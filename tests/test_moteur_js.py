@@ -4457,15 +4457,14 @@ def test_l_option_du_volant_en_marche_arriere_se_bascule_et_se_garde(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         o.tape('Escape', 2);
-        L.B.menu.items.find(function (i) { return i.libelle === 'OPTIONS'; }).faire();
+        L.Hud.ouvrirOnglet('options');
         const ligne = function () { return L.B.menu.items.find(function (i) { return i.libelle === 'VOLANT EN MARCHE ARRIÈRE'; }); };
         const avant = { detail: ligne().detail, option: L.B.options.reculCommeEnAvant };
         ligne().faire(ligne());
         const apres = { detail: ligne().detail, option: L.B.options.reculCommeEnAvant,
                         sauvee: JSON.parse(o.store[L.Sauvegarde.CLE_OPTIONS]).reculCommeEnAvant };
         // Rouvrir les options : la ligne dit ce qui est choisi, pas le defaut.
-        L.B.menu.items.find(function (i) { return i.libelle === 'RETOUR'; }).faire();
-        L.B.menu.items.find(function (i) { return i.libelle === 'OPTIONS'; }).faire();
+        o.tape('ArrowRight', 2); o.tape('ArrowLeft', 2);
         const rouvert = ligne().detail;
         ligne().faire(ligne());
         return { avant: avant, apres: apres, rouvert: rouvert, retour: { detail: ligne().detail, option: L.B.options.reculCommeEnAvant } };
@@ -7801,19 +7800,21 @@ def test_la_police_dessine_l_accent_au_dessus_de_la_lettre(banc):
 
 
 def test_la_pause_a_un_menu_des_options_et_un_bilan(banc):
+    """Les options et le bilan sont des ONGLETS du classeur de la PAUSE : on y
+    tourne aux fleches, et ECHAP reprend la partie de n'importe lequel."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         o.tape('Escape', 2);
         const pause = { etat: L.B.etat, menu: L.B.menu && L.B.menu.titre };
-        // OPTIONS : troisieme ligne ; on bascule le sang.
-        L.B.menu.items.find(function (i) { return i.libelle === 'OPTIONS'; }).faire();
+        // OPTIONS : le cinquieme onglet ; on bascule le sang.
+        L.Hud.ouvrirOnglet('options');
         const options = L.B.menu.titre;
         const sangAvant = L.B.options.sang;
         L.B.menu.items.find(function (i) { return i.libelle === 'SANG'; }).faire(L.B.menu.items[0]);
         const sangApres = L.B.options.sang;
         const sauvees = JSON.parse(o.store[L.Sauvegarde.CLE_OPTIONS]).sang;
-        L.B.menu.items.find(function (i) { return i.libelle === 'RETOUR'; }).faire();
-        L.B.menu.items.find(function (i) { return i.libelle === 'BILAN DE LA SESSION'; }).faire();
+        // Deux crans a gauche : COMMANDES, puis BILAN.
+        o.tape('ArrowLeft', 2); o.tape('ArrowLeft', 2);
         const bilan = { titre: L.B.menu.titre, lignes: L.B.menu.items.length };
         o.tape('Escape', 2);
         return { pause: pause, options: options, sangAvant: sangAvant, sangApres: sangApres, sauvees: sauvees,

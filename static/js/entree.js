@@ -90,6 +90,38 @@ const Entree = (function () {
   //: Ce que la manette tenait a l'image d'avant (boutons, croix, stick pousse,
   //: gachettes) : elle ne reprend l'appareil que sur un geste NEUF.
   let actifAvant = [];
+  //: Les EPAULES (LB/RB, L1/R1, L/R) : elles tournent les onglets d'un classeur
+  //: (`Hud`, la PAUSE). ⚠️ Pas une action de plus dans `MAP_TOUCHES` : l'epaule
+  //: est deja le DEUXIEME bouton d'ARME et de FRAPPE (`manettes.py`, `pieces` :
+  //: `epaule_g`, `epaule_d` ; le dessin de l'ecran MANETTE fait la meme
+  //: hypothese). Une action neuve, une disposition deja sauvee ne l'aurait pas —
+  //: et prendrait les numeros par defaut, qui sont ceux d'un bouton de droite sur
+  //: la 8BitDo de Martin en Bluetooth. On lit donc le NUMERO de ce deuxieme
+  //: bouton : FRAPPE a la croix de droite (X) ne tourne rien. Et les lettres R et
+  //: L du clavier ne peuvent pas servir : c'est la suite secrete RIGOLO
+  //: (`Jeu.SEQUENCE_DEBUG`), qui doit rester hors de `MAP_TOUCHES`.
+  const epauleTenue = { g: false, d: false }, epauleTenueCasque = { g: false, d: false };
+  const epauleNeuve = { g: false, d: false }, epauleNeuveCasque = { g: false, d: false };
+
+  /** L'epaule `cote` ('g' ou 'd') tient-elle, a en croire `tient(indice)` ?
+      Marque l'appui NEUF dans `neuve` (vide par `videPresse`, comme tout appui neuf). */
+  function lireEpaules(boutons, tenue, neuve, tient, muette) {
+    const indices = { g: (boutons.arme || [])[1], d: (boutons.attaque || [])[1] };
+    for (const c of ['g', 'd']) {
+      const t = indices[c] !== undefined && tient(indices[c]);
+      if (t && !tenue[c] && !muette) neuve[c] = true;
+      tenue[c] = t;
+    }
+  }
+
+  /** L'epaule `cote` ('g' : LB, 'd' : RB) vient-elle d'etre enfoncee ?
+      ⚠️ En coop locale, la manette est celle du joueur qui la tient (voir
+      `joueur1PrendLaManette`) : les epaules ne tournent les onglets de la pause
+      que si c'est le PREMIER — sinon le deuxieme joueur feuillette le classeur
+      de l'autre en jouant. */
+  function neufEpaule(cote) {
+    return ((!B.coop || joueur1PrendLaManette()) && !!epauleNeuve[cote]) || !!epauleNeuveCasque[cote];
+  }
 
   function poser(sac, a, v) {
     v = !!v;
@@ -167,6 +199,7 @@ const Entree = (function () {
     for (const a in vNeuf) vNeuf[a] = false;
     for (const a in vNeufTact) vNeufTact[a] = false;
     for (const a in vNeufCasque) vNeufCasque[a] = false;
+    epauleNeuve.g = false; epauleNeuve.d = false; epauleNeuveCasque.g = false; epauleNeuveCasque.d = false;
   }
   function toutRelacher() {
     for (const k in enfonce) enfonce[k] = false;
@@ -555,6 +588,10 @@ const Entree = (function () {
     if (f > 0.5) actif.push('frein');
     if (branchee && actif.some(function (a) { return actifAvant.indexOf(a) < 0; })) appareil = 'manette';
     actifAvant = actif;
+    // ⚠️ Le bouton qu'on vient d'apprendre (`ignores`) ne tourne pas un onglet
+    // en se relachant — et pendant un apprentissage, rien ne tourne.
+    lireEpaules(profil.boutons, epauleTenue, epauleNeuve, function (i) { return info.boutons.indexOf(i) >= 0 && !ignores[i]; },
+                !!apprentissage);
     // Pendant un apprentissage la manette ne commande rien (voir `apprendre`).
     for (const a in MAP_TOUCHES) poser(vPad, a, apprentissage ? false : etat[a]);
     if (apprentissage) { stick.x = 0; stick.y = 0; stick.mag = 0; gaz = 0; frein = 0; return; }
@@ -602,6 +639,8 @@ const Entree = (function () {
       s = zoneMorte(p.axes[AXES_DEFAUT[0]] || 0, p.axes[AXES_DEFAUT[1]] || 0);
     }
     for (const a in MAP_TOUCHES) poser(vCasque, a, etat[a]);
+    // Les Touch se lisent toujours a la disposition par defaut (voir plus haut).
+    lireEpaules(MANETTE_DEFAUT, epauleTenueCasque, epauleNeuveCasque, function (i) { return !!p && valeurBouton(p, i) > GESTE; }, false);
     if (s.mag > 0 || Object.keys(etat).length) appareil = 'manette';
     stickCasque.x = s.x; stickCasque.y = s.y; stickCasque.mag = s.mag;
     gazCasque = p ? lirePedale(p, PEDALES_DEFAUT.gaz) : 0;
@@ -856,7 +895,7 @@ const Entree = (function () {
 
   return {
     MAP_TOUCHES, MANETTE_DEFAUT, ZONE_MORTE,
-    init, debutImage, bas, neuf, basTactile, neufTactile, neufSansManette, videPresse, toutRelacher, contexte, passerEnTactile,
+    init, debutImage, bas, neuf, basTactile, neufTactile, neufSansManette, neufEpaule, videPresse, toutRelacher, contexte, passerEnTactile,
     etiquettesTactiles: etiquettes,
     toucheEnfoncee: function (code) { return !!enfonce[code]; },
     surSecret, surSuiteActions,

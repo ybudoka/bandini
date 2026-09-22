@@ -652,16 +652,22 @@ def test_un_vrai_geste_rend_le_son_et_efface_le_bandeau(page, serveur, erreurs):
 
 
 def test_les_options_disent_l_etat_du_son(page, serveur, erreurs):
+    """OPTIONS est un onglet du classeur de la PAUSE : on le CLIQUE a la souris,
+    sur la vraie toile etiree en CSS — le seul juge d'un clic reel sur un menu
+    (`Hud.toucherMenu` ramene le point aux 480 x 270 pixels du jeu)."""
     page.goto(serveur)
     attendre_titre(page)
     jouer(page)
     page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.evaluate("window.BANDINI.Jeu.pause()")
+    page.wait_for_function("window.BANDINI.Hud.ciblesDuMenu().some(q => q.onglet === 'options')")
+    z = page.evaluate("window.BANDINI.Hud.ciblesDuMenu().find(q => q.onglet === 'options')")
+    boite = page.locator("canvas").first.bounding_box()
+    page.mouse.click(boite["x"] + (z["x"] + z["l"] / 2) * boite["width"] / 480,
+                     boite["y"] + (z["y"] + z["h"] / 2) * boite["height"] / 270)
+    page.wait_for_function("window.BANDINI.B.menu && window.BANDINI.B.menu.titre === 'OPTIONS'")
     ligne = page.evaluate("""() => {
         const L = window.BANDINI;
-        L.Jeu.pause();
-        const pause = L.B.menu;
-        const i = pause.items.findIndex(x => x.libelle === 'OPTIONS');
-        pause.items[i].faire(pause.items[i]);
         const son = L.B.menu.items.find(x => x.libelle === 'SON');
         return { titre: L.B.menu.titre, detail: son && son.detail, actif: son && son.actif };
     }""")

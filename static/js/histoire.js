@@ -2055,11 +2055,10 @@ const Histoire = (function () {
     }
   }
 
-  function finirDefi(reussi, raison) {
-    const f = B.defi, d = defis().find(function (q) { return q.slug === f.slug; });
-    // ⚠️ **LE FORAIN REPREND SA CARABINE** — gagnée ou ratée, la partie est
-    // finie, et on reprend l'arme qu'on tenait avant de jouer. Sans ça, on
-    // garderait le bouchon pour la rue, et il ne blesse personne.
+  /** ⚠️ **LE FORAIN REPREND SA CARABINE** — gagnée, ratée ou abandonnée, la
+      partie est finie, et on reprend l'arme qu'on tenait avant de jouer. Sans
+      ça, on garderait le bouchon pour la rue, et il ne blesse personne. */
+  function rendreLaCarabine(f) {
     if (f && f.avantArme && B.joueur) {
       delete B.partie.armes.carabine_foire;
       if (B.joueur.arme === 'carabine_foire') {
@@ -2067,6 +2066,19 @@ const Histoire = (function () {
         B.partie.arme = f.avantArme;
       }
     }
+  }
+
+  /** Le defi en cours s'arrete la, SANS rien noter ni rien dire : c'est la
+      triche SAUT VERS UN DÉFI (`Hud.menuSautDefis`) qui l'abandonne pour en
+      proposer un autre — pas un echec du joueur. */
+  function abandonnerDefi() {
+    rendreLaCarabine(B.defi);
+    B.defi = null;
+  }
+
+  function finirDefi(reussi, raison) {
+    const f = B.defi, d = defis().find(function (q) { return q.slug === f.slug; });
+    rendreLaCarabine(f);
     B.defi = null;
     if (!reussi) { Hud.message('DÉFI RATÉ — ' + (raison || ''), 180); Son.SFX.erreur(); noter('DÉFI RATÉ : ' + d.titre, false); return; }
     const premiere = !B.partie.defisFaits[d.slug];
@@ -2451,7 +2463,7 @@ const Histoire = (function () {
            ouverture, passerOuverture, fichiersDeLOuverture, direLignes, majCinema, resoudre,
            lieuDuPersonnage, ouTrouver, present, calme, jouerOuDire,
            reinitialiser, noter, rencontrer, CARNET_MAX,
-           proposerDefi, commencerDefi, finirDefi, actionDeDefi, defisDeFoire, comptoirDeDefi, defiDuComptoir, canardAuCrochet,
+           proposerDefi, commencerDefi, finirDefi, abandonnerDefi, actionDeDefi, defisDeFoire, comptoirDeDefi, defiDuComptoir, canardAuCrochet,
            cible, ligneObjectif, lieu, lieuDeLivraison, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, cibleDuParler, maj,
            piratageSousLaMain, commencerPiratage, estCourse, dessinerCheminCourse, lampesDeCourse };
 })();

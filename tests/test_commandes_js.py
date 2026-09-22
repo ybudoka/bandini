@@ -241,30 +241,37 @@ def test_chaque_ligne_a_son_bouton_sur_chaque_appareil(banc):
 
 
 def test_pause_commandes_et_retour(banc):
-    """PAUSE > COMMANDES : RETOUR (Effacer, B) revient a la PAUSE, et PAUSE
-    reprend le jeu — la regle de tous les sous-menus de la pause. Ouverte au
-    volant, l'aide s'ouvre sur la page du volant."""
+    """COMMANDES est un ONGLET du classeur de la PAUSE : Effacer et ECHAP
+    reprennent la partie, comme depuis tout onglet. HAUT et BAS y tournent la
+    page — GAUCHE et DROITE tournent l'onglet. Ouverte au volant, l'aide s'ouvre
+    sur la page du volant."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.Jeu.pause();
-        const lignes = L.B.menu.items.map(function (i) { return i.libelle; });
-        L.B.menu.items.find(function (i) { return i.libelle === 'COMMANDES'; }).faire();
+        const onglets = L.Hud.onglets();
+        L.Hud.ouvrirOnglet('commandes');
         const ouvert = { titre: L.B.menu.titre, bouton: L.B.menu.items[0].libelle, page: L.B.menu.page };
+        o.tape('ArrowDown', 2);
+        const tournee = L.B.menu.page;
+        o.tape('ArrowRight', 2);
+        const aCote = L.B.menu.titre;
+        L.Hud.ouvrirOnglet('commandes');
         o.tape('Backspace', 2);
-        const retour = L.B.menu && L.B.menu.titre;
-        L.B.menu.items.find(function (i) { return i.libelle === 'COMMANDES'; }).faire();
+        const effacer = L.B.etat;
+        L.Jeu.pause(); L.Hud.ouvrirOnglet('commandes');
         o.tape('Escape', 2);
         const repris = L.B.etat;
         L.B.joueur.dansVehicule = true;
         const auVolant = L.Hud.menuCommandes(true).page;
         L.B.joueur.dansVehicule = null;
-        return { lignes: lignes, ouvert: ouvert, retour: retour, repris: repris,
+        return { onglets: onglets, ouvert: ouvert, tournee: tournee, aCote: aCote, effacer: effacer, repris: repris,
                  auVolant: L.B.defs.manettes.pages[auVolant].slug };
     }""")
-    assert "COMMANDES" in r["lignes"]
-    assert r["ouvert"] == {"titre": "COMMANDES", "bouton": "RETOUR", "page": 0}
-    assert r["retour"] == "PAUSE"
-    assert r["repris"] == "jeu"
+    assert "commandes" in r["onglets"]
+    assert r["ouvert"] == {"titre": "COMMANDES", "bouton": "REPRENDRE", "page": 0}
+    assert r["tournee"] == 1, "BAS tourne la page"
+    assert r["aCote"] == "OPTIONS", "DROITE tourne l'onglet"
+    assert r["effacer"] == "jeu" and r["repris"] == "jeu"
     assert r["auVolant"] == "volant"
 
 

@@ -1,5 +1,5 @@
-"""Le menu DEBUG : une suite secrete de touches (qui ajoute ensuite une ligne
-TRICHES a la PAUSE de la partie), jamais un bouton au titre — et ses
+"""Les TRICHES : une suite secrete de touches (qui ajoute ensuite un onglet
+TRICHES au classeur de la PAUSE de la partie), jamais un bouton au titre — et ses
 tricheries, faites pour tester a la main sans y perdre la soiree : de l'argent,
 la sante, sauter l'objectif, teleporter au repere que le HUD montre deja
 (`Histoire.cible`, la meme fleche que celle du joueur ordinaire).
@@ -22,16 +22,17 @@ TAPER_LA_SUITE = (
 
 
 def test_la_suite_secrete_ouvre_le_menu_debug_en_partie(banc):
+    """Elle ouvre la PAUSE, sur l'onglet TRICHES du classeur."""
     r = banc(
         """function (L, o) {
         L.Jeu.commencer();
         """
         + TAPER_LA_SUITE
         + """
-        return { titre: L.B.menu && L.B.menu.titre };
+        return { titre: L.B.menu && L.B.menu.titre, etat: L.B.etat, onglet: L.B.menu && L.B.menu.classeur.onglet };
     }"""
     )
-    assert r["titre"] == "DEBUG"
+    assert r == {"titre": "TRICHES", "etat": "pause", "onglet": "triches"}
 
 
 def test_une_suite_fausse_n_ouvre_rien(banc):
@@ -58,18 +59,36 @@ def test_pas_de_menu_debug_au_titre(banc):
 
 
 def test_pas_par_dessus_un_autre_menu(banc):
-    """La suite ne vole pas un menu deja ouvert — ici, PAUSE."""
+    """La suite ne vole pas un menu deja ouvert — ici, un comptoir."""
+    r = banc(
+        """function (L, o) {
+        L.Jeu.commencer();
+        L.Hud.ouvrirMenu({ titre: 'COMPTOIR', items: [{ libelle: 'UN HOT-DOG', faire: function () { return false; } }] });
+        """
+        + TAPER_LA_SUITE
+        + """
+        return { titre: L.B.menu && L.B.menu.titre, etat: L.B.etat, triches: L.B.partie.triches.menu };
+    }"""
+    )
+    assert r == {"titre": "COMPTOIR", "etat": "jeu", "triches": False}
+
+
+def test_dans_la_pause_la_suite_tourne_le_classeur_vers_les_triches(banc):
+    """Le classeur de la PAUSE n'est pas « un autre menu » : la suite tapee
+    dedans allume les triches et tourne vers leur onglet."""
     r = banc(
         """function (L, o) {
         L.Jeu.commencer();
         L.Jeu.pause();
+        const avant = L.Hud.onglets();
         """
         + TAPER_LA_SUITE
         + """
-        return { titre: L.B.menu && L.B.menu.titre };
+        return { avant: avant, apres: L.Hud.onglets(), titre: L.B.menu && L.B.menu.titre, etat: L.B.etat };
     }"""
     )
-    assert r["titre"] == "PAUSE"
+    assert "triches" not in r["avant"] and r["apres"][-1] == "triches"
+    assert r["titre"] == "TRICHES" and r["etat"] == "pause"
 
 
 def test_argent_et_sante_dans_le_menu_debug(banc):
@@ -211,19 +230,21 @@ def test_terminer_la_mission_compte_la_reussite(banc):
 
 
 def test_retour_ferme_le_menu_debug_par_le_clavier(banc):
+    """Il n'y a plus de RETOUR au bout des triches : c'est un onglet du classeur,
+    et B (Effacer) reprend la partie, comme depuis tout onglet."""
     r = banc(
         """function (L, o) {
         L.Jeu.commencer();
         """
         + TAPER_LA_SUITE
         + """
-        const items = L.B.menu.items.map(function (i) { return i.libelle; });
-        L.B.menu.curseur = items.indexOf('RETOUR');
-        o.tape('KeyE', 2);
-        return { menu: L.B.menu };
+        const lignes = L.B.menu.items.map(function (i) { return i.libelle; });
+        o.tape('Backspace', 2);
+        return { lignes: lignes, menu: L.B.menu, etat: L.B.etat };
     }"""
     )
-    assert r["menu"] is None
+    assert "RETOUR" not in r["lignes"] and "PLUS…" not in r["lignes"]
+    assert r["menu"] is None and r["etat"] == "jeu"
 
 
 # --- Les triches se sauvent avec la partie ----------------------------------------------
@@ -411,13 +432,13 @@ def test_vehicules_invincibles_ne_coule_pas(banc, allumee):
     assert r["present"] is allumee, "avec la triche le char reste ; sans elle, la baie le mange"
 
 
-# --- La ligne TRICHES de la PAUSE ---------------------------------------------------------
+# --- L'onglet TRICHES de la PAUSE ---------------------------------------------------------
 
 def _lignes_de_la_pause():
     return """
         function lignes(L) {
             L.Jeu.pause();
-            return L.B.menu.items.map(function (i) { return i.libelle; });
+            return L.Hud.onglets();
         }
     """
 
@@ -426,35 +447,39 @@ def test_la_pause_n_a_pas_de_ligne_triches_avant_la_suite_secrete(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         """ + _lignes_de_la_pause() + """
-        return { lignes: lignes(L), menu: L.B.partie.triches.menu };
+        return { lignes: lignes(L), menu: L.B.partie.triches.menu, ouvert: L.Hud.ouvrirOnglet('triches'),
+                 titre: L.B.menu.titre };
     }""")
-    assert "TRICHES" not in r["lignes"]
+    assert "triches" not in r["lignes"]
     assert r["menu"] is False
+    assert r["ouvert"] is False and r["titre"] == "PAUSE", "l'onglet ne s'ouvre pas meme en le demandant"
 
 
 def test_la_suite_secrete_active_les_triches_et_la_pause_y_mene(banc):
-    """La suite tapee UNE fois : la ligne TRICHES est dans la PAUSE, elle se
-    sauve avec la partie, elle ouvre le menu DEBUG, et RETOUR ramene a la pause."""
+    """La suite tapee UNE fois : l'onglet TRICHES est dans le classeur de la
+    PAUSE, il se sauve avec la partie, et on y tourne a l'epaule droite depuis
+    OPTIONS — puis encore une fois, et on fait le tour jusqu'a la PAUSE."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         """ + _lignes_de_la_pause() + TAPER_LA_SUITE + """
         const ecrit = JSON.parse(o.store[L.Sauvegarde.CLE]).triches.menu;
-        L.Hud.fermerMenu();
-        // Rouvrir l'emplacement, comme `chargerPartie` : la ligne doit y etre encore.
+        L.Hud.fermerMenu(); L.Jeu.reprendre();
+        // Rouvrir l'emplacement, comme `chargerPartie` : l'onglet doit y etre encore.
         L.B.partie = L.Sauvegarde.completer(L.Sauvegarde.lire(1), L.B.defs);
         const l = lignes(L);
-        const iTriches = l.indexOf('TRICHES');
-        L.B.menu.items[iTriches].faire(L.B.menu.items[iTriches]);
-        const titreDebug = L.B.menu.titre, etatDebug = L.B.etat;
-        const retour = L.B.menu.items.filter(function (i) { return i.libelle === 'RETOUR'; })[0];
-        retour.faire(retour);
-        return { ecrit: ecrit, lignes: l, titreDebug: titreDebug, etatDebug: etatDebug,
-                 titreApres: L.B.menu && L.B.menu.titre, etatApres: L.B.etat };
+        L.Hud.ouvrirOnglet('options');
+        function rb() {
+            o.pad([0, 0], [0, 0, 0, 0, 0, 1], { mapping: 'standard' }); o.frame(2);
+            o.pad([0, 0], [0, 0, 0, 0, 0, 0], { mapping: 'standard' }); o.frame(2);
+            return { titre: L.B.menu && L.B.menu.titre, etat: L.B.etat };
+        }
+        const un = rb(), deux = rb();
+        return { ecrit: ecrit, lignes: l, un: un, deux: deux };
     }""")
     assert r["ecrit"] is True, "la suite secrete se sauve avec la partie"
-    assert r["lignes"].index("TRICHES") == r["lignes"].index("OPTIONS") + 1
-    assert r["titreDebug"] == "DEBUG" and r["etatDebug"] == "pause"
-    assert r["titreApres"] == "PAUSE" and r["etatApres"] == "pause", "RETOUR ramene a la pause, pas au jeu"
+    assert r["lignes"] == ["pause", "carnet", "bilan", "commandes", "options", "triches"]
+    assert r["un"] == {"titre": "TRICHES", "etat": "pause"}
+    assert r["deux"] == {"titre": "PAUSE", "etat": "pause"}, "RB fait le tour du classeur, il ne ferme rien"
 
 
 def test_une_triche_qui_ferme_le_menu_depuis_la_pause_reprend_la_partie(banc):
@@ -465,8 +490,7 @@ def test_une_triche_qui_ferme_le_menu_depuis_la_pause_reprend_la_partie(banc):
         L.B.partie.triches.menu = true;
         L.Histoire.cible = function () { return { x: L.B.joueur.x + 500, y: L.B.joueur.y }; };
         L.Jeu.pause();
-        const items = L.B.menu.items;
-        items[items.findIndex(function (i) { return i.libelle === 'TRICHES'; })].faire();
+        L.Hud.ouvrirOnglet('triches');
         const teleporter = L.B.menu.items.filter(function (i) { return i.libelle.indexOf('TÉLÉPORTER') === 0; })[0];
         L.B.menu.curseur = L.B.menu.items.indexOf(teleporter);
         o.tape('KeyE', 2);                                     // ACTION sur la ligne
@@ -477,15 +501,20 @@ def test_une_triche_qui_ferme_le_menu_depuis_la_pause_reprend_la_partie(banc):
 
 
 def test_le_menu_debug_ouvert_par_la_suite_secrete_se_ferme_toujours_vers_le_jeu(banc):
-    """Le chemin d'avant ne change pas : hors pause, RETOUR rend la main au jeu."""
+    """Ouvert par la suite, le classeur des triches se referme vers le jeu — a
+    ECHAP comme a PAUSE : la partie ne reste pas figee."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
-        L.Hud.ouvrirMenu(L.Hud.menuDebug());
-        const retour = L.B.menu.items.filter(function (i) { return i.libelle === 'RETOUR'; })[0];
-        retour.faire(retour);
-        return { etat: L.B.etat, menu: L.B.menu };
+        """ + TAPER_LA_SUITE + """
+        o.tape('Escape', 2);
+        const echap = { etat: L.B.etat, menu: L.B.menu };
+        """ + TAPER_LA_SUITE + """
+        o.pad([0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 1], { mapping: 'standard' }); o.frame(2);
+        o.pad([0, 0], [], { mapping: 'standard' }); o.frame(2);
+        return { echap: echap, start: { etat: L.B.etat, menu: L.B.menu } };
     }""")
-    assert r["etat"] == "jeu" and r["menu"] is None
+    assert r["echap"] == {"etat": "jeu", "menu": None}
+    assert r["start"] == {"etat": "jeu", "menu": None}
 
 
 
@@ -494,12 +523,8 @@ def test_le_menu_debug_ouvert_par_la_suite_secrete_se_ferme_toujours_vers_le_jeu
 CHOISIR_UNE_MISSION = """
         function choisir(L, slug, depuisLaPause) {
             if (!depuisLaPause) L.Hud.ouvrirMenu(L.Hud.menuDebug());
-            else {
-                const t = L.B.menu.items.filter(function (i) { return i.libelle === 'TRICHES'; })[0];
-                t.faire(t);
-            }
+            else L.Hud.ouvrirOnglet('triches');
             function ligne(nom) { return L.B.menu.items.filter(function (i) { return i.libelle === nom; })[0]; }
-            ligne('PLUS…').faire();
             ligne('SAUT VERS UNE MISSION').faire();
             const titre = L.B.defs.missions.filter(function (m) { return m.slug === slug; })[0].titre.toUpperCase();
             const item = ligne(titre);
@@ -671,3 +696,161 @@ def test_chaque_mission_du_catalogue_se_lance_par_le_saut(banc):
         assert m["actif"] is True and m["demarree"] is True, m
         assert m["distance"] is not None and m["distance"] <= 2.5 * m["tx"], m
         assert m["menu"] is False, m
+
+
+# --- SAUT VERS UN DÉFI : on se pose devant son panneau, et il se propose -----------------
+
+ALLER_AU_DEFI = """
+        function allerAu(L, slug, depuisLaPause) {
+            if (depuisLaPause) { L.B.partie.triches.menu = true; L.Jeu.pause(); L.Hud.ouvrirOnglet('triches'); }
+            else L.Hud.ouvrirMenu(L.Hud.menuDebug());
+            L.B.menu.items.filter(function (i) { return i.libelle === 'SAUT VERS UN DÉFI'; })[0].faire();
+            const item = L.B.menu.items.filter(function (i) { return i.defi === slug; })[0];
+            return item.faire(item);
+        }
+        // Ce que le bouton ACTION lirait ici : un panneau, ou le comptoir d'un jeu de foire.
+        function sousLaMain(L) {
+            const j = L.B.joueur, p = L.Histoire.panneauSousLaMain(j);
+            if (p) return p.defi;
+            const jeu = L.Foire.jeuSousLaMain(j), d = jeu && L.Histoire.defiDuComptoir(jeu);
+            return d ? d.slug : null;
+        }
+        function rendreLaMain(L) { L.B.scene = null; L.B.cinema = null; }
+"""
+
+
+def test_le_saut_vers_un_defi_range_le_catalogue_par_genre(banc):
+    """C'est le CATALOGUE qui fait la liste, rangee au volant / les tours / la
+    foire — et un defi reussi le dit."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.B.partie.defisFaits = { saut: { jour: 1, temps: 100 } };
+        const m = L.Hud.menuSautDefis();
+        return { lignes: m.items.map(function (i) { return i.entete ? '# ' + i.entete : i.libelle; }),
+                 defis: m.items.filter(function (i) { return i.defi; }).map(function (i) { return i.defi; }),
+                 saut: m.items.filter(function (i) { return i.defi === 'saut'; })[0].detail,
+                 catalogue: L.B.defs.defis.map(function (d) { return d.slug; }) };
+    }""")
+    assert sorted(r["defis"]) == sorted(r["catalogue"]), "chaque defi du catalogue, une fois"
+    entetes = [x for x in r["lignes"] if x.startswith("# ")]
+    assert entetes == ["# AU VOLANT", "# LES TOURS", "# À LA FOIRE"]
+    assert r["lignes"][-1] == "RETOUR"
+    assert r["saut"] == "RÉUSSI"
+
+
+def test_chaque_defi_du_catalogue_se_rejoint_par_le_saut(banc):
+    """Pour chaque defi : le joueur est pose a portee de son panneau (ou du
+    comptoir de sa baraque), tourne vers lui — ACTION le lirait —, la pause est
+    refermee et la proposition du defi est ouverte."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        """ + ALLER_AU_DEFI + """
+        const sorties = [];
+        L.B.defs.defis.forEach(function (d) {
+            rendreLaMain(L);
+            L.Hud.fermerMenu();
+            if (L.B.etat === 'pause') L.Jeu.reprendre();
+            const rendu = allerAu(L, d.slug, sorties.length % 2 === 1);
+            sorties.push({ slug: d.slug, rendu: rendu, menu: L.B.menu && L.B.menu.titre, attendu: d.titre.toUpperCase(),
+                           classeur: !!(L.B.menu && L.B.menu.classeur), sousLaMain: sousLaMain(L), etat: L.B.etat });
+        });
+        return sorties;
+    }""")
+    assert len(r) >= 10
+    for d in r:
+        assert d["rendu"] is True, d
+        assert d["menu"] == d["attendu"] and d["classeur"] is False, d
+        assert d["sousLaMain"] == d["slug"], d
+        assert d["etat"] == "jeu", d
+
+
+def test_apres_le_saut_action_lit_le_panneau_et_commencer_lance_le_defi(banc):
+    """Par le BOUTON : PAS MAINTENANT referme la proposition, ACTION la rouvre —
+    le panneau est bien sous la main —, et COMMENCER lance le defi."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        """ + ALLER_AU_DEFI + """
+        const vu = {};
+        for (const slug of ['tour', 'livraison', 'marteau']) {
+            rendreLaMain(L);
+            L.Hud.fermerMenu();
+            if (L.B.defi) L.Histoire.abandonnerDefi();
+            allerAu(L, slug);
+            L.B.menu.curseur = L.B.menu.items.findIndex(function (i) { return i.libelle === 'PAS MAINTENANT'; });
+            o.tape('KeyE', 2);
+            const ferme = !L.B.menu;
+            o.tape('KeyE', 2);
+            const relu = L.B.menu && L.B.menu.titre;
+            L.B.menu.curseur = L.B.menu.items.findIndex(function (i) { return i.libelle === 'COMMENCER'; });
+            o.tape('KeyE', 2);
+            vu[slug] = { ferme: ferme, relu: relu, defi: L.B.defi && L.B.defi.slug };
+        }
+        return { vu: vu, titres: L.B.defs.defis.reduce(function (a, d) { a[d.slug] = d.titre.toUpperCase(); return a; }, {}) };
+    }""")
+    for slug, v in r["vu"].items():
+        assert v["ferme"] is True, (slug, v)
+        assert v["relu"] == r["titres"][slug], (slug, v)
+        assert v["defi"] == slug, (slug, v)
+
+
+def test_le_saut_vers_un_defi_sort_du_char_et_de_la_piece(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        """ + ALLER_AU_DEFI + """
+        rendreLaMain(L);
+        const j = L.B.joueur;
+        const v = o.char('auto', 0, 0, 0);
+        L.Vehicules.monter(j, v);
+        L.Entites.indexer();
+        allerAu(L, 'saut');
+        const char = { auVolant: !!j.dansVehicule, conducteur: v.conducteur, sousLaMain: sousLaMain(L) };
+        L.Hud.fermerMenu();
+        // Dans une piece : le casse-croute du sergent, par la porte de sa mission.
+        const porte = L.Monde.carte.def.portes.filter(function (q) { return q.interieur; })[0];
+        L.Jeu.entrer(porte); L.Jeu.finirTransition();
+        const dedans = !!L.B.interieur;
+        allerAu(L, 'canards');
+        return { char: char, dedans: dedans, interieur: !!L.B.interieur, sousLaMain: sousLaMain(L),
+                 menu: L.B.menu && L.B.menu.titre };
+    }""")
+    assert r["char"]["auVolant"] is False and r["char"]["conducteur"] is None
+    assert r["char"]["sousLaMain"] == "saut"
+    assert r["dedans"] is True, "temoin : on etait bien dans une piece"
+    assert r["interieur"] is False and r["sousLaMain"] == "canards"
+    assert r["menu"] == "LA PÊCHE AUX CANARDS"
+
+
+def test_le_saut_abandonne_le_defi_en_cours_sans_rien_noter(banc):
+    """Un defi en cours s'arrete sans « DÉFI RATÉ » au carnet — c'est une
+    triche, pas un echec —, et le forain reprend sa carabine."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        """ + ALLER_AU_DEFI + """
+        rendreLaMain(L);
+        const tir = L.B.defs.defis.filter(function (d) { return d.slug === 'tir'; })[0];
+        allerAu(L, 'tir');
+        L.Hud.fermerMenu();
+        L.Histoire.commencerDefi(tir);
+        const pendant = { defi: L.B.defi && L.B.defi.slug, arme: L.B.joueur.arme };
+        const carnet = (L.B.partie.carnet || []).length;
+        allerAu(L, 'saut');
+        return { pendant: pendant, defi: L.B.defi, arme: L.B.joueur.arme,
+                 carabine: !!L.B.partie.armes.carabine_foire,
+                 notes: (L.B.partie.carnet || []).slice(carnet).map(function (e) { return e.t; }) };
+    }""")
+    assert r["pendant"] == {"defi": "tir", "arme": "carabine_foire"}
+    assert r["defi"] is None
+    assert r["arme"] != "carabine_foire" and r["carabine"] is False
+    assert not any("RATÉ" in n for n in r["notes"]), r["notes"]
+
+
+def test_le_saut_vers_un_defi_ne_se_lance_pas_pendant_une_scene(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        """ + ALLER_AU_DEFI + """
+        L.B.scene = { bidon: true };
+        const j = L.B.joueur, x = j.x, y = j.y;
+        const rendu = allerAu(L, 'saut');
+        return { rendu: rendu, menu: L.B.menu && L.B.menu.titre, bouge: j.x !== x || j.y !== y };
+    }""")
+    assert r["rendu"] is False and r["menu"] == "SAUT VERS UN DÉFI" and r["bouge"] is False

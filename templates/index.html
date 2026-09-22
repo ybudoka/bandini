@@ -153,7 +153,9 @@
     </section>
   </div>
 
-  {# Commandes tactiles : de vrais elements, jamais de hit-test sur le canvas. #}
+  {# Commandes tactiles : de vrais elements, jamais de hit-test sur le canvas.
+     (Les onglets et les lignes d'un menu, eux, se touchent SUR la toile —
+     `Hud.toucherMenu` : on les touche une fois, on ne les tient pas.) #}
   <div id="tactile" aria-hidden="true">
     <div id="croix"><u></u></div>
     <div id="boutons">

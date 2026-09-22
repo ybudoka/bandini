@@ -8,6 +8,18 @@ const Hud = (function () {
   function init(d, r) {
     doc = d; racine = r;
     ['titre', 'compte'].forEach(function (n) { voiles[n] = d.getElementById('voile-' + n); });
+    // Un onglet, une ligne de menu : au doigt et a la souris (`toucherMenu`). La
+    // toile est etiree en CSS (`Base.redimensionner`) : on ramene le point aux
+    // 480 x 270 pixels du jeu.
+    const toile = d.getElementById('toile');
+    if (toile && toile.addEventListener) {
+      toile.addEventListener('pointerdown', function (ev) {
+        if (!B.menu) return;
+        const b = toile.getBoundingClientRect();
+        if (!b.width || !b.height) return;
+        toucherMenu((ev.clientX - b.left) * VW / b.width, (ev.clientY - b.top) * VH / b.height);
+      });
+    }
     // ⚠️ `videPresse` : ENTREE sur le bouton qui a le focus fait un clic ET un
     // appui d'ACTION. Le clic ouvre le choix des parties, et l'appui, lu a
     // l'image suivante, y choisirait aussitot la ligne sous le curseur.
@@ -159,6 +171,9 @@ const Hud = (function () {
   //: (on achete trois hot-dogs sans rouvrir le comptoir).
   //: `refaire()` rend un menu NEUF : un menu qui reste ouvert se refait apres
   //: chaque achat (voir `rafraichirMenu`).
+  //: Un item `entete('LE JOUEUR')` est un TITRE DE SECTION : il se lit, le
+  //: curseur passe par-dessus (une liste de vingt triches se lit par blocs).
+  //: Et chaque ligne qu'on peut choisir se TOUCHE et se CLIQUE (`toucherMenu`).
 
   //: La repetition d'un menu tenu, en images (60 par seconde) : un cran tout de
   //: suite, le suivant apres `REPETE_PREMIER`, puis un tous les `REPETE_ENSUITE`.
@@ -200,6 +215,14 @@ const Hud = (function () {
     if (typeof menu.curseur !== 'number') {
       const i = (menu.items || []).findIndex(function (item) { return !!item.faire; });
       menu.curseur = i < 0 ? 0 : i;
+    }
+    // ⚠️ Une page ouverte DEPUIS le classeur (le journal, l'ecran MANETTE, un
+    // saut) en est une SOUS-PAGE : elle garde la barre d'onglets, sous l'onglet
+    // d'ou elle vient. Un menu qui ne veut pas du classeur le dit
+    // (`classeur: null`) ; la proposition d'un defi, elle, s'ouvre apres que le
+    // saut a referme la pause.
+    if (menu.classeur === undefined && B.menu && B.menu.classeur) {
+      menu.classeur = { onglet: B.menu.classeur.onglet, racine: false };
     }
     B.menu = menu;
     // ⚠️ Un menu qui s'ouvre sous un pouce DEJA pousse (on marchait vers le
@@ -250,21 +273,76 @@ const Hud = (function () {
   }
 
   function fenetreMenu(m) {
+    if (m.classeur) {
+      return Math.max(1, Math.floor((hauteurClasseur(m) - LISTE_CLASSEUR - PIED_CLASSEUR - (m.aide ? 14 : 0)) / 14));
+    }
     const h = m.hauteur || Math.min(VH - 30, 40 + m.items.length * 14 + (m.aide ? 14 : 0));
     return Math.max(1, Math.floor((h - 28 - (m.aide ? 16 : 6)) / 14));
   }
 
-  /** Garde le curseur dans la fenetre. Rend le premier item visible. */
+  /** Garde le curseur dans la fenetre. Rend le premier item visible.
+      ⚠️ Le titre de section juste au-dessus du curseur reste a l'ecran : une
+      ligne qui a perdu sa section se lit hors de son contexte. */
   function hautDuMenu(m) {
     const f = fenetreMenu(m), n = m.items.length;
     let haut = m.haut || 0;
     if (haut > n - f) haut = n - f;
     if (haut < 0) haut = 0;
-    if (m.curseur < haut) haut = m.curseur;
+    const avant = m.items[m.curseur - 1];
+    const dessus = avant && avant.entete ? m.curseur - 1 : m.curseur;
+    if (dessus < haut) haut = dessus;
     if (m.curseur >= haut + f) haut = m.curseur - f + 1;
     m.haut = haut;
     return haut;
   }
+
+  /** Le curseur, un cran dans le `sens`, par-dessus les titres de section.
+      `bute` : il s'arrete au bout de la liste au lieu d'en faire le tour. */
+  function pasDuCurseur(m, sens, bute) {
+    const n = m.items.length;
+    let c = m.curseur;
+    for (let k = 0; k < n; k++) {
+      let s = c + sens;
+      if (s < 0 || s >= n) { if (bute) return m.curseur; s = (s + n) % n; }
+      c = s;
+      if (!m.items[c].entete) return c;
+    }
+    return m.curseur;
+  }
+
+  /** Aucune ligne a choisir : une page qui se lit, et rien d'autre. */
+  function rienQueDeLaLecture(m) {
+    return !m.items.some(function (i) { return !i.entete && i.actif !== false; });
+  }
+
+  /** ACTION sur la ligne du curseur — au bouton comme au doigt. */
+  function choisirLigne(m) {
+    const item = m.items[m.curseur];
+    if (item && !item.entete && item.actif !== false) {
+      const fini = item.faire ? item.faire(item) : true;
+      if (fini !== false && B.menu === m) fermerMenu();
+      else if (B.menu === m) rafraichirMenu();
+    } else Son.SFX.erreur();
+  }
+
+  /** Un titre de section : il se lit, il ne se choisit pas (`libelle` vide et
+      `actif: false`, pour tout ce qui parcourt les lignes d'un menu). */
+  function entete(texte) { return { entete: texte, libelle: '', actif: false }; }
+
+  //: Ce que le doigt ou la souris a touche sur la toile, en pixels du jeu. Il se
+  //: lit a l'image suivante (`majMenu`), comme un bouton : un menu n'agit que
+  //: dans la boucle, jamais au milieu d'un evenement du navigateur.
+  //: ⚠️ `index.html` le dit : les COMMANDES tactiles sont de vrais elements,
+  //: jamais un test sur la toile — un pouce qui TIENT un bouton doit le sentir
+  //: sous lui. Un onglet ou une ligne de menu ne se tient pas : on les touche
+  //: une fois, la ou on les voit, et ils ne bougent pas sous le doigt.
+  let clic = null;
+  //: Les zones a toucher, telles que le DERNIER menu dessine les a posees.
+  let cibles = [], ciblesDe = null;
+  function poserCible(zone) { cibles.push(zone); }
+
+  /** Un doigt ou un clic en (x, y), en pixels du jeu (480 x 270). */
+  function toucherMenu(x, y) { if (B.menu) clic = { x: x, y: y }; }
 
   function majMenu() {
     const m = B.menu;
@@ -275,8 +353,27 @@ const Hud = (function () {
     // ⚠️ Pendant qu'on reapprend un bouton, le menu ne bouge plus : la manette
     // est muette (voir `Entree.apprendre`) et le clavier ne sert qu'a annuler.
     if (Entree.apprendEnCours()) {
+      clic = null;
       if (Entree.neuf('pause') || Entree.neuf('annuler')) { Entree.annulerApprentissage(); Son.SFX.erreur(); }
       return;
+    }
+    // Le doigt, la souris : un onglet s'ouvre, une ligne se choisit tout de suite.
+    if (clic) {
+      const c = clic;
+      clic = null;
+      const z = ciblesDe === m ? cibles.find(function (q) {
+        return c.x >= q.x && c.x < q.x + q.l && c.y >= q.y && c.y < q.y + q.h;
+      }) : null;
+      if (z && z.onglet) { ouvrirOnglet(z.onglet); return; }
+      // Une page d'un ecran qui en a plusieurs (COMMANDES : a pied, au volant).
+      if (z && z.page !== undefined) { if (m.page !== z.page) { m.page = z.page; Son.SFX.menu(); } return; }
+      if (z && z.item !== undefined) { m.curseur = z.item; choisirLigne(m); return; }
+    }
+    // ⚠️ L'ONGLET AVANT TOUT : l'epaule droite est aussi FRAPPE, qui ferme un
+    // menu — tournee, la page ne doit pas se refermer dans la meme image.
+    if (m.classeur) {
+      const s = sensDOnglet(m);
+      if (s) { tournerOnglet(m, s); return; }
     }
     // ⚠️ UN appui, UNE ligne. Le pouce sur la croix donnait les deux a la fois :
     // son « haut » neuf bougeait le curseur, puis, a l'image suivante, l'axe
@@ -293,27 +390,18 @@ const Hud = (function () {
     sensTenu = tenu;
     // Tenu, le curseur s'arrete au bout de la liste ; un appui neuf, lui, en
     // fait le tour — sinon un pouce qui s'attarde tourne en rond.
-    const n = m.items.length;
-    if (repete && (m.curseur + sens < 0 || m.curseur + sens >= n)) sens = 0;
-    if (sens) {
-      m.curseur = (m.curseur + sens + n) % n;
-      Son.SFX.menu();
+    if (sens && !m.sansListe) {
+      const c = pasDuCurseur(m, sens, repete);
+      if (c !== m.curseur) { m.curseur = c; Son.SFX.menu(); }
     }
-    if (Entree.neuf('action')) {
-      const item = m.items[m.curseur];
-      if (item && item.actif !== false) {
-        const fini = item.faire ? item.faire(item) : true;
-        if (fini !== false && B.menu === m) fermerMenu();
-        else if (B.menu === m) rafraichirMenu();
-      } else Son.SFX.erreur();
-    }
+    if (Entree.neuf('action')) choisirLigne(m);
     // Un menu `obligatoire` (l'arrestation) ne se ferme que par un choix.
     // ⚠️ `manetteInerte` (l'ecran MANETTE) : on y appuie sur les boutons pour
     // les VOIR s'allumer, pas pour commander. La manette peut encore bouger le
     // curseur et choisir — sinon un joueur qui n'a QUE sa manette resterait
     // enferme — mais elle ne FERME plus l'ecran sous ses doigts.
     const ferme = m.manetteInerte ? Entree.neufSansManette : Entree.neuf;
-    if (!m.obligatoire && (ferme('annuler') || ferme('attaque') || ferme('pause'))) {
+    if (B.menu === m && !m.obligatoire && (ferme('annuler') || ferme('attaque') || ferme('pause'))) {
       // ⚠️ `retour` : une page d'un carnet recule d'un cran au lieu de rendre
       // la main au jeu. Sans ca, sortir du JOURNAL relancait la partie, et il
       // fallait remettre PAUSE pour lire la page d'a cote.
@@ -321,9 +409,38 @@ const Hud = (function () {
     }
   }
 
+  /** Les lignes d'un menu, la premiere a `y0` : titres de section, curseur,
+      detail a droite de la colonne — et une zone a toucher par ligne qu'on
+      peut choisir. */
+  function dessinerLignesDuMenu(ctx, m, x, y0, l, f, haut) {
+    const col = m.colonne || l;
+    // Une page qu'on ne fait que lire (le BILAN) n'a pas de curseur a montrer.
+    const lire = !!m.classeur && rienQueDeLaLecture(m);
+    m.items.slice(haut, haut + f).forEach(function (item, k) {
+      const i = haut + k;
+      const yy = y0 + k * 14;
+      if (item.entete) {
+        const w = Atlas.largeurTexte(item.entete, 1);
+        texte(ctx, item.entete, x + 8, yy + 1, '#b89a4a', 1);
+        ctx.fillStyle = '#3a3450'; ctx.fillRect(x + 13 + w, yy + 4, Math.max(0, col - 21 - w), 1);
+        B.stats.rects++;
+        return;
+      }
+      const choisi = i === m.curseur && !lire;
+      const actif = item.actif !== false;
+      if (choisi) { ctx.fillStyle = 'rgba(232,179,60,0.18)'; ctx.fillRect(x + 4, yy - 3, col - 8, 12); }
+      texte(ctx, (choisi ? '> ' : '  ') + item.libelle, x + 8, yy, actif ? (choisi ? '#efe6d0' : '#cdc6e6') : '#6a6678', 1);
+      const bord = x + col;
+      if (item.detail) texte(ctx, item.detail, bord - 8 - Atlas.largeurTexte(item.detail, 1), yy, actif ? '#e8b33c' : '#6a6678', 1);
+      if (actif) poserCible({ x: x + 4, y: yy - 4, l: col - 8, h: 14, item: i });
+    });
+  }
+
   function dessinerMenu(ctx) {
     const m = B.menu;
     if (!m) return;
+    cibles = []; ciblesDe = m;
+    if (m.classeur) { dessinerClasseur(ctx, m); return; }
     // `largeur`, `hauteur` et `colonne` : un menu qui montre autre chose qu'une
     // liste (l'ecran MANETTE et son dessin) prend la place qu'il lui faut.
     const l = m.largeur || 300;
@@ -337,16 +454,7 @@ const Hud = (function () {
     // `sansListe` : un ecran qui dessine tout lui-meme (COMMANDES) garde la
     // mecanique d'un menu — figer la ville, ACTION choisit, ECHAP ferme — sans
     // la liste.
-    (m.sansListe ? [] : m.items.slice(haut, haut + f)).forEach(function (item, k) {
-      const i = haut + k;
-      const yy = y + 28 + k * 14;
-      const choisi = i === m.curseur;
-      const actif = item.actif !== false;
-      if (choisi) { ctx.fillStyle = 'rgba(232,179,60,0.18)'; ctx.fillRect(x + 4, yy - 3, (m.colonne || l) - 8, 12); }
-      texte(ctx, (choisi ? '> ' : '  ') + item.libelle, x + 8, yy, actif ? (choisi ? '#efe6d0' : '#cdc6e6') : '#6a6678', 1);
-      const bord = x + (m.colonne || l);
-      if (item.detail) texte(ctx, item.detail, bord - 8 - Atlas.largeurTexte(item.detail, 1), yy, actif ? '#e8b33c' : '#6a6678', 1);
-    });
+    if (!m.sansListe) dessinerLignesDuMenu(ctx, m, x, y + 28, l, f, haut);
     // Les fleches de defilement : on doit voir qu'il y a autre chose au-dessus
     // et en dessous, sinon une page longue a l'air d'etre toute la page.
     // ⚠️ Dessinees, pas ecrites : la police pixel n'a que des lettres, des
@@ -356,6 +464,144 @@ const Hud = (function () {
     if (m.aide) texte(ctx, m.aide, x + 8, y + h - 12, '#8a8698', 1);
     if (m.dessiner) m.dessiner(ctx, x, y, l, h);
     B.stats.rects += 4;
+  }
+
+  // --- Le classeur : la PAUSE en onglets ----------------------------------------------
+  //: Demande de Martin (22 sept. 2026) : « remanier tous les menus pour que ce
+  //: soit plus convivial et plus facile de s'y retrouver — des onglets
+  //: cliquables, ou deplacables avec R et L ». La PAUSE etait un arbre : dix
+  //: lignes, dont six ouvraient un sous-menu, qui en ouvraient d'autres (les
+  //: triches, puis PLUS…, puis le saut) — et chaque sous-menu avait sa taille, sa
+  //: place, et un RETOUR a trouver. Le classeur les range cote a cote :
+  //:
+  //: - un ONGLET par page (`ONGLETS`), qu'on tourne aux EPAULES (`Entree.neufEpaule`),
+  //:   a la croix, aux fleches ← →, ou en le touchant ;
+  //: - la boite a le HAUT FIXE, et la rangee d'onglets est centree sur l'ECRAN :
+  //:   COMMANDES est plus large que les autres pages, rien ne glisse quand on y passe ;
+  //: - une page ouverte depuis un onglet (le journal, la manette, un saut) est une
+  //:   SOUS-PAGE : l'onglet reste allume, son titre s'ecrit dessous, B recule ;
+  //: - depuis un onglet, B (FRAPPE, ECHAP) reprend la partie : il n'y a plus de
+  //:   RETOUR a chercher au bout de la liste ;
+  //: - le pied montre les VRAIS boutons de l'appareil qu'on tient.
+  //:
+  //: ⚠️ Au telephone en paysage, le pouce et les quatre boutons couvrent les
+  //: coins du bas (`styles.css`) et PAUSE le coin du haut a droite : la boite des
+  //: listes garde les 320 px du milieu, comme le carnet avant elle.
+  const HAUT_CLASSEUR = 12, LARGEUR_CLASSEUR = 320, ONGLET_H = 14;
+  //: Du haut de la boite a sa premiere ligne ; et le pied, ou vivent les boutons.
+  const LISTE_CLASSEUR = 34, PIED_CLASSEUR = 16;
+  //: Un dessin fait pour un menu ordinaire (sa premiere ligne a `y + 28`, l'ecran
+  //: MANETTE, la fiche d'un personnage) se decale d'autant dans le classeur.
+  const DECALAGE_CLASSEUR = LISTE_CLASSEUR - 28;
+
+  /** La hauteur de la boite : ce qu'il faut a la page, jamais plus que l'ecran. */
+  function hauteurClasseur(m) {
+    const max = VH - HAUT_CLASSEUR - 4;
+    // Un ecran qui dessine tout lui-meme (COMMANDES) compte deja son pied.
+    if (m.hauteur) return Math.min(max, m.hauteur + DECALAGE_CLASSEUR + (m.sansListe ? 0 : PIED_CLASSEUR));
+    return Math.min(max, LISTE_CLASSEUR + m.items.length * 14 + (m.aide ? 14 : 0) + PIED_CLASSEUR);
+  }
+
+  /** Une touche du clavier, dessinee comme sur l'ecran COMMANDES. */
+  function glypheDeTouche(code) {
+    return { s: 'touche', code: code, allume: function () { return Entree.toucheEnfoncee(code); } };
+  }
+
+  /** Les deux boutons qui tournent l'onglet, de part et d'autre de la rangee :
+      les epaules de SA manette (LB/RB, L1/R1, L/R), les fleches du clavier ;
+      rien au doigt — l'onglet se touche. */
+  function glyphesDOnglets(m) {
+    const appareil = Entree.appareil;
+    if (appareil === 'clavier') return [glypheDeTouche('ArrowLeft'), glypheDeTouche('ArrowRight')];
+    if (appareil !== 'manette' || m.epaulesInertes) return null;
+    const prof = Entree.profilManette(), fam = familleCourante(), etat = Entree.manetteInfo();
+    const g = (prof.boutons.arme || [])[1], d = (prof.boutons.attaque || [])[1];
+    if (g === undefined || d === undefined || !fam) return null;
+    return [glypheDePiece('epaule_g', fam, g, etat), glypheDePiece('epaule_d', fam, d, etat)];
+  }
+
+  /** Le pied : ce que font les boutons ICI, dessines pour l'appareil qu'on tient.
+      Une page peut y ajouter les siens (`pied`, l'autre page de COMMANDES). */
+  function piedDuClasseur(m) {
+    const appareil = Entree.appareil, lignes = m.pied ? m.pied() : [];
+    if (appareil === 'tactile') {
+      lignes.push({ glyphes: [], texte: m.sansListe ? 'TOUCHE UN ONGLET' : 'TOUCHE UN ONGLET, OU UNE LIGNE' });
+      return lignes;
+    }
+    // Un ecran sans liste (COMMANDES) dit lui-meme ce que font ses boutons.
+    if (m.sansListe) return lignes;
+    const choisir = glypheDAction('action');
+    if (choisir && !rienQueDeLaLecture(m)) lignes.push({ glyphes: [choisir], texte: 'CHOISIR' });
+    // ⚠️ Sur une page ou l'on essaie sa manette, B s'allume sans rien fermer :
+    // on ne promet pas un bouton qui ne fait rien.
+    const reculer = appareil === 'clavier' ? glypheDeTouche('Escape')
+      : (m.manetteInerte ? null : glypheDAction('annuler'));
+    if (reculer) lignes.push({ glyphes: [reculer], texte: m.classeur.racine ? 'REPRENDRE' : 'RETOUR' });
+    return lignes;
+  }
+
+  function dessinerClasseur(ctx, m) {
+    const l = m.largeur || LARGEUR_CLASSEUR, h = hauteurClasseur(m);
+    const x = Math.round((VW - l) / 2), y = HAUT_CLASSEUR, corps = y + ONGLET_H;
+    ctx.fillStyle = 'rgba(11,10,18,0.92)'; ctx.fillRect(x, corps, l, h - ONGLET_H);
+    ctx.fillStyle = '#e8b33c'; ctx.fillRect(x, y + h - 1, l, 1);
+    // Les onglets, centres sur l'ECRAN.
+    const liste = ongletsVisibles();
+    const largeurs = liste.map(function (o) { return Atlas.largeurTexte(o.titre, 1) + 10; });
+    const total = largeurs.reduce(function (a, b) { return a + b; }, 0) + 2 * (liste.length - 1);
+    const debut = Math.round((VW - total) / 2);
+    let tx = debut, lu = null;
+    liste.forEach(function (o, k) {
+      const w = largeurs[k], la = o.slug === m.classeur.onglet;
+      if (la) {
+        lu = { x: tx, l: w };
+        ctx.fillStyle = 'rgba(11,10,18,0.92)'; ctx.fillRect(tx, y, w, ONGLET_H + 1);
+        ctx.fillStyle = '#e8b33c';
+        ctx.fillRect(tx, y, w, 1); ctx.fillRect(tx, y, 1, ONGLET_H + 1); ctx.fillRect(tx + w - 1, y, 1, ONGLET_H + 1);
+      } else {
+        ctx.fillStyle = 'rgba(11,10,18,0.78)'; ctx.fillRect(tx, y + 3, w, ONGLET_H - 3);
+      }
+      texte(ctx, o.titre, tx + 5, y + (la ? 5 : 7), la ? '#e8b33c' : '#8a8698', 1);
+      poserCible({ x: tx, y: y, l: w, h: ONGLET_H + 1, onglet: o.slug });
+      tx += w + 2;
+    });
+    B.stats.rects += 6 + liste.length;
+    // La ligne d'or du haut de la boite s'ouvre sous l'onglet qu'on lit.
+    ctx.fillStyle = '#e8b33c';
+    if (lu) {
+      ctx.fillRect(x, corps, Math.max(0, lu.x - x), 1);
+      ctx.fillRect(lu.x + lu.l, corps, Math.max(0, x + l - lu.x - lu.l), 1);
+    } else ctx.fillRect(x, corps, l, 1);
+    const bouts = glyphesDOnglets(m);
+    if (bouts) {
+      dessinerGlyphe(ctx, bouts[0], debut - 5 - largeurGlyphe(bouts[0]), y + 3);
+      dessinerGlyphe(ctx, bouts[1], debut + total + 5, y + 3);
+    }
+    // Sous la rangee : le titre d'une SOUS-PAGE (l'onglet dit deja celui de la
+    // page), et a droite ce que la page dit d'elle-meme (le jour, l'heure).
+    const yT = corps + 6;
+    if (!m.classeur.racine && m.titre) texte(ctx, m.titre, x + 8, yT, '#e8b33c', 1);
+    if (m.sur) texte(ctx, m.sur, x + l - 8 - Atlas.largeurTexte(m.sur, 1), yT, '#8a8698', 1);
+    const f = fenetreMenu(m), haut = hautDuMenu(m), y0 = y + LISTE_CLASSEUR;
+    if (!m.sansListe) {
+      dessinerLignesDuMenu(ctx, m, x, y0, l, f, haut);
+      if (haut > 0) fleche(ctx, x + l - 12, y0 + 1, -1);
+      if (haut + f < m.items.length) fleche(ctx, x + l - 12, y0 + 2 + (f - 1) * 14, 1);
+    }
+    if (m.aide) texte(ctx, m.aide, x + 8, y + h - PIED_CLASSEUR - 12, '#8a8698', 1);
+    if (m.dessiner) m.dessiner(ctx, x, y + DECALAGE_CLASSEUR, l, h - DECALAGE_CLASSEUR);
+    // Le pied, centre.
+    const pied = piedDuClasseur(m);
+    const largeur = pied.reduce(function (s, li) { return s + largeurLigne(li); }, 0) + 14 * Math.max(0, pied.length - 1);
+    let px = x + Math.round((l - largeur) / 2);
+    const py = y + h - 13;
+    ctx.fillStyle = '#2a2440'; ctx.fillRect(x + 6, py - 4, l - 12, 1);
+    B.stats.rects++;
+    for (const li of pied) {
+      li.allume = li.glyphes.some(function (g) { return g.allume && g.allume(); });
+      dessinerLigne(ctx, li, px, py, 'pied');
+      px += largeurLigne(li) + 14;
+    }
   }
 
   // --- Pause : reprendre, bilan, options, quitter ------------------------------------
@@ -381,7 +627,7 @@ const Hud = (function () {
     HorsLigne.demanderEtat();
     const sonsHorsLigne = { libelle: 'LES SONS HORS LIGNE', detail: HorsLigne.detail(), actif: HorsLigne.disponible,
       faire: function (item) { HorsLigne.toutTelecharger(); item.detail = HorsLigne.detail(); return false; } };
-    return { titre: 'OPTIONS', curseur: 1,
+    return enOnglet('options', { titre: 'OPTIONS', curseur: 1,
       maj: function () {
         etatSon.detail = ETATS[Son.etatSon()] || '?';
         sonsHorsLigne.detail = HorsLigne.detail();
@@ -412,8 +658,7 @@ const Hud = (function () {
       // deuxieme. `Entree.debutImage`/`axeJoueur2` lisent cette meme case.
       bascule('coopP1Manette', 'JOUEUR 1 À LA MANETTE (COOP)'),
       { libelle: 'MANETTE', faire: function () { ouvrirMenu(menuManette()); return false; } },
-      { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } },
-    ], aide: 'ACTION : CHANGER · FRAPPE : FERMER' };
+    ] });
   }
 
   // --- La manette : une disposition a choisir, un dessin qui la prouve ---------------
@@ -540,7 +785,10 @@ const Hud = (function () {
     });
     items.push({ libelle: 'TOUT RÉAPPRENDRE', faire: function () { toutReapprendre(0); return false; } });
     items.push({ libelle: 'RETOUR', faire: function () { suite = null; ouvrirMenu(menuManette()); return false; } });
-    const menu = { titre: 'RÉAPPRENDRE', items: items, curseur: 0, manetteInerte: true };
+    // ⚠️ `epaulesInertes` : on y apprend AUSSI les epaules — elles ne tournent
+    // pas l'onglet sous le pouce de celui qui les essaie.
+    const menu = { titre: 'RÉAPPRENDRE', items: items, curseur: 0, manetteInerte: true, epaulesInertes: true,
+                   retour: function () { suite = null; Entree.annulerApprentissage(); ouvrirMenu(menuManette()); } };
     let repos = null;                 // les axes au repos, pour voir lesquels bougent
     menu.maj = function (m) {
       const etat = Entree.manetteInfo(), profil = Entree.profilManette();
@@ -624,8 +872,8 @@ const Hud = (function () {
     // voir le bouton s'allumer ne change alors rien.
     const actuel = B.options.manetteProfil || bloc.defaut;
     const depart = Math.max(0, items.findIndex(function (i) { return i.profil && i.profil.slug === actuel; }));
-    const menu = { titre: 'MANETTE', items: items, curseur: depart, manetteInerte: true,
-                   largeur: 420, hauteur: 162, colonne: 212 };
+    const menu = { titre: 'MANETTE', items: items, curseur: depart, manetteInerte: true, epaulesInertes: true,
+                   largeur: 420, hauteur: 162, colonne: 212, retour: function () { ouvrirMenu(menuOptions()); } };
     menu.maj = function (m) {
       const etat = Entree.manetteInfo();
       m.sur = etat.branchee ? (etat.mapping === 'standard' ? 'RECONNUE' : 'NON RECONNUE')
@@ -924,13 +1172,14 @@ const Hud = (function () {
     return l + 1 + Atlas.largeurTexte(li.texte, 1);
   }
 
-  function dessinerLigne(ctx, li, x, y) {
+  function dessinerLigne(ctx, li, x, y, nom) {
     let cx = x;
     for (const g of li.glyphes) cx += dessinerGlyphe(ctx, g, cx, y) + 2;
     texte(ctx, li.texte, cx + 1, y + 2, li.allume ? '#e8b33c' : '#efe6d0', 1);
     // Chaque ligne est une ancre : le juge tactile verifie qu'aucune ne finit
     // sous un pouce (le telephone en paysage, ou les boutons sont grands).
-    noter('commandes', x, y, largeurLigne(li), 9);
+    // Le pied du classeur a les siennes (`pied`).
+    noter(nom || 'commandes', x, y, largeurLigne(li), 9);
   }
 
   /** Des lignes rangees d'un cote, chacune a la hauteur de ce qu'elle designe
@@ -1124,16 +1373,19 @@ const Hud = (function () {
     for (const li of lignes) dessinerLigne(ctx, li, li.x, li.y);
   }
 
-  /** Les onglets, en haut a droite : la page qu'on lit en or. */
-  function dessinerOnglets(ctx, pages, courante, x, y, l) {
+  /** Les onglets, en haut a droite : la page qu'on lit en or. `aGauche` : dans
+      le classeur, a gauche — en haut a droite, au telephone, c'est le bouton
+      PAUSE qui les couvrait. Chacun se touche (`page`). */
+  function dessinerOnglets(ctx, pages, courante, x, y, l, aGauche) {
     const noms = pages.map(function (p) { return p.titre; });
     const total = noms.reduce(function (s, n) { return s + Atlas.largeurTexte(n, 1) + 12; }, 0);
-    let cx = x + l - 8 - total;
+    let cx = aGauche ? x + 2 : x + l - 8 - total;
     noms.forEach(function (n, k) {
       const w = Atlas.largeurTexte(n, 1);
       const la = k === courante;
       texte(ctx, n, cx + 6, y + 10, la ? '#e8b33c' : '#6a6678', 1);
       if (la) { ctx.fillStyle = '#e8b33c'; ctx.fillRect(cx + 6, y + 17, w, 1); B.stats.rects++; }
+      poserCible({ x: cx, y: y + 5, l: w + 12, h: 14, page: k });
       cx += w + 12;
     });
   }
@@ -1161,16 +1413,19 @@ const Hud = (function () {
     const page = pages[m.page];
     if (!page) return;
     const appareil = Entree.appareil;
-    dessinerOnglets(ctx, pages, m.page, x, y, l);
+    // Dans le classeur, la rangee d'onglets tient le haut : les deux pages se
+    // lisent dessous, a droite, sur la ligne du titre — et le pied est celui du
+    // classeur (`menu.pied`).
+    dessinerOnglets(ctx, pages, m.page, x, m.classeur ? y + 4 : y, l, !!m.classeur);
     const lignes = lignesDAide(page, appareil);
     if (appareil === 'manette') dessinerCommandesManette(ctx, lignes, x, y, l);
     else if (appareil === 'clavier') dessinerCommandesClavier(ctx, lignes, x, y, l);
     else dessinerCommandesTactile(ctx, lignes, x, y);
-    dessinerPiedDesCommandes(ctx, m, appareil, x, y, l, h);
+    if (!m.classeur) dessinerPiedDesCommandes(ctx, m, appareil, x, y, l, h);
   }
 
-  /** L'ecran COMMANDES. `depuisPause` : il revient a la pause ; sinon (le debut
-      d'une partie) il rend la ville.
+  /** L'ecran COMMANDES. `depuisPause` : c'est l'onglet COMMANDES du classeur ;
+      sinon (le debut d'une partie) un ecran seul, qui rend la ville.
 
       ⚠️ C'est un MENU : la ville est figee pendant qu'on lit — personne ne se
       fait renverser en apprenant ou est le frein. Et comme l'ecran MANETTE, la
@@ -1183,17 +1438,31 @@ const Hud = (function () {
     const menu = {
       titre: 'COMMANDES', sansListe: true, manetteInerte: true, largeur: 476, hauteur: 210, curseur: 0,
       page: j && j.dansVehicule && !j.passager ? Math.max(0, pages.findIndex(function (p) { return p.slug === 'volant'; })) : 0,
-      items: [{ libelle: depuisPause ? 'RETOUR' : 'C\'EST PARTI', faire: function () {
-        if (depuisPause) { ouvrirMenu(menuPause()); return false; }
-        return true;
-      } }],
+      // Fermer le dernier menu d'une pause, c'est reprendre (`Jeu.maj`).
+      items: [{ libelle: depuisPause ? 'REPRENDRE' : 'C\'EST PARTI', faire: function () { return true; } }],
     };
-    if (depuisPause) menu.retour = function () { ouvrirMenu(menuPause()); };
+    if (depuisPause) {
+      enOnglet('commandes', menu);
+      // Le pied du classeur, a la mode de celui de l'ecran seul : le bouton qui
+      // tourne la page, celui qui rend la ville.
+      menu.pied = function () {
+        const appareil = Entree.appareil;
+        const tourner = appareil === 'manette' ? [icone('croix', croixTenue)]
+          : appareil === 'clavier' ? [glypheDeTouche('ArrowUp'), glypheDeTouche('ArrowDown')]
+          : [icone('pouce', poucePose, 'haut')];
+        const fermer = glypheDAction('action')
+          || { s: 'doigt', texte: Entree.etiquettesTactiles('menu').action, allume: function () { return Entree.basTactile('action'); } };
+        return [{ glyphes: tourner, texte: 'L\'AUTRE PAGE' }, { glyphes: [fermer], texte: 'REPRENDRE' }];
+      };
+    }
     menu.maj = function (m) {
       // Tourner la page : la croix, les fleches, le pouce.
       // ⚠️ PAS LE STICK : on le pousse pour voir MARCHER s'allumer, et la page
       // tournait sous le pouce (vu au banc). Le pied de l'ecran dit la croix.
-      const sens = Entree.neuf('gauche') ? -1 : Entree.neuf('droite') ? 1 : 0;
+      // ⚠️ Dans le classeur, gauche et droite tournent l'ONGLET : la page, elle,
+      // se tourne en haut et en bas (il n'y a pas de liste ou promener un curseur).
+      const sens = depuisPause ? (Entree.neuf('haut') ? -1 : Entree.neuf('bas') ? 1 : 0)
+        : (Entree.neuf('gauche') ? -1 : Entree.neuf('droite') ? 1 : 0);
       if (sens && pages.length > 1) { m.page = (m.page + sens + pages.length) % pages.length; Son.SFX.menu(); }
       // La boite a la hauteur de ce qu'elle montre : le dessin de la manette
       // (et une ligne de plus pour un bouton que rien ne situe), deux colonnes
@@ -1247,8 +1516,7 @@ const Hud = (function () {
       ['MORTS', String(s.tues || 0)],
       ['HOSPITALISATIONS', String(s.hospitalisations || 0)],
     ];
-    return { titre: 'BILAN', items: lignes.map(function (l) { return { libelle: l[0], detail: l[1], actif: false }; })
-      .concat([{ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } }]) };
+    return enOnglet('bilan', { titre: 'BILAN', items: lignes.map(function (l) { return { libelle: l[0], detail: l[1], actif: false }; }) });
   }
 
   // --- Les parties : trois emplacements, au titre ------------------------------------
@@ -1446,7 +1714,7 @@ const Hud = (function () {
   function menuCarnet() {
     const p = B.partie;
     const connus = Object.keys(p.connus || {}).length;
-    return { titre: 'LE CARNET', sur: 'JOUR ' + p.jour, largeur: 320, items: [
+    return enOnglet('carnet', { titre: 'LE CARNET', sur: 'JOUR ' + p.jour, largeur: 320, items: [
       { libelle: 'EN COURS', detail: Histoire.courante() ? Histoire.courante().titre.toUpperCase() : 'RIEN',
         faire: function () { ouvrirMenu(menuCarnetEnCours()); return false; } },
       { libelle: 'JOURNAL', detail: (p.carnet || []).length + ' ENTRÉES',
@@ -1469,8 +1737,7 @@ const Hud = (function () {
       // rien se lit comme un bogue.
       !B.interieur ? { libelle: "REVOIR L'OUVERTURE", faire: function () {
           fermerMenu(); Jeu.reprendre(); Histoire.ouverture(true); return true; } } : null,
-      { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } },
-    ].filter(Boolean) };
+    ].filter(Boolean) });
   }
 
   //: Une ligne qu'on lit, qu'on ne choisit pas.
@@ -1521,7 +1788,6 @@ const Hud = (function () {
     if (!items.length) items.push(ligne('RIEN ENCORE'));
     items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet()); return false; } });
     return { titre: 'JOURNAL', largeur: 320, hauteur: VH - 30, curseur: 0, items: items,
-             aide: 'HAUT/BAS : LIRE · FRAPPE : RETOUR',
              retour: function () { ouvrirMenu(menuCarnet()); } };
   }
 
@@ -1537,7 +1803,6 @@ const Hud = (function () {
     if (!items.length) items.push(ligne('TU N’AS ENCORE PARLÉ À PERSONNE'));
     items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet()); return false; } });
     return { titre: 'RÉPERTOIRE', largeur: 320, hauteur: VH - 30, items: items,
-             aide: 'ACTION : LA FICHE · FRAPPE : RETOUR',
              retour: function () { ouvrirMenu(menuCarnet()); } };
   }
 
@@ -1590,36 +1855,81 @@ const Hud = (function () {
              } };
   }
 
+  /** Le premier onglet du classeur : ce qu'on fait de la partie. Le carnet, le
+      bilan, les commandes, les options et les triches sont les onglets d'a cote
+      (`ONGLETS`) — ils etaient des lignes de cette liste. */
   function menuPause() {
-    const items = [
+    return enOnglet('pause', { titre: 'PAUSE', sur: 'JOUR ' + B.partie.jour + ' ' + Monde.heureTexte(), items: [
       { libelle: 'REPRENDRE', faire: function () { Jeu.reprendre(); return true; } },
       { libelle: 'CARTE DE LA VILLE', faire: function () { Jeu.ouvrirCarte(); return true; } },
       { libelle: 'MODE PHOTO', faire: function () { Jeu.ouvrirPhoto(); return true; } },
-      { libelle: 'LE CARNET', faire: function () { ouvrirMenu(menuCarnet()); return false; } },
-      { libelle: 'BILAN DE LA SESSION', faire: function () { ouvrirMenu(menuBilan()); return false; } },
-      { libelle: 'COMMANDES', faire: function () { ouvrirMenu(menuCommandes(true)); return false; } },
-      { libelle: 'OPTIONS', faire: function () { ouvrirMenu(menuOptions()); return false; } },
-    ];
-    // ⚠️ La suite secrete (`Jeu.ouvrirMenuDebug`) a active les triches de cette
-    // partie : la ligne existe, et le menu DEBUG s'ouvre d'ici sans la retaper.
-    // Une partie qui ne l'a jamais tapee ne montre rien.
-    if (triche('menu')) items.push({ libelle: 'TRICHES', faire: function () { ouvrirMenu(menuDebug()); return false; } });
-    items.push(
       { libelle: 'SAUVEGARDER', faire: function () { Missions.sauvegarderPartie(); message('PARTIE SAUVEGARDÉE'); return false; } },
-      { libelle: 'QUITTER VERS LE TITRE', faire: function () { Jeu.retourTitre(); return true; } });
-    return { titre: 'PAUSE', sur: 'JOUR ' + B.partie.jour + ' ' + Monde.heureTexte(), items: items };
+      { libelle: 'QUITTER VERS LE TITRE', faire: function () { Jeu.retourTitre(); return true; } },
+    ] });
+  }
+
+  //: Les onglets du classeur, dans l'ordre ou on les tourne. ⚠️ TRICHES n'existe
+  //: que dans une partie ou la suite secrete a ete tapee (`Jeu.ouvrirMenuDebug`) :
+  //: une partie qui ne l'a jamais tapee n'en montre rien, pas meme un onglet gris.
+  const ONGLETS = [
+    { slug: 'pause', titre: 'PAUSE', menu: function () { return menuPause(); } },
+    { slug: 'carnet', titre: 'CARNET', menu: function () { return menuCarnet(); } },
+    { slug: 'bilan', titre: 'BILAN', menu: function () { return menuBilan(); } },
+    { slug: 'commandes', titre: 'COMMANDES', menu: function () { return menuCommandes(true); } },
+    { slug: 'options', titre: 'OPTIONS', menu: function () { return menuOptions(); } },
+    { slug: 'triches', titre: 'TRICHES', menu: function () { return menuDebug(); }, si: function () { return triche('menu'); } },
+  ];
+
+  function ongletsVisibles() { return ONGLETS.filter(function (o) { return !o.si || o.si(); }); }
+
+  /** Pose `menu` sous l'onglet `slug`, comme sa page de tete. */
+  function enOnglet(slug, menu) { menu.classeur = { onglet: slug, racine: true }; return menu; }
+
+  /** Ouvre la page de tete d'un onglet ; rend false s'il n'y en a pas (TRICHES
+      dans une partie qui ne les a pas). */
+  function ouvrirOnglet(slug) {
+    const o = ongletsVisibles().find(function (q) { return q.slug === slug; });
+    if (!o) return false;
+    ouvrirMenu(o.menu());
+    return true;
+  }
+
+  /** Le sens dans lequel on tourne l'onglet a cette image : -1, 1, ou 0.
+      ⚠️ Sur une page ou l'on ESSAIE sa manette (COMMANDES, l'ecran MANETTE), la
+      croix s'allume sans rien tourner ; les epaules, elles, tournent — sauf la
+      ou on les essaie aussi (`epaulesInertes`). Le stick ne tourne jamais rien :
+      on le pousse pour voir MARCHER s'allumer. */
+  function sensDOnglet(m) {
+    if (!m.epaulesInertes) {
+      if (Entree.neufEpaule('g')) return -1;
+      if (Entree.neufEpaule('d')) return 1;
+    }
+    const lire = m.manetteInerte ? Entree.neufSansManette : Entree.neuf;
+    const sens = lire('gauche') ? -1 : lire('droite') ? 1 : 0;
+    // ⚠️ LE POUCE SUR LA VITRE monte et descend dans la liste (HAUT et BAS) : une
+    // diagonale passe par GAUCHE ou DROITE sans qu'on veuille changer de page.
+    // Au doigt, seul un geste franchement de cote tourne l'onglet.
+    const a = Entree.axe;
+    if (sens && a.source === 'tactile' && Math.abs(a.x) <= Math.abs(a.y)) return 0;
+    return sens;
+  }
+
+  /** L'onglet d'a cote — on fait le tour, comme un classeur qu'on feuillette. */
+  function tournerOnglet(m, sens) {
+    const liste = ongletsVisibles();
+    const k = Math.max(0, liste.findIndex(function (o) { return o.slug === m.classeur.onglet; }));
+    ouvrirOnglet(liste[(k + sens + liste.length) % liste.length].slug);
   }
 
   // --- Debug : la triche du developpeur, jamais un bouton visible -------------------
-  //: Ce menu s'ouvre par la suite secrete de touches ecoutee dans `Jeu.demarrer`
-  //: (voir `Entree.surSecret`) — et, une fois la suite tapee dans une partie, par
-  //: la ligne TRICHES de sa PAUSE (`menuPause`). Aucun autre bouton n'y mene.
+  //: L'onglet TRICHES du classeur. La suite secrete de touches ecoutee dans
+  //: `Jeu.demarrer` (voir `Entree.surSecret`) l'ouvre — et l'allume pour de bon
+  //: dans cette partie : l'onglet reste dans sa PAUSE. Aucun autre bouton n'y mene.
   //: ⚠️ Ses BASCULES (invincible, vehicules, energie, munitions, police) se sauvent
   //: avec la partie (`B.partie.triches`) : on rouvre son emplacement, elles y sont
   //: encore. C'est la ligne OUI/NON qui dit ce qui est allume.
-  //: ⚠️ Ouvert depuis la PAUSE (`B.etat === 'pause'`), RETOUR revient a la pause,
-  //: comme les OPTIONS ; une ligne qui rend `true` ferme le menu et la pause
-  //: reprend toute seule (`Jeu.maj` : « fermer le dernier menu, c'est reprendre »).
+  //: ⚠️ Une ligne qui rend `true` ferme le classeur et la pause reprend toute
+  //: seule (`Jeu.maj` : « fermer le dernier menu, c'est reprendre »).
 
   /** Bascule une triche de `B.partie.triches`, la dit dans son item et SE SAUVE
       tout de suite : un rechargement avant la sauvegarde auto (dix secondes) ne
@@ -1734,8 +2044,103 @@ const Hud = (function () {
                faire: function () { return lancerLaMission(m); } };
     });
     items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuDebug()); return false; } });
-    return { titre: 'SAUT VERS UNE MISSION', largeur: 340, hauteur: VH - 30,
+    return { titre: 'SAUT VERS UNE MISSION', largeur: 320, hauteur: VH - 30,
              items: items, retour: function () { ouvrirMenu(menuDebug()); } };
+  }
+
+  /** Le point d'ou un defi se lance, dans la ville : son PANNEAU (`Histoire.creerPanneaux`),
+      ou le comptoir de son jeu de foire (`foire:<jeu>` : aucun panneau ne s'y
+      plante, c'est la baraque qui sert de panneau). `portee` : d'ou ACTION le lit
+      (`Histoire.panneauSousLaMain`, `Foire.jeuSousLaMain`). Null s'il n'y en a pas. */
+  function pointDuDefi(d) {
+    if (!d.ou) return null;
+    if (d.ou.indexOf('foire:') === 0) {
+      const q = (typeof Foire !== 'undefined' ? Foire.jeux() : []).find(function (k) { return k.slug === d.ou.slice(6); });
+      return q ? { x: q.x * TT + 8, y: q.y * TT + 15, portee: Foire.PORTEE_JEU - 4 } : null;
+    }
+    const e = B.entites.find(function (k) { return k.type === 'panneau' && k.defi === d.slug; });
+    return e ? { x: e.x, y: e.y, portee: 20 } : null;
+  }
+
+  /** Dans un decor solide (une baraque, une borne) : le joueur y serait pousse
+      dehors a l'image suivante (`Entites.bloquerParDecor`), hors de portee. */
+  function dansUnDecor(x, y) {
+    const r = 5;
+    return Entites.decorAutour(x, y, 24).some(function (d) {
+      if (!d.solide) return false;
+      const sol = typeof DECORS !== 'undefined' && DECORS[d.decor] && DECORS[d.decor].sol;
+      if (sol) return Math.abs(x - d.x) < sol[0] + r && Math.abs(y - d.y) < sol[1] + r;
+      return Math.hypot(x - d.x, y - d.y) < r + (d.r || 0);
+    });
+  }
+
+  /** La tuile a pied la plus proche de `c` d'ou on le LIT : a sa portee, pas
+      dessus, hors meuble, hors decor solide, sans personne dessus. Ou null. */
+  function placeDevant(c) {
+    const tx0 = Math.floor(c.x / TT), ty0 = Math.floor(c.y / TT);
+    let meilleure = null, dMin = Infinity;
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+      const tx = tx0 + dx, ty = ty0 + dy, x = tx * TT + 8, y = ty * TT + 8;
+      const d = Math.hypot(x - c.x, y - c.y);
+      if (d < 8 || d > c.portee || d >= dMin) continue;
+      if (!Monde.marchablePieton(tx, ty) || Monde.estMeuble(tx, ty) || dansUnDecor(x, y)) continue;
+      if (Entites.pietonsAutour(x, y, 10).length) continue;
+      meilleure = { x: x, y: y }; dMin = d;
+    }
+    return meilleure;
+  }
+
+  /** Va au depart d'un defi et OUVRE sa proposition (COMMENCER / PAS MAINTENANT),
+      comme si on venait de lire son panneau. Ferme le classeur — et la pause :
+      la proposition est un menu ordinaire, par-dessus la ville.
+      ⚠️ On sort du char et de la piece SANS fondu, comme le saut vers une
+      mission (`allerChezLeDonneur`) : le panneau se lit a pied, dehors. Un defi
+      deja en cours est abandonne sans rien noter : c'est une triche, pas un echec.
+      Rend `false` (le menu reste ouvert) quand on ne peut pas. */
+  function allerAuDefi(d) {
+    const j = B.joueur;
+    if (!j || B.cinema || B.scene) { message('UNE SCÈNE JOUE'); return false; }
+    Jeu.finirTransition();
+    if (j.dansVehicule) Vehicules.descendre(j, true);
+    const ext = Jeu.quitterLaPiece();
+    if (ext) { j.x = ext.x; j.y = ext.y; }
+    const c = pointDuDefi(d);
+    const place = c && placeDevant(c);
+    if (!place) { message('INTROUVABLE'); return false; }
+    if (B.defi) Histoire.abandonnerDefi();
+    j.x = place.x; j.y = place.y; j.vx = 0; j.vy = 0;
+    Entites.regarder(j, c.x - j.x, c.y - j.y);
+    Entites.indexer();
+    Monde.centrerCamera(j.x, j.y);
+    if (B.etat === 'pause') Jeu.reprendre();
+    fermerMenu();
+    Histoire.proposerDefi(d.slug);
+    return true;
+  }
+
+  /** SAUT VERS UN DÉFI : tous les defis de `B.defs.defis`, rangés par genre — au
+      volant, les tours (une course sur un circuit), la foire. C'est le CATALOGUE
+      qui fait la liste : un defi ajoute au jeu tombe ici sans qu'on y touche. */
+  function menuSautDefis() {
+    const p = B.partie;
+    const genres = [
+      ['AU VOLANT', function (d) { return !d.circuit && !d.a_pied; }],
+      ['LES TOURS', function (d) { return !!d.circuit; }],
+      ['À LA FOIRE', function (d) { return !!d.a_pied; }],
+    ];
+    const items = [];
+    for (const g of genres) {
+      const siens = (B.defs.defis || []).filter(g[1]);
+      if (!siens.length) continue;
+      items.push(entete(g[0]));
+      for (const d of siens) {
+        const etat = B.defi && B.defi.slug === d.slug ? 'EN COURS' : (p.defisFaits && p.defisFaits[d.slug] ? 'RÉUSSI' : '');
+        items.push({ libelle: d.titre.toUpperCase(), detail: etat, defi: d.slug, actif: !!d.ou,
+                     faire: function () { return allerAuDefi(d); } });
+      }
+    }
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuDebug()); return false; } });
+    return { titre: 'SAUT VERS UN DÉFI', largeur: 320, items: items, retour: function () { ouvrirMenu(menuDebug()); } };
   }
 
   /** JUKEBOX : toutes les musiques de `B.defs.audio.musiques`, jouables a la
@@ -1758,17 +2163,6 @@ const Hud = (function () {
     items.push({ libelle: 'RETOUR', faire: function () { B.jukebox = null; Son.Chef.arreter(); ouvrirMenu(menuDebug()); return false; } });
     return { titre: 'JUKEBOX', largeur: 340, hauteur: VH - 30, items: items,
              retour: function () { B.jukebox = null; Son.Chef.arreter(); ouvrirMenu(menuDebug()); } };
-  }
-
-  /** PLUS : une page de triches de débug qui débordent du menu principal (le
-      saut de mission, le jukebox). Ouverte depuis la derniere ligne du menu
-      DEBUG, pour ne pas l'encombrer. */
-  function menuDebugPlus() {
-    return { titre: 'PLUS DE TRICHE', sur: 'DEBUG', items: [
-      { libelle: 'SAUT VERS UNE MISSION', faire: function () { ouvrirMenu(menuSautMissions()); return false; } },
-      { libelle: 'JUKEBOX', faire: function () { ouvrirMenu(menuJukebox()); return false; } },
-      { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuDebug()); return false; } },
-    ], retour: function () { ouvrirMenu(menuDebug()); } };
   }
 
   /** Donne TOUTES les armes (chargees a fond) et TOUS les vetements, en lisant
@@ -1794,32 +2188,40 @@ const Hud = (function () {
     return false;
   }
 
+  /** L'onglet TRICHES, en sections : ce qu'on se donne, ou l'on va, la mission
+      en cours, le reste. ⚠️ Il n'y a plus de PLUS… ni de RETOUR : les sauts sont
+      des sous-pages de l'onglet, et B reprend la partie comme partout dans le
+      classeur. */
   function menuDebug() {
     const m = Histoire.courante();
-    return { titre: 'DEBUG', sur: 'TRICHE', items: [
+    function bascule(nom, libelle) {
+      return { libelle: libelle, detail: triche(nom) ? 'OUI' : 'NON', faire: function (item) { basculerTriche(nom, item); return false; } };
+    }
+    return enOnglet('triches', { titre: 'TRICHES', sur: 'DEBUG', items: [
+      entete('LE JOUEUR'),
       { libelle: 'ARGENT +1 000 $', faire: function () { Missions.encaisser(1000, 'DEBUG'); return false; } },
       { libelle: 'ARGENT +50 000 $', faire: function () { Missions.encaisser(50000, 'DEBUG'); return false; } },
       { libelle: 'TOUS LES ITEMS', faire: function () { tousLesItems(); return false; } },
       { libelle: 'SANTÉ COMPLÈTE', faire: function () { Missions.soigner(B.joueur, B.joueur.vieMax); return false; } },
-      { libelle: 'INVINCIBLE', detail: triche('invincible') ? 'OUI' : 'NON', faire: function (item) { basculerTriche('invincible', item); return false; } },
-      { libelle: 'VÉHICULES INVINCIBLES', detail: triche('vehicules') ? 'OUI' : 'NON', faire: function (item) { basculerTriche('vehicules', item); return false; } },
-      { libelle: 'ÉNERGIE INFINIE', detail: triche('endurance') ? 'OUI' : 'NON', faire: function (item) { basculerTriche('endurance', item); return false; } },
-      { libelle: 'MUNITIONS INFINIES', detail: triche('munitions') ? 'OUI' : 'NON', faire: function (item) { basculerTriche('munitions', item); return false; } },
-      { libelle: 'LA POLICE NE T\'ARRÊTE PAS', detail: triche('pasArrete') ? 'OUI' : 'NON', faire: function (item) { basculerTriche('pasArrete', item); return false; } },
+      bascule('invincible', 'INVINCIBLE'),
+      bascule('vehicules', 'VÉHICULES INVINCIBLES'),
+      bascule('endurance', 'ÉNERGIE INFINIE'),
+      bascule('munitions', 'MUNITIONS INFINIES'),
+      bascule('pasArrete', 'LA POLICE NE T\'ARRÊTE PAS'),
+      entete('ALLER'),
+      { libelle: 'TÉLÉPORTER À L\'OBJECTIF', actif: !!Histoire.cible(), faire: function () { teleporterVersObjectif(); return true; } },
+      { libelle: 'SAUT VERS UNE MISSION', faire: function () { ouvrirMenu(menuSautMissions()); return false; } },
+      { libelle: 'SAUT VERS UN DÉFI', faire: function () { ouvrirMenu(menuSautDefis()); return false; } },
+      entete('LA MISSION'),
+      { libelle: 'OBJECTIF SUIVANT', actif: !!m, faire: function () { Histoire.avancer(); return true; } },
+      { libelle: 'TERMINER LA MISSION', actif: !!m, faire: function () { Histoire.reussir(); return true; } },
+      entete('DIVERS'),
       // ⚠️ Coop locale (M14, essai) : PAS une triche de `B.partie.triches` — elle
       // n'est jamais sauvegardee (on la rallume a chaque essai) et bascule une
       // VRAIE entite dans le monde, pas juste un drapeau.
       { libelle: 'COOP LOCALE (ESSAI)', detail: B.coop ? 'OUI' : 'NON', faire: function (item) { Jeu.basculerCoop(); item.detail = B.coop ? 'OUI' : 'NON'; return false; } },
-      { libelle: 'TÉLÉPORTER À L\'OBJECTIF', actif: !!Histoire.cible(), faire: function () { teleporterVersObjectif(); return true; } },
-      { libelle: 'OBJECTIF SUIVANT', actif: !!m, faire: function () { Histoire.avancer(); return true; } },
-      { libelle: 'TERMINER LA MISSION', actif: !!m, faire: function () { Histoire.reussir(); return true; } },
-      { libelle: 'PLUS…', faire: function () { ouvrirMenu(menuDebugPlus()); return false; } },
-      { libelle: 'RETOUR', faire: function () {
-        if (B.etat === 'pause') { ouvrirMenu(menuPause()); return false; }
-        fermerMenu();
-        return true;
-      } },
-    ] };
+      { libelle: 'JUKEBOX', faire: function () { ouvrirMenu(menuJukebox()); return false; } },
+    ] });
   }
 
   /** L'invite du bas : ce que fera ACTION ici. */
@@ -2964,7 +3366,9 @@ const Hud = (function () {
     }
   }
 
-  return { init, voile, etat, progression, partDesScripts, finirChargement, message, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, menuCarnet, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
+  return { init, voile, etat, progression, partDesScripts, finirChargement, message, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, menuSautMissions, menuSautDefis, menuJukebox, pointDuDefi, menuCarnet,
+    ouvrirOnglet, toucherMenu, onglets: function () { return ongletsVisibles().map(function (o) { return o.slug; }); },
+    ciblesDuMenu: function () { return cibles.slice(); }, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     menuCommandes, ouvrirCommandes, majAideDuTitre, lignesDAide, glypheDAction,
     menuParties, menuEffacer, menuCopier, tempsDeJeu, quand,
     legendeDeLaCarte, legendeDuZonage, lieuxSurLaCarte, couleurDeLieu, cibleDuBoulot, PULSE_JOUEUR, BATTEMENT_CIBLE, CALQUE_ALPHA,

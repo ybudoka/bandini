@@ -536,13 +536,18 @@ const Jeu = (function () {
       En partie seulement, et pas par-dessus un autre menu, une scene ou la
       roue d'armes : ce sont eux qui gelent deja la simulation, pas ce menu.
 
-      ⚠️ La taper ACTIVE les triches de cette partie : la ligne TRICHES apparait
-      dans la PAUSE (`Hud.menuPause`), et se sauve avec la partie — on n'a plus
-      a retaper la suite, mais une partie qui ne l'a jamais tapee n'en montre rien. */
+      ⚠️ La taper ACTIVE les triches de cette partie : l'onglet TRICHES apparait
+      dans le classeur de la PAUSE (`Hud.ouvrirOnglet`), et se sauve avec la
+      partie — on n'a plus a retaper la suite, mais une partie qui ne l'a jamais
+      tapee n'en montre rien. Elle ouvre la PAUSE sur cet onglet ; tapee DANS la
+      pause, elle y tourne (le classeur n'est pas « un autre menu »). */
   function ouvrirMenuDebug() {
-    if (B.etat !== 'jeu' || B.menu || B.cinema || B.roue) return;
+    const dansLaPause = B.etat === 'pause' && B.menu && B.menu.classeur;
+    if (!(B.etat === 'jeu' && !B.menu) && !dansLaPause) return;
+    if (B.cinema || B.roue) return;
     if (!triche('menu')) { B.partie.triches.menu = true; Missions.sauvegarderPartie(); }
-    Hud.ouvrirMenu(Hud.menuDebug());
+    if (B.etat === 'jeu') pause();
+    Hud.ouvrirOnglet('triches');
   }
 
   /** La carte de la ville, plein ecran : la simulation attend. */

@@ -120,11 +120,10 @@ def test_les_options_montrent_l_etat_du_son(banc):
         o.pad([0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]); o.frame(2);   // PAUSE
         o.pad(null); o.frame(2);
         const pause = L.B.menu && L.B.menu.titre;
-        // OPTIONS est le 3e item du menu pause : on descend puis on valide.
-        const items = L.B.menu.items.map(function (i) { return i.libelle; });
-        const iOptions = items.indexOf('OPTIONS');
-        L.B.menu.curseur = iOptions;
-        o.pad([0, 0], [1]); o.frame(2); o.pad(null); o.frame(2);
+        // OPTIONS est un onglet du classeur de la pause : a la croix, un cran a
+        // gauche depuis PAUSE (on fait le tour).
+        const gauche = []; for (let k = 0; k <= 15; k++) gauche.push(k === 14 ? 1 : 0);
+        o.pad([0, 0], gauche); o.frame(2); o.pad(null); o.frame(2);
         const m = L.B.menu;
         const ligne = m.items.filter(function (i) { return i.libelle === 'SON'; })[0];
         return { pause: pause, titre: m.titre, curseur: m.curseur,

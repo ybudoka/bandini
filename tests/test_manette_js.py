@@ -419,7 +419,8 @@ def test_le_dessin_allume_le_bouton_qu_on_appuie(banc):
 
 def test_la_manette_ne_ferme_pas_l_ecran_sous_ses_doigts(banc):
     """On y appuie sur ses boutons pour les VOIR : si FRAPPE ou START fermaient
-    l'ecran, on ne pourrait pas les essayer. Le clavier, lui, ferme."""
+    l'ecran, on ne pourrait pas les essayer. Le clavier, lui, recule — vers
+    OPTIONS, l'onglet d'ou l'ecran s'ouvre (c'est une sous-page du classeur)."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.Hud.ouvrirMenu(L.Hud.menuManette());
@@ -431,11 +432,11 @@ def test_la_manette_ne_ferme_pas_l_ecran_sous_ses_doigts(banc):
             o.pad([0, 0], b(-1)); o.frame(2);
         }
         o.pad(null); o.frame(2);
-        o.tape('Space', 2);                          // FRAPPE au clavier : ca, ca ferme
-        return { etapes: etapes, apresClavier: !!L.B.menu };
+        o.tape('Space', 2);                          // FRAPPE au clavier : ca, ca recule
+        return { etapes: etapes, apresClavier: L.B.menu && L.B.menu.titre };
     }""")
     assert r["etapes"] == [True, True, True], "un bouton de manette a ferme l'ecran"
-    assert r["apresClavier"] is False, "le clavier doit pouvoir fermer"
+    assert r["apresClavier"] == "OPTIONS", "le clavier doit pouvoir reculer"
 
 
 def test_un_bouton_hors_disposition_se_dit_au_lieu_de_ne_rien_faire(banc):
