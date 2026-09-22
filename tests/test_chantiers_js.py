@@ -1308,11 +1308,15 @@ BENNE = TAS + """
     return L.Chantiers.liste.findIndex(function (c) { return c.def.conteneur; });
   }
   // La benne SEULE dans son coin : les machines voisines et l'équipe ne se mettent pas en travers.
+  // ⚠️ LAZY comme l'équipe : elle ne naît que dans `equiper()`, joueur dans la bulle et hors de
+  // l'écran — au sud de chez elle, comme `auSud` le fait pour l'équipe.
   function appliquerSeule(L, i, phase) {
-    const id = L.Chantiers.liste[i].def.id;
+    const id = L.Chantiers.liste[i].def.id, maison = L.Chantiers.liste[i].def.conteneur;
     L.Chantiers.appliquer(i, phase);
     for (const e of L.B.entites.slice()) if (e.machineDe === id) L.Entites.retirer(e);
     L.Entites.reindexerDecor();
+    poserLeJoueur(L, { x: maison[0] * 16 + 8, y: maison[1] * 16 + 8 + 300 });
+    L.Chantiers.equiper();
     return benneDe(L, id)[0];
   }
 """
@@ -1320,13 +1324,19 @@ BENNE = TAS + """
 
 def test_la_benne_est_la_pendant_les_travaux(banc):
     """Une seule, chez elle, solide, dans l'index du décor : des phases 1 à 3, jamais sur la maison
-    condamnée ni sur le neuf — et jamais en double quand on repose la même phase."""
+    condamnée ni sur le neuf — et jamais en double quand on repose la même phase.
+
+    ⚠️ LAZY comme l'équipe (`poserLaBenneSiBesoin`, appelée par `equiper`) : le joueur doit être
+    dans la bulle et hors de l'écran pour qu'elle naisse, sinon chaque chantier « ouvert » en
+    poserait une au démarrage, qu'on le visite ou non — voir sa note dans `chantiers.js`."""
     r = banc(_juge(BENNE + """
         L.Jeu.commencer();
         const i = chantierAvecBenne(L), ch = L.Chantiers.liste[i], id = ch.def.id, maison = ch.def.conteneur;
         const parPhase = {};
         for (const phase of [0, 1, 2, 3, 4, 2, 2]) {
             L.Chantiers.appliquer(i, phase);
+            poserLeJoueur(L, { x: maison[0] * 16 + 8, y: maison[1] * 16 + 8 + 300 });
+            L.Chantiers.equiper();
             const b = benneDe(L, id);
             parPhase[phase] = { n: b.length };
             if (b.length) {
@@ -1458,14 +1468,18 @@ def test_l_index_du_decor_suit_la_benne_d_une_cellule_a_l_autre(banc):
 
 
 def test_la_benne_rentre_chez_elle_avec_la_phase(banc):
+    """La phase change : la benne d'hier (poussée) s'en va, `equiper` en repose une chez elle — pas
+    à l'endroit qu'on l'avait poussée."""
     r = banc(_juge(BENNE + """
         L.Jeu.commencer();
-        const i = chantierAvecBenne(L), ch = L.Chantiers.liste[i], id = ch.def.id;
+        const i = chantierAvecBenne(L), ch = L.Chantiers.liste[i], id = ch.def.id, maison = ch.def.conteneur;
         const b = appliquerSeule(L, i, 2);
         const chez = { x: b.chez.x, y: b.chez.y };
         L.Entites.pousserDecor(b, 10, 0);
         const poussee = { x: b.x, y: b.y };
         L.Chantiers.appliquer(i, 3);
+        poserLeJoueur(L, { x: maison[0] * 16 + 8, y: maison[1] * 16 + 8 + 300 });
+        L.Chantiers.equiper();
         const apres = benneDe(L, id);
         return { chez: chez, poussee: poussee, n: apres.length, apres: apres[0] && { x: apres[0].x, y: apres[0].y },
                  ancienne: L.B.entites.indexOf(b) >= 0 };

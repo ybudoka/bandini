@@ -216,24 +216,52 @@ const Chantiers = (function () {
         dessine: true, v: 0, machineDe: ch.def.id, frappe: m.frappe || null, sens: m.sens || 1,
       });
     });
-    poserLaBenne(ch, phase);
+    retirerLaBenne(ch);
     Entites.reindexerDecor();
   }
 
-  /** La BENNE, tant qu'il y a des machines (phases 1 à 3) : posée chez elle, à la tuile que
-      Python a choisie. ⚠️ À chaque phase elle est retirée et REPOSÉE — c'est ce qui la remet
-      chez elle quand on l'a poussée, et ce qui l'ôte du chemin du neuf. Elle se pousse
-      (`Entites.pousserDecor`) mais ne se tient pas dans `machines` : la pelle ne travaille pas
-      avec elle, et la boucle du chantier n'a rien à lui demander. */
-  function poserLaBenne(ch, phase) {
+  /** À chaque phase, la BENNE d'hier s'en va — c'est ce qui la remet chez elle la prochaine fois
+      (on l'a peut-être poussée avec `Entites.pousserDecor`), et ce qui l'ôte du chemin du neuf.
+      `equiper` la repose, LAZILY : voir `poserLaBenneSiBesoin`. */
+  function retirerLaBenne(ch) {
     if (ch.conteneur) Entites.retirer(ch.conteneur);
     ch.conteneur = null;
+  }
+
+  /** La BENNE, tant qu'il y a des machines (phases 1 à 3) : posée chez elle, à la tuile que
+      Python a choisie. Elle se pousse (`Entites.pousserDecor`) mais ne se tient pas dans
+      `machines` : la pelle ne travaille pas avec elle, et la boucle du chantier n'a rien à lui
+      demander.
+
+      ⚠️ **LAZY, comme l'équipe et le signaleur — et gardée par la MÊME bulle qu'eux.** Elle
+      naissait avant EN MÊME TEMPS que les machines, dans `poserLesMachines`, donc au démarrage
+      pour tout chantier déjà « ouvert » — qu'on le visite ou non. Poser du décor consomme un
+      identifiant d'entité, pour toujours : trois chantiers jamais visités posaient donc trois
+      bennes de plus dès le boot, décalant l'identifiant de TOUT ce qui naît ensuite pour le
+      reste de la partie. `police.js` étale ses vérifications de vue sur `(B.t + a.id) % N`
+      (le budget d'un agent, pas du hasard) : un test qui fait naître ses agents juste après le
+      démarrage a vu l'un d'eux abandonner sa poursuite à l'image 1419 au lieu de ~400, uniquement
+      parce que ces bennes avaient décalé son identifiant de quelques crans. Comme l'équipe, elle
+      ne naît donc jamais sous les yeux, et une fois là elle reste : rien ne la fait partir tant
+      que la phase ne change pas. */
+  function poserLaBenneSiBesoin(ch, phase) {
+    // ⚠️ `phase` ici est l'OBJET de la phase (comme `equiper` le tient déjà), pas son indice.
     const maison = ch.def.conteneur;
-    if (!maison || !ch.def.phases[phase].machines.length) return;
-    const fiche = DECORS.conteneur, x = maison[0] * TT + 8, y = maison[1] * TT + 15;
+    if (!maison || !phase || !phase.machines.length) {
+      if (ch.conteneur) retirerLaBenne(ch);
+      return;
+    }
+    if (ch.conteneur) return;
+    const j = B.joueur;
+    if (!j) return;
+    const x = maison[0] * TT + 8, y = maison[1] * TT + 15;
+    if (dist2(x, y, j.x, j.y) > Entites.BULLE_OUBLI * Entites.BULLE_OUBLI) return;
+    if (Entites.visibleAEcran(x, y, 24)) return;
+    const fiche = DECORS.conteneur;
     ch.conteneur = Entites.creer('decor', x, y, {
       decor: 'conteneur', r: fiche.r, solide: true, dessine: true, v: 0, conteneurDe: ch.def.id, chez: { x: x, y: y },
     });
+    Entites.reindexerDecor();
   }
 
   /** Ce qui traîne par terre dans l'empreinte (une arme lâchée, un paquet)
@@ -398,6 +426,7 @@ const Chantiers = (function () {
         ch.signaleur = null;
       }
       tenirLaPalette(ch);
+      poserLaBenneSiBesoin(ch, phase);
     }
   }
 

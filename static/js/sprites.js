@@ -1584,12 +1584,13 @@ const MACHINE_PELLETEUSE = {
     // Les phares de travail au coin avant du toit de la cabine (côté vu), les feux au cul du contrepoids.
     [
       // Hauts sur le toit de la cabine et sur le contrepoids : on les voit de presque partout.
+      // ⚠️ Un seul bloc par côté du contrepoids (pas deux empilés) : la place gardée par char
+      // (`LAMPES_PAR_CHAR_MAX`) ne tient que sept lampes, une pelle qui en allumerait neuf
+      // roulerait éteinte une fois l'écran plein d'autres chars.
       ['bloc', [4.6, 6.6], [1.2, 2.8], [21.6, 22.8], 'l', 'l', 'l', 0.4],
       ['bloc', [4.6, 6.6], [5.4, 6.6], [21.6, 22.8], 'l', 'l', 'l', 0.4],
-      ['bloc', [-19.4, -17.6], [3.2, 5.6], [8.6, 10.4], 't', 't', 't', 0.3],
-      ['bloc', [-19.4, -17.6], [-5.6, -3.2], [8.6, 10.4], 't', 't', 't', 0.3],
-      ['bloc', [-19.0, -17.2], [3.2, 5.6], [12.4, 13.6], 't', 't', 't', 0.3],
-      ['bloc', [-19.0, -17.2], [-5.6, -3.2], [12.4, 13.6], 't', 't', 't', 0.3],
+      ['bloc', [-19.4, -17.2], [3.2, 5.6], [8.6, 13.6], 't', 't', 't', 0.3],
+      ['bloc', [-19.4, -17.2], [-5.6, -3.2], [8.6, 13.6], 't', 't', 't', 0.3],
       // Et deux phares bas, aux coins de la tourelle : vus de l'avant en biais, ils ne se cachent pas
       // derrière la cabine.
       ['bloc', [4.6, 6.0], [4.0, 5.8], [8.2, 9.6], 'l', 'l', 'l', 0.3],
