@@ -215,6 +215,8 @@ def test_e02_la_biere_passe_par_le_phare_seme_la_patrouille_et_finit_chez_ti_pau
         aCote(L, ti);
         const parle = L.Histoire.parler('tipaul');
         passer(L, o);
+        // La réplique PENDANT du premier objectif se dit, l'intro finie (« Douce, douce! »).
+        const douce = ecouter(L, o);
         const v = B.mission.vehicule, cantine = L.Histoire.lieu('cantine');
         const camion = { slug: v.slug, d: Math.round(Math.hypot(v.x - cantine.x, v.y - cantine.y)) };
         const avant = longueur(L, v, L.Histoire.lieuDeLivraison('depanneur'), 4);
@@ -226,10 +228,11 @@ def test_e02_la_biere_passe_par_le_phare_seme_la_patrouille_et_finit_chez_ti_pau
         const s = semer(L, o);
         const t2 = rouler(L, o, L.Histoire.lieuDeLivraison('depanneur'), 3);
         finir(L, o);
-        return { parle: parle, camion: camion, monte: monte, phare: phare, t1: t1, apresPhare: apresPhare, s: s, t2: t2,
+        return { parle: parle, douce: douce, camion: camion, monte: monte, phare: phare, t1: t1, apresPhare: apresPhare, s: s, t2: t2,
                  avant: avant, fait: !!B.partie.missionsFaites.e02, argent: argent };
     """)
     assert r["parle"] and r["camion"]["slug"] == "camion", r
+    assert r["douce"] and r["douce"]["texte"].startswith("Douce, douce"), r["douce"]
     assert r["monte"] == 1 and r["phare"]["qui"] == "tipaul" and "La Pointe" in r["phare"]["texte"], r
     assert r["t1"]["arrive"], f"le camion n'arrive pas au phare : {r['t1']}"
     assert r["apresPhare"]["etape"] == 2 and r["apresPhare"]["etoiles"] >= 1, "au phare, une patrouille : %s" % r["apresPhare"]
