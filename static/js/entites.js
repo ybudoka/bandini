@@ -299,6 +299,14 @@ const Entites = (function () {
       intouchable: !!p.intouchable,
       etat: 'flane', dir: Math.floor(B.rng() * 4), butT: 0, cri: 0,
     });
+    // L'HABIT : une tenue tiree dans la garde-robe de l'archetype (`Garderobe`), ou celle qu'on
+    // lui donne (`arch.tenue` : un personnage, un passant qui descend de l'autobus).
+    // ⚠️ A L'EMPREINTE de son identifiant, JAMAIS `B.rng()` : un de de plus par naissance
+    // decalerait tout ce que la ville tire ensuite. `swaps` suit la tenue : ce qui lit encore
+    // ses couleurs (le cavalier d'une moto) le voit habille pareil.
+    const tenue = arch && arch.tenue ? arch.tenue
+      : (typeof Garderobe !== 'undefined' ? Garderobe.tirer(p.slug, hash2(e.id, 0x7e4e)) : null);
+    if (tenue) { e.tenue = tenue; e.swaps = Garderobe.couleurs(tenue); }
     // ⚠️ Une fille de la Brume TIENT SON COIN : sans poste, elle se remettait
     // a flaner comme n'importe qui au bout de dix secondes, et le seul indice
     // qui restait etait sa robe. On reconnait d'abord celle qui ATTEND.
@@ -4916,9 +4924,12 @@ const Entites = (function () {
   }
 
   function imageDe(e) {
-    const def = SPRITES[e.sprite];
+    // Une TENUE (`Garderobe`) : un squelette habille, cuit pose par pose. Sinon, le sprite
+    // dessine a la main et ses echanges de palette, comme toujours.
+    const habille = e.tenue && typeof Garderobe !== 'undefined' ? Garderobe.cuire(e.tenue) : null;
+    const def = habille || SPRITES[e.sprite];
     if (!def) return null;
-    const cuit = Atlas.cuire(e.sprite, def, e.swaps);
+    const cuit = habille || Atlas.cuire(e.sprite, def, e.swaps);
     const voulu = nomDePose(e);
     const nom = cuit.poses[voulu] ? voulu : (cuit.poses[e.face] ? e.face : 'bas');
     const poses = cuit.poses[nom];
@@ -4936,7 +4947,7 @@ const Entites = (function () {
     // le joueur marchait vers la gauche (Martin).
     const miroir = nom.endsWith('gauche');
     const main = def.mains ? (def.mains[miroir ? nom.slice(0, -6) + 'droite' : nom] || null) : null;
-    return { canvas: poses[Math.min(i, poses.length - 1)], ancre: cuit.ancre, pose: nom, main: main, miroir: miroir };
+    return { canvas: poses[Math.min(i, poses.length - 1)], ancre: cuit.ancre, pose: nom, main: main, miroir: miroir, largeur: cuit.w };
   }
 
   // --- La pose : ce que le corps fait en plus de marcher ---------------------------
@@ -4979,7 +4990,7 @@ const Entites = (function () {
       : Atlas.cuirePeintre('objet|' + sprite, 16, 10, function (g, w, h) {
         OBJETS[OBJETS[sprite] ? sprite : 'defaut'](g, w, h);
       });
-    const mx = img.miroir ? (SPRITES[e.sprite].w - 1 - img.main[0]) : img.main[0];
+    const mx = img.miroir ? (img.largeur - 1 - img.main[0]) : img.main[0];
     let angle = img.miroir ? Math.PI - img.main[2] : img.main[2];
     // Un bout de trois pixels tourne de biais n'est plus qu'une tache : au
     // repos, la main penche (0,9 rad de cote). Un dessin de main se tient donc

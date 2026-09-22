@@ -615,7 +615,9 @@ const Histoire = (function () {
 
   function creerPersonnage(p, x, y) {
     const arch = { slug: 'perso_' + p.slug, nom: p.nom, sprite: 'joueur', couleurs: p.couleurs, vitesse: 0, courage: 0,
-                   temoin: 0, vie: 100, argent: [0, 0], arme: null, intouchable: true, metier: 'histoire' };
+                   temoin: 0, vie: 100, argent: [0, 0], arme: null, intouchable: true, metier: 'histoire',
+                   // Sa tenue de rue : la meme tete que son portrait, chapeau compris (`garderobe.py`).
+                   tenue: typeof Garderobe !== 'undefined' ? Garderobe.duPersonnage(p.slug) : null };
     const e = Entites.creerPieton(x, y, arch);
     e.personnage = p.slug; e.etat = 'fige'; e.cri = 0;
     return e;
@@ -1412,7 +1414,11 @@ const Histoire = (function () {
         // vides, ce qui est exactement le bogue qu'on repare.
         if (o.arme !== undefined) e.arme = o.arme || null;
         if (o.vie) { e.vie = e.vieMax = o.vie; }
-        if (o.chef) { e.chef = true; e.vie = e.vieMax = 160; e.arme = 'batte'; e.swaps = Object.assign({}, e.swaps, { c: '#101018' }); }
+        if (o.chef) {
+          e.chef = true; e.vie = e.vieMax = 160; e.arme = 'batte'; e.swaps = Object.assign({}, e.swaps, { c: '#101018' });
+          // Habille (`Garderobe`), c'est sa TENUE qui se dessine : le chef la porte en noir aussi.
+          if (e.tenue) e.tenue = Object.assign({}, e.tenue, { couleur_haut: '#101018' });
+        }
         B.mission.entites.push(e);
         if (B.mission.entites.filter(function (q) { return q.cible && q.etape === etape && q.vivant && q.etat !== 'assomme'; }).length >= reste) break;
       }

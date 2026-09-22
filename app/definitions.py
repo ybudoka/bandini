@@ -26,8 +26,8 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-from . import (armes, audio, carte, devantures, economie, interactions, journal, magasins, manettes,
-               missions, nuit, pietons, recherche, vehicules, visages)
+from . import (armes, audio, carte, devantures, economie, garderobe, interactions, journal, magasins,
+               manettes, missions, nuit, pietons, recherche, vehicules, visages)
 from .version import VERSION
 
 
@@ -66,6 +66,8 @@ def assembler() -> dict:
         "personnages": missions.PERSONNAGES,
         # Le portrait de qui parle, à gauche de la boîte de dialogue (`visages.js`).
         "visages": visages.pour_le_navigateur(),
+        # Les squelettes qu'on habille : les garde-robes des passants, la tenue des personnages.
+        "garderobe": garderobe.exporter(),
         # Les quatre phrases de l'ouverture, avec leur slug de voix : le
         # navigateur les lit, il ne refait pas la regle du slug.
         "ouverture": missions.repliques_ouverture(),

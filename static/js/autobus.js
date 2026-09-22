@@ -697,7 +697,7 @@ const Autobus = (function () {
     v.bord = v.bord || [];
     // `qui` : le passant qui est monte — c'est par lui qu'on sait que CELUI qui
     // attendait est bien a bord, et pas un autre arrive entre-temps.
-    v.bord.push({ arret: sortie, depuis: v.arret, arch: e.arch, swaps: e.swaps, graine: hash2(e.id, sortie), qui: e.id });
+    v.bord.push({ arret: sortie, depuis: v.arret, arch: e.arch, swaps: e.swaps, tenue: e.tenue || null, graine: hash2(e.id, sortie), qui: e.id });
     B.abribusServis = B.abribusServis || {};
     B.abribusServis[v.arret] = quartDHeure();
     Entites.retirer(e);
@@ -723,7 +723,7 @@ const Autobus = (function () {
       v.bord.splice(v.bord.indexOf(b), 1);
       const e = sansLeDe(b.graine, function () {
         const arch = Entites.archetype(b.arch);
-        return Entites.creerPieton(x, y, arch ? Object.assign({}, arch, { couleurs: b.swaps || arch.couleurs }) : null);
+        return Entites.creerPieton(x, y, arch ? Object.assign({}, arch, { couleurs: b.swaps || arch.couleurs, tenue: b.tenue || null }) : null);
       });
       if (!e) return;
       e.descenduDe = v.ligne;
