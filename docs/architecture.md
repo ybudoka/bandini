@@ -170,7 +170,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         frame(n), touches, singe)  test_routes.py test_hors_ligne.py test_definitions.py
         test_vehicules.py test_armes.py test_armes_js.py test_brume_js.py test_economie.py test_recherche.py test_carte.py test_relief.py
         test_districts.py test_missions.py test_magasins.py test_pietons.py test_audio.py
-        test_version.py test_moteur_js.py test_police_js.py test_histoire_js.py test_piratage_js.py test_sven_missions_js.py
+        test_version.py test_moteur_js.py test_police_js.py test_histoire_js.py test_piratage_js.py test_sven_missions_js.py test_defis_graduels_js.py
         test_trace_js.py test_districts_js.py test_manettes.py test_manette_js.py test_commandes_js.py test_viser_a_la_gachette_js.py test_menus_au_doigt_js.py test_un_comptoir_reste_ouvert_js.py test_son_js.py
         test_musique.py test_devantures.py test_devantures_js.py test_devants.py test_devants_js.py test_interieurs.py
         test_interieurs_js.py test_rampes.py test_carte_du_depot.py test_eau.py test_banlieue.py test_parole.py test_effacer.py test_stool.py test_bouclier.py test_trottoir.py test_dette.py test_paliers.py test_ombre.py test_reproductible.py test_poses_vehicules.py
