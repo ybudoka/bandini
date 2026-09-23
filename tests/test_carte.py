@@ -775,8 +775,12 @@ def test_tout_stationnement_touche_la_rue(graine):
     sol = carte.generer(graine=graine)["sol"] if graine != carte.GRAINE else CARTE["sol"]
     orphelins = []
     for lot in _lots(sol):
+        # ⚠️ Une BARRIERE COULISSANTE (le lot du poste, clos de barbele) est la
+        # sortie du lot, pas un mur : on regarde ce qu'il y a de l'autre cote.
+        barrieres = {(x + dx, y + dy) for (x, y) in lot for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+                     if carte.LEGENDE[sol[y + dy][x + dx]].get("coulissante")}
         voisines = {sol[y + dy][x + dx]
-                    for (x, y) in lot for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+                    for (x, y) in lot | barrieres for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
                     if 0 <= y + dy < len(sol) and 0 <= x + dx < len(sol[0])}
         if not any(_sur_la_rue(g) for g in voisines - LOT):
             orphelins.append((min(sorted(lot)), len(lot), sorted(voisines - LOT)))

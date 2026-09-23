@@ -900,6 +900,8 @@ const Jeu = (function () {
         pas('monde', function () {
           Monde.majHeure();
           Monde.majBattants();
+          // La barriere du lot du poste : elle glisse pour une auto-patrouille conduite.
+          if (!B.interieur && Monde.majBarrieresCoulissantes()) Son.SFX.barriere_coulissante();
           Monde.majChemins();
           Monde.majSonDuBord();          // les vagues : leur volume est une question de carte, pas de son
         });
@@ -1000,7 +1002,7 @@ const Jeu = (function () {
     if (B.interieur) Metro.dessiner(ctx, vue);
     // ⚠️ Les battants PAR-DESSUS le sol, jamais dedans : repeindre un
     // morceau de 256 px a chaque image pour une porte tuerait le cache.
-    if (!B.interieur) { Autobus.dessinerRails(ctx, vue); Neige.dessinerPanneaux(ctx, vue); Monde.dessinerBattants(ctx, vue); Monde.dessinerPortesDeGarage(ctx, vue); Monde.dessinerBarrieres(ctx, vue); }
+    if (!B.interieur) { Autobus.dessinerRails(ctx, vue); Neige.dessinerPanneaux(ctx, vue); Monde.dessinerBattants(ctx, vue); Monde.dessinerPortesDeGarage(ctx, vue); Monde.dessinerBarrieresCoulissantes(ctx, vue); Monde.dessinerBarrieres(ctx, vue); }
     Entites.dessinerDecals(ctx, vue);     // le sang est SOUS les pieds
     if (!B.interieur) Histoire.dessinerCheminCourse(ctx, vue);   // le trace d'une course, sur la chaussee
     if (!B.interieur) Entites.dessinerBetes(ctx, vue);   // un goeland passe sous personne

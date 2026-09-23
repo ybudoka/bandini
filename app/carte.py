@@ -344,6 +344,14 @@ LEGENDE: dict[str, dict] = {
     # vitrine est BATIE (solidite 1), une palissade est une CLOTURE (4).
     "w": {"nom": "palissade de bois", "solide": 4, "cloture": "bois"},
     "X": {"nom": "barbelé", "solide": 5, "cloture": "barbele"},
+    # ⚠️ LA BARRIERE COULISSANTE du lot du poste (demande de Martin, 23 sept.
+    # 2026 : « complètement clôturé barbelé pour ne pas qu'on vole les autos »).
+    # Fermee, c'est du barbele : solidite 5, ni a pied ni en char, et un lourd
+    # ne la defonce pas. Ce qui l'ouvre vit dans le navigateur
+    # (`Monde.majBarrieresCoulissantes`) : une auto-patrouille CONDUITE, rien
+    # d'autre. `coulissante` : c'est une OUVERTURE qui a une cle, donc la
+    # connexite la traverse (`franchissable`) — sinon le lot serait une poche.
+    "Z": {"nom": "barrière coulissante", "solide": 5, "cloture": "barbele", "coulissante": True},
     # --- Dedans : les planchers et les meubles ------------------------------
     # ⚠️ Un MEUBLE est solide 3, comme la borne-fontaine et la cloture : il
     # arrete un char, pas un piéton. C'est ce qui permet d'en poser partout
@@ -407,6 +415,9 @@ PORTES_DE_FACADE = frozenset("DdG")
 #: sont en grillage industriel n'a pas l'air d'une banlieue.
 GRILLAGE, BOIS, BARBELE = "f", "w", "X"
 CLOTURES = frozenset({GRILLAGE, BOIS, BARBELE})
+#: La barriere coulissante : du barbele qui s'ouvre pour qui a la cle. ⚠️ PAS dans
+#: `CLOTURES` : elle ne se pose qu'a la sortie du lot du poste, jamais par `clore`.
+COULISSANTE = "Z"
 #: Ce qui s'enjambe (une seconde en haut), par opposition au barbele.
 ENJAMBABLES = frozenset({GRILLAGE, BOIS})
 
@@ -444,8 +455,11 @@ def franchissable(glyphe: str) -> bool:
     seconde), une cour derriere du barbele n'en fait pas partie. C'est pour ca
     que le juge « tout ce qui est marchable est relie » est du meme coup la
     garantie qu'un barbele ne referme jamais une poche.
+
+    ⚠️ La barriere coulissante (`coulissante`) est du barbele qui s'OUVRE : le
+    lot qu'elle ferme a une sortie, et il fait partie de la ville.
     """
-    return solidite(glyphe) in (0, 3, 4)
+    return solidite(glyphe) in (0, 3, 4) or bool(LEGENDE.get(glyphe, {}).get("coulissante"))
 
 
 def routier(glyphe: str) -> bool:
@@ -3865,8 +3879,10 @@ class _Chantier:
                 # ruelle jusqu'au devant, pour ses autos-patrouilles. Il ne tire
                 # aucun de et ne deplace aucun mur : le batiment garde sa
                 # parcelle, et ce bout-la etait deja un terrain nu.
+                # ⚠️ `+ 4` : le barbele du haut, les cases, deux tuiles d'allee
+                # et la barriere coulissante (`_stationnement_de_service`).
                 if (special.get("stationnement") and largeur - large >= 1
-                        and bh - 2 >= CASE_CREUX + 2):
+                        and bh - 2 >= CASE_CREUX + 4):
                     lot_de_service = (x + large, zy, largeur - large, bh - 2)
                 elif largeur - large >= mini:
                     parcelles.append(((x + large, zy, largeur - large, zh), True))
@@ -4270,14 +4286,32 @@ class _Chantier:
         ⚠️ `garees` : combien de places ont leur char, en partant du batiment.
         Une place reste libre quand il y en a trois ou plus — un vrai lot a
         toujours un trou, et c'est la qu'on se gare pour entrer au poste.
+
+        ⚠️ ET IL EST CLOS DE BARBELE (demande de Martin, 23 sept. 2026 : « le
+        poste de police doit etre completement cloture barbele pour ne pas qu'on
+        vole les autos »). Il etait ouvert sur la ruelle, sur le cote et sur la
+        rue : on y entrait a pied et on repartait en auto-patrouille. Le barbele
+        prend la rangee du haut (les cases descendent d'une tuile) et les deux
+        cotes, sauf la ou le mur du poste ferme deja ; la rangee du bas, sur la
+        rue, est la BARRIERE COULISSANTE — la seule sortie, qui ne s'ouvre que
+        pour une auto-patrouille conduite (`Monde.majBarrieresCoulissantes`).
         """
         self.rect(x, y, largeur, hauteur, "p")
-        self.rect(x, y, largeur, CASE_CREUX, "^")
-        places = [{"x": x + i, "y": y, "sens": "N"} for i in range(largeur)]
+        # Le tour : la rangee du haut (coins compris), puis les deux cotes. Un mur
+        # (solidite 1) ferme deja : on ne pose pas de barbele dans une facade.
+        tour = [(x + i, y) for i in range(-1, largeur + 1)]
+        tour += [(cx, y + j) for j in range(1, hauteur) for cx in (x - 1, x + largeur)]
+        for tx, ty in tour:
+            if solidite(self.sol[ty][tx]) != 1:
+                self.sol[ty][tx] = BARBELE
+        self.rect(x, y + 1, largeur, CASE_CREUX, "^")
+        self.rect(x, y + hauteur - 1, largeur, 1, COULISSANTE)
+        places = [{"x": x + i, "y": y + 1, "sens": "N"} for i in range(largeur)]
         self.stationnement_du_poste = {
             "lieu": special["slug"], "vehicule": special["stationnement"],
             "x": x, "y": y, "largeur": largeur, "hauteur": hauteur,
             "places": places, "garees": len(places) - 1 if len(places) >= 3 else len(places),
+            "barriere": {"x": x, "y": y + hauteur - 1, "l": largeur},
         }
 
     # --- La fourriere (M9) --------------------------------------------------

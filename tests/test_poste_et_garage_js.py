@@ -138,6 +138,96 @@ def test_une_auto_patrouille_prise_ne_revient_pas_tant_qu_elle_existe(banc):
     assert r["surLaPlace"] == 0, "le lot a refait une auto-patrouille a la place de celle qu'on a volee"
 
 
+#: Le lot du poste, clos de barbele (23 sept. 2026) : la rue videe autour, le
+#: joueur loin le temps que la boucle y gare ses autos-patrouilles.
+LOT_DU_POSTE = """
+    function lotDuPoste(L, o) {
+        const j = L.B.joueur, TT = L.TT;
+        const lot = L.Monde.carte.def.stationnement_du_poste, b = lot.barriere;
+        const cx = (lot.x + lot.largeur / 2) * TT, cy = (lot.y + 1) * TT;
+        j.x = cx + 330; j.y = cy + 60; L.Monde.centrerCamera(j.x, j.y);
+        o.frame(%(images)d);
+        L.B.defs.conduite.trafic.vehicules_max = 0;
+        L.B.entites.filter(function (e) { return (e.type === 'vehicule' && !e.gareDeService || e.type === 'pieton') && e !== j
+            && Math.hypot(e.x - cx, e.y - cy) < 400; }).forEach(function (e) { L.Entites.retirer(e); });
+        L.Entites.indexer();
+        const coulissante = L.Monde.barrieresCoulissantes()[0];
+        return { lot: lot, b: b, coulissante: coulissante, TT: TT,
+                 garee: L.B.entites.find(function (e) { return e.gareDeService === lot.places[0]; }) };
+    }
+""" % {"images": IMAGES_DE_PEUPLER}
+
+
+def test_on_ne_prend_pas_une_auto_patrouille_du_lot_ni_par_dessus_le_barbele_ni_par_la_barriere(banc):
+    """Demande de Martin (23 sept. 2026) : « le poste de police doit etre
+    completement cloture barbele pour ne pas qu'on vole les autos ». La
+    portiere s'ouvre a deux tuiles : du trottoir, la main passait par-dessus
+    le barbele. A pied devant la barriere, on pousse contre ; au volant d'un
+    char ordinaire aussi — elle ne bouge pas."""
+    r = banc("""function (L, o) {
+        %(lot)s
+        L.Jeu.commencer();
+        const p = lotDuPoste(L, o), j = L.B.joueur, TT = p.TT, v = p.garee;
+        if (!v) return { garee: false };
+        // La main par-dessus le barbele : du bout de dalle a l'ouest, de la ruelle au nord.
+        // (A l'est, le trottoir est deja hors de portee de la premiere place.)
+        const essais = {};
+        j.x = (p.lot.x - 1) * TT - 6; j.y = (p.lot.y + 1.5) * TT; j.face = 'droite';
+        essais.ouest = { loin: Math.round(Math.hypot(j.x - v.x, j.y - v.y)), char: !!L.Vehicules.vehiculeSousLaMain(j) };
+        j.x = v.x; j.y = p.lot.y * TT - 7; j.face = 'bas';
+        essais.nord = { loin: Math.round(Math.hypot(j.x - v.x, j.y - v.y)), char: !!L.Vehicules.vehiculeSousLaMain(j) };
+        // A pied, on pousse contre la barriere, du trottoir vers le nord.
+        j.x = (p.b.x + p.b.l / 2) * TT; j.y = (p.b.y + 2.5) * TT; L.Monde.centrerCamera(j.x, j.y);
+        o.touche('KeyW'); o.frame(90); o.relacher('KeyW');
+        const aPied = { y: j.y / TT, ouverture: p.coulissante.ouverture };
+        // Au volant d'un char ordinaire, pareil.
+        const auto = L.Vehicules.creer('auto', (p.b.x + p.b.l / 2) * TT, (p.b.y + 3) * TT, -Math.PI / 2, { etat: 'stationne', couleur: '#c0392b' });
+        L.Entites.indexer(); L.Vehicules.monter(j, auto);
+        o.touche('KeyW'); o.frame(120); o.relacher('KeyW');
+        return { garee: true, essais: essais, aPied: aPied, barriere: p.b.y,
+                 auto: { y: auto.y / TT, ouverture: p.coulissante.ouverture, solide: L.Monde.solidite(p.b.x + 1, p.b.y) } };
+    }""" % {"lot": LOT_DU_POSTE})
+    assert r["garee"], "pas d'auto-patrouille garee au poste"
+    for cote, essai in r["essais"].items():
+        assert essai["loin"] < 40, f"le juge devait tenir la main a portee de portiere ({cote} : {essai})"
+        assert essai["char"] is False, f"on monte dans l'auto-patrouille par-dessus le barbele, cote {cote}"
+    assert r["aPied"]["ouverture"] == 0, "la barriere s'ouvre pour un pieton"
+    assert r["aPied"]["y"] > r["barriere"] + 1, f"a pied, on passe la barriere ({r['aPied']['y']:.2f})"
+    assert r["auto"]["ouverture"] == 0 and r["auto"]["solide"] == 5, "la barriere s'ouvre pour un char ordinaire"
+    assert r["auto"]["y"] > r["barriere"] + 1, f"un char ordinaire passe la barriere ({r['auto']['y']:.2f})"
+
+
+def test_une_auto_patrouille_conduite_ouvre_la_barriere_passe_et_elle_se_referme(banc):
+    """Au volant d'une auto-patrouille, on arrive devant : le panneau glisse, la
+    tuile se libere une fois grande ouverte (pas avant), on entre — et, le char
+    parti, elle se referme et redevient du barbele."""
+    r = banc("""function (L, o) {
+        %(lot)s
+        L.Jeu.commencer();
+        const p = lotDuPoste(L, o), j = L.B.joueur, TT = p.TT, b = p.coulissante;
+        const v = L.Vehicules.creer('police', (p.b.x + p.b.l / 2) * TT, (p.b.y + 3) * TT, -Math.PI / 2, { etat: 'stationne' });
+        L.Entites.indexer(); L.Vehicules.monter(j, v); L.Monde.centrerCamera(v.x, v.y);
+        const trajet = [];
+        for (let k = 0; k < 400 && v.y > (p.b.y - 1.5) * TT; k++) {
+            if (Math.abs(v.vitesse) > 1.2) o.relacher('KeyW'); else o.touche('KeyW');
+            o.frame(1);
+            trajet.push({ y: v.y / TT, ouverture: b.ouverture, solide: L.Monde.solidite(p.b.x + 1, p.b.y) });
+        }
+        o.relacher('KeyW');
+        const entre = v.y / TT;
+        // Le char repart loin (on le pose ailleurs) : la barriere se referme.
+        L.Vehicules.descendre(j, true);
+        v.x += 20 * TT; j.x = v.x; j.y = v.y + 2 * TT; L.Entites.indexer();
+        o.frame(%(attente)d);
+        return { trajet: trajet, entre: entre, barriere: p.b.y, fin: { ouverture: b.ouverture, solide: L.Monde.solidite(p.b.x + 1, p.b.y) } };
+    }""" % {"lot": LOT_DU_POSTE, "attente": 60 + 50 + 10})
+    t, rangee = r["trajet"], r["barriere"]
+    assert any(p["ouverture"] > 0 for p in t), "la barriere ne s'est pas ouverte pour l'auto-patrouille"
+    assert all(p["solide"] == 5 for p in t if p["ouverture"] < 1), "la barriere laisse passer a moitie tiree"
+    assert r["entre"] < rangee - 1, f"l'auto-patrouille n'est pas entree dans le lot ({r['entre']:.2f})"
+    assert r["fin"] == {"ouverture": 0, "solide": 5}, f"la barriere ne s'est pas refermee : {r['fin']}"
+
+
 def test_au_volant_le_rideau_se_leve_des_qu_on_arrive_et_le_menu_s_ouvre_a_l_arret(banc):
     r = banc("""function (L, o) {
         %(arriver)s
@@ -267,3 +357,30 @@ def test_le_panneau_de_la_livraison_ne_se_plante_pas_devant_le_rideau(banc, paqu
     assert any(p["defi"] == "livraison" for p in r["panneaux"]), "le panneau de la livraison a disparu"
     assert not any(p["devant"] for p in r["panneaux"]), f"un panneau plante devant le rideau : {r['panneaux']}"
     assert r["menu"] == livraison["titre"].upper(), f"ACTION au panneau ouvre « {r['menu']} » au lieu du defi"
+
+
+def test_la_barriere_ne_se_referme_pas_sur_quelqu_un(banc):
+    """Ouverte, puis la cle partie : tant que quelqu'un est dans sa rangee, elle
+    reste ouverte — sinon la tuile redeviendrait du barbele sous ses pieds. Il
+    s'en va : elle se referme."""
+    r = banc("""function (L, o) {
+        %(lot)s
+        L.Jeu.commencer();
+        const p = lotDuPoste(L, o), j = L.B.joueur, TT = p.TT, b = p.coulissante;
+        const v = L.Vehicules.creer('police', (p.b.x + p.b.l / 2) * TT, (p.b.y + 2.5) * TT, -Math.PI / 2, { etat: 'stationne' });
+        L.Entites.indexer(); L.Vehicules.monter(j, v); L.Monde.centrerCamera(v.x, v.y);
+        for (let k = 0; k < 120 && b.ouverture < 1; k++) o.frame(1);
+        const ouverte = b.ouverture;
+        L.Vehicules.descendre(j, true);
+        v.x += 20 * TT; L.Entites.indexer();
+        j.x = (p.b.x + p.b.l / 2) * TT; j.y = (p.b.y + 0.5) * TT;
+        o.frame(%(attente)d);
+        const dessous = { ouverture: b.ouverture, solide: L.Monde.solidite(p.b.x + 1, p.b.y), y: j.y / TT };
+        j.y = (p.b.y + 3) * TT;
+        o.frame(%(attente)d);
+        return { ouverte: ouverte, dessous: dessous, parti: { ouverture: b.ouverture, solide: L.Monde.solidite(p.b.x + 1, p.b.y) } };
+    }""" % {"lot": LOT_DU_POSTE, "attente": 60 + 50 + 10})
+    assert r["ouverte"] == 1, "la barriere ne s'est pas ouverte pour l'auto-patrouille"
+    assert r["dessous"]["ouverture"] == 1 and r["dessous"]["solide"] == 0, \
+        f"la barriere se referme sur le joueur : {r['dessous']}"
+    assert r["parti"] == {"ouverture": 0, "solide": 5}, f"parti, la barriere ne s'est pas refermee : {r['parti']}"

@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (227 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (228 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -78,7 +78,6 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
-| Le poste clôturé : du barbelé et une barrière coulissante | ⬜ **en cours** | 23 sept. 2026 | **P2** | ajout | [fiche](jalons/le-poste-cloture-du-barbele-et-une-barriere-coulissante.md#fiche) |
 | La ligne d'histoire : une ouverture et un générique | ⬜ **en cours** (l'ouverture livrée) | 16 sept. 2026 | **P2** | ajout | [fiche](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#fiche) · [notes](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#notes) |
 | M15 La ville te parle — deuxième vague | ⬜ **en cours** (déjà livrés : la rue qui se tait, les leçons du Clairon, la radio qui parle vraiment, la police à la radio, le souffle du joueur, les bruits de quartier ; restent le bulletin de nouvelles et les répliques par contexte) | 21 sept. 2026 | **P4** | ajout | [fiche](jalons/m15-la-ville-te-parle.md#fiche-de-la-deuxième-vague) |
 | Le décor, les bêtes et les gens répondent — deuxième vague | ⬜ **en cours** (livrés : manger au barbecue, caresser le chat, vider un parcomètre ; le buisson est annulé ; restent l'affiche arrachée, le caddie, le panneau) | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/le-decor-les-betes-et-les-gens-repondent.md#fiche-de-la-deuxième-vague) |

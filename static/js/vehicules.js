@@ -1570,6 +1570,20 @@ const Vehicules = (function () {
 
   // --- Monter, descendre, ejecter ---------------------------------------------------
 
+  /** ⚠️ ON N'OUVRE PAS UNE PORTIERE A TRAVERS LE BARBELE (le lot du poste, 23 sept.
+      2026). La portiere s'ouvre a `portee_monter_px` — trente pixels, deux tuiles :
+      clos de barbele, le lot du poste se volait quand meme depuis le trottoir, la
+      main par-dessus la cloture, et l'auto-patrouille volee ouvrait ensuite sa propre
+      barriere. Le trait de la main au char ne traverse donc aucune tuile de solidite
+      5. ⚠️ Seulement 5 : on monte dans une chaloupe PAR-DESSUS l'eau du quai. */
+  function aPorteeDeMain(j, x, y) {
+    const n = Math.ceil(Math.hypot(x - j.x, y - j.y) / 4);
+    for (let k = 1; k < n; k++) {
+      if (Monde.solidite(Math.floor((j.x + (x - j.x) * k / n) / TT), Math.floor((j.y + (y - j.y) * k / n) / TT)) === 5) return false;
+    }
+    return true;
+  }
+
   function vehiculeSousLaMain(j) {
     const portee = physique().portee_monter_px;
     let meilleur = null, dMin = Infinity;
@@ -1578,7 +1592,7 @@ const Vehicules = (function () {
     for (const v of Entites.autour(j.x, j.y, portee + 20, function (e) { return e.type === 'vehicule' && e.etat !== 'epave' && !e.rails; })) {
       for (const c of cercles(v)) {
         const d = Math.hypot(c.x - j.x, c.y - j.y) - c.r;
-        if (d < dMin && d <= portee && faceA(j, c.x, c.y)) { dMin = d; meilleur = v; }
+        if (d < dMin && d <= portee && faceA(j, c.x, c.y) && aPorteeDeMain(j, c.x, c.y)) { dMin = d; meilleur = v; }
       }
     }
     return meilleur;

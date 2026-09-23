@@ -231,6 +231,8 @@ const Monde = (function () {
         return { x: p.x, y: p.y, l: p.l, lieu: p.lieu, baie: p.baie || 0, genre: p.genre || 'garage',
                  ouverture: 0, tient: 0, servi: null, admis: null, dedans: null, phase: null, t: 0, refuse: null };
       }),
+      // La barriere coulissante du lot du poste : `cle`, le char pour qui elle s'ouvre.
+      coulissantes: coulissantesDe(def),
       portesParTuile: portes, mini: null, croisements: croisements, arrets: def.arrets || {},
       nids: new Set((def.nids_de_poule || []).map(function (n) { return n.x + ',' + n.y; })), coeur: null,
       plaques: new Set(),
@@ -1105,6 +1107,93 @@ const Monde = (function () {
     }
   }
 
+  // --- La barriere coulissante : le lot du poste ne s'ouvre qu'aux siens ------------------
+  //
+  // Demande de Martin (23 sept. 2026) : « le poste de police doit etre completement
+  // cloture barbele pour ne pas qu'on vole les autos. cree une nouvelle cloture
+  // coulissante ». La tuile `Z` est du BARBELE (solidite 5) tant qu'elle n'est pas
+  // grande ouverte : ni a pied, ni en char, et un lourd ne la defonce pas. Ce qui
+  // l'ouvre, c'est une auto-patrouille CONDUITE (`cle`) qui arrive devant — par la
+  // police, ou par le joueur qui en a vole une ailleurs. Garee, elle n'a personne au
+  // volant : c'est tout le point, on ne sort pas celles du lot.
+  //
+  // ⚠️ ELLE NE SE REFERME JAMAIS SUR QUELQU'UN. Tant qu'un char ou un pieton touche
+  // sa rangee, elle reste ouverte — sinon la tuile redeviendrait solide sous ses
+  // roues, et `Vehicules.degager` le jetterait d'un cote ou de l'autre.
+
+  //: Combien d'images le panneau met a glisser, combien il reste ouvert une fois
+  //: la cle partie, et jusqu'ou la cle se sent : en travers, la largeur de la
+  //: barriere et une demi-tuile ; en long, deux tuiles dedans (l'allee) et deux
+  //: dehors (l'abord et le trottoir). ⚠️ PAS la chaussee : une patrouille qui passe
+  //: dans la rue n'ouvre pas le lot a qui attend devant.
+  const COULISSE_GLISSE = 50, COULISSE_TIENT = 60, COULISSE_DEDANS = 2, COULISSE_DEHORS = 2;
+
+  function coulissantesDe(def) {
+    const lot = def.stationnement_du_poste;
+    if (!lot || !lot.barriere) return [];
+    const b = lot.barriere;
+    return [{ x: b.x, y: b.y, l: b.l, cle: lot.vehicule, ouverture: 0, tient: 0, libre: false }];
+  }
+  function barrieresCoulissantes() { return (carte && carte.coulissantes) || []; }
+
+  /** Ce char a-t-il la CLE de cette barriere : le bon modele, quelqu'un au volant,
+      et le nez dans la zone qui la commande ? */
+  function aLaCle(b, v) {
+    if (v.type !== 'vehicule' || v.slug !== b.cle || !v.conducteur || v.etat === 'epave') return false;
+    return v.x >= (b.x - 0.5) * TT && v.x < (b.x + b.l + 0.5) * TT &&
+           v.y >= (b.y - COULISSE_DEDANS) * TT && v.y < (b.y + 1 + COULISSE_DEHORS) * TT;
+  }
+
+  /** Quelqu'un (char, pieton, joueur) touche-t-il la rangee de la barriere ? */
+  function quelquUnDessous(b) {
+    const x0 = b.x * TT, x1 = (b.x + b.l) * TT, y0 = b.y * TT, y1 = (b.y + 1) * TT;
+    return B.entites.some(function (e) {
+      if (e.type !== 'vehicule' && e.type !== 'pieton' && e.type !== 'joueur') return false;
+      if (e.dansVehicule) return false;                 // son char compte pour lui
+      const r = e.type === 'vehicule' ? e.def.longueur / 2 : (e.r || 6);
+      return e.x + r > x0 && e.x - r < x1 && e.y + r > y0 && e.y - r < y1;
+    });
+  }
+
+  /** La tuile de la barriere : barbele, ou libre. ⚠️ Libre seulement GRANDE ouverte —
+      un char ne se faufile pas dans un panneau a moitie tire. */
+  function poserLaCoulissante(b, libre) {
+    b.libre = libre;
+    for (let i = 0; i < b.l; i++) carte.solide[b.y * carte.w + b.x + i] = libre ? 0 : 5;
+  }
+
+  /** Rend vrai si un panneau vient de se mettre en marche — c'est la qu'il grince. */
+  function majBarrieresCoulissantes() {
+    let part = false;
+    for (const b of barrieresCoulissantes()) {
+      if (B.entites.some(function (v) { return aLaCle(b, v); })) b.tient = COULISSE_TIENT;
+      const voulu = b.tient > 0 || (b.ouverture > 0 && quelquUnDessous(b)) ? 1 : 0;
+      if (b.tient > 0) b.tient--;
+      if (b.ouverture !== voulu) {
+        if (b.ouverture === 1 - voulu && Entites.visibleAEcran((b.x + b.l / 2) * TT, b.y * TT, TT * 2)) part = true;
+        b.ouverture = voulu ? Math.min(1, b.ouverture + 1 / COULISSE_GLISSE)
+                            : Math.max(0, b.ouverture - 1 / COULISSE_GLISSE);
+      }
+      if ((b.ouverture >= 1) !== b.libre) poserLaCoulissante(b, b.ouverture >= 1);
+    }
+    return part;
+  }
+
+  /** Le panneau, par-dessus le rail : il glisse vers l'EST et rentre derriere son
+      poteau — on ne voit que ce qui reste en travers de l'allee. */
+  function dessinerBarrieresCoulissantes(ctx, cam) {
+    const cx = Math.round(cam.x), cy = Math.round(cam.y);
+    for (const b of barrieresCoulissantes()) {
+      const x = b.x * TT - cx, y = b.y * TT - cy, l = b.l * TT;
+      if (x + l < 0 || x > VW || y + TT < 0 || y > VH || b.ouverture >= 1) continue;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x, y - 2, l, TT + 2); ctx.clip();
+      TUILES.Z.panneau(ctx, x + Math.round(l * b.ouverture), y, l);
+      ctx.restore();
+      B.stats.rects += 12;
+    }
+  }
+
   /** Cette tuile est-elle DEVANT une porte (le pas, l'axe a trois tuiles, ses flancs) ? */
   function devantDUnePorte(tx, ty) { return !!carte && carte.devants.has(tx + ',' + ty); }
 
@@ -1568,7 +1657,12 @@ const Monde = (function () {
   }
 
   /** Une cloture a cette tuile ? (grillage, palissade ou barbele) */
-  function estCloture(tx, ty) { const s = solidite(tx, ty); return s === 4 || s === 5; }
+  function estCloture(tx, ty) {
+    const s = solidite(tx, ty);
+    // ⚠️ Une barriere coulissante OUVERTE reste une cloture pour le dessin : sinon le
+    // poteau d'a cote, recuit pendant qu'elle est ouverte, perdrait son bras.
+    return s === 4 || s === 5 || glyphe(tx, ty) === 'Z';
+  }
 
   /** La variante d'une cloture : le masque des cotes ou elle CONTINUE — 1 nord,
       2 est, 4 sud, 8 ouest.
@@ -2300,6 +2394,7 @@ const Monde = (function () {
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE,
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
     dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau, sousLeToit, cacheSousLeToit, abrite,
+    barrieresCoulissantes, majBarrieresCoulissantes, dessinerBarrieresCoulissantes, COULISSE_GLISSE, COULISSE_TIENT,
 estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, estNuit, periode, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,

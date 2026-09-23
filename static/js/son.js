@@ -898,6 +898,15 @@ const Son = (function () {
       bruit(0.5, 0.12, 700, 180);
       for (let i = 0; i < 6; i++) ton(150 + (i % 2) * 35, 0.04, 'square', 0.05, 0.8, i * 0.08);
     },
+    // La barriere coulissante du poste : le moteur qui ronronne et les roulettes
+    // sur le rail, puis le claquement du panneau en butee. ⚠️ Synthetise seulement,
+    // comme le rideau : pas de fichier au catalogue.
+    barriere_coulissante: function () {
+      bruit(0.8, 0.07, 420, 120);
+      ton(88, 0.8, 'sawtooth', 0.035, 0.9);
+      ton(1900, 0.05, 'square', 0.05, 0.5, 0.82);
+      ton(140, 0.08, 'square', 0.07, 0.6, 0.82);
+    },
     // Le pistolet de la carrosserie, derriere le rideau baisse : UNE passe, un souffle
     // aigu qui siffle et le compresseur qui cogne dessous — l'atelier en fait trois
     // (`Missions.majGarage`). ⚠️ Synthetise seulement, comme le rideau : pas de

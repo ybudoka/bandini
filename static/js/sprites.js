@@ -2675,6 +2675,40 @@ const TUILES = (function () {
   const CLOTURE_BARBELE = { ombre: '#3a6c2d', lisse: '#5d5852', maille: '#6b655c', poteau: '#7d766a',
                     fils: '#d8d2c4', rails: [6, 11], poteau0: 0, epaisseur: 2 };
 
+  /* --- La barriere coulissante (le lot du poste, 23 sept. 2026) ------------
+
+     ⚠️ LE SOL ET LE PANNEAU NE SE PEIGNENT PAS AU MEME ENDROIT. La tuile `Z`
+     cuite dans son morceau n'est que le sol : l'asphalte de l'allee et le RAIL
+     d'acier sur lequel roule le panneau. Le panneau, lui, bouge : il se peint
+     par-dessus a chaque image (`Monde.dessinerBarrieresCoulissantes`), comme
+     le rideau d'un garage — repeindre un morceau de 256 px par image pour une
+     barriere tuerait le cache. */
+  function railDeCoulissante(ctx, v, T) {
+    bitume(ctx, 0, T);
+    ctx.fillStyle = '#26282e'; ctx.fillRect(0, 13, T, 2);          // la saignee du rail
+    ctx.fillStyle = '#8d9096'; ctx.fillRect(0, 13, T, 1);          // l'acier, use au passage des roues
+  }
+
+  /** Le PANNEAU d'une barriere coulissante, de `longueur` pixels, vu comme une
+      cloture est-ouest : c'est du barbele (la maille, les trois fils et leurs
+      epines, `CLOTURE_BARBELE`), dans un CADRE de metal — deux montants, une
+      lisse basse et ses roulettes sur le rail. C'est le cadre qui dit « ca
+      bouge » : un barbele ordinaire n'a ni roues ni montant a son bout. */
+  function panneauCoulissant(ctx, x, y, longueur) {
+    const s = CLOTURE_BARBELE;
+    ctx.save();
+    ctx.translate(x, y);
+    brinDeCloture(ctx, 'h', 0, longueur, TT, s);
+    ctx.fillStyle = '#4a4640';                                     // le cadre : lisse basse et montants
+    ctx.fillRect(0, 11, longueur, 2);
+    ctx.fillRect(0, 1, 2, 12); ctx.fillRect(longueur - 2, 1, 2, 12);
+    ctx.fillStyle = s.poteau;
+    for (let u = 8; u < longueur - 4; u += 16) ctx.fillRect(u, 1, 1, 11);   // les raidisseurs
+    ctx.fillStyle = '#1c1b1f';                                     // les roulettes, sur le rail
+    for (const u of [3, longueur - 6]) ctx.fillRect(u, 13, 3, 2);
+    ctx.restore();
+  }
+
   /* --- Les toits ----------------------------------------------------------
 
      ⚠️ Un toit etait peint TUILE PAR TUILE, chacune ignorant les autres : un
@@ -3042,6 +3076,9 @@ const TUILES = (function () {
     'f': function (ctx, v, T) { clotureTuile(ctx, v, T, CLOTURE_GRILLAGE); },
     'w': function (ctx, v, T) { clotureTuile(ctx, v, T, CLOTURE_BOIS); },
     'X': function (ctx, v, T) { clotureTuile(ctx, v, T, CLOTURE_BARBELE); },
+    // ⚠️ Le sol seulement (voir `railDeCoulissante`) ; `TUILES.Z.panneau` est ce
+    // que `Monde` peint par-dessus, au pixel ou le panneau a glisse.
+    'Z': Object.assign(railDeCoulissante, { panneau: panneauCoulissant }),
 
     /* --- Dedans : le plancher et les meubles ------------------------------
 

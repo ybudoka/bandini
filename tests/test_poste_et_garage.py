@@ -18,6 +18,8 @@ GRAINES = (carte.GRAINE, 1, 2)
 #: Le glyphe d'une case nez au nord, et celui de l'allee — ecrits ici, pas lus
 #: dans le module : le juge ne relit pas la regle qu'il garde.
 CASE_NORD, ALLEE = "^", "p"
+#: Le barbele, et la barriere coulissante qui ferme le lot du poste sur la rue.
+BARBELE, BARRIERE = "X", "Z"
 
 
 @pytest.fixture(scope="module", params=GRAINES)
@@ -71,11 +73,56 @@ def test_les_places_sont_des_cases_qui_donnent_sur_une_allee_jusqu_a_la_rue(vill
         assert sol[y - 1][x] != CASE_NORD, f"{x, y} n'est pas le fond de sa case"
         assert sol[y + 2][x] == ALLEE, f"la case {x, y} n'a pas d'allee derriere elle"
         # On descend : roulable jusqu'a la route, en moins de huit tuiles apres le lot.
+        # ⚠️ La barriere coulissante est la sortie : elle s'ouvre pour l'auto-patrouille.
         ty = y + 2
         while not carte.LEGENDE[sol[ty][x]].get("route") or sol[ty][x] in (ALLEE, CASE_NORD):
-            assert _roulable(sol, x, ty), f"un mur en {x, ty} entre la case {x, y} et la rue"
+            assert _roulable(sol, x, ty) or sol[ty][x] == BARRIERE, \
+                f"un mur en {x, ty} entre la case {x, y} et la rue"
             ty += 1
             assert ty <= lot["y"] + lot["hauteur"] + 8, f"la case {x, y} ne mene a aucune rue"
+
+
+def test_le_lot_du_poste_est_clos_de_barbele_et_ne_sort_que_par_sa_barriere(ville):
+    """Demande de Martin (23 sept. 2026) : « le poste de police doit etre
+    completement cloture barbele pour ne pas qu'on vole les autos ». Depuis les
+    cases, tout ce qu'un pieton traverse — en enjambant s'il le faut — reste dans
+    le lot : les murs du poste, le barbele, et la barriere. Elle prend toute la
+    largeur de l'allee, et de l'autre cote, c'est la rue."""
+    lot, sol = ville["stationnement_du_poste"], ville["sol"]
+    b = lot["barriere"]
+    assert (b["x"], b["l"]) == (lot["x"], lot["largeur"]), f"la barriere {b} ne ferme pas toute l'allee"
+    assert [sol[b["y"]][b["x"] + i] for i in range(b["l"])] == [BARRIERE] * b["l"]
+    dedans = {(lot["x"] + i, lot["y"] + j) for i in range(lot["largeur"]) for j in range(lot["hauteur"])}
+    depart = [(p["x"], p["y"]) for p in lot["places"]]
+    vues, pile, bords = set(depart), list(depart), set()
+    while pile:
+        cx, cy = pile.pop()
+        assert (cx, cy) in dedans, f"on sort du lot du poste a pied par {cx, cy} ({sol[cy][cx]!r})"
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nx, ny = cx + dx, cy + dy
+            g = sol[ny][nx]
+            if (nx, ny) in vues:
+                continue
+            if carte.LEGENDE[g].get("solide", 0) in (0, 3, 4):
+                vues.add((nx, ny))
+                pile.append((nx, ny))
+            else:
+                bords.add(g)
+    assert BARRIERE in bords and BARBELE in bords, f"le lot n'est pas clos de barbele : {sorted(bords)}"
+    assert bords <= {BARRIERE, BARBELE} | {g for g in bords if carte.LEGENDE[g].get("solide") == 1}, sorted(bords)
+    for i in range(b["l"]):
+        dehors = sol[b["y"] + 1][b["x"] + i]
+        assert _roulable(sol, b["x"] + i, b["y"] + 1), f"la barriere donne sur {dehors!r}, pas sur la rue"
+
+
+def test_la_barriere_coulissante_est_du_barbele_qui_s_ouvre():
+    """Fermee, elle ne se passe pas plus que le barbele (ni a pied, ni en char, et
+    un lourd ne la defonce pas : c'est la solidite 5) ; mais c'est une SORTIE —
+    la connexite la traverse, sinon le lot serait une poche fermee."""
+    assert carte.solidite(BARRIERE) == carte.solidite(BARBELE) == 5
+    assert carte.LEGENDE[BARRIERE]["cloture"] == "barbele"
+    assert carte.franchissable(BARRIERE) and not carte.franchissable(BARBELE)
+    assert not carte.marchable(BARRIERE), "on ne se tient pas sur une barriere"
 
 
 def _poses_sur(ville, tuiles):
