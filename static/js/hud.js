@@ -2240,11 +2240,12 @@ const Hud = (function () {
     const p = B.partie;
     const foire = function (d) { return !!d.a_pied && d.ou.indexOf('foire:') === 0; };
     const genres = [
-      ['AU VOLANT', function (d) { return !d.circuit && !d.a_pied; }],
+      ['AU VOLANT', function (d) { return !d.circuit && !d.a_pied && !d.rue; }],
       ['LES TOURS', function (d) { return !!d.circuit; }],
       // ⚠️ Les épreuves devant un panneau (la roue, la radio, le cadenas…) :
       // debout, mais pas à la foire.
       ['DEBOUT', function (d) { return !!d.a_pied && !foire(d); }],
+      ['DANS LA RUE', function (d) { return !!d.rue; }],
       ['À LA FOIRE', foire],
     ];
     const items = [];

@@ -690,6 +690,41 @@ DEFIS: list[dict] = [
      "appareils": ["manette", "doigts"],
      "regles": {"gaz": 0.75, "frein": 0.6, "virage": 0.6, "debord": 0.2, "epave_loin": 22},
      "texte": "PRENDS LA REMORQUEUSE, ACCROCHE L'ÉPAVE (RECULE, KLAXON) ET RAMÈNE-LA SANS À-COUPS"},
+
+    # --- DANS LA RUE, ET LE DÉFI DE LA CHEF (3e vague, 23 sept. 2026) ---------
+    #
+    # ⚠️ `rue` : l'épreuve qu'on joue à pied, en marchant (`static/js/rue.js`) —
+    # pas cloué comme une épreuve debout (`epreuve`).
+    # ⚠️ À LA CANTINE, parce que c'est là qu'il y a un TROTTOIR : une voie du bord
+    # droite sur 24 tuiles, il n'y en a que le long de l'eau (mesuré sur la carte :
+    # la cantine et l'hôtel, à trois tuiles ; rien près du casse-croûte).
+    {"slug": "filature", "titre": "La filature des Quais", "ou": "porte:cantine", "rue": "filature",
+     "chrono_s": 120, "prime": 70, "debloque": {"missions": ["f06"]},
+     # `pas_px` : son pas, en pixels par image — plus lent que le nôtre, qui
+     # court par défaut : on s'arrête, on repart. `vu` : quand il se retourne,
+     # ce qu'il voit devant lui, en tuiles.
+     "regles": {"longueur": 24, "depart": 4, "pas_px": 0.45, "proche": 3, "loin": 8, "vu": 6,
+                "mefiance_s": 1.5, "perdu_s": 4, "regard_s": 1.2, "regard_tous_s": [3, 6]},
+     "texte": "SUIS LE SUSPECT SUR LE TROTTOIR : PAS À MOINS DE 3 TUILES, PAS À PLUS DE 8. QUAND IL SE RETOURNE, SOIS LOIN"},
+    # ⚠️ AU PARC DU KIOSQUE, pas au terminus où Mo attend : le ring doit être
+    # loin de TOUTE chaussée (au banc, une moto a fauché le joueur qui tournait
+    # dans le ring du terminus). Le jeu le cherche (`Rue`, `ringDegage`) ; sur la
+    # carte, le seul espace dégagé de cinq tuiles à deux pas d'un lieu nommé est
+    # le parc du kiosque.
+    {"slug": "esquive", "titre": "L'esquive du Grand Mo", "ou": "porte:kiosque", "rue": "esquive",
+     "chrono_s": 60, "prime": 80, "debloque": {"missions": ["f04"]},
+     # `vie_min` : sous cette part de ta vie, tu es sonné. `ring` : on reste à
+     # moins de tant de tuiles de là où il a chargé — hors du ring plus de
+     # `dehors_s`, on ne l'esquive plus, on le fuit (on court plus vite que lui :
+     # sans ring, il suffirait de tourner en rond au loin).
+     "regles": {"duree_s": 30, "vie_min": 0.4, "ring": 5, "dehors_s": 1.5},
+     "texte": "LE COUSIN DU GRAND MO CHARGE : TRENTE SECONDES DANS LE RING, SANS FRAPPER UNE SEULE FOIS. ESQUIVE !"},
+    {"slug": "chef", "titre": "Le défi de la Chef des Quais", "ou": "porte:hotel", "conduite": "chef",
+     "chrono_s": 300, "prime": 150, "debloque": {"apres": ["frein_pile", "slalom", "creneau"]},
+     # ⚠️ Les étapes sont LES épreuves de ces trois défis, à leurs panneaux, avec
+     # leurs règles (`Conduite`, `chaine`) : rien n'est recopié ici.
+     "regles": {"chaine": ["frein_pile", "slalom", "creneau"]},
+     "texte": "JOSÉE VEUT VOIR : LE FREIN PILE, LE SLALOM ET LE CRÉNEAU, D'UN SEUL SOUFFLE, SANS SORTIR DU CHAR"},
 ]
 
 #: Avec quoi un défi se joue. ⚠️ Un défi n'en exclut un que pour une raison

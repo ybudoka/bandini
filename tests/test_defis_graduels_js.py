@@ -451,6 +451,13 @@ VOLANT = """
         while (e > Math.PI) e -= 2 * Math.PI; while (e < -Math.PI) e += 2 * Math.PI;
         return Math.max(-1, Math.min(1, e * 2));
     }
+    /** `tenir`, sur une piste donnée (celle d'une étape de la Chef). */
+    function tenir2(L, v, p, lat) {
+        const q = L.Conduite.projeter(p, v.x, v.y);
+        let e = Math.atan2(p.dy, p.dx) + Math.atan2(lat - q.lat, 28) - v.angle;
+        while (e > Math.PI) e -= 2 * Math.PI; while (e < -Math.PI) e += 2 * Math.PI;
+        return Math.max(-1, Math.min(1, e * 2.2));
+    }
     /** Où il s'arrêterait, pied au frein à partir de maintenant (la physique de `majPhysique` :
         ⚠️ sous 0,15 px/image, le frein est la MARCHE ARRIÈRE — il ralentit moins fort). */
     function arretA(v) {
@@ -748,3 +755,179 @@ def test_au_remorquage_un_coup_de_frein_fait_lacher_l_epave(banc):
     assert r["avant"] == 0 and r["vite"] >= 1.6, r
     assert r["defi"] is None and r["accroche"] is False, r
     assert "L'ÉPAVE A LÂCHÉ" in r["message"], r
+
+
+# --- La 3e vague : dans la rue, et la Chef ----------------------------------------------------
+
+#: Marcher au clavier vers un point (huit directions), comme un joueur : les flèches qu'il faut,
+#: tenues tant qu'on n'y est pas.
+MARCHER = """
+    let tenues = [];
+    function marcherVers(o, j, x, y, marge) {
+        const dx = x - j.x, dy = y - j.y, voulues = [];
+        if (Math.abs(dx) > marge) voulues.push(dx > 0 ? 'KeyD' : 'KeyA');
+        if (Math.abs(dy) > marge) voulues.push(dy > 0 ? 'KeyS' : 'KeyW');
+        tenues.filter(function (t) { return voulues.indexOf(t) < 0; }).forEach(function (t) { o.relacher(t); });
+        voulues.filter(function (t) { return tenues.indexOf(t) < 0; }).forEach(function (t) { o.touche(t); });
+        tenues = voulues;
+    }
+    function toutLacher(o) { tenues.forEach(function (t) { o.relacher(t); }); tenues = []; }
+"""
+
+
+@pytest.mark.parametrize("ecart,gagne,raison", [(7, True, None), (4, False, "IL T'A VU"), (11, False, "TU L'AS PERDU")])
+def test_la_filature_se_gagne_a_bonne_distance(banc, ecart, gagne, raison):
+    """Au clavier, en marchant : à sept tuiles derrière lui, on le suit jusqu'au bout ; à quatre,
+    il nous voit en se retournant ; à onze, on le perd."""
+    r = banc(_jeu(MARCHER + """
+        aller(L, o, 'filature');
+        const j = L.B.joueur, e = L.B.rue, p = e.piste;
+        for (let n = 0; n < 7200 && L.B.defi; n++) {
+            const cible = L.Conduite.point(p, e.s - %d * L.TT, e.lat);
+            marcherVers(o, j, cible.x, cible.y, 6);
+            o.frame(1);
+        }
+        toutLacher(o);
+        return { fait: !!L.B.partie.defisFaits.filature, message: L.B.msg, suspect: L.B.entites.indexOf(e.suspect) >= 0 };
+    """ % ecart))
+    assert r["fait"] is gagne, r
+    if raison:
+        assert r["message"] == "DÉFI RATÉ — " + raison, r
+    assert r["suspect"] is False, "le suspect repart avec l'épreuve"
+
+
+ESQUIVE = MARCHER + """
+    function combat(L, o, frappeur) {
+        const j = L.B.joueur, e = L.B.rue, q = e.adversaire, R = 3 * L.TT;
+        // D'abord, entrer dans le ring.
+        for (let n = 0; n < 900 && L.B.defi && e.phase !== 'combat'; n++) { marcherVers(o, j, e.depart.x + R, e.depart.y, 4); o.frame(1); }
+        let roulades = 0, a = Math.atan2(j.y - e.depart.y, j.x - e.depart.x);
+        for (let n = 0; n < 2400 && L.B.defi; n++) {
+            const d = Math.hypot(q.x - j.x, q.y - j.y);
+            if (frappeur && d < 30) { toutLacher(o); o.tape('Space', 1); continue; }
+            // Il arme son coup, TOUT PRÈS : on roule. Sinon on tourne dans le ring, en
+            // gardant le cercle — c'est le pas du boxeur, pas la fuite.
+            if (q.phase === 'anticipation' && d < 24 && !j.roule) {
+                o.touche('ShiftLeft'); o.frame(1); o.relacher('ShiftLeft');
+                roulades++;
+                continue;
+            }
+            if (Math.hypot(j.x - (e.depart.x + Math.cos(a) * R), j.y - (e.depart.y + Math.sin(a) * R)) < 10) a += 0.35;
+            marcherVers(o, j, e.depart.x + Math.cos(a) * R, e.depart.y + Math.sin(a) * R, 4);
+            o.frame(1);
+        }
+        toutLacher(o);
+        return { fait: !!L.B.partie.defisFaits.esquive, message: L.B.msg, roulades: roulades,
+                 vie: j.vie / j.vieMax, reste: L.B.entites.indexOf(q) >= 0 };
+    }
+"""
+
+
+def test_l_esquive_se_gagne_sans_frapper(banc):
+    r = banc(_jeu(ESQUIVE + """
+        aller(L, o, 'esquive');
+        return combat(L, o, false);
+    """))
+    assert r["fait"] is True, r
+    assert r["roulades"] >= 3, "il a fallu esquiver pour de vrai"
+    assert r["reste"] is False
+
+
+def test_l_esquive_se_rate_au_premier_coup_de_poing(banc):
+    r = banc(_jeu(ESQUIVE + """
+        aller(L, o, 'esquive');
+        return combat(L, o, true);
+    """))
+    assert r["fait"] is False and r["message"] == "DÉFI RATÉ — TU AS FRAPPÉ", r
+
+
+def test_l_esquive_se_rate_sans_esquiver(banc):
+    """Entré dans le ring, planté là, les bras le long du corps : il nous sonne avant la fin."""
+    r = banc(_jeu(MARCHER + """
+        aller(L, o, 'esquive');
+        const j = L.B.joueur, e = L.B.rue;
+        for (let n = 0; n < 900 && L.B.defi && e.phase !== 'combat'; n++) { marcherVers(o, j, e.depart.x + 3 * L.TT, e.depart.y, 4); o.frame(1); }
+        // Au MILIEU du ring : repoussé par les coups, on y reste — c'est le coup qui juge.
+        for (let n = 0; n < 120 && L.B.defi; n++) { marcherVers(o, j, e.depart.x, e.depart.y, 3); o.frame(1); }
+        toutLacher(o);
+        for (let n = 0; n < 2400 && L.B.defi; n++) o.frame(1);
+        return { fait: !!L.B.partie.defisFaits.esquive, message: L.B.msg };
+    """))
+    assert r["fait"] is False and r["message"] == "DÉFI RATÉ — IL T'A SONNÉ", r
+
+
+def test_la_chef_enchaine_les_trois_epreuves_a_leurs_panneaux(banc):
+    """Chaque étape est l'épreuve d'un autre défi, à son panneau, avec ses règles. On joue le
+    frein pile et le slalom au volant (le pilote du banc), puis on pose le char dans la place du
+    créneau ; entre deux étapes, on saute d'un panneau à l'autre."""
+    r = banc(_jeu(VOLANT + """
+        const d = aller(L, o, 'chef'), c = L.B.conduite;
+        const etapes = [];
+        function poserSur(sl) {
+            const p = c.etape.e.piste, pt = L.Conduite.point(p, sl, 0);
+            let v = L.B.joueur.dansVehicule;
+            if (!v) {
+                v = L.Vehicules.creer('auto', pt.x, pt.y, Math.atan2(p.dy, p.dx), { etat: 'stationne', couleur: '#8a8698' });
+                L.Entites.indexer(); L.Vehicules.monter(L.B.joueur, v); o.frame(2);
+            }
+            v.x = pt.x; v.y = pt.y; v.vx = 0; v.vy = 0; v.vitesse = 0; v.angle = Math.atan2(p.dy, p.dx);
+            L.Entites.indexer(); L.Monde.centrerCamera(v.x, v.y);
+            return v;
+        }
+        // 1. Le frein pile.
+        etapes.push(c.etape.d.slug);
+        let v = poserSur(-8 * L.TT);
+        o.frame(2);
+        const rf = c.etape.d.regles;
+        for (let n = 0; n < 900 && L.B.defi && c.k === 0; n++) {
+            const q = L.Conduite.projeter(c.etape.e.piste, v.x, v.y);
+            const freine = c.etape.e.phase === 'lance' && q.s + arretA(v) >= rf.case * L.TT - 2;
+            piloter(o, freine ? 0 : 1, freine && v.vitesse > 0.05 ? 1 : 0, tenir2(L, v, c.etape.e.piste, 0));
+            o.frame(1);
+        }
+        o.pad(null);
+        // 2. Le slalom.
+        etapes.push(c.etape && c.etape.d.slug);
+        v = poserSur(-5 * L.TT);
+        const rs = c.etape.d.regles, cones = c.etape.e.cones;
+        for (let n = 0; n < 1500 && L.B.defi && c.k === 1; n++) {
+            const q = L.Conduite.projeter(c.etape.e.piste, v.x, v.y);
+            const k = Math.max(0, Math.min(cones.length - 1, Math.round((q.s + 28 - rs.depart * L.TT) / (rs.pas * L.TT))));
+            piloter(o, v.vitesse < 1.8 ? 0.8 : 0, 0, tenir2(L, v, c.etape.e.piste, k % 2 === 0 ? 3 : -19));
+            o.frame(1);
+        }
+        o.pad(null);
+        // 3. Le créneau.
+        etapes.push(c.etape && c.etape.d.slug);
+        v = poserSur(c.etape.e.milieu);
+        for (let n = 0; n < 90 && L.B.defi; n++) o.frame(1);
+        return { etapes: etapes, fait: !!L.B.partie.defisFaits.chef, message: L.B.msg };
+    """.replace("tenir(L", "tenir(L")))
+    assert r["etapes"] == ["frein_pile", "slalom", "creneau"], r
+    assert r["fait"] is True, r
+
+
+def test_le_ring_de_l_esquive_ne_touche_aucune_chaussee(banc):
+    r = banc(_jeu("""
+        aller(L, o, 'esquive');
+        const e = L.B.rue, d = L.B.defs.defis.find(function (q) { return q.slug === 'esquive'; }), R = d.regles.ring;
+        const cx = Math.floor(e.depart.x / L.TT), cy = Math.floor(e.depart.y / L.TT);
+        let chaussee = 0;
+        for (let y = cy - R; y <= cy + R; y++) for (let x = cx - R; x <= cx + R; x++) {
+            if ((x - cx) * (x - cx) + (y - cy) * (y - cy) > R * R) continue;
+            if (L.Monde.fleche(x, y) !== '.' || L.Monde.estChaussee(x, y)) chaussee++;
+        }
+        const loin = Math.hypot(e.depart.x - L.B.joueur.x, e.depart.y - L.B.joueur.y) / L.TT;
+        // Hors du ring (sur sa couronne, dehors), le combat attend ; dedans, il part.
+        const j = L.B.joueur;
+        j.x = e.depart.x + (R + 1) * L.TT; j.y = e.depart.y; L.Entites.indexer();
+        o.frame(30);
+        const dehors = e.phase;
+        j.x = e.depart.x + L.TT; j.y = e.depart.y; L.Entites.indexer();
+        o.frame(2);
+        return { chaussee: chaussee, loin: loin, dehors: dehors, dedans: e.phase };
+    """))
+    assert r["chaussee"] == 0
+    assert r["loin"] <= 12
+    assert r["dehors"] == "attend", "le combat attend qu'on entre dans le ring"
+    assert r["dedans"] == "combat"

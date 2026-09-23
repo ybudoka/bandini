@@ -245,3 +245,4 @@ Deux documents d'avant la table :
 | L'écran du compte se lit d'un coup d'œil | ✅ **livré** | 22 sept. 2026 | **P4** | ajout | [fiche](l-ecran-du-compte-se-lit-d-un-coup-d-oeil.md#fiche) · [notes](l-ecran-du-compte-se-lit-d-un-coup-d-oeil.md#notes) |
 | Un comptoir reste ouvert après un achat | ✅ **livré** | 22 sept. 2026 | **P2** | **correctif** | [fiche](un-comptoir-reste-ouvert-apres-un-achat.md#fiche) · [notes](un-comptoir-reste-ouvert-apres-un-achat.md#notes) |
 | Le poste clôturé : du barbelé et une barrière coulissante | ✅ **livré** | 23 sept. 2026 | **P2** | ajout | [fiche](le-poste-cloture-du-barbele-et-une-barriere-coulissante.md#fiche) · [notes](le-poste-cloture-du-barbele-et-une-barriere-coulissante.md#notes) |
+| Dix-huit défis au doigt, à la manette et au clavier | ✅ **livré** | 23 sept. 2026 | **P4** | ajout | [fiche](dix-huit-defis-au-doigt-a-la-manette-et-au-clavier.md#fiche) · [notes](dix-huit-defis-au-doigt-a-la-manette-et-au-clavier.md#notes) |

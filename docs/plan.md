@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (228 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (229 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -90,7 +90,6 @@ pas quand l'ordre de travail change.
 | Infiltration : portes verrouillées et gardes privés | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/infiltration-portes-verrouillees-et-gardes-prives.md#fiche) |
 | Générer les bruitages qui n'ont aucun équivalent payé | ⬜ **à faire** (à trancher par Martin : le quota du mois est épuisé jusqu'au 17 oct.) | — | **P4** | ajout | [fiche](jalons/les-bruitages-qui-n-ont-aucun-equivalent-paye.md#fiche) |
 | Refaire les voix que le dictionnaire de prononciation change | ⬜ **à faire** (à trancher par Martin : le quota du mois est épuisé jusqu'au 17 oct.) | — | **P4** | **correctif** | [fiche](jalons/refaire-les-voix-que-le-dictionnaire-de-prononciation-change.md#fiche) |
-| Dix-huit défis au doigt, à la manette et au clavier | ⬜ **en cours** (vagues 1 et 2 livrées : le socle — la carte, les appareils, le déblocage —, les neuf épreuves debout et les six au volant ; restent les trois dans la rue) | 23 sept. 2026 | **P4** | ajout | [fiche](jalons/dix-huit-defis-au-doigt-a-la-manette-et-au-clavier.md#fiche) · [notes](jalons/dix-huit-defis-au-doigt-a-la-manette-et-au-clavier.md#notes) |
 
 ## L'ordre
 

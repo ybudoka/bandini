@@ -389,6 +389,60 @@ const Conduite = (function () {
     },
   };
 
+  // --- Le défi de la Chef : trois épreuves d'un seul souffle ------------------------------
+  //
+  // ⚠️ Chaque étape EST l'épreuve d'un autre défi (`regles.chaine` : leurs slugs),
+  // jouée à SON panneau avec SES règles — la même piste, les mêmes cônes. Rien
+  // n'est recopié : un chiffre changé au frein pile change aussi la Chef.
+
+  /** L'étape `k` de la Chef : son défi, sa sorte, son état préparé à son panneau. */
+  function etapeDeLaChef(e, k) {
+    const d = defDe(e.chaine[k]);
+    // ⚠️ La triche peut ouvrir la Chef sans ses trois étapes : on les ouvre avec elle.
+    if (d && Histoire.ouvrirDefi(d, true)) Histoire.planterLesPanneauxOuverts();
+    const panneau = d && B.entites.find(function (q) { return q.type === 'panneau' && q.defi === d.slug; });
+    if (!d || !panneau) return null;
+    const sous = EPREUVES[d.conduite].preparer(d, d.regles, { x: panneau.x, y: panneau.y });
+    return sous ? { d: d, sorte: d.conduite, e: sous } : null;
+  }
+
+  EPREUVES.chef = {
+    preparer: function (d, r) {
+      const e = { chaine: r.chaine, k: 0, etape: null };
+      e.etape = etapeDeLaChef(e, 0);
+      return e.etape ? e : null;
+    },
+    partir: function (e, r, v) {
+      const et = e.etape, sorte = EPREUVES[et.sorte];
+      if (sorte.partir) sorte.partir(et.e, et.d.regles, v);
+    },
+    maj: function (e, r, v) {
+      const et = e.etape, issue = EPREUVES[et.sorte].maj(et.e, et.d.regles, v, et.d);
+      if (!issue) return null;
+      if (!issue.gagne) return { gagne: false, raison: et.d.titre.toUpperCase() + ' : ' + issue.raison };
+      if (++e.k >= e.chaine.length) return { gagne: true };
+      e.etape = etapeDeLaChef(e, e.k);
+      if (!e.etape) return { gagne: false, raison: 'L\'ÉTAPE SUIVANTE A DISPARU' };
+      Hud.message('ÉTAPE ' + (e.k + 1) + ' / ' + e.chaine.length + ' : ' + e.etape.d.titre.toUpperCase(), 180);
+      Son.SFX.mission();
+      EPREUVES.chef.partir(e, r, v);
+      return null;
+    },
+    compte: function (e, r, v) {
+      const et = e.etape;
+      return 'ÉTAPE ' + (e.k + 1) + '/' + e.chaine.length + ' ' + EPREUVES[et.sorte].compte(et.e, et.d.regles, v);
+    },
+    cible: function (e) { const et = e.etape; return EPREUVES[et.sorte].cible(et.e, et.d.regles, et.d); },
+    sol: function (ctx, e, r, vue) {
+      const et = e.etape, sorte = EPREUVES[et.sorte];
+      if (sorte.sol) sorte.sol(ctx, et.e, et.d.regles, vue);
+    },
+    hud: function (ctx, e) {
+      const et = e.etape, sorte = EPREUVES[et.sorte];
+      if (sorte.hud) sorte.hud(ctx, et.e, et.d.regles);
+    },
+  };
+
   // --- Les marques au sol ---------------------------------------------------------------
 
   /** Une ligne peinte en travers de la voie, à `sl` pixels : un damier de deux

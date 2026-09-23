@@ -2394,6 +2394,13 @@ const Histoire = (function () {
     // ⚠️ UNE ÉPREUVE AU VOLANT (`Conduite`) trouve sa piste AU PANNEAU, et y pose
     // ce qui attend (la remorqueuse, l'épave) : ses marques se voient avant qu'on
     // ait trouvé un char. Pas de place ici : le défi ne ment pas, il ne part pas.
+    // ⚠️ UNE ÉPREUVE DANS LA RUE (`Rue`) se joue à pied, sans char à trouver : elle
+    // pose celui qu'on file ou celui qui cogne, et part tout de suite.
+    if (d.rue) {
+      if (!Rue.commencer(d)) { B.defi = null; Hud.message('PAS DE PLACE ICI POUR CE DÉFI', 150); Son.SFX.erreur(); return; }
+      partir(d, null);
+      return;
+    }
     if (d.conduite && !Conduite.commencer(d)) {
       B.defi = null;
       Hud.message('PAS DE PLACE ICI POUR CE DÉFI', 150); Son.SFX.erreur();
@@ -2424,6 +2431,13 @@ const Histoire = (function () {
     if (!f) return;
     const d = defis().find(function (q) { return q.slug === f.slug; });
     if (d.a_pied) { majDefiDeFoire(d, f, j); return; }
+    if (d.rue) {
+      f.t++;
+      if (d.chrono_s && f.t > d.chrono_s * 60) { finirDefi(false, 'TEMPS ÉCOULÉ'); return; }
+      const issue = Rue.maj(d);
+      if (issue) finirDefi(issue.gagne, issue.raison);
+      return;
+    }
     if (!f.parti) {
       if (!j.dansVehicule) { if (++f.attente > ATTENTE_CHAR) finirDefi(false, 'IL FAUT UN CHAR'); return; }
       partir(d, j.dansVehicule);
@@ -2516,6 +2530,7 @@ const Histoire = (function () {
     rendreLaCarabine(B.defi);
     Adresse.fermer();
     Conduite.fermer();
+    Rue.fermer();
     B.defi = null;
   }
 
@@ -2524,6 +2539,7 @@ const Histoire = (function () {
     rendreLaCarabine(f);
     Adresse.fermer();
     Conduite.fermer();
+    Rue.fermer();
     B.defi = null;
     if (!reussi) { Hud.message('DÉFI RATÉ — ' + (raison || ''), 180); Son.SFX.erreur(); noter('DÉFI RATÉ : ' + d.titre, false); return; }
     const premiere = !B.partie.defisFaits[d.slug];
@@ -2777,7 +2793,7 @@ const Histoire = (function () {
     if (!j) return null;
     if (B.defi) {
       const d = defis().find(function (q) { return q.slug === B.defi.slug; });
-      const l = d.conduite ? Conduite.cible(d) : d.circuit ? repereDeCircuit(B.defi) : d.lieu ? lieu(d.lieu) : null;
+      const l = d.rue ? Rue.cible(d) : d.conduite ? Conduite.cible(d) : d.circuit ? repereDeCircuit(B.defi) : d.lieu ? lieu(d.lieu) : null;
       return l ? { x: l.x, y: l.y, nom: l.nom, couleur: '#7fc4ff' } : null;
     }
     if (m) {
@@ -2857,6 +2873,7 @@ const Histoire = (function () {
       }
       if (d.epreuve) return d.titre.toUpperCase() + chrono + ' ' + Adresse.compte(d);
       if (d.conduite) return d.titre.toUpperCase() + chrono + ' ' + Conduite.compte(d);
+      if (d.rue) return d.titre.toUpperCase() + chrono + ' ' + Rue.compte(d);
       if (d.coups) return d.titre.toUpperCase() + chrono + ' COUPS ' + B.defi.coups + '/' + d.coups;
       if (d.canards) return d.titre.toUpperCase() + chrono + ' CANARDS ' + B.defi.pris + '/' + d.canards
              + (canardAuCrochet() ? ' — MAINTENANT !' : '');

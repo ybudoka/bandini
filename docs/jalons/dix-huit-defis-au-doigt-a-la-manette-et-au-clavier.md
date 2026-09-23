@@ -180,3 +180,41 @@ dessinée par-dessus la ville, qu'on joue debout devant son panneau ou son compt
   `test_defis_graduels_js.py` dans l'arborescence de `docs/architecture.md`. Corrigé à part
   (`cf49706`), dès que la suite complète l'a montré. Les autres rouges de cette suite sont ceux déjà
   connus sur `dev` (voir le jalon des menus à onglets).
+
+### Vague 3 — dans la rue, et le défi de la Chef (23 sept. 2026) — ✅ livré
+
+- **`rue.js`** joue les épreuves à pied, en marchant (`rue` et `regles` au catalogue) : pas cloué
+  comme une épreuve debout.
+- **La filature des Quais** (débloquée par `f06`). Un suspect marche sur un trottoir droit : on le
+  suit sans être à moins de 3 tuiles (sinon la méfiance monte) ni à plus de 8 (sinon on le perd en
+  4 s). **Quand il se retourne**, il voit ce qui est devant lui à moins de 6 tuiles, à découvert.
+  ⚠️ C'est un passant `fige` : un passant figé rejoint son poste (`plante`) à pas de piéton, et on
+  déplace ce poste le long du trottoir. Il marche, s'arrête et se retourne sans une ligne de plus
+  dans le moteur des passants. ⚠️ **À la cantine, parce que c'est là qu'il y a un trottoir** : il
+  faut une voie du bord droite sur 24 tuiles, et on n'en trouve que le long de l'eau (mesuré : la
+  cantine et l'hôtel ; rien près du casse-croûte, prévu d'abord).
+- **L'esquive du Grand Mo** (débloquée par `f04`) : trente secondes contre son cousin, un docker aux
+  poings, sans un seul coup (`j.phase` ou une frappe chargée `j.charge` : raté), jusqu'à tomber sous
+  40 % de sa vie. On la joue **dans un ring** de 5 tuiles, peint au sol : on court plus vite que lui,
+  et sans ring il suffisait de tourner en rond au loin. Le combat part quand on y entre. ⚠️ **Le ring
+  est loin de toute chaussée** (`ringDegage`) : au banc, une moto a fauché le joueur qui tournait
+  dans un ring au bord d'une rue, près du terminus. Sur la carte, le seul espace dégagé de 5 tuiles à
+  deux pas d'un lieu déjà nommé est le parc du kiosque de Madame Thibodeau : c'est là.
+- **Le défi de la Chef des Quais** (débloqué par le frein pile, le slalom et le créneau réussis) :
+  ces trois épreuves d'un seul souffle, **à leurs panneaux, avec leurs règles** (`chaine`, rien de
+  recopié). Chaque étape s'annonce, et un échec d'étape rate la Chef en disant laquelle.
+- Le menu de saut gagne la rubrique **DANS LA RUE**.
+- **Juges** : la filature au clavier en marchant (7 tuiles derrière : gagnée ; 4 : « IL T'A VU » ;
+  11 : « TU L'AS PERDU »), l'esquive d'un boxeur qui tourne dans le ring et roule au dernier moment
+  (gagnée), qui frappe (« TU AS FRAPPÉ »), qui reste planté au milieu (« IL T'A SONNÉ »), le ring sans
+  chaussée qui n'engage qu'une fois dedans, et la Chef jouée étape par étape. Huit mutations, toutes
+  rouges une fois le juge du ring refait (il lisait la phase sans laisser passer une image).
+- ⚠️ **La vague 2 avait laissé un rouge sur `dev`** : `test_interpretation` refuse tout `"jeu"` dans
+  le paquet (ce mot est le jeu d'acteur des répliques), et la place du créneau s'appelait `jeu`.
+  Renommée `place` et corrigée à part (`de7f62a`), dès que la suite complète l'a montré.
+
+**Les dix-huit sont livrés** : neuf debout, six au volant, trois dans la rue. Cinq excluent un
+appareil pour une raison mécanique écrite au catalogue et prouvée par un juge : la danse (le doigt),
+le cadenas et le coffre (le clavier : ses huit directions), le verre de lait et le remorquage (le
+clavier : tout ou rien). Les voix des répliques n'y sont pas : aucun de ces défis ne parle, et le
+quota d'ElevenLabs est vide jusqu'au 17 oct.

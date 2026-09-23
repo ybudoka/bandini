@@ -734,8 +734,9 @@ def test_le_saut_vers_un_defi_range_le_catalogue_par_genre(banc):
     }""")
     assert sorted(r["defis"]) == sorted(r["catalogue"]), "chaque defi du catalogue, une fois"
     entetes = [x for x in r["lignes"] if x.startswith("# ")]
-    # ⚠️ DEBOUT : les épreuves devant un panneau (les dix-huit défis, 23 sept. 2026).
-    assert entetes == ["# AU VOLANT", "# LES TOURS", "# DEBOUT", "# À LA FOIRE"]
+    # ⚠️ DEBOUT (les épreuves devant un panneau) et DANS LA RUE (la filature, l'esquive) :
+    # les dix-huit défis, 23 sept. 2026.
+    assert entetes == ["# AU VOLANT", "# LES TOURS", "# DEBOUT", "# DANS LA RUE", "# À LA FOIRE"]
     assert r["lignes"][-1] == "RETOUR"
     assert r["saut"] == "RÉUSSI"
     assert r["cache"] == "CACHÉ"
