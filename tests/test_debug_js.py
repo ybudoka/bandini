@@ -720,8 +720,8 @@ ALLER_AU_DEFI = """
 
 
 def test_le_saut_vers_un_defi_range_le_catalogue_par_genre(banc):
-    """C'est le CATALOGUE qui fait la liste, rangee au volant / les tours / la
-    foire — et un defi reussi le dit."""
+    """C'est le CATALOGUE qui fait la liste, rangee au volant / les tours / debout / la
+    foire — et un defi reussi le dit, un defi encore cache aussi."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.B.partie.defisFaits = { saut: { jour: 1, temps: 100 } };
@@ -729,13 +729,16 @@ def test_le_saut_vers_un_defi_range_le_catalogue_par_genre(banc):
         return { lignes: m.items.map(function (i) { return i.entete ? '# ' + i.entete : i.libelle; }),
                  defis: m.items.filter(function (i) { return i.defi; }).map(function (i) { return i.defi; }),
                  saut: m.items.filter(function (i) { return i.defi === 'saut'; })[0].detail,
+                 cache: m.items.filter(function (i) { return i.defi === 'roue'; })[0].detail,
                  catalogue: L.B.defs.defis.map(function (d) { return d.slug; }) };
     }""")
     assert sorted(r["defis"]) == sorted(r["catalogue"]), "chaque defi du catalogue, une fois"
     entetes = [x for x in r["lignes"] if x.startswith("# ")]
-    assert entetes == ["# AU VOLANT", "# LES TOURS", "# À LA FOIRE"]
+    # ⚠️ DEBOUT : les épreuves devant un panneau (les dix-huit défis, 23 sept. 2026).
+    assert entetes == ["# AU VOLANT", "# LES TOURS", "# DEBOUT", "# À LA FOIRE"]
     assert r["lignes"][-1] == "RETOUR"
     assert r["saut"] == "RÉUSSI"
+    assert r["cache"] == "CACHÉ"
 
 
 def test_chaque_defi_du_catalogue_se_rejoint_par_le_saut(banc):

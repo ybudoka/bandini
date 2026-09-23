@@ -905,6 +905,11 @@ const Entree = (function () {
           // change de sens — abandonner, pas frapper.
           : nom === 'piratage'
             ? { attaque: 'ABANDONNER', action: '·', esquive: '·', arme: '·' }
+            // ⚠️ Une EPREUVE D'ADRESSE (`Adresse`) : ACTION et FRAPPE y servent
+            // (la roue, la danse), et c'est COURS qui abandonne — le seul bouton
+            // qu'aucune epreuve ne prend.
+            : nom === 'epreuve'
+            ? { attaque: 'FRAPPE', action: 'ACTION', esquive: 'ABANDONNER', arme: '·' }
             // Le mode photo (M14) : pas de FRAPPE ni d'ESQUIVE, on ne fait
             // que regarder.
             : nom === 'photo'

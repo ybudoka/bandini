@@ -169,6 +169,10 @@ function etatInitial(defs) {
     appels: {},           // les appels recus, par mission
     appelT: null,
     defisFaits: {},
+    //: Les defis DEBLOQUES en cours de partie (`debloque` du catalogue) : slug ->
+    //: `{ jour, lu }`. ⚠️ Une fois ouvert, un defi le reste — meme ouvert par la
+    //: triche. `lu` : on a lu son panneau, il ne bat plus sur la carte.
+    defisOuverts: {},
     //: LE DEFI DU JOUR (M14, 5e vague) : `{ date, slug, temps }` de la derniere prime du jour
     //: encaissee par CETTE partie. ⚠️ La date est celle du SERVEUR, jamais l'horloge locale.
     //: Null tant qu'on n'en a pas touche ; une vieille partie le recoit par `completer`.
@@ -721,7 +725,7 @@ const Sauvegarde = (function () {
     const base = etatInitial(defs);
     if (!partie || typeof partie !== 'object') return base;
     const out = Object.assign({}, base, partie);
-    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'paquets', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance', 'contrebande', 'contacts', 'triches']) {
+    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'defisOuverts', 'paquets', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance', 'contrebande', 'contacts', 'triches']) {
       out[k] = Object.assign({}, base[k], (partie[k] && typeof partie[k] === 'object') ? partie[k] : {});
     }
     if (!Array.isArray(out.tenues) || out.tenues.indexOf('chandail') < 0) out.tenues = ['chandail'].concat(Array.isArray(out.tenues) ? out.tenues : []);

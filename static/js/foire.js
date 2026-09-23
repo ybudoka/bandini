@@ -262,9 +262,26 @@ const Foire = (function () {
 
   function jeux() { return (Monde.carte && Monde.carte.def && Monde.carte.def.jeux_de_foire) || []; }
 
+  /** Les comptoirs où l'on JOUE : les trois jeux d'adresse, et les kiosques
+      qu'un défi nomme (`foire:<kiosque>`, les dix-huit défis du 23 sept. 2026 —
+      le lance-anneaux, les peluches, les ballons ne servaient qu'à vendre).
+      ⚠️ Nommé ne veut pas dire ouvert : c'est `Histoire.defiDuComptoir` qui
+      dit si le défi est débloqué, et ACTION passe au suivant sinon. */
+  function comptoirs() {
+    const def = Monde.carte && Monde.carte.def;
+    if (!def) return [];
+    const nommes = ((B.defs && B.defs.defis) || []).filter(function (d) { return d.ou && d.ou.indexOf('foire:') === 0; })
+      .map(function (d) { return d.ou.slice(6); });
+    const siens = jeux().slice();
+    for (const k of def.kiosques_de_foire || []) {
+      if (nommes.indexOf(k.slug) >= 0 && !siens.some(function (q) { return q.slug === k.slug; })) siens.push(k);
+    }
+    return siens;
+  }
+
   /** Le décor d'un jeu, tel qu'il vit dans le monde (il peut être CASSÉ). */
   function kiosqueDuJeu(slug) {
-    const j = jeux().find(function (q) { return q.slug === slug; });
+    const j = comptoirs().find(function (q) { return q.slug === slug; });
     if (!j) return null;
     return Entites.decorAutour(j.x * TT + 8, j.y * TT + 15, 10).find(function (e) {
       return e.decor === slug;
@@ -281,7 +298,7 @@ const Foire = (function () {
   function jeuSousLaMain(j) {
     if (!j || j.dansVehicule || j.manege || B.interieur) return null;
     let meilleur = null, dMin = PORTEE_JEU;
-    for (const q of jeux()) {
+    for (const q of comptoirs()) {
       const d = Math.hypot(q.x * TT + 8 - j.x, q.y * TT + 15 - j.y);
       if (d <= dMin && faceA(j, q.x * TT + 8, q.y * TT + 15)) { dMin = d; meilleur = q; }
     }
@@ -803,7 +820,7 @@ const Foire = (function () {
   return {
     demarrer, maj, bloquer, ajouterVisibles, wagons, pointDuTrain, pointDeMontagne,
     sousLaMain, inviteMonter, monter, descendre,
-    jeux, jeuSousLaMain, kiosqueDuJeu, cibles, centre, PORTEE_JEU,
+    jeux, comptoirs, jeuSousLaMain, kiosqueDuJeu, cibles, centre, PORTEE_JEU,
     MACHINES: FOIRE_EN_VOLUME,
     get train() { return train; }, get montagne() { return mr; }, get roue() { return roue; }, attache,
   };

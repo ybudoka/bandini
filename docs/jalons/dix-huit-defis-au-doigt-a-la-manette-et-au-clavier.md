@@ -80,3 +80,48 @@ dessinée par-dessus la ville, qu'on joue debout devant son panneau ou son compt
 - **La triche SAUT VERS UN DÉFI débloque le défi qu'elle vise** : c'est une triche.
 
 ## Notes
+
+### Vague 1 — le socle et les neuf épreuves debout (23 sept. 2026)
+
+- **Le catalogue** : `appareils` sur chaque défi (les trois par défaut, `missions.APPAREILS`) ;
+  `debloque` (`defis`, `missions`, `apres`) ; `epreuve` et `regles` pour les neuf jeux debout.
+  Les chiffres d'une épreuve vivent dans `regles`, pas au premier niveau, où `coups`, `canards` et
+  `cibles` parlent déjà aux jeux de la foire. Les trois nouveaux jeux de la foire n'ont **pas**
+  `foire: True` : ce drapeau fait le lot de la casquette, et on ne demande pas six jeux à qui l'a
+  gagnée avec trois.
+- **Le défi du jour** ne tourne que sur les dix défis sans `debloque` (`defi.rotation`) : la rotation
+  d'avant ne bouge pas d'un jour, et le serveur ne désigne jamais un défi qu'un joueur neuf ne voit
+  pas encore.
+- **Le déblocage** (`Histoire.majDeblocages`, une fois par seconde, jamais dans une pièce ni pendant
+  une scène) : un défi ouvert entre dans `partie.defisOuverts` (`{ jour, lu }`), s'inscrit au journal
+  (« NOUVEAU DÉFI : … ») et s'annonce, en une seule ligne quand plusieurs s'ouvrent ensemble. Son
+  **panneau naît à ce moment-là** (`poserPanneau`), jamais au démarrage. Deux panneaux restent à
+  trois tuiles l'un de l'autre (`PANNEAUX_ECARTES`). Un défi ouvert le reste, et la triche SAUT VERS
+  UN DÉFI ouvre celui qu'elle vise (nouvelle rubrique DEBOUT, et « CACHÉ » à côté d'un défi fermé).
+- **La foire** apprend ses kiosques qui jouent (`Foire.comptoirs`) : le lance-anneaux, les peluches
+  et les ballons. Tant que leur défi est caché, ils restent des kiosques (`defiDuComptoir`).
+- **La proposition** du défi dit « SE JOUE : » avec les trois appareils dessinés (`Hud.iconeAppareil` :
+  un doigt, une manette, un clavier), souligne celui qu'on tient, et prévient « PAS AVEC CE QUE TU
+  TIENS ».
+- **La carte** : un drapeau par défi ouvert (cyan : jouable avec le filtre ; vert : réussi ; gris :
+  pas avec ce que tu tiens, en TOUS), qui bat tant qu'on n'a pas lu son panneau. En haut à gauche :
+  l'appareil du filtre, le nombre de défis, et combien restent « À DÉCOUVRIR ». **ARME** tourne le
+  filtre (l'appareil qu'on tient, les deux autres, TOUS) ; la carte se rouvre sur ce qu'on tient.
+- **Les épreuves** (`adresse.js`) : la roue, les anneaux, les ratons, la danse, le mannequin, la
+  radio, le moteur, le cadenas et le coffre. Même axe que le piratage, `B.epreuve` cloue le joueur et
+  affame le combat, l'entrée en char et le décor, et ESQUIVE (COURS, B, MAJ) abandonne. Les douze
+  premières images ne lisent rien : l'appui de COMMENCER y est encore neuf. Un coup reçu arrête
+  l'épreuve. La boîte se dessine **sous** le joueur, parce qu'au milieu elle le cachait (capture).
+- ⚠️ **Le cadenas exclut vraiment le clavier.** Chaque goupille se cache à 22,5° ± 4° d'une des huit
+  directions, et la tolérance est de 9°. Un juge essaie les huit directions sur beaucoup de
+  goupilles : zéro. Le stick virtuel du doigt, lui, y arrive (un autre juge le fait au pointeur).
+- **Juges** : `test_defis_graduels_js.py`. Chaque épreuve se gagne au bouton avec un joueur parfait
+  qui lit l'état et appuie au clavier (ou pousse le stick pour le cadenas). Chacune se rate sans rien
+  faire, et se rate aussi avec un **joueur maladroit** qui appuie au mauvais moment : sans lui, une
+  règle qui laisse tout passer dès qu'on appuie restait verte. S'y ajoutent l'abandon, le joueur
+  figé (les quatre directions et sa vitesse, parce que face au comptoir il ne bougeait déjà pas), les
+  paliers de déblocage, la sauvegarde, la carte et son filtre ARME, et le kiosque caché. Côté Python
+  (`test_missions.py`) : les appareils, ce que `debloque` nomme, **aucune porte neuve**, les règles
+  d'une épreuve. Vingt mutations : toutes rouges, sauf une. Pour le moteur, une toux ratée est
+  rattrapée deux fois (la marge, puis « IL CALE ») : c'est une protection double, pas un juge aveugle.
+- Captures Chromium : la proposition, les neuf épreuves, la carte dans ses quatre filtres.

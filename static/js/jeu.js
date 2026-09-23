@@ -100,7 +100,7 @@ const Jeu = (function () {
     Monde.centrerCamera(j.x, j.y);
     Entites.peuplerDabord();          // ⚠️ apres le joueur : la bulle est autour de lui
     if (p.mission) p.mission = null;  // une mission ne survit pas au rechargement : ses figurants non plus
-    B.mission = null; B.defi = null; B.cinema = null; B.ouverture = null; B.scene = null; B.finEnAttente = null;
+    B.mission = null; B.defi = null; B.epreuve = null; B.cinema = null; B.ouverture = null; B.scene = null; B.finEnAttente = null;
     B.sonnerie = null;                       // un telephone qui sonnait dans la partie d'avant ne sonne pas dans celle-ci
     B.abribusServis = {};                    // les abribus qu'un autobus vient de servir (Autobus)
     Traversier.oublier();                    // rien a bord, la carte neuve n'a pas de pont pose
@@ -557,6 +557,7 @@ const Jeu = (function () {
   /** La carte de la ville, plein ecran : la simulation attend. */
   function ouvrirCarte() {
     if (B.etat !== 'jeu' && B.etat !== 'pause') return;
+    Hud.oublierFiltreDeCarte();   // la carte se rouvre sur l'appareil qu'on tient
     Combat.fermerRoue(false);
     if (B.menu) Hud.fermerMenu();
     B.etat = 'carte';
@@ -928,6 +929,9 @@ const Jeu = (function () {
       }
     } else if (B.etat === 'carte') {
       // La carte de la ville : N, ECHAP, ACTION ou FRAPPE la referment.
+      // ⚠️ ARME tourne le filtre des défis (l'appareil qu'on tient, les deux autres, tous) :
+      // c'est le seul bouton que la carte ne prenait pas, et le doigt l'a aussi.
+      if (Entree.neuf('arme')) { Hud.tournerFiltreDeCarte(); Entree.videPresse(); return; }
       if (Entree.neuf('carte') || Entree.neuf('pause') || Entree.neuf('action') || Entree.neuf('attaque') || Entree.neuf('annuler')) { fermerCarte(); Entree.videPresse(); return; }
     } else if (B.etat === 'photo') {
       majPhoto();
@@ -1286,7 +1290,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Entites: Entites, Combat: Combat,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Incendies: Incendies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Incendies: Incendies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,

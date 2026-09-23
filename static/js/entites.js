@@ -3846,7 +3846,8 @@ const Entites = (function () {
     // ⚠️ LE PIRATAGE CLOUE COMME LA ROUE D'ARMES : le stick choisit une
     // direction de sequence, pas un pas — s'il faisait aussi marcher le
     // personnage, on sortirait du terminal des le premier essai.
-    if (B.cinema || B.roue || B.piratage) { j.vx = 0; j.vy = 0; return; }   // on ecoute, on choisit, ou on pirate
+    // ⚠️ Une EPREUVE D'ADRESSE aussi (`Adresse`) : les ratons et la radio se jouent a la croix.
+    if (B.cinema || B.roue || B.piratage || B.epreuve) { j.vx = 0; j.vy = 0; return; }   // on ecoute, on choisit, on pirate ou on joue
     // ⚠️ ASSIS SUR UN BANC — comme le lit, c'est le stick qui leve (`Interactions.majAssis`) ;
     // tant qu'on est assis rien ne bouge, et le pas qui suit un lever est le notre, dans la meme image.
     if (j.assis && typeof Interactions !== 'undefined' && Interactions.majAssis(j)) return;

@@ -12,7 +12,9 @@ import pytest
 from app import defi, missions
 
 UTC = timezone.utc
-SLUGS = [d["slug"] for d in missions.DEFIS]
+#: ⚠️ Les defis qui TOURNENT : ceux qu'on a des le depart. Un defi qui se debloque (`debloque`)
+#: n'entre pas dans la rotation (voir `defi.rotation`).
+SLUGS = [d["slug"] for d in missions.DEFIS if not d.get("debloque")]
 
 
 def _quebec(annee, mois, jour, heure=12, minute=0):
@@ -41,6 +43,16 @@ def test_le_defi_du_jour_ne_depend_que_de_la_date():
     jour = date(2027, 3, 14)
     assert {defi.defi_du(jour) for _ in range(50)} == {defi.defi_du(jour)}
     assert defi.aujourdhui(_quebec(2027, 3, 14, 1)) == defi.aujourdhui(_quebec(2027, 3, 14, 23))
+
+
+def test_un_defi_qui_se_debloque_n_est_jamais_le_defi_du_jour():
+    """Le serveur ne connait pas la partie : il designerait a un joueur neuf un defi que sa carte
+    ne montre pas encore. Et la rotation d'avant les dix-huit ne bouge pas d'un jour."""
+    caches = {d["slug"] for d in missions.DEFIS if d.get("debloque")}
+    assert caches, "le catalogue a des defis a debloquer"
+    vus = {defi.defi_du(date(2026, 1, 1) + timedelta(days=k)) for k in range(400)}
+    assert not vus & caches
+    assert defi.defi_du(date(2026, 9, 23)) == "tour_shop", "le 23 sept. 2026 reste celui qu'il etait"
 
 
 def test_toutes_les_reponses_nomment_un_defi_qui_existe():

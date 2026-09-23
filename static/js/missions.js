@@ -2751,6 +2751,9 @@ const Missions = (function () {
       if (Monde.porteDevant(j)) B.invite = 'SORTIR';
       return;
     }
+    // ⚠️ Une épreuve d'adresse se joue CLOUÉ SUR PLACE, et ACTION y sert à elle
+    // seule (`Histoire.actionDeDefi`) : l'invite « DÉFI » du panneau d'à côté mentirait.
+    if (B.epreuve) return;
     const perso = Histoire.personnageSousLaMain(j);
     if (perso) { const d = Histoire.personnage(perso.personnage); B.invite = 'PARLER À ' + (d ? d.nom.toUpperCase() : '?'); return; }
     const panneau = Histoire.panneauSousLaMain(j);

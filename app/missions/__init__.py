@@ -551,7 +551,105 @@ DEFIS: list[dict] = [
      "pose": 0, "vole_pas": True,
      "consigne": "ACTION QUAND IL PASSE SOUS LE CROCHET",
      "texte": "PÊCHE CINQ CANARDS : ACTION QUAND IL PASSE SOUS LE CROCHET"},
+
+    # --- LES ÉPREUVES DEBOUT (dix-huit défis, 1re vague, 23 sept. 2026) ------
+    #
+    # Martin : « je veux tout ça sur la carte, on doit les voir selon s'il est
+    # possible de les faire avec les doigts ou avec la manette ou le clavier. Je
+    # veux qu'ils n'apparaissent pas tous en même temps, mais graduellement. »
+    #
+    # ⚠️ `epreuve` : le jeu qu'on joue DEBOUT, dessiné par-dessus la ville
+    # (`static/js/adresse.js`) ; `regles` : ses chiffres, et rien qu'eux — ils ne
+    # vivent pas au premier niveau, où `coups`, `canards` et `cibles` disent déjà
+    # autre chose aux jeux de la foire (`Histoire.actionDeDefi`).
+    #
+    # ⚠️ `debloque` : TOUTES ses conditions doivent tenir — `defis` (combien de
+    # défis réussis), `missions` (faites), `apres` (ces défis-là réussis). Sans
+    # `debloque`, un défi est là dès le départ : les dix de la v1.
+    #
+    # ⚠️ `ou` NE NOMME QUE DES LIEUX DÉJÀ NOMMÉS : `devants.lieux_de_mission` lit
+    # ce catalogue, et une porte neuve élargirait son devant — toute la ville
+    # glisserait. Les kiosques de la foire, eux, existent déjà
+    # (`carte.FOIRE["kiosques"]`) : ils ne servaient qu'à vendre.
+    #
+    # ⚠️ Pas de `foire: True` pour les trois qui s'y jouent : ce drapeau-là fait
+    # les jeux du LOT de la foire (la casquette), et un joueur qui l'a méritée
+    # avec trois jeux ne doit pas s'en voir demander six.
+    {"slug": "roue", "titre": "La roue de Madame Thibodeau", "ou": "porte:kiosque", "a_pied": True,
+     "epreuve": "roue", "chrono_s": 45, "prime": 40, "debloque": {"defis": 1},
+     # La roue tourne à vitesse fixe ; ACTION la freine, et elle s'arrête TOUJOURS
+     # `freinage_s` plus loin : c'est ça qu'on apprend — quand appuyer, pas où.
+     "regles": {"secteurs": 12, "tours_par_s": 0.6, "freinage_s": 1.2, "essais": 3},
+     "consigne": "ACTION FREINE LA ROUE",
+     "texte": "FREINE LA ROUE POUR QU'ELLE S'ARRÊTE SUR LE GROS LOT : TROIS ESSAIS"},
+    {"slug": "anneaux", "titre": "Le lancer d'anneaux", "ou": "foire:lance_anneaux", "a_pied": True,
+     "epreuve": "anneaux", "chrono_s": 60, "rayon_px": 44, "prime": 45, "debloque": {"defis": 3},
+     "regles": {"anneaux": 5, "reussis": 3, "charge_s": 1.0, "bande": 0.16},
+     "consigne": "TIENS ACTION, LÂCHE DANS LE VERT",
+     "texte": "TIENS ACTION POUR DONNER DE LA FORCE, LÂCHE DANS LE VERT : TROIS ANNEAUX SUR CINQ"},
+    {"slug": "ratons", "titre": "Les ratons du kiosque à peluches", "ou": "foire:peluches", "a_pied": True,
+     "epreuve": "ratons", "chrono_s": 45, "rayon_px": 44, "prime": 45, "debloque": {"defis": 3},
+     # ⚠️ Trois trous, pas quatre : BAS est le côté du joueur, il n'y a pas de
+     # comptoir de ce côté-là.
+     "regles": {"trous": ["gauche", "haut", "droite"], "coups": 10, "rates": 3,
+                "fenetre_s": [1.0, 0.5], "pause_s": 0.35},
+     "consigne": "LA DIRECTION DU RATON",
+     "texte": "UN RATON SORT : POUSSE VERS SON TROU AVANT QU'IL RENTRE. DIX COUPS, TROIS RATÉS PERMIS"},
+    {"slug": "danse", "titre": "La danse du Bonimenteur", "ou": "foire:ballons", "a_pied": True,
+     "epreuve": "danse", "chrono_s": 60, "rayon_px": 44, "prime": 60, "debloque": {"missions": ["p13"]},
+     # ⚠️ PAS AU DOIGT : un appel sur deux est une direction, l'autre FRAPPE, de
+     # plus en plus vite — le pouce doit ramener le stick virtuel au centre ET
+     # aller chercher un bouton à l'autre bout de l'écran entre deux appels.
+     "appareils": ["manette", "clavier"],
+     "regles": {"pas": 12, "erreurs": 2, "fenetre_s": [1.3, 0.55],
+                "appels": ["haut", "bas", "gauche", "droite", "attaque"]},
+     "consigne": "FAIS CE QU'IL CRIE",
+     "texte": "MARCEL CRIE, TU DANSES : DOUZE PAS DE PLUS EN PLUS VITE, DEUX FAUX PAS PERMIS"},
+    {"slug": "mannequin", "titre": "Le mannequin à clochettes", "ou": "porte:vetements", "a_pied": True,
+     "epreuve": "mannequin", "chrono_s": 60, "prime": 50, "debloque": {"missions": ["m6"]},
+     "regles": {"reussis": 5, "clochettes": 2, "zone": 0.16, "periode_s": [1.6, 0.9]},
+     "consigne": "ACTION DANS LE VERT",
+     "texte": "VIDE LES POCHES DU MANNEQUIN : ACTION QUAND L'AIGUILLE EST DANS LE VERT, SANS FAIRE SONNER"},
+    {"slug": "radio", "titre": "La radio de la police", "ou": "porte:poste", "a_pied": True,
+     "epreuve": "radio", "chrono_s": 75, "prime": 60, "debloque": {"missions": ["m4"]},
+     # ⚠️ AU CLAVIER AUSSI : l'aiguille avance à vitesse fixe tant qu'on tient,
+     # et la fenêtre (deux fois `tolerance`) dure une dizaine d'images au
+     # passage — on tapote, on ne dose pas.
+     "regles": {"stations": 3, "tolerance": 0.025, "tenir_s": 1.5, "vitesse": 0.35},
+     "consigne": "GAUCHE ET DROITE ACCORDENT",
+     "texte": "ACCORDE LA RADIO SUR LES TROIS FRÉQUENCES DE LA POLICE ET ÉCOUTE OÙ SONT LES BARRAGES"},
+    {"slug": "moteur", "titre": "Le vieux camion de la cantine", "ou": "porte:cantine", "a_pied": True,
+     "epreuve": "moteur", "chrono_s": 40, "prime": 40, "debloque": {"missions": ["e01"]},
+     "regles": {"toux": 5, "cadence_s": 0.7, "marge_s": 0.14},
+     "consigne": "ACTION À CHAQUE TOUX",
+     "texte": "LE MOTEUR TOUSSE EN CADENCE : ACTION À CHAQUE TOUX, CINQ DE SUITE, ET IL PART"},
+    {"slug": "crochet", "titre": "Le cadenas de l'armurier", "ou": "porte:armurerie", "a_pied": True,
+     "epreuve": "crochet", "chrono_s": 45, "prime": 70, "debloque": {"missions": ["m53"]},
+     # ⚠️ PAS AU CLAVIER : chaque goupille se cache entre deux des huit
+     # directions (`decalage_deg` d'une diagonale), plus loin que `tolerance_deg`
+     # — les flèches n'y tombent jamais. Le stick, réel ou virtuel, y va.
+     "appareils": ["manette", "doigts"],
+     "regles": {"goupilles": 3, "tolerance_deg": 9, "decalage_deg": 22.5, "jeu_deg": 4,
+                "tenir_s": 0.75, "proche_deg": 35, "force": 0.6},
+     "consigne": "CHERCHE AU STICK, TIENS QUAND ÇA TREMBLE",
+     "texte": "TROIS GOUPILLES : CHERCHE L'ANGLE AU STICK, LE CADENAS TREMBLE TOUT PRÈS, TIENS-LE"},
+    {"slug": "coffre", "titre": "Le coffre du bar", "ou": "porte:bar", "a_pied": True,
+     "epreuve": "coffre", "chrono_s": 60, "prime": 120,
+     "debloque": {"missions": ["m54"], "apres": ["crochet"]},
+     "appareils": ["manette", "doigts"],
+     "regles": {"sequence": 4, "erreurs": 2, "goupilles": 2, "tolerance_deg": 9, "decalage_deg": 22.5,
+                "jeu_deg": 4, "tenir_s": 0.75, "proche_deg": 35, "force": 0.6},
+     "consigne": "LE CODE, PUIS LES GOUPILLES",
+     "texte": "LE CODE DE QUATRE DIRECTIONS, PUIS DEUX GOUPILLES AU STICK, AVANT QUE L'ALARME SONNE"},
 ]
+
+#: Avec quoi un défi se joue. ⚠️ Un défi n'en exclut un que pour une raison
+#: MÉCANIQUE, écrite à côté de lui : le clavier ne dose ni le gaz ni un angle
+#: (tout ou rien, huit directions), le doigt n'a qu'un stick virtuel et quatre
+#: boutons, la manette fait tout — et vibre.
+APPAREILS = ("doigts", "manette", "clavier")
+for _defi in DEFIS:
+    _defi.setdefault("appareils", list(APPAREILS))
 
 #: ⚠️ **LE LOT DU TROISIEME PALIER**, et rien d'autre ne la donne : la casquette
 #: de la foire (`magasins.TENUES`) tombe quand les TROIS jeux d'adresse sont

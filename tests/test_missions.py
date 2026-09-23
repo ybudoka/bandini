@@ -56,7 +56,9 @@ def test_les_cinq_missions_se_suivent():
     # foire : un jeu d'adresse est un DÉFI, pas un moteur.
     # ⚠️ Et une course par quartier depuis le 22 sept. 2026 (le Tour du
     # Faubourg, plus les Érables, la Shop, les Quais et la Pointe).
-    assert len(missions.DEFIS) == 10
+    # ⚠️ Et, depuis le 23 sept. 2026, des défis qui se DÉBLOQUENT : les dix
+    # d'avant restent les seuls qu'on a dès le départ.
+    assert len([d for d in missions.DEFIS if not d.get("debloque")]) == 10
     assert sorted(d["district"] for d in missions.DEFIS if d.get("circuit")) == sorted(
         d["slug"] for d in carte.DISTRICTS if d["slug"] != "baie")
     assert len(missions.defis_de_foire()) == 3
@@ -171,3 +173,66 @@ def test_chaque_donneur_a_son_mot_pour_t_interpeller():
     # Le client du taxi hele lui aussi — c'est le meme geste, au bord du trottoir.
     assert missions.personnage("civil")["heler"], "le client du taxi doit lever le bras"
     assert not missions.personnage("narrateur")["heler"], "le narrateur n'est nulle part : il ne hele personne"
+
+
+# --- Les dix-huit défis au doigt, à la manette et au clavier (23 sept. 2026) ----------------
+
+
+def test_chaque_defi_dit_avec_quoi_il_se_joue():
+    """`appareils` : une liste non vide, sans doublon, prise parmi les trois ; les dix de la v1
+    se jouent avec les trois. Et un défi qui en EXCLUT un le fait pour une raison écrite dans
+    le catalogue — ce juge-ci ne lit pas les commentaires, il en tient la liste."""
+    for d in missions.DEFIS:
+        assert d["appareils"], d["slug"]
+        assert len(set(d["appareils"])) == len(d["appareils"])
+        assert set(d["appareils"]) <= set(missions.APPAREILS), d["slug"]
+        if not d.get("debloque"):
+            assert sorted(d["appareils"]) == sorted(missions.APPAREILS), d["slug"]
+    exclus = {d["slug"]: sorted(set(missions.APPAREILS) - set(d["appareils"])) for d in missions.DEFIS}
+    assert {s: e for s, e in exclus.items() if e} == {
+        "danse": ["doigts"], "crochet": ["clavier"], "coffre": ["clavier"]}
+
+
+def test_ce_qui_debloque_un_defi_existe():
+    slugs = {d["slug"] for d in missions.DEFIS}
+    faites = {m["slug"] for m in missions.CATALOGUE}
+    for d in missions.DEFIS:
+        r = d.get("debloque")
+        if not r:
+            continue
+        assert set(r) <= {"defis", "missions", "apres"}, d["slug"]
+        assert r.get("defis", 1) >= 1
+        assert set(r.get("missions", [])) <= faites, d["slug"]
+        assert set(r.get("apres", [])) <= slugs - {d["slug"]}, d["slug"]
+        # ⚠️ Un défi qu'on attend doit s'ouvrir AVANT lui (ou être là dès le départ).
+        for autre in r.get("apres", []):
+            assert missions.DEFIS.index(next(q for q in missions.DEFIS if q["slug"] == autre)) \
+                < missions.DEFIS.index(d), d["slug"]
+
+
+def test_un_defi_neuf_ne_nomme_aucune_porte_neuve():
+    """⚠️ `devants.lieux_de_mission` lit ce catalogue : une porte que rien ne nommait avant
+    élargirait son devant, et toute la ville glisserait. Un défi qui se débloque ne se plante
+    que devant une porte qu'une mission, un personnage ou un défi de la v1 nomme déjà."""
+    deja = set()
+    for m in missions.CATALOGUE:
+        deja |= set(__import__("re").findall(r"porte:([a-z_]+)", repr(m)))
+        deja |= {o["lieu"] for o in m["objectifs"] if o.get("lieu")}
+    for d in missions.DEFIS:
+        if not d.get("debloque") and d["ou"].startswith("porte:"):
+            deja.add(d["ou"][6:])
+    for p in missions.PERSONNAGES:
+        if p["ou"].startswith("porte:"):
+            deja.add(p["ou"].split(":")[1])
+    for d in missions.DEFIS:
+        if d.get("debloque") and d["ou"].startswith("porte:"):
+            assert d["ou"][6:] in deja, d["slug"]
+        if d["ou"].startswith("foire:"):
+            assert d["ou"][6:] in carte.FOIRE["kiosques"] + carte.FOIRE["jeux"], d["slug"]
+
+
+def test_une_epreuve_a_ses_regles_et_se_joue_debout():
+    for d in missions.DEFIS:
+        if d.get("epreuve"):
+            assert d.get("a_pied") and isinstance(d.get("regles"), dict) and d.get("consigne"), d["slug"]
+            assert d["chrono_s"] > 0 and 0 < d["prime"] <= 150, d["slug"]

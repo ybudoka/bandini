@@ -2083,59 +2083,83 @@ const Histoire = (function () {
       const dessus = meubles.some(function (d) { return Math.floor(d.x / TT) === tx && Math.floor(d.y / TT) === ty; });
       if (dessus || meubles.length >= 2) return null;
     }
+    if (panneauVoisin(p)) return null;
     return Entites.pietonsAutour(p.x, p.y, PANNEAU_LOIN_DU_DONNEUR).some(function (e) { return e.personnage; }) ? null : p;
   }
 
+  /** Les panneaux des defis qu'on a DES LE DEPART (sans `debloque`). ⚠️ Ceux
+      qui se debloquent naissent plus tard, un par un, a l'image ou ils s'ouvrent
+      (`majDeblocages`) : une partie neuve ne cree pas une entite de plus au
+      demarrage, et rien de ce qui se tire a l'empreinte d'un numero ne bouge. */
   function creerPanneaux() {
     for (const d of defis()) {
-      let l = null;
-      if (d.ou === 'rampe') {
-        // ⚠️ La PLUS PROCHE du depart, et pas la premiere venue en balayant la
-        // carte : les rampes vivent maintenant dans les cours de La Shop et au
-        // port, et le panneau du Grand Saut se posait a l'autre bout de la
-        // ville. On se pose au PIED, du cote de l'elan — un panneau derriere
-        // le tremplin, on le lit apres avoir saute.
-        const depart = Monde.carte.apparition && Monde.carte.apparition.joueur;
-        // ⚠️ Seulement celles que `carte.py` a marquees `defi` : elles ont de
-        // quoi recevoir une MOTO LANCEE, pas seulement l'auto de reference. Le
-        // Grand Saut exige la moto ; un panneau pose sur une rampe ordinaire,
-        // c'est un defi qui se termine dans un mur. Repli sur toutes les
-        // rampes : mieux vaut un defi dur qu'un defi absent.
-        const toutes = Monde.carte.rampes || [];
-        const bonnes = toutes.filter(function (r) { return r.defi; });
-        const rampes = (bonnes.length ? bonnes : toutes).slice().sort(function (a, b) {
-          if (!depart) return 0;
-          return (Math.abs(a.x - depart.x) + Math.abs(a.y - depart.y))
-               - (Math.abs(b.x - depart.x) + Math.abs(b.y - depart.y));
-        });
-        for (const r of rampes) {
-          const c = { x: (r.x - r.dx) * TT + 8, y: (r.y - r.dy) * TT + 8 };
-          if (tuileLibre(c.x - TT * 3, c.y, 3) || tuileLibre(c.x + TT * 3, c.y, 3)) { l = c; break; }
-        }
-      } else if (d.ou.indexOf('porte:') === 0) l = lieu(d.ou.slice(6));
-      if (!l) continue;
-      // ⚠️ JAMAIS DEVANT UN RIDEAU DE GARAGE : trois tuiles a l'ouest de la
-      // porte de Ti-Guy, c'est exactement la baie ou l'on gare pour vendre, et
-      // le panneau de la livraison s'y plantait devant la porte qui se leve.
-      // ⚠️ NI SOUS LE NEZ D'UN DONNEUR : a l'est, c'est Marco qui attend, et
-      // ACTION lui parlait au lieu de lire le panneau (`interagir` sert les
-      // personnages d'abord). On s'eloigne par pas ; ailleurs, rien ne change.
-      // ⚠️ Une place AEREE d'abord (ni sur un meuble, ni entre deux), un pas plus
-      // loin s'il le faut : au terminus, Ti-Guy, Mo et Fern ne s'empilent plus sur
-      // une tuile, et a eux trois ils tiennent toute la facade. Faute de mieux, la
-      // premiere place d'avant : un panneau serre vaut mieux qu'un defi absent.
-      let place = null;
-      for (const aere of [true, false]) {
-        for (const loin of [3, 5, 7, 9, 11]) {
-          place = placeDePanneau(tuileLibre(l.x - TT * loin, l.y, 3), aere)
-            || placeDePanneau(tuileLibre(l.x + TT * loin, l.y, 3), aere);
-          if (place) break;
-        }
+      if (!d.debloque) poserPanneau(d);
+    }
+  }
+
+  //: Deux panneaux ne se plantent pas a moins de ca l'un de l'autre : deux defis
+  //: devant la meme porte se liraient l'un pour l'autre (`panneauSousLaMain`
+  //: prend le premier qui est a portee).
+  const PANNEAUX_ECARTES = 3 * TT;
+
+  /** Le panneau d'UN defi, a son point de depart — ou rien si le defi se joue a
+      un comptoir de la foire, ou si la ville n'a pas de place. */
+  function poserPanneau(d) {
+    let l = null;
+    if (d.ou === 'rampe') {
+      // ⚠️ La PLUS PROCHE du depart, et pas la premiere venue en balayant la
+      // carte : les rampes vivent maintenant dans les cours de La Shop et au
+      // port, et le panneau du Grand Saut se posait a l'autre bout de la
+      // ville. On se pose au PIED, du cote de l'elan — un panneau derriere
+      // le tremplin, on le lit apres avoir saute.
+      const depart = Monde.carte.apparition && Monde.carte.apparition.joueur;
+      // ⚠️ Seulement celles que `carte.py` a marquees `defi` : elles ont de
+      // quoi recevoir une MOTO LANCEE, pas seulement l'auto de reference. Le
+      // Grand Saut exige la moto ; un panneau pose sur une rampe ordinaire,
+      // c'est un defi qui se termine dans un mur. Repli sur toutes les
+      // rampes : mieux vaut un defi dur qu'un defi absent.
+      const toutes = Monde.carte.rampes || [];
+      const bonnes = toutes.filter(function (r) { return r.defi; });
+      const rampes = (bonnes.length ? bonnes : toutes).slice().sort(function (a, b) {
+        if (!depart) return 0;
+        return (Math.abs(a.x - depart.x) + Math.abs(a.y - depart.y))
+             - (Math.abs(b.x - depart.x) + Math.abs(b.y - depart.y));
+      });
+      for (const r of rampes) {
+        const c = { x: (r.x - r.dx) * TT + 8, y: (r.y - r.dy) * TT + 8 };
+        if (tuileLibre(c.x - TT * 3, c.y, 3) || tuileLibre(c.x + TT * 3, c.y, 3)) { l = c; break; }
+      }
+    } else if (d.ou.indexOf('porte:') === 0) l = lieu(d.ou.slice(6));
+    if (!l) return null;
+    // ⚠️ JAMAIS DEVANT UN RIDEAU DE GARAGE : trois tuiles a l'ouest de la
+    // porte de Ti-Guy, c'est exactement la baie ou l'on gare pour vendre, et
+    // le panneau de la livraison s'y plantait devant la porte qui se leve.
+    // ⚠️ NI SOUS LE NEZ D'UN DONNEUR : a l'est, c'est Marco qui attend, et
+    // ACTION lui parlait au lieu de lire le panneau (`interagir` sert les
+    // personnages d'abord). On s'eloigne par pas ; ailleurs, rien ne change.
+    // ⚠️ Une place AEREE d'abord (ni sur un meuble, ni entre deux), un pas plus
+    // loin s'il le faut : au terminus, Ti-Guy, Mo et Fern ne s'empilent plus sur
+    // une tuile, et a eux trois ils tiennent toute la facade. Faute de mieux, la
+    // premiere place d'avant : un panneau serre vaut mieux qu'un defi absent.
+    let place = null;
+    for (const aere of [true, false]) {
+      for (const loin of [3, 5, 7, 9, 11]) {
+        place = placeDePanneau(tuileLibre(l.x - TT * loin, l.y, 3), aere)
+          || placeDePanneau(tuileLibre(l.x + TT * loin, l.y, 3), aere);
         if (place) break;
       }
-      if (!place) continue;
-      Entites.creer('panneau', place.x, place.y, { decor: 'panneau', r: 3, solide: false, dessine: true, vivant: false, defi: d.slug });
+      if (place) break;
     }
+    if (!place) return null;
+    return Entites.creer('panneau', place.x, place.y, { decor: 'panneau', r: 3, solide: false, dessine: true, vivant: false, defi: d.slug });
+  }
+
+  /** Un autre panneau de defi plante trop pres de ce pixel ? ⚠️ Dans `B.entites`,
+      pas dans l'index spatial : un panneau pose dans la meme image n'y est pas encore. */
+  function panneauVoisin(p) {
+    return B.entites.some(function (e) {
+      return e.type === 'panneau' && dist2(e.x, e.y, p.x, p.y) < PANNEAUX_ECARTES * PANNEAUX_ECARTES;
+    });
   }
 
   function panneauSousLaMain(j) {
@@ -2152,11 +2176,108 @@ const Histoire = (function () {
     const gain = (fait ? 0 : d.prime) + (aPayer ? d.prime : 0);
     const sur = duJour ? (aPayer ? 'DÉFI DU JOUR · ' + gain + ' $' : 'DÉFI DU JOUR — RÉUSSI AUJOURD\'HUI')
       : (fait ? 'DÉJÀ RÉUSSI' : d.prime + ' $');
-    Hud.ouvrirMenu({ titre: d.titre.toUpperCase(), sur: sur, aide: d.texte, items: [
+    // Le panneau est LU : le drapeau du defi ne bat plus sur la carte.
+    const ouvert = B.partie.defisOuverts && B.partie.defisOuverts[slug];
+    if (ouvert) ouvert.lu = true;
+    // ⚠️ AVEC QUOI IL SE JOUE, et pas seulement sur la carte : c'est ici qu'on
+    // decide de commencer. Une ligne de plus sous la liste (`Hud.dessinerAppareils`),
+    // et un avertissement quand l'appareil qu'on tient n'y est pas — on peut
+    // commencer quand meme : on a peut-etre une manette dans le tiroir.
+    Hud.ouvrirMenu({ titre: d.titre.toUpperCase(), sur: sur, aide: d.texte, hauteur: 100, largeur: 380, items: [
       { libelle: 'COMMENCER', faire: function () { commencerDefi(d); return true; } },
       { libelle: 'PAS MAINTENANT', faire: function () { return true; } },
-    ] });
+    ], dessiner: function (ctx, x, y, l, h) { Hud.dessinerAppareils(ctx, appareilsDe(d), x + 8, y + h - 28); } });
     return true;
+  }
+
+  // --- Avec quoi on joue, et quand ca s'ouvre (les dix-huit defis, 23 sept. 2026) ----------------
+  //: Martin : « on doit les voir selon s'il est possible de les faire avec les
+  //: doigts ou avec la manette ou le clavier. Je veux qu'ils n'apparaissent pas
+  //: tous en meme temps, mais graduellement quand on passe des defis ou qu'on
+  //: avance dans l'histoire. »
+
+  //: L'appareil qu'on tient (`Entree.appareil`) dans les mots du catalogue.
+  const APPAREIL_DU_CATALOGUE = { tactile: 'doigts', manette: 'manette', clavier: 'clavier' };
+
+  /** Les appareils avec lesquels ce defi se joue (`appareils` du catalogue ;
+      les trois par defaut). */
+  function appareilsDe(d) { return (d && d.appareils) || ['doigts', 'manette', 'clavier']; }
+
+  /** Ce defi se joue-t-il avec `appareil` (un mot du catalogue : `doigts`,
+      `manette`, `clavier`) — par defaut, celui qu'on tient ? */
+  function jouableAvec(d, appareil) {
+    const a = appareil || APPAREIL_DU_CATALOGUE[Entree.appareil] || 'clavier';
+    return appareilsDe(d).indexOf(a) >= 0;
+  }
+
+  /** Les conditions de `debloque` tiennent-elles, dans cette partie ? */
+  function conditionsTenues(d) {
+    const r = d.debloque, p = B.partie;
+    if (!r) return true;
+    if (r.defis && Object.keys(p.defisFaits || {}).length < r.defis) return false;
+    if (r.missions && r.missions.some(function (m) { return !(p.missionsFaites || {})[m]; })) return false;
+    if (r.apres && r.apres.some(function (s) { return !(p.defisFaits || {})[s]; })) return false;
+    return true;
+  }
+
+  /** Ce defi est-il OUVERT ? Sans `debloque`, toujours ; sinon, une fois
+      qu'il a ete debloque — et il le reste (`partie.defisOuverts`). */
+  function defiOuvert(d) {
+    if (!d) return false;
+    if (!d.debloque) return true;
+    return !!(B.partie && B.partie.defisOuverts && B.partie.defisOuverts[d.slug]);
+  }
+
+  /** Les defis ouverts, dans l'ordre du catalogue — ceux de la carte. */
+  function defisOuverts() { return defis().filter(defiOuvert); }
+
+  /** Un defi neuf (pas encore lu) : son drapeau bat sur la carte. */
+  function defiNeuf(d) {
+    const o = d && d.debloque && B.partie && B.partie.defisOuverts && B.partie.defisOuverts[d.slug];
+    return !!(o && !o.lu);
+  }
+
+  /** Ouvre ce defi : il entre dans la partie et son panneau se plante. Rend vrai
+      s'il vient de s'ouvrir. ⚠️ La triche SAUT VERS UN DÉFI passe aussi par ici
+      (`force`) : un saut vers un defi encore cache l'ouvre. */
+  function ouvrirDefi(d, force) {
+    if (!d || !d.debloque || defiOuvert(d)) return false;
+    if (!force && !conditionsTenues(d)) return false;
+    B.partie.defisOuverts[d.slug] = { jour: B.partie.jour, lu: false };
+    return true;
+  }
+
+  /** Un panneau pour chaque defi ouvert qui n'en a pas encore (sauf ceux de la
+      foire : la baraque sert de panneau). */
+  function planterLesPanneauxOuverts() {
+    for (const d of defisOuverts()) {
+      if (!d.debloque || !d.ou || d.ou.indexOf('porte:') !== 0) continue;
+      if (B.entites.some(function (e) { return e.type === 'panneau' && e.defi === d.slug; })) continue;
+      poserPanneau(d);
+    }
+  }
+
+  //: On regarde les conditions une fois par seconde : un defi s'ouvre a la fin
+  //: d'une mission ou d'un autre defi, pas au milieu d'une image.
+  const DEBLOCAGE_PERIODE = 60;
+
+  /** Les defis qui s'ouvrent : on les ouvre, on plante leur panneau, on le dit
+      — une fois pour tous ceux qui s'ouvrent ensemble (une vieille partie en
+      ouvre plusieurs d'un coup, et six messages se recouvriraient). ⚠️ Jamais
+      pendant une scene ni une mission : le message se perdrait sous elles. */
+  function majDeblocages(maintenant) {
+    if (!B.partie || B.interieur || B.cinema || B.scene) return;
+    if (!maintenant && B.t % DEBLOCAGE_PERIODE !== 0) return;
+    if (!B.partie.defisOuverts) B.partie.defisOuverts = {};
+    const neufs = defis().filter(function (d) { return ouvrirDefi(d, false); });
+    planterLesPanneauxOuverts();
+    if (!neufs.length) return;
+    for (const d of neufs) noter('NOUVEAU DÉFI : ' + d.titre, true);
+    if (!B.mission && !B.defi) {
+      Hud.message(neufs.length === 1 ? 'NOUVEAU DÉFI : ' + neufs[0].titre.toUpperCase() + ' — VOIS LA CARTE'
+        : neufs.length + ' NOUVEAUX DÉFIS — VOIS LA CARTE', 240);
+      Son.SFX.mission();
+    }
   }
 
   // --- Les trois jeux d'adresse de la foire -----------------------------------------------------
@@ -2205,6 +2326,10 @@ const Histoire = (function () {
     if (!f) return false;
     const d = defis().find(function (q) { return q.slug === f.slug; });
     if (!d || !d.a_pied) return false;
+    // ⚠️ UNE ÉPREUVE LIT SES BOUTONS ELLE-MÊME (`Adresse.maj`, à chaque image) :
+    // ACTION y freine une roue, lance un anneau, attrape une toux. Ici, on ne
+    // fait que le garder pour elle — sinon il ouvrirait le kiosque d'à côté.
+    if (d.epreuve) return true;
     if (d.coups) {
       f.coups++;
       Son.SFX.maillet();
@@ -2238,7 +2363,7 @@ const Histoire = (function () {
   function commencerDefi(d) {
     const j = B.joueur;
     B.defi = { slug: d.slug, t: 0, attente: 0, parti: false, etape: 0, tours: 0, vol: 0, chocs: 0, vie: 0,
-               coups: 0, pris: 0, tour: -1, x: j.x, y: j.y, avantArme: null };
+               coups: 0, pris: 0, tour: -1, x: j.x, y: j.y, avantArme: null, vieDepart: j.vie };
     // Une course tire son circuit AU PANNEAU : la ligne de depart se montre
     // (fleches et GPS) avant meme qu'on ait trouve un char.
     if (d.circuit) Object.assign(B.defi, { piste: circuit(d), i: 0, avance: 0, hors: 0, enPiste: false });
@@ -2262,6 +2387,7 @@ const Histoire = (function () {
         j.arme = 'carabine_foire';
       }
       if (d.consigne) Hud.message(d.consigne, 180);
+      if (d.epreuve) Adresse.commencer(d);
       partir(d, null);
       return;
     }
@@ -2327,6 +2453,16 @@ const Histoire = (function () {
     f.t++;
     if (d.chrono_s && f.t > d.chrono_s * 60) { finirDefi(false, 'TEMPS ÉCOULÉ'); return; }
     if (j.dansVehicule) { finirDefi(false, 'PAS AU VOLANT'); return; }
+    // ⚠️ UN COUP, ET L'ÉPREUVE S'ARRÊTE : on la joue cloué sur place
+    // (`Entites.majJoueur`), et personne ne se fait tabasser sans pouvoir bouger.
+    if (d.epreuve && j.vie < f.vieDepart) { finirDefi(false, 'ON T\'A DÉRANGÉ'); return; }
+    // Une épreuve devant un PANNEAU n'a pas de comptoir : on la joue là où on
+    // l'a commencée, et on n'en bouge pas.
+    if (d.epreuve && d.ou.indexOf('foire:') !== 0) {
+      const issue = Adresse.maj(d);
+      if (issue) finirDefi(issue.gagne, issue.raison);
+      return;
+    }
     const comptoir = comptoirDeDefi(d);
     if (!comptoir || comptoir.brise) { finirDefi(false, 'LE COMPTOIR EST EN MIETTES'); return; }
     if (Math.hypot(j.x - comptoir.x, j.y - comptoir.y) > (d.rayon_px || 40)) {
@@ -2338,6 +2474,10 @@ const Histoire = (function () {
     if (d.cibles) {
       const crevees = Foire.cibles().filter(function (c) { return c.brise; }).length;
       if (crevees >= d.cibles) finirDefi(true);
+    }
+    if (d.epreuve) {
+      const issue = Adresse.maj(d);
+      if (issue) finirDefi(issue.gagne, issue.raison);
     }
   }
 
@@ -2359,12 +2499,14 @@ const Histoire = (function () {
       proposer un autre — pas un echec du joueur. */
   function abandonnerDefi() {
     rendreLaCarabine(B.defi);
+    Adresse.fermer();
     B.defi = null;
   }
 
   function finirDefi(reussi, raison) {
     const f = B.defi, d = defis().find(function (q) { return q.slug === f.slug; });
     rendreLaCarabine(f);
+    Adresse.fermer();
     B.defi = null;
     if (!reussi) { Hud.message('DÉFI RATÉ — ' + (raison || ''), 180); Son.SFX.erreur(); noter('DÉFI RATÉ : ' + d.titre, false); return; }
     const premiere = !B.partie.defisFaits[d.slug];
@@ -2407,7 +2549,9 @@ const Histoire = (function () {
 
   /** Le défi que vend ce comptoir-là (`ou: 'foire:<kiosque>'`), ou null. */
   function defiDuComptoir(slug) {
-    return defis().find(function (d) { return d.ou === 'foire:' + slug; }) || null;
+    // ⚠️ Un kiosque dont le defi est encore CACHE reste un kiosque : ACTION
+    // passe au suivant de la chaine (`Missions.interagir`).
+    return defis().find(function (d) { return d.ou === 'foire:' + slug && defiOuvert(d); }) || null;
   }
 
   // --- Les courses : un circuit, et on suit les fleches -------------------------------------------
@@ -2694,6 +2838,7 @@ const Histoire = (function () {
         const crevees = typeof Foire === 'undefined' ? 0 : Foire.cibles().filter(function (c) { return c.brise; }).length;
         return d.titre.toUpperCase() + chrono + ' CIBLES ' + Math.min(crevees, d.cibles) + '/' + d.cibles;
       }
+      if (d.epreuve) return d.titre.toUpperCase() + chrono + ' ' + Adresse.compte(d);
       if (d.coups) return d.titre.toUpperCase() + chrono + ' COUPS ' + B.defi.coups + '/' + d.coups;
       if (d.canards) return d.titre.toUpperCase() + chrono + ' CANARDS ' + B.defi.pris + '/' + d.canards
              + (canardAuCrochet() ? ' — MAINTENANT !' : '');
@@ -2765,6 +2910,7 @@ const Histoire = (function () {
       }
     }
     majDefi();
+    majDeblocages(false);
   }
 
   return { disponibles, disponibleDe, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
@@ -2774,6 +2920,7 @@ const Histoire = (function () {
            lieuDuPersonnage, ouTrouver, present, calme, jouerOuDire,
            reinitialiser, noter, rencontrer, CARNET_MAX,
            proposerDefi, commencerDefi, finirDefi, abandonnerDefi, actionDeDefi, defisDeFoire, comptoirDeDefi, defiDuComptoir, canardAuCrochet,
+           appareilsDe, jouableAvec, defiOuvert, defisOuverts, defiNeuf, ouvrirDefi, majDeblocages, planterLesPanneauxOuverts, APPAREIL_DU_CATALOGUE,
            cible, ligneObjectif, lieu, lieuDeLivraison, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, cibleDuParler, maj,
            piratageSousLaMain, commencerPiratage, estCourse, dessinerCheminCourse, lampesDeCourse };
 })();

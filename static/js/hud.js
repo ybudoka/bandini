@@ -2168,7 +2168,7 @@ const Hud = (function () {
   function pointDuDefi(d) {
     if (!d.ou) return null;
     if (d.ou.indexOf('foire:') === 0) {
-      const q = (typeof Foire !== 'undefined' ? Foire.jeux() : []).find(function (k) { return k.slug === d.ou.slice(6); });
+      const q = (typeof Foire !== 'undefined' ? Foire.comptoirs() : []).find(function (k) { return k.slug === d.ou.slice(6); });
       return q ? { x: q.x * TT + 8, y: q.y * TT + 15, portee: Foire.PORTEE_JEU - 4 } : null;
     }
     const e = B.entites.find(function (k) { return k.type === 'panneau' && k.defi === d.slug; });
@@ -2217,6 +2217,8 @@ const Hud = (function () {
     if (j.dansVehicule) Vehicules.descendre(j, true);
     const ext = Jeu.quitterLaPiece();
     if (ext) { j.x = ext.x; j.y = ext.y; }
+    // ⚠️ C'est une triche : un défi encore caché s'ouvre, et son panneau se plante.
+    if (Histoire.ouvrirDefi(d, true)) Histoire.planterLesPanneauxOuverts();
     const c = pointDuDefi(d);
     const place = c && placeDevant(c);
     if (!place) { message('INTROUVABLE'); return false; }
@@ -2236,10 +2238,14 @@ const Hud = (function () {
       qui fait la liste : un defi ajoute au jeu tombe ici sans qu'on y touche. */
   function menuSautDefis() {
     const p = B.partie;
+    const foire = function (d) { return !!d.a_pied && d.ou.indexOf('foire:') === 0; };
     const genres = [
       ['AU VOLANT', function (d) { return !d.circuit && !d.a_pied; }],
       ['LES TOURS', function (d) { return !!d.circuit; }],
-      ['À LA FOIRE', function (d) { return !!d.a_pied; }],
+      // ⚠️ Les épreuves devant un panneau (la roue, la radio, le cadenas…) :
+      // debout, mais pas à la foire.
+      ['DEBOUT', function (d) { return !!d.a_pied && !foire(d); }],
+      ['À LA FOIRE', foire],
     ];
     const items = [];
     for (const g of genres) {
@@ -2247,7 +2253,8 @@ const Hud = (function () {
       if (!siens.length) continue;
       items.push(entete(g[0]));
       for (const d of siens) {
-        const etat = B.defi && B.defi.slug === d.slug ? 'EN COURS' : (p.defisFaits && p.defisFaits[d.slug] ? 'RÉUSSI' : '');
+        const etat = B.defi && B.defi.slug === d.slug ? 'EN COURS' : (p.defisFaits && p.defisFaits[d.slug] ? 'RÉUSSI'
+          : (Histoire.defiOuvert(d) ? '' : 'CACHÉ'));
         items.push({ libelle: d.titre.toUpperCase(), detail: etat, defi: d.slug, actif: !!d.ou,
                      faire: function () { return allerAuDefi(d); } });
       }
@@ -2897,7 +2904,7 @@ const Hud = (function () {
   /*: Ce que la derniere image a dessine pour se reperer : le joueur, l'objectif,
     et leur FORME. ⚠️ C'est la seule facon de juger un clignotement sans
     regarder l'ecran — les juges lisent ca, pas des pixels. */
-  let marqueurs = { joueur: null, cible: null, boulot: null, ecran: null };
+  let marqueurs = { joueur: null, cible: null, boulot: null, ecran: null, defis: [], filtre: null };
 
   //: Ce qu'on va chercher (le client, le blesse) : bleu. La destination : or.
   const COULEUR_RAMASSE = '#6f9fd8', COULEUR_DESTINATION = '#e8b33c';
@@ -3099,6 +3106,128 @@ const Hud = (function () {
     B.stats.rects += 6;
   }
 
+  // --- Les défis sur la carte, et avec quoi ils se jouent (23 sept. 2026) ---------------------
+  //: Martin : « je veux tout ça sur la carte, on doit les voir selon s'il est
+  //: possible de les faire avec les doigts ou avec la manette ou le clavier ».
+
+  //: Les trois appareils, dans l'ordre du catalogue, et comment on les nomme.
+  const APPAREILS = ['doigts', 'manette', 'clavier'];
+  const NOM_APPAREIL = { doigts: 'AU DOIGT', manette: 'MANETTE', clavier: 'CLAVIER' };
+  //: Les couleurs d'un drapeau de défi. ⚠️ Le CYAN n'est à aucune famille de
+  //: lieux (`carte.familles`) ni au GPS (or) : on le lit « défi » d'un coup d'œil.
+  const DRAPEAU = { jouable: '#6fe3ff', reussi: '#8fd46a', pas: '#6a6878' };
+
+  /** Un appareil, en pixels, dans `couleur` : un doigt levé, une manette, un
+      clavier. ⚠️ Dessinés, pas écrits : la police du HUD n'a pas d'icônes.
+      11 × 7 pixels, le coin haut-gauche en (x, y). */
+  function iconeAppareil(ctx, nom, x, y, couleur) {
+    const r = function (a, b, l, h, c) { ctx.fillStyle = c || couleur; ctx.fillRect(x + a, y + b, l, h); };
+    if (nom === 'manette') {
+      r(1, 1, 9, 4); r(0, 2, 11, 4); r(0, 6, 3, 1); r(8, 6, 3, 1);
+      r(2, 3, 3, 1, '#101018'); r(3, 2, 1, 3, '#101018'); r(7, 2, 1, 1, '#101018'); r(8, 4, 1, 1, '#101018');
+    } else if (nom === 'clavier') {
+      r(0, 1, 11, 6);
+      for (let k = 0; k < 4; k++) { r(1 + k * 2 + 1, 2, 1, 1, '#101018'); r(1 + k * 2, 4, 1, 1, '#101018'); }
+      r(3, 5, 5, 1, '#101018');
+    } else {
+      r(4, 0, 2, 4); r(3, 3, 5, 3); r(2, 4, 1, 2); r(4, 6, 3, 1);
+    }
+    B.stats.rects += 6;
+  }
+
+  /** « SE JOUE : » et les trois appareils, allumés ou éteints selon `liste` (le
+      catalogue), celui qu'on tient souligné ; et un avertissement quand celui
+      qu'on tient n'y est pas. Sous la liste du menu d'un défi (`Histoire.proposerDefi`). */
+  function dessinerAppareils(ctx, liste, x, y) {
+    const tenu = Histoire.APPAREIL_DU_CATALOGUE[Entree.appareil] || 'clavier';
+    texte(ctx, 'SE JOUE :', x, y + 1, '#8a8698', 1);
+    let cx = x + Atlas.largeurTexte('SE JOUE :', 1) + 6;
+    for (const a of APPAREILS) {
+      const oui = liste.indexOf(a) >= 0, c = oui ? DRAPEAU.jouable : '#3a3a48';
+      iconeAppareil(ctx, a, cx, y, c);
+      texte(ctx, NOM_APPAREIL[a], cx + 14, y + 1, oui ? '#cdc6e6' : '#4a4a5c', 1);
+      const l = 14 + Atlas.largeurTexte(NOM_APPAREIL[a], 1);
+      if (a === tenu) { ctx.fillStyle = oui ? DRAPEAU.jouable : '#ff8a7a'; ctx.fillRect(cx, y + 9, l, 1); B.stats.rects++; }
+      cx += l + 10;
+    }
+    if (liste.indexOf(tenu) < 0) texte(ctx, 'PAS AVEC CE QUE TU TIENS', cx, y + 1, '#ff8a7a', 1);
+  }
+
+  //: Le filtre des défis sur la grande carte : `null` = l'appareil qu'on tient,
+  //: sinon un appareil du catalogue, ou 'tous'. ⚠️ Il ne se sauvegarde pas :
+  //: la carte se rouvre sur ce qu'on a dans les mains.
+  let filtreDeCarte = null;
+
+  /** Le filtre en vigueur : un appareil du catalogue, ou 'tous'. */
+  function filtreDesDefis() {
+    return filtreDeCarte || Histoire.APPAREIL_DU_CATALOGUE[Entree.appareil] || 'clavier';
+  }
+
+  /** ARME, sur la carte : l'appareil qu'on tient, puis les deux autres, puis TOUS. */
+  function tournerFiltreDeCarte() {
+    const tenu = Histoire.APPAREIL_DU_CATALOGUE[Entree.appareil] || 'clavier';
+    const ordre = [tenu].concat(APPAREILS.filter(function (a) { return a !== tenu; })).concat(['tous']);
+    filtreDeCarte = ordre[(ordre.indexOf(filtreDesDefis()) + 1) % ordre.length];
+    Son.SFX.menu();
+  }
+
+  /** Le départ d'un défi sur la carte `carte` : son panneau (dans `entites`), ou
+      le comptoir de la foire qui sert de panneau. ⚠️ Pas `pointDuDefi` : dans
+      une pièce, la ville est `B.exterieur`, pas `Monde.carte` ni `B.entites`. */
+  function departDuDefi(d, carte, entites) {
+    if (!d.ou) return null;
+    if (d.ou.indexOf('foire:') === 0) {
+      const k = ((carte.def && carte.def.kiosques_de_foire) || []).find(function (q) { return q.slug === d.ou.slice(6); });
+      return k ? { x: k.x * TT + 8, y: k.y * TT + 8 } : null;
+    }
+    return entites.find(function (e) { return e.type === 'panneau' && e.defi === d.slug; }) || null;
+  }
+
+  /** Les défis à dessiner sur la carte, avec leur couleur et leur place — ce que
+      le filtre laisse voir. `caches` : combien restent à débloquer. */
+  function defisSurLaCarte(carte, entites) {
+    const filtre = filtreDesDefis(), tenu = Histoire.APPAREIL_DU_CATALOGUE[Entree.appareil] || 'clavier';
+    const vus = [];
+    for (const d of Histoire.defisOuverts()) {
+      const jouable = Histoire.jouableAvec(d, filtre === 'tous' ? tenu : filtre);
+      if (filtre !== 'tous' && !jouable) continue;
+      const c = departDuDefi(d, carte, entites);
+      if (!c) continue;
+      const fait = !!(B.partie.defisFaits && B.partie.defisFaits[d.slug]);
+      vus.push({ slug: d.slug, x: c.x, y: c.y, neuf: Histoire.defiNeuf(d), fait: fait, jouable: jouable,
+                 couleur: fait ? DRAPEAU.reussi : (jouable ? DRAPEAU.jouable : DRAPEAU.pas) });
+    }
+    return { filtre: filtre, defis: vus,
+             caches: (B.defs.defis || []).filter(function (d) { return !Histoire.defiOuvert(d); }).length };
+  }
+
+  /** Un drapeau : un mât et un fanion, le pied au point. Un défi NEUF bat. */
+  function drapeau(ctx, x, y, couleur, neuf) {
+    const haut = neuf && (B.image >> 4) % 2 ? 1 : 0;
+    ctx.fillStyle = '#101018'; ctx.fillRect(x - 1, y - 8 - haut, 7, 5); ctx.fillRect(x - 1, y - 8 - haut, 3, 9 + haut);
+    ctx.fillStyle = '#efe6d0'; ctx.fillRect(x, y - 7 - haut, 1, 7 + haut);
+    ctx.fillStyle = couleur; ctx.fillRect(x + 1, y - 7 - haut, 4, 3);
+    B.stats.rects += 5;
+  }
+
+  /** Les drapeaux, et la ligne du filtre en haut à gauche. */
+  function dessinerDefisDeLaCarte(ctx, carte, pos) {
+    const entites = B.exterieur ? B.exterieur.entites : B.entites;
+    const vue = defisSurLaCarte(carte, entites);
+    marqueurs.defis = [];
+    for (const d of vue.defis) {
+      const p = pos(d.x, d.y);
+      drapeau(ctx, p.x, p.y, d.couleur, d.neuf);
+      marqueurs.defis.push({ slug: d.slug, x: p.x, y: p.y, couleur: d.couleur, neuf: d.neuf });
+    }
+    let x = 6;
+    if (vue.filtre !== 'tous') { iconeAppareil(ctx, vue.filtre, x, 5, DRAPEAU.jouable); x += 14; }
+    const ligne = (vue.filtre === 'tous' ? 'TOUS LES DÉFIS' : 'DÉFIS ' + NOM_APPAREIL[vue.filtre]) + ' ' + vue.defis.length
+      + (vue.caches ? ' · ' + vue.caches + ' À DÉCOUVRIR' : '');
+    texte(ctx, ligne, x, 6, DRAPEAU.jouable, 1);
+    marqueurs.filtre = vue.filtre;
+  }
+
   /** La ville entiere, deux pixels par tuile, avec ses lieux nommes, le
       joueur, l'objectif — et la police si elle te cherche. */
   function dessinerCarte(ctx) {
@@ -3146,6 +3275,7 @@ const Hud = (function () {
       ctx.fillStyle = couleurDeLieu(point); ctx.fillRect(p.x - 1, p.y - 1, 3, 3);
       B.stats.rects += 2;
     }
+    dessinerDefisDeLaCarte(ctx, carte, pos);
     if (B.recherche.etoiles > 0) {
       ctx.fillStyle = '#4f8fe8';
       for (const e of (B.exterieur ? B.exterieur.entites : B.entites)) {
@@ -3191,7 +3321,9 @@ const Hud = (function () {
     texte(ctx, titre, (VW - Atlas.largeurTexte(titre, 1)) / 2, 6, '#e8b33c', 1);
     dessinerLegende(ctx, carte);
     dessinerLegendeDuZonage(ctx, zonage);
-    const aide = (gps ? gps.nom.toUpperCase() + ' · ' : '') + 'N : FERMER';
+    // ⚠️ ARME tourne le filtre des défis (`tournerFiltreDeCarte`) : on le dit ici, en bas, avec
+    // le reste de ce qu'on peut faire — en haut, la rangée du zonage prend toute la largeur.
+    const aide = (gps ? gps.nom.toUpperCase() + ' · ' : '') + 'ARME : DÉFIS · N : FERMER';
     texte(ctx, aide, (VW - Atlas.largeurTexte(aide, 1)) / 2, VH - 12, '#cdc6e6', 1);
   }
 
@@ -3508,6 +3640,7 @@ const Hud = (function () {
         }
       }
       dessinerPiratage(ctx);
+      Adresse.dessiner(ctx);
       // Message. ⚠️ Un comptoir ouvert le dessine par-dessus lui, plus bas.
       if (!(B.etat === 'jeu' && B.menu)) dessinerMessage(ctx, 40);
       if (B.etat === 'jeu') iconeDeChargement(ctx);
@@ -3565,6 +3698,8 @@ const Hud = (function () {
     menuCommandes, ouvrirCommandes, majAideDuTitre, lignesDAide, glypheDAction,
     menuParties, menuEffacer, menuCopier, tempsDeJeu, quand,
     legendeDeLaCarte, legendeDuZonage, lieuxSurLaCarte, couleurDeLieu, cibleDuBoulot, PULSE_JOUEUR, BATTEMENT_CIBLE, CALQUE_ALPHA,
+    iconeAppareil, dessinerAppareils, defisSurLaCarte, tournerFiltreDeCarte, filtreDesDefis, DRAPEAU,
+    oublierFiltreDeCarte: function () { filtreDeCarte = null; },
     marqueurs: function () { return marqueurs; },
     get voileCourant() { return voileCourant; },
            majAvisSon,

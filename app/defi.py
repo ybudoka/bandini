@@ -67,9 +67,18 @@ def jour_de(maintenant: datetime | None = None) -> date:
     return maintenant.astimezone(fuseau).date()
 
 
+def rotation() -> list[dict]:
+    """Les defis qui tournent : ceux qu'on a des le depart (sans `debloque`).
+
+    ⚠️ Un defi qui se DEBLOQUE (les dix-huit du 23 sept. 2026) n'entre pas dans la rotation :
+    le serveur ne connait pas la partie, et il designerait a un joueur neuf un defi qu'il ne
+    voit meme pas encore. Et la rotation d'avant ne bouge pas d'un jour."""
+    return [d for d in missions.DEFIS if not d.get("debloque")]
+
+
 def defi_du(jour: date) -> str:
     """Le slug du defi de ce jour : une rotation sur le catalogue, jamais un tirage."""
-    catalogue = missions.DEFIS
+    catalogue = rotation()
     return catalogue[(jour - EPOQUE).days % len(catalogue)]["slug"]
 
 

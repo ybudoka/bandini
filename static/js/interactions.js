@@ -45,7 +45,7 @@ const Interactions = (function () {
       sens ailleurs. */
   function peutAgir(j) {
     return !!(j && j.vivant && !j.dansVehicule && !j.manege && !j.enjambe && !j.alite && !j.assis
-      && !j.otage && !j.roule && !B.interieur && !B.cinema && !B.menu && !B.roue && !B.piratage && !B.transition && cfg());
+      && !j.otage && !j.roule && !B.interieur && !B.cinema && !B.menu && !B.roue && !B.piratage && !B.epreuve && !B.transition && cfg());
   }
 
   // --- Ce qui est sous la main : les gens ----------------------------------------
