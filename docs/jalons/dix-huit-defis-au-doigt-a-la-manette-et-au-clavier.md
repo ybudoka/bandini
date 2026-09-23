@@ -125,3 +125,58 @@ dessinée par-dessus la ville, qu'on joue debout devant son panneau ou son compt
   d'une épreuve. Vingt mutations : toutes rouges, sauf une. Pour le moteur, une toux ratée est
   rattrapée deux fois (la marge, puis « IL CALE ») : c'est une protection double, pas un juge aveugle.
 - Captures Chromium : la proposition, les neuf épreuves, la carte dans ses quatre filtres.
+
+### Vague 2 — les six au volant (23 sept. 2026)
+
+- **`conduite.js`** joue les épreuves au volant (`conduite` et `regles` au catalogue) : le frein
+  pile de l'hôpital, le démarrage du terminus, le créneau devant la planque, le slalom de l'hôtel,
+  le verre de lait de Lulu (de la cantine au casse-croûte) et le remorquage de la fourrière.
+- **Un bout de rue droit, sans croisement** (`pisteDroite`) : les tuiles d'une même voie à la file,
+  cherchées autour du panneau, la plus proche, sans dé. Les portes ont été **choisies à la mesure** :
+  une ligne droite de 12 tuiles à trois pas de l'hôpital et du terminus, 10 tuiles de voie du bord
+  devant la planque, 30 tuiles à cinq pas de l'hôtel. Le créneau prend la **voie du bord**, celle
+  qui n'a pas de chaussée à sa droite.
+- **Les marques sont peintes au sol**, pas posées : la ligne de départ (un damier sur toute la
+  voie ; plus fine, elle disparaissait sous le char arrêté dessus), la case du frein pile, la place
+  du créneau, l'arrivée. **Les cônes aussi** : peints et heurtés par la géométrie, sans entité, pour
+  ne prendre aucun numéro. Le feu (trois rouges, puis le vert) et les jauges (le verre, la fourche)
+  se dessinent en haut de l'écran.
+- **Les chars posés par une épreuve** (les deux autos du créneau, la remorqueuse, l'épave) sont
+  `mission` : la ville ne les oublie pas, la fourrière ne les prend pas. Leur couleur est donnée,
+  donc `Vehicules.creer` ne tire aucun dé. `Conduite.fermer` les retire à la fin, sauf celui qu'on
+  conduit. ⚠️ `Entites.retirer` ne touche pas `actif` : c'est la liste qui dit si un char est encore
+  là (`present`).
+- **Le feu se mesure au char qu'on conduit** : son temps idéal pied au plancher (sa physique,
+  `tempsIdeal`), plus un réflexe de 0,45 s, plus 20 %. Avec un chiffre fixe (2,4 s), l'autobus y
+  mettait 2,3 s sans réflexe du tout, et la pelleteuse n'y arrivait jamais. Le juge le vérifie de la
+  moto à la pelleteuse : un tiers de seconde de réflexe gagne, une seconde perd.
+- **Le slalom** : des cônes aux 4 tuiles sur la ligne du milieu, à droite du premier, à gauche du
+  suivant. Aux 3 tuiles, une auto réelle (rayon de braquage 22, volant qui se tourne) les renversait
+  tous : le pilote du banc n'y arrivait pas.
+- **Le verre de lait et le remorquage excluent le clavier, et la physique le dit.** Les à-coups se
+  lisent **sur la commande** (`Vehicules.commandesJoueur`), pas sur la vitesse : lancée, une auto
+  perd par la friction autant qu'elle gagne au gaz. Au-delà de 70 % de gaz, 60 % de frein ou d'un
+  volant trop serré pour la vitesse, le verre déborde. Une touche, c'est 100 % : un départ et un
+  arrêt au clavier vident le verre (juge), pendant que la gâchette à 60 % n'en renverse pas une
+  goutte. Sur la fourche, un coup de frein franc **lancé** fait lâcher l'épave ; au pas, le même
+  coup de frein dure trop peu pour secouer.
+- **Le remorquage** : la remorqueuse attend sur la rue la plus proche (la fourrière est au fond d'une
+  cour qui ne touche aucune rue), et l'épave est à 22 tuiles **de la cour**. Le klaxon l'accroche (le
+  crochet existant) ; on la livre **dans la cour** (`Missions.dansLaCour`, la règle du boulot). ⚠️ Le
+  même klaxon prenait aussi le **boulot** de remorquage (« LA FOURRIÈRE NE PAIE QUE LES ÉPAVES ») :
+  pendant un défi, le boulot se tait.
+- **Juges** : un pilote au banc qui conduit **par la manette** (les gâchettes analogiques et le
+  stick de la disposition standard), qui tient sa voie et freine au pixel près (⚠️ sous 0,15 px/image,
+  le frein devient la marche arrière et ralentit moins fort, et il faut le compter). Pour le frein
+  pile : gagné, trop loin, trop court, refusé au pas. Pour le feu : gagné au vert, raté avant, et
+  mesuré au char. Pour le créneau : la place à la mesure du char, gagné garé droit, raté en
+  accrochant. Pour le slalom : gagné en zigzag, raté tout droit. Pour le verre de lait : la gâchette
+  contre le clavier, et la livraison. Pour le remorquage : les deux chars posés, l'accrochage,
+  « arrêté hors de la cour ne livre rien », et le coup de frein. Treize mutations : toutes rouges, une
+  fois deux juges resserrés (le créneau exige « TU AS ACCROCHÉ » ; le feu a deux gardes, l'arrivée et
+  le chrono, et chacune mord seule).
+- Captures Chromium : les cinq épreuves qui ont une piste ou une jauge.
+- ⚠️ **La vague 1 avait laissé un rouge sur `dev`** : `test_carte_du_depot` voulait
+  `test_defis_graduels_js.py` dans l'arborescence de `docs/architecture.md`. Corrigé à part
+  (`cf49706`), dès que la suite complète l'a montré. Les autres rouges de cette suite sont ceux déjà
+  connus sur `dev` (voir le jalon des menus à onglets).

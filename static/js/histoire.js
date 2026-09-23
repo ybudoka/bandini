@@ -2391,6 +2391,14 @@ const Histoire = (function () {
       partir(d, null);
       return;
     }
+    // ⚠️ UNE ÉPREUVE AU VOLANT (`Conduite`) trouve sa piste AU PANNEAU, et y pose
+    // ce qui attend (la remorqueuse, l'épave) : ses marques se voient avant qu'on
+    // ait trouvé un char. Pas de place ici : le défi ne ment pas, il ne part pas.
+    if (d.conduite && !Conduite.commencer(d)) {
+      B.defi = null;
+      Hud.message('PAS DE PLACE ICI POUR CE DÉFI', 150); Son.SFX.erreur();
+      return;
+    }
     // Le Grand Saut compte ses dix secondes lui-meme (`majDefi`) : il part tout de suite.
     if (d.vehicule || j.dansVehicule) { partir(d, j.dansVehicule); return; }
     Hud.message(d.titre.toUpperCase() + ' — MONTE DANS UN CHAR', 150);
@@ -2404,6 +2412,7 @@ const Histoire = (function () {
     f.parti = true; f.t = 0; f.attente = 0;
     f.chocs = v ? v.chocs : 0; f.vie = v ? v.vie : 0;
     if (d.etoiles) { B.recherche.etoiles = Math.max(B.recherche.etoiles, d.etoiles); B.recherche.vu = 0; }
+    if (d.conduite) Conduite.partir(d, v);
     // ⚠️ **AU GO, ON RAPPELLE QUOI FAIRE** : le menu l'a dit en `aide`, mais on
     // le relit à l'instant où la partie part — et la consigne d'un jeu de
     // foire tient en une ligne (`FRAPPE POUR TIRER`, `MARTÈLE ACTION`…).
@@ -2421,6 +2430,12 @@ const Histoire = (function () {
     }
     if (d.circuit) { majCircuit(d, f, j.dansVehicule); return; }
     f.t++;
+    if (d.conduite) {
+      if (d.chrono_s && f.t > d.chrono_s * 60) { finirDefi(false, 'TEMPS ÉCOULÉ'); return; }
+      const issue = Conduite.maj(d, j.dansVehicule);
+      if (issue) finirDefi(issue.gagne, issue.raison);
+      return;
+    }
     if (d.chrono_s && f.t > d.chrono_s * 60) { finirDefi(false, 'TEMPS ÉCOULÉ'); return; }
     const v = j.dansVehicule;
     if (d.vehicule === 'moto') {
@@ -2500,6 +2515,7 @@ const Histoire = (function () {
   function abandonnerDefi() {
     rendreLaCarabine(B.defi);
     Adresse.fermer();
+    Conduite.fermer();
     B.defi = null;
   }
 
@@ -2507,6 +2523,7 @@ const Histoire = (function () {
     const f = B.defi, d = defis().find(function (q) { return q.slug === f.slug; });
     rendreLaCarabine(f);
     Adresse.fermer();
+    Conduite.fermer();
     B.defi = null;
     if (!reussi) { Hud.message('DÉFI RATÉ — ' + (raison || ''), 180); Son.SFX.erreur(); noter('DÉFI RATÉ : ' + d.titre, false); return; }
     const premiere = !B.partie.defisFaits[d.slug];
@@ -2760,7 +2777,7 @@ const Histoire = (function () {
     if (!j) return null;
     if (B.defi) {
       const d = defis().find(function (q) { return q.slug === B.defi.slug; });
-      const l = d.circuit ? repereDeCircuit(B.defi) : d.lieu ? lieu(d.lieu) : null;
+      const l = d.conduite ? Conduite.cible(d) : d.circuit ? repereDeCircuit(B.defi) : d.lieu ? lieu(d.lieu) : null;
       return l ? { x: l.x, y: l.y, nom: l.nom, couleur: '#7fc4ff' } : null;
     }
     if (m) {
@@ -2839,6 +2856,7 @@ const Histoire = (function () {
         return d.titre.toUpperCase() + chrono + ' CIBLES ' + Math.min(crevees, d.cibles) + '/' + d.cibles;
       }
       if (d.epreuve) return d.titre.toUpperCase() + chrono + ' ' + Adresse.compte(d);
+      if (d.conduite) return d.titre.toUpperCase() + chrono + ' ' + Conduite.compte(d);
       if (d.coups) return d.titre.toUpperCase() + chrono + ' COUPS ' + B.defi.coups + '/' + d.coups;
       if (d.canards) return d.titre.toUpperCase() + chrono + ' CANARDS ' + B.defi.pris + '/' + d.canards
              + (canardAuCrochet() ? ' — MAINTENANT !' : '');

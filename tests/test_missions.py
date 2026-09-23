@@ -190,7 +190,8 @@ def test_chaque_defi_dit_avec_quoi_il_se_joue():
             assert sorted(d["appareils"]) == sorted(missions.APPAREILS), d["slug"]
     exclus = {d["slug"]: sorted(set(missions.APPAREILS) - set(d["appareils"])) for d in missions.DEFIS}
     assert {s: e for s, e in exclus.items() if e} == {
-        "danse": ["doigts"], "crochet": ["clavier"], "coffre": ["clavier"]}
+        "danse": ["doigts"], "crochet": ["clavier"], "coffre": ["clavier"],
+        "lait": ["clavier"], "remorquage": ["clavier"]}
 
 
 def test_ce_qui_debloque_un_defi_existe():

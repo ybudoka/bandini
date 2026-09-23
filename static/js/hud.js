@@ -3641,6 +3641,7 @@ const Hud = (function () {
       }
       dessinerPiratage(ctx);
       Adresse.dessiner(ctx);
+      Conduite.dessiner(ctx);
       // Message. ⚠️ Un comptoir ouvert le dessine par-dessus lui, plus bas.
       if (!(B.etat === 'jeu' && B.menu)) dessinerMessage(ctx, 40);
       if (B.etat === 'jeu') iconeDeChargement(ctx);

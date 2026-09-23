@@ -575,6 +575,10 @@ const Missions = (function () {
     /** Le klaxon dans un char qui a un boulot : on le prend, ou rien. */
     klaxon: function (v) {
       if (!v || !v.def.boulot) return false;
+      // ⚠️ PAS DE CONTRAT PENDANT UN DÉFI : au remorquage de la fourrière, le
+      // klaxon accroche l'épave du défi — il ne doit pas, en plus, prendre le
+      // boulot (ni dire que la fourrière ne paie que les épaves).
+      if (B.defi) return false;
       // ⚠️ UN contrat a la fois — et sur un char a sirene, ca se DIT : le
       // bouton vient d'allumer la sirene, il a donc l'air d'avoir fait
       // quelque chose, et un refus muet passerait pour une panne. Dans un

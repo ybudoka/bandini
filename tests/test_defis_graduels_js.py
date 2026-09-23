@@ -215,8 +215,9 @@ def test_le_meme_cadenas_se_crochete_au_stick_du_doigt(banc):
 
 
 def test_un_defi_reussi_ouvre_la_roue_et_le_dit(banc):
-    """Le premier palier : un défi réussi, n'importe lequel. Son panneau se plante À CE
-    MOMENT-LÀ, devant le kiosque de Madame Thibodeau ; le journal le note, le HUD l'annonce."""
+    """Le premier palier : un défi réussi, n'importe lequel. Les panneaux se plantent À CE
+    MOMENT-LÀ, devant le kiosque de Madame Thibodeau et à l'hôpital ; le journal note chacun,
+    le HUD les annonce en une ligne."""
     r = banc(_jeu("""
         const avant = L.B.entites.filter(function (e) { return e.type === 'panneau'; }).length;
         L.B.partie.defisFaits.tour = { jour: 1, temps: 100 };
@@ -226,17 +227,19 @@ def test_un_defi_reussi_ouvre_la_roue_et_le_dit(banc):
         return { ouverts: Object.keys(L.B.partie.defisOuverts), neuf: L.Histoire.defiNeuf(L.B.defs.defis.find(function (d) { return d.slug === 'roue'; })),
                  panneaux: L.B.entites.filter(function (e) { return e.type === 'panneau'; }).length - avant,
                  loin: p ? Math.round(Math.hypot(p.x - kiosque.x, p.y - kiosque.y) / L.TT) : null,
-                 message: L.B.message && L.B.message.texte, carnet: L.B.partie.carnet.slice(-1)[0].t };
+                 message: L.B.msg, carnet: L.B.partie.carnet.slice(-2).map(function (l) { return l.t; }) };
     """))
-    assert r["ouverts"] == ["roue"]
+    # ⚠️ Le premier palier en ouvre DEUX : la roue, et le frein pile (2e vague).
+    assert r["ouverts"] == ["roue", "frein_pile"]
     assert r["neuf"] is True
-    assert r["panneaux"] == 1 and r["loin"] is not None and r["loin"] <= 12, r
-    assert r["carnet"] == "NOUVEAU DÉFI : LA ROUE DE MADAME THIBODEAU"
+    assert r["panneaux"] == 2 and r["loin"] is not None and r["loin"] <= 12, r
+    assert r["carnet"] == ["NOUVEAU DÉFI : LA ROUE DE MADAME THIBODEAU", "NOUVEAU DÉFI : LE FREIN PILE DE L'HÔPITAL"]
+    assert r["message"] == "2 NOUVEAUX DÉFIS — VOIS LA CARTE", "deux défis ensemble : une seule annonce"
 
 
 def test_l_histoire_ouvre_ses_defis_et_rien_d_autre(banc):
-    """m6 ouvre le mannequin (le pickpocket de Josée), m4 la radio du sergent — et une mission
-    ne rouvre pas un défi déjà ouvert, ni n'annonce deux fois."""
+    """m6 ouvre le mannequin (le pickpocket de Josée), m4 la radio du sergent, m1 et m3 le feu et
+    le créneau — et une mission ne rouvre pas un défi déjà ouvert, ni n'annonce deux fois."""
     r = banc(_jeu("""
         const vus = [];
         L.B.partie.missionsFaites = { m1: 1, m2: 1, m3: 1, m4: 1 };
@@ -247,9 +250,10 @@ def test_l_histoire_ouvre_ses_defis_et_rien_d_autre(banc):
         L.Histoire.majDeblocages(true);
         return { vus: vus, lignes: lignes, apres: L.B.partie.carnet.filter(function (l) { return l.t.indexOf('NOUVEAU DÉFI') === 0; }).length };
     """))
-    assert r["vus"][0] == ["radio"]
-    assert r["vus"][1] == ["mannequin", "radio"]
-    assert r["lignes"] == r["apres"] == 2
+    # m1 ouvre le feu du terminus, m3 le créneau, m4 la radio ; m6 le mannequin.
+    assert r["vus"][0] == ["creneau", "feu", "radio"]
+    assert r["vus"][1] == ["creneau", "feu", "mannequin", "radio"]
+    assert r["lignes"] == r["apres"] == 4
 
 
 def test_le_coffre_attend_la_mission_ET_le_cadenas(banc):
@@ -415,3 +419,332 @@ def test_chaque_epreuve_du_catalogue_a_son_jeu(banc, paquet):
     r = banc("function (L, o) { return Object.keys(L.Adresse.EPREUVES).sort(); }")
     catalogue = sorted(d["epreuve"] for d in paquet["defis"] if d.get("epreuve"))
     assert catalogue == sorted(EPREUVES) == r
+
+
+# --- La 2e vague : au volant ------------------------------------------------------------------
+
+#: Au volant, par la MANETTE : `piloter(o, gaz, frein, volant)` pose les gâchettes (analogiques,
+#: boutons 7 et 6 de la disposition standard) et le stick. `auVolant` pose une auto sur la piste
+#: de l'épreuve (à `sl` pixels devant la ligne, `lat` à droite) et y assoit le joueur.
+VOLANT = """
+    function piloter(o, gaz, frein, volant) { o.pad([volant || 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, frein || 0, gaz || 0]); }
+    function auVolant(L, o, sl, lat, slug) {
+        const p = L.B.conduite.piste, pt = L.Conduite.point(p, sl, lat || 0);
+        const v = L.Vehicules.creer(slug || 'auto', pt.x, pt.y, Math.atan2(p.dy, p.dx), { etat: 'stationne', couleur: '#8a8698' });
+        L.Entites.indexer(); L.Vehicules.monter(L.B.joueur, v); L.Monde.centrerCamera(v.x, v.y);
+        o.frame(2);
+        return v;
+    }
+    /** Le volant qui tient la piste à `lat` pixels à droite de son axe. */
+    function tenir(L, v, lat) {
+        const p = L.B.conduite.piste, q = L.Conduite.projeter(p, v.x, v.y);
+        let e = Math.atan2(p.dy, p.dx) + Math.atan2(lat - q.lat, 28) - v.angle;
+        while (e > Math.PI) e -= 2 * Math.PI; while (e < -Math.PI) e += 2 * Math.PI;
+        return Math.max(-1, Math.min(1, e * 2.2));
+    }
+    /** Le volant qui suit la voie sous le char (son sens), sans piste d'épreuve. */
+    function tenirLaRue(L, v) {
+        const g = L.Monde.fleche(Math.floor(v.x / L.TT), Math.floor(v.y / L.TT));
+        const cap = { '>': 0, 'v': Math.PI / 2, '<': Math.PI, '^': -Math.PI / 2 }[g];
+        if (cap === undefined) return 0;
+        let e = cap - v.angle;
+        while (e > Math.PI) e -= 2 * Math.PI; while (e < -Math.PI) e += 2 * Math.PI;
+        return Math.max(-1, Math.min(1, e * 2));
+    }
+    /** Où il s'arrêterait, pied au frein à partir de maintenant (la physique de `majPhysique` :
+        ⚠️ sous 0,15 px/image, le frein est la MARCHE ARRIÈRE — il ralentit moins fort). */
+    function arretA(v) {
+        let u = v.vitesse, d = 0;
+        while (u > 0.05) { u = (u - (u > 0.15 ? v.def.frein : v.def.acceleration * 0.7)) * v.def.friction; d += Math.max(0, u); }
+        return d;
+    }
+"""
+
+
+def test_le_frein_pile_se_gagne_lance_et_s_arrete_dans_la_case(banc):
+    r = banc(_jeu(VOLANT + """
+        const d = aller(L, o, 'frein_pile'), r = d.regles, p = L.B.conduite.piste;
+        const v = auVolant(L, o, -8 * L.TT, 0);
+        let lanceA = null;
+        for (let n = 0; n < 900 && L.B.defi; n++) {
+            const q = L.Conduite.projeter(p, v.x, v.y);
+            if (L.B.conduite.phase === 'lance' && lanceA === null) lanceA = v.vitesse / v.def.vitesse_max;
+            const freine = L.B.conduite.phase === 'lance' && q.s + arretA(v) >= r.case * L.TT - 2;
+            piloter(o, freine ? 0 : 1, freine && v.vitesse > 0.05 ? 1 : 0, tenir(L, v, 0));
+            o.frame(1);
+        }
+        o.pad(null);
+        return { fait: !!L.B.partie.defisFaits.frein_pile, lanceA: lanceA, carnet: L.B.partie.carnet.slice(-1)[0].t };
+    """))
+    assert r["fait"] is True, r
+    assert r["lanceA"] >= 0.55
+
+
+@pytest.mark.parametrize("freinA,raison", [(1, "TROP LOIN"), (-2, "TROP COURT")])
+def test_le_frein_pile_se_rate_trop_loin_ou_trop_court(banc, freinA, raison):
+    """`freinA` : on freine une tuile trop tard, ou deux trop tôt."""
+    r = banc(_jeu(VOLANT + """
+        const d = aller(L, o, 'frein_pile'), r = d.regles, p = L.B.conduite.piste;
+        const v = auVolant(L, o, -8 * L.TT, 0);
+        for (let n = 0; n < 900 && L.B.defi; n++) {
+            const q = L.Conduite.projeter(p, v.x, v.y);
+            const freine = L.B.conduite.phase === 'lance' && q.s + arretA(v) >= (r.case + %d) * L.TT;
+            piloter(o, freine ? 0 : 1, freine && v.vitesse > 0.05 ? 1 : 0, tenir(L, v, 0));
+            o.frame(1);
+        }
+        o.pad(null);
+        return { fait: !!L.B.partie.defisFaits.frein_pile, carnet: L.B.partie.carnet.slice(-1)[0].t };
+    """ % freinA))
+    assert r["fait"] is False
+    assert r["carnet"] == "DÉFI RATÉ : LE FREIN PILE DE L'HÔPITAL", r
+
+
+def test_le_frein_pile_refuse_qui_passe_la_ligne_au_pas(banc):
+    r = banc(_jeu(VOLANT + """
+        const d = aller(L, o, 'frein_pile'), p = L.B.conduite.piste;
+        const v = auVolant(L, o, -3 * L.TT, 0);
+        for (let n = 0; n < 240 && L.B.defi; n++) {
+            piloter(o, v.vitesse < 1 ? 0.5 : 0, 0, tenir(L, v, 0));
+            o.frame(1);
+        }
+        o.pad(null);
+        return { phase: L.B.conduite && L.B.conduite.phase, defi: L.B.defi && L.B.defi.slug };
+    """))
+    assert r == {"phase": "approche", "defi": "frein_pile"}
+
+
+def test_le_demarrage_au_feu_se_gagne_au_vert_et_se_rate_avant(banc):
+    r = banc(_jeu(VOLANT + """
+        const issues = {};
+        for (const tricheur of [false, true]) {
+            aller(L, o, 'feu');
+            const v = auVolant(L, o, -L.TT / 2, 0);
+            let vuRouge = false;
+            for (let n = 0; n < 900 && L.B.defi; n++) {
+                const c = L.B.conduite;
+                vuRouge = vuRouge || c.phase === 'rouge';
+                const go = c.phase === 'vert' || (tricheur && c.phase === 'rouge' && c.t > 20);
+                piloter(o, go ? 1 : 0, 0, go ? tenir(L, v, 0) : 0);
+                o.frame(1);
+            }
+            o.pad(null);
+            issues[tricheur ? 'tricheur' : 'honnete'] = { rouge: vuRouge, fait: !!L.B.partie.defisFaits.feu,
+                                                          carnet: L.B.partie.carnet.slice(-1)[0].t };
+            L.Vehicules.descendre(L.B.joueur, true); L.Entites.retirer(v);
+            delete L.B.partie.defisFaits.feu;
+        }
+        return issues;
+    """))
+    assert r["honnete"]["rouge"] and r["honnete"]["fait"], r
+    assert r["tricheur"]["rouge"] and not r["tricheur"]["fait"], r
+    assert r["tricheur"]["carnet"] == "DÉFI RATÉ : LE DÉMARRAGE DU TERMINUS"
+
+
+@pytest.mark.parametrize("vehicule", ["moto", "auto", "autobus", "pelleteuse"])
+@pytest.mark.parametrize("reflexe,gagne", [(18, True), (60, False)])
+def test_le_feu_se_mesure_au_char_qu_on_conduit(banc, vehicule, reflexe, gagne):
+    """Un réflexe d'un tiers de seconde gagne, avec la moto comme avec la pelleteuse ; une
+    seconde de rêverie au vert perd, avec les deux aussi."""
+    r = banc(_jeu(VOLANT + """
+        aller(L, o, 'feu');
+        const v = auVolant(L, o, -L.TT / 2, 0, '%s');
+        let attente = 0;
+        for (let n = 0; n < 1500 && L.B.defi; n++) {
+            const c = L.B.conduite;
+            if (c.phase === 'vert') attente++;
+            const go = c.phase === 'vert' && attente > %d;
+            piloter(o, go ? 1 : 0, 0, go ? tenir(L, v, 0) : 0);
+            o.frame(1);
+        }
+        o.pad(null);
+        return !!L.B.partie.defisFaits.feu;
+    """ % (vehicule, reflexe)))
+    assert r is gagne
+
+
+def test_le_creneau_pose_deux_chars_et_la_place_a_la_mesure_du_sien(banc):
+    r = banc(_jeu(VOLANT + """
+        aller(L, o, 'creneau');
+        const v = auVolant(L, o, -3 * L.TT, 0);
+        o.frame(2);
+        const c = L.B.conduite, p = c.piste;
+        const garees = c.garees.map(function (g) { return Math.round(L.Conduite.projeter(p, g.x, g.y).s); });
+        // Dans la place, droit, arrêté : on pose le char comme s'il s'y était glissé.
+        const pt = L.Conduite.point(p, c.milieu, 0);
+        v.x = pt.x; v.y = pt.y; v.vx = 0; v.vy = 0; v.vitesse = 0; v.angle = Math.atan2(p.dy, p.dx);
+        L.Entites.indexer();
+        for (let n = 0; n < 60 && L.B.defi; n++) { piloter(o, 0, 0, 0); o.frame(1); }
+        o.pad(null);
+        return { place: c.place, lon: v.def.longueur, garees: garees, milieu: c.milieu, fait: !!L.B.partie.defisFaits.creneau,
+                 restent: c.garees.filter(function (g) { return L.B.entites.indexOf(g) >= 0; }).length };
+    """))
+    assert abs(r["place"] - 1.6 * r["lon"]) < 0.01
+    assert r["garees"][0] < r["milieu"] < r["garees"][1]
+    assert r["fait"] is True, r
+    assert r["restent"] == 0, "les deux chars de l'épreuve repartent avec elle"
+
+
+def test_le_creneau_se_rate_en_touchant_un_char(banc):
+    r = banc(_jeu(VOLANT + """
+        aller(L, o, 'creneau');
+        const v = auVolant(L, o, -3 * L.TT, 0);
+        o.frame(2);
+        const c = L.B.conduite, p = c.piste, pt = L.Conduite.point(p, c.milieu, 0);
+        v.x = pt.x; v.y = pt.y; v.vx = 0; v.vy = 0; v.vitesse = 0; v.angle = Math.atan2(p.dy, p.dx);
+        L.Entites.indexer();
+        for (let n = 0; n < 240 && L.B.defi; n++) { piloter(o, 1, 0, 0); o.frame(1); }
+        o.pad(null);
+        return { fait: !!L.B.partie.defisFaits.creneau, carnet: L.B.partie.carnet.slice(-1)[0].t, message: L.B.msg };
+    """))
+    assert r["fait"] is False
+    assert r["carnet"] == "DÉFI RATÉ : LE CRÉNEAU DEVANT LA PLANQUE", r
+    assert r["message"] == "DÉFI RATÉ — TU AS ACCROCHÉ", r
+
+
+def test_le_slalom_se_gagne_en_zigzag_et_se_rate_tout_droit(banc):
+    r = banc(_jeu(VOLANT + """
+        const issues = {};
+        for (const droit of [false, true]) {
+            const d = aller(L, o, 'slalom'), r = d.regles;
+            const c = L.B.conduite, p = c.piste;
+            const v = auVolant(L, o, -5 * L.TT, 0);
+            function voulu(sl) {
+                // Entre deux cônes, on vise le côté du PROCHAIN — dans sa voie (droite) ou dans l'autre.
+                const k = Math.max(0, Math.min(c.cones.length - 1, Math.round((sl - r.depart * L.TT) / (r.pas * L.TT))));
+                return k % 2 === 0 ? 3 : -19;
+            }
+            let temps = null;
+            for (let n = 0; n < 1500 && L.B.defi; n++) {
+                const q = L.Conduite.projeter(p, v.x, v.y);
+                const lat = droit ? 2 : voulu(q.s + 28);
+                piloter(o, v.vitesse < 1.8 ? 0.8 : 0, 0, tenir(L, v, lat));
+                o.frame(1);
+                if (L.B.conduite && L.B.conduite.phase === 'slalom') temps = L.B.conduite.t;
+            }
+            o.pad(null);
+            issues[droit ? 'droit' : 'zigzag'] = { fait: !!L.B.partie.defisFaits.slalom, temps: temps,
+                                                    tombes: c.cones.filter(function (k) { return k.tombe; }).length,
+                                                    carnet: L.B.partie.carnet.slice(-1)[0].t };
+            L.Vehicules.descendre(L.B.joueur, true); L.Entites.retirer(v);
+            delete L.B.partie.defisFaits.slalom;
+        }
+        return issues;
+    """))
+    assert r["zigzag"]["fait"], r
+    assert not r["droit"]["fait"] and r["droit"]["carnet"] == "DÉFI RATÉ : LE SLALOM DE L'HÔTEL", r
+
+
+#: Une auto posée sur la rue la plus proche du joueur, dans le sens de la voie, et le joueur dedans.
+SUR_LA_RUE = """
+    function surLaRue(L, o, slug) {
+        const j = L.B.joueur, r = L.Monde.routeLaPlusProche(j.x, j.y, 16);
+        const g = L.Monde.fleche(Math.floor(r.x / L.TT), Math.floor(r.y / L.TT));
+        const cap = { '>': 0, 'v': Math.PI / 2, '<': Math.PI, '^': -Math.PI / 2 }[g] || 0;
+        const v = L.Vehicules.creer(slug || 'auto', r.x, r.y, cap, { etat: 'stationne', couleur: '#8a8698' });
+        L.Entites.indexer(); L.Vehicules.monter(j, v); L.Monde.centrerCamera(v.x, v.y);
+        o.frame(2);
+        return v;
+    }
+"""
+
+
+def test_le_verre_de_lait_tient_a_la_gachette_douce_et_deborde_au_clavier(banc):
+    """À la manette, 60 % de gaz puis 50 % de frein : pas une goutte. Au clavier, UN départ et
+    UN arrêt — tout le gaz, tout le frein, les seuls que les touches connaissent — et le verre
+    est vide. C'est ce qui l'exclut du clavier, et c'est la physique qui le dit."""
+    r = banc(_jeu(VOLANT + SUR_LA_RUE + """
+        const out = {};
+        for (const appareil of ['manette', 'clavier']) {
+            aller(L, o, 'lait');
+            const v = surLaRue(L, o);
+            for (let n = 0; n < 50; n++) {
+                if (appareil === 'manette') piloter(o, 0.6, 0, 0); else o.touche('KeyW');
+                o.frame(1);
+            }
+            o.pad(null); o.relacher('KeyW');
+            const vite = v.vitesse;
+            for (let n = 0; n < 80 && L.B.defi && v.vitesse > 0.05; n++) {
+                if (appareil === 'manette') piloter(o, 0, 0.5, 0); else o.touche('KeyS');
+                o.frame(1);
+            }
+            o.pad(null); o.relacher('KeyS'); o.frame(2);
+            out[appareil] = { vite: vite, lait: L.B.conduite ? L.B.conduite.lait : null, defi: L.B.defi && L.B.defi.slug,
+                              message: L.B.msg };
+            if (L.B.defi) L.Histoire.abandonnerDefi();
+            L.Vehicules.descendre(L.B.joueur, true); L.Entites.retirer(v);
+        }
+        return out;
+    """))
+    assert r["manette"]["lait"] == 0 and r["manette"]["defi"] == "lait", r
+    assert r["manette"]["vite"] > 1.0
+    assert r["clavier"]["defi"] is None and "LE LAIT A DÉBORDÉ" in r["clavier"]["message"], r
+
+
+def test_le_verre_de_lait_se_livre_au_casse_croute(banc):
+    r = banc(_jeu(VOLANT + SUR_LA_RUE + """
+        aller(L, o, 'lait');
+        const v = surLaRue(L, o);
+        piloter(o, 0.5, 0, 0); o.frame(10); o.pad(null);
+        const l = L.Histoire.lieu('casse_croute'), rue = L.Monde.routeLaPlusProche(l.x, l.y, 3);
+        v.x = rue.x; v.y = rue.y; v.vx = 0; v.vy = 0; v.vitesse = 0;
+        L.Entites.indexer();
+        o.frame(5);
+        return { fait: !!L.B.partie.defisFaits.lait, loin: Math.hypot(rue.x - l.x, rue.y - l.y) / L.TT };
+    """))
+    assert r["loin"] < 4
+    assert r["fait"] is True
+
+
+def test_le_remorquage_pose_ses_deux_chars_et_se_gagne_en_douceur(banc):
+    """La remorqueuse attend près de la fourrière, l'épave plus loin. On monte, on recule sur
+    l'épave, le KLAXON l'accroche ; ramenée à la fourrière et arrêtée, c'est gagné — et les
+    deux chars de l'épreuve repartent, sauf celui qu'on conduit."""
+    r = banc(_jeu(VOLANT + """
+        aller(L, o, 'remorquage');
+        const c = L.B.conduite, rq = c.remorqueuse, ep = c.epave, j = L.B.joueur;
+        const lot = L.Monde.carte.fourriere, f = { x: (lot.x + lot.largeur / 2) * L.TT, y: (lot.y + lot.hauteur / 2) * L.TT };
+        const loin = Math.round(Math.hypot(ep.x - f.x, ep.y - f.y) / L.TT);
+        L.Vehicules.monter(j, rq); o.frame(2);
+        // Devant l'épave, dans son axe : elle est DERRIÈRE la fourche.
+        const d = (rq.def.longueur + ep.def.longueur) / 2 + 2;
+        rq.angle = ep.angle; rq.x = ep.x + Math.cos(ep.angle) * d; rq.y = ep.y + Math.sin(ep.angle) * d;
+        rq.vx = 0; rq.vy = 0; rq.vitesse = 0; L.Entites.indexer();
+        o.tape('Space', 2);
+        const accroche = rq.remorque === ep;
+        o.frame(30);
+        const ailleurs = !!L.B.partie.defisFaits.remorquage;      // arrêtée, mais pas dans la cour
+        // Dans la cour du lot, arrêtée : l'épave suit sur la fourche.
+        rq.x = f.x; rq.y = f.y; rq.vitesse = 0; rq.vx = 0; rq.vy = 0; L.Entites.indexer();
+        o.frame(6);
+        return { loin: loin, accroche: accroche, ailleurs: ailleurs, fait: !!L.B.partie.defisFaits.remorquage,
+                 restent: [rq, ep].map(function (v) { return L.B.entites.indexOf(v) >= 0; }),
+                 message: L.B.msg };
+    """))
+    assert r["loin"] >= 12, r
+    assert r["accroche"] is True, r
+    assert r["ailleurs"] is False, "arrêté hors de la cour, rien n'est livré"
+    assert r["fait"] is True, r
+    assert r["restent"] == [True, False], "on garde la remorqueuse qu'on conduit ; l'épave repart"
+
+
+def test_au_remorquage_un_coup_de_frein_fait_lacher_l_epave(banc):
+    r = banc(_jeu(VOLANT + """
+        aller(L, o, 'remorquage');
+        const c = L.B.conduite, rq = c.remorqueuse, ep = c.epave, j = L.B.joueur;
+        L.Vehicules.monter(j, rq); o.frame(2);
+        const d = (rq.def.longueur + ep.def.longueur) / 2 + 2;
+        rq.angle = ep.angle; rq.x = ep.x + Math.cos(ep.angle) * d; rq.y = ep.y + Math.sin(ep.angle) * d;
+        rq.vx = 0; rq.vy = 0; rq.vitesse = 0; L.Entites.indexer();
+        o.tape('Space', 2);
+        // Lancé en douceur (70 % de gaz, sous le seuil) jusqu'à un bon pas, puis un coup de
+        // frein franc. ⚠️ Au pas, le même coup de frein ne secoue presque rien : il dure trop peu.
+        for (let n = 0; n < 240 && L.B.defi && rq.vitesse < 1.6; n++) { piloter(o, 0.7, 0, tenirLaRue(L, rq)); o.frame(1); }
+        const secousses = c.secousses, vite = rq.vitesse;
+        for (let n = 0; n < 60 && L.B.defi; n++) { piloter(o, 0, 1, 0); o.frame(1); }
+        o.pad(null);
+        return { avant: secousses, vite: vite, defi: L.B.defi && L.B.defi.slug, accroche: rq.remorque === ep,
+                 message: L.B.msg };
+    """))
+    assert r["avant"] == 0 and r["vite"] >= 1.6, r
+    assert r["defi"] is None and r["accroche"] is False, r
+    assert "L'ÉPAVE A LÂCHÉ" in r["message"], r

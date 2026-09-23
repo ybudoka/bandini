@@ -641,6 +641,53 @@ DEFIS: list[dict] = [
                 "jeu_deg": 4, "tenir_s": 0.75, "proche_deg": 35, "force": 0.6},
      "consigne": "LE CODE, PUIS LES GOUPILLES",
      "texte": "LE CODE DE QUATRE DIRECTIONS, PUIS DEUX GOUPILLES AU STICK, AVANT QUE L'ALARME SONNE"},
+
+    # --- LES ÉPREUVES AU VOLANT (2e vague, 23 sept. 2026) ---------------------
+    #
+    # ⚠️ `conduite` : l'épreuve qu'on joue au volant (`static/js/conduite.js`),
+    # sur un bout de rue droit sans croisement trouvé près du panneau
+    # (`pisteDroite`) — d'où les portes : l'hôpital, le terminus, la planque et
+    # l'hôtel ont une voie droite assez longue à deux pas (mesuré sur la carte).
+    # ⚠️ Pas de `vehicule` : la remorqueuse, c'est l'épreuve qui la pose et qui
+    # la demande. `vehicule` fait partir le chrono à pied (le Grand Saut).
+    {"slug": "frein_pile", "titre": "Le frein pile de l'hôpital", "ou": "porte:hopital", "conduite": "frein",
+     "chrono_s": 60, "prime": 60, "debloque": {"defis": 1},
+     "regles": {"longueur": 12, "case": 10, "elan": 0.55, "arret_s": 0.4},
+     "texte": "PASSE LA LIGNE LANCÉ, PUIS ARRÊTE-TOI PILE DANS LA CASE PEINTE : NI AVANT, NI APRÈS"},
+    {"slug": "feu", "titre": "Le démarrage du terminus", "ou": "porte:terminus", "conduite": "feu",
+     "chrono_s": 60, "prime": 50, "debloque": {"missions": ["m1"]},
+     # ⚠️ LE TEMPS SE MESURE À TON CHAR : pied au plancher, une moto fait les
+     # dix tuiles en 1,25 s, l'autobus en 2,3 s (mesuré au banc) — un chiffre
+     # fixe aurait fermé le défi aux gros. On a le temps IDÉAL de son char
+     # (`Conduite`, sa physique), plus `reflexe_s` pour voir le vert, plus `marge`.
+     "regles": {"longueur": 12, "arrivee": 10, "reflexe_s": 0.45, "marge": 0.2, "rouges_s": 0.7,
+                "attente_s": [0.4, 1.6]},
+     "texte": "ARRÊTÉ SUR LA LIGNE : TROIS ROUGES, PUIS LE VERT. PARS AVANT, C'EST UN FAUX DÉPART"},
+    {"slug": "creneau", "titre": "Le créneau devant la planque", "ou": "porte:planque", "conduite": "creneau",
+     "chrono_s": 45, "prime": 60, "debloque": {"missions": ["m3"]},
+     # ⚠️ `jeu` : la place fait 1,6 fois TON char — on ne le sait qu'au volant.
+     "regles": {"longueur": 10, "jeu": 1.6, "angle_deg": 12, "arret_s": 0.5},
+     "texte": "GARE-TOI ENTRE LES DEUX CHARS, DROIT, SANS TOUCHER PERSONNE"},
+    {"slug": "slalom", "titre": "Le slalom de l'hôtel", "ou": "porte:hotel", "conduite": "slalom",
+     "chrono_s": 60, "prime": 70, "debloque": {"defis": 5},
+     "regles": {"depart": 3, "cones": 6, "pas": 4, "penalite_s": 2, "temps_s": 9},
+     "texte": "SIX CÔNES : À DROITE DU PREMIER, À GAUCHE DU SUIVANT. UN CÔNE RENVERSÉ COÛTE 2 S"},
+    {"slug": "lait", "titre": "Le verre de lait de Lulu", "ou": "porte:cantine", "lieu": "casse_croute",
+     "conduite": "lait", "chrono_s": 180, "prime": 90, "debloque": {"apres": ["livraison"]},
+     # ⚠️ PAS AU CLAVIER : le verre déborde au-delà de 70 % de gaz, de 60 % de
+     # frein, d'un volant trop serré pour la vitesse. Une touche, c'est 100 % ou
+     # rien : un seul départ vide presque le verre (juge), et une auto lâchée à
+     # la vitesse qu'on atteint avant qu'il déborde s'arrête en huit tuiles.
+     "appareils": ["manette", "doigts"],
+     "regles": {"gaz": 0.7, "frein": 0.6, "virage": 0.55, "debord": 0.08},
+     "texte": "UN VERRE PLEIN SUR LA BANQUETTE, JUSQU'AU CASSE-CROÛTE : GAZ DOUX, FREIN DOUX, SANS UNE BOSSE"},
+    {"slug": "remorquage", "titre": "Le remorquage de la fourrière", "ou": "porte:fourriere", "lieu": "fourriere",
+     "conduite": "remorquage", "chrono_s": 180, "prime": 90, "debloque": {"missions": ["f08"]},
+     # ⚠️ PAS AU CLAVIER, pour la même raison que le verre de lait : une épave
+     # sur la fourche lâche aux à-coups, et une touche n'en fait pas d'autres.
+     "appareils": ["manette", "doigts"],
+     "regles": {"gaz": 0.75, "frein": 0.6, "virage": 0.6, "debord": 0.2, "epave_loin": 22},
+     "texte": "PRENDS LA REMORQUEUSE, ACCROCHE L'ÉPAVE (RECULE, KLAXON) ET RAMÈNE-LA SANS À-COUPS"},
 ]
 
 #: Avec quoi un défi se joue. ⚠️ Un défi n'en exclut un que pour une raison
