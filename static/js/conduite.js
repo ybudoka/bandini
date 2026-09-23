@@ -234,7 +234,7 @@ const Conduite = (function () {
         // ⚠️ LA PLACE SE MESURE AU CHAR QU'ON CONDUIT : on ne sait qu'au volant
         // si c'est une moto ou l'autobus.
         const lon = v.def.longueur, milieu = r.longueur * TT / 2, garee = Vehicules.vehiculeDef('auto').longueur;
-        e.place = lon * r.jeu;
+        e.place = lon * r.place;
         e.milieu = milieu;
         const cap = Math.atan2(e.piste.dy, e.piste.dx);
         for (const cote of [-1, 1]) {

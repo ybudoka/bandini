@@ -665,8 +665,10 @@ DEFIS: list[dict] = [
      "texte": "ARRÊTÉ SUR LA LIGNE : TROIS ROUGES, PUIS LE VERT. PARS AVANT, C'EST UN FAUX DÉPART"},
     {"slug": "creneau", "titre": "Le créneau devant la planque", "ou": "porte:planque", "conduite": "creneau",
      "chrono_s": 45, "prime": 60, "debloque": {"missions": ["m3"]},
-     # ⚠️ `jeu` : la place fait 1,6 fois TON char — on ne le sait qu'au volant.
-     "regles": {"longueur": 10, "jeu": 1.6, "angle_deg": 12, "arret_s": 0.5},
+     # ⚠️ `place` : elle fait 1,6 fois TON char — on ne le sait qu'au volant.
+     # ⚠️ Pas `jeu` : ce mot-là est le jeu d'acteur des répliques, et aucun
+     # `"jeu"` ne doit partir au navigateur (`test_interpretation`).
+     "regles": {"longueur": 10, "place": 1.6, "angle_deg": 12, "arret_s": 0.5},
      "texte": "GARE-TOI ENTRE LES DEUX CHARS, DROIT, SANS TOUCHER PERSONNE"},
     {"slug": "slalom", "titre": "Le slalom de l'hôtel", "ou": "porte:hotel", "conduite": "slalom",
      "chrono_s": 60, "prime": 70, "debloque": {"defis": 5},
