@@ -5086,7 +5086,9 @@ def test_la_fourriere_saisit_le_char_et_le_revend_plus_cher_qu_il_ne_vaut(banc, 
     assert r["plein"]["n"] == f["places"], "le lot garde %s chars, pas %s" % (f["places"], r["plein"]["n"])
     assert r["plein"]["dernier"] == "moto", "le dernier saisi n'est pas au bout"
     assert r["plein"]["premier"] == "taxi", "c'est le plus VIEUX qui doit partir"
-    assert r["rachat"]["achete"] is True and r["rachat"]["reste"] == 0
+    # ⚠️ `faire` rend `false` : le comptoir RESTE ouvert (Martin, 22 sept. 2026).
+    # Le rachat se juge a ce qu'il fait — le lot vide, l'argent parti.
+    assert r["rachat"]["achete"] is False and r["rachat"]["reste"] == 0
     assert r["rachat"]["paye"] == r["rachat"]["prix"] > 0
     assert r["vide"] == "LE LOT EST VIDE", "un lot vide doit le dire, pas se taire"
     assert r["poses"] == 1 and r["dansLaCour"] == 1, (
@@ -7191,7 +7193,9 @@ def test_le_taxi_de_marco_ne_se_vend_pas(banc, paquet):
     # sans lui, le taxi redeviendrait vendable la minute ou Marco le recupere.
     assert r["livre"]["faite"], "la mission ne s'est pas terminee : le juge ne prouve rien"
     assert r["livre"]["mission"] is None and r["livre"]["aQui"] == "marco"
-    assert r["autre"]["actif"] is True and r["autre"]["vendu"] is True, (
+    # ⚠️ `vendu` est le retour de `faire` : au comptoir, il garde le menu ouvert
+    # (`false`) — la vente se juge a l'argent et au char parti, plus bas.
+    assert r["autre"]["actif"] is True and r["autre"]["argent"] > 0, (
         "plus personne ne peut vendre un char au garage : %s" % r["autre"]
     )
     assert r["autre"]["argent"] == round(auto["prix"] * paquet["economie"]["vente_fraction"])
@@ -7341,6 +7345,9 @@ def test_un_commerce_s_achete_au_comptoir_et_rapporte(banc, paquet):
         const comptoir = { menu: libelles(), choisi: choisi(), aide: L.B.menu && L.B.menu.aide };
         o.tape('KeyE', 2);
         const achete = { ouvert: !!L.B.menu, a_soi: !!L.B.partie.proprietes.kiosque, argent: L.B.partie.argent };
+        // Le comptoir reste ouvert apres l'achat : on le quitte comme le joueur, a Echap.
+        o.tape('Escape', 2);
+        achete.ferme = !L.B.menu;
         for (let i = 0; i < 4; i++) L.Missions.revenusDuJour();
         const caisse = L.B.partie.proprietes.kiosque.caisse;
         L.Missions.majInvite(j);
@@ -7360,7 +7367,8 @@ def test_un_commerce_s_achete_au_comptoir_et_rapporte(banc, paquet):
     assert r["comptoir"]["menu"] == ["ACHETER LE COMMERCE"], r["comptoir"]["menu"]
     assert r["comptoir"]["choisi"] == "ACHETER LE COMMERCE"
     assert str(kiosque["revenu_par_jour"]) in r["comptoir"]["aide"], "le comptoir ne dit pas ce que ca rapporte"
-    assert r["achete"] == {"ouvert": False, "a_soi": True, "argent": 2000 - kiosque["prix"]}
+    assert r["achete"] == {"ouvert": True, "a_soi": True, "argent": 2000 - kiosque["prix"], "ferme": True}, (
+        "l'achat du commerce doit laisser le comptoir ouvert, et Echap le fermer : %s" % r["achete"])
     assert r["caisse"] == kiosque["revenu_par_jour"] * paquet["economie"]["caisse_jours_max"], "la caisse doit plafonner"
     assert r["inviteApres"] == "LA CAISSE"
     assert r["aSoi"]["menu"] == ["PRENDRE LA CAISSE"], "un commerce a soi ne se rachete pas : %s" % r["aSoi"]["menu"]
