@@ -199,9 +199,10 @@ def test_les_radios_ne_sont_pas_chargees_au_demarrage(paquet):
 
 
 def test_le_navigateur_ne_reclame_que_des_slugs_du_catalogue():
-    """`Son.joue('x')` dans le JS doit correspondre a un son declare en Python."""
+    """`Son.joue('x')` dans le JS doit correspondre a un son declare en Python —
+    et `bref('x', ...)`, qui emprunte un echantillon en le coupant court."""
     source = (RACINE_JS / "son.js").read_text(encoding="utf-8")
-    demandes = set(re.findall(r"joue\('([a-z_]+)'\)", source))
+    demandes = set(re.findall(r"(?:joue|bref)\('([a-z_]+)'", source))
     assert demandes, "plus personne ne joue d'echantillon ?"
     assert demandes <= set(audio.SLUGS), demandes - set(audio.SLUGS)
 

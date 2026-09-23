@@ -918,7 +918,11 @@ const Son = (function () {
       const slug = MATIERE_DU_BRIS[decor];
       if (!slug || dernierBris === B.t) return null;
       dernierBris = B.t;
-      if (!joue(slug)) bruit(0.2, 0.3, slug === 'pelle' ? 2600 : 3000, 400);
+      // ⚠️ Chaque `joue` nomme son fichier en toutes lettres : c'est ce que
+      // `test_audio.py` lit pour tenir le catalogue et le filet.
+      if (slug === 'pelle') { if (!joue('pelle')) bruit(0.2, 0.3, 2600, 400); }
+      else if (slug === 'bouteille') { if (!joue('bouteille')) bruit(0.2, 0.3, 3000, 400); }
+      else if (!joue('casse')) bruit(0.2, 0.3, 3000, 400);
       return slug;
     },
     // ⚠️ La sonnette est l'AVERTISSEUR du velo (`vehicules.py`, `klaxon`) : au
