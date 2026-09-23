@@ -90,6 +90,7 @@ pas quand l'ordre de travail change.
 | Infiltration : portes verrouillées et gardes privés | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/infiltration-portes-verrouillees-et-gardes-prives.md#fiche) |
 | Générer les bruitages qui n'ont aucun équivalent payé | ⬜ **à faire** (à trancher par Martin : le quota du mois est épuisé jusqu'au 17 oct.) | — | **P4** | ajout | [fiche](jalons/les-bruitages-qui-n-ont-aucun-equivalent-paye.md#fiche) |
 | Refaire les voix que le dictionnaire de prononciation change | ⬜ **à faire** (à trancher par Martin : le quota du mois est épuisé jusqu'au 17 oct.) | — | **P4** | **correctif** | [fiche](jalons/refaire-les-voix-que-le-dictionnaire-de-prononciation-change.md#fiche) |
+| Dix-huit défis au doigt, à la manette et au clavier | ⬜ **en cours** | 23 sept. 2026 | **P4** | ajout | [fiche](jalons/dix-huit-defis-au-doigt-a-la-manette-et-au-clavier.md#fiche) |
 
 ## L'ordre
 
