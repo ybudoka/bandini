@@ -903,6 +903,11 @@ class Voix(TypedDict, total=False):
     #: elle est basse. Absents = les reglages de la voix telle quelle.
     style: float
     stabilite: float
+    #: DANS QUEL CONTEXTE on la dit (`PAROLE["contextes"]`) : `normal`, `peur`,
+    #: `celebre`, `nuit`. Une banque, ce n'est plus un genre — c'est un genre ET
+    #: un contexte. Absent : le genre n'a pas de contextes (le crieur crie
+    #: pareil, la fille de la Brume accoste pareil), il tire dans tout ce qu'il a.
+    quand: str
     #: Une pub qui annonce une PROPRIETE (`economie.PROPRIETES`) : quand le joueur
     #: la possede, la radio dit sa jumelle `a_toi` a sa place.
     propriete: str
@@ -929,6 +934,17 @@ VOIX_CRIEUR = "Léo - Français québécois"
 #: Poussee au style et laissee varier : elle n'annonce pas, elle accoste.
 VOIX_BRUME = "Julia"
 
+#: Le contexte qui se charge AVEC les bruitages : il en faut une sous la main des
+#: la premiere rencontre, et `normal` est celui de la rue par defaut.
+#:
+#: ⚠️ **LES AUTRES ARRIVENT QUAND LEUR CONTEXTE ARRIVE**, un a la fois, comme un
+#: bruit de quartier ou une piece de musique (`Son.Voix.chargerContexte`). Mesure
+#: du 24 sept. 2026, avant d'y toucher : les bruitages du demarrage pesaient
+#: 2,34 Mo pour un plafond de 2,5 — vingt-quatre repliques de plus (environ
+#: 960 Ko) le faisaient sauter de moitie. Le plafond protege la 3G du premier
+#: ecran, et le relever est une decision de Martin, pas la mienne.
+CONTEXTE_DE_DEPART = "normal"
+
 #: COMMENT LA RUE PARLE — et c'est ici, pas dans le JS, parce que ce sont trois
 #: reglages qui se decident ensemble.
 #:
@@ -953,19 +969,103 @@ PAROLE = {
     # sans l'autre. Sinon la regle se retourne contre elle-meme : on exclut
     # tout, il ne reste rien a tirer, et plus personne ne parle.
     "memoire": 2,
+    # ⚠️ DANS QUEL CONTEXTE la ville te parle, et c'est ICI que ca se decide : la
+    # PREMIERE regle qui passe, de la plus pressante a la plus banale — la meme
+    # forme que la manchette du Clairon (`journal.REGLES`), parce que c'est la
+    # meme question. Le navigateur lit cette liste dans l'ordre ; il n'invente ni
+    # l'ordre ni les nombres.
+    #
+    # ⚠️ **NI LA PEUR NI LA NUIT NE SE REDEFINISSENT ICI.** La peur est celle qui
+    # fait deja taire la rumeur (`RUMEUR`, et `Son.Rumeur.peurT` dans le
+    # navigateur) ; la nuit est celle du ciel (`Monde.estNuit`). Une deuxieme
+    # definition de la nuit se decale du premier coup ou l'on touche a l'autre, et
+    # alors la moitie des repliques ne sortent jamais — c'est exactement le genre
+    # de panne qui ne se voit pas.
+    #
+    # ⚠️ Et un contexte que personne ne peut atteindre, ce sont huit clips morts :
+    # un juge force chaque condition par le vrai chemin du jeu et verifie qu'on
+    # tombe bien dans sa banque (`test_parole.py`).
+    #
+    # `contexte_de_depart` : celui de la rue par defaut, celui qui part avec les
+    # bruitages, et le filet d'une banque vide. Les trois a la fois, et c'est
+    # voulu — trois noms pour un seul contexte, et on finit par en changer deux.
+    "contexte_de_depart": CONTEXTE_DE_DEPART,
+    "contextes": [
+        {"quand": "peur"},                       # une arme a la main, ou un coup de feu
+        {"quand": "celebre", "missions_min": 6}, # on t'a vu dans le Clairon
+        {"quand": "nuit"},                       # `Monde.estNuit` : 19 h 53 a 6 h 24
+    ],
 }
 
+
+def _pa(slug: str, texte: str, genre: str, quand: str, *, volume: float = 0.7) -> Voix:
+    """Une replique de passant. Son `genre` dit QUI parle, son `quand` dit dans
+    QUEL monde : les deux ensemble font la banque ou l'on tire.
+
+    ⚠️ Une replique de plus doit etre UNE LIGNE de plus, sinon la banque ne
+    grossira jamais — c'est la demande de Martin (« comme des blocs Lego »)
+    appliquee a la rue.
+    """
+    return {"slug": slug, "texte": texte, "genre": genre, "quand": quand,
+            "voix": VOIX_PAR_GENRE[genre], "volume": volume}
+
+
 #: Ce que disent les gens quand on les frole. Court, quebecois, jamais deux
-#: fois de suite le meme (le moteur tire au hasard, avec un temps mort).
+#: fois de suite le meme (le moteur tire dans le de du jeu, avec un temps mort).
+#:
+#: ⚠️ **LA VILLE SE MET A TE RECONNAITRE** (M15, 2e vague) : quatre banques au lieu
+#: d'une, et c'est la ville qui choisit — pas la replique. Huit repliques disaient
+#: bonjour pendant que tu saignais, une arme a la main, a trois heures du matin ;
+#: c'est le genre de detail qui fait qu'une ville reste un decor. `quand` dit dans
+#: quel monde une phrase se dit, `PAROLE["contextes"]` dit quel monde on est en
+#: train de jouer.
+#:
+#: ⚠️ **LE CRIEUR ET LA FILLE DE LA BRUME N'ONT PAS DE `quand`**, et c'est voulu :
+#: un homme-sandwich crie son special pareil, qu'il fasse nuit ou que la rue ait
+#: peur — c'est son metier. Un genre sans contexte tire dans tout ce qu'il a.
 VOIX: list[Voix] = [
-    {"slug": "salut_h", "texte": "Salut!", "genre": "homme", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.7},
-    {"slug": "frette_h", "texte": "Fait frette, hein?", "genre": "homme", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.7},
-    {"slug": "tasse_toi_h", "texte": "Heille ! Tâsse-toi don !", "genre": "homme", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.75},
-    {"slug": "bonne_journee_h", "texte": "Bonne journée, là.", "genre": "homme", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.7},
-    {"slug": "salut_f", "texte": "Salut!", "genre": "femme", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.7},
-    {"slug": "excusez_f", "texte": "Excusez-moi.", "genre": "femme", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.7},
-    {"slug": "belle_journee_f", "texte": "Belle journée, hein?", "genre": "femme", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.7},
-    {"slug": "ca_va_f", "texte": "Ça va, toi?", "genre": "femme", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.7},
+    _pa("salut_h", "Salut!", "homme", "normal"),
+    _pa("frette_h", "Fait frette, hein?", "homme", "normal"),
+    _pa("tasse_toi_h", "Heille ! Tâsse-toi don !", "homme", "normal", volume=0.75),
+    _pa("bonne_journee_h", "Bonne journée, là.", "homme", "normal"),
+    _pa("salut_f", "Salut!", "femme", "normal"),
+    _pa("excusez_f", "Excusez-moi.", "femme", "normal"),
+    _pa("belle_journee_f", "Belle journée, hein?", "femme", "normal"),
+    _pa("ca_va_f", "Ça va, toi?", "femme", "normal"),
+    # LA RUE A PEUR DE TOI. ⚠️ C'est la MEME peur qui fait tomber la rumeur : une
+    # arme a la main, ou un coup de feu qui vient de partir. Personne ne fait de
+    # blague sur le dos de qui a peur — celui qui parle rit de LUI-MEME, et c'est
+    # ce qui rend la rue vivante au lieu de mechante.
+    _pa("peur_rien_vu_h", "Moi j'ai rien vu. J'ai même pas d'yeux.", "homme", "peur"),
+    _pa("peur_trouble_h", "Fais pas de trouble icitte, là.", "homme", "peur"),
+    _pa("peur_je_partais_h", "Je m'en allais, justement. Là.", "homme", "peur"),
+    _pa("peur_range_h", "Range don ça, mon homme.", "homme", "peur", volume=0.75),
+    _pa("peur_sainte_f", "Sainte-Bénite...", "femme", "peur"),
+    _pa("peur_police_f", "J'appelle la police, moi, là!", "femme", "peur", volume=0.75),
+    _pa("peur_passer_f", "Laissez-moi passer, s'il vous plaît.", "femme", "peur"),
+    _pa("peur_pas_moi_f", "Pas moi, pas moi, pas moi.", "femme", "peur"),
+    # ON T'A VU DANS LE CLAIRON. ⚠️ Le journal du matin parle de ce que tu as fait ;
+    # a partir d'un certain nombre de missions, la rue l'a lu. C'est la seule
+    # recompense du jeu qui ne s'achete pas et ne se depense pas.
+    _pa("celebre_clairon_h", "Heille! Je t'ai vu dans le Clairon!", "homme", "celebre"),
+    _pa("celebre_cousin_h", "Mon cousin dit qu'il te connaît.", "homme", "celebre"),
+    _pa("celebre_autographe_h", "Tu signes-tu des autographes?", "homme", "celebre"),
+    _pa("celebre_moins_grand_h", "T'es pas mal moins grand en vrai.", "homme", "celebre"),
+    _pa("celebre_c_est_lui_f", "C'est lui! Je te l'avais dit!", "femme", "celebre"),
+    _pa("celebre_ma_mere_f", "Ma mère parle de toi au téléphone.", "femme", "celebre"),
+    _pa("celebre_photo_f", "On peut-tu prendre une photo?", "femme", "celebre"),
+    _pa("celebre_journal_f", "On t'a vu dans le journal, hier.", "femme", "celebre"),
+    # LA NUIT. ⚠️ Celle du ciel (`Monde.estNuit`), pas une heure recopiee ici : la
+    # ville se couche a 19 h 53 et se leve a 6 h 24, et ces huit repliques suivent
+    # ce coucher-la sans le savoir.
+    _pa("nuit_rentrer_h", "Tu devrais rentrer, là. Y fait noir.", "homme", "nuit"),
+    _pa("nuit_bars_h", "Les bars sont fermés, mon homme.", "homme", "nuit"),
+    _pa("nuit_chien_h", "T'as-tu vu mon chien? Y s'est sauvé.", "homme", "nuit"),
+    _pa("nuit_bonne_nuit_h", "Bonne nuit, là. Fais attention à toi.", "homme", "nuit"),
+    _pa("nuit_quelle_heure_f", "Il est quelle heure, vous pensez?", "femme", "nuit"),
+    _pa("nuit_travaille_f", "Je travaille de nuit. Pas par choix.", "femme", "nuit"),
+    _pa("nuit_tout_seul_f", "Marche pas tout seul icitte le soir.", "femme", "nuit"),
+    _pa("nuit_depanneur_f", "Le dépanneur ferme dans dix minutes.", "femme", "nuit"),
     # Le crieur : ce que lance l'homme-sandwich quand il vient vers toi
     # (`pietons.homme_sandwich`, `magasins.RECLAME`). Un genre a part : un
     # passant qu'on frole ne crie pas « approchez ».
@@ -1102,7 +1202,12 @@ ONDES = {
     # Les stations qui parlent, et ce qu'elles disent, en alternance. ⚠️ Le Choc
     # n'y est pas, et les stations du camion non plus : personne au micro, juste
     # la musique — c'est le propos d'une station de rave a trois heures du matin.
-    "stations": {"la_brume": ["radio_brume", "pub"], "taxi_radio": ["radio_taxi", "pub"]},
+    # ⚠️ `bulletin` N'A PAS DE CLIPS A LUI, et c'est tout son interet : il rejoue la
+    # manchette que le Clairon a lue au lever du jour (`Son.Ondes.bulletin`). La
+    # radio parle donc de CE QUE TU AS FAIT HIER, dans un char que tu viens de
+    # voler, et ca n'a pas coute un credit.
+    "stations": {"la_brume": ["radio_brume", "pub", "bulletin"],
+                 "taxi_radio": ["radio_taxi", "pub", "bulletin"]},
     # La premiere voix vient vite : on sait tout de suite qu'on est a la radio.
     "premiere_s": 20,
     # Ensuite, entre deux et trois tounes (une boucle de station dure 45 s).
@@ -1113,7 +1218,28 @@ ONDES = {
     # se redit pas a chaque etoile — sinon le scanner devient une alarme.
     "police_temps_mort_s": 6,
     "police_repos_s": 30,
+    # LE BULLETIN. ⚠️ La manchette ne change qu'au lever du jour : sans repos, la
+    # station redirait la meme nouvelle toutes les quatre minutes, et une nouvelle
+    # qu'on entend dix fois n'est plus une nouvelle, c'est une alarme — la meme
+    # faute que le scanner de police, au meme endroit. Dix minutes de radio entre
+    # deux bulletins ; d'ici la, la station joue sa musique et ses pubs.
+    "bulletin_repos_s": 600,
+    # Un peu sous la voix du narrateur (0,85) : il lit dans un haut-parleur
+    # d'autoradio, pas dans ta cuisine.
+    "bulletin_volume": 0.72,
 }
+
+#: Ce qu'une station dit SANS avoir de clip a elle. ⚠️ Le bulletin est le seul, et
+#: c'est ce qui le rend gratuit : il rejoue la voix que le narrateur a deja
+#: enregistree pour la manchette du matin. Dans une ville de cette taille, le vieux
+#: qui lit le journal lit aussi les nouvelles de huit heures.
+#:
+#: ⚠️ Un annonceur qui dirait « les nouvelles de huit heures » AVANT la manchette,
+#: ce serait deux clips (un par station) et un enchainement — de la mecanique au
+#: service d'un fichier qui n'existe pas. C'est exactement la faute du 16 sept.
+#: (« la radio ne parlait pas »), prise par l'autre bout. Quand Martin aura ses
+#: credits, ces deux clips-la se brancheront ici.
+GENRES_SANS_CLIP = frozenset({"bulletin"})
 
 #: LE SOUFFLE DU JOUEUR (M15, 2e vague) : la barre d'endurance, lisible sans la
 #: regarder. Tout est une part de `recherche.VITESSES["endurance"]`.
@@ -1161,7 +1287,8 @@ QUARTIERS = {
 }
 
 #: Ce qui passe sur les ondes, et ne s'affiche donc jamais dans une bulle.
-GENRES_DES_ONDES = frozenset({g for genres in ONDES["stations"].values() for g in genres} | {"police"})
+GENRES_DES_ONDES = (frozenset({g for genres in ONDES["stations"].values() for g in genres})
+                    | {"police"}) - GENRES_SANS_CLIP
 
 
 #: Les voix de l'histoire : une par personnage, nommees dans `missions.PERSONNAGES`.
@@ -1263,6 +1390,20 @@ def chemin_voix(voix: dict) -> Path:
 
 def voix_manquantes() -> list[dict]:
     return [v for v in toutes_les_voix() if not chemin_voix(v).is_file()]
+
+
+def voix_a_la_volee() -> list[Voix]:
+    """Les repliques qui ne se telechargent PAS au demarrage : celles d'un contexte
+    autre que `normal`.
+
+    ⚠️ Elles arrivent la premiere fois que leur contexte arrive
+    (`Son.Voix.chargerContexte`), un contexte a la fois — exactement comme un bruit
+    de quartier ou une piece de musique. Mesure du 24 sept. 2026 : le demarrage
+    pesait 2,34 Mo sur un plafond de 2,5, et vingt-quatre repliques de plus
+    l'auraient fait sauter. Le plafond protege la 3G du premier ecran ; le juge du
+    poids les met donc a part, comme les bruits de quartier.
+    """
+    return [v for v in VOIX if v.get("quand", CONTEXTE_DE_DEPART) != CONTEXTE_DE_DEPART]
 
 
 #: Le format des radios : 44 kHz a 64 kbit/s. Plus bas, un cuivre devient une
@@ -1396,7 +1537,7 @@ def exporter() -> dict:
     un son qui n'existe pas, et se rabat sur la synthese sans un 404."""
     return {
         "dossier": DOSSIER,
-        "parole": dict(PAROLE),
+        "parole": {**PAROLE, "contextes": [dict(c) for c in PAROLE["contextes"]]},
         "rumeur": dict(RUMEUR),
         "ondes": {**ONDES, "stations": {s: list(g) for s, g in ONDES["stations"].items()},
                   "intervalle_s": list(ONDES["intervalle_s"])},
@@ -1451,7 +1592,7 @@ def exporter() -> dict:
         "voix": [
             {"slug": v["slug"], "genre": v["genre"], "volume": v["volume"],
              **({} if v["genre"] in GENRES_DES_ONDES else {"texte": v["texte"]}),
-             **{cle: v[cle] for cle in ("propriete", "a_toi", "evenement") if cle in v},
+             **{cle: v[cle] for cle in ("quand", "propriete", "a_toi", "evenement") if cle in v},
              "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None}
             for v in VOIX + VOIX_DE_LA_POLICE
         ],

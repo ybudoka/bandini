@@ -231,6 +231,37 @@ JEU: dict[str, str] = {
     "excusez_f": "[surprised] Excusez-moi.",
     "belle_journee_f": "[happy] Belle journée… hein?",
     "ca_va_f": "[warmly] Ça va, toi?",
+    # --- LA RUE A PEUR DE TOI (M15, 2e vague). Ce n'est pas la peur du cinema : c'est
+    # celle du monsieur qui voudrait juste continuer son chemin. Bas, vite, et celui
+    # qui parle rit de LUI-MEME — jamais de blague sur le dos de qui a peur.
+    "peur_rien_vu_h": "[nervously] Moi j'ai rien vu. J'ai même pas d'yeux.",
+    "peur_trouble_h": "[worried] Fais pas de trouble icitte… là.",
+    "peur_je_partais_h": "[nervously] Je m'en allais, justement. Là.",
+    "peur_range_h": "[concerned] Range don ça… mon homme.",
+    "peur_sainte_f": "[worried] [whispers] Sainte-Bénite…",
+    "peur_police_f": "[nervously] J'appelle la police, moi, là!",
+    "peur_passer_f": "[nervously] Laissez-moi passer… s'il vous plaît.",
+    "peur_pas_moi_f": "[quietly] Pas moi, pas moi, pas moi.",
+    # --- ON T'A VU DANS LE CLAIRON. La seule recompense du jeu qui ne s'achete pas :
+    # la ville te reconnait. Etonnee, jamais admirative — on est a Baie-des-Brumes.
+    "celebre_clairon_h": "[surprised] Heille! Je t'ai vu dans le Clairon!",
+    "celebre_cousin_h": "[curious] Mon cousin dit qu'il te connaît.",
+    "celebre_autographe_h": "[amused] Tu signes-tu des autographes?",
+    "celebre_moins_grand_h": "[deadpan] T'es pas mal moins grand en vrai.",
+    "celebre_c_est_lui_f": "[excited] C'est lui! Je te l'avais dit!",
+    "celebre_ma_mere_f": "[amused] Ma mère parle de toi… au téléphone.",
+    "celebre_photo_f": "[cheerful] On peut-tu prendre une photo?",
+    "celebre_journal_f": "[impressed] On t'a vu dans le journal… hier.",
+    # --- LA NUIT. Plus bas que le jour : a cette heure-la, on ne parle pas fort dans
+    # la rue. Celui qui te croise a trois heures du matin a ses raisons, lui aussi.
+    "nuit_rentrer_h": "[quietly] Tu devrais rentrer, là. Y fait noir.",
+    "nuit_bars_h": "[matter-of-fact] Les bars sont fermés… mon homme.",
+    "nuit_chien_h": "[worried] T'as-tu vu mon chien? Y s'est sauvé.",
+    "nuit_bonne_nuit_h": "[warmly] Bonne nuit, là. Fais attention à toi.",
+    "nuit_quelle_heure_f": "[softly] Il est quelle heure… vous pensez?",
+    "nuit_travaille_f": "[deadpan] Je travaille de nuit. Pas par choix.",
+    "nuit_tout_seul_f": "[concerned] Marche pas tout seul icitte le soir.",
+    "nuit_depanneur_f": "[matter-of-fact] Le dépanneur ferme dans dix minutes.",
     # --- Le crieur : il vend, il ne murmure jamais.
     "approchez_c": "[excited] Approchez, approchez… venez voir!",
     "special_c": "[enthusiastic] Le spécial du jour… c'est icitte!",

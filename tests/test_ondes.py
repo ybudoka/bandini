@@ -6,7 +6,7 @@ et aucune ligne du jeu ne les jouait. Les juges d'ici regardent donc ce qui PASS
 (`Son.Ondes.dites`), pas ce qui est déclaré.
 """
 
-from app import audio, economie, missions
+from app import audio, economie, journal, missions
 
 
 def _voix(genre):
@@ -18,14 +18,45 @@ def _voix(genre):
 
 def test_les_stations_qui_parlent_ont_de_quoi_dire():
     """Chaque station qui parle existe, et chaque sorte de clip qu'elle dit en
-    compte au moins deux : à tour de rôle, une seule réplique serait un disque rayé."""
+    compte au moins deux : à tour de rôle, une seule réplique serait un disque rayé.
+
+    ⚠️ **Sauf ce qui n'a pas de clip à lui** (`audio.GENRES_SANS_CLIP`) : le bulletin
+    de nouvelles rejoue la manchette du Clairon, et c'est exactement ce qui le rend
+    gratuit. Le juge ne l'excuse pas, il exige le contraire — un `bulletin` qui se
+    mettrait à avoir ses propres clips aurait cessé d'être ce bulletin-là."""
     stations = audio.ONDES["stations"]
     assert stations, "aucune station ne parle"
     for station, genres in stations.items():
         assert audio.station_existe(station), f"{station} n'est pas une station"
         for genre in genres:
+            if genre in audio.GENRES_SANS_CLIP:
+                assert not _voix(genre), f"{genre} a des clips à lui : il ne rejoue plus rien"
+                continue
             assert len(_voix(genre)) >= 2, f"{station} dit des « {genre} » et n'en a pas deux"
     assert "le_choc" not in stations, "personne au micro du Choc : c'est le propos de la station"
+
+
+def test_le_bulletin_lit_une_nouvelle_et_jamais_une_lecon():
+    """⚠️ **LE BULLETIN NE COÛTE PAS UN CLIP** : il rejoue la voix que le narrateur a
+    déjà pour la manchette du matin — donc il faut qu'il en ait une pour **chacune**,
+    sans quoi la radio se tairait les jours où il s'est passé quelque chose.
+
+    ⚠️ Et une **leçon** n'est pas une nouvelle : « Le saviez-vous? Un coup de klaxon
+    dans un taxi vous trouve un client » à la radio, ce n'est pas un bulletin, c'est
+    un mode d'emploi. Le repli du Clairon enseigne ; la station, elle, joue sa
+    musique."""
+    assert "bulletin" in audio.GENRES_SANS_CLIP
+    assert any("bulletin" in genres for genres in audio.ONDES["stations"].values()), \
+        "aucune station ne lit les nouvelles"
+    dites = {v["slug"] for v in audio.voix_journal()}
+    for manchette in journal.REGLES + journal.SPECIALES + journal.MATINS:
+        assert f"narrateur-journal-{manchette['slug']}" in dites, \
+            f"{manchette['slug']} : le narrateur n'a pas de voix, la radio ne pourra pas la lire"
+    # ⚠️ Le repos est ce qui empêche le bulletin de devenir une alarme : la manchette
+    # ne change qu'au lever du jour, et sans repos la station la redirait entre
+    # chaque paire de tounes.
+    assert audio.ONDES["bulletin_repos_s"] > audio.ONDES["intervalle_s"][1], \
+        "le bulletin repasse avant la voix suivante : c'est une alarme, pas une nouvelle"
 
 
 def test_l_animateur_laisse_passer_deux_tounes():
@@ -104,7 +135,7 @@ _ECOUTER = """
             L.Son.Ondes.maj();
         }
         L.B.rng = rng;
-        return { des: des, dites: L.Son.Ondes.dites.map(function (d) { return { slug: d.slug, t: d.t - t0, bande: d.bande }; }) };
+        return { des: des, dites: L.Son.Ondes.dites.map(function (d) { return { slug: d.slug, t: d.t - t0, bande: d.bande, banque: d.banque }; }) };
     }
 """
 
@@ -265,3 +296,117 @@ def test_une_replique_de_mission_coupe_les_ondes(banc):
     assert r["sortie"] is True, "l'animateur « parle » et on n'entend rien"
     assert r["baisse"] is True
     assert r["apres"] is None, "une réplique de mission a commencé et la radio parle encore"
+
+
+def test_la_radio_lit_ce_que_tu_as_fait_hier(banc):
+    """⚠️ **LE SEUL MOMENT DE LA STATION QUI NE SOIT PAS LE MÊME POUR TOUT LE MONDE.**
+    L'animateur et les pubs sont écrits d'avance ; le bulletin, lui, rejoue la
+    manchette que le Clairon a lue au lever — donc ce que TU as fait hier, dans un
+    char que tu viens de voler.
+
+    ⚠️ Et il la prend dans la banque du **narrateur** (`histoire-`), pas dans celle
+    des ondes : c'est ce qui fait qu'il n'a coûté aucun crédit."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        %s
+        L.B.partie.derniereManchette = L.B.defs.journal[0];
+        return ecouter(L, 'taxi_radio', 400);
+    }""" % _ECOUTER)
+    assert r["des"] == 0, "les ondes tirent des dés : tout le hasard du jeu se décale"
+    nouvelles = [d for d in r["dites"] if d["banque"] == "histoire"]
+    assert nouvelles, f"la radio ne lit jamais les nouvelles : {r['dites']}"
+    manchette = journal.REGLES[0]["slug"]
+    assert nouvelles[0]["slug"] == f"narrateur-journal-{manchette}", nouvelles
+    assert nouvelles[0]["bande"] == "radio", "le bulletin sort du scanner de police"
+    # ⚠️ Il passe DANS le tour de rôle, pas à la place de l'animateur : une station
+    # qui ne dirait que les nouvelles n'aurait plus d'animateur.
+    genres = {v["slug"]: v["genre"] for v in audio.VOIX}
+    assert [genres.get(d["slug"], "bulletin") for d in r["dites"][:3]] \
+        == ["radio_taxi", "pub", "bulletin"], r["dites"]
+
+
+def test_la_radio_ne_lit_pas_une_lecon_aux_nouvelles(banc):
+    """⚠️ « Le saviez-vous? Un coup de klaxon dans un taxi vous trouve un client » :
+    au Clairon c'est une leçon, à la radio ce serait un mode d'emploi. La station
+    joue sa musique à la place.
+
+    ⚠️ Et **elle ne se tait pas pour autant** : le tour de rôle prend le premier
+    genre qui a quelque chose à dire. Sans ça, un matin sans nouvelle rendrait la
+    station muette deux minutes — on entendrait le trou, pas la règle."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        %s
+        L.B.partie.derniereManchette = L.B.defs.journal_lecons[0];
+        return ecouter(L, 'taxi_radio', 400);
+    }""" % _ECOUTER)
+    assert [d for d in r["dites"] if d["banque"] == "histoire"] == [], \
+        f"la radio lit une leçon aux nouvelles : {r['dites']}"
+    genres = {v["slug"]: v["genre"] for v in audio.VOIX}
+    assert [genres.get(d["slug"], "bulletin") for d in r["dites"][:4]] \
+        == ["radio_taxi", "pub", "radio_taxi", "pub"], \
+        f"la station se tait au lieu de passer au suivant : {r['dites']}"
+
+
+def test_la_meme_nouvelle_ne_repasse_pas_a_chaque_paire_de_tounes(banc):
+    """⚠️ La manchette ne change qu'au **lever du jour** : sans repos, la station la
+    redirait toutes les quatre minutes, et une nouvelle qu'on entend dix fois n'est
+    plus une nouvelle — c'est une alarme, la faute déjà faite au scanner de police.
+
+    ⚠️ Le repos est par manchette : un jour neuf passe tout de suite."""
+    repos = audio.ONDES["bulletin_repos_s"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const O = L.Son.Ondes, dit = [];
+        L.B.partie.derniereManchette = L.B.defs.journal[0];
+        dit.push(O.bulletin());
+        L.B.t += 60 * 60;     dit.push(O.bulletin());       // une minute plus tard
+        L.B.t += %d * 60;     dit.push(O.bulletin());       // apres le repos
+        L.B.partie.derniereManchette = L.B.defs.journal[1];
+        dit.push(O.bulletin());                             // une autre nouvelle
+        return dit.map(function (v) { return v && v.slug; });
+    }""" % repos)
+    premiere = f"narrateur-journal-{journal.REGLES[0]['slug']}"
+    assert r[0] == premiere
+    assert r[1] is None, "la radio redit la nouvelle une minute plus tard"
+    assert r[2] == premiere, "elle ne la redit plus jamais : les nouvelles de midi n'existent pas"
+    assert r[3] == f"narrateur-journal-{journal.REGLES[1]['slug']}", \
+        "un jour neuf attend le repos de la veille"
+
+
+def test_sans_manchette_la_radio_parle_quand_meme(banc):
+    """Le premier matin, rien n'a encore été lu : le bulletin n'a rien à dire, et la
+    station ne doit pas s'en apercevoir."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        %s
+        L.B.partie.derniereManchette = null;
+        return ecouter(L, 'la_brume', 400);
+    }""" % _ECOUTER)
+    assert [d for d in r["dites"] if d["banque"] == "histoire"] == []
+    assert len(r["dites"]) >= 4, f"la station se tait faute de nouvelles : {r['dites']}"
+
+
+def test_le_bulletin_s_entend_vraiment(banc):
+    """Avec du son : le bulletin prend le clip du **narrateur** (`histoire-`) et
+    atteint la sortie.
+
+    ⚠️ C'est la panne du 16 sept. 2026 prise par l'autre bout : là, douze clips
+    existaient et rien ne les jouait ; ici, il serait facile qu'il « passe » —
+    `dites` le note, la musique baisse, le juge est vert — sans qu'on entende un
+    mot, parce qu'il serait allé chercher son clip dans la mauvaise banque."""
+    r = banc("""async function (L, o) {
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre(); await o.attendre();
+        L.Jeu.commencer();
+        L.B.partie.derniereManchette = L.B.defs.journal[0];
+        L.Son.Voix.chargerHistoire('journal');
+        for (let i = 0; i < 8; i++) await o.attendre();
+        const v = L.Son.Ondes.bulletin();
+        const passe = v && L.Son.Ondes.dire(v, 'radio');
+        return { slug: v && v.slug, banque: v && v.banque,
+                 sortie: !!passe && L.Son.contexte.atteintLaSortie(passe.source) };
+    }""")
+    assert r["slug"] == f"narrateur-journal-{journal.REGLES[0]['slug']}", r
+    assert r["banque"] == "histoire", "le bulletin cherche son clip chez les ondes : %s" % r
+    assert r["sortie"] is True, "le bulletin « passe » et on n'entend rien : %s" % r

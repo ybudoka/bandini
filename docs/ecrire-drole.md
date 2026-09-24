@@ -129,7 +129,7 @@ le suivre, pas le précéder.
 
 | Type | Où ça vit | Forme | Notes d'écriture |
 |---|---|---|---|
-| **Répliques de rue** | `audio.py` (VOIX, `salut_h` à `ca_va_f`) + `interpretation.py` (JEU) | 2-3 mots, une émotion, rarement une pause | Les passants qu'on frôle : une seule émotion, vite dite. |
+| **Répliques de rue** | `audio.py` (VOIX, quatre banques : `normal`, `peur`, `celebre`, `nuit`) + `interpretation.py` (JEU) | 2-3 mots (40 caractères au plus), une émotion, rarement une pause | Les passants qu'on frôle : une seule émotion, vite dite. ⚠️ Le champ `quand` dit **dans quel monde** on la dit — la rue a peur, on t'a vu dans le Clairon, il fait nuit. Quatre par genre et par banque, et on écrit dans celle qui manque : une réplique de plus est **une ligne** de plus (`_pa`). |
 | **Le crieur** | `audio.py` (`approchez_c`…) | 3 phrases courtes, pleine voix, « icitte » | Il vend, ne murmure jamais. |
 | **La fille de la Brume** | `audio.py` (`compagnie_b`…) + JEU | accroche douce, invitation | Elle accoste ; la pause est dans l'invitation, jamais dans le prix. |
 | **Radio La Brume** | `audio.py` (genre `radio_brume`) | animatrice de nuit, posée | « Il est minuit passé… sur le port. » |
