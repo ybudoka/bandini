@@ -1044,19 +1044,103 @@ const Son = (function () {
 
   const Voix = {
     dernierT: -9999, chargees: false,
+    //: Les contextes dont les repliques sont deja demandees. ⚠️ Un `Set`, pas un
+    //: drapeau : elles arrivent UN CONTEXTE A LA FOIS, et un contexte ne se
+    //: redemande pas a chaque rencontre.
+    contextesCharges: new Set(),
     liste: function () { return (B.defs && B.defs.audio && B.defs.audio.voix) || []; },
+    reglages: function () { return (B.defs && B.defs.audio && B.defs.audio.parole) || {}; },
+    depart: function () { return Voix.reglages().contexte_de_depart || 'normal'; },
 
-    /** Les repliques se chargent avec les bruitages : petites, et il en faut
-        une sous la main des la premiere rencontre. */
-    charger: function () {
-      if (Voix.chargees || !ctx || !fenetre || !fenetre.fetch) return;
-      Voix.chargees = true;
-      Voix.liste().forEach(function (v) {
+    /** Demande ces repliques-la au reseau. Une qui n'a pas de fichier n'est pas un
+        manque : `audio.exporter()` ne declare que ce qui existe, et le texte se
+        montre quand meme. */
+    _charger: function (liste) {
+      liste.forEach(function (v) {
         if (!v.fichier) return;
         decoder(base + B.defs.audio.dossier + '/' + v.fichier)
           .then(function (tampon) { tampons.set('voix-' + v.slug, [tampon]); })
           .catch(function () { /* muet, tant pis */ });
       });
+    },
+
+    /** Les repliques se chargent avec les bruitages : petites, et il en faut
+        une sous la main des la premiere rencontre.
+
+        ⚠️ **SAUF CELLES D'UN CONTEXTE** (M15, 2e vague) : vingt-quatre repliques de
+        plus, c'est 960 Ko au premier ecran, sur un budget de demarrage qui avait
+        160 Ko de marge (mesure du 24 sept. 2026). Elles arrivent quand leur monde
+        arrive — voir `chargerContexte`. Ce qui n'a pas de `quand` (le crieur, la
+        fille de la Brume, les ondes) part avec le reste : ces banques-la ne
+        dependent d'aucun contexte. */
+    charger: function () {
+      if (Voix.chargees || !ctx || !fenetre || !fenetre.fetch) return;
+      Voix.chargees = true;
+      const depart = Voix.depart();
+      Voix.contextesCharges.add(depart);
+      Voix._charger(Voix.liste().filter(function (v) { return !v.quand || v.quand === depart; }));
+    },
+
+    /** Les repliques d'UN contexte, la premiere fois qu'on y entre — exactement
+        comme `Quartier.charger` prend un district en y entrant, ou comme une piece
+        de musique arrive a la porte du commerce. */
+    chargerContexte: function (quand) {
+      if (!quand || Voix.contextesCharges.has(quand) || !ctx || !fenetre || !fenetre.fetch) return;
+      Voix.contextesCharges.add(quand);
+      Voix._charger(Voix.liste().filter(function (v) { return v.quand === quand; }));
+    },
+
+    /** DANS QUEL MONDE la ville te parle — le `quand` d'une replique
+        (`audio.VOIX`) : la premiere regle de `parole.contextes`
+        qui passe, de la plus pressante a la plus banale. Meme forme que la
+        manchette du Clairon (`journal.REGLES`), parce que c'est la meme question —
+        et l'ordre est en Python, pas ici.
+
+        ⚠️ **NI LA PEUR NI LA NUIT NE SE REDEFINISSENT ICI.** La peur est celle qui
+        fait deja taire la rumeur (`Rumeur.peurT`, `Rumeur.criT`) ; la nuit est
+        celle du ciel (`Monde.estNuit`). Deux definitions de la nuit, et le jour ou
+        l'une des deux bouge, huit repliques ne sortent plus jamais — une panne qui
+        ne se voit pas.
+
+        ⚠️ Un contexte que le Python nomme et que ce tableau-ci ne connait pas ne
+        se joue JAMAIS : ce sont huit clips morts, et un juge tient les deux
+        ensemble (`test_parole.py`).
+
+        ⚠️ Elle s'appelle `quand` et pas `contexte` : dans ce fichier-ci, `contexte`
+        est deja l'AudioContext (`Son.contexte`). Deux sens pour un mot dans le meme
+        module, et on finit par lire le mauvais. */
+    quand: function () {
+      const p = B.partie;
+      const passe = {
+        peur: function () { return B.t < Rumeur.peurT || B.t < Rumeur.criT; },
+        celebre: function (c) { return !!p && ((p.stats && p.stats.missions) || 0) >= c.missions_min; },
+        nuit: function () { return Monde.estNuit(); },
+      };
+      const contextes = Voix.reglages().contextes || [];
+      for (const c of contextes) {
+        const regle = passe[c.quand];
+        if (regle && regle(c)) return c.quand;
+      }
+      return Voix.depart();
+    },
+
+    /** LA BANQUE OU L'ON TIRE : un genre ET un contexte, plus seulement un genre.
+
+        ⚠️ Une banque vide **se rabat sur le contexte de depart** plutot que de
+        laisser le passant muet : un mp3 pas encore genere ne doit pas faire taire
+        la rue. C'est la meme regle qu'`audio.exporter()`, du cote du joueur.
+
+        ⚠️ Et un genre SANS contexte (le crieur, la fille de la Brume) tire dans
+        tout ce qu'il a : un homme-sandwich crie son special pareil a trois heures
+        du matin, c'est son metier. ⚠️ Il n'a PAS besoin de sa ligne a lui : le
+        dernier filet (`: liste`) le couvre deja, puisque ni sa banque ni celle du
+        depart ne rendent rien. Un `if (!liste.some(v => v.quand)) return liste;`
+        ecrit en tete ne rougissait AUCUNE mutation — on l'a retire. */
+    banque: function (liste, quand) {
+      const ici = liste.filter(function (v) { return v.quand === quand; });
+      if (ici.length) return ici;
+      const filet = liste.filter(function (v) { return v.quand === Voix.depart(); });
+      return filet.length ? filet : liste;
     },
 
     // --- Les voix de l'histoire : une par personnage, chargees par mission ---
@@ -1197,13 +1281,15 @@ const Son = (function () {
     },
 
     dire: function (genre, x, y, slug) {
-      const reglages = (B.defs && B.defs.audio && B.defs.audio.parole) || {};
-      const mort = reglages.temps_mort_images || 420;
+      const mort = Voix.reglages().temps_mort_images || 420;
       if (B.t - Voix.dernierT < mort) return null;
+      const quand = Voix.quand();
+      // La premiere fois qu'on entre dans ce monde-la, ses repliques se demandent.
+      Voix.chargerContexte(quand);
       const tous = Voix.liste().filter(function (v) {
         return v.genre === genre && (!slug || v.slug === slug) && tampons.has('voix-' + v.slug);
       });
-      const v = Voix.tirer(tous);
+      const v = Voix.tirer(Voix.banque(tous, quand));
       if (!v) return null;
       Voix.dernierT = B.t;
       const j = B.joueur;
@@ -1237,6 +1323,7 @@ const Son = (function () {
     n: 0,                    // combien de fois il l'a prise sur cette station
     policeT: -99999,         // le dernier message de la police
     derniers: {},            // evenement -> quand il a ete dit
+    bulletins: {},           // slug de manchette -> quand la radio l'a lue
 
     reglages: function () { return (B.defs && B.defs.audio && B.defs.audio.ondes) || {}; },
 
@@ -1260,6 +1347,43 @@ const Son = (function () {
       return pubs.find(function (p) { return p.a_toi && p.propriete === v.propriete; }) || v;
     },
 
+    /** LE BULLETIN DE NOUVELLES : la manchette du jour — celle que le Clairon a lue
+        au lever — passee par le haut-parleur de l'autoradio. La radio parle donc de
+        CE QUE TU AS FAIT HIER, dans un char que tu viens de voler, et c'est le seul
+        moment de la station qui ne soit pas le meme pour tout le monde.
+
+        ⚠️ **IL NE COUTE PAS UN CLIP** : il rejoue la voix que le narrateur a deja
+        pour cette manchette-la (`histoire-narrateur-journal-<slug>`), celle du
+        matin. Dans une ville de cette taille, le vieux qui lit le journal lit aussi
+        les nouvelles de huit heures.
+
+        ⚠️ **UNE LECON N'EST PAS UNE NOUVELLE.** Le repli du Clairon enseigne
+        (« Le saviez-vous? Un coup de klaxon dans un taxi vous trouve un client »).
+        A la radio, ce ne serait pas un bulletin, ce serait un mode d'emploi : la
+        station joue sa musique a la place.
+
+        ⚠️ **ET JAMAIS DEUX FOIS EN DIX MINUTES.** La manchette ne change qu'au lever
+        du jour : sans repos, la station redirait la meme nouvelle toutes les quatre
+        minutes — la faute du scanner de police, au meme endroit. Le repos se pose
+        ICI, a la question : demander le bulletin, c'est le prendre, comme
+        `aTourDeRole` avance son compteur quand on l'interroge. */
+    bulletin: function () {
+      const r = Ondes.reglages();
+      const m = B.partie && B.partie.derniereManchette;
+      if (!m || !m.slug) return null;
+      const lecons = (B.defs && B.defs.journal_lecons) || [];
+      if (lecons.some(function (l) { return l.slug === m.slug; })) return null;
+      const lue = Ondes.bulletins[m.slug];
+      if (lue !== undefined && B.t - lue < (r.bulletin_repos_s || 600) * 60) return null;
+      // ⚠️ La voix du narrateur se charge PAR MISSION, et « journal » est la sienne :
+      // une partie reprise a bien sa manchette, mais pas encore la voix qui la lit.
+      // L'appel est idempotent.
+      Voix.chargerHistoire('journal');
+      Ondes.bulletins[m.slug] = B.t;
+      return { slug: 'narrateur-journal-' + m.slug, banque: 'histoire',
+               volume: r.bulletin_volume || 0.72 };
+    },
+
     /** Une image. L'animateur de la station qui joue reprend la parole entre deux
         et trois tounes ; une station sans animateur (le Choc, le camion) se tait. */
     maj: function () {
@@ -1275,10 +1399,20 @@ const Son = (function () {
       const genres = station && r.stations ? r.stations[station] : null;
       if (!genres || !genres.length || B.t < Ondes.prochaineT) return;
       if (Voix.enCours || Ondes.enCours) { Ondes.prochaineT = B.t + (r.attente_s || 2) * 60; return; }
-      const genre = genres[Ondes.n % genres.length];
-      const v = genre === 'pub' ? Ondes.pub()
-        : Ondes.aTourDeRole(genre, Voix.liste().filter(function (x) { return x.genre === genre; }));
-      Ondes.n++;
+      // ⚠️ ON PREND LE PREMIER GENRE QUI A QUELQUE CHOSE A DIRE, a partir de celui
+      // dont c'est le tour. Le bulletin n'a rien tant que le jour n'a pas livre sa
+      // manchette, ni pendant son repos — et une station ne doit pas se taire deux
+      // minutes pour autant. Le compteur avance jusqu'au genre retenu : le tour de
+      // role reste un tour de role, et le bulletin muet est simplement sauté.
+      let v = null, k = 0;
+      for (; k < genres.length; k++) {
+        const genre = genres[(Ondes.n + k) % genres.length];
+        v = genre === 'pub' ? Ondes.pub()
+          : genre === 'bulletin' ? Ondes.bulletin()
+          : Ondes.aTourDeRole(genre, Voix.liste().filter(function (x) { return x.genre === genre; }));
+        if (v) break;
+      }
+      Ondes.n += (v ? k : 0) + 1;
       // Entre deux et trois tounes, et pas toujours le meme ecart — sans de.
       const iv = r.intervalle_s || [80, 125];
       Ondes.prochaineT = B.t + (iv[0] + (Ondes.n * 23) % Math.max(1, iv[1] - iv[0])) * 60;
@@ -1306,11 +1440,14 @@ const Son = (function () {
     },
 
     /** Fait passer `v` sur les ondes. Le scanner est la bande du telephone ;
-        l'autoradio, celle d'un petit haut-parleur. */
+        l'autoradio, celle d'un petit haut-parleur. ⚠️ `v.banque` dit OU prendre le
+        clip : les ondes ont les leurs (`voix-`), le bulletin emprunte celui du
+        narrateur (`histoire-`) — c'est ce qui le rend gratuit. */
     dire: function (v, quelle) {
-      Ondes.dites.push({ slug: v.slug, t: B.t, bande: quelle });
+      const banque = v.banque || 'voix';
+      Ondes.dites.push({ slug: v.slug, t: B.t, bande: quelle, banque: banque });
       if (Ondes.dites.length > 50) Ondes.dites.shift();
-      const liste = tampons.get('voix-' + v.slug);
+      const liste = tampons.get(banque + '-' + v.slug);
       if (!pret() || !liste || !liste.length) return null;
       const source = ctx.createBufferSource();
       source.buffer = liste[0];

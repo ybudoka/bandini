@@ -38,9 +38,9 @@ def test_chaque_visage_se_peint_avec_sa_palette_et_chaque_humeur_change_la_mine(
     assert not doublons, f"même portrait pour {doublons}"
 
 
-def test_la_replique_montre_le_visage_de_qui_parle_avec_sa_mine(banc, paquet):
+def test_la_replique_montre_le_visage_de_qui_parle_avec_sa_mine(banc, paquet, dialogues):
     """La première réplique de Ti-Guy : son portrait, à gauche, et le texte poussé à droite."""
-    humeur = next((r.get("humeur") for r in paquet["missions"][0]["dialogue"]["intro"] if r["qui"] == "ti_guy"), None)
+    humeur = next((r.get("humeur") for r in dialogues["m1"]["dialogue"]["intro"] if r["qui"] == "ti_guy"), None)
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur, t = L.Histoire.donneur('ti_guy');

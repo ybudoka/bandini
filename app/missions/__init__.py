@@ -867,8 +867,31 @@ def repliques() -> list[dict]:
     return sortie
 
 
-def pour_le_navigateur() -> list[dict]:
-    """Le catalogue tel que le téléphone le reçoit : les missions SANS le jeu de leurs répliques.
+#: Ce qui NE VOYAGE PAS dans le paquet des definitions : ce que la mission DIT et ce
+#: qu'elle MONTRE.
+#:
+#: ⚠️ **Le paquet etait au-dessus de son plafond** (24 sept. 2026 : 369 224 octets bruts
+#: pour 250 000, 75 138 gzip pour 54 000), et le remede est ecrit depuis le 16 sept. dans
+#: la fiche de M16. Le CATALOGUE reste — c'est ce que le carnet, le GPS et le telephone
+#: lisent, et il faut l'avoir en entier pour savoir quelle mission est disponible. Les
+#: repliques et les scenes, elles, ne servent qu'a UNE mission a la fois : elles viennent
+#: par `/api/dialogue/<slug>`, quand son donneur apparait ou quand le telephone la choisit.
+#:
+#: ⚠️ Mesure au decoupage, le 24 sept. 2026 : le paquet passe de **369 224 a 239 190 octets
+#: bruts** (75 138 a 53 097 gzip), sous ses deux plafonds (250 000 et 54 000). Les trente-six
+#: dialogues pesent 131 956 octets bruts en tout — 3,7 Ko chacun, le plus gros 5,4 Ko : une
+#: requete qu'un telephone avale sans s'en apercevoir, sur la route que
+#: `Son.Voix.chargerHistoire` prend deja pour ses mp3.
+#:
+#: ⚠️ **ET LA MARGE EST MINCE** : 903 octets sous le plafond gzip. Le catalogue, lui, reste
+#: dans le paquet et pese 170 octets gzip par mission — cinq missions de plus et il repasse
+#: au-dessus. Les 109 missions de M16 ne tiendront pas la : ce qui doit sortir ensuite est
+#: mesure dans la fiche du jalon (les `objectifs`, puis les notes de `musique.py`).
+HORS_DU_PAQUET = ("dialogue", "scenes")
+
+
+def _sans_le_jeu(dialogue: dict) -> dict:
+    """Les repliques telles que le navigateur les recoit : sans leur `jeu`.
 
     ⚠️ `jeu` est ce qu'ElevenLabs dit (`_l(..., jeu=...)`) : il sert à générer les voix, jamais à jouer.
     L'envoyer au navigateur, c'est des balises entre crochets dans le paquet — environ le tiers de
@@ -878,14 +901,41 @@ def pour_le_navigateur() -> list[dict]:
     tirée de la première balise du jeu. Une réplique neutre n'en porte pas — c'est le défaut.
     """
     from .. import visages
-    catalogue = copy.deepcopy(CATALOGUE)
-    for mission in catalogue:
-        for lignes in mission["dialogue"].values():
-            for ligne in lignes:
-                h = visages.humeur(ligne.pop("jeu", None))
-                if h != "neutre":
-                    ligne["humeur"] = h
-    return catalogue
+    dialogue = copy.deepcopy(dialogue)
+    for lignes in dialogue.values():
+        for ligne in lignes:
+            h = visages.humeur(ligne.pop("jeu", None))
+            if h != "neutre":
+                ligne["humeur"] = h
+    return dialogue
+
+
+def pour_le_navigateur() -> list[dict]:
+    """Le catalogue tel que le téléphone le reçoit : les missions SANS ce qu'elles
+    disent ni ce qu'elles montrent (voir `HORS_DU_PAQUET`)."""
+    return [{cle: copy.deepcopy(valeur) for cle, valeur in mission.items()
+             if cle not in HORS_DU_PAQUET}
+            for mission in CATALOGUE]
+
+
+def dialogue_pour_le_navigateur(slug: str) -> dict | None:
+    """Ce qu'une mission dit et ce qu'elle montre — la reponse de `/api/dialogue/<slug>`.
+
+    ⚠️ Les scenes voyagent AVEC les repliques, et par la meme porte : une scene sans
+    ses repliques est une camera qui filme un silence, et elles arrivent au meme
+    moment — quand on commence a parler a la mission.
+    """
+    mission = par_slug(slug)
+    if mission is None:
+        return None
+    from .. import audio
+    return {"slug": slug, "dialogue": _sans_le_jeu(mission["dialogue"]),
+            "scenes": copy.deepcopy(mission.get("scenes") or {}),
+            # ⚠️ **ET SES VOIX** : elles se chargeaient deja par mission
+            # (`Son.Voix.chargerHistoire`), mais se DECLARAIENT au demarrage — quatre
+            # cent vingt mp3 annonces pour en jouer sept. Meme regle, meme route, meme
+            # instant : ce qu'une mission dit, montre, et avec quelle voix.
+            "voix": audio.voix_de_mission(slug)}
 
 
 def repliques_ouverture() -> list[dict]:

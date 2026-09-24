@@ -237,3 +237,22 @@ def test_une_epreuve_a_ses_regles_et_se_joue_debout():
         if d.get("epreuve"):
             assert d.get("a_pied") and isinstance(d.get("regles"), dict) and d.get("consigne"), d["slug"]
             assert d["chrono_s"] > 0 and 0 < d["prime"] <= 150, d["slug"]
+
+
+def test_toute_mission_qui_a_des_prerequis_s_annonce_au_telephone():
+    """⚠️ `histoire.js` choisit la mission qui va sonner sur ses PREREQUIS seuls, depuis
+    que les repliques ont quitte le paquet (24 sept. 2026) : il ne peut plus regarder
+    `m.dialogue.appel.length`, qui n'y est plus.
+
+    C'etait deja une tautologie — la seule mission sans replique d'appel est la
+    premiere, et elle n'a pas de prerequis — mais une tautologie que rien ne tenait.
+    Celle-ci la tient : une mission avec des prerequis et sans appel ne sonnerait jamais,
+    et le joueur attendrait un telephone muet.
+
+    ⚠️ Et l'inverse : une mission SANS prerequis qui ecrirait un appel l'ecrirait pour
+    rien — personne n'irait le chercher."""
+    for mission in missions.CATALOGUE:
+        appel = mission["dialogue"].get("appel") or []
+        assert bool(mission.get("prerequis")) == bool(appel), (
+            f"{mission['slug']} : prerequis={mission.get('prerequis')} et {len(appel)} replique(s) d'appel"
+        )

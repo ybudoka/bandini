@@ -56,7 +56,9 @@ que je n'ai pas. Cette première moitié ne demande **aucun son neuf**.
 
 ## Fiche de la deuxième vague
 
-✅ **La radio, la police, le souffle et les quartiers** (21 sept. 2026) — voir les notes. **Restent** : le bulletin de nouvelles, les répliques par contexte.
+✅ **Toute la deuxième vague est livrée** (21 et 24 sept. 2026) — voir les notes. ⚠️ **Reste à
+générer** : les vingt-quatre clips des répliques par contexte, quand le quota ElevenLabs se remet
+(⚠️ **nouveau forfait le 24 sept. 2026** : le quota n'est plus l'obstacle) ; la règle d'`audio.py` fait que la rue parle comme avant d'ici là.
 
 **Ce qui reste, et ce que ça coûte** : la radio qui parle (animateur, pubs, bulletin), la
 police à la radio, les bruits de quartier, le souffle du joueur, et les banques de répliques
@@ -247,3 +249,86 @@ tout ce qui ne demandait **aucun son neuf**.
   les vraies requêtes réseau, `o.fetchs` — un `Set` qui n'enfle pas aurait laissé passer le trou), et le souffle
   s'entend vraiment (atteint la sortie, s'éteint quand on a repris son souffle).
 
+✅ **2e vague, troisième partie : la radio lit ce que tu as fait hier, et la ville se met à te
+reconnaître** (24 sept. 2026) — les deux derniers morceaux de M15.
+
+- ⚠️ **LE BULLETIN DE NOUVELLES N'A COÛTÉ AUCUN CRÉDIT.** La fiche demandait « un bulletin qui
+  rejoue la manchette de `journal.py` » : la voix existait déjà. Le narrateur a un clip pour
+  **chacune** des manchettes du Clairon depuis la 1re vague, et le bulletin va le chercher dans
+  **sa** banque (`histoire-narrateur-journal-<slug>`) plutôt que dans celle des ondes. Dans une
+  ville de cette taille, le vieux qui lit le journal lit aussi les nouvelles de huit heures.
+  C'est le seul moment d'une station qui ne soit pas le même pour tout le monde : l'animateur et
+  les pubs sont écrits d'avance, la nouvelle est **la tienne**.
+- ⚠️ **UNE LEÇON N'EST PAS UNE NOUVELLE.** Le repli du Clairon enseigne (« Le saviez-vous? Un
+  coup de klaxon dans un taxi vous trouve un client ») : à la radio, ce ne serait pas un
+  bulletin, ce serait un mode d'emploi. La station joue sa musique à la place — et **elle ne se
+  tait pas pour autant** : le tour de rôle prend désormais le premier genre qui a quelque chose
+  à dire. Sans ce rattrapage, un matin sans nouvelle rendait la station muette deux minutes, et
+  on aurait entendu le trou, pas la règle.
+- ⚠️ **ET JAMAIS DEUX FOIS EN DIX MINUTES** (`bulletin_repos_s`). La manchette ne change qu'au
+  lever du jour : sans repos, la station l'aurait redite entre chaque paire de tounes — la faute
+  déjà faite au scanner de police, au même endroit. Le repos est **par manchette** : un jour
+  neuf passe tout de suite.
+- **Les répliques par contexte** : `audio.VOIX` gagne un champ `quand`, et la rue quatre banques
+  au lieu d'une — `normal`, `peur`, `celebre`, `nuit`, quatre répliques par genre et par banque,
+  **vingt-quatre textes neufs**. Huit répliques disaient bonjour pendant qu'on saignait, une
+  arme à la main, à trois heures du matin ; c'est le genre de détail qui fait qu'une ville reste
+  un décor.
+  - ⚠️ **NI LA PEUR NI LA NUIT NE SE REDÉFINISSENT.** La peur est celle qui fait déjà taire la
+    rumeur (`Son.Rumeur`, 1re vague) ; la nuit est celle du ciel (`Monde.estNuit`). Une deuxième
+    définition de la nuit se décale le jour où l'on touche à l'autre — et alors huit répliques
+    ne sortent plus jamais, une panne qui ne se voit pas. Seul le seuil de la célébrité est un
+    nombre neuf (six missions), et il vit en Python, dans l'ordre : `PAROLE["contextes"]` se lit
+    comme une manchette, la première règle qui passe gagne. Quand la rue a peur, elle ne demande
+    pas d'autographe.
+  - ⚠️ **VINGT-QUATRE CLIPS DE PLUS AURAIENT FAIT SAUTER LE BUDGET DE DÉMARRAGE.** Mesure du
+    24 sept. 2026, avant d'y toucher : les bruitages du premier écran pesaient **2,34 Mo pour un
+    plafond de 2,5** — 160 Ko de marge, et vingt-quatre clips à 40 Ko en font 960. Plutôt que de
+    relever un plafond qui protège la 3G du premier écran (décision de Martin, pas la mienne),
+    les répliques se chargent **un contexte à la fois**, la première fois que la rue a peur, que
+    tu es célèbre ou qu'il fait nuit : `Son.Voix.chargerContexte`, exactement comme un bruit de
+    quartier ou une pièce de musique. `normal` part avec le reste — il en faut une sous la main
+    dès la première rencontre.
+  - ⚠️ **UNE BANQUE, C'EST UN GENRE ET UN CONTEXTE**, plus seulement un genre : « quatre
+    répliques d'homme » pouvait vouloir dire deux la nuit et deux le jour, et la mémoire du
+    tirage (`PAROLE["memoire"]`) s'y serait retournée contre elle-même sans que le juge de la
+    1re vague voie rien. Il compte maintenant par banque — et seulement celles **où l'on tire** :
+    ce qui passe sur les ondes se dit à tour de rôle, la mémoire ne le regarde pas.
+  - ⚠️ **LA MÉMOIRE RESTE À DEUX**, et la fiche annonçait quatre. Elle le disait déjà de la
+    1re vague : pour en exclure quatre il faut six par banque, et la plus petite (le crieur) en
+    compte trois. Quatre par banque contextuelle est ce que la règle demande (la mémoire, plus
+    deux pour que ça reste un tirage) ; la banque peut grossir plus tard sans une ligne de code.
+  - **Le crieur et la fille de la Brume n'ont pas de `quand`**, et c'est voulu : un
+    homme-sandwich crie son spécial pareil à trois heures du matin, c'est son métier. Un genre
+    sans contexte tire dans tout ce qu'il a.
+- ⚠️ **LES VINGT-QUATRE MP3 N'EXISTENT PAS ENCORE** : le quota ElevenLabs est à sec jusqu'au
+  **17 oct. 2026** — ⚠️ et ce quota-là a **sauté le jour même** : Martin a pris un nouveau forfait,
+  la dette est échue avant d'avoir vieilli. Ce n'est pas une porte laissée ouverte — c'est la règle d'`audio.py` qui
+  joue : `exporter()` ne déclare que les fichiers présents, une banque vide **se rabat sur
+  `normal`**, et la rue parle comme avant. Le jour où les fichiers arrivent, la porte se referme
+  d'elle-même, exactement comme pour les six leçons du Clairon (écrites le 14 sept., mises en
+  voix le 16). La dette est inscrite dans [le plan](../plan.md#dettes), avec son déclencheur.
+- ⚠️ **UN JUGE DE LA 2e VAGUE EST ROUGE, ET CE N'EST PAS CELUI-CI**
+  (`test_ondes.py::test_la_police_n_a_la_voix_ni_d_un_passant_ni_d_un_personnage`) : les dix
+  missions du 23 sept. ont donné **Caroline** à Mado et **Alexandre Boutin** au Grand Mo et à
+  Gégé — les deux voix du scanner de police. On entend donc la dame du casse-croûte au central.
+  Le juge a raison, et le remède coûte des crédits (dix clips de police à refaire, ou les voix
+  de trois personnages) : il a sa ligne dans le plan.
+- ⚠️ **UNE RÈGLE ÉCRITE ET SUPPRIMÉE** : `Voix.banque` commençait par « un genre sans `quand` tire
+  dans tout ce qu'il a ». Elle est vraie, et **aucune mutation ne la rougissait** — le dernier
+  filet de la fonction (ni la banque du contexte, ni celle du départ ne rendent rien : on rend
+  tout) la couvrait déjà. Elle est partie, et la raison est écrite à sa place.
+- **Juges** (17 neufs : 9 dans `test_ondes.py`, 8 dans `test_parole.py` ; dix-sept mutations,
+  toutes rouges) : le bulletin n'a pas de clip à lui et le narrateur a une voix pour chaque manchette,
+  son repos passe avant l'intervalle des voix ; au banc, la radio lit la manchette du jour dans
+  la banque du narrateur et **atteint la sortie** (avec du son : sans ça, elle « passe » et on
+  n'entend rien — la panne du 16 sept. prise par l'autre bout), elle ne lit pas une leçon, elle
+  ne se tait pas pour autant, la même nouvelle ne repasse pas à chaque paire de tounes mais un
+  jour neuf passe tout de suite, et le premier matin sans manchette ne l'empêche pas de parler ;
+  chaque contexte a ses répliques dans les deux genres, le `quand` voyage dans le paquet, le
+  seuil de la célébrité est atteignable ; au banc, chaque contexte s'atteint par le **vrai
+  chemin** (une batte à la main, des missions au compteur, l'heure au ciel), l'ordre tient (la
+  peur passe devant la célébrité), une banque sans clip se rabat sur la rue normale, `dire`
+  branche bien le contexte et sa banque, et les répliques d'un contexte **ne se chargent pas au
+  démarrage** — comptées en vraies requêtes réseau, avec un fichier posé sur chacune, sinon le
+  juge ne mesurerait rien.

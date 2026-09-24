@@ -13,6 +13,15 @@ part donc sur `/api/carte`, avec son propre ETag, et le navigateur la remet
 dans `defs.carte` en arrivant : aucun lecteur de la carte ne change, et
 `assembler()` rend toujours le tout, tel que le navigateur le tient.
 
+⚠️ **LES DIALOGUES ET LES SCENES SORTENT DU PAQUET, AUSSI** (24 sept. 2026) — et
+cette fois ce n'est pas une precaution, c'est une reparation : le paquet pesait
+369 224 octets bruts pour un plafond de 250 000 et 75 138 gzip pour 54 000, et son
+juge etait rouge. Le CATALOGUE reste (le carnet, le GPS et le telephone le lisent en
+entier) ; ce qu'une mission DIT et ce qu'elle MONTRE part sur `/api/dialogue/<slug>`,
+une reponse par mission, avec son ETag — la meme route et le meme instant que ses mp3
+(`Son.Voix.chargerHistoire`), dont la DECLARATION part avec elle. Mesure : 369 224 a
+239 190 octets bruts, 75 138 a 53 097 gzip. Voir `missions.HORS_DU_PAQUET`.
+
 ⚠️ **Les definitions portent l'empreinte de la carte** (`carte_empreinte`), et
 c'est ce qui garde la sauvegarde honnete : elle oublie une position quand
 `empreinte` change, et `empreinte` change donc des que la CARTE change — meme
@@ -110,10 +119,17 @@ class Paquet:
 
 @dataclass(frozen=True)
 class Paquets:
-    """Les deux reponses : les definitions (`/api/definitions`) et la carte (`/api/carte`)."""
+    """Les reponses : les definitions (`/api/definitions`), la carte (`/api/carte`), et
+    un dialogue par mission (`/api/dialogue/<slug>`)."""
 
     definitions: Paquet
     carte: Paquet
+    #: slug de mission -> ce qu'elle dit et ce qu'elle montre. ⚠️ Construits ici, une
+    #: fois, comme les deux autres : un dialogue ne change pas sous un processus lance.
+    dialogues: dict[str, Paquet]
+    #: UNE empreinte pour les trente-six, celle que le paquet nomme et que l'adresse
+    #: porte (`?e=`) : la clef du cache hors ligne.
+    dialogues_empreinte: str
 
 
 def _json(donnees: dict) -> bytes:
@@ -135,4 +151,16 @@ def construire() -> Paquets:
     # demie, et deux villes batties separement pourraient ne pas etre la meme.
     carte = _signer(donnees.pop("carte"))
     donnees["carte_empreinte"] = carte.etag
-    return Paquets(definitions=_signer(donnees), carte=carte)
+    # Un paquet par mission, signe comme les autres.
+    dialogues = {m["slug"]: _signer(missions.dialogue_pour_le_navigateur(m["slug"]))
+                 for m in missions.CATALOGUE}
+    # ⚠️ UNE empreinte pour les trente-six, posee dans l'adresse (`?e=`) comme celles
+    # des deux autres paquets : c'est ce qui empeche une page gardee hors ligne de
+    # servir le dialogue d'un AUTRE deploiement sous un catalogue qui ne le connait
+    # pas. Une seule, et pas trente-six dans le paquet : ils sont batis ensemble, du
+    # meme catalogue, et un seul mot qui change les renomme tous — ce qui coute, en
+    # ligne, trente-six 304 gratuits.
+    des_dialogues = empreinte(_json({slug: paquet.etag for slug, paquet in sorted(dialogues.items())}))
+    donnees["dialogues_empreinte"] = des_dialogues
+    return Paquets(definitions=_signer(donnees), carte=carte, dialogues=dialogues,
+                   dialogues_empreinte=des_dialogues)

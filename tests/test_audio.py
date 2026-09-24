@@ -54,9 +54,17 @@ def test_le_poids_audio_reste_raisonnable():
     # fichier `<slug>-1.mp3`, sans prefixe (comme tout `Echantillon`) : on les
     # reconnait par leur SLUG, pas par leur nom de fichier.
     slugs_de_quartier = {e["slug"] for sons in audio.QUARTIERS["sons"].values() for e in sons}
+    # ⚠️ ET LES REPLIQUES D'UN CONTEXTE EN SORTENT AUSSI, pour la meme raison :
+    # `Son.Voix.chargerContexte` les demande UN CONTEXTE A LA FOIS, la premiere fois
+    # que la rue a peur, que tu es celebre ou qu'il fait nuit. Mesure du 24 sept.
+    # 2026, avant d'y toucher : le demarrage pesait 2,34 Mo sur ce plafond-ci de 2,5,
+    # et vingt-quatre clips de 40 Ko en font 960 — il aurait sauté de moitie. Relever
+    # un plafond qui protege la 3G du premier ecran est une decision de Martin.
+    a_la_volee = {f"voix-{v['slug']}" for v in audio.voix_a_la_volee()}
     bruitages = [f for f in fichiers
                  if not f.name.startswith(("radio-", "histoire-", "musique-"))
-                 and f.stem.rsplit("-", 1)[0] not in slugs_de_quartier]
+                 and f.stem.rsplit("-", 1)[0] not in slugs_de_quartier
+                 and f.stem not in a_la_volee]
     radios = [f for f in fichiers if f.name.startswith("radio-")]
     histoire = [f for f in fichiers if f.name.startswith("histoire-")]
     musiques = [f for f in fichiers if f.name.startswith("musique-")]
@@ -102,6 +110,12 @@ def test_le_poids_audio_reste_raisonnable():
     for fichier in quartiers:
         assert fichier.stat().st_size < 80_000, fichier.name
     assert sum(f.stat().st_size for f in quartiers) < 1_000_000
+    # Les repliques d'un contexte ont leur plafond de DEPOT, comme les bruits de
+    # quartier : un joueur n'en telecharge jamais plus d'un contexte a la fois.
+    contextuelles = [f for f in fichiers if f.stem in a_la_volee]
+    for fichier in contextuelles:
+        assert fichier.stat().st_size < 80_000, fichier.name
+    assert sum(f.stat().st_size for f in contextuelles) < 1_500_000
     for fichier in radios:
         assert 100_000 < fichier.stat().st_size < 700_000, fichier.name
     # 5 stations de 45 s + l'ambiance de 60 s a 64 kbit/s : 2,3 Mo dans le
@@ -293,22 +307,40 @@ def test_le_navigateur_joue_les_trois_sons_de_l_eau():
         assert f"joue('{slug}')" in source, slug
 
 
-def test_les_voix_de_l_histoire_sont_declarees_par_mission(paquet):
+def test_les_voix_de_l_histoire_sont_declarees_par_mission(paquet, dialogues):
     """Chaque replique de l'histoire est servie avec son personnage et sa
     mission, pour que le navigateur ne charge que celles de la mission en
-    cours — jamais au demarrage."""
+    cours — jamais au demarrage.
+
+    ⚠️ **ET DEPUIS LE 24 SEPT. 2026, ELLE N'EST PLUS DECLAREE AU DEMARRAGE NON PLUS** :
+    celles d'une mission voyagent avec son dialogue (`/api/dialogue/<slug>`), le paquet
+    ne garde que les trois bancs qui n'appartiennent a aucune mission — le journal du
+    matin, l'ouverture, et le mot de repos de chaque personnage. Declarer quatre cent
+    vingt mp3 au premier ecran pour en jouer sept, c'etait le meme gaspillage que le
+    texte, au meme endroit.
+
+    ⚠️ Le juge tient les DEUX MOITIES ensemble : ce qui reste, et ce qui est parti. Une
+    voix qui tomberait entre les deux ne se declarerait nulle part, et le personnage
+    parlerait a l'ecrit."""
+    from app import missions
     histoire = paquet["audio"]["histoire"]
     assert len(histoire) >= 30
+    assert {v["mission"] for v in histoire} == {"journal", "ouverture", "repos"}, \
+        "le journal lu par le narrateur, l'ouverture qu'il lit aussi, et le mot de repos"
     # ⚠️ Les missions se lisent dans le catalogue : une liste écrite ici se retouchait à chaque mission
     # ajoutée (le 21 sept. 2026, cinq de plus la faisaient rougir).
-    from app import missions
-    assert {v["mission"] for v in histoire} == {m["slug"] for m in missions.CATALOGUE} | {"journal", "ouverture", "repos"}, \
-        "les missions, le journal lu par le narrateur, et l'ouverture qu'il lit aussi"
-    assert all(v["qui"] and v["partie"] for v in histoire)
-    assert any(v["telephone"] for v in histoire), "les appels sont marques : la voix vient du combine"
-    assert all(v["fichier"] is None or v["fichier"].startswith("histoire-") for v in histoire)
-    slugs = {v["slug"] for v in histoire} | {v["slug"] for v in paquet["audio"]["voix"]}
-    assert len(slugs) == len(histoire) + len(paquet["audio"]["voix"]), "un slug de voix par replique"
+    assert set(dialogues) == {m["slug"] for m in missions.CATALOGUE}
+    des_missions = [v for slug in dialogues for v in dialogues[slug]["voix"]]
+    assert all(dialogues[v["mission"]]["voix"] for v in des_missions), "une voix sans son dialogue"
+    toutes = histoire + des_missions
+    assert all(v["qui"] and v["partie"] for v in toutes)
+    assert any(v["telephone"] for v in des_missions), "les appels sont marques : la voix vient du combine"
+    assert all(v["fichier"] is None or v["fichier"].startswith("histoire-") for v in toutes)
+    slugs = {v["slug"] for v in toutes} | {v["slug"] for v in paquet["audio"]["voix"]}
+    assert len(slugs) == len(toutes) + len(paquet["audio"]["voix"]), "un slug de voix par replique"
+    # ⚠️ Et AUCUNE ne se declare deux fois : le navigateur ajoute celles du dialogue a
+    # celles du paquet, et un doublon ferait parler deux fois la meme ligne.
+    assert len({v["slug"] for v in des_missions}) == len(des_missions)
 
 
 # --- La finition : on juge les FICHIERS, pas l'intention -----------------------------

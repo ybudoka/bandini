@@ -13,6 +13,12 @@
          un `data-url-defi`, que `hors_ligne._ADRESSES` ne lit pas. Un defi garde par le
          travailleur passerait minuit sans le savoir. #}
       data-url-defi="{{ url_for('jeu.api_defi') }}"
+      {# Ce qu'une mission DIT, MONTRE et avec quelles voix : hors du paquet depuis le
+         24 sept. 2026 (il etait au-dessus de ses deux plafonds). Un GABARIT, pas une
+         adresse : `histoire.js` y remplace SLUG. Comme le defi, `hors_ligne._ADRESSES`
+         ne le lit pas — une adresse a trous dans la coquille ne se telechargerait
+         jamais, et les dialogues se gardent a l'usage. #}
+      data-url-dialogue="{{ url_for('jeu.api_dialogue', slug='SLUG', e=empreinte_dialogues) }}"
       data-url-statique="{{ url_for('static', filename='') }}">
 
   <div class="ecran">

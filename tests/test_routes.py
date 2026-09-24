@@ -73,6 +73,58 @@ def test_carte_avec_etag(client):
     assert client.get("/api/carte", headers={"If-None-Match": '"autre"'}).status_code == 200
 
 
+def test_un_dialogue_de_mission_avec_etag(client):
+    """Ce qu'une mission DIT, MONTRE et avec quelles VOIX : hors du paquet depuis le
+    24 sept. 2026, une reponse par mission, la meme revalidation que les deux autres.
+
+    ⚠️ **404 pour un slug inconnu**, et pas un objet vide : le navigateur ne demande que
+    ce qu'il a lu dans le catalogue, alors un slug inconnu est un defaut de notre cote —
+    un 200 vide le cacherait, et la mission s'ouvrirait sur une boite muette."""
+    from app import missions
+    reponse = client.get("/api/dialogue/m2")
+    assert reponse.status_code == 200
+    assert reponse.mimetype == "application/json"
+    etag = reponse.headers["ETag"]
+    corps = reponse.get_json()
+    assert corps["empreinte"] == etag.strip('"')
+    assert corps["slug"] == "m2"
+    # Les quatre temps du dialogue, ses deux scenes, et les voix qui les disent.
+    for partie in ("appel", "intro", "fin", "echec"):
+        assert corps["dialogue"][partie], partie
+    assert corps["scenes"]["intro"] and corps["scenes"]["fin"]
+    assert corps["voix"] and all(v["mission"] == "m2" for v in corps["voix"])
+    # ⚠️ Le JEU des repliques ne voyage pas : il sert a generer les voix, jamais a jouer.
+    assert all("jeu" not in ligne for lignes in corps["dialogue"].values() for ligne in lignes)
+
+    assert client.get("/api/dialogue/m2", headers={"If-None-Match": etag}).status_code == 304
+    # nginx renvoie un ETag FAIBLE quand il compresse : il doit revalider aussi.
+    assert client.get("/api/dialogue/m2", headers={"If-None-Match": "W/" + etag}).status_code == 304
+    assert client.get("/api/dialogue/m2", headers={"If-None-Match": '"autre"'}).status_code == 200
+    assert client.get("/api/dialogue/pas-une-mission").status_code == 404
+
+    # Chaque mission du catalogue a la sienne, et une seule empreinte les nomme toutes.
+    paquet = client.get("/api/definitions").get_json()
+    assert len(paquet["dialogues_empreinte"]) == 16
+    for mission in missions.CATALOGUE:
+        assert client.get(f"/api/dialogue/{mission['slug']}").status_code == 200, mission["slug"]
+
+
+def test_le_paquet_ne_porte_plus_ce_qu_une_mission_dit(client):
+    """⚠️ Le CATALOGUE reste (le carnet, le GPS et le telephone le lisent en entier) ;
+    ce qu'une mission dit, montre et avec quelles voix n'y est plus. Une mission qui
+    ramenerait son dialogue dans le paquet le remettrait au-dessus de son plafond sans
+    que rien d'autre ne rougisse."""
+    from app import missions
+    paquet = client.get("/api/definitions").get_json()
+    assert len(paquet["missions"]) == len(missions.CATALOGUE)
+    for mission in paquet["missions"]:
+        for cle in missions.HORS_DU_PAQUET:
+            assert cle not in mission, f"{mission['slug']} porte encore « {cle} » dans le paquet"
+        assert mission["objectifs"], mission["slug"]
+    # Les voix de l'histoire qui restent sont celles qui n'appartiennent a AUCUNE mission.
+    assert {v["mission"] for v in paquet["audio"]["histoire"]} == {"journal", "ouverture", "repos"}
+
+
 def test_le_tableau_des_scores_n_existe_plus(client):
     """Retire le 17 sept. 2026 (demande de Martin) : plus de route, et plus un mot
     dans la page — ni bouton, ni voile, ni adresse a appeler."""

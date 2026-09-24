@@ -26,6 +26,7 @@ from config import Config
 
 RACINE = Path(__file__).resolve().parent.parent
 AUDIO = RACINE / "static" / "audio"
+RACINE_JS = RACINE / "static" / "js"
 OBLIGATOIRE = os.environ.get("BANDINI_TESTS_OBLIGATOIRES") == "1"
 
 
@@ -98,19 +99,59 @@ def test_les_sons_du_travailleur_sont_ceux_du_dossier(client):
         assert f["octets"] == (AUDIO / f["nom"]).stat().st_size
 
 
+def test_les_dialogues_se_gardent_a_l_usage_et_jamais_dans_la_coquille(client):
+    """Ce qu'une mission DIT est sorti du paquet le 24 sept. 2026 : le travailleur doit
+    le nommer, sinon une mission jamais ouverte ne pourrait pas commencer hors ligne —
+    et un texte n'a pas de repli, contrairement a un son.
+
+    ⚠️ **PAS DANS LA COQUILLE**, et c'est le point : `addAll` les prendrait TOUS a
+    l'installation — trente-six requetes pour un joueur qui jouera trois missions, cent
+    quarante-cinq quand M16 sera la. Ils se gardent a l'usage, comme les mp3, et
+    « tout telecharger » les prend d'abord (132 Ko contre 14 Mo de son).
+
+    ⚠️ Et l'adresse de la page est un GABARIT (`SLUG`) : une adresse a trous dans la
+    coquille ne se telechargerait jamais, et `addAll` refuserait de s'installer."""
+    from app import missions
+    config = config_du_travailleur(client)
+    chemins = config["dialogues"]
+    assert chemins == sorted(f"/api/dialogue/{m['slug']}" for m in missions.CATALOGUE)
+    assert not any("/api/dialogue/" in u for u in config["coquille"]), \
+        "les dialogues sont dans la coquille : trente-six requetes a l'installation"
+    for adresse in chemins[:3]:
+        assert client.get(adresse).status_code == 200, adresse
+    page = client.get("/").get_data(as_text=True)
+    gabarit = re.search(r'data-url-dialogue="([^"]+)"', page).group(1)
+    assert "SLUG" in gabarit, gabarit
+    etag = client.get("/api/definitions").get_json()["dialogues_empreinte"]
+    assert gabarit == f"/api/dialogue/SLUG?e={etag}", gabarit
+    assert gabarit not in config["coquille"]
+    # ⚠️ Le travailleur garde le CHEMIN SANS la requete : hors ligne, un dialogue
+    # d'avant-hier vaut mieux qu'une mission qui ne peut pas commencer.
+    source = (RACINE_JS / "travailleur.js").read_text(encoding="utf-8")
+    assert "CHEMINS_DIALOGUES.has(url.pathname)" in source
+    assert "reseauDabord(ev, DIALOGUES, url.pathname)" in source
+
+
 def test_l_empreinte_suit_le_contenu(tmp_path):
     """Le cache de la coquille se nomme par l'empreinte, jamais par la version : elle
     change quand la page change (une version, un script), quand un son change de
     poids — et pas autrement."""
     (tmp_path / "a.mp3").write_bytes(b"123")
     page = '<script src="/static/js/jeu.js?v=1.0.0"></script>'
-    _, une = hors_ligne.travailleur(page, "/", tmp_path, "/static/audio/")
-    _, meme = hors_ligne.travailleur(page, "/", tmp_path, "/static/audio/")
-    _, version = hors_ligne.travailleur(page.replace("1.0.0", "1.0.1"), "/", tmp_path, "/static/audio/")
+    dia = ["/api/dialogue/m1"]
+
+    def empreinte_de(page_lue, dialogues=dia):
+        return hors_ligne.travailleur(page_lue, "/", tmp_path, "/static/audio/", dialogues)[1]
+
+    une, meme = empreinte_de(page), empreinte_de(page)
+    version = empreinte_de(page.replace("1.0.0", "1.0.1"))
+    # ⚠️ Et quand une MISSION s'ajoute : son dialogue est un chemin de plus que le
+    # travailleur doit connaitre, sinon il ne le garderait jamais.
+    mission = empreinte_de(page, dia + ["/api/dialogue/m2"])
     (tmp_path / "a.mp3").write_bytes(b"1234")
-    _, son = hors_ligne.travailleur(page, "/", tmp_path, "/static/audio/")
+    son = empreinte_de(page)
     assert une == meme
-    assert len({une, version, son}) == 3
+    assert len({une, version, son, mission}) == 4
 
 
 def test_la_coquille_ne_garde_rien_d_une_autre_origine():

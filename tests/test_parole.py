@@ -22,13 +22,77 @@ def test_les_reglages_de_la_parole_tiennent_ensemble():
     p = audio.PAROLE
     assert p["temps_mort_images"] >= 240, "la rue parle plus souvent qu'avant, pas moins"
     assert 0 < p["chance"] < 1, "parler doit rester une chance, pas une certitude"
-    banques: dict[str, int] = {}
+    # ⚠️ **UNE BANQUE, C'EST UN GENRE ET UN CONTEXTE** depuis la 2e vague, plus
+    # seulement un genre : « quatre répliques d'homme » peut très bien vouloir dire
+    # deux la nuit et deux le jour, et la mémoire s'y retournerait contre elle-même
+    # sans que ce juge-ci ne voie rien. Un genre sans contexte (le crieur, la Brume)
+    # est une banque à lui tout seul.
+    #
+    # ⚠️ Et on ne compte QUE les banques où l'on tire : ce qui passe sur les ondes se
+    # dit à tour de rôle (`Ondes.aTourDeRole`), la mémoire ne le regarde pas.
+    banques: dict[tuple[str, str], int] = {}
     for voix in audio.VOIX:
-        banques[voix["genre"]] = banques.get(voix["genre"], 0) + 1
+        if voix["genre"] in audio.GENRES_DES_ONDES:
+            continue
+        cle = (voix["genre"], voix.get("quand", audio.CONTEXTE_DE_DEPART))
+        banques[cle] = banques.get(cle, 0) + 1
     plus_petite = min(banques.values())
     assert p["memoire"] < plus_petite, (
         f"la mémoire ({p['memoire']}) atteint la plus petite banque ({plus_petite}) : "
         f"il ne resterait rien à tirer — {banques}"
+    )
+
+
+def test_chaque_contexte_a_ses_repliques_dans_les_deux_genres():
+    """⚠️ **LA VILLE SE MET À TE RECONNAÎTRE** (M15, 2e vague) : quatre banques au
+    lieu d'une, et c'est la ville qui choisit — huit répliques disaient bonjour
+    pendant qu'on saignait, une arme à la main, à trois heures du matin.
+
+    ⚠️ **Un contexte sans banque est du code mort ; une banque sans contexte est
+    huit clips qui ne sortiront jamais.** Le juge tient les deux listes ensemble :
+    celle des règles (`PAROLE["contextes"]`, en Python, dans l'ordre) et celle des
+    répliques (`quand`).
+
+    ⚠️ Et chaque banque doit rester **plus grande que la mémoire, plus deux** : deux
+    de plus pour que ce soit encore un tirage et pas une alternance."""
+    p = audio.PAROLE
+    contextes = [c["quand"] for c in p["contextes"]]
+    assert contextes, "la ville n'a plus qu'un seul monde"
+    assert len(contextes) == len(set(contextes)), f"deux règles pour le même contexte : {contextes}"
+    attendus = set(contextes) | {audio.CONTEXTE_DE_DEPART}
+    vus = {v["quand"] for v in audio.VOIX if v.get("quand")}
+    assert vus == attendus, (
+        f"les règles parlent de {sorted(attendus)} et les répliques de {sorted(vus)} : "
+        "ce qui n'est que d'un côté ne se joue jamais"
+    )
+    for quand in sorted(attendus):
+        for genre in ("homme", "femme"):
+            banque = [v for v in audio.VOIX if v.get("quand") == quand and v["genre"] == genre]
+            assert len(banque) >= p["memoire"] + 2, (
+                f"la banque « {genre} / {quand} » n'a que {len(banque)} répliques : "
+                f"on en écarte {p['memoire']}, il n'en reste pas de quoi tirer"
+            )
+            slugs = [v["slug"] for v in banque]
+            assert len(slugs) == len(set(slugs)), f"{genre} / {quand} : deux fois le même slug"
+            textes = [v["texte"] for v in banque]
+            assert len(textes) == len(set(textes)), f"{genre} / {quand} : deux fois le même texte"
+    # ⚠️ Et le `quand` VOYAGE : c'est le navigateur qui choisit la banque, à l'image.
+    # Sans lui dans le paquet, les quatre banques n'en font qu'une, et tout le reste
+    # marche — c'est le genre d'oubli qui ne se voit qu'à l'oreille.
+    exporte = {v["slug"]: v for v in audio.exporter()["voix"]}
+    for voix in audio.VOIX:
+        assert exporte[voix["slug"]].get("quand") == voix.get("quand"), voix["slug"]
+
+
+def test_le_seuil_de_la_celebrite_est_atteignable():
+    """⚠️ Un contexte qu'on ne peut pas atteindre, ce sont huit clips morts : « on t'a
+    vu dans le Clairon » à partir de plus de missions qu'il n'en existe ne se dirait
+    jamais."""
+    from app import missions
+    regle = next(c for c in audio.PAROLE["contextes"] if c["quand"] == "celebre")
+    assert 0 < regle["missions_min"] < len(missions.CATALOGUE), (
+        f"{regle['missions_min']} missions pour être célèbre, et le jeu en a "
+        f"{len(missions.CATALOGUE)}"
     )
 
 
@@ -189,3 +253,186 @@ def test_la_rue_se_tait_devant_une_arme_et_crie_apres_un_coup_de_feu(banc):
         "une foule qui murmure pareil avant et après un coup de feu n'est pas une foule, "
         "c'est un bruit de fond (%s)" % r
     )
+
+
+def test_la_ville_te_parle_selon_ce_qui_se_passe(banc):
+    """Chaque contexte se force par le **vrai chemin du jeu** — une arme à la main,
+    des missions au compteur, l'heure au ciel — et pas en posant le contexte à la
+    main. Un contexte qu'on ne peut pas atteindre, ce sont huit clips morts.
+
+    ⚠️ **Ni la peur ni la nuit ne se redéfinissent dans `son.js`** : la peur est
+    celle qui fait déjà taire la rumeur, la nuit est celle du ciel
+    (`Monde.estNuit`). C'est pour ça que ce juge-ci sort une batte et avance
+    l'horloge au lieu de toucher à un drapeau.
+
+    ⚠️ Et l'**ordre** compte : quand la rue a peur, elle ne demande pas
+    d'autographe. La première règle qui passe gagne, comme une manchette."""
+    regles = [c["quand"] for c in audio.PAROLE["contextes"]]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, V = L.Son.Voix;
+        const midi = 0.5, nuit = 0.95;
+        L.B.partie.heure = midi;
+        L.B.partie.stats.missions = 0;
+        j.arme = 'poings';
+        for (let i = 0; i < 30; i++) o.frame(1);
+        const rien = V.quand();
+        // La rue a peur : une arme a la main, par le chemin d'`Entites.maj`.
+        j.arme = 'batte';
+        for (let i = 0; i < 30; i++) o.frame(1);
+        const peur = V.quand();
+        // On la range : la peur s'epuise.
+        j.arme = 'poings';
+        L.Son.Rumeur.peurT = 0; L.Son.Rumeur.criT = 0;
+        const rangee = V.quand();
+        // On t'a vu dans le Clairon.
+        L.B.partie.stats.missions = %d;
+        const celebre = V.quand();
+        // ... mais la rue qui a peur ne demande pas d'autographe.
+        L.Son.Rumeur.taire();
+        const peurDAbord = V.quand();
+        L.Son.Rumeur.peurT = 0;
+        // La nuit, celle du ciel.
+        L.B.partie.stats.missions = 0;
+        L.B.partie.heure = nuit;
+        const laNuit = V.quand();
+        return { rien: rien, peur: peur, rangee: rangee, celebre: celebre,
+                 peurDAbord: peurDAbord, nuit: laNuit, estNuit: L.Monde.estNuit(),
+                 depart: V.depart() };
+    }""" % next(c["missions_min"] for c in audio.PAROLE["contextes"] if c["quand"] == "celebre"))
+    assert r["depart"] == audio.CONTEXTE_DE_DEPART
+    assert r["rien"] == audio.CONTEXTE_DE_DEPART, "la rue normale n'est pas normale : %s" % r
+    assert r["peur"] == "peur", "une batte à la main et la ville dit bonjour : %s" % r
+    assert r["rangee"] == audio.CONTEXTE_DE_DEPART, "la peur ne passe jamais : %s" % r
+    assert r["celebre"] == "celebre", "on a fait ses missions et personne ne s'en aperçoit : %s" % r
+    assert r["peurDAbord"] == "peur", "la rue demande un autographe en ayant peur : %s" % r
+    assert r["estNuit"] is True, "le juge n'a pas réussi à faire nuit : %s" % r
+    assert r["nuit"] == "nuit", "il fait nuit et les gens souhaitent une belle journée : %s" % r
+    # ⚠️ Ce juge-ci ne sait forcer que ces trois-là : un contexte de plus en Python
+    # sans son chemin ici (ni dans `son.js`) passerait inaperçu, et ne se jouerait
+    # jamais. Les deux listes tiennent ensemble ou pas du tout.
+    assert set(regles) == {"peur", "celebre", "nuit"}, (
+        f"un contexte que ce juge ne sait pas atteindre : {regles}"
+    )
+
+
+def test_une_banque_sans_clip_se_rabat_sur_la_rue_normale(banc):
+    """⚠️ Les vingt-quatre répliques des contextes **n'ont pas encore de mp3** (le
+    quota ElevenLabs est à sec jusqu'au 17 oct. 2026), et ça ne doit pas faire taire
+    un passant : `audio.exporter()` ne déclare que les fichiers présents, et la
+    banque vide se rabat sur `normal`. C'est la même règle que pour les leçons du
+    Clairon, du côté du joueur.
+
+    ⚠️ Et un genre **sans** contexte (le crieur, la fille de la Brume) tire dans tout
+    ce qu'il a : un homme-sandwich crie son spécial pareil à trois heures du matin."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const V = L.Son.Voix;
+        const du = function (genre) {
+            return V.liste().filter(function (v) { return v.genre === genre; });
+        };
+        const slugs = function (liste) { return liste.map(function (v) { return v.slug; }); };
+        const hommes = du('homme');
+        const normales = hommes.filter(function (v) { return v.quand === 'normal'; });
+        return {
+            // La banque du contexte, quand elle est la.
+            nuit: slugs(V.banque(hommes, 'nuit')).length,
+            nuitEstDeNuit: slugs(V.banque(hommes, 'nuit')).every(function (s) {
+                return hommes.find(function (v) { return v.slug === s; }).quand === 'nuit';
+            }),
+            // Rien de charge pour ce contexte : on retombe sur la rue normale.
+            filet: slugs(V.banque(normales, 'nuit')),
+            attendu: slugs(normales),
+            // Un genre sans `quand` : tout ce qu'il a.
+            crieur: slugs(V.banque(du('crieur'), 'nuit')).length,
+            crieurEnTout: du('crieur').length,
+        };
+    }""")
+    assert r["nuit"] >= 4 and r["nuitEstDeNuit"] is True, "la nuit ne tire pas dans sa banque : %s" % r
+    assert r["filet"] == r["attendu"], "une banque sans clip fait taire le passant : %s" % r
+    assert r["crieur"] == r["crieurEnTout"] > 0, "le crieur s'est mis à avoir des contextes : %s" % r
+
+
+def test_les_repliques_d_un_contexte_ne_se_chargent_pas_au_demarrage(banc):
+    """⚠️ **VINGT-QUATRE RÉPLIQUES DE PLUS AURAIENT FAIT SAUTER LE BUDGET DE
+    DÉMARRAGE** : mesure du 24 sept. 2026, les bruitages du premier écran pesaient
+    2,34 Mo pour un plafond de 2,5, et vingt-quatre clips de 40 Ko en font 960. Elles
+    arrivent **un contexte à la fois**, la première fois qu'on y entre — exactement
+    comme un bruit de quartier ou une pièce de musique.
+
+    ⚠️ Le juge **pose un fichier** à chaque réplique de contexte : sans ça, aucune n'a
+    de mp3 (le quota est à sec), rien ne serait demandé de toute façon, et le juge ne
+    mesurerait rien. On compte les VRAIES requêtes (`o.fetchs`), pas la taille d'un
+    `Set` — un `Set` n'enfle pas quand on y remet ce qui y est déjà, même sans le
+    garde."""
+    r = banc("""async function (L, o) {
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre(); await o.attendre();
+        L.Jeu.commencer();
+        // ⚠️ Les mp3 des contextes n'existent pas encore : on leur en pose un, sinon
+        // il n'y a rien a ne pas telecharger.
+        const contextuelles = L.Son.Voix.liste().filter(function (v) { return v.quand && v.quand !== 'normal'; });
+        contextuelles.forEach(function (v) { v.fichier = 'voix-' + v.slug + '.mp3'; });
+        const nomme = function (depuis) {
+            return o.fetchs.slice(depuis).map(function (f) { return String(f.url || f); });
+        };
+        // ⚠️ Le jeu a deja charge ses voix au premier geste : on remet le compteur
+        // a zero pour REJOUER ce chargement-la, celui du premier ecran, maintenant
+        // que les fichiers des contextes existent aux yeux du navigateur.
+        L.Son.Voix.chargees = false;
+        L.Son.Voix.contextesCharges.clear();
+        const avant = o.fetchs.length;
+        L.Son.Voix.charger();
+        const auDemarrage = nomme(avant);
+        const apresCharger = o.fetchs.length;
+        L.Son.Voix.chargerContexte('nuit');
+        const laNuit = nomme(apresCharger);
+        const apresNuit = o.fetchs.length;
+        L.Son.Voix.chargerContexte('nuit');
+        L.Son.Voix.chargerContexte('nuit');
+        return {
+            demarrage: auDemarrage.length,
+            contextuellesAuDemarrage: auDemarrage.filter(function (u) { return /voix-(peur|celebre|nuit)_/.test(u); }),
+            nuit: laNuit.length,
+            nuitEstDeNuit: laNuit.every(function (u) { return /voix-nuit_/.test(u); }),
+            deuxieme: o.fetchs.length - apresNuit,
+            combien: contextuelles.length,
+        };
+    }""")
+    assert r["combien"] == 24, "ce ne sont plus vingt-quatre répliques de contexte : %s" % r
+    assert r["demarrage"] > 0, "le démarrage ne télécharge aucune voix : le juge ne mesure rien"
+    assert r["contextuellesAuDemarrage"] == [], (
+        "des répliques de contexte partent au premier écran : %s" % r["contextuellesAuDemarrage"]
+    )
+    assert r["nuit"] == 8 and r["nuitEstDeNuit"] is True, "entrer dans la nuit ne charge pas la nuit : %s" % r
+    assert r["deuxieme"] == 0, "chaque rencontre retélécharge le contexte : %s requêtes de plus" % r["deuxieme"]
+
+
+def test_un_passant_tire_dans_la_banque_du_moment(banc):
+    """La règle et le tirage sont jugés à part (l'un n'a besoin de rien, l'autre de
+    mp3) — reste à prouver que `dire` les **branche** : qu'il demande le contexte du
+    moment, charge sa banque et tire dedans.
+
+    ⚠️ Sans ça, les vingt-quatre répliques seraient écrites, déclarées, chargées — et
+    jamais dites. C'est la panne du 16 sept. 2026 (« la radio ne parlait pas »),
+    qu'on ne refait pas deux fois."""
+    r = banc("""async function (L, o) {
+        // ⚠️ AVEC DU SON : `chargerContexte` ne demande rien sans AudioContext (meme
+        // garde que `Quartier.charger`), et c'est justement ce chargement-la qu'on juge.
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre(); await o.attendre();
+        L.Jeu.commencer();
+        const V = L.Son.Voix;
+        L.B.partie.heure = 0.95;                 // la nuit, celle du ciel
+        const vues = [];
+        const vraie = V.banque;
+        V.banque = function (liste, quand) { vues.push(quand); return vraie(liste, quand); };
+        V.dernierT = -99999;
+        V.dire('homme', 0, 0);
+        V.banque = vraie;
+        return { vues: vues, charge: Array.from(V.contextesCharges) };
+    }""")
+    assert r["vues"] == ["nuit"], "`dire` ne demande pas dans quel monde on est : %s" % r
+    assert "nuit" in r["charge"], "`dire` ne charge pas la banque du moment : %s" % r
