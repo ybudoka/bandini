@@ -8,8 +8,10 @@ toucher au texte qu'on lit. Ce qui peut s'y perdre sans que personne l'entende :
 - une règle morte (le mot a quitté toutes les répliques) ou en double (seule
   la première compte : la seconde ment en silence) ;
 - une règle qui mord dans une balise de jeu (`[running]`) : v3 la lirait à voix haute ;
-- un phonème qui n'est pas de l'IPA (un `g` ou un `r` tapé au clavier) ou qui a perdu sa
-  lecture en clair (22 sept. 2026 : les règles passent de l'alias au phonème).
+- un phonème qui n'est pas de l'IPA (un `g` ou un `r` tapé au clavier) ou une règle qui a
+  perdu sa lecture en clair ;
+- une règle posée « au cas où », sans écoute : les 23-24 sept. 2026, Martin a écouté 34 mots
+  sans/avec, et le dictionnaire n'a gagné que pour trois.
 """
 
 import json
@@ -39,19 +41,56 @@ def test_le_lexique_est_un_pls_qu_elevenlabs_lit():
 IPA = set("abdefhijklmnopstuvwyzøŋœɑɔəɛɡɪʁʃʊʒɲɥʏ") | {"\u0303", "ː", "ˈ", "ˌ", ".", " "}
 
 
-def test_chaque_regle_est_un_phoneme_complet():
-    """⚠️ Des phonèmes IPA, plus des alias (Martin, 22 sept. 2026 : « ça marche bien »,
-    après « Deux piastres. » → pjɑs en v3). Un lexème = un grapheme puis un phonème, et
-    rien d'autre : un alias à côté laisserait ElevenLabs choisir."""
+def _lexemes_bruts():
     racine = ET.parse(prononciation.FICHIER).getroot()
-    for lexeme in racine.findall(f"{{{prononciation.ESPACE}}}lexeme"):
+    return racine.findall(f"{{{prononciation.ESPACE}}}lexeme")
+
+
+def test_chaque_regle_est_un_phoneme_ou_un_alias_complet():
+    """Phonème IPA ou alias, celui que l'oreille a choisi (« Envoye » → l'alias
+    « Anvoueille » a battu deux IPA, le 24 sept. 2026). Un lexème = un grapheme puis UN
+    des deux, jamais les deux : ElevenLabs choisirait à notre place."""
+    for lexeme in _lexemes_bruts():
         enfants = [e.tag.split("}")[1] for e in lexeme]
-        assert enfants == ["grapheme", "phoneme"], f"un lexème = un grapheme puis un phonème : {enfants}"
-    for mot, phoneme in REGLES:
+        assert enfants in (["grapheme", g] for g in prononciation.GENRES), (
+            f"un lexème = un grapheme puis un phonème ou un alias : {enfants}")
+    for mot, son in REGLES:
         assert mot and mot.strip() == mot, f"grapheme vide ou avec des blancs : {mot!r}"
-        assert phoneme and phoneme.strip() == phoneme, f"phonème vide ou avec des blancs pour « {mot} »"
+        assert son and son.strip() == son, f"son vide ou avec des blancs pour « {mot} »"
+        assert son != mot, f"« {mot} » se remplace par lui-même"
+
+
+def test_chaque_phoneme_est_de_l_ipa_d_ici():
+    for lexeme in _lexemes_bruts():
+        phoneme = lexeme.findtext(f"{{{prononciation.ESPACE}}}phoneme")
+        if phoneme is None:
+            continue
+        mot = lexeme.findtext(f"{{{prononciation.ESPACE}}}grapheme")
         etrangers = sorted(set(phoneme) - IPA)
         assert not etrangers, f"« {mot} » → /{phoneme}/ : {etrangers} n'est pas de l'IPA d'ici"
+
+
+def test_chaque_regle_dite_a_ete_ecoutee():
+    """⚠️ Une règle n'entre qu'après une écoute sans/avec (Martin, 23-24 sept. 2026) :
+    SANS gagnait pour 27 mots, PAREIL pour 5, AVEC pour 3 — les voix québécoises de v3
+    disent déjà bien le parler d'ici, et une règle qui n'aide pas nuit. Au-dessus de la
+    réserve, le commentaire qui précède chaque règle dit quand on l'a écoutée
+    (« Écouté le … »). La réserve n'en demande pas : ce sont les autres formes d'un mot
+    déjà écouté."""
+    parseur = ET.XMLParser(target=ET.TreeBuilder(insert_comments=True))
+    racine = ET.parse(prononciation.FICHIER, parseur).getroot()
+    explication, sans_ecoute = "", []
+    for noeud in racine:
+        if noeud.tag is ET.Comment:
+            texte = (noeud.text or "").strip()
+            if prononciation.MARQUE_RESERVE in texte:
+                break
+            if not texte.startswith(prononciation.MARQUE_LECTURE):
+                explication = texte
+        elif noeud.tag == f"{{{prononciation.ESPACE}}}lexeme":
+            if "Écouté le" not in explication:
+                sans_ecoute.append(noeud.findtext(f"{{{prononciation.ESPACE}}}grapheme"))
+    assert not sans_ecoute, f"règles sans « Écouté le … » dans leur commentaire : {sans_ecoute}"
 
 
 def test_chaque_phoneme_se_lit_en_clair():
@@ -90,7 +129,7 @@ def test_chaque_regle_hors_reserve_touche_une_replique(mot):
 
 def test_la_reserve_existe_et_ne_passe_pas_devant():
     """La réserve est la FIN du fichier : une règle dite qui la suivrait échapperait au
-    juge ci-dessus. Et elle n'est pas vide — c'est elle qui sert les missions à venir."""
+    juge ci-dessus. Et elle n'est pas vide — les autres formes des mots écoutés."""
     lexemes = prononciation._lexemes()
     drapeaux = [reserve for _, _, _, reserve in lexemes]
     assert any(drapeaux), f"la marque « {prononciation.MARQUE_RESERVE} » manque"
@@ -115,9 +154,9 @@ def test_aucune_regle_ne_mord_dans_une_balise():
 
 
 def test_les_regles_prennent_des_mots_entiers():
-    assert prononciation.entendu("Prenez donc la rue.") == "Prenez don la rue."
-    assert prononciation.entendu("[running] Royal") == "[running] Royal"
-    assert prononciation.entendu("l'inspectrice Roy.") == "l'inspectrice Roi."
+    assert prononciation.entendu("Ça coûte quinze piastres.") == "Ça coûte quinze piasses."
+    assert prononciation.entendu("Envoyez, les gars!") == "Envoyez, les gars!"
+    assert prononciation.entendu("Envoye, fonce!") == "Anvoueille, fonce!"
     # une seule passe : une lecture n'est pas réécrite par une règle suivante
     assert prononciation.entendu("Astheure") == "Asteure"
 

@@ -367,9 +367,10 @@ def dire_le_dictionnaire() -> int:
     reserve = prononciation.en_reserve()
     print(f"  ({len(regles) - len(reserve)} touchent une replique, {len(reserve)} en reserve "
           f"pour les missions a venir)")
-    lectures = prononciation.lectures()
-    for mot, phoneme in regles:
-        print(f"  {mot:>14}  ->  /{phoneme}/  « {lectures[mot]} »{'   (reserve)' if mot in reserve else ''}")
+    lectures, phonemes = prononciation.lectures(), prononciation.phonemes()
+    for mot, son in regles:
+        dit = f"/{son}/  « {lectures[mot]} »" if mot in phonemes else f"alias « {son} »"
+        print(f"  {mot:>14}  ->  {dit}{'   (reserve)' if mot in reserve else ''}")
     touchees = [v for v in audio.toutes_les_voix()
                 if prononciation.touches(interpretation.dit(v)) and audio.chemin_voix(v).exists()]
     if not touchees:

@@ -1,17 +1,20 @@
 """LE DICTIONNAIRE DE PRONONCIATION — comment une voix dit un mot, sans changer le mot.
 
 Les règles vivent dans `prononciation.pls` (le format W3C qu'ElevenLabs lit) :
-un mot tel qu'on l'écrit, le PHONÈME IPA qu'on veut entendre, et sa lecture en
-clair (un commentaire « dit : … » juste après la règle — personne ne relit l'IPA).
+un mot tel qu'on l'écrit, le son qu'on veut entendre — un PHONÈME IPA ou un ALIAS
+(le mot réécrit comme on l'entend) — et sa lecture en clair (un commentaire
+« dit : … » juste après la règle : personne ne relit l'IPA).
 
-    affiché : « Prenez donc la rue des Érables. »
-    phonème : donc → dɔ̃
-    entendu : « Prenez don la rue des Érables. »
+    affiché : « Ça coûte quinze piastres. »
+    phonème : piastres → pjɑs
+    entendu : « Ça coûte quinze piasses. »
 
-⚠️ **Des phonèmes, plus des alias** (Martin, 22 sept. 2026, après un essai en v3 :
-« ça marche bien, je préfère que tu y ailles avec ça »). Le phonème ne vaut que
-pour eleven_v3 (multilingual_v2 l'ignore) : c'est le modèle de toutes les voix
-qui prennent ce dictionnaire (`interpretation.MODELE`).
+⚠️ **Une règle n'entre qu'après une écoute sans/avec** (Martin, 23-24 sept. 2026) :
+sur 34 mots écoutés, le dictionnaire n'a gagné que pour astheure, piastres et
+Envoye — les voix québécoises de v3 disent déjà bien le reste, et une règle qui
+n'aide pas nuit. Phonème ou alias : celui que l'oreille a choisi. Le phonème ne
+vaut que pour eleven_v3 (multilingual_v2 l'ignore) : c'est le modèle de toutes
+les voix qui prennent ce dictionnaire (`interpretation.MODELE`).
 
 ⚠️ **Martin, 22 sept. 2026** : « crée moi un dictionnaire pour mon jeu » (les
 *pronunciation dictionaries* d'ElevenLabs). C'est la troisième voie que
@@ -58,8 +61,13 @@ MARQUE_RESERVE = "EN RÉSERVE"
 MARQUE_LECTURE = "dit :"
 
 
+#: Ce qu'un lexème peut dire du son : le phonème IPA ou l'alias.
+GENRES = ("phoneme", "alias")
+
+
 def _lexemes() -> list[tuple[str, str, str | None, bool]]:
-    """(mot écrit, phonème, lecture en clair, en réserve), dans l'ordre du fichier.
+    """(mot écrit, son, lecture en clair, en réserve), dans l'ordre du fichier — le son
+    est le phonème ou l'alias, celui des deux que la règle porte.
     ⚠️ La lecture est le commentaire « dit : » qui SUIT le lexème ; un autre commentaire
     (une explication, un titre de section) ne s'y rattache pas."""
     parseur = ET.XMLParser(target=ET.TreeBuilder(insert_comments=True))
@@ -70,17 +78,24 @@ def _lexemes() -> list[tuple[str, str, str | None, bool]]:
             texte = (noeud.text or "").strip()
             reserve = reserve or MARQUE_RESERVE in texte
             if texte.startswith(MARQUE_LECTURE) and resultat and resultat[-1][2] is None:
-                mot, phoneme, _, dans_reserve = resultat[-1]
-                resultat[-1] = (mot, phoneme, texte[len(MARQUE_LECTURE):].strip(), dans_reserve)
+                mot, son, _, dans_reserve = resultat[-1]
+                resultat[-1] = (mot, son, texte[len(MARQUE_LECTURE):].strip(), dans_reserve)
         elif noeud.tag == f"{{{ESPACE}}}lexeme":
-            resultat.append((noeud.findtext("pls:grapheme", namespaces=_NS),
-                             noeud.findtext("pls:phoneme", namespaces=_NS), None, reserve))
+            son = next((s for g in GENRES if (s := noeud.findtext(f"pls:{g}", namespaces=_NS))), None)
+            resultat.append((noeud.findtext("pls:grapheme", namespaces=_NS), son, None, reserve))
     return resultat
 
 
 def regles() -> list[tuple[str, str]]:
-    """(mot écrit, phonème), dans l'ordre du fichier — l'ordre compte : la première qui colle gagne."""
-    return [(mot, phoneme) for mot, phoneme, _, _ in _lexemes()]
+    """(mot écrit, son), dans l'ordre du fichier — l'ordre compte : la première qui colle gagne."""
+    return [(mot, son) for mot, son, _, _ in _lexemes()]
+
+
+def phonemes() -> set[str]:
+    """Les mots dont la règle est un phonème IPA (les autres sont des alias)."""
+    return {lexeme.findtext("pls:grapheme", namespaces=_NS)
+            for lexeme in ET.parse(FICHIER).getroot().findall("pls:lexeme", _NS)
+            if lexeme.find("pls:phoneme", _NS) is not None}
 
 
 def lectures() -> dict[str, str | None]:
@@ -134,7 +149,7 @@ def touches(texte: str) -> list[str]:
 def entendu(texte: str) -> str:
     """Ce que la voix dira, en clair — le texte après les règles, chaque mot remplacé par
     sa lecture « dit : ». ⚠️ Une seule passe, la première règle qui colle gagne : une
-    lecture ne se fait pas réécrire à son tour. (ElevenLabs, lui, reçoit le phonème.)"""
+    lecture ne se fait pas réécrire à son tour. (ElevenLabs, lui, reçoit le phonème ou l'alias.)"""
     motif = _tout()
     if motif is None:
         return texte

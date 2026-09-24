@@ -48,12 +48,22 @@ des passants. Ce que ça implique, jalon par jalon :
 Demande de Martin : « crée moi un dictionnaire pour mon jeu » — les
 [pronunciation dictionaries](https://elevenlabs.io/docs/overview/capabilities/text-to-speech/best-practices#pronunciation-dictionaries)
 d'ElevenLabs. Un mot que la voix dit mal se corrige **sans toucher au texte** : la boîte
-affiche « Prenez donc la rue », la voix dit « Prenez don la rue ».
+affiche « Quinze piastres », la voix dit « Quinze piasses ».
+
+⚠️ **Une règle n'entre qu'après une écoute sans/avec** (Martin, 23-24 sept. 2026). Onze phrases
+dites sans puis avec 107 règles (`captures/essai-dico/`) : **sans** gagnait pour 27 mots (p'tit,
+truck, chum, Roy, OK, full, donc, docker, run…), c'était **pareil** pour 5 (gang, job, y'a, ET,
+Y a), **avec** ne gagnait que pour astheure et piastres. Les voix québécoises d'eleven_v3 disent
+déjà bien le parler d'ici : une règle qui n'aide pas nuit. Le lexique n'en garde que 6. Une voix
+bute sur un mot : on fait dire UNE phrase sans puis avec (une paire ≈ 100 crédits), Martin
+écoute, et la règle entre seulement s'il préfère « avec ».
 
 - **Les règles** vivent dans [`app/prononciation.pls`](../app/prononciation.pls) (format W3C
-  PLS, celui qu'ElevenLabs lit) : un `<grapheme>` (le mot tel qu'on l'écrit), un `<phoneme>`
-  (le son qu'on veut entendre, en IPA : `pjɑs`) et, juste après, sa **lecture en clair**
-  (`<!-- dit : piasses -->`). Un commentaire au-dessus de chaque règle dit pourquoi elle est là.
+  PLS, celui qu'ElevenLabs lit) : un `<grapheme>` (le mot tel qu'on l'écrit), puis **un** son —
+  un `<phoneme>` IPA (`pjɑs`) **ou** un `<alias>` (le mot réécrit comme on l'entend,
+  « Anvoueille ») — et, juste après, sa **lecture en clair** (`<!-- dit : piasses -->`). Le
+  commentaire au-dessus de chaque règle dit pourquoi elle est là et **quand elle a été écoutée**
+  (« Écouté le … » : le juge l'exige hors réserve).
 - **Ajouter une règle** : un `<lexeme>` de plus dans le `.pls`. ⚠️ Sensible à la **casse**
   (« Astheure » en tête de phrase est une deuxième règle), un mot **entier** seulement, et
   seule la **première** règle qui colle s'applique. Pas de `--` dans un commentaire XML (le
@@ -62,20 +72,18 @@ affiche « Prenez donc la rue », la voix dit « Prenez don la rue ».
   dans une balise de jeu.
 - **Deux parties** : au-dessus du commentaire `EN RÉSERVE`, chaque règle touche une réplique qu'on
   entend déjà (le juge l'exige : une faute de frappe dans le mot ne corrigerait rien, en silence) ;
-  en dessous, **la réserve** — les mots que les prochaines missions diront sans doute (l'anglais du
-  garage et de la rue, les contractions, les noms pas encore dits, `OK`, `Mme`, `10-4`). Une
-  réplique neuve qui dit « brakes » est donc déjà prononcée « brèques » (`bʁek`). Un mot neuf qui sonne mal :
-  sa règle va dans la réserve, ou au-dessus si une réplique le dit déjà.
+  en dessous, **la réserve** — les autres formes d'un mot déjà écouté (« piastre », « envoye »),
+  qu'aucune réplique ne dit encore. ⚠️ Plus de mots « au cas où » : la réserve de 83 anglicismes et
+  contractions (22 sept.) est partie avec l'écoute du 23 — ses cousins écoutés sonnaient mieux sans.
 - **L'ordre compte** : une règle longue passe avant la courte qu'elle contient (« Ti-Guy » avant
   « Guy »), le juge y veille.
-- **Des phonèmes, plus des alias** (Martin, 22 sept. 2026, après un essai « Deux piastres. » →
-  `pjɑs` en v3 : « ça marche bien, je préfère que tu y ailles avec ça ») : le phonème dit le son
-  exact — l'affrication de « p'tit » (`ptsɪ`), le « gang » d'ici (`ɡɛŋ`) — là où l'alias passait
-  par une orthographe que le modèle relisait à sa façon. ⚠️ Il **dépend du modèle** : eleven_v3 le
-  lit, multilingual_v2 l'ignore en silence (un juge tient `interpretation.MODELE` à v3). Écrire
-  l'IPA d'ici : `ʁ` (jamais `r`), `ɡ` (U+0261, jamais le `g` du clavier), les voyelles relâchées
-  des syllabes fermées (`fʊl`, `ʃɪft`), `ts`/`dz` devant `i` et `y` ; le juge refuse un caractère
-  hors de l'IPA qu'on emploie, et une règle sans sa lecture « dit : ».
+- **Phonème ou alias : celui que l'oreille choisit.** Le phonème a gagné pour « piastres »
+  (`pjɑs`) et « astheure » (`astœʁ`) ; pour « Envoye » (« devrait sonner envoueille »), l'alias
+  « Anvoueille » a battu « Envoueille » et deux IPA (`ɑ̃vwɛːj`, `ɑ̃ˈvwɛj`). Essayer les deux formes
+  dans la même écoute. ⚠️ Le phonème **dépend du modèle** : eleven_v3 le lit, multilingual_v2
+  l'ignore en silence (un juge tient `interpretation.MODELE` à v3). Écrire l'IPA d'ici : `ʁ`
+  (jamais `r`), `ɡ` (U+0261, jamais le `g` du clavier) ; le juge refuse un caractère hors de l'IPA
+  qu'on emploie, un lexème qui porte les deux formes, et une règle sans sa lecture « dit : ».
 - **Le téléversement** est automatique et gratuit : `scripts/audio_elevenlabs.py` compare
   l'empreinte du `.pls` à `app/prononciation.json` et en téléverse un neuf s'il a changé
   (chaque téléversement crée un nouveau dictionnaire chez ElevenLabs — committer le `.json`
