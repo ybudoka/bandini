@@ -6,7 +6,7 @@ mission, que le donneur suivant appelle, que chaque replique demande sa voix.
 """
 
 
-def test_les_donneurs_attendent_devant_leur_porte_et_ti_guy_parle(banc, paquet):
+def test_les_donneurs_attendent_devant_leur_porte_et_ti_guy_parle(banc, paquet, dialogues):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur;
@@ -32,7 +32,7 @@ def test_les_donneurs_attendent_devant_leur_porte_et_ti_guy_parle(banc, paquet):
     assert r["invite"] == "PARLER À TI-GUY"
     # ⚠️ Depuis la 2e vague des scènes, parler joue la SCENE d'intro : ses répliques
     # se disent en deux temps, sous ses plans (`missions.py`, `scenes.intro`).
-    assert r["parle"] is True and r["scene"] is True and 1 <= r["lignes"] <= len(paquet["missions"][0]["dialogue"]["intro"])
+    assert r["parle"] is True and r["scene"] is True and 1 <= r["lignes"] <= len(dialogues["m1"]["dialogue"]["intro"])
     assert r["qui"] == "ti_guy" and r["slug"] == "ti_guy-m1-1" and r["dialogue"] == "Ti-Guy"
     assert r["demandee"] == "ti_guy-m1-1", "la replique demande sa voix"
     assert r["fige"] is True, "pendant qu'on lui parle, le joueur ecoute"
@@ -176,7 +176,7 @@ def test_une_arrestation_fait_rater_la_mission_et_on_peut_recommencer(banc):
     assert r["encore"] == "m1", "ratee, la mission se redonne"
 
 
-def test_le_donneur_suivant_appelle_au_telephone(banc, paquet):
+def test_le_donneur_suivant_appelle_au_telephone(banc, paquet, dialogues):
     m2 = paquet["missions"][1]
     r = banc("""function (L, o) {
         L.Jeu.commencer();
@@ -199,7 +199,7 @@ def test_le_donneur_suivant_appelle_au_telephone(banc, paquet):
     assert r["slug"] == "thibodeau-m2-1"
     assert r["gps"] == "Madame Thibodeau" and r["versThibodeau"], "le GPS pointe vers celle qui a appele"
     assert r["appels"] == {"m2": True}
-    assert m2["dialogue"]["appel"][0]["qui"] == "thibodeau"
+    assert dialogues[m2["slug"]]["dialogue"]["appel"][0]["qui"] == "thibodeau"
 
 
 def test_le_dialogue_de_l_appel_attend_la_fin_de_la_sonnerie(banc):
@@ -564,7 +564,7 @@ def test_m50_le_fuyard_ne_nait_pas_dans_le_char_gare_devant_la_cantine(banc):
     assert r["dPorte"] <= 200, "et il reste devant la porte"
 
 
-def test_m50_lulu_dit_d_attendre_la_noirceur_quand_on_lui_parle_de_jour(banc, paquet):
+def test_m50_lulu_dit_d_attendre_la_noirceur_quand_on_lui_parle_de_jour(banc, paquet, dialogues):
     """⚠️ Martin, 20 sept. 2026 : à la cantine, Lulu disait « le Faubourg est tranquille » — le
     texte de repos de tout le monde, sans voix — parce que l'objectif 0 de m50 attend la nuit et
     que « parler à Lulu » ne compte qu'au suivant. « Il fallait que j'attende la nuit : peux-tu
@@ -572,7 +572,6 @@ def test_m50_lulu_dit_d_attendre_la_noirceur_quand_on_lui_parle_de_jour(banc, pa
 
     Et la réplique de mission garde sa place : la nuit venue, parler à Lulu joue son `pendant`,
     pas le renvoi."""
-    m50 = next(m for m in paquet["missions"] if m["slug"] == "m50")
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(6);
@@ -626,7 +625,7 @@ def test_m50_lulu_dit_d_attendre_la_noirceur_quand_on_lui_parle_de_jour(banc, pa
     }""")
     assert r["jour"] is True
     assert r["renvoi"] == {"partie": "renvoi", "qui": "lulu", "slug": "lulu-m50-12", "telephone": False,
-                           "texte": m50["dialogue"]["renvoi"][0]["texte"]}, "de jour, Lulu dit d'attendre la nuit"
+                           "texte": dialogues["m50"]["dialogue"]["renvoi"][0]["texte"]}, "de jour, Lulu dit d'attendre la nuit"
     assert "noirceur" in r["renvoi"]["texte"]
     assert "lulu-m50-12" in r["voix"], "et sa voix est demandée"
     assert r["etapeRenvoi"] == 0, "on ne fait pas avancer la mission en se faisant renvoyer"
@@ -1297,7 +1296,7 @@ def test_une_cravate_de_m5_couchee_reste_couchee_tant_que_la_mission_dure(banc):
     assert r["apres"] != "assomme", "la mission arrêtée, elle se relève comme tout le monde"
 
 
-def test_la_premiere_replique_se_dit_quand_on_parle_au_bouton(banc, paquet):
+def test_la_premiere_replique_se_dit_quand_on_parle_au_bouton(banc, paquet, dialogues):
     """⚠️ Rouge avant (17 sept. 2026), chez les cinq donneurs : l'appui d'ACTION
     qui ouvre la conversation etait relu par `Histoire.majCinema` dans la MEME
     image, et passait a la deuxieme replique. La voix de la premiere etait
@@ -1314,8 +1313,9 @@ def test_la_premiere_replique_se_dit_quand_on_parle_au_bouton(banc, paquet):
         # occurrence, pas la dernière.
         if m["donneur"] in premieres:
             continue
-        n = len(m["dialogue"].get("appel", []))
-        premieres[m["donneur"]] = f"{m['dialogue']['intro'][0]['qui']}-{m['slug']}-{n + 1}"
+        n = len(dialogues[m["slug"]]["dialogue"].get("appel", []))
+        intro = dialogues[m["slug"]]["dialogue"]["intro"]
+        premieres[m["donneur"]] = f"{intro[0]['qui']}-{m['slug']}-{n + 1}"
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const B = L.B, j = B.joueur, M = L.Monde, out = {};
@@ -1594,7 +1594,7 @@ def test_ti_guy_nait_derriere_l_auto_patrouille_et_la_suit(banc):
     assert r["suit"] > 60, f"Ti-Guy ne suit pas ({r['suit']} px pendant qu'on en roule {r['joueur']})"
 
 
-def test_serrer_la_main_d_un_contact_de_m6_le_fait_parler_en_personne_puis_avancer(banc, paquet):
+def test_serrer_la_main_d_un_contact_de_m6_le_fait_parler_en_personne_puis_avancer(banc, paquet, dialogues):
     """⚠️ Martin, 20 sept. 2026 : « il manque aussi des voix pour cette animation… enrichir leur
     dialogue ». La poignée de main de m6 était MUETTE : `parler()` faisait `avancer()` tout de suite,
     et Ti-Paul, Lulu, Raymonde et Ovila n'avaient pas une réplique. Chacun dit maintenant son
@@ -1637,7 +1637,7 @@ def test_serrer_la_main_d_un_contact_de_m6_le_fait_parler_en_personne_puis_avanc
         const muet = { cinema: !!B.cinema, etape: B.partie.mission.etape };
         return { vus: vus, voix: voix, muet: muet };
     }""".replace("ETAPES", json.dumps(etapes)))
-    accueils = m6["dialogue"]["accueil"]
+    accueils = dialogues["m6"]["dialogue"]["accueil"]
     assert len(r["vus"]) == 4 and len(accueils) == 4
     for i, (v, dit) in enumerate(zip(r["vus"], accueils)):
         assert v["rendu"] is True, f"contact {i} : parler() ne rend pas true"
@@ -1651,15 +1651,14 @@ def test_serrer_la_main_d_un_contact_de_m6_le_fait_parler_en_personne_puis_avanc
     assert r["muet"] == {"cinema": False, "etape": 1}, f"sans réplique : la poignée de main avance à l'instant ({r['muet']})"
 
 
-def test_la_replique_pendant_du_premier_objectif_se_dit_apres_l_intro(banc, paquet):
+def test_la_replique_pendant_du_premier_objectif_se_dit_apres_l_intro(banc, paquet, dialogues):
     """⚠️ Rouge avant (22 sept. 2026) : `avancer(true)` se tait sous l'intro et n'arme pas la
     réplique `pendant` de l'objectif 0 ; `annoncer`, qui dit le reste quand l'intro finit, ne
     l'armait pas non plus. « Le dépanneur d'abord » de Josée (m6) était payée et jamais dite."""
-    m6 = next(m for m in paquet["missions"] if m["slug"] == "m6")
     n = 0
     attendue = None
     for partie in ("appel", "intro", "client", "fin", "echec", "pendant", "renvoi", "accueil"):
-        for ligne in m6["dialogue"].get(partie, []):
+        for ligne in dialogues["m6"]["dialogue"].get(partie, []):
             n += 1
             if partie == "pendant" and ligne.get("objectif") == 0 and attendue is None:
                 attendue = f"{ligne['qui']}-m6-{n}"

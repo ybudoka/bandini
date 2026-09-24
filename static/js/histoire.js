@@ -8,7 +8,13 @@
    personnage parle, le joueur ecoute (il ne bouge pas), la radio baisse.
 
    Le telephone : quand une mission devient possible, son donneur appelle
-   quelques secondes plus tard — la voix vient du combine. */
+   quelques secondes plus tard — la voix vient du combine.
+
+   ⚠️ **CE QU'UNE MISSION DIT N'EST PLUS DANS LE PAQUET** (24 sept. 2026) : il etait
+   au-dessus de ses deux plafonds. `B.defs.missions` porte le CATALOGUE — c'est lui que
+   le carnet, le GPS et le telephone lisent, et il faut l'avoir en entier pour savoir
+   quelle mission est possible. Ses repliques, ses scenes et la declaration de ses voix
+   arrivent par `/api/dialogue/<slug>` : voir `chargerDialogue`. */
 
 const Histoire = (function () {
   'use strict';
@@ -17,6 +23,65 @@ const Histoire = (function () {
   const RAYON_PARLER = 22;          // a cette distance d'un personnage, ACTION = lui parler
 
   function defs() { return B.defs.missions || []; }
+
+  // --- Ce qu'une mission dit : hors du paquet -----------------------------------
+  /*: ⚠️ **UN TEXTE NE PEUT PAS ARRIVER EN RETARD**, contrairement a une voix : une
+    replique sans son mp3 s'affiche quand meme (`Son.Voix.attendue` la dit des qu'il
+    arrive), un dialogue absent n'a RIEN a afficher. On le demande donc bien AVANT sa
+    porte — des que la bulle d'un donneur s'allume (il est visible a plusieurs secondes
+    de marche) et des que le telephone choisit sa prochaine mission (il attend
+    `DELAI_APPEL` avant de sonner) — et les portes verifient quand meme : un reseau lent
+    ne doit pas ouvrir une boite vide. */
+  let fenetre = null;
+  let gabaritDialogue = '/api/dialogue/SLUG';
+  //: slug -> ce qu'on rappellera quand son texte arrivera. La clef seule dit « en
+  //: route » : on ne demande jamais deux fois la meme.
+  const enRoute = {};
+  //: La mission dont on attend le texte pour ouvrir sa porte. ⚠️ Deux coups d'ACTION
+  //: pendant qu'il vole ne doivent pas poser la mission deux fois.
+  let porteEnAttente = null;
+
+  function init(w, racine) {
+    fenetre = w;
+    const gabarit = racine && racine.dataset && racine.dataset.urlDialogue;
+    if (gabarit) gabaritDialogue = gabarit;
+  }
+
+  /** Demande ce qu'une mission dit, montre et avec quelles voix — une seule fois.
+      `suite` s'appelle quand c'est la ; tout de suite si ca y est deja. Rend `true`
+      quand le texte est deja sous la main. */
+  function chargerDialogue(slug, suite) {
+    const m = mission(slug);
+    if (!m) return false;
+    if (m.dialogue) { if (suite) suite(); return true; }
+    if (enRoute[slug]) { if (suite) enRoute[slug].push(suite); return false; }
+    enRoute[slug] = suite ? [suite] : [];
+    if (!fenetre || !fenetre.fetch) return false;
+    fenetre.fetch(gabaritDialogue.replace('SLUG', slug))
+      .then(function (r) { if (!r.ok) throw new Error('dialogue ' + slug + ' : ' + r.status); return r.json(); })
+      .then(function (d) {
+        m.dialogue = d.dialogue || {};
+        m.scenes = d.scenes || {};
+        // ⚠️ SES VOIX SE DECLARENT ICI AUSSI. `Son.Voix.histoire()` lit la liste du
+        // paquet, et celles d'une mission n'y sont plus : sans cette ligne, le texte
+        // s'afficherait et personne ne parlerait. `chargerHistoire` va chercher les
+        // mp3 ensuite, comme avant.
+        const connues = (B.defs.audio && B.defs.audio.histoire) || [];
+        (d.voix || []).forEach(function (v) {
+          if (!connues.some(function (x) { return x.slug === v.slug; })) connues.push(v);
+        });
+        const suites = enRoute[slug] || [];
+        delete enRoute[slug];
+        suites.forEach(function (f) { f(); });
+      })
+      .catch(function () {
+        // ⚠️ ON OUBLIE LA DEMANDE : la porte redemandera. Un reseau qui tombe une fois
+        // ne doit pas fermer une mission pour le reste de la partie.
+        delete enRoute[slug];
+        if (porteEnAttente === slug) porteEnAttente = null;
+      });
+    return false;
+  }
   // --- Le carnet : ce qui s'ecrit tout seul -------------------------------------
 
   /*: Le plafond du journal. ⚠️ Une partie de cent jours accumule des dizaines
@@ -893,8 +958,15 @@ const Histoire = (function () {
       dire(m, 'appel', function () { Hud.message('VA VOIR ' + personnage(m.donneur).nom.toUpperCase(), 180); });
       return;
     }
-    const prochaine = disponibles().find(function (m) { return m.prerequis.length && m.dialogue.appel.length && !p.appels[m.slug]; });
+    // ⚠️ `m.prerequis.length` SEUL dit « celle-la s'annonce au telephone ». On y lisait
+    // aussi `m.dialogue.appel.length`, et ce n'est plus dans le paquet — mais c'etait
+    // deja une tautologie : la seule mission sans replique d'appel est la premiere, et
+    // elle n'a pas de prerequis. Un juge de `missions.py` tient les deux ensemble.
+    const prochaine = disponibles().find(function (m) { return m.prerequis.length && !p.appels[m.slug]; });
     if (!prochaine) return;
+    // ⚠️ Son texte AVANT sa sonnerie : il vole pendant que le delai s'ecoule, et le
+    // combine ne sonne jamais sur une mission qui n'aurait rien a dire.
+    if (!chargerDialogue(prochaine.slug)) return;
     if (p.appelT === undefined || p.appelT === null) { p.appelT = B.t + DELAI_APPEL; return; }
     if (B.t < p.appelT) return;
     p.appelT = null;
@@ -964,6 +1036,21 @@ const Histoire = (function () {
       les tirages de `poser()` tombent dans le meme ordre. Ce qui s'ANNONCE
       (le titre, l'objectif, le coup de cuivre) attend, lui, la fin de l'intro. */
   function poserPuisDireLIntro(m) {
+    // ⚠️ LE TEXTE D'ABORD. Sans lui, la mission se poserait et son intro ouvrirait une
+    // boite vide. La bulle du donneur l'a demande bien avant (`majBulles`) : on n'arrive
+    // ici sans texte qu'avec un reseau lent, ou du premier coup dans un banc qui ne pose
+    // rien. `porteEnAttente` fait que deux coups d'ACTION ne posent pas la mission deux
+    // fois pendant qu'il vole.
+    if (!m.dialogue) {
+      porteEnAttente = m.slug;
+      chargerDialogue(m.slug, function () {
+        if (porteEnAttente !== m.slug) return;
+        porteEnAttente = null;
+        poserPuisDireLIntro(m);
+      });
+      return;
+    }
+    porteEnAttente = null;
     commencer(m.slug, true);
     jouerOuDire(m, 'intro', function () { annoncer(m); });
   }
@@ -2915,7 +3002,11 @@ const Histoire = (function () {
     const m = courante(), o = objectif();
     for (const e of B.entites) {
       if (!e.personnage || !e.vivant) continue;
-      const attend = (m && m.donneur === e.personnage && o && o.type === 'retourner') || !!disponibleDe(e.personnage);
+      const dispo = disponibleDe(e.personnage);
+      // ⚠️ SA BULLE S'ALLUME, SON TEXTE SE DEMANDE. Il est visible a plusieurs secondes
+      // de marche : c'est la marge qu'il faut pour que la porte n'attende jamais.
+      if (dispo && !dispo.dialogue) chargerDialogue(dispo.slug);
+      const attend = (m && m.donneur === e.personnage && o && o.type === 'retourner') || !!dispo;
       const p = attend ? personnage(e.personnage) : null;
       Entites.bulle(e, p ? p.heler : '');
     }
@@ -2923,6 +3014,12 @@ const Histoire = (function () {
 
   function maj() {
     if (!B.joueur || !B.partie) return;
+    // ⚠️ UNE PARTIE REPRISE EN PLEINE MISSION n'a pas son texte : il n'est plus dans le
+    // paquet, et elle a ete sauvegardee bien apres son intro. Tout ce qui suit le lit —
+    // les repliques `pendant`, la fin, l'echec — alors on le demande et on laisse passer
+    // l'image. La ville, elle, continue de tourner.
+    const reprise = courante();
+    if (reprise && !reprise.dialogue) { chargerDialogue(reprise.slug); return; }
     majCinema();
     if (B.cinema) return;
     jouerLaFin();
@@ -2953,7 +3050,7 @@ const Histoire = (function () {
            parler, dire, suivante, finir, commencer, demarrer, avancer, objectif, courante, reussir, echouer, evenement,
            ouverture, passerOuverture, fichiersDeLOuverture, direLignes, majCinema, resoudre,
            lieuDuPersonnage, ouTrouver, present, calme, jouerOuDire,
-           reinitialiser, noter, rencontrer, CARNET_MAX,
+           reinitialiser, noter, rencontrer, CARNET_MAX, init, chargerDialogue,
            proposerDefi, commencerDefi, finirDefi, abandonnerDefi, actionDeDefi, defisDeFoire, comptoirDeDefi, defiDuComptoir, canardAuCrochet,
            appareilsDe, jouableAvec, defiOuvert, defisOuverts, defiNeuf, ouvrirDefi, majDeblocages, planterLesPanneauxOuverts, APPAREIL_DU_CATALOGUE,
            cible, ligneObjectif, lieu, lieuDeLivraison, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, cibleDuParler, maj,

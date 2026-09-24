@@ -1311,6 +1311,20 @@ def voix_histoire() -> list[dict]:
     return sortie
 
 
+def voix_de_mission(slug: str) -> list[dict]:
+    """Les voix d'UNE mission, telles que le navigateur les recoit — la part
+    « son » de `/api/dialogue/<slug>`.
+
+    ⚠️ Meme forme que `exporter()["histoire"]`, et c'est ce qui compte : le
+    navigateur les ajoute a la liste qu'il a deja, et pas une ligne de `son.js` ne
+    sait d'ou elles viennent.
+    """
+    return [{"slug": v["slug"], "qui": v["qui"], "mission": v["mission"], "partie": v["partie"],
+             "telephone": v["telephone"], "volume": v["volume"],
+             "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None}
+            for v in voix_histoire() if v["mission"] == slug]
+
+
 def voix_journal() -> list[dict]:
     """Chaque manchette du Clairon, lue par le narrateur (la version `lu`, en casse naturelle)."""
     from . import journal, missions
@@ -1596,11 +1610,21 @@ def exporter() -> dict:
              "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None}
             for v in VOIX + VOIX_DE_LA_POLICE
         ],
-        # Les repliques de l'histoire : une voix par personnage, chargees par mission.
+        # Les repliques de l'histoire qui n'appartiennent A AUCUNE MISSION : le journal
+        # que le narrateur lit au lever du jour, l'ouverture qu'il lit aussi, et le mot
+        # de repos de chaque personnage. Trois bancs qu'on ne peut pas charger « par
+        # mission », puisqu'ils n'en ont pas.
+        #
+        # ⚠️ **CELLES D'UNE MISSION N'Y SONT PLUS** (24 sept. 2026) : elles voyagent avec
+        # son dialogue, sur `/api/dialogue/<slug>` (`voix_de_mission`). Elles se
+        # chargeaient DEJA par mission (`Son.Voix.chargerHistoire`) et pesaient 57 Ko
+        # bruts dans un paquet au-dessus de son plafond : declarer quatre cent vingt
+        # mp3 au demarrage pour en jouer sept, c'etait le meme gaspillage que le texte,
+        # au meme endroit. Elles prennent la meme route, au meme instant.
         "histoire": [
             {"slug": v["slug"], "qui": v["qui"], "mission": v["mission"], "partie": v["partie"],
              "telephone": v["telephone"], "volume": v["volume"],
              "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None}
-            for v in voix_histoire() + voix_journal() + voix_ouverture() + voix_repos()
+            for v in voix_journal() + voix_ouverture() + voix_repos()
         ],
     }

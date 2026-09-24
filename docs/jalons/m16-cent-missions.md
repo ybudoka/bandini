@@ -675,3 +675,74 @@ catalogue.
   - ⚠️ **Et hors ligne**, le travailleur garde les dialogues **à l'usage**, comme les mp3 — pas
     dans la coquille : cent adresses dans la coquille, ce serait cent requêtes à l'installation
     pour un joueur qui en jouera trois.
+  - ✅ **Livré le 24 sept. 2026.** Mesures, avant et après, prises sur la même
+    construction :
+
+    | | bruts | gzip | plafond |
+    |---|---|---|---|
+    | le paquet, avant | 369 224 | 75 138 | 250 000 / 54 000 — **rouge** |
+    | le paquet, après | **239 190** | **53 097** | vert, de 10 810 et de **903 octets** |
+    | les 36 dialogues | 131 956 en tout | — | 3,7 Ko chacun, le plus gros 5,4 |
+
+    Ce qui est parti : les **répliques**, les **scènes**, et — trouvé en mesurant —
+    la **déclaration des voix** de chaque mission. `audio.histoire` annonçait 485 mp3 au
+    premier écran pour en jouer sept ; il en reste **65**, les trois bancs qui
+    n'appartiennent à aucune mission (le journal du matin, l'ouverture, le mot de repos
+    de chaque personnage). Les 420 autres voyagent avec le dialogue de leur mission :
+    même règle, même route, même instant.
+  - ⚠️ **SANS LES VOIX, LE DÉCOUPAGE NE SUFFISAIT PAS.** Répliques et scènes seules
+    laissaient le paquet à 294 727 octets bruts — encore 45 Ko au-dessus. `audio` faisait
+    **47 % du paquet** à lui seul, et personne ne l'avait regardé : la tranche ne serait
+    pas allée au bout de sa propre raison d'être.
+  - ⚠️ **ET LA MARGE GZIP EST DE 903 OCTETS.** Le catalogue reste dans le paquet et pèse
+    **170 octets gzip par mission** : cinq de plus et il repasse au-dessus. Ce qui sort
+    ensuite est déjà mesuré : les **`objectifs`** (18 391 bruts / 4 319 gzip des 26 158 /
+    6 074 du catalogue — ils ne servent qu'à partir de `commencer()`, donc après le
+    dialogue, donc par la même porte), puis les **notes de `musique.py`** (39 314 bruts /
+    7 823 gzip, et la musique se charge déjà par district). Les 109 missions de M16 ne
+    tiennent pas sans le premier.
+  - ⚠️ **`m.dialogue.appel.length` A DISPARU DU TÉLÉPHONE**, et c'était une tautologie
+    que rien ne tenait : la seule mission sans réplique d'appel est la première, et elle
+    n'a pas de prérequis. `histoire.js` choisit maintenant sur les prérequis seuls, et un
+    juge tient les deux ensemble dans les deux sens (une mission avec des prérequis a un
+    appel ; une sans prérequis n'en écrit pas, personne n'irait le chercher).
+  - ⚠️ **QUATRE PORTES, PAS UNE.** On croyait n'en avoir qu'une (parler au donneur) ;
+    il y en a quatre, et les trois autres se voient mal : le **téléphone** (il ne doit pas
+    sonner pour une mission qui n'a rien à dire — la réplique d'appel arrive pendant
+    `DELAI_APPEL`), une **partie reprise en pleine mission** (sauvegardée bien après son
+    intro : elle a `partie.mission` et pas une ligne de dialogue, et tout ce que `maj()`
+    lit ensuite le cherche dedans), et le **menu de triche** (`demarrer`). La marge, elle,
+    se gagne ailleurs : la **bulle du donneur** demande son texte dès qu'elle s'allume, et
+    il est visible à plusieurs secondes de marche.
+  - ⚠️ **HORS LIGNE, À L'USAGE — jamais dans la coquille.** `addAll` les prendrait tous à
+    l'installation : trente-six requêtes pour un joueur qui jouera trois missions, cent
+    quarante-cinq quand M16 sera là. Le travailleur les garde par leur **chemin sans la
+    requête** (`?e=` change à chaque construction, et hors ligne un dialogue d'avant-hier
+    vaut infiniment mieux qu'une mission qui ne peut pas commencer — un texte n'a pas de
+    repli, contrairement à un son), et « tout télécharger » les prend **d'abord** : 132 Ko
+    contre 14 Mo de son, pour que celui qui veut jouer hors ligne ait toutes ses missions
+    jouables même si le téléchargement des sons s'arrête en chemin.
+  - ⚠️ **LE BANC POSE LES DIALOGUES D'AVANCE, et un juge le dit à voix haute.**
+    `o.frame()` est synchrone et une réponse de `fetch` arrive sur une micro-tâche : entre
+    deux images du banc il n'y en a aucune. Une centaine de juges qui jouent une mission
+    de bout en bout devraient chacun devenir asynchrones pour attendre un texte qui, dans
+    le vrai jeu, est arrivé pendant qu'on marchait. Le chemin du téléchargement a donc ses
+    juges à lui, qui partent d'un **catalogue nu** (`banc(..., poser_les_dialogues=False)`)
+    et attendent vraiment.
+  - ⚠️ **UN JUGE QUI PASSAIT POUR RIEN**, trouvé par la mutation : celui des deux coups
+    d'ACTION mesurait `cinema.i`, qui vaut zéro que l'intro se joue une fois ou trois —
+    la garde neutralisée, il restait vert. Il compte maintenant **les demandes de voix**
+    de la première réplique : ce qu'on entendrait vraiment, trois fois.
+  - **Juges** (12 neufs ; treize mutations, toutes rouges) : `/api/dialogue/<slug>` rend
+    son ETag, revalide en 304 (faible compris) et **404 pour un slug inconnu** ; le paquet
+    ne porte plus ni répliques, ni scènes, ni voix de mission, et le catalogue y reste en
+    entier ; chaque mission a son dialogue, aucune voix ne se déclare deux fois ni ne
+    tombe entre les deux moitiés ; toute mission à prérequis s'annonce au téléphone, et
+    l'inverse ; le travailleur nomme les trente-six chemins, ne les met pas dans la
+    coquille, et son empreinte change quand une mission s'ajoute ; au banc, sur un
+    catalogue nu : la bulle du donneur demande son texte (**une fois**, pas soixante par
+    seconde), la porte attend qu'il arrive puis pose la mission et déclare ses voix, deux
+    coups d'ACTION ne la posent pas deux fois, un réseau qui tombe ne ferme pas la mission
+    pour le reste de la partie, le téléphone reste muet tant qu'il n'a rien à dire, une
+    partie reprise en pleine mission redemande son texte — et le banc pose bien les
+    dialogues par défaut, sans quoi les cent autres juges ne prouveraient plus rien.

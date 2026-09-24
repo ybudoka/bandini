@@ -46,15 +46,31 @@ def racine():
 
 
 @pytest.fixture(scope="session")
-def paquet():
+def paquets():
+    """UNE construction pour toute la session : `construire()` batit une ville, et
+    deux villes baties separement pourraient ne pas etre la meme."""
+    return construire()
+
+
+@pytest.fixture(scope="session")
+def paquet(paquets):
     """Le paquet de definitions tel que le navigateur le recoit."""
     # ⚠️ Tel que le navigateur le TIENT : les definitions, et la carte remise
     # dedans a son arrivee (`Jeu.chargerDefinitions`). Elle voyage a part depuis
     # le 16 sept. 2026, mais aucun lecteur ne la cherche ailleurs.
-    paquets = construire()
     donnees = json.loads(paquets.definitions.corps.decode("utf-8"))
     donnees["carte"] = json.loads(paquets.carte.corps.decode("utf-8"))
     return donnees
+
+
+@pytest.fixture(scope="session")
+def dialogues(paquets):
+    """Ce que chaque mission dit, montre et avec quelles voix — un `/api/dialogue/<slug>`.
+
+    ⚠️ Hors du paquet depuis le 24 sept. 2026 : il etait au-dessus de ses deux plafonds.
+    Le banc les sert comme le serveur ; voir `banc.js`.
+    """
+    return {slug: json.loads(p.corps.decode("utf-8")) for slug, p in paquets.dialogues.items()}
 
 
 @pytest.fixture(scope="session")
@@ -75,19 +91,24 @@ def serveur(tmp_path_factory):
 
 
 @pytest.fixture(scope="session")
-def banc(paquet):
+def banc(paquet, dialogues):
     """Fait tourner `corps` (une fonction JS `(L, o) => resultat`) dans le banc Node."""
     if OBLIGATOIRE and shutil.which("node") is None:
         pytest.fail("node est obligatoire (BANDINI_TESTS_OBLIGATOIRES=1) et il manque")
     prelude = (RACINE / "tests" / "banc.js").read_text(encoding="utf-8")
 
     def executer(corps: str, graine: int = 0x1A2B3C4D, stockage: dict | None = None, session: dict | None = None,
-                 reseau: dict | None = None, defi: dict | None = None):
+                 reseau: dict | None = None, defi: dict | None = None, poser_les_dialogues: bool = True,
+                 dialogues_panne: int = 0):
         # `stockage` / `session` : ce que le navigateur gardait AVANT le chargement.
         # `reseau` : ce que /api/compte/ repond (M14) — l'ouverture part des que la
         # ville est batie, donc ses reponses se posent avant, jamais pendant.
         script = prelude + "\nrapporter(banc(" + corps + "));\n"
-        entree = {"racine": str(RACINE), "defs": paquet, "graine": graine}
+        # ⚠️ `poser_les_dialogues=False` : le catalogue part NU, et le jeu doit aller
+        # chercher chaque dialogue — c'est ainsi qu'on juge la porte elle-meme.
+        entree = {"racine": str(RACINE), "defs": paquet, "graine": graine,
+                  "dialogues": dialogues, "poser_les_dialogues": poser_les_dialogues,
+                  "dialogues_panne": dialogues_panne}
         if stockage is not None:
             entree["stockage"] = stockage
         if session is not None:

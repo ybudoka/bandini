@@ -559,6 +559,12 @@ def test_une_voix_de_l_histoire_se_decode_et_baisse_la_radio(page, serveur, erre
     # DECODE. On le demande donc explicitement.
     page.evaluate("window.BANDINI.Son.Ambiance.jouer()")
     page.wait_for_function("window.BANDINI.Son.Ambiance.courante === 'ville'", timeout=20000)
+    # ⚠️ LES VOIX D'UNE MISSION NE SONT PLUS DANS LE PAQUET (24 sept. 2026) : elles se
+    # declarent avec son dialogue (`/api/dialogue/<slug>`). Dans le jeu, la bulle du
+    # donneur le demande ; ici on le demande explicitement, avant de chercher sa voix.
+    page.evaluate("window.BANDINI.Histoire.chargerDialogue('m1')")
+    page.wait_for_function(
+        "window.BANDINI.B.defs.audio.histoire.some(v => v.mission === 'm1')", timeout=20000)
     premiere = page.evaluate("window.BANDINI.B.defs.audio.histoire.find(v => v.mission === 'm1' && v.fichier)")
     if not premiere:
         pytest.skip("aucune voix de l'histoire generee (scripts/audio_elevenlabs.py --voix)")
@@ -772,6 +778,10 @@ def test_tout_ce_qui_doit_s_entendre_s_entend(page, serveur, erreurs):
         "() => { BANDINI.Son.reglerBoucle('ambiance-ville', 1); return window.__mesure(1500); }")
 
     # Une replique de l'histoire, la ville coupee pour n'entendre qu'elle.
+    # ⚠️ Son dialogue d'abord : les voix d'une mission ne sont plus dans le paquet.
+    page.evaluate("window.BANDINI.Histoire.chargerDialogue('m1')")
+    page.wait_for_function(
+        "window.BANDINI.B.defs.audio.histoire.some(v => v.mission === 'm1')", timeout=20000)
     premiere = page.evaluate(
         "window.BANDINI.B.defs.audio.histoire.find(v => v.mission === 'm1' && v.fichier)")
     if premiere:
