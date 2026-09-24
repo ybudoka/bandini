@@ -25,8 +25,12 @@ Personne n'a rien cassé : trois sessions ont pioché dans les voix libres du co
 et la liste des voix prises est écrite à deux endroits (`audio.py` pour la police,
 `missions.PERSONNAGES` pour les gens).
 
-**Ce que ça coûte.** Le remède n'est pas un `if` : il faut **régénérer** des clips, et le quota
-ElevenLabs est à sec jusqu'au **17 oct. 2026**. Deux chemins, et c'est à Martin de trancher :
+**Ce que ça coûte.** Le remède n'est pas un `if` : il faut **régénérer** des clips.
+
+⚠️ **Le quota n'est plus l'obstacle** — Martin a pris un **nouveau forfait** le 24 sept. 2026, le
+jour même où cette ligne a été écrite. Il reste à choisir deux voix libres du compte
+(`scripts/audio_elevenlabs.py --voix` dit lesquelles des voix nommées existent ; le compte en a
+plus que le dépôt n'en nomme). Deux chemins, et c'est à Martin de trancher :
 
 - **la police change de voix** — dix clips à refaire (`police_*_r`), deux voix libres à choisir
   dans le compte ; le scanner est un bruit de fond, personne ne le reconnaîtra ;
@@ -34,6 +38,13 @@ ElevenLabs est à sec jusqu'au **17 oct. 2026**. Deux chemins, et c'est à Marti
   leurs), et trois personnages qu'on a peut-être déjà écoutés.
 
 Le premier chemin est le moins cher et le moins risqué.
+
+⚠️ **Et un troisième, écarté** : transposer les dix clips en post-production plutôt que de les
+régénérer — la vitesse de bande (`asetrate` + `atempo`) déplace le pitch **et les formants**, donc
+le corps de la voix, et le scanner coupe déjà tout sous 300 Hz ; `--refinir` rejoue la finition
+depuis les masters **sans un crédit**. C'était le bon chemin tant que le quota était à sec ; il ne
+l'est plus. Deux vraies voix valent mieux qu'une voix déguisée, et la transposition reste ce
+qu'elle est : un outil pour réutiliser un fond, pas pour économiser des crédits qu'on a.
 
 ⚠️ **Et le vrai correctif est ailleurs** : rien n'empêche la prochaine session de reprendre une
 voix déjà prise. `scripts/audio_elevenlabs.py --voix` sait dire quelles voix du compte existent ;

@@ -58,7 +58,7 @@ que je n'ai pas. Cette première moitié ne demande **aucun son neuf**.
 
 ✅ **Toute la deuxième vague est livrée** (21 et 24 sept. 2026) — voir les notes. ⚠️ **Reste à
 générer** : les vingt-quatre clips des répliques par contexte, quand le quota ElevenLabs se remet
-(17 oct. 2026) ; la règle d'`audio.py` fait que la rue parle comme avant d'ici là.
+(⚠️ **nouveau forfait le 24 sept. 2026** : le quota n'est plus l'obstacle) ; la règle d'`audio.py` fait que la rue parle comme avant d'ici là.
 
 **Ce qui reste, et ce que ça coûte** : la radio qui parle (animateur, pubs, bulletin), la
 police à la radio, les bruits de quartier, le souffle du joueur, et les banques de répliques
@@ -302,7 +302,8 @@ reconnaître** (24 sept. 2026) — les deux derniers morceaux de M15.
     homme-sandwich crie son spécial pareil à trois heures du matin, c'est son métier. Un genre
     sans contexte tire dans tout ce qu'il a.
 - ⚠️ **LES VINGT-QUATRE MP3 N'EXISTENT PAS ENCORE** : le quota ElevenLabs est à sec jusqu'au
-  **17 oct. 2026**. Ce n'est pas une porte laissée ouverte — c'est la règle d'`audio.py` qui
+  **17 oct. 2026** — ⚠️ et ce quota-là a **sauté le jour même** : Martin a pris un nouveau forfait,
+  la dette est échue avant d'avoir vieilli. Ce n'est pas une porte laissée ouverte — c'est la règle d'`audio.py` qui
   joue : `exporter()` ne déclare que les fichiers présents, une banque vide **se rabat sur
   `normal`**, et la rue parle comme avant. Le jour où les fichiers arrivent, la porte se referme
   d'elle-même, exactement comme pour les six leçons du Clairon (écrites le 14 sept., mises en
