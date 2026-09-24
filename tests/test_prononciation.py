@@ -16,6 +16,8 @@ toucher au texte qu'on lit. Ce qui peut s'y perdre sans que personne l'entende :
 
 import json
 import re
+import shutil
+import subprocess
 import xml.etree.ElementTree as ET
 
 import pytest
@@ -172,3 +174,50 @@ def test_la_note_du_televersement_suit_le_lexique():
     if note is None:
         pytest.skip("le lexique a changé depuis le dernier téléversement : le script en refera un")
     assert re.fullmatch(r"[A-Za-z0-9]+", note["id"])
+
+
+# --- L'étiquette : avec quelles règles une voix a été faite (24 sept. 2026) ------------------
+
+def test_la_signature_dit_les_regles_qui_touchent_une_replique():
+    assert prononciation.signature("Ça coûte quinze piastres.") == "piastres=pjɑs"
+    assert prononciation.signature("Envoye, quinze piastres!") == "piastres=pjɑs;Envoye=Anvoueille"
+    assert prononciation.signature("Rien à dire ici.") == ""
+
+
+def test_une_voix_est_a_refaire_seulement_si_son_etiquette_a_vieilli():
+    """⚠️ Rouge avant : `--dictionnaire` listait toute voix qui disait un mot du lexique — le
+    24 sept. 2026, les douze qu'on venait de refaire avec lui (1 071 caractères pour rien)."""
+    texte = "Ça coûte quinze piastres."
+    assert not prononciation.a_refaire(texte, "piastres=pjɑs"), "faite avec la règle d'aujourd'hui"
+    assert prononciation.a_refaire(texte, None), "faite avant la règle"
+    assert prononciation.a_refaire(texte, "piastres=pjas"), "faite avec une règle qui a changé depuis"
+    assert prononciation.a_refaire("Rien à dire ici.", "donc=dɔ̃"), "faite avec une règle retirée depuis"
+    assert not prononciation.a_refaire("Rien à dire ici.", None), "jamais touchée"
+
+
+def test_les_trois_finitions_portent_l_etiquette():
+    """La génération, `--refinir` et `--secher` fabriquent une voix par `finir_voix`, qui
+    efface toutes les étiquettes (`-map_metadata -1`). La génération pose la signature ;
+    les deux autres repartent d'un master déjà payé et REPORTENT l'étiquette du fichier."""
+    source = (prononciation.FICHIER.parents[1] / "scripts" / "audio_elevenlabs.py").read_text(encoding="utf-8")
+    assert source.count("bilan = finir_voix(") == 3
+    assert source.count("etiquette_dictionnaire(audio.chemin_voix(ligne)))") == 2
+    boucle = source[source.index("for ligne in voix:", source.index("def main")):]
+    assert "prononciation.signature(interpretation.dit(ligne))" in boucle
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg absent")
+def test_finir_voix_ecrit_l_etiquette_dans_le_mp3(tmp_path):
+    import importlib.util
+    chemin = prononciation.FICHIER.parents[1] / "scripts" / "audio_elevenlabs.py"
+    spec = importlib.util.spec_from_file_location("audio_elevenlabs_juge", chemin)
+    script = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(script)
+    master = tmp_path / "master.mp3"
+    subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "sine=frequency=220:duration=1.5",
+                    "-ar", "44100", str(master)], check=True)
+    cible = tmp_path / "voix.mp3"
+    script.finir_voix(master, cible, True, "voix isolee", None, "piastres=pjɑs")
+    assert script.etiquette_dictionnaire(cible) == "piastres=pjɑs"
+    script.finir_voix(master, cible, True)
+    assert script.etiquette_dictionnaire(cible) is None, "sans dictionnaire, pas d'étiquette"

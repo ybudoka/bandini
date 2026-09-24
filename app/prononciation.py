@@ -61,6 +61,12 @@ MARQUE_RESERVE = "EN RÉSERVE"
 MARQUE_LECTURE = "dit :"
 
 
+#: L'étiquette mp3 d'une voix touchée par le dictionnaire : les règles qui l'ont touchée,
+#: telles qu'elles étaient quand on l'a générée (`signature`). Sans elle, `--dictionnaire`
+#: ne savait pas qu'une voix avait déjà été refaite (24 sept. 2026 : il listait encore les
+#: douze qu'on venait de payer).
+ETIQUETTE = "dictionnaire"
+
 #: Ce qu'un lexème peut dire du son : le phonème IPA ou l'alias.
 GENRES = ("phoneme", "alias")
 
@@ -144,6 +150,20 @@ def touches(texte: str) -> list[str]:
     motif = _tout()
     pris = {m.group(0) for m in motif.finditer(texte)} if motif else set()
     return [mot for mot, _ in regles() if mot in pris]
+
+
+def signature(texte: str) -> str:
+    """Les règles qui touchent ce texte, telles qu'elles sont : « piastres=pjɑs;Envoye=Anvoueille ».
+    Vide si aucune ne le touche. C'est ce qu'une voix générée avec le dictionnaire porte."""
+    sons = dict(regles())
+    return ";".join(f"{mot}={sons[mot]}" for mot in touches(texte))
+
+
+def a_refaire(texte: str, etiquette: str | None) -> bool:
+    """Une voix déjà faite est à refaire si les règles qui la touchent AUJOURD'HUI ne sont pas
+    celles qu'elle porte : une règle neuve (pas d'étiquette), changée, ou retirée (l'étiquette
+    reste, la signature est vide). Une voix qu'aucune règle n'a jamais touchée ne l'est pas."""
+    return (etiquette or "") != signature(texte)
 
 
 def entendu(texte: str) -> str:

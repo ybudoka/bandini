@@ -90,6 +90,10 @@ bute sur un mot : on fait dire UNE phrase sans puis avec (une paire ≈ 100 cré
   pour que les autres sessions réutilisent le même). Puis il le joint à **chaque** voix
   générée (`pronunciation_dictionary_locators`).
 - **Rien ne se régénère tout seul** : une règle vaut pour la prochaine voix générée.
+- **Une voix sait avec quelles règles elle a été faite** (24 sept. 2026) : son mp3 porte
+  l'étiquette `dictionnaire` (`piastres=pjɑs;Envoye=Anvoueille`, `prononciation.signature`).
+  `--dictionnaire` ne liste qu'une voix dont l'étiquette diffère des règles d'aujourd'hui — une
+  règle ajoutée, changée ou retirée. `--refinir` et `--secher` la reportent (même master).
 
 ```bash
 uv run python scripts/audio_elevenlabs.py --dictionnaire   # téléverser s'il a changé, et les voix déjà faites qu'il changerait (gratuit)
