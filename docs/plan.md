@@ -89,6 +89,7 @@ pas quand l'ordre de travail change.
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/m13-les-deux-fins.md#fiche) · [notes](jalons/m13-les-deux-fins.md#notes) |
 | Infiltration : portes verrouillées et gardes privés | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/infiltration-portes-verrouillees-et-gardes-prives.md#fiche) |
 | Générer les bruitages qui n'ont aucun équivalent payé | ⬜ **à faire** (à trancher par Martin : le quota du mois est épuisé jusqu'au 17 oct.) | — | **P4** | ajout | [fiche](jalons/les-bruitages-qui-n-ont-aucun-equivalent-paye.md#fiche) |
+| Une voix sait avec quel dictionnaire elle a été faite | ⬜ **en cours** | 24 sept. 2026 | **P4** | **correctif** | [fiche](jalons/une-voix-sait-avec-quel-dictionnaire-elle-a-ete-faite.md#fiche) |
 
 ## L'ordre
 
