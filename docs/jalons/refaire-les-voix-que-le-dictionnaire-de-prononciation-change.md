@@ -25,5 +25,7 @@ Livré le 24 sept. 2026, sur le oui de Martin.
 - Deux voix s'allongent (ti_guy-m1-2 : 5,3 → 6,4 s ; bouchard-f06-7 : 4,5 → 5,8 s) : aucune scène
   ne les coupe (`test_aucune_voix_de_scene_n_est_coupee_par_la_suivante`), l'ouverture et le
   niveau des voix restent verts.
-- `--dictionnaire` ne liste plus aucune voix à refaire. L'avant/après des douze :
+- ⚠️ `--dictionnaire` **liste encore ces douze voix** : il voit qu'un mot du lexique est dans une
+  voix qui existe, pas avec quel dictionnaire elle a été faite. Ne pas les refaire une deuxième fois
+  (1 071 caractères pour rien). L'avant/après des douze :
   `captures/essai-dico/00-douze-voix-avant-apres.mp3` (hors dépôt) — Martin écoute.
