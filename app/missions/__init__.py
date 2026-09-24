@@ -874,20 +874,26 @@ def repliques() -> list[dict]:
 #: pour 250 000, 75 138 gzip pour 54 000), et le remede est ecrit depuis le 16 sept. dans
 #: la fiche de M16. Le CATALOGUE reste — c'est ce que le carnet, le GPS et le telephone
 #: lisent, et il faut l'avoir en entier pour savoir quelle mission est disponible. Les
-#: repliques et les scenes, elles, ne servent qu'a UNE mission a la fois : elles viennent
-#: par `/api/dialogue/<slug>`, quand son donneur apparait ou quand le telephone la choisit.
+#: repliques, les scenes et les objectifs, eux, ne servent qu'a UNE mission a la fois :
+#: ils viennent par `/api/mission/<slug>`, quand son donneur apparait ou quand le
+#: telephone la choisit.
 #:
-#: ⚠️ Mesure au decoupage, le 24 sept. 2026 : le paquet passe de **369 224 a 239 190 octets
-#: bruts** (75 138 a 53 097 gzip), sous ses deux plafonds (250 000 et 54 000). Les trente-six
-#: dialogues pesent 131 956 octets bruts en tout — 3,7 Ko chacun, le plus gros 5,4 Ko : une
+#: ⚠️ **LES `objectifs` EN SONT SORTIS LE 24 SEPT. 2026, APRES MESURE** : ils pesaient
+#: 18 391 octets bruts / 4 319 gzip des 26 158 / 6 074 du catalogue — les deux tiers. Et
+#: ils ne servent qu'a partir de `commencer()`, donc APRES l'intro, donc apres le
+#: dialogue : la meme porte, le meme instant.
+#:
+#: Mesure au decoupage : le catalogue passe de 170 a **53 octets gzip par mission**, et la
+#: marge du paquet de 903 a **5 029 octets** — de quoi tenir **94 missions de plus**, la
+#: ou il n'en tenait cinq. Les 109 de M16 y sont presque ; le reste viendra des notes de
+#: `musique.py` (39 314 bruts / 7 823 gzip), qui se chargent deja par district.
+#:
+#: ⚠️ Mesure au decoupage, le 24 sept. 2026 : le paquet passe de **369 224 a 220 367 octets
+#: bruts** (75 138 a 48 971 gzip), sous ses deux plafonds (250 000 et 54 000). Les trente-six
+#: missions pesent 150 778 octets bruts en tout — 4,2 Ko chacune, la plus grosse 6 Ko : une
 #: requete qu'un telephone avale sans s'en apercevoir, sur la route que
 #: `Son.Voix.chargerHistoire` prend deja pour ses mp3.
-#:
-#: ⚠️ **ET LA MARGE EST MINCE** : 903 octets sous le plafond gzip. Le catalogue, lui, reste
-#: dans le paquet et pese 170 octets gzip par mission — cinq missions de plus et il repasse
-#: au-dessus. Les 109 missions de M16 ne tiendront pas la : ce qui doit sortir ensuite est
-#: mesure dans la fiche du jalon (les `objectifs`, puis les notes de `musique.py`).
-HORS_DU_PAQUET = ("dialogue", "scenes")
+HORS_DU_PAQUET = ("dialogue", "scenes", "objectifs")
 
 
 def _sans_le_jeu(dialogue: dict) -> dict:
@@ -918,12 +924,17 @@ def pour_le_navigateur() -> list[dict]:
             for mission in CATALOGUE]
 
 
-def dialogue_pour_le_navigateur(slug: str) -> dict | None:
-    """Ce qu'une mission dit et ce qu'elle montre — la reponse de `/api/dialogue/<slug>`.
+def pour_jouer(slug: str) -> dict | None:
+    """TOUT CE QU'UNE MISSION DEMANDE POUR SE JOUER — la reponse de `/api/mission/<slug>`.
 
-    ⚠️ Les scenes voyagent AVEC les repliques, et par la meme porte : une scene sans
-    ses repliques est une camera qui filme un silence, et elles arrivent au meme
-    moment — quand on commence a parler a la mission.
+    Quatre choses, et elles arrivent ensemble parce qu'elles servent au meme instant :
+    ce qu'elle DIT (`dialogue`), ce qu'elle MONTRE (`scenes`), avec quelles VOIX
+    (`voix`), et ce qu'elle DEMANDE DE FAIRE (`objectifs`).
+
+    ⚠️ Une scene sans ses repliques est une camera qui filme un silence ; des objectifs
+    sans son intro sont une mission qui commence avant qu'on lui ait parle. Le catalogue,
+    lui, garde de quoi SAVOIR — son titre, son donneur, ses prerequis, sa recompense :
+    c'est ce que le carnet, le GPS et le telephone lisent, et il faut l'avoir en entier.
     """
     mission = par_slug(slug)
     if mission is None:
@@ -931,6 +942,7 @@ def dialogue_pour_le_navigateur(slug: str) -> dict | None:
     from .. import audio
     return {"slug": slug, "dialogue": _sans_le_jeu(mission["dialogue"]),
             "scenes": copy.deepcopy(mission.get("scenes") or {}),
+            "objectifs": copy.deepcopy(mission["objectifs"]),
             # ⚠️ **ET SES VOIX** : elles se chargeaient deja par mission
             # (`Son.Voix.chargerHistoire`), mais se DECLARAIENT au demarrage — quatre
             # cent vingt mp3 annonces pour en jouer sept. Meme regle, meme route, meme

@@ -48,7 +48,7 @@ def _page_d_accueil() -> str:
     return render_template("index.html", scripts_du_jeu=_scripts_du_jeu(gabarit),
                            empreinte_definitions=current_app.extensions["definitions"].etag,
                            empreinte_carte=current_app.extensions["carte"].etag,
-                           empreinte_dialogues=current_app.extensions["dialogues_empreinte"],
+                           empreinte_missions=current_app.extensions["missions_empreinte"],
                            url_compte=comptes.CHEMIN_COOKIE + "/")
 
 
@@ -91,21 +91,26 @@ def api_carte():
     return _revalide(current_app.extensions["carte"])
 
 
-@bp.route("/api/dialogue/<slug>")
-def api_dialogue(slug: str):
-    """Ce qu'UNE mission dit, montre, et avec quelles voix — hors du paquet.
+@bp.route("/api/mission/<slug>")
+def api_mission(slug: str):
+    """Tout ce qu'UNE mission demande pour se jouer — hors du paquet.
 
-    ⚠️ Le paquet des definitions etait au-dessus de ses deux plafonds (24 sept. 2026) :
-    le catalogue y reste (le carnet, le GPS et le telephone le lisent en entier), les
-    repliques, les scenes et la declaration des voix partent ici. Une reponse par
-    mission, demandee quand son donneur apparait ou quand le telephone la choisit —
-    l'instant ou `Son.Voix.chargerHistoire` telecharge deja ses mp3.
+    Ce qu'elle DIT, ce qu'elle MONTRE, avec quelles VOIX, et ce qu'elle DEMANDE DE FAIRE
+    (`missions.pour_jouer`). ⚠️ Le paquet des definitions etait au-dessus de ses deux
+    plafonds (24 sept. 2026) : le catalogue y reste — le carnet, le GPS et le telephone le
+    lisent en entier —, le reste part ici. Une reponse par mission, demandee quand son
+    donneur apparait ou quand le telephone la choisit : l'instant ou
+    `Son.Voix.chargerHistoire` telecharge deja ses mp3.
+
+    ⚠️ **Elle s'appelait `/api/dialogue/<slug>` pendant un commit**, et le nom mentait des
+    que les objectifs l'ont prise : une route qui rend des objectifs ne s'appelle pas un
+    dialogue. Renommee le jour meme, avant que quoi que ce soit s'y accroche.
 
     ⚠️ Meme revalidation que les deux autres (`_revalide`, ETag faible compris), et
     **404 pour un slug inconnu** : le navigateur en demande un qu'il a lu dans le
     catalogue, donc un 404 est un defaut de notre cote, pas une adresse a deviner.
     """
-    paquet = current_app.extensions["dialogues"].get(slug)
+    paquet = current_app.extensions["missions_a_jouer"].get(slug)
     if paquet is None:
         return Response(status=404)
     return _revalide(paquet)
@@ -310,11 +315,11 @@ def travailleur():
     navigateur le redemande a chaque visite, et un 304 ne coute rien. Voir
     `app/hors_ligne.py`.
     """
-    empreintes = current_app.extensions["dialogues"]
+    a_jouer = current_app.extensions["missions_a_jouer"]
     corps, empreinte = hors_ligne.travailleur(
         _page_d_accueil(), url_for("jeu.accueil"),
         Path(current_app.static_folder, "audio"), url_for("static", filename="audio/"),
-        [url_for("jeu.api_dialogue", slug=slug) for slug in empreintes])
+        [url_for("jeu.api_mission", slug=slug) for slug in a_jouer])
     if request.if_none_match.contains_weak(empreinte):
         reponse = Response(status=304)
     else:

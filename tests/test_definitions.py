@@ -85,8 +85,15 @@ def test_le_paquet_reste_leger():
     « je veux de longue mission » (+9 840 bruts / +1 629 gzip, trois missions et un personnage).
     Mesuré une fois les trois réunies : **241 179 bruts / 52 330 gzip.** Plafond posé avec de la
     marge pour ne pas revenir ici au prochain petit ajout. Le remède reste le même, écrit depuis
-    le 16 sept. dans la fiche de M16 : les dialogues sortent du paquet (`/api/dialogue/<slug>`,
+    le 16 sept. dans la fiche de M16 : ce qui sert à jouer sort du paquet (`/api/mission/<slug>`,
     ETag) — il n'est pas livré, et ce plafond-ci s'en rapproche.
+
+    ⚠️ **ET IL L'EST, LE 24 SEPT. 2026** : ce qui sert à JOUER une mission est sorti du
+    paquet (`missions.HORS_DU_PAQUET` — répliques, scènes, voix, objectifs). 369 224 →
+    **220 367 octets bruts**, 75 138 → **48 971 gzip**. Le juge était rouge depuis la
+    veille ; le catalogue est passé de 170 à **53 octets gzip par mission**, ce qui laisse
+    **94 missions de marge au lieu de cinq**. Les plafonds ne bougent pas : c'est le paquet
+    qui a maigri.
     """
     paquets = definitions.construire()
     for nom, brut_max, fil_max in (("definitions", 250_000, 54_000), ("carte", 520_000, 53_000)):

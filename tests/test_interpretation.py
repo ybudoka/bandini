@@ -350,15 +350,15 @@ def test_le_jeu_des_repliques_ne_part_pas_au_navigateur():
     from app import definitions, missions
 
     # ⚠️ **NI DANS LE PAQUET, NI DANS LES DIALOGUES.** Depuis le 24 sept. 2026, les
-    # répliques voyagent à part (`/api/dialogue/<slug>`) : le juge qui ne regardait que
+    # répliques voyagent à part (`/api/mission/<slug>`) : le juge qui ne regardait que
     # le paquet serait devenu vert sans rien prouver — il ne reste plus une réplique
     # dedans.
     paquets = definitions.construire()
-    corps = [paquets.definitions.corps.decode()] + [d.corps.decode() for d in paquets.dialogues.values()]
+    corps = [paquets.definitions.corps.decode()] + [d.corps.decode() for d in paquets.a_jouer.values()]
     for texte in corps:
         assert '"jeu"' not in texte and "[casually]" not in texte and "[worried]" not in texte
-    assert all("jeu" not in ligne for slug in paquets.dialogues
-               for lignes in missions.dialogue_pour_le_navigateur(slug)["dialogue"].values()
+    assert all("jeu" not in ligne for slug in paquets.a_jouer
+               for lignes in missions.pour_jouer(slug)["dialogue"].values()
                for ligne in lignes)
     assert any("jeu" in ligne for m in missions.CATALOGUE for lignes in m["dialogue"].values()
                for ligne in lignes), "le découpage retire le jeu d'une COPIE, pas du catalogue"

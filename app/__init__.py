@@ -47,10 +47,11 @@ def create_app(config_object: type[Config] = Config) -> Flask:
     paquets = construire()
     app.extensions["definitions"] = paquets.definitions
     app.extensions["carte"] = paquets.carte
-    # Un dialogue par mission : ce qu'elle dit, ce qu'elle montre, et avec quelles
-    # voix. Hors du paquet depuis le 24 sept. 2026 — voir `definitions.py`.
-    app.extensions["dialogues"] = paquets.dialogues
-    app.extensions["dialogues_empreinte"] = paquets.dialogues_empreinte
+    # Tout ce qu'une mission demande pour se jouer : ce qu'elle dit, ce qu'elle montre,
+    # avec quelles voix, et ce qu'elle demande de faire. Hors du paquet depuis le
+    # 24 sept. 2026 — voir `definitions.py`.
+    app.extensions["missions_a_jouer"] = paquets.a_jouer
+    app.extensions["missions_empreinte"] = paquets.missions_empreinte
 
     from .routes import bp
 

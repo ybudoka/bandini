@@ -136,7 +136,7 @@ générales :
 - **Dessin** : six gestes, une fois.
 - **Paquet** : une dizaine de plans pèsent un demi-kilo-octet par scène. Pour cinq missions,
   rien ; pour cent trente-quatre, ≈ 130 Ko bruts — les scènes **voyagent avec leurs
-  répliques**, par `/api/dialogue/<slug>` (M16).
+  répliques**, par `/api/mission/<slug>` (M16, livré le 24 sept. 2026).
 
 **Juges** — on juge le câblage, pas la fiche :
 

@@ -1,15 +1,17 @@
-"""M16 — ce qu'une mission dit, montre et avec quelles voix : hors du paquet.
+"""M16 — tout ce qu'une mission demande pour se jouer : hors du paquet.
 
 Le paquet des définitions était **au-dessus de ses deux plafonds** le 24 sept. 2026
 (369 224 octets bruts pour 250 000, 75 138 gzip pour 54 000) : trois sessions l'avaient
-grossi le même jour sans se voir. Le catalogue y reste — le carnet, le GPS et le
-téléphone le lisent en entier — et les répliques, les scènes et la déclaration des voix
-partent sur `/api/dialogue/<slug>`.
+grossi le même jour sans se voir. Le catalogue y reste — son titre, son donneur, ses
+prérequis, sa récompense : ce que le carnet, le GPS et le téléphone lisent, en entier —
+et ses **répliques**, ses **scènes**, ses **voix** et ses **objectifs** partent sur
+`/api/mission/<slug>`.
 
 ⚠️ **Un texte ne peut pas arriver en retard**, contrairement à une voix : une réplique
 sans son mp3 s'affiche quand même (`Son.Voix.attendue` la dit dès qu'il arrive), un
-dialogue absent n'a **rien** à afficher. Les juges d'ici partent donc d'un **catalogue
-nu** (`poser_les_dialogues=False`) et attendent vraiment le réseau.
+dialogue absent n'a **rien** à afficher — et des objectifs absents, c'est une mission qui
+n'a rien à faire faire. Les juges d'ici partent donc d'un **catalogue nu**
+(`poser_les_missions=False`) et attendent vraiment le réseau.
 """
 
 
@@ -29,18 +31,21 @@ def test_le_banc_pose_les_dialogues_par_defaut(banc):
     assert r["voix"] > 0, "les voix de la mission ne sont pas déclarées : le banc ne joue rien"
 
 
-def test_un_catalogue_nu_n_a_ni_repliques_ni_scenes(banc):
-    """Le paquet ne porte que le catalogue — et il le porte EN ENTIER : `disponibles()`
-    et le carnet en ont besoin pour savoir quelle mission est possible."""
+def test_un_catalogue_nu_dit_encore_quelle_mission_est_possible(banc):
+    """Le paquet ne porte que le catalogue — et il le porte EN ENTIER : `disponibles()`,
+    le carnet et le GPS en ont besoin pour savoir quelle mission est possible et chez qui.
+
+    ⚠️ Ce qui en est parti, c'est ce qui sert à la JOUER, jamais ce qui sert à la CHOISIR."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const m = L.B.defs.missions[0];
         return { combien: L.B.defs.missions.length, dialogue: !!m.dialogue, scenes: !!m.scenes,
-                 titre: m.titre, objectifs: m.objectifs.length,
+                 objectifs: !!m.objectifs, titre: m.titre, donneur: m.donneur,
+                 recompense: m.recompense, prerequis: !!m.prerequis,
                  dispo: L.Histoire.disponibles().map(function (x) { return x.slug; }) };
-    }""", poser_les_dialogues=False)
-    assert r["dialogue"] is False and r["scenes"] is False
-    assert r["combien"] >= 30 and r["titre"] and r["objectifs"] > 0
+    }""", poser_les_missions=False)
+    assert r["dialogue"] is False and r["scenes"] is False and r["objectifs"] is False
+    assert r["combien"] >= 30 and r["titre"] and r["donneur"] and r["recompense"] and r["prerequis"]
     assert r["dispo"] == ["m1"], "le catalogue nu ne dit plus quelle mission est possible : %s" % r
 
 
@@ -55,18 +60,18 @@ def test_la_bulle_d_un_donneur_demande_son_texte(banc):
         const avant = o.fetchs.length;
         o.frame(1); o.frame(1); o.frame(1);
         const demandes = o.fetchs.slice(avant).map(function (f) { return String(f.url); })
-          .filter(function (u) { return u.indexOf('/api/dialogue/') === 0; });
+          .filter(function (u) { return u.indexOf('/api/mission/') === 0; });
         await o.attendre();
         const m = L.Histoire.disponibles()[0];
         return { demandes: demandes, texte: !!(m && m.dialogue) };
-    }""", poser_les_dialogues=False)
+    }""", poser_les_missions=False)
     assert r["demandes"], "la bulle de Ti-Guy ne demande pas son texte"
     assert len(r["demandes"]) == 1, "une demande par image : %s" % r["demandes"]
-    assert "/api/dialogue/m1" in r["demandes"][0]
+    assert "/api/mission/m1" in r["demandes"][0]
     assert r["texte"] is True, "le texte est arrivé mais la mission ne l'a pas"
 
 
-def test_on_parle_au_donneur_et_la_mission_part_quand_son_texte_arrive(banc, dialogues):
+def test_on_parle_au_donneur_et_la_mission_part_quand_son_texte_arrive(banc, a_jouer):
     """La porte elle-même, depuis un catalogue nu : ACTION sur le donneur, le texte
     arrive, l'intro se joue et les voix de la mission sont déclarées.
 
@@ -87,13 +92,13 @@ def test_on_parle_au_donneur_et_la_mission_part_quand_son_texte_arrive(banc, dia
                  lignes: cinema ? cinema.lignes.length : 0, qui: cinema ? cinema.lignes[0].qui : null,
                  slug: cinema ? cinema.lignes[0].slug : null, voix: voix.length,
                  demandee: L.Son.Voix.demandees[0] };
-    }""", poser_les_dialogues=False)
+    }""", poser_les_missions=False)
     assert r["parle"] is True, "ACTION sur le donneur ne fait rien"
     assert r["tout_de_suite"] is False, "la boîte s'ouvre avant que le texte soit là"
     assert r["mission"] == "m1", "la mission ne se pose pas quand son texte arrive : %s" % r
-    assert 1 <= r["lignes"] <= len(dialogues["m1"]["dialogue"]["intro"])
+    assert 1 <= r["lignes"] <= len(a_jouer["m1"]["dialogue"]["intro"])
     assert r["qui"] == "ti_guy" and r["slug"] == "ti_guy-m1-1"
-    assert r["voix"] == len(dialogues["m1"]["voix"]), "les voix de la mission ne sont pas déclarées"
+    assert r["voix"] == len(a_jouer["m1"]["voix"]), "les voix de la mission ne sont pas déclarées"
     assert r["demandee"] == "ti_guy-m1-1", "la réplique demande sa voix"
 
 
@@ -118,8 +123,8 @@ def test_deux_coups_d_action_ne_posent_pas_la_mission_deux_fois(banc):
         return { lignes: cinema ? cinema.lignes.length : 0,
                  premiere: L.Son.Voix.demandees.filter(function (s) { return s === 'ti_guy-m1-1'; }).length,
                  demandes: o.fetchs.map(function (f) { return String(f.url); })
-                   .filter(function (u) { return u.indexOf('/api/dialogue/m1') === 0; }).length };
-    }""", poser_les_dialogues=False)
+                   .filter(function (u) { return u.indexOf('/api/mission/m1') === 0; }).length };
+    }""", poser_les_missions=False)
     assert r["demandes"] == 1, "%s demandes pour le même dialogue" % r["demandes"]
     assert r["premiere"] == 1, "la première réplique est dite %s fois : l'intro s'est rejouée (%s)" % (r["premiere"], r)
 
@@ -140,7 +145,7 @@ def test_un_reseau_qui_tombe_ne_ferme_pas_la_mission(banc):
         for (let i = 0; i < 4; i++) await o.attendre();
         return { apresLaPanne: apresLaPanne, ensuite: !!L.B.cinema,
                  mission: L.B.partie.mission && L.B.partie.mission.slug };
-    }""", poser_les_dialogues=False, dialogues_panne=1)
+    }""", poser_les_missions=False, missions_panne=1)
     assert r["apresLaPanne"] is False, "la boîte s'ouvre alors que le texte n'est jamais arrivé"
     assert r["ensuite"] is True and r["mission"] == "m1", \
         "le réseau est revenu et la mission reste fermée : %s" % r
@@ -160,12 +165,12 @@ def test_une_partie_reprise_en_pleine_mission_demande_son_texte(banc):
         const avant = o.fetchs.length;
         o.frame(1); o.frame(1);
         const demandes = o.fetchs.slice(avant).map(function (f) { return String(f.url); })
-          .filter(function (u) { return u.indexOf('/api/dialogue/m2') === 0; });
+          .filter(function (u) { return u.indexOf('/api/mission/m2') === 0; });
         for (let i = 0; i < 4; i++) await o.attendre();
         o.frame(1);
         const m = L.Histoire.courante();
         return { demandes: demandes.length, texte: !!(m && m.dialogue), vivant: !!L.B.joueur.vivant };
-    }""", poser_les_dialogues=False)
+    }""", poser_les_missions=False)
     assert r["demandes"] >= 1, "une partie reprise en pleine mission ne demande pas son texte"
     assert r["texte"] is True and r["vivant"] is True, r
 
@@ -186,7 +191,7 @@ def test_le_telephone_ne_sonne_pas_pour_une_mission_sans_texte(banc):
         const m = L.Histoire.disponibles()[0];
         return { sonnerie: !!L.B.sonnerie, appelT: p.appelT, dispo: m && m.slug,
                  texte: !!(m && m.dialogue), appels: Object.keys(p.appels).length };
-    }""", poser_les_dialogues=False, dialogues_panne=99)
+    }""", poser_les_missions=False, missions_panne=99)
     assert r["dispo"] == "m2", "ce n'est pas m2 qui devrait appeler : %s" % r
     assert r["texte"] is False, "le réseau a répondu : le juge ne mesure rien"
     assert r["sonnerie"] is False, "le téléphone sonne pour une mission qui n'a rien à dire"

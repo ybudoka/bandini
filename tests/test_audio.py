@@ -307,13 +307,13 @@ def test_le_navigateur_joue_les_trois_sons_de_l_eau():
         assert f"joue('{slug}')" in source, slug
 
 
-def test_les_voix_de_l_histoire_sont_declarees_par_mission(paquet, dialogues):
+def test_les_voix_de_l_histoire_sont_declarees_par_mission(paquet, a_jouer):
     """Chaque replique de l'histoire est servie avec son personnage et sa
     mission, pour que le navigateur ne charge que celles de la mission en
     cours — jamais au demarrage.
 
     ⚠️ **ET DEPUIS LE 24 SEPT. 2026, ELLE N'EST PLUS DECLAREE AU DEMARRAGE NON PLUS** :
-    celles d'une mission voyagent avec son dialogue (`/api/dialogue/<slug>`), le paquet
+    celles d'une mission voyagent avec son dialogue (`/api/mission/<slug>`), le paquet
     ne garde que les trois bancs qui n'appartiennent a aucune mission — le journal du
     matin, l'ouverture, et le mot de repos de chaque personnage. Declarer quatre cent
     vingt mp3 au premier ecran pour en jouer sept, c'etait le meme gaspillage que le
@@ -329,9 +329,9 @@ def test_les_voix_de_l_histoire_sont_declarees_par_mission(paquet, dialogues):
         "le journal lu par le narrateur, l'ouverture qu'il lit aussi, et le mot de repos"
     # ⚠️ Les missions se lisent dans le catalogue : une liste écrite ici se retouchait à chaque mission
     # ajoutée (le 21 sept. 2026, cinq de plus la faisaient rougir).
-    assert set(dialogues) == {m["slug"] for m in missions.CATALOGUE}
-    des_missions = [v for slug in dialogues for v in dialogues[slug]["voix"]]
-    assert all(dialogues[v["mission"]]["voix"] for v in des_missions), "une voix sans son dialogue"
+    assert set(a_jouer) == {m["slug"] for m in missions.CATALOGUE}
+    des_missions = [v for slug in a_jouer for v in a_jouer[slug]["voix"]]
+    assert all(a_jouer[v["mission"]]["voix"] for v in des_missions), "une voix sans son dialogue"
     toutes = histoire + des_missions
     assert all(v["qui"] and v["partie"] for v in toutes)
     assert any(v["telephone"] for v in des_missions), "les appels sont marques : la voix vient du combine"

@@ -248,12 +248,17 @@ _r("lulu", "Reviens ce soir.", 0, jeu="[warmly] Reviens ce soir.")   # RENVOI : 
 | `fin` | la récompense, dite par **quelqu'un qui est là** | 1 à 3 répliques |
 | `echec` | on a raté | une réplique **au combiné** |
 
-À partir de M16, **les dialogues sortent du paquet** : les répliques d'une
-mission viennent par `/api/dialogue/<slug>` **quand le téléphone sonne** (avec un
-ETag), et **les scènes voyagent avec elles**. Le catalogue (objectifs,
-prérequis, `donne`) reste dans le paquet — c'est ce que le carnet et le GPS
-lisent. Rien ne change pour **l'écriture** d'une mission : on écrit ici les
-répliques comme avant, le routeur s'occupe du reste.
+✅ **Depuis le 24 sept. 2026, tout ce qui sert à JOUER une mission sort du
+paquet** : ses répliques, ses **scènes**, ses **voix** et ses **objectifs**
+viennent par `/api/mission/<slug>` (avec un ETag), demandés dès que la bulle de
+son donneur s'allume ou que le téléphone la choisit. Le catalogue — son titre,
+son donneur, ses prérequis, sa récompense — reste dans le paquet : c'est ce que
+le carnet, le GPS et le téléphone lisent, et il faut l'avoir en entier.
+
+⚠️ **Rien ne change pour l'écriture d'une mission** : on écrit ici son fichier
+comme avant, objectifs et répliques ensemble, et `missions.pour_jouer` fait le
+partage. C'est le seul endroit où le découpage se décide
+(`missions.HORS_DU_PAQUET`).
 
 Règles jugées (`erreurs_de_mise_en_scene`) :
 

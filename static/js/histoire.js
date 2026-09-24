@@ -10,11 +10,12 @@
    Le telephone : quand une mission devient possible, son donneur appelle
    quelques secondes plus tard — la voix vient du combine.
 
-   ⚠️ **CE QU'UNE MISSION DIT N'EST PLUS DANS LE PAQUET** (24 sept. 2026) : il etait
-   au-dessus de ses deux plafonds. `B.defs.missions` porte le CATALOGUE — c'est lui que
-   le carnet, le GPS et le telephone lisent, et il faut l'avoir en entier pour savoir
-   quelle mission est possible. Ses repliques, ses scenes et la declaration de ses voix
-   arrivent par `/api/dialogue/<slug>` : voir `chargerDialogue`. */
+   ⚠️ **CE QU'UNE MISSION DEMANDE POUR SE JOUER N'EST PLUS DANS LE PAQUET** (24 sept.
+   2026) : il etait au-dessus de ses deux plafonds. `B.defs.missions` porte le CATALOGUE —
+   son titre, son donneur, ses prerequis, sa recompense : c'est lui que le carnet, le GPS
+   et le telephone lisent, et il faut l'avoir en entier pour savoir quelle mission est
+   possible. Ses repliques, ses scenes, ses voix et ses OBJECTIFS arrivent par
+   `/api/mission/<slug>` : voir `charger`. */
 
 const Histoire = (function () {
   'use strict';
@@ -33,7 +34,7 @@ const Histoire = (function () {
     `DELAI_APPEL` avant de sonner) — et les portes verifient quand meme : un reseau lent
     ne doit pas ouvrir une boite vide. */
   let fenetre = null;
-  let gabaritDialogue = '/api/dialogue/SLUG';
+  let gabarit = '/api/mission/SLUG';
   //: slug -> ce qu'on rappellera quand son texte arrivera. La clef seule dit « en
   //: route » : on ne demande jamais deux fois la meme.
   const enRoute = {};
@@ -43,25 +44,28 @@ const Histoire = (function () {
 
   function init(w, racine) {
     fenetre = w;
-    const gabarit = racine && racine.dataset && racine.dataset.urlDialogue;
-    if (gabarit) gabaritDialogue = gabarit;
+    const dit = racine && racine.dataset && racine.dataset.urlMission;
+    if (dit) gabarit = dit;
   }
 
-  /** Demande ce qu'une mission dit, montre et avec quelles voix — une seule fois.
-      `suite` s'appelle quand c'est la ; tout de suite si ca y est deja. Rend `true`
-      quand le texte est deja sous la main. */
-  function chargerDialogue(slug, suite) {
+  /** Demande tout ce qu'une mission demande pour se jouer — une seule fois. `suite`
+      s'appelle quand c'est la ; tout de suite si ca y est deja. Rend `true` quand elle est
+      deja sous la main. */
+  function charger(slug, suite) {
     const m = mission(slug);
     if (!m) return false;
     if (m.dialogue) { if (suite) suite(); return true; }
     if (enRoute[slug]) { if (suite) enRoute[slug].push(suite); return false; }
     enRoute[slug] = suite ? [suite] : [];
     if (!fenetre || !fenetre.fetch) return false;
-    fenetre.fetch(gabaritDialogue.replace('SLUG', slug))
-      .then(function (r) { if (!r.ok) throw new Error('dialogue ' + slug + ' : ' + r.status); return r.json(); })
+    fenetre.fetch(gabarit.replace('SLUG', slug))
+      .then(function (r) { if (!r.ok) throw new Error('mission ' + slug + ' : ' + r.status); return r.json(); })
       .then(function (d) {
         m.dialogue = d.dialogue || {};
         m.scenes = d.scenes || {};
+        // ⚠️ Les OBJECTIFS aussi (ils pesaient les deux tiers du catalogue) : ils ne
+        // servent qu'a partir de `commencer()`, donc apres l'intro, donc apres tout ceci.
+        m.objectifs = d.objectifs || [];
         // ⚠️ SES VOIX SE DECLARENT ICI AUSSI. `Son.Voix.histoire()` lit la liste du
         // paquet, et celles d'une mission n'y sont plus : sans cette ligne, le texte
         // s'afficherait et personne ne parlerait. `chargerHistoire` va chercher les
@@ -966,7 +970,7 @@ const Histoire = (function () {
     if (!prochaine) return;
     // ⚠️ Son texte AVANT sa sonnerie : il vole pendant que le delai s'ecoule, et le
     // combine ne sonne jamais sur une mission qui n'aurait rien a dire.
-    if (!chargerDialogue(prochaine.slug)) return;
+    if (!charger(prochaine.slug)) return;
     if (p.appelT === undefined || p.appelT === null) { p.appelT = B.t + DELAI_APPEL; return; }
     if (B.t < p.appelT) return;
     p.appelT = null;
@@ -1043,7 +1047,7 @@ const Histoire = (function () {
     // fois pendant qu'il vole.
     if (!m.dialogue) {
       porteEnAttente = m.slug;
-      chargerDialogue(m.slug, function () {
+      charger(m.slug, function () {
         if (porteEnAttente !== m.slug) return;
         porteEnAttente = null;
         poserPuisDireLIntro(m);
@@ -1135,7 +1139,10 @@ const Histoire = (function () {
 
   function objectif() {
     const m = courante();
-    return m ? m.objectifs[B.partie.mission.etape] || null : null;
+    // ⚠️ `m.objectifs` peut ne pas etre arrive : ils ne sont plus dans le paquet, et une
+    // partie reprise en pleine mission les redemande (`maj`). D'ici la, pas d'objectif —
+    // plutot que de planter la boucle de dessin, qui lit ceci a chaque image.
+    return m && m.objectifs ? m.objectifs[B.partie.mission.etape] || null : null;
   }
 
   /** `enSilence` : posee sans rien annoncer — son intro va se dire par-dessus,
@@ -2884,7 +2891,9 @@ const Histoire = (function () {
       return l ? { x: l.x, y: l.y, nom: l.nom, couleur: '#7fc4ff' } : null;
     }
     if (m) {
-      const o = m.objectifs[p.mission.etape];
+      // ⚠️ Pas encore arrivee (voir `objectif`) : le GPS ne pointe rien plutot que de
+      // tomber. Le HUD appelle ceci a chaque image.
+      const o = m.objectifs && m.objectifs[p.mission.etape];
       if (!o) return null;
       let l = null;
       if (o.type === 'aller') l = lieu(o.lieu);
@@ -2973,7 +2982,7 @@ const Histoire = (function () {
       return d.titre.toUpperCase() + chrono + compte;
     }
     if (!m) return null;
-    const o = m.objectifs[B.partie.mission.etape];
+    const o = m.objectifs && m.objectifs[B.partie.mission.etape];
     if (!o) return null;
     if (B.mission && B.mission.attend) return B.mission.attend;
     let compte = '';
@@ -3005,7 +3014,7 @@ const Histoire = (function () {
       const dispo = disponibleDe(e.personnage);
       // ⚠️ SA BULLE S'ALLUME, SON TEXTE SE DEMANDE. Il est visible a plusieurs secondes
       // de marche : c'est la marge qu'il faut pour que la porte n'attende jamais.
-      if (dispo && !dispo.dialogue) chargerDialogue(dispo.slug);
+      if (dispo && !dispo.dialogue) charger(dispo.slug);
       const attend = (m && m.donneur === e.personnage && o && o.type === 'retourner') || !!dispo;
       const p = attend ? personnage(e.personnage) : null;
       Entites.bulle(e, p ? p.heler : '');
@@ -3019,7 +3028,7 @@ const Histoire = (function () {
     // les repliques `pendant`, la fin, l'echec — alors on le demande et on laisse passer
     // l'image. La ville, elle, continue de tourner.
     const reprise = courante();
-    if (reprise && !reprise.dialogue) { chargerDialogue(reprise.slug); return; }
+    if (reprise && !reprise.dialogue) { charger(reprise.slug); return; }
     majCinema();
     if (B.cinema) return;
     jouerLaFin();
@@ -3050,7 +3059,7 @@ const Histoire = (function () {
            parler, dire, suivante, finir, commencer, demarrer, avancer, objectif, courante, reussir, echouer, evenement,
            ouverture, passerOuverture, fichiersDeLOuverture, direLignes, majCinema, resoudre,
            lieuDuPersonnage, ouTrouver, present, calme, jouerOuDire,
-           reinitialiser, noter, rencontrer, CARNET_MAX, init, chargerDialogue,
+           reinitialiser, noter, rencontrer, CARNET_MAX, init, charger,
            proposerDefi, commencerDefi, finirDefi, abandonnerDefi, actionDeDefi, defisDeFoire, comptoirDeDefi, defiDuComptoir, canardAuCrochet,
            appareilsDe, jouableAvec, defiOuvert, defisOuverts, defiNeuf, ouvrirDefi, majDeblocages, planterLesPanneauxOuverts, APPAREIL_DU_CATALOGUE,
            cible, ligneObjectif, lieu, lieuDeLivraison, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, cibleDuParler, maj,

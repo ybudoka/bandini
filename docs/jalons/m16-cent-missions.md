@@ -108,7 +108,7 @@ déjà livré. Une mission qui n'a que ses objectifs n'est pas livrée.
   paquet (370 Ko, plafond 600) les prendrait en brut, mais pas sur le fil : 50 Ko de texte
   gzippé par-dessus les 43 d'aujourd'hui, et les 70 Ko sautent. Le catalogue (objectifs, prérequis, `donne`)
   reste dedans — c'est ce que le carnet et le GPS lisent — et les répliques viennent par
-  `/api/dialogue/<slug>` **quand le téléphone sonne**, avec un ETag comme le reste. Une
+  `/api/mission/<slug>` **quand le téléphone sonne**, avec un ETag comme le reste. Une
   requête par mission, avant que la première voix se charge de toute façon. ⚠️ **Les scènes
   voyagent avec les répliques** : une dizaine de plans par scène, deux scènes par mission,
   ≈ 130 Ko bruts de plus sur le catalogue — la même route, la même requête, et le paquet ne
@@ -574,7 +574,7 @@ jamais une passe « animations » à la fin, qui ne viendrait pas.
   aucune qui ne se termine pas, qui tire un dé ou qui déplace le joueur ; chaque type de plan
   sert au moins trois fois, sinon il ne valait pas un type.
 - **Le paquet** : sans les dialogues ni les scènes, il reste sous 600 Ko bruts et 70 Ko gzip ;
-  `/api/dialogue/<slug>` répond 304 au deuxième passage et 404 pour un slug inconnu.
+  `/api/mission/<slug>` répond 304 au deuxième passage et 404 pour un slug inconnu.
 - **Le banc** : m6 de bout en bout ; **une mission par nouveau type**, jouée jusqu'à la
   récompense ; le singe qui prend vingt missions au hasard et ne trouve **aucune mission
   morte** (un objectif qu'on ne peut pas commencer depuis l'état où on le reçoit — un char
@@ -664,7 +664,7 @@ catalogue.
   juge est rouge. Trois sessions l'ont grossi le même jour, chacune sans voir les deux autres.
   Le remède est celui écrit ici le 16 sept. : le **catalogue** reste dans le paquet (c'est ce
   que le carnet, le GPS et le téléphone lisent), les **répliques et les scènes** partent par
-  `/api/dialogue/<slug>` avec son ETag, sur la route qu'`app/routes.py` a déjà (`_revalide`).
+  `/api/mission/<slug>` avec son ETag, sur la route qu'`app/routes.py` a déjà (`_revalide`).
   - ⚠️ **Une requête par mission, et elle arrive avant la première voix de toute façon** :
     `Son.Voix.chargerHistoire(mission)` télécharge déjà les mp3 d'une mission quand on
     commence à lui parler. Le texte prend la même route, au même moment.
@@ -739,7 +739,7 @@ catalogue.
     d'ACTION mesurait `cinema.i`, qui vaut zéro que l'intro se joue une fois ou trois —
     la garde neutralisée, il restait vert. Il compte maintenant **les demandes de voix**
     de la première réplique : ce qu'on entendrait vraiment, trois fois.
-  - **Juges** (12 neufs ; treize mutations, toutes rouges) : `/api/dialogue/<slug>` rend
+  - **Juges** (12 neufs ; treize mutations, toutes rouges) : `/api/mission/<slug>` rend
     son ETag, revalide en 304 (faible compris) et **404 pour un slug inconnu** ; le paquet
     ne porte plus ni répliques, ni scènes, ni voix de mission, et le catalogue y reste en
     entier ; chaque mission a son dialogue, aucune voix ne se déclare deux fois ni ne
@@ -752,3 +752,35 @@ catalogue.
     pour le reste de la partie, le téléphone reste muet tant qu'il n'a rien à dire, une
     partie reprise en pleine mission redemande son texte — et le banc pose bien les
     dialogues par défaut, sans quoi les cent autres juges ne prouveraient plus rien.
+- **24 sept. 2026 : et les `objectifs` sortent avec le reste — la route se renomme.** La
+  tranche d'il y a une heure laissait **903 octets de marge gzip** et 170 octets par mission :
+  cinq missions avant de repasser au-dessus. Les `objectifs` pesaient **18 391 octets bruts /
+  4 319 gzip** des 26 158 / 6 074 du catalogue — les deux tiers — et ils ne servent qu'à
+  partir de `commencer()`, donc **après** l'intro, donc après le dialogue. La même porte, le
+  même instant.
+
+  | | bruts | gzip | par mission (gzip) |
+  |---|---|---|---|
+  | le paquet, la veille | 369 224 | 75 138 | 170 |
+  | après les répliques, les scènes et les voix | 239 190 | 53 097 | 170 |
+  | **après les objectifs** | **220 367** | **48 971** | **53** |
+
+  **94 missions de marge au lieu de cinq.** Les 109 de M16 y sont presque ; le reste viendra
+  des notes de `musique.py` (39 314 bruts / 7 823 gzip, et la musique se charge déjà par
+  district).
+  - ⚠️ **`/api/dialogue/<slug>` EST DEVENUE `/api/mission/<slug>`.** Une route qui rend des
+    objectifs ne s'appelle pas un dialogue. Renommée le jour même, avant que quoi que ce soit
+    s'y accroche : `missions.pour_jouer(slug)` rend les quatre choses, et le nom dit ce qu'elle
+    fait — **tout ce qu'une mission demande pour se jouer**. Ce qui reste au paquet, c'est ce
+    qui sert à la **choisir** (titre, donneur, prérequis, récompense) ; ce qui part, c'est ce
+    qui sert à la **jouer**.
+  - ⚠️ **TROIS LECTEURS DE PLUS, ET ILS TOURNENT À CHAQUE IMAGE** : `Histoire.objectif()`,
+    `cible()` (la flèche du GPS) et `ligneObjectif()` (la ligne du HUD) indexaient
+    `m.objectifs` sans regarder s'ils étaient là. Une partie reprise en pleine mission faisait
+    **tomber la boucle de dessin** — pas la logique de mission, qui a sa garde depuis la
+    tranche d'avant, mais le HUD, qui lit ça soixante fois par seconde. Les trois rendent
+    maintenant « rien à montrer » tant que la mission n'est pas arrivée.
+  - **Juges** : les mêmes, resserrés — le catalogue nu **dit encore quelle mission est
+    possible et chez qui** (c'est ce qui sert à choisir, et il le garde en entier), la réponse
+    porte ses objectifs avec un `type` chacun, et le juge du plafond raconte sa propre
+    guérison avec la mesure.

@@ -40,9 +40,9 @@ SOURCE = Path(__file__).resolve().parent.parent / "static" / "js" / "travailleur
 #: Tout ce que la page demande par un attribut : ses scripts, sa feuille, ses
 #: images, son manifeste — et les deux paquets que `jeu.js` va chercher.
 #:
-#: ⚠️ `data-url-dialogue` n'y est PAS, et c'est voulu : ce n'est pas une adresse mais
-#: un GABARIT (`…/SLUG?e=…`), et les dialogues se gardent a l'usage, jamais dans la
-#: coquille. Les leurs arrivent par `travailleur(dialogues=…)`.
+#: ⚠️ `data-url-mission` n'y est PAS, et c'est voulu : ce n'est pas une adresse mais
+#: un GABARIT (`…/SLUG?e=…`), et les missions se gardent a l'usage, jamais dans la
+#: coquille. Les leurs arrivent par `travailleur(missions=…)`.
 _ADRESSES = re.compile(r'\s(?:src|href|data-url-definitions|data-url-carte)="([^"]+)"')
 
 
@@ -72,19 +72,19 @@ def sons(dossier: Path, url_dossier: str) -> dict:
 
 
 def travailleur(page: str, accueil: str, dossier_audio: Path, url_audio: str,
-                dialogues: list[str]) -> tuple[str, str]:
+                missions: list[str]) -> tuple[str, str]:
     """Le corps du travailleur et son empreinte.
 
-    ⚠️ `dialogues` : les adresses de `/api/dialogue/<slug>`, une par mission (24 sept.
+    ⚠️ `missions` : les adresses de `/api/mission/<slug>`, une par mission (24 sept.
     2026). Elles ne sont PAS dans la coquille : trente-six requetes a l'installation
     pour un joueur qui jouera trois missions, et cent quarante-cinq quand M16 sera la.
     Elles se gardent **a l'usage**, comme les mp3, et « tous d'un coup » les prend
-    **d'abord** — 132 Ko contre 14 Mo de son : celui qui veut jouer hors ligne a toutes
+    **d'abord** — 151 Ko contre 14 Mo de son : celui qui veut jouer hors ligne a toutes
     ses missions jouables meme si le telechargement des sons s'arrete en chemin.
     """
     source = SOURCE.read_text(encoding="utf-8")
     config = {"accueil": accueil, "coquille": coquille(page, accueil),
-              "audio": sons(dossier_audio, url_audio), "dialogues": sorted(dialogues)}
+              "audio": sons(dossier_audio, url_audio), "missions": sorted(missions)}
     brut = json.dumps(config, ensure_ascii=False, sort_keys=True)
     empreinte = hashlib.sha256((brut + "\n" + source).encode("utf-8")).hexdigest()[:16]
     config["empreinte"] = empreinte

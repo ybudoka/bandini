@@ -1313,7 +1313,7 @@ def voix_histoire() -> list[dict]:
 
 def voix_de_mission(slug: str) -> list[dict]:
     """Les voix d'UNE mission, telles que le navigateur les recoit — la part
-    « son » de `/api/dialogue/<slug>`.
+    « son » de `/api/mission/<slug>`.
 
     ⚠️ Meme forme que `exporter()["histoire"]`, et c'est ce qui compte : le
     navigateur les ajoute a la liste qu'il a deja, et pas une ligne de `son.js` ne
@@ -1616,7 +1616,7 @@ def exporter() -> dict:
         # mission », puisqu'ils n'en ont pas.
         #
         # ⚠️ **CELLES D'UNE MISSION N'Y SONT PLUS** (24 sept. 2026) : elles voyagent avec
-        # son dialogue, sur `/api/dialogue/<slug>` (`voix_de_mission`). Elles se
+        # son dialogue, sur `/api/mission/<slug>` (`voix_de_mission`). Elles se
         # chargeaient DEJA par mission (`Son.Voix.chargerHistoire`) et pesaient 57 Ko
         # bruts dans un paquet au-dessus de son plafond : declarer quatre cent vingt
         # mp3 au demarrage pour en jouer sept, c'etait le meme gaspillage que le texte,

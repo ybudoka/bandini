@@ -64,13 +64,13 @@ def paquet(paquets):
 
 
 @pytest.fixture(scope="session")
-def dialogues(paquets):
-    """Ce que chaque mission dit, montre et avec quelles voix — un `/api/dialogue/<slug>`.
+def a_jouer(paquets):
+    """Tout ce que chaque mission demande pour se jouer — un `/api/mission/<slug>`.
 
     ⚠️ Hors du paquet depuis le 24 sept. 2026 : il etait au-dessus de ses deux plafonds.
     Le banc les sert comme le serveur ; voir `banc.js`.
     """
-    return {slug: json.loads(p.corps.decode("utf-8")) for slug, p in paquets.dialogues.items()}
+    return {slug: json.loads(p.corps.decode("utf-8")) for slug, p in paquets.a_jouer.items()}
 
 
 @pytest.fixture(scope="session")
@@ -91,24 +91,24 @@ def serveur(tmp_path_factory):
 
 
 @pytest.fixture(scope="session")
-def banc(paquet, dialogues):
+def banc(paquet, a_jouer):
     """Fait tourner `corps` (une fonction JS `(L, o) => resultat`) dans le banc Node."""
     if OBLIGATOIRE and shutil.which("node") is None:
         pytest.fail("node est obligatoire (BANDINI_TESTS_OBLIGATOIRES=1) et il manque")
     prelude = (RACINE / "tests" / "banc.js").read_text(encoding="utf-8")
 
     def executer(corps: str, graine: int = 0x1A2B3C4D, stockage: dict | None = None, session: dict | None = None,
-                 reseau: dict | None = None, defi: dict | None = None, poser_les_dialogues: bool = True,
-                 dialogues_panne: int = 0):
+                 reseau: dict | None = None, defi: dict | None = None, poser_les_missions: bool = True,
+                 missions_panne: int = 0):
         # `stockage` / `session` : ce que le navigateur gardait AVANT le chargement.
         # `reseau` : ce que /api/compte/ repond (M14) — l'ouverture part des que la
         # ville est batie, donc ses reponses se posent avant, jamais pendant.
         script = prelude + "\nrapporter(banc(" + corps + "));\n"
-        # ⚠️ `poser_les_dialogues=False` : le catalogue part NU, et le jeu doit aller
-        # chercher chaque dialogue — c'est ainsi qu'on juge la porte elle-meme.
+        # ⚠️ `poser_les_missions=False` : le catalogue part NU, et le jeu doit aller
+        # chercher chaque mission — c'est ainsi qu'on juge la porte elle-meme.
         entree = {"racine": str(RACINE), "defs": paquet, "graine": graine,
-                  "dialogues": dialogues, "poser_les_dialogues": poser_les_dialogues,
-                  "dialogues_panne": dialogues_panne}
+                  "missions": a_jouer, "poser_les_missions": poser_les_missions,
+                  "missions_panne": missions_panne}
         if stockage is not None:
             entree["stockage"] = stockage
         if session is not None:

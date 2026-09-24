@@ -81,10 +81,10 @@ function banc(corps) {
   const racine = ENTREE.racine;
   const defs = ENTREE.defs;
 
-  /*: CE QU'UNE MISSION DIT, MONTRE ET AVEC QUELLES VOIX (`/api/dialogue/<slug>`,
-    24 sept. 2026). Le banc le sert comme le serveur — et, par defaut, le POSE AUSSI
-    dans le catalogue avant que le jeu demarre, comme si on avait deja rencontre tous
-    les donneurs.
+  /*: TOUT CE QU'UNE MISSION DEMANDE POUR SE JOUER (`/api/mission/<slug>`, 24 sept.
+    2026). Le banc le sert comme le serveur — et, par defaut, le POSE AUSSI dans le
+    catalogue avant que le jeu demarre, comme si on avait deja rencontre tous les
+    donneurs.
 
     ⚠️ Pourquoi le poser : `o.frame()` est SYNCHRONE, et une reponse de `fetch` arrive
     sur une micro-tache. Entre deux images du banc il n'y en a aucune — une centaine de
@@ -93,20 +93,21 @@ function banc(corps) {
     le donneur.
 
     ⚠️ Et le CHEMIN du telechargement a ses juges a lui, qui attendent vraiment
-    (`o.attendre()`) et partent d'un catalogue nu : `banc(..., dialogues='reseau')` ne
-    pose rien, et le jeu doit alors aller les chercher. Sans ce mode-la, le banc ne
+    (`o.attendre()`) et partent d'un catalogue nu : `banc(..., poser_les_missions=False)`
+    ne pose rien, et le jeu doit alors aller les chercher. Sans ce mode-la, le banc ne
     prouverait rien de la porte. */
-  const DIALOGUES = ENTREE.dialogues || {};
-  //: Combien des PREMIERES demandes de dialogue tombent en panne (`ENTREE.dialogues_panne`) :
+  const MISSIONS = ENTREE.missions || {};
+  //: Combien des PREMIERES demandes de mission tombent en panne (`ENTREE.missions_panne`) :
   //: de quoi juger qu'un reseau qui tombe une fois ne ferme pas une mission pour le reste
   //: de la partie.
-  let dialoguesEnPanne = ENTREE.dialogues_panne || 0;
-  if (ENTREE.poser_les_dialogues !== false) {
+  let missionsEnPanne = ENTREE.missions_panne || 0;
+  if (ENTREE.poser_les_missions !== false) {
     (defs.missions || []).forEach(function (m) {
-      const d = DIALOGUES[m.slug];
+      const d = MISSIONS[m.slug];
       if (!d) return;
       m.dialogue = d.dialogue;
       m.scenes = d.scenes;
+      m.objectifs = d.objectifs;
       (d.voix || []).forEach(function (v) { defs.audio.histoire.push(v); });
     });
   }
@@ -291,11 +292,11 @@ function banc(corps) {
         if (tenu) return new Promise(function (r) { tenu.push(r); }).then(function () { return servirCompte(chemin, methode); });
         return servirCompte(chemin, methode);
       }
-      // Un dialogue de mission, comme le serveur : 404 pour un slug inconnu.
-      if (adresse.indexOf('/api/dialogue/') === 0) {
-        const slug = adresse.slice('/api/dialogue/'.length).split('?')[0];
-        if (dialoguesEnPanne > 0) { dialoguesEnPanne--; return Promise.reject(new Error('reseau coupe')); }
-        const d = DIALOGUES[slug];
+      // Une mission, comme le serveur : 404 pour un slug inconnu.
+      if (adresse.indexOf('/api/mission/') === 0) {
+        const slug = adresse.slice('/api/mission/'.length).split('?')[0];
+        if (missionsEnPanne > 0) { missionsEnPanne--; return Promise.reject(new Error('reseau coupe')); }
+        const d = MISSIONS[slug];
         return Promise.resolve({ ok: !!d, status: d ? 200 : 404,
                                  json: function () { return Promise.resolve(d || {}); } });
       }

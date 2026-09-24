@@ -1262,8 +1262,9 @@ const Jeu = (function () {
       // LE DEFI DU JOUR (M14, 5e vague) : une demande, et rien n'attend sa reponse. ⚠️ Sans
       // reseau, pas de defi du jour — et le jeu ne s'en apercoit pas.
       Defi.init(w, racine);
-      // CE QU'UNE MISSION DIT (24 sept. 2026) : hors du paquet, une requete par mission,
-      // demandee quand son donneur apparait ou quand le telephone la choisit.
+      // CE QU'UNE MISSION DEMANDE POUR SE JOUER (24 sept. 2026) : hors du paquet, une
+      // requete par mission, demandee quand son donneur apparait ou quand le telephone
+      // la choisit.
       Histoire.init(w, racine);
       const etat = d.getElementById('etat-chargement');
       const parties = Sauvegarde.occupes().length;

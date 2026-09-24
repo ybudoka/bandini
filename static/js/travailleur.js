@@ -33,11 +33,11 @@
 
 const COQUILLE = 'bandini-coquille-' + HORS_LIGNE.empreinte;
 const SONS = 'bandini-sons';
-//: Ce qu'une mission DIT, MONTRE et avec quelles voix (`/api/dialogue/<slug>`), hors du
-//: paquet depuis le 24 sept. 2026. ⚠️ Un cache a elles, au nom STABLE comme celui des
-//: sons : leur contenu se revalide par ETag, il n'a pas besoin qu'on jette tout a
-//: chaque construction. Ce qui sort, c'est ce que le catalogue ne reclame plus.
-const DIALOGUES = 'bandini-dialogues';
+//: Tout ce qu'une mission demande pour se jouer (`/api/mission/<slug>`), hors du paquet
+//: depuis le 24 sept. 2026. ⚠️ Un cache a elles, au nom STABLE comme celui des sons :
+//: leur contenu se revalide par ETag, il n'a pas besoin qu'on jette tout a chaque
+//: construction. Ce qui sort, c'est ce que le catalogue ne reclame plus.
+const MISSIONS = 'bandini-missions';
 const ORIGINE = self.location.origin;
 //: ⚠️ `Vary` ne compte pas : nginx ajoute `Vary: Accept-Encoding`, et une page qui
 //: se met a porter un cookie (M14) ne doit pas perdre sa ville hors ligne.
@@ -51,12 +51,12 @@ const CHEMINS = new Set(HORS_LIGNE.coquille.map(function (u) { return new URL(u,
 const FICHIERS_SONS = new Map(HORS_LIGNE.audio.fichiers.map(function (f) {
   return [HORS_LIGNE.audio.dossier + f.nom, f];
 }));
-//: Les dialogues, par leur CHEMIN SANS LA REQUETE : `?e=` change a chaque
-//: construction, et hors ligne un dialogue d'avant-hier vaut infiniment mieux qu'une
-//: mission qui ne peut pas commencer — le texte n'a pas de repli, contrairement a un
-//: son. En ligne la regle de la maison protege : le reseau d'abord, toujours, et un
-//: vieux dialogue ne gagne jamais quand il y a du reseau.
-const CHEMINS_DIALOGUES = new Set(HORS_LIGNE.dialogues.map(function (u) {
+//: Les missions, par leur CHEMIN SANS LA REQUETE : `?e=` change a chaque construction,
+//: et hors ligne une mission d'avant-hier vaut infiniment mieux qu'une mission qui ne
+//: peut pas commencer — un texte n'a pas de repli, contrairement a un son. En ligne la
+//: regle de la maison protege : le reseau d'abord, toujours, et une vieille mission ne
+//: gagne jamais quand il y a du reseau.
+const CHEMINS_MISSIONS = new Set(HORS_LIGNE.missions.map(function (u) {
   return new URL(u, ORIGINE).pathname;
 }));
 
@@ -78,9 +78,9 @@ self.addEventListener('activate', function (ev) {
   }).then(function () {
     return Promise.all([
       purger(SONS, function (chemin) { return FICHIERS_SONS.has(chemin); }),
-      // Une mission retiree du catalogue emporte son dialogue : le cache ne garde
+      // Une mission retiree du catalogue emporte la sienne : le cache ne garde
       // que ce que le catalogue reclame encore.
-      purger(DIALOGUES, function (chemin) { return CHEMINS_DIALOGUES.has(chemin); }),
+      purger(MISSIONS, function (chemin) { return CHEMINS_MISSIONS.has(chemin); }),
     ]);
   }).then(function () { return self.clients.claim(); }));
 });
@@ -106,7 +106,7 @@ self.addEventListener('fetch', function (ev) {
     return;
   }
   if (FICHIERS_SONS.has(url.pathname)) ev.respondWith(reseauDabord(ev, SONS, url.pathname));
-  else if (CHEMINS_DIALOGUES.has(url.pathname)) ev.respondWith(reseauDabord(ev, DIALOGUES, url.pathname));
+  else if (CHEMINS_MISSIONS.has(url.pathname)) ev.respondWith(reseauDabord(ev, MISSIONS, url.pathname));
   else if (CHEMINS.has(url.pathname)) ev.respondWith(reseauDabord(ev, COQUILLE, url.pathname + url.search));
 });
 
@@ -189,18 +189,18 @@ function annoncer() {
 
     ⚠️ Un fichier qui echoue ne fait pas echouer les autres : on repassera par
     le bouton, et seuls les manquants repartiront. */
-/** ⚠️ LES DIALOGUES D'ABORD, et c'est la seule chose qui compte dans cet ordre-la :
-    132 Ko contre 14 Mo de son. Celui qui appuie sur « tout telecharger » veut jouer
+/** ⚠️ LES MISSIONS D'ABORD, et c'est la seule chose qui compte dans cet ordre-la :
+    151 Ko contre 14 Mo de son. Celui qui appuie sur « tout telecharger » veut jouer
     hors ligne ; si le telechargement s'arrete en chemin, il vaut mieux qu'il lui
     manque des bruits de pas que des missions qui ne peuvent pas commencer.
 
-    ⚠️ Ils ne comptent PAS dans ce qu'`annoncer()` annonce : le bandeau dit des SONS,
+    ⚠️ Elles ne comptent PAS dans ce qu'`annoncer()` annonce : le bandeau dit des SONS,
     et trente-six fichiers de 4 Ko dans un total de 14 Mo n'y changeraient rien qu'un
     chiffre qui ne veut plus dire ce qu'il dit. */
 function toutTelecharger() {
-  return caches.open(DIALOGUES).then(function (cache) {
+  return caches.open(MISSIONS).then(function (cache) {
     return dejaGardes(cache).then(function (gardes) {
-      const reste = Array.from(CHEMINS_DIALOGUES).filter(function (c) { return !gardes.has(c); });
+      const reste = Array.from(CHEMINS_MISSIONS).filter(function (c) { return !gardes.has(c); });
       return Promise.all(reste.map(function (chemin) {
         return fetch(chemin, { cache: 'no-cache' })
           .then(function (r) { return r.ok ? cache.put(chemin, r) : null; })
