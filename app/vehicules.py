@@ -30,6 +30,12 @@ n'a pas a le deviner de son slug :
               rare — et c'est tout ce qui fait qu'on le VEUT
     alarme_s  la duree de son alarme, en secondes ; 0 = celle de tout le monde
               (`PHYSIQUE.alarme_secondes`)
+    au_volant le slug du passant (`pietons.CATALOGUE`) qui la mene TOUJOURS : le
+              trafic la fait naitre avec lui, elle ne se gare jamais (une
+              voiture qu'on lui a laissee n'aurait plus personne a faire
+              descendre), et le carjacking sort CELUI-LA de la voiture, pas
+              un passant tire au hasard. ⚠️ C'est la fiche qui le dit — le
+              navigateur n'a pas a reconnaitre un cabriolet a son slug
 """
 
 from __future__ import annotations
@@ -68,6 +74,7 @@ class Vehicule(TypedDict):
     reservoir: bool
     rare: bool
     alarme_s: float
+    au_volant: str | None
     defonce: float
     soigne: float
     crochet: bool
@@ -89,24 +96,63 @@ CLASSES_A_PORTIERES = ("auto", "camion")
 #: dit, pas un `slug === 'velo'` dans `vehicules.js`. Les velos du trafic
 #: sonnaient deja en passant ; c'est le meme son, desormais aussi sous le
 #: pouce.
-AVERTISSEURS = ("klaxon", "sonnette")
+#: ⚠️ Et la CORNE des grands bateaux (le chalutier, le porte-conteneurs) : la
+#: meme que celle du traversier, jouee la ou l'on est quand on la tient.
+AVERTISSEURS = ("klaxon", "sonnette", "corne")
+
+#: La friction de la rue et celle de l'eau : ce que perd, a chaque image, un
+#: char qu'on ne pousse plus.
+FRICTION_RUE = 0.985
+FRICTION_EAU = 0.995
+
+
+def friction_pour(vitesse_max: float, acceleration: float, base: float) -> float:
+    """La friction d'un char : celle de la rue (ou de l'eau), sauf si elle lui
+    vole la `vitesse_max` que sa fiche promet.
+
+    ⚠️ **LA FICHE NE MENT PAS SUR LA VITESSE** (21 sept. 2026, retour de Martin :
+    « la paie de la Prevost est presque impossible, le camion va trop lentement
+    pour les policiers »). A fond, le moteur fait `vitesse = (vitesse +
+    acceleration) x friction` a chaque image : la vitesse plafonne la ou la
+    friction mange tout ce que le moteur ajoute, a `acceleration x friction /
+    (1 - friction)`. A 0,985, un moteur faible n'atteignait JAMAIS sa
+    `vitesse_max` : le camion plafonnait a 1,97 px/image au lieu de 2,8 — moins
+    qu'un agent a pied (2,0), qui le suivait a 40 px jusqu'au bar, et les deux
+    etoiles de s03 ne tombaient jamais. La berline de luxe roulait a 2,76 au
+    lieu de 3,6, le porte-conteneurs a la moitie de sa fiche, et le compteur du
+    HUD n'affichait jamais 120.
+
+    ⚠️ C'est donc la FRICTION qui se deduit, juste assez faible pour que la
+    pointe soit la `vitesse_max` — pas l'acceleration, qui dit comment le char
+    DEMARRE : le camion part toujours en camion. Et le trafic ne voit rien : il
+    roule sur ses rails (`rouler`), sans friction, et son acceleration n'a pas
+    bouge d'un cheveu. Un char qui atteint deja sa vitesse garde la friction de
+    la rue : la moto, la police, le taxi ne changent pas.
+    """
+    juste = vitesse_max / (vitesse_max + acceleration)
+    # Arrondie VERS LE HAUT : arrondie au plus pres, la pointe retombait d'un
+    # cheveu sous la fiche.
+    return max(base, math.ceil(juste * 100_000) / 100_000)
 
 
 def _v(slug, nom, classe, lon, lat, vmax, accel, rayon, vie, places, prix, freq, couleurs,
        sprite, *, police=False, sirene=False, alarme=False, ejecte=False, eau=False,
        masse=1.0, cercles=3, reservoir=True, defonce=0.0, soigne=0.0, crochet=False,
        plateau=False, boulot=None,
-       radio=None, phase=1, klaxon="klaxon", rare=False, adherence=None, alarme_s=0.0) -> Vehicule:
+       radio=None, phase=1, klaxon="klaxon", rare=False, adherence=None, alarme_s=0.0,
+       au_volant=None) -> Vehicule:
     return Vehicule(
         slug=slug, nom=nom, classe=classe, longueur=lon, largeur=lat,
         vitesse_max=vmax, vitesse_recul=round(vmax * 0.33, 2), acceleration=accel,
-        frein=round(accel * 2, 3), friction=0.995 if eau else 0.985,
+        frein=round(accel * 2, 3),
+        friction=friction_pour(vmax, accel, FRICTION_EAU if eau else FRICTION_RUE),
         rayon_braquage=rayon,
         adherence=adherence if adherence is not None else (0.30 if not eau else 0.05),
         adherence_frein=0.035,
         masse=masse, vie=vie, places=places, prix=prix, frequence=freq,
         couleurs=couleurs, sprite=sprite, police=police, sirene=sirene, alarme=alarme,
         ejecte=ejecte, eau=eau, cercles=cercles, reservoir=reservoir, rare=rare, alarme_s=alarme_s,
+        au_volant=au_volant,
         defonce=defonce, soigne=soigne,
         crochet=crochet, plateau=plateau, boulot=boulot, radio=radio, phase=phase,
         portieres=classe in CLASSES_A_PORTIERES, klaxon=klaxon,
@@ -147,7 +193,8 @@ CATALOGUE: list[Vehicule] = [
        ["#7f8c8d", "#c0392b", "#2c3e50"], "camion", masse=3.0, cercles=4,
        defonce=0.75, radio="station_camion", adherence=0.22),
     _v("autobus", "Autobus", "camion", 48, 16, 2.6, 0.028, 40, 250, 12, 1500, 0.04,
-       ["#2980b9"], "autobus", masse=3.2, cercles=5, defonce=0.7, adherence=0.22),
+       ["#2980b9"], "autobus", masse=3.2, cercles=5, defonce=0.7, adherence=0.22,
+       boulot="autobus"),
     # ⚠️ L'ambulance SOIGNE (2 PV par seconde au volant) — elle ne ressuscite
     # personne : un blesse mort reste mort, et le boulot est perdu.
     _v("ambulance", "Ambulance", "auto", 32, 15, 3.6, 0.05, 25, 180, 3, 1400, 0.04,
@@ -156,6 +203,22 @@ CATALOGUE: list[Vehicule] = [
     _v("remorqueuse", "Remorqueuse", "camion", 36, 15, 3.0, 0.04, 29, 220, 2, 1300, 0.05,
        ["#d98324", "#2c3e50", "#7f8c8d"], "remorqueuse", masse=2.2, cercles=4, adherence=0.24,
        defonce=0.6, crochet=True, boulot="remorquage", radio="station_remorqueuse"),
+    # ⚠️ **LA PELLE QU'ON CONDUIT** (« Ça travaille », 8e vague : l'étage 2 du plan, que la refonte
+    # des véhicules avait retardé). Elle ne naît JAMAIS dans la rue (`frequence` 0) : c'est celle du
+    # chantier, `chantiers.js` la sort de son décor quand on monte dedans. Elle roule à 12 km/h
+    # (1,3 — l'auto de référence fait 4,0), tourne court, et ne s'arrête devant rien : `defonce`
+    # 0,95, elle garde presque toute sa vitesse en traversant ce qu'un autre char casse en
+    # ralentissant — et le seuil de vitesse pour défoncer une clôture se règle sur SA vitesse
+    # (`vehicules.js`), pas sur celle d'un camion.
+    # ⚠️ **Masse 3,3, et pas plus** : plus lourde que l'autobus (3,2), sous le camion-cuisine (3,4) —
+    # une pelle qui déracinerait un commerce en roulant à 12 km/h n'est plus une farce — et très
+    # loin sous les machines du chantier (6, 8, 9) : elle ne détruit pas les siennes.
+    # ⚠️ **16 de large, comme le camion** : les bacs des éboueurs se tiennent à 14 px du centre de la
+    # voie, et `test_eboueurs_js` calcule cette marge sur le char le plus LARGE du parc — à 20 (rayon
+    # 10), la pelle frôlait un bac que le camion ne touche pas. On ne déplace pas les bacs de la ville
+    # pour un char qui n'est jamais dans le trafic.
+    _v("pelleteuse", "Pelleteuse", "camion", 38, 16, 1.3, 0.022, 30, 320, 1, 1500, 0.0,
+       ["#e8b33c"], "pelleteuse", masse=3.3, cercles=4, defonce=0.95, adherence=0.22),
     # --- Le haut de gamme : deux chars qu'on vole EXPRES ------------------
     # ⚠️ Tout le reste du parc est utilitaire — on le prend parce qu'il sert.
     # Ces deux-la, on les prend parce qu'on les VEUT, et ils s'opposent en
@@ -177,6 +240,22 @@ CATALOGUE: list[Vehicule] = [
        # conduite, elle recompense le vol. C'est la meilleure revente du jeu,
        # et `economie.prix_vente` le fait toute seule — le prix neuf suffit.
        adherence=0.40, alarme_s=30.0),
+    # ⚠️ **LE CABRIOLET ROSE** (demande de Martin, 21 sept. 2026 : « une voiture
+    # type corvette, rose, avec une femme en robe rose qui la pilote et en descend
+    # si volee. Elle va plus vite »). Le troisieme char qu'on vole EXPRES, et le
+    # seul du parc qui a SA conductrice (`au_volant`).
+    #
+    # ⚠️ **Elle va plus vite que le sport — pas plus vite que la moto.** Le
+    # garde-fou d'`exploitation.md` tient toujours : un char qui roule bien au-dela
+    # de l'auto-patrouille (4,4) rend la police decorative. Elle depasse le sport
+    # (4,8) d'un cran et la patrouille de 14 %, jamais la moto (5,2) ; la parade
+    # est la meme que la sienne — la carrosserie mince (80 PV : un barrage l'arrete
+    # pour de bon), l'alarme, et une adherence qui la fait partir en travers.
+    # `frequence` est plus haute que celle du sport : on la VEUT, mais on veut
+    # d'abord la VOIR — et c'est la carte qui decide ou (`rares` de `carte.py`).
+    _v("cabriolet", "Cabriolet rose", "auto", 27, 13, 5.0, 0.09, 18, 80, 2, 3800, 0.04,
+       ["#ff77b7"], "cabriolet", alarme=True, rare=True, masse=0.9,
+       adherence=0.20, au_volant="conductrice"),
     # ⚠️ **LA DETTE DE M3, PAYEE LE 16 SEPT. 2026.** « Phase 2 » voulait dire
     # « sans sprite et sans trafic » : la fiche existait depuis M3 — eau,
     # friction 0,995, adherence 0,05, trois cercles — et rien ne l'avait jamais
@@ -195,6 +274,33 @@ CATALOGUE: list[Vehicule] = [
     # trouve amarree au quai (`carte.amarrages`), et nulle part ailleurs.
     _v("bateau", "Chaloupe", "bateau", 30, 12, 3.2, 0.02, 40, 120, 4, 2000, 0.0,
        ["#ecf0f1", "#2c3e50"], "bateau", eau=True, cercles=3, phase=1),
+    # --- Deux bateaux de plus (demande de Martin, 21 sept. 2026) -----------
+    # ⚠️ « nouveau bateau : chalutier + porte-conteneurs ». La meme regle que la
+    # chaloupe, et rien d'autre : `eau`, hors du trafic, et la coque arretee par
+    # tout ce qui n'est pas de l'eau. Ils mouillent a quai (`navires.py`), pas aux
+    # amarrages : une chaloupe se glisse contre n'importe quelle rive batie, un
+    # chalutier demande trois tuiles de quai, un porte-conteneurs dix.
+    #
+    # ⚠️ **LA CORNE, PAS LE KLAXON** : c'est la fiche qui le dit (`klaxon`), et
+    # c'est l'echantillon du traversier. Une chaloupe hors-bord garde son klaxon
+    # — personne ne met une corne de brume sur un 9,9 forces.
+    #
+    # ⚠️ **Le prix reste sous celui du luxe** (le juge : « la meilleure revente du
+    # jeu »). Ce n'est pas ce que vaut un navire : c'est ce que Ti-Guy en donnerait,
+    # et un porte-conteneurs ne passe pas la porte de son garage.
+    #
+    # Le chalutier : trois tuiles et demie, plus lent et plus lourd que la
+    # chaloupe, et il encaisse — c'est un outil de travail.
+    _v("chalutier", "Chalutier", "bateau", 56, 18, 2.6, 0.012, 56, 300, 3, 3000, 0.0,
+       ["#c0392b", "#1f4e79", "#2e7d4f", "#e8e2d0"], "chalutier", eau=True, masse=3.0,
+       cercles=4, klaxon="corne"),
+    # Le porte-conteneurs : dix tuiles, deux de plus que le traversier. Il met cinq
+    # secondes a prendre son erre, il vire le plus large que le juge permette (six
+    # tuiles), il glisse (`adherence` de l'eau) et il pousse tout ce qui flotte
+    # (`masse`). Cinq cercles : il en faut `longueur / largeur`, soit quatre.
+    _v("porte_conteneurs", "Porte-conteneurs", "bateau", 160, 40, 1.9, 0.005, 96, 1500, 2, 5000, 0.0,
+       ["#1f3a5f", "#7a1f1f", "#2b2b30", "#1d5c4a"], "porte_conteneurs", eau=True, masse=12.0,
+       cercles=5, klaxon="corne"),
 ]
 
 CLASSES = ("auto", "moto", "velo", "camion", "bateau")
@@ -204,6 +310,16 @@ CLASSES = ("auto", "moto", "velo", "camion", "bateau")
 TRAFIC = {
     "vehicules_max": 9,           # en circulation, dans la bulle
     "stationnes_max": 6,          # a l'arret sur les stationnements
+    # ⚠️ **LA NUIT, LES CHARS RENTRENT A LA MAISON** (Martin, 21 sept. 2026 : « la
+    # nuit, plus de vehicules stationnes »). Le jour, six chars gares ou que ce
+    # soit ; la nuit, le monde est rentre : DEUX FOIS plus, et d'abord dans les
+    # rues ou l'on habite (`Monde.usageA` = `usage`). Une fois sur quelques-unes
+    # (`ailleurs`), devant un commerce quand meme : le bar et le depanneur ont
+    # leurs clients de nuit — et un quartier sans une seule rue a logements (La
+    # Shop) garde ses chars de nuit dans ses cours. ⚠️ Le JOUR ne change pas
+    # d'un de : le banc joue a 8 h 24, et chaque naissance deplacee decale tous
+    # les des qui suivent (`Vehicules.peupler`).
+    "garer_la_nuit": {"max": 12, "usage": "residentiel", "ailleurs": 0.15},
     "regard_tuiles": 4,           # a quelle distance un conducteur regarde devant
     "distance_securite_px": 34,   # plus pres que ca, il freine
     "vitesse_ville": 0.55,        # fraction de la vitesse max en circulation
@@ -294,6 +410,40 @@ TRAFIC = {
     },
     "naissance_px": 300,          # comme les pietons : hors ecran, dans la bulle
     "oubli_px": 560,
+    # ⚠️ **LE VELO ROULE A LA BORDURE** — Martin (21 sept. 2026) : « les velos
+    # peuvent passer dans les parcs, les trottoirs, et restent souvent sur la
+    # bordure de la route, sauf pour virage a gauche ». Il roulait au MILIEU de
+    # sa voie, comme une auto de huit pixels de large.
+    #
+    # ⚠️ Rien ici ne se tire au de du jeu : l'intention de tourner, le trottoir
+    # et le parc se lisent a l'EMPREINTE du cycliste et de l'endroit (`hash2`).
+    # C'est la lecon du pilote des deux-roues — un de de plus decale tout ce
+    # qui nait apres, et un juge de police voit son auto-patrouille ailleurs.
+    "velo": {
+        "bord_px": 4,             # il se tasse de ca vers le trottoir, depuis le centre de sa voie
+        # A cette distance de la ligne d'arret, il SAIT ou il va : s'il tourne a
+        # gauche, il se range a gauche (la voie du milieu, s'il y en a une), et
+        # tourne de la. Cinq tuiles : assez pour se tasser en diagonale.
+        "virage_tuiles": 5,
+        # --- Hors de la rue : le trottoir et le parc ------------------------
+        # ⚠️ **AU PAS, ET EN CEDANT.** Un velo qui fauche les pietons du trottoir
+        # n'est plus un cycliste, c'est une arme : il roule sous la vitesse qui
+        # renverse (`PHYSIQUE.renverse_vitesse_min`), s'arrete derriere un
+        # passant et sonne.
+        "trottoir_vitesse": 0.8,  # en px/image (une auto de ville : 2,2 ; un passant : 0,45)
+        "parc_chance": 0.05,      # par tuile longee au bord d'un parc : il entre le traverser
+        "trottoir_chance": 0.01,  # par tuile de voie : il monte faire un bout de trottoir
+        "trottoir_tuiles": [4, 10],  # la longueur d'un bout de trottoir, au plus ce qu'il y a
+        # Coince derriere un char arrete ce temps-la, un cycliste sur deux monte
+        # sur le trottoir et le longe — l'autre attend comme une auto.
+        "coince_images": 45,
+        "coince_part": 0.5,
+        "parc_allees_min": 6,     # une traversee de parc passe par au moins autant d'allee
+        "noeuds_max": 2500,       # le budget de la recherche d'une traversee
+        "attente_images": 240,    # au bout du trottoir, il attend un trou dans la voie, pas plus
+        "sonnette_images": 150,   # entre deux coups de sonnette a un passant
+        "repos_images": 900,      # redescendu, il ne remonte pas avant ce temps
+    },
 }
 
 #: Ce qui arrive quand un char touche quelque chose. ⚠️ Les degats se
@@ -342,6 +492,30 @@ PHYSIQUE = {
     "nid_degats": 2,
     "nid_secousse": 0.35,
     "nid_repit_images": 30,       # on ne le paie pas deux fois en le traversant
+    # ⚠️ **UNE PLAQUE D'ACIER** (la tranchée d'un chantier, `chantiers.py`) : elle
+    # claque et elle secoue, elle ne coûte RIEN — un nid-de-poule est un accident,
+    # une plaque est un décor qu'on sent. Plus doux : ce n'est pas un trou.
+    "plaque_secousse": 0.28,
+    "plaque_repit_images": 30,
+    # ⚠️ **UN TAS DE TERRE** (le chantier, `chantiers.py`) est une rampe NATURELLE : plus
+    # douce que celle des défis, et elle ne se mesure pas — elle se PLAFONNE. La vitesse
+    # qui compte est bornée (`tas_vitesse_max`) et le saut ne monte jamais au-dessus de
+    # `tas_hauteur_max` px : c'est sous le seuil (6 px) où un char passe AU-DESSUS des
+    # tuiles, donc un mur retient toujours ce qui retombe. Un juge REJOUE le saut d'ici, image
+    # par image (l'intégration est discrète : `z += vz; vz -= gravité` monte de `vz / 2` de
+    # plus que la formule continue — 6,3 px mesurés à 0,42, la moto).
+    "tas_impulsion": 0.38,        # vz = vitesse * ca, en sortant sur le tas
+    "tas_vitesse_min": 1.2,       # plus lent, on monte dessus sans décoller
+    "tas_vitesse_max": 4.0,       # la moto (5,2) ne vole pas plus haut que la berline
+    "tas_hauteur_max": 6,         # px : jamais plus haut qu'un char qui passe au-dessus d'un mur
+    "tas_repit_images": 30,       # on ne rebondit pas dix fois en roulant sur le même tas
+    "tas_secousse": 0.18,
+    # ⚠️ **UNE BENNE QU'ON POUSSE** (`chantiers.py`) : elle ralentit le char qui la pousse, d'autant
+    # plus qu'il est léger — `poussee_frein` x la masse de la benne / celle du char, par image de
+    # contact, au plus `poussee_frein_max`. Une berline (1,0) pousse une benne (1,8) à petite
+    # vitesse ; l'autobus (3,2) la sent à peine ; un char plus léger que le vélo serait borné.
+    "poussee_frein": 0.04,
+    "poussee_frein_max": 0.4,
     # ⚠️ **LE BRAQUAGE EST UN RAYON, PAS UNE VITESSE DE ROTATION** (15 sept.
     # 2026, demande de Martin : « ameliore les virages »). Le char tournait de
     # `braquage` RADIANS PAR IMAGE, quelle que soit sa vitesse : le rayon du
@@ -520,9 +694,24 @@ OMBRE = {
 }
 
 
+#: ⚠️ **CE QUI EST GARE DIT LE STANDING** (4e vague des quartiers). `rares` : le
+#: haut de gamme peut-il naitre ici ? Une decapotable devant un preteur sur gages
+#: n'est plus une decapotable, c'est une auto de plus — et c'est la rue chic du
+#: Faubourg qui la rend desirable. `usure` : la part de carrosserie qu'un char de
+#: la rue a encore — en pauvre, on roule une minoune, et elle casse plus vite.
+#: ⚠️ Pas d'epave sur des blocs (le plan la proposait) : une epave s'efface au bout
+#: de `PHYSIQUE["epave_secondes"]`, elle ne peut pas decorer une rue.
+STANDING_DU_PARC: dict[str, dict] = {
+    "cossu": {"rares": 1, "usure": 1.0},
+    "ordinaire": {"rares": 1, "usure": 1.0},
+    "pauvre": {"rares": 0, "usure": 0.6},
+}
+
+
 def exporter_conduite() -> dict:
     return {"trafic": dict(TRAFIC), "physique": dict(PHYSIQUE),
             "ombre": dict(OMBRE),
+            "standing": {nom: dict(fiche) for nom, fiche in STANDING_DU_PARC.items()},
             "saut_vitesse_min": saut_vitesse_min()}
 
 

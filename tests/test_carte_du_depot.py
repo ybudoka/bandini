@@ -1,4 +1,4 @@
-"""La carte du depot — `docs/plan.md` nomme chaque fichier, ou la prochaine session ne le trouve pas.
+"""La carte du depot — `docs/architecture.md` nomme chaque fichier, ou la prochaine session ne le trouve pas.
 
 Le detecteur vit dans `scripts/verifier_carte_du_depot.py` : les gardes Claude
 Code (`.claude/settings.json`) l'appellent a l'ecriture d'un fichier et avant

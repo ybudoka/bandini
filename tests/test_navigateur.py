@@ -5,6 +5,7 @@ en local avant de pousser sur `main` — les tests ne tournent plus en CI depuis
 17 sept. 2026), c'est un echec : un garde-fou qui se desactive tout seul n'en est pas un.
 """
 
+import json
 import os
 import re
 
@@ -51,12 +52,16 @@ def erreurs(page):
     return liste
 
 
+COMMANDES_OUVERTES = "window.BANDINI.B.menu && window.BANDINI.B.menu.titre === 'COMMANDES'"
+
+
 def attendre_titre(page):
     page.wait_for_selector('#bandini[data-etat="titre"]', timeout=15000)
 
 
 def jouer(page):
-    """JOUER, puis PASSER l'ouverture : les juges d'ici veulent la ville, pas la scene.
+    """JOUER, PASSER l'ouverture, puis fermer les COMMANDES : les juges d'ici
+    veulent la ville, pas la scene ni l'aide.
 
     ⚠️ Depuis que le jeu s'ouvre sur une scene (le car de six heures, le
     narrateur), cliquer JOUER ne rend plus les commandes tout de suite : elle
@@ -64,11 +69,18 @@ def jouer(page):
     juste apres ne bouge pas d'un pixel. Tout ce qui veut jouer DANS la ville
     passe donc par ici — un seul endroit a changer le jour ou l'ouverture change.
     L'ouverture elle-meme a ses juges, plus bas et au banc.
+
+    ⚠️ Et depuis le 21 sept. 2026, la fin de l'ouverture ouvre l'ecran
+    COMMANDES, qui fige la ville tant qu'on ne l'a pas ferme (ses juges : plus
+    bas, et `test_commandes_js.py`). On le ferme comme un joueur : ECHAP.
     """
     page.click("#bouton-jouer")
     page.wait_for_selector('#bandini[data-etat="jeu"]')
     page.evaluate("window.BANDINI.Histoire.passerOuverture()")
     page.wait_for_function("!window.BANDINI.B.ouverture")
+    page.wait_for_function(COMMANDES_OUVERTES)
+    page.keyboard.press("Escape")
+    page.wait_for_function("!window.BANDINI.B.menu")
 
 
 @pytest.mark.parametrize("ecran", list(ECRANS))
@@ -213,6 +225,10 @@ def test_l_ouverture_joue_au_premier_jouer_et_se_passe(page, serveur, erreurs):
     page.wait_for_function("!window.BANDINI.B.ouverture")
     assert page.evaluate("window.BANDINI.B.joueur.dessine") is True
     assert page.evaluate("window.BANDINI.B.entites.filter(e => e.slug === 'autobus' && e.conducteur !== 'ligne').length") == 0
+    # Les COMMANDES s'ouvrent quand on rend le bonhomme, et E (« C'EST PARTI ») les ferme.
+    page.wait_for_function(COMMANDES_OUVERTES)
+    page.keyboard.press("KeyE")
+    page.wait_for_function("!window.BANDINI.B.menu")
     page.keyboard.down("KeyW")
     page.wait_for_timeout(400)
     page.keyboard.up("KeyW")
@@ -292,16 +308,82 @@ def test_la_premiere_mission_se_joue_en_scenes_de_l_intro_a_la_fin(page, serveur
     page.evaluate("""() => { const L = window.BANDINI, g = L.Histoire.lieu('garage'), j = L.B.joueur;
                             j.x = g.x; j.y = g.y; L.Entites.indexer(); }""")
     page.wait_for_function("window.BANDINI.B.partie.mission.etape === 1", timeout=20000)
+    # Marco, devant le garage : sa poignée de main (« des missions plus longues », 22 sept. 2026).
+    page.evaluate("() => window.BANDINI.Histoire.parler('marco')")
+    page.wait_for_function("window.BANDINI.B.partie.mission.etape === 2", timeout=60000)
     page.evaluate("""() => { const L = window.BANDINI, v = L.B.mission.vehicule, j = L.B.joueur;
                             j.x = v.x + 12; j.y = v.y; L.Entites.indexer(); L.Vehicules.monter(j, v); }""")
-    page.wait_for_function("window.BANDINI.B.partie.mission.etape === 2", timeout=20000)
+    page.wait_for_function("window.BANDINI.B.partie.mission.etape === 3", timeout=20000)
     page.wait_for_function("!window.BANDINI.B.cinema", timeout=60000)      # Ti-Guy au combine
+    # Le propriétaire a appelé la police : personne ne nous voit (les agents sont retirés à mesure
+    # qu'ils naissent), l'étoile tombe toute seule en quinze secondes.
+    page.evaluate("""() => { const L = window.BANDINI;
+        window.__sansAgents = setInterval(function () {
+            L.B.entites.filter(function (e) { return e.type === 'pieton' && e.arch === 'policier'; })
+              .forEach(function (e) { L.Entites.retirer(e); });
+        }, 100); }""")
+    page.wait_for_function("window.BANDINI.B.partie.mission.etape === 4", timeout=60000)
+    page.evaluate("() => clearInterval(window.__sansAgents)")
+    page.wait_for_function("!window.BANDINI.B.cinema", timeout=60000)      # « Beau char! »
     page.evaluate("""() => { const L = window.BANDINI, g = L.Histoire.lieu('garage'), v = L.B.mission.vehicule, j = L.B.joueur;
                             v.x = g.x; v.y = g.y; v.vitesse = 0; v.vx = 0; v.vy = 0; j.x = v.x; j.y = v.y; }""")
     page.wait_for_function("!!window.BANDINI.B.partie.missionsFaites.m1", timeout=20000)
     page.wait_for_function("!!window.BANDINI.B.scene", timeout=20000)
     page.wait_for_function("!window.BANDINI.B.scene && !window.BANDINI.B.cinema", timeout=90000)
     assert page.evaluate("!window.BANDINI.Histoire.donneur('ti_guy')"), "Ti-Guy n'est pas rentre au garage"
+    assert erreurs == []
+
+
+#: Une manette que le navigateur croit branchee : `window.__manette(boutons)` la
+#: tient, `navigator.getGamepads` la rend. Assez pour l'API Manette de Chromium,
+#: que Playwright ne sait pas imiter.
+FAUSSE_MANETTE = """
+window.__pad = null;
+navigator.getGamepads = function () { return window.__pad ? [window.__pad] : []; };
+window.__manette = function (id, boutons) {
+  const b = []; for (let i = 0; i < 17; i++) b.push({ pressed: boutons.indexOf(i) >= 0, value: boutons.indexOf(i) >= 0 ? 1 : 0 });
+  window.__pad = { id: id, mapping: 'standard', connected: true, axes: [0, 0, 0, 0], buttons: b, index: 0 };
+};
+"""
+
+
+def test_les_commandes_parlent_la_manette_du_titre_a_la_ville(page, serveur, erreurs):
+    """Demande de Martin (21 sept. 2026) : une manette branchee, l'aide dit SUR
+    QUEL BOUTON peser. Tout a la manette, comme il joue : le titre lit ses
+    lettres, A commence, et l'ecran COMMANDES du bout de l'ouverture allume ce
+    qu'on touche sans se fermer — seul A le ferme. ⚠️ Visibilite a l'ECRAN
+    (`is_visible`), jamais l'attribut `hidden` (voir `.boutons`)."""
+    page.add_init_script(FAUSSE_MANETTE)
+    page.goto(serveur)
+    attendre_titre(page)
+    x = "Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e Product: 0b13)"
+
+    def appui(*boutons):
+        page.evaluate("([i, b]) => window.__manette(i, b)", [x, list(boutons)])
+        page.wait_for_timeout(120)
+        page.evaluate("([i]) => window.__manette(i, [])", [x])
+        page.wait_for_timeout(120)
+
+    assert page.is_visible("#aide-clavier") and not page.is_visible("#aide-manette")
+    appui(1)                                          # B : rien au titre, mais on tient la manette
+    page.wait_for_function("!document.getElementById('aide-manette').hidden")
+    assert page.is_visible("#aide-manette") and not page.is_visible("#aide-clavier")
+    assert page.inner_text("#aide-manette-jouer") == "A"
+    appui(0)                                          # A : JOUER
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.evaluate("window.BANDINI.Histoire.passerOuverture()")
+    page.wait_for_function(COMMANDES_OUVERTES)
+    page.evaluate("([i]) => window.__manette(i, [1])", [x])            # B tenu
+    page.wait_for_timeout(150)
+    allumees = page.evaluate("""() => { const L = window.BANDINI;
+        return L.Hud.lignesDAide(L.B.defs.manettes.pages[L.B.menu.page], L.Entree.appareil)
+            .filter(li => li.allume).map(li => li.c); }""")
+    assert allumees == ["esquive"], allumees
+    page.evaluate("([i]) => window.__manette(i, [])", [x])
+    page.wait_for_timeout(120)
+    assert page.evaluate(COMMANDES_OUVERTES), "B ne ferme pas l'aide : on y essaie ses boutons"
+    appui(0)
+    page.wait_for_function("!window.BANDINI.B.menu")
     assert erreurs == []
 
 
@@ -319,6 +401,13 @@ def test_les_commandes_tactiles_sont_grandes_et_visibles(browser, serveur):
     # pastilles et un joystick, pas une scene. Elle a les siens.
     page.evaluate("window.BANDINI.Histoire.passerOuverture()")
     page.wait_for_function("!window.BANDINI.B.ouverture")
+    # ⚠️ L'ecran COMMANDES est ouvert ici, et c'est voulu : ses lignes sont des
+    # ancres du HUD, et la mesure plus bas verifie qu'aucune ne finit sous un
+    # pouce — au telephone en paysage, les boutons couvrent le coin en bas a
+    # droite, et le plan centre y poussait FRAPPE et SPRINT (vu a la capture).
+    page.wait_for_function(COMMANDES_OUVERTES)
+    page.wait_for_timeout(100)
+    assert page.evaluate("window.BANDINI.Hud.ancres().filter(a => a.nom === 'commandes').length") >= 6
     assert page.evaluate("document.body.classList.contains('tactile')")
     for action, minimum in (("attaque", 64), ("action", 64), ("esquive", 64), ("arme", 64), ("pause", 44)):
         boite = page.locator(f'#tactile b[data-a="{action}"]').bounding_box()
@@ -359,6 +448,10 @@ def test_les_commandes_tactiles_sont_grandes_et_visibles(browser, serveur):
                          and boite["y"] < bouton["y"] + bouton["height"]
                          and bouton["y"] < boite["y"] + boite["height"])
             assert not chevauche, f"le HUD « {ancre['nom']} » passe sous le bouton {nom}"
+    # L'aide se ferme au DOIGT : son pied dit « CHOISIR », le nom du bouton ACTION dans un menu.
+    assert page.inner_text('#tactile b[data-a="action"]') == "CHOISIR"
+    page.tap('#tactile b[data-a="action"]')
+    page.wait_for_function("!window.BANDINI.B.menu")
     # Glisser sur le joystick deplace le joueur.
     x0 = page.evaluate("window.BANDINI.B.joueur.x")
     cx, cy = croix["x"] + croix["width"] / 2, croix["y"] + croix["height"] / 2
@@ -472,6 +565,8 @@ def test_une_voix_de_l_histoire_se_decode_et_baisse_la_radio(page, serveur, erre
     page.evaluate("""() => {
         const L = window.BANDINI, j = L.B.joueur, t = L.Histoire.donneur('ti_guy');
         j.x = t.x - 16; j.y = t.y; L.Entites.indexer();
+        // ⚠️ On le regarde : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, t.x - j.x, t.y - j.y);
         L.Missions.interagir(j);
     }""")
     assert page.evaluate("!!window.BANDINI.B.cinema"), "Ti-Guy ne parle pas"
@@ -570,16 +665,22 @@ def test_un_vrai_geste_rend_le_son_et_efface_le_bandeau(page, serveur, erreurs):
 
 
 def test_les_options_disent_l_etat_du_son(page, serveur, erreurs):
+    """OPTIONS est un onglet du classeur de la PAUSE : on le CLIQUE a la souris,
+    sur la vraie toile etiree en CSS — le seul juge d'un clic reel sur un menu
+    (`Hud.toucherMenu` ramene le point aux 480 x 270 pixels du jeu)."""
     page.goto(serveur)
     attendre_titre(page)
     jouer(page)
     page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.evaluate("window.BANDINI.Jeu.pause()")
+    page.wait_for_function("window.BANDINI.Hud.ciblesDuMenu().some(q => q.onglet === 'options')")
+    z = page.evaluate("window.BANDINI.Hud.ciblesDuMenu().find(q => q.onglet === 'options')")
+    boite = page.locator("canvas").first.bounding_box()
+    page.mouse.click(boite["x"] + (z["x"] + z["l"] / 2) * boite["width"] / 480,
+                     boite["y"] + (z["y"] + z["h"] / 2) * boite["height"] / 270)
+    page.wait_for_function("window.BANDINI.B.menu && window.BANDINI.B.menu.titre === 'OPTIONS'")
     ligne = page.evaluate("""() => {
         const L = window.BANDINI;
-        L.Jeu.pause();
-        const pause = L.B.menu;
-        const i = pause.items.findIndex(x => x.libelle === 'OPTIONS');
-        pause.items[i].faire(pause.items[i]);
         const son = L.B.menu.items.find(x => x.libelle === 'SON');
         return { titre: L.B.menu.titre, detail: son && son.detail, actif: son && son.actif };
     }""")
@@ -679,7 +780,9 @@ def test_tout_ce_qui_doit_s_entendre_s_entend(page, serveur, erreurs):
             "s => window.BANDINI.Son.estCharge('histoire-' + s)", arg=premiere["slug"], timeout=45000)
         niveaux["une replique"] = page.evaluate("""(s) => {
             const S = window.BANDINI.Son;
-            S.Voix.couper(); S.Ambiance.arreter(); S.boucle('ambiance-ville', false);
+            // ⚠️ NET, et dans cet ordre : `Ambiance.arreter()` fond maintenant sur deux
+            // secondes, et la replique serait mesuree par-dessus l'ambiance qui s'eteint.
+            S.Voix.couper(); S.boucle('ambiance-ville', false); S.Ambiance.arreter();
             const p = window.__mesure(1500);
             S.Voix.parler(s, {});
             return p;
@@ -694,6 +797,84 @@ def test_tout_ce_qui_doit_s_entendre_s_entend(page, serveur, erreurs):
     muets = [nom for nom, v in niveaux.items() if v <= PLANCHER]
     print("\n[audio] " + " · ".join(f"{nom} {v:.4f}" for nom, v in niveaux.items()))
     assert not muets, f"ca « joue » mais on n'entend rien : {muets} (niveaux {niveaux})"
+    assert erreurs == []
+
+
+#: Une sonde sur les fondus : elle garde chaque courbe posee et chaque arret de
+#: source, avec le PARAMETRE lui-meme — c'est ce qui permet d'en lire la valeur
+#: pendant qu'il descend, sans deviner quel noeud est lequel.
+SONDE_FONDU = """
+window.__courbes = []; window.__arrets = [];
+(function () {
+  const C = AudioParam.prototype.setValueCurveAtTime;
+  AudioParam.prototype.setValueCurveAtTime = function (v, t, d) {
+    window.__courbes.push({ param: this, sens: v[v.length - 1] > v[0] ? 'entree' : 'sortie', t: t, duree: d });
+    return C.apply(this, arguments);
+  };
+  const S = AudioScheduledSourceNode.prototype.stop;
+  AudioBufferSourceNode.prototype.stop = function (t) {
+    window.__arrets.push({ apres: t === undefined ? 0 : t - this.context.currentTime });
+    return S.apply(this, arguments);
+  };
+})();
+"""
+
+
+def test_le_fondu_enchaine_marche_pour_de_vrai_dans_le_navigateur(page, serveur, erreurs):
+    """⚠️ Le faux contexte du banc dit ce que le jeu DEMANDE, pas ce que le
+    navigateur en fait. Ici, un vrai `AudioContext` : les deux courbes sont
+    acceptees (pas de `NotSupportedError`), l'ancienne piste descend pendant que
+    la nouvelle monte — a puissance constante —, et la source de l'ancienne ne
+    s'arrete qu'apres la fin de sa courbe. Demande de Martin (20 sept. 2026) :
+    « les transitions de musique doivent toujours se faire en crossover »."""
+    page.add_init_script(SONDE_FONDU)
+    page.goto(serveur)
+    attendre_titre(page)
+    jouer(page)
+    page.wait_for_function("window.BANDINI.Son.charges > 0", timeout=45000)
+    # ⚠️ Le jukebox TIENT LA MAIN du chef d'orchestre : la ville ne remet pas son
+    # ambiance pendant qu'on mesure. Deux morceaux dans le cache d'abord (le
+    # premier telechargement, lui, n'est pas un fondu qu'on puisse dater).
+    for slug in ("amb_quais", "amb_pointe"):
+        page.evaluate("(s) => { BANDINI.B.jukebox = s; }", slug)
+        page.wait_for_function("(s) => BANDINI.Son.boucleActive('musique-' + s)", arg=slug, timeout=45000)
+    avant = page.evaluate("() => window.__courbes.length")
+    fondu = page.evaluate("() => BANDINI.B.defs.audio.musique.fondu_s")
+    page.evaluate("() => { window.__arrets.length = 0; BANDINI.B.jukebox = 'amb_quais'; }")
+    page.wait_for_function("(n) => window.__courbes.length >= n + 2", arg=avant, timeout=15000)
+    mesures = page.evaluate("""() => new Promise(function (ok) {
+        const neuves = window.__courbes.slice(%d);
+        const entree = neuves.find(function (c) { return c.sens === 'entree'; });
+        const sortie = neuves.find(function (c) { return c.sens === 'sortie'; });
+        const ctx = BANDINI.Son.contexte;
+        const lu = [];
+        const t = setInterval(function () {
+          lu.push({ e: entree.param.value, s: sortie.param.value });
+        }, 250);
+        setTimeout(function () {
+          clearInterval(t);
+          ok({ lu: lu, neuves: neuves.map(function (c) { return { sens: c.sens, t: c.t, duree: c.duree }; }),
+               arrets: window.__arrets, actives: [BANDINI.Son.boucleActive('musique-amb_quais'), BANDINI.Son.boucleActive('musique-amb_pointe')] });
+        }, %d);
+    })""" % (avant, int((fondu + 0.6) * 1000)))
+    sens = sorted(c["sens"] for c in mesures["neuves"])
+    assert sens == ["entree", "sortie"], f"un fondu, c'est une courbe qui monte et une qui descend : {mesures['neuves']}"
+    for c in mesures["neuves"]:
+        assert c["duree"] == fondu, f"la courbe ne suit pas fondu_s ({fondu}) : {c}"
+    e, s = [next(c for c in mesures["neuves"] if c["sens"] == k) for k in ("entree", "sortie")]
+    assert abs(e["t"] - s["t"]) < 0.5, f"les deux courbes ne partent pas ensemble : {e} {s}"
+    lu = mesures["lu"]
+    assert lu[-1]["e"] > 0.95 and lu[-1]["s"] < 0.05, f"le fondu n'arrive pas au bout : {lu[-1]}"
+    assert all(b["e"] >= a["e"] - 1e-6 for a, b in zip(lu, lu[1:])), f"la nouvelle ne fait pas que monter : {lu}"
+    assert all(b["s"] <= a["s"] + 1e-6 for a, b in zip(lu, lu[1:])), f"l'ancienne ne fait pas que baisser : {lu}"
+    # Puissance constante : au milieu, ni creux ni bosse (deux fois 0,707 valent 1).
+    puissances = [m["e"] ** 2 + m["s"] ** 2 for m in lu]
+    assert all(0.8 < p < 1.2 for p in puissances), f"le fondu creuse ou gonfle le volume : {puissances}"
+    assert mesures["actives"] == [True, False], f"seule la nouvelle doit etre une boucle active : {mesures['actives']}"
+    # L'ancienne source ne s'arrete qu'APRES sa courbe.
+    assert mesures["arrets"], "l'ancienne piste n'a jamais ete arretee : elle jouerait pour toujours"
+    assert max(a["apres"] for a in mesures["arrets"]) >= fondu - 0.2, \
+        f"l'ancienne piste est coupee net : {mesures['arrets']}"
     assert erreurs == []
 
 
@@ -841,3 +1022,294 @@ def test_le_compte_ne_barre_jamais_le_chemin_de_jouer(page, serveur, erreurs):
     attendre_titre(page)
     jouer(page)
     assert page.get_attribute("#bandini", "data-etat") == "jeu"
+
+
+# --- Le NIP (M14, 3e vague) --------------------------------------------------------------
+
+
+def visibles(page, *ids):
+    """Ce que le joueur VOIT : `is_visible`, jamais l'attribut `hidden` — le banc lisait
+    `hidden === true` sur un formulaire encore affiche (2e vague), et sur `nip-retrait`
+    encore affiche dans les quatre etats (3e vague)."""
+    return {i: page.is_visible("#" + i) for i in ids}
+
+
+NIP_ELEMENTS = ("nip-form", "compte-form", "nip-activer-form", "nip-retrait", "bouton-nip-retirer",
+                "bouton-compte-deconnexion")
+
+
+def test_activer_un_nip_puis_le_retrouver_au_rechargement(page, serveur, erreurs):
+    """De bout en bout, avec un VRAI rechargement de page (localStorage survit, le
+    cookie httpOnly aussi — c'est justement lui que le NIP protège) : créer un
+    compte, activer un NIP, recharger, se faire demander le NIP, et déverrouiller.
+
+    ⚠️ Son PROPRE pseudo : le fixture `serveur` est celui de toute la session, donc une
+    seule base — « Martin » est déjà pris par le juge du compte, et le second
+    `inscription` rendait 409 dans la suite complète alors que ce juge passait seul."""
+    page.goto(serveur)
+    attendre_titre(page)
+    page.click("#bouton-compte")
+    # ⚠️ FERME : ni reglage du NIP, ni bouton pour le retirer, ni deconnexion.
+    assert visibles(page, *NIP_ELEMENTS) == {"nip-form": False, "compte-form": True, "nip-activer-form": False,
+                                             "nip-retrait": False, "bouton-nip-retirer": False,
+                                             "bouton-compte-deconnexion": False}
+    page.fill("#compte-pseudo", "Nadia")
+    page.fill("#compte-passe", "un-mot-de-passe")
+    page.click("#bouton-compte-inscription")
+    page.wait_for_function("document.getElementById('compte-parties').children.length === 3", timeout=10000)
+
+    # OUVERT SANS NIP : on peut en ajouter un, pas en retirer un qui n'existe pas.
+    assert visibles(page, *NIP_ELEMENTS) == {"nip-form": False, "compte-form": False, "nip-activer-form": True,
+                                             "nip-retrait": False, "bouton-nip-retirer": False,
+                                             "bouton-compte-deconnexion": True}
+    page.fill("#nip-nouveau", "4821")
+    page.click("#bouton-nip-activer")
+    page.wait_for_function("window.BANDINI.Compte.etat().nipConfigure === true", timeout=5000)
+    # OUVERT AVEC NIP : on peut le retirer, plus en ajouter.
+    assert visibles(page, *NIP_ELEMENTS) == {"nip-form": False, "compte-form": False, "nip-activer-form": False,
+                                             "nip-retrait": True, "bouton-nip-retirer": True,
+                                             "bouton-compte-deconnexion": True}
+
+    page.reload()
+    attendre_titre(page)
+    assert page.evaluate("window.BANDINI.Compte.etat().etat") == "verrouille"
+    # ⚠️ Verrouille ou pas, JOUER doit rester JOUER : un compte est un confort.
+    assert page.is_visible("#bouton-jouer")
+
+    page.click("#bouton-compte")
+    # ⚠️ VERROUILLE : le NIP SEUL. « Retirer le NIP » s'affichait ici, et retirait le
+    # verrou sans le NIP — le bouton ne doit pas etre a l'ecran, ni cliquable.
+    assert visibles(page, *NIP_ELEMENTS) == {"nip-form": True, "compte-form": False, "nip-activer-form": False,
+                                             "nip-retrait": False, "bouton-nip-retirer": False,
+                                             "bouton-compte-deconnexion": False}
+
+    page.fill("#nip-code", "4821")
+    page.click("#nip-form button[type=submit]")
+    page.wait_for_function("window.BANDINI.Compte.etat().etat === 'ouvert'", timeout=5000)
+    assert page.text_content("#bouton-compte") == "Compte : Nadia"
+    assert erreurs == []
+
+
+def test_le_nip_ne_bloque_jamais_jouer(page, serveur, erreurs):
+    """Un appareil verrouillé (NIP configuré, pas encore tapé) : JOUER joue quand
+    même, sans un seul appel au serveur des comptes."""
+    appels = []
+
+    def noter(route):
+        appels.append(route.request.url)
+        route.continue_()
+
+    page.route("**/api/compte/**", noter)
+    page.goto(serveur)
+    attendre_titre(page)
+    page.evaluate("""() => {
+        localStorage.setItem('bandini-nip-v1', JSON.stringify({ sel: 'AA==', iv: 'AA==', corps: 'AA==', essais: 0 }));
+    }""")
+    page.reload()
+    attendre_titre(page)
+    assert page.evaluate("window.BANDINI.Compte.etat().etat") == "verrouille"
+    appels_avant_jeu = list(appels)
+    jouer(page)
+    assert page.get_attribute("#bandini", "data-etat") == "jeu"
+    assert appels == appels_avant_jeu, "verrouille ne doit jamais parler au serveur des comptes"
+    assert erreurs == []
+
+
+# --- Effacer son compte (M14, 4e vague) --------------------------------------------------
+
+EFFACER_ELEMENTS = ("compte-effacer-ligne", "compte-effacer-form", "compte-garde")
+
+
+def test_effacer_son_compte_de_bout_en_bout(page, serveur, erreurs):
+    """Le vrai chemin, sur le vrai serveur : s'inscrire, refuser un mauvais mot de passe,
+    effacer, puis — la seule preuve qu'un banc ne peut pas donner — **reprendre le même
+    pseudo**, ce qui n'est possible que si le compte a vraiment disparu.
+
+    ⚠️ Son PROPRE pseudo (le fixture `serveur` est partagé par toute la session)."""
+    page.goto(serveur)
+    attendre_titre(page)
+    page.click("#bouton-compte")
+    # FERME : la page « ce qu'on garde » se lit, mais rien à effacer.
+    assert visibles(page, *EFFACER_ELEMENTS) == {"compte-effacer-ligne": False, "compte-effacer-form": False,
+                                                 "compte-garde": True}
+    page.fill("#compte-pseudo", "Leila")
+    page.fill("#compte-passe", "un-mot-de-passe")
+    page.click("#bouton-compte-inscription")
+    page.wait_for_function("document.getElementById('compte-parties').children.length === 3", timeout=10000)
+
+    # OUVERT : le bouton, pas encore la confirmation.
+    assert visibles(page, *EFFACER_ELEMENTS) == {"compte-effacer-ligne": True, "compte-effacer-form": False,
+                                                 "compte-garde": True}
+    page.click("#bouton-compte-effacer")
+    assert visibles(page, *EFFACER_ELEMENTS) == {"compte-effacer-ligne": False, "compte-effacer-form": True,
+                                                 "compte-garde": True}
+
+    # Un mauvais mot de passe : rien n'est effacé, on reste connecté (403, pas 401).
+    page.fill("#compte-effacer-passe", "un-mauvais-mot-de-passe")
+    page.click("#bouton-compte-effacer-confirmer")
+    page.wait_for_function("document.getElementById('compte-effacer-etat').textContent.includes('incorrect')")
+    assert page.text_content("#bouton-compte") == "Compte : Leila"
+    assert page.input_value("#compte-effacer-passe") == "", "le mot de passe ne reste pas dans le champ"
+    assert page.evaluate("window.BANDINI.Compte.etat().etat") == "ouvert"
+    assert page.is_visible("#compte-effacer-form"), "la confirmation reste ouverte : on peut retaper"
+
+    # Le bon : le compte disparaît, l'appareil est délié, le message se lit encore.
+    page.fill("#compte-effacer-passe", "un-mot-de-passe")
+    page.click("#bouton-compte-effacer-confirmer")
+    page.wait_for_function("window.BANDINI.Compte.etat().etat === 'ferme'", timeout=10000)
+    assert page.text_content("#bouton-compte") == "Compte"
+    assert page.is_visible("#compte-form"), "retour au formulaire de connexion"
+    assert visibles(page, *EFFACER_ELEMENTS) == {"compte-effacer-ligne": False, "compte-effacer-form": False,
+                                                 "compte-garde": True}
+    # ⚠️ Le seul mot qui dit ce qui s'est passé vit dehors du formulaire qui vient de se refermer.
+    assert page.is_visible("#compte-etat") and "effacé" in page.text_content("#compte-etat")
+    assert not [c for c in page.context.cookies() if c["name"] == "bandini-appareil"], "le cookie s'efface"
+
+    # LA PREUVE : le pseudo est libre. Un compte encore là aurait rendu 409 « déjà pris ».
+    page.fill("#compte-pseudo", "Leila")
+    page.fill("#compte-passe", "un-autre-mot-de-passe")
+    page.click("#bouton-compte-inscription")
+    page.wait_for_function("window.BANDINI.Compte.etat().etat === 'ouvert'", timeout=10000)
+    assert page.text_content("#bouton-compte") == "Compte : Leila"
+    assert erreurs == ["Failed to load resource: the server responded with a status of 403 (FORBIDDEN)"], \
+        "seul le 403 attendu du mauvais mot de passe s'est produit"
+
+
+def test_la_page_ce_qu_on_garde_dit_la_verite_et_ne_promet_rien_qu_on_ne_tienne_pas(page, serveur, erreurs):
+    """« Une page dit ce qui est gardé et comment tout effacer » : elle se déplie, et elle
+    ne promet pas ce qu'aucun code ne tient — un mot de passe perdu ne se retrouve pas."""
+    page.goto(serveur)
+    attendre_titre(page)
+    page.click("#bouton-compte")
+    assert not page.is_visible("#compte-garde li"), "fermée par défaut : ce n'est pas ce qu'on est venu chercher"
+    page.click("#compte-garde summary")
+    assert page.is_visible("#compte-garde li")
+    texte = page.text_content("#compte-garde")
+    for verite in ("empreinte", "jamais le mot de passe", "sept jours", "Mot de passe perdu, compte perdu"):
+        assert verite in texte, verite
+    assert erreurs == []
+
+
+# --- L'ecran du compte sur un petit ecran (M14) --------------------------------------------
+
+DANS_L_ECRAN = """(id) => {
+    const e = document.querySelector('.ecran').getBoundingClientRect(), b = document.getElementById(id);
+    if (!b || b.offsetParent === null) return false;
+    const r = b.getBoundingClientRect();
+    return r.top >= e.top - 1 && r.bottom <= e.bottom + 1;
+}"""
+
+
+# ⚠️ Depuis le 22 sept. 2026, le compte SORT de la boîte du jeu (`position: fixed`) : son « écran »
+# à lui, c'est le voile, qui couvre la fenêtre.
+DANS_LE_COMPTE = DANS_L_ECRAN.replace("document.querySelector('.ecran')", "document.getElementById('voile-compte')")
+
+
+def atteignable_au_doigt(page, ident, pas=60, maxi=60):
+    """Vrai si `ident` finit DANS l'écran en faisant défiler le voile comme un doigt le fait.
+
+    ⚠️ La MOLETTE, jamais `scrollIntoView` ni le `click` de Playwright (qui défilent
+    programmatiquement, même un conteneur `overflow: hidden`) : un joueur ne peut pas
+    faire ça, et un juge qui le fait laisserait passer un bouton inatteignable."""
+    page.evaluate("document.getElementById('voile-compte').scrollTop = 0")
+    boite = page.evaluate("""() => { const r = document.getElementById('voile-compte').getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }""")
+    page.mouse.move(boite["x"], boite["y"])
+    for _ in range(maxi):
+        if page.evaluate(DANS_LE_COMPTE, ident):
+            return True
+        page.mouse.wheel(0, pas)
+        page.wait_for_timeout(20)
+    return page.evaluate(DANS_LE_COMPTE, ident)
+
+
+@pytest.mark.parametrize("nom,taille", [("portrait", (390, 844)), ("paysage", (844, 390))])
+def test_tout_l_ecran_du_compte_s_atteint_en_le_faisant_defiler_sur_un_telephone(page, serveur, erreurs, nom, taille):
+    """⚠️ Mesuré le 20 sept. 2026 : `.voile` centre son contenu dans un `.ecran` en
+    `overflow: hidden`, donc le compte était ROGNÉ — en portrait (écran de jeu de 390×219)
+    « Retour » était hors écran et le pseudo coupé en haut ; en paysage, la confirmation
+    d'effacement aurait débordé. Le pire état : compte ouvert, confirmation d'effacement ouverte."""
+    page.set_viewport_size({"width": taille[0], "height": taille[1]})
+    page.goto(serveur)
+    attendre_titre(page)
+    page.evaluate("""async (pseudo) => { await fetch('/api/compte/inscription', { method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pseudo: pseudo, mot_de_passe: 'un-mot-de-passe' }) }); }""", "Ecran-" + nom)
+    page.reload()
+    attendre_titre(page)
+    page.wait_for_function("window.BANDINI.Compte.etat().etat === 'ouvert'", timeout=15000)
+    page.click("#bouton-compte")
+    page.evaluate("document.getElementById('bouton-compte-effacer').click()")
+    voile = page.evaluate("(() => { const r = document.getElementById('voile-compte').getBoundingClientRect(); return [r.width, r.height]; })()")
+    assert voile[0] >= taille[0] - 1 and voile[1] >= taille[1] - 1, \
+        f"le compte doit prendre toute la fenêtre, pas la boîte du jeu (390×219 en portrait) : {voile}"
+    for ident in ("compte-mot", "compte-effacer-passe", "bouton-compte-effacer-annuler",
+                  "bouton-compte-effacer-confirmer", "bouton-compte-deconnexion", "bouton-fermer-compte"):
+        assert atteignable_au_doigt(page, ident), f"{ident} est inatteignable en {nom} ({taille[0]}×{taille[1]})"
+    assert erreurs == []
+
+
+# --- Le defi du jour (M14, 5e vague) -------------------------------------------------------
+
+
+def test_le_titre_annonce_le_defi_que_le_vrai_serveur_designe(page, serveur, erreurs):
+    """Le vrai serveur, la vraie route : la ligne du titre nomme le defi que `/api/defi` a rendu,
+    avec la prime du catalogue — et aucun cookie ne part (route publique)."""
+    demandes = []
+    page.on("request", lambda r: demandes.append(r) if r.url.endswith("/api/defi") else None)
+    page.goto(serveur)
+    attendre_titre(page)
+    page.wait_for_function("window.BANDINI.Defi.duJour() !== null", timeout=8000)
+    reponse = page.evaluate("fetch('/api/defi').then(r => r.json())")
+    fiche = page.evaluate("window.BANDINI.B.defs.defis.find(d => d.slug === '%s')" % reponse["defi"])
+    assert page.is_visible("#defi-du-jour")
+    assert page.text_content("#defi-du-jour") == f"Défi du jour : {fiche['titre']} — {fiche['prime']} $"
+    assert len(demandes) >= 1 and all("cookie" not in r.headers for r in demandes)
+    assert erreurs == []
+
+
+def test_le_defi_du_jour_ne_barre_jamais_le_chemin_de_jouer(page, serveur, erreurs):
+    """⚠️ Un bonus, jamais une condition : la route tombe (500), le titre ne dit rien, JOUER joue."""
+    page.route("**/api/defi", lambda route: route.fulfill(status=500, body="{}", content_type="application/json"))
+    page.goto(serveur)
+    attendre_titre(page)
+    page.wait_for_timeout(300)
+    assert not page.is_visible("#defi-du-jour")
+    assert page.evaluate("window.BANDINI.Defi.duJour()") is None
+    jouer(page)
+    assert page.get_attribute("#bandini", "data-etat") == "jeu"
+
+
+def test_une_page_rouverte_le_lendemain_annonce_le_defi_du_nouveau_jour(page, serveur, erreurs):
+    """Un telephone qui a dormi sur la table : la page revient (`visibilitychange`), dix minutes
+    ont passe, et le titre ne doit pas annoncer le defi d'hier."""
+    reponses = iter([{"date": "2026-09-20", "defi": "saut"}, {"date": "2026-09-21", "defi": "tour"}])
+
+    def repondre(route):
+        route.fulfill(status=200, body=json.dumps(next(reponses)), content_type="application/json")
+
+    page.add_init_script("""(() => { const reel = Date.now.bind(Date); window.__decalage = 0;
+        Date.now = () => reel() + window.__decalage; })()""")
+    page.route("**/api/defi", repondre)
+    page.goto(serveur)
+    attendre_titre(page)
+    page.wait_for_function("window.BANDINI.Defi.duJour() !== null", timeout=8000)
+    assert "Grand Saut" in page.text_content("#defi-du-jour")
+    page.evaluate("window.__decalage = window.BANDINI.Defi.REPOS_MS + 1000")
+    page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+    page.wait_for_function("window.BANDINI.Defi.duJour() && window.BANDINI.Defi.duJour().slug === 'tour'", timeout=8000)
+    assert "Tour du Faubourg" in page.text_content("#defi-du-jour")
+    assert erreurs == []
+
+
+@pytest.mark.parametrize("nom,taille", [("portrait", (390, 844)), ("paysage", (844, 390))])
+def test_la_ligne_du_defi_ne_pousse_ni_jouer_ni_compte_hors_de_l_ecran(page, serveur, erreurs, nom, taille):
+    """⚠️ L'écran titre est aussi un `.voile` en `overflow: hidden` (le piège de l'écran du compte) :
+    une ligne de plus ne doit pas rogner JOUER — mesuré en portrait, où l'écran de jeu fait 390×219."""
+    page.set_viewport_size({"width": taille[0], "height": taille[1]})
+    page.goto(serveur)
+    attendre_titre(page)
+    page.wait_for_function("window.BANDINI.Defi.duJour() !== null", timeout=8000)
+    for ident in ("bouton-jouer", "bouton-compte", "defi-du-jour"):
+        assert page.evaluate(DANS_L_ECRAN, ident), f"{ident} sort de l'écran titre en {nom}"
+    assert erreurs == []

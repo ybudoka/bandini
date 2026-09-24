@@ -1,6 +1,30 @@
 from app import armes, audio, carte, economie, missions, pietons
 
 
+def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
+    """⚠️ Martin, 20 sept. 2026 : « fais parler les personnages ». Lulu, sans mission, disait
+    « le Faubourg est tranquille » en silence — comme les autres. `civil` et `narrateur`
+    n'ont pas de `ou` : on ne leur parle jamais, ils n'ont pas de repos."""
+    assert [p["slug"] for p in missions.PERSONNAGES if p.get("ou")] == [
+        "ti_guy", "thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu", "raymonde", "ovila",
+        "mo", "fern", "mado", "gege", "xavier", "lachance", "gus", "rosa", "ginette", "gilles",
+        "bonimenteur", "sven"]
+    # Ti-Guy s'en va apres m1 (il a m1 a donner tant qu'il est la) ; Josee ouvre le marche noir
+    # apres M5 (`marche_noir.apres`) au lieu de dire son repos : pas de voix pour ce qui ne s'entend pas.
+    attendus = [f"{qui}-repos-{n}" for qui in ("thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu",
+                                              "raymonde", "ovila", "mo", "fern", "mado", "gege",
+                                              "xavier", "lachance", "gus", "rosa", "ginette", "gilles",
+                                              "bonimenteur", "sven") for n in (1, 2) if (qui, n) != ("josee", 2)]
+    repos = missions.repliques_de_repos()
+    assert [r["slug"] for r in repos] == attendus, "trente-neuf voix, pas quarante"
+    assert {r["texte"] for r in repos} == {missions.REPOS["texte"], missions.REPOS["texte_apres"]}
+    assert all(r["mission"] == "repos" and not r["telephone"] for r in repos)
+    voix = {v["slug"]: v for v in audio.voix_repos()}
+    assert set(voix) == {r["slug"] for r in repos}
+    for slug, v in voix.items():
+        assert v["voix"] == missions.personnage(v["qui"])["voix"], slug
+
+
 def test_types_et_ordre():
     assert "aller" in missions.TYPES_OBJECTIFS
     assert missions.ordre_topologique() == sorted(m["slug"] for m in missions.CATALOGUE) or True
@@ -30,13 +54,19 @@ def test_les_cinq_missions_se_suivent():
         assert mission["prerequis"] == [precedente["slug"]], "chaque mission de la v1 ouvre la suivante"
     # ⚠️ Trois défis de char depuis la v1, plus les trois jeux d'adresse de la
     # foire : un jeu d'adresse est un DÉFI, pas un moteur.
-    assert len(missions.DEFIS) == 6
+    # ⚠️ Et une course par quartier depuis le 22 sept. 2026 (le Tour du
+    # Faubourg, plus les Érables, la Shop, les Quais et la Pointe).
+    # ⚠️ Et, depuis le 23 sept. 2026, des défis qui se DÉBLOQUENT : les dix
+    # d'avant restent les seuls qu'on a dès le départ.
+    assert len([d for d in missions.DEFIS if not d.get("debloque")]) == 10
+    assert sorted(d["district"] for d in missions.DEFIS if d.get("circuit")) == sorted(
+        d["slug"] for d in carte.DISTRICTS if d["slug"] != "baie")
     assert len(missions.defis_de_foire()) == 3
 
 
 def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
     lieux = {p["slug"] for p in carte.SPECIAUX.values()} | {"kiosque", "planque"}
-    zones = {"cravates", "port", "faubourg"}
+    zones = {"cravates", "port", "faubourg", "boulonneux"}
     for m in missions.CATALOGUE:
         perso = missions.personnage(m["donneur"])
         assert perso and perso["ou"], f"{m['slug']} : le donneur doit se tenir quelque part"
@@ -45,7 +75,11 @@ def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
             assert o["type"] in missions.TYPES_OBJECTIFS
             assert o["texte"] == o["texte"].upper() and len(o["texte"]) <= 60, "l'objectif s'affiche en une ligne"
             if "lieu" in o:
-                assert o["lieu"] in lieux, f"{m['slug']} : lieu inconnu {o['lieu']}"
+                # ⚠️ Livrer une COQUE, c'est la ramener à son mouillage (`navires.py`) :
+                # il n'y a pas de baie de garage sur l'eau, `carte.SPECIAUX` n'en sait rien.
+                assert o["lieu"] in lieux or o["lieu"].startswith("mouillage:"), f"{m['slug']} : lieu inconnu {o['lieu']}"
+            for etape in o.get("par", []):
+                assert etape in lieux, f"{m['slug']} : lieu du détour inconnu {etape}"
             if o.get("ou", "").startswith("zone:"):
                 assert o["ou"][5:] in zones
             if o.get("groupe"):
@@ -93,13 +127,20 @@ def test_chaque_replique_a_une_voix_et_tient_en_deux_phrases():
     # arrêter. Ce qui reste borné ici, c'est qu'UNE mission ne déborde pas :
     # `REPLIQUES_PAR_MISSION` répliques au plus (les cinq de la v1 font 7–8),
     # et une réplique reste déjà bornée au-dessus (8–110 caractères, ≤ 2 phrases).
-    REPLIQUES_PAR_MISSION = 10
+    # ⚠️ Relevé de 10 à 18 le 22 sept. 2026, sur demande de Martin (« des missions plus longues, le
+    # plus possible ») : deux à quatre étapes de plus par mission, chacune avec sa réplique `pendant`,
+    # et des intros et des fins plus étoffées — 11 à 14 répliques par mission après ce passage.
+    REPLIQUES_PAR_MISSION = 18
+    # ⚠️ m6 : quatre répliques de plus (la poignée de main de ses quatre contacts, `accueil`) — Martin,
+    # 20 sept. 2026, « enrichir leur dialogue » : une chacune, donc 12. Un plafond par mission qui le
+    # demande, jamais un plafond global relevé : les autres restent à 10.
+    PLAFONDS = {"m6": 20}
     par_mission: dict[str, int] = {}
     for r in missions.repliques():
         par_mission[r["mission"]] = par_mission.get(r["mission"], 0) + 1
     for slug, n in par_mission.items():
-        assert n <= REPLIQUES_PAR_MISSION, (
-            f"{slug} : {n} répliques pour un plafond de {REPLIQUES_PAR_MISSION} "
+        assert n <= PLAFONDS.get(slug, REPLIQUES_PAR_MISSION), (
+            f"{slug} : {n} répliques pour un plafond de {PLAFONDS.get(slug, REPLIQUES_PAR_MISSION)} "
             "— une mission bavarde, c'est une voix de plus à générer par ligne"
         )
     # Le filet global suit le catalogue : il se détend tout seul quand on ajoute
@@ -132,3 +173,67 @@ def test_chaque_donneur_a_son_mot_pour_t_interpeller():
     # Le client du taxi hele lui aussi — c'est le meme geste, au bord du trottoir.
     assert missions.personnage("civil")["heler"], "le client du taxi doit lever le bras"
     assert not missions.personnage("narrateur")["heler"], "le narrateur n'est nulle part : il ne hele personne"
+
+
+# --- Les dix-huit défis au doigt, à la manette et au clavier (23 sept. 2026) ----------------
+
+
+def test_chaque_defi_dit_avec_quoi_il_se_joue():
+    """`appareils` : une liste non vide, sans doublon, prise parmi les trois ; les dix de la v1
+    se jouent avec les trois. Et un défi qui en EXCLUT un le fait pour une raison écrite dans
+    le catalogue — ce juge-ci ne lit pas les commentaires, il en tient la liste."""
+    for d in missions.DEFIS:
+        assert d["appareils"], d["slug"]
+        assert len(set(d["appareils"])) == len(d["appareils"])
+        assert set(d["appareils"]) <= set(missions.APPAREILS), d["slug"]
+        if not d.get("debloque"):
+            assert sorted(d["appareils"]) == sorted(missions.APPAREILS), d["slug"]
+    exclus = {d["slug"]: sorted(set(missions.APPAREILS) - set(d["appareils"])) for d in missions.DEFIS}
+    assert {s: e for s, e in exclus.items() if e} == {
+        "danse": ["doigts"], "crochet": ["clavier"], "coffre": ["clavier"],
+        "lait": ["clavier"], "remorquage": ["clavier"]}
+
+
+def test_ce_qui_debloque_un_defi_existe():
+    slugs = {d["slug"] for d in missions.DEFIS}
+    faites = {m["slug"] for m in missions.CATALOGUE}
+    for d in missions.DEFIS:
+        r = d.get("debloque")
+        if not r:
+            continue
+        assert set(r) <= {"defis", "missions", "apres"}, d["slug"]
+        assert r.get("defis", 1) >= 1
+        assert set(r.get("missions", [])) <= faites, d["slug"]
+        assert set(r.get("apres", [])) <= slugs - {d["slug"]}, d["slug"]
+        # ⚠️ Un défi qu'on attend doit s'ouvrir AVANT lui (ou être là dès le départ).
+        for autre in r.get("apres", []):
+            assert missions.DEFIS.index(next(q for q in missions.DEFIS if q["slug"] == autre)) \
+                < missions.DEFIS.index(d), d["slug"]
+
+
+def test_un_defi_neuf_ne_nomme_aucune_porte_neuve():
+    """⚠️ `devants.lieux_de_mission` lit ce catalogue : une porte que rien ne nommait avant
+    élargirait son devant, et toute la ville glisserait. Un défi qui se débloque ne se plante
+    que devant une porte qu'une mission, un personnage ou un défi de la v1 nomme déjà."""
+    deja = set()
+    for m in missions.CATALOGUE:
+        deja |= set(__import__("re").findall(r"porte:([a-z_]+)", repr(m)))
+        deja |= {o["lieu"] for o in m["objectifs"] if o.get("lieu")}
+    for d in missions.DEFIS:
+        if not d.get("debloque") and d["ou"].startswith("porte:"):
+            deja.add(d["ou"][6:])
+    for p in missions.PERSONNAGES:
+        if p["ou"].startswith("porte:"):
+            deja.add(p["ou"].split(":")[1])
+    for d in missions.DEFIS:
+        if d.get("debloque") and d["ou"].startswith("porte:"):
+            assert d["ou"][6:] in deja, d["slug"]
+        if d["ou"].startswith("foire:"):
+            assert d["ou"][6:] in carte.FOIRE["kiosques"] + carte.FOIRE["jeux"], d["slug"]
+
+
+def test_une_epreuve_a_ses_regles_et_se_joue_debout():
+    for d in missions.DEFIS:
+        if d.get("epreuve"):
+            assert d.get("a_pied") and isinstance(d.get("regles"), dict) and d.get("consigne"), d["slug"]
+            assert d["chrono_s"] > 0 and 0 < d["prime"] <= 150, d["slug"]

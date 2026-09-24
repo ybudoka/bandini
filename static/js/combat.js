@@ -70,7 +70,11 @@ const Combat = (function () {
     return B.defs.armes_regles || { rafale_images: 45, incendie: { rayon_px: 20, degats_par_seconde: 12 } };
   }
 
-  function armeCourante() { return armeDef(B.joueur ? B.joueur.arme : 'poings') || armeDef('poings'); }
+  function armeCourante() { return armeDe(B.joueur); }
+  /** L'arme au poing de CE joueur-la. En coop, le deuxieme en a une aussi (il
+      peut en ramasser une) — mais les munitions, elles, sortent du meme sac :
+      il n'y a qu'une partie, et deux joueurs y puisent ensemble. */
+  function armeDe(j) { return armeDef(j && j.arme ? j.arme : 'poings') || armeDef('poings'); }
 
   function munitions(slug) {
     const sac = B.partie.armes[slug];
@@ -122,7 +126,7 @@ const Combat = (function () {
     e.phase = 'anticipation';
     e.phaseT = arme.anticipation;
     e.touches = [];
-    if (e === B.joueur && arme.etoiles_usage > 0) {
+    if (Entites.estJoueur(e) && arme.etoiles_usage > 0) {
       Police.signalerCrime('arme_sortie', e.x, e.y, Police.quelqu_un_voit(e.x, e.y, e));
     }
     return true;
@@ -170,7 +174,7 @@ const Combat = (function () {
     // rattrapage que `tirer` (`viseeAssistee`), mais borne a la portee de
     // l'arme pour ne pas accrocher un passant plus loin, mieux aligne, que
     // celui qu'on a sous le nez.
-    const angle = e === B.joueur ? viseeAssistee(e, e.angle, portee) : e.angle;
+    const angle = Entites.estJoueur(e) ? viseeAssistee(e, e.angle, portee) : e.angle;
     const cibles = Entites.autour(e.x, e.y, portee + 8, function (c) {
       return c !== e && c.vivant && (c.type === 'pieton' || c.type === 'joueur');
     });
@@ -198,9 +202,13 @@ const Combat = (function () {
         assomme: !!arme.assomme,
         angle: angleVers(e.x, e.y, c.x, c.y),
       });
-      if (e === B.joueur) {
+      if (Entites.estJoueur(e)) {
         B.cam.secousse = e.fort ? 0.9 : 0.5;
-        Entree.vibrer(e.fort ? 40 : 18);
+        // ⚠️ LA MANETTE DE CELUI QUI COGNE, pas « la » manette : en coop, la
+        // secousse partait dans les mains de l'autre. Une source sait si son
+        // joueur la tient (`Entree.SOURCE1/2.vibrer`).
+        if (e.entree && e.entree.vibrer) e.entree.vibrer(e.fort ? 40 : 18);
+        else Entree.vibrer(e.fort ? 40 : 18);
         user(arme);
         if (c.vivant) {
           if (c.agent) Police.signalerCrime('coup_policier', c.x, c.y, true);
@@ -216,7 +224,7 @@ const Combat = (function () {
     const sac = B.partie.armes[arme.slug];
     if (!sac) return;
     sac.usure = (sac.usure || 0) + 1;
-    if (sac.usure >= arme.usures) perdreArme(B.joueur, arme.slug);
+    if (sac.usure >= arme.usures) perdreArme(B.joueur, arme.slug);   // un seul sac : celui de la partie
   }
 
   // --- Verrouillage -----------------------------------------------------------------
@@ -296,7 +304,7 @@ const Combat = (function () {
       const reste = munitions(arme.slug);
       // ⚠️ La gachette a vide CLIQUE : le buzzer des menus faisait croire
       // que le bouton etait casse, pas le chargeur.
-      if (!B.debugMunitions && reste !== null && reste <= 0) { Son.SFX.vide(); return false; }
+      if (!triche('munitions') && reste !== null && reste <= 0) { Son.SFX.vide(); return false; }
     }
     e.etat = 'attaque';
     e.arc = arme;
@@ -333,7 +341,7 @@ const Combat = (function () {
     }
     if (joueur) {
       const sac = B.partie.armes[arme.slug];
-      if (!B.debugMunitions && sac && sac.mun !== null) sac.mun = Math.max(0, sac.mun - 1);
+      if (!triche('munitions') && sac && sac.mun !== null) sac.mun = Math.max(0, sac.mun - 1);
       B.cam.secousse = 0.6;
       Entree.vibrer(25);
       // ⚠️ **LA CARABINE À BOUCHON DE LA FOIRE N'EST PAS UNE ARME** : pas de
@@ -555,8 +563,8 @@ const Combat = (function () {
     if (!arme || arme.type !== 'jet' || e.phase !== 'actif') return;
     const sac = B.partie.armes[arme.slug];
     if (e === B.joueur) {
-      if (!B.debugMunitions && (!sac || sac.mun <= 0)) { e.etat = 'flane'; e.phase = null; return; }
-      if (!B.debugMunitions) sac.mun--;
+      if (!triche('munitions') && (!sac || sac.mun <= 0)) { e.etat = 'flane'; e.phase = null; return; }
+      if (!triche('munitions')) sac.mun--;
     }
     for (let i = 0; i < 3; i++) {
       const a = e.angle + (B.rng() - 0.5) * 0.7;
@@ -582,19 +590,29 @@ const Combat = (function () {
   // --- Ramasser, faire les poches -------------------------------------------------
 
   function objetSousLaMain(j) {
-    return Entites.autour(j.x, j.y, 18, function (e) { return e.type === 'ramassage' && e.objet === 'arme'; })[0] || null;
+    return Entites.autour(j.x, j.y, 18, function (e) {
+      return e.type === 'ramassage' && e.objet === 'arme' && faceA(j, e.x, e.y);
+    })[0] || null;
+  }
+
+  /** Ses poches sont-elles a prendre, d'ici ? ⚠️ LA regle du pickpocket, dite une
+      fois : `interactions.js` la lit aussi (un pourboire, une photo, un banc ne
+      volent pas le geste de qui a quelqu'un dans le dos). */
+  function pochesAPrendre(j, c) {
+    const dos = B.defs.pietons.reactions.pickpocket_dos_degres * Math.PI / 180 / 2;
+    if (c.gang || !c.vivant || c.argent <= 0 || !faceA(j, c.x, c.y)) return false;
+    if (c.etat === 'assomme') return true;                 // assomme : les poches sont a nous
+    // ⚠️ DERRIERE lui : on compare son regard a la direction d'ou l'on vient.
+    return Math.abs(ecartAngle(c.angle, angleVers(c.x, c.y, j.x, j.y))) > Math.PI - dos;
+  }
+
+  function victimeDesPoches(j) {
+    return Entites.pietonsAutour(j.x, j.y, 20).find(function (c) { return pochesAPrendre(j, c); }) || null;
   }
 
   function pickpocket(j) {
     const reactions = B.defs.pietons.reactions;
-    const dos = reactions.pickpocket_dos_degres * Math.PI / 180 / 2;
-    const victimes = Entites.pietonsAutour(j.x, j.y, 20).filter(function (c) {
-      if (c.gang || !c.vivant || c.argent <= 0) return false;
-      if (c.etat === 'assomme') return true;                 // assomme : les poches sont a nous
-      // ⚠️ DERRIERE lui : on compare son regard a la direction d'ou l'on vient.
-      return Math.abs(ecartAngle(c.angle, angleVers(c.x, c.y, j.x, j.y))) > Math.PI - dos;
-    });
-    const victime = victimes[0];
+    const victime = victimeDesPoches(j);
     if (!victime) return false;
     Missions.encaisser(victime.argent, 'POCHES');
     victime.argent = 0;
@@ -696,7 +714,7 @@ const Combat = (function () {
     const j = B.joueur;
     // Les memes gardes que le combat : au volant ARME est la RADIO, et en haut
     // d'une cloture on ne fait rien du tout.
-    if (!j || j.dansVehicule || j.manege || !j.vivant || j.enjambe || j.alite || B.cinema) {
+    if (!j || j.dansVehicule || j.manege || !j.vivant || j.enjambe || j.alite || j.assis || B.cinema || B.piratage || B.epreuve) {
       fermerRoue(false);
       tenu = 0;
       return;
@@ -743,7 +761,7 @@ const Combat = (function () {
       return c.etat === 'attaque_joueur' || c.etat === 'attaque';
     });
     if (!menace && j.etat !== 'attaque') return false;
-    const axe = Entree.axe;
+    const axe = (j.entree || Entree).axe;
     const angle = axe.mag > 0.2 ? Math.atan2(axe.y, axe.x) : j.angle;
     j.roule = ROULADE_IMAGES;
     j.invincible = ROULADE_IMAGES - 2;
@@ -778,7 +796,7 @@ const Combat = (function () {
     if (objetSousLaMain(j) || Monde.porteDevant(j) || Vehicules.vehiculeSousLaMain(j)) return null;
     return Entites.pietonsAutour(j.x, j.y, ficheBouclier().portee_px).find(function (e) {
       return e.vivant && !e.agent && !e.intouchable && !e.petit && !e.commerce
-        && !e.personnage && !e.mission && e.etat !== 'assomme';
+        && !e.personnage && !e.mission && e.etat !== 'assomme' && faceA(j, e.x, e.y);
     }) || null;
   }
 
@@ -837,11 +855,12 @@ const Combat = (function () {
     // ⚠️ `dansVehicule` et `interieur` aussi, pour la tape : `otageSousLaMain`
     // les ecartait deja pour la prise, mais on ne fait pas les poches d'un
     // passant depuis un char ni a travers le mur d'une piece.
-    const debout = j.vivant && !j.enjambe && !j.alite && !j.dansVehicule && !B.interieur
+    const debout = j.vivant && !j.enjambe && !j.alite && !j.assis && !j.dansVehicule && !B.interieur
       && !B.cinema && !B.roue;
     // Relachee avant d'avoir muri : c'etait une tape (voir `viserOtage`).
-    if (debout && !Entree.bas('action')) { j.saisie = 0; pickpocket(j); return; }
-    const cible = debout && Entree.bas('action') ? otageSousLaMain(j) : null;
+    const ent = j.entree || Entree;
+    if (debout && !ent.bas('action')) { j.saisie = 0; pickpocket(j); return; }
+    const cible = debout && ent.bas('action') ? otageSousLaMain(j) : null;
     if (!cible) { j.saisie = 0; return; }
     if (++j.saisie < Math.round(ficheBouclier().saisie_s * 60)) return;
     j.saisie = 0;
@@ -849,8 +868,9 @@ const Combat = (function () {
   }
 
   /** On le lache — de son plein gre, ou parce qu'il s'est degage. */
-  function lacherOtage(deLuiMeme) {
-    const j = B.joueur, e = j && j.otage;
+  function lacherOtage(j, deLuiMeme) {
+    const e = j && j.otage;
+    if (!j) return false;
     j.otage = null;
     if (!e) return false;
     e.otage = false; e.otageT = 0;
@@ -865,13 +885,12 @@ const Combat = (function () {
     return true;
   }
 
-  function majOtage() {
-    const j = B.joueur;
+  function majOtage(j) {
     if (!j || !j.otage) return;
     const e = j.otage, f = ficheBouclier();
     // Mort, assomme, entre dans une piece, monte en char : on n'a plus d'otage.
     if (!e.vivant || e.etat === 'assomme' || B.interieur || j.dansVehicule || !j.vivant) {
-      lacherOtage(false);
+      lacherOtage(j, false);
       return;
     }
     e.otageT++;
@@ -893,24 +912,31 @@ const Combat = (function () {
       const tremble = (e.otageT % 8 < 4) ? 1.5 : -1.5;
       Entites.deplacerCercle(e, 0, tremble, Monde.MASQUE_PIETON);
     }
-    if (e.otageT >= f.tenue_max_s * 60) lacherOtage(true);
+    if (e.otageT >= f.tenue_max_s * 60) lacherOtage(j, true);
   }
 
+  /** Le tour de combat : ce qui appartient au MONDE une fois (les balles, les
+      brasiers, les trois temps de chaque coup), et le reste UNE FOIS PAR
+      JOUEUR — en coop, les deux passent ici, chacun sur sa source d'entrees
+      (`Entites.joueurs`, `j.entree`). */
   function maj() {
+    const equipe = Entites.joueurs();
     const j = B.joueur;
     // ⚠️ AVANT LA BOUCLE D'ATTAQUE, plus bas : `arcDeMelee` lit `e.angle`
     // pendant la phase active, et c'est cette ligne qui le tient pointe sur
     // la cible verrouillee, image apres image, meme si le joueur ne bouge
     // pas. Un `j` qui n'existe pas encore (chargement) ne verrouille rien.
-    if (j && j.vivant && !j.dansVehicule && !j.manege && !j.enjambe && !j.alite && !B.roue) majCible(j);
+    // ⚠️ LE VERROU EST AU JOUEUR 1 : son compteur (`verrouTenu`) est unique,
+    // au module. Le deuxieme vise a la main, sans verrou — un deuxieme
+    // compteur se paiera quand le verrou aura son bouton a lui.
+    if (j && j.vivant && !j.dansVehicule && !j.manege && !j.enjambe && !j.alite && !j.assis && !B.roue) majCible(j);
     else if (j) { j.cible = null; verrouTenu = 0; }
     majProjectiles();
     majBrasiers();
-    majOtage();
-    // ⚠️ AVANT les gardes du bas (char, mort, cloture) et avant la lecture
-    // d'ACTION : la prise doit pouvoir RETOMBER dans les images ou le reste du
-    // bouton ne se lit pas, sinon son compteur survit a un tour de char.
-    majSaisie(j);
+    // ⚠️ AVANT les gardes de `majGestes` (char, mort, cloture) et avant la
+    // lecture d'ACTION : la prise doit pouvoir RETOMBER dans les images ou le
+    // reste du bouton ne se lit pas, sinon son compteur survit a un tour de char.
+    for (const q of equipe) { majOtage(q); majSaisie(q); }
     for (const e of B.entites) {
       if (e.etat === 'attaque') { majAttaque(e); majJet(e); }
       if (e.aveugle > 0) e.aveugle--;
@@ -920,6 +946,12 @@ const Combat = (function () {
     // verite a chaque image plutot que d'attraper chacune des sorties.
     Son.SFX.jet(!!j && j.vivant && !j.dansVehicule && j.etat === 'attaque'
                 && !!j.arc && j.arc.type === 'jet' && j.phase === 'actif');
+    for (const q of equipe) majGestes(q);
+  }
+
+  /** Les boutons d'UN joueur : esquive, frappe, action. */
+  function majGestes(j) {
+    const ent = j.entree || Entree;
     // ⚠️ En haut d'une cloture, on ne fait RIEN : ni frapper, ni tirer, ni
     // rouler, ni ouvrir une porte. C'est ce prix-la qui fait d'une cloture un
     // choix plutot qu'un raccourci gratuit.
@@ -927,34 +959,39 @@ const Combat = (function () {
     // (`Entites.majJoueur`), et un coup de poing donne depuis l'oreiller
     // partirait d'un corps qui n'est pas debout.
     // ⚠️ Assis dans un manège (`j.manege`), on ne frappe pas et on ne ramasse rien.
-    if (!j || j.dansVehicule || j.manege || !j.vivant || j.enjambe || j.alite) return;
+    // ⚠️ Assomme (le deuxieme joueur a terre, `Entites.blesser`), on attend
+    // son partenaire : le compte se fait dans `majJoueur`, pas au bouton.
+    if (!j || j.dansVehicule || j.manege || !j.vivant || j.enjambe || j.alite || j.assis || j.etat === 'assomme') return;
     // ⚠️ ROUE OUVERTE, ON NE SE BAT PAS. Le monde rampe tant qu'elle est la :
     // pouvoir tirer dedans, ce serait un ralenti a la demande — tenir ARME,
     // viser tranquillement, tirer. On choisit son arme OU on se bat.
     // ⚠️ Et ACTION passe par ici : sans cette porte, relacher la roue devant
     // une porte ouvrirait la porte, et devant un passant lui ferait les poches.
-    if (B.roue) return;
+    // ⚠️ Le piratage repurpose FRAPPE en ABANDONNER (`Histoire.majPiratage`) :
+    // sans cette porte, la meme pression donnerait AUSSI un coup de poing.
+    // ⚠️ Une epreuve d'adresse aussi : FRAPPE y est un pas de danse, ESQUIVE l'abandonne.
+    if (B.roue || B.piratage || B.epreuve) return;
 
-    if (Entree.neuf('esquive')) roulade(j);
+    if (ent.neuf('esquive')) roulade(j);
 
     // Coup fort : on MAINTIENT la frappe, on relache quand c'est charge.
-    const arme = armeCourante();
+    const arme = armeDe(j);
     if (arme.auto) {
       // ⚠️ Automatique : on TIENT. `frapper` refuse tant que la cadence court,
       // c'est elle qui rythme la rafale. Et a vide, la gachette tenue ne
       // clique qu'a la PRESSION — pas soixante fois par seconde.
-      if (Entree.bas('attaque')) {
-        if ((munitions(arme.slug) || 0) > 0 || Entree.neuf('attaque')) frapper(j, false);
+      if (ent.bas('attaque')) {
+        if ((munitions(arme.slug) || 0) > 0 || ent.neuf('attaque')) frapper(j, false);
         j.rafale = (j.rafale || 0) + 1;
       } else {
         j.rafale = 0;
       }
-    } else if (Entree.bas('attaque') && arme.type === 'melee') {
+    } else if (ent.bas('attaque') && arme.type === 'melee') {
       j.charge++;
     } else if (j.charge > 0) {
       frapper(j, j.charge >= CHARGE_MIN);
       j.charge = 0;
-    } else if (Entree.neuf('attaque') && arme.type !== 'jet') {
+    } else if (ent.neuf('attaque') && arme.type !== 'jet') {
       // ⚠️ Pas le jet : sans cette garde, la premiere pression partait par
       // ici — anticipation, quatre images de jet, deux de repos — AVANT que le
       // maintien ne prenne le relais juste dessous. Ca ne se voyait pas ; avec
@@ -962,16 +999,24 @@ const Combat = (function () {
       // depart.
       frapper(j, false);
     }
-    if (Entree.bas('attaque') && arme.type === 'jet' && j.etat !== 'attaque') {
+    if (ent.bas('attaque') && arme.type === 'jet' && j.etat !== 'attaque') {
       frapper(j, false);
       j.phase = 'actif';
       j.phaseT = 9999;
-    } else if (!Entree.bas('attaque') && arme.type === 'jet' && j.etat === 'attaque') {
+    } else if (!ent.bas('attaque') && arme.type === 'jet' && j.etat === 'attaque') {
       j.etat = 'flane';
       j.phase = null;
     }
 
-    if (Entree.neuf('action')) {
+    if (ent.neuf('action')) {
+      // ⚠️ CE QUI CHANGE DE SCENE EST AU JOUEUR 1 — « les 2 personnages
+      // doivent pouvoir faire toutes les memes actions sauf ce qui change de
+      // scene et lancer des missions ou conduire » (Martin, 22 sept.). Une
+      // porte, un comptoir, un donneur de mission, un autobus : tous mènent
+      // ailleurs, et une scene ne se joue pas a deux endroits a la fois.
+      // Le reste — les gens, les betes, le decor, une arme par terre, les
+      // poches d'un passant — est a tout le monde.
+      if (j !== B.joueur) { gestesPartages(j); return; }
       // Dedans : la sortie, ou un point (lit, coffre, comptoir...).
       // ⚠️ LA PORTE D'ABORD, et c'est un bloquant qui l'a decide (« chez
       // Ti-Paul, il est impossible de sortir »). `pointSousLaMain` attrape un
@@ -990,27 +1035,44 @@ const Combat = (function () {
       // vendeur, sinon on ne peut plus jamais acheter un hot-dog.
       if (Missions.interagir(j)) return;
       const objet = objetSousLaMain(j);
-      if (objet) {
-        j.animT = 14; j.animType = 'ramasse';         // on se penche
-        if (ramasserArme(objet.arme, objet.munitions)) {
-          Hud.message((armeDef(objet.arme) || {}).nom || 'ARME');
-          j.arme = objet.arme;
-          B.partie.arme = objet.arme;
-        }
-        Entites.retirer(objet);
-      } else {
-        const porte = Monde.porteDevant(j);
-        // Une porte ne vend rien : un commerce s'achete au comptoir, dedans.
-        if (porte) Jeu.entrer(porte);
-        else pickpocket(j);
-      }
+      if (objet) { ramasser(j, objet); return; }
+      const porte = Monde.porteDevant(j);
+      // Une porte ne vend rien : un commerce s'achete au comptoir, dedans.
+      if (porte) Jeu.entrer(porte);
+      else pickpocket(j);
     }
   }
 
+  /** ACTION pour un joueur qui n'est pas le premier : tout ce qui ne change
+      pas de scene. Les gens (reveiller, payer, soigner), les betes, le decor
+      (une poubelle, un robinet, un banc), une arme par terre, les poches. */
+  function gestesPartages(j) {
+    if (typeof Interactions !== 'undefined'
+        && (Interactions.utiliserSurLesGens(j) || Interactions.utiliserSurLesBetes(j)
+            || Interactions.utiliserSurLeDecor(j))) return;
+    const objet = objetSousLaMain(j);
+    if (objet) { ramasser(j, objet); return; }
+    pickpocket(j);
+  }
+
+  /** Se pencher, prendre l'arme par terre, l'annoncer. */
+  function ramasser(j, objet) {
+    j.animT = 14; j.animType = 'ramasse';         // on se penche
+    if (ramasserArme(objet.arme, objet.munitions)) {
+      Hud.message((armeDef(objet.arme) || {}).nom || 'ARME');
+      j.arme = objet.arme;
+      // ⚠️ La partie ne retient que l'arme du PREMIER joueur : c'est celle
+      // qu'on retrouve en rechargeant. Le deuxieme la tient en main, pas en
+      // memoire — une coop est une partie a deux, pas deux sauvegardes.
+      if (j === B.joueur) B.partie.arme = objet.arme;
+    }
+    Entites.retirer(objet);
+  }
+
   return {
-    CHARGE_MIN, ROULADE_IMAGES, TENIR_IMAGES, RALENTI, armeDef, armeCourante, munitions, possede, regles,
+    CHARGE_MIN, ROULADE_IMAGES, TENIR_IMAGES, RALENTI, armeDef, armeCourante, armeDe, munitions, possede, regles,
     armesDuSac, aSec, degainer, retourRapide, ouvrirRoue, fermerRoue, creneauVise, majRoue, tempsQuiPasse,
-    frapper, tirer, cycler, roulade, pickpocket, ramasserArme, objetSousLaMain,
+    frapper, tirer, cycler, roulade, pickpocket, pochesAPrendre, victimeDesPoches, ramasserArme, objetSousLaMain,
     viseeAssistee, dispersionDe, allumer, majBrasiers, majAttaque, majProjectiles, maj,
     majCible, ciblesVerrouillables, VERROU_PORTEE,
     otageSousLaMain, viserOtage, prendreEnOtage, lacherOtage, majOtage, majSaisie,

@@ -135,8 +135,15 @@ def test_la_largeur_de_la_ville_suit_sa_trame():
     blocs sans rien casser : un juge de trame ne dit rien de la beauté, mais il
     dit tout de suite si une rue a été comptée deux fois."""
     ville = carte.exporter()
-    assert ville["largeur"] == sum(carte.COLONNES) + sum(carte.RUES_V)
-    assert ville["hauteur"] == sum(carte.RANGEES) + sum(carte.RUES_H)
+    # ⚠️ À l'est de la trame, le relief (21 sept. 2026) : la carte s'allonge d'une
+    # chaîne de montagnes après la dernière rue, et pas une colonne de blocs ne bouge.
+    largeur_trame = sum(carte.COLONNES) + sum(carte.RUES_V)
+    montagnes = ville["relief"]["montagnes"]
+    assert montagnes["x"] == largeur_trame and ville["largeur"] == largeur_trame + montagnes["l"]
+    # ⚠️ Sous la trame, l'aéroport (21 sept. 2026) : la carte s'allonge jusqu'au bas
+    # de son plan, et pas une rangée de blocs ne bouge.
+    _, y0, _, hauteur = ville["aeroport"]["plan"]
+    assert sum(carte.RANGEES) + sum(carte.RUES_H) < y0 and ville["hauteur"] == y0 + hauteur
 
 
 def test_une_rue_garde_deux_voies_et_un_boulevard_quatre():

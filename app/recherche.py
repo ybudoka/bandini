@@ -46,6 +46,24 @@ ETOILES_MAX = len(PALIERS) - 1
 CHALEUR_PAR_GRAVITE = 35
 CHALEUR_ETOILE = 100
 
+#: ⚠️ LA CHALEUR REFROIDIT (demande de Martin en jouant, 22 sept. 2026 : « la
+#: police arrive trop rapidement et les etoiles aussi. il faut plus de
+#: tolerance »). Elle ne redescendait JAMAIS : trois petits delits espaces de
+#: vingt minutes faisaient une etoile, et la jauge portait toute la partie.
+#: Maintenant, `chaleur_repit_s` apres le dernier delit COMPTE, elle perd
+#: `chaleur_refroidit_par_s` points a la seconde : un delit de gravite 1 (35)
+#: s'oublie 37 s apres, et trois delits font toujours une etoile — s'ils
+#: tombent dans la meme demi-minute.
+#:
+#: ⚠️ Seule la JAUGE refroidit, jamais les etoiles : elles ne tombent toujours
+#: qu'hors de vue, une a une (`decroissance_s`).
+#:
+#: ⚠️ DEUXIEME PASSE (22 sept. 2026, Martin en jouant : « ca me semble ENCORE
+#: trop rapide ») : a 20 s de repit et 3 points la seconde, deux petits delits
+#: se rejoignaient encore trop souvent.
+CHALEUR_REPIT_S = 30
+CHALEUR_REFROIDIT_PAR_S = 5
+
 #: Etoiles ajoutees par delit (gravite), et si un temoin est necessaire.
 #: `temoin: False` = le delit est BRUYANT : quiconque le percoit suffit, la
 #: police le sait tout de suite. `temoin: True` = il faut qu'un agent le voie,
@@ -62,13 +80,31 @@ DELITS: dict[str, dict] = {
     "arme_sortie": {"etoiles": 1, "temoin": False},
     "coup_policier": {"etoiles": 2, "temoin": False},
     "mort_policier": {"etoiles": 3, "temoin": False},
-    "conduite_dangereuse": {"etoiles": 1, "temoin": False},
+    # ⚠️ UN CARAMBOLAGE EST UN DELIT, PAS TROIS (la tolerance, 22 sept. 2026).
+    # Chaque accrochage a plus de 2 px/image et chaque cloture defoncee en
+    # etait un, BRUYANT : trois chars touches devant un passant, c'etait une
+    # etoile d'un coup. `repit_s` : le meme delit, de nouveau compte avant ce
+    # delai, ne chauffe pas une deuxieme fois. ⚠️ Le delai part du dernier
+    # delit COMPTE, il ne glisse pas : conduire comme un fou sans arret chauffe
+    # quand meme, une fois par repit.
+    #
+    # ⚠️ ET IL A UN TEMOIN, comme sa fiche le disait deja (« casser est un
+    # delit, avec son temoin qui rapporte ») : un accrochage n'est pas un coup
+    # de feu — il faut qu'un agent le VOIE, ou qu'un passant aille le raconter,
+    # et d'ici la on peut lui acheter son silence. C'etait la derniere raison
+    # pour laquelle les etoiles montaient en conduisant (Martin, 22 sept. 2026).
+    "conduite_dangereuse": {"etoiles": 1, "temoin": True, "repit_s": 20},
     "explosion": {"etoiles": 2, "temoin": False},
     "guichet": {"etoiles": 2, "temoin": False},
     # Defoncer une machine distributrice. ⚠️ Pas un guichet : une etoile, et
     # il faut qu'un passant aille le raconter — personne n'appelle la police
     # pour trois canettes, sauf s'il a tout vu.
     "distributrice": {"etoiles": 1, "temoin": True},
+    # Forcer un parcomètre (`interactions.PARCOMETRE`, 2e vague du décor, 22 sept.
+    # 2026). Même gabarit que la distributrice : une étoile, et il faut qu'un
+    # passant l'ait vu ET aille le raconter — personne n'appelle la police pour
+    # quelques dollars de monnaie, sauf s'il a tout vu.
+    "parcometre": {"etoiles": 1, "temoin": True},
     "effraction": {"etoiles": 1, "temoin": True},
     "pot_de_vin_refuse": {"etoiles": 1, "temoin": False},
     # Sortir son char de la fourriere sans passer au comptoir. ⚠️ BRUYANT : les
@@ -88,6 +124,12 @@ VISION = {
     "auto_police": {"angle": 30, "jour": 14, "nuit": 12},
     "pieton": {"angle": 60, "jour": 6, "nuit": 4},
     "helico": {"angle": 180, "jour": 25, "nuit": 20},
+    # ⚠️ LE VIGILE PRIVE (infiltration) : le meme cone qu'un policier, en plus
+    # court et en plus large — un garde tient un couloir, il ne patrouille pas
+    # un pate de maisons. Pas d'auto, pas d'helico : ses renforts, ce sont les
+    # VRAIS policiers, une fois qu'il a signale (`police.js` generalise `voit`
+    # a n'importe quel genre declare ici).
+    "garde": {"angle": 50, "jour": 6, "nuit": 5},
     "alarme_rayon": 12,
     "explosion_rayon": 15,
     "delai_reperage_s": 0.6,
@@ -117,7 +159,10 @@ TEMOINS = {
     "cherche_policier_tuiles": 40,
     "oubli_s": 30,
     "proba_telephone": 0.3,
-    "delai_depeche_s": 8,
+    # ⚠️ Le temoin qui ne trouve aucun agent finit par TELEPHONER. Huit secondes,
+    # c'etait le temps de traverser la rue : ni celui de lui acheter son silence,
+    # ni celui de partir (la tolerance, 22 sept. 2026).
+    "delai_depeche_s": 15,
 }
 
 #: ⚠️ LE CRIME D'AUTRUI (M12) : « un crime qu'on n'a pas commis peut te tomber dessus si
@@ -309,6 +354,22 @@ CLOTURES = {
 }
 
 
+#: FAIRE FACE : pour agir sur quelque chose (une porte, un char, un comptoir,
+#: quelqu'un), le joueur doit le REGARDER. ⚠️ « Regarder » veut dire ce que le
+#: sprite MONTRE — l'un des quatre regards dessines (`face`) — et pas l'angle
+#: fin du stick : ce que le joueur voit est ce que le jeu juge. Quatre regards
+#: a +/-50 degres se recouvrent de 10 degres a chaque diagonale : aucune
+#: direction n'est hors de portee, et sur une diagonale on peut viser des deux.
+#: ⚠️ Et ON N'A PAS A REGARDER CE QU'ON A SOUS LES PIEDS : a `dessus_px` d'un
+#: point, la direction n'est plus definie (une arme tombee la ou l'on se tient).
+#: Le meme calcul pour l'invite du HUD et pour ACTION — `faceA`, dans base.js —
+#: pour que le bouton ne promette jamais ce qu'il refuserait.
+REGARD = {
+    "demi_cone_degres": 50,   # de part et d'autre du regard dessine
+    "dessus_px": 8,           # sous les pieds : pas de regard a exiger
+}
+
+
 #: La police sur le terrain : patrouille, poursuite, arrestation, prison.
 POLICE = {
     "patrouille_par_zone_max": 3,   # agents a pied dans la bulle, plafond (la zone dit combien)
@@ -317,7 +378,27 @@ POLICE = {
     "poursuite_abandon_s": 12,      # sans te voir pendant ce temps, l'agent retourne patrouiller
     "chemin_toutes_les_images": 30, # l'agent redemande son chemin (A*) a ce rythme
     "auto_vitesse": 0.85,           # fraction de la vitesse max de l'auto-patrouille en poursuite
-    "auto_sortent_px": 60,          # si tu es a pied, les agents descendent a cette distance
+    "auto_sortent_px": 60,          # si tu es a pied, l'auto s'arrete a cette distance et l'equipage descend
+    # ⚠️ L'EQUIPAGE NE DESCEND PAS D'UNE AUTO QUI ROULE (retour de Martin : « les
+    # policiers en sortent trop vite et se font ecraser par leur propre voiture »).
+    # Deux vitesses REELLES (px/image, celle qui ecrase : `Math.hypot(vx, vy)`) :
+    # le PASSAGER saute sous la premiere — seul, le conducteur tient le volant —,
+    # et le CONDUCTEUR descend sous la seconde, auto arretee ; une auto a
+    # laquelle l'equipage tourne le dos ne roule plus. La premiere reste sous le
+    # seuil qui renverse un pieton (`vehicules.PHYSIQUE.renverse_vitesse_min`).
+    "auto_passager_saute_sous": 0.8,
+    "auto_arret_sous": 0.15,
+    # Le coup de frein d'une auto qui s'arrete sur toi (multiplie le frein de la
+    # fiche). Au frein normal elle mettait 47 px a s'arreter depuis les 60 px
+    # de `auto_sortent_px` : elle finissait contre toi. Ceci la garde a un char.
+    "auto_frein": 2.0,
+    # ⚠️ DEUX AGENTS PAR AUTO, UN AU VOLANT (retour de Martin). Les deux dehors,
+    # l'auto reste GAREE jusqu'a ce que l'un d'eux reprenne le volant ; au volant,
+    # un seul peut etre dehors. Personne n'est fabrique : on descend, on remonte.
+    "auto_equipage": 2,
+    "auto_rappel_px": 480,          # un agent plus loin que ca de son auto n'est plus de son equipage
+    "auto_regagne_s": 15,           # ... ni celui qui n'a pas regagne l'auto en ce temps
+    "auto_attend_px": 40,           # l'auto attend l'equipier qui arrive en courant, a cette distance
     "tir_cadence_s": 1.2,           # a 3 etoiles et plus, un agent tire a ce rythme
     "tir_portee_tuiles": 9,
     "affiches_max": 6,              # affiches « Recherche » dans la bulle a partir de 2 etoiles
@@ -327,17 +408,42 @@ POLICE = {
     # se tient a cette distance. Sans le deuxieme, le bouclier ne servait a
     # rien — ils cessaient de tirer et venaient te cueillir a la main.
     "bouclier_recul_px": 90,
+    # ⚠️ LES RENFORTS PRENNENT LE TEMPS DE VENIR (la tolerance, 22 sept. 2026).
+    # Ceux d'un palier — ses agents a pied en plus, ses autos, l'helico, les
+    # barrages — naissaient a l'image ou l'etoile tombait, a moins de 420 px
+    # d'ou l'on t'avait vu (parfois d'une porte a l'ecran), et couraient a
+    # 1,6 px/image : trois secondes et demie plus tard, ils etaient la. Ils
+    # partent maintenant `renfort_s` apres l'etoile neuve, et jamais d'une
+    # porte. ⚠️ Les agents DEJA sur place, eux, reagissent tout de suite : le
+    # delai est celui du poste, pas celui de l'agent qui te regarde.
+    # ⚠️ Deuxieme passe (22 sept. 2026) : 12 s ne se sentaient pas — une etoile
+    # tombe en 15 s hors de vue, et les renforts doivent arriver APRES ca.
+    "renfort_s": 20,
+}
+
+
+#: ⚠️ **LA POLICE ET LE STANDING** (4e vague des quartiers) : « en cossu, la police
+#: arrive plus vite ; en pauvre, elle tarde ». `patrouille` multiplie le nombre
+#: d'agents que la zone veut ; `depeche` multiplie le delai au bout duquel un temoin
+#: qui ne trouve pas d'agent TELEPHONE. Voler chez les riches paie, et ca se paie.
+STANDING: dict[str, dict] = {
+    "cossu": {"patrouille": 1.5, "depeche": 0.6},
+    "ordinaire": {"patrouille": 1.0, "depeche": 1.0},
+    "pauvre": {"patrouille": 0.6, "depeche": 1.7},
 }
 
 
 def exporter() -> dict:
     return {
         "tuile_px": TUILE_PX,
+        "standing": {nom: dict(fiche) for nom, fiche in STANDING.items()},
         "police": dict(POLICE),
         "paliers": PALIERS,
         "etoiles_max": ETOILES_MAX,
         "chaleur_par_gravite": CHALEUR_PAR_GRAVITE,
         "chaleur_etoile": CHALEUR_ETOILE,
+        "chaleur_repit_s": CHALEUR_REPIT_S,
+        "chaleur_refroidit_par_s": CHALEUR_REFROIDIT_PAR_S,
         "delits": DELITS,
         "vision": VISION,
         "temoins": TEMOINS,
@@ -348,4 +454,5 @@ def exporter() -> dict:
         "vitesses": VITESSES,
         "clotures": CLOTURES,
         "nage": NAGE,
+        "regard": dict(REGARD),
     }

@@ -37,6 +37,32 @@ POT_DE_VIN_AMI_MAX = 2
 
 HOPITAL = {"fraction": 0.10, "minimum": 30, "maximum": 500}
 
+# --- La prime d'une mission : se voir et s'entendre ------------------------
+
+#: Martin, 22 sept. 2026 : « quand je reçois une prime pour une mission, je veux
+#: le voir clairement et avec un son qui correspond à la prime ». Quatre paliers,
+#: du plus petit au plus gros : `des` est le montant à partir duquel on y entre.
+#: Chacun a son son (`prime_<slug>` dans `audio.CATALOGUE`, synthétisé dans
+#: `son.js` tant que le mp3 manque) et son bandeau (`Hud.prime`) — plus la prime
+#: est grosse, plus le compteur prend son temps et plus la pluie de pièces dure.
+#: Les bornes suivent les missions de l'histoire (100 à 900 $, la moitié entre
+#: 200 et 350) : le gros lot est rare, c'est ce qui le fait sonner.
+PRIME_PALIERS = (
+    {"slug": "petite", "des": 0},
+    {"slug": "moyenne", "des": 250},
+    {"slug": "grosse", "des": 450},
+    {"slug": "gros_lot", "des": 800},
+)
+
+
+def palier_de_prime(montant: int) -> str:
+    """Le palier d'une prime : le dernier dont on atteint le seuil."""
+    palier = PRIME_PALIERS[0]["slug"]
+    for p in PRIME_PALIERS:
+        if montant >= p["des"]:
+            palier = p["slug"]
+    return palier
+
 # --- Les boulots montent en grade -----------------------------------------
 
 #: ⚠️ **Un boulot qui paie et rien d'autre n'est pas une activite, c'est un
@@ -92,6 +118,14 @@ PALIERS: dict[str, tuple[dict, ...]] = {
          "nom": "LE LOT NE TE FAIT PLUS PAYER", "detail": "RACHAT GRATUIT"},
         {"compte": 50, "type": "char", "valeur": "remorqueuse",
          "nom": "LA DÉPANNEUSE EST À TOI", "detail": "GARÉE À LA PLANQUE"},
+    ),
+    "autobus": (
+        {"compte": 10, "type": "prime", "valeur": 1.3,
+         "nom": "UN VISAGE CONNU", "detail": "+30 % DE POURBOIRE"},
+        {"compte": 25, "type": "rabais", "valeur": 0.75, "cle": "kiosque",
+         "nom": "LE CAFÉ DU TERMINUS", "detail": "-25 % AUX KIOSQUES"},
+        {"compte": 50, "type": "char", "valeur": "autobus",
+         "nom": "TON PROPRE AUTOBUS", "detail": "GARÉ À LA PLANQUE"},
     ),
 }
 
@@ -634,6 +668,13 @@ BOULOTS: dict[str, Boulot] = {
     "remorquage": {"slug": "remorquage", "nom": "Remorquage", "vehicule": "remorqueuse",
                    "base": 70, "par_tuile": 0.4, "prime": 0,
                    "etapes": 1, "chrono_s": 0, "malus_choc": 0.0},
+    # ⚠️ M16 : le boulot du terminus (f05, « Le dernier autobus ») — des
+    # passagers a prendre au bord de la route et a mener ailleurs, sur le
+    # patron du taxi, mais plus lent a charger (le malus de choc encaisse
+    # mieux : un autobus plein ne se conduit pas sur la pointe des pieds).
+    "autobus": {"slug": "autobus", "nom": "Arrêt", "vehicule": "autobus",
+                "base": 20, "par_tuile": 0.25, "prime": 15,
+                "etapes": 1, "chrono_s": 0, "malus_choc": 0.30},
 }
 
 #: La course type qui sert a COMPARER les boulots entre eux (en tuiles). Elle
@@ -692,6 +733,20 @@ VENTE_MALUS_DOUBLON = 0.20
 REPARATION_PAR_PV = 2
 REPEINTE = 100
 
+#: ⚠️ **LA CARROSSERIE** (demande de Martin, 21 sept. 2026 : « des portes de garage qu'on
+#: peut vraiment entrer. pour permettre de semer la police en voiture », puis « repeindre
+#: des voitures »). On rentre le char, le rideau retombe, et il ressort d'une autre couleur :
+#: le vol effacé, la police à zéro. La peinture de Ti-Guy (`REPEINTE`) plus un supplément
+#: PAR ÉTOILE — le silence coûte ce que vaut la chasse, et cinq étoiles effacées pour cent
+#: piastres rendraient la police décorative. ⚠️ Chez Ti-Guy, c'est prix de famille : son
+#: menu garde `REPEINTE` tout court.
+#: `atelier_s` : le temps que le rideau reste baissé, pistolet en marche.
+CARROSSERIE = {"prix": REPEINTE, "par_etoile": 50, "atelier_s": 1.5}
+
+
+def prix_carrosserie(etoiles: int) -> int:
+    return CARROSSERIE["prix"] + CARROSSERIE["par_etoile"] * max(0, etoiles)
+
 
 def prix_vente(prix_neuf: int, vie: int, vie_max: int, doublons: int) -> int:
     if vie_max <= 0:
@@ -743,9 +798,17 @@ def _table_des_dettes() -> list[int]:
     return table
 
 
+#: ⚠️ **CE QU'IL Y A DANS LES TIROIRS** (4e vague des quartiers) : la part de
+#: `fouille_min`/`fouille_max` qu'on trouve, selon le standing du logement. Voler
+#: chez les riches paie ; dans un plex du port, il n'y a presque rien a prendre —
+#: et la police, elle, tarde (voir `recherche.STANDING`). C'est le meme echange.
+FOUILLE_PAR_STANDING: dict[str, float] = {"cossu": 2.2, "ordinaire": 1.0, "pauvre": 0.4}
+
+
 def exporter() -> dict:
     return {
         "argent_depart": ARGENT_DEPART,
+        "fouille_standing": dict(FOUILLE_PAR_STANDING),
         "fortune_max": FORTUNE_MAX,
         "jour_secondes": JOUR_SECONDES,
         "casier_max": CASIER_MAX,
@@ -760,6 +823,7 @@ def exporter() -> dict:
         "pot_de_vin_accepte": list(POT_DE_VIN_ACCEPTE),
         "pot_de_vin_ami_max": POT_DE_VIN_AMI_MAX,
         "hopital": dict(HOPITAL),
+        "prime_paliers": [dict(p) for p in PRIME_PALIERS],
         "tarifs": dict(TARIFS),
         "cafe": dict(CAFE),
         "souffle": dict(SOUFFLE),
@@ -771,6 +835,7 @@ def exporter() -> dict:
         "vente_malus_doublon": VENTE_MALUS_DOUBLON,
         "reparation_par_pv": REPARATION_PAR_PV,
         "repeinte": REPEINTE,
+        "carrosserie": dict(CARROSSERIE),
         "proprietes": PROPRIETES,
         "caisse_jours_max": CAISSE_JOURS_MAX,
         "dette": dict(DETTE),

@@ -84,11 +84,22 @@ def _nage_la_plus_courte_vers_la_pointe() -> int:
     for y in range(pont["y"], pont["y"] + pont["h"]):
         for x in range(pont["x"], pont["x"] + pont["l"]):
             sol[y][x] = "~"                  # on defait le pont : reste la nage
-    ile = CARTE["ile"]
+    # ⚠️ Les îles ne sont pas « le reste de la ville » : ni celle des Corneilles, ni
+    # celle de l'aéroport (21 sept. 2026), dont le pont inachevé part justement de
+    # La Pointe — sa travée manquante se nage, et c'est voulu (`test_aeroport`).
+    iles = (CARTE["ile"], CARTE["aeroport"])
 
     def dans_l_ile(x: int, y: int) -> bool:
-        return (ile["x"] <= x < ile["x"] + ile["l"]
-                and ile["y"] <= y < ile["y"] + ile["h"])
+        return any(ile["x"] <= x < ile["x"] + ile["l"] and ile["y"] <= y < ile["y"] + ile["h"]
+                   for ile in iles)
+
+    # ⚠️ Le relief (`relief.py`, 21 sept. 2026) n'est ni de l'eau ni de la ville : un
+    # « pas d'eau » qui vaut land pour ce juge ferait de la montagne un pont — elle
+    # touche le bord EST d'origine (celui de La Pointe compris) sur toute sa hauteur.
+    # Elle compte donc comme un obstacle des deux côtés : on ne s'y accroche pas
+    # (phase 1) et on n'y arrive pas (phase 2, comme une île).
+    def est_relief(x: int, y: int) -> bool:
+        return sol[y][x] in ("M", "C")
 
     foire = CARTE["foire"]
     depart = (foire["x"] + foire["l"] // 2, foire["y"] + foire["h"] // 2)
@@ -100,7 +111,7 @@ def _nage_la_plus_courte_vers_la_pointe() -> int:
         for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
             voisin = (x + dx, y + dy)
             if (voisin in pointe or not (0 <= voisin[0] < LARGEUR and 0 <= voisin[1] < HAUTEUR)
-                    or sol[voisin[1]][voisin[0]] == "~"):
+                    or sol[voisin[1]][voisin[0]] == "~" or est_relief(*voisin)):
                 continue
             pointe.add(voisin)
             file.append(voisin)
@@ -113,7 +124,7 @@ def _nage_la_plus_courte_vers_la_pointe() -> int:
             if not (0 <= nx < LARGEUR and 0 <= ny < HAUTEUR) or (nx, ny) in dist:
                 continue
             if sol[ny][nx] != "~":
-                if not dans_l_ile(nx, ny):
+                if not dans_l_ile(nx, ny) and not est_relief(nx, ny):
                     return dist[(x, y)] + 1  # la premiere rive qui n'est pas elle
                 continue
             dist[(nx, ny)] = dist[(x, y)] + 1
@@ -224,7 +235,11 @@ def test_le_bateau_est_le_seul_a_flotter():
     """⚠️ Un char dans l'eau coule, et le bateau non — et c'est sa FICHE qui le
     dit (`eau`, deja la pour sa friction et son adherence), pas une classe
     ecrite dans le JavaScript. Une deuxieme verite a tenir a jour, c'est une
-    deuxieme verite qui finit par mentir."""
+    deuxieme verite qui finit par mentir.
+
+    ⚠️ LES bateaux depuis le 21 sept. 2026 : la chaloupe, le chalutier et le
+    porte-conteneurs — et ce sont les seuls de leur classe."""
     from app import vehicules
     flottent = [v["slug"] for v in vehicules.CATALOGUE if v["eau"]]
-    assert flottent == ["bateau"], flottent
+    assert flottent == ["bateau", "chalutier", "porte_conteneurs"], flottent
+    assert flottent == [v["slug"] for v in vehicules.CATALOGUE if v["classe"] == "bateau"]

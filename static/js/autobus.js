@@ -119,7 +119,14 @@ const Autobus = (function () {
       charrue = { numero: 'charrue', nom: 'La charrue', tuiles: tuiles, n: tuiles.length, longueurPx: tuiles.length * TT,
                   arretA: new Map(), ordre: [], autobus: 1, horaire: { vitesse_px: nc.vitesse_px }, largeur: nc.largeur_tuiles };
     }
-    prepare = { lignes: lignes, arrets: arrets, horaire: brut.horaire, attente: brut.attente || null, tournee: tournee, charrue: charrue };
+    // ⚠️ L'ARROSEUSE (la nuit a ses habitudes) fait la tournee de la charrue : la meme
+    // voirie deneige l'hiver et arrose l'ete. Ses propres heures, sa propre vitesse.
+    const na = B.defs.nuit && B.defs.nuit.arroseuse;
+    const arroseuse = charrue && na ? Object.assign({}, charrue, {
+      numero: 'arroseuse', nom: 'L’arroseuse', horaire: { vitesse_px: na.vitesse_px }, largeur: na.largeur_tuiles,
+    }) : null;
+    prepare = { lignes: lignes, arrets: arrets, horaire: brut.horaire, attente: brut.attente || null, tournee: tournee, charrue: charrue,
+                arroseuse: arroseuse };
     return prepare;
   }
 
@@ -140,6 +147,7 @@ const Autobus = (function () {
     if (!d) return null;
     if (numero === 'tournee') return d.tournee;
     if (numero === 'charrue') return d.charrue;
+    if (numero === 'arroseuse') return d.arroseuse;
     return d.lignes.find(function (l) { return l.numero === numero; }) || null;
   }
 
@@ -282,6 +290,7 @@ const Autobus = (function () {
       return;
     }
     if (v.charrue) Neige.deneiger(Math.floor(v.x / TT), Math.floor(v.y / TT), L.largeur);
+    if (v.arrose) arroser(v, L);
     let cible = centre(L.tuiles[v.etape]);
     if (dist2(cible.x, cible.y, v.x, v.y) < 36) {
       const ici = v.etape;
@@ -384,12 +393,12 @@ const Autobus = (function () {
     const r = d.horaire.rayon_monter_px;
     let meilleur = null, dMin = Infinity;
     for (const v of Entites.autour(j.x, j.y, r + 30, function (q) { return q.type === 'vehicule'; })) {
-      if (v.conducteur !== 'ligne' || v.collecte || v.charrue || !(v.arretT > 0) || v.etat === 'epave' || v.passager) continue;
+      if (v.conducteur !== 'ligne' || v.collecte || v.charrue || v.arrose || !(v.arretT > 0) || v.etat === 'epave' || v.passager) continue;
       const cx = Math.cos(v.angle), cy = Math.sin(v.angle);
       const long = borner((j.x - v.x) * cx + (j.y - v.y) * cy, -v.def.longueur / 2, v.def.longueur / 2);
       const px = v.x + cx * long, py = v.y + cy * long;
       const d2 = dist2(px, py, j.x, j.y);
-      if (d2 < r * r && d2 < dMin) { dMin = d2; meilleur = v; }
+      if (d2 < r * r && d2 < dMin && faceA(j, px, py)) { dMin = d2; meilleur = v; }
     }
     return meilleur;
   }
@@ -688,7 +697,7 @@ const Autobus = (function () {
     v.bord = v.bord || [];
     // `qui` : le passant qui est monte — c'est par lui qu'on sait que CELUI qui
     // attendait est bien a bord, et pas un autre arrive entre-temps.
-    v.bord.push({ arret: sortie, depuis: v.arret, arch: e.arch, swaps: e.swaps, graine: hash2(e.id, sortie), qui: e.id });
+    v.bord.push({ arret: sortie, depuis: v.arret, arch: e.arch, swaps: e.swaps, tenue: e.tenue || null, graine: hash2(e.id, sortie), qui: e.id });
     B.abribusServis = B.abribusServis || {};
     B.abribusServis[v.arret] = quartDHeure();
     Entites.retirer(e);
@@ -714,7 +723,7 @@ const Autobus = (function () {
       v.bord.splice(v.bord.indexOf(b), 1);
       const e = sansLeDe(b.graine, function () {
         const arch = Entites.archetype(b.arch);
-        return Entites.creerPieton(x, y, arch ? Object.assign({}, arch, { couleurs: b.swaps || arch.couleurs }) : null);
+        return Entites.creerPieton(x, y, arch ? Object.assign({}, arch, { couleurs: b.swaps || arch.couleurs, tenue: b.tenue || null }) : null);
       });
       if (!e) return;
       e.descenduDe = v.ligne;
@@ -855,6 +864,57 @@ const Autobus = (function () {
     if (v) v.vitesse = v.def.vitesse_max * t.vitesse_ville * 0.4;
   }
 
+  // --- L'arroseuse (la nuit a ses habitudes) ----------------------------------------------
+
+  const ARROSEUSE_DECALAGE = 13;
+
+  /** Elle sort entre 1 h et 5 h (`nuit.arroseuse.heures`) — pas quand la charrue est
+      dehors : l'hiver, la voirie a autre chose a faire. */
+  function arroseuseDehors() {
+    const a = B.defs.nuit && B.defs.nuit.arroseuse, p = B.partie;
+    if (!a || !p || Neige.charrueDehors()) return false;
+    return p.heure >= a.heures[0] && p.heure < a.heures[1];
+  }
+
+  /** Comme la charrue : hors de l'ecran et a sa place a l'heure ; son heure passee,
+      elle rentre des qu'on ne la voit plus. Aucun de : sa silhouette et sa couleur
+      sont donnees. */
+  function faireNaitreLArroseuse() {
+    const d = donnees(), A = d && d.arroseuse, j = B.joueur;
+    if (!A || !j || B.interieur || (B.t % REGARD_IMAGES) !== ARROSEUSE_DECALAGE) return;
+    const v0 = enService('arroseuse', 0);
+    if (!arroseuseDehors()) {
+      if (v0 && !Entites.visibleAEcran(v0.x, v0.y, 60)) Entites.retirer(v0);
+      return;
+    }
+    if (v0) return;
+    const t = B.defs.conduite.trafic, p = placeALHeure(A, 0, tempsDeLaPartie());
+    const d2 = dist2(p.x, p.y, j.x, j.y);
+    if (d2 < t.naissance_px * t.naissance_px || d2 > (t.oubli_px - 80) * (t.oubli_px - 80)) return;
+    if (Entites.visibleAEcran(p.x, p.y, 60)) return;
+    if (Entites.autour(p.x, p.y, 48, function (q) { return q.type === 'vehicule' || q.type === 'joueur'; }).length) return;
+    const v = Vehicules.creer('camion', p.x, p.y, p.angle, {
+      conducteur: 'ligne', etat: 'roule', sprite: 'camion_arroseuse', couleur: B.defs.nuit.arroseuse.couleur, sens: p.sens,
+      ligne: 'arroseuse', arrose: true, rang: 0, etape: (p.i + 1) % A.n, servi: -1, arretT: 0, arret: null,
+      passager: null, demande: false, bloqueT: 0,
+    });
+    if (v) v.vitesse = v.def.vitesse_max * t.vitesse_ville * 0.3;
+  }
+
+  /** Elle mouille sa voie et ses voisines, et ca se voit : deux gerbes de gouttes de
+      chaque cote de la citerne. ⚠️ A l'empreinte de l'instant, pas au de : un decor. */
+  function arroser(v, L) {
+    Monde.mouiller(Math.floor(v.x / TT), Math.floor(v.y / TT), L.largeur);
+    if (B.t % 3 !== 0 || !Entites.visibleAEcran(v.x, v.y, 30)) return;
+    const ca = Math.cos(v.angle), sa = Math.sin(v.angle), demi = v.def.longueur / 2 - 4;
+    for (const cote of [-1, 1]) {
+      const h = hash2(B.t, v.id * 7 + (cote + 1));
+      const x = v.x - ca * demi - sa * cote * 7, y = v.y - sa * demi + ca * cote * 7;
+      const vite = 0.6 + (h % 50) / 100;
+      Entites.particule(x, y, -sa * cote * vite - ca * 0.3, ca * cote * vite - sa * 0.3, 14 + (h >>> 8) % 8, '#cfe3f5', 1, 0.15);
+    }
+  }
+
   /** Combien d'images le camion reste a ce point : le temps d'un bac, s'il y en a
       un plein ; sinon il passe. */
   function dureeDeCollecte(k) {
@@ -941,6 +1001,7 @@ const Autobus = (function () {
     faireNaitre();
     faireNaitreLaTournee();
     faireNaitreLaCharrue();
+    faireNaitreLArroseuse();
     majLesBacs();
     naitreALAbribus();
     majPassager();
@@ -952,6 +1013,6 @@ const Autobus = (function () {
     invite, inviteMonter, ligneDuHud, abribusIci, attenteDe, texteDAttente, maj,
     quiAttend, combienAttendent, naitreALAbribus, porteDe, quartDHeure, dureeDArret, naitreUnVoyageur,
     parcoursDuJour, dejaVide, bacDe, placeDuBac, majLesBacs, faireNaitreLaTournee, dureeDeCollecte,
-    railsParTuile, dessinerRails, faireNaitreLaCharrue,
+    railsParTuile, dessinerRails, faireNaitreLaCharrue, faireNaitreLArroseuse, arroseuseDehors,
   };
 })();

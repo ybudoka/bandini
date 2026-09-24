@@ -478,3 +478,25 @@ def test_la_musique_generee_tient_dans_le_budget():
     # démarrage. Il ne servait qu'à nous faire écrire des boucles courtes
     # qu'on entend reboucler.
     assert ko < 12000, f"{secondes} s de musique, soit {ko} Ko : le depot enfle"
+
+
+def test_le_fondu_enchaine_est_ecrit_une_fois_et_le_navigateur_le_lit():
+    """⚠️ Demande de Martin (20 sept. 2026) : « les transitions de musique doivent
+    toujours se faire en crossover, a moins que ce soit necessaire pour l'effet et
+    l'ambiance ». `fondu_s` etait declare depuis le premier jour et le JS ne le
+    lisait jamais — d'ou des pistes coupees net. Il y a maintenant DEUX durees, et
+    la vive est plus courte que la lente : c'est l'exception qui garde la regle."""
+    r = audio.exporter()["musique"]
+    assert r["fondu_s"] > 0, "sans fondu, chaque changement de piste est une coupure"
+    assert 0 < r["fondu_vif_s"] < r["fondu_s"], (r["fondu_vif_s"], r["fondu_s"])
+
+
+def test_le_volume_baisse_et_remonte_graduellement_les_chiffres_sont_ecrits_une_fois():
+    """⚠️ Demande de Martin (20 sept. 2026) : « il faut aussi baisser les volumes et
+    les monter graduellement ». Le quart etait ecrit en dur, deux fois, dans le JS ;
+    il est maintenant ici, avec la duree de la descente et celle de la remontee — et
+    la remontee est PLUS LENTE : deux repliques d'une conversation ne la laissent pas
+    revenir entre les deux."""
+    r = audio.exporter()["musique"]
+    assert 0 < r["ducking"] < 1, r["ducking"]
+    assert 0 < r["baisse_s"] < r["remonte_s"], (r["baisse_s"], r["remonte_s"])

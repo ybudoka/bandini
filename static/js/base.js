@@ -8,9 +8,22 @@ const VW = 480;
 const VH = 270;
 const TT = 16;
 
+//: Les filtres du mode photo (M14) : un nom pour le bandeau, un filtre CSS
+//: applique sur la ville deja peinte — jamais sur le HUD, qui reste lisible
+//: (voir `Base.fin`, remis a 'none' juste apres). ⚠️ Un `ctx.filter` de canvas,
+//: pas une classe CSS : ca doit teindre l'image CAPTUREE (`Base.telecharger`),
+//: pas seulement ce qu'on affiche.
+const FILTRES_PHOTO = [
+  { nom: 'AUCUN', css: 'none' },
+  { nom: 'NOIR ET BLANC', css: 'grayscale(1) contrast(1.1)' },
+  { nom: 'SÉPIA', css: 'sepia(0.8) contrast(1.05) saturate(1.1)' },
+  { nom: 'CONTRASTE', css: 'contrast(1.4) saturate(1.3)' },
+  { nom: 'FROID', css: 'hue-rotate(180deg) saturate(1.2)' },
+];
+
 /** Le sac d'etat : une seule source, lue et ecrite par tous les modules. */
 const B = {
-  etat: 'chargement',   // chargement | titre | jeu | pause | prison | hopital | fin
+  etat: 'chargement',   // chargement | titre | jeu | pause | carte | photo | prison | hopital | fin
   menu: null,           // objet de menu canvas ; non nul = simulation figee
   /*: La roue d'armes OUVERTE : { armes, choix, t } — voir `Combat.majRoue`.
     ⚠️ Elle ne fige pas le monde comme `menu`, elle le RALENTIT (une image
@@ -34,6 +47,13 @@ const B = {
   defs: null,           // le paquet /api/definitions
   carte: null,
   cam: { x: 0, y: 0, secousse: 0 },
+  //: Mode photo (M14, 6e vague) : { dx, dy, filtre } — non nul = simulation
+  //: figee, camera detachee du joueur (voir Jeu.ouvrirPhoto).
+  photo: null,
+  //: Coop locale (M14, essai — RISQUE, pas promis) : { entite } le deuxieme
+  //: joueur, ou null. Jamais sauvegarde avec la partie : on la rallume a
+  //: chaque session qui veut l'essayer (voir Jeu.basculerCoop).
+  coop: null,
   joueur: null,
   entites: [],
   particules: [],
@@ -46,7 +66,12 @@ const B = {
   msg: null, msgT: 0,
   partie: null,         // ce qui se sauvegarde (voir etatInitial)
   options: { muet: false, sang: true, vibration: true, daltonien: false, trace: false, neige: false,
-             reculCommeEnAvant: false, manette: null, manetteProfil: null },
+             reculCommeEnAvant: false, manette: null, manetteProfil: null,
+             // Les lettres des boutons de l'ecran COMMANDES : null = devinees.
+             lettresManette: null,
+             // La coop locale (essai) : qui a la manette, entre les deux
+             // joueurs — faux (par defaut) = le deuxieme (`Entree.debutImage`).
+             coopP1Manette: false },
   trace: { anomalies: [], total: 0 },     // ce que le mode TRACE a releve (voir Vehicules.majTrace)
   cinema: null,         // un dialogue en cours : le joueur ecoute (voir Histoire.dire)
   ouverture: null,      // la scene d'ouverture en cours (voir Histoire.ouverture)
@@ -75,6 +100,7 @@ function etatInitial(defs) {
     vie: 100,
     tenue: 'chandail',
     tenues: ['chandail'],
+    chapeau: null,        // le chapeau porte (`magasins.TENUES`, `emplacement: 'tete'`), ou rien
     cheveux: null,        // la couleur donnee par le barbier (`magasins.COIFFURES`)
     fouilles: {},         // les logements deja fouilles, par porte et par etage
     armes: { poings: { mun: null } },
@@ -143,6 +169,14 @@ function etatInitial(defs) {
     appels: {},           // les appels recus, par mission
     appelT: null,
     defisFaits: {},
+    //: Les defis DEBLOQUES en cours de partie (`debloque` du catalogue) : slug ->
+    //: `{ jour, lu }`. ⚠️ Une fois ouvert, un defi le reste — meme ouvert par la
+    //: triche. `lu` : on a lu son panneau, il ne bat plus sur la carte.
+    defisOuverts: {},
+    //: LE DEFI DU JOUR (M14, 5e vague) : `{ date, slug, temps }` de la derniere prime du jour
+    //: encaissee par CETTE partie. ⚠️ La date est celle du SERVEUR, jamais l'horloge locale.
+    //: Null tant qu'on n'en a pas touche ; une vieille partie le recoit par `completer`.
+    defiDuJour: null,
     rabais: {},
     //: Les contacts du téléphone (`donne.contacts`, m6) : des personnages
     //: dont on a le numéro. Un objet slug -> jour, comme le répertoire.
@@ -181,9 +215,24 @@ function etatInitial(defs) {
     //: jamais — celui qui joue depuis trois jours n'a pas besoin qu'on lui
     //: presente son oncle.
     ouvertureVue: false,
+    //: Les triches du menu DEBUG qui se BASCULENT (`Hud.menuDebug`) — invincible,
+    //: vehicules invincibles, energie infinie, munitions infinies, police qui
+    //: n'arrete pas — et `menu`, qui n'est pas une triche mais la CLE : la suite
+    //: secrete l'a tapee dans cette partie, donc la PAUSE montre la ligne
+    //: TRICHES. ⚠️ Tout vit DANS LA PARTIE, pas sur `B` : ca suit son emplacement
+    //: (et le compte, qui monte la partie entiere), et une nouvelle partie
+    //: repart sans rien. On lit par `triche(nom)`, jamais a la main.
+    triches: { menu: false, invincible: false, vehicules: false, endurance: false, munitions: false, pasArrete: false },
     stats: { crimes: 0, arrestations: 0, volees: 0, tues: 0, secondes: 0 },
     x: null, y: null,
   };
+}
+
+/** Une triche du menu DEBUG est-elle allumee dans la partie en cours ? Faux sans
+    partie (le titre) et pour un nom inconnu. */
+function triche(nom) {
+  const p = B.partie;
+  return !!(p && p.triches && p.triches[nom]);
 }
 
 /** Les couleurs du joueur : son linge, et sa coupe s'il est passe chez le barbier.
@@ -194,7 +243,9 @@ function etatInitial(defs) {
 function apparenceDuJoueur(partie, defs) {
   const tenue = ((defs && defs.tenues) || []).find(function (t) { return t.slug === partie.tenue; });
   const swaps = {};
-  if (tenue) swaps.c = tenue.couleur;
+  // ⚠️ Un CHAPEAU n'est pas un chandail (`emplacement: 'tete'`, la garde-robe) : la casquette de la
+  // foire, portee comme linge dans une vieille sauvegarde, ne teint plus le torse en orange.
+  if (tenue && tenue.emplacement !== 'tete') swaps.c = tenue.couleur;
   if (partie.cheveux) swaps.h = partie.cheveux;
   return Object.keys(swaps).length ? swaps : null;
 }
@@ -211,6 +262,27 @@ function ecartAngle(a, b) {
   if (d > Math.PI) d -= Math.PI * 2;
   if (d <= -Math.PI) d += Math.PI * 2;
   return d;
+}
+
+//: Les quatre regards que le sprite MONTRE, en radians (`e.face`).
+const REGARDS = { droite: 0, bas: Math.PI / 2, gauche: Math.PI, haut: -Math.PI / 2 };
+
+/** `e` FAIT-IL FACE au point (x, y) ? La regle de toute interaction : pour agir sur
+    une porte, un char, un comptoir ou quelqu'un, on le regarde.
+
+    ⚠️ Le regard est ce que le sprite MONTRE (`face`), pas l'angle fin du stick :
+    ce que le joueur voit est ce que le jeu juge. `angle` ne sert que quand la pose
+    n'est pas un regard (couche, assis). ⚠️ Et on n'a pas a regarder ce qu'on a sous
+    les pieds (`regard.dessus_px`) : la, la direction n'est plus definie.
+
+    Toutes les fonctions « sous la main » passent par ici, et l'invite du HUD lit
+    les memes : le bouton ne promet jamais ce qu'il refuserait (`recherche.regard`). */
+function faceA(e, x, y) {
+  const r = B.defs.recherche.regard;
+  if (dist2(e.x, e.y, x, y) <= r.dessus_px * r.dessus_px) return true;
+  const regard = REGARDS[e.face];
+  return Math.abs(ecartAngle(regard === undefined ? e.angle : regard, angleVers(e.x, e.y, x, y)))
+    <= r.demi_cone_degres * Math.PI / 180;
 }
 /** Un entier stable pour une paire (x, y) — variantes de tuiles. */
 function hash2(x, y) {
@@ -305,11 +377,59 @@ const Base = (function () {
   //: un croisement, c'est 2 poteaux de chars a 2 ampoules et jusqu'a 4
   //: poteaux de pietons — 8 lampes, et l'ecran en tient plusieurs. Au plafond
   //: d'avant, les feux AURAIENT ETEINT les lampadaires au lieu de s'ajouter a
-  //: eux : 25 lampadaires + 24 feux + le projecteur de l'helico.
-  const LAMPES_MAX = 50;
+  //: eux : 25 lampadaires + 24 feux + le projecteur de l'helico. Et depuis la
+  //: nuit a ses habitudes, les PHARES : douze lampes de plus (six chars menes).
+  //: ⚠️ Et depuis « des phares a la mesure de chaque char », quatorze chars
+  //: menes a sept lampes au plus (`Vehicules`, `LAMPES_PHARES_MAX`) : a six,
+  //: le septieme char de l'ecran roulait eteint.
+  const LAMPES_MAX = 148;
+  //: Le bord d'un faisceau : [de combien la passe s'elargit au bout, sa part].
+  //: Les parts font 1 au milieu du cone.
+  const CONE_FLOU = [[8, 0.45], [0, 0.55]];
 
-  /** Compose la nuit et les lampes, puis envoie a l'ecran. */
-  function fin(ambiance, lampes) {
+  /** Les quatre coins d'un cone (l'ecran, PAS son repere tourne/ecrase) — meme
+      rotation que le sol (`ry` ecrase par `p` APRES avoir tourne), le plus
+      large des deux passes de `CONE_FLOU` pour ne pas raboter le flou. */
+  function coinsDuCone(l) {
+    const ca = Math.cos(l.a || 0), sa = Math.sin(l.a || 0), p = l.p || 1;
+    const large = CONE_FLOU[0][0];
+    return [[0, -l.cone[0] - large / 2], [l.r, -l.cone[1] - large], [l.r, l.cone[1] + large], [0, l.cone[0] + large / 2]]
+      .map(function ([u, w]) { return [l.x + u * ca - w * sa, l.y + (u * sa + w * ca) * p]; });
+  }
+
+  /** Les quatre coins d'une empreinte de char (`Vehicules.corpsDesPhares`), au
+      meme calcul que son ombre au sol (angle tourne, puis ecrasee par `profondeur`). */
+  function coinsDuCorps(b) {
+    const ca = Math.cos(b.angle || 0), sa = Math.sin(b.angle || 0), p = b.profondeur || 1;
+    return [[-b.l / 2, -b.h / 2], [b.l / 2, -b.h / 2], [b.l / 2, b.h / 2], [-b.l / 2, b.h / 2]]
+      .map(function ([u, w]) { return [b.x + u * ca - w * sa, b.y + (u * sa + w * ca) * p]; });
+  }
+
+  /** Decoupe le CONE en cours (contexte deja `beginPath`e) : un `clip` par
+      char devant lui, empreinte par empreinte — jamais une seule passe avec
+      tous les chars dans le meme chemin `evenodd` (deux empreintes qui se
+      chevauchent s'annuleraient et rallumeraient le faisceau entre elles). Le
+      char qui PORTE ce faisceau ne se decoupe pas lui-meme (`b.v === l.faisceau`). */
+  function decouperLesCorps(c, l, corps) {
+    if (!corps || !corps.length) return;
+    const cone = coinsDuCone(l);
+    for (const b of corps) {
+      if (b.v === l.faisceau) continue;
+      c.beginPath();
+      for (const [x, y] of cone) c.lineTo(x, y);
+      c.closePath();
+      const coin = coinsDuCorps(b);
+      c.moveTo(coin[0][0], coin[0][1]);
+      for (let i = 1; i < coin.length; i++) c.lineTo(coin[i][0], coin[i][1]);
+      c.closePath();
+      c.clip('evenodd');
+    }
+  }
+
+  /** Compose la nuit et les lampes, puis envoie a l'ecran. `corps` : les
+      empreintes des chars (`Vehicules.corpsDesPhares`) — un faisceau s'y
+      arrete au lieu de les traverser. */
+  function fin(ambiance, lampes, corps) {
     const c = cible.ctx;
     if (ambiance && ambiance.alpha > 0) {
       c.save();
@@ -323,6 +443,35 @@ const Base = (function () {
         c.globalCompositeOperation = 'lighter';
         for (let i = 0; i < lampes.length && i < LAMPES_MAX; i++) {
           const l = lampes[i];
+          // Un faisceau (des phares) : un CONE pose au sol, qui part des phares
+          // (`x`, `y`) dans l'axe `a` et s'eteint a sa portee `r` — `cone`, sa
+          // demi-largeur au depart et au bout. ⚠️ Ecrase comme le sol (`p`)
+          // APRES avoir tourne : le meme ordre que l'ombre des chars, sinon un
+          // faisceau en diagonale serait cisaille au lieu d'etre pose a plat.
+          if (l.cone) {
+            c.save();
+            decouperLesCorps(c, l, corps);
+            c.translate(l.x, l.y);
+            c.scale(1, l.p || 1);
+            c.rotate(l.a || 0);
+            const f = c.createRadialGradient(0, 0, 0, 0, 0, l.r);
+            f.addColorStop(0, l.c);
+            f.addColorStop(1, 'rgba(0,0,0,0)');
+            c.fillStyle = f;
+            // ⚠️ DEUX PASSES : le cone, et un cone plus large a moitie moins
+            // fort. D'une seule, le bord etait une arete franche — un triangle
+            // de lumiere pose sur la rue, pas un faisceau.
+            for (const [elargi, part] of CONE_FLOU) {
+              c.globalAlpha = part;
+              c.beginPath();
+              c.moveTo(0, -l.cone[0] - elargi / 2); c.lineTo(l.r, -l.cone[1] - elargi);
+              c.lineTo(l.r, l.cone[1] + elargi); c.lineTo(0, l.cone[0] + elargi / 2);
+              c.closePath();
+              c.fill();
+            }
+            c.restore();
+            continue;
+          }
           const g = c.createRadialGradient(l.x, l.y, 2, l.x, l.y, l.r);
           g.addColorStop(0, l.c || 'rgba(255,220,140,0.55)');
           g.addColorStop(1, 'rgba(0,0,0,0)');
@@ -345,8 +494,24 @@ const Base = (function () {
   /** `n` : l'echelle a tenir quelle que soit la fenetre ; null la rend a la fenetre. */
   function imposerEchelle(n) { echelleImposee = n || null; }
 
+  /** Le mode photo (M14) : l'ecran tel qu'il est LA, telecharge en PNG.
+      ⚠️ `cv.toDataURL` et le lien qui se clique tout seul n'existent que dans
+      un vrai navigateur — le banc d'essai (tests/banc.js) n'a ni l'un ni
+      l'autre, et un mode photo qui plante sous Node casserait tous les
+      juges qui passent par la pause. On se tait plutot que de lancer. */
+  function telecharger(nom) {
+    if (!cv || typeof cv.toDataURL !== 'function') return false;
+    if (typeof document === 'undefined' || typeof document.createElement !== 'function') return false;
+    const a = document.createElement('a');
+    if (typeof a.click !== 'function') return false;
+    a.href = cv.toDataURL('image/png');
+    a.download = nom;
+    a.click();
+    return true;
+  }
+
   return {
-    initCanvas, redimensionner, imposerEchelle, debut, fin, ecran, nouveauCanvas,
+    initCanvas, redimensionner, imposerEchelle, debut, fin, ecran, nouveauCanvas, telecharger,
     get SCALE() { return SCALE; },
   };
 })();
@@ -560,7 +725,7 @@ const Sauvegarde = (function () {
     const base = etatInitial(defs);
     if (!partie || typeof partie !== 'object') return base;
     const out = Object.assign({}, base, partie);
-    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'paquets', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance', 'contrebande', 'contacts']) {
+    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'defisOuverts', 'paquets', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance', 'contrebande', 'contacts', 'triches']) {
       out[k] = Object.assign({}, base[k], (partie[k] && typeof partie[k] === 'object') ? partie[k] : {});
     }
     if (!Array.isArray(out.tenues) || out.tenues.indexOf('chandail') < 0) out.tenues = ['chandail'].concat(Array.isArray(out.tenues) ? out.tenues : []);

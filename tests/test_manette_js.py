@@ -199,7 +199,7 @@ def test_la_disposition_a_croix_sur_un_axe_marche_sans_rien_apprendre(banc):
     assert r["lu"]["repos"] == []
 
 
-def test_tout_reapprendre_enchaine_les_douze_gestes(banc):
+def test_tout_reapprendre_enchaine_les_onze_gestes(banc):
     """⚠️ Le vrai geste quand rien ne repond : TOUT REAPPRENDRE, et le jeu
     demande un bouton apres l'autre. La croix compte pour quatre."""
     r = banc("""function (L, o) {
@@ -223,7 +223,7 @@ def test_tout_reapprendre_enchaine_les_douze_gestes(banc):
                  fini: L.Entree.apprendEnCours(), garde: !!L.B.options.manette };
     }""")
     assert r["demandes"][:5] == ["action", "attaque", "esquive", "arme", "annuler"]
-    assert "verrouiller" in r["demandes"]
+    assert "verrouiller" not in r["demandes"], "VISER est la gachette du gaz : rien a reapprendre"
     assert "haut" in r["demandes"] and "bas" in r["demandes"], "la croix s'apprend en quatre gestes"
     assert r["action"] == [15] and r["attaque"] == [14]
     assert r["fini"] is None, "la file doit finir"
@@ -419,7 +419,8 @@ def test_le_dessin_allume_le_bouton_qu_on_appuie(banc):
 
 def test_la_manette_ne_ferme_pas_l_ecran_sous_ses_doigts(banc):
     """On y appuie sur ses boutons pour les VOIR : si FRAPPE ou START fermaient
-    l'ecran, on ne pourrait pas les essayer. Le clavier, lui, ferme."""
+    l'ecran, on ne pourrait pas les essayer. Le clavier, lui, recule — vers
+    OPTIONS, l'onglet d'ou l'ecran s'ouvre (c'est une sous-page du classeur)."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.Hud.ouvrirMenu(L.Hud.menuManette());
@@ -431,11 +432,11 @@ def test_la_manette_ne_ferme_pas_l_ecran_sous_ses_doigts(banc):
             o.pad([0, 0], b(-1)); o.frame(2);
         }
         o.pad(null); o.frame(2);
-        o.tape('Space', 2);                          // FRAPPE au clavier : ca, ca ferme
-        return { etapes: etapes, apresClavier: !!L.B.menu };
+        o.tape('Space', 2);                          // FRAPPE au clavier : ca, ca recule
+        return { etapes: etapes, apresClavier: L.B.menu && L.B.menu.titre };
     }""")
     assert r["etapes"] == [True, True, True], "un bouton de manette a ferme l'ecran"
-    assert r["apresClavier"] is False, "le clavier doit pouvoir fermer"
+    assert r["apresClavier"] == "OPTIONS", "le clavier doit pouvoir reculer"
 
 
 def test_un_bouton_hors_disposition_se_dit_au_lieu_de_ne_rien_faire(banc):

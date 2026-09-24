@@ -9,7 +9,10 @@ en reconnaissant une scène.
 import re
 from pathlib import Path
 
+import pytest
+
 from app import missions
+from app.missions._commun import _l, _p, _r
 
 RACINE = Path(__file__).resolve().parent.parent
 SCENES_JS = (RACINE / "static" / "js" / "scenes.js").read_text(encoding="utf-8")
@@ -103,10 +106,16 @@ def test_les_lieux_des_scenes_existent_dans_la_ville():
     lieux = {p["slug"] for p in ville["points_interet"]} | {p["lieu"] for p in ville["portes"] if p.get("lieu")}
     zones = {z["slug"] for z in ville["zones"]}
     for m in missions.CATALOGUE:
-        for partie, scene in m["scenes"].items():
+        # ⚠️ Celles qu'elle écrit ET celles que le défaut lui bâtirait : c'est le
+        # défaut qui portera la prochaine mission, et les cent de M16.
+        ecrites = list(m["scenes"].items())
+        defauts = [(partie, missions.scene_par_defaut(m, partie)) for partie in ("intro", "fin")]
+        for partie, scene in ecrites + defauts:
             for plan in scene:
-                for nom in (plan.get(cle) for cle in ("vers", "dans", "de")):
-                    if not isinstance(nom, str) or ":" not in nom:
+                # ⚠️ `_lieux_du_plan` : une coupe en liste (`vers: [...]`, le tour de m6) nomme
+                # plusieurs lieux, et chacun est confronté à la ville.
+                for nom in missions._lieux_du_plan(plan):
+                    if ":" not in nom:
                         continue
                     forme, suite = nom.split(":", 1)
                     # `ruelle:garage:24` : la ruelle a vingt-quatre tuiles au moins.
@@ -119,6 +128,22 @@ def test_les_lieux_des_scenes_existent_dans_la_ville():
                         assert suite in zones, (m["slug"], partie, nom)
                     elif forme == "chez":
                         assert missions.personnage(suite)["ou"], (m["slug"], partie, nom)
+
+
+def test_une_coupe_en_liste_se_valide_lieu_par_lieu():
+    """`vers` en liste : réservé à la coupe, non vide, et chaque lieu est jugé comme s'il
+    était seul — `chez:` d'un personnage qui n'existe pas se voit."""
+    import copy
+    coupe = {"type": "coupe", "vers": ["chez:tipaul", "chez:lulu"], "ferme": 14, "ouvre": 14, "tient": 87}
+    assert missions.erreurs_de_scene([coupe]) == []
+    assert missions._lieux_du_plan(coupe) == ["chez:tipaul", "chez:lulu"]
+    assert any("pour la coupe seule" in e for e in missions.erreurs_de_scene([{"type": "camera", "vers": ["a", "b"]}]))
+    assert any("au moins un lieu" in e for e in missions.erreurs_de_scene([dict(coupe, vers=[])]))
+    assert any("au moins un lieu" in e for e in missions.erreurs_de_scene([dict(coupe, vers=["chez:tipaul", 7])]))
+    m6 = copy.deepcopy(missions.par_slug("m6"))
+    m6["scenes"]["intro"][2]["vers"] = ["chez:tipaul", "chez:personne"]
+    assert any("n'est chez personne" in e for e in missions.erreurs_de_mise_en_scene(m6)), \
+        "le second lieu d'une coupe en liste n'est pas jugé"
 
 
 def test_le_juge_refuse_une_mission_pas_finie():
@@ -148,8 +173,9 @@ def test_histoire_ne_nomme_aucune_mission():
 
 
 def test_les_voix_deja_payees_gardent_leur_slug():
-    """⚠️ `pendant` se compte APRÈS `echec` : insérée avant `fin`, elle renommait les
-    voix de fin et d'échec déjà générées — des mp3 payés devenus des 404."""
+    """⚠️ `pendant` se compte APRÈS `echec`, et `renvoi` après `pendant` : insérées avant
+    `fin`, elles renommaient les voix de fin et d'échec déjà générées — des mp3 payés
+    devenus des 404."""
     for m in missions.CATALOGUE:
         n, attendus = 0, {}
         for partie in ("appel", "intro", "client", "fin", "echec"):
@@ -157,11 +183,200 @@ def test_les_voix_deja_payees_gardent_leur_slug():
                 n += 1
                 attendus[(partie, ligne["texte"])] = f"{ligne['qui']}-{m['slug']}-{n}"
         for r in missions.repliques():
-            if r["mission"] == m["slug"] and r["partie"] != "pendant":
+            if r["mission"] == m["slug"] and r["partie"] not in ("pendant", "renvoi", "accueil"):
                 assert r["slug"] == attendus[(r["partie"], r["texte"])], r
+
+
+def test_une_replique_renvoi_s_accroche_a_un_objectif_qui_existe_et_se_dit_en_personne():
+    """⚠️ Lulu, de jour, renvoie qui lui parle trop tôt (m50). Une réplique `renvoi` dont
+    l'objectif n'existe pas ne se dirait jamais ; et on lui PARLE, donc elle ne passe pas au
+    combiné."""
+    fiche = _fiche("marco", [{"type": "aller", "lieu": "garage", "rayon": 4, "texte": "VA AU GARAGE"}])
+    fiche["dialogue"]["renvoi"] = [_r("marco", "Reviens ce soir.", 0)]
+    missions._completer(fiche)
+    assert missions.erreurs_de_mise_en_scene(fiche) == []
+    fiche["dialogue"]["renvoi"] = [_r("marco", "Reviens ce soir.", 7)]
+    assert any("renvoi accrochée à un objectif qui n'existe pas" in e for e in missions.erreurs_de_mise_en_scene(fiche))
+    renvois = [r for r in missions.repliques() if r["partie"] == "renvoi"]
+    assert [r["slug"] for r in renvois] == ["lulu-m50-12"], "m50 : Lulu dit d'attendre la nuit"
+    assert not any(r["telephone"] for r in renvois)
+
+
+def test_un_accueil_s_accroche_a_la_poignee_de_main_de_celui_qui_parle():
+    """⚠️ Martin, 20 sept. 2026 : « enrichir leur dialogue ». Un `accueil` se dit quand on serre la
+    main de sa cible (objectif `parler`) : accroché à un autre objectif, ou dit par quelqu'un d'autre
+    que la cible, il ne se dirait jamais. Les quatre de m6 se comptent APRÈS `pendant` et `renvoi`,
+    pour qu'aucun mp3 déjà payé ne change de nom."""
+    from app.missions._commun import _a
+    fiche = _fiche("marco", [{"type": "parler", "cible": "tipaul", "texte": "PARLE À TI-PAUL"},
+                             {"type": "aller", "lieu": "garage", "rayon": 4, "texte": "VA AU GARAGE"}])
+    fiche["dialogue"]["accueil"] = [_a("tipaul", "Salut, l'ami!", 0)]
+    missions._completer(fiche)
+    assert missions.erreurs_de_mise_en_scene(fiche) == []
+    fiche["dialogue"]["accueil"] = [_a("tipaul", "Salut, l'ami!", 1)]
+    assert any("SON objectif `parler`" in e for e in missions.erreurs_de_mise_en_scene(fiche)), "un objectif `aller`"
+    fiche["dialogue"]["accueil"] = [_a("lulu", "Viens manger!", 0)]
+    assert any("SON objectif `parler`" in e for e in missions.erreurs_de_mise_en_scene(fiche)), "la mauvaise voix"
+    fiche["dialogue"]["accueil"] = [_a("tipaul", "Salut, l'ami!", 5)]
+    assert any("accueil accrochée à un objectif qui n'existe pas" in e for e in missions.erreurs_de_mise_en_scene(fiche))
+    accueils = [r for r in missions.repliques() if r["partie"] == "accueil"]
+    # Ceux de m6 : la mission qui a inventé la poignée de main dite. Les autres missions (m51) ont les
+    # leurs, et ce juge n'a pas à les nommer — il nomme ce qui est déjà payé.
+    # ⚠️ « Des missions plus longues » (22 sept. 2026) : une fin et cinq `pendant` de plus devant eux — leurs
+    # mp3 (`-9` à `-12`) se renomment d'après qui, mission et texte.
+    assert [r["slug"] for r in accueils if r["mission"] == "m6"] == [
+        "tipaul-m6-15", "lulu-m6-16", "raymonde-m6-17", "ovila-m6-18"]
+    assert not any(r["telephone"] for r in accueils), "on leur serre la main : ils parlent en personne"
+
+
+def test_on_se_presente_une_fois_par_mission():
+    """⚠️ Martin, 21 sept. 2026 : « normalement les gens se présentent avant de parler », puis « finalement
+    les personnes doivent se présenter seulement une fois par mission ». L'appel (toujours au téléphone)
+    dit qui appelle — m50 appelait d'un « Cousin, j'ai une faveur » ; ensuite, plus personne ne redit son
+    nom dans la mission — Josée le disait à l'appel, au pendant, à la fin et à l'échec de m5."""
+    import copy
+    m50 = copy.deepcopy(missions.par_slug("m50"))
+    m50["dialogue"]["appel"][0]["texte"] = "Cousin, j'ai une faveur. Passe au port, discret."
+    assert any("l'appel ne dit pas qui appelle" in e for e in missions.erreurs_de_mise_en_scene(m50))
+    m5 = copy.deepcopy(missions.par_slug("m5"))
+    assert missions.erreurs_de_mise_en_scene(m5) == []
+    m5["dialogue"]["echec"][0]["texte"] = "Josée. Les Cravates sont encore là. Reviens quand tu seras prêt."
+    assert any("josee se présente 2 fois" in e for e in missions.erreurs_de_mise_en_scene(m5)), "l'échec redit son nom"
+    # Un AUTRE personnage de la même mission a droit à sa présentation : Lulu à m50, après l'appel de Marco.
+    assert missions.se_nomme("lulu", missions.par_slug("m50")["dialogue"]["accueil"][0]["texte"])
+    assert missions.erreurs_de_mise_en_scene(missions.par_slug("m50")) == []
+    # Nommer quelqu'un d'autre n'est pas se présenter : Ti-Paul parle de Bouchard à m51.
+    assert missions.erreurs_de_mise_en_scene(missions.par_slug("m51")) == []
+
+
+def test_la_premiere_fois_qu_on_entend_quelqu_un_il_dit_son_nom():
+    """Dans l'ordre du catalogue (celui du téléphone), la première réplique de chacun le nomme :
+    Ti-Guy au terminus, les quatre contacts de m6 à la poignée de main. Le client du taxi et le
+    narrateur n'en sont pas — un rôle et une voix, on ne les rencontre pas."""
+    import copy
+    assert missions.erreurs_de_presentation() == []
+    catalogue = copy.deepcopy(missions.CATALOGUE)
+    m6 = next(m for m in catalogue if m["slug"] == "m6")
+    m6["dialogue"]["accueil"][0]["texte"] = "Ah, c'est toi, le nouveau de Josée! Ici, rien passe sans que je le sache."
+    assert [e for e in missions.erreurs_de_presentation(catalogue) if "tipaul" in e], "Ti-Paul serre la main sans se nommer"
+    # La deuxième fois, on le connaît : l'accueil de m51 ne dit pas « Ti-Paul », et c'est bien.
+    assert not missions.se_nomme("tipaul", missions.par_slug("m51")["dialogue"]["accueil"][2]["texte"])
+    assert not [e for e in missions.erreurs_de_presentation(catalogue) if "m51" in e]
+    assert not missions.on_le_rencontre("civil") and not missions.on_le_rencontre("narrateur")
+
+
+def test_se_nommer_c_est_dire_son_nom_en_entier():
+    """Un mot entier, sans égard à la casse — et un titre seul ne nomme personne."""
+    assert missions.noms_dits("lulu") == ("Lucienne", "Lulu", "Pelletier")
+    assert missions.noms_dits("bouchard") == ("Bouchard",)
+    assert missions.se_nomme("tipaul", "Moi, c'est Ti-Paul!")
+    assert not missions.se_nomme("tipaul", "C'est Ti-Paulette, du dépanneur.")
+    assert not missions.se_nomme("marco", "Les Marcotte sont en ville.")
+    assert not missions.se_nomme("bouchard", "Le sergent veut son poisson frais.")
+    assert not missions.se_nomme("thibodeau", "Madame est servie.")
+    assert missions.se_nomme("thibodeau", "C'est Madame THIBODEAU, du kiosque.")
+
+
+def test_un_acteur_qui_marche_vers_le_joueur_s_arrete_a_distance_de_parole():
+    """⚠️ Martin, 20 sept. 2026 : « Marco se déplace par-dessus le personnage principal dans
+    l'animation du début ». Sans `pres`, `marcher vers joueur` va au pixel du joueur : l'acteur
+    finit dessus. Rouge avant : m50 n'en passait pas, ni à l'intro ni à la fin."""
+    for m in missions.CATALOGUE:
+        for partie, scene in m["scenes"].items():
+            for plan in scene:
+                if plan["type"] == "marcher" and plan.get("vers") == "joueur":
+                    assert plan.get("pres", 0) >= 14, (m["slug"], partie, "marche sur le joueur")
+    nu = [{"type": "marcher", "acteur": "donneur", "vers": "joueur", "duree": 50}]
+    assert any("sans `pres`" in e for e in missions.erreurs_de_scene(nu))
+    assert missions.erreurs_de_scene([dict(nu[0], pres=22)]) == []
 
 
 def test_l_echec_se_dit_au_combine():
     """On n'est jamais à côté du donneur quand on rate."""
     echecs = [r for r in missions.repliques() if r["partie"] == "echec"]
     assert echecs and all(r["telephone"] for r in echecs)
+
+
+# --- Le bloc Lego : une mission qui n'apporte que ses données ---------------------------
+
+
+def _fiche(donneur, objectifs, intro=2, fin=2):
+    """Une fiche réduite à l'os : ce qui distingue une mission, et rien d'autre.
+    Pas de `prerequis`, pas de `phase`, pas d'`echec`, pas de `donne`, pas de
+    `scenes`. ⚠️ On se présente une fois par mission, à l'appel : la fiche le fait aussi, sinon le
+    juge « qui parle se nomme » la refuserait pour autre chose que ce qu'on juge."""
+    nom = " ".join(missions.noms_dits(donneur))
+    return {
+        "slug": "zz", "titre": "Un essai", "donneur": donneur, "recompense": 100,
+        "objectifs": objectifs,
+        "dialogue": {
+            "appel": [_l(donneur, f"C'est {nom}. Viens me voir.")],
+            "intro": [_l(donneur, f"Intro {i}.") for i in range(1, intro + 1)],
+            "pendant": [_p(donneur, "Ça avance?", 0)],
+            "fin": [_l(donneur, f"Fin {i}.") for i in range(1, fin + 1)],
+            "echec": [_l(donneur, "Une autre fois.")],
+        },
+    }
+
+
+#: Les formes que le défaut doit couvrir — ce sont celles que les missions écrites
+#: à la main ont fini par prendre. ⚠️ `marco` et `thibodeau` se tiennent dehors
+#: (`porte:`), `bouchard` et `josee` dedans (`point:`).
+FORMES = {
+    "dehors, fin ailleurs": ("marco", [{"type": "aller", "lieu": "poste", "rayon": 4, "texte": "VA AU POSTE"}]),
+    "dehors, fin chez lui": ("thibodeau", [{"type": "tuer", "groupe": "cravates", "n": 2, "ou": "donneur", "texte": "COGNE"},
+                                           {"type": "retourner", "texte": "REVIENS"}]),
+    "dedans, un lieu à montrer": ("bouchard", [{"type": "aller", "lieu": "poste", "rayon": 4, "texte": "VA AU POSTE"}]),
+    "dedans, rien à montrer": ("josee", [{"type": "survivre", "secondes": 30, "texte": "TIENS LE COUP"}]),
+    "une zone": ("josee", [{"type": "tuer", "groupe": "cravates", "n": 2, "ou": "zone:cravates", "texte": "VIDE LE COIN"}]),
+    "une seule réplique": ("marco", [{"type": "aller", "lieu": "garage", "rayon": 4, "texte": "VA AU GARAGE"}], 1, 1),
+}
+
+
+@pytest.mark.parametrize("forme", sorted(FORMES))
+def test_une_mission_qui_n_apporte_que_ses_donnees_est_finie(forme):
+    """⚠️ **LE BLOC LEGO** (demande de Martin, 20 sept. 2026). Un fichier de
+    mission qui n'écrit que ce qui la distingue — son donneur, ses objectifs, ses
+    répliques — reçoit tout le reste : ses clés par défaut ET ses deux scènes. Il
+    doit passer le juge du catalogue sans qu'on lui ajoute une ligne."""
+    fiche = _fiche(*FORMES[forme])
+    manque = set(missions.DEFAUTS_DE_MISSION) - set(fiche)
+    assert manque, "la fiche d'essai doit vraiment omettre les clés par défaut"
+    missions._completer(fiche)
+    assert missions.erreurs_de_mise_en_scene(fiche) == [], forme
+    for cle, valeur in missions.DEFAUTS_DE_MISSION.items():
+        if cle != "scenes":
+            assert fiche[cle] == valeur, (forme, cle)
+    for partie in ("intro", "fin"):
+        assert fiche["scenes"][partie], (forme, partie)
+
+
+@pytest.mark.parametrize("forme", sorted(FORMES))
+def test_une_scene_par_defaut_montre_quelque_chose(forme):
+    """Une scène par défaut n'est jamais une boîte de dialogue déguisée : il s'y
+    passe toujours un geste, une caméra ou une coupe. Et **dedans, elle sort** —
+    sinon on parlerait d'un lieu qu'on ne montre pas."""
+    fiche = _fiche(*FORMES[forme])
+    missions._completer(fiche)
+    for partie in ("intro", "fin"):
+        assert {p["type"] for p in fiche["scenes"][partie]} - {"dire"}, (forme, partie)
+    if missions.dedans(FORMES[forme][0]):
+        assert "coupe" in {p["type"] for p in fiche["scenes"]["intro"]}, forme
+
+
+def test_le_catalogue_est_complete_a_l_import():
+    """Personne, en aval — le paquet, le navigateur, les juges — n'a à savoir
+    qu'une clé pouvait manquer."""
+    for m in missions.CATALOGUE:
+        for cle in ("prerequis", "phase", "echec", "donne", "scenes"):
+            assert cle in m, (m["slug"], cle)
+        assert set(m["scenes"]) == {"intro", "fin"}, m["slug"]
+
+
+def test_chaque_mission_du_catalogue_a_aussi_des_scenes_par_defaut_jouables():
+    """⚠️ Les missions écrivent les leurs ; le défaut doit quand même savoir les
+    mettre en scène — c'est lui qui portera les cent de M16. Le banc les joue
+    toutes les deux (`test_missions_en_scene_js`)."""
+    for m in missions.CATALOGUE:
+        for partie in ("intro", "fin"):
+            assert missions.erreurs_de_scene(missions.scene_par_defaut(m, partie)) == [], (m["slug"], partie)

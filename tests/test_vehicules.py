@@ -25,8 +25,8 @@ def test_une_auto_de_police_le_parc_complet_et_le_velo():
     # ce qui n'est pas de l'eau »). Plus un seul vehicule en phase 2.
     assert {v["slug"] for v in vehicules.de_phase(1)} == {
         "auto", "taxi", "moto", "velo", "police",
-        "camion", "autobus", "ambulance", "remorqueuse",
-        "sport", "luxe", "bateau"}
+        "camion", "autobus", "ambulance", "remorqueuse", "pelleteuse",
+        "sport", "luxe", "cabriolet", "bateau", "chalutier", "porte_conteneurs"}
     assert {v["slug"] for v in vehicules.CATALOGUE} - {v["slug"] for v in vehicules.de_phase(1)} == set()
     assert vehicules.par_slug("moto")["ejecte"] is True
     assert vehicules.par_slug("velo")["ejecte"] is True, "on tombe d'un velo au premier choc"
@@ -82,6 +82,44 @@ def test_le_trafic_et_la_physique_sont_bornes():
     assert 0 <= ph["pivot_arriere"] < 0.5, "le pivot est DERRIERE le centre, pas derriere le char"
 
 
+def test_aucune_fiche_ne_promet_une_pointe_que_la_physique_refuse():
+    """⚠️ La paie de la Prevost (21 sept. 2026) : le camion plafonnait a 1,97 px/image au lieu des 2,8 de sa
+    fiche, et un agent a pied (2,0) le suivait jusqu'au bar. La friction mangeait tout ce que le moteur
+    ajoutait bien avant la `vitesse_max` — et la berline de luxe, l'autobus, le porte-conteneurs avec lui.
+
+    On INTEGRE image par image, comme `majPhysique` : gaz a fond, `(vitesse + acceleration) x friction`,
+    bornee par la fiche. Une formule fermee dirait ce qu'on croit, pas ce que le moteur fait."""
+    for v in vehicules.CATALOGUE:
+        vitesse, secondes = 0.0, None
+        for image in range(60 * 30):
+            vitesse = min(v["vitesse_max"], (vitesse + v["acceleration"]) * v["friction"])
+            if secondes is None and vitesse >= 0.95 * v["vitesse_max"]:
+                secondes = image / 60
+        assert secondes is not None, f"{v['slug']} plafonne a {vitesse:.2f} pour une fiche a {v['vitesse_max']}"
+        # ⚠️ La pointe elle-meme, pas seulement 95 % : un moteur qui s'epuise a 2,79 laisse le compteur a 119.
+        pointe = v["acceleration"] * v["friction"] / (1 - v["friction"])
+        assert pointe >= v["vitesse_max"], f"{v['slug']} : pointe {pointe:.4f} sous sa fiche"
+        # Et un char qui atteignait deja sa vitesse garde la friction de sa surface : on ne l'a pas touche.
+        base = vehicules.FRICTION_EAU if v["eau"] else vehicules.FRICTION_RUE
+        if v["acceleration"] * base / (1 - base) >= v["vitesse_max"]:
+            assert v["friction"] == base, v["slug"]
+
+
+def test_un_char_a_moteur_distance_un_agent_a_pied():
+    """Semer la police, c'est d'abord la distancer. Un agent court a `VITESSES["policier"]` ; tout ce qui a un
+    moteur et roule en ville va plus vite a fond — le camion et l'autobus compris, les plus lents. Le velo,
+    lui, ne distance personne : on le pedale.
+
+    ⚠️ **La pelleteuse non plus** (« Ça travaille » : l'etage 2, 12 km/h) : elle n'est pas la pour fuir, elle
+    est la pour la farce — un agent a pied la rattrape, et c'est voulu. `frequence == 0` : elle ne nait
+    jamais dans le trafic, ce n'est pas un char qu'on choisit pour semer qui que ce soit."""
+    from app.recherche import VITESSES
+    for v in vehicules.CATALOGUE:
+        if v["reservoir"] and not v["eau"] and v["frequence"] > 0:
+            assert v["vitesse_max"] >= 1.25 * VITESSES["policier"], \
+                f"{v['slug']} ({v['vitesse_max']}) ne distance pas un agent a pied ({VITESSES['policier']})"
+
+
 def test_le_sous_pas_ne_traverse_jamais_un_char():
     """⚠️ Le sous-pas doit rester plus petit que le demi-largeur du char le
     plus etroit : sinon, a pleine vitesse, deux cercles se croisent sans se
@@ -121,8 +159,11 @@ def test_le_haut_de_gamme_s_oppose_et_reste_rare():
     autos = [v for v in vehicules.de_phase(1) if v["classe"] == "auto"]
     moto = vehicules.par_slug("moto")
 
-    # Le sport : le plus rapide sur QUATRE roues, la moto restant devant.
+    # Le sport : le plus rapide des autos de tous les jours — le cabriolet rose,
+    # plus rapide encore, a son propre juge plus bas —, la moto restant devant.
     for v in autos:
+        if v["slug"] == "cabriolet":
+            continue
         assert sport["vitesse_max"] >= v["vitesse_max"], v["slug"]
     assert sport["vitesse_max"] < moto["vitesse_max"], "un coupe ne rattrape pas une moto"
     assert sport["acceleration"] > vehicules.par_slug("auto")["acceleration"], "reprise molle"
@@ -146,13 +187,56 @@ def test_le_haut_de_gamme_s_oppose_et_reste_rare():
 
     # ⚠️ Rares, et c'est la carte qui decide ou — pas leur frequence.
     rares = {v["slug"] for v in vehicules.CATALOGUE if v["rare"]}
-    assert rares == {"sport", "luxe"}
+    assert rares == {"sport", "luxe", "cabriolet"}
     for v in vehicules.de_phase(1):
         if v["rare"]:
             continue
         if v["frequence"] > 0:
             assert v["frequence"] > sport["frequence"], \
                 f"{v['slug']} est aussi rare qu'un coupe sport"
+
+
+def test_le_cabriolet_rose_va_plus_vite_et_a_sa_conductrice():
+    """⚠️ Demande de Martin (21 sept. 2026) : « une voiture type corvette, rose,
+    avec une femme en robe rose qui la pilote et en descend si volee. Elle va
+    plus vite. »
+
+    Le plus rapide des chars a QUATRE roues — le sport est devance —, mais la
+    parade de `exploitation.md` tient : un char qui roule bien au-dela de
+    l'auto-patrouille rend la police decorative. La moto reste devant, la
+    carrosserie reste mince (un barrage l'arrete pour de bon) et la vitesse
+    n'achete pas plus qu'un cheveu de distance sur la patrouille."""
+    cab, sport, moto = (vehicules.par_slug(s) for s in ("cabriolet", "sport", "moto"))
+    police = vehicules.par_slug("police")
+    for v in vehicules.de_phase(1):
+        if v["classe"] == "auto" and v["slug"] != "cabriolet":
+            assert cab["vitesse_max"] > v["vitesse_max"], f"le cabriolet ne devance pas {v['slug']}"
+    assert cab["vitesse_max"] < moto["vitesse_max"], "un cabriolet ne rattrape pas une moto"
+    assert cab["acceleration"] > vehicules.par_slug("auto")["acceleration"], "reprise molle"
+    assert cab["vitesse_max"] <= police["vitesse_max"] * 1.2, "elle sème toute la police du jeu"
+    # La carrosserie mince : le sport reste la plus fragile des autos, le cabriolet
+    # n'est pas un char qui encaisse.
+    assert cab["vie"] >= sport["vie"] and cab["vie"] <= vehicules.par_slug("auto")["vie"]
+    assert cab["alarme"], "un cabriolet rose sans alarme se vole trop facilement"
+    assert cab["places"] == 2 and cab["classe"] == "auto" and cab["portieres"]
+    # Rose, et rien d'autre : le catalogue ne la repeint pas en rouge a la naissance.
+    assert cab["couleurs"]
+    for c in cab["couleurs"]:
+        r, g, b = (int(c[i:i + 2], 16) for i in (1, 3, 5))
+        assert r >= 200 and b > g and r > g + 60, f"{c} n'est pas un rose"
+
+    # ⚠️ Elle est TOUJOURS menee, et c'est la fiche qui dit par qui — jamais un
+    # `slug === 'cabriolet'` dans le navigateur. Elle est la seule.
+    from app import pietons
+
+    assert cab["au_volant"] == "conductrice"
+    assert {v["slug"] for v in vehicules.CATALOGUE if v["au_volant"]} == {"cabriolet"}
+    conductrice = pietons.par_slug(cab["au_volant"])
+    assert conductrice is not None, "la fiche nomme un passant qui n'existe pas"
+    assert conductrice["sprite"] == "conductrice", "elle a repris le corps de tout le monde : plus de robe"
+    assert conductrice["frequence"] == 0.0 and conductrice["gang"] is None, "elle nait au hasard dans la rue"
+    assert conductrice["courage"] == 0.0, "elle ne riposte pas : elle descend et elle se sauve"
+    assert conductrice["temoin"] >= 0.5, "elle a tout vu, elle le dit"
 
 
 def test_un_char_rare_ne_nait_que_la_ou_son_district_le_veut():
@@ -175,7 +259,7 @@ def test_un_char_rare_ne_nait_que_la_ou_son_district_le_veut():
     # Et le paquet les sort, y compris pour les sous-zones : `Monde.zoneA` rend
     # la zone la PLUS PRECISE, donc une cour de gang doit heriter des siens.
     zones = {z["slug"]: z for z in carte.generer()["zones"]}
-    assert set(zones["faubourg"]["rares"]) == {"sport", "luxe"}
+    assert set(zones["faubourg"]["rares"]) == {"sport", "luxe", "cabriolet"}
     assert zones["cravates"]["rares"] == zones["faubourg"]["rares"], \
         "la cour des Cravates ne connait pas les chars de son district"
     assert zones["shop"]["rares"] == [] and zones["boulonneux"]["rares"] == []
@@ -211,9 +295,11 @@ def test_seuls_les_lourds_defoncent():
         if v["defonce"]:
             assert v["masse"] >= 2.0, f"{v['slug']} defonce sans etre lourd"
     lourds = {v["slug"] for v in vehicules.CATALOGUE if v["defonce"]}
-    assert lourds == {"camion", "autobus", "remorqueuse"}
+    assert lourds == {"camion", "autobus", "remorqueuse", "pelleteuse"}
     assert vehicules.par_slug("camion")["defonce"] > vehicules.par_slug("remorqueuse")["defonce"], \
-        "le camion est celui qui passe le mieux au travers"
+        "le camion est celui qui passe le mieux au travers des chars de la rue"
+    assert vehicules.par_slug("pelleteuse")["defonce"] > vehicules.par_slug("camion")["defonce"], \
+        "la pelle est celle qui passe le mieux au travers de tout"
     assert vehicules.PHYSIQUE["defonce_vitesse_min"] > 0
 
 
@@ -316,12 +402,18 @@ def test_une_moto_et_un_velo_n_ont_pas_de_portiere():
 
 def test_le_velo_a_une_sonnette_et_les_autres_un_klaxon():
     """L'avertisseur vient de la fiche : la sonnette du velo, le klaxon de tous
-    les autres — et c'est toujours un effet que `son.js` sait jouer."""
+    les autres — et c'est toujours un effet que `son.js` sait jouer.
+
+    ⚠️ Sauf les grands bateaux (21 sept. 2026) : le chalutier et le
+    porte-conteneurs ont la CORNE du traversier. La chaloupe, elle, garde son
+    klaxon — un hors-bord n'a pas de corne de brume."""
     for v in vehicules.CATALOGUE:
         assert v["klaxon"] in vehicules.AVERTISSEURS, v["slug"]
     par_slug = {v["slug"]: v for v in vehicules.CATALOGUE}
     assert par_slug["velo"]["klaxon"] == "sonnette"
-    assert all(v["klaxon"] == "klaxon" for v in vehicules.CATALOGUE if v["slug"] != "velo")
+    cornes = {"chalutier", "porte_conteneurs"}
+    assert {v["slug"] for v in vehicules.CATALOGUE if v["klaxon"] == "corne"} == cornes
+    assert all(v["klaxon"] == "klaxon" for v in vehicules.CATALOGUE if v["slug"] not in cornes | {"velo"})
 
 
 def test_le_garde_fou_cherche_assez_fin_et_assez_loin():
@@ -330,8 +422,37 @@ def test_le_garde_fou_cherche_assez_fin_et_assez_loin():
     saute par-dessus la seule bande libre d'une ruelle ; et la portee doit
     couvrir au moins le char le plus long, sinon un autobus retombe d'un saut
     au milieu d'un toit y reste. Mais pas plus de huit tuiles : au-dela, ce
-    n'est plus un degagement, c'est une teleportation."""
+    n'est plus un degagement, c'est une teleportation.
+
+    ⚠️ **Ce qui roule en ville** (21 sept. 2026) : le porte-conteneurs fait dix
+    tuiles, et `Vehicules.degager` cherche au moins a la longueur du char — une
+    coque se degage a sa propre echelle. Les huit tuiles restent le plafond de
+    tout ce qui saute sur un toit."""
     ph = vehicules.PHYSIQUE
-    plus_long = max(v["longueur"] for v in vehicules.de_phase(1))
+    plus_long = max(v["longueur"] for v in vehicules.de_phase(1) if not v["eau"])
     assert 0 < ph["degagement_pas_px"] <= ph["sous_pas_px"]
     assert plus_long <= ph["degagement_px"] <= 8 * 16
+
+
+def test_la_pelleteuse_ne_nait_pas_dans_la_rue_et_c_est_le_char_le_plus_lourd_et_le_plus_lent():
+    """⚠️ La pelle du chantier (8e vague de « Ça travaille ») : `frequence` 0 — c'est `chantiers.js` qui
+    la sort de son décor. La plus lourde et la plus lente DU PARC DE LA RUE (12 km/h, moins que le vélo),
+    et elle traverse tout : `defonce` le plus haut du parc — même en comptant les bateaux, qui ne roulent
+    jamais dans une rue.
+
+    ⚠️ **Hors trafic, pas hors catégorie** : le porte-conteneurs (masse 12, hors trafic — `eau`) est plus
+    lourd qu'elle, et LUI est plus rapide (1,9 contre 1,3) : la pelle reste la plus LENTE du catalogue au
+    grand complet, mais pas la plus lourde une fois les bateaux comptés."""
+    p = vehicules.par_slug("pelleteuse")
+    assert p["frequence"] == 0 and not p["rare"], "la pelle naîtrait dans le trafic"
+    de_la_rue = [v for v in vehicules.CATALOGUE if v["slug"] != "pelleteuse" and not v["eau"]]
+    autres = [v for v in vehicules.CATALOGUE if v["slug"] != "pelleteuse"]
+    assert p["masse"] > max(v["masse"] for v in de_la_rue), "la pelle n'est pas le char le plus lourd de la rue"
+    assert p["vitesse_max"] < min(v["vitesse_max"] for v in autres), "la pelle n'est pas le char le plus lent, bateaux compris"
+    assert p["defonce"] > max(v["defonce"] for v in autres), "un autre char passe mieux au travers"
+    assert p["classe"] == "camion" and p["portieres"], "on monte dans sa cabine par une portière"
+    # ⚠️ Pas plus large que le plus large du parc de la rue : les bacs des éboueurs se tiennent à 14 px
+    # du centre de la voie (`test_eboueurs_js`), une marge calculée sur ce char-là. Vu à 20 de large,
+    # la pelle frôlait un bac que le camion ne touche pas.
+    assert p["largeur"] <= max(v["largeur"] for v in de_la_rue), "la pelle est le char le plus large de la rue"
+    assert p["boulot"] is None and p["radio"] is None and not p["police"]

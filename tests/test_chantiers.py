@@ -79,12 +79,17 @@ def test_a_chaque_phase_la_ville_reste_d_un_seul_tenant(numero):
     for ch in VILLE["chantiers"]:
         phase = ch["phases"][numero]
         sol = _machines_en_murs(chantiers.appliquer(VILLE["sol"], ch, numero), phase["machines"])
-        # ⚠️ Un îlot PAR TERRE FERME : l'île n'a pas de chantier, et elle est
-        # un îlot à elle (`carte.composantes_par_terre`).
+        # ⚠️ Un îlot PAR TERRE FERME : l'île et l'aéroport n'ont pas de chantier, et sont
+        # chacun un îlot à eux (`carte.composantes_par_terre`) — toute terre qui n'est pas
+        # « ville », quel qu'en soit le nombre, se rejoint au principal.
         terres = carte.composantes_par_terre(_ville_a(sol))
         groupes = terres["ville"]
         assert len(groupes) == 1, f"chantier {ch['id']}, phase {numero} : {len(groupes)} îlots"
-        principal = groupes[0] | terres["ile"][0]
+        principal = set(groupes[0])
+        for cle, liste in terres.items():
+            if cle != "ville":
+                for autre_terre in liste:
+                    principal |= autre_terre
         assert (depart["x"], depart["y"]) in principal
         for point in VILLE["points_interet"]:
             assert (point["x"], point["y"]) in principal, (ch["id"], numero, point)
@@ -98,7 +103,8 @@ def test_au_premier_matin_tous_les_chantiers_ensemble_tiennent():
     sol = VILLE["sol"]
     for ch in VILLE["chantiers"]:
         numero = chantiers.phase_du_jour(ch, 1, 1)
-        sol = _machines_en_murs(chantiers.appliquer(sol, ch, numero), ch["phases"][numero]["machines"])
+        machines = ch["phases"][numero]["machines"] if numero >= 0 else []
+        sol = _machines_en_murs(chantiers.appliquer(sol, ch, numero), machines)
     assert all(len(groupes) == 1 for groupes in carte.composantes_par_terre(_ville_a(sol)).values())
 
 
@@ -223,30 +229,33 @@ def test_les_phases_avancent_avec_les_jours():
     son décalage, jamais en arrière, et le neuf ne se redémolit pas."""
     for ch in VILLE["chantiers"]:
         assert ch["pas"] in chantiers.PAS_JOURS
-        vues = [chantiers.phase_du_jour(ch, jour, 1) for jour in range(1, 40)]
-        assert vues[0] == ch["decalage"]
+        ouvre = ch.get("ouvre", 0)
+        vues = [chantiers.phase_du_jour(ch, jour, 1) for jour in range(1, 60)]
+        assert vues[0] == (ch["decalage"] if not ouvre else chantiers.DORMANT)
         assert vues == sorted(vues), "un chantier recule"
         assert vues[-1] == chantiers.DERNIERE
-        for jour in range(1, 30):
+        for jour in range(1 + ouvre, 30):
             avant = chantiers.phase_du_jour(ch, jour, 1)
             if avant < chantiers.DERNIERE:
                 assert chantiers.phase_du_jour(ch, jour + ch["pas"], 1) == avant + 1
         # Une partie commencée plus tard repart du même premier matin.
-        assert chantiers.phase_du_jour(ch, 50, 50) == ch["decalage"]
+        premier = ch["decalage"] if not ouvre else chantiers.DORMANT
+        assert chantiers.phase_du_jour(ch, 50, 50) == premier
         # Et une sauvegarde bricolée ne fait pas reculer le temps.
-        assert chantiers.phase_du_jour(ch, 3, 10) == ch["decalage"]
+        assert chantiers.phase_du_jour(ch, 3, 10) == premier
 
 
 def test_au_premier_matin_les_chantiers_ne_sont_pas_au_meme_stade():
     """Sinon il faut trois jours de jeu avant de voir la moindre machine."""
-    phases = [chantiers.phase_du_jour(ch, 1, 1) for ch in VILLE["chantiers"]]
+    phases = [chantiers.phase_du_jour(ch, 1, 1) for ch in VILLE["chantiers"] if not ch.get("ouvre")]
+    assert len(phases) == chantiers.OUVERTS
     assert len(set(phases)) == len(phases), phases
     assert any(chantiers.MACHINES.get(p) for p in phases), "aucune machine au premier matin"
 
 
 def test_la_ville_est_neuve_au_bout_de_vingt_jours():
     for ch in VILLE["chantiers"]:
-        assert chantiers.phase_du_jour(ch, 1 + 20, 1) == chantiers.DERNIERE, ch
+        assert chantiers.phase_du_jour(ch, 1 + ch.get("ouvre", 0) + 20, 1) == chantiers.DERNIERE, ch
 
 
 def test_deux_chantiers_ne_se_voisinent_pas():
@@ -434,3 +443,515 @@ def test_la_boule_ne_frappe_pas_un_mur_sans_rien_au_dessus():
     assert phases is not None, "l'autre moitié tombée, la boule a son mur entier"
     (boule,) = phases[1]["machines"]
     assert (boule["x"], boule["y"], boule["sens"], boule["frappe"]) == (6, 3, -1, [4, 3])
+
+
+# --- 3e vague : la tranchée et l'équipe -----------------------------------------------
+
+#: La graine livrée et trois autres : sur chacune, chaque chantier trouve sa rue.
+GRAINES_DE_LA_RUE = (carte.GRAINE, 7, 99, 2026)
+
+
+def _villes_de_la_rue():
+    return [(g, VILLE if g == carte.GRAINE else carte.generer(graine=g)) for g in GRAINES_DE_LA_RUE]
+
+
+def _facade_du_bas(ville: dict, ch: dict) -> int:
+    tuiles = set(chantiers.tuiles(ch))
+    return max(y for x, y in tuiles
+               if (x, y + 1) not in tuiles and carte.marchable(ville["sol"][y + 1][x]))
+
+
+def test_les_chantiers_ont_leur_tranchee():
+    """⚠️ Une tranchée est facultative (une rue fermée devant la façade n'en laisse
+    pas la place), mais un juge qui ne la verrait jamais laisserait la règle mourir
+    sans rougir : la graine livrée les a toutes, et deux chantiers sur trois
+    partout ailleurs. (Les trois chantiers OUVERTS : les dormants, tirés parmi ce qui reste,
+    ne peuvent pas tous avoir la rue libre devant eux.)"""
+    for ch in VILLE["chantiers"][:chantiers.OUVERTS]:
+        assert len(ch["tranchee"]) == chantiers.TRANCHEE_TUILES, ch["id"]
+    creusees = tous = 0
+    for _graine, ville in _villes_de_la_rue():
+        for ch in ville["chantiers"]:
+            tous += 1
+            creusees += len(ch["tranchee"]) == chantiers.TRANCHEE_TUILES
+            assert len(ch["tranchee"]) in (0, chantiers.TRANCHEE_TUILES), ch["tranchee"]
+    assert creusees * 3 >= tous * 2, (creusees, tous)
+
+
+def test_la_tranchee_est_de_l_asphalte_ou_rien_d_autre_ne_parle():
+    """⚠️ Deux tuiles de suite, sur la même rangée, d'asphalte nu — et jamais là où
+    quelque chose d'autre parle déjà : croisement, ligne d'arrêt, nid, entrave,
+    pont, barrière, bris d'aqueduc."""
+    for graine, ville in _villes_de_la_rue():
+        sol = ville["sol"]
+        boites = [(r["x"], r["y"], r["l"], r["h"])
+                  for cle in ("intersections", "entraves", "fermetures", "ponts", "barrieres")
+                  for r in ville[cle]]
+        arrets = {tuple(int(n) for n in cle.split(",")) for cle in ville["arrets"]}
+        nids = {(n["x"], n["y"]) for n in ville["nids_de_poule"]}
+        for ch in ville["chantiers"]:
+            tuiles = set(chantiers.tuiles(ch))
+            bas = _facade_du_bas(ville, ch)
+            if not ch["tranchee"]:
+                continue
+            assert len({y for _, y in ch["tranchee"]}) == 1, "la tranchée change de rangée"
+            xs = sorted(x for x, _ in ch["tranchee"])
+            assert xs == list(range(xs[0], xs[0] + len(xs))), "la tranchée a un trou"
+            for x, y in ch["tranchee"]:
+                clef = (graine, ch["id"], x, y)
+                assert sol[y][x] == chantiers.ASPHALTE, clef
+                assert (x, y) not in tuiles, clef
+                assert bas < y <= bas + chantiers.TRANCHEE_PORTEE, ("loin de la façade", clef)
+                assert (x, y) not in arrets and (x, y) not in nids, clef
+                assert not any(bx <= x < bx + bl and by <= y < by + bh for bx, by, bl, bh in boites), clef
+                for a in ville["aqueducs"]:
+                    assert max(abs(x - a["x"]), abs(y - a["y"])) > chantiers.RAYON_AQUEDUC, clef
+
+
+def test_la_tranchee_est_la_premiere_chaussee_sous_la_facade():
+    """Pas la dixième : une tranchée au bout de la rue n'est plus celle du chantier.
+    Aucune rangée plus près de la façade n'offrait deux tuiles d'asphalte libres."""
+    for graine, ville in _villes_de_la_rue():
+        for ch in ville["chantiers"]:
+            if not ch["tranchee"]:
+                continue
+            y = ch["tranchee"][0][1]
+            bas = _facade_du_bas(ville, ch)
+            libres = chantiers._tranchee(ville, {"tuiles": chantiers.tuiles(ch), "sur_rue": [(ch["x"], bas)]},
+                                         carte.Des(1))
+            assert libres and libres[0][1] == y, (graine, ch["id"], libres, y)
+
+
+def test_la_tranchee_ne_change_aucune_tuile():
+    """⚠️ Elle se PEINT et se SENT : la ville qu'un juge de géométrie a validée à
+    chaque phase est exactement celle du jeu."""
+    for _graine, ville in _villes_de_la_rue():
+        for ch in ville["chantiers"]:
+            rue = {tuple(t) for t in ch["tranchee"]}
+            for numero in range(chantiers.DERNIERE + 1):
+                sol = chantiers.appliquer(ville["sol"], ch, numero)
+                touchees = {(x, y) for y, ligne in enumerate(sol)
+                            for x, glyphe in enumerate(ligne) if glyphe != ville["sol"][y][x]}
+                assert not touchees & rue, (ch["id"], numero)
+
+
+def test_la_tranchee_suit_les_phases():
+    """Rien tant que le terrain n'est pas rasé, des plaques tant qu'on y travaille,
+    et l'asphalte refait quand le neuf est debout."""
+    for _graine, ville in _villes_de_la_rue():
+        for ch in ville["chantiers"]:
+            vues = [p["tranchee"] for p in ch["phases"]]
+            attendues = [None, None, "plaques", "plaques", "rapiece"] if ch["tranchee"] else [None] * 5
+            assert vues == attendues, (ch["id"], vues)
+
+
+def test_une_ville_sans_rue_devant_n_a_pas_de_tranchee():
+    """La garde du refus : sans deux tuiles libres, le chantier n'a pas de
+    tranchée — et ne s'en trouve pas refusé."""
+    sol = ["BBBBBBBB", "BPPPPPPB", "BFFFFFFB", "........", "........"]
+    libre = {"tuiles": [(x, y) for y in (1, 2) for x in range(1, 7)], "sur_rue": [(x, 2) for x in range(1, 7)]}
+    ville = {"sol": sol, "arrets": {}, "intersections": [], "nids_de_poule": [], "aqueducs": []}
+    assert chantiers._tranchee(ville, libre, carte.Des(1)) == []
+
+
+@pytest.mark.parametrize("de_la_rue", ["intersections", "entraves", "ponts", "barrieres", "fermetures"])
+def test_la_tranchee_evite_ce_qui_parle_deja(de_la_rue):
+    """Chaque exclusion a sa carte : sur une rue d'asphalte, on la couvre d'un de
+    ces endroits et la tranchée n'y tombe plus — il n'y a plus nulle part où aller."""
+    sol = ["BBBBBBBB", "BPPPPPPB", "BFFFFFFB", "........", "........", "########", "########"]
+    libre = {"tuiles": [(x, y) for y in (1, 2) for x in range(1, 7)], "sur_rue": [(x, 2) for x in range(1, 7)]}
+    base = {"sol": sol, "arrets": {}, "intersections": [], "nids_de_poule": [], "aqueducs": []}
+    assert chantiers._tranchee(base, libre, carte.Des(1)), "sans obstacle, la rue est libre"
+    couvert = {**base, de_la_rue: [{"x": 0, "y": 5, "l": 8, "h": 2}]}
+    assert chantiers._tranchee(couvert, libre, carte.Des(1)) == []
+
+
+def test_la_tranchee_evite_les_lignes_d_arret_les_nids_et_les_bris():
+    sol = ["BBBBBBBB", "BPPPPPPB", "BFFFFFFB", "........", "........", "########", "########"]
+    libre = {"tuiles": [(x, y) for y in (1, 2) for x in range(1, 7)], "sur_rue": [(x, 2) for x in range(1, 7)]}
+    base = {"sol": sol, "arrets": {}, "intersections": [], "nids_de_poule": [], "aqueducs": []}
+    toute_la_rue = {f"{x},{y}": "<" for x in range(8) for y in (5, 6)}
+    assert chantiers._tranchee({**base, "arrets": toute_la_rue}, libre, carte.Des(1)) == []
+    tous_les_nids = [{"x": x, "y": y} for x in range(8) for y in (5, 6)]
+    assert chantiers._tranchee({**base, "nids_de_poule": tous_les_nids}, libre, carte.Des(1)) == []
+    assert chantiers._tranchee({**base, "aqueducs": [{"x": 3, "y": 5}]}, libre, carte.Des(1)) == []
+
+
+def test_l_equipe_tient_ses_postes():
+    """Personne sur une maison condamnée ni sur le neuf ; à chaque phase des
+    hommes sur du sol libre, à portée de leur machine, jamais dans un couloir."""
+    # ⚠️ En toutes lettres, pas relu dans la constante : un juge qui lit ce qu'il
+    # juge ne rougit jamais.
+    assert set(chantiers.EQUIPE) == {1, 2, 3}, "du monde sur une maison condamnée ou sur le neuf"
+    for graine, ville in _villes_de_la_rue():
+        for ch in ville["chantiers"]:
+            tuiles = set(chantiers.tuiles(ch))
+            for numero, phase in enumerate(ch["phases"]):
+                postes = [tuple(p) for p in phase["equipe"]]
+                clef = (graine, ch["id"], numero)
+                assert len(postes) <= chantiers.EQUIPE.get(numero, 0), clef
+                if numero not in chantiers.EQUIPE:
+                    assert not postes, ("un homme sur un chantier fermé", clef)
+                sol = chantiers.appliquer(ville["sol"], ch, numero)
+                machines = {(m["x"], m["y"]) for m in phase["machines"]}
+                for x, y in postes:
+                    assert (x, y) in tuiles, clef
+                    assert carte.marchable(sol[y][x]) and (x, y) not in machines, clef
+                    for vx, vy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                        assert carte.marchable(sol[y + vy][x + vx]) and (x + vx, y + vy) not in machines, \
+                            ("dans un couloir", clef)
+                    ecart = min(max(abs(x - mx), abs(y - my)) for mx, my in machines)
+                    assert chantiers.POSTE_MIN <= ecart <= chantiers.POSTE_MAX, (ecart, clef)
+                for a in range(len(postes)):
+                    for b in range(a + 1, len(postes)):
+                        assert max(abs(postes[a][0] - postes[b][0]), abs(postes[a][1] - postes[b][1])) >= 2, clef
+
+
+def test_le_terrain_a_son_equipe():
+    """⚠️ Sans cette mesure, une équipe toujours vide passerait tous les juges :
+    sur la graine livrée, la pelle et la grue ont chacune leurs deux hommes."""
+    for ch in VILLE["chantiers"]:
+        for numero in (2, 3):
+            assert len(ch["phases"][numero]["equipe"]) == chantiers.EQUIPE[numero], (ch["id"], numero)
+    assert any(ch["phases"][1]["equipe"] for ch in VILLE["chantiers"]), "personne à la démolition"
+
+
+def test_un_poste_ne_se_prend_pas_dans_un_couloir():
+    """La garde des quatre voisines : sur un terrain d'une seule rangée, chaque
+    tuile est un couloir, et personne n'y est planté."""
+    sol = ["BBBBBBBB", "B;;;;;;B", "BBBBBBBB"]
+    tuiles = {(x, 1) for x in range(1, 7)}
+    phase = {"sol": ["".join(";" for _ in range(6))], "machines": [{"x": 1, "y": 1}]}
+    assert chantiers._postes(sol, 1, 1, phase, tuiles, 2, carte.Des(1)) == []
+    large = ["BBBBBBBB", "B;;;;;;B", "B;;;;;;B", "B;;;;;;B", "BBBBBBBB"]
+    tuiles = {(x, y) for y in (1, 2, 3) for x in range(1, 7)}
+    phase = {"sol": [";;;;;;"] * 3, "machines": [{"x": 1, "y": 2}]}
+    postes = chantiers._postes(large, 1, 1, phase, tuiles, 2, carte.Des(1))
+    assert len(postes) == 2 and all(chantiers.POSTE_MIN <= max(abs(x - 1), abs(y - 2)) <= chantiers.POSTE_MAX
+                                    for x, y in postes), postes
+
+
+def test_tirer_tranchee_et_equipe_ne_deplace_pas_les_chantiers(monkeypatch):
+    """⚠️ Leur PROPRE dé : les chantiers, leurs machines et leurs phases sont ceux
+    d'avant la 3e vague. Sans elle, la graine livrée aurait changé de chantiers."""
+    def sans(ville, libre, phases, graine, numero):
+        return []
+    avec = [(c["x"], c["y"], c["decalage"], c["pas"], [p["machines"] for p in c["phases"]],
+             [p["sol"] for p in c["phases"]]) for c in carte.generer()["chantiers"]]
+    monkeypatch.setattr(chantiers, "_annexes", sans)
+    sans_eux = [(c["x"], c["y"], c["decalage"], c["pas"], [p["machines"] for p in c["phases"]],
+                 [p["sol"] for p in c["phases"]]) for c in carte.generer()["chantiers"]]
+    assert avec == sans_eux
+
+
+# --- 4e vague : le signaleur ------------------------------------------------------------
+
+
+def _rue_mini(sens: str = "<", trottoir: str = "."):
+    """Une chaussée d'une voie sous un trottoir : la tranchée est en (3..4, 2)."""
+    ville = {"sol": ["BBBBBBBB", trottoir * 8, "########"],
+             "voie": ["........", "........", sens * 8]}
+    return ville, [[3, 2], [4, 2]]
+
+
+def test_chaque_tranchee_de_la_graine_livree_a_son_signaleur():
+    """⚠️ Sans cette mesure, un signaleur qui ne se pose jamais passerait tous les
+    juges : la graine livrée les a tous, et la tranchée est toujours sur une voie
+    horizontale."""
+    for ch in VILLE["chantiers"][:chantiers.OUVERTS]:
+        assert ch["signaleur"], f"le chantier {ch['id']} n'a pas de signaleur"
+
+
+def test_le_signaleur_tient_la_voie_de_la_tranchee_depuis_le_trottoir():
+    for graine, ville in _villes_de_la_rue():
+        sol = ville["sol"]
+        for ch in ville["chantiers"]:
+            s = ch["signaleur"]
+            if not ch["tranchee"]:
+                assert s is None, (graine, ch["id"])
+                continue
+            if s is None:
+                continue
+            clef = (graine, ch["id"])
+            (x0, y), (x1, _) = ch["tranchee"][0], ch["tranchee"][-1]
+            sx, sy = s
+            sens = ville["voie"][y][x0]
+            assert sens in chantiers.SIGNAUX, clef
+            assert sy == y - 1, clef
+            assert all(ville["voie"][y][x] == sens for x in range(x0, x1 + 1)), ("pas sa voie", clef)
+            # Là d'où l'on vient, sur le trottoir : jamais dans la chaussée.
+            assert sx == (x1 if sens == "<" else x0), ("pas au bout amont", clef)
+            glyphe = sol[sy][sx]
+            assert carte.marchable(glyphe) and not carte.LEGENDE[glyphe].get("route"), ("dans la chaussée", clef)
+            assert (sx, sy) not in chantiers.cases_prises(ville), ("un meuble sur sa tuile", clef)
+
+
+def test_le_signaleur_n_existe_que_sur_une_tranchee():
+    """⚠️ Il ne sert que pendant les plaques — et cela se lit dans `tranchee` de chaque phase,
+    pas dans un drapeau de plus : le paquet de la carte est à quelques octets de son plafond."""
+    for _graine, ville in _villes_de_la_rue():
+        for ch in ville["chantiers"]:
+            if ch["signaleur"]:
+                assert ch["tranchee"], ch["id"]
+                assert [p["tranchee"] for p in ch["phases"]] == [None, None, "plaques", "plaques", "rapiece"]
+            assert all("signaleur" not in p for p in ch["phases"]), "un drapeau par phase : le paquet enfle"
+            assert ch["signaleur"] is None or len(ch["signaleur"]) == 2, ch["signaleur"]
+
+
+def test_le_signaleur_se_met_a_l_amont_de_chaque_sens():
+    """Les graines livrées n'ont que des voies « < » : la carte écrite à la main
+    juge l'autre bout."""
+    ville, rue = _rue_mini("<")
+    assert chantiers._signaleur(ville, rue) == [4, 1]
+    ville, rue = _rue_mini(">")
+    assert chantiers._signaleur(ville, rue) == [3, 1]
+
+
+@pytest.mark.parametrize("cas", ["nord_sud", "voies_mixtes", "chaussee", "meuble", "sans_tranchee"])
+def test_le_signaleur_a_ses_refus(cas):
+    """Chaque refus a sa carte : une voie qui ne va pas de l'est à l'ouest, une voie
+    à deux sens sous la tranchée, un trottoir qui est une chaussée, une tuile déjà
+    prise par un meuble — et le chantier n'en est pas refusé pour autant."""
+    ville, rue = _rue_mini("<")
+    assert chantiers._signaleur(ville, rue), "sans refus, il se pose"
+    if cas == "nord_sud":
+        ville["voie"][2] = "v" * 8
+    elif cas == "voies_mixtes":
+        ville["voie"][2] = "<<<<>>>>"   # la tranchée est sur les colonnes 3 et 4
+    elif cas == "chaussee":
+        ville["sol"][1] = "#" * 8
+    elif cas == "meuble":
+        ville["decor"] = [{"type": "banc", "x": 4, "y": 1}]
+    elif cas == "sans_tranchee":
+        rue = []
+    assert chantiers._signaleur(ville, rue) is None
+
+
+# --- 5e vague : le tas de terre --------------------------------------------------------------
+
+
+def test_le_saut_du_tas_reste_sous_le_seuil_du_mur():
+    """⚠️ Un char à plus de 6 px passe AU-DESSUS des tuiles (`vehicules.js`). Le saut du tas se
+    PLAFONNE : la vitesse qui compte est bornée, et la hauteur qu'elle donne — calculée d'ici, à
+    partir de la gravité — ne dépasse pas `tas_hauteur_max`, qui reste sous ce seuil."""
+    from app import vehicules
+
+    ph = vehicules.PHYSIQUE
+    # Rejoué image par image comme `majPhysique` (z += vz ; vz -= gravité) : la formule
+    # continue vz²/2g sous-estime de vz/2, et c'est le banc qui l'a attrapé (6,3 px).
+    z, vz, apogee = 0.0, ph["tas_vitesse_max"] * ph["tas_impulsion"], 0.0
+    while True:
+        z += vz
+        vz -= ph["gravite"]
+        apogee = max(apogee, z)
+        if z <= 0:
+            break
+    assert 0 < apogee <= ph["tas_hauteur_max"], (apogee, ph["tas_hauteur_max"])
+    assert ph["tas_hauteur_max"] <= 6, "le tas lancerait un char au-dessus des murs"
+    assert ph["tas_vitesse_min"] < vehicules.saut_vitesse_min(), "le tas serait moins doux qu'une rampe : aucun sens"
+    plus_rapide = max(v["vitesse_max"] for v in vehicules.CATALOGUE)
+    assert ph["tas_vitesse_max"] <= plus_rapide
+
+
+# --- 6e vague : la benne qu'on pousse ------------------------------------------------------
+
+
+def _bloc_de_la_benne(ville: dict, ch: dict) -> list[tuple[int, int]]:
+    x, y = ch["conteneur"]
+    demi = chantiers.CONTENEUR_LARGEUR // 2
+    return [(x + i, y + j) for i in range(-demi, demi + 1) for j in range(chantiers.CONTENEUR_PROFONDEUR)]
+
+
+def test_chaque_chantier_de_la_graine_livree_a_sa_benne():
+    """⚠️ Sans cette mesure, une place qui ne se trouve jamais passerait tous les juges."""
+    for ch in VILLE["chantiers"]:
+        assert ch["conteneur"], f"le chantier {ch['id']} n'a pas de benne"
+    for graine, ville in _villes_de_la_rue():
+        assert any(ch["conteneur"] for ch in ville["chantiers"]), f"aucune benne sur la graine {graine}"
+
+
+def test_la_benne_a_un_bloc_libre_ou_elle_ne_bloque_rien():
+    """⚠️ Poussée jusqu'au bout de sa portée, elle reste sur du sol libre : son bloc de cinq
+    tuiles sur trois est tout de l'espace piéton — ni chaussée, ni mur, ni meuble, ni porte,
+    ni ligne d'arrêt, ni l'empreinte du bâtiment."""
+    for graine, ville in _villes_de_la_rue():
+        sol = ville["sol"]
+        arrets = {tuple(int(n) for n in cle.split(",")) for cle in ville["arrets"]}
+        pris = chantiers.cases_prises(ville)
+        for ch in ville["chantiers"]:
+            if not ch["conteneur"]:
+                continue
+            clef = (graine, ch["id"])
+            assert ch["conteneur"][1] == _facade_du_bas(ville, ch) + 1, ("pas sous la façade", clef)
+            siennes = set(chantiers.tuiles(ch))
+            for x, y in _bloc_de_la_benne(ville, ch):
+                g = sol[y][x]
+                assert carte.marchable(g) and not carte.LEGENDE[g].get("route"), ("pas de l'espace piéton", clef, (x, y))
+                assert (x, y) not in pris and (x, y) not in arrets and (x, y) not in siennes, (clef, (x, y))
+
+
+@pytest.mark.parametrize("cas", ["chaussee", "meuble", "arret", "etroit", "court", "empreinte"])
+def test_une_benne_refuse_un_trottoir_qui_n_est_pas_libre(cas):
+    """Chaque refus a sa carte : une chaussée dans le bloc, un banc, une ligne d'arrêt, un
+    trottoir de quatre tuiles seulement, le bâtiment lui-même — et le chantier n'en est pas refusé."""
+    sol = ["BBBBBBBBBB", "BPPPPPPPPB", "BFFFFFFFFB", "..........", "..........", ".........."]
+    libre = {"tuiles": [(x, y) for y in (1, 2) for x in range(1, 9)], "sur_rue": [(x, 2) for x in range(1, 9)]}
+    ville = {"sol": list(sol), "arrets": {}}
+    assert chantiers._conteneur(ville, libre, carte.Des(1)), "sans obstacle, la benne se pose"
+    if cas == "chaussee":
+        ville["sol"] = ["BBBBBBBBBB", "BPPPPPPPPB", "BFFFFFFFFB", "##########", "##########", "##########"]
+    elif cas == "meuble":
+        ville["decor"] = [{"type": "banc", "x": x, "y": y} for x in range(0, 10) for y in (3, 4, 5)]
+    elif cas == "arret":
+        ville["arrets"] = {f"{x},{y}": "<" for x in range(0, 10) for y in (3, 4, 5)}
+    elif cas == "etroit":   # deux rangées de trottoir seulement : trop peu profond
+        ville["sol"] = ["BBBBBBBBBB", "BPPPPPPPPB", "BFFFFFFFFB", "..........", "..........", "BBBBBBBBBB"]
+    elif cas == "court":    # quatre tuiles de large entre deux murs : trop étroit pour cinq
+        ville["sol"] = ["BBBBBBBBBB", "BPPPPPPPPB", "BFFFFFFFFB", "BBB....BBB", "BBB....BBB", "BBB....BBB"]
+    elif cas == "empreinte":
+        libre = {"tuiles": [(x, y) for y in (1, 2, 3, 4, 5) for x in range(-3, 13)], "sur_rue": [(x, 2) for x in range(1, 9)]}
+    assert chantiers._conteneur(ville, libre, carte.Des(1)) is None
+
+
+def test_la_benne_ne_deplace_pas_les_chantiers(monkeypatch):
+    """⚠️ Leur PROPRE dé : les chantiers, leurs machines et leurs phases sont ceux d'avant."""
+    def avec():
+        return [(c["x"], c["y"], c["decalage"], c["pas"], c["tranchee"], [p["machines"] for p in c["phases"]],
+                 [p["equipe"] for p in c["phases"]]) for c in carte.generer()["chantiers"]]
+    avant = avec()
+    monkeypatch.setattr(chantiers, "_conteneur", lambda ville, libre, des: None)
+    assert avec() == avant
+
+
+def test_les_annexes_evitent_ce_que_la_ville_pose_apres_les_chantiers():
+    """⚠️ Le mobilier de rue, les abribus et la saleté se posent APRÈS `tirer` et ne retirent rien
+    aux chantiers : un parcmètre est tombé dans le bloc d'une benne le jour où on l'a mesuré. Les
+    annexes se calculent donc sur la ville FINIE (`completer`). Ici, on pose un meuble sur la tuile
+    de chacune — la benne, la tranchée, le signaleur — et on les recalcule : aucune ne retombe dessus."""
+    import copy
+
+    ville = copy.deepcopy(VILLE)
+    # Les chantiers qui ont les trois : les trois ouverts de la graine livrée, au moins.
+    ville["chantiers"] = [ch for ch in ville["chantiers"] if ch["conteneur"] and ch["tranchee"] and ch["signaleur"]]
+    assert len(ville["chantiers"]) >= chantiers.OUVERTS
+    avant = {ch["id"]: (ch["conteneur"], ch["tranchee"], ch["signaleur"]) for ch in ville["chantiers"]}
+    for ch in ville["chantiers"]:
+        ville["decor"].append({"type": "parcometre", "x": ch["conteneur"][0], "y": ch["conteneur"][1]})
+        ville["decor"].append({"type": "cone", "x": ch["tranchee"][0][0], "y": ch["tranchee"][0][1]})
+        ville["decor"].append({"type": "banc", "x": ch["signaleur"][0], "y": ch["signaleur"][1]})
+    pris = chantiers.cases_prises(ville)
+    chantiers.completer(ville, carte.GRAINE)
+    # Les annexes ont changé, le reste des chantiers non : c'est ce que `sans_annexes` écarte, et ce
+    # que les juges « ce module ne déplace rien » comparent d'une ville à l'autre.
+    ids = {ch["id"] for ch in ville["chantiers"]}
+    assert chantiers.sans_annexes(ville["chantiers"]) == chantiers.sans_annexes([c for c in VILLE["chantiers"] if c["id"] in ids])
+    assert all(not (set(c) & set(chantiers.ANNEXES)) for c in chantiers.sans_annexes(ville["chantiers"]))
+    for ch in ville["chantiers"]:
+        benne, rue, homme = avant[ch["id"]]
+        assert ch["conteneur"] != benne and ch["tranchee"] != rue and ch["signaleur"] != homme, \
+            f"le chantier {ch['id']} n'a rien recalculé : un meuble est resté sur une annexe"
+        if ch["conteneur"]:
+            assert not set(_bloc_de_la_benne(ville, ch)) & pris, (ch["id"], "la benne se pose sur un meuble")
+        assert not {tuple(t) for t in ch["tranchee"]} & pris, (ch["id"], "la tranchée se creuse sous un meuble")
+        if ch["signaleur"]:
+            assert tuple(ch["signaleur"]) not in pris, (ch["id"], "le signaleur se plante dans un meuble")
+
+
+def test_l_equipe_ne_depend_pas_de_la_tranchee():
+    """⚠️ Les postes des ouvriers ne lisent que l'intérieur du chantier : qu'une tranchée trouve une
+    place, n'en trouve plus, ou change de rue, ils ne bougent pas."""
+    import copy
+
+    ville = copy.deepcopy(VILLE)
+    avant = {ch["id"]: [p["equipe"] for p in ch["phases"]] for ch in ville["chantiers"]}
+    for ch in ville["chantiers"]:
+        if ch["tranchee"]:
+            for x, y in ch["tranchee"]:
+                ville["decor"].append({"type": "cone", "x": x, "y": y})
+    # Et toute la rue d'en face prise : plus aucune tranchée possible.
+    for ch in ville["chantiers"]:
+        y = ch["y"] + ch["h"]
+        for j in range(1, chantiers.TRANCHEE_PORTEE + 1):
+            for x in range(ch["x"] - 3, ch["x"] + ch["l"] + 3):
+                ville["decor"].append({"type": "cone", "x": x, "y": y + j})
+    chantiers.completer(ville, carte.GRAINE)
+    assert any(not ch["tranchee"] for ch in ville["chantiers"]), "le montage ne supprime aucune tranchée : il ne prouve rien"
+    for ch in ville["chantiers"]:
+        assert [p["equipe"] for p in ch["phases"]] == avant[ch["id"]], f"l'équipe du chantier {ch['id']} suit la tranchée"
+
+
+def test_cases_prises_lit_les_abribus_et_les_stations():
+    """Les listes rangées un cran plus bas : `autobus.arrets` et `metro.stations`."""
+    ville = {"decor": [{"type": "banc", "x": 1, "y": 2}], "portes": [], "devantures": [{"x": 5, "y": 5, "l": 3}],
+             "autobus": {"arrets": [{"x": 9, "y": 9}]}, "metro": {"stations": [{"x": 7, "y": 1}]}}
+    assert chantiers.cases_prises(ville) == {(1, 2), (5, 5), (6, 5), (7, 5), (9, 9), (7, 1)}
+
+
+# --- 7e vague : de nouveaux chantiers quand les premiers sont finis -------------------------
+
+
+def test_la_ville_a_six_chantiers_dont_trois_dorment():
+    """⚠️ Sans cette mesure, un tirage qui ne trouverait que trois bâtiments passerait tous les juges :
+    la graine livrée et trois autres en ont six, à `ECART_MIN` les uns des autres."""
+    for graine, ville in _villes_de_la_rue():
+        assert len(ville["chantiers"]) == chantiers.NOMBRE == 6, (graine, len(ville["chantiers"]))
+        assert [bool(c.get("ouvre")) for c in ville["chantiers"]] == [False] * chantiers.OUVERTS + [True] * 3
+        assert [c.get("ouvre") for c in ville["chantiers"][chantiers.OUVERTS:]] == list(chantiers.OUVERTURES)
+
+
+def test_un_dormant_laisse_la_ville_telle_quelle_jusqu_a_son_jour():
+    """⚠️ `phases[-1]` est le NEUF : un dormant ne doit jamais se lire comme un indice négatif."""
+    for ch in VILLE["chantiers"]:
+        ouvre = ch.get("ouvre", 0)
+        if not ouvre:
+            continue
+        assert chantiers.phase_du_jour(ch, ouvre, 1) == chantiers.DORMANT, "il ouvre un jour trop tôt"
+        assert chantiers.phase_du_jour(ch, 1 + ouvre, 1) == 0, "il n'ouvre pas à la maison condamnée"
+        assert chantiers.appliquer(VILLE["sol"], ch, chantiers.DORMANT) == VILLE["sol"], \
+            f"le chantier dormant {ch['id']} a changé la ville"
+        assert chantiers.phase_du_jour(ch, 1 + ouvre + 4 * ch["pas"], 1) == chantiers.DERNIERE
+
+
+def test_les_dormants_ouvrent_quand_les_premiers_finissent():
+    """« De nouveaux chantiers quand les premiers sont finis » : le premier dormant ouvre quand le
+    premier chantier ouvert finit — pas avant, pas bien après — et les autres à mesure."""
+    for _graine, ville in _villes_de_la_rue():
+        finis = sorted((chantiers.DERNIERE - c["decalage"]) * c["pas"] for c in ville["chantiers"] if not c.get("ouvre"))
+        assert chantiers.OUVERTURES[0] >= finis[0], (finis, "le premier dormant ouvre avant qu'un chantier soit fini")
+        assert chantiers.OUVERTURES[0] <= finis[-1], (finis, "le premier dormant attend que tous soient finis")
+        assert list(chantiers.OUVERTURES) == sorted(set(chantiers.OUVERTURES))
+
+
+def test_jamais_plus_de_trois_chantiers_qui_travaillent_a_la_fois():
+    """Ils s'ouvrent à mesure que les autres finissent : la ville change longtemps, sans jamais
+    devenir un quartier bombardé."""
+    for graine, ville in _villes_de_la_rue():
+        for jour in range(1, 60):
+            en_cours = [c["id"] for c in ville["chantiers"]
+                        if 0 <= chantiers.phase_du_jour(c, jour, 1) < chantiers.DERNIERE]
+            assert len(en_cours) <= chantiers.OUVERTS, (graine, jour, en_cours)
+
+
+def test_la_ville_est_neuve_au_bout_de_trente_cinq_jours():
+    for ch in VILLE["chantiers"]:
+        assert chantiers.phase_du_jour(ch, 1 + 35, 1) == chantiers.DERNIERE, ch["id"]
+
+
+def test_les_trois_premiers_chantiers_n_ont_pas_bouge(monkeypatch):
+    """⚠️ La graine livrée a ses trois premiers chantiers depuis la 1re vague : les trois nouveaux
+    viennent APRÈS dans le même dé, et ne déplacent ni leur bâtiment, ni leur décalage, ni leurs
+    machines, ni leurs phases."""
+    def tel(ville):
+        return [(c["x"], c["y"], c["l"], c["h"], c["decalage"], c["pas"], c["phases"]) for c in ville["chantiers"][:3]]
+    avec = tel(carte.generer())
+    monkeypatch.setattr(chantiers, "NOMBRE", 3)
+    assert tel(carte.generer()) == avec
+
+
+def test_les_dormants_ne_touchent_a_rien_de_la_ville_du_premier_matin(monkeypatch):
+    """La ville avec ou sans chantiers reste la même : les dormants aussi se tirent dans leur dé."""
+    avec = carte.generer()
+    monkeypatch.setattr(chantiers, "tirer", lambda ville, batiments, graine: [])
+    sans = carte.generer()
+    for cle in ("sol", "voie", "decor", "portes", "lampes", "devantures", "residences", "points_interet"):
+        assert avec[cle] == sans[cle], cle

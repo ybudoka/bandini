@@ -19,7 +19,7 @@ from flask import (
     url_for,
 )
 
-from . import bd, comptes
+from . import bd, comptes, defi
 from . import hors_ligne
 
 bp = Blueprint("jeu", __name__)
@@ -200,6 +200,43 @@ def api_compte_partie_ecrire(n: int):
     if ecrite:
         return jsonify(etat)
     return jsonify({"erreur": "la partie du serveur est plus avancée", "serveur": etat}), 409
+
+
+@bp.route("/api/defi")
+def api_defi():
+    """Le defi du jour (M14, 5e vague) : la date du serveur et le slug du defi d'aujourd'hui.
+
+    Publique — ni compte ni base : c'est une fonction de la date. ⚠️ `no-store` : un defi garde
+    par le navigateur passerait minuit sans le savoir (nginx ne met en cache que `/static/`).
+    """
+    reponse = jsonify(defi.aujourdhui())
+    reponse.headers["Cache-Control"] = "no-store"
+    return reponse
+
+
+@bp.route("/api/compte/nip", methods=["POST"])
+def api_compte_nip():
+    """Le jeton en clair, UNE fois : de quoi le chiffrer localement pour le NIP (M14, 3e vague).
+
+    ⚠️ Le serveur ne connaît jamais le NIP et ne le verra jamais : le chiffrement et le
+    déchiffrement sont entièrement locaux (WebCrypto, PBKDF2 + AES-GCM). Cette route
+    expose, à la demande explicite du joueur, le jeton que le cookie `httpOnly` porte
+    déjà — `httpOnly` bloque le JS de la page, pas le serveur, qui le lit à chaque
+    requête comme n'importe quel autre cookie.
+    """
+    comptes.authentifier(bd.connexion(), _jeton())
+    return jsonify({"jeton": _jeton()})
+
+
+@bp.route("/api/compte/effacer", methods=["POST"])
+def api_compte_effacer():
+    """Efface le compte pour vrai (M14, 4e vague). Le mot de passe est redemande : voir
+    `comptes.effacer`. Un mot de passe faux rend 403 et LAISSE LE COOKIE — l'appareil reste lie."""
+    session = comptes.authentifier(bd.connexion(), _jeton())
+    comptes.effacer(bd.connexion(), session, request.get_json(silent=True))
+    reponse = jsonify({"compte": None})
+    _cookie(reponse, None)
+    return reponse
 
 
 #: (fichier de static/img/, cote, usage). La 512 sert deux fois : Bandini tient

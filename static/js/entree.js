@@ -38,9 +38,14 @@ const Entree = (function () {
   //: n'a pas les memes numeros sur le telephone et sur le Mac. Ca ne se devine
   //: pas : l'ecran MANETTE des options fait REAPPRENDRE chaque bouton en
   //: l'appuyant, et garde le resultat dans les options (`options.manette`).
+  //:
+  //: ⚠️ VERROUILLER (viser une cible) n'a PAS de bouton : c'est la GACHETTE DE
+  //: DROITE, celle du gaz, quand on est a pied (`gachetteVise`). Demande de
+  //: Martin, 22 sept. 2026 : sur sa 8BitDo en Bluetooth, VISER etait le bouton
+  //: 2 — un numero que DirectInput saute, que rien sur la manette ne porte.
   const MANETTE_DEFAUT = {
     action: [0], esquive: [1], annuler: [1], attaque: [2, 5], arme: [3, 4],
-    carte: [8], pause: [9], muet: [], verrouiller: [10],
+    carte: [8], pause: [9], muet: [],
     haut: [12], bas: [13], gauche: [14], droite: [15],
   };
   //: Le stick de marche, puis le gaz et le frein. Sur une manette reconnue ce
@@ -49,6 +54,11 @@ const Entree = (function () {
   //: repose a -1 sur une manette et a 0 sur la suivante).
   const AXES_DEFAUT = [0, 1];
   const PEDALES_DEFAUT = { gaz: { type: 'bouton', i: 7 }, frein: { type: 'bouton', i: 6 } };
+  /** La gachette de droite vise (VERROUILLER) : la pedale de GAZ, telle que le
+      profil la connait — un bouton ou un axe, dispositions sauvees et
+      reapprises comprises. Au volant, `Combat` ne lit pas le verrou : elle
+      reste le gaz, et rien d'autre. */
+  function gachetteVise(etat, g) { if (g > GESTE) etat.verrouiller = true; }
   const ZONE_MORTE = 0.2, ZONE_PLEINE = 0.95;
   //: De combien un bouton ou un axe doit bouger pour qu'on dise « c'est
   //: celui-la » pendant un apprentissage.
@@ -81,6 +91,47 @@ const Entree = (function () {
   const REPOS_IMAGES = 30;
   const ignores = {};                // le bouton qu'on vient d'apprendre, jusqu'au relachement
   const info = { branchee: false, id: '', mapping: '', boutons: [], axes: [] };
+  //: L'APPAREIL QU'ON TIENT : le dernier qui a servi — 'clavier', 'manette' ou
+  //: 'tactile'. L'ecran COMMANDES et l'invite du HUD montrent SES boutons, et
+  //: changent sous les yeux quand on pose le clavier pour prendre la manette.
+  //: ⚠️ Pas « une manette est branchee » : celui qui joue au clavier avec une
+  //: manette qui dort sur le bureau ne veut pas lire des A et des B.
+  let appareil = null;
+  //: Ce que la manette tenait a l'image d'avant (boutons, croix, stick pousse,
+  //: gachettes) : elle ne reprend l'appareil que sur un geste NEUF.
+  let actifAvant = [];
+  //: Les EPAULES (LB/RB, L1/R1, L/R) : elles tournent les onglets d'un classeur
+  //: (`Hud`, la PAUSE). ⚠️ Pas une action de plus dans `MAP_TOUCHES` : l'epaule
+  //: est deja le DEUXIEME bouton d'ARME et de FRAPPE (`manettes.py`, `pieces` :
+  //: `epaule_g`, `epaule_d` ; le dessin de l'ecran MANETTE fait la meme
+  //: hypothese). Une action neuve, une disposition deja sauvee ne l'aurait pas —
+  //: et prendrait les numeros par defaut, qui sont ceux d'un bouton de droite sur
+  //: la 8BitDo de Martin en Bluetooth. On lit donc le NUMERO de ce deuxieme
+  //: bouton : FRAPPE a la croix de droite (X) ne tourne rien. Et les lettres R et
+  //: L du clavier ne peuvent pas servir : c'est la suite secrete RIGOLO
+  //: (`Jeu.SEQUENCE_DEBUG`), qui doit rester hors de `MAP_TOUCHES`.
+  const epauleTenue = { g: false, d: false }, epauleTenueCasque = { g: false, d: false };
+  const epauleNeuve = { g: false, d: false }, epauleNeuveCasque = { g: false, d: false };
+
+  /** L'epaule `cote` ('g' ou 'd') tient-elle, a en croire `tient(indice)` ?
+      Marque l'appui NEUF dans `neuve` (vide par `videPresse`, comme tout appui neuf). */
+  function lireEpaules(boutons, tenue, neuve, tient, muette) {
+    const indices = { g: (boutons.arme || [])[1], d: (boutons.attaque || [])[1] };
+    for (const c of ['g', 'd']) {
+      const t = indices[c] !== undefined && tient(indices[c]);
+      if (t && !tenue[c] && !muette) neuve[c] = true;
+      tenue[c] = t;
+    }
+  }
+
+  /** L'epaule `cote` ('g' : LB, 'd' : RB) vient-elle d'etre enfoncee ?
+      ⚠️ En coop locale, la manette est celle du joueur qui la tient (voir
+      `joueur1PrendLaManette`) : les epaules ne tournent les onglets de la pause
+      que si c'est le PREMIER — sinon le deuxieme joueur feuillette le classeur
+      de l'autre en jouant. */
+  function neufEpaule(cote) {
+    return ((!B.coop || joueur1PrendLaManette()) && !!epauleNeuve[cote]) || !!epauleNeuveCasque[cote];
+  }
 
   function poser(sac, a, v) {
     v = !!v;
@@ -92,11 +143,27 @@ const Entree = (function () {
     sac[a] = v;
   }
 
+  /** La coop locale (essai) : qui tient la manette ? Par defaut le deuxieme
+      joueur — mais Martin veut choisir (options > COOP > JOUEUR 1 A LA
+      MANETTE), pour jouer le personnage principal au stick plutot qu'au
+      clavier. Hors coop, la question ne se pose pas : la manette est a tout
+      le monde, comme avant. */
+  function joueur1PrendLaManette() { return !!(B.coop && B.options.coopP1Manette); }
+
   function bas(a) {
-    return !!vPad[a] || !!vTact[a] || !!vCasque[a] || MAP_TOUCHES[a].some(function (k) { return enfonce[k]; });
+    // ⚠️ La coop locale (essai, un clavier + une manette) : celui qui n'a
+    // PAS la manette ne doit jamais agir par ses boutons (ATTAQUE, ACTION,
+    // ESQUIVE…) — sans ca, une seule manette mene les deux personnages a la
+    // fois. Retour de Martin, 22 sept. : « les frappes ne sont pas bien
+    // assignees » — c'etait ca, pas seulement le stick (`debutImage`).
+    if (!B.coop) return !!vPad[a] || !!vTact[a] || !!vCasque[a] || MAP_TOUCHES[a].some(function (k) { return enfonce[k]; });
+    if (joueur1PrendLaManette()) return !!vPad[a] || !!vTact[a] || !!vCasque[a];
+    return !!vTact[a] || !!vCasque[a] || MAP_TOUCHES[a].some(function (k) { return enfonce[k]; });
   }
   function neuf(a) {
-    return !!vNeuf[a] || MAP_TOUCHES[a].some(function (k) { return presse[k]; });
+    if (!B.coop) return !!vNeuf[a] || MAP_TOUCHES[a].some(function (k) { return presse[k]; });
+    if (joueur1PrendLaManette()) return !!vNeuf[a];   // vNeuf ne vient jamais du clavier (voir `presse`, a part)
+    return neufSansManette(a);
   }
   /** Comme `neuf`, mais la manette ne compte pas — le clavier, le doigt et les
       mains du casque, oui : l'ecran MANETTE montre la manette Bluetooth, pas elles. */
@@ -108,11 +175,71 @@ const Entree = (function () {
   function neufSansManette(a) {
     return !!vNeufTact[a] || !!vNeufCasque[a] || MAP_TOUCHES[a].some(function (k) { return presse[k]; });
   }
+  //: Le clavier SEUL, sans la manette ni le tactile — la branche `axe` de
+  //: `debutImage` en a besoin deux fois (le joueur 1 SANS manette, le
+  //: joueur 2 quand la manette est passee au premier).
+  function axeClavierSeul() {
+    let x = 0, y = 0;
+    if (MAP_TOUCHES.gauche.some(function (k) { return enfonce[k]; })) x -= 1;
+    if (MAP_TOUCHES.droite.some(function (k) { return enfonce[k]; })) x += 1;
+    if (MAP_TOUCHES.haut.some(function (k) { return enfonce[k]; })) y -= 1;
+    if (MAP_TOUCHES.bas.some(function (k) { return enfonce[k]; })) y += 1;
+    const h = Math.hypot(x, y);
+    // ⚠️ `source` COMPTE : c'est elle qui dit a `Entites.majJoueur` qu'un
+    // clavier ne sait pas effleurer — sans elle, le joueur au clavier
+    // MARCHAIT au lieu de courir (retour de Martin, 22 sept. : « celui avec
+    // la manette ne court pas a la meme vitesse »).
+    return { x: h ? x / h : 0, y: h ? y / h : 0, mag: h ? 1 : 0, source: 'clavier' };
+  }
+  /** La coop locale (un clavier + une manette) : les entrees NUES du deuxieme
+      joueur — la manette par defaut, le clavier si l'option donne celle-la au
+      premier (`joueur1PrendLaManette`). Jamais celles du premier joueur, quel
+      que soit l'appareil de chacun. C'est `SOURCE2` qui les porte jusqu'a lui. */
+  function basJoueur2(a) {
+    if (joueur1PrendLaManette()) return MAP_TOUCHES[a].some(function (k) { return enfonce[k]; });
+    return !!vPad[a];
+  }
+  function neufJoueur2(a) {
+    if (joueur1PrendLaManette()) return MAP_TOUCHES[a].some(function (k) { return presse[k]; });
+    return !!vNeuf[a] && !vNeufTact[a] && !vNeufCasque[a];
+  }
+  function axeJoueur2() {
+    if (joueur1PrendLaManette()) return axeClavierSeul();
+    const st = stickCasque.mag > stick.mag ? stickCasque : stick;
+    return { x: st.x, y: st.y, mag: st.mag, source: 'manette' };
+  }
+
+  /** LES SOURCES D'ENTREES — une par joueur, et c'est LE joint de la coop.
+
+      Chaque joueur porte la sienne (`j.entree`, pose a la naissance), et tout
+      ce qui le fait marcher, frapper, rouler ou se lever la lit plutot que le
+      module : `Entites.majJoueur`, `Combat.majUnJoueur`, `Interactions.majAssis`.
+      Plus personne ne demande « est-ce LE joueur ? » pour savoir quel stick
+      ecouter — il suffit de demander au joueur qu'on est en train d'avancer.
+
+      ⚠️ C'est la porte ouverte a la COOP EN LIGNE : une source n'est qu'un
+      objet a trois entrees (`axe`, `bas`, `neuf`) plus une vibration. Celle
+      d'un joueur distant remplirait les memes champs depuis le reseau, et pas
+      une ligne de `majJoueur` ne changerait.
+
+      La vibration, elle, s'adresse a UNE manette : elle ne part que si ce
+      joueur-la la tient, sinon c'est l'autre qu'on secoue. */
+  const SOURCE1 = {
+    get axe() { return axe; },
+    bas: bas, neuf: neuf,
+    vibrer: function (ms) { if (!B.coop || joueur1PrendLaManette()) vibrer(ms); },
+  };
+  const SOURCE2 = {
+    get axe() { return axeJoueur2(); },
+    bas: basJoueur2, neuf: neufJoueur2,
+    vibrer: function (ms) { if (!joueur1PrendLaManette()) vibrer(ms); },
+  };
   function videPresse() {
     for (const k in presse) presse[k] = false;
     for (const a in vNeuf) vNeuf[a] = false;
     for (const a in vNeufTact) vNeufTact[a] = false;
     for (const a in vNeufCasque) vNeufCasque[a] = false;
+    epauleNeuve.g = false; epauleNeuve.d = false; epauleNeuveCasque.g = false; epauleNeuveCasque.d = false;
   }
   function toutRelacher() {
     for (const k in enfonce) enfonce[k] = false;
@@ -128,6 +255,7 @@ const Entree = (function () {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
     if (!TOUCHES_JEU.has(e.code)) return;
     e.preventDefault();
+    if (valeur) appareil = 'clavier';
     if (valeur && !enfonce[e.code] && !e.repeat) presse[e.code] = true;
     enfonce[e.code] = valeur;
   }
@@ -487,8 +615,24 @@ const Entree = (function () {
       f = Math.max(f, lirePedale(p, profil.frein));
       if (apprentissage) ecouterApprentissage(p);
     }
+    gachetteVise(etat, g);
     if (!branchee && !manetteVue) return;
     manetteVue = branchee;
+    // ⚠️ SUR UN GESTE NEUF, pas sur un etat : un stick qui derive au repos, ou
+    // un bouton que la manette rend enfonce en permanence, reprenaient
+    // l'appareil a CHAQUE image — et l'aide montrait des A et des B a qui tape
+    // au clavier (vu dans Chromium, une vraie manette branchee au Mac).
+    const actif = info.boutons.slice();
+    for (const a of CROIX_ACTIONS) if (etat[a]) actif.push(a);
+    if (Math.hypot(sx, sy) > 0.5) actif.push('stick');
+    if (g > 0.5) actif.push('gaz');
+    if (f > 0.5) actif.push('frein');
+    if (branchee && actif.some(function (a) { return actifAvant.indexOf(a) < 0; })) appareil = 'manette';
+    actifAvant = actif;
+    // ⚠️ Le bouton qu'on vient d'apprendre (`ignores`) ne tourne pas un onglet
+    // en se relachant — et pendant un apprentissage, rien ne tourne.
+    lireEpaules(profil.boutons, epauleTenue, epauleNeuve, function (i) { return info.boutons.indexOf(i) >= 0 && !ignores[i]; },
+                !!apprentissage);
     // Pendant un apprentissage la manette ne commande rien (voir `apprendre`).
     for (const a in MAP_TOUCHES) poser(vPad, a, apprentissage ? false : etat[a]);
     if (apprentissage) { stick.x = 0; stick.y = 0; stick.mag = 0; gaz = 0; frein = 0; return; }
@@ -534,8 +678,12 @@ const Entree = (function () {
         if (MANETTE_DEFAUT[a].some(function (i) { return valeurBouton(p, i) > GESTE; })) etat[a] = true;
       }
       s = zoneMorte(p.axes[AXES_DEFAUT[0]] || 0, p.axes[AXES_DEFAUT[1]] || 0);
+      gachetteVise(etat, lirePedale(p, PEDALES_DEFAUT.gaz));
     }
     for (const a in MAP_TOUCHES) poser(vCasque, a, etat[a]);
+    // Les Touch se lisent toujours a la disposition par defaut (voir plus haut).
+    lireEpaules(MANETTE_DEFAUT, epauleTenueCasque, epauleNeuveCasque, function (i) { return !!p && valeurBouton(p, i) > GESTE; }, false);
+    if (s.mag > 0 || Object.keys(etat).length) appareil = 'manette';
     stickCasque.x = s.x; stickCasque.y = s.y; stickCasque.mag = s.mag;
     gazCasque = p ? lirePedale(p, PEDALES_DEFAUT.gaz) : 0;
     freinCasque = p ? lirePedale(p, PEDALES_DEFAUT.frein) : 0;
@@ -562,9 +710,37 @@ const Entree = (function () {
              attend: !!(apprentissage && apprentissage.attend) };
   }
 
+  /** L'appareil qu'on tient (voir `appareil`). Avant le premier geste : la
+      manette si le navigateur en voit une, le doigt sur un ecran tactile,
+      sinon le clavier. */
+  function appareilCourant() {
+    if (appareil) return appareil;
+    if (manetteVue || padCasque) return 'manette';
+    return tactile ? 'tactile' : 'clavier';
+  }
+
+  /** Les lettres de la manette : 'xbox', 'playstation' ou 'nintendo'
+      (`manettes.FAMILLES`). Celle qu'on a choisie dans OPTIONS > MANETTE, sinon
+      celle que son nom trahit (`manettes.DETECTION`), sinon Xbox.
+
+      ⚠️ Rien ne devine une Nintendo : la 8BitDo de Martin se presente parfois
+      en « Pro Controller » et porte pourtant les lettres Xbox. */
+  function familleManette() {
+    const bloc = (B.defs && B.defs.manettes) || {};
+    const familles = bloc.familles || {};
+    const choisie = B.options && B.options.lettresManette;
+    if (choisie && familles[choisie]) return choisie;
+    const id = info.id || (padCasque && padCasque.id) || '';
+    for (const d of bloc.detection || []) {
+      if (new RegExp(d.motif, 'i').test(id)) return d.famille;
+    }
+    return bloc.famille_defaut || 'xbox';
+  }
+
   // --- Tactile ----------------------------------------------------------------------
 
   function passerEnTactile() {
+    appareil = 'tactile';
     if (tactile) return;
     tactile = true;
     if (doc && doc.body) doc.body.classList.add('tactile');
@@ -578,6 +754,9 @@ const Entree = (function () {
     if (!zone) return;
     if (fenetre && fenetre.matchMedia && fenetre.matchMedia('(pointer: coarse)').matches) passerEnTactile();
     fenetre.addEventListener('touchstart', passerEnTactile, { once: true, passive: true });
+    // ⚠️ Une fois, c'est pour la classe `tactile` ; le doigt qui REVIENT apres
+    // le clavier ou la manette, lui, doit se lire a chaque fois.
+    fenetre.addEventListener('touchstart', function () { appareil = 'tactile'; }, { passive: true });
 
     const croix = d.getElementById('croix');
     const bouton = croix.querySelector('u');
@@ -679,24 +858,36 @@ const Entree = (function () {
     // gagne, et c'est un stick de MANETTE dans les deux cas (marcher a mi-course,
     // promener un menu).
     const st = stickCasque.mag > stick.mag ? stickCasque : stick;
+    // ⚠️ La coop locale (essai, un clavier + une manette) : le joueur 1 n'a
+    // la manette QUE si l'option la lui donne (`joueur1PrendLaManette`) —
+    // sinon elle est au deuxieme joueur (`Entree.SOURCE2`, qui lit
+    // `Entree.axeJoueur2` directement), et le premier n'y repond plus.
+    const manettePourJoueur1 = !B.coop || joueur1PrendLaManette();
     if (pouce.actif && pouce.mag > 0) {
       axe.x = pouce.x; axe.y = pouce.y; axe.mag = pouce.mag; axe.source = 'tactile';
-    } else if (st.mag > 0) {
+    } else if (st.mag > 0 && manettePourJoueur1) {
       axe.x = st.x; axe.y = st.y; axe.mag = st.mag; axe.source = 'manette';
     } else {
+      // ⚠️ `bas()` compte aussi la manette (son stick ET sa croix) : sans la
+      // manette (coop, pas l'option), on lit `enfonce` tout cru pour ne rien
+      // lui laisser passer — mais AVEC elle (hors coop, ou l'option), `bas()`
+      // se sert comme avant.
+      const touche = (B.coop && !manettePourJoueur1)
+        ? function (a) { return MAP_TOUCHES[a].some(function (k) { return enfonce[k]; }); }
+        : bas;
       let x = 0, y = 0;
-      if (bas('gauche')) x -= 1; if (bas('droite')) x += 1;
-      if (bas('haut')) y -= 1; if (bas('bas')) y += 1;
+      if (touche('gauche')) x -= 1; if (touche('droite')) x += 1;
+      if (touche('haut')) y -= 1; if (touche('bas')) y += 1;
       const h = Math.hypot(x, y);
       axe.x = h ? x / h : 0; axe.y = h ? y / h : 0; axe.mag = h ? 1 : 0; axe.source = 'clavier';
     }
     lireSuitesActions();
   }
 
-  function contexte(nom) {
-    if (nom === contexteCourant || !doc) { contexteCourant = nom; return; }
-    contexteCourant = nom;
-    const etiquettes = nom === 'vehicule'
+  /** Ce qu'on lit sur les quatre boutons tactiles dans ce contexte-la. L'ecran
+      COMMANDES les montre tels quels : au doigt, le nom du bouton EST son geste. */
+  function etiquettes(nom) {
+    return nom === 'vehicule'
       ? { attaque: 'KLAXON', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO' }
       // ⚠️ Sur un char a sirene, le bouton du klaxon EST celui de la sirene :
       // c'est ce qu'on cherche en premier au volant d'une ambulance, et le
@@ -709,13 +900,33 @@ const Entree = (function () {
         ? { attaque: 'RETOUR', action: 'CHOISIR', esquive: 'BAS', arme: 'HAUT' }
         : nom === 'dialogue'
           ? { attaque: 'PASSER', action: 'SUIVANT', esquive: '·', arme: '·' }
-          // ⚠️ « SPRINT », plus « COURS » : courir est devenu la vitesse par
-          // defaut (la ville fait 421 tuiles), et le bouton ne sert plus qu'a
-          // la bouffee qui coute du souffle.
-          : { attaque: 'FRAPPE', action: 'ACTION', esquive: 'SPRINT', arme: 'ARME' };
-    Object.keys(etiquettes).forEach(function (a) {
+          // ⚠️ Le piratage se joue au STICK (une direction a la fois, comme la
+          // roue d'armes) : FRAPPE est le seul bouton qui compte encore, et il
+          // change de sens — abandonner, pas frapper.
+          : nom === 'piratage'
+            ? { attaque: 'ABANDONNER', action: '·', esquive: '·', arme: '·' }
+            // ⚠️ Une EPREUVE D'ADRESSE (`Adresse`) : ACTION et FRAPPE y servent
+            // (la roue, la danse), et c'est COURS qui abandonne — le seul bouton
+            // qu'aucune epreuve ne prend.
+            : nom === 'epreuve'
+            ? { attaque: 'FRAPPE', action: 'ACTION', esquive: 'ABANDONNER', arme: '·' }
+            // Le mode photo (M14) : pas de FRAPPE ni d'ESQUIVE, on ne fait
+            // que regarder.
+            : nom === 'photo'
+              ? { attaque: '·', action: 'CAPTURER', esquive: '·', arme: 'FILTRE' }
+              // ⚠️ « SPRINT », plus « COURS » : courir est devenu la vitesse par
+              // defaut (la ville fait 421 tuiles), et le bouton ne sert plus qu'a
+              // la bouffee qui coute du souffle.
+              : { attaque: 'FRAPPE', action: 'ACTION', esquive: 'SPRINT', arme: 'ARME' };
+  }
+
+  function contexte(nom) {
+    if (nom === contexteCourant || !doc) { contexteCourant = nom; return; }
+    contexteCourant = nom;
+    const e = etiquettes(nom);
+    Object.keys(e).forEach(function (a) {
       const b = doc.querySelector('#boutons b[data-a="' + a + '"]');
-      if (b) b.textContent = etiquettes[a];
+      if (b) b.textContent = e[a];
     });
   }
 
@@ -724,19 +935,27 @@ const Entree = (function () {
     w.addEventListener('keydown', function (e) { surToucheSecrete(e); surTouche(e, true); });
     w.addEventListener('keyup', function (e) { surTouche(e, false); });
     w.addEventListener('blur', toutRelacher);
-    w.addEventListener('gamepadconnected', function () { manetteVue = true; Son.reveiller(); });
+    w.addEventListener('gamepadconnected', function () { manetteVue = true; appareil = 'manette'; Son.reveiller(); });
     initTactile(d);
     empecherZoom(d, w);
   }
 
   return {
     MAP_TOUCHES, MANETTE_DEFAUT, ZONE_MORTE,
-    init, debutImage, bas, neuf, basTactile, neufTactile, neufSansManette, videPresse, toutRelacher, contexte, passerEnTactile,
+    init, debutImage, bas, neuf, basTactile, neufTactile, neufSansManette, neufEpaule, videPresse, toutRelacher, contexte, passerEnTactile,
+    etiquettesTactiles: etiquettes,
+    toucheEnfoncee: function (code) { return !!enfonce[code]; },
     surSecret, surSuiteActions,
     lireManette, vibrer, pleinEcran,
     reglerManette, profilManette, profilParDefaut, apprendre, apprendEnCours,
-    annulerApprentissage, oublierRepos, manetteInfo, brancherCasque,
+    annulerApprentissage, oublierRepos, manetteInfo, brancherCasque, familleManette,
+    get appareil() { return appareilCourant(); },
     get axe() { return axe; },
+    // La coop locale : une SOURCE par joueur (`j.entree`), les entrees nues
+    // du deuxieme, et l'option qui decide qui a la manette
+    // (`Hud.menuOptions`, `options.coopP1Manette`).
+    SOURCE1, SOURCE2,
+    basJoueur2, neufJoueur2, axeJoueur2, joueur1PrendLaManette,
     get gaz() { return Math.max(gaz, gazCasque); }, get frein() { return Math.max(frein, freinCasque); },
     get estTactile() { return tactile; },
     _sacs: function () { return { enfonce: enfonce, presse: presse, vPad: vPad, vTact: vTact, vNeuf: vNeuf, vCasque: vCasque, pouce: pouce, stick: stick, stickCasque: stickCasque }; },

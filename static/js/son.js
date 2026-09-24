@@ -122,7 +122,8 @@ const Son = (function () {
     Voix.chargees = false; Voix.enCours = null; Voix.missionsChargees.clear();
     Ambiance.courante = null; Ambiance.chargee = null;
     Radio.courante = null; Radio.chargees.clear();
-    Mus.arreter();
+    // ⚠️ Net : la page s'en va, le contexte se ferme juste apres — un fondu n'aurait personne a qui parler.
+    Mus.arreter(0); Mus.sortantes.length = 0;
     try { parti.close(); } catch (e) { /* deja fermee */ }
   }
 
@@ -131,6 +132,9 @@ const Son = (function () {
   //: c'est ce qui pose dans le monde TOUS les effets du combat (une douzaine
   //: d'armes, chacune avec son filet) sans les reecrire un par un.
   let ici = null;
+
+  //: L'image du dernier bris de decor entendu (`SFX.bris`) : un seul par image.
+  let dernierBris = -1;
 
   /** Une note : frequence en Hz, duree en s, forme, volume, glisse (facteur de frequence finale). */
   function ton(freq, duree, forme, volume, glisse, depart) {
@@ -224,12 +228,30 @@ const Son = (function () {
 
   /** Telecharge et decode une fois, apres le premier geste (il faut un ctx).
       ⚠️ Un echec ne remonte nulle part : l'effet retombera sur la synthese. */
+  /** Les slugs qui n'appartiennent qu'aux bruits de quartier (M15, 2e vague) :
+      ils ne se chargent PAS au demarrage — voir `chargerEchantillons`. */
+  function slugsDeQuartier() {
+    const q = (B.defs && B.defs.audio && B.defs.audio.quartiers) || {};
+    const vus = new Set();
+    Object.keys(q.sons || {}).forEach(function (d) {
+      q.sons[d].forEach(function (e) { vus.add(e.slug); });
+    });
+    return vus;
+  }
+
   function chargerEchantillons() {
     const audio = B.defs && B.defs.audio;
     if (demandes || !ctx || !audio || !fenetre || !fenetre.fetch) return;
     demandes = true;
     const dossier = base + audio.dossier + '/';
+    // ⚠️ LES BRUITS DE QUARTIER NE SE CHARGENT PAS ICI (M15, 2e vague) : ils
+    // sont RARES et PROPRES A UN DISTRICT — `Quartier.charger` les demande
+    // en y entrant. Les charger tous au demarrage doublait presque le budget
+    // de bruitages (2,83 Mo pour 2,5 Mo) pour des sons qu'une partie n'entend
+    // peut-etre jamais si on ne visite pas le quartier.
+    const deQuartier = slugsDeQuartier();
     audio.echantillons.forEach(function (e) {
+      if (deQuartier.has(e.slug)) return;
       (e.fichiers || []).forEach(function (nom) {
         decoder(dossier + nom)
           .then(function (tampon) {
@@ -268,9 +290,13 @@ const Son = (function () {
     // et il ne sort RIEN. C'est ainsi qu'aucun des 79 fichiers n'a jamais ete
     // entendu jusqu'au 13 sept. 2026, sans qu'une seule erreur soit levee.
     source.connect(gain);
-    sortie.connect(maitre);
+    // ⚠️ `fondu` (en secondes) : la musique entre PAR la chaine de fondu, pas
+    // directement sur le maitre — voir « Le fondu enchaine ». Le volume, lui,
+    // reste sur `gain` : la distance et le ducking le reposent sans toucher au fondu.
+    const chaine = options && options.fondu !== undefined ? chaineDeFondu(options.fondu) : null;
+    sortie.connect(chaine ? chaine.entree : maitre);
     source.start(ctx.currentTime);
-    return { source: source, gain: gain, base: def ? def.volume : 1 };
+    return { source: source, gain: gain, base: def ? def.volume : 1, fondu: chaine };
   }
 
   /** Un son POSE dans le monde : plus loin, plus faible ; a droite, a droite.
@@ -287,6 +313,41 @@ const Son = (function () {
   }
 
   function joue(slug) { return echantillon(slug, ici) !== null; }
+
+  /** `joue`, mais COUPE au bout de `duree` secondes, en fondu : un geste bref
+      qui emprunte un echantillon plus long que lui (la passe du pistolet a
+      peinture dans le souffle de l'extincteur). `part` dose le volume (1 =
+      celui du catalogue). Rend vrai si l'echantillon est parti. */
+  function bref(slug, duree, part) {
+    const options = ici ? { volume: ici.volume * (part || 1), pan: ici.pan } : { volume: part || 1 };
+    const j = echantillon(slug, options);
+    if (!j) return false;
+    const fondu = 0.06, t = ctx.currentTime + Math.max(0, duree - fondu);
+    const g = j.gain.gain.value;
+    // Une courbe, pas une rampe : c'est ce que le banc lit (et un seul appel
+    // par gain, comme le fondu de la musique).
+    j.gain.gain.setValueCurveAtTime(Array.from(courbeDeFondu(false), function (c) { return c * g; }), t, fondu);
+    try { j.source.stop(t + fondu + 0.02); } catch (e) { /* deja finie */ }
+    return true;
+  }
+
+  //: LE BRIS D'UN DECOR, par matiere, dans les echantillons DEJA PAYES : le bois
+  //: et le plastique qui cassent (`casse`, un manche qui claque et ses morceaux
+  //: sur l'asphalte), le metal qui sonne (`pelle`, un clang), le verre qui
+  //: eclate (`bouteille`). ⚠️ Le reste — buisson, chateau de sable, matelas,
+  //: manche a air — n'a que sa poussiere : un craquement de bois sur un
+  //: buisson sonnerait faux. Et la borne, le guichet et les distributrices ont
+  //: leur propre son (`borne_cassee`, `argent`, `monnaie`), joue par `briser`.
+  const MATIERE_DU_BRIS = {
+    lampadaire: 'pelle', parcometre: 'pelle', boite_aux_lettres: 'pelle', poteau_amarrage: 'pelle',
+    baril: 'pelle', caddie: 'pelle', kiosque_journaux: 'pelle', bbq: 'pelle',
+    poubelle: 'pelle', poubelle_pleine: 'pelle',
+    abribus: 'bouteille', abribus_nord: 'bouteille', abribus_est: 'bouteille', abribus_ouest: 'bouteille',
+    bac: 'casse', cible_foire: 'casse', table_pique_nique: 'casse', chaise_sauveteur: 'casse',
+    banc: 'casse', banc_nord: 'casse', banc_est: 'casse', banc_ouest: 'casse', bac_fleurs: 'casse',
+    bac_recyclage: 'casse', palettes: 'casse', caisse: 'casse', cabanon: 'casse',
+    corde_a_linge: 'casse', ordures: 'casse', pneu: 'casse',
+  };
 
   /** Combien s'entend ce qui se passe en (x, y) : 0 hors de l'ecran, et de plus
       en plus fort a mesure que le joueur s'approche (`audio.coups_des_autres`).
@@ -329,17 +390,173 @@ const Son = (function () {
     return !!liste && liste.length > 0;
   }
 
-  /** Une boucle qu'on allume et qu'on eteint (sirene, moteur). */
-  function boucle(slug, actif, volume) {
+  // --- Le fondu enchaine : la regle de TOUTE la musique ---------------------------------
+  /*: ⚠️ Demande de Martin (20 sept. 2026) : « les transitions de musique doivent
+    toujours se faire en crossover, a moins que ce soit necessaire pour l'effet
+    et l'ambiance ». Avant, `boucle(..., false)` faisait `source.stop()` : la
+    piste s'arretait NET et la suivante partait apres — un blanc, ou un coup sec.
+    Maintenant celle qui s'en va BAISSE pendant que celle qui arrive MONTE.
+
+    ⚠️ Trois choses a ne pas defaire :
+    - **Deux gains, pas un** (`entree`, puis `sortie`). Poser une courbe sur un
+      parametre qui en suit deja une leve `NotSupportedError` : quelqu'un qui
+      change encore de piste pendant le fondu d'entree aurait fait taire toute la
+      musique. Chaque gain ne recoit qu'UNE courbe.
+    - **Puissance constante** (sinus, cosinus), pas une rampe lineaire : deux
+      morceaux qui n'ont rien en commun sonnent deux fois moins fort au milieu
+      d'une rampe lineaire, et on entend le creux.
+    - **La piste qui sort quitte `boucles` TOUT DE SUITE** : sa cle est libre pour
+      la suivante (redemander la meme toune ne tombe pas sur elle), et
+      `boucleActive` ne dit « vrai » que de ce qu'on est cense entendre.
+
+    ⚠️ **UNE COUPURE FRANCHE SE DEMANDE.** Le fondu est ce qui arrive par defaut
+    a toute la musique ; couper net, c'est passer `0` a l'appel
+    (`Mus.jouer(slug, 0)`, `Mus.arreter(0)`) — et ecrire la raison a cet endroit,
+    parce que ce n'est jamais un oubli qu'on veut y trouver. */
+  const POINTS_DE_COURBE = 64;
+
+  /** La courbe d'un fondu, de 0 a 1 (`entrant`) ou de 1 a 0, a PUISSANCE CONSTANTE. */
+  function courbeDeFondu(entrant) {
+    const c = new Float32Array(POINTS_DE_COURBE);
+    for (let i = 0; i < POINTS_DE_COURBE; i++) {
+      const x = i / (POINTS_DE_COURBE - 1) * Math.PI / 2;
+      c[i] = entrant ? Math.sin(x) : Math.cos(x);
+    }
+    return c;
+  }
+
+  /** Combien de secondes dure un fondu. `vif` : celui de la musique d'ETAT qui
+      arrive et du musicien de rue. ⚠️ Les chiffres viennent de Python
+      (`musique.MUSIQUE`), comme l'echelle : le navigateur les LIT. */
+  function dureeFondu(vif) {
+    const r = reglagesMusique();
+    return vif ? (r.fondu_vif_s || 0.7) : (r.fondu_s || 2);
+  }
+
+  /** Les chiffres de la musique, tels que Python les ecrit (`musique.MUSIQUE`). */
+  function reglagesMusique() { return (B.defs && B.defs.audio && B.defs.audio.musique) || {}; }
+
+  /** La poursuite et la bagarre : les deux pistes qui prennent toute la place. */
+  function pisteDEtat(slug) { return slug === 'mus_poursuite' || slug === 'mus_bagarre'; }
+
+  /** Les deux gains d'un fondu, branches sur le maitre. Tout ce qu'on branche
+      sur `entree` monte pendant `duree` secondes (0 : plein tout de suite), et
+      `sortir(d)` le fait redescendre jusqu'au silence en `d` secondes. */
+  function chaineDeFondu(duree) {
+    const entree = ctx.createGain(), sortie = ctx.createGain();
+    entree.connect(sortie);
+    sortie.connect(maitre);
+    if (duree > 0) {
+      entree.gain.value = 0;
+      entree.gain.setValueCurveAtTime(courbeDeFondu(true), ctx.currentTime, duree);
+    }
+    let sortant = false;
+    return {
+      entree: entree,
+      sortir: function (d) {
+        if (sortant) return;
+        sortant = true;
+        sortie.gain.setValueCurveAtTime(courbeDeFondu(false), ctx.currentTime, d);
+      },
+    };
+  }
+
+  /** Eteint une boucle : en fondu si elle en a un et qu'on en demande un, net sinon. */
+  function eteindre(courante, fondu) {
+    if (fondu > 0 && courante.fondu && ctx) {
+      courante.fondu.sortir(fondu);
+      // ⚠️ Un peu APRES la fin de la courbe, jamais avant : arreter la source a
+      // l'instant ou le gain touche zero laisserait un claquement.
+      try { courante.source.stop(ctx.currentTime + fondu + 0.05); } catch (e) { /* deja finie */ }
+      return;
+    }
+    try { courante.source.stop(); } catch (e) { /* deja finie */ }
+  }
+
+  /** Une boucle qu'on allume et qu'on eteint (sirene, moteur — et la musique, qui
+      passe `fondu`, en secondes : voir plus haut). Sans `fondu`, elle part et
+      s'arrete net, comme un moteur. */
+  function boucle(slug, actif, volume, fondu) {
     const courante = boucles.get(slug);
     if (actif && !courante) {
-      const jouee = echantillon(slug, { boucle: true, volume: volume });
+      const jouee = echantillon(slug, { boucle: true, volume: volume, fondu: fondu });
       if (jouee) boucles.set(slug, jouee);
     } else if (!actif && courante) {
-      try { courante.source.stop(); } catch (e) { /* deja finie */ }
       boucles.delete(slug);
+      eteindre(courante, fondu);
     }
   }
+
+  // --- Le ducking : la musique se retire quand quelqu'un parle, GRADUELLEMENT ---------
+  /*: ⚠️ Demande de Martin (20 sept. 2026), dans le prolongement du fondu enchaine :
+    « il faut aussi baisser les volumes et les monter graduellement ». Avant, la
+    musique tombait au quart D'UN COUP a la premiere syllabe d'une replique et
+    revenait d'un coup a la derniere : deux repliques qui s'enchainaient la
+    faisaient sauter deux fois.
+
+    ⚠️ Le niveau GLISSE vers sa cible a chaque image de `maj()`, qui tourne a pas
+    fixe (60 par seconde, `jeu.js`) : `baisse_s` et `remonte_s` sont de vraies
+    secondes, quelle que soit la frequence de l'ecran — et le banc, qui rejoue les
+    memes pas, voit la meme courbe.
+
+    ⚠️ Elle REMONTE PLUS LENTEMENT qu'elle ne baisse, et c'est voulu : entre deux
+    repliques d'une meme conversation, la musique n'a pas le temps de revenir.
+
+    ⚠️ Ce qui glisse, c'est le NIVEAU ; qui l'applique reste a chacun : les boucles
+    (`musique-`, `radio-`, `ambiance-`), les notes du sequenceur (`Mus.attenuation`,
+    lue a la pose : jusqu'a HORIZON_S de retard, ce qui est deja programme garde son
+    volume) et le musicien de rue (`Rue.attenuation`). */
+  const IMAGE_S = 1 / 60;
+
+  /** Un niveau qui rejoint sa `cible` GRADUELLEMENT, un pas de `maj()` a la fois :
+      exponentiel, donc sans a-coup au depart, et arrete net quand il y est. */
+  function glisser(niveau, cible) {
+    if (niveau === cible) return niveau;
+    const r = reglagesMusique();
+    const duree = cible < niveau ? (r.baisse_s || 0.3) : (r.remonte_s || 1.2);
+    const suivant = niveau + (cible - niveau) * (1 - Math.exp(-IMAGE_S / (duree / 3)));
+    return Math.abs(cible - suivant) < 0.005 ? cible : suivant;
+  }
+
+  /** Une boucle qui est de la MUSIQUE (celle qui baisse pendant une replique). ⚠️
+      `rue-` est absent expres : le musicien de rue repose son gain a chaque image,
+      attenuation comprise (`Rue.tick`). */
+  function boucleDeMusique(slug) {
+    return slug.indexOf('radio-') === 0 || slug.indexOf('ambiance-') === 0 || slug.indexOf('musique-') === 0;
+  }
+
+  const Duck = {
+    niveau: 1,          // 1 = plein ; `ducking` = tout en bas
+    cible: 1,
+
+    /** Ou l'on veut aller : `actif` = quelqu'un parle. */
+    viser: function (actif) {
+      Duck.cible = actif ? (reglagesMusique().ducking || 0.25) : 1;
+    },
+
+    /** Une image (`Mus.tick`). Ne fait rien quand tout est au plein volume.
+        ⚠️ Elle tourne AUSSI quand le niveau est installe en bas : une boucle
+        demarree pendant une replique n'a pas encore son `avant`. */
+    maj: function () {
+      if (Duck.niveau === 1 && Duck.cible === 1) return;
+      Duck.niveau = glisser(Duck.niveau, Duck.cible);
+      Mus.attenuation = Duck.niveau;
+      Rue.attenuation = Duck.niveau;
+      boucles.forEach(function (courante, slug) {
+        if (!boucleDeMusique(slug)) return;
+        // ⚠️ `avant` = le volume SANS ducking, pris la premiere fois qu'on baisse ce
+        // qui joue : une boucle demarree PENDANT une replique le prend a son tour, et
+        // baisse elle aussi au lieu de couvrir la voix.
+        if (Duck.niveau < 1) {
+          if (courante.avant === undefined) courante.avant = courante.gain.gain.value;
+          courante.gain.gain.value = courante.avant * Duck.niveau;
+        } else if (courante.avant !== undefined) {
+          courante.gain.gain.value = courante.avant;
+          delete courante.avant;
+        }
+      });
+    },
+  };
 
   /** Regle une boucle en marche : volume (0..1) et hauteur (1 = normale).
       C'est ce qui fait monter le moteur dans les tours. */
@@ -361,6 +578,38 @@ const Son = (function () {
     return courante ? courante.gain.gain.value : null;
   }
 
+  //: Le passe-bas d'une boucle entendue a travers un mur : ouvert, il laisse
+  //: tout passer ; ferme, il ne garde que le grave — le rotor sans son sifflement.
+  const COUPURE_CLAIRE = 20000, COUPURE_SOURDE = 250;
+
+  /** Etouffe une boucle en marche : `part` 0 = en plein air, 1 = a travers un
+      toit. Le passe-bas se glisse entre la source et le gain a la premiere
+      demande : les boucles qu'on n'etouffe jamais n'en portent pas. */
+  function etouffer(slug, part) {
+    const courante = boucles.get(slug);
+    if (!courante || !ctx || !ctx.createBiquadFilter) return;
+    if (!courante.sourdine) {
+      const filtre = ctx.createBiquadFilter();
+      filtre.type = 'lowpass';
+      filtre.Q.value = 0.7;
+      // ⚠️ La source ne va QUE dans son gain (`echantillon`) : la debrancher puis
+      // la rebrancher par le filtre ne perd rien d'autre en chemin.
+      courante.source.disconnect();
+      courante.source.connect(filtre).connect(courante.gain);
+      courante.sourdine = filtre;
+    }
+    // Exponentielle : l'oreille entend des octaves, pas des hertz.
+    const p = Math.max(0, Math.min(1, part));
+    courante.sourdine.frequency.value = COUPURE_CLAIRE * Math.pow(COUPURE_SOURDE / COUPURE_CLAIRE, p);
+  }
+
+  /** La coupure du passe-bas d'une boucle (en Hz), ou null : jamais etouffee, ou
+      eteinte. Le pendant en LECTURE d'`etouffer`, comme `volumeBoucle`. */
+  function coupureBoucle(slug) {
+    const courante = boucles.get(slug);
+    return courante && courante.sourdine ? courante.sourdine.frequency.value : null;
+  }
+
   // --- Ça travaille : le filet des sons de chantier ---------------------------------
   //: Chaque son de chantier sans son fichier, a un volume `v` (0..1) qui dit deja
   //: la distance. ⚠️ Le bip de recul N'EST QUE CA : ElevenLabs n'a rendu que des
@@ -379,6 +628,32 @@ const Son = (function () {
       for (let k = 0; k < 3; k++) { tonA(t0 + k * 0.22, 420, 0.06, 'triangle', 0.22 * v, 0.7); bruitA(t0 + k * 0.22, 0.05, 0.2 * v, 2500); }
     },
     scie: function (v) { ton(1800, 1.4, 'sawtooth', 0.04 * v, 1.15); bruit(1.2, 0.08 * v, 5000, 2500); },
+    // La benne qu'on pousse : la tôle qui racle le trottoir, et un coup sourd de caisse vide.
+    conteneur: function (v) {
+      const t0 = ctx.currentTime;
+      bruitA(t0, 0.35, 0.2 * v, 1400);
+      tonA(t0 + 0.05, 95, 0.18, 'square', 0.12 * v, 0.7);
+      tonA(t0 + 0.05, 240, 0.25, 'triangle', 0.05 * v, 0.9);
+    },
+    // Le tas de terre : la roue attaque la pente (un coup sourd), la terre roule sous
+    // la caisse (du gravier), et on retombe mollement. Synthétisé : du sable, pas du fer.
+    tas: function (v) {
+      const t0 = ctx.currentTime;
+      tonA(t0, 62, 0.16, 'sine', 0.3 * v, 0.6);
+      bruitA(t0, 0.28, 0.16 * v, 900);
+      bruitA(t0 + 0.22, 0.14, 0.1 * v, 500);
+    },
+    // La plaque d'acier de la tranchée : la roue avant claque, la plaque résonne, et
+    // la roue arrière claque à son tour. Synthétisée, comme le nid-de-poule : un
+    // cahot n'a pas besoin d'un fichier.
+    plaque: function (v) {
+      const t0 = ctx.currentTime;
+      for (const [dt, force] of [[0, 1], [0.13, 0.7]]) {
+        tonA(t0 + dt, 210, 0.09, 'square', 0.2 * v * force, 0.55);
+        bruitA(t0 + dt, 0.1, 0.18 * v * force, 3200);
+        tonA(t0 + dt + 0.02, 560, 0.3, 'triangle', 0.08 * v * force, 0.96);
+      }
+    },
     // Le bras du camion a ordures : le moteur hydraulique, puis ce qui degringole.
     benne: function (v) { ton(160, 1.1, 'sawtooth', 0.05 * v, 1.5); bruit(0.8, 0.25 * v, 1400, 200); },
   };
@@ -388,6 +663,28 @@ const Son = (function () {
   //: (encore) la — le dialogue de l'appel l'attend, et attendre les deux secondes
   //: du fichier pendant que trois bips ont deja fini serait un silence pour rien.
   const SONNERIE_SYNTHESE = 0.37;
+
+  // --- Les briques des sons de prime (le filet synthetise) ---------------------------
+  /** La caisse enregistreuse : le tiroir qui claque, puis la clochette. */
+  function caisse(depart) {
+    ton(180, 0.06, 'square', 0.12, 0.6, depart);
+    ton(2093, 0.35, 'sine', 0.22, 1, depart + 0.05);
+    ton(2637, 0.5, 'sine', 0.18, 1, depart + 0.1);
+  }
+  /** `n` pieces qui tombent pendant `duree` secondes, a partir de `depart`.
+      ⚠️ Sans `Math.random` : la hauteur et l'ecart se tirent de l'indice, pour
+      que le son ne puise pas dans le hasard du jeu, et qu'il soit le meme
+      d'une fois sur l'autre. */
+  function pieces(n, duree, depart) {
+    for (let i = 0; i < n; i++) {
+      const f = 2900 + ((i * 7919) % 11) * 240, dt = ((i * 37) % 5) * 0.012;
+      ton(f, 0.07, 'sine', 0.1, 0.97, depart + (i * duree) / n + dt);
+    }
+  }
+  /** Do-mi-sol-do, vif : la fanfare des grosses primes. */
+  function arpege(depart, pas, volume) {
+    [523, 659, 784, 1047].forEach(function (f, i) { ton(f, i === 3 ? pas * 2.5 : pas, 'square', volume, 1, depart + i * pas); });
+  }
 
   const SFX = {
     pas: function () { if (!joue('pas')) bruit(0.05, 0.12, 900, 300); },
@@ -400,7 +697,10 @@ const Son = (function () {
     //: un coup de poing. ⚠️ Synthetise, et ce n'est pas une economie de bouts de
     //: chandelle : le seau des bruitages porte deja 190 fichiers, et un coup sec
     //: est exactement ce qu'un oscillateur fait le mieux.
-    maillet: function () { ton(190, 0.07, 'square', 0.26, 0.4); bruit(0.07, 0.22, 700, 180); },
+    //: ⚠️ 22 sept. 2026 : il emprunte le coup de BATON (`batte`, un « thwack »
+    //: de bois creux), deja paye — la meme matiere qu'un maillet sur un plateau
+    //: de bois, sans un octet de plus au seau. La synthese reste le filet.
+    maillet: function () { if (!joue('batte')) { ton(190, 0.07, 'square', 0.26, 0.4); bruit(0.07, 0.22, 700, 180); } },
     //: LA CLOCHE, en haut de la colonne : UN coup, clair et qui traine. C'est le
     //: seul son du jeu qui dise « tu as gagne » avant que le HUD l'ecrive — deux
     //: coups en feraient un tramway (`cloche_tram`), qui, lui, passe.
@@ -484,10 +784,14 @@ const Son = (function () {
         d'une borne : `volume` 0 = on se tait. Faute de fichier, un grondement
         sourd toutes les quinze images, qui se recouvre. */
     /** La corne du traversier, posee en (x, y) : l'echantillon s'il est charge, sinon
-        deux longs coups graves. Rend le volume (0 = trop loin). */
+        deux longs coups graves. Rend le volume (0 = trop loin).
+        ⚠️ SANS position, elle sonne ou l'on est : c'est l'avertisseur des grands
+        bateaux (`klaxon: 'corne'` de leur fiche), et `Vehicules.avertir` appelle
+        un avertisseur sans rien lui donner, comme le klaxon et la sonnette. */
     corne: function (x, y, portee) {
       const j = B.joueur;
       if (!j || !pret()) return 0;
+      if (x === undefined || y === undefined) { x = j.x; y = j.y; }
       const p = portee || 900;
       const v = 1 - Math.hypot(x - j.x, y - j.y) / p;
       if (v <= 0) return 0;
@@ -594,6 +898,42 @@ const Son = (function () {
       bruit(0.5, 0.12, 700, 180);
       for (let i = 0; i < 6; i++) ton(150 + (i % 2) * 35, 0.04, 'square', 0.05, 0.8, i * 0.08);
     },
+    // La barriere coulissante du poste : le moteur qui ronronne et les roulettes
+    // sur le rail, puis le claquement du panneau en butee. ⚠️ Synthetise seulement,
+    // comme le rideau : pas de fichier au catalogue.
+    barriere_coulissante: function () {
+      bruit(0.8, 0.07, 420, 120);
+      ton(88, 0.8, 'sawtooth', 0.035, 0.9);
+      ton(1900, 0.05, 'square', 0.05, 0.5, 0.82);
+      ton(140, 0.08, 'square', 0.07, 0.6, 0.82);
+    },
+    // Le pistolet de la carrosserie, derriere le rideau baisse : UNE passe, un souffle
+    // aigu qui siffle et le compresseur qui cogne dessous — l'atelier en fait trois
+    // (`Missions.majGarage`). ⚠️ Synthetise seulement, comme le rideau : pas de
+    // fichier au catalogue.
+    //: ⚠️ 22 sept. 2026 : la passe emprunte le souffle de l'EXTINCTEUR, deja
+    //: paye (un jet de poudre sous pression), coupe a 0,4 s et a moitie
+    //: volume — c'est derriere un rideau baisse. La synthese reste le filet.
+    pistolet_peinture: function () {
+      if (bref('extincteur', 0.4, 0.5)) return;
+      bruit(0.4, 0.09, 5200, 3400);
+      ton(62, 0.12, 'square', 0.04, 0.6);
+    },
+    /** Un decor qui CEDE (`Entites.briser`), par sa matiere : voir
+        `MATIERE_DU_BRIS`. Une seule fois par image : l'explosion d'un char
+        couche six decors d'un coup, et six fois le meme fichier au meme
+        instant ne sonnent pas plus fort, ils saturent. Rend le slug joue. */
+    bris: function (decor) {
+      const slug = MATIERE_DU_BRIS[decor];
+      if (!slug || dernierBris === B.t) return null;
+      dernierBris = B.t;
+      // ⚠️ Chaque `joue` nomme son fichier en toutes lettres : c'est ce que
+      // `test_audio.py` lit pour tenir le catalogue et le filet.
+      if (slug === 'pelle') { if (!joue('pelle')) bruit(0.2, 0.3, 2600, 400); }
+      else if (slug === 'bouteille') { if (!joue('bouteille')) bruit(0.2, 0.3, 3000, 400); }
+      else if (!joue('casse')) bruit(0.2, 0.3, 3000, 400);
+      return slug;
+    },
     // ⚠️ La sonnette est l'AVERTISSEUR du velo (`vehicules.py`, `klaxon`) : au
     // meme bouton que le klaxon d'une auto. Les velos du trafic la font deja
     // entendre en passant (`jouerA`) ; ici c'est la sienne.
@@ -669,9 +1009,38 @@ const Son = (function () {
       if (actif && B.t % 8 === 0) SFX.extincteur();
     },
     mission: function () { ton(523, 0.1, 'square', 0.2); ton(659, 0.1, 'square', 0.2, 1, 0.1); ton(784, 0.25, 'square', 0.22, 1, 0.2); },
+    // --- La prime d'une mission : le son dit sa taille (`economie.PRIME_PALIERS`) ---
+    // ⚠️ `prime(palier)` est le seul point d'entree : `Missions.annoncerPrime`
+    // l'appelle avec le palier deja tranche. SYNTHESE SEULE pour l'instant :
+    // les mp3 attendent le quota (`audio.EN_ATTENTE`, qui dit comment les
+    // brancher — un `joue` devant chaque ligne, comme les autres). La gradation
+    // est la meme des deux cotes : la caisse, puis des pieces de plus en plus
+    // nombreuses, puis la fanfare. La pluie de pieces dure ce que dure le
+    // compteur du bandeau (`Hud.prime`) : on entend l'argent tomber pendant
+    // qu'on le voit monter.
+    prime_petite: function () { caisse(0); pieces(3, 0.25, 0.12); },
+    prime_moyenne: function () { caisse(0); pieces(8, 0.6, 0.1); ton(784, 0.1, 'square', 0.12, 1, 0.5); ton(1047, 0.22, 'square', 0.14, 1, 0.6); },
+    prime_grosse: function () { arpege(0, 0.09, 0.16); caisse(0.36); pieces(14, 1.1, 0.4); ton(1047, 0.45, 'triangle', 0.18, 1, 1.2); ton(1319, 0.45, 'triangle', 0.14, 1, 1.2); },
+    prime_gros_lot: function () { arpege(0, 0.1, 0.2); arpege(0.4, 0.1, 0.2); caisse(0.8); caisse(1.3); pieces(28, 1.8, 0.8); [1047, 1319, 1568, 2093].forEach(function (f) { ton(f, 0.9, 'triangle', 0.14, 1, 2.2); }); },
+    prime: function (palier) { (SFX['prime_' + palier] || SFX.prime_petite)(); },
   };
 
   // --- Les voix des passants : un mot quand on se frole ------------------------------
+
+  /** Une BANDE de frequences : un passe-haut puis un passe-bas, plat entre les
+      deux. Le combine du telephone (300 Hz - 3,4 kHz, voir `Voix.parler`), le
+      scanner de la police, le haut-parleur d'un autoradio. `renfort` compense
+      ce que la coupe retire : une voix sans ses graves s'entend moins fort a
+      puissance egale. Rend le dernier noeud, a brancher sur la sortie. */
+  function bande(gain, basHz, hautHz, renfort) {
+    const haut = ctx.createBiquadFilter();
+    haut.type = 'highpass'; haut.frequency.value = basHz;
+    const bas = ctx.createBiquadFilter();
+    bas.type = 'lowpass'; bas.frequency.value = hautHz;
+    gain.gain.value *= renfort || 1;
+    gain.connect(haut); haut.connect(bas);
+    return bas;
+  }
 
   const Voix = {
     dernierT: -9999, chargees: false,
@@ -718,6 +1087,8 @@ const Son = (function () {
         `fin` s'appelle quand la voix se tait (jamais si elle n'a pas joue). */
     parler: function (slug, options) {
       Voix.couper();
+      // ⚠️ La mission passe AVANT les ondes : l'animateur ou le scanner se taisent.
+      Ondes.couper();
       Voix.demandees.push(slug);
       if (Voix.demandees.length > 50) Voix.demandees.shift();
       const cle = 'histoire-' + slug;
@@ -745,12 +1116,7 @@ const Son = (function () {
            Le 2x qui reste n'est pas un caprice : une voix coupee de ses graves
            s'entend moins fort a puissance egale, et un appel se prend au milieu
            des moteurs et de la rue. Un combine, ca doit percer. */
-        const haut = ctx.createBiquadFilter();
-        haut.type = 'highpass'; haut.frequency.value = 300;
-        const bas = ctx.createBiquadFilter();
-        bas.type = 'lowpass'; bas.frequency.value = 3400;
-        gain.gain.value *= 2;
-        gain.connect(haut); haut.connect(bas); sortie = bas;
+        sortie = bande(gain, 300, 3400, 2);
       }
       // ⚠️ Comme dans `echantillon()` : sans cette ligne la replique se charge,
       // se decode, « joue » (`enCours` est pose, la radio baisse, le texte
@@ -772,25 +1138,17 @@ const Son = (function () {
       Voix.baisserLeReste(false);
     },
 
-    /** Le ducking : les boucles de musique (radio, ambiance) au quart pendant qu'on parle. */
+    /** Le ducking : la musique se retire pendant qu'on parle — GRADUELLEMENT, voir
+        « Le ducking ». ⚠️ Cet appel ne baisse rien : il donne la CIBLE, et `Duck`
+        glisse. Tout ce qui joue est concerne — les boucles (radio, ambiance,
+        `musique-`), le sequenceur (`Mus.attenuation`) et le musicien de rue, qui a
+        sa propre sortie : sans lui, sa guitare couvrait la voix au telephone,
+        exactement comme la radio du camion le faisait avant elle. */
     baisserLeReste: function (actif) {
-      Mus.attenuation = actif ? 0.25 : 1;
-      // ⚠️ Le musicien de rue AUSSI : il ne traverse ni `boucles` ni `Mus`, il
-      // a sa propre sortie — sans cette ligne, sa guitare couvrait la voix au
-      // telephone, exactement comme la radio du camion le faisait avant elle.
-      Rue.attenuation = actif ? 0.25 : 1;
-      boucles.forEach(function (courante, slug) {
-        // ⚠️ `musique-` aussi, depuis que les quinze morceaux sont des mp3 :
-        // sans lui, l'ambiance du district et la musique de poursuite
-        // couvraient la replique, exactement comme la radio du camion le
-        // faisait avant elles. (`rue-` est absent expres : le musicien de rue
-        // repose son gain a chaque image, attenuation comprise.)
-        if (slug.indexOf('radio-') !== 0 && slug.indexOf('ambiance-') !== 0
-            && slug.indexOf('musique-') !== 0) return;
-        if (actif && courante.avant === undefined) { courante.avant = courante.gain.gain.value; courante.gain.gain.value = courante.avant * 0.25; }
-        else if (!actif && courante.avant !== undefined) { courante.gain.gain.value = courante.avant; delete courante.avant; }
-      });
       Voix.ducking = !!actif;
+      // ⚠️ Quelqu'un parle aussi quand c'est la radio ou la police (`Ondes`) : la
+      // fin d'une replique de mission ne remonte pas la musique sous le scanner.
+      Duck.viser(Voix.ducking || !!Ondes.enCours);
     },
 
     /** Une replique du catalogue, au hasard, pour ce genre — SANS regarder si
@@ -854,6 +1212,252 @@ const Son = (function () {
     },
   };
 
+  // --- Sur les ondes : la radio qui parle, et la police ------------------------------
+  /*: ⚠️ M15, 2e vague. « L'ame d'une radio, c'est ce qui se dit ENTRE les tounes » :
+    douze clips d'animateurs et de pubs etaient generes, declares et telecharges au
+    demarrage depuis le 16 sept. 2026 — et AUCUNE ligne du jeu ne les jouait. Et la
+    police, qu'on voyait partout, ne s'entendait nulle part.
+
+    ⚠️ UNE bande pour les deux : l'animateur et le scanner ne se marchent pas
+    dessus, la police passe devant l'animateur, et une replique de MISSION passe
+    devant tout le monde (`Voix.parler` coupe les ondes ; les ondes attendent
+    qu'elle finisse). Ce qui passe baisse la musique comme une replique.
+
+    ⚠️ A TOUR DE ROLE, JAMAIS `B.rng()` : ce sont des bruits de fond qui tournent
+    toute la partie, et un de de plus decalerait tout le hasard du jeu
+    (`docs/ecrire-drole.md`, regle 8). Chaque liste se lit dans l'ordre.
+
+    `dites` garde ce qui est passe, fichier ou pas : le banc n'a pas d'oreille. */
+  const Ondes = {
+    enCours: null,           // { source, slug, radio } : ce qui passe en ce moment
+    dites: [],               // { slug, t, bande } — ce qui est passe, dans l'ordre
+    tours: {},               // cle -> combien de fois on a pioche dans cette liste
+    station: null,           // la station dont on compte les tounes
+    prochaineT: 0,           // quand l'animateur reprend la parole
+    n: 0,                    // combien de fois il l'a prise sur cette station
+    policeT: -99999,         // le dernier message de la police
+    derniers: {},            // evenement -> quand il a ete dit
+
+    reglages: function () { return (B.defs && B.defs.audio && B.defs.audio.ondes) || {}; },
+
+    /** Le suivant d'une liste, a tour de role : on n'entend deux fois la meme
+        replique qu'apres les avoir toutes entendues. */
+    aTourDeRole: function (cle, liste) {
+      if (!liste.length) return null;
+      const n = Ondes.tours[cle] || 0;
+      Ondes.tours[cle] = n + 1;
+      return liste[n % liste.length];
+    },
+
+    /** La pub suivante. ⚠️ Celle d'un commerce qu'on POSSEDE est sa jumelle « a
+        toi » : entendre son propre bar annonce a la radio, dans un char qu'on
+        vient de voler, c'est exactement ce que M15 promet. */
+    pub: function () {
+      const pubs = Voix.liste().filter(function (v) { return v.genre === 'pub'; });
+      const v = Ondes.aTourDeRole('pub', pubs.filter(function (p) { return !p.a_toi; }));
+      const a = B.partie && B.partie.proprietes;
+      if (!v || !v.propriete || !(a && a[v.propriete])) return v;
+      return pubs.find(function (p) { return p.a_toi && p.propriete === v.propriete; }) || v;
+    },
+
+    /** Une image. L'animateur de la station qui joue reprend la parole entre deux
+        et trois tounes ; une station sans animateur (le Choc, le camion) se tait. */
+    maj: function () {
+      const r = Ondes.reglages();
+      const station = Radio.demandee;
+      if (station !== Ondes.station) {
+        // ⚠️ On change de station, ou on l'eteint : l'animateur se tait avec elle.
+        if (Ondes.enCours && Ondes.enCours.radio) Ondes.couper();
+        Ondes.station = station;
+        Ondes.n = 0;
+        Ondes.prochaineT = B.t + (r.premiere_s || 20) * 60;
+      }
+      const genres = station && r.stations ? r.stations[station] : null;
+      if (!genres || !genres.length || B.t < Ondes.prochaineT) return;
+      if (Voix.enCours || Ondes.enCours) { Ondes.prochaineT = B.t + (r.attente_s || 2) * 60; return; }
+      const genre = genres[Ondes.n % genres.length];
+      const v = genre === 'pub' ? Ondes.pub()
+        : Ondes.aTourDeRole(genre, Voix.liste().filter(function (x) { return x.genre === genre; }));
+      Ondes.n++;
+      // Entre deux et trois tounes, et pas toujours le meme ecart — sans de.
+      const iv = r.intervalle_s || [80, 125];
+      Ondes.prochaineT = B.t + (iv[0] + (Ondes.n * 23) % Math.max(1, iv[1] - iv[0])) * 60;
+      if (v) Ondes.dire(v, 'radio');
+    },
+
+    /** La police parle : `evenement` est l'un de `audio.EVENEMENTS_DE_POLICE`.
+        Rend le slug dit, ou null. ⚠️ Jamais par-dessus une replique de mission,
+        jamais deux messages colles, et le meme evenement ne se redit pas a
+        chaque etoile — sinon le scanner devient une alarme. */
+    police: function (evenement) {
+      const r = Ondes.reglages();
+      if (Voix.enCours) return null;
+      if (B.t - Ondes.policeT < (r.police_temps_mort_s || 6) * 60) return null;
+      const dernier = Ondes.derniers[evenement];
+      if (dernier !== undefined && B.t - dernier < (r.police_repos_s || 30) * 60) return null;
+      const v = Ondes.aTourDeRole('police-' + evenement,
+        Voix.liste().filter(function (x) { return x.genre === 'police' && x.evenement === evenement; }));
+      if (!v) return null;
+      Ondes.policeT = B.t;
+      Ondes.derniers[evenement] = B.t;
+      Ondes.couper();                     // la police passe devant l'animateur
+      Ondes.dire(v, 'police');
+      return v.slug;
+    },
+
+    /** Fait passer `v` sur les ondes. Le scanner est la bande du telephone ;
+        l'autoradio, celle d'un petit haut-parleur. */
+    dire: function (v, quelle) {
+      Ondes.dites.push({ slug: v.slug, t: B.t, bande: quelle });
+      if (Ondes.dites.length > 50) Ondes.dites.shift();
+      const liste = tampons.get('voix-' + v.slug);
+      if (!pret() || !liste || !liste.length) return null;
+      const source = ctx.createBufferSource();
+      source.buffer = liste[0];
+      const gain = ctx.createGain();
+      gain.gain.value = v.volume || 0.7;
+      source.connect(gain);
+      const sortie = ctx.createBiquadFilter
+        ? (quelle === 'police' ? bande(gain, 300, 3400, 2) : bande(gain, 150, 6000, 1.2))
+        : gain;
+      sortie.connect(maitre);
+      const enCours = { source: source, gain: gain, slug: v.slug, radio: quelle === 'radio' };
+      source.onended = function () {
+        if (Ondes.enCours === enCours) { Ondes.enCours = null; Duck.viser(Voix.ducking); }
+      };
+      Ondes.enCours = enCours;
+      Duck.viser(true);
+      source.start(ctx.currentTime);
+      return enCours;
+    },
+
+    couper: function () {
+      if (!Ondes.enCours) return;
+      try { Ondes.enCours.source.onended = null; Ondes.enCours.source.stop(); } catch (e) { /* deja finie */ }
+      Ondes.enCours = null;
+      Duck.viser(Voix.ducking);
+    },
+  };
+
+  // --- Le souffle du joueur ------------------------------------------------------------
+  /*: ⚠️ M15, 2e vague. Il sprinte, il s'essouffle, et on n'entendait rien : la barre
+    d'endurance ne se lisait qu'en la regardant, alors que le sprint est une
+    ressource qu'on depense par bouffees. Une boucle qui suit la DETTE de souffle
+    (ce qu'on a depense), et une inspiration quand il repart. Tout vient de
+    `audio.souffle` ; `reprises` compte les inspirations (le banc n'a pas d'oreille). */
+  const Souffle = {
+    volume: 0,          // ce que la boucle joue en ce moment (0..1)
+    bas: false,         // descendu sous `bas` : la prochaine remontee s'entend
+    reprises: 0,
+
+    maj: function (j) {
+      const r = (B.defs && B.defs.audio && B.defs.audio.souffle) || {};
+      const max = (B.defs && B.defs.recherche && B.defs.recherche.vitesses.endurance) || 100;
+      // Au volant, on ne s'entend pas respirer — et on ne court pas.
+      const actif = !!(j && j.vivant !== false && !j.dansVehicule && B.etat === 'jeu');
+      const dette = actif ? 1 - Math.max(0, j.endurance) / max : 0;
+      const seuil = r.seuil === undefined ? 0.35 : r.seuil;
+      const voulu = dette <= seuil ? 0 : Math.min(1, (dette - seuil) / (1 - seuil));
+      // ⚠️ Il MONTE vite et REDESCEND doucement : on halete encore un moment apres
+      // s'etre arrete. Un souffle qui se coupe net a la seconde ou l'on lache le
+      // bouton, c'est une barre de vie qui fait du bruit, pas quelqu'un qui respire.
+      Souffle.volume = voulu > Souffle.volume
+        ? Math.min(voulu, Souffle.volume + (r.monte_par_image || 0.03))
+        : Math.max(voulu, Souffle.volume - (r.descend_par_image || 0.006));
+      if (Souffle.volume <= 0.02) {
+        if (boucleActive('souffle')) boucle('souffle', false);
+      } else {
+        if (!boucleActive('souffle')) boucle('souffle', true, Souffle.volume);
+        reglerBoucle('souffle', Souffle.volume);
+      }
+      if (!actif) { Souffle.bas = false; return; }
+      if (j.endurance <= (r.bas || 0.2) * max) Souffle.bas = true;
+      else if (Souffle.bas && j.endurance >= (r.reprise || 0.6) * max) {
+        // ⚠️ LE SOUFFLE REPART : c'est le moment ou l'on peut de nouveau courir,
+        // et c'est la seule chose que la barre disait qu'on ne pouvait pas entendre.
+        Souffle.bas = false;
+        Souffle.reprises++;
+        if (!joue('reprise')) bruit(0.5, 0.05, 1600, 500);
+      }
+    },
+  };
+
+  // --- Les bruits de quartier ----------------------------------------------------------
+  /*: ⚠️ M15, 2e vague. Pas des nappes — chaque district a deja sa musique — mais des
+    EVENEMENTS, rares et au loin : une corne de brume aux Quais, un marteau a La
+    Shop, une tondeuse aux Erables. Un quartier s'entend avant de se voir.
+
+    ⚠️ A TOUR DE ROLE, jamais `B.rng()` (comme `Ondes`), et chaque son a ses heures.
+    Il vient d'une direction qui TOURNE (l'angle d'or) : jamais deux fois du meme
+    cote, et `jouerA` le place a gauche ou a droite. `entendus` garde ce qui a
+    joue, fichier ou pas. */
+  const Quartier = {
+    prochaineT: null,
+    n: 0,
+    tours: {},
+    entendus: [],
+    chargees: new Set(),
+
+    /** Charge les bruits d'UN district, une seule fois — comme `Voix.chargerHistoire`
+        charge les repliques d'une mission. Rare et propre au quartier : les charger
+        tous au demarrage doublerait le budget de bruitages pour rien. */
+    charger: function (district) {
+      if (Quartier.chargees.has(district) || !ctx || !fenetre || !fenetre.fetch) return;
+      Quartier.chargees.add(district);
+      const r = (B.defs && B.defs.audio && B.defs.audio.quartiers) || {};
+      const dossier = base + B.defs.audio.dossier + '/';
+      ((r.sons && r.sons[district]) || []).forEach(function (e) {
+        const def = defEchantillon(e.slug);
+        (def && def.fichiers || []).forEach(function (nom) {
+          decoder(dossier + nom)
+            .then(function (tampon) {
+              const liste = tampons.get(e.slug) || [];
+              liste.push(tampon);
+              tampons.set(e.slug, liste);
+            })
+            .catch(function () { /* ce district restera silencieux, tant pis */ });
+        });
+      });
+    },
+
+    /** `heures` : [debut, fin] sur 24 h ramenees a 0..1 ; peut passer minuit. */
+    aSonHeure: function (e, heure) {
+      if (!e.heures) return true;
+      const d = e.heures[0], f = e.heures[1];
+      return d < f ? (heure >= d && heure < f) : (heure >= d || heure < f);
+    },
+
+    maj: function () {
+      const r = (B.defs && B.defs.audio && B.defs.audio.quartiers) || {};
+      const j = B.joueur;
+      if (!r.sons || !j) return;
+      const iv = r.intervalle_s || [25, 50];
+      if (Quartier.prochaineT === null) { Quartier.prochaineT = B.t + iv[0] * 60; return; }
+      if (B.t < Quartier.prochaineT) return;
+      Quartier.n++;
+      // Entre `iv[0]` et `iv[1]` secondes, et pas toujours le meme ecart — sans de.
+      Quartier.prochaineT = B.t + (iv[0] + (Quartier.n * 17) % Math.max(1, iv[1] - iv[0])) * 60;
+      // Dedans, on n'entend pas la rue : la piece a sa propre musique, ou son silence.
+      if (B.interieur) return;
+      const zone = Monde.zoneA(j.x, j.y);
+      const sons = zone && r.sons[zone.district];
+      if (!sons) return;
+      Quartier.charger(zone.district);
+      const heure = B.partie && B.partie.heure !== undefined ? B.partie.heure : 0.5;
+      const possibles = sons.filter(function (e) { return Quartier.aSonHeure(e, heure); });
+      if (!possibles.length) return;
+      const k = Quartier.tours[zone.district] || 0;
+      Quartier.tours[zone.district] = k + 1;
+      const e = possibles[k % possibles.length];
+      const angle = Quartier.n * 2.39996;
+      const d = r.distance_px || 240;
+      const x = j.x + Math.cos(angle) * d, y = j.y + Math.sin(angle) * d;
+      Quartier.entendus.push({ slug: e.slug, t: B.t, district: zone.district, x: x, y: y });
+      if (Quartier.entendus.length > 50) Quartier.entendus.shift();
+      jouerA(e.slug, x, y, r.portee_px || 420);
+    },
+  };
+
   // --- L'ambiance : la musique de fond, a pied ---------------------------------------
 
   const Ambiance = {
@@ -878,9 +1482,9 @@ const Son = (function () {
         .catch(function () { Ambiance.chargee = null; });
       return true;
     },
-    _demarrer: function (a) { boucle('ambiance-' + a.slug, true, a.volume); Ambiance.courante = a.slug; },
+    _demarrer: function (a) { boucle('ambiance-' + a.slug, true, a.volume, dureeFondu()); Ambiance.courante = a.slug; },
     arreter: function () {
-      if (Ambiance.courante) boucle('ambiance-' + Ambiance.courante, false);
+      if (Ambiance.courante) boucle('ambiance-' + Ambiance.courante, false, undefined, dureeFondu());
       Ambiance.courante = null; Ambiance.demandee = null;
     },
   };
@@ -1006,7 +1610,10 @@ const Son = (function () {
       if (v.slug === Chef.piste) return;
       Chef.piste = v.slug; Chef.rang = v.rang;
       Chef.queue = Chef.queue || 0;
-      Mus.jouer(v.slug);
+      // ⚠️ La musique d'ETAT entre VITE (`fondu_vif_s`) : deux secondes de montee
+      // feraient entendre que ca tourne mal apres l'avoir vu. Elle entre quand
+      // meme en fondu — c'est la duree qui change, pas la regle.
+      Mus.jouer(v.slug, pisteDEtat(v.slug) ? dureeFondu(true) : undefined);
     },
 
     arreter: function () { Mus.arreter(); Chef.piste = null; Chef.rang = 99; Chef.queue = 0; Chef.district = null; Chef.frontiere = null; },
@@ -1131,7 +1738,7 @@ const Son = (function () {
 
     _demarrer: function (slug) {
       const station = Radio.station(slug);
-      boucle('radio-' + slug, true, station ? station.volume : 0.4);
+      boucle('radio-' + slug, true, station ? station.volume : 0.4, dureeFondu());
       Radio.courante = slug;
     },
 
@@ -1139,7 +1746,7 @@ const Son = (function () {
       // ⚠️ On n'arrete le sequenceur QUE s'il jouait une station : au titre il
       // joue le theme du menu, et descendre d'un char ne doit pas l'eteindre.
       if (Radio.courante && Radio.estProcedurale(Radio.courante)) Mus.arreter();
-      else if (Radio.courante) boucle('radio-' + Radio.courante, false);
+      else if (Radio.courante) boucle('radio-' + Radio.courante, false, undefined, dureeFondu());
       Radio.courante = null;
       Radio.demandee = null;
     },
@@ -1263,6 +1870,15 @@ const Son = (function () {
     pas: 0,             // ou l'on en est, en pas (avance meme sans audio)
     debutT: 0,          // l'instant audio du pas 0 ; 0 = pas encore demarre
     prochain: 0,        // le prochain pas a programmer
+    // Le fondu (voir « Le fondu enchaine »). Le mp3 a le sien dans `boucles` ; le
+    // SEQUENCEUR, dont les notes ne traversent aucune boucle, a `chaine`.
+    entreeS: 0,         // la duree du fondu d'entree de la piste courante
+    chaine: null,       // ou aboutissent les notes de la piste courante
+    // ⚠️ Une piste en notes qui s'en va ne se tait pas : elle continue de poser ses
+    // notes, dans sa chaine qui baisse, jusqu'a la fin de la courbe. Le sequenceur
+    // ne programme qu'un quart de seconde d'avance : sans elle, l'ancienne se
+    // tairait en un quart de seconde et le « fondu » n'aurait rien a baisser.
+    sortantes: [],      // { def, debutT, prochain, chaine, finT }
 
     morceaux: function () { return (B.defs && B.defs.audio && B.defs.audio.musiques) || []; },
     def: function (slug) {
@@ -1273,12 +1889,17 @@ const Son = (function () {
     },
 
     /** Demande un morceau. Le redemander pendant qu'il joue ne le fait PAS
-        repartir du debut : le menu le reclame a chaque image. */
-    jouer: function (slug) {
+        repartir du debut : le menu le reclame a chaque image.
+
+        ⚠️ Le morceau qui jouait ne s'arrete pas, il BAISSE pendant que celui-ci
+        monte, `fondu` secondes (`fondu_s` par defaut). `0` coupe net — se justifie
+        a l'appel. */
+    jouer: function (slug, fondu) {
       if (Mus.courante === slug) return true;
       if (!Mus.def(slug)) { Mus.arreter(); return false; }
-      Mus.arreter();
-      Mus.courante = slug; Mus.pas = 0; Mus.debutT = 0; Mus.prochain = 0;
+      const d = fondu === undefined ? dureeFondu() : fondu;
+      Mus.arreter(d);
+      Mus.courante = slug; Mus.pas = 0; Mus.debutT = 0; Mus.prochain = 0; Mus.entreeS = d;
       return true;
     },
 
@@ -1291,17 +1912,26 @@ const Son = (function () {
     _demarrer: function () {
       const def = Mus.def(Mus.courante);
       if (!def || !def.fichier) return;
-      boucle(Mus.cle(Mus.courante), true, volumeFichier(def));
+      boucle(Mus.cle(Mus.courante), true, volumeFichier(def), Mus.entreeS);
     },
 
-    arreter: function () {
-      if (Mus.courante) boucle(Mus.cle(Mus.courante), false);
-      Mus.courante = null; Mus.pas = 0; Mus.debutT = 0; Mus.prochain = 0;
+    /** Eteint la musique — en fondu (`fondu_s`), sauf si on passe `0`. */
+    arreter: function (fondu) {
+      const d = fondu === undefined ? dureeFondu() : fondu;
+      if (Mus.courante) boucle(Mus.cle(Mus.courante), false, undefined, d);
+      // Le sequenceur : la piste passe en `sortantes` et finit sa courbe. A `0`, les
+      // notes deja posees s'eteignent seules — un quart de seconde au plus.
+      if (Mus.chaine && ctx && d > 0 && Mus.debutT) {
+        Mus.chaine.sortir(d);
+        Mus.sortantes.push({ def: Mus.def(Mus.courante), debutT: Mus.debutT, prochain: Mus.prochain,
+                             chaine: Mus.chaine, finT: ctx.currentTime + d });
+      }
+      Mus.courante = null; Mus.pas = 0; Mus.debutT = 0; Mus.prochain = 0; Mus.chaine = null;
     },
     stop: function () { Mus.arreter(); },       // l'ancien nom, garde par prudence
 
-    /** Pose toutes les notes d'un pas, a l'instant `t`. */
-    poser: function (def, p, t, pasS) {
+    /** Pose toutes les notes d'un pas, a l'instant `t`, dans `sortie`. */
+    poser: function (def, p, t, pasS, sortie) {
       for (let v = 0; v < def.voix.length; v++) {
         const voix = def.voix[v];
         const motif = voix.motif || def.pas;
@@ -1311,16 +1941,45 @@ const Son = (function () {
           if (note[0] !== dans) continue;
           const volume = (voix.volume || 0.2) * (note[3] === undefined ? 1 : note[3])
                        * (def.volume || 1) * Mus.attenuation;
-          if (voix.forme === 'bruit') bruitA(t, Math.min(0.12, note[2] * pasS), volume, note[1]);
+          if (voix.forme === 'bruit') bruitA(t, Math.min(0.12, note[2] * pasS), volume, note[1], sortie);
           // ⚠️ 0.92 : la note s'arrete juste avant la suivante. Sans ce blanc,
           // deux notes voisines de meme hauteur n'en font plus qu'une longue.
-          else tonA(t, frequence(note[1]), note[2] * pasS * 0.92, voix.forme, volume);
+          else tonA(t, frequence(note[1]), note[2] * pasS * 0.92, voix.forme, volume, 0, sortie);
         }
       }
     },
 
+    /** Programme les pas d'une piste jusqu'a l'horizon. `piste` porte `debutT` et
+        `prochain` : c'est `Mus` lui-meme pour la piste courante, un objet de
+        `sortantes` pour une qui s'en va. Rend la duree d'un pas, en secondes. */
+    programmer: function (piste, def, sortie) {
+      const pasS = 60 / def.bpm / (def.pas_par_temps || 1);
+      if (!piste.debutT) { piste.debutT = ctx.currentTime + 0.08; piste.prochain = 0; }
+      const limite = ctx.currentTime + HORIZON_S;
+      // Un garde-fou : si l'onglet dort une minute, on ne rattrape pas mille
+      // pas d'un coup — on se recale sur l'horloge.
+      const retard = (ctx.currentTime - piste.debutT) / pasS - piste.prochain;
+      if (retard > 32) { piste.prochain = Math.floor((ctx.currentTime - piste.debutT) / pasS); }
+      while (piste.debutT + piste.prochain * pasS < limite) {
+        Mus.poser(def, piste.prochain, piste.debutT + piste.prochain * pasS, pasS, sortie);
+        piste.prochain++;
+      }
+      return pasS;
+    },
+
     /** Une image de musique. A appeler a CHAQUE image, y compris au menu. */
     tick: function () {
+      // Le ducking glisse d'abord : la duree d'un pas ne depend pas de ce qui joue.
+      Duck.maj();
+      // Les pistes en notes qui finissent leur fondu de sortie — avant tout le
+      // reste : quand plus rien ne joue, elles sont justement les seules.
+      if (Mus.sortantes.length) {
+        if (etatSon() !== 'actif') Mus.sortantes.length = 0;
+        else {
+          Mus.sortantes = Mus.sortantes.filter(function (q) { return ctx.currentTime < q.finT; });
+          Mus.sortantes.forEach(function (q) { Mus.programmer(q, q.def, q.chaine.entree); });
+        }
+      }
       const def = Mus.def(Mus.courante);
       if (!def) return;
       // ⚠️ Un morceau qui sort d'un mp3 n'a RIEN a programmer : la boucle tourne
@@ -1341,17 +2000,10 @@ const Son = (function () {
       // figee, et programmer dedans ferait sortir toute la boucle d'un coup au
       // reveil. Le morceau demarrera pour de bon a la premiere image sonore.
       if (etatSon() !== 'actif') { Mus.pas++; Mus.debutT = 0; Mus.prochain = 0; return; }
-      const pasS = 60 / def.bpm / (def.pas_par_temps || 1);
-      if (!Mus.debutT) { Mus.debutT = ctx.currentTime + 0.08; Mus.prochain = 0; }
-      const limite = ctx.currentTime + HORIZON_S;
-      // Un garde-fou : si l'onglet dort une minute, on ne rattrape pas mille
-      // pas d'un coup — on se recale sur l'horloge.
-      const retard = (ctx.currentTime - Mus.debutT) / pasS - Mus.prochain;
-      if (retard > 32) { Mus.prochain = Math.floor((ctx.currentTime - Mus.debutT) / pasS); }
-      while (Mus.debutT + Mus.prochain * pasS < limite) {
-        Mus.poser(def, Mus.prochain, Mus.debutT + Mus.prochain * pasS, pasS);
-        Mus.prochain++;
-      }
+      // ⚠️ La chaine naît ICI, au vrai depart des notes : son fondu d'entree part
+      // de cet instant, pas de celui ou le morceau a ete demande.
+      if (!Mus.chaine) Mus.chaine = chaineDeFondu(Mus.entreeS);
+      const pasS = Mus.programmer(Mus, def, Mus.chaine.entree);
       Mus.pas = Math.max(0, Math.floor((ctx.currentTime - Mus.debutT) / pasS));
     },
   };
@@ -1379,7 +2031,8 @@ const Son = (function () {
     courante: null,     // le slug du morceau demande cette image
     jouee: null,        // celui qui tourne pour de vrai
     volume: 0,          // 0..1, la distance
-    attenuation: 1,     // le ducking (une voix, une poursuite)
+    attenuation: 1,     // le ducking (une voix) : `Duck` le fait glisser
+    sousEtat: 1,        // le retrait sous la musique d'ETAT : il glisse aussi
     demandeT: -1,       // la derniere image ou quelqu'un a demande a jouer
     pas: 0, debutT: 0, prochain: 0,
     sortie: null,       // le gain qui porte la distance
@@ -1402,7 +2055,7 @@ const Son = (function () {
     _demarrer: function () {
       const def = Rue.def(Rue.jouee);
       if (!def || !def.fichier) return;
-      boucle(Rue.cle(Rue.jouee), true, volumeFichier(def) * Rue.g);
+      boucle(Rue.cle(Rue.jouee), true, volumeFichier(def) * Rue.g, dureeFondu(true));
       // ⚠️ L'instant ou la boucle part : c'est LUI qui fait gratter la main en
       // mesure quand c'est un fichier qui joue (voir `surLeTemps`).
       Rue.debutT = ctx ? ctx.currentTime : 0;
@@ -1429,7 +2082,8 @@ const Son = (function () {
     },
 
     arreter: function () {
-      if (Rue.jouee) boucle(Rue.cle(Rue.jouee), false);
+      // ⚠️ En fondu, vif : un musicien qu'on perd de vue s'eclipse, il ne claque pas.
+      if (Rue.jouee) boucle(Rue.cle(Rue.jouee), false, undefined, dureeFondu(true));
       Rue.courante = null; Rue.jouee = null; Rue.volume = 0; Rue.g = 0;
       Rue.pas = 0; Rue.debutT = 0; Rue.prochain = 0;
     },
@@ -1442,6 +2096,13 @@ const Son = (function () {
 
     /** Une image de musique de rue. Appelee a chaque image, comme `Mus.tick`. */
     tick: function () {
+      // ⚠️ La musique d'ETAT prend toute la place : quand la police te court
+      // apres, la toune du guitariste n'a plus d'importance. Le chiffre vient de
+      // Python (`musique.MUSIQUE.rue_sous_etat`), comme le reste de l'echelle.
+      // ⚠️ Il GLISSE, et il glisse TOUJOURS — meme sans musicien en vue : un gars
+      // qui apparait en pleine poursuite doit entrer deja tasse, pas plein puis
+      // redescendre.
+      Rue.sousEtat = glisser(Rue.sousEtat, pisteDEtat(Chef.piste) ? (reglagesMusique().rue_sous_etat || 0.25) : 1);
       // ⚠️ Plus personne ne demande : le musicien est mort, assomme, hors de
       // portee ou hors de la bulle. On se tait — et c'est ce qui evite qu'une
       // toune continue toute seule a l'autre bout de la ville.
@@ -1459,16 +2120,12 @@ const Son = (function () {
       if (Rue.jouee !== Rue.courante) {
         // ⚠️ On eteint l'ancienne AVANT de changer de toune : `Rue.cle` suit
         // `Rue.jouee`, et une boucle qu'on oublie de nommer joue pour toujours.
-        if (Rue.jouee) boucle(Rue.cle(Rue.jouee), false);
+        // Sa toune s'efface pendant que l'autre monte — meme regle que la piste de la ville.
+        if (Rue.jouee) boucle(Rue.cle(Rue.jouee), false, undefined, dureeFondu(true));
         Rue.jouee = Rue.courante; Rue.pas = 0; Rue.debutT = 0; Rue.prochain = 0;
       }
       if (etatSon() !== 'actif') { Rue.pas++; Rue.debutT = 0; Rue.prochain = 0; return; }
-      // ⚠️ La musique d'ETAT prend toute la place : quand la police te court
-      // apres, la toune du guitariste n'a plus d'importance. Le chiffre vient de
-      // Python (`musique.MUSIQUE.rue_sous_etat`), comme le reste de l'echelle.
-      const r = (B.defs && B.defs.audio && B.defs.audio.musique) || {};
-      const etat = Chef.piste === 'mus_poursuite' || Chef.piste === 'mus_bagarre';
-      Rue.g = Rue.volume * Rue.attenuation * (etat ? (r.rue_sous_etat || 0.25) : 1);
+      Rue.g = Rue.volume * Rue.attenuation * Rue.sousEtat;
       // LE FICHIER, quand il y en a un. ⚠️ Le volume se REPOSE a chaque image :
       // c'est la distance, et elle change a chaque pas du joueur. Une boucle
       // reglee une fois au depart resterait forte a l'autre bout de la rue.
@@ -1535,8 +2192,8 @@ const Son = (function () {
 
   return {
     init, reveiller, sonder, etatSon, enAttente, surEtat, pret, suspendre, fermer, majVolume, prechauffer, ton, bruit, SFX, Mus, Chef, Rue,
-    chargerEchantillons, echantillon, joue, estCharge, jouerA, presence, depuis, boucle, boucleActive, reglerBoucle, volumeBoucle,
-    Radio, Ambiance, Rumeur, Voix,
+    chargerEchantillons, echantillon, joue, estCharge, jouerA, presence, depuis, boucle, boucleActive, reglerBoucle, volumeBoucle, etouffer, coupureBoucle,
+    Radio, Ambiance, Rumeur, Voix, Ondes, Souffle, Quartier,
     get contexte() { return ctx; },
     // ⚠️ Les bruitages seuls : les voix, l'ambiance et les radios ont leurs
     // propres clefs dans `tampons`, et le test des bruitages compte l'egalite.

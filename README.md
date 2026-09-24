@@ -16,8 +16,9 @@ En ligne : <https://bandini.gestiondojo.ca>
 
 ## Reprendre le travail
 
-**[docs/plan.md](docs/plan.md)** — la vision, l'architecture, les jalons et
-leur état. À lire en premier.
+**[docs/plan.md](docs/plan.md)** — ce qui reste à faire, et où trouver le reste
+(la vision, l'architecture, les jalons livrés). À lire en premier ; les commandes
+pour reprendre sont dans [docs/reprendre-le-travail.md](docs/reprendre-le-travail.md).
 
 ## Démarrage local
 
@@ -81,5 +82,5 @@ static/js/                 base, atlas, sprites, entree, son, monde, entites,
                            combat, vehicules, police, missions, hud, jeu
 tests/                     pytest, banc.js (Node), test_navigateur.py (Playwright)
 deploy/                    gunicorn, deploy.sh, installer.sh, systemd, nginx, caddy
-docs/plan.md               le plan et l'etat des jalons
+docs/plan.md               ce qui reste a faire (le reste : docs/*.md et docs/jalons/)
 ```

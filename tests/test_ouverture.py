@@ -181,6 +181,10 @@ def test_on_passe_l_ouverture_et_on_tombe_au_meme_endroit(banc):
         o.frame(30);
         o.tape('Escape', 2);                      // PAUSE aussi
         const apresPause = { ouverture: !!L.B.ouverture, etat: L.B.etat, x: L.B.joueur.x, y: L.B.joueur.y };
+        // ⚠️ Les COMMANDES s'ouvrent au bout de l'ouverture, passee ou non
+        // (`test_commandes_js.py`) : ACTION les ferme, comme le dit leur pied.
+        const aide = L.B.menu && L.B.menu.titre;
+        o.tape('KeyE', 2);
         // Et la partie continue : on bouge. ⚠️ LES QUATRE DIRECTIONS, pas une :
         // le terminus a un mur a l'est de sa porte, et un juge qui ne pousse
         // que vers la droite accuse l'ouverture d'un mur de la carte.
@@ -194,7 +198,7 @@ def test_on_passe_l_ouverture_et_on_tombe_au_meme_endroit(banc):
             // Un juge qui exige une vraie marche juge la carte, pas l'ouverture.
             if (Math.hypot(L.B.joueur.x - x0, L.B.joueur.y - y0) >= 1) bouge++;
         });
-        return { frappe: apresFrappe, pause: apresPause, bouge: bouge };
+        return { frappe: apresFrappe, pause: apresPause, bouge: bouge, aide: aide };
     }""")
     assert r["frappe"]["ouverture"] is False and r["frappe"]["cinema"] is False
     assert r["frappe"]["dessine"] is True and r["frappe"]["cars"] == 0
@@ -202,7 +206,8 @@ def test_on_passe_l_ouverture_et_on_tombe_au_meme_endroit(banc):
     assert abs(r["frappe"]["x"] - r["pause"]["x"]) < 1 and abs(r["frappe"]["y"] - r["pause"]["y"]) < 1, (
         "les deux facons de passer laissent au meme endroit"
     )
-    assert r["bouge"] >= 1, "et on joue tout de suite apres : les commandes sont rendues"
+    assert r["aide"] == "COMMANDES", "passer la scene mene aux commandes, comme la voir jusqu'au bout"
+    assert r["bouge"] >= 1, "et on joue des qu'on les ferme : les commandes sont rendues"
 
 
 def test_l_ouverture_ne_change_rien_a_la_partie(banc):

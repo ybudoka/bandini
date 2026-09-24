@@ -44,7 +44,10 @@ function faireCanvas(w, h) {
   const ctx = faireC2d();
   return { tagName: 'CANVAS', width: w | 0, height: h | 0, style: {}, dataset: {}, getContext: function () { return ctx; },
            addEventListener: function () {}, setPointerCapture: function () {},
-           getBoundingClientRect: function () { return { left: 0, top: 0, width: this.width, height: this.height }; } };
+           getBoundingClientRect: function () { return { left: 0, top: 0, width: this.width, height: this.height }; },
+           // ⚠️ Le mode photo (M14) : juste assez vrai pour que `Base.telecharger`
+           // ne se taise pas sous Node (voir sa garde `typeof cv.toDataURL`).
+           toDataURL: function () { return 'data:image/png;base64,BANC'; } };
 }
 
 function faireElement(tag, id) {
@@ -88,7 +91,7 @@ function banc(corps) {
   elements.toile = toile;
   const bandini = faireElement('main', 'bandini');
   bandini.dataset = { etat: 'chargement', urlDefinitions: '/api/definitions', urlCarte: '/api/carte',
-                      urlCompte: '/api/compte/' };
+                      urlCompte: '/api/compte/', urlDefi: '/api/defi' };
   elements.bandini = bandini;
   const tactile = faireElement('div', 'tactile');
   const boutonsTactiles = ['attaque', 'action', 'esquive', 'arme', 'pause', 'plein'].map(function (a) {
@@ -105,8 +108,20 @@ function banc(corps) {
    // L'ecran du compte (M14, 2e vague).
    'voile-compte', 'bouton-compte', 'bouton-fermer-compte', 'compte-form', 'compte-pseudo', 'compte-passe',
    'compte-courriel', 'compte-etat', 'compte-mot', 'compte-parties', 'bouton-compte-inscription',
-   'bouton-compte-connexion', 'bouton-compte-deconnexion'].forEach(function (id) {
-    const entree = id.indexOf('compte-pseudo') === 0 || id === 'compte-passe' || id === 'compte-courriel';
+   'bouton-compte-connexion', 'bouton-compte-deconnexion',
+   // Le NIP (M14, 3e vague).
+   'nip-form', 'nip-code', 'nip-etat', 'bouton-nip-mot-de-passe',
+   'nip-activer-form', 'nip-nouveau', 'bouton-nip-activer', 'nip-retrait', 'bouton-nip-retirer',
+   // Effacer son compte (M14, 4e vague).
+   'defi-du-jour', 'compte-effacer-ligne', 'bouton-compte-effacer', 'compte-effacer-form', 'compte-effacer-passe',
+   'bouton-compte-effacer-confirmer', 'bouton-compte-effacer-annuler', 'compte-effacer-etat', 'compte-garde',
+   // Les rubriques de l'ecran du compte.
+   'compte-rubrique-parties', 'compte-appareil',
+   // La ligne d'aide du titre, qui suit l'appareil (l'ecran COMMANDES).
+   'aide-clavier', 'aide-manette', 'aide-manette-jouer', 'aide-manette-pause']
+    .forEach(function (id) {
+    const entree = id.indexOf('compte-pseudo') === 0 || id === 'compte-passe' || id === 'compte-courriel'
+      || id === 'nip-code' || id === 'nip-nouveau' || id === 'compte-effacer-passe';
     elements[id] = faireElement(id.indexOf('bouton') === 0 ? 'button' : entree ? 'input' : 'div', id);
   });
   const body = faireElement('body');
@@ -115,7 +130,15 @@ function banc(corps) {
   const doc = {
     body: body, documentElement: documentElement, hidden: false, readyState: 'complete',
     getElementById: function (id) { return elements[id] || null; },
-    createElement: function (tag) { return tag === 'canvas' ? faireCanvas(0, 0) : faireElement(tag); },
+    // ⚠️ Le mode photo (M14) telecharge en cliquant un `<a>` fabrique a la
+    // volee (voir `Base.telecharger`) : sans ce `click`, le juge ne peut pas
+    // dire si l'image est vraiment partie.
+    createElement: function (tag) {
+      if (tag === 'canvas') return faireCanvas(0, 0);
+      const el = faireElement(tag);
+      if (tag === 'a') el.click = function () { telechargements.push({ href: el.href, nom: el.download }); };
+      return el;
+    },
     querySelector: function (sel) {
       const m = /data-a="([a-z]+)"/.exec(sel);
       return m ? boutonsTactiles.find(function (b) { return b.dataset.a === m[1]; }) || null : null;
@@ -143,6 +166,12 @@ function banc(corps) {
   const reseau = Object.assign({}, ENTREE.reseau || {});
   const appelsCompte = [];
   const beacons = [];
+  const telechargements = [];   // le mode photo (M14) : chaque capture cliquee
+  /*: LE FAUX /api/defi (M14, 5e vague). `ENTREE.defi` : { statut, corps } ou { panne: true }.
+    ⚠️ Par DEFAUT le reseau est coupe : sans defi du jour, tout ce qui existait joue comme
+    avant — un test qui veut le defi du jour le demande (`defi=` de la fixture `banc`). */
+  let defiEntree = ENTREE.defi !== undefined ? ENTREE.defi : { panne: true };
+  const appelsDefi = [];
   //: `tenu: true` dans `ENTREE.reseau` : la reponse attend `o.compte.rendre(…)`.
   //: ⚠️ Il faut l'armer AVANT le chargement — l'ouverture part des la ville batie,
   //: et c'est justement ce qu'on veut voir attendre.
@@ -175,6 +204,12 @@ function banc(corps) {
     document: doc, console: console, Math: FauxMath, Date: Date, JSON: JSON, Object: Object, Array: Array,
     Uint8Array: Uint8Array, Uint8ClampedArray: Uint8ClampedArray, Int32Array: Int32Array, Float32Array: Float32Array,
     Map: Map, Set: Set, Promise: Promise, Error: Error, String: String, Number: Number, Boolean: Boolean,
+    // Le NIP (M14, 3e vague) : la meme WebCrypto que le navigateur — Node l'expose
+    // depuis `node:crypto`, aussi vraie que celle d'un vrai navigateur (PBKDF2, AES-GCM).
+    crypto: require('node:crypto').webcrypto,
+    TextEncoder: TextEncoder, TextDecoder: TextDecoder,
+    btoa: function (s) { return Buffer.from(s, 'binary').toString('base64'); },
+    atob: function (s) { return Buffer.from(s, 'base64').toString('binary'); },
     Event: function (t) { this.type = t; }, performance: { now: function () { return horloge; } },
     setTimeout: function () { return 0; }, clearTimeout: function () {}, setInterval: function () { return 0; }, clearInterval: function () {},
     requestAnimationFrame: function (cb) { rafCb = cb; return 1; }, cancelAnimationFrame: function () {},
@@ -204,6 +239,15 @@ function banc(corps) {
     fetch: function (url, opts) {
       fetchs.push({ url: url, opts: opts });
       const adresse = String(url);
+      // ⚠️ L'adresse EXACTE : `/api/defi` est un PREFIXE de `/api/definitions`, et un `indexOf(…) === 0`
+      // captait le paquet du jeu — le chargement entier tombait en « reseau coupe ».
+      if (adresse === '/api/defi' || adresse.indexOf('/api/defi?') === 0) {
+        appelsDefi.push({ url: adresse, opts: opts });
+        if (defiEntree && defiEntree.panne) return Promise.reject(new Error('reseau coupe'));
+        const statut = defiEntree && typeof defiEntree.statut === 'number' ? defiEntree.statut : 200;
+        return Promise.resolve({ ok: statut < 400, status: statut,
+                                 json: function () { return Promise.resolve(defiEntree.corps); } });
+      }
       if (adresse.indexOf('/api/compte/') === 0) {
         const chemin = adresse.slice('/api/compte/'.length);
         let corps = null;
@@ -241,8 +285,21 @@ function banc(corps) {
     function param(v) {
       // ⚠️ `setValueAtTime` pose vraiment la valeur : sinon le banc lit 440 Hz
       // pour toutes les notes et un sequenceur faux passerait les tests.
+      // ⚠️ `setValueCurveAtTime` GARDE ses courbes : c'est elle qui fait le fondu
+      // enchaine, et un juge doit pouvoir lire de quand a quand et dans quel sens.
       return { value: v, setValueAtTime: function (x) { this.value = x; return this; },
-               exponentialRampToValueAtTime: function () { return this; } };
+               exponentialRampToValueAtTime: function () { return this; },
+               setValueCurveAtTime: function (courbe, t, duree) {
+                 // ⚠️ Comme le navigateur : une courbe qui en chevauche une autre SUR LE
+                 // MEME PARAMETRE leve `NotSupportedError`. C'est ce qui oblige le fondu
+                 // a avoir deux gains — un seul ferait planter la musique a la premiere
+                 // piste changee pendant sa montee.
+                 (this.__courbes = this.__courbes || []).forEach(function (c) {
+                   if (t < c.t + c.duree && c.t < t + duree) throw new Error('NotSupportedError : courbes qui se chevauchent');
+                 });
+                 this.__courbes.push({ courbe: Array.from(courbe), t: t, duree: duree });
+                 return this;
+               } };
     }
     // ⚠️ Chaque noeud garde la liste de ce sur quoi il est branche. C'est ce qui
     // permet de juger qu'un son ATTEINT vraiment la sortie : une source que
@@ -303,7 +360,10 @@ function banc(corps) {
         return n;
       };
       this.createBufferSource = function () {
-        const n = noeud({ buffer: null, loop: false, playbackRate: param(1), onended: null, stop: function () {} });
+        // ⚠️ `stop(t)` note l'instant : une piste qui s'en va en fondu s'arrete
+        // APRES la fin de sa courbe, et un `stop()` sans argument est une coupure nette.
+        const n = noeud({ buffer: null, loop: false, playbackRate: param(1), onended: null,
+                          stop: function (t) { this.__arretT = t === undefined ? ctx.currentTime : t; } });
         sources.push(n);
         n.start = function (t) { n.__demarree = true; joues.push({ quoi: 'echantillon', t: t }); };
         return n;
@@ -444,6 +504,7 @@ function banc(corps) {
 
   const outils = { frame: frame, touche: touche, relacher: relacher, tape: tape, pad: pad, pointeur: pointeur, bouton: bouton, singe: singe,
                    fenetreEvenement: fenetreEvenement,
+                   defi: { appels: appelsDefi, repondre: function (v) { defiEntree = v; } },
                    poser: poser, viser: viser, char: char, ligneDroite: ligneDroite, boulevard: boulevard,
                    fondu: fondu, entrer: entrer, sortir: sortir,
                    doc: doc, fenetre: fenetre, fetchs: fetchs, elements: elements, store: store, session: session, ctx: toile.getContext('2d'),
@@ -457,6 +518,7 @@ function banc(corps) {
                                attente.forEach(function (r) { r(); });
                              } },
                    rechargements: function () { return rechargements; },
+                   photo: { telechargements: telechargements },
                    brancherAudio: brancherAudio,
                    // Laisse tourner les promesses en attente (chargement d'un son).
                    attendre: function () { return new Promise(function (r) { setImmediate(r); }); } };

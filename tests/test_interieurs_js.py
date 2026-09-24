@@ -83,6 +83,8 @@ def test_on_entre_chez_un_commerce_ordinaire_et_il_porte_son_enseigne(banc):
             return p.nom && piece.porte === 'commerce';
         });
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        // ⚠️ On regarde la porte : dehors, ENTRER n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 0, -1);
         L.Missions.majInvite(j);
         const invite = L.B.invite;
         o.entrer(porte);
@@ -201,14 +203,19 @@ def test_les_tiroirs_d_un_logement_ne_se_fouillent_qu_une_fois(banc, paquet):
             L.Missions.utiliserPoint(j);
             return { gain: L.B.partie.argent - avant, invite: invite };
         }
+        // Le standing se lit DEHORS, avant d'entrer : une piece n'a pas de quartier.
+        const standing = L.Monde.standingA(portes[0].x, portes[0].y);
         const un = fouiller(portes[0]);
         const encore = fouiller(portes[0]);
         const autre = fouiller(portes[1]);
-        return { un: un, encore: encore.gain, autre: autre.gain, adresses: portes.length };
+        return { un: un, encore: encore.gain, autre: autre.gain, adresses: portes.length, standing: standing };
     }""")
     assert r["adresses"] >= 2, "il faut deux logements pour juger"
     assert r["un"]["invite"] == "FOUILLER"
-    assert tarifs["fouille_min"] <= r["un"]["gain"] <= tarifs["fouille_max"]
+    # ⚠️ Les tiroirs disent le quartier (4e vague des quartiers) : la fourchette
+    # est celle des tarifs, multipliee par la part du standing de l'adresse.
+    part = paquet["economie"]["fouille_standing"].get(r["standing"], 1)
+    assert round(tarifs["fouille_min"] * part) <= r["un"]["gain"] <= round(tarifs["fouille_max"] * part), r
     assert r["encore"] == 0, "les memes tiroirs paient deux fois"
     assert r["autre"] > 0, "une autre adresse doit payer"
 

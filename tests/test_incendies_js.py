@@ -63,7 +63,9 @@ def test_l_extincteur_eteint_le_feu_et_paie_une_fois(banc):
         j.angle = -Math.PI / 2;          // vise le mur au nord
         const avant = L.B.partie.argent;
         // ⚠️ On TIENT le jet, comme le fait le bouton : phase active tenue.
-        j.etat = 'attaque'; j.arc = L.Combat.armeDef('extincteur'); j.phase = 'actif'; j.phaseT = 9999;
+        // ⚠️ `touches` : le vrai coup l'initialise (`combat.js`, début d'attaque). Poser l'attaque à la main sans
+        // lui plante `arcDeMelee` dès qu'un personnage est à portée du jet — Ti-Paul, une fois posé à un endroit où on le voit.
+        j.etat = 'attaque'; j.arc = L.Combat.armeDef('extincteur'); j.phase = 'actif'; j.phaseT = 9999; j.touches = [];
         let eteint = false, argent = 0;
         for (let i = 0; i < 120; i++) {
             o.frame(1);
@@ -92,7 +94,7 @@ def test_le_feu_ne_se_redeclare_pas_dans_l_heure_apres_eteint(banc):
         L.B.partie.armes.extincteur = { mun: 100, usure: 0 };
         j.arme = 'extincteur';
         j.x = a.p.x; j.y = a.p.y + 8; j.angle = -Math.PI / 2;
-        j.etat = 'attaque'; j.arc = L.Combat.armeDef('extincteur'); j.phase = 'actif'; j.phaseT = 9999;
+        j.etat = 'attaque'; j.arc = L.Combat.armeDef('extincteur'); j.phase = 'actif'; j.phaseT = 9999; j.touches = [];
         for (let i = 0; i < 120; i++) { o.frame(1); a.j.x = a.p.x; a.j.y = a.p.y + 8; L.Monde.centrerCamera(a.j.x, a.j.y); }
         const apresEteintro = !!L.Incendies.feuActif();
         // On recule (le feu allumé ne se recrée pas), et l'heure avance encore.

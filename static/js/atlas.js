@@ -372,6 +372,29 @@ const Atlas = (function () {
     return c;
   }
 
+  /** La grille de lettres d'une machine a ce cap (`n` crans, le `i`-ieme) — celle-la
+      meme que `cuireCap` peint, et que la projection a decidee point par point (le plus
+      pres de l'oeil gagne). ⚠️ C'est elle qui SAIT ce qui se voit : une lampe dont les
+      pixels n'y sont pas est cachee par la caisse (`Vehicules.allumerLesPhares`). */
+  function grilleDuCap(nom, def, n, i) {
+    if (!def || !def.machine) return null;
+    const cle = 'machine|' + nom + '|' + n + '|' + i;
+    let grille = cache.get(cle);
+    if (!grille) {
+      grille = projeter(def.machine, i * Math.PI * 2 / n - Math.PI / 2, def.w, 0);
+      cache.set(cle, grille);
+    }
+    return grille;
+  }
+
+  /** Ou tombe, dans cette grille, le point (`u` avant, `w` droite, `z` haut) de la
+      machine — le calcul de `projeter`, au pixel pres. */
+  function ouTombe(def, n, i, u, w, z) {
+    const angle = i * Math.PI * 2 / n - Math.PI / 2, ca = Math.cos(angle), sa = Math.sin(angle);
+    const milieu = def.w / 2, sol = u * sa + w * ca;
+    return { x: Math.floor(milieu + u * ca - w * sa + 1e-6), y: Math.floor(milieu + sol * def.machine.profondeur - z + 1e-6) };
+  }
+
   /** Cuit une tuile 16x16 par un peintre procedural (variante = entier stable). */
   function cuireTuile(glyphe, variante, peintre) {
     const cle = 'tuile|' + glyphe + '|' + variante;
@@ -486,5 +509,5 @@ const Atlas = (function () {
 
   function vider() { cache.clear(); }
 
-  return { valider, cuire, toitDe, projeter, cuireCap, cuireTuile, cuirePeintre, texte, largeurTexte, normaliser, connait, vider, get taille() { return cache.size; } };
+  return { valider, cuire, toitDe, projeter, cuireCap, grilleDuCap, ouTombe, cuireTuile, cuirePeintre, texte, largeurTexte, normaliser, connait, vider, get taille() { return cache.size; } };
 })();

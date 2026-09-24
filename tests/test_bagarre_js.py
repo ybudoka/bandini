@@ -366,16 +366,36 @@ def test_une_rixe_qu_on_ne_voit_pas_ne_s_entend_pas(banc):
             }
             return v;
         };
-        o.frame(420);
+        // ⚠️ CENT CINQUANTE IMAGES HORS CHAMP, pas sept secondes. Mesure du
+        // 17 sept. 2026 : en 420 images, un camp entier y passait (trois morts
+        // sur six), les survivants n'avaient plus d'adversaire et la rixe etait
+        // FINIE avant qu'on aille la voir — le juge concluait « a cote, on
+        // n'entend rien » d'une bagarre qui n'existait plus. On mesure le
+        // silence sur les premiers coups, pas sur la fin du monde.
+        o.frame(150);
         const horsChamp = appels.splice(0);
         // On va voir : au milieu de ceux qui sont encore debout.
         const debout = rixeurs(L).filter(function (e) { return e.vivant && e.etat !== 'assomme'; });
+        // ⚠️ ON FORCE LA REGLE, on ne joue pas la duree de la rixe. Elle dure
+        // vingt-cinq secondes (`bagarre.duree_images`) et on vient d'en brûler
+        // sept hors champ : le jour ou la ville a change autour (4e vague des
+        // quartiers, 17 sept. 2026), les coups tombaient apres la fenetre et le
+        // juge concluait « a cote, on n'entend rien ». Ce qu'il prouve n'est pas
+        // le tempo d'une bagarre : c'est qu'a cote, ca s'entend.
+        for (const e of rixeurs(L)) if (e.bagarreT !== undefined) e.bagarreT = Math.max(e.bagarreT, 900);
         const j = L.B.joueur;
         j.x = debout.reduce(function (s, e) { return s + e.x; }, 0) / debout.length;
         j.y = debout.reduce(function (s, e) { return s + e.y; }, 0) / debout.length;
         L.Monde.centrerCamera(j.x, j.y);
         L.Entites.indexer();
-        o.frame(300);
+        // ⚠️ ON ECOUTE JUSQU'A ENTENDRE, pas trois cents images. Les coups d'une
+        // rixe ne tombent pas a heure fixe : le jour ou la ville a change autour
+        // (4e vague des quartiers, 17 sept. 2026), les six hommes se tapaient
+        // encore dessus mais le premier coup arrivait apres la fenetre — et le
+        // juge concluait « on n'entend rien ». Ce qu'il prouve n'est pas le tempo
+        // de la bagarre : c'est qu'a cote, ca s'entend.
+        for (let i = 0; i < 600 && !appels.length; i++) o.frame(1);
+        o.frame(120);
         const enVue = appels.splice(0);
         L.Son.depuis = vrai;
         return { trouve: true, horsChamp: horsChamp, enVue: enVue, debout: debout.length };

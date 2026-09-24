@@ -36,6 +36,7 @@ class Pieton(TypedDict):
     metier: str | None
     heures: tuple[float, float] | None
     districts: tuple[str, ...] | None
+    standings: tuple[str, ...] | None
     frequence: float
     phase: int
 
@@ -43,13 +44,13 @@ class Pieton(TypedDict):
 def _p(slug, nom, chandail, cheveux, peau, pantalon, *, sprite="joueur", vitesse=1.0,
        courage=0.0, temoin=0.3, vie=60, argent=(2, 20), arme=None, gang=None,
        intouchable=False, accompagne=None, metier=None, heures=None, districts=None,
-       frequence=1.0, phase=1) -> Pieton:
+       standings=None, frequence=1.0, phase=1) -> Pieton:
     return Pieton(
         slug=slug, nom=nom, sprite=sprite,
         couleurs={"c": chandail, "h": cheveux, "s": peau, "p": pantalon},
         vitesse=vitesse, courage=courage, temoin=temoin, vie=vie, argent=argent,
         arme=arme, gang=gang, intouchable=intouchable, accompagne=accompagne,
-        metier=metier, heures=heures, districts=districts,
+        metier=metier, heures=heures, districts=districts, standings=standings,
         frequence=frequence, phase=phase,
     )
 
@@ -114,6 +115,20 @@ CATALOGUE: list[Pieton] = [
     _p("mere", "Mère avec son petit", "#16a085", "#4a3320", "#f0c098", "#3a3a4a",
        vitesse=0.85, vie=65, argent=(10, 45), temoin=0.7, accompagne="enfant",
        frequence=1.4),
+    # ⚠️ L'ENFANT A VELO — Martin (21 sept. 2026) : « je veux aussi des enfants
+    # a velo, seulement sur trottoir, casque, parc ». Un CORPS a lui (le casque
+    # se voit de loin, `SPRITES.enfant_velo`), pas l'enfant repeint : a seize
+    # pixels, c'est la silhouette qui nomme, pas la couleur.
+    # ⚠️ Il ne descend JAMAIS sur la chaussee — pas meme sur un passage pieton :
+    # le trottoir, l'abord et le parc, rien d'autre (`Entites.roulableEnfant`).
+    # Intouchable comme l'enfant a pied, et il ne va rien raconter a la police
+    # (`temoin=0`) : un temoin court vers l'agent, et le chemin passe par la rue.
+    # ⚠️ Frequence 0 : il ne se tire pas dans la foule, il nait par son propre
+    # systeme (`ENFANTS_A_VELO`) — le jour, dans les quartiers qui ont des parcs.
+    _p("enfant_velo", "Enfant à vélo", "#f1c40f", "#6b4b2c", "#f0c098", "#2f6b8a",
+       sprite="enfant_velo", vitesse=2.0, vie=40, argent=(0, 2), temoin=0.0,
+       intouchable=True, metier="cycliste", frequence=0.0, heures=(0.33, 0.8),
+       districts=("erables", "pointe", "faubourg")),
     # ⚠️ LES BAIGNEURS — Martin : « des gens s'il y a beaucoup de place ». Des
     # enfants seuls sur une plage, c'est une cour d'ecole. Le corps commun, et
     # c'est la PALETTE qui les met en maillot : lui torse nu (le chandail a la
@@ -139,6 +154,19 @@ CATALOGUE: list[Pieton] = [
     _p("racoleuse", "Fille de la Brume", "#ff3d8e", "#f2d27a", "#f0c098", "#c2185b",
        sprite="racoleuse", vitesse=0.9, vie=60, argent=(20, 90), temoin=0.2,
        metier="compagnie", heures=(0.78, 0.28), frequence=0.0),
+    # ⚠️ LA CONDUCTRICE DU CABRIOLET ROSE : elle ne marche jamais sans sa
+    # voiture (`frequence=0`, et pas de `metier` — descendue, c'est une passante
+    # comme une autre : elle fuit, elle temoigne). C'est la fiche du char qui la
+    # nomme (`vehicules.au_volant`), et le carjacking qui la fait naitre : elle
+    # sort de SA voiture, en robe. Troisieme archetype a avoir son propre corps
+    # (`conductrice` dans sprites.js) : une robe d'une seule piece, et une couleur
+    # ne la distingue pas d'un chandail a douze pixels — la coupe, oui. La robe
+    # est du meme rose en `c` et en `p` (une robe n'a pas de haut et de bas), et
+    # ses couleurs ne se croisent nulle part ailleurs dans le catalogue.
+    # Elle a de quoi payer sa voiture : la bourse est la plus lourde de la rue.
+    _p("conductrice", "Dame au cabriolet", "#f7a1c4", "#d9a441", "#f0c098", "#f7a1c4",
+       sprite="conductrice", vitesse=0.9, courage=0.0, vie=55, argent=(60, 180),
+       temoin=0.75, frequence=0.0),
     _p("vendeur", "Marchand ambulant", "#ecf0f1", "#3a2a1a", "#c98d66", "#2a3a4a",
        vitesse=0.0, vie=70, argent=(20, 70), temoin=0.5, metier="ambulant",
        frequence=0.0),
@@ -211,6 +239,15 @@ CATALOGUE: list[Pieton] = [
     _p("policier", "Agent", "#1f3a6e", "#101018", "#e8b088", "#16264a",
        vitesse=1.0, courage=1.0, temoin=0.0, vie=100, argent=(0, 0), arme="pistolet",
        metier="police", frequence=0.0),
+    # Le vigile prive (infiltration) : le meme moule que l'agent — un pieton
+    # que `police.js` dirige quand il poursuit, et qui ne nait jamais au
+    # hasard dans la rue — mais un uniforme d'entreprise, une matraque et pas
+    # de pistolet : il TIENT un batiment, il ne patrouille pas la ville. Se
+    # faire voir par lui compte comme se faire voir par un agent (`genreVision`,
+    # cote navigateur) : c'est lui qui appelle les vrais policiers.
+    _p("garde", "Garde de sécurité", "#5a5f47", "#2a2a2a", "#c98d66", "#3a3d33",
+       vitesse=1.0, courage=1.0, temoin=0.0, vie=90, argent=(0, 0), arme="batte",
+       metier="garde", frequence=0.0),
     # Les gars du lot : ils tiennent la grille de la fourriere et ne naissent
     # jamais ailleurs. ⚠️ Courage 1 et une batte, pas un pistolet : ils
     # RIPOSTENT quand on sort un char sans payer, ils n'abattent personne —
@@ -296,24 +333,28 @@ CATALOGUE: list[Pieton] = [
     # ⚠️ LE MEILLEUR TEMOIN DE LA VILLE (`temoin=1.0`, le seul) : il regarde,
     # c'est tout ce qu'il fait. Faire un coup devant lui, c'est se faire voir a
     # coup sur — et il est lent, alors on ne le seme pas en marchant.
+    # ⚠️ `standings` : QUI MARCHE DANS LA RUE dit aussi le standing (4e vague des
+    # quartiers). Un touriste ne se promene pas au pied des plex du port, un
+    # ivrogne ne dort pas dans la rue chic. Ca se croise avec `districts` : la
+    # sorte nait la ou les DEUX sont vrais, et une sorte sans standing va partout.
     _p("touriste", "Touriste", "#f2e2a8", "#8a6a3a", "#e8b088", "#8a7a5a",
        sprite="touriste", vitesse=0.7, courage=0.0, temoin=1.0, vie=55,
        argent=(30, 90), metier="touriste", frequence=0.0,
-       districts=("quais", "pointe")),
+       districts=("quais", "pointe"), standings=("cossu", "ordinaire")),
     # ⚠️ LE SEUL QUI NE FUIT PAS devant une arme — il insulte. Ce qui le rend
     # dangereux pour lui-meme, et c'est le but : une rue ou tout le monde
     # detale de la meme facon n'a qu'une reaction.
     _p("ivrogne", "Ivrogne", "#6a5a4a", "#8a8a8a", "#d8a878", "#4a4438",
        sprite="ivrogne", vitesse=0.7, courage=1.0, temoin=0.05, vie=70,
        argent=(2, 18), metier="ivrogne", frequence=0.0,
-       districts=("quais", "faubourg")),
+       districts=("quais", "faubourg"), standings=("pauvre",)),
     # Ecouteurs sur les oreilles : il ne temoigne de RIEN (`temoin=0.0`, le
     # seul avec l'agent) et il ne s'arrete jamais — ni pour un amuseur, ni
     # pour une pause.
     _p("jogger", "Joggeuse", "#e04a3a", "#2a2a2a", "#e8b088", "#2a2a2a",
        sprite="jogger", vitesse=1.45, courage=0.2, temoin=0.0, vie=75,
        argent=(0, 8), metier="jogger", frequence=0.0,
-       districts=("erables", "pointe")),
+       districts=("erables", "pointe"), standings=("cossu", "ordinaire")),
     # Sa tournee fait battre les portes de la rue une a une — et il n'ENTRE
     # jamais. C'est toute la difference avec le flaneur qui rentre chez lui :
     # celui-la disparait derriere le battant, le facteur reste dehors.
@@ -336,6 +377,15 @@ CATALOGUE: list[Pieton] = [
        sprite="crieur", vitesse=0.0, courage=0.2, temoin=0.7, vie=65,
        argent=(8, 35), metier="crieur", frequence=0.0,
        heures=(0.25, 0.55), districts=("faubourg", "shop")),
+    # ⚠️ LA NUIT A SES HABITUDES : LE CAMELOT DU CLAIRON. Il passe a l'AUBE, avant
+    # le crieur, et il lance le journal sur les perrons, porte apres porte — sans
+    # jamais entrer, comme le facteur. Le corps est celui du crieur (le sac de
+    # journaux en bandouliere), repeint ; la routine est la sienne. Ses heures
+    # tombent dans la nuit qu'on voit : on le croise a la lueur des lampadaires.
+    _p("camelot", "Camelot", "#2f5f8a", "#3a2a1a", "#e8b088", "#2a2a3a",
+       sprite="crieur", vitesse=1.15, courage=0.2, temoin=0.4, vie=60,
+       argent=(2, 12), metier="camelot", frequence=0.0,
+       heures=(0.19, 0.265), districts=("erables", "faubourg")),
     # ⚠️ IL TRAVAILLE AU FEU ROUGE : il ne s'approche que des chars ARRETES.
     # Les feux pour pietons viennent d'etre livres — c'est la meme horloge, et
     # c'est elle qui lui donne ses quinze secondes de travail.
@@ -350,7 +400,7 @@ CATALOGUE: list[Pieton] = [
     _p("pickpocket", "Pickpocket", "#3a4450", "#1a1a1a", "#d8a878", "#26262e",
        sprite="pickpocket", vitesse=1.1, courage=0.2, temoin=0.1, vie=65,
        argent=(20, 80), metier="pickpocket", frequence=0.0,
-       districts=("faubourg", "quais")),
+       districts=("faubourg", "quais"), standings=("pauvre",)),
 ]
 
 #: Les gangs : leur archetype, leur territoire (zone de la carte), leur humeur.
@@ -504,6 +554,28 @@ PLAGE: dict = {
     "ballon_vitesse": 2.4,
     "ballon_pause": 26,          # le temps de le ramasser avant de le relancer
     "jeu_images": (300, 720),    # puis on change de jeu
+    # ⚠️ **LA NUIT, PERSONNE NE SE BAIGNE** (Martin, 21 sept. 2026). La plage
+    # ouvre a 7 h 12 et ferme a 19 h 12, sur 24 h ramenees a 0..1 comme les
+    # `heures` d'un metier : hors de la, personne n'y nait, et qui y est encore
+    # sort de l'eau, range ses affaires et s'en va — hors de l'ecran, jamais
+    # sous nos yeux. ⚠️ Ici et PAS sur l'archetype `enfant` : toute la ville
+    # s'en sert, et les enfants disparaitraient de partout a la brunante. Les
+    # deux heures tombent DANS le jour (`Monde.estNuit` : 6 h 24 → 19 h 53) :
+    # on ferme au coucher du soleil, pas une fois la nuit tombee.
+    "heures": (0.30, 0.80),
+}
+
+#: **LES ENFANTS A VELO** — combien, et de quelles couleurs.
+#:
+#: ⚠️ Les couleurs se lisent A L'EMPREINTE de la tuile ou il nait, pas au de :
+#: un casque tire au sort decalerait tout ce qui nait apres lui. Et c'est le
+#: CASQUE qui change le plus d'un enfant a l'autre — c'est lui qu'on voit.
+ENFANTS_A_VELO: dict = {
+    "combien": 2,                # dans la bulle du joueur, au plus
+    "rayon_px": 480,             # ils naissent hors champ, dans cette bulle
+    "casques": ("#e03a2e", "#2f7fd8", "#f1c40f", "#27ae60", "#ff77b7", "#f39c12"),
+    "cadres": ("#27ae60", "#c0392b", "#2980b9", "#8e44ad", "#e8e8e8", "#16a085"),
+    "chandails": ("#f1c40f", "#e74c3c", "#3a6ea5", "#9b59b6", "#1abc9c", "#ecf0f1"),
 }
 
 #: **LES GOELANDS ET LES CHATS.** La vie qui n'est pas humaine.
@@ -524,6 +596,13 @@ PLAGE: dict = {
 #: plus grande que tout ce qui pourrait les atteindre. C'est ce qui evite
 #: d'avoir a repondre a la question « que se passe-t-il si je lui roule
 #: dessus » — on n'y arrive pas.
+#:
+#: ⚠️ **LE CHAT SEUL A UNE CONFIANCE** (`confiance_px`, deuxieme vague, 22 sept.
+#: 2026, § « caresser le chat ») : marcher doucement (pas de sprint) et sans
+#: arme fait tomber sa distance de fuite a celle-la, assez pres pour le
+#: caresser (`interactions.CARESSER`). Courir ou sortir une arme, et il
+#: redevient farouche — `fuite_px`, comme avant. Le goeland n'a pas cette cle :
+#: il reste farouche, et c'est voulu (fiche de la 2e vague).
 BETES: dict = {
     "goeland": {
         "combien": 6,            # au plus, dans la bulle du joueur
@@ -538,12 +617,46 @@ BETES: dict = {
     "chat": {
         "combien": 3,
         "fuite_px": 74,
+        # ⚠️ Approché doucement, sans arme : il ne fuit plus qu'à CETTE distance —
+        # et il faut donc qu'elle reste NETTEMENT sous la portée d'ACTION
+        # (`interactions.CARESSER["portee_px"]`, 22 px), sinon la fenêtre où l'on
+        # est assez près pour caresser SANS avoir déjà fait fuir est trop
+        # étroite pour un joueur (mesuré : 20 laissait 2 px, injouable).
+        "confiance_px": 16,
         "detale_images": 120,
         "detale_vitesse": 2.6,
         "pas": 0.5,
         "assis_images": (120, 420),
         "marche_images": (60, 200),
+        # ⚠️ LES BÊTES QUI SE SAUVENT POUR VRAI (Martin, 22 sept. 2026). Un départ, pas
+        # un glissement : il se RAMASSE (`sursaut_images`), puis il ACCÉLÈRE jusqu'à sa
+        # pleine vitesse (`elan_images`). Sa FOULÉE — quatre images de galop — tourne à la
+        # distance parcourue : `foulee_px` est ce qu'il couvre en un cycle entier.
+        "sursaut_images": 7,
+        "elan_images": 14,
+        "foulee_px": {"fuit": 28, "marche": 12},
     },
+    # ⚠️ LA NUIT A SES HABITUDES : LE RATON LAVEUR. Il ne sort que la nuit
+    # (`heures`), dans les ruelles comme le chat, et c'est lui qui sort de la
+    # poubelle qu'on fouille a trois heures du matin (`interactions.FOUILLER`).
+    # Plus lent que le chat, et il se laisse approcher de plus pres : il a
+    # l'habitude des poubelles, pas des gens. Et la nuit, les goelands dorment.
+    "raton": {
+        "combien": 2,
+        "fuite_px": 52,
+        "detale_images": 150,
+        "detale_vitesse": 2.1,
+        "pas": 0.35,
+        "assis_images": (100, 320),
+        "marche_images": (60, 180),
+        "heures": (0.83, 0.26),
+        # Plus lourd que le chat : il met plus de temps à se décider et à prendre son
+        # élan, et ses courtes pattes battent plus vite (une foulée plus courte).
+        "sursaut_images": 10,
+        "elan_images": 20,
+        "foulee_px": {"fuit": 20, "marche": 10},
+    },
+    "goeland_dort": True,
     # ⚠️ La bulle des betes est plus PETITE que celle des gens (520) : une bete
     # ne sert a rien qu'on ne la voie pas, et elle ne doit surtout pas peser sur
     # le budget d'images de la rue.
@@ -706,6 +819,8 @@ PAROLES: dict[str, dict] = {
     # ⚠️ Ce qu'il crie VRAIMENT, c'est la manchette du Clairon ; celle-ci n'est
     # que son appel, pour les matins où il n'y a rien à signaler.
     "crieur": {"appel": "LE CLAIRON DE LA BAIE!"},
+    # Il ne crie pas la manchette : il la LANCE. Un mot, de temps en temps.
+    "camelot": {"lance": "LE CLAIRON!"},
     "laveur": {"propose": "UN COUP DE CHIFFON?", "merci": "MERCI M'SIEUR"},
     # Le voleur ne dit rien. C'est la VICTIME qui parle — et c'est elle qu'on
     # doit entendre, sinon le vol n'est qu'une animation.
@@ -830,13 +945,23 @@ def exporter() -> dict:
                               "marche_images": list(BETES["goeland"]["marche_images"])},
                   "chat": {**BETES["chat"],
                            "assis_images": list(BETES["chat"]["assis_images"]),
-                           "marche_images": list(BETES["chat"]["marche_images"])}},
+                           "marche_images": list(BETES["chat"]["marche_images"])},
+                  "raton": {**BETES["raton"],
+                            "assis_images": list(BETES["raton"]["assis_images"]),
+                            "marche_images": list(BETES["raton"]["marche_images"]),
+                            "heures": list(BETES["raton"]["heures"])},
+                  "goeland_dort": BETES["goeland_dort"]},
+        "enfants_a_velo": {**ENFANTS_A_VELO,
+                           "casques": list(ENFANTS_A_VELO["casques"]),
+                           "cadres": list(ENFANTS_A_VELO["cadres"]),
+                           "chandails": list(ENFANTS_A_VELO["chandails"])},
         "plage": {**PLAGE,
                   "adultes_archetypes": list(PLAGE["adultes_archetypes"]),
                   "bronzer_images": list(PLAGE["bronzer_images"]),
                   "accroupi_images": list(PLAGE["accroupi_images"]),
                   "barbote_images": list(PLAGE["barbote_images"]),
-                  "jeu_images": list(PLAGE["jeu_images"])},
+                  "jeu_images": list(PLAGE["jeu_images"]),
+                  "heures": list(PLAGE["heures"])},
         # ⚠️ Le spectacle de rue passe par le paquet, comme tout le reste : un
         # minimum de 3 ecrit dans `entites.js` serait un nombre que personne ne
         # peut relire ni juger depuis la source de verite.

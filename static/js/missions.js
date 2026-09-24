@@ -13,17 +13,51 @@ const Missions = (function () {
   const FONDU_NUIT = [32, 56, 32];      // une nuit de sommeil
   const FONDU_SOUFFLE = [24, 42, 24];   // la compagnie d'une fille de la Brume
 
-  function encaisser(montant, raison) {
+  /** `enSilence` : ni le ding ni la ligne de message — c'est `annoncerPrime`
+      qui dira cette somme-la, plus fort. */
+  function encaisser(montant, raison, enSilence) {
     montant = Math.max(0, Math.round(montant));
     B.partie.argent = Math.min(B.defs.economie.fortune_max, B.partie.argent + montant);
-    if (montant > 0) { Son.SFX.argent(); if (typeof Hud !== 'undefined') Hud.message('+' + montant + ' $' + (raison ? ' ' + raison : '')); }
+    if (montant > 0 && !enSilence) { Son.SFX.argent(); if (typeof Hud !== 'undefined') Hud.message('+' + montant + ' $' + (raison ? ' ' + raison : '')); }
     return montant;
+  }
+
+  /** Le palier d'une prime (`economie.PRIME_PALIERS`) : le dernier dont on atteint le seuil. */
+  function palierDePrime(montant) {
+    let palier = 'petite';
+    (B.defs.economie.prime_paliers || []).forEach(function (p) { if (montant >= p.des) palier = p.slug; });
+    return palier;
+  }
+
+  /** LA PRIME D'UNE MISSION (ou d'un defi) SE VOIT ET S'ENTEND. Martin, 22 sept.
+      2026 : « quand je reçois une prime pour une mission, je veux le voir
+      clairement et avec un son qui correspond à la prime ». Elle n'etait qu'un
+      « +350 $ » dans la bande des messages, avec le ding d'une liasse ramassee —
+      et la bande se tait pendant une scene : la fin d'une mission partait
+      aussitot, le chiffre ne s'affichait jamais. Le bandeau (`Hud.prime`) passe
+      PAR-DESSUS la scene, et le son est celui du palier.
+      ⚠️ L'argent, lui, s'encaisse a part (`encaisser(..., true)`) : c'est la
+      qu'on le compte, et les juges l'y guettent. `bonus` : la part ajoutee
+      (sans une bosse), dite sur sa ligne. */
+  function annoncerPrime(montant, titre, quoi, bonus) {
+    montant = Math.max(0, Math.round(montant));
+    if (!montant) return null;
+    const palier = palierDePrime(montant);
+    Son.SFX.prime(palier);
+    if (typeof Hud !== 'undefined') Hud.prime({ montant: montant, titre: titre, quoi: quoi, bonus: bonus || 0, palier: palier });
+    return palier;
   }
 
   function payer(montant, raison) {
     montant = Math.max(0, Math.round(montant));
     if (B.partie.argent < montant) return false;
     B.partie.argent -= montant;
+    // ⚠️ LE TIROIR-CAISSE A CHAQUE ACHAT, comme `encaisser` : le meme
+    // echantillon (`argent`), deja paye. Jusqu'au 22 sept. 2026 chaque appelant
+    // le jouait lui-meme — et une quinzaine l'oubliaient (le billet de foire,
+    // le ticket de metro, la coupe de cheveux, l'amende, l'hopital…). Un
+    // appelant ne le rejoue donc plus apres `payer`.
+    if (montant > 0 && typeof Son !== 'undefined') Son.SFX.argent();
     if (typeof Hud !== 'undefined') Hud.message('-' + montant + ' $' + (raison ? ' ' + raison : ''));
     return true;
   }
@@ -111,7 +145,6 @@ const Missions = (function () {
     soigner(j, commerce.gain_pv ? B.defs.economie.tarifs[commerce.gain_pv] : 0);
     nourrir(j, commerce.gain_souffle ? B.defs.economie.tarifs[commerce.gain_souffle] : 0);
     if (commerce.effet === 'cafe') cafeine(j);
-    Son.SFX.argent();
     if (commerce.service === 'journal') Hud.message('LE CLAIRON DE LA BAIE');
     return true;
   }
@@ -144,7 +177,8 @@ const Missions = (function () {
   /** L'homme-sandwich a portee de main : celui qui te parle, ou qui passe. */
   function crieurSousLaMain(j) {
     return Entites.pietonsAutour(j.x, j.y, 26).find(function (e) {
-      return e.metier === 'reclame' && e.vivant && e.etat !== 'fuit' && e.etat !== 'assomme' && e.etat !== 'temoin';
+      return e.metier === 'reclame' && e.vivant && e.etat !== 'fuit' && e.etat !== 'assomme' && e.etat !== 'temoin'
+        && faceA(j, e.x, e.y);
     }) || null;
   }
 
@@ -182,7 +216,7 @@ const Missions = (function () {
       se passer. */
   function filleSousLaMain(j) {
     return Entites.pietonsAutour(j.x, j.y, 26).find(function (e) {
-      return e.metier === 'compagnie' && e.vivant && e.etat !== 'fuit';
+      return e.metier === 'compagnie' && e.vivant && e.etat !== 'fuit' && faceA(j, e.x, e.y);
     }) || null;
   }
 
@@ -191,19 +225,35 @@ const Missions = (function () {
       silence a travers la rue. */
   function stoolSousLaMain(j) {
     return Entites.pietonsAutour(j.x, j.y, B.defs.recherche.police.silence_rayon_px)
-      .find(Police.estStool) || null;
+      .find(function (e) { return Police.estStool(e) && faceA(j, e.x, e.y); }) || null;
+  }
+
+  /** L'etal d'un ambulant a portee de main — le meme pour l'invite et pour ACTION. */
+  function etalSousLaMain(j) {
+    return Entites.autour(j.x, j.y, 30, function (e) { return e.type === 'ambulant' && faceA(j, e.x, e.y); })[0] || null;
+  }
+
+  /** Le temoin qui court raconter, a portee de main : on lui achete son silence. */
+  function temoinSousLaMain(j) {
+    return Entites.pietonsAutour(j.x, j.y, B.defs.recherche.police.silence_rayon_px).find(function (e) {
+      return e.etat === 'temoin' && e.crime && !e.crime.rapporte && faceA(j, e.x, e.y);
+    }) || null;
   }
 
   function interagir(j) {
     // ⚠️ On ne magasine pas avec quelqu'un dans les bras : tant qu'on tient un
     // otage, ACTION ne fait qu'une chose — le lacher.
-    if (j.otage) return Combat.lacherOtage(false);
+    if (j.otage) return Combat.lacherOtage(j, false);
     // ⚠️ UN JEU D'ADRESSE EN COURS PREND LE BOUTON, et il le prend AVANT tout le
     // reste : le marteau de force se joue en martelant ACTION devant son
     // comptoir, et sans cette ligne chaque coup ouvrirait le menu de la
     // baraque d'a cote. La chaine d'ACTION affame ce qui suit — c'est vrai
     // dans les deux sens, et c'est pour ca que ce test-ci est le premier.
     if (B.defi && Histoire.actionDeDefi()) return true;
+    // ⚠️ Le piratage EN COURS prend aussi le bouton avant tout : ouvrir un menu
+    // par-dessus une sequence a moitie tapee la perdrait pour rien.
+    const terminal = Histoire.piratageSousLaMain(j);
+    if (terminal) return Histoire.commencerPiratage();
     // Un personnage de l'histoire, un panneau de defi : avant tout le reste.
     const perso = Histoire.personnageSousLaMain(j);
     if (perso) return Histoire.parler(perso.personnage);
@@ -216,7 +266,7 @@ const Missions = (function () {
     const comptoir = typeof Foire !== 'undefined' ? Foire.jeuSousLaMain(j) : null;
     const jeu = comptoir ? Histoire.defiDuComptoir(comptoir) : null;
     if (jeu) return Histoire.proposerDefi(jeu.slug);
-    const etal = Entites.autour(j.x, j.y, 30, function (e) { return e.type === 'ambulant'; })[0];
+    const etal = etalSousLaMain(j);
     if (etal) return acheterAmbulant(j, etal);
     // ⚠️ LES HOMMES DE SAL AVANT TOUT LE MONDE : quand ils sont sur toi, il
     // n'y a rien d'autre a faire de ce bouton-la.
@@ -225,16 +275,19 @@ const Missions = (function () {
     // qui donne au menu son curseur. Pose directement, ce comptoir-la s'ouvrait
     // SANS curseur — aucune ligne surlignee, HAUT et BAS le mettaient a NaN,
     // ACTION ne choisissait rien. Le menu le plus tendu du jeu ne se jouait pas.
-    if (homme) { Hud.ouvrirMenu(menuDette(homme)); return true; }
+    if (homme) {
+      const menu = menuDette(homme);
+      menu.refaire = function () { return menuDette(homme); };
+      Hud.ouvrirMenu(menu);
+      return true;
+    }
     // ⚠️ LE STOOL AVANT LE TEMOIN : lui est en route vers un telephone, l'autre
     // cherche encore un agent. Quand les deux sont a portee, c'est le plus
     // presse qu'on paie.
     const stool = stoolSousLaMain(j);
     if (stool) return Police.acheterLeStool(j, stool);
     // Un temoin qui court raconter : on lui achete le silence.
-    const temoin = Entites.pietonsAutour(j.x, j.y, B.defs.recherche.police.silence_rayon_px).find(function (e) {
-      return e.etat === 'temoin' && e.crime && !e.crime.rapporte;
-    });
+    const temoin = temoinSousLaMain(j);
     if (temoin) return Police.acheterLeSilence(j, temoin);
     const crieur = crieurSousLaMain(j);
     if (crieur) return prendreCoupon(j, crieur);
@@ -257,6 +310,13 @@ const Missions = (function () {
     if (manege) return Foire.monter(j, manege);
     const autobus = Autobus.autobusSousLaMain(j);
     if (autobus) return Autobus.monter(j, autobus);
+    // La pelle d'un chantier : on monte dans la cabine (8e vague de « Ça travaille »). Avant la
+    // portière (`Vehicules.maj`) : ce n'est un char qu'à l'instant où on le prend.
+    const pelle = Chantiers.pelleSousLaMain(j);
+    if (pelle) return Chantiers.monterDansLaPelle(j, pelle);
+    // La grue : la cabine, et la flèche qu'on tourne (9e vague).
+    const grue = Chantiers.grueSousLaMain(j);
+    if (grue) return Chantiers.monterDansLaGrue(j, grue);
     // ⚠️ LE BOUCLIER HUMAIN EN DERNIER, et c'est voulu : on attrape quelqu'un
     // quand ACTION n'avait rien d'autre a faire. Sinon le geste aurait pris
     // Josee en otage au lieu de lui parler. `otageSousLaMain` ecarte aussi la
@@ -272,8 +332,21 @@ const Missions = (function () {
     // l'heure, c'etait une tape, et elle fait les poches. ⚠️ Rendre `true` sans
     // ce relais, c'etait le bug « je n'arrive plus a voler les gens » : l'arme a
     // la main, toute victime des poches est aussi a portee de bouclier.
+    //
+    // ⚠️ LES GENS QUI TRAVAILLENT DANS LA RUE AVANT LUI (le pourboire à l'artiste, la
+    // photo du touriste) : le bouclier prend n'importe quel passant, et il aurait pris
+    // le musicien. Sauf DERRIERE l'artiste quand ses poches se prennent — c'est le
+    // pickpocket (`Combat.pochesAPrendre`).
+    if (typeof Interactions !== 'undefined' && Interactions.utiliserSurLesGens(j)) return true;
     const otage = Combat.otageSousLaMain(j);
     if (otage) return Combat.viserOtage(j);
+    // Une bete confiante (le chat) : jamais une prise d'otage, jamais un decor — sa
+    // propre place, entre le bouclier et le decor (`Interactions.utiliserSurLesBetes`).
+    if (typeof Interactions !== 'undefined' && Interactions.utiliserSurLesBetes(j)) return true;
+    // ⚠️ LE DECOR EN TOUT DERNIER : un banc, un bac, une fontaine ne volent ACTION ni a
+    // une personne, ni a la porte, l'arme par terre ou le char d'a cote (`Interactions`
+    // les ecarte lui-meme : ils sont servis par l'appelant, APRES nous).
+    if (typeof Interactions !== 'undefined') return Interactions.utiliserSurLeDecor(j);
     return false;
   }
 
@@ -330,11 +403,12 @@ const Missions = (function () {
         Police.remiseAZero();
         j.arrete = false;
         if (agent) { agent.etat = 'flane'; agent.but = null; }
-        Hud.dialogue(ami ? 'SGT BOUCHARD' : 'L’AGENT', ['« ON N’A RIEN VU. CIRCULE. »'], 180);
+        Hud.dialogue(ami ? 'SGT BOUCHARD' : 'L’AGENT', ['« ON N’A RIEN VU. CIRCULE. »'], 180,
+                     { slug: ami ? 'bouchard' : 'agent', humeur: 'malin' });
         return true;
       }
       Police.signalerCrime('pot_de_vin_refuse', j.x, j.y, true);
-      Hud.dialogue('L’AGENT', ['« TU TE PENSES OÙ, TOI? »'], 120);
+      Hud.dialogue('L’AGENT', ['« TU TE PENSES OÙ, TOI? »'], 120, { slug: 'agent', humeur: 'fache' });
       prison(agent);
       return true;
     } });
@@ -434,6 +508,15 @@ const Missions = (function () {
       pris: 'À LA FOURRIÈRE',
       fini: 'REMORQUAGE',
     },
+    // ⚠️ M16 : le boulot de l'autobus, sur le patron du taxi (un passager au
+    // bord de la route, une destination ailleurs) — `economie.BOULOTS.autobus`
+    // porte les nombres.
+    autobus: {
+      ramasser: 'client',
+      destination: 'ailleurs',
+      pris: 'PROCHAIN ARRÊT : ',
+      fini: 'ARRÊT',
+    },
   };
 
   //: A cette distance de sa destination, un boulot est arrive.
@@ -492,6 +575,10 @@ const Missions = (function () {
     /** Le klaxon dans un char qui a un boulot : on le prend, ou rien. */
     klaxon: function (v) {
       if (!v || !v.def.boulot) return false;
+      // ⚠️ PAS DE CONTRAT PENDANT UN DÉFI : au remorquage de la fourrière, le
+      // klaxon accroche l'épave du défi — il ne doit pas, en plus, prendre le
+      // boulot (ni dire que la fourrière ne paie que les épaves).
+      if (B.defi) return false;
       // ⚠️ UN contrat a la fois — et sur un char a sirene, ca se DIT : le
       // bouton vient d'allumer la sirene, il a donc l'air d'avoir fait
       // quelque chose, et un refus muet passerait pour une panne. Dans un
@@ -852,7 +939,7 @@ const Missions = (function () {
       const def = Vehicules.vehiculeDef(c.slug);
       const prix = prixRachat(c.slug);
       items.push({ libelle: (def ? def.nom : c.slug).toUpperCase(), detail: prix + ' $', actif: p.argent >= prix,
-                   faire: function () { return racheter(c, prix); } });
+                   faire: function () { racheter(c, prix); return false; } });
     });
     return { titre: 'FOURRIÈRE MUNICIPALE', items: items,
              sur: p.argent + ' $ · ' + p.fourriere.length + '/' + B.defs.economie.fourriere.places,
@@ -873,7 +960,6 @@ const Missions = (function () {
       if (e.type === 'vehicule' && e.saisi === i) { e.saisi = null; e.vole = false; e.aToi = true; }
     });
     Hud.message('CHAR RACHETÉ — IL EST DANS LA COUR');
-    Son.SFX.argent();
     return true;
   }
 
@@ -904,7 +990,7 @@ const Missions = (function () {
     let meilleur = null, dMin = 1.6;
     for (const p of piece.points) {
       const d = Math.hypot(p.x - tx, p.y - ty);
-      if (d < dMin) { dMin = d; meilleur = p; }
+      if (d < dMin && faceA(j, (p.x + 0.5) * TT, (p.y + 0.5) * TT)) { dMin = d; meilleur = p; }
     }
     return meilleur;
   }
@@ -931,7 +1017,7 @@ const Missions = (function () {
     // brasse — l'invite l'a promis.
     if (point.type === 'distributrice') return utiliserDistributrice(j, machineDuPoint(point));
     const menu = menuDuPoint(point);
-    if (!menu) { Hud.message('PLUS TARD'); return true; }
+    if (!menu) { Hud.message('PLUS TARD'); Son.SFX.erreur(); return true; }
     // Un comptoir qui reste ouvert se refait apres chaque achat : l'arme passe
     // a « DEJA A TOI », le magot en haut a droite fond, les munitions de ce
     // qu'on vient d'acheter apparaissent. Sans ca, on paie deux fois.
@@ -954,7 +1040,7 @@ const Missions = (function () {
     return { libelle: 'PRENDRE LA CAISSE', detail: caisse + ' $', actif: caisse > 0, faire: function () {
       encaisser(caisse, prop.nom.toUpperCase());
       B.partie.proprietes[prop.slug].caisse = 0;
-      return true;
+      return false;
     } };
   }
 
@@ -975,7 +1061,7 @@ const Missions = (function () {
       payer(prop.prix, prop.nom.toUpperCase());
       p.proprietes[prop.slug] = { jour: p.jour, caisse: 0 };
       Hud.message(prop.nom.toUpperCase() + ' EST À TOI', 180);
-      return true;
+      return false;
     } };
   }
 
@@ -1013,7 +1099,7 @@ const Missions = (function () {
         if (!Monde.estNuit(p.heure) && p.heure < B.defs.economie.sieste.reveil) {
           items.push({ libelle: 'DORMIR JUSQU’AU SOIR', detail: 'SAUVEGARDE', faire: function () { dormirJusquAuSoir(); return true; } });
         }
-        items.push({ libelle: 'SAUVEGARDER SEULEMENT', faire: function () { sauvegarderPartie(); Hud.message('PARTIE SAUVEGARDÉE'); return true; } });
+        items.push({ libelle: 'SAUVEGARDER SEULEMENT', faire: function () { sauvegarderPartie(); Hud.message('PARTIE SAUVEGARDÉE'); return false; } });
         return { titre: piece.nom.toUpperCase(), items: items };
       case 'coffre':
         return menuCoffre();
@@ -1032,16 +1118,16 @@ const Missions = (function () {
         [['HOT-DOG', 'hotdog'], ['POUTINE', 'poutine'], ['SOUPE AUX POIS', 'soupe'], ['LIQUEUR', 'liqueur']].forEach(function (d) {
           items.push({ libelle: d[0], detail: tarifs[d[1]] + ' $ / +' + tarifs[d[1] + '_pv'] + ' PV +' + tarifs[d[1] + '_souffle'] + ' SOUFFLE',
                        actif: p.argent >= tarifs[d[1]],
-                       faire: function () { payer(tarifs[d[1]], d[0]); soigner(B.joueur, tarifs[d[1] + '_pv']); nourrir(B.joueur, tarifs[d[1] + '_souffle']); Son.SFX.argent(); return false; } });
+                       faire: function () { payer(tarifs[d[1]], d[0]); soigner(B.joueur, tarifs[d[1] + '_pv']); nourrir(B.joueur, tarifs[d[1] + '_souffle']); return false; } });
         });
         items.push({ libelle: 'CAFÉ', detail: tarifs.cafe + ' $ / +' + tarifs.cafe_souffle + ' SOUFFLE · COURSE LONGUE ' + B.defs.economie.cafe.duree_s + ' S',
                      actif: p.argent >= tarifs.cafe,
-                     faire: function () { payer(tarifs.cafe, 'CAFÉ'); soigner(B.joueur, tarifs.cafe_pv); nourrir(B.joueur, tarifs.cafe_souffle); cafeine(B.joueur); Son.SFX.argent(); return false; } });
+                     faire: function () { payer(tarifs.cafe, 'CAFÉ'); soigner(B.joueur, tarifs.cafe_pv); nourrir(B.joueur, tarifs.cafe_souffle); cafeine(B.joueur); return false; } });
         return { titre: piece.nom.toUpperCase(), items: items, sur: p.argent + ' $' };
       case 'soigner': {
         const prix = B.defs.economie.hopital.minimum;
         items.push({ libelle: 'SOINS COMPLETS', detail: prix + ' $', actif: p.argent >= prix && B.joueur.vie < B.joueur.vieMax,
-                     faire: function () { payer(prix, 'SOINS'); soigner(B.joueur, 999); return true; } });
+                     faire: function () { payer(prix, 'SOINS'); soigner(B.joueur, 999); return false; } });
         return { titre: 'HÔPITAL DE BAIE-DES-BRUMES', items: items, sur: p.argent + ' $' };
       }
       case 'caisse':
@@ -1072,6 +1158,19 @@ const Missions = (function () {
 
   // --- Les comptoirs des commerces ordinaires ------------------------------------------
 
+  /** **LA NUIT A SES HABITUDES** : un comptoir a ses heures (`magasins.HEURES_DES_COMPTOIRS`),
+      sauf dans les pieces qui ne ferment jamais (`nuit.comptoirs.toujours_ouverts` : le
+      depanneur). Rend le mot du comptoir ferme — « FERMÉ — OUVRE À 7 H » —, ou null s'il
+      sert. ⚠️ L'invite et le menu le lisent tous deux ICI : une invite qui promet
+      « ACHETER » devant un comptoir ferme se lit comme un bogue. */
+  function comptoirFerme(point) {
+    const comptoir = (B.defs.comptoirs || {})[point.genre], cn = B.defs.nuit && B.defs.nuit.comptoirs;
+    if (!comptoir || !comptoir.heures || !cn) return null;
+    if (B.interieur && cn.toujours_ouverts.indexOf(B.interieur.slug) >= 0) return null;
+    if (ouvert(comptoir)) return null;
+    return cn.ferme + ' ' + Math.round(comptoir.heures[0] * 24) + ' H';
+  }
+
   /** Ce qu'on achete au comptoir d'un commerce ordinaire.
 
       ⚠️ Rien n'est ecrit ici : le comptoir vient du serveur
@@ -1084,6 +1183,12 @@ const Missions = (function () {
     const p = B.partie, tarifs = B.defs.economie.tarifs, piece = B.interieur;
     const comptoir = (B.defs.comptoirs || {})[point.genre];
     if (!comptoir) return null;
+    // Ferme, on ne promet pas de prix : le menu le dit, et ACTION ne vendra rien.
+    const ferme = comptoirFerme(point);
+    if (ferme) {
+      items.push({ libelle: ferme, actif: false });
+      return { titre: piece ? piece.nom.toUpperCase() : comptoir.nom.toUpperCase(), items: items, sur: p.argent + ' $' };
+    }
     comptoir.articles.forEach(function (a) {
       if (a.arme) return items.push(itemArme(a, comptoir.marge));
       if (a.tenue) return items.push(itemTenue(a, comptoir.rabais));
@@ -1117,7 +1222,6 @@ const Missions = (function () {
                }
                manger(a);
                if (a.journal) { lireLeJournal(); return true; }
-               Son.SFX.argent();
                return false;
              } };
   }
@@ -1153,12 +1257,12 @@ const Missions = (function () {
     const prix = Math.round(tenue.prix * (rabaisTenue || 1));
     const deja = p.tenues.indexOf(article.tenue) >= 0;
     return { libelle: tenue.nom.toUpperCase(),
-             detail: deja ? (p.tenue === article.tenue ? 'PORTÉE' : 'À TOI') : prix + ' $',
+             detail: deja ? (portee(tenue) ? 'PORTÉE' : 'À TOI') : prix + ' $',
              actif: deja || p.argent >= prix,
              faire: function () {
                if (!deja) { payer(prix, tenue.nom.toUpperCase()); p.tenues.push(article.tenue); }
                porterTenue(article.tenue);
-               return true;
+               return false;
              } };
   }
 
@@ -1174,10 +1278,11 @@ const Missions = (function () {
                      payer(prix, 'COUPE DE CHEVEUX');
                      p.cheveux = c.couleur;
                      B.joueur.swaps = apparenceDuJoueur(p, B.defs);
+                     B.joueur.tenue = Garderobe.duJoueur(p, B.defs);
                      Police.remiseAZero();
                      // ⚠️ Le stool reconnait une FACE : une coupe neuve la defait.
                      Police.onNeTeReconnaitPlus();
-                     return true;
+                     return false;
                    } });
     });
     return { titre: B.interieur.nom.toUpperCase(), items: items, sur: p.argent + ' $',
@@ -1234,7 +1339,6 @@ const Missions = (function () {
     const dehors = B.exterieur && B.exterieur.carte;
     const gain = gainDeFouille(porte && dehors ? Monde.standingA(porte.x, porte.y, dehors) : null);
     encaisser(gain, 'DANS LES TIROIRS');
-    Son.SFX.argent();
     return true;
   }
 
@@ -1257,10 +1361,13 @@ const Missions = (function () {
   function porterTenue(slug) {
     const tenue = (B.defs.tenues || []).find(function (t) { return t.slug === slug; });
     if (!tenue) return false;
-    B.partie.tenue = slug;
+    // Un CHAPEAU se met par-dessus le linge — et celui qu'on porte deja s'enleve.
+    if (tenue.emplacement === 'tete') B.partie.chapeau = B.partie.chapeau === slug ? null : slug;
+    else B.partie.tenue = slug;
     // ⚠️ `apparenceDuJoueur` et pas `{ c: ... }` : ecraser les swaps effacait la
     // teinture du barbier des qu'on changeait de linge.
     B.joueur.swaps = apparenceDuJoueur(B.partie, B.defs);
+    B.joueur.tenue = Garderobe.duJoueur(B.partie, B.defs);
     // Changer de linge, c'est devenir quelqu'un d'autre pour la police (M4 affinera).
     Police.remiseAZero();
     Police.onNeTeReconnaitPlus();
@@ -1269,8 +1376,8 @@ const Missions = (function () {
 
   function menuGardeRobe() {
     const p = B.partie;
-    const items = (B.defs.tenues || []).filter(function (t) { return p.tenues.indexOf(t.slug) >= 0; }).map(function (t) {
-      return { libelle: t.nom.toUpperCase(), detail: p.tenue === t.slug ? 'PORTÉE' : '', faire: function () { porterTenue(t.slug); return true; } };
+    const items = parEmplacement((B.defs.tenues || []).filter(function (t) { return p.tenues.indexOf(t.slug) >= 0; }), function (t) {
+      return { libelle: t.nom.toUpperCase(), detail: portee(t) ? (t.emplacement === 'tete' ? 'SUR TA TÊTE' : 'PORTÉE') : '', faire: function () { porterTenue(t.slug); return false; } };
     });
     return { titre: 'GARDE-ROBE', items: items, aide: 'CHANGER DE LINGE FAIT OUBLIER TA TÊTE' };
   }
@@ -1381,18 +1488,18 @@ const Missions = (function () {
         const i = B.exterieur.entites.indexOf(v);
         if (i >= 0) B.exterieur.entites.splice(i, 1);
       } else Entites.retirer(v);
-      return true;
+      // ⚠️ Au RIDEAU, le char vendu part avec le volant : il n'y a plus rien
+      // a faire de ce menu-la. Au comptoir, on reste — la fiche se refait sur
+      // « GARE UN CHAR DEVANT LA PORTE ».
+      return !!vDonne;
     } });
     items.push({ libelle: 'RÉPARER', detail: reparation + ' $', actif: reparation > 0 && p.argent >= reparation, faire: function () {
-      payer(reparation, 'RÉPARATION'); v.vie = v.vieMax; return true;
+      payer(reparation, 'RÉPARATION'); v.vie = v.vieMax; return false;
     } });
     items.push({ libelle: 'REPEINDRE (EFFACE LE VOL)', detail: eco.repeinte + ' $', actif: p.argent >= eco.repeinte, faire: function () {
       payer(eco.repeinte, 'PEINTURE');
-      const autres = v.def.couleurs.filter(function (c) { return c !== v.couleur; });
-      v.couleur = autres.length ? autres[Math.floor(B.rng() * autres.length)] : v.couleur;
-      v.swaps = nuances(v.couleur); v.vole = false; v.alarme = 0;
-      Police.remiseAZero();
-      return true;
+      repeindre(v);
+      return false;
     } });
     // L'assurance : Ti-Guy couvre ce qui est gare devant, sans demander a qui
     // c'est. La prime, la valeur couverte, et « deja assure » — une fois.
@@ -1400,12 +1507,22 @@ const Missions = (function () {
     items.push({ libelle: 'ASSURER ' + v.def.nom.toUpperCase(),
                  detail: v.assure ? 'DÉJÀ ASSURÉ' : (enqueteEnCours() ? 'L’ASSUREUR ENQUÊTE' : prime + ' $ / COUVRE ' + couvre + ' $'),
                  actif: !v.assure && !proprio && !enqueteEnCours() && p.argent >= prime,
-                 faire: function () { return assurer(v); } });
+                 faire: function () { assurer(v); return false; } });
     if (p.assurance.du > 0) {
       items.push({ libelle: 'ENCAISSER L’ASSURANCE', detail: p.assurance.du + ' $', actif: true,
-                   faire: function () { encaisserAssurance(); return true; } });
+                   faire: function () { encaisserAssurance(); return false; } });
     }
     return { titre: 'GARAGE ROCCO BANDINI', items: items, sur: p.argent + ' $' };
+  }
+
+  /** Une couche neuve : une autre couleur de sa fiche (s'il en a une autre), le vol
+      efface, l'alarme coupee, et la police remise a zero — elle cherchait CE char-la.
+      Le menu de Ti-Guy et la carrosserie passent par la meme main. */
+  function repeindre(v) {
+    const autres = v.def.couleurs.filter(function (c) { return c !== v.couleur; });
+    v.couleur = autres.length ? autres[Math.floor(B.rng() * autres.length)] : v.couleur;
+    v.swaps = nuances(v.couleur); v.vole = false; v.alarme = 0;
+    Police.remiseAZero();
   }
 
   // --- La porte de garage : on se gare devant, le rideau monte, Ti-Guy sort ---------------
@@ -1417,10 +1534,124 @@ const Missions = (function () {
   const BAIE_PROFONDEUR = 2;
   //: Sous cette vitesse, le char est GARE — le menu s'ouvre.
   const BAIE_ARRET = 0.3;
+  //: Combien de passes de pistolet on entend, rideau baisse, a la carrosserie.
+  const PASSES_DE_PISTOLET = 3;
+
+  /** Ce que coute la peinture a la carrosserie, a la chaleur d'en ce moment. */
+  function prixCarrosserie() {
+    const c = B.defs.economie.carrosserie;
+    return c.prix + c.par_etoile * Math.max(0, B.recherche.etoiles || 0);
+  }
+
+  /** Pourquoi ce char ne passe pas le seuil de ce rideau — `null` s'il passe, `''`
+      pour un refus qui se tait.
+
+      ⚠️ Chez Ti-Guy, le char d'une mission ne passe pas (il se LIVRE devant le rideau,
+      `Histoire.lieuDeLivraison`) mais le rideau se leve quand meme pour lui. A la
+      carrosserie, il passe : semer la police en pleine mission, c'est tout l'interet.
+      ⚠️ Une auto-patrouille ne se repeint pas, et une remorque ne rentre pas sous le toit. */
+  function refusDuSeuil(pg, v) {
+    if (B.cinema || B.menu || B.transition || v.etat === 'epave') return '';
+    if (v.remorque) return 'DÉCROCHE CE QUE TU TIRES D’ABORD';
+    // La cachette d'un bungalow prend tout le monde, gratuitement — le char d'une
+    // mission compris : se cacher en pleine mission, c'est la meme idee que la peinture.
+    if (pg.genre === 'cachette') return null;
+    if (pg.genre !== 'carrosserie') return v.mission ? '' : null;
+    if (v.def.police) return 'UN CHAR DE POLICE ? ON TOUCHE PAS À ÇA';
+    const prix = prixCarrosserie();
+    if (B.partie.argent < prix) return 'PEINTURE : ' + prix + ' $ — T’AS PAS ÇA';
+    return null;
+  }
+
+  /** Le char est-il TOUT ENTIER passe sous le linteau ? Son pare-chocs arriere au-dessus
+      du bas de la rangee du rideau — c'est la que le rideau retombe. La boite du char
+      tourne avec lui ; les montants tiennent deja ses flancs. */
+  function toutDedans(pg, v) {
+    const c = Math.abs(Math.cos(v.angle)), s = Math.abs(Math.sin(v.angle));
+    const demi = s * v.def.longueur / 2 + c * v.def.largeur / 2;
+    return Monde.dansLePassage(pg, v.x, v.y) && v.y + demi <= (pg.y + 1) * TT;
+  }
+
+  /** On a passe le seuil : le volant se fige, le rideau retombe derriere le pare-chocs. */
+  function entrer(pg, v) {
+    pg.dedans = v; pg.phase = 'baisse'; pg.t = 0; pg.tient = 0;
+    pg.prix = pg.genre === 'carrosserie' ? prixCarrosserie() : 0;
+    v.atelier = pg; v.vitesse = 0; v.vx = 0; v.vy = 0;
+  }
+
+  /** L'ATELIER, rideau baisse : `baisse` → `peint` (la carrosserie), `menu` (Ti-Guy) ou
+      `cache` (un bungalow, jusqu'a ce qu'on recule) → `leve` → `sortie`. On en sort en
+      reculant ; le rideau tient tant que le char est dessous ou devant, et l'atelier se
+      referme quand il a quitte la baie. */
+  function majAtelier(pg) {
+    const v = pg.dedans, j = B.joueur;
+    // Le char n'est plus au joueur (vendu chez Ti-Guy, une epave) : l'atelier se referme.
+    if (!j || j.dansVehicule !== v || v.etat === 'epave' || B.entites.indexOf(v) < 0) {
+      v.atelier = null;
+      pg.dedans = null; pg.admis = null; pg.phase = null;
+      return;
+    }
+    if (pg.phase === 'sortie') {
+      if (Monde.dansLePassage(pg, v.x, v.y) || Monde.devantLaPorteDeGarage(pg, v.x, v.y, BAIE_PROFONDEUR, RIDEAU_MARGE)) {
+        Monde.leverLaPorteDeGarage(pg);
+        return;
+      }
+      pg.dedans = null; pg.phase = null;
+      return;
+    }
+    v.vitesse = 0; v.vx = 0; v.vy = 0;
+    if (pg.phase === 'baisse') {
+      if (pg.ouverture > 0) return;
+      pg.t = 0;
+      if (pg.genre === 'cachette') { pg.phase = 'cache'; pg.relache = false; Hud.message('CACHÉ — RECULE POUR SORTIR', 180); return; }
+      if (pg.genre !== 'carrosserie') { pg.phase = 'menu'; Hud.ouvrirMenu(menuDuRideau(v)); return; }
+      // ⚠️ Le prix est celui de l'ENTREE : une etoile gagnee en route ne se paie
+      // pas deux fois, et l'argent se recompte ici — on a pu en depenser depuis.
+      if (B.partie.argent < pg.prix) { Hud.message('PEINTURE : ' + pg.prix + ' $ — T’AS PAS ÇA', 150); Son.SFX.erreur(); pg.phase = 'leve'; }
+      else pg.phase = 'peint';
+    }
+    if (pg.phase === 'peint') {
+      const duree = Math.max(1, Math.round(B.defs.economie.carrosserie.atelier_s * 60));
+      if (pg.t % Math.ceil(duree / PASSES_DE_PISTOLET) === 0) Son.SFX.pistolet_peinture();
+      if (++pg.t < duree) return;
+      const cherchaient = B.recherche.etoiles > 0;
+      payer(pg.prix, 'PEINTURE — ' + (cherchaient ? 'ILS CHERCHENT UN AUTRE CHAR' : 'COMME NEUF'));
+      repeindre(v);
+      pg.phase = 'leve';
+    }
+    if (pg.phase === 'menu') {
+      if (B.menu) return;
+      pg.phase = 'leve';
+    }
+    // ⚠️ CACHE : rien ne se passe, et c'est tout le service. La police ne voit pas sous
+    // un toit (`Monde.abrite`), les etoiles tombent comme hors de vue. RECULER releve le
+    // rideau — pas le gaz : on est entre en le tenant, et le nez est deja au mur. Et
+    // RECULER DE NOUVEAU : la main qui freinait pour s'arreter sous le toit, et qui tient
+    // encore le frein quand le rideau touche le sol, ne ressort pas aussitot.
+    if (pg.phase === 'cache') {
+      if (Vehicules.commandesJoueur(v).frein < 0.2) { pg.relache = true; return; }
+      if (!pg.relache) return;
+      pg.phase = 'leve';
+    }
+    if (pg.phase === 'leve') {
+      Monde.leverLaPorteDeGarage(pg);
+      if (pg.ouverture < 1) return;
+      pg.phase = 'sortie'; v.atelier = null;
+    }
+  }
 
   /** Demande de Martin (17 sept. 2026) : « il faut une vraie porte de garage ou
       on stationne pour vendre ou faire des missions. la porte ouvre seule des
-      qu'on est devant en voiture. »
+      qu'on est devant en voiture. » Puis (21 sept. 2026) : « des portes de garage
+      qu'on peut vraiment entrer. pour permettre de semer la police en voiture »,
+      et « repeindre des voitures ».
+
+      ⚠️ ON ENTRE. Rideau leve, le char admis (`refusDuSeuil`) passe le seuil
+      (`Monde.seuilOuvert`) ; tout entier sous le toit, le volant se fige et le
+      rideau retombe (`majAtelier`). A la CARROSSERIE (`genre`), le pistolet siffle
+      et le char ressort d'une autre couleur, la police a zero, pour le prix de la
+      peinture et d'un supplement par etoile ; sans l'argent, le rideau ne monte
+      pas. Chez Ti-Guy, son menu s'ouvre a l'abri.
 
       Au volant, devant le rideau : il monte. Arrete dans la baie, rideau leve :
       le menu du garage s'ouvre avec CE char — vendre, reparer, repeindre,
@@ -1439,11 +1670,27 @@ const Missions = (function () {
     if (!portes.length || B.interieur) return;
     const j = B.joueur, v = j && j.dansVehicule;
     for (const pg of portes) {
-      if (v && Monde.devantLaPorteDeGarage(pg, v.x, v.y, RIDEAU_PORTEE, RIDEAU_MARGE)) Monde.leverLaPorteDeGarage(pg);
+      if (pg.dedans) { majAtelier(pg); continue; }
+      const devant = v && Monde.devantLaPorteDeGarage(pg, v.x, v.y, RIDEAU_PORTEE, RIDEAU_MARGE);
+      const dessous = v && pg.baie > 0 && Monde.dansLePassage(pg, v.x, v.y);
+      if (!devant && !dessous) { pg.admis = null; pg.refuse = null; continue; }
+      const refus = pg.admis === v ? null : refusDuSeuil(pg, v);
+      if (pg.genre !== 'garage' && refus !== null) {
+        // Refuse une fois par arrivee : on le dit, et le rideau reste baisse. (Chez Ti-Guy,
+      // il se leve quand meme : le char d'une mission s'y livre DEVANT.)
+        if (refus && pg.refuse !== v) { pg.refuse = v; Hud.message(refus, 150); Son.SFX.erreur(); }
+        continue;
+      }
+      Monde.leverLaPorteDeGarage(pg);
+      if (refus === null && pg.baie) pg.admis = v;
+      if (pg.admis === v && toutDedans(pg, v)) entrer(pg, v);
     }
     if (Monde.majPortesDeGarage()) Son.SFX.rideau_garage();
     for (const pg of portes) {
-      if (pg.servi && !Monde.devantLaPorteDeGarage(pg, pg.servi.x, pg.servi.y, BAIE_PROFONDEUR, 0)) pg.servi = null;
+      // ⚠️ Le menu DEVANT le rideau est celui de Ti-Guy : une carrosserie n'a pas de comptoir.
+      if (pg.genre !== 'garage' || pg.dedans) continue;
+      if (pg.servi && !Monde.devantLaPorteDeGarage(pg, pg.servi.x, pg.servi.y, BAIE_PROFONDEUR, 0)
+          && !Monde.dansLePassage(pg, pg.servi.x, pg.servi.y)) pg.servi = null;
       if (!v || !Monde.devantLaPorteDeGarage(pg, v.x, v.y, BAIE_PROFONDEUR, 0)) continue;
       if (pg.servi === v || pg.ouverture < 1 || Math.abs(v.vitesse) >= BAIE_ARRET) continue;
       if (B.cinema || B.menu || B.transition || v.mission || v.etat === 'epave') continue;
@@ -1459,7 +1706,9 @@ const Missions = (function () {
       auraient VENDU le char qu'on voulait seulement garer. */
   function menuDuRideau(v) {
     const items = [{ libelle: 'REPARTIR', faire: function () { return true; } }];
-    return menuGarage(items, v);
+    const menu = menuGarage(items, v);
+    menu.refaire = function () { return menuDuRideau(v); };
+    return menu;
   }
 
   // --- Les magasins ------------------------------------------------------------------
@@ -1487,21 +1736,39 @@ const Missions = (function () {
     return { titre: 'CHEZ GUS', items: items, sur: p.argent + ' $' };
   }
 
+  /** Porte-t-on cette piece ? Le linge (`partie.tenue`) ou le chapeau (`partie.chapeau`). */
+  function portee(t) {
+    const p = B.partie;
+    return t.emplacement === 'tete' ? p.chapeau === t.slug : p.tenue === t.slug;
+  }
+
+  /** Le linge, puis les chapeaux, chacun sous son titre de section (`entete`). */
+  function parEmplacement(tenues, item) {
+    const out = [];
+    [['corps', 'LE LINGE'], ['tete', 'LES CHAPEAUX']].forEach(function (e) {
+      const siennes = tenues.filter(function (t) { return (t.emplacement || 'corps') === e[0]; });
+      if (!siennes.length) return;
+      out.push({ entete: e[1], libelle: '', actif: false });
+      siennes.forEach(function (t) { out.push(item(t)); });
+    });
+    return out;
+  }
+
   function menuVetements() {
     const p = B.partie;
     // ⚠️ UN LOT NE SE VEND PAS. La casquette de la foire (`prime`) n'apparait
     // chez Rosa qu'une fois GAGNEE — sinon le lot des trois jeux d'adresse
     // s'achete au comptoir d'a cote, et il ne vaut plus rien. Une fois a soi,
     // elle se range avec les autres : c'est la qu'on vient la remettre.
-    const items = (B.defs.tenues || []).filter(function (t) {
+    const items = parEmplacement((B.defs.tenues || []).filter(function (t) {
       return !t.prime || p.tenues.indexOf(t.slug) >= 0;
-    }).map(function (t) {
+    }), function (t) {
       const deja = p.tenues.indexOf(t.slug) >= 0;
-      return { libelle: t.nom.toUpperCase(), detail: deja ? (p.tenue === t.slug ? 'PORTÉE' : 'À TOI') : t.prix + ' $',
+      return { libelle: t.nom.toUpperCase(), detail: deja ? (portee(t) ? (t.emplacement === 'tete' ? 'SUR TA TÊTE' : 'PORTÉE') : 'À TOI') : t.prix + ' $',
                actif: deja || p.argent >= t.prix, faire: function () {
                  if (!deja) { payer(t.prix, t.nom.toUpperCase()); p.tenues.push(t.slug); }
                  porterTenue(t.slug);
-                 return true;
+                 return false;
                } };
     });
     return { titre: 'BOUTIQUE ROSA', items: items, sur: p.argent + ' $' };
@@ -1583,14 +1850,14 @@ const Missions = (function () {
     // annonceur radio, il respire entre ses phrases, et le texte INTERPRETE
     // porte des « … » que `lu` ne montre pas.
     const duree = 90 + ((m.lu && m.lu.length) || (m.titre.length + m.texte.length)) * 4;
-    Hud.dialogue('LE CLAIRON DE LA BAIE', [m.titre, m.texte], duree);
-    if (m.slug) { Son.Voix.chargerHistoire('journal'); Son.Voix.parler('narrateur-journal-' + m.slug, {}); }
+    Hud.dialogue('LE CLAIRON DE LA BAIE', [m.titre, m.texte], duree, { slug: 'narrateur', humeur: 'neutre' });
+    if (m.slug) { Son.Voix.chargerHistoire('journal'); if (Son.Voix.parler('narrateur-journal-' + m.slug, {}) && B.dialogue) B.dialogue.voix = true; }
   }
 
   function lireLeJournal() {
     const m = B.partie.derniereManchette;
     if (m) direLaManchette(m);
-    else Hud.dialogue('LE CLAIRON DE LA BAIE', ['RIEN À SIGNALER À BAIE-DES-BRUMES.'], 300);
+    else Hud.dialogue('LE CLAIRON DE LA BAIE', ['RIEN À SIGNALER À BAIE-DES-BRUMES.'], 300, { slug: 'narrateur', humeur: 'neutre' });
   }
 
   function nouveauJour() {
@@ -1640,9 +1907,8 @@ const Missions = (function () {
         payer(prix, 'ME DESJARDINS');
         p.casier = Math.max(0, p.casier - fiche.pages);
         p.nettoyage.avocatJour = p.jour;
-        Son.SFX.argent();
         Hud.message('UNE PAGE DE MOINS — DOSSIER ' + pages(p.casier));
-        return true;
+        return false;
       }
     });
     // ⚠️ L'AUTRE MOITIE DE CE QU'IL VEND. Une provision retenue d'avance :
@@ -1659,9 +1925,8 @@ const Missions = (function () {
         payer(provision, 'ME DESJARDINS');
         p.nettoyage.provision = true;
         p.nettoyage.avocatJour = p.jour;
-        Son.SFX.argent();
         Hud.message('IL SERA LÀ — LA PROCHAINE SANS AMENDE');
-        return true;
+        return false;
       }
     });
     return { titre: 'ME DESJARDINS', items: items, sur: p.argent + ' $',
@@ -1681,7 +1946,7 @@ const Missions = (function () {
                aide: 'TU AS PAYÉ ' + cmd.paye + ' $ — TU SAURAS DEMAIN' };
     }
     if (cmd) {
-      items.push({ libelle: 'PRENDRE LES NOUVELLES', faire: nouvellesDuHacker });
+      items.push({ libelle: 'PRENDRE LES NOUVELLES', faire: function () { nouvellesDuHacker(); return false; } });
       return { titre: 'LE COMPTOIR DU FOND', items: items, sur: p.argent + ' $',
                aide: 'IL A FINI — RESTE À SAVOIR CE QU’IL A FAIT' };
     }
@@ -1692,9 +1957,8 @@ const Missions = (function () {
       faire: function () {
         payer(prix, 'LE COMPTOIR DU FOND');
         p.nettoyage.commande = { jour: p.jour + fiche.delai_jours, paye: prix };
-        Son.SFX.argent();
         Hud.message('IL Y TRAVAILLE — REVIENS DEMAIN');
-        return true;
+        return false;
       }
     });
     return { titre: 'LE COMPTOIR DU FOND', items: items, sur: p.argent + ' $',
@@ -1951,7 +2215,7 @@ const Missions = (function () {
   function collecteurSousLaMain(j) {
     if (!j || B.interieur) return null;
     return Entites.pietonsAutour(j.x, j.y, 26).find(function (e) {
-      return e.collecteur && e.vivant;
+      return e.collecteur && e.vivant && faceA(j, e.x, e.y);
     }) || null;
   }
 
@@ -1971,8 +2235,7 @@ const Missions = (function () {
                      rembourser(m, 'À SES HOMMES');
                      B.partie.collecteT = B.t + (f.repit_s || 120) * 60;
                      collecteurs().forEach(function (q) { q.collecteur = false; q.mission = false; q.etat = 'flane'; });
-                     Son.SFX.argent();
-                     return true;
+                     return false;
                    } });
     });
     return { titre: 'LES HOMMES DE SAL', items: items, sur: p.argent + ' $',
@@ -1984,7 +2247,9 @@ const Missions = (function () {
   /** Le guichet a portee de main — debout, dehors, et pas deja defonce. */
   function guichetSousLaMain(j) {
     if (B.interieur || j.dansVehicule) return null;
-    return Entites.decorAutour(j.x, j.y, 22).find(function (d) { return d.decor === 'guichet' && !d.brise; }) || null;
+    return Entites.decorAutour(j.x, j.y, 22).find(function (d) {
+      return d.decor === 'guichet' && !d.brise && faceA(j, d.x, d.y);
+    }) || null;
   }
 
   function tuileDe(e) { return Math.floor(e.x / TT) + ',' + Math.floor(e.y / TT); }
@@ -2140,7 +2405,7 @@ const Missions = (function () {
     // et ceci est le filet pour tout ce qu'on posera demain a cote d'une porte.
     if (Monde.porteDevant(j)) return null;
     const d = Entites.decorAutour(j.x, j.y, 22).find(function (q) {
-      return !q.brise && (DECORS[q.decor] || {}).distributrice;
+      return !q.brise && (DECORS[q.decor] || {}).distributrice && faceA(j, q.x, q.y);
     });
     return d ? machine(DECORS[d.decor].distributrice, 'rue:' + tuileDe(d), d.x, d.y) : null;
   }
@@ -2370,7 +2635,6 @@ const Missions = (function () {
                      v.cargaison[slug] = (v.cargaison[slug] || 0) + 1;
                      acheteesAujourdhui();
                      p.contrebande.achetees += 1;
-                     Son.SFX.argent();
                      return false;
                    } });
     });
@@ -2466,6 +2730,8 @@ const Missions = (function () {
     // promet un geste qui n'aura pas lieu se lit comme un bogue.
     if (j && j.manege) return;
     if (!j || j.dansVehicule || B.menu || B.cinema) return;
+    // ⚠️ Assis sur un banc, ACTION ne fait qu'une chose : se lever (`Interactions.majAssis`).
+    if (j.assis) { B.invite = 'SE LEVER'; return; }
     if (B.interieur) {
       // Le metro dit ce qu'ACTION fait sous terre (monter, descendre, remonter) —
       // et se tait quand la rame n'est pas la : une invite qui promet un geste
@@ -2483,17 +2749,20 @@ const Missions = (function () {
         B.invite = assis ? 'PARLER À ' + assis.nom.toUpperCase()
           : vente ? 'ACHETER ' + vente.nom.toUpperCase()
           : (point.type === 'distributrice' ? inviteDistributrice(machineDuPoint(point))
-            : (LIBELLES[point.type] || point.type.toUpperCase()));
+            : (point.type === 'emplettes' && comptoirFerme(point)) || (LIBELLES[point.type] || point.type.toUpperCase()));
         return;
       }
       if (Monde.porteDevant(j)) B.invite = 'SORTIR';
       return;
     }
+    // ⚠️ Une épreuve d'adresse se joue CLOUÉ SUR PLACE, et ACTION y sert à elle
+    // seule (`Histoire.actionDeDefi`) : l'invite « DÉFI » du panneau d'à côté mentirait.
+    if (B.epreuve) return;
     const perso = Histoire.personnageSousLaMain(j);
     if (perso) { const d = Histoire.personnage(perso.personnage); B.invite = 'PARLER À ' + (d ? d.nom.toUpperCase() : '?'); return; }
     const panneau = Histoire.panneauSousLaMain(j);
     if (panneau) { B.invite = 'DÉFI'; return; }
-    const etal = Entites.autour(j.x, j.y, 30, function (e) { return e.type === 'ambulant'; })[0];
+    const etal = etalSousLaMain(j);
     if (etal) {
       const c = commerceDe(etal.slug);
       if (c && c.service === 'contrebande') {
@@ -2512,9 +2781,7 @@ const Missions = (function () {
     if (collecteurSousLaMain(j)) { B.invite = 'PAYER SAL — ' + B.partie.dette + ' $'; return; }
     const stool = stoolSousLaMain(j);
     if (stool) { B.invite = 'ACHETER SON SILENCE — ' + Police.prixDuStool() + ' $'; return; }
-    const temoin = Entites.pietonsAutour(j.x, j.y, B.defs.recherche.police.silence_rayon_px).find(function (e) {
-      return e.etat === 'temoin' && e.crime && !e.crime.rapporte;
-    });
+    const temoin = temoinSousLaMain(j);
     if (temoin) { B.invite = 'ACHETER SON SILENCE — ' + B.defs.economie.tarifs.silence_temoin + ' $'; return; }
     // L'homme-sandwich : l'invite nomme le kiosque pour lequel il crie.
     const crieur = crieurSousLaMain(j);
@@ -2525,6 +2792,9 @@ const Missions = (function () {
     // Brume et pas une passante — le HUD la nomme.
     const fille = filleSousLaMain(j);
     if (fille) { B.invite = 'LA BRUME — ' + B.defs.economie.tarifs.compagnie + ' $'; return; }
+    // ⚠️ Meme place que dans `interagir` : avant le bouclier, apres la fille.
+    const gens = typeof Interactions !== 'undefined' ? Interactions.inviteGens(j) : null;
+    if (gens) { B.invite = gens; return; }
     const guichet = inviteGuichet(j);
     if (guichet) { B.invite = guichet; return; }
     const machine = distributriceSousLaMain(j);
@@ -2535,6 +2805,10 @@ const Missions = (function () {
     if (manege) { B.invite = manege; return; }
     const autobus = Autobus.inviteMonter(j);
     if (autobus) { B.invite = autobus; return; }
+    const pelle = Chantiers.inviteMonter(j);
+    if (pelle) { B.invite = pelle; return; }
+    const grue = Chantiers.inviteGrue(j);
+    if (grue) { B.invite = grue; return; }
     const objet = Combat.objetSousLaMain(j);
     if (objet) { const a = Combat.armeDef(objet.arme); B.invite = 'RAMASSER ' + (a ? a.nom.toUpperCase() : ''); return; }
     const porte = Monde.porteDevant(j);
@@ -2546,13 +2820,21 @@ const Missions = (function () {
     // ⚠️ « TENIR » est dans l'invite parce que la prise se tient : un bouton
     // qui demande qu'on insiste sans le dire n'est pas un bouton qui resiste,
     // c'est un bouton brise. Le HUD la remplit pendant qu'on insiste.
-    if (Combat.otageSousLaMain(j)) B.invite = 'BOUCLIER HUMAIN — TENIR';
+    if (Combat.otageSousLaMain(j)) { B.invite = 'BOUCLIER HUMAIN — TENIR'; return; }
+    // Une bete confiante, avant le decor — meme ordre que dans `interagir`.
+    const betes = typeof Interactions !== 'undefined' ? Interactions.inviteBetes(j) : null;
+    if (betes) { B.invite = betes; return; }
+    // Le decor, en dernier — comme dans `interagir` (la porte, l'arme et le char ont deja repondu).
+    const decor = typeof Interactions !== 'undefined' ? Interactions.inviteDecor(j) : null;
+    if (decor) B.invite = decor;
   }
 
   function sauvegarderPartie() {
     const p = B.partie, j = B.joueur;
     if (j) {
-      const dehors = B.exterieur ? { x: B.exterieur.x, y: B.exterieur.y } : { x: j.x, y: j.y };
+      // ⚠️ Assis, on se sauvegarde la ou l'on se tenait : le banc est solide, et un joueur
+      // recharge DEDANS ne saurait pas en sortir.
+      const dehors = B.exterieur ? { x: B.exterieur.x, y: B.exterieur.y } : (j.assis ? { x: j.assis.avant.x, y: j.assis.avant.y } : { x: j.x, y: j.y });
       p.x = Math.round(dehors.x); p.y = Math.round(dehors.y); p.vie = Math.max(1, j.vie); p.arme = j.arme;
       // Le char gare devant la planque revient avec la partie.
       const planque = Monde.carte.ville ? Monde.carte.ville : Monde.carte;
@@ -2596,12 +2878,13 @@ const Missions = (function () {
     if (B.t % 60 === 0) B.partie.stats.secondes++;
   }
 
-  return { encaisser, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
+  return { encaisser, palierDePrime, annoncerPrime, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, nourrir, cafeine, hopital,
-           coupon, prixAmbulant, crieurSousLaMain, stoolSousLaMain, prendreCoupon,
+           coupon, prixAmbulant, crieurSousLaMain, filleSousLaMain, stoolSousLaMain, etalSousLaMain, temoinSousLaMain, prendreCoupon,
            paliersDe, palierDebloque, avantage, compterLeBoulot,
            boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, dansLaCour, majFourriere, malGare, majMalGares, estDeLaPlanque, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, proprieteDe, possede,
-           dormir, dormirJusquAuSoir, porterTenue, fouiller, menuComptoir, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, majGarage, menuDuRideau, menuArmurerie, menuVetements,
+           dormir, dormirJusquAuSoir, porterTenue, fouiller, menuComptoir, comptoirFerme, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, majGarage, menuDuRideau, menuArmurerie, menuVetements,
+           repeindre, prixCarrosserie, refusDuSeuil,
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais,
            nuitDeLaDette, detteDuLendemain, collecteurs, envoyerLesCollecteurs, majCollecteurs, rembourser, collecteurSousLaMain, menuDette,
            guichetSousLaMain, inviteGuichet, utiliserGuichet, nuitDesSkimmers, guichetCasse, ramasserLesBillets,

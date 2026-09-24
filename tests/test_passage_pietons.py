@@ -162,6 +162,21 @@ def test_la_ville_n_a_plus_une_seule_attente_sur_une_traverse(banc, graine):
                 const bord = p[0] > 0 ? tx * TT : p[0] < 0 ? (tx + 1) * TT : p[1] > 0 ? ty * TT : (ty + 1) * TT;
                 const dans = p[0] ? (nx - bord) * p[0] : (ny - bord) * p[1];
                 if (dans <= 0.5) continue;                 // le nez SUR la ligne, pas dedans
+                // ⚠️ SURPRIS PAR LE FEU, IL S'ARRETE OU IL EST — c'est la regle de
+                // `pointDArret` (« jamais derriere soi »), pas une attente mal posee : le
+                // feu a tourne quand il etait deja dans sa distance de freinage. On juge
+                // la REGLE : le point d'arret qu'elle donne, recalcule depuis la ligne ;
+                // un char arrete au-dela de ce point a ete surpris, un char arrete dessus
+                // avec le nez dans les bandes, c'est la regle qui ment. Ce juge tenait
+                // par la graine (un camion surpris a la graine 1 des le 21 sept. 2026,
+                // quand les velos ont change la chronologie du trafic ; trois graines sur
+                // trente-six sur la base, le hasard decale d'un a trois tirages).
+                let lx = tx, ly = ty;                      // du nez, sur les bandes, on recule jusqu'a la ligne
+                for (let n = 0; n < 3 && L.Monde.fleche(lx, ly) !== 'S'; n++) { lx -= p[0]; ly -= p[1]; }
+                if (L.Monde.fleche(lx, ly) === 'S') {
+                    const regle = L.Vehicules.pointDArret({ x: -1e9 * p[0], y: -1e9 * p[1], def: v.def }, lx, ly, p);
+                    if ((v.x - regle.x) * p[0] + (v.y - regle.y) * p[1] > 0.5) continue;
+                }
                 releves++;
                 pire = Math.max(pire, dans);
             }

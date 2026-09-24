@@ -7,12 +7,24 @@
 > ⚠️ **Ce document est un instantané.** La carte est générée depuis le code —
 > c'est `app/carte.py` qui fait foi. **Toute modification de la carte, des
 > districts, des bâtiments, des personnages, des véhicules ou des gangs DOIT
-> être répercutée ici.** Voir la consigne correspondante dans `docs/plan.md`.
+> être répercutée ici.** Voir la consigne correspondante dans `docs/reprendre-le-travail.md`.
 
 La ville tient sur **une seule grille de blocs** (20 colonnes × 12 rangées),
 rebâtie à l'ouverture par `generer(plan, graine)`. Rien n'est régulier : chaque
 colonne a sa largeur, chaque rangée sa hauteur, et les superblocs (`<` `^`)
 fusionnent des îlots en effaçant la rue qui les séparait.
+
+**Sous la grille, depuis le 21 sept. 2026 : l'aéroport** (`app/aeroport.py`). La
+carte fait 419 × 304 tuiles au lieu de 419 × 224 : quatre-vingts rangées d'eau (le
+large) et une île **dessinée** sous La Pointe, posée en dernier et sans un dé — la
+ville d'au-dessus n'a pas bougé d'une tuile.
+
+**Autour de la grille, depuis le 21 sept. 2026 : le relief**
+(`app/relief.py`). La carte fait 459 × 304 tuiles au lieu de 419 × 304 : quarante
+colonnes de montagnes à l'est (posées après la dernière rue, sans toucher la
+trame — le même principe que l'aéroport au sud), et une ligne de falaises qui
+referme le large au sud de l'aéroport. Infranchissable partout (`solide 1`) :
+ni à pied, ni en char, ni à la nage.
 
 ---
 
@@ -28,7 +40,9 @@ rythme de vie (matin/soir/nuit) et ses propres bâtiments garantis.
 | **La Shop** | `shop` | Les Boulonneux | ➖ | L'industriel : entrepôts 2×2, presque pas de rues, désert la nuit. |
 | **Les Quais** | `quais` | Les Morues | ✅ | Le port : hangars longs, une rangée de quais, l'eau au sud. |
 | **La baie** | `baie` | — | ➖ | Pas un quartier : l'eau (un bloc fusionné de 7×6). |
-| **La Pointe** | `pointe` | Les Skateux | ➖ | Le parc au bout de la ville, coupé par un chenal de 24 tuiles — un seul pont et la foire. |
+| **La Pointe** | `pointe` | Les Skateux | ➖ | Le parc au bout de la ville, coupé par un chenal de 24 tuiles — un pont, la foire, et au sud le pont inachevé de l'aéroport. |
+| **Le large** | `large` (zone) | — | ➖ | Pas un district : l'eau que la carte a gagnée au sud (district `baie`), personne n'y naît. |
+| **L'aéroport** | `aeroport` (zone) | — | ➖ | Pas un district de la trame : une île dessinée (`aeroport.py`), clôturée de barbelé, **fermée** pour les missions à venir. Deux agents : ce n'est pas un refuge. |
 
 ---
 
@@ -61,6 +75,21 @@ dessiné à la main (sauf exceptions), et appartient à une **famille de lieu**
 `kiosque` (Mme Thibodeau), `hopital_soins`, `hotel_chambre`, `metro_quai`,
 `metro_rame`.
 
+**Les carrosseries** (des garages où l'on entre, 21 sept. 2026) : une par district, posées
+sur la ville finie par `_Chantier.poser_les_carrosseries` — un commerce sans porte dont
+l'enseigne devient CARROSSERIE, PEINTURE AUTO ou PEINTURE MINUTE (`devantures.CARROSSERIES`),
+un rideau de deux tuiles et une baie de deux rangées sous le toit. Point `carrosserie_<district>`,
+famille `service`, sans intérieur : on y entre en char, on en ressort repeint et la police à
+zéro (100 $ + 50 $ par étoile, `economie.CARROSSERIE`). Ville livrée : Faubourg, La Shop, Les
+Quais — pas Les Érables (leurs commerces se visitent tous). Le rideau de Ti-Guy s'entre aussi :
+son menu s'ouvre à l'abri.
+
+**Les bungalows avec garage** (2e vague, 21 sept. 2026) : cinq logements de banlieue
+(`bungalow_1`…), posés sur la ville finie par `_Chantier.poser_les_garages_de_bungalows` — un
+rideau, une baie sous le toit, une entrée asphaltée jusqu'au trottoir. Pas sur la carte. On y
+entre en char et on s'y cache : rien ne se paie ni ne se repeint, la police ne voit pas sous le
+toit, les étoiles tombent comme hors de vue. Ville livrée : les cinq aux Érables.
+
 **Lieux sans intérieur propre** (points de commerce générés sur les parcelles) :
 `logement` (logements procéduraux, un par habitation), et les devantures de
 quartier (commerces tirés par famille).
@@ -92,6 +121,8 @@ un paiement.
 | La cour de l'usine Prévost | `usine` | piéton + véhicule | **de jour** |
 | Le quai du cargo | `cargo` | piéton + véhicule | **de nuit** |
 | L'arche de la foire | `foire` | piéton + véhicule | payer le billet (à la journée) |
+| Le pont de l'aéroport | `pont_aeroport` | piéton + véhicule | après **a01** (pas encore écrite) — la barricade se défonce et s'enjambe, sans étoile, mais le tablier s'arrête au-dessus de l'eau : trente-deux tuiles de chantier et six piles |
+| La guérite de l'aéroport | `aeroport` | piéton + véhicule | après **a02** (pas encore écrite) — ne se force pas |
 
 ---
 
@@ -102,22 +133,27 @@ un paiement.
 | `auto` | Berline | auto | 4 | La référence (vitesse 100 %). |
 | `taxi` | Taxi | auto | 4 | Boulot taxi, radio. |
 | `moto` | Moto | moto | 2 | Éjecte, boulot pizza. |
-| `velo` | Vélo | velo | 1 | |
+| `velo` | Vélo | velo | 1 | Roule à la bordure (tassé vers le trottoir) et se range à gauche pour tourner à gauche ; de temps en temps un bout de trottoir, ou la traversée d'un parc par ses allées, au pas et en sonnant (`TRAFIC["velo"]`). |
 | `police` | Auto-patrouille | auto | 4 | Sirène, alarme, radio 10-4. |
 | `camion` | Camion | camion | 2 | |
 | `autobus` | Autobus | camion | 12 | |
 | `ambulance` | Ambulance | auto | 3 | Sirène, soigne, boulot ambulance. |
 | `remorqueuse` | Remorqueuse | camion | 2 | |
+| `pelleteuse` | Pelleteuse | camion | 1 | « Ça travaille » : ne naît jamais dans la rue (`frequence` 0), sort du décor du chantier quand on monte dedans. Le char le plus lent du catalogue (12 km/h, y compris les bateaux) et le plus lourd de la rue ; défonce au pas (le seuil se règle sur sa vitesse) ; un agent à pied la rattrape, et c'est voulu. |
 | `sport` | Coupé sport | auto | 2 | Rare. |
 | `luxe` | Berline de luxe | auto | 4 | Rare. |
-| `bateau` | Chaloupe | bateau | 4 | Phase 2 (hors trafic). |
+| `cabriolet` | Cabriolet rose | auto | 2 | Rare (Faubourg, La Pointe). Le plus rapide des chars à quatre roues, sous la moto ; menée à la vue de tous par la conductrice (`au_volant`), qui descend si on la vole. Ne se gare jamais. |
+| `bateau` | Chaloupe | bateau | 4 | Hors trafic : amarrée contre une rive bâtie (`carte.amarrages`). Deux silhouettes, la barre et la console. |
+| `chalutier` | Chalutier | bateau | 3 | Hors trafic : deux à quai autour du cargo (`navires.py`). Plus lent et plus lourd que la chaloupe ; la corne. |
+| `porte_conteneurs` | Porte-conteneurs | bateau | 2 | Hors trafic : un seul, au quai du cargo (`navires.py`). Dix tuiles, le plus lourd du parc (la pelleteuse du chantier, hors trafic elle aussi, la bat en lenteur) ; la corne. |
 
 ---
 
 ## 5. Les personnages de l'histoire (`missions.PERSONNAGES`)
 
 Ceux qui donnent les missions et font vivre le fil, avec leur position et leur
-voix.
+voix. Leur histoire, leur personnalité et leur façon de parler et de se présenter : une fiche
+chacun dans [docs/personnages/](personnages/README.md).
 
 | Slug | Nom | Voix | Où | S'en va |
 |---|---|---|---|---|
@@ -132,6 +168,22 @@ voix.
 | `lulu` | Lucienne « Lulu » Pelletier | Claudia | point:lulu | — |
 | `raymonde` | Raymonde Fortin | Nadine | porte:usine | — |
 | `ovila` | Ovila Saint-Onge | annonceur centre d'achat 1 | point:ovila | — |
+| `mo` | Le Grand Mo | Alexandre Boutin | porte:terminus | — |
+| `fern` | Fern Côté | Premium Male teacher (Adam) | porte:terminus | — |
+| `mado` | Mado | Caroline | porte:casse_croute | — |
+| `gege` | Gérard « Gégé » Morin | Alexandre Boutin | porte:cantine | — |
+| `xavier` | Xavier | Premium Male teacher (Adam) | porte:depanneur | — |
+| `lachance` | Dr Lachance | Patrick | point:lachance | — |
+| `gus` | Gus Lévesque | Khaivan | porte:armurerie | — |
+| `rosa` | Rosa Di Meo | Amélie | porte:vetements | — |
+| `ginette` | Ginette | Jeanne Mance | porte:hopital | — |
+| `gilles` | Gilles Thériault | Patrick | porte:fourriere | — |
+| `bonimenteur` | Le Bonimenteur | Léo | foire (l'arche) | — |
+
+⚠️ **`ou: "foire"` est un lieu neuf** (22 sept. 2026) : le seul personnage posé DANS l'enceinte de la
+foire, vivant à l'arche — `histoire.js::lieuFoire`/`poserDonneurFoire` trouvent sa position dans la
+barrière `"foire"` déjà exportée (même patron que `lieuPont` pour le pont de La Pointe), sans toucher
+`app/carte.py`. Contrairement à un donneur `point:`, il hèle et se retrouve par `retourner`.
 
 ---
 
@@ -178,6 +230,7 @@ La foule anonyme, les sortes posées, et les gens d'intérieur. `frequence`
 |---|---|---|
 | `baigneur` / `baigneuse` | Baigneur·se | plages |
 | `racoleuse` | Fille de la Brume | bar/port, la nuit |
+| `conductrice` | Dame au cabriolet | au volant du cabriolet rose — jamais à pied avant qu'on la vole |
 | `vendeur` | Marchand ambulant | comptoirs |
 | `mascotte` | Mascotte (ours) | foire (La Pointe) |
 | `mascotte_bleue` | Mascotte (bleue) | foire (La Pointe) |
@@ -187,12 +240,14 @@ La foule anonyme, les sortes posées, et les gens d'intérieur. `frequence`
 | `exhibitionniste` | L'homme au manteau | — (la police l'arrête) |
 | `contractuelle` | Contractuelle | faubourg, shop |
 | `touriste` | Touriste | quais, pointe |
-| `ivrogne` | Ivrogne | quais, faubourg |
+| `ivrogne` | Ivrogne | quais, faubourg — et à 3 h, en grappe devant chaque bar (le last call) |
 | `jogger` | Joggeuse | erables, pointe |
 | `facteur` | Facteur | erables, faubourg |
 | `crieur` | Crieur de journaux | faubourg, shop (le jour) |
+| `camelot` | Camelot du _Clairon_ (lance le journal sur les perrons) | erables, faubourg (à l'aube) |
 | `laveur` | Laveur de vitres | shop, faubourg |
 | `pickpocket` | Pickpocket | faubourg, quais |
+| `enfant_velo` | Enfant à vélo (casqué, intouchable) | erables, pointe, faubourg — le jour, sur le trottoir et dans les parcs seulement (`ENFANTS_A_VELO`) |
 
 ### Les gens d'intérieur (fréquence 0 — posés derrière une porte)
 
@@ -203,6 +258,7 @@ La foule anonyme, les sortes posées, et les gens d'intérieur. `frequence`
 | `malade` | Malade | lits de l'hôpital |
 | `avocat` | Me Desjardins | table du fond, Le Brouillard |
 | `policier` | Agent | patrouille (posé par `police.js`) |
+| `garde` | Garde de sécurité | vigile privé de l'infiltration, posé à la main par une mission (`Police.creerAgent(x, y, etat, 'garde')`) |
 | `gardien` | Gardien du lot | grille de la fourrière |
 
 ---
@@ -216,6 +272,19 @@ La foule anonyme, les sortes posées, et les gens d'intérieur. `frequence`
   `peche_canards`) — un par kiosque, joués à pied.
 - **Plages** : où naissent les baigneurs.
 - **Métro** : quai (`metro_quai`) et rame (`metro_rame`).
+- **Aéroport** (`aeroport.py`) : l'aérogare (lieu `aeroport`, famille transport,
+  pièce `aerogare` — comptoirs, sièges, carrousel, portiques), la tour de contrôle,
+  deux hangars et la guérite (portes condamnées), la piste 09-27, la voie de
+  circulation, trois avions peints (un bimoteur _Air Brumes_, un de Gaspésie, le
+  monomoteur de l'aéroclub), un stationnement, une manche à air. Fermé par
+  étages : la barricade du pont, le chantier (six piles sur 32 tuiles d'eau :
+  aucun saut, et la nage demande le café et l'estomac plein), le barbelé, la
+  guérite, le large (trop d'eau pour la nager depuis la plage de La Pointe) — et
+  le **large refusé** : une ligne invisible, à une vue de l'île, où une coque vire
+  de bord toute seule et où le courant ramène le nageur (la travée comprise).
+  **Caché sur la carte** (mini-carte et grande carte) jusqu'au pont fini : de
+  l'eau à la place de l'île, pas de repère. Les missions qui l'ouvriront :
+  `aeroport.MISSIONS_A_VENIR` (`a01`, `a02`).
 
 ---
 

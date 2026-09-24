@@ -26,8 +26,8 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-from . import (armes, audio, carte, devantures, economie, journal, magasins, manettes,
-               missions, pietons, recherche, vehicules)
+from . import (armes, audio, carte, devantures, economie, garderobe, interactions, journal, magasins,
+               manettes, missions, nuit, pietons, recherche, vehicules, visages)
 from .version import VERSION
 
 
@@ -55,10 +55,19 @@ def assembler() -> dict:
         "pietons": gens,
         "manettes": manettes.exporter(),
         "devantures": devantures.exporter(),
+        # Les gestes du décor et de la rue : ACTION devant un banc, une poubelle, un artiste.
+        "interactions": interactions.exporter(),
+        # Ce que la nuit change (« la nuit a ses habitudes ») : les fenêtres qui
+        # s'éteignent, les lampadaires qui grésillent, le last call, le camelot…
+        "nuit": nuit.exporter(ville),
         "carte": ville,
-        "missions": missions.CATALOGUE,
+        "missions": missions.pour_le_navigateur(),
         "defis": missions.DEFIS,
         "personnages": missions.PERSONNAGES,
+        # Le portrait de qui parle, à gauche de la boîte de dialogue (`visages.js`).
+        "visages": visages.pour_le_navigateur(),
+        # Les squelettes qu'on habille : les garde-robes des passants, la tenue des personnages.
+        "garderobe": garderobe.exporter(),
         # Les quatre phrases de l'ouverture, avec leur slug de voix : le
         # navigateur les lit, il ne refait pas la regle du slug.
         "ouverture": missions.repliques_ouverture(),

@@ -84,6 +84,10 @@ def test_le_pont_arrete_les_chars_et_pas_les_jambes_avant_m2(banc, paquet):
         return out;
     }""")
     b = r["b"]
+    # ⚠️ La fiche doit COUTER quelque chose, sinon le juge compare zero a zero :
+    # il relit `forcer.degats` pour son attendu, et une fiche a zero le rendait
+    # vert (mutation du 17 sept. 2026).
+    assert pont["forcer"]["degats"] > 0, pont
     assert r["fermee"] is True
     assert r["lent"]["y"] < b["y"] + 0.5, f"au pas, le char est entre sur le pont : {r['lent']}"
     assert r["lent"]["msg"] == pont["raison"], r["lent"]
@@ -137,6 +141,28 @@ def test_la_cour_de_l_usine_ferme_la_nuit(banc, paquet):
     assert r["sorti"]["y"] > yc + 0.9, f"dedans, on ne ressort plus : {r['sorti']}"
     assert r["jour"]["nuit"] is False and r["jour"]["fermee"] is False
     assert r["jour"]["y"] < yc and r["jour"]["etoiles"] == 0, f"le jour, la cour coute encore : {r['jour']}"
+
+
+def test_une_barriere_a_objet_se_ferme_et_s_ouvre_avec_la_cle(banc, paquet):
+    """⚠️ Infiltration : `objet` est une VRAIE serrure — fermee tant que
+    `partie.objets[slug]` n'est pas possede, et elle ne se CONSOMME pas en
+    passant (contrairement a `payer`, qui se rachete chaque jour). Une
+    barriere synthetique suffit : `barriereFermee` ne lit que `condition`,
+    aucun rectangle de `carte.BARRIERES` n'a encore cette serrure — comme
+    `jour_tire`, deja declare avant sa premiere entrave (M12)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const b = { slug: 'test_porte', condition: { objet: 'cle_test' } };
+        const out = { avant: L.Monde.barriereFermee(b) };
+        L.B.partie.objets.cle_test = 1;
+        out.avecCle = L.Monde.barriereFermee(b);
+        delete L.B.partie.objets.cle_test;
+        out.sansPlus = L.Monde.barriereFermee(b);
+        return out;
+    }""")
+    assert r["avant"] is True, "sans la cle, la porte reste fermee"
+    assert r["avecCle"] is False, "avec la cle en poche, elle s'ouvre"
+    assert r["sansPlus"] is True, "et se referme si la cle repart (elle ne se consomme pas en passant)"
 
 
 def test_le_trafic_fait_demi_tour_devant_les_cones(banc, paquet):

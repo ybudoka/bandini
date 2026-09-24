@@ -147,6 +147,18 @@ const Entites = (function () {
   /** Le decor solide dans un rayon — index fixe, donc jamais perime. */
   function decorAutour(x, y, rayon) { return chercher(grilleFixe, x, y, rayon, null); }
 
+  /** LES JOUEURS de la partie, dans l'ordre : le premier, puis le deuxieme si
+      la coop est la et qu'il tient debout. Tout ce qui se fait « pour chaque
+      joueur » (le combat, les entrees, la camera) passe par ici plutot que par
+      `B.joueur` — c'est la meme porte qu'ouvrira une coop en ligne. */
+  function joueurs() {
+    const out = [];
+    if (B.joueur) out.push(B.joueur);
+    if (B.coop && B.coop.entite && B.coop.entite.vivant) out.push(B.coop.entite);
+    return out;
+  }
+  function estJoueur(e) { return !!e && e.type === 'joueur'; }
+
   function pietonsAutour(x, y, rayon) {
     return autour(x, y, rayon, function (e) { return e.type === 'pieton' && e.vivant; });
   }
@@ -157,6 +169,8 @@ const Entites = (function () {
     const p = B.partie;
     const j = creer('joueur', x, y, {
       r: 5, sprite: 'joueur', swaps: apparenceDuJoueur(p, B.defs),
+      // Habille (`Garderobe`) : son linge, sa coupe ET son chapeau.
+      tenue: typeof Garderobe !== 'undefined' ? Garderobe.duJoueur(p, B.defs) : null,
       // ⚠️ `vieMax` N'EST PLUS UN LITTERAL : les paliers d'ambulance le font
       // monter (+10 % a dix transports, +25 % a vingt-cinq). C'est le seul
       // avantage de palier qui ne se lise pas au moment de s'en servir — une
@@ -165,9 +179,58 @@ const Entites = (function () {
       endurance: 100, surplus: 0, cafeine: 0, arme: p.arme || 'poings',
       dansVehicule: null, flagrant: 0, pasDist: 0, coupT: 0, charge: 0, roule: 0,
       cible: null,
+      // Sa SOURCE d'entrees (`Entree.SOURCE1`) : le clavier, la manette ou le
+      // doigt — et en coop, celui des deux appareils que l'option lui donne.
+      // Voir la note des sources dans `entree.js` : c'est par la que passera
+      // un jour un joueur distant.
+      entree: typeof Entree !== 'undefined' ? Entree.SOURCE1 : null,
     });
     B.joueur = j;
     return j;
+  }
+
+  /** Le deuxieme joueur de la coop locale : meme sprite, meme linge que le
+      premier, pour qu'on le reconnaisse tout de suite comme « l'autre toi »
+      plutot que comme un passant de plus. */
+  //: Un linge d'une autre couleur que toutes les tenues en vente (rouge,
+  //: bleu, noir, gris, orange — voir `TENUES` dans `app/magasins.py`) : au
+  //: premier coup d'œil, « l'autre toi » reste l'autre, quelle que soit la
+  //: tenue du joueur 1. Retour de Martin, 22 sept. : « je veux une
+  //: distinction pour différencier les joueurs ».
+  const COULEUR_COOP_JOUEUR2 = '#16a085';
+
+  /** ⚠️ UN VRAI JOUEUR, PAS UN PIETON DEGUISE — c'est le remaniement du
+      22 sept. (« 2 vrais joueurs »), et il tient dans le `type`.
+
+      L'essai en faisait un `pieton` marque `coopJoueur2`, et tout ce que le
+      jeu reserve au joueur se demandait « est-ce LE joueur ? » : ses coups ne
+      portaient jamais (`Combat.arcDeMelee` interdit pieton contre pieton), la
+      police ne voyait pas ses crimes, il ne nageait pas, ne roulait pas, ne
+      sprintait pas. Le meme `type` le fait passer par `majJoueur` comme le
+      premier — une seule fonction pour les deux, et c'est la SOURCE
+      D'ENTREES qu'il porte (`entree`) qui les distingue, plus le code.
+
+      Ce qui lui reste en propre tient en une marque, `coopJoueur2` :
+      l'ombre verte, et les trois gestes du joueur 1 (changer de scene,
+      lancer une mission, conduire — Martin, 22 sept. : « les 2 personnages
+      doivent pouvoir faire toutes les memes actions sauf ce qui change de
+      scene et lancer des missions ou conduire »). */
+  function creerJoueur2(x, y) {
+    const p = B.partie;
+    const swaps = Object.assign({}, apparenceDuJoueur(p, B.defs), { c: COULEUR_COOP_JOUEUR2 });
+    const vieMax = Math.round(100 * Missions.avantage('vie', 1));
+    return creer('joueur', x, y, {
+      r: 5, sprite: 'joueur', swaps: swaps, coopJoueur2: true,
+      entree: typeof Entree !== 'undefined' ? Entree.SOURCE2 : null,
+      vie: vieMax, vieMax: vieMax,
+      endurance: 100, surplus: 0, cafeine: 0, arme: 'poings',
+      dansVehicule: null, flagrant: 0, pasDist: 0, coupT: 0, charge: 0, roule: 0,
+      cible: null, etat: 'flane', dir: 0, butT: 0, cri: 0,
+      // ⚠️ Deja invincible A LA NAISSANCE, pas seulement a la premiere image :
+      // sans ca, une image separe la creation du premier rechargement, et un
+      // coup porte pile a ce moment-la passerait.
+      invincible: 60,
+    });
   }
 
   function creerDecor(def) {
@@ -238,6 +301,24 @@ const Entites = (function () {
       intouchable: !!p.intouchable,
       etat: 'flane', dir: Math.floor(B.rng() * 4), butT: 0, cri: 0,
     });
+    // L'HABIT : une tenue tiree dans la garde-robe de l'archetype (`Garderobe`), ou celle qu'on
+    // lui donne (`arch.tenue` : un personnage, un passant qui descend de l'autobus).
+    // ⚠️ A L'EMPREINTE de son identifiant, JAMAIS `B.rng()` : un de de plus par naissance
+    // decalerait tout ce que la ville tire ensuite. `swaps` suit la tenue : ce qui lit encore
+    // ses couleurs (le cavalier d'une moto) le voit habille pareil.
+    let tenue = arch && arch.tenue ? arch.tenue
+      : (typeof Garderobe !== 'undefined' ? Garderobe.tirer(p.slug, hash2(e.id, 0x7e4e)) : null);
+    // ⚠️ Des COULEURS IMPOSEES sans tenue (un pilote d'avant la garde-robe, une robe que la
+    // mission choisit) : la tenue tiree les prend. Sans ca, celui qu'on jette de sa moto se
+    // relevait en quelqu'un d'autre.
+    const imposees = !!(tenue && !(arch && arch.tenue) && arch && arch.couleurs && archetype(p.slug) &&
+                        arch.couleurs !== archetype(p.slug).couleurs);
+    if (imposees) {
+      const c = arch.couleurs;
+      tenue = Object.assign({}, tenue, { couleur_haut: c.c || tenue.couleur_haut, cheveux: c.h || tenue.cheveux,
+                                         peau: c.s || tenue.peau, couleur_bas: c.p || tenue.couleur_bas });
+    }
+    if (tenue) { e.tenue = tenue; e.swaps = imposees ? arch.couleurs : Garderobe.couleurs(tenue); }
     // ⚠️ Une fille de la Brume TIENT SON COIN : sans poste, elle se remettait
     // a flaner comme n'importe qui au bout de dix secondes, et le seul indice
     // qui restait etait sa robe. On reconnait d'abord celle qui ATTEND.
@@ -423,6 +504,9 @@ const Entites = (function () {
     }
     reindexerDecor();
     poussiere(e.x, e.y, 8);
+    // Le decor qui cede s'ENTEND, de la ou il est (`Son.SFX.bris`). La borne,
+    // le guichet et les distributrices ont le leur, plus bas.
+    if (typeof Son !== 'undefined') Son.depuis(e, function () { Son.SFX.bris(e.decor); });
     // ⚠️ UN GUICHET DEFONCE REPAND SA CAISSE — et c'est un delit a deux
     // etoiles, quoi qu'il l'ait ouvert (un camion, l'explosion d'a cote, un
     // chargeur entier) : la caisse est par terre, tout le monde l'a vu.
@@ -522,6 +606,52 @@ const Entites = (function () {
   function reindexerDecor() {
     grilleFixe.clear();
     for (const e of B.entites) if (estIndexable(e)) ajouterA(grilleFixe, e);
+  }
+
+  /** La boîte d'un décor (`sol`, en demi-côtés) touche-t-elle le cercle (x, y, r) ?
+      La même arithmétique que `bloquerParDecor` : on ressort par le côté le moins enfoncé. */
+  function boiteTouche(d, x, y, r) {
+    const sol = (DECORS[d.decor] || {}).sol || [d.r || 4, d.r || 4];
+    return sol[0] + r - Math.abs(x - d.x) > 0 && sol[1] + r - Math.abs(y - d.y) > 0;
+  }
+
+  /** ⚠️ POUSSER UN DÉCOR (la benne d'un chantier) : le déplacer de (mx, my), s'il le peut.
+      Le décor ne bougeait JAMAIS (voir l'index fixe) : celui-ci est le seul qui bouge, et il
+      tient l'index à jour LUI-MÊME — sans quoi les piétons continueraient de buter sur
+      l'endroit qu'il a quitté et de traverser celui où il est.
+
+      Il refuse — et le char qui pousse est alors arrêté comme devant un mur — dès que le
+      décor : s'éloigne de plus de `portee` px de chez lui (`d.chez`), entre dans une tuile
+      solide (les quatre coins de sa boîte), ou en chevauche un autre décor solide. Rend vrai
+      s'il a bougé. */
+  function pousserDecor(d, mx, my) {
+    const fiche = DECORS[d.decor] || {};
+    if (!fiche.poussable || d.brise) return false;
+    if (!d.chez) d.chez = { x: d.x, y: d.y };
+    const nx = d.x + mx, ny = d.y + my, sol = fiche.sol || [d.r, d.r];
+    if (Math.max(Math.abs(nx - d.chez.x), Math.abs(ny - d.chez.y)) > (fiche.portee || 0)) return false;
+    for (const sx of [-1, 1]) {
+      for (const sy of [-1, 1]) {
+        if (Monde.solidite(Math.floor((nx + sx * sol[0]) / TT), Math.floor((ny + sy * sol[1]) / TT)) !== 0) return false;
+      }
+    }
+    for (const o of decorAutour(nx, ny, sol[0] + 24)) {
+      if (o === d || !o.solide || o.brise) continue;
+      const so = (DECORS[o.decor] || {}).sol || [o.r || 4, o.r || 4];
+      if (Math.abs(nx - o.x) < sol[0] + so[0] && Math.abs(ny - o.y) < sol[1] + so[1]) return false;
+    }
+    const ancienne = cle(d.x, d.y);
+    d.x = nx; d.y = ny;
+    if (cle(nx, ny) !== ancienne) {
+      const liste = grilleFixe.get(ancienne);
+      if (liste) {
+        const i = liste.indexOf(d);
+        if (i >= 0) liste.splice(i, 1);
+        if (!liste.length) grilleFixe.delete(ancienne);
+      }
+      ajouterA(grilleFixe, d);
+    }
+    return true;
   }
 
   /** Y a-t-il deja quelqu'un debout ici ? ⚠️ Les deux branches de
@@ -696,7 +826,7 @@ const Entites = (function () {
     fait rien est un costume, et le depot a deja paye ce defaut une fois. */
   const SORTES = ['musicien', 'amuseur', 'jongleur', 'echassier', 'exhibitionniste',
                   'contractuelle', 'touriste', 'ivrogne', 'jogger', 'facteur',
-                  'crieur', 'laveur', 'pickpocket'];
+                  'crieur', 'laveur', 'pickpocket', 'camelot'];
 
   //: LES AMUSEURS DE RUE — les quatre qui font un NUMERO et qu'on regarde.
   //: ⚠️ Ils partagent un plafond au lieu d'en avoir un chacun, et c'est la
@@ -743,6 +873,10 @@ const Entites = (function () {
       // pareilles — de la figuration, donc. Un quartier se reconnait aussi a
       // qui y marche.
       if (arch.districts && (!zone || arch.districts.indexOf(zone.district) < 0)) continue;
+      // ⚠️ ET SES HEURES (la nuit a ses habitudes). Le crieur ne travaille que le
+      // matin (`heures`) — et il naissait quand meme a deux heures du matin, pour
+      // hurler la manchette a une rue vide. `enService` est celui de l'homme-sandwich.
+      if (!enService(arch.heures)) continue;
       // ⚠️ DEUX pour celles qui tiennent un poste, UNE pour celles qui
       // marchent. Un spectacle est plante quelque part : il en faut deux pour
       // avoir une chance d'en croiser un. Une sorte qui marche, elle, traverse
@@ -766,6 +900,14 @@ const Entites = (function () {
       // trottoir devant les commerces.
       const place = spectacle ? sceneLibre(zone) : placeDeNaissance();
       if (!place || visibleAEcran(place.x, place.y, 24)) continue;
+      // ⚠️ ET SON STANDING, a l'endroit ou elle se pose (4e vague des quartiers) :
+      // un touriste ne flane pas au pied des plex du port, un ivrogne ne dort pas
+      // dans la rue chic. Le district se lit au joueur (c'est sa bulle), le
+      // standing a la TUILE : deux blocs voisins n'ont pas le meme.
+      if (arch.standings) {
+        const rang = Monde.standingA(Math.floor(place.x / TT), Math.floor(place.y / TT));
+        if (arch.standings.indexOf(rang) < 0) continue;
+      }
       const e = creerPieton(place.x, place.y, arch);
       if (!e) continue;
       // ⚠️ Qui tient un poste se lit dans la FICHE (`vitesse: 0`), pas dans
@@ -1219,6 +1361,10 @@ const Entites = (function () {
     if (B.interieur || B.t % 15 !== 0) return;
     for (const e of B.entites) {
       if (e.type !== 'pieton' || !e.vivant || e.etat === 'assomme') continue;
+      // Passe ses heures, une sorte rentre — hors de l'ecran (le crieur, le camelot).
+      // ⚠️ Les heures se lisent sur l'ARCHETYPE : une sorte ne les porte pas sur elle.
+      const sorte = SORTES.indexOf(e.arch) >= 0 ? archetype(e.arch) : null;
+      if (sorte && sorte.heures && !enService(sorte.heures)) { rentrerHorsChamp(e); continue; }
       // ⚠️ On aiguille sur le METIER, pas sur le slug : c'est le metier qui
       // est le crochet declare dans `pietons.py`, et c'est lui qui dit ce que
       // la sorte FAIT. Un slug ne dit que comment on l'appelle.
@@ -1232,6 +1378,7 @@ const Entites = (function () {
       else if (e.metier === 'laveur') majLaveur(e);
       else if (e.metier === 'pickpocket') majPickpocket(e);
       else if (e.metier === 'baigneur') majPlage(e);
+      else if (e.metier === 'camelot') majCamelot(e);
       else if (e.metier === 'forain') majForain(e);
       else if (e.metier === 'mascotte') majMascotte(e);
     }
@@ -1369,6 +1516,8 @@ const Entites = (function () {
       facon n'a qu'une reaction. */
   function majIvrogne(e) {
     if (e.etat !== 'flane') return;
+    if (e.fetard) chicaner(e);
+    if (e.etat !== 'flane') return;
     // ⚠️ UN COMPTE A SOI, jamais `e.t % 60`. `majSortes` ne tourne qu'une image
     // sur quinze et `e.t` compte depuis la NAISSANCE : les deux ne tombent
     // ensemble que si l'on est ne sur un multiple de quinze. Un ivrogne ne du
@@ -1386,10 +1535,69 @@ const Entites = (function () {
       poussiere(e.x, e.y, 4);
       return;
     }
+    // Le fetard du last call CHANTE au lieu d'insulter : a l'empreinte du fetard
+    // et de l'instant, pas au de — ce qu'il chante ne change rien au jeu.
+    const lc = e.fetard && B.defs.nuit && B.defs.nuit.last_call;
+    if (lc) {
+      const h = hash2(e.id * 7919 + B.t, 0x1A57C);
+      if (h % 1000 < lc.chante * 1000) bulle(e, lc.chansons[(h >>> 10) % lc.chansons.length], { duree: 120 });
+      return;
+    }
     const mots = paroles('ivrogne').insultes;
     if (mots && mots.length && B.rng() < 0.14) {
       bulle(e, mots[Math.floor(B.rng() * mots.length)], { duree: 90 });
     }
+  }
+
+  /** **LA CHICANE** : on frôle un fetard du last call, il se retourne. Une fois
+      par fetard ; une part d'entre eux passe aux poings (`attaque_joueur`, comme
+      une Cravate sur son territoire). A l'empreinte du fetard, jamais au de. */
+  function chicaner(e) {
+    const c = B.defs.nuit && B.defs.nuit.last_call && B.defs.nuit.last_call.chicane, j = B.joueur;
+    if (!c || e.chicane || !j || !j.vivant || j.dansVehicule || B.cinema) return;
+    if (dist2(e.x, e.y, j.x, j.y) > c.portee_px * c.portee_px) return;
+    e.chicane = true;
+    const h = hash2(e.id, 0xC41CA);
+    regarder(e, j.x - e.x, j.y - e.y);
+    bulle(e, c.mots[h % c.mots.length], { duree: 100 });
+    if ((h >>> 10) % 1000 < c.part * 1000) { e.etat = 'attaque_joueur'; e.cri = 90; }
+  }
+
+  /** **LE LAST CALL** (la nuit a ses habitudes) : a 3 h, chaque bar de la bulle
+      (`nuit.last_call.bars`) laisse sortir sa grappe de fetards — une fois par bar
+      et par nuit. Nes DANS LA PORTE, qui s'ouvre : comme le flaneur qui sort de
+      chez lui, on les voit sortir, on ne les voit pas apparaitre. ⚠️ Combien, a
+      l'empreinte du jour et du bar : aucun de du jeu ne sert a les compter. */
+  function naitreLeLastCall() {
+    const lc = B.defs.nuit && B.defs.nuit.last_call, p = B.partie, j = B.joueur;
+    if (!lc || !p || !j || B.interieur) return 0;
+    if (p.heure < lc.heure || p.heure >= lc.jusqu_a) return 0;
+    const arch = archetype('ivrogne');
+    if (!arch) return 0;
+    const faits = B.lastCall || (B.lastCall = {});
+    let nes = 0;
+    lc.bars.forEach(function (bar, k) {
+      const cle = p.jour + ':' + k;
+      if (faits[cle]) return;
+      const x = bar.x * TT + 8, y = bar.y * TT + 8;
+      if (dist2(x, y, j.x, j.y) > lc.portee_px * lc.portee_px) return;
+      if (!Monde.marchablePieton(bar.x, bar.y)) return;
+      faits[cle] = true;
+      const n = lc.fetards[0] + hash2(p.jour, k * 131 + 7) % (lc.fetards[1] - lc.fetards[0] + 1);
+      Monde.ouvrirPorte(bar.porte[0], bar.porte[1]);
+      for (let i = 0; i < n; i++) {
+        // En grappe devant la porte : un pas de cote chacun, pas tous sur la meme tuile.
+        const dx = ((i % 3) - 1) * 10, dy = Math.floor(i / 3) * 8;
+        const e = creerPieton(x + dx, y + dy, arch);
+        if (!e) continue;
+        e.fetard = true;
+        e.etat = 'flane';
+        e.sortie = { x: bar.porte[0], y: bar.porte[1], t: 0 };
+        nes++;
+      }
+    });
+    if (nes) indexer();
+    return nes;
   }
 
   /** La porte la plus proche qu'il n'a pas encore desservie. */
@@ -1438,6 +1646,93 @@ const Entites = (function () {
     e.porteTournee = porte;
     e.cap = { x: porte.x * TT + 8, y: (porte.y + 1) * TT + 8 };
     e.capT = 0; e.etat = 'cap';
+  }
+
+  /** Qui a fini sa journee s'en va — HORS DE L'ECRAN, jamais sous nos yeux. Par
+      `entre` (retire a l'image suivante) : on est dans la boucle de `majSortes`. */
+  function rentrerHorsChamp(e) {
+    if (visibleAEcran(e.x, e.y, 40)) return;
+    e.etat = 'entre'; e.minuterie = 1; e.vx = 0; e.vy = 0;
+  }
+
+  /** Le perron le plus proche qu'il n'a pas encore servi — d'abord dans une rue ou
+      l'on habite : le Clairon se lit au dejeuner, pas au comptoir. */
+  function prochainPerron(e) {
+    const carte = Monde.carte;
+    if (!carte || !carte.portesFermees.length) return null;
+    const faites = e.tournee || (e.tournee = []);
+    const portee = PORTEE_SORTE * PORTEE_SORTE;
+    let chez = null, dChez = portee, autre = null, dAutre = portee;
+    for (const porte of carte.portesFermees) {
+      const px = porte.x * TT + 8, py = (porte.y + 1) * TT + 8;
+      const d = dist2(px, py, e.x, e.y);
+      if (d >= portee || faites.indexOf(porte) >= 0) continue;
+      if (Monde.glyphe(porte.x, porte.y) !== porte.glyphe) continue;   // rasee (chantier)
+      if (!Monde.marchablePieton(porte.x, porte.y + 1)) continue;
+      // ⚠️ Un perron qu'il VOIT : `cap` marche en ligne droite, et le premier camelot
+      // restait dix secondes le nez contre le mur d'une cour, a viser la porte d'en face.
+      if (!Monde.ligneLibre(e.x, e.y, px, py)) continue;
+      if (Monde.usageA(porte.x, porte.y) === 'residentiel') { if (d < dChez) { dChez = d; chez = porte; } }
+      else if (d < dAutre) { dAutre = d; autre = porte; }
+    }
+    return chez || autre;
+  }
+
+  /** **LE CAMELOT DU CLAIRON** (la nuit a ses habitudes). Il va de perron en perron
+      et y LANCE le journal — un rouleau qui reste sur le seuil jusqu'a ce qu'on le
+      rentre (`nuit.CAMELOT.rentre_a`). ⚠️ Il n'ouvre aucune porte : c'est toute la
+      difference avec le facteur, qui fait battre les portes une a une. */
+  function majCamelot(e) {
+    // ⚠️ Un perron qu'il n'atteint pas (`cap` renonce au bout de dix secondes) se
+    // RAYE de la tournee : sinon il le rechoisissait, le plus proche, sans fin.
+    if (e.perron && (e.etat !== 'cap' || !e.cap)) { e.tournee.push(e.perron); e.perron = null; }
+    if (e.lanceT > 0) {
+      e.lanceT -= 15;
+      if (e.lanceT <= 0) { e.lanceT = 0; e.etat = 'flane'; }
+      return;
+    }
+    if (e.etat === 'cap' && e.cap && e.perron) {
+      if (Math.hypot(e.cap.x - e.x, e.cap.y - e.y) > 18) return;
+      const p = e.perron;
+      poserLeJournal(p.x * TT + 8, (p.y + 1) * TT + 3);
+      e.tournee.push(p);
+      e.perron = null; e.cap = null;
+      e.etat = 'arret'; e.minuterie = 20; e.vx = 0; e.vy = 0;
+      e.face = 'haut';
+      e.lanceT = 20;
+      const c = B.defs.nuit && B.defs.nuit.camelot;
+      if (c && hash2(e.id, e.tournee.length) % 1000 < c.parle * 1000) bulle(e, paroles('camelot').lance, { duree: 70 });
+      return;
+    }
+    if (e.etat !== 'flane') return;
+    const p = prochainPerron(e);
+    if (!p) { if (e.tournee && e.tournee.length > 12) e.tournee.length = 0; return; }
+    e.perron = p;
+    e.cap = { x: p.x * TT + 8, y: (p.y + 1) * TT + 8 };
+    e.capT = 0; e.etat = 'cap';
+  }
+
+  /** Le journal sur le perron : un decalque, qui porte son JOUR — rentre a l'heure
+      dite (`rentrerLesJournaux`). Aucun de : sa pose se lit a sa place. */
+  function poserLeJournal(x, y) {
+    if (B.decals.length >= MAX_DECALS) B.decals.shift();
+    B.decals.push({ x: x, y: y, type: 'journal', v: hash2(Math.floor(x), Math.floor(y)) % 4,
+                    jour: B.partie ? B.partie.jour : 0 });
+  }
+
+  /** On a rentre le journal : passe l'heure (`rentre_a`), ou le lendemain, ceux
+      qu'on ne voit pas s'en vont. Sous nos yeux, il attend qu'on regarde ailleurs. */
+  function rentrerLesJournaux() {
+    const c = B.defs.nuit && B.defs.nuit.camelot, p = B.partie;
+    if (!c || !p || !B.decals.length) return;
+    // Il passe avant 6 h 30 : a partir de `rentre_a`, tout journal du jour est rentre.
+    const tard = p.heure >= c.rentre_a;
+    for (let i = B.decals.length - 1; i >= 0; i--) {
+      const d = B.decals[i];
+      if (d.type !== 'journal') continue;
+      if (!(tard || d.jour !== p.jour) || visibleAEcran(d.x, d.y, 16)) continue;
+      B.decals.splice(i, 1);
+    }
   }
 
   /** IL HURLE CE QUE TU AS FAIT HIER.
@@ -1590,10 +1885,16 @@ const Entites = (function () {
   function emporterLeChar(e, v) {
     const f = B.defs.pietons.vol_de_char;
     v.conducteur = 'trafic';
+    // ⚠️ IL PART D'UN STATIONNEMENT, PAS D'UN RAIL : tant qu'il n'a pas
+    // rejoint une tuile de la voirie, `avancer` (collision aux tuiles) le
+    // conduit au lieu du saut en ligne droite du trafic sur rails — sinon
+    // il traverse tout ce qui se trouve entre sa place et la rue (`maj`,
+    // Vehicules).
+    v.horsReseau = true;
     v.etat = 'roule';
     v.vole = true;
     const selle = SPRITES[v.sprite] && SPRITES[v.sprite].selle;
-    if (selle) v.pilote = { swaps: e.swaps };
+    if (selle) v.pilote = { swaps: e.swaps, tenue: e.tenue || null };
     v.sens = Monde.fleche(Math.floor(v.x / TT), Math.floor(v.y / TT)) || v.sens;
     v.alarme = 0;
     // ⚠️ La rue le voit partir — et c'est LUI la menace, pas le joueur. On
@@ -1685,7 +1986,7 @@ const Entites = (function () {
       Sans ca ce ne sont pas deux betes, c'est deux dessins du meme animal. */
   function chezElle(espece, tx, ty) {
     if (!Monde.marchablePieton(tx, ty)) return false;
-    if (espece === 'chat') return Monde.glyphe(tx, ty) === 'x';          // la ruelle
+    if (espece === 'chat' || espece === 'raton') return Monde.glyphe(tx, ty) === 'x';   // la ruelle
     const g = Monde.glyphe(tx, ty);
     if (g !== 's' && g !== 'Q') return false;                            // le sable, le quai
     for (let d = 1; d <= 3; d++) {
@@ -1703,8 +2004,14 @@ const Entites = (function () {
     const f = B.defs.pietons && B.defs.pietons.betes;
     if (!f || !B.joueur || B.interieur) return 0;
     let nes = 0;
-    for (const espece of ['goeland', 'chat']) {
+    // ⚠️ LA NUIT A SES HABITUDES : le raton ne sort que la nuit (`heures`), et la
+    // nuit le goeland dort — il n'en nait plus (`goeland_dort`).
+    const nuit = B.partie && Monde.estNuit(B.partie.heure);
+    for (const espece of ['goeland', 'chat', 'raton']) {
       const fiche = f[espece];
+      if (!fiche) continue;
+      if (fiche.heures && !enService(fiche.heures)) continue;
+      if (espece === 'goeland' && nuit && f.goeland_dort) continue;
       const deja = betes().filter(function (q) { return q.espece === espece; }).length;
       if (deja >= fiche.combien) continue;
       const place = placeDeBete(espece, f.rayon_px);
@@ -1736,6 +2043,20 @@ const Entites = (function () {
     return null;
   }
 
+  /** Le raton qui sort de la poubelle qu'on fouille, et qui file a l'oppose du
+      joueur (`interactions.js`). ⚠️ Il ne se pose pas : il PART. */
+  function fairePartirUnRaton(x, y) {
+    const f = B.defs.pietons && B.defs.pietons.betes, fiche = f && f.raton;
+    if (!fiche || !B.joueur) return null;
+    const e = {
+      type: 'bete', espece: 'raton', decor: 'raton', x: x, y: y, r: 0, solide: false,
+      id: ++idDeBete, t: 0, v: 0, humeur: 'pose', minuterie: 1, vx: 0, vy: 0, altitude: 0, fuite: 0, libre: true,
+    };
+    betes().push(e);
+    sEnvoler(e, fiche, B.joueur);
+    return e;
+  }
+
   function oublier(e) {
     const i = betes().indexOf(e);
     if (i >= 0) B.betes.splice(i, 1);
@@ -1759,7 +2080,15 @@ const Entites = (function () {
     // ⚠️ ELLE PART AVANT QU'ON LA TOUCHE. Un char qui fonce compte double : ce
     // qui arrive vite se voit venir de plus loin.
     const menace = j.dansVehicule ? j.dansVehicule : j;
-    const portee = fiche.fuite_px * (j.dansVehicule ? 1.6 : 1);
+    // ⚠️ LA CONFIANCE DU CHAT (`confiance_px`, 2e vague, 22 sept. 2026) : au pas, sans
+    // arme, sans char — un chat laisse approcher bien plus près, assez pour le caresser
+    // (`Interactions.caresserSousLaMain`). Courir (`Entree.bas('esquive')`), sortir une
+    // arme ou monter en char, et il redevient aussi farouche qu'avant. `e.confiance` est
+    // lu par `Interactions` : ce n'est confiant que si la bête ET la portée le disent —
+    // s'approcher DOUCEMENT d'un goéland ne le rend pas plus caressable, il n'a pas la clé.
+    e.confiance = fiche.confiance_px !== undefined && menace === j
+      && (!j.arme || j.arme === 'poings') && !Entree.bas('esquive');
+    const portee = (e.confiance ? fiche.confiance_px : fiche.fuite_px) * (j.dansVehicule ? 1.6 : 1);
     if (dist2(e.x, e.y, menace.x, menace.y) < portee * portee) { sEnvoler(e, fiche, menace); return; }
     if (--e.minuterie > 0) { avancerLaBete(e, fiche); return; }
     // Elle change d'idee : elle se pose, ou elle fait quelques pas.
@@ -1774,7 +2103,7 @@ const Entites = (function () {
       e.v = 1;
     } else {
       e.humeur = 'pose';
-      const dur = e.espece === 'chat' ? fiche.assis_images : fiche.picore_images;
+      const dur = e.espece === 'goeland' ? fiche.picore_images : fiche.assis_images;
       e.minuterie = dur[0] + (tirage >>> 8) % (dur[1] - dur[0]);
       e.vx = 0; e.vy = 0;
       // Le goeland picore une image sur deux ; le chat, assis, ne bouge pas.
@@ -1796,6 +2125,9 @@ const Entites = (function () {
       return;
     }
     e.x = nx; e.y = ny;
+    // Au pas aussi, il va dans le sens ou il marche, et ses pattes suivent la distance.
+    e.foulee = (e.foulee || 0) + Math.hypot(e.vx, e.vy);
+    e.dir = directionDeBete(e);
     void fiche;
   }
 
@@ -1809,21 +2141,107 @@ const Entites = (function () {
     e.fuite = e.espece === 'goeland' ? fiche.envol_images : fiche.detale_images;
     e.humeur = 'part';
     e.v = 2;
+    if (e.espece === 'goeland') return;
+    // ⚠️ LES BÊTES QUI SE SAUVENT POUR VRAI : il se ramasse, puis il prend son elan
+    // (`majFuite`) — et une bouffee de poussiere part de ses pattes arriere. A
+    // l'empreinte de la bete et de l'instant : un decor ne tire pas de de.
+    e.sursaut = fiche.sursaut_images || 0;
+    e.elan = 0;
+    e.dir = directionDeBete(e);
+    for (let k = 0; k < 3; k++) {
+      const h = hash2(e.id * 31 + k, B.t);
+      particule(e.x - dx / norme * 4, e.y + 2, -dx / norme * 0.5 + ((h % 21) - 10) / 40, -0.1 - (h >>> 8) % 10 / 40,
+                12 + (h >>> 12) % 8, '#b9b2a4', 1, 0.02);
+    }
   }
 
+  //: Ce qui dessine une bete qui BOUGE : le peintre de son espece (`sprites.js`).
+  const BETES_QUI_BOUGENT = { chat: 'chat_bouge', raton: 'raton_bouge' };
+
+  /** Vers ou elle va, en quatre : de profil a gauche ou a droite, de dos vers le haut,
+      de face vers le bas. ⚠️ Avec une PRISE : on garde son sens tant que l'autre axe ne
+      l'emporte pas nettement — sans elle, une course en diagonale clignotait d'un
+      profil a un dos a chaque image. */
+  function directionDeBete(e) {
+    const ax = Math.abs(e.vx), ay = Math.abs(e.vy);
+    if (ax < 1e-6 && ay < 1e-6) return e.dir || 'droite';
+    const garde = { droite: e.vx > 0, gauche: e.vx < 0, bas: e.vy > 0, haut: e.vy < 0 };
+    if (e.dir && garde[e.dir]) {
+      const horiz = e.dir === 'droite' || e.dir === 'gauche';
+      if ((horiz ? ax : ay) >= 0.8 * (horiz ? ay : ax)) return e.dir;
+    }
+    return ax > ay ? (e.vx > 0 ? 'droite' : 'gauche') : (e.vy > 0 ? 'bas' : 'haut');
+  }
+
+  /** Ce qu'on dessine d'une bete qui bouge, ou null (assise, posee — ou un goeland) :
+      le decor, l'allure, la direction et l'image. ⚠️ L'image se lit a la DISTANCE
+      parcourue (`foulee`), pas a l'horloge : une bete bloquee ne court pas sur place. */
+  function poseDeBete(e) {
+    const decor = BETES_QUI_BOUGENT[e.espece];
+    if (!decor) return null;
+    const allure = e.fuite > 0 ? (e.sursaut > 0 ? 'sursaut' : 'fuit') : (e.humeur === 'marche' ? 'marche' : null);
+    if (!allure) return null;
+    const fiche = B.defs.pietons.betes[e.espece] || {};
+    const cycle = (fiche.foulee_px && fiche.foulee_px[allure]) || 24;
+    const image = allure === 'sursaut' ? 0 : Math.floor((e.foulee || 0) / (cycle / 4)) % 4;
+    const dir = e.dir || 'droite';
+    return { decor: decor, allure: allure, dir: dir, image: image, cle: allure + '|' + dir + '|' + image };
+  }
+
+  /** Une tuile ou une bete qui se sauve peut poser la patte. */
+  function libreAuxPattes(x, y) { return Monde.marchablePieton(Math.floor(x / TT), Math.floor(y / TT)); }
+
   function majFuite(e, fiche) {
+    // Le chat et le raton COURENT (`majCourse`) ; le goeland s'envole.
+    if (e.espece !== 'goeland') { majCourse(e, fiche); return; }
     e.fuite--;
     e.x += e.vx; e.y += e.vy;
-    if (e.espece === 'goeland') {
-      // Il monte, puis il plane. L'altitude ne sert qu'au dessin.
-      e.altitude = Math.min(fiche.montee_px, e.altitude + 0.5);
-      e.v = 2;
-    } else {
-      // Le chat file au sol, et il s'arrete s'il se bute a autre chose que sa ruelle.
-      if (!chezElle('chat', Math.floor(e.x / TT), Math.floor(e.y / TT))) { oublier(e); return; }
-      e.v = 2;
-    }
+    // Il monte, puis il plane. L'altitude ne sert qu'au dessin.
+    e.altitude = Math.min(fiche.montee_px, e.altitude + 0.5);
+    e.v = 2;
     if (e.fuite <= 0) oublier(e);
+  }
+
+  /** ⚠️ LES BÊTES QUI SE SAUVENT POUR VRAI (Martin, 22 sept. 2026). Avant : une image
+      fixe qui glissait a pleine vitesse des la premiere image, et qui DISPARAISSAIT net
+      des qu'elle quittait sa ruelle — sous nos yeux. Maintenant :
+      - elle se RAMASSE (`sursaut`), puis ACCELERE (`elan`) ;
+      - un mur, elle le LONGE (on garde l'axe qui passe ; sinon un quart de tour, du cote
+        qui l'eloigne du joueur) — elle ne le traverse ni ne s'y evapore ;
+      - elle peut quitter sa ruelle en fuyant : elle court ou elle peut ;
+      - sa fuite finie, elle ne s'efface que HORS DE L'ECRAN ; sous nos yeux elle court
+        encore, et coincee, elle s'assoit la ou elle est. */
+  function majCourse(e, fiche) {
+    e.v = 2;
+    if (e.sursaut > 0) { e.sursaut--; return; }
+    e.elan = Math.min(1, (e.elan || 0) + 1 / (fiche.elan_images || 1));
+    const k = e.elan * (2 - e.elan);               // elle part vite, puis elle tient sa vitesse
+    let nx = e.x + e.vx * k, ny = e.y + e.vy * k;
+    if (!libreAuxPattes(nx, ny)) {
+      if (libreAuxPattes(nx, e.y)) { ny = e.y; e.vy = 0; e.vx = Math.sign(e.vx) * fiche.detale_vitesse; }
+      else if (libreAuxPattes(e.x, ny)) { nx = e.x; e.vx = 0; e.vy = Math.sign(e.vy) * fiche.detale_vitesse; }
+      else {
+        // Un coin : un quart de tour, du cote qui l'eloigne du joueur.
+        const j = B.joueur, gx = -e.vy, gy = e.vx;
+        const versJ = j ? (gx * (j.x - e.x) + gy * (j.y - e.y)) : 0;
+        const s = versJ > 0 ? -1 : 1;
+        e.vx = gx * s; e.vy = gy * s;
+        nx = e.x; ny = e.y;
+      }
+    }
+    const fait = Math.hypot(nx - e.x, ny - e.y);
+    e.foulee = (e.foulee || 0) + fait;
+    e.x = nx; e.y = ny;
+    e.dir = directionDeBete(e);
+    e.fuite--;
+    e.coinceT = fait < 0.3 ? (e.coinceT || 0) + 1 : 0;
+    if (e.fuite > 0) return;
+    if (!visibleAEcran(e.x, e.y, 16)) { oublier(e); return; }
+    if (e.coinceT < 30) { e.fuite = 1; return; }
+    // Coincee sous nos yeux : elle s'assoit, et elle reprend sa vie de bete.
+    e.fuite = 0; e.humeur = 'pose'; e.v = 0; e.vx = 0; e.vy = 0; e.coinceT = 0;
+    const dur = fiche.assis_images || [120, 240];
+    e.minuterie = dur[0] + hash2(e.id, B.t) % Math.max(1, dur[1] - dur[0]);
   }
 
   // --- La foule de la foire ------------------------------------------------
@@ -1997,7 +2415,8 @@ const Entites = (function () {
       des deux groupes qui est le plus loin de son compte. */
   function naitreLesEnfantsDeLaPlage() {
     const f = B.defs.pietons && B.defs.pietons.plage;
-    if (!f || !B.joueur || B.interieur) return 0;
+    // La nuit, personne ne se baigne : la plage a ses heures (`PLAGE.heures`).
+    if (!f || !B.joueur || B.interieur || !enService(f.heures)) return 0;
     const baigneurs = B.entites.filter(function (q) { return q.metier === 'baigneur' && q.vivant; });
     const petits = baigneurs.filter(function (q) { return q.sprite === 'enfant'; }).length;
     const grands = baigneurs.length - petits;
@@ -2018,6 +2437,127 @@ const Entites = (function () {
     e.jeu = null;
     e.jeuT = 0;
     ajouterA(grille, e);
+    return 1;
+  }
+
+  // --- Les enfants a velo ------------------------------------------------------------
+
+  //: ⚠️ Martin (21 sept. 2026) : « je veux aussi des enfants a velo, seulement sur
+  //: trottoir, casque, parc ». Ce ne sont pas des chars : ce sont des passants
+  //: (`metier: 'cycliste'`) qui flanent plus vite, sur un corps a eux
+  //: (`SPRITES.enfant_velo`), et a qui la rue est INTERDITE — pas seulement la
+  //: chaussee, comme a tout le monde : la traverse aussi. Un enfant a velo reste
+  //: sur son ilot, le trottoir, l'abord et le parc.
+
+  /** Une tuile ou un enfant a velo peut rouler : le trottoir, l'abord, la
+      pelouse et l'allee d'un parc. ⚠️ Ni la chaussee ni le passage pieton
+      (`estRoute` les prend tous les deux), ni la ruelle, ni le sable. */
+  function roulableEnfant(tx, ty) {
+    if (Monde.estRoute(tx, ty) || Monde.bloque(tx, ty, Monde.MASQUE_PIETON)) return false;
+    const g = Monde.glyphe(tx, ty);
+    return Monde.estTrottoir(tx, ty) || Monde.estAbord(tx, ty) || g === ',' || g === 'g';
+  }
+
+  /** Il ne descend pas sur la rue, meme en detalant : on coupe le pas qui l'y
+      menerait, axe par axe — il longe la bordure au lieu de la franchir.
+
+      ⚠️ **ET LE COIN EN DIAGONALE.** Les deux axes, pris chacun seul, tombaient
+      sur du trottoir ; le pas entier, lui, tombait sur la traverse d'en biais —
+      au coin d'un ilot, en detalant. Le juge l'a vu deux fois en 800 releves.
+
+      ⚠️ Et s'il y est quand meme (un char l'a pousse, la foule l'a demele), il
+      en SORT : vers la tuile roulable la plus proche, a son allure. Sans ca, la
+      regle qui le garde sur le trottoir le gardait sur la traverse. */
+  function resterSurLeTrottoir(e) {
+    const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
+    if (!roulableEnfant(tx, ty)) {
+      // Le bord le plus PROCHE d'une tuile roulable, pas son centre : pousse d'un
+      // pixel sur la traverse, il remonte d'un pixel — viser le centre de la
+      // tuile du coin l'envoyait contre le poteau du feu, qui le renvoyait.
+      let meilleur = null;
+      for (let r = 1; r <= 3 && !meilleur; r++) {
+        for (let dy = -r; dy <= r; dy++) {
+          for (let dx = -r; dx <= r; dx++) {
+            if (Math.max(Math.abs(dx), Math.abs(dy)) !== r || !roulableEnfant(tx + dx, ty + dy)) continue;
+            const x0 = (tx + dx) * TT, y0 = (ty + dy) * TT;
+            const gx = Math.min(Math.max(e.x, x0 + e.r + 1), x0 + TT - e.r - 1) - e.x;
+            const gy = Math.min(Math.max(e.y, y0 + e.r + 1), y0 + TT - e.r - 1) - e.y;
+            const d = Math.hypot(gx, gy);
+            if (!meilleur || d < meilleur.d) meilleur = { gx: gx, gy: gy, d: d };
+          }
+        }
+      }
+      if (meilleur) {
+        const n = meilleur.d || 1, allure = Math.min(meilleur.d, Math.max(Math.hypot(e.vx, e.vy), B.defs.recherche.vitesses.pieton));
+        e.vx = meilleur.gx / n * allure; e.vy = meilleur.gy / n * allure;
+      }
+      return;
+    }
+    const bord = e.r + 2;
+    const x1 = Math.floor((e.x + e.vx + Math.sign(e.vx) * bord) / TT), y1 = Math.floor((e.y + e.vy + Math.sign(e.vy) * bord) / TT);
+    if (e.vx && !roulableEnfant(x1, ty)) e.vx = 0;
+    if (e.vy && !roulableEnfant(tx, y1)) e.vy = 0;
+    if (e.vx && e.vy && !roulableEnfant(x1, y1)) e.vy = 0;
+  }
+
+  /** `fn` jouee avec un de PRETE : la file du jeu ne bouge pas d'un tirage.
+      ⚠️ La meme que celle des gens qui attendent l'autobus (`Autobus`) :
+      `creerPieton` tire deux des, et une naissance de decor ne doit pas
+      deplacer tout ce qui nait apres elle. */
+  function sansLeDe(graine, fn) {
+    const de = B.rng;
+    let s = graine >>> 0;
+    B.rng = function () { s = hash2(s + 1, 0x5EED); return (s % 100000) / 100000; };
+    try { return fn(); } finally { B.rng = de; }
+  }
+
+  /** Une tuile de trottoir ou de parc, dans la bulle et hors champ, dans un
+      quartier qui en veut. ⚠️ Aucun de : on balaie en spirale, comme pour la
+      greve, en commencant par un cote qui tourne avec l'heure. */
+  function placeDEnfantAVelo(rayon, arch) {
+    const c = Monde.carte, j = B.joueur;
+    if (!c) return null;
+    const t = Math.floor(rayon / TT);
+    const jx = Math.floor(j.x / TT), jy = Math.floor(j.y / TT);
+    const tour = Math.floor(B.t / 60) % 4;
+    for (let d = 4; d <= t; d++) {
+      for (let k = -d; k <= d; k++) {
+        const cotes = [[jx + k, jy - d], [jx + d, jy + k], [jx - k, jy + d], [jx - d, jy - k]];
+        for (let n = 0; n < 4; n++) {
+          const tx = cotes[(n + tour) % 4][0], ty = cotes[(n + tour) % 4][1];
+          if (!roulableEnfant(tx, ty)) continue;
+          const x = tx * TT + 8, y = ty * TT + 8;
+          if (dist2(x, y, j.x, j.y) > rayon * rayon) continue;
+          const zone = Monde.zoneA(x, y);
+          if (arch.districts && (!zone || arch.districts.indexOf(zone.district) < 0)) continue;
+          if (visibleAEcran(x, y, 24) || !placeLibre(x, y)) continue;
+          return { x: x, y: y, tx: tx, ty: ty };
+        }
+      }
+    }
+    return null;
+  }
+
+  /** Les enfants a velo de la bulle : le jour (`heures`), dans leurs quartiers
+      (`districts`), `combien` au plus. Le casque, le cadre et le chandail se
+      lisent a l'empreinte de la tuile ou il nait. */
+  function naitreLesEnfantsAVelo() {
+    const f = B.defs.pietons && B.defs.pietons.enfants_a_velo;
+    const arch = archetype('enfant_velo');
+    if (!f || !arch || arch.slug !== 'enfant_velo' || !B.joueur || B.interieur) return 0;
+    if (!enService(arch.heures)) return 0;
+    const n = B.entites.filter(function (q) { return q.type === 'pieton' && q.arch === 'enfant_velo' && q.vivant; }).length;
+    if (n >= f.combien) return 0;
+    const place = placeDEnfantAVelo(f.rayon_px, arch);
+    if (!place) return 0;
+    const h = hash2(place.tx, place.ty);
+    const e = sansLeDe(h, function () { return creerPieton(place.x, place.y, arch); });
+    if (!e) return 0;
+    e.swaps = Object.assign({}, arch.couleurs, {
+      e: f.casques[h % f.casques.length],
+      v: f.cadres[(h >>> 8) % f.cadres.length],
+      c: f.chandails[(h >>> 16) % f.chandails.length],
+    });
     return 1;
   }
 
@@ -2120,9 +2660,43 @@ const Entites = (function () {
     return null;
   }
 
+  /** La plage ferme (`PLAGE.heures`) : on sort de l'eau, on range ses affaires,
+      et on s'en va.
+
+      ⚠️ **HORS DE L'ECRAN, JAMAIS SOUS NOS YEUX** — comme le marchand d'un
+      kiosque qui ferme. Un baigneur qu'on regarde marche (il sort de l'eau s'il
+      y est, puis il flane et quitte le sable) ; celui qu'on ne voit pas est deja
+      rentre. Aucun de. ⚠️ Par `entre` (retire a l'image suivante, comme qui
+      passe une porte), pas par `retirer` : on est ici DANS la boucle de
+      `majSortes`, et un `splice` en plein parcours sauterait le suivant. */
+  function plierBagage(e) {
+    quitterLeJeu(e);
+    if (!visibleAEcran(e.x, e.y, 40)) { e.etat = 'entre'; e.minuterie = 1; e.vx = 0; e.vy = 0; return; }
+    const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
+    if (!Monde.estEau(tx, ty)) return;
+    // Le sable le plus proche : les quatre voisins d'abord, puis les diagonales.
+    // ⚠️ Un decor SOLIDE sur la tuile (une table de pique-nique, une chaise de
+    // sauveteur) lui barrait la seule sortie : il restait plante dans l'eau, `cap`
+    // repousse par la table a chaque pas. On prend une tuile ou il peut poser le pied.
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+      const cx = tx + dx, cy = ty + dy;
+      if (Monde.estEau(cx, cy) || !Monde.marchablePieton(cx, cy)) continue;
+      const x = cx * TT + 8, y = cy * TT + 8;
+      if (decorAutour(x, y, 20).some(function (d) {
+        return d.solide && dist2(d.x, d.y, x, y) < (d.r + e.r + 2) * (d.r + e.r + 2);
+      })) continue;
+      // ⚠️ Six pixels AU-DELA du centre, comme `bordDeLEau` dans l'autre sens :
+      // `cap` s'arrete a 12 px de son but, et vise au centre, il restait les
+      // pieds dans l'eau (le juge l'a vu).
+      e.cap = { x: x + dx * 6, y: y + dy * 6 }; e.capT = 0; e.etat = 'cap';
+      return;
+    }
+  }
+
   /** La routine : trois jeux, et on en change. */
   function majPlage(e) {
     const f = B.defs.pietons.plage;
+    if (!enService(f.heures)) { plierBagage(e); return; }
     if (e.etat !== 'flane' && e.etat !== 'arret' && e.etat !== 'cap' && e.etat !== 'fige') {
       // Il a peur, il temoigne, il fuit : le jeu s'arrete, il reste un enfant.
       quitterLeJeu(e);
@@ -2582,6 +3156,43 @@ const Entites = (function () {
     return nes;
   }
 
+  /** L'ÉQUIPE d'un chantier (3e vague de « Ça travaille ») : un ouvrier planté sur
+      chacun des postes que Python a choisis (`chantiers._postes`), tant que le
+      joueur est dans la bulle et que le poste est hors de l'écran.
+
+      ⚠️ **INTOUCHABLES, comme les ouvriers de la voie fermée** — et pour la même
+      raison : une équipe qu'on fauche au premier passage est une cible. Et ils ne
+      comptent pas dans la foule (`metier`) : ils ont un poste. Mais ⚠️ ils ne se
+      marquent PAS `chantier` : `naitreLesOuvriers` compte « qui travaille » avec
+      `q.chantier && q.vivant`, et l'équipe d'une voie fermée ne naîtrait plus.
+      `equipeDe` porte l'id du chantier, `posteDe` le numéro du poste : c'est ce
+      qui dit qu'un poste est pris. */
+  function naitreLEquipe(id, postes, nom) {
+    const arch = archetype('ouvrier');
+    if (!arch || !B.joueur || B.interieur) return 0;
+    let nes = 0;
+    postes.forEach(function (p, k) {
+      // Le poste de la palette s'appelle `'signal'` (4e vague) : il ne se confond
+      // pas avec les postes numérotés de l'équipe du terrain.
+      const poste = nom === undefined ? k : nom;
+      const x = p[0] * TT + 8, y = p[1] * TT + 8;
+      if (dist2(x, y, B.joueur.x, B.joueur.y) > BULLE_OUBLI * BULLE_OUBLI) return;
+      if (visibleAEcran(x, y, 24)) return;
+      if (B.entites.some(function (q) { return q.equipeDe === id && q.posteDe === poste && q.vivant; })) return;
+      const e = creerPieton(x, y, arch);
+      e.metier = 'chantier';
+      e.intouchable = true;
+      e.etat = 'fige';
+      e.face = 'bas';
+      e.plante = { x: e.x, y: e.y };
+      e.equipeDe = id;
+      e.posteDe = poste;
+      nes++;
+    });
+    if (nes) indexer();
+    return nes;
+  }
+
   /** Combien de flaneurs la rue veut, ici et maintenant.
 
       ⚠️ ECRIT UNE FOIS. `peupler` avait son calcul ; l'attroupement, qui fait
@@ -2600,6 +3211,27 @@ const Entites = (function () {
     let n = 0;
     for (const e of B.entites) if (e.type === 'pieton' && e.vivant && !e.metier) n++;
     return n;
+  }
+
+  // ⚠️ LA BRUME N'EST PAS UNE FOULE (Martin, 21 sept. 2026 : treize filles en
+  // grappe sur le quai). Elle a un `metier`, donc `foule` ne la compte pas, et
+  // elle ne rentre jamais par une porte : sans plafond a elle, chaque passant
+  // qui rentrait chez lui la nuit laissait une chance sur cinq d'une fille de
+  // plus, et aucune ne repartait. Quelques-unes dans la bulle, chacune son coin
+  // (dix tuiles, un tiers d'ecran).
+  const BRUME_MAX = 3, BRUME_ECART = 160;
+
+  /** Une fille neuve peut-elle prendre un coin ici ? Pas si la bulle en a deja
+      assez, ni si une autre tient le coin d'a cote. Ne tire aucun de. */
+  function coinDeBrumeLibre(x, y) {
+    let n = 0;
+    for (const e of B.entites) {
+      if (e.type !== 'pieton' || e.metier !== 'compagnie' || !e.vivant) continue;
+      if (++n >= BRUME_MAX) return false;
+      const coin = e.poste || e;
+      if (dist2(coin.x, coin.y, x, y) < BRUME_ECART * BRUME_ECART) return false;
+    }
+    return true;
   }
 
   /** Garde la rue peuplee : on nait hors champ, on s'oublie hors de la bulle. */
@@ -2628,12 +3260,15 @@ const Entites = (function () {
     if (B.t % 30 === 0) majKiosques();
     if (B.t % 45 === 0) naitreLesOuvriers();
     if (B.t % 60 === 0) naitreLesEnfantsDeLaPlage();
+    if (B.t % 60 === 30) naitreLesEnfantsAVelo();
     if (B.t % 30 === 0) naitreLaFoire();
     if (B.t % 40 === 0) naitreLesBetes();
     if (B.t % 30 === 0) majVolDeChar();
     if (B.t % 30 === 0) majBagarre();
     if (B.t % 30 === 0) majAqueduc();
     if (B.t % 90 === 0) naitreLesSortes();
+    if (B.t % 30 === 0) naitreLeLastCall();
+    if (B.t % 120 === 0) rentrerLesJournaux();
     majSortes();
     // ⚠️ Une part de l'oubli passe par les PORTES : sinon la ville se vide
     // toujours de la meme facon (par distance) et on n'aurait ajoute qu'une
@@ -2647,9 +3282,11 @@ const Entites = (function () {
     const sortie = place.porte
       ? { x: place.porte.x, y: place.porte.y, t: 0 } : null;
     if (sortie) Monde.ouvrirPorte(sortie.x, sortie.y);
-    // La nuit, pres du bar et du port, la Brume a ses habituees.
+    // La nuit, pres du bar et du port, la Brume a ses habituees. ⚠️ Le coin se
+    // lit APRES le de : un refus retombe sur la naissance ordinaire, qui tire
+    // ce qu'elle tirait deja.
     const nuit = Monde.estNuit();
-    if (nuit && zone && zone.brume && B.rng() < 0.18) {
+    if (nuit && zone && zone.brume && B.rng() < 0.18 && coinDeBrumeLibre(place.x, place.y)) {
       const fille = archetype('racoleuse');
       if (fille) {
         const e = creerPieton(place.x, place.y, fille);
@@ -2933,7 +3570,7 @@ const Entites = (function () {
   function cede(e) {
     // ⚠️ Couche dans son lit, le joueur ne se fait pas sortir du lit a coups
     // d'epaule : c'est lui qui se leve, et seulement quand il pousse le stick.
-    if (e.alite && e.type === 'joueur') return false;
+    if ((e.alite || e.assis) && e.type === 'joueur') return false;
     if (e.etat !== 'fige') return true;
     if (!e.plante) return true;
     return dist2(e.x, e.y, e.plante.x, e.plante.y) < ECART_PLANTE * ECART_PLANTE;
@@ -2986,8 +3623,14 @@ const Entites = (function () {
       if (!cede(e) || (e.pousseX === 0 && e.pousseY === 0)) continue;
       const n = Math.hypot(e.pousseX, e.pousseY);
       const k = n > pas ? pas / n : 1;
+      const x0 = e.x, y0 = e.y;
       deplacerCercle(e, e.pousseX * k, e.pousseY * k, Monde.MASQUE_PIETON);
       dansLaCarte(e);
+      // ⚠️ La foule ne pousse pas l'enfant a velo sur la rue. Au coin, ceux qui
+      // attendent la traverse le serraient contre le poteau du feu, et il finissait
+      // un pixel sur les bandes, coince la : il garde sa place, l'autre cede.
+      if (e.metier === 'cycliste' && roulableEnfant(Math.floor(x0 / TT), Math.floor(y0 / TT))
+          && !roulableEnfant(Math.floor(e.x / TT), Math.floor(e.y / TT))) { e.x = x0; e.y = y0; }
     }
   }
 
@@ -3100,6 +3743,17 @@ const Entites = (function () {
     // Le moment le plus grave que l'eau produit : il ne peut pas etre muet.
     Son.SFX.couler();
     j.vx = 0; j.vy = 0;
+    // ⚠️ LE DEUXIEME JOUEUR NE VA PAS A L'URGENCE : elle change de scene, et
+    // une scene est au joueur 1 (Martin, 22 sept.). Il boit la tasse, on le
+    // repose au sec, K.-O. — comme un coup de trop (`blesser`, `majJoueur`).
+    if (j !== B.joueur) {
+      const sec = trottoirLePlusProche(Math.floor(j.x / TT), Math.floor(j.y / TT));
+      if (sec) { j.x = sec.x; j.y = sec.y; }
+      j.nage = false;
+      j.endurance = B.defs.recherche.vitesses.endurance;
+      assommer(j);
+      return;
+    }
     Missions.hopital(null);
   }
 
@@ -3155,7 +3809,30 @@ const Entites = (function () {
   }
 
   function majJoueur(j) {
+    // ⚠️ LES ENTREES VIENNENT DU JOUEUR QU'ON AVANCE, pas du module : en coop,
+    // cette meme fonction fait marcher les deux, chacun sur son appareil
+    // (`Entree.SOURCE1`/`SOURCE2`). Un joueur sans source, c'est le jeu a un :
+    // on retombe sur `Entree`, ou tout se confond comme avant.
+    const ent = j.entree || Entree;
+    // ⚠️ Le `recul` d'un coup recu se decompte ICI, avant tout retour : seuls
+    // les pietons le faisaient, et le joueur restait penche de 0,22 rad a vie
+    // (retour de Martin : « mon personnage est croche »).
+    if (j.recul > 0) j.recul--;
     if (j.dansVehicule) return;
+    // ⚠️ LE DEUXIEME JOUEUR TOMBE K.-O., IL NE VA PAS A L'HOPITAL (`blesser`) :
+    // l'urgence CHANGE DE SCENE, et une scene appartient au joueur 1. Il reste
+    // couche le temps du compte, puis se releve a mi-vie, invincible une
+    // seconde et demie — un joueur a terre attend son partenaire, il ne met
+    // pas fin a la partie.
+    if (j.etat === 'assomme') {
+      j.vx = 0; j.vy = 0;
+      if (--j.minuterie <= 0) {
+        j.etat = 'flane'; j.face = 'bas';
+        j.vie = Math.round(j.vieMax / 2);
+        j.invincible = 90;
+      }
+      return;
+    }
     // ⚠️ A bord du traversier, on regarde passer la baie : la coque nous porte, et
     // l'eau sous le pont n'est pas une raison de nager (`Traversier.maj`).
     if (j.aBord) { j.vx = 0; j.vy = 0; j.nage = false; return; }
@@ -3166,17 +3843,24 @@ const Entites = (function () {
     // un seul role a la fois — sans ca, choisir son arme au stick ferait
     // MARCHER le personnage vers son choix, au ralenti et sans le vouloir.
     // C'est aussi ce qui fait le prix de la roue : on est debout, immobile.
-    if (B.cinema || B.roue) { j.vx = 0; j.vy = 0; return; }   // on ecoute, ou on choisit
+    // ⚠️ LE PIRATAGE CLOUE COMME LA ROUE D'ARMES : le stick choisit une
+    // direction de sequence, pas un pas — s'il faisait aussi marcher le
+    // personnage, on sortirait du terminal des le premier essai.
+    // ⚠️ Une EPREUVE D'ADRESSE aussi (`Adresse`) : les ratons et la radio se jouent a la croix.
+    if (B.cinema || B.roue || B.piratage || B.epreuve) { j.vx = 0; j.vy = 0; return; }   // on ecoute, on choisit, on pirate ou on joue
+    // ⚠️ ASSIS SUR UN BANC — comme le lit, c'est le stick qui leve (`Interactions.majAssis`) ;
+    // tant qu'on est assis rien ne bouge, et le pas qui suit un lever est le notre, dans la meme image.
+    if (j.assis && typeof Interactions !== 'undefined' && Interactions.majAssis(j)) return;
     // ⚠️ COUCHE DANS UN LIT — le reveil a l'hopital : rien ne bouge tant qu'on
     // ne pousse pas, et la PREMIERE poussee leve. On marche dans la meme image,
     // depuis le pas de cote que `seLever` vient de poser.
     if (j.alite) {
-      if (!(Entree.axe.mag > 0)) { j.vx = 0; j.vy = 0; return; }
-      seLever(j, Entree.axe.x, Entree.axe.y);
+      if (!(ent.axe.mag > 0)) { j.vx = 0; j.vy = 0; return; }
+      seLever(j, ent.axe.x, ent.axe.y);
     }
     const v = B.defs.recherche.vitesses;
     const eau = B.defs.recherche.nage;
-    const axe = Entree.axe;
+    const axe = ent.axe;
     // ⚠️ L'EAU N'EST PLUS UN MUR. Le joueur et les agents portent le masque du
     // nageur — eux seuls entrent dans la baie — et c'est le SOUFFLE qui decide
     // jusqu'ou. Voir `recherche.NAGE` : les deux nombres se jugent contre la
@@ -3193,6 +3877,7 @@ const Entites = (function () {
       j.roule--;
       deplacerCercle(j, j.vx, j.vy, Monde.MASQUE_NAGEUR);
       dansLaCarte(j);
+      auLarge(j);
       if (j.roule === 0) j.invincible = 6;
       return;
     }
@@ -3201,7 +3886,7 @@ const Entites = (function () {
     // grandeur de la carte. » Pousser le pouce a fond, ou n'importe quelle
     // touche de direction, c'est courir ; l'effleurer, c'est marcher ; le
     // bouton, c'est SPRINTER, et lui seul coute du souffle.
-    const veutSprinter = Entree.bas('esquive');
+    const veutSprinter = ent.bas('esquive');
     const marche = axe.source !== 'clavier' && axe.mag < 0.6;
     let vitesse = marche ? v.joueur_marche : v.joueur_course;
     // ⚠️ Le cafe allonge le sprint, il ne l'accelere PAS : `joueur_sprint`
@@ -3255,12 +3940,20 @@ const Entites = (function () {
     j.vx = axe.x * vitesse * mag;
     j.vy = axe.y * vitesse * mag;
     if (axe.mag > 0) regarder(j, axe.x, axe.y);
+    // ⚠️ LE COURANT DU LARGE REFUSÉ (`auLarge`) : le temps qu'il nous ramène, on nage
+    // où il veut, le dos tourné à l'île — c'est le « tourner de bord » du nageur.
+    if (j.courant && j.courant.t > 0) {
+      j.courant.t--;
+      j.vx = j.courant.x * vitesse; j.vy = j.courant.y * vitesse;
+      regarder(j, j.courant.x, j.courant.y);
+    }
     // Pousser contre un grillage, c'est vouloir l'enjamber : une seconde en
     // haut, sans frapper, sans tirer, sans courir — et une cible immobile.
     if (axe.mag > 0 && !j.nage && enjamber(j, j.vx, j.vy)) { return; }
     const avant = { x: j.x, y: j.y };
     deplacerCercle(j, j.vx, j.vy, Monde.MASQUE_NAGEUR);
     dansLaCarte(j);
+    auLarge(j);
     if (j.buteImage !== B.t) j.buteT = 0;              // on a lache la barriere
     if (j.forceT > 0) j.forceT--;
     const d = Math.hypot(j.x - avant.x, j.y - avant.y);
@@ -3273,6 +3966,19 @@ const Entites = (function () {
     if (j.invincible > 0) j.invincible--;
     if (j.flagrant > 0) j.flagrant--;
     if (j.saigne > 0) saigner(j);
+  }
+
+  //: Combien d'images le courant ramène le nageur que la ligne a arrêté.
+  const COURANT_IMAGES = 45;
+
+  /** ⚠️ LE LARGE REFUSÉ, À LA NAGE (`Monde.retenirAuLarge`) : la ligne arrête le
+      nageur comme la coque, puis le courant le ramène vers la rive — la travée
+      manquante du pont de l'aéroport ne se nage plus jusqu'au bout. */
+  function auLarge(j) {
+    const s = Monde.retenirAuLarge(j);
+    if (!s) return;
+    j.courant = { x: s.x, y: s.y, t: COURANT_IMAGES };
+    Monde.avertirDuLarge('nage');
   }
 
   // --- Pietons --------------------------------------------------------------------------
@@ -3429,6 +4135,10 @@ const Entites = (function () {
     const v = B.defs.recherche.vitesses;
     const reactions = B.defs.pietons.reactions;
     if (!e.vivant) { if (e.saigne > 0) e.saigne--; return; }
+    // Assis dans le char du joueur (celui qu'on escorte, `Histoire.majProtege`) :
+    // il va ou le char va, et rien d'autre — `dessine` est faux, et `blesser`
+    // ne touche pas qui est dedans.
+    if (e.dansVehicule) { e.x = e.dansVehicule.x; e.y = e.dansVehicule.y; e.vx = 0; e.vy = 0; return; }
     // ⚠️ Lu sous les pieds a chaque image, pour tout le monde : c'est ce qui
     // decide du masque, du dessin, et de la vitesse d'un agent a la nage.
     mouiller(e);
@@ -3436,7 +4146,11 @@ const Entites = (function () {
     if (majEnjambe(e)) return;         // il passe par-dessus une cloture : rien d'autre
     if (majPorte(e)) return;           // il sort d'une porte, ou il y rentre
 
-    if (e.etat === 'fige') {
+    // ⚠️ `suit` PASSE AVANT `fige` : un donneur est fige (il tient son poste),
+    // et celui qu'on escorte en est un. La branche du poste sortait la premiere
+    // et le ramenait a sa place a chaque image — le Bonimenteur de p14 restait
+    // plante a l'arche, a cote du joueur qui devait l'emmener (22 sept. 2026).
+    if (e.etat === 'fige' && !e.suit) {
       // ⚠️ Fige veut dire « il tient son poste », pas « c'est un poteau ». Un
       // donneur vraiment immobile bouche la rue POUR TOUJOURS : l'agent lance
       // aux trousses du joueur venait buter sur Ti-Guy et y restait — 260
@@ -3459,7 +4173,10 @@ const Entites = (function () {
       const dx = e.suit.x - e.x, dy = e.suit.y - e.y;
       const norme = Math.hypot(dx, dy);
       if (norme > ecart) {
-        const vitesse = Math.min(v.pieton_course, v.pieton * e.allure * 1.6);
+        // ⚠️ `vitesseSuite` : celui qu'on escorte court comme le joueur sprinte
+        // (`Histoire`, `proteger`) — plafonne a `pieton_course`, il se laissait
+        // distancer, et le premier coin de mur le perdait pour de bon.
+        const vitesse = e.vitesseSuite || Math.min(v.pieton_course, v.pieton * e.allure * 1.6);
         e.vx = dx / norme * vitesse;
         e.vy = dy / norme * vitesse;
       } else { e.vx = 0; e.vy = 0; }
@@ -3470,7 +4187,12 @@ const Entites = (function () {
       return;
     }
     if (e.etat === 'assomme') {
-      if (--e.minuterie <= 0) { e.etat = 'fuit'; e.minuterie = reactions.fuite_secondes * 60; e.face = 'bas'; }
+      // ⚠️ UNE CIBLE DE MISSION COUCHEE RESTE COUCHEE tant que la mission dure :
+      // le K.-O. compte comme un mort au compteur de l'objectif. Elle se relevait
+      // au bout de 5 s et s'enfuyait — le « 1/6 » redevenait « 0/6 », et il
+      // fallait coucher les six Cravates de M5, sur trois coins, en 5 s.
+      // `nettoyer` lui retire `cible` a la fin : elle se releve alors.
+      if (!e.cible && --e.minuterie <= 0) { e.etat = 'fuit'; e.minuterie = reactions.fuite_secondes * 60; e.face = 'bas'; }
       return;
     }
     if (e.metier === 'reclame' && (e.etat === 'flane' || e.etat === 'arret')) solliciter(e);
@@ -3482,6 +4204,10 @@ const Entites = (function () {
       return;
     }
 
+    // Pousse sur la rue, l'enfant a velo n'y souffle pas : il en sort d'abord.
+    if (e.etat === 'arret' && e.metier === 'cycliste' && !roulableEnfant(Math.floor(e.x / TT), Math.floor(e.y / TT))) {
+      e.etat = 'flane'; e.butT = 0;
+    }
     let vitesse = v.pieton * e.allure;
     // ⚠️ On nage a la vitesse de la nage, agent compris : un policier qui
     // traverserait le chenal aussi vite qu'il court sur le quai ferait de l'eau
@@ -3681,8 +4407,14 @@ const Entites = (function () {
             return;
           }
           // Une porte juste au nord ? Une fois sur douze, on rentre.
+          // ⚠️ SAUF UN HOMME DE MISSION (retour de Martin, 21 sept. 2026 : « la
+          // derniere cravate a trouver n'apparait pas »). Une Cravate de M5 qui
+          // flanait sous une porte y entrait : sortie de la ville, elle restait
+          // comptee debout, la mission bloquait a 5/6 et la fleche montrait la
+          // porte. ⚠️ Teste APRES le de : il se tire comme avant, et la ville
+          // d'une mission reste celle d'hier.
           const g = Monde.glyphe(tx, ty - 1);
-          if ((g === 'd' || g === 'D') && !e.metier && !e.suit && !e.petit && B.rng() < 0.08) {
+          if ((g === 'd' || g === 'D') && !e.metier && !e.suit && !e.petit && B.rng() < 0.08 && !e.mission) {
             e.etat = 'entre'; e.minuterie = 40; e.face = 'haut';
             return;
           }
@@ -3696,7 +4428,10 @@ const Entites = (function () {
         // ⚠️ La regle de la ville : on ne pose pas le pied sur la chaussee.
         // On traverse au passage, et seulement quand c'est sur.
         const ax = Math.floor((e.x + dir[0] * (e.r + 4)) / TT), ay = Math.floor((e.y + dir[1] * (e.r + 4)) / TT);
-        if (Monde.estChaussee(ax, ay) || Monde.bloque(ax, ay, Monde.MASQUE_PIETON)) {
+        // ⚠️ L'enfant a velo ne descend meme pas sur la traverse : pour lui, toute
+        // la rue est un mur (`roulableEnfant`).
+        if (Monde.estChaussee(ax, ay) || Monde.bloque(ax, ay, Monde.MASQUE_PIETON)
+            || (e.metier === 'cycliste' && !roulableEnfant(ax, ay))) {
           e.dir = (e.dir + (B.rng() < 0.5 ? 1 : 3)) % 4;      // on tourne, on ne fonce pas
           e.butT = e.poste ? 30 : 60 + Math.floor(B.rng() * 120);
           e.vx = 0; e.vy = 0;
@@ -3733,8 +4468,15 @@ const Entites = (function () {
       }
     }
     const avant = { x: e.x, y: e.y };
+    const cycliste = e.metier === 'cycliste';
+    const surLeTrottoir = cycliste && roulableEnfant(Math.floor(e.x / TT), Math.floor(e.y / TT));
+    if (cycliste) resterSurLeTrottoir(e);
     deplacerCercle(e, e.vx, e.vy, masqueDe(e));
     dansLaCarte(e);
+    // ⚠️ La regle dure de l'enfant a velo : un pas qui le mettrait sur la rue ne
+    // se fait pas. `resterSurLeTrottoir` le prevoit ; ceci le garantit, quoi qu'ait
+    // fait la glissade le long d'un mur ou d'un banc.
+    if (surLeTrottoir && !roulableEnfant(Math.floor(e.x / TT), Math.floor(e.y / TT))) { e.x = avant.x; e.y = avant.y; }
     const bouge = Math.hypot(e.x - avant.x, e.y - avant.y);
     e.anim.dist += bouge;
     if (bouge < 0.2 && e.etat === 'flane') e.butT = 0;      // bloque : on change d'idee
@@ -3907,7 +4649,11 @@ const Entites = (function () {
     if (e.saigne % 60 === 0) {
       e.vie -= reactions.degats_saignement;
       goutte(e.x, e.y);
-      if (e.vie <= 0 && e.vivant) { if (e.type === 'joueur') Missions.hopital(e.menace); else tuer(e, e.menace); }
+      if (e.vie <= 0 && e.vivant) {
+        if (e === B.joueur) Missions.hopital(e.menace);
+        else if (e.type === 'joueur') assommer(e);
+        else tuer(e, e.menace);
+      }
     }
   }
 
@@ -3921,6 +4667,13 @@ const Entites = (function () {
     // sur un oiseau qui n'a pas de vie a perdre. Un goeland qu'on peut tuer est
     // une CIBLE, et une cible demande un score, un crime, un juge.
     if (e.type !== 'pieton' && e.type !== 'joueur') return false;
+    // ⚠️ DEUX JOUEURS NE SE FRAPPENT PAS — Martin, 22 sept. : « il ne faut pas
+    // qu'il puisse se frapper mutuellement ». Ecrit ICI, au seul passage de
+    // toute blessure du jeu, plutot qu'arme par arme : le poing, la balle, la
+    // grenaille, le brasier et le char conduit par l'autre (`Vehicules`
+    // signale alors `B.joueur` comme source) y passent tous. Une coop ou on
+    // se tue entre partenaires est une coop qui dure une minute.
+    if (e.type === 'joueur' && source && source.type === 'joueur') return false;
     // ⚠️ RIEN n'atteint un enfant : ni un poing, ni une balle, ni un char. Le
     // jeu est adulte, pas ca. Il prend peur et il court, point.
     if (e.intouchable) {
@@ -3959,8 +4712,10 @@ const Entites = (function () {
     // Le grognement vient de celui qui encaisse : muet hors de l'ecran, plus
     // fort a mesure qu'on s'approche (retour de Martin, 16 sept. 2026).
     Son.depuis(e, Son.SFX.touche);
-    if (e.vie <= 0 && e.type === 'joueur') {
+    if (e.vie <= 0 && e === B.joueur) {
       Missions.hopital(source);
+    } else if (e.vie <= 0 && e.type === 'joueur') {
+      assommer(e);                      // le deuxieme joueur : K.-O., voir `majJoueur`
     } else if (e.vie <= 0) {
       if (opts.assomme) assommer(e);
       else tuer(e, source);
@@ -4117,7 +4872,7 @@ const Entites = (function () {
       if (e.metier || e.intouchable || e.etat === 'assomme' || e.etat === 'fuit' || e.etat === 'temoin' || e.aParle) continue;
       e.aParle = true;
       if (B.rng() > (chance === undefined ? 0.35 : chance)) break;
-      const femme = /passante|dame|mere|racoleuse/.test(e.arch);
+      const femme = /passante|dame|mere|racoleuse|conductrice/.test(e.arch);
       Son.Voix.dire(femme ? 'femme' : 'homme', e.x, e.y);
       break;
     }
@@ -4185,9 +4940,12 @@ const Entites = (function () {
   }
 
   function imageDe(e) {
-    const def = SPRITES[e.sprite];
+    // Une TENUE (`Garderobe`) : un squelette habille, cuit pose par pose. Sinon, le sprite
+    // dessine a la main et ses echanges de palette, comme toujours.
+    const habille = e.tenue && typeof Garderobe !== 'undefined' ? Garderobe.cuire(e.tenue) : null;
+    const def = habille || SPRITES[e.sprite];
     if (!def) return null;
-    const cuit = Atlas.cuire(e.sprite, def, e.swaps);
+    const cuit = habille || Atlas.cuire(e.sprite, def, e.swaps);
     const voulu = nomDePose(e);
     const nom = cuit.poses[voulu] ? voulu : (cuit.poses[e.face] ? e.face : 'bas');
     const poses = cuit.poses[nom];
@@ -4205,7 +4963,7 @@ const Entites = (function () {
     // le joueur marchait vers la gauche (Martin).
     const miroir = nom.endsWith('gauche');
     const main = def.mains ? (def.mains[miroir ? nom.slice(0, -6) + 'droite' : nom] || null) : null;
-    return { canvas: poses[Math.min(i, poses.length - 1)], ancre: cuit.ancre, pose: nom, main: main, miroir: miroir };
+    return { canvas: poses[Math.min(i, poses.length - 1)], ancre: cuit.ancre, pose: nom, main: main, miroir: miroir, largeur: cuit.w };
   }
 
   // --- La pose : ce que le corps fait en plus de marcher ---------------------------
@@ -4248,7 +5006,7 @@ const Entites = (function () {
       : Atlas.cuirePeintre('objet|' + sprite, 16, 10, function (g, w, h) {
         OBJETS[OBJETS[sprite] ? sprite : 'defaut'](g, w, h);
       });
-    const mx = img.miroir ? (SPRITES[e.sprite].w - 1 - img.main[0]) : img.main[0];
+    const mx = img.miroir ? (img.largeur - 1 - img.main[0]) : img.main[0];
     let angle = img.miroir ? Math.PI - img.main[2] : img.main[2];
     // Un bout de trois pixels tourne de biais n'est plus qu'une tache : au
     // repos, la main penche (0,9 rad de cote). Un dessin de main se tient donc
@@ -4301,11 +5059,15 @@ const Entites = (function () {
   function dessinerBetes(ctx, cam) {
     const cx = Math.round(cam.x), cy = Math.round(cam.y);
     for (const e of betes()) {
-      const d = DECORS[e.decor];
+      // Une bete qui BOUGE (le chat, le raton) a son peintre de mouvement : l'allure, le
+      // sens et l'image de sa foulee (`poseDeBete`). Assise, c'est son dessin d'avant.
+      const pose = poseDeBete(e);
+      const nom = pose ? pose.decor : e.decor, v = pose ? pose.cle : e.v;
+      const d = DECORS[nom];
       if (!d) continue;
       if (e.x < cx - 40 || e.x > cx + VW + 40 || e.y < cy - 40 || e.y > cy + VH + 40) continue;
-      const c = Atlas.cuirePeintre('decor|' + e.decor + '|' + e.v, d.w, d.h,
-                                   function (g, w, h) { d.peindre(g, w, h, e.v); });
+      const c = Atlas.cuirePeintre('decor|' + nom + '|' + v, d.w, d.h,
+                                   function (g, w, h) { d.peindre(g, w, h, v); });
       ctx.drawImage(c, Math.round(e.x - d.ancre[0] - cx),
                     Math.round(e.y - d.ancre[1] - (e.altitude || 0) - cy));
       B.stats.images++;
@@ -4401,6 +5163,15 @@ const Entites = (function () {
     });
     B.stats.entites = visibles.length;
     const ombre = Atlas.cuirePeintre('ombre', DECORS.ombre.w, DECORS.ombre.h, DECORS.ombre.peindre);
+    // ⚠️ La coop locale (essai) : « je verrais aussi comme distinction l'ombre
+    // du personnage de couleur différente, vu qu'on peut s'habiller en
+    // boutique » (Martin, 22 sept.) — le linge change au comptoir, l'ombre
+    // jamais : un second repere qui tient quoi qu'on porte. Meme teal que
+    // `COULEUR_COOP_JOUEUR2` (#16a085 = rgb(22,160,133)), juste plus opaque
+    // qu'un noir a 30 % pour rester lisible a cette taille (12x6 px).
+    const ombreCoop = Atlas.cuirePeintre('ombre_coop', DECORS.ombre.w, DECORS.ombre.h, function (ctx, w, h) {
+      ctx.fillStyle = 'rgba(22,160,133,0.55)'; ctx.fillRect(2, 0, 8, 6); ctx.fillRect(0, 1, 12, 4);
+    });
     const eauRemous = Atlas.cuirePeintre('remous', DECORS.remous.w, DECORS.remous.h, DECORS.remous.peindre);
     const bulles = [];
     for (const e of visibles) {
@@ -4420,7 +5191,9 @@ const Entites = (function () {
         // une articulation, pas dix — chaque pose est cuite UNE fois et reste
         // en cache, donc un manège qui tourne coute quatre canevas, pas un par
         // image.
-        const pose = d.anime ? poseDuDecor(d, B.t, nuit) : e.v;
+        // ⚠️ `poseManuelle` : la grue qu'un joueur pilote (`Chantiers.piloter`) ne tourne plus toute
+        // seule, elle prend la pose qu'on lui donne — jour ou nuit.
+        const pose = e.poseManuelle !== undefined ? e.poseManuelle : d.anime ? poseDuDecor(d, B.t, nuit) : e.v;
         const c = d.variantes
           ? Atlas.cuirePeintre('decor|' + e.decor + '|' + pose, d.w, d.h,
                                function (g, w, h) { d.peindre(g, w, h, pose); })
@@ -4439,7 +5212,24 @@ const Entites = (function () {
         B.stats.images++;
         continue;
       }
-      if (e.type === 'vehicule') { Vehicules.dessinerUn(ctx, e, cx, cy); continue; }
+      if (e.type === 'vehicule') {
+        // ⚠️ UN CHAR QUI PASSE LE SEUIL D'UN GARAGE disparait sous le linteau, puis
+        // derriere les lames qui descendent : on le peint, moins ce qui est au-dessus
+        // du bas du rideau dans le passage (le reste de l'ecran, tout entier).
+        // ⚠️ La zone vient de `Monde.sousLeToit` : ses lampes lisent la meme.
+        const rideau = Monde.rideauPres(e);
+        if (rideau) {
+          const z = Monde.sousLeToit(rideau);
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(0, 0, VW, VH);
+          ctx.rect(z.x0 - cx, z.y0 - cy, z.x1 - z.x0, Math.max(0, z.y1 - z.y0));
+          ctx.clip('evenodd');
+          Vehicules.dessinerUn(ctx, e, cx, cy);
+          ctx.restore();
+        } else Vehicules.dessinerUn(ctx, e, cx, cy);
+        continue;
+      }
       if (e.type === 'ramassage' && e.objet === 'caisse') {
         const d = DECORS.caisse;
         const c = Atlas.cuirePeintre('decor|caisse', d.w, d.h, d.peindre);
@@ -4475,7 +5265,7 @@ const Entites = (function () {
       } else if (e.vivant && !(e.alite && (e.etat === 'fige' || e.type === 'joueur'))) {
         // ⚠️ Pas d'ombre sous un malade couche : elle tomberait au milieu de la
         // couverture, une tache grise en travers du lit.
-        ctx.drawImage(ombre, Math.round(e.x - 6 - cx), Math.round(e.y - 3 - cy));
+        ctx.drawImage(e.coopJoueur2 ? ombreCoop : ombre, Math.round(e.x - 6 - cx), Math.round(e.y - 3 - cy));
       }
       if (e.invincible > 0 && (e.invincible >> 2) % 2 === 0) continue;
       const p = pose(e);
@@ -4503,7 +5293,7 @@ const Entites = (function () {
 
   return {
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES, PORTEE_DECOR,
-    creer, retirer, vider, creerJoueur, creerDecor, creerAmbulants, majKiosques, creerPaquets, creerPieton, reindexerDecor,
+    creer, retirer, vider, creerJoueur, creerJoueur2, joueurs, estJoueur, creerDecor, creerAmbulants, majKiosques, creerPaquets, creerPieton, reindexerDecor,
     briser, endommagerDecor, reparerLeDecor, releverDecor, DEBRIS_MAX,
     peuplerInterieur, PIEDS_ALITE, coucher, seLever,
     archetype, archetypeDeRue,
@@ -4514,10 +5304,12 @@ const Entites = (function () {
     plageEn, litLibre, coinDePlage,
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele, mouiller,
     enjamber, majEnjambe, clotureDevant, reglesCloture,
-    blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers, majVolDeChar, emporterLeChar,
+    blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers, naitreLEquipe, pousserDecor, boiteTouche, majVolDeChar, emporterLeChar,
     majBagarre, allumerLaBagarre, frontiereProche, rivalDe, enPleineRixe, majAqueduc, JET_EAU_IMAGES,
-    naitreLesEnfantsDeLaPlage, majPlage, bordDeLEau, chateauLePlusProche, majBallonVol, lancerLeBallon,
-    naitreLesBetes, majBete, majLesBetes, chezElle, placeDeBete, betes, dessinerBetes,
+    naitreLesEnfantsDeLaPlage, majPlage, plierBagage, naitreLeLastCall, chicaner, majCamelot, prochainPerron,
+    poserLeJournal, rentrerLesJournaux, fairePartirUnRaton, bordDeLEau, chateauLePlusProche, majBallonVol, lancerLeBallon,
+    naitreLesEnfantsAVelo, placeDEnfantAVelo, roulableEnfant, resterSurLeTrottoir,
+    naitreLesBetes, majBete, majLesBetes, chezElle, placeDeBete, betes, dessinerBetes, poseDeBete, directionDeBete, sEnvoler,
     naitreLaFoire, majForain, majMascotte, placeDansLaFoire, destinationDeFoire,
     bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe, mousse,
     particule, sang, poussiere, decal, majParticules,

@@ -15,6 +15,8 @@ def test_les_donneurs_attendent_devant_leur_porte_et_ti_guy_parle(banc, paquet):
         const pres = Math.hypot(t.x - terminus.x, t.y - terminus.y);
         const invite0 = (L.Missions.majInvite(j), L.B.invite);
         j.x = t.x - 16; j.y = t.y; L.Entites.indexer();
+        // ⚠️ On regarde Ti-Guy : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser(t);
         L.Missions.majInvite(j);
         const invite = L.B.invite;
         const parle = L.Missions.interagir(j);
@@ -60,6 +62,8 @@ def test_la_premiere_mission_de_bout_en_bout(banc, paquet):
         };
         const t = L.Histoire.donneur('ti_guy');
         j.x = t.x - 16; j.y = t.y; L.Entites.indexer();
+        // ⚠️ On regarde Ti-Guy : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser(t);
         L.Missions.interagir(j);
         // On passe les repliques a ACTION, une a une — et la SCENE, qui continue
         // apres ses mots, a PAUSE (2e vague des scenes).
@@ -77,20 +81,39 @@ def test_la_premiere_mission_de_bout_en_bout(banc, paquet):
         j.x = garage.x; j.y = garage.y; L.Entites.indexer();
         o.frame(2);
         const etape1 = L.B.partie.mission.etape;
+        // 2. Marco, devant le garage (« des missions plus longues », 22 sept. 2026) : sa poignée
+        // de main se dit, puis l'objectif avance.
+        const marco = L.Histoire.donneur('marco');
+        j.x = marco.x - 16; j.y = marco.y; L.Entites.indexer(); o.viser(marco);
+        L.Missions.interagir(j);
+        const accueil = L.B.cinema ? L.B.cinema.lignes[0].slug : null;
+        ecouter(passes + 10);
+        const etapeMarco = L.B.partie.mission.etape;
         const v = L.B.mission.vehicule;
         const ruelle = v ? L.Monde.glyphe(Math.floor(v.x / L.TT), Math.floor(v.y / L.TT)) : null;
-        // 2. Le char de la ruelle.
+        // 3. Le char de la ruelle.
         j.x = v.x + 12; j.y = v.y; L.Entites.indexer();
         L.Vehicules.monter(j, v);
         o.frame(2);
         const etape2 = L.B.partie.mission.etape;
         const objectif2 = L.Histoire.ligneObjectif();
+        const etoiles = L.B.recherche.etoiles;
         // Au volant, Ti-Guy appelle : la replique PENDANT de l'objectif, au combine
         // (il est au terminus). On l'ecoute.
         const pendant = L.B.cinema ? { partie: L.B.cinema.partie, slug: L.B.cinema.lignes[0].slug,
                                        telephone: L.B.cinema.lignes[0].telephone } : null;
-        ecouter(20);
-        // 3. Au garage, sans bosse, a l'arret.
+        ecouter(passes + 20);
+        // 4. Le propriétaire a appelé la police : personne ne nous voit (on retire les agents,
+        // `test_tronc_plus_long_js.py` la sème au volant), l'étoile tombe toute seule.
+        let seme = 0;
+        while (L.B.recherche.etoiles > 0 && seme < 60 * 40) {
+            L.B.entites.filter(function (e) { return e.type === 'pieton' && e.arch === 'policier'; }).forEach(function (e) { L.Entites.retirer(e); });
+            o.frame(1); seme++; if (L.B.cinema) ecouter(passes + 20);
+        }
+        o.frame(2);
+        const etape3 = L.B.partie.mission.etape;
+        ecouter(passes + 20);
+        // 5. Au garage, sans bosse, a l'arret.
         v.x = garage.x; v.y = garage.y; v.vitesse = 0; v.vx = 0; v.vy = 0; j.x = v.x; j.y = v.y;
         o.frame(2);
         const finie = !!L.B.partie.missionsFaites.m1;
@@ -101,9 +124,10 @@ def test_la_premiere_mission_de_bout_en_bout(banc, paquet):
         while (L.B.scene && !L.B.cinema && attente < 300) { o.frame(1); attente++; }
         const finDite = !!L.B.cinema;
         const voixFin = L.Son.Voix.demandees[L.Son.Voix.demandees.length - 1];
-        ecouter(40);
+        ecouter(passes + 40);
         return { passes: passes, commencee: commencee, etape0: etape0, objectif0: objectif0, gps0: gps0 && gps0.nom,
-                 etape1: etape1, ruelle: ruelle, etape2: etape2, objectif2: objectif2, finie: finie, finDite: finDite,
+                 etape1: etape1, accueil: accueil, etapeMarco: etapeMarco, etoiles: etoiles, seme: seme, etape3: etape3,
+                 ruelle: ruelle, etape2: etape2, objectif2: objectif2, finie: finie, finDite: finDite,
                  finJouee: finJouee, voixFin: voixFin, mission: L.B.partie.mission, pendant: pendant,
                  tiGuy: !!L.Histoire.donneur('ti_guy'),
                  missions: L.B.partie.stats.missions, paiements: paiements };
@@ -111,12 +135,14 @@ def test_la_premiere_mission_de_bout_en_bout(banc, paquet):
     assert r["commencee"] == "m1" and r["etape0"] == 0
     assert r["objectif0"] == m1["objectifs"][0]["texte"] and r["gps0"] == "Garage Rocco Bandini"
     assert r["etape1"] == 1, "arrive au garage, l'objectif suivant"
+    assert r["accueil"] == "marco-m1-12" and r["etapeMarco"] == 2, "Marco serre la main, puis on va au char"
     assert r["ruelle"] == "x", "le char de Ti-Guy dort dans une ruelle"
-    assert r["etape2"] == 2 and r["objectif2"] == m1["objectifs"][2]["texte"]
-    assert r["pendant"] == {"partie": "pendant", "slug": "ti_guy-m1-8", "telephone": True}, \
+    assert r["etape2"] == 3 and r["objectif2"] == m1["objectifs"][3]["texte"] and r["etoiles"] == 1
+    assert r["pendant"] == {"partie": "pendant", "slug": "ti_guy-m1-10", "telephone": True}, \
         "au volant, Ti-Guy appelle : sa replique pendant, au combine"
+    assert r["etape3"] == 4 and r["seme"] < 60 * 40, "hors de vue, l'étoile tombe : on livre"
     assert r["finie"] is True and r["finJouee"] is True and r["finDite"] is True, "la mission finie, Ti-Guy conclut"
-    assert r["voixFin"] == "ti_guy-m1-5", "la replique de fin demande sa voix (n continue apres l'intro)"
+    assert r["voixFin"] == "ti_guy-m1-6", "la replique de fin demande sa voix (n continue apres l'intro)"
     # ⚠️ La prime de la MISSION, retrouvee par son libelle : c'est elle qu'on
     # juge, pas la somme de tout ce qui est entre dans les poches en chemin.
     prime = [p for p in r["paiements"] if p["raison"] == m1["titre"].upper()]
@@ -219,7 +245,11 @@ def test_les_cravates_de_madame_thibodeau_et_le_fuyard(banc):
         j.x = t.x - 16; j.y = t.y; L.Entites.indexer();
         L.Histoire.commencer('m2');
         const cibles = L.B.mission.entites.filter(function (e) { return e.type === 'pieton' && e.cible; });
-        const pres = cibles.every(function (e) { return Math.hypot(e.x - t.x, e.y - t.y) < 160; });
+        // ⚠️ Ils ARRIVENT (`loin`) : à la lisière de l'écran, sur le joueur, pas collés au kiosque.
+        const arrivent = cibles.every(function (e) {
+          const d = Math.hypot(e.x - j.x, e.y - j.y);
+          return d > 180 && d <= 260 && e.etat === 'attaque_joueur';
+        });
         const ligne0 = L.Histoire.ligneObjectif();
         cibles.forEach(function (e) { L.Entites.assommer(e); });
         o.frame(2);
@@ -243,21 +273,449 @@ def test_les_cravates_de_madame_thibodeau_et_le_fuyard(banc):
         j.x = caisse.x; j.y = caisse.y; L.Entites.indexer();
         o.frame(2);
         const etape2 = L.B.partie.mission.etape;
-        j.x = t.x - 14; j.y = t.y; L.Entites.indexer();
+        // « Des missions plus longues » (22 sept. 2026) : deux de plus arrivent, puis l'hôpital
+        // et Ginette, puis le kiosque (`test_tronc_plus_long_js.py` les joue à pied).
+        while (L.B.cinema) L.Histoire.suivante();
+        o.frame(2);
+        const renforts = L.B.mission.entites.filter(function (e) { return e.type === 'pieton' && e.cible && e.etape === 2; });
+        renforts.forEach(function (e) { L.Entites.assommer(e); });
+        o.frame(2);
+        const etape3 = L.B.partie.mission.etape;
+        while (L.B.cinema) L.Histoire.suivante();
+        const h = L.Histoire.lieu('hopital');
+        j.x = h.x; j.y = h.y; L.Entites.indexer();
+        o.frame(2);
+        const etape4 = L.B.partie.mission.etape;
+        L.Histoire.parler('ginette');
+        while (L.B.cinema) L.Histoire.suivante();
+        const etape5 = L.B.partie.mission.etape;
+        o.frame(2);
+        while (L.B.cinema) L.Histoire.suivante();
+        const t2 = L.Histoire.donneur('thibodeau');
+        j.x = t2.x - 14; j.y = t2.y; L.Entites.indexer();
         o.frame(2);
         const finie = !!L.B.partie.missionsFaites.m2;
-        return { n: cibles.length, pres: pres, ligne0: ligne0, etape1: etape1, pendant: pendant, fuit: fuit, dMax: dMax, tombe: tombe,
-                 porteur: !!porteur, caisse: !!caisse, etape2: etape2, finie: finie,
+        return { n: cibles.length, arrivent: arrivent, ligne0: ligne0, etape1: etape1, pendant: pendant, fuit: fuit, dMax: dMax, tombe: tombe,
+                 porteur: !!porteur, caisse: !!caisse, etape2: etape2, renforts: renforts.length, etape3: etape3,
+                 etape4: etape4, etape5: etape5, finie: finie,
                  batte: !!L.B.partie.armes.batte, rabais: L.B.partie.rabais };
     }""")
-    assert r["n"] == 2 and r["pres"], "deux Cravates rodent pres du kiosque"
+    assert r["n"] == 2 and r["arrivent"], "deux Cravates arrivent de loin, sur le joueur"
     assert r["ligne0"].endswith(" 0/2")
     assert r["etape1"] == 1, "les deux K.-O., le fuyard file"
     assert r["pendant"] == {"partie": "pendant", "telephone": False}, "elle crie apres le fuyard, a deux pas de toi"
     assert r["fuit"] is True and r["dMax"] > 60, "la moto s'eloigne sur les rails"
     assert r["tombe"] and r["porteur"] and r["caisse"], "la moto cassee, le Cravate tombe, la caisse aussi"
-    assert r["etape2"] == 2 and r["finie"] is True
+    assert r["etape2"] == 2 and r["renforts"] == 2 and r["etape3"] == 3, "deux de plus, puis l'hôpital"
+    assert r["etape4"] == 4 and r["etape5"] == 5, "à l'hôpital, Ginette ; puis le kiosque"
+    assert r["finie"] is True
     assert r["batte"] is True and r["rabais"] == {"kiosque": 0.75}, "le baton, et le kiosque moins cher"
+
+
+def test_les_cravates_de_m2_arrivent_quand_madame_thibodeau_a_fini_de_parler(banc):
+    """⚠️ Martin, 20 sept. 2026, devant l'intro : « il faudrait que les méchants apparaissent
+    plus loin et m'attaquent, mais aussi après que la dame ait fini de parler ». Ils naissaient
+    à 40 px du kiosque, donc du joueur, dès la pose de la mission : collés à elle pendant
+    qu'elle parlait. Maintenant : personne pendant l'intro (la caméra va voir le COIN d'où
+    ils viendront, vide), puis deux hommes hors de l'écran qui courent sur le joueur."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(6);
+        const j = L.B.joueur;
+        L.B.partie.missionsFaites.m1 = 1;
+        const t = L.Histoire.donneur('thibodeau');
+        j.x = t.x - 16; j.y = t.y; L.Entites.indexer();
+        const hommes = function () { return L.B.entites.filter(function (e) { return e.type === 'pieton' && e.cible && e.mission === 'm2'; }); };
+        L.Histoire.parler('thibodeau');
+        const arrivee = L.B.mission.arrivee ? { x: L.B.mission.arrivee.x, y: L.B.mission.arrivee.y } : null;
+        const scene = L.B.scene;
+        // Pendant qu'elle parle : personne, et la caméra va voir le coin.
+        let images = 0, avant = 0, coin = 0;
+        while ((L.B.scene || L.B.cinema) && images < 6000) {
+          o.frame(1); images++;
+          if (L.B.scene || L.B.cinema) avant += hommes().length;    // l'image où elle finit est celle où ils naissent
+          const s = L.B.scene;
+          if (arrivee && s && s.vise && Math.hypot(s.vise.x - arrivee.x, s.vise.y - arrivee.y) < 8) coin++;
+        }
+        const nes = hommes();
+        // Juste apres : deux hommes, au coin, hors de l'ecran, a la course.
+        const aLaNaissance = nes.map(function (e) {
+          return { d: Math.hypot(e.x - j.x, e.y - j.y), coin: arrivee ? Math.hypot(e.x - arrivee.x, e.y - arrivee.y) : null,
+                   visible: L.Entites.visibleAEcran(e.x, e.y, 0), etat: e.etat };
+        });
+        // Puis ils arrivent : le premier au contact.
+        let contact = -1, dMin = 1e9;
+        for (let i = 0; i < 400 && contact < 0; i++) {
+          o.frame(1);
+          for (const e of hommes()) dMin = Math.min(dMin, Math.hypot(e.x - j.x, e.y - j.y));
+          if (dMin < 22) contact = i;
+        }
+        return { scene: !!scene, sautes: scene ? scene.sautes : null, images: images, avant: avant, coin: coin, arrivee: !!arrivee,
+                 n: nes.length, aLaNaissance: aLaNaissance, contact: contact, dMin: dMin, objectif: L.Histoire.ligneObjectif() };
+    }""")
+    assert r["scene"] and r["arrivee"], "l'intro se joue, et le point d'arrivée est choisi avant"
+    assert r["sautes"] == 0, "aucun plan de l'intro ne s'est perdu : `cible` nomme le coin d'où ils viendront"
+    assert r["avant"] == 0, "personne ne naît pendant qu'elle parle"
+    assert r["coin"] > 20, f"la caméra va voir le coin (vue {r['coin']} images)"
+    assert r["n"] == 2, "les deux Cravates naissent quand elle a fini"
+    for h in r["aLaNaissance"]:
+        assert h["etat"] == "attaque_joueur", "ils courent sur le joueur dès la première image"
+        assert 180 < h["d"] <= 260, f"loin, mais pas au-delà de ce que `attaque_joueur` poursuit ({h['d']:.0f} px)"
+        assert h["coin"] < 40, "ils naissent au coin que la caméra a montré"
+        assert not h["visible"], "ils arrivent de hors de l'écran, pas de nulle part sous les yeux"
+    assert 0 <= r["contact"] < 400 and r["dMin"] < 22, "ils arrivent jusqu'au joueur"
+    assert r["objectif"].endswith(" 0/2")
+
+
+def _jouer_m50_jusqu_a_lulu(garee):
+    """Le début de m50, joué au bouton : la nuit, la cantine, Lulu. Rend le JS qui le fait et
+    ce qu'il mesure — `garee` : on est venu EN CHAR, garé sur la tuile de rue devant la porte."""
+    return """function (L, o) {
+        L.Jeu.commencer();
+        L.graine(6);
+        const B = L.B, j = B.joueur, M = L.Monde;
+        const CAP = { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 };
+        j.invincible = 1e6;
+        B.partie.missionsFaites = { m1: 1, m2: 1, m3: 1, m4: 1, m5: 1 };
+        let h = B.partie.heure;
+        for (let k = 0; k < 400 && !M.estNuit(h); k++) h = (h + 0.005) % 1;
+        B.partie.heure = h;
+        L.Histoire.commencer('m50'); B.cinema = null; B.scene = null;
+        const cantine = L.Histoire.lieu('cantine');
+        const porte = (M.carte.def.portes || []).find(function (q) { return q.lieu === 'cantine' && q.interieur; });
+        // Venu EN CHAR : on se gare sur la tuile de rue la plus proche de la porte, celle-là même
+        // où naît ce que la mission pose près de nous.
+        let mien = null;
+        if (GAREE) {
+            const arret = L.Histoire.tuileDeRue(porte.x * 16 + 8, (porte.y + 1) * 16 + 10, 10);
+            mien = L.Vehicules.creer('auto', arret.x, arret.y, CAP[arret.sens], { etat: 'stationne' });
+        }
+        j.x = cantine.x; j.y = cantine.y + 20; L.Entites.indexer();
+        o.frame(3);
+        const etapeAller = B.partie.mission.etape;
+        j.x = porte.x * 16 + 8; j.y = (porte.y + 1) * 16 + 4; L.Entites.indexer();
+        L.Jeu.entrer(porte); o.fondu();
+        for (let k = 0; k < 200 && !B.interieur; k++) o.frame(1);
+        const dedans = B.interieur && B.interieur.slug;
+        const pt = B.interieur.points.find(function (q) { return q.type === 'lulu'; });
+        j.x = pt.x * 16 + 8; j.y = (pt.y + 1) * 16 + 8; L.Entites.indexer();
+        o.frame(2);
+        const invite = (L.Missions.majInvite(j), B.invite);
+        o.tape('KeyE', 2);
+        o.frame(2);
+        // ⚠️ La poignée de main se DIT (21 sept. 2026, « qui parle se nomme ») : Lulu se présente,
+        // puis l'objectif avance et son `pendant` commence. On passe l'accueil, comme ACTION.
+        const accueil = B.cinema && B.cinema.partie === 'accueil' ? B.cinema.lignes[0].slug : null;
+        while (B.cinema && B.cinema.partie === 'accueil') L.Histoire.suivante();
+        o.frame(2);
+        const etapeLulu = B.partie.mission.etape;
+        const pendant = B.cinema ? B.cinema.partie : null;
+        const f = B.mission.fuyard;
+        const ext = B.exterieur;
+        const mesure = { etapeAller: etapeAller, dedans: dedans, invite: invite, accueil: accueil, etapeLulu: etapeLulu, pendant: pendant,
+            fuyard: !!f, dansLaVille: !!f && ext.entites.indexOf(f) >= 0,
+            dPorte: f ? Math.round(Math.hypot(f.x - ext.x, f.y - ext.y)) : null,
+            dChar: f && mien ? Math.round(Math.hypot(f.x - mien.x, f.y - mien.y)) : null };
+        return { mesure: mesure };
+    }""".replace("GAREE", "true" if garee else "false")
+
+
+def test_m50_le_fuyard_file_devant_la_cantine_quand_lulu_le_voit(banc):
+    """⚠️ Martin, 20 sept. 2026 : « la mission 50 ne fonctionne pas bien ». Rouge avant : parler à
+    Lulu, c'est le faire DEDANS, et le fuyard naissait sur la rue la plus proche des x et y du
+    joueur — ceux de la PIÈCE (104, 120), donc le coin haut-gauche de la carte, à 2 900 px de la
+    cantine. La flèche du GPS y menait, la ville était vide, la mission ne se finissait pas.
+
+    Ici on la joue au bouton, de l'appel de Marco à la prime : la nuit, la cantine, Lulu qui crie
+    (« pendant » : il faut la passer avant que l'objectif suivant compte), le fuyard qui file
+    devant la porte, la caisse, le garage."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(6);
+        const B = L.B, j = B.joueur, M = L.Monde;
+        j.invincible = 1e6;
+        B.partie.missionsFaites = { m1: 1, m2: 1, m3: 1, m4: 1, m5: 1 };
+        const marco = L.Histoire.donneur('marco');
+        j.x = marco.x - 16; j.y = marco.y; L.Entites.indexer();
+        const parle = L.Histoire.parler('marco');
+        let n = 0;
+        while ((B.scene || B.cinema) && n < 6000) { o.frame(1); if (B.cinema && n % 30 === 0) L.Histoire.suivante(); n++; }
+        const debut = { parle: parle, etape: B.partie.mission.etape, objectif: L.Histoire.ligneObjectif() };
+        // Le jour : on attend la nuit.
+        o.frame(3);
+        const attend = B.mission.attend;
+        let h = B.partie.heure;
+        for (let k = 0; k < 400 && !M.estNuit(h); k++) h = (h + 0.005) % 1;
+        B.partie.heure = h;
+        const cantine = L.Histoire.lieu('cantine');
+        j.x = cantine.x; j.y = cantine.y + 20; L.Entites.indexer();
+        o.frame(3);
+        const etapeAller = B.partie.mission.etape;
+        const porte = (M.carte.def.portes || []).find(function (q) { return q.lieu === 'cantine' && q.interieur; });
+        j.x = porte.x * 16 + 8; j.y = (porte.y + 1) * 16 + 4; L.Entites.indexer();
+        L.Jeu.entrer(porte); o.fondu();
+        for (let k = 0; k < 200 && !B.interieur; k++) o.frame(1);
+        const dedans = B.interieur && B.interieur.slug;
+        const pt = B.interieur.points.find(function (q) { return q.type === 'lulu'; });
+        j.x = pt.x * 16 + 8; j.y = (pt.y + 1) * 16 + 8; L.Entites.indexer();
+        o.frame(2);
+        const invite = (L.Missions.majInvite(j), B.invite);
+        o.tape('KeyE', 2);
+        o.frame(2);
+        // ⚠️ La poignée de main se DIT (21 sept. 2026, « qui parle se nomme ») : Lulu se présente,
+        // puis l'objectif avance et son `pendant` commence. On passe l'accueil, comme ACTION.
+        const accueil = B.cinema && B.cinema.partie === 'accueil' ? B.cinema.lignes[0].slug : null;
+        while (B.cinema && B.cinema.partie === 'accueil') L.Histoire.suivante();
+        o.frame(2);
+        const etapeLulu = B.partie.mission.etape;
+        const pendant = B.cinema ? { partie: B.cinema.partie, qui: B.cinema.lignes[0].qui, telephone: B.cinema.lignes[0].telephone } : null;
+        const f = B.mission.fuyard, ext = B.exterieur;
+        const naissance = f ? { dansLaVille: ext.entites.indexOf(f) >= 0, dPorte: Math.round(Math.hypot(f.x - ext.x, f.y - ext.y)), slug: f.slug } : null;
+        // Elle crie, on sort.
+        let g = 0; while (B.cinema && g < 100) { L.Histoire.suivante(); g++; }
+        L.Jeu.sortir(); o.fondu();
+        for (let k = 0; k < 200 && B.interieur; k++) o.frame(1);
+        const dehors = !B.interieur;
+        const cible = L.Histoire.cible();
+        const dSortie = Math.round(Math.hypot(f.x - j.x, f.y - j.y));
+        const dFleche = cible ? Math.round(Math.hypot(cible.x - j.x, cible.y - j.y)) : null;
+        let dMax = 0;
+        for (let i = 0; i < 150; i++) { o.frame(1); dMax = Math.max(dMax, Math.hypot(f.x - j.x, f.y - j.y)); }
+        // Rattrapé : le char casse, le porteur tombe, la caisse aussi.
+        L.Vehicules.endommager(f, 999, j);
+        o.frame(2);
+        const tombe = B.mission.fuyardTombe;
+        const porteur = B.mission.entites.find(function (e) { return e.porteLaCaisse; });
+        L.Entites.assommer(porteur);
+        o.frame(2);
+        const caisse = B.mission.entites.find(function (e) { return e.objet === 'caisse'; });
+        j.x = caisse.x; j.y = caisse.y; L.Entites.indexer();
+        o.frame(2);
+        const etapeCaisse = B.partie.mission.etape, ligneCaisse = L.Histoire.ligneObjectif();
+        const etoilesCaisse = B.recherche.etoiles;
+        // « Des missions plus longues » (22 sept. 2026) : la police du port a vu la bagarre. On se cache
+        // dans la cantine le temps que l'étoile tombe (la police ne voit pas dedans) ; l'objectif avance
+        // à la sortie.
+        let g2 = 0; while (B.cinema && g2 < 100) { L.Histoire.suivante(); g2++; }
+        j.x = porte.x * 16 + 8; j.y = (porte.y + 1) * 16 + 4; L.Entites.indexer();
+        L.Jeu.entrer(porte); o.fondu();
+        for (let k = 0; k < 200 && !B.interieur; k++) o.frame(1);
+        let cache = 0;
+        for (; cache < 9000 && B.recherche.etoiles > 0; cache++) o.frame(1);
+        L.Jeu.sortir(); o.fondu();
+        for (let k = 0; k < 200 && B.interieur; k++) o.frame(1);
+        o.frame(3);
+        const etapePlanque = B.partie.mission.etape, lignePlanque = L.Histoire.ligneObjectif();
+        const pendantPlanque = B.cinema ? { qui: B.cinema.lignes[0].qui, slug: B.cinema.lignes[0].slug } : null;
+        let g3 = 0; while (B.cinema && g3 < 100) { L.Histoire.suivante(); g3++; }
+        // Pas au garage : à la planque de Rocco.
+        const planque = L.Histoire.lieu('planque');
+        j.x = planque.x; j.y = planque.y; L.Entites.indexer();
+        o.frame(3);
+        const etapeRetour = B.partie.mission.etape, ligneRetour = L.Histoire.ligneObjectif();
+        // Au garage : la prime.
+        const argent0 = B.partie.argent;
+        const m2 = L.Histoire.donneur('marco');
+        j.x = m2.x - 16; j.y = m2.y; L.Entites.indexer();
+        for (let k = 0; k < 400 && B.partie.mission; k++) o.frame(1);
+        const fait = !!B.partie.missionsFaites.m50;
+        let s = 0; while ((B.scene || B.cinema) && s < 6000) { o.frame(1); if (B.cinema && s % 30 === 0) L.Histoire.suivante(); s++; }
+        return { debut: debut, attend: attend, etapeAller: etapeAller, dedans: dedans, invite: invite, accueil: accueil, etapeLulu: etapeLulu,
+                 pendant: pendant, naissance: naissance, dehors: dehors, dSortie: dSortie, dFleche: dFleche, dMax: Math.round(dMax),
+                 tombe: tombe, etapeCaisse: etapeCaisse, ligneCaisse: ligneCaisse, etoilesCaisse: etoilesCaisse,
+                 secondesCache: Math.round(cache / 60), etapePlanque: etapePlanque, lignePlanque: lignePlanque,
+                 pendantPlanque: pendantPlanque, etapeRetour: etapeRetour, ligneRetour: ligneRetour,
+                 fait: fait, prime: B.partie.argent - argent0 };
+    }""")
+    assert r["debut"]["parle"] is True and r["debut"]["etape"] == 0, "Marco donne la mission"
+    assert r["debut"]["objectif"].startswith("ALLER À LA CANTINE"), r["debut"]
+    assert r["attend"] == "ATTENDS LA NUIT", "de jour, on attend la nuit"
+    assert r["etapeAller"] == 1, "arrivé à la cantine de nuit, on passe à Lulu"
+    assert r["dedans"] == "cantine" and r["invite"] == "PARLER À LUCIENNE « LULU » PELLETIER"
+    assert r["accueil"] == "lulu-m50-13", "à la poignée de main, Lulu se présente (m50 peut se jouer avant m6)"
+    assert r["etapeLulu"] == 2, "ACTION devant Lulu accomplit l'objectif"
+    assert r["pendant"] == {"partie": "pendant", "qui": "lulu", "telephone": False}, "c'est Lulu qui le crie, elle est là"
+    nait = r["naissance"]
+    assert nait and nait["dansLaVille"], "le fuyard nait dans la VILLE, pas dans la piece"
+    assert nait["slug"] == "auto"
+    # ⚠️ Rouge avant : 2 900 px, au coin de la carte.
+    assert nait["dPorte"] <= 200, f"le fuyard naît devant la cantine, pas au bout de la carte ({nait['dPorte']} px de la porte)"
+    assert r["dehors"] is True
+    assert r["dSortie"] <= 200, f"en sortant, on le voit filer ({r['dSortie']} px)"
+    assert r["dFleche"] <= 200, "la flèche du GPS mène à lui, et il est là"
+    assert r["dMax"] > 150, "il file : la rue s'allonge entre lui et nous"
+    assert r["tombe"] is True and r["etapeCaisse"] == 3 and r["ligneCaisse"].startswith("SÈME LA POLICE DU PORT")
+    assert r["etoilesCaisse"] >= 1, "la bagarre sur le quai fait venir la police"
+    assert 0 < r["secondesCache"] < 120, f"cachés dans la cantine, l'étoile tombe ({r['secondesCache']} s)"
+    assert r["etapePlanque"] == 4 and r["lignePlanque"].startswith("CACHE LE COLIS À LA PLANQUE")
+    assert r["pendantPlanque"] == {"qui": "marco", "slug": "marco-m50-11"}, "Marco : pas au garage!"
+    assert r["etapeRetour"] == 5 and r["ligneRetour"].startswith("RETOURNER AU GARAGE")
+    assert r["fait"] is True and r["prime"] == 450, "au garage, Marco paie la mission"
+
+
+def test_m50_le_fuyard_ne_nait_pas_dans_le_char_gare_devant_la_cantine(banc):
+    """On vient à la cantine EN CHAR (c'est la nuit, la mission est au port) et on se gare sur la
+    tuile de rue la plus proche de la porte — celle-là même où le fuyard naît. Il naissait aux
+    mêmes x et y que notre char, dessous (voir `test_le_char_de_la_mission_ne_nait_pas_sous_celui_du_joueur`).
+    Un char fait 28 px de long : rien à moins de 32 px."""
+    r = banc(_jouer_m50_jusqu_a_lulu(True))["mesure"]
+    assert r["etapeLulu"] == 2 and r["fuyard"] and r["dansLaVille"]
+    assert r["dChar"] >= 28, f"le fuyard naît dans le char garé ({r['dChar']} px, un char en fait 28)"
+    assert r["dPorte"] <= 200, "et il reste devant la porte"
+
+
+def test_m50_lulu_dit_d_attendre_la_noirceur_quand_on_lui_parle_de_jour(banc, paquet):
+    """⚠️ Martin, 20 sept. 2026 : à la cantine, Lulu disait « le Faubourg est tranquille » — le
+    texte de repos de tout le monde, sans voix — parce que l'objectif 0 de m50 attend la nuit et
+    que « parler à Lulu » ne compte qu'au suivant. « Il fallait que j'attende la nuit : peux-tu
+    faire dire ça à Lulu ? » Rouge avant : pas de cinéma du tout, un texte muet.
+
+    Et la réplique de mission garde sa place : la nuit venue, parler à Lulu joue son `pendant`,
+    pas le renvoi."""
+    m50 = next(m for m in paquet["missions"] if m["slug"] == "m50")
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(6);
+        const B = L.B, j = B.joueur, M = L.Monde;
+        j.invincible = 1e6;
+        B.partie.missionsFaites = { m1: 1, m2: 1, m3: 1, m4: 1, m5: 1 };
+        const jour = !M.estNuit();
+        L.Histoire.commencer('m50'); B.cinema = null; B.scene = null;
+        const porte = (M.carte.def.portes || []).find(function (q) { return q.lieu === 'cantine' && q.interieur; });
+        const entrer = function () {
+            j.x = porte.x * 16 + 8; j.y = (porte.y + 1) * 16 + 4; L.Entites.indexer();
+            L.Jeu.entrer(porte); o.fondu();
+            for (let k = 0; k < 200 && !B.interieur; k++) o.frame(1);
+        };
+        let accueil = null;
+        const parlerALulu = function () {
+            const pt = B.interieur.points.find(function (q) { return q.type === 'lulu'; });
+            j.x = pt.x * 16 + 8; j.y = (pt.y + 1) * 16 + 8; L.Entites.indexer();
+            o.frame(2);
+            o.tape('KeyE', 2);
+            o.frame(2);
+            // ⚠️ La nuit, la poignée de main se DIT (« qui parle se nomme ») avant que l'objectif avance.
+            if (B.cinema && B.cinema.partie === 'accueil') {
+                accueil = B.cinema.lignes[0].slug;
+                while (B.cinema && B.cinema.partie === 'accueil') L.Histoire.suivante();
+                o.frame(2);
+            }
+        };
+        // De jour, dedans : Lulu renvoie.
+        entrer();
+        parlerALulu();
+        const c = B.cinema;
+        const renvoi = c ? { partie: c.partie, qui: c.lignes[0].qui, slug: c.lignes[0].slug, texte: c.lignes[0].texte,
+                             telephone: c.lignes[0].telephone } : null;
+        const voix = L.Son.Voix.demandees.slice();
+        const etapeRenvoi = B.partie.mission.etape;
+        while (B.cinema) L.Histoire.suivante();
+        // La nuit venue, dehors : l'objectif compte, et Lulu joue sa réplique de mission.
+        L.Jeu.sortir(); o.fondu();
+        for (let k = 0; k < 200 && B.interieur; k++) o.frame(1);
+        let h = B.partie.heure;
+        for (let k = 0; k < 400 && !M.estNuit(h); k++) h = (h + 0.005) % 1;
+        B.partie.heure = h;
+        o.frame(3);
+        const etapeNuit = B.partie.mission.etape;
+        entrer();
+        parlerALulu();
+        const suite = B.cinema ? { partie: B.cinema.partie, slug: B.cinema.lignes[0].slug } : null;
+        return { jour: jour, renvoi: renvoi, voix: voix, etapeRenvoi: etapeRenvoi, etapeNuit: etapeNuit,
+                 accueil: accueil, etapeLulu: B.partie.mission.etape, suite: suite };
+    }""")
+    assert r["jour"] is True
+    assert r["renvoi"] == {"partie": "renvoi", "qui": "lulu", "slug": "lulu-m50-12", "telephone": False,
+                           "texte": m50["dialogue"]["renvoi"][0]["texte"]}, "de jour, Lulu dit d'attendre la nuit"
+    assert "noirceur" in r["renvoi"]["texte"]
+    assert "lulu-m50-12" in r["voix"], "et sa voix est demandée"
+    assert r["etapeRenvoi"] == 0, "on ne fait pas avancer la mission en se faisant renvoyer"
+    assert r["etapeNuit"] == 1, "la nuit venue, l'objectif compte"
+    assert r["accueil"] == "lulu-m50-13", "la nuit, la poignée de main se dit — le jour, c'est le renvoi, pas l'accueil"
+    assert r["etapeLulu"] == 2 and r["suite"] == {"partie": "pendant", "slug": "lulu-m50-9"}, \
+        "la réplique de mission garde sa place"
+
+
+def test_m50_marco_ne_marche_pas_sur_le_joueur_a_l_intro_ni_a_la_fin(banc):
+    """⚠️ Martin, 20 sept. 2026 : « Marco se déplace par-dessus le personnage principal dans
+    l'animation du début ». `marcher vers joueur` sans `pres` allait au pixel du joueur : 0 px
+    dans les quatre cas mesurés (16 à 60 px au départ), et il y restait toute la scène. Il
+    s'arrête maintenant à la distance de parole — ou ne bouge pas s'il y est déjà."""
+    r = banc("""function (L, o) {
+        const scene = function (depart) {
+            L.Jeu.commencer();
+            L.graine(6);
+            const B = L.B, j = B.joueur;
+            j.invincible = 1e6;
+            B.partie.missionsFaites = { m1: 1, m2: 1, m3: 1, m4: 1, m5: 1 };
+            const marco = L.Histoire.donneur('marco');
+            j.x = marco.x - depart.ecart; j.y = marco.y; L.Entites.indexer();
+            if (depart.fin) {
+                L.Histoire.commencer('m50'); B.cinema = null; B.scene = null;
+                B.partie.mission.etape = 3; L.Entites.indexer();
+                L.Histoire.reussir();
+            } else {
+                L.Histoire.parler('marco');
+            }
+            let dMin = 1e9, dMax = 0, n = 0;
+            while ((B.scene || B.cinema) && n < 6000) {
+                o.frame(1); n++;
+                const d = Math.hypot(marco.x - j.x, marco.y - j.y);
+                dMin = Math.min(dMin, d); dMax = Math.max(dMax, d);
+            }
+            return { ecart: depart.ecart, fin: !!depart.fin, images: n, dMin: Math.round(dMin * 10) / 10,
+                     dFin: Math.round(Math.hypot(marco.x - j.x, marco.y - j.y) * 10) / 10 };
+        };
+        const sortie = [];
+        for (const ecart of [16, 22, 44]) sortie.push(scene({ ecart: ecart, fin: false }));
+        for (const ecart of [16, 22]) sortie.push(scene({ ecart: ecart, fin: true }));
+        return sortie;
+    }""")
+    for s in r:
+        quand = "fin" if s["fin"] else "intro"
+        assert s["images"] > 30, f"{quand} : la scène ne s'est pas jouée ({s})"
+        # ⚠️ Rouge avant : 0 px.
+        assert s["dMin"] >= 14, f"{quand} : Marco marche sur le joueur ({s['dMin']} px, départ à {s['ecart']} px)"
+        assert s["dFin"] >= 14, f"{quand} : Marco reste sur le joueur ({s['dFin']} px)"
+
+
+def test_les_personnages_disent_leur_repos_a_voix_haute(banc, paquet):
+    """⚠️ Martin, 20 sept. 2026 : « fais parler les personnages ». Sans mission pour toi, chacun
+    disait « reviens me voir plus tard » (avant M5) ou « le Faubourg est tranquille » (après) en
+    silence. Rouge avant : aucune voix demandée."""
+    import json
+    abordables = [p["slug"] for p in paquet["personnages"] if p.get("ou") and not p.get("parti_apres")]
+    tous = [m["slug"] for m in paquet["missions"]]
+    assert abordables == ["thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu", "raymonde", "ovila",
+                           "mo", "fern", "mado", "gege", "xavier", "lachance", "sven"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B;
+        const dit = function (qui) {
+            L.Son.Voix.demandees.length = 0;
+            const ok = L.Histoire.parler(qui);
+            const cinema = !!B.cinema;
+            const voix = L.Son.Voix.demandees.slice();
+            if (B.cinema) { while (B.cinema) L.Histoire.suivante(); }
+            return { ok: ok, cinema: cinema, voix: voix };
+        };
+        // Avant M5, partie neuve : personne (sauf Ti-Guy, qui a m1) n'a rien a donner.
+        const avant = {};
+        for (const qui of ENTREE_ABORDABLES) avant[qui] = dit(qui);
+        // Apres M5, toutes les missions faites : personne n'a plus rien a donner.
+        B.partie.missionsFaites = {};
+        for (const m of ENTREE_TOUS) B.partie.missionsFaites[m] = 1;
+        const apres = {};
+        for (const qui of ENTREE_ABORDABLES) apres[qui] = dit(qui);
+        return { avant: avant, apres: apres, menu: !!B.menu };
+    }""".replace("ENTREE_TOUS", json.dumps(tous)).replace("ENTREE_ABORDABLES", json.dumps(abordables)))
+    for qui, d in r["avant"].items():
+        assert d["ok"] and not d["cinema"] and d["voix"] == [f"{qui}-repos-1"], (qui, d)
+    for qui, d in r["apres"].items():
+        if qui == "josee":       # apres M5 elle ouvre le marche noir : pas de repos, donc pas de voix
+            assert d["ok"] and d["voix"] == [], (qui, d)
+        else:
+            assert d["ok"] and not d["cinema"] and d["voix"] == [f"{qui}-repos-2"], (qui, d)
 
 
 def test_le_sergent_ami_et_le_faubourg_libere(banc):
@@ -266,6 +724,7 @@ def test_le_sergent_ami_et_le_faubourg_libere(banc):
         const j = L.B.joueur;
         ['m1', 'm2', 'm3'].forEach(function (s) { L.B.partie.missionsFaites[s] = 1; });
         L.Histoire.commencer('m4');
+        L.B.mission.pendant = null;                         // l'alibi de Bouchard (pendant 0) : pas ce qu'on juge ici
         const nuit = L.Monde.estNuit();
         o.frame(2);
         const attend = L.Histoire.ligneObjectif();
@@ -295,7 +754,10 @@ def test_le_tour_du_proprietaire_pointe_chaque_contact(banc, paquet):
     la PERSONNE quand elle est dehors (Ti-Paul au dépanneur, Raymonde à
     l'usine), et sa PORTE quand elle est dedans (Lulu à la cantine, Ovila au
     phare)."""
+    import json
     m6 = next(m for m in paquet["missions"] if m["slug"] == "m6")
+    etapes = [i for i, o in enumerate(m6["objectifs"]) if o["type"] == "parler"]
+    assert [m6["objectifs"][i]["cible"] for i in etapes] == ["tipaul", "lulu", "raymonde", "ovila"]
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         ['m1', 'm2', 'm3', 'm4', 'm5'].forEach(function (s) { L.B.partie.missionsFaites[s] = 1; });
@@ -314,10 +776,10 @@ def test_le_tour_du_proprietaire_pointe_chaque_contact(banc, paquet):
                         return l && Math.hypot(g.x - l.x, g.y - l.y) < 4;
                      })() : null };
         }
-        return { tiPaul: vue(0), lulu: vue(1), raymonde: vue(2), ovila: vue(3) };
-    }""")
-    # Les quatre objectifs sont bien des `parler`, dans cet ordre.
-    assert [o["cible"] for o in m6["objectifs"]] == ["tipaul", "lulu", "raymonde", "ovila"]
+        return { tiPaul: vue(ETAPES[0]), lulu: vue(ETAPES[1]), raymonde: vue(ETAPES[2]), ovila: vue(ETAPES[3]) };
+    }""".replace("ETAPES", json.dumps(etapes)))
+    # Les quatre `parler`, dans cet ordre (entre eux, depuis « Des missions plus longues », le pickpocket de
+    # Ti-Paul, le piquet de Raymonde et le retour au Brouillard — `test_tronc_plus_long_js.py`).
     assert r["tiPaul"]["nom"] == "Ti-Paul Gagnon", "le GPS nomme Ti-Paul, pas un lieu"
     assert r["tiPaul"]["surLePersonnage"] is True, "Ti-Paul est dehors : on pointe SA personne"
     assert r["lulu"]["nom"] == "Lucienne « Lulu » Pelletier", "le GPS nomme Lulu"
@@ -357,11 +819,12 @@ def test_les_defis_ont_un_panneau_et_un_chrono(banc, paquet):
         return { panneaux: panneaux, invite: invite, menu: menu, defi: defi, ligne: ligne, gps: gps && gps.nom,
                  attend: attend, rateA: n, apres: L.B.defi, msg: L.B.msg };
     }""")
-    assert r["panneaux"] == ["livraison", "saut", "tour"]
+    # ⚠️ Une course par quartier depuis le 22 sept. 2026 : quatre panneaux de plus.
+    assert r["panneaux"] == ["livraison", "saut", "tour", "tour_erables", "tour_pointe", "tour_quais", "tour_shop"]
     assert r["invite"] == "DÉFI" and r["menu"] == "TOUR DU FAUBOURG"
-    assert r["defi"] == "tour" and r["ligne"] == "TOUR DU FAUBOURG 2:00 — MONTE DANS UN CHAR"
+    assert r["defi"] == "tour" and r["ligne"] == "TOUR DU FAUBOURG 3:00 — MONTE DANS UN CHAR"
     assert r["gps"] == "Terminus Baie-des-Brumes" or r["gps"]
-    assert r["attend"] == {"defi": "tour", "ligne": "TOUR DU FAUBOURG 2:00 — MONTE DANS UN CHAR"}, (
+    assert r["attend"] == {"defi": "tour", "ligne": "TOUR DU FAUBOURG 3:00 — MONTE DANS UN CHAR"}, (
         "a pied, le defi attend son char et le chrono ne court pas : %s" % r["attend"])
     assert r["apres"] is None and r["msg"] == "DÉFI RATÉ — IL FAUT UN CHAR"
     assert 590 <= r["rateA"] <= 610, f"{r['rateA']} images : dix secondes pour monter, pas plus"
@@ -397,7 +860,7 @@ def test_la_livraison_se_commence_a_pied_et_part_au_volant(banc, paquet):
         const unPeuPlusTard = { t: B.defi && B.defi.t, etoiles: B.recherche.etoiles };
         const cotes = [[0, 16], [0, -16], [16, 0], [-16, 0], [0, 22], [0, -22]];
         for (const c of cotes) {
-            j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer();
+            j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer(); o.viser(v);
             if (L.Vehicules.vehiculeSousLaMain(j) === v) break;
         }
         o.tape('KeyE', 2);                                // on monte
@@ -408,7 +871,7 @@ def test_la_livraison_se_commence_a_pied_et_part_au_volant(banc, paquet):
         let n = 0;
         while (B.defi && n < 30) { o.frame(1); n++; }
         return { commence: commence, aPied: aPied, unPeuPlusTard: unPeuPlusTard, auVolant: auVolant,
-                 reussi: !!B.partie.defisFaits.livraison, msg: B.msg, encore: B.defi && B.defi.slug };
+                 reussi: !!B.partie.defisFaits.livraison, msg: B.msg, prime: B.prime, encore: B.defi && B.defi.slug };
     }""")
     assert r["commence"] == "livraison"
     assert r["aPied"] == {"t": 0, "etoiles": 0} and r["unPeuPlusTard"] == {"t": 0, "etoiles": 0}, (
@@ -417,7 +880,8 @@ def test_la_livraison_se_commence_a_pied_et_part_au_volant(banc, paquet):
     assert r["auVolant"]["etoiles"] >= liv["etoiles"], "au volant, la police aux fesses"
     assert r["auVolant"]["ligne"].startswith("LIVRAISON SANS BOSSE 1:"), r["auVolant"]
     assert r["reussi"] is True, f"la livraison ne se gagne pas : {r['msg']} (encore : {r['encore']})"
-    assert str(liv["prime"]) in r["msg"]
+    # La prime se lit dans son bandeau (`Hud.prime`, test_prime_js.py), plus dans la bande des messages.
+    assert r["prime"]["montant"] == liv["prime"]
 
 
 def test_le_narrateur_lit_la_manchette_et_josee_ouvre_le_marche_noir(banc, paquet):
@@ -519,6 +983,8 @@ def test_le_sergent_et_josee_se_voient_dans_leur_piece(banc):
                           gens: L.B.entites.filter(function (q) { return q.type === 'pieton'; }).length };
             if (e) {
                 j.x = e.x - 14; j.y = e.y; L.Entites.indexer();
+                // ⚠️ On regarde le donneur : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+                o.viser(e);
                 L.Missions.majInvite(j);
                 dit.invite = L.B.invite;
                 dit.parle = L.Missions.utiliserPoint(j);
@@ -610,6 +1076,10 @@ def test_la_premiere_bagarre_se_gagne_aux_poings(banc, paquet):
     joueur qui se deplace, qui en a un dans le dos, qui rate — celui-la
     encaissait 18 par coup. Cette moitie tient l'autre bord : deux hommes
     qu'on peut ignorer ne seraient plus une bagarre.
+
+    ⚠️ **Les secondes se comptent depuis le premier contact** (20 sept. 2026) : les deux
+    hommes naissent hors de l'écran, après l'intro, et courent sur le joueur. Leur course
+    n'est pas de la bagarre — la mesurer rendait le juge rouge à 7,1 s pour 4,6 de coups.
     """
     r = banc("""function (L, o) {
         function bagarre(riposte) {
@@ -623,10 +1093,13 @@ def test_la_premiere_bagarre_se_gagne_aux_poings(banc, paquet):
             L.B.cinema = null; L.B.dialogue = null;      // on a raccroche : la bagarre commence
             const cibles = L.B.mission.entites.filter(function (e) { return e.type === 'pieton' && e.cible; });
             const fiches = cibles.map(function (e) { return { vie: e.vie, arme: e.arme }; });
-            let i = 0, mort = false, creux = j.vie;
+            let i = 0, mort = false, creux = j.vie, contact = -1;
             for (; i < 1800; i++) {
                 const debout = cibles.filter(function (e) { return e.vivant && e.etat !== 'assomme'; });
                 if (!debout.length) break;
+                // ⚠️ La bagarre COMMENCE AU PREMIER CONTACT : ils arrivent de quinze tuiles
+                // (`loin`), et deux secondes et demie de course ne sont pas de la bagarre.
+                if (contact < 0 && debout.some(function (e) { return Math.hypot(e.x - j.x, e.y - j.y) < 26; })) contact = i;
                 if (j.vie <= 0 || L.B.transition) { mort = true; break; }   // l'hopital l'a repris
                 creux = Math.min(creux, j.vie);
                 // ⚠️ UN COUP SUR DIX IMAGES, pas un par image : le juge doit
@@ -640,7 +1113,7 @@ def test_la_premiere_bagarre_se_gagne_aux_poings(banc, paquet):
                 }
                 o.frame(1);
             }
-            return { fiches: fiches, s: i / 60, mort: mort, restant: mort ? 0 : creux };
+            return { fiches: fiches, s: (i - Math.max(contact, 0)) / 60, mort: mort, restant: mort ? 0 : creux };
         }
         const bat = bagarre(true), subit = bagarre(false);
         // L'archetype, lui, n'a pas bouge : une Cravate de rue garde son baton.
@@ -733,8 +1206,95 @@ def test_ceux_qu_on_a_couches_restent_couches_quand_la_mission_rate(banc):
     assert r["rateePrison"] is True, "en prison, la mission rate aussi"
     assert r["etapeReprise"] == 1 and r["deboutReprise"] == [True], (
         "les trois coins sont vides : la reprise va droit au chef, seul debout")
-    assert r["etapeApres"] == 2, "le chef couche, on seme la police"
+    assert r["etapeApres"] == 2, "le chef couche, on court apres la caisse des Cravates"
     assert r["oubliees"] is True, "la mission reussie, il n'y a plus d'essai a retenir"
+
+
+def _m5_posee():
+    """Le début commun des juges de la dernière Cravate : M5 posée, ses six Cravates dans leurs
+    coins, le joueur resté chez Josée (loin d'eux)."""
+    return """
+        L.Jeu.commencer();
+        ['m1', 'm2', 'm3', 'm4'].forEach(function (s) { L.B.partie.missionsFaites[s] = 1; });
+        L.Histoire.commencer('m5');
+        L.B.cinema = null; L.B.dialogue = null; L.B.scene = null;
+        L.B.joueur.invincible = 1e6;
+        o.frame(2);
+        const six = L.B.mission.entites.filter(function (e) { return e.type === 'pieton' && e.cible; });
+    """
+
+
+def test_une_cravate_de_m5_n_entre_par_aucune_porte(banc):
+    """⚠️ Retour de Martin, 21 sept. 2026 : « la mission de libérer les trois coins des Cravates,
+    la dernière cravate à trouver n'apparaît pas ». Un flâneur qui passe sous une porte y entre
+    une fois sur douze, et une Cravate de M5 aussi : sortie de la ville, elle restait comptée
+    debout, la mission bloquait à 5/6 et la flèche montrait la porte, où il n'y avait personne.
+    Au banc, celle du coin 2 rentrait en une minute, sur 2 graines sur 8. Ici on la plante sous
+    une porte, et le dé dit « rentre » une fois sur deux ; un TÉMOIN (la même Cravate, sans
+    mission) y entre, lui : c'est ce qui dit que le juge mord encore."""
+    r = banc("""function (L, o) {""" + _m5_posee() + """
+        const M = L.Monde, TT = 16;
+        // La porte la plus proche du premier, avec un trottoir dessous.
+        const tx0 = Math.floor(six[0].x / TT), ty0 = Math.floor(six[0].y / TT);
+        let seuil = null;
+        for (let r = 0; r < 40 && !seuil; r++) {
+          for (let dy = -r; dy <= r && !seuil; dy++) for (let dx = -r; dx <= r && !seuil; dx++) {
+            if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+            const g = M.glyphe(tx0 + dx, ty0 + dy);
+            if ((g === 'd' || g === 'D') && M.marchablePieton(tx0 + dx, ty0 + dy + 1)) {
+              seuil = { x: (tx0 + dx) * TT + 8, y: (ty0 + dy + 1) * TT + 8 };
+            }
+          }
+        }
+        // Il flane sur le seuil, et decide a chaque image ; le de alterne « on ne
+        // s'arrete pas » et « on rentre ». Rend l'image ou il a quitte la ville.
+        function planter(e) {
+          const rng = L.B.rng;
+          let k = 0, sortie = -1;
+          L.B.rng = function () { return (k++ % 2) ? 0.01 : 0.5; };
+          for (let i = 0; i < 300 && sortie < 0; i++) {
+            if (e.etat !== 'entre') { e.x = seuil.x; e.y = seuil.y; e.vx = 0; e.vy = 0; e.etat = 'flane'; e.butT = 0; }
+            L.Entites.indexer();
+            o.frame(1);
+            if (L.B.entites.indexOf(e) < 0) sortie = i;
+          }
+          L.B.rng = rng;
+          return sortie;
+        }
+        const temoin = six[1];
+        temoin.mission = null; temoin.cible = false;
+        const temoinSorti = planter(temoin);
+        const sortie = planter(six[0]);
+        o.frame(2);
+        const g = L.Histoire.cible();
+        return { seuil: !!seuil, temoinSorti: temoinSorti, sortie: sortie, dansLaVille: L.B.entites.indexOf(six[0]) >= 0,
+                 gpsSurLui: !!g && Math.hypot(g.x - six[0].x, g.y - six[0].y) < 1 };
+    }""")
+    assert r["seuil"], "une porte avec un trottoir dessous, près du Faubourg"
+    assert r["temoinSorti"] >= 0, "le témoin sans mission rentre : le juge mord encore"
+    assert r["sortie"] < 0 and r["dansLaVille"], "une Cravate de M5 n'entre par aucune porte"
+    assert r["gpsSurLui"], "la flèche montre une Cravate qu'on peut trouver"
+
+
+def test_une_cravate_de_m5_couchee_reste_couchee_tant_que_la_mission_dure(banc):
+    """⚠️ Même retour de Martin. Un K.-O. (poings, poing américain) se relevait au bout de 5 s
+    et s'enfuyait : le « 1/6 » redevenait « 0/6 », et pour finir M5 il fallait coucher les six
+    Cravates, réparties sur trois coins, en 5 s. Le K.-O. compte comme un mort au compteur : il
+    reste au sol tant que la mission dure, et se relève quand elle s'arrête."""
+    r = banc("""function (L, o) {""" + _m5_posee() + """
+        L.Entites.assommer(six[0]);
+        o.frame(2);
+        const lue = L.Histoire.ligneObjectif();
+        o.frame(600);                                   // deux fois le temps d'un K.-O.
+        const relue = L.Histoire.ligneObjectif(), auSol = six[0].etat;
+        L.Histoire.reinitialiser('m5');                 // la mission s'arrete : on nettoie
+        o.frame(400);
+        return { lue: lue, relue: relue, auSol: auSol, apres: six[0].etat };
+    }""")
+    assert r["lue"].endswith(" 1/6")
+    assert r["auSol"] == "assomme" and r["relue"].endswith(" 1/6"), (
+        f"le compteur est revenu à {r['relue']!r} : la Cravate couchée s'est relevée ({r['auSol']})")
+    assert r["apres"] != "assomme", "la mission arrêtée, elle se relève comme tout le monde"
 
 
 def test_la_premiere_replique_se_dit_quand_on_parle_au_bouton(banc, paquet):
@@ -769,6 +1329,8 @@ def test_la_premiere_replique_se_dit_quand_on_parle_au_bouton(banc, paquet):
             const d = L.Histoire.donneur(slug);
             if (!d) return { absent: true };
             j.x = d.x - 14; j.y = d.y; L.Entites.indexer();
+            // ⚠️ On regarde le donneur : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+            o.viser(d);
             L.Son.Voix.demandees.length = 0;
             if (manette) { o.pad([0, 0, 0, 0], [1]); o.frame(1); o.pad([0, 0, 0, 0], [0]); o.frame(1); }
             else { o.touche('KeyE'); o.frame(1); o.relacher('KeyE'); o.frame(1); }
@@ -815,7 +1377,9 @@ def test_le_char_de_m1_dort_loin_du_garage(banc):
         j.x = garage.x; j.y = garage.y; L.Entites.indexer();
         M.centrerCamera(j.x, j.y);
         o.frame(3);
-        const v = B.mission.vehicule;
+        // ⚠️ Il dort là dès le début de la mission, mais `B.mission.vehicule` attend le tour de
+        // son `monter` (Marco d'abord, depuis « des missions plus longues ») : on le cherche.
+        const v = B.mission.vehicule || B.entites.find(function (e) { return e.type === 'vehicule' && e.mission === 'm1'; });
         M.centrerCamera(j.x, j.y);
         const vu = L.Entites.visibleAEcran(v.x, v.y, 0);
         // La coupe de l'intro va MONTRER ce char : elle doit tomber sur sa ruelle.
@@ -843,7 +1407,12 @@ def test_le_char_de_m1_dort_loin_du_garage(banc):
         }
         const cotes = [[0, 16], [0, -16], [16, 0], [-16, 0], [0, 22], [0, -22]];
         for (const c of cotes) {
-            j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer();
+            j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer(); o.viser(v);
+            if (L.Vehicules.vehiculeSousLaMain(j) === v) break;
+        }
+        L.Histoire.parler('marco'); while (B.cinema) L.Histoire.suivante();    // la poignée de main
+        for (const c of cotes) {
+            j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer(); o.viser(v);
             if (L.Vehicules.vehiculeSousLaMain(j) === v) break;
         }
         o.tape('KeyE', 2);
@@ -860,7 +1429,7 @@ def test_le_char_de_m1_dort_loin_du_garage(banc):
         f"la coupe de l'intro filme une ruelle a {r['ecartCoupe']} px de celle ou dort le char")
     assert r["glyphe"] == "x" and r["bouts"] == ["x", "x"], f"le char deborde de sa ruelle : {r['bouts']}"
     assert r["relie"] is True, "aucune route ne ramene ce char au garage"
-    assert r["monte"] is True and r["etape"] == 2
+    assert r["monte"] is True and r["etape"] == 3, "monté : on sème l'étoile du propriétaire"
     assert r["roule"] > 30 and r["chocs"] == 0, f"le char ne sort pas de sa ruelle ({r['roule']:.0f} px, {r['chocs']} chocs)"
 
 
@@ -876,7 +1445,7 @@ def test_le_char_de_la_mission_saute_sous_le_joueur_et_la_mission_rate(banc):
         function monter(v) {
             const cotes = [[0, 16], [0, -16], [16, 0], [-16, 0], [0, 22], [0, -22]];
             for (const c of cotes) {
-                j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer();
+                j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer(); o.viser(v);
                 if (L.Vehicules.vehiculeSousLaMain(j) === v) break;
             }
             o.tape('KeyE', 2);
@@ -908,7 +1477,7 @@ def test_le_char_de_la_mission_saute_sous_le_joueur_et_la_mission_rate(banc):
         Object.assign(out.m3, sauter(taxi));
         // M4, pendant qu'on seme.
         B.partie.missionsFaites = { m1: 1, m2: 1, m3: 1 };
-        L.Histoire.commencer('m4'); B.cinema = null;
+        L.Histoire.commencer('m4'); B.cinema = null; B.mission.pendant = null;   // l'alibi (pendant 0) se tait
         let h = B.partie.heure;
         for (let k = 0; k < 200 && !M.estNuit(h); k++) h = (h + 0.005) % 1;
         B.partie.heure = h;
@@ -953,14 +1522,14 @@ def test_le_char_de_la_mission_ne_nait_pas_sous_celui_du_joueur(banc):
             L.Vehicules.monter(j, mien); L.Entites.indexer();
             if (nuit) { let h = B.partie.heure; for (let k = 0; k < 400 && !M.estNuit(h); k++) h = (h + 0.005) % 1; B.partie.heure = h; }
             B.partie.missionsFaites = faites;
-            L.Histoire.commencer(slug); B.cinema = null;
+            L.Histoire.commencer(slug); B.cinema = null; B.mission.pendant = null;   // l'alibi de m4 (pendant 0) se tait
             for (let n = 0; n < 30 && !B.mission.vehicule; n++) o.frame(1);
             const v = B.mission.vehicule;
             if (!v) return { etape: B.partie.mission.etape };
             const ecart = Math.hypot(v.x - mien.x, v.y - mien.y);
             L.Vehicules.descendre(j, true); o.frame(2);
             const cotes = [[0, 16], [0, -16], [16, 0], [-16, 0], [0, 22], [0, -22]];
-            for (const c of cotes) { j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer(); if (L.Vehicules.vehiculeSousLaMain(j) === v) break; }
+            for (const c of cotes) { j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer(); o.viser(v); if (L.Vehicules.vehiculeSousLaMain(j) === v) break; }
             o.tape('KeyE', 2);
             const rec = { slug: v.slug, ecart: Math.round(ecart), monte: j.dansVehicule === v, etape: B.partie.mission.etape };
             L.Histoire.echouer('arrete'); B.cinema = null; B.dialogue = null; B.recherche.etoiles = 0;
@@ -989,7 +1558,7 @@ def test_ti_guy_nait_derriere_l_auto_patrouille_et_la_suit(banc):
         L.graine(4);
         const B = L.B, j = B.joueur, M = L.Monde;
         B.partie.missionsFaites = { m1: 1, m2: 1, m3: 1 };
-        L.Histoire.commencer('m4'); B.cinema = null;
+        L.Histoire.commencer('m4'); B.cinema = null; B.mission.pendant = null;   // l'alibi (pendant 0) se tait
         let h = B.partie.heure;
         for (let k = 0; k < 400 && !M.estNuit(h); k++) h = (h + 0.005) % 1;
         B.partie.heure = h;
@@ -999,7 +1568,7 @@ def test_ti_guy_nait_derriere_l_auto_patrouille_et_la_suit(banc):
         for (let n = 0; n < 30 && B.partie.mission.etape < 1; n++) o.frame(1);
         const v = B.mission.vehicule;
         const cotes = [[0, 16], [0, -16], [16, 0], [-16, 0], [0, 22], [0, -22]];
-        for (const c of cotes) { j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer(); if (L.Vehicules.vehiculeSousLaMain(j) === v) break; }
+        for (const c of cotes) { j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer(); o.viser(v); if (L.Vehicules.vehiculeSousLaMain(j) === v) break; }
         o.tape('KeyE', 2);
         o.frame(2);
         const e = B.mission.escorte;
@@ -1023,3 +1592,97 @@ def test_ti_guy_nait_derriere_l_auto_patrouille_et_la_suit(banc):
     assert r["cote"] <= 24 and r["memeSens"] is True, f"Ti-Guy n'est pas dans une voie qui va où l'on va ({r})"
     assert r["joueur"] > 150, f"l'auto-patrouille n'avance que de {r['joueur']} px : quelqu'un lui bouche la rue"
     assert r["suit"] > 60, f"Ti-Guy ne suit pas ({r['suit']} px pendant qu'on en roule {r['joueur']})"
+
+
+def test_serrer_la_main_d_un_contact_de_m6_le_fait_parler_en_personne_puis_avancer(banc, paquet):
+    """⚠️ Martin, 20 sept. 2026 : « il manque aussi des voix pour cette animation… enrichir leur
+    dialogue ». La poignée de main de m6 était MUETTE : `parler()` faisait `avancer()` tout de suite,
+    et Ti-Paul, Lulu, Raymonde et Ovila n'avaient pas une réplique. Chacun dit maintenant son
+    `accueil` — en personne, sa voix demandée — et l'objectif n'avance qu'une fois la boîte fermée.
+
+    Et sans `accueil`, la poignée de main reste ce qu'elle était : elle avance à l'instant."""
+    import json
+    m6 = next(m for m in paquet["missions"] if m["slug"] == "m6")
+    etapes = [i for i, o in enumerate(m6["objectifs"]) if o["type"] == "parler"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(6);
+        const B = L.B;
+        B.partie.missionsFaites = { m1: 1, m2: 1, m3: 1, m4: 1, m5: 1 };
+        L.Histoire.commencer('m6'); B.cinema = null; B.scene = null;
+        const d0 = L.Son.Voix.demandees.length;
+        const vus = [];
+        const etapes = ETAPES;
+        for (const slug of ['tipaul', 'lulu', 'raymonde', 'ovila']) {
+            // ⚠️ Entre deux poignées de main, les étapes de « Des missions plus longues » (le pickpocket, le
+            // piquet) : on se pose à la suivante, elles sont jouées dans `test_tronc_plus_long_js.py`.
+            if (B.partie.mission) { B.partie.mission.etape = etapes[vus.length]; B.mission.pendant = null; B.cinema = null; }
+            const avant = B.partie.mission ? B.partie.mission.etape : null;
+            const rendu = L.Histoire.parler(slug);
+            const c = B.cinema;
+            const pendant = { rendu: rendu, avant: avant, etape: B.partie.mission ? B.partie.mission.etape : null,
+                              boite: c ? { partie: c.partie, qui: c.lignes[0].qui, slug: c.lignes[0].slug,
+                                           texte: c.lignes[0].texte, telephone: c.lignes[0].telephone, n: c.lignes.length } : null };
+            while (B.cinema) L.Histoire.suivante();
+            pendant.apres = B.partie.mission ? B.partie.mission.etape : 'finie';
+            vus.push(pendant);
+        }
+        const voix = L.Son.Voix.demandees.slice(d0);
+        // Sans `accueil` : la poignée de main muette d'avant.
+        L.Jeu.retourTitre(); L.Jeu.commencer(); L.graine(6);
+        B.partie.missionsFaites = { m1: 1, m2: 1, m3: 1, m4: 1, m5: 1 };
+        L.B.defs.missions.find(function (m) { return m.slug === 'm6'; }).dialogue.accueil = [];
+        L.Histoire.commencer('m6'); B.cinema = null; B.scene = null;
+        L.Histoire.parler('tipaul');
+        const muet = { cinema: !!B.cinema, etape: B.partie.mission.etape };
+        return { vus: vus, voix: voix, muet: muet };
+    }""".replace("ETAPES", json.dumps(etapes)))
+    accueils = m6["dialogue"]["accueil"]
+    assert len(r["vus"]) == 4 and len(accueils) == 4
+    for i, (v, dit) in enumerate(zip(r["vus"], accueils)):
+        assert v["rendu"] is True, f"contact {i} : parler() ne rend pas true"
+        assert v["boite"] == {"partie": "accueil", "qui": dit["qui"], "slug": v["boite"]["slug"], "texte": dit["texte"],
+                              "telephone": False, "n": 1}, f"contact {i} : {v['boite']}"
+        assert v["etape"] == etapes[i], f"contact {i} : l'objectif avance PENDANT sa réplique ({v['etape']})"
+        assert v["apres"] == etapes[i] + 1, f"contact {i} : l'objectif n'avance pas après ({v['apres']})"
+    slugs = ["tipaul-m6-15", "lulu-m6-16", "raymonde-m6-17", "ovila-m6-18"]
+    assert [v["boite"]["slug"] for v in r["vus"]] == slugs
+    assert [s for s in r["voix"] if s in slugs] == slugs, f"leurs voix ne sont pas demandées : {r['voix']}"
+    assert r["muet"] == {"cinema": False, "etape": 1}, f"sans réplique : la poignée de main avance à l'instant ({r['muet']})"
+
+
+def test_la_replique_pendant_du_premier_objectif_se_dit_apres_l_intro(banc, paquet):
+    """⚠️ Rouge avant (22 sept. 2026) : `avancer(true)` se tait sous l'intro et n'arme pas la
+    réplique `pendant` de l'objectif 0 ; `annoncer`, qui dit le reste quand l'intro finit, ne
+    l'armait pas non plus. « Le dépanneur d'abord » de Josée (m6) était payée et jamais dite."""
+    m6 = next(m for m in paquet["missions"] if m["slug"] == "m6")
+    n = 0
+    attendue = None
+    for partie in ("appel", "intro", "client", "fin", "echec", "pendant", "renvoi", "accueil"):
+        for ligne in m6["dialogue"].get(partie, []):
+            n += 1
+            if partie == "pendant" and ligne.get("objectif") == 0 and attendue is None:
+                attendue = f"{ligne['qui']}-m6-{n}"
+    assert attendue, "m6 a une réplique pendant sur son premier objectif"
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B, j = B.joueur, attendue = '""" + attendue + """';
+        ['m1', 'm2', 'm3', 'm4', 'm5'].forEach(function (s) { B.partie.missionsFaites[s] = 1; });
+        B.partie.appels = { m2: true, m3: true, m4: true, m5: true, m6: true };
+        o.entrer(L.Monde.carte.portes.find(function (p) { return p.lieu === 'bar'; }));
+        const d = L.Histoire.donneur('josee');
+        j.x = d.x - 14; j.y = d.y; L.Entites.indexer();
+        o.viser(d);
+        o.touche('KeyE'); o.frame(1); o.relacher('KeyE'); o.frame(1);
+        const vues = [];
+        for (let k = 0; k < 4000 && vues.length < 40; k++) {
+            const c = B.cinema;
+            const s = c && c.lignes[c.i] ? c.lignes[c.i].slug : null;
+            if (s && vues[vues.length - 1] !== s) vues.push(s);
+            if (!B.cinema && !B.scene && k > 60 && vues.indexOf(attendue) >= 0) break;
+            o.frame(1);
+        }
+        return { vues: vues, mission: B.partie.mission && B.partie.mission.slug };
+    }""")
+    assert r["mission"] == "m6", r
+    assert attendue in r["vues"], f"la réplique pendant de l'objectif 0 ({attendue}) n'a jamais été dite : {r['vues']}"

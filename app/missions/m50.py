@@ -1,6 +1,6 @@
 """La mission m50 — voir app/missions/__init__.py pour le moteur."""
 
-from ._commun import _l, _p
+from ._commun import _a, _l, _p, _r
 
 MISSION = {
     "slug": "m50",
@@ -22,42 +22,86 @@ MISSION = {
         { "type": "ramasser", "texte": "RATTRAPER LE FUYARD ET SON COLIS",
           "vehicule": "auto", "cible": "fuyard" },
 
+        # « Des missions plus longues » (22 sept. 2026) : la bagarre sur le quai a fait du bruit — la
+        # police du port arrive. Puis Marco ne veut pas du colis au garage (Bouchard y passe le matin) :
+        # on le cache à la planque de Rocco, et on revient les mains vides.
+        { "type": "semer", "texte": "SÈME LA POLICE DU PORT, LE COLIS SOUS LE BRAS",
+          "etoiles": 1 },
+
+        { "type": "aller", "texte": "CACHE LE COLIS À LA PLANQUE DE ROCCO",
+          "lieu": "planque", "rayon": 4 },
+
         { "type": "retourner", "texte": "RETOURNER AU GARAGE" }
     ],
 
+    # Le jeu de chaque réplique (`jeu=`) — Marco te confie un colis : la contrebande à voix basse, « discret ».
     "dialogue": {
         "appel": [
-            _l("marco", "Cousin, j’ai une faveur. Passe au port, discret.")
+            _l("marco", "C'est Marco. Parle pas trop fort, cousin, j'ai une faveur. Passe au port, discret.",
+               jeu="[quietly] C'est Marco. Parle pas trop fort, cousin… j'ai une faveur. [casually] Passe au port, discret.")
         ],
         "intro": [
-            _l("marco", "Un colis arrive ce soir, sur le cargo."),
-            _l("marco", "Va le chercher. Personne doit savoir que ça vient de moi.")
+            _l("marco", "Un colis arrive ce soir, sur le cargo.",
+               jeu="[quietly] Un colis arrive ce soir… sur le cargo."),
+            _l("marco", "Va le chercher. Personne doit savoir que ça vient de moi.",
+               jeu="[serious] Va le chercher. Personne doit savoir… que ça vient de moi."),
+            _l("marco", "Pis si quelqu'un te demande, t'es allé manger du poisson chez Lulu.",
+               jeu="[wryly] Pis si quelqu'un te demande… t'es allé manger du poisson chez Lulu.")
         ],
         "pendant": [
             # ⚠️ C'est Lulu qui le crie : elle est à la cantine quand le docker file.
-            _p("lulu", "Le docker va essayer de filer. Rattrape-le!", 2)
+            _p("lulu", "Le docker va essayer de filer. Rattrape-le!", 2,
+               jeu="[excited] Le docker va essayer de filer. Rattrape-le!"),
+            # Au combiné : Marco est au garage, on a le colis sous le bras et la police du port au cul.
+            _p("marco", "Cousin, t'as la police du port au cul. Perds-la avant de venir, pas après.", 3,
+               jeu="[quietly] Cousin, t'as la police du port au cul. [firmly] Perds-la avant de venir… pas après."),
+            _p("marco", "Pas au garage! Bouchard y passe le matin. Cache ça à la planque de Rocco.", 4,
+               jeu="[quietly] Pas au garage! Bouchard y passe le matin. [serious] Cache ça à la planque de Rocco.")
         ],
         "client": [],
+        # ⚠️ Lulu renvoie qui vient trop tôt : de jour, l'objectif 0 attend la noirceur et « parler à
+        # Lulu » ne compte pas encore. Sans cette réplique elle disait le texte de repos de tout le
+        # monde (« le Faubourg est tranquille »), sans voix, et le joueur ne savait pas quoi attendre.
+        "renvoi": [
+            _r("lulu", "Le cargo arrive à la noirceur, pas avant. Reviens me voir ce soir.", 0,
+               jeu="[warmly] Le cargo arrive à la noirceur… pas avant. Reviens me voir ce soir.")
+        ],
+        # La poignée de main de l'objectif 1 : elle était muette. Lulu se nomme — on peut jouer m50
+        # avant m6, et c'est alors ici qu'on la rencontre (docs/jeu-d-acteur.md § 3.11).
+        "accueil": [
+            _a("lulu", "Te v'là, toi! Lulu, la sœur de Josée. C'est Marco qui t'envoie pour le cargo?", 1,
+               jeu="[warmly] Te v'là, toi! Lulu, la sœur de Josée. [knowingly] C'est Marco qui t'envoie pour le cargo?")
+        ],
         "fin": [
-            _l("marco", "Parfait. Personne t’a vu? Bon."),
-            _l("marco", "Tiens, pour le trouble.")
+            _l("marco", "Parfait. Personne t’a vu? Bon.",
+               jeu="[satisfied] Parfait. Personne t'a vu… Bon."),
+            _l("marco", "Tiens, pour le trouble.",
+               jeu="[casually] Tiens… pour le trouble."),
+            _l("marco", "Pis le colis, pose pas de questions. Moins t'en sais, mieux tu dors.",
+               jeu="[quietly] Pis le colis… pose pas de questions. [wryly] Moins t'en sais, mieux tu dors.")
         ],
         "echec": [
-            _l("marco", "T’es censé être discret, pas mort.")
+            _l("marco", "T’es censé être discret, pas mort.",
+               jeu="[disappointed] T'es censé être discret… pas mort.")
         ]
     },
 
     "scenes": {
         "intro": [
             { "type": "camera", "vers": "porte:garage", "duree": 90 },
-            { "type": "marcher", "acteur": "donneur", "vers": "joueur", "duree": 60 },
+            { "type": "marcher", "acteur": "donneur", "vers": "joueur", "pres": 22, "duree": 60 },
             { "type": "geste", "acteur": "donneur", "geste": "montrer", "duree": 40 },
-            { "type": "dire", "repliques": [1, 2] }
+            { "type": "dire", "repliques": [1, 2] },
+            # Le mensonge tout prêt : il hausse les épaules dessus (sa signature).
+            { "type": "geste", "acteur": "donneur", "geste": "hausser", "duree": 50, "ensemble": True },
+            { "type": "dire", "repliques": [3] }
         ],
         "fin": [
-            { "type": "marcher", "acteur": "donneur", "vers": "joueur", "duree": 50 },
+            { "type": "marcher", "acteur": "donneur", "vers": "joueur", "pres": 22, "duree": 50 },
             { "type": "geste", "acteur": "donneur", "geste": "prendre", "duree": 40 },
-            { "type": "dire", "repliques": [1, 2] }
+            { "type": "dire", "repliques": [1, 2] },
+            { "type": "attendre", "duree": 25 },
+            { "type": "dire", "repliques": [3] }
         ]
     }
 }

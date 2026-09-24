@@ -47,11 +47,20 @@ def test_le_poids_audio_reste_raisonnable():
     loin du megaoctet. Les radios, elles, n'arrivent qu'au tour de cle."""
     dossier = audio.RACINE_STATIQUE / audio.DOSSIER
     fichiers = list(dossier.glob("*.mp3")) if dossier.is_dir() else []
+    # ⚠️ LES BRUITS DE QUARTIER (M15, 2e vague) SORTENT DU BUDGET DE DEMARRAGE,
+    # ET PAS POUR LUI FAIRE DE LA PLACE : `Son.Quartier.charger` les demande
+    # UN DISTRICT A LA FOIS, en y entrant — jamais au premier geste, exactement
+    # comme la musique. Chaque slug de `audio.QUARTIERS["sons"]` nomme son
+    # fichier `<slug>-1.mp3`, sans prefixe (comme tout `Echantillon`) : on les
+    # reconnait par leur SLUG, pas par leur nom de fichier.
+    slugs_de_quartier = {e["slug"] for sons in audio.QUARTIERS["sons"].values() for e in sons}
     bruitages = [f for f in fichiers
-                 if not f.name.startswith(("radio-", "histoire-", "musique-"))]
+                 if not f.name.startswith(("radio-", "histoire-", "musique-"))
+                 and f.stem.rsplit("-", 1)[0] not in slugs_de_quartier]
     radios = [f for f in fichiers if f.name.startswith("radio-")]
     histoire = [f for f in fichiers if f.name.startswith("histoire-")]
     musiques = [f for f in fichiers if f.name.startswith("musique-")]
+    quartiers = [f for f in fichiers if f.stem.rsplit("-", 1)[0] in slugs_de_quartier]
     # ⚠️ Budget releve de 600 a 650 Ko le 13 sept. 2026 : les trois cris de
     # l'homme-sandwich (22 Ko) l'ont fait deborder de 6 Ko. On reste a un
     # tiers du megaoctet ; la prochaine fois, on compresse avant de relever.
@@ -84,6 +93,15 @@ def test_le_poids_audio_reste_raisonnable():
     assert sum(f.stat().st_size for f in bruitages) < 2_500_000
     for fichier in bruitages:
         assert fichier.stat().st_size < 80_000, fichier.name
+    # ⚠️ Un bruit de quartier ne se telecharge JAMAIS au demarrage
+    # (`Quartier.charger`, un district a la fois, comme une piece de musique) :
+    # ce plafond borne le DEPOT, pas le premier ecran. Mesure du 21 sept. 2026 :
+    # treize sons, ~536 Ko — largement sous le megaoctet ; un joueur qui visite
+    # tous les quartiers d'une partie en telecharge au plus une poignee de Ko
+    # a la fois, jamais plus d'un district d'un coup.
+    for fichier in quartiers:
+        assert fichier.stat().st_size < 80_000, fichier.name
+    assert sum(f.stat().st_size for f in quartiers) < 1_000_000
     for fichier in radios:
         assert 100_000 < fichier.stat().st_size < 700_000, fichier.name
     # 5 stations de 45 s + l'ambiance de 60 s a 64 kbit/s : 2,3 Mo dans le
@@ -97,7 +115,15 @@ def test_le_poids_audio_reste_raisonnable():
     # total passe à 3,19 Mo. Ce plafond ne protège pas le démarrage (ces voix se
     # chargent par mission, une à la fois) : il borne le dépôt, et c'est un ajout
     # de contenu, pas un dépassement qu'on laisse filer.
-    assert sum(f.stat().st_size for f in histoire) < 4_000_000
+    # ⚠️ Relevé de 4 à 5 Mo le 20 sept. 2026 : les voix de repos (15 fichiers, 350 Ko — demande
+    # de Martin, « fais parler les personnages »), Lulu de m50 et ses sœurs ont fait passer le
+    # total à 4,10 Mo. Même raison : elles se chargent d'un coup par « repos » ou par mission,
+    # jamais au démarrage ; le plafond borne le dépôt. 5 et pas 4,2 : un chiffre qui tient.
+    # ⚠️ Relevé de 5 à 20 Mo le 20 sept. 2026, sur demande de Martin (« mets un plafond de 20 mo ») :
+    # M16 apporte cent trente-quatre missions, à quelques dizaines de Ko de voix chacune. Ce
+    # plafond ne protège rien de ce que le joueur télécharge (une mission à la fois, jamais au
+    # démarrage) : il borne le dépôt, et 20 Mo dit « on est loin de l'avoir atteint ».
+    assert sum(f.stat().st_size for f in histoire) < 20_000_000
     # LA MUSIQUE (14 sept. 2026). ⚠️ Elle sort du budget des bruitages, et pas
     # pour lui faire de la place : elle ne se telecharge JAMAIS au demarrage,
     # exactement comme les radios. Une ambiance de district arrive quand on
@@ -123,6 +149,16 @@ def test_une_station_est_generable(radio):
         "une voix chantee sous une sirene, c'est illisible"
     assert 20 <= radio["duree_s"] <= 90
     assert 0 < radio["volume"] <= 1
+
+
+def test_aucune_radio_declaree_ne_manque_a_l_appel():
+    """⚠️ `10-4` et `Radio-Traversier` sont restees DECLAREES sans mp3 genere pendant des
+    jours (M8 a M9) sans qu'aucun juge ne rougisse : `station_existe` (lu par
+    `test_chaque_char_de_phase_1_a_une_station_qui_existe`, ci-dessous) ne verifie que le
+    SLUG, jamais le fichier — un bouton RADIO pointait vers un mp3 qui n'a jamais existe, et
+    rien ne le disait. `radios_manquantes()` existe depuis la meme epoque pour ca precisement ;
+    c'est elle qu'on juge, maintenant (payee le 13 sept. 2026, `0598d07`)."""
+    assert audio.radios_manquantes() == []
 
 
 def test_chaque_char_de_phase_1_a_une_station_qui_existe():
@@ -163,9 +199,10 @@ def test_les_radios_ne_sont_pas_chargees_au_demarrage(paquet):
 
 
 def test_le_navigateur_ne_reclame_que_des_slugs_du_catalogue():
-    """`Son.joue('x')` dans le JS doit correspondre a un son declare en Python."""
+    """`Son.joue('x')` dans le JS doit correspondre a un son declare en Python —
+    et `bref('x', ...)`, qui emprunte un echantillon en le coupant court."""
     source = (RACINE_JS / "son.js").read_text(encoding="utf-8")
-    demandes = set(re.findall(r"joue\('([a-z_]+)'\)", source))
+    demandes = set(re.findall(r"(?:joue|bref)\('([a-z_]+)'", source))
     assert demandes, "plus personne ne joue d'echantillon ?"
     assert demandes <= set(audio.SLUGS), demandes - set(audio.SLUGS)
 
@@ -262,7 +299,10 @@ def test_les_voix_de_l_histoire_sont_declarees_par_mission(paquet):
     cours — jamais au demarrage."""
     histoire = paquet["audio"]["histoire"]
     assert len(histoire) >= 30
-    assert {v["mission"] for v in histoire} == {"m1", "m2", "m3", "m4", "m5", "m6", "m97", "journal", "ouverture"}, \
+    # ⚠️ Les missions se lisent dans le catalogue : une liste écrite ici se retouchait à chaque mission
+    # ajoutée (le 21 sept. 2026, cinq de plus la faisaient rougir).
+    from app import missions
+    assert {v["mission"] for v in histoire} == {m["slug"] for m in missions.CATALOGUE} | {"journal", "ouverture", "repos"}, \
         "les missions, le journal lu par le narrateur, et l'ouverture qu'il lit aussi"
     assert all(v["qui"] and v["partie"] for v in histoire)
     assert any(v["telephone"] for v in histoire), "les appels sont marques : la voix vient du combine"
@@ -476,7 +516,7 @@ def test_la_sonnerie_du_telephone_ne_couvre_pas_la_voix_qui_la_suit():
     # ⚠️ TOUTES les voix : les donneurs (`voix_histoire`), le narrateur du matin
     # (`voix_journal`) et celui de l'ouverture (`voix_ouverture`) — la sonnerie
     # ne doit en couvrir aucune, et c'est la plus BASSE qui decide.
-    voix = [v for v in audio.voix_histoire() + audio.voix_journal() + audio.voix_ouverture()
+    voix = [v for v in audio.voix_histoire() + audio.voix_journal() + audio.voix_ouverture() + audio.voix_repos()
             if audio.chemin_voix(v).is_file()]
     if not voix:
         pytest.skip("les voix ne sont pas generees sur ce poste")

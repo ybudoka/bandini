@@ -253,6 +253,26 @@ COMPTOIRS: dict[str, dict] = {
     ]},
 }
 
+#: ⚠️ **LA NUIT A SES HABITUDES : LES COMPTOIRS ONT LEURS HEURES.** Jusqu'ici, on
+#: achetait une pointe de tarte à 4 h du matin partout en ville. Chaque famille ouvre
+#: au plus tard à 7 h (le jeu commence à 8 h 24 : le jour ne change pas) et ferme
+#: entre 20 h et 23 h selon son métier. La TAVERNE ouvre à 8 h et ferme à 3 h — l'heure
+#: du last call (`nuit.LAST_CALL`). Le DÉPANNEUR ne ferme jamais, lui : il vend sous
+#: la famille « bouffe », alors c'est la PIÈCE qui le dit (`nuit.COMPTOIRS`).
+HEURES_DES_COMPTOIRS: dict[str, tuple[float, float]] = {
+    "bouffe": (6 / 24, 23 / 24),
+    "service": (7 / 24, 21 / 24),
+    "artisan": (7 / 24, 21 / 24),
+    "nuit": (8 / 24, 3 / 24),
+    "commerce": (7 / 24, 22 / 24),
+    "marine": (5 / 24, 20 / 24),       # la poissonnerie : les bateaux rentrent tôt
+    "industrie": (6 / 24, 20 / 24),
+    "sante": (7 / 24, 22 / 24),
+    "mode": (7 / 24, 21 / 24),
+}
+for _famille, _heures in HEURES_DES_COMPTOIRS.items():
+    COMPTOIRS[_famille]["heures"] = _heures
+
 
 def comptoir(genre: str) -> dict | None:
     return COMPTOIRS.get(genre)
@@ -270,19 +290,45 @@ class Magasin(TypedDict):
     phase: int
 
 
+#: ⚠️ Depuis la garde-robe (22 sept. 2026, `garderobe.py`), une tenue est une PIÈCE qu'on enfile
+#: sur le squelette du joueur, plus seulement une couleur de chandail : `emplacement` dit où elle
+#: va (`corps` : le haut ; `tete` : un chapeau), `piece` ce qu'elle est (`haut` et son `motif`,
+#: ses `accessoires`, ou le `chapeau`). On porte un corps ET une tête à la fois.
 TENUES = [
-    {"slug": "chandail", "nom": "Chandail de Rocco", "prix": 0, "couleur": "#c0392b"},
-    {"slug": "coupe_vent", "nom": "Coupe-vent bleu", "prix": 80, "couleur": "#2980b9"},
-    {"slug": "veste_cuir", "nom": "Veste de cuir", "prix": 200, "couleur": "#2c2c2c"},
-    {"slug": "complet", "nom": "Complet gris", "prix": 500, "couleur": "#7f8c8d"},
-    {"slug": "chemise_hawai", "nom": "Chemise hawaïenne", "prix": 120, "couleur": "#f39c12"},
+    {"slug": "chandail", "nom": "Chandail de Rocco", "prix": 0, "couleur": "#c0392b",
+     "emplacement": "corps", "piece": {"haut": "chandail"}},
+    {"slug": "coupe_vent", "nom": "Coupe-vent bleu", "prix": 80, "couleur": "#2980b9",
+     "emplacement": "corps", "piece": {"haut": "coton_ouate"}},
+    {"slug": "veste_cuir", "nom": "Veste de cuir", "prix": 200, "couleur": "#2c2c2c",
+     "emplacement": "corps", "piece": {"haut": "veston"}},
+    {"slug": "complet", "nom": "Complet gris", "prix": 500, "couleur": "#7f8c8d",
+     "emplacement": "corps", "piece": {"haut": "veston", "accessoires": ["cravate"]}},
+    {"slug": "chemise_hawai", "nom": "Chemise hawaïenne", "prix": 120, "couleur": "#f39c12",
+     "emplacement": "corps", "piece": {"haut": "chemise", "motif": "carreaute"}},
+    {"slug": "camisole", "nom": "Camisole blanche", "prix": 40, "couleur": "#e8e8e8",
+     "emplacement": "corps", "piece": {"haut": "camisole"}},
+    {"slug": "salopette", "nom": "Salopette de mécano", "prix": 150, "couleur": "#e8e8e8",
+     "emplacement": "corps", "piece": {"haut": "salopette"}},
+    # Les chapeaux : ils se portent PAR-DESSUS le linge, et en changer aussi fait oublier ta tête.
+    {"slug": "tuque", "nom": "Tuque rouge", "prix": 30, "couleur": "#c0392b",
+     "emplacement": "tete", "piece": {"chapeau": "tuque"}},
+    {"slug": "casquette", "nom": "Casquette bleue", "prix": 40, "couleur": "#2980b9",
+     "emplacement": "tete", "piece": {"chapeau": "casquette"}},
+    {"slug": "beret", "nom": "Béret noir", "prix": 60, "couleur": "#1a1a22",
+     "emplacement": "tete", "piece": {"chapeau": "beret"}},
+    {"slug": "canotier", "nom": "Canotier de paille", "prix": 90, "couleur": "#e8d8a0",
+     "emplacement": "tete", "piece": {"chapeau": "canotier"}},
+    {"slug": "cowboy", "nom": "Chapeau de cowboy", "prix": 120, "couleur": "#7a5a2a",
+     "emplacement": "tete", "piece": {"chapeau": "cowboy"}},
+    {"slug": "feutre", "nom": "Feutre de gangster", "prix": 150, "couleur": "#3a2a1a",
+     "emplacement": "tete", "piece": {"chapeau": "feutre"}},
     # ⚠️ **LA SEULE QUI NE SE VEND PAS** : le lot du troisieme jeu d'adresse de
     # la foire (`missions.CASQUETTE_DE_LA_FOIRE`). `prime` dit d'ou elle vient,
     # et c'est ce qui la tient hors de la boutique de Rosa tant qu'on ne l'a pas
     # gagnee — un lot qu'on peut acheter n'est plus un lot. Une fois a soi, elle
     # s'y range comme les autres : c'est la qu'on vient la remettre.
     {"slug": "casquette_foire", "nom": "Casquette de la foire", "prix": None,
-     "couleur": "#e8a33a", "prime": "foire"},
+     "couleur": "#e8a33a", "prime": "foire", "emplacement": "tete", "piece": {"chapeau": "casquette"}},
 ]
 
 #: Chez le barbier (`boutique_service`) : la coupe change la COULEUR des cheveux

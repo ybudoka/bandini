@@ -14,6 +14,8 @@ def test_la_cale_vend_dans_le_coffre_du_char_d_a_cote(banc, paquet):
         if (!cale) return { pasDeCale: true };
         p.argent = 5000;
         j.x = cale.x; j.y = cale.y + 18; L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer();
+        // ⚠️ On regarde la cale : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser(cale);
         // Aucun char a portee : l'invite le dit, et le comptoir ne vend rien.
         for (const e of L.B.entites.slice()) if (e.type === 'vehicule' && Math.hypot(e.x - cale.x, e.y - cale.y) < c.rayon_px + 40) L.Entites.retirer(e);
         L.Entites.indexer();

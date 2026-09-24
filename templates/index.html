@@ -9,6 +9,10 @@
          jeton d'appareil ne part qu'avec ces appels-la, ni avec la page, ni avec
          les definitions. Une adresse ecrite ailleurs les ferait diverger. #}
       data-url-compte="{{ url_compte }}"
+      {# Le defi du jour (M14, 5e vague) : jamais dans la coquille hors ligne — l'adresse est
+         un `data-url-defi`, que `hors_ligne._ADRESSES` ne lit pas. Un defi garde par le
+         travailleur passerait minuit sans le savoir. #}
+      data-url-defi="{{ url_for('jeu.api_defi') }}"
       data-url-statique="{{ url_for('static', filename='') }}">
 
   <div class="ecran">
@@ -27,8 +31,18 @@
            ses manettes Touch ne se lisent que la-dedans. Voir static/js/casque.js. #}
         <button class="bouton" id="bouton-casque" type="button" hidden>Jouer dans le casque</button>
       </div>
-      <p class="aide">
-        <kbd>WASD</kbd>/<kbd>←↑↓→</kbd> marcher · <kbd>Maj</kbd> courir · <kbd>E</kbd> action ·
+      {# LE DEFI DU JOUR (M14, 5e vague) : le serveur dit lequel ; sans reseau, rien du tout.
+         ⚠️ PAS `.aide` : `body.tactile .aide { display: none }` — la ligne disparaitrait
+         sur telephone, qui est la plateforme du jeu. #}
+      <p class="defi-du-jour" id="defi-du-jour" hidden></p>
+      {# La ligne d'aide suit l'appareil qu'on tient (`Hud.majAideDuTitre`) : une
+         manette lit SES boutons — les lettres de sa famille, `manettes.FAMILLES`. #}
+      <p class="aide" id="aide-manette" hidden>
+        <kbd id="aide-manette-jouer">A</kbd> jouer · <kbd id="aide-manette-pause">START</kbd> pause ·
+        les commandes s’affichent au début de la partie
+      </p>
+      <p class="aide" id="aide-clavier">
+        <kbd>WASD</kbd>/<kbd>←↑↓→</kbd> marcher · <kbd>Maj</kbd> courir · <kbd>E</kbd> action <em>(face à la chose)</em> ·
         <kbd>Espace</kbd> frapper · <kbd>Tab</kbd> arme d’avant, <em>tenu</em> la roue ·
         <kbd>Échap</kbd> pause · <kbd>M</kbd> son
       </p>
@@ -50,6 +64,21 @@
        jamais le chemin de JOUER : un compte est un confort. #}
     <section class="voile" id="voile-compte" hidden>
       <h2 class="titre titre--petit">Ton compte</h2>
+
+      {# LE NIP (M14, 3e vague) : un verrou d'ECRAN sur un appareil DEJA lie, jamais
+         un second mot de passe. ⚠️ SEUL a l'ecran tant qu'on n'a pas tape les quatre
+         chiffres — jamais en meme temps que le formulaire de mot de passe : deux
+         portes ouvertes a la fois n'en protegent aucune. #}
+      <form class="compte-form" id="nip-form" hidden>
+        <p class="aide aide--petit">Cet appareil a un NIP.</p>
+        <div class="compte-form__ligne">
+          <input id="nip-code" name="nip" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="••••">
+          <button class="bouton bouton--principal" type="submit">Déverrouiller</button>
+        </div>
+        <p class="compte-form__etat" id="nip-etat"></p>
+        <button class="bouton" id="bouton-nip-mot-de-passe" type="button">Mot de passe plutôt</button>
+      </form>
+
       <p class="aide aide--petit" id="compte-mot">Un compte garde tes parties sur le serveur : commence au téléphone, finis à l’ordi. Le jeu se joue très bien sans.</p>
       <form class="compte-form" id="compte-form">
         <div class="compte-form__ligne">
@@ -71,15 +100,68 @@
          « Bonjour, Martin » se cacherait avec lui — le seul mot qui dit que ça a
          marché. Vu à la capture, le 17 sept. 2026. #}
       <p class="compte-form__etat" id="compte-etat"></p>
+      <h3 class="compte-rubrique" id="compte-rubrique-parties" hidden>Tes parties sur le serveur</h3>
       <ul class="compte-parties" id="compte-parties"></ul>
+
+      {# Le reglage du NIP : seulement une fois le compte OUVERT (`Hud.majCompte`
+         montre l'une ou l'autre, jamais les deux). #}
+      <div class="compte-bloc" id="compte-appareil" hidden>
+        <h3 class="compte-rubrique">Cet appareil</h3>
+        <form class="compte-form" id="nip-activer-form" hidden>
+          <p class="aide aide--petit">Un NIP de quatre chiffres verrouille ton compte ici : le jeu le demande à chaque lancement. Pratique sur un appareil partagé.</p>
+          <div class="compte-form__ligne">
+            <input id="nip-nouveau" name="nip" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="••••" aria-label="Quatre chiffres">
+            <button class="bouton" id="bouton-nip-activer" type="submit">Ajouter un NIP</button>
+          </div>
+        </form>
+        <div class="compte-form" id="nip-retrait" hidden>
+          <p class="aide aide--petit">Cet appareil demande ton NIP à chaque lancement.</p>
+          <button class="bouton" id="bouton-nip-retirer" type="button">Retirer le NIP</button>
+        </div>
+      </div>
+
       <div class="boutons">
         <button class="bouton" id="bouton-compte-deconnexion" type="button" hidden>Se déconnecter</button>
         <button class="bouton" id="bouton-fermer-compte" type="button">Retour</button>
       </div>
+
+      {# CE QU'ON GARDE, ET COMMENT TOUT EFFACER (M14) : « c'est un jeu pour s'amuser, pas une
+         raison de tenir un fichier sur du monde ». Ne dit que ce qui est VRAI aujourd'hui —
+         la base et ses copies de surete —, et jamais une promesse qu'aucun code ne tient
+         (un mot de passe perdu ne se retrouve pas : rien ne le permet encore). #}
+      <details class="compte-garde" id="compte-garde">
+        <summary>Ce qu’on garde, et comment tout effacer</summary>
+        <ul>
+          <li>Sur le serveur : ton pseudo, l’<em>empreinte</em> de ton mot de passe (jamais le mot de passe lui-même), ton courriel si tu en donnes un, les parties que tu envoies, et pour chaque appareil relié son nom et sa dernière visite.</li>
+          <li><strong>Effacer mon compte</strong> (une fois connecté) supprime tout cela pour de bon, et ton pseudo redevient libre. Les copies de sûreté quotidiennes de la base s’effacent d’elles-mêmes au bout de sept jours.</li>
+          <li>Les parties gardées dans <em>ce navigateur</em> restent à toi et ne bougent pas : le jeu se joue très bien sans compte.</li>
+          <li><strong>Mot de passe perdu, compte perdu</strong> : rien ne permet encore de le retrouver, courriel ou pas.</li>
+        </ul>
+      </details>
+
+      {# EFFACER SON COMPTE (M14, 4e vague) : seulement une fois le compte OUVERT. Le mot de
+         passe est REDEMANDE — c'est la confirmation, et le serveur la verifie —, et le
+         bouton qui garde est celui qui est mis en avant : un compte efface ne revient pas. #}
+      <div class="boutons" id="compte-effacer-ligne" hidden>
+        <button class="bouton bouton--discret" id="bouton-compte-effacer" type="button">Effacer mon compte</button>
+      </div>
+      <form class="compte-form" id="compte-effacer-form" hidden>
+        <p class="aide aide--petit">Ton pseudo, ton mot de passe, ton courriel, tes appareils et tes parties gardées <em>sur le serveur</em> seront effacés pour de bon. Les parties de <em>ce navigateur</em>, elles, ne sont pas touchées.</p>
+        <div class="compte-form__ligne">
+          <input id="compte-effacer-passe" name="mot_de_passe" type="password" maxlength="128" autocomplete="current-password" placeholder="Ton mot de passe">
+        </div>
+        <div class="boutons">
+          <button class="bouton bouton--principal" id="bouton-compte-effacer-annuler" type="button">Non, le garder</button>
+          <button class="bouton bouton--danger" id="bouton-compte-effacer-confirmer" type="submit">Oui, tout effacer pour de bon</button>
+        </div>
+        <p class="compte-form__etat" id="compte-effacer-etat"></p>
+      </form>
     </section>
   </div>
 
-  {# Commandes tactiles : de vrais elements, jamais de hit-test sur le canvas. #}
+  {# Commandes tactiles : de vrais elements, jamais de hit-test sur le canvas.
+     (Les onglets et les lignes d'un menu, eux, se touchent SUR la toile —
+     `Hud.toucherMenu` : on les touche une fois, on ne les tient pas.) #}
   <div id="tactile" aria-hidden="true">
     <div id="croix"><u></u></div>
     <div id="boutons">
@@ -97,8 +179,11 @@
 <script src="{{ url_for('static', filename='js/hors-ligne.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/base.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/compte.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/defi.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/atlas.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/sprites.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/visages.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/garderobe.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/entree.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/son.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/monde.js') }}?v={{ version }}"></script>
@@ -112,9 +197,14 @@
 <script src="{{ url_for('static', filename='js/incendies.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/police.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/chantiers.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/aeroport.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/foire.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/interactions.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/missions.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/scenes.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/adresse.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/conduite.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/rue.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/histoire.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/hud.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/casque.js') }}?v={{ version }}"></script>

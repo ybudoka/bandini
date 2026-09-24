@@ -118,11 +118,25 @@ const Vehicules = (function () {
     // n'a personne dessus : c'est ce qui le distingue d'un char qui roule.
     const sprite = SPRITES[v.sprite];
     if (sprite && sprite.selle && v.conducteur === 'trafic') {
-      // ⚠️ SANS TOUCHER AUX DES DU JEU : la tete du pilote se tire de sa
-      // position par `hash2`. Un `B.rng()` ici decalait tout ce qui naissait
-      // apres, et un juge de police voyait son auto-patrouille naitre ailleurs.
-      const arch = Entites.archetypeDeRue(x, y, hash2(Math.round(x), Math.round(y)) / 4294967296);
-      v.pilote = arch ? { swaps: arch.couleurs } : null;
+      // ⚠️ **QUELQU'UN DE PRECIS AU VOLANT** : la fiche peut dire QUI mene le char
+      // (`au_volant`, le cabriolet rose et sa conductrice) — et c'est elle, pas
+      // un passant tire de la rue. Son identite voyage avec elle (`arch`) : c'est
+      // ELLE que le carjacking sort de la voiture (`monter`), et pas celle qu'on
+      // croit reconnaitre au slug du char — un voleur qui l'aurait prise reste un
+      // voleur. Aucun de : le catalogue la nomme.
+      const nommee = def.au_volant ? Entites.archetype(def.au_volant) : null;
+      if (nommee && nommee.slug === def.au_volant) {
+        v.pilote = { swaps: nommee.couleurs, arch: nommee.slug };
+      } else {
+        // ⚠️ SANS TOUCHER AUX DES DU JEU : la tete du pilote se tire de sa
+        // position par `hash2`. Un `B.rng()` ici decalait tout ce qui naissait
+        // apres, et un juge de police voyait son auto-patrouille naitre ailleurs.
+        const arch = Entites.archetypeDeRue(x, y, hash2(Math.round(x), Math.round(y)) / 4294967296);
+        // Habille (`Garderobe`) des sa naissance sur la selle, a la meme empreinte : celui
+        // qu'on jette a terre se releve avec SA tenue (`Entites.creerPieton`, `arch.tenue`).
+        const tenue = arch && typeof Garderobe !== 'undefined' ? Garderobe.tirer(arch.slug, hash2(Math.round(y), Math.round(x))) : null;
+        v.pilote = arch ? { swaps: tenue ? Garderobe.couleurs(tenue) : arch.couleurs, tenue: tenue } : null;
+      }
     }
     return v;
   }
@@ -135,16 +149,38 @@ const Vehicules = (function () {
       n'est plus un coupe sport, c'est une auto de plus. Et c'est PYTHON qui
       decide ou — le navigateur n'a pas a savoir qu'une decapotable n'a rien a
       faire a La Shop. */
-  function typeDeRue(zone) {
+  function standingDuParc(standing) {
+    const table = (B.defs.conduite && B.defs.conduite.standing) || {};
+    return table[standing] || { rares: 1, usure: 1 };
+  }
+
+  function typeDeRue(zone, standing) {
     const rares = (zone && zone.rares) || [];
+    // ⚠️ ET PAS DANS UNE RUE PAUVRE (4e vague des quartiers) : une decapotable
+    // devant un preteur sur gages n'est plus une decapotable.
+    const permis = standing === undefined ? 1 : standingDuParc(standing).rares;
     const types = B.defs.vehicules.filter(function (v) {
       if (v.phase !== 1 || v.frequence <= 0) return false;
-      return !v.rare || rares.indexOf(v.slug) >= 0;
+      return !v.rare || (permis && rares.indexOf(v.slug) >= 0);
     });
     if (!types.length) return null;
     let tirage = B.rng() * types.reduce(function (s, v) { return s + v.frequence; }, 0);
     for (const v of types) { tirage -= v.frequence; if (tirage <= 0) return v; }
     return types[0];
+  }
+
+  /** LA MINOUNE D'UNE RUE PAUVRE : la carrosserie qu'il lui reste (`usure`). Elle
+      ne se voit pas d'en haut — elle se SENT, au premier poteau : un char de la
+      rue chic encaisse, celui-la casse. */
+  function user(v, standing) {
+    if (!v) return v;
+    const usure = standingDuParc(standing).usure;
+    if (usure >= 1) return v;
+    // `usure` reste sur le char : c'est ce qui dit qu'il est NE minoune, et pas
+    // qu'il s'est fait defoncer depuis (un juge les distingue).
+    v.usure = usure;
+    v.vie = Math.max(1, Math.round(v.vieMax * usure));
+    return v;
   }
 
   function libreAutour(x, y, rayon) {
@@ -181,7 +217,10 @@ const Vehicules = (function () {
   //: qui la depasse ne se gare pas dedans.
   const CASE_PX = 2 * TT;
 
-  function placeStationnee() {
+  /** `prefere` (facultatif, `garesVoulus()`) : la nuit, on rentre chez soi
+      (`placeDeNuit`). Sans preference — le jour —, le tirage d'avant, au de pres. */
+  function placeStationnee(prefere) {
+    if (prefere && prefere.usage) return placeDeNuit(prefere);
     const t = trafic(), c = Monde.carte, j = B.joueur;
     for (let essai = 0; essai < 20; essai++) {
       const a = B.rng() * Math.PI * 2;
@@ -197,6 +236,64 @@ const Vehicules = (function () {
       return { x: x, y: y, angle: Math.atan2(nez[1], nez[0]) };
     }
     return null;
+  }
+
+  //: Les cases de la carte, par leur tuile du FOND (celle contre la ligne de
+  //: nez, avec le reste de la case derriere elle) : lues une fois par carte.
+  let fondsDe = null, fonds = [];
+  function fondsDesCases() {
+    const c = Monde.carte;
+    if (fondsDe === c) return fonds;
+    fondsDe = c; fonds = [];
+    for (let ty = 2; ty < c.h - 1; ty++) {
+      for (let tx = 1; tx < c.w - 1; tx++) {
+        const g = Monde.glyphe(tx, ty), nez = NEZ[g];
+        if (!nez || Monde.glyphe(tx + nez[0], ty + nez[1]) === g || Monde.glyphe(tx - nez[0], ty - nez[1]) !== g) continue;
+        fonds.push({ tx: tx, ty: ty, x: (tx + 0.5 - nez[0] / 2) * TT, y: (ty + 0.5 - nez[1] / 2) * TT,
+                     angle: Math.atan2(nez[1], nez[0]) });
+      }
+    }
+    return fonds;
+  }
+
+  /** La nuit, une case libre dans l'anneau de naissance — d'abord dans une rue
+      ou l'on habite, et une fois sur quelques-unes (`ailleurs`) devant un
+      commerce : le bar et le depanneur ont leurs clients de nuit.
+
+      ⚠️ **ON CHOISIT PARMI LES CASES, on ne tire pas au hasard dans l'anneau.**
+      Premiere version : le tirage du jour, qui refusait les cases d'ailleurs
+      pendant ses premiers essais. Or une tuile tiree au hasard n'est une case
+      qu'une fois sur dix — refuser en plus faisait MOINS de chars la nuit que
+      le jour (0 contre 1 en 4 000 images, le juge l'a vu). Le jour garde son
+      tirage : c'est lui qui garde les des de la suite a leur place. */
+  function placeDeNuit(prefere) {
+    const t = trafic(), j = B.joueur;
+    const min = t.naissance_px * 0.6, max = t.naissance_px * 0.6 + (t.oubli_px - t.naissance_px);
+    const chez = [], ailleurs = [];
+    for (const f of fondsDesCases()) {
+      const d2 = dist2(f.x, f.y, j.x, j.y);
+      if (d2 < min * min || d2 > max * max) continue;
+      if (Entites.visibleAEcran(f.x, f.y, 40) || !libreAutour(f.x, f.y, 40)) continue;
+      (Monde.usageA(f.tx, f.ty) === prefere.usage ? chez : ailleurs).push(f);
+    }
+    const versAilleurs = B.rng() < (prefere.ailleurs || 0);
+    const liste = chez.length && !(versAilleurs && ailleurs.length) ? chez : ailleurs;
+    if (!liste.length) return null;
+    const f = liste[Math.floor(B.rng() * liste.length)];
+    return { x: f.x, y: f.y, angle: f.angle };
+  }
+
+  /** Combien de chars garés la bulle veut à cette heure, et où d'abord.
+
+      ⚠️ **LA NUIT, LES CHARS RENTRENT À LA MAISON** (`TRAFIC.garer_la_nuit`) :
+      deux fois plus, et d'abord dans les rues où l'on habite. Le jour rend
+      exactement ce qu'il rendait avant (six, n'importe où) — c'est ce qui garde
+      les des de toute la suite a leur place. `estNuit(heure)` AVEC l'heure :
+      c'est la nuit DEHORS, qu'on la voie ou non. */
+  function garesVoulus() {
+    const t = trafic(), n = t.garer_la_nuit;
+    if (n && B.partie && Monde.estNuit(B.partie.heure)) return { max: n.max, usage: n.usage, ailleurs: n.ailleurs };
+    return { max: t.stationnes_max, usage: null, ailleurs: 0 };
   }
 
   /** Comme les pietons : naitre hors champ, s'oublier hors de la bulle. */
@@ -280,7 +377,7 @@ const Vehicules = (function () {
       const v = B.entites[i];
       if (v.type !== 'vehicule') continue;
       const loin = dist2(v.x, v.y, j.x, j.y) > t.oubli_px * t.oubli_px;
-      if (loin && v.conducteur !== j && !v.mission && !v.remorqueePar && !v.remorque && !Entites.visibleAEcran(v.x, v.y, 60)) { Entites.retirer(v); continue; }
+      if (loin && v.conducteur !== j && !v.mission && !v.remorqueePar && !v.remorque && !Entites.visibleAEcran(v.x, v.y, margeDOubli(v))) { Entites.retirer(v); continue; }
       if (v.etat === 'epave') continue;
       // ⚠️ **UNE PANNE N'EST PAS UN CHAR GARE** : la compter dans les places
       // de stationnement prenait une place au parc normal, donc la ville
@@ -304,27 +401,42 @@ const Vehicules = (function () {
     if (roulent < voulu) {
       const place = placeDansLeTrafic();
       if (place) {
-        const type = typeDeRue(zone);
+        const rang = Monde.standingA(Math.floor(place.x / TT), Math.floor(place.y / TT));
+        const type = typeDeRue(zone, rang);
         const v = type && creer(type.slug, place.x, place.y, place.angle, { conducteur: 'trafic', etat: 'roule', sens: place.sens });
         if (v) {
+          user(v, rang);
           v.vitesse = v.def.vitesse_max * t.vitesse_ville * 0.5;
+          // ⚠️ Le cycliste nait DEJA a la bordure : ne au milieu de sa voie, on le
+          // voyait glisser vers le trottoir a chaque apparition.
+          if (estVeloDuTrafic(v)) {
+            const q = droiteDe(PAS_FLECHE[place.sens]);
+            v.x += q[0] * t.velo.bord_px; v.y += q[1] * t.velo.bord_px;
+          }
           // ⚠️ Une ambulance sur trois est EN COURSE, et on l'entend passer.
           // Les deux autres rentrent au garage : une ville ou toutes les
           // ambulances hurlent n'est pas une ville, c'est une alarme.
           if (v.def.sirene) v.sirene = B.rng() < AMBULANCE_EN_COURSE;
         }
       }
-    } else if (stationnes < t.stationnes_max && B.t % 40 === 0) {
-      const place = placeStationnee();
+    } else if (stationnes < garesVoulus().max && B.t % 40 === 0) {
+      const place = placeStationnee(garesVoulus());
       // ⚠️ IL FAUT QUE LE CHAR RENTRE DANS LA CASE. Une case fait deux tuiles,
       // soit 32 px ; la remorqueuse en fait 36. Garee la, elle depassait, le
       // garde-fou (`degager`) la poussait hors des tuiles qu'elle chevauche, et
       // elle finissait A CHEVAL SUR SES LIGNES — a un centieme de pixel pres,
       // ce qui est exactement ce qu'un juge voit et qu'un oeil ne voit pas.
       if (place) {
-        let type = typeDeRue(zone);
-        for (let essai = 0; essai < 6 && type && type.longueur > CASE_PX; essai++) type = typeDeRue(zone);
-        if (type && type.longueur <= CASE_PX) creer(type.slug, place.x, place.y, place.angle, { etat: 'stationne' });
+        // ⚠️ Et ce qui est TOUJOURS MENE (`au_volant`) ne se gare jamais : un
+        // cabriolet rose vide, sans personne a en faire descendre, ne serait plus
+        // le sien — il ne se croise qu'en circulation, avec sa conductrice.
+        const rentre = function (t) { return t.longueur <= CASE_PX && !t.au_volant; };
+        const rang = Monde.standingA(Math.floor(place.x / TT), Math.floor(place.y / TT));
+        let type = typeDeRue(zone, rang);
+        for (let essai = 0; essai < 6 && type && !rentre(type); essai++) type = typeDeRue(zone, rang);
+        if (type && rentre(type)) {
+          user(creer(type.slug, place.x, place.y, place.angle, { etat: 'stationne' }), rang);
+        }
       }
     }
   }
@@ -345,7 +457,9 @@ const Vehicules = (function () {
     const def = Monde.carte && Monde.carte.def;
     const places = (def && def.amarrages) || [];
     const j = B.joueur;
-    if (!places.length || !j || B.interieur) return 0;
+    // ⚠️ Les grands bateaux ne dependent pas des chaloupes : une ville sans
+    // amarrage aurait quand meme son cargo.
+    if (!places.length || !j || B.interieur) return majMouillages();
     let nees = 0;
     for (const place of places) {
       const x = place.x * TT + 8, y = place.y * TT + 8;
@@ -371,8 +485,47 @@ const Vehicules = (function () {
       const v = creer('bateau', x, y, place.angle || 0, { etat: 'stationne', couleur: couleur });
       if (v) { v.amarrage = place; nees++; }
     }
+    return nees + majMouillages();
+  }
+
+  /** LES GRANDS BATEAUX A QUAI : le chalutier et le porte-conteneurs (demande de
+      Martin, 21 sept. 2026). La meme regle que les chaloupes — hors champ, dans la
+      bulle, une seule a la fois, la couleur a l'empreinte du mouillage —, mais la
+      place est un CENTRE en pixels et un cap (`carte.mouillages`, `navires.py`) :
+      une coque de dix tuiles ne se centre pas sur une tuile, et elle mouille le
+      long du quai, le nez vers le chenal.
+
+      ⚠️ **Hors champ par son BOUT, pas par son centre** : a 160 px, un centre
+      juste hors de l'ecran laisse la proue dedans. La marge est la demi-longueur.
+      ⚠️ Et EN DECA de l'oubli (`oubli_px`) : au-dela, `peupler` l'oublierait a
+      l'image suivante et on la referait — un porte-conteneurs qui nait et meurt
+      soixante fois par seconde, hors champ. */
+  function majMouillages() {
+    const def = Monde.carte && Monde.carte.def;
+    const places = (def && def.mouillages) || [];
+    const j = B.joueur;
+    if (!places.length || !j || B.interieur) return 0;
+    const portee = trafic().oubli_px - GAREES_MARGE;
+    let nees = 0;
+    for (const place of places) {
+      const fiche = vehiculeDef(place.slug);
+      if (!fiche) continue;
+      const d2 = (place.x - j.x) * (place.x - j.x) + (place.y - j.y) * (place.y - j.y);
+      if (d2 > portee * portee) continue;
+      if (B.entites.some(function (q) { return q.type === 'vehicule' && q.amarrage === place; })) continue;
+      if (Entites.visibleAEcran(place.x, place.y, fiche.longueur / 2 + 24)) continue;
+      const couleur = fiche.couleurs[hash2(place.x * 7919 + place.y, 0xC0C0E) % fiche.couleurs.length];
+      const v = creer(place.slug, place.x, place.y, place.angle || 0, { etat: 'stationne', couleur: couleur });
+      if (v) { v.amarrage = place; nees++; }
+    }
     return nees;
   }
+
+  /** La marge d'oubli d'un char : ⚠️ par son BOUT. Un char de moins de 72 px garde
+      les 60 px de tout le monde (les des du trafic ne bougent pas d'un cran) ; un
+      porte-conteneurs, sa demi-longueur et de l'air — sinon il disparaissait la
+      proue encore a l'ecran. */
+  function margeDOubli(v) { return Math.max(60, v.def.longueur / 2 + 24); }
 
   //: La bulle des chars gares au poste. ⚠️ EN DECA de l'oubli (`oubli_px`) : au-dela,
   //: `peupler` oublierait a l'image suivante celle qu'on vient de poser, et on la
@@ -465,11 +618,25 @@ const Vehicules = (function () {
       fraction de vitesse qu'on garde en passant au travers. */
   function decorDevant(v, x, y) {
     const ph = physique();
-    if (Math.hypot(v.vx, v.vy) < ph.choc_vitesse_min) return null;
+    // ⚠️ Un char LENT ne casse rien et ne bute sur rien — mais il POUSSE encore une benne : la
+    // poussée le ralentit sous ce seuil, et sans elle il la traverserait comme un fantôme.
+    const lent = Math.hypot(v.vx, v.vy) < ph.choc_vitesse_min;
     for (const c of cercles(v, x, y)) {
-      for (const d of Entites.decorAutour(c.x, c.y, c.r + 14)) {
+      // ⚠️ 26 et pas 14 : une benne fait 30 px de large, son CENTRE est à 15 px de son bout.
+      // (Le test précis, lui, est plus bas : ceci ne fait que choisir qui regarder.)
+      for (const d of Entites.decorAutour(c.x, c.y, c.r + 26)) {
         if (d.brise) continue;
         const fiche = DECORS[d.decor] || {};
+        // ⚠️ Une RAMPE (le tas de terre) n'est ni un mur ni un obstacle qui cède :
+        // le char passe dessus, et `majTas` le fait décoller. Sans cette ligne, la
+        // berline butait sur le tas et l'autobus le déracinait.
+        if (fiche.rampe) continue;
+        // ⚠️ Une BENNE se POUSSE : c'est sa boîte, pas un cercle, qu'on touche.
+        if (fiche.poussable) {
+          if (Entites.boiteTouche(d, c.x, c.y, c.r)) return { quoi: 'pousse', d: d, c: c };
+          continue;
+        }
+        if (lent) continue;
         if (!fiche.arrete && !fiche.casse) continue;
         if (Math.hypot(d.x - c.x, d.y - c.y) > c.r + (d.r || 4)) continue;
         // ⚠️ `lourd` : il ne cede qu'a un char d'AU MOINS cette masse — le
@@ -486,11 +653,37 @@ const Vehicules = (function () {
     return null;
   }
 
+  /** POUSSER UNE BENNE : la boîte est écartée du cercle qui la touche par le côté le moins
+      enfoncé (comme un piéton contre un décor), et le char paie sa masse — la berline la
+      pousse à petite vitesse, l'autobus la sent à peine. Rend faux si elle ne bouge pas. */
+  function pousserLeDecor(v, d, c) {
+    const ph = physique(), fiche = DECORS[d.decor] || {}, sol = fiche.sol;
+    const dx = d.x - c.x, dy = d.y - c.y;
+    const px = sol[0] + c.r - Math.abs(dx), py = sol[1] + c.r - Math.abs(dy);
+    let mx = 0, my = 0;
+    if (px < py) mx = (dx < 0 ? -1 : 1) * (px + 0.5); else my = (dy < 0 ? -1 : 1) * (py + 0.5);
+    if (!Entites.pousserDecor(d, mx, my)) return false;
+    const frein = 1 - Math.min(ph.poussee_frein_max, fiche.poussable * ph.poussee_frein / v.def.masse);
+    v.vitesse *= frein; v.vx *= frein; v.vy *= frein;
+    if (!d.sonT || B.t - d.sonT > 25) {
+      d.sonT = B.t;
+      Son.SFX.chantier('conteneur', d.x, d.y, 260);
+      Entites.poussiere(d.x, d.y + 4, 2);
+    }
+    return true;
+  }
+
   /** Ce qui arrive quand un char rencontre du decor. Rend vrai si la voie
       s'ouvre (le decor a cede), faux s'il faut s'arreter dessus. */
   function heurterDecor(v, x, y) {
     const rencontre = decorDevant(v, x, y);
     if (!rencontre) return true;
+    // Une benne : on la pousse. Si elle ne peut pas bouger (un mur derrière, la limite de sa
+    // portée), c'est un mur comme un autre.
+    if (rencontre.quoi === 'pousse') {
+      if (pousserLeDecor(v, rencontre.d, rencontre.c)) return true;
+      rencontre.quoi = 'arrete';
+    }
     if (rencontre.quoi === 'arrete') {
       // ⚠️ Le REBOND se pose ici, pas dans `heurterMur` : celui-ci ne touche
       // qu'a `v.vitesse`, et c'est l'appelant qui renverse `vx`/`vy` — pour
@@ -557,7 +750,11 @@ const Vehicules = (function () {
   function defoncerDevant(v, x, y) {
     const ph = physique();
     if (!v.def.defonce || B.interieur) return false;
-    if (Math.hypot(v.vx, v.vy) < ph.defonce_vitesse_min) return false;
+    // ⚠️ Le seuil se règle sur la vitesse du char : la pelle (1,3 px/image, 12 km/h) ne serait jamais
+    // assez vite pour le 1,4 d'un camion — et c'est justement celle qui traverse une clôture au pas.
+    // Trois quarts de sa vitesse max, sans jamais dépasser le seuil de la fiche : rien ne change pour
+    // les chars plus rapides que 1,9.
+    if (Math.hypot(v.vx, v.vy) < Math.min(ph.defonce_vitesse_min, v.def.vitesse_max * 0.75)) return false;
     const tuiles = tuilesQuiBloquent(v, x, y);
     if (!tuiles.length) return false;
     for (const t of tuiles) {
@@ -589,6 +786,8 @@ const Vehicules = (function () {
       demande un bit « terre » sur chaque tuile du jeu pour un seul vehicule. */
   function tuileInterdite(v, tx, ty) {
     if (v.def && v.def.eau) return !Monde.estEau(tx, ty);
+    // ⚠️ Le passage d'un rideau leve, pour le seul char qu'il attend (`Monde.seuilOuvert`).
+    if (Monde.seuilOuvert(v, tx, ty)) return false;
     return Monde.bloque(tx, ty, Monde.MASQUE_VEHICULE);
   }
 
@@ -667,6 +866,11 @@ const Vehicules = (function () {
       trouve rien, on n'y revient pas avant une demi-seconde : la recherche
       est chere, et le mur ne bougera pas d'ici la.
 
+      ⚠️ **La portee est au moins la longueur du char** : un porte-conteneurs de
+      dix tuiles, le nez dans une jetee, ne se degage pas a six tuiles. Pour tout ce
+      qui roule en ville, `degagement_px` couvre deja le plus long (le juge) et rien
+      ne change.
+
       ⚠️ Pas pour le trafic sur ses rails : il ne lit pas les tuiles, il suit
       sa voie, et il a son propre chien de garde (`debloquer`). Rend vrai si
       le char a bouge. */
@@ -689,8 +893,8 @@ const Vehicules = (function () {
     if (v.angleLibre !== undefined && Math.abs(ecartAngle(v.angle, v.angleLibre)) > 0.01) caps.push(v.angleLibre);
     const droit = Math.round(v.angle / (Math.PI / 2)) * (Math.PI / 2);
     if (caps.every(function (a) { return Math.abs(ecartAngle(a, droit)) > 0.01; })) caps.push(droit);
-    const pas = ph.degagement_pas_px;
-    for (let r = 0; r <= ph.degagement_px; r += pas) {
+    const pas = ph.degagement_pas_px, portee = Math.max(ph.degagement_px, v.def.longueur);
+    for (let r = 0; r <= portee; r += pas) {
       const n = r === 0 ? 1 : Math.min(32, Math.max(8, Math.round(2 * Math.PI * r / pas)));
       for (const a of caps) {
         for (let i = 0; i < n; i++) {
@@ -726,7 +930,7 @@ const Vehicules = (function () {
     const d = v.def;
     if (cmd.gaz > 0) v.vitesse += d.acceleration * cmd.gaz;
     if (cmd.frein > 0) {
-      if (v.vitesse > 0.15) v.vitesse -= d.frein * cmd.frein * Neige.frein(v);
+      if (v.vitesse > 0.15) v.vitesse -= d.frein * cmd.frein * Neige.frein(v) * Monde.freinMouille(v);
       else v.vitesse -= d.acceleration * 0.7 * cmd.frein;      // marche arriere
     }
     if (cmd.freinMain) v.vitesse *= 0.965;
@@ -757,7 +961,7 @@ const Vehicules = (function () {
     }
     // Adherence : la vitesse reelle glisse vers le cap. Frein a main : elle traine.
     // ⚠️ LA NEIGE DIVISE L'ADHERENCE (M12) — la police glisse comme tout le monde.
-    const adh = (cmd.freinMain ? d.adherence_frein : d.adherence) * Neige.adherence(v);
+    const adh = (cmd.freinMain ? d.adherence_frein : d.adherence) * Neige.adherence(v) * Monde.adherenceMouillee(v);
     v.vx += (Math.cos(v.angle) * v.vitesse - v.vx) * adh;
     v.vy += (Math.sin(v.angle) * v.vitesse - v.vy) * adh;
     // En l'air (rampe) : on retombe.
@@ -801,6 +1005,8 @@ const Vehicules = (function () {
     Entites.dansLaCarte(v);
     heurterVehicules(v);
     heurterPietons(v);
+    // ⚠️ La ligne du large refuse ne retient que le joueur : c'est lui que la camera suit.
+    if (v.conducteur === B.joueur) retenirAuLarge(v);
     // La rampe : on decolle a la sortie.
     const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
     // ⚠️ Le seuil de decollage vient de Python (`saut_vitesse_min`), qui le
@@ -841,13 +1047,26 @@ const Vehicules = (function () {
           if (d2 >= min * min || d2 === 0) continue;
           const d = Math.sqrt(d2), nx = dx / d, ny = dy / d, chevauche = min - d;
           const m1 = v.def.masse, m2 = autre.def.masse, total = m1 + m2;
-          // Sur des rails : on ne se pousse pas. ⚠️ L'AUTOBUS D'UNE LIGNE AUSSI est
-          // sur des rails (`Autobus.conduire`). Il n'y etait pas : un velo du trafic
-          // qui perdait patience derriere lui (`force`) le poussait de deux pixels
-          // pendant qu'il attendait le feu — assez pour mettre son nez dans le
-          // carrefour, ou le sortir de son trace (`test_autobus_js`, 17 sept. 2026).
+          // ⚠️ DEUX CHARS SUR RAILS NE SE POUSSENT PAS AUX MASSES : un vélo qui
+          // perd patience (`force`) derrière un autobus arrêté au feu le poussait
+          // de deux pixels — assez pour mettre son nez dans le carrefour, ou le
+          // sortir de son tracé (`test_autobus_js`, 17 sept. 2026). Mais NE JAMAIS
+          // POUSSER NI L'UN NI L'AUTRE laissait les deux chevauchés pour de bon
+          // dès qu'ils se touchaient pour une autre raison — retour de Martin,
+          // 21 sept. 2026 : « les véhicules ne devraient jamais pouvoir se
+          // chevaucher ». Celui qui ATTEND LÉGITIMEMENT (feu rouge, stop, boîte)
+          // a raison d'être là et ne bouge jamais ; c'est l'autre — l'impatient,
+          // ou n'importe quel char qui s'est retrouvé là par ailleurs — qui
+          // absorbe TOUTE la séparation. Si aucun des deux n'attend (ils se
+          // frôlent à un coin, en roulant), le partage aux masses d'avant suffit.
           const surDesRails = function (q) { return q.conducteur === 'trafic' || q.conducteur === 'ligne'; };
-          if (surDesRails(v) && surDesRails(autre)) return;
+          if (surDesRails(v) && surDesRails(autre)) {
+            const vAttend = attenteLegitime(v), autreAttend = attenteLegitime(autre);
+            if (vAttend && !autreAttend) { autre.x += nx * chevauche; autre.y += ny * chevauche; }
+            else if (autreAttend && !vAttend) { v.x -= nx * chevauche; v.y -= ny * chevauche; }
+            else { v.x -= nx * chevauche * (m2 / total); v.y -= ny * chevauche * (m2 / total); autre.x += nx * chevauche * (m1 / total); autre.y += ny * chevauche * (m1 / total); }
+            return;
+          }
           v.x -= nx * chevauche * (m2 / total); v.y -= ny * chevauche * (m2 / total);
           autre.x += nx * chevauche * (m1 / total); autre.y += ny * chevauche * (m1 / total);
           const relatif = (v.vx - autre.vx) * nx + (v.vy - autre.vy) * ny;
@@ -891,6 +1110,15 @@ const Vehicules = (function () {
         if (d >= min) continue;
         const nx = dx / d, ny = dy / d;
         p.x = c.x + nx * min; p.y = c.y + ny * min;
+        // ⚠️ PAS HORS DE LA CARTE : un char gare qui chevauche le joueur au ras du
+        // bord nord le poussait a y = -3,5, dans le « mur » du dehors (le singe l'a
+        // trouve, graine 1, le 21 sept. 2026). La meme borne que pour tout ce qui marche.
+        Entites.dansLaCarte(p);
+        // ⚠️ UNE AUTO DE PATROUILLE NE RENVERSE PAS SES AGENTS : elle les pousse
+        // hors de sa carrosserie, c'est tout. L'equipage descend d'une auto
+        // arretee (`Police.commandes`) ; ceci n'est que le filet — un agent reste
+        // au flanc d'une auto qui repart, une autre patrouille le frole.
+        if (v.conducteur === 'police' && p.agent) continue;
         if (vitesse >= ph.renverse_vitesse_min && !p.intouchable && p.etat !== 'assomme') {
           const degats = Math.round(vitesse * ph.renverse_degats_par_px);
           const avant = p.vivant;
@@ -920,8 +1148,16 @@ const Vehicules = (function () {
     if (v.assure && typeof Missions !== 'undefined' && Missions.charPerdu) Missions.charPerdu(v);
   }
 
+  /** La triche VEHICULES INVINCIBLES (`Hud.menuDebug`) : le char que le JOUEUR
+      CONDUIT — pas le trafic, pas la police, pas le fuyard d'une mission qu'il
+      faut justement abimer. ⚠️ `B.joueur &&` : un char gare a `conducteur ===
+      null` serait sinon « conduit » par un joueur qui n'existe pas encore. */
+  function blinde(v) {
+    return triche('vehicules') && !!B.joueur && v.conducteur === B.joueur;
+  }
+
   function endommager(v, degats, source) {
-    if (v.etat === 'epave' || degats <= 0) return;
+    if (v.etat === 'epave' || degats <= 0 || blinde(v)) return;
     v.vie -= degats;
     if (source) v.agresseur = source;
     if (v.vie > 0) return;
@@ -984,6 +1220,9 @@ const Vehicules = (function () {
       v.coule = 0;
       return false;
     }
+    // ⚠️ Couler, c'est DISPARAITRE : une triche qui laisse la baie manger le char
+    // n'est pas invincible. Il roule sur l'eau, sans un remous.
+    if (blinde(v)) { v.coule = 0; return false; }
     if (!v.coule) {
       Entites.remous(v.x, v.y, 14);
       // ⚠️ Il entrait dans l'eau SANS UN BRUIT : le HUD ecrivait « IL COULE —
@@ -1048,6 +1287,56 @@ const Vehicules = (function () {
     }
   }
 
+  /** Une PLAQUE D'ACIER sous les roues (la tranchée d'un chantier) : ça claque et
+      ça secoue, et ça ne coûte RIEN — un nid-de-poule est un accident, une plaque
+      est un décor qu'on sent. ⚠️ Même règle de répit que les nids (sans lui un char
+      lent la claquerait à chaque image de la tuile), et le claquement part POSÉ
+      là où roule le char : le trafic aussi claque, et s'entend à la distance. Ce
+      qui secoue la caméra, lui, est le char du joueur. */
+  function majPlaque(v) {
+    const ph = physique();
+    if (v.plaqueT > 0) { v.plaqueT--; return; }
+    if (v.z > 2 || Math.hypot(v.vx, v.vy) < 0.8 || B.interieur) return;
+    if (!Monde.plaqueDAcier(Math.floor(v.x / TT), Math.floor(v.y / TT))) return;
+    v.plaqueT = ph.plaque_repit_images;
+    Son.SFX.chantier('plaque', v.x, v.y, 300);
+    if (v.conducteur === B.joueur) {
+      B.cam.secousse = Math.max(B.cam.secousse, ph.plaque_secousse);
+      Entree.vibrer(40);
+    }
+  }
+
+  /** Un TAS DE TERRE sous les roues (le chantier) : une rampe naturelle. Le char
+      décolle doucement, ne perd ni vitesse ni carrosserie, et retombe plus loin.
+
+      ⚠️ Le saut est PLAFONNÉ, il ne se mesure pas (`tas_hauteur_max` : moins que les
+      6 px au-delà desquels un char passe AU-DESSUS des tuiles) : un mur retient
+      toujours ce qui retombe, et un tas au bord d'un lot ne lance personne dans une
+      façade. Même répit que les nids, et seulement au sol : en l'air, rien. */
+  function majTas(v) {
+    const ph = physique();
+    if (v.tasT > 0) { v.tasT--; return; }
+    if (v.z > 0 || v.vz !== 0 || v.rails || B.interieur) return;
+    const vit = Math.hypot(v.vx, v.vy);
+    if (vit < ph.tas_vitesse_min) return;
+    for (const c of cercles(v, v.x, v.y)) {
+      for (const d of Entites.decorAutour(c.x, c.y, c.r + 26)) {
+        const fiche = DECORS[d.decor] || {};
+        if (!fiche.rampe || d.brise) continue;
+        if (Math.hypot(d.x - c.x, d.y - c.y) > c.r + fiche.rampe) continue;
+        v.vz = Math.min(vit, ph.tas_vitesse_max) * ph.tas_impulsion;
+        v.tasT = ph.tas_repit_images;
+        Entites.poussiere(v.x, v.y, 5);
+        Son.SFX.chantier('tas', v.x, v.y, 300);
+        if (v.conducteur === B.joueur) {
+          B.cam.secousse = Math.max(B.cam.secousse, ph.tas_secousse);
+          Entree.vibrer(30);
+        }
+        return;
+      }
+    }
+  }
+
   /** L'heure de la panne finie, le char s'en va — il s'efface, faute de savoir
       rentrer au garage tout seul.
 
@@ -1073,6 +1362,8 @@ const Vehicules = (function () {
     const ph = physique();
     bruitDePassage(v);
     majNidDePoule(v);
+    majPlaque(v);
+    majTas(v);
     if (v.forceT > 0) v.forceT--;
     if (v.panneT > 0) majFinDePanne(v);
     if (majNoyade(v)) return;
@@ -1126,7 +1417,7 @@ const Vehicules = (function () {
   function basculerCrochet(v) {
     if (v.remorque) { decrocher(v); return false; }
     const cible = aCrocher(v);
-    if (!cible) { Hud.message('RIEN À ACCROCHER DERRIÈRE'); return false; }
+    if (!cible) { Hud.message('RIEN À ACCROCHER DERRIÈRE'); Son.SFX.erreur(); return false; }
     v.remorque = cible;
     cible.remorqueePar = v;
     cible.alarme = 0;
@@ -1279,6 +1570,20 @@ const Vehicules = (function () {
 
   // --- Monter, descendre, ejecter ---------------------------------------------------
 
+  /** ⚠️ ON N'OUVRE PAS UNE PORTIERE A TRAVERS LE BARBELE (le lot du poste, 23 sept.
+      2026). La portiere s'ouvre a `portee_monter_px` — trente pixels, deux tuiles :
+      clos de barbele, le lot du poste se volait quand meme depuis le trottoir, la
+      main par-dessus la cloture, et l'auto-patrouille volee ouvrait ensuite sa propre
+      barriere. Le trait de la main au char ne traverse donc aucune tuile de solidite
+      5. ⚠️ Seulement 5 : on monte dans une chaloupe PAR-DESSUS l'eau du quai. */
+  function aPorteeDeMain(j, x, y) {
+    const n = Math.ceil(Math.hypot(x - j.x, y - j.y) / 4);
+    for (let k = 1; k < n; k++) {
+      if (Monde.solidite(Math.floor((j.x + (x - j.x) * k / n) / TT), Math.floor((j.y + (y - j.y) * k / n) / TT)) === 5) return false;
+    }
+    return true;
+  }
+
   function vehiculeSousLaMain(j) {
     const portee = physique().portee_monter_px;
     let meilleur = null, dMin = Infinity;
@@ -1287,7 +1592,7 @@ const Vehicules = (function () {
     for (const v of Entites.autour(j.x, j.y, portee + 20, function (e) { return e.type === 'vehicule' && e.etat !== 'epave' && !e.rails; })) {
       for (const c of cercles(v)) {
         const d = Math.hypot(c.x - j.x, c.y - j.y) - c.r;
-        if (d < dMin && d <= portee) { dMin = d; meilleur = v; }
+        if (d < dMin && d <= portee && faceA(j, c.x, c.y) && aPorteeDeMain(j, c.x, c.y)) { dMin = d; meilleur = v; }
       }
     }
     return meilleur;
@@ -1297,11 +1602,14 @@ const Vehicules = (function () {
     if (!v || v.etat === 'epave' || j.dansVehicule) return false;
     // Le volant part droit : on n'herite pas du braquage de celui d'avant.
     v.volant = 0;
+    // Ni du demi-tour qu'il n'a pas fini (`virerDeBord`) : descendu au large en pleine
+    // virée, il reprenait son vieux cap a la montee suivante.
+    v.virage = null;
     // ⚠️ ON NE MONTE PAS DANS UN CHAR REMORQUE. Rien ne l'interdisait, et ce
     // serait la facon la plus courte de casser la physique : deux conducteurs,
     // deux volontes, un seul lien rigide. Et le refus SE DIT — une porte qui ne
     // s'ouvre pas sans un mot se lit comme un bogue.
-    if (v.remorqueePar) { Hud.message('IL EST SUR LA FOURCHE'); return false; }
+    if (v.remorqueePar) { Hud.message('IL EST SUR LA FOURCHE'); Son.SFX.erreur(); return false; }
     let crime = null, vu = false;
     if (v.conducteur === 'trafic' && v.def.classe === 'velo') {
       // On prend le velo au cycliste : il tombe, il a tout vu, il le dit.
@@ -1310,7 +1618,7 @@ const Vehicules = (function () {
       // le sol.
       const arch = Entites.archetypeDeRue(v.x, v.y, hash2(Math.round(v.x), Math.round(v.y)) / 4294967296);
       const cycliste = Entites.creerPieton(v.x, v.y + 10,
-        v.pilote && v.pilote.swaps ? Object.assign({}, arch, { couleurs: v.pilote.swaps }) : arch);
+        v.pilote && v.pilote.swaps ? Object.assign({}, arch, { couleurs: v.pilote.swaps, tenue: v.pilote.tenue || null }) : arch);
       v.pilote = null;
       cycliste.etat = 'temoin'; cycliste.menace = j; cycliste.minuterie = 600; cycliste.cri = 120;
       cycliste.recul = 14; cycliste.vx = 0; cycliste.vy = 1.5;
@@ -1322,9 +1630,13 @@ const Vehicules = (function () {
       // avec ses couleurs, et il quitte la selle. Sans `v.pilote = null`, le
       // joueur le cachait tant qu'il roulait et il reapparaissait assis sur la
       // moto des qu'on en descendait.
-      const arch = Entites.archetypeDeRue();
+      // ⚠️ **C'EST CELUI QUI CONDUIT QUI DESCEND** : la conductrice du cabriolet, en
+      // robe rose, et pas un passant tire au hasard qui aurait ses couleurs. Elle
+      // dit son identite (`pilote.arch`) ; un pilote sans nom — le trafic ordinaire,
+      // le voleur d'une moto — reste un passant de la rue.
+      const arch = v.pilote && v.pilote.arch ? Entites.archetype(v.pilote.arch) : Entites.archetypeDeRue();
       const victime = Entites.creerPieton(v.x + Math.cos(v.angle + Math.PI / 2) * 14, v.y + Math.sin(v.angle + Math.PI / 2) * 14,
-        v.pilote && v.pilote.swaps ? Object.assign({}, arch, { couleurs: v.pilote.swaps }) : arch);
+        v.pilote && v.pilote.swaps ? Object.assign({}, arch, { couleurs: v.pilote.swaps, tenue: v.pilote.tenue || null }) : arch);
       v.pilote = null;
       victime.etat = 'temoin'; victime.menace = j; victime.minuterie = 600; victime.cri = 120;
       crime = 'carjacking'; vu = true;
@@ -1395,9 +1707,15 @@ const Vehicules = (function () {
     const v = j.dansVehicule;
     if (!v) return false;
     if (!force && Math.abs(v.vitesse) > 1.2) { v.vitesse *= 0.8; return false; }
+    // ⚠️ SOUS LE TOIT D'UN GARAGE, les portieres donnent sur des murs : on ne descend
+    // pas (on recule d'abord), et si on y est force — vendu chez Ti-Guy, une epave —
+    // on ressort a pied par-dessous le rideau, dans la baie.
+    const rideau = Monde.rideauDe(v);
+    if (rideau && !force) { Hud.message('RECULE D’ABORD — T’ES SOUS LE TOIT'); Son.SFX.erreur(); return false; }
     const cotes = [v.angle + Math.PI / 2, v.angle - Math.PI / 2, v.angle + Math.PI];
     let pose = false;
-    for (const a of cotes) {
+    if (rideau) { const baie = Monde.baieDeLaPorteDeGarage(rideau); j.x = baie.x; j.y = baie.y; pose = true; }
+    for (const a of (pose ? [] : cotes)) {
       const x = v.x + Math.cos(a) * (v.def.largeur / 2 + 8), y = v.y + Math.sin(a) * (v.def.largeur / 2 + 8);
       if (!Monde.bloque(Math.floor(x / TT), Math.floor(y / TT), Monde.MASQUE_PIETON)) { j.x = x; j.y = y; pose = true; break; }
     }
@@ -1472,6 +1790,19 @@ const Vehicules = (function () {
       const f = Monde.fleche(x, y);
       if (f === sens) return true;
       if (f !== '+') return false;
+    }
+    return false;
+  }
+
+  /** Cette sortie part-elle d'ici, ou d'une tuile plus loin TOUT DROIT dans la
+      boite (`cap`) ? C'est la question que le tirage ne pose pas : une sortie
+      que la boite n'a pas se decouvre au fond, et on y arrive trop tard. */
+  function sortieDevant(tx, ty, cap, sens, v) {
+    const p = PAS_FLECHE[cap];
+    let x = tx, y = ty;
+    for (let i = 0; i < 9 && Monde.fleche(x, y) === '+'; i++) {
+      if (peutSortir(x, y, sens, v)) return true;
+      x += p[0]; y += p[1];
     }
     return false;
   }
@@ -1598,7 +1929,292 @@ const Vehicules = (function () {
     return { tx: sx, ty: sy, inter: Monde.intersectionA(sx + p[0], sy + p[1]) };
   }
 
+  // --- Le velo : a la bordure, a gauche pour tourner a gauche, et hors de la rue -------
+  //
+  // ⚠️ Martin (21 sept. 2026) : « les velos peuvent passer dans les parcs, les
+  // trottoirs, et restent souvent sur la bordure de la route, sauf pour virage a
+  // gauche ». Le velo du trafic roulait au MILIEU de sa voie, comme une auto de
+  // huit pixels de large, et ne quittait jamais les fleches. C'est toujours un
+  // char sur des rails : on ne touche qu'aux CIBLES qu'on lui donne.
+  //
+  // ⚠️ **AUCUN DE.** Ou il tourne, s'il monte sur le trottoir, quel parc il
+  // traverse : tout se lit a l'empreinte du cycliste et de l'endroit (`hash2`).
+
+  /** Un velo que le TRAFIC mene. ⚠️ La classe, pas le slug — et pas celui du
+      joueur, ni un fuyard de mission (`poursuite`), qui brule tout. */
+  function estVeloDuTrafic(v) {
+    return !!v.def && v.def.classe === 'velo' && v.conducteur === 'trafic' && !v.poursuite && !!trafic().velo;
+  }
+
+  /** Le hasard d'UN cycliste a UN endroit : stable, et gratuit pour les des du jeu. */
+  function empreinteVelo(v, a, b) { return hash2((v.id * 7919 + a) | 0, b | 0) / 4294967296; }
+
+  /** A droite de ce sens (on roule a droite) : le pas vers le trottoir. */
+  function droiteDe(p) { return [-p[1], p[0]]; }
+
+  //: Le bras d'un croisement par ou l'on SORT dans ce sens.
+  const BRAS_DU_SENS = { '^': 'N', 'v': 'S', '<': 'O', '>': 'E' };
+
+  /** Ou ce cycliste ira au croisement qu'il a devant : tout droit, a droite, a
+      gauche — dans l'ordre ou il les essaiera. Les memes parts ET le meme repli
+      que le reste du trafic (`prochaineCible`, la boite : « tout droit, sinon a
+      gauche »), mais tirees a l'empreinte, et d'abord parmi les bras qui
+      EXISTENT : se ranger a gauche devant un T sans gauche, c'est se ranger pour
+      rien. La boite, elle, prend ensuite la premiere de la liste qui en part
+      (`sortieDevant`). */
+  function ordreDuVelo(v, inter, sens) {
+    const p = PAS_FLECHE[sens];
+    const vers = { droit: sens, droite: FLECHE_DE[(-p[1]) + ',' + p[0]], gauche: FLECHE_DE[p[1] + ',' + (-p[0])] };
+    const tirage = empreinteVelo(v, inter.x * 4099 + inter.y, 17);
+    const ordre = tirage < 0.55 ? ['droit', 'gauche', 'droite'] : tirage < 0.78 ? ['droite', 'droit', 'gauche'] : ['gauche', 'droit', 'droite'];
+    const bras = inter.bras || 'NSOE';
+    return ordre.filter(function (c) { return bras.indexOf(BRAS_DU_SENS[vers[c]]) >= 0; }).concat(
+      ordre.filter(function (c) { return bras.indexOf(BRAS_DU_SENS[vers[c]]) < 0; }));
+  }
+
+  /** L'intention du cycliste au prochain croisement — lue AVANT la ligne
+      d'arret, a `virage_tuiles` : c'est ce qui lui laisse le temps de se ranger
+      a gauche. On l'oublie des qu'on a traverse la boite. */
+  function intentionDuVelo(v, tx, ty, p) {
+    if (v.intention && v.intention.dedans) v.intention = null;
+    if (v.intention) return v.intention;
+    const n = trafic().velo.virage_tuiles;
+    for (let k = 1; k <= n; k++) {
+      const sx = tx + p[0] * k, sy = ty + p[1] * k, f = Monde.fleche(sx, sy);
+      if (f === 'S') {
+        if (Monde.sensArret(sx, sy) !== v.sens) return null;
+        const inter = Monde.intersectionA(sx + p[0], sy + p[1]);
+        if (!inter) return null;
+        v.intention = { inter: inter, sens: v.sens, ordre: ordreDuVelo(v, inter, v.sens), dedans: false };
+        return v.intention;
+      }
+      if (f !== v.sens) return null;        // la voie finit ou tourne : rien de droit devant
+    }
+    return null;
+  }
+
+  /** +1 : a la bordure (a droite). -1 : a gauche — il va tourner a gauche, et
+      il roule encore dans le sens d'ou il arrive (la boite comprise, jusqu'au
+      virage). */
+  function coteDuVelo(v) {
+    const i = v.intention;
+    return i && i.ordre[0] === 'gauche' && v.sens === i.sens ? -1 : 1;
+  }
+
+  /** La cible, tassee vers la bordure (ou vers la ligne du milieu).
+
+      ⚠️ **SUR PLACE, IL GARDE SON COTE.** Une cible a moins d'un pixel devant
+      — ou derriere — est le point d'arret d'un velo arrive a la ligne : la
+      tasser le ferait glisser de travers au feu, et la laisser au milieu de la
+      voie le ramenait au milieu, trois pixels en crabe, le temps du rouge. On
+      la pose sur SA ligne a lui. */
+  function aLaBordure(v, c) {
+    if (!c || v.horsRue) return c;
+    const p = PAS_FLECHE[v.sens];
+    if (!p) return c;
+    const q = droiteDe(p);
+    if ((c.x - v.x) * p[0] + (c.y - v.y) * p[1] <= 1) {
+      const lat = (v.x - c.x) * q[0] + (v.y - c.y) * q[1];
+      return { x: c.x + q[0] * lat, y: c.y + q[1] * lat, tx: c.tx, ty: c.ty };
+    }
+    const d = trafic().velo.bord_px * coteDuVelo(v);
+    return { x: c.x + q[0] * d, y: c.y + q[1] * d, tx: c.tx, ty: c.ty };
+  }
+
+  /** Le pas lateral vers la voie qu'il VEUT : celle du trottoir d'ordinaire,
+      celle du milieu s'il va tourner a gauche. null s'il y est deja, ou si la
+      voisine n'est pas libre. Les memes gardes que le deport (`voieDeDepassement`) :
+      la voisine et la tuile d'apres dans notre sens, pas de barriere. */
+  function voieDuVelo(v, tx, ty, p) {
+    if (v.deportFroid > 0 || v.deportT > 0) return null;       // il vient de contourner quelque chose
+    const d = droiteDe(p), c = coteDuVelo(v), q = [d[0] * c, d[1] * c];
+    if (Monde.fleche(tx + q[0], ty + q[1]) !== v.sens) return null;
+    if (Monde.fleche(tx + q[0] + p[0], ty + q[1] + p[1]) !== v.sens) return null;
+    if (Monde.barriereBloque(v, tx + q[0], ty + q[1]) || Monde.barriereBloque(v, tx + q[0] + p[0], ty + q[1] + p[1])) return null;
+    return voieLibre(v, tx + q[0], ty + q[1], p) ? q : null;
+  }
+
+  /** Une tuile ou un velo roule hors de la chaussee : le trottoir (pas la
+      traverse, qui est de la route) et l'allee de parc — ni l'herbe, ou l'on
+      seme les arbres, les bancs et les buissons, ni l'abord, ou se range le
+      mobilier. Jamais le coin d'un croisement (ses poteaux, ses traverses), et
+      rien de pose dessus : sur des rails, il passerait au travers. */
+  function roulableHorsRue(tx, ty) {
+    const c = Monde.carte;
+    if (!c || tx < 1 || ty < 1 || tx >= c.w - 1 || ty >= c.h - 1) return false;
+    if (Monde.bloque(tx, ty, Monde.MASQUE_VEHICULE) || Monde.intersectionA(tx, ty)) return false;
+    if (Monde.glyphe(tx, ty) !== 'g' && !Monde.estTrottoir(tx, ty)) return false;
+    const x = tx * TT + 8, y = ty * TT + 8;
+    for (const d of Entites.decorAutour(x, y, 20)) {
+      if (!d.brise && Math.hypot(d.x - x, d.y - y) < 8 + (d.r || 4)) return false;
+    }
+    return true;
+  }
+
+  /** Un parc de l'autre cote du trottoir : la pelouse ou l'allee, une ou deux tuiles derriere. */
+  function parcDerriere(rx, ry, d) {
+    for (let k = 1; k <= 2; k++) {
+      const g = Monde.glyphe(rx + d[0] * k, ry + d[1] * k);
+      if (g === ',' || g === 'g') return true;
+    }
+    return false;
+  }
+
+  /** Un bout de trottoir : tout droit le long de la voie, de `trottoir_tuiles[0]`
+      a ce qu'il y a (au plus `trottoir_tuiles[1]`), et on redescend UNE tuile plus
+      loin, dans la meme voie. ⚠️ On s'arrete avant le coin : la traverse est de
+      la route, et un velo qui descend sur un passage pieton descend dans les
+      jambes de ceux qui traversent. */
+  function boutDeTrottoir(v, tx, ty, p) {
+    const f = trafic().velo, d = droiteDe(p);
+    const chemin = [];
+    for (let k = 1; k <= f.trottoir_tuiles[1]; k++) {
+      const sx = tx + d[0] + p[0] * k, sy = ty + d[1] + p[1] * k;
+      if (!roulableHorsRue(sx, sy) || !Monde.estTrottoir(sx, sy)) break;
+      if (Monde.fleche(tx + p[0] * k, ty + p[1] * k) !== v.sens) break;
+      if (Monde.fleche(tx + p[0] * (k + 1), ty + p[1] * (k + 1)) !== v.sens) break;
+      chemin.push(centre(sx, sy));
+    }
+    const min = f.trottoir_tuiles[0];
+    if (chemin.length < min) return null;
+    const n = min + Math.floor(empreinteVelo(v, tx * 3 + 1, ty * 5 + 2) * (chemin.length - min + 1));
+    const bout = chemin.slice(0, n), dernier = bout[bout.length - 1];
+    return { chemin: bout, retour: { tx: dernier.tx - d[0], ty: dernier.ty - d[1], sens: v.sens } };
+  }
+
+  /** Un segment roule-t-il tout du long sur des tuiles hors rue ? On echantillonne
+      l'axe et ses deux bords (un velo fait huit pixels de large). */
+  function segmentRoulable(a, b) {
+    const n = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 4);
+    const l = Math.hypot(b.x - a.x, b.y - a.y) || 1, nx = -(b.y - a.y) / l * 3, ny = (b.x - a.x) / l * 3;
+    for (let i = 0; i <= n; i++) {
+      const x = a.x + (b.x - a.x) * i / n, y = a.y + (b.y - a.y) * i / n;
+      for (const s of [0, 1, -1]) {
+        if (!roulableHorsRue(Math.floor((x + nx * s) / TT), Math.floor((y + ny * s) / TT))) return false;
+      }
+    }
+    return true;
+  }
+
+  /** Le chemin, sans ses marches d'escalier : d'un point, on vise le plus loin
+      qu'on voit en ligne droite. Sur des rails, un chemin de tuile en tuile fait
+      zigzaguer le velo en travers de la place du parc. */
+  function lisser(chemin) {
+    const out = [];
+    let i = 0;
+    while (i < chemin.length - 1) {
+      let j = chemin.length - 1;
+      while (j > i + 1 && !segmentRoulable(chemin[i], chemin[j])) j--;
+      out.push(chemin[j]);
+      i = j;
+    }
+    return out;
+  }
+
+  /** La traversee d'un parc, depuis la tuile de trottoir `(rx, ry)` : par ses
+      allees, jusqu'a un trottoir d'une AUTRE rue, et la voie ou redescendre.
+
+      ⚠️ Un Dijkstra a seaux (les couts sont 2 et 3 : l'allee coute moins que le
+      trottoir, donc on passe PAR le parc plutot qu'autour), plafonne. On garde
+      les bouts qui ont vu au moins `parc_allees_min` tuiles d'allee, et parmi
+      les plus longs dans le parc, on en prend un a l'empreinte.
+
+      ⚠️ **ON REDESCEND A LA SORTIE DE L'ALLEE**, sur la premiere tuile de
+      trottoir (`trottoir === 1`). La premiere version choisissait n'importe quel
+      bout de trottoir apres le parc : le velo sortait, longeait le trottoir cinq
+      tuiles a rebours, et repartait sur la chaussee dans l'autre sens. */
+  function traverseeDuParc(v, rx, ry) {
+    const f = trafic().velo, w = Monde.carte.w;
+    const depart = ry * w + rx;
+    const vu = new Map([[depart, { cout: 0, parent: -1, allees: 0, trottoir: 1 }]]);
+    const seaux = [[depart]];
+    let noeuds = 0;
+    const bouts = [];
+    for (let cout = 0; cout < seaux.length && noeuds < f.noeuds_max; cout++) {
+      for (const cle of seaux[cout] || []) {
+        const n = vu.get(cle);
+        if (n.cout !== cout) continue;
+        noeuds++;
+        const tx = cle % w, ty = Math.floor(cle / w);
+        // Un bout : du trottoir qui borde une voie dont c'est la DROITE, avec de quoi redescendre.
+        if (n.allees >= f.parc_allees_min && n.trottoir === 1 && Monde.estTrottoir(tx, ty)) {
+          for (const sens of ['>', '<', '^', 'v']) {
+            const q = PAS_FLECHE[sens], d = droiteDe(q), lx = tx - d[0], ly = ty - d[1];
+            if (Monde.fleche(lx, ly) === sens && Monde.fleche(lx + q[0], ly + q[1]) === sens) {
+              bouts.push({ cle: cle, allees: n.allees, retour: { tx: lx, ty: ly, sens: sens } });
+            }
+          }
+        }
+        for (const q of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = tx + q[0], ny = ty + q[1];
+          if (!roulableHorsRue(nx, ny)) continue;
+          const allee = Monde.glyphe(nx, ny) === 'g';
+          const c2 = cout + (allee ? 2 : 3), k = ny * w + nx;
+          const deja = vu.get(k);
+          if (deja && deja.cout <= c2) continue;
+          vu.set(k, { cout: c2, parent: cle, allees: n.allees + (allee ? 1 : 0), trottoir: allee ? 0 : n.trottoir + 1 });
+          (seaux[c2] = seaux[c2] || []).push(k);
+        }
+      }
+    }
+    if (!bouts.length) return null;
+    const mieux = bouts.reduce(function (m, b) { return Math.max(m, b.allees); }, 0);
+    const retenus = bouts.filter(function (b) { return b.allees * 5 >= mieux * 4; });
+    const b = retenus[Math.floor(empreinteVelo(v, rx, ry) * retenus.length)];
+    const tuiles = [];
+    for (let cle = b.cle; cle !== -1; cle = vu.get(cle).parent) tuiles.push(centre(cle % w, Math.floor(cle / w)));
+    tuiles.reverse();
+    return { chemin: lisser(tuiles), retour: b.retour };
+  }
+
+  /** Il quitte la chaussee : un chemin de points, et ou redescendre au bout. */
+  function partirHorsRue(v, chemin, retour) {
+    if (!chemin || !chemin.length) return null;
+    v.horsRue = { chemin: chemin, i: 0, retour: retour, attente: 0 };
+    v.deportT = 0; v.sortie = null; v.enBoite = null; v.intention = null;
+    v.horsRues = (v.horsRues || 0) + 1;
+    return cibleHorsRue(v);
+  }
+
+  /** Le point suivant du chemin, puis la descente dans la voie — quand elle est
+      libre, ou quand il a assez attendu (sur des rails, le trafic ne se pousse
+      pas : au pire il se frole). */
+  function cibleHorsRue(v) {
+    const h = v.horsRue, f = trafic().velo;
+    if (h.i < h.chemin.length) return h.chemin[h.i++];
+    const r = h.retour, p = PAS_FLECHE[r.sens];
+    if (!voieLibre(v, r.tx, r.ty, p) && ++h.attente < f.attente_images) return { x: v.x, y: v.y };
+    v.horsRue = null;
+    v.horsRueFroid = B.t + f.repos_images;
+    v.sens = r.sens;
+    return aLaBordure(v, centre(r.tx + p[0], r.ty + p[1]));
+  }
+
+  /** Monter sur le trottoir, depuis la voie du bord : pour traverser le parc
+      qu'on longe, pour un bout de trottoir, ou parce qu'un char arrete bouche la
+      voie (`coince`). null s'il reste sur la chaussee. ⚠️ Jamais s'il va
+      tourner a gauche : il est range de l'autre cote. */
+  function monterSurLeTrottoir(v, tx, ty, p, coince) {
+    const f = trafic().velo;
+    if (v.mission || (v.horsRueFroid || 0) > B.t || coteDuVelo(v) < 0) return null;
+    const d = droiteDe(p), rx = tx + d[0], ry = ty + d[1];
+    if (!Monde.estTrottoir(rx, ry) || !roulableHorsRue(rx, ry)) return null;
+    if (!coince && parcDerriere(rx, ry, d) && empreinteVelo(v, tx, ty) < f.parc_chance) {
+      const t = traverseeDuParc(v, rx, ry);
+      if (t) return partirHorsRue(v, t.chemin, t.retour);
+    }
+    if (coince ? empreinteVelo(v, 3, 7) >= f.coince_part : empreinteVelo(v, ty, tx) >= f.trottoir_chance) return null;
+    const t = boutDeTrottoir(v, tx, ty, p);
+    return t ? partirHorsRue(v, t.chemin, t.retour) : null;
+  }
+
   function prochaineCible(v) {
+    if (v.horsRue && estVeloDuTrafic(v)) { v.attendFeu = false; v.guetteLigne = false; return cibleHorsRue(v); }
+    const c = cibleDeLaVoie(v);
+    return estVeloDuTrafic(v) ? aLaBordure(v, c) : c;
+  }
+
+  function cibleDeLaVoie(v) {
     const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
     const f = Monde.fleche(tx, ty);
     v.attendFeu = false;
@@ -1607,6 +2223,7 @@ const Vehicules = (function () {
       v.sens = f; v.sortie = null;
       v.enBoite = null;                              // on rend le croisement
       const p = PAS_FLECHE[f];
+      if (estVeloDuTrafic(v)) intentionDuVelo(v, tx, ty, p);
       if (v.conducteur === 'trafic' && Monde.barriereBloque(v, tx + p[0], ty + p[1])) {
         // ⚠️ **On SE DEPORTE avant de faire demi-tour.** Une voie fermee laisse
         // sa voisine ouverte : y faire demi-tour serait absurde, et toute la
@@ -1627,6 +2244,14 @@ const Vehicules = (function () {
           v.attendFeu = true;
           return pointDArret(v, ligne.tx, ligne.ty, p);
         }
+      }
+      if (estVeloDuTrafic(v)) {
+        // ⚠️ Le trottoir d'abord : il ne se tasse pas dans la voie du milieu
+        // pour remonter sur le trottoir a la tuile d'apres.
+        const hors = !ligne && monterSurLeTrottoir(v, tx, ty, p, false);
+        if (hors) return hors;
+        const q = voieDuVelo(v, tx, ty, p);
+        if (q) return centre(tx + q[0] + p[0], ty + q[1] + p[1]);
       }
       return centre(tx + p[0], ty + p[1]);
     }
@@ -1666,9 +2291,29 @@ const Vehicules = (function () {
       // rapport au cap du moment fait tourner a gauche, puis a gauche du
       // nouveau cap, puis encore : le char faisait le tour de la boite sans
       // fin. Martin l'a vu, et le juge des boites en trouvait 1858 cas.
+      // ⚠️ Le cycliste sait deja ou il va : il l'a lu avant la ligne, et c'est
+      // pour ca qu'il s'est range a gauche (`intentionDuVelo`).
+      const intention = estVeloDuTrafic(v) && v.intention && v.intention.inter === Monde.intersectionA(tx, ty) ? v.intention : null;
+      if (intention) intention.dedans = true;
       if (!v.sortie) {
         let ordre;
-        if (v.poursuite && B.joueur) {
+        if (intention) {
+          ordre = intention.ordre.slice();
+        } else if (v.destination) {
+          // Un char qui VA quelque part (celui qu'on file, `suivre` : le stool de
+          // f06 roule au poste) : la sortie d'ou le chemin de chaussee jusqu'au but
+          // est le plus court (`Monde.cheminRoute`, une fois par boite). ⚠️ Pas la
+          // distance a vol d'oiseau de la poursuite : la rue qui s'approche le plus
+          // du but n'est pas toujours celle qui y mene.
+          const but = v.destination, longueurs = {};
+          ['droit', 'droite', 'gauche'].forEach(function (choix) {
+            const q = PAS_FLECHE[vers[choix]];
+            const x = (tx + q[0] * 4) * TT + 8, y = (ty + q[1] * 4) * TT + 8;
+            const c = Monde.cheminRoute(x, y, but.x, but.y);
+            longueurs[choix] = c ? c.length : 1e6 + Math.sqrt(dist2(x, y, but.x, but.y));
+          });
+          ordre = ['droit', 'droite', 'gauche'].sort(function (a, b) { return longueurs[a] - longueurs[b]; });
+        } else if (v.poursuite && B.joueur) {
           // En poursuite : la sortie qui rapproche le plus du joueur, d'abord.
           // En fuite (le fuyard de M2) : celle qui en eloigne le plus.
           const j = B.joueur, signe = v.fuite ? -1 : 1;
@@ -1695,8 +2340,13 @@ const Vehicules = (function () {
                             - dist2((tx + qb[0] * 6) * TT, (ty + qb[1] * 6) * TT, c.x, c.y));
             });
           } else {
+            // ⚠️ « Tout droit, SINON A GAUCHE » : au pied d'un T, ou tout droit
+            // n'existe pas, c'est le repli qui decide. Il a toujours ete la
+            // gauche (le char traversait la boite et prenait ce qu'il trouvait
+            // au fond) ; `sortieDevant` le rend explicite sans rien changer au
+            // partage des T.
             const tirage = B.rng();
-            ordre = tirage < 0.55 ? ['droit', 'droite', 'gauche'] : tirage < 0.78 ? ['droite', 'droit', 'gauche'] : ['gauche', 'droit', 'droite'];
+            ordre = tirage < 0.55 ? ['droit', 'gauche', 'droite'] : tirage < 0.78 ? ['droite', 'droit', 'gauche'] : ['gauche', 'droit', 'droite'];
           }
         }
         v.sortie = ordre.map(function (choix) { return vers[choix]; });
@@ -1704,7 +2354,14 @@ const Vehicules = (function () {
       // 1. La sortie voulue, si elle part d'ici. Sinon on traverse la boite
       //    tout droit jusqu'a la voie d'ou elle part : un virage a droite se
       //    prend a l'entree de la boite, un virage a gauche au fond.
-      const voulu = v.sortie[0];
+      // ⚠️ **LA SORTIE VOULUE EST CELLE QUE LA BOITE A** (21 sept. 2026, retour
+      // de Martin au coin en L des Quais). Le tirage ne sait rien de la boite :
+      // dans un coin en L, un char qui descendait du nord en voulant « tout
+      // droit » traversait jusqu'a la rangee du bord de l'eau, n'y trouvait pas
+      // de sortie, et zigzaguait — ouest, nord, ouest. 24 entrees de boite sur
+      // 2 238, toutes dans les onze coins en L. On prend donc la premiere de la
+      // liste qui part d'ici ou de plus loin tout droit.
+      const voulu = v.sortie.find(function (sens) { return sortieDevant(tx, ty, droit, sens, v); }) || v.sortie[0];
       if (peutSortir(tx, ty, voulu, v)) {
         const q = PAS_FLECHE[voulu];
         v.sens = voulu;
@@ -1886,7 +2543,10 @@ const Vehicules = (function () {
       }
       if (devant < dMin) dMin = devant - v.def.longueur / 2;
     }
-    return dMin;
+    // ⚠️ Et le SIGNALEUR d'un chantier, quand sa palette dit ARRÊT : le même
+    // freinage que pour un piéton planté sur la voie, à la distance où il est.
+    // (Infinity la plupart du temps : aucun chantier ne le fait parler.)
+    return Math.min(dMin, Chantiers.signalDevant(v));
   }
 
   /** Le chien de garde du trafic : dix secondes sans bouger, sans feu rouge
@@ -1947,6 +2607,9 @@ const Vehicules = (function () {
     v.cible = null; v.sortie = null; v.enBoite = null; v.stopT = undefined; v.attenteBoite = 0; v.attendFeu = false;
     v.patience = 0; v.force = 90; v.immobileT = 0; v.surPlace = 0; v.ancrage = null; v.debloques = (v.debloques || 0) + 1;
     if (voie) {
+      // ⚠️ Recale sur la chaussee, le velo a fini son tour de trottoir. Sans voie
+      // a portee (au milieu du parc), il le garde : son chemin l'y ramene.
+      v.horsRue = null; v.intention = null;
       v.x = voie.x; v.y = voie.y;
       const q = PAS_FLECHE[v.sens] || [1, 0];
       v.angle = Math.atan2(q[1], q[0]);
@@ -1965,6 +2628,9 @@ const Vehicules = (function () {
     // pour le prochain qui le ferait : elle reste la ou elle est, sans personne.
     if (v.def.eau) { v.conducteur = null; v.etat = 'stationne'; v.vitesse = 0; v.vx = 0; v.vy = 0; return; }
     const t = trafic();
+    // Celui qu'on file (`suivre`) attend, moteur en marche, que tu sois au volant.
+    // ⚠️ Avant `debloquer` : dix secondes a l'arret, et il le recalait sur sa voie.
+    if (v.attendLeJoueur) { rouler(v, 0); return; }
     if (debloquer(v)) return;
     if (v.deportT > 0 && --v.deportT === 0) v.deportFroid = t.depassement_images;
     if (v.deportFroid > 0) v.deportFroid--;
@@ -2009,8 +2675,16 @@ const Vehicules = (function () {
     const devant = Monde.fleche(tx + p[0] * 2, ty + p[1] * 2);
     if (ici === '+' || ici === 'S' || devant === '+' || devant === 'S') vitesseVoulue = Math.min(vitesseVoulue, v.poursuite ? 1.5 : 1.1);
     if (Math.abs(ecart) > 0.5) vitesseVoulue = Math.min(vitesseVoulue, 0.8);
+    // ⚠️ Hors de la rue, un velo va AU PAS : sous la vitesse qui renverse, et
+    // assez lent pour s'arreter derriere un passant (`trottoir_vitesse`).
+    const velo = estVeloDuTrafic(v) ? t.velo : null;
+    if (velo && v.horsRue) vitesseVoulue = Math.min(vitesseVoulue, velo.trottoir_vitesse);
     const obstacle = obstacleDevant(v);
     const proche = obstacle < t.distance_securite_px;
+    // Et il SONNE a celui qu'il a devant — un coup, pas une rafale.
+    if (velo && v.horsRue && obstacle < t.distance_securite_px * 2 && (v.sonnetteT || 0) <= B.t) {
+      v.klaxonT = 30; v.sonnetteT = B.t + velo.sonnette_images;
+    }
     // ⚠️ On decide de se tasser DE LOIN (deux fois la distance de securite),
     // pas au dernier moment : a une tuile du pieton, le deport serait un coup
     // de volant a 45 degres. De loin, la diagonale se voit venir.
@@ -2018,6 +2692,13 @@ const Vehicules = (function () {
     if (proche && !deport) {
       vitesseVoulue = 0;
       v.patience++;
+      // ⚠️ COINCE DERRIERE UN CHAR ARRETE, un cycliste sur deux monte sur le
+      // trottoir et le longe (`coince_part`, a l'empreinte) ; l'autre attend.
+      if (velo && !v.horsRue && v.patience === velo.coince_images) {
+        const p = PAS_FLECHE[v.sens];
+        const hors = p && Monde.fleche(tx, ty) === v.sens && monterSurLeTrottoir(v, tx, ty, p, true);
+        if (hors) { v.cible = hors; v.patience = 0; }
+      }
       if (v.patience > t.patience_images) { v.force = 90; v.patience = 0; v.klaxonT = 30; }
     } else {
       if (obstacle < t.distance_securite_px * 2) vitesseVoulue *= 0.5;
@@ -2067,10 +2748,58 @@ const Vehicules = (function () {
              reculCommeEnAvant: !!B.options.reculCommeEnAvant };
   }
 
+  //: Les mains hors du volant : le char de l'atelier ne bouge pas (`Missions.majGarage`).
+  const POINT_MORT = { gaz: 0, frein: 0, direction: 0, freinMain: false };
+
+  //: ⚠️ LE LARGE REFUSE, VU DU VOLANT (`Monde.largeRefuse` ; demande de Martin : « une
+  //: barriere invisible nous fait tourner de bord avant qu'on puisse voir l'ile »). A
+  //: `VIRAGE_BANDE_PX` de la ligne, un char qui y VA vire de bord tout seul : le cap
+  //: pivote vers le large permis de `VIRAGE_RAD` par image (un demi-tour en trois quarts
+  //: de seconde), le moteur tire, et le volant ne repond plus tant que ce n'est pas fait.
+  //: Une coque derive (adherence 0,05) : elle file sur son elan pendant qu'elle tourne,
+  //: et c'est la ligne (`retenirAuLarge`, dans `avancer`) qui garde ce qui passerait
+  //: quand meme. Un char blinde qui roule sur l'eau vire pareil.
+  const VIRAGE_BANDE_PX = 6 * TT, VIRAGE_RAD = 0.07, VIRAGE_ENTRANT = 0.2, VIRAGE_MAX = 150;
+  const VIRAGE = { gaz: 0.6, frein: 0, direction: 0, freinMain: false };
+
+  /** Les commandes du demi-tour, ou null : pas de virage en cours, et pas de raison
+      d'en commencer un. ⚠️ Seulement s'il y VA : longer la ligne, ou s'en eloigner,
+      reste permis. */
+  function virerDeBord(v) {
+    if (!v.virage) {
+      const s = Monde.sortieDuLarge(v.x, v.y, VIRAGE_BANDE_PX);
+      if (!s || v.vx * s.x + v.vy * s.y > -VIRAGE_ENTRANT) return null;
+      v.virage = { cap: Math.atan2(s.y, s.x), sortie: s, t: 0 };
+      Monde.avertirDuLarge('coque');
+      Entites.remous(v.x, v.y, 10);
+    }
+    const w = v.virage;
+    const ecart = ecartAngle(v.angle, w.cap);
+    // ⚠️ Autour du CENTRE, pas de l'arriere (`pivoterSurLArriere`) : pivoter sur la
+    // poupe d'un porte-conteneurs deplacerait son centre de plusieurs tuiles.
+    v.angle += borner(ecart, -VIRAGE_RAD, VIRAGE_RAD);
+    v.volant = 0;
+    w.t++;
+    if ((Math.abs(ecart) <= VIRAGE_RAD && v.vx * w.sortie.x + v.vy * w.sortie.y >= 0) || w.t >= VIRAGE_MAX) v.virage = null;
+    return VIRAGE;
+  }
+
+  /** La ligne mord : on ressort, et l'elan qui y entrait tombe (pas de choc : ce n'est
+      pas un mur, c'est la mer qui ne veut pas). */
+  function retenirAuLarge(v) {
+    const s = Monde.retenirAuLarge(v);
+    if (!s) return;
+    if (s.x && v.vx * s.x < 0) v.vx = 0;
+    if (s.y && v.vy * s.y < 0) v.vy = 0;
+  }
+
   function majJoueur(j) {
     const v = j.dansVehicule;
     if (v.etat === 'epave') { descendre(j, true); return; }
-    majPhysique(v, commandesJoueur(v));
+    // ⚠️ SOUS LE RIDEAU, ON NE CONDUIT PAS : il descend, le pistolet siffle, il remonte.
+    // Tant que dure l'atelier, le char est a l'arret et le volant ne repond pas.
+    if (v.atelier) { v.vitesse = 0; v.vx = 0; v.vy = 0; }
+    majPhysique(v, v.atelier ? POINT_MORT : (virerDeBord(v) || commandesJoueur(v)));
     if (Entree.neuf('attaque')) {
       // ⚠️ Un char a sirene n'a pas de klaxon sous le pouce : il a sa sirene.
       // Le boulot, lui, se prend au meme bouton — dans une ambulance, on
@@ -2087,7 +2816,7 @@ const Vehicules = (function () {
       if (v.def.crochet) basculerCrochet(v);
       if ((!v.def.sirene || allume) && typeof Missions !== 'undefined' && Missions.boulot) Missions.boulot.klaxon(v);
     }
-    if (Entree.neuf('action') && !B.cinema) descendre(j, false);   // (pendant un dialogue, ACTION passe la replique)
+    if (Entree.neuf('action') && !B.cinema && !v.atelier) descendre(j, false);   // (pendant un dialogue, ACTION passe la replique)
     if (Entree.neuf('arme')) {
       const station = Son.Radio.suivante();
       const def = station ? Son.Radio.station(station) : null;
@@ -2180,13 +2909,22 @@ const Vehicules = (function () {
       else majPhysique(v, { gaz: 0, frein: 0, direction: 0 });
       // La chasse finie, la sirene de l'auto-patrouille se tait.
       if (v.conducteur === 'police') v.sirene = B.recherche.etoiles > 0;
-      if (v.conducteur === 'trafic' || v.conducteur === 'ligne' || (v.conducteur === 'police' && v.surRails)) {
+      // ⚠️ UN CHAR VOLE HORS RESEAU N'EST PAS ENCORE SUR SES RAILS (`emporterLeChar`) :
+      // il vise la voie la plus proche en ligne droite (`voieLaPlusProche`), et rien ne
+      // l'arrete sur ce trajet tant qu'il n'y a pas rejoint une tuile de la voirie —
+      // c'etait le vol de char qui traversait un batiment entre sa place et la rue.
+      const surRails = v.conducteur === 'trafic' && !v.horsReseau;
+      if (surRails || v.conducteur === 'ligne' || (v.conducteur === 'police' && v.surRails)) {
         v.x += v.vx; v.y += v.vy;
         heurterVehicules(v);
         heurterPietons(v);
         if (B.options.trace) majTrace(v);
       } else if (Math.abs(v.vx) + Math.abs(v.vy) > 0.01 || v.z > 0) avancer(v);
       else { heurterPietons(v); degager(v); }             // a l'arret, mais quelqu'un a pu le pousser
+      if (v.horsReseau) {
+        const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
+        if (PAS_FLECHE[Monde.fleche(tx, ty)]) v.horsReseau = false;
+      }
       // La distance ROULEE, pas la vitesse : c'est elle qui tourne les pedales.
       // Un velo pousse contre un mur a de la vitesse et ne pedale pas.
       v.parcouru += Math.hypot(v.x - x0, v.y - y0);
@@ -2209,7 +2947,7 @@ const Vehicules = (function () {
     // elle est depensee. Un menu et un fondu figent tout le jeu (`Jeu.maj`) ;
     // la portiere d'a cote ne fait pas exception — sinon on passait la porte
     // deja au volant, et `Jeu.entrer` refusait.
-    if (!j.dansVehicule && !j.manege && Entree.neuf('action') && !j.roule && j.descenduT !== B.t && !B.cinema && !B.menu && !B.transition) {
+    if (!j.dansVehicule && !j.manege && Entree.neuf('action') && !j.roule && j.descenduT !== B.t && !B.cinema && !B.menu && !B.transition && !B.piratage && !B.epreuve) {
       const v = vehiculeSousLaMain(j);
       if (v && !Missions.interagir(j)) monter(j, v);
     }
@@ -2267,7 +3005,8 @@ const Vehicules = (function () {
     }
     // 3. Il roule hors de la chaussee.
     const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
-    const surRoute = Monde.estChaussee(tx, ty) || Monde.estRampe(tx, ty) || Monde.estPassage(tx, ty);
+    // ⚠️ Un velo parti sur le trottoir ou au parc (`horsRue`) y est de son plein gre.
+    const surRoute = Monde.estChaussee(tx, ty) || Monde.estRampe(tx, ty) || Monde.estPassage(tx, ty) || !!v.horsRue;
     v.horsVoieT = surRoute ? 0 : (v.horsVoieT || 0) + 1;
     if (v.horsVoieT === 90) anomalie(v, 'HORS VOIE');
   }
@@ -2536,6 +3275,312 @@ const Vehicules = (function () {
 
   /** Ce que `jeu.js` donne a `Base.fin` — vide des qu'on change d'image. */
   function lampesDesFeux() { return lampesFeux.image === B.image ? lampesFeux.liste : []; }
+
+  //: **LES PHARES** (la nuit a ses habitudes). Un char qu'on MENE allume ses
+  //: lampes — ses phares luisent, ses feux arriere rougeoient — et ses phares BAS
+  //: jettent un faisceau sur la chaussee devant lui. Un char gare est eteint :
+  //: c'est ce qui dit, de loin, lequel va bouger. Ramasses EN DESSINANT, comme
+  //: les feux de circulation, et pour la meme raison : `dessinerUn` ne passe que
+  //: sur les chars de l'ecran.
+  //:
+  //: ⚠️ **LES LAMPES VIENNENT DE LA MACHINE** (retour de Martin : « ajuste
+  //: correctement les phares pour tous les types de véhicules le soir »). Il n'y
+  //: avait qu'un halo rond, 16 px devant le nez, le meme pour le velo et pour
+  //: l'autobus : il debordait sur la caisse et derriere elle, un camion n'avait
+  //: qu'un feu arriere au milieu, et le chalutier roulait avec des phares d'auto.
+  //: Chaque machine declare deja ou sont ses lampes — ses pieces `l` et `t`, ce
+  //: qu'elle peint — : les lire, c'est les poser au pixel pres pour toutes les
+  //: silhouettes, et pour celles qui viendront.
+  //:
+  //: Le FAISCEAU de chaque classe : `portee` (px devant les phares), `ouverture`
+  //: (ce qu'il gagne de chaque cote au bout de sa portee) et `force`. ⚠️ `null`,
+  //: aucun : un bateau n'eclaire pas l'eau devant lui, il montre ses feux de
+  //: navigation. Une classe ABSENTE n'en a pas non plus — et un juge exige que
+  //: chaque classe du catalogue y soit, pour que ce soit une decision.
+  const FAISCEAUX = {
+    auto:   { portee: 56, ouverture: 13, force: 0.36 },
+    camion: { portee: 68, ouverture: 16, force: 0.38 },
+    moto:   { portee: 54, ouverture: 10, force: 0.34 },
+    velo:   { portee: 26, ouverture: 5, force: 0.20 },
+    bateau: null,
+  };
+  //: Un phare BAS eclaire la chaussee ; un phare HAUT — le feu de mat d'un
+  //: bateau, les feux d'arret de l'autobus scolaire — ne fait que luire.
+  const PHARE_BAS_Z = 10;
+  //: La lueur sur chaque lampe peinte : petite, comme celle d'un feu de
+  //: circulation (`RAYON_LAMPE`) — une lampe ne s'eclaire qu'elle-meme.
+  const LUEURS = { l: { rayon: 5, alpha: 0.55, defaut: '#fff3b0' }, t: { rayon: 5, alpha: 0.5, defaut: '#ff4b3e' } };
+  //: ⚠️ LE PLAFOND COMPTE DES CHARS. Il comptait des lampes — douze, deux par
+  //: char : passe six chars a l'ecran, les suivants roulaient eteints. Un char de
+  //: ville en allume cinq (un faisceau, deux phares, deux feux) ; l'autobus
+  //: scolaire et le cabriolet sept. Des places gardees pour le char du joueur :
+  //: c'est lui qu'on regarde.
+  const CHARS_ECLAIRES_MAX = 14;
+  const LAMPES_PAR_CHAR_MAX = 7;
+  const LAMPES_PHARES_MAX = CHARS_ECLAIRES_MAX * LAMPES_PAR_CHAR_MAX;
+  //: ⚠️ LE SOIR, LE FAISCEAU MONTE AVEC LA NUIT. Allume a la brune (18 h 40), il
+  //: jetait deja toute sa force sur une chaussee a peine assombrie : des cones
+  //: blancs sur une rue encore orangee. Il part du tiers (`FAISCEAU_A_LA_BRUNE`)
+  //: et n'a toute sa force qu'a la nuit faite (`NUIT_FAITE`, l'ambiance de 21 h).
+  //: Les LUEURS, elles, sont pleines des qu'on allume : une lampe allumee se
+  //: voit, soir ou pas.
+  const FAISCEAU_A_LA_BRUNE = 0.35;
+  const NUIT_FAITE = 0.62;
+  const lampesPhares = { image: -1, liste: [], corps: [], corpsMonde: [], allume: false, fondu: 1, finalise: false };
+
+  /** Remet `lampesPhares` a neuf a la premiere machine dessinee de l'image —
+      IDEMPOTENT (`allumerLesPhares` ET `dessinerUn` l'appellent toutes deux,
+      selon celle qui passe en premier). ⚠️ `corps` (l'empreinte a l'ECRAN, pour
+      le decoupage du cone dans `Base.fin`) et `corpsMonde` (l'empreinte en VRAI
+      monde, pour `porteeLibreDesChars`) sont deux choses : la meme caisse, lue
+      deux fois pour deux geometries differentes — jamais melangees dans le
+      meme tableau, ou l'une des deux marches sur des champs qui n'existent pas
+      chez l'autre. */
+  function rafraichirEtatPhares() {
+    if (lampesPhares.image === B.image) return;
+    lampesPhares.image = B.image;
+    lampesPhares.liste.length = 0;
+    lampesPhares.corps.length = 0;
+    lampesPhares.corpsMonde.length = 0;
+    lampesPhares.finalise = false;
+    const noir = Monde.ambiance().alpha;
+    lampesPhares.allume = noir >= BRUNE;
+    lampesPhares.fondu = FAISCEAU_A_LA_BRUNE + (1 - FAISCEAU_A_LA_BRUNE)
+      * Math.max(0, Math.min(1, (noir - BRUNE) / (NUIT_FAITE - BRUNE)));
+  }
+
+  /** Les lampes d'une silhouette, lues UNE FOIS dans sa machine : ou elles sont
+      (`u` vers l'avant, `w` vers la droite, `z` en hauteur, en px), et la
+      couleur de leur lueur, tiree de la palette — le phare jaunatre d'une
+      vieille auto, le feu rouge qu'elle peint. `bas` : le milieu et la
+      demi-largeur des phares BAS, d'ou part le faisceau (null s'il n'y en a pas).
+
+      ⚠️ Une piece de lampe a trois formes : `bloc` (ses trois faces, dont une
+      au moins est `l` ou `t` — le phare de la moto a le dessus noir), `point`
+      (le feu du velo, au bout du porte-bagages) et `tube`. */
+  const lampesDesMachines = new Map();
+  function lampesDeLaMachine(nom) {
+    if (lampesDesMachines.has(nom)) return lampesDesMachines.get(nom);
+    const def = SPRITES[nom];
+    const liste = [];
+    for (const p of (def && def.machine ? def.machine.pieces : [])) {
+      let lettre = null, u = 0, w = 0, z = 0;
+      if (p[0] === 'bloc') {
+        lettre = [p[4], p[5], p[6]].find(function (ch) { return ch === 'l' || ch === 't'; }) || null;
+        u = (p[1][0] + p[1][1]) / 2; w = (p[2][0] + p[2][1]) / 2; z = (p[3][0] + p[3][1]) / 2;
+      } else if (p[0] === 'point') {
+        lettre = p[2]; u = p[1][0]; w = p[1][1]; z = p[1][2];
+      } else if (p[0] === 'tube') {
+        lettre = p[3]; u = (p[1][0] + p[2][0]) / 2; w = (p[1][1] + p[2][1]) / 2; z = (p[1][2] + p[2][2]) / 2;
+      }
+      if (lettre !== 'l' && lettre !== 't') continue;
+      const lueur = LUEURS[lettre], teinte = (def.pal && def.pal[lettre]) || lueur.defaut;
+      liste.push({ u: u, w: w, z: z, lettre: lettre, r: lueur.rayon, teinte: teinte, alpha: lueur.alpha,
+                   c: rgba(teinte, lueur.alpha) });
+    }
+    const bas = liste.filter(function (l) { return l.lettre === 'l' && l.z < PHARE_BAS_Z; });
+    if (bas.length) {
+      const ws = bas.map(function (l) { return l.w; });
+      const w0 = Math.min.apply(null, ws), w1 = Math.max.apply(null, ws);
+      liste.bas = { u: Math.max.apply(null, bas.map(function (l) { return l.u; })),
+                    w: (w0 + w1) / 2, demi: (w1 - w0) / 2 };
+    } else liste.bas = null;
+    liste.profondeur = (def && def.machine && def.machine.profondeur) || 1;
+    lampesDesMachines.set(nom, liste);
+    return liste;
+  }
+
+  /** ⚠️ **ON NE VOIT UNE LAMPE QUE SI ELLE REGARDE L'OEIL** (retour de Martin, 22 sept.
+      2026 : « les phares devraient logiquement etre visibles ou non selon la direction »).
+      La ville se voit de trois quarts : un char qui monte montre ses feux arriere, ses
+      phares sont caches par la caisse ; un char qui descend, l'inverse. Ce que la lueur
+      vaut, c'est ce qu'on VOIT de la lampe a ce cap : les pixels de sa lettre que la
+      projection a gardes (`Atlas.grilleDuCap`) autour de son centre — deux, et elle luit
+      a plein ; un, a moitie (on en devine le coin) ; aucun, elle est eteinte a l'ecran.
+      Lu une fois par silhouette, par cap et par lampe. */
+  const vuesDesLampes = new Map();
+  //: Ce que luit une lampe vue de profil (sa face de cote a l'oeil), en part de sa lueur.
+  const LUEUR_DE_PROFIL = 0.4;
+  //: Combien de pixels de sa lettre il faut voir pour qu'une lampe luise a plein.
+  const PIXELS_PLEINE_LUEUR = 2;
+
+  /** Ce qu'on voit de CHAQUE lampe de la silhouette a ce cap, de 0 a 1. ⚠️ Chaque pixel de
+      lampe que la projection a garde revient a la lampe de sa sorte la PLUS PROCHE, dans le
+      rayon de sa lueur : ainsi tout pixel peint est sous une lueur (un bout de lampe depasse
+      parfois de son centre), et une lampe cachee ne vole pas les pixels de sa jumelle. */
+  function partsVisibles(nom, i, lampes) {
+    const cle = nom + '|' + i;
+    if (vuesDesLampes.has(cle)) return vuesDesLampes.get(cle);
+    const def = SPRITES[nom], grille = Atlas.grilleDuCap(nom, def, ROTATIONS, i);
+    let parts = lampes.map(function () { return 1; });
+    if (grille) {
+      const centres = lampes.map(function (l) { return Atlas.ouTombe(def, ROTATIONS, i, l.u, l.w, l.z); });
+      const vus = lampes.map(function () { return 0; });
+      for (let y = 0; y < grille.length; y++) {
+        const ligne = grille[y];
+        for (let x = 0; x < ligne.length; x++) {
+          const ch = ligne[x];
+          if (ch !== 'l' && ch !== 't') continue;
+          let meilleure = -1, dMin = Infinity;
+          lampes.forEach(function (l, n) {
+            if (l.lettre !== ch) return;
+            const d = Math.hypot(x + 0.5 - (centres[n].x + 0.5), y + 0.5 - (centres[n].y + 0.5));
+            if (d <= l.r && d < dMin) { dMin = d; meilleure = n; }
+          });
+          if (meilleure >= 0) vus[meilleure]++;
+        }
+      }
+      parts = vus.map(function (n) { return Math.min(1, n / PIXELS_PLEINE_LUEUR); });
+    }
+    vuesDesLampes.set(cle, parts);
+    return parts;
+  }
+
+  function rgba(hex, a) {
+    const n = parseInt(hex.slice(1), 16);
+    return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
+
+  /** Jusqu'ou le faisceau porte avant un MUR — et un toit compte pareil : les
+      deux partagent la meme solidite (1), comme pour `Jeu.ligneLibre`. Un char
+      gare contre un mur, ou une ruelle qui tourne, ne doit pas jeter sa lumiere
+      A TRAVERS (retour de Martin : « les phares ne doivent pas passer au
+      travers des toits »).
+
+      ⚠️ Depuis le PHARE (`x0`, `y0`), pas depuis le centre du char : un phare
+      pres du trottoir voit le mur d'a cote une demi-tuile avant celui du
+      centre. Marche par quarts de tuile — assez fin pour ne pas sauter un mur
+      d'une tuile a un angle serre — et rend la distance JUSTE AVANT le mur, pas
+      dedans. */
+  function porteeLibre(x0, y0, ca, sa, portee) {
+    const pas = TT / 4;
+    for (let d = pas; d < portee; d += pas) {
+      if (Monde.solidite(Math.floor((x0 + ca * d) / TT), Math.floor((y0 + sa * d) / TT)) === 1) return d - pas;
+    }
+    return portee;
+  }
+
+  /** Un point (en VRAI monde) est-il dans l'empreinte d'un AUTRE char ? `corps`
+      vient de `lampesPhares.corpsMonde` : chaque char visible y pose la sienne
+      (`u`, `w` dans son propre repere — la meme rotation inverse que
+      `Atlas.projeter`), `sansCe` exclut le char qui porte ce faisceau. */
+  function dansUnCorps(x, y, corps, sansCe) {
+    for (const c of corps) {
+      if (c.v === sansCe) continue;
+      const dx = x - c.x, dy = y - c.y;
+      const u = dx * c.ca + dy * c.sa, w = -dx * c.sa + dy * c.ca;
+      if (Math.abs(u) <= c.demiL && Math.abs(w) <= c.demiH) return true;
+    }
+    return false;
+  }
+
+  /** Comme `porteeLibre`, mais arrete aussi devant un AUTRE char — jamais le
+      sien (retour de Martin, 22 sept. 2026 : « les phares éclairent encore au
+      travers des véhicules eux-mêmes »). */
+  function porteeLibreDesChars(x0, y0, ca, sa, portee, corps, sansCe) {
+    const pas = TT / 4;
+    for (let d = pas; d < portee; d += pas) {
+      if (dansUnCorps(x0 + ca * d, y0 + sa * d, corps, sansCe)) return d - pas;
+    }
+    return portee;
+  }
+
+  function allumerLesPhares(v, cx, cy) {
+    rafraichirEtatPhares();
+    if (!lampesPhares.allume) return;
+    // ⚠️ L'EMPREINTE (EN VRAI MONDE) SE POSE POUR TOUT CHAR VISIBLE, MENE OU
+    // NON : un char gare, ou en panne, bloque un faisceau tout autant que celui
+    // qui roule — c'est sa CAISSE qui arrete la lumiere, pas son moteur. Posee
+    // ici (avant le retour qui suit, propre aux chars menes) pour que meme un
+    // char sans lumieres bloque celle des autres. `corpsMonde`, pas `corps` :
+    // ce dernier est l'empreinte a l'ECRAN de `dessinerUn`, une autre geometrie.
+    if (v.def) {
+      lampesPhares.corpsMonde.push({ x: v.x, y: v.y, ca: Math.cos(v.angle), sa: Math.sin(v.angle),
+                                      demiL: v.def.longueur / 2, demiH: v.def.largeur / 2, v: v });
+    }
+    if (!v.conducteur || v.etat === 'epave' || v.panneT > 0 || !v.def) return;
+    const lampes = lampesDeLaMachine(v.sprite);
+    const faisceau = lampes.bas ? FAISCEAUX[v.def.classe] || null : null;
+    const n = lampes.length + (faisceau ? 1 : 0);
+    const plafond = v.conducteur === B.joueur ? LAMPES_PHARES_MAX : LAMPES_PHARES_MAX - LAMPES_PAR_CHAR_MAX;
+    if (!n || lampesPhares.liste.length + n > plafond) return;
+    // ⚠️ Le cap DESSINE, pas `v.angle` : le toit est cuit au cran le plus
+    // proche, et une lueur posee au cap exact glisserait a cote de sa lampe.
+    const cap = capDe(v.angle) * Math.PI * 2 / ROTATIONS - Math.PI / 2;
+    const ca = Math.cos(cap), sa = Math.sin(cap), k = lampes.profondeur;
+    // ⚠️ SOUS LE TOIT D'UN GARAGE, RIEN NE S'ALLUME a l'ecran : ni une lueur, ni le
+    // faisceau qui en partirait (`Monde.cacheSousLeToit`, la zone meme que le dessin
+    // decoupe). Ce qui a passe le linteau, le nez dehors, eclaire comme avant.
+    const rideau = Monde.rideauPres ? Monde.rideauPres(v) : null;
+    if (faisceau) {
+      // ⚠️ AU SOL (`v.y`, pas `v.y - v.z`) : la flaque de lumiere est sur la
+      // chaussee, comme l'ombre, meme quand le char saute. Et ECRASEE comme
+      // elle (`p`) : le sol se voit de biais. Il part des phares, pas de
+      // devant le nez — ce qui s'allume derriere les phares, c'est la caisse.
+      const b = lampes.bas, sol = ombreDe(v);
+      // Le phare, en VRAI monde (non ecrase) : c'est depuis la, et dans le cap
+      // dessine, qu'on marche pour trouver le premier mur devant lui.
+      const ox = v.x + b.u * ca - b.w * sa, oy = v.y + b.u * sa + b.w * ca;
+      const portee = porteeLibre(ox, oy, ca, sa, faisceau.portee);
+      if (!Monde.cacheSousLeToit(rideau, ox, oy)) lampesPhares.liste.push({
+        x: ox - cx, y: v.y + (b.u * sa + b.w * ca) * k - cy,
+        a: cap, p: sol ? sol.profondeur : k, r: portee,
+        cone: [b.demi + 1, b.demi + 1 + faisceau.ouverture * (portee / faisceau.portee)],
+        c: 'rgba(255,236,190,' + (faisceau.force * lampesPhares.fondu).toFixed(3) + ')', faisceau: v,
+        // ⚠️ Pour la 2e passe (`lampesDesPhares`) : l'origine et l'axe en VRAI
+        // monde, et de quoi recalculer le cone si un char le raccourcit encore.
+        ox: ox, oy: oy, ca: ca, sa: sa, demi: b.demi, ouverture: faisceau.ouverture, porteeMax: faisceau.portee,
+      });
+    }
+    const x0 = v.x - cx, y0 = v.y - v.z - cy, i = capDe(v.angle), parts = partsVisibles(v.sprite, i, lampes);
+    for (let n = 0; n < lampes.length; n++) {
+      const l = lampes[n];
+      // Cachee par la caisse a ce cap : pas de lueur (le faisceau au sol, lui, reste).
+      // Et une lampe eclaire vers ou elle POINTE : pleine quand elle nous regarde (le
+      // phare d'un char qui descend, le feu arriere d'un char qui monte), a 40 % de
+      // profil, ou l'on n'en devine que le coin. `sa` est la part du cap vers le bas.
+      const face = l.lettre === 't' ? -sa : sa;
+      const part = parts[n] * (LUEUR_DE_PROFIL + (1 - LUEUR_DE_PROFIL) * Math.max(0, face));
+      if (part <= 0) continue;
+      const lampe = { x: x0 + l.u * ca - l.w * sa, y: y0 + (l.u * sa + l.w * ca) * k - l.z, r: l.r,
+                      c: part < 1 ? rgba(l.teinte, l.alpha * part) : l.c };
+      if (Monde.cacheSousLeToit(rideau, lampe.x + cx, lampe.y + cy)) continue;
+      if (l.lettre === 't') lampe.arriere = v; else lampe.phare = v;
+      lampesPhares.liste.push(lampe);
+    }
+  }
+
+  /** Ce que `jeu.js` donne a `Base.fin` — vide des qu'on change d'image.
+
+      ⚠️ **C'EST ICI, PAS DANS `allumerLesPhares`, QUE LES CHARS SE BLOQUENT
+      L'UN L'AUTRE.** Les chars se dessinent dans l'ordre de `Entites`, pas
+      dans celui ou ils se genent : au moment ou le faisceau d'un char
+      s'allume, un char plus loin dans la liste — donc pas encore dessine —
+      peut deja se trouver devant lui, et son empreinte n'existe pas encore
+      dans `lampesPhares.corpsMonde`. `lampesDesPhares` n'est appelee qu'UNE FOIS
+      par image, par `jeu.js`, APRES que tous les chars visibles sont passes
+      par `dessinerUn` : c'est le seul moment ou `corps` est complet. */
+  function lampesDesPhares() {
+    if (lampesPhares.image !== B.image) return [];
+    if (!lampesPhares.finalise) {
+      lampesPhares.finalise = true;
+      for (const l of lampesPhares.liste) {
+        if (!l.faisceau) continue;
+        const r = porteeLibreDesChars(l.ox, l.oy, l.ca, l.sa, l.r, lampesPhares.corpsMonde, l.faisceau);
+        if (r < l.r) {
+          l.r = r;
+          l.cone = [l.demi + 1, l.demi + 1 + l.ouverture * (r / l.porteeMax)];
+        }
+      }
+    }
+    return lampesPhares.liste;
+  }
+
+  /** Les empreintes au sol des chars dessines cette image — ce que `Base.fin`
+      decoupe hors d'un faisceau pour qu'il n'eclaire pas AU TRAVERS d'un char
+      gare devant, comme il le faisait avant (la lueur se composait par-dessus
+      toute la scene deja peinte, sans egard a ce qui s'y trouvait). */
+  function corpsDesPhares() { return lampesPhares.image === B.image ? lampesPhares.corps : []; }
 
   /** Une ampoule allumee : le pourtour de la phase, un COEUR plus pale, et la
       lampe qu'elle jette a la brune.
@@ -2807,8 +3852,17 @@ const Vehicules = (function () {
       il avait les fesses a la hauteur des moyeux, les mains sur les genoux et
       les pieds dans le vide. Les pedales tournent avec la distance roulee
       (`pedale` du sprite) ; sans pedales — la moto —, la premiere image. */
-  function imageDuCavalier(def, v, swaps) {
-    const cuit = Atlas.cuire('joueur', SPRITES.joueur, swaps);
+  /** La TENUE de celui qui est sur le deux-roues (`Garderobe`), ou null : le joueur habille,
+      le pilote du trafic habille des sa naissance sur la selle (`v.pilote.tenue`). */
+  function tenueDuCavalier(v) {
+    if (!cavalierDe(v)) return null;
+    if (v.conducteur === B.joueur) return B.joueur.tenue || null;
+    return (v.pilote && v.pilote.tenue) || null;
+  }
+
+  function imageDuCavalier(def, v, swaps, tenue) {
+    // Habille : son squelette et ses pieces, chapeau compris ; sinon le corps commun teint.
+    const cuit = (tenue && typeof Garderobe !== 'undefined' && Garderobe.cuire(tenue)) || Atlas.cuire('joueur', SPRITES.joueur, swaps);
     const face = faceDe(v);
     // ⚠️ La POSTURE est celle de la fiche : on ne mene pas une chaloupe comme on
     // enfourche une moto — assis au fond, la main a la barre (`posture`).
@@ -2854,6 +3908,7 @@ const Vehicules = (function () {
   function dessinerUn(ctx, v, cx, cy) {
     const def = SPRITES[v.sprite];
     if (!def) return;
+    rafraichirEtatPhares();
     // ⚠️ **LES FEUX DE DETRESSE** d'un char en panne : deux ambres qui battent
     // aux quatre coins de sa caisse. C'est tout ce qui le distingue d'un char
     // mal gare — et c'est exactement ce qu'on veut dire.
@@ -2869,6 +3924,13 @@ const Vehicules = (function () {
     }
     const ombre = ombreDe(v);
     if (ombre) {
+      // Meme rectangle que l'ombre, garde pour decouper les faisceaux DES
+      // AUTRES chars (v exclut le sien, cf. Base.fin) : le seul endroit ou
+      // l'empreinte au sol d'un char visible est deja calculee.
+      if (lampesPhares.allume) {
+        lampesPhares.corps.push({ x: ombre.x - cx, y: ombre.y - cy, angle: ombre.angle,
+                                   l: ombre.l, h: ombre.h, profondeur: ombre.profondeur, v: v });
+      }
       // ⚠️ ORIENTEE COMME LE CHAR. Une tache alignee sur les axes ne dit rien
       // de la place qu'il prend : c'est justement l'encombrement qu'on rend a
       // l'oeil, et un autobus en travers de la rue n'a pas la meme empreinte
@@ -2890,6 +3952,7 @@ const Vehicules = (function () {
     // et centre sur son empreinte — donc sur `v.x`, `v.y`, la ou l'ombre est
     // posee et la ou les cercles de collision sont. Ce qu'on voit tourner est
     // ce qui bloque.
+    allumerLesPhares(v, cx, cy);
     const toit = Atlas.cuireCap(v.sprite, def, swapsDuMoment(v, def), ROTATIONS, capDe(v.angle), centreDuToit(v));
     const demi = toit.width / 2;
     ctx.drawImage(toit, Math.round(v.x - demi - cx), Math.round(v.y - v.z - demi - cy));
@@ -2897,7 +3960,7 @@ const Vehicules = (function () {
     // ⚠️ Et le cavalier PAR-DESSUS, toujours : vu d'en haut, celui qui est
     // assis sur la machine est au-dessus d'elle, quel que soit son cap.
     const swaps = cavalierDe(v);
-    const cavalier = swaps ? imageDuCavalier(def, v, swaps) : null;
+    const cavalier = swaps ? imageDuCavalier(def, v, swaps, tenueDuCavalier(v)) : null;
     if (cavalier) {
       ctx.drawImage(cavalier.canvas, Math.round(cavalier.x - cx), Math.round(cavalier.y - v.z - cy));
       B.stats.images++;
@@ -2905,13 +3968,14 @@ const Vehicules = (function () {
   }
 
   return {
-    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, majGaresDeService, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
+    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, majGaresDeService, typeDeRue, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, pousserLeDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
     majPhysique, avancer, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
-    pointDArret, approcheDeLaLigne, placeDeLaPanne,
+    pointDArret, approcheDeLaLigne, placeDeLaPanne, placeStationnee, garesVoulus,
     voieDeDepassement, voieLibre, changerDeVoie,
-    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPanne, majAmarrages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, imageDuCavalier,
+    estVeloDuTrafic, intentionDuVelo, coteDuVelo, aLaBordure, voieDuVelo, roulableHorsRue, boutDeTrottoir, traverseeDuParc, monterSurLeTrottoir,
+    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPlaque, majTas, majPanne, majAmarrages, majMouillages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, lampesDesPhares, corpsDesPhares, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, tenueDuCavalier, imageDuCavalier,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };
 })();

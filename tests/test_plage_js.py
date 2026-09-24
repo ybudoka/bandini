@@ -359,7 +359,14 @@ def test_un_grand_se_fait_bronzer_sur_une_serviette_libre(banc, paquet):
         o.frame(900);
         const grands = enfants(L).filter(function (e) { return e.sprite !== 'enfant'; });
         if (grands.length < 2) return { greve: true, grands: grands.length };
-        const a = grands[0], b = grands[1];
+        // ⚠️ LE GRAND LE PLUS PRES D'UNE SERVIETTE LIBRE, pas le premier de la
+        // liste : l'ordre des entites bouge des qu'on ajoute un panneau n'importe
+        // ou en ville (les courses, 22 sept. 2026), et le premier etait alors un
+        // nageur a 227 px, en pleine eau, force a bronzer en ligne droite — 20
+        // graines sur 40 rouges pour un chemin que ce juge ne juge pas.
+        function prochain(e) { const l = L.Entites.litLibre(e, 400); return l ? Math.hypot(e.x - (l.x * TT + 8), e.y - (l.y * TT + 8)) : Infinity; }
+        const a = grands.slice().sort(function (p, q) { return prochain(p) - prochain(q); })[0];
+        const b = grands.find(function (e) { return e !== a; });
         // ⚠️ Le geste, pas la chance : on lui donne le jeu, comme le juge du ballon.
         const lit = L.Entites.litLibre(a, 400);
         if (!lit) return { greve: true, grands: grands.length, lit: false };

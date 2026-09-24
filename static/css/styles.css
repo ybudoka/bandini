@@ -117,6 +117,15 @@ canvas#toile {
 .bouton:active { transform: scale(.96); }
 .bouton--principal { background: var(--or); color: var(--nuit); border-color: var(--or); }
 .bouton--principal:hover, .bouton--principal:focus-visible { background: #f5c75a; }
+/* Le geste qui ne revient pas (effacer son compte) : rouge, jamais au rang des boutons de
+   tous les jours. `--discret` le range en bas ; `--danger` est la confirmation. */
+.bouton--discret {
+  min-height: 36px; padding: 6px 14px; font-size: 13px;
+  background: transparent; border-color: rgba(196, 54, 47, .5); color: #e7837c;
+}
+.bouton--discret:hover, .bouton--discret:focus-visible { background: rgba(196, 54, 47, .18); }
+.bouton--danger { background: var(--rouge); border-color: var(--rouge); color: var(--parchemin); }
+.bouton--danger:hover, .bouton--danger:focus-visible { background: #d9463e; }
 
 .aide { margin: 0; font-size: clamp(11px, 1.5vw, 13px); opacity: .8; }
 .aide--petit { opacity: .6; }
@@ -173,25 +182,113 @@ kbd {
 }
 .compte-form__etat { margin: 0; min-height: 1.2em; font-size: 14px; color: var(--or); }
 
-/* Le compte (M14) : les trois cases telles que le serveur les connait. Deux
-   colonnes, la valeur en or a droite. */
+/* Le compte (M14) : les trois cases telles que le serveur les connait. Une rangee par
+   case, et des colonnes partagees (`subgrid`) : partie, jour, argent a droite, date en or.
+   Sur un ecran etroit, la date passe sous la rangee plutot que de casser l'argent. */
 .compte-parties {
   list-style: none;
-  margin: 10px 0 0;
+  margin: 0;
   padding: 0;
-  width: min(30em, 100%);
+  width: var(--compte-l);
+  display: grid;
+  grid-template-columns: max-content max-content max-content 1fr;
+  gap: 6px 0;
   font-size: 15px;
+  text-align: left;
 }
-.compte-parties li { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; }
-.compte-parties li span:last-child { color: var(--or); white-space: nowrap; }
+.compte-parties li {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  column-gap: 18px;
+  align-items: baseline;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, .05);
+}
+.compte-parties span { white-space: nowrap; }
+.compte-parties__partie { font-weight: 700; }
+.compte-parties__jour { opacity: .75; }
+.compte-parties__argent { text-align: right; }
+.compte-parties__quand { text-align: right; color: var(--or); font-size: 13px; }
+.compte-parties__vide { opacity: .5; }
+.compte-parties__vide .compte-parties__vide { grid-column: 2 / 4; font-style: italic; }
 .compte-parties:empty { display: none; }
+@container compte (max-width: 34em) {
+  .compte-parties { grid-template-columns: max-content max-content 1fr; }
+  .compte-parties__quand { grid-column: 1 / -1; text-align: left; }
+  .compte-parties__quand:empty { display: none; }
+}
+
+/* Les rubriques du compte ouvert : un nom en petites capitales, un filet dessous. */
+.compte-rubrique {
+  width: var(--compte-l);
+  margin: 10px 0 0;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(232, 179, 60, .25);
+  font-size: 12px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--or);
+}
+.compte-rubrique[hidden] { display: none; }
+.compte-bloc { width: var(--compte-l); display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.compte-bloc[hidden] { display: none; }
+.compte-bloc .compte-form { align-items: flex-start; }
+.compte-bloc .compte-form__ligne { justify-content: flex-start; }
 /* ⚠️ `display: flex` BAT l'attribut `hidden` : sans cette règle, le formulaire du
    compte reste à l'écran une fois connecté — et rien ne le dit au banc, qui voit
    bien `hidden = true`. Vu à la capture, le 17 sept. 2026 ; c'est la même raison
    qui a fait écrire `.voile[hidden]` plus haut. */
 .compte-form[hidden] { display: none; }
+/* ⚠️ Idem pour `.boutons` (M14, 3e vague) : `<div class="boutons" id="nip-retrait" hidden>`
+   restait affiché dans TOUS les états — « Retirer le NIP » sous l'écran VERROUILLÉ, où il
+   retirait le verrou sans le NIP. Vu à la capture le 20 sept. 2026 ; les juges du NIP ne
+   regardaient pas ce bloc-là. */
+.boutons[hidden] { display: none; }
+
+/* Le defi du jour au titre (M14, 5e vague) : une ligne, en or comme l'argent. */
+.defi-du-jour { margin: 0; font-size: 14px; color: var(--or); }
+
+/* ⚠️ L'ECRAN DU COMPTE DEFILE (M14) : il est bien plus haut que le titre, et `.voile` centre
+   son contenu dans un `.ecran` en `overflow: hidden` — ce qui deborde etait ROGNE des deux
+   cotes, sans defilement. Mesure du 20 sept. 2026 : en portrait (ecran de jeu de 390x219),
+   « Retour » etait hors ecran, meme le champ du pseudo etait coupe en haut ; en paysage tout
+   tenait AU PIXEL PRES, et la confirmation d'effacement (+130 px) l'aurait rogne. Les marges
+   `auto` gardent le centrage quand ca tient (un simple `justify-content: center` rendrait le
+   haut inatteignable des que ca deborde). */
+#voile-compte { justify-content: flex-start; overflow-y: auto; overscroll-behavior: contain; }
+/* ⚠️ Et il SORT DE LA BOITE DU JEU (22 sept. 2026) : en portrait, la boite fait 390x219 et
+   l'on n'y lisait que deux lignes a la fois. `fixed` prend toute la fenetre (`.ecran` n'a pas
+   de `transform`, qui l'y enfermerait), par-dessus les commandes tactiles (`z-index: 5`), et
+   le fond est opaque : le decor (l'enseigne du TERMINUS) se lisait a travers la liste. */
+#voile-compte {
+  position: fixed;
+  z-index: 20;
+  gap: 10px;
+  padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+  background: var(--nuit);
+  container: compte / inline-size;
+  /* Une seule largeur pour les rubriques, la liste et les blocs : en `rem`, pas en `em` —
+     chacun a sa taille de police, et les filets ne s'alignaient pas. */
+  --compte-l: min(34rem, 100%);
+}
+#voile-compte > :first-child { margin-top: auto; }
+#voile-compte > :last-child { margin-bottom: auto; }
+
+/* « Ce qu'on garde » (M14, 4e vague) : un <details>, ferme par defaut — ce n'est pas ce
+   qu'on est venu chercher, mais ca doit se trouver sans chercher. */
+.compte-garde { width: var(--compte-l); margin-top: 10px; font-size: 13px; text-align: left; }
+.compte-garde summary { cursor: pointer; text-align: center; opacity: .85; }
+.compte-garde ul { margin: 6px 0 0; padding-left: 1.2em; }
+.compte-garde li { margin: 3px 0; }
 /* Trois champs nommés : « Courriel (facultatif) » ne tient pas dans 12em. */
 #voile-compte .compte-form input { width: 15em; }
+/* Quatre chiffres n'ont pas besoin de la largeur d'un courriel. */
+#voile-compte #nip-code, #voile-compte #nip-nouveau { width: 7em; text-align: center; letter-spacing: .3em; }
+#compte-effacer-ligne { margin-top: 4px; }
+#compte-effacer-form { width: var(--compte-l); }
 
 .pied {
   display: flex;

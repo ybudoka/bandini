@@ -25,6 +25,15 @@ const Jeu = (function () {
   const SEQUENCE_DEBUG_ACTIONS = ['haut', 'haut', 'bas', 'bas', 'gauche', 'droite', 'gauche', 'droite'];
   let dernier = 0, accu = 0, fenetre = null, doc = null;
   let horsLigne = false;
+  //: Debug des gels (Martin, 21 sept.) : le temps par systeme durant l'image en
+  //: cours de simulation — null hors d'`avancer()` (le banc appelle `maj()`
+  //: tout seul). `pas()` mesure sans rien changer au comportement : un
+  //: `fn` refuse simplement d'etre chronometre quand `tEtapes` est null.
+  let tEtapes = null;
+  //: Le seuil au-dela duquel une image se signale : 50ms, pire que 20 IPS —
+  //: une image ordinaire tourne sous les 16ms. En dessous, ce sont des
+  //: courants d'air normaux, pas un gel.
+  const SEUIL_GEL = 50;
   //: La partie pour laquelle `commencer()` a pose la ville, ou null tant qu'on
   //: n'a pas joue depuis le chargement de la page (voir `jouerPartie`).
   let monde = null;
@@ -79,16 +88,27 @@ const Jeu = (function () {
       const porte = (Monde.carte.def.portes || []).find(function (q) { return q.lieu === 'planque'; });
       if (porte) { x = porte.x * TT + 8; y = (porte.y + 1) * TT + 8; }
     }
+    // ⚠️ UNE POSITION SAUVEGARDEE N'EST PAS UNE PLACE OU L'ON TIENT. La sauvegarde
+    // ecrit ou l'on est, et au volant c'est le centre du char : sous le toit d'un
+    // garage, sur l'eau, dans une facade. Rouverte telle quelle, la partie nous
+    // posait sur le toit du garage Bandini (Martin, 21 sept. 2026), et rien ne
+    // sort un pieton d'un mur. C'est ICI qu'on corrige, pas a la sauvegarde : les
+    // parties deja ecrites se rouvrent aussi.
+    const debout = ouTenirDebout(x, y);
+    if (debout) { x = debout.x; y = debout.y; }
     const j = Entites.creerJoueur(x, y);
     Monde.centrerCamera(j.x, j.y);
     Entites.peuplerDabord();          // ⚠️ apres le joueur : la bulle est autour de lui
     if (p.mission) p.mission = null;  // une mission ne survit pas au rechargement : ses figurants non plus
-    B.mission = null; B.defi = null; B.cinema = null; B.ouverture = null; B.scene = null; B.finEnAttente = null;
+    B.mission = null; B.defi = null; B.epreuve = null; B.conduite = null; B.rue = null; B.cinema = null; B.ouverture = null; B.scene = null; B.finEnAttente = null;
     B.sonnerie = null;                       // un telephone qui sonnait dans la partie d'avant ne sonne pas dans celle-ci
     B.abribusServis = {};                    // les abribus qu'un autobus vient de servir (Autobus)
     Traversier.oublier();                    // rien a bord, la carte neuve n'a pas de pont pose
     Neige.oublier();                         // la rue d'une partie rechargee est blanche
     Incendies.oublier();                     // une nouvelle partie n'hérite pas des feux éteints
+    Interactions.oublier();                  // ni de la soif des fontaines
+    Monde.oublierLesRuesMouillees();         // ni de l'arroseuse d'une autre nuit
+    B.lastCall = null;                       // ni des bars qu'elle a vus se vider
     B.transition = null;        // une partie ne commence jamais dans le noir d'une porte
     Histoire.creerDonneurs();
     Histoire.creerPanneaux();
@@ -136,7 +156,9 @@ const Jeu = (function () {
     const p = B.partie;
     const neuve = (p.x === null || p.x === undefined) && !p.ouvertureVue;
     commencer();
-    if (neuve) Histoire.ouverture(false);
+    // Sans ouverture possible (pas de rue devant le terminus), les commandes
+    // s'ouvrent tout de suite : c'est la fin de l'ouverture qui les montre.
+    if (neuve && !Histoire.ouverture(false)) Hud.ouvrirCommandes();
   }
 
   // --- Les parties : trois emplacements -------------------------------------------------
@@ -353,7 +375,11 @@ const Jeu = (function () {
     const piece = Monde.entrer(porte);
     if (!piece) return null;
     B.exterieur = { carte: piece.ville, entites: B.entites, x: porte.x * TT + 8, y: (porte.y + 1) * TT + 10 };
-    B.entites = [B.joueur];
+    // ⚠️ TOUS LES JOUEURS PASSENT LA PORTE, pas seulement le premier : en
+    // coop, le deuxieme restait dehors avec ses coordonnees de rue, et la
+    // laisse de la camera (`Monde.majCameraCoop`) le tirait a travers les
+    // murs de la piece. `majCoop` le repose a cote a la premiere image.
+    B.entites = Entites.joueurs();
     B.particules.length = 0;
     B.interieur = piece.interieur;
     Entites.reindexerDecor();
@@ -363,6 +389,10 @@ const Jeu = (function () {
     // la rue se tait, et ce qu'on entend en ouvrant les yeux est deja celle
     // d'ici. Une piece qui n'est pas un commerce reste silencieuse.
     Son.Radio.dedans(piece.interieur.slug);
+    // ⚠️ L'helico devient sourd AU NOIR aussi, avec la porte qui se ferme : le
+    // monde est fige pendant le fondu, et sans cet appel on l'entendrait en plein
+    // air dans la piece deja eclairee.
+    Police.majBruitHelico();
     return piece;
   }
 
@@ -454,6 +484,7 @@ const Jeu = (function () {
       // exactement la ou l'on etait, meme en sortant pendant le fondu d'entree.
       j.x = ext.x; j.y = ext.y;
       poserDansLaPorte(j, 'bas');
+      Police.majBruitHelico();              // la porte s'ouvre : l'helico se reentend en plein air
       // ⚠️ La porte de la RUE s'ouvre ici, une fois `Monde.restaurer` fait :
       // avant, `Monde.carte` est encore la piece, et ses battants ne sont pas
       // ceux de la ville. On la trouve juste au-dessus du pas de porte.
@@ -503,19 +534,30 @@ const Jeu = (function () {
     if (B.menu) Hud.fermerMenu();
   }
 
-  function basculerPause() { if (B.etat === 'jeu') pause(); else if (B.etat === 'pause') reprendre(); else if (B.etat === 'carte') fermerCarte(); }
+  function basculerPause() { if (B.etat === 'jeu') pause(); else if (B.etat === 'pause') reprendre(); else if (B.etat === 'carte') fermerCarte(); else if (B.etat === 'photo') fermerPhoto(); }
 
   /** Reveille par la suite secrete (`SEQUENCE_DEBUG`) — jamais par un bouton.
       En partie seulement, et pas par-dessus un autre menu, une scene ou la
-      roue d'armes : ce sont eux qui gelent deja la simulation, pas ce menu. */
+      roue d'armes : ce sont eux qui gelent deja la simulation, pas ce menu.
+
+      ⚠️ La taper ACTIVE les triches de cette partie : l'onglet TRICHES apparait
+      dans le classeur de la PAUSE (`Hud.ouvrirOnglet`), et se sauve avec la
+      partie — on n'a plus a retaper la suite, mais une partie qui ne l'a jamais
+      tapee n'en montre rien. Elle ouvre la PAUSE sur cet onglet ; tapee DANS la
+      pause, elle y tourne (le classeur n'est pas « un autre menu »). */
   function ouvrirMenuDebug() {
-    if (B.etat !== 'jeu' || B.menu || B.cinema || B.roue) return;
-    Hud.ouvrirMenu(Hud.menuDebug());
+    const dansLaPause = B.etat === 'pause' && B.menu && B.menu.classeur;
+    if (!(B.etat === 'jeu' && !B.menu) && !dansLaPause) return;
+    if (B.cinema || B.roue) return;
+    if (!triche('menu')) { B.partie.triches.menu = true; Missions.sauvegarderPartie(); }
+    if (B.etat === 'jeu') pause();
+    Hud.ouvrirOnglet('triches');
   }
 
   /** La carte de la ville, plein ecran : la simulation attend. */
   function ouvrirCarte() {
     if (B.etat !== 'jeu' && B.etat !== 'pause') return;
+    Hud.oublierFiltreDeCarte();   // la carte se rouvre sur l'appareil qu'on tient
     Combat.fermerRoue(false);
     if (B.menu) Hud.fermerMenu();
     B.etat = 'carte';
@@ -528,6 +570,139 @@ const Jeu = (function () {
     Hud.etat('jeu');
   }
 
+  //: Le PAS d'un fondu de camera par image, en pixels — assez vif pour
+  //: explorer un pate de maisons en une seconde, assez lent pour viser un
+  //: cadrage precis (voir `majPhoto`).
+  const VITESSE_PHOTO = 6;
+
+  /** Le mode photo (M14, 6e vague) : comme la carte, la simulation attend —
+      mais la camera se detache et repond au stick, et l'ecran reste celui du
+      jeu (pas un fond noir) pour qu'on cadre ce qu'on voit. Depuis le jeu ou
+      la pause, comme `ouvrirCarte`. */
+  function ouvrirPhoto() {
+    if (B.etat !== 'jeu' && B.etat !== 'pause') return;
+    Combat.fermerRoue(false);
+    if (B.menu) Hud.fermerMenu();
+    B.etat = 'photo';
+    Hud.etat('photo');
+    Entree.contexte('photo');
+    B.photo = { dx: 0, dy: 0, filtre: 0 };
+  }
+
+  function fermerPhoto() {
+    if (B.etat !== 'photo') return;
+    B.photo = null;
+    B.etat = 'jeu';
+    Hud.etat('jeu');
+    Entree.contexte(B.joueur && B.joueur.dansVehicule ? 'vehicule' : 'pied');
+  }
+
+  //: Les pas essayes pour poser le deuxieme joueur PRES du premier sans le
+  //: planter dans un mur — meme idee que `Hud.placeAupres` (l'objectif
+  //: teleporte), une tuile a la fois autour de lui.
+  const PAS_COOP = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1], [2, 0], [-2, 0]];
+
+  /** Une tuile marchable A COTE de (x, y) — jamais (x, y) lui-meme, deja pris
+      par celui qu'on longe. */
+  function placePresDe(x, y) {
+    const tx0 = Math.floor(x / TT), ty0 = Math.floor(y / TT);
+    for (const p of PAS_COOP) {
+      const tx = tx0 + p[0], ty = ty0 + p[1];
+      if (Monde.marchablePieton(tx, ty) && !Monde.estMeuble(tx, ty)) return { x: tx * TT + 8, y: ty * TT + 8 };
+    }
+    return { x: x, y: y };
+  }
+
+  /** La coop locale : un DEUXIEME VRAI JOUEUR a cote du premier, sur l'autre
+      appareil (un clavier et une manette — l'option COOP dit lequel va au
+      joueur 1, `Entree.joueur1PrendLaManette`). Depuis le menu DEBUG. */
+  function basculerCoop() {
+    if (B.coop) {
+      Entites.retirer(B.coop.entite);
+      B.coop = null;
+      return;
+    }
+    if (!B.joueur) return;
+    const place = placePresDe(B.joueur.x, B.joueur.y);
+    // `scene` : la piece ou les deux se trouvent (`null` = la rue). C'est elle
+    // qui dit a `majCoop` qu'on vient de changer de decor.
+    B.coop = { entite: Entites.creerJoueur2(place.x, place.y), scene: B.interieur };
+  }
+
+  /** Repose le partenaire a cote du premier, debout et libre de tout ce que
+      la scene d'avant lui avait mis sur le dos. */
+  function poserAupres(e, j) {
+    const place = placePresDe(j.x, j.y);
+    e.x = place.x; e.y = place.y;
+    e.vx = 0; e.vy = 0;
+    e.assis = null; e.alite = false; e.otage = null; e.enjambe = null;
+    e.dansVehicule = null; e.dessine = true; e.nage = false;
+  }
+
+  /** Ce que la coop doit a chaque image, et rien de plus : garder les deux
+      joueurs DANS LA MEME SCENE, et faire monter le deuxieme quand le premier
+      prend le volant.
+
+      ⚠️ « Ce qui change de scene, lance une mission ou conduit, c'est toujours
+      le joueur 1 » (Martin, 22 sept.) : le deuxieme ne pousse pas les portes,
+      il SUIT. Le rattrapage se fait ici, au tour d'apres, plutot qu'a chaque
+      sortie (porte, metro, etage, urgence, prison, cinema) — une scene
+      oubliee le perdrait dans une carte qui n'existe plus. */
+  function majCoop() {
+    if (!B.coop) return;
+    const e = B.coop.entite, j = B.joueur;
+    if (!e || !j) return;
+    // ⚠️ LA SCENE A CHANGE : chaque piece est un objet neuf (`Monde.entrer`) et
+    // la rue est `null` — comparer l'objet suffit, et ca attrape la porte comme
+    // le metro, l'ascenseur, l'urgence ou la prison, sans les enumerer. Il
+    // suit le premier ; ses coordonnees d'avant n'ont plus de sens ici.
+    if (B.coop.scene !== B.interieur) {
+      B.coop.scene = B.interieur;
+      poserAupres(e, j);
+    }
+    if (B.entites.indexOf(e) < 0) {
+      poserAupres(e, j);
+      B.entites.push(e);
+    }
+    // ⚠️ IL MONTE AVEC LUI : sans ca, la laisse de la camera trainait le
+    // deuxieme joueur derriere un char lance, a travers les murs. Passager,
+    // donc invisible et a l'abri (`Entites.blesser` refuse tout a qui est en
+    // char) — il redescend a cote des que le premier se gare.
+    if (j.dansVehicule && !e.dansVehicule) {
+      e.dansVehicule = j.dansVehicule; e.dessine = false;
+      e.vx = 0; e.vy = 0; e.assis = null; e.charge = 0;
+    } else if (!j.dansVehicule && e.dansVehicule) {
+      const place = placePresDe(j.x, j.y);
+      e.x = place.x; e.y = place.y;
+      e.dansVehicule = null; e.dessine = true; e.descenduT = B.t;
+    }
+    if (e.dansVehicule) { e.x = e.dansVehicule.x; e.y = e.dansVehicule.y; }
+  }
+
+  /** Le stick promene la camera (bornee a la ville, voir `Monde.limitesCamera`),
+      ARME cycle les filtres, ACTION capture et telecharge, ANNULER/PAUSE/CARTE
+      referment — trois sorties parce que le pouce d'un telephone n'a que
+      quatre boutons et que ANNULER n'en est pas un (voir `Entree.etiquettes`). */
+  function majPhoto() {
+    const p = B.photo, axe = Entree.axe, ax = p.dx, ay = p.dy;
+    if (axe.mag > 0) { p.dx += axe.x * axe.mag * VITESSE_PHOTO; p.dy += axe.y * axe.mag * VITESSE_PHOTO; }
+    const lim = Monde.limitesCamera();
+    p.dx = borner(B.cam.x + p.dx, lim.xMin, lim.xMax) - B.cam.x;
+    p.dy = borner(B.cam.y + p.dy, lim.yMin, lim.yMax) - B.cam.y;
+    // ⚠️ LA PHOTO NE VA PAS OÙ L'ŒIL NE VA PAS : tant que l'île de l'aéroport est
+    // cachée, le large refusé tient la caméra du jeu loin d'elle (`Monde.largeRefuse`),
+    // et celle-ci aussi — un axe à la fois, pour glisser le long comme contre un mur.
+    // (Qui la voyait déjà — une vieille sauvegarde prise sur l'île — garde sa photo.)
+    if (Monde.vueSurLeMasque(B.cam.x + p.dx, B.cam.y + p.dy) && !Monde.vueSurLeMasque(B.cam.x + ax, B.cam.y + ay)) {
+      if (!Monde.vueSurLeMasque(B.cam.x + p.dx, B.cam.y + ay)) p.dy = ay;
+      else if (!Monde.vueSurLeMasque(B.cam.x + ax, B.cam.y + p.dy)) p.dx = ax;
+      else { p.dx = ax; p.dy = ay; }
+    }
+    if (Entree.neuf('arme')) p.filtre = (p.filtre + 1) % FILTRES_PHOTO.length;
+    if (Entree.neuf('action')) Base.telecharger('bandini-' + Date.now() + '.png');
+    if (Entree.neuf('annuler') || Entree.neuf('pause') || Entree.neuf('carte')) fermerPhoto();
+  }
+
   function retourTitre() {
     Missions.sauvegarderPartie();
     // ⚠️ UN DES TROIS MOMENTS QUI COMPTENT (M14) : on vient de finir de jouer, et
@@ -537,11 +712,16 @@ const Jeu = (function () {
     // titre est aussi le moment ou une partie qui attendait en coulisse (elle ne
     // pouvait pas se poser pendant qu'on jouait) peut enfin descendre.
     Compte.ranger();
+    // Le titre revient : le defi du jour a peut-etre change depuis (au plus une demande / 10 min).
+    Defi.rafraichir();
     B.etat = 'titre';
     Hud.etat('titre');
     Hud.voile('titre');
     Son.Ambiance.arreter();
     Son.Chef.arreter();
+    // ⚠️ La ville reste derriere le titre, figee, l'helico avec : plus rien ne
+    // reglerait son bruit, qui tournerait sous la musique du titre.
+    Police.taireHelico();
     Son.Mus.jouer('titre');
   }
 
@@ -562,6 +742,28 @@ const Jeu = (function () {
     return null;
   }
 
+  /** Ou un pieton tient debout, au plus pres du pixel (x, y) : ce pixel-la s'il y
+      tient (ni mur, ni eau, ni grillage), sinon le centre de la tuile a pied la
+      plus proche — hors chaussee, hors meuble —, ou null a plus de 12 tuiles.
+
+      ⚠️ La plus proche AU PIXEL, pas la premiere d'une spirale : sorti du toit du
+      garage, on retombe devant sa porte, pas dans la ruelle derriere parce que la
+      spirale commence par le nord. */
+  function ouTenirDebout(x, y) {
+    const tx = Math.floor(x / TT), ty = Math.floor(y / TT);
+    if (!Monde.bloque(tx, ty, Monde.MASQUE_PIETON)) return { x: x, y: y };
+    let mieux = null, loin = Infinity;
+    for (let dy = -12; dy <= 12; dy++) {
+      for (let dx = -12; dx <= 12; dx++) {
+        if (!Monde.marchablePieton(tx + dx, ty + dy) || Monde.estMeuble(tx + dx, ty + dy)) continue;
+        const px = (tx + dx) * TT + 8, py = (ty + dy) * TT + 8;
+        const d = (px - x) * (px - x) + (py - y) * (py - y);
+        if (d < loin) { loin = d; mieux = { x: px, y: py }; }
+      }
+    }
+    return mieux;
+  }
+
   function maj() {
     Entree.debutImage();
     // ⚠️ Le debug INVINCIBLE (`Hud.menuDebug`) reutilise les images
@@ -570,12 +772,12 @@ const Jeu = (function () {
     // CHAQUE image, tant que le flag tient, elle ne retombe jamais a zero — et
     // combat, tirs, explosions, collisions restent le MEME chemin qu'en jeu
     // normal, juste sans jamais s'epuiser.
-    if (B.debugInvincible && B.joueur) B.joueur.invincible = 30;
+    if (triche('invincible') && B.joueur) B.joueur.invincible = 30;
     // ⚠️ MÊME PATRON que l'invincibilité : on recharge le souffle à fond à
     // CHAQUE image tant que le flag tient, au lieu d'un second garde-fou dans
     // la dépense. Le sprint et la nage restent le même chemin, juste sans
     // jamais s'épuiser — et on ne coule jamais.
-    if (B.debugEndurance && B.joueur) B.joueur.endurance = B.defs.recherche.vitesses.endurance;
+    if (triche('endurance') && B.joueur) B.joueur.endurance = B.defs.recherche.vitesses.endurance;
     // ⚠️ A chaque image, quel que soit l'ecran : la musique du menu doit
     // tourner au titre, la ou la simulation, elle, ne tourne pas.
     Son.Mus.tick();
@@ -585,6 +787,10 @@ const Jeu = (function () {
     // qu'on a laisse sur le trottoir. Une musique qu'on n'arrete que la ou on
     // la demarre est une musique qui reste allumee.
     Son.Rue.tick();
+    // Le bandeau de la prime compte ses pas ICI, avant tout ce qui fige la ville
+    // (un fondu, un dialogue) : il doit se derouler PENDANT la scene de fin. Un
+    // menu, lui, fige tout — le bandeau attend qu'on le ferme.
+    if (B.etat === 'jeu' && !B.menu) Hud.majPrime();
     if (Entree.neuf('muet')) {
       B.options.muet = !B.options.muet;
       Son.majVolume();
@@ -592,6 +798,8 @@ const Jeu = (function () {
     }
     // ⚠️ « Jouer » n'etait qu'un bouton de la page : a la manette (ou au
     // clavier), on ne pouvait pas commencer la partie sans toucher l'ecran.
+    // La ligne d'aide du titre suit l'appareil qu'on tient.
+    if (B.etat === 'titre') Hud.majAideDuTitre();
     if (B.etat === 'titre' && Hud.voileCourant === 'titre'
         && (Entree.neuf('action') || Entree.neuf('pause'))) {
       Son.reveiller();
@@ -690,31 +898,43 @@ const Jeu = (function () {
       // ici mesure le temps en IMAGES (cadences, minuteries, usure) : en
       // sauter trois sur quatre ralentit tout d'un coup, sans un seul `dt`.
       if (Combat.tempsQuiPasse()) {
-        Monde.majHeure();
-        Monde.majBattants();
-        // La musique suit ce qui t'arrive : district, poursuite, bagarre.
-        Son.Chef.maj();
-        Monde.majChemins();
-        // Les vagues : leur volume est une question de carte, pas de son.
-        Monde.majSonDuBord();
-        Entites.maj();
-        Combat.maj();
-        Vehicules.maj();
-        Traversier.maj();                 // apres les chars : ce qui est a bord suit la coque
-        Neige.maj();
-        Police.maj();
-        Incendies.maj();
-        Missions.maj();
-        Chantiers.maj();
-        Foire.maj();
-        Metro.maj();
-        Histoire.maj();
+        pas('monde', function () {
+          Monde.majHeure();
+          Monde.majBattants();
+          // La barriere du lot du poste : elle glisse pour une auto-patrouille conduite.
+          if (!B.interieur && Monde.majBarrieresCoulissantes()) Son.SFX.barriere_coulissante();
+          Monde.majChemins();
+          Monde.majSonDuBord();          // les vagues : leur volume est une question de carte, pas de son
+        });
+        // La musique suit ce qui t'arrive (Chef), la radio parle entre les
+        // tounes (Ondes, M15), on s'entend respirer et un quartier s'entend
+        // avant de se voir (Souffle, Quartier, M15).
+        pas('son', function () { Son.Chef.maj(); Son.Ondes.maj(); Son.Souffle.maj(B.joueur); Son.Quartier.maj(); });
+        pas('entites', Entites.maj);
+        pas('combat', Combat.maj);
+        pas('vehicules', Vehicules.maj);
+        pas('coop', majCoop);              // apres les chars : le passager suit sa tole
+        pas('traversier', Traversier.maj); // apres les chars : ce qui est a bord suit la coque
+        pas('neige', Neige.maj);
+        pas('police', Police.maj);
+        pas('incendies', Incendies.maj);
+        pas('interactions', Interactions.maj);
+        pas('missions', Missions.maj);
+        pas('chantiers', Chantiers.maj);
+        pas('foire', Foire.maj);
+        pas('metro', Metro.maj);
+        pas('histoire', Histoire.maj);
         Monde.majCamera();
         B.t++;
       }
     } else if (B.etat === 'carte') {
       // La carte de la ville : N, ECHAP, ACTION ou FRAPPE la referment.
+      // ⚠️ ARME tourne le filtre des défis (l'appareil qu'on tient, les deux autres, tous) :
+      // c'est le seul bouton que la carte ne prenait pas, et le doigt l'a aussi.
+      if (Entree.neuf('arme')) { Hud.tournerFiltreDeCarte(); Entree.videPresse(); return; }
       if (Entree.neuf('carte') || Entree.neuf('pause') || Entree.neuf('action') || Entree.neuf('attaque') || Entree.neuf('annuler')) { fermerCarte(); Entree.videPresse(); return; }
+    } else if (B.etat === 'photo') {
+      majPhoto();
     } else if (B.etat === 'pause') {
       // ⚠️ Pendant qu'on reapprend un bouton de manette, ECHAP annule
       // l'apprentissage ; il ne sort pas de la pause.
@@ -730,6 +950,44 @@ const Jeu = (function () {
     Entree.videPresse();
   }
 
+  /** Chronometre `fn` (aucun argument, aucune valeur de retour utilisee — tous
+      les `.maj()` de systeme) sous le nom `nom`, dans `tEtapes` : ne fait rien
+      de plus que l'appel nu quand `tEtapes` est null (hors d'`avancer()`). */
+  function pas(nom, fn) {
+    if (!tEtapes || typeof performance === 'undefined' || !performance.now) { fn(); return; }
+    const d = performance.now();
+    fn();
+    tEtapes[nom] = (tEtapes[nom] || 0) + performance.now() - d;
+  }
+
+  /** Ce qui aide a relire un gel dans la console : ou on en etait, sans
+      rejouer la partie pour le savoir. */
+  function contexteGel() {
+    const b = ['etat=' + B.etat];
+    if (B.partie) b.push('jour ' + B.partie.jour, (Monde.heureTexte && Monde.heureTexte()) || '');
+    if (B.cinema) b.push('cinema:' + (B.cinema.mission || '?'));
+    if (B.scene) b.push('scene');
+    if (B.menu) b.push('menu');
+    if (B.transition) b.push('transition');
+    if (B.joueur && B.joueur.dansVehicule) b.push('vehicule');
+    return b.join(' ');
+  }
+
+  /** Une image a mis plus de `SEUIL_GEL` a se simuler ET se dessiner : on le
+      dit, avec de quoi savoir OU ca a coute cher sans avoir a le reproduire
+      sous un profileur. `etapes` : le temps par systeme, accumule sur les
+      `n` pas de simulation de cette image (voir `avancer`) ; peut etre vide
+      (aucun pas — le jeu etait fige, menu ou cinema). */
+  function signalerGel(duree, etapes, dureeRendu, n) {
+    if (typeof console === 'undefined' || !console.warn) return;
+    const detail = Object.keys(etapes)
+      .sort(function (a, c) { return etapes[c] - etapes[a]; })
+      .map(function (k) { return k + ' ' + Math.round(etapes[k]) + 'ms'; })
+      .join(', ');
+    console.warn('[gel] ' + Math.round(duree) + 'ms (' + n + ' pas, rendu ' + Math.round(dureeRendu) + 'ms) — '
+      + contexteGel() + (detail ? ' — ' + detail : ''));
+  }
+
   function rendre() {
     if (!B.carte) return;
     B.image++;                          // l'horloge de l'OEIL : elle avance meme quand le monde est fige
@@ -738,16 +996,20 @@ const Jeu = (function () {
     ctx.fillRect(0, 0, VW, VH);
     const cam = B.cam;
     const sec = B.cam.secousse > 0.05 ? B.cam.secousse : 0;
-    const vue = { x: cam.x + (sec ? (Math.random() - 0.5) * sec * 8 : 0), y: cam.y + (sec ? (Math.random() - 0.5) * sec * 8 : 0) };
+    const vue = { x: cam.x + (sec ? (Math.random() - 0.5) * sec * 8 : 0) + (B.photo ? B.photo.dx : 0),
+                  y: cam.y + (sec ? (Math.random() - 0.5) * sec * 8 : 0) + (B.photo ? B.photo.dy : 0) };
     Monde.dessinerSol(ctx, vue);
     if (!B.interieur) Neige.dessinerSol(ctx, vue);     // la neige au sol, SOUS les rails et les gens
+    if (!B.interieur) Monde.dessinerMouille(ctx, vue); // derriere l'arroseuse (la nuit a ses habitudes)
     // Le tunnel, la rame et ses fenetres : peints par-dessus le sol de la piece,
     // sous les gens du quai.
     if (B.interieur) Metro.dessiner(ctx, vue);
     // ⚠️ Les battants PAR-DESSUS le sol, jamais dedans : repeindre un
     // morceau de 256 px a chaque image pour une porte tuerait le cache.
-    if (!B.interieur) { Autobus.dessinerRails(ctx, vue); Neige.dessinerPanneaux(ctx, vue); Monde.dessinerBattants(ctx, vue); Monde.dessinerPortesDeGarage(ctx, vue); Monde.dessinerBarrieres(ctx, vue); }
+    if (!B.interieur) { Autobus.dessinerRails(ctx, vue); Neige.dessinerPanneaux(ctx, vue); Monde.dessinerBattants(ctx, vue); Monde.dessinerPortesDeGarage(ctx, vue); Monde.dessinerBarrieresCoulissantes(ctx, vue); Monde.dessinerBarrieres(ctx, vue); }
     Entites.dessinerDecals(ctx, vue);     // le sang est SOUS les pieds
+    if (!B.interieur) Histoire.dessinerCheminCourse(ctx, vue);   // le trace d'une course, sur la chaussee
+    if (!B.interieur) { Conduite.dessinerSol(ctx, vue); Rue.dessinerSol(ctx, vue); }          // la case, les lignes, les cones d'une epreuve au volant
     if (!B.interieur) Entites.dessinerBetes(ctx, vue);   // un goeland passe sous personne
     Entites.dessiner(ctx, vue);
     Entites.dessinerCible(ctx, vue);
@@ -761,9 +1023,20 @@ const Jeu = (function () {
     // chacune porte la couleur de sa phase a CETTE image-ci. Les chercher
     // autrement voudrait dire balayer 482 poteaux par image.
     if (!B.interieur) for (const l of Vehicules.lampesDesFeux()) lampes.push(l);
+    // Les phares (la nuit a ses habitudes) : ramasses en dessinant, comme les feux.
+    if (!B.interieur) for (const l of Vehicules.lampesDesPhares()) lampes.push(l);
+    // Les fleches d'une course : lumineuses, meme la nuit.
+    if (!B.interieur) for (const l of Histoire.lampesDeCourse(vue)) lampes.push(l);
     const projecteur = !B.interieur ? Police.lampeHelico(vue) : null;
     if (projecteur && Monde.ambiance().alpha > 0.2) lampes.unshift(projecteur);
-    Base.fin(Monde.ambiance(), lampes);
+    // Les empreintes des chars, pour decouper les faisceaux qui les recouvrent.
+    const corpsPhares = !B.interieur ? Vehicules.corpsDesPhares() : [];
+    // ⚠️ Le filtre du mode photo se pose sur l'ECRAN (`Base.ecran()`), pas dans
+    // `Base.fin` : il ne doit teindre QUE le dernier `drawImage` de cette
+    // fonction-la (la ville deja peinte), jamais le HUD dessine juste apres.
+    if (B.photo) Base.ecran().filter = FILTRES_PHOTO[B.photo.filtre].css;
+    Base.fin(Monde.ambiance(), lampes, corpsPhares);
+    if (B.photo) Base.ecran().filter = 'none';
     Hud.dessiner();
   }
 
@@ -782,11 +1055,15 @@ const Jeu = (function () {
     dernier = t;
     accu += dt;
     let n = 0;
+    tEtapes = {};
     while (accu >= PAS && n < 4) { maj(); accu -= PAS; n++; }
     if (accu > 200) accu = 0;
+    const avantRendu = (typeof performance !== 'undefined' && performance.now) ? performance.now() : t;
     rendre();
     const fin = (typeof performance !== 'undefined' && performance.now) ? performance.now() : t;
     B.stats.ms = B.stats.ms * 0.9 + (fin - debut) * 0.1;
+    if (fin - debut > SEUIL_GEL) signalerGel(fin - debut, tEtapes, fin - avantRendu, n);
+    tEtapes = null;
   }
 
   // --- Demarrage ------------------------------------------------------------------------
@@ -871,11 +1148,30 @@ const Jeu = (function () {
     });
   }
 
+  /** Un gel qui ne vient pas de la boucle de jeu (decodage audio, GC, un
+      `fetch` qui bloque) ne passe jamais par `avancer()` — la Long Tasks API
+      le voit quand meme : elle signale TOUT ce qui bloque le fil principal
+      plus de 50ms, quelle qu'en soit la cause. Absente de Safari et Firefox
+      (avril 2026) : `pas()`/`signalerGel` restent le filet la ou elle manque. */
+  function surveillerLesGels(w) {
+    if (!w.PerformanceObserver) return;
+    try {
+      new w.PerformanceObserver(function (liste) {
+        liste.getEntries().forEach(function (e) {
+          if (typeof console !== 'undefined' && console.warn) {
+            console.warn('[gel] tache longue ' + Math.round(e.duration) + 'ms — ' + contexteGel());
+          }
+        });
+      }).observe({ entryTypes: ['longtask'] });
+    } catch (e) { /* entryType inconnu : rien a faire */ }
+  }
+
   function demarrer(w, d) {
     fenetre = w; doc = d;
     const racine = d.getElementById('bandini');
     const toile = d.getElementById('toile');
     Base.initCanvas(toile, fabriqueCanvas);
+    surveillerLesGels(w);
     Son.init(w, racine.dataset.urlStatique);
     // ⚠️ Lire `sessionStorage` peut LEVER (stockage bloque, navigation privee
     // de certains navigateurs) : le choix des parties s'en passe tres bien.
@@ -903,6 +1199,8 @@ const Jeu = (function () {
     // dedans. C'est alors la session qui dit si on la regarde (`Casque`).
     d.addEventListener('visibilitychange', function () {
       if (d.hidden && !(typeof Casque !== 'undefined' && Casque.actif)) { pause(); Son.suspendre(); }
+      // Une page rouverte le lendemain matin ne doit pas annoncer le defi d'hier.
+      else if (!d.hidden) Defi.rafraichir();
     });
     // ⚠️ La page s'en va : on rend la carte son — mais SEULEMENT si elle ne peut
     // pas revenir. `persisted` dit que le navigateur la met de cote (bfcache,
@@ -961,6 +1259,9 @@ const Jeu = (function () {
         // exercee, donc jamais jugee, et elle mentirait le jour ou l'autre tombe.
         if (recue && recue === Sauvegarde.emplacement()) B.partie = chargerPartie(recue);
       });
+      // LE DEFI DU JOUR (M14, 5e vague) : une demande, et rien n'attend sa reponse. ⚠️ Sans
+      // reseau, pas de defi du jour — et le jeu ne s'en apercoit pas.
+      Defi.init(w, racine);
       const etat = d.getElementById('etat-chargement');
       const parties = Sauvegarde.occupes().length;
       if (etat) etat.textContent = 'v' + defs.version + ' · ' + (B.partie.x !== null ? 'partie ' + Sauvegarde.emplacement() + ', jour ' + B.partie.jour : 'nouvelle partie')
@@ -982,7 +1283,7 @@ const Jeu = (function () {
     });
   }
 
-  return { demarrer, commencer, jouer, ouvrirParties, jouerPartie, effacerPartie, copierPartie, entrer, sortir, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, retourTitre, maj, rendre, avancer, get horsLigne() { return horsLigne; } };
+  return { demarrer, commencer, jouer, ouvrirParties, jouerPartie, effacerPartie, copierPartie, entrer, sortir, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, ouvrirPhoto, fermerPhoto, basculerCoop, majCoop, retourTitre, maj, rendre, avancer, get horsLigne() { return horsLigne; } };
 })();
 
 /* Surface de test et de debogage — la seule poignee du banc d'essai. */
@@ -990,11 +1291,12 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Entites: Entites, Combat: Combat,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Incendies: Incendies, Police: Police, Chantiers: Chantiers, Foire: Foire, Missions: Missions, Scenes: Scenes, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Incendies: Incendies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Conduite: Conduite, Rue: Rue, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
-    ETOILE: ETOILE,
+    ETOILE: ETOILE, MOMENTS: MOMENTS,
     BULLES: BULLES, POLICE_PIXEL: POLICE_PIXEL, MARQUES_PIXEL: MARQUES_PIXEL,
-    etatInitial: etatInitial, mulberry: mulberry, hash2: hash2, nuances: nuances,
+    etatInitial: etatInitial, mulberry: mulberry, hash2: hash2, nuances: nuances, faceA: faceA,
     graine: function (n) { B.graine = n; B.rng = mulberry(n); },
     entree: function (a) { const s = Entree._sacs(); return { bas: Entree.bas(a), pad: !!s.vPad[a], tactile: !!s.vTact[a], axe: Entree.axe }; },
   };

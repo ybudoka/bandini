@@ -9,21 +9,26 @@ from collections import deque
 
 import pytest
 
-from app import carte, economie, missions
+from app import aeroport, carte, economie, missions
 
 SORTES = {"pieton", "vehicule"}
-CONDITIONS = {"apres", "heure", "jour_tire", "payer"}
+CONDITIONS = {"apres", "heure", "jour_tire", "payer", "objet"}
 
 
 def test_la_fiche_se_tient():
     slugs = [b["slug"] for b in carte.BARRIERES]
     assert len(slugs) == len(set(slugs)) and len(slugs) >= 4
     connues = {m["slug"] for m in missions.CATALOGUE}
+    # ⚠️ L'aéroport attend des missions qui ne sont pas encore écrites — c'est ce
+    # qui le garde fermé. Elles sont DÉCLARÉES (`aeroport.MISSIONS_A_VENIR`), et
+    # un `apres` qui n'est ni au catalogue ni là reste une faute de frappe.
+    a_venir = set(aeroport.MISSIONS_A_VENIR)
+    assert not a_venir & connues, f"{sorted(a_venir & connues)} : écrite, elle sort des missions à venir"
     for b in carte.BARRIERES:
         assert b["arrete"] and set(b["arrete"]) <= SORTES, b["slug"]
         assert len(b["condition"]) == 1 and set(b["condition"]) <= CONDITIONS, b["slug"]
         if "apres" in b["condition"]:
-            assert b["condition"]["apres"] in connues, f"{b['slug']} attend une mission qui n'existe pas"
+            assert b["condition"]["apres"] in connues | a_venir, f"{b['slug']} attend une mission qui n'existe pas"
         if "heure" in b["condition"]:
             assert b["condition"]["heure"] in ("jour", "nuit")
         assert b["raison"] == b["raison"].upper() and 0 < len(b["raison"]) <= 40, b["slug"]
@@ -86,7 +91,10 @@ def lieux_de_mission():
     lieux = set()
     for m in missions.CATALOGUE:
         for o in m["objectifs"]:
-            if o.get("lieu"):
+            # ⚠️ Un mouillage (mouillage:<slug>[:n], m52-m54) n'est pas un
+            # point_interet : c'est de l'eau, sans porte ni barrière piétonne à
+            # franchir — cette règle-ci ne le concerne pas.
+            if o.get("lieu") and not o["lieu"].startswith("mouillage:"):
                 lieux.add(o["lieu"])
     for d in missions.DEFIS:
         if d.get("lieu"):
@@ -135,11 +143,12 @@ def test_aucune_barriere_n_enferme_la_planque_ni_un_lieu_de_mission(ville):
     # Et ce qui ne rouvre jamais tout seul (`apres`) n'enferme AUCUN lieu.
     fixes = [b for b in pietons if "apres" in b["condition"]]
     vus = atteignables(ville, fixes)
-    ile = ville["ile"]
     for slug, p in points.items():
-        # ⚠️ Sauf l'île : on n'y va pas à pied, par construction, et aucune
-        # barrière ne la touche (`test_ile`).
-        if ile["x"] <= p["x"] < ile["x"] + ile["l"] and ile["y"] <= p["y"] < ile["y"] + ile["h"]:
+        # ⚠️ Sauf les îles : on n'y va pas à pied, par construction — l'île aux
+        # Corneilles n'a pas de pont (`test_ile`), celui de l'aéroport s'arrête
+        # au-dessus de l'eau (`test_aeroport`).
+        if any(i["x"] <= p["x"] < i["x"] + i["l"] and i["y"] <= p["y"] < i["y"] + i["h"]
+               for i in (ville["ile"], ville["aeroport"])):
             continue
         assert (p["x"], p["y"]) in vus, f"{slug} attend une mission pour etre atteignable a pied"
     # Un lieu enferme par une barriere d'heure rouvre le jour ou la nuit : on

@@ -30,6 +30,10 @@ def test_un_pieton_est_jouable(pieton):
     # qui les range la, pas leur slug.
     if pieton["metier"] in POSTES:
         assert pieton["vitesse"] == 0.0, pieton["slug"]
+    elif pieton["metier"] == "cycliste":
+        # L'enfant a velo ROULE : plus vite qu'un passant, moins qu'une course a
+        # pied qui detale (`pieton_course`) — c'est toujours un enfant.
+        assert 1.5 < pieton["vitesse"] <= 2.5, pieton["slug"]
     else:
         assert 0.5 <= pieton["vitesse"] <= 1.5, pieton["slug"]
     assert 0.0 <= pieton["courage"] <= 1.0
@@ -88,6 +92,26 @@ def test_la_fille_de_la_brume_ne_porte_les_couleurs_de_personne():
                 f"{autre['slug']} porte la meme couleur « {cle} » que la fille de la Brume"
 
 
+def test_la_conductrice_ne_porte_les_couleurs_de_personne():
+    """⚠️ Meme regle que la fille de la Brume : a douze pixels de large, ce qui
+    la nomme est la COUPE (`conductrice` dans sprites.js, une robe), mais ses
+    couleurs ne doivent se recroiser nulle part — une robe rose de plus dans la
+    foule, et on ne sait plus laquelle sortait du cabriolet. Sa robe est d'une
+    seule piece : le meme rose en `c` et en `p`. La peau se partage."""
+    elle = pietons.par_slug("conductrice")
+    assert elle is not None and elle["sprite"] == "conductrice"
+    assert elle["couleurs"]["c"] == elle["couleurs"]["p"], "une robe n'a pas de haut et de bas"
+    for autre in pietons.CATALOGUE:
+        if autre["slug"] == "conductrice":
+            continue
+        for cle in ("c", "h", "p"):
+            assert autre["couleurs"][cle].lower() != elle["couleurs"][cle].lower(), \
+                f"{autre['slug']} porte la meme couleur « {cle} » que la conductrice"
+    # Et elle ne marche pas sans sa voiture : ni au hasard, ni de metier.
+    assert elle["frequence"] == 0.0 and elle["metier"] is None
+    assert elle not in pietons.ordinaires()
+
+
 def test_les_slugs_sont_uniques():
     assert len(pietons.SLUGS) == len(set(pietons.SLUGS))
 
@@ -134,6 +158,18 @@ def test_l_agent_de_police_est_un_pieton_arme_qui_ne_nait_pas_au_hasard():
     assert agent["arme"] == "pistolet" and agent["courage"] == 1.0
     assert agent["temoin"] == 0.0, "un agent ne temoigne pas : il agit"
     assert agent not in pietons.ordinaires()
+
+
+def test_le_vigile_prive_ne_nait_jamais_au_hasard():
+    """⚠️ Infiltration : meme moule que l'agent (`police.js` le dirige
+    pareillement), un uniforme et une matraque a lui — il TIENT un batiment,
+    il n'a pas de pistolet et il ne temoigne pas : il agit, comme l'agent."""
+    garde = pietons.par_slug("garde")
+    assert garde and garde["metier"] == "garde" and garde["frequence"] == 0.0
+    assert garde["arme"] == "batte" and garde["courage"] == 1.0
+    assert garde["temoin"] == 0.0
+    assert garde not in pietons.ordinaires()
+    assert garde["couleurs"] != pietons.par_slug("policier")["couleurs"], "on doit le reconnaitre avant qu'il se retourne"
 
 
 def test_les_trois_sortes_ont_un_corps_a_elles():

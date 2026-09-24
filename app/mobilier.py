@@ -27,6 +27,8 @@ enseigne. Un juge compare la ville avec et sans.
 
 from __future__ import annotations
 
+from . import nuit
+
 #: Le rythme de chaque quartier. `arbres` : le pas entre deux arbres d'un même
 #: bord, en tuiles, et la part des bords qu'on plante. `bancs` : pareil pour les
 #: bancs — `None` quand le quartier n'en pose pas au bord de la rue.
@@ -217,6 +219,10 @@ def _place_libre(chantier, x: int, y: int, solides: set[tuple[int, int]]) -> boo
 #: tombé sur la sienne. La lumière se déplace par sa PORTÉE, pas par des poteaux.
 PART_EN_PANNE = 1 / 3
 
+#: La part des lampadaires pauvres qui marchent encore et qui GRÉSILLENT (la nuit a ses
+#: habitudes) : elle vit avec le reste de la nuit, dans `nuit.LAMPADAIRES`.
+PART_QUI_GRESILLE = nuit.LAMPADAIRES["part_qui_gresille"]
+
 #: La portée d'un lampadaire de rue cossue, en pixels (celle des autres : 44,
 #: `SORTES_DE_LAMPE` dans monde.js).
 PORTEE_COSSUE = 60
@@ -228,16 +234,23 @@ def eclairer(chantier, bords: list[dict], solides: set[tuple[int, int]]) -> dict
     signature du semis."""
     from . import carte
 
-    comptes = {"en_panne": 0, "elargis": 0}
+    comptes = {"en_panne": 0, "elargis": 0, "gresillent": 0}
     for lampe in chantier.lampes:
         # Un lampadaire est la lampe SANS sorte (`c`) : les vitrines et les
         # fenêtres ont la leur, et elles ne sont pas sur la rue.
         if lampe.get("c"):
             continue
         standing = chantier.standing_en(lampe["x"], lampe["y"])
-        if standing == "pauvre" and carte.empreinte_de_tuile(lampe["x"], lampe["y"]) < PART_EN_PANNE:
+        empreinte = carte.empreinte_de_tuile(lampe["x"], lampe["y"])
+        if standing == "pauvre" and empreinte < PART_EN_PANNE:
             lampe["panne"] = 1
             comptes["en_panne"] += 1
+        elif standing == "pauvre" and empreinte < PART_EN_PANNE + (1 - PART_EN_PANNE) * PART_QUI_GRESILLE:
+            # ⚠️ LA NUIT A SES HABITUDES : parmi ceux qui marchent encore, une part
+            # GRÉSILLE (`nuit.LAMPADAIRES`). Même empreinte que la panne, la tranche
+            # d'après : jamais les deux, et pas un dé de plus — un drapeau, pas une tuile.
+            lampe["gresille"] = 1
+            comptes["gresillent"] += 1
         elif standing == "cossu":
             lampe["r"] = PORTEE_COSSUE
             comptes["elargis"] += 1

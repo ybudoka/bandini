@@ -3,7 +3,7 @@ s'y arrete ; la caisse tombe en liasses qu'on ramasse en passant ; le skimmer
 se pose, lit la nuit et se vide ; l'assurance paie le char disparu, et
 l'assureur enquete a la troisieme reclamation."""
 
-from app import economie, magasins, vehicules
+from app import economie, vehicules
 
 
 def test_le_camion_defonce_le_guichet_et_l_auto_s_y_arrete(banc, paquet):
@@ -70,6 +70,8 @@ def test_le_skimmer_se_pose_lit_la_nuit_et_se_vide(banc, paquet):
         });
         if (!g) return { pasDeGuichet: true };
         j.x = g.x; j.y = g.y + 14; L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer();
+        // ⚠️ On regarde le guichet : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser(g);
         L.Missions.majInvite(j);
         const sansSkimmer = L.B.invite;
         p.objets.skimmer = 2;
@@ -199,7 +201,6 @@ def test_le_skimmer_se_pose_sur_une_machine_sans_empecher_d_acheter(banc, paquet
     dans son menu, EN PLUS des articles : poser un skimmer n'empeche pas
     d'acheter une canette dans la meme visite, et la machine d'une salle
     d'attente refuse le skimmer."""
-    tarifs = paquet["economie"]["tarifs"]
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(5);
@@ -210,6 +211,8 @@ def test_le_skimmer_se_pose_sur_une_machine_sans_empecher_d_acheter(banc, paquet
         });
         if (!d) return { pasDeMachine: true };
         j.x = d.x; j.y = d.y + 14; L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer();
+        // ⚠️ On regarde la machine : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser(d);
         const m = L.Missions.distributriceSousLaMain(j);
         if (!m) return { pasDeMachine: true };
         p.objets.skimmer = 2; p.argent = 100;

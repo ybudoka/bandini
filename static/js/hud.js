@@ -8,6 +8,18 @@ const Hud = (function () {
   function init(d, r) {
     doc = d; racine = r;
     ['titre', 'compte'].forEach(function (n) { voiles[n] = d.getElementById('voile-' + n); });
+    // Un onglet, une ligne de menu : au doigt et a la souris (`toucherMenu`). La
+    // toile est etiree en CSS (`Base.redimensionner`) : on ramene le point aux
+    // 480 x 270 pixels du jeu.
+    const toile = d.getElementById('toile');
+    if (toile && toile.addEventListener) {
+      toile.addEventListener('pointerdown', function (ev) {
+        if (!B.menu) return;
+        const b = toile.getBoundingClientRect();
+        if (!b.width || !b.height) return;
+        toucherMenu((ev.clientX - b.left) * VW / b.width, (ev.clientY - b.top) * VH / b.height);
+      });
+    }
     // ⚠️ `videPresse` : ENTREE sur le bouton qui a le focus fait un clic ET un
     // appui d'ACTION. Le clic ouvre le choix des parties, et l'appui, lu a
     // l'image suivante, y choisirait aussitot la ligne sous le curseur.
@@ -22,9 +34,51 @@ const Hud = (function () {
       if (etatEl) etatEl.textContent = 'Déconnexion…';
       Compte.deconnecter().then(function (v) { majCompte(v); if (etatEl) etatEl.textContent = 'Déconnecté de cet appareil.'; });
     });
+    // LE NIP (M14, 3e vague) : verrou d'ecran sur un appareil deja lie.
+    d.getElementById('nip-form').addEventListener('submit', deverrouillerNip);
+    d.getElementById('bouton-nip-mot-de-passe').addEventListener('click', function () {
+      nipBypasse = true;
+      majCompte();
+      const el = d.getElementById('compte-pseudo');
+      if (el && el.focus) el.focus();
+    });
+    d.getElementById('nip-activer-form').addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      const nipEl = d.getElementById('nip-nouveau'), etatEl = d.getElementById('compte-etat');
+      const nip = nipEl ? String(nipEl.value || '').trim() : '';
+      if (etatEl) etatEl.textContent = 'Activation…';
+      Compte.activerNip(nip).then(function (r) {
+        if (nipEl) nipEl.value = '';
+        if (etatEl) etatEl.textContent = r.ok ? 'NIP activé sur cet appareil.' : (r.motif || 'Refusé.');
+        majCompte();
+      });
+    });
+    d.getElementById('bouton-nip-retirer').addEventListener('click', function () {
+      const fait = Compte.desactiverNip();
+      const etatEl = d.getElementById('compte-etat');
+      if (etatEl) etatEl.textContent = fait ? 'NIP retiré de cet appareil.' : 'Déverrouille le compte d’abord.';
+      majCompte();
+    });
+    // EFFACER SON COMPTE (M14, 4e vague) : un bouton, puis une confirmation par mot de passe.
+    d.getElementById('bouton-compte-effacer').addEventListener('click', function () {
+      effacerDemande = true;
+      majCompte();
+      const el = d.getElementById('compte-effacer-passe');
+      if (el && el.focus) el.focus();
+    });
+    d.getElementById('bouton-compte-effacer-annuler').addEventListener('click', function () {
+      effacerDemande = false;
+      const el = d.getElementById('compte-effacer-passe');
+      if (el) el.value = '';
+      direEffacer('');
+      majCompte();
+    });
+    d.getElementById('compte-effacer-form').addEventListener('submit', envoyerEffacer);
     // ⚠️ L'ecran suit le compte, il ne l'interroge pas : l'ouverture, une partie
     // qui descend ou une session coupee arrivent quand le reseau veut bien.
     Compte.surChangement(function (vue) { majCompte(vue); });
+    // LE DEFI DU JOUR (M14, 5e vague) : la ligne du titre suit ce que le serveur a dit.
+    Defi.surChangement(majDefiDuJour);
     avisSon = d.getElementById('avis-son');
     logoTitre = d.querySelector('#voile-titre .logo');
     majAvisSon();
@@ -111,12 +165,89 @@ const Hud = (function () {
 
   function message(texte, duree) { B.msg = texte; B.msgT = duree || 120; }
 
+  // --- Le bandeau de la prime ---------------------------------------------------------
+  //: La prime d'une mission ou d'un defi (`Missions.annoncerPrime`) : un bandeau au
+  //: centre, le montant en gros qui MONTE jusqu'a sa valeur. ⚠️ Il passe PAR-DESSUS
+  //: une scene et son fondu (`dessiner`, apres `dessinerTransition`) : la fin d'une
+  //: mission part tout de suite, et la bande des messages, elle, se tait pendant
+  //: une scene — le « +350 $ » d'avant ne s'affichait jamais.
+  //: `compte` (en images) suit la pluie de pieces du son du meme palier
+  //: (`son.js`, `prime_<palier>`) : on voit l'argent monter pendant qu'on
+  //: l'entend tomber. Plus la prime est grosse, plus il prend son temps.
+  const PRIME = {
+    compte: { petite: 24, moyenne: 42, grosse: 90, gros_lot: 156 },
+    couleur: { petite: '#efe6d0', moyenne: '#8fd46a', grosse: '#e8b33c', gros_lot: '#ffd84a' },
+    //: Les pieces qui tombent a l'ecran, par palier : aucune pour une petite prime.
+    pieces: { petite: 0, moyenne: 0, grosse: 8, gros_lot: 18 },
+    entree: 8, tenue: 150, sortie: 20, pop: 6,
+  };
+
+  function prime(p) {
+    B.prime = { montant: p.montant, titre: p.titre || '', quoi: p.quoi || 'PRIME', bonus: p.bonus || 0,
+                palier: PRIME.compte[p.palier] ? p.palier : 'petite', t: 0 };
+  }
+
+  /** Le bandeau avance d'un PAS DE SIMULATION (60 par seconde, `Jeu.maj`), pas
+      d'une image peinte : un ecran a 120 Hz le ferait durer moitie moins, et le
+      compteur ne suivrait plus la pluie de pieces du son. ⚠️ Pas non plus sur
+      `B.t` : la ville se fige pendant un dialogue — la scene de fin, justement
+      — et le bandeau resterait colle a l'ecran toute la conversation. */
+  function majPrime() {
+    const p = B.prime;
+    if (p && ++p.t >= PRIME.compte[p.palier] + PRIME.tenue + PRIME.sortie) B.prime = null;
+  }
+
+  /** Ce que le bandeau affiche a l'image `t` : le montant qui monte (vite au
+      debut, qui ralentit en arrivant), puis tient. Rendu a part pour le juge. */
+  function montantDeLaPrime(p) {
+    const k = Math.min(1, p.t / PRIME.compte[p.palier]);
+    return Math.round(p.montant * (1 - Math.pow(1 - k, 3)));
+  }
+
+  function dessinerPrime(ctx) {
+    const p = B.prime;
+    if (!p) return;
+    const compte = PRIME.compte[p.palier];
+    const t = p.t, coul = PRIME.couleur[p.palier];
+    const centre = function (s, y, c, e) { Atlas.texte(ctx, s, Math.round((VW - Atlas.largeurTexte(s, e)) / 2), y, c, e); };
+    ctx.save();
+    if (t > compte + PRIME.tenue) ctx.globalAlpha = 1 - (t - compte - PRIME.tenue) / PRIME.sortie;
+    // Les pieces tombent derriere le bandeau, le temps du compte et un peu plus.
+    const n = PRIME.pieces[p.palier];
+    for (let i = 0; i < n && t < compte + 60; i++) {
+      const x = (i * 53 + 17) % VW, y = ((t * (2 + i % 3) + i * 29) % (VH + 20)) - 10;
+      ctx.fillStyle = '#b8862a'; ctx.fillRect(x, y, 5, 5);
+      ctx.fillStyle = '#ffd84a'; ctx.fillRect(x, y, 4, 4);
+      B.stats.rects += 2;
+    }
+    // Le bandeau s'ouvre du centre vers les bords, filete de la couleur du palier.
+    // ⚠️ `haut` SOUS la bande des messages (40 a 56) : le `message` d'une fin
+    // de mission (« LA CLÉ DE LA PLANQUE ») s'y ecrit pendant que le bandeau tient.
+    const h = p.bonus ? 64 : 54, haut = 60, l = Math.round(VW * Math.min(1, (t + 1) / PRIME.entree));
+    ctx.fillStyle = 'rgba(11,10,18,0.85)'; ctx.fillRect((VW - l) / 2, haut, l, h);
+    ctx.fillStyle = coul; ctx.fillRect((VW - l) / 2, haut, l, 1); ctx.fillRect((VW - l) / 2, haut + h - 1, l, 1);
+    B.stats.rects += 3;
+    if (t >= PRIME.entree) {
+      centre(p.quoi, haut + 8, coul, 2);
+      // Le montant « saute » d'un cran quand le compte arrive ; le gros lot clignote.
+      const e = t >= compte && t < compte + PRIME.pop ? 5 : 4;
+      const clin = p.palier === 'gros_lot' && t >= compte && (t >> 3) % 2 === 0;
+      centre('+' + montantDeLaPrime(p).toLocaleString('fr-CA') + ' $', haut + 22 - (e - 4) * 2, clin ? '#ffffff' : coul, e);
+      centre(p.titre, haut + 47, '#efe6d0', 1);
+      if (p.bonus) centre('SANS UNE BOSSE : +' + p.bonus.toLocaleString('fr-CA') + ' $', haut + 57, '#8fd46a', 1);
+    }
+    ctx.restore();
+  }
+
   // --- Menus canvas ---------------------------------------------------------------
   //: Un menu = { titre, items: [{ libelle, detail, actif, faire }], curseur, aide, sur, obligatoire }.
   //: `faire()` rend true pour fermer le menu, false pour le laisser ouvert
   //: (on achete trois hot-dogs sans rouvrir le comptoir).
   //: `refaire()` rend un menu NEUF : un menu qui reste ouvert se refait apres
   //: chaque achat (voir `rafraichirMenu`).
+  //: Un item `entete('LE JOUEUR')` est un TITRE DE SECTION : il se lit, le
+  //: curseur passe par-dessus (une liste de vingt triches se lit par blocs).
+  //: Et chaque ligne qu'on peut choisir se TOUCHE et se CLIQUE (`toucherMenu`).
 
   //: La repetition d'un menu tenu, en images (60 par seconde) : un cran tout de
   //: suite, le suivant apres `REPETE_PREMIER`, puis un tous les `REPETE_ENSUITE`.
@@ -158,6 +289,14 @@ const Hud = (function () {
     if (typeof menu.curseur !== 'number') {
       const i = (menu.items || []).findIndex(function (item) { return !!item.faire; });
       menu.curseur = i < 0 ? 0 : i;
+    }
+    // ⚠️ Une page ouverte DEPUIS le classeur (le journal, l'ecran MANETTE, un
+    // saut) en est une SOUS-PAGE : elle garde la barre d'onglets, sous l'onglet
+    // d'ou elle vient. Un menu qui ne veut pas du classeur le dit
+    // (`classeur: null`) ; la proposition d'un defi, elle, s'ouvre apres que le
+    // saut a referme la pause.
+    if (menu.classeur === undefined && B.menu && B.menu.classeur) {
+      menu.classeur = { onglet: B.menu.classeur.onglet, racine: false };
     }
     B.menu = menu;
     // ⚠️ Un menu qui s'ouvre sous un pouce DEJA pousse (on marchait vers le
@@ -208,21 +347,85 @@ const Hud = (function () {
   }
 
   function fenetreMenu(m) {
+    if (m.classeur) {
+      return Math.max(1, Math.floor((hauteurClasseur(m) - LISTE_CLASSEUR - PIED_CLASSEUR - (m.aide ? 14 : 0)) / 14));
+    }
     const h = m.hauteur || Math.min(VH - 30, 40 + m.items.length * 14 + (m.aide ? 14 : 0));
     return Math.max(1, Math.floor((h - 28 - (m.aide ? 16 : 6)) / 14));
   }
 
-  /** Garde le curseur dans la fenetre. Rend le premier item visible. */
+  /** Garde le curseur dans la fenetre. Rend le premier item visible.
+      ⚠️ Le titre de section juste au-dessus du curseur reste a l'ecran : une
+      ligne qui a perdu sa section se lit hors de son contexte. */
   function hautDuMenu(m) {
     const f = fenetreMenu(m), n = m.items.length;
     let haut = m.haut || 0;
     if (haut > n - f) haut = n - f;
     if (haut < 0) haut = 0;
-    if (m.curseur < haut) haut = m.curseur;
+    const avant = m.items[m.curseur - 1];
+    const dessus = avant && avant.entete ? m.curseur - 1 : m.curseur;
+    if (dessus < haut) haut = dessus;
     if (m.curseur >= haut + f) haut = m.curseur - f + 1;
     m.haut = haut;
     return haut;
   }
+
+  /** Le curseur, un cran dans le `sens`, par-dessus les titres de section.
+      `bute` : il s'arrete au bout de la liste au lieu d'en faire le tour. */
+  function pasDuCurseur(m, sens, bute) {
+    const n = m.items.length;
+    let c = m.curseur;
+    for (let k = 0; k < n; k++) {
+      let s = c + sens;
+      if (s < 0 || s >= n) { if (bute) return m.curseur; s = (s + n) % n; }
+      c = s;
+      if (!m.items[c].entete) return c;
+    }
+    return m.curseur;
+  }
+
+  /** Aucune ligne a choisir : une page qui se lit, et rien d'autre. */
+  function rienQueDeLaLecture(m) {
+    return !m.items.some(function (i) { return !i.entete && i.actif !== false; });
+  }
+
+  /** ACTION sur la ligne du curseur — au bouton comme au doigt.
+
+      ⚠️ Un `faire` qui rend `false` GARDE le menu ouvert, et le refait
+      (`refaire`) ; tout autre retour le ferme. Demande de Martin (22 sept.
+      2026) : « lors d'une selection d'un achat ou autre, je veux rester dans
+      le meme menu ; on quitte seulement avec B ou Esc ou un menu retour ».
+      Un comptoir rend donc `false` a chaque achat ; seul un choix qui EST un
+      depart (dormir, lire le Clairon, REPARTIR, l'arrestation, reprendre la
+      partie) le ferme — le juge `test_un_comptoir_reste_ouvert_js.py` presse
+      ACTION sur chaque ligne de chaque comptoir de la ville. */
+  function choisirLigne(m) {
+    const item = m.items[m.curseur];
+    if (item && !item.entete && item.actif !== false) {
+      const fini = item.faire ? item.faire(item) : true;
+      if (fini !== false && B.menu === m) fermerMenu();
+      else if (B.menu === m) rafraichirMenu();
+    } else Son.SFX.erreur();
+  }
+
+  /** Un titre de section : il se lit, il ne se choisit pas (`libelle` vide et
+      `actif: false`, pour tout ce qui parcourt les lignes d'un menu). */
+  function entete(texte) { return { entete: texte, libelle: '', actif: false }; }
+
+  //: Ce que le doigt ou la souris a touche sur la toile, en pixels du jeu. Il se
+  //: lit a l'image suivante (`majMenu`), comme un bouton : un menu n'agit que
+  //: dans la boucle, jamais au milieu d'un evenement du navigateur.
+  //: ⚠️ `index.html` le dit : les COMMANDES tactiles sont de vrais elements,
+  //: jamais un test sur la toile — un pouce qui TIENT un bouton doit le sentir
+  //: sous lui. Un onglet ou une ligne de menu ne se tient pas : on les touche
+  //: une fois, la ou on les voit, et ils ne bougent pas sous le doigt.
+  let clic = null;
+  //: Les zones a toucher, telles que le DERNIER menu dessine les a posees.
+  let cibles = [], ciblesDe = null;
+  function poserCible(zone) { cibles.push(zone); }
+
+  /** Un doigt ou un clic en (x, y), en pixels du jeu (480 x 270). */
+  function toucherMenu(x, y) { if (B.menu) clic = { x: x, y: y }; }
 
   function majMenu() {
     const m = B.menu;
@@ -233,8 +436,27 @@ const Hud = (function () {
     // ⚠️ Pendant qu'on reapprend un bouton, le menu ne bouge plus : la manette
     // est muette (voir `Entree.apprendre`) et le clavier ne sert qu'a annuler.
     if (Entree.apprendEnCours()) {
+      clic = null;
       if (Entree.neuf('pause') || Entree.neuf('annuler')) { Entree.annulerApprentissage(); Son.SFX.erreur(); }
       return;
+    }
+    // Le doigt, la souris : un onglet s'ouvre, une ligne se choisit tout de suite.
+    if (clic) {
+      const c = clic;
+      clic = null;
+      const z = ciblesDe === m ? cibles.find(function (q) {
+        return c.x >= q.x && c.x < q.x + q.l && c.y >= q.y && c.y < q.y + q.h;
+      }) : null;
+      if (z && z.onglet) { ouvrirOnglet(z.onglet); return; }
+      // Une page d'un ecran qui en a plusieurs (COMMANDES : a pied, au volant).
+      if (z && z.page !== undefined) { if (m.page !== z.page) { m.page = z.page; Son.SFX.menu(); } return; }
+      if (z && z.item !== undefined) { m.curseur = z.item; choisirLigne(m); return; }
+    }
+    // ⚠️ L'ONGLET AVANT TOUT : l'epaule droite est aussi FRAPPE, qui ferme un
+    // menu — tournee, la page ne doit pas se refermer dans la meme image.
+    if (m.classeur) {
+      const s = sensDOnglet(m);
+      if (s) { tournerOnglet(m, s); return; }
     }
     // ⚠️ UN appui, UNE ligne. Le pouce sur la croix donnait les deux a la fois :
     // son « haut » neuf bougeait le curseur, puis, a l'image suivante, l'axe
@@ -251,27 +473,18 @@ const Hud = (function () {
     sensTenu = tenu;
     // Tenu, le curseur s'arrete au bout de la liste ; un appui neuf, lui, en
     // fait le tour — sinon un pouce qui s'attarde tourne en rond.
-    const n = m.items.length;
-    if (repete && (m.curseur + sens < 0 || m.curseur + sens >= n)) sens = 0;
-    if (sens) {
-      m.curseur = (m.curseur + sens + n) % n;
-      Son.SFX.menu();
+    if (sens && !m.sansListe) {
+      const c = pasDuCurseur(m, sens, repete);
+      if (c !== m.curseur) { m.curseur = c; Son.SFX.menu(); }
     }
-    if (Entree.neuf('action')) {
-      const item = m.items[m.curseur];
-      if (item && item.actif !== false) {
-        const fini = item.faire ? item.faire(item) : true;
-        if (fini !== false && B.menu === m) fermerMenu();
-        else if (B.menu === m) rafraichirMenu();
-      } else Son.SFX.erreur();
-    }
+    if (Entree.neuf('action')) choisirLigne(m);
     // Un menu `obligatoire` (l'arrestation) ne se ferme que par un choix.
     // ⚠️ `manetteInerte` (l'ecran MANETTE) : on y appuie sur les boutons pour
     // les VOIR s'allumer, pas pour commander. La manette peut encore bouger le
     // curseur et choisir — sinon un joueur qui n'a QUE sa manette resterait
     // enferme — mais elle ne FERME plus l'ecran sous ses doigts.
     const ferme = m.manetteInerte ? Entree.neufSansManette : Entree.neuf;
-    if (!m.obligatoire && (ferme('annuler') || ferme('attaque') || ferme('pause'))) {
+    if (B.menu === m && !m.obligatoire && (ferme('annuler') || ferme('attaque') || ferme('pause'))) {
       // ⚠️ `retour` : une page d'un carnet recule d'un cran au lieu de rendre
       // la main au jeu. Sans ca, sortir du JOURNAL relancait la partie, et il
       // fallait remettre PAUSE pour lire la page d'a cote.
@@ -279,38 +492,213 @@ const Hud = (function () {
     }
   }
 
+  /** Les lignes d'un menu, la premiere a `y0` : titres de section, curseur,
+      detail a droite de la colonne — et une zone a toucher par ligne qu'on
+      peut choisir. */
+  function dessinerLignesDuMenu(ctx, m, x, y0, l, f, haut) {
+    const col = m.colonne || l;
+    // Une page qu'on ne fait que lire (le BILAN) n'a pas de curseur a montrer.
+    const lire = !!m.classeur && rienQueDeLaLecture(m);
+    m.items.slice(haut, haut + f).forEach(function (item, k) {
+      const i = haut + k;
+      const yy = y0 + k * 14;
+      if (item.entete) {
+        const w = Atlas.largeurTexte(item.entete, 1);
+        texte(ctx, item.entete, x + 8, yy + 1, '#b89a4a', 1);
+        ctx.fillStyle = '#3a3450'; ctx.fillRect(x + 13 + w, yy + 4, Math.max(0, col - 21 - w), 1);
+        B.stats.rects++;
+        return;
+      }
+      const choisi = i === m.curseur && !lire;
+      const actif = item.actif !== false;
+      if (choisi) { ctx.fillStyle = 'rgba(232,179,60,0.18)'; ctx.fillRect(x + 4, yy - 3, col - 8, 12); }
+      texte(ctx, (choisi ? '> ' : '  ') + item.libelle, x + 8, yy, actif ? (choisi ? '#efe6d0' : '#cdc6e6') : '#6a6678', 1);
+      const bord = x + col;
+      if (item.detail) texte(ctx, item.detail, bord - 8 - Atlas.largeurTexte(item.detail, 1), yy, actif ? '#e8b33c' : '#6a6678', 1);
+      if (actif) poserCible({ x: x + 4, y: yy - 4, l: col - 8, h: 14, item: i });
+    });
+  }
+
+  /** Le toast (`message`), a la hauteur `y`. */
+  function dessinerMessage(ctx, y) {
+    if (!B.msg || B.msgT <= 0) return;
+    const l = Atlas.largeurTexte(B.msg, 2);
+    ctx.fillStyle = 'rgba(11,10,18,0.75)'; ctx.fillRect((VW - l) / 2 - 6, y, l + 12, 16);
+    Atlas.texte(ctx, B.msg, (VW - l) / 2, y + 3, '#efe6d0', 2);
+    B.msgT--;
+  }
+
+  /** La boite d'un menu hors classeur. `largeur`, `hauteur` et `colonne` : un
+      menu qui montre autre chose qu'une liste (l'ecran MANETTE et son dessin)
+      prend la place qu'il lui faut. */
+  function boiteDuMenu(m) {
+    const l = m.largeur || 300;
+    const h = m.hauteur || Math.min(VH - 30, 40 + m.items.length * 14 + (m.aide ? 14 : 0));
+    return { x: (VW - l) / 2, y: (VH - h) / 2, l: l, h: h };
+  }
+
   function dessinerMenu(ctx) {
     const m = B.menu;
     if (!m) return;
-    // `largeur`, `hauteur` et `colonne` : un menu qui montre autre chose qu'une
-    // liste (l'ecran MANETTE et son dessin) prend la place qu'il lui faut.
-    const l = m.largeur || 300;
-    const h = m.hauteur || Math.min(VH - 30, 40 + m.items.length * 14 + (m.aide ? 14 : 0));
-    const x = (VW - l) / 2, y = (VH - h) / 2;
+    cibles = []; ciblesDe = m;
+    if (m.classeur) { dessinerClasseur(ctx, m); return; }
+    const boite = boiteDuMenu(m), l = boite.l, h = boite.h, x = boite.x, y = boite.y;
     ctx.fillStyle = 'rgba(11,10,18,0.92)'; ctx.fillRect(x, y, l, h);
     ctx.fillStyle = '#e8b33c'; ctx.fillRect(x, y, l, 1); ctx.fillRect(x, y + h - 1, l, 1);
     texte(ctx, m.titre, x + 8, y + 7, '#e8b33c', 2);
     if (m.sur) texte(ctx, m.sur, x + l - 8 - Atlas.largeurTexte(m.sur, 1), y + 10, '#cdc6e6', 1);
     const f = fenetreMenu(m), haut = hautDuMenu(m);
-    m.items.slice(haut, haut + f).forEach(function (item, k) {
-      const i = haut + k;
-      const yy = y + 28 + k * 14;
-      const choisi = i === m.curseur;
-      const actif = item.actif !== false;
-      if (choisi) { ctx.fillStyle = 'rgba(232,179,60,0.18)'; ctx.fillRect(x + 4, yy - 3, (m.colonne || l) - 8, 12); }
-      texte(ctx, (choisi ? '> ' : '  ') + item.libelle, x + 8, yy, actif ? (choisi ? '#efe6d0' : '#cdc6e6') : '#6a6678', 1);
-      const bord = x + (m.colonne || l);
-      if (item.detail) texte(ctx, item.detail, bord - 8 - Atlas.largeurTexte(item.detail, 1), yy, actif ? '#e8b33c' : '#6a6678', 1);
-    });
+    // `sansListe` : un ecran qui dessine tout lui-meme (COMMANDES) garde la
+    // mecanique d'un menu — figer la ville, ACTION choisit, ECHAP ferme — sans
+    // la liste.
+    if (!m.sansListe) dessinerLignesDuMenu(ctx, m, x, y + 28, l, f, haut);
     // Les fleches de defilement : on doit voir qu'il y a autre chose au-dessus
     // et en dessous, sinon une page longue a l'air d'etre toute la page.
     // ⚠️ Dessinees, pas ecrites : la police pixel n'a que des lettres, des
     // chiffres et un peu de ponctuation — un « ▲ » y tomberait sur un « ? ».
-    if (haut > 0) fleche(ctx, x + l - 12, y + 29, -1);
-    if (haut + f < m.items.length) fleche(ctx, x + l - 12, y + 30 + (f - 1) * 14, 1);
+    if (haut > 0 && !m.sansListe) fleche(ctx, x + l - 12, y + 29, -1);
+    if (haut + f < m.items.length && !m.sansListe) fleche(ctx, x + l - 12, y + 30 + (f - 1) * 14, 1);
     if (m.aide) texte(ctx, m.aide, x + 8, y + h - 12, '#8a8698', 1);
     if (m.dessiner) m.dessiner(ctx, x, y, l, h);
     B.stats.rects += 4;
+  }
+
+  // --- Le classeur : la PAUSE en onglets ----------------------------------------------
+  //: Demande de Martin (22 sept. 2026) : « remanier tous les menus pour que ce
+  //: soit plus convivial et plus facile de s'y retrouver — des onglets
+  //: cliquables, ou deplacables avec R et L ». La PAUSE etait un arbre : dix
+  //: lignes, dont six ouvraient un sous-menu, qui en ouvraient d'autres (les
+  //: triches, puis PLUS…, puis le saut) — et chaque sous-menu avait sa taille, sa
+  //: place, et un RETOUR a trouver. Le classeur les range cote a cote :
+  //:
+  //: - un ONGLET par page (`ONGLETS`), qu'on tourne aux EPAULES (`Entree.neufEpaule`),
+  //:   a la croix, aux fleches ← →, ou en le touchant ;
+  //: - la boite a le HAUT FIXE, et la rangee d'onglets est centree sur l'ECRAN :
+  //:   COMMANDES est plus large que les autres pages, rien ne glisse quand on y passe ;
+  //: - une page ouverte depuis un onglet (le journal, la manette, un saut) est une
+  //:   SOUS-PAGE : l'onglet reste allume, son titre s'ecrit dessous, B recule ;
+  //: - depuis un onglet, B (FRAPPE, ECHAP) reprend la partie : il n'y a plus de
+  //:   RETOUR a chercher au bout de la liste ;
+  //: - le pied montre les VRAIS boutons de l'appareil qu'on tient.
+  //:
+  //: ⚠️ Au telephone en paysage, le pouce et les quatre boutons couvrent les
+  //: coins du bas (`styles.css`) et PAUSE le coin du haut a droite : la boite des
+  //: listes garde les 320 px du milieu, comme le carnet avant elle.
+  const HAUT_CLASSEUR = 12, LARGEUR_CLASSEUR = 320, ONGLET_H = 14;
+  //: Du haut de la boite a sa premiere ligne ; et le pied, ou vivent les boutons.
+  const LISTE_CLASSEUR = 34, PIED_CLASSEUR = 16;
+  //: Un dessin fait pour un menu ordinaire (sa premiere ligne a `y + 28`, l'ecran
+  //: MANETTE, la fiche d'un personnage) se decale d'autant dans le classeur.
+  const DECALAGE_CLASSEUR = LISTE_CLASSEUR - 28;
+
+  /** La hauteur de la boite : ce qu'il faut a la page, jamais plus que l'ecran. */
+  function hauteurClasseur(m) {
+    const max = VH - HAUT_CLASSEUR - 4;
+    // Un ecran qui dessine tout lui-meme (COMMANDES) compte deja son pied.
+    if (m.hauteur) return Math.min(max, m.hauteur + DECALAGE_CLASSEUR + (m.sansListe ? 0 : PIED_CLASSEUR));
+    return Math.min(max, LISTE_CLASSEUR + m.items.length * 14 + (m.aide ? 14 : 0) + PIED_CLASSEUR);
+  }
+
+  /** Une touche du clavier, dessinee comme sur l'ecran COMMANDES. */
+  function glypheDeTouche(code) {
+    return { s: 'touche', code: code, allume: function () { return Entree.toucheEnfoncee(code); } };
+  }
+
+  /** Les deux boutons qui tournent l'onglet, de part et d'autre de la rangee :
+      les epaules de SA manette (LB/RB, L1/R1, L/R), les fleches du clavier ;
+      rien au doigt — l'onglet se touche. */
+  function glyphesDOnglets(m) {
+    const appareil = Entree.appareil;
+    if (appareil === 'clavier') return [glypheDeTouche('ArrowLeft'), glypheDeTouche('ArrowRight')];
+    if (appareil !== 'manette' || m.epaulesInertes) return null;
+    const prof = Entree.profilManette(), fam = familleCourante(), etat = Entree.manetteInfo();
+    const g = (prof.boutons.arme || [])[1], d = (prof.boutons.attaque || [])[1];
+    if (g === undefined || d === undefined || !fam) return null;
+    return [glypheDePiece('epaule_g', fam, g, etat), glypheDePiece('epaule_d', fam, d, etat)];
+  }
+
+  /** Le pied : ce que font les boutons ICI, dessines pour l'appareil qu'on tient.
+      Une page peut y ajouter les siens (`pied`, l'autre page de COMMANDES). */
+  function piedDuClasseur(m) {
+    const appareil = Entree.appareil, lignes = m.pied ? m.pied() : [];
+    if (appareil === 'tactile') {
+      lignes.push({ glyphes: [], texte: m.sansListe ? 'TOUCHE UN ONGLET' : 'TOUCHE UN ONGLET, OU UNE LIGNE' });
+      return lignes;
+    }
+    // Un ecran sans liste (COMMANDES) dit lui-meme ce que font ses boutons.
+    if (m.sansListe) return lignes;
+    const choisir = glypheDAction('action');
+    if (choisir && !rienQueDeLaLecture(m)) lignes.push({ glyphes: [choisir], texte: 'CHOISIR' });
+    // ⚠️ Sur une page ou l'on essaie sa manette, B s'allume sans rien fermer :
+    // on ne promet pas un bouton qui ne fait rien.
+    const reculer = appareil === 'clavier' ? glypheDeTouche('Escape')
+      : (m.manetteInerte ? null : glypheDAction('annuler'));
+    if (reculer) lignes.push({ glyphes: [reculer], texte: m.classeur.racine ? 'REPRENDRE' : 'RETOUR' });
+    return lignes;
+  }
+
+  function dessinerClasseur(ctx, m) {
+    const l = m.largeur || LARGEUR_CLASSEUR, h = hauteurClasseur(m);
+    const x = Math.round((VW - l) / 2), y = HAUT_CLASSEUR, corps = y + ONGLET_H;
+    ctx.fillStyle = 'rgba(11,10,18,0.92)'; ctx.fillRect(x, corps, l, h - ONGLET_H);
+    ctx.fillStyle = '#e8b33c'; ctx.fillRect(x, y + h - 1, l, 1);
+    // Les onglets, centres sur l'ECRAN.
+    const liste = ongletsVisibles();
+    const largeurs = liste.map(function (o) { return Atlas.largeurTexte(o.titre, 1) + 10; });
+    const total = largeurs.reduce(function (a, b) { return a + b; }, 0) + 2 * (liste.length - 1);
+    const debut = Math.round((VW - total) / 2);
+    let tx = debut, lu = null;
+    liste.forEach(function (o, k) {
+      const w = largeurs[k], la = o.slug === m.classeur.onglet;
+      if (la) {
+        lu = { x: tx, l: w };
+        ctx.fillStyle = 'rgba(11,10,18,0.92)'; ctx.fillRect(tx, y, w, ONGLET_H + 1);
+        ctx.fillStyle = '#e8b33c';
+        ctx.fillRect(tx, y, w, 1); ctx.fillRect(tx, y, 1, ONGLET_H + 1); ctx.fillRect(tx + w - 1, y, 1, ONGLET_H + 1);
+      } else {
+        ctx.fillStyle = 'rgba(11,10,18,0.78)'; ctx.fillRect(tx, y + 3, w, ONGLET_H - 3);
+      }
+      texte(ctx, o.titre, tx + 5, y + (la ? 5 : 7), la ? '#e8b33c' : '#8a8698', 1);
+      poserCible({ x: tx, y: y, l: w, h: ONGLET_H + 1, onglet: o.slug });
+      tx += w + 2;
+    });
+    B.stats.rects += 6 + liste.length;
+    // La ligne d'or du haut de la boite s'ouvre sous l'onglet qu'on lit.
+    ctx.fillStyle = '#e8b33c';
+    if (lu) {
+      ctx.fillRect(x, corps, Math.max(0, lu.x - x), 1);
+      ctx.fillRect(lu.x + lu.l, corps, Math.max(0, x + l - lu.x - lu.l), 1);
+    } else ctx.fillRect(x, corps, l, 1);
+    const bouts = glyphesDOnglets(m);
+    if (bouts) {
+      dessinerGlyphe(ctx, bouts[0], debut - 5 - largeurGlyphe(bouts[0]), y + 3);
+      dessinerGlyphe(ctx, bouts[1], debut + total + 5, y + 3);
+    }
+    // Sous la rangee : le titre d'une SOUS-PAGE (l'onglet dit deja celui de la
+    // page), et a droite ce que la page dit d'elle-meme (le jour, l'heure).
+    const yT = corps + 6;
+    if (!m.classeur.racine && m.titre) texte(ctx, m.titre, x + 8, yT, '#e8b33c', 1);
+    if (m.sur) texte(ctx, m.sur, x + l - 8 - Atlas.largeurTexte(m.sur, 1), yT, '#8a8698', 1);
+    const f = fenetreMenu(m), haut = hautDuMenu(m), y0 = y + LISTE_CLASSEUR;
+    if (!m.sansListe) {
+      dessinerLignesDuMenu(ctx, m, x, y0, l, f, haut);
+      if (haut > 0) fleche(ctx, x + l - 12, y0 + 1, -1);
+      if (haut + f < m.items.length) fleche(ctx, x + l - 12, y0 + 2 + (f - 1) * 14, 1);
+    }
+    if (m.aide) texte(ctx, m.aide, x + 8, y + h - PIED_CLASSEUR - 12, '#8a8698', 1);
+    if (m.dessiner) m.dessiner(ctx, x, y + DECALAGE_CLASSEUR, l, h - DECALAGE_CLASSEUR);
+    // Le pied, centre.
+    const pied = piedDuClasseur(m);
+    const largeur = pied.reduce(function (s, li) { return s + largeurLigne(li); }, 0) + 14 * Math.max(0, pied.length - 1);
+    let px = x + Math.round((l - largeur) / 2);
+    const py = y + h - 13;
+    ctx.fillStyle = '#2a2440'; ctx.fillRect(x + 6, py - 4, l - 12, 1);
+    B.stats.rects++;
+    for (const li of pied) {
+      li.allume = li.glyphes.some(function (g) { return g.allume && g.allume(); });
+      dessinerLigne(ctx, li, px, py, 'pied');
+      px += largeurLigne(li) + 14;
+    }
   }
 
   // --- Pause : reprendre, bilan, options, quitter ------------------------------------
@@ -336,7 +724,7 @@ const Hud = (function () {
     HorsLigne.demanderEtat();
     const sonsHorsLigne = { libelle: 'LES SONS HORS LIGNE', detail: HorsLigne.detail(), actif: HorsLigne.disponible,
       faire: function (item) { HorsLigne.toutTelecharger(); item.detail = HorsLigne.detail(); return false; } };
-    return { titre: 'OPTIONS', curseur: 1,
+    return enOnglet('options', { titre: 'OPTIONS', curseur: 1,
       maj: function () {
         etatSon.detail = ETATS[Son.etatSon()] || '?';
         sonsHorsLigne.detail = HorsLigne.detail();
@@ -361,9 +749,13 @@ const Hud = (function () {
         return false;
       } },
       sonsHorsLigne,
+      // ⚠️ La coop locale (essai, un clavier + une manette) : par defaut la
+      // manette va au deuxieme joueur — Martin veut pouvoir se la garder
+      // (jouer le personnage principal au stick) et laisser le clavier au
+      // deuxieme. `Entree.debutImage`/`axeJoueur2` lisent cette meme case.
+      bascule('coopP1Manette', 'JOUEUR 1 À LA MANETTE (COOP)'),
       { libelle: 'MANETTE', faire: function () { ouvrirMenu(menuManette()); return false; } },
-      { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } },
-    ], aide: 'ACTION : CHANGER · FRAPPE : FERMER' };
+    ] });
   }
 
   // --- La manette : une disposition a choisir, un dessin qui la prouve ---------------
@@ -374,22 +766,23 @@ const Hud = (function () {
   //: meme action). C'est ce qui fait du dessin une PREUVE — on appuie, la piece
   //: correspondante s'allume ; si ce n'est pas celle qu'on a sous le pouce, la
   //: disposition choisie n'est pas la bonne.
+  //: `nom` : la POSITION de la piece, celle que `manettes.py` nomme (`pieces`)
+  //: et qui porte la lettre imprimee (l'ecran COMMANDES).
   const MANETTE_PIECES = [
-    { pedale: 'frein', x: 10, y: 0, l: 14, h: 4 },
-    { pedale: 'gaz', x: 54, y: 0, l: 14, h: 4 },
-    { a: 'arme', rang: 1, x: 8, y: 5, l: 18, h: 5 },
-    { a: 'attaque', rang: 1, x: 52, y: 5, l: 18, h: 5 },
-    { a: 'haut', x: 15, y: 14, l: 4, h: 4 },
-    { a: 'gauche', x: 11, y: 18, l: 4, h: 4 },
-    { a: 'droite', x: 19, y: 18, l: 4, h: 4 },
-    { a: 'bas', x: 15, y: 22, l: 4, h: 4 },
-    { a: 'carte', x: 33, y: 18, l: 5, h: 3 },
-    { a: 'pause', x: 41, y: 18, l: 5, h: 3 },
-    { a: 'verrouiller', x: 36, y: 22, l: 6, h: 3 },
-    { a: 'arme', rang: 0, x: 59, y: 14, l: 5, h: 5 },
-    { a: 'attaque', rang: 0, x: 54, y: 19, l: 5, h: 5 },
-    { a: 'esquive', rang: 0, x: 64, y: 19, l: 5, h: 5 },
-    { a: 'action', rang: 0, x: 59, y: 24, l: 5, h: 5 },
+    { pedale: 'frein', nom: 'gachette_g', x: 10, y: 0, l: 14, h: 4 },
+    { pedale: 'gaz', nom: 'gachette_d', x: 54, y: 0, l: 14, h: 4 },
+    { a: 'arme', rang: 1, nom: 'epaule_g', x: 8, y: 5, l: 18, h: 5 },
+    { a: 'attaque', rang: 1, nom: 'epaule_d', x: 52, y: 5, l: 18, h: 5 },
+    { a: 'haut', nom: 'croix', x: 15, y: 14, l: 4, h: 4 },
+    { a: 'gauche', nom: 'croix', x: 11, y: 18, l: 4, h: 4 },
+    { a: 'droite', nom: 'croix', x: 19, y: 18, l: 4, h: 4 },
+    { a: 'bas', nom: 'croix', x: 15, y: 22, l: 4, h: 4 },
+    { a: 'carte', nom: 'select', x: 33, y: 18, l: 5, h: 3 },
+    { a: 'pause', nom: 'start', x: 41, y: 18, l: 5, h: 3 },
+    { a: 'arme', rang: 0, nom: 'haut', x: 59, y: 14, l: 5, h: 5 },
+    { a: 'attaque', rang: 0, nom: 'gauche', x: 54, y: 19, l: 5, h: 5 },
+    { a: 'esquive', rang: 0, nom: 'droite', x: 64, y: 19, l: 5, h: 5 },
+    { a: 'action', rang: 0, nom: 'bas', x: 59, y: 24, l: 5, h: 5 },
   ];
   const MANETTE_L = 78, MANETTE_H = 46;
 
@@ -434,7 +827,6 @@ const Hud = (function () {
     ['annuler', 'RETOUR'],
     ['pause', 'PAUSE'],
     ['carte', 'CARTE'],
-    ['verrouiller', 'VERROUILLER / CHANGER DE CIBLE'],
     ['croix', 'CROIX DIRECTIONNELLE'],
     ['gaz', 'GAZ'],
     ['frein', 'FREIN'],
@@ -488,7 +880,10 @@ const Hud = (function () {
     });
     items.push({ libelle: 'TOUT RÉAPPRENDRE', faire: function () { toutReapprendre(0); return false; } });
     items.push({ libelle: 'RETOUR', faire: function () { suite = null; ouvrirMenu(menuManette()); return false; } });
-    const menu = { titre: 'RÉAPPRENDRE', items: items, curseur: 0, manetteInerte: true };
+    // ⚠️ `epaulesInertes` : on y apprend AUSSI les epaules — elles ne tournent
+    // pas l'onglet sous le pouce de celui qui les essaie.
+    const menu = { titre: 'RÉAPPRENDRE', items: items, curseur: 0, manetteInerte: true, epaulesInertes: true,
+                   retour: function () { suite = null; Entree.annulerApprentissage(); ouvrirMenu(menuManette()); } };
     let repos = null;                 // les axes au repos, pour voir lesquels bougent
     menu.maj = function (m) {
       const etat = Entree.manetteInfo(), profil = Entree.profilManette();
@@ -554,18 +949,33 @@ const Hud = (function () {
     });
     items.push({ libelle: 'RÉAPPRENDRE BOUTON PAR BOUTON',
                  faire: function () { ouvrirMenu(menuManetteBoutons()); return false; } });
+    // Les LETTRES que l'ecran COMMANDES imprime sur les boutons. AUTO : celles
+    // que le nom de la manette trahit (une PlayStation), sinon Xbox. ⚠️ Nintendo
+    // ne se devine pas (`manettes.DETECTION`) : c'est ici qu'on la choisit.
+    const familles = Object.keys(bloc.familles || {});
+    const lettres = { libelle: 'LETTRES DES BOUTONS', faire: function () {
+      const cycle = [null].concat(familles);
+      const k = cycle.indexOf(B.options.lettresManette || null);
+      B.options.lettresManette = cycle[(k + 1) % cycle.length];
+      Sauvegarde.ecrireOptions(B.options);
+      Son.SFX.menu();
+      return false;
+    } };
+    items.push(lettres);
     items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuOptions()); return false; } });
     // Le curseur commence sur la disposition en cours : appuyer sur ACTION pour
     // voir le bouton s'allumer ne change alors rien.
     const actuel = B.options.manetteProfil || bloc.defaut;
     const depart = Math.max(0, items.findIndex(function (i) { return i.profil && i.profil.slug === actuel; }));
-    const menu = { titre: 'MANETTE', items: items, curseur: depart, manetteInerte: true,
-                   largeur: 420, hauteur: 162, colonne: 212 };
+    const menu = { titre: 'MANETTE', items: items, curseur: depart, manetteInerte: true, epaulesInertes: true,
+                   largeur: 420, hauteur: 162, colonne: 212, retour: function () { ouvrirMenu(menuOptions()); } };
     menu.maj = function (m) {
       const etat = Entree.manetteInfo();
       m.sur = etat.branchee ? (etat.mapping === 'standard' ? 'RECONNUE' : 'NON RECONNUE')
                             : 'AUCUNE MANETTE';
       const choisi = B.options.manetteProfil || bloc.defaut;
+      const fam = (bloc.familles || {})[Entree.familleManette()];
+      lettres.detail = (B.options.lettresManette ? '' : 'AUTO · ') + (fam ? fam.nom : '?');
       for (const item of m.items) {
         if (!item.profil) continue;
         // ⚠️ Le detail du profil ne tient pas a cote de son nom : il se dit en
@@ -601,6 +1011,592 @@ const Hud = (function () {
     return menu;
   }
 
+  // --- COMMANDES : chaque bouton et ce qu'il fait, avec les boutons qu'on TIENT --------
+
+  //: Demande de Martin (21 sept. 2026) : « au debut du jeu, un affichage d'aides
+  //: pour que les joueurs sachent comment ca fonctionne ; si une manette est
+  //: branchee, indiquer visuellement sur quel bouton peser ». L'ecran s'ouvre a
+  //: la fin de l'ouverture d'une partie neuve (`Histoire`), et de PAUSE.
+  //:
+  //: ⚠️ IL PARLE L'APPAREIL QU'ON TIENT (`Entree.appareil`), pas « une manette
+  //: est branchee » : celui qui joue au clavier avec une manette qui dort sur le
+  //: bureau ne veut pas lire des A et des B. Et il change sous les yeux quand
+  //: on passe de l'un a l'autre.
+  //:
+  //: ⚠️ LES LETTRES SUIVENT LA POSITION, JAMAIS LE NUMERO. Le A d'une manette
+  //: Xbox est EN BAS ; le numero que le navigateur lui donne depend de la
+  //: manette, du Bluetooth et du systeme (`manettes.py`). La disposition dit
+  //: quelle PIECE du dessin porte chaque action (`pieces`), la famille dit quelle
+  //: lettre est imprimee sur cette piece.
+
+  //: Les pieces du dessin par NOM (`manettes.py`). Le stick et son clic ne sont
+  //: pas dans `MANETTE_PIECES` (le stick y est dessine a part), et la croix y
+  //: est en quatre morceaux : l'aide la vise en entier. Le CLIC du stick vise le
+  //: bas de la cuvette : deux traits vers le meme stick (marcher, viser) se
+  //: confondraient.
+  const PIECES_AIDE = { stick: { x: 24, y: 26, l: 9, h: 9 }, clic: { x: 24, y: 32, l: 9, h: 4 },
+                        croix: { x: 11, y: 14, l: 12, h: 12 } };
+  MANETTE_PIECES.forEach(function (p) { if (p.nom && !PIECES_AIDE[p.nom]) PIECES_AIDE[p.nom] = p; });
+  //: La main qui tient chaque piece : la ligne de l'aide se range de son cote,
+  //: ou dessous (`m`) pour les petits boutons du milieu.
+  const COTE_DES_PIECES = { gachette_g: 'g', epaule_g: 'g', croix: 'g', stick: 'g', clic: 'g',
+                            select: 'm', start: 'm',
+                            gachette_d: 'd', epaule_d: 'd', haut: 'd', gauche: 'd', droite: 'd', bas: 'd' };
+  //: Les boutons de droite portent leur lettre SUR le dessin : pas de trait.
+  const FACES = { haut: true, gauche: true, droite: true, bas: true };
+  //: Les gestes qui ne sont pas un bouton : le stick, la croix, les fleches.
+  const DIRECTIONS_DU_GESTE = { marcher: ['haut', 'gauche', 'bas', 'droite'], tourner: ['gauche', 'droite'],
+                                gaz: ['haut'], frein: ['bas'] };
+  //: Ce qu'on lit sur la touche. ⚠️ Les fleches ne s'ecrivent pas (la police
+  //: pixel n'a pas de « ← ») : elles se dessinent.
+  const NOMS_DE_TOUCHES = { Space: 'ESPACE', ShiftLeft: 'MAJ', ShiftRight: 'MAJ', Tab: 'TAB',
+                            Escape: 'ÉCHAP', Enter: 'ENTRÉE', Backspace: 'EFFACER' };
+  //: Les symboles PlayStation dans le DOM du titre (la toile, elle, les dessine).
+  const SYMBOLES = { croix: '✕', rond: '○', carre: '□', triangle: '△' };
+
+  /** La disposition choisie telle que le paquet la decrit. Une disposition
+      REAPPRISE bouton par bouton n'a plus de description : on garde les pieces
+      de la disposition par defaut — celles du dessin de l'ecran MANETTE, qui
+      fait deja cette hypothese. */
+  function dispositionDecrite() {
+    const bloc = B.defs.manettes || { profils: [] };
+    const slug = B.options.manetteProfil || bloc.defaut;
+    const p = bloc.profils.find(function (q) { return q.slug === slug; });
+    if (p) return p;
+    const defaut = bloc.profils.find(function (q) { return q.slug === bloc.defaut; });
+    return defaut ? { slug: 'apprise', pieces: defaut.pieces } : null;
+  }
+
+  function familleCourante() {
+    const bloc = B.defs.manettes || {};
+    return (bloc.familles || {})[Entree.familleManette()] || null;
+  }
+
+  function toucheLibelle(code) {
+    if (/^Arrow/.test(code)) return null;
+    return NOMS_DE_TOUCHES[code] || code.replace(/^Key|^Digit/, '');
+  }
+
+  /** La premiere touche de `a` d'un genre (`Key`, `Arrow`) dans `MAP_TOUCHES`. */
+  function toucheDe(a, genre) {
+    return (Entree.MAP_TOUCHES[a] || []).find(function (k) { return k.indexOf(genre) === 0; }) || null;
+  }
+
+  // Les glyphes : ce qui se dessine a la place du nom d'un bouton. Chacun sait
+  // s'il est enfonce (`allume`) : on appuie, il s'allume, et sa ligne avec lui.
+
+  function glypheDePiece(nom, fam, indice, etat) {
+    const b = nom && fam && fam.boutons[nom];
+    const allume = nom === 'gachette_d' ? function () { return Entree.gaz > 0.15; }
+      : nom === 'gachette_g' ? function () { return Entree.frein > 0.15; }
+      : function () { return indice !== undefined && etat.boutons.indexOf(indice) >= 0; };
+    if (b) return { s: 'bouton', texte: b.texte, forme: b.forme, couleur: b.couleur, piece: nom, allume: allume };
+    return { s: 'numero', texte: 'BOUTON ' + indice, piece: null, allume: allume };
+  }
+
+  function icone(nom, allume, vers) { return { s: 'icone', icone: nom, vers: vers || null, allume: allume }; }
+
+  function stickPousse() { return Entree.axe.source === 'manette' && Entree.axe.mag > 0; }
+  function croixTenue() { return ['haut', 'bas', 'gauche', 'droite'].some(function (a) { return Entree.bas(a); }); }
+  function poucePose() { return Entree.axe.source === 'tactile' && Entree.axe.mag > 0; }
+
+  /** Une ligne de l'aide, pour un appareil : ses glyphes et, a la manette, les
+      pieces du dessin qu'elle designe. `null` : cet appareil ne le fait pas. */
+  function ligneDAide(c, appareil, page, fam, etat) {
+    if (appareil === 'manette') {
+      if (c === 'marcher') return { glyphes: [icone('stick', stickPousse), icone('croix', croixTenue)], pieces: ['stick', 'croix'] };
+      if (c === 'tourner') return { glyphes: [icone('stick', stickPousse)], pieces: ['stick'] };
+      // ⚠️ VISER est la gachette du gaz, a pied (`Entree`, `gachetteVise`) : pas
+      // un bouton du profil, la meme piece que GAZ sur la page du volant.
+      if (c === 'gaz' || c === 'frein' || c === 'verrouiller') {
+        const nom = c === 'frein' ? 'gachette_g' : 'gachette_d';
+        return { glyphes: [glypheDePiece(nom, fam, undefined, etat)], pieces: [nom] };
+      }
+      const indices = Entree.profilManette().boutons[c] || [];
+      if (!indices.length) return null;
+      const decrite = dispositionDecrite();
+      const pieces = indices.map(function (_, k) { return (decrite && decrite.pieces[c] && decrite.pieces[c][k]) || null; });
+      return { glyphes: indices.map(function (i, k) { return glypheDePiece(pieces[k], fam, i, etat); }), pieces: pieces };
+    }
+    if (appareil === 'clavier') {
+      const dirs = DIRECTIONS_DU_GESTE[c];
+      const codes = dirs
+        ? dirs.map(function (d) { return toucheDe(d, 'Key'); }).concat([null], dirs.map(function (d) { return toucheDe(d, 'Arrow'); }))
+        : [(Entree.MAP_TOUCHES[c] || [])[0]].filter(Boolean);
+      if (!codes.length) return null;
+      return { glyphes: codes.map(function (code) {
+        return code ? { s: 'touche', code: code, allume: function () { return Entree.toucheEnfoncee(code); } } : { s: 'espace' };
+      }) };
+    }
+    // Le doigt : le pouce, et les quatre boutons sous leur nom du moment.
+    const vers = { marcher: null, tourner: 'cote', gaz: 'haut', frein: 'bas' };
+    if (c in vers) return { glyphes: [icone('pouce', poucePose, vers[c])], cible: 'croix' };
+    if (c === 'pause') return { glyphes: [icone('pause', function () { return Entree.basTactile('pause'); })], cible: 'pause' };
+    const noms = Entree.etiquettesTactiles(page === 'volant' ? 'vehicule' : 'pied');
+    if (!noms[c]) return null;
+    return { glyphes: [{ s: 'doigt', texte: noms[c], allume: function () { return Entree.basTactile(c); } }], cible: c };
+  }
+
+  /** Les lignes d'une page pour l'appareil qu'on tient. */
+  function lignesDAide(page, appareil) {
+    const fam = familleCourante(), etat = Entree.manetteInfo();
+    const out = [];
+    for (const l of page.lignes) {
+      const li = ligneDAide(l.c, appareil, page.slug, fam, etat);
+      if (!li) continue;
+      li.c = l.c; li.texte = l.texte;
+      li.allume = li.glyphes.some(function (g) { return g.allume && g.allume(); });
+      out.push(li);
+    }
+    return out;
+  }
+
+  /** Le glyphe de l'action `a` pour l'appareil qu'on tient — `null` au doigt,
+      ou le nom ecrit sur le bouton EST deja « ACTION ». */
+  function glypheDAction(a) {
+    const appareil = Entree.appareil;
+    if (appareil === 'tactile') return null;
+    const li = ligneDAide(a, appareil, 'pied', familleCourante(), Entree.manetteInfo());
+    return li && li.glyphes[0] ? li.glyphes[0] : null;
+  }
+
+  // --- Le dessin des glyphes (9 pixels de haut) ---
+
+  function largeurGlyphe(g) {
+    if (g.s === 'espace') return 4;
+    if (g.s === 'icone') return 9;
+    if (g.s === 'bouton' && (g.forme || String(g.texte).length === 1)) return 9;
+    if (g.s === 'touche') {
+      const lib = toucheLibelle(g.code);
+      return lib ? Math.max(9, Atlas.largeurTexte(lib, 1) + 6) : 9;
+    }
+    return Atlas.largeurTexte(g.texte, 1) + 6;
+  }
+
+  /** Un rond de `d` pixels (9 ou 15), coins coupes. */
+  function rond(ctx, x, y, d, couleur) {
+    const c = d >= 15 ? 3 : 2;
+    ctx.fillStyle = couleur;
+    ctx.fillRect(x + c, y, d - 2 * c, d);
+    ctx.fillRect(x, y + c, d, d - 2 * c);
+    ctx.fillRect(x + 1, y + 1, d - 2, d - 2);
+    B.stats.rects += 3;
+  }
+
+  //: Les quatre symboles PlayStation, 5 x 5 (`manettes.FORMES`).
+  const FORMES_DE_BOUTON = {
+    croix: ['10001', '01010', '00100', '01010', '10001'],
+    rond: ['01110', '10001', '10001', '10001', '01110'],
+    carre: ['11111', '10001', '10001', '10001', '11111'],
+    triangle: ['00100', '01010', '01010', '10001', '11111'],
+  };
+
+  function forme(ctx, nom, x, y, couleur, e) {
+    const g = FORMES_DE_BOUTON[nom];
+    if (!g) return;
+    ctx.fillStyle = couleur;
+    for (let j = 0; j < 5; j++) for (let i = 0; i < 5; i++) {
+      if (g[j][i] === '1') { ctx.fillRect(x + i * e, y + j * e, e, e); B.stats.rects++; }
+    }
+  }
+
+  /** Un triangle plein de trois rangs, pointe vers `sens` : une fleche de touche. */
+  function pointe(ctx, cx, cy, sens, couleur) {
+    ctx.fillStyle = couleur;
+    for (let i = 0; i < 3; i++) {
+      const larg = 1 + i * 2;
+      if (sens === 'haut') ctx.fillRect(cx - i, cy - 1 + i, larg, 1);
+      else if (sens === 'bas') ctx.fillRect(cx - i, cy + 1 - i, larg, 1);
+      else if (sens === 'gauche') ctx.fillRect(cx - 1 + i, cy - i, 1, larg);
+      else ctx.fillRect(cx + 1 - i, cy - i, 1, larg);
+    }
+    B.stats.rects += 3;
+  }
+
+  const SENS_DES_FLECHES = { ArrowUp: 'haut', ArrowDown: 'bas', ArrowLeft: 'gauche', ArrowRight: 'droite' };
+
+  function dessinerGlyphe(ctx, g, x, y) {
+    const l = largeurGlyphe(g), allume = !!(g.allume && g.allume());
+    function r(a, b, w, h, c) { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, w, h); B.stats.rects++; }
+    if (g.s === 'espace') return l;
+    if (g.s === 'touche') {
+      // Une touche : son dessus, et l'ombre de son flanc dessous.
+      r(0, 1, l, 8, '#15141c');
+      r(0, 0, l, 8, allume ? '#e8b33c' : '#8a8698');
+      r(1, 1, l - 2, 6, allume ? '#f2cf72' : '#efe6d0');
+      const lib = toucheLibelle(g.code);
+      if (lib) Atlas.texte(ctx, lib, x + 3, y + 1, '#22242a', 1);
+      else pointe(ctx, x + 4, y + 4, SENS_DES_FLECHES[g.code], '#22242a');
+      return l;
+    }
+    if (g.s === 'icone') {
+      if (g.icone === 'croix') {
+        r(3, 0, 3, 9, allume ? '#e8b33c' : '#6f757c'); r(0, 3, 9, 3, allume ? '#e8b33c' : '#6f757c');
+        r(4, 4, 1, 1, '#22242a');
+        return l;
+      }
+      if (g.icone === 'pause') {
+        rond(ctx, x, y, 9, allume ? '#e8b33c' : '#2a2440');
+        r(2, 2, 2, 5, '#efe6d0'); r(5, 2, 2, 5, '#efe6d0');
+        return l;
+      }
+      // Le stick de la manette, ou le pouce sur la vitre : un rond, et sa tete
+      // poussee du cote ou le geste la pousse.
+      rond(ctx, x, y, 9, g.icone === 'pouce' ? '#2a2440' : '#22242a');
+      const dy = g.vers === 'haut' ? -2 : g.vers === 'bas' ? 2 : 0;
+      r(3, 3 + dy, 3, 3, allume ? '#e8b33c' : (g.icone === 'pouce' ? '#b89a4a' : '#8a8698'));
+      if (g.vers === 'cote') { r(0, 4, 1, 1, '#efe6d0'); r(8, 4, 1, 1, '#efe6d0'); }
+      return l;
+    }
+    if (g.s === 'bouton' && l === 9) {
+      rond(ctx, x, y, 9, allume ? '#e8b33c' : '#22242a');
+      const c = allume ? '#22242a' : g.couleur;
+      if (g.forme) forme(ctx, g.forme, x + 2, y + 2, c, 1);
+      else Atlas.texte(ctx, g.texte, x + 3, y + 2, c, 1);
+      return l;
+    }
+    // Une pastille : un bouton au nom long (LB, SELECT), un numero, un bouton tactile.
+    const fond = allume ? '#e8b33c' : g.s === 'doigt' ? '#2a2440' : '#3a3d44';
+    r(1, 0, l - 2, 9, fond); r(0, 1, l, 7, fond);
+    if (g.s === 'doigt' && !allume) { r(1, 0, l - 2, 1, '#6b5a2e'); r(1, 8, l - 2, 1, '#6b5a2e'); }
+    Atlas.texte(ctx, g.texte, x + 3, y + 2, allume ? '#22242a' : '#efe6d0', 1);
+    return l;
+  }
+
+  function largeurLigne(li) {
+    let l = 0;
+    for (const g of li.glyphes) l += largeurGlyphe(g) + 2;
+    return l + 1 + Atlas.largeurTexte(li.texte, 1);
+  }
+
+  function dessinerLigne(ctx, li, x, y, nom) {
+    let cx = x;
+    for (const g of li.glyphes) cx += dessinerGlyphe(ctx, g, cx, y) + 2;
+    texte(ctx, li.texte, cx + 1, y + 2, li.allume ? '#e8b33c' : '#efe6d0', 1);
+    // Chaque ligne est une ancre : le juge tactile verifie qu'aucune ne finit
+    // sous un pouce (le telephone en paysage, ou les boutons sont grands).
+    // Le pied du classeur a les siennes (`pied`).
+    noter(nom || 'commandes', x, y, largeurLigne(li), 9);
+  }
+
+  /** Des lignes rangees d'un cote, chacune a la hauteur de ce qu'elle designe
+      (`cible`), ou juste dessous si la place est prise — ou juste AU-DESSUS
+      (`versLeHaut`), pour que rien ne descende plus bas que sa cible. Rend ses
+      TRAITS : un par bout vise (`bouts`), avec sa gouttiere.
+
+      ⚠️ Deux traits dans la meme gouttiere se confondraient : chacun a la
+      sienne, le plus haut le plus loin du dessin — ainsi aucun coude ne coupe
+      le trait d'un autre. */
+  function rangerDUnCote(lignes, cote, bord, yMin, versLeHaut) {
+    lignes.sort(function (a, b) { return a.cible.y - b.cible.y; });
+    if (versLeHaut) {
+      let dessus = Infinity;
+      for (let k = lignes.length - 1; k >= 0; k--) {
+        lignes[k].y = Math.min(Math.round(lignes[k].cible.y) - 4, dessus - 13); dessus = lignes[k].y;
+      }
+    } else {
+      let dessous = yMin - 13;
+      for (const li of lignes) { li.y = Math.max(Math.round(li.cible.y) - 4, dessous + 13); dessous = li.y; }
+    }
+    for (const li of lignes) li.x = cote === 'g' ? bord - 20 - largeurLigne(li) : bord + 20;
+    const traits = [];
+    for (const li of lignes) for (const b of li.bouts || []) traits.push({ li: li, b: b });
+    traits.sort(function (a, b) { return a.b.y - b.b.y; });
+    const sens = cote === 'g' ? -1 : 1;
+    traits.forEach(function (t, k) {
+      t.gx = bord + sens * (5 + 3 * (traits.length - 1 - k));
+      t.depart = cote === 'g' ? t.li.x + largeurLigne(t.li) + 2 : t.li.x - 2;
+    });
+    return traits;
+  }
+
+  /** Les traits, PAR-DESSUS le dessin : ils arrivent au bord du bouton vise,
+      et un point s'y pose. Coude a coude : la ligne, la gouttiere, le bouton.
+      ⚠️ Traces sous le dessin, ils s'arretaient au bord de la manette, a la
+      hauteur du bouton — on ne savait pas lequel (vu a la capture). */
+  function tracer(ctx, traits) {
+    for (const t of traits) {
+      const ym = t.li.y + 4, xc = t.b.x, yc = t.b.y;
+      ctx.fillStyle = t.li.allume ? '#e8b33c' : '#8a8698';
+      if (t.gx === undefined) {                                // tout droit, a la verticale
+        ctx.fillRect(xc, Math.min(ym, yc), 1, Math.abs(yc - ym) + 1);
+        ctx.fillRect(Math.min(xc, t.depart), ym, Math.abs(t.depart - xc) + 1, 1);
+      } else {
+        ctx.fillRect(Math.min(t.depart, t.gx), ym, Math.abs(t.gx - t.depart) + 1, 1);
+        ctx.fillRect(t.gx, Math.min(ym, yc), 1, Math.abs(yc - ym) + 1);
+        ctx.fillRect(Math.min(t.gx, xc), yc, Math.abs(xc - t.gx) + 1, 1);
+      }
+      ctx.fillRect(xc - 1, yc - 1, 3, 3);
+      B.stats.rects += 4;
+    }
+  }
+
+  /** Les lignes du milieu (SELECT, START) : sous le dessin, de part et d'autre
+      de leur bouton, avec un trait qui monte au bouton. */
+  function rangerDessous(lignes, y) {
+    const traits = [];
+    const avecCible = lignes.filter(function (li) { return li.cible; })
+      .sort(function (a, b) { return a.cible.x - b.cible.x; });
+    avecCible.forEach(function (li, k) {
+      const gauche = k === 0 && avecCible.length > 1;
+      li.y = y;
+      li.x = gauche ? li.cible.x - 8 - largeurLigne(li) : li.cible.x + 8;
+      traits.push({ li: li, b: li.bouts[0] || li.cible,
+                    depart: gauche ? li.x + largeurLigne(li) + 2 : li.x - 2 });
+    });
+    // Un bouton que rien ne situe (VISER sur une 8BitDo en DirectInput) : son
+    // numero, sous les autres, sans trait — il n'a nulle part ou pointer.
+    lignes.filter(function (li) { return !li.cible; }).forEach(function (li, k) {
+      li.y = y + 14 + k * 12;
+      li.x = Math.round((VW - largeurLigne(li)) / 2);
+    });
+    return traits;
+  }
+
+  function dessinerCommandesManette(ctx, lignes, x, y, l) {
+    const ech = 3;
+    const ox = x + Math.round((l - MANETTE_L * ech) / 2), oy = y + 32;
+    function centre(nom) {
+      const p = PIECES_AIDE[nom];
+      return p ? { x: ox + Math.round((p.x + p.l / 2) * ech), y: oy + Math.round((p.y + p.h / 2) * ech) } : null;
+    }
+    /** Le bord du bouton qui fait face a sa ligne : a gauche, a droite, ou dessous. */
+    function bord(nom, cote) {
+      const p = PIECES_AIDE[nom], c = centre(nom);
+      if (cote === 'g') return { x: ox + p.x * ech - 1, y: c.y };
+      if (cote === 'd') return { x: ox + (p.x + p.l) * ech, y: c.y };
+      return { x: c.x, y: oy + (p.y + p.h) * ech };
+    }
+    const cotes = { g: [], d: [], m: [] };
+    for (const li of lignes) {
+      const p = li.pieces[0], cote = (p && COTE_DES_PIECES[p]) || 'm';
+      li.cible = p ? centre(p) : null;
+      // Un trait vers chaque bouton de SON cote — pas vers les boutons de
+      // droite, qui portent leur lettre sur le dessin.
+      li.bouts = li.pieces.filter(function (q) { return q && COTE_DES_PIECES[q] === cote && !FACES[q]; })
+        .map(function (q) { return bord(q, cote); });
+      cotes[cote].push(li);
+    }
+    const traits = rangerDUnCote(cotes.g, 'g', ox, oy - 2)
+      .concat(rangerDUnCote(cotes.d, 'd', ox + MANETTE_L * ech, oy - 2))
+      .concat(rangerDessous(cotes.m, oy + MANETTE_H * ech + 4));
+    const etat = Entree.manetteInfo(), profil = Entree.profilManette(), fam = familleCourante();
+    dessinerManette(ctx, ox, oy, ech, profil, etat);
+    // Les lettres, imprimees sur le dessin comme sur la manette.
+    if (fam) {
+      for (const p of MANETTE_PIECES) {
+        const b = fam.boutons[p.nom];
+        if (!b || p.nom === 'select' || p.nom === 'start') continue;
+        const px = ox + p.x * ech, py = oy + p.y * ech, pl = p.l * ech, ph = p.h * ech;
+        const tenue = pieceEnfoncee(p, profil, etat);
+        if (FACES[p.nom]) {
+          ctx.fillStyle = '#3a3d44'; ctx.fillRect(px, py, pl, ph);
+          rond(ctx, px, py, 15, tenue ? '#e8b33c' : '#22242a');
+          const c = tenue ? '#22242a' : b.couleur;
+          if (b.forme) forme(ctx, b.forme, px + 3, py + 3, c, 2);
+          else Atlas.texte(ctx, b.texte, px + 5, py + 3, c, 2);
+        } else {
+          Atlas.texte(ctx, b.texte, px + Math.round((pl - Atlas.largeurTexte(b.texte, 1)) / 2),
+                      py + Math.round((ph - 5) / 2), tenue ? '#22242a' : '#15141c', 1);
+        }
+      }
+    }
+    tracer(ctx, traits);
+    for (const li of lignes) dessinerLigne(ctx, li, li.x, li.y);
+  }
+
+  function dessinerCommandesClavier(ctx, lignes, x, y, l) {
+    // Deux colonnes : le geste d'abord (marcher, conduire), puis les boutons.
+    const moitie = Math.ceil(lignes.length / 2);
+    lignes.forEach(function (li, k) {
+      const col = k < moitie ? 0 : 1, rang = col ? k - moitie : k;
+      dessinerLigne(ctx, li, x + 22 + col * Math.round(l / 2), y + 44 + rang * 20);
+    });
+  }
+
+  //: Le plan de l'ecran tactile, en petit : ou sont le pouce et les boutons.
+  //: L'ordre suit `styles.css` (`#croix`, `#boutons`, `#haut`) ; les hauteurs,
+  //: elles, sont choisies pour qu'AUCUN trait ne passe sur un autre bouton — a
+  //: la capture, celui de SPRINT traversait FRAPPE. Le plein ecran n'y est pas :
+  //: l'aide dit comment jouer, pas comment regler la fenetre.
+  const PLAN_TACTILE = { l: 184, h: 104,
+    croix: { x: 24, y: 80, r: 15 },
+    arme: { x: 164, y: 52, r: 7 }, action: { x: 136, y: 64, r: 8 },
+    attaque: { x: 164, y: 80, r: 9 }, esquive: { x: 134, y: 94, r: 7 },
+    pause: { x: 170, y: 10, r: 5 } };
+
+  function disque(ctx, cx, cy, r, couleur) {
+    ctx.fillStyle = couleur;
+    for (let dy = -r; dy <= r; dy++) {
+      const w = Math.floor(Math.sqrt(r * r - dy * dy));
+      ctx.fillRect(cx - w, cy + dy, 2 * w + 1, 1);
+    }
+    B.stats.rects += 2 * r + 1;
+  }
+
+  function dessinerCommandesTactile(ctx, lignes, x, y) {
+    const P = PLAN_TACTILE;
+    // ⚠️ DECALE A GAUCHE, pas centre : sur un telephone en paysage, les quatre
+    // boutons couvrent le coin en bas a droite de l'ecran — centre, le plan
+    // poussait FRAPPE et SPRINT dessous (vu a la capture, 844 x 390).
+    const ox = x + 92, oy = y + 36;
+    const gauche = [], droite = [];
+    for (const li of lignes) {
+      const c = P[li.cible], aGauche = c.x < P.l / 2;
+      li.cible = { x: ox + c.x, y: oy + c.y };
+      li.bouts = [{ x: li.cible.x + (aGauche ? -c.r - 1 : c.r + 1), y: li.cible.y }];
+      (aGauche ? gauche : droite).push(li);
+    }
+    // ⚠️ Les lignes du pouce s'empilent VERS LE HAUT : au volant il y en a
+    // trois, et vers le bas elles tombaient dans le cercle du vrai joystick.
+    const traits = rangerDUnCote(gauche, 'g', ox - 3, oy, true).concat(rangerDUnCote(droite, 'd', ox + P.l + 3, oy));
+    // L'ecran du telephone, couche.
+    ctx.fillStyle = '#8a8698'; ctx.fillRect(ox - 2, oy - 2, P.l + 4, P.h + 4);
+    ctx.fillStyle = '#15141c'; ctx.fillRect(ox, oy, P.l, P.h);
+    B.stats.rects += 2;
+    for (const nom of ['croix', 'attaque', 'action', 'esquive', 'arme']) {
+      const c = P[nom];
+      const tenu = nom === 'croix' ? poucePose() : Entree.basTactile(nom);
+      disque(ctx, ox + c.x, oy + c.y, c.r, tenu ? '#e8b33c' : '#3a3450');
+    }
+    disque(ctx, ox + P.croix.x, oy + P.croix.y, 6, '#6b5a2e');
+    const c = P.pause;
+    ctx.fillStyle = Entree.basTactile('pause') ? '#e8b33c' : '#3a3450';
+    ctx.fillRect(ox + c.x - c.r, oy + c.y - c.r, 2 * c.r + 1, 2 * c.r + 1);
+    ctx.fillStyle = '#efe6d0';
+    ctx.fillRect(ox + c.x - 2, oy + c.y - 2, 1, 5); ctx.fillRect(ox + c.x + 2, oy + c.y - 2, 1, 5);
+    B.stats.rects += 3;
+    tracer(ctx, traits);
+    for (const li of lignes) dessinerLigne(ctx, li, li.x, li.y);
+  }
+
+  /** Les onglets, en haut a droite : la page qu'on lit en or. `aGauche` : dans
+      le classeur, a gauche — en haut a droite, au telephone, c'est le bouton
+      PAUSE qui les couvrait. Chacun se touche (`page`). */
+  function dessinerOnglets(ctx, pages, courante, x, y, l, aGauche) {
+    const noms = pages.map(function (p) { return p.titre; });
+    const total = noms.reduce(function (s, n) { return s + Atlas.largeurTexte(n, 1) + 12; }, 0);
+    let cx = aGauche ? x + 2 : x + l - 8 - total;
+    noms.forEach(function (n, k) {
+      const w = Atlas.largeurTexte(n, 1);
+      const la = k === courante;
+      texte(ctx, n, cx + 6, y + 10, la ? '#e8b33c' : '#6a6678', 1);
+      if (la) { ctx.fillStyle = '#e8b33c'; ctx.fillRect(cx + 6, y + 17, w, 1); B.stats.rects++; }
+      poserCible({ x: cx, y: y + 5, l: w + 12, h: 14, page: k });
+      cx += w + 12;
+    });
+  }
+
+  /** Le pied de l'ecran : le bouton qui ferme, et celui qui tourne la page —
+      dessines tous les deux pour l'appareil qu'on tient. */
+  function dessinerPiedDesCommandes(ctx, m, appareil, x, y, l, h) {
+    const lignes = [];
+    const fermer = glypheDAction('action')
+      || { s: 'doigt', texte: Entree.etiquettesTactiles('menu').action, allume: function () { return Entree.basTactile('action'); } };
+    lignes.push({ glyphes: [fermer], texte: m.items[0].libelle });
+    const tourner = appareil === 'manette' ? [icone('croix', croixTenue)]
+      : appareil === 'clavier' ? [{ s: 'touche', code: 'ArrowLeft', allume: function () { return Entree.toucheEnfoncee('ArrowLeft'); } },
+                                  { s: 'touche', code: 'ArrowRight', allume: function () { return Entree.toucheEnfoncee('ArrowRight'); } }]
+      : [icone('pouce', poucePose, 'cote')];
+    lignes.push({ glyphes: tourner, texte: 'L\'AUTRE PAGE' });
+    const total = largeurLigne(lignes[0]) + 16 + largeurLigne(lignes[1]);
+    let cx = x + Math.round((l - total) / 2);
+    const yy = y + h - 15;
+    lignes.forEach(function (li) { dessinerLigne(ctx, li, cx, yy); cx += largeurLigne(li) + 16; });
+  }
+
+  function dessinerCommandes(ctx, m, x, y, l, h) {
+    const pages = (B.defs.manettes && B.defs.manettes.pages) || [];
+    const page = pages[m.page];
+    if (!page) return;
+    const appareil = Entree.appareil;
+    // Dans le classeur, la rangee d'onglets tient le haut : les deux pages se
+    // lisent dessous, a droite, sur la ligne du titre — et le pied est celui du
+    // classeur (`menu.pied`).
+    dessinerOnglets(ctx, pages, m.page, x, m.classeur ? y + 4 : y, l, !!m.classeur);
+    const lignes = lignesDAide(page, appareil);
+    if (appareil === 'manette') dessinerCommandesManette(ctx, lignes, x, y, l);
+    else if (appareil === 'clavier') dessinerCommandesClavier(ctx, lignes, x, y, l);
+    else dessinerCommandesTactile(ctx, lignes, x, y);
+    if (!m.classeur) dessinerPiedDesCommandes(ctx, m, appareil, x, y, l, h);
+  }
+
+  /** L'ecran COMMANDES. `depuisPause` : c'est l'onglet COMMANDES du classeur ;
+      sinon (le debut d'une partie) un ecran seul, qui rend la ville.
+
+      ⚠️ C'est un MENU : la ville est figee pendant qu'on lit — personne ne se
+      fait renverser en apprenant ou est le frein. Et comme l'ecran MANETTE, la
+      manette y ALLUME ce qu'on appuie sans rien fermer (`manetteInerte`) :
+      seul ACTION ferme, c'est ce que dit le pied de l'ecran. Sinon on le
+      fermerait en essayant le premier bouton. */
+  function menuCommandes(depuisPause) {
+    const pages = (B.defs.manettes && B.defs.manettes.pages) || [];
+    const j = B.joueur;
+    const menu = {
+      titre: 'COMMANDES', sansListe: true, manetteInerte: true, largeur: 476, hauteur: 210, curseur: 0,
+      page: j && j.dansVehicule && !j.passager ? Math.max(0, pages.findIndex(function (p) { return p.slug === 'volant'; })) : 0,
+      // Fermer le dernier menu d'une pause, c'est reprendre (`Jeu.maj`).
+      items: [{ libelle: depuisPause ? 'REPRENDRE' : 'C\'EST PARTI', faire: function () { return true; } }],
+    };
+    if (depuisPause) {
+      enOnglet('commandes', menu);
+      // Le pied du classeur, a la mode de celui de l'ecran seul : le bouton qui
+      // tourne la page, celui qui rend la ville.
+      menu.pied = function () {
+        const appareil = Entree.appareil;
+        const tourner = appareil === 'manette' ? [icone('croix', croixTenue)]
+          : appareil === 'clavier' ? [glypheDeTouche('ArrowUp'), glypheDeTouche('ArrowDown')]
+          : [icone('pouce', poucePose, 'haut')];
+        const fermer = glypheDAction('action')
+          || { s: 'doigt', texte: Entree.etiquettesTactiles('menu').action, allume: function () { return Entree.basTactile('action'); } };
+        return [{ glyphes: tourner, texte: 'L\'AUTRE PAGE' }, { glyphes: [fermer], texte: 'REPRENDRE' }];
+      };
+    }
+    menu.maj = function (m) {
+      // Tourner la page : la croix, les fleches, le pouce.
+      // ⚠️ PAS LE STICK : on le pousse pour voir MARCHER s'allumer, et la page
+      // tournait sous le pouce (vu au banc). Le pied de l'ecran dit la croix.
+      // ⚠️ Dans le classeur, gauche et droite tournent l'ONGLET : la page, elle,
+      // se tourne en haut et en bas (il n'y a pas de liste ou promener un curseur).
+      const sens = depuisPause ? (Entree.neuf('haut') ? -1 : Entree.neuf('bas') ? 1 : 0)
+        : (Entree.neuf('gauche') ? -1 : Entree.neuf('droite') ? 1 : 0);
+      if (sens && pages.length > 1) { m.page = (m.page + sens + pages.length) % pages.length; Son.SFX.menu(); }
+      // La boite a la hauteur de ce qu'elle montre : le dessin de la manette
+      // (et une ligne de plus pour un bouton que rien ne situe), deux colonnes
+      // de touches, ou le plan de l'ecran tactile.
+      const appareil = Entree.appareil;
+      const numero = appareil === 'manette' && pages[m.page]
+        && lignesDAide(pages[m.page], 'manette').some(function (li) { return !li.pieces[0]; });
+      m.hauteur = appareil === 'manette' ? 210 + (numero ? 14 : 0) : appareil === 'clavier' ? 160 : 170;
+    };
+    menu.dessiner = function (ctx, x, y, l, h) { dessinerCommandes(ctx, menu, x, y, l, h); };
+    return menu;
+  }
+
+  function ouvrirCommandes() { ouvrirMenu(menuCommandes(false)); }
+
+  //: La ligne du titre suit l'appareil : une manette y lit SES boutons, pas WASD.
+  let aideDuTitre = null;
+  function majAideDuTitre() {
+    if (!doc) return;
+    const appareil = Entree.appareil, famille = appareil === 'manette' ? Entree.familleManette() : '';
+    const cle = appareil + '/' + famille;
+    if (cle === aideDuTitre) return;
+    aideDuTitre = cle;
+    const clavier = doc.getElementById('aide-clavier'), manette = doc.getElementById('aide-manette');
+    if (!clavier || !manette) return;
+    clavier.hidden = appareil === 'manette';
+    manette.hidden = appareil !== 'manette';
+    const fam = ((B.defs && B.defs.manettes && B.defs.manettes.familles) || {})[famille];
+    if (!fam) return;
+    const nom = function (piece) { const b = fam.boutons[piece]; return b ? (b.texte || SYMBOLES[b.forme] || '') : ''; };
+    const decrite = dispositionDecrite();
+    const pieceDe = function (a) { return (decrite && decrite.pieces[a] && decrite.pieces[a][0]) || null; };
+    const jouer = doc.getElementById('aide-manette-jouer'), pause = doc.getElementById('aide-manette-pause');
+    if (jouer) jouer.textContent = nom(pieceDe('action'));
+    if (pause) pause.textContent = nom(pieceDe('pause'));
+  }
+
   /** Le bilan de la session : ce qu'on a fait depuis le debut. */
   function menuBilan() {
     const p = B.partie, s = p.stats;
@@ -617,8 +1613,7 @@ const Hud = (function () {
       ['MORTS', String(s.tues || 0)],
       ['HOSPITALISATIONS', String(s.hospitalisations || 0)],
     ];
-    return { titre: 'BILAN', items: lignes.map(function (l) { return { libelle: l[0], detail: l[1], actif: false }; })
-      .concat([{ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } }]) };
+    return enOnglet('bilan', { titre: 'BILAN', items: lignes.map(function (l) { return { libelle: l[0], detail: l[1], actif: false }; }) });
   }
 
   // --- Les parties : trois emplacements, au titre ------------------------------------
@@ -813,15 +1808,15 @@ const Hud = (function () {
     ⚠️ Et « journal » est pris deux fois dans ce depot : `journal.py` est Le
     Clairon (la manchette du matin), M11 prevoit le carnet du POSTE (le dossier
     de la police sur toi). Ici, c'est la page du joueur, dans LE CARNET. */
-  function menuCarnet() {
+  function menuCarnet(depuis) {
     const p = B.partie;
     const connus = Object.keys(p.connus || {}).length;
-    return { titre: 'LE CARNET', sur: 'JOUR ' + p.jour, largeur: 320, items: [
-      { libelle: 'EN COURS', detail: Histoire.courante() ? Histoire.courante().titre.toUpperCase() : 'RIEN',
+    return surLaLigne(depuis, enOnglet('carnet', { titre: 'LE CARNET', sur: 'JOUR ' + p.jour, largeur: 320, items: [
+      { libelle: 'EN COURS', cle: 'en_cours', detail: Histoire.courante() ? Histoire.courante().titre.toUpperCase() : 'RIEN',
         faire: function () { ouvrirMenu(menuCarnetEnCours()); return false; } },
-      { libelle: 'JOURNAL', detail: (p.carnet || []).length + ' ENTRÉES',
+      { libelle: 'JOURNAL', cle: 'journal', detail: (p.carnet || []).length + ' ENTRÉES',
         faire: function () { ouvrirMenu(menuCarnetJournal()); return false; } },
-      { libelle: 'RÉPERTOIRE', detail: connus + ' PERSONNE' + (connus > 1 ? 'S' : ''),
+      { libelle: 'RÉPERTOIRE', cle: 'repertoire', detail: connus + ' PERSONNE' + (connus > 1 ? 'S' : ''),
         faire: function () { ouvrirMenu(menuCarnetRepertoire()); return false; } },
       // ⚠️ LA DETTE SE LIT ICI, sinon on l'oublie entre deux appels. C'est la
       // même règle que le carnet du poste : une pression qu'on subit sans
@@ -839,8 +1834,21 @@ const Hud = (function () {
       // rien se lit comme un bogue.
       !B.interieur ? { libelle: "REVOIR L'OUVERTURE", faire: function () {
           fermerMenu(); Jeu.reprendre(); Histoire.ouverture(true); return true; } } : null,
-      { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } },
-    ].filter(Boolean) };
+    ].filter(Boolean) }));
+  }
+
+  /** Pose le curseur de `menu` sur la ligne `cle` — la page dont on revient.
+
+      ⚠️ RETOUR depuis une fiche rouvrait le repertoire sur sa PREMIERE ligne :
+      avec dix personnes connues, on reperdait sa place a chaque fiche (Martin,
+      22 sept.). Une page qu'on quitte pour y revenir rend le curseur la ou il
+      etait ; une cle qu'on ne trouve plus (la ligne a disparu) laisse
+      `ouvrirMenu` choisir, comme avant. */
+  function surLaLigne(cle, menu) {
+    if (cle === undefined) return menu;
+    const i = menu.items.findIndex(function (item) { return item.cle === cle; });
+    if (i >= 0) menu.curseur = i;
+    return menu;
   }
 
   //: Une ligne qu'on lit, qu'on ne choisit pas.
@@ -879,9 +1887,9 @@ const Hud = (function () {
       const gps = Histoire.cible();
       if (gps) { items.push(ligne('')); items.push(ligne('OÙ', (gps.nom || '').toUpperCase())); }
     }
-    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet()); return false; } });
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet('en_cours')); return false; } });
     return { titre: m ? m.titre.toUpperCase() : 'EN COURS', largeur: 320, curseur: items.length - 1,
-             items: items, retour: function () { ouvrirMenu(menuCarnet()); } };
+             items: items, retour: function () { ouvrirMenu(menuCarnet('en_cours')); } };
   }
 
   /** JOURNAL : ce qui s'est passe, le plus recent en haut, date au jour. */
@@ -889,26 +1897,24 @@ const Hud = (function () {
     const lignes = (B.partie.carnet || []).slice().reverse();
     const items = lignes.map(function (e) { return ligne(e.t, 'J' + e.j); });
     if (!items.length) items.push(ligne('RIEN ENCORE'));
-    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet()); return false; } });
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet('journal')); return false; } });
     return { titre: 'JOURNAL', largeur: 320, hauteur: VH - 30, curseur: 0, items: items,
-             aide: 'HAUT/BAS : LIRE · FRAPPE : RETOUR',
-             retour: function () { ouvrirMenu(menuCarnet()); } };
+             retour: function () { ouvrirMenu(menuCarnet('journal')); } };
   }
 
   /** RÉPERTOIRE : les gens qu'on a RENCONTRES, et eux seuls. */
-  function menuCarnetRepertoire() {
+  function menuCarnetRepertoire(depuis) {
     const p = B.partie;
     const items = (B.defs.personnages || [])
       .filter(function (q) { return p.connus && p.connus[q.slug]; })
       .map(function (q) {
-        return { libelle: q.nom.toUpperCase(), detail: 'J' + p.connus[q.slug],
+        return { libelle: q.nom.toUpperCase(), cle: q.slug, detail: 'J' + p.connus[q.slug],
                  faire: function () { ouvrirMenu(menuCarnetFiche(q.slug)); return false; } };
       });
     if (!items.length) items.push(ligne('TU N’AS ENCORE PARLÉ À PERSONNE'));
-    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet()); return false; } });
-    return { titre: 'RÉPERTOIRE', largeur: 320, hauteur: VH - 30, items: items,
-             aide: 'ACTION : LA FICHE · FRAPPE : RETOUR',
-             retour: function () { ouvrirMenu(menuCarnet()); } };
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet('repertoire')); return false; } });
+    return surLaLigne(depuis, { titre: 'RÉPERTOIRE', largeur: 320, hauteur: VH - 30, items: items,
+             retour: function () { ouvrirMenu(menuCarnet('repertoire')); } });
   }
 
   /** Le lieu d'un personnage, en francais : « porte:terminus » est une adresse
@@ -941,41 +1947,112 @@ const Hud = (function () {
     siennes.forEach(function (m) {
       items.push(ligne('\u00B7 ' + m.titre.toUpperCase(), p.missionsFaites[m.slug] ? 'FAITE' : ''));
     });
-    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnetRepertoire()); return false; } });
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnetRepertoire(slug)); return false; } });
     return { titre: q ? q.nom.toUpperCase() : slug.toUpperCase(), largeur: 320, colonne: 250,
              curseur: items.length - 1, items: items,
-             retour: function () { ouvrirMenu(menuCarnetRepertoire()); },
+             retour: function () { ouvrirMenu(menuCarnetRepertoire(slug)); },
              // ⚠️ Le visage se cuit avec SES couleurs de palette — celles que
              // `Entites.creerPieton` donne deja a son sosie dans la rue. Rien
              // de neuf a dessiner : on agrandit le meme sprite de 10 x 13.
              dessiner: function (ctx, x, y, l) {
                if (!q || !q.couleurs || typeof SPRITES === 'undefined' || !SPRITES.joueur) return;
-               const cuit = Atlas.cuire('joueur', SPRITES.joueur, q.couleurs);
+               // Habille (`Garderobe`) : sa tenue de rue, chapeau compris — celle de son portrait.
+               const tenue = typeof Garderobe !== 'undefined' ? Garderobe.duPersonnage(slug) : null;
+               const cuit = (tenue && Garderobe.cuire(tenue)) || Atlas.cuire('joueur', SPRITES.joueur, q.couleurs);
                const img = cuit.poses.bas && cuit.poses.bas[0];
                if (!img) return;
                ctx.imageSmoothingEnabled = false;
                ctx.drawImage(img, 0, 0, img.width, img.height,
-                             x + l - 46, y + 26, img.width * 3, img.height * 3);
+                             x + l - 10 - img.width * 3, y + 26 - (img.height - 16) * 3, img.width * 3, img.height * 3);
                B.stats.images++;
              } };
   }
 
+  /** Le premier onglet du classeur : ce qu'on fait de la partie. Le carnet, le
+      bilan, les commandes, les options et les triches sont les onglets d'a cote
+      (`ONGLETS`) — ils etaient des lignes de cette liste. */
   function menuPause() {
-    return { titre: 'PAUSE', sur: 'JOUR ' + B.partie.jour + ' ' + Monde.heureTexte(), items: [
+    return enOnglet('pause', { titre: 'PAUSE', sur: 'JOUR ' + B.partie.jour + ' ' + Monde.heureTexte(), items: [
       { libelle: 'REPRENDRE', faire: function () { Jeu.reprendre(); return true; } },
       { libelle: 'CARTE DE LA VILLE', faire: function () { Jeu.ouvrirCarte(); return true; } },
-      { libelle: 'LE CARNET', faire: function () { ouvrirMenu(menuCarnet()); return false; } },
-      { libelle: 'BILAN DE LA SESSION', faire: function () { ouvrirMenu(menuBilan()); return false; } },
-      { libelle: 'OPTIONS', faire: function () { ouvrirMenu(menuOptions()); return false; } },
+      { libelle: 'MODE PHOTO', faire: function () { Jeu.ouvrirPhoto(); return true; } },
       { libelle: 'SAUVEGARDER', faire: function () { Missions.sauvegarderPartie(); message('PARTIE SAUVEGARDÉE'); return false; } },
       { libelle: 'QUITTER VERS LE TITRE', faire: function () { Jeu.retourTitre(); return true; } },
-    ] };
+    ] });
+  }
+
+  //: Les onglets du classeur, dans l'ordre ou on les tourne. ⚠️ TRICHES n'existe
+  //: que dans une partie ou la suite secrete a ete tapee (`Jeu.ouvrirMenuDebug`) :
+  //: une partie qui ne l'a jamais tapee n'en montre rien, pas meme un onglet gris.
+  const ONGLETS = [
+    { slug: 'pause', titre: 'PAUSE', menu: function () { return menuPause(); } },
+    { slug: 'carnet', titre: 'CARNET', menu: function () { return menuCarnet(); } },
+    { slug: 'bilan', titre: 'BILAN', menu: function () { return menuBilan(); } },
+    { slug: 'commandes', titre: 'COMMANDES', menu: function () { return menuCommandes(true); } },
+    { slug: 'options', titre: 'OPTIONS', menu: function () { return menuOptions(); } },
+    { slug: 'triches', titre: 'TRICHES', menu: function () { return menuDebug(); }, si: function () { return triche('menu'); } },
+  ];
+
+  function ongletsVisibles() { return ONGLETS.filter(function (o) { return !o.si || o.si(); }); }
+
+  /** Pose `menu` sous l'onglet `slug`, comme sa page de tete. */
+  function enOnglet(slug, menu) { menu.classeur = { onglet: slug, racine: true }; return menu; }
+
+  /** Ouvre la page de tete d'un onglet ; rend false s'il n'y en a pas (TRICHES
+      dans une partie qui ne les a pas). */
+  function ouvrirOnglet(slug) {
+    const o = ongletsVisibles().find(function (q) { return q.slug === slug; });
+    if (!o) return false;
+    ouvrirMenu(o.menu());
+    return true;
+  }
+
+  /** Le sens dans lequel on tourne l'onglet a cette image : -1, 1, ou 0.
+      ⚠️ Sur une page ou l'on ESSAIE sa manette (COMMANDES, l'ecran MANETTE), la
+      croix s'allume sans rien tourner ; les epaules, elles, tournent — sauf la
+      ou on les essaie aussi (`epaulesInertes`). Le stick ne tourne jamais rien :
+      on le pousse pour voir MARCHER s'allumer. */
+  function sensDOnglet(m) {
+    if (!m.epaulesInertes) {
+      if (Entree.neufEpaule('g')) return -1;
+      if (Entree.neufEpaule('d')) return 1;
+    }
+    const lire = m.manetteInerte ? Entree.neufSansManette : Entree.neuf;
+    const sens = lire('gauche') ? -1 : lire('droite') ? 1 : 0;
+    // ⚠️ LE POUCE SUR LA VITRE monte et descend dans la liste (HAUT et BAS) : une
+    // diagonale passe par GAUCHE ou DROITE sans qu'on veuille changer de page.
+    // Au doigt, seul un geste franchement de cote tourne l'onglet.
+    const a = Entree.axe;
+    if (sens && a.source === 'tactile' && Math.abs(a.x) <= Math.abs(a.y)) return 0;
+    return sens;
+  }
+
+  /** L'onglet d'a cote — on fait le tour, comme un classeur qu'on feuillette. */
+  function tournerOnglet(m, sens) {
+    const liste = ongletsVisibles();
+    const k = Math.max(0, liste.findIndex(function (o) { return o.slug === m.classeur.onglet; }));
+    ouvrirOnglet(liste[(k + sens + liste.length) % liste.length].slug);
   }
 
   // --- Debug : la triche du developpeur, jamais un bouton visible -------------------
-  //: Ce menu ne s'ouvre QUE par la suite secrete de touches ecoutee dans
-  //: `Jeu.demarrer` (voir `Entree.surSecret`) — aucune ligne de menu n'y mene,
-  //: aucune sauvegarde ne s'en souvient.
+  //: L'onglet TRICHES du classeur. La suite secrete de touches ecoutee dans
+  //: `Jeu.demarrer` (voir `Entree.surSecret`) l'ouvre — et l'allume pour de bon
+  //: dans cette partie : l'onglet reste dans sa PAUSE. Aucun autre bouton n'y mene.
+  //: ⚠️ Ses BASCULES (invincible, vehicules, energie, munitions, police) se sauvent
+  //: avec la partie (`B.partie.triches`) : on rouvre son emplacement, elles y sont
+  //: encore. C'est la ligne OUI/NON qui dit ce qui est allume.
+  //: ⚠️ Une ligne qui rend `true` ferme le classeur et la pause reprend toute
+  //: seule (`Jeu.maj` : « fermer le dernier menu, c'est reprendre »).
+
+  /** Bascule une triche de `B.partie.triches`, la dit dans son item et SE SAUVE
+      tout de suite : un rechargement avant la sauvegarde auto (dix secondes) ne
+      la perdrait pas. */
+  function basculerTriche(nom, item) {
+    const t = B.partie.triches;
+    t[nom] = !t[nom];
+    item.detail = t[nom] ? 'OUI' : 'NON';
+    Missions.sauvegarderPartie();
+  }
 
   /** Saute le joueur au point que le HUD pointe deja (la fleche/losange de
       `Histoire.cible`) — rien de plus qu'un raccourci sur une position deja
@@ -993,43 +2070,198 @@ const Hud = (function () {
     message('TÉLÉPORTÉ');
   }
 
-  /** Teleporte le joueur a un point (en ville, a pied). Meme refus que
-      `teleporterVersObjectif` : ni dans une piece, ni au volant. */
-  function sauterVers(x, y, nom) {
-    const j = B.joueur;
-    if (!j) return false;
-    if (B.interieur || j.dansVehicule) { message('SORS D\'ABORD'); return false; }
-    if (x === undefined || y === undefined) { message('INTROUVABLE'); return false; }
-    j.x = x; j.y = y; j.vx = 0; j.vy = 0;
+  /** Une tuile a pied a un pas de `e` — hors chaussee, hors meuble, sans
+      personne dessus —, ou null. */
+  function placeAupres(e) {
+    const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
+    const pas = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1], [2, 0], [-2, 0], [0, 2], [0, -2]];
+    for (const p of pas) {
+      const x = tx + p[0], y = ty + p[1];
+      if (!Monde.marchablePieton(x, y) || Monde.estMeuble(x, y)) continue;
+      if (Entites.pietonsAutour(x * TT + 8, y * TT + 8, 10).length) continue;
+      return { x: x * TT + 8, y: y * TT + 8 };
+    }
+    return null;
+  }
+
+  /** Se poser DEVANT le donneur d'une mission, la ou l'on lui parle : a cote de
+      lui dehors, DANS sa piece quand il se tient dedans (M4, M5, M6).
+
+      ⚠️ Le bon endroit decide de la facon dont l'intro se joue : a moins de
+      douze tuiles de lui (`Histoire.present`) elle se joue EN PERSONNE, plus
+      loin elle se dit au combine. Et dehors, un donneur dedans n'existe pas.
+      ⚠️ On sort de la piece ou l'on est et du char SANS fondu (`Jeu.entrer` puis
+      `Jeu.finirTransition`, comme le reveil a l'hopital) : l'ancien saut refusait
+      « SORS D'ABORD » et ne posait le joueur que sur le pixel du donneur. Un
+      donneur qui n'est plus la — Ti-Guy entre au garage a la fin de M1 — est
+      REPOSE devant sa porte : sa mission se refait quand meme.
+      Rend faux quand il n'y a nulle part ou se poser. */
+  function allerChezLeDonneur(slug) {
+    const j = B.joueur, perso = Histoire.personnage(slug);
+    if (!j || !perso) return false;
+    Jeu.finirTransition();
+    if (j.dansVehicule) Vehicules.descendre(j, true);
+    // ⚠️ Dehors D'ABORD, toujours : `quitterLaPiece` ne pose pas le joueur, et un
+    // joueur qui garderait ses coordonnees de piece se retrouverait au milieu de
+    // la ville. Il retombe la ou il etait entre ; s'il ne trouve rien mieux, il y reste.
+    const ext = Jeu.quitterLaPiece();
+    if (ext) { j.x = ext.x; j.y = ext.y; }
+    let e = null;
+    if (perso.ou.indexOf('point:') === 0) {
+      const piece = Histoire.pieceDuPoint(perso.ou.slice(6));
+      const porte = piece && (Monde.carte.def.portes || []).find(function (q) { return q.lieu === piece.slug && q.interieur; });
+      if (porte && Jeu.entrer(porte)) { Jeu.finirTransition(); e = Histoire.donneur(slug); }
+    } else {
+      e = Histoire.donneur(slug) || Histoire.poserDonneur(perso);
+    }
+    if (!e) return false;
+    Entites.indexer();
+    const place = placeAupres(e);
+    if (!place) return false;
+    j.x = place.x; j.y = place.y; j.vx = 0; j.vy = 0;
+    Entites.regarder(j, e.x - j.x, e.y - j.y);
+    Entites.regarder(e, j.x - e.x, j.y - e.y);
+    Entites.indexer();
     Monde.centrerCamera(j.x, j.y);
-    message('TÉLÉPORTÉ — ' + (nom || '').toUpperCase());
     return true;
   }
 
-  /** SAUT VERS UNE MISSION : la liste complete de `B.defs.missions`, chacune
-      menant vers son donneur. C'est le CATALOGUE qui fait la liste — une
-      mission ajoutee au jeu tombe ici sans qu'on y touche. Le donneur porte un
-      intitule d'etat (à faire / en cours / faite) et, s'il a un lieu, un saut.
-      ⚠️ Sauter vers une mission DEJA FAITE la reinitialise (`Histoire.
-      reinitialiser`) pour qu'on puisse la refaire : le drapeau FAIT, l'appel
-      et les tombes tombent, puis on se teleporte chez le donneur. */
+  /** Va chez le donneur de `m` et LANCE la mission, comme s'il venait de nous
+      parler (`Histoire.demarrer`). Ferme le menu — et la pause : la partie
+      reprend AVANT que l'intro ne se joue. Rend `false` (le menu reste ouvert)
+      quand on ne peut pas : une scene joue, ou il n'y a nulle part ou se poser. */
+  function lancerLaMission(m) {
+    if (!B.joueur || B.cinema || B.scene) { message('UNE SCÈNE JOUE'); return false; }
+    if (!allerChezLeDonneur(m.donneur)) { message('INTROUVABLE'); return false; }
+    if (B.etat === 'pause') Jeu.reprendre();
+    fermerMenu();
+    Histoire.demarrer(m.slug);
+    return true;
+  }
+
+  /** SAUT VERS UNE MISSION : la liste complete de `B.defs.missions`. C'est le
+      CATALOGUE qui fait la liste — une mission ajoutee au jeu tombe ici sans
+      qu'on y touche. Choisir une ligne TELEPORTE devant le donneur (dans sa piece
+      s'il est dedans) et LANCE la mission tout de suite, intro comprise
+      (`lancerLaMission`) — deja faite, elle est d'abord reinitialisee ; en cours,
+      celle-ci ou une autre, elle est abandonnee sans compter d'echec.
+      ⚠️ Aucun pre-requis n'est regarde : la mission part dans l'etat ou est la partie. */
   function menuSautMissions() {
     const p = B.partie;
     const cours = p.mission ? p.mission.slug : null;
     const items = (B.defs.missions || []).map(function (m) {
-      const ou = Histoire.ouTrouver(m.donneur);
       const faite = !!p.missionsFaites[m.slug];
-      const etat = faite ? 'FAITE · REFAIRE' : (m.slug === cours ? 'EN COURS' : '→ DONNEUR');
+      const etat = faite ? 'FAITE · REFAIRE' : (m.slug === cours ? 'EN COURS · RELANCER' : 'LANCER');
       return { libelle: m.titre.toUpperCase(), detail: etat,
-               actif: !!ou,
-               faire: function () {
-                 if (faite) Histoire.reinitialiser(m.slug);
-                 return !sauterVers(ou.x, ou.y, m.titre);
-               } };
+               actif: !!Histoire.personnage(m.donneur),
+               faire: function () { return lancerLaMission(m); } };
     });
     items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuDebug()); return false; } });
-    return { titre: 'SAUT VERS UNE MISSION', largeur: 340, hauteur: VH - 30,
+    return { titre: 'SAUT VERS UNE MISSION', largeur: 320, hauteur: VH - 30,
              items: items, retour: function () { ouvrirMenu(menuDebug()); } };
+  }
+
+  /** Le point d'ou un defi se lance, dans la ville : son PANNEAU (`Histoire.creerPanneaux`),
+      ou le comptoir de son jeu de foire (`foire:<jeu>` : aucun panneau ne s'y
+      plante, c'est la baraque qui sert de panneau). `portee` : d'ou ACTION le lit
+      (`Histoire.panneauSousLaMain`, `Foire.jeuSousLaMain`). Null s'il n'y en a pas. */
+  function pointDuDefi(d) {
+    if (!d.ou) return null;
+    if (d.ou.indexOf('foire:') === 0) {
+      const q = (typeof Foire !== 'undefined' ? Foire.comptoirs() : []).find(function (k) { return k.slug === d.ou.slice(6); });
+      return q ? { x: q.x * TT + 8, y: q.y * TT + 15, portee: Foire.PORTEE_JEU - 4 } : null;
+    }
+    const e = B.entites.find(function (k) { return k.type === 'panneau' && k.defi === d.slug; });
+    return e ? { x: e.x, y: e.y, portee: 20 } : null;
+  }
+
+  /** Dans un decor solide (une baraque, une borne) : le joueur y serait pousse
+      dehors a l'image suivante (`Entites.bloquerParDecor`), hors de portee. */
+  function dansUnDecor(x, y) {
+    const r = 5;
+    return Entites.decorAutour(x, y, 24).some(function (d) {
+      if (!d.solide) return false;
+      const sol = typeof DECORS !== 'undefined' && DECORS[d.decor] && DECORS[d.decor].sol;
+      if (sol) return Math.abs(x - d.x) < sol[0] + r && Math.abs(y - d.y) < sol[1] + r;
+      return Math.hypot(x - d.x, y - d.y) < r + (d.r || 0);
+    });
+  }
+
+  /** La tuile a pied la plus proche de `c` d'ou on le LIT : a sa portee, pas
+      dessus, hors meuble, hors decor solide, sans personne dessus. Ou null. */
+  function placeDevant(c) {
+    const tx0 = Math.floor(c.x / TT), ty0 = Math.floor(c.y / TT);
+    let meilleure = null, dMin = Infinity;
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+      const tx = tx0 + dx, ty = ty0 + dy, x = tx * TT + 8, y = ty * TT + 8;
+      const d = Math.hypot(x - c.x, y - c.y);
+      if (d < 8 || d > c.portee || d >= dMin) continue;
+      if (!Monde.marchablePieton(tx, ty) || Monde.estMeuble(tx, ty) || dansUnDecor(x, y)) continue;
+      if (Entites.pietonsAutour(x, y, 10).length) continue;
+      meilleure = { x: x, y: y }; dMin = d;
+    }
+    return meilleure;
+  }
+
+  /** Va au depart d'un defi et OUVRE sa proposition (COMMENCER / PAS MAINTENANT),
+      comme si on venait de lire son panneau. Ferme le classeur — et la pause :
+      la proposition est un menu ordinaire, par-dessus la ville.
+      ⚠️ On sort du char et de la piece SANS fondu, comme le saut vers une
+      mission (`allerChezLeDonneur`) : le panneau se lit a pied, dehors. Un defi
+      deja en cours est abandonne sans rien noter : c'est une triche, pas un echec.
+      Rend `false` (le menu reste ouvert) quand on ne peut pas. */
+  function allerAuDefi(d) {
+    const j = B.joueur;
+    if (!j || B.cinema || B.scene) { message('UNE SCÈNE JOUE'); return false; }
+    Jeu.finirTransition();
+    if (j.dansVehicule) Vehicules.descendre(j, true);
+    const ext = Jeu.quitterLaPiece();
+    if (ext) { j.x = ext.x; j.y = ext.y; }
+    // ⚠️ C'est une triche : un défi encore caché s'ouvre, et son panneau se plante.
+    if (Histoire.ouvrirDefi(d, true)) Histoire.planterLesPanneauxOuverts();
+    const c = pointDuDefi(d);
+    const place = c && placeDevant(c);
+    if (!place) { message('INTROUVABLE'); return false; }
+    if (B.defi) Histoire.abandonnerDefi();
+    j.x = place.x; j.y = place.y; j.vx = 0; j.vy = 0;
+    Entites.regarder(j, c.x - j.x, c.y - j.y);
+    Entites.indexer();
+    Monde.centrerCamera(j.x, j.y);
+    if (B.etat === 'pause') Jeu.reprendre();
+    fermerMenu();
+    Histoire.proposerDefi(d.slug);
+    return true;
+  }
+
+  /** SAUT VERS UN DÉFI : tous les defis de `B.defs.defis`, rangés par genre — au
+      volant, les tours (une course sur un circuit), la foire. C'est le CATALOGUE
+      qui fait la liste : un defi ajoute au jeu tombe ici sans qu'on y touche. */
+  function menuSautDefis() {
+    const p = B.partie;
+    const foire = function (d) { return !!d.a_pied && d.ou.indexOf('foire:') === 0; };
+    const genres = [
+      ['AU VOLANT', function (d) { return !d.circuit && !d.a_pied && !d.rue; }],
+      ['LES TOURS', function (d) { return !!d.circuit; }],
+      // ⚠️ Les épreuves devant un panneau (la roue, la radio, le cadenas…) :
+      // debout, mais pas à la foire.
+      ['DEBOUT', function (d) { return !!d.a_pied && !foire(d); }],
+      ['DANS LA RUE', function (d) { return !!d.rue; }],
+      ['À LA FOIRE', foire],
+    ];
+    const items = [];
+    for (const g of genres) {
+      const siens = (B.defs.defis || []).filter(g[1]);
+      if (!siens.length) continue;
+      items.push(entete(g[0]));
+      for (const d of siens) {
+        const etat = B.defi && B.defi.slug === d.slug ? 'EN COURS' : (p.defisFaits && p.defisFaits[d.slug] ? 'RÉUSSI'
+          : (Histoire.defiOuvert(d) ? '' : 'CACHÉ'));
+        items.push({ libelle: d.titre.toUpperCase(), detail: etat, defi: d.slug, actif: !!d.ou,
+                     faire: function () { return allerAuDefi(d); } });
+      }
+    }
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuDebug()); return false; } });
+    return { titre: 'SAUT VERS UN DÉFI', largeur: 320, items: items, retour: function () { ouvrirMenu(menuDebug()); } };
   }
 
   /** JUKEBOX : toutes les musiques de `B.defs.audio.musiques`, jouables a la
@@ -1052,17 +2284,6 @@ const Hud = (function () {
     items.push({ libelle: 'RETOUR', faire: function () { B.jukebox = null; Son.Chef.arreter(); ouvrirMenu(menuDebug()); return false; } });
     return { titre: 'JUKEBOX', largeur: 340, hauteur: VH - 30, items: items,
              retour: function () { B.jukebox = null; Son.Chef.arreter(); ouvrirMenu(menuDebug()); } };
-  }
-
-  /** PLUS : une page de triches de débug qui débordent du menu principal (le
-      saut de mission, le jukebox). Ouverte depuis la derniere ligne du menu
-      DEBUG, pour ne pas l'encombrer. */
-  function menuDebugPlus() {
-    return { titre: 'PLUS DE TRICHE', sur: 'DEBUG', items: [
-      { libelle: 'SAUT VERS UNE MISSION', faire: function () { ouvrirMenu(menuSautMissions()); return false; } },
-      { libelle: 'JUKEBOX', faire: function () { ouvrirMenu(menuJukebox()); return false; } },
-      { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuDebug()); return false; } },
-    ], retour: function () { ouvrirMenu(menuDebug()); } };
   }
 
   /** Donne TOUTES les armes (chargees a fond) et TOUS les vetements, en lisant
@@ -1088,39 +2309,40 @@ const Hud = (function () {
     return false;
   }
 
+  /** L'onglet TRICHES, en sections : ce qu'on se donne, ou l'on va, la mission
+      en cours, le reste. ⚠️ Il n'y a plus de PLUS… ni de RETOUR : les sauts sont
+      des sous-pages de l'onglet, et B reprend la partie comme partout dans le
+      classeur. */
   function menuDebug() {
     const m = Histoire.courante();
-    return { titre: 'DEBUG', sur: 'TRICHE', items: [
+    function bascule(nom, libelle) {
+      return { libelle: libelle, detail: triche(nom) ? 'OUI' : 'NON', faire: function (item) { basculerTriche(nom, item); return false; } };
+    }
+    return enOnglet('triches', { titre: 'TRICHES', sur: 'DEBUG', items: [
+      entete('LE JOUEUR'),
       { libelle: 'ARGENT +1 000 $', faire: function () { Missions.encaisser(1000, 'DEBUG'); return false; } },
       { libelle: 'ARGENT +50 000 $', faire: function () { Missions.encaisser(50000, 'DEBUG'); return false; } },
       { libelle: 'TOUS LES ITEMS', faire: function () { tousLesItems(); return false; } },
       { libelle: 'SANTÉ COMPLÈTE', faire: function () { Missions.soigner(B.joueur, B.joueur.vieMax); return false; } },
-      { libelle: 'INVINCIBLE', detail: B.debugInvincible ? 'OUI' : 'NON', faire: function (item) {
-        B.debugInvincible = !B.debugInvincible;
-        item.detail = B.debugInvincible ? 'OUI' : 'NON';
-        return false;
-      } },
-      { libelle: 'ÉNERGIE INFINIE', detail: B.debugEndurance ? 'OUI' : 'NON', faire: function (item) {
-        B.debugEndurance = !B.debugEndurance;
-        item.detail = B.debugEndurance ? 'OUI' : 'NON';
-        return false;
-      } },
-      { libelle: 'MUNITIONS INFINIES', detail: B.debugMunitions ? 'OUI' : 'NON', faire: function (item) {
-        B.debugMunitions = !B.debugMunitions;
-        item.detail = B.debugMunitions ? 'OUI' : 'NON';
-        return false;
-      } },
-      { libelle: 'LA POLICE NE T\'ARRÊTE PAS', detail: B.debugPasArrete ? 'OUI' : 'NON', faire: function (item) {
-        B.debugPasArrete = !B.debugPasArrete;
-        item.detail = B.debugPasArrete ? 'OUI' : 'NON';
-        return false;
-      } },
+      bascule('invincible', 'INVINCIBLE'),
+      bascule('vehicules', 'VÉHICULES INVINCIBLES'),
+      bascule('endurance', 'ÉNERGIE INFINIE'),
+      bascule('munitions', 'MUNITIONS INFINIES'),
+      bascule('pasArrete', 'LA POLICE NE T\'ARRÊTE PAS'),
+      entete('ALLER'),
       { libelle: 'TÉLÉPORTER À L\'OBJECTIF', actif: !!Histoire.cible(), faire: function () { teleporterVersObjectif(); return true; } },
+      { libelle: 'SAUT VERS UNE MISSION', faire: function () { ouvrirMenu(menuSautMissions()); return false; } },
+      { libelle: 'SAUT VERS UN DÉFI', faire: function () { ouvrirMenu(menuSautDefis()); return false; } },
+      entete('LA MISSION'),
       { libelle: 'OBJECTIF SUIVANT', actif: !!m, faire: function () { Histoire.avancer(); return true; } },
       { libelle: 'TERMINER LA MISSION', actif: !!m, faire: function () { Histoire.reussir(); return true; } },
-      { libelle: 'PLUS…', faire: function () { ouvrirMenu(menuDebugPlus()); return false; } },
-      { libelle: 'RETOUR', faire: function () { fermerMenu(); return true; } },
-    ] };
+      entete('DIVERS'),
+      // ⚠️ Coop locale (M14, essai) : PAS une triche de `B.partie.triches` — elle
+      // n'est jamais sauvegardee (on la rallume a chaque essai) et bascule une
+      // VRAIE entite dans le monde, pas juste un drapeau.
+      { libelle: 'COOP LOCALE (ESSAI)', detail: B.coop ? 'OUI' : 'NON', faire: function (item) { Jeu.basculerCoop(); item.detail = B.coop ? 'OUI' : 'NON'; return false; } },
+      { libelle: 'JUKEBOX', faire: function () { ouvrirMenu(menuJukebox()); return false; } },
+    ] });
   }
 
   /** L'invite du bas : ce que fera ACTION ici. */
@@ -1130,8 +2352,13 @@ const Hud = (function () {
     // meme : c'est elle qui dit ou l'on descend.
     if (!j || (j.dansVehicule && !j.passager) || !B.invite || B.menu) return;   // un menu ouvert : l'invite se tait
     if (B.scene) return;                     // une scene joue : ACTION passe une replique, il n'ouvre pas de porte
-    const t = 'ACTION : ' + B.invite;
-    const l = Atlas.largeurTexte(t, 1);
+    // ⚠️ LE BOUTON, PAS SON NOM : « ACTION » ne dit a personne sur quoi
+    // peser. A la manette le A (ou la croix) dessine, au clavier la touche E ;
+    // au doigt, le bouton s'appelle ACTION, et le mot reste.
+    const glyphe = glypheDAction('action');
+    const t = glyphe ? B.invite : 'ACTION : ' + B.invite;
+    const lg = glyphe ? largeurGlyphe(glyphe) + 3 : 0;
+    const l = lg + Atlas.largeurTexte(t, 1);
     ctx.fillStyle = 'rgba(11,10,18,0.7)'; ctx.fillRect((VW - l) / 2 - 4, VH - 26, l + 8, 11);
     // ⚠️ La prise du bouclier humain se TIENT, et c'est L'INVITE qui se
     // remplit — pas une jauge de plus dans un coin. Le bouton qui resiste et
@@ -1145,7 +2372,8 @@ const Hud = (function () {
       ctx.fillRect((VW - l) / 2 - 4, VH - 26, Math.round((l + 8) * part), 11);
       B.stats.rects++;
     }
-    texte(ctx, t, (VW - l) / 2, VH - 24, '#efe6d0', 1);
+    if (glyphe) dessinerGlyphe(ctx, glyphe, (VW - l) / 2, VH - 25);
+    texte(ctx, t, (VW - l) / 2 + lg, VH - 24, '#efe6d0', 1);
     noter('invite', (VW - l) / 2 - 4, VH - 26, l + 8, 11);
   }
 
@@ -1183,20 +2411,42 @@ const Hud = (function () {
     }
   }
 
-  /** Une boite de texte : une ou deux lignes, qui se ferme au bouton. */
-  function dialogue(qui, lignes, duree) {
-    B.dialogue = { qui: qui, lignes: Array.isArray(lignes) ? lignes : [lignes], t: 0, duree: duree || 0 };
+  /** Une boite de texte : une ou deux lignes, qui se ferme au bouton.
+      `visage` (`{ slug, humeur }`) pose le portrait de qui parle a gauche (`Visages`) ;
+      sans lui, ou pour un slug qui n'a pas de visage, la boite reste celle d'avant. */
+  function dialogue(qui, lignes, duree, visage) {
+    B.dialogue = { qui: qui, lignes: Array.isArray(lignes) ? lignes : [lignes], t: 0, duree: duree || 0,
+                   visage: visage && typeof Visages !== 'undefined' && Visages.connait(visage.slug) ? visage : null,
+                   voix: false };
+  }
+
+  //: Le portrait dans la boite : 42 x 42 cadre compris, a quatre pixels du haut ; le texte
+  //: se pousse de `PORTRAIT_DECALE` a droite. La boite grandit a `PORTRAIT_BOITE` pour le tenir.
+  const PORTRAIT_DECALE = 48, PORTRAIT_BOITE = 50;
+
+  /** La bouche bouge-t-elle ? Tant que SA voix joue ; sans voix (muette, pas encore
+      generee, son coupe), le temps de dire le texte — deux images par lettre. */
+  function parleEncore(d) {
+    if (typeof Son !== 'undefined' && Son.Voix && Son.Voix.enCours) return true;
+    if (d.voix) return false;
+    const lettres = d.lignes.reduce(function (n, l) { return n + l.length; }, 0);
+    return d.t < 10 + lettres * 2;
   }
 
   function dessinerDialogue(ctx) {
     const d = B.dialogue;
     if (!d) return;
     d.t++;
-    const h = 22 + d.lignes.length * 9;
+    const v = d.visage;
+    const h = Math.max(22 + d.lignes.length * 9, v ? PORTRAIT_BOITE : 0);
+    const xt = 18 + (v ? PORTRAIT_DECALE : 0);
     ctx.fillStyle = 'rgba(11,10,18,0.9)'; ctx.fillRect(12, VH - h - 8, VW - 24, h);
     ctx.fillStyle = '#e8b33c'; ctx.fillRect(12, VH - h - 8, VW - 24, 1);
-    if (d.qui) texte(ctx, d.qui.toUpperCase(), 18, VH - h - 2, '#e8b33c', 1);
-    d.lignes.forEach(function (ligne, i) { texte(ctx, ligne, 18, VH - h + 8 + i * 9, '#efe6d0', 1); });
+    // ⚠️ L'HORLOGE DE L'OEIL (`B.image`) pour le clin, comme pour « ACTION > » plus bas :
+    // la ville est figee pendant qu'on lit, et un visage qui ne cligne plus est un masque.
+    if (v) Visages.dessiner(ctx, v.slug, 16, VH - h - 4, v.humeur, B.image || d.t, parleEncore(d));
+    if (d.qui) texte(ctx, d.qui.toUpperCase(), xt, VH - h - 2, '#e8b33c', 1);
+    d.lignes.forEach(function (ligne, i) { texte(ctx, ligne, xt, VH - h + 8 + i * 9, '#efe6d0', 1); });
     // ⚠️ L'HORLOGE DE L'OEIL (`B.image`), PAS CELLE DU MONDE (`B.t`) : depuis
     // qu'un dialogue fige la ville (`Jeu.maj`), `B.t` ne bouge plus pendant
     // qu'on lit — et « ACTION > » serait reste eteint (ou allume) tout l'appel,
@@ -1204,8 +2454,12 @@ const Hud = (function () {
     if (B.cinema && (B.image >> 4) % 2 === 0) {
       // ⚠️ Dans une scene, la derniere ligne d'un plan `dire` n'est pas la fin : d'autres
       // repliques suivent sous d'autres plans. On ne promet pas « FIN » a tort.
-      const suite = (B.scene || B.cinema.i < B.cinema.lignes.length - 1) ? 'ACTION >' : 'ACTION > FIN';
-      texte(ctx, suite, VW - 18 - Atlas.largeurTexte(suite, 1), VH - 16, '#8a8698', 1);
+      const fin = (B.scene || B.cinema.i < B.cinema.lignes.length - 1) ? '>' : '> FIN';
+      const glyphe = glypheDAction('action');
+      const suite = glyphe ? fin : 'ACTION ' + fin;
+      const xs = VW - 18 - Atlas.largeurTexte(suite, 1);
+      if (glyphe) dessinerGlyphe(ctx, glyphe, xs - largeurGlyphe(glyphe) - 3, VH - 18);
+      texte(ctx, suite, xs, VH - 16, '#8a8698', 1);
     }
     if (d.duree && d.t > d.duree) B.dialogue = null;
     B.stats.rects += 2;
@@ -1326,11 +2580,82 @@ const Hud = (function () {
     return quand(d.getTime(), Date.now()).toLowerCase();
   }
 
+  //: LE NIP (M14, 3e vague) : « Mot de passe plutôt » montre le formulaire habituel
+  //: SANS toucher au NIP local — un contournement d'un chargement, pas un « oublie
+  //: mon NIP ». Remis a zero a chaque ouverture de l'ecran.
+  let nipBypasse = false;
+  //: EFFACER SON COMPTE (M14, 4e vague) : la confirmation est-elle ouverte ? Purement
+  //: d'affichage, et remise a zero a chaque ouverture de l'ecran, comme `nipBypasse`.
+  let effacerDemande = false;
+
   function montrerCompte() {
+    nipBypasse = false;
+    effacerDemande = false;
     voile('compte');
     majCompte();
-    const el = doc.getElementById('compte-pseudo');
+    const v = Compte.etat();
+    const el = doc.getElementById(v.etat === 'verrouille' ? 'nip-code' : 'compte-pseudo');
     if (el && el.focus) el.focus();
+  }
+
+  /** LE DEFI DU JOUR au titre : « Defi du jour : Tour du Faubourg — 250 $ », ou rien du tout
+      (pas de reseau, defi inconnu de ce catalogue). ⚠️ `textContent`, jamais `innerHTML` : le
+      titre vient d'un catalogue, mais le slug vient du reseau. */
+  function majDefiDuJour() {
+    const el = doc && doc.getElementById('defi-du-jour');
+    if (!el) return;
+    const j = Defi.duJour();
+    el.hidden = !j;
+    el.textContent = j ? 'Défi du jour : ' + j.def.titre + ' — ' + j.def.prime + ' $' : '';
+  }
+
+  /** Le message de l'effacement : dans le formulaire ET dans `compte-etat`, qui est
+      DEHORS — un effacement reussi (ou une session coupee) referme le formulaire, et le
+      seul mot qui dit ce qui s'est passe se cacherait avec lui (le piege de « Bonjour »). */
+  function direEffacer(texte) {
+    const dedans = doc.getElementById('compte-effacer-etat'), dehors = doc.getElementById('compte-etat');
+    if (dedans) dedans.textContent = texte;
+    if (dehors) dehors.textContent = texte;
+  }
+
+  /** ⚠️ Le mot de passe ne reste dans le champ NI apres un succes NI apres un echec. */
+  function envoyerEffacer(ev) {
+    if (ev) ev.preventDefault();
+    const champEl = doc.getElementById('compte-effacer-passe');
+    const motDePasse = champEl ? String(champEl.value || '').trim() : '';
+    if (!motDePasse) { direEffacer('Il faut ton mot de passe pour confirmer.'); return null; }
+    direEffacer('Effacement…');
+    return Compte.effacer(motDePasse).then(function (r) {
+      if (champEl) champEl.value = '';
+      if (r.ok) {
+        effacerDemande = false;
+        direEffacer('Compte effacé. Les parties de ce navigateur sont toujours là.');
+      } else {
+        direEffacer(r.motif || 'Refusé.');
+      }
+      majCompte();
+      return r;
+    });
+  }
+
+  /** Le NIP tape au verrou. ⚠️ `Compte.deverrouiller` rend `{ok:false, motif, essaisRestants}`
+      sur un echec, et l'etat public complet (avec `ok:true`) sur un succes — jamais de
+      troisieme forme, pour que ce geste se lise d'un coup d'oeil. */
+  function deverrouillerNip(ev) {
+    if (ev) ev.preventDefault();
+    const nipEl = doc.getElementById('nip-code'), etatEl = doc.getElementById('nip-etat');
+    const nip = nipEl ? String(nipEl.value || '').trim() : '';
+    if (etatEl) etatEl.textContent = 'Vérification…';
+    return Compte.deverrouiller(nip).then(function (r) {
+      if (nipEl) nipEl.value = '';
+      if (!r.ok && etatEl) {
+        etatEl.textContent = r.motif === 'efface' ? 'Cinq essais ratés : NIP effacé — le mot de passe est nécessaire.'
+          : r.motif === 'faux' ? 'NIP incorrect — ' + r.essaisRestants + (r.essaisRestants > 1 ? ' essais restants' : ' essai restant')
+          : (r.motif || 'Refusé.');
+      }
+      majCompte();
+      return r;
+    });
   }
 
   /** Ce que l'ecran du compte montre. Ferme, il demande un pseudo ; ouvert, il
@@ -1340,17 +2665,43 @@ const Hud = (function () {
   function majCompte(vue) {
     if (!doc) return;
     const v = vue || Compte.etat();
+    // LE NIP (M14, 3e vague) : SEUL a l'ecran tant qu'on n'a pas tape les quatre
+    // chiffres — jamais en meme temps que le formulaire de mot de passe. Le
+    // contournement local (`nipBypasse`) montre le mot de passe sans y toucher.
+    const verrouille = v.etat === 'verrouille' && !nipBypasse;
     const ouvert = v.etat === 'ouvert';
+    const nipForm = doc.getElementById('nip-form');
     const form = doc.getElementById('compte-form');
     const liste = doc.getElementById('compte-parties');
     const mot = doc.getElementById('compte-mot');
     const partir = doc.getElementById('bouton-compte-deconnexion');
     const bouton = doc.getElementById('bouton-compte');
     const etatEl = doc.getElementById('compte-etat');
-    if (form) form.hidden = ouvert;
-    if (partir) partir.hidden = !ouvert;
-    if (bouton) bouton.textContent = ouvert ? 'Compte : ' + v.pseudo : 'Compte';
-    if (mot) {
+    const activerForm = doc.getElementById('nip-activer-form');
+    const retrait = doc.getElementById('nip-retrait');
+    const effacerLigne = doc.getElementById('compte-effacer-ligne');
+    const effacerForm = doc.getElementById('compte-effacer-form');
+    const garde = doc.getElementById('compte-garde');
+    const rubrique = doc.getElementById('compte-rubrique-parties');
+    const appareil = doc.getElementById('compte-appareil');
+    // ⚠️ Effacer n'existe QUE sur un compte ouvert (le serveur le refuserait de toute facon),
+    // et la confirmation prend la place du bouton — jamais les deux a l'ecran.
+    if (effacerLigne) effacerLigne.hidden = !ouvert || effacerDemande;
+    if (effacerForm) effacerForm.hidden = !ouvert || !effacerDemande;
+    // « Ce qu'on garde » se lit partout SAUF sous le verrou, qui montre le NIP seul.
+    if (garde) garde.hidden = verrouille;
+    if (nipForm) nipForm.hidden = !verrouille;
+    if (form) form.hidden = verrouille || ouvert;
+    if (mot) mot.hidden = verrouille;
+    if (liste) liste.hidden = verrouille;
+    // Les rubriques « Tes parties » et « Cet appareil » n'ont rien a nommer tant que le compte est ferme.
+    if (rubrique) rubrique.hidden = !ouvert;
+    if (appareil) appareil.hidden = !ouvert;
+    if (partir) partir.hidden = verrouille || !ouvert;
+    if (activerForm) activerForm.hidden = !ouvert || v.nipConfigure;
+    if (retrait) retrait.hidden = !ouvert || !v.nipConfigure;
+    if (bouton) bouton.textContent = verrouille ? 'Compte verrouillé' : ouvert ? 'Compte : ' + v.pseudo : 'Compte';
+    if (mot && !verrouille) {
       mot.textContent = ouvert ? 'Connecté comme ' + v.pseudo + '. Tes parties montent toutes seules.'
         : v.etat === 'hors-ligne' ? 'Pas de réseau : le compte attendra. Le jeu, lui, se joue hors ligne.'
         : v.etat === 'indisponible' ? 'Les comptes sont indisponibles pour l’instant. Le jeu, lui, tourne.'
@@ -1358,19 +2709,28 @@ const Hud = (function () {
     }
     // ⚠️ Un message de session coupee doit rester lisible : il n'est efface que
     // par le geste suivant, jamais par une mise a jour qui passe.
-    if (etatEl && !ouvert && v.message) etatEl.textContent = v.message;
+    if (etatEl && !ouvert && !verrouille && v.message) etatEl.textContent = v.message;
     if (!liste) return;
     liste.innerHTML = '';
     if (!ouvert) return;
+    // Une case = une rangee de colonnes (partie, jour, argent, date) : les chiffres
+    // s'alignent d'une partie a l'autre, et l'argent ne se casse plus sur deux lignes
+    // (« 4590 $ » se lisait « 4590 » puis « $ », vu a la capture le 22 sept. 2026).
     for (const c of v.cases) {
       const li = doc.createElement('li');
-      const nom = doc.createElement('span');
       const a = c.serveur && c.serveur.apercu;
-      nom.textContent = 'Partie ' + c.emplacement + (a ? ' · jour ' + a.jour + ' · ' + a.argent + ' $' : ' · vide');
-      const detail = doc.createElement('span');
-      detail.textContent = c.decision === 'trancher' ? 'deux versions — choisis en jouant'
-        : c.serveur && c.serveur.sauvee_le ? dateCourte(c.serveur.sauvee_le) : '—';
-      li.appendChild(nom); li.appendChild(detail);
+      const cellules = a ? [['partie', 'Partie ' + c.emplacement], ['jour', 'jour ' + a.jour],
+        ['argent', Number(a.argent).toLocaleString('fr-CA') + ' $']]
+        : [['partie', 'Partie ' + c.emplacement], ['vide', 'vide']];
+      cellules.push(['quand', c.decision === 'trancher' ? 'deux versions — choisis en jouant'
+        : c.serveur && c.serveur.sauvee_le ? dateCourte(c.serveur.sauvee_le) : '']);
+      if (!a) li.className = 'compte-parties__vide';
+      for (const [classe, texte] of cellules) {
+        const span = doc.createElement('span');
+        span.className = 'compte-parties__' + classe;
+        span.textContent = texte;
+        li.appendChild(span);
+      }
       liste.appendChild(li);
     }
   }
@@ -1453,11 +2813,79 @@ const Hud = (function () {
     return { x: x0, y: 4, l: l, h: ETOILE_H };
   }
 
+  //: Les palettes du moment de la journee (`MOMENTS`). ⚠️ Le soleil est
+  //: ORANGE, pas jaune : le jaune est a l'etoile de recherche et le dore a
+  //: l'argent, juste au-dessus. L'aube est rose et claire, le crepuscule
+  //: rouge et sombre : le meme soleil couche, deux moments qu'on ne confond pas.
+  const MOMENT_PALETTES = {
+    jour: { dessin: 'jour', pal: { s: '#ff9f43', r: '#ffc98a' } },
+    aube: { dessin: 'levant', pal: { s: '#ffc06a', r: '#ffe0a0', h: '#9fb4e0' } },
+    crepuscule: { dessin: 'levant', pal: { s: '#ff5e3a', r: '#ff9a5c', h: '#7a5a9e' } },
+    nuit: { dessin: 'nuit', pal: { l: '#dfe6ff' } },
+  };
+  const MOMENT_L = MOMENTS.jour[0].length;
+  const MOMENT_H = MOMENTS.jour.length;
+
+  /** Un moment cuit une fois (et son ombre, comme le texte du HUD : sans elle,
+      le soleil disparait sur un trottoir en plein jour). */
+  function momentCuit(periode, ombre) {
+    const m = MOMENT_PALETTES[periode];
+    const grille = MOMENTS[m.dessin];
+    return Atlas.cuirePeintre('moment|' + periode + (ombre ? '|ombre' : ''), MOMENT_L, MOMENT_H, function (c) {
+      for (let y = 0; y < MOMENT_H; y++) {
+        for (let x = 0; x < MOMENT_L; x++) {
+          const ch = grille[y][x];
+          if (ch === '.' || !m.pal[ch]) continue;
+          c.fillStyle = ombre ? 'rgba(11,10,18,0.8)' : m.pal[ch];
+          c.fillRect(x, y, 1, 1);
+        }
+      }
+    });
+  }
+
+  /** L'icone du moment, le coin haut-gauche en (x, y). */
+  function dessinerMoment(ctx, x, y) {
+    const p = Monde.periode();
+    ctx.drawImage(momentCuit(p, true), x + 1, y + 1);
+    ctx.drawImage(momentCuit(p, false), x, y);
+    B.stats.images += 2;
+    return p;
+  }
+
   function barre(ctx, x, y, l, h, frac, couleur) {
     ctx.fillStyle = '#101018'; ctx.fillRect(x - 1, y - 1, l + 2, h + 2);
     ctx.fillStyle = '#2a2a3a'; ctx.fillRect(x, y, l, h);
     ctx.fillStyle = couleur; ctx.fillRect(x, y, Math.round(l * borner(frac, 0, 1)), h);
     B.stats.rects += 3;
+  }
+
+  //: L'initiale de chaque direction du piratage (`Histoire.DIRS_PIRATAGE`) —
+  //: le meme H/B/G/D que le clavier (`MAP_TOUCHES.haut` commence par une
+  //: fleche, mais la police du HUD n'en dessine pas).
+  const LETTRE_PIRATAGE = { haut: 'H', bas: 'B', gauche: 'G', droite: 'D' };
+
+  /** La sequence du piratage en cours (`B.piratage`), et sa progression : un
+      cran par direction, faite (vert), en cours (or, celle qu'on vise), a
+      venir (gris). Le meme geste que la barre de charge du coup fort — on lit
+      la couleur, pas les lettres, une fois qu'on a appris le motif. */
+  function dessinerPiratage(ctx) {
+    const r = B.piratage;
+    if (!r) return;
+    const n = r.sequence.length, pas = 14, largeur = n * pas + 6;
+    const x0 = Math.round((VW - largeur) / 2), y0 = 90;
+    ctx.fillStyle = 'rgba(11,10,18,0.82)'; ctx.fillRect(x0 - 5, y0 - 11, largeur + 10, 25);
+    B.stats.rects++;
+    for (let i = 0; i < n; i++) {
+      const fait = i < r.pos, enCours = i === r.pos;
+      ctx.fillStyle = fait ? '#1e3a1e' : (enCours ? '#4a3a10' : '#26262e');
+      ctx.fillRect(x0 + i * pas, y0, pas - 3, 11);
+      B.stats.rects++;
+      texte(ctx, LETTRE_PIRATAGE[r.sequence[i]], x0 + i * pas + 3, y0 + 2,
+            fait ? '#8fd46a' : (enCours ? '#e8b33c' : '#5a5a6a'), 1);
+    }
+    const consigne = 'FRAPPE POUR ABANDONNER';
+    texte(ctx, consigne, Math.round((VW - Atlas.largeurTexte(consigne, 1)) / 2), y0 + 15, '#8a8698', 1);
+    noter('piratage', x0 - 5, y0 - 11, largeur + 10, 25);
   }
 
   // --- Mini-carte ---------------------------------------------------------------------
@@ -1477,7 +2905,7 @@ const Hud = (function () {
   /*: Ce que la derniere image a dessine pour se reperer : le joueur, l'objectif,
     et leur FORME. ⚠️ C'est la seule facon de juger un clignotement sans
     regarder l'ecran — les juges lisent ca, pas des pixels. */
-  let marqueurs = { joueur: null, cible: null, boulot: null, ecran: null };
+  let marqueurs = { joueur: null, cible: null, boulot: null, ecran: null, defis: [], filtre: null };
 
   //: Ce qu'on va chercher (le client, le blesse) : bleu. La destination : or.
   const COULEUR_RAMASSE = '#6f9fd8', COULEUR_DESTINATION = '#e8b33c';
@@ -1520,7 +2948,7 @@ const Hud = (function () {
   function legendeDeLaCarte(carte) {
     const familles = famillesDeLieu();
     const portees = {};
-    for (const point of (carte.points || [])) if (point.famille) portees[point.famille] = true;
+    for (const point of lieuxSurLaCarte(carte)) if (point.famille) portees[point.famille] = true;
     // ⚠️ L'ordre est celui de la TABLE, pas celui des lieux rencontres : sinon la
     // legende se reordonne d'une ville a l'autre, et on la relit a chaque partie.
     return parRang(familles).filter(function (nom) { return portees[nom]; }).map(function (nom) {
@@ -1576,6 +3004,12 @@ const Hud = (function () {
   }
 
   /** La ville autour du joueur, une tuile par pixel, avec les lieux en blips. */
+  /** Les lieux qu'on montre sur la carte : pas ceux qu'elle cache encore (l'aerogare,
+      tant que le pont de l'aeroport n'est pas fini — `Monde.masquee`). */
+  function lieuxSurLaCarte(carte) {
+    return (carte.points || []).filter(function (p) { return !Monde.masquee(p.x, p.y, carte); });
+  }
+
   function miniCarte(ctx) {
     const carte = Monde.carte, j = B.joueur;
     if (!carte || !j) return;
@@ -1586,7 +3020,7 @@ const Hud = (function () {
     ctx.fillRect(MINI.x - 1, MINI.y - 1, MINI.l + 2, MINI.h + 2);
     ctx.drawImage(mini, sx, sy, MINI.l, MINI.h, MINI.x, MINI.y, MINI.l, MINI.h);
     B.stats.images++;
-    for (const point of carte.points) {
+    for (const point of lieuxSurLaCarte(carte)) {
       const px = MINI.x + point.x - sx, py = MINI.y + point.y - sy;
       if (px < MINI.x || px >= MINI.x + MINI.l || py < MINI.y || py >= MINI.y + MINI.h) continue;
       ctx.fillStyle = '#101018'; ctx.fillRect(px - 1, py - 1, 3, 3);
@@ -1673,6 +3107,128 @@ const Hud = (function () {
     B.stats.rects += 6;
   }
 
+  // --- Les défis sur la carte, et avec quoi ils se jouent (23 sept. 2026) ---------------------
+  //: Martin : « je veux tout ça sur la carte, on doit les voir selon s'il est
+  //: possible de les faire avec les doigts ou avec la manette ou le clavier ».
+
+  //: Les trois appareils, dans l'ordre du catalogue, et comment on les nomme.
+  const APPAREILS = ['doigts', 'manette', 'clavier'];
+  const NOM_APPAREIL = { doigts: 'AU DOIGT', manette: 'MANETTE', clavier: 'CLAVIER' };
+  //: Les couleurs d'un drapeau de défi. ⚠️ Le CYAN n'est à aucune famille de
+  //: lieux (`carte.familles`) ni au GPS (or) : on le lit « défi » d'un coup d'œil.
+  const DRAPEAU = { jouable: '#6fe3ff', reussi: '#8fd46a', pas: '#6a6878' };
+
+  /** Un appareil, en pixels, dans `couleur` : un doigt levé, une manette, un
+      clavier. ⚠️ Dessinés, pas écrits : la police du HUD n'a pas d'icônes.
+      11 × 7 pixels, le coin haut-gauche en (x, y). */
+  function iconeAppareil(ctx, nom, x, y, couleur) {
+    const r = function (a, b, l, h, c) { ctx.fillStyle = c || couleur; ctx.fillRect(x + a, y + b, l, h); };
+    if (nom === 'manette') {
+      r(1, 1, 9, 4); r(0, 2, 11, 4); r(0, 6, 3, 1); r(8, 6, 3, 1);
+      r(2, 3, 3, 1, '#101018'); r(3, 2, 1, 3, '#101018'); r(7, 2, 1, 1, '#101018'); r(8, 4, 1, 1, '#101018');
+    } else if (nom === 'clavier') {
+      r(0, 1, 11, 6);
+      for (let k = 0; k < 4; k++) { r(1 + k * 2 + 1, 2, 1, 1, '#101018'); r(1 + k * 2, 4, 1, 1, '#101018'); }
+      r(3, 5, 5, 1, '#101018');
+    } else {
+      r(4, 0, 2, 4); r(3, 3, 5, 3); r(2, 4, 1, 2); r(4, 6, 3, 1);
+    }
+    B.stats.rects += 6;
+  }
+
+  /** « SE JOUE : » et les trois appareils, allumés ou éteints selon `liste` (le
+      catalogue), celui qu'on tient souligné ; et un avertissement quand celui
+      qu'on tient n'y est pas. Sous la liste du menu d'un défi (`Histoire.proposerDefi`). */
+  function dessinerAppareils(ctx, liste, x, y) {
+    const tenu = Histoire.APPAREIL_DU_CATALOGUE[Entree.appareil] || 'clavier';
+    texte(ctx, 'SE JOUE :', x, y + 1, '#8a8698', 1);
+    let cx = x + Atlas.largeurTexte('SE JOUE :', 1) + 6;
+    for (const a of APPAREILS) {
+      const oui = liste.indexOf(a) >= 0, c = oui ? DRAPEAU.jouable : '#3a3a48';
+      iconeAppareil(ctx, a, cx, y, c);
+      texte(ctx, NOM_APPAREIL[a], cx + 14, y + 1, oui ? '#cdc6e6' : '#4a4a5c', 1);
+      const l = 14 + Atlas.largeurTexte(NOM_APPAREIL[a], 1);
+      if (a === tenu) { ctx.fillStyle = oui ? DRAPEAU.jouable : '#ff8a7a'; ctx.fillRect(cx, y + 9, l, 1); B.stats.rects++; }
+      cx += l + 10;
+    }
+    if (liste.indexOf(tenu) < 0) texte(ctx, 'PAS AVEC CE QUE TU TIENS', cx, y + 1, '#ff8a7a', 1);
+  }
+
+  //: Le filtre des défis sur la grande carte : `null` = l'appareil qu'on tient,
+  //: sinon un appareil du catalogue, ou 'tous'. ⚠️ Il ne se sauvegarde pas :
+  //: la carte se rouvre sur ce qu'on a dans les mains.
+  let filtreDeCarte = null;
+
+  /** Le filtre en vigueur : un appareil du catalogue, ou 'tous'. */
+  function filtreDesDefis() {
+    return filtreDeCarte || Histoire.APPAREIL_DU_CATALOGUE[Entree.appareil] || 'clavier';
+  }
+
+  /** ARME, sur la carte : l'appareil qu'on tient, puis les deux autres, puis TOUS. */
+  function tournerFiltreDeCarte() {
+    const tenu = Histoire.APPAREIL_DU_CATALOGUE[Entree.appareil] || 'clavier';
+    const ordre = [tenu].concat(APPAREILS.filter(function (a) { return a !== tenu; })).concat(['tous']);
+    filtreDeCarte = ordre[(ordre.indexOf(filtreDesDefis()) + 1) % ordre.length];
+    Son.SFX.menu();
+  }
+
+  /** Le départ d'un défi sur la carte `carte` : son panneau (dans `entites`), ou
+      le comptoir de la foire qui sert de panneau. ⚠️ Pas `pointDuDefi` : dans
+      une pièce, la ville est `B.exterieur`, pas `Monde.carte` ni `B.entites`. */
+  function departDuDefi(d, carte, entites) {
+    if (!d.ou) return null;
+    if (d.ou.indexOf('foire:') === 0) {
+      const k = ((carte.def && carte.def.kiosques_de_foire) || []).find(function (q) { return q.slug === d.ou.slice(6); });
+      return k ? { x: k.x * TT + 8, y: k.y * TT + 8 } : null;
+    }
+    return entites.find(function (e) { return e.type === 'panneau' && e.defi === d.slug; }) || null;
+  }
+
+  /** Les défis à dessiner sur la carte, avec leur couleur et leur place — ce que
+      le filtre laisse voir. `caches` : combien restent à débloquer. */
+  function defisSurLaCarte(carte, entites) {
+    const filtre = filtreDesDefis(), tenu = Histoire.APPAREIL_DU_CATALOGUE[Entree.appareil] || 'clavier';
+    const vus = [];
+    for (const d of Histoire.defisOuverts()) {
+      const jouable = Histoire.jouableAvec(d, filtre === 'tous' ? tenu : filtre);
+      if (filtre !== 'tous' && !jouable) continue;
+      const c = departDuDefi(d, carte, entites);
+      if (!c) continue;
+      const fait = !!(B.partie.defisFaits && B.partie.defisFaits[d.slug]);
+      vus.push({ slug: d.slug, x: c.x, y: c.y, neuf: Histoire.defiNeuf(d), fait: fait, jouable: jouable,
+                 couleur: fait ? DRAPEAU.reussi : (jouable ? DRAPEAU.jouable : DRAPEAU.pas) });
+    }
+    return { filtre: filtre, defis: vus,
+             caches: (B.defs.defis || []).filter(function (d) { return !Histoire.defiOuvert(d); }).length };
+  }
+
+  /** Un drapeau : un mât et un fanion, le pied au point. Un défi NEUF bat. */
+  function drapeau(ctx, x, y, couleur, neuf) {
+    const haut = neuf && (B.image >> 4) % 2 ? 1 : 0;
+    ctx.fillStyle = '#101018'; ctx.fillRect(x - 1, y - 8 - haut, 7, 5); ctx.fillRect(x - 1, y - 8 - haut, 3, 9 + haut);
+    ctx.fillStyle = '#efe6d0'; ctx.fillRect(x, y - 7 - haut, 1, 7 + haut);
+    ctx.fillStyle = couleur; ctx.fillRect(x + 1, y - 7 - haut, 4, 3);
+    B.stats.rects += 5;
+  }
+
+  /** Les drapeaux, et la ligne du filtre en haut à gauche. */
+  function dessinerDefisDeLaCarte(ctx, carte, pos) {
+    const entites = B.exterieur ? B.exterieur.entites : B.entites;
+    const vue = defisSurLaCarte(carte, entites);
+    marqueurs.defis = [];
+    for (const d of vue.defis) {
+      const p = pos(d.x, d.y);
+      drapeau(ctx, p.x, p.y, d.couleur, d.neuf);
+      marqueurs.defis.push({ slug: d.slug, x: p.x, y: p.y, couleur: d.couleur, neuf: d.neuf });
+    }
+    let x = 6;
+    if (vue.filtre !== 'tous') { iconeAppareil(ctx, vue.filtre, x, 5, DRAPEAU.jouable); x += 14; }
+    const ligne = (vue.filtre === 'tous' ? 'TOUS LES DÉFIS' : 'DÉFIS ' + NOM_APPAREIL[vue.filtre]) + ' ' + vue.defis.length
+      + (vue.caches ? ' · ' + vue.caches + ' À DÉCOUVRIR' : '');
+    texte(ctx, ligne, x, 6, DRAPEAU.jouable, 1);
+    marqueurs.filtre = vue.filtre;
+  }
+
   /** La ville entiere, deux pixels par tuile, avec ses lieux nommes, le
       joueur, l'objectif — et la police si elle te cherche. */
   function dessinerCarte(ctx) {
@@ -1691,19 +3247,22 @@ const Hud = (function () {
     // dans le bandeau du bas, qui tient deja les familles de lieux sur trois rangees.
     const zonage = legendeDuZonage(carte);
     const yHaut = zonage.length ? 24 : 14, yBas = VH - 38;
-    const brut = Math.min((VW - 20) / carte.w, (yBas - yHaut) / carte.h);
+    // ⚠️ LA CARTE QU'ON CONNAIT : tant que l'ile de l'aeroport est cachee, il n'y a que
+    // de l'eau sous la ville, et la ville garde l'echelle qu'elle avait avant lui.
+    const hauteur = Monde.hauteurConnue(carte, B.exterieur ? B.exterieur.y : j.y);
+    const brut = Math.min((VW - 20) / carte.w, (yBas - yHaut) / hauteur);
     const echelle = brut >= 1 ? Math.floor(brut) : brut;
-    const l = carte.w * echelle, h = carte.h * echelle;
+    const l = carte.w * echelle, h = hauteur * echelle;
     const ox = Math.round((VW - l) / 2), oy = yHaut + Math.round((yBas - yHaut - h) / 2);
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(mini, 0, 0, carte.w, carte.h, ox, oy, l, h);
+    ctx.drawImage(mini, 0, 0, carte.w, hauteur, ox, oy, l, h);
     B.stats.images++;
     // Le calque du ZONAGE, par-dessus les tuiles et sous tout le reste : les
     // blocs se teignent de leur usage, les rues restent grises et se lisent.
     const calque = Monde.calqueDeZonage(carte);
     if (calque) {
       ctx.globalAlpha = CALQUE_ALPHA;
-      ctx.drawImage(calque, 0, 0, carte.w, carte.h, ox, oy, l, h);
+      ctx.drawImage(calque, 0, 0, carte.w, hauteur, ox, oy, l, h);
       ctx.globalAlpha = 1;
       B.stats.images++;
     }
@@ -1711,12 +3270,13 @@ const Hud = (function () {
     dessinerLignes(ctx, pos);
     Metro.dessinerSurLaCarte(ctx, pos);
     Traversier.dessinerSurLaCarte(ctx, pos);
-    for (const point of carte.points) {
+    for (const point of lieuxSurLaCarte(carte)) {
       const p = pos(point.x * TT, point.y * TT);
       ctx.fillStyle = '#101018'; ctx.fillRect(p.x - 2, p.y - 2, 5, 5);
       ctx.fillStyle = couleurDeLieu(point); ctx.fillRect(p.x - 1, p.y - 1, 3, 3);
       B.stats.rects += 2;
     }
+    dessinerDefisDeLaCarte(ctx, carte, pos);
     if (B.recherche.etoiles > 0) {
       ctx.fillStyle = '#4f8fe8';
       for (const e of (B.exterieur ? B.exterieur.entites : B.entites)) {
@@ -1762,8 +3322,21 @@ const Hud = (function () {
     texte(ctx, titre, (VW - Atlas.largeurTexte(titre, 1)) / 2, 6, '#e8b33c', 1);
     dessinerLegende(ctx, carte);
     dessinerLegendeDuZonage(ctx, zonage);
-    const aide = (gps ? gps.nom.toUpperCase() + ' · ' : '') + 'N : FERMER';
+    // ⚠️ ARME tourne le filtre des défis (`tournerFiltreDeCarte`) : on le dit ici, en bas, avec
+    // le reste de ce qu'on peut faire — en haut, la rangée du zonage prend toute la largeur.
+    const aide = (gps ? gps.nom.toUpperCase() + ' · ' : '') + 'ARME : DÉFIS · N : FERMER';
     texte(ctx, aide, (VW - Atlas.largeurTexte(aide, 1)) / 2, VH - 12, '#cdc6e6', 1);
+  }
+
+  /** Le bandeau du mode photo (M14) : un bord discret plutot que le fond noir
+      de la carte — c'est la ville qu'on cadre, pas une fiche par-dessus elle. */
+  function dessinerPhoto(ctx) {
+    const nom = FILTRES_PHOTO[B.photo.filtre].nom;
+    ctx.fillStyle = 'rgba(11,10,18,0.55)'; ctx.fillRect(0, VH - 13, VW, 13); B.stats.rects++;
+    texte(ctx, 'MODE PHOTO · ' + nom, 6, VH - 10, '#efe6d0', 1);
+    const aide = Entree.estTactile ? 'ACTION : CAPTURER · ARME : FILTRE'
+      : 'ACTION : CAPTURER · ARME : FILTRE · ANNULER : RETOUR';
+    texte(ctx, aide, VW - 6 - Atlas.largeurTexte(aide, 1), VH - 10, '#cdc6e6', 1);
   }
 
   //: La transparence du calque de zonage. ⚠️ Assez pour qu'un bloc d'usine et
@@ -1983,7 +3556,13 @@ const Hud = (function () {
       const heure = 'JOUR ' + p.jour + ' ' + Monde.heureTexte();
       const largeurHeure = Atlas.largeurTexte(heure, 1);
       texte(ctx, heure, VW - marge - largeurHeure, 20, '#cdc6e6', 1);
-      const boiteHeure = { x: VW - marge - largeurHeure, y: 20, l: largeurHeure, h: 7 };
+      // Le moment de la journee, devant l'heure : on lit « la nuit » d'un coup
+      // d'oeil, sans faire le calcul de 20:47. La boite de l'heure l'englobe —
+      // la ligne d'objectif doit passer dessous a elle aussi.
+      const xMoment = VW - marge - largeurHeure - MOMENT_L - 3;
+      const moment = dessinerMoment(ctx, xMoment, 20);
+      ancres.push({ nom: 'moment', x: xMoment, y: 20, l: MOMENT_L, h: MOMENT_H, periode: moment });
+      const boiteHeure = { x: xMoment, y: 20, l: VW - marge - xMoment, h: 7 };
       noter('heure', boiteHeure.x, boiteHeure.y, boiteHeure.l, boiteHeure.h);
       // Le quartier ou l'on se trouve, sous la mini-carte.
       const zone = j && !B.interieur ? Monde.zoneA(j.x, j.y) : null;
@@ -2039,8 +3618,11 @@ const Hud = (function () {
       // il y en a un : on a klaxonne pour ce client, c'est lui qu'on cherche.
       // Deux fleches de deux couleurs, chacune avec ses metres, se marcheraient
       // dessus au meme bord. L'objectif reste sur la mini-carte.
-      const boulotEcran = !B.interieur && j ? cibleDuBoulot() : null;
-      const gps = boulotEcran || (!B.interieur && j ? Histoire.cible() : null);
+      // ⚠️ EN COURSE, PAS DE FLECHE NI DE METRES ICI (Martin, 21 sept. 2026) :
+      // les fleches au sol (`Histoire.dessinerCheminCourse`) montrent la piste
+      // elle-meme — une fleche hors cadre en plus ferait double emploi.
+      const boulotEcran = !B.interieur && j && !Histoire.estCourse() ? cibleDuBoulot() : null;
+      const gps = boulotEcran || (!B.interieur && j && !Histoire.estCourse() ? Histoire.cible() : null);
       marqueurs.ecran = null;
       if (gps) {
         const dx = gps.x - j.x, dy = gps.y - j.y, d = Math.hypot(dx, dy);
@@ -2058,13 +3640,11 @@ const Hud = (function () {
                               couleur: gps.couleur || '#e8b33c', quoi: boulotEcran ? 'boulot' : 'histoire' };
         }
       }
-      // Message.
-      if (B.msg && B.msgT > 0) {
-        const l = Atlas.largeurTexte(B.msg, 2);
-        ctx.fillStyle = 'rgba(11,10,18,0.75)'; ctx.fillRect((VW - l) / 2 - 6, 40, l + 12, 16);
-        Atlas.texte(ctx, B.msg, (VW - l) / 2, 43, '#efe6d0', 2);
-        B.msgT--;
-      }
+      dessinerPiratage(ctx);
+      Adresse.dessiner(ctx);
+      Conduite.dessiner(ctx);
+      // Message. ⚠️ Un comptoir ouvert le dessine par-dessus lui, plus bas.
+      if (!(B.etat === 'jeu' && B.menu)) dessinerMessage(ctx, 40);
       if (B.etat === 'jeu') iconeDeChargement(ctx);
       if (B.etat === 'pause') {
         ctx.fillStyle = 'rgba(11,10,18,0.6)'; ctx.fillRect(0, 0, VW, VH);
@@ -2090,6 +3670,7 @@ const Hud = (function () {
       // qu'elle, il merite le meme fond.
       if (B.menu) { ctx.fillStyle = 'rgba(11,10,18,0.6)'; ctx.fillRect(0, 0, VW, VH); B.stats.rects++; }
       dessinerMenu(ctx);
+      if (B.menu && !B.scene) dessinerMessage(ctx, Math.max(2, boiteDuMenu(B.menu).y - 20));
     }
     // Le choix des parties : la ville vide du titre, assombrie, derriere.
     if (B.etat === 'titre' && B.menu) {
@@ -2097,7 +3678,11 @@ const Hud = (function () {
       dessinerMenu(ctx);
     }
     if (B.etat === 'carte') dessinerCarte(ctx);
+    if (B.etat === 'photo') dessinerPhoto(ctx);
     dessinerTransition(ctx);
+    // ⚠️ APRES le fondu : la prime se lit meme quand la fin de mission noircit l'ecran.
+    // Pas sous un menu (il fige tout, le bandeau attend qu'on le ferme).
+    if (B.etat === 'jeu' && !B.menu) dessinerPrime(ctx);
     if (B.options.perf) {
       const s = B.stats;
       Atlas.texte(ctx, Math.round(s.ms * 10) / 10 + 'MS ' + s.images + 'I ' + s.entites + 'E', 6, VH - 8, '#8f8', 1);
@@ -2109,13 +3694,18 @@ const Hud = (function () {
     }
   }
 
-  return { init, voile, etat, progression, partDesScripts, finirChargement, message, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, menuCarnet, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
+  return { init, voile, etat, progression, partDesScripts, finirChargement, message, prime, majPrime, montantDeLaPrime, PRIME, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, menuSautMissions, menuSautDefis, menuJukebox, pointDuDefi, menuCarnet,
+    ouvrirOnglet, toucherMenu, onglets: function () { return ongletsVisibles().map(function (o) { return o.slug; }); },
+    ciblesDuMenu: function () { return cibles.slice(); }, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
+    menuCommandes, ouvrirCommandes, majAideDuTitre, lignesDAide, glypheDAction,
     menuParties, menuEffacer, menuCopier, tempsDeJeu, quand,
-    legendeDeLaCarte, legendeDuZonage, couleurDeLieu, cibleDuBoulot, PULSE_JOUEUR, BATTEMENT_CIBLE, CALQUE_ALPHA,
+    legendeDeLaCarte, legendeDuZonage, lieuxSurLaCarte, couleurDeLieu, cibleDuBoulot, PULSE_JOUEUR, BATTEMENT_CIBLE, CALQUE_ALPHA,
+    iconeAppareil, dessinerAppareils, defisSurLaCarte, tournerFiltreDeCarte, filtreDesDefis, DRAPEAU,
+    oublierFiltreDeCarte: function () { filtreDeCarte = null; },
     marqueurs: function () { return marqueurs; },
     get voileCourant() { return voileCourant; },
            majAvisSon,
            dessiner, dessinerRoue, rayonDeLaRoue, LOGO_ECHELLE, LOGO_Y, posteDeLaRoue, miniCarte, MINI,
-           montrerCompte, majCompte, envoyerCompte, menuVersions,
+           montrerCompte, majCompte, envoyerCompte, menuVersions, deverrouillerNip, envoyerEffacer, majDefiDuJour,
            ancres: function () { return ancres; } };
 })();

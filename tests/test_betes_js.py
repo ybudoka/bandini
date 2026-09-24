@@ -128,7 +128,8 @@ def test_rien_au_monde_ne_peut_atteindre_une_bete(banc, paquet):
 def test_elles_partent_avant_qu_on_les_touche(banc, paquet):
     """⚠️ Leur distance de fuite est plus grande que la portée de tout ce qui
     pourrait les atteindre. C'est ce qui évite d'avoir à répondre à « que se
-    passe-t-il si je lui roule dessus » : **on n'y arrive pas**.
+    passe-t-il si je lui roule dessus » : **on n'y arrive pas** — même le chat
+    confiant (`confiance_px`, 20 px) reste hors de portée d'un poing (12 px).
 
     ⚠️ Le goéland **s'élève** — l'altitude est un décalage de dessin, pas une
     position : rien ne se cogne dans un oiseau."""
@@ -152,9 +153,14 @@ def test_elles_partent_avant_qu_on_les_touche(banc, paquet):
             return Math.hypot(a.x - L.B.joueur.x, a.y - L.B.joueur.y)
                  - Math.hypot(b.x - L.B.joueur.x, b.y - L.B.joueur.y); })[0];
           const fiche = L.B.defs.pietons.betes[espece];
+          // ⚠️ Le chat SEUL a une confiance (`confiance_px`, 2e vague, 22 sept. 2026) :
+          // au pas, sans arme — l'état par défaut du joueur ici —, c'est CETTE
+          // distance-là qui le fait fuir, pas `fuite_px` (réservé au sprint et à
+          // l'arme au poing). Le goéland n'a pas cette clé : `fuite_px` pour lui.
+          const seuil = fiche.confiance_px !== undefined ? fiche.confiance_px : fiche.fuite_px;
           const d0 = Math.hypot(bete.x - L.B.joueur.x, bete.y - L.B.joueur.y);
-          // On s'approche : à `fuite_px`, elle doit être déjà partie.
-          L.B.joueur.x = bete.x + fiche.fuite_px - 6; L.B.joueur.y = bete.y;
+          // On s'approche : au seuil, elle doit être déjà partie.
+          L.B.joueur.x = bete.x + seuil - 6; L.B.joueur.y = bete.y;
           L.Monde.centrerCamera(L.B.joueur.x, L.B.joueur.y);
           o.frame(2);
           const partie = bete.fuite > 0;
@@ -166,7 +172,7 @@ def test_elles_partent_avant_qu_on_les_touche(banc, paquet):
           }
           eloigne = Math.hypot(bete.x - L.B.joueur.x, bete.y - L.B.joueur.y) - avant;
           out[espece] = { n: vues.length, d0: d0, partie: partie, monte: monte, eloigne: eloigne,
-                          portee: fiche.fuite_px, pose: bete.v };
+                          portee: seuil, pose: bete.v };
         }
         // Une portée de poing, pour comparer.
         const poings = paquetArme(L);
@@ -186,6 +192,48 @@ def test_elles_partent_avant_qu_on_les_touche(banc, paquet):
             f"un {espece} fuit à {d['portee']} px et un poing porte à {r['poings']}")
     assert r["out"]["goeland"]["monte"] > 4, "le goéland s'envole sans s'élever"
     assert r["out"]["chat"]["monte"] == 0, "le chat vole"
+
+
+def test_le_chat_laisse_approcher_qui_marche_doucement_et_sans_arme(banc, paquet):
+    """⚠️ **2e vague, « caresser le chat » (22 sept. 2026).** Le chat SEUL a une
+    confiance (`pietons.BETES["chat"]["confiance_px"]`) : au pas, sans arme, il
+    laisse venir bien plus près qu'un `fuite_px` normal — assez pour
+    `interactions.CARESSER`. Courir (`esquive` tenue) ou sortir une arme, et il
+    redevient aussi farouche que le goéland, qui n'a jamais cette clé."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(7);
+        %s
+        function approcher(sprint, arme) {
+          for (const e of betes(L)) L.Entites.retirer(e);
+          const p = poser(L, 'chat', 300);
+          if (!p) return { pasDeChat: true };
+          for (let i = 0; i < 400 && !betes(L, 'chat').length; i++) o.frame(1);
+          const vues = betes(L, 'chat');
+          if (!vues.length) return { pasDeChat: true };
+          const chat = vues[0];
+          L.B.joueur.arme = arme || 'poings';
+          if (sprint) o.bouton('esquive', 'pointerdown');
+          // Entre les deux portées : plus loin que `confiance_px` (rien à y craindre,
+          // confiant), bien plus près que `fuite_px` (un chat ordinaire fuirait déjà).
+          const c = L.B.defs.pietons.betes.chat;
+          L.B.joueur.x = chat.x + c.confiance_px + 10; L.B.joueur.y = chat.y;
+          L.Monde.centrerCamera(L.B.joueur.x, L.B.joueur.y);
+          o.frame(3);
+          const out = { fuite: chat.fuite > 0, confiance: !!chat.confiance };
+          if (sprint) o.bouton('esquive', 'pointerup');
+          return out;
+        }
+        return { doux: approcher(false, null), sprint: approcher(true, null), arme: approcher(false, 'batte') };
+    }""" % POSER)
+    for cas in ("doux", "sprint", "arme"):
+        assert not r[cas].get("pasDeChat"), f"{cas} : aucun chat dans toute la ville"
+    assert r["doux"]["confiance"] and not r["doux"]["fuite"], \
+        f"au pas, sans arme, à confiance_px le chat aurait dû rester : {r['doux']}"
+    assert not r["sprint"]["confiance"] and r["sprint"]["fuite"], \
+        f"au sprint, le chat aurait dû fuir comme avant : {r['sprint']}"
+    assert not r["arme"]["confiance"] and r["arme"]["fuite"], \
+        f"une arme à la main, le chat aurait dû fuir comme avant : {r['arme']}"
 
 
 def test_une_bete_ne_tire_pas_un_seul_de_du_jeu(banc, paquet):

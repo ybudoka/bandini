@@ -11,6 +11,7 @@ celui qu'on utilise a la main depuis l'agent.
     uv run python scripts/audio_elevenlabs.py --musiques   # les 15 musiques du jeu
     uv run python scripts/audio_elevenlabs.py --refaire coup pas
     uv run python scripts/audio_elevenlabs.py --refaire pas-2   # cette variante-la
+    uv run python scripts/audio_elevenlabs.py --dictionnaire    # le televerser, et ce qu'il change (gratuit)
 
 ⚠️ CHAQUE GENERATION COUTE DES CREDITS. Le script ne touche jamais a un
 fichier deja present (sauf `--refaire`), et ne tourne jamais en CI.
@@ -30,14 +31,16 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import tempfile
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RACINE))
 
-from app import audio, interpretation  # noqa: E402
+from app import audio, interpretation, prononciation  # noqa: E402
 
 LANCEUR = Path(os.environ.get(
     "BANDINI_MCP_ELEVENLABS",
@@ -313,8 +316,116 @@ def secher(client: ClientMCP, master: Path, dossier: Path) -> Path:
     return cible
 
 
+def lexique(client: ClientMCP, voix: list[dict]) -> dict | None:
+    """Le dictionnaire de prononciation a joindre a chaque voix (`app/prononciation.py`).
+
+    ⚠️ Televerse seulement si le `.pls` a change depuis la derniere fois (son
+    empreinte est dans `prononciation.json`, a committer) : chaque televersement
+    cree un NOUVEAU dictionnaire chez ElevenLabs. C'est gratuit, mais une session
+    qui en creerait un par generation en semerait des dizaines.
+
+    ⚠️ Si ElevenLabs refuse (22 sept. 2026 : la cle n'avait pas la permission
+    `pronunciation_dictionaries_write`), on ne bloque que ce qui en a besoin : des
+    voix qu'aucune regle ne touche se generent sans lui ; une voix touchee, jamais —
+    elle serait a repayer des que le dictionnaire marcherait.
+    """
+    note = prononciation.televerse()
+    if note is None:
+        reponse = client.appeler("elevenlabs_pronunciation_dictionary", {
+            "fichier": str(prononciation.FICHIER), "name": prononciation.NOM,
+            "description": f"app/prononciation.pls, empreinte {prononciation.empreinte()}",
+        })
+        if not reponse.get("ok"):
+            erreur = reponse.get("erreur") or "?"
+            remede = ("\n   Ajouter pronunciation_dictionaries_write (et _read) a la cle : "
+                      "elevenlabs.io/app/settings/api-keys" if "permission" in erreur else "")
+            touchees = [v["slug"] for v in voix if prononciation.touches(interpretation.dit(v))]
+            if touchees:
+                raise SystemExit(f"dictionnaire de prononciation refuse : {erreur}{remede}\n"
+                                 f"   Rien n'est genere : il change {' '.join(touchees)}.")
+            suite = " — aucune de ces voix n'en a besoin, on continue sans." if voix else "."
+            print(f"⚠️  Dictionnaire refuse ({erreur}){suite}{remede}")
+            return None
+        note = prononciation.noter(reponse["id"], reponse.get("version_id"))
+        print(f"Dictionnaire televerse : {reponse.get('regles')} regles, {note['id']} "
+              f"— committer app/prononciation.json")
+    return {"id": note["id"], **({"version_id": note["version_id"]} if note.get("version_id") else {})}
+
+
+def dire_le_dictionnaire() -> int:
+    """`--dictionnaire` : le televerse s'il a change, puis dit ses regles et les voix DEJA
+    generees qu'elles changeraient. Gratuit : aucune voix n'est generee."""
+    regles = prononciation.regles()
+    if prononciation.televerse() is None and LANCEUR.is_file():
+        client = ClientMCP(LANCEUR)
+        try:
+            lexique(client, [])
+        finally:
+            client.fermer()
+    note = prononciation.televerse()
+    print(f"{len(regles)} regle(s) dans {prononciation.FICHIER.relative_to(RACINE)} — "
+          + (f"televerse ({note['id']})" if note else "a televerser (le script le fait avant la premiere voix)"))
+    reserve = prononciation.en_reserve()
+    print(f"  ({len(regles) - len(reserve)} touchent une replique, {len(reserve)} en reserve "
+          f"pour les missions a venir)")
+    lectures, phonemes = prononciation.lectures(), prononciation.phonemes()
+    for mot, son in regles:
+        dit = f"/{son}/  « {lectures[mot]} »" if mot in phonemes else f"alias « {son} »"
+        print(f"  {mot:>14}  ->  {dit}{'   (reserve)' if mot in reserve else ''}")
+    # ⚠️ Une voix n'est a refaire que si son etiquette ne dit pas les regles d'aujourd'hui
+    # (`prononciation.a_refaire`) — avant, toute voix qui disait un mot du lexique l'etait,
+    # meme refaite avec lui la veille. Un ffprobe par voix : en parallele.
+    faites = [v for v in audio.toutes_les_voix() if audio.chemin_voix(v).exists()]
+    with ThreadPoolExecutor(max_workers=8) as ouvriers:
+        etiquettes = list(ouvriers.map(lambda v: etiquette_dictionnaire(audio.chemin_voix(v)), faites))
+    touchees = [(v, e) for v, e in zip(faites, etiquettes)
+                if prononciation.a_refaire(interpretation.dit(v), e)]
+    if not touchees:
+        print("\nAucune voix deja generee n'est a refaire : chacune porte les regles d'aujourd'hui.")
+        return 0
+    print(f"\n{len(touchees)} voix deja generee(s) ne disent pas ces mots comme le dictionnaire "
+          f"({sum(len(interpretation.dit(v)) for v, _ in touchees)} caracteres a repayer) :")
+    for v, e in touchees:
+        voulu = prononciation.signature(interpretation.dit(v)) or "(plus aucune regle)"
+        print(f"  {v['slug']:>34}  {voulu}{f'   (faite avec {e})' if e else ''}")
+    touchees = [v for v, _ in touchees]
+    print("\nPour les refaire (PAYANT) :\n  uv run python scripts/audio_elevenlabs.py --masters "
+          "~/elevenlabs-audio/bandini-voix-v3-masters-2026-09-16 --refaire "
+          + " ".join(v["slug"] for v in touchees))
+    return 0
+
+
+def ranger_master(paye: Path, attendu: Path, seche: bool) -> None:
+    """⚠️ Le master payé prend le nom que `--refinir` relit. Le serveur n'écrase jamais : un
+    `--refaire` avec `--masters` écrivait `<slug>-2.mp3` (et `<slug>-2-sec.wav`) à côté de
+    `<slug>.mp3`, et `--refinir` relisait celui-ci — l'ANCIENNE phrase, finie comme si c'était la
+    nouvelle, sans que rien ne le dise (21 sept. 2026, les gens se présentent : 38 voix refaites).
+    L'ancien reste à côté, daté : un master payé ne se jette pas."""
+    paires = [(paye, attendu)]
+    if seche:
+        paires.append((paye.with_name(f"{paye.stem}-sec.wav"), attendu.with_name(f"{attendu.stem}-sec.wav")))
+    date = time.strftime("%Y-%m-%d-%H%M%S")
+    for neuf, cible in paires:
+        if neuf == cible or not neuf.exists():
+            continue
+        if cible.exists():
+            cible.rename(cible.with_name(f"{attendu.stem}-avant-{date}{cible.name[len(attendu.stem):]}"))
+        neuf.rename(cible)
+
+
+def etiquette_dictionnaire(chemin: Path) -> str | None:
+    """Les regles du dictionnaire avec lesquelles cette voix a ete faite (son etiquette mp3
+    `prononciation.ETIQUETTE`), ou rien."""
+    if not chemin.is_file():
+        return None
+    sortie = subprocess.run(["ffprobe", "-v", "error", "-show_entries",
+                             f"format_tags={prononciation.ETIQUETTE}", "-of", "default=nw=1:nk=1",
+                             str(chemin)], capture_output=True, text=True).stdout.strip()
+    return sortie or None
+
+
 def finir_voix(master: Path, cible: Path, histoire: bool, marque: str | None = None,
-               filtre: str | None = None) -> dict:
+               filtre: str | None = None, dictionnaire: str | None = None) -> dict:
     """Mono, au niveau, un fondu sur la derniere syllabe, le temps mort, encode.
 
     ⚠️ L'ancien fichier n'est remplace qu'a la toute fin : une finition qui
@@ -322,6 +433,10 @@ def finir_voix(master: Path, cible: Path, histoire: bool, marque: str | None = N
     `marque` va dans l'etiquette `comment` (`interpretation.MARQUE_SECHEE`) ;
     `filtre` est l'egalisation de la voix (`interpretation.egalisation`), posee
     AVANT de mesurer le niveau : on regle le volume de ce qu'on entendra.
+    `dictionnaire` va dans l'etiquette `prononciation.ETIQUETTE` : les regles qui ont
+    touche cette voix (`prononciation.signature`). ⚠️ `-map_metadata -1` efface tout :
+    une finition qui repart d'un master deja paye (`--refinir`, `--secher`) doit la
+    reporter, sinon `--dictionnaire` la redemanderait.
     """
     frequence, debit = (audio.FORMAT_HISTOIRE if histoire else FORMAT).split("_")[1:]
     with tempfile.TemporaryDirectory(prefix="bandini-voix-") as temporaire:
@@ -376,7 +491,9 @@ def finir_voix(master: Path, cible: Path, histoire: bool, marque: str | None = N
                             f"apad=pad_dur={interpretation.TEMPS_MORT_S}",
                             "-ar", frequence, "-ac", "1", "-b:a", f"{debit}k",
                             "-map_metadata", "-1",
-                            *(["-metadata", f"comment={marque}"] if marque else []), str(fini)])
+                            *(["-metadata", f"comment={marque}"] if marque else []),
+                            *(["-metadata", f"{prononciation.ETIQUETTE}={dictionnaire}"]
+                              if dictionnaire else []), str(fini)])
             depasse = _pic_dbfs(fini) - interpretation.PIC_MAX_DBFS
             if depasse <= 0.1:
                 break
@@ -470,9 +587,11 @@ def refinir(voix: list[dict], masters: Path) -> int:
                   + (" (lance --secher)" if seche else ""))
             continue
         try:
+            # ⚠️ Le meme master : les memes regles l'ont touche. On garde son etiquette.
             bilan = finir_voix(master, audio.chemin_voix(ligne), bool(ligne.get("histoire")),
                                interpretation.MARQUE_SECHEE if seche else None,
-                               interpretation.egalisation(ligne))
+                               interpretation.egalisation(ligne),
+                               etiquette_dictionnaire(audio.chemin_voix(ligne)))
         except (RuntimeError, OSError) as souci:
             rates += 1
             print(f"  ✗ {nom:>40}  {souci}")
@@ -500,7 +619,8 @@ def secher_masters(voix: list[dict], masters: Path) -> int:
             try:
                 sec = secher(client, masters / nom, masters)
                 bilan = finir_voix(sec, audio.chemin_voix(ligne), bool(ligne.get("histoire")),
-                                   interpretation.MARQUE_SECHEE, interpretation.egalisation(ligne))
+                                   interpretation.MARQUE_SECHEE, interpretation.egalisation(ligne),
+                                   etiquette_dictionnaire(audio.chemin_voix(ligne)))
             except (RuntimeError, OSError) as souci:
                 rates += 1
                 print(f"  ✗ {nom:>40}  {souci}")
@@ -530,6 +650,10 @@ def main() -> int:
     argus.add_argument("--secher", action="store_true",
                        help="avec --masters : passer les voix qui sonnent dans une piece par "
                             "l'isolateur ElevenLabs, puis les finir (1000 credits / minute)")
+    argus.add_argument("--dictionnaire", action="store_true",
+                       help="televerser le dictionnaire de prononciation (app/prononciation.pls) "
+                            "s'il a change, et lister les voix deja generees qu'il changerait ; "
+                            "gratuit, aucune voix n'est generee")
     argus.add_argument("--refinir", action="store_true",
                        help="avec --masters : rejouer la finition des voix depuis leurs masters, "
                             "sans rien generer (gratuit)")
@@ -538,6 +662,8 @@ def main() -> int:
     if os.environ.get("CI"):
         print("⚠️  Jamais en CI : la generation coute des credits.", file=sys.stderr)
         return 2
+    if options.dictionnaire:
+        return dire_le_dictionnaire()
 
     travail = a_faire(options.refaire)
     radios = radios_a_faire(options.refaire) if (options.radios or options.refaire) else []
@@ -582,6 +708,11 @@ def main() -> int:
     for ligne in voix:
         print(f"  {audio.nom_fichier_voix(ligne):>28}  {len(interpretation.dit(ligne)):>4} c  VOIX     "
               f"{ligne['voix'][:22]} — « {interpretation.dit(ligne)[:60]} »")
+    if voix:
+        touchees = sum(1 for v in voix if prononciation.touches(interpretation.dit(v)))
+        print(f"\nDictionnaire de prononciation : {len(prononciation.regles())} regle(s), "
+              f"{'deja televerse' if prononciation.televerse() else 'a televerser (gratuit)'} ; "
+              f"il change {touchees} de ces voix.")
     if options.essai:
         print("\n(--essai : rien n'a ete genere)")
         return 0
@@ -635,6 +766,9 @@ def main() -> int:
         # temps mort de la fin se posent APRES la generation (voir
         # `app/interpretation.py`). Et on ne l'efface plus avant : c'est
         # `finir_voix()` qui la remplace, une fois la nouvelle prete.
+        # ⚠️ Le dictionnaire suit TOUTES les voix, meme celles qu'il ne touche pas :
+        # une regle ajoutee plus tard vaudra pour elles au prochain --refaire.
+        dictionnaires = [d for d in [lexique(client, voix)] if d] if voix else []
         with (contextlib.nullcontext(options.masters) if options.masters
               else tempfile.TemporaryDirectory(prefix="bandini-masters-voix-")) as masters:
             for ligne in voix:
@@ -647,6 +781,7 @@ def main() -> int:
                     "model_id": interpretation.MODELE,
                     "language_code": "fr",
                     "stability": interpretation.STABILITE,
+                    "pronunciation_dictionaries": dictionnaires,
                     "output_format": audio.FORMAT_MASTER,
                     "output_dir": masters,
                     "nom": nom[:-4],
@@ -662,13 +797,19 @@ def main() -> int:
                     if interpretation.a_secher(ligne):
                         master = secher(client, master, Path(masters))
                         marque = interpretation.MARQUE_SECHEE
+                    # ⚠️ L'etiquette dit les regles qui l'ont VRAIMENT touchee : aucune
+                    # si la voix est partie sans dictionnaire.
                     bilan = finir_voix(master, cible, bool(ligne.get("histoire")), marque,
-                                       interpretation.egalisation(ligne))
+                                       interpretation.egalisation(ligne),
+                                       prononciation.signature(interpretation.dit(ligne))
+                                       if dictionnaires else None)
                 except (RuntimeError, OSError) as souci:
                     rates.append((nom, f"finition : {souci}"))
                     print(f"  ✗ {nom:>40}  finition : {souci}")
                     continue
                 faits += 1
+                if options.masters:
+                    ranger_master(Path(reponse["fichier"]), Path(masters) / nom, interpretation.a_secher(ligne))
                 duree = "" if avant is None else f"{avant:5.2f} s -> "
                 trous = f"  ⚠ trou de {max(bilan['trous']):.1f} s" if bilan["trous"] else ""
                 print(f"  ✓ {nom:>40}  {duree}{bilan['duree']:5.2f} s  gain {bilan['gain']:+5.1f} dB{trous}")

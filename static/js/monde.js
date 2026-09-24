@@ -50,6 +50,9 @@ const Monde = (function () {
     foire_jaune: { dy: 0, c: 'rgba(255,214,110,0.62)' },
     foire_rose: { dy: 0, c: 'rgba(255,120,190,0.52)' },
     foire_bleue: { dy: 0, c: 'rgba(120,190,255,0.50)' },
+    // ⚠️ LES BALISES DE LA PISTE : une petite lueur froide, au ras du sol. La nuit,
+    // c'est tout ce qu'on voit de l'aeroport depuis La Pointe — deux pointilles.
+    balise: { dy: 8, c: 'rgba(200,225,255,0.55)' },
   };
 
   let carte = null;
@@ -62,6 +65,11 @@ const Monde = (function () {
   //: rend que la carte : jusqu'au 17 sept. 2026, entrer dans n'importe quel
   //: batiment effacait tous les nids de la ville jusqu'au rechargement.
   function nidDePoule(tx, ty) { return !!(carte && carte.nids && carte.nids.has(tx + ',' + ty)); }
+
+  //: Les PLAQUES D'ACIER des tranchées de chantier (`chantiers.js` les pose et les
+  //: retire avec la phase du jour) : même règle que les nids, l'index vit SUR LA
+  //: CARTE, et « x,y » -> vrai.
+  function plaqueDAcier(tx, ty) { return !!(carte && carte.plaques && carte.plaques.has(tx + ',' + ty)); }
 
   //: Le STANDING d'une tuile (des quartiers qu'on reconnait) : 'cossu',
   //: 'ordinaire', 'pauvre', ou null sur l'eau et dans une piece. ⚠️ Python l'a
@@ -80,6 +88,7 @@ const Monde = (function () {
     }
     return sortie;
   }
+  function somme(nombres) { return nombres.reduce(function (s, n) { return s + n; }, 0); }
   function rang(bornes, v) {
     let i = 0;
     while (i + 1 < bornes.length && bornes[i + 1] <= v) i++;
@@ -89,7 +98,10 @@ const Monde = (function () {
   function lettreDuBloc(nom, tx, ty, laquelle) {
     const k = laquelle || carte;
     const q = k && k.quartiers;
-    if (!q || !q[nom] || tx < 0 || ty < 0 || tx >= k.w || ty >= k.h) return null;
+    // ⚠️ HORS DE LA TRAME, PAS DE QUARTIER : la carte a grandi sous elle (l'aeroport),
+    // et `rang` rendait la derniere rangee de blocs a tout ce qui est plus bas — la
+    // mer au sud des Quais etait « pauvre ». Python rend None au meme endroit.
+    if (!q || !q[nom] || tx < 0 || ty < 0 || tx >= Math.min(k.w, q.w) || ty >= Math.min(k.h, q.h)) return null;
     return q[nom][rang(q.y, ty)][rang(q.x, tx)];
   }
   function standingA(tx, ty, laquelle) {
@@ -128,12 +140,34 @@ const Monde = (function () {
     return ville.coeur;
   }
 
+  //: **LE DEVANT D'UNE PORTE** : trois tuiles dans l'axe, une de chaque cote — la
+  //: fenetre que la ville tient libre (`app/devants.py`) et que ce qu'une mission
+  //: pose (un donneur, des hommes de main, un panneau) ne prend pas non plus.
+  //: ⚠️ La fenetre vient du PAQUET (`def.devant`), elle ne s'ecrit pas ici : deux
+  //: chiffres qui divergent, et la ville degage une zone que le jeu remplit.
+  //: Une piece n'en a pas (`def.devant` absent) : un ensemble vide.
+  function devantsDePortes(def, portesVues) {
+    const devants = new Set();
+    const fen = def.devant;
+    if (!fen) return devants;
+    (def.devantures || []).concat(def.residences || []).forEach(function (f) {
+      for (let i = 0; i < f.motifs.length; i++) if (f.motifs[i] === 'P') portesVues.push({ x: f.x + i, y: f.y });
+    });
+    for (const p of portesVues) {
+      for (let dy = 1; dy <= fen.profondeur; dy++) {
+        for (let dx = -fen.cote; dx <= fen.cote; dx++) devants.add((p.x + dx) + ',' + (p.y + dy));
+      }
+    }
+    return devants;
+  }
+
   function charger(def) {
     const w = def.largeur, h = def.hauteur;
     const solide = new Uint8Array(w * h);
     const route = new Uint8Array(w * h);
     const passage = new Uint8Array(w * h);     // passage pieton : route ET trottoir
     const portesFermees = [];                   // les « d » : par ou les gens rentrent chez eux
+    const portesVues = [];                      // toutes celles qu'on VOIT : D, d, G (et les peintes, plus bas)
     for (let y = 0; y < h; y++) {
       const ligne = def.sol[y];
       for (let x = 0; x < w; x++) {
@@ -146,6 +180,7 @@ const Monde = (function () {
         // un interieur. Les gens passent les deux ; le joueur, seulement les
         // `D` — et le dessin le dit deja, c'est ce qui rend la regle lisible.
         if (ligne[x] === 'd' || ligne[x] === 'D') portesFermees.push({ x: x, y: y, glyphe: ligne[x] });
+        if (ligne[x] === 'd' || ligne[x] === 'D' || ligne[x] === 'G') portesVues.push({ x: x, y: y });
       }
     }
     const portes = new Map();
@@ -184,19 +219,28 @@ const Monde = (function () {
       // Le plancher d'une piece : ce qu'on peint SOUS les meubles (null dehors).
       plancher: def.plancher || null,
       solide: solide, route: route, passage: passage, portesFermees: portesFermees,
+      devants: devantsDePortes(def, portesVues),
       morceaux: new Map(), visibles: new Set(),
       // Les battants qui s'ouvrent : hors du cache de morceaux (voir `ouvrirPorte`).
       battants: new Map(),
       // Les rideaux de garage : meme regle, et ils se souviennent de leur hauteur.
+      // ⚠️ `baie` : les rangees de toit derriere le rideau, ou le char se cache
+      // (Python la garantit, le navigateur ne la devine pas). `admis`, `dedans`,
+      // `phase` : l'atelier (`Missions.majGarage`).
       portesGarage: (def.portes_garage || []).map(function (p) {
-        return { x: p.x, y: p.y, l: p.l, lieu: p.lieu, ouverture: 0, tient: 0, servi: null };
+        return { x: p.x, y: p.y, l: p.l, lieu: p.lieu, baie: p.baie || 0, genre: p.genre || 'garage',
+                 ouverture: 0, tient: 0, servi: null, admis: null, dedans: null, phase: null, t: 0, refuse: null };
       }),
+      // La barriere coulissante du lot du poste : `cle`, le char pour qui elle s'ouvre.
+      coulissantes: coulissantesDe(def),
       portesParTuile: portes, mini: null, croisements: croisements, arrets: def.arrets || {},
       nids: new Set((def.nids_de_poule || []).map(function (n) { return n.x + ',' + n.y; })), coeur: null,
+      plaques: new Set(),
       quartiers: def.grille && def.grille.standing ? {
         standing: def.grille.standing, usage: def.grille.usage || null,
         usages: Object.keys(def.zonage || {}).reduce(function (m, slug) { m[def.zonage[slug].lettre] = slug; return m; }, {}),
         x: coupes(def.grille.colonnes, def.grille.rues_v), y: coupes(def.grille.rangees, def.grille.rues_h),
+        w: somme(def.grille.colonnes) + somme(def.grille.rues_v), h: somme(def.grille.rangees) + somme(def.grille.rues_h),
       } : null,
       intersections: def.intersections || [],
       // ⚠️ Trois sortes de lumiere, et elles ne se ressemblent pas : le
@@ -206,7 +250,11 @@ const Monde = (function () {
       lampes: (def.lampes || []).map(function (l) {
         const sorte = SORTES_DE_LAMPE[l.c] || SORTES_DE_LAMPE.poteau;
         // ⚠️ `panne` : un lampadaire de rue pauvre qui n'eclaire plus (3e vague).
-        return { x: l.x * TT + 8, y: l.y * TT + sorte.dy, r: l.r || 44, c: sorte.c, panne: !!l.panne };
+        // `gresille` : un autre qui hoquette (la nuit a ses habitudes).
+        const lampe = { x: l.x * TT + 8, y: l.y * TT + sorte.dy, r: l.r || 44, c: sorte.c, panne: !!l.panne,
+                        gresille: !!l.gresille, tx: l.x, ty: l.y };
+        if (l.c === 'fenetre') heuresDeLaFenetre(lampe);
+        return lampe;
       }),
       portes: def.portes || [],
       rampes: def.rampes || [],
@@ -394,13 +442,20 @@ const Monde = (function () {
     if (!total) return null;
     const jour = B.partie ? B.partie.jour : 0;
     if (entraveJour.jour !== jour) {
+      // ⚠️ `ecartee` : Python a marque celles qui tombent devant une porte
+      // (`app/devants.py`). On tire dans la liste ENTIERE — une entree de moins
+      // rebattrait tous les jours —, puis on passe a la suivante tant que celle-ci
+      // est ecartee. Le jour dont le tirage ne tombait pas sur elles ne change pas.
+      const tous = voies.concat(rues);
       // ⚠️ UNE SEULE PAR JOUR, et c'est ce qui evite d'avoir a juger les
       // COMBINAISONS : deux fermetures prises separement dans une liste valide
       // peuvent, ensemble, isoler un bloc. Une seule, et la question ne se pose
       // pas.
-      const i = hash2(jour, 9173) % total;
+      let i = hash2(jour, 9173) % total;
+      for (let k = 0; k < total && tous[i].ecartee; k++) i = (i + 1) % total;
+      if (tous[i].ecartee) { entraveJour = { jour: jour, b: null }; return null; }   // toutes ecartees
       const rue = i >= voies.length;
-      const c = rue ? rues[i - voies.length] : voies[i];
+      const c = tous[i];
       const f = (rue ? def.fermeture : def.entrave) || {};
       entraveJour = { jour: jour, b: {
         slug: rue ? 'rue_barree' : 'entrave',
@@ -493,7 +548,11 @@ const Monde = (function () {
     if (ecoule >= f.minutes) return null;
     const graine = jour * 1607 + heure;
     if (hash2(graine, 0xA9DE) / 4294967296 >= f.chance_par_heure) return null;
-    const c = liste[hash2(graine, 0x5EA0) % liste.length];
+    // ⚠️ `ecartee` : le bris qui tombe devant une porte (`app/devants.py`) passe au suivant.
+    let i = hash2(graine, 0x5EA0) % liste.length;
+    for (let k = 0; k < liste.length && liste[i].ecartee; k++) i = (i + 1) % liste.length;
+    if (liste[i].ecartee) return null;
+    const c = liste[i];
     brisEnCours.b = {
       slug: 'aqueduc', nom: "Un bris d'aqueduc",
       x: c.x, y: c.y, l: 1, h: 1,
@@ -556,6 +615,11 @@ const Monde = (function () {
     // pas son billet DU JOUR. Un billet par journee, pas par passage — une foire
     // qui refacture chaque aller-retour au hot-dog d'en face est un peage.
     if (c.payer) return !(p && p.billets && p.billets[c.payer] === p.jour);
+    // ⚠️ UNE VRAIE SERRURE (infiltration) : fermee tant qu'on n'a pas l'objet —
+    // une cle trouvee ou volee, dans `partie.objets` comme n'importe quel item
+    // (le skimmer). ⚠️ Elle ne se CONSOMME pas : une cle de mission ouvre sa
+    // porte tant qu'on la garde, elle ne se depense pas comme un billet.
+    if (c.objet) return !(p && p.objets && p.objets[c.objet] > 0);
     return false;
   }
 
@@ -622,6 +686,7 @@ const Monde = (function () {
     if ((e === B.joueur || e.conducteur === B.joueur) && typeof Hud !== 'undefined' && B.t - (B.buteMsgT || -999) >= 90) {
       B.buteMsgT = B.t;
       Hud.message(b.raison, 90);
+      if (typeof Son !== 'undefined') Son.SFX.erreur();
     }
     return true;
   }
@@ -673,6 +738,19 @@ const Monde = (function () {
               ctx.fillStyle = k % 2 ? '#d98324' : '#efe6d0';
               ctx.fillRect(px + k * 4, py + 8, 4, 2);
             }
+          } else if (b.decor === 'levante') {
+            // ⚠️ LA BARRIERE LEVANTE d'une guerite : un bras raye rouge et blanc en
+            // travers de la rue, et son socle au bout ouest. On lit « contrôle »,
+            // pas « chantier » — ce n'est pas la meme promesse.
+            if (tx === b.x) {
+              ctx.fillStyle = '#3a3d44'; ctx.fillRect(px + 1, py + 3, 5, 11);
+              ctx.fillStyle = '#e8b33c'; ctx.fillRect(px + 2, py + 4, 3, 2);
+            }
+            for (let k = 0; k < 4; k++) {
+              ctx.fillStyle = k % 2 ? '#efe6d0' : '#c0392b';
+              ctx.fillRect(px + k * 4, py + 7, 4, 3);
+            }
+            ctx.fillStyle = 'rgba(11,10,18,0.3)'; ctx.fillRect(px, py + 10, TT, 1);
           } else if (b.decor === 'cones') {
             for (const ox of [2, 9]) {
               ctx.fillStyle = '#d98324'; ctx.fillRect(px + ox + 1, py + 5, 3, 7); ctx.fillRect(px + ox, py + 11, 5, 2);
@@ -878,9 +956,17 @@ const Monde = (function () {
   //
   // Demande de Martin (17 sept. 2026) : « il faut une vraie porte de garage ou on
   // stationne pour vendre ou faire des missions. la porte ouvre seule des qu'on est
-  // devant en voiture ». La tuile `G` reste un MUR (le char se gare devant, il
-  // n'entre pas dans le toit) ; ce qui bouge, c'est le rideau, peint par-dessus le
-  // sol comme un battant. Qui le leve, c'est `Missions.majGarage`.
+  // devant en voiture ». La tuile `G` reste un MUR pour tout le monde ; ce qui bouge,
+  // c'est le rideau, peint par-dessus le sol comme un battant. Qui le leve, c'est
+  // `Missions.majGarage`.
+  //
+  // ⚠️ ET ON ENTRE (21 sept. 2026 : « des portes de garage qu'on peut vraiment
+  // entrer. pour permettre de semer la police en voiture »). Rideau leve, le char
+  // ADMIS — celui du joueur, et lui seul — passe le seuil : la rangee du rideau et
+  // les `baie` rangees de toit derriere cessent d'etre un mur POUR LUI
+  // (`seuilOuvert`, lu par `Vehicules.tuileInterdite`). Pour les autres, le toit
+  // reste un toit : l'auto-patrouille qui suit s'arrete devant, et la ligne de vue
+  // (`ligneLibre`) ne traverse pas plus un rideau qu'un mur.
 
   //: Combien d'images le rideau met a monter (ou a descendre), et combien il reste
   //: leve une fois le char parti. ⚠️ Assez lent pour qu'on le VOIE monter — c'est
@@ -901,6 +987,76 @@ const Monde = (function () {
 
   /** Le milieu de la place devant le rideau : ou l'on gare, ou l'on livre. */
   function baieDeLaPorteDeGarage(pg) { return { x: (pg.x + pg.l / 2) * TT, y: (pg.y + 2) * TT }; }
+
+  /** Ce pixel est-il SOUS LE LINTEAU : dans la rangee du rideau, ou dans les rangees
+      de toit derriere lui ? */
+  function dansLePassage(pg, x, y) {
+    return x >= pg.x * TT && x < (pg.x + pg.l) * TT && y >= (pg.y - pg.baie) * TT && y < (pg.y + 1) * TT;
+  }
+
+  /** Le rideau sous lequel ce char a le nez — ou le centre —, ou null. */
+  function rideauDe(v) {
+    const portes = portesDeGarage();
+    for (let i = 0; i < portes.length; i++) if (portes[i].baie && dansLePassage(portes[i], v.x, v.y)) return portes[i];
+    return null;
+  }
+
+  /** Ce char est-il A L'ABRI : sous le toit d'un garage, rideau pas encore leve ?
+      ⚠️ Personne ne le voit alors — ni l'helico, qui voit d'en haut a travers tout
+      sauf un toit, ni l'auto-patrouille garee devant le rideau, qui « sent » le
+      joueur a 60 px (`Police.commandes`). Sans ca, cinq etoiles ne tomberaient
+      jamais dans la cachette d'un bungalow. */
+  function abrite(v) {
+    const pg = v ? rideauDe(v) : null;
+    return !!pg && pg.dedans === v && pg.ouverture < 1;
+  }
+
+  /** Le rideau dont ce char est ASSEZ PRES pour y avoir le nez : dans ses colonnes,
+      du fond de la baie a deux tuiles devant. C'est ce que le dessin decoupe. */
+  function rideauPres(v) {
+    const portes = portesDeGarage();
+    for (let i = 0; i < portes.length; i++) {
+      const pg = portes[i];
+      if (!pg.baie || v.x < pg.x * TT || v.x >= (pg.x + pg.l) * TT) continue;
+      if (v.y >= (pg.y - pg.baie) * TT && v.y < (pg.y + 3) * TT) return pg;
+    }
+    return null;
+  }
+
+  /** ⚠️ **LA TUILE QUI S'OUVRE POUR UN SEUL CHAR.** Le passage d'un rideau n'est pas
+      un mur pour le char qu'il a ADMIS, tant que le rideau est leve — ou tant que ce
+      char est l'atelier en cours (`dedans`), sinon le rideau qui retombe le
+      pousserait dehors (`Vehicules.degager` lit la meme regle). Pour tout autre char,
+      et pour ce char-la une fois reparti, c'est un toit. */
+  function seuilOuvert(v, tx, ty) {
+    const portes = portesDeGarage();
+    for (let i = 0; i < portes.length; i++) {
+      const pg = portes[i];
+      if (pg.admis !== v || !pg.baie) continue;
+      if (tx >= pg.x && tx < pg.x + pg.l && ty <= pg.y && ty >= pg.y - pg.baie) return pg.ouverture >= 1 || pg.dedans === v;
+    }
+    return false;
+  }
+
+  /** La ligne, en pixels du monde, SOUS laquelle on voit ce qui passe le seuil : le
+      bas du rideau (le linteau, rideau leve). Au-dessus, le char est sous le toit —
+      ou derriere les lames. ⚠️ Le meme calcul que `dessinerPortesDeGarage`. */
+  function basDuRideau(pg) { return pg.y * TT + 3 + Math.round((TT - 4) * (1 - pg.ouverture)); }
+
+  /** Ce que le toit d'un garage CACHE, en pixels du monde : les colonnes du passage, du
+      fond de la baie jusqu'au bas du rideau. ⚠️ LA MEME ZONE pour le dessin du char
+      (`Entites.dessiner` la decoupe) et pour ses lampes (`Vehicules.allumerLesPhares` n'y
+      allume rien) : les lampes se composent par-dessus toute l'image (`Base.fin`), et un
+      char cache sous le toit y jetait ses phares et ses feux arriere A TRAVERS le toit
+      (retour de Martin, 22 sept. 2026 : « on devrait rien voir »). */
+  function sousLeToit(pg) {
+    return { x0: pg.x * TT, x1: (pg.x + pg.l) * TT, y0: (pg.y - pg.baie) * TT, y1: basDuRideau(pg) };
+  }
+  function cacheSousLeToit(pg, x, y) {
+    if (!pg) return false;
+    const z = sousLeToit(pg);
+    return x >= z.x0 && x < z.x1 && y >= z.y0 && y < z.y1;
+  }
 
   /** On est devant : le rideau monte (ou reste leve) pour `RIDEAU_TIENT` images. */
   function leverLaPorteDeGarage(pg) { pg.tient = RIDEAU_TIENT; }
@@ -950,6 +1106,96 @@ const Monde = (function () {
       B.stats.rects += rects;
     }
   }
+
+  // --- La barriere coulissante : le lot du poste ne s'ouvre qu'aux siens ------------------
+  //
+  // Demande de Martin (23 sept. 2026) : « le poste de police doit etre completement
+  // cloture barbele pour ne pas qu'on vole les autos. cree une nouvelle cloture
+  // coulissante ». La tuile `Z` est du BARBELE (solidite 5) tant qu'elle n'est pas
+  // grande ouverte : ni a pied, ni en char, et un lourd ne la defonce pas. Ce qui
+  // l'ouvre, c'est une auto-patrouille CONDUITE (`cle`) qui arrive devant — par la
+  // police, ou par le joueur qui en a vole une ailleurs. Garee, elle n'a personne au
+  // volant : c'est tout le point, on ne sort pas celles du lot.
+  //
+  // ⚠️ ELLE NE SE REFERME JAMAIS SUR QUELQU'UN. Tant qu'un char ou un pieton touche
+  // sa rangee, elle reste ouverte — sinon la tuile redeviendrait solide sous ses
+  // roues, et `Vehicules.degager` le jetterait d'un cote ou de l'autre.
+
+  //: Combien d'images le panneau met a glisser, combien il reste ouvert une fois
+  //: la cle partie, et jusqu'ou la cle se sent : en travers, la largeur de la
+  //: barriere et une demi-tuile ; en long, deux tuiles dedans (l'allee) et deux
+  //: dehors (l'abord et le trottoir). ⚠️ PAS la chaussee : une patrouille qui passe
+  //: dans la rue n'ouvre pas le lot a qui attend devant.
+  const COULISSE_GLISSE = 50, COULISSE_TIENT = 60, COULISSE_DEDANS = 2, COULISSE_DEHORS = 2;
+
+  function coulissantesDe(def) {
+    const lot = def.stationnement_du_poste;
+    if (!lot || !lot.barriere) return [];
+    const b = lot.barriere;
+    return [{ x: b.x, y: b.y, l: b.l, cle: lot.vehicule, ouverture: 0, tient: 0, libre: false }];
+  }
+  function barrieresCoulissantes() { return (carte && carte.coulissantes) || []; }
+
+  /** Ce char a-t-il la CLE de cette barriere : le bon modele, quelqu'un au volant,
+      et le nez dans la zone qui la commande ? */
+  function aLaCle(b, v) {
+    if (v.type !== 'vehicule' || v.slug !== b.cle || !v.conducteur || v.etat === 'epave') return false;
+    return v.x >= (b.x - 0.5) * TT && v.x < (b.x + b.l + 0.5) * TT &&
+           v.y >= (b.y - COULISSE_DEDANS) * TT && v.y < (b.y + 1 + COULISSE_DEHORS) * TT;
+  }
+
+  /** Quelqu'un (char, pieton, joueur) touche-t-il la rangee de la barriere ? */
+  function quelquUnDessous(b) {
+    const x0 = b.x * TT, x1 = (b.x + b.l) * TT, y0 = b.y * TT, y1 = (b.y + 1) * TT;
+    return B.entites.some(function (e) {
+      if (e.type !== 'vehicule' && e.type !== 'pieton' && e.type !== 'joueur') return false;
+      if (e.dansVehicule) return false;                 // son char compte pour lui
+      const r = e.type === 'vehicule' ? e.def.longueur / 2 : (e.r || 6);
+      return e.x + r > x0 && e.x - r < x1 && e.y + r > y0 && e.y - r < y1;
+    });
+  }
+
+  /** La tuile de la barriere : barbele, ou libre. ⚠️ Libre seulement GRANDE ouverte —
+      un char ne se faufile pas dans un panneau a moitie tire. */
+  function poserLaCoulissante(b, libre) {
+    b.libre = libre;
+    for (let i = 0; i < b.l; i++) carte.solide[b.y * carte.w + b.x + i] = libre ? 0 : 5;
+  }
+
+  /** Rend vrai si un panneau vient de se mettre en marche — c'est la qu'il grince. */
+  function majBarrieresCoulissantes() {
+    let part = false;
+    for (const b of barrieresCoulissantes()) {
+      if (B.entites.some(function (v) { return aLaCle(b, v); })) b.tient = COULISSE_TIENT;
+      const voulu = b.tient > 0 || (b.ouverture > 0 && quelquUnDessous(b)) ? 1 : 0;
+      if (b.tient > 0) b.tient--;
+      if (b.ouverture !== voulu) {
+        if (b.ouverture === 1 - voulu && Entites.visibleAEcran((b.x + b.l / 2) * TT, b.y * TT, TT * 2)) part = true;
+        b.ouverture = voulu ? Math.min(1, b.ouverture + 1 / COULISSE_GLISSE)
+                            : Math.max(0, b.ouverture - 1 / COULISSE_GLISSE);
+      }
+      if ((b.ouverture >= 1) !== b.libre) poserLaCoulissante(b, b.ouverture >= 1);
+    }
+    return part;
+  }
+
+  /** Le panneau, par-dessus le rail : il glisse vers l'EST et rentre derriere son
+      poteau — on ne voit que ce qui reste en travers de l'allee. */
+  function dessinerBarrieresCoulissantes(ctx, cam) {
+    const cx = Math.round(cam.x), cy = Math.round(cam.y);
+    for (const b of barrieresCoulissantes()) {
+      const x = b.x * TT - cx, y = b.y * TT - cy, l = b.l * TT;
+      if (x + l < 0 || x > VW || y + TT < 0 || y > VH || b.ouverture >= 1) continue;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x, y - 2, l, TT + 2); ctx.clip();
+      TUILES.Z.panneau(ctx, x + Math.round(l * b.ouverture), y, l);
+      ctx.restore();
+      B.stats.rects += 12;
+    }
+  }
+
+  /** Cette tuile est-elle DEVANT une porte (le pas, l'axe a trois tuiles, ses flancs) ? */
+  function devantDUnePorte(tx, ty) { return !!carte && carte.devants.has(tx + ',' + ty); }
 
   /** Une porte a cette tuile ? (index : on interroge a chaque image) */
   function porteA(tx, ty) {
@@ -1063,11 +1309,22 @@ const Monde = (function () {
     return !!(p && p.rampe);
   }
 
-  /** La porte collee a la tuile ou se tient `e` : au nord dehors (une facade),
-      au sud dedans (la sortie est sur le mur du bas). Jamais les deux. */
+  /** La porte collee a la tuile ou se tient `e` : au nord dehors (une facade), au
+      sud dedans (la sortie est sur le mur du bas). Jamais les deux.
+
+      ⚠️ DEHORS, IL FAUT LA REGARDER : le dos tourne a la porte, il n'y en a pas, et
+      l'invite « ENTRER » comme ACTION passent par ici. ⚠️ DEDANS, NON — c'est
+      l'exception de la sortie : en entrant on regarde vers le fond de la piece, la
+      porte est dans le dos, et c'est le jeu qui nous y a mis. Sortir reste le
+      geste vif du bloquant du 13 sept. 2026 (« chez Ti-Paul, il est impossible de
+      sortir »), pas un demi-tour a deviner. */
   function porteDevant(e) {
     const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
-    return porteA(tx, ty - 1) || porteA(tx, ty + 1);
+    for (const dy of [-1, 1]) {
+      const porte = porteA(tx, ty + dy);
+      if (porte && (B.interieur || faceA(e, (tx + 0.5) * TT, (ty + dy + 0.5) * TT))) return porte;
+    }
+    return null;
   }
 
   /** La zone nommee qui contient ce point (la derniere gagne : la plus precise). */
@@ -1157,6 +1414,122 @@ const Monde = (function () {
         if (deja && deja.g <= g) continue;
         vu.set(cle, { g: g, parent: c.y * w + c.x });
         ouvert.push({ x: nx, y: ny, g: g, f: g + Math.abs(gx - nx) + Math.abs(gy - ny) });
+      }
+    }
+    return null;
+  }
+
+  // --- Chemins de char, par la chaussee (courses) ---------------------------------------
+  //: Un second A*, reserve aux CHARS : la chaussee seule (`estRoute`), pas la
+  //: grille du pieton — sinon le trace d'une course couperait tout droit par
+  //: les parcs et les cours (Martin, 21 sept. 2026 : « des fleches lumineuses
+  //: sur la route qui trace le chemin de la course »). Il sert au depart d'une
+  //: course, une fois par troncon de circuit — jamais a chaque image.
+
+  //: ⚠️ Un troncon traverse un quartier entier (des milliers de tuiles de
+  //: chaussee) : le tas ouvert est un vrai tas, pas la file lineaire de l'A*
+  //: des pietons, dont le cout grimperait au carre du nombre de noeuds.
+  const NOEUDS_MAX_ROUTE = 30000;
+  //: Ce qu'un pas coute EN PLUS : a contre-sens de la voie (on roule a droite,
+  //: et le trace aussi), et quand on tourne (sans ca, une rue de six tuiles se
+  //: descend en escalier d'une voie a l'autre, et les fleches regardent de cote).
+  const COUT_CONTRE_SENS = 3, COUT_VIRAGE = 1;
+  const CONTRE_SENS = { '1,0': '<', '-1,0': '>', '0,1': '^', '0,-1': 'v' };
+
+  /** Une vraie rue : de la chaussee qui a une voie, et un sens. ⚠️ La cour de
+      la fourriere et celle de l'usine sont de la chaussee sans voie (`.`), et
+      elles ne touchent aucune rue — un circuit qui partirait de la ne
+      sortirait jamais de la cour. */
+  function estVoie(tx, ty) { return estRoute(tx, ty) && '<>^v'.indexOf(fleche(tx, ty)) >= 0; }
+
+  /** La tuile qui passe `garde` la plus proche de (tx, ty), en spirale,
+      jusqu'a `rayon` tuiles — un depart se pose devant une porte, jamais sur
+      la route elle-meme. */
+  function procheRoute(tx, ty, rayon, garde) {
+    const ok = garde || estRoute;
+    if (ok(tx, ty)) return { x: tx, y: ty };
+    for (let r = 1; r <= rayon; r++) {
+      for (let dx = -r; dx <= r; dx++) {
+        for (let dy = -r; dy <= r; dy++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          if (ok(tx + dx, ty + dy)) return { x: tx + dx, y: ty + dy };
+        }
+      }
+    }
+    return null;
+  }
+
+  /** Le centre (en pixels) de la tuile de RUE (une voie, un sens) la plus
+      proche de (x, y), ou null : l'ancre d'un circuit de course. */
+  function routeLaPlusProche(x, y, rayon) {
+    const t = procheRoute(Math.floor(x / TT), Math.floor(y / TT), rayon, estVoie);
+    return t ? { x: t.x * TT + 8, y: t.y * TT + 8 } : null;
+  }
+
+  /** Un tas binaire de noeuds, trie sur `f`. */
+  function tasPousser(tas, n) {
+    tas.push(n);
+    let i = tas.length - 1;
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (tas[p].f <= tas[i].f) break;
+      const t = tas[p]; tas[p] = tas[i]; tas[i] = t; i = p;
+    }
+  }
+  function tasTirer(tas) {
+    const haut = tas[0], bas = tas.pop();
+    if (tas.length) {
+      tas[0] = bas;
+      let i = 0;
+      for (;;) {
+        const g = 2 * i + 1, d = g + 1;
+        let m = i;
+        if (g < tas.length && tas[g].f < tas[m].f) m = g;
+        if (d < tas.length && tas[d].f < tas[m].f) m = d;
+        if (m === i) break;
+        const t = tas[m]; tas[m] = tas[i]; tas[i] = t; i = m;
+      }
+    }
+    return haut;
+  }
+
+  /** Un chemin de char, en tuiles de chaussee seulement : des centres de
+      tuiles en pixels, du premier pas jusqu'a la tuile de route la plus
+      proche de l'arrivee — ou null si l'une des deux n'a pas de route a
+      portee, ou si aucune chaussee ne les relie. */
+  function cheminRoute(x0, y0, x1, y1) {
+    if (!carte) return null;
+    const depart = procheRoute(Math.floor(x0 / TT), Math.floor(y0 / TT), 10);
+    const arrivee = procheRoute(Math.floor(x1 / TT), Math.floor(y1 / TT), 10);
+    if (!depart || !arrivee) return null;
+    if (depart.x === arrivee.x && depart.y === arrivee.y) return [];
+    const w = carte.w, h = carte.h, cleDepart = depart.y * w + depart.x;
+    const tas = [];
+    tasPousser(tas, { x: depart.x, y: depart.y, g: 0, f: Math.abs(arrivee.x - depart.x) + Math.abs(arrivee.y - depart.y), dx: 0, dy: 0 });
+    const vu = new Map();
+    vu.set(cleDepart, { g: 0, parent: -1 });
+    let noeuds = 0;
+    while (tas.length) {
+      const c = tasTirer(tas);
+      if (c.g > vu.get(c.y * w + c.x).g) continue;   // une entree perimee du tas
+      if (c.x === arrivee.x && c.y === arrivee.y) {
+        const out = [];
+        for (let cle = arrivee.y * w + arrivee.x; cle !== cleDepart; cle = vu.get(cle).parent) {
+          out.push({ x: (cle % w) * TT + 8, y: Math.floor(cle / w) * TT + 8 });
+        }
+        return out.reverse();
+      }
+      if (++noeuds > NOEUDS_MAX_ROUTE) return null;
+      for (const d of CROIX) {
+        const nx = c.x + d[0], ny = c.y + d[1];
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h || !estRoute(nx, ny)) continue;
+        let g = c.g + 1;
+        if (fleche(nx, ny) === CONTRE_SENS[d[0] + ',' + d[1]]) g += COUT_CONTRE_SENS;
+        if ((c.dx || c.dy) && (c.dx !== d[0] || c.dy !== d[1])) g += COUT_VIRAGE;
+        const cle = ny * w + nx, deja = vu.get(cle);
+        if (deja && deja.g <= g) continue;
+        vu.set(cle, { g: g, parent: c.y * w + c.x });
+        tasPousser(tas, { x: nx, y: ny, g: g, f: g + Math.abs(arrivee.x - nx) + Math.abs(arrivee.y - ny), dx: d[0], dy: d[1] });
       }
     }
     return null;
@@ -1284,7 +1657,12 @@ const Monde = (function () {
   }
 
   /** Une cloture a cette tuile ? (grillage, palissade ou barbele) */
-  function estCloture(tx, ty) { const s = solidite(tx, ty); return s === 4 || s === 5; }
+  function estCloture(tx, ty) {
+    const s = solidite(tx, ty);
+    // ⚠️ Une barriere coulissante OUVERTE reste une cloture pour le dessin : sinon le
+    // poteau d'a cote, recuit pendant qu'elle est ouverte, perdrait son bras.
+    return s === 4 || s === 5 || glyphe(tx, ty) === 'Z';
+  }
 
   /** La variante d'une cloture : le masque des cotes ou elle CONTINUE — 1 nord,
       2 est, 4 sud, 8 ouest.
@@ -1524,6 +1902,8 @@ const Monde = (function () {
     }
     // Le chantier par-dessus tout : ses planches et son panneau pendent AU MUR.
     Chantiers.peindre(ctx, mx, my);
+    // L'aeroport : la piste, ses avions, et le pont qui s'arrete au-dessus de l'eau.
+    Aeroport.peindre(ctx, mx, my);
   }
 
   function dessinerSol(ctx, cam) {
@@ -1576,18 +1956,126 @@ const Monde = (function () {
     return '#6b5a3a';
   }
 
+  //: ⚠️ CE QUE LA CARTE NE MONTRE PAS ENCORE : l'ile de l'aeroport, jusqu'au pont
+  //: fini (demande de Martin). Python donne le rectangle, la mission qui le leve et
+  //: la hauteur de la carte connue (`def.aeroport.masque`) ; ici on ne fait que lire
+  //: la partie. La couleur de l'eau, parce que c'est ce qu'on croit y voir.
+  const EAU_MINI = '#24506f';
+  function masqueDeLaCarte(laquelle) {
+    const k = laquelle || carte;
+    const m = k && k.def && k.def.aeroport && k.def.aeroport.masque;
+    if (!m) return null;
+    const p = B.partie;
+    return p && p.missionsFaites && p.missionsFaites[m.apres] ? null : m;
+  }
+  /** Cette tuile est-elle cachee sur la carte ? */
+  function masquee(tx, ty, laquelle) {
+    const m = masqueDeLaCarte(laquelle);
+    return !!m && tx >= m.x && tx < m.x + m.l && ty >= m.y && ty < m.y + m.h;
+  }
+  /** La couleur d'une tuile sur la carte : celle de son sol, ou l'eau si elle est cachee. */
+  function couleurMiniA(tx, ty, laquelle) {
+    const k = laquelle || carte;
+    return masquee(tx, ty, k) ? EAU_MINI : couleurMini(k.sol[ty][tx]);
+  }
+  /** La hauteur de carte que la grande carte montre : celle qu'on CONNAIT tant que
+      l'ile est cachee (sous elle, il n'y a que de l'eau a montrer, et la ville garde
+      son echelle) — sauf si le joueur est lui-meme plus bas : on ne le perd pas. */
+  function hauteurConnue(laquelle, yJoueur) {
+    const k = laquelle || carte;
+    const m = masqueDeLaCarte(k);
+    if (!m || !m.carte_h || (yJoueur !== undefined && yJoueur >= m.carte_h * TT)) return k.h;
+    return Math.min(k.h, m.carte_h);
+  }
+
+  //: ⚠️ LE LARGE REFUSÉ (demande de Martin, 22 sept. 2026 : « même en bateau on ne
+  //: puisse pas aller à l'île de l'aéroport avant que le pont soit réparé, une barrière
+  //: invisible nous fait tourner de bord avant qu'on puisse voir l'île »). Tant que
+  //: l'île est cachée sur la carte, elle l'est aussi à l'écran : le rectangle du masque,
+  //: élargi de ce que la caméra montre AU PLUS LOIN de celui qu'elle suit — la demi-vue,
+  //: son avance au volant (`AVANCE_CAMERA`) et une tuile pour la secousse —, ne se
+  //: franchit pas. Python dit quoi cacher, jusqu'à quand, et ce que le HUD dit alors
+  //: (`aeroport.MASQUE`) ; la portée de la vue, elle, est une affaire de caméra.
+  const LARGE_MARGE_PX = TT;
+  //: ⚠️ LA LISIÈRE : on ne franchit jamais la ligne de plus d'une image de char lancé,
+  //: et c'est ce qu'on rend. Plus loin dedans, c'est qu'on y était déjà — une vieille
+  //: sauvegarde prise sur l'île — et l'on circule, comme derrière une barrière.
+  const LARGE_LISIERE_PX = TT;
+  /** Le large refusé, en px ({ x0, y0, x1, y1 }), ou null : le pont est fini, ou l'on
+      est dans une pièce. */
+  function largeRefuse(laquelle) {
+    const m = masqueDeLaCarte(laquelle);
+    if (!m) return null;
+    const px = VW / 2 + AVANCE_CAMERA + LARGE_MARGE_PX, py = VH / 2 + AVANCE_CAMERA + LARGE_MARGE_PX;
+    return { x0: m.x * TT - px, y0: m.y * TT - py, x1: (m.x + m.l) * TT + px, y1: (m.y + m.h) * TT + py };
+  }
+  function dansLeLarge(z, x, y) { return x >= z.x0 && x < z.x1 && y >= z.y0 && y < z.y1; }
+
+  /** Par où s'éloigner du large refusé : pour un point DEHORS, à moins de `marge` px
+      de lui, la direction unitaire qui en sort (du point du large le plus proche vers
+      lui). Null ailleurs, et dedans. */
+  function sortieDuLarge(x, y, marge) {
+    const z = largeRefuse();
+    if (!z || dansLeLarge(z, x, y)) return null;
+    const dx = x - borner(x, z.x0, z.x1), dy = y - borner(y, z.y0, z.y1), d = Math.hypot(dx, dy);
+    return d > 0 && d <= marge ? { x: dx / d, y: dy / d } : null;
+  }
+
+  /** ⚠️ LA LIGNE. `e` (le joueur, ou le char qu'il conduit) vient de bouger : s'il est
+      entré dans le large refusé — de moins que la lisière —, il ressort par le bord le
+      plus proche, sur un seul axe : comme contre un mur, on glisse le long. Rend la
+      direction de sortie ({ x, y }) quand la ligne a mordu, sinon null. ⚠️ Sans
+      mémoire du pas d'avant : un char qui pivote sur son arrière (`pivoterSurLArriere`)
+      ou qu'un autre pousse y entre aussi, sans passer par `avancer`. */
+  function retenirAuLarge(e) {
+    const z = largeRefuse();
+    if (!z || !dansLeLarge(z, e.x, e.y)) return null;
+    const g = e.x - z.x0, d = z.x1 - e.x, h = e.y - z.y0, b = z.y1 - e.y, p = Math.min(g, d, h, b);
+    if (p > LARGE_LISIERE_PX) return null;
+    if (p === g) { e.x = z.x0 - 0.01; return { x: -1, y: 0 }; }
+    if (p === d) { e.x = z.x1; return { x: 1, y: 0 }; }
+    if (p === h) { e.y = z.y0 - 0.01; return { x: 0, y: -1 }; }
+    e.y = z.y1;
+    return { x: 0, y: 1 };
+  }
+
+  /** Le HUD dit pourquoi, une fois par demi-tour : `sorte` est `coque` ou `nage`. */
+  function avertirDuLarge(sorte) {
+    const m = masqueDeLaCarte();
+    if (!m || !m.raisons || typeof Hud === 'undefined' || B.t - (B.largeMsgT || -999) < 120) return;
+    B.largeMsgT = B.t;
+    Hud.message(m.raisons[sorte], 120);
+  }
+
+  /** Cette vue (le coin nord-ouest de la caméra, en px) montre-t-elle une tuile cachée ?
+      Pour le mode photo, qui promène la caméra loin du joueur : il ne va pas où l'œil ne
+      va pas. */
+  function vueSurLeMasque(cx, cy) {
+    const m = masqueDeLaCarte();
+    if (!m) return false;
+    return cx + VW > m.x * TT && cx < (m.x + m.l) * TT && cy + VH > m.y * TT && cy < (m.y + m.h) * TT;
+  }
+
   /** La ville entiere, une tuile = un pixel. Cuite une fois : 18 000 rectangles
-      au chargement valent mieux que 64x48 relus a chaque image. */
+      au chargement valent mieux que 64x48 relus a chaque image.
+      ⚠️ Recuite quand le masque tombe (le pont de l'aeroport fini) : la cle dit
+      avec quel masque elle a ete peinte. */
   function miniCarte(laquelle) {
     const k = laquelle || carte;                  // la ville, meme quand on est dedans
-    if (k.mini) return k.mini;
+    const cle = masqueDeLaCarte(k) ? 'masquee' : 'entiere';
+    if (k.mini && k.miniCle === cle) return k.mini;
     const c = Base.nouveauCanvas(k.w, k.h);
     const ctx = c.getContext('2d');
+    // ⚠️ Le masque se lit UNE fois, pas par tuile : 127 000 tuiles au premier dessin
+    // de la mini-carte, et la premiere image du jeu les attend.
+    const m = masqueDeLaCarte(k);
     for (let y = 0; y < k.h; y++) {
       const ligne = k.sol[y];
-      let debut = 0, couleur = couleurMini(ligne[0]);
+      const x0 = m && y >= m.y && y < m.y + m.h ? m.x : k.w, x1 = m ? m.x + m.l : 0;
+      const couleurEn = function (x) { return x >= x0 && x < x1 ? EAU_MINI : couleurMini(ligne[x]); };
+      let debut = 0, couleur = couleurEn(0);
       for (let x = 1; x <= k.w; x++) {
-        const suivante = x < k.w ? couleurMini(ligne[x]) : null;
+        const suivante = x < k.w ? couleurEn(x) : null;
         if (suivante !== couleur) {
           ctx.fillStyle = couleur;
           ctx.fillRect(debut, y, x - debut, 1);
@@ -1596,6 +2084,7 @@ const Monde = (function () {
       }
     }
     k.mini = c;
+    k.miniCle = cle;
     return c;
   }
 
@@ -1648,13 +2137,60 @@ const Monde = (function () {
     B.cam.x = c.x; B.cam.y = c.y;
   }
 
+  /** Les bornes que `B.cam.{x,y}` ne depasse jamais — le meme calcul que
+      `cibleCamera`, exposees pour le mode photo (M14) : la camera s'y
+      detache du joueur, mais reste dans la ville. */
+  function limitesCamera() {
+    return {
+      xMin: carte.pxW < VW ? (carte.pxW - VW) / 2 : 0, xMax: carte.pxW < VW ? (carte.pxW - VW) / 2 : carte.pxW - VW,
+      yMin: carte.pxH < VH ? (carte.pxH - VH) / 2 : 0, yMax: carte.pxH < VH ? (carte.pxH - VH) / 2 : carte.pxH - VH,
+    };
+  }
+
+  //: De combien la camera regarde DEVANT le char lance (px, a pleine vitesse). ⚠️ Le
+  //: large refuse s'en sert (`largeRefuse`) : c'est ce qu'elle montre au plus loin du
+  //: joueur. A pied, `vx × 14` reste en dessous — la nage (1 px/image) fait 14, la
+  //: roulade (3,4) 47,6.
+  const AVANCE_CAMERA = 48;
+
+  //: La coop locale (essai) : au-dela de cette distance (px) entre les deux
+  //: joueurs, on ramene le deuxieme vers le premier — une LAISSE, pas un
+  //: zoom arriere. ⚠️ Le zoom arriere a ete essaye (Martin, 22 sept. 2026) et
+  //: retire : la camera zoomait, mais le sol et les entites ne se dessinent
+  //: QUE dans la fenetre normale (480×270 — `Monde.dessinerSol`,
+  //: `Entites.visibleAEcran` et consorts bornent tout sur `VW`/`VH` en dur,
+  //: pas sur ce que la camera montre) — zoomer aurait exige de reecrire le
+  //: culls dans plusieurs modules pour un essai qui reste RISQUE. La laisse
+  //: est le choix simple : ⚠️ assez court pour tenir dans 480×270 avec de la
+  //: marge (le decalage du HUD, le temps que la camera rattrape le milieu),
+  //: a revoir au prochain essai si ça serre trop.
+  const LAISSE_COOP = 130;
+
+  /** La camera de la coop locale (M14, essai) : le MILIEU des deux joueurs.
+      `LAISSE_COOP` les empeche de trop s'eloigner — sans elle, l'un des deux
+      sortirait de l'ecran. */
+  function majCameraCoop(j, e2) {
+    const dx = e2.x - j.x, dy = e2.y - j.y, dist = Math.hypot(dx, dy);
+    if (dist > LAISSE_COOP) {
+      const t = LAISSE_COOP / dist;
+      e2.x = j.x + dx * t;
+      e2.y = j.y + dy * t;
+    }
+    const mx = (j.x + e2.x) / 2, my = (j.y + e2.y) / 2;
+    const cible = cibleCamera(mx, my);
+    B.cam.x += (cible.x - B.cam.x) * 0.12;
+    B.cam.y += (cible.y - B.cam.y) * 0.12;
+    if (B.cam.secousse > 0) B.cam.secousse *= 0.9;
+  }
+
   function majCamera() {
     const j = B.joueur;
     if (!j) return;
+    if (B.coop && B.coop.entite && B.coop.entite.vivant) { majCameraCoop(j, B.coop.entite); return; }
     let avanceX = 0, avanceY = 0;
     if (j.dansVehicule) {
       const v = j.dansVehicule, f = Math.min(1, Math.abs(v.vitesse || 0) / 4);
-      avanceX = Math.cos(v.angle) * 48 * f; avanceY = Math.sin(v.angle) * 48 * f;
+      avanceX = Math.cos(v.angle) * AVANCE_CAMERA * f; avanceY = Math.sin(v.angle) * AVANCE_CAMERA * f;
     } else { avanceX = j.vx * 14; avanceY = j.vy * 14; }
     // ⚠️ Assis dans un manège qui MONTE (la montagne russe), on regarde le chariot,
     // pas le sol sous lui : cent cinquante pixels, c'est plus de la moitié de l'écran.
@@ -1699,6 +2235,20 @@ const Monde = (function () {
       ce que le lit doit savoir, lui qui est toujours dans une piece. */
   function estNuit(heure) { return ambiance(heure).alpha > 0.4; }
 
+  /** Le moment de la journee, pour l'icone du HUD : 'nuit', 'aube', 'jour' ou
+      'crepuscule'. ⚠️ Lu sur la teinte du ciel, pas sur des heures a part : la
+      lune apparait quand `estNuit` le dit (les barrieres, les fenetres, la
+      police suivent la meme regle), et l'aube et le crepuscule sont les heures
+      ou la ville se teinte d'orange. ⚠️ C'est l'heure DEHORS, meme dans une
+      piece : `ambiance(h)` avec une heure ne regarde pas les murs. */
+  function periode(heure) {
+    const h = heure === undefined ? (B.partie ? B.partie.heure : 0.5) : heure;
+    const a = ambiance(h).alpha;
+    if (a > 0.4) return 'nuit';
+    if (a > 0.1) return h < 0.5 ? 'aube' : 'crepuscule';
+    return 'jour';
+  }
+
   /** Le facteur de foule d'un quartier a cette heure-ci : (nuit, matin, soir).
 
       ⚠️ C'est ce qui empeche les cinq districts d'etre le meme district a cinq
@@ -1721,6 +2271,101 @@ const Monde = (function () {
     return (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
   }
 
+  //: **LA NUIT A SES HABITUDES : LES FENETRES S'ETEIGNENT UNE A UNE.** Chacune a
+  //: son coucher et son lever (`nuit.FENETRES`), lus a l'empreinte de sa tuile —
+  //: jamais au de du jeu. Poses une fois, au chargement de la carte.
+  function heuresDeLaFenetre(l) {
+    const f = B.defs && B.defs.nuit && B.defs.nuit.fenetres;
+    if (!f) return;
+    const h = hash2(l.tx, l.ty);
+    l.coucher = (f.coucher[0] + (h % 1000) / 1000 * (f.coucher[1] - f.coucher[0])) % 1;
+    l.lever = f.lever[0] + ((h >>> 10) % 1000) / 1000 * (f.lever[1] - f.lever[0]);
+  }
+
+  /** La fenetre dort-elle a cette heure ? Entre son coucher et son lever — qui
+      peut passer minuit. Une fenetre sans heures (pas de fiche) ne dort jamais. */
+  function fenetreEteinte(l, heure) {
+    if (l.coucher === undefined) return false;
+    const h = heure === undefined ? (B.partie ? B.partie.heure : 0.5) : heure;
+    return l.coucher < l.lever ? (h >= l.coucher && h < l.lever) : (h >= l.coucher || h < l.lever);
+  }
+
+  /** Le lampadaire qui grésille est-il noir a cette image ? Par SALVES
+      (`nuit.LAMPADAIRES`) : la plupart du temps il tient, puis il hoquette. A
+      l'empreinte de la lampe et de `B.t` — un decor ne tire pas de de. */
+  function gresilleEteint(l, t) {
+    const g = B.defs && B.defs.nuit && B.defs.nuit.lampadaires;
+    if (!g || !l.gresille) return false;
+    const temps = t === undefined ? B.t : t;
+    const salve = hash2(Math.floor(temps / g.salve_images), l.tx * 31 + l.ty) % 1000 < g.part_des_salves * 1000;
+    if (!salve) return false;
+    return hash2(Math.floor(temps / g.clignote_images), l.tx + l.ty * 17) % 1000 < g.part_eteinte * 1000;
+  }
+
+  // --- Les rues mouillees (la nuit a ses habitudes : l'arroseuse) ----------------------
+
+  //: « tx,ty » -> l'instant (`B.t`) ou l'arroseuse y est passee.
+  const mouillees = new Map();
+
+  function dureeMouillee() {
+    const a = B.defs && B.defs.nuit && B.defs.nuit.arroseuse;
+    return a ? Math.round(a.mouille_minutes / (24 * 60) * B.defs.economie.jour_secondes * 60) : 0;
+  }
+
+  /** L'arroseuse passe : sa tuile et ses voisines sont mouillees — la chaussee
+      seulement, le trottoir ne compte pas pour un char. */
+  function mouiller(tx, ty, largeur) {
+    const l = largeur || 0;
+    for (let dy = -l; dy <= l; dy++) for (let dx = -l; dx <= l; dx++) {
+      if (estRoute(tx + dx, ty + dy)) mouillees.set((tx + dx) + ',' + (ty + dy), B.t);
+    }
+  }
+
+  /** ⚠️ Un instant « dans le futur » (une partie recommencee remet `B.t` a zero)
+      ne mouille rien : la rue d'une autre partie est seche. */
+  function mouillee(tx, ty) {
+    const t = mouillees.get(tx + ',' + ty);
+    return t !== undefined && B.t >= t && B.t - t < dureeMouillee();
+  }
+
+  /** Ce que la rue mouillee laisse de l'adherence d'un char, et de son freinage. */
+  function adherenceMouillee(v) {
+    const a = B.defs.nuit && B.defs.nuit.arroseuse;
+    return a && mouillee(Math.floor(v.x / TT), Math.floor(v.y / TT)) ? a.adherence : 1;
+  }
+  function freinMouille(v) {
+    const a = B.defs.nuit && B.defs.nuit.arroseuse;
+    return a && mouillee(Math.floor(v.x / TT), Math.floor(v.y / TT)) ? a.frein : 1;
+  }
+
+  function oublierLesRuesMouillees() { mouillees.clear(); }
+
+  /** L'asphalte mouille : plus sombre, et un reflet. Une couche PEINTE par-dessus le
+      sol, qui ne touche a rien. Ce qui a seche s'oublie en passant. */
+  function dessinerMouille(ctx, cam) {
+    if (!mouillees.size) return;
+    const duree = dureeMouillee(), cx = Math.round(cam.x), cy = Math.round(cam.y);
+    for (const [cle, t] of mouillees) {
+      if (B.t < t || B.t - t >= duree) { mouillees.delete(cle); continue; }
+      const i = cle.indexOf(','), tx = +cle.slice(0, i), ty = +cle.slice(i + 1);
+      const x = tx * TT - cx, y = ty * TT - cy;
+      if (x < -TT || y < -TT || x > VW || y > VH) continue;
+      // Elle seche : le dernier quart de sa duree, la tache pâlit.
+      const reste = Math.min(1, (duree - (B.t - t)) / (duree * 0.25));
+      // ⚠️ Ce qui dit « mouille », c'est le REFLET, pas le sombre : assombrir un
+      // asphalte deja noir ne se voyait pas (capture). Un voile bleute, et des
+      // miroitements en tirets, a l'empreinte de la tuile.
+      ctx.fillStyle = 'rgba(30,52,86,' + (0.26 * reste).toFixed(3) + ')';
+      ctx.fillRect(x, y, TT, TT);
+      const h = hash2(tx, ty);
+      ctx.fillStyle = 'rgba(205,225,255,' + (0.38 * reste).toFixed(3) + ')';
+      ctx.fillRect(x + (h % 9), y + ((h >>> 4) % 13), 6, 1);
+      ctx.fillRect(x + ((h >>> 8) % 11), y + ((h >>> 12) % 13) + 1, 4, 1);
+      ctx.fillRect(x + ((h >>> 16) % 13), y + ((h >>> 20) % 14), 2, 1);
+      B.stats.rects += 4;
+    }
+  }
+
   function lampesVisibles(cam) {
     // Les lampadaires n'eclairent qu'a la brune : en plein jour, rien.
     if (!carte || ambiance().alpha < 0.2) return [];
@@ -1730,6 +2375,8 @@ const Monde = (function () {
       if (l.eteinte) continue;             // son poteau est a terre
       if (l.panne) continue;               // une rue pauvre : personne ne change l'ampoule
       if (l.demolie) continue;             // sa fenetre est tombee avec le batiment (chantier)
+      if (fenetreEteinte(l)) continue;     // on est couche, chez nous (la nuit a ses habitudes)
+      if (gresilleEteint(l)) continue;     // l'ampoule hoquette
       if (l.x < cx - l.r || l.x > cx + VW + l.r || l.y < cy - l.r || l.y > cy + VH + l.r) continue;
       out.push({ x: l.x - cx, y: l.y - cy, r: l.r, c: l.c });
       if (out.length >= 25) break;
@@ -1743,13 +2390,17 @@ const Monde = (function () {
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
     barrieres, barriereFermee, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
     brisDAqueduc, dansLaFoire, resquille,
-    feuxClignotent, arterePasse, nidDePoule, standingA, usageA, couleurDeZonage, calqueDeZonage, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
+    feuxClignotent, arterePasse, nidDePoule, plaqueDAcier, standingA, usageA, couleurDeZonage, calqueDeZonage, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE,
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
+    dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau, sousLeToit, cacheSousLeToit, abrite,
+    barrieresCoulissantes, majBarrieresCoulissantes, dessinerBarrieresCoulissantes, COULISSE_GLISSE, COULISSE_TIENT,
 estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
-    ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
-    dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
-    miniCarte, couleurMini, chemin, demanderChemin, majChemins,
+    ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
+    dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, estNuit, periode, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
+    miniCarte, couleurMini, couleurMiniA, masqueDeLaCarte, masquee, hauteurConnue, chemin, demanderChemin, majChemins,
+    largeRefuse, sortieDuLarge, retenirAuLarge, avertirDuLarge, vueSurLeMasque, AVANCE_CAMERA,
+    cheminRoute, routeLaPlusProche,
     get carte() { return carte; }, get cheminsEnAttente() { return fileChemins.length; },
   };
 })();

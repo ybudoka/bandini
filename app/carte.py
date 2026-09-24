@@ -271,6 +271,13 @@ LEGENDE: dict[str, dict] = {
     "T": {"nom": "voie du petit train", "rail": True},
     "Q": {"nom": "quai"},
     "~": {"nom": "eau", "solide": 2},
+    # ⚠️ LE RELIEF (`relief.py`, 21 sept. 2026) : infranchissable comme une
+    # façade — solidité 1, pas 2 comme l'eau ni 5 comme le barbelé. On ne le
+    # nage pas, on ne l'enjambe pas, une balle s'y arrête. `M` la montagne (le
+    # rocher plein), `C` la falaise (la paroi qu'on voit depuis la ville ou
+    # depuis le large — la bordure du relief, jamais son intérieur).
+    "M": {"nom": "montagne", "solide": 1},
+    "C": {"nom": "falaise", "solide": 1},
     # ⚠️ UNE PISCINE DE BANLIEUE N'EST PAS LA BAIE. Hors terre, on y entre
     # debout et on ne s'y noie pas : solidite 3, comme un meuble — un pieton la
     # traverse, une auto non, et aucun juge de connexite ne s'en emeut. Elle
@@ -337,6 +344,14 @@ LEGENDE: dict[str, dict] = {
     # vitrine est BATIE (solidite 1), une palissade est une CLOTURE (4).
     "w": {"nom": "palissade de bois", "solide": 4, "cloture": "bois"},
     "X": {"nom": "barbelé", "solide": 5, "cloture": "barbele"},
+    # ⚠️ LA BARRIERE COULISSANTE du lot du poste (demande de Martin, 23 sept.
+    # 2026 : « complètement clôturé barbelé pour ne pas qu'on vole les autos »).
+    # Fermee, c'est du barbele : solidite 5, ni a pied ni en char, et un lourd
+    # ne la defonce pas. Ce qui l'ouvre vit dans le navigateur
+    # (`Monde.majBarrieresCoulissantes`) : une auto-patrouille CONDUITE, rien
+    # d'autre. `coulissante` : c'est une OUVERTURE qui a une cle, donc la
+    # connexite la traverse (`franchissable`) — sinon le lot serait une poche.
+    "Z": {"nom": "barrière coulissante", "solide": 5, "cloture": "barbele", "coulissante": True},
     # --- Dedans : les planchers et les meubles ------------------------------
     # ⚠️ Un MEUBLE est solide 3, comme la borne-fontaine et la cloture : il
     # arrete un char, pas un piéton. C'est ce qui permet d'en poser partout
@@ -400,6 +415,9 @@ PORTES_DE_FACADE = frozenset("DdG")
 #: sont en grillage industriel n'a pas l'air d'une banlieue.
 GRILLAGE, BOIS, BARBELE = "f", "w", "X"
 CLOTURES = frozenset({GRILLAGE, BOIS, BARBELE})
+#: La barriere coulissante : du barbele qui s'ouvre pour qui a la cle. ⚠️ PAS dans
+#: `CLOTURES` : elle ne se pose qu'a la sortie du lot du poste, jamais par `clore`.
+COULISSANTE = "Z"
 #: Ce qui s'enjambe (une seconde en haut), par opposition au barbele.
 ENJAMBABLES = frozenset({GRILLAGE, BOIS})
 
@@ -437,8 +455,11 @@ def franchissable(glyphe: str) -> bool:
     seconde), une cour derriere du barbele n'en fait pas partie. C'est pour ca
     que le juge « tout ce qui est marchable est relie » est du meme coup la
     garantie qu'un barbele ne referme jamais une poche.
+
+    ⚠️ La barriere coulissante (`coulissante`) est du barbele qui s'OUVRE : le
+    lot qu'elle ferme a une sortie, et il fait partie de la ville.
     """
-    return solidite(glyphe) in (0, 3, 4)
+    return solidite(glyphe) in (0, 3, 4) or bool(LEGENDE.get(glyphe, {}).get("coulissante"))
 
 
 def routier(glyphe: str) -> bool:
@@ -493,15 +514,20 @@ def composantes_par_terre(carte: dict) -> dict[str, list[set[tuple[int, int]]]]:
     EXPRÈS, pas le découvrir. Un groupe est de l'île s'il tient entier dans son
     rectangle (`carte["ile"]`) ; tout le reste est la ville — et une poche
     enclavée en ville reste un deuxième groupe de la ville, donc un juge rouge.
+
+    ⚠️ **Et l'aéroport est une troisième terre** (21 sept. 2026) : son pont
+    s'arrête au-dessus de l'eau, et le bout côté île est à lui — `carte["aeroport"]`
+    en porte le rectangle, bout du pont compris.
     """
-    ile = carte.get("ile")
+    iles = [t for t in (carte.get("ile"), carte.get("aeroport")) if t]
     terres: dict[str, list[set[tuple[int, int]]]] = {"ville": []}
-    if ile:
+    for ile in iles:
         terres[ile["slug"]] = []
     for groupe in composantes_marchables(carte):
-        dedans = ile and all(ile["x"] <= x < ile["x"] + ile["l"] and ile["y"] <= y < ile["y"] + ile["h"]
-                             for x, y in groupe)
-        terres[ile["slug"] if dedans else "ville"].append(groupe)
+        terre = next((ile["slug"] for ile in iles
+                      if all(ile["x"] <= x < ile["x"] + ile["l"] and ile["y"] <= y < ile["y"] + ile["h"]
+                             for x, y in groupe)), "ville")
+        terres[terre].append(groupe)
     return terres
 
 
@@ -550,6 +576,10 @@ EQUIPEMENTS_DE_TOIT = (
     # Il est pose a la main sur la chapelle de l'ile (`ile.BATIMENTS`), et il est
     # ici pour que le juge des toits le connaisse.
     {"type": "clocher", "poids": 1, "genres": ("chapelle",)},
+    # ⚠️ La cabine de la tour de controle non plus : posee a la main sur la tour
+    # (`aeroport.BATIMENTS`). Filtree par son genre avant le tirage, elle ne change
+    # pas d'un cran le de des toits de la ville.
+    {"type": "tour_controle", "poids": 1, "genres": ("aeroport",)},
 )
 
 #: ⚠️ Les genres d'ilot qui ont pignon sur rue. Pas les maisons ni la banlieue
@@ -591,7 +621,7 @@ DISTRICTS: tuple[dict, ...] = (
      # du jour. Les quatre autres ont baisse pour le payer — le budget d'image
      # n'a pas bouge, c'est la REPARTITION qui change.
      "pietons": 34, "vehicules": 12, "police": 2, "rythme": (0.35, 1.0, 1.0),
-     "rares": ("sport", "luxe"),
+     "rares": ("sport", "luxe", "cabriolet"),
      # ⚠️ **`jj`, PAS `qq`** — retour de Martin, capture a l'appui : « il y a
      # encore des quais entre deux routes ». Les deux quais du Faubourg etaient
      # du plancher plein ENTOURE DE RUES : une rue de chaque cote, et en
@@ -711,7 +741,7 @@ DISTRICTS: tuple[dict, ...] = (
     {"slug": "pointe", "nom": "La Pointe", "bx": 14, "by": 6,
      "gang": "skateux", "gang_nom": "Les Skateux", "brume": False,
      "pietons": 9, "vehicules": 4, "police": 1, "rythme": (0.2, 0.9, 1.2),
-     "rares": ("sport",),
+     "rares": ("sport", "cabriolet"),
      # ⚠️ Une des trois taches de bois devient la FOIRE (`f`) : on n'agrandit pas
      # la grille, on la DEPENSE — la lecon de l'ile. Celle-ci borde le chenal ;
      # les plages sont a l'ouest et au sud, face au large (`PLAGES`).
@@ -1396,7 +1426,10 @@ NIDS_DE_POULE: dict = {
 #:               n'est pas faite), `heure` (« jour » = ouverte le jour, fermee
 #:               la nuit ; « nuit » l'inverse), `jour_tire` (la graine du jour,
 #:               par ou les entraves de M12 entreront), `payer` (le comptoir
-#:               d'un lieu — la guerite, deja ecrite) ;
+#:               d'un lieu — la guerite, deja ecrite), `objet` (une VRAIE
+#:               serrure : fermee tant que `partie.objets[slug]` n'est pas
+#:               possede — la cle d'une mission d'infiltration, trouvee ou
+#:               volee, jamais consommee) ;
 #:   `forcer`    ce que ca coute de passer quand meme : `etoiles`, `degats` ;
 #:               `None` pour ce qui ne se force pas ;
 #:   `raison`    la ligne, en majuscules, qui s'affiche quand on s'y bute — et
@@ -1447,6 +1480,20 @@ BARRIERES: tuple[dict, ...] = (
      "forcer": {"etoiles": economie.FOIRE["etoiles_resquille"]},
      "raison": f"LA FOIRE : {economie.FOIRE['entree']} $ L'ENTRÉE",
      "decor": None, "prix": economie.FOIRE["entree"], "dedans": "N"},
+    # ⚠️ **L'AÉROPORT, FERMÉ POUR LES MISSIONS À VENIR** (demande de Martin,
+    # 21 sept. 2026 : « bloqué par un pont en construction et d'autres
+    # stratagèmes »). Les deux attendent une mission qui n'existe pas encore
+    # (`aeroport.MISSIONS_A_VENIR`), et c'est `aeroport.poser` qui les résout :
+    # le pont et la guérite n'existent qu'une fois l'aéroport posé, en dernier.
+    # La barricade du pont se défonce et s'enjambe (sans étoile : c'est un
+    # chantier, pas un crime) — derrière, le tablier s'arrête au-dessus de l'eau.
+    # La guérite, elle, ne se force pas.
+    {"slug": "pont_aeroport", "nom": "Le pont de l'aéroport", "ou": {"aeroport": "pont"},
+     "arrete": ("pieton", "vehicule"), "condition": {"apres": "a01"},
+     "forcer": {"degats": 10}, "raison": "PONT EN CONSTRUCTION", "decor": "barricade"},
+    {"slug": "aeroport", "nom": "La guérite de l'aéroport", "ou": {"aeroport": "guerite"},
+     "arrete": ("pieton", "vehicule"), "condition": {"apres": "a02"},
+     "forcer": None, "raison": "AÉROPORT : LAISSEZ-PASSER EXIGÉ", "decor": "levante"},
 )
 
 #: Les batiments garantis : un par majuscule du plan. `interieur` doit exister
@@ -2398,6 +2445,12 @@ class _Chantier:
             if porte:
                 vides |= {(porte["x"] + i, py + j) for i in range(porte["l"]) for j in (1, 2)}
                 rangees.update(range(py, min(self.hauteur, py + 12)))
+        # ⚠️ LES CARROSSERIES APRES LE RIDEAU DE TI-GUY : `portes_garage[0]` reste le sien
+        # (des juges le lisent la), et elles evitent sa facade.
+        for porte in self.poser_les_carrosseries(ville) + self.poser_les_garages_de_bungalows(ville):
+            py = porte["y"]
+            vides |= {(porte["x"] + i, y) for i in range(porte["l"]) for y in porte["abord"]}
+            rangees.update(range(py, min(self.hauteur, py + 12)))
         partis = [d for d in ville["decor"] if (d["x"], d["y"]) in vides]
         ville["decor"][:] = [d for d in ville["decor"] if (d["x"], d["y"]) not in vides]
         eteintes = {(d["x"], d["y"]) for d in partis if d["type"] == "lampadaire"}
@@ -2405,11 +2458,20 @@ class _Chantier:
         for y in sorted(rangees):
             ville["sol"][y] = "".join(self.sol[y])
         ville["stationnement_du_poste"] = self.stationnement_du_poste
+        for porte in self.portes_garage:
+            porte.pop("abord", None)
         ville["portes_garage"] = self.portes_garage
 
     #: La largeur d'une porte de garage, en tuiles : un char fait une tuile de
     #: large (16 px), et il lui faut de quoi entrer sans racler les montants.
     PORTE_DE_GARAGE_L = 2
+
+    #: Combien de rangees de TOIT la baie prend derriere le rideau (des garages ou
+    #: l'on entre, 21 sept. 2026) : le char passe sous le linteau, nez au mur du fond,
+    #: et le rideau retombe derriere son pare-chocs. ⚠️ Deux, et c'est une mesure :
+    #: l'autobus, le plus long du parc, fait 48 px — la rangee du rideau et deux de
+    #: toit. Elle voyage avec chaque porte (`baie`) : le navigateur ne la devine pas.
+    BAIE_SOUS_LE_TOIT = 2
 
     def poser_porte_de_garage(self, facades: list[tuple[int, int]], px: int, py: int,
                               special: dict) -> dict | None:
@@ -2421,8 +2483,9 @@ class _Chantier:
         des qu'on est devant en voiture. » Le garage n'avait qu'une tuile de
         rideau peinte, deux cases a gauche de la porte — un dessin, pas un
         endroit ou aller. La porte se leve dans le navigateur
-        (`Monde.majPortesDeGarage`), et c'est garer DEVANT qui ouvre le menu du
-        garage (`Missions.majGarage`).
+        (`Monde.majPortesDeGarage`), et c'est garer DEVANT — ou entrer dessous, depuis
+        les garages ou l'on entre (21 sept. 2026) — qui ouvre le menu du garage
+        (`Missions.majGarage`).
 
         ⚠️ Une tuile de mur ENTRE les deux portes quand la facade le permet : un
         rideau colle a la porte des pietons, et le char gare devant bouche
@@ -2442,6 +2505,11 @@ class _Chantier:
         for t in sorted(rangee):
             if self.sol[py][t] == "G" and t not in tuiles:
                 self._repeindre_la_facade(t, py, "F")
+        return self._poser_le_rideau(tuiles, py, special["slug"])
+
+    def _poser_le_rideau(self, tuiles: list[int], py: int, lieu: str) -> dict:
+        """Le rideau sur ces tuiles de facade : le mur devient `G`, son devant se degage
+        et se pave jusqu'a la rue, et la pancarte qui pendait devant s'en va au bout."""
         for t in tuiles:
             self._repeindre_la_facade(t, py, "G")
             self.degager_le_devant(t, py)
@@ -2456,9 +2524,269 @@ class _Chantier:
             if bouts[d["pancarte"]] in tuiles:
                 autre = -d["pancarte"]
                 d["pancarte"] = autre if bouts[autre] not in tuiles and self.marchable_en(bouts[autre], py + 1) else 0
-        porte = {"x": gx, "y": py, "l": large, "lieu": special["slug"]}
+        porte = {"x": tuiles[0], "y": py, "l": len(tuiles), "lieu": lieu, "baie": self.BAIE_SOUS_LE_TOIT}
         self.portes_garage.append(porte)
         return porte
+
+    def poser_les_carrosseries(self, ville: dict) -> list[dict]:
+        """UNE CARROSSERIE PAR DISTRICT : un commerce sans porte devient un atelier ou
+        l'on RENTRE son char (des garages ou l'on entre, 21 sept. 2026).
+
+        Demande de Martin : « il faut des portes de garage qu'on peut vraiment entrer.
+        pour permettre de semer la police en voiture », puis « repeindre des voitures ».
+        Le rideau se pose sur deux tuiles de la vitrine, l'enseigne change de nom
+        (`devantures.CARROSSERIES`), et un point de la famille des services dit ou elle
+        est. Le reste — le rideau qui monte, le char qui passe sous le toit, le pistolet —
+        se joue dans le navigateur (`Missions.majGarage`).
+
+        ⚠️ SUR LA VILLE FINIE ET SANS UN DE, comme le rideau de Ti-Guy : rien ne tire sa
+        place apres, et aucun batiment ne bouge. Le choix est une mesure — la facade qui
+        convient la plus proche du coeur du district —, jamais un tirage.
+
+        ⚠️ Ce qu'une facade doit offrir, et chaque ligne a sa raison :
+        - deux tuiles de vitrine ou de mur (jamais la porte peinte, jamais des planches) ;
+        - DERRIERE, `BAIE_SOUS_LE_TOIT` rangees de toit du MEME batiment : c'est la ou le
+          char se cache, et une cour ou le toit du voisin n'en est pas une ;
+        - DEVANT, du roulable jusqu'a la rue, sans meuble qu'on ne deplace pas (un
+          abribus, un edicule, un lampadaire) — le mobile, lui, s'en va comme devant le
+          rideau de Ti-Guy ;
+        - ni sur un chantier (on demolit ce batiment-la un jour), ni a deux pas d'une facade
+          qui peut bruler (les incendies ne touchent pas un lieu garanti), ni a moins de
+          `CARROSSERIE_ECART` tuiles de la porte d'un lieu garanti ;
+        - pas dans un bloc cossu : une carrosserie entre la galerie d'art et le salon de
+          the, ce n'est pas une rue qu'on reconnait.
+        """
+        from . import chantiers as chantiers_mod
+        from . import devants as devants_mod
+
+        index: dict[tuple[int, int], int] = {}
+        for i, batiment in enumerate(self.batiments):
+            for tx, ty in batiment["tuiles"]:
+                index[(tx, ty)] = i
+        interdites: set[tuple[int, int]] = set()
+        for ch in ville.get("chantiers") or []:
+            siennes = set(chantiers_mod.tuiles(ch))
+            interdites |= siennes | {(x, y + j) for x, y in siennes for j in (1, 2)}
+        feux = {(f["x"], f["y"]) for f in (ville.get("incendies") or {}).get("facades") or []}
+        garantis = {s["slug"] for s in SPECIAUX.values()}
+        portes_gardees = [(p["x"], p["y"]) for p in ville["portes"] if p.get("lieu") in garantis]
+        portes_gardees += [(p["x"], p["y"]) for p in self.portes_garage]
+        poses_mobiles = {(d["x"], d["y"]) for d in ville["decor"] if d["type"] in devants_mod.DECOR_MOBILE}
+        occupees = {(d["x"], d["y"]) for d in ville["decor"]} - poses_mobiles
+        for cle in ("paquets", "ambulants", "scenes", "reclames"):
+            occupees |= {(q["x"], q["y"]) for q in ville.get(cle) or []}
+
+        def abord(t: int, py: int) -> list[int] | None:
+            """Les rangees roulables entre le rideau et la rue, ou None."""
+            rangees = []
+            for j in range(1, self.CARROSSERIE_ABORD + 1):
+                y = py + j
+                if y >= self.hauteur or (t, y) in interdites:
+                    return None
+                fiche = LEGENDE[self.sol[y][t]]
+                if fiche.get("route") and not fiche.get("stationnement") and j > 1:
+                    return rangees
+                if fiche.get("solide", 0) != 0 or (t, y) in occupees:
+                    return None
+                rangees.append(y)
+            return None
+
+        def place(d: dict) -> tuple[int, list[int]] | None:
+            py = d["y"]
+            for i in range(d["l"] - 1):
+                tuiles = [d["x"] + i, d["x"] + i + 1]
+                if any(d["motifs"][k] not in "WF" for k in (i, i + 1)):
+                    continue
+                if any(self.sol[py][t] not in "WF" for t in tuiles):
+                    continue
+                qui = index.get((tuiles[0], py))
+                if qui is None or any(index.get((t, py - k)) != qui or not LEGENDE[self.sol[py - k][t]].get("toit")
+                                      for t in tuiles for k in range(1, self.BAIE_SOUS_LE_TOIT + 1)):
+                    continue
+                if index.get((tuiles[1], py)) != qui:
+                    continue
+                if any(max(abs(fx - t), abs(fy - py)) <= 2 for fx, fy in feux for t in tuiles):
+                    continue
+                if any(max(abs(gx - t), abs(gy - py)) < self.CARROSSERIE_ECART for gx, gy in portes_gardees
+                       for t in tuiles):
+                    continue
+                bords = [abord(t, py) for t in tuiles]
+                if any(b is None for b in bords):
+                    continue
+                return tuiles, sorted(set(bords[0]) | set(bords[1]))
+            return None
+
+        posees: list[dict] = []
+        for district in DISTRICTS:
+            fiche = devantures_mod.CARROSSERIES.get(district["slug"])
+            if district.get("eau") or not fiche:
+                continue
+            enseigne, nom = fiche
+            x0, y0, dl, dh = self.rect_district(district)
+            cx, cy = x0 + dl / 2, y0 + dh / 2
+            meilleure = None
+            for d in self.devantures:
+                if d["porte"] or d["texte"] == devantures_mod.A_LOUER:
+                    continue
+                if self.district_en(d["x"], d["y"]) != district["slug"] or self.standing_en(d["x"], d["y"]) == "cossu":
+                    continue
+                if not devantures_mod.tient_en(enseigne, d["l"], TUILE_PX):
+                    continue
+                trouvee = place(d)
+                if not trouvee:
+                    continue
+                tuiles, _ = trouvee
+                cle = (d["texte"] != enseigne, abs(tuiles[0] + 1 - cx) + abs(d["y"] - cy), d["y"], d["x"])
+                if meilleure is None or cle < meilleure[0]:
+                    meilleure = (cle, d, trouvee)
+            if not meilleure:
+                continue
+            _, d, (tuiles, rangees) = meilleure
+            d["texte"] = enseigne
+            d["genre"] = devantures_mod.genre_index("industrie")
+            lieu = f"carrosserie_{district['slug']}"
+            porte = self._poser_le_rideau(tuiles, d["y"], lieu)
+            porte["genre"] = "carrosserie"
+            # ⚠️ LE RIDEAU EST LA PORTE : la porte PEINTE du bandeau redevient le mur qu'elle
+            # couvrait. Une porte peinte ne double jamais une vraie (`test_devantures`) —
+            # elle n'etait la que parce que le commerce n'en avait aucune.
+            for i, motif in enumerate(d["motifs"]):
+                if motif == "P":
+                    x = d["x"] + i
+                    d["motifs"] = d["motifs"][:i] + self.sol[d["y"]][x] + d["motifs"][i + 1:]
+                    self.portes_peintes.discard((x, d["y"]))
+            porte["abord"] = rangees
+            portes_gardees.append((porte["x"], porte["y"]))
+            self.points.append({"type": "carrosserie", "slug": lieu, "nom": nom,
+                                "x": tuiles[0], "y": d["y"] + 1, "famille": "service"})
+            posees.append(porte)
+        return posees
+
+    def poser_les_garages_de_bungalows(self, ville: dict) -> list[dict]:
+        """DES BUNGALOWS AVEC GARAGE (des garages ou l'on entre, 2e vague, 21 sept. 2026) :
+        on y rentre le char et on s'y CACHE, sans peinture et sans payer — la police ne
+        voit pas sous un toit, et les etoiles tombent comme hors de vue.
+
+        Le rideau se pose sur deux tuiles d'un logement de banlieue, et une entree
+        ASPHALTEE descend du rideau a la rue : le gazon d'un bungalow n'est pas une
+        entree de garage, et c'est a elle qu'on reconnait la cachette — elle n'est pas
+        sur la carte.
+
+        ⚠️ SUR LA VILLE FINIE ET SANS UN DE, comme les carrosseries, et SANS ELLES : le
+        choix ne lit ni les noms, ni les planches, ni les carrosseries — un juge
+        « avec et sans » d'une autre etape ne doit pas voir un garage changer de rue.
+        La mesure : la plus proche du coeur de son district d'abord, puis les autres a
+        `BUNGALOW_ECART` tuiles au moins, jusqu'a `BUNGALOWS_MAX`.
+
+        ⚠️ Ce qu'une facade doit offrir : deux tuiles de mur ou de fenetre (jamais la
+        porte de la maison), deux rangees de toit du MEME bungalow derriere, du roulable
+        jusqu'a la rue sans meuble fixe, ni chantier, ni facade qui peut bruler a deux
+        pas, ni lieu garanti a moins de `CARROSSERIE_ECART` tuiles — et, pour une maison
+        a etage, pas du cote ou le palier de son escalier deborde.
+        """
+        from . import chantiers as chantiers_mod
+        from . import devants as devants_mod
+
+        index: dict[tuple[int, int], int] = {}
+        for i, batiment in enumerate(self.batiments):
+            for tx, ty in batiment["tuiles"]:
+                index[(tx, ty)] = i
+        interdites: set[tuple[int, int]] = set()
+        for ch in ville.get("chantiers") or []:
+            siennes = set(chantiers_mod.tuiles(ch))
+            interdites |= siennes | {(x, y + j) for x, y in siennes for j in (1, 2)}
+        feux = {(f["x"], f["y"]) for f in (ville.get("incendies") or {}).get("facades") or []}
+        garantis = {s["slug"] for s in SPECIAUX.values()}
+        gardees = [(p["x"], p["y"]) for p in ville["portes"] if p.get("lieu") in garantis]
+        gardees += [(p["x"], p["y"]) for p in self.portes_garage if p.get("genre") is None]
+        mobiles = {(d["x"], d["y"]) for d in ville["decor"] if d["type"] in devants_mod.DECOR_MOBILE}
+        occupees = {(d["x"], d["y"]) for d in ville["decor"]} - mobiles
+        for cle in ("paquets", "ambulants", "scenes", "reclames"):
+            occupees |= {(q["x"], q["y"]) for q in ville.get(cle) or []}
+
+        def allee(t: int, py: int) -> list[int] | None:
+            rangees = []
+            for j in range(1, self.BUNGALOW_ALLEE + 1):
+                y = py + j
+                if y >= self.hauteur or (t, y) in interdites:
+                    return None
+                fiche = LEGENDE[self.sol[y][t]]
+                if fiche.get("route") and not fiche.get("stationnement") and j > 1:
+                    return rangees
+                if fiche.get("solide", 0) != 0 or fiche.get("eau") or (t, y) in occupees:
+                    return None
+                rangees.append(y)
+            return None
+
+        def place(r: dict) -> tuple[list[int], list[int]] | None:
+            py, porte = r["y"], r["x"] + r["porte"]
+            palier = porte + r["escalier"] if r["etages"] >= 2 and r["escalier"] else None
+            for i in range(r["l"] - 1):
+                tuiles = [r["x"] + i, r["x"] + i + 1]
+                # Les planches d'un logement pauvre couvrent une FENETRE : la meme tuile.
+                if any(r["motifs"][k].replace("B", "W") not in "WF" for k in (i, i + 1)):
+                    continue
+                if palier in tuiles or any(self.sol[py][t] not in "WF" for t in tuiles):
+                    continue
+                qui = index.get((tuiles[0], py))
+                if qui is None or self.batiments[qui]["genre"] != "banlieue" or index.get((tuiles[1], py)) != qui:
+                    continue
+                if any(index.get((t, py - k)) != qui or not LEGENDE[self.sol[py - k][t]].get("toit")
+                       for t in tuiles for k in range(1, self.BAIE_SOUS_LE_TOIT + 1)):
+                    continue
+                if any(max(abs(fx - t), abs(fy - py)) <= 2 for fx, fy in feux for t in tuiles):
+                    continue
+                if any(max(abs(gx - t), abs(gy - py)) < self.CARROSSERIE_ECART for gx, gy in gardees
+                       for t in tuiles):
+                    continue
+                bords = [allee(t, py) for t in tuiles]
+                if any(b is None for b in bords):
+                    continue
+                return tuiles, sorted(set(bords[0]) | set(bords[1]))
+            return None
+
+        centres = {d["slug"]: self.rect_district(d) for d in DISTRICTS}
+        candidats = []
+        for r in self.residences:
+            trouvee = place(r)
+            if not trouvee:
+                continue
+            x0, y0, dl, dh = centres[self.district_en(r["x"], r["y"])]
+            loin = abs(trouvee[0][0] + 1 - (x0 + dl / 2)) + abs(r["y"] - (y0 + dh / 2))
+            candidats.append((loin, r["y"], r["x"], r, trouvee))
+        posees: list[dict] = []
+        for _, _, _, r, (tuiles, rangees) in sorted(candidats, key=lambda c: c[:3]):
+            if len(posees) >= self.BUNGALOWS_MAX:
+                break
+            if any(max(abs(p["x"] - tuiles[0]), abs(p["y"] - r["y"])) < self.BUNGALOW_ECART for p in posees):
+                continue
+            porte = self._poser_le_rideau(tuiles, r["y"], f"bungalow_{len(posees) + 1}")
+            porte["genre"] = "cachette"
+            porte["abord"] = rangees
+            i = tuiles[0] - r["x"]
+            r["motifs"] = r["motifs"][:i] + "GG" + r["motifs"][i + 2:]
+            # L'entree asphaltee : le gazon et l'abord du rideau a la rue. Le trottoir
+            # reste un trottoir — on le traverse, comme a la sortie d'un stationnement.
+            for t in tuiles:
+                for y in rangees:
+                    if self.sol[y][t] in ",_":
+                        self.sol[y][t] = "p"
+            posees.append(porte)
+        return posees
+
+    #: Les bungalows avec garage : combien, a quelle distance les uns des autres, et
+    #: jusqu'ou l'entree peut descendre avant la rue (la pelouse d'un bungalow est plus
+    #: profonde que le trottoir d'un commerce).
+    BUNGALOWS_MAX = 5
+    BUNGALOW_ECART = 20
+    BUNGALOW_ALLEE = 7
+
+    #: Jusqu'ou l'abord d'une carrosserie peut descendre avant la rue, en tuiles : le
+    #: pas de porte, la couronne du bloc, le trottoir — la rue tombe a la cinquieme.
+    CARROSSERIE_ABORD = 5
+    #: A combien de tuiles de la porte d'un lieu garanti (et d'un autre rideau) une
+    #: carrosserie ne s'ouvre pas : Ti-Guy n'a pas de concurrent sur son trottoir.
+    CARROSSERIE_ECART = 8
 
     # --- Les devantures ------------------------------------------------------
 
@@ -2472,8 +2800,9 @@ class _Chantier:
     def standing_en(self, x: int, y: int) -> str | None:
         """`cossu`, `ordinaire` ou `pauvre` ; `None` sur l'eau. ⚠️ Une rue se
         coupe en deux, comme entre deux districts (`rect_district`) : chaque
-        trottoir est du standing du bloc qu'il borde."""
-        if not (0 <= x < self.largeur and 0 <= y < self.hauteur):
+        trottoir est du standing du bloc qu'il borde. ⚠️ Hors de la TRAME, None : la
+        carte grandit sous elle (`aeroport.py`), et ce n'est pas un quartier."""
+        if not (0 <= x < self.xr[self.nc] + RUES_V[self.nc] and 0 <= y < self.yr[self.nr] + RUES_H[self.nr]):
             return None
         bx = bisect.bisect_right(self._coupes_x, x) - 1
         by = bisect.bisect_right(self._coupes_y, y) - 1
@@ -2481,8 +2810,8 @@ class _Chantier:
 
     def usage_en(self, x: int, y: int) -> str | None:
         """`commercial`, `residentiel`, `industriel`, `parc`, `port` ou `eau` —
-        avec la meme coupe au milieu des rues que `standing_en`."""
-        if not (0 <= x < self.largeur and 0 <= y < self.hauteur):
+        avec la meme coupe au milieu des rues que `standing_en` (et None hors de la trame)."""
+        if not (0 <= x < self.xr[self.nc] + RUES_V[self.nc] and 0 <= y < self.yr[self.nr] + RUES_H[self.nr]):
             return None
         bx = bisect.bisect_right(self._coupes_x, x) - 1
         by = bisect.bisect_right(self._coupes_y, y) - 1
@@ -3550,8 +3879,10 @@ class _Chantier:
                 # ruelle jusqu'au devant, pour ses autos-patrouilles. Il ne tire
                 # aucun de et ne deplace aucun mur : le batiment garde sa
                 # parcelle, et ce bout-la etait deja un terrain nu.
+                # ⚠️ `+ 4` : le barbele du haut, les cases, deux tuiles d'allee
+                # et la barriere coulissante (`_stationnement_de_service`).
                 if (special.get("stationnement") and largeur - large >= 1
-                        and bh - 2 >= CASE_CREUX + 2):
+                        and bh - 2 >= CASE_CREUX + 4):
                     lot_de_service = (x + large, zy, largeur - large, bh - 2)
                 elif largeur - large >= mini:
                     parcelles.append(((x + large, zy, largeur - large, zh), True))
@@ -3955,14 +4286,32 @@ class _Chantier:
         ⚠️ `garees` : combien de places ont leur char, en partant du batiment.
         Une place reste libre quand il y en a trois ou plus — un vrai lot a
         toujours un trou, et c'est la qu'on se gare pour entrer au poste.
+
+        ⚠️ ET IL EST CLOS DE BARBELE (demande de Martin, 23 sept. 2026 : « le
+        poste de police doit etre completement cloture barbele pour ne pas qu'on
+        vole les autos »). Il etait ouvert sur la ruelle, sur le cote et sur la
+        rue : on y entrait a pied et on repartait en auto-patrouille. Le barbele
+        prend la rangee du haut (les cases descendent d'une tuile) et les deux
+        cotes, sauf la ou le mur du poste ferme deja ; la rangee du bas, sur la
+        rue, est la BARRIERE COULISSANTE — la seule sortie, qui ne s'ouvre que
+        pour une auto-patrouille conduite (`Monde.majBarrieresCoulissantes`).
         """
         self.rect(x, y, largeur, hauteur, "p")
-        self.rect(x, y, largeur, CASE_CREUX, "^")
-        places = [{"x": x + i, "y": y, "sens": "N"} for i in range(largeur)]
+        # Le tour : la rangee du haut (coins compris), puis les deux cotes. Un mur
+        # (solidite 1) ferme deja : on ne pose pas de barbele dans une facade.
+        tour = [(x + i, y) for i in range(-1, largeur + 1)]
+        tour += [(cx, y + j) for j in range(1, hauteur) for cx in (x - 1, x + largeur)]
+        for tx, ty in tour:
+            if solidite(self.sol[ty][tx]) != 1:
+                self.sol[ty][tx] = BARBELE
+        self.rect(x, y + 1, largeur, CASE_CREUX, "^")
+        self.rect(x, y + hauteur - 1, largeur, 1, COULISSANTE)
+        places = [{"x": x + i, "y": y + 1, "sens": "N"} for i in range(largeur)]
         self.stationnement_du_poste = {
             "lieu": special["slug"], "vehicule": special["stationnement"],
             "x": x, "y": y, "largeur": largeur, "hauteur": hauteur,
             "places": places, "garees": len(places) - 1 if len(places) >= 3 else len(places),
+            "barriere": {"x": x, "y": y + hauteur - 1, "l": largeur},
         }
 
     # --- La fourriere (M9) --------------------------------------------------
@@ -6110,6 +6459,8 @@ class _Chantier:
         sortie = []
         for fiche in BARRIERES:
             ou = fiche["ou"]
+            if "aeroport" in ou:
+                continue          # resolue par `aeroport.poser`, une fois l'aeroport pose
             if "pont" in ou:
                 sens, i, j = ou["pont"]
                 pont = next(p for p in ponts if p["sens"] == sens and (p["x"], p["y"]) == (
@@ -6718,6 +7069,37 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # ⚠️ LE LOT DU POSTE ET LA PORTE DU GARAGE, APRES TOUT : ils changent des tuiles
     # que toutes les etapes d'avant lisent pour tirer leurs places.
     chantier.poser_les_lots_et_les_rideaux(ville)
+    # ⚠️ RIEN DEVANT UNE PORTE, PLUS LARGE : tout A LA FIN, sur la ville finie, et sans un
+    # de. Reserver plus de tuiles pendant la construction re-tire la ville entiere ; ici on
+    # DEPLACE ce qui bouche (une scene, un kiosque, un BBQ) sur la tuile voisine qui convient.
+    from . import devants as devants_mod
+    devants_mod.deplacer(chantier, ville)
+    # ⚠️ LES GRANDS BATEAUX, APRES TOUT (demande de Martin, 21 sept. 2026) : le
+    # chalutier et le porte-conteneurs mouillent a quai, loin des chaloupes, des
+    # ponts et de la route du traversier — qu'ils lisent, donc qu'ils suivent. Ils
+    # ne posent rien et ne tirent aucun de : la ville est la meme sans eux.
+    from . import navires as navires_mod
+    ville["mouillages"] = navires_mod.amarrer(chantier, ville)
+    # ⚠️ L'AEROPORT, APRES ABSOLUMENT TOUT (demande de Martin, 21 sept. 2026) : la
+    # carte grandit au sud d'une bande d'eau et d'une ile dessinee, et le deuxieme
+    # pont de La Pointe s'arrete au-dessus de l'eau. Pose avant, il re-tirerait les
+    # arbres de rue, les paquets et les nids-de-poule (ils tirent leur place dans des
+    # listes de tuiles) ; ici, la ville d'avant est la meme a la tuile pres. Aucun de.
+    from . import aeroport as aeroport_mod
+    ville["aeroport"] = aeroport_mod.poser(chantier, ville)
+    # ⚠️ LES ANNEXES DES CHANTIERS (la tranchée, l'équipe, le signaleur, la benne), après
+    # absolument tout ce qui précède : elles lisent la ville FINIE — le mobilier, les abribus, la
+    # saleté, les grands bateaux et l'aéroport ne leur retirent rien, et une benne posée plus
+    # tôt tombait sur un parcmètre. Chaque chantier garde son dé : rien de la ville ne bouge.
+    chantiers_mod.completer(ville, graine)
+    # ⚠️ LE RELIEF, TOUT À LA TOUTE FIN (demande de Martin, 21 sept. 2026 : « ajoute
+    # des falaises et montagnes infranchissable ») — après les chantiers aussi : une
+    # chaîne de montagnes ajoutée après la dernière rue, à l'est (la carte grandit,
+    # comme l'aéroport au sud) et une ligne de falaises au sud du large, en place.
+    # Aucun dé, rien de la ville d'aujourd'hui — aéroport et chantiers compris — ne
+    # bouge d'une tuile.
+    from . import relief as relief_mod
+    ville["relief"] = relief_mod.poser(chantier, ville)
     return ville
 
 # --- Les interieurs ---------------------------------------------------------
@@ -6974,7 +7356,7 @@ Bn          nB
 BBBBBWWDWWBBBB
 """, points=(_pt("soigner", 4, 3), _pt("escalier", 12, 1, vers="hopital_soins"),
              _pt("distributrice", 12, 4, sorte="cafe"),
-             _pt("distributrice", 12, 6, sorte="grignotines")),
+             _pt("distributrice", 12, 6, sorte="grignotines"), _pt("lachance", 4, 5)),
      gens=_gens(("soignant", 4, 1), ("malade", 9, 1),
                 ("patient", 2, 4), ("patient", 4, 4), ("patient", 8, 4),
                 ("patient", 3, 6), ("patient", 9, 6), ("patient", 10, 6),

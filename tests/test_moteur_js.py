@@ -17,6 +17,7 @@ def test_le_moteur_charge_et_expose_son_api(banc, paquet):
         return { etat: L.B.etat, cles: Object.keys(L).sort(), version: L.B.defs.version,
                  carte: [L.Monde.carte.w, L.Monde.carte.h], fetchs: o.fetchs.length,
                  compte: o.compte.appels.map(function (a) { return a.chemin; }),
+                 defi: o.defi.appels.length,
                  ouverture: L.Histoire.fichiersDeLOuverture().length };
     }""")
     assert r["etat"] == "titre"
@@ -40,7 +41,10 @@ def test_le_moteur_charge_et_expose_son_api(banc, paquet):
     # avec le serveur alors que personne n'a de compte serait un jeu qui a oublie
     # qu'il se joue hors ligne.
     assert r["compte"] == ["ouvrir"]
-    assert r["fetchs"] == 3 + r["ouverture"]
+    # ⚠️ Plus UNE requete pour le defi du jour (M14, 5e vague) : `GET /api/defi`, sans
+    # cookie et sans que rien n'attende sa reponse.
+    assert r["defi"] == 1
+    assert r["fetchs"] == 4 + r["ouverture"]
     assert r["ouverture"] <= 6, "l'ouverture se prechauffe ; la ville, non"
 
 
@@ -1289,6 +1293,28 @@ def test_la_sauvegarde_fait_l_aller_retour_et_complete_un_vieux_blob(banc):
     assert r["vieux"]["armes"]["poings"] == {"mun": None}
 
 
+def test_un_char_ne_pousse_personne_hors_de_la_carte(banc):
+    """Un char gare qui chevauche le joueur au ras du bord nord le repousse — vers
+    le dedans de la carte, jamais au-dela. Le singe l'a trouve (graine 1) : le
+    joueur finissait a y = -3,5, dans le « mur » du dehors."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, T = L.TT, c = L.Monde.carte;
+        const out = [];
+        for (const dy of [4, 6, 8, 10]) {
+            j.x = 1782.8; j.y = 5.0; j.vx = 0; j.vy = 0;
+            L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'vehicule'; });
+            const v = L.Vehicules.creer('remorqueuse', j.x + 2, j.y + dy, 0, { etat: 'stationne' });
+            L.Entites.indexer();
+            o.frame(1);
+            out.push({ dy: dy, y: j.y, dedans: j.y >= j.r && j.y <= c.pxH - j.r });
+            L.Entites.retirer(v);
+        }
+        return out;
+    }""")
+    assert all(q["dedans"] for q in r), f"pousse hors de la carte : {r}"
+
+
 @pytest.mark.parametrize("graine", [1, 2])
 def test_le_singe_ne_casse_rien(banc, graine):
     r = banc("""function (L, o) {
@@ -1340,7 +1366,11 @@ def test_le_joueur_et_les_lieux_sont_sur_des_tuiles_marchables(banc):
         const j = L.B.joueur;
         const dur = L.Monde.solidite(Math.floor(j.x / L.TT), Math.floor(j.y / L.TT));
         const lieux = L.Monde.carte.points.map(function (p) {
-            return [p.slug, L.Monde.solidite(p.x, p.y), !!L.Monde.porteA(p.x, p.y - 1)];
+            // ⚠️ Une carrosserie n'a pas de porte des pietons : sa porte est le rideau.
+            const rideau = L.Monde.portesDeGarage().some(function (pg) {
+                return pg.lieu === p.slug && pg.y === p.y - 1 && p.x >= pg.x && p.x < pg.x + pg.l;
+            });
+            return [p.slug, L.Monde.solidite(p.x, p.y), !!L.Monde.porteA(p.x, p.y - 1) || rideau];
         });
         return { dur: dur, lieux: lieux, zone: L.Monde.zoneA(j.x, j.y).slug,
                  horsCarte: L.Monde.porteA(-1, -1) };
@@ -2011,6 +2041,13 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
         // place et sous la meme arme, reagit la ou l'ivrogne repond.
         sobre.etat = 'flane'; soul.etat = 'flane'; soul.bulle = null;
         const temoin = o.poser('passant', 16, 0); temoin.etat = 'flane';
+        // ⚠️ A COTE DE L'IVROGNE, pas du joueur. `poser` place par rapport au
+        // JOUEUR, et l'ivrogne vient de marcher cent soixante pas : mesure du
+        // 17 sept. 2026, il etait a 191 px — hors du rayon de peur (sept
+        // tuiles). Le juge notait « le passant ne reagit pas » alors que le
+        // passant n'etait pas la, et il ne tenait que par la promenade de
+        // l'ivrogne (la 4e vague des quartiers l'a defaite).
+        temoin.x = soul.x + 16; temoin.y = soul.y; temoin.plante = null;
         L.Entites.indexer();
         L.Entites.alerter(soul.x, soul.y, j, 2);
         out.ivrogne = { zigzag: vireSoul.pct, droit: vireSobre.pct,
@@ -2026,7 +2063,17 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
         const vraiTaux = L.B.defs.pietons.reactions.ivrogne_chute;
         L.B.defs.pietons.reactions.ivrogne_chute = 1;
         let tombe = false;
-        for (let i = 0; i < 180 && !tombe; i++) { o.frame(1); if (soul.etat === 'assomme') tombe = true; }
+        // ⚠️ ET ON LE REMET DEBOUT S'IL S'ARRETE. Un flaneur s'arrete tout seul
+        // une fois sur trois, pour 50 a 209 images, et `majIvrogne` ne regarde
+        // qu'un ivrogne qui FLANE : mesure du 17 sept. 2026, sa halte a dure
+        // 195 images, son compte a gele a 45 — UNE COCHE avant la chute — et le
+        // juge a note « il ne tombe jamais tout seul ». Ce qu'on prouve, c'est
+        // qu'il tombe en marchant ; la duree de ses haltes est une autre regle.
+        for (let i = 0; i < 400 && !tombe; i++) {
+            o.frame(1);
+            if (soul.etat === 'arret') { soul.etat = 'flane'; soul.minuterie = 0; }
+            if (soul.etat === 'assomme') tombe = true;
+        }
         L.B.defs.pietons.reactions.ivrogne_chute = vraiTaux;
         out.ivrogne.tombe = tombe;
         out.ivrogne.taux = vraiTaux;
@@ -3067,6 +3114,82 @@ def test_la_foule_ne_se_traverse_plus(banc):
     assert r["pire"] < 4.0, f"deux personnes s'enfoncent de {r['pire']} px l'une dans l'autre"
 
 
+def test_les_vehicules_ne_se_chevauchent_pas(banc):
+    """Retour de Martin, 21 sept. 2026 : « les véhicules ne devraient jamais pouvoir
+    se chevaucher ».
+
+    ⚠️ Deux chars « sur des rails » (le trafic, une ligne d'autobus) ne se
+    poussaient PLUS DU TOUT l'un l'autre une fois pris ensemble
+    (`heurterVehicules` sautait la paire au complet : « sur des rails, on ne se
+    pousse pas », posé pour un autre bug — un vélo impatient qui plantait le nez
+    d'un autobus dans le carrefour). Le remède avait bien empêché ce cas-là, mais
+    laissait n'importe quel autre chevauchement entre deux chars sur rails
+    TENIR pour de bon, faute d'un garde-fou qui les sépare. Corrigé : celui qui
+    ATTEND LÉGITIMEMENT (feu rouge, stop, boîte) ne bouge jamais, c'est l'autre
+    qui absorbe toute la séparation ; si aucun des deux n'attend, le partage aux
+    masses d'avant suffit — la même règle que pour la foule
+    (`test_la_foule_ne_se_traverse_plus`), appliquée aux chars.
+    """
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        let paires = 0, pire = 0, images = 0;
+        let gros = 0, plusLong = 0, creuse = 0;
+        const durees = {}, profond = {}, creuseT = {};
+        function pireChevauchement(a, b) {
+            let p = -Infinity;
+            for (const ca of L.Vehicules.cercles(a)) {
+                for (const cb of L.Vehicules.cercles(b)) {
+                    p = Math.max(p, ca.r + cb.r - Math.hypot(ca.x - cb.x, ca.y - cb.y));
+                }
+            }
+            return p;
+        }
+        const touches = ['KeyD', 'KeyW', 'KeyA', 'KeyS'];
+        for (let bloc = 0; bloc < 24; bloc++) {
+            const t = touches[bloc % 4];
+            o.touche(t);
+            for (let k = 0; k < 40; k++) {
+                o.frame(1); images++;
+                const vs = L.B.entites.filter(function (e) { return e.type === 'vehicule' && e.etat !== 'epave' && !e.aBord; });
+                const vues = {};
+                for (let a = 0; a < vs.length; a++) {
+                    for (let b = a + 1; b < vs.length; b++) {
+                        if (vs[a] === vs[b].remorque || vs[a] === vs[b].remorqueePar) continue;
+                        const chevauche = pireChevauchement(vs[a], vs[b]);
+                        if (chevauche > 0) { paires++; pire = Math.max(pire, chevauche); }
+                        const cle = vs[a].id + '-' + vs[b].id;
+                        // ⚠️ Meme methode que la foule : ce qui compte, c'est qu'un
+                        // chevauchement se DEFAIT, pas qu'il n'en existe jamais un —
+                        // deux chars qui se frolent se rapprochent une image, la
+                        // separation les defait a la suivante.
+                        if (chevauche > 1) {
+                            gros++;
+                            durees[cle] = (durees[cle] || 0) + 1;
+                            plusLong = Math.max(plusLong, durees[cle]);
+                            vues[cle] = true;
+                            if (profond[cle] !== undefined && chevauche > profond[cle] + 0.01) {
+                                creuseT[cle] = (creuseT[cle] || 0) + 1;
+                                if (creuseT[cle] >= 2) creuse++;
+                            } else creuseT[cle] = 0;
+                            profond[cle] = chevauche;
+                        }
+                    }
+                }
+                for (const cle in durees) if (!vues[cle]) { durees[cle] = 0; delete profond[cle]; delete creuseT[cle]; }
+            }
+            o.relacher(t);
+        }
+        return { images: images, paires: paires, pire: +pire.toFixed(2), gros: gros, plusLong: plusLong, creuse: creuse };
+    }""")
+    assert r["images"] == 960
+    assert r["creuse"] == 0, (
+        f"{r['creuse']} fois un chevauchement de véhicules s'est CREUSÉ au lieu de se défaire : "
+        "deux chars restent pris l'un dans l'autre"
+    )
+    assert r["plusLong"] <= 8, f"un chevauchement de véhicules tient {r['plusLong']} images d'affilée"
+    assert r["pire"] < 8.0, f"deux véhicules s'enfoncent de {r['pire']} px l'un dans l'autre"
+
+
 def test_courir_ne_permet_pas_de_traverser_les_gens(banc, paquet):
     """⚠️ Le plafond de separation doit passer DEVANT les jambes les plus
     rapides du jeu. Fixe a 1,5 px, il arretait bien le joueur qui MARCHE
@@ -3104,6 +3227,14 @@ def test_celui_qui_tient_son_poste_cede_puis_revient(banc):
         L.Jeu.commencer();
         const j = L.B.joueur;
         const t = L.B.entites.find(function (e) { return e.personnage === 'ti_guy'; });
+        // ⚠️ **LA RUE AUTOUR DE LUI EST VIDE** : une roulotte a cafe a 1 tuile de Ti-Guy fait ce juge.
+        // A l'ouest, elle se tenait sur la piste du coureur — il mesurait 1 px, la roulotte, pas la
+        // laisse ; deplacee a l'est (`app/devants.py` : elle bouchait la porte du terminus), Ti-Guy
+        // se retrouvait coince contre elle, a 12,1 px et incapable de revenir. Le juge parle d'un
+        // donneur, pas d'une roulotte : on l'ote, et ce qu'on mesure est la laisse toute seule.
+        L.B.entites.filter(function (e) { return e.type === 'ambulant' && Math.hypot(e.x - t.x, e.y - t.y) < 200; })
+            .forEach(function (e) { L.Entites.retirer(e); });
+        L.Entites.indexer();
         o.frame(2);
         const poste = { x: t.plante ? t.plante.x : t.x, y: t.plante ? t.plante.y : t.y };
         j.x = poste.x - 40; j.y = poste.y; j.vx = 0; j.vy = 0;
@@ -3120,6 +3251,9 @@ def test_celui_qui_tient_son_poste_cede_puis_revient(banc):
         for (let i = 0; i < 240; i++) { j.y = poste.y; o.frame(1); }
         const pousse = Math.hypot(t.x - poste.x, t.y - poste.y);
         o.relacher('KeyD'); o.relacher('ShiftLeft');
+        // ⚠️ Et on le DEPLACE pour de bon, de huit pixels (sous la laisse) : en rue libre la poussee
+        // ne l'ecarte que d'un dixieme de pixel, et « il rentre » serait vrai sans qu'il ait a rentrer.
+        t.x = poste.x + 8; t.y = poste.y;
         j.x = poste.x - 200; j.y = poste.y;              // on le lache
         // ⚠️ Il rentre à pied, et le chemin du retour dépend de ce qu'il a autour
         // (un banc, un passant, la largeur du trottoir) : 180 images le ramenaient
@@ -3130,7 +3264,9 @@ def test_celui_qui_tient_son_poste_cede_puis_revient(banc):
         return { pousse: +pousse.toFixed(1), rentre: +Math.hypot(t.x - poste.x, t.y - poste.y).toFixed(1),
                  etat: t.etat };
     }""")
-    assert r["pousse"] > 0.5, "on doit pouvoir le tasser un peu, sinon il bouche la rue"
+    # ⚠️ Le plancher est « un peu », pas un demi-pixel : en rue libre la laisse le ramene a chaque
+    # image et l'equilibre est a 0,1-0,3 px (le demi-pixel d'avant n'etait tenu que par la roulotte).
+    assert r["pousse"] > 0.05, "on doit pouvoir le tasser un peu, sinon il bouche la rue"
     assert r["pousse"] < 12, f"on l'a promene de {r['pousse']} px : il n'est plus a son poste"
     # ⚠️ **UN PIXEL, c'est à sa place** : il marche par pas de fraction de pixel et
     # s'arrête dès qu'il est chez lui. Le juge exigeait STRICTEMENT moins d'un
@@ -3176,8 +3312,12 @@ def test_la_rue_se_peuple_puis_s_oublie(banc, paquet):
         });
         const dansLEcran = pietons.filter(function (e) { return L.Entites.visibleAEcran(e.x, e.y, 0); });
         // On se teleporte a l'autre bout : la foule doit suivre, pas rester la.
+        // ⚠️ « L'autre bout » reste la VILLE, pas le relief (`relief.py`, 21 sept.
+        // 2026) : sa chaine de montagnes, a l'est, est infranchissable — personne
+        // n'y nait, n'y marche ni n'y suit personne.
         const c = L.Monde.carte;
-        j.x = c.pxW - 200; j.y = c.pxH - 200;
+        const largeurRelief = c.def.relief ? c.def.relief.montagnes.l * L.TT : 0;
+        j.x = c.pxW - largeurRelief - 200; j.y = c.pxH - 200;
         L.Monde.centrerCamera(j.x, j.y);
         o.frame(600);
         const apres = L.B.entites.filter(function (e) { return e.type === 'pieton' && !e.metier; });
@@ -3306,6 +3446,8 @@ def test_l_arme_du_mort_se_ramasse(banc):
         const armeDeLaCravate = cravate.arme;
         L.Entites.tuer(cravate, L.B.joueur);
         L.Entites.indexer();
+        // ⚠️ On regarde l'arme : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(L.B.joueur, 1, 0);
         const objet = L.Combat.objetSousLaMain(L.B.joueur);
         o.tape('KeyE', 2);
         return { arme: armeDeLaCravate, objet: objet ? objet.arme : null,
@@ -3332,6 +3474,8 @@ def test_le_pickpocket_se_fait_dans_le_dos(banc):
         L.Entites.indexer();
         const face = o.poser('dame', 14, 0);
         face.argent = 40;
+        // ⚠️ Le joueur, lui, regarde la dame : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 1, 0);
         L.Entites.regarder(face, -1, 0);            // elle regarde le joueur
         const deFace = L.Combat.pickpocket(j);
         L.Entites.regarder(face, 1, 0);             // elle lui tourne le dos
@@ -3435,6 +3579,11 @@ def test_la_bagarre_tient_le_budget(banc):
         for (const e of L.B.entites) {
             if (e.type !== 'pieton' || !e.actif) continue;
             if (!e.vivant) { morts++; continue; }
+            // ⚠️ Le PETIT QUI SUIT SA MERE nait avec elle : le budget se decide a la
+            // naissance (`peupler`), et une mere nee a vingt-sept flaneurs en fait
+            // vingt-neuf. Le juge tenait tant que la graine ne faisait pas naitre de
+            // paire au bord du budget (21 sept. 2026, graine 13).
+            if (e.suit) continue;
             if (e.metier || e.personnage) metiers++; else flaneurs++;
         }
         return { etat: L.B.etat, entites: L.B.entites.length, actifs: s.actifs,
@@ -3628,6 +3777,8 @@ def test_le_kiosque_vend_de_la_vie_contre_de_l_argent(banc, paquet):
         const j = L.B.joueur;
         const etal = L.B.entites.filter(function (e) { return e.type === 'ambulant' && e.slug === 'hotdog'; })[0];
         j.x = etal.x; j.y = etal.y + 22; j.vie = 40; L.B.partie.argent = 100;
+        // ⚠️ On regarde le kiosque : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 0, -1);
         L.Entites.indexer();
         const achat = L.Missions.interagir(j);
         const apres = { vie: j.vie, argent: L.B.partie.argent };
@@ -3657,6 +3808,8 @@ def test_manger_redonne_du_souffle_et_le_cafe_reveille(banc, paquet):
         function acheter(slug) {
           const etal = L.B.entites.filter(function (e) { return e.type === 'ambulant' && e.slug === slug; })[0];
           j.x = etal.x; j.y = etal.y + 22;
+          // ⚠️ On regarde l'étal : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+          L.Entites.regarder(j, 0, -1);
           L.Entites.indexer();
           return L.Missions.interagir(j);
         }
@@ -3912,6 +4065,8 @@ def test_la_compagnie_se_paie_et_refuse_quand_la_police_cherche(banc, paquet):
         for (const q of L.B.entites.slice()) if (q !== j && q.type !== 'joueur') L.Entites.retirer(q);
         const fille = o.poser('racoleuse', 12, 0);
         fille.etat = 'arret';
+        // ⚠️ On regarde la fille : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 1, 0);
         L.Entites.indexer();
         j.vie = 50; L.B.partie.argent = 200;
         L.B.recherche.etoiles = 2;
@@ -4065,6 +4220,8 @@ def test_le_hud_nomme_la_fille_de_la_brume(banc, paquet):
         for (const q of L.B.entites.slice()) if (q !== j && q.type !== 'joueur') L.Entites.retirer(q);
         const fille = o.poser('racoleuse', 14, 0);
         fille.etat = 'arret';
+        // ⚠️ On regarde la fille : l'invite n'apparaît que pour ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 1, 0);
         L.Entites.indexer();
         L.Missions.majInvite(j);
         const pres = L.B.invite;
@@ -4088,6 +4245,8 @@ def test_on_vole_un_char_et_on_en_descend(banc):
         j.y += 40;                                  // loin de la porte du terminus : E y entrerait
         const v = o.char('auto', 24, 0, 0);
         const avantVol = L.B.partie.stats.volees;
+        // ⚠️ On regarde le char : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 1, 0);
         o.tape('KeyE', 2);
         const dedans = { conducteur: v.conducteur === j, dansVehicule: j.dansVehicule === v,
                          dessine: j.dessine, contexte: o.elements.tactile.querySelectorAll('[data-a]')[0].textContent };
@@ -4150,7 +4309,7 @@ def test_le_cercle_d_un_char_ne_grandit_pas_avec_sa_vitesse(banc, paquet):
         j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
         function ecart(a, b) { let e = b - a; while (e > Math.PI) e -= 2 * Math.PI; while (e < -Math.PI) e += 2 * Math.PI; return e; }
         const out = {};
-        ['auto', 'moto', 'autobus'].forEach(function (slug) {
+        ['auto', 'moto', 'camion', 'autobus'].forEach(function (slug) {
             const v = o.char(slug, 0, 0, 0);
             const cercles = [], glisses = [];
             [0.25, 1.0].forEach(function (part) {
@@ -4171,7 +4330,7 @@ def test_le_cercle_d_un_char_ne_grandit_pas_avec_sa_vitesse(banc, paquet):
                 glisses.push(+(Math.abs(ecart(v.angle, Math.atan2(v.vy, v.vx))) * 180 / Math.PI).toFixed(1));
                 if (tourne < Math.PI * 2) cercles.push('jamais bouclé');
             });
-            out[slug] = { rayon: v.def.rayon_braquage, cercles: cercles, glisses: glisses };
+            out[slug] = { rayon: v.def.rayon_braquage, classe: v.def.classe, cercles: cercles, glisses: glisses };
             L.Entites.retirer(v);
         });
         return out;
@@ -4188,7 +4347,17 @@ def test_le_cercle_d_un_char_ne_grandit_pas_avec_sa_vitesse(banc, paquet):
         assert vite <= lent * 2.6, f"{slug} : le cercle passe de {lent} à {vite} px avec la vitesse"
         # Et il reste franchissable : un coin de rue fait une tuile et demie,
         # une intersection quatre.
-        assert vite <= 16 * 4.5, f"{slug} : {vite / 16:.1f} tuiles de rayon à fond, aucun coin ne passe"
+        # ⚠️ SAUF UN POIDS LOURD LANCÉ (21 sept. 2026, la paie de la Prévost).
+        # Jusque-là l'autobus ne passait jamais 1,84 px/image — la friction lui
+        # volait sa `vitesse_max` —, et ce juge le mesurait « à fond » sans le
+        # savoir : il était vert à vide. Il roule enfin à 2,6, et à 2,6 un
+        # autobus ne prend pas une intersection : il freine avant, comme un vrai.
+        # Rien n'a reculé : la courbe lit `vitesse / vitesse_max`, qui n'a pas
+        # bougé, donc à chaque vitesse qu'il atteignait avant il tourne comme
+        # avant. La borne ne garde que l'ordre de grandeur — qu'on ne l'alourdisse
+        # pas sans le voir.
+        tuiles = 6.5 if m["classe"] == "camion" else 4.5
+        assert vite <= 16 * tuiles, f"{slug} : {vite / 16:.1f} tuiles de rayon à fond, aucun coin ne passe"
     # La berline glisse un peu, jamais en travers : c'est le caractère de la
     # sport, pas celui d'une auto de tous les jours.
     assert max(r["auto"]["glisses"]) < 20, r["auto"]
@@ -4288,15 +4457,14 @@ def test_l_option_du_volant_en_marche_arriere_se_bascule_et_se_garde(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         o.tape('Escape', 2);
-        L.B.menu.items.find(function (i) { return i.libelle === 'OPTIONS'; }).faire();
+        L.Hud.ouvrirOnglet('options');
         const ligne = function () { return L.B.menu.items.find(function (i) { return i.libelle === 'VOLANT EN MARCHE ARRIÈRE'; }); };
         const avant = { detail: ligne().detail, option: L.B.options.reculCommeEnAvant };
         ligne().faire(ligne());
         const apres = { detail: ligne().detail, option: L.B.options.reculCommeEnAvant,
                         sauvee: JSON.parse(o.store[L.Sauvegarde.CLE_OPTIONS]).reculCommeEnAvant };
         // Rouvrir les options : la ligne dit ce qui est choisi, pas le defaut.
-        L.B.menu.items.find(function (i) { return i.libelle === 'RETOUR'; }).faire();
-        L.B.menu.items.find(function (i) { return i.libelle === 'OPTIONS'; }).faire();
+        o.tape('ArrowRight', 2); o.tape('ArrowLeft', 2);
         const rouvert = ligne().detail;
         ligne().faire(ligne());
         return { avant: avant, apres: apres, rouvert: rouvert, retour: { detail: ligne().detail, option: L.B.options.reculCommeEnAvant } };
@@ -4918,7 +5086,9 @@ def test_la_fourriere_saisit_le_char_et_le_revend_plus_cher_qu_il_ne_vaut(banc, 
     assert r["plein"]["n"] == f["places"], "le lot garde %s chars, pas %s" % (f["places"], r["plein"]["n"])
     assert r["plein"]["dernier"] == "moto", "le dernier saisi n'est pas au bout"
     assert r["plein"]["premier"] == "taxi", "c'est le plus VIEUX qui doit partir"
-    assert r["rachat"]["achete"] is True and r["rachat"]["reste"] == 0
+    # ⚠️ `faire` rend `false` : le comptoir RESTE ouvert (Martin, 22 sept. 2026).
+    # Le rachat se juge a ce qu'il fait — le lot vide, l'argent parti.
+    assert r["rachat"]["achete"] is False and r["rachat"]["reste"] == 0
     assert r["rachat"]["paye"] == r["rachat"]["prix"] > 0
     assert r["vide"] == "LE LOT EST VIDE", "un lot vide doit le dire, pas se taire"
     assert r["poses"] == 1 and r["dansLaCour"] == 1, (
@@ -5073,6 +5243,50 @@ def test_le_repertoire_ne_montre_que_les_gens_rencontres(banc, paquet):
     # du lieu, sinon elle envoie le joueur a « PORTE:TERMINUS ».
     assert ":" not in (r["ou"] or ""), "la fiche donne une adresse de code : %s" % r["ou"]
     assert r["ou"] and r["ou"] in r["lieux"], "le lieu de la fiche n'existe pas sur la carte : %s" % r["ou"]
+
+
+def test_sortir_d_une_fiche_rend_le_curseur_a_la_meme_personne(banc):
+    """⚠️ RETOUR depuis une fiche rouvrait le RÉPERTOIRE sur sa première ligne :
+    avec dix personnes connues, on reperdait sa place à chaque fiche (Martin,
+    22 sept. 2026). Au clavier, comme on joue : on ouvre la fiche de la
+    DEUXIÈME personne, on en sort par RETOUR puis par B, le curseur est sur
+    elle ; et le carnet rouvre sur RÉPERTOIRE, pas sur EN COURS."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const H = L.Histoire;
+        (L.B.defs.personnages || []).slice(0, 3).forEach(function (q) { H.rencontrer(q.slug); });
+        // La partie neuve ouvre sur l'aide COMMANDES : Echap la ferme, Echap met en pause.
+        while (L.B.menu) o.tape('Escape', 2);
+        o.tape('Escape', 2);
+        L.Hud.ouvrirOnglet('carnet');
+        const sous = function () { const m = L.B.menu; return m && m.items[m.curseur].libelle; };
+        const ici = function () { return L.B.menu ? { titre: L.B.menu.titre, ligne: sous() } : null; };
+        while (sous() !== 'RÉPERTOIRE') o.tape('ArrowDown', 2);
+        o.tape('KeyE', 2);
+        const premier = sous();
+        o.tape('ArrowDown', 2);
+        const visee = sous();
+        o.tape('KeyE', 2);
+        const fiche = ici(), surRetour = sous();
+        o.tape('KeyE', 2);                         // RETOUR, la ligne du bas
+        const parRetour = ici();
+        o.tape('KeyE', 2);
+        o.tape('KeyB', 2);                         // B recule d'un cran (Echap reprend la partie)
+        const parB = ici();
+        o.tape('KeyB', 2);
+        const carnet = ici();
+        return { premier: premier, visee: visee, fiche: fiche, surRetour: surRetour,
+                 parRetour: parRetour, parB: parB, carnet: carnet };
+    }""")
+    assert r["visee"] != r["premier"], "il faut viser une autre personne que la premiere : %s" % r
+    assert r["fiche"]["titre"] == r["visee"] and r["surRetour"] == "RETOUR", r
+    assert r["parRetour"] == {"titre": "RÉPERTOIRE", "ligne": r["visee"]}, (
+        "RETOUR doit rendre le curseur a la personne dont on sort : %s" % r
+    )
+    assert r["parB"] == {"titre": "RÉPERTOIRE", "ligne": r["visee"]}, "B doit faire pareil : %s" % r
+    assert r["carnet"] == {"titre": "LE CARNET", "ligne": "RÉPERTOIRE"}, (
+        "le carnet doit rouvrir sur la page d'ou l'on revient : %s" % r
+    )
 
 
 def test_mal_gare_veut_dire_quelque_chose_et_la_fourriere_passe(banc, paquet):
@@ -5532,6 +5746,9 @@ def test_le_trafic_reste_dans_sa_voie(banc):
             if (i < 200 || i % 20) continue;
             L.B.entites.forEach(function (v) {
                 if (v.type !== 'vehicule' || v.conducteur !== 'trafic' || v.def.classe === 'velo' && false) return;
+                // ⚠️ Un velo parti sur le trottoir ou au parc (`horsRue`) y est de son
+                // plein gre : ce n'est pas un char qui coupe un coin (`test_velos_js`).
+                if (v.horsRue) return;
                 releves++;
                 const tx = Math.floor(v.x / L.TT), ty = Math.floor(v.y / L.TT);
                 if (!L.Monde.estRoute(tx, ty)) horsRoute++;
@@ -6097,9 +6314,16 @@ def test_le_plafond_de_lampes_tient_les_lampadaires_ET_les_feux(racine):
     plafond = int(re.search(r"^  const LAMPES_MAX = (\d+);", js("base.js"), re.M).group(1))
     lampadaires = int(re.search(r"out\.length >= (\d+)\) break;", js("monde.js")).group(1))
     feux = int(re.search(r"^  const LAMPES_FEUX_MAX = (\d+);", js("vehicules.js"), re.M).group(1))
-    assert plafond >= lampadaires + feux + 1, (
-        f"{lampadaires} lampadaires + {feux} feux + le projecteur de l'helico ne tiennent pas "
-        f"sous un plafond de {plafond} : les feux en eteindraient"
+    # Et depuis « la nuit a ses habitudes », les phares des chars menés — comptés
+    # en CHARS depuis « des phares à la mesure de chaque char » : tant de chars, à
+    # tant de lampes au plus.
+    chars = int(re.search(r"^  const CHARS_ECLAIRES_MAX = (\d+);", js("vehicules.js"), re.M).group(1))
+    par_char = int(re.search(r"^  const LAMPES_PAR_CHAR_MAX = (\d+);", js("vehicules.js"), re.M).group(1))
+    assert re.search(r"^  const LAMPES_PHARES_MAX = CHARS_ECLAIRES_MAX \* LAMPES_PAR_CHAR_MAX;", js("vehicules.js"), re.M)
+    phares = chars * par_char
+    assert plafond >= lampadaires + feux + phares + 1, (
+        f"{lampadaires} lampadaires + {feux} feux + {phares} phares + le projecteur de l'helico ne "
+        f"tiennent pas sous un plafond de {plafond} : les feux en eteindraient"
     )
 
 
@@ -6672,6 +6896,8 @@ def test_on_entre_dans_la_planque_et_on_en_ressort(banc):
         const j = L.B.joueur, c = L.Monde.carte;
         const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        // ⚠️ On regarde la porte : dehors, ENTRER n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 0, -1);
         // Ce qui ne bouge pas : ni les pietons (oublies quand on s'eloigne), ni les
         // chars, ni les armes de fortune (semees au fil des images).
         // ⚠️ `bete` et `ballon` sont de la VIE DE RUE, pas du mobilier : un goéland
@@ -6930,7 +7156,9 @@ def test_le_taxi_de_marco_ne_se_vend_pas(banc, paquet):
 
         // La livraison, la vraie : on ramene le taxi au garage et la mission
         // se termine toute seule — c'est la qu'on efface `mission`.
-        L.B.partie.mission.etape = 2;
+        // ⚠️ La livraison est le DERNIER objectif (le phare et l'étoile à semer passent avant,
+        // depuis « des missions plus longues ») : on la cherche plutôt que de la compter.
+        L.B.partie.mission.etape = L.B.defs.missions.find(function (m) { return m.slug === 'm3'; }).objectifs.length - 1;
         const g = L.Histoire.lieu('garage');
         taxi.x = g.x; taxi.y = g.y; taxi.vitesse = 0;
         j.x = taxi.x; j.y = taxi.y;
@@ -6965,7 +7193,9 @@ def test_le_taxi_de_marco_ne_se_vend_pas(banc, paquet):
     # sans lui, le taxi redeviendrait vendable la minute ou Marco le recupere.
     assert r["livre"]["faite"], "la mission ne s'est pas terminee : le juge ne prouve rien"
     assert r["livre"]["mission"] is None and r["livre"]["aQui"] == "marco"
-    assert r["autre"]["actif"] is True and r["autre"]["vendu"] is True, (
+    # ⚠️ `vendu` est le retour de `faire` : au comptoir, il garde le menu ouvert
+    # (`false`) — la vente se juge a l'argent et au char parti, plus bas.
+    assert r["autre"]["actif"] is True and r["autre"]["argent"] > 0, (
         "plus personne ne peut vendre un char au garage : %s" % r["autre"]
     )
     assert r["autre"]["argent"] == round(auto["prix"] * paquet["economie"]["vente_fraction"])
@@ -7097,6 +7327,8 @@ def test_un_commerce_s_achete_au_comptoir_et_rapporte(banc, paquet):
         L.B.partie.argent = 2000;
         const porte = c.portes.find(function (p) { return p.lieu === 'kiosque'; });
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        // ⚠️ On regarde la porte : dehors, ENTRER n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 0, -1);
         L.Missions.majInvite(j);
         const dehors = L.B.invite;
         o.tape('KeyE', 1);
@@ -7105,12 +7337,17 @@ def test_un_commerce_s_achete_au_comptoir_et_rapporte(banc, paquet):
         const dedans = L.B.interieur && L.B.interieur.slug;
         const point = L.B.interieur.points.find(function (p) { return p.type === 'caisse'; });
         j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
+        // Et la caisse aussi : on la regarde (elle est au-dessus du joueur).
+        L.Entites.regarder(j, 0, -1);
         L.Missions.majInvite(j);
         const inviteCaisse = L.B.invite;
         o.tape('KeyE', 2);
         const comptoir = { menu: libelles(), choisi: choisi(), aide: L.B.menu && L.B.menu.aide };
         o.tape('KeyE', 2);
         const achete = { ouvert: !!L.B.menu, a_soi: !!L.B.partie.proprietes.kiosque, argent: L.B.partie.argent };
+        // Le comptoir reste ouvert apres l'achat : on le quitte comme le joueur, a Echap.
+        o.tape('Escape', 2);
+        achete.ferme = !L.B.menu;
         for (let i = 0; i < 4; i++) L.Missions.revenusDuJour();
         const caisse = L.B.partie.proprietes.kiosque.caisse;
         L.Missions.majInvite(j);
@@ -7130,7 +7367,8 @@ def test_un_commerce_s_achete_au_comptoir_et_rapporte(banc, paquet):
     assert r["comptoir"]["menu"] == ["ACHETER LE COMMERCE"], r["comptoir"]["menu"]
     assert r["comptoir"]["choisi"] == "ACHETER LE COMMERCE"
     assert str(kiosque["revenu_par_jour"]) in r["comptoir"]["aide"], "le comptoir ne dit pas ce que ca rapporte"
-    assert r["achete"] == {"ouvert": False, "a_soi": True, "argent": 2000 - kiosque["prix"]}
+    assert r["achete"] == {"ouvert": True, "a_soi": True, "argent": 2000 - kiosque["prix"], "ferme": True}, (
+        "l'achat du commerce doit laisser le comptoir ouvert, et Echap le fermer : %s" % r["achete"])
     assert r["caisse"] == kiosque["revenu_par_jour"] * paquet["economie"]["caisse_jours_max"], "la caisse doit plafonner"
     assert r["inviteApres"] == "LA CAISSE"
     assert r["aSoi"]["menu"] == ["PRENDRE LA CAISSE"], "un commerce a soi ne se rachete pas : %s" % r["aSoi"]["menu"]
@@ -7149,11 +7387,15 @@ def test_au_garage_deux_pressions_vendent_le_char_et_n_achetent_pas_le_garage(ba
         L.B.partie.argent = 2 * %d;
         const porte = c.portes.find(function (p) { return p.lieu === 'garage'; });
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        // ⚠️ On regarde la porte : dehors, ENTRER n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 0, -1);
         o.char('auto', 20, 0, 0);
         o.tape('KeyE', 1);
         o.fondu();
         const point = L.B.interieur.points.find(function (p) { return p.type === 'vendre'; });
         j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
+        // Et le comptoir aussi : on le regarde (il est au-dessus du joueur).
+        L.Entites.regarder(j, 0, -1);
         o.tape('KeyE', 2);
         const menu = L.B.menu ? L.B.menu.items.map(function (i) { return i.libelle; }) : null;
         const choisi = L.B.menu ? L.B.menu.items[L.B.menu.curseur].libelle : null;
@@ -7185,7 +7427,12 @@ def test_devant_le_garage_la_porte_gagne_sur_le_char_gare_devant(banc, a_soi):
         if (%s) L.B.partie.proprietes.garage = { jour: L.B.partie.jour, caisse: 0 };
         L.B.partie.argent = 99999;             // de quoi acheter : la porte ne doit pas le proposer
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
-        const v = o.char('auto', 20, 0, 0);    // gare devant, a portee de portiere
+        // ⚠️ On regarde la porte : dehors, ENTRER n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 0, -1);
+        // ⚠️ Le char est DANS LE REGARD, a cote de la porte : depuis que ACTION n'agit que
+        // sur ce qu'on regarde, un char a l'est de quelqu'un qui regarde la porte au nord
+        // n'etait plus a portee de rien — et la course entre les deux lecteurs ne se jouait plus.
+        const v = o.char('auto', 12, -12, 0);  // gare devant, a portee de portiere
         const pres = L.Vehicules.vehiculeSousLaMain(j) === v, devant = L.Monde.porteDevant(j) === porte;
         o.tape('KeyE', 1);                     // UNE pression
         const fondu = !!L.B.transition, menu = !!L.B.menu, auVolant = !!j.dansVehicule;
@@ -7491,6 +7738,33 @@ def test_la_roulade_tourne_et_le_recul_chancelle(banc):
     assert r["penche"] < 1 and r["dy"] > 0, "ramasser courbe le dos"
 
 
+def test_le_joueur_touche_chancelle_puis_se_redresse(banc):
+    """Martin : « regarde pourquoi mon personnage est croche. » `blesser` pose un
+    `recul` (8 images, 22 si on est renverse) et seule la mise a jour des
+    PIETONS le decomptait : le joueur restait penche de 0,22 rad, du cote de sa
+    marche, jusqu'a la fin de la partie — au premier coup recu."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(81);
+        const j = L.B.joueur;
+        const lu = function () { return { recul: j.recul, rot: L.Entites.pose(j).rot }; };
+        const avant = lu();
+        L.Entites.blesser(j, 1, null, {});
+        const petit = lu();
+        o.frame(12);
+        const petitApres = lu();
+        L.Entites.blesser(j, 1, null, { renverse: true });
+        const gros = lu();
+        o.frame(30);
+        const grosApres = lu();
+        return { avant: avant, petit: petit, petitApres: petitApres, gros: gros, grosApres: grosApres };
+    }""")
+    assert r["avant"]["rot"] == 0, r
+    assert r["petit"]["rot"] != 0 and r["gros"]["rot"] != 0, "le coup fait chanceler : %s" % r
+    assert r["petitApres"] == {"recul": 0, "rot": 0}, "le petit coup est oublie en 12 images : %s" % r
+    assert r["grosApres"] == {"recul": 0, "rot": 0}, "le corps renverse se redresse en 30 images : %s" % r
+
+
 def test_la_police_pixel_sait_ecrire_tout_ce_que_le_jeu_affiche(banc):
     """Un glyphe absent tombe sur « ? » : HÔPITAL, CASSE-CROÛTE, BÂTON… Martin
     l'a vu a l'ecran. Chaque nom du jeu doit se normaliser en glyphes connus —
@@ -7580,19 +7854,21 @@ def test_la_police_dessine_l_accent_au_dessus_de_la_lettre(banc):
 
 
 def test_la_pause_a_un_menu_des_options_et_un_bilan(banc):
+    """Les options et le bilan sont des ONGLETS du classeur de la PAUSE : on y
+    tourne aux fleches, et ECHAP reprend la partie de n'importe lequel."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         o.tape('Escape', 2);
         const pause = { etat: L.B.etat, menu: L.B.menu && L.B.menu.titre };
-        // OPTIONS : troisieme ligne ; on bascule le sang.
-        L.B.menu.items.find(function (i) { return i.libelle === 'OPTIONS'; }).faire();
+        // OPTIONS : le cinquieme onglet ; on bascule le sang.
+        L.Hud.ouvrirOnglet('options');
         const options = L.B.menu.titre;
         const sangAvant = L.B.options.sang;
         L.B.menu.items.find(function (i) { return i.libelle === 'SANG'; }).faire(L.B.menu.items[0]);
         const sangApres = L.B.options.sang;
         const sauvees = JSON.parse(o.store[L.Sauvegarde.CLE_OPTIONS]).sang;
-        L.B.menu.items.find(function (i) { return i.libelle === 'RETOUR'; }).faire();
-        L.B.menu.items.find(function (i) { return i.libelle === 'BILAN DE LA SESSION'; }).faire();
+        // Deux crans a gauche : COMMANDES, puis BILAN.
+        o.tape('ArrowLeft', 2); o.tape('ArrowLeft', 2);
         const bilan = { titre: L.B.menu.titre, lignes: L.B.menu.items.length };
         o.tape('Escape', 2);
         return { pause: pause, options: options, sangAvant: sangAvant, sangApres: sangApres, sauvees: sauvees,
@@ -7602,6 +7878,507 @@ def test_la_pause_a_un_menu_des_options_et_un_bilan(banc):
     assert r["options"] == "OPTIONS" and r["sangApres"] == (not r["sangAvant"]) and r["sauvees"] == r["sangApres"]
     assert r["bilan"]["titre"] == "BILAN" and r["bilan"]["lignes"] >= 9
     assert r["etat"] == "jeu" and r["menu"] is None, "Echap doit reprendre et fermer le menu"
+
+
+def test_le_mode_photo_fige_le_monde_promene_la_camera_et_capture(banc):
+    """M14, 6e vague. Ouvert depuis la PAUSE, comme la carte : le monde attend
+    (`B.t` ne bouge pas) mais l'ecran continue de se dessiner (`B.image`
+    avance) — sinon le mode photo serait un ecran noir, pas une vue qu'on
+    cadre. Le stick deplace la vue SANS toucher `B.cam` (c'est `B.photo.dx/dy`
+    qui bouge), ARME cycle les filtres, ACTION capture et telecharge, ANNULER
+    referme."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const camAvant = { x: L.B.cam.x, y: L.B.cam.y }, tAvant = L.B.t;
+        o.tape('Escape', 2);
+        L.B.menu.items.find(function (i) { return i.libelle === 'MODE PHOTO'; }).faire();
+        // ⚠️ Une COPIE : `L.B.photo` est le meme objet du debut a la fin, le
+        // stick et les filtres le mutent en place plus bas — le lire ici sans
+        // copier aurait rendu l'etat de LA FIN, pas celui de l'ouverture.
+        const ouvert = { etat: L.B.etat, photo: Object.assign({}, L.B.photo), menu: L.B.menu };
+        const imageAvant = L.B.image;
+        o.pad([1, 0]); o.frame(10); o.pad(null);
+        const apresPan = { dx: L.B.photo.dx, camInchangee: L.B.cam.x === camAvant.x && L.B.cam.y === camAvant.y,
+                            imageAvance: L.B.image > imageAvant };
+        o.tape('Tab', 2);
+        const filtreApres1 = L.B.photo.filtre;
+        o.tape('Tab', 2);
+        const filtreApres2 = L.B.photo.filtre;
+        o.tape('Enter', 2);
+        const captures = o.photo.telechargements.length, premiere = o.photo.telechargements[0];
+        // ⚠️ `tGele` AVANT de refermer : sortir du mode photo rend la main au
+        // jeu, qui recommence aussitot a faire avancer `B.t` — le lire apres
+        // les deux images de relache de `tape('Backspace', 2)` aurait mesure
+        // la reprise, pas le gel.
+        const tGele = L.B.t === tAvant;
+        o.tape('Backspace', 2);
+        return { ouvert: ouvert, apresPan: apresPan, filtreApres1: filtreApres1, filtreApres2: filtreApres2,
+                 captures: captures, premiere: premiere, tGele: tGele,
+                 etatApres: L.B.etat, photoApres: L.B.photo };
+    }""")
+    assert r["ouvert"] == {"etat": "photo", "photo": {"dx": 0, "dy": 0, "filtre": 0}, "menu": None}
+    assert r["apresPan"]["dx"] > 0, "le stick doit deplacer la vue"
+    assert r["apresPan"]["camInchangee"], "la camera DU JOUEUR ne bouge pas : seule la vue se detache"
+    assert r["apresPan"]["imageAvance"], "le monde attend, l'ecran continue de se dessiner"
+    assert r["filtreApres1"] == 1 and r["filtreApres2"] == 2, "ARME cycle les filtres un a la fois"
+    assert r["captures"] == 1
+    assert r["premiere"]["href"].startswith("data:image/png")
+    assert r["premiere"]["nom"].startswith("bandini-") and r["premiere"]["nom"].endswith(".png")
+    assert r["tGele"], "le monde attend en mode photo, comme la carte"
+    assert r["etatApres"] == "jeu" and r["photoApres"] is None, "ANNULER referme et rend la main"
+
+
+def test_la_vue_du_mode_photo_ne_deborde_pas_de_la_ville(banc):
+    """Sans borne, le stick pousserait la vue hors de la carte — de l'eau et du
+    vide sous la mer, jamais peints (voir `Monde.limitesCamera`). Pousse dans
+    UN SEUL sens largement plus longtemps qu'il n'en faut pour traverser toute
+    la ville, puis encore autant : si la vue s'arretait au bord une fois pour
+    toutes, `camX/Y` ne bougerait plus du tout entre les deux mesures — un
+    plafond qui laisserait encore deriver un peu (un bug d'arrondi, par
+    exemple) se verrait ici, pas seulement « ca n'a pas encore deborde »."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.pause();
+        L.B.menu.items.find(function (i) { return i.libelle === 'MODE PHOTO'; }).faire();
+        const lim = L.Monde.limitesCamera();
+        o.pad([1, 1]); o.frame(2500);
+        const premiere = { x: L.B.cam.x + L.B.photo.dx, y: L.B.cam.y + L.B.photo.dy };
+        o.frame(1200); o.pad(null);
+        const seconde = { x: L.B.cam.x + L.B.photo.dx, y: L.B.cam.y + L.B.photo.dy };
+        return { premiere: premiere, seconde: seconde, lim: lim };
+    }""")
+    assert r["premiere"] == r["seconde"], "colle au bord : pousser plus longtemps ne devrait plus rien deplacer"
+    assert r["premiere"]["x"] == pytest.approx(r["lim"]["xMax"], abs=0.01)
+    assert r["premiere"]["y"] == pytest.approx(r["lim"]["yMax"], abs=0.01)
+
+
+def test_la_coop_locale_bascule_un_deuxieme_joueur_a_la_manette(banc):
+    """M14 : `Jeu.basculerCoop` fait naitre un DEUXIEME VRAI JOUEUR
+    (`type: 'joueur'`, pas un pieton deguise — remaniement du 22 sept.,
+    « 2 vrais joueurs »), mene par LA manette (`Entree.SOURCE2`) — le
+    joueur 1, lui, ne repond plus qu'au clavier pendant ce temps
+    (`Entree.debutImage`, `!B.coop` sur la branche manette). Un clavier, une
+    manette : la manette ne bouge jamais le joueur 1, le clavier ne bouge jamais
+    le deuxieme. Rebasculer efface le deuxieme joueur."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const avant = L.B.entites.length;
+        L.Jeu.basculerCoop();
+        const ouvert = { coop: !!L.B.coop, entites: L.B.entites.length,
+                          type: L.B.coop.entite.type, coopFlag: L.B.coop.entite.coopJoueur2,
+                          vivant: L.B.coop.entite.vivant };
+        // ⚠️ La VITESSE, pas la position accumulee : pousser longtemps dans une
+        // direction fixe peut buter sur un mur pres du spawn (essaye, et vu :
+        // un juge qui pousse "vers l'est" pendant 200 images peut avancer de
+        // 5 px a peine, coince, sans que la coop y soit pour rien). La
+        // reponse immediate au stick/au clavier, elle, ne depend pas du decor.
+        o.pad([1, 0]); o.frame(3);
+        const e2VitesseManette = { vx: L.B.coop.entite.vx, vy: L.B.coop.entite.vy };
+        const joueurVitesseManette = { vx: L.B.joueur.vx, vy: L.B.joueur.vy };
+        o.pad(null); o.frame(2);
+        // Le CLAVIER pousse, SEUL : aucune manette branchee.
+        o.touche('KeyD'); o.frame(3);
+        const joueurVitesseClavier = { vx: L.B.joueur.vx, vy: L.B.joueur.vy };
+        const e2VitesseClavier = { vx: L.B.coop.entite.vx, vy: L.B.coop.entite.vy };
+        o.relacher('KeyD');
+        const e2 = L.B.coop.entite;
+        L.Jeu.basculerCoop();
+        // ⚠️ PAS une comparaison de COMPTE : la foule nait et meurt toute
+        // seule pendant ces images, `L.B.entites.length` bouge pour
+        // d'autres raisons. La seule preuve qui compte, c'est que CETTE
+        // entite-la (`e2`, la reference gardee plus haut) a quitte le tableau.
+        const ferme = { coop: L.B.coop, encore: L.B.entites.indexOf(e2) >= 0 };
+        return { avant: avant, ouvert: ouvert, e2VitesseManette: e2VitesseManette,
+                 joueurVitesseManette: joueurVitesseManette,
+                 joueurVitesseClavier: joueurVitesseClavier, e2VitesseClavier: e2VitesseClavier,
+                 ferme: ferme };
+    }""")
+    assert r["ouvert"] == {"coop": True, "entites": r["avant"] + 1, "type": "joueur",
+                            "coopFlag": True, "vivant": True}
+    assert r["e2VitesseManette"]["vx"] > 0.2, "la manette doit faire marcher le deuxieme joueur"
+    assert r["joueurVitesseManette"] == {"vx": 0, "vy": 0}, "la manette a bouge le joueur 1"
+    assert r["joueurVitesseClavier"]["vx"] > 0.5, "le clavier doit faire marcher le joueur 1"
+    # ⚠️ Retour de Martin (22 sept., en testant) : le deuxieme joueur ne
+    # courait pas a la meme vitesse que le premier — l'essai le menait par
+    # `v.pieton` (la foule), pas `v.joueur_course`. Les deux passent
+    # desormais par la MEME fonction (`Entites.majJoueur`). Le stick a
+    # fond (mag=1) et le clavier (toujours a fond) doivent donner LA MEME
+    # vitesse, au pouce pres.
+    assert r["e2VitesseManette"]["vx"] == pytest.approx(r["joueurVitesseClavier"]["vx"], abs=0.05), (
+        f"le deuxieme joueur court a {r['e2VitesseManette']['vx']:.2f} px/image, "
+        f"le premier a {r['joueurVitesseClavier']['vx']:.2f} : meme manette a fond, meme vitesse attendue"
+    )
+    assert r["e2VitesseClavier"] == {"vx": 0, "vy": 0}, "le clavier a bouge le deuxieme joueur"
+    assert r["ferme"] == {"coop": None, "encore": False}, "rebasculer efface le deuxieme joueur"
+
+
+def test_la_coop_locale_ignore_les_boutons_de_la_manette_pour_le_joueur_1(banc):
+    """Retour de Martin (22 sept., en testant) : « les frappes ne sont pas bien
+    assignées au bon joueur » — c'était plus large que le stick (déjà isolé) :
+    un BOUTON de la manette (ACTION, ATTAQUE, ESQUIVE…) ne doit jamais
+    déclencher une action du joueur 1 pendant la coop, exactement comme son
+    stick ne doit jamais le faire marcher. `bas()`/`neuf()` ignorent la
+    manette pendant `B.coop`, pas seulement `debutImage`."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        // ACTION (0), ESQUIVE/ANNULER (1), ATTAQUE (2, 5), ARME (3, 4) : tous
+        // les boutons de la manette, enfonces en meme temps.
+        o.pad([0, 0], [1, 1, 1, 1, 1, 1]);
+        // ⚠️ `Entree.debutImage()` directement, PAS `o.frame(1)` : un frame
+        // complet appelle `Jeu.maj()`, qui finit par `Entree.videPresse()` —
+        // `neuf()` retomberait a faux avant qu'on le lise, qu'il ait ete
+        // ignore par la coop ou non. Ici on lit la couche d'entree seule,
+        // juste apres le calcul, avant que quoi que ce soit ne la vide.
+        L.Entree.debutImage();
+        const pendant = { bas: L.Entree.bas('attaque'), neuf: L.Entree.neuf('action'),
+                           esquive: L.Entree.bas('esquive'), arme: L.Entree.bas('arme') };
+        o.pad(null);
+        L.Jeu.basculerCoop();
+        return { pendant: pendant };
+    }""")
+    assert r["pendant"] == {"bas": False, "neuf": False, "esquive": False, "arme": False}, (
+        "un bouton de la manette a declenche une action du joueur 1 pendant la coop"
+    )
+
+
+def test_la_coop_locale_le_deuxieme_joueur_interagit_au_bouton_action(banc):
+    """Demande de Martin (22 sept.) : « ajouter ACTION (interagir) » pour le
+    deuxième joueur — les mêmes gestes de décor que le premier
+    (`Interactions.utiliserSurLesGens`/`Betes`/`LeDecor`), au bouton ACTION de
+    LA MANETTE (`Entree.neufManette`), jamais celui du clavier. ⚠️ Jugé PAR LE
+    BOUTON (comme `test_interactions_js.py` : « la chaîne d'ACTION affame ce
+    qui suit, un juge qui appelle la fonction ne voit pas le bouton cassé »),
+    pas en appelant `Interactions.utiliserSurLeDecor` a la main."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        const e2 = L.B.coop.entite;
+        // Vide les passants autour : quelqu'un devant la poubelle fausserait le juge.
+        for (const q of L.Entites.autour(e2.x, e2.y, 60, function (v) { return v.type === 'pieton' && v !== e2; })) L.Entites.retirer(q);
+        L.Entites.creer('decor', e2.x, e2.y - 12, { decor: 'poubelle', r: 5, solide: true, dessine: true });
+        L.Entites.reindexerDecor(); L.Entites.indexer();
+        L.Entites.regarder(e2, 0, -1);   // face au bac
+        const avant = Object.keys(L.B.partie.fouilles).length;
+        // Le bouton ACTION (0) de LA MANETTE — ni le stick, ni le clavier.
+        o.pad([0, 0], [1]);
+        o.frame(1);
+        o.pad(null);
+        const apres = Object.keys(L.B.partie.fouilles).length;
+        L.Jeu.basculerCoop();
+        return { avant: avant, apres: apres };
+    }""")
+    assert r["apres"] == r["avant"] + 1, "le bouton ACTION de la manette doit fouiller le bac pour le deuxieme joueur"
+
+
+def test_la_coop_locale_les_deux_joueurs_ne_peuvent_pas_se_frapper(banc):
+    """« Il ne faut pas qu'ils puissent se frapper mutuellement » (Martin, 22
+    sept.) : la regle est ecrite dans `Entites.blesser`, au seul passage de
+    toute blessure du jeu — un joueur ne blesse pas un joueur. ⚠️ Et c'est
+    BIEN CETTE REGLE-LA qu'on juge, pas l'invincibilite de naissance : on
+    attend qu'elle soit retombee, puis le meme coup venant d'un PASSANT
+    porte, lui."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        const e2 = L.B.coop.entite;
+        // L'invincibilite de naissance (60 images) doit etre retombee : sans
+        // ca, le juge resterait vert meme sans la regle.
+        for (let i = 0; i < 70; i++) o.frame(1);
+        const invincible = e2.invincible;
+        const vieAvant = e2.vie;
+        const parLeJoueur = L.Entites.blesser(e2, 20, L.B.joueur, {});
+        const vieApres = e2.vie;
+        // Le meme coup, venu d'un passant : il porte. C'est la preuve que le
+        // refus vient de la regle joueur-contre-joueur et de rien d'autre.
+        const passant = L.Entites.creerPieton(e2.x + 40, e2.y, L.Entites.archetypeDeRue());
+        const parUnPassant = L.Entites.blesser(e2, 20, passant, {});
+        // Et dans l'autre sens : le deuxieme ne blesse pas le premier.
+        const jAvant = L.B.joueur.vie;
+        L.B.joueur.invincible = 0;
+        const versLePremier = L.Entites.blesser(L.B.joueur, 20, e2, {});
+        L.Jeu.basculerCoop();
+        return { invincible: invincible, vieAvant: vieAvant, vieApres: vieApres,
+                 parLeJoueur: parLeJoueur, parUnPassant: parUnPassant,
+                 versLePremier: versLePremier, jAvant: jAvant, jApres: L.B.joueur.vie };
+    }""")
+    assert not r["invincible"], "l'invincibilite de naissance tient encore : le juge ne prouverait rien"
+    assert r["parLeJoueur"] is False, "le joueur 1 a pu frapper le deuxieme"
+    assert r["vieApres"] == r["vieAvant"], "le deuxieme joueur a perdu de la vie sous le coup du premier"
+    assert r["parUnPassant"] is True, "un passant doit pouvoir le blesser, lui : sinon le juge ne mord pas"
+    assert r["versLePremier"] is False, "le deuxieme joueur a pu frapper le premier"
+    assert r["jApres"] == r["jAvant"], "le joueur 1 a perdu de la vie sous le coup du deuxieme"
+
+
+def test_la_coop_locale_le_deuxieme_joueur_frappe_a_poings_nus(banc):
+    """Demande de Martin (22 sept.) : « toutes les mêmes actions » — ATTAQUE
+    fait frapper le deuxième joueur, ET SON COUP PORTE.
+
+    ⚠️ C'est LA raison du remaniement « 2 vrais joueurs » : tant qu'il etait
+    un `pieton`, son poing ne touchait jamais personne — `Combat.arcDeMelee`
+    refuse pieton contre pieton (les passants ne se battent pas entre eux,
+    sauf deux gangs). Un juge qui ne regardait que `etat === 'attaque'` restait
+    vert pendant que rien n'arrivait : on mesure donc la VIE de la cible."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        const e2 = L.B.coop.entite;
+        // Le banc plante la cible sous son nez, face a elle, et vide le reste :
+        // un passant qui s'interpose prendrait le coup a sa place.
+        for (const q of L.Entites.autour(e2.x, e2.y, 60, function (v) { return v.type === 'pieton'; })) L.Entites.retirer(q);
+        const cible = L.Entites.creerPieton(e2.x + 9, e2.y, L.Entites.archetypeDeRue());
+        cible.etat = 'fige';
+        L.Entites.regarder(e2, 1, 0);
+        L.Entites.indexer();
+        const vieAvant = cible.vie;
+        // ATTAQUE : bouton 2 (MANETTE_DEFAUT.attaque = [2, 5]).
+        // ⚠️ ON PRESSE ET ON RELACHE — a poings nus (melee), le bouton TENU
+        // charge un coup fort, et le coup ne part qu'au relacher
+        // (`Combat.majGestes`). C'est desormais le meme geste que pour le
+        // joueur 1 : le tenir sans jamais le lacher ne frappe personne.
+        o.pad([0, 0], [0, 0, 1]);
+        o.frame(1);
+        const charge = e2.charge;
+        o.pad(null);
+        o.frame(1);
+        const etat = e2.etat, arme = e2.arme;
+        // Les trois temps du coup : anticipation, actif, repos.
+        for (let i = 0; i < 20; i++) o.frame(1);
+        L.Jeu.basculerCoop();
+        return { etat: etat, arme: arme, charge: charge, vieAvant: vieAvant, vieApres: cible.vie,
+                 assomme: cible.etat === 'assomme' };
+    }""")
+    assert r["charge"] >= 1, "le bouton tenu doit CHARGER le coup du deuxieme joueur"
+    assert r["etat"] == "attaque", "ATTAQUE doit faire frapper le deuxieme joueur"
+    assert r["arme"] == "poings", "le deuxieme joueur part a poings nus"
+    assert r["vieApres"] < r["vieAvant"] or r["assomme"], (
+        f"le coup du deuxieme joueur n'a rien fait : la cible est passee de {r['vieAvant']} "
+        f"a {r['vieApres']} point(s) de vie"
+    )
+
+
+def test_la_coop_le_deuxieme_joueur_ne_passe_pas_les_portes(banc):
+    """« Les 2 personnages doivent pouvoir faire toutes les mêmes actions sauf
+    ce qui change de scène et lancer des missions ou conduire. C'est toujours
+    le joueur 1 » (Martin, 22 sept.). Le deuxième joueur, ACTION collé à une
+    porte : rien. Pas de fondu, pas de pièce. ⚠️ Jugé PAR LE BOUTON, et le
+    même juge vérifie que la porte, elle, s'ouvre bien pour le PREMIER — sans
+    ça, un décor mal posé (mauvaise tuile, mauvais regard) rendrait le juge
+    vert sans rien prouver."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        const j = L.B.joueur, e2 = L.B.coop.entite, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
+        // Le DEUXIEME joueur sur le pas de la porte, face a elle ; le premier a cote.
+        e2.x = porte.x * L.TT + 8; e2.y = (porte.y + 1) * L.TT + 10;
+        j.x = e2.x + 20; j.y = e2.y;
+        L.Entites.regarder(e2, 0, -1);
+        L.Entites.regarder(j, 0, -1);
+        // ACTION (bouton 0) a LA MANETTE : c'est le deuxieme joueur.
+        o.pad([0, 0], [1]);
+        o.frame(1);
+        o.pad(null);
+        o.frame(1);
+        const lui = { fondu: !!L.B.transition, dedans: !!L.B.interieur };
+        // La meme porte, au CLAVIER : le joueur 1 la passe.
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        L.Entites.regarder(j, 0, -1);
+        o.tape('KeyE', 1);
+        const premier = { fondu: !!L.B.transition };
+        o.fondu();
+        const apres = { dedans: L.B.interieur ? L.B.interieur.slug : null };
+        return { lui: lui, premier: premier, apres: apres, attendu: porte.interieur };
+    }""")
+    assert r["lui"] == {"fondu": False, "dedans": False}, (
+        "ACTION du deuxieme joueur a ouvert la porte : changer de scene est au joueur 1"
+    )
+    assert r["premier"]["fondu"] is True and r["apres"]["dedans"] == r["attendu"], (
+        "la porte ne s'ouvre meme pas pour le joueur 1 : le decor du juge est faux"
+    )
+
+
+def test_la_coop_le_partenaire_suit_dans_la_piece(banc):
+    """Il ne pousse pas les portes, il SUIT. L'essai le laissait dehors avec ses
+    coordonnees de rue (`Jeu.chargerPiece` : `B.entites = [B.joueur]`), et la
+    laisse de la camera le tirait a travers les murs de la piece. Il entre
+    avec le premier (`Entites.joueurs`), et `Jeu.majCoop` le repose a cote."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        const j = L.B.joueur, e2 = L.B.coop.entite, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        e2.x = j.x + 24; e2.y = j.y;
+        L.Entites.regarder(j, 0, -1);
+        o.tape('KeyE', 1);
+        o.fondu();
+        o.frame(2);
+        const dedans = { piece: L.B.interieur ? L.B.interieur.slug : null,
+                          present: L.B.entites.indexOf(e2) >= 0,
+                          dist: Math.round(Math.hypot(e2.x - j.x, e2.y - j.y)) };
+        // Et on ressort : il revient dehors avec lui, une seule fois (pas de
+        // sosie laisse dans la rue).
+        L.Jeu.sortir();
+        o.fondu();
+        o.frame(2);
+        let compte = 0;
+        for (const q of L.B.entites) if (q === e2) compte++;
+        const dehors = { present: L.B.entites.indexOf(e2) >= 0, compte: compte,
+                          dist: Math.round(Math.hypot(e2.x - j.x, e2.y - j.y)) };
+        return { dedans: dedans, dehors: dehors };
+    }""")
+    assert r["dedans"]["piece"], "le joueur 1 n'est pas entre : le decor du juge est faux"
+    assert r["dedans"]["present"] is True, "le deuxieme joueur est reste dehors pendant que le premier entrait"
+    assert r["dedans"]["dist"] <= 32, (
+        f"le deuxieme joueur est a {r['dedans']['dist']} px du premier dans la piece : "
+        "il a garde ses coordonnees de la rue"
+    )
+    assert r["dehors"] == {"present": True, "compte": 1, "dist": r["dehors"]["dist"]}
+    assert r["dehors"]["dist"] <= 32, "en ressortant, le deuxieme joueur est reste dans la piece"
+
+
+def test_la_coop_repeche_le_partenaire_oublie_par_une_scene(banc):
+    """La ceinture ET les bretelles. `Jeu.majCoop` repose le partenaire des que
+    la scene change (l'objet `B.interieur`), mais une sortie qui ne passerait
+    pas par la — une scene qu'on ecrira plus tard — le laisserait hors du
+    tableau des entites, vivant nulle part. Il y est repeche a l'image
+    suivante, a cote du premier, plutot que perdu dans une carte morte."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        const j = L.B.joueur, e2 = L.B.coop.entite;
+        // Ce que ferait une scene qui l'oublie : il quitte le tableau, et ses
+        // coordonnees n'ont plus rien a voir avec celles du premier.
+        L.B.entites.splice(L.B.entites.indexOf(e2), 1);
+        e2.x = j.x + 200; e2.y = j.y + 200;
+        o.frame(2);
+        const r2 = { present: L.B.entites.indexOf(e2) >= 0,
+                      dist: Math.round(Math.hypot(e2.x - j.x, e2.y - j.y)) };
+        L.Jeu.basculerCoop();
+        return r2;
+    }""")
+    assert r["present"] is True, "le partenaire oublie par une scene n'est jamais revenu"
+    assert r["dist"] <= 32, f"il est revenu a {r['dist']} px du premier, pas a cote"
+
+
+def test_la_coop_le_deuxieme_joueur_monte_en_passager(banc):
+    """Conduire est au joueur 1 — mais le deuxieme MONTE AVEC LUI. Sans ca, la
+    laisse de la camera le trainait derriere un char lance, a travers les murs
+    (vu a la sonde, 22 sept.). Passager : invisible, porte par la tole, et il
+    redescend a cote des que le premier se gare."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        const j = L.B.joueur, e2 = L.B.coop.entite;
+        const v = o.char('auto', 24, 0, 0);
+        L.Vehicules.monter(j, v);
+        o.frame(1);
+        const dedans = { passager: e2.dansVehicule === v, dessine: e2.dessine,
+                          surLaTole: Math.round(Math.hypot(e2.x - v.x, e2.y - v.y)) };
+        // Le char roule : le passager suit la tole, il ne se traine pas dedans.
+        v.vitesse = 3;
+        o.frame(20);
+        const enRoute = { passager: e2.dansVehicule === v,
+                           surLaTole: Math.round(Math.hypot(e2.x - v.x, e2.y - v.y)) };
+        L.Vehicules.descendre(j, true);
+        o.frame(2);
+        const gare = { passager: !!e2.dansVehicule, dessine: e2.dessine,
+                        dist: Math.round(Math.hypot(e2.x - j.x, e2.y - j.y)) };
+        L.Jeu.basculerCoop();
+        return { dedans: dedans, enRoute: enRoute, gare: gare };
+    }""")
+    assert r["dedans"]["passager"] is True, "le premier a pris le volant, le deuxieme est reste sur le trottoir"
+    assert r["dedans"]["dessine"] is False, "un passager ne se dessine pas par-dessus le toit"
+    assert r["enRoute"]["passager"] is True and r["enRoute"]["surLaTole"] <= 8, (
+        "le passager a perdu le char en route"
+    )
+    assert r["gare"] == {"passager": False, "dessine": True, "dist": r["gare"]["dist"]}
+    assert r["gare"]["dist"] <= 32, "le deuxieme joueur n'est pas redescendu a cote du premier"
+
+
+def test_la_coop_le_deuxieme_joueur_tombe_ko_sans_envoyer_a_l_hopital(banc):
+    """Un vrai joueur peut tomber — mais l'urgence CHANGE DE SCENE, et une
+    scene est au joueur 1. A zero de vie, le deuxieme joueur est K.-O. sur
+    place (`Entites.blesser` -> `assommer`), il attend son partenaire, puis il
+    se releve a mi-vie (`Entites.majJoueur`). La partie, elle, continue."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        const e2 = L.B.coop.entite;
+        for (let i = 0; i < 70; i++) o.frame(1);       // l'invincibilite de naissance retombe
+        const passant = L.Entites.creerPieton(e2.x + 40, e2.y, L.Entites.archetypeDeRue());
+        const vieMax = e2.vieMax;
+        L.Entites.blesser(e2, 999, passant, {});
+        const aTerre = { etat: e2.etat, vivant: e2.vivant, fondu: !!L.B.transition,
+                          dedans: !!L.B.interieur, vie: e2.vie };
+        e2.minuterie = 2;                              // le compte du K.-O., abrege
+        o.frame(4);
+        const debout = { etat: e2.etat, vie: e2.vie, vieMax: vieMax, invincible: e2.invincible > 0 };
+        L.Jeu.basculerCoop();
+        return { aTerre: aTerre, debout: debout };
+    }""")
+    assert r["aTerre"]["etat"] == "assomme", "le deuxieme joueur devait tomber K.-O."
+    assert r["aTerre"]["vivant"] is True, "le deuxieme joueur est mort au lieu de tomber K.-O."
+    assert r["aTerre"] == {"etat": "assomme", "vivant": True, "fondu": False, "dedans": False,
+                            "vie": r["aTerre"]["vie"]}, (
+        "la chute du deuxieme joueur a declenche le fondu de l'urgence"
+    )
+    assert r["debout"]["etat"] != "assomme", "le deuxieme joueur ne s'est jamais releve"
+    assert r["debout"]["vie"] == round(r["debout"]["vieMax"] / 2), "il se releve a mi-vie"
+    assert r["debout"]["invincible"] is True, "il se releve sans le repit qui evite de retomber aussitot"
+
+
+def test_la_coop_locale_l_option_donne_la_manette_au_joueur_1(banc):
+    """Demande de Martin (22 sept.) : « le joueur 1 doit pouvoir etre soit la
+    manette ou soit le clavier dans les options » — `options.coopP1Manette`
+    inverse qui a quoi : le premier a la manette, le deuxieme au clavier."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.B.options.coopP1Manette = true;
+        L.Jeu.basculerCoop();
+        // La manette pousse : le PREMIER doit marcher, le second rester immobile.
+        o.pad([1, 0]); o.frame(3);
+        const joueurVitesseManette = { vx: L.B.joueur.vx };
+        const e2VitesseManette = { vx: L.B.coop.entite.vx };
+        o.pad(null); o.frame(2);
+        // Le clavier pousse : le DEUXIEME doit marcher, le premier rester immobile.
+        o.touche('KeyD'); o.frame(3);
+        const joueurVitesseClavier = { vx: L.B.joueur.vx };
+        const e2VitesseClavier = { vx: L.B.coop.entite.vx };
+        o.relacher('KeyD');
+        L.Jeu.basculerCoop();
+        L.B.options.coopP1Manette = false;
+        return { joueurVitesseManette: joueurVitesseManette, e2VitesseManette: e2VitesseManette,
+                 joueurVitesseClavier: joueurVitesseClavier, e2VitesseClavier: e2VitesseClavier };
+    }""")
+    assert r["joueurVitesseManette"]["vx"] > 0.5, "l'option doit donner la manette au joueur 1"
+    assert r["e2VitesseManette"] == {"vx": 0}, "le deuxieme joueur ne doit pas repondre a la manette quand elle est au premier"
+    assert r["e2VitesseClavier"]["vx"] > 0.2, "le clavier doit faire marcher le deuxieme joueur, manette au premier"
+    assert r["joueurVitesseClavier"]["vx"] == 0, "le joueur 1 ne doit pas repondre au clavier quand il a la manette"
+
+
+def test_la_camera_de_la_coop_retient_le_deuxieme_joueur_a_une_laisse(banc):
+    """Le milieu des deux joueurs, et une LAISSE (`LAISSE_COOP`) qui l'empeche
+    de trop s'eloigner — sans elle, l'un des deux sortirait de l'ecran.
+
+    ⚠️ Pas un zoom arriere : essayé (22 sept. 2026), puis retiré — le sol et
+    les entités ne se dessinent QUE dans la fenêtre normale (480×270,
+    `Monde.dessinerSol`/`Entites.visibleAEcran` bornent tout sur `VW`/`VH` en
+    dur), un vrai zoom exigeait de réécrire le cull dans plusieurs modules.
+    La laisse est le choix simple qui tient dans l'écran tel qu'il est."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        // Le deuxieme joueur est teleporte loin — bien au-dela de la laisse —
+        // et la camera doit le retenir, pas le suivre jusque-la.
+        L.B.coop.entite.x += 300;
+        o.frame(5);
+        const dist = Math.hypot(L.B.joueur.x - L.B.coop.entite.x, L.B.joueur.y - L.B.coop.entite.y);
+        L.Jeu.basculerCoop();
+        return { dist: dist };
+    }""")
+    assert r["dist"] < 135, f"le deuxieme joueur est a {r['dist']:.0f}px du premier : la laisse ne tient pas"
 
 
 # --- M4 : la police -----------------------------------------------------------
@@ -7968,6 +8745,70 @@ def test_la_ligne_d_objectif_ne_passe_sur_rien(banc):
         chevauche = (o["x"] < autre["x"] + autre["l"] and autre["x"] < o["x"] + o["l"]
                      and o["y"] < autre["y"] + autre["h"] and autre["y"] < o["y"] + o["h"])
         assert not chevauche, f"la ligne d'objectif passe sur « {autre['nom']} » : {o} / {autre}"
+
+
+def test_le_moment_de_la_journee_suit_le_ciel(banc):
+    """Martin (22 sept. 2026) : « un petit icone pour indiquer quel moment de la
+    journee on est ». Quatre moments, dans l'ordre, une fois chacun par jour —
+    et la lune se leve PILE quand `estNuit` le dit : une icone qui dirait « jour »
+    quand les barrieres se ferment mentirait. Les heures sont ecrites ici, pas
+    relues dans `TEINTES`."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const M = L.Monde, suite = [], desaccords = [];
+        for (let k = 0; k < 24 * 60; k += 5) {
+            const h = k / (24 * 60), p = M.periode(h);
+            if ((p === 'nuit') !== M.estNuit(h)) desaccords.push(k);
+            if (suite[suite.length - 1] !== p) suite.push(p);
+        }
+        return { suite: suite, desaccords: desaccords,
+                 minuit: M.periode(0), midi: M.periode(0.5),
+                 h645: M.periode(6.75 / 24), h1915: M.periode(19.25 / 24),
+                 h900: M.periode(9 / 24), h1700: M.periode(17 / 24) };
+    }""")
+    assert r["suite"] == ["nuit", "aube", "jour", "crepuscule", "nuit"], r["suite"]
+    assert r["desaccords"] == [], f"l'icone et estNuit ne disent pas la meme chose a {r['desaccords']} min"
+    assert (r["minuit"], r["midi"]) == ("nuit", "jour")
+    assert r["h645"] == "aube", "6 h 45 : le ciel est orange, c'est l'aube"
+    assert r["h1915"] == "crepuscule", "19 h 15 : le ciel est orange, c'est le crepuscule"
+    assert (r["h900"], r["h1700"]) == ("jour", "jour")
+
+
+def test_l_icone_du_moment_se_dessine_devant_l_heure(banc):
+    """L'icone est DEVANT « JOUR N HH:MM », a la hauteur du texte, et la boite de
+    l'heure l'englobe — la ligne d'objectif, qui passe sous tout, passe aussi
+    sous elle. ⚠️ Dans une piece, c'est l'heure DEHORS : on dort chez soi la
+    nuit, et l'icone dit encore la lune meme si la piece est eclairee."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        function voir() {
+            L.Jeu.rendre();
+            const a = L.Hud.ancres();
+            function trouver(n) { return a.find(function (x) { return x.nom === n; }) || null; }
+            return { moment: trouver('moment'), heure: trouver('heure') };
+        }
+        L.B.partie.heure = 0.5;
+        const midi = voir();
+        L.B.partie.heure = 0.02;
+        const minuit = voir();
+        const porte = L.Monde.carte.def.portes.filter(function (q) { return q.interieur; })[0];
+        L.Jeu.entrer(porte); L.Jeu.finirTransition();
+        L.B.partie.heure = 0.02;
+        const dedans = voir();
+        return { midi: midi, minuit: minuit, dedans: dedans, interieur: !!L.B.interieur,
+                 eclaire: L.Monde.ambiance().alpha, VW: L.VW };
+    }""")
+    m, h = r["midi"]["moment"], r["midi"]["heure"]
+    assert m, "aucune ancre « moment » : le HUD ne dessine pas l'icone"
+    assert m["periode"] == "jour" and r["minuit"]["moment"]["periode"] == "nuit"
+    assert m["h"] == 7, "l'icone a la hauteur du texte du HUD (7 px)"
+    assert m["y"] == h["y"], "l'icone est sur la ligne de l'heure"
+    assert m["x"] == h["x"], "l'icone est DEVANT l'heure, et sa boite l'englobe"
+    assert h["x"] + h["l"] <= r["VW"], "l'heure deborde de l'ecran"
+    assert h["l"] > m["l"] + 20, "la boite de l'heure ne porte plus le texte"
+    assert r["interieur"] is True, "temoin : on est bien dans une piece"
+    assert r["eclaire"] == 0, "temoin : la piece est eclairee, le ciel ne s'y voit pas"
+    assert r["dedans"]["moment"]["periode"] == "nuit", "dans une piece, l'icone dit l'heure DEHORS"
 
 
 def test_le_niveau_de_recherche_ne_partage_pas_la_couleur_de_l_argent(banc):

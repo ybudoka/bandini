@@ -30,8 +30,16 @@ def test_rectangulaire_et_glyphes_connus():
 
 
 def test_la_ville_a_la_taille_de_sa_trame():
-    assert CARTE["largeur"] == sum(carte.COLONNES) + sum(carte.RUES_V)
-    assert CARTE["hauteur"] == sum(carte.RANGEES) + sum(carte.RUES_H)
+    # ⚠️ La trame fait la ville ; l'aéroport (21 sept. 2026) l'allonge SOUS elle, de
+    # l'eau et une île dessinée, sans toucher une rangée de blocs (`aeroport.py`) — et
+    # le relief (21 sept. 2026) l'allonge À L'EST, d'une chaîne de montagnes, sans
+    # toucher une colonne de blocs (`relief.py`).
+    largeur_trame = sum(carte.COLONNES) + sum(carte.RUES_V)
+    montagnes = CARTE["relief"]["montagnes"]
+    assert montagnes["x"] == largeur_trame and CARTE["largeur"] == largeur_trame + montagnes["l"]
+    trame = sum(carte.RANGEES) + sum(carte.RUES_H)
+    _, y0, _, hauteur = CARTE["aeroport"]["plan"]
+    assert trame < y0 and CARTE["hauteur"] == y0 + hauteur
     assert len(carte.RUES_V) == len(carte.COLONNES) + 1
     assert len(carte.RUES_H) == len(carte.RANGEES) + 1
 
@@ -226,9 +234,11 @@ def test_un_barbele_ne_referme_jamais_une_poche():
     rebati, et c'est exactement son role. Ce qui serait grave, c'est une COUR —
     dix tuiles, c'est moins qu'une piece."""
     terres = carte.composantes_par_terre(CARTE)
-    assert len(terres["ville"]) == 1 and len(terres["ile"]) == 1
+    assert len(terres["ville"]) == 1 and len(terres["ile"]) == 1 and len(terres["aeroport"]) == 1
     assert CARTE["tuiles_bouchees"] < 10, CARTE["tuiles_bouchees"]
-    principal = terres["ville"][0]
+    # ⚠️ Le barbelé de l'aéroport ferme l'aéroport, pas une poche : l'île est d'un
+    # seul tenant par sa guérite (`test_aeroport`), et c'est là qu'on regarde.
+    principal = terres["ville"][0] | terres["aeroport"][0]
     for y, ligne in enumerate(CARTE["sol"]):
         for x, glyphe in enumerate(ligne):
             if glyphe != carte.BARBELE:
@@ -515,7 +525,8 @@ def test_les_lampadaires_eclairent_depuis_un_trottoir():
     poteaux = [lampe for lampe in CARTE["lampes"]
                # ⚠️ Ni les guirlandes de la foire : elles pendent a un KIOSQUE,
                # pas a un poteau plante — la raison de la vitrine et de la fenetre.
-               if lampe.get("c") not in ("vitrine", "fenetre", *carte.FOIRE["lampes"])]
+               # Ni les balises de la piste de l'aeroport : elles sont AU SOL.
+               if lampe.get("c") not in ("vitrine", "fenetre", "balise", *carte.FOIRE["lampes"])]
     assert len(poteaux) >= 40
     # ⚠️ **Reformule le 15 sept. 2026, le jour du trottoir a une tuile.** Il
     # exigeait que 80 % des poteaux soient SUR le trottoir. Depuis que la dalle
@@ -575,7 +586,8 @@ def test_aucun_lampadaire_ne_prend_le_coin_d_un_feu():
     poteaux = [lampe for lampe in CARTE["lampes"]
                # ⚠️ Ni les guirlandes de la foire : elles pendent a un KIOSQUE,
                # pas a un poteau plante — la raison de la vitrine et de la fenetre.
-               if lampe.get("c") not in ("vitrine", "fenetre", *carte.FOIRE["lampes"])]
+               # Ni les balises de la piste de l'aeroport : elles sont AU SOL.
+               if lampe.get("c") not in ("vitrine", "fenetre", "balise", *carte.FOIRE["lampes"])]
     dessus = [(lampe["x"], lampe["y"]) for lampe in poteaux if (lampe["x"], lampe["y"]) in reserves]
     assert not dessus, f"{len(dessus)} lampadaires sur un coin reserve au feu (ex. {dessus[:4]})"
     # ⚠️ Et il en reste : ecarter n'est pas supprimer. Sans cette borne, la
@@ -763,8 +775,12 @@ def test_tout_stationnement_touche_la_rue(graine):
     sol = carte.generer(graine=graine)["sol"] if graine != carte.GRAINE else CARTE["sol"]
     orphelins = []
     for lot in _lots(sol):
+        # ⚠️ Une BARRIERE COULISSANTE (le lot du poste, clos de barbele) est la
+        # sortie du lot, pas un mur : on regarde ce qu'il y a de l'autre cote.
+        barrieres = {(x + dx, y + dy) for (x, y) in lot for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+                     if carte.LEGENDE[sol[y + dy][x + dx]].get("coulissante")}
         voisines = {sol[y + dy][x + dx]
-                    for (x, y) in lot for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+                    for (x, y) in lot | barrieres for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
                     if 0 <= y + dy < len(sol) and 0 <= x + dx < len(sol[0])}
         if not any(_sur_la_rue(g) for g in voisines - LOT):
             orphelins.append((min(sorted(lot)), len(lot), sorted(voisines - LOT)))

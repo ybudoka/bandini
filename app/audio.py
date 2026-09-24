@@ -440,6 +440,65 @@ CATALOGUE: list[Echantillon] = [
        prompt="a small outboard boat motor idling and puttering on calm water, "
               "two-stroke engine putter with water slap against the hull, "
               "recorded from on board, seamless loop, no voices, no music"),
+    # --- M15, 2e vague : LE SOUFFLE DU JOUEUR. Il sprinte, il s'essouffle, et on
+    # n'entendait rien : la barre d'endurance ne se lisait qu'en la regardant.
+    # Une boucle qui monte avec la depense, et une inspiration quand le souffle
+    # repart — c'est-a-dire quand on peut de nouveau courir (`SOUFFLE`).
+    # ⚠️ TROIS variantes, comme `nage` : a chaque sprint on RELANCE la boucle
+    # (`Son.boucle`), et une seule variante ferait entendre le meme haletement
+    # a chaque course — la lecon des pas, la ou l'oreille s'agace le plus vite.
+    _e("souffle", "Le souffle court", variantes=3, duree_s=3.0, volume=0.45, boucle=True, influence=0.6,
+       prompt="heavy rhythmic panting of a man out of breath after sprinting, fast mouth "
+              "breathing in and out, close mic, dry, no reverb, seamless loop, no voice, no music"),
+    _e("reprise", "Il reprend son souffle", duree_s=2.0, volume=0.5, influence=0.6,
+       prompt="a single deep relieved inhale followed by a long slow exhale, a man catching "
+              "his breath after running, close mic, dry, no reverb, no voice, no music"),
+    # --- M15, 2e vague : LES BRUITS DE QUARTIER. Pas des nappes (chaque district
+    # a deja sa musique) : des EVENEMENTS, rares, au loin — et un quartier
+    # s'entend avant de se voir (`QUARTIERS`). ⚠️ Pas de goeland : c'est une BETE
+    # du jeu, on l'entend quand on la voit. Le huard, lui, ne vit pas en ville.
+    _e("corne_de_brume", "Une corne de brume au loin", duree_s=4.0, volume=0.35, influence=0.6,
+       prompt="a distant foghorn from a lighthouse, one long low mournful blast over a "
+              "foggy harbour, far away, outdoors, no voices, no music"),
+    _e("cloche_de_bouee", "La cloche d'une bouee", duree_s=4.0, volume=0.3, influence=0.6,
+       prompt="a distant bell buoy clanging irregularly as it rocks on gentle waves, "
+              "far away across open water, outdoors, no voices, no music"),
+    _e("quai_qui_grince", "Un quai qui grince", duree_s=3.0, volume=0.3, influence=0.5,
+       prompt="old wooden dock creaking and mooring ropes straining as a boat pulls on "
+              "them, harbour at night, outdoors, no voices, no music"),
+    _e("marteau_au_loin", "On martele au loin", duree_s=3.0, volume=0.3, influence=0.6,
+       prompt="distant heavy hammer blows on steel in an industrial yard, irregular "
+              "metallic clangs echoing between warehouses, far away, no voices, no music"),
+    _e("meuleuse_au_loin", "Une meuleuse au loin", duree_s=3.0, volume=0.25, influence=0.6,
+       prompt="a distant angle grinder cutting metal in a workshop, a few seconds of "
+              "high whine then stopping, heard from outside down the street, no voices, no music"),
+    _e("sifflet_d_usine", "Le sifflet de l'usine", duree_s=3.0, volume=0.3, influence=0.7,
+       prompt="a distant old factory steam whistle blowing one long blast for the shift "
+              "change, far away across an industrial district, no voices, no music"),
+    _e("tondeuse", "Une tondeuse", duree_s=4.0, volume=0.25, influence=0.6,
+       prompt="a gas lawn mower running in a suburban backyard a few houses away, engine "
+              "droning then fading, summer afternoon, no voices, no music"),
+    _e("chien_au_loin", "Un chien au loin", duree_s=2.5, volume=0.3, influence=0.6,
+       prompt="a dog barking a few times in a backyard down the street, distant, "
+              "outdoors, residential neighbourhood, no voices, no music"),
+    _e("oiseaux", "Des oiseaux", duree_s=4.0, volume=0.25, influence=0.5,
+       prompt="small songbirds chirping in a leafy suburban tree, robins and sparrows, "
+              "gentle morning, outdoors, no voices, no music"),
+    _e("vent_dans_les_arbres", "Le vent dans les arbres", duree_s=4.0, volume=0.3, influence=0.5,
+       prompt="a gust of wind rustling through tall trees in a seaside park, leaves "
+              "swishing, rising and falling, outdoors, no voices, no music"),
+    _e("huard", "Le cri du huard", duree_s=4.0, volume=0.25, influence=0.7,
+       prompt="the haunting wail of a common loon calling across a quiet lake at dusk, "
+              "far away, echoing over the water, no voices, no music"),
+    _e("planche_a_roulettes", "Une planche a roulettes", duree_s=3.0, volume=0.25, influence=0.6,
+       prompt="a skateboard rolling on concrete then an ollie and a clacking landing, a "
+              "little way off in a skate park, outdoors, no voices, no music"),
+    _e("cloche_d_eglise", "La cloche de l'eglise", duree_s=4.0, volume=0.3, influence=0.6,
+       prompt="a single church bell tolling a few slow strokes from a steeple downtown, "
+              "heard from a few streets away, outdoors, no voices, no music"),
+    _e("klaxons_au_loin", "Des klaxons au loin", duree_s=3.0, volume=0.25, influence=0.5,
+       prompt="a few impatient car horns honking in a traffic jam a few blocks away, "
+              "downtown street, distant, no voices, no music"),
 ]
 
 # --- La finition des bruitages -------------------------------------------------------
@@ -518,6 +577,32 @@ DEBIT_BOUCLE = "64k"
 
 
 SLUGS = tuple(e["slug"] for e in CATALOGUE)
+
+#: LA PRIME D'UNE MISSION, quatre paliers (`economie.PRIME_PALIERS`) : le son dit
+#: la taille de la prime avant qu'on lise le chiffre. ⚠️ EN ATTENTE, HORS DU
+#: CATALOGUE : le quota ElevenLabs etait a sec le 22 sept. 2026 (remise le 17 oct.),
+#: et le catalogue ne declare jamais un son sans son fichier
+#: (`test_le_son_survit_a_l_absence_d_audio`). D'ici la, `son.js` les synthetise
+#: (meme gradation : caisse, pieces, fanfare). Pour les generer : deplacer ces
+#: quatre lignes dans `CATALOGUE`, lancer `scripts/audio_elevenlabs.py`, puis
+#: remettre `if (!joue('prime_…'))` devant chaque synthese de `SFX.prime_*`.
+EN_ATTENTE: list[Echantillon] = [
+    _e("prime_petite", "Prime : petite", duree_s=0.8, volume=0.5,
+       prompt="a small cash register ding, a single bell ping and two or three "
+              "coins dropping into a tray, short, bright, close, no music"),
+    _e("prime_moyenne", "Prime : moyenne", duree_s=1.2, volume=0.52,
+       prompt="a cash register drawer springing open with a bright bell, then a "
+              "handful of coins spilling into a metal tray, satisfying, close, "
+              "no music"),
+    _e("prime_grosse", "Prime : grosse", duree_s=1.8, volume=0.55,
+       prompt="a big payout: cash register bell, a thick wad of banknotes "
+              "slapped on a counter, then a generous cascade of coins pouring "
+              "into a metal tray, rich and satisfying, close, no music"),
+    _e("prime_gros_lot", "Prime : gros lot", duree_s=3.0, volume=0.58,
+       prompt="a slot machine jackpot payout: a winning bell ringing, then a "
+              "long heavy shower of coins pouring and piling up in a metal tray, "
+              "triumphant, close, no voices, no music"),
+]
 
 
 class Radio(TypedDict):
@@ -818,6 +903,12 @@ class Voix(TypedDict, total=False):
     #: elle est basse. Absents = les reglages de la voix telle quelle.
     style: float
     stabilite: float
+    #: Une pub qui annonce une PROPRIETE (`economie.PROPRIETES`) : quand le joueur
+    #: la possede, la radio dit sa jumelle `a_toi` a sa place.
+    propriete: str
+    a_toi: bool
+    #: Une replique de la police : l'evenement qui la fait dire (`ONDES`).
+    evenement: str
 
 
 #: ⚠️ Deux voix nommees du compte ElevenLabs ; si l'une disparait,
@@ -922,19 +1013,155 @@ VOIX: list[Voix] = [
     # cette ligne-la qui fait que ca vaut la peine, pas une autre : entendre son
     # propre commerce annonce a la radio, dans un char qu'on vient de voler, est
     # exactement ce que M15 promet. Une par commerce, plus sa jumelle « a toi ».
+    #
+    # ⚠️ **ELLES NE PEUVENT VISER QUE CE QUI S'ACHETE** (21 sept. 2026). Les
+    # premieres jumelles « a toi » annoncaient Chez Gus, Boutique Rosa et le
+    # Depanneur Ti-Paul sous nouvelle administration — trois commerces qu'AUCUN
+    # joueur ne peut acheter (`economie.PROPRIETES` : le kiosque, le bar, le
+    # garage, l'hotel). Elles ne pouvaient jamais jouer ; elles sont parties.
+    # Gus, Rosa et Ti-Paul gardent leur pub, qui est une pub. Les jumelles vont
+    # aux commerces qui se vendent, et `propriete` les y attache : un juge refuse
+    # une jumelle sans propriete, ou une propriete qui n'existe pas.
     {"slug": "pub_gus_r", "texte": "Chez Gus! Le meilleur smoked meat en ville, depuis mille neuf cent soixante-deux.",
-     "genre": "pub", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
-    {"slug": "pub_gus_a_toi_r", "texte": "Chez Gus, sous nouvelle administration! Passez voir le nouveau proprio.",
      "genre": "pub", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
     {"slug": "pub_rosa_r", "texte": "Boutique Rosa, rue du Faubourg. Habillez-vous comme du monde.",
      "genre": "pub", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
-    {"slug": "pub_rosa_a_toi_r", "texte": "Boutique Rosa a changé de mains! Venez rencontrer le nouveau proprio.",
-     "genre": "pub", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
     {"slug": "pub_tipaul_r", "texte": "Dépanneur Ti-Paul, ouvert tard. Bière frette, loterie, pis du bon café.",
      "genre": "pub", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
-    {"slug": "pub_tipaul_a_toi_r", "texte": "Le Dépanneur Ti-Paul est vendu! Le nouveau proprio vous attend.",
+    {"slug": "pub_kiosque_r", "propriete": "kiosque",
+     "texte": "Le kiosque de Madame Thibodeau : journaux, gomme, billets de loto. Pis les potins, ça, c'est gratis.",
+     "genre": "pub", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
+    {"slug": "pub_kiosque_a_toi_r", "propriete": "kiosque", "a_toi": True,
+     "texte": "Le kiosque du Faubourg a un nouveau proprio! Madame Thibodeau, elle, garde les potins.",
+     "genre": "pub", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
+    {"slug": "pub_bar_r", "propriete": "bar",
+     "texte": "Bar Le Brouillard, sur le port. La bière est frette, pis personne se souvient de rien.",
+     "genre": "pub", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
+    {"slug": "pub_bar_a_toi_r", "propriete": "bar", "a_toi": True,
+     "texte": "Bar Le Brouillard, sous nouvelle direction! Le nouveau boss paye la première, s'il te connaît.",
+     "genre": "pub", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
+    {"slug": "pub_garage_r", "propriete": "garage",
+     "texte": "Garage Rocco Bandini : on répare toute, pis on pose pas de questions.",
+     "genre": "pub", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
+    {"slug": "pub_garage_a_toi_r", "propriete": "garage", "a_toi": True,
+     "texte": "Le Garage Bandini reste dans la famille! Le neveu a repris la clé à molette.",
      "genre": "pub", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
 ]
+
+#: LA POLICE SE PARLE A LA RADIO (M15, 2e vague). On voyait les cones, les
+#: blips, l'helico — on n'entendait RIEN, alors qu'une poursuite est ce qu'il y a
+#: de plus tendu dans le jeu. Cinq evenements, deux repliques chacun, dites a
+#: tour de role : on sait ce qui va nous tomber dessus sans quitter la route des
+#: yeux. Filtrees comme le combine du telephone (`Son.Ondes`).
+#:
+#: ⚠️ Deux voix qui ne sont NI un passant NI un personnage : la repartitrice au
+#: central (calme, c'est son metier) et l'agent sur le terrain (direct, il
+#: court). Une voix de la rue au bout du scanner, on croirait que la passante
+#: d'a cote appelle la police.
+#:
+#: ⚠️ Elles ne sont PAS dans `VOIX` : ce ne sont pas des banques ou l'on tire,
+#: c'est un evenement qui dit la sienne — `PAROLE["memoire"]` ne les regarde pas.
+VOIX_REPARTITRICE = "Caroline - Soft Quebec accent"
+VOIX_AGENT = "Alexandre Boutin - Professional"
+EVENEMENTS_DE_POLICE = ("repere", "poursuite", "perdu", "barrage", "helico")
+VOIX_DE_LA_POLICE: list[Voix] = [
+    {"slug": "police_repere_1_r", "evenement": "repere", "texte": "Central à toutes les voitures : suspect signalé dans le secteur.",
+     "genre": "police", "voix": VOIX_REPARTITRICE, "volume": 0.8},
+    {"slug": "police_repere_2_r", "evenement": "repere", "texte": "Dix-quatre, j'ai un suspect en visuel.",
+     "genre": "police", "voix": VOIX_AGENT, "volume": 0.8},
+    {"slug": "police_poursuite_1_r", "evenement": "poursuite", "texte": "Poursuite en cours! Toutes les unités disponibles.",
+     "genre": "police", "voix": VOIX_REPARTITRICE, "volume": 0.8},
+    {"slug": "police_poursuite_2_r", "evenement": "poursuite", "texte": "Il se sauve! Je le suis, envoyez du renfort!",
+     "genre": "police", "voix": VOIX_AGENT, "volume": 0.8},
+    {"slug": "police_perdu_1_r", "evenement": "perdu", "texte": "On l'a perdu. Je m'en vais prendre un café.",
+     "genre": "police", "voix": VOIX_AGENT, "volume": 0.8},
+    {"slug": "police_perdu_2_r", "evenement": "perdu", "texte": "Fin des recherches. Retournez à vos beignes.",
+     "genre": "police", "voix": VOIX_REPARTITRICE, "volume": 0.8},
+    {"slug": "police_barrage_1_r", "evenement": "barrage", "texte": "Barrage en place. Il passera pas par icitte.",
+     "genre": "police", "voix": VOIX_AGENT, "volume": 0.8},
+    {"slug": "police_barrage_2_r", "evenement": "barrage", "texte": "Barrage installé. Bloquez-moi toute ça.",
+     "genre": "police", "voix": VOIX_REPARTITRICE, "volume": 0.8},
+    {"slug": "police_helico_1_r", "evenement": "helico", "texte": "L'hélico décolle. On va l'avoir d'en haut.",
+     "genre": "police", "voix": VOIX_REPARTITRICE, "volume": 0.8},
+    {"slug": "police_helico_2_r", "evenement": "helico", "texte": "Ici l'hélico, je le vois. Y peut pas se cacher.",
+     "genre": "police", "voix": VOIX_AGENT, "volume": 0.8},
+]
+
+#: CE QUI PASSE SUR LES ONDES — la radio qui parle entre les tounes, et la police.
+#:
+#: ⚠️ Une seule bande pour les deux (`Son.Ondes`) : l'animateur et le scanner ne
+#: se marchent pas dessus, et ni l'un ni l'autre ne coupe une replique de
+#: mission — c'est elle qui les coupe.
+#:
+#: ⚠️ **A TOUR DE ROLE, JAMAIS AU DE.** Ce sont des bruits de fond, ils tournent
+#: pendant toute une partie : un tirage par `B.rng()` decalerait tout le hasard
+#: du jeu (`docs/ecrire-drole.md`, regle 8), et dix juges sans rapport
+#: tomberaient. Chaque liste se lit dans l'ordre, et on ne l'entend deux fois
+#: qu'apres l'avoir entendue en entier.
+ONDES = {
+    # Les stations qui parlent, et ce qu'elles disent, en alternance. ⚠️ Le Choc
+    # n'y est pas, et les stations du camion non plus : personne au micro, juste
+    # la musique — c'est le propos d'une station de rave a trois heures du matin.
+    "stations": {"la_brume": ["radio_brume", "pub"], "taxi_radio": ["radio_taxi", "pub"]},
+    # La premiere voix vient vite : on sait tout de suite qu'on est a la radio.
+    "premiere_s": 20,
+    # Ensuite, entre deux et trois tounes (une boucle de station dure 45 s).
+    "intervalle_s": [80, 125],
+    # Quelqu'un parle deja (une mission, la police) : on reessaie un peu plus tard.
+    "attente_s": 2,
+    # La police : deux messages ne se marchent pas dessus, et le meme evenement ne
+    # se redit pas a chaque etoile — sinon le scanner devient une alarme.
+    "police_temps_mort_s": 6,
+    "police_repos_s": 30,
+}
+
+#: LE SOUFFLE DU JOUEUR (M15, 2e vague) : la barre d'endurance, lisible sans la
+#: regarder. Tout est une part de `recherche.VITESSES["endurance"]`.
+SOUFFLE = {
+    # Sous cette dette (ce qu'on a depense), on ne s'entend pas respirer : un
+    # petit bout de sprint ne doit pas faire haleter.
+    "seuil": 0.35,
+    # Il MONTE vite (on s'essouffle d'un coup) et REDESCEND doucement : on
+    # continue de haleter un moment apres s'etre arrete, comme en vrai. ⚠️ Plus
+    # lentement que la barre ne se remplit (0,24 point par image, soit 0,0037 de
+    # volume) : a 0,006, le halètement SUIVAIT la barre et se taisait pile quand
+    # elle repassait le seuil — une jauge qui fait du bruit, pas quelqu'un qui souffle.
+    "monte_par_image": 0.03,
+    "descend_par_image": 0.002,
+    # La reprise : descendu sous `bas`, on entend l'inspiration quand la barre
+    # remonte a `reprise` — le moment ou l'on peut de nouveau courir.
+    "bas": 0.2,
+    "reprise": 0.6,
+}
+
+#: LES BRUITS DE QUARTIER (M15, 2e vague) : des EVENEMENTS rares, au loin, qui
+#: font qu'un quartier s'entend avant de se voir. Trois ou quatre par district,
+#: dits a tour de role (⚠️ jamais `B.rng()` : un bruit de fond qui tire un de
+#: decale tout le hasard du jeu), et certains a leurs heures (`heures`, sur
+#: 24 h ramenees a 0..1, comme `pietons.travaille_a`) : on ne tond pas son
+#: gazon a trois heures du matin.
+QUARTIERS = {
+    "intervalle_s": [25, 50],
+    # Ou ca se passe : a cette distance du joueur, dans une direction qui tourne.
+    # La portee dit combien il en reste a l'oreille (`Son.jouerA`) : au loin.
+    "distance_px": 240,
+    "portee_px": 420,
+    "sons": {
+        "faubourg": [{"slug": "cloche_d_eglise", "heures": [0.3, 0.8]}, {"slug": "klaxons_au_loin", "heures": [0.3, 0.85]},
+                     {"slug": "chien_au_loin"}],
+        "erables": [{"slug": "tondeuse", "heures": [0.38, 0.75]}, {"slug": "oiseaux", "heures": [0.25, 0.7]},
+                    {"slug": "chien_au_loin"}],
+        "shop": [{"slug": "marteau_au_loin", "heures": [0.3, 0.75]}, {"slug": "meuleuse_au_loin", "heures": [0.3, 0.75]},
+                 {"slug": "sifflet_d_usine", "heures": [0.3, 0.75]}, {"slug": "chien_au_loin"}],
+        "quais": [{"slug": "corne_de_brume"}, {"slug": "quai_qui_grince"}, {"slug": "cloche_de_bouee"}],
+        "baie": [{"slug": "corne_de_brume"}, {"slug": "cloche_de_bouee"}, {"slug": "huard", "heures": [0.75, 0.95]}],
+        "pointe": [{"slug": "vent_dans_les_arbres"}, {"slug": "planche_a_roulettes", "heures": [0.35, 0.85]},
+                   {"slug": "huard", "heures": [0.75, 0.95]}],
+    },
+}
+
+#: Ce qui passe sur les ondes, et ne s'affiche donc jamais dans une bulle.
+GENRES_DES_ONDES = frozenset({g for genres in ONDES["stations"].values() for g in genres} | {"police"})
 
 
 #: Les voix de l'histoire : une par personnage, nommees dans `missions.PERSONNAGES`.
@@ -996,8 +1223,27 @@ def voix_ouverture() -> list[dict]:
             for ligne in missions.repliques_ouverture()]
 
 
+def voix_repos() -> list[dict]:
+    """Ce que chaque personnage dit quand on lui parle et qu'aucune mission ne l'attend.
+
+    Même mécanique que `voix_ouverture()` : le texte vit dans `missions.REPOS`, le slug
+    (`lulu-repos-2`) suit la place du texte, et un mp3 qui manque laisse la boîte s'afficher
+    sans voix — le filet.
+    """
+    from . import missions
+    sortie = []
+    for r in missions.repliques_de_repos():
+        perso = missions.personnage(r["qui"])
+        if perso is None:
+            raise ValueError(f"repos {r['slug']} : personnage inconnu {r['qui']!r}")
+        sortie.append({"slug": r["slug"], "texte": r["texte"], "genre": perso["genre"], "voix": perso["voix"],
+                       "volume": 0.9, "histoire": True, "qui": r["qui"], "mission": r["mission"],
+                       "partie": r["partie"], "telephone": False})
+    return sortie
+
+
 def toutes_les_voix() -> list[dict]:
-    return list(VOIX) + voix_histoire() + voix_journal() + voix_ouverture()
+    return list(VOIX) + list(VOIX_DE_LA_POLICE) + voix_histoire() + voix_journal() + voix_ouverture() + voix_repos()
 
 
 def voix_par_slug(slug: str) -> Voix | None:
@@ -1152,6 +1398,11 @@ def exporter() -> dict:
         "dossier": DOSSIER,
         "parole": dict(PAROLE),
         "rumeur": dict(RUMEUR),
+        "ondes": {**ONDES, "stations": {s: list(g) for s, g in ONDES["stations"].items()},
+                  "intervalle_s": list(ONDES["intervalle_s"])},
+        "souffle": dict(SOUFFLE),
+        "quartiers": {**QUARTIERS, "intervalle_s": list(QUARTIERS["intervalle_s"]),
+                      "sons": {d: [dict(e) for e in sons] for d, sons in QUARTIERS["sons"].items()}},
         "coups_des_autres": dict(COUPS_DES_AUTRES),
         # LA MUSIQUE. Chaque morceau part de `app/musique.py` (les notes, le
         # filet) et recoit ici le mp3 genere quand il est sur le disque — plus
@@ -1191,16 +1442,24 @@ def exporter() -> dict:
             for r in AMBIANCES
         ],
         # Les repliques des passants : quelques mots, deux voix, en francais.
+        # Et ce qui passe sur les ondes : les animateurs, les pubs (avec la
+        # propriete qu'elles annoncent), la police (avec son evenement).
+        # ⚠️ Le TEXTE ne voyage que s'il s'affiche : une bulle de passant, oui ; ce
+        # qui passe sur les ondes ne s'ecrit nulle part, et le paquet est a son
+        # plafond (`test_definitions`) — 25 repliques de radio et de police y
+        # pesaient 600 octets pour rien.
         "voix": [
-            {"slug": v["slug"], "texte": v["texte"], "genre": v["genre"], "volume": v["volume"],
+            {"slug": v["slug"], "genre": v["genre"], "volume": v["volume"],
+             **({} if v["genre"] in GENRES_DES_ONDES else {"texte": v["texte"]}),
+             **{cle: v[cle] for cle in ("propriete", "a_toi", "evenement") if cle in v},
              "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None}
-            for v in VOIX
+            for v in VOIX + VOIX_DE_LA_POLICE
         ],
         # Les repliques de l'histoire : une voix par personnage, chargees par mission.
         "histoire": [
             {"slug": v["slug"], "qui": v["qui"], "mission": v["mission"], "partie": v["partie"],
              "telephone": v["telephone"], "volume": v["volume"],
              "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None}
-            for v in voix_histoire() + voix_journal() + voix_ouverture()
+            for v in voix_histoire() + voix_journal() + voix_ouverture() + voix_repos()
         ],
     }
