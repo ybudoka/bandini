@@ -658,3 +658,20 @@ catalogue.
     la foire (`p13` prouve le donneur `foire` vivant + `retourner` ; `p14` reprend `proteger`)
     et `sans_etoile` (`q04`, jamais jouée avant cette tranche). Les sept autres missions ne
     réutilisent que des types déjà prouvés — couvertes par `scripts/verifier_missions.py`.
+- **24 sept. 2026 : les dialogues et les scènes sortent du paquet — en cours.** Ce n'est plus
+  une précaution, c'est une réparation : le paquet des définitions pèse **369 224 octets bruts
+  pour un plafond de 250 000** et **75 138 octets gzip pour 54 000** (mesure du 24 sept.), et le
+  juge est rouge. Trois sessions l'ont grossi le même jour, chacune sans voir les deux autres.
+  Le remède est celui écrit ici le 16 sept. : le **catalogue** reste dans le paquet (c'est ce
+  que le carnet, le GPS et le téléphone lisent), les **répliques et les scènes** partent par
+  `/api/dialogue/<slug>` avec son ETag, sur la route qu'`app/routes.py` a déjà (`_revalide`).
+  - ⚠️ **Une requête par mission, et elle arrive avant la première voix de toute façon** :
+    `Son.Voix.chargerHistoire(mission)` télécharge déjà les mp3 d'une mission quand on
+    commence à lui parler. Le texte prend la même route, au même moment.
+  - ⚠️ **Sauf qu'un texte ne peut pas arriver en retard**, lui. Une voix qui manque laisse la
+    réplique s'afficher (`Voix.attendue` la dit quand elle arrive) ; un dialogue qui manque
+    n'a **rien** à afficher. Les deux portes doivent donc attendre : le téléphone qui sonne, et
+    le donneur qu'on hèle.
+  - ⚠️ **Et hors ligne**, le travailleur garde les dialogues **à l'usage**, comme les mp3 — pas
+    dans la coquille : cent adresses dans la coquille, ce serait cent requêtes à l'installation
+    pour un joueur qui en jouera trois.
