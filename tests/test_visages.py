@@ -90,9 +90,12 @@ def test_l_humeur_est_celle_de_la_premiere_balise_qui_dit_une_mine():
 
 
 def test_le_navigateur_recoit_l_humeur_et_jamais_le_jeu():
+    """⚠️ Les répliques ne sont plus dans le paquet (24 sept. 2026) : elles voyagent avec
+    leur mission (`/api/dialogue/<slug>`), et c'est là qu'il faut les lire — sinon ce juge
+    ne regarderait plus une seule réplique."""
     humeurs = set()
-    for mission in missions.pour_le_navigateur():
-        for lignes in mission["dialogue"].values():
+    for fiche in missions.CATALOGUE:
+        for lignes in missions.dialogue_pour_le_navigateur(fiche["slug"])["dialogue"].values():
             for ligne in lignes:
                 assert "jeu" not in ligne
                 if "humeur" in ligne:

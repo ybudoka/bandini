@@ -729,6 +729,12 @@ catalogue.
     le vrai jeu, est arrivé pendant qu'on marchait. Le chemin du téléchargement a donc ses
     juges à lui, qui partent d'un **catalogue nu** (`banc(..., poser_les_dialogues=False)`)
     et attendent vraiment.
+  - ⚠️ **ET DEUX JUGES QUI SERAIENT DEVENUS VERTS EN NE REGARDANT PLUS RIEN**, trouvés
+    par la suite complète : « le `jeu=` ne part pas au navigateur » et « le navigateur
+    reçoit l'humeur et jamais le jeu » lisaient les répliques **dans le paquet**. Il n'y
+    en a plus une seule : ils auraient passé pour toujours, sur zéro réplique. Ils lisent
+    maintenant les dialogues, et une mutation qui laisse le `jeu=` passer les rougit tous
+    les deux (plus celui de la route).
   - ⚠️ **UN JUGE QUI PASSAIT POUR RIEN**, trouvé par la mutation : celui des deux coups
     d'ACTION mesurait `cinema.i`, qui vaut zéro que l'intro se joue une fois ou trois —
     la garde neutralisée, il restait vert. Il compte maintenant **les demandes de voix**
