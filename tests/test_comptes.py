@@ -582,3 +582,135 @@ def test_la_production_se_reconnait_a_son_https(url, production):
         cwd=RACINE, env=env, capture_output=True, text=True, check=True,
     ).stdout.strip()
     assert sortie == str(production)
+
+
+# --- La limite d'essais (dette de M14, payee le 25 sept. 2026) ---------------------------
+
+ICI = "203.0.113.7"
+AILLEURS = "198.51.100.9"
+
+
+def _rater(conn, n, adresse=ICI, quand=T0, pseudo="Rocco"):
+    for i in range(n):
+        with pytest.raises(comptes.NonAutorise):
+            comptes.connecter(conn, {"pseudo": pseudo, "mot_de_passe": f"faux-{i}"},
+                              quand=quand + i, adresse=adresse)
+
+
+def test_dix_essais_rates_et_l_adresse_attend_meme_avec_le_bon_mot_de_passe(conn):
+    _inscrire(conn)
+    _rater(conn, comptes.ESSAIS_MAX)
+    with pytest.raises(comptes.TropDEssais) as refus:
+        comptes.connecter(conn, {"pseudo": "Rocco", "mot_de_passe": MDP},
+                          quand=T0 + 20, adresse=ICI)
+    # Le plus vieux des dix (T0) sort de la fenetre a T0 + 15 min.
+    assert refus.value.attente == comptes.FENETRE_ESSAIS_S - 20
+    assert "réessaie dans 15 minutes" in str(refus.value)
+
+
+def test_neuf_essais_rates_ne_bloquent_pas_le_dixieme(conn):
+    _inscrire(conn)
+    _rater(conn, comptes.ESSAIS_MAX - 1)
+    assert comptes.connecter(conn, {"pseudo": "Rocco", "mot_de_passe": MDP},
+                             quand=T0 + 20, adresse=ICI).pseudo == "Rocco"
+
+
+def test_la_limite_est_par_adresse_jamais_par_compte(conn):
+    """⚠️ Sinon n'importe qui verrouillerait le compte d'un autre en tapant son pseudo."""
+    _inscrire(conn)
+    _rater(conn, comptes.ESSAIS_MAX)
+    assert comptes.connecter(conn, {"pseudo": "Rocco", "mot_de_passe": MDP},
+                             quand=T0 + 20, adresse=AILLEURS).pseudo == "Rocco"
+
+
+def test_la_fenetre_passee_l_adresse_rejoue(conn):
+    _inscrire(conn)
+    _rater(conn, comptes.ESSAIS_MAX)
+    plus_tard = T0 + comptes.FENETRE_ESSAIS_S
+    assert comptes.connecter(conn, {"pseudo": "Rocco", "mot_de_passe": MDP},
+                             quand=plus_tard, adresse=ICI).pseudo == "Rocco"
+    # Et ce qui est sorti de la fenetre est parti de la base.
+    # (les dix echecs s'etalent de T0 a T0 + 9 : a plus_tard + 10, tous sont sortis)
+    _rater(conn, 1, quand=plus_tard + comptes.ESSAIS_MAX)
+    assert conn.execute("SELECT COUNT(*) FROM essais_rates").fetchone()[0] == 1
+
+
+def test_un_succes_n_efface_pas_les_echecs(conn):
+    """Sinon : son propre compte, une connexion entre deux essais sur celui d'un autre."""
+    _inscrire(conn)
+    _inscrire(conn, pseudo="Complice")
+    _rater(conn, comptes.ESSAIS_MAX - 1)
+    comptes.connecter(conn, {"pseudo": "Complice", "mot_de_passe": MDP}, quand=T0 + 30, adresse=ICI)
+    _rater(conn, 1, quand=T0 + 31)
+    with pytest.raises(comptes.TropDEssais):
+        comptes.connecter(conn, {"pseudo": "Complice", "mot_de_passe": MDP}, quand=T0 + 40, adresse=ICI)
+
+
+def test_un_pseudo_inconnu_compte_comme_un_mot_de_passe_faux(conn):
+    _rater(conn, comptes.ESSAIS_MAX, pseudo="Personne")
+    with pytest.raises(comptes.TropDEssais):
+        comptes.connecter(conn, {"pseudo": "Personne", "mot_de_passe": MDP}, quand=T0 + 20, adresse=ICI)
+
+
+def test_une_adresse_bloquee_ne_coute_plus_un_scrypt(conn, monkeypatch):
+    _inscrire(conn)
+    _rater(conn, comptes.ESSAIS_MAX)
+    appels = []
+    monkeypatch.setattr(comptes, "check_password_hash", lambda *a: appels.append(a) or False)
+    with pytest.raises(comptes.TropDEssais):
+        comptes.connecter(conn, {"pseudo": "Rocco", "mot_de_passe": MDP}, quand=T0 + 20, adresse=ICI)
+    assert appels == []
+
+
+def test_l_effacement_partage_le_compteur_de_la_connexion(conn):
+    """Le second endroit ou l'on devine un mot de passe : un cookie emprunte ne suffit pas."""
+    rocco = _inscrire(conn)
+    session = comptes.authentifier(conn, rocco.jeton)
+    _rater(conn, comptes.ESSAIS_MAX - 1)
+    with pytest.raises(comptes.MotDePasseIncorrect):
+        comptes.effacer(conn, session, {"mot_de_passe": "encore-faux"}, adresse=ICI, quand=T0 + 20)
+    with pytest.raises(comptes.TropDEssais):
+        comptes.effacer(conn, session, {"mot_de_passe": MDP}, adresse=ICI, quand=T0 + 21)
+    assert _appareils(conn, rocco.compte_id) == 1, "rien n'est efface"
+
+
+@pytest.mark.parametrize("brute, cle", [
+    ("203.0.113.7", "203.0.113.7"),
+    ("::ffff:203.0.113.7", "203.0.113.7"),
+    ("2001:db8:1:2:aaaa::1", "2001:db8:1:2::/64"),
+    ("2001:db8:1:2:bbbb::9", "2001:db8:1:2::/64"),
+    ("pas une adresse", "inconnue"),
+    (None, "inconnue"),
+])
+def test_une_adresse_ipv6_compte_pour_son_slash_64(brute, cle):
+    assert comptes.cle_d_adresse(brute) == cle
+
+
+def test_par_http_dix_essais_rates_rendent_429_avec_retry_after_et_laissent_le_cookie(client):
+    client.post("/api/compte/inscription", json={"pseudo": "Rocco", "mot_de_passe": MDP})
+    jeton = _cookie(client).value
+    entetes = {"X-Real-IP": ICI}
+    for i in range(comptes.ESSAIS_MAX):
+        assert client.post("/api/compte/effacer", json={"mot_de_passe": f"faux-{i}"},
+                           headers=entetes).status_code == 403
+    refus = client.post("/api/compte/effacer", json={"mot_de_passe": MDP}, headers=entetes)
+    assert refus.status_code == 429
+    assert 0 < int(refus.headers["Retry-After"]) <= comptes.FENETRE_ESSAIS_S
+    assert "trop d'essais" in refus.get_json()["erreur"]
+    assert _cookie(client).value == jeton, "l'appareil reste lie"
+    # La connexion lit le meme compteur...
+    assert client.post("/api/compte/connexion", json={"pseudo": "Rocco", "mot_de_passe": MDP},
+                       headers=entetes).status_code == 429
+    # ...et une autre adresse, derriere le meme nginx, n'en sait rien.
+    assert client.post("/api/compte/connexion", json={"pseudo": "Rocco", "mot_de_passe": MDP},
+                       headers={"X-Real-IP": AILLEURS}).status_code == 200
+
+
+def test_par_http_x_real_ip_ne_se_croit_que_venu_de_nginx(client):
+    """Un client qui parle au serveur en direct ne choisit pas l'adresse qu'on lui compte."""
+    direct = {"REMOTE_ADDR": AILLEURS}
+    for i in range(comptes.ESSAIS_MAX):
+        client.post("/api/compte/connexion", json={"pseudo": "Rocco", "mot_de_passe": f"faux-{i}"},
+                    headers={"X-Real-IP": f"192.0.2.{i}"}, environ_base=direct)
+    assert client.post("/api/compte/connexion", json={"pseudo": "Rocco", "mot_de_passe": MDP},
+                       headers={"X-Real-IP": "192.0.2.99"}, environ_base=direct).status_code == 429

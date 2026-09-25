@@ -84,6 +84,16 @@ MIGRATIONS: tuple[tuple[str, ...], ...] = (
             PRIMARY KEY (compte_id, emplacement)
         )""",
     ),
+    # 2 — la limite d'essais (dette de M14, payee le 25 sept. 2026) : un mot de passe
+    # rate par ligne, PAR ADRESSE et jamais par compte (`comptes.ESSAIS_MAX`). Dans la
+    # base et pas en memoire : deux workers gunicorn, un seul compteur.
+    (
+        """CREATE TABLE essais_rates (
+            adresse TEXT NOT NULL,
+            quand INTEGER NOT NULL
+        )""",
+        "CREATE INDEX essais_rates_adresse ON essais_rates(adresse, quand)",
+    ),
 )
 
 

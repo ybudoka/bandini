@@ -347,7 +347,9 @@ nom). Ce qu'il faut savoir :
   accent en v3 (les huit du jeu le prouvent) ; une **multilingue**, on ne sait pas :
   aucune voix du compte n'est vérifiée en v3, et son français « vérifié » est souvent
   un aperçu fabriqué. **Lis `verified_languages`** (API `v2/voices`), pas l'étiquette
-  `language`, et **fais écouter** avant de distribuer (`docs/plan.md`, M16, « Les 34
+  `language`. ⚠️ Mais une voix **non québécoise** est permise, et souvent assez bonne
+  (Martin, 25 sept. 2026) : pas besoin d'audition avant de la distribuer, Martin l'écoute à
+  la génération (l'ordre des choix : `docs/jalons/m16-cent-missions.md`, « Les 34
   personnages de plus »). v3 ne tolère d'ailleurs qu'**une** balise d'accent par
   réplique, en tête — elle prendrait la place de l'émotion.
 - **Chaque voix passe par une égalisation** (`interpretation.EGALISATION` : un passe-haut

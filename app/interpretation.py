@@ -174,9 +174,11 @@ EGALISATION: dict[str, str] = {
         # +7,7 dB au-dessus de v2 entre 4 et 8 kHz — v3 l'avait deja rendue brillante.
         PASSE_HAUT_FEMMES + ",equalizer=f=150:t=o:w=1.2:g=-8,equalizer=f=400:t=o:w=1:g=-5"
         ",equalizer=f=5000:t=o:w=1.5:g=-4",
+    # Mado. (Elle a ete la repartitrice de la police jusqu'au 25 sept. 2026.)
+    "Caroline - Soft Quebec accent": PASSE_HAUT_FEMMES,
     # La repartitrice de la police : une voix de femme, le passe-haut des femmes.
     # Le scanner la coupe de toute facon sous 300 Hz (`Son.Ondes`).
-    "Caroline - Soft Quebec accent": PASSE_HAUT_FEMMES,
+    "Clara Dupont - Professional and Urgent": PASSE_HAUT_FEMMES,
     "Jeanne Mance - Charming, Clear and Young":
         PASSE_HAUT_FEMMES + ",equalizer=f=150:t=o:w=1.2:g=-6,equalizer=f=4000:t=o:w=1.5:g=-4",
     "Léo - Français québécois": PASSE_HAUT_HOMMES + ",highshelf=f=3000:g=5",

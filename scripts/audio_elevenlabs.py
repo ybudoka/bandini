@@ -12,6 +12,7 @@ celui qu'on utilise a la main depuis l'agent.
     uv run python scripts/audio_elevenlabs.py --refaire coup pas
     uv run python scripts/audio_elevenlabs.py --refaire pas-2   # cette variante-la
     uv run python scripts/audio_elevenlabs.py --dictionnaire    # le televerser, et ce qu'il change (gratuit)
+    uv run python scripts/audio_elevenlabs.py --libres          # qui parle avec chaque voix du compte (gratuit)
 
 ⚠️ CHAQUE GENERATION COUTE DES CREDITS. Le script ne touche jamais a un
 fichier deja present (sauf `--refaire`), et ne tourne jamais en CI.
@@ -395,6 +396,41 @@ def dire_le_dictionnaire() -> int:
     return 0
 
 
+def dire_les_voix_libres() -> int:
+    """`--libres` : chaque voix du compte, et qui parle deja avec elle. Gratuit.
+
+    ⚠️ Le 23 sept. 2026, trois sessions ont pioche dans les « voix libres » du compte
+    le meme jour, et deux d'entre elles etaient celles du scanner de police. Avant de
+    donner une voix a quelqu'un, c'est ici qu'on regarde — et `audio.VOIX_RESERVEES`
+    dit celles qui ne se partagent pas.
+    """
+    if not LANCEUR.is_file():
+        raise SystemExit(f"lanceur MCP introuvable : {LANCEUR}")
+    client = ClientMCP(LANCEUR)
+    try:
+        reponse = client.appeler("elevenlabs_list_voices", {"page_size": 100})
+    finally:
+        client.fermer()
+    if not reponse.get("ok"):
+        raise SystemExit(f"liste des voix refusee : {reponse.get('erreur')}")
+    usages = audio.usages_des_voix()
+    du_compte = sorted((v["nom"] or "").strip() for v in reponse["voix"])
+    for nom in sorted(du_compte, key=lambda n: (n in usages, n)):
+        if nom in audio.VOIX_RESERVEES:
+            qui = f"RESERVEE a « {audio.VOIX_RESERVEES[nom]} »"
+        elif nom in usages:
+            qui = ", ".join(sorted(usages[nom]))
+        else:
+            qui = "libre"
+        print(f"  {nom[:48]:<48}  {qui}")
+    absentes = sorted(set(usages) - set(du_compte))
+    if absentes:
+        print("\n⚠️  Le jeu nomme des voix que le compte n'a pas :", ", ".join(absentes))
+    print("\n(Lire l'accent dans `verified_languages` de GET /v2/voices, pas dans le nom — "
+          "docs/jalons/m16-cent-missions.md, « Les 34 personnages de plus ».)")
+    return 1 if absentes else 0
+
+
 def ranger_master(paye: Path, attendu: Path, seche: bool) -> None:
     """⚠️ Le master payé prend le nom que `--refinir` relit. Le serveur n'écrase jamais : un
     `--refaire` avec `--masters` écrivait `<slug>-2.mp3` (et `<slug>-2-sec.wav`) à côté de
@@ -657,6 +693,9 @@ def main() -> int:
     argus.add_argument("--refinir", action="store_true",
                        help="avec --masters : rejouer la finition des voix depuis leurs masters, "
                             "sans rien generer (gratuit)")
+    argus.add_argument("--libres", action="store_true",
+                       help="lister les voix du compte et qui parle deja avec chacune ; "
+                            "gratuit, aucune voix n'est generee")
     options = argus.parse_args()
 
     if os.environ.get("CI"):
@@ -664,6 +703,8 @@ def main() -> int:
         return 2
     if options.dictionnaire:
         return dire_le_dictionnaire()
+    if options.libres:
+        return dire_les_voix_libres()
 
     travail = a_faire(options.refaire)
     radios = radios_a_faire(options.refaire) if (options.radios or options.refaire) else []

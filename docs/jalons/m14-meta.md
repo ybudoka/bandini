@@ -467,6 +467,7 @@ gardé. Le serveur efface pour vrai ; l'écran ne fait que le proposer.
 - ⚠️ **À faire encore, et ce n'est plus optionnel** : la dette « aucune limite d'essais » est
   **échue** (voir la table des dettes) — le formulaire de connexion est public depuis la 2e
   vague, et la confirmation d'effacement est un second endroit où l'on devine un mot de passe.
+  ✅ **Payée le 25 sept. 2026** — voir la note qui suit.
 
 **6e vague livrée** (22 sept. 2026) : **le mode photo**. Ouvert depuis PAUSE > MODE PHOTO
 (comme la carte, mais l'écran reste celui du jeu plutôt qu'un fond noir) : le monde attend
@@ -730,3 +731,29 @@ déclenche pas le fondu de l'urgence, et le repêchage d'un partenaire oublié p
 tenir ATTAQUE arme un coup fort qui ne part qu'au relâcher. Un juge qui appuie sans jamais
 lâcher ne frappe personne — c'est ce qui l'a fait rougir en premier, et c'est le bon
 comportement.
+
+**La limite d'essais** (25 sept. 2026) — la dette de la 2e vague, échue depuis le 17 sept. :
+**dix mots de passe ratés en quinze minutes, et l'adresse attend** (`comptes.ESSAIS_MAX`,
+`FENETRE_ESSAIS_S`). Un 429 avec `Retry-After` et « trop d'essais ratés : réessaie dans N
+minutes » ; le jeu l'affiche comme n'importe quel refus (`compte.js` montre `erreur`), sans une
+ligne de client.
+
+- ⚠️ **Par adresse, jamais par pseudo** — la raison de toujours : bloquer un compte laisserait
+  n'importe qui verrouiller celui d'un autre. Une adresse **IPv6 compte pour son /64** (un
+  abonnement en a des milliards), une IPv4 mappée (`::ffff:…`) pour son IPv4.
+- ⚠️ **Dans la base, pas en mémoire** (`essais_rates`, migration 2) : deux workers gunicorn, un
+  seul compteur. Ce qui sort de la fenêtre s'efface au prochain échec.
+- ⚠️ **Le compte se fait avant scrypt** : une adresse bloquée ne coûte plus rien au serveur. Et
+  **un succès n'efface pas les échecs** : sinon, un compte à soi et une connexion entre deux
+  essais sur celui d'un autre.
+- **Deux portes, un compteur** : la connexion et la confirmation d'effacement. Le 429 de
+  l'effacement **laisse le cookie**, comme son 403.
+- **L'adresse** : `X-Real-IP`, que nginx écrase lui-même depuis ce que Caddy lui donne — mais
+  seulement quand la requête vient de 127.0.0.1 (gunicorn n'écoute que là). Un client qui
+  parlerait au serveur en direct ne choisit pas l'adresse qu'on lui compte (jugé). ⚠️ Ça repose
+  sur la configuration de nginx **du serveur** (`deploy/nginx/…example` : `real_ip_header
+  X-Forwarded-For` depuis Caddy, puis `X-Real-IP $remote_addr`) : si elle change, tout le monde
+  derrière Caddy partagerait une adresse — et dix fautes de frappe au total bloqueraient tout
+  le monde quinze minutes.
+- Juges : `test_comptes.py` (**+16**), **4 mutations toutes rouges** (le compte avant scrypt
+  retiré, l'adresse retirée de la route, `X-Real-IP` cru de n'importe qui, l'échec pas noté).

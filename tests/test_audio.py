@@ -137,7 +137,13 @@ def test_le_poids_audio_reste_raisonnable():
     # M16 apporte cent trente-quatre missions, à quelques dizaines de Ko de voix chacune. Ce
     # plafond ne protège rien de ce que le joueur télécharge (une mission à la fois, jamais au
     # démarrage) : il borne le dépôt, et 20 Mo dit « on est loin de l'avoir atteint ».
-    assert sum(f.stat().st_size for f in histoire) < 20_000_000
+    # ⚠️ Relevé de 20 à 80 Mo le 25 sept. 2026 : on l'a atteint. Les 198 voix en attente
+    # (les missions longues et les répliques de rue par contexte, payées avec le nouveau
+    # forfait) ont porté le total à 20,9 Mo. Mesure : 37 missions parlent, ~530 Ko
+    # chacune (la plus lourde 900 Ko) — pas « quelques dizaines de Ko ». Les 134 de M16
+    # feraient donc ~70 Mo : 80 dit encore « on est loin », mais avec le vrai chiffre.
+    # Rien de plus ne voyage : une mission à la fois, jamais au démarrage.
+    assert sum(f.stat().st_size for f in histoire) < 80_000_000
     # LA MUSIQUE (14 sept. 2026). ⚠️ Elle sort du budget des bruitages, et pas
     # pour lui faire de la place : elle ne se telecharge JAMAIS au demarrage,
     # exactement comme les radios. Une ambiance de district arrive quand on

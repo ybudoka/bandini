@@ -37,6 +37,7 @@ uv run python scripts/audio_elevenlabs.py --voix        # … et les voix (passa
 uv run python scripts/audio_elevenlabs.py --musiques    # … et les 15 musiques du jeu (30 crédits/seconde)
 uv run python scripts/audio_elevenlabs.py --refaire coup pas la_brume titre amb_quais ti_guy-m1-1
 uv run python scripts/audio_elevenlabs.py --dictionnaire  # le dictionnaire de prononciation (app/prononciation.pls) : le téléverser, et les voix déjà faites qu'il changerait (gratuit)
+uv run python scripts/audio_elevenlabs.py --libres        # chaque voix du compte, et qui parle déjà avec elle — AVANT de donner une voix (gratuit)
 ```
 
 La musique se génère **et** s'écrit. Les quinze morceaux sont des mp3 ElevenLabs
