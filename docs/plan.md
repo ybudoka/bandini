@@ -90,6 +90,14 @@ pas quand l'ordre de travail change.
 | Générer les bruitages qui n'ont aucun équivalent payé | ⬜ **à faire** (⚠️ le quota n'est plus l'obstacle — **nouveau forfait le 24 sept. 2026** ; à trancher par Martin, c'est sa dépense) | — | **P4** | ajout | [fiche](jalons/les-bruitages-qui-n-ont-aucun-equivalent-paye.md#fiche) |
 | Des choses à collectionner, et la planque qu'on décore | ⬜ **à faire** (à trancher par Martin : les familles, leur nombre, les meubles) | — | **P4** | ajout | [fiche](jalons/des-choses-a-collectionner-et-la-planque-qu-on-decore.md#fiche) |
 | Une deuxième planque, plus loin | ⬜ **à faire** (à trancher par Martin : où, et comment on l'a) | — | **P4** | ajout | [fiche](jalons/une-deuxieme-planque-plus-loin.md#fiche) |
+| La cabane à sucre : un événement de printemps | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/la-cabane-a-sucre.md#fiche) |
+| Le vidéopoker du Brouillard | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-videopoker-du-brouillard.md#fiche) |
+| Le brouillard de Baie-des-Brumes | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-brouillard-de-baie-des-brumes.md#fiche) |
+| Des photos pour le Clairon | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/des-photos-pour-le-clairon.md#fiche) |
+| Le garage qui modifie les chars | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-garage-qui-modifie-les-chars.md#fiche) |
+| Le hockey de ruelle | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-hockey-de-ruelle.md#fiche) |
+| Les territoires des gangs bougent | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/les-territoires-des-gangs-bougent.md#fiche) |
+| Le marché aux puces du dimanche | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-marche-aux-puces-du-dimanche.md#fiche) |
 
 ## L'ordre
 
@@ -122,6 +130,14 @@ Ce que chaque ligne à faire attend (la table de tri du 13 sept. 2026, réduite 
 | **P4** | ajout | M13 Les deux fins | 4 | **M8** pour les districts, et ça gagne à suivre **M10** : la dette de Rocco est le fil des deux fins. C'est la fin — elle se pose en dernier |
 | **P4** | ajout | Des choses à collectionner, et la planque qu'on décore | 3 | rien ne l'attend ; ⚠️ poser les objets **en dernier, sans dé** (sinon la ville glisse) ; le décor conditionnel de la planque sert aussi à la deuxième |
 | **P4** | ajout | Une deuxième planque, plus loin | 2 | gagne à suivre les collections (le décor conditionnel) ; « la planque » est au singulier dans tout le code, les chars `donne` compris |
+| **P4** | ajout | La cabane à sucre : un événement de printemps | 3 | une pièce neuve posée sans dé ; la saison est une fenêtre de jours, calculée comme la neige |
+| **P4** | ajout | Le vidéopoker du Brouillard | 1 | rien ne l'attend ; ⚠️ un générateur à part, jamais `B.rng()` |
+| **P4** | ajout | Le brouillard de Baie-des-Brumes | 2 | reprend le mécanisme de la neige (M12) ; ⚠️ la dette du rythme sur le vrai téléphone avant de l'allumer |
+| **P4** | ajout | Des photos pour le Clairon | 2 | le **personnage de Louise** d'abord (M16, arc C) ; le mode photo existe |
+| **P4** | ajout | Le garage qui modifie les chars | 2 | ⚠️ la vitesse d'un moteur neuf se juge au bouton (la friction) |
+| **P4** | ajout | Le hockey de ruelle | 3 | de la physique neuve : la plus chère du lot |
+| **P4** | ajout | Les territoires des gangs bougent | 3 | `libere` et `calme` de M16 d'abord ; à trancher avec « La réputation et la lecture des passants » |
+| **P4** | ajout | Le marché aux puces du dimanche | 2 | après **les collections** (il vend leurs meubles et leurs cartes) |
 
 M8 porte tout le reste (les gangs, les fins, le traversier, la fourrière ont besoin de la
 ville complète) ; il est livré. Rien n'oblige à suivre la liste à la lettre : à l'intérieur
