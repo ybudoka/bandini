@@ -4707,11 +4707,15 @@ const Entites = (function () {
     const poussee = opts.renverse ? 3.2 : 1.4;
     e.vx = Math.cos(angle) * poussee;
     e.vy = Math.sin(angle) * poussee;
-    if (opts.saigne) e.saigne = Math.min(B.defs.pietons.reactions.saignement_images, opts.saigne);
-    if (e !== B.joueur) sang(e.x, e.y, opts.saigne ? 6 : 3);
+    // ⚠️ Une projection ASSOMME sans faire saigner (`sans_sang`) : c'est ce qui la
+    // fait valoir moins d'etoiles que cogner. Un etranglement (`silencieuse`) ne
+    // crie pas et n'alerte personne : `Police.quelqu_un_voit` decide seul du crime
+    // (docs/jalons/les-techniques-d-arts-martiaux.md).
+    if (opts.saigne && !opts.sans_sang) e.saigne = Math.min(B.defs.pietons.reactions.saignement_images, opts.saigne);
+    if (e !== B.joueur && !opts.sans_sang) sang(e.x, e.y, opts.saigne ? 6 : 3);
     // Le grognement vient de celui qui encaisse : muet hors de l'ecran, plus
     // fort a mesure qu'on s'approche (retour de Martin, 16 sept. 2026).
-    Son.depuis(e, Son.SFX.touche);
+    if (!opts.silencieuse) Son.depuis(e, Son.SFX.touche);
     if (e.vie <= 0 && e === B.joueur) {
       Missions.hopital(source);
     } else if (e.vie <= 0 && e.type === 'joueur') {
@@ -4720,6 +4724,7 @@ const Entites = (function () {
       if (opts.assomme) assommer(e);
       else tuer(e, source);
     } else if (e.type === 'pieton') {
+      if (opts.silencieuse) return true;
       alerter(e.x, e.y, source, 2);
       // ⚠️ CELUI QUI SE BAT DEJA NE SE RETOURNE PAS CONTRE LE JOUEUR : le
       // premier coup d'une rixe envoyait les deux camps sur lui, et il n'avait
