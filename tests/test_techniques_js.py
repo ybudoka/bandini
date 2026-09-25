@@ -410,3 +410,36 @@ def test_saisir_ne_fait_rien_la_roue_ouverte(banc):
         return { roue: roue, prise: !!j.prise };
     }""")
     assert r == {"roue": True, "prise": False}, r
+
+
+# --- Les poses dessinées (tâche 6) -------------------------------------------------------
+
+def test_chaque_pose_dessinee_existe_pour_les_trois_vues(banc):
+    r = banc("""function (L, o) {
+        const manque = [];
+        const poses = L.SPRITES.joueur.poses;
+        const dessinees = new Set();
+        for (const t of L.B.defs.techniques) for (const e of t.temps)
+            if (e.pose !== 'debout' && e.pose !== 'frappe') dessinees.add(e.pose);
+        for (const p of dessinees) for (const v of ['bas', 'haut', 'cote']) {
+            const g = poses['tech_' + p + '_' + v];
+            if (!g || g[0].length !== 16 || g[0].some(function (r) { return r.length !== 12; })) manque.push(p + '_' + v);
+        }
+        return { manque: manque, nombre: dessinees.size };
+    }""")
+    assert r["manque"] == [] and r["nombre"] == 9, r
+
+
+def test_un_coup_de_pied_se_dessine_avec_sa_pose(banc):
+    """Le joueur (une tenue de la garde-robe) peint `tech_pied_cote_droite`
+    pendant le coup de pied de côté — pas la marche, pas le coup de poing."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.B.partie.techniques.pied_de_cote = true;
+        const j = L.B.joueur; j.face = 'droite'; j.angle = 0;
+        o.touche('KeyX'); o.frame(L.Combat.CHARGE_MIN + 2); o.relacher('KeyX');
+        const vus = new Set();
+        for (let k = 0; k < 30; k++) { o.frame(1); const im = L.Entites.imageDe(j); if (im) vus.add(im.pose); }
+        return Array.from(vus);
+    }""")
+    assert "tech_pied_cote_droite" in r and "tech_genou_droite" in r, r
