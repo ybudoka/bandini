@@ -14,7 +14,7 @@
 | Voix | **Martin - Clear and Comforting** (norvégien, accent d'Oslo) |
 | Bulle | « Viens, discret. » |
 | Couleurs | veste gris-bleu, cheveux gris, pantalon noir |
-| Missions | donne **m52** · **m53** · **m54** |
+| Missions | donne **m52** · **m53** · **m54** · **q10** (« j'avais dit une dernière fois » — le choix contre **q11**) |
 
 ## Son histoire
 

@@ -15,7 +15,7 @@
 | Voix | **Patrick — Clear, Natural and Polished** (partagée avec le Dr Lachance : jamais dans le même dialogue) |
 | Bulle | « Hé, le jeune! » |
 | Couleurs | uniforme olive, cheveux gris, pantalon foncé |
-| Missions | donne **s01** ; payé pour regarder ailleurs dans **f02** |
+| Missions | donne **s01**, **s08** (la nuit au lot) ; payé pour regarder ailleurs dans **f02** |
 
 ## Son histoire
 

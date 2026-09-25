@@ -14,7 +14,7 @@
 | Voix | **Claudia — Warm, Energetic and Confident**, québécoise d'origine (ajoutée au compte le 18 sept. 2026) |
 | Bulle | « Viens manger! » |
 | Couleurs | chandail jaune moutarde, cheveux noirs, pantalon prune |
-| Missions | rencontrée à **m6** (ou à **m50**, si on la joue avant) ; donne **q02** ; une enveloppe de la tournée (**m51**) |
+| Missions | rencontrée à **m6** (ou à **m50**, si on la joue avant) ; donne **q02**, **q01** (trois Morues de sa sœur qui mangent sans payer) ; une enveloppe de la tournée (**m51**) |
 
 ## Son histoire
 

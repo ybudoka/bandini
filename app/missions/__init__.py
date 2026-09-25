@@ -430,7 +430,8 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 # cles par defaut et les scenes), et il faut donc que le moteur soit defini.
 from . import (  # noqa: E402
     e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f11, h01, h02, m1, m2, m3,
-    m4, m5, m6, m50, m51, m52, m53, m54, m97, p01, p13, p14, q02, q03, q04, r01, s01, s03,
+    m4, m5, m6, m50, m51, m52, m53, m54, m97, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
+    s03, s08,
 )
 
 # ⚠️ L'ordre est celui du téléphone : il sonne pour la première mission disponible dont l'appel n'a pas
@@ -442,6 +443,8 @@ from . import (  # noqa: E402
 # ⚠️ Dix missions de plus encore (22 sept. 2026) : f02, f03, f08 (Faubourg — Gus, Rosa, Ti-Guy),
 # q04 (les Quais — Josée), e02 (les Érables — Ti-Paul), h02 (l'hôpital — Ginette), r01 (la police —
 # Bouchard), s01 (la Shop — Gilles), p13/p14 (La Pointe — la foire prend vie, le Bonimenteur).
+# ⚠️ Quatre de plus (25 sept. 2026) : q01 (Lulu, après q02), q10/q11 (le choix entre Sven et Josée —
+# chacune `ferme` l'autre ; q10 après m54, Sven ayant dit « une dernière fois »), s08 (Gilles, après s01).
 CATALOGUE: list[Mission] = [
     m1.MISSION, m2.MISSION, m3.MISSION, m4.MISSION, m5.MISSION, m6.MISSION, m50.MISSION,
     f01.MISSION, e01.MISSION, q02.MISSION, s03.MISSION, m51.MISSION,
@@ -451,6 +454,7 @@ CATALOGUE: list[Mission] = [
     q04.MISSION, e02.MISSION, h02.MISSION, r01.MISSION, s01.MISSION,
     p13.MISSION, p14.MISSION,
     m52.MISSION, m53.MISSION, m54.MISSION,
+    q01.MISSION, q10.MISSION, q11.MISSION, s08.MISSION,
     m97.MISSION,
 ]
 
@@ -1002,6 +1006,14 @@ ACTEURS_DE_MISSION = ("joueur", "donneur", "vehicule", "cible", "fuyard")
 #: d'autre.
 FORMES_DE_LIEU = ("place", "porte", "ruelle", "zone", "chez", "boutique", "district", "rampe",
                    "mouillage", "amarrage")
+#: Les lieux NOMMÉS que `Histoire.resoudre` connaît sans forme (`pont` : la barrière du
+#: pont, `bois` : une tuile des bois, `foire` : l'arche) — le `ou` d'un objectif peut les
+#: nommer, et la scène par défaut les filme alors tels quels (q10 et sa moto au pont).
+#: ⚠️ PAS `quai` : `Histoire.tuileDeQuai` cherche les glyphes `q`/`j`, que la carte n'a
+#: plus (le quai est `Q`) — il rend `null`, et un char posé là ne naît pas (vu en
+#: écrivant q11, 25 sept. 2026). La scène d'ouverture dit `quai`, mais elle reçoit ses
+#: lieux tout faits.
+LIEUX_NOMMES = ("pont", "bois", "foire")
 
 
 def _lieux_du_plan(plan: dict) -> list[str]:
@@ -1047,7 +1059,7 @@ def erreurs_de_mise_en_scene(mission: dict) -> list[str]:
                 erreurs.append(f"{slug} {partie} : acteur inconnu {plan['acteur']!r}")
             for nom in _lieux_du_plan(plan):
                 forme = nom.split(":", 1)[0] if ":" in nom else None
-                if forme is None and nom not in acteurs:
+                if forme is None and nom not in acteurs and nom not in LIEUX_NOMMES:
                     erreurs.append(f"{slug} {partie} : lieu inconnu {nom!r}")
                 elif forme is not None and forme not in FORMES_DE_LIEU:
                     erreurs.append(f"{slug} {partie} : forme de lieu inconnue {nom!r}")

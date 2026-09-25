@@ -810,3 +810,30 @@ catalogue.
     `refs/wip/objectifs-doublon`) et n'a reporté que ces gardes. Un `git fetch` suivi de
     `git log dev..origin/dev` **avant** de marquer une ligne « en cours » l'aurait montré —
     à condition que la première l'ait marquée elle aussi.
+- **25 sept. 2026 : quatre missions de plus, et le premier choix du catalogue.** `q01`
+  (Lulu : trois Morues de sa sœur mangent sans payer, le quatrième file avec la caisse du
+  midi — la cantine à −25 %), `q10`/`q11` (**Sven ou Josée** : la moto du pont au phare en
+  une minute, ou les deux camions de Sven à faire sauter ; chacune `ferme` l'autre, pour de
+  bon), `s08` (Gilles : la nuit au lot, trois Boulonneux, l'auto volée à ramener dans sa
+  case). Aucun personnage neuf, aucune pièce neuve. 41 voix générées (3 781 caractères),
+  relues par Scribe ; une refaite (`gilles-s08-3`, « Les Boulonneux » mâché).
+  - **Jouées au bouton** (`tests/test_quatre_missions_js.py`, six juges) : chaque mission de
+    l'appel à la prime ; `q10` sans bosse (900 $), avec une bosse (600 $), et ratée au chrono
+    (rien ne se ferme) ; faire `q10` ferme `q11` et l'inverse — la première mission du
+    catalogue qui exerce `ferme`.
+  - ⚠️ **`ou: "quai"` ne pose rien.** `Histoire.tuileDeQuai` cherche les glyphes `q`/`j`, que
+    la carte n'a plus (le quai est `Q`) : il rend `null`, et le camion de `q11` ne naissait
+    pas — aucun juge de structure ne le voit, le banc l'a vu. Le camion est posé derrière la
+    cantine (`ruelle:cantine:12`), et `missions.LIEUX_NOMMES` (ce que la scène par défaut peut
+    filmer sans forme : `pont`, `bois`, `foire`) ne nomme pas `quai`.
+  - ⚠️ **`sans_arme` est déclarée et personne ne la lit** (`OPTIONS_OBJECTIFS`, aucune ligne
+    de `histoire.js`). Aucune mission ne s'en sert — ce n'est pas encore un mensonge, mais
+    la première qui l'écrira en fera un : la brancher avant (`q06`, `s11` la prévoient).
+  - ⚠️ **Le texte d'un objectif dit ce que le jeu fait** : le second camion de Sven est garé
+    au pont, il « attend », il ne « file » pas ; la prime sans bosse de `q10` est une prime,
+    l'objectif dit « IL PAIE PLUS », pas « SANS UNE ÉGRATIGNURE ».
+  - Le banc a montré deux faux rouges, à retenir pour les prochains juges : un fuyard qui n'a
+    pas encore démarré laisse tomber sa caisse à la porte du donneur (le retour se fait dans
+    la même image — laisser filer 300 images) ; et la cour de la fourrière se roule jusqu'au
+    point du lieu, alors que la rue fléchée la plus proche est à seize tuiles (`s01` et `s08`
+    se livrent en entrant dans la cour).

@@ -14,7 +14,7 @@
 | Voix | **Jeanne Mance — Charming, Clear and Young**, québécoise |
 | Bulle | « Approche, toi. » |
 | Couleurs | chandail rouge, cheveux noirs, pantalon noir |
-| Missions | donne **m5**, **m6** ; ouvre le marché noir après m5 (au lieu de dire son repos) |
+| Missions | donne **m5**, **m6**, **q04**, **q11** (les camions de Sven — le choix contre **q10**) ; ouvre le marché noir après m5 (au lieu de dire son repos) |
 
 ## Son histoire
 
