@@ -118,6 +118,21 @@ def _jeton() -> str | None:
     return request.cookies.get(comptes.COOKIE)
 
 
+def _adresse() -> str:
+    """L'adresse du joueur, comptee par `comptes.cle_d_adresse`.
+
+    ⚠️ En production, gunicorn n'ecoute que 127.0.0.1 : tout arrive par nginx, qui
+    pose `X-Real-IP` lui-meme (il l'ecrase, un client ne peut pas le choisir) depuis
+    l'adresse que Caddy lui a donnee. Hors de ce chemin — le serveur du salon —,
+    c'est l'adresse de la connexion.
+    """
+    directe = request.remote_addr or ""
+    relayee = request.headers.get("X-Real-IP")
+    if relayee and directe in ("127.0.0.1", "::1"):
+        return comptes.cle_d_adresse(relayee.strip())
+    return comptes.cle_d_adresse(directe)
+
+
 def _cookie(reponse: Response, jeton: str | None) -> None:
     """Pose le jeton d'appareil — ou l'efface, avec `None`.
 
@@ -154,6 +169,15 @@ def _compte_invalide(erreur: comptes.CompteInvalide):
     return jsonify({"erreur": str(erreur)}), erreur.statut
 
 
+@bp.errorhandler(comptes.TropDEssais)
+def _trop_d_essais(erreur: comptes.TropDEssais):
+    """429 avec `Retry-After`, et le cookie ne bouge pas."""
+    reponse = jsonify({"erreur": str(erreur), "attente": erreur.attente})
+    reponse.status_code = erreur.statut
+    reponse.headers["Retry-After"] = str(erreur.attente)
+    return reponse
+
+
 @bp.errorhandler(comptes.NonAutorise)
 def _non_autorise(erreur: comptes.NonAutorise):
     reponse = jsonify({"erreur": str(erreur), "coupe": erreur.coupe})
@@ -178,7 +202,8 @@ def api_compte_inscription():
 @bp.route("/api/compte/connexion", methods=["POST"])
 def api_compte_connexion():
     return _compte_ouvert(
-        comptes.connecter(bd.connexion(), request.get_json(silent=True), jeton_actuel=_jeton())
+        comptes.connecter(bd.connexion(), request.get_json(silent=True), jeton_actuel=_jeton(),
+                          adresse=_adresse())
     )
 
 
@@ -254,7 +279,7 @@ def api_compte_effacer():
     """Efface le compte pour vrai (M14, 4e vague). Le mot de passe est redemande : voir
     `comptes.effacer`. Un mot de passe faux rend 403 et LAISSE LE COOKIE — l'appareil reste lie."""
     session = comptes.authentifier(bd.connexion(), _jeton())
-    comptes.effacer(bd.connexion(), session, request.get_json(silent=True))
+    comptes.effacer(bd.connexion(), session, request.get_json(silent=True), adresse=_adresse())
     reponse = jsonify({"compte": None})
     _cookie(reponse, None)
     return reponse

@@ -37,6 +37,7 @@ qui pose la question au joueur.
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import json
 import re
 import secrets
@@ -84,6 +85,24 @@ REQUETE_PARTIE_MAX_OCTETS = PARTIE_MAX_OCTETS + 4096
 #: `Number.MAX_SAFE_INTEGER` : au-dela, le navigateur ne compte plus juste.
 COMPTEUR_MAX = 2**53 - 1
 
+#: LA LIMITE D'ESSAIS — une dette de M14, payee le 25 sept. 2026. Dix mots de passe
+#: rates en quinze minutes, et la meme adresse attend : un humain qui se trompe n'en
+#: rate pas dix, et quelqu'un qui devine passe de milliers d'essais a quarante l'heure.
+#:
+#: ⚠️ **PAR ADRESSE, JAMAIS PAR PSEUDO.** Bloquer un compte apres N echecs laisserait
+#: n'importe qui verrouiller celui d'un autre en tapant son pseudo — la raison meme
+#: pour laquelle le NIP ne bloque pas le compte. Une adresse IPv6 compte pour son /64 :
+#: un seul abonnement en a des milliards, et on les essaierait une a une.
+#:
+#: ⚠️ **Un succes n'efface pas les echecs** : sinon il suffirait d'avoir un compte a
+#: soi et de s'y connecter entre deux essais sur celui d'un autre. Et le compte se
+#: fait AVANT scrypt : une adresse bloquee ne coute plus rien au serveur.
+#:
+#: Deux portes lisent le meme compteur : la connexion et la confirmation d'effacement
+#: (le second endroit ou l'on devine un mot de passe).
+ESSAIS_MAX = 10
+FENETRE_ESSAIS_S = 15 * 60
+
 _EMPREINTE_DEFS = re.compile(r"^[0-9a-f]{0,64}$")
 _JETON = re.compile(r"^[A-Za-z0-9_\-]{16,64}$")
 _COURRIEL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -128,6 +147,18 @@ class MotDePasseIncorrect(CompteInvalide):
     l'effacement du compte ne doit surtout pas delier l'appareil qui vient de la faire."""
 
     statut = 403
+
+
+class TropDEssais(Exception):
+    """429 — et le cookie reste : un appareil deja lie qui rate l'effacement dix fois
+    n'est pas deconnecte pour autant. `attente` : les secondes avant le prochain essai."""
+
+    statut = 429
+
+    def __init__(self, attente: int) -> None:
+        minutes = max(1, -(-attente // 60))
+        super().__init__(f"trop d'essais ratés : réessaie dans {minutes} minute{'s' if minutes > 1 else ''}")
+        self.attente = attente
 
 
 class NonAutorise(Exception):
@@ -196,6 +227,44 @@ def _lier(conn: sqlite3.Connection, compte_id: int, nom: str, quand: int) -> tup
     return jeton, curseur.lastrowid
 
 
+# --- La limite d'essais ----------------------------------------------------------------
+
+
+def cle_d_adresse(adresse: object) -> str:
+    """L'adresse telle qu'on la compte : IPv4 entiere, IPv6 par son /64."""
+    try:
+        ip = ipaddress.ip_address(adresse if isinstance(adresse, str) else "")
+    except ValueError:
+        return "inconnue"
+    if isinstance(ip, ipaddress.IPv6Address):
+        if ip.ipv4_mapped is not None:
+            return str(ip.ipv4_mapped)  # « ::ffff:1.2.3.4 » est 1.2.3.4
+        return str(ipaddress.ip_network(f"{ip}/64", strict=False))
+    return str(ip)
+
+
+def _attendre_son_tour(conn: sqlite3.Connection, cle: str | None, quand: int) -> None:
+    """Leve `TropDEssais` si cette adresse a deja rate `ESSAIS_MAX` fois dans la fenetre."""
+    if cle is None:
+        return
+    rangs = conn.execute(
+        "SELECT quand FROM essais_rates WHERE adresse = ? AND quand > ? ORDER BY quand DESC LIMIT ?",
+        (cle, quand - FENETRE_ESSAIS_S, ESSAIS_MAX),
+    ).fetchall()
+    if len(rangs) >= ESSAIS_MAX:
+        # Le plus vieux des dix sort de la fenetre : c'est la que l'adresse rejoue.
+        raise TropDEssais(rangs[-1]["quand"] + FENETRE_ESSAIS_S - quand)
+
+
+def _noter_un_echec(conn: sqlite3.Connection, cle: str | None, quand: int) -> None:
+    if cle is None:
+        return
+    with bd.transaction(conn):
+        conn.execute("INSERT INTO essais_rates (adresse, quand) VALUES (?, ?)", (cle, quand))
+        # Ce qui est sorti de la fenetre ne compte plus pour personne.
+        conn.execute("DELETE FROM essais_rates WHERE quand <= ?", (quand - FENETRE_ESSAIS_S,))
+
+
 # --- Le compte -------------------------------------------------------------------------
 
 
@@ -247,18 +316,23 @@ def connecter(
     donnees: object,
     jeton_actuel: str | None = None,
     quand: int | None = None,
+    adresse: str | None = None,
 ) -> Session:
     """Le mot de passe lie cet appareil au compte.
 
     Le meme message pour un pseudo inconnu et un mot de passe faux. L'appareil qui
     portait deja un jeton le perd : on ne garde pas deux liens pour le meme appareil.
+    `adresse` (la cle de `cle_d_adresse`) compte les essais rates ; sans elle, rien
+    ne se compte — c'est la route qui la donne, toujours.
     """
     donnees = _objet(donnees)
     quand = maintenant() if quand is None else quand
+    _attendre_son_tour(conn, adresse, quand)
 
     pseudo = pseudo_propre(donnees.get("pseudo"))
     mot_de_passe = donnees.get("mot_de_passe")
     if not isinstance(mot_de_passe, str) or len(mot_de_passe) > MOT_DE_PASSE_MAX:
+        _noter_un_echec(conn, adresse, quand)
         raise NonAutorise(MAUVAIS_IDENTIFIANTS)
 
     rang = None
@@ -269,8 +343,10 @@ def connecter(
         ).fetchone()
     if rang is None:
         check_password_hash(_leurre(), mot_de_passe)
+        _noter_un_echec(conn, adresse, quand)
         raise NonAutorise(MAUVAIS_IDENTIFIANTS)
     if not check_password_hash(rang["mot_de_passe"], mot_de_passe):
+        _noter_un_echec(conn, adresse, quand)
         raise NonAutorise(MAUVAIS_IDENTIFIANTS)
 
     with bd.transaction(conn):
@@ -367,7 +443,8 @@ def deconnecter(conn: sqlite3.Connection, session: Session) -> None:
         conn.execute("DELETE FROM appareils WHERE id = ?", (session.appareil_id,))
 
 
-def effacer(conn: sqlite3.Connection, session: Session, donnees: object) -> None:
+def effacer(conn: sqlite3.Connection, session: Session, donnees: object,
+            adresse: str | None = None, quand: int | None = None) -> None:
     """Efface le compte POUR VRAI (M14, 4e vague) : ses parties, ses appareils, ses jetons
     perimes, son courriel, son pseudo — le pseudo est libre aussitot.
 
@@ -381,8 +458,11 @@ def effacer(conn: sqlite3.Connection, session: Session, donnees: object) -> None
     base (`deploy/sauvegarder_bd.py`, les sept dernieres), qui s'effacent d'elles-memes.
     """
     donnees = _objet(donnees)
+    quand = maintenant() if quand is None else quand
+    _attendre_son_tour(conn, adresse, quand)
     mot_de_passe = donnees.get("mot_de_passe")
     if not isinstance(mot_de_passe, str) or len(mot_de_passe) > MOT_DE_PASSE_MAX:
+        _noter_un_echec(conn, adresse, quand)
         raise MotDePasseIncorrect(MOT_DE_PASSE_FAUX)
     rang = conn.execute(
         "SELECT mot_de_passe FROM comptes WHERE id = ?", (session.compte_id,)
@@ -392,6 +472,7 @@ def effacer(conn: sqlite3.Connection, session: Session, donnees: object) -> None
         raise NonAutorise(APPAREIL_INCONNU)
     # Hors transaction : scrypt prend un moment, et le verrou d'ecriture est a tout le monde.
     if not check_password_hash(rang["mot_de_passe"], mot_de_passe):
+        _noter_un_echec(conn, adresse, quand)
         raise MotDePasseIncorrect(MOT_DE_PASSE_FAUX)
     with bd.transaction(conn):
         conn.execute("DELETE FROM comptes WHERE id = ?", (session.compte_id,))
