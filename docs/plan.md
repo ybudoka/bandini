@@ -88,6 +88,8 @@ pas quand l'ordre de travail change.
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/m13-les-deux-fins.md#fiche) · [notes](jalons/m13-les-deux-fins.md#notes) |
 | Infiltration : portes verrouillées et gardes privés | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/infiltration-portes-verrouillees-et-gardes-prives.md#fiche) |
 | Générer les bruitages qui n'ont aucun équivalent payé | ⬜ **à faire** (⚠️ le quota n'est plus l'obstacle — **nouveau forfait le 24 sept. 2026** ; à trancher par Martin, c'est sa dépense) | — | **P4** | ajout | [fiche](jalons/les-bruitages-qui-n-ont-aucun-equivalent-paye.md#fiche) |
+| Des choses à collectionner, et la planque qu'on décore | ⬜ **à faire** (à trancher par Martin : les familles, leur nombre, les meubles) | — | **P4** | ajout | [fiche](jalons/des-choses-a-collectionner-et-la-planque-qu-on-decore.md#fiche) |
+| Une deuxième planque, plus loin | ⬜ **à faire** (à trancher par Martin : où, et comment on l'a) | — | **P4** | ajout | [fiche](jalons/une-deuxieme-planque-plus-loin.md#fiche) |
 
 ## L'ordre
 
@@ -118,6 +120,8 @@ Ce que chaque ligne à faire attend (la table de tri du 13 sept. 2026, réduite 
 | **P4** | ajout | Quatre activités que le jeu n'a pas | 2 | ⚠️ la **refonte des véhicules** d'abord (les deux boulots neufs ne demandent aucun char de plus, mais la liste du quai fait regarder le parc de près) |
 | **P4** | ajout | M16 Cent missions | 8 (4 × 2) | le **carnet** d'abord (c'est lui qui rend cent missions lisibles) et **les missions mises en scène** (chaque mission porte ses scènes et ses dialogues) ; ⚠️ les dialogues et les scènes sortent du paquet ; M13 en est la dernière tranche |
 | **P4** | ajout | M13 Les deux fins | 4 | **M8** pour les districts, et ça gagne à suivre **M10** : la dette de Rocco est le fil des deux fins. C'est la fin — elle se pose en dernier |
+| **P4** | ajout | Des choses à collectionner, et la planque qu'on décore | 3 | rien ne l'attend ; ⚠️ poser les objets **en dernier, sans dé** (sinon la ville glisse) ; le décor conditionnel de la planque sert aussi à la deuxième |
+| **P4** | ajout | Une deuxième planque, plus loin | 2 | gagne à suivre les collections (le décor conditionnel) ; « la planque » est au singulier dans tout le code, les chars `donne` compris |
 
 M8 porte tout le reste (les gangs, les fins, le traversier, la fourrière ont besoin de la
 ville complète) ; il est livré. Rien n'oblige à suivre la liste à la lettre : à l'intérieur
