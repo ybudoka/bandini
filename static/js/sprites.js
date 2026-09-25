@@ -2540,6 +2540,33 @@ const TUILES = (function () {
     ctx.restore();
   }
 
+  /** LE BOIS ROND — le mur du chalet du rang (demande de Martin : « une vraie texture de
+      bois rond »). Des rondins couches, un par quatre pixels : le dessus arrondi qui prend la
+      lumiere, le ventre, le dessous dans l'ombre, et entre deux le CALFEUTRAGE clair (le
+      mortier de chaux des camps). Chaque rondin a sa teinte (l'empreinte de la tuile et du
+      rang, jamais un de), quelques noeuds, et le fil du bois en traits courts. */
+  const BOIS_ROND = {
+    teintes: [['#b98249', '#94612f', '#6d4420'], ['#ad7641', '#8a5829', '#643d1c'], ['#c28d53', '#9c6a36', '#734924']],
+    calfeutrage: '#d9c7a0', joint: '#b5a07a', noeud: '#4e2f14', fil: 'rgba(60,32,12,0.35)',
+  };
+  function boisRond(ctx, v, T) {
+    for (let r = 0; r < T / 4; r++) {
+      const t = BOIS_ROND.teintes[hash2(v * 7 + r, 31) % BOIS_ROND.teintes.length];
+      const y = r * 4;
+      ctx.fillStyle = t[0]; ctx.fillRect(0, y, T, 1);          // le dessus, dans la lumiere
+      ctx.fillStyle = t[1]; ctx.fillRect(0, y + 1, T, 1);      // le ventre
+      ctx.fillStyle = t[2]; ctx.fillRect(0, y + 2, T, 1);      // le dessous, dans l'ombre
+      ctx.fillStyle = BOIS_ROND.calfeutrage; ctx.fillRect(0, y + 3, T, 1);
+      ctx.fillStyle = BOIS_ROND.joint;                          // le calfeutrage n'est pas une regle
+      for (let i = 0; i < 3; i++) ctx.fillRect(hash2(v + r, 70 + i) % T, y + 3, 2, 1);
+      ctx.fillStyle = BOIS_ROND.fil;                            // le fil du bois
+      for (let i = 0; i < 2; i++) ctx.fillRect(hash2(v + r, 90 + i) % (T - 3), y + 1, 3, 1);
+      if (hash2(v * 13 + r, 50) % 5 === 0) {                    // un noeud, parfois
+        ctx.fillStyle = BOIS_ROND.noeud; ctx.fillRect(hash2(v + r, 51) % (T - 2) + 1, y + 1, 2, 1);
+      }
+    }
+  }
+
   function facade(ctx, v, T, teinte) {
     plein(ctx, teinte || '#8c4a3c', T);
     ctx.fillStyle = 'rgba(0,0,0,0.18)';
@@ -3069,6 +3096,37 @@ const TUILES = (function () {
     'O': function (ctx, v, T) { toitPlat(ctx, v, T, TOIT_GRAVIER); },
     'P': function (ctx, v, T) { toitEnPente(ctx, v, T, TOIT_BARDEAU); },
     'F': function (ctx, v, T) { facade(ctx, v, T); },
+    // Le COIN d'un mur de bois rond : le mur, et par-dessus les bouts des rondins qui
+    // depassent — un sur deux, en alternance, comme se croisent les deux murs d'un chalet.
+    // Chaque bout montre son grain : l'ecorce sombre, le bois clair, les cernes.
+    'H': function (ctx, v, T) {
+      boisRond(ctx, v, T);
+      for (let r = 0; r < T / 4; r++) {
+        const cx = r % 2 ? 11 : 5, cy = r * 4 + 1;
+        ctx.fillStyle = '#4e2f14'; ctx.fillRect(cx - 3, cy - 1, 7, 4); ctx.fillRect(cx - 2, cy - 2, 5, 6);   // l'ecorce
+        ctx.fillStyle = '#d6a868'; ctx.fillRect(cx - 2, cy - 1, 5, 4); ctx.fillRect(cx - 1, cy - 2, 3, 6);   // le bout, clair
+        ctx.fillStyle = '#b3824a'; ctx.fillRect(cx - 1, cy, 3, 2);                                           // un cerne
+        ctx.fillStyle = '#7a4c24'; ctx.fillRect(cx, cy, 1, 1);                                               // le coeur
+      }
+    },
+    // Le chalet du rang : les memes glyphes, en bois rond (`materiaux` d'une carte de bloc).
+    'F@bois_rond': function (ctx, v, T) { boisRond(ctx, v, T); },
+    'W@bois_rond': function (ctx, v, T) {
+      boisRond(ctx, v, T);
+      ctx.fillStyle = '#e6dcc4'; ctx.fillRect(2, 2, 12, 11);    // le cadre, du bois peint
+      ctx.fillStyle = '#2a3a4e'; ctx.fillRect(3, 3, 10, 9);     // la vitre
+      ctx.fillStyle = '#86b8d8'; ctx.fillRect(4, 4, 3, 3);      // un reflet
+      ctx.fillStyle = '#e6dcc4'; ctx.fillRect(7, 3, 2, 9); ctx.fillRect(3, 7, 10, 1);   // les croisillons
+      ctx.fillStyle = '#6d4420'; ctx.fillRect(1, 13, 14, 1);    // l'appui
+    },
+    'D@bois_rond': function (ctx, v, T) {
+      boisRond(ctx, v, T);
+      ctx.fillStyle = '#4a2e16'; ctx.fillRect(3, 2, 10, 14);    // le chambranle
+      ctx.fillStyle = '#7a4c24'; ctx.fillRect(4, 3, 8, 13);     // la porte, en planches
+      ctx.fillStyle = '#5e391a'; ctx.fillRect(6, 3, 1, 13); ctx.fillRect(9, 3, 1, 13);
+      ctx.fillStyle = '#5e391a'; ctx.fillRect(4, 6, 8, 1); ctx.fillRect(4, 12, 8, 1);   // les traverses
+      ctx.fillStyle = '#d8b83a'; ctx.fillRect(11, 9, 1, 1);     // la poignee
+    },
     'W': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#243447'; ctx.fillRect(3, 3, 10, 9); ctx.fillStyle = '#7fb3d8'; ctx.fillRect(4, 4, 3, 3); ctx.fillStyle = '#4d7ea3'; ctx.fillRect(8, 4, 4, 7); ctx.fillRect(4, 8, 3, 3); },
     'D': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#3d2a1c'; ctx.fillRect(4, 3, 8, 13); ctx.fillStyle = '#d8b83a'; ctx.fillRect(10, 9, 1, 1); },
     'd': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#2e2118'; ctx.fillRect(4, 4, 8, 12); ctx.fillStyle = '#3a2a1e'; ctx.fillRect(5, 5, 6, 10); ctx.fillStyle = '#6b5a48'; ctx.fillRect(4, 8, 8, 1); },

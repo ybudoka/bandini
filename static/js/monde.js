@@ -287,6 +287,11 @@ const Monde = (function () {
       // redessiné à chaque image sous chaque arbre de rue coûterait cher pour
       // ce qu'il dit — et il passerait par-dessus les pieds de celui qui
       // marche juste au nord de l'arbre.
+      // Les MATERIAUX d'une carte de bloc (`app/blocs/`) : un glyphe peint autrement que
+      // dans la ville — les `F`, `W` et `D` du chalet du rang sont en BOIS ROND. Le glyphe
+      // reste le meme (la porte s'ouvre et se franchit comme toutes les autres) ; seul le
+      // peintre change (`TUILES['F@bois_rond']`).
+      materiaux: def.materiaux || null,
       fosses: indexerParMorceau((def.decor || []).filter(function (d) {
         if (d.type !== 'arbre') return false;
         return !(def.legende[def.sol[d.y][d.x]] || {}).terre;
@@ -1829,8 +1834,10 @@ const Monde = (function () {
           const fond = TUILES[carte.plancher] || TUILES[','];
           ctx.drawImage(Atlas.cuireTuile(carte.plancher, varianteDeTuile(carte.plancher, tx, ty), fond), i * TT, j * TT);
         }
-        const peintre = TUILES[g] || TUILES[','];
-        const tuile = Atlas.cuireTuile(g, varianteDeTuile(g, tx, ty), peintre);
+        const mat = carte.materiaux && carte.materiaux[g];
+        const cle = mat && TUILES[g + '@' + mat] ? g + '@' + mat : g;
+        const peintre = TUILES[cle] || TUILES[','];
+        const tuile = Atlas.cuireTuile(cle, varianteDeTuile(g, tx, ty), peintre);
         ctx.drawImage(tuile, i * TT, j * TT);
       }
     }

@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (234 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (235 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -81,7 +81,7 @@ pas quand l'ordre de travail change.
 | La ligne d'histoire : une ouverture et un générique | ⬜ **en cours** (l'ouverture livrée) | 16 sept. 2026 | **P2** | ajout | [fiche](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#fiche) · [notes](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#notes) |
 | Le décor, les bêtes et les gens répondent — deuxième vague | ⬜ **en cours** (livrés : manger au barbecue, caresser le chat, vider un parcomètre ; le buisson est annulé ; restent l'affiche arrachée, le caddie, le panneau) | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/le-decor-les-betes-et-les-gens-repondent.md#fiche-de-la-deuxième-vague) |
 | M14 Meta | ⬜ **en cours** (6 vagues livrées : le compte, la session longue, les parties sur le serveur, le jeu qui se synchronise, le NIP, effacer son compte, le défi du jour, et le mode photo ; la coop locale à **deux vrais joueurs** (un clavier, une manette, chacun sur sa source d'entrées : ses coups portent, il suit dans les pièces et monte en passager, portes, missions et volant restent au joueur 1 — la porte reste ouverte à une coop en ligne) ; reste le verdict de Martin, manette en main) | 17 sept. 2026 | **P4** | ajout | [fiche](jalons/m14-meta.md#fiche) · [notes](jalons/m14-meta.md#notes) |
-| Des blocs de carte en extensions | ⬜ **en cours** (✅ vagues 1 et 2 livrées : à pied, au volant, à deux, la police qui reprend au bord — la clairière du lac au nord des Érables ; restent un vrai dehors et le premier vrai bloc) | 25 sept. 2026 | **P3** | ajout | [fiche](jalons/des-blocs-de-carte-en-extensions.md#fiche) |
+| Des blocs de carte en extensions | ⬜ **en cours** (✅ vagues 1 à 3 livrées : à pied, au volant, à deux, la police qui reprend au bord, et le premier vrai bloc — le chalet du rang, la deuxième planque ; reste « un vrai dehors », avec le bloc qui en aura besoin) | 25 sept. 2026 | **P3** | ajout | [fiche](jalons/des-blocs-de-carte-en-extensions.md#fiche) |
 | L'Île-aux-Corneilles — deuxième vague | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/l-ile-aux-corneilles.md#fiche) · [notes](jalons/l-ile-aux-corneilles-deuxieme-vague.md#notes) |
 | Quatre activités que le jeu n'a pas | ⬜ **en cours** (2 des 4 livrées : les paliers de boulot, le pompier volontaire ; restent la patrouille, la liste du quai et les frénésies) | 15 sept. 2026 | **P4** | ajout | [fiche](jalons/quatre-activites-que-le-jeu-n-a-pas.md#fiche) · [notes](jalons/quatre-activites-que-le-jeu-n-a-pas.md#notes) |
 | La réputation et la lecture des passants | ⬜ **à faire** (à trancher par Martin) | — | **P4** | ajout | [fiche](jalons/la-reputation-et-la-lecture-des-passants.md#fiche) |
@@ -90,7 +90,6 @@ pas quand l'ordre de travail change.
 | Infiltration : portes verrouillées et gardes privés | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/infiltration-portes-verrouillees-et-gardes-prives.md#fiche) |
 | Générer les bruitages qui n'ont aucun équivalent payé | ⬜ **à faire** (⚠️ le quota n'est plus l'obstacle — **nouveau forfait le 24 sept. 2026** ; à trancher par Martin, c'est sa dépense) | — | **P4** | ajout | [fiche](jalons/les-bruitages-qui-n-ont-aucun-equivalent-paye.md#fiche) |
 | Des choses à collectionner, et la planque qu'on décore | ⬜ **à faire** (à trancher par Martin : les familles, leur nombre, les meubles) | — | **P4** | ajout | [fiche](jalons/des-choses-a-collectionner-et-la-planque-qu-on-decore.md#fiche) |
-| Une deuxième planque, plus loin | ⬜ **à faire** (à trancher par Martin : où, et comment on l'a) | — | **P4** | ajout | [fiche](jalons/une-deuxieme-planque-plus-loin.md#fiche) |
 | La cabane à sucre : un événement de printemps | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/la-cabane-a-sucre.md#fiche) |
 | Le vidéopoker du Brouillard | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-videopoker-du-brouillard.md#fiche) |
 | Le brouillard de Baie-des-Brumes | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-brouillard-de-baie-des-brumes.md#fiche) |
@@ -114,6 +113,7 @@ pas quand l'ordre de travail change.
 | Le camion de crème glacée | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-camion-de-creme-glacee.md#fiche) |
 | L'orignal de La Pointe | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/l-orignal-de-la-pointe.md#fiche) |
 | Le ciné-parc | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-cine-parc.md#fiche) |
+| Une amélioration générale des toits | ⬜ **à faire** (à trancher par Martin : la liste, et par où commencer) | — | **P4** | ajout | [fiche](jalons/une-amelioration-generale-des-toits.md#fiche) |
 
 ## L'ordre
 
@@ -146,7 +146,6 @@ Ce que chaque ligne à faire attend (la table de tri du 13 sept. 2026, réduite 
 | **P4** | ajout | M16 Cent missions | 8 (4 × 2) | le **carnet** d'abord (c'est lui qui rend cent missions lisibles) et **les missions mises en scène** (chaque mission porte ses scènes et ses dialogues) ; ⚠️ les dialogues et les scènes sortent du paquet ; M13 en est la dernière tranche |
 | **P4** | ajout | M13 Les deux fins | 4 | **M8** pour les districts, et ça gagne à suivre **M10** : la dette de Rocco est le fil des deux fins. C'est la fin — elle se pose en dernier |
 | **P4** | ajout | Des choses à collectionner, et la planque qu'on décore | 3 | rien ne l'attend ; ⚠️ poser les objets **en dernier, sans dé** (sinon la ville glisse) ; le décor conditionnel de la planque sert aussi à la deuxième |
-| **P4** | ajout | Une deuxième planque, plus loin | 2 | gagne à suivre les collections (le décor conditionnel) ; « la planque » est au singulier dans tout le code, les chars `donne` compris |
 | **P4** | ajout | La cabane à sucre : un événement de printemps | 3 | une pièce neuve posée sans dé ; la saison est une fenêtre de jours, calculée comme la neige |
 | **P4** | ajout | Le vidéopoker du Brouillard | 1 | rien ne l'attend ; ⚠️ un générateur à part, jamais `B.rng()` |
 | **P4** | ajout | Le brouillard de Baie-des-Brumes | 2 | reprend le mécanisme de la neige (M12) ; ⚠️ la dette du rythme sur le vrai téléphone avant de l'allumer |
@@ -170,6 +169,7 @@ Ce que chaque ligne à faire attend (la table de tri du 13 sept. 2026, réduite 
 | **P4** | ajout | Le camion de crème glacée | 2 | les enfants à vélo existent ; une sorte de boulot de plus |
 | **P4** | ajout | L'orignal de La Pointe | 1 | les bêtes existent ; ⚠️ une règle d'horaire, jamais `B.rng()` |
 | **P4** | ajout | Le ciné-parc | 3 | un grand terrain en bord de ville : poser en dernier, sans dé |
+| **P4** | ajout | Une amélioration générale des toits | 3 | rien ne l'attend ; la moitié de l'écran, c'est des toits ; ⚠️ le cache des morceaux et le rythme sur le téléphone, et rien au dé (l'empreinte du bâtiment) ; le chalet du rang comme banc d'essai |
 
 M8 porte tout le reste (les gangs, les fins, le traversier, la fourrière ont besoin de la
 ville complète) ; il est livré. Rien n'oblige à suivre la liste à la lettre : à l'intérieur

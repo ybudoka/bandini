@@ -1108,8 +1108,36 @@ const Missions = (function () {
     return menu;
   }
 
+  /** La planque d'un bloc de carte (le chalet), si c'est ICI et qu'elle n'est pas encore a
+      nous : `{ slug, prix, nom }`, ou null. */
+  function planqueAVendre(piece) {
+    const bloc = B.bloc, planque = bloc && bloc.def.bloc.planque;
+    if (!planque || !piece || planque.piece !== piece.slug) return null;
+    if (B.partie.planques.indexOf(bloc.slug) >= 0) return null;
+    return { slug: bloc.slug, prix: planque.prix, nom: piece.nom };
+  }
+
+  function itemAchatPlanque(a) {
+    const p = B.partie;
+    return { libelle: 'ACHETER ' + a.nom.toUpperCase(), detail: a.prix + ' $', actif: p.argent >= a.prix, faire: function () {
+      payer(a.prix, a.nom.toUpperCase());
+      p.planques.push(a.slug);
+      Hud.message(a.nom.toUpperCase() + ' EST À TOI', 180);
+      return true;
+    } };
+  }
+
   function menuDuComptoir(point, items) {
     const piece = B.interieur, p = B.partie, tarifs = B.defs.economie.tarifs;
+    // ⚠️ LA PLANQUE D'UN BLOC (le chalet du rang) ne sert qu'a qui l'a achetee : avant, son
+    // lit, son coffre et sa garde-robe ne proposent que de l'acheter — pas de nuit, pas de
+    // sauvegarde, pas de magot dans le coffre d'un chalet qui n'est pas a toi.
+    const planqueIci = planqueAVendre(piece);
+    if (planqueIci && (point.type === 'lit' || point.type === 'coffre' || point.type === 'garde_robe')) {
+      items.push(itemAchatPlanque(planqueIci));
+      return { titre: piece.nom.toUpperCase(), items: items, sur: p.argent + ' $',
+               aide: 'TA DEUXIÈME PLANQUE : Y DORMIR, SAUVEGARDER, GARER UN CHAR' };
+    }
     const caisse = itemCaisse(piece.slug);
     if (caisse) items.push(caisse);
     // La run : le prix du jour, et « vendre » ce qu'il y a dans le char devant.
@@ -2864,19 +2892,23 @@ const Missions = (function () {
     if (j) {
       // ⚠️ Assis, on se sauvegarde la ou l'on se tenait : le banc est solide, et un joueur
       // recharge DEDANS ne saurait pas en sortir.
-      // ⚠️ Dans un bloc de carte (`B.bloc`), la position sauvegardee est celle du passage
-      // en VILLE : une partie rouverte se reveille dans la ville, au bord d'ou l'on etait
-      // parti (vague 1 — se reveiller DANS le bloc viendra avec sa planque).
-      const dehors = B.exterieur ? { x: B.exterieur.x, y: B.exterieur.y }
-        : B.bloc ? { x: B.bloc.ville.x, y: B.bloc.ville.y }
+      // ⚠️ Dans un bloc de carte (`B.bloc`), `p.x`/`p.y` sont ceux du passage EN VILLE — le
+      // repli, si le bloc ne se charge pas au reveil — et `p.bloc` dit ou l'on est DANS le
+      // bloc (devant la porte du chalet, si l'on y dort) : une partie rouverte s'y reveille.
+      const ici = B.exterieur ? { x: B.exterieur.x, y: B.exterieur.y }
         : (j.assis ? { x: j.assis.avant.x, y: j.assis.avant.y } : { x: j.x, y: j.y });
+      const dehors = B.bloc ? { x: B.bloc.ville.x, y: B.bloc.ville.y } : ici;
+      p.bloc = B.bloc ? { slug: B.bloc.slug, x: Math.round(ici.x), y: Math.round(ici.y) } : null;
       p.x = Math.round(dehors.x); p.y = Math.round(dehors.y); p.vie = Math.max(1, j.vie); p.arme = j.arme;
       // Le char gare devant la planque revient avec la partie.
-      const planque = Monde.carte.ville ? Monde.carte.ville : Monde.carte;
+      // ⚠️ LA VILLE, d'ou qu'on sauvegarde : dans un bloc, la carte courante est le bloc, et
+      // la porte de la planque de Rocco n'y etait pas — le char qui l'attendait etait OUBLIE
+      // a chaque sauvegarde faite au chalet (vague 3, le juge l'a vu).
+      const planque = B.bloc ? B.bloc.ville.carte : (Monde.carte.ville ? Monde.carte.ville : Monde.carte);
       const porte = planque.portes.find(function (q) { return q.lieu === 'planque'; });
       p.planque.vehicule = null;
       if (porte) {
-        const entites = B.exterieur ? B.exterieur.entites : B.bloc ? B.bloc.ville.entites : B.entites;
+        const entites = B.bloc ? B.bloc.ville.entites : B.exterieur ? B.exterieur.entites : B.entites;
         for (const e of entites) {
           if (e.type === 'vehicule' && e.etat !== 'epave' && dist2(e.x, e.y, porte.x * TT + 8, (porte.y + 1) * TT) < 100 * 100) {
             p.planque.vehicule = { slug: e.slug, sprite: e.sprite, couleur: e.couleur, vie: e.vie, x: Math.round(e.x), y: Math.round(e.y), angle: e.angle, vole: e.vole };
@@ -2884,9 +2916,26 @@ const Missions = (function () {
           }
         }
       }
+      garderLesCharsDesPlanques(p);
     }
     p.empreinte = B.defs.empreinte;
     return Sauvegarde.ecrire(p);
+  }
+
+  /** Le char gare sur la place de chaque planque de bloc achetee (le chalet) : celui du
+      bloc ou l'on est, ou celui qu'on y a laisse (`Blocs.enMemoire`). Un bloc pas visite de
+      la partie garde ce que la sauvegarde avait. */
+  function garderLesCharsDesPlanques(p) {
+    for (const b of Blocs.liste()) {
+      if (p.planques.indexOf(b.slug) < 0) continue;
+      const ici = B.bloc && B.bloc.slug === b.slug;
+      const entites = ici ? (B.exterieur ? B.exterieur.entites : B.entites) : Blocs.enMemoire(b.slug);
+      const def = ici ? B.bloc.def : Blocs.cartes[b.slug];
+      if (!entites || !def || !def.bloc.planque) continue;
+      const c = def.bloc.planque.char, cx = c.x * TT + 8, cy = c.y * TT + 8;
+      const v = entites.find(function (e) { return e.type === 'vehicule' && e.etat !== 'epave' && dist2(e.x, e.y, cx, cy) < 48 * 48; });
+      p.charsDesPlanques[b.slug] = v ? { slug: v.slug, sprite: v.sprite, couleur: v.couleur, vie: v.vie, x: Math.round(v.x), y: Math.round(v.y), angle: v.angle, vole: v.vole } : null;
+    }
   }
 
   function maj() {

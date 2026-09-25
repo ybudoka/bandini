@@ -60,12 +60,7 @@ const Jeu = (function () {
     if (garde && Vehicules.vehiculeDef(garde.slug)) {
       const place = garde.x === null || garde.x === undefined
         ? placeDevantLaPlanque() : { x: garde.x, y: garde.y };
-      const v = place && Vehicules.creer(garde.slug, place.x, place.y, garde.angle || 0, { etat: 'stationne', sprite: garde.sprite });
-      // ⚠️ `nuances` : le rehaut et l'ombre suivent la couleur (voir le lot).
-      if (v) {
-        if (garde.couleur) { v.couleur = garde.couleur; v.swaps = nuances(garde.couleur); }
-        v.vie = Math.max(1, garde.vie); v.vole = !!garde.vole;
-      }
+      recreerLeChar(garde, place);
     }
     // Le char DONNE par une mission (`donne.vehicule`, le taxi de m97) gare
     // devant la planque, a part de celui qu'on y laisse soi-meme.
@@ -138,6 +133,23 @@ const Jeu = (function () {
     // Le petit train et la montagne russe : ils ne creent aucune entite, donc
     // aucun numero n'est pris a personne.
     Foire.demarrer();
+    // ⚠️ ENDORMI DANS UN BLOC DE CARTE (la planque du chalet) : on s'y reveille — au noir,
+    // le temps que sa carte arrive. Sans elle (hors ligne, un bloc retire), on reste au
+    // passage en ville, ou `p.x`/`p.y` nous ont deja poses.
+    Blocs.oublier();
+    if (p.bloc) Blocs.reprendre(p.bloc);
+  }
+
+  /** Le char d'une planque, tel que la sauvegarde l'a garde, a `place`. ⚠️ `nuances` : le
+      rehaut et l'ombre suivent la couleur (voir le lot). Une recette pour la planque de
+      Rocco et pour celles des blocs de carte (le chalet du rang). */
+  function recreerLeChar(garde, place) {
+    const v = place && Vehicules.creer(garde.slug, place.x, place.y, garde.angle || 0, { etat: 'stationne', sprite: garde.sprite });
+    if (v) {
+      if (garde.couleur) { v.couleur = garde.couleur; v.swaps = nuances(garde.couleur); }
+      v.vie = Math.max(1, garde.vie); v.vole = !!garde.vole;
+    }
+    return v;
   }
 
   /** JOUER : la partie se pose, et l'histoire commence.
@@ -278,7 +290,12 @@ const Jeu = (function () {
       quand l'ecran est vraiment plein — que `texte` s'ecrit.
 
       Le jeu est FIGE pendant (voir `maj()`). */
-  function transiter(duree, faire, texte) {
+  /** `attente` (facultatif) : tant qu'elle rend vrai, le noir TIENT avant de changer la
+      scene — la carte d'un bloc qui n'est pas encore arrivee, au reveil d'une partie
+      (`Blocs.reprendre`). ⚠️ Jamais plus de `ATTENTE_MAX` images : un reseau mort ne laisse
+      pas l'ecran noir, on change la scene quand meme, et `faire` fait avec ce qu'il a. */
+  const ATTENTE_MAX = 600;
+  function transiter(duree, faire, texte, attente) {
     // ⚠️ Un fondu par-dessus un autre n'en empile pas deux : celui qui joue
     // finit tout de suite (sa scene change AU NOIR, une fois), et le nouveau
     // repart du clair. Se faire arreter en tombant dans la rue passait sinon
@@ -286,7 +303,7 @@ const Jeu = (function () {
     finirTransition();
     const tenu = duree.length > 2;
     B.transition = { t: 0, ferme: duree[0], tient: tenu ? duree[1] : 0, ouvre: duree[tenu ? 2 : 1],
-                     faire: faire, texte: texte || null, fait: false, vu: false };
+                     faire: faire, texte: texte || null, fait: false, vu: false, attente: attente || null, attendu: 0 };
   }
 
   /** Le changement de scene lui-meme, au noir — une fois, jamais deux. */
@@ -309,7 +326,11 @@ const Jeu = (function () {
     if (!tr) return;
     if (!tr.fait) {
       tr.t++;
-      if (tr.t >= tr.ferme) { tr.t = tr.ferme; auNoir(); }
+      if (tr.t >= tr.ferme) {
+        tr.t = tr.ferme;
+        if (tr.attente && tr.attente() && tr.attendu++ < ATTENTE_MAX) return;
+        auNoir();
+      }
       return;
     }
     if (!tr.vu) return;
@@ -412,34 +433,61 @@ const Jeu = (function () {
       c'est `B.bloc` qui se souvient de la ville. ⚠️ Vague 2 : on passe AU VOLANT (le char et
       tout ce qui est dedans), et A DEUX. */
   function entrerDansLeBloc(bloc, def, retour) {
-    const j = B.joueur;
     finirTransition();
     if (B.bloc || B.interieur) return false;
-    transiter(FONDU_ENTREE, function () {
-      const gens = voyageurs(), ville = B.entites;
-      for (const e of gens) { const i = ville.indexOf(e); if (i >= 0) ville.splice(i, 1); }
-      const passage = bloc.passage;
-      B.bloc = { slug: bloc.slug, def: def, ville: { carte: Monde.carte, entites: ville, x: retour.x, y: retour.y,
-                                                     passage: passage, leLong: passage.bord === 'nord' || passage.bord === 'sud' ? j.x : j.y } };
-      Monde.charger(def);
-      // ⚠️ UNE COPIE : `creerDecor` ajoute les arbres du bloc a `B.entites`, et `gens` doit
-      // rester la liste des voyageurs — sans quoi les deux cents arbres de la clairiere se
-      // faisaient « poser » en file comme un deuxieme joueur (le juge des arbres l'a vu).
-      B.entites = gens.slice();
-      B.particules.length = 0;
-      // ⚠️ Les ARBRES et les buissons du bloc sont des entites de decor, baties comme celles
-      // de la ville au debut d'une partie (`commencer`) — sans cet appel, seuls leurs pieds
-      // se peignaient. `creerDecor` refait l'index du decor ; au retour, `reindexerDecor`
-      // le rebatit depuis les entites de la ville, remises telles quelles.
-      Entites.creerDecor(def);
-      const r = def.bloc.retour;
-      poserLesVoyageurs(gens, { x: def.bloc.arrivee.x * TT + 8, y: def.bloc.arrivee.y * TT + 8 }, Blocs.capVersLInterieur(r));
-      // Recherche, ceux qui te suivaient passent par le meme bord que toi, un peu apres.
-      Blocs.poursuiteAuBord(r, Monde.carte);
-      Monde.centrerCamera(j.x, j.y);
-      Hud.message(def.nom.toUpperCase(), 150);
-    });
+    transiter(FONDU_ENTREE, function () { passerDansLeBloc(bloc, def, retour, null); });
     return true;
+  }
+
+  /** Le passage lui-meme, au noir. `ici` (facultatif) : ou poser le joueur dans le bloc —
+      le reveil d'une partie endormie au chalet — plutot qu'a son arrivee.
+
+      ⚠️ UN BLOC SE SOUVIENT (vague 3), comme la ville : ce qu'on y laisse — le char gare
+      devant le chalet, un arbre abattu — y est encore en revenant, le temps de la partie
+      (`Blocs.souvenir`). La premiere fois, on le batit : ses arbres (`creerDecor`), et le
+      char de sa planque que la sauvegarde avait garde. */
+  function passerDansLeBloc(bloc, def, retour, ici) {
+    const j = B.joueur;
+    const gens = voyageurs(), ville = B.entites;
+    for (const e of gens) { const i = ville.indexOf(e); if (i >= 0) ville.splice(i, 1); }
+    const passage = bloc.passage;
+    B.bloc = { slug: bloc.slug, def: def, ville: { carte: Monde.carte, entites: ville, x: retour.x, y: retour.y,
+                                                   passage: passage, leLong: passage.bord === 'nord' || passage.bord === 'sud' ? j.x : j.y } };
+    Monde.charger(def);
+    const souvenir = Blocs.souvenir(bloc.slug);
+    // ⚠️ UNE COPIE : `creerDecor` ajoute les arbres du bloc a `B.entites`, et `gens` doit
+    // rester la liste des voyageurs — sans quoi les deux cents arbres de la clairiere se
+    // faisaient « poser » en file comme un deuxieme joueur (le juge des arbres l'a vu).
+    B.entites = gens.concat(souvenir || []);
+    B.particules.length = 0;
+    if (souvenir) {
+      Entites.reindexerDecor();
+    } else {
+      // Les ARBRES et les buissons du bloc sont des entites de decor, baties comme celles de
+      // la ville au debut d'une partie (`commencer`) — sans cet appel, seuls leurs pieds se
+      // peignaient. `creerDecor` refait l'index du decor.
+      Entites.creerDecor(def);
+      garerLeCharDeLaPlanque(bloc.slug, def);
+    }
+    const r = def.bloc.retour;
+    if (ici) poserLesVoyageurs(gens, ici, j.angle || 0);
+    else poserLesVoyageurs(gens, { x: def.bloc.arrivee.x * TT + 8, y: def.bloc.arrivee.y * TT + 8 }, Blocs.capVersLInterieur(r));
+    // Recherche, ceux qui te suivaient passent par le meme bord que toi, un peu apres.
+    Blocs.poursuiteAuBord(r, Monde.carte);
+    Monde.centrerCamera(j.x, j.y);
+    Hud.message(def.nom.toUpperCase(), 150);
+  }
+
+  /** Le char de la planque d'un bloc, tel que la sauvegarde l'a garde — la premiere fois
+      qu'on revient dans le bloc de la partie. */
+  function garerLeCharDeLaPlanque(slug, def) {
+    const planque = def.bloc.planque, p = B.partie;
+    if (!planque || p.planques.indexOf(slug) < 0) return;
+    const garde = p.charsDesPlanques[slug];
+    if (!garde || !Vehicules.vehiculeDef(garde.slug)) return;
+    const place = garde.x === null || garde.x === undefined
+      ? { x: planque.char.x * TT + 8, y: planque.char.y * TT + 8 } : { x: garde.x, y: garde.y };
+    recreerLeChar(garde, place);
   }
 
   /** Revient du bloc : au noir, la ville reprend sa place telle qu'on l'a laissee, et l'on
@@ -450,7 +498,7 @@ const Jeu = (function () {
     if (!B.bloc) return false;
     transiter(FONDU_SORTIE, function () {
       const gens = voyageurs(), ville = B.bloc.ville;
-      quitterLeBloc();
+      quitterLeBloc(gens);
       for (const e of gens) if (B.entites.indexOf(e) < 0) B.entites.push(e);
       // Au meme endroit le long du bord, et assez loin pour qu'un char n'y reparte pas.
       const point = Blocs.recul(ville.passage, Monde.carte, Blocs.porteur(j), ville.leLong);
@@ -464,9 +512,13 @@ const Jeu = (function () {
   /** La ville reprend sa place, sans fondu : rend l'endroit du passage, ou null. Les
       voyageurs, c'est a l'appelant de les emporter (`sortirDuBloc`) — l'hopital et la prison
       ramenent le joueur seul, a pied. */
-  function quitterLeBloc() {
+  function quitterLeBloc(gens) {
     const j = B.joueur, bloc = B.bloc;
     if (!bloc) return null;
+    // Ce qui reste dans le bloc s'y garde : tout, sauf ceux qui repartent avec nous (a
+    // l'hopital ou en prison, le joueur seul — son char reste devant le chalet).
+    const partent = gens || Entites.joueurs();
+    Blocs.garder(bloc.slug, B.entites.filter(function (e) { return partent.indexOf(e) < 0 && !Entites.estJoueur(e); }));
     Monde.restaurer(bloc.ville.carte);
     B.entites = bloc.ville.entites;
     for (const e of Entites.joueurs()) if (B.entites.indexOf(e) < 0) B.entites.push(e);
@@ -1416,7 +1468,7 @@ const Jeu = (function () {
     });
   }
 
-  return { demarrer, commencer, jouer, ouvrirParties, jouerPartie, effacerPartie, copierPartie, entrer, sortir, entrerDansLeBloc, sortirDuBloc, revenirEnVille, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, ouvrirPhoto, fermerPhoto, basculerCoop, majCoop, retourTitre, maj, rendre, avancer, get horsLigne() { return horsLigne; } };
+  return { demarrer, commencer, jouer, ouvrirParties, jouerPartie, effacerPartie, copierPartie, entrer, sortir, entrerDansLeBloc, passerDansLeBloc, sortirDuBloc, revenirEnVille, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, ouvrirPhoto, fermerPhoto, basculerCoop, majCoop, retourTitre, maj, rendre, avancer, get horsLigne() { return horsLigne; } };
 })();
 
 /* Surface de test et de debogage — la seule poignee du banc d'essai. */

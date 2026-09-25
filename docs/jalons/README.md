@@ -252,3 +252,4 @@ Deux documents d'avant la table :
 | M15 La ville te parle — deuxième vague | ✅ **livré** | 24 sept. 2026 | **P4** | ajout | [fiche](m15-la-ville-te-parle.md#fiche-de-la-deuxième-vague) · [notes](m15-la-ville-te-parle.md#notes) |
 | Le scanner de police a perdu ses deux voix | ✅ **livré** | 25 sept. 2026 | **P2** | **correctif** | [fiche](le-scanner-de-police-a-perdu-ses-deux-voix.md#fiche) · [notes](le-scanner-de-police-a-perdu-ses-deux-voix.md#notes) |
 | Les rabais gagnés en mission ne s'appliquent pas | ✅ **livré** | 25 sept. 2026 | **P1** | **correctif** | [fiche](les-rabais-gagnes-en-mission-ne-s-appliquent-pas.md#fiche) · [notes](les-rabais-gagnes-en-mission-ne-s-appliquent-pas.md#notes) |
+| Une deuxième planque, plus loin | ✅ **livré** | 25 sept. 2026 | **P4** | ajout | [fiche](une-deuxieme-planque-plus-loin.md#fiche) · [notes](une-deuxieme-planque-plus-loin.md#notes) |

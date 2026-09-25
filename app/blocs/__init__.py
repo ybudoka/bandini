@@ -18,9 +18,9 @@ Comme une mission : rien d'autre à toucher.
 from __future__ import annotations
 
 from .. import carte
-from . import clairiere
+from . import chalet, clairiere
 
-BLOCS: list[dict] = [clairiere.BLOC]
+BLOCS: list[dict] = [clairiere.BLOC, chalet.BLOC]
 
 BORDS = ("nord", "sud", "est", "ouest")
 
@@ -53,14 +53,22 @@ def carte_du_bloc(bloc: dict) -> dict:
         "tuile_px": carte.TUILE_PX, "sol": sol, "voie": ["." * largeur] * hauteur,
         "legende": carte.LEGENDE, "decor": decor_du_bloc(bloc),
         "apparition": {"joueur": dict(bloc["arrivee"])},
-        "portes": [], "lampes": [], "zones": [], "points_interet": [], "intersections": [],
-        "arrets": {}, "interieurs": {}, "ambulants": [],
+        # ⚠️ Ses portes et ses pièces : on entre dans un bâtiment de bloc exactement comme en
+        # ville (`Monde.entrer` lit `interieurs` dans la carte COURANTE).
+        "portes": [dict(p) for p in bloc.get("portes", [])],
+        "interieurs": {slug: dict(piece) for slug, piece in bloc.get("pieces", {}).items()},
+        # Les glyphes peints autrement que dans la ville (le bois rond du chalet).
+        "materiaux": dict(bloc.get("materiaux", {})),
+        "lampes": [], "zones": [], "points_interet": [], "intersections": [],
+        "arrets": {}, "ambulants": [],
         # Ce que le navigateur doit savoir pour en ressortir.
         "bloc": {"slug": bloc["slug"], "nom": bloc["nom"], "retour": dict(bloc["retour"]),
                  "arrivee": dict(bloc["arrivee"]),
                  # Des passants y naissent-ils ? (`Entites.peupler`) — la vague 3 dira lesquels.
                  "gens": bool(bloc.get("gens", False)),
-                 "panneau": bloc.get("panneau_retour", "VILLE")},
+                 "panneau": bloc.get("panneau_retour", "VILLE"),
+                 # Une planque (le chalet) : son prix, sa pièce, la place de son char.
+                 "planque": dict(bloc["planque"]) if bloc.get("planque") else None},
     }
 
 
@@ -99,6 +107,7 @@ def erreurs(bloc: dict, ville: dict | None = None) -> list[str]:
             fautes.append(f"{slug} : la tuile ({x}, {y}) du retour ne se marche pas")
     # De l'arrivée, on rejoint le retour à pied.
     a = bloc["arrivee"]
+    a_pied = None
     if not (0 <= a["x"] < largeur and 0 <= a["y"] < hauteur) or not marchable(sol[a["y"]][a["x"]]):
         fautes.append(f"{slug} : l'arrivée ne se marche pas")
     else:
@@ -112,6 +121,24 @@ def erreurs(bloc: dict, ville: dict | None = None) -> list[str]:
                     pile.append((nx, ny))
         if not set(ouverture) <= vues:
             fautes.append(f"{slug} : de l'arrivée, on ne rejoint pas le retour à pied")
+        a_pied = vues
+    # Ses portes : sur une porte dessinée, vers une pièce qu'il déclare, et on les atteint à
+    # pied depuis l'arrivée (le pas devant la porte).
+    for porte in bloc.get("portes", []):
+        x, y = porte["x"], porte["y"]
+        if not (0 <= x < largeur and 0 <= y < hauteur) or plan[y][x] != "D":
+            fautes.append(f"{slug} : la porte ({x}, {y}) n'est pas sur un « D » du plan")
+        if porte.get("interieur") not in bloc.get("pieces", {}):
+            fautes.append(f"{slug} : la porte ({x}, {y}) mène à une pièce inconnue {porte.get('interieur')!r}")
+        elif a_pied is not None and (x, y + 1) not in a_pied:
+            fautes.append(f"{slug} : on n'atteint pas la porte ({x}, {y}) à pied depuis l'arrivée")
+    planque = bloc.get("planque")
+    if planque:
+        if planque["piece"] not in bloc.get("pieces", {}):
+            fautes.append(f"{slug} : la planque dort dans une pièce inconnue {planque['piece']!r}")
+        c = planque["char"]
+        if a_pied is not None and (c["x"], c["y"]) not in a_pied:
+            fautes.append(f"{slug} : la place du char ({c['x']}, {c['y']}) ne se rejoint pas depuis l'arrivée")
     # Le passage, dans la ville : sur son bord, et chacune de ses tuiles se marche.
     if ville is not None:
         p = bloc["passage"]

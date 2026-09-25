@@ -113,6 +113,14 @@ function etatInitial(defs) {
     //: dans la partie parce qu'il survit a une nuit de sommeil.
     armePrecedente: 'poings',
     planque: { armes: {}, vehicule: null, coffre: 0 },
+    //: Les planques des BLOCS DE CARTE qu'on a achetees (`app/blocs/`, le chalet du rang),
+    //: le char gare sur la place de chacune (slug -> char, comme `planque.vehicule`), et le
+    //: bloc ou l'on s'est endormi (`{ slug, x, y }`, en pixels du bloc) : une partie rouverte
+    //: s'y reveille. ⚠️ `x`/`y` restent ceux du passage EN VILLE : si le bloc ne se charge
+    //: pas (hors ligne, jamais visite), c'est la qu'on se reveille.
+    planques: [],
+    charsDesPlanques: {},
+    bloc: null,
     //: Les chars saisis, du plus vieux au plus recent. ⚠️ Un TABLEAU, pas un
     //: objet : le lot a un nombre de places, et c'est le plus vieux qui part
     //: quand il deborde — un ordre, donc, pas un sac.
@@ -743,6 +751,10 @@ const Sauvegarde = (function () {
     if (!Array.isArray(out.libere)) out.libere = [];
     if (!Array.isArray(out.calmes)) out.calmes = [];
     if (!Array.isArray(out.fermees)) out.fermees = [];
+    // Les planques des blocs de carte : une partie d'avant elles n'en a aucune.
+    if (!Array.isArray(out.planques)) out.planques = [];
+    if (!out.charsDesPlanques || typeof out.charsDesPlanques !== 'object') out.charsDesPlanques = {};
+    if (out.bloc && (typeof out.bloc !== 'object' || typeof out.bloc.slug !== 'string')) out.bloc = null;
     if (!out.choix || typeof out.choix !== 'object') out.choix = {};
     // ⚠️ Une partie d'avant les chantiers REPART de son jour : sinon elle
     // s'ouvrirait au trentieme jour sur trois batiments neufs qu'on n'a jamais

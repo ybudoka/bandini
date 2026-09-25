@@ -323,6 +323,9 @@ LEGENDE: dict[str, dict] = {
     # monde.js). Une banlieue de bungalows vue d'en haut, c'est ca.
     "P": {"nom": "toit à deux versants", "solide": 1, "toit": True, "pente": True},
     "F": {"nom": "façade", "solide": 1},
+    # ⚠️ Le coin d'un mur de BOIS ROND : les bouts des rondins qui dépassent en alternance
+    # (le chalet du rang, `app/blocs/chalet.py`). Aucun bâtiment de la ville ne s'en sert.
+    "H": {"nom": "coin de bois rond", "solide": 1},
     "W": {"nom": "vitrine", "solide": 1, "lampe": True},
     "D": {"nom": "porte", "solide": 1, "porte": True},
     "d": {"nom": "porte condamnée", "solide": 1},

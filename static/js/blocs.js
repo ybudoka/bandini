@@ -41,6 +41,9 @@ const Blocs = (function () {
   const cartes = {};      // slug -> la carte du bloc, une fois arrivee
   const enRoute = {};     // slug -> vrai pendant qu'elle vole (on ne la demande jamais deux fois)
   const ratee = {};       // slug -> l'image (`B.t`) de la derniere demande ratee
+  //: slug -> ce qu'on a laisse dans le bloc (ses arbres, le char gare devant le chalet) :
+  //: un bloc se souvient le temps de la partie, comme la ville (`Jeu.quitterLeBloc`).
+  let memoire = {};
 
   function init(w, racine) {
     fenetre = w;
@@ -242,6 +245,40 @@ const Blocs = (function () {
     return null;
   }
 
+  /** Ce qu'on laisse dans un bloc en le quittant. */
+  function garder(slug, entites) { memoire[slug] = entites; }
+
+  /** Ce qu'on y avait laisse, ou null la premiere fois — et on le reprend (il revient dans
+      `B.entites`, il ne reste pas a deux endroits). */
+  function souvenir(slug) {
+    const s = memoire[slug] || null;
+    delete memoire[slug];
+    return s;
+  }
+
+  /** Ce qu'on a laisse dans un bloc, sans le reprendre — ce que la sauvegarde regarde. */
+  function enMemoire(slug) { return memoire[slug] || null; }
+
+  /** Une partie qui commence ne se souvient d'aucun bloc. */
+  function oublier() { memoire = {}; B.passagePolice = null; }
+
+  /** Le reveil d'une partie endormie dans un bloc (`partie.bloc`, la planque du chalet) :
+      au noir TOUT DE SUITE, le noir tient le temps que sa carte arrive (`Jeu.transiter`,
+      `attente`), puis on est dans le bloc, a l'endroit ou l'on s'est couche. ⚠️ Si elle
+      n'arrive pas (hors ligne, un bloc retire), on se reveille au passage EN VILLE : la
+      sauvegarde y a pose `p.x`/`p.y`, et c'est la que `commencer` nous a mis. */
+  function reprendre(ou) {
+    const b = liste().find(function (q) { return q.slug === ou.slug; });
+    if (!b) return false;
+    charger(b.slug);
+    Jeu.transiter([1, 0, 24], function () {
+      const def = cartes[b.slug];
+      if (!def || B.bloc) return;
+      Jeu.passerDansLeBloc(b, def, recul(b.passage, Monde.carte, B.joueur), { x: ou.x, y: ou.y });
+    }, null, function () { return !cartes[b.slug]; });
+    return true;
+  }
+
   /** Ce que le GPS vise dans un bloc : la sortie, vers la ville. */
   function cibleDeSortie() {
     if (!B.bloc) return null;
@@ -250,6 +287,7 @@ const Blocs = (function () {
   }
 
   return { init, maj, charger, liste, contreLeBord, recul, marge, porteur, capVersLInterieur, poursuiteAuBord,
+           garder, souvenir, enMemoire, oublier, reprendre,
            cibleDeSortie, dessiner, texteDInfo, DELAI_POURSUIVANTS,
            get cartes() { return cartes; }, BORD_PX, PRES, RELANCE };
 })();

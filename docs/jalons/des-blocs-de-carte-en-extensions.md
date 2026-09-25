@@ -148,3 +148,18 @@ parti. Captures : `captures/blocs/` (le passage, la clairière, la clairière de
   passe pas, ce qui est dans le char passe avec lui, le deuxième joueur passe, la poursuite reprend au bord.
   **Six mutations, toutes rouges** (dont une qui ne rougissait pas au premier essai : le recul du char, que
   le juge regardait 120 images trop tard — il le regarde maintenant à la première image en ville).
+
+**Vague 3 livrée (25 sept. 2026) : le premier vrai bloc — le chalet du rang, la deuxième planque**
+(choisi par Martin). Le détail est dans la fiche de [la deuxième planque](une-deuxieme-planque-plus-loin.md#notes).
+Ce que la mécanique des blocs y a gagné, pour tous les blocs à venir :
+
+- **Des bâtiments** : un bloc déclare ses `portes` et ses `pieces` (bâties par `carte._piece`, vérifiées au
+  chargement) ; on y entre exactement comme en ville.
+- **Des matériaux** : un bloc peint ses glyphes autrement (`materiaux` — le bois rond du chalet) sans
+  changer de glyphe ; `Monde` met en cache sous `F@bois_rond`.
+- **La mémoire** : un bloc se souvient de ce qu'on y laisse, le temps de la partie (`Blocs.garder`,
+  `souvenir`) — le char garé au chalet y est encore en revenant.
+- **Le réveil dans un bloc** : `partie.bloc`, et un fondu qui ATTEND la carte (`Jeu.transiter`, `attente`,
+  jamais plus de dix secondes) — hors ligne, on retombe au passage en ville.
+- ⚠️ La vague « un vrai dehors » (trafic, passants, police, nuit d'un bloc) attend un bloc qui en a
+  besoin : le chalet n'a ni rue ni voisin. Elle viendra avec le ciné-parc ou le centre d'achat.
