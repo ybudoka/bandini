@@ -42,10 +42,12 @@ def test_q01_trois_morues_dehors_la_caisse_du_midi_puis_la_cantine_moins_chere(b
         commencer(L, o, 'q01'); jouer(L, o);
         const cantine = L.Histoire.lieu('cantine');
         const morues = B.mission.entites.filter(function (e) { return e.cible && e.etape === 0; });
-        const galerie = { n: morues.length, loin: Math.max.apply(null, morues.map(function (e) {
-            return Math.round(Math.hypot(e.x - cantine.x, e.y - cantine.y) / 16); })),
+        const coin = L.Histoire.resoudre('zone:morues', null);
+        const galerie = { n: morues.length, ligne: L.Histoire.ligneObjectif(),
+            coin: Math.max.apply(null, morues.map(function (e) { return Math.round(Math.hypot(e.x - coin.x, e.y - coin.y) / 16); })),
+            cantine: Math.min.apply(null, morues.map(function (e) { return Math.round(Math.hypot(e.x - cantine.x, e.y - cantine.y) / 16); })),
             mains: morues.every(function (e) { return !e.arme; }) };
-        j.x = cantine.x; j.y = cantine.y + 24; L.Entites.indexer();
+        j.x = morues[0].x + 24; j.y = morues[0].y; L.Entites.indexer();
         morues.forEach(function (e) { L.Entites.assommer(e); });
         jouer(L, o);
         // Il démarre : on le laisse prendre de l'avance, comme au jeu — sinon la caisse
@@ -63,8 +65,10 @@ def test_q01_trois_morues_dehors_la_caisse_du_midi_puis_la_cantine_moins_chere(b
                  rabais: B.partie.rabais.cantine };
     }""")
     assert r["dispo"] == "q01", "Lulu donne q01 après le poisson du vendredi"
-    assert r["galerie"]["n"] == 3 and r["galerie"]["loin"] <= 8 and r["galerie"]["mains"], (
-        f"trois Morues sur la galerie, les mains vides : {r['galerie']}")
+    assert r["galerie"]["n"] == 3 and r["galerie"]["mains"] and r["galerie"]["ligne"].startswith("VA PRÉSENTER"), (
+        f"trois Morues, les mains vides : {r['galerie']}")
+    # ⚠️ Dans leur coin, LOIN de la cantine : la fin se joue là (voir q01.py).
+    assert r["galerie"]["cantine"] > 20, f"les Morues sont posées trop près de la cantine : {r['galerie']}"
     assert r["fuite"]["etape"] == 1 and r["fuite"]["fuyard"] and r["fuite"]["ligne"].startswith("LE QUATRIÈME"), r["fuite"]
     assert r["fuite"]["avance"] > 10, f"le fuyard doit filer avec la caisse : {r['fuite']}"
     assert r["retour"]["etape"] == 2 and r["retour"]["ligne"].startswith("RAPPORTE"), r["retour"]

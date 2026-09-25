@@ -32,6 +32,17 @@ MISSION = {
          "lieu": "bar", "rayon": 4},
     ],
 
+    # ⚠️ L'INTRO EST ÉCRITE, comme celle de q01 : sous la coupe du défaut, la première
+    # réplique était coupée par la deuxième. La coupe en `ensemble`, puis la voix.
+    "scenes": {
+        "intro": [
+            {"type": "coupe", "vers": "ruelle:cantine:12", "ferme": 20, "ouvre": 20, "tient": 150, "ensemble": True},
+            {"type": "dire", "repliques": [1]},
+            {"type": "geste", "acteur": "donneur", "geste": "bras_croises", "duree": 90, "ensemble": True},
+            {"type": "dire", "repliques": [2, 3]},
+        ]
+    },
+
     # Le jeu de chaque réplique (`jeu=`) — Josée : la Chef qui ne hausse jamais le ton ;
     # plus menaçante posée qu'en colère. Un seul `[warmly]` dans la mission, à la fin du
     # pendant — c'est ce qui le rend rare.

@@ -832,6 +832,17 @@ catalogue.
   - ⚠️ **Le texte d'un objectif dit ce que le jeu fait** : le second camion de Sven est garé
     au pont, il « attend », il ne « file » pas ; la prime sans bosse de `q10` est une prime,
     l'objectif dit « IL PAIE PLUS », pas « SANS UNE ÉGRATIGNURE ».
+  - ⚠️ **Des hommes posés là où la fin se joue tirent des dés pendant la scène.** Les trois
+    Morues de `q01` étaient d'abord à la porte de la cantine ; le juge qui passe la fin à
+    n'importe quelle image (`test_passer_une_scene…`) part de la dernière étape sans jouer
+    les autres — elles étaient debout à côté du joueur, se battaient, et le monde divergeait
+    selon qu'on regardait la scène ou non. Au vrai jeu elles sont couchées depuis longtemps,
+    mais la garantie vaut pour tout le catalogue : elles sont maintenant dans leur coin du
+    port (`zone:morues`), et on va leur présenter la facture. Un `tuer` à l'étape 0 ne se pose
+    pas là où la mission finit.
+  - ⚠️ **Deux intros écrites (`q01`, `q11`) pour une seule raison** : le défaut dit la première
+    réplique sous la coupe (190 images), et une voix de six secondes se faisait couper par la
+    suivante. La recette de `q02` : la coupe en `ensemble`, puis la `dire` qui retient la scène.
   - Le banc a montré deux faux rouges, à retenir pour les prochains juges : un fuyard qui n'a
     pas encore démarré laisse tomber sa caisse à la porte du donneur (le retour se fait dans
     la même image — laisser filer 300 images) ; et la cour de la fourrière se roule jusqu'au
