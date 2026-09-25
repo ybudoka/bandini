@@ -4940,6 +4940,12 @@ const Entites = (function () {
 
   /** Le nom de la pose a dessiner : la marche, ou le coup qui part. */
   function nomDePose(e) {
+    // Une TECHNIQUE (`techniques.js`) : la pose cle de son etape — `debout` est la
+    // marche, `frappe` la pose de coup d'avant, le reste `tech_<pose>_<face>`.
+    if (e.etat === 'attaque' && e.techPose) {
+      if (e.techPose === 'debout') return e.face;
+      return (e.techPose === 'frappe' ? 'frappe_' : 'tech_' + e.techPose + '_') + e.face;
+    }
     if (e.etat === 'attaque' && e.phase && e.phase !== 'anticipation') return 'frappe_' + e.face;
     // Un GESTE de scene (`Scenes`) : `geste_montrer_bas`, `geste_donner_droite`...
     // Un sprite qui ne l'a pas retombe sur sa face (`imageDe`).
@@ -4955,7 +4961,10 @@ const Entites = (function () {
     if (!def) return null;
     const cuit = habille || Atlas.cuire(e.sprite, def, e.swaps);
     const voulu = nomDePose(e);
-    const nom = cuit.poses[voulu] ? voulu : (cuit.poses[e.face] ? e.face : 'bas');
+    // ⚠️ Un sprite dessine a la main n'a pas les poses des techniques : il frappe
+    // comme avant (`frappe_<face>`), plutot que de marcher en donnant un coup de pied.
+    const repli = e.techPose && e.techPose !== 'debout' && cuit.poses['frappe_' + e.face] ? 'frappe_' + e.face : null;
+    const nom = cuit.poses[voulu] ? voulu : (repli || (cuit.poses[e.face] ? e.face : 'bas'));
     const poses = cuit.poses[nom];
     const bouge = Math.abs(e.vx) + Math.abs(e.vy) > 0.05;
     // ⚠️ Une foulee de 9 px, pas 7 : a 7, les jambes tournaient plus vite que
@@ -4994,7 +5003,14 @@ const Entites = (function () {
     if (e.animT > 0 && e.animType === 'ramasse') { p.dy = 3; p.echelleY = 0.78; }
     if (e.recul > 0 && e.vivant && e.etat !== 'assomme') p.rot = (e.vx >= 0 ? 1 : -1) * 0.22;   // il chancelle
     const arme = Combat.armeDef(e.arme || 'poings') || Combat.armeDef('poings');
-    if (e.etat === 'attaque' && e.phase && arme) {
+    // L'elan d'une technique vient de son etape (`app/techniques.py`) : `dx` le
+    // long du regard, `dy` vers le bas, `z` en l'air, `rot` dans le sens du regard.
+    const tech = e.etat === 'attaque' && e.technique ? Techniques.def(e.technique) : null;
+    if (tech) {
+      const et = tech.temps[e.techEtape] || tech.temps[0];
+      p.dx += Math.round(cx * et.dx); p.dy += Math.round(cy * et.dx * 0.6) + et.dy - et.z;
+      p.rot += et.rot * (cx >= 0 ? 1 : -1);
+    } else if (e.etat === 'attaque' && e.phase && arme) {
       const elan = e.phase === 'anticipation' ? -2 : (e.phase === 'actif' ? 3 : 1);
       p.dx += Math.round(cx * elan); p.dy += Math.round(cy * elan * 0.6);
     }

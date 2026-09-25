@@ -113,6 +113,11 @@ const Combat = (function () {
   /** Commence une attaque. `fort` = coup charge (projection). */
   function frapper(e, fort) {
     const arme = armeDef(e.arme || 'poings') || armeDef('poings');
+    // A mains nues (et au poing americain) : les techniques — la chaine de tapes,
+    // les pieds, les projections (`techniques.js`). ⚠️ AVANT la garde d'en
+    // dessous : une tape donnee PENDANT le coup se garde en reserve, elle ne se
+    // jette pas.
+    if (arme && (arme.slug === 'poings' || arme.slug === 'poing_americain')) return Techniques.frapper(e, fort);
     if (!arme || e.etat === 'attaque' || e.roule > 0) return false;
     if (arme.type === 'tir') return tirer(e, arme);
     // ⚠️ ON SE SOUVIENT DE CE QU'ON FAISAIT. `e.etat` est ecrase par 'attaque'
@@ -200,6 +205,9 @@ const Combat = (function () {
         // Le poing americain aussi (`armes.py`, champ `assomme`) : c'est
         // un poing, plus lourd.
         assomme: !!arme.assomme,
+        // Une technique qui ne fait pas saigner, ou qui ne fait pas de bruit.
+        sans_sang: !!arme.sans_sang,
+        silencieuse: !!arme.silencieuse,
         angle: angleVers(e.x, e.y, c.x, c.y),
       });
       if (Entites.estJoueur(e)) {
@@ -765,6 +773,7 @@ const Combat = (function () {
     const angle = axe.mag > 0.2 ? Math.atan2(axe.y, axe.x) : j.angle;
     j.roule = ROULADE_IMAGES;
     j.invincible = ROULADE_IMAGES - 2;
+    j.sortieRoulade = Techniques.SORTIE_ROULADE;   // FRAPPE au sortir : le balayage
     j.endurance -= ROULADE_COUT;
     j.vx = Math.cos(angle) * ROULADE_VITESSE;
     j.vy = Math.sin(angle) * ROULADE_VITESSE;
@@ -938,8 +947,12 @@ const Combat = (function () {
     // reste du bouton ne se lit pas, sinon son compteur survit a un tour de char.
     for (const q of equipe) { majOtage(q); majSaisie(q); }
     for (const e of B.entites) {
-      if (e.etat === 'attaque') { majAttaque(e); majJet(e); }
+      if (e.etat === 'attaque') {
+        if (e.technique) Techniques.maj(e);
+        else { majAttaque(e); majJet(e); }
+      }
       if (e.aveugle > 0) e.aveugle--;
+      Techniques.majCompteurs(e);
     }
     // Le jet de l'extincteur s'entend tant qu'il sort et se tait des qu'il
     // s'arrete — bouton relache, reservoir vide, char, mort : on redit la
@@ -1073,7 +1086,7 @@ const Combat = (function () {
     CHARGE_MIN, ROULADE_IMAGES, TENIR_IMAGES, RALENTI, armeDef, armeCourante, armeDe, munitions, possede, regles,
     armesDuSac, aSec, degainer, retourRapide, ouvrirRoue, fermerRoue, creneauVise, majRoue, tempsQuiPasse,
     frapper, tirer, cycler, roulade, pickpocket, pochesAPrendre, victimeDesPoches, ramasserArme, objetSousLaMain,
-    viseeAssistee, dispersionDe, allumer, majBrasiers, majAttaque, majProjectiles, maj,
+    viseeAssistee, dispersionDe, allumer, majBrasiers, majAttaque, arcDeMelee, majProjectiles, maj,
     majCible, ciblesVerrouillables, VERROU_PORTEE,
     otageSousLaMain, viserOtage, prendreEnOtage, lacherOtage, majOtage, majSaisie,
   };
