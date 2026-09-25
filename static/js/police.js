@@ -558,6 +558,10 @@ const Police = (function () {
   function peuplerAgents() {
     const j = B.joueur, r = B.recherche;
     if (B.t % 30 !== 0) return;
+    // ⚠️ Un bloc de carte sans passants (`bloc.gens`, la clairiere d'essai) n'a pas de
+    // ronde non plus : un agent seul dans les bois ne patrouille rien. Recherche, on te
+    // cherche quand meme — la poursuite qui reprend au bord est la vague 2.
+    if (B.bloc && !B.bloc.def.bloc.gens && r.etoiles === 0) return;
     const zone = Monde.zoneA(j.x, j.y);
     // ⚠️ La police suit le rythme comme le reste : autant d'agents a 4 h du
     // matin qu'a midi, dans une ville desertee, ca se remarque tout de suite.

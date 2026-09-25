@@ -74,6 +74,13 @@ def a_jouer(paquets):
 
 
 @pytest.fixture(scope="session")
+def cartes_des_blocs(paquets):
+    """La carte de chaque bloc de carte — un `/api/carte/bloc/<slug>`. Le banc les sert
+    comme le serveur ; voir `banc.js`."""
+    return {slug: json.loads(p.corps.decode("utf-8")) for slug, p in paquets.blocs.items()}
+
+
+@pytest.fixture(scope="session")
 def serveur(tmp_path_factory):
     """Vrai serveur HTTP, pour les tests de navigateur — port 0, jamais 5400 en dur."""
 
@@ -91,7 +98,7 @@ def serveur(tmp_path_factory):
 
 
 @pytest.fixture(scope="session")
-def banc(paquet, a_jouer):
+def banc(paquet, a_jouer, cartes_des_blocs):
     """Fait tourner `corps` (une fonction JS `(L, o) => resultat`) dans le banc Node."""
     if OBLIGATOIRE and shutil.which("node") is None:
         pytest.fail("node est obligatoire (BANDINI_TESTS_OBLIGATOIRES=1) et il manque")
@@ -99,7 +106,7 @@ def banc(paquet, a_jouer):
 
     def executer(corps: str, graine: int = 0x1A2B3C4D, stockage: dict | None = None, session: dict | None = None,
                  reseau: dict | None = None, defi: dict | None = None, poser_les_missions: bool = True,
-                 missions_panne: int = 0):
+                 missions_panne: int = 0, blocs_panne: int = 0):
         # `stockage` / `session` : ce que le navigateur gardait AVANT le chargement.
         # `reseau` : ce que /api/compte/ repond (M14) — l'ouverture part des que la
         # ville est batie, donc ses reponses se posent avant, jamais pendant.
@@ -108,7 +115,7 @@ def banc(paquet, a_jouer):
         # chercher chaque mission — c'est ainsi qu'on juge la porte elle-meme.
         entree = {"racine": str(RACINE), "defs": paquet, "graine": graine,
                   "missions": a_jouer, "poser_les_missions": poser_les_missions,
-                  "missions_panne": missions_panne}
+                  "missions_panne": missions_panne, "blocs": cartes_des_blocs, "blocs_panne": blocs_panne}
         if stockage is not None:
             entree["stockage"] = stockage
         if session is not None:

@@ -474,7 +474,7 @@ const Missions = (function () {
       // lit (`finirTransition` a fini le reveil) : on se leve, on sort de la
       // piece, et c'est au poste qu'on se reveille — pas dans la piece d'avant.
       if (j.alite) Entites.seLever(j, 0, 0);
-      Jeu.quitterLaPiece();
+      Jeu.revenirEnVille();
       const poste = Monde.carte.points.find(function (q) { return q.slug === 'poste'; });
       if (poste) { j.x = poste.x * TT + 8; j.y = poste.y * TT + 20; }
       j.vie = j.vieMax; j.invincible = 90; j.saigne = 0; j.arrete = false; j.surplus = 0;
@@ -2864,14 +2864,19 @@ const Missions = (function () {
     if (j) {
       // ⚠️ Assis, on se sauvegarde la ou l'on se tenait : le banc est solide, et un joueur
       // recharge DEDANS ne saurait pas en sortir.
-      const dehors = B.exterieur ? { x: B.exterieur.x, y: B.exterieur.y } : (j.assis ? { x: j.assis.avant.x, y: j.assis.avant.y } : { x: j.x, y: j.y });
+      // ⚠️ Dans un bloc de carte (`B.bloc`), la position sauvegardee est celle du passage
+      // en VILLE : une partie rouverte se reveille dans la ville, au bord d'ou l'on etait
+      // parti (vague 1 — se reveiller DANS le bloc viendra avec sa planque).
+      const dehors = B.exterieur ? { x: B.exterieur.x, y: B.exterieur.y }
+        : B.bloc ? { x: B.bloc.ville.x, y: B.bloc.ville.y }
+        : (j.assis ? { x: j.assis.avant.x, y: j.assis.avant.y } : { x: j.x, y: j.y });
       p.x = Math.round(dehors.x); p.y = Math.round(dehors.y); p.vie = Math.max(1, j.vie); p.arme = j.arme;
       // Le char gare devant la planque revient avec la partie.
       const planque = Monde.carte.ville ? Monde.carte.ville : Monde.carte;
       const porte = planque.portes.find(function (q) { return q.lieu === 'planque'; });
       p.planque.vehicule = null;
       if (porte) {
-        const entites = B.exterieur ? B.exterieur.entites : B.entites;
+        const entites = B.exterieur ? B.exterieur.entites : B.bloc ? B.bloc.ville.entites : B.entites;
         for (const e of entites) {
           if (e.type === 'vehicule' && e.etat !== 'epave' && dist2(e.x, e.y, porte.x * TT + 8, (porte.y + 1) * TT) < 100 * 100) {
             p.planque.vehicule = { slug: e.slug, sprite: e.sprite, couleur: e.couleur, vie: e.vie, x: Math.round(e.x), y: Math.round(e.y), angle: e.angle, vole: e.vole };

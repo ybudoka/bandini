@@ -49,6 +49,7 @@ def _page_d_accueil() -> str:
                            empreinte_definitions=current_app.extensions["definitions"].etag,
                            empreinte_carte=current_app.extensions["carte"].etag,
                            empreinte_missions=current_app.extensions["missions_empreinte"],
+                           empreinte_blocs=current_app.extensions["blocs_empreinte"],
                            url_compte=comptes.CHEMIN_COOKIE + "/")
 
 
@@ -111,6 +112,17 @@ def api_mission(slug: str):
     catalogue, donc un 404 est un defaut de notre cote, pas une adresse a deviner.
     """
     paquet = current_app.extensions["missions_a_jouer"].get(slug)
+    if paquet is None:
+        return Response(status=404)
+    return _revalide(paquet)
+
+
+@bp.route("/api/carte/bloc/<slug>")
+def api_bloc(slug: str):
+    """La carte d'UN bloc (`app/blocs/`) — un morceau de monde à part, chargé au noir
+    quand on passe son passage. Même revalidation que les autres (`_revalide`), et 404
+    pour un slug inconnu : le navigateur ne demande que ceux que le paquet lui a nommés."""
+    paquet = current_app.extensions["blocs"].get(slug)
     if paquet is None:
         return Response(status=404)
     return _revalide(paquet)

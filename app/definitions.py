@@ -35,7 +35,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-from . import (armes, audio, carte, devantures, economie, garderobe, interactions, journal, magasins,
+from . import (armes, audio, blocs, carte, devantures, economie, garderobe, interactions, journal, magasins,
                manettes, missions, nuit, pietons, recherche, vehicules, visages)
 from .version import VERSION
 
@@ -71,6 +71,9 @@ def assembler() -> dict:
         "nuit": nuit.exporter(ville),
         "carte": ville,
         "missions": missions.pour_le_navigateur(),
+        # Les blocs de carte : leur passage en ville, et rien d'autre — leur carte voyage
+        # à part, à la demande (`/api/carte/bloc/<slug>`).
+        "blocs": blocs.pour_le_navigateur(),
         "defis": missions.DEFIS,
         "personnages": missions.PERSONNAGES,
         # Le portrait de qui parle, à gauche de la boîte de dialogue (`visages.js`).
@@ -131,6 +134,10 @@ class Paquets:
     #: UNE empreinte pour les trente-six, celle que le paquet nomme et que l'adresse
     #: porte (`?e=`) : la clef du cache hors ligne.
     missions_empreinte: str
+    #: slug de bloc -> sa carte (`blocs.carte_du_bloc`), servie par `/api/carte/bloc/<slug>`.
+    #: ⚠️ Hors de `/api/carte` : un bloc de plus ne change pas un octet de la ville.
+    blocs: dict[str, Paquet]
+    blocs_empreinte: str
 
 
 def _json(donnees: dict) -> bytes:
@@ -162,5 +169,10 @@ def construire() -> Paquets:
     # ligne, trente-six 304 gratuits.
     des_missions = empreinte(_json({slug: paquet.etag for slug, paquet in sorted(a_jouer.items())}))
     donnees["missions_empreinte"] = des_missions
+    # Les blocs de carte, une carte par bloc — même règle que les missions : signés ici,
+    # une empreinte pour tous dans l'adresse (`?e=`).
+    des_cartes = {b["slug"]: _signer(blocs.carte_du_bloc(b)) for b in blocs.BLOCS}
+    des_blocs = empreinte(_json({slug: paquet.etag for slug, paquet in sorted(des_cartes.items())}))
+    donnees["blocs_empreinte"] = des_blocs
     return Paquets(definitions=_signer(donnees), carte=carte, a_jouer=a_jouer,
-                   missions_empreinte=des_missions)
+                   missions_empreinte=des_missions, blocs=des_cartes, blocs_empreinte=des_blocs)

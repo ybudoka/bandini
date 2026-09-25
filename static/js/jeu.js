@@ -43,6 +43,9 @@ const Jeu = (function () {
   function commencer() {
     const p = B.partie;
     monde = p;
+    // ⚠️ La partie se bâtit sur LA VILLE : relancée depuis une pièce ou un bloc de carte
+    // (le titre, puis JOUER), `Monde.carte` serait encore la pièce ou la clairière.
+    revenirEnVille();
     Entites.vider();
     B.entites.length = 0;
     Entites.creerDecor(Monde.carte.def);
@@ -110,6 +113,7 @@ const Jeu = (function () {
     Monde.oublierLesRuesMouillees();         // ni de l'arroseuse d'une autre nuit
     B.lastCall = null;                       // ni des bars qu'elle a vus se vider
     B.transition = null;        // une partie ne commence jamais dans le noir d'une porte
+    B.bloc = null;              // ni dans un bloc de carte : la sauvegarde retient le passage de la ville
     Histoire.creerDonneurs();
     Histoire.creerPanneaux();
     B.etat = 'jeu';
@@ -364,6 +368,75 @@ const Jeu = (function () {
     return true;
   }
 
+  /** Passe dans un bloc de carte (`Blocs`) : un fondu, et au noir la ville se met de
+      cote — sa carte, ses gens, et l'endroit ou l'on reviendra (`retour`, juste en deca du
+      seuil) — puis la carte du bloc se charge et l'on apparait a son arrivee.
+
+      ⚠️ La meme mecanique que la piece (`chargerPiece`), et pas la meme porte : un bloc est
+      DEHORS. `B.interieur` reste nul — le ciel, la nuit, la radio de dehors continuent — et
+      c'est `B.bloc` qui se souvient de la ville. */
+  function entrerDansLeBloc(bloc, def, retour) {
+    const j = B.joueur;
+    finirTransition();
+    if (B.bloc || B.interieur || j.dansVehicule) return false;
+    transiter(FONDU_ENTREE, function () {
+      B.bloc = { slug: bloc.slug, def: def, ville: { carte: Monde.carte, entites: B.entites, x: retour.x, y: retour.y } };
+      Monde.charger(def);
+      B.entites = Entites.joueurs();
+      B.particules.length = 0;
+      // ⚠️ Les ARBRES et les buissons du bloc sont des entites de decor, baties comme celles
+      // de la ville au debut d'une partie (`commencer`) — sans cet appel, seuls leurs pieds
+      // se peignaient. `creerDecor` refait l'index du decor ; au retour, `reindexerDecor`
+      // le rebatit depuis les entites de la ville, remises telles quelles.
+      Entites.creerDecor(def);
+      j.x = def.bloc.arrivee.x * TT + 8;
+      j.y = def.bloc.arrivee.y * TT + 8;
+      Monde.centrerCamera(j.x, j.y);
+      Hud.message(def.nom.toUpperCase(), 150);
+    });
+    return true;
+  }
+
+  /** Revient du bloc : au noir, la ville reprend sa place telle qu'on l'a laissee, et l'on
+      se retrouve au passage par lequel on etait parti. */
+  function sortirDuBloc() {
+    const j = B.joueur;
+    finirTransition();
+    if (!B.bloc) return false;
+    transiter(FONDU_SORTIE, function () {
+      const ville = quitterLeBloc();
+      j.x = ville.x; j.y = ville.y;
+      Monde.centrerCamera(j.x, j.y);
+    });
+    return true;
+  }
+
+  /** La ville reprend sa place, sans fondu : rend l'endroit du passage, ou null. */
+  function quitterLeBloc() {
+    const j = B.joueur, bloc = B.bloc;
+    if (!bloc) return null;
+    Monde.restaurer(bloc.ville.carte);
+    B.entites = bloc.ville.entites;
+    if (j && B.entites.indexOf(j) < 0) B.entites.push(j);
+    B.particules.length = 0;
+    B.bloc = null;
+    Entites.reindexerDecor();
+    return { x: bloc.ville.x, y: bloc.ville.y };
+  }
+
+  /** De retour EN VILLE, d'ou qu'on soit — une piece, un bloc de carte, ou une piece
+      d'un bloc — sans fondu : c'est l'appelant qui pose le joueur et qui noircit.
+
+      ⚠️ Pour ce qui RAMENE de force : l'hopital, la prison, la teleportation de la
+      triche. `quitterLaPiece` seul ne suffit plus depuis les blocs : arrete dans la
+      clairiere, on cherchait le poste de police dans la clairiere. Rend l'endroit ou
+      l'on est entre (la porte, ou le passage du bloc), ou null. */
+  function revenirEnVille() {
+    const piece = quitterLaPiece();
+    const bloc = quitterLeBloc();
+    return bloc || piece;
+  }
+
   /** La piece derriere une porte, chargee AU NOIR : la rue mise de cote (c'est
       par cette porte-la qu'on ressortira), les gens de dedans, la toune. Le
       joueur, lui, n'est pas encore pose — c'est a l'appelant de dire ou.
@@ -414,7 +487,7 @@ const Jeu = (function () {
       on se reveille alors devant la porte, comme avant. */
   function coucherALHopital() {
     const j = B.joueur;
-    quitterLaPiece();
+    revenirEnVille();
     const porte = (Monde.carte.def.portes || []).find(function (q) { return q.lieu === 'hopital' && q.interieur; });
     const commune = porte && ((Monde.carte.def.interieurs || {})[porte.interieur]);
     const lit = commune && (commune.gens || []).find(function (g) { return g.qui === 'malade'; });
@@ -924,6 +997,7 @@ const Jeu = (function () {
         pas('foire', Foire.maj);
         pas('metro', Metro.maj);
         pas('histoire', Histoire.maj);
+        pas('blocs', Blocs.maj);
         Monde.majCamera();
         B.t++;
       }
@@ -1006,7 +1080,7 @@ const Jeu = (function () {
     if (B.interieur) Metro.dessiner(ctx, vue);
     // ⚠️ Les battants PAR-DESSUS le sol, jamais dedans : repeindre un
     // morceau de 256 px a chaque image pour une porte tuerait le cache.
-    if (!B.interieur) { Autobus.dessinerRails(ctx, vue); Neige.dessinerPanneaux(ctx, vue); Monde.dessinerBattants(ctx, vue); Monde.dessinerPortesDeGarage(ctx, vue); Monde.dessinerBarrieresCoulissantes(ctx, vue); Monde.dessinerBarrieres(ctx, vue); }
+    if (!B.interieur) { Autobus.dessinerRails(ctx, vue); Neige.dessinerPanneaux(ctx, vue); Blocs.dessiner(ctx, vue); Monde.dessinerBattants(ctx, vue); Monde.dessinerPortesDeGarage(ctx, vue); Monde.dessinerBarrieresCoulissantes(ctx, vue); Monde.dessinerBarrieres(ctx, vue); }
     Entites.dessinerDecals(ctx, vue);     // le sang est SOUS les pieds
     if (!B.interieur) Histoire.dessinerCheminCourse(ctx, vue);   // le trace d'une course, sur la chaussee
     if (!B.interieur) { Conduite.dessinerSol(ctx, vue); Rue.dessinerSol(ctx, vue); }          // la case, les lignes, les cones d'une epreuve au volant
@@ -1266,6 +1340,7 @@ const Jeu = (function () {
       // requete par mission, demandee quand son donneur apparait ou quand le telephone
       // la choisit.
       Histoire.init(w, racine);
+      Blocs.init(w, racine);
       const etat = d.getElementById('etat-chargement');
       const parties = Sauvegarde.occupes().length;
       if (etat) etat.textContent = 'v' + defs.version + ' · ' + (B.partie.x !== null ? 'partie ' + Sauvegarde.emplacement() + ', jour ' + B.partie.jour : 'nouvelle partie')
@@ -1287,14 +1362,14 @@ const Jeu = (function () {
     });
   }
 
-  return { demarrer, commencer, jouer, ouvrirParties, jouerPartie, effacerPartie, copierPartie, entrer, sortir, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, ouvrirPhoto, fermerPhoto, basculerCoop, majCoop, retourTitre, maj, rendre, avancer, get horsLigne() { return horsLigne; } };
+  return { demarrer, commencer, jouer, ouvrirParties, jouerPartie, effacerPartie, copierPartie, entrer, sortir, entrerDansLeBloc, sortirDuBloc, revenirEnVille, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, ouvrirPhoto, fermerPhoto, basculerCoop, majCoop, retourTitre, maj, rendre, avancer, get horsLigne() { return horsLigne; } };
 })();
 
 /* Surface de test et de debogage — la seule poignee du banc d'essai. */
 if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
-    Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Entites: Entites, Combat: Combat,
+    Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat,
     Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Incendies: Incendies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Conduite: Conduite, Rue: Rue, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,

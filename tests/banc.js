@@ -97,6 +97,10 @@ function banc(corps) {
     ne pose rien, et le jeu doit alors aller les chercher. Sans ce mode-la, le banc ne
     prouverait rien de la porte. */
   const MISSIONS = ENTREE.missions || {};
+  //: Les cartes des blocs (`/api/carte/bloc/<slug>`), et combien des PREMIERES demandes
+  //: tombent en panne (`ENTREE.blocs_panne`).
+  const BLOCS = ENTREE.blocs || {};
+  let blocsEnPanne = ENTREE.blocs_panne || 0;
   //: Combien des PREMIERES demandes de mission tombent en panne (`ENTREE.missions_panne`) :
   //: de quoi juger qu'un reseau qui tombe une fois ne ferme pas une mission pour le reste
   //: de la partie.
@@ -297,6 +301,16 @@ function banc(corps) {
         const slug = adresse.slice('/api/mission/'.length).split('?')[0];
         if (missionsEnPanne > 0) { missionsEnPanne--; return Promise.reject(new Error('reseau coupe')); }
         const d = MISSIONS[slug];
+        return Promise.resolve({ ok: !!d, status: d ? 200 : 404,
+                                 json: function () { return Promise.resolve(d || {}); } });
+      }
+      // Un bloc de carte, comme le serveur : 404 pour un bloc inconnu. ⚠️ AVANT la carte
+      // de la ville : `/api/carte/bloc/…` contient `/api/carte`, et la ville entiere serait
+      // arrivee en guise de clairiere — des juges verts pour rien.
+      if (adresse.indexOf('/api/carte/bloc/') === 0) {
+        const slug = adresse.slice('/api/carte/bloc/'.length).split('?')[0];
+        if (blocsEnPanne > 0) { blocsEnPanne--; return Promise.reject(new Error('reseau coupe')); }
+        const d = BLOCS[slug];
         return Promise.resolve({ ok: !!d, status: d ? 200 : 404,
                                  json: function () { return Promise.resolve(d || {}); } });
       }

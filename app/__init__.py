@@ -52,6 +52,9 @@ def create_app(config_object: type[Config] = Config) -> Flask:
     # 24 sept. 2026 — voir `definitions.py`.
     app.extensions["missions_a_jouer"] = paquets.a_jouer
     app.extensions["missions_empreinte"] = paquets.missions_empreinte
+    # Les blocs de carte : une carte à part par bloc (`app/blocs/`).
+    app.extensions["blocs"] = paquets.blocs
+    app.extensions["blocs_empreinte"] = paquets.blocs_empreinte
 
     from .routes import bp
 

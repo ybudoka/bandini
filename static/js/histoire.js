@@ -2889,6 +2889,9 @@ const Histoire = (function () {
   function cible() {
     const m = courante(), p = B.partie, j = B.joueur;
     if (!j) return null;
+    // ⚠️ DANS UN BLOC DE CARTE, les lieux de la ville n'ont pas de pixel ici : la fleche
+    // vise la sortie, vers la ville (`Blocs`) — c'est par la que passe tout le reste.
+    if (B.bloc) return Blocs.cibleDeSortie();
     if (B.defi) {
       const d = defis().find(function (q) { return q.slug === B.defi.slug; });
       const l = d.rue ? Rue.cible(d) : d.conduite ? Conduite.cible(d) : d.circuit ? repereDeCircuit(B.defi) : d.lieu ? lieu(d.lieu) : null;

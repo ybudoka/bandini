@@ -87,4 +87,39 @@ bloc hors ligne déjà visité se recharge ; une partie sauvegardée dans un blo
 
 ## Notes
 
-_Rien de livré._
+**Vague 1 livrée (25 sept. 2026) : à pied, vers la clairière du lac.** Au bord nord des Érables, sur le
+trottoir de ceinture, une plaque « LAC ↑ » ; on pousse vers le haut de la carte, noir, et on est dans **la
+clairière du lac** (`app/blocs/clairiere.py`, 40 × 26 : un lac, sa grève, un petit quai de bois, un
+chemin, des arbres). Le chemin du sud, sous sa plaque « VILLE ↓ », ramène au passage exact d'où l'on était
+parti. Captures : `captures/blocs/` (le passage, la clairière, la clairière de nuit).
+
+- **Côté serveur** : `app/blocs/` (un bloc par fichier, `BLOCS`), `carte_du_bloc` au format de la ville,
+  `/api/carte/bloc/<slug>` avec son ETag et 404 pour un inconnu, un gabarit `data-url-bloc` hors de la
+  coquille hors ligne, et le paquet des définitions qui ne nomme que les passages (`blocs`).
+- **Côté navigateur** : `static/js/blocs.js` — la carte demandée **d'avance** à l'approche (14 tuiles), le
+  passage qui ne s'ouvre qu'une fois la carte arrivée (pousser avant, c'est pousser contre un bord),
+  `Jeu.entrerDansLeBloc` / `sortirDuBloc` sur le modèle des pièces, mais **dehors** (`B.bloc`, jamais
+  `B.interieur`) ; les arbres du bloc sont des entités de décor (`creerDecor`), la ville revient avec les
+  siens (`reindexerDecor`).
+- ⚠️ **Trois choses que le banc a montrées, et que la fiche ne prévoyait pas :**
+  - **Arrêté ou tombé dans le bloc**, le jeu cherchait le poste ou l'hôpital **dans la clairière**.
+    `Jeu.revenirEnVille()` (la pièce, puis le bloc) sert maintenant l'hôpital, la prison et les deux
+    téléportations de la triche — et `commencer()`, qu'une partie relancée depuis une pièce bâtissait
+    sur la pièce (un défaut d'avant les blocs, réparé au passage).
+  - **Des passants de la ville naissaient dans les bois** (un livreur, un policier de ronde, et la nuit un
+    exhibitionniste) : un bloc dit maintenant s'il a des gens (`gens`, faux pour la clairière) —
+    `Entites.peupler` et la ronde de `Police.peuplerAgents` s'y taisent. Recherché, on te cherche quand
+    même (la poursuite qui reprend au bord est la vague 2).
+  - **Un réseau mort était redemandé à chaque image** — soixante requêtes par seconde près du passage.
+    Après une panne, on attend cinq secondes (`Blocs.RELANCE`).
+  - Et **un faux vert évité** : le faux `fetch` du banc servait la carte de la ville à toute adresse
+    contenant `/api/carte` — la ville entière serait arrivée en guise de clairière. Il sert les blocs à
+    part, avant, avec leur 404 et leurs pannes.
+- **La sauvegarde** faite dans le bloc retient le passage en ville : une partie rouverte se réveille au bord
+  d'où l'on était parti (se réveiller DANS un bloc viendra avec sa planque, vague 4).
+- **Juges** : `tests/test_blocs.py` (7 : le bloc tient debout, un bloc mal fait se voit, la ville ne change
+  pas d'un octet sans bloc, la route et son 304/404, le paquet ne nomme que les passages, le gabarit hors de
+  la coquille, la carte du bloc a ce que `Monde.charger` lit) et `tests/test_blocs_js.py` (11, joués au
+  clavier : l'aller et le retour, longer le trottoir ne passe pas, au volant non, la carte pas encore
+  arrivée puis le réseau revenu, personne ne naît, jour, nuit et police sans tomber, arrêté → le poste,
+  tombé → l'hôpital, la sauvegarde, les arbres, les plaques). **Sept mutations, toutes rouges.**

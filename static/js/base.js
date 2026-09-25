@@ -33,6 +33,7 @@ const B = {
   roue: null,
   interieur: null,      // la piece ou l'on est, ou null dehors
   exterieur: null,      // la ville mise de cote pendant qu'on est dedans
+  bloc: null,           // le bloc de carte ou l'on est (`Blocs`) : sa carte, et la ville mise de cote
   dialogue: null,       // boite de texte en cours
   transition: null,     // un changement de scene EN COURS ; non nul = simulation figee (voir Jeu.transiter)
   t: 0,                 // images simulees depuis le demarrage

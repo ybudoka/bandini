@@ -4923,7 +4923,10 @@ const Entites = (function () {
     indexer();
     demeler();
     majParticules();
-    if (B.joueur && !B.interieur) { peupler(); semerDesArmesDeFortune(); rumeurEtRepliques(); }
+    // ⚠️ Un bloc de carte dit s'il a des passants (`bloc.gens`) : la clairiere d'essai n'en
+    // a pas — sans cette garde, un livreur et un policier de la ville y naissaient.
+    const personneIci = B.bloc && !B.bloc.def.bloc.gens;
+    if (B.joueur && !B.interieur && !personneIci) { peupler(); semerDesArmesDeFortune(); rumeurEtRepliques(); }
     laMusiqueDeLaRue();
     B.stats.actifs = actifs;
   }
