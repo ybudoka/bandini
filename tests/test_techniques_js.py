@@ -489,3 +489,122 @@ def test_un_coup_de_pied_s_entend_comme_un_pied(banc):
         return compte;
     }""")
     assert r.get("pied") == 1 and not r.get("coup"), r
+
+
+# --- La relecture de la branche (corrections) --------------------------------------------
+
+def test_un_enfant_ne_se_saisit_pas(banc):
+    """« RIEN n'atteint un enfant » (`blesser`) : ni la prise, ni la projection.
+    Tout `intouchable` (enfants, cyclistes, personnages, escortés) aussi."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, p = o.poser(null, 12, 0);
+        p.etat = 'flane'; p.intouchable = true; j.angle = 0; j.face = 'droite'; L.Entites.indexer();
+        o.touche('KeyU'); o.frame(3);
+        // ⚠️ Lu PENDANT qu'on tient : relacher repousse, et la prise s'efface.
+        return { prise: !!j.prise, tenu: !!p.tenu, etat: p.etat };
+    }""")
+    assert r["prise"] is False and r["tenu"] is False and r["etat"] != "assomme", r
+
+
+def test_une_projection_n_assomme_pas_un_intouchable(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, p = o.poser(null, 12, 0);
+        p.etat = 'flane'; p.intouchable = true; L.Entites.indexer();
+        L.Techniques.projeter(p, j, L.Techniques.def('projection_hanche'));
+        o.frame(60);
+        return p.etat;
+    }""")
+    assert r != "assomme", r
+
+
+def test_le_joueur_2_assomme_pendant_une_prise_se_releve_et_lache(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        const j2 = L.Entites.joueurs()[1];
+        const p = L.Entites.creerPieton(j2.x + 12, j2.y, null); p.etat = 'flane'; L.Entites.indexer();
+        j2.prise = { cible: p, t: 0, mode: 'tenir', interieur: L.B.interieur }; p.tenu = true;
+        j2.invincible = 0;                              // il nait invincible une seconde et demie
+        L.Entites.blesser(j2, 999, p);
+        const ko = j2.etat;
+        o.frame(L.B.defs.pietons.reactions.ko_images + 30);
+        return { ko: ko, etat: j2.etat, prise: !!j2.prise, tenu: !!p.tenu };
+    }""")
+    assert r["ko"] == "assomme" and r["etat"] != "assomme" and not r["prise"] and not r["tenu"], r
+
+
+def test_les_epaules_se_montrent_autour_des_onglets(banc):
+    """La pastille de droite se lisait dans le DEUXIÈME bouton de FRAPPE, qui
+    n'existe plus : les deux pastilles disparaissaient pour toutes les manettes."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const p = L.B.defs.manettes.profils.find(function (q) { return q.slug === 'standard'; });
+        L.Entree.reglerManette(p);
+        const rien = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], a = rien.slice(); a[12] = 1;
+        o.pad([0, 0], a); o.frame(2); o.pad([0, 0], rien); o.frame(2);   // la manette prend la main
+        L.Jeu.pause(); o.frame(2);
+        const g = L.Hud.glyphesDOnglets(L.B.menu);
+        return { appareil: L.Entree.appareil, g: g ? g.length : null };
+    }""")
+    assert r == {"appareil": "manette", "g": 2}, r
+
+
+def test_la_prise_se_voit(banc):
+    """Pendant la prise, Bandini tient l'autre à deux mains, et l'autre nous fait face."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, p = o.poser(null, 12, 0);
+        p.etat = 'flane'; p.face = 'droite'; p.angle = 0; j.angle = 0; j.face = 'droite'; L.Entites.indexer();
+        o.touche('KeyU'); o.frame(5);
+        return { pose: L.Entites.imageDe(j).pose, face: p.face, prise: !!j.prise };
+    }""")
+    assert r == {"pose": "tech_saisie_droite", "face": "gauche", "prise": True}, r
+
+
+def test_la_parade_a_le_temps_d_un_regard(banc):
+    """SAISIR à la 4e image de son élan : il arme encore (le coup de rue arme
+    cinq images, comme le coup de poing d'avant les techniques)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.B.partie.techniques.retournement_poignet = true;
+        const j = L.B.joueur, p = o.poser(null, 12, 0);
+        p.etat = 'attaque_joueur'; p.id = 3; p.coups = 0; p.angle = Math.PI; j.angle = 0; j.face = 'droite';
+        L.Entites.indexer();
+        L.Combat.frapper(p, false);
+        o.frame(3);
+        o.touche('KeyU'); o.frame(1); o.relacher('KeyU');
+        for (let k = 0; k < 90; k++) o.frame(1);
+        return { etat: p.etat, vie: j.vie };
+    }""")
+    assert r == {"etat": "assomme", "vie": 100}, r
+
+
+def test_la_parade_marche_contre_un_couteau(banc):
+    """Le cas d'école du retournement du poignet : un attaquant ARMÉ."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.B.partie.techniques.retournement_poignet = true;
+        const j = L.B.joueur, p = o.poser(null, 12, 0);
+        p.etat = 'attaque_joueur'; p.arme = 'couteau'; p.angle = Math.PI; j.angle = 0; j.face = 'droite';
+        L.Entites.indexer();
+        L.Combat.frapper(p, false);
+        o.touche('KeyU'); o.frame(1); o.relacher('KeyU');
+        for (let k = 0; k < 90; k++) o.frame(1);
+        return { etat: p.etat, vie: j.vie };
+    }""")
+    assert r == {"etat": "assomme", "vie": 100}, r
+
+
+def test_saisir_un_passant_qui_arme_annule_son_coup(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, p = o.poser(null, 12, 0);
+        p.etat = 'attaque_joueur'; p.angle = Math.PI; j.angle = 0; j.face = 'droite';
+        L.Entites.indexer();
+        L.Combat.frapper(p, false);
+        o.touche('KeyU'); o.frame(20);
+        return { vie: j.vie, technique: p.technique || null, prise: !!j.prise };
+    }""")
+    assert r == {"vie": 100, "technique": None, "prise": True}, r

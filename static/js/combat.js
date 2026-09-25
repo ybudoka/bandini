@@ -946,7 +946,8 @@ const Combat = (function () {
     // ⚠️ Une prise ne survit pas a un char, a la mort ni a une porte : sans ca, la
     // cible restait figee `tenu` dans la rue qu'on venait de quitter.
     for (const q of equipe) {
-      if (q.prise && (q.dansVehicule || !q.vivant || B.interieur !== q.prise.interieur)) Techniques.lacher(q);
+      // Assomme aussi (le deuxieme joueur, K.-O. en coop) : un corps a terre ne tient personne.
+      if (q.prise && (q.dansVehicule || !q.vivant || q.etat === 'assomme' || B.interieur !== q.prise.interieur)) Techniques.lacher(q);
     }
     // ⚠️ AVANT les gardes de `majGestes` (char, mort, cloture) et avant la
     // lecture d'ACTION : la prise doit pouvoir RETOMBER dans les images ou le

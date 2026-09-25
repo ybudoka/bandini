@@ -612,7 +612,9 @@ const Hud = (function () {
     if (appareil === 'clavier') return [glypheDeTouche('ArrowLeft'), glypheDeTouche('ArrowRight')];
     if (appareil !== 'manette' || m.epaulesInertes) return null;
     const prof = Entree.profilManette(), fam = familleCourante(), etat = Entree.manetteInfo();
-    const g = (prof.boutons.arme || [])[1], d = (prof.boutons.attaque || [])[1];
+    // ⚠️ L'epaule de droite est a SAISIR depuis les projections (25 sept. 2026) :
+    // lue dans FRAPPE, elle manquait, et les DEUX pastilles disparaissaient.
+    const g = (prof.boutons.arme || [])[1], d = (prof.boutons.saisir || [])[0];
     if (g === undefined || d === undefined || !fam) return null;
     return [glypheDePiece('epaule_g', fam, g, etat), glypheDePiece('epaule_d', fam, d, etat)];
   }
@@ -3720,7 +3722,7 @@ const Hud = (function () {
     }
   }
 
-  return { init, voile, etat, progression, partDesScripts, finirChargement, message, prime, majPrime, montantDeLaPrime, PRIME, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, toutesLesTechniques, menuSautMissions, menuSautDefis, menuJukebox, pointDuDefi, menuCarnet,
+  return { init, voile, etat, progression, partDesScripts, finirChargement, message, prime, majPrime, montantDeLaPrime, PRIME, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, toutesLesTechniques, glyphesDOnglets, menuSautMissions, menuSautDefis, menuJukebox, pointDuDefi, menuCarnet,
     ouvrirOnglet, toucherMenu, onglets: function () { return ongletsVisibles().map(function (o) { return o.slug; }); },
     ciblesDuMenu: function () { return cibles.slice(); }, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     menuCommandes, ouvrirCommandes, majAideDuTitre, lignesDAide, glypheDAction,

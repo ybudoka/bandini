@@ -3819,7 +3819,6 @@ const Entites = (function () {
     // (retour de Martin : « mon personnage est croche »).
     if (j.recul > 0) j.recul--;
     if (j.dansVehicule) return;
-    if (j.prise) { j.vx = 0; j.vy = 0; return; }      // il tient quelqu'un (SAISIR) : il ne marche pas
     // ⚠️ LE DEUXIEME JOUEUR TOMBE K.-O., IL NE VA PAS A L'HOPITAL (`blesser`) :
     // l'urgence CHANGE DE SCENE, et une scene appartient au joueur 1. Il reste
     // couche le temps du compte, puis se releve a mi-vie, invincible une
@@ -3834,6 +3833,9 @@ const Entites = (function () {
       }
       return;
     }
+    // Il tient quelqu'un (SAISIR) : il ne marche pas. ⚠️ SOUS le compte du K.-O. :
+    // au-dessus, un deuxieme joueur assomme en pleine prise ne se relevait jamais.
+    if (j.prise) { j.vx = 0; j.vy = 0; return; }
     // ⚠️ A bord du traversier, on regarde passer la baie : la coque nous porte, et
     // l'eau sous le pont n'est pas une raison de nager (`Traversier.maj`).
     if (j.aBord) { j.vx = 0; j.vy = 0; j.nage = false; return; }
@@ -4946,6 +4948,8 @@ const Entites = (function () {
   function nomDePose(e) {
     // Une TECHNIQUE (`techniques.js`) : la pose cle de son etape — `debout` est la
     // marche, `frappe` la pose de coup d'avant, le reste `tech_<pose>_<face>`.
+    // La prise (SAISIR) : on tient l'autre a deux mains, tant qu'aucun coup ne part.
+    if (e.prise && e.etat !== 'attaque') return 'tech_saisie_' + e.face;
     if (e.etat === 'attaque' && e.techPose) {
       if (e.techPose === 'debout') return e.face;
       return (e.techPose === 'frappe' ? 'frappe_' : 'tech_' + e.techPose + '_') + e.face;

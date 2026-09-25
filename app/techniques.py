@@ -82,17 +82,19 @@ def _t(slug, nom, style, geste, degats, portee, temps, *, rang=0, prix=0, arc=0.
 
 CATALOGUE: list[Technique] = [
     # --- La rue : gratuite, pour tout le monde. Les poings de `armes.py` (8 de
-    # dégâts, 12 px) restent la mesure : un direct EST le coup de poing d'avant.
+    # dégâts, 12 px, cinq images d'élan) restent la mesure : un direct EST le coup
+    # de poing d'avant. ⚠️ Les CINQ images d'élan sont aussi la fenêtre de la
+    # parade (le retournement du poignet) : à trois, elle ne s'attrapait pas.
     _t("direct_gauche", "Direct du gauche", "rue", "tape", 8, 12, rang=1, temps=[
-        _e("debout", 3, dx=-1), _e("frappe", 4, dx=3, actif=True), _e("frappe", 3, dx=1), _e("debout", 2)]),
+        _e("debout", 5, dx=-1), _e("frappe", 4, dx=3, actif=True), _e("frappe", 3, dx=1), _e("debout", 2)]),
     _t("direct_droit", "Direct du droit", "rue", "tape", 8, 12, rang=2, temps=[
-        _e("debout", 3, dx=-1), _e("poing_arriere", 4, dx=3, actif=True), _e("poing_arriere", 3, dx=1),
+        _e("debout", 5, dx=-1), _e("poing_arriere", 4, dx=3, actif=True), _e("poing_arriere", 3, dx=1),
         _e("debout", 2)]),
     _t("crochet", "Crochet", "rue", "tape", 10, 12, rang=3, arc=1.4, temps=[
-        _e("debout", 4, dx=-2, rot=-0.15), _e("crochet", 4, dx=2, rot=0.2, actif=True), _e("crochet", 4),
+        _e("debout", 5, dx=-2, rot=-0.15), _e("crochet", 4, dx=2, rot=0.2, actif=True), _e("crochet", 4),
         _e("debout", 3)]),
     _t("genou", "Coup de genou", "rue", "genou", 10, 9, temps=[
-        _e("debout", 3, dy=-1), _e("genou", 5, dx=2, z=2, actif=True), _e("debout", 4)]),
+        _e("debout", 5, dy=-1), _e("genou", 5, dx=2, z=2, actif=True), _e("debout", 4)]),
     _t("repousser", "Repousser", "rue", "prise", 0, 14, assomme=False, sans_sang=True, temps=[
         _e("saisie", 6, dx=3, actif=True), _e("debout", 4)]),
     _t("genoux_prise", "Genoux", "rue", "prise_frappe", 8, 14, temps=[

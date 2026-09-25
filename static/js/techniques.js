@@ -206,7 +206,10 @@ const Techniques = (function () {
   /** La cible prenable devant `j` (le cone de la frappe, a bout portant), ou null. */
   function prenable(j, portee) {
     for (const c of Entites.pietonsAutour(j.x, j.y, portee)) {
-      if (!c.vivant || c.dansVehicule || c.vol || c.tenu || c.etat === 'assomme') continue;
+      // ⚠️ RIEN N'ATTEINT UN ENFANT (`Entites.blesser`) : ni un enfant, ni un
+      // cycliste, ni un personnage de l'histoire, ni un escorte — tout ce qui est
+      // `intouchable` ne se saisit pas, et ne se projette donc pas.
+      if (!c.vivant || c.dansVehicule || c.vol || c.tenu || c.etat === 'assomme' || c.intouchable || c.invincible > 0) continue;
       if (Math.abs(ecartAngle(j.angle, angleVers(j.x, j.y, c.x, c.y))) > 0.9) continue;
       if (!Monde.ligneLibre(j.x, j.y, c.x, c.y)) continue;
       return c;
@@ -217,8 +220,15 @@ const Techniques = (function () {
   function tenir(j, c, mode) {
     // ⚠️ La prise retient la SCENE ou elle commence : une porte franchie la lache.
     j.prise = { cible: c, t: 0, mode: mode, interieur: B.interieur };
+    // ⚠️ Saisi en plein elan, son coup S'ARRETE : sinon il partait quand meme,
+    // fige dans nos bras, et touchait le joueur qui le tenait.
+    if (c.etat === 'attaque') { c.etat = c.avantLeCoup || 'flane'; c.avantLeCoup = null; }
+    c.technique = null; c.techPose = null; c.phase = null;
     c.tenu = true; c.avantPrise = c.etat; c.vx = 0; c.vy = 0;
     j.vx = 0; j.vy = 0;
+    // On se fait face : la prise se voit (`Entites.nomDePose`, `tech_saisie_*`).
+    Entites.regarder(j, c.x - j.x, c.y - j.y);
+    if (mode !== 'etrangler') Entites.regarder(c, j.x - c.x, j.y - c.y);
   }
 
   /** La cible relachee reprend ce qu'elle faisait — ou la colere, ou la fuite. */
@@ -270,12 +280,16 @@ const Techniques = (function () {
     if (!ent.neuf('saisir') || j.etat === 'attaque') return false;
     // La parade : il ARME son coup, a portee, et on sait le retournement.
     if (sait(j, 'retournement_poignet')) {
+      // Il ARME : un coup de rue comme un couteau ou un baton (`Combat.majAttaque`) —
+      // c'est le cas d'ecole du retournement du poignet.
       const a = Entites.pietonsAutour(j.x, j.y, def('retournement_poignet').portee).find(function (c) {
-        return c.vivant && c.etat === 'attaque' && c.phase === 'anticipation' && !c.vol && c.technique;
+        return c.vivant && c.etat === 'attaque' && c.phase === 'anticipation' && !c.vol && !c.intouchable
+          && c.arc && c.arc.type === 'melee';
       });
       if (a) {
         // On lui prend le poignet avant que ca parte. `projeter` le relachera.
-        a.etat = 'flane'; a.technique = null; a.techPose = null; a.phase = null; a.tenu = true;
+        a.etat = a.avantLeCoup || 'flane'; a.avantLeCoup = null;
+        a.technique = null; a.techPose = null; a.phase = null; a.tenu = true;
         demarrer(j, 'retournement_poignet', a);
         return true;
       }
@@ -342,12 +356,13 @@ const Techniques = (function () {
         Police.signalerCrime(c.agent ? 'coup_policier' : 'coup_pieton', c.x, c.y,
                              !!c.agent || Police.quelqu_un_voit(c.x, c.y, c));
       }
-      Entites.blesser(c, t.degats, v.auteur, { renverse: true, assomme: t.assomme, sans_sang: t.sans_sang,
-                                               angle: angleVers(v.x0, v.y0, v.x1, v.y1) });
+      const porte = Entites.blesser(c, t.degats, v.auteur, { renverse: true, assomme: t.assomme, sans_sang: t.sans_sang,
+                                                             angle: angleVers(v.x0, v.y0, v.x1, v.y1) });
       // ⚠️ UNE PROJECTION COUCHE : `assomme` ne joue qu'a zero de vie (le coup
       // qui aurait tue assomme), et 12 points n'y menent pas — la victime se
       // relevait en courant. Retombee, elle reste au sol le temps d'un K.-O.
-      if (c.vivant && c.etat !== 'assomme' && c.type === 'pieton') Entites.assommer(c);
+      // Et seulement si la chute a PORTE : `blesser` refuse un intouchable.
+      if (porte && c.vivant && c.etat !== 'assomme' && c.type === 'pieton') Entites.assommer(c);
     }
   }
 

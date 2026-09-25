@@ -316,10 +316,15 @@ def test_les_hommes_de_sal_cognent_a_mains_nues_ou_au_poing_americain(banc):
     assert r["hommes"] >= 2, "il faut deux hommes pour voir les deux mains : %s" % r
     assert r["poings"] < r["americain"] < r["batte"], "le poing américain n'est pas « un peu plus fort » : %s" % r
     assert r["batte"] not in r["coups"], "un homme de Sal cogne encore au bâton : %s" % r
-    assert set(r["coups"]) == {r["poings"], r["americain"]}, (
+    # ⚠️ Depuis les techniques d'arts martiaux (25 sept. 2026), un coup de rue varie :
+    # le direct fait les dégâts de l'arme, le crochet (ou le genou) deux de plus.
+    # Chaque coup appartient donc à une FAMILLE : les poings, ou le poing américain.
+    mains = [c for c in r["coups"] if c in (r["poings"], r["poings"] + 2)]
+    fer = [c for c in r["coups"] if c in (r["americain"], r["americain"] + 2)]
+    assert mains and fer and len(mains) + len(fer) == len(r["coups"]), (
         "ils doivent frapper à mains nues ET au poing américain, rien d'autre : %s" % r
     )
-    assert r["tombe"] == ["poing_americain"] * r["coups"].count(r["americain"]), (
+    assert r["tombe"] == ["poing_americain"] * len(fer), (
         "couchés, ils doivent laisser leur poing américain — et rien d'autre : %s" % r
     )
 
