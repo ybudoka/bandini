@@ -690,6 +690,10 @@ const Son = (function () {
     pas: function () { if (!joue('pas')) bruit(0.05, 0.12, 900, 300); },
     coup: function () { if (!joue('coup')) { ton(140, 0.08, 'square', 0.3, 0.5); bruit(0.08, 0.3, 800, 200); } },
     touche: function () { if (!joue('touche')) ton(220, 0.12, 'sawtooth', 0.25, 0.4); },
+    // Les techniques d'arts martiaux : le corps projete qui tombe, l'etranglement.
+    // Synthetises en attendant leurs echantillons au catalogue (`app/audio.py`).
+    chute: function () { ton(90, 0.18, 'sine', 0.35, 0.4); bruit(0.14, 0.3, 500, 120); },
+    etranglement: function () { bruit(0.4, 0.08, 400, 200); },
     // La cloche du tramway : deux coups clairs. Un DE SES effets (voir `Son.depuis`).
     cloche_tram: function () { if (!joue('cloche_tram')) { ton(1320, 0.3, 'triangle', 0.16, 1); ton(1320, 0.3, 'triangle', 0.16, 1, 0.32); } },
     ramasse: function () { if (!joue('ramasse')) { ton(880, 0.08, 'sine', 0.25); ton(1320, 0.12, 'sine', 0.2, 1, 0.07); } },

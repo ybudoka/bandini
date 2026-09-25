@@ -942,6 +942,12 @@ const Combat = (function () {
     else if (j) { j.cible = null; verrouTenu = 0; }
     majProjectiles();
     majBrasiers();
+    Techniques.majVols();
+    // ⚠️ Une prise ne survit pas a un char, a la mort ni a une porte : sans ca, la
+    // cible restait figee `tenu` dans la rue qu'on venait de quitter.
+    for (const q of equipe) {
+      if (q.prise && (q.dansVehicule || !q.vivant || B.interieur !== q.prise.interieur)) Techniques.lacher(q);
+    }
     // ⚠️ AVANT les gardes de `majGestes` (char, mort, cloture) et avant la
     // lecture d'ACTION : la prise doit pouvoir RETOMBER dans les images ou le
     // reste du bouton ne se lit pas, sinon son compteur survit a un tour de char.
@@ -984,6 +990,11 @@ const Combat = (function () {
     // sans cette porte, la meme pression donnerait AUSSI un coup de poing.
     // ⚠️ Une epreuve d'adresse aussi : FRAPPE y est un pas de danse, ESQUIVE l'abandonne.
     if (B.roue || B.piratage || B.epreuve) return;
+    // SAISIR (`techniques.js`) : la prise, les projections, l'etranglement, la
+    // parade. ⚠️ APRES toutes les gardes du dessus (char, cloture, lit, manege,
+    // roue, epreuve) : elles valent pour elle aussi. Et tant qu'on tient quelqu'un,
+    // FRAPPE et ACTION sont a la prise, pas au reste.
+    if (Techniques.majPrise(j, ent)) return;
 
     if (ent.neuf('esquive')) roulade(j);
 

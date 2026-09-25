@@ -3819,6 +3819,7 @@ const Entites = (function () {
     // (retour de Martin : « mon personnage est croche »).
     if (j.recul > 0) j.recul--;
     if (j.dansVehicule) return;
+    if (j.prise) { j.vx = 0; j.vy = 0; return; }      // il tient quelqu'un (SAISIR) : il ne marche pas
     // ⚠️ LE DEUXIEME JOUEUR TOMBE K.-O., IL NE VA PAS A L'HOPITAL (`blesser`) :
     // l'urgence CHANGE DE SCENE, et une scene appartient au joueur 1. Il reste
     // couche le temps du compte, puis se releve a mi-vie, invincible une
@@ -4139,6 +4140,9 @@ const Entites = (function () {
     // il va ou le char va, et rien d'autre — `dessine` est faux, et `blesser`
     // ne touche pas qui est dedans.
     if (e.dansVehicule) { e.x = e.dansVehicule.x; e.y = e.dansVehicule.y; e.vx = 0; e.vy = 0; return; }
+    // Tenu par le joueur (une prise), ou en l'air (une projection) : `techniques.js`
+    // le mene, rien d'autre ne bouge.
+    if (e.vol || e.tenu) { e.vx = 0; e.vy = 0; return; }
     // ⚠️ Lu sous les pieds a chaque image, pour tout le monde : c'est ce qui
     // decide du masque, du dessin, et de la vitesse d'un agent a la nage.
     mouiller(e);
@@ -4996,6 +5000,11 @@ const Entites = (function () {
   function pose(e) {
     const p = { dx: 0, dy: 0, rot: 0, echelleY: 1, arme: null };
     const cx = Math.cos(e.angle), cy = Math.sin(e.angle);
+    // Projete (`techniques.js`) : il tourne en l'air, `z` le souleve.
+    if (e.vol) {
+      p.rot = e.vol.tours * Math.PI * 2 * (e.vol.t / e.vol.duree) * e.vol.sens;
+      return p;
+    }
     if (e.roule > 0) {
       p.rot = (1 - e.roule / Combat.ROULADE_IMAGES) * Math.PI * 2 * (cx >= 0 ? 1 : -1);
       return p;

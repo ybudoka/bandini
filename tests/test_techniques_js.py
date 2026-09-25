@@ -230,3 +230,183 @@ def test_un_direct_touche_la_cible_devant(banc):
     assert r == 8, r
 
 
+# --- La prise, les projections, l'étranglement, la parade (tâche 5) ----------------------
+
+#: Pose une victime à (dx, dy), la saisit (U tenu), joue `geste()`, laisse finir
+#: le coup et le vol, relâche U. Rend où elle est tombée, et dans quel état.
+PRISE = """
+    function prise(L, o, sait, dx, dy, geste) {
+        Object.assign(L.B.partie.techniques, sait);
+        const j = L.B.joueur, p = o.poser(null, dx, dy);
+        p.etat = 'flane'; p.courage = 0; p.angle = Math.atan2(dy, dx); j.angle = Math.atan2(dy, dx);
+        j.face = dx > 0 ? 'droite' : 'bas';
+        L.Entites.indexer();
+        o.touche('KeyU'); o.frame(2);
+        const tenait = !!j.prise;
+        geste();
+        for (let k = 0; k < 120 && (j.etat === 'attaque' || p.vol); k++) o.frame(1);
+        o.relacher('KeyU'); o.frame(4);
+        const tx = Math.floor(p.x / L.TT), ty = Math.floor(p.y / L.TT);
+        return { tenait: tenait, x: p.x, y: p.y, dx: p.x - j.x, jx: j.x, etat: p.etat, vol: !!p.vol,
+                 tenu: !!p.tenu, prise: !!j.prise, solide: L.Monde.solidite(tx, ty) };
+    }
+"""
+
+
+def test_la_hanche_le_fait_passer_devant(banc):
+    r = banc("""function (L, o) { """ + PRISE + """
+        L.Jeu.commencer();
+        return prise(L, o, { projection_hanche: true }, 12, 0, function () {
+            o.touche('ArrowRight'); o.frame(3); o.relacher('ArrowRight'); });
+    }""")
+    assert r["tenait"] and r["etat"] == "assomme" and r["dx"] > 20 and not r["vol"], r
+
+
+def test_le_sacrifice_le_fait_passer_par_dessus(banc):
+    r = banc("""function (L, o) { """ + PRISE + """
+        L.Jeu.commencer();
+        return prise(L, o, { sacrifice: true }, 12, 0, function () {
+            o.touche('ArrowDown'); o.frame(3); o.relacher('ArrowDown'); });
+    }""")
+    assert r["etat"] == "assomme" and r["dx"] < 0, r
+
+
+def test_le_grand_fauchage_le_couche_sur_place(banc):
+    r = banc("""function (L, o) { """ + PRISE + """
+        L.Jeu.commencer();
+        return prise(L, o, { grand_fauchage: true }, 12, 0, function () {
+            o.touche('ArrowLeft'); o.frame(3); o.relacher('ArrowLeft'); });
+    }""")
+    assert r["etat"] == "assomme" and 8 < r["dx"] < 30, r
+
+
+def test_sans_le_cours_le_stick_ne_projette_pas(banc):
+    r = banc("""function (L, o) { """ + PRISE + """
+        L.Jeu.commencer();
+        return prise(L, o, {}, 12, 0, function () {
+            o.touche('ArrowRight'); o.frame(3); o.relacher('ArrowRight'); });
+    }""")
+    assert r["etat"] != "assomme", r
+
+
+def test_relacher_sans_rien_repousse(banc):
+    r = banc("""function (L, o) { """ + PRISE + """
+        L.Jeu.commencer();
+        return prise(L, o, {}, 12, 0, function () {});
+    }""")
+    assert r["tenait"] and r["dx"] > 14 and not r["tenu"] and not r["prise"], r
+
+
+def test_une_projection_vers_un_mur_tombe_sur_une_tuile_libre(banc):
+    """La victime entre le joueur et un mur : la hanche l'enverrait dedans."""
+    r = banc("""function (L, o) { """ + PRISE + """
+        L.Jeu.commencer();
+        const c = L.Monde.carte, TT = L.TT;
+        let pose = null;
+        for (let y = 10; y < c.h - 10 && !pose; y++) for (let x = 10; x < c.w - 10 && !pose; x++) {
+            if (L.Monde.solidite(x - 1, y) === 0 && L.Monde.solidite(x, y) === 0 && L.Monde.solidite(x + 1, y) === 0
+                && L.Monde.solidite(x + 2, y) === 1) pose = { x: x * TT + 8, y: y * TT + 8 };
+        }
+        L.B.joueur.x = pose.x - 4; L.B.joueur.y = pose.y;      // tuile x ; la victime, tuile x+1
+        L.Monde.centrerCamera(pose.x, pose.y);
+        return prise(L, o, { projection_hanche: true }, 12, 0, function () {
+            o.touche('ArrowRight'); o.frame(3); o.relacher('ArrowRight'); });
+    }""")
+    assert r["etat"] == "assomme" and r["solide"] == 0, r
+
+
+def test_une_projection_vers_l_eau_retombe_au_sec(banc):
+    """À surveiller no 1 : pas de victime dans la baie."""
+    r = banc("""function (L, o) { """ + PRISE + """
+        L.Jeu.commencer();
+        const c = L.Monde.carte, TT = L.TT;
+        let pose = null;
+        for (let y = 10; y < c.h - 10 && !pose; y++) for (let x = 10; x < c.w - 10 && !pose; x++) {
+            if (L.Monde.solidite(x - 1, y) === 0 && L.Monde.solidite(x, y) === 0 && L.Monde.solidite(x + 1, y) === 0
+                && L.Monde.estEau(x + 2, y)) pose = { x: x * TT + 8, y: y * TT + 8 };
+        }
+        L.B.joueur.x = pose.x - 4; L.B.joueur.y = pose.y;
+        L.Monde.centrerCamera(pose.x, pose.y);
+        return prise(L, o, { projection_hanche: true }, 12, 0, function () {
+            o.touche('ArrowRight'); o.frame(3); o.relacher('ArrowRight'); });
+    }""")
+    assert r["etat"] == "assomme" and r["solide"] == 0, r
+
+
+def test_l_etranglement_non_vu_n_alerte_personne(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.B.partie.techniques.etranglement = true;
+        const j = L.B.joueur, p = o.poser(null, 10, 0);
+        p.etat = 'flane'; p.angle = 0; p.face = 'droite';    // il nous tourne le dos
+        j.angle = 0; j.face = 'droite';
+        L.Entites.indexer();
+        const crimes = []; const f = L.Police.signalerCrime;
+        L.Police.signalerCrime = function (q, x, y, vu) { crimes.push([q, vu]); return f.apply(null, arguments); };
+        L.Police.quelqu_un_voit = function () { return false; };
+        o.touche('KeyU'); o.frame(100); o.relacher('KeyU'); o.frame(2);
+        return { etat: p.etat, crimes: crimes };
+    }""")
+    assert r["etat"] == "assomme", r
+    assert r["crimes"] and all(vu is False for _, vu in r["crimes"]), r
+
+
+def test_lacher_trop_tot_l_etranglement_le_libere(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.B.partie.techniques.etranglement = true;
+        const j = L.B.joueur, p = o.poser(null, 10, 0);
+        p.etat = 'flane'; p.angle = 0; j.angle = 0; j.face = 'droite';
+        L.Entites.indexer();
+        o.touche('KeyU'); o.frame(30);
+        const tenu = !!p.tenu;
+        o.relacher('KeyU'); o.frame(2);
+        return { tenu: tenu, etat: p.etat, apres: !!p.tenu };
+    }""")
+    assert r["tenu"] and r["etat"] != "assomme" and not r["apres"], r
+
+
+def test_saisir_pendant_qu_il_arme_le_retourne(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.B.partie.techniques.retournement_poignet = true;
+        const j = L.B.joueur, p = o.poser(null, 12, 0);
+        p.etat = 'attaque_joueur'; p.angle = Math.PI; j.angle = 0; j.face = 'droite';
+        L.Entites.indexer();
+        L.Combat.frapper(p, false);                     // il arme
+        const armait = p.phase;
+        o.touche('KeyU'); o.frame(1); o.relacher('KeyU');
+        for (let k = 0; k < 90; k++) o.frame(1);
+        return { armait: armait, etat: p.etat, vie: j.vie };
+    }""")
+    assert r["armait"] == "anticipation" and r["etat"] == "assomme" and r["vie"] == 100, r
+
+
+def test_la_cible_qui_meurt_lache_la_prise(banc):
+    """À surveiller no 5."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, p = o.poser(null, 12, 0);
+        p.etat = 'flane'; j.angle = 0; j.face = 'droite'; L.Entites.indexer();
+        o.touche('KeyU'); o.frame(3);
+        const tenait = !!j.prise;
+        L.Entites.tuer(p, null); o.frame(2);
+        return { tenait: tenait, prise: !!j.prise, tenu: !!p.tenu };
+    }""")
+    assert r == {"tenait": True, "prise": False, "tenu": False}
+
+
+def test_saisir_ne_fait_rien_la_roue_ouverte(banc):
+    """À surveiller no 4."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, p = o.poser(null, 12, 0);
+        p.etat = 'flane'; j.angle = 0; L.Entites.indexer();
+        L.B.partie.armes.batte = { mun: null, usure: 0 };      // deux armes : la roue s'ouvre
+        o.touche('KeyF'); o.frame(L.Combat.TENIR_IMAGES + 2);   // ARME tenu : la roue
+        o.touche('KeyU'); o.frame(1);
+        const roue = !!L.B.roue;
+        o.frame(2);
+        return { roue: roue, prise: !!j.prise };
+    }""")
+    assert r == {"roue": True, "prise": False}, r

@@ -191,7 +191,183 @@ const Techniques = (function () {
     if (e.sortieRoulade > 0 && !(e.roule > 0)) e.sortieRoulade--;
   }
 
-  const api = { FENETRE, COLLE, SORTIE_ROULADE, def, sait, choisir, frapper, demarrer, maj, majCompteurs,
-                cibleProche, surActif: null };
+  // --- La prise : SAISIR, et ce qu'on fait de celui qu'on tient -----------------------
+
+  //: Combien d'images on tient sans rien faire, la portee de la prise, et le
+  //: seuil du stick qui choisit la projection.
+  const PRISE_MAX = 72, PRISE_PORTEE = 14, STICK = 0.5;
+  //: Dans le dos : l'ecart entre le regard de la cible et la direction cible -> joueur.
+  const DOS = 2.09;   // 120 degres
+
+  /** La cible prenable devant `j` (le cone de la frappe, a bout portant), ou null. */
+  function prenable(j, portee) {
+    for (const c of Entites.pietonsAutour(j.x, j.y, portee)) {
+      if (!c.vivant || c.dansVehicule || c.vol || c.tenu || c.etat === 'assomme') continue;
+      if (Math.abs(ecartAngle(j.angle, angleVers(j.x, j.y, c.x, c.y))) > 0.9) continue;
+      if (!Monde.ligneLibre(j.x, j.y, c.x, c.y)) continue;
+      return c;
+    }
+    return null;
+  }
+
+  function tenir(j, c, mode) {
+    // ⚠️ La prise retient la SCENE ou elle commence : une porte franchie la lache.
+    j.prise = { cible: c, t: 0, mode: mode, interieur: B.interieur };
+    c.tenu = true; c.avantPrise = c.etat; c.vx = 0; c.vy = 0;
+    j.vx = 0; j.vy = 0;
+  }
+
+  /** La cible relachee reprend ce qu'elle faisait — ou la colere, ou la fuite. */
+  function relacherCible(c) {
+    c.tenu = false;
+    if (c.vivant && c.etat !== 'assomme' && !c.vol) c.etat = c.courage > 0 ? 'attaque_joueur' : 'fuit';
+    c.avantPrise = null;
+  }
+
+  /** Lache la prise de `j`, s'il en a une. */
+  function lacher(j) {
+    const c = j.prise && j.prise.cible;
+    j.prise = null;
+    if (c) relacherCible(c);
+  }
+
+  /** SAISIR et ce qu'on fait dans la prise. Vrai si le geste est pris : `majGestes`
+      s'arrete la (ni FRAPPE, ni ACTION pendant qu'on tient quelqu'un). */
+  function majPrise(j, ent) {
+    if (j.prise) {
+      const p = j.prise, c = p.cible;
+      p.t++;
+      if (!c.vivant || c.dansVehicule || c.etat === 'assomme' || c.vol) { lacher(j); return false; }
+      j.vx = 0; j.vy = 0; c.vx = 0; c.vy = 0;
+      if (ent.neuf('esquive')) { lacher(j); return true; }
+      if (p.mode === 'etrangler') {
+        // ⚠️ On TIENT tout le long : relacher avant la fin, il se degage.
+        if (!ent.bas('saisir')) { lacher(j); return true; }
+        if (p.t >= def('etranglement').tenir) {
+          j.prise = null; c.tenu = false;
+          Entites.blesser(c, def('etranglement').degats, j, { assomme: true, silencieuse: true, sans_sang: true });
+          Police.signalerCrime(c.agent ? 'coup_policier' : 'coup_pieton', c.x, c.y,
+                               !!c.agent || Police.quelqu_un_voit(c.x, c.y, c));
+        }
+        return true;
+      }
+      if (ent.neuf('attaque') && j.etat !== 'attaque') { demarrer(j, 'genoux_prise', c); return true; }
+      const axe = ent.axe;
+      if (axe.mag > STICK && j.etat !== 'attaque') {
+        const rel = Math.abs(ecartAngle(Math.atan2(axe.y, axe.x), angleVers(j.x, j.y, c.x, c.y)));
+        const geste = rel < Math.PI / 4 ? 'prise_avant' : (rel > 3 * Math.PI / 4 ? 'prise_vers_soi' : 'prise_cote');
+        const slug = choisir(j, geste);
+        if (slug) { j.prise = null; demarrer(j, slug, c); return true; }
+      }
+      if (!ent.bas('saisir') && j.etat !== 'attaque') { j.prise = null; demarrer(j, 'repousser', c); return true; }
+      if (p.t > PRISE_MAX) lacher(j);
+      return true;
+    }
+    if (!ent.neuf('saisir') || j.etat === 'attaque') return false;
+    // La parade : il ARME son coup, a portee, et on sait le retournement.
+    if (sait(j, 'retournement_poignet')) {
+      const a = Entites.pietonsAutour(j.x, j.y, def('retournement_poignet').portee).find(function (c) {
+        return c.vivant && c.etat === 'attaque' && c.phase === 'anticipation' && !c.vol && c.technique;
+      });
+      if (a) {
+        // On lui prend le poignet avant que ca parte. `projeter` le relachera.
+        a.etat = 'flane'; a.technique = null; a.techPose = null; a.phase = null; a.tenu = true;
+        demarrer(j, 'retournement_poignet', a);
+        return true;
+      }
+    }
+    const c = prenable(j, PRISE_PORTEE);
+    if (!c) return true;                          // SAISIR dans le vide : rien, mais le geste est pris
+    const dos = Math.abs(ecartAngle(c.angle, angleVers(c.x, c.y, j.x, j.y))) > DOS;
+    tenir(j, c, dos && sait(j, 'etranglement') ? 'etrangler' : 'tenir');
+    if (j.prise.mode === 'etrangler') Son.depuis(j, Son.SFX.etranglement);
+    return true;
+  }
+
+  /** Le point de chute : de `x0,y0` vers `x1,y1`, raccourci a la derniere tuile
+      libre et seche. ⚠️ On ne projette personne dans un mur, ni dans la baie. */
+  function chute(x0, y0, x1, y1) {
+    const pas = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 2));
+    let bx = x0, by = y0;
+    for (let i = 1; i <= pas; i++) {
+      const x = x0 + (x1 - x0) * i / pas, y = y0 + (y1 - y0) * i / pas;
+      if (Monde.solidite(Math.floor(x / TT), Math.floor(y / TT)) !== 0) break;
+      bx = x; by = y;
+    }
+    return { x: bx, y: by };
+  }
+
+  /** Envoie `c` en l'air selon `t` : ou il retombe depend du geste. */
+  function projeter(c, auteur, t) {
+    const a = angleVers(auteur.x, auteur.y, c.x, c.y);
+    const d = Math.hypot(c.x - auteur.x, c.y - auteur.y);
+    let cx, cy;
+    if (t.geste === 'prise_cote') {
+      // Le sacrifice : il vole par-dessus nous et retombe DERRIERE.
+      cx = auteur.x - Math.cos(a) * t.projete; cy = auteur.y - Math.sin(a) * t.projete;
+    } else if (t.geste === 'prise_avant') {
+      // La hanche : il passe par-dessus et retombe devant, plus loin qu'il n'etait.
+      cx = auteur.x + Math.cos(a) * (d + t.projete); cy = auteur.y + Math.sin(a) * (d + t.projete);
+    } else {
+      cx = c.x + Math.cos(a) * t.projete; cy = c.y + Math.sin(a) * t.projete;
+    }
+    // ⚠️ Le sacrifice passe PAR-DESSUS le lanceur : sa chute se cherche depuis le
+    // lanceur (un mur derriere lui l'arrete), pas depuis la victime.
+    const depart = t.geste === 'prise_cote' ? auteur : c;
+    const fin = chute(depart.x, depart.y, cx, cy);
+    c.tenu = false; c.vx = 0; c.vy = 0;
+    c.etat = 'flane'; c.technique = null; c.techPose = null; c.phase = null;
+    c.vol = { x0: c.x, y0: c.y, x1: fin.x, y1: fin.y, t: 0, duree: 24 + Math.round(t.projete / 3),
+              h: 10 + t.projete / 4, tours: t.tours, sens: Math.cos(a) >= 0 ? 1 : -1, auteur: auteur, tech: t.slug };
+  }
+
+  /** Une image de chaque vol ; a l'atterrissage, la chute fait mal. */
+  function majVols() {
+    for (const c of B.entites) {
+      if (!c.vol) continue;
+      const v = c.vol, k = ++v.t / v.duree;
+      c.x = v.x0 + (v.x1 - v.x0) * k; c.y = v.y0 + (v.y1 - v.y0) * k;
+      c.z = 4 * v.h * k * (1 - k);
+      if (v.t < v.duree) continue;
+      c.z = 0; c.vol = null;
+      const t = def(v.tech);
+      Entites.poussiere(c.x, c.y, 6);
+      Son.depuis(c, Son.SFX.chute);
+      if (Entites.estJoueur(v.auteur)) {
+        B.cam.secousse = 0.8;
+        Police.signalerCrime(c.agent ? 'coup_policier' : 'coup_pieton', c.x, c.y,
+                             !!c.agent || Police.quelqu_un_voit(c.x, c.y, c));
+      }
+      Entites.blesser(c, t.degats, v.auteur, { renverse: true, assomme: t.assomme, sans_sang: t.sans_sang,
+                                               angle: angleVers(v.x0, v.y0, v.x1, v.y1) });
+      // ⚠️ UNE PROJECTION COUCHE : `assomme` ne joue qu'a zero de vie (le coup
+      // qui aurait tue assomme), et 12 points n'y menent pas — la victime se
+      // relevait en courant. Retombee, elle reste au sol le temps d'un K.-O.
+      if (c.vivant && c.etat !== 'assomme' && c.type === 'pieton') Entites.assommer(c);
+    }
+  }
+
+  /** A l'etape `actif` d'une prise : la projection, ou la poussee. */
+  function surActif(e, t) {
+    const c = e.techCible;
+    if (!c || !c.vivant) return;
+    if (t.projete > 0 && !frappeEnArc(t)) { projeter(c, e, t); return; }
+    if (t.geste === 'prise') {
+      const a = angleVers(e.x, e.y, c.x, c.y);
+      relacherCible(c);
+      c.vx = Math.cos(a) * 3.2; c.vy = Math.sin(a) * 3.2; c.recul = 22;
+      return;
+    }
+    if (t.geste === 'prise_frappe') {
+      // Les genoux dans la prise : la cible reste tenue, le coup porte sur ELLE.
+      const tenait = e.prise;
+      Entites.blesser(c, e.arc.degats, e, { assomme: true, angle: angleVers(e.x, e.y, c.x, c.y) });
+      if (Entites.estJoueur(e)) Police.signalerCrime('coup_pieton', c.x, c.y, Police.quelqu_un_voit(c.x, c.y, c));
+      if (tenait && c.vivant && c.etat !== 'assomme') { c.vx = 0; c.vy = 0; }
+    }
+  }
+
+  const api = { FENETRE, COLLE, SORTIE_ROULADE, PRISE_MAX, def, sait, choisir, frapper, demarrer, maj, majCompteurs,
+                cibleProche, majPrise, projeter, majVols, lacher, chute, surActif: surActif };
   return api;
 })();
