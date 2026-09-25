@@ -95,6 +95,15 @@ camp_
 - **Vu en le jouant** : la ligne « TRAVERSIER POUR LA POINTE · DÉPART… » s'écrivait sous les cartons —
   elle se tait sous une scène.
 
+**La suite complète, après l'atterrissage** : trois rouges, tous de la vague.
+- `test_interactions` comparait le butin d'un bac à « la plus petite prime », qui vaut 0 $ depuis m99 : la
+  plus petite prime est celle d'une mission qui en paie une.
+- `test_passage_pietons` et `test_velos_js` : Bérubé, en naissant, décale les identifiants d'un cran (même
+  retiré aussitôt, ils rougissaient). L'autobus du juge tournait à droite au vert au lieu de filer tout
+  droit, et le juge mesurait sa progression sur l'axe : il mesure maintenant qu'il franchit la ligne et
+  qu'il ROULE. Le vélo, lui, montre un vrai défaut, ancien (la base le fait à la graine 24) : sa ligne est au
+  plan, « Un vélo qui redescend du trottoir reste planté », et la graine 5 est un `xfail` strict.
+
 **Ce qui reste (vague 2)** : _Le Boss_ (m98), son générique et la ville qui change de couleur,
 `p.libere` qui efface les zones de gang, Marco qui disparaît après m97 — dès que les arcs de M16
 libèrent assez de districts pour qu'on y arrive en jouant (et que l'hôtel se vende).

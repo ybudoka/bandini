@@ -59,7 +59,10 @@ def test_les_bancs_sont_les_quatre_de_la_ville_et_regardent_du_bon_cote():
 
 
 def test_rien_ici_ne_remplace_une_mission_un_repas_ou_l_hopital():
-    plus_petite_prime = min(m["recompense"] for m in missions.CATALOGUE if "recompense" in m)
+    # ⚠️ Une FIN DE PARTIE paie 0 $ (m99, M13) : on part avec un générique, pas une prime. La
+    # plus petite prime est celle d'une mission qui en paie une.
+    plus_petite_prime = min(m["recompense"] for m in missions.CATALOGUE
+                            if "recompense" in m and not (m.get("donne") or {}).get("generique"))
     f = interactions.FOUILLER
     plus_gros_butin = max(t["argent"][1] for t in f["trouvailles"].values() if "argent" in t)
     assert plus_gros_butin * 10 <= plus_petite_prime, \

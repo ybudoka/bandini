@@ -103,7 +103,12 @@ def test_le_long_char_repart_au_vert_et_franchit_la_ligne(banc):
     """⚠️ **L'AUTRE MOITIE, ET ELLE COMPTE AUTANT.** S'arreter avant la ligne ne
     vaut rien si l'on n'en repart pas : un autobus qui freine une tuile plus tot
     pourrait tres bien ne plus jamais trouver la raison d'avancer. Au vert, il
-    passe."""
+    passe.
+
+    ⚠️ **IL PASSE, TOUT DROIT OU EN TOURNANT.** Le juge mesurait sa progression sur l'axe de son
+    approche : un autobus qui tourne à droite au vert plafonnait à 32 px sur cet axe en roulant
+    229 px (25 sept. 2026 — un donneur de plus en ville, et les dés du trafic avaient glissé d'un
+    cran). « Planté », c'est ne pas bouger : il franchit la ligne, et il roule."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.B.partie.heure = 0.5;
@@ -120,13 +125,19 @@ def test_le_long_char_repart_au_vert_et_franchit_la_ligne(banc):
         const avantLaLigne = (v.x - ligne.sx * TT - 8) * p[0] + (v.y - ligne.sy * TT - 8) * p[1] <= 0;
         // Le vert, maintenant : le meme char, le meme croisement.
         for (let k = 0; k < 2000 && L.Monde.feuDeCirculation(ligne.inter, ligne.sens) !== 'vert'; k++) L.B.t++;
-        for (let i = 0; i < 400; i++) { L.Entites.indexer(); L.Vehicules.majConducteur(v); v.x += v.vx; v.y += v.vy; }
-        const franchi = (v.x - ligne.sx * TT - 8) * p[0] + (v.y - ligne.sy * TT - 8) * p[1];
-        return { trouve: true, avantLaLigne: avantLaLigne, franchi: Math.round(franchi) };
+        const x0 = v.x, y0 = v.y;
+        let franchi = -Infinity;
+        for (let i = 0; i < 400; i++) {
+            L.Entites.indexer(); L.Vehicules.majConducteur(v); v.x += v.vx; v.y += v.vy;
+            franchi = Math.max(franchi, (v.x - ligne.sx * TT - 8) * p[0] + (v.y - ligne.sy * TT - 8) * p[1]);
+        }
+        return { trouve: true, avantLaLigne: avantLaLigne, franchi: Math.round(franchi),
+                 roule: Math.round(Math.hypot(v.x - x0, v.y - y0)) };
     }""".replace("CHERCHER(L)", CHERCHER_LIGNE))
     assert r["trouve"], "aucune ligne d'arrêt de croisement à feux avec huit tuiles droites derrière"
     assert r["avantLaLigne"], "l'autobus a attendu au-delà de la ligne d'arrêt"
-    assert r["franchi"] > 32, f"au vert, l'autobus n'a avancé que de {r['franchi']} px : il reste planté"
+    assert r["franchi"] > 0, "au vert, l'autobus n'a pas franchi la ligne d'arrêt"
+    assert r["roule"] > 4 * 16, f"au vert, l'autobus n'a roulé que {r['roule']} px : il reste planté"
 
 
 @pytest.mark.parametrize("graine", [1, 2, 5])
