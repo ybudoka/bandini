@@ -162,6 +162,10 @@ VISAGES: dict[str, dict] = {
     # Le contrebandier : casquette de marin, barbe grise courte, yeux pâles.
     "sven": _v("carree", "courte", "col_roule", "barbe_courte", chapeau="marin",
                signes=("yeux_plisses", "rides"), t="#1a1a2a", y="#6a9ac8"),
+    # Le vieux capitaine du traversier (M13) : la casquette de marin, l'uniforme bleu nuit, une
+    # barbe blanche pleine — là où Sven la porte courte et grise.
+    "berube": _v("large", "degarnie", "uniforme", "barbe", chapeau="marin",
+                 signes=("rides", "sourcils_epais", "yeux_plisses"), t="#16263a", y="#5a7a9a"),
 }
 
 #: Ceux qui parlent sans être des PERSONNAGES : l'agent qui t'interpelle dans la rue.

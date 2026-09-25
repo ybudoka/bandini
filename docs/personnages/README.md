@@ -51,6 +51,7 @@ Chaque fiche mêle deux sortes de faits.
 | [Ginette](ginette.md) | `ginette` | à l'hôpital | Jeanne Mance | h02 |
 | [Gilles Thériault](gilles.md) | `gilles` | à la guérite de la fourrière | Patrick | s01 · s08 |
 | [Le Bonimenteur](le-bonimenteur.md) | `bonimenteur` | à l'arche de la foire | Léo | p13 · p14 |
+| [Le capitaine Aurèle Bérubé](berube.md) | `berube` | au bout du quai du traversier, aux Quais | Paul K — Deep French Narrator | m99 |
 
 ⚠️ **Deux voix du compte ne se donnent à personne** : celles du scanner de police (Clara Dupont, la
 répartitrice, et Frederic, l'agent — `audio.VOIX_RESERVEES`, jugé). Avant de donner une voix à un

@@ -724,6 +724,17 @@ MUSIQUES: list[Piece] = [
        "a wet harbour town, unresolved and heavy, no drums, no vocals, loopable",
        duree_s=30, volume=0.44),
 
+    # LE GÉNÉRIQUE (M13) : l'ouverture à l'envers — même tonalité, plus lente, et qui
+    # se résout. ⚠️ Quarante-cinq secondes : la scène du générique de m99 en dure autant
+    # (cinq coupes sur la ville, puis les chiffres un à un) ; elle ne reboucle pas sous le
+    # dernier carton.
+    _m("generique",
+       "slow warm cinematic end credits at 56 bpm in A minor resolving to A major, "
+       "long sustained strings, sparse felt piano rising melody, distant foghorn, "
+       "a night ferry leaving a small harbour town, bittersweet and hopeful, "
+       "no drums, no vocals",
+       duree_s=45, volume=0.44),
+
     # --- Les deux stations de char (le bouton RADIO peut tomber dessus) ------
     _m("station_camion",
        "mid-tempo country rock instrumental at 104 bpm in C major, twangy "

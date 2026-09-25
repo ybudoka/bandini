@@ -59,6 +59,10 @@ TYPES_OBJECTIFS = (
     # direction recommence la séquence ; après `essais` ratés, l'alarme sonne (échec
     # `alarme`). Voir `Histoire.majPiratage`.
     "pirater",     # `ou`, `rayon` (def. 3), `longueur` (def. 4), `essais` (def. 3)
+    # --- M13 : la deuxième fin part en traversier. À bord (à pied ou au volant) quand
+    # il QUITTE `escale` (un district de `traversier.ESCALES`) : manquer le départ, c'est
+    # attendre le suivant, pas un échec.
+    "embarquer",   # `escale`
 )
 
 #: ⚠️ **CE QUE PORTE UN HOMME DE MISSION SE DECLARE ICI.** Un objectif `tuer`
@@ -94,7 +98,8 @@ class Personnage(TypedDict):
     voix: str          # le nom exact de la voix dans le compte ElevenLabs
     couleurs: dict     # les permutations du sprite `joueur` : c chandail, h cheveux, s peau, p pantalon
     ou: str            # ou il se tient : `porte:<lieu>` (dehors, a cote de la porte), `point:<type>`
-                       # (dedans) ou `mouillage:<slug>[:n]` (le poste a quai d'un grand bateau)
+                       # (dedans), `mouillage:<slug>[:n]` (le poste a quai d'un grand bateau) ou
+                       # `traversier:<escale>` (le bout du quai du traversier)
     heler: str         # le mot de sa BULLE quand il a une job pour toi (voir `Entites.bulle`)
     # La mission apres laquelle il n'est plus a sa place (Ti-Guy quitte le terminus
     # apres M1 : sa scene de fin le fait entrer au garage). ⚠️ Dans les donnees, pas
@@ -212,6 +217,13 @@ PERSONNAGES: list[Personnage] = [
     {"slug": "sven", "nom": "Sven Haugen", "genre": "homme", "voix": "Martin - Clear and Comforting",
      "couleurs": {"c": "#34495e", "h": "#c8c8c8", "s": "#e8b088", "p": "#1a1a1a"}, "ou": "mouillage:porte_conteneurs",
      "heler": "Viens, discret."},
+    # --- M13 : la deuxième fin. Le capitaine du traversier, au bout du quai des Quais
+    # (`traversier:quais`) : c'est lui qui fait passer, de nuit, ceux qui partent sans
+    # bruit. ⚠️ Une voix de France, et c'est permis (Martin, 25 sept. 2026) : un vieux loup
+    # de mer grave et posé, qu'aucun autre personnage n'avait prise.
+    {"slug": "berube", "nom": "Capitaine Bérubé", "genre": "homme", "voix": "Paul K — Deep French Narrator",
+     "couleurs": {"c": "#1f3a5f", "h": "#e8e8e8", "s": "#d9a07a", "p": "#20242c"}, "ou": "traversier:quais",
+     "heler": "Un passage?", "parti_apres": "m99"},
 ]
 
 
@@ -344,6 +356,10 @@ TYPES_PLANS: dict[str, tuple[str, ...]] = {
     "attendre": ("duree",),
 }
 CLES_DE_TOUS_LES_PLANS = ("type", "ensemble", "fond")
+#: Ce qu'un `titre` peut écrire entre accolades (`"{fortune} $"`) : les chiffres de la partie,
+#: que `Histoire` passe à la scène au moment de la jouer (M13, le générique). Tout le reste
+#: s'écrirait tel quel à l'écran, accolades comprises.
+VALEURS_DE_TITRE = ("fortune", "missions", "proprietes", "jours", "dette", "liberes")
 COURBES = ("droite", "freine", "accelere")
 GESTES = ("montrer", "donner", "prendre", "bras_croises", "hausser", "telephone")
 
@@ -418,6 +434,11 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
             erreurs.append(f"plan {i} : un son, et un seul")
         if genre == "titre" and not (plan.get("logo") or plan.get("texte")):
             erreurs.append(f"plan {i} : un titre sans texte ni logo")
+        if genre == "titre":
+            for cle in ("texte", "sous"):
+                for nom in re.findall(r"\{([^}]*)\}", str(plan.get(cle) or "")):
+                    if nom not in VALEURS_DE_TITRE:
+                        erreurs.append(f"plan {i} (titre) : {{{nom}}} n'est pas un chiffre de la partie")
     return erreurs
 
 # --- Les missions, une par fichier ----------------------------------------
@@ -430,7 +451,7 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 # cles par defaut et les scenes), et il faut donc que le moteur soit defini.
 from . import (  # noqa: E402
     e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f11, h01, h02, m1, m2, m3,
-    m4, m5, m6, m50, m51, m52, m53, m54, m97, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
+    m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
     s03, s08,
 )
 
@@ -445,6 +466,8 @@ from . import (  # noqa: E402
 # Bouchard), s01 (la Shop — Gilles), p13/p14 (La Pointe — la foire prend vie, le Bonimenteur).
 # ⚠️ Quatre de plus (25 sept. 2026) : q01 (Lulu, après q02), q10/q11 (le choix entre Sven et Josée —
 # chacune `ferme` l'autre ; q10 après m54, Sven ayant dit « une dernière fois »), s08 (Gilles, après s01).
+# ⚠️ m99 (M13, 25 sept. 2026) — _Sacrer son camp_, la fin qu'on peut jouer — tout au bout : son appel
+# ne sonne qu'avec 15 000 $ en poche (`exige`), et une fin n'a rien à précéder.
 CATALOGUE: list[Mission] = [
     m1.MISSION, m2.MISSION, m3.MISSION, m4.MISSION, m5.MISSION, m6.MISSION, m50.MISSION,
     f01.MISSION, e01.MISSION, q02.MISSION, s03.MISSION, m51.MISSION,
@@ -455,7 +478,7 @@ CATALOGUE: list[Mission] = [
     p13.MISSION, p14.MISSION,
     m52.MISSION, m53.MISSION, m54.MISSION,
     q01.MISSION, q10.MISSION, q11.MISSION, s08.MISSION,
-    m97.MISSION,
+    m97.MISSION, m99.MISSION,
 ]
 
 
@@ -815,7 +838,7 @@ def dans_l_ordre_ou_on_les_entend(mission: dict) -> list[dict]:
     for i in range(len(mission["objectifs"])):
         for partie in ("pendant", "renvoi", "accueil"):
             sortie += [ligne for ligne in dialogue.get(partie) or [] if ligne.get("objectif") == i]
-    for partie in ("client", "fin", "echec"):
+    for partie in ("client", "fin", "generique", "echec"):
         sortie += list(dialogue.get(partie) or [])
     return sortie
 
@@ -843,7 +866,7 @@ def erreurs_de_presentation(catalogue: list[dict] | None = None) -> list[str]:
 #: L'ordre dans lequel se comptent les répliques d'une mission (le `n` du slug de voix).
 #: ⚠️ `renvoi` vient APRÈS `pendant` : un slug de voix se compte à sa place, et les mp3 déjà
 #: payés ne changent pas de nom. Et `accueil` vient APRÈS `renvoi`, pour la même raison.
-PARTIES = ("appel", "intro", "client", "fin", "echec", "pendant", "renvoi", "accueil")
+PARTIES = ("appel", "intro", "client", "fin", "echec", "pendant", "renvoi", "accueil", "generique")
 
 
 def repliques() -> list[dict]:
@@ -970,13 +993,21 @@ def repliques_ouverture() -> list[dict]:
             for i, ligne in enumerate(OUVERTURE, start=1)]
 
 
+def _sa_mission_l_attend_toujours(p: dict) -> bool:
+    """Il part après une mission qui est à lui dès la première minute (sans prérequis ni
+    `exige`) : tant qu'il est là, on lui parle pour la prendre, jamais pour rien."""
+    m = par_slug(p["parti_apres"]) if p.get("parti_apres") else None
+    return bool(m) and not m["prerequis"] and not m.get("exige")
+
+
 def repliques_de_repos() -> list[dict]:
     """Ce que chacun dit quand on lui parle et qu'aucune mission ne l'attend : `REPOS`, dit
     de SA voix — le texte avant `REPOS["apres"]` (`-1`), l'autre ensuite (`-2`).
 
     ⚠️ On ne paie que ce qui s'entend. `civil` et `narrateur` n'ont pas de `ou` : on ne leur
-    parle jamais. Ceux qui s'en vont après leur mission (`parti_apres`, Ti-Guy) ont toujours
-    leur mission à donner tant qu'ils sont là. Et Josée ouvre le marché noir après
+    parle jamais. Ceux qui s'en vont après une mission jouable DÈS LE DÉPART (`parti_apres`,
+    Ti-Guy et m1) l'ont toujours à donner tant qu'ils sont là. Le capitaine Bérubé, lui, attend
+    au quai bien avant que m99 s'ouvre (m6, 15 000 $) : il a son repos. Et Josée ouvre le marché noir après
     `REPOS["apres"]` (`histoire.js`) au lieu de dire son repos : pas de `-2` pour elle.
     `mission` vaut `"repos"` : c'est ce qui range ces voix ensemble et permet au navigateur de
     les charger d'un coup (`Son.Voix.chargerHistoire('repos')`). Le slug suit la PLACE du texte,
@@ -984,7 +1015,7 @@ def repliques_de_repos() -> list[dict]:
     """
     return [{"slug": f"{p['slug']}-repos-{n}", "qui": p["slug"], "texte": texte, "mission": "repos",
              "partie": "repos", "telephone": False}
-            for p in PERSONNAGES if p.get("ou") and not p.get("parti_apres")
+            for p in PERSONNAGES if p.get("ou") and not _sa_mission_l_attend_toujours(p)
             for n, texte in enumerate((REPOS["texte"], REPOS["texte_apres"]), start=1)
             if not (p["slug"] == "josee" and n == 2)]
 
@@ -1005,7 +1036,7 @@ ACTEURS_DE_MISSION = ("joueur", "donneur", "vehicule", "cible", "fuyard")
 #: — les amarrages ordinaires (`carte.amarrages`) n'appartiennent à personne
 #: d'autre.
 FORMES_DE_LIEU = ("place", "porte", "ruelle", "zone", "chez", "boutique", "district", "rampe",
-                   "mouillage", "amarrage")
+                   "mouillage", "amarrage", "traversier")
 #: Les lieux NOMMÉS que `Histoire.resoudre` connaît sans forme (`pont` : la barrière du
 #: pont, `bois` : une tuile des bois, `foire` : l'arche) — le `ou` d'un objectif peut les
 #: nommer, et la scène par défaut les filme alors tels quels (q10 et sa moto au pont).
@@ -1047,7 +1078,16 @@ def erreurs_de_mise_en_scene(mission: dict) -> list[str]:
         i = ligne.get("objectif", -1)
         if 0 <= i < len(objectifs) and (objectifs[i].get("type") != "parler" or objectifs[i].get("cible") != ligne["qui"]):
             erreurs.append(f"{slug} : l'accueil de {ligne['qui']} n'est pas accroché à SON objectif `parler`")
-    for partie in ("intro", "fin"):
+    # ⚠️ UNE FIN DE PARTIE A SON GÉNÉRIQUE (M13), et il est ENTIER : sa scène, ses répliques,
+    # et `donne.generique` qui le fait jouer — l'un sans l'autre est un générique muet, ou
+    # une scène que rien ne lance. Le narrateur du Clairon le dit, et lui seul.
+    generique = bool((mission.get("donne") or {}).get("generique"))
+    if generique != bool(scenes.get("generique")) or generique != bool(dialogue.get("generique")):
+        erreurs.append(f"{slug} : un générique veut `donne.generique`, sa scène ET ses répliques")
+    for ligne in dialogue.get("generique") or []:
+        if ligne["qui"] != "narrateur":
+            erreurs.append(f"{slug} : le générique, c'est le narrateur du Clairon — pas {ligne['qui']}")
+    for partie in ("intro", "fin") + (("generique",) if generique else ()):
         scene = scenes.get(partie)
         if not scene:
             erreurs.append(f"{slug} : pas de scène {partie}")
@@ -1160,8 +1200,9 @@ def lieu_a_montrer(mission: dict) -> str | None:
         if objectif.get("lieu"):
             # ⚠️ `porte:<lieu>`, pas le nom nu : `Histoire.resoudre` rend le même
             # pixel des deux façons, mais c'est la forme préfixée que le juge des
-            # lieux sait confronter à la ville bâtie.
-            return "porte:" + objectif["lieu"]
+            # lieux sait confronter à la ville bâtie. Un lieu qui a déjà sa forme
+            # (`traversier:quais`, m99) se montre tel quel.
+            return objectif["lieu"] if ":" in objectif["lieu"] else "porte:" + objectif["lieu"]
     return None
 
 
@@ -1254,8 +1295,12 @@ def scenes_de(mission: dict) -> dict:
     """Les scènes d'une mission : celles que son fichier écrit, et le défaut pour
     les autres. ⚠️ Une mission peut n'en écrire qu'une — l'autre lui est bâtie."""
     ecrites = mission.get("scenes") or {}
-    return {partie: ecrites.get(partie) or scene_par_defaut(mission, partie)
-            for partie in ("intro", "fin")}
+    scenes = {partie: ecrites.get(partie) or scene_par_defaut(mission, partie)
+              for partie in ("intro", "fin")}
+    # Le générique (M13) n'a pas de défaut : une fin de partie s'écrit à la main, ou pas du tout.
+    if ecrites.get("generique"):
+        scenes["generique"] = ecrites["generique"]
+    return scenes
 
 
 def _completer(mission: dict) -> dict:

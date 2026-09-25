@@ -292,6 +292,11 @@ def test_les_lieux_des_missions_existent():
                 pareils = [m for m in mouillages if m["slug"] == deux[0]]
                 assert n < len(pareils), f"{mission['slug']} : « {slug} » introuvable"
                 continue
+            # Le quai du traversier (m99, M13) : une escale que la ville trace (`traversier.ESCALES`).
+            if slug.startswith("traversier:"):
+                assert slug[len("traversier:"):] in {q["district"] for q in VILLE["traversier"]["escales"]}, \
+                    f"{mission['slug']} : « {slug} » introuvable"
+                continue
             assert slug in lieux, f"{mission['slug']} : « {slug} » introuvable"
     for defi in missions.DEFIS:
         for lieu in defi.get("points", []) + ([defi["lieu"]] if defi.get("lieu") else []):

@@ -8,15 +8,16 @@ def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
     assert [p["slug"] for p in missions.PERSONNAGES if p.get("ou")] == [
         "ti_guy", "thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu", "raymonde", "ovila",
         "mo", "fern", "mado", "gege", "xavier", "lachance", "gus", "rosa", "ginette", "gilles",
-        "bonimenteur", "sven"]
+        "bonimenteur", "sven", "berube"]
     # Ti-Guy s'en va apres m1 (il a m1 a donner tant qu'il est la) ; Josee ouvre le marche noir
     # apres M5 (`marche_noir.apres`) au lieu de dire son repos : pas de voix pour ce qui ne s'entend pas.
     attendus = [f"{qui}-repos-{n}" for qui in ("thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu",
                                               "raymonde", "ovila", "mo", "fern", "mado", "gege",
                                               "xavier", "lachance", "gus", "rosa", "ginette", "gilles",
-                                              "bonimenteur", "sven") for n in (1, 2) if (qui, n) != ("josee", 2)]
+                                              "bonimenteur", "sven", "berube") for n in (1, 2)
+                if (qui, n) != ("josee", 2)]
     repos = missions.repliques_de_repos()
-    assert [r["slug"] for r in repos] == attendus, "trente-neuf voix, pas quarante"
+    assert [r["slug"] for r in repos] == attendus, "quarante et une voix, pas quarante-deux"
     assert {r["texte"] for r in repos} == {missions.REPOS["texte"], missions.REPOS["texte_apres"]}
     assert all(r["mission"] == "repos" and not r["telephone"] for r in repos)
     voix = {v["slug"]: v for v in audio.voix_repos()}
@@ -31,7 +32,9 @@ def test_types_et_ordre():
     for m in missions.CATALOGUE:
         for o in m["objectifs"]:
             assert o["type"] in missions.TYPES_OBJECTIFS
-        assert m["recompense"] > 0
+        # ⚠️ Une FIN DE PARTIE ne paie rien (M13) : on ne part pas avec une prime, on part avec
+        # un générique. Seules les missions qui en jouent un sont à 0 $.
+        assert m["recompense"] > 0 or (m.get("donne") or {}).get("generique"), m["slug"]
         assert set(m["echec"]) <= set(missions.ECHECS)
 
 
@@ -81,7 +84,8 @@ def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
             if "lieu" in o:
                 # ⚠️ Livrer une COQUE, c'est la ramener à son mouillage (`navires.py`) :
                 # il n'y a pas de baie de garage sur l'eau, `carte.SPECIAUX` n'en sait rien.
-                assert o["lieu"] in lieux or o["lieu"].startswith("mouillage:"), f"{m['slug']} : lieu inconnu {o['lieu']}"
+                assert o["lieu"] in lieux or o["lieu"].startswith(("mouillage:", "traversier:")), \
+                    f"{m['slug']} : lieu inconnu {o['lieu']}"
             for etape in o.get("par", []):
                 assert etape in lieux, f"{m['slug']} : lieu du détour inconnu {etape}"
             if o.get("ou", "").startswith("zone:"):

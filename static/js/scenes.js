@@ -113,7 +113,8 @@ const Scenes = (function () {
   /** Lance `scene` (une liste de plans). `contexte` : `lieux` (nom -> {x, y, sens}),
       `lignes` (les répliques que `dire` peut dire), `anonyme` (pas de nom au-dessus
       de la boîte), `voix` (le paquet de voix à charger), `mission`, `fin` (appelée
-      une fois, à la dernière image ou quand on passe). Rend l'état, ou `null`. */
+      une fois, à la dernière image ou quand on passe), `valeurs` (les chiffres qu'un
+      `titre` écrit entre accolades). Rend l'état, ou `null`. */
   function jouer(scene, contexte) {
     const j = B.joueur, c = contexte || {};
     if (!j || B.scene || !scene || !scene.length) return null;
@@ -126,7 +127,7 @@ const Scenes = (function () {
       retour: { x: j.x, y: j.y, dessine: j.dessine !== false }, musique: null, boucles: [], moteur: false,
       noir: 0, titre: 0, carton: null, camera: null,
       vise: { x: B.cam.x + VW / 2, y: B.cam.y + VH / 2 },
-      silence: -1, fin: c.fin || null, sautes: 0,
+      silence: -1, fin: c.fin || null, sautes: 0, valeurs: c.valeurs || {},
     };
     for (const nom in (c.acteurs || {})) if (c.acteurs[nom]) s.acteurs[nom] = c.acteurs[nom];
     // Où chacun se tenait à la première image : `place:<acteur>`, pour revenir.
@@ -152,6 +153,15 @@ const Scenes = (function () {
     Entree.contexte('dialogue');
     demarrerLesSuivants(s);
     return s;
+  }
+
+  /** Les chiffres entre accolades d'un carton (`{fortune}`) : ce que la scène a reçu dans
+      `valeurs` (le générique, M13). Une clé qu'elle n'a pas s'efface plutôt que de
+      s'afficher en accolades — `missions.py` refuse déjà les inconnues. */
+  function remplir(s, texte) {
+    return String(texte || '').replace(/\{(\w+)\}/g, function (tout, cle) {
+      return s.valeurs[cle] !== undefined ? String(s.valeurs[cle]) : '';
+    });
   }
 
   function toucher(s, e) { if (s.touches.indexOf(e) < 0) s.touches.push(e); }
@@ -561,7 +571,7 @@ const Scenes = (function () {
 
     titre: {
       demarrer: function (s, a, p) {
-        s.carton = { logo: !!p.logo, texte: p.texte || '', sous: p.sous || '' };
+        s.carton = { logo: !!p.logo, texte: remplir(s, p.texte), sous: remplir(s, p.sous) };
         s.titre = 0;
         return true;
       },

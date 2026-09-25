@@ -93,8 +93,9 @@ def lieux_de_mission():
         for o in m["objectifs"]:
             # ⚠️ Un mouillage (mouillage:<slug>[:n], m52-m54) n'est pas un
             # point_interet : c'est de l'eau, sans porte ni barrière piétonne à
-            # franchir — cette règle-ci ne le concerne pas.
-            if o.get("lieu") and not o["lieu"].startswith("mouillage:"):
+            # franchir — cette règle-ci ne le concerne pas. Le quai du traversier
+            # (`traversier:<escale>`, m99) non plus : il est jugé dans test_traversier.
+            if o.get("lieu") and not o["lieu"].startswith(("mouillage:", "traversier:")):
                 lieux.add(o["lieu"])
     for d in missions.DEFIS:
         if d.get("lieu"):

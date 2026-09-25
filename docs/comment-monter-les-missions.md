@@ -174,6 +174,7 @@ attend son **juge de banc** avant de porter une mission) :
 | `eteindre` | un feu à l'extincteur (le jet existe, le feu de char aussi) | — |
 | `boulots` | `n` boulots d'une `sorte` (généralise `courses`, qui reste au taxi) | `n`, `sorte` |
 | `pirater` | s'approcher de `ou`, ACTION l'ouvre, reproduire une séquence de 4 directions avec le stick (le même axe unifié que la marche, `Entree.axe` — clavier, manette, doigt) ; une mauvaise direction recommence, `essais` ratés déclenchent l'échec `alarme` ; la flèche mène au terminal (le poste, pour un mouillage) — un `ou` loin du donneur se trouve (l'île de m53, m54) | `ou`, `rayon` (déf. 3), `longueur` (déf. 4), `essais` (déf. 3) |
+| `embarquer` | (M13) être à bord du traversier — à pied ou au volant — quand il **quitte** `escale` ; c'est `Traversier.embarquer` qui prend ce qui est sur le pont à l'heure du départ, et manquer le départ, c'est attendre le suivant (deux heures), pas un échec ; la flèche mène au bout du quai (`traversier:<escale>`) | `escale` (un district de `traversier.ESCALES` : `quais` ou `pointe`) |
 
 **Les quatre options transverses** (`OPTIONS_OBJECTIFS`) : ce ne sont **pas**
 des types, mais des clés qui se posent sur **n'importe quel** objectif —
@@ -426,6 +427,16 @@ En plus de `recompense`, la mission peut donner :
   fermée n'apparaît plus jamais, ni au téléphone ni au carnet.
 
 Tout ça est jugé : `arme` doit exister, `propriete` doit exister.
+
+**`generique: true`** (M13) — une **fin de partie**. Après la scène de fin, la mission joue sa
+scène `scenes["generique"]` sous ses répliques `dialogue["generique"]`, dites par le **narrateur du
+Clairon** et lui seul, sans nom au-dessus de la boîte (comme l'ouverture) ; puis le BILAN s'ouvre, la
+fin est retenue (`partie.fins`) et **la partie continue**. Les trois vont ensemble (jugé) : un générique
+sans scène est muet, une scène sans `donne.generique` ne se joue jamais. `generique` se compte en
+dernier dans `PARTIES` (les voix déjà payées gardent leur slug). Un plan `titre` y écrit les chiffres
+de la partie entre accolades — `{fortune}`, `{missions}`, `{proprietes}`, `{jours}`, `{dette}`,
+`{liberes}` (`VALEURS_DE_TITRE`, toute autre clé est refusée). Une fin de partie paie `recompense: 0`,
+et c'est la seule mission qui le peut. Exemple : `m99.py`.
 
 ---
 

@@ -128,6 +128,8 @@ def test_les_lieux_des_scenes_existent_dans_la_ville():
                         assert suite in zones, (m["slug"], partie, nom)
                     elif forme == "chez":
                         assert missions.personnage(suite)["ou"], (m["slug"], partie, nom)
+                    elif forme == "traversier":
+                        assert suite in {q["district"] for q in ville["traversier"]["escales"]}, (m["slug"], partie, nom)
 
 
 def test_une_coupe_en_liste_se_valide_lieu_par_lieu():
@@ -183,7 +185,7 @@ def test_les_voix_deja_payees_gardent_leur_slug():
                 n += 1
                 attendus[(partie, ligne["texte"])] = f"{ligne['qui']}-{m['slug']}-{n}"
         for r in missions.repliques():
-            if r["mission"] == m["slug"] and r["partie"] not in ("pendant", "renvoi", "accueil"):
+            if r["mission"] == m["slug"] and r["partie"] not in ("pendant", "renvoi", "accueil", "generique"):
                 assert r["slug"] == attendus[(r["partie"], r["texte"])], r
 
 
@@ -370,7 +372,9 @@ def test_le_catalogue_est_complete_a_l_import():
     for m in missions.CATALOGUE:
         for cle in ("prerequis", "phase", "echec", "donne", "scenes"):
             assert cle in m, (m["slug"], cle)
-        assert set(m["scenes"]) == {"intro", "fin"}, m["slug"]
+        # Le générique (M13) : une fin de partie seulement, et il n'a pas de défaut.
+        attendues = {"intro", "fin"} | ({"generique"} if m["donne"].get("generique") else set())
+        assert set(m["scenes"]) == attendues, m["slug"]
 
 
 def test_chaque_mission_du_catalogue_a_aussi_des_scenes_par_defaut_jouables():

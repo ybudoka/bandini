@@ -79,6 +79,7 @@ const B = {
   ouverture: null,      // la scene d'ouverture en cours (voir Histoire.ouverture)
   scene: null,          // la scene qui joue, quelle qu'elle soit (voir Scenes)
   finEnAttente: null,   // la fin d'une mission reussie, qui attend qu'on soit a l'arret (Histoire.jouerLaFin)
+  generiqueEnAttente: null,   // le slug d'une fin de partie (M13) : son generique suit la scene de fin
   sonnerie: null,       // le combine sonne : { slug, t } — on decroche a l'image `t` (Histoire.majTelephone)
   mission: null,        // les figurants de la mission en cours (pas sauvegardes : voir Histoire)
   defi: null,           // le defi en cours

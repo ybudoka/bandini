@@ -223,7 +223,7 @@ _CORPS = {"ti_guy": "costaud", "thibodeau": "vieux", "marco": "homme", "bouchard
           "lulu": "femme", "raymonde": "femme", "ovila": "vieux", "mo": "costaud", "fern": "grand",
           "mado": "femme", "gege": "costaud", "xavier": "grand", "lachance": "grand", "gus": "costaud",
           "rosa": "femme", "ginette": "femme", "gilles": "vieux", "bonimenteur": "grand",
-          "sven": "homme"}
+          "sven": "homme", "berube": "vieux"}
 
 #: Du portrait à la rue : ce que `visages.py` dit de sa tête, la rue le porte aussi.
 _COIFFURE_DE = {"courte": "courte", "brosse": "rase", "degarnie": "degarnie", "chauve": "chauve",
@@ -260,7 +260,7 @@ def tenue_du_personnage(slug: str) -> dict:
                   _COIFFURE_DE[v["coiffure"]], _HAUT_DE[v["habit"]], c["c"],
                   "jupe" if femme and v["habit"] in ("blouse", "tablier") else "pantalon", c["p"],
                   chapeau=chapeau, couleur_chapeau=v["extra"].get("t", "#1a1a22"),
-                  souliers="bottes" if slug in ("gege", "mo", "sven", "gilles", "ovila") else "souliers",
+                  souliers="bottes" if slug in ("gege", "mo", "sven", "gilles", "ovila", "berube") else "souliers",
                   accessoires=acc, accent="#e8b33c" if chapeau == "kepi" else "#c0392b")
 
 

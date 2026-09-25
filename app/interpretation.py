@@ -333,6 +333,8 @@ JEU: dict[str, str] = {
     "ovila-repos-2": "[softly] Le Faubourg est tranquille… Merci.",
     "sven-repos-1": "[Norwegian accent][coldly] Reviens me voir… plus tard.",
     "sven-repos-2": "[Norwegian accent][matter-of-fact] Le Faubourg est tranquille… Merci.",
+    "berube-repos-1": "[calm] Reviens me voir… plus tard.",
+    "berube-repos-2": "[wryly] Le Faubourg est tranquille… Merci.",
     "mo-repos-1": "[knowingly] Reviens me voir… plus tard.",
     "mo-repos-2": "[amused] Le Faubourg est tranquille… Merci.",
     "fern-repos-1": "[matter-of-fact] Reviens me voir… plus tard.",

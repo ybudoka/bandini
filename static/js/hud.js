@@ -1607,12 +1607,18 @@ const Hud = (function () {
       ['FORTUNE', fortune + ' $'],
       ['PROPRIÉTÉS', Object.keys(p.proprietes).length + ' / ' + B.defs.economie.proprietes.filter(function (q) { return q.phase === 1; }).length],
       ['PAQUETS', Object.keys(p.paquets).length + ' / ' + (Monde.carte.ville ? Monde.carte.ville : Monde.carte).def.paquets.length],
+      // M13 : ce que dit le générique, et ce qu'il reste à faire après lui — la partie continue.
+      ['MISSIONS', Object.keys(p.missionsFaites || {}).length + ' / ' + (B.defs.missions || []).filter(function (m) { return m.phase !== 2; }).length],
+      ['DETTE DE ROCCO', p.dette > 0 ? Math.round(p.dette) + ' $' : 'RÉGLÉE'],
+      ['DISTRICTS LIBÉRÉS', String((p.libere || []).length)],
       ['CRIMES', String(s.crimes || 0)],
       ['CHARS VOLÉS', String(s.volees || 0)],
       ['COURSES DE TAXI', String(s.courses || 0)],
       ['MORTS', String(s.tues || 0)],
       ['HOSPITALISATIONS', String(s.hospitalisations || 0)],
     ];
+    const fins = Object.keys(p.fins || {});
+    if (fins.length) lignes.push(['FIN', fins.map(function (slug) { const m = (B.defs.missions || []).find(function (q) { return q.slug === slug; }); return m ? m.titre.toUpperCase() : slug; }).join(' · ')]);
     return enOnglet('bilan', { titre: 'BILAN', items: lignes.map(function (l) { return { libelle: l[0], detail: l[1], actif: false }; }) });
   }
 
@@ -2385,7 +2391,9 @@ const Hud = (function () {
       un geste qui n'existe pas se lit comme un bogue. */
   function attenteALAbribus(ctx) {
     const j = B.joueur;
-    if (!j || B.invite || B.menu || B.dialogue) return;
+    // ⚠️ Ni sous une scene : le generique de m99 (M13) finit sur le pont du traversier, et
+    // « TRAVERSIER POUR LA POINTE · DEPART 10:00 » s'ecrivait sous ses cartons.
+    if (!j || B.invite || B.menu || B.dialogue || B.scene) return;
     // Sous terre, le metro dit ou l'on est et quand passe la rame.
     // Au quai du traversier (ou a bord), son horaire.
     const t = B.interieur ? Metro.texteDInfo(j) : (Autobus.texteDAttente(j) || Traversier.texteDInfo(j) || Neige.texteDInfo(j) || Blocs.texteDInfo(j));

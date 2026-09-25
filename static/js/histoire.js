@@ -177,6 +177,7 @@ const Histoire = (function () {
     // le centre de la coque, qui est dans l'eau (`lieuDeLivraison` fait déjà
     // cette différence pour un `livrer`).
     if (slug.indexOf('mouillage:') === 0) { const mo = trouverMouillage(slug.slice(10)); return mo && mo.poste ? { x: mo.poste.x, y: mo.poste.y, nom: 'le quai' } : null; }
+    if (slug.indexOf('traversier:') === 0) return quaiDuTraversier(slug.slice(11));
     const p = point(slug);
     if (p) return { x: p.x * TT + 8, y: p.y * TT + 8, nom: p.nom };
     const porte = (Monde.carte.def.portes || []).find(function (q) { return q.lieu === slug; });
@@ -385,6 +386,17 @@ const Histoire = (function () {
     return meilleure ? { x: meilleure.x * TT + 8, y: meilleure.y * TT + 8 } : null;
   }
 
+  /** Le bout du quai du traversier dans le district `district` (`traversier.ESCALES`) : la
+      tuile du milieu de ses accès, là où le pont touche la rive (M13, le capitaine Bérubé et
+      m99). `null` si la ville n'a pas de traversier. */
+  function quaiDuTraversier(district) {
+    const d = typeof Traversier !== 'undefined' ? Traversier.donnees() : null;
+    const q = d && d.escales.find(function (e) { return e.district === district; });
+    if (!q || !q.acces.length) return null;
+    const t = q.acces[Math.floor(q.acces.length / 2)];
+    return { x: t[0] * TT + 8, y: t[1] * TT + 8, nom: 'le quai du traversier', escale: q };
+  }
+
   /** Le mouillage `slug` (le n-ième, 0 par défaut — deux chalutiers partagent le
       slug) : `carte.mouillages` (`navires.py`). `null` si la ville n'en a pas. */
   function trouverMouillage(spec) {
@@ -448,6 +460,7 @@ const Histoire = (function () {
     // ⚠️ Posé DEHORS, à l'arche — contrairement à un donneur `point:`, il existe
     // vraiment en ville : hélable, GPS, et un `retourner` le trouve.
     if (ou[0] === 'foire') return lieuFoire();
+    if (ou[0] === 'traversier') return lieu(p.ou);
     return null;
   }
 
@@ -512,7 +525,18 @@ const Histoire = (function () {
       else if (p.ou.indexOf('mouillage:') === 0) poserDonneurMouillage(p);
       // Le Bonimenteur, a l'arche de la foire — dehors, comme une porte, mais sans batiment.
       else if (p.ou === 'foire') poserDonneurFoire(p);
+      // Le capitaine Bérubé, au bout du quai du traversier (M13).
+      else if (p.ou.indexOf('traversier:') === 0) poserDonneurAuQuai(p);
     }
+  }
+
+  /** UN personnage posé au bout du quai du traversier (`ou: "traversier:<escale>"`) — même
+      idée que `poserDonneurFoire` : une place qu'on voit, à côté du lieu. */
+  function poserDonneurAuQuai(p) {
+    const l = lieu(p.ou);
+    if (!l) return null;
+    const place = placeVisible(l);
+    return place ? creerPersonnage(p, place.x, place.y) : null;
   }
 
   /** UN personnage posé à l'arche de la foire (`ou: "foire"`) — même idée que
@@ -786,7 +810,7 @@ const Histoire = (function () {
   function slugDeVoix(m, partie, i) {
     // ⚠️ `pendant` APRES `echec`, puis `renvoi`, comme `missions.PARTIES` : inseree plus tot,
     // elle renommerait des voix deja generees.
-    const ordre = ['appel', 'intro', 'client', 'fin', 'echec', 'pendant', 'renvoi', 'accueil'];
+    const ordre = ['appel', 'intro', 'client', 'fin', 'echec', 'pendant', 'renvoi', 'accueil', 'generique'];
     let n = 0;
     for (const p of ordre) {
       const lignes = m.dialogue[p] || [];
@@ -1173,8 +1197,51 @@ const Histoire = (function () {
         const e = donneur(p.slug);
         if (e) Entites.retirer(e);
       }
+      // ⚠️ UNE FIN DE PARTIE (M13) : le générique attend que la scène de fin soit finie
+      // (`jouerLeGenerique`) — on est encore dans son dernier appel.
+      if (d.generique) B.generiqueEnAttente = m.slug;
       Missions.sauvegarderPartie();
     }, { vehicule: f.vehicule });
+  }
+
+  /** Les chiffres que le générique écrit (`VALEURS_DE_TITRE`, `missions.py`). */
+  function valeursDuGenerique() {
+    // La FORTUNE du BILAN (`Hud.menuBilan`) : la poche et le coffre de la planque.
+    const p = B.partie, argent = Math.round((p.argent || 0) + ((p.planque && p.planque.coffre) || 0));
+    const pieces = function (n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); };
+    const dette = Math.round(p.dette || 0);
+    return {
+      fortune: pieces(argent),
+      missions: String(Object.keys(p.missionsFaites || {}).length),
+      proprietes: String(Object.keys(p.proprietes || {}).length),
+      jours: String(p.jour || 1),
+      dette: dette > 0 ? pieces(dette) + ' $ À SAL' : 'RÉGLÉE',
+      liberes: String((p.libere || []).length),
+    };
+  }
+
+  /** LE GÉNÉRIQUE (M13) : la scène `generique` de la mission, dite par le narrateur du
+      Clairon comme l'ouverture (`anonyme`), avec les chiffres de la partie. Puis le BILAN —
+      et la partie continue : le générique n'est pas un écran de fin, c'est une scène.
+      ⚠️ Une fin vue le reste (`p.fins`, dans la sauvegarde). */
+  function jouerLeGenerique() {
+    const slug = B.generiqueEnAttente;
+    if (!slug || B.cinema || B.scene) return;
+    B.generiqueEnAttente = null;
+    const m = mission(slug), p = B.partie;
+    if (!m || !p) return;
+    const fin = function () {
+      p.fins = p.fins || {};
+      if (!p.fins[slug]) p.fins[slug] = { jour: p.jour || 1 };
+      Missions.sauvegarderPartie();
+      if (Hud.ouvrirOnglet) Hud.ouvrirOnglet('bilan');
+    };
+    const scene = m.scenes && m.scenes.generique;
+    const etat = scene && Scenes.jouer(scene, {
+      mission: m, voix: m.slug, lignes: lignesDe(m, 'generique'), anonyme: true,
+      valeurs: valeursDuGenerique(), fin: fin,
+    });
+    if (!etat) fin();
   }
 
   // --- Les missions ------------------------------------------------------------------------
@@ -1851,6 +1918,18 @@ const Histoire = (function () {
       }
       case 'payer': {
         if (Missions.payer(o.montant, o.raison || '')) avancer();
+        return;
+      }
+      case 'embarquer': {
+        // M13 : à bord — à pied ou au volant — quand il QUITTE l'escale. C'est
+        // `Traversier.embarquer` qui met sur le pont ce qui s'y trouve à l'heure du départ ;
+        // manquer le départ, c'est attendre le suivant. Une ville sans traversier ne
+        // bloque pas la mission.
+        const l = quaiDuTraversier(o.escale);
+        if (!l) { avancer(); return; }
+        const s = Traversier.etatA(B.partie.heure);
+        const aBord = Traversier.aBord(j) || (j.dansVehicule && Traversier.aBord(j.dansVehicule));
+        if (aBord && s.phase === 'traverse' && s.de === l.escale.k) avancer();
         return;
       }
       case 'acheter': {
@@ -2960,6 +3039,7 @@ const Histoire = (function () {
       if (!o) return null;
       let l = null;
       if (o.type === 'aller') l = lieu(o.lieu);
+      else if (o.type === 'embarquer') l = quaiDuTraversier(o.escale);
       else if (o.type === 'livrer') l = lieuDeLivraison(o.lieu);
       else if (o.type === 'monter') l = B.mission && B.mission.vehicule ? B.mission.vehicule : null;
       else if (o.type === 'retourner') l = ouTrouver(m.donneur);
@@ -3096,6 +3176,7 @@ const Histoire = (function () {
     if (B.cinema) return;
     jouerLaFin();
     if (B.cinema) return;
+    jouerLeGenerique();
     majBulles();
     majRetours();
     majTelephone();
