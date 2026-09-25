@@ -799,6 +799,39 @@ def test_q03_detruire_le_camion_puis_les_boulonneux_la_police_et_gege(banc):
     assert r["fait"] is True and r["argent"] == [300]
 
 
+
+def test_q03_le_camion_pousse_a_l_eau_est_detruit(banc):
+    """Martin (25 sept. 2026) : « si on le fout dans l'eau ça devrait le détruire ».
+    `Vehicules.majNoyade` retirait le camion de la ville sans en faire une épave : `detruire`
+    guette `etat === 'epave'`, ne le voyait jamais mourir, et le chrono faisait échouer la
+    mission avec le camion au fond de la baie. Ici on le pose dans l'eau la plus proche de sa
+    ruelle, et on le laisse couler tout seul."""
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, j = B.joueur, TT = L.TT, c = L.Monde.carte; j.invincible = 1e6;
+        faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6']);
+        commencer(L, o, 'q03');
+        o.frame(1); ecouter(L);
+        const camion = B.mission.chars[0];
+        const tx = Math.floor(camion.x / TT), ty = Math.floor(camion.y / TT);
+        let eau = null, d2 = Infinity;
+        for (let y = 1; y < c.h - 1; y++) for (let x = 1; x < c.w - 1; x++) {
+            if (!L.Monde.estEau(x, y) || !L.Monde.estEau(x + 1, y) || !L.Monde.estEau(x, y + 1)) continue;
+            const d = (x - tx) * (x - tx) + (y - ty) * (y - ty);
+            if (d < d2) { d2 = d; eau = { x: x, y: y }; }
+        }
+        camion.x = eau.x * TT + 8; camion.y = eau.y * TT + 8;
+        j.x = camion.x; j.y = camion.y - 5 * TT; L.Entites.indexer();
+        let coule = -1;
+        for (let i = 0; i < 400 && coule < 0; i++) { o.frame(1); ecouter(L); if (B.entites.indexOf(camion) < 0) coule = i; }
+        jouer(L, o);
+        return { tuiles: Math.round(Math.sqrt(d2)), coule: coule, etat: camion.etat, etape: etape(L),
+                 echec: B.partie.mission ? null : 'la mission est finie' };
+    }""")
+    assert r["coule"] >= 0, f"le camion n'a pas coulé : le juge ne prouve rien ({r})"
+    assert r["etat"] == "epave", f"le camion au fond de l'eau n'est pas une épave : {r['etat']!r}"
+    assert r["etape"] == 1, f"le camion coulé ne compte pas pour `detruire` : étape {r['etape']} ({r})"
+
 def test_e12_le_phare_la_rampe_de_la_pointe_la_police_puis_le_depanneur(banc):
     """`sauter` (M16) : le vol se compte comme le défi *Le Grand Saut* (`vol_px`), tant que
     le véhicule est en l'air (`v.z > 0`) — dans n'importe quelle rampe de la ville, `ou` ne

@@ -227,3 +227,27 @@ def test_le_char_du_joueur_plonge_coule_et_le_rejette(banc):
     assert r["dansVehicule"] is False, "le joueur est resté dans un char retiré des entités"
     assert r["nage"] is True, "le joueur ne nage pas : il coule avec le char"
     assert r["bouge"] > 20, f"le joueur ne bouge plus d'un pixel : {r['bouge']} px en 60 images"
+
+
+def test_un_char_qui_coule_hors_mission_est_une_epave(banc):
+    """Martin (25 sept. 2026) : un char à l'eau est DÉTRUIT, « même hors mission ».
+    `majNoyade` le retirait de la ville en gardant son état de char vivant (`stationne`) : ce
+    qui guette une épave (`detruire`, `vehicule_detruit`, les boulots) ne le voyait jamais
+    mourir. Un char au fond est une épave comme un char qui explose : l'état, la vie à zéro."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(31);
+        const j = L.B.joueur, c = L.Monde.carte, TT = L.TT;
+        """ + RIVE + """
+        // Le joueur sur la rive, à côté : loin, `peupler` oublierait le char avant qu'il coule.
+        j.x = rive.x * TT + 8; j.y = rive.y * TT + 8;
+        const v = L.Vehicules.creer('auto', (rive.x + 4) * TT + 8, rive.y * TT + 8, 0, { etat: 'stationne' });
+        L.Entites.indexer();
+        L.Monde.centrerCamera(v.x, v.y);
+        let sombre = -1;
+        for (let i = 0; i < 400 && sombre < 0; i++) { o.frame(1); if (L.B.entites.indexOf(v) < 0) sombre = i; }
+        return { sombre: sombre, etat: v.etat, vie: v.vie };
+    }""")
+    assert r["sombre"] >= 170, f"le char n'a pas coulé, on l'a oublié : image {r['sombre']}"
+    assert r["etat"] == "epave", f"un char au fond de l'eau n'est pas détruit : {r['etat']!r}"
+    assert r["vie"] == 0, f"un char au fond de l'eau garde sa vie : {r['vie']}"

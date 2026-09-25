@@ -1264,6 +1264,16 @@ const Vehicules = (function () {
       Hud.message('LE ' + v.def.nom.toUpperCase() + ' A COULÉ', 240);
     }
     Entites.remous(v.x, v.y, 18);
+    // ⚠️ AU FOND, C'EST UNE EPAVE (Martin, 25 sept. 2026 : « si on le fout dans
+    // l'eau ca devrait le detruire, meme hors mission »). On le retirait en
+    // gardant son etat de char vivant : tout ce qui guette une epave (`detruire`
+    // de q03, `vehicule_detruit`, les boulots) ne le voyait jamais mourir, et le
+    // chrono faisait echouer la mission avec le camion au fond de la baie.
+    v.etat = 'epave';
+    v.vie = 0;
+    v.vitesse = 0; v.vx = 0; v.vy = 0;
+    if (v.remorque) decrocher(v);
+    if (v.remorqueePar) decrocher(v.remorqueePar);
     perdu(v);
     Entites.retirer(v);
     return true;

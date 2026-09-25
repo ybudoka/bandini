@@ -256,3 +256,4 @@ Deux documents d'avant la table :
 | Le téléphone sonne à la chaîne : un appel à la fois | ✅ **livré** | 25 sept. 2026 | **P2** | **correctif** | [fiche](le-telephone-sonne-a-la-chaine.md#fiche) · [notes](le-telephone-sonne-a-la-chaine.md#notes) |
 | Trois défauts vus au banc : la flèche des boutiques, la batte déjà en poche, ACTION près d'un char | ✅ **livré** | 25 sept. 2026 | **P1** | **correctif** | [fiche](trois-defauts-vus-au-banc-la-fleche-des-boutiques-la-batte-deja-en-poche.md#fiche) · [notes](trois-defauts-vus-au-banc-la-fleche-des-boutiques-la-batte-deja-en-poche.md#notes) |
 | Neuf juges rouges sur dev | ✅ **livré** | 25 sept. 2026 | **P1** | **correctif** | [fiche](neuf-juges-rouges-sur-dev.md#fiche) · [notes](neuf-juges-rouges-sur-dev.md#notes) |
+| Un char qui coule est détruit | ✅ **livré** | 25 sept. 2026 | **P1** | **correctif** | [fiche](un-char-qui-coule-est-detruit.md#fiche) · [notes](un-char-qui-coule-est-detruit.md#notes) |
