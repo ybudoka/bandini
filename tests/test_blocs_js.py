@@ -1,5 +1,8 @@
-"""Les blocs de carte, JOUÉS (vague 1) : on pousse contre le bord nord des Érables, la carte
-fait un noir, la clairière se charge, et on revient — à pied. Voir `static/js/blocs.js`."""
+"""Les blocs de carte, JOUÉS : on pousse contre le bord nord des Érables, la carte fait un noir,
+la clairière se charge, et on revient — à pied (vague 1), au volant et à deux, la police
+reprenant au bord (vague 2). Voir `static/js/blocs.js`."""
+
+import pytest
 
 OUTILS = """
   const TT = 16;
@@ -79,19 +82,127 @@ def test_longer_le_trottoir_ne_passe_pas_et_a_cote_du_passage_non_plus(banc):
     assert r["contre"] <= 6 and r["acote"] is False, f"à côté de l'ouverture, le bord reste un bord : {r}"
 
 
-def test_au_volant_le_bord_reste_un_bord_pour_l_instant(banc):
-    """Vague 1 : à pied. Le char passera à la vague 2."""
+VOLANT = """
+  function auVolant(L, o, slug, cap) {
+    const B = L.B, j = B.joueur, p = passage(L);
+    const v = L.Vehicules.creer(slug, (p.de + 2) * TT + 8, 4 * TT, cap === undefined ? -Math.PI / 2 : cap, { etat: 'stationne' });
+    j.x = v.x + 12; j.y = v.y; L.Entites.indexer();
+    L.Vehicules.monter(j, v); L.Entites.indexer();
+    return v;
+  }
+  function foncer(L, o, n) {
+    o.touche('KeyW');
+    for (let i = 0; i < (n || 200) && !L.B.transition; i++) o.frame(1);
+    o.relacher('KeyW');
+    for (let i = 0; i < 90; i++) o.frame(1);
+  }
+"""
+
+
+@pytest.mark.parametrize("slug", ["auto", "camion", "moto", "velo"])
+def test_au_volant_on_passe_avec_son_char_et_on_revient_avec_lui(banc, slug):
+    """⚠️ Vague 2 : le char passe le bord, tourné vers l'intérieur du bloc, le joueur dedans ;
+    et il revient avec lui, assez loin du bord pour ne pas repartir aussitôt."""
+    r = banc("async function (L, o) {" + OUTILS + VOLANT + """
+        L.Jeu.commencer();
+        const B = L.B, j = B.joueur;
+        auPassage(L, o); await laisserArriver(L, o);
+        const v = auVolant(L, o, '""" + slug + """');
+        const ville = B.entites;
+        foncer(L, o);
+        const dedans = { bloc: B.bloc && B.bloc.slug, dansLeBloc: B.entites.indexOf(v) >= 0, horsDeLaVille: ville.indexOf(v) < 0,
+                         auVolant: j.dansVehicule === v, cap: Math.round(v.angle * 100) / 100, y: Math.round(v.y) };
+        // Demi-tour vers le chemin du sud, et on fonce — et on regarde OÙ le char revient,
+        // à la première image en ville : posé en entier dans la carte, pas à moitié dehors.
+        v.angle = Math.PI / 2; v.vitesse = 0; v.x = 20 * TT + 8; v.y = 20 * TT; j.x = v.x; j.y = v.y;
+        o.touche('KeyW');
+        for (let i = 0; i < 400 && B.bloc; i++) o.frame(1);
+        o.relacher('KeyW');
+        const yRetour = v.y, cap = Math.round(v.angle * 100) / 100;
+        for (let i = 0; i < 120; i++) o.frame(1);
+        return { dedans: dedans, apres: { bloc: !!B.bloc, enVille: B.entites.indexOf(v) >= 0 && B.entites === ville,
+                 auVolant: j.dansVehicule === v, cap: cap, y: Math.round(yRetour),
+                 demi: L.Vehicules.vehiculeDef(v.slug).longueur / 2 } };
+    }""")
+    d, a = r["dedans"], r["apres"]
+    assert d["bloc"] == "clairiere" and d["dansLeBloc"] and d["horsDeLaVille"] and d["auVolant"], d
+    assert d["cap"] == -1.57, f"le char arrive tourné vers l'intérieur du bloc : {d}"
+    assert a["bloc"] is False and a["enVille"] and a["auVolant"], f"le char revient avec nous : {a}"
+    assert a["y"] > a["demi"], f"revenu, le char dépasse du bord nord de la ville : {a}"
+    assert a["cap"] == 1.57, f"il revient tourné vers la ville : {a}"
+
+
+def test_un_char_qui_longe_le_bord_ne_passe_pas(banc):
+    r = banc("async function (L, o) {" + OUTILS + VOLANT + """
+        L.Jeu.commencer();
+        const B = L.B, j = B.joueur, p = passage(L);
+        auPassage(L, o); await laisserArriver(L, o);
+        const v = auVolant(L, o, 'auto', 0);
+        v.x = (p.de - 4) * TT; v.y = 8; j.x = v.x; j.y = v.y;
+        foncer(L, o, 120);
+        return { bloc: !!B.bloc, x: Math.round(v.x / TT), y: Math.round(v.y) };
+    }""")
+    assert r["bloc"] is False and r["y"] < 16, f"en longeant le trottoir, on est passé : {r}"
+
+
+def test_ce_qui_est_dans_le_char_passe_avec_lui(banc):
+    """Un client, un protégé de mission : tout ce qui est `dansVehicule` du char passe."""
+    r = banc("async function (L, o) {" + OUTILS + VOLANT + """
+        L.Jeu.commencer();
+        const B = L.B, j = B.joueur;
+        auPassage(L, o); await laisserArriver(L, o);
+        const v = auVolant(L, o, 'auto');
+        const c = L.Entites.creerPieton(v.x, v.y, L.Entites.archetype('passant'));
+        c.dansVehicule = v; c.dessine = false;
+        foncer(L, o);
+        const dedans = { bloc: !!B.bloc, lui: B.entites.indexOf(c) >= 0, dansLeChar: c.dansVehicule === v };
+        v.angle = Math.PI / 2; v.x = 20 * TT + 8; v.y = 20 * TT; j.x = v.x; j.y = v.y;
+        foncer(L, o);
+        return { dedans: dedans, revenu: !B.bloc && B.entites.indexOf(c) >= 0 && c.dansVehicule === v };
+    }""")
+    assert r["dedans"] == {"bloc": True, "lui": True, "dansLeChar": True}, r
+    assert r["revenu"] is True
+
+
+def test_a_deux_le_deuxieme_joueur_passe_aussi(banc):
+    r = banc("async function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const B = L.B, j = B.joueur;
+        L.Jeu.basculerCoop();
+        const j2 = B.coop && B.coop.entite;
+        auPassage(L, o); await laisserArriver(L, o);
+        j2.x = j.x + 200; j2.y = j.y + 120;
+        pousser(L, o, 'KeyW');
+        const dedans = { bloc: !!B.bloc, j2: B.entites.indexOf(j2) >= 0, pres: Math.hypot(j2.x - j.x, j2.y - j.y) < 40 };
+        versLeRetour(L, o);
+        return { dedans: dedans, revenu: !B.bloc && B.entites.indexOf(j2) >= 0 && Math.hypot(j2.x - j.x, j2.y - j.y) < 60 };
+    }""")
+    assert r["dedans"] == {"bloc": True, "j2": True, "pres": True}, r
+    assert r["revenu"] is True
+
+
+def test_recherche_la_poursuite_reprend_au_bord(banc):
+    """Les agents d'avant restent en ville ; ceux qui te suivent passent le MÊME bord,
+    quelques secondes après toi — jamais d'un bosquet, jamais à tes pieds."""
     r = banc("async function (L, o) {" + OUTILS + """
         L.Jeu.commencer();
         const B = L.B, j = B.joueur;
         auPassage(L, o); await laisserArriver(L, o);
-        const v = L.Vehicules.creer('auto', j.x, j.y + 4, -Math.PI / 2, { etat: 'stationne' });
-        L.Vehicules.monter(j, v); L.Entites.indexer();
-        v.x = j.x; v.y = 6; j.x = v.x; j.y = v.y;
-        for (let i = 0; i < 60; i++) o.frame(1);
-        return { bloc: !!B.bloc, noir: !!B.transition };
+        B.recherche.etoiles = 2; B.recherche.chaleur = 60;
+        const avant = L.Police.agents().slice();
+        pousser(L, o, 'KeyW');
+        const agents = function () { return B.entites.filter(function (e) { return e.agent; }); };
+        const toutDeSuite = agents().length;
+        const anciens = agents().filter(function (a) { return avant.indexOf(a) >= 0; }).length;
+        for (let i = 0; i < L.Blocs.DELAI_POURSUIVANTS + 10; i++) o.frame(1);
+        const bord = (L.Monde.carte.h - 1) * TT;
+        const venus = agents().map(function (a) { return { y: Math.round(a.y), etat: a.etat }; });
+        return { etoiles: B.recherche.etoiles, toutDeSuite: toutDeSuite, anciens: anciens, venus: venus, bord: bord };
     }""")
-    assert r == {"bloc": False, "noir": False}
+    assert r["etoiles"] == 2, "les étoiles passent le bord"
+    assert r["toutDeSuite"] == 0 and r["anciens"] == 0, f"les agents d'avant ne suivent pas : {r}"
+    assert len(r["venus"]) == 2, f"deux étoiles, deux poursuivants : {r}"
+    assert all(v["y"] > r["bord"] - 4 * 16 for v in r["venus"]), f"ils arrivent par le bord : {r}"
 
 
 def test_une_carte_pas_encore_arrivee_ne_noircit_pas_et_le_reseau_revenu_elle_passe(banc):

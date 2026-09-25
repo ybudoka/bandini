@@ -114,6 +114,7 @@ const Jeu = (function () {
     B.lastCall = null;                       // ni des bars qu'elle a vus se vider
     B.transition = null;        // une partie ne commence jamais dans le noir d'une porte
     B.bloc = null;              // ni dans un bloc de carte : la sauvegarde retient le passage de la ville
+    B.passagePolice = null;     // ni poursuivie par des agents qui passaient un bord
     Histoire.creerDonneurs();
     Histoire.creerPanneaux();
     B.etat = 'jeu';
@@ -368,29 +369,73 @@ const Jeu = (function () {
     return true;
   }
 
+  /** Ceux qui passent un bord avec le joueur : les joueurs (le deuxieme aussi, comme par
+      une porte), le char qu'on conduit, et TOUT ce qui est dedans (`dansVehicule` : le
+      deuxieme joueur passager, un client, un protege de mission). */
+  function voyageurs() {
+    const j = B.joueur, v = j.dansVehicule || null;
+    const out = Entites.joueurs().slice();
+    if (v) {
+      out.push(v);
+      for (const e of B.entites) if (e.dansVehicule === v && out.indexOf(e) < 0) out.push(e);
+    }
+    return out;
+  }
+
+  /** Pose les voyageurs a `point`, tournes vers `cap` : le char et ses occupants dessus,
+      un deuxieme joueur a pied a cote du premier. */
+  function poserLesVoyageurs(gens, point, cap) {
+    const j = B.joueur, v = j.dansVehicule || null;
+    // ⚠️ L'ELAN CONTINUE, a moitie : « ca continue » (Martin), mais l'arrivee de la
+    // clairiere est a dix tuiles du lac — a pleine vitesse, le passage jetait le char a l'eau.
+    // Et l'elan suit le NOUVEAU cap : un bloc dont le retour n'est pas en face du passage
+    // ferait sinon deraper le char de cote.
+    if (v) {
+      const elan = Math.hypot(v.vx || 0, v.vy || 0) * 0.5;
+      v.x = point.x; v.y = point.y; v.angle = cap; v.vitesse = (v.vitesse || 0) * 0.5;
+      v.vx = Math.cos(cap) * elan; v.vy = Math.sin(cap) * elan;
+    }
+    let cote = 0;
+    for (const e of gens) {
+      if (e === v) continue;
+      if (v && e.dansVehicule === v) { e.x = v.x; e.y = v.y; continue; }
+      e.x = point.x + (e === j ? 0 : (++cote) * 14); e.y = point.y;
+    }
+  }
+
   /** Passe dans un bloc de carte (`Blocs`) : un fondu, et au noir la ville se met de
       cote — sa carte, ses gens, et l'endroit ou l'on reviendra (`retour`, juste en deca du
       seuil) — puis la carte du bloc se charge et l'on apparait a son arrivee.
 
       ⚠️ La meme mecanique que la piece (`chargerPiece`), et pas la meme porte : un bloc est
       DEHORS. `B.interieur` reste nul — le ciel, la nuit, la radio de dehors continuent — et
-      c'est `B.bloc` qui se souvient de la ville. */
+      c'est `B.bloc` qui se souvient de la ville. ⚠️ Vague 2 : on passe AU VOLANT (le char et
+      tout ce qui est dedans), et A DEUX. */
   function entrerDansLeBloc(bloc, def, retour) {
     const j = B.joueur;
     finirTransition();
-    if (B.bloc || B.interieur || j.dansVehicule) return false;
+    if (B.bloc || B.interieur) return false;
     transiter(FONDU_ENTREE, function () {
-      B.bloc = { slug: bloc.slug, def: def, ville: { carte: Monde.carte, entites: B.entites, x: retour.x, y: retour.y } };
+      const gens = voyageurs(), ville = B.entites;
+      for (const e of gens) { const i = ville.indexOf(e); if (i >= 0) ville.splice(i, 1); }
+      const passage = bloc.passage;
+      B.bloc = { slug: bloc.slug, def: def, ville: { carte: Monde.carte, entites: ville, x: retour.x, y: retour.y,
+                                                     passage: passage, leLong: passage.bord === 'nord' || passage.bord === 'sud' ? j.x : j.y } };
       Monde.charger(def);
-      B.entites = Entites.joueurs();
+      // ⚠️ UNE COPIE : `creerDecor` ajoute les arbres du bloc a `B.entites`, et `gens` doit
+      // rester la liste des voyageurs — sans quoi les deux cents arbres de la clairiere se
+      // faisaient « poser » en file comme un deuxieme joueur (le juge des arbres l'a vu).
+      B.entites = gens.slice();
       B.particules.length = 0;
       // ⚠️ Les ARBRES et les buissons du bloc sont des entites de decor, baties comme celles
       // de la ville au debut d'une partie (`commencer`) — sans cet appel, seuls leurs pieds
       // se peignaient. `creerDecor` refait l'index du decor ; au retour, `reindexerDecor`
       // le rebatit depuis les entites de la ville, remises telles quelles.
       Entites.creerDecor(def);
-      j.x = def.bloc.arrivee.x * TT + 8;
-      j.y = def.bloc.arrivee.y * TT + 8;
+      const r = def.bloc.retour;
+      poserLesVoyageurs(gens, { x: def.bloc.arrivee.x * TT + 8, y: def.bloc.arrivee.y * TT + 8 }, Blocs.capVersLInterieur(r));
+      // Recherche, ceux qui te suivaient passent par le meme bord que toi, un peu apres.
+      Blocs.poursuiteAuBord(r, Monde.carte);
       Monde.centrerCamera(j.x, j.y);
       Hud.message(def.nom.toUpperCase(), 150);
     });
@@ -404,22 +449,31 @@ const Jeu = (function () {
     finirTransition();
     if (!B.bloc) return false;
     transiter(FONDU_SORTIE, function () {
-      const ville = quitterLeBloc();
-      j.x = ville.x; j.y = ville.y;
+      const gens = voyageurs(), ville = B.bloc.ville;
+      quitterLeBloc();
+      for (const e of gens) if (B.entites.indexOf(e) < 0) B.entites.push(e);
+      // Au meme endroit le long du bord, et assez loin pour qu'un char n'y reparte pas.
+      const point = Blocs.recul(ville.passage, Monde.carte, Blocs.porteur(j), ville.leLong);
+      poserLesVoyageurs(gens, point, Blocs.capVersLInterieur(ville.passage));
+      Blocs.poursuiteAuBord(ville.passage, Monde.carte);
       Monde.centrerCamera(j.x, j.y);
     });
     return true;
   }
 
-  /** La ville reprend sa place, sans fondu : rend l'endroit du passage, ou null. */
+  /** La ville reprend sa place, sans fondu : rend l'endroit du passage, ou null. Les
+      voyageurs, c'est a l'appelant de les emporter (`sortirDuBloc`) — l'hopital et la prison
+      ramenent le joueur seul, a pied. */
   function quitterLeBloc() {
     const j = B.joueur, bloc = B.bloc;
     if (!bloc) return null;
     Monde.restaurer(bloc.ville.carte);
     B.entites = bloc.ville.entites;
+    for (const e of Entites.joueurs()) if (B.entites.indexOf(e) < 0) B.entites.push(e);
     if (j && B.entites.indexOf(j) < 0) B.entites.push(j);
     B.particules.length = 0;
     B.bloc = null;
+    B.passagePolice = null;
     Entites.reindexerDecor();
     return { x: bloc.ville.x, y: bloc.ville.y };
   }

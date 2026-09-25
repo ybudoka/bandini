@@ -123,3 +123,28 @@ parti. Captures : `captures/blocs/` (le passage, la clairière, la clairière de
   clavier : l'aller et le retour, longer le trottoir ne passe pas, au volant non, la carte pas encore
   arrivée puis le réseau revenu, personne ne naît, jour, nuit et police sans tomber, arrêté → le poste,
   tombé → l'hôpital, la sauvegarde, les arbres, les plaques). **Sept mutations, toutes rouges.**
+
+**Vague 2 livrée (25 sept. 2026) : au volant, à deux, et la police qui reprend au bord.** Capture :
+`captures/blocs/4-en-char-dans-la-clairiere.png`.
+
+- **Le char passe**, avec **tout ce qui est dedans** (`dansVehicule` : le deuxième joueur passager, un
+  client, un protégé de mission) ; il arrive tourné vers l'intérieur du bloc, et revient tourné vers la
+  ville, au même endroit le long du bord. **Le deuxième joueur à pied passe aussi**, comme par une porte.
+- **Un char touche le bord à sa demi-longueur** (mesuré au banc : l'auto s'arrête à 14 px du bord nord, le
+  camion à 20, la moto à 10, le vélo à 8 — la moitié de leur `longueur`) ; le seuil suit la fiche de chaque
+  char (`Blocs.marge`). ⚠️ **Et il doit faire FACE au bord** (à 45° près) : une auto qui longe le trottoir
+  de ceinture roule à 8 px du bord, sous son seuil — sans cette condition, on passait en roulant.
+- **L'élan continue, à moitié**, et suit le nouveau cap : l'arrivée de la clairière est à dix tuiles du
+  lac, et à pleine vitesse le passage jetait le char à l'eau.
+- **La police reprend au bord** : les étoiles passent ; les agents d'avant restent de leur côté ; ceux qui te
+  suivent **passent le même bord**, trois secondes après toi (`Blocs.DELAI_POURSUIVANTS`), un par étoile et
+  trois au plus, en poursuite. Dans un bloc sans passants, aucun agent ne naît au hasard d'un bosquet
+  (`Police.peuplerAgents` s'y tait, recherché ou non).
+- ⚠️ **Un bogue que le juge des arbres a attrapé** : la liste des voyageurs était devenue `B.entites`, et
+  `creerDecor` y ajoutait les arbres du bloc — les deux cents arbres de la clairière se faisaient « poser »
+  en file, tous les 14 px, comme un deuxième joueur. La carte a maintenant sa propre copie.
+- **Juges** (`tests/test_blocs_js.py`, 18 en tout) : l'aller et le retour **en auto, en camion, en moto et à
+  vélo** (le char revient posé en entier dans la carte, tourné vers la ville), un char qui longe le bord ne
+  passe pas, ce qui est dans le char passe avec lui, le deuxième joueur passe, la poursuite reprend au bord.
+  **Six mutations, toutes rouges** (dont une qui ne rougissait pas au premier essai : le recul du char, que
+  le juge regardait 120 images trop tard — il le regarde maintenant à la première image en ville).

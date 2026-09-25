@@ -7,9 +7,10 @@
    retour la ville telle qu'on l'a laissee — mais DEHORS : on POUSSE contre un bord de la
    carte, la ou le bloc a son passage.
 
-   ⚠️ Vague 1 (docs/jalons/des-blocs-de-carte-en-extensions.md) : a pied seulement. Le char,
-   le deuxieme joueur et la police qui reprend au bord viennent a la vague 2 ; le trafic,
-   les passants et la nuit du bloc, a la vague 3.
+   ⚠️ Vague 1 (docs/jalons/des-blocs-de-carte-en-extensions.md) : a pied. Vague 2 : au
+   volant (le char et TOUT ce qui est dedans passent), a deux (le deuxieme joueur suit), et
+   la police qui reprend AU BORD — ses poursuivants passent par le meme passage que toi,
+   quelques secondes apres. Le trafic, les passants et la nuit du bloc : vague 3.
 
    ⚠️ UNE CARTE NE PEUT PAS ARRIVER EN RETARD — comme le texte d'une mission. On la demande
    d'avance, des qu'on approche du passage (`PRES`), et le passage ne s'ouvre qu'une fois
@@ -25,7 +26,11 @@ const Blocs = (function () {
   //: trottoir de ceinture (le joueur au centre de sa tuile, a 8 px) ne declenche rien.
   const BORD_PX = 6;
   //: Ou l'on reapparait en revenant : juste en deca du seuil, sinon on repartirait.
-  const RECUL_PX = BORD_PX + 8;
+  const RECUL_PX = 8;
+  //: Recherche, les poursuivants passent le passage tant d'images apres toi (trois
+  //: secondes) — et jamais plus de trois.
+  const DELAI_POURSUIVANTS = 180;
+  const POURSUIVANTS_MAX = 3;
   //: Apres une demande ratee, on attend tant d'images avant de redemander. ⚠️ Sans ce
   //: delai, un reseau mort etait redemande A CHAQUE IMAGE — soixante requetes par seconde
   //: tant qu'on restait pres du passage.
@@ -65,27 +70,59 @@ const Blocs = (function () {
     return { x0: w - 1, x1: w, y0: o.de, y1: o.de + o.l };
   }
 
-  /** `j` pousse-t-il contre ce bord, dans l'ouverture ? */
-  function contreLeBord(o, carte, j) {
-    const w = carte.w, h = carte.h, b = bornes(o, w, h);
-    const tx = Math.floor(j.x / TT), ty = Math.floor(j.y / TT);
+  /** A quelle distance du bord `e` le touche : un pieton a son rayon, un char a sa
+      DEMI-LONGUEUR (mesure au banc : l'auto s'arrete a 14 px du bord nord, le camion a 20,
+      la moto a 10, le velo a 8 — la moitie de leur `longueur`). ⚠️ Un char qui longe le
+      bord n'y presente que sa demi-largeur : il ne passe pas, c'est voulu. */
+  function marge(e) {
+    if (e && e.type === 'vehicule') {
+      const d = Vehicules.vehiculeDef(e.slug);
+      return (d && d.longueur ? d.longueur / 2 : 14) + 2;
+    }
+    return BORD_PX;
+  }
+
+  /** Qui passe le bord pour le joueur : son char s'il conduit, lui sinon. */
+  function porteur(j) { return (j && j.dansVehicule) || j; }
+
+  /** `e` (un pieton, ou le char qu'on conduit) pousse-t-il contre ce bord, dans l'ouverture ?
+
+      ⚠️ Un CHAR doit aussi lui FAIRE FACE (a 45 degres pres) : sur le trottoir de ceinture,
+      une auto qui longe le bord roule a 8 px de lui, sous son seuil de demi-longueur — sans
+      cette condition, on passait en roulant le long du trottoir. */
+  function contreLeBord(o, carte, e) {
+    const w = carte.w, h = carte.h, b = bornes(o, w, h), m = marge(e);
+    if (e.type === 'vehicule') {
+      const dehors = capVersLInterieur(o) + Math.PI;
+      const ecart = Math.atan2(Math.sin(e.angle - dehors), Math.cos(e.angle - dehors));
+      if (Math.abs(ecart) > Math.PI / 4) return false;
+    }
+    const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
     if (o.bord === 'nord' || o.bord === 'sud') {
       if (tx < b.x0 || tx >= b.x1) return false;
-      return o.bord === 'nord' ? j.y <= BORD_PX : j.y >= h * TT - BORD_PX;
+      return o.bord === 'nord' ? e.y <= m : e.y >= h * TT - m;
     }
     if (ty < b.y0 || ty >= b.y1) return false;
-    return o.bord === 'ouest' ? j.x <= BORD_PX : j.x >= w * TT - BORD_PX;
+    return o.bord === 'ouest' ? e.x <= m : e.x >= w * TT - m;
   }
 
   /** Le point ou l'on revient par cette ouverture : au meme endroit le long du bord (on
-      ressort la ou l'on est entre), en deca du seuil. */
-  function recul(o, carte, j) {
+      ressort la ou l'on est entre, `le_long`), en deca du seuil de `e` — un char recule
+      de sa demi-longueur, sinon il repartirait aussitot. */
+  function recul(o, carte, e, leLong) {
     const w = carte.w * TT, h = carte.h * TT, b = bornes(o, carte.w, carte.h);
-    const le_long = function (v, a0, a1) { return Math.max(a0 * TT + 4, Math.min(a1 * TT - 4, v)); };
-    if (o.bord === 'nord') return { x: le_long(j.x, b.x0, b.x1), y: RECUL_PX };
-    if (o.bord === 'sud') return { x: le_long(j.x, b.x0, b.x1), y: h - RECUL_PX };
-    if (o.bord === 'ouest') return { x: RECUL_PX, y: le_long(j.y, b.y0, b.y1) };
-    return { x: w - RECUL_PX, y: le_long(j.y, b.y0, b.y1) };
+    const d = marge(e) + RECUL_PX;
+    const borne = function (v, a0, a1) { return Math.max(a0 * TT + 4, Math.min(a1 * TT - 4, v)); };
+    const long = leLong === undefined ? (o.bord === 'nord' || o.bord === 'sud' ? e.x : e.y) : leLong;
+    if (o.bord === 'nord') return { x: borne(long, b.x0, b.x1), y: d };
+    if (o.bord === 'sud') return { x: borne(long, b.x0, b.x1), y: h - d };
+    if (o.bord === 'ouest') return { x: d, y: borne(long, b.y0, b.y1) };
+    return { x: w - d, y: borne(long, b.y0, b.y1) };
+  }
+
+  /** Le cap qui tourne le dos a ce bord : vers l'interieur de la carte. */
+  function capVersLInterieur(o) {
+    return { nord: Math.PI / 2, sud: -Math.PI / 2, ouest: 0, est: Math.PI }[o.bord];
   }
 
   /** Le centre d'une ouverture, en pixels — ce que le GPS vise pour ressortir. */
@@ -104,21 +141,45 @@ const Blocs = (function () {
     if (B.etat !== 'jeu' || B.transition || B.interieur || B.cinema || B.scene) return;
     const j = B.joueur;
     if (!j || j.vie <= 0) return;
-    // ⚠️ Vague 1 : a pied. Au volant, le bord reste un bord (vague 2).
-    if (j.dansVehicule) return;
+    majPoursuivants();
+    const e = porteur(j);
     if (B.bloc) {
-      const def = B.bloc.def;
-      if (contreLeBord(def.bloc.retour, Monde.carte, j)) Jeu.sortirDuBloc();
+      if (contreLeBord(B.bloc.def.bloc.retour, Monde.carte, e)) Jeu.sortirDuBloc();
       return;
     }
     for (const b of liste()) {
       if (!pres(b.passage, Monde.carte, j)) continue;
       charger(b.slug);
-      if (cartes[b.slug] && contreLeBord(b.passage, Monde.carte, j)) {
+      if (cartes[b.slug] && contreLeBord(b.passage, Monde.carte, e)) {
         Jeu.entrerDansLeBloc(b, cartes[b.slug], recul(b.passage, Monde.carte, j));
         return;
       }
     }
+  }
+
+  /** Recherche, on passe un bord : les agents d'avant restent de leur cote, et ceux qui te
+      suivent passent PAR LE MEME BORD, `DELAI_POURSUIVANTS` images apres toi. Pose au noir
+      par `Jeu` (`B.passagePolice`) ; ils naissent ici, dans la carte ou l'on est arrive. */
+  function majPoursuivants() {
+    const pp = B.passagePolice;
+    if (!pp || B.t < pp.t) return;
+    B.passagePolice = null;
+    if (B.recherche.etoiles <= 0) return;
+    const j = B.joueur;
+    for (let i = 0; i < pp.n; i++) {
+      const a = Police.creerAgent(pp.x + (i - (pp.n - 1) / 2) * 14, pp.y, 'poursuit');
+      a.but = { x: j.x, y: j.y };
+    }
+    B.recherche.dernierVu = { x: pp.x, y: pp.y, t: B.t };
+  }
+
+  /** La poursuite qui reprendra au bord `o` de la carte courante (au noir, en passant). */
+  function poursuiteAuBord(o, carte) {
+    const r = B.recherche;
+    if (r.etoiles <= 0) { B.passagePolice = null; return; }
+    const c = recul(o, carte, { type: 'pieton', x: centre(o, carte).x, y: centre(o, carte).y });
+    B.passagePolice = { t: B.t + DELAI_POURSUIVANTS, n: Math.min(POURSUIVANTS_MAX, r.etoiles), x: c.x, y: c.y };
+    r.dernierVu = { x: c.x, y: c.y, t: B.t };
   }
 
   /** Les ouvertures a signaler dans la carte courante : en ville, les passages ; dans un
@@ -188,6 +249,7 @@ const Blocs = (function () {
     return { x: c.x, y: c.y, nom: 'Vers la ville', couleur: '#7fc4ff' };
   }
 
-  return { init, maj, charger, liste, contreLeBord, recul, cibleDeSortie, dessiner, texteDInfo,
+  return { init, maj, charger, liste, contreLeBord, recul, marge, porteur, capVersLInterieur, poursuiteAuBord,
+           cibleDeSortie, dessiner, texteDInfo, DELAI_POURSUIVANTS,
            get cartes() { return cartes; }, BORD_PX, PRES, RELANCE };
 })();
