@@ -19,55 +19,57 @@ bâtiments, ses zones, ses barrières (`carte.BARRIERES`), ses missions à venir
 recette est dans la mémoire du projet (« agrandir la carte sous la trame ») : ce qu'on a appris en payant
 26 juges rouges la fois où une rangée de la trame a bougé.
 
-**Ce qui manque, c'est d'en faire un système** — le même passage que les missions ont fait le 20 sept.
-2026 (« une mission, un fichier, comme des blocs Lego ») :
+✅ **Tranché par Martin, le 25 sept. 2026 : « la carte fait un black-out et charge le nouveau morceau, et
+ça continue. »** Un bloc n'est donc **pas** greffé à la ville comme l'île et l'aéroport : c'est **une carte à
+part**, et on y passe par un **fondu au noir** — exactement comme on entre dans une pièce, mais dehors, et au
+volant.
 
-- **Un bloc = un fichier** dans `app/blocs/` (l'île et l'aéroport y déménagent), qui déclare `BLOC = {…}` :
-  son **plan** (les glyphes de la carte), son **ancre** (où il s'accroche : des rangées **sous** la carte,
-  une colonne à l'est, un îlot **dans** la baie, une clairière réservée dans les bois), ses **lieux** (ce que
-  `carte.SPECIAUX` et `Histoire.resoudre` connaîtront), ses **pièces** (`_piece`), ses **barrières**, ses
-  **zones**, et, facultatifs, ses **personnages** et ses **missions**.
-- **Une liste, dans l'ordre** : les blocs se posent dans l'ordre de la liste, après tout le reste — ajouter
-  un bloc à la fin ne déplace aucun bloc d'avant.
-- **Des points d'ancrage réservés** : la carte garde des endroits prévus pour des blocs (un bout de rue qui
-  finit en T vers le large, une clairière). Un bloc qui déborde de son ancre est refusé par un juge, pas
-  découvert en jouant.
-- **Le reste du jeu les voit** : le GPS, le carnet, la carte plein écran, les lignes d'autobus et le
-  traversier (s'ils doivent y aller), la sauvegarde (un lieu de bloc a un identifiant stable).
+**Le jeu sait déjà le faire à moitié.** Entrer dans une pièce (`Jeu.entrer` → `chargerPiece` →
+`Monde.entrer`) met la ville **de côté** (`B.exterieur` : la carte, ses entités, l'endroit d'où l'on vient),
+charge une petite carte **au noir**, pose les joueurs (le deuxième aussi, en coop), change la toune, rend
+l'hélico sourd ; `Monde.restaurer` rend la ville telle qu'on l'a laissée. Ce qui manque au bloc :
 
-⚠️ **À trancher par Martin — « extension », ça veut dire quoi ?**
+- **Un bloc = un fichier** dans `app/blocs/`, qui déclare `BLOC = {…}` : son **plan** (les glyphes de la
+  carte, avec ses voies, ses lampes, ses zones — une vraie carte de dehors, pas une pièce), ses **lieux**,
+  ses **pièces**, ses **barrières**, et, facultatifs, ses **personnages** et ses **missions**. Il est bâti
+  à part : **la ville ne bouge pas d'une tuile**, jamais, quel que soit le nombre de blocs — le problème des
+  26 juges disparaît.
+- **Des passages**, des deux côtés : dans la ville, un bout de chemin qui sort de la carte, le quai du
+  traversier, une rampe de pont ; dans le bloc, l'endroit où l'on arrive et celui par où l'on repart. On
+  les franchit **à pied ou en char** — c'est la grande différence avec une porte.
+- **Le fondu** : au noir, la ville se met de côté, le bloc se charge (`/api/carte/bloc/<slug>`, avec son
+  ETag, sur le modèle de `/api/mission/<slug>`), les joueurs et **le char où l'on est** (avec ses passagers)
+  sont posés au passage d'arrivée, et ça continue. Au retour, la ville revient telle qu'on l'a laissée.
+- **Le poids** : chaque bloc voyage **à part**, à la demande, et se garde hors ligne **à l'usage** (comme
+  les missions). La carte de la ville n'en grossit pas — c'est même une réponse à la dette « les districts
+  chargés autour du joueur ».
 
-1. **Des blocs toujours là** (le plus simple) : on les ajoute au dépôt, ils font partie de la ville pour
-   tout le monde. « Extension » veut dire « facile à ajouter », pas « optionnel ».
-2. **Des blocs qu'on allume** : un écran EXTENSIONS dans OPTIONS, chaque partie garde **sa** liste de blocs.
-   ⚠️ C'est beaucoup plus cher : la carte d'une partie dépend alors de ses blocs (un paquet `/api/carte` par
-   combinaison, ou une carte assemblée dans le navigateur), une vieille sauvegarde doit se charger sans le
-   bloc qu'elle n'avait pas, et une mission ne peut pas dépendre d'un bloc éteint.
-3. **Des blocs qui se débloquent en jouant** (entre les deux) : toujours dans la carte, mais fermés
-   (barrières, comme l'aéroport) jusqu'à une mission ou un achat — c'est ce que le jeu fait déjà.
+⚠️ **À trancher par Martin** (ce que le fondu emporte avec lui) :
 
-La recommandation : **1, puis 3** — c'est ce que l'île et l'aéroport sont déjà, et ça ne coûte rien à la
-sauvegarde. Le 2 n'a de sens que si des blocs viennent un jour de quelqu'un d'autre que ce dépôt.
+- **La police** : les étoiles passent-elles le fondu ? Proposition : oui, mais la poursuite **reprend au
+  bord** du bloc (les agents d'avant ne suivent pas) — sinon un passage devient un bouton « semer ».
+- **La mission** : une mission dans un bloc a son GPS qui pointe **le passage** tant qu'on est en ville.
+- **Le temps** : l'heure continue de tourner dans le bloc (la nuit tombe pareil).
+- **L'île et l'aéroport** restent où ils sont : ils marchent, et les déménager ne rapporterait rien. Les
+  blocs, c'est pour ce qui vient.
 
 ⚠️ **Ce qui guette** :
 
-- **Le paquet** : la carte voyage à part (`/api/carte`, 50 000 octets gzip de plafond, et elle en est
-  près). Chaque bloc l'alourdit : c'est le déclencheur de la dette « les districts chargés autour du
-  joueur » — un bloc pourrait être le premier morceau chargé à la demande.
-- **Les juges qui supposent une seule terre ou une carte = la trame** (la liste est dans la recette : la
-  taille de la carte, les districts, les terres par île, la nage, les quais) — les écrire pour N blocs, pas
-  pour deux.
+- **Une carte de dehors complète** a ses voies, son trafic, ses piétons, sa police, ses lampes, sa nuit :
+  tout ce qui lit « la carte » doit lire **la carte courante**, pas « la ville » (les pièces l'ont déjà
+  obligé pour une partie du code, pas pour le trafic ni la police).
+- **La sauvegarde** : dormir dans un bloc (la deuxième planque) doit se recharger **dans** le bloc.
 - **Les règles de ville valent dans un bloc** (rien devant une porte, une lampe par devanture, pas de sable
   hors plage déclarée) : le juge les passe sur chaque bloc comme sur la ville.
 
-**Ce qu'il porte** : la deuxième planque, la cabane à sucre, le centre d'achat hanté, le ciné-parc — quatre
-lignes du plan qui ont chacune « poser en dernier, sans dé » dans leur fiche. Fait d'abord, il les rend
-chacune plus simples : un fichier de bloc au lieu d'une greffe à la main.
+**Ce qu'il porte** : la deuxième planque (« plus loin » : un chalet au bout d'un chemin, derrière un
+fondu), la cabane à sucre, le ciné-parc, le centre d'achat hanté — quatre lignes du plan qui ont chacune
+« poser en dernier, sans dé » dans leur fiche. En bloc, elles ne touchent plus du tout à la ville.
 
-**Juges** : la ville avec et sans chaque bloc est identique hors du bloc (à la tuile et au décor près) ;
-chaque bloc tient dans son ancre ; chaque lieu d'un bloc est atteignable (ou fermé par une barrière
-déclarée) ; l'île et l'aéroport, déménagés en blocs, donnent exactement la même carte qu'avant (l'empreinte
-de `/api/carte` ne bouge pas).
+**Juges** : ajouter un bloc ne change pas une octet de `/api/carte` ; on passe un passage à pied et en char,
+et on revient à l'endroit exact d'où l'on est parti ; le char et ses passagers passent avec nous (le
+deuxième joueur aussi) ; `/api/carte/bloc/<slug>` revalide en 304 et rend 404 pour un bloc inconnu ; un
+bloc hors ligne déjà visité se recharge ; une partie sauvegardée dans un bloc s'y réveille.
 
 ## Notes
 

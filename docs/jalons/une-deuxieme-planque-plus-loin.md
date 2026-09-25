@@ -20,6 +20,11 @@ trancher par Martin :
 - **un bungalow des Érables** (les garages où l'on entre y sont déjà) ;
 - ⚠️ **pas sur l'Île-aux-Corneilles** : elle ne se rejoint pas à pied, et une planque doit l'être.
 
+⚠️ **Et depuis le 25 sept. 2026, une quatrième possibilité** : un chalet **dans un bloc de carte**, au bout
+d'un chemin, derrière un fondu au noir ([des blocs de carte en extensions](des-blocs-de-carte-en-extensions.md#fiche),
+tranché par Martin). « Plus loin » pour vrai, et la ville n'en bouge pas d'une tuile — mais il faut les
+blocs d'abord.
+
 **Comment on l'a** — à trancher aussi : l'**acheter** (comme un commerce, `economie.PROPRIETES`), ou la
 **gagner** en mission (un personnage te la laisse, le fil de M16 s'y prête).
 
