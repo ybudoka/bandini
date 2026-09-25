@@ -797,3 +797,16 @@ catalogue.
     possible et chez qui** (c'est ce qui sert à choisir, et il le garde en entier), la réponse
     porte ses objectifs avec un `type` chacun, et le juge du plafond raconte sa propre
     guérison avec la mesure.
+- **25 sept. 2026 : deux gardes de plus sur les objectifs absents.** Le carnet
+  (`Hud.menuCarnetEnCours`) indexait `m.objectifs` : ouvert pendant qu'une partie reprise
+  attend sa mission, il tombait — et le joueur l'ouvre quand il veut, pas quand `maj` le
+  permet. `avancer`, `poser`, `majObjectif` et le piratage ont la même garde, pour un appel
+  direct (la triche, un événement). Un juge le tient sur un réseau qui ne répond jamais (la
+  mission reste à son étape, rien n'est payé, le carnet s'ouvre), et la mutation (la garde du
+  carnet retirée) le rougit.
+  - ⚠️ **Deux sessions ont sorti les objectifs du paquet le même jour**, chacune sans voir
+    l'autre : celle du 24 au soir (`23f97f5`, arrivée par `origin` le 25) et une seconde le 25,
+    qui l'a découverte en voulant pousser. La seconde a retiré son commit (gardé sous
+    `refs/wip/objectifs-doublon`) et n'a reporté que ces gardes. Un `git fetch` suivi de
+    `git log dev..origin/dev` **avant** de marquer une ligne « en cours » l'aurait montré —
+    à condition que la première l'ait marquée elle aussi.

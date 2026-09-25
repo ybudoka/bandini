@@ -1186,6 +1186,10 @@ const Histoire = (function () {
       vers la rue doit y trouver le char ou les Cravates qu'elle montre. */
   function avancer(enSilence) {
     const m = courante(), p = B.partie.mission;
+    // ⚠️ SANS SES OBJECTIFS (encore en route, `charger`), rien n'avance : l'etape
+    // monterait sur un tableau absent. `maj` attend deja ; un appel direct (la
+    // triche, un evenement) ne doit pas plus faire tomber la mission.
+    if (!m.objectifs) return;
     p.etape++;
     const o = m.objectifs[p.etape];
     if (!o) { reussir(); return; }
@@ -1216,7 +1220,7 @@ const Histoire = (function () {
 
   function poser(enSilence) {
     const m = courante(), p = B.partie.mission, j = B.joueur;
-    const o = m.objectifs[p.etape];
+    const o = m.objectifs && m.objectifs[p.etape];
     if (!o) return;
     // ⚠️ Toujours dans la VILLE, même quand on est dans une pièce : une scène
     // qui coupe vers la rue doit y trouver ce qu'on pose (`dansLaVille`).
@@ -1369,7 +1373,7 @@ const Histoire = (function () {
   /** L'objectif `pirater` EN COURS, ou null. Un seul a la fois : `p.etape` le dit. */
   function objectifDePiratage() {
     const m = courante(), p = B.partie.mission;
-    if (!m || !p) return null;
+    if (!m || !p || !m.objectifs) return null;
     const o = m.objectifs[p.etape];
     return o && o.type === 'pirater' ? o : null;
   }
@@ -1666,7 +1670,7 @@ const Histoire = (function () {
   /** Le chef sort quand ses gars sont tombes : `tuer` avec `chef` se pose au moment venu. */
   function majObjectif() {
     const m = courante(), p = B.partie.mission, j = B.joueur;
-    const o = m.objectifs[p.etape];
+    const o = m.objectifs && m.objectifs[p.etape];
     if (!o) return;
     // ⚠️ LE CHAR DE LA MISSION A SAUTE : c'est rate, QUEL QUE SOIT l'objectif.
     // Seuls `monter` et `livrer` le regardaient : le taxi de Marco explosait

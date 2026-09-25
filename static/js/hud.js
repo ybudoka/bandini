@@ -1876,7 +1876,10 @@ const Hud = (function () {
       items.push(ligne('DONNÉE PAR', perso ? perso.nom.toUpperCase() : m.donneur.toUpperCase()));
       items.push(ligne('RÉCOMPENSE', m.recompense + ' $'));
       items.push(ligne(''));
-      m.objectifs.forEach(function (o, i) {
+      // ⚠️ Les objectifs arrivent avec le reste de la mission (`Histoire.charger`) : une
+      // partie reprise en pleine mission les attend encore un instant, et le carnet
+      // s'ouvre quand le joueur le veut.
+      (m.objectifs || []).forEach(function (o, i) {
         const fait = i < p.mission.etape;
         // ⚠️ « Barre » en police 5x7 : on ne peut pas rayer un texte, alors on
         // le marque et on l'eteint. Une coche, un point, et la couleur fait

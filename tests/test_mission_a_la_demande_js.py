@@ -197,3 +197,31 @@ def test_le_telephone_ne_sonne_pas_pour_une_mission_sans_texte(banc):
     assert r["sonnerie"] is False, "le téléphone sonne pour une mission qui n'a rien à dire"
     assert r["appelT"] is None, "le délai de l'appel part sans que le texte soit demandé"
     assert r["appels"] == 0, "l'appel est marqué comme fait alors qu'il n'a jamais été dit"
+
+
+def test_sans_ses_objectifs_une_mission_reprise_attend_sans_rien_casser(banc):
+    """⚠️ Une partie reprise en pleine mission, sur un réseau qui ne répond jamais, n'a
+    AUCUN objectif : le GPS, la ligne du HUD, `avancer` et le CARNET — que le joueur
+    ouvre quand il veut — doivent attendre. Le carnet indexait `m.objectifs` sans regarder."""
+    r = banc("""async function (L, o) {
+        L.Jeu.commencer();
+        L.Histoire.reinitialiser('m2');
+        L.B.partie.missionsFaites = { m1: true };
+        L.B.partie.mission = { slug: 'm2', etape: 0 };
+        L.B.mission = null;
+        const argent = L.B.partie.argent;
+        for (let i = 0; i < 120; i++) { o.frame(1); if (i % 30 === 0) await o.attendre(); }
+        L.Histoire.avancer();
+        const carnet = L.Hud.menuCarnetEnCours().items.map(function (x) { return x.libelle; });
+        const m = L.Histoire.courante();
+        return { objectifs: !!(m && m.objectifs), objectif: L.Histoire.objectif(), cible: L.Histoire.cible(),
+                 ligne: L.Histoire.ligneObjectif(), carnet: carnet.length,
+                 mission: L.B.partie.mission && L.B.partie.mission.slug,
+                 etape: L.B.partie.mission && L.B.partie.mission.etape,
+                 faite: !!L.B.partie.missionsFaites.m2, paye: L.B.partie.argent - argent };
+    }""", poser_les_missions=False, missions_panne=99)
+    assert r["objectifs"] is False, "le réseau a répondu : le juge ne mesure rien"
+    assert r["mission"] == "m2" and r["etape"] == 0, "la mission a bougé sans ses objectifs : %s" % r
+    assert r["faite"] is False and r["paye"] == 0, "la mission s'est réussie toute seule : %s" % r
+    assert r["objectif"] is None and r["cible"] is None and r["ligne"] is None, r
+    assert r["carnet"] > 0, "le carnet ne s'ouvre plus"
