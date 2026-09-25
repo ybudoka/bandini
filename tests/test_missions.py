@@ -66,7 +66,11 @@ def test_les_cinq_missions_se_suivent():
 
 def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
     lieux = {p["slug"] for p in carte.SPECIAUX.values()} | {"kiosque", "planque"}
-    zones = {"cravates", "port", "faubourg", "boulonneux"}
+    # Les zones qu'un `ou: zone:<x>` peut nommer : celle de chaque gang (`pietons.GANGS`, que
+    # `Histoire.resoudre` trouve dans `carte.zones`), plus le port et le Faubourg. ⚠️ Lue, pas
+    # recopiée : la liste à la main n'avait appris `boulonneux` qu'avec s01, et q01 (les Morues,
+    # 25 sept. 2026) l'a fait rougir pour une zone qui existait.
+    zones = {"port", "faubourg"} | {g["zone"] for g in pietons.GANGS}
     for m in missions.CATALOGUE:
         perso = missions.personnage(m["donneur"])
         assert perso and perso["ou"], f"{m['slug']} : le donneur doit se tenir quelque part"
