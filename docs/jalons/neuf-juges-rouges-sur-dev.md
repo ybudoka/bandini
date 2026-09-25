@@ -65,3 +65,8 @@ disant :
   et ne tenait que parce que Ti-Guy y était aussi et poussait le jongleur à côté. Il le pose maintenant sur
   la scène de la carte la plus proche, comme le jeu. Douze graines, base contre build : onze vertes des deux
   côtés (à la 99, un incident fait fuir le jongleur avant que le cercle paie).
+- **Deux de plus après l'atterrissage** — `test_abri_js::test_le_telephone_fige_la_ville` et
+  `test_au_volant_l_appel_ne_fige_rien` : « le téléphone n'a jamais sonné ». Rougis par 26bdadf (« un appel
+  à la fois », livré en parallèle) : l'appel tarde 45 s, le juge l'attendait 15. Le délai a son juge dans
+  `test_histoire_js` ; celui-ci mesure la ville PENDANT l'appel, alors il ramène l'échéance aux 10 s
+  d'avant dès qu'elle est posée.

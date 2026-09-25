@@ -131,7 +131,16 @@ def test_une_balle_mord_la_tole_pas_le_conducteur(banc):
 DECROCHER = """
     function decrocher(L, o) {
       L.B.partie.missionsFaites.m1 = 1;
-      for (let i = 0; i < 900; i++) { o.frame(1); if (L.B.cinema) return i; }
+      // ⚠️ L'appel tarde 45 s depuis « un appel a la fois » (26bdadf) : on ramene son
+      // echeance aux 10 s d'avant, des qu'elle est posee. Le delai a son juge
+      // (test_histoire_js) ; ici, on mesure ce que fait la ville PENDANT l'appel. (Force a
+      // l'image suivante, l'appel perdait une image sur trente — constate, pas trace.)
+      for (let i = 0; i < 900; i++) {
+        const p = L.B.partie;
+        if (p.appelT !== undefined && p.appelT !== null && p.appelT > L.B.t + 600) p.appelT = L.B.t + 600;
+        o.frame(1);
+        if (L.B.cinema) return i;
+      }
       return -1;
     }
     function photo(L) {
