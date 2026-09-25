@@ -98,6 +98,13 @@ pas quand l'ordre de travail change.
 | Le hockey de ruelle | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-hockey-de-ruelle.md#fiche) |
 | Les territoires des gangs bougent | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/les-territoires-des-gangs-bougent.md#fiche) |
 | Le marché aux puces du dimanche | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-marche-aux-puces-du-dimanche.md#fiche) |
+| Le 1er juillet, jour du déménagement | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-1er-juillet-jour-du-demenagement.md#fiche) |
+| La Saint-Jean sur la baie | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/la-saint-jean-sur-la-baie.md#fiche) |
+| La tempête de verglas | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/la-tempete-de-verglas.md#fiche) |
+| Braquer un commerce | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/braquer-un-commerce.md#fiche) |
+| Les nids-de-poule qui mordent | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/les-nids-de-poule-qui-mordent.md#fiche) |
+| Le derby de démolition à la foire | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-derby-de-demolition-a-la-foire.md#fiche) |
+| Le 6/49 du dépanneur | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-6-49-du-depanneur.md#fiche) |
 
 ## L'ordre
 
@@ -138,6 +145,13 @@ Ce que chaque ligne à faire attend (la table de tri du 13 sept. 2026, réduite 
 | **P4** | ajout | Le hockey de ruelle | 3 | de la physique neuve : la plus chère du lot |
 | **P4** | ajout | Les territoires des gangs bougent | 3 | `libere` et `calme` de M16 d'abord ; à trancher avec « La réputation et la lecture des passants » |
 | **P4** | ajout | Le marché aux puces du dimanche | 2 | après **les collections** (il vend leurs meubles et leurs cartes) |
+| **P4** | ajout | Le 1er juillet, jour du déménagement | 2 | gagne à suivre **les collections** (les meubles du trottoir vont à la planque) |
+| **P4** | ajout | La Saint-Jean sur la baie | 3 | les barrières ferment les rues du défilé ; ⚠️ la foule et le rendu sur le vrai téléphone |
+| **P4** | ajout | La tempête de verglas | 3 | reprend la neige de M12 et l'éclairage de nuit ; tout doit se rallumer après |
+| **P4** | ajout | Braquer un commerce | 2 | rien ne l'attend ; ⚠️ ne jamais rapporter plus qu'un boulot, chaleur comptée |
+| **P4** | ajout | Les nids-de-poule qui mordent | 1 | les nids sont déjà dessinés ; ⚠️ le trafic ne doit pas perdre ses virages |
+| **P4** | ajout | Le derby de démolition à la foire | 3 | une conduite neuve (des chars qui en visent d'autres) |
+| **P4** | ajout | Le 6/49 du dépanneur | 1 | le journal et sa voix existent ; ⚠️ un tirage calculé, jamais `B.rng()` |
 
 M8 porte tout le reste (les gangs, les fins, le traversier, la fourrière ont besoin de la
 ville complète) ; il est livré. Rien n'oblige à suivre la liste à la lettre : à l'intérieur
