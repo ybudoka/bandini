@@ -155,7 +155,7 @@ def test_les_touch_tombent_comme_une_manette_xbox(banc):
     r = banc(quest("""
         const q = fauxQuest(o);
         L.B.partie.ouvertureVue = true;
-        const actions = ['action', 'esquive', 'attaque', 'arme', 'carte', 'pause', 'haut', 'bas', 'gauche', 'droite', 'annuler'];
+        const actions = ['action', 'esquive', 'attaque', 'saisir', 'arme', 'carte', 'pause', 'haut', 'bas', 'gauche', 'droite', 'annuler'];
         return q.entrer().then(function () {
             const vu = {};
             function lire(nom) {
@@ -181,7 +181,9 @@ def test_les_touch_tombent_comme_une_manette_xbox(banc):
     assert r["left4"]["actions"] == ["attaque"], "X : FRAPPER"
     assert r["left5"]["actions"] == ["arme"], "Y : ARME"
     assert r["left1"]["actions"] == ["arme"], "la poignee gauche est l'epaule gauche : ARME"
-    assert r["right1"]["actions"] == ["attaque"], "la poignee droite est l'epaule droite : FRAPPER"
+    # La poignee droite est l'epaule droite : SAISIR depuis les projections (25 sept.
+    # 2026) — et c'est le geste de la main qui se referme.
+    assert r["right1"]["actions"] == ["saisir"], "la poignee droite est l'epaule droite : SAISIR"
     assert r["left3"]["actions"] == ["pause"], "le clic du stick gauche : PAUSE"
     assert r["right3"]["actions"] == ["carte"], "le clic du stick droit : CARTE"
     assert r["right0"] == {"actions": [], "gaz": 1, "frein": 0}, "la gachette droite est le GAZ"

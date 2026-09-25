@@ -333,7 +333,7 @@ body.tactile .aide { display: none; }
   position: absolute;
   right: max(10px, env(safe-area-inset-right));
   bottom: max(16px, env(safe-area-inset-bottom));
-  width: 190px; height: 170px;
+  width: 190px; height: 210px;
 }
 #boutons b, #haut b {
   position: absolute;
@@ -357,6 +357,9 @@ body.tactile .aide { display: none; }
 #boutons b[data-a="action"].on { background: rgba(60, 140, 200, .55); }
 #boutons b[data-a="esquive"] { right: 96px; bottom: 0; width: 64px; height: 64px; }
 #boutons b[data-a="arme"] { right: 14px; bottom: 96px; width: 64px; height: 64px; }
+/* SAISIR (les projections) : au-dessus d'ACTION, 8 px d'air — la meme regle que
+   COURS sous ACTION ; et 12 px a gauche d'ARME. */
+#boutons b[data-a="saisir"] { right: 90px; bottom: 146px; width: 56px; height: 56px; font-size: 10px; }
 
 #haut {
   position: absolute;

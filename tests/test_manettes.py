@@ -100,7 +100,8 @@ def test_la_disposition_directinput_dit_ce_que_martin_a_mesure():
     assert profil["frein"] == {"type": "bouton", "i": 8}
     assert profil["gaz"] == {"type": "bouton", "i": 9}
     assert profil["boutons"]["carte"] == [10] and profil["boutons"]["pause"] == [11]
-    assert profil["boutons"]["attaque"][1] == 7 and profil["boutons"]["arme"][1] == 6
+    # L'epaule droite (7) etait le deuxieme FRAPPE ; depuis les projections, c'est SAISIR.
+    assert profil["boutons"]["saisir"] == [7] and profil["boutons"]["arme"][1] == 6
     assert profil["croix"], "et sa croix est un axe"
 
 

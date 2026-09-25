@@ -123,7 +123,8 @@ def test_la_manette_de_martin_allume_ce_qu_on_touche_et_seul_action_ferme(banc):
                  appareil: L.Entree.appareil };
     }""")
     vu = r["vu"]
-    attendu = {"1": "esquive", "3": "attaque", "4": "arme", "6": "arme", "7": "attaque",
+    # L'epaule droite (7) : SAISIR depuis les projections (25 sept. 2026), plus FRAPPE.
+    attendu = {"1": "esquive", "3": "attaque", "4": "arme", "6": "arme", "7": "saisir",
                "10": "carte", "11": "pause"}
     for bouton, action in attendu.items():
         assert vu[bouton]["allumees"] == [action], (bouton, vu[bouton])

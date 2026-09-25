@@ -772,7 +772,7 @@ const Hud = (function () {
     { pedale: 'frein', nom: 'gachette_g', x: 10, y: 0, l: 14, h: 4 },
     { pedale: 'gaz', nom: 'gachette_d', x: 54, y: 0, l: 14, h: 4 },
     { a: 'arme', rang: 1, nom: 'epaule_g', x: 8, y: 5, l: 18, h: 5 },
-    { a: 'attaque', rang: 1, nom: 'epaule_d', x: 52, y: 5, l: 18, h: 5 },
+    { a: 'saisir', rang: 0, nom: 'epaule_d', x: 52, y: 5, l: 18, h: 5 },
     { a: 'haut', nom: 'croix', x: 15, y: 14, l: 4, h: 4 },
     { a: 'gauche', nom: 'croix', x: 11, y: 18, l: 4, h: 4 },
     { a: 'droite', nom: 'croix', x: 19, y: 18, l: 4, h: 4 },
@@ -822,6 +822,7 @@ const Hud = (function () {
   const LIGNES_MANETTE = [
     ['action', 'ACTION / ENTRER'],
     ['attaque', 'FRAPPER / KLAXON'],
+    ['saisir', 'SAISIR / PROJETER'],
     ['esquive', 'COURIR / FREIN À MAIN'],
     ['arme', 'ARME / RADIO'],
     ['annuler', 'RETOUR'],
@@ -1421,7 +1422,7 @@ const Hud = (function () {
   //: l'aide dit comment jouer, pas comment regler la fenetre.
   const PLAN_TACTILE = { l: 184, h: 104,
     croix: { x: 24, y: 80, r: 15 },
-    arme: { x: 164, y: 52, r: 7 }, action: { x: 136, y: 64, r: 8 },
+    arme: { x: 164, y: 52, r: 7 }, action: { x: 136, y: 64, r: 8 }, saisir: { x: 136, y: 44, r: 6 },
     attaque: { x: 164, y: 80, r: 9 }, esquive: { x: 134, y: 94, r: 7 },
     pause: { x: 170, y: 10, r: 5 } };
 
@@ -1454,7 +1455,7 @@ const Hud = (function () {
     ctx.fillStyle = '#8a8698'; ctx.fillRect(ox - 2, oy - 2, P.l + 4, P.h + 4);
     ctx.fillStyle = '#15141c'; ctx.fillRect(ox, oy, P.l, P.h);
     B.stats.rects += 2;
-    for (const nom of ['croix', 'attaque', 'action', 'esquive', 'arme']) {
+    for (const nom of ['croix', 'attaque', 'action', 'esquive', 'arme', 'saisir']) {
       const c = P[nom];
       const tenu = nom === 'croix' ? poucePose() : Entree.basTactile(nom);
       disque(ctx, ox + c.x, oy + c.y, c.r, tenu ? '#e8b33c' : '#3a3450');

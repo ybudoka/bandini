@@ -15,7 +15,7 @@ def test_la_disposition_par_defaut_est_celle_d_une_manette_reconnue(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const vu = {};
-        const actions = ['action', 'esquive', 'attaque', 'arme', 'carte', 'pause', 'haut', 'bas', 'gauche', 'droite', 'annuler'];
+        const actions = ['action', 'esquive', 'attaque', 'saisir', 'arme', 'carte', 'pause', 'haut', 'bas', 'gauche', 'droite', 'annuler'];
         for (let b = 0; b <= 15; b++) {
             const boutons = []; for (let k = 0; k <= 15; k++) boutons.push(k === b ? 1 : 0);
             o.pad([0, 0], boutons); o.frame(2);
@@ -26,7 +26,8 @@ def test_la_disposition_par_defaut_est_celle_d_une_manette_reconnue(banc):
     }""")
     assert r["0"] == ["action"]
     assert set(r["1"]) == {"esquive", "annuler"}, "le bouton de droite doit aussi servir de RETOUR"
-    assert r["2"] == ["attaque"] and r["5"] == ["attaque"]
+    # L'epaule droite (5) etait le deuxieme FRAPPE ; depuis les projections (25 sept. 2026), SAISIR.
+    assert r["2"] == ["attaque"] and r["5"] == ["saisir"]
     assert r["3"] == ["arme"] and r["4"] == ["arme"]
     assert r["8"] == ["carte"] and r["9"] == ["pause"]
     assert (r["12"], r["13"], r["14"], r["15"]) == (["haut"], ["bas"], ["gauche"], ["droite"])
@@ -199,7 +200,7 @@ def test_la_disposition_a_croix_sur_un_axe_marche_sans_rien_apprendre(banc):
     assert r["lu"]["repos"] == []
 
 
-def test_tout_reapprendre_enchaine_les_onze_gestes(banc):
+def test_tout_reapprendre_enchaine_les_douze_gestes(banc):
     """⚠️ Le vrai geste quand rien ne repond : TOUT REAPPRENDRE, et le jeu
     demande un bouton apres l'autre. La croix compte pour quatre."""
     r = banc("""function (L, o) {
@@ -222,7 +223,7 @@ def test_tout_reapprendre_enchaine_les_onze_gestes(banc):
                  haut: profil.boutons.haut, droite: profil.boutons.droite,
                  fini: L.Entree.apprendEnCours(), garde: !!L.B.options.manette };
     }""")
-    assert r["demandes"][:5] == ["action", "attaque", "esquive", "arme", "annuler"]
+    assert r["demandes"][:6] == ["action", "attaque", "saisir", "esquive", "arme", "annuler"]
     assert "verrouiller" not in r["demandes"], "VISER est la gachette du gaz : rien a reapprendre"
     assert "haut" in r["demandes"] and "bas" in r["demandes"], "la croix s'apprend en quatre gestes"
     assert r["action"] == [15] and r["attaque"] == [14]

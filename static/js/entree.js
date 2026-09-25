@@ -27,6 +27,10 @@ const Entree = (function () {
     // (voir le commentaire au-dessus de `secrets`, plus bas dans ce fichier),
     // sans quoi les taper declenche AUSSI cette action-ci.
     verrouiller: ['KeyH'],
+    // SAISIR (les projections, docs/jalons/les-techniques-d-arts-martiaux.md) :
+    // U, a cote de J (FRAPPE) et K (ESQUIVE). ⚠️ Ni G ni R, I, O, L : c'est la
+    // suite secrete RIGOLO, voir juste au-dessus.
+    saisir: ['KeyU'],
   };
   //: La disposition d'une manette RECONNUE par le navigateur (`mapping:
   //: "standard"`, W3C) : 0 le bouton du bas, 1 celui de droite, 2 celui de
@@ -44,7 +48,7 @@ const Entree = (function () {
   //: Martin, 22 sept. 2026 : sur sa 8BitDo en Bluetooth, VISER etait le bouton
   //: 2 — un numero que DirectInput saute, que rien sur la manette ne porte.
   const MANETTE_DEFAUT = {
-    action: [0], esquive: [1], annuler: [1], attaque: [2, 5], arme: [3, 4],
+    action: [0], esquive: [1], annuler: [1], attaque: [2], saisir: [5], arme: [3, 4],
     carte: [8], pause: [9], muet: [],
     haut: [12], bas: [13], gauche: [14], droite: [15],
   };
@@ -116,7 +120,7 @@ const Entree = (function () {
   /** L'epaule `cote` ('g' ou 'd') tient-elle, a en croire `tient(indice)` ?
       Marque l'appui NEUF dans `neuve` (vide par `videPresse`, comme tout appui neuf). */
   function lireEpaules(boutons, tenue, neuve, tient, muette) {
-    const indices = { g: (boutons.arme || [])[1], d: (boutons.attaque || [])[1] };
+    const indices = { g: (boutons.arme || [])[1], d: (boutons.saisir || [])[0] };
     for (const c of ['g', 'd']) {
       const t = indices[c] !== undefined && tient(indices[c]);
       if (t && !tenue[c] && !muette) neuve[c] = true;
@@ -376,6 +380,14 @@ const Entree = (function () {
     if (p && p.boutons) {
       for (const a in profil.boutons) {
         if (Array.isArray(p.boutons[a])) profil.boutons[a] = p.boutons[a].slice();
+      }
+      // ⚠️ UNE DISPOSITION APPRISE AVANT SAISIR (25 sept. 2026) : l'epaule de
+      // droite y est le DEUXIEME bouton de FRAPPE, et `saisir` n'y est pas — il
+      // prendrait le defaut (5) et, sur une manette ou 5 est deja FRAPPE, le meme
+      // bouton frapperait ET saisirait. L'epaule passe donc de FRAPPE a SAISIR.
+      if (!Array.isArray(p.boutons.saisir) && Array.isArray(p.boutons.attaque) && p.boutons.attaque.length > 1) {
+        profil.boutons.saisir = [p.boutons.attaque[1]];
+        profil.boutons.attaque = [p.boutons.attaque[0]];
       }
     }
     if (p && Array.isArray(p.axes) && p.axes.length === 2) profil.axes = p.axes.slice();
@@ -884,40 +896,40 @@ const Entree = (function () {
     lireSuitesActions();
   }
 
-  /** Ce qu'on lit sur les quatre boutons tactiles dans ce contexte-la. L'ecran
+  /** Ce qu'on lit sur les cinq boutons tactiles dans ce contexte-la. L'ecran
       COMMANDES les montre tels quels : au doigt, le nom du bouton EST son geste. */
   function etiquettes(nom) {
     return nom === 'vehicule'
-      ? { attaque: 'KLAXON', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO' }
+      ? { attaque: 'KLAXON', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO', saisir: '·' }
       // ⚠️ Sur un char a sirene, le bouton du klaxon EST celui de la sirene :
       // c'est ce qu'on cherche en premier au volant d'une ambulance, et le
       // klaxon d'une auto-patrouille n'a jamais servi a rien.
       : nom === 'vehicule_sirene'
-      ? { attaque: 'SIRÈNE', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO' }
+      ? { attaque: 'SIRÈNE', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO', saisir: '·' }
       : nom === 'vehicule_sonnette'                       // un velo : sa sonnette
-      ? { attaque: 'SONNETTE', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO' }
+      ? { attaque: 'SONNETTE', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO', saisir: '·' }
       : nom === 'menu'
-        ? { attaque: 'RETOUR', action: 'CHOISIR', esquive: 'BAS', arme: 'HAUT' }
+        ? { attaque: 'RETOUR', action: 'CHOISIR', esquive: 'BAS', arme: 'HAUT', saisir: '·' }
         : nom === 'dialogue'
-          ? { attaque: 'PASSER', action: 'SUIVANT', esquive: '·', arme: '·' }
+          ? { attaque: 'PASSER', action: 'SUIVANT', esquive: '·', arme: '·', saisir: '·' }
           // ⚠️ Le piratage se joue au STICK (une direction a la fois, comme la
           // roue d'armes) : FRAPPE est le seul bouton qui compte encore, et il
           // change de sens — abandonner, pas frapper.
           : nom === 'piratage'
-            ? { attaque: 'ABANDONNER', action: '·', esquive: '·', arme: '·' }
+            ? { attaque: 'ABANDONNER', action: '·', esquive: '·', arme: '·', saisir: '·' }
             // ⚠️ Une EPREUVE D'ADRESSE (`Adresse`) : ACTION et FRAPPE y servent
             // (la roue, la danse), et c'est COURS qui abandonne — le seul bouton
             // qu'aucune epreuve ne prend.
             : nom === 'epreuve'
-            ? { attaque: 'FRAPPE', action: 'ACTION', esquive: 'ABANDONNER', arme: '·' }
+            ? { attaque: 'FRAPPE', action: 'ACTION', esquive: 'ABANDONNER', arme: '·', saisir: '·' }
             // Le mode photo (M14) : pas de FRAPPE ni d'ESQUIVE, on ne fait
             // que regarder.
             : nom === 'photo'
-              ? { attaque: '·', action: 'CAPTURER', esquive: '·', arme: 'FILTRE' }
+              ? { attaque: '·', action: 'CAPTURER', esquive: '·', arme: 'FILTRE', saisir: '·' }
               // ⚠️ « SPRINT », plus « COURS » : courir est devenu la vitesse par
               // defaut (la ville fait 421 tuiles), et le bouton ne sert plus qu'a
               // la bouffee qui coute du souffle.
-              : { attaque: 'FRAPPE', action: 'ACTION', esquive: 'SPRINT', arme: 'ARME' };
+              : { attaque: 'FRAPPE', action: 'ACTION', esquive: 'SPRINT', arme: 'ARME', saisir: 'SAISIR' };
   }
 
   function contexte(nom) {
