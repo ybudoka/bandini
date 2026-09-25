@@ -157,7 +157,7 @@ clé `"techniques"` à côté de `"armes"`).
 `techniques.par_slug(slug)`, `techniques.chaine()` (les techniques `tape` par rang) ; au client,
 `B.defs.techniques` (la liste, telle quelle).
 
-- [ ] **Le juge d'abord** — `tests/test_techniques.py` :
+- [x] **Le juge d'abord** — `tests/test_techniques.py` :
 
 ```python
 """Les techniques d'arts martiaux — le catalogue (voir docs/jalons/les-techniques-d-arts-martiaux.md)."""
@@ -224,9 +224,9 @@ def test_le_paquet_porte_les_techniques():
 ⚠️ Vérifier le nom de la largeur de vue dans `base.js` (`test_armes` lit la même borne : copier sa
 regex si elle diffère).
 
-- [ ] **Le voir rougir** : `… pytest -q tests/test_techniques.py` → `ModuleNotFoundError: app.techniques`.
+- [x] **Le voir rougir** : `… pytest -q tests/test_techniques.py` → `ModuleNotFoundError: app.techniques`.
 
-- [ ] **Le catalogue** — `app/techniques.py` :
+- [x] **Le catalogue** — `app/techniques.py` :
 
 ```python
 """Les techniques d'arts martiaux — les coups de rue et les cours du dojo.
@@ -376,10 +376,10 @@ def chaine() -> list[Technique]:
 Dans `app/definitions.py`, sous `"armes_regles": armes.REGLES,` : `"techniques": techniques.CATALOGUE,`
 (et `techniques` dans l'import des modules du paquet, à côté d'`armes`).
 
-- [ ] **Vert** : `… pytest -q tests/test_techniques.py tests/test_definitions.py` → tout passe. Les juges
+- [x] **Vert** : `… pytest -q tests/test_techniques.py tests/test_definitions.py` → tout passe. Les juges
   du poids du paquet (`test_definitions`, `test_hors_ligne`) : relire leur borne si l'un rougit.
-- [ ] **Mutation** : donner `rang=3` à `uppercut` → `test_pas_deux_techniques…` rougit ; remettre.
-- [ ] **Commit** : `feat: les techniques d'arts martiaux, 1re tâche — le catalogue`.
+- [x] **Mutation** : donner `rang=3` à `uppercut` → `test_pas_deux_techniques…` rougit ; remettre.
+- [x] **Commit** : `feat: les techniques d'arts martiaux, 1re tâche — le catalogue`.
 
 #### Tâche 2 : `blesser` sait ne pas faire saigner, et se taire
 
@@ -387,7 +387,7 @@ Dans `app/definitions.py`, sous `"armes_regles": armes.REGLES,` : `"techniques":
 
 **Produit** — `Entites.blesser(e, degats, source, { sans_sang, silencieuse, … })`.
 
-- [ ] **Les juges** — `tests/test_techniques_js.py` (le fichier des juges de banc du jalon ; les tâches
+- [x] **Les juges** — `tests/test_techniques_js.py` (le fichier des juges de banc du jalon ; les tâches
   suivantes y ajoutent les leurs) :
 
 ```python
@@ -422,8 +422,8 @@ def test_un_coup_silencieux_n_alerte_personne(banc):
 compter ce qu'il crée vraiment (décalques `B.decals`, ou ce que `sang` remplit). Et lire `assommer` :
 aujourd'hui il n'alerte pas ; si `tuer`/`assommer` crient ailleurs, la garde va là aussi.
 
-- [ ] **Rouge** : le premier rougit (le sang tombe toujours), le second aussi si le témoin fuit.
-- [ ] **Le code** — dans `blesser` :
+- [x] **Rouge** : le premier rougit (le sang tombe toujours), le second aussi si le témoin fuit.
+- [x] **Le code** — dans `blesser` :
 
 ```js
     if (opts.saigne && !opts.sans_sang) e.saigne = Math.min(B.defs.pietons.reactions.saignement_images, opts.saigne);
@@ -436,8 +436,8 @@ aujourd'hui il n'alerte pas ; si `tuer`/`assommer` crient ailleurs, la garde va 
 et, dans la branche `else if (e.type === 'pieton')`, en tête : `if (opts.silencieuse) return true;` —
 l'étranglement ne crie pas et n'alerte pas ; `Police.quelqu_un_voit` décide seul du crime (tâche 5).
 
-- [ ] **Vert**, puis **mutation** (retirer `!opts.sans_sang`) → rouge ; remettre.
-- [ ] **Commit** : `feat: les techniques d'arts martiaux, 2e tâche — un coup sans sang, un coup sans bruit`.
+- [x] **Vert**, puis **mutation** (retirer `!opts.sans_sang`) → rouge ; remettre.
+- [x] **Commit** : `feat: les techniques d'arts martiaux, 2e tâche — un coup sans sang, un coup sans bruit`.
 
 #### Tâche 3 : le bouton SAISIR
 
@@ -449,7 +449,7 @@ place ; `tests/test_manettes*.py` (ce qui fige `attaque: [2, 5]`) ; `tests/test_
 
 **Produit** — l'action `saisir` : `Entree.neuf('saisir')`, `Entree.bas('saisir')`, `j.entree.neuf('saisir')`.
 
-- [ ] **Les juges** :
+- [x] **Les juges** :
 
 ```python
 def test_u_saisit_au_clavier(banc):
@@ -488,7 +488,7 @@ def test_une_disposition_sauvee_avant_saisir_garde_saisir(banc):
 sauvée) et ajuster le `stockage` du troisième juge à cette forme ; lire aussi la signature de `o.pad`
 (`tests/banc.js`, `function pad(axes, boutons, fiche)`).
 
-- [ ] **Rouge**, puis le code :
+- [x] **Rouge**, puis le code :
   - `entree.js` : `saisir: ['KeyU'],` dans `MAP_TOUCHES` (commentaire : ni G ni R, I, O, L — `RIGOLO`) ;
     `MANETTE_DEFAUT` : `attaque: [2], saisir: [5]` ; la ligne 119 : `d: (boutons.saisir || [])[0]` si elle
     désigne l'épaule de droite (la lire avant) ; les libellés tactiles : `saisir: 'SAISIR'` à pied, `'·'`
@@ -501,9 +501,9 @@ sauvée) et ajuster le `stockage` du troisième juge à cette forme ; lire aussi
     du téléphone (et sa place dans `P`).
   - `index.html` : `<b data-a="saisir">SAISIR</b>` ; la feuille lui fait une place (au pouce droit, sous
     FRAPPE) — **capture Chromium** du téléphone avant de cocher.
-- [ ] **Vert** : `… pytest -q tests/test_techniques_js.py tests/test_manettes*.py tests/test_commandes_js.py`.
+- [x] **Vert** : `… pytest -q tests/test_techniques_js.py tests/test_manettes*.py tests/test_commandes_js.py`.
   Les juges qui figeaient l'épaule de droite sur FRAPPE se corrigent **dans ce commit**, avec la raison.
-- [ ] **Commit** : `feat: les techniques d'arts martiaux, 3e tâche — le bouton SAISIR`.
+- [x] **Commit** : `feat: les techniques d'arts martiaux, 3e tâche — le bouton SAISIR`.
 
 #### Tâche 4 : le moteur — la chaîne, la réserve, les passants
 
@@ -520,7 +520,7 @@ sauvée) et ajuster le `stockage` du troisième juge à cette forme ; lire aussi
 sur l'entité : `e.technique` (slug), `e.techEtape`, `e.techT`, `e.techPose`, `e.reserve`, `e.chaine`,
 `e.chaineT`, `e.coups` ; `Combat.arcDeMelee` exporté.
 
-- [ ] **Les juges** (au bouton ; `X` est FRAPPE au clavier) :
+- [x] **Les juges** (au bouton ; `X` est FRAPPE au clavier) :
 
 ```python
 def _chaine(banc, sait, tapes, espace=4):
@@ -620,8 +620,8 @@ def test_un_passant_rejoue_la_meme_suite_pour_la_meme_empreinte(banc):
 `Combat.maj`) — c'est voulu, on juge le choix, pas la poursuite. Et `o.poser` : lire sa signature
 (`tests/banc.js`, `poser(arch, dx, dy)`).
 
-- [ ] **Rouge** : `Techniques is not defined` / `technique` indéfini.
-- [ ] **Le module** — `static/js/techniques.js` :
+- [x] **Rouge** : `Techniques is not defined` / `technique` indéfini.
+- [x] **Le module** — `static/js/techniques.js` :
 
 ```js
 /* Bandini — les techniques d'arts martiaux : la chaine de tapes, les pieds,
@@ -795,7 +795,7 @@ const Techniques = (function () {
 })();
 ```
 
-- [ ] **Les branchements** :
+- [x] **Les branchements** :
   - `combat.js`, `frapper` : après `if (arme.type === 'tir') return tirer(e, arme);` —
     `if (arme.slug === 'poings' || arme.slug === 'poing_americain') return Techniques.frapper(e, fort);`
     (le poing américain garde son écart de dégâts : c'est `armeDe(t, e)`).
@@ -825,11 +825,11 @@ const Techniques = (function () {
 
   - `base.js` : `techniques: {}` dans `etatInitial` (près d'`armes`) ; `'techniques'` dans la liste de
     `completer`.
-- [ ] **Vert** : `… pytest -q tests/test_techniques_js.py tests/test_armes_js.py tests/test_bagarre_js.py`,
+- [x] **Vert** : `… pytest -q tests/test_techniques_js.py tests/test_armes_js.py tests/test_bagarre_js.py`,
   puis les juges « ce module ne déplace rien » (`-k deplace`) et ceux des poings (`-k poing`).
-- [ ] **Mutations** : `FENETRE = 0` → la chaîne rougit ; retirer `e.reserve = true` → la réserve rougit ;
+- [x] **Mutations** : `FENETRE = 0` → la chaîne rougit ; retirer `e.reserve = true` → la réserve rougit ;
   `(e.id + e.coups)` → `B.rng()` → l'empreinte rougit.
-- [ ] **Commit** : `feat: les techniques d'arts martiaux, 4e tâche — la chaîne, la réserve, les passants`.
+- [x] **Commit** : `feat: les techniques d'arts martiaux, 4e tâche — la chaîne, la réserve, les passants`.
 
 #### Tâche 5 : la prise, les projections, l'étranglement, la parade
 
@@ -843,7 +843,7 @@ const Techniques = (function () {
 `Techniques.projeter(c, auteur, t)`, `Techniques.majVols()`, `Techniques.lacher(j)` ; sur l'entité :
 `j.prise = { cible, t, mode }` (`mode` : `'tenir'` ou `'etrangler'`), `c.tenu`, `c.vol = { x0, y0, x1, y1, t, duree, h, tours, sens, auteur, tech }`.
 
-- [ ] **Les juges** — une fonction commune, puis un juge par geste :
+- [x] **Les juges** — une fonction commune, puis un juge par geste :
 
 ```python
 PRISE = """
@@ -992,7 +992,7 @@ def test_saisir_ne_fait_rien_la_roue_ouverte(banc):
 `majRoue` (sinon ouvrir la roue par `Combat.ouvrirRoue(j)`), et que `ArrowDown` est bien « de côté »
 quand le joueur regarde à droite (angle relatif ≈ 90°).
 
-- [ ] **Rouge**, puis le code — dans `techniques.js`, avant `const api` :
+- [x] **Rouge**, puis le code — dans `techniques.js`, avant `const api` :
 
 ```js
   //: La prise : combien de temps on tient sans rien faire, et le seuil du stick.
@@ -1139,7 +1139,7 @@ quand le joueur regarde à droite (angle relatif ≈ 90°).
 modules l'obtiennent (`B.defs.tuile_px` ou une constante de `base.js`) et faire pareil. Et
 `Entites.poussiere(x, y, …)` : lire sa signature (l'export existe).
 
-- [ ] **Les branchements** :
+- [x] **Les branchements** :
   - `combat.js`, `majGestes`, juste après `if (B.roue || B.piratage || B.epreuve) return;` :
     `if (Techniques.majPrise(j, ent)) return;` — les gardes du dessus (char, clôture, lit, manège, mort,
     roue, épreuve) valent donc pour SAISIR, et ESQUIVE dans la prise ne part pas (elle lâche : ajouter
@@ -1153,18 +1153,18 @@ modules l'obtiennent (`B.defs.tuile_px` ou une constante de `base.js`) et faire 
     (⚠️ lire la suite de `majJoueur` : si l'endurance ou `recul` se décomptent plus bas, les garder).
   - `entites.js`, `pose` : `if (e.vol) { p.rot = e.vol.tours * Math.PI * 2 * (e.vol.t / e.vol.duree) * e.vol.sens; return p; }`
     en tête (après la roulade).
-- [ ] **Vert** : tout `tests/test_techniques_js.py`, `tests/test_bouclier.py` (la prise d'otage ne doit pas
+- [x] **Vert** : tout `tests/test_techniques_js.py`, `tests/test_bouclier.py` (la prise d'otage ne doit pas
   bouger), `tests/test_bagarre_js.py`, `tests/test_armes_js.py`.
-- [ ] **Mutations** : `chute` sans le `break` → le juge du mur rougit ; `DOS = 9` → l'étranglement rougit ;
+- [x] **Mutations** : `chute` sans le `break` → le juge du mur rougit ; `DOS = 9` → l'étranglement rougit ;
   retirer le `lacher` sur `!c.vivant` → le no 5 rougit.
-- [ ] **Commit** : `feat: les techniques d'arts martiaux, 5e tâche — la prise et les projections`.
+- [x] **Commit** : `feat: les techniques d'arts martiaux, 5e tâche — la prise et les projections`.
 
 #### Tâche 6 : les poses dessinées
 
 **Fichiers** — `static/js/sprites.js` (`SPRITES.joueur.poses` : 27 grilles, et `mains` pour
 `tech_poing_arriere_*` et `tech_crochet_*`) ; `tests/test_techniques_js.py`.
 
-- [ ] **Le juge** :
+- [x] **Le juge** :
 
 ```python
 def test_chaque_pose_dessinee_existe_pour_les_trois_vues(banc):
@@ -1185,8 +1185,8 @@ def test_chaque_pose_dessinee_existe_pour_les_trois_vues(banc):
 
 ⚠️ Vérifier que `SPRITES` est exposé dans `L` (sinon `L.fenetre.SPRITES` ou ce que le banc expose).
 
-- [ ] **Rouge** : les 27 manquent.
-- [ ] **Dessiner** — 12×16, les lettres de région (`h s o c p b k`, `.` vide), les pieds sur la dernière
+- [x] **Rouge** : les 27 manquent.
+- [x] **Dessiner** — 12×16, les lettres de région (`h s o c p b k`, `.` vide), les pieds sur la dernière
   rangée, comme `frappe_*`. Ce que chaque pose doit **montrer**, et c'est ça que la capture juge :
   - `poing_arriere` : le bras de l'AUTRE côté que `frappe` tendu, l'épaule avancée.
   - `crochet` : le bras replié en arc devant le visage, le torse tourné.
@@ -1201,13 +1201,13 @@ def test_chaque_pose_dessinee_existe_pour_les_trois_vues(banc):
   - `accroupi` : le corps tassé de 4 rangées, une jambe tendue de côté (le balayage).
   - `mains` : `tech_poing_arriere_bas|haut|droite` et `tech_crochet_bas|haut|droite`, `[x, y, angle]` au
     bout du bras tendu — le poing américain doit rester au poing.
-- [ ] **Capture Chromium** (voir la note « Capturer une pièce du jeu ») : chaque pose × 3 vues, pour le
+- [x] **Capture Chromium** (voir la note « Capturer une pièce du jeu ») : chaque pose × 3 vues, pour le
   squelette `homme` ET les dérivés (`femme`, `costaud`, `vieux`, `grand` — leurs règles s'appliquent aux
   poses « debout » par le suffixe `_bas|_haut|_cote`, et `au_sol` peut s'y abîmer) ; plus une projection
   de hanche en vol. Copier dans `~/dev/bandini/captures/` et **regarder** chaque image avant de cocher.
-- [ ] **Vert** + `tests/test_garderobe*.py` (le nombre de poses du squelette y est peut-être figé : « ses
+- [x] **Vert** + `tests/test_garderobe*.py` (le nombre de poses du squelette y est peut-être figé : « ses
   42 poses »).
-- [ ] **Commit** : `feat: les techniques d'arts martiaux, 6e tâche — les poses`.
+- [x] **Commit** : `feat: les techniques d'arts martiaux, 6e tâche — les poses`.
 
 #### Tâche 7 : la triche, le nom affiché, les trois bruitages
 
@@ -1215,7 +1215,7 @@ def test_chaque_pose_dessinee_existe_pour_les_trois_vues(banc):
 (`entrerDansLActif`) ; `app/audio.py` (trois `_e`) ; `static/js/son.js` (trois `SFX` avec repli
 synthétique) ; `tests/test_techniques_js.py`.
 
-- [ ] **Les juges** :
+- [x] **Les juges** :
 
 ```python
 def test_la_triche_donne_toutes_les_techniques(banc):
@@ -1238,7 +1238,7 @@ def test_une_technique_apprise_se_nomme_quand_elle_part(banc):
     assert r == "COUP DE PIED DE CÔTÉ !"
 ```
 
-- [ ] **Rouge**, puis :
+- [x] **Rouge**, puis :
   - `hud.js` : `function toutesLesTechniques()` (pose `true` pour chaque technique non gratuite, `message('TOUTES LES TECHNIQUES')`,
     `Son.SFX.argent()`), l'item `{ libelle: 'TOUTES LES TECHNIQUES', … }` sous TOUS LES ITEMS, et
     l'export.
@@ -1249,25 +1249,41 @@ def test_une_technique_apprise_se_nomme_quand_elle_part(banc):
     étouffé, sans mot) — prompts en anglais, secs, « no reverb, no music », comme `coup`.
   - `son.js` : `pied`, `chute`, `etranglement`, chacun `if (!joue('<slug>')) { … }` avec un repli par
     `ton`/`bruit`, comme `coup`.
-- [ ] **Générer** : `uv run python scripts/audio_elevenlabs.py --essai` (le voir lister les trois, et
+- [x] **Générer** : `uv run python scripts/audio_elevenlabs.py --essai` (le voir lister les trois, et
   eux seuls), `mcp elevenlabs_status` pour le solde, puis sans `--essai`. Écouter les trois.
-- [ ] **Vert** : `tests/test_techniques_js.py`, `tests/test_audio.py`, `tests/test_hors_ligne.py`.
-- [ ] **Commit** : `feat: les techniques d'arts martiaux, 7e tâche — la triche, le nom, les sons`.
+- [x] **Vert** : `tests/test_techniques_js.py`, `tests/test_audio.py`, `tests/test_hors_ligne.py`.
+- [x] **Commit** : `feat: les techniques d'arts martiaux, 7e tâche — la triche, le nom, les sons`.
 
 #### Tâche 8 : la doc, la suite, la livraison
 
-- [ ] `docs/architecture.md` : `app/techniques.py` dans la table des modules Python ; `techniques.js`
+- [x] `docs/architecture.md` : `app/techniques.py` dans la table des modules Python ; `techniques.js`
   dans la table des scripts (juste après `combat.js`) ; l'arborescence. `tests/test_carte_du_depot.py` vert.
-- [ ] `docs/reprendre-le-travail.md` ou l'aide COMMANDES : SAISIR y est (tâche 3) — relire.
-- [ ] La **suite complète** en parallèle (voir « Un rouge est-il de moi ? ») ; un rouge : le rejouer sur la
+- [x] `docs/reprendre-le-travail.md` ou l'aide COMMANDES : SAISIR y est (tâche 3) — relire.
+- [x] La **suite complète** en parallèle (voir « Un rouge est-il de moi ? ») ; un rouge : le rejouer sur la
   base avant d'accuser le jalon.
-- [ ] `uv run ruff check .`
-- [ ] **Atterrir** (ff-only), puis **capture pour Martin** : une chaîne de 5 tapes, une projection de
+- [x] `uv run ruff check .`
+- [x] **Atterrir** (ff-only), puis **capture pour Martin** : une chaîne de 5 tapes, une projection de
   hanche, un sacrifice — dans `captures/`, ouvertes dans Aperçu.
-- [ ] **Livrer** : la ligne quitte `docs/plan.md` pour `docs/jalons/README.md` (`✅ **livré**`, la date) ;
+- [x] **Livrer** : la ligne quitte `docs/plan.md` pour `docs/jalons/README.md` (`✅ **livré**`, la date) ;
   la note sous `## Notes` (ce qui est livré, ce qui a surpris, les dettes).
-- [ ] **Commit** : `docs: les techniques d'arts martiaux — livré`.
+- [x] **Commit** : `docs: les techniques d'arts martiaux — livré`.
 
 ## Notes
 
-_Rien de livré._
+**Livré le 25 sept. 2026** — huit tâches, plus une passe de corrections après la relecture de toute la branche.
+
+- **Le répertoire** : `app/techniques.py` (6 coups de rue, 10 cours) et `static/js/techniques.js`, qui prend `Combat.frapper` à mains nues et au poing américain. La chaîne de tapes s'allonge avec ce qu'on sait ; une tape donnée pendant le coup se garde en réserve ; tenue, sprint et sortie de roulade donnent le pied de côté, le coup sauté, le balayage.
+- **SAISIR** : U au clavier, l'épaule de droite à la manette (elle doublait FRAPPE), la poignée droite au casque, une pastille au doigt au-dessus d'ACTION. Une disposition apprise avant le bouton donne son épaule à SAISIR.
+- **La prise** : le stick choisit la projection (vers l'avant la hanche, vers soi le fauchage, de côté le sacrifice) ; dans le dos, l'étranglement (tenir 1,5 s, muet) ; pendant qu'il arme, le retournement du poignet — contre un coup de rue comme contre un couteau. La victime vole (`e.vol`) et retombe sur la dernière tuile libre et sèche ; une projection assomme sans faire saigner.
+- **Les poses** : 27 grilles (9 poses × 3 vues) dans le corps du joueur ; les tenues les habillent, les cinq squelettes les portent (planche regardée à la capture).
+- **Le reste** : la triche « TOUTES LES TECHNIQUES », le nom de la technique apprise au HUD, trois bruitages ElevenLabs (`pied`, `chute`, `etranglement`, cinq fichiers).
+
+⚠️ **Ce qui a surpris** :
+- Deux corps ne s'approchent jamais sous 10 px (`Entites.demeler`) : un genou « collé » à 9 px ne partait jamais. Collé, c'est au contact (11 px), et le genou y **remplace le crochet** — sinon il aurait volé toute la chaîne.
+- `Combat.frapper` refusait un coup pendant un coup AVANT de déléguer : la tape en réserve n'arrivait jamais. La délégation passe devant la garde.
+- La relecture a trouvé qu'on pouvait saisir et projeter un **enfant** (tout `intouchable`) : `prenable` les écarte, et l'atterrissage n'assomme que si `blesser` a porté. Elle a trouvé aussi le deuxième joueur bloqué K.-O. pendant une prise, les pastilles LB/RB disparues du classeur, une prise sans pose, une parade de trois images (l'élan de rue est rendu à cinq, comme le coup d'avant), et un passant saisi qui frappait quand même.
+- Un juge des hommes de Sal comptait les dégâts d'un seul coup : depuis la chaîne, un crochet fait +2 ; il raisonne par famille (mains nues, poing américain).
+
+**Dettes** (mineures, relevées par la relecture) : une victime peut rester figée si l'hôpital ou l'arrestation coupe une projection entre la prise et le lancer ; la cible relâchée ne reprend pas ce qu'elle faisait (`avantPrise`) et sa fuite n'a pas de minuterie ; SAISIR peut prendre son propre otage ; une disposition apprise avec FRAPPE sur un seul bouton garde SAISIR sur le 5 ; le pied de côté n'« envoie pas loin », le coup sauté ralentit, le nom s'affiche même dans le vide ; les genoux dans la prise signalent `coup_pieton` sur un agent ; le point de chute peut frôler un mur ; pas de juge SAISIR sur une clôture, au volant ou en épreuve.
+
+**À écouter** : les cinq mp3 neufs (`static/audio/pied-*`, `chute-*`, `etranglement-1`) passent les juges de niveau, mais personne ne les a écoutés.
