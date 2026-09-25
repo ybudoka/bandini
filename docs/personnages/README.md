@@ -55,6 +55,9 @@ Chaque fiche mêle deux sortes de faits.
 ⚠️ **Deux voix du compte ne se donnent à personne** : celles du scanner de police (Clara Dupont, la
 répartitrice, et Frederic, l'agent — `audio.VOIX_RESERVEES`, jugé). Avant de donner une voix à un
 personnage, `uv run python scripts/audio_elevenlabs.py --libres` dit qui parle déjà avec chacune (gratuit).
+Une voix **non québécoise** du compte est permise quand il n'y a plus de québécoise libre (Martin,
+25 sept. 2026 : « elles sont souvent assez bonnes ») — l'ordre des choix est dans
+[M16](../jalons/m16-cent-missions.md#les-34-personnages-de-plus).
 
 ⚠️ **Sept voix sont partagées**, et c'est pourquoi leurs personnages ne parlent **jamais dans le même
 dialogue** (jugé) : Québec Tremblay fait Marco **et** Ti-Paul, l'annonceur fait le narrateur **et** Ovila,

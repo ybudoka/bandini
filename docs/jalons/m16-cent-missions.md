@@ -169,16 +169,23 @@ jeu à la fois ; `audio.VOIX_RESERVEES` dit ce qui ne se partage pas.
 
 Ce qu'on fait, dans cet ordre :
 
-1. **Une voix québécoise d'origine** pour quiconque est né dans la ville.
-2. **Une voix générée** (_Voice Design_, comme les deux annonceurs) quand il n'en reste
-   pas : décrite en français, « accent québécois marqué » — le narrateur parle déjà québécois
-   en v3. Le palier _starter_ tient **dix voix à soi, deux sont prises** : huit places, les
-   femmes d'abord. Le serveur MCP n'a pas l'outil ; Martin les crée dans l'interface, ou le
-   serveur l'apprend.
-3. **Une voix de France ou multilingue** seulement quand l'accent **fait le personnage** —
-   Sven Haugen, le Norvégien, est le seul de la table ; Me Desjardins et Norbert, qui se
-   donnent des airs, sont à trancher par Martin — ou pour boucher un trou **après une
-   audition qu'il a écoutée**. Un accent ne se juge pas à la mesure.
+⚠️ **Martin, 25 sept. 2026 : « Tu peux utiliser des voix non québécoises, parce qu'elles sont
+souvent assez bonnes. »** L'ancienne règle ne permettait une voix de France ou multilingue que
+si l'accent faisait le personnage, ou après une audition — et elle poussait vers une voix
+générée, qui coûte une des huit places à soi. Elle passe donc **avant** la voix générée, sans
+audition préalable : Martin écoute à la génération, comme pour toutes les autres.
+
+1. **Une voix québécoise d'origine** pour quiconque est né dans la ville, **s'il en reste une
+   libre** (`scripts/audio_elevenlabs.py --libres` ; au 25 sept. 2026, il n'en reste plus une
+   seule de femme, ni au compte ni dans la bibliothèque).
+2. **Une voix non québécoise du compte** — de France ou multilingue — sinon. Elle est souvent
+   assez bonne ; choisis-la pour son **grain** et son **ton** (`docs/jeu-d-acteur.md`), lis son
+   français dans `verified_languages`, et mesure-la contre les autres pour l'égalisation. Quand
+   l'accent **fait le personnage** (Sven Haugen, le Norvégien), c'est même le premier choix.
+3. **Une voix générée** (_Voice Design_, comme les deux annonceurs) seulement si rien du
+   compte ne va : décrite en français, « accent québécois marqué ». Le palier _starter_
+   tient **dix voix à soi, deux sont prises** : huit places. Le serveur MCP n'a pas l'outil ;
+   Martin les crée dans l'interface, ou le serveur l'apprend.
 4. **Partager ce qui reste**, comme prévu : entre personnages qui ne parlent **jamais dans
    la même mission**, avec un réglage différent (stabilité, style). Les **petites jobs**
    (arc T) gardent les voix des passants : zéro voix de plus.
