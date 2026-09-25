@@ -49,3 +49,30 @@ def test_acheter_ce_qu_on_a_deja_le_dit(banc):
     }""")
     assert r["deja"]["etape"] == 1 and r["deja"]["msg"] == "DÉJÀ DANS TES POCHES", r
     assert r["achat"]["etape"] == 2 and r["achat"]["msg"] != "DÉJÀ DANS TES POCHES", r
+
+
+def test_action_parle_a_la_personne_meme_avec_un_char_a_portee(banc):
+    """Soupçonné au banc de q02 (22 sept. 2026) : « à 36 px d'un char, ACTION remonte dedans au lieu
+    de parler ». Rejoué le 25 sept. : faux — la personne passe avant la portière (`Missions.interagir`
+    d'abord, `vehicules.js` ensuite). Ce qui arrivait : le camion garé collé REPOUSSAIT le joueur hors
+    de portée de voix. Ce juge tient l'ordre : le char ET Ti-Paul sous la main, c'est Ti-Paul."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, j = B.joueur; j.invincible = 1e6;
+        ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'].forEach(function (s) { B.partie.missionsFaites[s] = 1; });
+        L.Histoire.commencer('q02'); B.cinema = null; B.scene = null;
+        const v = B.mission.vehicule, ti = L.Histoire.donneur('tipaul');
+        j.x = v.x + 20; j.y = v.y; L.Entites.indexer(); L.Vehicules.monter(j, v); L.Entites.indexer(); o.frame(2);
+        while (B.cinema) L.Histoire.suivante();
+        // Garé juste derrière Ti-Paul, dans l'axe : on le regarde, lui ET le camion.
+        v.x = ti.x + 12; v.y = ti.y; v.vitesse = 0; j.x = v.x; j.y = v.y; L.Entites.indexer(); o.frame(1);
+        L.Vehicules.descendre(j); L.Entites.indexer(); o.frame(2);
+        j.x = ti.x - 20; j.y = ti.y; L.Entites.indexer();
+        o.touche('KeyD'); o.frame(2); o.relacher('KeyD'); o.frame(1);
+        const deux = { perso: !!L.Histoire.personnageSousLaMain(j), char: L.Vehicules.vehiculeSousLaMain(j) === v };
+        o.tape('KeyE', 2); o.frame(2);
+        const c = B.cinema;
+        return { deux: deux, monte: j.dansVehicule === v, qui: c && c.lignes[c.i] ? c.lignes[c.i].qui : null };
+    }""")
+    assert r["deux"] == {"perso": True, "char": True}, f"le cas n'est pas posé : {r}"
+    assert r["monte"] is False and r["qui"] == "tipaul", r

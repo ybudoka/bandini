@@ -45,6 +45,4 @@ aucun lieu neuf, la ville ne bouge pas (`test_devants.py`).
   s01), `test_p01_lampe_du_phare_js.py`, et ceux de `test_cinq_missions_js.py`, `test_dix_missions_js.py`,
   `test_dix_missions_deux_js.py`, `test_sven_missions_js.py` réécrits pour les étapes neuves.
 
-Vus au banc, pas corrigés : dans p01, `acheter` la batte est déjà fait pour qui a joué m2 (l'extincteur
-est le vrai achat) ; `boutique:artisan`/`boutique:industrie` ne donnent aucune flèche ; à 36 px d'un char,
-ACTION y remonte au lieu de parler à la personne.
+Vus au banc, réglés le 25 sept. 2026 dans [trois défauts vus au banc](trois-defauts-vus-au-banc-la-fleche-des-boutiques-la-batte-deja-en-poche.md#notes) : la flèche des boutiques, la batte déjà en poche (le jeu le dit), et ACTION près d'un char (pas un défaut : le camion repoussait le joueur).

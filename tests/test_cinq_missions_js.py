@@ -293,8 +293,9 @@ def test_q02_le_camion_de_poisson_la_glace_de_ti_paul_le_sergent_paie_et_lulu_en
         const pendant = boite(L);
         fermer(L);
         // Aux Érables : le camion garé dans la rue, on descend, on va serrer la main de Ti-Paul. ⚠️ Pas
-        // collé à lui : à 36 px, ACTION remonte dans le camion au lieu de lui parler (le char passe
-        // avant le personnage dans la chaîne d'ACTION) — on se gare à quatre tuiles et on marche.
+        // collé à lui : un camion garé contre Ti-Paul REPOUSSE le joueur hors de portée de voix (la
+        // personne, elle, passe bien avant la portière — `test_trois_defauts_js.py`) — on se gare à
+        // quatre tuiles et on marche.
         const ti = L.Histoire.donneur('tipaul');
         const loin = Math.round(Math.hypot(ti.x - cantine.x, ti.y - cantine.y) / 16);
         const rue = L.Histoire.tuileDeRue(ti.x, ti.y, 12, function (q) { return Math.hypot(q.x - ti.x, q.y - ti.y) >= 64; });
