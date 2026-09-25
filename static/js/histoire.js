@@ -312,9 +312,16 @@ const Histoire = (function () {
     const devs = (Monde.carte.def && Monde.carte.def.devantures) || [];
     const n = sansAccent(mot), j = B.joueur;
     let meilleure = null, meilleureD = Infinity;
+    // ⚠️ Le mot peut être un GENRE de devanture (`boutique:artisan`, la quincaillerie ;
+    // `boutique:industrie`, la Shop) : c'est la famille du comptoir, pas un mot de l'enseigne.
+    // Chercher « ARTISAN » dans les textes ne trouvait rien — ni flèche, ni coupe d'intro
+    // (f04, p01). Une devanture qu'on visite (`porte`) passe devant une porte peinte.
+    const genres = (B.defs && B.defs.devantures && B.defs.devantures.genres) || [];
+    const g = genres.findIndex(function (q) { return q.slug === String(mot).toLowerCase(); });
     for (const d of devs) {
-      if (!d.texte || sansAccent(d.texte).indexOf(n) < 0) continue;
-      const d2 = dist2(d.x * TT + 8, (d.y + 1) * TT + 8, j.x, j.y);
+      if (g >= 0 ? d.genre !== g : (!d.texte || sansAccent(d.texte).indexOf(n) < 0)) continue;
+      // Une porte peinte ne vend rien : elle ne gagne que s'il n'y a aucune vraie porte du genre.
+      const d2 = dist2(d.x * TT + 8, (d.y + 1) * TT + 8, j.x, j.y) + (g >= 0 && !d.porte ? 1e12 : 0);
       if (d2 < meilleureD) { meilleureD = d2; meilleure = d; }
     }
     return meilleure
@@ -1212,6 +1219,8 @@ const Histoire = (function () {
     // On ne repose pas des morts pour les recoucher.
     if (o.type === 'tuer' && dejaTombes(m.slug, p.etape) >= o.n) { avancer(enSilence); return; }
     p.debutT = B.t;
+    // Un `acheter` dont l'article est DÉJÀ en poche au départ : l'étape le dira (`majObjectif`).
+    if (o.type === 'acheter' && B.mission && (B.partie.objets[o.article] || B.partie.armes[o.article])) B.mission.acheterDeja = p.etape;
     poser(enSilence);
     if (!enSilence) Hud.message(o.texte, 200);
     // La replique PENDANT de cet objectif, des qu'aucune autre ne parle (`maj`).
@@ -1823,7 +1832,14 @@ const Histoire = (function () {
         // Un article a un comptoir : la mission avance quand on l'a en poche
         // (`B.partie.objets` ou `armes`). Le menu du comptoir l'achète déjà.
         const enPoche = B.partie.objets[o.article] || B.partie.armes[o.article];
-        if (enPoche) avancer();
+        // ⚠️ Déjà en poche quand l'étape a COMMENCÉ (`avancer` le note ; p01 : le bâton que m2
+        // donne) : le comptoir affiche « DÉJÀ À TOI » et ne le revend pas. L'étape passe, mais le
+        // jeu le DIT — avant, elle filait sans un mot et l'objectif mentait.
+        if (enPoche) {
+          const deja = B.mission.acheterDeja === B.partie.mission.etape;
+          avancer();
+          if (deja) Hud.message('DÉJÀ DANS TES POCHES', 150);
+        }
         return;
       }
       case 'suivre': {
