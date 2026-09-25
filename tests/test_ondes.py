@@ -99,9 +99,20 @@ def test_la_police_a_deux_repliques_par_evenement():
 def test_la_police_n_a_la_voix_ni_d_un_passant_ni_d_un_personnage():
     """Une voix de la rue au bout du scanner, on croirait que la passante d'à côté
     appelle la police ; celle d'un personnage, qu'il s'est fait engager."""
-    prises = {v["voix"] for v in audio.VOIX} | {p["voix"] for p in missions.PERSONNAGES}
     for v in audio.VOIX_DE_LA_POLICE:
-        assert v["voix"] not in prises, f"{v['slug']} parle avec la voix de {v['voix']}"
+        assert audio.VOIX_RESERVEES.get(v["voix"]) == "police", f"{v['slug']} : {v['voix']} n'est pas reservee"
+    assert audio.voix_partagees_a_tort() == []
+
+
+def test_une_voix_reservee_prise_ailleurs_se_voit():
+    """La table n'est bonne que si elle mord : Frederic donne au Grand Mo."""
+    mo = missions.personnage("mo")
+    avant = mo["voix"]
+    try:
+        mo["voix"] = audio.VOIX_AGENT
+        assert any("mo" in e and audio.VOIX_AGENT in e for e in audio.voix_partagees_a_tort())
+    finally:
+        mo["voix"] = avant
 
 
 def test_le_paquet_porte_ce_que_les_ondes_lisent():

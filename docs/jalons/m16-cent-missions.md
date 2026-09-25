@@ -145,6 +145,12 @@ de trois à cinq en une journée.
 | **France** | Luca, Nicolas Petit (parisien), Martin Dupont Intime, Roland Lescalde, Troy | Clara Dupont |
 | **multilingue** (née ailleurs) | Bubba Marshal (rocailleux, Sud des É.-U.), Omar J et Lutz (jeunes) | Ruby Roo (jeune, « fr-quebec »), Nadine (rauque, « fr-swiss »), Kriti, Arabella, Piku (une enfant) |
 
+⚠️ **Cette table date du 18 sept. 2026 et ne se tient plus à jour** : depuis, Alexandre Boutin, Premium
+Male teacher, Claudia et Caroline sont données, et **Frederic** (québécois d'origine, arrivé au compte
+ensuite) et **Clara Dupont** sont **réservées au scanner de police** (25 sept. 2026). Qui parle avec
+quoi se lit par `uv run python scripts/audio_elevenlabs.py --libres`, qui interroge le compte et le
+jeu à la fois ; `audio.VOIX_RESERVEES` dit ce qui ne se partage pas.
+
 - **Aucune voix du compte n'est vérifiée en `eleven_v3`**, et le jeu ne génère qu'en v3
   (`interpretation.MODELE`). Une québécoise d'origine garde son accent quand même : il est
   dans son échantillon, et les huit du jeu le prouvent. Une **multilingue**, non : son

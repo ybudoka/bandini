@@ -1161,8 +1161,16 @@ VOIX: list[Voix] = [
 #:
 #: ⚠️ Elles ne sont PAS dans `VOIX` : ce ne sont pas des banques ou l'on tire,
 #: c'est un evenement qui dit la sienne — `PAROLE["memoire"]` ne les regarde pas.
-VOIX_REPARTITRICE = "Caroline - Soft Quebec accent"
-VOIX_AGENT = "Alexandre Boutin - Professional"
+#:
+#: ⚠️ Le 23 sept. 2026, la police parlait avec Caroline et Alexandre Boutin, et
+#: trois sessions les ont donnees le meme jour a Mado, au Grand Mo et a Gegé : la
+#: liste des voix prises vivait a deux endroits. Elle vit maintenant dans
+#: `VOIX_RESERVEES`, plus bas, et `voix_partagees_a_tort()` la juge. La
+#: repartitrice parle France (Martin, 25 sept. 2026 : plus aucune quebecoise
+#: d'origine n'etait libre, ni au compte ni dans la bibliotheque) ; l'agent est
+#: quebecois.
+VOIX_REPARTITRICE = "Clara Dupont - Professional and Urgent"
+VOIX_AGENT = "Frederic - Professional and Confident"
 EVENEMENTS_DE_POLICE = ("repere", "poursuite", "perdu", "barrage", "helico")
 VOIX_DE_LA_POLICE: list[Voix] = [
     {"slug": "police_repere_1_r", "evenement": "repere", "texte": "Central à toutes les voitures : suspect signalé dans le secteur.",
@@ -1385,6 +1393,46 @@ def voix_repos() -> list[dict]:
 
 def toutes_les_voix() -> list[dict]:
     return list(VOIX) + list(VOIX_DE_LA_POLICE) + voix_histoire() + voix_journal() + voix_ouverture() + voix_repos()
+
+
+#: LES VOIX QUI NE SE PARTAGENT PAS — la table, ecrite UNE fois : la voix, et le
+#: seul usage qui a le droit de s'en servir (`usages_des_voix()`).
+#:
+#: ⚠️ Les autres voix du compte se partagent, et c'est voulu : les passants
+#: tirent dans huit voix, et deux personnages qui ne parlent jamais dans la meme
+#: mission peuvent en partager une. Une voix n'entre ici que si l'entendre
+#: ailleurs MENT : la police au scanner qui parle comme la dame du casse-croute.
+#: Avant de donner une voix, `scripts/audio_elevenlabs.py --libres` dit qui
+#: parle deja avec chacune des voix du compte.
+VOIX_RESERVEES: dict[str, str] = {
+    VOIX_REPARTITRICE: "police",
+    VOIX_AGENT: "police",
+}
+
+
+def usages_des_voix() -> dict[str, set[str]]:
+    """Qui parle avec chaque voix : `police`, `rue` (passants, pubs, radio, crieur)
+    ou le slug d'un personnage — ses repliques, et sa fiche meme sans replique."""
+    from . import missions
+    usages: dict[str, set[str]] = {}
+    for v in toutes_les_voix():
+        qui = v.get("qui") or ("police" if v["genre"] == "police" else "rue")
+        usages.setdefault(v["voix"].strip(), set()).add(qui)
+    for p in missions.PERSONNAGES:
+        usages.setdefault(p["voix"].strip(), set()).add(p["slug"])
+    return usages
+
+
+def voix_partagees_a_tort() -> list[str]:
+    """Chaque voix reservee qu'un autre usage que le sien a prise, dite en clair."""
+    usages = usages_des_voix()
+    fautes = []
+    for voix, seul in VOIX_RESERVEES.items():
+        autres = sorted(usages.get(voix.strip(), set()) - {seul})
+        if autres:
+            fautes.append(f"{voix} est reservee a « {seul} », et {', '.join(autres)} "
+                          f"s'en {'servent' if len(autres) > 1 else 'sert'} aussi")
+    return fautes
 
 
 def voix_par_slug(slug: str) -> Voix | None:

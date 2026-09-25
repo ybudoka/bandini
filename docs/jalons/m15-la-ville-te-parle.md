@@ -313,7 +313,9 @@ reconnaître** (24 sept. 2026) — les deux derniers morceaux de M15.
   missions du 23 sept. ont donné **Caroline** à Mado et **Alexandre Boutin** au Grand Mo et à
   Gégé — les deux voix du scanner de police. On entend donc la dame du casse-croûte au central.
   Le juge a raison, et le remède coûte des crédits (dix clips de police à refaire, ou les voix
-  de trois personnages) : il a sa ligne dans le plan.
+  de trois personnages) : il a sa ligne dans le plan. ⚠️ **Réglé le 25 sept. 2026** : la police
+  parle maintenant avec Clara Dupont et Frederic, deux voix réservées
+  ([le scanner de police a perdu ses deux voix](le-scanner-de-police-a-perdu-ses-deux-voix.md#notes)).
 - ⚠️ **UNE RÈGLE ÉCRITE ET SUPPRIMÉE** : `Voix.banque` commençait par « un genre sans `quand` tire
   dans tout ce qu'il a ». Elle est vraie, et **aucune mutation ne la rougissait** — le dernier
   filet de la fonction (ni la banque du contexte, ni celle du départ ne rendent rien : on rend

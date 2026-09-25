@@ -53,4 +53,30 @@ c'est là qu'un juge doit refuser une voix réservée à deux usages — la tabl
 
 ## Notes
 
-_Rien de livré._
+_Livré le 25 sept. 2026._
+
+- **La police change de voix** — le premier chemin de la fiche. **Frederic — Professional and
+  Confident** est l'agent (`audio.VOIX_AGENT`) : québécois d'origine, arrivé au compte après le
+  recompte du 18 sept., et personne ne l'avait. **Clara Dupont — Professional and Urgent** est la
+  répartitrice (`audio.VOIX_REPARTITRICE`), **choisie par Martin** entre trois aperçus : aucune
+  Québécoise d'origine n'était libre — ni au compte (Jeanne Mance, Julia, Amélie, Claudia, Caroline,
+  toutes données), ni dans la **bibliothèque** ElevenLabs (`GET /v1/shared-voices?language=fr&accent=quebec&gender=female`
+  n'en rend que quatorze, et les cinq Québécoises sont celles du compte). Les deux autres
+  candidates étaient une voix générée (une des huit places à soi) et « annonceur centre d'achat 2 »
+  (générée, libre, mais « hantée ») ; Martin a pris le ton d'un central plutôt que l'accent.
+  Clara prend le passe-haut des femmes (`interpretation.EGALISATION`) ; Caroline le garde pour Mado.
+- **Dix clips refaits** (`--refaire police_* --masters …`, 597 caractères) : Scribe a relu les dix
+  mots pour mots (il ramène « icitte » à « ici », comme toujours). Les anciens masters sont gardés en
+  `-avant-<date>` à côté des neufs. ⚠️ **Aucun juge ne dit qu'une voix est la bonne** : l'oreille de
+  Martin, sur les dix fichiers `static/audio/voix-police_*.mp3`.
+- **La table de ce qui est pris, écrite une fois** — le vrai correctif. `audio.VOIX_RESERVEES` dit
+  quelle voix n'appartient qu'à un usage (`police`) ; `audio.usages_des_voix()` dit qui parle avec
+  chaque voix (`police`, `rue`, ou le slug d'un personnage — ses répliques et sa fiche) ; et
+  `audio.voix_partagees_a_tort()` le dit en clair. Le juge de M15
+  (`test_la_police_n_a_la_voix_ni_d_un_passant_ni_d_un_personnage`) passe par elle, et un second
+  (`test_une_voix_reservee_prise_ailleurs_se_voit`) donne Frederic au Grand Mo pour la voir mordre.
+  Mutation faite : l'ancienne voix de l'agent remise, le juge rougit avec « Alexandre Boutin est
+  réservée à « police », et gege, mo s'en servent aussi ».
+- **`scripts/audio_elevenlabs.py --libres`** (gratuit) : chaque voix du compte et qui parle déjà avec
+  elle, les réservées marquées, et une alerte si le jeu nomme une voix que le compte n'a pas. C'est
+  là qu'une session regarde **avant** de donner une voix — c'est ce qui manquait le 23 sept.
