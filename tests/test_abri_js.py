@@ -95,6 +95,12 @@ def test_une_balle_mord_la_tole_pas_le_conducteur(banc):
         const j = surLaRue(L, o);
         j.vie = j.vieMax;
         const v = auVolant(L, o);
+        // ⚠️ UNE TOLE QUI TIENT LES CINQ BALLES : le pistolet fait 30, l'auto a 100. Cinq
+        // balles qui touchent toutes (150) la font EXPLOSER — et l'explosion blesse le
+        // conducteur, que le juge accusait alors d'avoir pris la balle. Il a tenu par chance
+        // de graine tant que la dispersion en faisait rater deux ; le 22 sept. 2026, des
+        // personnages de plus en ville ont déplacé les dés, et les cinq ont touché.
+        v.vie = v.vieMax = 1000;
         const vieChar = v.vie;
         const tireur = assaillant(L, 46, 'pistolet');
         // ⚠️ **UNE RAFALE, PAS UNE BALLE.** Une arme DISPERSE — `Combat.tirer`

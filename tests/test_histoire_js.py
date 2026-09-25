@@ -723,8 +723,11 @@ def test_les_personnages_disent_leur_repos_a_voix_haute(banc, paquet):
     import json
     abordables = [p["slug"] for p in paquet["personnages"] if p.get("ou") and not p.get("parti_apres")]
     tous = [m["slug"] for m in paquet["missions"]]
-    assert abordables == ["thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu", "raymonde", "ovila",
-                           "mo", "fern", "mado", "gege", "xavier", "lachance", "sven"]
+    # ⚠️ Un PLANCHER, pas la liste : figée au 20 sept., elle rougissait à chaque personnage
+    # neuf (Gus, Rosa, Ginette, Gilles, le Bonimenteur…). Ce qu'on juge, c'est que CHACUN des
+    # abordables — les neufs compris — dit son repos à voix haute.
+    assert {"thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu", "raymonde", "ovila",
+            "mo", "fern", "mado", "gege", "xavier", "lachance", "sven"} <= set(abordables), abordables
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const B = L.B;
@@ -1723,3 +1726,19 @@ def test_la_replique_pendant_du_premier_objectif_se_dit_apres_l_intro(banc, paqu
     }""")
     assert r["mission"] == "m6", r
     assert attendue in r["vues"], f"la réplique pendant de l'objectif 0 ({attendue}) n'a jamais été dite : {r['vues']}"
+
+
+def test_une_boutique_se_trouve_par_son_genre_et_par_son_enseigne(banc):
+    """⚠️ `boutique:artisan` (f04, p01 : « à la quincaillerie ») nomme un GENRE, que la
+    devanture porte en numéro : on ne cherchait que le mot dans l'enseigne, et la flèche du
+    GPS ne pointait nulle part."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const genres = L.B.defs.devantures.genres, devs = L.Monde.carte.def.devantures;
+        const lieu = L.Histoire.resoudre('boutique:artisan', null);
+        const d = lieu && devs.find(function (q) { return q.texte === lieu.nom; });
+        const parMot = L.Histoire.resoudre('boutique:quincaillerie', null);
+        return { trouve: !!lieu, genre: d ? genres[d.genre].slug : null, parMot: parMot && parMot.nom };
+    }""")
+    assert r["trouve"] and r["genre"] == "artisan", r
+    assert r["parMot"] and "QUINCAILLERIE" in r["parMot"], r

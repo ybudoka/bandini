@@ -401,12 +401,26 @@ def test_le_public_applaudit_paie_et_se_renouvelle(banc, paquet):
     """⚠️ L'ARGENT CHANGE DE POCHE POUR DE VRAI, comme pour le pickpocket :
     sinon le chapeau n'est qu'une animation, et fouiller l'artiste rapporterait
     la même chose qu'il ait joué ou non. Et le public TOURNE : un cercle de
-    trois statues qui ne bougent plus n'est pas une foule."""
+    trois statues qui ne bougent plus n'est pas une foule.
+
+    ⚠️ **SUR UNE SCÈNE, comme dans le jeu** (`carte.scenes`, la plus proche du
+    départ). Le juge le posait à 36 px du joueur : sur la roulotte de café du
+    terminus. Il ne tenait que parce que Ti-Guy s'y tenait aussi et que la
+    foule poussait le jongleur à côté ; le 25 sept. 2026, Ti-Guy a laissé la
+    place au stand, le jongleur est resté collé à l'étal, et son cercle ne se
+    formait plus (5 passants, 1 $, pas un bravo). Sur la scène, douze graines :
+    onze vertes, avant comme après ; à la graine 99, un incident fait fuir le
+    jongleur à l'image 1500, avant le premier départ du cercle — le jeu fait
+    son travail, et c'est la graine 64 que le juge joue."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(64);
         const a = L.Entites.archetype('jongleur');
-        const e = L.Entites.creerPieton(L.B.joueur.x + 36, L.B.joueur.y, a);
+        const j = L.B.joueur;
+        const scene = L.B.defs.carte.scenes.slice().sort(function (p, q) {
+            return Math.hypot(p.x * L.TT + 8 - j.x, p.y * L.TT + 8 - j.y) - Math.hypot(q.x * L.TT + 8 - j.x, q.y * L.TT + 8 - j.y);
+        })[0];
+        const e = L.Entites.creerPieton(scene.x * L.TT + 8, scene.y * L.TT + 8, a);
         e.etat = 'fige'; e.plante = { x: e.x, y: e.y };
         L.Entites.indexer();
         L.Entites.ouvrirLeSpectacle(e);

@@ -13,10 +13,12 @@ ligne — un juge qui appellerait `item.faire()` ne verrait pas le menu partir.
 
 import json
 
-from app import carte
+from app import carte, missions
 
 #: Les points qui ne passent PAS par un menu (voir test_interieurs_js.py).
-SANS_MENU = ("sergent", "contact", "escalier", "fouiller", "rame", "lulu", "ovila")
+# Le point d'un personnage posé dedans se lit dans le catalogue (voir `test_interieurs_js.py`).
+SANS_MENU = ("escalier", "fouiller", "rame") + tuple(
+    p["ou"][len("point:"):] for p in missions.PERSONNAGES if p["ou"].startswith("point:"))
 
 #: ⚠️ Les SEULES lignes d'un comptoir qui le referment : le choix y est un
 #: départ. Dormir passe au noir ; le Clairon se lit, en voix, hors du menu.

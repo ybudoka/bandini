@@ -3576,7 +3576,9 @@ def test_la_bagarre_tient_le_budget(banc):
         // compter vingt-neuf personnes pour vingt-huit vivantes : le moteur
         // tenait son budget et le juge accusait un emballement.
         let flaneurs = 0, metiers = 0, morts = 0;
+        const histoire = {};
         for (const e of L.B.entites) {
+            if (e.type === 'pieton' && e.actif && e.vivant && e.metier === 'histoire') histoire[e.personnage] = (histoire[e.personnage] || 0) + 1;
             if (e.type !== 'pieton' || !e.actif) continue;
             if (!e.vivant) { morts++; continue; }
             // ⚠️ Le PETIT QUI SUIT SA MERE nait avec elle : le budget se decide a la
@@ -3590,6 +3592,7 @@ def test_la_bagarre_tient_le_budget(banc):
                  flaneurs: flaneurs, metiers: metiers, morts: morts,
                  budget: L.Entites.MAX_PIETONS,
                  vendeurs: (L.Monde.carte.def.ambulants || []).length,
+                 histoire: histoire,
                  particules: L.B.particules.length, decals: L.B.decals.length,
                  images: s.images, morceaux: s.morceaux,
                  nan: isNaN(L.B.joueur.x) || isNaN(L.B.joueur.y) };
@@ -3627,9 +3630,18 @@ def test_la_bagarre_tient_le_budget(banc):
     # sa marche au hasard l'a mene au centre-ville (146, 6) — treize vendeurs,
     # une bagarre de quatre, les trois personnages de l'histoire, deux agents.
     # Le plafond ne tenait que tant que le singe ne voyait personne.
-    assert r["actifs"] <= r["budget"] + r["vendeurs"] + 28, (
+    # ⚠️ **ET LES PERSONNAGES DE L'HISTOIRE AUSSI.** Posés dehors devant leur porte, ils ne
+    # dorment jamais, comme les vendeurs : « les trois personnages de l'histoire » quand le
+    # « +28 » a été écrit, seize depuis les donneurs de M16 — et le juge a crié à
+    # l'emballement (72 pour 69, 25 sept. 2026) sans qu'un seul budget ait bougé. On les
+    # compte — et les trois du « +28 » en sortent (+25) : le juge ne se relâche pas d'une
+    # personne. Le vrai garde-fou est ailleurs : un personnage n'est jamais posé DEUX fois.
+    doubles = {qui: n for qui, n in r["histoire"].items() if n > 1}
+    assert not doubles, f"des personnages posés plusieurs fois : {doubles}"
+    personnages = sum(r["histoire"].values())
+    assert r["actifs"] <= r["budget"] + r["vendeurs"] + personnages + 25, (
         f"{r['actifs']} pietons actifs ({r['metiers']} a un metier, "
-        f"dont {r['vendeurs']} vendeurs fixes)"
+        f"dont {r['vendeurs']} vendeurs fixes et {personnages} personnages de l'histoire)"
     )
     assert r["particules"] <= 300 and r["decals"] <= 150
     assert r["images"] <= 160, f"{r['images']} drawImage par image"

@@ -39,8 +39,7 @@ MEUBLES = frozenset(g for g, p in carte.LEGENDE.items() if p.get("meuble"))
 #: s'accordent. Un type ajoute ici sans son cas la-bas est un comptoir mort.
 TYPES_SERVIS = frozenset({
     "lit", "coffre", "garde_robe", "vendre", "reparer", "repeindre", "acheter",
-    "hotdog", "soigner", "caisse", "journal", "contact", "sergent", "casier",
-    "lulu", "ovila",
+    "hotdog", "soigner", "caisse", "journal", "casier",
     "fourriere", "emplettes", "salon", "escalier", "fouiller",
     # M11, 2e vague — les deux moities du meme choix : effacer une page, sur,
     # cher, une fois par jour (l'avocat) ou payer d'avance et revenir demain
@@ -53,6 +52,10 @@ TYPES_SERVIS = frozenset({
     # (`Metro.utiliser`). Un geste, pas un menu.
     "rame",
 })
+#: ⚠️ Le point d'un PERSONNAGE posé dedans (`ou: "point:<type>"` — le sergent, Josée, Lulu,
+#: Ovila, le Dr Lachance) est servi par `Histoire.personnageDuPoint`, et se lit dans le
+#: catalogue : écrit à la main, il avait oublié le docteur.
+TYPES_SERVIS = TYPES_SERVIS | {p["ou"][len("point:"):] for p in missions.PERSONNAGES if p["ou"].startswith("point:")}
 
 
 @pytest.mark.parametrize("slug", sorted(PIECES))

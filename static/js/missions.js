@@ -1007,7 +1007,13 @@ const Missions = (function () {
   };
 
   /** Le libelle d'invite d'un type de point — et la preuve qu'il est servi. */
-  function libelleDuPoint(type) { return LIBELLES[type] || null; }
+  /** Le mot de l'invite devant un point. ⚠️ Un point qui porte un PERSONNAGE (`ou:
+      "point:<type>"` dans `missions.PERSONNAGES`) dit PARLER, sans qu'on l'inscrive ici :
+      le Dr Lachance, pose a l'hopital, n'avait pas son libelle — trois listes a tenir a la
+      main pour chaque donneur dedans, et une avait ete oubliee. */
+  function libelleDuPoint(type) {
+    return LIBELLES[type] || (Histoire.personnageDuPoint(type) ? 'PARLER' : null);
+  }
 
   function pointSousLaMain(j) {
     const piece = B.interieur;

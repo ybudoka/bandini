@@ -593,8 +593,16 @@ const Histoire = (function () {
   /** Un autre personnage de l'histoire se tient-il deja sur cette place, ou colle a elle ? */
   function placeTenue(place) {
     return B.entites.some(function (e) {
-      return e.type === 'pieton' && e.personnage && e.vivant
-        && Math.max(Math.abs(e.x - place.x), Math.abs(e.y - place.y)) < ECART_DONNEURS * TT;
+      const ecart = Math.max(Math.abs(e.x - place.x), Math.abs(e.y - place.y));
+      // ⚠️ ET LE STAND D'UN AMBULANT (la roulotte de cafe du terminus), meme ferme : son
+      // vendeur n'existe pas encore quand la partie commence le matin, il arrive a
+      // l'ouverture — a son poste, c'est-a-dire sur Ti-Guy, pose a sept pixels de lui. Deux
+      // personnes qui tiennent chacune leur place, l'une dans l'autre, se repoussent hors de
+      // leur place, cessent de ceder et y reviennent, l'une dans l'autre, six images sur six
+      // (le juge de la foule : 333 chevauchements creuses). C'est le STAND qui est toujours la.
+      if (e.type === 'ambulant') return ecart < 2 * TT;
+      if (e.type !== 'pieton' || !e.vivant) return false;
+      return e.personnage && ecart < ECART_DONNEURS * TT;
     });
   }
 
@@ -626,10 +634,11 @@ const Histoire = (function () {
     const essais = [[-2, 0], [3, 0], [-3, 0], [2, 1], [-2, 1], [4, 0], [-4, 0], [3, 1], [-3, 1]];
     // Un second donneur cherche un peu plus loin : a deux tuiles de l'autre, il lui faut la place.
     if (!libre) essais.push([5, 0], [-5, 0], [4, 1], [-4, 1], [6, 0], [-6, 0]);
-    let collee = null;
+    let collee = null, repli = null;
     for (const [dx, dy] of essais) {
       const place = tuileDeTrottoir(tx0 + dx, ty0 + dy);
       if (!place || placeTenue(place)) continue;
+      if (!repli) repli = place;
       const c = partCachee(place.x, place.y);
       if (!libre && colleeAUnMeuble(place)) {
         if (c < CACHE_MAX && !collee) collee = place;
@@ -638,7 +647,18 @@ const Histoire = (function () {
       if (c < CACHE_MAX) return place;
       if (c < part) { part = c; meilleure = place; }
     }
-    return collee || meilleure || premiere;
+    // ⚠️ Plutot une place a moitie cachee, collee a un banc, ou plus loin, que celle d'un autre : Fern,
+    // troisieme donneur du terminus apres Ti-Guy, Mo et la roulotte de cafe, avait epuise ses essais
+    // et retombait sur `premiere` — le poste du vendeur de cafe. Les deux s'y poussaient hors de leur
+    // place six images sur six (le juge de la foule : 333 creusements). Le tour plus loin ne se fait
+    // que si rien n'a ete trouve : les autres donneurs ne bougent pas d'un pixel.
+    if (!collee && !meilleure && !repli && !libre) {
+      for (const [dx, dy] of [[7, 0], [-7, 0], [5, 1], [-5, 1], [6, 1], [-6, 1], [8, 0], [-8, 0]]) {
+        const place = tuileDeTrottoir(tx0 + dx, ty0 + dy);
+        if (place && !placeTenue(place)) return place;
+      }
+    }
+    return collee || meilleure || repli || premiere;
   }
 
   /** UN personnage du dehors, pose devant sa porte — ou null quand la porte ou la
@@ -1491,7 +1511,12 @@ const Histoire = (function () {
           const tx = Math.floor((j.x + Math.cos(a) * r * TT) / TT), ty = Math.floor((j.y + Math.sin(a) * r * TT) / TT);
           if (!Monde.marchablePieton(tx, ty)) continue;
           const place = { x: tx * TT + 8, y: ty * TT + 8 };
-          if (horsChamp && Entites.visibleAEcran(place.x, place.y, 8)) continue;
+          // ⚠️ HORS DE L'ECRAN CENTRE SUR LE JOUEUR, pas de celui d'a present : le point se
+          // choisit quand la mission se pose — la camera est alors sur la scene, ou en retard
+          // sur un joueur qui vient d'arriver — et ils naissent quand elle est REVENUE sur
+          // lui. Choisis a 240 px a l'est, ils naissaient au bord droit de l'ecran, sous les
+          // yeux (le juge des Cravates de m2 l'a dit).
+          if (horsChamp && Math.abs(place.x - j.x) < VW / 2 + 16 && Math.abs(place.y - j.y) < VH / 2 + 16) continue;
           if (Monde.ligneLibre(place.x, place.y, j.x, j.y)) return place;
         }
       }

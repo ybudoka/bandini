@@ -10,10 +10,13 @@ qu'on touchait pour lire « PLUS TARD ».
 
 import json
 
-from app import carte
+from app import carte, missions
 
-#: Les points qui ne passent PAS par un menu : ils agissent tout de suite.
-SANS_MENU = ("sergent", "contact", "escalier", "fouiller", "rame", "lulu", "ovila")
+#: Les points qui ne passent PAS par un menu : ils agissent tout de suite. ⚠️ Le point d'un
+#: PERSONNAGE posé dedans (`ou: "point:<type>"`) en est un, et se lit dans le catalogue :
+#: la liste écrite à la main avait oublié le Dr Lachance.
+SANS_MENU = ("escalier", "fouiller", "rame") + tuple(
+    p["ou"][len("point:"):] for p in missions.PERSONNAGES if p["ou"].startswith("point:"))
 
 #: ⚠️ Les comptoirs encore en chantier, et le jalon qui les doit. La liste est
 #: volontairement penible a garder : chaque entree doit encore exister dans une
