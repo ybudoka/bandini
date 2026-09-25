@@ -20,7 +20,12 @@
 const Histoire = (function () {
   'use strict';
 
-  const DELAI_APPEL = 600;          // images entre la fin d'une mission et l'appel de la suivante
+  // ⚠️ UN APPEL A LA FOIS. Martin (25 sept. 2026) : « j'ai trop de missions au telephone
+  // une apres l'autre ». Le combine sonnait 10 s apres chaque appel tant qu'une mission
+  // restait a annoncer — avec une dizaine de donneurs, quatre ou cinq d'affilee. Il attend
+  // maintenant qu'on aille voir celui qui a appele ; s'il est ignore, il relance plus tard.
+  const DELAI_APPEL = 2700;         // images (45 s) entre la fin d'une mission et l'appel de la suivante
+  const DELAI_RELANCE = 10800;      // images (3 min) quand une mission annoncee attend encore d'etre prise
   const RAYON_PARLER = 22;          // a cette distance d'un personnage, ACTION = lui parler
 
   function defs() { return B.defs.missions || []; }
@@ -950,6 +955,9 @@ const Histoire = (function () {
       sonner l'appel plus tard au lieu de le perdre pour de bon. */
   function majTelephone() {
     const p = B.partie;
+    // ⚠️ Pendant une mission, l'echeance repart de zero : ratee ou abandonnee, elle ne doit
+    // pas laisser derriere elle une sonnerie deja due, qui tomberait a la seconde de l'echec.
+    if (p.mission) p.appelT = null;
     if (B.cinema || p.mission || B.interieur || B.finEnAttente) return;
     if (B.sonnerie) {
       if (B.t < B.sonnerie.t) return;                     // ca sonne encore : on ne decroche pas
@@ -966,12 +974,19 @@ const Histoire = (function () {
     // aussi `m.dialogue.appel.length`, et ce n'est plus dans le paquet — mais c'etait
     // deja une tautologie : la seule mission sans replique d'appel est la premiere, et
     // elle n'a pas de prerequis. Un juge de `missions.py` tient les deux ensemble.
-    const prochaine = disponibles().find(function (m) { return m.prerequis.length && !p.appels[m.slug]; });
+    const dispo = disponibles();
+    const prochaine = dispo.find(function (m) { return m.prerequis.length && !p.appels[m.slug]; });
     if (!prochaine) return;
     // ⚠️ Son texte AVANT sa sonnerie : il vole pendant que le delai s'ecoule, et le
     // combine ne sonne jamais sur une mission qui n'aurait rien a dire.
     if (!charger(prochaine.slug)) return;
-    if (p.appelT === undefined || p.appelT === null) { p.appelT = B.t + DELAI_APPEL; return; }
+    // Une mission deja annoncee et toujours la (ni prise, ni faite) : on n'empile pas un
+    // deuxieme appel par-dessus, on laisse le temps d'y aller.
+    const attend = dispo.some(function (m) { return p.appels[m.slug]; });
+    const delai = attend ? DELAI_RELANCE : DELAI_APPEL;
+    // ⚠️ `appelT` est dans la SAUVEGARDE, `B.t` repart de zero a chaque chargement : une
+    // echeance plus loin que le plus long des delais vient d'une autre session.
+    if (p.appelT === undefined || p.appelT === null || p.appelT - B.t > DELAI_RELANCE) { p.appelT = B.t + delai; return; }
     if (B.t < p.appelT) return;
     p.appelT = null;
     // `Son.SFX.telephone()` rend ce que dure la sonnerie, en secondes (le mp3,

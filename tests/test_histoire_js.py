@@ -186,7 +186,7 @@ def test_le_donneur_suivant_appelle_au_telephone(banc, paquet, a_jouer):
         const j = L.B.joueur;
         L.B.partie.missionsFaites.m1 = 1;
         let quand = -1;
-        for (let i = 0; i < 900 && quand < 0; i++) { o.frame(1); if (L.B.cinema) quand = i; }
+        for (let i = 0; i < 3600 && quand < 0; i++) { o.frame(1); if (L.B.cinema) quand = i; }
         const c = L.B.cinema;
         const ligne = c ? c.lignes[0] : null;
         const gpsPendant = L.Histoire.cible();
@@ -197,12 +197,47 @@ def test_le_donneur_suivant_appelle_au_telephone(banc, paquet, a_jouer):
                  slug: ligne && ligne.slug, dialogueQui: gpsPendant && gpsPendant.nom, gps: gps && gps.nom,
                  versThibodeau: gps && t && Math.hypot(gps.x - t.x, gps.y - t.y) < 4, appels: L.B.partie.appels };
     }""")
-    assert 0 <= r["quand"] < 900, "Madame Thibodeau appelle quelques secondes apres M1"
+    # ⚠️ 45 s depuis le 25 sept. 2026 (`DELAI_APPEL`, « un appel a la fois ») : plus tot, ca sonnait a la chaine.
+    assert 2600 <= r["quand"] < 3600, "Madame Thibodeau appelle une quarantaine de secondes apres M1"
     assert r["partie"] == "appel" and r["qui"] == "thibodeau" and r["telephone"] is True
     assert r["slug"] == "thibodeau-m2-1"
     assert r["gps"] == "Madame Thibodeau" and r["versThibodeau"], "le GPS pointe vers celle qui a appele"
     assert r["appels"] == {"m2": True}
     assert a_jouer[m2["slug"]]["dialogue"]["appel"][0]["qui"] == "thibodeau"
+
+
+def test_un_appel_a_la_fois(banc):
+    """Demande de Martin (25 sept. 2026) : « j'ai trop de missions au téléphone une
+    après l'autre ». Le combine sonnait 10 s apres chaque appel tant qu'une mission
+    restait a annoncer. Maintenant : pas de deuxieme appel tant que la premiere
+    mission annoncee attend d'etre prise — sauf la relance, trois minutes plus tard."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const p = L.B.partie, ms = L.B.defs.missions;
+        // Le premier moment de l'histoire ou DEUX missions s'annoncent au telephone.
+        let k = 1, dispo = [];
+        for (; k < ms.length; k++) {
+          p.missionsFaites = {};
+          for (let i = 0; i < k; i++) p.missionsFaites[ms[i].slug] = 1;
+          dispo = L.Histoire.disponibles().filter(function (m) { return m.prerequis.length; });
+          if (dispo.length >= 2) break;
+        }
+        p.appels = {}; p.appelT = null;
+        const appels = [];
+        let vu = false;
+        for (let i = 0; i < 16000; i++) {
+          o.frame(1);
+          if (L.B.cinema && !vu) { vu = true; appels.push({ i: i, partie: L.B.cinema.partie }); L.Histoire.finir(); }
+          if (!L.B.cinema) vu = false;
+        }
+        return { dispo: dispo.length, appels: appels, marques: Object.keys(p.appels).length };
+    }""")
+    assert r["dispo"] >= 2, "il faut deux missions a annoncer pour voir si elles s'empilent"
+    appels = r["appels"]
+    assert len(appels) >= 2 and all(a["partie"] == "appel" for a in appels), appels
+    ecart = appels[1]["i"] - appels[0]["i"]
+    assert ecart >= 10800, f"un deuxieme appel {ecart} images apres le premier, sans qu'on ait bouge"
+    assert ecart < 11000, "le telephone ne relance jamais une mission qu'on laisse attendre"
 
 
 def test_le_dialogue_de_l_appel_attend_la_fin_de_la_sonnerie(banc):
@@ -216,7 +251,7 @@ def test_le_dialogue_de_l_appel_attend_la_fin_de_la_sonnerie(banc):
         L.Jeu.commencer();
         L.B.partie.missionsFaites.m1 = 1;
         let sonne = -1, parle = -1, ensemble = false;
-        for (let i = 0; i < 900 && parle < 0; i++) {
+        for (let i = 0; i < 3600 && parle < 0; i++) {
           o.frame(1);
           if (L.B.sonnerie && sonne < 0) sonne = i;
           if (L.B.sonnerie && L.B.cinema) ensemble = true;   // on parle pendant que ca sonne

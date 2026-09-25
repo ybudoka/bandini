@@ -253,3 +253,4 @@ Deux documents d'avant la table :
 | Le scanner de police a perdu ses deux voix | ✅ **livré** | 25 sept. 2026 | **P2** | **correctif** | [fiche](le-scanner-de-police-a-perdu-ses-deux-voix.md#fiche) · [notes](le-scanner-de-police-a-perdu-ses-deux-voix.md#notes) |
 | Les rabais gagnés en mission ne s'appliquent pas | ✅ **livré** | 25 sept. 2026 | **P1** | **correctif** | [fiche](les-rabais-gagnes-en-mission-ne-s-appliquent-pas.md#fiche) · [notes](les-rabais-gagnes-en-mission-ne-s-appliquent-pas.md#notes) |
 | Une deuxième planque, plus loin | ✅ **livré** | 25 sept. 2026 | **P4** | ajout | [fiche](une-deuxieme-planque-plus-loin.md#fiche) · [notes](une-deuxieme-planque-plus-loin.md#notes) |
+| Le téléphone sonne à la chaîne : un appel à la fois | ✅ **livré** | 25 sept. 2026 | **P2** | **correctif** | [fiche](le-telephone-sonne-a-la-chaine.md#fiche) · [notes](le-telephone-sonne-a-la-chaine.md#notes) |
