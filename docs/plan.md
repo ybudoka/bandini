@@ -78,6 +78,7 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
+| Un char qui coule est détruit | ⬜ **en cours** | 25 sept. 2026 | **P1** | **correctif** | [fiche](jalons/un-char-qui-coule-est-detruit.md#fiche) |
 | Neuf juges rouges sur dev | ⬜ **en cours** | 25 sept. 2026 | **P1** | **correctif** | [fiche](jalons/neuf-juges-rouges-sur-dev.md#fiche) |
 | La ligne d'histoire : une ouverture et un générique | ⬜ **en cours** (l'ouverture livrée) | 16 sept. 2026 | **P2** | ajout | [fiche](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#fiche) · [notes](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#notes) |
 | Le décor, les bêtes et les gens répondent — deuxième vague | ⬜ **en cours** (livrés : manger au barbecue, caresser le chat, vider un parcomètre ; le buisson est annulé ; restent l'affiche arrachée, le caddie, le panneau) | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/le-decor-les-betes-et-les-gens-repondent.md#fiche-de-la-deuxième-vague) |
