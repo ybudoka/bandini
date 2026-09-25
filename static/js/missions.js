@@ -149,14 +149,39 @@ const Missions = (function () {
     return true;
   }
 
-  /** Un rabais gagne dans l'histoire (1 = plein prix). */
+  /** Un rabais gagne (1 = plein prix), pour UNE cle : le slug d'une piece
+      (`armurerie`, `vetements`, `cantine`…), `fourriere` ou `kiosque`.
+
+      ⚠️ **CHAQUE CLE QU'UNE MISSION DONNE DOIT ETRE LUE QUELQUE PART** (25 sept.
+      2026) : f02, f03 et s01 affichaient un rabais a leur recompense, et seul le
+      kiosque le lisait — Gus, Rosa et le lot vendaient plein prix. Ce facteur est
+      maintenant pris partout ou un prix se calcule dans une piece, et
+      `test_rabais_js.py` juge chaque cle de `donne.rabais` du catalogue. */
   function rabais(cle) {
     const histoire = (B.partie && B.partie.rabais && B.partie.rabais[cle]) || 1;
     // ⚠️ Le rabais de l'histoire et celui d'un palier se MULTIPLIENT : ce sont
     // deux choses qu'on a gagnees separement, et les additionner aurait pu
     // donner un prix negatif.
-    return histoire * avantage('rabais', 1);
+    return histoire * rabaisDePalier(cle);
   }
+
+  /** Le meilleur palier `rabais` deja gagne POUR CETTE CLE. ⚠️ Un palier porte sa
+      `cle` (le cafe du chauffeur : `kiosque`) : `avantage('rabais')` les confondait
+      toutes, et le rabais du kiosque aurait suivi le joueur chez Gus. */
+  function rabaisDePalier(cle) {
+    const paliers = B.defs.economie.paliers || {};
+    let valeur = 1;
+    for (const slug in paliers) {
+      for (const palier of paliers[slug]) {
+        if (palier.type !== 'rabais' || (palier.cle || 'kiosque') !== cle || !palierDebloque(slug, palier)) continue;
+        valeur = Math.min(valeur, palier.valeur);
+      }
+    }
+    return valeur;
+  }
+
+  /** Un prix de piece, rabais compris. */
+  function auRabais(prix, cle) { return Math.round(prix * rabais(cle)); }
 
   // --- L'homme-sandwich et son coupon --------------------------------------------
 
@@ -777,7 +802,8 @@ const Missions = (function () {
       meme char au garage, sinon la fourriere devient une machine a argent. */
   function prixRachat(slug) {
     const f = B.defs.economie.fourriere, def = Vehicules.vehiculeDef(slug);
-    const part = avantage('fourriere', 1);     // les gars du lot te connaissent
+    // Les gars du lot te connaissent (le palier), et Gilles t'en doit une (s01).
+    const part = avantage('fourriere', 1) * rabais('fourriere');
     if (!def) return Math.round(f.rachat_minimum * part);
     return Math.round(Math.max(f.rachat_minimum, Math.round(def.prix * f.rachat_fraction)) * part);
   }
@@ -1115,14 +1141,17 @@ const Missions = (function () {
         // Le casse-croute : le hot-dog, la poutine, la soupe, la liqueur — et
         // le cafe, sinon la roulotte du trottoir est le seul endroit du jeu ou
         // courir plus longtemps s'achete, et elle ferme.
+        // ⚠️ Au prix de LA PIECE : Lulu fait un prix a qui a vide sa cantine (q01).
         [['HOT-DOG', 'hotdog'], ['POUTINE', 'poutine'], ['SOUPE AUX POIS', 'soupe'], ['LIQUEUR', 'liqueur']].forEach(function (d) {
-          items.push({ libelle: d[0], detail: tarifs[d[1]] + ' $ / +' + tarifs[d[1] + '_pv'] + ' PV +' + tarifs[d[1] + '_souffle'] + ' SOUFFLE',
-                       actif: p.argent >= tarifs[d[1]],
-                       faire: function () { payer(tarifs[d[1]], d[0]); soigner(B.joueur, tarifs[d[1] + '_pv']); nourrir(B.joueur, tarifs[d[1] + '_souffle']); return false; } });
+          const prix = auRabais(tarifs[d[1]], piece.slug);
+          items.push({ libelle: d[0], detail: prix + ' $ / +' + tarifs[d[1] + '_pv'] + ' PV +' + tarifs[d[1] + '_souffle'] + ' SOUFFLE',
+                       actif: p.argent >= prix,
+                       faire: function () { payer(prix, d[0]); soigner(B.joueur, tarifs[d[1] + '_pv']); nourrir(B.joueur, tarifs[d[1] + '_souffle']); return false; } });
         });
-        items.push({ libelle: 'CAFÉ', detail: tarifs.cafe + ' $ / +' + tarifs.cafe_souffle + ' SOUFFLE · COURSE LONGUE ' + B.defs.economie.cafe.duree_s + ' S',
-                     actif: p.argent >= tarifs.cafe,
-                     faire: function () { payer(tarifs.cafe, 'CAFÉ'); soigner(B.joueur, tarifs.cafe_pv); nourrir(B.joueur, tarifs.cafe_souffle); cafeine(B.joueur); return false; } });
+        const cafe = auRabais(tarifs.cafe, piece.slug);
+        items.push({ libelle: 'CAFÉ', detail: cafe + ' $ / +' + tarifs.cafe_souffle + ' SOUFFLE · COURSE LONGUE ' + B.defs.economie.cafe.duree_s + ' S',
+                     actif: p.argent >= cafe,
+                     faire: function () { payer(cafe, 'CAFÉ'); soigner(B.joueur, tarifs.cafe_pv); nourrir(B.joueur, tarifs.cafe_souffle); cafeine(B.joueur); return false; } });
         return { titre: piece.nom.toUpperCase(), items: items, sur: p.argent + ' $' };
       case 'soigner': {
         const prix = B.defs.economie.hopital.minimum;
@@ -1189,10 +1218,11 @@ const Missions = (function () {
       items.push({ libelle: ferme, actif: false });
       return { titre: piece ? piece.nom.toUpperCase() : comptoir.nom.toUpperCase(), items: items, sur: p.argent + ' $' };
     }
+    const cle = piece && piece.slug;
     comptoir.articles.forEach(function (a) {
-      if (a.arme) return items.push(itemArme(a, comptoir.marge));
-      if (a.tenue) return items.push(itemTenue(a, comptoir.rabais));
-      items.push(itemBouchee(a));
+      if (a.arme) return items.push(itemArme(a, (comptoir.marge || 1) * rabais(cle)));
+      if (a.tenue) return items.push(itemTenue(a, (comptoir.rabais || 1) * rabais(cle)));
+      items.push(itemBouchee(a, null, rabais(cle)));
     });
     return { titre: piece.nom.toUpperCase(), items: items, sur: p.argent + ' $' };
   }
@@ -1205,9 +1235,9 @@ const Missions = (function () {
       rien. C'est une seule fonction pour les deux, parce que le jour ou une
       liqueur change de prix, le comptoir et la machine doivent le dire
       ensemble. */
-  function itemBouchee(a, servir) {
+  function itemBouchee(a, servir, facteur) {
     const p = B.partie, tarifs = B.defs.economie.tarifs;
-    const prix = Math.round(tarifs[a.tarif] || 0);
+    const prix = Math.round((tarifs[a.tarif] || 0) * (facteur || 1));
     const gains = [];
     if (a.gain_pv) gains.push('+' + tarifs[a.gain_pv] + ' PV');
     if (a.gain_souffle) gains.push('+' + tarifs[a.gain_souffle] + ' SOUFFLE');
@@ -1721,17 +1751,17 @@ const Missions = (function () {
     (m ? m.articles : []).forEach(function (slug) {
       const arme = Combat.armeDef(slug);
       if (!arme) return;
-      const deja = !!p.armes[slug];
-      items.push({ libelle: arme.nom.toUpperCase(), detail: deja ? 'DÉJÀ À TOI' : arme.prix + ' $', actif: !deja && p.argent >= arme.prix,
-                   faire: function () { payer(arme.prix, arme.nom.toUpperCase()); Combat.ramasserArme(slug, arme.chargeur); return false; } });
+      const deja = !!p.armes[slug], prix = auRabais(arme.prix, 'armurerie');
+      items.push({ libelle: arme.nom.toUpperCase(), detail: deja ? 'DÉJÀ À TOI' : prix + ' $', actif: !deja && p.argent >= prix,
+                   faire: function () { payer(prix, arme.nom.toUpperCase()); Combat.ramasserArme(slug, arme.chargeur); return false; } });
     });
     (m ? m.munitions : []).forEach(function (slug) {
       const arme = Combat.armeDef(slug);
       if (!arme || !p.armes[slug] || arme.prix_munitions === null) return;
-      const pleine = p.armes[slug].mun >= arme.munitions_max;
-      items.push({ libelle: 'MUNITIONS ' + arme.nom.toUpperCase(), detail: pleine ? 'PLEIN' : arme.prix_munitions + ' $',
-                   actif: !pleine && p.argent >= arme.prix_munitions,
-                   faire: function () { payer(arme.prix_munitions, 'MUNITIONS'); Combat.ramasserArme(slug, arme.chargeur); return false; } });
+      const pleine = p.armes[slug].mun >= arme.munitions_max, prix = auRabais(arme.prix_munitions, 'armurerie');
+      items.push({ libelle: 'MUNITIONS ' + arme.nom.toUpperCase(), detail: pleine ? 'PLEIN' : prix + ' $',
+                   actif: !pleine && p.argent >= prix,
+                   faire: function () { payer(prix, 'MUNITIONS'); Combat.ramasserArme(slug, arme.chargeur); return false; } });
     });
     return { titre: 'CHEZ GUS', items: items, sur: p.argent + ' $' };
   }
@@ -1763,10 +1793,10 @@ const Missions = (function () {
     const items = parEmplacement((B.defs.tenues || []).filter(function (t) {
       return !t.prime || p.tenues.indexOf(t.slug) >= 0;
     }), function (t) {
-      const deja = p.tenues.indexOf(t.slug) >= 0;
-      return { libelle: t.nom.toUpperCase(), detail: deja ? (portee(t) ? (t.emplacement === 'tete' ? 'SUR TA TÊTE' : 'PORTÉE') : 'À TOI') : t.prix + ' $',
-               actif: deja || p.argent >= t.prix, faire: function () {
-                 if (!deja) { payer(t.prix, t.nom.toUpperCase()); p.tenues.push(t.slug); }
+      const deja = p.tenues.indexOf(t.slug) >= 0, prix = auRabais(t.prix, 'vetements');
+      return { libelle: t.nom.toUpperCase(), detail: deja ? (portee(t) ? (t.emplacement === 'tete' ? 'SUR TA TÊTE' : 'PORTÉE') : 'À TOI') : prix + ' $',
+               actif: deja || p.argent >= prix, faire: function () {
+                 if (!deja) { payer(prix, t.nom.toUpperCase()); p.tenues.push(t.slug); }
                  porterTenue(t.slug);
                  return false;
                } };
