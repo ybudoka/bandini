@@ -443,3 +443,49 @@ def test_un_coup_de_pied_se_dessine_avec_sa_pose(banc):
         return Array.from(vus);
     }""")
     assert "tech_pied_cote_droite" in r and "tech_genou_droite" in r, r
+
+
+# --- La triche, le nom, les sons (tâche 7) -----------------------------------------------
+
+def test_la_triche_donne_toutes_les_techniques(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const item = L.Hud.menuDebug().items.find(function (i) { return i.libelle === 'TOUTES LES TECHNIQUES'; });
+        item.faire();
+        return { reste: L.B.defs.techniques.filter(function (t) { return !t.gratuite && !L.B.partie.techniques[t.slug]; }).length,
+                 rue: Object.keys(L.B.partie.techniques).filter(function (s) { return L.Techniques.def(s).gratuite; }) };
+    }""")
+    assert r == {"reste": 0, "rue": []}, r
+
+
+def test_une_technique_apprise_se_nomme_quand_elle_part(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.B.partie.techniques.pied_de_cote = true;
+        o.touche('KeyX'); o.frame(L.Combat.CHARGE_MIN + 2); o.relacher('KeyX'); o.frame(20);
+        return L.B.msg;
+    }""")
+    assert r == "COUP DE PIED DE CÔTÉ !"
+
+
+def test_un_coup_de_rue_ne_se_nomme_pas(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.B.msg = null;
+        o.touche('KeyX'); o.frame(1); o.relacher('KeyX'); o.frame(12);
+        return L.B.msg || null;
+    }""")
+    assert r is None, r
+
+
+def test_un_coup_de_pied_s_entend_comme_un_pied(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const compte = {};
+        ['pied', 'coup', 'chute'].forEach(function (e) { L.Son.SFX[e] = function () { compte[e] = (compte[e] || 0) + 1; }; });
+        L.Son.depuis = function (e, f) { f(); };
+        L.B.partie.techniques.pied_de_cote = true;
+        o.touche('KeyX'); o.frame(L.Combat.CHARGE_MIN + 2); o.relacher('KeyX'); o.frame(30);
+        return compte;
+    }""")
+    assert r.get("pied") == 1 and not r.get("coup"), r

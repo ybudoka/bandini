@@ -164,7 +164,11 @@ const Techniques = (function () {
 
   function entrerDansLActif(e, t) {
     const arme = e.arc;
-    Son.depuis(e, function () { Son.SFX.arme(arme); });
+    // Un pied fend l'air ; le reste sonne comme ce qu'on a au poing.
+    Son.depuis(e, function () { if (t.style === 'karate') Son.SFX.pied(); else Son.SFX.arme(arme); });
+    // Une technique APPRISE se nomme quand elle part : on sait ce qu'on vient de
+    // faire, et ce qu'on a paye au dojo. Les coups de rue se taisent.
+    if (Entites.estJoueur(e) && !t.gratuite) Hud.message(t.nom.toUpperCase() + ' !', 50);
     // La prise branche ici la projection de `e.techCible`. ⚠️ `api`, pas
     // `Techniques` : appele a l'execution, apres la fin de l'IIFE.
     if (api.surActif) api.surActif(e, t);

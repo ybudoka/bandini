@@ -2319,6 +2319,19 @@ const Hud = (function () {
     return false;
   }
 
+  /** Donne TOUTES les techniques du dojo (`app/techniques.py`), en lisant le
+      catalogue : une technique ajoutee tombe dans cette triche sans qu'on y
+      touche. Les coups de rue, deja sus de tout le monde, ne s'y ecrivent pas. */
+  function toutesLesTechniques() {
+    const p = B.partie;
+    if (!p) { message('PAS DE PARTIE'); return false; }
+    p.techniques = p.techniques || {};
+    for (const t of (B.defs.techniques || [])) if (!t.gratuite) p.techniques[t.slug] = true;
+    Son.SFX.argent();
+    message('TOUTES LES TECHNIQUES');
+    return false;
+  }
+
   /** L'onglet TRICHES, en sections : ce qu'on se donne, ou l'on va, la mission
       en cours, le reste. ⚠️ Il n'y a plus de PLUS… ni de RETOUR : les sauts sont
       des sous-pages de l'onglet, et B reprend la partie comme partout dans le
@@ -2333,6 +2346,7 @@ const Hud = (function () {
       { libelle: 'ARGENT +1 000 $', faire: function () { Missions.encaisser(1000, 'DEBUG'); return false; } },
       { libelle: 'ARGENT +50 000 $', faire: function () { Missions.encaisser(50000, 'DEBUG'); return false; } },
       { libelle: 'TOUS LES ITEMS', faire: function () { tousLesItems(); return false; } },
+      { libelle: 'TOUTES LES TECHNIQUES', faire: function () { toutesLesTechniques(); return false; } },
       { libelle: 'SANTÉ COMPLÈTE', faire: function () { Missions.soigner(B.joueur, B.joueur.vieMax); return false; } },
       bascule('invincible', 'INVINCIBLE'),
       bascule('vehicules', 'VÉHICULES INVINCIBLES'),
@@ -3706,7 +3720,7 @@ const Hud = (function () {
     }
   }
 
-  return { init, voile, etat, progression, partDesScripts, finirChargement, message, prime, majPrime, montantDeLaPrime, PRIME, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, menuSautMissions, menuSautDefis, menuJukebox, pointDuDefi, menuCarnet,
+  return { init, voile, etat, progression, partDesScripts, finirChargement, message, prime, majPrime, montantDeLaPrime, PRIME, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, toutesLesTechniques, menuSautMissions, menuSautDefis, menuJukebox, pointDuDefi, menuCarnet,
     ouvrirOnglet, toucherMenu, onglets: function () { return ongletsVisibles().map(function (o) { return o.slug; }); },
     ciblesDuMenu: function () { return cibles.slice(); }, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     menuCommandes, ouvrirCommandes, majAideDuTitre, lignesDAide, glypheDAction,

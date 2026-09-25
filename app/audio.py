@@ -86,6 +86,20 @@ CATALOGUE: list[Echantillon] = [
        prompt="a short winded male grunt of pain after a punch to the ribs, "
               "breath forced out through the teeth, dry close-up, no words, "
               "no music"),
+    # Les techniques d'arts martiaux (`techniques.py`, `techniques.js`) : le pied
+    # (karate) a son elan, la projection sa chute, l'etranglement son souffle.
+    _e("pied", "Coup de pied", variantes=2, duree_s=0.7, volume=0.24,
+       prompt="a fast martial arts kick, a sharp whoosh of a leg cutting the air "
+              "then a dull heavy thud of a shoe landing on a body, dry close-up, "
+              "no reverb, no voices, no music"),
+    _e("chute", "Corps qui tombe", variantes=2, duree_s=0.9, volume=0.3,
+       prompt="a grown man thrown hard onto his back on asphalt, a heavy dull body "
+              "slam with a short scrape of clothes on grit, dry close-up, no "
+              "reverb, no voices, no music"),
+    _e("etranglement", "Étranglement", duree_s=1.2, volume=0.2,
+       prompt="a muffled struggling male breath cut short by a chokehold, a strained "
+              "throaty wheeze and a few scuffs of shoes, dry close-up, no words, "
+              "no reverb, no music"),
     # ⚠️ Un son PAR ARME (`armes.py`, champ `son`). Jusqu'au 13 sept. 2026,
     # tout jouait le coup de poing : la batte, le couteau, le pistolet et le
     # fusil aussi. Une arme qu'on n'entend pas, on ne sait pas qu'on la tient.
