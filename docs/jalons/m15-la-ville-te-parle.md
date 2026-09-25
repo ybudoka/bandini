@@ -56,9 +56,9 @@ que je n'ai pas. Cette première moitié ne demande **aucun son neuf**.
 
 ## Fiche de la deuxième vague
 
-✅ **Toute la deuxième vague est livrée** (21 et 24 sept. 2026) — voir les notes. ⚠️ **Reste à
-générer** : les vingt-quatre clips des répliques par contexte, quand le quota ElevenLabs se remet
-(⚠️ **nouveau forfait le 24 sept. 2026** : le quota n'est plus l'obstacle) ; la règle d'`audio.py` fait que la rue parle comme avant d'ici là.
+✅ **Toute la deuxième vague est livrée** (21 et 24 sept. 2026) — voir les notes. ✅ Les
+vingt-quatre clips des répliques par contexte sont **générés le 25 sept. 2026** (nouveau forfait) :
+la rue a peur, te reconnaît et parle de nuit avec sa voix.
 
 **Ce qui reste, et ce que ça coûte** : la radio qui parle (animateur, pubs, bulletin), la
 police à la radio, les bruits de quartier, le souffle du joueur, et les banques de répliques
@@ -308,6 +308,12 @@ reconnaître** (24 sept. 2026) — les deux derniers morceaux de M15.
   `normal`**, et la rue parle comme avant. Le jour où les fichiers arrivent, la porte se referme
   d'elle-même, exactement comme pour les six leçons du Clairon (écrites le 14 sept., mises en
   voix le 16). La dette est inscrite dans [le plan](../plan.md#dettes), avec son déclencheur.
+  ✅ **Payée le 25 sept. 2026** : les vingt-quatre générés d'un coup avec les 174 répliques de
+  missions encore muettes (198 voix, 16 943 caractères, choix de Martin). Une seule a demandé une
+  reprise : `marco-m50-7` (balise au milieu + « … », trou de 1,4 s — le piège connu de v3), refaite
+  une fois, sans trou. Le plafond de dépôt des voix d'histoire est passé de 20 à 80 Mo
+  (`test_le_poids_audio_reste_raisonnable` : 37 missions parlent à ~530 Ko, les 134 de M16 en
+  feraient ~70). ⚠️ À écouter par Martin : aucun juge ne dit qu'une voix est la bonne.
 - ⚠️ **UN JUGE DE LA 2e VAGUE EST ROUGE, ET CE N'EST PAS CELUI-CI**
   (`test_ondes.py::test_la_police_n_a_la_voix_ni_d_un_passant_ni_d_un_personnage`) : les dix
   missions du 23 sept. ont donné **Caroline** à Mado et **Alexandre Boutin** au Grand Mo et à
