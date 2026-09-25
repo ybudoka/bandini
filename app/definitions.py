@@ -36,7 +36,7 @@ import json
 from dataclasses import dataclass
 
 from . import (armes, audio, blocs, carte, devantures, economie, garderobe, interactions, journal, magasins,
-               manettes, missions, nuit, pietons, recherche, vehicules, visages)
+               manettes, missions, nuit, pietons, recherche, techniques, vehicules, visages)
 from .version import VERSION
 
 
@@ -59,6 +59,8 @@ def assembler() -> dict:
         "armes": armes.CATALOGUE,
         "ordre_armes": armes.ORDRE_CYCLE,
         "armes_regles": armes.REGLES,
+        # Les coups de rue et les cours du dojo (docs/jalons/les-techniques-d-arts-martiaux.md).
+        "techniques": techniques.CATALOGUE,
         "economie": economie.exporter(),
         "recherche": recherche.exporter(),
         "pietons": gens,
