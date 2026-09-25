@@ -44,14 +44,28 @@ l'hélico sourd ; `Monde.restaurer` rend la ville telle qu'on l'a laissée. Ce q
   les missions). La carte de la ville n'en grossit pas — c'est même une réponse à la dette « les districts
   chargés autour du joueur ».
 
-⚠️ **À trancher par Martin** (ce que le fondu emporte avec lui) :
+✅ **Tranché aussi (Martin, 25 sept. 2026 : « ça m'a l'air bon ») — ce que le fondu emporte :**
 
-- **La police** : les étoiles passent-elles le fondu ? Proposition : oui, mais la poursuite **reprend au
-  bord** du bloc (les agents d'avant ne suivent pas) — sinon un passage devient un bouton « semer ».
-- **La mission** : une mission dans un bloc a son GPS qui pointe **le passage** tant qu'on est en ville.
-- **Le temps** : l'heure continue de tourner dans le bloc (la nuit tombe pareil).
+- **La police** : les étoiles passent le fondu, mais la poursuite **reprend au bord** du bloc — les agents
+  d'avant ne suivent pas, de nouveaux arrivent du bloc. Sinon un passage deviendrait un bouton « semer ».
+- **Le temps** : l'heure continue de tourner dans le bloc ; la nuit tombe au même moment partout.
+- **La mission** : une mission dans un bloc a son GPS qui pointe **le passage** tant qu'on est en ville (et
+  l'inverse).
 - **L'île et l'aéroport** restent où ils sont : ils marchent, et les déménager ne rapporterait rien. Les
   blocs, c'est pour ce qui vient.
+
+**En vagues, chacune jouable, testée, déployée :**
+
+1. **Le passage à pied, vers un bloc d'essai** : `app/blocs/`, un bloc minuscule (une clairière et un
+   chemin), `/api/carte/bloc/<slug>` avec son ETag, le fondu dans les deux sens, la ville rendue telle
+   qu'on l'a laissée. Le juge : `/api/carte` ne change pas d'un octet.
+2. **En char, et à deux** : le char et ses passagers passent, le deuxième joueur aussi ; les étoiles
+   passent et la poursuite reprend au bord.
+3. **Un vrai dehors** : le trafic, les piétons, la police, les lampes et la nuit du bloc — tout ce qui lit
+   « la carte » lit la carte courante.
+4. **Le premier vrai bloc** : un de ceux que le plan attend (la deuxième planque, la cabane à sucre, le
+   ciné-parc ou le centre d'achat — à choisir par Martin), avec la sauvegarde qui se réveille dedans et le
+   hors-ligne à l'usage.
 
 ⚠️ **Ce qui guette** :
 
