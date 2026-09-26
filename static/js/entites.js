@@ -404,6 +404,9 @@ const Entites = (function () {
 
   function peuplerInterieur(piece) {
     if (!piece || !piece.gens) return;
+    // ⚠️ UNE PIECE VIDE LA NUIT (les Galeries de la Baie) : ses gens ne naissent pas quand il fait nuit
+    // DEHORS (`estNuit` avec l'heure : sans elle, dans une piece, il ne fait jamais nuit).
+    if (piece.vide_la_nuit && B.partie && Monde.estNuit(B.partie.heure)) return;
     for (const g of piece.gens) {
       const arch = archetypeDedans(g);
       if (!arch) continue;

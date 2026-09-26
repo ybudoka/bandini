@@ -734,6 +734,8 @@ const Son = (function () {
     explosion: function () { if (!joue('explosion')) { bruit(0.9, 0.8, 600, 40); ton(60, 0.6, 'sine', 0.5, 0.5); } },
     // Un feu d'artifice qui eclate (la Saint-Jean) : un claquement sec, et le crepitement qui retombe.
     // Synthetise : pas d'echantillon a payer pour un soir par annee.
+    // Une lumiere qui s'eteint (les Galeries, la nuit) : le clac sec d'un gros interrupteur.
+    interrupteur: function () { bruit(0.04, 0.3, 2400, 700); ton(90, 0.08, 'square', 0.12, 0.6); },
     artifice: function () { bruit(0.12, 0.35, 3000, 900); bruit(0.7, 0.12, 5000, 1500); ton(180, 0.2, 'sine', 0.2, 0.5); },
     // --- L'eau ---------------------------------------------------------------
     // ⚠️ Jusqu'ici, entrer dans l'eau jouait `choc` — la TOLE FROISSEE d'un

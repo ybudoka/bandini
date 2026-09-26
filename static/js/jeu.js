@@ -1102,6 +1102,7 @@ const Jeu = (function () {
         pas('pont', Pont.maj);             // le pont de glace : il prend, craque au degel, et rend l'eau
         pas('saintjean', SaintJean.maj);   // la Saint-Jean : le bruit des feux
         pas('cineparc', Cineparc.maj);     // le cine-parc : ses spectateurs, et les phares qui fachent
+        pas('galeries', Galeries.maj);     // la nuit aux Galeries : les lumieres, la voix, le gardien
         pas('neige', Neige.maj);
         pas('brouillard', Brouillard.maj);
         pas('police', Police.maj);
@@ -1241,6 +1242,7 @@ const Jeu = (function () {
     // ⚠️ LES FEUX D'ARTIFICE PAR-DESSUS LA NUIT : une fusee fait sa propre lumiere. Peints sous la nuit,
     // ils s'y eteignaient (vu a la capture : une lueur, pas un eclat) ; leurs lampes eclairent la ville.
     if (!B.interieur) SaintJean.dessinerFeux(Base.ecran(), vue);
+    Galeries.dessiner(Base.ecran(), vue);    // le noir qui gagne aux Galeries, la nuit (une piece n'a pas de nuit a elle)
     Hud.dessiner();
   }
 
@@ -1500,7 +1502,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Incendies: Incendies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Conduite: Conduite, Rue: Rue, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Galeries: Galeries, Incendies: Incendies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Conduite: Conduite, Rue: Rue, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,

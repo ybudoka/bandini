@@ -275,6 +275,7 @@ Deux documents d'avant la table :
 | Le ciné-parc | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-cine-parc.md#fiche) · [notes](le-cine-parc.md#notes) |
 | Le hockey de ruelle | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-hockey-de-ruelle.md#fiche) · [notes](le-hockey-de-ruelle.md#notes) |
 | La cabane à sucre : un événement de printemps | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](la-cabane-a-sucre.md#fiche) · [notes](la-cabane-a-sucre.md#notes) |
+| Le centre d'achat hanté | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-centre-d-achat-hante.md#fiche) · [notes](le-centre-d-achat-hante.md#notes) |
 | Un vrai chalet dedans, et son foyer | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](un-vrai-chalet-dedans-et-son-foyer.md#fiche) · [notes](un-vrai-chalet-dedans-et-son-foyer.md#notes) |
 | Le chalet fume, et son feu crépite | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-chalet-fume-et-son-feu-crepite.md#fiche) · [notes](le-chalet-fume-et-son-feu-crepite.md#notes) |
 | Le dojo du quartier : apprendre les techniques | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-dojo-du-quartier.md#fiche) · [notes](le-dojo-du-quartier.md#notes) |

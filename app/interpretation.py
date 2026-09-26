@@ -426,6 +426,11 @@ from app import missions  # noqa: E402
 
 JEU.update({r["slug"]: r["jeu"] for r in missions.repliques() if r.get("jeu")})
 
+# LA VOIX AU HAUT-PARLEUR DES GALERIES (`blocs.galeries.ANNONCES`) : son jeu est écrit avec son texte.
+from app.blocs import galeries as _galeries  # noqa: E402
+
+JEU.update({f"galeries-{a['cle']}": a["jeu"] for a in _galeries.ANNONCES})
+
 # LE TIRAGE DU 6/49 (`loto.repliques`) : l'annonceur de la loterie. Les boules, d'un ton egal et net
 # — elles s'enchainent, une par une ; l'amorce et l'issue, elles, ont du jeu.
 from app import loto  # noqa: E402

@@ -331,6 +331,8 @@ def test_les_voix_de_l_histoire_sont_declarees_par_mission(paquet, a_jouer):
     from app import missions
     histoire = paquet["audio"]["histoire"]
     assert len(histoire) >= 30
+    # ⚠️ La voix au haut-parleur des Galeries (26 sept. 2026) n'appartient à aucune mission non plus :
+    # elle voyage en SÉRIE (`audio.serie_de_voix`, comme le tirage du 6/49), dépliée par `Son.Voix`.
     assert {v["mission"] for v in histoire} == {"journal", "ouverture", "repos"}, \
         "le journal lu par le narrateur, l'ouverture qu'il lit aussi, et le mot de repos"
     # ⚠️ Les missions se lisent dans le catalogue : une liste écrite ici se retouchait à chaque mission

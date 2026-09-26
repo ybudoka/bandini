@@ -1415,6 +1415,16 @@ def serie_de_voix(prefixe: str, voix: list[dict]) -> dict:
             "sans_fichier": [v["slug"][len(prefixe):] for v in voix if not chemin_voix(v).is_file()]}
 
 
+def voix_galeries() -> list[dict]:
+    """La voix au haut-parleur des Galeries de la Baie, la nuit (`blocs.galeries.ANNONCES`) — sa banque à
+    elle (`galeries`), chargée quand on entre (`Galeries`). Sa voix lui est RÉSERVÉE (`VOIX_RESERVEES`)."""
+    from .blocs import galeries
+    return [{"slug": f"galeries-{a['cle']}", "texte": a["texte"], "genre": "homme", "voix": galeries.VOIX,
+             "volume": 0.85, "histoire": True, "qui": "annonceur", "mission": "galeries", "partie": "galeries",
+             "telephone": False}
+            for a in galeries.ANNONCES]
+
+
 def voix_ouverture() -> list[dict]:
     """Les quatre phrases de l'ouverture, dites par le narrateur du Clairon.
 
@@ -1468,7 +1478,7 @@ def voix_dojo() -> list[dict]:
 
 def toutes_les_voix() -> list[dict]:
     return (list(VOIX) + list(VOIX_DE_LA_POLICE) + voix_histoire() + voix_journal() + voix_loto() + voix_ouverture()
-            + voix_repos() + voix_dojo())
+            + voix_repos() + voix_dojo() + voix_galeries())
 
 
 #: LES VOIX QUI NE SE PARTAGENT PAS — la table, ecrite UNE fois : la voix, et le
@@ -1483,6 +1493,8 @@ def toutes_les_voix() -> list[dict]:
 VOIX_RESERVEES: dict[str, str] = {
     VOIX_REPARTITRICE: "police",
     VOIX_AGENT: "police",
+    # La voix au haut-parleur des Galeries : générée pour elle, et à elle seule.
+    "annonceur centre d'achat 2": "annonceur",
 }
 
 
@@ -1755,5 +1767,5 @@ def exporter() -> dict:
         # en une ligne — le prefixe, les noms, ce qu'elles ont en commun, et celles dont le mp3 manque.
         # Declarees une par une, elles pesaient 8 870 octets bruts et firent deborder le paquet
         # (`test_le_paquet_reste_leger`, 26 sept. 2026). `Son.Voix.histoire()` les deplie au chargement.
-        "series": [serie_de_voix("narrateur-loto-", voix_loto())],
+        "series": [serie_de_voix("narrateur-loto-", voix_loto()), serie_de_voix("galeries-", voix_galeries())],
     }

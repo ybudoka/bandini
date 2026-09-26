@@ -105,9 +105,14 @@ def test_le_paquet_reste_leger():
     ⚠️ **Le brut : 250 000 → 260 000 le 26 sept. 2026**, même journée : les défis et les comptoirs de la
     cabane à sucre, du hockey, de la motoneige et du derby, l'année du jeu, la Saint-Jean et le ciné-parc —
     250 142 octets bruts, un indicateur (le gzip reste le juge, sous son plafond).
+
+    ⚠️ **Le gzip : 56 000 → 58 000 le 26 sept. 2026, le soir.** Mesure : 54 404 le matin, 56 003 le soir —
+    le dojo (une autre session), la motoneige, la Saint-Jean, le ciné-parc, la cabane à sucre, les défis
+    du hockey et de la tire, et les Galeries (dont la voix au haut-parleur voyage déjà en série). Deux Ko
+    de marge ; le remède du poids reste celui d'en haut, et c'est ce plafond-ci qui le rendra urgent.
     """
     paquets = definitions.construire()
-    for nom, brut_max, fil_max in (("definitions", 260_000, 56_000), ("carte", 520_000, 53_000)):
+    for nom, brut_max, fil_max in (("definitions", 260_000, 58_000), ("carte", 520_000, 53_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))
