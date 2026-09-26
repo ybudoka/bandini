@@ -597,6 +597,28 @@ ENFANTS_A_VELO: dict = {
 #: d'avoir a repondre a la question « que se passe-t-il si je lui roule
 #: dessus » — on n'y arrive pas.
 #:
+#: L'ORIGNAL DE LA POINTE (docs/jalons/l-orignal-de-la-pointe.md) : une bete rare et enorme, sur les
+#: sentiers du bois de La Pointe (`carte.chemins_des_bois`), la nuit. Il traverse au pas, se FIGE
+#: dans les phares d'un char, et ne bouge plus ; un coup de klaxon le fait fuir. Le frapper, c'est
+#: le char presque detruit (`degats` : la part de sa vie qui part), et il repart dans le bois, fache.
+#:
+#: ⚠️ SA VENUE NE SE TIRE PAS AU DE DU JEU : une nuit sur trois environ, a l'EMPREINTE du jour
+#: (`hash2(jour, sel)`), sur un sentier choisi de meme. Et il ne nait que quand le joueur approche
+#: du bois (`bulle_px`), hors de l'ecran : ailleurs, personne ne cree rien — un identifiant de plus
+#: au demarrage decalait des juges sans rapport (le capitaine Berube, M13).
+ORIGNAL = {
+    "heures": (0.85, 0.22),      # de 20 h 24 a 5 h 17 : la nuit, surtout
+    "chance_par_nuit": 0.35,     # une nuit sur trois, environ
+    "sel": 0x0415,
+    "bulle_px": 420,             # il nait quand le joueur est a moins de tant du sentier
+    "vitesse": 0.25,             # au pas, en px par image
+    "fuite_vitesse": 1.4,        # il detale
+    "phares_px": 90,             # un char qui roule vers lui a moins de tant : il se fige
+    "klaxon_px": 150,            # a portee d'un coup de klaxon, il fuit
+    "degats": 0.85,              # la part de la vie du char qui part au choc
+    "oubli_px": 520,             # enfui, et si loin : il s'efface
+}
+
 #: ⚠️ **LE CHAT SEUL A UNE CONFIANCE** (`confiance_px`, deuxieme vague, 22 sept.
 #: 2026, § « caresser le chat ») : marcher doucement (pas de sprint) et sans
 #: arme fait tomber sa distance de fuite a celle-la, assez pres pour le
@@ -950,7 +972,8 @@ def exporter() -> dict:
                             "assis_images": list(BETES["raton"]["assis_images"]),
                             "marche_images": list(BETES["raton"]["marche_images"]),
                             "heures": list(BETES["raton"]["heures"])},
-                  "goeland_dort": BETES["goeland_dort"]},
+                  "goeland_dort": BETES["goeland_dort"],
+                  "orignal": {**ORIGNAL, "heures": list(ORIGNAL["heures"])}},
         "enfants_a_velo": {**ENFANTS_A_VELO,
                            "casques": list(ENFANTS_A_VELO["casques"]),
                            "cadres": list(ENFANTS_A_VELO["cadres"]),

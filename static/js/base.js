@@ -81,6 +81,7 @@ const B = {
   finEnAttente: null,   // la fin d'une mission reussie, qui attend qu'on soit a l'arret (Histoire.jouerLaFin)
   generiqueEnAttente: null,   // le slug d'une fin de partie (M13) : son generique suit la scene de fin
   videopoker: null,     // la main en cours a la machine (Missions, le videopoker du Brouillard)
+  orignal: null,        // l'orignal de La Pointe, quand il est en ville (Entites.majOrignal)
   sonnerie: null,       // le combine sonne : { slug, t } — on decroche a l'image `t` (Histoire.majTelephone)
   mission: null,        // les figurants de la mission en cours (pas sauvegardes : voir Histoire)
   defi: null,           // le defi en cours

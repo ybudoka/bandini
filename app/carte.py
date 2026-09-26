@@ -1928,6 +1928,9 @@ class _Chantier:
         self.intersections: list[dict] = []
         self.arrets: dict[str, str] = {}
         self.reserve: set[tuple[int, int]] = set()
+        #: Les rectangles des BOIS (les parcs sauvages de La Pointe) : leurs sentiers s'exportent
+        #: (`chemins_des_bois`), c'est la que traverse l'orignal.
+        self.bois: list[tuple[int, int, int, int]] = []
         self.occupe: set[tuple[int, int]] = set()
         #: Les portes PEINTES (`P`) des devantures et des logements. Elles ne
         #: sont pas dans `sol` — le mur reste un mur, on ne la pousse pas — mais
@@ -5084,6 +5087,8 @@ class _Chantier:
         # ⚠️ Le bois de La Pointe garde son SABLE (des sentiers de plage, on y
         # arrive par la greve) ; un parc de ville a de la poussiere de pierre.
         pave = "s" if sauvage else "g"
+        if sauvage:
+            self.bois.append((x, y, largeur, hauteur))
         self.bouchon_rect(x, y, largeur, hauteur, "~")
         self.rect(x, y, largeur, hauteur, ",")
         centre = (x + largeur // 2, y + hauteur // 2)
@@ -5157,6 +5162,18 @@ class _Chantier:
         for x in range(min(coude, ax), max(coude, ax) + 1):
             self.rect(x, ay, 1, 2, pave)
             self.reserver(x, ay, 1, 2)
+
+    def chemins_des_bois(self) -> list[list[int]]:
+        """Les tuiles des SENTIERS du bois de La Pointe : le sable reserve des allees (`_allee`) dans
+        les parcs sauvages, tel qu'il est une fois la ville finie. C'est la que traverse l'orignal
+        (`Entites.majOrignal`). ⚠️ Lu, jamais tire : exporter ceci ne deplace rien dans la ville."""
+        tuiles = set()
+        for x, y, largeur, hauteur in self.bois:
+            for j in range(y, y + hauteur):
+                for i in range(x, x + largeur):
+                    if (i, j) in self.reserve and self.sol[j][i] == "s":
+                        tuiles.add((i, j))
+        return [[i, j] for i, j in sorted(tuiles, key=lambda t: (t[1], t[0]))]
 
     def reserver(self, x: int, y: int, largeur: int, hauteur: int) -> None:
         """Ces tuiles-la resteront libres : rien ne s'y posera (voir
@@ -6960,6 +6977,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "fourriere": chantier.fourriere,
         "barrieres": barrieres,
         "nids_de_poule": chantier.nids_de_poule(),
+        "chemins_des_bois": chantier.chemins_des_bois(),
         "entraves": chantier.entraves(),
         # ⚠️ La fiche A COTE de la liste : « entraves » est ce que la ville
         # PEUT fermer, « entrave » est ce qu'une entrave coute et ce qu'elle

@@ -262,3 +262,4 @@ Deux documents d'avant la table :
 | La ligne d'histoire : une ouverture et un générique | ✅ **livré** | 26 sept. 2026 | **P2** | ajout | [fiche](la-ligne-d-histoire-une-ouverture-et-un-generique.md#fiche) · [notes](la-ligne-d-histoire-une-ouverture-et-un-generique.md#notes) |
 | Le vidéopoker du Brouillard | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-videopoker-du-brouillard.md#fiche) · [notes](le-videopoker-du-brouillard.md#notes) |
 | Le 6/49 du dépanneur | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-6-49-du-depanneur.md#fiche) · [notes](le-6-49-du-depanneur.md#notes) |
+| L'orignal de La Pointe | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](l-orignal-de-la-pointe.md#fiche) · [notes](l-orignal-de-la-pointe.md#notes) |

@@ -2063,6 +2063,111 @@ const Entites = (function () {
   }
 
   /** Toutes les betes, une image. */
+  // --- L'orignal de La Pointe -------------------------------------------------------------
+  //: docs/jalons/l-orignal-de-la-pointe.md. Une bete rare et enorme sur les sentiers du bois de
+  //: La Pointe (`carte.chemins_des_bois`), la nuit : il va au pas d'une tuile de sentier a une
+  //: autre, se FIGE dans les phares d'un char qui vient vers lui, et ne bouge plus. Un coup de
+  //: klaxon le fait fuir ; le frapper aussi (`Vehicules`, le char presque detruit).
+  //:
+  //: ⚠️ C'est un DECOR, pas une bete de `B.betes` : les betes sont hors de `B.entites` pour qu'aucun
+  //: char ne les touche, et celle-ci, justement, on la frappe. Il tient l'index fixe a jour lui-meme
+  //: a chaque pas (`deplacerOrignal`), comme la benne qu'on pousse.
+  //:
+  //: ⚠️ Ni sa venue ni ses pas ne tirent `B.rng()` : l'empreinte de la nuit (`orignalDeLaNuit`) et
+  //: celle de ses pas (`hash2(id, pas)`). Et il ne nait qu'a l'approche du joueur, hors champ.
+
+  function ficheOrignal() { return B.defs.pietons && B.defs.pietons.betes && B.defs.pietons.betes.orignal; }
+  function cheminsDesBois() { return (Monde.carte && Monde.carte.def && Monde.carte.def.chemins_des_bois) || []; }
+
+  /** La nuit en cours a-t-elle son orignal, et sur quelle tuile de sentier ? Une nuit appartient au
+      jour ou elle commence. null sinon. */
+  function orignalDeLaNuit() {
+    const f = ficheOrignal(), c = cheminsDesBois(), p = B.partie;
+    if (!f || !c.length || !p) return null;
+    const nuit = p.heure >= f.heures[0] ? p.jour : p.jour - 1;
+    if (hash2(nuit, f.sel) / 4294967296 >= f.chance_par_nuit) return null;
+    return { nuit: nuit, tuile: c[hash2(nuit, f.sel + 1) % c.length] };
+  }
+
+  function deplacerOrignal(o, nx, ny) {
+    const ancienne = cle(o.x, o.y);
+    o.x = nx; o.y = ny;
+    if (cle(nx, ny) !== ancienne) {
+      const liste = grilleFixe.get(ancienne);
+      if (liste) {
+        const i = liste.indexOf(o);
+        if (i >= 0) liste.splice(i, 1);
+        if (!liste.length) grilleFixe.delete(ancienne);
+      }
+      ajouterA(grilleFixe, o);
+    }
+  }
+
+  /** La prochaine tuile de sentier ou il va : a moins de cinq tuiles, choisie a l'empreinte de ses pas. */
+  function prochainPasDeLOrignal(o) {
+    const c = cheminsDesBois(), m = o.orignal, tx = Math.floor(o.x / TT), ty = Math.floor(o.y / TT);
+    const proches = c.filter(function (t) { const d = Math.max(Math.abs(t[0] - tx), Math.abs(t[1] - ty)); return d >= 2 && d <= 5; });
+    m.pas = (m.pas || 0) + 1;
+    const t = proches.length ? proches[hash2(o.id, m.pas) % proches.length] : [tx, ty];
+    m.but = { x: t[0] * TT + 8, y: t[1] * TT + 8 };
+  }
+
+  /** Il detale, loin de `menace`, et fache. */
+  function faireFuirLOrignal(o, menace) {
+    const m = o.orignal;
+    if (m.etat === 'fuit') return;
+    m.etat = 'fuit';
+    const a = Math.atan2(o.y - menace.y, o.x - menace.x);
+    m.fuite = { dx: Math.cos(a), dy: Math.sin(a) };
+  }
+
+  /** Une image de l'orignal : sa venue, ses pas, les phares, le klaxon, la fuite. */
+  function majOrignal() {
+    const f = ficheOrignal(), j = B.joueur;
+    if (!f || !j || B.interieur || B.bloc) return;
+    let o = B.orignal;
+    if (o && B.entites.indexOf(o) < 0) o = B.orignal = null;
+    if (!o) {
+      if (B.t % 30 !== 0 || !enService(f.heures)) return;
+      const soir = orignalDeLaNuit();
+      if (!soir || B.partie.orignalVu === soir.nuit) return;           // une fois par nuit
+      const x = soir.tuile[0] * TT + 8, y = soir.tuile[1] * TT + 8;
+      if (dist2(x, y, j.x, j.y) > f.bulle_px * f.bulle_px || visibleAEcran(x, y, 24)) return;
+      const fiche = DECORS.orignal || {};
+      o = creer('decor', x, y, { decor: 'orignal', r: fiche.r || 9, solide: true, dessine: true,
+                                 orignal: { etat: 'marche', nuit: soir.nuit, pas: 0 } });
+      ajouterA(grilleFixe, o);
+      B.orignal = o;
+      B.partie.orignalVu = soir.nuit;
+      prochainPasDeLOrignal(o);
+      return;
+    }
+    const m = o.orignal, v = j.dansVehicule;
+    // Le klaxon, a portee : il fuit (`Vehicules`, `klaxonT` a 30 au coup, 29 l'image d'apres).
+    if (v && v.klaxonT === 29 && dist2(o.x, o.y, v.x, v.y) < f.klaxon_px * f.klaxon_px) faireFuirLOrignal(o, v);
+    if (m.etat === 'marche') {
+      // FIGE DANS LES PHARES : un char qui roule VERS lui, tout pres, la nuit.
+      if (v && Monde.estNuit() && dist2(o.x, o.y, v.x, v.y) < f.phares_px * f.phares_px) {
+        const vit = Math.hypot(v.vx, v.vy);
+        if (vit > 0.3 && ((o.x - v.x) * v.vx + (o.y - v.y) * v.vy) / (vit * Math.hypot(o.x - v.x, o.y - v.y) || 1) > 0.8) {
+          m.etat = 'fige';
+          return;
+        }
+      }
+      const dx = m.but.x - o.x, dy = m.but.y - o.y, d = Math.hypot(dx, dy);
+      if (d < 1) { prochainPasDeLOrignal(o); return; }
+      const pas = Math.min(d, f.vitesse);
+      if (dx) o.decor = dx < 0 ? 'orignal_g' : 'orignal';
+      deplacerOrignal(o, o.x + dx / d * pas, o.y + dy / d * pas);
+      return;
+    }
+    if (m.etat === 'fuit') {
+      o.decor = m.fuite.dx < 0 ? 'orignal_g' : 'orignal';
+      deplacerOrignal(o, o.x + m.fuite.dx * f.fuite_vitesse, o.y + m.fuite.dy * f.fuite_vitesse);
+      if (dist2(o.x, o.y, j.x, j.y) > f.oubli_px * f.oubli_px && !visibleAEcran(o.x, o.y, 32)) { retirer(o); B.orignal = null; }
+    }
+  }
+
   function majLesBetes() {
     const liste = betes();
     for (let i = liste.length - 1; i >= 0; i--) { liste[i].t++; majBete(liste[i]); }
@@ -4928,6 +5033,7 @@ const Entites = (function () {
     }
     Son.SFX.borne_jet(jetProche);
     majLesBetes();
+    majOrignal();
     // ⚠️ Apres que tout le monde a bouge, et sur un index REFAIT : `indexer()`
     // date du debut de l'image, et demeler la foule sur des positions perimees
     // laisse passer exactement les paires qui viennent de se rejoindre.
@@ -5329,6 +5435,7 @@ const Entites = (function () {
   }
 
   return {
+    orignalDeLaNuit, majOrignal, faireFuirLOrignal,
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES, PORTEE_DECOR,
     creer, retirer, vider, creerJoueur, creerJoueur2, joueurs, estJoueur, creerDecor, creerAmbulants, majKiosques, creerPaquets, creerPieton, reindexerDecor,
     briser, endommagerDecor, reparerLeDecor, releverDecor, DEBRIS_MAX,

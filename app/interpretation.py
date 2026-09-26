@@ -378,6 +378,7 @@ JEU: dict[str, str] = {
     "narrateur-journal-matin_volets": "[cheerful] La ville ouvre les volets. Ils se lèvent un à un… Baie-des-Brumes s'étire au soleil.",
     "narrateur-journal-matin_silence": "[warmly] Un matin tranquille. Rien à signaler à Baie-des-Brumes… le meilleur genre de matin.",
     "narrateur-journal-cravates_chassees": "[excited] Les Cravates chassées du Faubourg! Trois coins de rue libérés en une nuit… toute la ville en parle.",
+    "narrateur-journal-orignal": "[dramatic] Un orignal gagne contre un char. [wryly] La bête est repartie dans le bois de La Pointe ; le char est au garage. [matter-of-fact] Ovila, au phare, le rappelle : un coup de klaxon, et ils s'en vont.",
     "narrateur-journal-lecon_klaxon": "[amused] Le saviez-vous? Un coup de klaxon dans un taxi vous trouve un client. Ça marche aussi avec la pizza… l'ambulance et la remorqueuse.",
     "narrateur-journal-lecon_fourriere": "[matter-of-fact] Votre char a disparu? Mal garé, il est à la fourrière municipale. On peut l'y racheter… à un prix qui dépend de ce qu'il vaut.",
     "narrateur-journal-lecon_cafe": "[cheerful] Le café du matin. Un café au comptoir… et vous sprintez deux fois plus longtemps pendant une minute et demie.",

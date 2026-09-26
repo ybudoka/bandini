@@ -27,3 +27,25 @@ aucun `B.rng()` tiré par sa venue ; le journal en parle le lendemain.
 ## Notes
 
 _Rien de livré._
+
+**Livré le 26 sept. 2026.**
+
+- **Le chemin des bois** n'existait pas sous ce nom : le bois de La Pointe est un parc sauvage, avec des
+  allées de sable réservées. La carte les exporte maintenant (`chemins_des_bois`, 501 tuiles) — lues,
+  jamais tirées : la ville ne bouge pas d'une tuile.
+- **L'orignal** (`Entites.majOrignal`) : une nuit sur trois environ, à l'empreinte du jour, sur un
+  sentier choisi de même ; il ne naît qu'à l'approche du joueur, hors champ (ailleurs, personne ne crée
+  rien). Il va au pas d'une tuile de sentier à l'autre, se **fige** dans les phares d'un char qui vient
+  vers lui et ne bouge plus ; un **coup de klaxon** le fait détaler, et il s'efface loin du joueur.
+- ⚠️ **Un décor, pas une bête** : les bêtes vivent hors de `B.entites` pour qu'aucun char ne les touche —
+  celle-ci, on la frappe. Il tient l'index des décors à jour à chaque pas, comme la benne qu'on pousse.
+- **Le choc** (`Vehicules.heurterDecor`) : le char y laisse 85 % de sa vie (un mur, à la même vitesse,
+  une vingtaine de points), la bête repart dans le bois, fâchée ; et si c'est toi, **le Clairon titre
+  dessus** le lendemain — « Un orignal gagne contre un char », et la leçon du klaxon, celle d'Ovila, citée
+  par le narrateur (une voix générée, 13 s).
+- **Le dessin** : 32 × 26, plus haut qu'un char — le panache en palettes, la bosse au garrot, le fanon,
+  les bas pâles ; tourné vers l'est ou l'ouest selon où il va.
+- **Juges** (`tests/test_orignal_js.py`) : une nuit sur trois sur 300, né et resté sur les sentiers, pas
+  le jour ; aucun `B.rng()` ni pour sa venue ni pour ses pas ; figé dans les phares, en fuite au klaxon ;
+  le choc qui coûte plus qu'un mur et fait la une. Quatre mutations le font rougir.
+

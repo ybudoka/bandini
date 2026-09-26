@@ -4692,7 +4692,42 @@ function peindreBeteEnMouvement(ctx, espece, cle) {
   }
 }
 
+/** L'orignal de profil, tourne vers l'est, dans une boite de 32 × 26 (voir `DECORS.orignal`). */
+function peindreOrignal(ctx) {
+  ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(4, 24, 24, 2);          // l'ombre
+  ctx.fillStyle = '#2e1d10';                                                 // les pattes, trop longues
+  ctx.fillRect(7, 16, 2, 9); ctx.fillRect(11, 16, 2, 8); ctx.fillRect(20, 16, 2, 9); ctx.fillRect(24, 16, 2, 8);
+  ctx.fillStyle = '#d9d0bf';                                                 // les bas pales
+  ctx.fillRect(7, 22, 2, 2); ctx.fillRect(11, 21, 2, 2); ctx.fillRect(20, 22, 2, 2); ctx.fillRect(24, 21, 2, 2);
+  ctx.fillStyle = '#4a2f18';
+  ctx.fillRect(5, 9, 22, 8);                                                 // le corps
+  ctx.fillRect(18, 7, 8, 3);                                                 // la bosse au garrot
+  ctx.fillRect(4, 10, 2, 3);                                                 // la queue, courte
+  ctx.fillStyle = '#5c3b1f';
+  ctx.fillRect(6, 10, 18, 3);                                                // le dos au clair de lune
+  ctx.fillStyle = '#3a2413';
+  ctx.fillRect(25, 8, 3, 6);                                                 // le cou
+  ctx.fillRect(26, 9, 5, 4);                                                 // la tete
+  ctx.fillStyle = '#5c3b1f';
+  ctx.fillRect(29, 11, 3, 4);                                                // le museau, qui pend
+  ctx.fillStyle = '#2a1a0e';
+  ctx.fillRect(26, 14, 2, 3);                                                // le fanon
+  ctx.fillRect(31, 13, 1, 1);                                                // le naseau
+  ctx.fillStyle = '#0d0906'; ctx.fillRect(28, 10, 1, 1);                     // l'oeil
+  ctx.fillStyle = '#c9b48a';                                                 // le panache, en palettes
+  ctx.fillRect(22, 3, 5, 2); ctx.fillRect(21, 1, 2, 3); ctx.fillRect(24, 1, 1, 2); ctx.fillRect(26, 5, 2, 3);
+  ctx.fillRect(28, 3, 4, 2); ctx.fillRect(29, 1, 1, 2); ctx.fillRect(31, 1, 1, 2); ctx.fillRect(28, 5, 1, 3);
+}
+
 const DECORS = {
+  // L'ORIGNAL de La Pointe (`Entites.majOrignal`) : une tonne de bete, plus haute qu'un char. Le
+  // panache en palettes, la bosse au garrot, le fanon sous le menton, les pattes trop longues.
+  // ⚠️ `arrete: 99` : aucun char ne le deracine, et c'est `Vehicules.heurterDecor` qui fait le reste
+  // (le char presque detruit, la bete qui repart). `orignal_g` : le meme, tourne vers l'ouest.
+  orignal: { arrete: 99, w: 32, h: 26, ancre: [16, 25], r: 9, solide: true, peindre: function (ctx, w, h) { peindreOrignal(ctx); } },
+  orignal_g: { arrete: 99, w: 32, h: 26, ancre: [16, 25], r: 9, solide: true, peindre: function (ctx, w, h) {
+    ctx.save(); ctx.translate(w, 0); ctx.scale(-1, 1); peindreOrignal(ctx); ctx.restore();
+  } },
   arbre: { arrete: 2.0, w: 18, h: 26, ancre: [9, 25], r: 5, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#5a3a1a'; ctx.fillRect(8, 16, 3, 9);
     ctx.fillStyle = '#2f6b2a'; ctx.fillRect(2, 4, 14, 13); ctx.fillRect(5, 1, 8, 3); ctx.fillRect(0, 7, 18, 7);

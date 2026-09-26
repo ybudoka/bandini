@@ -126,6 +126,12 @@ SPECIALES: list[dict] = [
     {"slug": "cravates_chassees", "titre": "LES CRAVATES CHASSÉES DU FAUBOURG",
      "texte": "TROIS COINS DE RUE LIBÉRÉS EN UNE NUIT. TOUTE LA VILLE EN PARLE.",
      "lu": "Les Cravates chassées du Faubourg. Trois coins de rue libérés en une nuit ; toute la ville en parle."},
+    # L'orignal de La Pointe (`Vehicules.heurterDecor`) : le lendemain du choc, si c'etait toi. La
+    # lecon du klaxon est celle d'Ovila, le gardien du phare, que le Clairon cite.
+    {"slug": "orignal", "titre": "UN ORIGNAL GAGNE CONTRE UN CHAR",
+     "texte": "LA BÊTE EST REPARTIE DANS LE BOIS. LE CHAR EST AU GARAGE.",
+     "lu": "Un orignal gagne contre un char. La bête est repartie dans le bois de La Pointe ; le char est au garage. "
+           "Ovila, au phare, le rappelle : un coup de klaxon, et ils s'en vont."},
 ]
 
 

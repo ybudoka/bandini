@@ -685,6 +685,22 @@ const Vehicules = (function () {
       rencontre.quoi = 'arrete';
     }
     if (rencontre.quoi === 'arrete') {
+      // ⚠️ L'ORIGNAL (La Pointe) : une tonne de bete. Le char y laisse la plus grande part de sa
+      // vie (`degats`), la bete repart dans le bois, fachee — et si c'est toi, le Clairon en fera sa
+      // une demain (s'il n'a pas deja une histoire a raconter). Une fois par bete.
+      const o = rencontre.d.orignal;
+      if (o && !o.choc) {
+        const f = B.defs.pietons.betes.orignal;
+        o.choc = true;
+        endommager(v, Math.round(v.vieMax * f.degats), null);
+        Entites.faireFuirLOrignal(rencontre.d, v);
+        Son.SFX.choc();
+        if (v.conducteur === B.joueur) {
+          B.cam.secousse = Math.max(B.cam.secousse, 0.9);
+          Entree.vibrer(160);
+          if (!B.partie.manchetteForcee) B.partie.manchetteForcee = 'orignal';
+        }
+      }
       // ⚠️ Le REBOND se pose ici, pas dans `heurterMur` : celui-ci ne touche
       // qu'a `v.vitesse`, et c'est l'appelant qui renverse `vx`/`vy` — pour
       // les tuiles, c'est fait axe par axe. Sans ca, le char s'ecrase sur
