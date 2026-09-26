@@ -1084,6 +1084,8 @@ const Histoire = (function () {
     if (m) { poserPuisDireLIntro(m); return true; }
     const mn = B.defs.marche_noir;
     if (mn && slug === 'josee' && faite(mn.apres)) { Hud.ouvrirMenu(Missions.menuMarcheNoir()); return true; }
+    // Mireille ouvre ses COURS, toujours (le DOJO DION, `dojo.js`) : elle n'a pas de repos.
+    if (slug === 'mireille') { Hud.ouvrirMenu(Dojo.menuCours()); return true; }
     const repos = B.defs.repos || {};
     const apres = !!(repos.apres && faite(repos.apres));
     // ⚠️ Le repos se DIT aussi : `<qui>-repos-1` avant `repos.apres`, `-2` ensuite (`missions.

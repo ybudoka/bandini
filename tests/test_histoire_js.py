@@ -749,10 +749,14 @@ def test_les_personnages_disent_leur_repos_a_voix_haute(banc, paquet):
         for (const qui of ENTREE_ABORDABLES) apres[qui] = dit(qui);
         return { avant: avant, apres: apres, menu: !!B.menu };
     }""".replace("ENTREE_TOUS", json.dumps(tous)).replace("ENTREE_ABORDABLES", json.dumps(abordables)))
+    # Mireille (le DOJO DION) ouvre ses COURS, avant comme apres : jamais de repos, donc pas de voix.
     for qui, d in r["avant"].items():
+        if qui == "mireille":
+            assert d["ok"] and d["voix"] == [], (qui, d)
+            continue
         assert d["ok"] and not d["cinema"] and d["voix"] == [f"{qui}-repos-1"], (qui, d)
     for qui, d in r["apres"].items():
-        if qui == "josee":       # apres M5 elle ouvre le marche noir : pas de repos, donc pas de voix
+        if qui in ("josee", "mireille"):   # le marche noir apres M5, les cours toujours : pas de repos
             assert d["ok"] and d["voix"] == [], (qui, d)
         else:
             assert d["ok"] and not d["cinema"] and d["voix"] == [f"{qui}-repos-2"], (qui, d)

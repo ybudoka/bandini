@@ -118,6 +118,9 @@ function etatInitial(defs) {
     //: Les techniques apprises au dojo (`app/techniques.py`), slug -> true. Les
     //: coups de rue ne s'y ecrivent pas : tout le monde les sait.
     techniques: {},
+    //: Les cours payes au DOJO DION et pas encore reussis (slug -> true) : un cours rate
+    //: se reprend sans repayer (`dojo.js`).
+    coursPayes: {},
     planque: { armes: {}, vehicule: null, coffre: 0 },
     //: Les planques des BLOCS DE CARTE qu'on a achetees (`app/blocs/`, le chalet du rang),
     //: le char gare sur la place de chacune (slug -> char, comme `planque.vehicule`), et le
@@ -741,7 +744,7 @@ const Sauvegarde = (function () {
     const base = etatInitial(defs);
     if (!partie || typeof partie !== 'object') return base;
     const out = Object.assign({}, base, partie);
-    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'defisOuverts', 'paquets', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance', 'contrebande', 'contacts', 'triches', 'techniques']) {
+    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'defisOuverts', 'paquets', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance', 'contrebande', 'contacts', 'triches', 'techniques', 'coursPayes']) {
       out[k] = Object.assign({}, base[k], (partie[k] && typeof partie[k] === 'object') ? partie[k] : {});
     }
     if (!Array.isArray(out.tenues) || out.tenues.indexOf('chandail') < 0) out.tenues = ['chandail'].concat(Array.isArray(out.tenues) ? out.tenues : []);
