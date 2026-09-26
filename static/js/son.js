@@ -746,7 +746,7 @@ const Son = (function () {
       bruit(0.5, 0.18, 300, 90);
       if (n > 0) { bruit(0.3, 0.12 + 0.03 * n, 2600, 800); ton(420, 0.12, 'square', 0.05 + 0.01 * n, 0.5, 0.52); }
     },
-    brosses: function () { if (!joue('brosses')) { bruit(1.4, 0.18, 1100, 300); bruit(1.4, 0.08, 5000, 2200); } },
+    brosses: function () { bruit(1.4, 0.18, 1100, 300); bruit(1.4, 0.08, 5000, 2200); },
     // --- L'eau ---------------------------------------------------------------
     // ⚠️ Jusqu'ici, entrer dans l'eau jouait `choc` — la TOLE FROISSEE d'un
     // accident de char — et nager ne jouait rien du tout : les pas sont coupes
