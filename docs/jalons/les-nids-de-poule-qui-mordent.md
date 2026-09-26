@@ -36,6 +36,22 @@ carrosserie, fait vibrer la manette et s'entend, avec un répit par nid. Ce qui 
 - **plus nombreux au printemps** : le jeu a-t-il un printemps ? (la neige de M12 est une météo, pas une
   saison) — à trancher.
 
+### Le plan (26 sept. 2026)
+
+⚠️ **Vu en ouvrant le chantier : les nids ne se DESSINENT pas.** La carte en pose (`nids_de_poule`, plus
+nombreux dans les quartiers pauvres), le char les sent — et la chaussée est lisse à l'écran : on les
+subit sans jamais les voir venir. D'abord ça.
+
+1. **Les dessiner** : un trou sombre aux bords cassés sur la tuile, à l'écran (`Monde.dessinerNids`).
+2. **La perte de contrôle** : à grande vitesse, le char du joueur ne répond plus une fraction de seconde
+   (le trafic roule sur des rails, il n'est pas touché).
+3. **Le camion d'asphalte** (`asphalte`, `freq` 0) : garé devant la fourrière municipale, il naît à
+   l'approche du joueur, comme le camion de crème glacée.
+4. **Le boulot de voirie** : au klaxon, trois nids à boucher, à l'arrêt dessus ; un nid bouché disparaît
+   **pour de bon** (`partie.nidsBouches`, rendu au chargement).
+5. **Le Clairon du lundi** : le décompte des nids de la ville, sous la manchette (tous les sept jours).
+6. **Le printemps** : le jeu n'a pas de saisons — à trancher par Martin, pas dans cette vague.
+
 ## Notes
 
 _Rien de livré._
