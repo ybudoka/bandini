@@ -275,14 +275,15 @@ def test_coince_derriere_un_char_arrete_un_cycliste_sur_deux_monte_sur_le_trotto
 
 @pytest.mark.parametrize("graine", [
     1,
-    # ⚠️ UN DEFAUT CONNU, PAS UN JUGE RELACHE (25 sept. 2026). La graine 5 etait verte par chance :
-    # un personnage de plus en ville (le capitaine Berube, M13) decale les identifiants d'un cran,
-    # et un velo qui redescend du trottoir (130, 40) reste plante sur la bordure — quatre secondes
-    # a attendre sa voie, puis trois et demie derriere un obstacle, `horsRue` deja rendu : HORS
-    # VOIE, puis le chien de garde. La base le fait aussi, a la graine 24 (1 graine sur 40 ; 3 sur
-    # 40 avec Berube). Ligne du plan : « Un velo qui redescend du trottoir reste plante ». Strict :
-    # repare, ce juge rougit, et la marque s'en va.
-    pytest.param(5, marks=pytest.mark.xfail(strict=True, reason="un velo qui redescend du trottoir reste plante (plan)")),
+    # ⚠️ DEUX FACONS DE RESTER HORS VOIE EN REDESCENDANT DU TROTTOIR (26 sept. 2026, ligne du plan
+    # « Un velo qui redescend du trottoir reste plante »). Graine 5 : une remorqueuse arretee au feu
+    # pile sur la tuile de retour ; le velo attendait quatre secondes, rendait son tour de trottoir
+    # et restait plante sur la bordure (HORS VOIE, puis le chien de garde) — il attend maintenant
+    # avec la file (`attendVoie`). Graine 23 : la voie libre au bout du trottoir, puis un char qui
+    # arrive pendant qu'il descend ; il cede en bordure, et la trace le croyait perdu — il
+    # `redescend`, jusqu'a toucher la voie. Mesure : 40 graines sur 40 propres (base : 39).
+    5,
+    23,
 ])
 def test_la_ville_roule_avec_ses_velos_sans_une_anomalie(banc, graine):
     """Toute la ville, la trace allumee, des velos qui montent souvent : la

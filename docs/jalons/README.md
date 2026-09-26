@@ -258,3 +258,4 @@ Deux documents d'avant la table :
 | Neuf juges rouges sur dev | ✅ **livré** | 25 sept. 2026 | **P1** | **correctif** | [fiche](neuf-juges-rouges-sur-dev.md#fiche) · [notes](neuf-juges-rouges-sur-dev.md#notes) |
 | Un char qui coule est détruit | ✅ **livré** | 25 sept. 2026 | **P1** | **correctif** | [fiche](un-char-qui-coule-est-detruit.md#fiche) · [notes](un-char-qui-coule-est-detruit.md#notes) |
 | Les techniques d'arts martiaux : le répertoire | ✅ **livré** | 25 sept. 2026 | **P4** | ajout | [fiche](les-techniques-d-arts-martiaux.md#fiche) · [notes](les-techniques-d-arts-martiaux.md#notes) |
+| Un vélo qui redescend du trottoir reste planté | ✅ **livré** | 26 sept. 2026 | **P2** | **correctif** | [fiche](un-velo-qui-redescend-du-trottoir-reste-plante.md#fiche) · [notes](un-velo-qui-redescend-du-trottoir-reste-plante.md#notes) |

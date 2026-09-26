@@ -27,4 +27,18 @@ défaut réparé, elle rougit, et la marque s'en va.
 
 ## Notes
 
-_Rien de livré._
+**Livré le 26 sept. 2026.** Deux défauts, pas un — tracés image par image, graine par graine.
+
+- **Graine 5 : la file arrêtée au feu.** Ce qui bouchait la voie de retour était une remorqueuse du trafic
+  arrêtée au rouge, pile sur la tuile où le vélo redescend. Il attendait ses quatre secondes, rendait son
+  tour de trottoir, et l'évitement le retenait encore trois secondes et demie sur la bordure. Il attend
+  maintenant **avec la file** (`attendVoie`, sans compte à rebours) dès qu'un char de la voie attend
+  légitimement, et le chien de garde le voit comme une attente légitime (`attenteLegitime`). Devant un
+  autre bouchon (un passant, un char en panne), les quatre secondes tiennent, et il redescend **en
+  forçant**, comme le disait déjà le commentaire de `cibleHorsRue` (« au pire il se frôle »).
+- **Graine 23 : le char qui arrive pendant qu'il descend.** La voie était libre au bout du trottoir ; le
+  vélo rendait `horsRue` au moment de DÉCIDER, puis cédait en bordure à un char qui arrivait — la trace le
+  croyait perdu. Il `redescend`, maintenant, jusqu'à toucher la voie (`cibleDeLaVoie`).
+- **Mesuré** : le juge de la ville, 40 graines sur 40 propres (39 sur la base, 37 avec Bérubé). Le juge
+  tourne aux graines 1, 5 et 23 ; sans `attendVoie`, la 5 rougit, sans `redescend`, la 23. L'`xfail` est
+  parti.

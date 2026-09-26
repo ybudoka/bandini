@@ -2193,8 +2193,26 @@ const Vehicules = (function () {
     const h = v.horsRue, f = trafic().velo;
     if (h.i < h.chemin.length) return h.chemin[h.i++];
     const r = h.retour, p = PAS_FLECHE[r.sens];
-    if (!voieLibre(v, r.tx, r.ty, p) && ++h.attente < f.attente_images) return { x: v.x, y: v.y };
+    const geneurs = geneursDeLaVoie(v, r.tx, r.ty, p);
+    // ⚠️ UNE VOIE QUI ATTEND LE VERT SE LIBERERA : une remorqueuse arretee au feu, pile sur la
+    // tuile ou il redescend (130, 40), le tenait quatre secondes, puis il rendait son tour de
+    // trottoir et restait plante sur la bordure — HORS VOIE pour la trace, bloque pour le chien
+    // de garde (graine 5 de `test_velos_js`, 25 sept. 2026). Derriere une file qui attend, il
+    // attend avec elle, sans compte a rebours (`attendVoie`, une attente legitime).
+    // (Un passant arrete PLUS LOIN, sur la traverse devant la file, n'y change rien : c'est la file
+    // qui le retient.)
+    v.attendVoie = geneurs.some(function (e) { return e.type === 'vehicule' && attenteLegitime(e); });
+    if (geneurs.length && (v.attendVoie || ++h.attente < f.attente_images)) return { x: v.x, y: v.y };
+    v.attendVoie = false;
+    // Assez attendu autre chose (un passant, un char en panne) : il descend EN FORCANT, comme le
+    // dit la regle d'au-dessus — sinon l'evitement le retenait encore `patience_images`.
+    if (geneurs.length) v.force = 90;
     v.horsRue = null;
+    // ⚠️ IL REDESCEND : entre le bout du trottoir et la chaussee, il y a la bordure, et il peut y
+    // ceder a un char qui arrive. `horsRue` rendu au moment de DECIDER, la trace le croyait
+    // perdu hors voie (graine 23 de `test_velos_js`) — il ne l'est plus quand il touche la voie
+    // (`cibleDeLaVoie`).
+    v.redescend = true;
     v.horsRueFroid = B.t + f.repos_images;
     v.sens = r.sens;
     return aLaBordure(v, centre(r.tx + p[0], r.ty + p[1]));
@@ -2226,6 +2244,7 @@ const Vehicules = (function () {
 
   function cibleDeLaVoie(v) {
     const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
+    v.redescend = false;
     const f = Monde.fleche(tx, ty);
     v.attendFeu = false;
     v.guetteLigne = false;
@@ -2470,17 +2489,20 @@ const Vehicules = (function () {
       par derriere dans cette voie compte autant qu'un char arrete dedans. Les
       echantillons se chevauchent (un par tuile, rayon 13 px), le couloir est
       donc continu : le centre d'un char ne peut pas s'y glisser entre deux. */
-  function voieLibre(v, tx, ty, p) {
-    const avant = trafic().depassement_tuiles;
+  function voieLibre(v, tx, ty, p) { return !geneursDeLaVoie(v, tx, ty, p).length; }
+
+  /** Ce qui encombre la voie (tx, ty) dans le sens `p`, de deux tuiles en arriere a
+      `depassement_tuiles` devant : chars, passants, joueur a pied. */
+  function geneursDeLaVoie(v, tx, ty, p) {
+    const avant = trafic().depassement_tuiles, geneurs = [];
     for (let k = -2; k <= avant; k++) {
       const x = (tx + p[0] * k) * TT + 8, y = (ty + p[1] * k) * TT + 8;
-      const gene = Entites.autour(x, y, TT * 0.8, function (e) {
+      for (const e of Entites.autour(x, y, TT * 0.8, function (e) {
         return e !== v && (e.type === 'vehicule'
           || ((e.type === 'pieton' || e.type === 'joueur') && e.vivant && !e.dansVehicule));
-      });
-      if (gene.length) return false;
+      })) if (geneurs.indexOf(e) < 0) geneurs.push(e);
     }
-    return true;
+    return geneurs;
   }
 
   /** Le pas lateral vers une voie parallele libre — a GAUCHE d'abord (on
@@ -2575,6 +2597,8 @@ const Vehicules = (function () {
       110 d'attente de boite faisaient 600, et le chien sautait sur un char
       parfaitement sage.) */
   function attenteLegitime(v) {
+    // Le velo au bout de son trottoir, derriere une file arretee au feu (`cibleHorsRue`).
+    if (v.horsRue && v.attendVoie) return true;
     if (!v.attendFeu) return false;
     if (v.stopT !== undefined && v.stopT > 0) return true;
     if (v.attenteBoite > 0) return v.attenteBoite < trafic().patience_images * 2;
@@ -3016,7 +3040,7 @@ const Vehicules = (function () {
     // 3. Il roule hors de la chaussee.
     const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
     // ⚠️ Un velo parti sur le trottoir ou au parc (`horsRue`) y est de son plein gre.
-    const surRoute = Monde.estChaussee(tx, ty) || Monde.estRampe(tx, ty) || Monde.estPassage(tx, ty) || !!v.horsRue;
+    const surRoute = Monde.estChaussee(tx, ty) || Monde.estRampe(tx, ty) || Monde.estPassage(tx, ty) || !!v.horsRue || !!v.redescend;
     v.horsVoieT = surRoute ? 0 : (v.horsVoieT || 0) + 1;
     if (v.horsVoieT === 90) anomalie(v, 'HORS VOIE');
   }
