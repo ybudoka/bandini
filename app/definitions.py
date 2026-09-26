@@ -35,7 +35,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-from . import (armes, audio, blocs, calendrier, carte, derby, motoneige, saint_jean, devantures, dojo, economie, garderobe, interactions, journal, magasins,
+from . import (armes, audio, blocs, calendrier, carte, derby, fetes, motoneige, saint_jean, devantures, dojo, economie, garderobe, interactions, journal, magasins,
                brouillard, loto, manettes, missions, nuit, pietons, recherche, techniques, vehicules, verglas, videopoker,
                pont_de_glace, visages)
 from .blocs import galeries as galeries_hantees
@@ -78,6 +78,8 @@ def assembler() -> dict:
         "motoneige": motoneige.pour_le_navigateur(ville),
         # Le soir du 24 juin : la rue du défilé, les feux (docs/jalons/la-saint-jean-sur-la-baie.md).
         "saint_jean": saint_jean.pour_le_navigateur(ville),
+        # Décembre : les guirlandes, le sapin, les dindes (docs/jalons/le-temps-des-fetes.md).
+        "fetes": fetes.pour_le_navigateur(ville),
         # La nuit aux Galeries de la Baie : la hantise et ce que dit le haut-parleur (docs/jalons/le-centre-d-achat-hante.md).
         "galeries": galeries_hantees.pour_le_navigateur(),
         # Le chemin sur la baie gelée, lu sur la ville finie (docs/jalons/le-pont-de-glace.md).

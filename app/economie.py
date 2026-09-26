@@ -159,6 +159,15 @@ PALIERS: dict[str, tuple[dict, ...]] = {
         {"compte": 25, "type": "char", "valeur": "camion",
          "nom": "LE CAMION DE LIVRAISON EST À TOI", "detail": "GARÉ À LA PLANQUE"},
     ),
+    # LES DINDES (le temps des Fêtes) : un mois par année — des paliers courts, comme les génératrices.
+    "dindes": (
+        {"compte": 5, "type": "prime", "valeur": 1.3,
+         "nom": "LE PÈRE NOËL DU FAUBOURG", "detail": "+30 % DE PRIME"},
+        {"compte": 12, "type": "rabais", "valeur": 0.8, "cle": "kiosque",
+         "nom": "LES KIOSQUES T'OFFRENT LE CAFÉ", "detail": "-20 % AUX KIOSQUES"},
+        {"compte": 25, "type": "vie", "valeur": 1.1,
+         "nom": "BIEN NOURRI POUR L'HIVER", "detail": "+10 % DE VIE"},
+    ),
     "autobus": (
         {"compte": 10, "type": "prime", "valeur": 1.3,
          "nom": "UN VISAGE CONNU", "detail": "+30 % DE POURBOIRE"},
@@ -734,6 +743,13 @@ BOULOTS: dict[str, Boulot] = {
     "patrouille": {"slug": "patrouille", "nom": "Arrestation", "vehicule": "police",
                    "base": 50, "par_tuile": 0.0, "prime": 40,
                    "etapes": 1, "chrono_s": 60, "malus_choc": 0.0},
+    # Les Fêtes : dans un camion, en DÉCEMBRE, trois dindes chez le monde (le camion n'a qu'un boulot à la
+    # fois : la saison le choisit — `Missions.boulotDuChar`).
+    # ⚠️ `partage` : il PARTAGE le camion du boulot nommé (les génératrices) — jamais en même temps (une
+    # saison chacun), et le juge « un boulot par char » le sait.
+    "dindes": {"slug": "dindes", "nom": "Dinde livrée", "vehicule": "camion", "partage": "generatrices",
+               "base": 25, "par_tuile": 0.2, "prime": 12,
+               "etapes": 3, "chrono_s": 0, "malus_choc": 0.2},
     # Le verglas : dans un camion, PENDANT la tempete, trois generatrices vers les quartiers au noir.
     "generatrices": {"slug": "generatrices", "nom": "Génératrice livrée", "vehicule": "camion",
                      "base": 30, "par_tuile": 0.2, "prime": 15,

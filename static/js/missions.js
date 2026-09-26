@@ -568,6 +568,14 @@ const Missions = (function () {
       pris: 'GÉNÉRATRICE : ',
       fini: 'GÉNÉRATRICE LIVRÉE',
     },
+    // LES FETES : dans un camion, en decembre, trois dindes chez le monde (le camion n'a qu'un boulot a la
+    // fois, et c'est la saison qui le choisit : `boulotDuChar`).
+    dindes: {
+      ramasser: null,
+      destination: 'ailleurs',
+      pris: 'UNE DINDE POUR ',
+      fini: 'DINDE LIVRÉE',
+    },
     // ⚠️ M16 : le boulot de l'autobus, sur le patron du taxi (un passager au
     // bord de la route, une destination ailleurs) — `economie.BOULOTS.autobus`
     // porte les nombres.
@@ -609,6 +617,16 @@ const Missions = (function () {
     };
   }
 
+  /** Le boulot que ce char prend au klaxon, maintenant, ou null. ⚠️ LE CAMION EN A DEUX, SELON LA SAISON :
+      les generatrices pendant le verglas, les dindes en decembre, rien le reste du temps (son klaxon
+      reste un klaxon). */
+  function boulotDuChar(v) {
+    if (!v || !v.def.boulot) return null;
+    if (v.def.boulot !== 'generatrices') return v.def.boulot;
+    if (Verglas.intensite()) return 'generatrices';
+    return typeof Fetes !== 'undefined' && Fetes.actif() ? 'dindes' : null;
+  }
+
   const boulot = {
     slug: null,            // le boulot en cours, ou null
     etape: null,           // null | 'ramasse' | 'route'
@@ -634,7 +652,8 @@ const Missions = (function () {
 
     /** Le klaxon dans un char qui a un boulot : on le prend, ou rien. */
     klaxon: function (v) {
-      if (!v || !v.def.boulot) return false;
+      const slugDuBoulot = boulotDuChar(v);
+      if (!v || !slugDuBoulot) return false;
       // ⚠️ PAS DE CONTRAT PENDANT UN DÉFI : au remorquage de la fourrière, le
       // klaxon accroche l'épave du défi — il ne doit pas, en plus, prendre le
       // boulot (ni dire que la fourrière ne paie que les épaves).
@@ -645,14 +664,13 @@ const Missions = (function () {
       // taxi, on se tait : le klaxon y sert a la circulation, et le repeter a
       // chaque coup de klaxon serait du harcelement.
       if (boulot.etape) { if (v.def.sirene) Hud.message('UN CONTRAT EST DÉJÀ EN COURS'); return false; }
-      const sorte = SORTES[v.def.boulot];
+      const sorte = SORTES[slugDuBoulot];
       if (!sorte) return false;          // le remorquage attend sa fourriere
-      if (sorte.pendant === 'verglas' && !Verglas.intensite()) return false;
       if (sorte.ramasser === 'crochet') {
         if (!v.remorque) return false;                    // `basculerCrochet` l'a deja dit
         if (v.remorque.etat !== 'epave') { Hud.message('LA FOURRIÈRE NE PAIE QUE LES ÉPAVES'); return false; }
       }
-      boulot.slug = v.def.boulot;
+      boulot.slug = slugDuBoulot;
       boulot.etape = 'ramasse';
       boulot.t = 0; boulot.etapesFaites = 0; boulot.gagne = 0;
       if (!sorte.ramasser || sorte.ramasser === 'crochet') { boulot.enRoute(v); return true; }
@@ -791,7 +809,10 @@ const Missions = (function () {
       const j = B.joueur, v = j.dansVehicule;
       const sorte = SORTES[boulot.slug];
       boulot.t++;
-      if (!v || v.def.boulot !== boulot.slug || v.etat === 'epave') { boulot.abandonner('BOULOT PERDU'); return; }
+      // ⚠️ Le char du boulot, c'est celui de SA FICHE (`economie.BOULOTS[slug].vehicule`) — pas le `boulot` de la
+      // fiche du char : le camion en porte deux selon la saison (les generatrices, les dindes).
+      const ficheDuBoulot = B.defs.economie.boulots[boulot.slug];
+      if (!v || !ficheDuBoulot || ficheDuBoulot.vehicule !== v.slug || v.etat === 'epave') { boulot.abandonner('BOULOT PERDU'); return; }
       if (boulot.slug === 'creme_glacee') ritournelleDuCamion(v);
       if (boulot.etape === 'ramasse' && sorte.ramasser === 'fuyard') { boulot.majSuspect(v); return; }
       if (boulot.etape === 'ramasse') {
@@ -2105,7 +2126,7 @@ const Missions = (function () {
     const loto = B.defs.loto ? nuitDuLoto() : null;
     // Le brouillard de demain matin : le Clairon l'annonce la veille, sous la manchette.
     const brume = typeof Brouillard !== 'undefined' ? Brouillard.annonceDeDemain() : null;
-    const dessous = [loto, brume, Verglas.ligneDuClairon(), Pont.ligneDuClairon(), SaintJean.ligneDuClairon(), decompteDesNids()].filter(Boolean);
+    const dessous = [loto, brume, Verglas.ligneDuClairon(), Pont.ligneDuClairon(), SaintJean.ligneDuClairon(), Fetes.ligneDuClairon(), decompteDesNids()].filter(Boolean);
     const m = manchetteDuJour();
     if (m) { B.partie.derniereManchette = m; direLaManchette(m, dessous); }
     else { Hud.message(dessous[0] || 'JOUR ' + B.partie.jour); direLeLoto(); }

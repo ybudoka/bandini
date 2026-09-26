@@ -337,10 +337,13 @@ def test_un_boulot_par_char_et_jamais_deux_fois_le_meme():
 
     boulots = [v["boulot"] for v in vehicules.CATALOGUE if v["boulot"]]
     assert len(boulots) == len(set(boulots))
-    assert set(boulots) == set(economie.BOULOTS)
+    # ⚠️ Un boulot DE SAISON partage le char d'un autre (`partage` : les dindes de décembre prennent le
+    # camion des génératrices du verglas) — jamais en même temps, c'est la saison qui choisit.
+    partages = {slug for slug, b in economie.BOULOTS.items() if b.get("partage")}
+    assert set(boulots) | partages == set(economie.BOULOTS)
     for slug, boulot in economie.BOULOTS.items():
         char = vehicules.par_slug(boulot["vehicule"])
-        assert char and char["boulot"] == slug, slug
+        assert char and char["boulot"] == boulot.get("partage", slug), slug
         assert char["phase"] == 1, f"{slug} : le char du boulot doit rouler"
 
 
