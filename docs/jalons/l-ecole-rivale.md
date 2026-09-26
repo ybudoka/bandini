@@ -10,8 +10,12 @@ Demande de Martin (25 sept. 2026), troisième des trois jalons des arts martiaux
 _Ce que ça donne :_ un gang qui connaît les coups de pied et les projections — pour avoir à qui rendre ce
 qu'on a appris. Les autres gangs gardent les poings de rue (variés depuis le premier jalon).
 
-- **Qui** : un gang neuf (les élèves d'un dojo concurrent) ou un gang existant qui s'entraîne — à trancher
-  avec Martin.
+- **Qui** : **un gang neuf** — tranché par Martin le 26 sept. 2026. Les élèves d'un dojo concurrent, avec
+  leur couleur, leur territoire et leur garde-robe (`app/garderobe.py`, une garde-robe par archétype).
+- ⚠️ **Ce que coûte un gang neuf** : un archétype de plus dans `pietons.py`, sa place dans les frontières de
+  gangs (`pietons.frontieres`, la bagarre), et son territoire sur la carte — or « grossir un lieu garanti
+  déplace la ville » : ce qu'on ajoute se pose en dernier, sans dé, et on compare les deux villes clé par clé.
+  Relire la ligne « Les territoires des gangs bougent » du plan avant de poser le sien.
 - **Comment ils choisissent** : `Techniques.choisir` pour eux aussi, avec leur liste de techniques ; leurs
   choix se tirent **à l'empreinte**, jamais par `B.rng()`.
 - **Ce qu'on leur répond** : la parade-contre (retournement du poignet) prend tout son sens contre eux ; une
