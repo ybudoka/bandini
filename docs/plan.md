@@ -105,7 +105,7 @@ pas quand l'ordre de travail change.
 | Braquer un commerce | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/braquer-un-commerce.md#fiche) |
 | Les nids-de-poule qui mordent | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/les-nids-de-poule-qui-mordent.md#fiche) |
 | Le derby de démolition à la foire | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-derby-de-demolition-a-la-foire.md#fiche) |
-| Le 6/49 du dépanneur | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-6-49-du-depanneur.md#fiche) |
+| Le 6/49 du dépanneur | ⬜ **en cours** | 26 sept. 2026 | **P4** | ajout | [fiche](jalons/le-6-49-du-depanneur.md#fiche) |
 | Les enseignes qui ouvrent pour vrai : bingo, quilles, lave-auto, Rialto | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/les-enseignes-qui-ouvrent-pour-vrai.md#fiche) |
 | Le pont de glace | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-pont-de-glace.md#fiche) |
 | La motoneige | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/la-motoneige.md#fiche) |
@@ -160,7 +160,7 @@ Ce que chaque ligne à faire attend (la table de tri du 13 sept. 2026, réduite 
 | **P4** | ajout | La Saint-Jean sur la baie | 3 | les barrières ferment les rues du défilé ; ⚠️ la foule et le rendu sur le vrai téléphone |
 | **P4** | ajout | La tempête de verglas | 3 | reprend la neige de M12 et l'éclairage de nuit ; tout doit se rallumer après |
 | **P4** | ajout | Braquer un commerce | 2 | rien ne l'attend ; ⚠️ ne jamais rapporter plus qu'un boulot, chaleur comptée |
-| **P4** | ajout | Les nids-de-poule qui mordent | 1 | les nids sont déjà dessinés ; ⚠️ le trafic ne doit pas perdre ses virages |
+| **P4** | ajout | Les nids-de-poule qui mordent | 2 | les nids sont déjà dessinés ; ⚠️ le trafic ne doit pas perdre ses virages |
 | **P4** | ajout | Le derby de démolition à la foire | 3 | une conduite neuve (des chars qui en visent d'autres) |
 | **P4** | ajout | Le 6/49 du dépanneur | 1 | le journal et sa voix existent ; ⚠️ un tirage calculé, jamais `B.rng()` |
 | **P4** | ajout | Les enseignes qui ouvrent pour vrai : bingo, quilles, lave-auto, Rialto | 3 | quatre intérieurs ; ⚠️ la ville promet déjà ces enseignes — le plus proche d'un mensonge du lot |

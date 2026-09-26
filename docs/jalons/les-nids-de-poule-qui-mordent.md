@@ -23,6 +23,19 @@ quartier : ne pas en ajouter au dé.
 **Juges** : un char qui passe dans un nid prend un choc ; un nid bouché ne revient pas ; le trafic ne sort
 pas de sa voie à cause d'eux.
 
+⚠️ **Relevé le 26 sept. 2026, avant de s'y mettre — plus gros que « taille 1 ».** Une bonne part mord
+DÉJÀ (« le rythme de la ville ») : `Vehicules.majNidDePoule` secoue la caméra, coûte deux points de
+carrosserie, fait vibrer la manette et s'entend, avec un répit par nid. Ce qui reste :
+- la **perte de contrôle** une fraction de seconde à grande vitesse (le char du joueur seulement : le trafic
+  roule sur des rails) ;
+- le **boulot de voirie** — les boulots naissent d'un véhicule (on klaxonne au volant), et le parc n'a pas
+  de **camion d'asphalte** : un véhicule neuf (fiche, dessin, bruit), c'est ce qui fait la taille ;
+- les nids **bouchés pour de bon** (dans la partie, et `carte.nids` qui les oublie) ;
+- le **décompte du Clairon le lundi** (le journal est dit par le narrateur : une phrase générique, le
+  nombre en texte) ;
+- **plus nombreux au printemps** : le jeu a-t-il un printemps ? (la neige de M12 est une météo, pas une
+  saison) — à trancher.
+
 ## Notes
 
 _Rien de livré._
