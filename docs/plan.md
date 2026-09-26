@@ -111,7 +111,7 @@ pas quand l'ordre de travail change.
 | Le centre d'achat hanté | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-centre-d-achat-hante.md#fiche) |
 | Le temps des Fêtes | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-temps-des-fetes.md#fiche) |
 | Le camion de crème glacée | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-camion-de-creme-glacee.md#fiche) |
-| L'orignal de La Pointe | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/l-orignal-de-la-pointe.md#fiche) |
+| L'orignal de La Pointe | ⬜ **en cours** | 26 sept. 2026 | **P4** | ajout | [fiche](jalons/l-orignal-de-la-pointe.md#fiche) |
 | Le ciné-parc | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-cine-parc.md#fiche) |
 | Une amélioration générale des toits | ⬜ **à faire** (à trancher par Martin : la liste, et par où commencer) | — | **P4** | ajout | [fiche](jalons/une-amelioration-generale-des-toits.md#fiche) |
 
