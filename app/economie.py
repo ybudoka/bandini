@@ -821,6 +821,26 @@ def _table_des_dettes() -> list[int]:
 FOUILLE_PAR_STANDING: dict[str, float] = {"cossu": 2.2, "ordinaire": 1.0, "pauvre": 0.4}
 
 
+#: LA LISTE DU QUAI (quatre activites, 26 sept. 2026 — le _wheeler-dealing_ de GTA 2) : Sven affiche
+#: `nombre` modeles ; on lui en livre UN par jour, au bout de sa jetee, sans bosse ; la liste se
+#: renouvelle tous les `renouvelle_jours`. C'est ce qui donne enfin une raison de REGARDER le parc :
+#: un coupe sport et une berline ne valent plus pareil des qu'ils roulent.
+#:
+#: ⚠️ Les modeles viennent de `modeles` — ce que la ville fait rouler ou garer (pas de sirene, pas de
+#: bateau, pas de char de chantier) — et un juge les tient au catalogue. Sven paie `fraction` du prix
+#: neuf : mieux que le garage (`VENTE_FRACTION`), jamais le neuf.
+LISTE_DU_QUAI = {
+    "donneur": "sven",
+    "nombre": 4,
+    "renouvelle_jours": 4,
+    "sel": 0x5E7E,
+    "modeles": ["auto", "taxi", "moto", "camion", "sport", "luxe", "cabriolet"],
+    "fraction": 0.4,
+    "sans_bosse": 0.9,           # la part de sa vie que le char doit garder
+    "rayon_tuiles": 4,           # a tant du poste de Sven, a l'arret, la livraison se fait
+    "info_tuiles": 7,            # a tant, la ligne du bas dit la liste
+}
+
 #: BRAQUER UN COMMERCE (docs/jalons/braquer-un-commerce.md) : une arme en main devant un comptoir,
 #: ACTION devient BRAQUER, le commis vide sa caisse — et l'alarme sonne (`recherche.DELITS["braquage"]`,
 #: deux etoiles).
@@ -848,6 +868,7 @@ BRAQUAGE = {
 
 def exporter() -> dict:
     return {
+        "liste_du_quai": {**LISTE_DU_QUAI, "modeles": list(LISTE_DU_QUAI["modeles"])},
         "braquage": {**BRAQUAGE, "caisses": dict(BRAQUAGE["caisses"]), "points": list(BRAQUAGE["points"]),
                      "jamais": list(BRAQUAGE["jamais"])},
         "argent_depart": ARGENT_DEPART,

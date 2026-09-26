@@ -2494,6 +2494,69 @@ const Missions = (function () {
     }
   }
 
+  // --- La liste du quai -------------------------------------------------------------------
+  //: Sven affiche quatre modeles ; on lui en livre UN par jour, au bout de sa jetee, a l'arret, sans
+  //: bosse — et la liste se renouvelle. Les regles sont a Python (`economie.LISTE_DU_QUAI`). La liste
+  //: d'une periode se tire a l'EMPREINTE de la periode (jamais `B.rng()`) : la meme pour tout le monde.
+
+  function reglesDuQuai() { return B.defs.economie.liste_du_quai; }
+
+  /** Les modeles demandes pour la periode ou tombe `jour`. */
+  function listeDuQuai(jour) {
+    const r = reglesDuQuai(), periode = Math.floor((jour - 1) / r.renouvelle_jours), pool = r.modeles.slice(), liste = [];
+    for (let k = 0; k < r.nombre && pool.length; k++) liste.push(pool.splice(hash2(periode, r.sel + k) % pool.length, 1)[0]);
+    return liste;
+  }
+
+  /** Ce que la partie retient : la periode, les modeles deja livres, et le jour de la derniere livraison. */
+  function etatDuQuai() {
+    const p = B.partie, r = reglesDuQuai(), periode = Math.floor((p.jour - 1) / r.renouvelle_jours);
+    if (!p.quai || p.quai.periode !== periode) p.quai = { periode: periode, livres: [], jour: p.quai ? p.quai.jour : null };
+    return p.quai;
+  }
+
+  /** Le poste de Sven (sa jetee), ou null s'il n'est plus la. */
+  function posteDuQuai() {
+    const r = reglesDuQuai();
+    return r ? Histoire.lieuDuPersonnage(r.donneur) : null;
+  }
+
+  function prixAuQuai(slug) {
+    const def = Vehicules.vehiculeDef(slug);
+    return def ? Math.round(def.prix * reglesDuQuai().fraction) : 0;
+  }
+
+  /** La ligne du bas, pres de la jetee : la liste, ce qui est deja livre, et si c'est pour demain. */
+  function texteDuQuai(j) {
+    const r = reglesDuQuai(), poste = posteDuQuai();
+    if (!r || !poste || B.interieur || !j || dist2(j.x, j.y, poste.x, poste.y) > Math.pow(r.info_tuiles * TT, 2)) return null;
+    const e = etatDuQuai();
+    const noms = listeDuQuai(B.partie.jour).map(function (slug) {
+      const def = Vehicules.vehiculeDef(slug);
+      return (def ? def.nom.toUpperCase() : slug.toUpperCase()) + (e.livres.indexOf(slug) >= 0 ? ' (LIVRÉ)' : '');
+    });
+    return 'LA LISTE DE SVEN : ' + noms.join(' · ') + (e.jour === B.partie.jour ? ' — DEMAIN' : '');
+  }
+
+  /** La livraison : au volant d'un modele de la liste, a l'arret au bout de la jetee. */
+  function majQuai() {
+    const r = reglesDuQuai(), j = B.joueur, v = j && j.dansVehicule;
+    if (!r || !v || B.interieur || B.partie.mission && B.mission && B.mission.vehicule === v) return;
+    if (Math.abs(v.vitesse) >= 0.4 || v.mission || estDeLaPlanque(v)) return;
+    const poste = posteDuQuai();
+    if (!poste || dist2(v.x, v.y, poste.x, poste.y) > Math.pow(r.rayon_tuiles * TT, 2)) { v.quaiDit = false; return; }
+    const e = etatDuQuai(), p = B.partie;
+    if (listeDuQuai(p.jour).indexOf(v.slug) < 0 || e.livres.indexOf(v.slug) >= 0) return;
+    if (e.jour === p.jour) { if (!v.quaiDit) { v.quaiDit = true; Hud.message('SVEN : UN PAR JOUR. REVIENS DEMAIN.'); } return; }
+    if (v.vie < v.vieMax * r.sans_bosse) { if (!v.quaiDit) { v.quaiDit = true; Hud.message('SVEN N’EN VEUT PAS : TROP DE BOSSES'); Son.SFX.erreur(); } return; }
+    const prix = prixAuQuai(v.slug);
+    e.livres.push(v.slug);
+    e.jour = p.jour;
+    Vehicules.descendre(j, true);
+    Entites.retirer(v);
+    encaisser(prix, 'SVEN — ' + v.def.nom.toUpperCase());
+  }
+
   // --- Braquer un commerce ------------------------------------------------------------------
   //: docs/jalons/braquer-un-commerce.md. Une arme en main devant le comptoir d'un commis : ACTION
   //: devient BRAQUER, le commis vide sa caisse, l'alarme sonne (`braquage`, deux etoiles, bruyant).
@@ -3323,6 +3386,7 @@ const Missions = (function () {
     majFourriere();
     majMalGares();
     majGarage();
+    majQuai();
     majInvite(B.joueur);
     // Les paquets se ramassent en passant dessus.
     if (B.joueur && !B.interieur) {
@@ -3334,7 +3398,8 @@ const Missions = (function () {
     if (B.t % 60 === 0) B.partie.stats.secondes++;
   }
 
-  return { braquable, braquer, rancuneIci,
+  return { listeDuQuai, etatDuQuai, posteDuQuai, prixAuQuai, texteDuQuai, majQuai,
+    braquable, braquer, rancuneIci,
     tirageDuLoto, numerosDuBillet, acheterUnBillet, nuitDuLoto, ligneDuLoto, itemLoto,
     evaluerMain, gainDuVideopoker, paquetDuVideopoker, donnerAuVideopoker, tirerAuVideopoker, menuVideopoker,
     encaisser, palierDePrime, annoncerPrime, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,

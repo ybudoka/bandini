@@ -80,3 +80,13 @@ dossier — une page de moins à 5 arrestations, une à 15, deux à 30. Juges : 
 (la sirène et la fuite, l'arrestation sans délit — assommé, et renversé au volant sur une rue dégagée —,
 mort ou trop tard, le casier au palier) ; quatre mutations les font rougir. ⚠️ Vu en l'écrivant : le juge
 au volant ne renversait personne — le quartier avait tiré un **enfant** comme suspect.
+
+**La liste du quai — livrée le 26 sept. 2026** : Sven affiche **quatre modèles** (`economie.LISTE_DU_QUAI`,
+tirés à l'empreinte de la période parmi ce que la ville fait rouler : auto, taxi, moto, camion, et les
+rares — sport, luxe, cabriolet) ; la liste se renouvelle tous les quatre jours, la même pour tout le monde.
+Près de sa jetée, la ligne du bas la dit (« LA LISTE DE SVEN : … (LIVRÉ) ») ; au volant d'un modèle
+demandé, à l'arrêt au bout de la jetée, il le prend — 40 % du prix neuf (mieux que le garage), **un par
+jour**, et **sans bosse** (90 % de sa vie, sinon « TROP DE BOSSES »). Juges : `tests/test_liste_du_quai_js.py`
+(hors liste rien, cabossé refusé, propre payé et parti, pas deux le même jour, oui le lendemain, la liste
+qui change ; la même pour deux graines) ; trois mutations les font rougir. Restent **les frénésies**, à
+trancher par Martin.
