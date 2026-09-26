@@ -54,6 +54,18 @@ Les noms, il me les a laissés :
   voix, il se nomme une fois dans sa salutation) et sa série de missions — « Une mission s'ajoute comme un
   bloc Lego ». Qui il est, et ce qu'il raconte : au brainstorming du jalon.
 
+**Le découpage (Martin, 26 sept. 2026)** : quatre étapes, chacune livrée seule.
+1. [La ville s'agrandit au nord](la-ville-s-agrandit-au-nord.md#fiche) : toute la ville descend de 110 rangées ; la
+   bande libérée est une deuxième ville bâtie par le même générateur (sa trame, sa graine), avec les Friches
+   au-dessus des Érables, la Gare de triage au-dessus de La Shop et, au-dessus du Faubourg, les rues du Petit-Canton
+   autour de terrains à bâtir.
+2. Le Petit-Canton : ses bâtiments sur ces terrains, ses devantures, ses lanternes, son arche et son bus.
+3. Le donneur et ses missions.
+4. [Les Mantes](l-ecole-rivale.md#fiche).
+
+⚠️ Ce qui précède sur « la recette de l'aéroport » a été dépassé : Martin a choisi la translation et la deuxième
+ville générée (l'approche A), et non un plan dessiné.
+
 **Juges** : la ville d'avant identique à la tuile près (comparer les deux villes en JSON, clé par clé) ; le
 quartier atteignable à pied et au volant ; le gang naît chez lui et se bat à sa frontière ; aucun dé consommé
 par la pose ; les juges de la carte à la nouvelle taille.
