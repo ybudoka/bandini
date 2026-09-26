@@ -101,7 +101,7 @@ pas quand l'ordre de travail change.
 | Le 1er juillet, jour du déménagement | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-1er-juillet-jour-du-demenagement.md#fiche) |
 | La Saint-Jean sur la baie | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/la-saint-jean-sur-la-baie.md#fiche) |
 | La tempête de verglas | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/la-tempete-de-verglas.md#fiche) |
-| Braquer un commerce | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/braquer-un-commerce.md#fiche) |
+| Braquer un commerce | ⬜ **en cours** | 26 sept. 2026 | **P4** | ajout | [fiche](jalons/braquer-un-commerce.md#fiche) |
 | Les nids-de-poule qui mordent | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/les-nids-de-poule-qui-mordent.md#fiche) |
 | Le derby de démolition à la foire | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-derby-de-demolition-a-la-foire.md#fiche) |
 | Les enseignes qui ouvrent pour vrai : bingo, quilles, lave-auto, Rialto | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/les-enseignes-qui-ouvrent-pour-vrai.md#fiche) |
