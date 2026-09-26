@@ -272,3 +272,4 @@ Deux documents d'avant la table :
 | Le pont de glace | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-pont-de-glace.md#fiche) · [notes](le-pont-de-glace.md#notes) |
 | Un vrai chalet dedans, et son foyer | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](un-vrai-chalet-dedans-et-son-foyer.md#fiche) · [notes](un-vrai-chalet-dedans-et-son-foyer.md#notes) |
 | Le chalet fume, et son feu crépite | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-chalet-fume-et-son-feu-crepite.md#fiche) · [notes](le-chalet-fume-et-son-feu-crepite.md#notes) |
+| Le dojo du quartier : apprendre les techniques | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-dojo-du-quartier.md#fiche) · [notes](le-dojo-du-quartier.md#notes) |

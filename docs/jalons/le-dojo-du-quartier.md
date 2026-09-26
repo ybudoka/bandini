@@ -137,7 +137,7 @@ muté une fois.
 `piece["tatami"] = {"x", "y"}` (le centre du tatami, en tuiles de la pièce) ; une porte `interieur: "dojo"`,
 `lieu: "dojo"`, `nom: "DOJO DION"` ; un point de carte `{"type": "dojo", "famille": "service"}`.
 
-- [ ] **Les juges** — `tests/test_dojo.py` :
+- [x] **Les juges** — `tests/test_dojo.py` :
 
 ```python
 """Le dojo du quartier (docs/jalons/le-dojo-du-quartier.md)."""
@@ -198,8 +198,8 @@ def test_plus_de_salon_mireille():
 vérifier la forme (`{district: [(nom, genre), …]}`) ; et que `generer()` n'est pas mis en cache (sinon le
 `monkeypatch` ne change rien : le juge « ne déplace rien » passerait à vide — le muter pour le voir rougir).
 
-- [ ] **Rouge** : `KeyError: 'dojo'` / aucune porte.
-- [ ] **Le code** :
+- [x] **Rouge** : `KeyError: 'dojo'` / aucune porte.
+- [x] **Le code** :
   - `LEGENDE` : `"Y": {"nom": "tatami", "dedans": True, "bloc": True}`, `"K": {"nom": "sac de frappe",
     "solide": 3, "meuble": True}`, `"U": {"nom": "mannequin de bois", "solide": 3, "meuble": True}` (les
     trois libres, vérifié le 26 sept.).
@@ -310,12 +310,12 @@ def piece_de_dojo(slug: str, largeur: int, hauteur: int, porte: int) -> dict:
     sombres toutes les huit pixels, le liseré noir aux bords comme le galon du tapis `'y'`, lu par
     `v & 1..8`) ; `'K'` : le sac de frappe (la chaîne au plafond, le sac rouge sombre, son ombre) ; `'U'` :
     le mannequin de bois (le tronc brun, trois bras courts, le pied).
-- [ ] **Vert** : `tests/test_dojo.py`, puis `tests/test_interieurs.py`, `tests/test_devantures.py`,
+- [x] **Vert** : `tests/test_dojo.py`, puis `tests/test_interieurs.py`, `tests/test_devantures.py`,
   `tests/test_carte.py`, `tests/test_districts.py`, `tests/test_reproductible.py`, `tests/test_interieurs_js.py`.
-- [ ] **Capture** de la pièce (recette « Capturer une pièce du jeu ») — la regarder.
-- [ ] **Mutations** : retirer la garde des mesures → le juge « sans façade » rougit (une pièce trop petite devient un dojo, `_piece` lève) ; retirer `ville["interieurs"]
+- [x] **Capture** de la pièce (recette « Capturer une pièce du jeu ») — la regarder.
+- [x] **Mutations** : retirer la garde des mesures → le juge « sans façade » rougit (une pièce trop petite devient un dojo, `_piece` lève) ; retirer `ville["interieurs"]
   .pop(ancienne…)` → le juge « ne déplace rien » rougit.
-- [ ] **Commit** : `feat: le dojo du quartier, 1re tâche — le DOJO DION dans la ville`.
+- [x] **Commit** : `feat: le dojo du quartier, 1re tâche — le DOJO DION dans la ville`.
 
 #### Tâche 2 : Mireille Dion, et les règles de la leçon
 
@@ -328,7 +328,7 @@ mireille.md` (neuf) et `docs/personnages/README.md`, `tests/test_dojo.py`.
 fenetre_images, reussites, rates_max, distances, repliques}` ; `t.lecon` sur chaque technique ; les voix
 `mireille-dojo-<cle>` (mission `dojo`).
 
-- [ ] **Les juges** (dans `tests/test_dojo.py`) :
+- [x] **Les juges** (dans `tests/test_dojo.py`) :
 
 ```python
 from app import audio, dojo, missions, techniques
@@ -358,7 +358,7 @@ def test_les_voix_du_dojo_sont_declarees():
     assert {f"mireille-dojo-{r['cle']}" for r in dojo.REPLIQUES} <= slugs
 ```
 
-- [ ] **Rouge**, puis :
+- [x] **Rouge**, puis :
   - `techniques.py` : `_t(..., lecon="contact")`, le champ `lecon: str` ; `pied_saute` → `lecon="loin"`,
     `balayage` → `"attaque"`, `retournement_poignet` → `"arme"`, `etranglement` → `"dos"`.
   - `app/dojo.py` :
@@ -432,10 +432,10 @@ def exporter() -> dict:
   - `docs/personnages/mireille.md` (histoire : danseuse contemporaine, l'aïkido puis le jiu-jitsu, le dojo au
     Faubourg ; personnalité ; comment elle parle ; comment elle se présente ; sa voix ; ses liens — aucun
     encore) et sa ligne dans le `README.md` des personnages.
-- [ ] **Vert** : `tests/test_dojo.py`, `tests/test_visages.py`, `tests/test_garderobe.py`,
+- [x] **Vert** : `tests/test_dojo.py`, `tests/test_visages.py`, `tests/test_garderobe.py`,
   `tests/test_missions.py`, `tests/test_interpretation.py`, `tests/test_audio.py`, `tests/test_techniques.py`,
   `tests/test_interieurs.py` (`TYPES_SERVIS` lit déjà les `point:` des personnages).
-- [ ] **Commit** : `feat: le dojo du quartier, 2e tâche — Mireille Dion, et les règles de la leçon`.
+- [x] **Commit** : `feat: le dojo du quartier, 2e tâche — Mireille Dion, et les règles de la leçon`.
 
 #### Tâche 3 : LES COURS au comptoir
 
@@ -448,7 +448,7 @@ def exporter() -> dict:
 menu`, `Dojo.acheter(slug) → bool` (appelle `Dojo.commencer(slug)`, tâche 4 ; en tâche 3, `commencer` est un
 bouchon qui pose `B.cours = { slug }` seulement).
 
-- [ ] **Les juges** (`tests/test_dojo_js.py`) — une fonction commune qui entre au dojo :
+- [x] **Les juges** (`tests/test_dojo_js.py`) — une fonction commune qui entre au dojo :
 
 ```python
 """Le dojo du quartier, au banc (docs/jalons/le-dojo-du-quartier.md)."""
@@ -536,7 +536,7 @@ def test_une_vieille_partie_a_ses_cours_vides(banc):
 (`tests/banc.js`, `entrer`) ; le champ qui nomme le personnage d'une entité (`e.personnage` ? lire
 `Histoire.creerPersonnage`) ; la touche d'ACTION (`KeyE`).
 
-- [ ] **Rouge**, puis `dojo.js` (le menu) — le patron de `Missions.menuMarcheNoir` :
+- [x] **Rouge**, puis `dojo.js` (le menu) — le patron de `Missions.menuMarcheNoir` :
 
 ```js
 /* Bandini — le dojo du quartier : LES COURS de Mireille Dion, et la lecon sur le
@@ -611,9 +611,9 @@ const Dojo = (function () {
   - `histoire.js`, dans `parler`, juste avant la branche de Josée : `if (slug === 'mireille') {
     Hud.ouvrirMenu(Dojo.menuCours()); return true; }` (la salutation la première fois — tâche 5).
   - `base.js` : `coursPayes: {}` dans l'état initial, `'coursPayes'` dans la liste de `completer`.
-- [ ] **Vert**, **mutations** (retirer le `if (etat === 'a_vendre')` → le juge « se paie une fois »
+- [x] **Vert**, **mutations** (retirer le `if (etat === 'a_vendre')` → le juge « se paie une fois »
   rougit ; `avant()` qui rend toujours null → le circulaire rougit).
-- [ ] **Commit** : `feat: le dojo du quartier, 3e tâche — LES COURS au comptoir`.
+- [x] **Commit** : `feat: le dojo du quartier, 3e tâche — LES COURS au comptoir`.
 
 #### Tâche 4 : la leçon sur le tatami
 
@@ -628,7 +628,7 @@ ABANDONNER LA LEÇON dans la pause), `tests/test_dojo_js.py`.
 `Dojo.maj()`, `Dojo.annuler(raison)`, `Dojo.dessiner(ctx)` ; `Techniques.quandPorte = function (e, slug, cible)`
 (appelé par le moteur, voir plus bas).
 
-- [ ] **Les juges** :
+- [x] **Les juges** :
 
 ```python
 def test_trois_reussites_en_rythme_apprennent_l_uppercut(banc):
@@ -720,7 +720,7 @@ def test_la_lecon_ne_tire_aucun_de(banc):
 une leçon d'**uppercut** doit faire partir l'uppercut à la tape, pas le direct — la leçon règle
 `B.joueur.chaine = rang - 1` et `chaineT = FENETRE` avant chaque « et » (la mise en place des tapes).
 
-- [ ] **Rouge**, puis le code :
+- [x] **Rouge**, puis le code :
   - `techniques.js` :
     - `sait(e, slug)` : `if (Entites.estJoueur(e) && B.cours && B.cours.slug === slug) return true;` en tête.
     - le **crochet** `api.quandPorte = null` et un appel `if (api.quandPorte) api.quandPorte(e, slug, cible)`
@@ -803,36 +803,52 @@ une leçon d'**uppercut** doit faire partir l'uppercut à la tape, pas le direct
     trois points (un par temps, le troisième doré pendant la fenêtre) ; dans `menuPause`, avant QUITTER :
     `B.cours ? { libelle: 'ABANDONNER LA LEÇON', faire: function () { Dojo.annuler('abandon'); Jeu.reprendre();
     return true; } } : null` (filtrer les `null`).
-- [ ] **Vert** : `tests/test_dojo_js.py`, puis `tests/test_techniques_js.py`, `tests/test_armes_js.py`,
+- [x] **Vert** : `tests/test_dojo_js.py`, puis `tests/test_techniques_js.py`, `tests/test_armes_js.py`,
   `tests/test_bagarre_js.py`, `tests/test_interieurs_js.py`, `tests/test_classeur_js.py`.
-- [ ] **Mutations** : `c.vu = true` sans vérifier `c.fenetre` → « hors fenêtre » rougit ; `sait` sans
+- [x] **Mutations** : `c.vu = true` sans vérifier `c.fenetre` → « hors fenêtre » rougit ; `sait` sans
   `B.cours` → « trois réussites » rougit ; retirer la garde `e.partenaire` de `blesser` → Kevin rougit.
-- [ ] **Capture** d'une leçon en cours (le compteur, Kevin, le tatami) — la regarder.
-- [ ] **Commit** : `feat: le dojo du quartier, 4e tâche — la leçon sur le tatami`.
+- [x] **Capture** d'une leçon en cours (le compteur, Kevin, le tatami) — la regarder.
+- [x] **Commit** : `feat: le dojo du quartier, 4e tâche — la leçon sur le tatami`.
 
 #### Tâche 5 : la voix de Mireille
 
-- [ ] Relire les répliques (`app/dojo.py`) contre `docs/ecrire-drole.md` et la fiche de Mireille ; le jeu
+- [x] Relire les répliques (`app/dojo.py`) contre `docs/ecrire-drole.md` et la fiche de Mireille ; le jeu
   (`interpretation.JEU`) contre `docs/jeu-d-acteur.md`.
-- [ ] `elevenlabs_status`, puis `uv run python scripts/audio_elevenlabs.py --voix --essai` : il doit lister
+- [x] `elevenlabs_status`, puis `uv run python scripts/audio_elevenlabs.py --voix --essai` : il doit lister
   les `mireille-dojo-*` (≈ 25) et **rien d'autre** — sinon, filtrer (lire les options du script ; ne pas
   générer les voix des autres sessions).
-- [ ] Générer ; `tests/test_audio.py` vert ; les voix au dépôt (le plafond du dépôt : « Voix des missions
+- [x] Générer ; `tests/test_audio.py` vert ; les voix au dépôt (le plafond du dépôt : « Voix des missions
   longues »). ⚠️ Personne ne les écoute ici : **les faire écouter à Martin**.
-- [ ] La salutation : la première fois qu'on parle à Mireille (`B.partie.connus` ou l'équivalent qui dit
+- [x] La salutation : la première fois qu'on parle à Mireille (`B.partie.connus` ou l'équivalent qui dit
   « déjà rencontré »), elle dit `salut` avant d'ouvrir le menu ; ensuite, `cours`.
-- [ ] **Commit** : `feat: le dojo du quartier, 5e tâche — la voix de Mireille`.
+- [x] **Commit** : `feat: le dojo du quartier, 5e tâche — la voix de Mireille`.
 
 #### Tâche 6 : la doc, la suite, la livraison
 
-- [ ] `docs/architecture.md` (`app/dojo.py`, `dojo.js`, l'arborescence), `docs/carte.md` (le DOJO DION, les
+- [x] `docs/architecture.md` (`app/dojo.py`, `dojo.js`, l'arborescence), `docs/carte.md` (le DOJO DION, les
   glyphes `Y`/`K`/`U`), `tests/test_carte_du_depot.py` vert.
-- [ ] La **suite complète** en parallèle ; un rouge : le rejouer sur la base avant d'accuser le jalon.
-- [ ] **Relecture de toute la branche** par un agent neuf ; corriger critiques et importants (un juge rouge
+- [x] La **suite complète** en parallèle ; un rouge : le rejouer sur la base avant d'accuser le jalon.
+- [x] **Relecture de toute la branche** par un agent neuf ; corriger critiques et importants (un juge rouge
   d'abord), reporter les mineurs dans les Notes.
-- [ ] Atterrir (ff-only) ; captures pour Martin dans `captures/`, ouvertes dans Aperçu ; livrer (la ligne
+- [x] Atterrir (ff-only) ; captures pour Martin dans `captures/`, ouvertes dans Aperçu ; livrer (la ligne
   quitte le plan pour `jalons/README.md`, la note sous `## Notes`).
 
 ## Notes
 
-_Rien de livré._
+**Livré le 26 sept. 2026** — six tâches, plus une passe de corrections après la relecture de toute la branche.
+
+- **Le DOJO DION** : la pièce d'un commerce visitable du Faubourg (RADIO-TV DUMAS, `commerce_24`, la plus au nord qui convienne), reprise sur la ville finie et sans un dé (`_Chantier.poser_le_dojo`, `piece_de_dojo`) : casiers, sac de frappe (`@`), mannequin de bois (`%`), tatami (`A`), le comptoir de Mireille et Kevin au sac. Le SALON MIREILLE s'appelle SALON LOUISE.
+- **Mireille Dion** (`mireille`, voix Marie Line) : sa fiche, son visage, sa tenue ; la première fois elle se présente, ensuite ACTION ouvre **LES COURS** (payé une fois, repris sans repayer, le maillon d'avant, fermé la nuit).
+- **La leçon** (`static/js/dojo.js`) : le métronome (deux claquements, un fort sur le « et »), la fenêtre de 24 images, trois réussites ou cinq ratés ; la technique enseignée compte comme sue ; Kevin encaisse sans dégât, sans sang, sans crime, se relève et retourne au sac ; la porte, la mort ou ABANDONNER LA LEÇON (pause) l'arrêtent, le cours reste payé.
+- **Vingt voix** (v3, avec leur jeu).
+
+⚠️ **Ce qui a surpris** :
+- Le Faubourg est serré de lieux garantis : ses pièces de commerce font cinq rangées de profond — un dojo de huit ne se trouvait nulle part (minimum 9 × 5).
+- Le **paquet des définitions** était à son plafond : le compte est devenu un métronome synthétisé (plus juste pour le rythme, de toute façon), Kevin le corps du commis recoloré, et seules trois répliques partent au paquet (les autres se disent). ⚠️ Le juge `test_le_paquet_reste_leger` est rouge sur `dev` depuis le 6/49 (54 175 gzip) ; le dojo y ajoute ≈ 400 octets.
+- La session du **chalet** a pris les glyphes `Y`, `K`, `U` le même jour : le dojo a `A`, `@`, `%`.
+- La relecture a trouvé le **retournement du poignet impossible à apprendre** (sa projection portait dans la même image que SAISIR, avant que la leçon note le geste — le balayage et le coup sauté aussi), **Kevin qui ne marchait jamais** et restait penché, et un cours achetable pendant une leçon. Une leçon au bouton par mise en place tient maintenant chacun.
+- Un appel téléphonique **met la leçon en pause** (la boucle est figée) au lieu de l'annuler : c'est mieux.
+
+**Dettes** (mineures) : sans argent, l'item du cours ne dit rien ; `B.cours` n'est pas remis à zéro au retour au titre (une image) ; « TU L'AS » est écrasé par « TU SAIS … ! » ; « Trop tôt » aussi quand on n'a rien tenté ; Kevin ne peut pas mourir (même par balle) ; un étranglement pendant que Kevin est couché.
+
+**À écouter** : les vingt voix de Mireille (`static/audio/histoire-mireille-dojo-*`) — personne ne les a entendues.
