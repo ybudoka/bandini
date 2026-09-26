@@ -640,6 +640,34 @@ def test_la_tempete_de_neige_tient_le_rythme(page, serveur, erreurs):
     assert erreurs == []
 
 
+def test_le_brouillard_tient_le_rythme(page, serveur, erreurs):
+    """⚠️ La SONDE que la fiche du brouillard exige avant de l'allumer pour tout le monde (la dette
+    « rythme mesuré sur le vrai téléphone ») : le même pire cas que la neige — au volant, recherché —
+    un matin de plein brouillard aux Quais, l'option allumée. Le chiffre s'imprime à côté des autres."""
+    page.goto(serveur)
+    attendre_titre(page)
+    jouer(page)
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.evaluate("""() => {
+        const L = window.BANDINI, j = L.B.joueur, p = L.B.partie;
+        j.intouchable = true;
+        L.B.options.brouillard = true;
+        let jour = 1;
+        while (!L.Brouillard.matinDeBrouillard(jour)) jour++;
+        p.jour = jour; p.heure = 8 / 24;
+        L.Police.ajouterChaleur(9);
+        const v = L.Vehicules.creer('auto', j.x + 24, j.y, 0, { etat: 'stationne' });
+        L.Entites.indexer();
+        L.Vehicules.monter(j, v);
+    }""")
+    page.wait_for_timeout(4000)
+    etat = page.evaluate("({ ms: window.BANDINI.B.stats.ms, i: window.BANDINI.Brouillard.intensite(), images: window.BANDINI.B.stats.images })")
+    print(f"\n[perf] {etat['ms']:.1f} ms par image, brouillard {etat['i']:.2f}, {etat['images']} images, 3 etoiles")
+    assert etat["i"] > 0.5, "la sonde ne mesure pas un brouillard"
+    assert etat["ms"] < 40, f"{etat['ms']:.1f} ms par image : le brouillard ne tient pas le rythme"
+    assert erreurs == []
+
+
 def test_sans_geste_le_son_est_retenu_et_la_page_le_dit(page, serveur, erreurs):
     """La panne de Martin, dans un vrai navigateur.
 

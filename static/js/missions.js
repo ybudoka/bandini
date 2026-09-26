@@ -1909,7 +1909,7 @@ const Missions = (function () {
   /** La manchette s'affiche ET se lit : le narrateur du Clairon la dit a voix
       haute. ⚠️ Et RIEN ne sonne par-dessus : le rappel de Sal, qui tombait dans
       la meme image, ne fait plus sonner le telephone (`nuitDeLaDette`). */
-  function direLaManchette(m, loto) {
+  function direLaManchette(m, dessous) {
     // ⚠️ La duree suit CE QUE LE NARRATEUR DIT (`lu`), pas un nombre fixe : les
     // lecons regenerees du 18 sept. (avec leurs pauses) durent jusqu'a 9,6 s,
     // et une boite qui s'eteint a 420 images (7 s) disparaissait au milieu de
@@ -1919,7 +1919,8 @@ const Missions = (function () {
     // porte des « … » que `lu` ne montre pas.
     const duree = 90 + ((m.lu && m.lu.length) || (m.titre.length + m.texte.length)) * 4;
     // ⚠️ Le 6/49 s'ecrit SOUS la manchette, sans voix : le narrateur lit la une, les numeros se lisent.
-    Hud.dialogue('LE CLAIRON DE LA BAIE', [m.titre, m.texte].concat(loto ? [loto] : []), duree, { slug: 'narrateur', humeur: 'neutre' });
+    // ⚠️ `dessous` : le 6/49 et l'annonce du brouillard, une ligne de texte ou une liste de lignes.
+    Hud.dialogue('LE CLAIRON DE LA BAIE', [m.titre, m.texte].concat(dessous || []), duree, { slug: 'narrateur', humeur: 'neutre' });
     if (m.slug) { Son.Voix.chargerHistoire('journal'); if (Son.Voix.parler('narrateur-journal-' + m.slug, {}) && B.dialogue) B.dialogue.voix = true; }
   }
 
@@ -1942,9 +1943,12 @@ const Missions = (function () {
     B.coincees = {};
     revenusDuJour();
     const loto = B.defs.loto ? nuitDuLoto() : null;
+    // Le brouillard de demain matin : le Clairon l'annonce la veille, sous la manchette.
+    const brume = typeof Brouillard !== 'undefined' ? Brouillard.annonceDeDemain() : null;
+    const dessous = [loto, brume].filter(Boolean);
     const m = manchetteDuJour();
-    if (m) { B.partie.derniereManchette = m; direLaManchette(m, loto); }
-    else Hud.message(loto || 'JOUR ' + B.partie.jour);
+    if (m) { B.partie.derniereManchette = m; direLaManchette(m, dessous); }
+    else Hud.message(dessous[0] || 'JOUR ' + B.partie.jour);
   }
 
   // --- Effacer le casier : la certitude, ou le pari ---------------------------------------

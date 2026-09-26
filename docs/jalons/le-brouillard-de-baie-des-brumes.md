@@ -42,3 +42,25 @@ quand il est là et revient après ; aucun dé tiré par le brouillard.
 ## Notes
 
 _Rien de livré._
+
+**Livré le 26 sept. 2026 — derrière l'option « BROUILLARD (ESSAI) », non par défaut, comme la neige.**
+
+- **Quand** (`app/brouillard.py`) : un matin sur quatre environ, à l'empreinte du jour — le même pour
+  toutes les parties ; il monte de 4 h 30 à 6 h 30, tient jusqu'à 10 h, se lève avant midi. Entier aux
+  Quais et à La Pointe, aux deux tiers ailleurs.
+- **Ce qu'il fait** (`static/js/brouillard.js`) : un voile clair au centre, épais aux bords de l'écran ;
+  la **police et les témoins voient moins loin** (`Police.voit`, `quelqu_un_voit`, les témoins d'un crime :
+  45 % de leur portée au plein) — semer devient plus facile ; la **corne du phare** sonne toutes les
+  vingt-deux secondes ; et **le Clairon l'annonce la veille**, sous la manchette (« BROUILLARD À COUPER AU
+  COUTEAU DEMAIN MATIN. »), à côté du 6/49.
+- **La sonde** (`test_navigateur.py`, jumelle de celle de la neige) : 1,9 ms par image au volant, trois
+  étoiles, plein brouillard — sur la machine de bureau. ⚠️ **Le vrai téléphone reste à mesurer** avant de
+  l'allumer pour tout le monde : c'est à Martin, manette en main.
+- **Juges** (`test_brouillard.py`, `test_brouillard_js.py`) : les mêmes matins pour deux graines, un sur
+  quatre sur 400 jours, la courbe de l'aube à midi ; éteint, rien ne change ; un agent qui voit le joueur à
+  70 % de sa portée par temps clair ne le voit plus dans le brouillard, et le revoit à midi ; aucun dé ;
+  l'annonce la veille, et pas un brouillard annoncé qui ne vient pas. Trois mutations les font rougir —
+  et le juge de la police passait d'abord À VIDE (le joueur dans un bâtiment) : il cherche maintenant
+  une rue dégagée, et le dit s'il n'en trouve pas.
+- **Pas encore** : la mission `sans_etoile` préparée pour un matin de brouillard (M16).
+

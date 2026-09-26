@@ -64,7 +64,8 @@ const Police = (function () {
   function voit(agent, x, y, genre, reconnait) {
     const vision = defs().vision[genre || 'policier'];
     const nuit = Monde.estNuit();
-    const portee = (nuit ? vision.nuit : vision.jour) * TT * (reconnait ? porteeDuCasier() : 1);
+    // ⚠️ Et le BROUILLARD raccourcit la vue (`Brouillard.vision`, 1 sans lui) : semer y devient plus facile.
+    const portee = (nuit ? vision.nuit : vision.jour) * TT * (reconnait ? porteeDuCasier() : 1) * Brouillard.vision();
     if (!dansLeCone(agent.x, agent.y, agent.angle, vision.angle * Math.PI / 180, portee, x, y)) return false;
     return Monde.ligneLibre(agent.x, agent.y, x, y);
   }
@@ -84,7 +85,7 @@ const Police = (function () {
     }
     const rayon = defs().temoins.rayon_tuiles * TT;
     const vision = defs().vision.pieton;
-    const portee = (Monde.estNuit() ? vision.nuit : vision.jour) * TT;
+    const portee = (Monde.estNuit() ? vision.nuit : vision.jour) * TT * Brouillard.vision();
     const demi = vision.angle * Math.PI / 180;
     for (const e of Entites.pietonsAutour(x, y, Math.min(rayon, portee))) {
       if (e === sauf || !e.vivant || e.etat === 'assomme' || e.aveugle > 0 || e.agent) continue;
@@ -177,7 +178,7 @@ const Police = (function () {
     // Les temoins : ceux qui ont VU (dans leur cone, rien devant) et qui ont le
     // coeur de le dire. La victime d'un pickpocket, de dos, n'a rien vu.
     const t = defs().temoins, vision = defs().vision.pieton;
-    const portee = (Monde.estNuit() ? vision.nuit : vision.jour) * TT, demi = vision.angle * Math.PI / 180;
+    const portee = (Monde.estNuit() ? vision.nuit : vision.jour) * TT * Brouillard.vision(), demi = vision.angle * Math.PI / 180;
     for (const e of Entites.pietonsAutour(x, y, Math.min(t.rayon_tuiles * TT, portee))) {
       if (!e.vivant || e.agent || e.intouchable || e.metier || e.etat === 'assomme') continue;
       if (!dansLeCone(e.x, e.y, e.angle, demi, portee, x, y) || !Monde.ligneLibre(e.x, e.y, x, y)) continue;
