@@ -17,13 +17,24 @@ ENTRER = """
 """
 
 
-def test_action_pres_de_mireille_ouvre_les_cours(banc):
+def test_la_premiere_fois_elle_se_presente_puis_ouvre_ses_cours(banc):
+    """« Qui parle se nomme » : la première fois, sa salutation (elle s'y nomme) ; ensuite, ACTION
+    ouvre LES COURS."""
     r = banc("""function (L, o) { """ + ENTRER + """
         auDojo(L, o);
+        L.Son.Voix.demandees.length = 0;
         o.tape('KeyE', 2);
-        return L.B.menu ? L.B.menu.titre : null;
+        const premiere = { menu: L.B.menu ? L.B.menu.titre : null,
+                           dit: L.B.dialogue ? L.B.dialogue.lignes.join(' ') : null,
+                           voix: L.Son.Voix.demandees.slice() };
+        L.B.dialogue = null;
+        o.frame(2);
+        o.tape('KeyE', 2);
+        return { premiere: premiere, ensuite: L.B.menu ? L.B.menu.titre : null };
     }""")
-    assert r == "LES COURS"
+    assert r["premiere"]["menu"] is None and "Mireille Dion" in (r["premiere"]["dit"] or ""), r
+    assert "mireille-dojo-salut" in r["premiere"]["voix"], r
+    assert r["ensuite"] == "LES COURS", r
 
 
 def test_un_cours_se_paie_une_fois(banc):

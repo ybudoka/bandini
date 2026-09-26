@@ -46,6 +46,22 @@ const Dojo = (function () {
     return commencer(slug);
   }
 
+  /** ACTION pres de Mireille. La premiere fois : sa salutation, sa voix, son visage. Ensuite :
+      LES COURS, et sa replique d'accueil (dite, pas affichee — le menu s'affiche). */
+  function accueillir(premiere) {
+    const m = (B.defs.personnages || []).find(function (q) { return q.slug === 'mireille'; });
+    const texte = (regles().repliques || {}).salut;
+    if (premiere && texte) {
+      Hud.dialogue(m ? m.nom : 'MIREILLE', [texte], 360, { slug: 'mireille', humeur: 'neutre' });
+      Son.Voix.chargerHistoire('dojo');
+      if (Son.Voix.parler('mireille-dojo-salut', {}) && B.dialogue) B.dialogue.voix = true;
+      return;
+    }
+    Hud.ouvrirMenu(menuCours());
+    Son.Voix.chargerHistoire('dojo');
+    Son.Voix.parler(ferme() ? 'mireille-dojo-ferme' : 'mireille-dojo-cours', {});
+  }
+
   function menuCours() {
     const items = [];
     if (ferme()) {
@@ -218,5 +234,5 @@ const Dojo = (function () {
     }
   }
 
-  return { menuCours, etatDuCours, acheter, commencer, maj, annuler, dessiner };
+  return { menuCours, accueillir, etatDuCours, acheter, commencer, maj, annuler, dessiner };
 })();

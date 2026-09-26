@@ -1052,7 +1052,7 @@ const Histoire = (function () {
   function parler(slug) {
     const p = personnage(slug);
     if (!p || B.cinema) return false;
-    rencontrer(slug);
+    const premiere = rencontrer(slug);
     const enCours = courante();
     // ⚠️ L'objectif `parler` d'une mission : on l'accomplit en parlant a SA
     // cible, pas au donneur. m6 t'envoie serrer la main de quatre personnes :
@@ -1084,8 +1084,9 @@ const Histoire = (function () {
     if (m) { poserPuisDireLIntro(m); return true; }
     const mn = B.defs.marche_noir;
     if (mn && slug === 'josee' && faite(mn.apres)) { Hud.ouvrirMenu(Missions.menuMarcheNoir()); return true; }
-    // Mireille ouvre ses COURS, toujours (le DOJO DION, `dojo.js`) : elle n'a pas de repos.
-    if (slug === 'mireille') { Hud.ouvrirMenu(Dojo.menuCours()); return true; }
+    // Mireille (le DOJO DION, `dojo.js`) : la premiere fois, elle se PRESENTE (« Qui parle se
+    // nomme ») ; ensuite, ACTION ouvre ses COURS. Elle n'a pas de repos.
+    if (slug === 'mireille') { Dojo.accueillir(premiere); return true; }
     const repos = B.defs.repos || {};
     const apres = !!(repos.apres && faite(repos.apres));
     // ⚠️ Le repos se DIT aussi : `<qui>-repos-1` avant `repos.apres`, `-2` ensuite (`missions.
