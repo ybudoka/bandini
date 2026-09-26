@@ -2423,6 +2423,7 @@ const Monde = (function () {
       if (l.demolie) continue;             // sa fenetre est tombee avec le batiment (chantier)
       if (fenetreEteinte(l)) continue;     // on est couche, chez nous (la nuit a ses habitudes)
       if (gresilleEteint(l)) continue;     // l'ampoule hoquette
+      if (Verglas.lampeAuNoir(l)) continue; // le verglas a fait tomber les fils : le quartier est au noir
       if (l.x < cx - l.r || l.x > cx + VW + l.r || l.y < cy - l.r || l.y > cy + VH + l.r) continue;
       out.push({ x: l.x - cx, y: l.y - cy, r: l.r, c: l.c });
       if (out.length >= 25) break;

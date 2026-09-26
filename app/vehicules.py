@@ -195,7 +195,7 @@ CATALOGUE: list[Vehicule] = [
     # de l'autobus, « deux de plus » que les trois de tout le monde.
     _v("camion", "Camion", "camion", 40, 16, 2.8, 0.03, 33, 300, 2, 1200, 0.08,
        ["#7f8c8d", "#c0392b", "#2c3e50"], "camion", masse=3.0, cercles=4,
-       defonce=0.75, radio="station_camion", adherence=0.22),
+       defonce=0.75, radio="station_camion", adherence=0.22, boulot="generatrices"),
     _v("autobus", "Autobus", "camion", 48, 16, 2.6, 0.028, 40, 250, 12, 1500, 0.04,
        ["#2980b9"], "autobus", masse=3.2, cercles=5, defonce=0.7, adherence=0.22,
        boulot="autobus"),

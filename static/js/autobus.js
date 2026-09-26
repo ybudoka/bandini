@@ -339,7 +339,7 @@ const Autobus = (function () {
     v.cible = cible;
     v.sens = FLECHE_DE[Math.sign(cible.tx - Math.floor(v.x / TT)) + ',' + Math.sign(cible.ty - Math.floor(v.y / TT))] || v.sens;
     // La vitesse : celle du trafic, qui ralentit avant un coin, une boite ou un arret.
-    let voulue = v.def.vitesse_max * t.vitesse_ville * Neige.vitesseTrafic();
+    let voulue = v.def.vitesse_max * t.vitesse_ville * Neige.vitesseTrafic() * Verglas.vitesseTrafic();
     const devant1 = L.tuiles[(v.etape + 1) % L.n], devant2 = L.tuiles[(v.etape + 2) % L.n];
     const f0 = Monde.fleche(cible.tx, cible.ty), f1 = Monde.fleche(devant1[0], devant1[1]);
     if (f0 === '+' || f0 === 'S' || f1 === '+' || f1 === 'S') voulue = Math.min(voulue, 1.1);

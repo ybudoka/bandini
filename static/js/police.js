@@ -65,7 +65,8 @@ const Police = (function () {
     const vision = defs().vision[genre || 'policier'];
     const nuit = Monde.estNuit();
     // ⚠️ Et le BROUILLARD raccourcit la vue (`Brouillard.vision`, 1 sans lui) : semer y devient plus facile.
-    const portee = (nuit ? vision.nuit : vision.jour) * TT * (reconnait ? porteeDuCasier() : 1) * Brouillard.vision();
+    // Le VERGLAS aussi (`Verglas.vision`) : la police est debordee.
+    const portee = (nuit ? vision.nuit : vision.jour) * TT * (reconnait ? porteeDuCasier() : 1) * Brouillard.vision() * Verglas.vision();
     if (!dansLeCone(agent.x, agent.y, agent.angle, vision.angle * Math.PI / 180, portee, x, y)) return false;
     return Monde.ligneLibre(agent.x, agent.y, x, y);
   }
@@ -85,7 +86,7 @@ const Police = (function () {
     }
     const rayon = defs().temoins.rayon_tuiles * TT;
     const vision = defs().vision.pieton;
-    const portee = (Monde.estNuit() ? vision.nuit : vision.jour) * TT * Brouillard.vision();
+    const portee = (Monde.estNuit() ? vision.nuit : vision.jour) * TT * Brouillard.vision() * Verglas.vision();
     const demi = vision.angle * Math.PI / 180;
     for (const e of Entites.pietonsAutour(x, y, Math.min(rayon, portee))) {
       if (e === sauf || !e.vivant || e.etat === 'assomme' || e.aveugle > 0 || e.agent) continue;
@@ -189,7 +190,7 @@ const Police = (function () {
     // Les temoins : ceux qui ont VU (dans leur cone, rien devant) et qui ont le
     // coeur de le dire. La victime d'un pickpocket, de dos, n'a rien vu.
     const t = defs().temoins, vision = defs().vision.pieton;
-    const portee = (Monde.estNuit() ? vision.nuit : vision.jour) * TT * Brouillard.vision(), demi = vision.angle * Math.PI / 180;
+    const portee = (Monde.estNuit() ? vision.nuit : vision.jour) * TT * Brouillard.vision() * Verglas.vision(), demi = vision.angle * Math.PI / 180;
     for (const e of Entites.pietonsAutour(x, y, Math.min(t.rayon_tuiles * TT, portee))) {
       if (!e.vivant || e.agent || e.intouchable || e.metier || e.etat === 'assomme') continue;
       if (!dansLeCone(e.x, e.y, e.angle, demi, portee, x, y) || !Monde.ligneLibre(e.x, e.y, x, y)) continue;
@@ -1033,7 +1034,7 @@ const Police = (function () {
       a rebours plutot qu'une heure (`B.t`), qui repart de zero a chaque partie. */
   function majRenforts() {
     const r = B.recherche;
-    if (r.etoiles > (r.etoilesAvant || 0)) r.renfortN = reglages().renfort_s * 60;
+    if (r.etoiles > (r.etoilesAvant || 0)) r.renfortN = Math.round(reglages().renfort_s * 60 * Verglas.retardPolice());   // le verglas : ils tardent
     r.etoilesAvant = r.etoiles;
     if (r.renfortN > 0) r.renfortN--;
     if (r.renforts === undefined) r.renforts = 0;
@@ -1102,7 +1103,7 @@ const Police = (function () {
       if (proche) {
         e.menace = null; e.vers = proche;
         if (dMin < 20) { rapporter(e.crime, proche); e.etat = 'fuit'; e.minuterie = 300; }
-      } else if (B.t - e.crime.t > t.delai_depeche_s * 60 * standingIci(e.x, e.y).depeche
+      } else if (B.t - e.crime.t > t.delai_depeche_s * 60 * standingIci(e.x, e.y).depeche * Verglas.retardPolice()
                  && B.rng() < t.proba_telephone / 60) {
         rapporter(e.crime, null);
         e.etat = 'fuit'; e.minuterie = 300;

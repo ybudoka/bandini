@@ -558,6 +558,16 @@ const Missions = (function () {
       pris: 'UN SUSPECT EN FUITE — RATTRAPE-LE',
       fini: 'ARRESTATION',
     },
+    // LE VERGLAS (docs/jalons/la-tempete-de-verglas.md) : dans un camion, PENDANT la tempete seulement,
+    // trois generatrices a livrer dans les quartiers au noir. Hors tempete, le klaxon d'un camion reste
+    // un klaxon (et se tait sur le reste : on ne le repete pas a chaque coup).
+    generatrices: {
+      ramasser: null,
+      destination: 'noir',
+      pendant: 'verglas',
+      pris: 'GÉNÉRATRICE : ',
+      fini: 'GÉNÉRATRICE LIVRÉE',
+    },
     // ⚠️ M16 : le boulot de l'autobus, sur le patron du taxi (un passager au
     // bord de la route, une destination ailleurs) — `economie.BOULOTS.autobus`
     // porte les nombres.
@@ -637,6 +647,7 @@ const Missions = (function () {
       if (boulot.etape) { if (v.def.sirene) Hud.message('UN CONTRAT EST DÉJÀ EN COURS'); return false; }
       const sorte = SORTES[v.def.boulot];
       if (!sorte) return false;          // le remorquage attend sa fourriere
+      if (sorte.pendant === 'verglas' && !Verglas.intensite()) return false;
       if (sorte.ramasser === 'crochet') {
         if (!v.remorque) return false;                    // `basculerCrochet` l'a deja dit
         if (v.remorque.etat !== 'epave') { Hud.message('LA FOURRIÈRE NE PAIE QUE LES ÉPAVES'); return false; }
@@ -720,6 +731,15 @@ const Missions = (function () {
           lieu = { x: n.x, y: n.y, nom: z ? (Monde.carte.zones.find(function (q) { return q.slug === z.district; }) || z).nom : 'LA RUE' };
         }
       }
+      if (sorte.destination === 'noir') {
+        // Un lieu d'un quartier AU NOIR, qu'un char atteint, pas sous le capot.
+        const atteint = atteignableEnChar(v), noirs = Verglas.quartiersNoirs();
+        const lieux = Monde.carte.points.filter(function (p) {
+          const z = Monde.zoneA(p.x * TT + 8, p.y * TT + 8);
+          return z && noirs.has(z.district) && dist2(p.x * TT, p.y * TT, v.x, v.y) > 200 * 200 && atteint(p.x * TT + 8, p.y * TT + 8, ARRIVEE_PX);
+        });
+        lieu = lieux[Math.floor(B.rng() * lieux.length)] || null;
+      }
       if (sorte.destination === 'scene') {
         // Un arret de tournee : une scene de la ville (un parc, la place) qu'un char atteint, pas trop pres.
         const atteint = atteignableEnChar(v);
@@ -750,7 +770,7 @@ const Missions = (function () {
       boulot.chocsDepart = v.chocs;
       boulot.t = 0;
       boulot.etape = 'route';
-      Hud.message(sorte.pris + (sorte.destination === 'ailleurs' ? lieu.nom.toUpperCase() : ''), 180);
+      Hud.message(sorte.pris + (sorte.destination === 'ailleurs' || sorte.destination === 'noir' ? lieu.nom.toUpperCase() : ''), 180);
     },
 
     /** Ce qui reste de la prime : les chocs la mangent, le chrono la fait
@@ -2041,7 +2061,7 @@ const Missions = (function () {
     const loto = B.defs.loto ? nuitDuLoto() : null;
     // Le brouillard de demain matin : le Clairon l'annonce la veille, sous la manchette.
     const brume = typeof Brouillard !== 'undefined' ? Brouillard.annonceDeDemain() : null;
-    const dessous = [loto, brume, decompteDesNids()].filter(Boolean);
+    const dessous = [loto, brume, Verglas.ligneDuClairon(), decompteDesNids()].filter(Boolean);
     const m = manchetteDuJour();
     if (m) { B.partie.derniereManchette = m; direLaManchette(m, dessous); }
     else Hud.message(dessous[0] || 'JOUR ' + B.partie.jour);

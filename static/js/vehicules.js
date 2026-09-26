@@ -946,7 +946,7 @@ const Vehicules = (function () {
     const d = v.def;
     if (cmd.gaz > 0) v.vitesse += d.acceleration * cmd.gaz;
     if (cmd.frein > 0) {
-      if (v.vitesse > 0.15) v.vitesse -= d.frein * cmd.frein * Neige.frein(v) * Monde.freinMouille(v);
+      if (v.vitesse > 0.15) v.vitesse -= d.frein * cmd.frein * Neige.frein(v) * Verglas.frein() * Monde.freinMouille(v);
       else v.vitesse -= d.acceleration * 0.7 * cmd.frein;      // marche arriere
     }
     if (cmd.freinMain) v.vitesse *= 0.965;
@@ -977,7 +977,7 @@ const Vehicules = (function () {
     }
     // Adherence : la vitesse reelle glisse vers le cap. Frein a main : elle traine.
     // ⚠️ LA NEIGE DIVISE L'ADHERENCE (M12) — la police glisse comme tout le monde.
-    const adh = (cmd.freinMain ? d.adherence_frein : d.adherence) * Neige.adherence(v) * Monde.adherenceMouillee(v);
+    const adh = (cmd.freinMain ? d.adherence_frein : d.adherence) * Neige.adherence(v) * Verglas.adherence() * Monde.adherenceMouillee(v);
     v.vx += (Math.cos(v.angle) * v.vitesse - v.vx) * adh;
     v.vy += (Math.sin(v.angle) * v.vitesse - v.vy) * adh;
     // En l'air (rampe) : on retombe.
@@ -2726,7 +2726,7 @@ const Vehicules = (function () {
     }
     const voulu = angleVers(v.x, v.y, v.cible.x, v.cible.y);
     const ecart = ecartAngle(v.angle, voulu);
-    let vitesseVoulue = v.def.vitesse_max * (v.poursuite ? 0.85 : t.vitesse_ville) * Neige.vitesseTrafic();   // sirene : bien plus vite
+    let vitesseVoulue = v.def.vitesse_max * (v.poursuite ? 0.85 : t.vitesse_ville) * Neige.vitesseTrafic() * Verglas.vitesseTrafic();   // sirene : bien plus vite
     // ⚠️ On ralentit AVANT le coin, pas dedans : a 2,2 px/image le rayon de
     // braquage fait 3,6 tuiles, et un coin de rue en demande 1,5 — le char
     // ratait son virage et finissait sur le trottoir d'en face.

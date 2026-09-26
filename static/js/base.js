@@ -67,7 +67,7 @@ const B = {
   souffleT: 0,
   msg: null, msgT: 0,
   partie: null,         // ce qui se sauvegarde (voir etatInitial)
-  options: { muet: false, sang: true, vibration: true, daltonien: false, trace: false, neige: false, brouillard: false,
+  options: { muet: false, sang: true, vibration: true, daltonien: false, trace: false, neige: false, brouillard: false, verglas: false,
              reculCommeEnAvant: false, manette: null, manetteProfil: null,
              // Les lettres des boutons de l'ecran COMMANDES : null = devinees.
              lettresManette: null,

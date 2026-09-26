@@ -267,3 +267,4 @@ Deux documents d'avant la table :
 | Braquer un commerce | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](braquer-un-commerce.md#fiche) · [notes](braquer-un-commerce.md#notes) |
 | Le camion de crème glacée | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-camion-de-creme-glacee.md#fiche) · [notes](le-camion-de-creme-glacee.md#notes) |
 | Les nids-de-poule qui mordent | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](les-nids-de-poule-qui-mordent.md#fiche) · [notes](les-nids-de-poule-qui-mordent.md#notes) |
+| La tempête de verglas | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](la-tempete-de-verglas.md#fiche) · [notes](la-tempete-de-verglas.md#notes) |

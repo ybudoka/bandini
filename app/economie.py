@@ -149,6 +149,16 @@ PALIERS: dict[str, tuple[dict, ...]] = {
         {"compte": 30, "type": "casier", "valeur": 2,
          "nom": "LE POSTE PERD TON DOSSIER", "detail": "DEUX PAGES DE MOINS"},
     ),
+    # ⚠️ LES GENERATRICES (la tempete de verglas) : trois jours tous les quarante — les paliers sont
+    # courts, sans quoi personne ne les verrait. On passe la tempete ; l'hopital te connait ; le camion.
+    "generatrices": (
+        {"compte": 5, "type": "vie", "valeur": 1.10,
+         "nom": "TU AS PASSÉ LA TEMPÊTE", "detail": "+10 % DE VIE"},
+        {"compte": 12, "type": "hopital", "valeur": 0.5,
+         "nom": "L'HÔPITAL S'EN SOUVIENT", "detail": "HÔPITAL À MOITIÉ PRIX"},
+        {"compte": 25, "type": "char", "valeur": "camion",
+         "nom": "LE CAMION DE LIVRAISON EST À TOI", "detail": "GARÉ À LA PLANQUE"},
+    ),
     "autobus": (
         {"compte": 10, "type": "prime", "valeur": 1.3,
          "nom": "UN VISAGE CONNU", "detail": "+30 % DE POURBOIRE"},
@@ -698,10 +708,6 @@ BOULOTS: dict[str, Boulot] = {
     "remorquage": {"slug": "remorquage", "nom": "Remorquage", "vehicule": "remorqueuse",
                    "base": 70, "par_tuile": 0.4, "prime": 0,
                    "etapes": 1, "chrono_s": 0, "malus_choc": 0.0},
-    # ⚠️ M16 : le boulot du terminus (f05, « Le dernier autobus ») — des
-    # passagers a prendre au bord de la route et a mener ailleurs, sur le
-    # patron du taxi, mais plus lent a charger (le malus de choc encaisse
-    # mieux : un autobus plein ne se conduit pas sur la pointe des pieds).
     # La voirie : trois nids-de-poule a boucher, a l'arret dessus. Bouche, un nid l'est pour de bon.
     "voirie": {"slug": "voirie", "nom": "Nid bouché", "vehicule": "asphalte",
                "base": 25, "par_tuile": 0.2, "prime": 10,
@@ -715,6 +721,14 @@ BOULOTS: dict[str, Boulot] = {
     "patrouille": {"slug": "patrouille", "nom": "Arrestation", "vehicule": "police",
                    "base": 50, "par_tuile": 0.0, "prime": 40,
                    "etapes": 1, "chrono_s": 60, "malus_choc": 0.0},
+    # Le verglas : dans un camion, PENDANT la tempete, trois generatrices vers les quartiers au noir.
+    "generatrices": {"slug": "generatrices", "nom": "Génératrice livrée", "vehicule": "camion",
+                     "base": 30, "par_tuile": 0.2, "prime": 15,
+                     "etapes": 3, "chrono_s": 0, "malus_choc": 0.2},
+    # ⚠️ M16 : le boulot du terminus (f05, « Le dernier autobus ») — des
+    # passagers a prendre au bord de la route et a mener ailleurs, sur le
+    # patron du taxi, mais plus lent a charger (le malus de choc encaisse
+    # mieux : un autobus plein ne se conduit pas sur la pointe des pieds).
     "autobus": {"slug": "autobus", "nom": "Arrêt", "vehicule": "autobus",
                 "base": 20, "par_tuile": 0.25, "prime": 15,
                 "etapes": 1, "chrono_s": 0, "malus_choc": 0.30},

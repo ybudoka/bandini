@@ -104,6 +104,7 @@ const Jeu = (function () {
     Traversier.oublier();                    // rien a bord, la carte neuve n'a pas de pont pose
     Neige.oublier();                         // la rue d'une partie rechargee est blanche
     Brouillard.oublier();
+    Verglas.oublier();
     Incendies.oublier();                     // une nouvelle partie n'hérite pas des feux éteints
     Interactions.oublier();                  // ni de la soif des fontaines
     Monde.oublierLesRuesMouillees();         // ni de l'arroseuse d'une autre nuit
@@ -1182,6 +1183,7 @@ const Jeu = (function () {
                   y: cam.y + (sec ? (Math.random() - 0.5) * sec * 8 : 0) + (B.photo ? B.photo.dy : 0) };
     Monde.dessinerSol(ctx, vue);
     if (!B.interieur) Monde.dessinerNids(ctx, vue);    // les nids-de-poule, dans la chaussee
+    if (!B.interieur) Verglas.dessinerSol(ctx, vue);   // la glace : le reflet, les eclats, les branches cassees
     if (!B.interieur) Neige.dessinerSol(ctx, vue);     // la neige au sol, SOUS les rails et les gens
     if (!B.interieur) Monde.dessinerMouille(ctx, vue); // derriere l'arroseuse (la nuit a ses habitudes)
     // Le tunnel, la rame et ses fenetres : peints par-dessus le sol de la piece,
@@ -1219,7 +1221,7 @@ const Jeu = (function () {
     // `Base.fin` : il ne doit teindre QUE le dernier `drawImage` de cette
     // fonction-la (la ville deja peinte), jamais le HUD dessine juste apres.
     if (B.photo) Base.ecran().filter = FILTRES_PHOTO[B.photo.filtre].css;
-    Base.fin(Monde.ambiance(), lampes, corpsPhares);
+    Base.fin(Verglas.ambiance(Monde.ambiance()), lampes, corpsPhares);   // au noir, la nuit est plus noire
     if (B.photo) Base.ecran().filter = 'none';
     Hud.dessiner();
   }
@@ -1480,7 +1482,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Incendies: Incendies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Conduite: Conduite, Rue: Rue, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Incendies: Incendies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Conduite: Conduite, Rue: Rue, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,
