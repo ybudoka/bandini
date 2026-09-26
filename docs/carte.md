@@ -84,6 +84,13 @@ zéro (100 $ + 50 $ par étoile, `economie.CARROSSERIE`). Ville livrée : Faubou
 Quais — pas Les Érables (leurs commerces se visitent tous). Le rideau de Ti-Guy s'entre aussi :
 son menu s'ouvre à l'abri.
 
+**Le DOJO DION** (le dojo du quartier, 26 sept. 2026) : la pièce d'un commerce visitable du
+Faubourg, reprise sur la ville finie par `_Chantier.poser_le_dojo` — la plus au nord du district,
+sans un dé, aux mêmes mesures (au moins 9 × 5). Son intérieur (`piece_de_dojo`) : les casiers du
+vestiaire, le sac de frappe (`@`) et le mannequin de bois (`%`) au fond, le TATAMI (`A`) au milieu,
+le comptoir de Mireille Dion (point `cours`) et Kevin, l'élève partenaire (`eleve`). Point `dojo`,
+famille `service`. L'ancien SALON MIREILLE du Faubourg s'appelle SALON LOUISE.
+
 **Les bungalows avec garage** (2e vague, 21 sept. 2026) : cinq logements de banlieue
 (`bungalow_1`…), posés sur la ville finie par `_Chantier.poser_les_garages_de_bungalows` — un
 rideau, une baie sous le toit, une entrée asphaltée jusqu'au trottoir. Pas sur la carte. On y
@@ -181,6 +188,7 @@ chacun dans [docs/personnages/](personnages/README.md).
 | `ginette` | Ginette | Jeanne Mance | porte:hopital | — |
 | `gilles` | Gilles Thériault | Patrick | porte:fourriere | — |
 | `bonimenteur` | Le Bonimenteur | Léo | foire (l'arche) | — |
+| `mireille` | Mireille Dion | Marie Line | point:cours (le DOJO DION) | — |
 
 ⚠️ **`ou: "foire"` est un lieu neuf** (22 sept. 2026) : le seul personnage posé DANS l'enceinte de la
 foire, vivant à l'arche — `histoire.js::lieuFoire`/`poserDonneurFoire` trouvent sa position dans la
@@ -259,6 +267,7 @@ La foule anonyme, les sortes posées, et les gens d'intérieur. `frequence`
 | `soignante` | Infirmière | hôpital |
 | `malade` | Malade | lits de l'hôpital |
 | `avocat` | Me Desjardins | table du fond, Le Brouillard |
+| `eleve` | Kevin | le DOJO DION : au sac, et sur le tatami pendant une leçon (le corps du commis en kimono blanc, `entites.archetypeDedans` — pas un archétype de `pietons.py`) |
 | `policier` | Agent | patrouille (posé par `police.js`) |
 | `garde` | Garde de sécurité | vigile privé de l'infiltration, posé à la main par une mission (`Police.creerAgent(x, y, etat, 'garde')`) |
 | `gardien` | Gardien du lot | grille de la fourrière |
