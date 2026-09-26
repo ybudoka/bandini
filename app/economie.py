@@ -608,6 +608,17 @@ TARIFS = {
     "cafe": 4,
     "cafe_pv": 10,
     "cafe_souffle": 30,
+    # La cabane à sucre (docs/jalons/la-cabane-a-sucre.md) : le repas des sucres, et la tire sur la neige
+    # qui remplit le souffle comme un café.
+    "oreilles": 7,
+    "oreilles_pv": 20,
+    "oreilles_souffle": 15,
+    "feves": 9,
+    "feves_pv": 30,
+    "feves_souffle": 10,
+    "tire": 3,
+    "tire_pv": 5,
+    "tire_souffle": 30,
     # ⚠️ La compagnie se paie et ne se montre pas : un fondu, une replique,
     # de la vie qui revient. Elle refuse quand la police te cherche.
     "compagnie": 60,

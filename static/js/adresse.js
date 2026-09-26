@@ -266,6 +266,45 @@ const Adresse = (function () {
 
     // LE MANNEQUIN : une aiguille va et vient ; ACTION quand elle est dans le
     // vert. Hors du vert, la clochette sonne.
+    // LA TIRE SUR LA NEIGE (la cabane a sucre, docs/jalons/la-cabane-a-sucre.md) : le sirop coule sur la
+    // neige et refroidit ; on l'enroule sur le baton quand il est A POINT (ACTION dans le vert). Trop tot,
+    // elle coule ; trop tard, elle casse. Chaque palette refroidit plus vite. ⚠️ Le point change a chaque
+    // palette, a l'empreinte du compte — jamais `B.rng()`.
+    tire: {
+      init: function (r) { return { temp: 1, centre: 0.45, reussis: 0, rates: 0, pause: 0, dit: '' }; },
+      maj: function (e, r) {
+        if (e.pause > 0) { e.pause--; return null; }
+        const rater = function (dit) {
+          e.rates++; e.dit = dit; Son.SFX.erreur(); e.pause = PAUSE; e.temp = 1;
+          return e.rates >= r.rates ? { gagne: false, raison: 'LA TIRE EST RATÉE' } : null;
+        };
+        e.temp -= (1 + e.reussis * r.acceleration) / s(r.refroidit_s);
+        if (e.temp <= 0) return rater('ELLE A CASSÉ');
+        if (!Entree.neuf('action')) return null;
+        if (Math.abs(e.temp - e.centre) <= r.zone / 2) {
+          e.reussis++; e.dit = 'SUR LE BÂTON!'; Son.SFX.ramasse(); e.pause = PAUSE / 2; e.temp = 1;
+          e.centre = 0.3 + ((e.reussis * 37 + e.rates * 11) % 40) / 100;
+          return e.reussis >= r.reussis ? { gagne: true } : null;
+        }
+        return rater(e.temp > e.centre ? 'TROP CHAUDE, ELLE COULE' : 'TROP FROIDE, ELLE CASSE');
+      },
+      compte: function (e, r) { return 'PALETTES ' + e.reussis + '/' + r.reussis + ' · RATÉES ' + e.rates + '/' + r.rates; },
+      dessiner: function (ctx, e, r, x, y) {
+        // La neige, et la tire dessus : doree quand elle est chaude, brune quand elle prend.
+        const bx = x + 30, by = y + 12, l = 140;
+        ctx.fillStyle = '#eef3f8'; ctx.fillRect(bx, by, l, 12);
+        const t = Math.max(0, e.temp);
+        ctx.fillStyle = 'rgb(' + Math.round(150 + 90 * t) + ',' + Math.round(80 + 90 * t) + ',' + Math.round(20 + 40 * t) + ')';
+        ctx.fillRect(bx + 10, by + 5, Math.round((l - 20) * (0.4 + 0.6 * (1 - t))), 3);
+        // Le thermometre : froid a gauche, chaud a droite, le vert la ou elle est a point.
+        const ty = by + 18;
+        ctx.fillStyle = VIDE; ctx.fillRect(bx, ty, l, 6);
+        ctx.fillStyle = '#2f6b2a'; ctx.fillRect(bx + Math.round((e.centre - r.zone / 2) * l), ty, Math.round(r.zone * l), 6);
+        ctx.fillStyle = '#ff8a3a'; ctx.fillRect(bx + Math.round(t * l) - 1, ty - 3, 2, 12);
+        if (e.dit) ecrire(ctx, e.dit, x + 100, y + 44, e.dit === 'SUR LE BÂTON!' ? '#8fd46a' : '#ff8a7a');
+      },
+    },
+
     mannequin: {
       init: function (r) { return { phase: 0, centre: 0.5, reussis: 0, clochettes: 0, pause: 0, dit: '' }; },
       maj: function (e, r) {

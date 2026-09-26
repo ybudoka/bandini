@@ -18,9 +18,9 @@ Comme une mission : rien d'autre à toucher.
 from __future__ import annotations
 
 from .. import carte
-from . import chalet, cineparc, clairiere
+from . import cabane, chalet, cineparc, clairiere
 
-BLOCS: list[dict] = [clairiere.BLOC, chalet.BLOC, cineparc.BLOC]
+BLOCS: list[dict] = [clairiere.BLOC, chalet.BLOC, cineparc.BLOC, cabane.BLOC]
 
 BORDS = ("nord", "sud", "est", "ouest")
 

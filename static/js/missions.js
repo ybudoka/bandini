@@ -1348,6 +1348,10 @@ const Missions = (function () {
       « ACHETER » devant un comptoir ferme se lit comme un bogue. */
   function comptoirFerme(point) {
     const comptoir = (B.defs.comptoirs || {})[point.genre], cn = B.defs.nuit && B.defs.nuit.comptoirs;
+    // ⚠️ UN COMPTOIR DE SAISON (la cabane a sucre, au printemps) : hors saison, il le DIT.
+    if (comptoir && comptoir.saison && typeof Calendrier !== 'undefined' && Calendrier.saisonDuJour() !== comptoir.saison) {
+      return 'FERMÉ — ON OUVRE AU TEMPS DES SUCRES';
+    }
     if (!comptoir || !comptoir.heures || !cn) return null;
     if (B.interieur && cn.toujours_ouverts.indexOf(B.interieur.slug) >= 0) return null;
     if (ouvert(comptoir)) return null;
@@ -1373,6 +1377,12 @@ const Missions = (function () {
       return { titre: piece ? piece.nom.toUpperCase() : comptoir.nom.toUpperCase(), items: items, sur: p.argent + ' $' };
     }
     const cle = piece && piece.slug;
+    // Le defi du comptoir (la tire sur la neige, a la cabane) : il se propose d'ici, comme un kiosque de foire.
+    const defi = comptoir.defi && (B.defs.defis || []).find(function (q) { return q.slug === comptoir.defi; });
+    if (defi && !B.defi && Histoire.defiOuvert(defi)) {
+      items.push({ libelle: defi.titre.toUpperCase() + ' — DÉFI', detail: defi.prime + ' $',
+                   faire: function () { Histoire.proposerDefi(defi.slug); return false; } });
+    }
     comptoir.articles.forEach(function (a) {
       if (a.arme) return items.push(itemArme(a, (comptoir.marge || 1) * rabais(cle)));
       if (a.tenue) return items.push(itemTenue(a, (comptoir.rabais || 1) * rabais(cle)));

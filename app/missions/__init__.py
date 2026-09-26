@@ -788,6 +788,13 @@ DEFIS: list[dict] = [
                 "tir_px": 90, "dispersion": 3.0, "vol": 0.05, "arret": 0.7, "gardien_px": 11, "prise_joueur": 10, "frottement": 0.965,
                 "frottement_glace": 0.99},
      "texte": "LES CHEVREUILS JOUENT DANS LA RUELLE : TROIS CONTRE TROIS, GAGNE PAR TROIS BUTS. ATTAQUE LANCE, ESQUIVE PASSE"},
+    # LA TIRE SUR LA NEIGE (docs/jalons/la-cabane-a-sucre.md) : au comptoir de la cabane à sucre, au printemps
+    # (le comptoir se dit fermé hors saison, et c'est lui qui propose le défi : `COMPTOIRS["sucre"]["defi"]`).
+    # Quatre palettes enroulées à point, deux ratées permises.
+    {"slug": "tire", "titre": "La tire sur la neige", "ou": "cabane", "a_pied": True, "epreuve": "tire",
+     "chrono_s": 60, "prime": 50, "debloque": {"defis": 3}, "consigne": "ACTION QUAND ELLE EST À POINT",
+     "regles": {"reussis": 4, "rates": 2, "zone": 0.18, "refroidit_s": 2.4, "acceleration": 0.25},
+     "texte": "LE SIROP COULE SUR LA NEIGE : ENROULE-LE SUR LE BÂTON QUAND IL EST À POINT. QUATRE PALETTES"},
 ]
 
 #: Avec quoi un défi se joue. ⚠️ Un défi n'en exclut un que pour une raison

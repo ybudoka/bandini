@@ -247,6 +247,14 @@ COMPTOIRS: dict[str, dict] = {
     ]},
     # La friperie : du linge d'occasion. Changer de linge fait oublier ta tete
     # (`porterTenue` remet la police a zero) — a ce prix-la, ca vaut le detour.
+    # LA CABANE À SUCRE (docs/jalons/la-cabane-a-sucre.md) : le repas des sucres, au printemps seulement
+    # (`saison` : hors saison, le comptoir se dit fermé — pas un menu vide) ; et le défi de la tire.
+    "sucre": {"nom": "La cabane à sucre", "marge": 1.0, "rabais": 1.0, "saison": "printemps", "defi": "tire",
+              "articles": [
+        _art("oreilles", "Oreilles de crisse", "oreilles", pv="oreilles_pv", souffle="oreilles_souffle"),
+        _art("feves", "Fèves au lard", "feves", pv="feves_pv", souffle="feves_souffle"),
+        _art("tire", "Tire sur la neige", "tire", pv="tire_pv", souffle="tire_souffle"),
+    ]},
     "mode": {"nom": "La friperie", "marge": 1.0, "rabais": 0.6, "articles": [
         _art("coupe_vent", "Coupe-vent bleu", tenue="coupe_vent"),
         _art("chemise_hawai", "Chemise hawaïenne", tenue="chemise_hawai"),
@@ -269,6 +277,7 @@ HEURES_DES_COMPTOIRS: dict[str, tuple[float, float]] = {
     "industrie": (6 / 24, 20 / 24),
     "sante": (7 / 24, 22 / 24),
     "mode": (7 / 24, 21 / 24),
+    "sucre": (7 / 24, 22 / 24),
 }
 for _famille, _heures in HEURES_DES_COMPTOIRS.items():
     COMPTOIRS[_famille]["heures"] = _heures

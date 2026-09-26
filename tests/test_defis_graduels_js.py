@@ -74,6 +74,8 @@ ROBOT = """
             } else if (e.sorte === 'radio') {
                 const ecart = e.cibles[e.k] - e.aiguille, voulu = e.pause ? null : (ecart > r.tolerance / 3 ? 'KeyD' : (ecart < -r.tolerance / 3 ? 'KeyA' : null));
                 if (voulu !== tenue) { if (tenue) o.relacher(tenue); if (voulu) o.touche(voulu); tenue = voulu; }
+            } else if (e.sorte === 'tire') {
+                if (e.pause === 0 && Math.abs(e.temp - e.centre) < r.zone / 4) { taper(o, 'KeyE'); continue; }
             } else if (e.sorte === 'moteur') {
                 const p = Math.round(r.cadence_s * 60);
                 if ((e.t + 1) % p === 0) { taper(o, 'KeyE'); continue; }
@@ -89,7 +91,7 @@ ROBOT = """
     }
 """
 
-EPREUVES = ["roue", "anneaux", "ratons", "danse", "mannequin", "radio", "moteur", "crochet", "coffre"]
+EPREUVES = ["roue", "anneaux", "ratons", "danse", "mannequin", "radio", "moteur", "crochet", "coffre", "tire"]
 
 
 @pytest.mark.parametrize("slug", EPREUVES)

@@ -2236,6 +2236,15 @@ const Hud = (function () {
     // ⚠️ C'est une triche : un défi encore caché s'ouvre, et son panneau se plante.
     if (Histoire.ouvrirDefi(d, true)) Histoire.planterLesPanneauxOuverts();
     const c = pointDuDefi(d);
+    // ⚠️ UNE EPREUVE DEBOUT SANS POINT EN VILLE (la tire, au comptoir de la cabane a sucre — un bloc de
+    // carte) : on la propose ici meme, elle se joue la ou on la commence.
+    if (!c && d.a_pied && d.epreuve) {
+      if (B.defi) Histoire.abandonnerDefi();
+      if (B.etat === 'pause') Jeu.reprendre();
+      fermerMenu();
+      Histoire.proposerDefi(d.slug);
+      return true;
+    }
     const place = c && placeDevant(c);
     if (!place) { message('INTROUVABLE'); return false; }
     if (B.defi) Histoire.abandonnerDefi();
