@@ -119,6 +119,15 @@ PALIERS: dict[str, tuple[dict, ...]] = {
         {"compte": 50, "type": "char", "valeur": "remorqueuse",
          "nom": "LA DÉPANNEUSE EST À TOI", "detail": "GARÉE À LA PLANQUE"},
     ),
+    # LA VOIRIE (les nids-de-poule) : la ville te connait, le lot aussi, et le camion est a toi.
+    "voirie": (
+        {"compte": 10, "type": "prime", "valeur": 1.3,
+         "nom": "LA VILLE TE REMERCIE", "detail": "+30 % DE PRIME"},
+        {"compte": 25, "type": "fourriere", "valeur": 0.5,
+         "nom": "LES COLS BLEUS TE CONNAISSENT", "detail": "RACHAT À MOITIÉ PRIX"},
+        {"compte": 50, "type": "char", "valeur": "asphalte",
+         "nom": "LE CAMION D'ASPHALTE EST À TOI", "detail": "GARÉ À LA PLANQUE"},
+    ),
     # LE CAMION DE CREME GLACEE : la ritournelle connue de tout le quartier, le cornet a moitie prix
     # aux kiosques, et le camion a toi a cinquante tournees.
     "creme_glacee": (
@@ -693,6 +702,10 @@ BOULOTS: dict[str, Boulot] = {
     # passagers a prendre au bord de la route et a mener ailleurs, sur le
     # patron du taxi, mais plus lent a charger (le malus de choc encaisse
     # mieux : un autobus plein ne se conduit pas sur la pointe des pieds).
+    # La voirie : trois nids-de-poule a boucher, a l'arret dessus. Bouche, un nid l'est pour de bon.
+    "voirie": {"slug": "voirie", "nom": "Nid bouché", "vehicule": "asphalte",
+               "base": 25, "par_tuile": 0.2, "prime": 10,
+               "etapes": 3, "chrono_s": 0, "malus_choc": 0.0},
     # La tournee du camion de creme glacee : trois parcs, a l'arret, une vente a chacun.
     "creme_glacee": {"slug": "creme_glacee", "nom": "Tournée", "vehicule": "creme_glacee",
                      "base": 20, "par_tuile": 0.2, "prime": 10,

@@ -66,6 +66,45 @@ const Monde = (function () {
   //: batiment effacait tous les nids de la ville jusqu'au rechargement.
   function nidDePoule(tx, ty) { return !!(carte && carte.nids && carte.nids.has(tx + ',' + ty)); }
 
+  //: LE NID-DE-POULE SE VOIT (26 sept. 2026). La carte en posait et le char les sentait — et la chaussee
+  //: restait lisse a l'ecran : on les subissait sans jamais les voir venir. Trois trous, tires a
+  //: l'EMPREINTE de la tuile : un bord casse plus clair, le fond sombre, une fissure qui part.
+  const NIDS = [
+    ['....hhhh....', '..hhooooh...', '.hooooooohh.', 'hoooooooooh.', '.hooooooohh.', '..hhhooohc..', '.....hh..c..', '..........c.'],
+    ['...hhh......', '.hhoooh.....', 'hoooooohh...', 'hoooooooohh.', '.hhooooooooh', '...hhooooohh', '.c...hhhhh..', 'c...........'],
+    ['.....hhh....', '..hhhoooh...', '.hoooooooh..', '.hoooooooh..', 'c.hooooohh..', '.c.hhhhh....', '..c.........', '............'],
+  ];
+  const TONS_DU_NID = { h: '#6b6d74', o: '#1b1c21', c: '#2b2c31' };
+
+  function peindreNid(v) {
+    return function (ctx) {
+      const m = NIDS[v];
+      for (let y = 0; y < m.length; y++) {
+        for (let x = 0; x < m[y].length; x++) {
+          const t = TONS_DU_NID[m[y][x]];
+          if (!t) continue;
+          ctx.fillStyle = t; ctx.fillRect(x + 2, y + 4, 1, 1);
+        }
+      }
+      ctx.fillStyle = 'rgba(120,150,190,0.35)'; ctx.fillRect(5, 7, 3, 1);   // un reste d'eau qui brille
+    };
+  }
+
+  /** Les nids de la carte a l'ecran, par-dessus la chaussee (sous les rails, les chars et les gens). */
+  function dessinerNids(ctx, cam) {
+    if (!carte || !carte.nids || !carte.nids.size) return;
+    let n = 0;
+    for (const cle of carte.nids) {
+      const i = cle.indexOf(','), tx = +cle.slice(0, i), ty = +cle.slice(i + 1);
+      const x = tx * TT - cam.x, y = ty * TT - cam.y;
+      if (x < -TT || y < -TT || x > VW || y > VH) continue;
+      const v = hash2(tx, ty) % NIDS.length;
+      ctx.drawImage(Atlas.cuirePeintre('nid|' + v, TT, TT, peindreNid(v)), Math.round(x), Math.round(y));
+      n++;
+    }
+    B.stats.images = (B.stats.images || 0) + n;
+  }
+
   //: Les PLAQUES D'ACIER des tranchées de chantier (`chantiers.js` les pose et les
   //: retire avec la phase du jour) : même règle que les nids, l'index vit SUR LA
   //: CARTE, et « x,y » -> vrai.
@@ -2397,7 +2436,7 @@ const Monde = (function () {
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
     barrieres, barriereFermee, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
     brisDAqueduc, dansLaFoire, resquille,
-    feuxClignotent, arterePasse, nidDePoule, plaqueDAcier, standingA, usageA, couleurDeZonage, calqueDeZonage, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
+    feuxClignotent, arterePasse, nidDePoule, dessinerNids, plaqueDAcier, standingA, usageA, couleurDeZonage, calqueDeZonage, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE,
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
     dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau, sousLeToit, cacheSousLeToit, abrite,

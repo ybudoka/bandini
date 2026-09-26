@@ -1315,6 +1315,12 @@ const Vehicules = (function () {
     if (v.conducteur === B.joueur) {
       B.cam.secousse = Math.max(B.cam.secousse, ph.nid_secousse);
       Entree.vibrer(60);
+      // A grande vitesse, le volant ne repond plus une fraction de seconde, et le nez part d'un cote
+      // (a l'empreinte de la tuile : jamais un de).
+      if (Math.hypot(v.vx, v.vy) >= ph.nid_derape_vitesse) {
+        v.sansControle = ph.nid_derape_images;
+        v.angle += (hash2(Math.floor(v.x / TT), Math.floor(v.y / TT)) % 2 ? 1 : -1) * ph.nid_derape_angle;
+      }
     }
   }
 
@@ -2803,6 +2809,14 @@ const Vehicules = (function () {
              reculCommeEnAvant: !!B.options.reculCommeEnAvant };
   }
 
+  /** Apres un nid-de-poule pris a grande vitesse, le volant ne repond plus (`sansControle`). */
+  function sansLeVolant(v, c) {
+    if (!(v.sansControle > 0)) return c;
+    v.sansControle--;
+    c.direction = 0;
+    return c;
+  }
+
   //: Les mains hors du volant : le char de l'atelier ne bouge pas (`Missions.majGarage`).
   const POINT_MORT = { gaz: 0, frein: 0, direction: 0, freinMain: false };
 
@@ -2854,7 +2868,7 @@ const Vehicules = (function () {
     // ⚠️ SOUS LE RIDEAU, ON NE CONDUIT PAS : il descend, le pistolet siffle, il remonte.
     // Tant que dure l'atelier, le char est a l'arret et le volant ne repond pas.
     if (v.atelier) { v.vitesse = 0; v.vx = 0; v.vy = 0; }
-    majPhysique(v, v.atelier ? POINT_MORT : (virerDeBord(v) || commandesJoueur(v)));
+    majPhysique(v, v.atelier ? POINT_MORT : (virerDeBord(v) || sansLeVolant(v, commandesJoueur(v))));
     if (Entree.neuf('attaque')) {
       // ⚠️ Un char a sirene n'a pas de klaxon sous le pouce : il a sa sirene.
       // Le boulot, lui, se prend au meme bouton — dans une ambulance, on

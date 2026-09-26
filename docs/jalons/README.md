@@ -266,3 +266,4 @@ Deux documents d'avant la table :
 | Le brouillard de Baie-des-Brumes | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-brouillard-de-baie-des-brumes.md#fiche) · [notes](le-brouillard-de-baie-des-brumes.md#notes) |
 | Braquer un commerce | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](braquer-un-commerce.md#fiche) · [notes](braquer-un-commerce.md#notes) |
 | Le camion de crème glacée | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-camion-de-creme-glacee.md#fiche) · [notes](le-camion-de-creme-glacee.md#notes) |
+| Les nids-de-poule qui mordent | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](les-nids-de-poule-qui-mordent.md#fiche) · [notes](les-nids-de-poule-qui-mordent.md#notes) |

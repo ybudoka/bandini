@@ -533,6 +533,14 @@ const Missions = (function () {
       pris: 'À LA FOURRIÈRE',
       fini: 'REMORQUAGE',
     },
+    // LA VOIRIE (les nids-de-poule) : trois nids a boucher, A L'ARRET DESSUS — pas a 44 px, sur le trou.
+    // Bouche, un nid l'est pour de bon (`partie.nidsBouches`).
+    voirie: {
+      ramasser: null,
+      destination: 'nid',
+      pris: 'UN NID-DE-POULE : ',
+      fini: 'NID BOUCHÉ',
+    },
     // LE CAMION DE CREME GLACEE : une tournee de trois arrets, la ou le monde s'arrete (`carte.scenes` —
     // les parcs, la place publique), la ritournelle en roulant, une vente a chaque arret.
     creme_glacee: {
@@ -699,6 +707,19 @@ const Missions = (function () {
         const g = Monde.carte.fourriere.grille;
         lieu = { x: g.x + Math.floor(g.largeur / 2), y: g.y, nom: 'Fourrière municipale' };
       }
+      if (sorte.destination === 'nid') {
+        // Un nid de la ville, qu'un char atteint, pas sous le capot.
+        const atteint = atteignableEnChar(v), nids = [];
+        for (const cle of Monde.carte.nids || []) {
+          const i = cle.indexOf(','), x = +cle.slice(0, i), y = +cle.slice(i + 1);
+          if (dist2(x * TT + 8, y * TT + 8, v.x, v.y) > 160 * 160 && atteint(x * TT + 8, y * TT + 8, 12)) nids.push({ x: x, y: y });
+        }
+        const n = nids[Math.floor(B.rng() * nids.length)];
+        if (n) {
+          const z = Monde.zoneA(n.x * TT, n.y * TT);
+          lieu = { x: n.x, y: n.y, nom: z ? (Monde.carte.zones.find(function (q) { return q.slug === z.district; }) || z).nom : 'LA RUE' };
+        }
+      }
       if (sorte.destination === 'scene') {
         // Un arret de tournee : une scene de la ville (un parc, la place) qu'un char atteint, pas trop pres.
         const atteint = atteignableEnChar(v);
@@ -769,7 +790,9 @@ const Missions = (function () {
       // ⚠️ Au lot, on livre DANS LA COUR, pas a 44 px d'un point : la grille
       // est une ouverture de quatre tuiles, et une remorqueuse de 36 px avec
       // son epave au bout ne s'arrete pas au pixel pres dessus.
-      const arrive = sorte.destination === 'fourriere' ? dansLaCour(v) : dist2(v.x, v.y, d.x, d.y) < ARRIVEE_PX * ARRIVEE_PX;
+      const arrive = sorte.destination === 'fourriere' ? dansLaCour(v)
+        : sorte.destination === 'nid' ? dist2(v.x, v.y, d.x, d.y) < 18 * 18
+        : dist2(v.x, v.y, d.x, d.y) < ARRIVEE_PX * ARRIVEE_PX;
       if (!arrive || Math.abs(v.vitesse) >= 0.4) return;
       if (sorte.ramasser === 'crochet') {
         // L'epave part a la ferraille : le lot la prend, il ne la range pas.
@@ -777,6 +800,7 @@ const Missions = (function () {
         Vehicules.decrocher(v);
         Entites.retirer(epave);
       }
+      if (sorte.destination === 'nid') boucherLeNid(Math.floor(d.x / TT), Math.floor(d.y / TT));
       const f = boulot.fiche();
       // ⚠️ La distance se paie A CHAQUE ETAPE : trois livraisons, trois
       // trajets. Sinon la pizza rapporterait trois fois la premiere course.
@@ -2017,7 +2041,7 @@ const Missions = (function () {
     const loto = B.defs.loto ? nuitDuLoto() : null;
     // Le brouillard de demain matin : le Clairon l'annonce la veille, sous la manchette.
     const brume = typeof Brouillard !== 'undefined' ? Brouillard.annonceDeDemain() : null;
-    const dessous = [loto, brume].filter(Boolean);
+    const dessous = [loto, brume, decompteDesNids()].filter(Boolean);
     const m = manchetteDuJour();
     if (m) { B.partie.derniereManchette = m; direLaManchette(m, dessous); }
     else Hud.message(dessous[0] || 'JOUR ' + B.partie.jour);
@@ -2515,6 +2539,63 @@ const Missions = (function () {
     }
   }
 
+  // --- La voirie : les nids-de-poule --------------------------------------------------------
+  //: docs/jalons/les-nids-de-poule-qui-mordent.md. Le camion d'asphalte attend devant la fourriere
+  //: municipale ; au klaxon, trois nids a boucher (`SORTES.voirie`). Un nid bouche l'est POUR DE BON :
+  //: il quitte la carte (`carte.nids`, on ne le sent plus, on ne le voit plus) et la partie le retient
+  //: (`nidsBouches`), rendu a la carte a chaque chargement (`rendreLesNidsBouches`).
+
+  function boucherLeNid(tx, ty) {
+    const p = B.partie, cle = tx + ',' + ty;
+    p.nidsBouches = p.nidsBouches || [];
+    if (p.nidsBouches.indexOf(cle) < 0) p.nidsBouches.push(cle);
+    if (Monde.carte && Monde.carte.nids) Monde.carte.nids.delete(cle);
+  }
+
+  /** La carte de la ville oublie les nids que la partie a bouches (une partie chargee repart de la
+      carte telle qu'elle est tracee). ⚠️ Des la premiere image : une fois par carte ET par partie
+      (`nidsDe`), pas « toutes les deux secondes » — un nid bouche ne mord pas le temps d'y penser. */
+  function rendreLesNidsBouches() {
+    const p = B.partie, c = Monde.carte;
+    if (!p || B.bloc || B.interieur || !c || !c.nids || c.nidsDe === p) return;
+    c.nidsDe = p;
+    for (const cle of p.nidsBouches || []) c.nids.delete(cle);
+  }
+
+  /** ⚠️ Un char qui nait pour le decor prend SA couleur, sans de : `Vehicules.creer` en tire un
+      sinon, et le hasard de toute la suite glisse (le saut de e12 est tombe sur un camion). */
+  function couleurDuDecor(slug) {
+    const d = Vehicules.vehiculeDef(slug);
+    return d && d.couleurs[0];
+  }
+
+  /** La place du camion d'asphalte : la rue devant la grille de la fourriere. */
+  function placeDeLAsphalte() {
+    const f = Monde.carte && (Monde.carte.fourriere || (Monde.carte.def && Monde.carte.def.fourriere));
+    const g = f && f.grille;
+    return g ? Histoire.tuileDeRue((g.x + Math.floor(g.largeur / 2)) * TT + 8, g.y * TT + 8, 10) : null;
+  }
+
+  /** Il nait gare, paresseusement, comme le camion de creme glacee. */
+  function majAsphalte() {
+    const j = B.joueur;
+    if (!j || B.interieur || B.bloc || B.t % 60 !== 30) return;
+    if (B.entites.some(function (e) { return e.type === 'vehicule' && e.slug === 'asphalte' && e.etat !== 'epave'; })) return;
+    const place = placeDeLAsphalte();
+    if (!place || dist2(place.x, place.y, j.x, j.y) > 500 * 500 || Entites.visibleAEcran(place.x, place.y, 40)) return;
+    const a = { '>': 0, 'v': Math.PI / 2, '<': Math.PI, '^': -Math.PI / 2 }[place.sens] || 0;
+    Vehicules.creer('asphalte', place.x, place.y, a, { etat: 'stationne', couleur: couleurDuDecor('asphalte') });
+    Entites.indexer();
+  }
+
+  /** Le Clairon du lundi (tous les sept jours) : le decompte des nids de la ville, sous la manchette. */
+  function decompteDesNids() {
+    const p = B.partie;
+    if (!p || p.jour % 7 !== 1 || !Monde.carte || !Monde.carte.nids || B.bloc) return null;
+    const bouches = (p.nidsBouches || []).length;
+    return 'LE DÉCOMPTE DU LUNDI : ' + Monde.carte.nids.size + ' NIDS-DE-POULE EN VILLE' + (bouches ? ', ' + bouches + ' BOUCHÉS PAR TOI' : '');
+  }
+
   // --- Le camion de creme glacee ------------------------------------------------------------
   //: docs/jalons/le-camion-de-creme-glacee.md. Le camion attend, gare, dans la rue du depanneur des
   //: Erables ; au klaxon, sa tournee (`SORTES.creme_glacee`). Pendant qu'il ROULE sa tournee, sa
@@ -2557,7 +2638,7 @@ const Missions = (function () {
     const place = placeDuCamion();
     if (!place || dist2(place.x, place.y, j.x, j.y) > 500 * 500 || Entites.visibleAEcran(place.x, place.y, 40)) return;
     const a = { '>': 0, 'v': Math.PI / 2, '<': Math.PI, '^': -Math.PI / 2 }[place.sens] || 0;
-    Vehicules.creer('creme_glacee', place.x, place.y, a, { etat: 'stationne' });
+    Vehicules.creer('creme_glacee', place.x, place.y, a, { etat: 'stationne', couleur: couleurDuDecor('creme_glacee') });
     Entites.indexer();
   }
 
@@ -3455,6 +3536,8 @@ const Missions = (function () {
     majGarage();
     majQuai();
     majCremeGlacee();
+    majAsphalte();
+    rendreLesNidsBouches();
     if (B.t % 60 === 0) oublierLaRitournelle();
     majInvite(B.joueur);
     // Les paquets se ramassent en passant dessus.
@@ -3467,7 +3550,8 @@ const Missions = (function () {
     if (B.t % 60 === 0) B.partie.stats.secondes++;
   }
 
-  return { majCremeGlacee, placeDuCamion, ritournelleDuCamion,
+  return { boucherLeNid, rendreLesNidsBouches, placeDeLAsphalte, majAsphalte, decompteDesNids,
+    majCremeGlacee, placeDuCamion, ritournelleDuCamion,
     listeDuQuai, etatDuQuai, posteDuQuai, prixAuQuai, texteDuQuai, majQuai,
     braquable, braquer, rancuneIci,
     tirageDuLoto, numerosDuBillet, acheterUnBillet, nuitDuLoto, ligneDuLoto, itemLoto,

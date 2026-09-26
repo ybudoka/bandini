@@ -227,6 +227,10 @@ CATALOGUE: list[Vehicule] = [
     # voie, et `test_eboueurs_js` calcule cette marge sur le char le plus LARGE du parc — à 20 (rayon
     # 10), la pelle frôlait un bac que le camion ne touche pas. On ne déplace pas les bacs de la ville
     # pour un char qui n'est jamais dans le trafic.
+    # LE CAMION D'ASPHALTE (les nids-de-poule, 26 sept. 2026) : le boulot de la voirie. `freq` 0, comme le
+    # camion de creme glacee : il attend, gare devant la fourriere municipale (`Missions.majAsphalte`).
+    _v("asphalte", "Camion d'asphalte", "camion", 36, 15, 2.4, 0.026, 31, 260, 2, 1300, 0.0,
+       ["#e67e22"], "asphalte", masse=2.6, cercles=4, adherence=0.22, boulot="voirie"),
     _v("pelleteuse", "Pelleteuse", "camion", 38, 16, 1.3, 0.022, 30, 320, 1, 1500, 0.0,
        ["#e8b33c"], "pelleteuse", masse=3.3, cercles=4, defonce=0.95, adherence=0.22),
     # --- Le haut de gamme : deux chars qu'on vole EXPRES ------------------
@@ -502,6 +506,12 @@ PHYSIQUE = {
     "nid_degats": 2,
     "nid_secousse": 0.35,
     "nid_repit_images": 30,       # on ne le paie pas deux fois en le traversant
+    # ⚠️ A GRANDE VITESSE, LE VOLANT NE REPOND PLUS une fraction de seconde (le char du joueur seulement :
+    # le trafic roule sur des rails). Au-dela de `nid_derape_vitesse` px/image, `nid_derape_images` images
+    # sans direction, et le nez qui part de `nid_derape_angle` radians.
+    "nid_derape_vitesse": 3.0,
+    "nid_derape_images": 18,
+    "nid_derape_angle": 0.12,
     # ⚠️ **UNE PLAQUE D'ACIER** (la tranchée d'un chantier, `chantiers.py`) : elle
     # claque et elle secoue, elle ne coûte RIEN — un nid-de-poule est un accident,
     # une plaque est un décor qu'on sent. Plus doux : ce n'est pas un trou.

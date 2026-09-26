@@ -1712,6 +1712,24 @@ const MACHINE_CAMION = {
     parechocsDeChar(20, -20, 6.8), lampesDeChar(19.8, -19.8, 3.6, 8.3, 3.6, 5.2),
   ),
 };
+// --- Le camion d'asphalte : la cabine de la voirie, une benne ouverte, l'asphalte noir -----
+// La voirie de Baie-des-Brumes (les nids-de-poule, 26 sept. 2026) : ce qui le NOMME, c'est la benne
+// BASSE et OUVERTE — l'asphalte noir dedans se voit d'en haut — et le gyrophare ambre sur la cabine.
+const MACHINE_ASPHALTE = {
+  profondeur: BIAIS_DU_SOL, contour: true, arrondi: true,
+  pieces: [].concat(
+    essieuDeChar(11.4, 3.4, 6.6), essieuDeChar(-11.0, 3.4, 6.6),
+    [caisseDeChar({ dessus: [[18, 5.6], [17.2, 8.4], [14.0, 8.8], [8.8, 8.8], [8.6, 5.6], [-18, 5.6]], bas: 1.8, essieux: [11.4, -11.0], r: 3.4,
+              plan: planPince(36, 7.5, 6.6), aretes: 'cccDs' })],
+    habitacle({ avant: 14.0, toit: [11.8, 8.8], arriere: 8.8, montant: null, bas: 8.8, haut: 14.4, demi: 6.8 }),
+    [['profil', [[8.2, 5.6], [8.2, 10.4], [-18.2, 11.0], [-18.2, 5.6]], [-7.5, 7.5], 'b', 'sns.', 0.02],      // la benne, basse
+     ['bloc', [-17.4, 7.4], [-6.6, 6.6], [11.0, 11.8], 'n', 'n', 'n', 0.2],                                  // l'asphalte qui depasse
+     ['tube', [8.2, 7.55, 10.6], [-18.2, 7.55, 11.2], 's', 0.12], ['tube', [8.2, -7.55, 10.6], [-18.2, -7.55, 11.2], 's', 0.12],  // les ridelles
+     ['tube', [-18.25, 0, 6.2], [-18.25, 0, 11.0], 's', 0.05],                                               // la ridelle arriere
+     ['bloc', [11.0, 12.6], [-2.0, 2.0], [14.4, 15.4], 'a', 'a', 'a', 0.2]],                                 // le gyrophare
+    parechocsDeChar(18, -18, 6.6), lampesDeChar(17.8, -17.8, 3.6, 8.3, 3.6, 5.2),
+  ),
+};
 // --- L'autobus : une longue boite, une rangee de fenetres, une porte ---------------
 const FENETRES_AUTOBUS = [];
 [-19.5, -14, -8.5, -3, 2.5, 8].forEach(function (u) {
@@ -1785,6 +1803,8 @@ SPRITES.ambulance = enVolume(MACHINE_AMBULANCE, 32, 64, { k: '#101018', c: '#fff
 SPRITES.ambulance.gyrophares = { quand: 'sirene', a: ['#ff4a3d', '#7a2320'], b: ['#ffffff', '#8e9299'] };
 // Creme, rose et menthe : on le reconnait de l'autre bout du parc.
 SPRITES.creme_glacee = enVolume(MACHINE_CREME_GLACEE, 30, 60, { k: '#101018', c: '#fff6ea', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#ff8fb8', y: '#7fe0c0', u: '#d9a25b', w: '#9c6a30', s: '#e8c9a8', a: '#ff4b3e' });
+// Orange voirie, la benne noire d'asphalte, l'ambre du gyrophare.
+SPRITES.asphalte = enVolume(MACHINE_ASPHALTE, 36, 64, { k: '#101018', c: '#e67e22', b: '#d9822b', n: '#2e2e33', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', s: '#6a4012', a: '#ffc233' });
 SPRITES.remorqueuse = enVolume(MACHINE_REMORQUEUSE, 36, 60, { k: '#101018', c: '#d98324', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', h: '#6b7078', p: '#c9cdd4', y: '#f39c12', s: '#3a3d44', a: '#6a4812', b: '#6a4812' });
 // Ambre, sur la cabine : ils tournent quand elle remorque. ⚠️ Sur une BASE SOMBRE,
 // et d'un ambre plus jaune que la caisse : ambre sur orange, la rampe disparaissait.

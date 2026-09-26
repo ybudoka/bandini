@@ -139,6 +139,7 @@ un paiement.
 | `autobus` | Autobus | camion | 12 | |
 | `ambulance` | Ambulance | auto | 3 | Sirène, soigne, boulot ambulance. |
 | `creme_glacee` | Camion de crème glacée | auto | 2 | Ne roule pas dans le trafic : garé devant le dépanneur des Érables ; boulot tournée, ritournelle, discret (la chaleur monte moitié moins). |
+| `asphalte` | Camion d'asphalte | camion | 2 | Ne roule pas dans le trafic : garé devant la fourrière municipale ; boulot voirie (boucher les nids-de-poule, pour de bon). |
 | `remorqueuse` | Remorqueuse | camion | 2 | |
 | `pelleteuse` | Pelleteuse | camion | 1 | « Ça travaille » : ne naît jamais dans la rue (`frequence` 0), sort du décor du chantier quand on monte dedans. Le char le plus lent du catalogue (12 km/h, y compris les bateaux) et le plus lourd de la rue ; défonce au pas (le seuil se règle sur sa vitesse) ; un agent à pied la rattrape, et c'est voulu. |
 | `sport` | Coupé sport | auto | 2 | Rare. |

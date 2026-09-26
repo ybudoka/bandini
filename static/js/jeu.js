@@ -1181,6 +1181,7 @@ const Jeu = (function () {
     const vue = { x: cam.x + (sec ? (Math.random() - 0.5) * sec * 8 : 0) + (B.photo ? B.photo.dx : 0),
                   y: cam.y + (sec ? (Math.random() - 0.5) * sec * 8 : 0) + (B.photo ? B.photo.dy : 0) };
     Monde.dessinerSol(ctx, vue);
+    if (!B.interieur) Monde.dessinerNids(ctx, vue);    // les nids-de-poule, dans la chaussee
     if (!B.interieur) Neige.dessinerSol(ctx, vue);     // la neige au sol, SOUS les rails et les gens
     if (!B.interieur) Monde.dessinerMouille(ctx, vue); // derriere l'arroseuse (la nuit a ses habitudes)
     // Le tunnel, la rame et ses fenetres : peints par-dessus le sol de la piece,
