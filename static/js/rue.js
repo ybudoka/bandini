@@ -93,6 +93,56 @@ const Rue = (function () {
       cible: function (e) { return e.suspect; },
     },
 
+    // LE HOCKEY DE RUELLE (docs/jalons/le-hockey-de-ruelle.md) : trois contre trois dans une ruelle des
+    // Erables, une balle orange, deux filets de fortune. On gagne par trois buts d'ecart avant la fin.
+    // ⚠️ LES JEUNES SONT PEINTS (ni entites ni `B.rng()`) : ils decident sur LEUR generateur
+    // (`mulberry`, seme par le jour et la partie), et la patinoire les retient. On court avec les
+    // commandes du jeu : ATTAQUE lance, ESQUIVE passe. L'hiver, la ruelle est une patinoire : la balle glisse.
+    hockey: {
+      preparer: function (d, r, depart) {
+        const piste = ruelleDeHockey(depart.x, depart.y, r.longueur);
+        if (!piste) return null;
+        const p = piste, milieu = { x: (p.x0 + p.x1) / 2, y: p.y };
+        const place = function (equipe, rang) {
+          const sens = equipe === 'nous' ? -1 : 1;           // nous defendons l'ouest
+          return { x: milieu.x + sens * (30 + rang * 50), y: p.y + (rang % 2 ? -6 : 6) };
+        };
+        const jeunes = [];
+        for (const equipe of ['nous', 'eux']) {
+          for (let k = 0; k < (equipe === 'nous' ? 2 : 3); k++) {
+            const q = place(equipe, k + (equipe === 'nous' ? 1 : 0));
+            jeunes.push({ equipe: equipe, x: q.x, y: q.y, depart: q, k: k, angle: equipe === 'nous' ? 0 : Math.PI, repit: 0 });
+          }
+        }
+        const graine = ((B.partie ? B.partie.jour : 0) * 7919 + (B.graine || 0)) >>> 0;
+        return { piste: p, jeunes: jeunes, balle: { x: milieu.x, y: p.y, vx: 0, vy: 0 }, porteur: null,
+                 nous: 0, eux: 0, phase: 'approche', t: 0, pause: 0, dehors: 0, de: mulberry(graine) };
+      },
+      maj: function (e, r) {
+        const j = B.joueur, p = e.piste;
+        if (e.phase === 'approche') {
+          if (dansLaPatinoire(p, j.x, j.y, 0)) { e.phase = 'jeu'; Hud.message('MISE AU JEU! ATTAQUE LANCE, ESQUIVE PASSE', 150); }
+          return null;
+        }
+        e.t++;
+        // Sortir de la patinoire, c'est abandonner (trois secondes pour revenir).
+        if (!dansLaPatinoire(p, j.x, j.y, 8)) { if (++e.dehors > s(3)) return { gagne: false, raison: 'TU AS QUITTÉ LA PATINOIRE' }; }
+        else e.dehors = 0;
+        if (e.pause > 0) { e.pause--; return null; }
+        majHockey(e, r);
+        if (e.nous - e.eux >= r.ecart) return { gagne: true };
+        // ⚠️ Pas d'horloge a elle : le chrono du defi est le seul a l'ecran (deux chronos qui ne disent
+        // pas la meme chose, c'etait la capture). Il tombe, c'est « TEMPS ÉCOULÉ ».
+        return null;
+      },
+      compte: function (e, r) {
+        if (e.phase === 'approche') return '— REJOINS LA RUELLE';
+        return 'NOUS ' + e.nous + ' – ' + e.eux + ' CHEVREUILS';
+      },
+      cible: function (e) { return e.phase === 'approche' ? { x: (e.piste.x0 + e.piste.x1) / 2, y: e.piste.y } : { x: e.balle.x, y: e.balle.y }; },
+      sol: function (ctx, e, r, vue) { dessinerHockey(ctx, e, vue); },
+    },
+
     // L'ESQUIVE : trente secondes contre le cousin du Grand Mo, sans frapper,
     // dans un ring dégagé ; il attend au milieu qu'on y entre.
     esquive: {
@@ -177,6 +227,196 @@ const Rue = (function () {
       }
     }
     return null;
+  }
+
+  // --- Le hockey de ruelle ------------------------------------------------------------------
+
+  /** La patinoire : la ruelle horizontale (deux rangees de `x` a la file, sur `longueur` tuiles) la plus
+      proche de (x, y), a 80 tuiles au plus. Rend { x0, x1, y, haut, bas } en pixels, ou null. Sans de. */
+  function ruelleDeHockey(x, y, longueur) {
+    const tx0 = Math.floor(x / TT), ty0 = Math.floor(y / TT);
+    const ruelle = function (tx, ty) { return Monde.glyphe(tx, ty) === 'x'; };
+    let mieux = null, dMin = Infinity;
+    for (let ty = ty0 - 80; ty <= ty0 + 80; ty++) {
+      for (let tx = tx0 - 80; tx <= tx0 + 80; tx++) {
+        if (!ruelle(tx, ty) || !ruelle(tx, ty + 1) || ruelle(tx - 1, ty)) continue;   // le debut d'un troncon
+        let n = 0;
+        while (n < longueur && ruelle(tx + n, ty) && ruelle(tx + n, ty + 1)) n++;
+        if (n < longueur) continue;
+        const d = Math.abs(tx + longueur / 2 - tx0) + Math.abs(ty - ty0);
+        if (d < dMin) { dMin = d; mieux = { x0: tx * TT, x1: (tx + longueur) * TT, y: (ty + 1) * TT, haut: ty * TT, bas: (ty + 2) * TT }; }
+      }
+    }
+    return mieux;
+  }
+
+  function dansLaPatinoire(p, x, y, marge) {
+    return x >= p.x0 - marge && x <= p.x1 + marge && y >= p.haut - marge && y <= p.bas + marge;
+  }
+
+  //: Le filet : la moitie de son ouverture (la ruelle fait 32 px de large ; le filet, 16). A 20, un bon
+  //: tireur gagnait par trois buts en quinze secondes : le gardien n'avait rien a couvrir.
+  const FILET = 8;
+
+  /** Retenir un corps dans la patinoire (les jeunes n'en sortent jamais). */
+  function retenirDans(p, q) {
+    q.x = Math.max(p.x0 + 4, Math.min(p.x1 - 4, q.x));
+    q.y = Math.max(p.haut + 4, Math.min(p.bas - 4, q.y));
+  }
+
+  /** Une image de jeu : qui a la balle, ce que chacun fait, ou va la balle, et les buts. */
+  function majHockey(e, r) {
+    const p = e.piste, b = e.balle, j = B.joueur, de = e.de;
+    const hiver = typeof Missions !== 'undefined' && Missions.hiverDeMotoneige && Missions.hiverDeMotoneige();
+    // ⚠️ LE REPIT DU JOUEUR vit dans l'epreuve (`e.repitJoueur`), pas sur son entite : pose sur `j`, il
+    // n'etait jamais decompte — apres son premier tir, le joueur ne touchait plus jamais la balle.
+    if (e.repitJoueur > 0) e.repitJoueur--;
+    const corps = [{ q: j, equipe: 'nous', joueur: true }].concat(e.jeunes.map(function (y) { return { q: y, equipe: y.equipe }; }));
+    const enRepit = function (c) { return c.joueur ? e.repitJoueur > 0 : c.q.repit > 0; };
+    const but = function (equipe) { return equipe === 'nous' ? p.x1 : p.x0; };       // le filet qu'on attaque
+    // 1. LA POSSESSION : le plus proche de la balle, s'il est dessus et qu'elle ne file pas.
+    // ⚠️ Le JOUEUR ramasse de plus loin (`prise_joueur`) et intercepte plus vite : c'est lui qu'on joue.
+    const vite = Math.hypot(b.vx, b.vy);
+    if (!e.porteur) {
+      let mieux = null, dMin = Infinity;
+      for (const c of corps) {
+        if (enRepit(c)) continue;
+        const d = Math.hypot(c.q.x - b.x, c.q.y - b.y);
+        const portee = c.joueur ? r.prise_joueur : 7, seuil = c.joueur ? 5.2 : 3.5;
+        if (d < portee && vite < seuil && d < dMin) { dMin = d; mieux = c; }
+      }
+      if (mieux) e.porteur = mieux;
+    }
+    // 1b. L'ARRET : une balle LANCEE qui frole le gardien (le jeune du rang 0, devant son filet) s'arrete
+    // souvent sur lui — sans gardien, trois minutes faisaient vingt-sept buts.
+    if (!e.porteur && vite >= 3.5) {
+      for (const y of e.jeunes) {
+        if (y.k !== 0 || y.repit > 0 || Math.hypot(y.x - b.x, y.y - b.y) > r.gardien_px) continue;
+        if (de() < r.arret) { e.porteur = { q: y, equipe: y.equipe }; b.vx = 0; b.vy = 0; }
+        else y.repit = 15;          // elle lui passe entre les jambes : il ne la reprend pas tout de suite
+        break;
+      }
+    }
+    // 2. LE VOL : un adversaire colle au porteur lui prend la balle, parfois (son de a lui).
+    if (e.porteur) {
+      for (const c of corps) {
+        if (c.equipe === e.porteur.equipe || enRepit(c)) continue;
+        if (Math.hypot(c.q.x - e.porteur.q.x, c.q.y - e.porteur.q.y) < 8 && de() < r.vol) {
+          if (e.porteur.joueur) e.repitJoueur = 30; else e.porteur.q.repit = 30;
+          e.porteur = c; break;
+        }
+      }
+    }
+    // 3. LES JEUNES : le plus proche de chaque equipe court a la balle ; les autres tiennent leur poste.
+    for (const y of e.jeunes) {
+      if (y.repit > 0) y.repit--;
+      const monPorteur = e.porteur && e.porteur.q === y;
+      let cx, cy;
+      if (monPorteur && y.k === 0) {
+        // LE GARDIEN a la balle : il la passe au plus avance des siens (il ne quitte pas son filet).
+        const avant = corps.filter(function (c) { return c.equipe === y.equipe && c.q !== y; })
+          .sort(function (a, c) { return y.equipe === 'nous' ? c.q.x - a.q.x : a.q.x - c.q.x; })[0];
+        if (avant) { lancer(e, y, avant.q.x, avant.q.y, r.passe); continue; }
+      }
+      if (monPorteur) {
+        // Il file vers le filet ; pres du but, ou quand on le colle, il lance.
+        const cible = but(y.equipe);
+        cx = cible; cy = p.y + (y.k % 2 ? -3 : 3);
+        const colle = corps.some(function (c) { return c.equipe !== y.equipe && Math.hypot(c.q.x - y.x, c.q.y - y.y) < 12; });
+        if (Math.abs(cible - y.x) < r.tir_px || (colle && de() < 0.05)) {
+          const vise = p.y + (de() - 0.5) * FILET * r.dispersion;
+          lancer(e, y, cible, vise, r.lancer);
+          continue;
+        }
+      } else {
+        const leMien = corps.filter(function (c) { return c.equipe === y.equipe && !c.joueur && c.q.k !== 0; })
+          .sort(function (a, c) { return Math.hypot(a.q.x - b.x, a.q.y - b.y) - Math.hypot(c.q.x - b.x, c.q.y - b.y); })[0];
+        if (leMien && leMien.q === y && (!e.porteur || e.porteur.equipe !== y.equipe)) { cx = b.x; cy = b.y; }
+        else {
+          // Le poste : le GARDIEN (rang 0) devant son filet, a la hauteur de la balle ; les autres
+          // devant la balle, vers le filet d'en face.
+          const monFilet = y.equipe === 'nous' ? p.x0 : p.x1, sens = y.equipe === 'nous' ? 1 : -1;
+          if (y.k === 0) { cx = monFilet + sens * 10; cy = Math.max(p.y - FILET, Math.min(p.y + FILET, b.y)); }
+          else { cx = b.x + sens * 50; cy = y.depart.y; }
+        }
+      }
+      const dx = cx - y.x, dy = cy - y.y, d = Math.hypot(dx, dy);
+      if (d > 1) { y.x += dx / d * r.vitesse_jeunes; y.y += dy / d * r.vitesse_jeunes; y.angle = Math.atan2(dy, dx); }
+      retenirDans(p, y);
+    }
+    // 4. LE JOUEUR : ATTAQUE lance dans son cap, ESQUIVE passe au plus proche des siens.
+    if (e.porteur && e.porteur.joueur) {
+      if (Entree.neuf('attaque')) lancer(e, j, j.x + Math.cos(j.angle) * 100, j.y + Math.sin(j.angle) * 100, r.lancer);
+      else if (Entree.neuf('esquive')) {
+        const ami = e.jeunes.filter(function (y) { return y.equipe === 'nous'; })
+          .sort(function (a, c) { return Math.hypot(a.x - j.x, a.y - j.y) - Math.hypot(c.x - j.x, c.y - j.y); })[0];
+        if (ami) lancer(e, j, ami.x, ami.y, r.passe);
+      }
+    }
+    // 5. LA BALLE : au bâton du porteur, ou libre — elle glisse, rebondit sur les bords.
+    if (e.porteur) {
+      const q = e.porteur.q, a = q.angle || 0;
+      b.x = q.x + Math.cos(a) * 6; b.y = q.y + Math.sin(a) * 4; b.vx = 0; b.vy = 0;
+    } else {
+      b.x += b.vx; b.y += b.vy;
+      const f = hiver ? r.frottement_glace : r.frottement;
+      b.vx *= f; b.vy *= f;
+      if (b.y < p.haut + 3 || b.y > p.bas - 3) { b.vy = -b.vy * 0.7; b.y = Math.max(p.haut + 3, Math.min(p.bas - 3, b.y)); }
+    }
+    // 6. LES BUTS : la balle passe une ligne de but DANS le filet.
+    const dansLeFilet = Math.abs(b.y - p.y) < FILET;
+    if (b.x >= p.x1 - 2 && dansLeFilet) marquer(e, 'nous');
+    else if (b.x <= p.x0 + 2 && dansLeFilet) marquer(e, 'eux');
+    else if (b.x < p.x0 + 2 || b.x > p.x1 - 2) { b.vx = -b.vx * 0.6; b.x = Math.max(p.x0 + 2, Math.min(p.x1 - 2, b.x)); }
+  }
+
+  function lancer(e, q, x, y, vitesse) {
+    const b = e.balle, d = Math.hypot(x - b.x, y - b.y) || 1;
+    b.vx = (x - b.x) / d * vitesse; b.vy = (y - b.y) / d * vitesse;
+    if (q === B.joueur) e.repitJoueur = 20; else q.repit = 20;
+    e.porteur = null;
+    if (Son.SFX.cone) Son.SFX.cone();
+  }
+
+  function marquer(e, equipe) {
+    e[equipe]++;
+    const p = e.piste, b = e.balle;
+    b.x = (p.x0 + p.x1) / 2; b.y = p.y; b.vx = 0; b.vy = 0; e.porteur = null;
+    for (const y of e.jeunes) { y.x = y.depart.x; y.y = y.depart.y; y.repit = 0; }
+    e.pause = 60;
+    Hud.message(equipe === 'nous' ? 'BUT! ' + e.nous + ' – ' + e.eux : 'BUT DES CHEVREUILS… ' + e.nous + ' – ' + e.eux, 90);
+    Son.SFX.klaxon();
+  }
+
+  /** La patinoire a l'ecran : les filets, la glace l'hiver, les jeunes et la balle (peints). */
+  function dessinerHockey(ctx, e, vue) {
+    const p = e.piste, hiver = typeof Missions !== 'undefined' && Missions.hiverDeMotoneige && Missions.hiverDeMotoneige();
+    const X = function (x) { return Math.round(x - vue.x); }, Y = function (y) { return Math.round(y - vue.y); };
+    if (X(p.x1) < -20 || X(p.x0) > VW + 20 || Y(p.bas) < -20 || Y(p.haut) > VH + 20) return;
+    let n = 0;
+    if (hiver) { ctx.fillStyle = 'rgba(200,228,250,0.55)'; ctx.fillRect(X(p.x0), Y(p.haut), p.x1 - p.x0, p.bas - p.haut); n++; }
+    // Les filets : deux poteaux et le filet rouge.
+    for (const fx of [p.x0, p.x1]) {
+      const dir = fx === p.x0 ? -1 : 1;
+      ctx.fillStyle = '#d23b2e'; ctx.fillRect(X(fx) + (dir > 0 ? 0 : -4), Y(p.y - FILET), 4, FILET * 2);
+      ctx.fillStyle = '#f2f2f2'; ctx.fillRect(X(fx) - 1, Y(p.y - FILET) - 1, 2, 2); ctx.fillRect(X(fx) - 1, Y(p.y + FILET) - 1, 2, 2);
+      n += 3;
+    }
+    // Les jeunes : tuque, chandail de l'equipe, baton dans leur cap.
+    for (const y of e.jeunes) {
+      const x = X(y.x), yy = Y(y.y), nous = y.equipe === 'nous';
+      ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(x - 3, yy + 2, 6, 2);
+      ctx.fillStyle = nous ? '#1f5fbf' : '#2e7d32'; ctx.fillRect(x - 2, yy - 5, 5, 5);
+      ctx.fillStyle = '#e8b088'; ctx.fillRect(x - 1, yy - 8, 3, 3);
+      ctx.fillStyle = nous ? '#e0453a' : '#f2c230'; ctx.fillRect(x - 1, yy - 9, 3, 1);
+      ctx.fillStyle = '#2a2a30'; ctx.fillRect(x - 2, yy, 2, 2); ctx.fillRect(x + 1, yy, 2, 2);
+      ctx.fillStyle = '#8a5a2a';
+      ctx.fillRect(Math.round(x + Math.cos(y.angle) * 5), Math.round(yy + 1 + Math.sin(y.angle) * 3), 2, 1);
+      n += 8;
+    }
+    // La balle orange.
+    ctx.fillStyle = '#ff8c1a'; ctx.fillRect(X(e.balle.x) - 1, Y(e.balle.y) - 1, 3, 3);
+    B.stats.rects += n + 1;
   }
 
   function defDe(slug) { return (B.defs.defis || []).find(function (q) { return q.slug === slug; }) || null; }

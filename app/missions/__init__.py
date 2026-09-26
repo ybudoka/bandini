@@ -777,6 +777,17 @@ DEFIS: list[dict] = [
      "hiver": True, "chrono_s": 24, "prime": 90, "debloque": {"apres": ["tour_erables"]},
      "regles": {"vehicule": "motoneige"},
      "texte": "UNE MOTONEIGE T'ATTEND AU BORD DU BOIS : HUIT FANIONS, JUSQU'AU BOUT DES SENTIERS ET RETOUR, EN 24 S"},
+    # LE HOCKEY DE RUELLE (docs/jalons/le-hockey-de-ruelle.md) : le soir, dans la ruelle la plus proche du
+    # dépanneur des Érables, trois contre trois contre les Chevreuils — toi et deux jeunes du quartier.
+    # Gagner par trois buts d'écart avant la fin du chrono (le seul à l'écran : trois minutes et demie,
+    # le temps de rejoindre la ruelle compris). ATTAQUE lance, ESQUIVE passe. L'hiver, la ruelle
+    # est une patinoire. ⚠️ Les jeunes sont peints et décident sur leur générateur, jamais `B.rng()`.
+    {"slug": "hockey", "titre": "Le hockey de ruelle", "ou": "porte:depanneur", "rue": "hockey", "soir": True,
+     "chrono_s": 210, "prime": 80, "debloque": {"defis": 4},
+     "regles": {"longueur": 22, "ecart": 3, "vitesse_jeunes": 1.25, "lancer": 5.5, "passe": 3.8,
+                "tir_px": 90, "dispersion": 3.0, "vol": 0.05, "arret": 0.7, "gardien_px": 11, "prise_joueur": 10, "frottement": 0.965,
+                "frottement_glace": 0.99},
+     "texte": "LES CHEVREUILS JOUENT DANS LA RUELLE : TROIS CONTRE TROIS, GAGNE PAR TROIS BUTS. ATTAQUE LANCE, ESQUIVE PASSE"},
 ]
 
 #: Avec quoi un défi se joue. ⚠️ Un défi n'en exclut un que pour une raison

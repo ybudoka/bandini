@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (255 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (256 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -94,7 +94,6 @@ pas quand l'ordre de travail change.
 | La cabane à sucre : un événement de printemps | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/la-cabane-a-sucre.md#fiche) |
 | Des photos pour le Clairon | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/des-photos-pour-le-clairon.md#fiche) |
 | Le garage qui modifie les chars | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-garage-qui-modifie-les-chars.md#fiche) |
-| Le hockey de ruelle | ⬜ **en cours** | 26 sept. 2026 | **P4** | ajout | [fiche](jalons/le-hockey-de-ruelle.md#fiche) |
 | Les territoires des gangs bougent | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/les-territoires-des-gangs-bougent.md#fiche) |
 | Le marché aux puces du dimanche | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-marche-aux-puces-du-dimanche.md#fiche) |
 | Le 1er juillet, jour du déménagement | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-1er-juillet-jour-du-demenagement.md#fiche) |
@@ -138,7 +137,6 @@ Ce que chaque ligne à faire attend (la table de tri du 13 sept. 2026, réduite 
 | **P4** | ajout | La cabane à sucre : un événement de printemps | 3 | une pièce neuve posée sans dé ; la saison est une fenêtre de jours, calculée comme la neige |
 | **P4** | ajout | Des photos pour le Clairon | 2 | le **personnage de Louise** d'abord (M16, arc C) ; le mode photo existe |
 | **P4** | ajout | Le garage qui modifie les chars | 2 | ⚠️ la vitesse d'un moteur neuf se juge au bouton (la friction) |
-| **P4** | ajout | Le hockey de ruelle | 3 | de la physique neuve : la plus chère du lot |
 | **P4** | ajout | Les territoires des gangs bougent | 3 | `libere` et `calme` de M16 d'abord ; à trancher avec « La réputation et la lecture des passants » |
 | **P4** | ajout | Le marché aux puces du dimanche | 2 | après **les collections** (il vend leurs meubles et leurs cartes) |
 | **P4** | ajout | Le 1er juillet, jour du déménagement | 2 | gagne à suivre **les collections** (les meubles du trottoir vont à la planque) |

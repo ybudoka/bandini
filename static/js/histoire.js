@@ -2637,12 +2637,7 @@ const Histoire = (function () {
     // ait trouvé un char. Pas de place ici : le défi ne ment pas, il ne part pas.
     // ⚠️ UNE ÉPREUVE DANS LA RUE (`Rue`) se joue à pied, sans char à trouver : elle
     // pose celui qu'on file ou celui qui cogne, et part tout de suite.
-    if (d.rue) {
-      if (!Rue.commencer(d)) { B.defi = null; Hud.message('PAS DE PLACE ICI POUR CE DÉFI', 150); Son.SFX.erreur(); return; }
-      partir(d, null);
-      return;
-    }
-    // ⚠️ LE SOIR SEULEMENT (`soir`, le derby) : ca se DIT, et rien ne part.
+    // ⚠️ LE SOIR SEULEMENT (`soir` : le derby, le hockey de ruelle) : ca se DIT, et rien ne part.
     if (d.soir && ['crepuscule', 'nuit'].indexOf(Monde.periode()) < 0) {
       B.defi = null;
       Hud.message('ÇA SE JOUE LE SOIR — REVIENS À LA BRUNANTE', 150); Son.SFX.erreur();
@@ -2652,6 +2647,11 @@ const Histoire = (function () {
     if (d.hiver && !Missions.hiverDeMotoneige()) {
       B.defi = null;
       Hud.message('ÇA SE JOUE L\'HIVER, DANS LA NEIGE', 150); Son.SFX.erreur();
+      return;
+    }
+    if (d.rue) {
+      if (!Rue.commencer(d)) { B.defi = null; Hud.message('PAS DE PLACE ICI POUR CE DÉFI', 150); Son.SFX.erreur(); return; }
+      partir(d, null);
       return;
     }
     if (d.conduite && !Conduite.commencer(d)) {
