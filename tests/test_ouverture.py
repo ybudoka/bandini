@@ -22,6 +22,8 @@ Ce que ces juges tiennent, et qui n'est pas evident :
 4. **Elle se passe, et elle ne se rejoue pas.**
 """
 
+import pytest
+
 from app import audio, economie, missions, musique
 
 #: Les chiffres de la premisse, ecrits comme on les dit. ⚠️ Le juge ci-dessous
@@ -76,14 +78,16 @@ def test_les_voix_de_l_ouverture_se_generent_comme_le_journal():
     assert len(toutes) == len(audio.toutes_les_voix()), "aucun slug en double dans tout le catalogue"
 
 
-def test_la_musique_de_l_ouverture_existe_des_deux_cotes():
+@pytest.mark.parametrize("slug", ["ouverture", "generique"])
+def test_la_musique_de_l_ouverture_existe_des_deux_cotes(slug):
     """⚠️ Un mp3 ET des notes. `scripts/audio_elevenlabs.py --musiques` ne
     genere que les slugs que `musique.py` connait (`manquants_musique`) : une
     recette dans `audio.MUSIQUES` sans morceau ecrit ne se genere JAMAIS, et
-    personne ne s'en apercoit — le jeu joue simplement le silence."""
-    recette = audio.piece_par_slug("ouverture")
+    personne ne s'en apercoit — le jeu joue simplement le silence. Le generique
+    (M13) de meme : les deux bouts de la ligne d'histoire."""
+    recette = audio.piece_par_slug(slug)
     assert recette is not None, "la recette ElevenLabs manque"
-    ecrit = musique.par_slug("ouverture")
+    ecrit = musique.par_slug(slug)
     assert ecrit is not None, "le filet en notes manque : sans mp3, l'ouverture serait muette"
     assert ecrit["voix"], "un morceau sans voix ne joue rien"
     assert abs(musique.duree_s(ecrit) - recette["duree_s"]) <= 5, (

@@ -181,3 +181,17 @@ un juge navigateur qui prouve que la voix se décode.
   partie en cours ne la rejoue pas, et elle se revoit depuis le carnet. Le **même
   narrateur** aux deux bouts (celui du Clairon) : c'est lui qui en fait une ligne et non
   deux animations
+
+**2e vague livrée le 26 sept. 2026 — le générique, avec la première fin (M13).** Il s'est écrit avec m99,
+_Sacrer son camp_ (voir les notes de [M13](m13-les-deux-fins.md#notes)) : une scène de la mission en
+plans (`scenes["generique"]`), dite par **le narrateur de l'ouverture** — le car de six heures, le billet
+aller simple, la manchette du lendemain —, la ville en coupes, puis les chiffres de la partie un à un dans
+les cartons (`{fortune}`, `{missions}`, `{proprietes}`, `{jours}`, `{dette}`) ; la musique `generique`,
+l'ouverture à l'envers (même tonalité, plus lente, qui se résout), en notes et en mp3 ; puis le BILAN, et
+la partie continue.
+- ⚠️ **Pas d'état `B.etat = 'fin'`** : le générique est une SCÈNE, la ville est déjà figée dessous, et le
+  jeu reprend quand elle se termine. Un état de plus aurait été un écran de fin à défaire.
+- ⚠️ **Le juge « des deux côtés » attendait le générique** : il couvre maintenant `ouverture` ET
+  `generique` ; il a demandé dix mesures au lieu de huit (34 s de notes pour 45 s de mp3).
+- **Ce qui reste va avec M13** : le générique de _Le Boss_ (la caméra sur le district libéré, la ville
+  qui change de couleur) s'écrira avec m98, dans la vague 2 de M13.

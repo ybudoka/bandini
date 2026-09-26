@@ -184,10 +184,11 @@ _GEN_BASSE: list[list[float]] = [
     [8, 29, 4], [12, 36, 4],     # F   : fa, do
     [16, 36, 4], [20, 43, 4],    # C   : do, sol
     [24, 31, 4], [28, 38, 4],    # G   : sol, re
-    [32, 29, 4], [36, 36, 4],    # F
-    [40, 31, 4], [44, 38, 4],    # G
-    [48, 40, 4], [52, 47, 4],    # E7  : mi, si
-    [56, 33, 8],                 # A   : la, tenu
+    [32, 33, 4], [36, 40, 4],    # Am
+    [40, 29, 4], [44, 36, 4],    # F
+    [48, 31, 4], [52, 38, 4],    # G
+    [56, 40, 4], [60, 47, 4],    # E7  : mi, si
+    [64, 33, 16],                # A   : la, tenu deux mesures
 ]
 
 _GEN_NAPPE = _accords(
@@ -195,20 +196,22 @@ _GEN_NAPPE = _accords(
     (57, 60, 65),       # F
     (55, 60, 64),       # C
     (55, 59, 62),       # G
+    (57, 60, 64),       # Am
     (57, 60, 65),       # F
     (55, 59, 62),       # G
     (56, 59, 64),       # E7
     (57, 61, 64),       # A — la tierce levée
+    (57, 61, 64),       # A
 )
 
 _GEN_CHANT: list[list[float]] = [
     [0, 64, 6], [8, 65, 6],
     [16, 67, 4], [20, 69, 4],
     [24, 71, 8],
-    [32, 69, 4], [36, 72, 4],
-    [40, 74, 8],
-    [48, 71, 6],
-    [56, 73, 8],
+    [32, 72, 6], [40, 74, 6],
+    [48, 71, 4], [52, 74, 4],
+    [56, 76, 8],
+    [64, 73, 8], [72, 76, 8],
 ]
 
 MORCEAUX: list[Morceau] = [
@@ -217,7 +220,9 @@ MORCEAUX: list[Morceau] = [
         "nom": "Le dernier traversier",
         "bpm": 56,
         "pas_par_temps": PAS_PAR_TEMPS,
-        "pas": 8 * PAS_PAR_MESURE,
+        # ⚠️ Dix mesures, pas huit : 43 s, la duree de la recette ElevenLabs (45 s) — le juge de
+        # l'ouverture veut que les notes et le mp3 soient la meme piece.
+        "pas": 10 * PAS_PAR_MESURE,
         "volume": 0.85,
         "voix": [
             {"role": "basse", "forme": "triangle", "volume": 0.40, "notes": _GEN_BASSE},
