@@ -918,7 +918,8 @@ const Missions = (function () {
   function saisir(v) {
     if (!v || !v.def) return false;
     const f = B.defs.economie.fourriere, p = B.partie;
-    p.fourriere.push({ slug: v.slug, sprite: v.sprite, couleur: v.couleur, vie: Math.max(1, Math.round(v.vie)), vole: !!v.vole });
+    p.fourriere.push({ slug: v.slug, sprite: v.sprite, couleur: v.couleur, vie: Math.max(1, Math.round(v.vie)), vole: !!v.vole,
+                       mods: Garage.fiche(v) });
     while (p.fourriere.length > f.places) p.fourriere.shift();
     if (B.joueur && B.joueur.dansVehicule === v) Vehicules.descendre(B.joueur, true);
     Entites.retirer(v);
@@ -928,12 +929,14 @@ const Missions = (function () {
   /** Ce qu'il en coute pour le ravoir. ⚠️ Le calcul est celui de Python
       (`economie.prix_rachat`) : il DOIT rester plus cher que la revente du
       meme char au garage, sinon la fourriere devient une machine a argent. */
-  function prixRachat(slug) {
+  function prixRachat(slug, mods) {
     const f = B.defs.economie.fourriere, def = Vehicules.vehiculeDef(slug);
     // Les gars du lot te connaissent (le palier), et Gilles t'en doit une (s01).
     const part = avantage('fourriere', 1) * rabais('fourriere');
-    if (!def) return Math.round(f.rachat_minimum * part);
-    return Math.round(Math.max(f.rachat_minimum, Math.round(def.prix * f.rachat_fraction)) * part);
+    // ⚠️ Un char MODIFIE se rachete plus cher : le lot a vu ce qu'il y a sous le capot.
+    const pieces = Math.round(Garage.valeur(mods) * ((B.defs.garage && B.defs.garage.rachat_part) || 0));
+    if (!def) return Math.round(f.rachat_minimum * part) + pieces;
+    return Math.round(Math.max(f.rachat_minimum, Math.round(def.prix * f.rachat_fraction)) * part) + pieces;
   }
 
   /*: Les cases de stationnement, par glyphe : le nez du char y pointe. Un
@@ -1075,6 +1078,7 @@ const Missions = (function () {
       // couleur. Sans eux, une auto bleue revenait du lot avec le toit et le
       // cadre des vitres de la palette — rouges.
       v.couleur = c.couleur; v.swaps = nuances(c.couleur);
+      Garage.poser(v, c.mods);        // un char modifie revient modifie
       v.vie = Math.max(1, c.vie); v.vole = !!c.vole;
       v.saisi = i;                    // son rang dans le lot : le comptoir s'y retrouve
       poses++;
@@ -1091,7 +1095,7 @@ const Missions = (function () {
     }
     p.fourriere.slice().reverse().forEach(function (c) {
       const def = Vehicules.vehiculeDef(c.slug);
-      const prix = prixRachat(c.slug);
+      const prix = prixRachat(c.slug, c.mods);
       items.push({ libelle: (def ? def.nom : c.slug).toUpperCase(), detail: prix + ' $', actif: p.argent >= prix,
                    faire: function () { racheter(c, prix); return false; } });
     });
@@ -1719,6 +1723,8 @@ const Missions = (function () {
       repeindre(v);
       return false;
     } });
+    // Les pieces qui se posent (docs/jalons/le-garage-qui-modifie-les-chars.md) : une ligne par piece.
+    Garage.items(v, payer).forEach(function (it) { items.push(it); });
     // L'assurance : Ti-Guy couvre ce qui est gare devant, sans demander a qui
     // c'est. La prime, la valeur couverte, et « deja assure » — une fois.
     const prime = primeAssurance(v), couvre = valeurAssuree(v);
@@ -3631,7 +3637,7 @@ const Missions = (function () {
         const entites = B.bloc ? B.bloc.ville.entites : B.exterieur ? B.exterieur.entites : B.entites;
         for (const e of entites) {
           if (e.type === 'vehicule' && e.etat !== 'epave' && dist2(e.x, e.y, porte.x * TT + 8, (porte.y + 1) * TT) < 100 * 100) {
-            p.planque.vehicule = { slug: e.slug, sprite: e.sprite, couleur: e.couleur, vie: e.vie, x: Math.round(e.x), y: Math.round(e.y), angle: e.angle, vole: e.vole };
+            p.planque.vehicule = { slug: e.slug, sprite: e.sprite, couleur: e.couleur, vie: e.vie, x: Math.round(e.x), y: Math.round(e.y), angle: e.angle, vole: e.vole, mods: Garage.fiche(e) };
             break;
           }
         }
@@ -3654,7 +3660,7 @@ const Missions = (function () {
       if (!entites || !def || !def.bloc.planque) continue;
       const c = def.bloc.planque.char, cx = c.x * TT + 8, cy = c.y * TT + 8;
       const v = entites.find(function (e) { return e.type === 'vehicule' && e.etat !== 'epave' && dist2(e.x, e.y, cx, cy) < 48 * 48; });
-      p.charsDesPlanques[b.slug] = v ? { slug: v.slug, sprite: v.sprite, couleur: v.couleur, vie: v.vie, x: Math.round(v.x), y: Math.round(v.y), angle: v.angle, vole: v.vole } : null;
+      p.charsDesPlanques[b.slug] = v ? { slug: v.slug, sprite: v.sprite, couleur: v.couleur, vie: v.vie, x: Math.round(v.x), y: Math.round(v.y), angle: v.angle, vole: v.vole, mods: Garage.fiche(v) } : null;
     }
   }
 

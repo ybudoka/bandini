@@ -958,14 +958,17 @@ const Vehicules = (function () {
 
   function majPhysique(v, cmd) {
     const d = v.def, sol = allureDuSol(v);
-    if (cmd.gaz > 0) v.vitesse += d.acceleration * sol * cmd.gaz;
+    // ⚠️ La nitro pousse l'acceleration du meme facteur que la pointe : la pointe est un equilibre avec
+    // la friction, et une pointe relevee sans acceleration ne s'atteint jamais.
+    if (cmd.gaz > 0) v.vitesse += d.acceleration * sol * cmd.gaz * Garage.pointe(v);
     if (cmd.frein > 0) {
-      if (v.vitesse > 0.15) v.vitesse -= d.frein * cmd.frein * Neige.frein(v) * Verglas.frein() * Monde.freinMouille(v);
+      if (v.vitesse > 0.15) v.vitesse -= d.frein * cmd.frein * Garage.hiver(v, Neige.frein(v) * Verglas.frein()) * Monde.freinMouille(v);
       else v.vitesse -= d.acceleration * 0.7 * cmd.frein;      // marche arriere
     }
     if (cmd.freinMain) v.vitesse *= 0.965;
     v.vitesse *= d.friction;
-    v.vitesse = borner(v.vitesse, -d.vitesse_recul, d.vitesse_max * sol);
+    // La NITRO (le garage de Ti-Guy) pousse la pointe le temps de sa bonbonne (`Garage.pointe`).
+    v.vitesse = borner(v.vitesse, -d.vitesse_recul, d.vitesse_max * sol * Garage.pointe(v));
     if (Math.abs(v.vitesse) < 0.02 && !cmd.gaz && !cmd.frein) v.vitesse = 0;
     const t = v.vitesse / d.vitesse_max;
     // ⚠️ LE VOLANT SE TOURNE, il ne se claque pas : il prend vers la consigne
@@ -991,7 +994,8 @@ const Vehicules = (function () {
     }
     // Adherence : la vitesse reelle glisse vers le cap. Frein a main : elle traine.
     // ⚠️ LA NEIGE DIVISE L'ADHERENCE (M12) — la police glisse comme tout le monde.
-    const adh = (cmd.freinMain ? d.adherence_frein : d.adherence) * Neige.adherence(v) * Verglas.adherence() * Monde.adherenceMouillee(v);
+    // Les PNEUS D'HIVER (le garage de Ti-Guy) rendent une part de ce que la neige et la glace prennent.
+    const adh = (cmd.freinMain ? d.adherence_frein : d.adherence) * Garage.hiver(v, Neige.adherence(v) * Verglas.adherence()) * Monde.adherenceMouillee(v);
     v.vx += (Math.cos(v.angle) * v.vitesse - v.vx) * adh;
     v.vy += (Math.sin(v.angle) * v.vitesse - v.vy) * adh;
     // En l'air (rampe) : on retombe.
@@ -1753,6 +1757,8 @@ const Vehicules = (function () {
       (`Son.depuis`) : muet hors champ, plus doux de loin. Le sien, au volant,
       reste plein volume. */
   function avertir(v) {
+    // Le klaxon « Gens du pays » (le garage de Ti-Guy) : au volant du joueur seulement.
+    if (Garage.klaxonne(v)) { Son.SFX.gensDuPays(); return; }
     const effet = Son.SFX[v.def.klaxon] || Son.SFX.klaxon;
     Son.depuis(v.conducteur === B.joueur ? B.joueur : v, effet);
   }

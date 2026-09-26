@@ -746,6 +746,16 @@ const Son = (function () {
       bruit(0.5, 0.18, 300, 90);
       if (n > 0) { bruit(0.3, 0.12 + 0.03 * n, 2600, 800); ton(420, 0.12, 'square', 0.05 + 0.01 * n, 0.5, 0.52); }
     },
+    // LE GARAGE DE TI-GUY : la bonbonne de nitro qui souffle, et le klaxon qui joue son air (les notes
+    // sont une donnee, `garage.KLAXON_AIR`).
+    nitro: function () { bruit(1.2, 0.3, 4000, 400); ton(110, 0.9, 'sawtooth', 0.12, 1.8); },
+    gensDuPays: function () {
+      let t = 0;
+      ((B.defs && B.defs.garage && B.defs.garage.klaxon_air) || []).forEach(function (n) {
+        ton(n[0], n[1] * 0.95, 'sawtooth', 0.18, 1, t); ton(n[0] * 1.26, n[1] * 0.95, 'sawtooth', 0.12, 1, t);
+        t += n[1];
+      });
+    },
     brosses: function () { bruit(1.4, 0.18, 1100, 300); bruit(1.4, 0.08, 5000, 2200); },
     // --- L'eau ---------------------------------------------------------------
     // ⚠️ Jusqu'ici, entrer dans l'eau jouait `choc` — la TOLE FROISSEE d'un

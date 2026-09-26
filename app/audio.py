@@ -1476,9 +1476,20 @@ def voix_dojo() -> list[dict]:
             for r in dojo.repliques()]
 
 
+def voix_garage() -> list[dict]:
+    """Ce que Ti-Guy dit quand une pièce est posée sur un char (`app/garage.py`) — sa banque (`garage`),
+    en série dans le paquet, chargée au comptoir (`Garage.commenter`)."""
+    from . import garage, missions
+    perso = missions.personnage("ti_guy")
+    return [{"slug": r["slug"], "texte": r["texte"], "genre": perso["genre"], "voix": perso["voix"],
+             "volume": 0.9, "histoire": True, "qui": r["qui"], "mission": r["mission"],
+             "partie": r["partie"], "telephone": False}
+            for r in garage.repliques()]
+
+
 def toutes_les_voix() -> list[dict]:
     return (list(VOIX) + list(VOIX_DE_LA_POLICE) + voix_histoire() + voix_journal() + voix_loto() + voix_ouverture()
-            + voix_repos() + voix_dojo() + voix_galeries())
+            + voix_repos() + voix_dojo() + voix_galeries() + voix_garage())
 
 
 #: LES VOIX QUI NE SE PARTAGENT PAS — la table, ecrite UNE fois : la voix, et le
@@ -1767,5 +1778,6 @@ def exporter() -> dict:
         # en une ligne — le prefixe, les noms, ce qu'elles ont en commun, et celles dont le mp3 manque.
         # Declarees une par une, elles pesaient 8 870 octets bruts et firent deborder le paquet
         # (`test_le_paquet_reste_leger`, 26 sept. 2026). `Son.Voix.histoire()` les deplie au chargement.
-        "series": [serie_de_voix("narrateur-loto-", voix_loto()), serie_de_voix("galeries-", voix_galeries())],
+        "series": [serie_de_voix("narrateur-loto-", voix_loto()), serie_de_voix("galeries-", voix_galeries()),
+                   serie_de_voix("ti_guy-garage-", voix_garage())],
     }

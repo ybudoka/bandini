@@ -474,3 +474,12 @@ def mots(texte: str) -> list[str]:
     pareil des deux cotes, et un « — » ajoute pour une pause ne compte pas.
     """
     return re.findall(r"\w+", _BALISE.sub(" ", texte).casefold())
+
+# TI-GUY AU GARAGE (`garage.REPLIQUES`) : une pièce posée, un commentaire de mécanicien fier de sa job.
+JEU.update({
+    "ti_guy-garage-moteur": "[smugly] Écoute-moi ça ronronner. [laughs] Y va te décoller les plombages, mon homme.",
+    "ti_guy-garage-blindage": "[satisfied] De la tôle de camion blindé. Les balles vont rebondir, pas toi.",
+    "ti_guy-garage-pneus": "[amused] Des bons pneus d'hiver. Tu vas coller à la glace comme ta langue sur un poteau.",
+    "ti_guy-garage-nitro": "[knowingly] La bonbonne est branchée. [laughs] Appuie pas là-dessus dans un stationnement.",
+    "ti_guy-garage-klaxon": "[mischievously] Klaxonne pour voir. Si ça te donne pas des frissons, t'es pas d'icitte.",
+})

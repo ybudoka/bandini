@@ -899,13 +899,16 @@ const Entree = (function () {
   /** Ce qu'on lit sur les cinq boutons tactiles dans ce contexte-la. L'ecran
       COMMANDES les montre tels quels : au doigt, le nom du bouton EST son geste. */
   function etiquettes(nom) {
+    // La NITRO (le garage de Ti-Guy) prend le bouton libre du volant, sur le char qui en a une.
+    const v = typeof B !== 'undefined' && B.joueur && B.joueur.dansVehicule;
+    const nitro = v && v.mods && v.mods.nitro ? 'NITRO' : '·';
     return nom === 'vehicule'
-      ? { attaque: 'KLAXON', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO', saisir: '·' }
+      ? { attaque: 'KLAXON', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO', saisir: nitro }
       // ⚠️ Sur un char a sirene, le bouton du klaxon EST celui de la sirene :
       // c'est ce qu'on cherche en premier au volant d'une ambulance, et le
       // klaxon d'une auto-patrouille n'a jamais servi a rien.
       : nom === 'vehicule_sirene'
-      ? { attaque: 'SIRÈNE', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO', saisir: '·' }
+      ? { attaque: 'SIRÈNE', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO', saisir: nitro }
       : nom === 'vehicule_sonnette'                       // un velo : sa sonnette
       ? { attaque: 'SONNETTE', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO', saisir: '·' }
       : nom === 'menu'

@@ -28,4 +28,28 @@ fourrière ; le klaxon joue le bon air.
 
 ## Notes
 
-_Rien de livré._
+**Livré le 26 sept. 2026.** `app/garage.py` (le catalogue), `static/js/garage.js`, cinq lignes de plus au
+menu de Ti-Guy (`Missions.menuGarage`), cinq voix de Ti-Guy (une série, `ti_guy-garage-*`) ; juges
+`tests/test_garage_js.py` (dix mutations, toutes mordent).
+
+- **Les pièces et leurs prix** (la liste de la fiche, les prix choisis à défaut d'un mot de Martin) :
+  le moteur gonflé 600 $ (pointe et accélération × 1,2), le blindage 800 $ (vie × 1,6), les pneus
+  d'hiver 250 $ (ils rendent 60 % de ce que la neige et le verglas prennent à l'adhérence et au frein),
+  la nitro 900 $ (× 1,35 pendant 1,5 s, 10 s de recharge), le klaxon 150 $. Une fois chacune ; pas sur
+  un vélo.
+- **Un char modifié a SA fiche** (`v.def`, une copie du catalogue) : ⚠️ le moteur gonfle la pointe ET
+  l'accélération du même facteur — la pointe est un équilibre entre l'accélération et la friction ; mesuré
+  au bouton sur un boulevard, 3,995 → 4,793. La nitro fait pareil le temps de sa bonbonne.
+- **La nitro prend le bouton libre du volant** (SAISIR : `U` au clavier, l'épaule droite à la manette) ;
+  l'étiquette tactile dit NITRO sur un char qui en a une.
+- **Elles voyagent avec le char** (`v.mods`) : devant la planque et dans les planques des blocs (la
+  sauvegarde), à la fourrière (un char modifié revient modifié) — et il se rachète plus cher (la moitié du
+  prix de ses pièces en plus).
+- **Ti-Guy commente** chaque pièce posée (sa voix, et la ligne à l'écran). ⚠️ Les cinq voix sont
+  générées, **pas écoutées**.
+- ⚠️ **Le klaxon ne joue PAS encore « Gens du pays »** : la mélodie n'a pas été transcrite note pour note,
+  et une fausse aurait été pire qu'une fanfare. `garage.KLAXON_AIR` joue une fanfare de klaxon qui monte ;
+  c'est une donnée (Hz, secondes) — la vraie phrase la remplace sans une ligne de code.
+- ⚠️ **La police** : une auto au moteur gonflé (4,8) file aussi vite qu'une sport du catalogue, plus vite
+  qu'une auto-patrouille (4,4). Rien n'a été retouché de ce côté : à 5★, les barrages et l'hélico restent
+  la menace. À surveiller en jouant.
