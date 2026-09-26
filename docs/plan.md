@@ -101,7 +101,7 @@ pas quand l'ordre de travail change.
 | Le 1er juillet, jour du déménagement | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-1er-juillet-jour-du-demenagement.md#fiche) |
 | La Saint-Jean sur la baie | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/la-saint-jean-sur-la-baie.md#fiche) |
 | Les enseignes qui ouvrent pour vrai : bingo, quilles, lave-auto, Rialto | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/les-enseignes-qui-ouvrent-pour-vrai.md#fiche) |
-| La motoneige | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/la-motoneige.md#fiche) |
+| La motoneige | ⬜ **en cours** | 26 sept. 2026 | **P4** | ajout | [fiche](jalons/la-motoneige.md#fiche) |
 | Le centre d'achat hanté | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-centre-d-achat-hante.md#fiche) |
 | Le temps des Fêtes | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-temps-des-fetes.md#fiche) |
 | Le ciné-parc | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-cine-parc.md#fiche) |
