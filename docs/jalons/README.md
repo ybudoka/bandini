@@ -281,3 +281,4 @@ Deux documents d'avant la table :
 | Le chalet fume, et son feu crépite | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-chalet-fume-et-son-feu-crepite.md#fiche) · [notes](le-chalet-fume-et-son-feu-crepite.md#notes) |
 | Le dojo du quartier : apprendre les techniques | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-dojo-du-quartier.md#fiche) · [notes](le-dojo-du-quartier.md#notes) |
 | Le traversier se prend pour vrai | ✅ **livré** | 26 sept. 2026 | **P1** | **correctif** | [fiche](le-traversier-se-prend-pour-vrai.md#fiche) · [notes](le-traversier-se-prend-pour-vrai.md#notes) |
+| Le sapin de la place se tient debout | ✅ **livré** | 26 sept. 2026 | **P2** | **correctif** | [fiche](le-sapin-de-la-place-se-tient-debout.md#fiche) · [notes](le-sapin-de-la-place-se-tient-debout.md#notes) |

@@ -5,10 +5,22 @@
 
    ⚠️ RIEN DE POSE : les guirlandes sont la COULEUR des lampes qui existent (`Monde.lampesVisibles` la
    demande ici), a l'empreinte de chaque lampe ; le sapin est PEINT. Rien ne bouche une porte, rien ne
-   reste en janvier — une pure fonction du jour. */
+   reste en janvier — une pure fonction du jour.
+
+   ⚠️ LE SAPIN SE TIENT DEBOUT (Martin, 26 sept. 2026, capture) : peint au sol, sous les gens, on marchait
+   dans ses branches, et il etait plante sur un banc et la fontaine. Il se TRIE avec les gens (comme la
+   coque du traversier : `ajouterVisibles`), et en decembre son tronc est une tuile pleine (`maj` la pose
+   et la rend, octet pour octet — jamais dans une piece ni dans un bloc de carte, ou `Monde.carte` n'est
+   pas la ville). Sa place, libre de tout, c'est Python qui la cherche (`app/fetes.py`). */
 
 const Fetes = (function () {
   'use strict';
+
+  //: Le tri du dessin : apres la coque et les panneaux du traversier.
+  const ID_TRI = 1e9 + 700;
+
+  //: Le tronc pose dans la carte : { carte, i, solide } — ce qu'il y avait avant.
+  let pose = null;
 
   function donnees() { return B.defs && B.defs.fetes; }
 
@@ -28,12 +40,44 @@ const Fetes = (function () {
     return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + d.guirlandes.force + ')';
   }
 
-  /** Le sapin de la place : deux tuiles de haut, ses boules qui clignotent, l'etoile au bout. */
-  function dessinerSapin(ctx, cam) {
+  /** Le sapin est-il dehors, en ville, ce mois-ci ? */
+  function debout() {
     const d = donnees();
-    if (!actif() || !d.sapin || B.interieur) return;
-    const x = Math.round(d.sapin.x * TT + 8 - cam.x), y = Math.round(d.sapin.y * TT + 14 - cam.y);
-    if (x < -30 || y < -50 || x > VW + 30 || y > VH + 30) return;
+    return actif() && !!d.sapin && !B.interieur && !B.bloc;
+  }
+
+  /** Decembre : le tronc devient une tuile pleine ; le reste de l'annee, la carte est rendue. */
+  function maj() {
+    if (B.interieur || B.bloc || !Monde.carte) return;
+    if (pose && pose.carte !== Monde.carte) pose = null;
+    const veut = debout();
+    if (veut && !pose) {
+      const d = donnees(), c = Monde.carte, i = d.sapin.y * c.w + d.sapin.x;
+      pose = { carte: c, i: i, solide: c.solide[i] };
+      c.solide[i] = 1;
+    } else if (!veut && pose) oublier();
+  }
+
+  /** Rend la tuile du tronc (nouvelle partie, partie chargee, janvier). */
+  function oublier() {
+    if (!pose) return;
+    pose.carte.solide[pose.i] = pose.solide;
+    pose = null;
+  }
+
+  /** Le sapin se trie avec les gens et les chars par le pied de son tronc. */
+  function ajouterVisibles(visibles, cx, cy) {
+    if (!debout()) return;
+    const d = donnees(), x = d.sapin.x * TT + 8, y = d.sapin.y * TT + 14;
+    if (x < cx - 30 || y < cy - 16 || x > cx + VW + 30 || y > cy + VH + 50) return;
+    visibles.push({ id: ID_TRI, vivant: true, x: x, y: y,
+                    peindreFoire: function (ctx) { peindreSapin(ctx, x - Math.round(cx), y - Math.round(cy)); } });
+  }
+
+  /** Le sapin de la place, le pied de son tronc en (x, y) a l'ecran : deux tuiles de haut, ses boules qui
+      clignotent, l'etoile au bout. */
+  function peindreSapin(ctx, x, y) {
+    const d = donnees();
     ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(x - 12, y - 1, 24, 4);
     ctx.fillStyle = '#5a3a22'; ctx.fillRect(x - 2, y - 6, 4, 6);
     const etages = [[14, 0], [11, 8], [8, 16], [5, 23]];
@@ -54,7 +98,7 @@ const Fetes = (function () {
   /** La lueur du sapin, la nuit. */
   function lampes(cam) {
     const d = donnees();
-    if (!actif() || !d.sapin || B.interieur) return [];
+    if (!debout()) return [];
     return [{ x: d.sapin.x * TT + 8 - cam.x, y: d.sapin.y * TT - 6 - cam.y, r: 70, c: 'rgba(255,214,130,0.5)' }];
   }
 
@@ -65,5 +109,6 @@ const Fetes = (function () {
     return d.clairon;
   }
 
-  return { donnees, actifA, actif, couleur, dessinerSapin, lampes, ligneDuClairon };
+  return { donnees, actifA, actif, couleur, maj, oublier, ajouterVisibles, lampes, ligneDuClairon,
+           get pose() { return pose; } };
 })();

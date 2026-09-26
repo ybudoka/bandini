@@ -102,6 +102,7 @@ const Jeu = (function () {
     B.sonnerie = null;                       // un telephone qui sonnait dans la partie d'avant ne sonne pas dans celle-ci
     B.abribusServis = {};                    // les abribus qu'un autobus vient de servir (Autobus)
     Traversier.oublier();                    // rien a bord, la carte neuve n'a pas de pont pose
+    Fetes.oublier();                         // la tuile du tronc du sapin est rendue
     Neige.oublier();                         // la rue d'une partie rechargee est blanche
     Brouillard.oublier();
     Verglas.oublier();
@@ -1100,6 +1101,7 @@ const Jeu = (function () {
         pas('coop', majCoop);              // apres les chars : le passager suit sa tole
         pas('traversier', Traversier.maj); // apres les chars : ce qui est a bord suit la coque
         pas('pont', Pont.maj);             // le pont de glace : il prend, craque au degel, et rend l'eau
+        pas('fetes', Fetes.maj);           // decembre : le tronc du sapin est une tuile pleine
         pas('saintjean', SaintJean.maj);   // la Saint-Jean : le bruit des feux
         pas('cineparc', Cineparc.maj);     // le cine-parc : ses spectateurs, et les phares qui fachent
         pas('galeries', Galeries.maj);     // la nuit aux Galeries : les lumieres, la voix, le gardien
@@ -1203,8 +1205,7 @@ const Jeu = (function () {
     if (!B.interieur) { Autobus.dessinerRails(ctx, vue); Neige.dessinerPanneaux(ctx, vue); Blocs.dessiner(ctx, vue); Monde.dessinerBattants(ctx, vue); Monde.dessinerPortesDeGarage(ctx, vue); Monde.dessinerBarrieresCoulissantes(ctx, vue); Monde.dessinerBarrieres(ctx, vue); }
     Entites.dessinerDecals(ctx, vue);     // le sang est SOUS les pieds
     if (!B.interieur) Histoire.dessinerCheminCourse(ctx, vue);   // le trace d'une course, sur la chaussee
-    if (!B.interieur) { Conduite.dessinerSol(ctx, vue); Rue.dessinerSol(ctx, vue); SaintJean.dessinerDefile(ctx, vue); }
-    if (!B.interieur) Fetes.dessinerSapin(ctx, vue);   // decembre : le sapin de la place du Faubourg          // la case, les lignes, les cones d'une epreuve au volant
+    if (!B.interieur) { Conduite.dessinerSol(ctx, vue); Rue.dessinerSol(ctx, vue); SaintJean.dessinerDefile(ctx, vue); }          // la case, les lignes, les cones d'une epreuve au volant
     if (!B.interieur) Entites.dessinerBetes(ctx, vue);   // un goeland passe sous personne
     Entites.dessiner(ctx, vue);
     Entites.dessinerCible(ctx, vue);

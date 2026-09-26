@@ -35,13 +35,56 @@ def test_le_sapin_brille_sur_la_place_en_decembre(banc):
         let traits = 0;
         const ctx = { fillRect: function () { traits++; }, set fillStyle(c) {} };
         const cam = { x: s.x * 16 - 240, y: s.y * 16 - 135 };
-        aLHeure(L, decembre(L), 22); F.dessinerSapin(ctx, cam);
+        function peindre() { const v = []; F.ajouterVisibles(v, cam.x, cam.y); v.forEach(function (e) { e.peindreFoire(ctx); }); return v; }
+        aLHeure(L, decembre(L), 22); const vus = peindre();
         const dec = traits, lueur = F.lampes(cam).length;
-        traits = 0; aLHeure(L, decembre(L) + 4, 22); F.dessinerSapin(ctx, cam);
-        return { dec: dec, lueur: lueur, jan: traits, lueurJan: F.lampes(cam).length };
+        traits = 0; aLHeure(L, decembre(L) + 4, 22); peindre();
+        return { dec: dec, lueur: lueur, jan: traits, lueurJan: F.lampes(cam).length,
+                 pied: vus.length ? vus[0].y : null, attendu: s.y * 16 + 14 };
     }""")
     assert r["dec"] > 20 and r["lueur"] == 1, r
     assert r["jan"] == 0 and r["lueurJan"] == 0, r
+    # ⚠️ Il se trie avec les gens par le pied de son tronc : peint au sol, on marchait dans ses branches.
+    assert r["pied"] == r["attendu"], r
+
+
+def test_le_tronc_du_sapin_arrete_en_decembre_et_janvier_rend_la_carte(banc):
+    """Martin (26 sept. 2026) : le joueur se tenait au milieu du sapin. En décembre son tronc est une tuile
+    pleine — on s'y arrête en marchant droit dessus ; en janvier la tuile est rendue telle qu'elle était, et
+    dans un bloc de carte (le chalet) on ne touche pas à `Monde.carte`, qui est le bloc."""
+    r = banc("async function (L, o) {" + DECEMBRE + """
+        L.Jeu.commencer();
+        const B = L.B, Mo = L.Monde, s = B.defs.fetes.sapin, j = B.joueur, c = Mo.carte, TT = L.TT;
+        if (B.menu) L.Hud.fermerMenu();
+        j.intouchable = true;
+        const i = s.y * c.w + s.x;
+        aLHeure(L, decembre(L) - 5, 13); o.frame(3);
+        const avant = c.solide[i];
+        aLHeure(L, decembre(L), 13); o.frame(3);
+        const plein = Mo.bloque(s.x, s.y, Mo.MASQUE_PIETON);
+        // Au sud du tronc, on marche vers le nord : on s'arrête au pied.
+        j.x = s.x * TT + 8; j.y = (s.y + 3) * TT + 8; Mo.centrerCamera(j.x, j.y);
+        o.touche('KeyW'); o.frame(90); o.relacher('KeyW'); o.frame(2);
+        const arret = { ty: Math.floor(j.y / TT), dessous: j.y > s.y * TT + 12 };
+        // Au chalet, en décembre : rien ne se pose dans le bloc.
+        L.Blocs.charger('chalet');
+        for (let i = 0; i < 200 && !L.Blocs.cartes.chalet; i++) { o.frame(1); await o.attendre(); }
+        const bloc = L.Blocs.liste().find(function (q) { return q.slug === 'chalet'; });
+        L.Jeu.passerDansLeBloc(bloc, L.Blocs.cartes.chalet, { x: j.x, y: j.y }, null);
+        const bc = Mo.carte, blocAvant = Array.from(bc.solide);
+        o.frame(3);
+        const blocIntact = bc !== c && Array.from(bc.solide).every(function (v, i) { return v === blocAvant[i]; });
+        L.Jeu.sortirDuBloc();
+        for (let i = 0; i < 200 && (B.bloc || B.transition); i++) o.frame(1);
+        aLHeure(L, decembre(L) + 4, 13); o.frame(3);
+        const libre = !Mo.bloque(s.x, s.y, Mo.MASQUE_PIETON);
+        const rendu = Mo.carte === c && c.solide[i] === avant && avant === 0;
+        return { plein: plein, arret: arret, blocIntact: blocIntact, libre: libre, rendu: rendu };
+    }""")
+    assert r["plein"], "en décembre, le tronc du sapin ne bloque rien"
+    assert r["arret"]["dessous"], f"le joueur a traversé le tronc : {r['arret']}"
+    assert r["blocIntact"], "le sapin a posé son tronc dans le bloc"
+    assert r["libre"] and r["rendu"], r
 
 
 def test_le_camion_livre_des_dindes_en_decembre(banc):
