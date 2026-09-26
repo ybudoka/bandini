@@ -595,6 +595,10 @@ def test_les_commerces_montent_sans_rien_deplacer(villes, monkeypatch):
     # la ville FINIE, elles choisissent leur facade d'apres les noms et les planches (un
     # local A LOUER n'en devient pas une). La comparaison reste celle des commerces.
     monkeypatch.setattr(carte._Chantier, "poser_les_carrosseries", lambda self, ville_: [])
+    # ⚠️ LES ENSEIGNES qui ouvrent pour vrai de même (`enseignes.poser`) : le BINGO prend la façade qui
+    # porte déjà son nom — un nom que `monter_et_descendre` donne.
+    from app import enseignes
+    monkeypatch.setattr(enseignes, "poser", lambda chantier, ville_: [])
     ville = carte.generer()
     monkeypatch.setattr(vitrines, "monter_et_descendre", lambda chantier, ville: {})
     sans = carte.generer()

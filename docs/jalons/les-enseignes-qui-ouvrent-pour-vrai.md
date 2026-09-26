@@ -73,4 +73,7 @@ de 53 000 à 55 000 (mesures dans `test_definitions`).
   (`test_interpretation`) : elle s'appelle `joue`. Et la façade reprise GARDE sa famille (`genre`) : la
   distributrice adossée à côté vend selon elle (`magasins.sortes_devant`) — le Rialto repeint « nuit »
   avait une machine à café. Les brosses du lave-auto réclamaient un échantillon qui n'existe pas.
+  Le lendemain, deux juges de plus : la carte de bingo et le billet du Rialto REFERMENT le comptoir (un
+  départ, comme dormir : `QUI_FERMENT`), et la comparaison « avec et sans vitrines » neutralise les
+  enseignes des deux côtés (le BINGO prend la façade qui porte son nom, un nom que les vitrines donnent).
 - Captures regardées : les quatre façades, les pièces, la partie de bingo, la ligue, le film, la baie.

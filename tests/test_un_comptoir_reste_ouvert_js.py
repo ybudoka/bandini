@@ -23,7 +23,11 @@ SANS_MENU = ("escalier", "fouiller", "rame") + tuple(
 #: ⚠️ Les SEULES lignes d'un comptoir qui le referment : le choix y est un
 #: départ. Dormir passe au noir ; le Clairon se lit, en voix, hors du menu.
 #: Allonger cette liste demande une raison de la même force.
-QUI_FERMENT = ("DORMIR JUSQU’AU MATIN", "DORMIR JUSQU’AU SOIR", "LE CLAIRON DE LA BAIE")
+#: ⚠️ La carte de BINGO et le billet du RIALTO (les enseignes qui ouvrent pour vrai, 26 sept. 2026) :
+#: la partie commence (sa carte à l'écran, ACTION y marque les boules), le film commence (on s'assoit,
+#: la salle s'éteint) — un menu resté ouvert prendrait ACTION à la place de la partie.
+QUI_FERMENT = ("DORMIR JUSQU’AU MATIN", "DORMIR JUSQU’AU SOIR", "LE CLAIRON DE LA BAIE",
+               "UNE CARTE DE BINGO", "UN BILLET POUR LE FILM")
 
 #: Les comptoirs de la ville livrée, un par type et par famille (`genre`).
 COMPTOIRS = sorted({(p["type"], p.get("genre") or "")
