@@ -116,6 +116,9 @@ DELITS: dict[str, dict] = {
     # l'autre bout de la rue, et c'est tout l'interet — inutile de convaincre
     # un temoin de quelque chose que tout le monde regarde.
     "otage": {"etoiles": 2, "temoin": False},
+    # Braquer un commerce (`economie.BRAQUAGE`). ⚠️ BRUYANT : l'alarme sonne au comptoir, le commis
+    # appelle — il n'y a pas de temoin a convaincre.
+    "braquage": {"etoiles": 2, "temoin": False},
 }
 
 #: Cones de vision : demi-angle en degres et portee en tuiles, jour / nuit.

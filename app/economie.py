@@ -805,8 +805,35 @@ def _table_des_dettes() -> list[int]:
 FOUILLE_PAR_STANDING: dict[str, float] = {"cossu": 2.2, "ordinaire": 1.0, "pauvre": 0.4}
 
 
+#: BRAQUER UN COMMERCE (docs/jalons/braquer-un-commerce.md) : une arme en main devant un comptoir,
+#: ACTION devient BRAQUER, le commis vide sa caisse — et l'alarme sonne (`recherche.DELITS["braquage"]`,
+#: deux etoiles).
+#:
+#: ⚠️ L'ECONOMIE D'ABORD : la plus grosse caisse reste sous ce qu'une heure de boulot rapporte, et les
+#: deux etoiles coutent une amende a qui se fait prendre. Et le commerce se SOUVIENT : pendant
+#: `rancune_jours`, il ne te sert plus, et sa caisse n'a plus que `apres` de ce qu'elle avait — sinon
+#: on braque le meme depanneur en boucle.
+BRAQUAGE = {
+    #: Ce que rend la caisse d'une piece (son slug) ; `defaut` pour les commerces d'une rue.
+    "caisses": {"depanneur": 90, "casse_croute": 70, "cantine": 80, "terminus": 60, "armurerie": 240,
+                "vetements": 180, "usine": 110},
+    "defaut": 120,
+    "rancune_jours": 3,
+    "apres": 0.1,
+    #: Les comptoirs ou l'on braque : ceux d'un commis (pas le coffre, pas la caisse de sa propriete).
+    "points": ["emplettes", "acheter", "hotdog"],
+    #: Ce qu'on ne braque jamais : Madame Thibodeau s'en souviendrait, et l'hopital, le poste, la planque
+    #: et le garage de Rocco ne sont pas des caisses.
+    "jamais": ["kiosque", "hopital", "poste", "planque", "garage"],
+    "dit": "OK, OK! PRENDS TOUT!",
+    "refus": "VA-T'EN, TOI!",
+}
+
+
 def exporter() -> dict:
     return {
+        "braquage": {**BRAQUAGE, "caisses": dict(BRAQUAGE["caisses"]), "points": list(BRAQUAGE["points"]),
+                     "jamais": list(BRAQUAGE["jamais"])},
         "argent_depart": ARGENT_DEPART,
         "fouille_standing": dict(FOUILLE_PAR_STANDING),
         "fortune_max": FORTUNE_MAX,

@@ -1045,6 +1045,15 @@ const Missions = (function () {
     if (point.type === 'escalier') return Jeu.changerEtage(point.vers);
     if (point.type === 'rame') return Metro.utiliser(j, point);
     if (point.type === 'fouiller') return fouiller(point);
+    // ⚠️ UNE ARME EN MAIN AU COMPTOIR : ACTION braque, avant le menu — l'invite l'a promis.
+    if (braquable(j, point)) { braquer(point); return true; }
+    // Et le commerce braque ne te sert plus, tant qu'il s'en souvient.
+    if (reglesDuBraquage() && rancuneIci() && reglesDuBraquage().points.indexOf(point.type) >= 0) {
+      const commis = B.entites.find(function (e) { return e.type === 'pieton' && e.vivant && e.poste; });
+      if (commis) Entites.bulle(commis, reglesDuBraquage().refus, { duree: 120 });
+      Hud.message('ON NE TE SERT PLUS ICI'); Son.SFX.erreur();
+      return true;
+    }
     // ⚠️ La machine AVANT le menu : si quelque chose y est reste pris, ACTION la
     // brasse — l'invite l'a promis.
     if (point.type === 'distributrice') return utiliserDistributrice(j, machineDuPoint(point));
@@ -2441,6 +2450,51 @@ const Missions = (function () {
     }
   }
 
+  // --- Braquer un commerce ------------------------------------------------------------------
+  //: docs/jalons/braquer-un-commerce.md. Une arme en main devant le comptoir d'un commis : ACTION
+  //: devient BRAQUER, le commis vide sa caisse, l'alarme sonne (`braquage`, deux etoiles, bruyant).
+  //: Les regles sont a Python (`economie.BRAQUAGE`).
+  //:
+  //: ⚠️ LE COMMERCE SE SOUVIENT (`partie.braquages[piece]`) : pendant `rancune_jours`, il ne te
+  //: sert plus, et sa caisse n'a plus que `apres` de ce qu'elle avait.
+
+  function reglesDuBraquage() { return B.defs.economie.braquage; }
+
+  /** Le commerce ou l'on est a-t-il ete braque il y a moins de `rancune_jours` ? */
+  function rancuneIci() {
+    const piece = B.interieur, r = reglesDuBraquage(), p = B.partie;
+    const b = piece && r && p.braquages && p.braquages[piece.slug];
+    return !!b && p.jour - b.jour < r.rancune_jours;
+  }
+
+  /** Le comptoir `point` se braque-t-il, arme en main ? Un comptoir de commis, dans un commerce qui
+      n'est ni a toi ni dans la liste de ceux qu'on ne braque jamais. */
+  function braquable(j, point) {
+    const piece = B.interieur, r = reglesDuBraquage();
+    if (!r || !piece || !point || !j || j.arme === 'poings' || !j.arme) return false;
+    if (r.points.indexOf(point.type) < 0 || r.jamais.indexOf(piece.slug) >= 0) return false;
+    if (B.partie.proprietes && B.partie.proprietes[piece.slug]) return false;
+    return true;
+  }
+
+  /** BRAQUER : le commis leve les mains et vide sa caisse ; l'alarme sonne ; la police le sait, a
+      l'adresse de la porte (`B.exterieur` : dedans, les coordonnees sont celles de la piece). */
+  function braquer(point) {
+    const piece = B.interieur, r = reglesDuBraquage(), p = B.partie;
+    const caisse = r.caisses[piece.slug] !== undefined ? r.caisses[piece.slug] : r.defaut;
+    const montant = Math.round(rancuneIci() ? caisse * r.apres : caisse);
+    const commis = B.entites.find(function (e) { return e.type === 'pieton' && e.vivant && e.poste; });
+    if (commis) { Entites.bulle(commis, r.dit, { duree: 150 }); commis.vx = 0; commis.vy = 0; }
+    p.braquages = p.braquages || {};
+    p.braquages[piece.slug] = { jour: p.jour };
+    p.stats.braquages = (p.stats.braquages || 0) + 1;
+    encaisser(montant, 'BRAQUAGE');
+    Son.SFX.alarme_commerce();
+    const ici = B.exterieur || { x: B.joueur.x, y: B.joueur.y };
+    Police.signalerCrime('braquage', ici.x, ici.y, true);
+    return montant;
+  }
+
   // --- Le 6/49 du depanneur ---------------------------------------------------------------
   //: Demande du plan (docs/jalons/le-6-49-du-depanneur.md) : un billet a 2 $ chez Ti-Paul, et le
   //: lendemain matin, les numeros sous la manchette du Clairon. Les regles sont a Python
@@ -3078,6 +3132,7 @@ const Missions = (function () {
         const assis = Histoire.personnageDuPoint(point.type);
         const vente = point.type === 'caisse' && aVendre(B.interieur.slug);
         B.invite = assis ? 'PARLER À ' + assis.nom.toUpperCase()
+          : braquable(j, point) ? 'BRAQUER'
           : vente ? 'ACHETER ' + vente.nom.toUpperCase()
           : (point.type === 'distributrice' ? inviteDistributrice(machineDuPoint(point))
             : (point.type === 'emplettes' && comptoirFerme(point)) || (LIBELLES[point.type] || point.type.toUpperCase()));
@@ -3235,7 +3290,8 @@ const Missions = (function () {
     if (B.t % 60 === 0) B.partie.stats.secondes++;
   }
 
-  return { tirageDuLoto, numerosDuBillet, acheterUnBillet, nuitDuLoto, ligneDuLoto, itemLoto,
+  return { braquable, braquer, rancuneIci,
+    tirageDuLoto, numerosDuBillet, acheterUnBillet, nuitDuLoto, ligneDuLoto, itemLoto,
     evaluerMain, gainDuVideopoker, paquetDuVideopoker, donnerAuVideopoker, tirerAuVideopoker, menuVideopoker,
     encaisser, palierDePrime, annoncerPrime, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, nourrir, cafeine, hopital,

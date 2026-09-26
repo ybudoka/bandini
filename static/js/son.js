@@ -723,6 +723,9 @@ const Son = (function () {
     erreur: function () { if (!joue('erreur')) { ton(330, 0.07, 'triangle', 0.12); ton(247, 0.11, 'triangle', 0.1, 1, 0.06); } },
     etoile: function () { if (!joue('etoile')) { ton(523, 0.15, 'square', 0.2); ton(784, 0.2, 'square', 0.2, 1, 0.12); } },
     sirene: function () { if (!joue('sirene')) ton(700, 0.4, 'square', 0.15, 1.4); },
+    //: L'alarme d'un commerce braque : deux tons qui alternent, trois fois. Synthetisee, comme le
+    //: bip de recul : un ton electronique a trous ne se genere pas (le modele ne fait pas de silence).
+    alarme_commerce: function () { for (let k = 0; k < 6; k++) ton(k % 2 ? 660 : 880, 0.17, 'square', 0.09, 1, k * 0.2); },
     klaxon: function () { if (!joue('klaxon')) { ton(330, 0.25, 'sawtooth', 0.3); ton(415, 0.25, 'sawtooth', 0.3); } },
     choc: function () { if (!joue('choc')) bruit(0.4, 0.5, 1200, 100); },
     explosion: function () { if (!joue('explosion')) { bruit(0.9, 0.8, 600, 40); ton(60, 0.6, 'sine', 0.5, 0.5); } },

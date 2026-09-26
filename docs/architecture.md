@@ -179,7 +179,7 @@ static/img/  favicon.svg favicon.ico icone-180.png icone-192.png icone-512.png l
 static/audio/  bruitages, radios, ambiances et voix (.mp3 ElevenLabs, recette dans app/audio.py)
 tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/fetch/manette/audio,
         frame(n), touches, singe)  test_routes.py test_hors_ligne.py test_definitions.py
-        test_vehicules.py test_armes.py test_armes_js.py test_techniques.py test_techniques_js.py test_videopoker.py test_videopoker_js.py test_loto.py test_loto_js.py test_orignal_js.py test_brouillard.py test_brouillard_js.py test_brume_js.py test_economie.py test_recherche.py test_carte.py test_relief.py
+        test_vehicules.py test_armes.py test_armes_js.py test_techniques.py test_techniques_js.py test_videopoker.py test_videopoker_js.py test_loto.py test_loto_js.py test_orignal_js.py test_brouillard.py test_brouillard_js.py test_braquage_js.py test_brume_js.py test_economie.py test_recherche.py test_carte.py test_relief.py
         test_districts.py test_missions.py test_magasins.py test_pietons.py test_audio.py
         test_version.py test_moteur_js.py test_police_js.py test_histoire_js.py test_piratage_js.py test_sven_missions_js.py test_defis_graduels_js.py
         test_trace_js.py test_districts_js.py test_manettes.py test_manette_js.py test_commandes_js.py test_viser_a_la_gachette_js.py test_menus_au_doigt_js.py test_un_comptoir_reste_ouvert_js.py test_son_js.py

@@ -26,3 +26,19 @@ presque rien ; on ne peut pas braquer sa propre propriété.
 ## Notes
 
 _Rien de livré._
+
+**Livré le 26 sept. 2026.**
+
+- **Le geste** : une arme en main devant le comptoir d'un commis (`emplettes`, `acheter`, `hotdog`),
+  l'invite dit **BRAQUER** ; ACTION — le commis lève les mains (« OK, OK! PRENDS TOUT! ») et vide sa
+  caisse, une **alarme** synthétisée sonne, et la police le sait à l'adresse de la porte (`braquage` :
+  deux étoiles, bruyant — pas de témoin à convaincre).
+- **Les caisses** (`economie.BRAQUAGE`) : 60 $ au terminus, 90 au dépanneur, 240 chez Gus, 120 pour un
+  commerce de rue ; la plus grosse reste sous une heure de taxi (jugé).
+- **La mémoire** : trois jours, le commerce ne te sert plus (même les mains vides) et sa caisse n'a plus
+  que le dixième ; la rancune passée, elle est pleine.
+- **Les tiens** : pas un commerce qui est à toi, ni le kiosque de Madame Thibodeau, ni l'hôpital, le
+  poste, la planque ou le garage de Rocco.
+- **Juges** (`tests/test_braquage_js.py`) : au bouton, la caisse, la chaleur et le crime rapporté ; la
+  rancune ; ni à mains nues ni chez soi ; l'économie. Trois mutations les font rougir.
+

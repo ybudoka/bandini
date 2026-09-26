@@ -264,3 +264,4 @@ Deux documents d'avant la table :
 | Le 6/49 du dépanneur | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-6-49-du-depanneur.md#fiche) · [notes](le-6-49-du-depanneur.md#notes) |
 | L'orignal de La Pointe | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](l-orignal-de-la-pointe.md#fiche) · [notes](l-orignal-de-la-pointe.md#notes) |
 | Le brouillard de Baie-des-Brumes | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-brouillard-de-baie-des-brumes.md#fiche) · [notes](le-brouillard-de-baie-des-brumes.md#notes) |
+| Braquer un commerce | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](braquer-un-commerce.md#fiche) · [notes](braquer-un-commerce.md#notes) |
