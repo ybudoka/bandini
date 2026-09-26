@@ -1100,6 +1100,7 @@ const Jeu = (function () {
         pas('coop', majCoop);              // apres les chars : le passager suit sa tole
         pas('traversier', Traversier.maj); // apres les chars : ce qui est a bord suit la coque
         pas('pont', Pont.maj);             // le pont de glace : il prend, craque au degel, et rend l'eau
+        pas('saintjean', SaintJean.maj);   // la Saint-Jean : le bruit des feux
         pas('neige', Neige.maj);
         pas('brouillard', Brouillard.maj);
         pas('police', Police.maj);
@@ -1200,7 +1201,7 @@ const Jeu = (function () {
     if (!B.interieur) { Autobus.dessinerRails(ctx, vue); Neige.dessinerPanneaux(ctx, vue); Blocs.dessiner(ctx, vue); Monde.dessinerBattants(ctx, vue); Monde.dessinerPortesDeGarage(ctx, vue); Monde.dessinerBarrieresCoulissantes(ctx, vue); Monde.dessinerBarrieres(ctx, vue); }
     Entites.dessinerDecals(ctx, vue);     // le sang est SOUS les pieds
     if (!B.interieur) Histoire.dessinerCheminCourse(ctx, vue);   // le trace d'une course, sur la chaussee
-    if (!B.interieur) { Conduite.dessinerSol(ctx, vue); Rue.dessinerSol(ctx, vue); }          // la case, les lignes, les cones d'une epreuve au volant
+    if (!B.interieur) { Conduite.dessinerSol(ctx, vue); Rue.dessinerSol(ctx, vue); SaintJean.dessinerDefile(ctx, vue); }          // la case, les lignes, les cones d'une epreuve au volant
     if (!B.interieur) Entites.dessinerBetes(ctx, vue);   // un goeland passe sous personne
     Entites.dessiner(ctx, vue);
     Entites.dessinerCible(ctx, vue);
@@ -1218,6 +1219,8 @@ const Jeu = (function () {
     if (!B.interieur) for (const l of Vehicules.lampesDesFeux()) lampes.push(l);
     // Les phares (la nuit a ses habitudes) : ramasses en dessinant, comme les feux.
     if (!B.interieur) for (const l of Vehicules.lampesDesPhares()) lampes.push(l);
+    // Les eclats des feux de la Saint-Jean.
+    if (!B.interieur) for (const l of SaintJean.lampes(vue)) lampes.push(l);
     // Les fleches d'une course : lumineuses, meme la nuit.
     if (!B.interieur) for (const l of Histoire.lampesDeCourse(vue)) lampes.push(l);
     const projecteur = !B.interieur ? Police.lampeHelico(vue) : null;
@@ -1230,6 +1233,9 @@ const Jeu = (function () {
     if (B.photo) Base.ecran().filter = FILTRES_PHOTO[B.photo.filtre].css;
     Base.fin(Verglas.ambiance(Monde.ambiance()), lampes, corpsPhares);   // au noir, la nuit est plus noire
     if (B.photo) Base.ecran().filter = 'none';
+    // ⚠️ LES FEUX D'ARTIFICE PAR-DESSUS LA NUIT : une fusee fait sa propre lumiere. Peints sous la nuit,
+    // ils s'y eteignaient (vu a la capture : une lueur, pas un eclat) ; leurs lampes eclairent la ville.
+    if (!B.interieur) SaintJean.dessinerFeux(Base.ecran(), vue);
     Hud.dessiner();
   }
 
@@ -1489,7 +1495,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, Incendies: Incendies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Conduite: Conduite, Rue: Rue, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Incendies: Incendies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Conduite: Conduite, Rue: Rue, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,

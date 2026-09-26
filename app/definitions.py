@@ -35,7 +35,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-from . import (armes, audio, blocs, calendrier, carte, derby, motoneige, devantures, dojo, economie, garderobe, interactions, journal, magasins,
+from . import (armes, audio, blocs, calendrier, carte, derby, motoneige, saint_jean, devantures, dojo, economie, garderobe, interactions, journal, magasins,
                brouillard, loto, manettes, missions, nuit, pietons, recherche, techniques, vehicules, verglas, videopoker,
                pont_de_glace, visages)
 from .version import VERSION
@@ -75,6 +75,8 @@ def assembler() -> dict:
         "calendrier": calendrier.pour_le_navigateur(),
         # La course des bois de La Pointe, lue sur la ville finie (docs/jalons/la-motoneige.md).
         "motoneige": motoneige.pour_le_navigateur(ville),
+        # Le soir du 24 juin : la rue du défilé, les feux (docs/jalons/la-saint-jean-sur-la-baie.md).
+        "saint_jean": saint_jean.pour_le_navigateur(ville),
         # Le chemin sur la baie gelée, lu sur la ville finie (docs/jalons/le-pont-de-glace.md).
         "pont": pont_de_glace.pour_le_navigateur(ville, carte.LEGENDE),
         # L'arène du derby, lue sur la ville finie (docs/jalons/le-derby-de-demolition-a-la-foire.md).

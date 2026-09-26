@@ -732,6 +732,9 @@ const Son = (function () {
     klaxon: function () { if (!joue('klaxon')) { ton(330, 0.25, 'sawtooth', 0.3); ton(415, 0.25, 'sawtooth', 0.3); } },
     choc: function () { if (!joue('choc')) bruit(0.4, 0.5, 1200, 100); },
     explosion: function () { if (!joue('explosion')) { bruit(0.9, 0.8, 600, 40); ton(60, 0.6, 'sine', 0.5, 0.5); } },
+    // Un feu d'artifice qui eclate (la Saint-Jean) : un claquement sec, et le crepitement qui retombe.
+    // Synthetise : pas d'echantillon a payer pour un soir par annee.
+    artifice: function () { bruit(0.12, 0.35, 3000, 900); bruit(0.7, 0.12, 5000, 1500); ton(180, 0.2, 'sine', 0.2, 0.5); },
     // --- L'eau ---------------------------------------------------------------
     // ⚠️ Jusqu'ici, entrer dans l'eau jouait `choc` — la TOLE FROISSEE d'un
     // accident de char — et nager ne jouait rien du tout : les pas sont coupes

@@ -482,6 +482,10 @@ const Monde = (function () {
   //: cher que tout le reste du mecanisme.
   let entraveJour = { jour: -1, b: null };
   function entraveDuJour() {
+    // ⚠️ LE SOIR DE LA SAINT-JEAN, la rue du defile PREND LA PLACE de l'entrave du jour : une seule rue
+    // fermee a la fois, toujours (`SaintJean.fermeture`, une des `fermetures` de la carte).
+    const fete = typeof SaintJean !== 'undefined' && carte && !carte.interieur ? SaintJean.fermeture() : null;
+    if (fete) return fete;
     const def = carte && carte.def;
     const voies = (def && def.entraves) || [];        // une voie fermee
     const rues = (def && def.fermetures) || [];       // la rue entiere barree
