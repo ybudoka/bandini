@@ -26,6 +26,19 @@ le vrai téléphone ») — le mesurer avant de l'allumer par défaut, comme la 
 **Juges** : le même brouillard le même matin pour tout le monde ; la portée de vue de la police baisse
 quand il est là et revient après ; aucun dé tiré par le brouillard.
 
+### Le plan (26 sept. 2026)
+
+1. `app/brouillard.py` : les matins (une chance par jour, à l'empreinte du jour), la montée de l'aube, le
+   plein, la levée avant midi ; les effets (le voile, la vue de la police, la corne), plus épais aux
+   Quais et à La Pointe.
+2. `static/js/brouillard.js` : `intensiteA(jour, heure)` pure, comme la neige ; derrière l'option
+   `brouillard` (NON par défaut, « BROUILLARD (ESSAI) ») tant que la sonde du navigateur ne l'a pas jugé.
+3. Le voile : clair au centre, épais aux bords de l'écran — on voit autour de soi, pas au bout de la rue.
+4. La police et les témoins voient moins loin (`Police.voit`, `quelqu_un_voit`) ; la corne du phare
+   sonne ; le Clairon l'annonce la veille, sous la manchette.
+5. Juges : le même brouillard pour tout le monde, la vue qui baisse et revient, aucun dé, l'annonce de la
+   veille ; et la sonde du navigateur (`test_navigateur.py`), comme la neige.
+
 ## Notes
 
 _Rien de livré._
