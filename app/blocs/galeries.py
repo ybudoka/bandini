@@ -7,7 +7,8 @@ utilisée — sait où tu es. Un gardien qui n'est peut-être pas un gardien. Dr
 ensuite, jamais gore (`static/js/galeries.js`).
 
 ⚠️ **UN BLOC**, comme le ciné-parc et la cabane : une grande pièce de plus EN VILLE aurait fait glisser la
-ville. On y entre par le bord OUEST des Érables ; on arrive par l'entrée du stationnement.
+ville. On y entre par le bord OUEST des Érables ; on arrive par l'entrée EST du stationnement, et on
+ressort en poussant vers l'est — dans le sens où l'on était venu.
 """
 
 from .. import carte
@@ -24,10 +25,10 @@ PLAN: tuple[str, ...] = (
     "A,,,,,OOOOOOOOOOOOOOOOOOOOOOOOOOOO,,,,,A",
     "A,,,,,FWWFWWFWWFWWFDFFWWFWWFWWFWWF,,,,,A",
     "A,,,................................,,,A",
-    "####################################,,,A",
-    "####################################,,,A",
-    "#######^^^^^^^^^^^^^^^^^^^^^^^^^^^##,,,A",
-    "####################################,,,A",
+    "A,,,####################################",
+    "A,,,####################################",
+    "A,,,###^^^^^^^^^^^^^^^^^^^^^^^^^^^######",
+    "A,,,####################################",
     "A,,,################################,,,A",
     "A,,,################################,,,A",
     "A,,,###^^^^^^^^^^^^^^^^^^^^^^^^^^^##,,,A",
@@ -112,8 +113,10 @@ BLOC = {
     # Le passage : le trottoir de ceinture du bord OUEST des Érables (rangées 60 à 64), au nord du chalet
     # (164 à 168).
     "passage": {"bord": "ouest", "de": 60, "l": 5},
-    "retour": {"bord": "ouest", "de": 11, "l": 4},
-    "arrivee": {"x": 2, "y": 12},
+    # ⚠️ On y entre en poussant vers l'OUEST : on arrive donc par le côté EST du bloc, et on en ressort en
+    # poussant vers l'est (Martin, 26 sept. 2026 : « on entre à l'ouest et on sort aussi à l'ouest »).
+    "retour": {"bord": "est", "de": 11, "l": 4},
+    "arrivee": {"x": 37, "y": 12},
     "gens": False,
     "portes": [{"x": 19, "y": 9, "interieur": "galeries", "lieu": "galeries"}],
     "pieces": {"galeries": PIECE},

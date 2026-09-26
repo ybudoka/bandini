@@ -35,7 +35,9 @@ la nuit et la voix sont là ; la mission viendra s'y poser.
 
 - **Les Galeries de la Baie** (`app/blocs/galeries.py`) : un bloc de carte, comme le ciné-parc et la
   cabane — une grande pièce EN VILLE aurait fait glisser la ville. On y entre par le bord OUEST des Érables
-  (rangées 60 à 64) ; un stationnement, la façade de vitrines, et dedans une grande pièce : les boutiques
+  (rangées 60 à 64) et on arrive par l'entrée EST du stationnement — on en ressort en poussant vers l'est,
+  dans le sens où l'on était venu (retour de Martin : « on entre à l'ouest et on sort aussi à l'ouest » ; un
+  juge le tient pour tous les blocs, `test_blocs.py`) ; un stationnement, la façade de vitrines, et dedans une grande pièce : les boutiques
   (leurs étagères), deux comptoirs, l'escalier roulant arrêté, la fontaine, l'aire de restauration.
 - **Le jour**, un centre d'achat ordinaire : des commis et des clients, les comptoirs. **La nuit**, personne
   (`vide_la_nuit`, lu par `Entites.peuplerInterieur` avec l'heure du dehors — dans une pièce, il ne fait

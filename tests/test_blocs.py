@@ -69,3 +69,13 @@ def test_la_carte_d_un_bloc_a_ce_que_monde_charger_lit():
             assert cle in c, f"{bloc['slug']} : « {cle} » manque"
         assert len(c["voie"]) == c["hauteur"] and len(c["voie"][0]) == c["largeur"]
         json.dumps(c)
+
+
+def test_on_ressort_d_un_bloc_dans_le_sens_ou_l_on_est_venu():
+    """⚠️ Martin, 26 sept. 2026 (les Galeries) : « on entre à l'ouest et on sort aussi à l'ouest ». On pousse
+    contre le bord OUEST de la ville : on arrive donc par le côté EST du bloc, et on en ressort en poussant
+    vers l'est. Le retour d'un bloc est sur le bord OPPOSÉ à son passage en ville."""
+    oppose = {"nord": "sud", "sud": "nord", "ouest": "est", "est": "ouest"}
+    for bloc in blocs.BLOCS:
+        assert bloc["retour"]["bord"] == oppose[bloc["passage"]["bord"]], (
+            f"{bloc['slug']} : passage au {bloc['passage']['bord']}, retour au {bloc['retour']['bord']}")
