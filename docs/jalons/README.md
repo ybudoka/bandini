@@ -269,3 +269,4 @@ Deux documents d'avant la table :
 | Les nids-de-poule qui mordent | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](les-nids-de-poule-qui-mordent.md#fiche) · [notes](les-nids-de-poule-qui-mordent.md#notes) |
 | La tempête de verglas | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](la-tempete-de-verglas.md#fiche) · [notes](la-tempete-de-verglas.md#notes) |
 | Le derby de démolition à la foire | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-derby-de-demolition-a-la-foire.md#fiche) · [notes](le-derby-de-demolition-a-la-foire.md#notes) |
+| Un vrai chalet dedans, et son foyer | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](un-vrai-chalet-dedans-et-son-foyer.md#fiche) · [notes](un-vrai-chalet-dedans-et-son-foyer.md#notes) |

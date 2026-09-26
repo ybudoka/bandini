@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (249 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (250 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -107,7 +107,6 @@ pas quand l'ordre de travail change.
 | Le temps des Fêtes | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-temps-des-fetes.md#fiche) |
 | Le ciné-parc | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-cine-parc.md#fiche) |
 | Une amélioration générale des toits | ⬜ **à faire** (à trancher par Martin : la liste, et par où commencer) | — | **P4** | ajout | [fiche](jalons/une-amelioration-generale-des-toits.md#fiche) |
-| Un vrai chalet dedans, et son foyer | ⬜ **en cours** | 26 sept. 2026 | **P4** | ajout | [fiche](jalons/un-vrai-chalet-dedans-et-son-foyer.md#fiche) |
 
 ## L'ordre
 
