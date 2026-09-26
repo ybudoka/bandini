@@ -35,9 +35,9 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-from . import (armes, audio, blocs, carte, derby, devantures, dojo, economie, garderobe, interactions, journal, magasins,
+from . import (armes, audio, blocs, calendrier, carte, derby, devantures, dojo, economie, garderobe, interactions, journal, magasins,
                brouillard, loto, manettes, missions, nuit, pietons, recherche, techniques, vehicules, verglas, videopoker,
-               visages)
+               pont_de_glace, visages)
 from .version import VERSION
 
 
@@ -71,6 +71,10 @@ def assembler() -> dict:
         "brouillard": brouillard.pour_le_navigateur(),
         # Trois jours de glace (docs/jalons/la-tempete-de-verglas.md).
         "verglas": verglas.pour_le_navigateur(),
+        # L'année du jeu : quarante jours, douze mois, quatre saisons (`calendrier.py`).
+        "calendrier": calendrier.pour_le_navigateur(),
+        # Le chemin sur la baie gelée, lu sur la ville finie (docs/jalons/le-pont-de-glace.md).
+        "pont": pont_de_glace.pour_le_navigateur(ville, carte.LEGENDE),
         # L'arène du derby, lue sur la ville finie (docs/jalons/le-derby-de-demolition-a-la-foire.md).
         "derby": derby.pour_le_navigateur(ville),
         # Le billet de Ti-Paul, et le tirage de la nuit (docs/jalons/le-6-49-du-depanneur.md).

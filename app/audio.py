@@ -1405,6 +1405,16 @@ def voix_loto() -> list[dict]:
             for r in loto.repliques()]
 
 
+def serie_de_voix(prefixe: str, voix: list[dict]) -> dict:
+    """Une serie de voix pour le paquet (`exporter()["series"]`) : ce qu'elles ont en commun, une fois,
+    et leurs noms (le slug sans le prefixe). ⚠️ Elles doivent TOUT partager sauf le slug."""
+    premiere = voix[0]
+    commun = {k: premiere[k] for k in ("qui", "mission", "partie", "telephone", "volume")}
+    assert all(v["slug"].startswith(prefixe) and {k: v[k] for k in commun} == commun for v in voix), prefixe
+    return {"prefixe": prefixe, "noms": [v["slug"][len(prefixe):] for v in voix], **commun,
+            "sans_fichier": [v["slug"][len(prefixe):] for v in voix if not chemin_voix(v).is_file()]}
+
+
 def voix_ouverture() -> list[dict]:
     """Les quatre phrases de l'ouverture, dites par le narrateur du Clairon.
 
@@ -1739,6 +1749,11 @@ def exporter() -> dict:
             {"slug": v["slug"], "qui": v["qui"], "mission": v["mission"], "partie": v["partie"],
              "telephone": v["telephone"], "volume": v["volume"],
              "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None}
-            for v in voix_journal() + voix_loto() + voix_ouverture() + voix_repos()
+            for v in voix_journal() + voix_ouverture() + voix_repos()
         ],
+        # ⚠️ LES SERIES : des voix qui ne different que par leur NOM (les 55 du tirage du 6/49) voyagent
+        # en une ligne — le prefixe, les noms, ce qu'elles ont en commun, et celles dont le mp3 manque.
+        # Declarees une par une, elles pesaient 8 870 octets bruts et firent deborder le paquet
+        # (`test_le_paquet_reste_leger`, 26 sept. 2026). `Son.Voix.histoire()` les deplie au chargement.
+        "series": [serie_de_voix("narrateur-loto-", voix_loto())],
     }

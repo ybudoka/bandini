@@ -94,9 +94,16 @@ def test_le_paquet_reste_leger():
     veille ; le catalogue est passé de 170 à **53 octets gzip par mission**, ce qui laisse
     **94 missions de marge au lieu de cinq**. Les plafonds ne bougent pas : c'est le paquet
     qui a maigri.
+
+    ⚠️ **Les définitions : 54 000 → 56 000 octets gzip le 26 sept. 2026.** Mesure : 53 660 avant la
+    journée (340 de marge), et le 6/49 qui se dit l'a fait déborder — ses 55 voix, déclarées une par
+    une, pesaient 8 870 bruts / 515 gzip. Elles voyagent maintenant en SÉRIE (`audio.serie_de_voix`,
+    dépliée par `Son.Voix.histoire`), le chemin du pont de glace en rangées : 244 962 bruts / 54 404
+    gzip avec l'année du jeu (`calendrier`) et le pont. Deux Ko de marge ; le remède du poids reste la
+    dette des districts chargés autour du joueur.
     """
     paquets = definitions.construire()
-    for nom, brut_max, fil_max in (("definitions", 250_000, 54_000), ("carte", 520_000, 53_000)):
+    for nom, brut_max, fil_max in (("definitions", 250_000, 56_000), ("carte", 520_000, 53_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))

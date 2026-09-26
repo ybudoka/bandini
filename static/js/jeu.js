@@ -105,6 +105,7 @@ const Jeu = (function () {
     Neige.oublier();                         // la rue d'une partie rechargee est blanche
     Brouillard.oublier();
     Verglas.oublier();
+    Pont.oublier();                          // la baie d'une partie rechargee a toute son eau
     Incendies.oublier();                     // une nouvelle partie n'hérite pas des feux éteints
     Interactions.oublier();                  // ni de la soif des fontaines
     Monde.oublierLesRuesMouillees();         // ni de l'arroseuse d'une autre nuit
@@ -1098,6 +1099,7 @@ const Jeu = (function () {
         pas('vehicules', Vehicules.maj);
         pas('coop', majCoop);              // apres les chars : le passager suit sa tole
         pas('traversier', Traversier.maj); // apres les chars : ce qui est a bord suit la coque
+        pas('pont', Pont.maj);             // le pont de glace : il prend, craque au degel, et rend l'eau
         pas('neige', Neige.maj);
         pas('brouillard', Brouillard.maj);
         pas('police', Police.maj);
@@ -1186,6 +1188,7 @@ const Jeu = (function () {
     Monde.dessinerSol(ctx, vue);
     if (B.interieur) Monde.dessinerFoyers(ctx, vue);   // le feu du foyer (le chalet du rang) : il danse, il ne se cuit pas
     if (!B.interieur) Monde.dessinerNids(ctx, vue);    // les nids-de-poule, dans la chaussee
+    if (!B.interieur) Pont.dessiner(ctx, vue);        // le pont de glace et ses sapins, sous la neige
     if (!B.interieur) Verglas.dessinerSol(ctx, vue);   // la glace : le reflet, les eclats, les branches cassees
     if (!B.interieur) Neige.dessinerSol(ctx, vue);     // la neige au sol, SOUS les rails et les gens
     if (!B.interieur) Monde.dessinerMouille(ctx, vue); // derriere l'arroseuse (la nuit a ses habitudes)
@@ -1486,7 +1489,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Incendies: Incendies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Conduite: Conduite, Rue: Rue, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, Incendies: Incendies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Conduite: Conduite, Rue: Rue, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,

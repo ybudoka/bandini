@@ -1159,7 +1159,23 @@ const Son = (function () {
     enCours: null,           // la replique qui joue { source, gain }
     demandees: [],           // les slugs demandes (le banc n'a pas d'AudioContext : il verifie ceci)
     missionsChargees: new Set(),
-    histoire: function () { return (B.defs && B.defs.audio && B.defs.audio.histoire) || []; },
+    histoire: function () {
+      const a = B.defs && B.defs.audio;
+      if (!a) return [];
+      // ⚠️ LES SERIES (`audio.exporter()["series"]`, les 55 voix du 6/49) se deplient ICI, une fois, DANS
+      // la liste du paquet : c'est elle que tout le monde lit, et qu'une mission complete a son tour.
+      if (a.series) {
+        a.histoire = a.histoire || [];
+        for (const s of a.series) {
+          for (const nom of s.noms) {
+            a.histoire.push({ slug: s.prefixe + nom, qui: s.qui, mission: s.mission, partie: s.partie, telephone: s.telephone,
+                              volume: s.volume, fichier: s.sans_fichier.indexOf(nom) >= 0 ? null : 'histoire-' + s.prefixe + nom + '.mp3' });
+          }
+        }
+        delete a.series;
+      }
+      return a.histoire || [];
+    },
 
     /** Les repliques d'une mission se telechargent quand on commence a lui parler. */
     chargerHistoire: function (mission) {

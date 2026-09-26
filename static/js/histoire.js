@@ -75,7 +75,7 @@ const Histoire = (function () {
         // paquet, et celles d'une mission n'y sont plus : sans cette ligne, le texte
         // s'afficherait et personne ne parlerait. `chargerHistoire` va chercher les
         // mp3 ensuite, comme avant.
-        const connues = (B.defs.audio && B.defs.audio.histoire) || [];
+        const connues = Son.Voix.histoire();   // (les series du paquet, depliees)
         (d.voix || []).forEach(function (v) {
           if (!connues.some(function (x) { return x.slug === v.slug; })) connues.push(v);
         });

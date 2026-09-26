@@ -1986,7 +1986,7 @@ const Hud = (function () {
       bilan, les commandes, les options et les triches sont les onglets d'a cote
       (`ONGLETS`) — ils etaient des lignes de cette liste. */
   function menuPause() {
-    return enOnglet('pause', { titre: 'PAUSE', sur: 'JOUR ' + B.partie.jour + ' ' + Monde.heureTexte(), items: [
+    return enOnglet('pause', { titre: 'PAUSE', sur: Calendrier.jourEcrit(B.partie.jour) + ' ' + Monde.heureTexte(), items: [
       { libelle: 'REPRENDRE', faire: function () { Jeu.reprendre(); return true; } },
       { libelle: 'CARTE DE LA VILLE', faire: function () { Jeu.ouvrirCarte(); return true; } },
       { libelle: 'MODE PHOTO', faire: function () { Jeu.ouvrirPhoto(); return true; } },
@@ -3585,7 +3585,7 @@ const Hud = (function () {
       // poursuite, c'est L'information, et elle etait deux fois plus petite
       // que le montant d'argent juste au-dessus.
       const boiteEtoiles = dessinerEtoiles(ctx);
-      const heure = 'JOUR ' + p.jour + ' ' + Monde.heureTexte();
+      const heure = Calendrier.jourEcrit(p.jour) + ' ' + Monde.heureTexte();   // le mois : l'annee du jeu
       const largeurHeure = Atlas.largeurTexte(heure, 1);
       texte(ctx, heure, VW - marge - largeurHeure, 20, '#cdc6e6', 1);
       // Le moment de la journee, devant l'heure : on lit « la nuit » d'un coup

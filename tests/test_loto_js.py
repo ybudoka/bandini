@@ -96,7 +96,7 @@ def test_le_narrateur_dit_le_tirage_apres_la_une(banc):
         V.demandees.length = 0;
         M.nouveauJour();
         const suite = M.sequenceDuLoto(), demandees = V.demandees.slice();
-        const declarees = new Set(B.defs.audio.histoire.map(function (v) { return v.slug; }));
+        const declarees = new Set(V.histoire().filter(function (v) { return v.fichier; }).map(function (v) { return v.slug; }));
         // Le lendemain, sans billet : rien du 6/49.
         p.jour += 1; V.demandees.length = 0; M.nouveauJour();
         return { tirage: t, suite: suite, demandees: demandees, manquent: (suite || []).filter(function (s) { return !declarees.has(s); }),

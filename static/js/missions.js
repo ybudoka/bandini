@@ -2095,7 +2095,7 @@ const Missions = (function () {
     const loto = B.defs.loto ? nuitDuLoto() : null;
     // Le brouillard de demain matin : le Clairon l'annonce la veille, sous la manchette.
     const brume = typeof Brouillard !== 'undefined' ? Brouillard.annonceDeDemain() : null;
-    const dessous = [loto, brume, Verglas.ligneDuClairon(), decompteDesNids()].filter(Boolean);
+    const dessous = [loto, brume, Verglas.ligneDuClairon(), Pont.ligneDuClairon(), decompteDesNids()].filter(Boolean);
     const m = manchetteDuJour();
     if (m) { B.partie.derniereManchette = m; direLaManchette(m, dessous); }
     else { Hud.message(dessous[0] || 'JOUR ' + B.partie.jour); direLeLoto(); }

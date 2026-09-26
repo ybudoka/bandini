@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (251 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (252 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -101,7 +101,6 @@ pas quand l'ordre de travail change.
 | Le 1er juillet, jour du déménagement | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-1er-juillet-jour-du-demenagement.md#fiche) |
 | La Saint-Jean sur la baie | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/la-saint-jean-sur-la-baie.md#fiche) |
 | Les enseignes qui ouvrent pour vrai : bingo, quilles, lave-auto, Rialto | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/les-enseignes-qui-ouvrent-pour-vrai.md#fiche) |
-| Le pont de glace | ⬜ **en cours** | 26 sept. 2026 | **P4** | ajout | [fiche](jalons/le-pont-de-glace.md#fiche) |
 | La motoneige | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/la-motoneige.md#fiche) |
 | Le centre d'achat hanté | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-centre-d-achat-hante.md#fiche) |
 | Le temps des Fêtes | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-temps-des-fetes.md#fiche) |
@@ -150,7 +149,6 @@ Ce que chaque ligne à faire attend (la table de tri du 13 sept. 2026, réduite 
 | **P4** | ajout | Le 1er juillet, jour du déménagement | 2 | gagne à suivre **les collections** (les meubles du trottoir vont à la planque) |
 | **P4** | ajout | La Saint-Jean sur la baie | 3 | les barrières ferment les rues du défilé ; ⚠️ la foule et le rendu sur le vrai téléphone |
 | **P4** | ajout | Les enseignes qui ouvrent pour vrai : bingo, quilles, lave-auto, Rialto | 3 | quatre intérieurs ; ⚠️ la ville promet déjà ces enseignes — le plus proche d'un mensonge du lot |
-| **P4** | ajout | Le pont de glace | 3 | la neige de M12 ; ⚠️ l'eau est une couche que beaucoup de juges tiennent |
 | **P4** | ajout | La motoneige | 2 | gagne à suivre **le pont de glace** ; un sprite de plus |
 | **P4** | ajout | Le centre d'achat hanté | 2 | la voix existe déjà (« annonceur centre d'achat 2 », libre) ; une audition de Martin |
 | **P4** | ajout | Le temps des Fêtes | 2 | la neige de M12 ; la musique de Noël est une dépense à trancher |
