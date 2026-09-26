@@ -3822,6 +3822,48 @@ const TUILES = (function () {
       ctx.fillStyle = '#ffd23a';
       ctx.fillRect(12, 12, 1, 2);                       // la fente a monnaie
     },
+    /* Le DOJO DION (docs/jalons/le-dojo-du-quartier.md). Le TATAMI : des nattes vert pale, un
+       joint sombre toutes les huit pixels (deux nattes par tuile), et le liseré noir aux bords
+       — lu comme le galon du tapis (`v & 1..8` : ou le tatami S'ARRETE). */
+    'A': function (ctx, v, T) {
+      const nord = !(v & 1), est = !(v & 2), sud = !(v & 4), ouest = !(v & 8);
+      plein(ctx, '#a9b98a', T);
+      ctx.fillStyle = '#b8c79a';
+      for (let y = 1; y < T; y += 4) ctx.fillRect(0, y, T, 1);   // le grain de la paille
+      ctx.fillStyle = '#8e9e70';
+      ctx.fillRect(Math.floor(T / 2), 0, 1, T);                   // le joint entre deux nattes
+      ctx.fillStyle = '#23241c';
+      if (nord) ctx.fillRect(0, 0, T, 1);
+      if (sud) ctx.fillRect(0, T - 1, T, 1);
+      if (ouest) ctx.fillRect(0, 0, 1, T);
+      if (est) ctx.fillRect(T - 1, 0, 1, T);
+    },
+    // Le SAC DE FRAPPE : la chaine qui descend du plafond, le sac rouge sombre, son ombre.
+    '@': function (ctx, v, T) {
+      ctx.fillStyle = 'rgba(0,0,0,0.20)';
+      ctx.fillRect(4, 14, 9, 2);                        // l'ombre au pied
+      ctx.fillStyle = '#7d7d86';
+      ctx.fillRect(8, 0, 1, 3);                         // la chaine
+      ctx.fillStyle = '#6b1f1c';
+      ctx.fillRect(5, 3, 7, 11);                        // le sac
+      ctx.fillStyle = '#8a2c27';
+      ctx.fillRect(6, 3, 2, 11);                        // le lustre du cuir
+      ctx.fillStyle = '#3a1210';
+      ctx.fillRect(5, 6, 7, 1); ctx.fillRect(5, 11, 7, 1);   // les deux sangles
+    },
+    // Le MANNEQUIN DE BOIS : le tronc, trois bras courts qui depassent, le pied.
+    '%': function (ctx, v, T) {
+      ctx.fillStyle = 'rgba(0,0,0,0.20)';
+      ctx.fillRect(4, 14, 9, 2);
+      ctx.fillStyle = '#7a5a36';
+      ctx.fillRect(6, 1, 5, 12);                        // le tronc
+      ctx.fillStyle = '#95714a';
+      ctx.fillRect(7, 1, 1, 12);                        // le fil du bois
+      ctx.fillStyle = '#5c4228';
+      ctx.fillRect(2, 4, 4, 2); ctx.fillRect(11, 4, 4, 2);   // les deux bras du haut
+      ctx.fillRect(11, 8, 3, 2);                        // le bras du bas
+      ctx.fillRect(5, 13, 7, 2);                        // le pied
+    },
   };
 })();
 

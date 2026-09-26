@@ -53,6 +53,8 @@ TYPES_SERVIS = frozenset({
     "rame",
     # Le videopoker du Brouillard et du depanneur (`videopoker.py`, `Missions.menuVideopoker`).
     "videopoker",
+    # Le comptoir de Mireille au DOJO DION (docs/jalons/le-dojo-du-quartier.md).
+    "cours",
 })
 #: ⚠️ Le point d'un PERSONNAGE posé dedans (`ou: "point:<type>"` — le sergent, Josée, Lulu,
 #: Ovila, le Dr Lachance) est servi par `Histoire.personnageDuPoint`, et se lit dans le
@@ -332,6 +334,10 @@ def test_les_commerces_ont_quelqu_un_derriere_le_comptoir():
     assert boutiques, "aucune piece de commerce ordinaire"
     for slug in boutiques:
         gens = PIECES[slug]["gens"]
+        # ⚠️ Le DOJO DION n'a pas de commis : c'est Mireille, un personnage, qui tient son
+        # comptoir (le point `cours`, docs/jalons/le-dojo-du-quartier.md).
+        if any(p["type"] == "cours" for p in PIECES[slug]["points"]):
+            continue
         assert any(g["qui"] == "commis" for g in gens), f"{slug} : personne au comptoir"
 
 
@@ -402,7 +408,9 @@ def test_les_blocs_sont_le_lit_la_table_le_tapis_et_la_machine():
     ⚠️ Le FOYER (« Y ») et la PEAU D'OURS (« U ») du chalet du rang (26 sept. 2026) : l'âtre
     court d'une tuile à l'autre (une bûche, une ouverture, pas deux cheminées collées), et la
     bête de deux sur deux peint chacun son quart (une tête, quatre pattes, pas quatre oursons)."""
-    assert BLOCS == {"l", "a", "y", "m", "o", "r", "Y", "U"}
+    # ⚠️ Le TATAMI du DOJO DION (« A ») aussi : son peintre lit le masque pour ne border de noir
+    # que les cotes ou le tatami s'arrete, comme le galon du tapis.
+    assert BLOCS == {"l", "a", "y", "m", "o", "r", "Y", "U", "A"}
 
 
 @pytest.mark.parametrize("slug", sorted(PIECES))

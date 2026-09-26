@@ -69,7 +69,7 @@ COMMERCES: dict[str, tuple[tuple[str, str], ...]] = {
     # Le Faubourg : le centre-ville ouvrier, celui qui a de tout et rien de neuf.
     "faubourg": (
         ("TABAGIE DUBOIS", "commerce"), ("ÉPICERIE MARCEL", "bouffe"),
-        ("BARBIER GILLES", "service"), ("SALON MIREILLE", "service"),
+        ("BARBIER GILLES", "service"), ("SALON LOUISE", "service"),
         ("QUINCAILLERIE", "artisan"), ("PHARMACIE ROY", "sante"),
         ("BOULANGERIE", "bouffe"), ("CORDONNERIE", "artisan"),
         ("DISQUES VOGUE", "savoir"), ("TAVERNE CHEZ GO", "nuit"),

@@ -1108,7 +1108,7 @@ const Missions = (function () {
     lulu: 'PARLER', ovila: 'PARLER',
     emplettes: 'ACHETER', salon: 'SE FAIRE COIFFER', escalier: 'MONTER', fouiller: 'FOUILLER',
     fourriere: 'LE LOT', avocat: 'PARLER À L’AVOCAT', hacker: 'LE COMPTOIR DU FOND',
-    distributrice: 'LA MACHINE', videopoker: 'LE VIDÉOPOKER',
+    distributrice: 'LA MACHINE', videopoker: 'LE VIDÉOPOKER', cours: 'LES COURS',
     // Le metro : monter dans la rame au quai, en descendre dans la rame.
     rame: 'LA RAME',
   };

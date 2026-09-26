@@ -414,6 +414,7 @@ const Entites = (function () {
     if (g.qui === 'commis') return archetype('commis');
     if (g.qui === 'soignant') return archetype('soignante');
     if (g.qui === 'avocat') return archetype('avocat');
+    if (g.qui === 'eleve') return archetype('eleve');   // Kevin, au DOJO DION
     const hasard = (hash2(g.x * 131 + g.y, 0xD0C) % 1000) / 1000;
     if (g.qui === 'malade') {
       const jaquette = archetype('malade'), rue = archetypeDeRue(g.x * TT, g.y * TT, hasard);

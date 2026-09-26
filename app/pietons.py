@@ -205,6 +205,11 @@ CATALOGUE: list[Pieton] = [
     _p("commis", "Commis", "#d8d8d0", "#4a3320", "#e8b088", "#3a3a4a",
        vitesse=0.55, courage=0.3, vie=65, argent=(25, 95), temoin=0.5,
        metier="commerce", frequence=0.0),
+    # L'ELEVE du DOJO DION (docs/jalons/le-dojo-du-quartier.md) : Kevin, le partenaire des
+    # lecons, dedans seulement (frequence 0). Le kimono blanc, haut et bas.
+    _p("eleve", "Élève", "#f4f1e8", "#2a1d12", "#e8b088", "#f4f1e8",
+       vitesse=0.8, courage=0.0, vie=80, argent=(0, 5), temoin=0.0,
+       metier="dojo", frequence=0.0),
     # ⚠️ Les gens de l'HOPITAL, dedans seulement (frequence 0), comme le commis.
     # La soignante tient le triage et le poste des infirmieres : la blouse
     # blanche et le pantalon vert d'hopital, c'est ce qui dit « on est a

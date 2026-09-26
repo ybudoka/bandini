@@ -24,7 +24,11 @@ SANS_MENU = ("escalier", "fouiller", "rame") + tuple(
 #: C'est la seule facon honnete d'avoir un comptoir dessine avant son menu —
 #: sans elle, on exempterait par habitude et « guichet » renaîtrait.
 #: Vide depuis le 13 sept. 2026 : le lot de la fourriere a recu son menu.
-EN_CHANTIER: dict[str, str] = {}
+EN_CHANTIER: dict[str, str] = {
+    # Le comptoir de Mireille : c'est ELLE qui le sert (un personnage, `point:cours`), a la
+    # 2e tache du dojo (docs/jalons/le-dojo-du-quartier.md). On l'enleve ce jour-la.
+    "cours": "le dojo du quartier, 2e tâche",
+}
 
 #: ⚠️ LES POINTS DE LA VILLE LIVREE, pas ceux du catalogue du module. Depuis
 #: que les commerces et les logements se POSENT a la mesure de leur batiment,

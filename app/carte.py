@@ -418,6 +418,12 @@ LEGENDE: dict[str, dict] = {
     "V": {"nom": "chaise berçante", "solide": 3, "meuble": True},
     "N": {"nom": "panache d'orignal", "solide": 1},
     "&": {"nom": "raquettes au mur", "solide": 1},
+    # Le DOJO DION (docs/jalons/le-dojo-du-quartier.md) : le tatami ou l'on apprend, le sac de
+    # frappe et le mannequin de bois au fond. Trois glyphes libres le 26 sept. 2026 — ⚠️ pas Y, K, U :
+    # le chalet du rang les a pris le meme jour (le foyer, la cheminee, la peau d'ours).
+    "A": {"nom": "tatami", "dedans": True, "bloc": True},
+    "@": {"nom": "sac de frappe", "solide": 3, "meuble": True},
+    "%": {"nom": "mannequin de bois", "solide": 3, "meuble": True},
 }
 
 #: Les glyphes de facade qu'on POUSSE (ou qu'on a condamnes) : une porte, une porte
@@ -2680,6 +2686,65 @@ class _Chantier:
                                 "x": tuiles[0], "y": d["y"] + 1, "famille": "service"})
             posees.append(porte)
         return posees
+
+    #: Le plus petit dojo : un tatami de deux rangees sur sept tuiles, et l'accueil.
+    #: ⚠️ Le Faubourg est serre de lieux garantis : ses pieces de commerce ordinaires font
+    #: cinq rangees de profond (mesure du 26 sept. 2026 : 9 x 5 et 5 x 4). Un minimum a
+    #: huit rangees ne trouvait AUCUN dojo.
+    DOJO_MESURES_MIN = (9, 5)
+
+    def poser_le_dojo(self, ville: dict) -> None:
+        """LE DOJO DION : la piece d'un commerce visitable du Faubourg, redessinee en dojo
+        (docs/jalons/le-dojo-du-quartier.md).
+
+        ⚠️ SUR LA VILLE FINIE ET SANS UN DE, comme les carrosseries : la facade, les murs
+        et les mesures de la piece ne bougent pas ; on reprend l'interieur, l'enseigne et la
+        porte. Le choix est une MESURE : la plus au nord du district (du cote du futur
+        Petit-Canton), a egalite la plus proche de son milieu. Aucune qui convient : pas de
+        dojo, et rien ne plante.
+        """
+        from . import chantiers as chantiers_mod
+        enseigne = "DOJO DION"
+        x0, _, dl, _ = self.rect_district(next(d for d in DISTRICTS if d["slug"] == "faubourg"))
+        cx = x0 + dl / 2
+        interdites: set[tuple[int, int]] = set()
+        for ch in ville.get("chantiers") or []:
+            interdites |= set(chantiers_mod.tuiles(ch))
+        feux = {(f["x"], f["y"]) for f in (ville.get("incendies") or {}).get("facades") or []}
+        meilleure = None
+        for porte in ville["portes"]:
+            dedans = self.pieces.get(porte.get("interieur") or "")
+            if not dedans or porte["interieur"].startswith("logement"):
+                continue
+            if self.district_en(porte["x"], porte["y"]) != "faubourg":
+                continue
+            largeur, hauteur = dedans["largeur"] - 2, dedans["hauteur"] - 2
+            if largeur < self.DOJO_MESURES_MIN[0] or hauteur < self.DOJO_MESURES_MIN[1]:
+                continue
+            if any(max(abs(fx - porte["x"]), abs(fy - porte["y"])) <= 2 for fx, fy in feux):
+                continue
+            if any((porte["x"], porte["y"] - k) in interdites for k in range(hauteur + 1)):
+                continue
+            devanture = next((d for d in self.devantures if d["y"] == porte["y"]
+                              and d["x"] <= porte["x"] < d["x"] + d["l"]), None)
+            if not devanture or not devantures_mod.tient_en(enseigne, devanture["l"], TUILE_PX):
+                continue
+            cle = (porte["y"], abs(porte["x"] - cx), porte["x"])
+            if meilleure is None or cle < meilleure[0]:
+                meilleure = (cle, porte, devanture, dedans)
+        if not meilleure:
+            return
+        _, porte, devanture, dedans = meilleure
+        ancienne = porte["interieur"]
+        self.pieces.pop(ancienne, None)
+        ville["interieurs"].pop(ancienne, None)
+        self.pieces["dojo"] = ville["interieurs"]["dojo"] = piece_de_dojo(
+            "dojo", dedans["largeur"] - 2, dedans["hauteur"] - 2, dedans["sortie"]["x"])
+        porte.update({"interieur": "dojo", "lieu": "dojo", "nom": enseigne})
+        devanture["texte"] = enseigne
+        devanture["genre"] = devantures_mod.genre_index("savoir")
+        self.points.append({"type": "dojo", "slug": "dojo", "nom": enseigne,
+                            "x": porte["x"], "y": porte["y"] + 1, "famille": "service"})
 
     def poser_les_garages_de_bungalows(self, ville: dict) -> list[dict]:
         """DES BUNGALOWS AVEC GARAGE (des garages ou l'on entre, 2e vague, 21 sept. 2026) :
@@ -7103,6 +7168,9 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # ⚠️ LE LOT DU POSTE ET LA PORTE DU GARAGE, APRES TOUT : ils changent des tuiles
     # que toutes les etapes d'avant lisent pour tirer leurs places.
     chantier.poser_les_lots_et_les_rideaux(ville)
+    # LE DOJO DION (docs/jalons/le-dojo-du-quartier.md) : la piece d'un commerce du Faubourg,
+    # redessinee en dojo, sur la ville finie et sans un de — rien d'autre ne bouge.
+    chantier.poser_le_dojo(ville)
     # ⚠️ RIEN DEVANT UNE PORTE, PLUS LARGE : tout A LA FIN, sur la ville finie, et sans un
     # de. Reserver plus de tuiles pendant la construction re-tire la ville entiere ; ici on
     # DEPLACE ce qui bouche (une scene, un kiosque, un BBQ) sur la tuile voisine qui convient.
@@ -7160,7 +7228,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
 #: Me Desjardins, ASSIS a la table du fond ou l'on vient lui parler.
 #: ⚠️ Sans eux, une piece meublee reste un musee : c'est le monde qui parle au
 #: comptoir qui fait qu'on a l'impression d'etre entre quelque part.
-QUI_DEDANS = ("commis", "client", "patient", "malade", "soignant", "avocat")
+QUI_DEDANS = ("commis", "client", "patient", "malade", "soignant", "avocat", "eleve")
 
 #: ⚠️ Les seuls gens qui naissent DANS un meuble, et chacun dans le sien : le
 #: PATIENT attend assis sur une chaise de la salle d'attente, l'AVOCAT tient la
@@ -7920,6 +7988,39 @@ def piece_de_commerce(slug: str, famille: str, largeur: int, hauteur: int,
                                porte, pris))
     return _piece(slug, fiche["nom"], _plan_de(grille, porte), sol=fiche["sol"],
                   points=tuple(points), gens=_gens(*[g for g in gens if g]))
+
+
+def piece_de_dojo(slug: str, largeur: int, hauteur: int, porte: int) -> dict:
+    """Le DOJO DION aux mesures d'une part de batiment (docs/jalons/le-dojo-du-quartier.md).
+
+    Le fond : les casiers du vestiaire, le sac de frappe a un bout, le mannequin de bois a
+    l'autre. Le TATAMI au milieu, une allee de chaque cote. Le comptoir d'accueil (Mireille) a
+    l'avant, du cote oppose a la porte, et la derniere rangee libre — on entre. ⚠️ Sans un
+    de : les memes mesures donnent le meme dojo.
+    """
+    grille = [[" "] * largeur for _ in range(hauteur)]
+    # Les casiers du vestiaire : des classeurs gris (« k »). ⚠️ Pas l'etagere (« e ») :
+    # son peintre la remplit de boites de conserve, et le dojo avait l'air d'une epicerie.
+    for x in range(largeur):
+        grille[0][x] = "k"
+    grille[0][0], grille[0][largeur - 1] = "@", "%"
+    haut, bas = 1, hauteur - 3
+    for y in range(haut, bas + 1):
+        for x in range(1, largeur - 1):
+            grille[y][x] = "A"
+    rangee, long_ = hauteur - 2, 3
+    debut = 0 if porte > largeur / 2 else largeur - long_
+    comptoir = [(x, rangee) for x in range(debut, debut + long_)]
+    for x, y in comptoir:
+        grille[y][x] = "c"
+    points = [_poser_le_point(grille, "cours", None, porte, list(reversed(comptoir)))]
+    pris: set[tuple[int, int]] = set()
+    kevin = _quelqu_un(grille, "eleve", (1, 1), porte, pris)       # au sac, hors lecon
+    piece = _piece(slug, "DOJO DION", _plan_de(grille, porte), sol="t",
+                   points=tuple(points), gens=_gens(kevin))
+    # Le centre du tatami, en tuiles de la piece (murs compris : +1).
+    piece["tatami"] = {"x": largeur // 2 + 1, "y": (haut + bas) // 2 + 1}
+    return piece
 
 
 #: Les coins d'un logement, dans l'ordre ou on les pose. ⚠️ Un grand logement
