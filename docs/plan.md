@@ -96,7 +96,7 @@ pas quand l'ordre de travail change.
 | Les territoires des gangs bougent | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/les-territoires-des-gangs-bougent.md#fiche) |
 | Le marché aux puces du dimanche | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-marche-aux-puces-du-dimanche.md#fiche) |
 | Le 1er juillet, jour du déménagement | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-1er-juillet-jour-du-demenagement.md#fiche) |
-| Les enseignes qui ouvrent pour vrai : bingo, quilles, lave-auto, Rialto | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/les-enseignes-qui-ouvrent-pour-vrai.md#fiche) |
+| Les enseignes qui ouvrent pour vrai : bingo, quilles, lave-auto, Rialto | ⬜ **en cours** | 26 sept. 2026 | **P4** | ajout | [fiche](jalons/les-enseignes-qui-ouvrent-pour-vrai.md#fiche) |
 | Une amélioration générale des toits | ⬜ **à faire** (à trancher par Martin : la liste, et par où commencer) | — | **P4** | ajout | [fiche](jalons/une-amelioration-generale-des-toits.md#fiche) |
 
 ## L'ordre
