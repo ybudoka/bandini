@@ -10,6 +10,8 @@ Demande de Martin (25 sept. 2026), troisième des trois jalons des arts martiaux
 _Ce que ça donne :_ un gang qui connaît les coups de pied et les projections — pour avoir à qui rendre ce
 qu'on a appris. Les autres gangs gardent les poings de rue (variés depuis le premier jalon).
 
+- **Où** : dans [le quartier chinois](le-quartier-chinois.md#fiche), un 7e district (Martin, 26 sept. 2026) —
+  il doit être livré avant.
 - **Qui** : **un gang neuf** — tranché par Martin le 26 sept. 2026. Les élèves d'un dojo concurrent, avec
   leur couleur, leur territoire et leur garde-robe (`app/garderobe.py`, une garde-robe par archétype).
 - ⚠️ **Ce que coûte un gang neuf** : un archétype de plus dans `pietons.py`, sa place dans les frontières de
