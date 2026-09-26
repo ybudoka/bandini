@@ -40,7 +40,7 @@ def test_les_chars_remontent_la_rue_dans_l_ordre(banc):
         }
         return { rue: rue, vertical: vertical, suivi: suivi };
     }""")
-    rue, v = r["rue"], r["vertical"]
+    rue = r["rue"]
     vus = set()
     tete = {}
     for image in r["suivi"]:
@@ -50,7 +50,6 @@ def test_les_chars_remontent_la_rue_dans_l_ordre(banc):
                 f"un char hors de sa rue : {c}")
             assert c["s"] >= tete.get(c["k"], -1), f"le char {c['k']} recule"
             tete[c["k"]] = c["s"]
-        ks = sorted(c["k"] for c in image)
         for a, b in zip(image, image[1:]):
             assert (a["s"] - b["s"]) * (b["k"] - a["k"]) >= 0, "les chars se doublent"
     assert vus == set(range(4)), f"tous les chars ne sont pas passés : {vus}"
