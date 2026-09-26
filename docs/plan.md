@@ -94,7 +94,7 @@ pas quand l'ordre de travail change.
 | La cabane à sucre : un événement de printemps | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/la-cabane-a-sucre.md#fiche) |
 | Des photos pour le Clairon | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/des-photos-pour-le-clairon.md#fiche) |
 | Le garage qui modifie les chars | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-garage-qui-modifie-les-chars.md#fiche) |
-| Le hockey de ruelle | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-hockey-de-ruelle.md#fiche) |
+| Le hockey de ruelle | ⬜ **en cours** | 26 sept. 2026 | **P4** | ajout | [fiche](jalons/le-hockey-de-ruelle.md#fiche) |
 | Les territoires des gangs bougent | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/les-territoires-des-gangs-bougent.md#fiche) |
 | Le marché aux puces du dimanche | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-marche-aux-puces-du-dimanche.md#fiche) |
 | Le 1er juillet, jour du déménagement | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-1er-juillet-jour-du-demenagement.md#fiche) |
