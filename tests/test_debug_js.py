@@ -14,6 +14,8 @@ par-dessus — voir `test_pas_par_dessus_un_autre_menu`.
 import json
 
 import pytest
+
+from app import missions
 from test_police_js import AGENT
 
 TAPER_LA_SUITE = (
@@ -761,10 +763,15 @@ def test_chaque_defi_du_catalogue_se_rejoint_par_le_saut(banc):
         return sorties;
     }""")
     assert len(r) >= 10
+    # ⚠️ Un défi qui se joue sur place et n'a pas de point en ville (la tire, au comptoir de la cabane à
+    # sucre — un bloc de carte) : le saut le propose là où l'on est ; rien n'est « sous la main ».
+    sur_place = {d["slug"] for d in missions.DEFIS if d.get("a_pied") and d.get("epreuve")
+                 and not d["ou"].startswith(("porte:", "foire:"))}
     for d in r:
         assert d["rendu"] is True, d
         assert d["menu"] == d["attendu"] and d["classeur"] is False, d
-        assert d["sousLaMain"] == d["slug"], d
+        if d["slug"] not in sur_place:
+            assert d["sousLaMain"] == d["slug"], d
         assert d["etat"] == "jeu", d
 
 

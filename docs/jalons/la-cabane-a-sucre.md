@@ -56,6 +56,11 @@ _Livré le 26 sept. 2026._
   défi au printemps, « FERMÉ… » l'hiver et l'été ; la tire se gagne à point, se rate les mains dans les
   poches ou trop tôt, sans un dé même en réussissant) ; `test_blocs.py` juge son plan. Chaque juge a été
   vu rougir sous sa mutation.
+- ⚠️ **Ce que la suite complète a dit** (trois rouges après l'atterrissage) : la tire à 3 $ rendait 11,7
+  par dollar — rien ne bat le hot-dog (6,5) : elle est à 6 $ ; le comptoir `sucre` n'est pas une famille
+  de devantures (en ajouter une ferait glisser la ville) : il est marqué `bloc`, et le juge des intérieurs
+  l'admet ; et le saut vers un défi exige un panneau « sous la main » — la tire se propose sur place, le
+  juge du saut l'exempte.
 - **Pas fait, à dire** : la **mission du camion de sirop** du cousin de Lulu (M16) ; le **violoneux**
   (un personnage de plus, et sa musique est une dépense à trancher) ; « la ville sent le sirop » (une
   ligne du Clairon au printemps viendrait facilement).

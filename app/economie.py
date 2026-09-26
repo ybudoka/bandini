@@ -616,7 +616,9 @@ TARIFS = {
     "feves": 9,
     "feves_pv": 30,
     "feves_souffle": 10,
-    "tire": 3,
+    # ⚠️ 6 $ et pas 3 : à 3, la tire rendait 11,7 (vie et souffle) par dollar, et rien ne doit battre
+    # le hot-dog au dollar (6,5 : `test_reclame`).
+    "tire": 6,
     "tire_pv": 5,
     "tire_souffle": 30,
     # ⚠️ La compagnie se paie et ne se montre pas : un fondu, une replique,

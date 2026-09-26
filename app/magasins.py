@@ -249,7 +249,10 @@ COMPTOIRS: dict[str, dict] = {
     # (`porterTenue` remet la police a zero) — a ce prix-la, ca vaut le detour.
     # LA CABANE À SUCRE (docs/jalons/la-cabane-a-sucre.md) : le repas des sucres, au printemps seulement
     # (`saison` : hors saison, le comptoir se dit fermé — pas un menu vide) ; et le défi de la tire.
+    # ⚠️ `bloc` : ce comptoir n'est pas une famille de devantures (il n'y en a qu'un, dans un bloc de carte) —
+    # en ajouter une ferait glisser la ville (`devantures.GENRES` se tire à l'empreinte des bâtiments).
     "sucre": {"nom": "La cabane à sucre", "marge": 1.0, "rabais": 1.0, "saison": "printemps", "defi": "tire",
+              "bloc": "cabane",
               "articles": [
         _art("oreilles", "Oreilles de crisse", "oreilles", pv="oreilles_pv", souffle="oreilles_souffle"),
         _art("feves", "Fèves au lard", "feves", pv="feves_pv", souffle="feves_souffle"),

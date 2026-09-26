@@ -162,7 +162,8 @@ def test_chaque_comptoir_ordinaire_vend_quelque_chose():
 def test_les_articles_des_comptoirs_existent():
     tenues = {t["slug"] for t in magasins.TENUES}
     for genre, comptoir in magasins.COMPTOIRS.items():
-        assert genre in devantures.INDEX_GENRE, f"comptoir « {genre} » : famille inconnue"
+        # ⚠️ Un comptoir de BLOC (la cabane à sucre) n'est pas une famille de devantures : il n'y en a qu'un.
+        assert genre in devantures.INDEX_GENRE or comptoir.get("bloc"), f"comptoir « {genre} » : famille inconnue"
         assert comptoir["articles"], f"{genre} : comptoir vide"
         for article in comptoir["articles"]:
             cibles = [article["tarif"], article["arme"], article["tenue"]]
