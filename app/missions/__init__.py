@@ -795,6 +795,14 @@ DEFIS: list[dict] = [
      "chrono_s": 60, "prime": 50, "debloque": {"defis": 3}, "consigne": "ACTION QUAND ELLE EST À POINT",
      "regles": {"reussis": 4, "rates": 2, "zone": 0.18, "refroidit_s": 2.4, "acceleration": 0.25},
      "texte": "LE SIROP COULE SUR LA NEIGE : ENROULE-LE SUR LE BÂTON QUAND IL EST À POINT. QUATRE PALETTES"},
+    # LA LIGUE DU MARDI (docs/jalons/les-enseignes-qui-ouvrent-pour-vrai.md) : au comptoir de la salle de
+    # quilles (`COMPTOIRS["quilles"]["defi"]`). Cinq carreaux, une boule chacun : ACTION arrête la visée
+    # (le curseur va et vient sur l'allée), puis la force (la jauge monte et descend). Les quilles qui
+    # tombent se CALCULENT de l'écart au milieu et de la force — jamais `B.rng()`. 32 quilles sur 50.
+    {"slug": "quilles", "titre": "La ligue du mardi", "ou": "quilles", "a_pied": True, "epreuve": "quilles",
+     "chrono_s": 90, "prime": 60, "debloque": {"defis": 3}, "consigne": "ACTION : LA VISÉE, PUIS LA FORCE",
+     "regles": {"carreaux": 5, "objectif": 32, "vise_s": 1.4, "force_s": 1.0, "abat": 22, "force_min": 0.45},
+     "texte": "LA LIGUE DU MARDI CHERCHE UN CINQUIÈME : CINQ CARREAUX, TRENTE-DEUX QUILLES. VISE LE MILIEU"},
 ]
 
 #: Avec quoi un défi se joue. ⚠️ Un défi n'en exclut un que pour une raison

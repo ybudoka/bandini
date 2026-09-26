@@ -3898,6 +3898,37 @@ const TUILES = (function () {
       ctx.fillRect(11, 8, 3, 2);                        // le bras du bas
       ctx.fillRect(5, 13, 7, 2);                        // le pied
     },
+    /* LES ENSEIGNES QUI OUVRENT POUR VRAI (docs/jalons/les-enseignes-qui-ouvrent-pour-vrai.md).
+       L'ALLEE DE QUILLES : l'erable verni, ses lattes, les dalots sombres sur ses bords (la ou l'allee
+       S'ARRETE : `v & 2` a l'est, `v & 8` a l'ouest), et au bout nord (`!(v & 1)`) les quilles. */
+    '[': function (ctx, v, T) {
+      const nord = !(v & 1), est = !(v & 2), sud = !(v & 4), ouest = !(v & 8);
+      plein(ctx, '#c99a5b', T);
+      ctx.fillStyle = '#b5874b';
+      for (let x = 2; x < T; x += 4) ctx.fillRect(x, 0, 1, T);            // les lattes
+      ctx.fillStyle = '#2a2230';
+      if (ouest) ctx.fillRect(0, 0, 3, T);                                // les dalots
+      if (est) ctx.fillRect(T - 3, 0, 3, T);
+      if (sud) { ctx.fillStyle = '#7a2a22'; ctx.fillRect(0, T - 1, T, 1); }   // la ligne de faute
+      if (nord) {
+        ctx.fillStyle = '#3a3440'; ctx.fillRect(0, 0, T, 3);               // la fosse
+        ctx.fillStyle = '#f4f1e8';
+        const x0 = ouest ? 5 : 1;
+        for (let k = 0; k < 3; k++) ctx.fillRect(x0 + k * 4, 4, 2, 4);     // les quilles, deux rangs
+        for (let k = 0; k < 2; k++) ctx.fillRect(x0 + 2 + k * 4, 8, 2, 4);
+        ctx.fillStyle = '#c0392b';
+        for (let k = 0; k < 3; k++) ctx.fillRect(x0 + k * 4, 5, 2, 1);
+        for (let k = 0; k < 2; k++) ctx.fillRect(x0 + 2 + k * 4, 9, 2, 1);
+      }
+    },
+    // LA TOILE DU RIALTO, eteinte : un grand blanc gris sous son cadre noir (le film, lui, se peint
+    // par-dessus pendant la seance : `Enseignes.dessinerSol`).
+    ']': function (ctx, v, T) {
+      plein(ctx, '#d8d8dc', T);
+      ctx.fillStyle = '#c4c4ca'; ctx.fillRect(0, 0, 1, T); ctx.fillRect(8, 0, 1, T);
+      ctx.fillStyle = '#1a1a20'; ctx.fillRect(0, 0, T, 2); ctx.fillRect(0, T - 3, T, 3);
+      ctx.fillStyle = '#6b1f2a'; ctx.fillRect(0, T - 1, T, 1);          // le bas du rideau rouge
+    },
   };
 })();
 

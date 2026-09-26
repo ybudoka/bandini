@@ -732,11 +732,21 @@ const Son = (function () {
     klaxon: function () { if (!joue('klaxon')) { ton(330, 0.25, 'sawtooth', 0.3); ton(415, 0.25, 'sawtooth', 0.3); } },
     choc: function () { if (!joue('choc')) bruit(0.4, 0.5, 1200, 100); },
     explosion: function () { if (!joue('explosion')) { bruit(0.9, 0.8, 600, 40); ton(60, 0.6, 'sine', 0.5, 0.5); } },
-    // Un feu d'artifice qui eclate (la Saint-Jean) : un claquement sec, et le crepitement qui retombe.
-    // Synthetise : pas d'echantillon a payer pour un soir par annee.
     // Une lumiere qui s'eteint (les Galeries, la nuit) : le clac sec d'un gros interrupteur.
     interrupteur: function () { bruit(0.04, 0.3, 2400, 700); ton(90, 0.08, 'square', 0.12, 0.6); },
+    // Un feu d'artifice qui eclate (la Saint-Jean) : un claquement sec, et le crepitement qui retombe.
+    // Synthetise : pas d'echantillon a payer pour un soir par annee.
     artifice: function () { bruit(0.12, 0.35, 3000, 900); bruit(0.7, 0.12, 5000, 1500); ton(180, 0.2, 'sine', 0.2, 0.5); },
+    // LES ENSEIGNES QUI OUVRENT POUR VRAI (`enseignes.js`, `adresse.js`), synthetisees comme le reste des
+    // petits bruits de salle : la boule du bingo qui sort du boulier (un toc de plastique, puis le ding du
+    // micro) ; la boule de quilles qui roule et les quilles qui tombent (plus fort quand il en tombe plus) ;
+    // les brosses du lave-auto, un long frottement mouille.
+    boule: function () { ton(700, 0.05, 'triangle', 0.14, 0.8); ton(1175, 0.35, 'sine', 0.12, 1.2, 0.08); },
+    quilles: function (n) {
+      bruit(0.5, 0.18, 300, 90);
+      if (n > 0) { bruit(0.3, 0.12 + 0.03 * n, 2600, 800); ton(420, 0.12, 'square', 0.05 + 0.01 * n, 0.5, 0.52); }
+    },
+    brosses: function () { if (!joue('brosses')) { bruit(1.4, 0.18, 1100, 300); bruit(1.4, 0.08, 5000, 2200); } },
     // --- L'eau ---------------------------------------------------------------
     // ⚠️ Jusqu'ici, entrer dans l'eau jouait `choc` — la TOLE FROISSEE d'un
     // accident de char — et nager ne jouait rien du tout : les pas sont coupes

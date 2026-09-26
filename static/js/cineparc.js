@@ -159,5 +159,6 @@ const Cineparc = (function () {
     return [{ x: cx, y: cy - 20, r: 150, c: 'rgba(210,220,255,0.5)' }, { x: cx, y: cy + 60, r: 110, c: 'rgba(210,220,255,0.35)' }];
   }
 
-  return { ici, seance, dansUneCase, cases, spectateurs, maj, dessiner, lampes };
+  // ⚠️ `film` sert aussi a la toile du Rialto (`Enseignes`) : le meme film muet, en ville.
+  return { ici, seance, dansUneCase, cases, spectateurs, maj, dessiner, lampes, film };
 })();

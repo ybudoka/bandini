@@ -21,7 +21,11 @@ def test_un_seul_dojo_et_il_est_au_faubourg():
 
 def test_le_dojo_ne_deplace_rien(monkeypatch):
     """La ville d'avant, identique : seules la porte, la devanture, la pièce et le point
-    du dojo changent — et la pièce de commerce qu'il a reprise disparaît."""
+    du dojo changent — et la pièce de commerce qu'il a reprise disparaît.
+    ⚠️ Les ENSEIGNES qui ouvrent pour vrai (`enseignes.poser`) sont posées juste après, sur la même
+    règle : sans le dojo, le Rialto prenait sa porte. Neutralisées des DEUX côtés."""
+    from app import enseignes
+    monkeypatch.setattr(enseignes, "poser", lambda chantier, ville: [])
     avec = carte.generer()
     monkeypatch.setattr(carte._Chantier, "poser_le_dojo", lambda self, ville: None)
     sans = carte.generer()

@@ -163,7 +163,9 @@ def test_les_articles_des_comptoirs_existent():
     tenues = {t["slug"] for t in magasins.TENUES}
     for genre, comptoir in magasins.COMPTOIRS.items():
         # ⚠️ Un comptoir de BLOC (la cabane à sucre) n'est pas une famille de devantures : il n'y en a qu'un.
-        assert genre in devantures.INDEX_GENRE or comptoir.get("bloc"), f"comptoir « {genre} » : famille inconnue"
+        # Ceux des ENSEIGNES non plus (le bingo, le Rialto, les quilles, le lave-auto).
+        assert genre in devantures.INDEX_GENRE or comptoir.get("bloc") or comptoir.get("enseigne"), \
+            f"comptoir « {genre} » : famille inconnue"
         assert comptoir["articles"], f"{genre} : comptoir vide"
         for article in comptoir["articles"]:
             cibles = [article["tarif"], article["arme"], article["tenue"]]
@@ -413,7 +415,8 @@ def test_les_blocs_sont_le_lit_la_table_le_tapis_et_la_machine():
     bête de deux sur deux peint chacun son quart (une tête, quatre pattes, pas quatre oursons)."""
     # ⚠️ Le TATAMI du DOJO DION (« A ») aussi : son peintre lit le masque pour ne border de noir
     # que les cotes ou le tatami s'arrete, comme le galon du tapis.
-    assert BLOCS == {"l", "a", "y", "m", "o", "r", "Y", "U", "A"}
+    # ⚠️ L'ALLEE DE QUILLES (« [ ») de meme : les quilles au bout nord, les dalots sur ses bords.
+    assert BLOCS == {"l", "a", "y", "m", "o", "r", "Y", "U", "A", "["}
 
 
 @pytest.mark.parametrize("slug", sorted(PIECES))

@@ -1404,6 +1404,9 @@ const Missions = (function () {
       items.push({ libelle: defi.titre.toUpperCase() + ' — DÉFI', detail: defi.prime + ' $',
                    faire: function () { Histoire.proposerDefi(defi.slug); return false; } });
     }
+    // Le jeu du comptoir d'une enseigne (la carte de bingo, le billet du Rialto, le lavage).
+    const jeu = comptoir.jeu && Enseignes.itemDuComptoir(comptoir.jeu);
+    if (jeu) items.push(jeu);
     comptoir.articles.forEach(function (a) {
       if (a.arme) return items.push(itemArme(a, (comptoir.marge || 1) * rabais(cle)));
       if (a.tenue) return items.push(itemTenue(a, (comptoir.rabais || 1) * rabais(cle)));

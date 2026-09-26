@@ -305,6 +305,149 @@ const Adresse = (function () {
       },
     },
 
+    // LA LIGUE DU MARDI (la salle de quilles, docs/jalons/les-enseignes-qui-ouvrent-pour-vrai.md) : cinq
+    // carreaux, une boule chacun. ACTION arrete la VISEE (la boule va et vient d'un dalot a l'autre), puis
+    // la FORCE (la jauge monte et redescend). ⚠️ Les quilles qui tombent se CALCULENT (`quillesTombees`) :
+    // l'ecart au milieu de l'allee en abat moins, une boule molle en abat moins. Jamais `B.rng()`.
+    quilles: {
+      init: function (r) { return { carreau: 0, total: 0, phase: 'vise', u: 0, vise: 0, force: 0, pause: 0, dit: '', derniere: -1 }; },
+      maj: function (e, r) {
+        if (e.pause > 0) {
+          if (--e.pause > 0) return null;
+          if (e.carreau >= r.carreaux) {
+            return e.total >= r.objectif ? { gagne: true }
+              : { gagne: false, raison: e.total + ' QUILLES — IL EN FALLAIT ' + r.objectif };
+          }
+          e.phase = 'vise'; e.u = 0; e.vise = 0; e.force = 0; e.derniere = -1; e.dit = '';
+          return null;
+        }
+        e.u++;
+        if (e.phase === 'vise') {
+          // D'un dalot a l'autre et retour, en `vise_s` par traversee : elle PART du dalot.
+          e.vise = 0.5 - 0.5 * Math.cos(e.u * Math.PI / s(r.vise_s));
+          if (Entree.neuf('action')) { e.phase = 'force'; e.u = 0; }
+          return null;
+        }
+        e.force = 0.5 - 0.5 * Math.cos(e.u * Math.PI / s(r.force_s));
+        if (!Entree.neuf('action')) return null;
+        const n = quillesTombees(e.vise, e.force, r);
+        e.total += n; e.carreau++; e.derniere = n;
+        e.dit = n === 10 ? 'ABAT!' : (n === 0 ? 'DANS LE DALOT' : n + (n > 1 ? ' QUILLES' : ' QUILLE'));
+        Son.SFX.quilles(n);
+        e.pause = PAUSE * 2;
+        return null;
+      },
+      compte: function (e, r) { return 'CARREAU ' + Math.min(r.carreaux, e.carreau + 1) + '/' + r.carreaux + ' · ' + e.total + '/' + r.objectif + ' QUILLES'; },
+      dessiner: function (ctx, e, r, x, y) {
+        // L'allee, de cote : la boule a gauche, les dix quilles en triangle au bout, a droite.
+        const bx = x + 20, by = y + 8, l = 160, h = 26;
+        ctx.fillStyle = '#2a2230'; ctx.fillRect(bx, by - 3, l, h + 6);            // les dalots
+        ctx.fillStyle = '#c99a5b'; ctx.fillRect(bx, by, l, h);                      // l'erable verni
+        ctx.fillStyle = '#b5874b'; for (let k = 6; k < l; k += 12) ctx.fillRect(bx + k, by, 1, h);
+        ctx.fillStyle = '#8a5a2a'; for (let k = 0; k < 5; k++) ctx.fillRect(bx + 44, by + 4 + k * 4, 2, 2);   // les fleches de visee
+        const tombees = e.derniere < 0 ? 0 : e.derniere;
+        let k = 0;
+        for (let rang = 0; rang < 4; rang++) {
+          for (let j = 0; j <= rang; j++, k++) {
+            const qx = bx + l - 30 + rang * 6, qy = by + h / 2 + (j - rang / 2) * 6;
+            ctx.fillStyle = k < tombees ? '#6a5a50' : '#f4f1e8';
+            ctx.fillRect(Math.round(qx), Math.round(qy) - 1, k < tombees ? 3 : 2, k < tombees ? 2 : 3);
+            if (k >= tombees) { ctx.fillStyle = '#c0392b'; ctx.fillRect(Math.round(qx), Math.round(qy) - 1, 2, 1); }
+          }
+        }
+        // La boule : sur la ligne de faute pendant la visee, lancee apres.
+        const boule = e.phase === 'vise' || e.pause === 0 ? 0 : 1 - e.pause / (PAUSE * 2);
+        ctx.fillStyle = '#1f3a6b';
+        ctx.fillRect(Math.round(bx + 6 + boule * (l - 44)), Math.round(by + 2 + e.vise * (h - 8)), 5, 5);
+        // La jauge de force.
+        ctx.fillStyle = VIDE; ctx.fillRect(bx, by + h + 8, l, 5);
+        if (e.phase === 'force' || e.pause > 0) {
+          ctx.fillStyle = e.force < r.force_min ? '#ff8a3a' : '#8fd46a';
+          ctx.fillRect(bx, by + h + 8, Math.round(l * e.force), 5);
+        }
+        ctx.fillStyle = '#efe6d0'; ctx.fillRect(bx + Math.round(l * r.force_min), by + h + 7, 1, 7);
+        ecrire(ctx, e.phase === 'vise' && !e.pause ? 'VISE' : 'FORCE', bx - 12, by + h + 7, '#cdc6e6');
+        if (e.dit) ecrire(ctx, e.dit, x + 100, y + 52, e.dit === 'ABAT!' ? '#8fd46a' : '#e8b33c');
+      },
+    },
+
+    // LE BINGO DU SOUS-SOL (docs/jalons/les-enseignes-qui-ouvrent-pour-vrai.md) : ta carte, et une boule
+    // toutes les `appel_s` secondes. ACTION la marque, si elle est sur ta carte, pendant `fenetre_s` ;
+    // les madames, elles, ne ratent rien — et c'est a la fin de la fenetre qu'elles crient. La premiere
+    // ligne pleine (rangee, colonne ou diagonale) gagne. ⚠️ Les cartes et l'ordre des boules sortent d'un
+    // generateur a la graine de la carte (`regles.graine`, `Enseignes`) : jamais `B.rng()`.
+    bingo: {
+      init: function (r) {
+        const alea = mulberry(r.graine >>> 0);
+        const carte = function () {
+          const c = [];
+          for (let col = 0; col < 5; col++) {
+            const pris = [];
+            while (pris.length < 5) {
+              const n = col * 15 + 1 + Math.floor(alea() * 15);
+              if (pris.indexOf(n) < 0) pris.push(n);
+            }
+            for (let rang = 0; rang < 5; rang++) c[rang * 5 + col] = pris[rang];
+          }
+          c[12] = 0;                                                  // la case gratuite
+          return c;
+        };
+        const joueur = carte(), madames = [];
+        for (let k = 0; k < r.madames; k++) madames.push(carte());
+        const ordre = [];
+        for (let n = 1; n <= 75; n++) ordre.push(n);
+        for (let i = 74; i > 0; i--) { const j = Math.floor(alea() * (i + 1)), t = ordre[i]; ordre[i] = ordre[j]; ordre[j] = t; }
+        return { carte: joueur, marques: joueur.map(function (n) { return n === 0; }), madames: madames, ordre: ordre,
+                 k: -1, attente: 0, fenetre: 0, dit: '' };
+      },
+      maj: function (e, r) {
+        if (e.fenetre > 0 && --e.fenetre === 0) {
+          // La fenetre se ferme : une madame qui a sa ligne CRIE.
+          const tirees = e.ordre.slice(0, e.k + 1);
+          if (e.madames.some(function (m) { return ligneBingo(m, function (i) { return m[i] === 0 || tirees.indexOf(m[i]) >= 0; }); })) {
+            return { gagne: false, raison: 'BINGO! — UNE MADAME DU FOND' };
+          }
+        }
+        if (--e.attente <= 0) {
+          if (e.k >= 74) return { gagne: false, raison: 'PLUS DE BOULES' };
+          e.k++; e.attente = s(r.appel_s); e.fenetre = s(r.fenetre_s);
+          const b = e.ordre[e.k];
+          e.dit = lettreBingo(b) + '-' + b;
+          Son.SFX.boule();
+        }
+        if (!Entree.neuf('action')) return null;
+        const i = e.carte.indexOf(e.ordre[e.k]);
+        if (e.fenetre > 0 && i >= 0 && !e.marques[i]) {
+          e.marques[i] = true; Son.SFX.ramasse();
+          if (ligneBingo(e.carte, function (q) { return e.marques[q]; })) return { gagne: true };
+        } else Son.SFX.erreur();
+        return null;
+      },
+      compte: function (e, r) { return e.k < 0 ? 'LE BOULIER TOURNE' : 'BOULE ' + (e.k + 1) + ' · ' + e.dit; },
+      dessiner: function (ctx, e, r, x, y) {
+        // La carte, a gauche : B I N G O, et les cases marquees au crayon rouge.
+        const c = 15, gx = x + 8, gy = y + 10;
+        'BINGO'.split('').forEach(function (l, col) { ecrire(ctx, l, gx + col * c + c / 2, gy - 9, '#e8b33c'); });
+        for (let i = 0; i < 25; i++) {
+          const cx = gx + (i % 5) * c, cy = gy + Math.floor(i / 5) * 11, n = e.carte[i];
+          const appelee = n > 0 && n === e.ordre[e.k] && e.fenetre > 0;
+          ctx.fillStyle = e.marques[i] ? '#6b1f1c' : (appelee ? '#4a3a10' : '#efe6d0');
+          ctx.fillRect(cx, cy, c - 1, 10);
+          if (n) ecrire(ctx, String(n), cx + (c - 1) / 2, cy + 2, e.marques[i] ? '#ffd8c8' : '#1a1a22');
+          else ecrire(ctx, '*', cx + (c - 1) / 2, cy + 2, '#ffd8c8');
+        }
+        // La boule qu'on crie, a droite, en gros.
+        if (e.k >= 0) {
+          const bx = x + 140, by = y + 26;
+          ctx.fillStyle = '#efe6d0'; ctx.fillRect(bx - 16, by - 12, 32, 30);
+          ctx.fillStyle = '#c0392b'; ctx.fillRect(bx - 16, by - 12, 32, 5);
+          ecrire(ctx, lettreBingo(e.ordre[e.k]), bx, by - 3, '#1a1a22');
+          ecrire(ctx, String(e.ordre[e.k]), bx, by + 5, '#1a1a22', 2);
+          ctx.fillStyle = '#e8b33c'; ctx.fillRect(bx - 16, by + 20, Math.round(32 * e.fenetre / s(r.fenetre_s)), 2);
+        }
+      },
+    },
+
     mannequin: {
       init: function (r) { return { phase: 0, centre: 0.5, reussis: 0, clochettes: 0, pause: 0, dit: '' }; },
       maj: function (e, r) {
@@ -456,6 +599,29 @@ const Adresse = (function () {
 
   function aiguille(e) { return 0.5 + 0.5 * Math.sin(e.phase); }
 
+  /** Les quilles qu'abat une boule : `vise` (0 et 1, les dalots ; 0,5, la poche), `force` (0 a 1).
+      Pure : la meme boule abat toujours autant de quilles. */
+  function quillesTombees(vise, force, r) {
+    let n = Math.round(10 - Math.abs(vise - 0.5) * r.abat);
+    if (force < r.force_min) n = Math.round(n * force / r.force_min);
+    return Math.max(0, Math.min(10, n));
+  }
+
+  //: Les lettres du bingo : B (1-15), I (16-30), N (31-45), G (46-60), O (61-75).
+  function lettreBingo(n) { return 'BINGO'.charAt(Math.floor((n - 1) / 15)); }
+
+  /** Une ligne pleine sur une carte (rangee, colonne ou diagonale) ? `pleine(i)` dit si la case i l'est. */
+  function ligneBingo(carte, pleine) {
+    for (let k = 0; k < 5; k++) {
+      let rang = true, col = true;
+      for (let j = 0; j < 5; j++) { rang = rang && pleine(k * 5 + j); col = col && pleine(j * 5 + k); }
+      if (rang || col) return true;
+    }
+    let d1 = true, d2 = true;
+    for (let j = 0; j < 5; j++) { d1 = d1 && pleine(j * 6); d2 = d2 && pleine(j * 4 + 4); }
+    return d1 || d2;
+  }
+
   function dessinerCadenas(ctx, e, r, x, y) {
     // ⚠️ Il TREMBLE tout près — la même mesure que la vibration de la manette.
     const dx = e.proche > 0.3 && (e.t >> 1) % 2 ? Math.round(e.proche * 2) : 0;
@@ -486,7 +652,9 @@ const Adresse = (function () {
   function commencer(d) {
     const sorte = EPREUVES[d.epreuve];
     if (!sorte) return false;
-    B.epreuve = Object.assign(sorte.init(d.regles), { slug: d.slug, sorte: d.epreuve, t: 0 });
+    // ⚠️ `def` voyage avec l'epreuve : le bingo n'est pas un defi du catalogue (`Enseignes` le joue, avec
+    // une fiche a lui), et le dessin la cherchait dans `B.defs.defis`.
+    B.epreuve = Object.assign(sorte.init(d.regles), { slug: d.slug, sorte: d.epreuve, t: 0, def: d });
     Entree.contexte('epreuve');
     return true;
   }
@@ -523,7 +691,7 @@ const Adresse = (function () {
   function dessiner(ctx) {
     const e = B.epreuve;
     if (!e) return;
-    const d = (B.defs.defis || []).find(function (q) { return q.slug === e.slug; });
+    const d = e.def || (B.defs.defis || []).find(function (q) { return q.slug === e.slug; });
     if (!d) return;
     const x = Math.round((VW - BOITE.l) / 2), y = BOITE.y, cx = x + BOITE.l / 2;
     ctx.fillStyle = 'rgba(11,10,18,0.84)'; ctx.fillRect(x, y, BOITE.l, BOITE.h);
@@ -535,5 +703,5 @@ const Adresse = (function () {
     ecrire(ctx, 'ESQUIVE : ABANDONNER', cx, y + BOITE.h - 10, '#5a5a6a');
   }
 
-  return { commencer, fermer, maj, compte, dessiner, EPREUVES, PRET, angleDuStick };
+  return { commencer, fermer, maj, compte, dessiner, EPREUVES, PRET, angleDuStick, quillesTombees, lettreBingo, ligneBingo };
 })();

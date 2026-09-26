@@ -76,6 +76,8 @@ ROBOT = """
                 if (voulu !== tenue) { if (tenue) o.relacher(tenue); if (voulu) o.touche(voulu); tenue = voulu; }
             } else if (e.sorte === 'tire') {
                 if (e.pause === 0 && Math.abs(e.temp - e.centre) < r.zone / 4) { taper(o, 'KeyE'); continue; }
+            } else if (e.sorte === 'quilles') {
+                if (!e.pause && ((e.phase === 'vise' && Math.abs(e.vise - 0.5) < 0.03) || (e.phase === 'force' && e.force > 0.95))) { taper(o, 'KeyE'); continue; }
             } else if (e.sorte === 'moteur') {
                 const p = Math.round(r.cadence_s * 60);
                 if ((e.t + 1) % p === 0) { taper(o, 'KeyE'); continue; }
@@ -91,7 +93,7 @@ ROBOT = """
     }
 """
 
-EPREUVES = ["roue", "anneaux", "ratons", "danse", "mannequin", "radio", "moteur", "crochet", "coffre", "tire"]
+EPREUVES = ["roue", "anneaux", "ratons", "danse", "mannequin", "radio", "moteur", "crochet", "coffre", "tire", "quilles"]
 
 
 @pytest.mark.parametrize("slug", EPREUVES)
@@ -420,7 +422,8 @@ def test_un_kiosque_dont_le_defi_est_cache_reste_un_kiosque(banc):
 def test_chaque_epreuve_du_catalogue_a_son_jeu(banc, paquet):
     r = banc("function (L, o) { return Object.keys(L.Adresse.EPREUVES).sort(); }")
     catalogue = sorted(d["epreuve"] for d in paquet["defis"] if d.get("epreuve"))
-    assert catalogue == sorted(EPREUVES) == r
+    # ⚠️ Le BINGO est une épreuve hors catalogue : c'est `Enseignes` qui la mène, pas un défi.
+    assert catalogue == sorted(EPREUVES) and sorted(catalogue + ["bingo"]) == r
 
 
 # --- La 2e vague : au volant ------------------------------------------------------------------

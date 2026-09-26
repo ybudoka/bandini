@@ -630,6 +630,10 @@ TARIFS = {
     "tire": 6,
     "tire_pv": 5,
     "tire_souffle": 30,
+    # Le maïs soufflé du Rialto (docs/jalons/les-enseignes-qui-ouvrent-pour-vrai.md) : 5 au dollar.
+    "mais": 4,
+    "mais_pv": 6,
+    "mais_souffle": 14,
     # ⚠️ La compagnie se paie et ne se montre pas : un fondu, une replique,
     # de la vie qui revient. Elle refuse quand la police te cherche.
     "compagnie": 60,

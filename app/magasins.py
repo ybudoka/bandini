@@ -258,6 +258,32 @@ COMPTOIRS: dict[str, dict] = {
         _art("feves", "Fèves au lard", "feves", pv="feves_pv", souffle="feves_souffle"),
         _art("tire", "Tire sur la neige", "tire", pv="tire_pv", souffle="tire_souffle"),
     ]},
+    # LES ENSEIGNES QUI OUVRENT POUR VRAI (docs/jalons/les-enseignes-qui-ouvrent-pour-vrai.md) : quatre
+    # comptoirs qui ne sont pas une famille de devantures (`enseigne`, comme le `bloc` de la cabane — une
+    # famille de plus ferait glisser la ville). `jeu` : ce que le comptoir fait jouer en plus de ce qu'il
+    # vend (`Enseignes.itemDuComptoir`) ; `defi` : le défi qu'il propose, comme la tire à la cabane.
+    "bingo": {"nom": "Le bingo du sous-sol", "marge": 1.0, "rabais": 1.0, "enseigne": True, "jeu": "bingo",
+              "articles": [
+        _art("cafe", "Café", "cafe", pv="cafe_pv", souffle="cafe_souffle", effet="cafe"),
+        _art("beigne", "Beigne", "beigne", pv="beigne_pv", souffle="beigne_souffle"),
+    ]},
+    "rialto": {"nom": "Le cinéma Rialto", "marge": 1.0, "rabais": 1.0, "enseigne": True, "jeu": "film",
+               "articles": [
+        _art("mais", "Maïs soufflé", "mais", pv="mais_pv", souffle="mais_souffle"),
+        _art("liqueur", "Liqueur", "liqueur", pv="liqueur_pv", souffle="liqueur_souffle"),
+        _art("chocolat", "Barre de chocolat", "chocolat", pv="chocolat_pv", souffle="chocolat_souffle"),
+    ]},
+    "quilles": {"nom": "La salle de quilles", "marge": 1.0, "rabais": 1.0, "enseigne": True, "defi": "quilles",
+                "articles": [
+        _art("biere", "Grosse bière", "biere", pv="biere_pv", souffle="biere_souffle"),
+        _art("hotdog", "Hot-dog steamé", "hotdog", pv="hotdog_pv", souffle="hotdog_souffle"),
+        _art("liqueur", "Liqueur", "liqueur", pv="liqueur_pv", souffle="liqueur_souffle"),
+    ]},
+    "lave_auto": {"nom": "Le lave-auto", "marge": 1.0, "rabais": 1.0, "enseigne": True, "jeu": "lave_auto",
+                  "articles": [
+        _art("cafe", "Café", "cafe", pv="cafe_pv", souffle="cafe_souffle", effet="cafe"),
+        _art("liqueur", "Liqueur", "liqueur", pv="liqueur_pv", souffle="liqueur_souffle"),
+    ]},
     "mode": {"nom": "La friperie", "marge": 1.0, "rabais": 0.6, "articles": [
         _art("coupe_vent", "Coupe-vent bleu", tenue="coupe_vent"),
         _art("chemise_hawai", "Chemise hawaïenne", tenue="chemise_hawai"),
@@ -281,6 +307,11 @@ HEURES_DES_COMPTOIRS: dict[str, tuple[float, float]] = {
     "sante": (7 / 24, 22 / 24),
     "mode": (7 / 24, 21 / 24),
     "sucre": (7 / 24, 22 / 24),
+    # ⚠️ Le Rialto vend son maïs soufflé le jour ; ses SÉANCES, elles, sont le soir (`enseignes.REGLES`).
+    "bingo": (8 / 24, 23 / 24),
+    "rialto": (8 / 24, 23 / 24),
+    "quilles": (8 / 24, 23 / 24),
+    "lave_auto": (7 / 24, 20 / 24),
 }
 for _famille, _heures in HEURES_DES_COMPTOIRS.items():
     COMPTOIRS[_famille]["heures"] = _heures

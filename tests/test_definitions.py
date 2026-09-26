@@ -110,9 +110,14 @@ def test_le_paquet_reste_leger():
     le dojo (une autre session), la motoneige, la Saint-Jean, le ciné-parc, la cabane à sucre, les défis
     du hockey et de la tire, et les Galeries (dont la voix au haut-parleur voyage déjà en série). Deux Ko
     de marge ; le remède du poids reste celui d'en haut, et c'est ce plafond-ci qui le rendra urgent.
+
+    ⚠️ **La carte : 53 000 → 55 000 octets gzip le 26 sept. 2026, tard.** Mesure : 52 767 avant (233 de
+    marge — la ville avait grossi sans y toucher : le dojo, le traversier), 53 023 avec les enseignes qui
+    ouvrent pour vrai (quatre points de plus sur la carte, la baie du lave-auto, la toile du Rialto : +539
+    bruts, +256 gzip). Deux Ko de marge, la même règle : le vrai juge est la dette du chargement.
     """
     paquets = definitions.construire()
-    for nom, brut_max, fil_max in (("definitions", 260_000, 58_000), ("carte", 520_000, 53_000)):
+    for nom, brut_max, fil_max in (("definitions", 260_000, 58_000), ("carte", 520_000, 55_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))

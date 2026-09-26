@@ -424,6 +424,11 @@ LEGENDE: dict[str, dict] = {
     "A": {"nom": "tatami", "dedans": True, "bloc": True},
     "@": {"nom": "sac de frappe", "solide": 3, "meuble": True},
     "%": {"nom": "mannequin de bois", "solide": 3, "meuble": True},
+    # LES ENSEIGNES QUI OUVRENT POUR VRAI (docs/jalons/les-enseignes-qui-ouvrent-pour-vrai.md) : l'allee
+    # de la salle de quilles (un BLOC : son peintre met les quilles au bout, la ou l'allee s'arrete au
+    # nord, et les dalots sur ses bords) et la toile du Rialto, ou le film se joue.
+    "[": {"nom": "allée de quilles", "solide": 3, "meuble": True, "bloc": True},
+    "]": {"nom": "toile de cinéma", "solide": 3, "meuble": True},
 }
 
 #: Les glyphes de facade qu'on POUSSE (ou qu'on a condamnes) : une porte, une porte
@@ -7171,6 +7176,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # LE DOJO DION (docs/jalons/le-dojo-du-quartier.md) : la piece d'un commerce du Faubourg,
     # redessinee en dojo, sur la ville finie et sans un de — rien d'autre ne bouge.
     chantier.poser_le_dojo(ville)
+    # LES ENSEIGNES QUI OUVRENT POUR VRAI : le bingo, le Rialto, la salle de quilles et le lave-auto,
+    # comme le dojo — une piece reprise, une enseigne repeinte, sans un de (`enseignes.py`).
+    from . import enseignes as enseignes_mod
+    enseignes_mod.poser(chantier, ville)
     # ⚠️ RIEN DEVANT UNE PORTE, PLUS LARGE : tout A LA FIN, sur la ville finie, et sans un
     # de. Reserver plus de tuiles pendant la construction re-tire la ville entiere ; ici on
     # DEPLACE ce qui bouche (une scene, un kiosque, un BBQ) sur la tuile voisine qui convient.

@@ -359,6 +359,10 @@ const Police = (function () {
 
   function remiseAZero() { const r = B.recherche; r.etoiles = 0; r.chaleur = 0; r.vu = 0; }
 
+  /** UN CRAN DE MOINS (le lave-auto) : une etoile tombe, et la chaleur qui montait vers la suivante
+      avec elle. Moins fort que repeindre au garage (`remiseAZero`), et moins cher. */
+  function unCranDeMoins() { const r = B.recherche; r.etoiles = Math.max(0, r.etoiles - 1); r.chaleur = 0; r.vu = 0; }
+
   /** Un PLANCHER d'etoiles, tout de suite.
 
       ⚠️ La chaleur est une moyenne : un delit de gravite 1 pose 35 points, et
@@ -1111,7 +1115,7 @@ const Police = (function () {
     }
   }
 
-  return { dansLeCone, voit, porteeDuCasier, quelqu_un_voit, auRefuge, ajouterChaleur, etoilesAuMoins, signalerCrime, crimeDAutrui, rapporter, acheterLeSilence, remiseAZero, entendre, palierDesRenforts,
+  return { dansLeCone, voit, porteeDuCasier, quelqu_un_voit, auRefuge, ajouterChaleur, etoilesAuMoins, signalerCrime, crimeDAutrui, rapporter, acheterLeSilence, remiseAZero, unCranDeMoins, entendre, palierDesRenforts,
            estStool, leStool, prixDuStool, majStools, appelDuStool, acheterLeStool, onNeTeReconnaitPlus,
            creerAgent, agents, autos, gere, commandes, peuplerAgents, peuplerAutos, equipageDe: equipage, abandonnee,
            agentsVoulus, standingIci,

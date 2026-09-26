@@ -1105,6 +1105,7 @@ const Jeu = (function () {
         pas('saintjean', SaintJean.maj);   // la Saint-Jean : le bruit des feux
         pas('cineparc', Cineparc.maj);     // le cine-parc : ses spectateurs, et les phares qui fachent
         pas('galeries', Galeries.maj);     // la nuit aux Galeries : les lumieres, la voix, le gardien
+        pas('enseignes', Enseignes.maj);   // le bingo, le film du Rialto, le lave-auto
         pas('neige', Neige.maj);
         pas('brouillard', Brouillard.maj);
         pas('police', Police.maj);
@@ -1205,7 +1206,8 @@ const Jeu = (function () {
     if (!B.interieur) { Autobus.dessinerRails(ctx, vue); Neige.dessinerPanneaux(ctx, vue); Blocs.dessiner(ctx, vue); Monde.dessinerBattants(ctx, vue); Monde.dessinerPortesDeGarage(ctx, vue); Monde.dessinerBarrieresCoulissantes(ctx, vue); Monde.dessinerBarrieres(ctx, vue); }
     Entites.dessinerDecals(ctx, vue);     // le sang est SOUS les pieds
     if (!B.interieur) Histoire.dessinerCheminCourse(ctx, vue);   // le trace d'une course, sur la chaussee
-    if (!B.interieur) { Conduite.dessinerSol(ctx, vue); Rue.dessinerSol(ctx, vue); SaintJean.dessinerDefile(ctx, vue); }          // la case, les lignes, les cones d'une epreuve au volant
+    if (!B.interieur) { Conduite.dessinerSol(ctx, vue); Rue.dessinerSol(ctx, vue); SaintJean.dessinerDefile(ctx, vue); }   // la case, les lignes, les cones d'une epreuve au volant
+    Enseignes.dessinerSol(ctx, vue);                   // la baie du lave-auto ; le film sur la toile du Rialto
     if (!B.interieur) Entites.dessinerBetes(ctx, vue);   // un goeland passe sous personne
     Entites.dessiner(ctx, vue);
     Entites.dessinerCible(ctx, vue);
@@ -1246,6 +1248,7 @@ const Jeu = (function () {
     // ils s'y eteignaient (vu a la capture : une lueur, pas un eclat) ; leurs lampes eclairent la ville.
     if (!B.interieur) SaintJean.dessinerFeux(Base.ecran(), vue);
     Galeries.dessiner(Base.ecran(), vue);    // le noir qui gagne aux Galeries, la nuit (une piece n'a pas de nuit a elle)
+    Enseignes.dessinerPardessus(Base.ecran(), vue);   // la salle du Rialto dans le noir, le film qui brille
     Hud.dessiner();
   }
 
@@ -1505,7 +1508,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Conduite: Conduite, Rue: Rue, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Conduite: Conduite, Rue: Rue, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,
