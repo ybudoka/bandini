@@ -284,3 +284,121 @@ def test_une_piece_pendant_le_depart_ne_laisse_pas_de_pont_fantome(banc):
     assert r["dedans"] is True, "le juge n'est pas entré"
     assert r["pose"] is False
     assert r["apres"] is True, "un pont fantôme est resté sur l'eau"
+
+
+def test_en_char_par_la_rue_on_monte_par_l_une_ou_l_autre_voie_sans_casse(banc):
+    """Le chemin d'un joueur, pas celui du juge : on arrive par la rue, quatorze tuiles
+    avant le quai, sur l'une ou l'autre de ses voies, et on roule tout droit. Martin (26
+    sept. 2026) : par la voie de droite, le char s'écrasait dans la cabine (−29 PV) et
+    restait à quai ; par l'autre, un poteau d'amarrage lui prenait 6 PV sur la rampe."""
+    r = banc("function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const j = L.B.joueur, a = escale(L, 0), out = [];
+        j.intouchable = true;
+        // ⚠️ Les voies de LA RUE, lues sur la carte — pas celles du pont : un juge qui roule
+        // dans l'axe du traversier ne voit jamais la cabine au bout de la voie de droite.
+        const x0 = a.x - 14, voies = [];
+        for (let y = a.y - 3; y <= a.y + 5; y++) if ('<>'.indexOf(L.B.defs.carte.voie[y][x0]) >= 0) voies.push(y);
+        out.push({ voies: voies });
+        for (const y of voies) {
+            L.Traversier.oublier();
+            heure(L, 1.7); o.frame(2);
+            const p = { x: x0 * L.TT + 8, y: y * L.TT + 8 };
+            poser(L, j, p);
+            const v = L.Vehicules.creer('auto', p.x, p.y, 0, { etat: 'stationne' });
+            L.Entites.indexer();
+            L.Vehicules.monter(j, v);
+            const vie = v.vie;
+            o.touche('KeyW');
+            for (let i = 0; i < 400 && tuile(L, v).x < a.x + 3; i++) o.frame(1);
+            o.relacher('KeyW');
+            o.touche('KeyS'); o.frame(25); o.relacher('KeyS'); o.frame(30);
+            heure(L, 1.999); o.frame(10);
+            out.push({ voie: y, degats: vie - v.vie, aBord: !!v.aBord, tuile: tuile(L, v) });
+            heure(L, 2.7); o.frame(2);
+            L.Traversier.oublier(); j.dansVehicule = null; L.Entites.retirer(v);
+        }
+        return out;
+    }""")
+    assert len(r[0]["voies"]) == 2, f"la rue du quai n'a pas deux voies à quatorze tuiles : {r[0]}"
+    for v in r[1:]:
+        assert v["aBord"], f"voie {v['voie']} : le char est resté à quai ({v['tuile']})"
+        assert v["degats"] == 0, f"voie {v['voie']} : {v['degats']} PV laissés en montant"
+
+
+def test_une_partie_rouverte_en_pleine_baie_se_reveille_a_bord(banc):
+    """La sauvegarde auto (dix secondes) tombe en pleine traversée (treize) : la partie
+    rouverte remettait le joueur à sa place, au milieu de la baie, à la nage."""
+    r = banc("function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const j = L.B.joueur, a = escale(L, 0), b = escale(L, 1);
+        j.intouchable = true;
+        heure(L, 1.9); o.frame(2);
+        poser(L, j, pont(L, a, 4, 0));
+        heure(L, 1.995); o.frame(20);
+        heure(L, 2.3); o.frame(2);
+        L.Missions.sauvegarderPartie();
+        L.B.partie = L.Sauvegarde.completer(L.Sauvegarde.lire(L.Sauvegarde.emplacement()), L.B.defs);
+        L.Jeu.commencer();
+        const j2 = L.B.joueur;
+        o.frame(30);
+        const enRoute = { aBord: !!j2.aBord, nage: !!j2.nage, radio: L.Son.Radio.demandee };
+        heure(L, 2.7); o.frame(30);
+        const t = tuile(L, j2);
+        return { enRoute: enRoute, arrive: { aBord: !!j2.aBord, nage: !!j2.nage, x: t.x, y: t.y }, b: { x: b.x, y: b.y } };
+    }""")
+    assert r["enRoute"] == {"aBord": True, "nage": False, "radio": "traversier"}, r["enRoute"]
+    a, b = r["arrive"], r["b"]
+    assert not a["nage"] and not a["aBord"], a
+    assert b["x"] <= a["x"] < b["x"] + 8 and b["y"] <= a["y"] <= b["y"] + 1, f"pas débarqué sur le pont d'en face : {a}"
+
+
+def test_un_bloc_de_carte_ne_laisse_pas_de_pont_fantome(banc):
+    """Au chalet pendant que le traversier est à quai, de retour après son départ : ses
+    8 × 3 tuiles restaient posées sur la baie, roulables, jusqu'au rechargement."""
+    r = banc("async function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const B = L.B, j = B.joueur, a = escale(L, 0), c = L.Monde.carte;
+        j.intouchable = true;
+        heure(L, 1.2); o.frame(2); L.Traversier.oublier();
+        const avant = Array.from(c.solide);
+        heure(L, 1.9); o.frame(2);
+        const aQuai = !L.Monde.estEau(a.x + 3, a.y);
+        L.Blocs.charger('chalet');
+        for (let i = 0; i < 200 && !L.Blocs.cartes.chalet; i++) { o.frame(1); await o.attendre(); }
+        const bloc = L.Blocs.liste().find(function (q) { return q.slug === 'chalet'; });
+        L.Jeu.passerDansLeBloc(bloc, L.Blocs.cartes.chalet, { x: j.x, y: j.y }, null);
+        const bc = L.Monde.carte, blocAvant = Array.from(bc.solide);
+        o.frame(3);
+        heure(L, 2.5); o.frame(3);
+        const blocIntact = Array.from(bc.solide).every(function (v, i) { return v === blocAvant[i]; });
+        L.Jeu.sortirDuBloc();
+        for (let i = 0; i < 200 && (B.bloc || B.transition); i++) o.frame(1);
+        for (const h of [2.6, 3.2, 3.9, 4.5]) { heure(L, h); o.frame(3); }
+        L.Traversier.oublier();
+        let fantome = 0;
+        for (let i = 0; i < avant.length; i++) if (c.solide[i] !== avant[i]) fantome++;
+        return { aQuai: aQuai, dansLeBloc: bc !== c, revenu: L.Monde.carte === c, blocIntact: blocIntact, fantome: fantome };
+    }""")
+    assert r["aQuai"] and r["dansLeBloc"] and r["revenu"], r
+    assert r["blocIntact"], "le traversier a posé son pont dans le bloc"
+    assert r["fantome"] == 0, f"{r['fantome']} tuiles du pont restées sur la baie"
+
+
+def test_a_deux_les_deux_joueurs_montent(banc):
+    r = banc("function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const B = L.B, j = B.joueur, a = escale(L, 0);
+        j.intouchable = true;
+        heure(L, 1.9); o.frame(2);
+        poser(L, j, pont(L, a, 3, 0));
+        L.Jeu.basculerCoop(); o.frame(1);
+        const d = B.coop.entite; d.intouchable = true;
+        const p = pont(L, a, 5, 1); d.x = p.x; d.y = p.y;
+        heure(L, 1.995); o.frame(20);
+        heure(L, 2.3); o.frame(4);
+        const h = coque(L);
+        return { j: !!j.aBord, deux: !!d.aBord, nage: !!d.nage, dx: Math.round(d.x - h.x), dy: Math.round(d.y - h.y) };
+    }""")
+    assert r["j"] and r["deux"], f"à deux, un joueur est resté à quai : {r}"
+    assert not r["nage"] and 0 <= r["dx"] < 8 * 16 and 0 <= r["dy"] < 2 * 16, r

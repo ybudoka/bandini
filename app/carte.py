@@ -7176,6 +7176,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # DEPLACE ce qui bouche (une scene, un kiosque, un BBQ) sur la tuile voisine qui convient.
     from . import devants as devants_mod
     devants_mod.deplacer(chantier, ville)
+    # ⚠️ LE DEBARCADERE DU TRAVERSIER, juste apres : rien ne se tient la ou l'on monte a
+    # bord (un poteau d'amarrage, une bouee sur la place du pont, une borne contre la rampe).
+    # Sans de, comme les devants ; apres eux, pour qu'ils n'y reposent rien.
+    traversier_mod.degager(chantier, ville)
     # ⚠️ LES GRANDS BATEAUX, APRES TOUT (demande de Martin, 21 sept. 2026) : le
     # chalutier et le porte-conteneurs mouillent a quai, loin des chaloupes, des
     # ponts et de la route du traversier — qu'ils lisent, donc qu'ils suivent. Ils

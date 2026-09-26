@@ -11,7 +11,7 @@ import math
 
 import pytest
 
-from app import carte, ile, traversier, vehicules
+from app import carte, devants, ile, traversier, vehicules
 
 
 @pytest.fixture(scope="module")
@@ -81,15 +81,65 @@ def test_le_couloir_est_de_l_eau_libre_loin_de_l_ile_et_des_chaloupes(ville):
 
 
 def test_la_ville_est_la_meme_avec_ou_sans_traversier(ville, monkeypatch):
+    """Hors du débarcadère : là, le décor s'écarte pour qu'on monte à bord (`degager`)."""
     monkeypatch.setattr(traversier, "tracer", lambda v: None)
     sans = carte.generer()
     assert set(sans) == set(ville)
+    zone = set().union(*(traversier.debarcadere(q) for q in ville["traversier"]["escales"]))
     for cle in ville:
         # ⚠️ Le tramway, lui, a son terminus au quai du traversier : sans traversier, il
         # s'arrête à la cantine. Il en dépend — ce qui ne bouge pas, c'est le reste.
-        if cle in ("traversier", "tramway"):
+        if cle in ("traversier", "tramway", "decor"):
             continue
         assert sans[cle] == ville[cle], f"« {cle} » a bougé"
+    ecartes = [d for d in sans["decor"] if (d["x"], d["y"]) in zone]
+    assert ecartes, "sans traversier, rien sur le débarcadère : le juge ne juge plus rien"
+    reste = [d for d in sans["decor"] if (d["x"], d["y"]) not in zone]
+    assert all(d in ville["decor"] for d in reste), "un décor loin du quai a bougé"
+    # Ce qui apparaît ailleurs, c'est ce qui a glissé du débarcadère : du décor mobile, pas plus.
+    nouveaux = [d for d in ville["decor"] if d not in sans["decor"]]
+    assert len(nouveaux) <= len(ecartes) and all(d["type"] in devants.DECOR_MOBILE for d in nouveaux), nouveaux
+
+
+def _fleche_en_remontant(ville, x, y, pas):
+    """Ma lecture : en remontant la rangée depuis (x, y), tant que c'est de la chaussée,
+    croise-t-on une voie est-ouest ?"""
+    for _ in range(12):
+        if not carte.routier(ville["sol"][y][x]):
+            return False
+        if ville["voie"][y][x] in "<>":
+            return True
+        x += pas
+    return False
+
+
+def test_le_pont_prolonge_les_deux_voies_de_la_rue_et_la_cabine_aucune(ville):
+    """Martin, 26 sept. 2026 : la cabine se dressait au bout de la voie de DROITE (celle
+    qu'on prend pour aller au quai), et un char y laissait 29 PV. Les rangées où une voie
+    de la rue arrive au bout du quai sont exactement les deux voies du pont."""
+    c = ville["traversier"]["coque"]
+    for q in ville["traversier"]["escales"]:
+        assert q["cote"] in ("ouest", "est"), f"{q['nom']} : on monte de côté"
+        pas = -1 if q["cote"] == "ouest" else 1
+        x = q["x"] - 2 if q["cote"] == "ouest" else q["x"] + c["longueur"] + 1
+        arrivent = {y for y in range(q["y"] - 2, q["y"] + c["largeur"] + 2) if _fleche_en_remontant(ville, x, y, pas)}
+        pont = {q["y"] + r for r in range(c["largeur"]) if r != c["cabine"]}
+        assert arrivent == pont, f"{q['nom']} : la rue arrive sur {sorted(arrivent)}, le pont est sur {sorted(pont)}"
+
+
+def test_rien_ne_se_tient_sur_le_debarcadere(ville):
+    """Un poteau d'amarrage se tenait sur le bout de quai des Quais, une borne-fontaine
+    contre la rampe, une bouée flottait où le pont accoste à La Pointe. Rien sur la coque
+    à quai, rien sur les deux tuiles de rive devant le pont, ni de chaque côté."""
+    c = ville["traversier"]["coque"]
+    for q in ville["traversier"]["escales"]:
+        tuiles = {(q["x"] + col, q["y"] + r) for col in range(c["longueur"]) for r in range(c["largeur"])}
+        for k in (1, 2):
+            x = q["x"] - k if q["cote"] == "ouest" else q["x"] + c["longueur"] - 1 + k
+            tuiles |= {(x, y) for y in range(q["y"] - 1, q["y"] + c["largeur"] + 1)}
+        for couche in ("decor", "ambulants", "reclames", "paquets", "scenes"):
+            gene = [o for o in ville[couche] if (o["x"], o["y"]) in tuiles]
+            assert not gene, f"{q['nom']} : {couche} sur le débarcadère : {gene}"
 
 
 def test_depart_a_l_heure_juste_et_jamais_plus_vite_qu_un_char(ville):

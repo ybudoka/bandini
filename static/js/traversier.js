@@ -19,7 +19,14 @@
 
    ⚠️ ET LA CARTE EST RENDUE TELLE QU'ELLE ETAIT. Chaque tuile que `poser` change est
    notee, et `lever` la remet — le juge compare la carte avant et apres un
-   aller-retour, octet par octet. */
+   aller-retour, octet par octet. ⚠️ Dans un BLOC de carte (le chalet), `Monde.carte`
+   est le bloc : on n'y touche pas, comme dans une piece — sinon le pont reste pose sur
+   la baie, oublie, et le bloc recoit des tuiles de la ville (26 sept. 2026).
+
+   ⚠️ A DEUX, les deux joueurs montent : ce qui compte, c'est `Entites.estJoueur`, pas
+   `B.joueur`. Et une partie rouverte en pleine traversee (la sauvegarde auto tombe
+   toutes les dix secondes, la traversee en dure treize) remet a bord le joueur que
+   la sauvegarde a laisse sur le pont (`adopter`) — il se reveillait a la nage. */
 
 const Traversier = (function () {
   'use strict';
@@ -150,33 +157,36 @@ const Traversier = (function () {
 
   function aBord(e) { return !!(e && e.aBord); }
 
-  /** L'heure du depart : ce qui est sur le pont part. Le joueur et les chars restent
+  /** Met `e` a bord de la coque dont le coin est en (x0, y0). */
+  function tenir(e, x0, y0) {
+    e.aBord = true;
+    e.vx = 0; e.vy = 0;
+    if (e.type === 'vehicule') e.vitesse = 0;
+    bord.push({ e: e, dx: e.x - x0, dy: e.y - y0, x: e.x, y: e.y });
+  }
+
+  /** L'heure du depart : ce qui est sur le pont part. Les joueurs et les chars restent
       a bord ; un passant ou un agent pose le pied sur le quai — il n'a pas pris de
       billet, il s'etait egare. */
   function embarquer(k) {
-    const d = donnees(), q = d.escales[k], j = B.joueur;
+    const d = donnees(), q = d.escales[k], joueurs = Entites.joueurs();
     let joueur = false;
     for (const e of B.entites) {
       if (!e.vivant && e.type !== 'vehicule') continue;
       const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
       if (!tuileDuPont(q, tx, ty)) continue;
-      if (e.type === 'vehicule' || e === j) {
+      if (e.type === 'vehicule' || Entites.estJoueur(e)) {
         if (e.aBord) continue;
-        e.aBord = true;
-        e.vx = 0; e.vy = 0;
-        if (e.type === 'vehicule') e.vitesse = 0;
-        bord.push({ e: e, dx: e.x - q.px, dy: e.y - q.py, x: e.x, y: e.y });
-        if (e === j || (j && j.dansVehicule === e)) joueur = true;
+        tenir(e, q.px, q.py);
+        if (Entites.estJoueur(e) || joueurs.some(function (j) { return j.dansVehicule === e; })) joueur = true;
       } else if (e.type === 'pieton' || e.type === 'police') {
         const p = quaiLePlusProche(q, e.x, e.y);
         if (p) { e.x = p.x; e.y = p.y; e.vx = 0; e.vy = 0; }
       }
     }
     // Au volant : le joueur n'est pas sur la liste, son char l'y met.
-    if (j && j.dansVehicule && j.dansVehicule.aBord && !j.aBord) {
-      j.aBord = true;
-      bord.push({ e: j, dx: j.x - q.px, dy: j.y - q.py, x: j.x, y: j.y });
-      joueur = true;
+    for (const j of joueurs) {
+      if (j.dansVehicule && j.dansVehicule.aBord && !j.aBord) { tenir(j, q.px, q.py); joueur = true; }
     }
     if (joueur) {
       const vers = d.escales[1 - k];
@@ -186,28 +196,43 @@ const Traversier = (function () {
     }
   }
 
+  /** Une partie rouverte en pleine traversee : le joueur que la sauvegarde a laisse sur
+      le pont (sa place, et l'heure, sont sauvees ensemble) y remonte. Son char, lui, ne
+      se sauve pas : il se reveille a pied, a la place qu'il avait. */
+  function adopter(ici) {
+    const d = donnees();
+    for (const j of Entites.joueurs()) {
+      if (j.aBord || j.dansVehicule || !j.vivant) continue;
+      const col = Math.floor((j.x - ici.x) / TT), r = Math.floor((j.y - ici.y) / TT);
+      if (col < 0 || col >= d.coque.longueur || r < 0 || r >= d.coque.largeur || r === d.coque.cabine) continue;
+      tenir(j, ici.x, ici.y);
+      if (j === B.joueur) Son.Radio.jouer('traversier');
+    }
+  }
+
   /** Ce qui est a bord suit la coque, au pixel. */
   function suivre(ici) {
-    const j = B.joueur;
     for (let i = bord.length - 1; i >= 0; i--) {
-      const b = bord[i], e = b.e;
-      const parti = e !== j && B.entites.indexOf(e) < 0;
+      const b = bord[i], e = b.e, joueur = Entites.estJoueur(e);
+      const parti = !joueur && B.entites.indexOf(e) < 0;
       const deplace = Math.hypot(e.x - b.x, e.y - b.y) > DECROCHE_PX;
-      if (parti || deplace || (e === j && !e.vivant)) { e.aBord = false; bord.splice(i, 1); continue; }
+      if (parti || deplace || (joueur && !e.vivant)) { e.aBord = false; bord.splice(i, 1); continue; }
       e.x = ici.x + b.dx; e.y = ici.y + b.dy;
       e.vx = 0; e.vy = 0;
       if (e.type === 'vehicule') e.vitesse = 0;
       b.x = e.x; b.y = e.y;
     }
     // Au volant, le joueur est ou est son char, a l'image pres.
-    if (j && j.aBord && j.dansVehicule && j.dansVehicule.aBord) { j.x = j.dansVehicule.x; j.y = j.dansVehicule.y; }
+    for (const j of Entites.joueurs()) {
+      if (j.aBord && j.dansVehicule && j.dansVehicule.aBord) { j.x = j.dansVehicule.x; j.y = j.dansVehicule.y; }
+    }
   }
 
   /** A quai : tout le monde descend — c'est-a-dire que plus rien n'est tenu. */
   function debarquer(k) {
     const d = donnees(), j = B.joueur;
     let joueur = false;
-    for (const b of bord) { if (b.e === j) joueur = true; b.e.aBord = false; }
+    for (const b of bord) { if (Entites.estJoueur(b.e)) joueur = true; b.e.aBord = false; }
     bord.length = 0;
     if (!joueur) return;
     Hud.message(d.escales[k].nom.toUpperCase());
@@ -225,7 +250,7 @@ const Traversier = (function () {
 
   function maj() {
     const d = donnees(), p = B.partie;
-    if (!d || !p || B.interieur || !Monde.carte) return;
+    if (!d || !p || B.interieur || B.bloc || !Monde.carte) return;
     // La ville a ete rechargee (une partie chargee) : la carte neuve n'a rien a rendre.
     if (pose && pose.carte !== Monde.carte) { pose = null; for (const b of bord) b.e.aBord = false; bord.length = 0; }
     const ici = placeA(p.heure), s = ici.etat;
@@ -240,6 +265,7 @@ const Traversier = (function () {
       if (!premiereImage) corne(d.escales[k]);
     }
     // 2. Ce qui est a bord suit la coque — a quai compris, pour arriver pile.
+    if (premiereImage && s.phase === 'traverse') adopter(ici);
     suivre(ici);
     // 3. L'arrivee : le pont redevient une tuile, et plus rien n'est tenu.
     if (escale !== null && !pose) {

@@ -11,8 +11,19 @@ La place du bateau n'est ensuite qu'une fonction de l'heure, et c'est `traversie
 qui la calcule.
 
 ⚠️ **Il ne choisit rien au hasard.** Aucun dé : parmi les paires de quais possibles,
-la traversée la plus courte, puis la plus droite, puis la plus au nord-ouest. La
-ville du premier matin est la même avec ou sans traversier (un juge compare).
+la traversée dont les deux ponts prolongent une rue (`dans_l_axe`), puis la plus courte,
+puis la plus droite, puis la plus au nord-ouest. La ville du premier matin est la même
+avec ou sans traversier, au débarcadère près (un juge compare).
+
+⚠️ **Le pont prolonge les deux voies de la rue, la cabine aucune.** « La plus au
+nord-ouest » départageait seule deux places aussi courtes l'une que l'autre, décalées
+d'une rangée : le pont couvrait le trottoir et la voie de gauche, et la cabine se
+dressait au bout de la voie de DROITE — celle qu'on prend pour y aller (Martin, 26
+sept. 2026 : un char y laissait 29 PV et restait à quai).
+
+⚠️ **Le débarcadère est dégagé après coup** (`degager`, en fin de `carte.generer`) : la
+grève plante ses poteaux et ses bouées, le mobilier ses bornes-fontaines, avant que le
+traversier ne choisisse sa place — un poteau d'amarrage se tenait sur le bout de quai.
 
 **La coque** : `LONGUEUR` × `LARGEUR` tuiles, couchée est-ouest. Ses deux premières
 rangées sont le PONT des chars ; la dernière, au sud, est la CABINE. On embarque donc
@@ -55,6 +66,21 @@ HORAIRE: dict = {
     #: La part de la traversée passée à prendre de la vitesse (et autant à freiner).
     "elan": 0.12,
 }
+
+
+#: Jusqu'où, depuis le bout du quai, on remonte une voie pour trouver sa flèche : la rue
+#: du quai finit souvent sur un croisement (quatre tuiles `+` sans sens).
+AXE_PORTEE = 8
+
+#: Le débarcadère : tant de tuiles de rive devant le bout du pont, sur toute la largeur
+#: de la coque et une rangée de plus de chaque côté (un décor du trottoir voisin mord sur
+#: la voie : la borne-fontaine des Quais, collée à la rampe, coûtait 6 PV).
+DEBARCADERE = 2
+
+#: Ce que la rive plante au bord de l'eau et qu'un débarcadère n'a pas : on l'enlève, on
+#: ne le déplace pas (ailleurs sur la rive, il y en a assez). Le reste du décor mobile
+#: glisse sur la tuile voisine (`devants`).
+DECOR_DE_RIVE = frozenset({"poteau_amarrage", "bouee", "pneu"})
 
 
 def _zones(ville: dict, district: str) -> list[dict]:
@@ -151,6 +177,65 @@ def _quais(baie: _Baie, ville: dict, district: str) -> list[dict]:
     return out
 
 
+def _fleche(ville: dict, x: int, y: int, pas: int) -> bool:
+    """En remontant la rangée `y` depuis (x, y) par pas de `pas`, tant qu'on est sur la
+    chaussée, croise-t-on une voie est-ouest (`<` ou `>` dans `ville["voie"]`) ?"""
+    sol, voie = ville["sol"], ville.get("voie")
+    if not voie:
+        return False
+    for _ in range(AXE_PORTEE):
+        if not (0 <= x < len(sol[0])) or not carte_mod.routier(sol[y][x]):
+            return False
+        if voie[y][x] in "<>":
+            return True
+        x += pas
+    return False
+
+
+def dans_l_axe(ville: dict, q: dict) -> bool:
+    """Le pont d'un quai `ouest` ou `est` prolonge-t-il les deux voies d'une rue, sans que
+    la cabine en prolonge une ? Un quai `nord` (on monte de côté) ne l'est jamais."""
+    if q["cote"] == "nord":
+        return False
+    pas = -1 if q["cote"] == "ouest" else 1
+    x = q["x"] - 2 if q["cote"] == "ouest" else q["x"] + LONGUEUR + 1
+    return (all(_fleche(ville, x, q["y"] + r, pas) for r in VOIES)
+            and not _fleche(ville, x, q["y"] + CABINE, pas))
+
+
+def debarcadere(q: dict) -> set[tuple[int, int]]:
+    """Les tuiles qu'on traverse pour monter à bord ou qui touchent la coque à quai : la
+    coque elle-même, et `DEBARCADERE` tuiles de rive devant le côté où l'on embarque."""
+    x0, y0 = q["x"], q["y"]
+    out = {(x0 + c, y0 + r) for c in range(LONGUEUR) for r in range(LARGEUR)}
+    for k in range(1, DEBARCADERE + 1):
+        if q["cote"] == "nord":
+            out |= {(x, y0 - k) for x in range(x0 - 1, x0 + LONGUEUR + 1)}
+        else:
+            x = x0 - k if q["cote"] == "ouest" else x0 + LONGUEUR - 1 + k
+            out |= {(x, y) for y in range(y0 - 1, y0 + LARGEUR + 1)}
+    return out
+
+
+def degager(chantier, ville: dict) -> tuple[int, int]:
+    """Rien sur le débarcadère : le décor de rive s'en va, le reste glisse à côté. Sans dé,
+    sur la ville finie. Rend (déplacés, retirés)."""
+    t = ville.get("traversier")
+    if not t:
+        return 0, 0
+    from . import devants
+
+    zone = set().union(*(debarcadere(q) for q in t["escales"]))
+    retires = 0
+    for d in [d for d in ville["decor"] if (d["x"], d["y"]) in zone and d["type"] in DECOR_DE_RIVE]:
+        ville["decor"].remove(d)
+        chantier.occupe.discard((d["x"], d["y"]))
+        retires += 1
+    deplaces, perdus = devants._deplacer_le_decor(chantier, ville, zone, devants._pris(chantier, ville),
+                                                  devants._evitees(chantier, ville))
+    return deplaces, retires + perdus
+
+
 def balayage(a: dict, b: dict) -> list[tuple[int, int, int, int]]:
     """Les rectangles de tuiles que la coque couvre en allant de `a` à `b` en ligne
     droite, une tuile de pas à la fois (bornes comprises)."""
@@ -172,9 +257,10 @@ def tracer(ville: dict) -> dict | None:
     baie = _Baie(ville)
     ouest = [q for q in _quais(baie, ville, ESCALES[0]) if q["cote"] != "est"]
     est = [q for q in _quais(baie, ville, ESCALES[1]) if q["cote"] != "ouest"]
-    paires = sorted(((b["x"] - a["x"], abs(b["y"] - a["y"]), a["y"], a["x"], b["y"], i, j)
+    axe = [[dans_l_axe(ville, q) for q in cote] for cote in (ouest, est)]
+    paires = sorted(((2 - axe[0][i] - axe[1][j], b["x"] - a["x"], abs(b["y"] - a["y"]), a["y"], a["x"], b["y"], i, j)
                      for i, a in enumerate(ouest) for j, b in enumerate(est) if b["x"] - a["x"] > LONGUEUR),
-                    key=lambda p: p[:5])
+                    key=lambda p: p[:6])
     noms = {d["slug"]: d["nom"] for d in ville.get("districts", [])}
     for *_, i, j in paires:
         a, b = ouest[i], est[j]
