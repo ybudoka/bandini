@@ -1089,8 +1089,12 @@ const Vehicules = (function () {
           // ⚠️ Le trafic ne s'entretue pas : deux chars sur leurs rails qui se
           // frolent a un coin se poussent, sans degats. Les chocs qui comptent
           // sont ceux ou le joueur est au volant d'un des deux.
+          // ⚠️ Sauf au DERBY : deux bazous se cognent pour vrai (`derby`, `Conduite`).
+          // ⚠️ Un bazou a un REPIT apres un choc (`Conduite.choc`) : deux bazous qui poussent l'un
+          // contre l'autre se cognaient a chaque image, et s'achevaient en une demi-seconde.
           const joueurImplique = v.conducteur === B.joueur || autre.conducteur === B.joueur;
-          if (relatif > ph.choc_vitesse_min && joueurImplique) {
+          const derby = v.derby || autre.derby;
+          if (relatif > ph.choc_vitesse_min && (joueurImplique || (v.derby && autre.derby)) && (!derby || Conduite.choc(v, autre))) {
             const degats = Math.round(relatif * ph.choc_degats_par_px);
             endommager(autre, degats, v.conducteur === B.joueur ? B.joueur : null);
             endommager(v, Math.round(degats * 0.6), autre.conducteur === B.joueur ? B.joueur : null);
@@ -1102,7 +1106,7 @@ const Vehicules = (function () {
             if (v.conducteur === B.joueur) {
               B.cam.secousse = 0.7;
               if (autre.alarme === 0 && autre.def.alarme && !autre.conducteur) declencherAlarme(autre);
-              if (relatif > 2) Police.signalerCrime('conduite_dangereuse', v.x, v.y, Police.quelqu_un_voit(v.x, v.y, null));
+              if (relatif > 2 && !autre.derby) Police.signalerCrime('conduite_dangereuse', v.x, v.y, Police.quelqu_un_voit(v.x, v.y, null));
             }
             if (autre.conducteur === 'trafic') autre.klaxonT = 30;
           }
@@ -1185,7 +1189,9 @@ const Vehicules = (function () {
     // ⚠️ Ce qui n'a pas de reservoir ne brule pas et n'explose pas : ca se
     // PLIE. C'est la fiche qui le dit (`reservoir`), pas un `slug === 'velo'`
     // cache ici — le jour ou une trottinette arrive, elle se plie toute seule.
-    if (v.def.reservoir === false) plier(v); else exploser(v);
+    // ⚠️ Un bazou du DERBY se plie, il n'explose pas : la deflagration tuait le joueur dans le sien,
+    // et on se reveillait a l'hopital pour avoir perdu un jeu de foire.
+    if (v.def.reservoir === false || v.derby) plier(v); else exploser(v);
   }
 
   /** Un char sans reservoir a zero PV : il tombe sur le cote, tordu, et c'est
@@ -1211,8 +1217,8 @@ const Vehicules = (function () {
       Entites.particule(v.x, v.y, Math.cos(a) * s, Math.sin(a) * s * 0.6, 16 + B.rng() * 10, '#8a8a8a', 1, 0.06);
     }
     Son.SFX.choc();
-    if (v.conducteur && v.conducteur !== 'trafic') descendre(v.conducteur, true);
-    if (v.conducteur === 'trafic') v.conducteur = null;
+    if (v.conducteur && v.conducteur !== 'trafic' && v.conducteur !== 'derby') descendre(v.conducteur, true);
+    if (v.conducteur === 'trafic' || v.conducteur === 'derby') v.conducteur = null;
   }
 
   /** Un char du trafic qui nous passe pres : on l'entend passer, une fois. */
@@ -1567,7 +1573,8 @@ const Vehicules = (function () {
     Entites.decal(v.x, v.y, 'impact');
     Son.SFX.explosion();
     B.cam.secousse = Math.max(B.cam.secousse, 1.2);
-    const coupable = v.agresseur === B.joueur ? B.joueur : null;
+    // ⚠️ Un bazou du derby qui saute, c'est le spectacle, pas un crime.
+    const coupable = v.agresseur === B.joueur && !v.derby ? B.joueur : null;
     for (const e of Entites.autour(v.x, v.y, ph.explosion_rayon_px, function (q) { return q !== v && q.vivant; })) {
       const d = Math.hypot(e.x - v.x, e.y - v.y);
       const part = 1 - d / ph.explosion_rayon_px;
@@ -1586,8 +1593,8 @@ const Vehicules = (function () {
       if (part <= 0) continue;
       Entites.endommagerDecor(d, Math.round(ph.explosion_degats * part));
     }
-    if (v.conducteur && v.conducteur !== 'trafic') descendre(v.conducteur, true);
-    if (v.conducteur === 'trafic') { v.conducteur = null; }
+    if (v.conducteur && v.conducteur !== 'trafic' && v.conducteur !== 'derby') descendre(v.conducteur, true);
+    if (v.conducteur === 'trafic' || v.conducteur === 'derby') { v.conducteur = null; }
     if (coupable) {
       Police.signalerCrime('explosion', v.x, v.y, true);
       Entites.alerter(v.x, v.y, coupable, 3);
@@ -2975,6 +2982,7 @@ const Vehicules = (function () {
       else if (v.conducteur === 'trafic') majConducteur(v);
       else if (v.conducteur === 'ligne') Autobus.conduire(v);
       else if (v.conducteur === 'police') { const c = Police.commandes(v); if (c === 'rails') majConducteur(v); else majPhysique(v, c); }
+      else if (v.conducteur === 'derby') majPhysique(v, Conduite.commandesDerby(v));   // un bazou du derby
       else majPhysique(v, { gaz: 0, frein: 0, direction: 0 });
       // La chasse finie, la sirene de l'auto-patrouille se tait.
       if (v.conducteur === 'police') v.sirene = B.recherche.etoiles > 0;
@@ -4038,7 +4046,7 @@ const Vehicules = (function () {
 
   return {
     ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, majGaresDeService, typeDeRue, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, pousserLeDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
-    majPhysique, avancer, endommager, exploser, declencherAlarme,
+    majPhysique, avancer, heurterVehicules, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
     pointDArret, approcheDeLaLigne, placeDeLaPanne, placeStationnee, garesVoulus,

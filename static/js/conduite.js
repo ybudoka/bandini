@@ -132,6 +132,88 @@ const Conduite = (function () {
     return lot ? { x: (lot.x + lot.largeur / 2) * TT, y: (lot.y + lot.hauteur / 2) * TT, nom: 'la fourrière' } : null;
   }
 
+  // --- Le derby -------------------------------------------------------------------------
+
+  function dansLArene(a, x, y, m) { return x >= a.x + m && x <= a.x + a.l - m && y >= a.y + m && y <= a.y + a.h - m; }
+
+  /** Un bazou qui roule encore : dans la ville, pas une epave. */
+  function roule(b) { return present(b) && b.etat !== 'epave' && b.vie > 0; }
+
+  /** Les pneus retiennent un bazou : il rebondit dessus, sans degats (des pneus). */
+  function retenir(a, b) {
+    if (!roule(b)) return;
+    const m = (b.r || 7) + 3;
+    if (b.x < a.x + m) { b.x = a.x + m; b.vx = Math.abs(b.vx) * 0.4; b.vitesse *= 0.5; }
+    if (b.x > a.x + a.l - m) { b.x = a.x + a.l - m; b.vx = -Math.abs(b.vx) * 0.4; b.vitesse *= 0.5; }
+    if (b.y < a.y + m) { b.y = a.y + m; b.vy = Math.abs(b.vy) * 0.4; b.vitesse *= 0.5; }
+    if (b.y > a.y + a.h - m) { b.y = a.y + a.h - m; b.vy = -Math.abs(b.vy) * 0.4; b.vitesse *= 0.5; }
+    if (b.conducteur === B.joueur) { B.joueur.x = b.x; B.joueur.y = b.y; }
+  }
+
+  /** Le bazou qui roule le plus pres de `b` (le tien compris), ou null. */
+  function plusProche(e, b) {
+    let meilleur = null, d = Infinity;
+    for (const q of e.bazous) {
+      if (q === b || !roule(q)) continue;
+      const dq = dist2(q.x, q.y, b.x, b.y);
+      if (dq < d) { d = dq; meilleur = q; }
+    }
+    return meilleur;
+  }
+
+  const AU_POINT_MORT = { gaz: 0, frein: 0, direction: 0, freinMain: false };
+
+  /** Deux chars se cognent, dont un bazou : le choc compte-t-il ? Pas pendant le REPIT d'un des deux
+      (`repit_s`). S'il compte, chaque bazou du jeu recule et change de cible — il a eu celui-la. */
+  function choc(a, b) {
+    const e = B.conduite, d = e && e.sorte === 'derby' ? defDe(e.slug) : null;
+    if (!d) return true;
+    const r = d.regles, repit = s(r.repit_s);
+    if (B.t - (a.derbyChoc === undefined ? -1e9 : a.derbyChoc) < repit || B.t - (b.derbyChoc === undefined ? -1e9 : b.derbyChoc) < repit) return false;
+    a.derbyChoc = B.t; b.derbyChoc = B.t;
+    for (const [q, autre] of [[a, b], [b, a]]) {
+      if (q.conducteur !== 'derby') continue;
+      q.derbyRecul = s(r.recul_s); q.derbyBraque = (q.id % 2) ? 1 : -1;
+      q.derbyEvite = autre; q.derbyCible = null;
+    }
+    return true;
+  }
+
+  /** La cible d'un bazou : il la GARDE (`garde_s`) tant qu'elle roule ; puis la plus proche, le
+      joueur compte plus pres qu'il n'est (`vise_joueur`), et pas celui qu'il vient de cogner. */
+  function cibleDerby(e, v, r) {
+    const c = v.derbyCible;
+    if (c && roule(c) && B.t - v.derbyDepuis < s(r.garde_s)) return c;
+    let meilleur = null, d = Infinity;
+    for (const q of e.bazous) {
+      if (q === v || !roule(q)) continue;
+      let dq = Math.sqrt(dist2(q.x, q.y, v.x, v.y));
+      if (q === e.moi) dq *= r.vise_joueur;
+      if (q === v.derbyEvite) dq *= 3;
+      if (dq < d) { d = dq; meilleur = q; }
+    }
+    v.derbyCible = meilleur; v.derbyDepuis = B.t;
+    return meilleur;
+  }
+
+  /** LA CONDUITE D'UN BAZOU (`conducteur === 'derby'`, `Vehicules.maj`) : il fonce sur le plus proche
+      qui roule, et quand il reste colle (un mur de pneus, une epave), il recule en braquant a
+      l'envers. ⚠️ Aucun de : la cible est la plus proche, le recul se lit sur la vitesse. */
+  function commandesDerby(v) {
+    const e = B.conduite, d = e && e.sorte === 'derby' ? defDe(e.slug) : null;
+    if (!d || !e.bazous || e.t < s(d.regles.attente_s)) return AU_POINT_MORT;
+    const r = d.regles;
+    if (v.derbyRecul > 0) { v.derbyRecul--; return { gaz: 0, frein: 1, direction: -(v.derbyBraque || 1), freinMain: false }; }
+    const c = cibleDerby(e, v, r);
+    if (!c) return AU_POINT_MORT;
+    if (Math.abs(v.vitesse) < 0.3) v.derbyColle = (v.derbyColle || 0) + 1; else v.derbyColle = 0;
+    const voulu = angleVers(v.x, v.y, c.x, c.y), ecart = ecartAngle(v.angle, voulu);
+    if (v.derbyColle > s(r.colle_s)) { v.derbyColle = 0; v.derbyRecul = s(r.recul_s); v.derbyBraque = ecart >= 0 ? 1 : -1; }
+    const vmax = v.def.vitesse_max * r.fougue;
+    return { gaz: Math.abs(ecart) > 1.6 ? 0.4 : (v.vitesse < vmax ? 1 : 0), frein: 0,
+             direction: borner(ecart * 2, -1, 1), freinMain: Math.abs(ecart) > 1.2 && v.vitesse > 2 };
+  }
+
   /** Encore dans la ville ? ⚠️ `Entites.retirer` ne touche pas `actif` : c'est la liste qui le dit. */
   function present(v) { return B.entites.indexOf(v) >= 0; }
 
@@ -318,6 +400,85 @@ const Conduite = (function () {
           if (!c.passe) chevronAuSol(ctx, e.piste, c.s, c.lat + (k % 2 === 0 ? TT / 2 : -TT / 2), vue);
         }
         B.stats.rects += e.cones.length * 3;
+      },
+    },
+
+    // LE DERBY DE DÉMOLITION (docs/jalons/le-derby-de-demolition-a-la-foire.md) : l'arène de gazon à
+    // l'est de la foire (`B.defs.derby.arene`, lue par Python sur la ville finie), fermée par des pneus
+    // PEINTS. Le Bonimenteur prête un bazou ; quatre autres (`derby`, pilotés par `commandesDerby`)
+    // foncent sur ce qui roule. Le dernier qui roule gagne ; au bout du temps, c'est aux points.
+    // ⚠️ L'ARÈNE NE RETIENT QUE LES BAZOUS (`retenir`) : pas un mur — la ville ne bouge pas, un passant
+    // ou une auto-patrouille y entre et en sort.
+    derby: {
+      preparer: function (d, r) {
+        const def = B.defs.derby, a = def && def.arene;
+        if (!a) return null;
+        const arene = { x: a.x * TT, y: a.y * TT, l: a.l * TT, h: a.h * TT };
+        const cx = arene.x + arene.l / 2, cy = arene.y + arene.h / 2;
+        // Personne a pied dans l'arene : les passants s'en vont (retires, sans de).
+        B.entites.filter(function (e) {
+          return e.type === 'pieton' && e !== B.joueur && !e.personnage && !e.mission && dansLArene(arene, e.x, e.y, 0);
+        }).forEach(Entites.retirer);
+        // Cinq bazous en couronne, le nez au centre ; le premier est le tien.
+        const n = r.bazous + 1, bazous = [];
+        for (let k = 0; k < n; k++) {
+          const t = Math.PI / 2 + k * 2 * Math.PI / n;
+          const x = cx + Math.cos(t) * arene.l * 0.36, y = cy + Math.sin(t) * arene.h * 0.34;
+          const v = Vehicules.creer('auto', x, y, angleVers(x, y, cx, cy),
+                                    { etat: 'stationne', couleur: def.bazous[k % def.bazous.length], mission: true });
+          if (!v) return null;
+          B.conduite.poses.push(v);
+          v.derby = true;
+          v.vie = v.vieMax = Math.round(v.def.vie * r.vie);
+          if (k === 0) v.aToi = true;      // prete : y monter n'est pas un vol
+          else { v.conducteur = 'derby'; v.etat = 'roule'; }
+          bazous.push(v);
+        }
+        return { arene: arene, bazous: bazous, moi: bazous[0], monter: bazous[0], t: 0 };
+      },
+      maj: function (e, r, v) {
+        e.t++;
+        for (const b of e.bazous) retenir(e.arene, b);
+        if (e.t === s(r.attente_s)) { Hud.message('GO ! LE DERNIER QUI ROULE GAGNE', 90); Son.SFX.klaxon(); }
+        if (v !== e.moi) return { gagne: false, raison: 'TU AS LAISSÉ TON BAZOU' };
+        if (!roule(e.moi)) return { gagne: false, raison: 'TON BAZOU EST MORT' };
+        const autres = e.bazous.filter(function (b) { return b !== e.moi && roule(b); });
+        if (!autres.length) return { gagne: true };
+        // ⚠️ Au bout du temps (l'attente comprise), pile quand le chrono du defi tombe a zero : c'est
+        // le seul chrono a l'ecran, et le verdict tombe avec lui.
+        if (e.t >= s(r.attente_s + r.temps_s)) {
+          // Aux points : la carrosserie qui reste, en part de la sienne.
+          const part = function (b) { return b.vie / b.vieMax; };
+          const meilleur = Math.max.apply(null, autres.map(part));
+          return part(e.moi) >= meilleur ? { gagne: true } : { gagne: false, raison: 'AUX POINTS' };
+        }
+        return null;
+      },
+      // Son bazou plie, on en descend : c'est qu'il est mort (`plier`), pas qu'on l'a laisse.
+      sansChar: function (e) { return { gagne: false, raison: roule(e.moi) ? 'TU AS LAISSÉ TON BAZOU' : 'TON BAZOU EST MORT' }; },
+      compte: function (e, r) {
+        const debout = e.bazous.filter(roule).length;
+        if (e.t < s(r.attente_s)) return 'PRÊT… ' + Math.ceil((s(r.attente_s) - e.t) / 60);
+        return 'DEBOUT ' + debout + ' / ' + e.bazous.length;
+      },
+      cible: function (e) {
+        const c = plusProche(e, e.moi);
+        return c ? { x: c.x, y: c.y } : null;
+      },
+      sol: function (ctx, e, r, vue) {
+        // Les pneus, en couronne : peints, pas des entites.
+        const a = e.arene, pas = 10;
+        let n = 0;
+        const pneu = function (x, y) {
+          const px = Math.round(x - vue.x), py = Math.round(y - vue.y);
+          if (px < -8 || py < -8 || px > VW + 8 || py > VH + 8) return;
+          ctx.fillStyle = '#141418'; ctx.fillRect(px - 4, py - 3, 8, 6); ctx.fillRect(px - 3, py - 4, 6, 8);
+          ctx.fillStyle = '#3a3a44'; ctx.fillRect(px - 1, py - 1, 2, 2);
+          n += 3;
+        };
+        for (let x = a.x; x <= a.x + a.l; x += pas) { pneu(x, a.y); pneu(x, a.y + a.h); }
+        for (let y = a.y + pas; y < a.y + a.h; y += pas) { pneu(a.x, y); pneu(a.x + a.l, y); }
+        B.stats.rects += n;
       },
     },
 
@@ -530,7 +691,7 @@ const Conduite = (function () {
     const sorte = EPREUVES[e.sorte];
     // ⚠️ Le remorquage se joue en DEUX chars : on descend du sien pour prendre la
     // remorqueuse. Les autres épreuves se ratent à pied.
-    if (!v) return sorte.aPied ? null : { gagne: false, raison: 'PAS SANS CHAR' };
+    if (!v) return sorte.aPied ? null : sorte.sansChar ? sorte.sansChar(e) : { gagne: false, raison: 'PAS SANS CHAR' };
     return sorte.maj(e, d.regles, v, d);
   }
 
@@ -576,5 +737,5 @@ const Conduite = (function () {
     if (d && sorte.hud) sorte.hud(ctx, e, d.regles);
   }
 
-  return { commencer, partir, maj, fermer, compte, cible, dessinerSol, dessiner, pisteDroite, projeter, point, aCoups, tempsIdeal, EPREUVES };
+  return { commencer, partir, maj, fermer, compte, cible, dessinerSol, dessiner, pisteDroite, projeter, point, aCoups, tempsIdeal, commandesDerby, choc, EPREUVES };
 })();

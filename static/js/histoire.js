@@ -2363,6 +2363,11 @@ const Histoire = (function () {
         if (tuileLibre(c.x - TT * 3, c.y, 3) || tuileLibre(c.x + TT * 3, c.y, 3)) { l = c; break; }
       }
     } else if (d.ou.indexOf('porte:') === 0) l = lieu(d.ou.slice(6));
+    // LE DERBY : au bord sud de son arene (`derby.arene`, lue par Python sur la ville finie).
+    else if (d.ou === 'derby') {
+      const a = B.defs.derby && B.defs.derby.arene;
+      if (a) l = { x: a.panneau.x * TT + 8, y: a.panneau.y * TT + 8 };
+    }
     if (!l) return null;
     // ⚠️ JAMAIS DEVANT UN RIDEAU DE GARAGE : trois tuiles a l'ouest de la
     // porte de Ti-Guy, c'est exactement la baie ou l'on gare pour vendre, et
@@ -2484,7 +2489,7 @@ const Histoire = (function () {
       foire : la baraque sert de panneau). */
   function planterLesPanneauxOuverts() {
     for (const d of defisOuverts()) {
-      if (!d.debloque || !d.ou || d.ou.indexOf('porte:') !== 0) continue;
+      if (!d.debloque || !d.ou || (d.ou.indexOf('porte:') !== 0 && d.ou !== 'derby')) continue;   // le derby : au bord de son arene
       if (B.entites.some(function (e) { return e.type === 'panneau' && e.defi === d.slug; })) continue;
       poserPanneau(d);
     }
@@ -2634,10 +2639,21 @@ const Histoire = (function () {
       partir(d, null);
       return;
     }
+    // ⚠️ LE SOIR SEULEMENT (`soir`, le derby) : ca se DIT, et rien ne part.
+    if (d.soir && ['crepuscule', 'nuit'].indexOf(Monde.periode()) < 0) {
+      B.defi = null;
+      Hud.message('ÇA SE JOUE LE SOIR — REVIENS À LA BRUNANTE', 150); Son.SFX.erreur();
+      return;
+    }
     if (d.conduite && !Conduite.commencer(d)) {
       B.defi = null;
       Hud.message('PAS DE PLACE ICI POUR CE DÉFI', 150); Son.SFX.erreur();
       return;
+    }
+    // Une epreuve qui PRETE son char (le bazou du derby) : on y monte tout de suite, a sa place.
+    if (d.conduite && B.conduite && B.conduite.monter && !j.dansVehicule) {
+      j.x = B.conduite.monter.x; j.y = B.conduite.monter.y;
+      Vehicules.monter(j, B.conduite.monter);
     }
     // Le Grand Saut compte ses dix secondes lui-meme (`majDefi`) : il part tout de suite.
     if (d.vehicule || j.dansVehicule) { partir(d, j.dansVehicule); return; }

@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (248 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (249 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -100,7 +100,6 @@ pas quand l'ordre de travail change.
 | Le marché aux puces du dimanche | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-marche-aux-puces-du-dimanche.md#fiche) |
 | Le 1er juillet, jour du déménagement | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-1er-juillet-jour-du-demenagement.md#fiche) |
 | La Saint-Jean sur la baie | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/la-saint-jean-sur-la-baie.md#fiche) |
-| Le derby de démolition à la foire | ⬜ **en cours** | 26 sept. 2026 | **P4** | ajout | [fiche](jalons/le-derby-de-demolition-a-la-foire.md#fiche) |
 | Les enseignes qui ouvrent pour vrai : bingo, quilles, lave-auto, Rialto | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/les-enseignes-qui-ouvrent-pour-vrai.md#fiche) |
 | Le pont de glace | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-pont-de-glace.md#fiche) |
 | La motoneige | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/la-motoneige.md#fiche) |
@@ -150,7 +149,6 @@ Ce que chaque ligne à faire attend (la table de tri du 13 sept. 2026, réduite 
 | **P4** | ajout | Le marché aux puces du dimanche | 2 | après **les collections** (il vend leurs meubles et leurs cartes) |
 | **P4** | ajout | Le 1er juillet, jour du déménagement | 2 | gagne à suivre **les collections** (les meubles du trottoir vont à la planque) |
 | **P4** | ajout | La Saint-Jean sur la baie | 3 | les barrières ferment les rues du défilé ; ⚠️ la foule et le rendu sur le vrai téléphone |
-| **P4** | ajout | Le derby de démolition à la foire | 3 | une conduite neuve (des chars qui en visent d'autres) |
 | **P4** | ajout | Les enseignes qui ouvrent pour vrai : bingo, quilles, lave-auto, Rialto | 3 | quatre intérieurs ; ⚠️ la ville promet déjà ces enseignes — le plus proche d'un mensonge du lot |
 | **P4** | ajout | Le pont de glace | 3 | la neige de M12 ; ⚠️ l'eau est une couche que beaucoup de juges tiennent |
 | **P4** | ajout | La motoneige | 2 | gagne à suivre **le pont de glace** ; un sprite de plus |

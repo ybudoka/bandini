@@ -35,7 +35,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-from . import (armes, audio, blocs, carte, devantures, economie, garderobe, interactions, journal, magasins,
+from . import (armes, audio, blocs, carte, derby, devantures, economie, garderobe, interactions, journal, magasins,
                brouillard, loto, manettes, missions, nuit, pietons, recherche, techniques, vehicules, verglas, videopoker,
                visages)
 from .version import VERSION
@@ -69,6 +69,8 @@ def assembler() -> dict:
         "brouillard": brouillard.pour_le_navigateur(),
         # Trois jours de glace (docs/jalons/la-tempete-de-verglas.md).
         "verglas": verglas.pour_le_navigateur(),
+        # L'arène du derby, lue sur la ville finie (docs/jalons/le-derby-de-demolition-a-la-foire.md).
+        "derby": derby.pour_le_navigateur(ville),
         # Le billet de Ti-Paul, et le tirage de la nuit (docs/jalons/le-6-49-du-depanneur.md).
         "loto": loto.pour_le_navigateur(),
         "recherche": recherche.exporter(),

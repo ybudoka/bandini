@@ -752,6 +752,18 @@ DEFIS: list[dict] = [
      # leurs règles (`Conduite`, `chaine`) : rien n'est recopié ici.
      "regles": {"chaine": ["frein_pile", "slalom", "creneau"]},
      "texte": "JOSÉE VEUT VOIR : LE FREIN PILE, LE SLALOM ET LE CRÉNEAU, D'UN SEUL SOUFFLE, SANS SORTIR DU CHAR"},
+    # LE DERBY DE DÉMOLITION (docs/jalons/le-derby-de-demolition-a-la-foire.md) : l'arène de gazon à
+    # l'est de la foire (`derby.arene`), le Bonimenteur te prête un bazou, et quatre autres foncent sur
+    # tout ce qui roule. Le dernier qui roule gagne ; au bout du temps, c'est aux points (la carrosserie).
+    # ⚠️ `chrono_s` = `attente_s` + `temps_s` : le chrono du défi est le seul à l'écran, les points
+    # tombent avec lui (`Conduite`).
+    # ⚠️ LE SOIR SEULEMENT (`soir`) ; et il s'ouvre quand on a gagné à la galerie de tir.
+    # ⚠️ La prime reste sous un boulot à l'heure (`test_derby`) : on vient pour le spectacle.
+    {"slug": "derby", "titre": "Le derby de démolition", "ou": "derby", "conduite": "derby", "soir": True,
+     "chrono_s": 123, "prime": 120, "debloque": {"apres": ["tir"]},
+     "regles": {"bazous": 4, "temps_s": 120, "attente_s": 3, "vie": 0.6, "fougue": 0.8, "colle_s": 0.8,
+                "recul_s": 0.7, "repit_s": 0.5, "garde_s": 4, "vise_joueur": 0.7},
+     "texte": "LE BONIMENTEUR TE PRÊTE UN BAZOU : QUATRE AUTRES FONCENT SUR TOUT CE QUI ROULE. LE DERNIER QUI ROULE GAGNE"},
 ]
 
 #: Avec quoi un défi se joue. ⚠️ Un défi n'en exclut un que pour une raison
