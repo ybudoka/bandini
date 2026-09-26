@@ -414,7 +414,14 @@ const Entites = (function () {
     if (g.qui === 'commis') return archetype('commis');
     if (g.qui === 'soignant') return archetype('soignante');
     if (g.qui === 'avocat') return archetype('avocat');
-    if (g.qui === 'eleve') return archetype('eleve');   // Kevin, au DOJO DION
+    // KEVIN, l'eleve du DOJO DION (docs/jalons/le-dojo-du-quartier.md) : le corps du commis,
+    // en kimono blanc. ⚠️ Pas un archetype a lui dans `pietons.py` : le paquet des definitions
+    // est a son plafond (54 000 gzip), et un archetype de plus le faisait deborder.
+    if (g.qui === 'eleve') {
+      const commis = archetype('commis');
+      return Object.assign({}, commis, { slug: 'eleve', nom: 'Kevin', metier: 'dojo', courage: 0, temoin: 0,
+                                         couleurs: Object.assign({}, commis.couleurs, { c: '#f4f1e8', p: '#f4f1e8' }) });
+    }
     const hasard = (hash2(g.x * 131 + g.y, 0xD0C) % 1000) / 1000;
     if (g.qui === 'malade') {
       const jaquette = archetype('malade'), rue = archetypeDeRue(g.x * TT, g.y * TT, hasard);

@@ -166,6 +166,9 @@ VISAGES: dict[str, dict] = {
     # barbe blanche pleine — là où Sven la porte courte et grise.
     "berube": _v("large", "degarnie", "uniforme", "barbe", chapeau="marin",
                  signes=("rides", "sourcils_epais", "yeux_plisses"), t="#16263a", y="#5a7a9a"),
+    # Mireille Dion, au DOJO DION : ancienne danseuse, la cinquantaine droite comme un i — le
+    # chignon serre, le col roule noir, deux boucles d'oreilles, quelques rides au coin des yeux.
+    "mireille": _v("fine", "chignon", "col_roule", signes=("boucles", "rides")),
 }
 
 #: Ceux qui parlent sans être des PERSONNAGES : l'agent qui t'interpelle dans la rue.

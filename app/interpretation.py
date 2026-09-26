@@ -311,6 +311,29 @@ JEU: dict[str, str] = {
     "police_helico_1_r": "[serious] L'hélico décolle. On va l'avoir d'en haut.",
     "police_helico_2_r": "[confident] Ici l'hélico, je le vois. Y peut pas se cacher.",
 
+    # --- Le DOJO DION (`app/dojo.py`) : Mireille Dion compte, corrige, felicite. Calme et
+    # precise ; seche quand on danse tout seul, chaleureuse quand le geste est propre.
+    "mireille-dojo-salut": "[calm] Bonjour. Mireille Dion. Tu enlèves tes souliers, tu salues le tatami, et après on parle.",
+    "mireille-dojo-cours": "[wryly] Choisis. Moi, je fournis le geste et le rythme. Toi, la sueur.",
+    "mireille-dojo-oui_1": "[satisfied] Oui.",
+    "mireille-dojo-oui_2": "[warmly] C'est ça.",
+    "mireille-dojo-rate_1": "[matter-of-fact] Trop tôt.",
+    "mireille-dojo-rate_2": "[deadpan] Tu danses tout seul.",
+    "mireille-dojo-appris": "[warmly] Tu l'as. Garde-le propre.",
+    "mireille-dojo-reprendre": "[calm] On reprendra. C'est payé. Reviens quand ton corps m'écoute.",
+    "mireille-dojo-abandon": "[softly] On arrête. Salue le tatami en sortant.",
+    "mireille-dojo-ferme": "[softly] Le dojo dort. Reviens à huit heures.",
+    "mireille-dojo-annonce_uppercut": "[calm] L'uppercut. Tu plies les genoux, tu remontes avec tout le corps. Pas juste le bras.",
+    "mireille-dojo-annonce_pied_circulaire": "[calm] Le coup de pied circulaire. La hanche tourne d'abord. La jambe suit.",
+    "mireille-dojo-annonce_pied_de_cote": "[calm] Le coup de pied de côté. Tu charges, tu gardes… et tu pousses le mur.",
+    "mireille-dojo-annonce_pied_saute": "[calm] Le coup de pied sauté. Tu cours, tu montes, et tu ne penses pas à la descente.",
+    "mireille-dojo-annonce_balayage": "[calm] Le balayage. Tu roules, tu restes bas, et tu fauches ce qui tient debout.",
+    "mireille-dojo-annonce_projection_hanche": "[calm] La projection de hanche. Tu le colles, tu tournes. Ta hanche fait le reste.",
+    "mireille-dojo-annonce_grand_fauchage": "[calm] Le grand fauchage. Tu le tires vers toi, et ta jambe balaie la sienne.",
+    "mireille-dojo-annonce_sacrifice": "[calm] Le sacrifice en cercle. Tu te laisses tomber. Oui, exprès. Ton pied fait voler le reste.",
+    "mireille-dojo-annonce_retournement_poignet": "[calm] Le retournement du poignet. Il frappe, tu accueilles, tu tournes.",
+    "mireille-dojo-annonce_etranglement": "[calm] L'étranglement. Par derrière, sans bruit. Et tu tiens jusqu'au bout.",
+
     # Le jeu des répliques de MISSION n'est pas ici : il est collé à chaque réplique, dans le fichier
     # de la mission (`jeu=` sur `_l`/`_p`/`_r`/`_a`) — voir plus bas.
 

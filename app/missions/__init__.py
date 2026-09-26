@@ -224,6 +224,11 @@ PERSONNAGES: list[Personnage] = [
     {"slug": "berube", "nom": "Capitaine Bérubé", "genre": "homme", "voix": "Paul K — Deep French Narrator",
      "couleurs": {"c": "#1f3a5f", "h": "#e8e8e8", "s": "#d9a07a", "p": "#20242c"}, "ou": "traversier:quais",
      "heler": "Un passage?", "parti_apres": "m99"},
+    # Mireille Dion tient le DOJO DION, au Faubourg (docs/jalons/le-dojo-du-quartier.md) : sa
+    # fiche est `docs/personnages/mireille.md`. Le col roule noir de la danseuse.
+    {"slug": "mireille", "nom": "Mireille Dion", "genre": "femme", "voix": "Marie Line - Energetic and Clear",
+     "couleurs": {"c": "#1f1f2a", "h": "#4a3a30", "s": "#e8c0a0", "p": "#1f1f2a"}, "ou": "point:cours",
+     "heler": "Au tatami."},
 ]
 
 
@@ -1029,7 +1034,10 @@ def repliques_de_repos() -> list[dict]:
              "partie": "repos", "telephone": False}
             for p in PERSONNAGES if p.get("ou") and not _sa_mission_l_attend_toujours(p)
             for n, texte in enumerate((REPOS["texte"], REPOS["texte_apres"]), start=1)
-            if not (p["slug"] == "josee" and n == 2)]
+            if not (p["slug"] == "josee" and n == 2)
+            # Mireille ouvre ses COURS a chaque fois (`histoire.js`) : un repos qu'on n'entend
+            # jamais ne se paie pas.
+            and p["slug"] != "mireille"]
 
 
 #: Les acteurs qu'une scène de mission peut nommer, en plus des personnages : ce que

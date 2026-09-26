@@ -269,7 +269,9 @@ def test_chaque_donneur_de_mission_a_sa_place():
     """⚠️ Bouchard mange au casse-croute, Josee tient le fond du Brouillard :
     leur `ou` nomme un point d'interieur, et ce point doit exister. Sans lui,
     M4 et M5 sont indonnables — et rien d'autre ne le dirait."""
-    points = {(slug, p["type"]) for slug, piece in carte.INTERIEURS.items()
+    # ⚠️ Les pieces POSEES aussi (`VILLE["interieurs"]`) : le comptoir de Mireille est celui du
+    # DOJO DION, une piece de commerce reprise sur la ville finie (`poser_le_dojo`).
+    points = {(slug, p["type"]) for slug, piece in {**carte.INTERIEURS, **VILLE["interieurs"]}.items()
               for p in piece["points"]}
     types = {t for _, t in points}
     for personnage in missions.PERSONNAGES:

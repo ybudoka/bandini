@@ -35,7 +35,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-from . import (armes, audio, blocs, carte, derby, devantures, economie, garderobe, interactions, journal, magasins,
+from . import (armes, audio, blocs, carte, derby, devantures, dojo, economie, garderobe, interactions, journal, magasins,
                brouillard, loto, manettes, missions, nuit, pietons, recherche, techniques, vehicules, verglas, videopoker,
                visages)
 from .version import VERSION
@@ -62,6 +62,8 @@ def assembler() -> dict:
         "armes_regles": armes.REGLES,
         # Les coups de rue et les cours du dojo (docs/jalons/les-techniques-d-arts-martiaux.md).
         "techniques": techniques.CATALOGUE,
+        # Le DOJO DION : les regles de la lecon et ce que Mireille dit (docs/jalons/le-dojo-du-quartier.md).
+        "dojo": dojo.exporter(),
         "economie": economie.exporter(),
         # La machine du fond du bar (docs/jalons/le-videopoker-du-brouillard.md).
         "videopoker": videopoker.pour_le_navigateur(),

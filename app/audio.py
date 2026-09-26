@@ -1444,9 +1444,21 @@ def voix_repos() -> list[dict]:
     return sortie
 
 
+def voix_dojo() -> list[dict]:
+    """Ce que Mireille dit au DOJO DION (`app/dojo.py`) : l'annonce des cours, le compte, les
+    « oui » et les « rate ». Meme mecanique que `voix_repos()` ; un mp3 qui manque laisse la
+    bulle s'afficher sans voix — le filet."""
+    from . import dojo, missions
+    perso = missions.personnage("mireille")
+    return [{"slug": r["slug"], "texte": r["texte"], "genre": perso["genre"], "voix": perso["voix"],
+             "volume": 0.9, "histoire": True, "qui": r["qui"], "mission": r["mission"],
+             "partie": r["partie"], "telephone": False}
+            for r in dojo.repliques()]
+
+
 def toutes_les_voix() -> list[dict]:
     return (list(VOIX) + list(VOIX_DE_LA_POLICE) + voix_histoire() + voix_journal() + voix_loto() + voix_ouverture()
-            + voix_repos())
+            + voix_repos() + voix_dojo())
 
 
 #: LES VOIX QUI NE SE PARTAGENT PAS — la table, ecrite UNE fois : la voix, et le

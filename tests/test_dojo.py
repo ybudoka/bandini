@@ -49,3 +49,39 @@ def test_sans_facade_qui_convient_pas_de_dojo_et_rien_ne_plante(monkeypatch):
 
 def test_plus_de_salon_mireille():
     assert all(nom != "SALON MIREILLE" for noms in devantures.COMMERCES.values() for nom, _ in noms)
+
+
+# --- Mireille Dion, et les règles de la leçon (tâche 2) ----------------------------------
+
+from app import audio, dojo, missions, techniques  # noqa: E402
+
+
+def test_mireille_tient_le_comptoir_du_dojo():
+    m = missions.personnage("mireille")
+    assert m and m["ou"] == "point:cours" and m["nom"] == "Mireille Dion"
+
+
+def test_chaque_cours_a_sa_lecon_et_son_annonce():
+    cles = {r["cle"] for r in dojo.REPLIQUES}
+    for t in techniques.CATALOGUE:
+        if t["gratuite"]:
+            continue
+        assert dojo.lecon(t["slug"]) in dojo.DISTANCES, t["slug"]
+        assert f"annonce_{t['slug']}" in cles, t["slug"]
+    assert set(dojo.LECONS) <= {t["slug"] for t in techniques.CATALOGUE}
+
+
+def test_mireille_ne_dit_pas_son_repos():
+    """ACTION ouvre ses cours, toujours : un repos qu'on n'entend jamais ne se paie pas."""
+    assert not [r for r in missions.repliques_de_repos() if r["qui"] == "mireille"]
+
+
+def test_les_voix_du_dojo_sont_declarees():
+    slugs = {v["slug"] for v in audio.toutes_les_voix()}
+    assert {f"mireille-dojo-{r['cle']}" for r in dojo.REPLIQUES} <= slugs
+
+
+def test_elle_se_nomme_une_fois():
+    """« Qui parle se nomme » : dans sa salutation, et nulle part ailleurs."""
+    nomment = [r["cle"] for r in dojo.REPLIQUES if "Mireille" in r["texte"]]
+    assert nomment == ["salut"], nomment
