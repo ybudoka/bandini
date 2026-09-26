@@ -1,4 +1,4 @@
-# Le quartier chinois : un 7e district
+# Le quartier chinois : le Petit-Canton, un 7e district
 
 ← [le plan](../plan.md) · [les jalons livrés](README.md)
 
@@ -35,9 +35,24 @@ rivale, qui se bat avec les techniques du [répertoire](les-techniques-d-arts-ma
 - **Prérequis et voisins** : il **porte** l'école rivale ; il touche « Les territoires des gangs bougent »
   (la même mécanique de territoires) ; le dojo du quartier (jalon 2) n'en dépend pas.
 
-**À trancher avec Martin** (le brainstorming du jalon) : le nom du quartier et celui du gang ; où il se pose
-(au nord du Faubourg ? à l'est, entre la Shop et les Quais ?) ; sa taille ; ce qui s'y ouvre au joueur
-(missions, un donneur, le marché).
+**Tranché avec Martin (26 sept. 2026)** : « un grand quartier bien défini. Au nord. Missions avec donneur. »
+Les noms, il me les a laissés :
+
+- **Le quartier : le Petit-Canton** (slug `canton`). Canton, la ville du Sud de la Chine d'où viennent bien
+  des vieux quartiers chinois ; et au Québec, un canton est aussi un coin de pays (les Cantons-de-l'Est). Le
+  nom joue sur les deux, sans rire de personne.
+- **Le gang : les Mantes** (slug `mantes`, piéton `mante`) — les élèves de l'école de la Mante religieuse, un
+  vrai style de kung-fu du Sud, qui ont mal tourné. Un nom d'animal au pluriel, comme les Morues et les
+  Chevreuils ; ni « grue » (la grue des chantiers existe), ni rien qui nomme une origine.
+- **La place : au NORD** de la ville — la carte s'allonge par le haut (l'aéroport l'a allongée par le bas).
+  ⚠️ Tout ce qui compte en y depuis le haut de la carte (la caméra, `Monde.lettreDuBloc`, les rangées de la
+  trame lues par index) se décale si on insère des rangées au-dessus : à mesurer avant de choisir entre
+  décaler la trame vers le bas (une translation, pas un nouveau tirage) et un plan posé au-dessus.
+- **La taille : grand, bien défini** — un vrai quartier qu'on reconnaît d'un coup d'œil : son arche aux
+  entrées, ses lanternes, ses enseignes, ses couleurs de trottoir ; pas trois rues de décor.
+- **Des missions, avec un donneur** : un personnage du Petit-Canton (sa fiche dans `docs/personnages/`, sa
+  voix, il se nomme une fois dans sa salutation) et sa série de missions — « Une mission s'ajoute comme un
+  bloc Lego ». Qui il est, et ce qu'il raconte : au brainstorming du jalon.
 
 **Juges** : la ville d'avant identique à la tuile près (comparer les deux villes en JSON, clé par clé) ; le
 quartier atteignable à pied et au volant ; le gang naît chez lui et se bat à sa frontière ; aucun dé consommé
