@@ -164,7 +164,8 @@ def test_kevin_se_releve_ne_fuit_pas_et_n_est_pas_un_crime(banc):
         const crimes = L.B.crimes.length, vie = kevin.vie;
         L.B.partie.techniques.uppercut = true;
         let touche = 0;
-        for (let k = 0; k < 4; k++) { o.tape('KeyX', 1); o.frame(18); if (kevin.recul > 0) touche++; }
+        // Un coup qui l'a TOUCHE : dans les `touches` du coup de Bandini (le recul, lui, retombe).
+        for (let k = 0; k < 4; k++) { o.tape('KeyX', 1); o.frame(18); if ((j.touches || []).indexOf(kevin.id) >= 0) touche++; }
         const couche = kevin.etat;
         o.frame(120);
         return { vivant: kevin.vivant, etat: kevin.etat, vie: kevin.vie === vie, touche: touche,
@@ -227,3 +228,66 @@ def test_la_lecon_ne_tire_aucun_de(banc):
         return tires;
     }""")
     assert r == 0
+
+
+# --- La relecture de la branche : une leçon au bouton par mise en place -------------------
+
+import pytest  # noqa: E402
+
+GESTES = {
+    # La parade : Kevin arme sur le « et » ; on lui prend le poignet tout de suite.
+    "retournement_poignet": "o.tape('KeyU', 1);",
+    # De dos : on tient SAISIR le temps de l'étranglement.
+    "etranglement": "o.touche('KeyU'); o.frame(95); o.relacher('KeyU'); o.frame(1);",
+    # Tenue : on charge sur le « et », on relâche avant la fin de la fenêtre.
+    "pied_de_cote": "o.touche('KeyX'); o.frame(21); o.relacher('KeyX'); o.frame(1);",
+    # Plus loin : on sprinte vers Kevin et on frappe en course.
+    "pied_saute": ("o.touche('ShiftLeft'); o.touche('ArrowRight'); o.frame(9); o.tape('KeyX', 1);"
+                   " o.relacher('ArrowRight'); o.relacher('ShiftLeft'); o.frame(1);"),
+    # Kevin attaque : on roule, et on balaie au sortir de la roulade.
+    "balayage": "o.tape('ShiftLeft', 1); o.frame(15); o.tape('KeyX', 1);",
+}
+
+
+@pytest.mark.parametrize("slug", sorted(GESTES))
+def test_chaque_mise_en_place_s_apprend_au_bouton(banc, slug):
+    r = banc("""function (L, o) { """ + ENTRER + LECON + """
+        auDojo(L, o);
+        return lecon(L, o, '%s', function (L, o) { %s }, 1400);
+    }""" % (slug, GESTES[slug]))
+    assert r["appris"] is True, r
+
+
+def test_kevin_revient_au_sac_et_se_redresse(banc):
+    """Après une leçon, Kevin rejoint sa place au sac — et un coup ne le laisse pas penché."""
+    r = banc("""function (L, o) { """ + ENTRER + """
+        auDojo(L, o);
+        const kevin = L.B.entites.find(function (e) { return e.partenaire; });
+        const poste = { x: kevin.poste.x, y: kevin.poste.y };
+        L.B.partie.argent = 1000;
+        L.Dojo.acheter('uppercut');
+        for (let k = 0; k < 200; k++) o.frame(1);
+        L.Entites.blesser(kevin, 5, L.B.joueur, {});
+        L.Dojo.annuler(null);
+        for (let k = 0; k < 600; k++) o.frame(1);
+        return { d: Math.round(Math.hypot(kevin.x - poste.x, kevin.y - poste.y)), recul: kevin.recul };
+    }""")
+    # ⚠️ « Au sac » a 8 px pres : Mireille se tient a cote, et deux corps restent a 10 px l'un
+    # de l'autre (`Entites.demeler`) — il s'arrete ou elle le laisse.
+    assert r["d"] <= 8 and r["recul"] == 0, r
+
+
+def test_pas_de_cours_achete_pendant_une_lecon(banc):
+    """Pendant la leçon d'uppercut, l'uppercut « se sait » : le circulaire ne doit pas pour
+    autant devenir achetable, ni une leçon en remplacer une autre."""
+    r = banc("""function (L, o) { """ + ENTRER + """
+        auDojo(L, o);
+        L.B.partie.argent = 5000;
+        L.Dojo.acheter('uppercut');
+        const achat = L.Dojo.acheter('pied_circulaire');
+        // Un cours VRAIMENT achetable (le balayage n'attend rien) : pas pendant une leçon.
+        const autre = L.Dojo.acheter('balayage');
+        return { achat: achat, autre: autre, cours: L.B.cours && L.B.cours.slug,
+                 etat: L.Dojo.etatDuCours('pied_circulaire'), argent: L.B.partie.argent };
+    }""")
+    assert r == {"achat": False, "autre": False, "cours": "uppercut", "etat": "verrouille", "argent": 4700}, r

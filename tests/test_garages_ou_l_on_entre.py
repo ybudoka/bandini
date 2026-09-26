@@ -132,6 +132,9 @@ def test_les_carrosseries_ne_deplacent_rien_d_autre(ville, monkeypatch):
     from app import aeroport
     monkeypatch.setattr(devants, "deplacer", lambda chantier, ville_: {})
     monkeypatch.setattr(aeroport, "poser", lambda chantier, ville_: None)
+    # Le DOJO DION de meme (docs/jalons/le-dojo-du-quartier.md) : pose apres les carrosseries,
+    # son point s'ajoute au bout — des deux cotes, pour la meme raison que l'aeroport.
+    monkeypatch.setattr(carte._Chantier, "poser_le_dojo", lambda self, ville_: None)
     avec = carte.generer(graine=ville["graine"])
     monkeypatch.setattr(carte._Chantier, "poser_les_carrosseries", lambda self, ville_: [])
     sans = carte.generer(graine=ville["graine"])

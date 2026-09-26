@@ -378,6 +378,9 @@ const Entites = (function () {
       fuite : un cri dans la rue ou un coup n'en font pas un passant (`alerter` peut le faire
       `fuit` — il revient a `fige`). */
   function majKevin(e) {
+    // ⚠️ Le recul d'un coup se DECOMPTE ici : `majPieton` le fait pour les autres, et Kevin le
+    // quitte avant — il restait penche (« il chancelle ») pour toute la visite.
+    if (e.recul > 0) e.recul--;
     if (e.etat === 'couche_dojo') {
       e.vx = 0; e.vy = 0;
       if (--e.minuterie <= 0) { e.etat = 'fige'; e.face = 'bas'; }
@@ -388,8 +391,12 @@ const Entites = (function () {
     const cible = e.marque || e.poste;
     if (!cible) return;
     const dx = cible.x - e.x, dy = cible.y - e.y, d = Math.hypot(dx, dy);
-    if (d > 1.5) { e.vx = dx / d * 0.9; e.vy = dy / d * 0.9; regarder(e, dx, dy); }
-    else {
+    if (d > 1.5) {
+      // ⚠️ Le pas se FAIT ici : `majPieton`, qui deplace les autres, Kevin le quitte avant.
+      e.vx = dx / d * Math.min(0.9, d); e.vy = dy / d * Math.min(0.9, d); regarder(e, dx, dy);
+      deplacerCercle(e, e.vx, e.vy, masqueDe(e));
+      dansLaCarte(e);
+    } else {
       e.vx = 0; e.vy = 0; e.x = cible.x; e.y = cible.y;
       if (e.regard) regarder(e, e.regard.x, e.regard.y);
     }

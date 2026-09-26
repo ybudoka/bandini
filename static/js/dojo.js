@@ -26,7 +26,9 @@ const Dojo = (function () {
     if (p.techniques && p.techniques[slug]) return 'appris';
     if (p.coursPayes && p.coursPayes[slug]) return 'paye';
     const a = avant(t);
-    if (a && !Techniques.sait(B.joueur, a.slug)) return 'verrouille';
+    // Le maillon d'avant se lit dans ce que la PARTIE sait (pas `Techniques.sait`, qui compte
+    // la technique d'une lecon en cours comme sue).
+    if (a && !a.gratuite && !(p.techniques && p.techniques[a.slug])) return 'verrouille';
     return 'a_vendre';
   }
 
@@ -36,6 +38,9 @@ const Dojo = (function () {
   /** Payer (une fois) et commencer. Rend true si la lecon part. ⚠️ Un cours rate reste
       PAYE : on recommence sans repayer. */
   function acheter(slug) {
+    // Une lecon a la fois : pendant l'uppercut, l'uppercut « se sait » — le circulaire ne
+    // s'achete pas pour autant, et une lecon n'en remplace pas une autre.
+    if (B.cours) return false;
     const etat = etatDuCours(slug), t = Techniques.def(slug);
     if (ferme() || etat === 'appris' || etat === 'verrouille') return false;
     if (etat === 'a_vendre') {
@@ -127,7 +132,9 @@ const Dojo = (function () {
   /** Le moteur des techniques : `auteur` vient de PORTER `slug` sur `cible`. */
   function quandPorte(auteur, slug, cible) {
     const c = B.cours;
-    if (!c || auteur !== B.joueur || cible !== c.kevin || slug !== c.slug || !c.lance) return;
+    // ⚠️ `c.fenetre` AUSSI : une technique dont l'etape 0 porte (le retournement du poignet)
+    // porte dans la meme image que SAISIR — avant que `maj` ait note le geste lance.
+    if (!c || auteur !== B.joueur || cible !== c.kevin || slug !== c.slug || !(c.lance || c.fenetre)) return;
     c.vu = true;
   }
 
