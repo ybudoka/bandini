@@ -2642,6 +2642,60 @@ const TUILES = (function () {
     ctx.restore();
   }
 
+  /* La table : un plateau CLAIR sur un piétement sombre. ⚠️ Le bois sombre
+     d'avant faisait un trou noir dans le plancher : a l'ecran, une table et
+     un billard se lisaient comme deux caisses posees la.
+
+     ⚠️ `v & 15` est le masque des cotes ou la table CONTINUE
+     (`varianteDeBloc`, monde.js). Le billard du bar fait quatre tuiles sur
+     deux, et c'etait huit tabourets : chaque tuile avait son plateau, ses
+     bords rentres et son ombre. Le plateau ne rentre ses bords, ne montre
+     son chant et ne porte son ombre que la ou la table s'arrete, et le
+     vernis court le long du bord nord. Une table d'une tuile n'a pas change.
+     La palette (piétement, plateau, vernis) : la ville, ou le pin du chalet. */
+  function table(ctx, v, T, pied, plateau, vernis) {
+    const nord = !(v & 1), est = !(v & 2), sud = !(v & 4), ouest = !(v & 8);   // ou la table S'ARRETE
+    const x0 = ouest ? 2 : 0, x1 = est ? T - 2 : T;
+    ctx.fillStyle = 'rgba(0,0,0,0.20)';               // l'ombre portee, vers le sud-est
+    ctx.fillRect(ouest ? 3 : 0, nord ? 5 : 0, (est ? T - 1 : T) - (ouest ? 3 : 0), T - (nord ? 5 : 0));
+    ctx.fillStyle = pied;                             // le piétement
+    ctx.fillRect(x0, nord ? 3 : 0, x1 - x0, (sud ? T - 2 : T) - (nord ? 3 : 0));
+    ctx.fillStyle = plateau;                          // le plateau
+    ctx.fillRect(x0, nord ? 2 : 0, x1 - x0, (sud ? T - 4 : T) - (nord ? 2 : 0));
+    if (nord) {                                       // le vernis qui accroche, le long du bord
+      ctx.fillStyle = vernis;
+      ctx.fillRect(ouest ? 3 : 0, 3, (est ? T - 3 : T) - (ouest ? 3 : 0), 2);
+    }
+    if (sud) { ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(x0, T - 5, x1 - x0, 1); }   // le chant
+  }
+  // La chaise : plus petite que la table, dossier au nord (on s'assoit face
+  // au sud). On doit voir le plancher tout autour, sinon deux chaises collees
+  // font une banquette.
+  function chaise(ctx, T, dossier, assise, reflet) {
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.fillRect(5, 8, 8, 6);
+    ctx.fillStyle = dossier;
+    ctx.fillRect(4, 3, 8, 2);                        // le dossier
+    ctx.fillStyle = assise;
+    ctx.fillRect(4, 6, 8, 7);                        // l'assise
+    ctx.fillStyle = reflet;
+    ctx.fillRect(5, 7, 6, 3);
+  }
+  // La pierre des champs du foyer et de sa cheminée : des galets gris et ocre, le mortier entre.
+  function pierres(ctx, v, T) {
+    plein(ctx, '#6e685e', T);                        // le mortier
+    const teintes = ['#8f897d', '#a39c8e', '#7d776c', '#9a8a70', '#b0a898'];
+    for (let r = 0; r < 4; r++) {
+      let x = -((v + r * 3) % 5);
+      while (x < T) {
+        const l = 4 + hash2(v * 11 + r, x + 20) % 3;
+        ctx.fillStyle = teintes[hash2(v + r * 7, x + 40) % teintes.length];
+        ctx.fillRect(x + 1, r * 4 + 1, l - 1, 3);
+        ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(x + 1, r * 4 + 1, l - 1, 1);
+        x += l;
+      }
+    }
+  }
   /** LE BOIS ROND — le mur du chalet du rang (demande de Martin : « une vraie texture de
       bois rond »). Des rondins couches, un par quatre pixels : le dessus arrondi qui prend la
       lumiere, le ventre, le dessous dans l'ombre, et entre deux le CALFEUTRAGE clair (le
@@ -3229,6 +3283,187 @@ const TUILES = (function () {
       ctx.fillStyle = '#5e391a'; ctx.fillRect(4, 6, 8, 1); ctx.fillRect(4, 12, 8, 1);   // les traverses
       ctx.fillStyle = '#d8b83a'; ctx.fillRect(11, 9, 1, 1);     // la poignee
     },
+    /* --- Le chalet du rang, DEDANS (26 sept. 2026) ---------------------------------------
+       « Je veux que ça ait vraiment l'air d'être un chalet » (Martin). Les murs en rondins
+       (`B@bois_rond`), un plancher de pin foncé, et les meubles de la ville repeints en camp
+       (`<glyphe>@chalet`, les `materiaux` de la pièce) ; puis ce qu'un camp a et qu'une ville
+       n'a pas : le foyer de pierre (`Y`) sous sa cheminée (`K`), la corde de bois (`L`), la
+       peau d'ours (`U`), la berçante (`V`), le panache (`N`) et les raquettes (`&`) au mur.
+       ⚠️ Le FEU du foyer ne se cuit pas ici : une tuile est peinte une fois. Ce qu'on voit
+       danser est redessiné à chaque image par-dessus (`Monde.dessinerFoyers`). */
+    'B@bois_rond': function (ctx, v, T) { boisRond(ctx, v, T); },
+    // Le plancher d'un camp : de longues planches de pin, couleur miel foncé, clouées.
+    // ⚠️ La teinte d'une planche ne dépend que de sa RANGÉE dans la tuile (jamais de `v`) :
+    // elle continue d'une tuile à l'autre. Teintée par tuile, c'était un damier. Seuls le
+    // joint de bout, les clous et le grain changent d'une tuile à l'autre.
+    't@chalet': function (ctx, v, T) {
+      const teintes = ['#8f5e34', '#84552f', '#946338', '#7c502c'];
+      for (let r = 0; r < 4; r++) {
+        ctx.fillStyle = teintes[r]; ctx.fillRect(0, r * 4, T, 4);
+        ctx.fillStyle = 'rgba(40,20,8,0.40)'; ctx.fillRect(0, r * 4 + 3, T, 1);   // le joint entre deux planches
+        if (hash2(v * 3 + r, 61) % 3 === 0) {                                     // un bout de planche, parfois
+          const x = hash2(v + r, 62) % T;
+          ctx.fillStyle = 'rgba(40,20,8,0.45)'; ctx.fillRect(x, r * 4, 1, 3);
+          ctx.fillStyle = 'rgba(30,15,5,0.6)'; ctx.fillRect((x + 2) % T, r * 4 + 1, 1, 1);   // son clou
+        }
+      }
+      points(ctx, v, T, 'rgba(60,30,10,0.30)', 6, 40);    // le grain
+    },
+    // Le lit du camp : un cadre en rondins, et la couverture à carreaux de bûcheron.
+    'l@chalet': function (ctx, v, T) {
+      const nord = !(v & 1), est = !(v & 2), sud = !(v & 4), ouest = !(v & 8);
+      const x0 = ouest ? 1 : 0, x1 = est ? T - 1 : T, y0 = nord ? 1 : 0, y1 = sud ? T - 1 : T;
+      if (sud) { ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(x0, T - 1, x1 - x0, 1); }
+      ctx.fillStyle = '#6d4420'; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);          // le cadre en rondins
+      ctx.fillStyle = '#b98249';
+      if (nord) ctx.fillRect(x0, y0, x1 - x0, 2);                                    // la tête de lit, un rondin
+      if (ouest) ctx.fillRect(x0, y0, 1, y1 - y0);
+      if (est) ctx.fillRect(x1 - 1, y0, 1, y1 - y0);
+      const mx0 = ouest ? 2 : 0, mx1 = est ? T - 2 : T, my0 = nord ? 3 : 0, my1 = sud ? T - 2 : T;
+      ctx.fillStyle = '#e8e0cc'; ctx.fillRect(mx0, my0, mx1 - mx0, my1 - my0);
+      if (nord) {
+        ctx.fillStyle = '#f2ecdc'; ctx.fillRect(ouest ? 3 : 0, 4, (est ? T - 3 : T) - (ouest ? 3 : 0), 4);   // l'oreiller
+        ctx.fillStyle = '#cdc4ae'; ctx.fillRect(ouest ? 3 : 0, 7, (est ? T - 3 : T) - (ouest ? 3 : 0), 1);
+      }
+      const cy0 = nord ? 9 : 0, cy1 = sud ? T - 3 : T;
+      ctx.fillStyle = '#a3262a'; ctx.fillRect(mx0, cy0, mx1 - mx0, cy1 - cy0);   // le rouge
+      ctx.fillStyle = '#1e1a1a';                                                 // les carreaux noirs, sur une grille de 4 px
+      for (let y = cy0; y < cy1; y++) for (let x = mx0; x < mx1; x++) {
+        if ((x >> 1) % 2 === 0 && (y >> 1) % 2 === 0) ctx.fillRect(x, y, 1, 1);
+      }
+      ctx.fillStyle = 'rgba(30,26,26,0.55)';                                     // les bandes qui se croisent
+      for (let x = mx0; x < mx1; x++) if ((x >> 1) % 2 === 0) ctx.fillRect(x, cy0, 1, cy1 - cy0);
+      if (sud) { ctx.fillStyle = '#6e1a1c'; ctx.fillRect(mx0, T - 3, mx1 - mx0, 1); }
+    },
+    // Le coffre : du pin, deux cerclages de fer et une grosse serrure.
+    'k@chalet': function (ctx, v, T) {
+      ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(2, 4, 13, 11);
+      ctx.fillStyle = '#7a4c24'; ctx.fillRect(1, 2, 14, 12);
+      ctx.fillStyle = '#9a6536'; ctx.fillRect(1, 2, 14, 5);                        // le couvercle bombé
+      ctx.fillStyle = '#b37a44'; ctx.fillRect(2, 3, 12, 1);
+      ctx.fillStyle = '#3a3a3e'; ctx.fillRect(4, 2, 2, 12); ctx.fillRect(10, 2, 2, 12);   // les cerclages
+      ctx.fillStyle = '#5e391a'; ctx.fillRect(1, 7, 14, 1);
+      ctx.fillStyle = '#c9a24a'; ctx.fillRect(7, 7, 2, 3);                          // la serrure
+    },
+    // L'armoire de pin : deux portes, leurs panneaux, deux boutons de bois.
+    'e@chalet': function (ctx, v, T) {
+      plein(ctx, '#8a5a2c', T);
+      ctx.fillStyle = '#a8703a'; ctx.fillRect(1, 1, 6, 13); ctx.fillRect(9, 1, 6, 13);
+      ctx.fillStyle = '#95622f'; ctx.fillRect(2, 3, 4, 4); ctx.fillRect(10, 3, 4, 4); ctx.fillRect(2, 9, 4, 4); ctx.fillRect(10, 9, 4, 4);
+      ctx.fillStyle = '#5e391a'; ctx.fillRect(7, 1, 2, 13);
+      ctx.fillStyle = '#e0c08a'; ctx.fillRect(6, 7, 1, 1); ctx.fillRect(9, 7, 1, 1);
+      ctx.fillStyle = 'rgba(0,0,0,0.30)'; ctx.fillRect(0, T - 1, T, 1);
+    },
+    // Le poêle à bois de fonte, où cuit la soupe aux pois : noir, deux ronds, la porte qui rougeoie.
+    'z@chalet': function (ctx, v, T) {
+      ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(2, 3, 13, 12);
+      ctx.fillStyle = '#26262a'; ctx.fillRect(1, 1, 14, 13);
+      ctx.fillStyle = '#3a3a40'; ctx.fillRect(2, 2, 12, 6);
+      ctx.fillStyle = '#18181b'; ctx.fillRect(3, 3, 4, 4); ctx.fillRect(9, 3, 4, 4);     // les ronds
+      ctx.fillStyle = '#4a4a52'; ctx.fillRect(4, 4, 2, 1); ctx.fillRect(10, 4, 2, 1);
+      ctx.fillStyle = '#1b1b1e'; ctx.fillRect(3, 9, 10, 4);                                // la porte
+      ctx.fillStyle = '#d8642a'; ctx.fillRect(4, 10, 8, 1);                                // la braise, par la fente
+      ctx.fillStyle = '#a8a8ae'; ctx.fillRect(12, 11, 1, 1);                               // la poignée
+      ctx.fillStyle = '#4a4a50'; ctx.fillRect(12, 0, 3, 2);                                // le tuyau, qui monte au mur
+    },
+    'a@chalet': function (ctx, v, T) { table(ctx, v, T, '#4e3016', '#8a5a2c', '#a8703a'); },
+    'h@chalet': function (ctx, v, T) { chaise(ctx, T, '#5e391a', '#7f5230', '#94633a'); },
+    /* Le foyer : de la pierre des champs, l'âtre noir de suie, deux bûches sur les chenets et
+       la braise. ⚠️ Deux tuiles (`bloc`) : l'âtre court de l'une à l'autre, et c'est le masque
+       (`v & 15`) qui dit laquelle on peint. Le feu qui danse vient par-dessus. */
+    'Y': function (ctx, v, T) {
+      const est = !(v & 2), ouest = !(v & 8);            // où le foyer S'ARRÊTE
+      pierres(ctx, v, T);
+      ctx.fillStyle = '#9a948a'; ctx.fillRect(0, 12, T, 4);                                // la dalle de l'âtre
+      ctx.fillStyle = '#b3ada2'; ctx.fillRect(0, 12, T, 1);
+      const a0 = ouest ? 4 : 0, a1 = est ? T - 4 : T;    // l'ouverture
+      ctx.fillStyle = '#5a534a'; ctx.fillRect(a0 - (ouest ? 1 : 0), 2, a1 - a0 + (ouest ? 1 : 0) + (est ? 1 : 0), 10);   // le linteau et les jambages
+      ctx.fillStyle = '#141112'; ctx.fillRect(a0, 3, a1 - a0, 9);                           // l'âtre, noir de suie
+      ctx.fillStyle = '#231c19'; ctx.fillRect(a0, 3, a1 - a0, 2);
+      ctx.fillStyle = '#6d4420'; ctx.fillRect(a0, 9, a1 - a0, 2);                           // les bûches
+      ctx.fillStyle = '#4e2f14'; ctx.fillRect(a0, 10, a1 - a0, 1);
+      ctx.fillStyle = '#c9a068';                                                            // les bouts coupés
+      if (ouest) ctx.fillRect(a0, 9, 1, 2);
+      if (est) ctx.fillRect(a1 - 1, 9, 1, 2);
+      ctx.fillStyle = '#e0772e'; for (let x = a0 + 1; x < a1; x += 3) ctx.fillRect(x, 11, 1, 1);   // la braise
+    },
+    // La cheminée : la même pierre, qui monte dans le mur de rondins jusqu'au toit.
+    'K': function (ctx, v, T) { pierres(ctx, v, T); ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(0, T - 2, T, 2); },
+    // La corde de bois : les bouts des bûches empilées, écorce autour, cernes au milieu.
+    'L': function (ctx, v, T) {
+      ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(1, 2, 15, 14);
+      for (let r = 0; r < 3; r++) {
+        for (let k = 0; k < 3; k++) {
+          const cx = 3 + k * 5 + (r % 2 ? 2 : 0), cy = 3 + r * 5;
+          if (cx > T - 2) continue;
+          ctx.fillStyle = '#4e2f14'; ctx.fillRect(cx - 2, cy - 2, 5, 5);                  // l'écorce
+          ctx.fillStyle = BOIS_ROND.teintes[(v + r + k) % 3][0]; ctx.fillRect(cx - 1, cy - 2, 3, 5); ctx.fillRect(cx - 2, cy - 1, 5, 3);
+          ctx.fillStyle = '#8a5829'; ctx.fillRect(cx - 1, cy - 1, 3, 3);                  // un cerne
+          ctx.fillStyle = '#d6a868'; ctx.fillRect(cx, cy, 1, 1);                          // le coeur
+        }
+      }
+    },
+    /* La peau d'ours, devant le feu : un bloc de deux sur deux. Chaque tuile peint le plancher
+       puis SA part de la bête entière (on décale le dessin de 16 px selon le quart) : le corps,
+       les quatre pattes aux coins, et la tête vers le sud, tournée vers la pièce. */
+    'U': function (ctx, v, T) {
+      TUILES['t@chalet'](ctx, v >> 4, T);
+      const ox = (v & 8) ? T : 0, oy = (v & 1) ? T : 0;  // le quart : l'ours continue à l'ouest ou au nord
+      ctx.save(); ctx.translate(-ox, -oy);
+      const brun = '#3b2518', clair = '#5a3a26', ombre = 'rgba(0,0,0,0.25)';
+      ctx.fillStyle = ombre; ctx.fillRect(6, 6, 22, 20);
+      ctx.fillStyle = brun;
+      ctx.fillRect(7, 5, 18, 20); ctx.fillRect(5, 8, 22, 14);                              // le corps
+      ctx.fillRect(2, 3, 7, 5); ctx.fillRect(23, 3, 7, 5);                                  // les pattes d'en avant
+      ctx.fillRect(2, 22, 7, 5); ctx.fillRect(23, 22, 7, 5);                                // celles d'en arrière
+      ctx.fillStyle = '#e8e0cc';                                                            // les griffes
+      [[2, 3], [4, 3], [6, 3], [25, 3], [27, 3], [29, 3], [2, 26], [4, 26], [6, 26], [25, 26], [27, 26], [29, 26]].forEach(function (p) { ctx.fillRect(p[0], p[1], 1, 1); });
+      ctx.fillStyle = clair; ctx.fillRect(10, 8, 12, 14);                                   // le dos, plus clair
+      ctx.fillStyle = brun; ctx.fillRect(12, 24, 8, 6);                                     // la tête
+      ctx.fillRect(11, 23, 2, 2); ctx.fillRect(19, 23, 2, 2);                               // les oreilles
+      ctx.fillStyle = '#7a5a40'; ctx.fillRect(14, 28, 4, 3);                                // le museau
+      ctx.fillStyle = '#111'; ctx.fillRect(15, 30, 2, 1);                                   // la truffe
+      ctx.fillStyle = '#e8d8a8'; ctx.fillRect(13, 26, 1, 1); ctx.fillRect(18, 26, 1, 1);    // les yeux, qui brillent au feu
+      ctx.restore();
+    },
+    // La chaise berçante : la chaise de pin sur ses deux berceaux, un coussin à carreaux.
+    'V': function (ctx, v, T) {
+      ctx.fillStyle = 'rgba(0,0,0,0.20)'; ctx.fillRect(3, 4, 11, 11);
+      ctx.fillStyle = '#5e391a'; ctx.fillRect(2, 2, 2, 13); ctx.fillRect(12, 2, 2, 13);   // les berceaux, courbés au bout
+      ctx.fillRect(1, 1, 1, 2); ctx.fillRect(14, 1, 1, 2); ctx.fillRect(1, 14, 1, 2); ctx.fillRect(14, 14, 1, 2);
+      ctx.fillStyle = '#7f5230'; ctx.fillRect(4, 2, 8, 3);                                  // le dossier à barreaux
+      ctx.fillStyle = '#5e391a'; ctx.fillRect(6, 2, 1, 3); ctx.fillRect(9, 2, 1, 3);
+      ctx.fillStyle = '#94633a'; ctx.fillRect(4, 6, 8, 7);                                  // l'assise
+      ctx.fillStyle = '#a3262a'; ctx.fillRect(5, 7, 6, 5);                                  // le coussin
+      ctx.fillStyle = '#1e1a1a'; ctx.fillRect(5, 7, 2, 2); ctx.fillRect(9, 7, 2, 2); ctx.fillRect(7, 9, 2, 2); ctx.fillRect(5, 11, 2, 1); ctx.fillRect(9, 11, 2, 1);
+    },
+    // Le panache d'orignal, cloué aux rondins : la tête brune, et les deux pelles de bois clair.
+    'N': function (ctx, v, T) {
+      boisRond(ctx, v, T);
+      ctx.fillStyle = '#6d4420'; ctx.fillRect(6, 3, 4, 3);                                  // la plaque
+      ctx.fillStyle = '#e2d2a8';
+      ctx.fillRect(0, 1, 6, 3); ctx.fillRect(10, 1, 6, 3);                                  // les pelles
+      ctx.fillRect(0, 0, 1, 1); ctx.fillRect(2, 0, 1, 1); ctx.fillRect(4, 0, 1, 1);         // leurs pointes
+      ctx.fillRect(11, 0, 1, 1); ctx.fillRect(13, 0, 1, 1); ctx.fillRect(15, 0, 1, 1);
+      ctx.fillStyle = '#c4b288'; ctx.fillRect(4, 3, 2, 2); ctx.fillRect(10, 3, 2, 2);
+      ctx.fillStyle = '#4a2c18'; ctx.fillRect(6, 5, 4, 9);                                  // la tête, longue
+      ctx.fillRect(5, 5, 1, 2); ctx.fillRect(10, 5, 1, 2);                                  // les oreilles
+      ctx.fillStyle = '#5e3a22'; ctx.fillRect(6, 11, 4, 4);                                 // le museau
+      ctx.fillStyle = '#111'; ctx.fillRect(6, 7, 1, 1); ctx.fillRect(9, 7, 1, 1);           // les yeux
+      ctx.fillStyle = '#3a2214'; ctx.fillRect(7, 15, 2, 1);                                 // la barbiche
+    },
+    // Les raquettes, croisées sur les rondins : deux cadres de frêne et leur babiche tressée.
+    '&': function (ctx, v, T) {
+      boisRond(ctx, v, T);
+      [[2, 1], [9, 3]].forEach(function (p) {
+        const x = p[0], y = p[1];
+        ctx.fillStyle = '#d8c090'; ctx.fillRect(x, y + 1, 5, 9); ctx.fillRect(x + 1, y, 3, 11);   // le cadre
+        ctx.fillRect(x + 2, y + 11, 1, 2);                                                         // la queue
+        ctx.fillStyle = '#6a5838';                                                                 // la babiche
+        for (let yy = y + 2; yy < y + 10; yy += 2) ctx.fillRect(x + 1, yy, 3, 1);
+        ctx.fillRect(x + 2, y + 1, 1, 9);
+      });
+    },
     'W': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#243447'; ctx.fillRect(3, 3, 10, 9); ctx.fillStyle = '#7fb3d8'; ctx.fillRect(4, 4, 3, 3); ctx.fillStyle = '#4d7ea3'; ctx.fillRect(8, 4, 4, 7); ctx.fillRect(4, 8, 3, 3); },
     'D': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#3d2a1c'; ctx.fillRect(4, 3, 8, 13); ctx.fillStyle = '#d8b83a'; ctx.fillRect(10, 9, 1, 1); },
     'd': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#2e2118'; ctx.fillRect(4, 4, 8, 12); ctx.fillStyle = '#3a2a1e'; ctx.fillRect(5, 5, 6, 10); ctx.fillStyle = '#6b5a48'; ctx.fillRect(4, 8, 8, 1); },
@@ -3313,44 +3548,8 @@ const TUILES = (function () {
         ctx.fillRect(1 + (k % 2) * 8, 6 + Math.floor(k / 2) * 7, 6, 1);
       }
     },
-    /* La table : un plateau CLAIR sur un piétement sombre. ⚠️ Le bois sombre
-       d'avant faisait un trou noir dans le plancher : a l'ecran, une table et
-       un billard se lisaient comme deux caisses posees la.
-
-       ⚠️ `v & 15` est le masque des cotes ou la table CONTINUE
-       (`varianteDeBloc`, monde.js). Le billard du bar fait quatre tuiles sur
-       deux, et c'etait huit tabourets : chaque tuile avait son plateau, ses
-       bords rentres et son ombre. Le plateau ne rentre ses bords, ne montre
-       son chant et ne porte son ombre que la ou la table s'arrete, et le
-       vernis court le long du bord nord. Une table d'une tuile n'a pas change. */
-    'a': function (ctx, v, T) {
-      const nord = !(v & 1), est = !(v & 2), sud = !(v & 4), ouest = !(v & 8);   // ou la table S'ARRETE
-      const x0 = ouest ? 2 : 0, x1 = est ? T - 2 : T;
-      ctx.fillStyle = 'rgba(0,0,0,0.20)';               // l'ombre portee, vers le sud-est
-      ctx.fillRect(ouest ? 3 : 0, nord ? 5 : 0, (est ? T - 1 : T) - (ouest ? 3 : 0), T - (nord ? 5 : 0));
-      ctx.fillStyle = '#5b3f26';                        // le piétement
-      ctx.fillRect(x0, nord ? 3 : 0, x1 - x0, (sud ? T - 2 : T) - (nord ? 3 : 0));
-      ctx.fillStyle = '#a0784a';                        // le plateau
-      ctx.fillRect(x0, nord ? 2 : 0, x1 - x0, (sud ? T - 4 : T) - (nord ? 2 : 0));
-      if (nord) {                                       // le vernis qui accroche, le long du bord
-        ctx.fillStyle = '#bb9160';
-        ctx.fillRect(ouest ? 3 : 0, 3, (est ? T - 3 : T) - (ouest ? 3 : 0), 2);
-      }
-      if (sud) { ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(x0, T - 5, x1 - x0, 1); }   // le chant
-    },
-    // La chaise : plus petite que la table, dossier au nord (on s'assoit face
-    // au sud). On doit voir le plancher tout autour, sinon deux chaises collees
-    // font une banquette.
-    'h': function (ctx, v, T) {
-      ctx.fillStyle = 'rgba(0,0,0,0.18)';
-      ctx.fillRect(5, 8, 8, 6);
-      ctx.fillStyle = '#7a5230';
-      ctx.fillRect(4, 3, 8, 2);                        // le dossier
-      ctx.fillStyle = '#96683c';
-      ctx.fillRect(4, 6, 8, 7);                        // l'assise
-      ctx.fillStyle = '#ab7b4c';
-      ctx.fillRect(5, 7, 6, 3);
-    },
+    'a': function (ctx, v, T) { table(ctx, v, T, '#5b3f26', '#a0784a', '#bb9160'); },
+    'h': function (ctx, v, T) { chaise(ctx, T, '#7a5230', '#96683c', '#ab7b4c'); },
     /* Le lit : UN lit, pas une tuile.
 
        ⚠️ `v & 15` est le masque des cotes ou le lit CONTINUE (`varianteDeBloc`,

@@ -190,3 +190,47 @@ def test_au_reveil_le_noir_attend_la_carte_du_chalet(banc):
         return { noirTenu: noirTenu, bloc: B.bloc && B.bloc.slug };
     }""")
     assert r == {"noirTenu": True, "bloc": "chalet"}, r
+
+
+def test_dedans_c_est_un_chalet_et_le_foyer_brule(banc):
+    """Martin, 26 sept. 2026 : « Remanie l'intérieur et ajoute un foyer au chalet. Je veux que ça
+    ait vraiment l'air d'être un chalet. » Avant : la planque de Rocco en plus petit — murs de
+    brique, classeur de bureau, cuisinière blanche, plantes en pot. Maintenant : des rondins, le
+    foyer de pierre sous sa cheminée, la corde de bois, la peau d'ours, les berçantes, le panache
+    et les raquettes au mur ; les meubles de la ville repeints en camp (`materiaux`) — chacun a son
+    peintre. Et le FEU danse : deux images, deux feux (il ne se cuit pas dans la tuile)."""
+    r = banc("async function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const B = L.B;
+        await auChalet(L, o);
+        const piece = entrerDansLeChalet(L, o);
+        const c = L.Monde.carte, sol = c.sol.join('\\n');
+        const mats = c.materiaux || {};
+        const sansPeintre = Object.keys(mats).filter(function (g) { return !L.TUILES[g + '@' + mats[g]]; });
+        function feu(t) {
+            B.t = t;
+            const ctx = L.Base.nouveauCanvas(400, 400).getContext('2d'); ctx.traces = [];
+            L.Monde.dessinerFoyers(ctx, { x: 0, y: 0 });
+            return ctx.traces.filter(function (q) { return q[4] === '#c8401e'; }).map(function (q) { return q[3]; }).join(',');
+        }
+        return { piece: piece, sol: sol, mats: mats, sansPeintre: sansPeintre,
+                 foyers: (c.foyers || []).length ? c.foyers : (feu(0), c.foyers),
+                 feu1: feu(10), feu2: feu(37),
+                 points: B.interieur.points.map(function (q) { return [q.type, c.sol[q.y][q.x]]; }) };
+    }""")
+    assert r["piece"] == "chalet", r
+    sol = r["sol"]
+    lignes = sol.split("\n")
+    for g, quoi in (("Y", "le foyer"), ("K", "la cheminée"), ("L", "la corde de bois"), ("U", "la peau d'ours"),
+                    ("V", "la berçante"), ("N", "le panache"), ("&", "les raquettes")):
+        assert g in sol, f"{quoi} manque au chalet"
+    for g, quoi in (("n", "une plante en pot"), ("j", "un frigo"), ("S", "un vidéopoker")):
+        assert g not in sol, f"{quoi} dans un camp en bois rond"
+    y = next(i for i, ligne in enumerate(lignes) if "YY" in ligne)
+    x = lignes[y].index("YY")
+    assert lignes[y - 1][x:x + 2] == "KK", "la cheminée monte au-dessus du foyer, dans le mur"
+    assert r["mats"]["B"] == r["mats"]["W"] == r["mats"]["D"] == "bois_rond", "dedans aussi, des rondins"
+    assert r["sansPeintre"] == [], f"un meuble repeint sans peintre : {r['sansPeintre']}"
+    assert dict(r["points"]) == {"lit": "l", "coffre": "k", "garde_robe": "e"}, "la planque sert encore"
+    assert r["foyers"] == [{"x": x, "y": y, "l": 2}], r["foyers"]
+    assert r["feu1"] and r["feu2"] and r["feu1"] != r["feu2"], "le feu danse : deux images, deux feux"

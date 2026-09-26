@@ -408,6 +408,16 @@ LEGENDE: dict[str, dict] = {
     # Le VIDEOPOKER (`videopoker.py`) : la machine qui clignote au fond du bar et du depanneur.
     # Il porte un point `videopoker`, sur sa tuile, comme la distributrice.
     "S": {"nom": "vidéopoker", "solide": 3, "meuble": True},
+    # Le chalet du rang, dedans (26 sept. 2026, « que ça ait vraiment l'air d'un chalet ») :
+    # le foyer de pierre et sa cheminée, la corde de bois, la peau d'ours, la berçante, et ce
+    # qu'on accroche au mur d'un camp — le panache d'orignal et les raquettes.
+    "Y": {"nom": "foyer", "solide": 3, "meuble": True, "bloc": True, "foyer": True},
+    "K": {"nom": "cheminée de pierre", "solide": 1},
+    "L": {"nom": "corde de bois", "solide": 3, "meuble": True},
+    "U": {"nom": "peau d'ours", "dedans": True, "bloc": True},
+    "V": {"nom": "chaise berçante", "solide": 3, "meuble": True},
+    "N": {"nom": "panache d'orignal", "solide": 1},
+    "&": {"nom": "raquettes au mur", "solide": 1},
 }
 
 #: Les glyphes de facade qu'on POUSSE (ou qu'on a condamnes) : une porte, une porte
@@ -7176,7 +7186,8 @@ GENRES_DE_PORTE = ("maison", "commerce")
 
 
 def _piece(slug: str, nom: str, plan: str, *, sol: str = "t",
-           points: tuple = (), gens: tuple = (), porte: str = "commerce") -> dict:
+           points: tuple = (), gens: tuple = (), porte: str = "commerce",
+           materiaux: dict[str, str] | None = None) -> dict:
     """Une piece dessinee a la main, verifiee ICI et pas trois fichiers plus loin.
 
     ⚠️ Le plan est la verite : la sortie est le « D », l'apparition la tuile
@@ -7218,6 +7229,11 @@ def _piece(slug: str, nom: str, plan: str, *, sol: str = "t",
         "gens": [dict(g) for g in gens],
         "porte": porte,
     }
+    # ⚠️ Les MATERIAUX d'une piece (le chalet du rang) : un glyphe peint autrement que dans
+    # la ville — le meme lit, le meme coffre, mais en pin et a carreaux (`TUILES['l@chalet']`).
+    # Le glyphe garde sa regle (on dort dans le lit, le coffre s'ouvre) ; seul le peintre change.
+    if materiaux:
+        piece["materiaux"] = dict(materiaux)
     _verifier_piece(piece)
     return piece
 

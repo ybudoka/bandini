@@ -52,17 +52,25 @@ DECORS: dict[str, tuple[str, str]] = {
     "b": (",", "buisson"),
 }
 
-#: Dedans : la planque de Rocco en plus petit, avec un poêle à bois (`z`) — c'est un chalet.
+#: Dedans : un vrai camp en bois rond (Martin, 26 sept. 2026 : « je veux que ça ait vraiment l'air
+#: d'être un chalet »). Les murs en rondins (`B`, `W`, `D` en bois rond, comme dehors) ; au mur du
+#: haut, le FOYER de pierre (`Y`, deux tuiles) sous sa cheminée (`K`), la corde de bois (`L`) à
+#: côté, la peau d'ours (`U`) et les deux berçantes (`V`) devant le feu ; le panache d'orignal
+#: (`N`) et les raquettes (`&`) accrochés aux rondins. Le lit à carreaux de bûcheron, le coffre
+#: cerclé de fer, l'armoire de pin, le poêle à bois en fonte et la table de pin sont les meubles
+#: de la ville repeints (`materiaux` : `l@chalet`…) — ils gardent ce qu'ils font.
 PIECE = carte._piece("chalet", "Le chalet du rang", porte="maison", plan="""
-BBBWWWBBBBB
-Bll   k  zB
-Bll      nB
-B ah yyy  B
-B ah yyy  B
-B    yyy eB
-Bj      n B
+BWWBNKKB&WB
+Bll  YYL eB
+Bll VUU   B
+Bk   UUV  B
+B        zB
+Bhaah     B
+B        LB
 BBBBWWDWWBB
-""", points=(carte._pt("lit", 2, 2), carte._pt("coffre", 6, 1), carte._pt("garde_robe", 9, 5)))
+""", points=(carte._pt("lit", 2, 2), carte._pt("coffre", 1, 3), carte._pt("garde_robe", 9, 1)),
+    materiaux={"B": "bois_rond", "W": "bois_rond", "D": "bois_rond", "t": "chalet", "l": "chalet",
+               "k": "chalet", "e": "chalet", "z": "chalet", "a": "chalet", "h": "chalet"})
 
 BLOC = {
     "slug": "chalet",

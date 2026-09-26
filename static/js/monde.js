@@ -357,6 +357,9 @@ const Monde = (function () {
     const def = {
       slug: inte.slug, nom: inte.nom, largeur: inte.largeur, hauteur: inte.hauteur, sol: inte.sol,
       plancher: inte.plancher,
+      // Les matériaux d'une pièce (le chalet du rang : ses rondins, son lit à carreaux) —
+      // `charger` les range comme ceux d'une carte de bloc, et le même peintre les lit.
+      materiaux: inte.materiaux || null,
       voie: inte.sol.map(function (l) { return '.'.repeat(l.length); }), legende: ville.legende,
       portes: [{ x: inte.sortie.x, y: inte.sortie.y, interieur: null, lieu: 'sortie' }],
       lampes: [], decor: [], zones: [], points_interet: [], intersections: [], arrets: {},
@@ -1870,8 +1873,12 @@ const Monde = (function () {
         // c'est-a-dire du noir. (Vu en plein visage : chaque table du bar avait
         // un cadre noir, et la plante etait posee dans un trou.)
         if (carte.plancher && (carte.legende[g] || {}).meuble) {
-          const fond = TUILES[carte.plancher] || TUILES[','];
-          ctx.drawImage(Atlas.cuireTuile(carte.plancher, varianteDeTuile(carte.plancher, tx, ty), fond), i * TT, j * TT);
+          // Le plancher sous le meuble suit le matériau de la pièce : sous la table de pin du
+          // chalet, du pin — pas le plancher pâle de la ville.
+          const pm = carte.materiaux && carte.materiaux[carte.plancher];
+          const pc = pm && TUILES[carte.plancher + '@' + pm] ? carte.plancher + '@' + pm : carte.plancher;
+          const fond = TUILES[pc] || TUILES[','];
+          ctx.drawImage(Atlas.cuireTuile(pc, varianteDeTuile(carte.plancher, tx, ty), fond), i * TT, j * TT);
         }
         const mat = carte.materiaux && carte.materiaux[g];
         const cle = mat && TUILES[g + '@' + mat] ? g + '@' + mat : g;
@@ -1972,6 +1979,48 @@ const Monde = (function () {
     }
     oublierLesVieuxMorceaux();
     B.stats.morceaux = carte.morceaux.size;
+  }
+
+  /** Le FEU des foyers d'une pièce (le chalet du rang) : les flammes qui dansent dans l'âtre,
+      et la lueur chaude qui bat sur le plancher. ⚠️ Pas dans la tuile : une tuile se cuit une
+      fois (`Atlas.cuireTuile`), et un feu figé est une image de feu. Redessiné à chaque image,
+      d'après l'heure du jeu (`B.t`) — jamais un dé : deux images pareilles, deux feux pareils.
+      Les foyers se trouvent une fois par pièce (`carte.foyers`), par la légende (`foyer`). */
+  function dessinerFoyers(ctx, cam) {
+    if (!carte || !carte.interieur) return;
+    if (!carte.foyers) {
+      carte.foyers = [];
+      for (let ty = 0; ty < carte.h; ty++) {
+        for (let tx = 0; tx < carte.w; tx++) {
+          const g = carte.sol[ty][tx];
+          if (!(carte.legende[g] || {}).foyer || (tx > 0 && carte.sol[ty][tx - 1] === g)) continue;
+          let l = 1;
+          while (tx + l < carte.w && carte.sol[ty][tx + l] === g) l++;
+          carte.foyers.push({ x: tx, y: ty, l: l });
+        }
+      }
+    }
+    const t = B.t || 0, cx = Math.round(cam.x), cy = Math.round(cam.y);
+    for (const f of carte.foyers) {
+      const x0 = f.x * TT + 4 - cx, x1 = (f.x + f.l) * TT - 4 - cx, base = f.y * TT + 10 - cy;
+      // Les flammes : une par trois pixels, chacune sa hauteur qui monte et retombe.
+      for (let x = x0; x < x1; x += 3) {
+        const k = x - x0, h = 3 + ((Math.sin(t * 0.21 + k * 1.7) + Math.sin(t * 0.13 + k * 0.9)) * 1.5 + 2.5 | 0);
+        ctx.fillStyle = '#c8401e'; ctx.fillRect(x, base - h, 3, h);
+        ctx.fillStyle = '#f08a2a'; ctx.fillRect(x + 1, base - h + 1, 1, h - 1);
+        if (h > 5) { ctx.fillStyle = '#ffd86a'; ctx.fillRect(x + 1, base - 2, 1, 2); }
+      }
+      // La lueur : un halo chaud qui respire, par-dessus le plancher et les meubles.
+      const mx = (x0 + x1) / 2, my = base + 4, r = TT * (4.2 + 0.25 * Math.sin(t * 0.17));
+      const g = ctx.createRadialGradient(mx, my, 2, mx, my, r);
+      const a = 0.22 + 0.05 * Math.sin(t * 0.23) + 0.02 * Math.sin(t * 0.61);
+      g.addColorStop(0, 'rgba(255,150,60,' + a.toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(255,120,40,0)');
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = g; ctx.fillRect(mx - r, my - r, 2 * r, 2 * r);
+      ctx.restore();
+    }
   }
 
   /** Jette les morceaux les plus anciens, jamais un morceau a l'ecran. */
@@ -2438,7 +2487,7 @@ const Monde = (function () {
     barrieres, barriereFermee, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
     brisDAqueduc, dansLaFoire, resquille,
     feuxClignotent, arterePasse, nidDePoule, dessinerNids, plaqueDAcier, standingA, usageA, couleurDeZonage, calqueDeZonage, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
-    ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE,
+    ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, dessinerFoyers,
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
     dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau, sousLeToit, cacheSousLeToit, abrite,
     barrieresCoulissantes, majBarrieresCoulissantes, dessinerBarrieresCoulissantes, COULISSE_GLISSE, COULISSE_TIENT,

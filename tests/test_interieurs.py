@@ -397,8 +397,12 @@ def test_les_blocs_sont_le_lit_la_table_le_tapis_et_la_machine():
 
     ⚠️ Le LIT D'HOPITAL (« r ») est le sixieme : une place, la tete au nord, et
     son peintre lit le masque pour ne mettre la tete de lit et l'oreiller qu'a
-    la tuile de tete — c'est la que se couche le malade."""
-    assert BLOCS == {"l", "a", "y", "m", "o", "r"}
+    la tuile de tete — c'est la que se couche le malade.
+
+    ⚠️ Le FOYER (« Y ») et la PEAU D'OURS (« U ») du chalet du rang (26 sept. 2026) : l'âtre
+    court d'une tuile à l'autre (une bûche, une ouverture, pas deux cheminées collées), et la
+    bête de deux sur deux peint chacun son quart (une tête, quatre pattes, pas quatre oursons)."""
+    assert BLOCS == {"l", "a", "y", "m", "o", "r", "Y", "U"}
 
 
 @pytest.mark.parametrize("slug", sorted(PIECES))
