@@ -45,6 +45,51 @@ def retour_moyen() -> float:
     return sum(chance(bons) * lot for bons, lot in LOTS.items()) / PRIX
 
 
+#: ⚠️ **LE TIRAGE SE DIT** (Martin, 26 sept. 2026 : « 6/49 doit se dire »). Les numéros changent chaque
+#: jour : on ne génère pas une phrase par tirage, on fait comme l'annonceur de la loterie — une
+#: amorce, les nombres un par un (`narrateur-loto-1` à `-49`), et ce que ton billet a donné. Le
+#: navigateur les enchaîne après la manchette (`Missions.direLeLoto`). Le texte écrit, lui, ne change
+#: pas : les chiffres sous la une.
+DIT = {
+    # En toutes lettres : « 6/49 » se lirait « six barre quarante-neuf ».
+    "amorce": "Les numéros du six-quarante-neuf.",
+    #: Ce que ton meilleur billet a donné : sous trois bons numéros, rien.
+    "rien": "Ton billet? Rien. Comme d'habitude.",
+    "trois": "Ton billet : trois bons numéros. De quoi payer la poutine.",
+    "quatre": "Ton billet : quatre bons numéros! Pas pire pantoute.",
+    "cinq": "Cinq bons numéros! Le gagnant est d'ici!",
+    "six": "Six sur six! Le gros lot! Le gagnant est d'ici!",
+}
+
+#: Le mot de ce que ton billet a donné, selon ses bons numéros.
+ISSUES = {0: "rien", 1: "rien", 2: "rien", 3: "trois", 4: "quatre", 5: "cinq", 6: "six"}
+
+_UNITES = ["zéro", "un", "deux", "trois", "quatre", "cinq", "six", "sept", "huit", "neuf", "dix", "onze", "douze",
+           "treize", "quatorze", "quinze", "seize", "dix-sept", "dix-huit", "dix-neuf"]
+_DIZAINES = {2: "vingt", 3: "trente", 4: "quarante"}
+
+
+def en_lettres(n: int) -> str:
+    """Un nombre de la boule, de 1 à 49, en toutes lettres (« vingt et un », « quarante-neuf »)."""
+    if not 1 <= n <= BOULES:
+        raise ValueError(n)
+    if n < 20:
+        return _UNITES[n]
+    d, u = divmod(n, 10)
+    if u == 0:
+        return _DIZAINES[d]
+    return _DIZAINES[d] + (" et un" if u == 1 else "-" + _UNITES[u])
+
+
+def repliques() -> list[dict]:
+    """Ce que le narrateur dit du tirage : l'amorce, les 49 boules, les issues. `slug` et `texte`."""
+    out = [{"slug": "narrateur-loto-amorce", "texte": DIT["amorce"]}]
+    out += [{"slug": f"narrateur-loto-{n}", "texte": en_lettres(n).capitalize() + "."} for n in range(1, BOULES + 1)]
+    out += [{"slug": f"narrateur-loto-{cle}", "texte": DIT[cle]} for cle in ("rien", "trois", "quatre", "cinq", "six")]
+    return out
+
+
 def pour_le_navigateur() -> dict:
     return {"prix": PRIX, "billets_par_jour": BILLETS_PAR_JOUR, "numeros": NUMEROS, "boules": BOULES,
-            "lots": {str(bons): lot for bons, lot in LOTS.items()}}
+            "lots": {str(bons): lot for bons, lot in LOTS.items()},
+            "issues": {str(bons): mot for bons, mot in ISSUES.items()}}

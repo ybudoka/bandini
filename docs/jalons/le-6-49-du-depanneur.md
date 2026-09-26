@@ -44,3 +44,11 @@ _Rien de livré._
 - **Juges** : `test_loto.py` (les chances, le retour, le plafond) et `test_loto_js.py` (le même tirage pour
   deux graines, un billet qui dépend de la sienne, cinq billets par jour, `B.rng` intact, un lot payé une
   seule fois et écrit au Clairon) ; trois mutations les font rougir.
+- ✅ **Le tirage se dit** (Martin, 26 sept. 2026 : « 6/49 doit se dire »). Comme l'annonceur de la
+  loterie : 55 petites voix du narrateur (`loto.repliques`, `audio.voix_loto`, banque du `journal`) —
+  l'amorce (« Les numéros du six-quarante-neuf… »), les 49 boules en toutes lettres (`loto.en_lettres`),
+  et ce que ton meilleur billet a donné (rien, trois, quatre, cinq, six). Au lever du jour, derrière la
+  une, `Missions.direLeLoto` les enchaîne (`fin` de chaque voix) ; sans manchette, il dit le tirage seul.
+  La boîte reste ouverte le temps de le dire (`DUREE_BOULE`). ~2 000 caractères, 820 Ko. Une voix qui
+  manque arrête la suite : les chiffres restent écrits sous la une. Juge : `test_le_narrateur_dit_le_tirage_apres_la_une`.
+  ⚠️ À écouter : générées sans oreille (durées vérifiées : 0,8 à 2 s par boule).

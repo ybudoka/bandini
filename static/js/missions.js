@@ -2033,11 +2033,45 @@ const Missions = (function () {
     // 4 images par caractere (au lieu des 3 du cinema) : le narrateur est un
     // annonceur radio, il respire entre ses phrases, et le texte INTERPRETE
     // porte des « … » que `lu` ne montre pas.
-    const duree = 90 + ((m.lu && m.lu.length) || (m.titre.length + m.texte.length)) * 4;
-    // ⚠️ Le 6/49 s'ecrit SOUS la manchette, sans voix : le narrateur lit la une, les numeros se lisent.
+    // ⚠️ LE 6/49 SE DIT (Martin, 26 sept. 2026) : apres la une, le narrateur enchaine le tirage
+    // (`direLeLoto`) — la boite reste le temps qu'il le dise.
+    const tirage = sequenceDuLoto();
+    const duree = 90 + ((m.lu && m.lu.length) || (m.titre.length + m.texte.length)) * 4 + (tirage ? tirage.length * DUREE_BOULE : 0);
     // ⚠️ `dessous` : le 6/49 et l'annonce du brouillard, une ligne de texte ou une liste de lignes.
     Hud.dialogue('LE CLAIRON DE LA BAIE', [m.titre, m.texte].concat(dessous || []), duree, { slug: 'narrateur', humeur: 'neutre' });
-    if (m.slug) { Son.Voix.chargerHistoire('journal'); if (Son.Voix.parler('narrateur-journal-' + m.slug, {}) && B.dialogue) B.dialogue.voix = true; }
+    Son.Voix.chargerHistoire('journal');
+    const suite = function () { direLeLoto(); };
+    if (m.slug && Son.Voix.parler('narrateur-journal-' + m.slug, { fin: suite })) { if (B.dialogue) B.dialogue.voix = true; }
+    else suite();
+  }
+
+  //: Le temps d'une voix du tirage, en images (la boite du Clairon reste ouverte d'autant) : les boules
+  //: durent 0,8 a 2 s, l'amorce et l'issue 2 a 5 s (mesure du 26 sept. 2026).
+  const DUREE_BOULE = 100;
+
+  /** Ce que le narrateur dit du tirage de cette nuit : l'amorce, les six boules, ce que ton billet a
+      donne (les voix `narrateur-loto-*`, `loto.repliques`) — ou null s'il n'y a pas eu de tirage pour
+      nous. */
+  function sequenceDuLoto() {
+    const l = B.partie && B.partie.loto && B.partie.loto.ligne;
+    if (!l || l.jour !== B.partie.jour || !l.numeros) return null;
+    const issues = (reglesDuLoto().issues) || {};
+    return ['narrateur-loto-amorce'].concat(l.numeros.map(function (n) { return 'narrateur-loto-' + n; }),
+                                            ['narrateur-loto-' + (issues[l.meilleur] || 'rien')]);
+  }
+
+  /** Le narrateur dit le tirage, une voix apres l'autre (`fin`). ⚠️ Une voix qui manque (pas encore
+      generee, son coupe) arrete la suite : le texte, lui, est sous la une. */
+  function direLeLoto() {
+    const suite = sequenceDuLoto();
+    if (!suite) return false;
+    Son.Voix.chargerHistoire('journal');
+    const dire = function (i) {
+      if (i >= suite.length) return;
+      if (Son.Voix.parler(suite[i], { fin: function () { dire(i + 1); } }) && B.dialogue) B.dialogue.voix = true;
+    };
+    dire(0);
+    return true;
   }
 
   function lireLeJournal() {
@@ -2064,7 +2098,7 @@ const Missions = (function () {
     const dessous = [loto, brume, Verglas.ligneDuClairon(), decompteDesNids()].filter(Boolean);
     const m = manchetteDuJour();
     if (m) { B.partie.derniereManchette = m; direLaManchette(m, dessous); }
-    else Hud.message(dessous[0] || 'JOUR ' + B.partie.jour);
+    else { Hud.message(dessous[0] || 'JOUR ' + B.partie.jour); direLeLoto(); }
   }
 
   // --- Effacer le casier : la certitude, ou le pari ---------------------------------------
@@ -2853,7 +2887,8 @@ const Missions = (function () {
     const texte = '6/49 : ' + tirageDuLoto(p.jour - 1).join(' ') + ' — ' + (gain > 0
       ? (meilleur >= 5 ? 'LE GAGNANT EST D’ICI! ' : '') + 'TON BILLET : ' + bons + ', +' + gain + ' $'
       : 'TON BILLET : ' + bons + ', RIEN');
-    e.ligne = { jour: p.jour, texte: texte };
+    // Les numeros et le meilleur billet voyagent avec la ligne : c'est ce que le narrateur DIT.
+    e.ligne = { jour: p.jour, texte: texte, numeros: tirageDuLoto(p.jour - 1), meilleur: meilleur };
     return texte;
   }
 
@@ -3573,7 +3608,7 @@ const Missions = (function () {
     if (B.t % 60 === 0) B.partie.stats.secondes++;
   }
 
-  return { boucherLeNid, rendreLesNidsBouches, placeDeLAsphalte, majAsphalte, decompteDesNids,
+  return { sequenceDuLoto, direLeLoto, boucherLeNid, rendreLesNidsBouches, placeDeLAsphalte, majAsphalte, decompteDesNids,
     majCremeGlacee, placeDuCamion, ritournelleDuCamion,
     listeDuQuai, etatDuQuai, posteDuQuai, prixAuQuai, texteDuQuai, majQuai,
     braquable, braquer, rancuneIci,

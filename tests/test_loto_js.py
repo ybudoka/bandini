@@ -79,3 +79,31 @@ def test_un_billet_gagnant_paie_le_bon_lot_une_seule_fois_et_le_clairon_le_dit(b
     assert r["ligne"].startswith("6/49 : " + " ".join(str(n) for n in r["tirage"])), r["ligne"]
     assert "LE GAGNANT EST D’ICI" in r["ligne"] and f"+{attendu} $" in r["ligne"], r["ligne"]
     assert r["dialogue"] and any("6/49" in str(x) for x in r["dialogue"]), r["dialogue"]
+
+
+def test_le_narrateur_dit_le_tirage_apres_la_une(banc):
+    """⚠️ Martin, 26 sept. 2026 : « 6/49 doit se dire ». Au lever du jour, derrière la manchette, le
+    narrateur enchaîne l'amorce, les six boules du tirage dans l'ordre, et ce que ton billet a donné ;
+    toutes ces voix sont déclarées au paquet (banque du journal). Sans billet, il ne dit rien du 6/49."""
+    r = banc("function (L, o) {" + """
+        L.Jeu.commencer();
+        const B = L.B, M = L.Missions, p = B.partie, V = L.Son.Voix;
+        const t = M.tirageDuLoto(p.jour);
+        const autres = [];
+        for (let n = 1; autres.length < 2; n++) if (t.indexOf(n) < 0) autres.push(n);
+        p.loto = { billets: [{ jour: p.jour, numeros: t.slice(0, 4).concat(autres) }], ligne: null };
+        p.jour += 1;
+        V.demandees.length = 0;
+        M.nouveauJour();
+        const suite = M.sequenceDuLoto(), demandees = V.demandees.slice();
+        const declarees = new Set(B.defs.audio.histoire.map(function (v) { return v.slug; }));
+        // Le lendemain, sans billet : rien du 6/49.
+        p.jour += 1; V.demandees.length = 0; M.nouveauJour();
+        return { tirage: t, suite: suite, demandees: demandees, manquent: (suite || []).filter(function (s) { return !declarees.has(s); }),
+                 sansBillet: M.sequenceDuLoto(), apres: V.demandees.filter(function (s) { return s.indexOf('narrateur-loto') === 0; }) };
+    }""")
+    attendu = ["narrateur-loto-amorce"] + [f"narrateur-loto-{n}" for n in r["tirage"]] + ["narrateur-loto-quatre"]
+    assert r["suite"] == attendu, r["suite"]
+    assert "narrateur-loto-amorce" in r["demandees"], f"le narrateur ne commence pas le tirage : {r['demandees']}"
+    assert not r["manquent"], f"ces voix du tirage ne sont pas déclarées : {r['manquent']}"
+    assert r["sansBillet"] is None and r["apres"] == [], r

@@ -403,6 +403,20 @@ from app import missions  # noqa: E402
 
 JEU.update({r["slug"]: r["jeu"] for r in missions.repliques() if r.get("jeu")})
 
+# LE TIRAGE DU 6/49 (`loto.repliques`) : l'annonceur de la loterie. Les boules, d'un ton egal et net
+# — elles s'enchainent, une par une ; l'amorce et l'issue, elles, ont du jeu.
+from app import loto  # noqa: E402
+
+JEU.update({
+    "narrateur-loto-amorce": "[dramatic] Les numéros du six-quarante-neuf…",
+    "narrateur-loto-rien": "[deadpan] Ton billet? Rien. [wryly] Comme d'habitude.",
+    "narrateur-loto-trois": "[matter-of-fact] Ton billet : trois bons numéros. [wryly] De quoi payer la poutine.",
+    "narrateur-loto-quatre": "[impressed] Ton billet : quatre bons numéros! Pas pire pantoute.",
+    "narrateur-loto-cinq": "[excited] Cinq bons numéros! Le gagnant est d'ici!",
+    "narrateur-loto-six": "[excited] Six sur six! Le gros lot! [surprised] Le gagnant est d'ici!",
+})
+JEU.update({f"narrateur-loto-{n}": f"[matter-of-fact] {loto.en_lettres(n).capitalize()}." for n in range(1, loto.BOULES + 1)})
+
 _BALISE = re.compile(r"\[([^\[\]]*)\]")
 
 

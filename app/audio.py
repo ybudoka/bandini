@@ -1391,6 +1391,20 @@ def voix_journal() -> list[dict]:
             for r in journal.REGLES + journal.SPECIALES + journal.LECONS + journal.MATINS]
 
 
+def voix_loto() -> list[dict]:
+    """Le tirage du 6/49, dit par le narrateur du Clairon : l'amorce, les 49 boules, et ce que ton
+    billet a donne (`loto.repliques`). Dans la banque du `journal` : elles se chargent avec les
+    manchettes, et s'enchainent derriere elles (`Missions.direLeLoto`)."""
+    from . import loto, missions
+    perso = missions.personnage("narrateur")
+    if perso is None:
+        raise ValueError("le narrateur manque a missions.PERSONNAGES")
+    return [{"slug": r["slug"], "texte": r["texte"], "genre": perso["genre"], "voix": perso["voix"],
+             "volume": 0.85, "histoire": True, "qui": "narrateur", "mission": "journal", "partie": "journal",
+             "telephone": False}
+            for r in loto.repliques()]
+
+
 def voix_ouverture() -> list[dict]:
     """Les quatre phrases de l'ouverture, dites par le narrateur du Clairon.
 
@@ -1431,7 +1445,8 @@ def voix_repos() -> list[dict]:
 
 
 def toutes_les_voix() -> list[dict]:
-    return list(VOIX) + list(VOIX_DE_LA_POLICE) + voix_histoire() + voix_journal() + voix_ouverture() + voix_repos()
+    return (list(VOIX) + list(VOIX_DE_LA_POLICE) + voix_histoire() + voix_journal() + voix_loto() + voix_ouverture()
+            + voix_repos())
 
 
 #: LES VOIX QUI NE SE PARTAGENT PAS — la table, ecrite UNE fois : la voix, et le
@@ -1712,6 +1727,6 @@ def exporter() -> dict:
             {"slug": v["slug"], "qui": v["qui"], "mission": v["mission"], "partie": v["partie"],
              "telephone": v["telephone"], "volume": v["volume"],
              "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None}
-            for v in voix_journal() + voix_ouverture() + voix_repos()
+            for v in voix_journal() + voix_loto() + voix_ouverture() + voix_repos()
         ],
     }
