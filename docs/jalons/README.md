@@ -261,3 +261,4 @@ Deux documents d'avant la table :
 | Un vélo qui redescend du trottoir reste planté | ✅ **livré** | 26 sept. 2026 | **P2** | **correctif** | [fiche](un-velo-qui-redescend-du-trottoir-reste-plante.md#fiche) · [notes](un-velo-qui-redescend-du-trottoir-reste-plante.md#notes) |
 | La ligne d'histoire : une ouverture et un générique | ✅ **livré** | 26 sept. 2026 | **P2** | ajout | [fiche](la-ligne-d-histoire-une-ouverture-et-un-generique.md#fiche) · [notes](la-ligne-d-histoire-une-ouverture-et-un-generique.md#notes) |
 | Le vidéopoker du Brouillard | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-videopoker-du-brouillard.md#fiche) · [notes](le-videopoker-du-brouillard.md#notes) |
+| Le 6/49 du dépanneur | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-6-49-du-depanneur.md#fiche) · [notes](le-6-49-du-depanneur.md#notes) |

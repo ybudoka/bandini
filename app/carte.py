@@ -7437,7 +7437,7 @@ B         B
 Bccccc  n B
 B         B
 BBBWWDWWBBB
-""", points=(_pt("emplettes", 3, 5, genre="bouffe"), _pt("journal", 9, 5), _pt("videopoker", 9, 1)),
+""", points=(_pt("emplettes", 3, 5, genre="bouffe"), _pt("journal", 9, 5, loto=True), _pt("videopoker", 9, 1)),
      gens=_gens(("commis", 3, 4), ("client", 8, 2))),
 
     # L'Hotel Bandini : le hall, le tapis, et l'escalier vers les chambres.

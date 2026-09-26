@@ -1199,6 +1199,8 @@ const Missions = (function () {
       case 'journal':
         items.push({ libelle: 'LE CLAIRON DE LA BAIE', detail: tarifs.journal + ' $', actif: p.argent >= tarifs.journal,
                      faire: function () { payer(tarifs.journal, 'JOURNAL'); lireLeJournal(); return true; } });
+        // Le presentoir de Ti-Paul vend aussi le billet du 6/49 (`loto` sur le point).
+        if (point.loto && B.defs.loto) items.push(itemLoto());
         return { titre: piece.nom.toUpperCase(), items: items, sur: p.argent + ' $' };
       case 'emplettes':
         return menuComptoir(point, items);
@@ -1907,7 +1909,7 @@ const Missions = (function () {
   /** La manchette s'affiche ET se lit : le narrateur du Clairon la dit a voix
       haute. ⚠️ Et RIEN ne sonne par-dessus : le rappel de Sal, qui tombait dans
       la meme image, ne fait plus sonner le telephone (`nuitDeLaDette`). */
-  function direLaManchette(m) {
+  function direLaManchette(m, loto) {
     // ⚠️ La duree suit CE QUE LE NARRATEUR DIT (`lu`), pas un nombre fixe : les
     // lecons regenerees du 18 sept. (avec leurs pauses) durent jusqu'a 9,6 s,
     // et une boite qui s'eteint a 420 images (7 s) disparaissait au milieu de
@@ -1916,13 +1918,14 @@ const Missions = (function () {
     // annonceur radio, il respire entre ses phrases, et le texte INTERPRETE
     // porte des « … » que `lu` ne montre pas.
     const duree = 90 + ((m.lu && m.lu.length) || (m.titre.length + m.texte.length)) * 4;
-    Hud.dialogue('LE CLAIRON DE LA BAIE', [m.titre, m.texte], duree, { slug: 'narrateur', humeur: 'neutre' });
+    // ⚠️ Le 6/49 s'ecrit SOUS la manchette, sans voix : le narrateur lit la une, les numeros se lisent.
+    Hud.dialogue('LE CLAIRON DE LA BAIE', [m.titre, m.texte].concat(loto ? [loto] : []), duree, { slug: 'narrateur', humeur: 'neutre' });
     if (m.slug) { Son.Voix.chargerHistoire('journal'); if (Son.Voix.parler('narrateur-journal-' + m.slug, {}) && B.dialogue) B.dialogue.voix = true; }
   }
 
   function lireLeJournal() {
     const m = B.partie.derniereManchette;
-    if (m) direLaManchette(m);
+    if (m) direLaManchette(m, ligneDuLoto());
     else Hud.dialogue('LE CLAIRON DE LA BAIE', ['RIEN À SIGNALER À BAIE-DES-BRUMES.'], 300, { slug: 'narrateur', humeur: 'neutre' });
   }
 
@@ -1938,9 +1941,10 @@ const Missions = (function () {
     // veille est parti avec lui.
     B.coincees = {};
     revenusDuJour();
+    const loto = B.defs.loto ? nuitDuLoto() : null;
     const m = manchetteDuJour();
-    if (m) { B.partie.derniereManchette = m; direLaManchette(m); }
-    else Hud.message('JOUR ' + B.partie.jour);
+    if (m) { B.partie.derniereManchette = m; direLaManchette(m, loto); }
+    else Hud.message(loto || 'JOUR ' + B.partie.jour);
   }
 
   // --- Effacer le casier : la certitude, ou le pari ---------------------------------------
@@ -2431,6 +2435,96 @@ const Missions = (function () {
       Son.SFX.ramasse();
       Entites.retirer(e);
     }
+  }
+
+  // --- Le 6/49 du depanneur ---------------------------------------------------------------
+  //: Demande du plan (docs/jalons/le-6-49-du-depanneur.md) : un billet a 2 $ chez Ti-Paul, et le
+  //: lendemain matin, les numeros sous la manchette du Clairon. Les regles sont a Python
+  //: (`loto.py`, `B.defs.loto`).
+  //:
+  //: ⚠️ LE TIRAGE NE DEPEND QUE DU JOUR (`tirageDuLoto`) : le meme jour, les memes numeros pour tout
+  //: le monde. Les numeros d'un billet se tirent a la graine de la partie et au numero du billet.
+  //: Ni l'un ni l'autre ne touche `B.rng()`.
+
+  function reglesDuLoto() { return B.defs.loto; }
+
+  /** Ce que la partie garde : les `billets` pas encore tires ({ jour, numeros }), et la `ligne` du
+      dernier tirage publie ({ jour, texte }). */
+  function etatDuLoto() {
+    const p = B.partie;
+    p.loto = p.loto || { billets: [], ligne: null };
+    return p.loto;
+  }
+
+  /** Six numeros differents de 1 a 49, en ordre, au generateur `rng`. */
+  function sixNumeros(rng) {
+    const r = reglesDuLoto(), pris = [];
+    while (pris.length < r.numeros) {
+      const n = 1 + Math.floor(rng() * r.boules);
+      if (pris.indexOf(n) < 0) pris.push(n);
+    }
+    return pris.sort(function (a, b) { return a - b; });
+  }
+
+  /** Les six numeros tires la nuit du jour `jour`. */
+  function tirageDuLoto(jour) { return sixNumeros(mulberry((0x0649 ^ Math.imul(jour + 1, 2654435761)) >>> 0)); }
+
+  /** Les numeros du `k`-ieme billet achete le jour `jour`. */
+  function numerosDuBillet(jour, k) {
+    return sixNumeros(mulberry(((B.graine | 0) ^ Math.imul(jour * 8 + k + 1, 0x9E3779B1)) >>> 0));
+  }
+
+  function billetsDuJour() {
+    const jour = B.partie.jour;
+    return etatDuLoto().billets.filter(function (b) { return b.jour === jour; }).length;
+  }
+
+  /** UN BILLET : 2 $, six numeros, et le tirage de cette nuit. */
+  function acheterUnBillet() {
+    const r = reglesDuLoto(), p = B.partie, n = billetsDuJour();
+    if (n >= r.billets_par_jour) { Hud.message('TI-PAUL T’EN A ASSEZ VENDU POUR AUJOURD’HUI'); Son.SFX.erreur(); return null; }
+    if (!payer(r.prix, '6/49')) return null;
+    const billet = { jour: p.jour, numeros: numerosDuBillet(p.jour, n) };
+    etatDuLoto().billets.push(billet);
+    Hud.message('TON BILLET : ' + billet.numeros.join(' ') + ' · TIRAGE CETTE NUIT', 240);
+    return billet;
+  }
+
+  function itemLoto() {
+    const r = reglesDuLoto(), n = billetsDuJour();
+    return { libelle: 'UN BILLET DE 6/49', detail: n >= r.billets_par_jour ? 'PLUS AUJOURD’HUI' : r.prix + ' $',
+             actif: n < r.billets_par_jour && B.partie.argent >= r.prix,
+             faire: function () { acheterUnBillet(); return false; } };
+  }
+
+  /** LA NUIT, LE TIRAGE : chaque billet d'avant aujourd'hui se compare au tirage de SON jour, paie
+      son lot (une fois : il quitte la partie), et la ligne du Clairon se prepare. null s'il n'y
+      avait aucun billet. */
+  function nuitDuLoto() {
+    const p = B.partie, e = etatDuLoto(), r = reglesDuLoto();
+    const aTirer = e.billets.filter(function (b) { return b.jour < p.jour; });
+    if (!aTirer.length) return null;
+    let gain = 0, meilleur = 0;
+    for (const b of aTirer) {
+      const tirage = tirageDuLoto(b.jour);
+      const bons = b.numeros.filter(function (n) { return tirage.indexOf(n) >= 0; }).length;
+      meilleur = Math.max(meilleur, bons);
+      gain += r.lots[bons] || 0;
+    }
+    e.billets = e.billets.filter(function (b) { return b.jour >= p.jour; });
+    if (gain > 0) encaisser(gain, '6/49');
+    const bons = meilleur + ' BON' + (meilleur > 1 ? 'S' : '');
+    const texte = '6/49 : ' + tirageDuLoto(p.jour - 1).join(' ') + ' — ' + (gain > 0
+      ? (meilleur >= 5 ? 'LE GAGNANT EST D’ICI! ' : '') + 'TON BILLET : ' + bons + ', +' + gain + ' $'
+      : 'TON BILLET : ' + bons + ', RIEN');
+    e.ligne = { jour: p.jour, texte: texte };
+    return texte;
+  }
+
+  /** La ligne du 6/49 du Clairon d'aujourd'hui, s'il y a eu un tirage pour nous cette nuit. */
+  function ligneDuLoto() {
+    const l = B.partie.loto && B.partie.loto.ligne;
+    return l && l.jour === B.partie.jour ? l.texte : null;
   }
 
   // --- Le videopoker du Brouillard ----------------------------------------------------------
@@ -3137,7 +3231,8 @@ const Missions = (function () {
     if (B.t % 60 === 0) B.partie.stats.secondes++;
   }
 
-  return { evaluerMain, gainDuVideopoker, paquetDuVideopoker, donnerAuVideopoker, tirerAuVideopoker, menuVideopoker,
+  return { tirageDuLoto, numerosDuBillet, acheterUnBillet, nuitDuLoto, ligneDuLoto, itemLoto,
+    evaluerMain, gainDuVideopoker, paquetDuVideopoker, donnerAuVideopoker, tirerAuVideopoker, menuVideopoker,
     encaisser, palierDePrime, annoncerPrime, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, nourrir, cafeine, hopital,
            coupon, prixAmbulant, crieurSousLaMain, filleSousLaMain, stoolSousLaMain, etalSousLaMain, temoinSousLaMain, prendreCoupon,
