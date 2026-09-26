@@ -11,7 +11,7 @@ import math
 
 import pytest
 
-from app import carte, devants, ile, traversier, vehicules
+from app import carte, ile, traversier, vehicules
 
 
 @pytest.fixture(scope="module")
@@ -96,9 +96,14 @@ def test_la_ville_est_la_meme_avec_ou_sans_traversier(ville, monkeypatch):
     assert ecartes, "sans traversier, rien sur le débarcadère : le juge ne juge plus rien"
     reste = [d for d in sans["decor"] if (d["x"], d["y"]) not in zone]
     assert all(d in ville["decor"] for d in reste), "un décor loin du quai a bougé"
-    # Ce qui apparaît ailleurs, c'est ce qui a glissé du débarcadère : du décor mobile, pas plus.
-    nouveaux = [d for d in ville["decor"] if d not in sans["decor"]]
-    assert len(nouveaux) <= len(ecartes) and all(d["type"] in devants.DECOR_MOBILE for d in nouveaux), nouveaux
+    # Ce qui apparaît ailleurs, c'est ce qui a glissé du débarcadère — et rien n'est RETIRÉ : la liste
+    # garde sa longueur et son ordre (retirer deux décors décalait les identifiants de toute la ville,
+    # et deux juges sans rapport rougissaient par la graine).
+    assert len(ville["decor"]) == len(sans["decor"]), "du décor a été retiré au lieu d'être déplacé"
+    bouges = [(d, e) for d, e in zip(sans["decor"], ville["decor"]) if d != e]
+    assert len(bouges) == len(ecartes), bouges
+    assert all(d["type"] == e["type"] and (d["x"], d["y"]) in zone and (e["x"], e["y"]) not in zone
+               for d, e in bouges), bouges
 
 
 def _fleche_en_remontant(ville, x, y, pas):

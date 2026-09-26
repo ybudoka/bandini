@@ -41,6 +41,14 @@ remettait son bogue.
   rive (`poteau_amarrage`, `bouee`, `pneu`) s'en va ; le décor mobile glisse à côté par
   `devants._deplacer_le_decor`. Le juge « la ville est la même avec ou sans traversier » compare
   maintenant le décor hors du débarcadère, et exige que ce qui a bougé soit du décor mobile.
+- ⚠️ **Le décor de rive GLISSE, il ne s'en va pas** (reprise du même jour). La première version
+  retirait le poteau et la bouée de `ville["decor"]` : deux entités de moins, les identifiants de toute
+  la ville décalés, et deux juges sans rapport rougissaient dans la suite complète — le musicien de
+  `test_une_sorte_de_gens…` naissait à une scène déserte, et le commis de h02 traînait le char du juge
+  dans la circulation jusqu'à l'arrestation (le monde figé sous « ARRÊTÉ ! »). Sur 12 graines, h02
+  figeait aussi une fois sur la base : le juge est fragile, mais c'est la liste raccourcie qui l'a fait
+  tomber sur SA graine. Le poteau glisse sur la rive (153, 132), la bouée sur l'eau (283, 133), hors du
+  débarcadère et du couloir ; le juge « ville identique » exige la même longueur de liste.
 - **Une partie rouverte en pleine baie remonte à bord** (`adopter`, à la première image après
   `oublier`) : la place et l'heure se sauvent ensemble, donc un joueur sur le pont de la coque à
   cette heure-là y était. Son char ne se sauve pas : il se réveille à pied, à sa place.

@@ -77,9 +77,12 @@ AXE_PORTEE = 8
 #: la voie : la borne-fontaine des Quais, collée à la rampe, coûtait 6 PV).
 DEBARCADERE = 2
 
-#: Ce que la rive plante au bord de l'eau et qu'un débarcadère n'a pas : on l'enlève, on
-#: ne le déplace pas (ailleurs sur la rive, il y en a assez). Le reste du décor mobile
-#: glisse sur la tuile voisine (`devants`).
+#: Ce que la rive plante au bord de l'eau : un débarcadère n'en a pas, il glisse sur la
+#: rive (ou l'eau, pour une bouée) voisine, hors du débarcadère et du couloir. Le reste du
+#: décor mobile glisse par `devants`. ⚠️ **On DÉPLACE, on ne RETIRE pas** : retirer deux
+#: décors de la liste raccourcissait `ville["decor"]`, décalait les identifiants de toute
+#: la ville et les tirages qui s'y accrochent — le musicien naissait à une scène déserte,
+#: le commis de h02 menait à une arrestation (26 sept. 2026, deux juges rouges).
 DECOR_DE_RIVE = frozenset({"poteau_amarrage", "bouee", "pneu"})
 
 
@@ -218,22 +221,41 @@ def debarcadere(q: dict) -> set[tuple[int, int]]:
 
 
 def degager(chantier, ville: dict) -> tuple[int, int]:
-    """Rien sur le débarcadère : le décor de rive s'en va, le reste glisse à côté. Sans dé,
-    sur la ville finie. Rend (déplacés, retirés)."""
+    """Rien sur le débarcadère : ce qui s'y tient glisse à côté, du même sol, hors du
+    débarcadère et du couloir de la coque. Sans dé, sur la ville finie. Rend (déplacés,
+    retirés) — on ne retire que ce qui ne trouve aucune place à `devants.PORTEE`."""
     t = ville.get("traversier")
     if not t:
         return 0, 0
     from . import devants
 
     zone = set().union(*(debarcadere(q) for q in t["escales"]))
-    retires = 0
-    for d in [d for d in ville["decor"] if (d["x"], d["y"]) in zone and d["type"] in DECOR_DE_RIVE]:
-        ville["decor"].remove(d)
-        chantier.occupe.discard((d["x"], d["y"]))
-        retires += 1
-    deplaces, perdus = devants._deplacer_le_decor(chantier, ville, zone, devants._pris(chantier, ville),
-                                                  devants._evitees(chantier, ville))
-    return deplaces, retires + perdus
+    a, b = t["escales"]
+    couloir = {(x, y) for x0, y0, x1, y1 in balayage(a, b)
+               for x in range(x0 - MARGE_AMARRAGE, x1 + MARGE_AMARRAGE + 1)
+               for y in range(y0 - MARGE_AMARRAGE, y1 + MARGE_AMARRAGE + 1)}
+    pris = devants._pris(chantier, ville)
+    deplaces = retires = 0
+    for d in sorted((d for d in ville["decor"] if (d["x"], d["y"]) in zone and d["type"] in DECOR_DE_RIVE),
+                    key=lambda d: (d["y"], d["x"])):
+        x0, y0 = d["x"], d["y"]
+        glyphe = ville["sol"][y0][x0]
+        cible = next(((x, y) for x, y in devants._anneaux(x0, y0)
+                      if 0 <= y < len(ville["sol"]) and 0 <= x < len(ville["sol"][0])
+                      and ville["sol"][y][x] == glyphe and (x, y) not in zone and (x, y) not in couloir
+                      and (x, y) not in pris), None)
+        chantier.occupe.discard((x0, y0))
+        if cible is None:
+            ville["decor"].remove(d)
+            retires += 1
+            continue
+        d["x"], d["y"] = cible
+        chantier.occupe.add(cible)
+        pris.add(cible)
+        deplaces += 1
+    mobiles = devants._deplacer_le_decor(chantier, ville, zone, devants._pris(chantier, ville),
+                                         devants._evitees(chantier, ville))
+    return deplaces + mobiles[0], retires + mobiles[1]
 
 
 def balayage(a: dict, b: dict) -> list[tuple[int, int, int, int]]:
