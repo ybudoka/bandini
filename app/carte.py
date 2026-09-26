@@ -405,6 +405,9 @@ LEGENDE: dict[str, dict] = {
     # un point `distributrice` (sa sorte dit ce qu'elle vend) ; sa cousine de
     # la rue, elle, est un DECOR cassable (`distributrices()`).
     "b": {"nom": "distributrice", "solide": 3, "meuble": True},
+    # Le VIDEOPOKER (`videopoker.py`) : la machine qui clignote au fond du bar et du depanneur.
+    # Il porte un point `videopoker`, sur sa tuile, comme la distributrice.
+    "S": {"nom": "vidéopoker", "solide": 3, "meuble": True},
 }
 
 #: Les glyphes de facade qu'on POUSSE (ou qu'on a condamnes) : une porte, une porte
@@ -7391,7 +7394,7 @@ BBBBBBBBBBDBBB
     # pas du pas d'a cote de lui (deux tuiles, `RAYON_POINT` en tient 1,6).
     _piece("bar", "Bar Le Brouillard", plan="""
 BBBBBBBBBBBB
-Bj        eB
+Bj       SeB
 B ccccccc  B
 B          B
 B ah  ah   B
@@ -7399,7 +7402,7 @@ B ah  ah   B
 B          B
 Baaaa    ahB
 BBBBWWDWWBBB
-""", points=(_pt("caisse", 4, 2), _pt("contact", 10, 7), _pt("avocat", 3, 5)),
+""", points=(_pt("caisse", 4, 2), _pt("contact", 10, 7), _pt("avocat", 3, 5), _pt("videopoker", 9, 1)),
      gens=_gens(("commis", 4, 1), ("client", 5, 4), ("client", 8, 5), ("avocat", 3, 5))),
 
     # Le casse-croute : la cuisine, les tabourets, les banquettes du fond.
@@ -7427,14 +7430,14 @@ BBWDWB
     # Chez Ti-Paul : deux allees, les frigos au fond, la caisse a l'entree.
     _piece("depanneur", "Dépanneur Chez Ti-Paul", plan="""
 BBBBBBBBBBB
-Bjjj  eee B
+Bjjj  eeeSB
 B         B
 B eeee eeeB
 B         B
 Bccccc  n B
 B         B
 BBBWWDWWBBB
-""", points=(_pt("emplettes", 3, 5, genre="bouffe"), _pt("journal", 9, 5)),
+""", points=(_pt("emplettes", 3, 5, genre="bouffe"), _pt("journal", 9, 5), _pt("videopoker", 9, 1)),
      gens=_gens(("commis", 3, 4), ("client", 8, 2))),
 
     # L'Hotel Bandini : le hall, le tapis, et l'escalier vers les chambres.

@@ -51,6 +51,8 @@ TYPES_SERVIS = frozenset({
     # Le metro : monter dans la rame au quai, en descendre dans la rame
     # (`Metro.utiliser`). Un geste, pas un menu.
     "rame",
+    # Le videopoker du Brouillard et du depanneur (`videopoker.py`, `Missions.menuVideopoker`).
+    "videopoker",
 })
 #: ⚠️ Le point d'un PERSONNAGE posé dedans (`ou: "point:<type>"` — le sergent, Josée, Lulu,
 #: Ovila, le Dr Lachance) est servi par `Histoire.personnageDuPoint`, et se lit dans le

@@ -260,3 +260,4 @@ Deux documents d'avant la table :
 | Les techniques d'arts martiaux : le répertoire | ✅ **livré** | 25 sept. 2026 | **P4** | ajout | [fiche](les-techniques-d-arts-martiaux.md#fiche) · [notes](les-techniques-d-arts-martiaux.md#notes) |
 | Un vélo qui redescend du trottoir reste planté | ✅ **livré** | 26 sept. 2026 | **P2** | **correctif** | [fiche](un-velo-qui-redescend-du-trottoir-reste-plante.md#fiche) · [notes](un-velo-qui-redescend-du-trottoir-reste-plante.md#notes) |
 | La ligne d'histoire : une ouverture et un générique | ✅ **livré** | 26 sept. 2026 | **P2** | ajout | [fiche](la-ligne-d-histoire-une-ouverture-et-un-generique.md#fiche) · [notes](la-ligne-d-histoire-une-ouverture-et-un-generique.md#notes) |
+| Le vidéopoker du Brouillard | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-videopoker-du-brouillard.md#fiche) · [notes](le-videopoker-du-brouillard.md#notes) |

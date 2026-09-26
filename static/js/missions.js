@@ -1001,7 +1001,7 @@ const Missions = (function () {
     lulu: 'PARLER', ovila: 'PARLER',
     emplettes: 'ACHETER', salon: 'SE FAIRE COIFFER', escalier: 'MONTER', fouiller: 'FOUILLER',
     fourriere: 'LE LOT', avocat: 'PARLER À L’AVOCAT', hacker: 'LE COMPTOIR DU FOND',
-    distributrice: 'LA MACHINE',
+    distributrice: 'LA MACHINE', videopoker: 'LE VIDÉOPOKER',
     // Le metro : monter dans la rame au quai, en descendre dans la rame.
     rame: 'LA RAME',
   };
@@ -1214,6 +1214,8 @@ const Missions = (function () {
         return menuHacker();
       case 'distributrice':
         return menuDistributrice(machineDuPoint(point));
+      case 'videopoker':
+        return menuVideopoker();
       default:
         return null;
     }
@@ -2431,6 +2433,173 @@ const Missions = (function () {
     }
   }
 
+  // --- Le videopoker du Brouillard ----------------------------------------------------------
+  //: Demande du plan (docs/jalons/le-videopoker-du-brouillard.md) : une machine au fond du bar et
+  //: du depanneur, qui mange ton argent comme les vraies. Les regles sont a Python
+  //: (`videopoker.py`, `B.defs.videopoker`) ; ici, on joue la main.
+  //:
+  //: ⚠️ SON HASARD EST A ELLE : le paquet se bat avec un generateur semé par la graine de la partie
+  //: et le numero de la main (`paquetDuVideopoker`), jamais `B.rng()` — une main jouee ne decale
+  //: pas un seul de du reste du jeu, et la meme main revient au meme numero.
+  //:
+  //: ⚠️ UN MENU, PAS UN ECRAN A PART : les cinq cartes sont des lignes (GARDER / JETER), TIRER en
+  //: est une autre — le clavier, la manette et le doigt savent deja s'en servir. Les cartes, elles,
+  //: se DESSINENT a cote (`dessinerVideopoker`).
+
+  //: Les noms des rangs et des couleurs, pour les lignes du menu.
+  const RANGS_DITS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'VALET', 'DAME', 'ROI', 'AS'];
+  const COULEURS_DITES = ['PIQUE', 'COEUR', 'CARREAU', 'TRÈFLE'];
+  //: Les couleurs en pixels, 5 × 5 : pique, coeur, carreau, trefle.
+  const ENSEIGNES = [
+    ['..#..', '.###.', '#####', '..#..', '.###.'],
+    ['.#.#.', '#####', '#####', '.###.', '..#..'],
+    ['..#..', '.###.', '#####', '.###.', '..#..'],
+    ['..#..', '.###.', '#.#.#', '#####', '..#..'],
+  ];
+
+  function reglesDuVideopoker() { return B.defs.videopoker; }
+
+  /** Le compteur de la partie : `jour`, `mains` jouees ce jour-la, et `total` (le numero de la
+      prochaine main, qui seme son paquet). */
+  function compteurDuVideopoker() {
+    const p = B.partie;
+    p.videopoker = p.videopoker || { jour: p.jour, mains: 0, total: 0 };
+    if (p.videopoker.jour !== p.jour) { p.videopoker.jour = p.jour; p.videopoker.mains = 0; }
+    return p.videopoker;
+  }
+
+  /** Le paquet de la main numero `n`, battu : cinquante-deux cartes (0 a 51). */
+  function paquetDuVideopoker(n) {
+    const rng = mulberry(((B.graine | 0) ^ Math.imul(n + 1, 2654435761)) >>> 0);
+    const paquet = [];
+    for (let c = 0; c < 52; c++) paquet.push(c);
+    for (let i = 51; i > 0; i--) {
+      const k = Math.floor(rng() * (i + 1));
+      const t = paquet[i]; paquet[i] = paquet[k]; paquet[k] = t;
+    }
+    return paquet;
+  }
+
+  /** La main que font ces cinq cartes (un slug de `gains`), ou null — le jumeau de
+      `videopoker.evaluer`, et un juge les compare. */
+  function evaluerMain(cartes) {
+    const rangs = cartes.map(function (c) { return c % 13; }).sort(function (a, b) { return a - b; });
+    const compte = {};
+    rangs.forEach(function (r) { compte[r] = (compte[r] || 0) + 1; });
+    const paquets = Object.keys(compte).map(function (r) { return compte[r]; }).sort(function (a, b) { return b - a; });
+    const couleur = cartes.every(function (c) { return Math.floor(c / 13) === Math.floor(cartes[0] / 13); });
+    const roue = rangs.join(',') === '0,1,2,3,12';
+    const quinte = paquets.length === 5 && (rangs[4] - rangs[0] === 4 || roue);
+    if (quinte && couleur) return rangs[0] === 8 ? 'quinte_flush_royale' : 'quinte_flush';
+    if (paquets[0] === 4) return 'carre';
+    if (paquets[0] === 3 && paquets[1] === 2) return 'main_pleine';
+    if (couleur) return 'couleur';
+    if (quinte) return 'quinte';
+    if (paquets[0] === 3) return 'brelan';
+    if (paquets[0] === 2 && paquets[1] === 2) return 'deux_paires';
+    if (paquets[0] === 2 && Object.keys(compte).some(function (r) { return compte[r] === 2 && Number(r) >= 9; })) return 'valets';
+    return null;
+  }
+
+  /** Ce que rend la main, en dollars (0 : la mise est perdue). */
+  function gainDuVideopoker(cartes) {
+    const r = reglesDuVideopoker(), slug = evaluerMain(cartes);
+    const g = r.gains.find(function (q) { return q.slug === slug; });
+    return g ? g.paie * r.mise : 0;
+  }
+
+  /** DONNER : la mise part, cinq cartes arrivent. */
+  function donnerAuVideopoker() {
+    const r = reglesDuVideopoker(), c = compteurDuVideopoker();
+    if (c.mains >= r.mains_par_jour) { Hud.message('LA MACHINE A ASSEZ MANGÉ POUR AUJOURD’HUI'); Son.SFX.erreur(); return false; }
+    if (!payer(r.mise, 'VIDÉOPOKER')) { Hud.message('PAS ASSEZ D’ARGENT'); Son.SFX.erreur(); return false; }
+    const paquet = paquetDuVideopoker(c.total);
+    c.total++; c.mains++;
+    B.videopoker = { phase: 'garde', cartes: paquet.slice(0, 5), pioche: paquet.slice(5, 10),
+                     gardes: [false, false, false, false, false], resultat: null };
+    return true;
+  }
+
+  /** TIRER : les cartes jetees sont remplacees, la main paie selon la table. */
+  function tirerAuVideopoker() {
+    const v = B.videopoker;
+    if (!v || v.phase !== 'garde') return false;
+    let k = 0;
+    v.cartes = v.cartes.map(function (c, i) { return v.gardes[i] ? c : v.pioche[k++]; });
+    const slug = evaluerMain(v.cartes), gain = gainDuVideopoker(v.cartes);
+    const g = reglesDuVideopoker().gains.find(function (q) { return q.slug === slug; });
+    v.phase = 'mise';
+    v.resultat = { slug: slug, nom: g ? g.nom : 'RIEN', gain: gain };
+    if (gain > 0) encaisser(gain, g.nom);
+    else { Hud.message('RIEN — LA MACHINE GARDE TES ' + reglesDuVideopoker().mise + ' $'); Son.SFX.erreur(); }
+    return true;
+  }
+
+  function nomDeCarte(c) { return RANGS_DITS[c % 13] + ' DE ' + COULEURS_DITES[Math.floor(c / 13)]; }
+
+  /** Le menu de la machine, dans la phase ou elle est. */
+  function menuVideopoker() {
+    const r = reglesDuVideopoker(), c = compteurDuVideopoker(), v = B.videopoker, p = B.partie;
+    const reste = Math.max(0, r.mains_par_jour - c.mains);
+    let items;
+    if (v && v.phase === 'garde') {
+      items = v.cartes.map(function (carte, i) {
+        return { libelle: nomDeCarte(carte), detail: v.gardes[i] ? 'GARDÉE' : 'JETER',
+                 faire: function () { v.gardes[i] = !v.gardes[i]; Son.SFX.menu(); return false; } };
+      });
+      items.push({ libelle: 'TIRER', faire: function () { tirerAuVideopoker(); return false; } });
+    } else {
+      items = [{ libelle: 'DONNER', detail: r.mise + ' $', actif: p.argent >= r.mise && reste > 0,
+                 faire: function () { donnerAuVideopoker(); return false; } }];
+    }
+    return { titre: 'VIDÉOPOKER', sur: p.argent + ' $', items: items, largeur: 440, hauteur: 214, colonne: 176,
+             aide: 'RETOUR ' + r.retour + ' % · ' + reste + ' MAIN' + (reste > 1 ? 'S' : '') + ' AUJOURD’HUI',
+             dessiner: dessinerVideopoker };
+  }
+
+  /** Les cinq cartes, a droite de la liste, et la table des gains dessous — celle qui paie
+      (`reglesDuVideopoker().gains`, la meme que `gainDuVideopoker` lit). */
+  function dessinerVideopoker(ctx, x, y) {
+    const r = reglesDuVideopoker(), v = B.videopoker, m = B.menu;
+    const x0 = x + 190, y0 = y + 30, L = 42, H = 56, pas = 48;
+    for (let i = 0; i < 5; i++) {
+      const cx = x0 + i * pas, carte = v ? v.cartes[i] : null;
+      const vise = v && v.phase === 'garde' && m && m.curseur === i;
+      ctx.fillStyle = vise ? '#e8b33c' : '#3a3450'; ctx.fillRect(cx - 1, y0 - 1, L + 2, H + 2);
+      if (carte === null) {
+        ctx.fillStyle = '#6b2a2a'; ctx.fillRect(cx, y0, L, H);                 // le dos de la carte
+        ctx.fillStyle = '#8a3a36'; for (let k = 2; k < H - 2; k += 4) ctx.fillRect(cx + 2, y0 + k, L - 4, 2);
+        continue;
+      }
+      const rouge = Math.floor(carte / 13) === 1 || Math.floor(carte / 13) === 2;
+      const encre = rouge ? '#c0392b' : '#1b1b24';
+      ctx.fillStyle = '#efe6d0'; ctx.fillRect(cx, y0, L, H);
+      const rang = r.rangs[carte % 13];
+      Atlas.texte(ctx, rang, cx + 3, y0 + 3, encre, 2);
+      const e = ENSEIGNES[Math.floor(carte / 13)];
+      for (let yy = 0; yy < 5; yy++) {
+        for (let xx = 0; xx < 5; xx++) {
+          if (e[yy][xx] !== '#') continue;
+          ctx.fillStyle = encre; ctx.fillRect(cx + 11 + xx * 4, y0 + 24 + yy * 4, 4, 4);
+        }
+      }
+      if (v.phase === 'garde' && v.gardes[i]) Atlas.texte(ctx, 'GARDÉE', cx + 3, y0 + H + 4, '#e8b33c', 1);
+    }
+    // La table des gains, en dollars : la main qui vient de payer s'allume.
+    const gagne = v && v.phase === 'mise' && v.resultat ? v.resultat.slug : null;
+    r.gains.forEach(function (g, i) {
+      const yy = y0 + H + 16 + i * 10, couleur = g.slug === gagne ? '#e8b33c' : '#8a8698';
+      const montant = g.paie * r.mise + ' $';
+      Atlas.texte(ctx, g.nom, x0, yy, couleur, 1);
+      Atlas.texte(ctx, montant, x0 + 5 * pas - 6 - Atlas.largeurTexte(montant, 1), yy, couleur, 1);
+    });
+    if (v && v.phase === 'mise' && v.resultat) {
+      const t = v.resultat.gain > 0 ? v.resultat.nom + ' · +' + v.resultat.gain + ' $' : 'RIEN CETTE FOIS';
+      Atlas.texte(ctx, t, x + 12, y + 50, v.resultat.gain > 0 ? '#e8b33c' : '#8a8698', 1);
+    }
+    B.stats.rects += 60;
+  }
+
   // --- Les machines distributrices ----------------------------------------------------------
 
   /** Une machine : sa sorte, sa fiche (`magasins.DISTRIBUTRICES`), et une CLE.
@@ -2968,7 +3137,8 @@ const Missions = (function () {
     if (B.t % 60 === 0) B.partie.stats.secondes++;
   }
 
-  return { encaisser, palierDePrime, annoncerPrime, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
+  return { evaluerMain, gainDuVideopoker, paquetDuVideopoker, donnerAuVideopoker, tirerAuVideopoker, menuVideopoker,
+    encaisser, palierDePrime, annoncerPrime, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, nourrir, cafeine, hopital,
            coupon, prixAmbulant, crieurSousLaMain, filleSousLaMain, stoolSousLaMain, etalSousLaMain, temoinSousLaMain, prendreCoupon,
            paliersDe, palierDebloque, avantage, compterLeBoulot,

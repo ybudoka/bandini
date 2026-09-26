@@ -36,7 +36,7 @@ import json
 from dataclasses import dataclass
 
 from . import (armes, audio, blocs, carte, devantures, economie, garderobe, interactions, journal, magasins,
-               manettes, missions, nuit, pietons, recherche, techniques, vehicules, visages)
+               manettes, missions, nuit, pietons, recherche, techniques, vehicules, videopoker, visages)
 from .version import VERSION
 
 
@@ -62,6 +62,8 @@ def assembler() -> dict:
         # Les coups de rue et les cours du dojo (docs/jalons/les-techniques-d-arts-martiaux.md).
         "techniques": techniques.CATALOGUE,
         "economie": economie.exporter(),
+        # La machine du fond du bar (docs/jalons/le-videopoker-du-brouillard.md).
+        "videopoker": videopoker.pour_le_navigateur(),
         "recherche": recherche.exporter(),
         "pietons": gens,
         "manettes": manettes.exporter(),

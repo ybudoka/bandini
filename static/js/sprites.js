@@ -3528,6 +3528,31 @@ const TUILES = (function () {
       ctx.fillStyle = '#1a0e0c';
       ctx.fillRect(4, 11, 7, 2);                        // la trappe
     },
+    /* Le videopoker du fond du bar (`videopoker.py`) : une borne noire, son ecran ou cinq cartes
+       attendent, et le voyant qui CLIGNOTE — c'est lui qu'on voit de la porte (`v >> 4` : deux
+       machines ne clignotent pas ensemble). */
+    'S': function (ctx, v, T) {
+      ctx.fillStyle = 'rgba(0,0,0,0.20)';
+      ctx.fillRect(2, 14, 13, 2);                       // l'ombre au pied
+      ctx.fillStyle = '#1d1a26';
+      ctx.fillRect(2, 1, 12, 14);                       // la borne
+      ctx.fillStyle = '#2e2940';
+      ctx.fillRect(2, 1, 12, 2);                        // le fronton
+      ctx.fillStyle = (v >> 4) % 2 ? '#ffd23a' : '#b8322a';
+      ctx.fillRect(6, 1, 4, 1);                         // le voyant qui clignote
+      ctx.fillStyle = '#0d2a3a';
+      ctx.fillRect(3, 4, 10, 6);                        // l'ecran
+      ctx.fillStyle = '#efe6d0';
+      for (let k = 0; k < 5; k++) ctx.fillRect(4 + k * 2, 6, 1, 2);   // les cinq cartes
+      ctx.fillStyle = '#c0392b';
+      ctx.fillRect(6, 6, 1, 1);                         // un coeur, quelque part
+      ctx.fillStyle = '#5a5570';
+      ctx.fillRect(3, 11, 10, 1);                       // le rebord des boutons
+      ctx.fillStyle = '#e8b33c';
+      ctx.fillRect(4, 12, 1, 1); ctx.fillRect(6, 12, 1, 1); ctx.fillRect(8, 12, 1, 1); ctx.fillRect(10, 12, 1, 1);
+      ctx.fillStyle = '#ffd23a';
+      ctx.fillRect(12, 12, 1, 2);                       // la fente a monnaie
+    },
   };
 })();
 
