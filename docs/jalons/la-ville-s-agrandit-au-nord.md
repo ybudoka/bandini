@@ -81,41 +81,73 @@ La nouvelle carte fait 459 × 414. Dans la bande (y de 0 à 109) :
   `y = DECALAGE_NORD`, et celle de la bande, à partir de 0. `rect_district` fait de même.
 - **Les blocs de carte** : leurs `passage` restent écrits en coordonnées de la ville d'avant, et c'est
   `app/blocs/__init__.py` qui les décale de `DECALAGE_NORD` en les posant sur la carte finie (les Galeries, de 60 à
-  170 ; le chalet, de 164 à 274). Les trois blocs du bord nord déménagent à l'ouest (voir plus bas) : le nouveau
-  bord nord n'a aucun passage.
+  170 ; le rang, de 171 à 281 ; le ciné-parc, de 94 à 204). Le bord nord n'a plus aucun passage (voir plus
+  bas).
 - **La carte du jeu** (touche N), la caméra, les blips et la police lisent la taille de la carte. Ils n'ont rien de
   codé en dur à 304 ; un juge le vérifie.
 - **Les missions** n'ont aucune coordonnée absolue : elles lisent des lieux et des points, qui descendent avec la
   ville.
 
-### Les blocs du bord nord déménagent à l'ouest
+### Les blocs du bord nord : le ciné-parc à l'ouest, et le rang
 
 Martin, 26 sept. 2026 : « Déplace le ciné-parc à l'ouest et ajuste son entrée. Regroupe la clairière et la cabane à
-sucre avec le chalet. » La bande couvre le bord nord : plutôt que d'y tirer trois chemins, les trois blocs qui s'y
-branchaient passent au **bord ouest**. C'est le trottoir de ceinture, le long de la rue qui borde la ville à
-l'ouest, et on y marche de y 0 à 190. Tous les passages ont cinq tuiles et tombent sur un tronçon droit, entre deux
-rues transversales. Coordonnées de la ville d'avant :
+sucre avec le chalet. » Puis : « Je préfère une vraie fusion », et « assure-toi que l'entrée de la ville au rang soit
+bien une ouverture de rue ». La bande couvre le bord nord. Plutôt que d'y tirer des chemins, **le bord nord n'a plus
+aucun passage** : le ciné-parc passe à l'ouest, et la clairière, la cabane et le chalet deviennent **un seul bloc :
+le rang**.
 
-| Bloc | Avant | Après | Où |
-|---|---|---|---|
-| les Galeries | ouest, 60 | ouest, 60 (inchangé) | les Érables |
-| **le ciné-parc** | nord, x 350 | **ouest, 94** | les Érables, entre les Galeries et les trois voisins |
-| **la clairière** | nord, x 55 | **ouest, 142** | les Quais, le tronçon au-dessus du chalet |
-| le chalet | ouest, 164 | ouest, 164 (inchangé) | les Quais |
-| **la cabane à sucre** | nord, x 200 | **ouest, 178** | les Quais, le tronçon au-dessous du chalet |
+Le bord ouest de la ville est un trottoir de ceinture qui longe une rue nord-sud (x 1 à 4), de y 0 à 190. Dans les
+coordonnées de la ville d'avant :
 
-La clairière, le chalet et la cabane se suivent sur trois tronçons de suite : c'est **le coin des rangs**, la
-campagne au bout de la rue de l'ouest.
+| Bloc | Avant | Après |
+|---|---|---|
+| les Galeries | ouest, 60 | inchangé |
+| **le ciné-parc** | nord, x 350 | **ouest, 94** : un tronçon droit du trottoir, aux Érables |
+| la clairière | nord, x 55 | fondue dans le rang |
+| le chalet | ouest, 164 (le trottoir le long d'un îlot) | fondu dans le rang |
+| la cabane à sucre | nord, x 200 | fondue dans le rang |
+| **le rang** | — | **ouest, 171 à 174** : l'ouverture de la rue des y 172-173 |
 
-**Leur entrée, dans le bloc.** On y arrivait par le bord sud (on montait vers le nord). On y arrive maintenant par
-le **bord est**, comme au chalet et aux Galeries. Pour chacun des trois, le `retour` passe de `sud` à `est`, le
-chemin d'accès est redessiné pour venir de l'est, l'`arrivee` se pose juste en dedans de ce bord, et les panneaux
-suivent. Pour le ciné-parc, c'est l'entrée du terrain qui tourne : le guichet, la barrière et l'allée d'accès
-passent sur son côté est. Les rangées de cases restent face à l'écran, et on entre par le côté pour les longer.
-Ce qui se passe dedans (le film, la tire, le lac) ne change pas.
+**L'entrée du rang est une ouverture de rue.** La rue à deux voies des y 172-173, aux Quais, s'arrête aujourd'hui
+sur la rue de l'ouest, contre le trottoir de ceinture. Elle **traverse** maintenant jusqu'au bord de la carte : les
+deux tuiles de trottoir à x 0 (y 172 et 173) deviennent de l'asphalte, avec les lignes de la rue. Les deux trottoirs
+de la rue (y 171 et 174) vont eux aussi jusqu'au bord. On quitte la ville en roulant tout droit sur une vraie rue,
+pas en poussant contre un trottoir. Le passage couvre les quatre tuiles, `{"bord": "ouest", "de": 171, "l": 4}` : à
+pied sur le trottoir, au volant sur la chaussée.
+- Ces tuiles sont **repeintes en dernier, sans un dé**. C'est la seule retouche de la ville d'avant, et le juge
+  « la ville d'avant identique » la nomme.
+- ⚠️ **Les chars de la ville ne s'y engagent pas.** Une voie qui mène au bord de la carte est un cul-de-sac pour la
+  circulation. Le graphe des voies ignore l'ouverture, et un juge fait rouler le trafic devant pour le vérifier.
 
-Ce déménagement ne dépend pas de la translation. **Il se livre en premier**, seul : on vérifie les trois blocs au
-bord ouest, puis on bâtit la bande sur un bord nord libre.
+**Le rang, un seul bloc** (≈ 80 × 50 tuiles ; le chalet en fait 44 × 30). C'est un seul endroit, pas trois cartes
+collées :
+- **Le chemin** entre par le bord est. C'est la même rue qui continue en gravier : deux voies et leurs accotements,
+  quatre tuiles, en face des quatre tuiles du passage (`retour` : bord est, `l: 4`). L'`arrivee` se pose juste en
+  dedans du bord, et le chemin file vers l'ouest.
+- **Le chalet** est posé sur la rive du **lac de la clairière**. Son étang disparaît : il n'y a plus qu'un lac, avec
+  sa grève et son quai de bois. La place du char de la planque est devant le chalet. Sa pièce, son prix, son coffre
+  partagé et sa cheminée qui fume ne changent pas.
+- **La cabane à sucre** est de l'autre côté du chemin, dans son érablière. Sa pièce, son comptoir, la tire, le défi
+  et sa fermeture hors saison ne changent pas.
+- Des arbres partout autour, et personne n'y naît (`gens: False`), comme les trois blocs d'avant.
+- Le panneau en ville dit **RANG**, et celui du retour **VILLE**.
+
+**Ce qui suit la fusion**
+- Le bloc a le slug `rang` ; `clairiere`, `cabane` et `chalet` disparaissent de `BLOCS`. Leurs **lieux** gardent leur
+  nom : `chalet` pour la planque, `cabane` pour la mission de la tire et le comptoir. Seul `magasins.py`
+  (`"bloc": "cabane"`) change.
+- Une partie sauvegardée dans l'un des trois vieux blocs se réveille dans le rang : au chalet si c'est la planque,
+  sinon à l'arrivée.
+- Le juge des blocs (`erreurs`) vérifie qu'on rejoint à pied depuis l'arrivée les deux portes, la place du char et le
+  quai.
+
+**Le ciné-parc** : son passage passe au bord ouest (y 94, un tronçon droit du trottoir). Dans le bloc, on arrivait
+par le sud. On arrive maintenant par l'**est** : le guichet, la barrière et l'allée d'accès passent sur son côté est,
+les rangées de cases restent face à l'écran, et on entre par le côté pour les longer. Le film et le reste ne
+changent pas.
+
+Ce chantier ne dépend pas de la translation. **Il se livre en premier**, seul : le rang et le ciné-parc au bord
+ouest, puis la bande sur un bord nord libre.
 
 ### La sauvegarde
 
@@ -149,17 +181,19 @@ Ces éléments n'ont pas d'étape prévue :
   `Monde.lettreDuBloc` répondent juste de part et d'autre de la couture.
 - **La bande est atteignable** à pied et au volant depuis le terminus (les composantes par terre), et le poste
   d'aiguillage s'ouvre.
-- **Les cinq blocs de carte se branchent toujours**, tous au bord ouest : on pousse au bon endroit, on arrive par
-  le bord est du bloc, on revient au même endroit, à pied et au volant. Aucun passage ne chevauche un autre, et aucun
-  n'est au bord nord (`test_blocs`).
+- **Les trois blocs de carte se branchent toujours** (les Galeries, le ciné-parc, le rang), tous au bord ouest :
+  on passe au bon endroit, on arrive par le bord est du bloc, on revient au même endroit, à pied et au volant. Aucun
+  passage n'en chevauche un autre, et aucun n'est au bord nord (`test_blocs`).
+- **L'entrée du rang est une rue** : les tuiles du passage sont de la chaussée et du trottoir qui continuent la rue
+  des y 172-173 jusqu'au bord, et aucun char de la circulation ne s'y engage.
 - **Une vieille partie** (sans `decalage_nord`) retrouve ses coordonnées gardées décalées de 110.
 - **Aucune clé de nom `nord_` n'entre en collision** avec une clé de la ville.
 - **Les tests qui avaient des y en dur** (une douzaine de lignes : `test_chalet_js`, `test_districts_js`,
   `test_moteur_js`, `test_blocs_js`…) les lisent désormais sur la carte.
 - Le temps de `generer` (2,8 s aujourd'hui) et le poids du paquet des définitions (`test_definitions`) sont mesurés
   avant d'atterrir.
-- **Une capture** de la bande entière, une de chaque couture et une de l'entrée redessinée de chacun des trois blocs
-  déménagés, ouvertes dans Aperçu pour Martin avant de livrer.
+- **Une capture** de la bande entière, une de chaque couture, une du rang entier, une de son ouverture de rue en ville et
+  une de l'entrée du ciné-parc, ouvertes dans Aperçu pour Martin avant de livrer.
 
 ## Notes
 
