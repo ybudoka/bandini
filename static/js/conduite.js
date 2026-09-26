@@ -482,6 +482,48 @@ const Conduite = (function () {
       },
     },
 
+    // LA COURSE AUX FANIONS (la motoneige, docs/jalons/la-motoneige.md) : la piste est lue par Python
+    // (`motoneige.course` : le phare, le bout des sentiers des bois de La Pointe, et retour) ; les fanions
+    // sont PEINTS, on les passe dans l'ordre, sur le vehicule de la fiche (`regles.vehicule`), qui attend
+    // au depart. Le chrono est celui du defi.
+    balises: {
+      preparer: function (d, r) {
+        const m = B.defs.motoneige, c = m && m.course;
+        if (!c) return null;
+        const px = function (t) { return { x: t[0] * TT + 8, y: t[1] * TT + 8 }; };
+        const balises = c.balises.map(px), depart = px(c.depart);
+        const v = poser(r.vehicule, depart.x, depart.y, angleVers(depart.x, depart.y, balises[0].x, balises[0].y));
+        if (!v) return null;
+        return { balises: balises, i: 0, rayon: m.regles.rayon_tuiles * TT, monture: v };
+      },
+      maj: function (e, r, v) {
+        if (v.slug !== r.vehicule) return { gagne: false, raison: 'À MOTONEIGE SEULEMENT' };
+        const b = e.balises[e.i];
+        if (Math.hypot(v.x - b.x, v.y - b.y) < e.rayon) {
+          e.i++;
+          Son.SFX.cone();
+          if (e.i >= e.balises.length) return { gagne: true };
+          Hud.message('FANION ' + e.i + ' / ' + e.balises.length, 45);
+        }
+        return null;
+      },
+      compte: function (e) { return 'FANION ' + e.i + ' / ' + e.balises.length; },
+      cible: function (e) { return e.balises[Math.min(e.i, e.balises.length - 1)]; },
+      sol: function (ctx, e, r, vue) {
+        let n = 0;
+        for (let k = e.i; k < e.balises.length; k++) {
+          const b = e.balises[k], x = Math.round(b.x - vue.x), y = Math.round(b.y - vue.y);
+          if (x < -12 || y < -20 || x > VW + 12 || y > VH + 12) continue;
+          // Un fanion : son mat, son drapeau (le prochain en jaune, les autres en rouge).
+          ctx.fillStyle = '#2b2b30'; ctx.fillRect(x, y - 14, 1, 15);
+          ctx.fillStyle = k === e.i ? '#ffd23f' : '#e0453a';
+          ctx.fillRect(x + 1, y - 14, 6, 2); ctx.fillRect(x + 1, y - 12, 4, 2); ctx.fillRect(x + 1, y - 10, 2, 1);
+          n += 4;
+        }
+        B.stats.rects += n;
+      },
+    },
+
     // LE VERRE DE LAIT : une livraison, et un verre plein sur la banquette.
     lait: {
       preparer: function () { return { lait: 0 }; },

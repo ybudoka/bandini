@@ -2648,6 +2648,12 @@ const Histoire = (function () {
       Hud.message('ÇA SE JOUE LE SOIR — REVIENS À LA BRUNANTE', 150); Son.SFX.erreur();
       return;
     }
+    // ⚠️ L'HIVER SEULEMENT (`hiver`, la course de motoneige) : la saison, et la neige de M12.
+    if (d.hiver && !Missions.hiverDeMotoneige()) {
+      B.defi = null;
+      Hud.message('ÇA SE JOUE L\'HIVER, DANS LA NEIGE', 150); Son.SFX.erreur();
+      return;
+    }
     if (d.conduite && !Conduite.commencer(d)) {
       B.defi = null;
       Hud.message('PAS DE PLACE ICI POUR CE DÉFI', 150); Son.SFX.erreur();

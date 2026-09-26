@@ -87,6 +87,9 @@ class Vehicule(TypedDict):
     #: La part de la chaleur qui monte dedans (1 : toute) — la police ne soupconne pas un camion de
     #: creme glacee, tant qu'on n'y tire pas (`Police.ajouterChaleur`).
     discret: float
+    #: LA MOTONEIGE : sa vitesse et son elan HORS de la neige (et de la glace), en part des siens —
+    #: 1 pour tout ce qui roule pareil partout (`Vehicules.allureDuSol`).
+    hors_neige: float
 
 
 #: Les classes dont on claque la portiere. ⚠️ Une moto et un velo n'en ont
@@ -143,7 +146,7 @@ def _v(slug, nom, classe, lon, lat, vmax, accel, rayon, vie, places, prix, freq,
        masse=1.0, cercles=3, reservoir=True, defonce=0.0, soigne=0.0, crochet=False,
        plateau=False, boulot=None,
        radio=None, phase=1, klaxon="klaxon", rare=False, adherence=None, alarme_s=0.0,
-       au_volant=None, discret=1.0) -> Vehicule:
+       au_volant=None, discret=1.0, hors_neige=1.0) -> Vehicule:
     return Vehicule(
         slug=slug, nom=nom, classe=classe, longueur=lon, largeur=lat,
         vitesse_max=vmax, vitesse_recul=round(vmax * 0.33, 2), acceleration=accel,
@@ -158,7 +161,7 @@ def _v(slug, nom, classe, lon, lat, vmax, accel, rayon, vie, places, prix, freq,
         au_volant=au_volant,
         defonce=defonce, soigne=soigne,
         crochet=crochet, plateau=plateau, boulot=boulot, radio=radio, phase=phase,
-        portieres=classe in CLASSES_A_PORTIERES, klaxon=klaxon, discret=discret,
+        portieres=classe in CLASSES_A_PORTIERES, klaxon=klaxon, discret=discret, hors_neige=hors_neige,
     )
 
 
@@ -210,6 +213,11 @@ CATALOGUE: list[Vehicule] = [
     # la ville) ; il attend, gare, dans la rue du depanneur des Erables (`Vehicules.majCremeGlacee`).
     _v("creme_glacee", "Camion de crème glacée", "auto", 30, 15, 3.2, 0.05, 25, 140, 2, 1100, 0.0,
        ["#fff6ea"], "creme_glacee", masse=1.3, boulot="creme_glacee", discret=0.5),
+    # LA MOTONEIGE (docs/jalons/la-motoneige.md) : le vehicule de l'hiver. Rapide dans la neige et sur la
+    # glace de la baie, lente et bruyante ailleurs (`hors_neige`). ⚠️ `freq` 0 : elle ne roule pas dans le
+    # trafic ; elle attend garee aux Erables, l'hiver, et naît a l'approche (`Missions.majMotoneiges`).
+    _v("motoneige", "Motoneige", "moto", 22, 10, 4.6, 0.08, 16, 45, 2, 900, 0.0,
+       ["#d7263d", "#1b75bb", "#f2c230"], "motoneige", ejecte=True, hors_neige=0.45),
     _v("remorqueuse", "Remorqueuse", "camion", 36, 15, 3.0, 0.04, 29, 220, 2, 1300, 0.05,
        ["#d98324", "#2c3e50", "#7f8c8d"], "remorqueuse", masse=2.2, cercles=4, adherence=0.24,
        defonce=0.6, crochet=True, boulot="remorquage", radio="station_remorqueuse"),

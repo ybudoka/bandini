@@ -270,6 +270,7 @@ Deux documents d'avant la table :
 | La tempête de verglas | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](la-tempete-de-verglas.md#fiche) · [notes](la-tempete-de-verglas.md#notes) |
 | Le derby de démolition à la foire | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-derby-de-demolition-a-la-foire.md#fiche) · [notes](le-derby-de-demolition-a-la-foire.md#notes) |
 | Le pont de glace | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-pont-de-glace.md#fiche) · [notes](le-pont-de-glace.md#notes) |
+| La motoneige | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](la-motoneige.md#fiche) · [notes](la-motoneige.md#notes) |
 | Un vrai chalet dedans, et son foyer | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](un-vrai-chalet-dedans-et-son-foyer.md#fiche) · [notes](un-vrai-chalet-dedans-et-son-foyer.md#notes) |
 | Le chalet fume, et son feu crépite | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-chalet-fume-et-son-feu-crepite.md#fiche) · [notes](le-chalet-fume-et-son-feu-crepite.md#notes) |
 | Le dojo du quartier : apprendre les techniques | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-dojo-du-quartier.md#fiche) · [notes](le-dojo-du-quartier.md#notes) |

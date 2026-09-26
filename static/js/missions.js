@@ -2699,6 +2699,51 @@ const Missions = (function () {
     Entites.indexer();
   }
 
+  // --- Les motoneiges des Erables --------------------------------------------------------------
+  //: docs/jalons/la-motoneige.md. L'HIVER (`Calendrier`, et l'option de la neige : c'est l'hiver du
+  //: jeu), deux motoneiges attendent garees dans une rue des Erables — pas celle du camion de creme
+  //: glacee. Elles naissent a l'approche, hors champ, comme lui ; l'hiver fini, celles qu'on n'a pas
+  //: prises repartent (hors champ aussi).
+
+  function hiverDeMotoneige() {
+    return !!(B.options && B.options.neige && B.partie && Calendrier.saisonDuJour() === 'hiver');
+  }
+
+  /** La rue des motoneiges : la plus proche du coeur des Erables, a trois tuiles au moins du camion. */
+  function placeDesMotoneiges() {
+    const z = Monde.carte && Monde.carte.zones.find(function (q) { return q.district === 'erables' && q.slug === 'erables'; });
+    if (!z) return null;
+    const camion = placeDuCamion();
+    return Histoire.tuileDeRue((z.x + z.l / 2) * TT, (z.y + z.h / 2) * TT, 30, function (p) {
+      return !camion || dist2(p.x, p.y, camion.x, camion.y) > 48 * 48;
+    });
+  }
+
+  function motoneigesGarees() {
+    return B.entites.filter(function (e) { return e.type === 'vehicule' && e.slug === 'motoneige' && e.etat !== 'epave'; });
+  }
+
+  function majMotoneiges() {
+    const j = B.joueur;
+    if (!j || B.interieur || B.bloc || B.t % 60 !== 45) return;
+    const garees = motoneigesGarees();
+    if (!hiverDeMotoneige()) {
+      // L'hiver fini : celles qui attendent encore repartent, sans qu'on les voie partir.
+      for (const v of garees) if (v.resteGare && !v.conducteur && !v.aToi && !Entites.visibleAEcran(v.x, v.y, 40)) Entites.retirer(v);
+      return;
+    }
+    if (garees.some(function (v) { return v.resteGare; })) return;
+    const place = placeDesMotoneiges();
+    if (!place || dist2(place.x, place.y, j.x, j.y) > 500 * 500 || Entites.visibleAEcran(place.x, place.y, 60)) return;
+    const a = { '>': 0, 'v': Math.PI / 2, '<': Math.PI, '^': -Math.PI / 2 }[place.sens] || 0;
+    const couleurs = Vehicules.vehiculeDef('motoneige').couleurs;
+    for (let k = 0; k < 2; k++) {
+      Vehicules.creer('motoneige', place.x - Math.cos(a) * 22 * k, place.y - Math.sin(a) * 22 * k, a,
+                      { etat: 'stationne', couleur: couleurs[k % couleurs.length], resteGare: true });
+    }
+    Entites.indexer();
+  }
+
   // --- La liste du quai -------------------------------------------------------------------
   //: Sven affiche quatre modeles ; on lui en livre UN par jour, au bout de sa jetee, a l'arret, sans
   //: bosse — et la liste se renouvelle. Les regles sont a Python (`economie.LISTE_DU_QUAI`). La liste
@@ -3595,6 +3640,7 @@ const Missions = (function () {
     majQuai();
     majCremeGlacee();
     majAsphalte();
+    majMotoneiges();
     rendreLesNidsBouches();
     if (B.t % 60 === 0) oublierLaRitournelle();
     majInvite(B.joueur);
@@ -3608,7 +3654,7 @@ const Missions = (function () {
     if (B.t % 60 === 0) B.partie.stats.secondes++;
   }
 
-  return { sequenceDuLoto, direLeLoto, boucherLeNid, rendreLesNidsBouches, placeDeLAsphalte, majAsphalte, decompteDesNids,
+  return { hiverDeMotoneige, placeDesMotoneiges, majMotoneiges, sequenceDuLoto, direLeLoto, boucherLeNid, rendreLesNidsBouches, placeDeLAsphalte, majAsphalte, decompteDesNids,
     majCremeGlacee, placeDuCamion, ritournelleDuCamion,
     listeDuQuai, etatDuQuai, posteDuQuai, prixAuQuai, texteDuQuai, majQuai,
     braquable, braquer, rancuneIci,

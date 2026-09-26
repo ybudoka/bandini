@@ -693,6 +693,39 @@ const MACHINE_MOTO = {
   ],
 };
 
+// LA MOTONEIGE (docs/jalons/la-motoneige.md) : deux skis devant, une chenille derriere, un capot de
+// couleur et un pare-brise ; on s'y assoit comme sur la moto (la selle a la meme hauteur).
+const MACHINE_MOTONEIGE = {
+  profondeur: BIAIS_DU_SOL,
+  assise: [-3, 0, 6.0],
+  guidon: [3.0, 3.0, 7.6],
+  pedales: [-1.4, 2.4, 3.6],
+  pieces: [
+    ['tube', [4.0, -3.4, 0.6], [11.0, -3.4, 0.6], 'M', 0.5],             // le ski gauche
+    ['tube', [11.0, -3.4, 0.6], [12.0, -3.4, 1.8], 'M', 0.5],           // sa spatule
+    ['tube', [4.0, 3.4, 0.6], [11.0, 3.4, 0.6], 'M', 0.5],               // le ski droit
+    ['tube', [11.0, 3.4, 0.6], [12.0, 3.4, 1.8], 'M', 0.5],
+    ['tube', [7.0, -3.0, 0.8], [6.0, -2.0, 3.4], 'k', 0.3],              // les jambes des skis
+    ['tube', [7.0, 3.0, 0.8], [6.0, 2.0, 3.4], 'k', 0.3],
+    ['bloc', [-10.2, -2.0], [-2.4, 2.4], [0.4, 2.8], 'r', 'r', 'r'],     // la chenille
+    ['tube', [-9.6, -2.5, 2.9], [-9.6, 2.5, 2.9], 'M', 0.2],             // ses crampons
+    ['tube', [-7.2, -2.5, 2.9], [-7.2, 2.5, 2.9], 'M', 0.2],
+    ['tube', [-4.8, -2.5, 2.9], [-4.8, 2.5, 2.9], 'M', 0.2],
+    ['bloc', [1.0, 9.0], [-3.0, 3.0], [2.4, 5.4], 'c', 'D', 'D'],        // le capot
+    ['bloc', [9.0, 10.6], [-2.0, 2.0], [2.4, 4.4], 'c', 'D', 'D'],       // son museau
+    ['tube', [5.2, -2.9, 5.5], [8.4, -2.9, 5.5], 'C', 0.2],              // son reflet, devant le pare-brise
+    // Le pare-brise : un cadre noir plein, et la vitre posee sur sa face AVANT seulement — de face, elle
+    // est cernee de noir ; de dos, on voit le dos du pare-brise (`test_poses_vehicules`).
+    ['bloc', [2.6, 4.2], [-2.9, 2.9], [5.3, 8.2], 'k', 'k', 'k'],
+    ['bloc', [4.2, 4.5], [-2.3, 2.3], [6.5, 7.6], 'v', 'v', 'v', 0.3],
+    ['bloc', [-8.4, 1.0], [-1.8, 1.8], [3.8, 5.6], 'k', 'k', 'k'],       // la selle
+    ['bloc', [-10.2, -8.4], [-2.2, 2.2], [2.8, 5.0], 'c', 'D', 'D'],     // le coffre arriere
+    ['tube', [3.0, -3.0, 7.6], [3.0, 3.0, 7.6], 'k', 0.4],               // le guidon
+    ['bloc', [10.6, 11.2], [-0.9, 0.9], [3.2, 4.4], 'l', 'l', 'l', 0.3], // le phare, au bout du museau
+    ['bloc', [-10.9, -10.2], [-0.6, 0.6], [4.4, 5.2], 't', 't', 't', 0.3], // le feu, sur le coffre
+  ],
+};
+
 const ASSIS_COTE = [
       '............',
       '............',
@@ -1365,6 +1398,7 @@ SPRITES.velo = deuxRoues(MACHINE_VELO, 16, 32, { k: '#101018', c: '#2980b9', r: 
 // pilote garde les pieds sur les repose-pieds.
 SPRITES.velo.pedale = 7;
 SPRITES.moto = deuxRoues(MACHINE_MOTO, 20, 36, { k: '#101018', c: '#1a1a1a', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e' });
+SPRITES.motoneige = deuxRoues(MACHINE_MOTONEIGE, 22, 40, { k: '#101018', c: '#d7263d', r: '#1f1f24', v: '#9fd0ee', l: '#fff3b0', t: '#ff4b3e' });
 
 /* --- LE PARC EN VOLUME : le reste des chars, comme la berline ---------------------
 

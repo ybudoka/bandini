@@ -942,16 +942,30 @@ const Vehicules = (function () {
 
   /** Une image de conduite : gaz, frein, direction (-1..1), frein a main, et
       `reculCommeEnAvant` (l'option du joueur, voir `commandesJoueur`). */
+  /** L'ALLURE DU SOL (la motoneige) : 1 dans la neige qui tient (`Neige.couverture`, pas derriere la
+      charrue), sur la glace de la baie (`Pont.glace`), et L'HIVER hors des rues (les parcs, les bois,
+      la greve : la neige n'y est jamais deblayee) ; ailleurs — l'asphalte, les trottoirs —, la part
+      `hors_neige` de sa fiche. 1 pour tout ce qui roule pareil partout. */
+  function allureDuSol(v) {
+    const h = v.def.hors_neige;
+    if (h === undefined || h >= 1) return 1;
+    const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
+    if (Pont.glace(tx, ty)) return 1;
+    const hiver = !!(B.options && B.options.neige && Calendrier.saisonDuJour() === 'hiver');
+    if (hiver && !Monde.estRoute(tx, ty) && !Monde.estTrottoir(tx, ty) && !Monde.estEau(tx, ty)) return 1;
+    return Neige.couverture() >= 0.3 && !Neige.deneigee(tx, ty) ? 1 : h;
+  }
+
   function majPhysique(v, cmd) {
-    const d = v.def;
-    if (cmd.gaz > 0) v.vitesse += d.acceleration * cmd.gaz;
+    const d = v.def, sol = allureDuSol(v);
+    if (cmd.gaz > 0) v.vitesse += d.acceleration * sol * cmd.gaz;
     if (cmd.frein > 0) {
       if (v.vitesse > 0.15) v.vitesse -= d.frein * cmd.frein * Neige.frein(v) * Verglas.frein() * Monde.freinMouille(v);
       else v.vitesse -= d.acceleration * 0.7 * cmd.frein;      // marche arriere
     }
     if (cmd.freinMain) v.vitesse *= 0.965;
     v.vitesse *= d.friction;
-    v.vitesse = borner(v.vitesse, -d.vitesse_recul, d.vitesse_max);
+    v.vitesse = borner(v.vitesse, -d.vitesse_recul, d.vitesse_max * sol);
     if (Math.abs(v.vitesse) < 0.02 && !cmd.gaz && !cmd.frein) v.vitesse = 0;
     const t = v.vitesse / d.vitesse_max;
     // ⚠️ LE VOLANT SE TOURNE, il ne se claque pas : il prend vers la consigne
@@ -4046,7 +4060,7 @@ const Vehicules = (function () {
 
   return {
     ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, majGaresDeService, typeDeRue, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, pousserLeDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
-    majPhysique, avancer, heurterVehicules, endommager, exploser, declencherAlarme,
+    majPhysique, allureDuSol, avancer, heurterVehicules, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
     pointDArret, approcheDeLaLigne, placeDeLaPanne, placeStationnee, garesVoulus,

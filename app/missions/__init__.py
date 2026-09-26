@@ -769,6 +769,14 @@ DEFIS: list[dict] = [
      "regles": {"bazous": 4, "temps_s": 120, "attente_s": 3, "vie": 0.6, "fougue": 0.8, "colle_s": 0.8,
                 "recul_s": 0.7, "repit_s": 0.5, "garde_s": 4, "vise_joueur": 0.7},
      "texte": "LE BONIMENTEUR TE PRÊTE UN BAZOU : QUATRE AUTRES FONCENT SUR TOUT CE QUI ROULE. LE DERNIER QUI ROULE GAGNE"},
+    # LA COURSE DE MOTONEIGE (docs/jalons/la-motoneige.md) : du phare au bout des sentiers des bois de La
+    # Pointe et retour (`motoneige.course`), huit fanions dans l'ordre (l'épreuve `balises`). L'HIVER
+    # seulement (`hiver` : la saison du calendrier, et l'option de la neige) ; la motoneige attend au
+    # départ. Elle s'ouvre après le tour des Érables.
+    {"slug": "motoneige", "titre": "La course des bois de La Pointe", "ou": "porte:phare", "conduite": "balises",
+     "hiver": True, "chrono_s": 24, "prime": 90, "debloque": {"apres": ["tour_erables"]},
+     "regles": {"vehicule": "motoneige"},
+     "texte": "UNE MOTONEIGE T'ATTEND AU BORD DU BOIS : HUIT FANIONS, JUSQU'AU BOUT DES SENTIERS ET RETOUR, EN 24 S"},
 ]
 
 #: Avec quoi un défi se joue. ⚠️ Un défi n'en exclut un que pour une raison

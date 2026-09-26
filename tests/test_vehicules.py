@@ -29,7 +29,9 @@ def test_une_auto_de_police_le_parc_complet_et_le_velo():
         "sport", "luxe", "cabriolet", "bateau", "chalutier", "porte_conteneurs",
         # Le camion de creme glacee et le camion d'asphalte (26 sept. 2026) : ils ne roulent pas dans le
         # trafic, ils attendent gares.
-        "creme_glacee", "asphalte"}
+        "creme_glacee", "asphalte",
+        # La motoneige (26 sept. 2026) : l'hiver, garee aux Erables.
+        "motoneige"}
     assert {v["slug"] for v in vehicules.CATALOGUE} - {v["slug"] for v in vehicules.de_phase(1)} == set()
     assert vehicules.par_slug("moto")["ejecte"] is True
     assert vehicules.par_slug("velo")["ejecte"] is True, "on tombe d'un velo au premier choc"
