@@ -30,7 +30,7 @@ def _mots_affiches():
 def test_le_catalogue_voyage_dans_le_paquet_et_se_lit_en_json():
     exporte = interactions.exporter()
     assert set(exporte) == {"asseoir", "fouiller", "boire", "barbecue", "parcometre", "caresser", "borne",
-                             "pourboire", "photo"}
+                             "pourboire", "photo", "affiche"}
     assert json.loads(json.dumps(exporte)) == exporte, "des listes et des dicts, jamais des tuples"
     assert definitions.assembler()["interactions"] == exporte, "le navigateur lit `B.defs.interactions`"
 

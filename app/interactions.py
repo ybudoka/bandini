@@ -230,9 +230,25 @@ PHOTO: dict = {
 }
 
 
+#: ARRACHER UNE AFFICHE « Recherché » (2e vague du décor, 26 sept. 2026). La police en colle a partir
+#: de deux etoiles (`police.majAffiches`) ; ta face est dessus, et c'est pour ca que le STOOL te
+#: reconnait (`recherche.STOOL`). En arracher une :
+#:   - la police en recolle UNE DE MOINS jusqu'a la fin de la poursuite (`affiches_max` moins les
+#:     arrachees) — sans ce plafond, elle les reposait sans fin et le geste ne valait rien ;
+#:   - et la rue t'oublie un moment : le prochain stool attend `repit_stool_s` de plus.
+#: ⚠️ Ce n'est pas un delit — mais c'est un geste qu'on fait EN FUITE, sous les yeux de la rue.
+AFFICHE: dict = {
+    "invite": "ARRACHER L'AFFICHE",
+    "portee_px": 22,
+    "repit_stool_s": 60,
+    "dit": "UNE FACE DE MOINS SUR LES MURS",
+}
+
+
 def exporter() -> dict:
     """Le catalogue tel que le navigateur le tient : des listes, jamais des tuples."""
     return {
+        "affiche": dict(AFFICHE),
         "asseoir": {**ASSEOIR, "sieges": {k: dict(v) for k, v in ASSEOIR["sieges"].items()},
                     "refus": dict(ASSEOIR["refus"])},
         "fouiller": {**FOUILLER, "decors": dict(FOUILLER["decors"]),

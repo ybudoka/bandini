@@ -175,3 +175,20 @@ sans fin tant que les étoiles durent — il faut d'abord un plafond par affiche
   parfois dans la même image de jeu et le garde « une pression, un geste » en avale un — le juge attend
   que `B.t` ait bougé (`suivant()`) ; et un **sprint tapé est une roulade**, qui bloque ACTION tant que
   `j.roule` court.
+
+✅ **2e vague : arracher une affiche « Recherché »** (26 sept. 2026).
+
+- **Le plafond d'abord**, comme la fiche l'exigeait : chaque affiche arrachée en est une de moins que la
+  police recolle (`affiches_max` moins `recherche.affichesArrachees`) jusqu'à la fin de la poursuite ; sous
+  deux étoiles, les murs se vident et le compte repart à zéro.
+- **Ce que ça donne** : ta face est sur les affiches, c'est pour ça que le STOOL te reconnaît — en
+  arracher une lui laisse soixante secondes de plus (`interactions.AFFICHE`, `repit_stool_s`). Ce n'est pas
+  un délit.
+- **Le geste** : ACTION devant une affiche (« ARRACHER L'AFFICHE »), avant le reste du décor
+  (`Interactions.afficheSousLaMain` ; une affiche est une entité à part, hors de l'index des décors).
+- **Juges** (`tests/test_affiche_arrachee_js.py`, au bouton) : l'invite, l'affiche partie, le stool qui
+  attend ; aucune recollée tant que la poursuite dure, le compte remis à zéro après. Trois mutations.
+- **Restent le caddie et le panneau — à préciser par Martin** : le caddie de la ville est COUCHÉ (un décor
+  renversé, cassable) — le redresser et le pousser, ou le fouiller ? Et le seul panneau qu'on vise est
+  celui d'un défi, qui a déjà son ACTION — lire le nom de la rue (`adresse.js` le sait), ou les panneaux
+  « À LOUER » des chantiers ?

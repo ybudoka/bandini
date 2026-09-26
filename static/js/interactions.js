@@ -421,9 +421,37 @@ const Interactions = (function () {
     return caresserLeChat(j, chat);
   }
 
+  /** L'affiche « Recherché » sous la main (une entité `affiche`, collée sur une façade), ou null. */
+  function afficheSousLaMain(j) {
+    const c = cfg().affiche;
+    if (!peutAgir(j) || !c) return null;
+    let meilleure = null, dMin = c.portee_px * c.portee_px;
+    for (const e of B.entites) {
+      if (e.type !== 'affiche') continue;
+      const d = dist2(j.x, j.y, e.x, e.y);
+      if (d < dMin && faceA(j, e.x, e.y)) { dMin = d; meilleure = e; }
+    }
+    return meilleure;
+  }
+
+  /** ARRACHER L'AFFICHE : une de moins a recoller jusqu'a la fin de la poursuite, et la rue t'oublie
+      un moment (le prochain stool attend). */
+  function arracherLAffiche(j, a) {
+    const c = cfg().affiche, r = B.recherche;
+    j.animT = 10; j.animType = 'ramasse';
+    Entites.retirer(a);
+    r.affichesArrachees = (r.affichesArrachees || 0) + 1;
+    r.stoolT = Math.max(r.stoolT || 0, B.t) + c.repit_stool_s * 60;
+    Hud.message(c.dit);
+    Son.SFX.ramasse();
+    return true;
+  }
+
   /** Après tout le reste : le décor. */
   function utiliserSurLeDecor(j) {
     if (j && j.gesteT === B.t) return true;
+    const affiche = afficheSousLaMain(j);
+    if (affiche) { j.gesteT = B.t; return arracherLAffiche(j, affiche); }
     const s = decorSousLaMain(j);
     if (!s) return false;
     j.gesteT = B.t;
@@ -450,6 +478,7 @@ const Interactions = (function () {
 
   function inviteDecor(j) {
     if (j && j.assis) return 'SE LEVER';
+    if (afficheSousLaMain(j)) return cfg().affiche.invite;
     const s = decorSousLaMain(j);
     return s ? s.invite : null;
   }
@@ -480,7 +509,7 @@ const Interactions = (function () {
     for (const k in fontaines) delete fontaines[k];
   }
 
-  return { peutAgir, artisteSousLaMain, touristeSousLaMain, chatSousLaMain, decorSousLaMain,
+  return { afficheSousLaMain, arracherLAffiche, peutAgir, artisteSousLaMain, touristeSousLaMain, chatSousLaMain, decorSousLaMain,
            utiliserSurLesGens, utiliserSurLesBetes, utiliserSurLeDecor,
            inviteGens, inviteBetes, inviteDecor, majAssis, seLever, maj, oublier, fouilleDuJour, fontaineSeche, jetDe };
 })();

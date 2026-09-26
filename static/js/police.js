@@ -988,8 +988,11 @@ const Police = (function () {
   function majAffiches() {
     const r = B.recherche, j = B.joueur, p = reglages();
     const affiches = B.entites.filter(function (e) { return e.type === 'affiche'; });
-    if (r.etoiles < 2) { affiches.forEach(function (e) { Entites.retirer(e); }); return; }
-    if (affiches.length >= p.affiches_max || B.t % 40 !== 0) return;
+    // ⚠️ LA POURSUITE FINIE, les murs se vident — et le compte des affiches arrachees repart a zero.
+    if (r.etoiles < 2) { affiches.forEach(function (e) { Entites.retirer(e); }); r.affichesArrachees = 0; return; }
+    // ⚠️ Chaque affiche arrachee en est une de moins a recoller (`Interactions.arracherLAffiche`) :
+    // sans ce plafond, la police les reposait sans fin et le geste ne valait rien.
+    if (affiches.length >= p.affiches_max - (r.affichesArrachees || 0) || B.t % 40 !== 0) return;
     const proches = lesFacades().filter(function (f) {
       const d = dist2(f.x, f.y, j.x, j.y);
       return d > 120 * 120 && d < 420 * 420 && !affiches.some(function (e) { return dist2(e.x, e.y, f.x, f.y) < 64 * 64; });
