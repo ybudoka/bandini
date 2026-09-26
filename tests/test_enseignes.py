@@ -41,7 +41,7 @@ def test_le_bingo_est_celui_que_la_ville_affichait_et_pas_dans_une_rue_cossue():
 def test_chaque_comptoir_d_enseigne_fait_jouer_ou_propose_quelque_chose():
     """Le bingo vend une carte, le Rialto un billet, le lave-auto dit son lavage, les quilles proposent la
     ligue du mardi — un défi du catalogue, joué debout au comptoir."""
-    jeux = {g: c.get("jeu") for g, c in magasins.COMPTOIRS.items() if c.get("enseigne")}
+    jeux = {g: c.get("joue") for g, c in magasins.COMPTOIRS.items() if c.get("enseigne")}
     assert jeux == {"bingo": "bingo", "rialto": "film", "quilles": None, "lave_auto": "lave_auto"}, jeux
     defi = next(d for d in missions.DEFIS if d["slug"] == "quilles")
     assert magasins.COMPTOIRS["quilles"]["defi"] == "quilles" and defi["epreuve"] == "quilles" and defi["a_pied"]

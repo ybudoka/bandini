@@ -28,14 +28,14 @@ from . import devantures as devantures_mod
 #: `devantures.COMMERCES_PAUVRES`, et un juge le garde).
 ENSEIGNES: tuple[dict, ...] = (
     {"slug": "bingo", "texte": "BINGO", "nom": "Le bingo du sous-sol", "district": "faubourg",
-     "genre": "nuit", "famille": "repere", "prefere": "BINGO", "sans_standing": "+"},
+     "famille": "repere", "prefere": "BINGO", "sans_standing": "+"},
     {"slug": "rialto", "texte": "CINÉMA RIALTO", "nom": "Le cinéma Rialto", "district": "faubourg",
-     "genre": "nuit", "famille": "repere", "prefere": "CINÉMA RIALTO", "sans_standing": None},
+     "famille": "repere", "prefere": "CINÉMA RIALTO", "sans_standing": None},
     {"slug": "quilles", "texte": "SALLE DE QUILLES", "court": "QUILLES", "nom": "La salle de quilles",
-     "district": "shop", "genre": "nuit", "famille": "repere", "prefere": "SALLE DE QUILLES",
+     "district": "shop", "famille": "repere", "prefere": "SALLE DE QUILLES",
      "sans_standing": None},
     {"slug": "lave_auto", "texte": "LAVE-AUTO", "nom": "Le lave-auto", "district": "erables",
-     "genre": "industrie", "famille": "service", "prefere": "LAVE-AUTO", "sans_standing": None},
+     "famille": "service", "prefere": "LAVE-AUTO", "sans_standing": None},
 )
 
 #: Deux enseignes neuves jamais à moins de tant de tuiles l'une de l'autre : un Rialto collé sur la
@@ -255,7 +255,8 @@ def poser(chantier, ville: dict) -> list[str]:
             dedans["largeur"] - 2, dedans["hauteur"] - 2, dedans["sortie"]["x"])
         porte.update({"interieur": slug, "lieu": slug, "nom": texte})
         devanture["texte"] = texte
-        devanture["genre"] = devantures_mod.genre_index(fiche["genre"])
+        # ⚠️ La façade GARDE sa famille (`genre`) : la distributrice adossée à côté vend selon elle
+        # (`magasins.sortes_devant`), posée avant — un Rialto repeint « nuit » avait une machine à café.
         ville["points_interet"].append({"type": slug, "slug": slug, "nom": fiche["nom"],
                                         "x": porte["x"], "y": porte["y"] + 1, "famille": fiche["famille"]})
         if baie:

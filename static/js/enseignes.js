@@ -25,7 +25,7 @@ const Enseignes = (function () {
 
   // --- Ce que les comptoirs font jouer ------------------------------------------------------
 
-  /** L'article de plus d'un comptoir d'enseigne (`magasins.COMPTOIRS[genre].jeu`), ou null. */
+  /** L'article de plus d'un comptoir d'enseigne (`magasins.COMPTOIRS[genre].joue`), ou null. */
   function itemDuComptoir(jeu) {
     if (!donnees()) return null;
     if (jeu === 'bingo') return itemBingo();

@@ -1405,7 +1405,7 @@ const Missions = (function () {
                    faire: function () { Histoire.proposerDefi(defi.slug); return false; } });
     }
     // Le jeu du comptoir d'une enseigne (la carte de bingo, le billet du Rialto, le lavage).
-    const jeu = comptoir.jeu && Enseignes.itemDuComptoir(comptoir.jeu);
+    const jeu = comptoir.joue && Enseignes.itemDuComptoir(comptoir.joue);
     if (jeu) items.push(jeu);
     comptoir.articles.forEach(function (a) {
       if (a.arme) return items.push(itemArme(a, (comptoir.marge || 1) * rabais(cle)));

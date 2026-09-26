@@ -260,14 +260,15 @@ COMPTOIRS: dict[str, dict] = {
     ]},
     # LES ENSEIGNES QUI OUVRENT POUR VRAI (docs/jalons/les-enseignes-qui-ouvrent-pour-vrai.md) : quatre
     # comptoirs qui ne sont pas une famille de devantures (`enseigne`, comme le `bloc` de la cabane — une
-    # famille de plus ferait glisser la ville). `jeu` : ce que le comptoir fait jouer en plus de ce qu'il
+    # famille de plus ferait glisser la ville). `joue` : ce que le comptoir fait jouer (⚠️ pas `jeu` : ce mot-là est
+    # le jeu d'acteur, et il ne part jamais au navigateur — `test_interpretation`) en plus de ce qu'il
     # vend (`Enseignes.itemDuComptoir`) ; `defi` : le défi qu'il propose, comme la tire à la cabane.
-    "bingo": {"nom": "Le bingo du sous-sol", "marge": 1.0, "rabais": 1.0, "enseigne": True, "jeu": "bingo",
+    "bingo": {"nom": "Le bingo du sous-sol", "marge": 1.0, "rabais": 1.0, "enseigne": True, "joue": "bingo",
               "articles": [
         _art("cafe", "Café", "cafe", pv="cafe_pv", souffle="cafe_souffle", effet="cafe"),
         _art("beigne", "Beigne", "beigne", pv="beigne_pv", souffle="beigne_souffle"),
     ]},
-    "rialto": {"nom": "Le cinéma Rialto", "marge": 1.0, "rabais": 1.0, "enseigne": True, "jeu": "film",
+    "rialto": {"nom": "Le cinéma Rialto", "marge": 1.0, "rabais": 1.0, "enseigne": True, "joue": "film",
                "articles": [
         _art("mais", "Maïs soufflé", "mais", pv="mais_pv", souffle="mais_souffle"),
         _art("liqueur", "Liqueur", "liqueur", pv="liqueur_pv", souffle="liqueur_souffle"),
@@ -279,7 +280,7 @@ COMPTOIRS: dict[str, dict] = {
         _art("hotdog", "Hot-dog steamé", "hotdog", pv="hotdog_pv", souffle="hotdog_souffle"),
         _art("liqueur", "Liqueur", "liqueur", pv="liqueur_pv", souffle="liqueur_souffle"),
     ]},
-    "lave_auto": {"nom": "Le lave-auto", "marge": 1.0, "rabais": 1.0, "enseigne": True, "jeu": "lave_auto",
+    "lave_auto": {"nom": "Le lave-auto", "marge": 1.0, "rabais": 1.0, "enseigne": True, "joue": "lave_auto",
                   "articles": [
         _art("cafe", "Café", "cafe", pv="cafe_pv", souffle="cafe_souffle", effet="cafe"),
         _art("liqueur", "Liqueur", "liqueur", pv="liqueur_pv", souffle="liqueur_souffle"),

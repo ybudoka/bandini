@@ -68,4 +68,9 @@ de 53 000 à 55 000 (mesures dans `test_definitions`).
   1,5 s : 12 $, et une étoile de moins (`Police.unCranDeMoins` — la chaleur repart de zéro). Une fois par
   passage ; à pleine vitesse, on traverse sans être lavé. La pièce derrière la porte est le bureau (un
   café, une liqueur, et le prix du lavage).
+- ⚠️ **Deux rouges de la suite complète, corrigés le soir même** : la clé du comptoir qui dit ce qu'il fait
+  jouer s'appelait `jeu` — le mot du jeu d'acteur, qui ne part jamais au navigateur
+  (`test_interpretation`) : elle s'appelle `joue`. Et la façade reprise GARDE sa famille (`genre`) : la
+  distributrice adossée à côté vend selon elle (`magasins.sortes_devant`) — le Rialto repeint « nuit »
+  avait une machine à café. Les brosses du lave-auto réclamaient un échantillon qui n'existe pas.
 - Captures regardées : les quatre façades, les pièces, la partie de bingo, la ligue, le film, la baie.
