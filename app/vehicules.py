@@ -182,7 +182,8 @@ CATALOGUE: list[Vehicule] = [
        ["#2980b9", "#c0392b", "#27ae60", "#f1c40f"], "velo", ejecte=True, reservoir=False,
        klaxon="sonnette", plateau=True),
     _v("police", "Auto-patrouille", "auto", 28, 14, 4.4, 0.07, 20, 150, 4, 2500, 0.0,
-       ["#ffffff"], "police", police=True, sirene=True, alarme=True, radio="dix_quatre"),
+       ["#ffffff"], "police", police=True, sirene=True, alarme=True, radio="dix_quatre",
+       boulot="patrouille"),
     # --- M9, le parc automobile ------------------------------------------
     # ⚠️ `cercles` n'est pas un reglage de confort : la chaine doit COUVRIR la
     # carrosserie, sinon deux cercles voisins laissent un trou par lequel une

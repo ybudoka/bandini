@@ -1143,7 +1143,12 @@ const Vehicules = (function () {
           });
           p.vx = v.vx * 1.2; p.vy = v.vy * 1.2;
           v.vitesse *= 0.85;
-          if (v.conducteur === B.joueur && p.type === 'pieton') {
+          // Le suspect de la patrouille, percute et vivant, reste AU SOL : c'est l'arrestation
+          // (un passant renverse qui survit se releve et detale ; lui, on l'a plaque).
+          if (p.suspect && p.vivant) Entites.assommer(p);
+          // ⚠️ Le SUSPECT d'une patrouille qu'on met a terre sans le tuer : c'est une arrestation,
+          // pas un delit (`Missions.boulot`, la patrouille). Mort, il en redevient un.
+          if (v.conducteur === B.joueur && p.type === 'pieton' && !(p.suspect && p.vivant)) {
             const type = (avant && !p.vivant) ? 'renversement_mortel' : 'renversement';
             Police.signalerCrime(type, p.x, p.y, Police.quelqu_un_voit(p.x, p.y, p));
             B.cam.secousse = 0.5;

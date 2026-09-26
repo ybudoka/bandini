@@ -84,7 +84,7 @@ def palier_de_prime(montant: int) -> str:
 #: — ils ne s'additionnent pas. Sans cette regle, « +10 % puis +25 % de vie »
 #: ferait +35 %, et la fiche dirait une chose pendant que le jeu en ferait une
 #: autre.
-PALIERS_TYPES = ("prime", "vie", "char", "fourriere", "hopital", "rabais")
+PALIERS_TYPES = ("prime", "vie", "char", "fourriere", "hopital", "rabais", "casier")
 
 PALIERS: dict[str, tuple[dict, ...]] = {
     "taxi": (
@@ -118,6 +118,17 @@ PALIERS: dict[str, tuple[dict, ...]] = {
          "nom": "LE LOT NE TE FAIT PLUS PAYER", "detail": "RACHAT GRATUIT"},
         {"compte": 50, "type": "char", "valeur": "remorqueuse",
          "nom": "LA DÉPANNEUSE EST À TOI", "detail": "GARÉE À LA PLANQUE"},
+    ),
+    # ⚠️ LA PATROUILLE (quatre activites, 26 sept. 2026) : tu fais la police AVEC UN CASIER, dans un
+    # char qui n'est pas a toi — et le poste te le rend en pages (`casier`, une page de moins, posee au
+    # palier). Pas de char a la planque : une auto-patrouille garee chez soi serait un aveu.
+    "patrouille": (
+        {"compte": 5, "type": "casier", "valeur": 1,
+         "nom": "LE SERGENT FERME LES YEUX", "detail": "UNE PAGE DE MOINS"},
+        {"compte": 15, "type": "casier", "valeur": 1,
+         "nom": "ON TE DOIT UNE FAVEUR", "detail": "UNE PAGE DE MOINS"},
+        {"compte": 30, "type": "casier", "valeur": 2,
+         "nom": "LE POSTE PERD TON DOSSIER", "detail": "DEUX PAGES DE MOINS"},
     ),
     "autobus": (
         {"compte": 10, "type": "prime", "valeur": 1.3,
@@ -672,6 +683,11 @@ BOULOTS: dict[str, Boulot] = {
     # passagers a prendre au bord de la route et a mener ailleurs, sur le
     # patron du taxi, mais plus lent a charger (le malus de choc encaisse
     # mieux : un autobus plein ne se conduit pas sur la pointe des pieds).
+    # La patrouille : un suspect a rattraper (a terre, pas mort) avant la fin du chrono ; la prime fond
+    # avec lui. Pas de distance : on ne le conduit nulle part.
+    "patrouille": {"slug": "patrouille", "nom": "Arrestation", "vehicule": "police",
+                   "base": 50, "par_tuile": 0.0, "prime": 40,
+                   "etapes": 1, "chrono_s": 60, "malus_choc": 0.0},
     "autobus": {"slug": "autobus", "nom": "Arrêt", "vehicule": "autobus",
                 "base": 20, "par_tuile": 0.25, "prime": 15,
                 "etapes": 1, "chrono_s": 0, "malus_choc": 0.30},

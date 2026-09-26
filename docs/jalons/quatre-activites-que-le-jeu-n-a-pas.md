@@ -68,3 +68,15 @@ qu'on le trouve. ⚠️ Rien ne se sauvegarde : un feu éteint se re-déclare au
 prix de garder la ville déterministe. Juges : `tests/test_incendies.py` (la règle, la borne
 d'équilibre, les candidats) et `tests/test_incendies_js.py` (il se déclare à l'heure, il
 s'éteint au jet, il ne se re-déclare pas).
+
+**La patrouille — livrée le 26 sept. 2026** (3e des 4 activités) : dans une auto-patrouille (volée,
+forcément), **allumer la sirène** prend le contrat (`boulot: "patrouille"` sur la fiche du char, le même
+bouton que l'ambulance). Un suspect — un adulte, jamais un enfant : il serait intouchable — détale d'un
+trottoir à 140 px au moins, le GPS le pointe ; on le **rattrape** avant soixante secondes : **à terre et
+vivant**, c'est une arrestation (50 $ et ce que le chrono laisse des 40 de prime). Percuté par
+l'auto-patrouille, il reste au sol (plaqué, pas renversé : ce n'est PAS un délit) ; mort, ça ne compte
+pas ; trop tard ou trop loin, il s'évapore. Les paliers (un type neuf, `casier`) : le poste te rend ton
+dossier — une page de moins à 5 arrestations, une à 15, deux à 30. Juges : `tests/test_patrouille_js.py`
+(la sirène et la fuite, l'arrestation sans délit — assommé, et renversé au volant sur une rue dégagée —,
+mort ou trop tard, le casier au palier) ; quatre mutations les font rougir. ⚠️ Vu en l'écrivant : le juge
+au volant ne renversait personne — le quartier avait tiré un **enfant** comme suspect.

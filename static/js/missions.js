@@ -533,6 +533,15 @@ const Missions = (function () {
       pris: 'À LA FOURRIÈRE',
       fini: 'REMORQUAGE',
     },
+    // ⚠️ LA PATROUILLE (quatre activites, 26 sept. 2026) : dans une auto-patrouille VOLEE, la sirene
+    // allumee, un suspect detale quelque part au bord de la route ; on le RATTRAPE — a terre, pas
+    // mort — avant la fin du chrono. Pas de destination : on ne le conduit nulle part.
+    patrouille: {
+      ramasser: 'fuyard',
+      destination: null,
+      pris: 'UN SUSPECT EN FUITE — RATTRAPE-LE',
+      fini: 'ARRESTATION',
+    },
     // ⚠️ M16 : le boulot de l'autobus, sur le patron du taxi (un passager au
     // bord de la route, une destination ailleurs) — `economie.BOULOTS.autobus`
     // porte les nombres.
@@ -622,7 +631,7 @@ const Missions = (function () {
       if (!sorte.ramasser || sorte.ramasser === 'crochet') { boulot.enRoute(v); return true; }
       boulot.client = boulot.poser(v, sorte.ramasser);
       if (!boulot.client) { boulot.abandonner('PERSONNE N’ATTEND DANS LE COIN'); return false; }
-      Hud.message(sorte.ramasser === 'blesse' ? 'QUELQU’UN EST À TERRE' : 'UN CLIENT ATTEND');
+      Hud.message(sorte.ramasser === 'blesse' ? 'QUELQU’UN EST À TERRE' : sorte.ramasser === 'fuyard' ? sorte.pris : 'UN CLIENT ATTEND');
       return true;
     },
 
@@ -635,10 +644,22 @@ const Missions = (function () {
         « a 80 px devant le capot » : c'etait sur la chaussee, sous les roues. */
     poser: function (v, quoi) {
       const atteint = atteignableEnChar(v);
-      const place = Entites.placeAuBordDeLaRoute(function (tx, ty) { return atteint(tx * TT + 8, ty * TT + 8, 1); });
+      // ⚠️ Le suspect, lui, n'attend pas sous le capot : assez loin pour qu'il faille le chercher.
+      const loin = quoi === 'fuyard' ? 140 : 0;
+      const place = Entites.placeAuBordDeLaRoute(function (tx, ty) {
+        return atteint(tx * TT + 8, ty * TT + 8, 1) && dist2(tx * TT + 8, ty * TT + 8, v.x, v.y) >= loin * loin;
+      });
       if (!place) return null;
-      const e = Entites.creerPieton(place.x, place.y, Entites.archetypeDeRue());
+      // ⚠️ Le suspect est un ADULTE (`passant`) : le quartier peut tirer un enfant, et un enfant est
+      // intouchable — on ne l'arrete pas, on ne le poursuit pas.
+      const e = Entites.creerPieton(place.x, place.y, quoi === 'fuyard' ? Entites.archetype('passant') : Entites.archetypeDeRue());
       if (!e) return null;
+      if (quoi === 'fuyard') {
+        // Il DETALE, loin de l'auto-patrouille, et ne se calme pas tant que dure la patrouille.
+        e.suspect = true; e.etat = 'fuit'; e.menace = v; e.minuterie = 99999; e.cri = 120;
+        Entites.bulle(e, '!', { duree: 90 });
+        return e;
+      }
       e.etat = 'fige'; e.cri = 9999; e.client = true;
       e.plante = { x: e.x, y: e.y };
       if (quoi === 'blesse') {
@@ -710,6 +731,7 @@ const Missions = (function () {
       const sorte = SORTES[boulot.slug];
       boulot.t++;
       if (!v || v.def.boulot !== boulot.slug || v.etat === 'epave') { boulot.abandonner('BOULOT PERDU'); return; }
+      if (boulot.etape === 'ramasse' && sorte.ramasser === 'fuyard') { boulot.majSuspect(v); return; }
       if (boulot.etape === 'ramasse') {
         const c = boulot.client;
         if (!c || !c.vivant) { boulot.abandonner('IL N’EST PLUS LÀ'); return; }
@@ -752,6 +774,26 @@ const Missions = (function () {
       compterLeBoulot(boulot.slug);
       B.partie.stats.courses = (B.partie.stats.courses || 0) + 1;
       boulot.fin();
+    },
+
+    /** La patrouille en cours : le suspect fuit toujours ; a terre et vivant, c'est une arrestation
+        (la base et ce que le chrono laisse de la prime) ; mort, ca ne compte pas ; trop loin ou trop
+        tard, il s'en est tire. */
+    majSuspect: function (v) {
+      const c = boulot.client, f = boulot.fiche();
+      if (!c || !c.vivant) { if (c) c.suspect = false; boulot.abandonner('LE SUSPECT EST MORT — ÇA NE COMPTE PAS'); return; }
+      if (c.etat === 'assomme') {
+        const prime = boulot.prime(v), prix = f.base + prime;
+        c.suspect = false;
+        boulot.client = null;
+        encaisser(prix, prime ? 'ARRESTATION + ' + prime + ' $' : 'ARRESTATION');
+        compterLeBoulot('patrouille');
+        boulot.fin();
+        return;
+      }
+      if (f.chrono_s > 0 && boulot.t > f.chrono_s * 60) { c.suspect = false; c.minuterie = 60; boulot.abandonner('IL S’EST ÉVAPORÉ'); return; }
+      if (dist2(c.x, c.y, v.x, v.y) > 900 * 900) { c.suspect = false; c.minuterie = 60; boulot.abandonner('IL T’A SEMÉ'); return; }
+      c.etat = 'fuit'; c.menace = v; c.minuterie = 99999;
     },
 
     /** Range la machine sans rien dire : le boulot est fini, ou il n'y en a pas. */
@@ -2137,6 +2179,8 @@ const Missions = (function () {
       fourriere, hopital, vie) ne posent rien : ils se lisent au moment ou
       l'on s'en sert, ce qui evite qu'un avantage vive en deux endroits. */
   function donnerLePalier(palier) {
+    // Le poste perd des pages de ton dossier (la patrouille) : ca se pose tout de suite, une fois.
+    if (palier.type === 'casier') { B.partie.casier = Math.max(0, (B.partie.casier || 0) - palier.valeur); return; }
     if (palier.type !== 'char') return;
     const def = Vehicules.vehiculeDef(palier.valeur);
     if (!def) return;
