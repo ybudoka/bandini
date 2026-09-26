@@ -1086,6 +1086,7 @@ const Jeu = (function () {
           if (!B.interieur && Monde.majBarrieresCoulissantes()) Son.SFX.barriere_coulissante();
           Monde.majChemins();
           Monde.majSonDuBord();          // les vagues : leur volume est une question de carte, pas de son
+          Monde.majFeuDeFoyer();         // le crépitement du foyer (le chalet du rang), plus fort près de l'âtre
         });
         // La musique suit ce qui t'arrive (Chef), la radio parle entre les
         // tounes (Ondes, M15), on s'entend respirer et un quartier s'entend
@@ -1203,6 +1204,7 @@ const Jeu = (function () {
     if (B.options.trace && !B.interieur) Vehicules.dessinerTrace(ctx, vue);
     if (!B.interieur) Police.dessinerHelico(ctx, vue);
     if (!B.interieur) Neige.dessinerTempete(ctx);
+    if (!B.interieur) Blocs.dessinerFumees(ctx, vue);   // la fumée des cheminées : au-dessus des toits ET des gens
     if (!B.interieur) Brouillard.dessiner(ctx);         // le voile du brouillard, SOUS la nuit aussi      // le voile et les flocons, SOUS la nuit
     const lampes = Monde.lampesVisibles(vue);
     // ⚠️ Les feux ont DEJA ete peints, deux lignes plus haut : leurs lampes

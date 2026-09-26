@@ -230,6 +230,63 @@ const Blocs = (function () {
       else { ctx.fillRect(fx - 1, fy, 6, 1); ctx.fillRect(fx + 4, fy - 1, 1, 3); ctx.fillRect(fx + 3, fy - 2, 1, 5); }
       B.stats.rects += 9;
     }
+    dessinerCheminees(ctx, cam);
+  }
+
+  /** Les cheminées du bloc où l'on est (le chalet du rang), en pixels : le haut de la souche. */
+  function cheminees() {
+    const b = B.bloc && B.bloc.def && B.bloc.def.bloc;
+    return (b && b.cheminees) || [];
+  }
+
+  /** La souche de pierre, sur le toit : deux tuiles de large, un peu plus haute que large pour
+      qu'on la voie DEBOUT sur le versant, son chapeau de pierre plate, et l'ombre qu'elle jette
+      sur les bardeaux. Peinte par-dessus le toit (le plan n'en sait rien). */
+  function dessinerCheminees(ctx, cam) {
+    for (const c of cheminees()) {
+      const x = Math.round(c.x * TT - cam.x) + 3, y = Math.round(c.y * TT - cam.y) - 4, l = c.l * TT - 6, h = TT + 2;
+      if (x < -40 || x > VW + 40 || y < -40 || y > VH + 40) continue;
+      ctx.fillStyle = 'rgba(0,0,0,0.30)'; ctx.fillRect(x + 3, y + h, l, 5);            // l'ombre sur le toit
+      ctx.fillStyle = '#6e685e'; ctx.fillRect(x, y, l, h);                            // le mortier
+      const teintes = ['#8f897d', '#a39c8e', '#7d776c', '#9a8a70'];
+      for (let r = 0; r * 4 < h; r++) {                                               // les pierres, en quinconce
+        for (let k = 0; k * 6 < l + 6; k++) {
+          const px = x + k * 6 - (r % 2 ? 3 : 0);
+          const x0 = Math.max(px + 1, x), x1 = Math.min(px + 6, x + l);
+          if (x1 <= x0) continue;
+          ctx.fillStyle = teintes[(r * 3 + k) % teintes.length];
+          ctx.fillRect(x0, y + r * 4 + 1, x1 - x0, Math.min(3, h - r * 4 - 1));
+        }
+      }
+      ctx.fillStyle = '#5a534a'; ctx.fillRect(x - 1, y - 2, l + 2, 3);               // le chapeau
+      ctx.fillStyle = '#b3ada2'; ctx.fillRect(x - 1, y - 2, l + 2, 1);
+      ctx.fillStyle = '#1b1614'; ctx.fillRect(x + 3, y - 1, l - 6, 2);               // la bouche, noire de suie
+      B.stats.rects += 6;
+    }
+  }
+
+  //: La fumée : combien de bouffées à la fois, leur vie (en images), combien elles montent et
+  //: dérivent (le vent vient de l'ouest), et leur plus grand rayon.
+  const FUMEE = { bouffees: 8, vie: 170, monte: 56, derive: 46, rayon: 10 };
+  /** La fumée qui sort de la cheminée : des bouffées grises qui montent, grossissent, dérivent vers
+      l'est et s'effacent. ⚠️ D'après `B.t` seulement — jamais un dé : deux images pareilles, deux
+      fumées pareilles, et le banc la juge. Au-dessus des toits et des gens (`Jeu.rendre`). */
+  function dessinerFumees(ctx, cam) {
+    for (const c of cheminees()) {
+      const bx = c.x * TT + c.l * TT / 2 - cam.x, by = c.y * TT - 6 - cam.y;
+      if (bx < -80 || bx > VW + 80 || by < -120 || by > VH + 40) continue;
+      for (let i = 0; i < FUMEE.bouffees; i++) {
+        const p = (((B.t || 0) + i * FUMEE.vie / FUMEE.bouffees) % FUMEE.vie) / FUMEE.vie;   // 0 à la bouche, 1 dissipée
+        const x = bx + FUMEE.derive * p * p + Math.sin(p * 6 + i) * 2;
+        const y = by - FUMEE.monte * p;
+        const r = 2 + (FUMEE.rayon - 2) * p;
+        const a = 0.55 * (1 - p) * Math.min(1, p * 6);
+        ctx.fillStyle = 'rgba(205,205,200,' + a.toFixed(3) + ')';
+        ctx.fillRect(Math.round(x - r), Math.round(y - r * 0.8), Math.round(2 * r), Math.round(1.6 * r));
+        ctx.fillRect(Math.round(x - r * 0.7), Math.round(y - r), Math.round(1.4 * r), Math.round(2 * r));
+        B.stats.rects += 2;
+      }
+    }
   }
 
   const SENS = { nord: 'LE NORD', sud: 'LE SUD', est: "L'EST", ouest: "L'OUEST" };
@@ -286,7 +343,7 @@ const Blocs = (function () {
     return { x: c.x, y: c.y, nom: 'Vers la ville', couleur: '#7fc4ff' };
   }
 
-  return { init, maj, charger, liste, contreLeBord, recul, marge, porteur, capVersLInterieur, poursuiteAuBord,
+  return { dessinerFumees, cheminees, FUMEE, init, maj, charger, liste, contreLeBord, recul, marge, porteur, capVersLInterieur, poursuiteAuBord,
            garder, souvenir, enMemoire, oublier, reprendre,
            cibleDeSortie, dessiner, texteDInfo, DELAI_POURSUIVANTS,
            get cartes() { return cartes; }, BORD_PX, PRES, RELANCE };

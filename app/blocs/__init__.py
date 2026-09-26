@@ -68,7 +68,9 @@ def carte_du_bloc(bloc: dict) -> dict:
                  "gens": bool(bloc.get("gens", False)),
                  "panneau": bloc.get("panneau_retour", "VILLE"),
                  # Une planque (le chalet) : son prix, sa pièce, la place de son char.
-                 "planque": dict(bloc["planque"]) if bloc.get("planque") else None},
+                 "planque": dict(bloc["planque"]) if bloc.get("planque") else None,
+                 # Ses cheminées (le chalet) : une pierre sur le toit, et la fumée qui en sort.
+                 "cheminees": [dict(c) for c in bloc.get("cheminees", [])]},
     }
 
 

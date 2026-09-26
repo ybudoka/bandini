@@ -416,6 +416,12 @@ CATALOGUE: list[Echantillon] = [
        prompt="a winter blizzard wind howling and gusting through city streets at "
               "night, snow hissing, steady intensity, seamless loop, no voices, "
               "no music"),
+    # Le feu du foyer (le chalet du rang, 26 sept. 2026) : une BOUCLE dont le volume suit la
+    # distance au foyer de la pièce (`Monde.majFeuDeFoyer`) — plus fort quand on s'y chauffe.
+    _e("foyer", "Feu de foyer", duree_s=8.0, volume=0.4, boucle=True, influence=0.45,
+       prompt="a wood fire crackling and popping gently in a stone fireplace inside a quiet "
+              "log cabin, soft flames hissing, logs settling, close and warm, seamless loop, "
+              "no voices, no music, no wind"),
     _e("chantier", "Rumeur de chantier", duree_s=6.0, volume=0.3, boucle=True,
        influence=0.45,
        prompt="distant construction site ambience, a diesel machine engine "

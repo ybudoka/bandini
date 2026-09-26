@@ -94,4 +94,11 @@ BLOC = {
     # ⚠️ LA PLANQUE : ce qui la distingue d'une pièce ordinaire. Son prix, la pièce où
     # l'on dort, et la place où son char attend (la tuile du milieu du `ppp`).
     "planque": {"piece": "chalet", "prix": 2500, "char": {"x": 22, "y": 21}},
+    # ⚠️ LA CHEMINÉE, vue de dehors (26 sept. 2026) : elle sort du versant NORD du toit, au-dessus
+    # du foyer de la pièce (colonne 5 et 6 dedans, 13 + 5 dehors ; une rangée sous le faîte nord, pour
+    # qu'on la voie depuis la porte), et elle FUME — on sait de loin,
+    # sur le rang, que le feu est allumé. Peinte par-dessus le toit (`Blocs.dessiner`), jamais dans
+    # le plan : une tuile de plus au milieu des `P` couperait le versant que le toit calcule d'après
+    # ses voisines.
+    "cheminees": [{"x": 18, "y": 12, "l": 2}],
 }

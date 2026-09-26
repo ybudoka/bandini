@@ -234,3 +234,58 @@ def test_dedans_c_est_un_chalet_et_le_foyer_brule(banc):
     assert dict(r["points"]) == {"lit": "l", "coffre": "k", "garde_robe": "e"}, "la planque sert encore"
     assert r["foyers"] == [{"x": x, "y": y, "l": 2}], r["foyers"]
     assert r["feu1"] and r["feu2"] and r["feu1"] != r["feu2"], "le feu danse : deux images, deux feux"
+
+
+def test_de_dehors_la_cheminee_fume(banc):
+    """« Va plus loin » (Martin, 26 sept. 2026) : sur le rang, on sait de loin que le feu est
+    allumé. La souche de pierre sort du toit au-dessus du foyer, et la fumée monte, grossit et
+    dérive — d'après l'heure du jeu, jamais un dé : deux images, deux fumées."""
+    r = banc("async function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const B = L.B;
+        await auChalet(L, o);
+        const c = L.Blocs.cheminees();
+        const vue = { x: c[0].x * TT - 120, y: c[0].y * TT - 120 };
+        function peindre(quoi, t) {
+            B.t = t;
+            const ctx = L.Base.nouveauCanvas(400, 400).getContext('2d'); ctx.traces = [];
+            quoi(ctx, vue);
+            return ctx.traces;
+        }
+        const souche = peindre(L.Blocs.dessiner, 5).filter(function (q) { return q[4] === '#6e685e'; }).length;
+        const f1 = peindre(L.Blocs.dessinerFumees, 10), f2 = peindre(L.Blocs.dessinerFumees, 60);
+        const toit = L.Monde.carte.sol[c[0].y].slice(c[0].x, c[0].x + c[0].l);
+        return { cheminees: c, souche: souche, toit: toit, f1: f1.length, pareil: JSON.stringify(f1) === JSON.stringify(f2),
+                 monte: f1.every(function (q) { return q[1] < 120 + 8; }) };
+    }""")
+    assert len(r["cheminees"]) == 1, r
+    assert r["toit"] == "PP", f"la souche sort du toit, pas du pré : {r['toit']}"
+    assert r["souche"] >= 1, "la souche de pierre n'est pas peinte"
+    assert r["f1"] > 0 and not r["pareil"], "la fumée ne bouge pas"
+    assert r["monte"], "la fumée monte au-dessus de la souche"
+
+
+def test_dedans_le_feu_crepite_plus_fort_pres_de_l_atre(banc):
+    """Le crépitement (`foyer`, une boucle ElevenLabs) : on l'entend en entrant, plus fort à
+    l'âtre qu'à la porte, et il s'éteint quand on ressort."""
+    r = banc("async function (L, o) {" + OUTILS + """
+        o.brancherAudio(true);
+        L.Jeu.commencer();
+        L.Son.reveiller();
+        const B = L.B;
+        await auChalet(L, o);
+        await o.attendre(); await o.attendre(); await o.attendre();
+        entrerDansLeChalet(L, o);
+        const j = B.joueur, f = L.Monde.foyersDeLaPiece()[0];
+        function la(x, y) { j.x = x; j.y = y; L.Entites.indexer(); for (let i = 0; i < 4; i++) o.frame(1); return L.Son.volumeBoucle('foyer'); }
+        const porte = L.Monde.carte.def.portes[0];
+        const loin = la(porte.x * TT + 8, (porte.y - 1) * TT + 8);
+        const pres = la((f.x + 1) * TT, (f.y + 1) * TT + 10);
+        const charge = L.Son.estCharge('foyer');
+        L.Jeu.sortir();
+        for (let i = 0; i < 90; i++) o.frame(1);
+        return { charge: charge, loin: loin, pres: pres, dehors: L.Son.boucleActive('foyer'), interieur: !!B.interieur };
+    }""")
+    assert r["charge"], "le fichier du feu ne se charge pas"
+    assert r["loin"] and r["pres"] and r["pres"] > r["loin"], f"plus fort près de l'âtre : {r}"
+    assert r["interieur"] is False and r["dehors"] is False, f"dehors, le feu se tait : {r}"

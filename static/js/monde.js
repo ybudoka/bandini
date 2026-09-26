@@ -1981,13 +1981,10 @@ const Monde = (function () {
     B.stats.morceaux = carte.morceaux.size;
   }
 
-  /** Le FEU des foyers d'une pièce (le chalet du rang) : les flammes qui dansent dans l'âtre,
-      et la lueur chaude qui bat sur le plancher. ⚠️ Pas dans la tuile : une tuile se cuit une
-      fois (`Atlas.cuireTuile`), et un feu figé est une image de feu. Redessiné à chaque image,
-      d'après l'heure du jeu (`B.t`) — jamais un dé : deux images pareilles, deux feux pareils.
-      Les foyers se trouvent une fois par pièce (`carte.foyers`), par la légende (`foyer`). */
-  function dessinerFoyers(ctx, cam) {
-    if (!carte || !carte.interieur) return;
+  /** Les foyers de la pièce courante, trouvés une fois par pièce (`carte.foyers`), par la
+      légende (`foyer`) : un foyer de deux tuiles est UN foyer. Aucun dehors. */
+  function foyersDeLaPiece() {
+    if (!carte || !carte.interieur) return [];
     if (!carte.foyers) {
       carte.foyers = [];
       for (let ty = 0; ty < carte.h; ty++) {
@@ -2000,8 +1997,41 @@ const Monde = (function () {
         }
       }
     }
+    return carte.foyers;
+  }
+
+  //: Le crépitement du foyer : son volume de près (à l'âtre), de loin (le fond de la pièce, on
+  //: l'entend encore), la distance où il tombe au plus bas, et son fondu en entrant et en sortant.
+  const FEU_SON = { pres: 1, loin: 0.35, portee_tuiles: 8, fondu_s: 0.8 };
+  let feuEntendu = 0;
+  /** Le feu s'ENTEND : une boucle (`foyer`) tant qu'on est dans une pièce qui a un foyer, plus
+      forte près de l'âtre. Sortie de la pièce : elle s'éteint en fondu. Même forme que le vent de
+      la tempête (`neige.js`) : allumer, régler, éteindre. */
+  function majFeuDeFoyer() {
+    const j = B.joueur;
+    let voulu = 0;
+    for (const f of foyersDeLaPiece()) {
+      if (!j) break;
+      const d = Math.hypot(j.x - (f.x + f.l / 2) * TT, j.y - (f.y + 1) * TT) / TT;
+      const k = Math.max(0, Math.min(1, d / FEU_SON.portee_tuiles));
+      voulu = Math.max(voulu, FEU_SON.pres + (FEU_SON.loin - FEU_SON.pres) * k);
+    }
+    voulu = Math.round(voulu * 100) / 100;
+    if (voulu && !feuEntendu) Son.boucle('foyer', true, voulu, FEU_SON.fondu_s);
+    else if (voulu && voulu !== feuEntendu) Son.reglerBoucle('foyer', voulu);
+    else if (!voulu && feuEntendu) Son.boucle('foyer', false, undefined, FEU_SON.fondu_s);
+    feuEntendu = voulu;
+  }
+
+  /** Le FEU des foyers d'une pièce (le chalet du rang) : les flammes qui dansent dans l'âtre,
+      et la lueur chaude qui bat sur le plancher. ⚠️ Pas dans la tuile : une tuile se cuit une
+      fois (`Atlas.cuireTuile`), et un feu figé est une image de feu. Redessiné à chaque image,
+      d'après l'heure du jeu (`B.t`) — jamais un dé : deux images pareilles, deux feux pareils.
+      Les foyers se trouvent une fois par pièce (`carte.foyers`), par la légende (`foyer`). */
+  function dessinerFoyers(ctx, cam) {
+    if (!carte || !carte.interieur) return;
     const t = B.t || 0, cx = Math.round(cam.x), cy = Math.round(cam.y);
-    for (const f of carte.foyers) {
+    for (const f of foyersDeLaPiece()) {
       const x0 = f.x * TT + 4 - cx, x1 = (f.x + f.l) * TT - 4 - cx, base = f.y * TT + 10 - cy;
       // Les flammes : une par trois pixels, chacune sa hauteur qui monte et retombe.
       for (let x = x0; x < x1; x += 3) {
@@ -2487,7 +2517,7 @@ const Monde = (function () {
     barrieres, barriereFermee, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
     brisDAqueduc, dansLaFoire, resquille,
     feuxClignotent, arterePasse, nidDePoule, dessinerNids, plaqueDAcier, standingA, usageA, couleurDeZonage, calqueDeZonage, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
-    ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, dessinerFoyers,
+    ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, dessinerFoyers, foyersDeLaPiece, majFeuDeFoyer, FEU_SON,
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
     dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau, sousLeToit, cacheSousLeToit, abrite,
     barrieresCoulissantes, majBarrieresCoulissantes, dessinerBarrieresCoulissantes, COULISSE_GLISSE, COULISSE_TIENT,
