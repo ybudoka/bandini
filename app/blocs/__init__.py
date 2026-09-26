@@ -18,9 +18,9 @@ Comme une mission : rien d'autre à toucher.
 from __future__ import annotations
 
 from .. import carte
-from . import chalet, clairiere
+from . import chalet, cineparc, clairiere
 
-BLOCS: list[dict] = [clairiere.BLOC, chalet.BLOC]
+BLOCS: list[dict] = [clairiere.BLOC, chalet.BLOC, cineparc.BLOC]
 
 BORDS = ("nord", "sud", "est", "ouest")
 
@@ -59,7 +59,8 @@ def carte_du_bloc(bloc: dict) -> dict:
         "interieurs": {slug: dict(piece) for slug, piece in bloc.get("pieces", {}).items()},
         # Les glyphes peints autrement que dans la ville (le bois rond du chalet).
         "materiaux": dict(bloc.get("materiaux", {})),
-        "lampes": [], "zones": [], "points_interet": [], "intersections": [],
+        # Ses lampes, s'il en declare (le cine-parc : ses vitrines, ses lampadaires) ; aucune sinon.
+        "lampes": [dict(la) for la in bloc.get("lampes", [])], "zones": [], "points_interet": [], "intersections": [],
         "arrets": {}, "ambulants": [],
         # Ce que le navigateur doit savoir pour en ressortir.
         "bloc": {"slug": bloc["slug"], "nom": bloc["nom"], "retour": dict(bloc["retour"]),
@@ -70,7 +71,9 @@ def carte_du_bloc(bloc: dict) -> dict:
                  # Une planque (le chalet) : son prix, sa pièce, la place de son char.
                  "planque": dict(bloc["planque"]) if bloc.get("planque") else None,
                  # Ses cheminées (le chalet) : une pierre sur le toit, et la fumée qui en sort.
-                 "cheminees": [dict(c) for c in bloc.get("cheminees", [])]},
+                 "cheminees": [dict(c) for c in bloc.get("cheminees", [])],
+                 # L'ecran du cine-parc : son cadre, en tuiles (`Cineparc` peint la toile).
+                 "ecran": dict(bloc["ecran"]) if bloc.get("ecran") else None},
     }
 
 

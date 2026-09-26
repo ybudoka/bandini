@@ -1101,6 +1101,7 @@ const Jeu = (function () {
         pas('traversier', Traversier.maj); // apres les chars : ce qui est a bord suit la coque
         pas('pont', Pont.maj);             // le pont de glace : il prend, craque au degel, et rend l'eau
         pas('saintjean', SaintJean.maj);   // la Saint-Jean : le bruit des feux
+        pas('cineparc', Cineparc.maj);     // le cine-parc : ses spectateurs, et les phares qui fachent
         pas('neige', Neige.maj);
         pas('brouillard', Brouillard.maj);
         pas('police', Police.maj);
@@ -1206,6 +1207,8 @@ const Jeu = (function () {
     Entites.dessiner(ctx, vue);
     Entites.dessinerCible(ctx, vue);
     Entites.dessinerParticules(ctx, vue);
+    // L'ecran du cine-parc, PAR-DESSUS les arbres qui sont derriere lui : il est haut (`Cineparc`).
+    if (!B.interieur) Cineparc.dessiner(ctx, vue);
     if (B.options.trace && !B.interieur) Vehicules.dessinerTrace(ctx, vue);
     if (!B.interieur) Police.dessinerHelico(ctx, vue);
     if (!B.interieur) Neige.dessinerTempete(ctx);
@@ -1221,6 +1224,8 @@ const Jeu = (function () {
     if (!B.interieur) for (const l of Vehicules.lampesDesPhares()) lampes.push(l);
     // Les eclats des feux de la Saint-Jean.
     if (!B.interieur) for (const l of SaintJean.lampes(vue)) lampes.push(l);
+    // La lueur de l'ecran du cine-parc, pendant le film.
+    if (!B.interieur) for (const l of Cineparc.lampes(vue)) lampes.push(l);
     // Les fleches d'une course : lumineuses, meme la nuit.
     if (!B.interieur) for (const l of Histoire.lampesDeCourse(vue)) lampes.push(l);
     const projecteur = !B.interieur ? Police.lampeHelico(vue) : null;
@@ -1495,7 +1500,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Incendies: Incendies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Conduite: Conduite, Rue: Rue, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Incendies: Incendies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Conduite: Conduite, Rue: Rue, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,

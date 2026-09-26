@@ -3590,6 +3590,8 @@ const Vehicules = (function () {
                                       demiL: v.def.longueur / 2, demiH: v.def.largeur / 2, v: v });
     }
     if (!v.conducteur || v.etat === 'epave' || v.panneT > 0 || !v.def) return;
+    // Gare dans une case du cine-parc pendant le film : phares eteints (`Cineparc`).
+    if (v.pharesEteints) return;
     const lampes = lampesDeLaMachine(v.sprite);
     const faisceau = lampes.bas ? FAISCEAUX[v.def.classe] || null : null;
     const n = lampes.length + (faisceau ? 1 : 0);
