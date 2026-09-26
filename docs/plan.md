@@ -100,7 +100,7 @@ pas quand l'ordre de travail change.
 | Le marché aux puces du dimanche | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-marche-aux-puces-du-dimanche.md#fiche) |
 | Le 1er juillet, jour du déménagement | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-1er-juillet-jour-du-demenagement.md#fiche) |
 | La Saint-Jean sur la baie | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/la-saint-jean-sur-la-baie.md#fiche) |
-| La tempête de verglas | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/la-tempete-de-verglas.md#fiche) |
+| La tempête de verglas | ⬜ **en cours** | 26 sept. 2026 | **P4** | ajout | [fiche](jalons/la-tempete-de-verglas.md#fiche) |
 | Le derby de démolition à la foire | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-derby-de-demolition-a-la-foire.md#fiche) |
 | Les enseignes qui ouvrent pour vrai : bingo, quilles, lave-auto, Rialto | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/les-enseignes-qui-ouvrent-pour-vrai.md#fiche) |
 | Le pont de glace | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-pont-de-glace.md#fiche) |
