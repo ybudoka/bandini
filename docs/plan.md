@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (245 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (246 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -108,7 +108,6 @@ pas quand l'ordre de travail change.
 | La motoneige | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/la-motoneige.md#fiche) |
 | Le centre d'achat hanté | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-centre-d-achat-hante.md#fiche) |
 | Le temps des Fêtes | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-temps-des-fetes.md#fiche) |
-| Le camion de crème glacée | ⬜ **en cours** | 26 sept. 2026 | **P4** | ajout | [fiche](jalons/le-camion-de-creme-glacee.md#fiche) |
 | Le ciné-parc | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-cine-parc.md#fiche) |
 | Une amélioration générale des toits | ⬜ **à faire** (à trancher par Martin : la liste, et par où commencer) | — | **P4** | ajout | [fiche](jalons/une-amelioration-generale-des-toits.md#fiche) |
 
@@ -161,7 +160,6 @@ Ce que chaque ligne à faire attend (la table de tri du 13 sept. 2026, réduite 
 | **P4** | ajout | La motoneige | 2 | gagne à suivre **le pont de glace** ; un sprite de plus |
 | **P4** | ajout | Le centre d'achat hanté | 2 | la voix existe déjà (« annonceur centre d'achat 2 », libre) ; une audition de Martin |
 | **P4** | ajout | Le temps des Fêtes | 2 | la neige de M12 ; la musique de Noël est une dépense à trancher |
-| **P4** | ajout | Le camion de crème glacée | 2 | les enfants à vélo existent ; une sorte de boulot de plus |
 | **P4** | ajout | Le ciné-parc | 3 | un grand terrain en bord de ville : poser en dernier, sans dé |
 | **P4** | ajout | Une amélioration générale des toits | 3 | rien ne l'attend ; la moitié de l'écran, c'est des toits ; ⚠️ le cache des morceaux et le rythme sur le téléphone, et rien au dé (l'empreinte du bâtiment) ; le chalet du rang comme banc d'essai |
 

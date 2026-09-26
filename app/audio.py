@@ -874,6 +874,14 @@ MUSIQUES: list[Piece] = [
     # l'allee. Le prompt REPREND la fiche du morceau ecrit (`musique.ORGUE`) —
     # meme tonalite, meme tempo, trois temps — sinon on ne remplace pas une
     # musique, on en met une autre.
+    # LA RITOURNELLE DU CAMION DE CREME GLACEE : la fiche ecrite (`musique.RITOURNELLE`), une boite a
+    # musique majeure et haute, qui tourne sans lasser.
+    _m("creme_glacee",
+       "an ice cream truck jingle played on a tinkling music box and glockenspiel, "
+       "a simple bright melody at 120 bpm in C major over four gentle chords, "
+       "heard from a small loudspeaker on a summer street, cheerful and a little nostalgic, "
+       "no vocals, seamless loop",
+       duree_s=30, volume=0.42),
     _m("foire_orgue",
        "a mechanical fairground barrel organ playing a bright cheerful waltz in "
        "three four time at 150 bpm in D major, oom-pah-pah bass and chords under "

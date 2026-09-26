@@ -39,4 +39,29 @@ vite dedans ; aucun enfant n'est renversé par la tournée (le camion freine).
 
 ## Notes
 
-_Rien de livré._
+**Livré le 26 sept. 2026.**
+
+- **Le camion** (`vehicules.creme_glacee`) : une machine en volume — la caisse haute de l'ambulance, des
+  bandes rose et menthe, la fenêtre de service à auvent côté trottoir, un cornet géant sur le toit, qui
+  se voit de loin — et, sur chaque flanc, **un vrai cornet complet, pointu** (Martin : « je veux un vrai
+  cornet complet sur le côté », « pointu ») : le biscuit qui s'effile jusqu'à une pointe d'un pixel, le
+  rebord roulé, une boule rose qui coule, une boule menthe, la cerise (`cornetDeFlanc`). ⚠️ Pas de
+  quadrillage gaufré : à cette taille, deux diagonales lui faisaient un visage. `freq` 0 : il ne roule pas dans le trafic ; il attend **garé** dans la rue du dépanneur
+  des Érables, et n'y naît qu'à l'approche du joueur, hors champ (jamais au démarrage).
+- **La tournée** (`boulot: "creme_glacee"`, au klaxon) : trois arrêts là où le monde s'arrête (les scènes
+  de la ville — parcs, place publique), une vente à chacun ; ses paliers : la ritournelle du quartier (+30 %),
+  les kiosques à −25 %, et le camion à toi à cinquante tournées.
+- **La ritournelle** (`musique.RITOURNELLE`, en notes, et un mp3 ElevenLabs de 30 s — une boîte à musique en
+  do majeur) : elle sort du camion quand il **roule** sa tournée (`Son.Rue.demander`, donc en fondu) et se
+  tait quand il s'arrête. ⚠️ Le budget des musiques écrites passe de 52 à 56 Ko, un cran franc, écrit.
+- **Les enfants à vélo** du coin la suivent : leur `poste` devient le camion (le garde du cycliste les
+  tient sur le trottoir), et ils l'oublient dix secondes après qu'elle s'est tue. Intouchables, le camion les
+  pousse, jamais ne les renverse.
+- **La police** (`discret: 0.5` sur la fiche, `Police.discretion`) : dans le camion, un délit chauffe moitié
+  moins — sauf ceux où l'on a une arme à la main (arme sortie, coup ou mort d'un policier, explosion, otage,
+  braquage).
+- **Juges** (`tests/test_creme_glacee_js.py`) : il naît garé à l'approche et pas au démarrage ; au klaxon la
+  tournée, la ritournelle en roulant et pas à l'arrêt, la vente au premier arrêt ; l'enfant qui suit sans
+  une image sur la chaussée ; la chaleur à moitié, l'arme en entier ; l'économie. Trois mutations les font
+  rougir. ⚠️ **Personne n'a encore écouté la ritournelle.**
+

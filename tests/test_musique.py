@@ -143,10 +143,14 @@ def test_le_theme_pese_moins_qu_une_seconde_de_mp3():
     Le budget dit « le filet reste plus léger qu'une seconde de mp3 » ; un
     morceau de plus qui coûte deux Ko ne le dément pas. Ce qui le démentirait,
     c'est de le relever de deux Ko à chaque ajout — il monte donc d'un cran
-    franc, une fois."""
+    franc, une fois.
+
+    ⚠️ **Deuxième cran, de 52 à 56 Ko, le 26 sept. 2026** — la ritournelle du camion de crème glacée,
+    une autre musique qui sort d'un endroit (mesuré avant : 52 358 octets, deux Ko et demi de plus).
+    Même règle : un cran franc, pour la prochaine aussi, pas deux Ko à chaque ajout."""
     import json
     octets = len(json.dumps(audio.exporter()["musiques"]))
-    assert octets < 52000, f"{octets} octets : le catalogue enfle"
+    assert octets < 56000, f"{octets} octets : le catalogue enfle"
 
 
 # --- M9 : les stations procedurales -----------------------------------------

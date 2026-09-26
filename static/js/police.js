@@ -152,6 +152,17 @@ const Police = (function () {
       l'entend). Sinon, les passants qui l'ont vu deviennent des TEMOINS
       porteurs de ce crime : ils courent le raconter a un agent, ou
       telephonent — et d'ici la, on peut leur acheter le silence. */
+  //: Les delits ou l'on a une arme a la main : dans un char discret, ceux-la chauffent en entier.
+  const DELITS_ARMES = ['arme_sortie', 'coup_policier', 'mort_policier', 'explosion', 'otage', 'braquage'];
+
+  /** La part de la chaleur qui monte, au volant d'un char DISCRET (`discret` sur sa fiche : le camion
+      de creme glacee, que la police ne soupconne pas) — tant qu'on n'y tire pas. 1 partout ailleurs. */
+  function discretion(type) {
+    const v = B.joueur && B.joueur.dansVehicule;
+    if (!v || !v.def || !(v.def.discret < 1) || DELITS_ARMES.indexOf(type) >= 0) return 1;
+    return v.def.discret;
+  }
+
   function signalerCrime(type, x, y, vu) {
     const delit = defs().delits[type];
     if (!delit) return null;
@@ -172,7 +183,7 @@ const Police = (function () {
       // une partie neuve, et rien n'est une redite.)
       const r = B.recherche, dernier = (r.redites || {})[type];
       const redite = !!delit.repit_s && dernier !== undefined && B.t - dernier >= 0 && B.t - dernier < delit.repit_s * 60;
-      if (!redite) { ajouterChaleur(delit.etoiles); if (delit.repit_s) (r.redites = r.redites || {})[type] = B.t; }
+      if (!redite) { ajouterChaleur(delit.etoiles * discretion(type)); if (delit.repit_s) (r.redites = r.redites || {})[type] = B.t; }
       crime.rapporte = true; r.dernierVu = { x: x, y: y, t: B.t };
     }
     // Les temoins : ceux qui ont VU (dans leur cone, rien devant) et qui ont le

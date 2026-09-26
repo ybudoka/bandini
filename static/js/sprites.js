@@ -1563,6 +1563,54 @@ const MACHINE_AMBULANCE = {
     parechocsDeChar(16, -16, 6.2), lampesDeChar(15.8, -15.8, 3.4, 7.2, 3.4, 5.0),
   ),
 };
+// --- Le camion de creme glacee : la caisse haute, les bandes pastel, le cornet -----
+// La meme caisse que l'ambulance (une cabine, une caisse haute), mais ce qui le NOMME est ailleurs :
+// deux bandes rose et menthe, la fenetre de service cote trottoir (a droite), et le cornet geant sur
+// le toit — une boule rose dans un cornet de biscuit.
+/** UN CORNET COMPLET, peint sur le flanc (`cote` : +1 a droite, -1 a gauche), centre sur `u0` : le
+    cornet de biscuit POINTU (des rangees qui s'affinent jusqu'a une pointe d'un pixel), son quadrillage
+    gaufre, le rebord roule, une boule rose qui coule par-dessus, une boule menthe, et la cerise. Martin
+    (26 sept. 2026) : « je veux un vrai cornet complet sur le cote », « pointu ». */
+function cornetDeFlanc(u0, cote, pointe) {
+  // ⚠️ DEVANT le flanc (7,7 a 7,82) : a 7,53, les bandes pastel passaient devant sa pointe.
+  const w0 = cote > 0 ? 7.7 : -7.82, w1 = cote > 0 ? 7.82 : -7.7, p = [];
+  const bande = function (hw, z0, z1, ton) { p.push(['bloc', [u0 - hw, u0 + hw], [w0, w1], [z0, z1], ton, ton, ton, 0.2]); };
+  // Le cornet : de la pointe (`pointe`) au rebord (z 10.4), une rangee tous les 0,45, qui s'affine jusqu'a
+  // un pixel. ⚠️ Le plus HAUT possible : a cette taille, c'est la hauteur qui le fait lire POINTU.
+  const haut = 10.4 - pointe;
+  for (let z = pointe; z < 10.4; z += 0.45) bande(Math.max(0.12, (z - pointe + 0.2) / haut * 2.5), z, z + 0.5, 'u');
+  // ⚠️ PAS DE QUADRILLAGE GAUFRE : a cette taille, deux diagonales faisaient deux yeux et une bouche —
+  // un cornet avec un visage. Le biscuit uni se lit mieux ; le rebord fonce suffit a dire « cornet ».
+  bande(2.7, 10.3, 10.9, 'w');                                   // le rebord roule
+  bande(2.4, 10.9, 11.6, 'x'); bande(2.8, 11.6, 12.5, 'x'); bande(2.3, 12.5, 13.1, 'x');   // la boule rose
+  p.push(['bloc', [u0 - 2.1, u0 - 1.4], [w0, w1], [9.6, 10.9], 'x', 'x', 'x', 0.2]);       // qui coule sur le bord
+  bande(1.9, 13.0, 13.7, 'y'); bande(1.3, 13.7, 14.3, 'y');     // la boule menthe
+  bande(0.5, 14.3, 15.0, 'a');                                   // la cerise
+  return p;
+}
+const MACHINE_CREME_GLACEE = {
+  profondeur: BIAIS_DU_SOL, contour: true, arrondi: true,
+  pieces: [].concat(
+    essieuDeChar(9.2, 3.2, 6.4), essieuDeChar(-9.0, 3.2, 6.4),
+    [caisseDeChar({ dessus: [[15, 5.4], [14.0, 7.0], [10.6, 7.3], [4.8, 7.3], [4.6, 15.2], [-14.4, 15.4], [-15, 14.6], [-15, 7.0]], bas: 1.6,
+              essieux: [9.2, -9.0], r: 3.2, plan: planPince(30, 7.5, 6.2), aretes: 'cccDCCD' })],
+    habitacle({ avant: 10.6, toit: [8.0, 4.8], arriere: 4.8, montant: null, bas: 7.3, haut: 12.6, demi: 6.4 }),
+    [
+      ['tube', [4.2, 7.53, 5.2], [-14.6, 7.53, 5.2], 'x', 0.6], ['tube', [4.2, -7.53, 5.2], [-14.6, -7.53, 5.2], 'x', 0.6],  // la bande rose
+      ['tube', [4.2, 7.53, 6.6], [-14.6, 7.53, 6.6], 'y', 0.5], ['tube', [4.2, -7.53, 6.6], [-14.6, -7.53, 6.6], 'y', 0.5],  // et la menthe
+      ['bloc', [-4.2, 3.4], [7.42, 7.62], [8.6, 12.8], 'v', 'v', 'v', 0.2],                 // la fenetre de service, cote trottoir
+      ['bloc', [-4.4, 3.6], [7.42, 7.9], [12.8, 13.6], 'x', 'x', 'x', 0.2],                 // son auvent
+      ['bloc', [-7.2, -4.8], [-1.2, 1.2], [15.4, 17.8], 'u', 'u', 'u', 0.2],                // le cornet, sur le toit
+      ['bloc', [-8.2, -3.8], [-2.2, 2.2], [17.8, 20.6], 'x', 'x', 'x', 0.2],                // et sa boule
+      ['bloc', [-14.8, -13.6], [-6.8, -4.8], [14.6, 15.4], 'a', 'a', 'a', 0.2],             // deux feux au cul de la caisse
+      ['bloc', [-14.8, -13.6], [4.8, 6.8], [14.6, 15.4], 'a', 'a', 'a', 0.2],
+      ['tube', [-15.05, 0, 2.2], [-15.05, 0, 14.2], 'D', 0.05],                            // les portes arriere
+    ],
+    cornetDeFlanc(-4.6, -1, 2.0),                                                           // le grand cornet, cote rue, jusqu'en bas
+    cornetDeFlanc(-11.3, 1, 3.8),                                                           // et au cul de la caisse, au-dessus de l'arche
+    parechocsDeChar(15, -15, 6.2), lampesDeChar(14.8, -14.8, 3.4, 7.2, 3.4, 5.0),
+  ),
+};
 // --- La remorqueuse : une cabine, un plateau, le bras et son crochet --------------
 const MACHINE_REMORQUEUSE = {
   profondeur: BIAIS_DU_SOL, contour: true, arrondi: true,
@@ -1735,6 +1783,8 @@ SPRITES.luxe = enVolume(MACHINE_LUXE, 32, 52, { k: '#101018', c: '#101014', v: '
 SPRITES.ambulance = enVolume(MACHINE_AMBULANCE, 32, 64, { k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8', s: '#f39c12', a: '#7a2320', b: '#8e9299' });
 // Rouge et blanc, devant sur la cabine et derriere sur la caisse : ils tournent avec sa sirene.
 SPRITES.ambulance.gyrophares = { quand: 'sirene', a: ['#ff4a3d', '#7a2320'], b: ['#ffffff', '#8e9299'] };
+// Creme, rose et menthe : on le reconnait de l'autre bout du parc.
+SPRITES.creme_glacee = enVolume(MACHINE_CREME_GLACEE, 30, 60, { k: '#101018', c: '#fff6ea', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#ff8fb8', y: '#7fe0c0', u: '#d9a25b', w: '#9c6a30', s: '#e8c9a8', a: '#ff4b3e' });
 SPRITES.remorqueuse = enVolume(MACHINE_REMORQUEUSE, 36, 60, { k: '#101018', c: '#d98324', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', h: '#6b7078', p: '#c9cdd4', y: '#f39c12', s: '#3a3d44', a: '#6a4812', b: '#6a4812' });
 // Ambre, sur la cabine : ils tournent quand elle remorque. ⚠️ Sur une BASE SOMBRE,
 // et d'un ambre plus jaune que la caisse : ambre sur orange, la rampe disparaissait.

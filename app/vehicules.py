@@ -84,6 +84,9 @@ class Vehicule(TypedDict):
     phase: int
     portieres: bool
     klaxon: str
+    #: La part de la chaleur qui monte dedans (1 : toute) — la police ne soupconne pas un camion de
+    #: creme glacee, tant qu'on n'y tire pas (`Police.ajouterChaleur`).
+    discret: float
 
 
 #: Les classes dont on claque la portiere. ⚠️ Une moto et un velo n'en ont
@@ -140,7 +143,7 @@ def _v(slug, nom, classe, lon, lat, vmax, accel, rayon, vie, places, prix, freq,
        masse=1.0, cercles=3, reservoir=True, defonce=0.0, soigne=0.0, crochet=False,
        plateau=False, boulot=None,
        radio=None, phase=1, klaxon="klaxon", rare=False, adherence=None, alarme_s=0.0,
-       au_volant=None) -> Vehicule:
+       au_volant=None, discret=1.0) -> Vehicule:
     return Vehicule(
         slug=slug, nom=nom, classe=classe, longueur=lon, largeur=lat,
         vitesse_max=vmax, vitesse_recul=round(vmax * 0.33, 2), acceleration=accel,
@@ -155,7 +158,7 @@ def _v(slug, nom, classe, lon, lat, vmax, accel, rayon, vie, places, prix, freq,
         au_volant=au_volant,
         defonce=defonce, soigne=soigne,
         crochet=crochet, plateau=plateau, boulot=boulot, radio=radio, phase=phase,
-        portieres=classe in CLASSES_A_PORTIERES, klaxon=klaxon,
+        portieres=classe in CLASSES_A_PORTIERES, klaxon=klaxon, discret=discret,
     )
 
 
@@ -201,6 +204,12 @@ CATALOGUE: list[Vehicule] = [
     _v("ambulance", "Ambulance", "auto", 32, 15, 3.6, 0.05, 25, 180, 3, 1400, 0.04,
        ["#ffffff"], "ambulance", sirene=True, alarme=True, masse=1.4, soigne=2.0,
        boulot="ambulance"),
+    # LE CAMION DE CREME GLACEE (docs/jalons/le-camion-de-creme-glacee.md) : une tournee des parcs, sa
+    # ritournelle, les enfants a velo qui la suivent — et le camion le moins soupconne de la ville
+    # (`discret`). ⚠️ `freq` 0 : il ne roule pas dans le trafic (sa naissance decalerait tous les des de
+    # la ville) ; il attend, gare, dans la rue du depanneur des Erables (`Vehicules.majCremeGlacee`).
+    _v("creme_glacee", "Camion de crème glacée", "auto", 30, 15, 3.2, 0.05, 25, 140, 2, 1100, 0.0,
+       ["#fff6ea"], "creme_glacee", masse=1.3, boulot="creme_glacee", discret=0.5),
     _v("remorqueuse", "Remorqueuse", "camion", 36, 15, 3.0, 0.04, 29, 220, 2, 1300, 0.05,
        ["#d98324", "#2c3e50", "#7f8c8d"], "remorqueuse", masse=2.2, cercles=4, adherence=0.24,
        defonce=0.6, crochet=True, boulot="remorquage", radio="station_remorqueuse"),

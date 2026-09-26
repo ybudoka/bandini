@@ -119,6 +119,16 @@ PALIERS: dict[str, tuple[dict, ...]] = {
         {"compte": 50, "type": "char", "valeur": "remorqueuse",
          "nom": "LA DÉPANNEUSE EST À TOI", "detail": "GARÉE À LA PLANQUE"},
     ),
+    # LE CAMION DE CREME GLACEE : la ritournelle connue de tout le quartier, le cornet a moitie prix
+    # aux kiosques, et le camion a toi a cinquante tournees.
+    "creme_glacee": (
+        {"compte": 10, "type": "prime", "valeur": 1.3,
+         "nom": "LA RITOURNELLE DU QUARTIER", "detail": "+30 % DE POURBOIRE"},
+        {"compte": 25, "type": "rabais", "valeur": 0.75, "cle": "kiosque",
+         "nom": "LES KIOSQUES TE CONNAISSENT", "detail": "-25 % AUX KIOSQUES"},
+        {"compte": 50, "type": "char", "valeur": "creme_glacee",
+         "nom": "LE CAMION EST À TOI", "detail": "GARÉ À LA PLANQUE"},
+    ),
     # ⚠️ LA PATROUILLE (quatre activites, 26 sept. 2026) : tu fais la police AVEC UN CASIER, dans un
     # char qui n'est pas a toi — et le poste te le rend en pages (`casier`, une page de moins, posee au
     # palier). Pas de char a la planque : une auto-patrouille garee chez soi serait un aveu.
@@ -683,6 +693,10 @@ BOULOTS: dict[str, Boulot] = {
     # passagers a prendre au bord de la route et a mener ailleurs, sur le
     # patron du taxi, mais plus lent a charger (le malus de choc encaisse
     # mieux : un autobus plein ne se conduit pas sur la pointe des pieds).
+    # La tournee du camion de creme glacee : trois parcs, a l'arret, une vente a chacun.
+    "creme_glacee": {"slug": "creme_glacee", "nom": "Tournée", "vehicule": "creme_glacee",
+                     "base": 20, "par_tuile": 0.2, "prime": 10,
+                     "etapes": 3, "chrono_s": 0, "malus_choc": 0.2},
     # La patrouille : un suspect a rattraper (a terre, pas mort) avant la fin du chrono ; la prime fond
     # avec lui. Pas de distance : on ne le conduit nulle part.
     "patrouille": {"slug": "patrouille", "nom": "Arrestation", "vehicule": "police",

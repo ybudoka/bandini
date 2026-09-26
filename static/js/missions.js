@@ -533,6 +533,14 @@ const Missions = (function () {
       pris: 'À LA FOURRIÈRE',
       fini: 'REMORQUAGE',
     },
+    // LE CAMION DE CREME GLACEE : une tournee de trois arrets, la ou le monde s'arrete (`carte.scenes` —
+    // les parcs, la place publique), la ritournelle en roulant, une vente a chaque arret.
+    creme_glacee: {
+      ramasser: null,
+      destination: 'scene',
+      pris: 'PROCHAIN ARRÊT : ',
+      fini: 'VENTE',
+    },
     // ⚠️ LA PATROUILLE (quatre activites, 26 sept. 2026) : dans une auto-patrouille VOLEE, la sirene
     // allumee, un suspect detale quelque part au bord de la route ; on le RATTRAPE — a terre, pas
     // mort — avant la fin du chrono. Pas de destination : on ne le conduit nulle part.
@@ -691,6 +699,18 @@ const Missions = (function () {
         const g = Monde.carte.fourriere.grille;
         lieu = { x: g.x + Math.floor(g.largeur / 2), y: g.y, nom: 'Fourrière municipale' };
       }
+      if (sorte.destination === 'scene') {
+        // Un arret de tournee : une scene de la ville (un parc, la place) qu'un char atteint, pas trop pres.
+        const atteint = atteignableEnChar(v);
+        const scenes = (Monde.carte.def.scenes || []).filter(function (q) {
+          return dist2(q.x * TT + 8, q.y * TT + 8, v.x, v.y) > 200 * 200 && atteint(q.x * TT + 8, q.y * TT + 8, ARRIVEE_PX);
+        });
+        const q = scenes[Math.floor(B.rng() * scenes.length)];
+        if (q) {
+          const z = Monde.carte.zones.find(function (z) { return z.district === q.district && z.slug === q.district; });
+          lieu = { x: q.x, y: q.y, nom: z ? z.nom : 'LE PARC' };
+        }
+      }
       if (!lieu) {
         // ⚠️ SEULEMENT LA OU UN CHAR SE REND. Depuis l'ile, la chapelle
         // Sainte-Anne est un point de la carte comme un autre, et on ne
@@ -731,6 +751,7 @@ const Missions = (function () {
       const sorte = SORTES[boulot.slug];
       boulot.t++;
       if (!v || v.def.boulot !== boulot.slug || v.etat === 'epave') { boulot.abandonner('BOULOT PERDU'); return; }
+      if (boulot.slug === 'creme_glacee') ritournelleDuCamion(v);
       if (boulot.etape === 'ramasse' && sorte.ramasser === 'fuyard') { boulot.majSuspect(v); return; }
       if (boulot.etape === 'ramasse') {
         const c = boulot.client;
@@ -2494,6 +2515,52 @@ const Missions = (function () {
     }
   }
 
+  // --- Le camion de creme glacee ------------------------------------------------------------
+  //: docs/jalons/le-camion-de-creme-glacee.md. Le camion attend, gare, dans la rue du depanneur des
+  //: Erables ; au klaxon, sa tournee (`SORTES.creme_glacee`). Pendant qu'il ROULE sa tournee, sa
+  //: ritournelle sort de lui (`Son.Rue.demander`, redemandee a chaque image : arrete, elle se tait en
+  //: fondu), et les enfants a velo du coin le suivent — par leur `poste`, qui les garde sur le trottoir.
+
+  //: Jusqu'ou un enfant entend la ritournelle, et combien de temps il la suit apres qu'elle s'est tue.
+  const RITOURNELLE_PX = 360, RITOURNELLE_OUBLI = 600;
+
+  function ritournelleDuCamion(v) {
+    if (Math.abs(v.vitesse) <= 0.3) return;
+    Son.Rue.demander('creme_glacee', 0.8);
+    if (B.t % 30 !== 0) return;
+    for (const e of Entites.pietonsAutour(v.x, v.y, RITOURNELLE_PX)) {
+      if (e.arch !== 'enfant_velo' || !e.vivant || e.etat === 'fuit') continue;
+      e.poste = { x: v.x, y: v.y }; e.posteRayon = 40; e.suitLeCamion = B.t; e.butT = 0;
+    }
+  }
+
+  /** Les enfants qui suivaient une ritournelle tue depuis longtemps reprennent leur flanerie. */
+  function oublierLaRitournelle() {
+    for (const e of B.entites) {
+      if (e.suitLeCamion && B.t - e.suitLeCamion > RITOURNELLE_OUBLI) { e.poste = null; e.suitLeCamion = null; }
+    }
+  }
+
+  /** La place du camion : la rue devant le depanneur des Erables. */
+  function placeDuCamion() {
+    const l = Histoire.lieu('depanneur');
+    return l ? Histoire.tuileDeRue(l.x, l.y, 10) : null;
+  }
+
+  /** Il NAIT GARE, et paresseusement : quand le joueur approche de sa place, hors du champ, s'il n'y
+      en a pas deja un en ville. ⚠️ Pas au demarrage : un identifiant de plus decale des juges sans
+      rapport (le capitaine Berube, M13). */
+  function majCremeGlacee() {
+    const j = B.joueur;
+    if (!j || B.interieur || B.bloc || B.t % 60 !== 0) return;
+    if (B.entites.some(function (e) { return e.type === 'vehicule' && e.slug === 'creme_glacee' && e.etat !== 'epave'; })) return;
+    const place = placeDuCamion();
+    if (!place || dist2(place.x, place.y, j.x, j.y) > 500 * 500 || Entites.visibleAEcran(place.x, place.y, 40)) return;
+    const a = { '>': 0, 'v': Math.PI / 2, '<': Math.PI, '^': -Math.PI / 2 }[place.sens] || 0;
+    Vehicules.creer('creme_glacee', place.x, place.y, a, { etat: 'stationne' });
+    Entites.indexer();
+  }
+
   // --- La liste du quai -------------------------------------------------------------------
   //: Sven affiche quatre modeles ; on lui en livre UN par jour, au bout de sa jetee, a l'arret, sans
   //: bosse — et la liste se renouvelle. Les regles sont a Python (`economie.LISTE_DU_QUAI`). La liste
@@ -3387,6 +3454,8 @@ const Missions = (function () {
     majMalGares();
     majGarage();
     majQuai();
+    majCremeGlacee();
+    if (B.t % 60 === 0) oublierLaRitournelle();
     majInvite(B.joueur);
     // Les paquets se ramassent en passant dessus.
     if (B.joueur && !B.interieur) {
@@ -3398,7 +3467,8 @@ const Missions = (function () {
     if (B.t % 60 === 0) B.partie.stats.secondes++;
   }
 
-  return { listeDuQuai, etatDuQuai, posteDuQuai, prixAuQuai, texteDuQuai, majQuai,
+  return { majCremeGlacee, placeDuCamion, ritournelleDuCamion,
+    listeDuQuai, etatDuQuai, posteDuQuai, prixAuQuai, texteDuQuai, majQuai,
     braquable, braquer, rancuneIci,
     tirageDuLoto, numerosDuBillet, acheterUnBillet, nuitDuLoto, ligneDuLoto, itemLoto,
     evaluerMain, gainDuVideopoker, paquetDuVideopoker, donnerAuVideopoker, tirerAuVideopoker, menuVideopoker,

@@ -301,7 +301,7 @@ def duree_s(morceau: Morceau) -> float:
 
 def exporter() -> list[Morceau]:
     return ([dict(m) for m in MORCEAUX] + stations() + ambiances()  # type: ignore[misc]
-            + rues() + commerces() + [orgue()])
+            + rues() + commerces() + [orgue(), ritournelle()])
 
 
 # --- Les stations procedurales (M9) ----------------------------------------
@@ -599,7 +599,7 @@ def rues() -> list[Morceau]:
 
 
 def rue_par_slug(slug: str) -> Morceau | None:
-    for style in RUE + [ORGUE]:
+    for style in RUE + [ORGUE, RITOURNELLE]:
         if style["slug"] == slug:
             return generer_rue(style)
     return None
@@ -633,6 +633,23 @@ def orgue() -> Morceau:
     """La ritournelle de la foire, en notes — le filet, comme partout : si le
     mp3 n'est pas la, le sequenceur la joue telle qu'elle est ecrite ici."""
     return generer_rue(ORGUE)
+
+
+#: LA RITOURNELLE DU CAMION DE CREME GLACEE (docs/jalons/le-camion-de-creme-glacee.md) : une musique qui
+#: sort d'un endroit, comme l'orgue — mais l'endroit ROULE (`Son.Rue.demander`, redemandee a chaque
+#: image tant que le camion fait sa tournee et avance ; arrete, elle se tait en fondu). Une boite a
+#: musique : majeure, la plus haute du jeu, quatre accords qui reviennent — elle doit rester supportable
+#: en boucle (Martin : un fondu, jamais une coupure franche).
+RITOURNELLE: StyleRue = {
+    "slug": "creme_glacee", "nom": "La ritournelle du camion", "graine": 19550704,
+    "bpm": 120, "tonique": 72, "gamme": MAJEURE, "grille": (0, 3, 4, 0), "mesure": 8,
+    "forme_chant": "sine", "forme_gratte": "triangle", "volume": 0.46,
+}
+
+
+def ritournelle() -> Morceau:
+    """La ritournelle du camion, en notes — le filet si le mp3 manque."""
+    return generer_rue(RITOURNELLE)
 
 
 #: --- La musique qui dit ou tu es et ce qui t'arrive -------------------------
