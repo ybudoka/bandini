@@ -106,7 +106,8 @@ def test_le_camion_livre_des_dindes_en_decembre(banc):
             o.tape('KeyJ', 2);
             return M.boulot.slug;
         }
-        return { dec: klaxon(decembre(L), false), juillet: klaxon(decembre(L) - 16, false),
+        // ⚠️ Pas le 1er juillet (le jour du demenagement, `decembre - 16`) : le camion y a son boulot.
+        return { dec: klaxon(decembre(L), false), juillet: klaxon(decembre(L) - 17, false),
                  verglas: klaxon(B.defs.verglas.tempete.premier + 1, true) };
     }""")
     assert r == {"dec": "dindes", "juillet": None, "verglas": "generatrices"}, r

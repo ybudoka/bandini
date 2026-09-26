@@ -159,6 +159,15 @@ PALIERS: dict[str, tuple[dict, ...]] = {
         {"compte": 25, "type": "char", "valeur": "camion",
          "nom": "LE CAMION DE LIVRAISON EST À TOI", "detail": "GARÉ À LA PLANQUE"},
     ),
+    # LE DÉMÉNAGEMENT (le 1er juillet) : UN jour par année — des paliers courts (le premier au plancher du juge).
+    "demenagement": (
+        {"compte": 5, "type": "prime", "valeur": 1.3,
+         "nom": "LES BRAS DU QUARTIER", "detail": "+30 % DE PRIME"},
+        {"compte": 10, "type": "vie", "valeur": 1.1,
+         "nom": "DU DOS COMME UN DÉMÉNAGEUR", "detail": "+10 % DE VIE"},
+        {"compte": 15, "type": "rabais", "valeur": 0.8, "cle": "kiosque",
+         "nom": "UNE BIÈRE OFFERTE PAR CHAQUE FAMILLE", "detail": "-20 % AUX KIOSQUES"},
+    ),
     # LES DINDES (le temps des Fêtes) : un mois par année — des paliers courts, comme les génératrices.
     "dindes": (
         {"compte": 5, "type": "prime", "valeur": 1.3,
@@ -754,6 +763,12 @@ BOULOTS: dict[str, Boulot] = {
     "dindes": {"slug": "dindes", "nom": "Dinde livrée", "vehicule": "camion", "partage": "generatrices",
                "base": 25, "par_tuile": 0.2, "prime": 12,
                "etapes": 3, "chrono_s": 0, "malus_choc": 0.2},
+    # LE 1ER JUILLET (docs/jalons/le-1er-juillet-jour-du-demenagement.md) : dans un camion, le jour du
+    # déménagement, les boîtes de trois familles à livrer — SANS UNE BOSSE (un choc mange le tiers de la
+    # prime : de la vaisselle dans des boîtes). Il partage le camion, comme les dindes.
+    "demenagement": {"slug": "demenagement", "nom": "Déménagement", "vehicule": "camion", "partage": "generatrices",
+                     "base": 25, "par_tuile": 0.2, "prime": 15,
+                     "etapes": 3, "chrono_s": 0, "malus_choc": 0.34},
     # Le verglas : dans un camion, PENDANT la tempete, trois generatrices vers les quartiers au noir.
     "generatrices": {"slug": "generatrices", "nom": "Génératrice livrée", "vehicule": "camion",
                      "base": 30, "par_tuile": 0.2, "prime": 15,

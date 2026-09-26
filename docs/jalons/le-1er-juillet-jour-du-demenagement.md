@@ -26,4 +26,23 @@ ramassé arrive à la planque.
 
 ## Notes
 
-_Rien de livré._
+**Livré le 27 sept. 2026.** `app/demenagement.py`, `static/js/demenagement.js`, le boulot `demenagement`
+(`economie.BOULOTS`, ses paliers), le camion qui le prend le jour venu (`Missions.boulotDuChar`) ; juges
+`tests/test_demenagement.py` et `tests/test_demenagement_js.py` (cinq mutations, toutes mordent).
+
+- **Le jour** : le 1er juillet du calendrier (`calendrier.DATES["demenagement"]`, le jour 21), la veille
+  et le matin dans le Clairon.
+- ⚠️ **À cheval sur le trottoir, pas en double file** : mesuré le 27 sept., cinq façades de logement sur
+  quatre-vingt-onze donnent sur une rue à deux voies par sens — partout ailleurs, un camion arrêté dans
+  l'unique voie la bouchait pour de bon (le trafic klaxonne, puis force). Les camions se garent donc sur
+  le trottoir, à côté de la porte (jamais devant une autre, ni sur un décor), seize dans la ville, à dix
+  tuiles l'un de l'autre, hors des rues cossues. Ils naissent à l'approche, d'une couleur donnée (aucun
+  dé), et sont partis le lendemain — sauf celui qu'on conduit.
+- **Les meubles** sont peints sur le trottoir de l'autre côté de la porte (sofa, matelas, boîtes,
+  lampe torchère, frigo, chaise — la sorte à l'empreinte de la tuile), ni entité ni obstacle.
+- **Le boulot de déménageur** : dans un camion, ce jour-là, les boîtes de trois familles à livrer ; une
+  bosse mange le tiers de la prime (de la vaisselle). Le camion a trois boulots selon la saison (les
+  génératrices au verglas, les boîtes le 1er juillet, les dindes en décembre).
+- ⚠️ **Pas fait : ramasser les meubles pour la planque.** Ils attendent la ligne des collections et de la
+  planque qu'on décore (à trancher par Martin) — sans elle, un meuble ramassé n'irait nulle part.
+- Capture regardée : un camion blanc devant une maison des Érables, le sofa et le matelas à côté.

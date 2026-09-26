@@ -115,9 +115,14 @@ def test_le_paquet_reste_leger():
     marge — la ville avait grossi sans y toucher : le dojo, le traversier), 53 023 avec les enseignes qui
     ouvrent pour vrai (quatre points de plus sur la carte, la baie du lave-auto, la toile du Rialto : +539
     bruts, +256 gzip). Deux Ko de marge, la même règle : le vrai juge est la dette du chargement.
+
+    ⚠️ **Les définitions : 58 000 → 60 000 gzip, 260 000 → 270 000 bruts, le 27 sept. 2026.** Mesure :
+    57 336 avec les enseignes, 57 757 avec le garage de Ti-Guy (ses pièces, ses répliques, l'air du klaxon),
+    58 258 avec le 1er juillet (les places de seize camions et de trente-deux meubles) — 257 937 bruts. Le
+    remède reste celui d'en haut ; ce plafond-ci le rapproche.
     """
     paquets = definitions.construire()
-    for nom, brut_max, fil_max in (("definitions", 260_000, 58_000), ("carte", 520_000, 55_000)):
+    for nom, brut_max, fil_max in (("definitions", 270_000, 60_000), ("carte", 520_000, 55_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))

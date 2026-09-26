@@ -568,6 +568,13 @@ const Missions = (function () {
       pris: 'GÉNÉRATRICE : ',
       fini: 'GÉNÉRATRICE LIVRÉE',
     },
+    // LE 1ER JUILLET : dans un camion, le jour du demenagement, les boites de trois familles, sans une bosse.
+    demenagement: {
+      ramasser: null,
+      destination: 'ailleurs',
+      pris: 'LES BOÎTES POUR ',
+      fini: 'DÉMÉNAGEMENT',
+    },
     // LES FETES : dans un camion, en decembre, trois dindes chez le monde (le camion n'a qu'un boulot a la
     // fois, et c'est la saison qui le choisit : `boulotDuChar`).
     dindes: {
@@ -617,13 +624,14 @@ const Missions = (function () {
     };
   }
 
-  /** Le boulot que ce char prend au klaxon, maintenant, ou null. ⚠️ LE CAMION EN A DEUX, SELON LA SAISON :
-      les generatrices pendant le verglas, les dindes en decembre, rien le reste du temps (son klaxon
+  /** Le boulot que ce char prend au klaxon, maintenant, ou null. ⚠️ LE CAMION EN A TROIS, SELON LA SAISON :
+      les generatrices pendant le verglas, les boites le 1er juillet, les dindes en decembre, rien le reste du temps (son klaxon
       reste un klaxon). */
   function boulotDuChar(v) {
     if (!v || !v.def.boulot) return null;
     if (v.def.boulot !== 'generatrices') return v.def.boulot;
     if (Verglas.intensite()) return 'generatrices';
+    if (typeof Demenagement !== 'undefined' && Demenagement.aujourdhui()) return 'demenagement';
     return typeof Fetes !== 'undefined' && Fetes.actif() ? 'dindes' : null;
   }
 
@@ -2135,7 +2143,7 @@ const Missions = (function () {
     const loto = B.defs.loto ? nuitDuLoto() : null;
     // Le brouillard de demain matin : le Clairon l'annonce la veille, sous la manchette.
     const brume = typeof Brouillard !== 'undefined' ? Brouillard.annonceDeDemain() : null;
-    const dessous = [loto, brume, Verglas.ligneDuClairon(), Pont.ligneDuClairon(), SaintJean.ligneDuClairon(), Fetes.ligneDuClairon(), decompteDesNids()].filter(Boolean);
+    const dessous = [loto, brume, Verglas.ligneDuClairon(), Pont.ligneDuClairon(), SaintJean.ligneDuClairon(), Demenagement.ligneDuClairon(), Fetes.ligneDuClairon(), decompteDesNids()].filter(Boolean);
     const m = manchetteDuJour();
     if (m) { B.partie.derniereManchette = m; direLaManchette(m, dessous); }
     else { Hud.message(dessous[0] || 'JOUR ' + B.partie.jour); direLeLoto(); }
