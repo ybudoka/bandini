@@ -73,6 +73,11 @@ _Livré le 26 sept. 2026._
 - ⚠️ **Un camion né pour le décor ne tire pas de dé** (`couleurDuDecor`) : né sans couleur, il en
   tirait une à `B.rng()`, et tout le hasard qui suit glissait — le saut du phare de e12 a fini dans un
   décor. Le camion de crème glacée avait le même défaut : corrigé du même geste.
+- ⚠️ **Un passant ne vole pas un camion qui attend** (`resteGare`, lu par `Entites.majVolDeChar`) :
+  la suite complète l'a montré (p14) — un passant emportait le camion garé, la scène faisait fuir le
+  Bonimenteur qu'on escortait, et le seul camion de la ville partait dans le trafic sans jamais revenir
+  à sa place. Même règle pour le camion de crème glacée ; un juge le tient (une auto garée à côté, elle,
+  se vole).
 - **Le boulot de voirie** (`BOULOTS.voirie`, « Nid bouché », trois nids, sans chrono) : au klaxon, un
   nid atteignable à plus de 160 px ; il faut s'arrêter DESSUS (18 px, pas 44). Bouché, il quitte
   `carte.nids` (on ne le sent plus, on ne le voit plus) et la partie le retient (`nidsBouches`) ;

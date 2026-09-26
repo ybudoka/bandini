@@ -1933,6 +1933,9 @@ const Entites = (function () {
         // abandonne appartient a la fourriere, pas aux voleurs — deux systemes
         // qui se disputent le meme char, c'est l'un des deux qui ment.
         && q !== B.joueur.dernierVehicule && !q.laisse && !(q.panneT > 0)
+        // ⚠️ Ni un char qui ATTEND le joueur a sa place (le camion de creme glacee, celui
+        // d'asphalte : `resteGare`) — il n'y en a qu'un, et vole il ne revient pas.
+        && !q.resteGare
         // ⚠️ **Ni une COQUE** (retour de Martin, capture a l'appui : « un
         // bateau sur la route ?? »). Une chaloupe amarree est `stationne` comme
         // une auto garee, et pour un passant du quai c'etait le premier char a

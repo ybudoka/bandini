@@ -2563,7 +2563,10 @@ const Missions = (function () {
   }
 
   /** ⚠️ Un char qui nait pour le decor prend SA couleur, sans de : `Vehicules.creer` en tire un
-      sinon, et le hasard de toute la suite glisse (le saut de e12 est tombe sur un camion). */
+      sinon, et le hasard de toute la suite glisse (le saut de e12 est tombe sur un camion). Et il
+      `resteGare` : un passant ne le vole pas (`Entites.majVolDeChar`) — vole, le seul camion de la
+      ville partait dans le trafic et ne revenait jamais a sa place (et la scene faisait fuir le
+      Bonimenteur qu'on escortait, p14). */
   function couleurDuDecor(slug) {
     const d = Vehicules.vehiculeDef(slug);
     return d && d.couleurs[0];
@@ -2584,7 +2587,7 @@ const Missions = (function () {
     const place = placeDeLAsphalte();
     if (!place || dist2(place.x, place.y, j.x, j.y) > 500 * 500 || Entites.visibleAEcran(place.x, place.y, 40)) return;
     const a = { '>': 0, 'v': Math.PI / 2, '<': Math.PI, '^': -Math.PI / 2 }[place.sens] || 0;
-    Vehicules.creer('asphalte', place.x, place.y, a, { etat: 'stationne', couleur: couleurDuDecor('asphalte') });
+    Vehicules.creer('asphalte', place.x, place.y, a, { etat: 'stationne', couleur: couleurDuDecor('asphalte'), resteGare: true });
     Entites.indexer();
   }
 
@@ -2638,7 +2641,7 @@ const Missions = (function () {
     const place = placeDuCamion();
     if (!place || dist2(place.x, place.y, j.x, j.y) > 500 * 500 || Entites.visibleAEcran(place.x, place.y, 40)) return;
     const a = { '>': 0, 'v': Math.PI / 2, '<': Math.PI, '^': -Math.PI / 2 }[place.sens] || 0;
-    Vehicules.creer('creme_glacee', place.x, place.y, a, { etat: 'stationne', couleur: couleurDuDecor('creme_glacee') });
+    Vehicules.creer('creme_glacee', place.x, place.y, a, { etat: 'stationne', couleur: couleurDuDecor('creme_glacee'), resteGare: true });
     Entites.indexer();
   }
 

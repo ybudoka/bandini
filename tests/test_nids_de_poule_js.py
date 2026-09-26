@@ -123,6 +123,33 @@ def test_le_camion_attend_devant_la_fourriere_et_nait_quand_on_approche(banc):
     assert r["grille"] < 12 * 16, r
 
 
+def test_un_passant_ne_vole_pas_le_camion_qui_attend(banc):
+    """Le vol de char de la rue prend un char gare que personne ne conduit — pas le camion
+    d'asphalte, ni celui de creme glacee : il n'y en a qu'un, et vole il ne revenait jamais."""
+    r = banc("function (L, o) {" + APPROCHE + """
+        L.Jeu.commencer();
+        const B = L.B, E = L.Entites, j = B.joueur;
+        const c = approcher(L, o)[0];
+        B.defs.pietons.vol_de_char.chance_par_minute = 1;
+        function essai(char) {
+            // Rien d'autre a voler : le char seul a l'ecran, un passant qui flane a cote.
+            B.entites = B.entites.filter(function (e) { return e === char || e === j || !(e.type === 'vehicule' || e.type === 'pieton'); });
+            j.x = char.x + 60; j.y = char.y; L.Monde.centrerCamera(j.x, j.y);
+            const p = E.creerPieton(char.x + 20, char.y + 20, E.archetype('passant'));
+            p.etat = 'flane';
+            E.indexer();
+            B.volMinute = null;
+            return { vole: E.majVolDeChar(), vise: p.charVise === char };
+        }
+        const camion = essai(c);
+        const auto = L.Vehicules.creer('auto', c.x, c.y + 40, 0, { etat: 'stationne', couleur: '#888' });
+        const temoin = essai(auto);
+        return { camion: camion, temoin: temoin };
+    }""")
+    assert r["temoin"] == {"vole": 1, "vise": True}, f"le vol de char ne vole rien : le juge ne prouve rien ({r})"
+    assert r["camion"] == {"vole": 0, "vise": False}, r
+
+
 def test_au_klaxon_un_nid_bouche_l_est_pour_de_bon(banc):
     """Au volant du camion, le klaxon : un nid-de-poule pour destination. Arrete dessus : paye, le
     nid quitte la carte et la partie s'en souvient — meme rechargee sur une carte neuve."""
