@@ -1094,6 +1094,7 @@ const Jeu = (function () {
         pas('son', function () { Son.Chef.maj(); Son.Ondes.maj(); Son.Souffle.maj(B.joueur); Son.Quartier.maj(); });
         pas('entites', Entites.maj);
         pas('combat', Combat.maj);
+        pas('dojo', Dojo.maj);            // la lecon du DOJO DION : apres les coups, qu'elle juge
         pas('vehicules', Vehicules.maj);
         pas('coop', majCoop);              // apres les chars : le passager suit sa tole
         pas('traversier', Traversier.maj); // apres les chars : ce qui est a bord suit la coque

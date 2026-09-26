@@ -690,6 +690,9 @@ const Son = (function () {
     pas: function () { if (!joue('pas')) bruit(0.05, 0.12, 900, 300); },
     coup: function () { if (!joue('coup')) { ton(140, 0.08, 'square', 0.3, 0.5); bruit(0.08, 0.3, 800, 200); } },
     touche: function () { if (!joue('touche')) ton(220, 0.12, 'sawtooth', 0.25, 0.4); },
+    // Le metronome du DOJO DION (`dojo.js`) : deux claquements de bois, puis un fort sur le
+    // « et ». ⚠️ Synthetise, pas un echantillon : il doit tomber PILE sur le temps.
+    claquement: function (fort) { ton(fort ? 1320 : 990, 0.035, 'square', fort ? 0.3 : 0.16, 0.6); },
     // Les techniques d'arts martiaux (`techniques.js`) : le pied qui fend l'air, le
     // corps projete qui tombe, l'etranglement.
     pied: function () { if (!joue('pied')) { bruit(0.12, 0.25, 1800, 400); ton(120, 0.06, 'square', 0.2, 0.5, 0.08); } },

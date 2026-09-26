@@ -1991,8 +1991,10 @@ const Hud = (function () {
       { libelle: 'CARTE DE LA VILLE', faire: function () { Jeu.ouvrirCarte(); return true; } },
       { libelle: 'MODE PHOTO', faire: function () { Jeu.ouvrirPhoto(); return true; } },
       { libelle: 'SAUVEGARDER', faire: function () { Missions.sauvegarderPartie(); message('PARTIE SAUVEGARDÉE'); return false; } },
+      // La lecon du DOJO DION en cours : on peut l'arreter d'ici (le cours reste paye).
+      B.cours ? { libelle: 'ABANDONNER LA LEÇON', faire: function () { Dojo.annuler('abandon'); Jeu.reprendre(); return true; } } : null,
       { libelle: 'QUITTER VERS LE TITRE', faire: function () { Jeu.retourTitre(); return true; } },
-    ] });
+    ].filter(Boolean) });
   }
 
   //: Les onglets du classeur, dans l'ordre ou on les tourne. ⚠️ TRICHES n'existe
@@ -3672,6 +3674,7 @@ const Hud = (function () {
       }
       dessinerPiratage(ctx);
       Adresse.dessiner(ctx);
+      Dojo.dessiner(ctx);
       Conduite.dessiner(ctx);
       // Message. ⚠️ Un comptoir ouvert le dessine par-dessus lui, plus bas.
       if (!(B.etat === 'jeu' && B.menu)) dessinerMessage(ctx, 40);

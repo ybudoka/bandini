@@ -28,6 +28,9 @@ const Techniques = (function () {
 
   /** `e` connait-il `slug` ? La rue, tout le monde ; le reste, ce que la partie a appris. */
   function sait(e, slug) {
+    // Pendant une lecon au dojo, la technique enseignee compte comme sue (`dojo.js`) :
+    // on ne peut pas faire un geste qu'on n'a pas encore appris, et c'est le moment de l'apprendre.
+    if (Entites.estJoueur(e) && B.cours && B.cours.slug === slug) return true;
     const t = def(slug);
     if (!t) return false;
     if (t.gratuite) return true;
@@ -150,7 +153,17 @@ const Techniques = (function () {
   function maj(e) {
     const t = def(e.technique);
     if (!t) { finir(e); return; }
-    if (t.temps[e.techEtape].actif && frappeEnArc(t)) Combat.arcDeMelee(e, e.arc);
+    if (t.temps[e.techEtape].actif && frappeEnArc(t)) {
+      // Le crochet `quandPorte` (la lecon du dojo l'ecoute) : chaque cible NOUVELLEMENT touchee.
+      const avant = e.touches.length;
+      Combat.arcDeMelee(e, e.arc);
+      if (api.quandPorte) {
+        for (const id of e.touches.slice(avant)) {
+          const c = B.entites.find(function (q) { return q.id === id; });
+          if (c) api.quandPorte(e, t.slug, c);
+        }
+      }
+    }
     if (--e.techT > 0) return;
     e.techEtape++;
     if (e.techEtape >= t.temps.length) { finir(e); return; }
@@ -260,8 +273,11 @@ const Techniques = (function () {
         if (p.t >= def('etranglement').tenir) {
           j.prise = null; c.tenu = false;
           Entites.blesser(c, def('etranglement').degats, j, { assomme: true, silencieuse: true, sans_sang: true });
-          Police.signalerCrime(c.agent ? 'coup_policier' : 'coup_pieton', c.x, c.y,
-                               !!c.agent || Police.quelqu_un_voit(c.x, c.y, c));
+          if (!c.partenaire) {
+            Police.signalerCrime(c.agent ? 'coup_policier' : 'coup_pieton', c.x, c.y,
+                                 !!c.agent || Police.quelqu_un_voit(c.x, c.y, c));
+          }
+          if (api.quandPorte) api.quandPorte(j, 'etranglement', c);
         }
         return true;
       }
@@ -337,6 +353,8 @@ const Techniques = (function () {
     c.etat = 'flane'; c.technique = null; c.techPose = null; c.phase = null;
     c.vol = { x0: c.x, y0: c.y, x1: fin.x, y1: fin.y, t: 0, duree: 24 + Math.round(t.projete / 3),
               h: 10 + t.projete / 4, tours: t.tours, sens: Math.cos(a) >= 0 ? 1 : -1, auteur: auteur, tech: t.slug };
+    // Une projection PORTE quand elle part (la lecon du dojo compte le geste, pas la chute).
+    if (api.quandPorte) api.quandPorte(auteur, t.slug, c);
   }
 
   /** Une image de chaque vol ; a l'atterrissage, la chute fait mal. */
@@ -351,7 +369,7 @@ const Techniques = (function () {
       const t = def(v.tech);
       Entites.poussiere(c.x, c.y, 6);
       Son.depuis(c, Son.SFX.chute);
-      if (Entites.estJoueur(v.auteur)) {
+      if (Entites.estJoueur(v.auteur) && !c.partenaire) {
         B.cam.secousse = 0.8;
         Police.signalerCrime(c.agent ? 'coup_policier' : 'coup_pieton', c.x, c.y,
                              !!c.agent || Police.quelqu_un_voit(c.x, c.y, c));
@@ -362,7 +380,8 @@ const Techniques = (function () {
       // qui aurait tue assomme), et 12 points n'y menent pas — la victime se
       // relevait en courant. Retombee, elle reste au sol le temps d'un K.-O.
       // Et seulement si la chute a PORTE : `blesser` refuse un intouchable.
-      if (porte && c.vivant && c.etat !== 'assomme' && c.type === 'pieton') Entites.assommer(c);
+      // Kevin, au dojo, se releve de lui-meme (`Entites.blesser`, le partenaire) : jamais assomme.
+      if (porte && c.vivant && c.etat !== 'assomme' && c.type === 'pieton' && !c.partenaire) Entites.assommer(c);
     }
   }
 
@@ -381,12 +400,14 @@ const Techniques = (function () {
       // Les genoux dans la prise : la cible reste tenue, le coup porte sur ELLE.
       const tenait = e.prise;
       Entites.blesser(c, e.arc.degats, e, { assomme: true, angle: angleVers(e.x, e.y, c.x, c.y) });
-      if (Entites.estJoueur(e)) Police.signalerCrime('coup_pieton', c.x, c.y, Police.quelqu_un_voit(c.x, c.y, c));
+      if (Entites.estJoueur(e) && !c.partenaire) Police.signalerCrime('coup_pieton', c.x, c.y, Police.quelqu_un_voit(c.x, c.y, c));
       if (tenait && c.vivant && c.etat !== 'assomme') { c.vx = 0; c.vy = 0; }
     }
   }
 
   const api = { FENETRE, COLLE, SORTIE_ROULADE, PRISE_MAX, def, sait, choisir, frapper, demarrer, maj, majCompteurs,
-                cibleProche, majPrise, projeter, majVols, lacher, chute, surActif: surActif };
+                cibleProche, majPrise, projeter, majVols, lacher, chute, surActif: surActif,
+                // Le crochet de la lecon du dojo : (auteur, slug, cible) quand une technique PORTE.
+                quandPorte: null };
   return api;
 })();

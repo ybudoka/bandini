@@ -373,6 +373,28 @@ const Entites = (function () {
       ⚠️ Le CLIENT est tire dans les passants ordinaires : dans une piece, la
       zone est vide, donc `archetypeDeRue` rend ceux de partout. C'est ce qui
       fait qu'on ne croise pas le meme figurant dans les vingt commerces. */
+  /** KEVIN au DOJO DION : couche, il compte jusqu'a se relever ; debout, il rejoint sa marque
+      (celle de la lecon, `e.marque`, sinon sa place au sac) et il y reste. ⚠️ Ni poursuite ni
+      fuite : un cri dans la rue ou un coup n'en font pas un passant (`alerter` peut le faire
+      `fuit` — il revient a `fige`). */
+  function majKevin(e) {
+    if (e.etat === 'couche_dojo') {
+      e.vx = 0; e.vy = 0;
+      if (--e.minuterie <= 0) { e.etat = 'fige'; e.face = 'bas'; }
+      return;
+    }
+    if (e.etat === 'attaque') return;                    // son coup d'une lecon (la parade)
+    if (e.etat !== 'attaque_joueur') e.etat = 'fige';     // `attaque_joueur` : la menace du balayage
+    const cible = e.marque || e.poste;
+    if (!cible) return;
+    const dx = cible.x - e.x, dy = cible.y - e.y, d = Math.hypot(dx, dy);
+    if (d > 1.5) { e.vx = dx / d * 0.9; e.vy = dy / d * 0.9; regarder(e, dx, dy); }
+    else {
+      e.vx = 0; e.vy = 0; e.x = cible.x; e.y = cible.y;
+      if (e.regard) regarder(e, e.regard.x, e.regard.y);
+    }
+  }
+
   function peuplerInterieur(piece) {
     if (!piece || !piece.gens) return;
     for (const g of piece.gens) {
@@ -388,6 +410,8 @@ const Entites = (function () {
       e.face = 'bas';
       // Le commis ne quitte pas sa caisse, la soignante son triage ; le client, lui, magasine.
       if (g.qui === 'commis' || g.qui === 'soignant') e.poste = { x: e.x, y: e.y };
+      // KEVIN, le partenaire des lecons du DOJO DION (`dojo.js`) : sa place est au sac.
+      if (g.qui === 'eleve') { e.partenaire = true; e.poste = { x: e.x, y: e.y }; }
       // ⚠️ `fige`, la regle du donneur : il TIENT sa place (on le bouscule, il y
       // revient) et il ne se retourne pas — c'est ce qui garde un malade couche
       // et un patient ou un avocat assis. Qu'on le frappe, et il redevient un
@@ -4261,6 +4285,7 @@ const Entites = (function () {
     // Tenu par le joueur (une prise), ou en l'air (une projection) : `techniques.js`
     // le mene, rien d'autre ne bouge.
     if (e.vol || e.tenu) { e.vx = 0; e.vy = 0; return; }
+    if (e.partenaire) { majKevin(e); return; }
     // ⚠️ Lu sous les pieds a chaque image, pour tout le monde : c'est ce qui
     // decide du masque, du dessin, et de la vitesse d'un agent a la nage.
     mouiller(e);
@@ -4783,6 +4808,9 @@ const Entites = (function () {
   function blesser(e, degats, source, options) {
     const opts = options || {};
     if (!e.vivant || e.invincible > 0) return false;
+    // ⚠️ KEVIN, le partenaire du DOJO DION (`dojo.js`), ne fait pas mal : son coup d'une lecon
+    // (la parade) arme, il ne blesse pas.
+    if (source && source.partenaire && e.type === 'joueur') return false;
     // ⚠️ ON NE BLESSE QUE DES GENS. `creer` donne `vivant: true` a TOUT ce qu'il
     // fabrique — c'est le defaut du constructeur — si bien qu'un goeland, un
     // ballon ou une gerbe d'eau se laissaient « blesser » : 99 points de degats
@@ -4822,6 +4850,16 @@ const Entites = (function () {
     // avant de le souffler, l'ejection aussi, et le char qui renverse quelqu'un
     // ne regarde que ceux qui marchent.
     if (e.dansVehicule) return false;
+    // ⚠️ KEVIN encaisse a l'entrainement : ni degat, ni sang, ni cri, ni alerte, ni fuite.
+    // Renverse (ou un coup qui aurait couche n'importe qui), il se couche une seconde et se
+    // releve (`majKevin`).
+    if (e.partenaire) {
+      e.recul = Math.max(e.recul, 8);
+      if (opts.renverse || degats >= e.vie) {
+        e.etat = 'couche_dojo'; e.minuterie = 60; e.face = 'couche'; e.vx = 0; e.vy = 0;
+      }
+      return true;
+    }
     e.vie -= degats;
     e.menace = source || e.menace;
     e.recul = Math.max(e.recul, opts.renverse ? 22 : 8);

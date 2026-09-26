@@ -218,7 +218,8 @@ const Combat = (function () {
         if (e.entree && e.entree.vibrer) e.entree.vibrer(e.fort ? 40 : 18);
         else Entree.vibrer(e.fort ? 40 : 18);
         user(arme);
-        if (c.vivant) {
+        // Kevin, au dojo, est un PARTENAIRE : le frapper n'est pas un crime (`dojo.js`).
+        if (c.vivant && !c.partenaire) {
           if (c.agent) Police.signalerCrime('coup_policier', c.x, c.y, true);
           else Police.signalerCrime('coup_pieton', c.x, c.y, Police.quelqu_un_voit(c.x, c.y, c));
         }
