@@ -865,3 +865,194 @@ def test_le_saut_vers_un_defi_ne_se_lance_pas_pendant_une_scene(banc):
         return { rendu: rendu, menu: L.B.menu && L.B.menu.titre, bouge: j.x !== x || j.y !== y };
     }""")
     assert r["rendu"] is False and r["menu"] == "SAUT VERS UN DÉFI" and r["bouge"] is False
+
+
+# --- CHEZ UN DONNEUR et ENDROITS CLÉS : on y va, et rien ne se lance ---------------------
+# Demande de Martin (27 sept. 2026) : « avec la triche je veux pouvoir me téléporter chez
+# les donneurs et endroits clé ». SAUT VERS UNE MISSION pose chez le donneur mais LANCE la
+# mission ; ces deux pages-ci ne font que porter le joueur.
+
+ALLER = """
+        function page(L, ligne, depuisLaPause) {
+            if (depuisLaPause) { L.B.partie.triches.menu = true; L.Jeu.pause(); L.Hud.ouvrirOnglet('triches'); }
+            else L.Hud.ouvrirMenu(L.Hud.menuDebug());
+            L.B.menu.items.filter(function (i) { return i.libelle === ligne; })[0].faire();
+            return L.B.menu;
+        }
+        function chez(L, slug, depuisLaPause) {
+            const item = page(L, 'CHEZ UN DONNEUR', depuisLaPause).items.filter(function (i) { return i.personnage === slug; })[0];
+            return item.faire(item);
+        }
+        function a(L, slug, depuisLaPause) {
+            const item = page(L, 'ENDROITS CLÉS', depuisLaPause).items.filter(function (i) { return i.endroit === slug; })[0];
+            return item.faire(item);
+        }
+        function pres(L, slug) {
+            const d = L.Histoire.donneur(slug), j = L.B.joueur;
+            return d ? Math.hypot(d.x - j.x, d.y - j.y) : null;
+        }
+        function rendreLaMain(L) {
+            L.B.scene = null; L.B.cinema = null;
+            L.Hud.fermerMenu();
+            if (L.B.etat === 'pause') L.Jeu.reprendre();
+        }
+"""
+
+
+def test_chez_un_donneur_liste_le_catalogue_et_dit_qui_a_une_mission(banc):
+    """Tous les personnages qui ont une adresse, une fois ; MISSION a droite de
+    celui qui en a une a donner, et son titre en bas sous le curseur ; un
+    personnage parti apres sa mission est grise."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const m = L.Hud.menuChezUnDonneur();
+        const k = m.items.findIndex(function (i) { return i.personnage === 'ti_guy'; });
+        m.curseur = k; m.maj(m);
+        const avant = { detail: m.items[k].detail, aide: m.aide };
+        L.B.partie.missionsFaites.m1 = 1;
+        const apres = L.Hud.menuChezUnDonneur().items.filter(function (i) { return i.personnage === 'ti_guy'; })[0];
+        return { personnages: m.items.filter(function (i) { return i.personnage; }).map(function (i) { return i.personnage; }),
+                 dernier: m.items[m.items.length - 1].libelle, avant: avant,
+                 apres: { detail: apres.detail, actif: apres.actif },
+                 m1: L.B.defs.missions.filter(function (x) { return x.slug === 'm1'; })[0].titre.toUpperCase() };
+    }""")
+    attendus = [p["slug"] for p in missions.PERSONNAGES if p["ou"]]
+    assert r["personnages"] == attendus, "chaque personnage qui a une adresse, dans l'ordre du catalogue"
+    assert "narrateur" not in r["personnages"], "le Clairon n'a pas d'adresse"
+    assert r["dernier"] == "RETOUR"
+    assert r["avant"] == {"detail": "MISSION", "aide": r["m1"]}
+    assert r["apres"] == {"detail": "PARTI", "actif": False}
+
+
+def test_chaque_donneur_se_rejoint_sans_lancer_de_mission(banc):
+    """Pour chaque personnage : pose a cote de lui (dans sa piece s'il s'y tient),
+    le menu et la pause refermes — et AUCUNE mission ne part."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        """ + ALLER + """
+        const sorties = [];
+        L.B.defs.personnages.filter(function (p) { return !!p.ou; }).forEach(function (p) {
+            rendreLaMain(L);
+            const rendu = chez(L, p.slug, sorties.length % 2 === 1);
+            sorties.push({ slug: p.slug, ou: p.ou, rendu: rendu, distance: pres(L, p.slug), tx: L.TT,
+                           mission: L.B.partie.mission && L.B.partie.mission.slug, menu: !!L.B.menu, etat: L.B.etat,
+                           interieur: L.B.interieur ? L.B.interieur.slug : null,
+                           present: L.Histoire.present(p.slug) });
+        });
+        return sorties;
+    }""")
+    assert len(r) >= 20
+    for p in r:
+        assert p["rendu"] is True, p
+        assert p["mission"] is None, p
+        assert p["menu"] is False and p["etat"] == "jeu", p
+        assert p["distance"] is not None and 0.75 * p["tx"] <= p["distance"] <= 2.5 * p["tx"], p
+        assert p["present"] is True, p
+        assert (p["interieur"] is not None) == p["ou"].startswith("point:"), p
+
+
+def test_endroits_cles_ranges_comme_la_legende(banc):
+    """Les points de la carte, une fois chacun, sous les titres de la LEGENDE
+    dans son ordre ; l'aerogare, cachee tant que le pont n'est pas fini, grisee."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const m = L.Hud.menuEndroitsCles();
+        const fam = L.B.defs.carte.familles;
+        const ordre = Object.keys(fam).sort(function (x, y) { return fam[x].rang - fam[y].rang; })
+            .map(function (k) { return fam[k].libelle; });
+        const aero = m.items.filter(function (i) { return i.endroit === 'aeroport'; })[0];
+        return { endroits: m.items.filter(function (i) { return i.endroit; }).map(function (i) { return i.endroit; }),
+                 entetes: m.items.filter(function (i) { return i.entete; }).map(function (i) { return i.entete; }),
+                 ordre: ordre, points: L.Monde.carte.points.map(function (p) { return p.slug; }),
+                 aero: aero && { detail: aero.detail, actif: aero.actif },
+                 aeroCache: L.Monde.masquee(L.Monde.carte.points.filter(function (p) { return p.slug === 'aeroport'; })[0].x,
+                                            L.Monde.carte.points.filter(function (p) { return p.slug === 'aeroport'; })[0].y) };
+    }""")
+    assert sorted(r["endroits"]) == sorted(r["points"]), "chaque point de la carte, une fois"
+    assert len(r["endroits"]) >= 20
+    assert r["entetes"] == [e for e in r["ordre"] if e in r["entetes"]], "l'ordre de la legende"
+    assert r["entetes"][0] == "TES PLACES"
+    assert r["aeroCache"] is True, "temoin : l'aerogare est cachee en debut de partie"
+    assert r["aero"] == {"detail": "CACHÉ", "actif": False}
+
+
+def test_chaque_endroit_cle_se_rejoint_et_sa_porte_s_ouvre(banc):
+    """Pour chaque endroit qu'on voit : pose a pied devant sa porte, dehors, le
+    menu referme — et ACTION ouvre SA porte (on entre dans ce lieu-la)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        """ + ALLER + """
+        const sorties = [];
+        const ville = L.Monde.carte;
+        ville.points.filter(function (p) { return !L.Monde.masquee(p.x, p.y, ville); }).forEach(function (p) {
+            rendreLaMain(L);
+            L.Jeu.revenirEnVille();
+            const rendu = a(L, p.slug, sorties.length % 2 === 1);
+            const j = L.B.joueur;
+            const s = { slug: p.slug, rendu: rendu, menu: !!L.B.menu, etat: L.B.etat, dehors: !L.B.interieur,
+                        tuiles: Math.hypot(j.x - (p.x * L.TT + 8), j.y - (p.y * L.TT + 8)) / L.TT,
+                        sol: !L.Monde.bloque(Math.floor(j.x / L.TT), Math.floor(j.y / L.TT), L.Monde.MASQUE_PIETON) };
+            o.tape('KeyE', 2);
+            L.Jeu.finirTransition();
+            s.entre = L.B.interieur ? L.B.interieur.slug : null;
+            sorties.push(s);
+        });
+        const lieux = {};
+        (ville.def.portes || []).forEach(function (q) { if (q.lieu && q.interieur) lieux[q.lieu] = q.interieur; });
+        return { sorties: sorties, lieux: lieux };
+    }""")
+    assert len(r["sorties"]) >= 20
+    for s in r["sorties"]:
+        assert s["rendu"] is True, s
+        assert s["menu"] is False and s["etat"] == "jeu", s
+        assert s["dehors"] is True and s["sol"] is True, s
+        assert s["tuiles"] <= 1.5, s
+        if s["slug"] in r["lieux"]:
+            assert s["entre"] == r["lieux"][s["slug"]], s
+
+
+def test_les_sauts_sortent_du_char_et_de_la_piece(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        """ + ALLER + """
+        rendreLaMain(L);
+        const j = L.B.joueur;
+        const v = o.char('auto', 0, 0, 0);
+        L.Vehicules.monter(j, v);
+        L.Entites.indexer();
+        a(L, 'phare');
+        const char = { auVolant: !!j.dansVehicule, conducteur: v.conducteur };
+        rendreLaMain(L);
+        chez(L, 'bouchard');                     // dans le casse-croute, a cote du sergent
+        const dedans = L.B.interieur && L.B.interieur.slug;
+        rendreLaMain(L);
+        a(L, 'garage');
+        const g = L.Monde.carte.points.filter(function (p) { return p.slug === 'garage'; })[0];
+        const garage = { dedans: !!L.B.interieur, tuiles: g ? Math.hypot(j.x - (g.x * L.TT + 8), j.y - (g.y * L.TT + 8)) / L.TT : null };
+        rendreLaMain(L);
+        L.Vehicules.monter(j, v);
+        chez(L, 'gus');
+        return { char: char, dedans: dedans, garage: garage, apres: !!L.B.interieur, auVolant: !!j.dansVehicule,
+                 gus: pres(L, 'gus'), tx: L.TT, mission: L.B.partie.mission };
+    }""")
+    assert r["char"] == {"auVolant": False, "conducteur": None}
+    assert r["dedans"], "temoin : chez le sergent, on est dans sa piece"
+    assert r["garage"]["dedans"] is False, "de la piece du sergent, on ressort"
+    assert r["garage"]["tuiles"] is not None and r["garage"]["tuiles"] <= 1.5, r["garage"]
+    assert r["apres"] is False and r["auVolant"] is False
+    assert r["gus"] is not None and r["gus"] <= 2.5 * r["tx"]
+    assert r["mission"] is None
+
+
+def test_les_sauts_ne_se_font_pas_pendant_une_scene(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        """ + ALLER + """
+        L.B.scene = { bidon: true };
+        const j = L.B.joueur, x = j.x, y = j.y;
+        const r1 = chez(L, 'marco');
+        const m1 = L.B.menu && L.B.menu.titre;
+        const r2 = a(L, 'garage');
+        return { r1: r1, m1: m1, r2: r2, m2: L.B.menu && L.B.menu.titre, bouge: j.x !== x || j.y !== y };
+    }""")
+    assert r == {"r1": False, "m1": "CHEZ UN DONNEUR", "r2": False, "m2": "ENDROITS CLÉS", "bouge": False}

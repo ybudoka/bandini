@@ -2289,6 +2289,124 @@ const Hud = (function () {
     return { titre: 'SAUT VERS UN DÉFI', largeur: 320, items: items, retour: function () { ouvrirMenu(menuDebug()); } };
   }
 
+  /** Va VOIR un personnage, sans rien lancer : on se pose a cote de lui
+      (`allerChezLeDonneur`, dans sa piece s'il s'y tient) et on lui parle comme
+      d'habitude. C'est ce qui separe cette ligne de SAUT VERS UNE MISSION.
+      Rend `false` (le menu reste ouvert) quand on ne peut pas. */
+  function allerVoir(p) {
+    if (!B.joueur || B.cinema || B.scene) { message('UNE SCÈNE JOUE'); return false; }
+    if (!allerChezLeDonneur(p.slug)) { message('INTROUVABLE'); return false; }
+    if (B.etat === 'pause') Jeu.reprendre();
+    fermerMenu();
+    message(p.nom.toUpperCase());
+    return true;
+  }
+
+  /** CHEZ UN DONNEUR : tous les personnages qui ont une adresse (`ou`) — c'est le
+      CATALOGUE qui fait la liste, un personnage ajoute y tombe sans qu'on y touche.
+      MISSION a droite : il en a une a donner ; son titre se lit en bas, sous le
+      curseur (il ne tiendrait pas a cote du nom).
+      ⚠️ Un personnage PARTI apres sa mission (`parti_apres` : Ti-Guy au garage,
+      Berube) est grise : aller le voir le reposerait en ville pour de bon. Le
+      saut de mission, lui, le repose expres — sa mission se refait. */
+  function menuChezUnDonneur() {
+    const p = B.partie;
+    const items = (B.defs.personnages || []).filter(function (q) { return !!q.ou; }).map(function (q) {
+      const parti = !!(q.parti_apres && p.missionsFaites[q.parti_apres]);
+      const m = !parti && Histoire.disponibleDe(q.slug);
+      return { libelle: q.nom.toUpperCase(), detail: parti ? 'PARTI' : (m ? 'MISSION' : ''), actif: !parti,
+               personnage: q.slug, mission: m ? m.titre.toUpperCase() : null,
+               faire: function () { return allerVoir(q); } };
+    });
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuDebug()); return false; } });
+    const menu = { titre: 'CHEZ UN DONNEUR', largeur: 340, hauteur: VH - 30, items: items,
+                   retour: function () { ouvrirMenu(menuDebug()); } };
+    menu.maj = function (m) {
+      const survole = m.items[m.curseur];
+      m.aide = survole && survole.mission ? survole.mission : '';
+    };
+    return menu;
+  }
+
+  /** La carte de la VILLE, d'ou qu'on soit. ⚠️ Dans une piece ou un bloc de carte,
+      `Monde.carte` est la piece ou le bloc (et une piece a ses propres `points`) :
+      la ville est la rue mise de cote (`B.exterieur`) ou celle que le bloc a
+      quittee (`B.bloc.ville`). */
+  function carteDeLaVille() {
+    if (B.bloc) return B.bloc.ville.carte;
+    if (B.interieur && B.exterieur) return B.exterieur.carte;
+    return Monde.carte;
+  }
+
+  /** Ou se poser a un endroit cle : son point est la tuile SOUS sa porte
+      (`carte.py`), on s'y met si elle est libre, sinon au plus pres, hors
+      meuble, hors decor, sans personne dessus. Ou null.
+      ⚠️ Le trottoir d'abord, la chaussee a defaut : la porte de la fourriere
+      donne droit sur l'asphalte de sa cour, sans une tuile de trottoir a trois
+      tuiles a la ronde — et le joueur, lui, marche sur la chaussee. */
+  function placeALEndroit(point) {
+    const surLeTrottoir = Monde.marchablePieton;
+    const aPied = function (tx, ty) { return !Monde.bloque(tx, ty, Monde.MASQUE_PIETON); };
+    for (const sol of [surLeTrottoir, aPied]) {
+      for (let r = 0; r <= 3; r++) {
+        for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          const tx = point.x + dx, ty = point.y + dy, x = tx * TT + 8, y = ty * TT + 8;
+          if (!sol(tx, ty) || Monde.estMeuble(tx, ty) || dansUnDecor(x, y)) continue;
+          if (Entites.pietonsAutour(x, y, 10).length) continue;
+          return { x: x, y: y };
+        }
+      }
+    }
+    return null;
+  }
+
+  /** Va a un endroit cle : on sort du char et de la piece (ou du bloc) SANS
+      fondu, comme les autres sauts, et on se pose devant sa porte, tourne vers
+      elle. Rend `false` (le menu reste ouvert) quand on ne peut pas. */
+  function allerALEndroit(point) {
+    const j = B.joueur;
+    if (!j || B.cinema || B.scene) { message('UNE SCÈNE JOUE'); return false; }
+    Jeu.finirTransition();
+    if (j.dansVehicule) Vehicules.descendre(j, true);
+    const ext = Jeu.revenirEnVille();
+    if (ext) { j.x = ext.x; j.y = ext.y; }
+    Entites.indexer();
+    const place = placeALEndroit(point);
+    if (!place) { message('INTROUVABLE'); return false; }
+    j.x = place.x; j.y = place.y; j.vx = 0; j.vy = 0;
+    Entites.regarder(j, point.x * TT + 8 - j.x, (point.y - 1) * TT + 8 - j.y);
+    Entites.indexer();
+    Monde.centrerCamera(j.x, j.y);
+    if (B.etat === 'pause') Jeu.reprendre();
+    fermerMenu();
+    message(point.nom.toUpperCase());
+    return true;
+  }
+
+  /** ENDROITS CLÉS : les points de la carte — les blips de la mini-carte —,
+      rangés par famille dans l'ordre de la LEGENDE (`carte.familles`). Un point
+      ajoute a la ville tombe ici sans qu'on y touche. Un lieu que la carte cache
+      encore (l'aerogare, avant le pont) est grise : il n'y a que de l'eau a voir. */
+  function menuEndroitsCles() {
+    const carte = carteDeLaVille(), points = carte.points || [];
+    const familles = famillesDeLieu();
+    const items = [];
+    for (const nom of parRang(familles)) {
+      const siens = points.filter(function (q) { return q.famille === nom; });
+      if (!siens.length) continue;
+      items.push(entete(familles[nom].libelle));
+      for (const q of siens) {
+        const cache = Monde.masquee(q.x, q.y, carte);
+        items.push({ libelle: q.nom.toUpperCase(), detail: cache ? 'CACHÉ' : '', actif: !cache, endroit: q.slug,
+                     faire: function () { return allerALEndroit(q); } });
+      }
+    }
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuDebug()); return false; } });
+    return { titre: 'ENDROITS CLÉS', largeur: 320, hauteur: VH - 30, items: items,
+             retour: function () { ouvrirMenu(menuDebug()); } };
+  }
+
   /** JUKEBOX : toutes les musiques de `B.defs.audio.musiques`, jouables a la
       demande. Le morceau choisit joue TANT QU'ON n'arrete pas (`Son.Chef` le
       respecte des qu'il lit `B.jukebox`) ; la note en bas le rappelle. */
@@ -2372,6 +2490,8 @@ const Hud = (function () {
       { libelle: 'TÉLÉPORTER À L\'OBJECTIF', actif: !!Histoire.cible(), faire: function () { teleporterVersObjectif(); return true; } },
       { libelle: 'SAUT VERS UNE MISSION', faire: function () { ouvrirMenu(menuSautMissions()); return false; } },
       { libelle: 'SAUT VERS UN DÉFI', faire: function () { ouvrirMenu(menuSautDefis()); return false; } },
+      { libelle: 'CHEZ UN DONNEUR', faire: function () { ouvrirMenu(menuChezUnDonneur()); return false; } },
+      { libelle: 'ENDROITS CLÉS', faire: function () { ouvrirMenu(menuEndroitsCles()); return false; } },
       entete('LA MISSION'),
       { libelle: 'OBJECTIF SUIVANT', actif: !!m, faire: function () { Histoire.avancer(); return true; } },
       { libelle: 'TERMINER LA MISSION', actif: !!m, faire: function () { Histoire.reussir(); return true; } },
@@ -3736,7 +3856,7 @@ const Hud = (function () {
     }
   }
 
-  return { init, voile, etat, progression, partDesScripts, finirChargement, message, prime, majPrime, montantDeLaPrime, PRIME, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, toutesLesTechniques, glyphesDOnglets, menuSautMissions, menuSautDefis, menuJukebox, pointDuDefi, menuCarnet,
+  return { init, voile, etat, progression, partDesScripts, finirChargement, message, prime, majPrime, montantDeLaPrime, PRIME, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, toutesLesTechniques, glyphesDOnglets, menuSautMissions, menuSautDefis, menuChezUnDonneur, menuEndroitsCles, menuJukebox, pointDuDefi, menuCarnet,
     ouvrirOnglet, toucherMenu, onglets: function () { return ongletsVisibles().map(function (o) { return o.slug; }); },
     ciblesDuMenu: function () { return cibles.slice(); }, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     menuCommandes, ouvrirCommandes, majAideDuTitre, lignesDAide, glypheDAction,

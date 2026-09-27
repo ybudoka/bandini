@@ -287,3 +287,4 @@ Deux documents d'avant la table :
 | Le sapin de la place se tient debout | ✅ **livré** | 26 sept. 2026 | **P2** | **correctif** | [fiche](le-sapin-de-la-place-se-tient-debout.md#fiche) · [notes](le-sapin-de-la-place-se-tient-debout.md#notes) |
 | Les chantiers restent en ville | ✅ **livré** | 27 sept. 2026 | **P2** | **correctif** | [fiche](les-chantiers-restent-en-ville.md#fiche) · [notes](les-chantiers-restent-en-ville.md#notes) |
 | Les Galeries et le ciné-parc s'ouvrent sur un chemin | ✅ **livré** | 27 sept. 2026 | **P3** | **correctif** | [fiche](les-galeries-et-le-cine-parc-s-ouvrent-sur-un-chemin.md#fiche) · [notes](les-galeries-et-le-cine-parc-s-ouvrent-sur-un-chemin.md#notes) |
+| Triches : se téléporter chez un donneur et aux endroits clés | ✅ **livré** | 27 sept. 2026 | **P4** | ajout | [fiche](triches-se-teleporter-chez-un-donneur-et-aux-endroits-cles.md#fiche) · [notes](triches-se-teleporter-chez-un-donneur-et-aux-endroits-cles.md#notes) |
