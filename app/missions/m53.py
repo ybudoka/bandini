@@ -19,7 +19,11 @@ MISSION = {
         {"type": "monter", "texte": "PRENDS LE CHALUTIER, AU QUAI DE SVEN",
          "vehicule": "chalutier", "ou": "mouillage:chalutier:0", "prete": "sven"},
 
-        {"type": "livrer", "texte": "MÈNE-LE À L'AUTRE QUAI, SANS ATTIRER L'ŒIL",
+        # ⚠️ **Le titre, c'est ça** : l'autre quai n'est qu'à une dizaine de tuiles (les deux
+        # chalutiers se rangent autour du cargo, `navires.amarrer`) — on n'y va pas en bateau pour
+        # la distance, mais parce qu'un chalutier au nom de Josée s'amarre à SON relais sans que
+        # personne regarde. Naviguer sous pavillon.
+        {"type": "livrer", "texte": "AMARRE-LE AU RELAIS — SOUS SON NOM, PERSONNE NE REGARDE",
          "lieu": "mouillage:chalutier:1", "rayon": 5, "sans_etoile": True},
 
         {"type": "pirater", "texte": "PIRATE LE RELAIS — SUIS LA SÉQUENCE",
@@ -33,7 +37,7 @@ MISSION = {
         {"type": "tuer", "texte": "DEUX MORUES ACCOURENT — LE RELAIS A CRIÉ",
          "groupe": "morues", "n": 2, "ou": "donneur", "loin": 12},
 
-        {"type": "pirater", "texte": "LE RELAIS PARLAIT AU CLOCHER DE L'ÎLE — PIRATE-LE AUSSI",
+        {"type": "pirater", "texte": "EN CHALUTIER JUSQU'AU CLOCHER DE L'ÎLE — PIRATE SON RELAIS",
          "ou": "chapelle", "rayon": 4, "longueur": 4, "essais": 3},
 
         {"type": "livrer", "texte": "RAMÈNE LE CHALUTIER, SANS UNE ÉGRATIGNURE",
@@ -55,8 +59,8 @@ MISSION = {
                jeu="[Norwegian accent][matter-of-fact] L'autre quai porte… un relais. [coldly] Il écoute la baie… pour le compte de Josée."),
             _l("sven", "Fais-le taire. Une bonne pêche ne pose jamais de questions.",
                jeu="[Norwegian accent][firmly] Fais-le taire. [wryly] Une bonne pêche… ne pose jamais de questions."),
-            _l("sven", "Le chalutier s'appelle la Belle-Josée. Je n'ai pas encore eu le temps de le rebaptiser.",
-               jeu="[Norwegian accent][coldly] Le chalutier s'appelle… la Belle-Josée. [wryly] Je n'ai pas encore eu le temps… de le rebaptiser.")
+            _l("sven", "Le chalutier s'appelle la Belle-Josée. Sous ce nom-là, personne ne le regarde.",
+               jeu="[Norwegian accent][coldly] Le chalutier s'appelle… la Belle-Josée. [wryly] Sous ce nom-là… personne ne le regarde.")
         ],
         "pendant": [
             _p("sven", "Doucement. Un chalutier pressé, ça se remarque.", 1,
@@ -65,8 +69,8 @@ MISSION = {
                jeu="[Norwegian accent][calm] Le boîtier est… sur le quai. [matter-of-fact] Reproduis ce qu'il montre… rien de plus."),
             _p("sven", "Le relais a crié avant de se taire. Deux hommes viennent voir pourquoi.", 3,
                jeu="[Norwegian accent][gravely] Le relais a crié… avant de se taire. [coldly] Deux hommes viennent voir… pourquoi."),
-            _p("sven", "Un relais ne parle jamais seul. Au clocher de l'île, quelqu'un l'écoutait encore.", 4,
-               jeu="[Norwegian accent][knowingly] Un relais ne parle jamais… seul. [quietly] Au clocher de l'île… quelqu'un l'écoutait encore.")
+            _p("sven", "La lunette du clocher n'était pas seule. Un relais y écoute encore.", 4,
+               jeu="[Norwegian accent][knowingly] La lunette du clocher… n'était pas seule. [quietly] Un relais y écoute… encore.")
         ],
         "fin": [
             _l("sven", "Le relais est muet. Josée regarde une baie qui ne lui dit plus rien.",
@@ -77,8 +81,8 @@ MISSION = {
                jeu="[Norwegian accent][satisfied] Et la Belle-Josée est rentrée… au quai. [wryly] Elle, au moins… m'obéit.")
         ],
         "echec": [
-            _l("sven", "Le relais parle encore. Recommence, avant que Josée n'écoute trop bien.",
-               jeu="[Norwegian accent][coldly] Le relais parle… encore. [firmly] Recommence… avant que Josée n'écoute trop bien.")
+            _l("sven", "Josée écoute encore la baie. Recommence, avant qu'elle écoute trop bien.",
+               jeu="[Norwegian accent][coldly] Josée écoute encore… la baie. [firmly] Recommence… avant qu'elle écoute trop bien.")
         ]
     }
 
