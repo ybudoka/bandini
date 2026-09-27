@@ -11,6 +11,10 @@ import pytest
 
 from app import carte, economie, magasins, missions
 
+#: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : ces juges jugent la construction de la ville — ils la comparent à
+#: elle-même sans un module, ou lisent ses quartiers par un `_Chantier` neuf, dans SON repère. La carte du jeu
+#: a descendu de 110 rangées sous la bande nord (`app/nord.py`) : on la génère sans elle, `nord=False`.
+
 
 def taxi_par_seconde() -> float:
     taxi = economie.BOULOTS["taxi"]
@@ -66,7 +70,7 @@ def test_export_de_la_contrebande():
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.generer()
+    return carte.generer(nord=False)
 
 
 def test_la_cale_est_posee_sur_les_planches_des_quais(ville):

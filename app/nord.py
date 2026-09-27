@@ -56,43 +56,68 @@ def district(slug: str) -> dict:
 
 # --- Les trois bâtisseurs --------------------------------------------------------------------
 
-#: Le poste d'aiguillage : des leviers (`m`), le classeur des horaires, la chaise et le poêle.
-PIECE_AIGUILLAGE = carte._piece("nord_aiguillage", "Le poste d'aiguillage", porte="commerce", plan="""
-BBBWWWWBB
-Bmmm   kB
-B       B
-B h   z B
-BBBBDBBBB
-""")
+#: Le poste d'aiguillage : des leviers (`m`), le classeur des horaires qu'on fouille, la chaise et le poêle.
+#: ⚠️ À LA MESURE DE SON BÂTIMENT (cinq sur quatre dedans, comme dehors) : `test_carte` le tient pour toute
+#: la ville. Une porte de MAISON : personne au comptoir, il n'y en a pas.
+PIECE_AIGUILLAGE = carte._piece("nord_aiguillage", "Le poste d'aiguillage", porte="maison", plan="""
+BBWWWBB
+Bmm  kB
+B     B
+Bh   zB
+B     B
+BBBDBBB
+""", points=(carte._pt("fouiller", 4, 1),))
 POSTE = {"slug": "nord_aiguillage", "nom": "Le poste d'aiguillage", "interieur": "nord_aiguillage",
          "famille": "repere", "genre": "industriel"}
 
-#: Ce qu'on a laissé rouiller dans les Friches, en plus des déchets d'un terrain vague.
-EPAVES = ("carcasse", "carcasse", "cabanon", "pneu", "baril", "caddie")
+#: Ce qu'on a laissé rouiller dans les Friches, et ce qui y a poussé tout seul.
+EPAVES = ("carcasse", "carcasse", "cabanon", "pneu", "baril", "caddie", "arbre", "arbre", "buisson", "buisson")
+
+
+def _terrain_vague(ch, x, y, largeur, hauteur):
+    """Un terrain vague de la bande : terre sèche, les déchets de la ville (`carte.DECHETS`), et un grillage en
+    U — ouvert au nord, une trouée de deux tuiles au MILIEU du côté sud. ⚠️ Pas `_Chantier._terrain_vague` :
+    sa trouée peut tomber contre un coin (le côté ouest reste alors une barre qui ne tourne jamais,
+    `test_carte`), et le corriger là changerait les tirages de toute la ville d'avant."""
+    ch.rect(x, y, largeur, hauteur, ";")
+    for j in range(1, hauteur):
+        ch.sol[y + j][x] = carte.GRILLAGE
+        ch.sol[y + j][x + largeur - 1] = carte.GRILLAGE
+    milieu = x + largeur // 2
+    for i in range(largeur):
+        if not milieu - 1 <= x + i <= milieu:
+            ch.sol[y + hauteur - 1][x + i] = carte.GRILLAGE
+    for _ in range(max(2, largeur * hauteur // 10)):
+        ch.poser_decor(ch.des.choix(carte.DECHETS), x + ch.des.entier(1, largeur - 2),
+                       y + ch.des.entier(0, hauteur - 2))
 
 
 def _friche(ch, x, y, largeur, hauteur):
-    """Des herbes hautes, un sentier de terre battue en croix, et dans chaque quart un terrain vague de la
-    ville (`_terrain_vague` : terre sèche, clôture percée, déchets) ; entre eux, des épaves. Les dés sont ceux
-    de la BANDE (`GRAINE_NORD`) : la ville d'avant n'en perd pas un."""
+    """Des herbes hautes, un sentier de gravier en croix, et dans chaque quart UN terrain vague (terre sèche,
+    grillage en U, déchets), de taille modeste ; autour, des épaves, des
+    arbres et des buissons. Les dés sont ceux de la BANDE (`GRAINE_NORD`) : la ville d'avant n'en perd pas un.
+    ⚠️ Un usage INDUSTRIEL (`carte.USAGE_DU_PLAN["z"]`), pas un parc : ce n'est pas un parc de quartier
+    (ni allées continues, ni obligation d'arbres), et de la terre sèche dans un parc est un défaut jugé."""
     ch.rect(x, y, largeur, hauteur, ",")
     mx, my = x + largeur // 2, y + hauteur // 2
-    ch.rect(x, my - 1, largeur, 2, ";")                  # le sentier est-ouest
-    ch.rect(mx - 1, y, 2, hauteur, ";")                  # et le nord-sud
-    for qx, ql in ((x + 2, mx - x - 5), (mx + 3, x + largeur - mx - 5)):
-        for qy, qh in ((y + 2, my - y - 5), (my + 3, y + hauteur - my - 5)):
-            if ql > 6 and qh > 6:
-                ch._terrain_vague(qx, qy, ql, qh)
-    for _ in range(max(6, largeur * hauteur // 120)):
+    ch.rect(x, my, largeur, 1, "g")                      # le sentier est-ouest
+    ch.rect(mx, y, 1, hauteur, "g")                      # et le nord-sud
+    for qx0, qx1 in ((x + 2, mx - 2), (mx + 3, x + largeur - 2)):
+        for qy0, qy1 in ((y + 2, my - 2), (my + 3, y + hauteur - 2)):
+            ql, qh = min(14, qx1 - qx0), min(8, qy1 - qy0)
+            if ql > 6 and qh > 5:
+                _terrain_vague(ch, qx0 + (qx1 - qx0 - ql) // 2, qy0 + (qy1 - qy0 - qh) // 2, ql, qh)
+    for _ in range(max(10, largeur * hauteur // 90)):
         quoi = ch.des.choix(EPAVES)
         ch.poser_decor(quoi, x + ch.des.entier(1, largeur - 2), y + ch.des.entier(1, hauteur - 2))
 
 
 def _terrain_a_batir(ch, x, y, largeur, hauteur):
-    """Une palissade tout autour, ouverte au sud ; du gravier dedans ; la pancarte « À BÂTIR » devant
-    l'entrée. ⚠️ En attendant le Petit-Canton (étape 2), qui y posera ses bâtiments sans toucher ses rues."""
+    """Un grillage de chantier tout autour, ouvert au sud ; du gravier dedans ; la pancarte « À BÂTIR » devant
+    l'entrée. ⚠️ En attendant le Petit-Canton (étape 2), qui y posera ses bâtiments sans toucher ses rues.
+    ⚠️ Du GRILLAGE, pas de la palissade de bois : le bois est l'image de la banlieue (`test_carte`)."""
     ch.rect(x, y, largeur, hauteur, "g")
-    ch.clore(x, y, largeur, hauteur, carte.BOIS, cote_ouvert="S", ouverture=2)
+    ch.clore(x, y, largeur, hauteur, carte.GRILLAGE, cote_ouvert="S", ouverture=2)
     ch.poser_decor("pancarte_a_batir", x + largeur // 2 + 1, y + hauteur)
 
 
@@ -106,7 +131,7 @@ def _voies_ferrees(ch, x, y, largeur, hauteur):
             ch.rect(x + i, y + j, 6, 1, "B")
     px, py = x + 2, y + hauteur - 6
     ch.rect(px - 1, py - 1, 7, 7, ",")                   # le poste a son terrain
-    ch.rect(px, py, 5, 3, "O")
+    ch.rect(px, py, 5, 3, "O")                           # 5 × 4 avec sa façade : sa pièce en a autant
     facades = [(px + i, py + 3) for i in range(5)]
     for fx, fy in facades:
         ch.sol[fy][fx] = "F"
@@ -126,9 +151,10 @@ def _hangars(ch, x, y, largeur, hauteur):
     ch.rect(hx, hy + hh - 1, hl, 1, "F")
     for i in range(3, hl - 2, 7):
         ch.sol[hy + hh - 1][hx + i] = "d"
-    for _ in range(max(3, largeur // 6)):
-        ch.poser_decor(ch.des.choix(("palettes", "baril", "caisse")), x + ch.des.entier(1, largeur - 2),
-                       hy + hh + ch.des.entier(0, 2))
+    # ⚠️ RIEN DEVANT LES PORTES, même condamnées (`test_devants`, `test_carte`) : les palettes et les
+    # barils vont sur les côtés du hangar, jamais au pied de sa façade.
+    for dx in (0, 1, largeur - 2, largeur - 1):
+        ch.poser_decor(ch.des.choix(("palettes", "baril", "caisse")), x + dx, hy + ch.des.entier(0, hh - 2))
 
 
 class _ChantierNord(carte._Chantier):
@@ -373,7 +399,9 @@ def poser(ville: dict) -> None:
                 and any(inter["x"] <= x < inter["x"] + inter["l"] for x in couture)):
             inter["bras"] = "".join(c for c in "NSOE" if c in inter["bras"] or c == "N")
     def haut(o):
-        return o["y"] < n
+        # ⚠️ Pas de borne-fontaine au pied de la couture : ses croisements ont maintenant quatre bras, et
+        # leurs coins sont aux feux (`Moteur`, `test_moteur_js`).
+        return o["y"] < n and not (o.get("type") == "borne_fontaine" and o["y"] >= n - 2)
     for cle, source in (("portes", ch.portes), ("decor", ch.decor), ("lampes", ch.lampes),
                         ("residences", ch.residences), ("devantures", ch.devantures), ("toits", ch.toits),
                         ("points_interet", ch.points), ("intersections", ch.intersections),
@@ -392,3 +420,36 @@ def poser(ville: dict) -> None:
                             "rues_v": list(carte.RUES_V), "rues_h": list(RUES_H_NORD),
                             "trottoir": carte.TROTTOIR, "standing": list(ch.standing),
                             "usage": list(ch.usage), "y0": 0}
+
+
+# --- Lire la carte FINIE ------------------------------------------------------------------------------
+
+class _Lecteur:
+    """Le quartier, le standing et l'usage d'une tuile de la carte FINIE : la bande nord au-dessus de
+    `DECALAGE_NORD`, la ville d'avant en dessous, chacune dans sa trame — le miroir Python de
+    `Monde.lettreDuBloc`. ⚠️ Un `_Chantier` neuf, lui, ne connaît que la ville d'avant, dans son repère."""
+
+    def __init__(self) -> None:
+        self._ville = None
+
+    def _qui(self, y: int):
+        if y < DECALAGE_NORD:
+            return _bande(), y
+        if self._ville is None:
+            self._ville = carte._Chantier(carte.PLAN, carte.GRAINE)
+        return self._ville, y - DECALAGE_NORD
+
+    def standing_en(self, x: int, y: int):
+        ch, y = self._qui(y)
+        return ch.standing_en(x, y)
+
+    def usage_en(self, x: int, y: int):
+        ch, y = self._qui(y)
+        return ch.usage_en(x, y)
+
+    def district_en(self, x: int, y: int) -> str:
+        ch, y = self._qui(y)
+        return ch.district_en(x, y)
+
+
+LECTEUR = _Lecteur()

@@ -12,13 +12,17 @@ import pytest
 
 from app import audio, carte, devantures, economie, magasins, pietons
 
+#: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : ces juges jugent la construction de la ville — ils la comparent à
+#: elle-même sans un module, ou lisent ses quartiers par un `_Chantier` neuf, dans SON repère. La carte du jeu
+#: a descendu de 110 rangées sous la bande nord (`app/nord.py`) : on la génère sans elle, `nord=False`.
+
 #: Au dollar, rien ne bat le hot-dog (`economie.py` le dit en toutes lettres).
 PAR_DOLLAR_MAX = (economie.TARIFS["hotdog_pv"] + economie.TARIFS["hotdog_souffle"]) / economie.TARIFS["hotdog"]
 
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.generer()
+    return carte.generer(nord=False)
 
 
 # --- Les fruits de mer ---------------------------------------------------------

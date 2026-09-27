@@ -18,10 +18,14 @@ import pytest
 
 from app import aeroport, carte, economie, missions, recherche
 
+#: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : ces juges jugent la construction de la ville — ils la comparent à
+#: elle-même sans un module, ou lisent ses quartiers par un `_Chantier` neuf, dans SON repère. La carte du jeu
+#: a descendu de 110 rangées sous la bande nord (`app/nord.py`) : on la génère sans elle, `nord=False`.
+
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.generer()
+    return carte.generer(nord=False)
 
 
 @pytest.fixture(scope="module")
@@ -30,7 +34,7 @@ def sans(ville):
     pose = aeroport.poser
     aeroport.poser = lambda chantier, v: None
     try:
-        return carte.generer()
+        return carte.generer(nord=False)
     finally:
         aeroport.poser = pose
 
@@ -313,7 +317,7 @@ def test_une_autre_graine_a_le_meme_aeroport(graine, ville):
     """L'aéroport est dessiné : à la même place d'une graine à l'autre. ⚠️ Et le pont
     part parfois du SABLE : sur ces graines-là, la plage de La Pointe descend sous
     le tablier, et ce qui y traînait a déménagé — plus rien sur le pont ni à son flanc."""
-    autre = carte.generer(graine=graine)
+    autre = carte.generer(graine=graine, nord=False)
     for cle in ("x", "y", "l", "h", "plan", "piste", "avions", "pont"):
         assert autre["aeroport"][cle] == ville["aeroport"][cle], cle
     pont = autre["aeroport"]["pont"]

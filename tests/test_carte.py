@@ -11,6 +11,10 @@ import pytest
 from app import carte, economie, magasins
 
 CARTE = carte.exporter()
+#: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : ce que rejouent les juges qui refont le chantier (ses rues, ses
+#: superblocs, ses sentiers) est dans SON repère ; la carte du jeu a descendu de 110 rangées sous la bande
+#: nord (`app/nord.py`). Les juges de toute la carte, eux, gardent `CARTE`.
+VILLE_D_AVANT = carte.generer(nord=False)
 
 #: Les lieux qu'une ville DOIT avoir, quelle que soit la graine. ⚠️ Les autres
 #: portes (un commerce ordinaire qui ouvre, un logement qu'on peut visiter) sont
@@ -404,10 +408,10 @@ def test_aucun_gabarit_ne_deborde_sur_une_rue_qui_existe():
             for y in range(chantier.yb[j], chantier.yb[j] + carte.RANGEES[j]):
                 for dx in range(carte.RUES_V[i]):
                     x = chantier.xr[i] + dx
-                    assert carte.solidite(CARTE["sol"][y][x]) != 1, f"batiment sur la rue en {(x, y)}"
+                    assert carte.solidite(VILLE_D_AVANT["sol"][y][x]) != 1, f"batiment sur la rue en {(x, y)}"
                     if carte.TROTTOIR <= dx < carte.RUES_V[i] - carte.TROTTOIR:
-                        assert carte.routier(CARTE["sol"][y][x]), (x, y)
-                        assert CARTE["voie"][y][x] != "."
+                        assert carte.routier(VILLE_D_AVANT["sol"][y][x]), (x, y)
+                        assert VILLE_D_AVANT["voie"][y][x] != "."
                         vues += 1
     for j in range(chantier.nr + 1):
         for i in range(chantier.nc):
@@ -416,10 +420,10 @@ def test_aucun_gabarit_ne_deborde_sur_une_rue_qui_existe():
             for dy in range(carte.RUES_H[j]):
                 y = chantier.yr[j] + dy
                 for x in range(chantier.xb[i], chantier.xb[i] + carte.COLONNES[i]):
-                    assert carte.solidite(CARTE["sol"][y][x]) != 1, f"batiment sur la rue en {(x, y)}"
+                    assert carte.solidite(VILLE_D_AVANT["sol"][y][x]) != 1, f"batiment sur la rue en {(x, y)}"
                     if carte.TROTTOIR <= dy < carte.RUES_H[j] - carte.TROTTOIR:
-                        assert carte.routier(CARTE["sol"][y][x]), (x, y)
-                        assert CARTE["voie"][y][x] != "."
+                        assert carte.routier(VILLE_D_AVANT["sol"][y][x]), (x, y)
+                        assert VILLE_D_AVANT["voie"][y][x] != "."
                         vues += 1
     assert vues > 3000, f"seulement {vues} tuiles de chaussee verifiees"
 
@@ -433,7 +437,7 @@ def test_un_superbloc_avale_bien_sa_rue():
     for i, j in avales:
         milieu = chantier.xr[i] + carte.RUES_V[i] // 2
         y = chantier.yb[j] + carte.RANGEES[j] // 2
-        assert CARTE["voie"][y][milieu] == ".", f"la rue {i} existe encore en {(milieu, y)}"
+        assert VILLE_D_AVANT["voie"][y][milieu] == ".", f"la rue {i} existe encore en {(milieu, y)}"
 
 
 def test_le_decor_ne_bouche_ni_la_rue_ni_les_portes():
@@ -951,7 +955,7 @@ def test_aucun_arbre_ne_bouche_un_sentier_de_parc():
     chantier.croisements()
     chantier.ilots()
     solides = {"arbre", "banc", "poubelle", "caisse", "fontaine", "buisson", "debris"}
-    dessus = [d for d in CARTE["decor"]
+    dessus = [d for d in VILLE_D_AVANT["decor"]
               if d["type"] in solides and (d["x"], d["y"]) in chantier.reserve]
     assert not dessus, f"{len(dessus)} decors solides posés sur un sentier : {dessus[:4]}"
     assert chantier.reserve, "plus rien n'est reserve : les sentiers ne se protegent plus"

@@ -6,7 +6,7 @@ from app import carte, devantures
 
 
 def test_un_seul_dojo_et_il_est_au_faubourg():
-    ville = carte.generer()
+    ville = carte.generer(nord=False)
     portes = [p for p in ville["portes"] if p.get("interieur") == "dojo"]
     assert len(portes) == 1, portes
     p = portes[0]
@@ -26,9 +26,9 @@ def test_le_dojo_ne_deplace_rien(monkeypatch):
     règle : sans le dojo, le Rialto prenait sa porte. Neutralisées des DEUX côtés."""
     from app import enseignes
     monkeypatch.setattr(enseignes, "poser", lambda chantier, ville: [])
-    avec = carte.generer()
+    avec = carte.generer(nord=False)
     monkeypatch.setattr(carte._Chantier, "poser_le_dojo", lambda self, ville: None)
-    sans = carte.generer()
+    sans = carte.generer(nord=False)
     for cle in avec:
         if cle in ("portes", "devantures", "interieurs", "points_interet"):
             continue
@@ -46,7 +46,7 @@ def test_le_dojo_ne_deplace_rien(monkeypatch):
 def test_sans_facade_qui_convient_pas_de_dojo_et_rien_ne_plante(monkeypatch):
     """À surveiller no 1 : une ville où aucune pièce du Faubourg n'est assez grande."""
     monkeypatch.setattr(carte._Chantier, "DOJO_MESURES_MIN", (99, 99))
-    ville = carte.generer()
+    ville = carte.generer(nord=False)
     assert "dojo" not in ville["interieurs"]
     assert not [p for p in ville["portes"] if p.get("interieur") == "dojo"]
 
@@ -58,6 +58,10 @@ def test_plus_de_salon_mireille():
 # --- Mireille Dion, et les règles de la leçon (tâche 2) ----------------------------------
 
 from app import audio, dojo, missions, techniques  # noqa: E402
+
+#: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : ces juges jugent la construction de la ville — ils la comparent à
+#: elle-même sans un module, ou lisent ses quartiers par un `_Chantier` neuf, dans SON repère. La carte du jeu
+#: a descendu de 110 rangées sous la bande nord (`app/nord.py`) : on la génère sans elle, `nord=False`.
 
 
 def test_mireille_tient_le_comptoir_du_dojo():

@@ -6,6 +6,10 @@ import pytest
 
 from app import carte, devantures, enseignes, magasins, missions
 
+#: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : ces juges jugent la construction de la ville — ils la comparent à
+#: elle-même sans un module, ou lisent ses quartiers par un `_Chantier` neuf, dans SON repère. La carte du jeu
+#: a descendu de 110 rangées sous la bande nord (`app/nord.py`) : on la génère sans elle, `nord=False`.
+
 VILLE = carte.exporter()
 SLUGS = [f["slug"] for f in enseignes.ENSEIGNES]
 
@@ -60,9 +64,9 @@ def test_les_enseignes_ne_deplacent_rien_d_autre(monkeypatch):
     """⚠️ Posées sur la ville FINIE et sans dé, comme le dojo : la même ville sans elles est identique, hors
     de leurs portes (la pièce, le lieu, le nom), de leurs enseignes, des pièces reprises et des points
     ajoutés au bout. Et elles ne mordent sur aucune porte qui avait un lieu à elle."""
-    avec = carte.generer(graine=VILLE["graine"])
+    avec = carte.generer(graine=VILLE["graine"], nord=False)
     monkeypatch.setattr(enseignes, "poser", lambda chantier, ville: [])
-    sans = carte.generer(graine=VILLE["graine"])
+    sans = carte.generer(graine=VILLE["graine"], nord=False)
     for cle in ("sol", "decor", "paquets", "ambulants", "reclames", "scenes", "nids_de_poule", "barrieres",
                 "metro", "autobus", "chantiers", "residences", "graffitis", "lampes", "fermetures"):
         assert avec[cle] == sans[cle], f"les enseignes deplacent « {cle} »"

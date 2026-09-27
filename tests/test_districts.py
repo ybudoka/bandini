@@ -9,7 +9,7 @@ elles se voient ici, avant de dessiner une tuile.
 
 import pytest
 
-from app import carte
+from app import carte, nord
 
 CARTE = carte.exporter()
 DISTRICTS = {d["slug"]: d for d in carte.DISTRICTS}
@@ -144,7 +144,9 @@ def test_le_pont_est_le_seul_lien_CARROSSABLE_vers_la_pointe():
     # district, chenal compris, qui doivent devenir injoignables.
     pointe = carte.district_par_slug("pointe")
     chantier = carte._Chantier(carte.PLAN, carte.GRAINE)
-    x0, y0 = chantier.xr[pointe["bx"]], chantier.yb[pointe["by"]]
+    # ⚠️ Le chantier est dans le repère de la ville d'avant : la carte a descendu de `decalage_nord` rangées
+    # sous la bande nord (`app/nord.py`).
+    x0, y0 = chantier.xr[pointe["bx"]], chantier.yb[pointe["by"]] + CARTE.get("decalage_nord", 0)
     derriere = [(x, y) for y in range(y0, CARTE["hauteur"]) for x in range(x0, CARTE["largeur"])
                 if CARTE["voie"][y][x] != "."]
     assert derriere, "La Pointe n'a aucune rue a elle"
@@ -182,7 +184,8 @@ def test_chaque_district_a_sa_gang_et_son_point_de_repere(district):
 def test_les_zones_de_district_ne_se_chevauchent_pas():
     """`Monde.zoneA` garde la derniere zone qui contient le point : si deux
     districts se superposaient, le nom sous la mini-carte mentirait."""
-    quartiers = [ZONES[d["slug"]] for d in carte.DISTRICTS]
+    # ⚠️ Et les trois districts de la bande nord (`app/nord.py`), au-dessus de la ville d'avant.
+    quartiers = [ZONES[d["slug"]] for d in carte.DISTRICTS + nord.DISTRICTS_NORD]
     for i, a in enumerate(quartiers):
         for b in quartiers[i + 1:]:
             chevauche = (a["x"] < b["x"] + b["l"] and b["x"] < a["x"] + a["l"]

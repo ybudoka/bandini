@@ -484,7 +484,9 @@ def test_le_petit_train_fait_le_tour_de_la_foire(ville):
     sol = ville["sol"]
     for x, y in voie:
         assert sol[y][x] == "T" and dans_l_enclos(ville, x, y), f"la voie sort de l'enceinte en ({x}, {y})"
-    rails = {(x, y) for y, ligne in enumerate(sol) for x, g in enumerate(ligne) if g == "T"}
+    # ⚠️ Les rails DE LA FOIRE : la gare de triage de la bande nord (`app/nord.py`) a les siens, loin d'ici.
+    rails = {(x, y) for y, ligne in enumerate(sol) for x, g in enumerate(ligne) if g == "T"
+             and y >= ville.get("decalage_nord", 0)}
     assert rails == set(voie), "des rails qui ne sont pas sur la boucle"
     xs, ys = [x for x, _ in voie], [y for _, y in voie]
     x0, x1, y0, y1 = min(xs), max(xs), min(ys), max(ys)

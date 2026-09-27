@@ -19,13 +19,17 @@ import pytest
 
 from app import carte, devantures, economie, magasins, recherche
 
+#: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : ces juges jugent la construction de la ville — ils la comparent à
+#: elle-même sans un module, ou lisent ses quartiers par un `_Chantier` neuf, dans SON repère. La carte du jeu
+#: a descendu de 110 rangées sous la bande nord (`app/nord.py`) : on la génère sans elle, `nord=False`.
+
 FICHE = economie.DISTRIBUTRICE
 GRAINES = (carte.GRAINE, 1, 2)
 
 
 @pytest.fixture(scope="module", params=GRAINES)
 def ville(request):
-    return carte.generer(graine=request.param)
+    return carte.generer(graine=request.param, nord=False)
 
 
 def _machines(ville):
@@ -169,12 +173,12 @@ def test_une_machine_de_plus_ne_deplace_rien_d_autre():
     carrosseries = carte._Chantier.poser_les_carrosseries
     carte._Chantier.poser_les_carrosseries = lambda self, ville_: []
     try:
-        avec = carte.generer()
+        avec = carte.generer(nord=False)
         decors = {fiche["decor"] for fiche in magasins.DISTRIBUTRICES.values()}
         sauve = carte._Chantier.distributrices
         try:
             carte._Chantier.distributrices = lambda self: 0
-            sans = carte.generer()
+            sans = carte.generer(nord=False)
         finally:
             carte._Chantier.distributrices = sauve
     finally:

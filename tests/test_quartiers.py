@@ -22,6 +22,10 @@ import pytest
 
 from app import carte, chantiers, devantures, mobilier, pietons, salete, vitrines
 
+#: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : ces juges jugent la construction de la ville — ils la comparent à
+#: elle-même sans un module, ou lisent ses quartiers par un `_Chantier` neuf, dans SON repère. La carte du jeu
+#: a descendu de 110 rangées sous la bande nord (`app/nord.py`) : on la génère sans elle, `nord=False`.
+
 #: La saleté qu'on compte : ce qu'on jette par terre, sur la friche d'un terrain
 #: vague (`;`) ou au pied d'un mur (`_`). ⚠️ En toutes lettres, pas relu dans
 #: `carte.DECHETS` ni `salete.AU_PIED_DES_MURS` : un juge qui relit la table
@@ -39,7 +43,7 @@ def _sans(*quoi):
     for module, nom, _ in originaux:
         setattr(module, nom, lambda *a, **k: {})
     try:
-        return carte.generer()
+        return carte.generer(nord=False)
     finally:
         for module, nom, fonction in originaux:
             setattr(module, nom, fonction)
@@ -49,7 +53,7 @@ def _sans(*quoi):
 def villes():
     """`ville` : la ville livrée. `avant` et `apres` : sans le mobilier de rue,
     sans puis avec le déplacement de la saleté."""
-    ville = carte.generer()
+    ville = carte.generer(nord=False)
     avant = _sans((salete, "deplacer"), (mobilier, "semer"))
     apres = _sans((mobilier, "semer"))
     return ville, avant, apres
@@ -74,6 +78,14 @@ def tout_part():
 @pytest.fixture(scope="module")
 def chantier():
     return carte._Chantier(carte.PLAN, carte.GRAINE)
+
+
+@pytest.fixture(scope="module")
+def jeu():
+    """⚠️ LA CARTE DU JEU (celle que joue le banc), et son lecteur de quartiers : pour les juges qui choisissent
+    des tuiles ici et les font jouer au navigateur — la ville a descendu de 110 rangées sous la bande nord."""
+    from app import nord
+    return carte.generer(), nord.LECTEUR
 
 
 def dechets(ville):
@@ -323,10 +335,11 @@ def test_une_rue_cossue_est_plantee_une_rue_pauvre_ne_l_est_pas(villes, chantier
 # --- Le moteur lit la même grille ---------------------------------------------
 
 
-def test_le_moteur_lit_les_memes_grilles(banc, chantier):
+def test_le_moteur_lit_les_memes_grilles(banc, jeu):
     """Python décide, JS calcule : `Monde.standingA` et `Monde.usageA` disent la
     même chose que `standing_en` et `usage_en`, tuile pour tuile — et ressorti
     d'une pièce, encore."""
+    chantier = jeu[1]
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const lettre = { cossu: '+', ordinaire: '=', pauvre: '-' };
@@ -428,7 +441,7 @@ def test_le_zonage_ne_touche_ni_une_tuile_ni_un_arbre(villes, monkeypatch):
     même objet pour objet, dans le même ordre."""
     ville, _avant, _apres = villes
     monkeypatch.setattr(mobilier, "MEUBLES_PAR_USAGE", {})
-    sans = carte.generer()
+    sans = carte.generer(nord=False)
     for cle in ville:
         if cle == "chantiers":
             assert chantiers.sans_annexes(ville[cle]) == chantiers.sans_annexes(sans[cle]), cle
@@ -451,11 +464,11 @@ def _luminance(couleur):
     return 0.3 * r + 0.59 * g + 0.11 * b
 
 
-def test_le_sol_se_peint_selon_le_quartier(banc, villes, chantier):
+def test_le_sol_se_peint_selon_le_quartier(banc, jeu):
     """Le peintre de morceau lit l'usage et le standing : un trottoir de rue chic
     n'a pas le béton d'une cour d'usine, l'abord d'une maison est une bande de
     gazon, celui d'une usine de l'asphalte."""
-    ville = villes[0]
+    ville, chantier = jeu
     tuiles = {
         "chic": (".", *_tuile(ville, chantier, ".", "commercial", "cossu")),
         "usine": (".", *_tuile(ville, chantier, ".", "industriel", "pauvre")),
@@ -485,10 +498,10 @@ def test_le_sol_se_peint_selon_le_quartier(banc, villes, chantier):
     assert r["commerce"]["fond"] != r["maison"]["fond"] != r["hangar"]["fond"]
 
 
-def test_la_carte_peint_le_zonage(banc, paquet, villes, chantier):
+def test_la_carte_peint_le_zonage(banc, paquet, jeu):
     """La carte plein écran teint chaque bloc de son usage — pas les rues — et sa
     légende se bâtit depuis la table, dans son ordre."""
-    ville = villes[0]
+    ville, chantier = jeu
     table = paquet["carte"]["zonage"]
     route = next((x, y) for y, ligne in enumerate(ville["sol"]) for x, g in enumerate(ligne)
                  if carte.LEGENDE[g].get("route") and not carte.LEGENDE[g].get("trottoir"))
@@ -599,9 +612,9 @@ def test_les_commerces_montent_sans_rien_deplacer(villes, monkeypatch):
     # porte déjà son nom — un nom que `monter_et_descendre` donne.
     from app import enseignes
     monkeypatch.setattr(enseignes, "poser", lambda chantier, ville_: [])
-    ville = carte.generer()
+    ville = carte.generer(nord=False)
     monkeypatch.setattr(vitrines, "monter_et_descendre", lambda chantier, ville: {})
-    sans = carte.generer()
+    sans = carte.generer(nord=False)
     changent = {"devantures", "residences", "portes", "lampes"}
     for cle in ville:
         if cle not in changent:
@@ -625,7 +638,7 @@ def sans_eclairage():
     original = mobilier.eclairer
     mobilier.eclairer = lambda chantier, bords, solides: {}
     try:
-        return carte.generer()
+        return carte.generer(nord=False)
     finally:
         mobilier.eclairer = original
 
@@ -747,11 +760,11 @@ def test_qui_marche_dit_le_standing(chantier, villes):
         assert places > 20, f"{slug} n'a presque nulle part où naître ({places} tuiles)"
 
 
-def test_l_ivrogne_ne_dort_pas_dans_la_rue_chic(banc, villes, chantier):
+def test_l_ivrogne_ne_dort_pas_dans_la_rue_chic(banc, jeu):
     """⚠️ Le district se lit au joueur, le standing à la TUILE où la sorte se pose :
     deux blocs voisins n'ont pas le même. On plante le joueur dans la rue chic du
     Faubourg, puis dans les Quais pauvres, et on regarde qui naît."""
-    ville = villes[0]
+    ville, chantier = jeu
     chic = _tuile(ville, chantier, "_", "commercial", "cossu", "faubourg")
     # ⚠️ Aux QUAIS : l'ivrogne a ses quartiers (`districts`), et La Shop n'en est
     # pas — un juge planté là ne verrait jamais personne et passerait pour rien.
@@ -812,12 +825,12 @@ def test_pas_de_char_rare_dans_une_rue_pauvre(banc, paquet):
     assert fiche["pauvre"]["usure"] < 1 and fiche["cossu"]["usure"] == 1
 
 
-def test_une_minoune_a_moins_de_carrosserie(banc, villes, chantier):
+def test_une_minoune_a_moins_de_carrosserie(banc, jeu):
     """Un char qui naît dans une rue pauvre a la carrosserie qu'il lui reste
     (`usure`) ; celui d'une rue cossue est entier. ⚠️ On suit les chars par leur
     naissance, pas par l'endroit où on les trouve : un char roule, et la bulle en
     garde d'autres, nés ailleurs."""
-    ville = villes[0]
+    ville, chantier = jeu
     pauvre = _tuile(ville, chantier, "_", "industriel", "pauvre", "quais")
     cossu = _tuile(ville, chantier, "_", "residentiel", "cossu", "erables")
     r = banc("""function (L, o) {
@@ -865,12 +878,12 @@ def test_la_police_arrive_plus_vite_chez_les_riches(banc, paquet):
     assert r["cossu"] > r["ordinaire"] > r["pauvre"], r
 
 
-def test_le_temoin_telephone_plus_vite_chez_les_riches(banc, villes, chantier):
+def test_le_temoin_telephone_plus_vite_chez_les_riches(banc, jeu):
     """⚠️ La table ne suffit pas : c'est `Police.maj` qui fait téléphoner le
     témoin, et le retirer de là laissait le juge d'au-dessus vert (mutation du
     21 sept. 2026). Un témoin loin de tout agent, au même âge du crime, a déjà
     appelé en cossu et pas encore en pauvre."""
-    ville = villes[0]
+    ville, chantier = jeu
     tuiles = {}
     for y, ligne in enumerate(ville["sol"]):
         for x, g in enumerate(ligne):

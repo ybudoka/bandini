@@ -11,6 +11,10 @@ import pytest
 
 from app import autobus, carte, metro, mobilier
 
+#: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : ces juges jugent la construction de la ville — ils la comparent à
+#: elle-même sans un module, ou lisent ses quartiers par un `_Chantier` neuf, dans SON repère. La carte du jeu
+#: a descendu de 110 rangées sous la bande nord (`app/nord.py`) : on la génère sans elle, `nord=False`.
+
 
 @pytest.fixture(scope="module")
 def ville():
@@ -114,9 +118,9 @@ def test_le_metro_ne_deplace_rien_de_la_ville(monkeypatch):
     # ⚠️ Le devant des portes vient APRES tout et lit les edicules pour n'y rien poser : il part
     # des deux villes, comme la saleté.
     monkeypatch.setattr(devants, "deplacer", lambda chantier, ville: {})
-    avec = carte.generer()
+    avec = carte.generer(nord=False)
     monkeypatch.setattr(metro, "creuser", lambda chantier, ville: {})
-    sans = carte.generer()
+    sans = carte.generer(nord=False)
     for cle in sans:
         if cle in ("decor", "metro"):
             continue
@@ -128,7 +132,7 @@ def test_le_metro_ne_deplace_rien_de_la_ville(monkeypatch):
 
 @pytest.mark.parametrize("graine", [1, 7, 99])
 def test_le_metro_se_creuse_sur_d_autres_graines(graine):
-    ville = carte.generer(graine=graine)
+    ville = carte.generer(graine=graine, nord=False)
     assert len(ville["metro"]["stations"]) == len(metro.LIGNE["stations"])
     for rang in range(len(ville["metro"]["stations"])):
         sx, sy = metro.sortie(ville, rang)

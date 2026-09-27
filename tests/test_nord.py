@@ -297,3 +297,15 @@ def test_la_gare_n_a_qu_une_porte_le_poste_d_aiguillage():
     portes = [p for p in ch.portes if _dans(ch, "gare", p)]
     assert [p["interieur"] for p in portes] == ["nord_aiguillage"], [p["interieur"] for p in portes]
     assert not [d for d in ch.devantures if _dans(ch, "gare", d)], "des devantures dans la gare"
+
+
+def test_le_lecteur_de_la_carte_finie_lit_les_deux_trames():
+    """`nord.LECTEUR` : le quartier d'une tuile de la CARTE FINIE — la bande au-dessus de `DECALAGE_NORD`, la
+    ville d'avant en dessous (le miroir de `Monde.lettreDuBloc`)."""
+    from app import nord
+    n, lecteur = nord.DECALAGE_NORD, nord.LECTEUR
+    ville = carte._Chantier(carte.PLAN, carte.GRAINE)
+    assert lecteur.district_en(140, 20) == "canton" and lecteur.district_en(140, n + 20) == "faubourg"
+    assert lecteur.standing_en(10, 10) == "pauvre" and lecteur.standing_en(10, n + 10) == ville.standing_en(10, 10)
+    assert lecteur.usage_en(300, 20) == "industriel"
+    assert lecteur.usage_en(140, n + 20) == ville.usage_en(140, 20)

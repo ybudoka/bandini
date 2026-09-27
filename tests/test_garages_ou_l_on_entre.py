@@ -13,12 +13,16 @@ import pytest
 
 from app import carte, devantures, devants, economie, vehicules
 
+#: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : ces juges jugent la construction de la ville — ils la comparent à
+#: elle-même sans un module, ou lisent ses quartiers par un `_Chantier` neuf, dans SON repère. La carte du jeu
+#: a descendu de 110 rangées sous la bande nord (`app/nord.py`) : on la génère sans elle, `nord=False`.
+
 GRAINES = (carte.GRAINE, 1, 2, 7)
 
 
 @pytest.fixture(scope="module", params=GRAINES)
 def ville(request):
-    return carte.generer(graine=request.param)
+    return carte.generer(graine=request.param, nord=False)
 
 
 def _carrosseries(ville):
@@ -138,9 +142,9 @@ def test_les_carrosseries_ne_deplacent_rien_d_autre(ville, monkeypatch):
     # Les ENSEIGNES qui ouvrent pour vrai (`enseignes.poser`) de meme : leurs points s'ajoutent au bout.
     from app import enseignes
     monkeypatch.setattr(enseignes, "poser", lambda chantier, ville_: [])
-    avec = carte.generer(graine=ville["graine"])
+    avec = carte.generer(graine=ville["graine"], nord=False)
     monkeypatch.setattr(carte._Chantier, "poser_les_carrosseries", lambda self, ville_: [])
-    sans = carte.generer(graine=ville["graine"])
+    sans = carte.generer(graine=ville["graine"], nord=False)
     for cle in ("paquets", "ambulants", "reclames", "scenes", "nids_de_poule", "barrieres",
                 "metro", "autobus", "chantiers", "portes", "residences", "graffitis", "lampes"):
         assert avec[cle] == sans[cle], f"les carrosseries deplacent « {cle} »"
@@ -234,12 +238,12 @@ def test_une_entree_asphaltee_du_rideau_a_la_rue(ville):
 
 def test_les_bungalows_ne_deplacent_rien_d_autre_et_ne_lisent_pas_les_carrosseries(ville, monkeypatch):
     monkeypatch.setattr(devants, "deplacer", lambda chantier, ville_: {})
-    avec = carte.generer(graine=ville["graine"])
+    avec = carte.generer(graine=ville["graine"], nord=False)
     monkeypatch.setattr(carte._Chantier, "poser_les_carrosseries", lambda self, ville_: [])
-    sans_carrosseries = carte.generer(graine=ville["graine"])
+    sans_carrosseries = carte.generer(graine=ville["graine"], nord=False)
     assert _bungalows(sans_carrosseries) == _bungalows(avec), "les bungalows changent de rue sans les carrosseries"
     monkeypatch.setattr(carte._Chantier, "poser_les_garages_de_bungalows", lambda self, ville_: [])
-    sans = carte.generer(graine=ville["graine"])
+    sans = carte.generer(graine=ville["graine"], nord=False)
     for cle in ("paquets", "ambulants", "reclames", "scenes", "nids_de_poule", "barrieres", "metro",
                 "autobus", "chantiers", "portes", "devantures", "graffitis", "lampes", "points_interet"):
         assert sans_carrosseries[cle] == sans[cle], f"les bungalows deplacent « {cle} »"

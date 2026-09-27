@@ -14,6 +14,10 @@ import pytest
 
 from app import autobus, carte, chantiers
 
+#: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : ces juges jugent la construction de la ville — ils la comparent à
+#: elle-même sans un module, ou lisent ses quartiers par un `_Chantier` neuf, dans SON repère. La carte du jeu
+#: a descendu de 110 rangées sous la bande nord (`app/nord.py`) : on la génère sans elle, `nord=False`.
+
 
 @pytest.fixture(scope="module")
 def ville():
@@ -213,13 +217,13 @@ def test_les_lignes_ne_deplacent_rien_de_la_ville(monkeypatch):
     # Et les lampadaires du mobilier (`eclairer`) : ils se plantent le long des
     # rues, après les lignes.
     monkeypatch.setattr(mobilier, "eclairer", lambda chantier, bords, solides: {})
-    avec = carte.generer()
+    avec = carte.generer(nord=False)
     monkeypatch.setattr(autobus, "tracer", lambda chantier, ville: {"lignes": [], "arrets": [], "horaire": {}})
     monkeypatch.setattr(mobilier, "semer", lambda chantier, ville, graine: {})
     # ⚠️ Le metro se creuse ENTRE les lignes et le mobilier : sans les abribus, ses
     # edicules tomberaient ailleurs. Il part donc avec eux.
     monkeypatch.setattr(metro, "creuser", lambda chantier, ville: {})
-    sans = carte.generer()
+    sans = carte.generer(nord=False)
     for cle in sans:
         # ⚠️ La tournée des éboueurs se trace APRÈS tout le reste, sur les voies et
         # loin des abribus et du décor : sans eux, ses bacs tombent ailleurs. Elle ne

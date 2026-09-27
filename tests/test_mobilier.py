@@ -12,14 +12,18 @@ import pytest
 
 from app import autobus, carte, mobilier
 
+#: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : ces juges jugent la construction de la ville — ils la comparent à
+#: elle-même sans un module, ou lisent ses quartiers par un `_Chantier` neuf, dans SON repère. La carte du jeu
+#: a descendu de 110 rangées sous la bande nord (`app/nord.py`) : on la génère sans elle, `nord=False`.
+
 
 @pytest.fixture(scope="module")
 def villes():
-    avec = carte.generer()
+    avec = carte.generer(nord=False)
     original = mobilier.semer
     mobilier.semer = lambda chantier, ville, graine: {}
     try:
-        sans = carte.generer()
+        sans = carte.generer(nord=False)
     finally:
         mobilier.semer = original
     ajoutes = avec["decor"][len(sans["decor"]):]

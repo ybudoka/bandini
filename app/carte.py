@@ -1828,7 +1828,7 @@ USAGE_DU_PLAN: dict[str, str] = {
     "p": "parc", "k": "parc", "n": "parc", "f": "parc", "o": "parc",
     "q": "port", "j": "port", "~": "eau",
     # La bande nord (`nord.py`) : la friche, le terrain à bâtir du Petit-Canton, les voies de la gare.
-    "z": "parc", "b": "commercial", "v": "industriel", "y": "industriel",
+    "z": "industriel", "b": "commercial", "v": "industriel", "y": "industriel",
 }
 
 #: Et celui d'un lieu garanti, par le GENRE d'ilot qui le batit (`SPECIAUX`) : le

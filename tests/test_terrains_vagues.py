@@ -20,6 +20,10 @@ import pytest
 
 from app import carte
 
+#: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : ces juges jugent la construction de la ville — ils la comparent à
+#: elle-même sans un module, ou lisent ses quartiers par un `_Chantier` neuf, dans SON repère. La carte du jeu
+#: a descendu de 110 rangées sous la bande nord (`app/nord.py`) : on la génère sans elle, `nord=False`.
+
 #: Le sol d'un terrain vague.
 FRICHE = ";"
 
@@ -52,7 +56,7 @@ def ville_et_lots():
     chantier._parc_de_quartier = note("parc", parc)
     chantier._terrain_vague = note("vague", vague)
     try:
-        ville = carte.generer()
+        ville = carte.generer(nord=False)
     finally:
         chantier._parc_de_quartier, chantier._terrain_vague = parc, vague
     return ville, lots
