@@ -82,9 +82,13 @@ def carte_du_bloc(bloc: dict) -> dict:
 
 def pour_le_navigateur() -> list[dict]:
     """Ce que le paquet des définitions dit des blocs : où est leur passage en ville.
-    ⚠️ Rien de leur carte : elle voyage à part, à la demande."""
+    ⚠️ Rien de leur carte : elle voyage à part, à la demande. Seulement leurs PORTES, avec le
+    nom de la pièce : la triche ENDROITS CLÉS les liste (le chalet, la cabane à sucre) avant
+    qu'aucune carte de bloc ne soit arrivée."""
     return [{"slug": b["slug"], "nom": b["nom"], "passage": dict(b["passage"]),
-             "panneau": b.get("panneau", b["nom"][:5].upper())} for b in BLOCS]
+             "panneau": b.get("panneau", b["nom"][:5].upper()),
+             "portes": [{"x": p["x"], "y": p["y"], "nom": b.get("pieces", {})[p["interieur"]]["nom"]}
+                        for p in b.get("portes", [])]} for b in BLOCS]
 
 
 def erreurs(bloc: dict, ville: dict | None = None) -> list[str]:

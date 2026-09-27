@@ -2155,7 +2155,7 @@ const Hud = (function () {
     return true;
   }
 
-  /** SAUT VERS UNE MISSION : la liste complete de `B.defs.missions`. C'est le
+  /** LANCER UNE MISSION : la liste complete de `B.defs.missions`. C'est le
       CATALOGUE qui fait la liste — une mission ajoutee au jeu tombe ici sans
       qu'on y touche. Choisir une ligne TELEPORTE devant le donneur (dans sa piece
       s'il est dedans) et LANCE la mission tout de suite, intro comprise
@@ -2173,7 +2173,7 @@ const Hud = (function () {
                faire: function () { return lancerLaMission(m); } };
     });
     items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuDebug()); return false; } });
-    return { titre: 'SAUT VERS UNE MISSION', largeur: 320, hauteur: VH - 30,
+    return { titre: 'LANCER UNE MISSION', largeur: 320, hauteur: VH - 30,
              items: items, retour: function () { ouvrirMenu(menuDebug()); } };
   }
 
@@ -2258,7 +2258,7 @@ const Hud = (function () {
     return true;
   }
 
-  /** SAUT VERS UN DÉFI : tous les defis de `B.defs.defis`, rangés par genre — au
+  /** LANCER UN DÉFI : tous les defis de `B.defs.defis`, rangés par genre — au
       volant, les tours (une course sur un circuit), la foire. C'est le CATALOGUE
       qui fait la liste : un defi ajoute au jeu tombe ici sans qu'on y touche. */
   function menuSautDefis() {
@@ -2286,12 +2286,12 @@ const Hud = (function () {
       }
     }
     items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuDebug()); return false; } });
-    return { titre: 'SAUT VERS UN DÉFI', largeur: 320, items: items, retour: function () { ouvrirMenu(menuDebug()); } };
+    return { titre: 'LANCER UN DÉFI', largeur: 320, items: items, retour: function () { ouvrirMenu(menuDebug()); } };
   }
 
   /** Va VOIR un personnage, sans rien lancer : on se pose a cote de lui
       (`allerChezLeDonneur`, dans sa piece s'il s'y tient) et on lui parle comme
-      d'habitude. C'est ce qui separe cette ligne de SAUT VERS UNE MISSION.
+      d'habitude. C'est ce qui separe cette ligne de LANCER UNE MISSION.
       Rend `false` (le menu reste ouvert) quand on ne peut pas. */
   function allerVoir(p) {
     if (!B.joueur || B.cinema || B.scene) { message('UNE SCÈNE JOUE'); return false; }
@@ -2361,10 +2361,9 @@ const Hud = (function () {
     return null;
   }
 
-  /** Va a un endroit cle : on sort du char et de la piece (ou du bloc) SANS
-      fondu, comme les autres sauts, et on se pose devant sa porte, tourne vers
-      elle. Rend `false` (le menu reste ouvert) quand on ne peut pas. */
-  function allerALEndroit(point) {
+  /** Sort du char et de la piece (ou du bloc) SANS fondu, comme les autres
+      sauts : on se retrouve a pied, dans la ville. Faux pendant une scene. */
+  function aPiedEnVille() {
     const j = B.joueur;
     if (!j || B.cinema || B.scene) { message('UNE SCÈNE JOUE'); return false; }
     Jeu.finirTransition();
@@ -2372,10 +2371,19 @@ const Hud = (function () {
     const ext = Jeu.revenirEnVille();
     if (ext) { j.x = ext.x; j.y = ext.y; }
     Entites.indexer();
+    return true;
+  }
+
+  /** Va a un endroit cle de la ville (`{ x, y }` en tuiles, `nom`) : on se pose
+      dessus ou au plus pres — devant sa porte, tourne vers elle, quand c'en est
+      une (`porte`). Rend `false` (le menu reste ouvert) quand on ne peut pas. */
+  function allerALEndroit(point) {
+    if (!aPiedEnVille()) return false;
+    const j = B.joueur;
     const place = placeALEndroit(point);
     if (!place) { message('INTROUVABLE'); return false; }
     j.x = place.x; j.y = place.y; j.vx = 0; j.vy = 0;
-    Entites.regarder(j, point.x * TT + 8 - j.x, (point.y - 1) * TT + 8 - j.y);
+    if (point.porte) Entites.regarder(j, point.x * TT + 8 - j.x, (point.y - 1) * TT + 8 - j.y);
     Entites.indexer();
     Monde.centrerCamera(j.x, j.y);
     if (B.etat === 'pause') Jeu.reprendre();
@@ -2384,12 +2392,52 @@ const Hud = (function () {
     return true;
   }
 
+  /** Va DANS un bloc de carte (`B.defs.blocs`) : a pied en ville d'abord, puis
+      le bloc se charge au noir (`Blocs.sauter`, comme le reveil au chalet) et
+      l'on se pose devant `porte`, tourne vers elle — a son arrivee sans porte
+      (le cine-parc). ⚠️ Le menu se ferme AVANT le fondu : le noir peut tenir le
+      temps que la carte arrive, et le joueur n'y voit que du noir, pas un menu fige. */
+  function allerDansLeBloc(b, porte) {
+    if (!aPiedEnVille()) return false;
+    const j = B.joueur;
+    const ici = porte ? { x: porte.x * TT + 8, y: (porte.y + 1) * TT + 8 } : null;
+    const part = Blocs.sauter(b.slug, ici, function () {
+      if (porte) Entites.regarder(j, 0, -1);
+      Entites.indexer();
+    });
+    if (!part) { message('INTROUVABLE'); return false; }
+    if (B.etat === 'pause') Jeu.reprendre();
+    fermerMenu();
+    return true;
+  }
+
+  /** Les endroits de la ville qui ne sont pas des points de la carte, rangés dans
+      la famille ou ils iraient : l'arche de la foire (REPERES), les quais du
+      traversier (TRANSPORT). Seulement ceux que la ville porte. */
+  function endroitsHorsDesPoints() {
+    const autres = [];
+    const foire = Histoire.resoudre('foire');
+    if (foire) autres.push({ slug: 'foire', nom: foire.nom || 'La foire', famille: 'repere', x: Math.floor(foire.x / TT), y: Math.floor(foire.y / TT) });
+    const traversier = typeof Traversier !== 'undefined' ? Traversier.donnees() : null;
+    for (const e of (traversier ? traversier.escales : [])) {
+      const q = Histoire.lieu('traversier:' + e.district);
+      if (q) autres.push({ slug: 'traversier:' + e.district, nom: 'Traversier — ' + e.nom, famille: 'transport', x: Math.floor(q.x / TT), y: Math.floor(q.y / TT) });
+    }
+    return autres;
+  }
+
   /** ENDROITS CLÉS : les points de la carte — les blips de la mini-carte —,
-      rangés par famille dans l'ordre de la LEGENDE (`carte.familles`). Un point
-      ajoute a la ville tombe ici sans qu'on y touche. Un lieu que la carte cache
-      encore (l'aerogare, avant le pont) est grise : il n'y a que de l'eau a voir. */
+      rangés par famille dans l'ordre de la LEGENDE (`carte.familles`), plus la
+      foire et le traversier (`endroitsHorsDesPoints`) ; puis HORS DE LA VILLE,
+      les portes des blocs de carte (`B.defs.blocs`). Un lieu ajoute a la ville
+      tombe ici sans qu'on y touche. Un lieu que la carte cache encore (l'aerogare,
+      avant le pont) est grise : il n'y a que de l'eau a voir.
+      ⚠️ La foire et le traversier se lisent sur `Monde.carte` : ils ne sont
+      listes qu'en ville, pas depuis une piece ou un bloc. */
   function menuEndroitsCles() {
-    const carte = carteDeLaVille(), points = carte.points || [];
+    const carte = carteDeLaVille();
+    const points = (carte.points || []).map(function (q) { return Object.assign({ porte: true }, q); })
+      .concat(carte === Monde.carte ? endroitsHorsDesPoints() : []);
     const familles = famillesDeLieu();
     const items = [];
     for (const nom of parRang(familles)) {
@@ -2400,6 +2448,15 @@ const Hud = (function () {
         const cache = Monde.masquee(q.x, q.y, carte);
         items.push({ libelle: q.nom.toUpperCase(), detail: cache ? 'CACHÉ' : '', actif: !cache, endroit: q.slug,
                      faire: function () { return allerALEndroit(q); } });
+      }
+    }
+    const blocs = (B.defs.blocs || []);
+    if (blocs.length) items.push(entete('HORS DE LA VILLE'));
+    for (const b of blocs) {
+      const portes = (b.portes || []).length ? b.portes : [null];
+      for (const porte of portes) {
+        items.push({ libelle: (porte ? porte.nom : b.nom).toUpperCase(), endroit: b.slug + (porte ? ':' + porte.nom : ''),
+                     bloc: b.slug, faire: function () { return allerDansLeBloc(b, porte); } });
       }
     }
     items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuDebug()); return false; } });
@@ -2465,34 +2522,42 @@ const Hud = (function () {
     return false;
   }
 
-  /** L'onglet TRICHES, en sections : ce qu'on se donne, ou l'on va, la mission
-      en cours, le reste. ⚠️ Il n'y a plus de PLUS… ni de RETOUR : les sauts sont
-      des sous-pages de l'onglet, et B reprend la partie comme partout dans le
-      classeur. */
+  /** L'onglet TRICHES, en sections PAR INTENTION (Martin, 27 sept. 2026 : « classe bien
+      le menu de triche, il commence a y avoir beaucoup de menus ») : LE JOUEUR (ce qu'on
+      se donne), TOUJOURS (les bascules OUI/NON), ALLER (on y va, rien ne se lance),
+      JOUER (on y va ET ca part), DIVERS. Une ligne qui ouvre une page porte « ... ».
+      ⚠️ Il n'y a plus de PLUS… ni de RETOUR : les sauts sont des sous-pages de
+      l'onglet, et B reprend la partie comme partout dans le classeur. */
   function menuDebug() {
     const m = Histoire.courante();
     function bascule(nom, libelle) {
       return { libelle: libelle, detail: triche(nom) ? 'OUI' : 'NON', faire: function (item) { basculerTriche(nom, item); return false; } };
     }
+    // ⚠️ « ... » : la ligne ouvre une page, elle n'agit pas tout de suite.
+    function page(libelle, menu) { return { libelle: libelle, detail: '...', faire: function () { ouvrirMenu(menu()); return false; } }; }
     return enOnglet('triches', { titre: 'TRICHES', sur: 'DEBUG', items: [
       entete('LE JOUEUR'),
       { libelle: 'ARGENT +1 000 $', faire: function () { Missions.encaisser(1000, 'DEBUG'); return false; } },
       { libelle: 'ARGENT +50 000 $', faire: function () { Missions.encaisser(50000, 'DEBUG'); return false; } },
+      { libelle: 'SANTÉ COMPLÈTE', faire: function () { Missions.soigner(B.joueur, B.joueur.vieMax); return false; } },
       { libelle: 'TOUS LES ITEMS', faire: function () { tousLesItems(); return false; } },
       { libelle: 'TOUTES LES TECHNIQUES', faire: function () { toutesLesTechniques(); return false; } },
-      { libelle: 'SANTÉ COMPLÈTE', faire: function () { Missions.soigner(B.joueur, B.joueur.vieMax); return false; } },
+      // Les bascules : elles tiennent jusqu'a ce qu'on les eteigne, et se sauvent avec la partie.
+      entete('TOUJOURS'),
       bascule('invincible', 'INVINCIBLE'),
       bascule('vehicules', 'VÉHICULES INVINCIBLES'),
       bascule('endurance', 'ÉNERGIE INFINIE'),
       bascule('munitions', 'MUNITIONS INFINIES'),
       bascule('pasArrete', 'LA POLICE NE T\'ARRÊTE PAS'),
+      // On y va, et rien ne se lance.
       entete('ALLER'),
-      { libelle: 'TÉLÉPORTER À L\'OBJECTIF', actif: !!Histoire.cible(), faire: function () { teleporterVersObjectif(); return true; } },
-      { libelle: 'SAUT VERS UNE MISSION', faire: function () { ouvrirMenu(menuSautMissions()); return false; } },
-      { libelle: 'SAUT VERS UN DÉFI', faire: function () { ouvrirMenu(menuSautDefis()); return false; } },
-      { libelle: 'CHEZ UN DONNEUR', faire: function () { ouvrirMenu(menuChezUnDonneur()); return false; } },
-      { libelle: 'ENDROITS CLÉS', faire: function () { ouvrirMenu(menuEndroitsCles()); return false; } },
-      entete('LA MISSION'),
+      { libelle: 'À L\'OBJECTIF', actif: !!Histoire.cible(), faire: function () { teleporterVersObjectif(); return true; } },
+      page('CHEZ UN DONNEUR', menuChezUnDonneur),
+      page('ENDROITS CLÉS', menuEndroitsCles),
+      // On y va ET ca part : l'histoire et les defis.
+      entete('JOUER'),
+      page('LANCER UNE MISSION', menuSautMissions),
+      page('LANCER UN DÉFI', menuSautDefis),
       { libelle: 'OBJECTIF SUIVANT', actif: !!m, faire: function () { Histoire.avancer(); return true; } },
       { libelle: 'TERMINER LA MISSION', actif: !!m, faire: function () { Histoire.reussir(); return true; } },
       entete('DIVERS'),
@@ -2500,7 +2565,7 @@ const Hud = (function () {
       // n'est jamais sauvegardee (on la rallume a chaque essai) et bascule une
       // VRAIE entite dans le monde, pas juste un drapeau.
       { libelle: 'COOP LOCALE (ESSAI)', detail: B.coop ? 'OUI' : 'NON', faire: function (item) { Jeu.basculerCoop(); item.detail = B.coop ? 'OUI' : 'NON'; return false; } },
-      { libelle: 'JUKEBOX', faire: function () { ouvrirMenu(menuJukebox()); return false; } },
+      page('JUKEBOX', menuJukebox),
     ] });
   }
 

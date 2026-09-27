@@ -11,7 +11,7 @@ ARME sur la carte), et chaque épreuve debout (`Adresse`) jouée jusqu'au bout.
 
 import pytest
 
-#: Aller au défi `slug` comme la triche SAUT VERS UN DÉFI (elle l'ouvre s'il est caché), puis
+#: Aller au défi `slug` comme la triche LANCER UN DÉFI (elle l'ouvre s'il est caché), puis
 #: COMMENCER. Rend le défi du catalogue.
 ALLER = """
     function aller(L, o, slug) {

@@ -2482,7 +2482,7 @@ const Histoire = (function () {
   }
 
   /** Ouvre ce defi : il entre dans la partie et son panneau se plante. Rend vrai
-      s'il vient de s'ouvrir. ⚠️ La triche SAUT VERS UN DÉFI passe aussi par ici
+      s'il vient de s'ouvrir. ⚠️ La triche LANCER UN DÉFI passe aussi par ici
       (`force`) : un saut vers un defi encore cache l'ouvre. */
   function ouvrirDefi(d, force) {
     if (!d || !d.debloque || defiOuvert(d)) return false;
@@ -2785,7 +2785,7 @@ const Histoire = (function () {
   }
 
   /** Le defi en cours s'arrete la, SANS rien noter ni rien dire : c'est la
-      triche SAUT VERS UN DÉFI (`Hud.menuSautDefis`) qui l'abandonne pour en
+      triche LANCER UN DÉFI (`Hud.menuSautDefis`) qui l'abandonne pour en
       proposer un autre — pas un echec du joueur. */
   function abandonnerDefi() {
     rendreLaCarabine(B.defi);

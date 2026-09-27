@@ -327,14 +327,21 @@ const Blocs = (function () {
       `attente`), puis on est dans le bloc, a l'endroit ou l'on s'est couche. ⚠️ Si elle
       n'arrive pas (hors ligne, un bloc retire), on se reveille au passage EN VILLE : la
       sauvegarde y a pose `p.x`/`p.y`, et c'est la que `commencer` nous a mis. */
-  function reprendre(ou) {
-    const b = liste().find(function (q) { return q.slug === ou.slug; });
+  function reprendre(ou) { return sauter(ou.slug, { x: ou.x, y: ou.y }); }
+
+  /** Passe dans le bloc `slug` depuis la ville, d'ou qu'on y soit, au noir : le noir tient
+      le temps que sa carte arrive, puis on est a `ici` dans le bloc (a son arrivee sans
+      `ici`), et `apres()` se joue. Le retour se fait a son passage, comme si on y etait
+      entre. Le reveil au chalet (`reprendre`) et la triche ENDROITS CLÉS passent par ici. */
+  function sauter(slug, ici, apres) {
+    const b = liste().find(function (q) { return q.slug === slug; });
     if (!b) return false;
     charger(b.slug);
     Jeu.transiter([1, 0, 24], function () {
       const def = cartes[b.slug];
       if (!def || B.bloc) return;
-      Jeu.passerDansLeBloc(b, def, recul(b.passage, Monde.carte, B.joueur), { x: ou.x, y: ou.y });
+      Jeu.passerDansLeBloc(b, def, recul(b.passage, Monde.carte, B.joueur), ici || null);
+      if (apres) apres();
     }, null, function () { return !cartes[b.slug]; });
     return true;
   }
@@ -346,7 +353,7 @@ const Blocs = (function () {
     return { x: c.x, y: c.y, nom: 'Vers la ville', couleur: '#7fc4ff' };
   }
 
-  return { dessinerFumees, cheminees, FUMEE, init, maj, charger, liste, contreLeBord, recul, marge, porteur, capVersLInterieur, poursuiteAuBord,
+  return { dessinerFumees, cheminees, FUMEE, init, maj, charger, liste, sauter, contreLeBord, recul, marge, porteur, capVersLInterieur, poursuiteAuBord,
            garder, souvenir, enMemoire, oublier, reprendre,
            cibleDeSortie, dessiner, texteDInfo, DELAI_POURSUIVANTS,
            get cartes() { return cartes; }, BORD_PX, PRES, RELANCE };

@@ -148,9 +148,9 @@ def test_les_titres_de_section_se_sautent(banc):
         return { entetes: entetes, depart: depart, apresPolice: apresPolice, retourPolice: retourPolice,
                  surUnTitre: poses.some(Boolean), tour: tour, titre: m.titre };
     }""")
-    assert r["entetes"] == ["LE JOUEUR", "ALLER", "LA MISSION", "DIVERS"]
+    assert r["entetes"] == ["LE JOUEUR", "TOUJOURS", "ALLER", "JOUER", "DIVERS"]
     assert r["depart"] == "ARGENT +1 000 $"
-    assert r["apresPolice"] == "TÉLÉPORTER À L'OBJECTIF", "le titre ALLER se saute"
+    assert r["apresPolice"] == "À L'OBJECTIF", "le titre ALLER se saute"
     assert r["retourPolice"] == "LA POLICE NE T'ARRÊTE PAS"
     assert r["surUnTitre"] is False
     assert r["tour"] == "JUKEBOX", "en haut, un appui neuf fait le tour sans se poser sur LE JOUEUR"

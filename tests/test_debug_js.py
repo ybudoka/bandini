@@ -155,7 +155,7 @@ def test_teleporter_sans_objectif_ne_bouge_personne(banc):
         const x = j.x, y = j.y;
         L.Histoire.cible = function () { return null; };
         L.Hud.ouvrirMenu(L.Hud.menuDebug());
-        const item = L.B.menu.items.filter(function (i) { return i.libelle.indexOf('TÉLÉPORTER') === 0; })[0];
+        const item = L.B.menu.items.filter(function (i) { return i.libelle === "À L'OBJECTIF"; })[0];
         item.faire(item);
         return { actif: item.actif, x: j.x, y: j.y, ax: x, ay: y };
     }""")
@@ -170,7 +170,7 @@ def test_teleporter_vers_l_objectif(banc):
         const cx = j.x + 3000, cy = j.y - 500;
         L.Histoire.cible = function () { return { x: cx, y: cy }; };
         L.Hud.ouvrirMenu(L.Hud.menuDebug());
-        const item = L.B.menu.items.filter(function (i) { return i.libelle.indexOf('TÉLÉPORTER') === 0; })[0];
+        const item = L.B.menu.items.filter(function (i) { return i.libelle === "À L'OBJECTIF"; })[0];
         const actif = item.actif;
         item.faire(item);
         return { actif: actif, x: j.x, y: j.y, cx: cx, cy: cy };
@@ -189,7 +189,7 @@ def test_teleporter_refuse_dans_une_piece(banc):
         const x = j.x, y = j.y;
         L.Histoire.cible = function () { return { x: j.x + 3000, y: j.y - 500 }; };
         L.Hud.ouvrirMenu(L.Hud.menuDebug());
-        const item = L.B.menu.items.filter(function (i) { return i.libelle.indexOf('TÉLÉPORTER') === 0; })[0];
+        const item = L.B.menu.items.filter(function (i) { return i.libelle === "À L'OBJECTIF"; })[0];
         item.faire(item);
         return { x: j.x, y: j.y, ax: x, ay: y };
     }""")
@@ -485,7 +485,7 @@ def test_la_suite_secrete_active_les_triches_et_la_pause_y_mene(banc):
 
 
 def test_une_triche_qui_ferme_le_menu_depuis_la_pause_reprend_la_partie(banc):
-    """SANTÉ COMPLÈTE laisse le menu ouvert ; TELEPORTER le ferme, et fermer le
+    """SANTÉ COMPLÈTE laisse le menu ouvert ; À L'OBJECTIF le ferme, et fermer le
     dernier menu d'une pause, c'est reprendre : la partie ne reste pas figee."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
@@ -493,7 +493,7 @@ def test_une_triche_qui_ferme_le_menu_depuis_la_pause_reprend_la_partie(banc):
         L.Histoire.cible = function () { return { x: L.B.joueur.x + 500, y: L.B.joueur.y }; };
         L.Jeu.pause();
         L.Hud.ouvrirOnglet('triches');
-        const teleporter = L.B.menu.items.filter(function (i) { return i.libelle.indexOf('TÉLÉPORTER') === 0; })[0];
+        const teleporter = L.B.menu.items.filter(function (i) { return i.libelle === "À L'OBJECTIF"; })[0];
         L.B.menu.curseur = L.B.menu.items.indexOf(teleporter);
         o.tape('KeyE', 2);                                     // ACTION sur la ligne
         o.frame(2);
@@ -520,14 +520,14 @@ def test_le_menu_debug_ouvert_par_la_suite_secrete_se_ferme_toujours_vers_le_jeu
 
 
 
-# --- SAUT VERS UNE MISSION : on va chez le donneur, et la mission demarre -------------------
+# --- LANCER UNE MISSION : on va chez le donneur, et la mission demarre -------------------
 
 CHOISIR_UNE_MISSION = """
         function choisir(L, slug, depuisLaPause) {
             if (!depuisLaPause) L.Hud.ouvrirMenu(L.Hud.menuDebug());
             else L.Hud.ouvrirOnglet('triches');
             function ligne(nom) { return L.B.menu.items.filter(function (i) { return i.libelle === nom; })[0]; }
-            ligne('SAUT VERS UNE MISSION').faire();
+            ligne('LANCER UNE MISSION').faire();
             const titre = L.B.defs.missions.filter(function (m) { return m.slug === slug; })[0].titre.toUpperCase();
             const item = ligne(titre);
             const detail = item.detail, actif = item.actif;
@@ -700,13 +700,13 @@ def test_chaque_mission_du_catalogue_se_lance_par_le_saut(banc):
         assert m["menu"] is False, m
 
 
-# --- SAUT VERS UN DÉFI : on se pose devant son panneau, et il se propose -----------------
+# --- LANCER UN DÉFI : on se pose devant son panneau, et il se propose -----------------
 
 ALLER_AU_DEFI = """
         function allerAu(L, slug, depuisLaPause) {
             if (depuisLaPause) { L.B.partie.triches.menu = true; L.Jeu.pause(); L.Hud.ouvrirOnglet('triches'); }
             else L.Hud.ouvrirMenu(L.Hud.menuDebug());
-            L.B.menu.items.filter(function (i) { return i.libelle === 'SAUT VERS UN DÉFI'; })[0].faire();
+            L.B.menu.items.filter(function (i) { return i.libelle === 'LANCER UN DÉFI'; })[0].faire();
             const item = L.B.menu.items.filter(function (i) { return i.defi === slug; })[0];
             return item.faire(item);
         }
@@ -864,12 +864,12 @@ def test_le_saut_vers_un_defi_ne_se_lance_pas_pendant_une_scene(banc):
         const rendu = allerAu(L, 'saut');
         return { rendu: rendu, menu: L.B.menu && L.B.menu.titre, bouge: j.x !== x || j.y !== y };
     }""")
-    assert r["rendu"] is False and r["menu"] == "SAUT VERS UN DÉFI" and r["bouge"] is False
+    assert r["rendu"] is False and r["menu"] == "LANCER UN DÉFI" and r["bouge"] is False
 
 
 # --- CHEZ UN DONNEUR et ENDROITS CLÉS : on y va, et rien ne se lance ---------------------
 # Demande de Martin (27 sept. 2026) : « avec la triche je veux pouvoir me téléporter chez
-# les donneurs et endroits clé ». SAUT VERS UNE MISSION pose chez le donneur mais LANCE la
+# les donneurs et endroits clé ». LANCER UNE MISSION pose chez le donneur mais LANCE la
 # mission ; ces deux pages-ci ne font que porter le joueur.
 
 ALLER = """
@@ -968,9 +968,12 @@ def test_endroits_cles_ranges_comme_la_legende(banc):
                  aeroCache: L.Monde.masquee(L.Monde.carte.points.filter(function (p) { return p.slug === 'aeroport'; })[0].x,
                                             L.Monde.carte.points.filter(function (p) { return p.slug === 'aeroport'; })[0].y) };
     }""")
-    assert sorted(r["endroits"]) == sorted(r["points"]), "chaque point de la carte, une fois"
-    assert len(r["endroits"]) >= 20
-    assert r["entetes"] == [e for e in r["ordre"] if e in r["entetes"]], "l'ordre de la legende"
+    en_ville = [e for e in r["endroits"] if e in r["points"]]
+    assert sorted(en_ville) == sorted(r["points"]), "chaque point de la carte, une fois"
+    assert len(en_ville) >= 20
+    assert r["entetes"][-1] == "HORS DE LA VILLE", "les blocs de carte, a la fin"
+    legende = r["entetes"][:-1]
+    assert legende == [e for e in r["ordre"] if e in legende], "l'ordre de la legende"
     assert r["entetes"][0] == "TES PLACES"
     assert r["aeroCache"] is True, "temoin : l'aerogare est cachee en debut de partie"
     assert r["aero"] == {"detail": "CACHÉ", "actif": False}
@@ -1056,3 +1059,122 @@ def test_les_sauts_ne_se_font_pas_pendant_une_scene(banc):
         return { r1: r1, m1: m1, r2: r2, m2: L.B.menu && L.B.menu.titre, bouge: j.x !== x || j.y !== y };
     }""")
     assert r == {"r1": False, "m1": "CHEZ UN DONNEUR", "r2": False, "m2": "ENDROITS CLÉS", "bouge": False}
+
+
+# --- L'onglet classé, et la foire, le traversier et les blocs dans ENDROITS CLÉS -------------
+# Martin (27 sept. 2026) : « classe bien le menu de triche, il commence a y avoir beaucoup de
+# menus » — des sections par intention, et « ... » sur les lignes qui ouvrent une page.
+
+
+def test_l_onglet_triches_est_classe_par_intention(banc):
+    """Cinq sections dans cet ordre ; chaque ligne « ... » ouvre la page de son nom, et
+    aucune autre ligne ne porte « ... »."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const m = L.Hud.menuDebug();
+        const sections = {};
+        let courante = null;
+        m.items.forEach(function (i) {
+            if (i.entete) { courante = i.entete; sections[courante] = []; }
+            else sections[courante].push(i.libelle);
+        });
+        const pages = m.items.filter(function (i) { return i.detail === '...'; }).map(function (i) {
+            L.Hud.ouvrirMenu(L.Hud.menuDebug());
+            const item = L.B.menu.items.filter(function (k) { return k.libelle === i.libelle; })[0];
+            const rendu = item.faire(item);
+            return { libelle: i.libelle, rendu: rendu, titre: L.B.menu && L.B.menu.titre };
+        });
+        return { entetes: Object.keys(sections), sections: sections, pages: pages };
+    }""")
+    assert r["entetes"] == ["LE JOUEUR", "TOUJOURS", "ALLER", "JOUER", "DIVERS"]
+    assert r["sections"]["ALLER"] == ["À L'OBJECTIF", "CHEZ UN DONNEUR", "ENDROITS CLÉS"]
+    assert r["sections"]["JOUER"] == ["LANCER UNE MISSION", "LANCER UN DÉFI", "OBJECTIF SUIVANT", "TERMINER LA MISSION"]
+    assert len(r["sections"]["TOUJOURS"]) == 5
+    assert {p["libelle"] for p in r["pages"]} == {"CHEZ UN DONNEUR", "ENDROITS CLÉS", "LANCER UNE MISSION",
+                                                   "LANCER UN DÉFI", "JUKEBOX"}
+    for p in r["pages"]:
+        assert p["rendu"] is False and p["titre"] == p["libelle"], p
+
+
+def test_la_foire_et_le_traversier_se_rejoignent(banc):
+    """L'arche de la foire sous REPÈRES, les deux quais du traversier sous TRANSPORT ; on
+    s'y pose a pied, dehors, a deux tuiles au plus."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        """ + ALLER + """
+        const m = L.Hud.menuEndroitsCles();
+        let section = null;
+        const ou = {};
+        m.items.forEach(function (i) { if (i.entete) section = i.entete; else if (i.endroit) ou[i.endroit] = section; });
+        const cibles = { foire: L.Histoire.resoudre('foire') };
+        L.Traversier.donnees().escales.forEach(function (e) { cibles['traversier:' + e.district] = L.Histoire.lieu('traversier:' + e.district); });
+        const sorties = [];
+        Object.keys(cibles).forEach(function (slug) {
+            rendreLaMain(L);
+            const rendu = a(L, slug);
+            const j = L.B.joueur, c = cibles[slug];
+            sorties.push({ slug: slug, section: ou[slug], rendu: rendu, menu: !!L.B.menu, dehors: !L.B.interieur,
+                           tuiles: Math.hypot(j.x - c.x, j.y - c.y) / L.TT });
+        });
+        return sorties;
+    }""")
+    assert [s["slug"] for s in r] == ["foire", "traversier:quais", "traversier:pointe"]
+    for s in r:
+        assert s["section"] == ("REPÈRES" if s["slug"] == "foire" else "TRANSPORT"), s
+        assert s["rendu"] is True and s["menu"] is False and s["dehors"] is True, s
+        assert s["tuiles"] <= 2.5, s
+
+
+ALLER_DANS_UN_BLOC = """
+        // La page ENDROITS CLÉS, section HORS DE LA VILLE : la ligne, puis le fondu et la
+        // carte du bloc, qui arrive par le reseau.
+        async function dansLeBloc(L, o, endroit) {
+            const item = page(L, 'ENDROITS CLÉS').items.filter(function (i) { return i.endroit === endroit; })[0];
+            const rendu = item.faire(item);
+            for (let i = 0; i < 200 && (L.B.transition || !L.B.bloc); i++) { o.frame(1); if (i % 5 === 0) await o.attendre(); }
+            for (let i = 0; i < 10; i++) o.frame(1);
+            return rendu;
+        }
+"""
+
+
+def test_chaque_porte_des_blocs_se_rejoint_et_s_ouvre(banc):
+    """Le chalet et la cabane a sucre au rang, les Galeries : on arrive dans le bloc
+    devant la porte, et ACTION l'ouvre. Le cine-parc, sans porte : a son arrivee. Et de
+    la, un endroit de la ville nous y ramene."""
+    r = banc("async function (L, o) {" + """
+        L.Jeu.commencer();
+        """ + ALLER + ALLER_DANS_UN_BLOC + """
+        const lignes = L.Hud.menuEndroitsCles().items.filter(function (i) { return i.bloc; })
+            .map(function (i) { return { endroit: i.endroit, libelle: i.libelle, bloc: i.bloc }; });
+        const sorties = [];
+        for (const l of lignes) {
+            rendreLaMain(L);
+            L.Jeu.revenirEnVille();
+            const rendu = await dansLeBloc(L, o, l.endroit);
+            const j = L.B.joueur, def = L.B.bloc && L.B.bloc.def;
+            const s = { endroit: l.endroit, libelle: l.libelle, rendu: rendu, menu: !!L.B.menu, etat: L.B.etat,
+                        bloc: L.B.bloc && L.B.bloc.slug, attendu: l.bloc };
+            if (def && def.bloc.arrivee && l.endroit === l.bloc) {
+                s.arrivee = Math.hypot(j.x - (def.bloc.arrivee.x * L.TT + 8), j.y - (def.bloc.arrivee.y * L.TT + 8)) / L.TT;
+            } else {
+                o.tape('KeyE', 2);
+                for (let i = 0; i < 80 && (L.B.transition || !L.B.interieur); i++) o.frame(1);
+                s.entre = L.B.interieur ? L.B.interieur.nom.toUpperCase() : null;
+            }
+            sorties.push(s);
+        }
+        rendreLaMain(L);
+        const retour = a(L, 'garage');
+        return { sorties: sorties, retour: { rendu: retour, bloc: L.B.bloc, interieur: !!L.B.interieur } };
+    }""")
+    faits = {s["endroit"] for s in r["sorties"]}
+    assert {"rang:Le chalet du rang", "rang:La cabane à sucre", "galeries:Les Galeries de la Baie", "cineparc"} <= faits
+    for s in r["sorties"]:
+        assert s["rendu"] is True and s["menu"] is False and s["etat"] == "jeu", s
+        assert s["bloc"] == s["attendu"], s
+        if "arrivee" in s:
+            assert s["arrivee"] <= 1.5, s
+        else:
+            assert s["entre"] == s["libelle"], s
+    assert r["retour"] == {"rendu": True, "bloc": None, "interieur": False}
