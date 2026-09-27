@@ -58,11 +58,12 @@ def test_un_lampadaire_pauvre_gresille_sans_etre_mort_et_la_ville_ne_bouge_pas()
     """Parmi les lampadaires pauvres qui marchent encore, une part grésille — un
     drapeau sur la lampe, pas une tuile : les lampes restent où elles étaient."""
     from app import carte, mobilier
-    ville = carte.generer()
+    # ⚠️ La ville d'avant (27 sept. 2026) : lue par un `_Chantier`, dans SON repère (`app/nord.py`).
+    ville = carte.generer(nord=False)
     original = mobilier.eclairer
     mobilier.eclairer = lambda chantier, bords, solides: {}
     try:
-        sans = carte.generer()
+        sans = carte.generer(nord=False)
     finally:
         mobilier.eclairer = original
     chantier = carte._Chantier(carte.PLAN, carte.GRAINE)

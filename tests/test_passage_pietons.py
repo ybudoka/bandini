@@ -34,6 +34,11 @@ CHERCHER_LIGNE = """(function (L) {
         const inter = L.Monde.intersectionA(sx + p[0], sy + p[1]);
         if (!inter || !inter.feux) continue;
         if (!L.Monde.estPassage(sx + p[0], sy + p[1])) continue;
+        // ⚠️ UNE VOIE DE BORDURE (27 sept. 2026) : le vélo roule contre le trottoir, à sa droite. Sur la voie
+        // intérieure d'un boulevard, il s'y range en s'arrêtant — ce n'est pas quitter sa voie. La première ligne
+        // trouvée était une voie de bordure par chance ; depuis que les croisements de la couture ont des feux
+        // (`app/nord.py`), c'est la voie intérieure du boulevard du haut de la ville.
+        if (!L.Monde.estTrottoir(sx - p[1], sy + p[0])) continue;
         let droit = true;
         for (let k = 1; k <= 8; k++) if (L.Monde.fleche(sx - p[0] * k, sy - p[1] * k) !== sens) droit = false;
         if (droit) return { sx: sx, sy: sy, sens: sens, p: p, inter: inter };

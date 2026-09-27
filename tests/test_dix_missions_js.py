@@ -844,6 +844,12 @@ def test_e12_le_phare_la_rampe_de_la_pointe_la_police_puis_le_depanneur(banc):
     r = banc("function (L, o) {" + OUTILS + ROUTE + """
         L.Jeu.commencer(); L.graine(6);
         const B = L.B, j = B.joueur; j.invincible = 1e6;
+        // ⚠️ SANS LA CIRCULATION (27 sept. 2026) : le juge mène le char à travers toute la ville, et il tenait
+        // parce que le hasard du démarrage laissait la route libre. La bande nord a changé ce hasard : un char
+        // de la circulation bloquait un croisement du Faubourg, et le coupé s'y est défoncé jusqu'à l'épave.
+        const trafic = B.defs.conduite.trafic;
+        trafic.vehicules_max = 0; trafic.stationnes_max = 0;
+        B.entites.filter(function (e) { return e.type === 'vehicule' && e.conducteur === 'trafic'; }).forEach(L.Entites.retirer);
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6']);
         const argent = paiements(L);
         commencer(L, o, 'e12');

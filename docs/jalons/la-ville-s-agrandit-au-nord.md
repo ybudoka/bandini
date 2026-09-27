@@ -1465,4 +1465,45 @@ Lancer la suite par le lanceur parallèle. Pour chaque rouge, décider :
 
 ## Notes
 
-_Rien de livré._
+**Livré le 27 sept. 2026** — en deux temps : le rang et le ciné-parc d'abord (tâche 1), puis la bande (tâches 2 à 6),
+avec une relecture neuve de toute la branche et une passe de corrections.
+
+- **Le rang** (`app/blocs/rang.py`) : le chalet au bord du lac de l'ancienne clairière, la cabane à sucre en face,
+  un chemin de gravier ; on y entre par la rue des Quais, qui traverse jusqu'au bord ouest
+  (`carte.OUVERTURES_DE_RUE`). Le **ciné-parc** est au bord ouest des Érables, entré par son côté est. Une vieille
+  partie retrouve sa planque au rang.
+- **La bande nord** (`app/nord.py`) : la carte fait 459 × 414. Toute la ville descend de 110 rangées ; une deuxième
+  ville, bâtie par le même chantier sur sa trame et sa graine, se colle au-dessus — **les Friches** (herbes hautes,
+  sentiers de gravier, terrains vagues, carcasses), **la place du Petit-Canton** (ses rues, et 56 terrains à bâtir
+  derrière leur grillage, pancarte « À BÂTIR »), **la Gare de triage** (voies, wagons, hangars de tôle et le **poste
+  d'aiguillage**, sa seule pièce). Les croisements de la couture s'ouvrent au nord ; on y roule et on y marche.
+- **Mesures** : `generer` 1,58 s → 1,64 s ; la carte 53 → 64 Ko gzip (682 Ko bruts) — le plafond est relevé, comme
+  pour l'aéroport (`test_definitions`), ⚠️ **à confirmer par Martin**.
+
+⚠️ **Ce qui a surpris** :
+- **Le scratchpad s'est vidé** en pleine exécution : un `cd` raté a fait un `checkout --detach dev` dans l'arbre
+  partagé (même commit, arbre propre), remis aussitôt.
+- Une **moto lancée** dans la rue du rang heurtait le bord et **éjectait son pilote** avant le passage :
+  `Blocs.marge` anticipe maintenant d'une image de route.
+- **La ville partage des objets** entre ses listes (les amarrages de l'île) : décalés deux fois sans un registre.
+- **« Python n'a pas besoin de deux trames » était faux** : les juges qui lisent le quartier d'une tuile de la
+  carte finie en ont besoin — `nord.LECTEUR`.
+- Les juges de la ville (les clôtures qui tournent, la pièce à la mesure de son bâtiment, rien devant une porte,
+  pas de terre sèche dans un parc) ont trouvé **six défauts de la bande** ; la relecture, **un faux pont** (la
+  globale `PONTS`, indexée sur la trame de la ville, peignait onze rangées de quai dans la gare), **dix commerces
+  dans la gare** (une clinique, une disco) et un plantage pour d'autres graines.
+- **Les numéros d'entités** : chaque décor et chaque poteau créés au démarrage prennent un numéro pour toujours, et
+  tout ce qui se tire au numéro suit. La bande prend les siens dans une plage à part, et la couture saute ceux de
+  ses anciens panneaux d'arrêt : la ville d'avant garde sa suite à l'unité près.
+- **Le hasard du démarrage change forcément** : on naît aussi au-dessus du terminus maintenant. Les juges du banc
+  qui tenaient par ce tirage fixent ce qu'ils jugent (l'archétype, la graine, l'intouchable).
+
+**Dettes** :
+- La **course de motoneige** ne se gagne, par le pilote du juge, qu'**une graine sur huit** — sur la base aussi.
+- Les **phares du camion-benne et du camion-citerne** se voient quand ils montent l'écran (un `xfail` le tient) :
+  un défaut d'avant, mis au jour par le nouveau hasard.
+- Les croisements de la couture n'ont pas de **feux piétons** (leurs feux de chars, oui).
+- Mineures : `nord._VUS` est un registre de module ; `Sauvegarde.completer` modifie la partie qu'on lui donne ;
+  les clés de `partie.fouilles` (« rue:tx,ty ») ne descendent pas (elles ne durent qu'une journée).
+
+**À regarder** (captures dans `captures/`) : le rang, son ouverture de rue, l'entrée du ciné-parc, la bande.
