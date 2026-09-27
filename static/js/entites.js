@@ -48,6 +48,25 @@ const Entites = (function () {
   const ECART_PLANTE = 10;
 
   let suivantId = 1;
+  //: ⚠️ LA BANDE NORD PREND SES NUMEROS A PART (27 sept. 2026, `app/nord.py`). Tout ce qui se cree au
+  //: demarrage depuis la carte (le decor, les feux, les arrets) consomme un numero POUR TOUJOURS, et tout
+  //: ce qui se tire a l'empreinte d'un numero (un passant, un char, un choix de coup) change avec lui.
+  //: La bande, collee au-dessus de la ville, ajoutait des centaines de decors et de poteaux avant les
+  //: premiers passants : la ville d'avant ne se jouait plus pareil. Ce qui est cree `horsSuite` prend
+  //: ses numeros dans une autre plage, et la suite de la ville ne bouge pas.
+  let horsSuite = 0, suivantHorsSuite = 1e9;
+  function enDehorsDeLaSuite(fn) {
+    horsSuite++;
+    try { return fn(); } finally { horsSuite--; }
+  }
+  /** Sauter `n` numeros de la suite de la ville : ce qu'une chose DISPARUE y prenait (le panneau d'arret
+      d'un croisement de la couture, devenu un carrefour a feux numerotes a part). */
+  function sauterDesNumeros(n) { suivantId += n; }
+  /** Une tuile de la bande nord (au-dessus de la ville d'avant) ? */
+  function dansLaBande(ty) {
+    const n = (Monde.carte && Monde.carte.def && Monde.carte.def.decalage_nord) || 0;
+    return ty < n;
+  }
   //: Deux index : le decor ne bouge JAMAIS (bati une fois, a la creation) et
   //: tout le reste est rebati a chaque image.
   //: ⚠️ Melanger les deux coutait 270 insertions par image — et surtout, un
@@ -65,7 +84,7 @@ const Entites = (function () {
 
   function creer(type, x, y, extra) {
     const e = {
-      id: suivantId++, type: type, x: x, y: y, vx: 0, vy: 0, r: 5, z: 0, vz: 0,
+      id: horsSuite ? suivantHorsSuite++ : suivantId++, type: type, x: x, y: y, vx: 0, vy: 0, r: 5, z: 0, vz: 0,
       angle: 0, face: 'bas', etat: 'flane', t: 0,
       vie: 100, vieMax: 100, vivant: true,
       sprite: null, swaps: null, anim: { i: 0, dist: 0 },
@@ -235,8 +254,10 @@ const Entites = (function () {
 
   function creerDecor(def) {
     grilleFixe.clear();
+    const n = def.decalage_nord || 0;
     (def.decor || []).forEach(function (d) {
       const fiche = DECORS[d.type] || {};
+      if (d.y < n) horsSuite++;
       const e = creer('decor', d.x * TT + 8, d.y * TT + 15, {
         decor: d.type, r: fiche.r === undefined ? 3 : fiche.r, solide: !!fiche.solide,
         // ⚠️ `invisible` : un decor qui ARRETE sans se peindre lui-meme — le pied
@@ -249,6 +270,7 @@ const Entites = (function () {
         // sont la premiere fiche de decor a en avoir besoin.
         v: fiche.variantes ? hash2(d.x * 7919 + d.y, 0x5A11) % fiche.variantes : 0,
       });
+      if (d.y < n) horsSuite--;
       // ⚠️ `estIndexable`, PAS `e.solide` : c'etait le second exemplaire de la
       // regle, et il a survecu au premier correctif. Un buisson restait hors
       // de l'index a la construction de la ville — donc invisible au char
@@ -5496,7 +5518,7 @@ const Entites = (function () {
   return {
     orignalDeLaNuit, majOrignal, faireFuirLOrignal,
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES, PORTEE_DECOR,
-    creer, retirer, vider, creerJoueur, creerJoueur2, joueurs, estJoueur, creerDecor, creerAmbulants, majKiosques, creerPaquets, creerPieton, reindexerDecor,
+    creer, enDehorsDeLaSuite, sauterDesNumeros, dansLaBande, retirer, vider, creerJoueur, creerJoueur2, joueurs, estJoueur, creerDecor, creerAmbulants, majKiosques, creerPaquets, creerPieton, reindexerDecor,
     briser, endommagerDecor, reparerLeDecor, releverDecor, DEBRIS_MAX,
     peuplerInterieur, PIEDS_ALITE, coucher, seLever,
     archetype, archetypeDeRue,

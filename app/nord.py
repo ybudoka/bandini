@@ -25,22 +25,24 @@ assert sum(RANGEES_NORD) + sum(RUES_H_NORD[:-1]) == DECALAGE_NORD
 
 #: `z` friche, `b` terrain à bâtir, `v` voies ferrées, `y` hangars de la gare : des lettres de plan que seule la bande emploie
 #: (`carte.USAGE_DU_PLAN` les connaît ; la ville d'avant n'en a aucune).
+#: ⚠️ UN AGENT PAR DISTRICT, comme aux Érables et à La Shop : à `police: 0`, la police retirait ses autos
+#: en entrant dans la bande — un refuge au bout de la rue (`test_police_js` l'a vu).
 #: ⚠️ LES GANGS SONT CEUX DU VOISIN DU SUD, en attendant les Mantes (étape 4) : un district sans gang existe
 #: (la baie), mais personne n'y marche — on n'ouvre pas ce chemin ici.
 DISTRICTS_NORD: tuple[dict, ...] = (
     {"slug": "friches", "nom": "Les Friches", "bx": 0, "by": 0,
      "gang": "chevreuils", "gang_nom": "Les Chevreuils", "brume": False,
-     "pietons": 4, "vehicules": 1, "police": 0, "rythme": (0.2, 1.0, 0.5), "rares": (),
+     "pietons": 4, "vehicules": 1, "police": 1, "rythme": (0.2, 1.0, 0.5), "rares": (),
      "plan": ("z<<<<", "^<<<<", "^<<<<", "z<<<<", "^<<<<", "^<<<<", "^<<<<"),
      "standing": ("-----",) * 7},
     {"slug": "canton", "nom": "Le Petit-Canton", "bx": 5, "by": 0,
      "gang": "cravates", "gang_nom": "Les Cravates", "brume": False,
-     "pietons": 2, "vehicules": 2, "police": 0, "rythme": (0.2, 1.0, 0.5), "rares": (),
+     "pietons": 2, "vehicules": 2, "police": 1, "rythme": (0.2, 1.0, 0.5), "rares": (),
      "plan": ("bbbbbbbb",) * 7,
      "standing": ("========",) * 7},
     {"slug": "gare", "nom": "La Gare de triage", "bx": 13, "by": 0,
      "gang": "boulonneux", "gang_nom": "Les Boulonneux", "brume": False,
-     "pietons": 3, "vehicules": 2, "police": 0, "rythme": (0.15, 1.2, 0.6), "rares": (),
+     "pietons": 3, "vehicules": 2, "police": 1, "rythme": (0.15, 1.2, 0.6), "rares": (),
      "plan": ("v<<<<<<", "^<<<<<<", "^<<<<<<", "^<<<<<<", "^<<<<<<", "y<y<y<y", "^<^<^<^"),
      "standing": ("-------",) * 7},
 )
@@ -398,6 +400,9 @@ def poser(ville: dict) -> None:
         if (inter["y"] <= n + carte.TROTTOIR < inter["y"] + inter["h"]
                 and any(inter["x"] <= x < inter["x"] + inter["l"] for x in couture)):
             inter["bras"] = "".join(c for c in "NSOE" if c in inter["bras"] or c == "N")
+            # ⚠️ Le navigateur doit savoir que ce croisement a CHANGÉ (un T à arrêt devenu un carrefour à
+            # feux) : il en numérote les feux à part, pour que la ville d'avant se joue pareil.
+            inter["couture"] = True
     def haut(o):
         # ⚠️ Pas de borne-fontaine au pied de la couture : ses croisements ont maintenant quatre bras, et
         # leurs coins sont aux feux (`Moteur`, `test_moteur_js`).

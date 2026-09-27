@@ -10,6 +10,10 @@ tire pas (aucun de). L'enfant a velo est un passant : on juge ou il nait, quand,
 qu'il ne pose jamais une roue sur la rue — pas meme sur la traverse.
 """
 
+#: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : les juges qui cherchent leur rue (ou leur parc, leur gazon) en
+#: balayant la carte depuis le haut commencent à `decalage_nord` — sinon ils la trouvaient dans la bande
+#: nord (`app/nord.py`), loin de la caméra et hors du terrain où ils ont été réglés.
+
 import pytest
 
 from app import pietons, vehicules
@@ -162,7 +166,7 @@ def _parc(banc, corps):
     return banc("""function (L, o) {""" + DECOR + """
         let d = null;
         const c = M.carte;
-        for (let y = 5; y < c.h - 5 && !d; y++) for (let x = 5; x < c.w - 5 && !d; x++) {
+        for (let y = (L.B.defs.decalage_nord || 0) + 5; y < c.h - 5 && !d; y++) for (let x = 5; x < c.w - 5 && !d; x++) {
             const fl = M.fleche(x, y), p = PAS[fl];
             if (!p) continue;
             const q = [-p[1], p[0]];
@@ -403,7 +407,7 @@ def test_face_a_la_traverse_l_enfant_a_velo_fait_demi_tour(banc):
         // Des coins de trottoir qui touchent un passage, a l'est ou a l'ouest.
         const coins = [];
         // ⚠️ `:` traverse une rue nord-sud : c'est lui qui borde un trottoir a l'est ou a l'ouest.
-        for (let y = 5; y < c.h - 5 && coins.length < 6; y++) for (let x = 5; x < c.w - 5 && coins.length < 6; x += 7) {
+        for (let y = (L.B.defs.decalage_nord || 0) + 5; y < c.h - 5 && coins.length < 6; y++) for (let x = 5; x < c.w - 5 && coins.length < 6; x += 7) {
             if (M.glyphe(x, y) !== '.' || M.estRoute(x, y)) continue;
             if (M.glyphe(x + 1, y) === ':') coins.push({ x: x, y: y, dir: 0 });
             else if (M.glyphe(x - 1, y) === ':') coins.push({ x: x, y: y, dir: 2 });

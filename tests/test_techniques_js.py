@@ -1,5 +1,9 @@
 """Les techniques d'arts martiaux, au banc (docs/jalons/les-techniques-d-arts-martiaux.md)."""
 
+#: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : les juges qui cherchent leur rue (ou leur parc, leur gazon) en
+#: balayant la carte depuis le haut commencent à `decalage_nord` — sinon ils la trouvaient dans la bande
+#: nord (`app/nord.py`), loin de la caméra et hors du terrain où ils ont été réglés.
+
 
 def test_une_projection_ne_fait_pas_saigner(banc):
     r = banc("""function (L, o) {
@@ -303,7 +307,7 @@ def test_une_projection_vers_un_mur_tombe_sur_une_tuile_libre(banc):
         L.Jeu.commencer();
         const c = L.Monde.carte, TT = L.TT;
         let pose = null;
-        for (let y = 10; y < c.h - 10 && !pose; y++) for (let x = 10; x < c.w - 10 && !pose; x++) {
+        for (let y = (L.B.defs.decalage_nord || 0) + 10; y < c.h - 10 && !pose; y++) for (let x = 10; x < c.w - 10 && !pose; x++) {
             if (L.Monde.solidite(x - 1, y) === 0 && L.Monde.solidite(x, y) === 0 && L.Monde.solidite(x + 1, y) === 0
                 && L.Monde.solidite(x + 2, y) === 1) pose = { x: x * TT + 8, y: y * TT + 8 };
         }
@@ -321,7 +325,7 @@ def test_une_projection_vers_l_eau_retombe_au_sec(banc):
         L.Jeu.commencer();
         const c = L.Monde.carte, TT = L.TT;
         let pose = null;
-        for (let y = 10; y < c.h - 10 && !pose; y++) for (let x = 10; x < c.w - 10 && !pose; x++) {
+        for (let y = (L.B.defs.decalage_nord || 0) + 10; y < c.h - 10 && !pose; y++) for (let x = 10; x < c.w - 10 && !pose; x++) {
             if (L.Monde.solidite(x - 1, y) === 0 && L.Monde.solidite(x, y) === 0 && L.Monde.solidite(x + 1, y) === 0
                 && L.Monde.estEau(x + 2, y)) pose = { x: x * TT + 8, y: y * TT + 8 };
         }
@@ -337,8 +341,11 @@ def test_l_etranglement_non_vu_n_alerte_personne(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.B.partie.techniques.etranglement = true;
-        const j = L.B.joueur, p = o.poser(null, 10, 0);
-        p.etat = 'flane'; p.angle = 0; p.face = 'droite';    // il nous tourne le dos
+        // ⚠️ UN ADO À L'ARRÊT, pas qui le hasard donne et qui flâne (27 sept. 2026) : le juge tenait par le
+        // tirage du démarrage — un ado, qui décidait au dé de s'arrêter une fois tenu. La bande nord a changé
+        // ce tirage : c'est sorti un ouvrier, qui se défend, et l'ado d'après repartait et se dégageait.
+        const j = L.B.joueur, p = o.poser('ado', 10, 0);
+        p.etat = 'arret'; p.angle = 0; p.face = 'droite';    // il nous tourne le dos
         j.angle = 0; j.face = 'droite';
         L.Entites.indexer();
         const crimes = []; const f = L.Police.signalerCrime;

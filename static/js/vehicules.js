@@ -3235,7 +3235,20 @@ const Vehicules = (function () {
     // pieton, a la tuile pres : 124 sur 124. Tant que les lanternes n'etaient
     // pas peintes, deux poteaux noirs l'un dans l'autre ne se voyaient pas.
     const poteaux = new Map();
+    // ⚠️ La bande nord prend ses numéros à part (`Entites.enDehorsDeLaSuite`) : ses poteaux ne décalent pas
+    // ceux de la ville d'avant, ni tout ce qui naît après eux.
     carte.intersections.forEach(function (inter) {
+      if (Entites.dansLaBande(inter.y)) return Entites.enDehorsDeLaSuite(function () { poser(inter); });
+      // ⚠️ LA COUTURE (`app/nord.py`) : un T de la ville d'avant, qui avait son panneau d'arret, est devenu un
+      // carrefour a feux. Ses feux se numerotent a part, et le numero du panneau disparu est saute — la
+      // suite de la ville reste celle d'avant, a l'unite pres.
+      if (inter.couture) {
+        if (inter.bras.replace('N', '').length === 3) Entites.sauterDesNumeros(1);
+        return Entites.enDehorsDeLaSuite(function () { poser(inter); });
+      }
+      poser(inter);
+    });
+    function poser(inter) {
       if (inter.feux) {
         for (const coin of COINS(inter)) {
           const c = coinLibre(coin[0], coin[1]);
@@ -3256,7 +3269,7 @@ const Vehicules = (function () {
         poteaux.set(c[0] + ',' + c[1], Entites.creer('stop', c[0] * TT + 8, c[1] * TT + 15,
                                                      { inter: inter, decor: 'stop', r: 2, solide: false }));
       }
-    });
+    }
     // ⚠️ LES FEUX PIETONS VIENNENT DE LA CARTE, pas d'un coin devine ici. Leur
     // place se lit sur la TRAVERSE — un a chaque bout, et le sens du passage
     // avec (`carte.py`, `feux_pietons`). Les deviner depuis la boite du
@@ -3281,9 +3294,11 @@ const Vehicules = (function () {
       if (!inter || !inter.feux) return;
       const mat = matDuCoin(poteaux, inter, f.x, f.y);
       if (mat) { mat.traverses.push(f.sens); return; }
-      poteaux.set(f.x + ',' + f.y,
-                  Entites.creer('feu_pieton', f.x * TT + 8, f.y * TT + 15,
-                                { inter: inter, traverses: [f.sens], r: 1, solide: false }));
+      const creer = function () {
+        return Entites.creer('feu_pieton', f.x * TT + 8, f.y * TT + 15,
+                             { inter: inter, traverses: [f.sens], r: 1, solide: false });
+      };
+      poteaux.set(f.x + ',' + f.y, Entites.dansLaBande(f.y) ? Entites.enDehorsDeLaSuite(creer) : creer());
     });
   }
 

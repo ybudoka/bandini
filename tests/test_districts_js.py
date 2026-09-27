@@ -74,15 +74,21 @@ def test_le_nom_du_quartier_suit_le_joueur(banc):
             const zone = L.Monde.zoneA(L.B.joueur.x, L.B.joueur.y);
             vus[slug] = zone ? { nom: zone.nom, district: zone.district, gang: zone.gang } : null;
         }
-        // Et le coin nord-ouest, c'est la banlieue, loin de toute cour de gang.
-        L.B.joueur.x = 30 * L.TT; L.B.joueur.y = 12 * L.TT;
+        // Et le coin nord-ouest de la ville d'avant, c'est la banlieue, loin de toute cour de gang —
+        // ⚠️ 110 rangées plus bas depuis que la ville s'agrandit au nord (`decalage_nord`) : au-dessus, ce
+        // sont les Friches.
+        const n = L.B.defs.decalage_nord;
+        L.B.joueur.x = 30 * L.TT; L.B.joueur.y = (n + 12) * L.TT;
         const coin = L.Monde.zoneA(L.B.joueur.x, L.B.joueur.y);
-        return { vus: vus, coin: coin ? coin.nom : null };
+        L.B.joueur.y = 12 * L.TT;
+        const friches = L.Monde.zoneA(L.B.joueur.x, L.B.joueur.y);
+        return { vus: vus, coin: coin ? coin.nom : null, friches: friches ? friches.nom : null };
     }""")
     for slug, zone in r["vus"].items():
         assert zone and zone["district"] == slug, f"{slug} : {zone}"
         assert zone["nom"], slug
     assert r["coin"] == "Les Érables"
+    assert r["friches"] == "Les Friches"
 
 
 def test_on_traverse_le_pont_en_char(banc):

@@ -12,6 +12,10 @@ from app import interactions, recherche
 RECHERCHE = """
   function recherche(L, o) {
     const B = L.B;
+    // ⚠️ On observe les murs : personne ne t'arrête (comme `test_police_js`). Sans ça, un agent finissait
+    // par te rejoindre pendant les 800 images — plus vite depuis qu'il peut naître aussi dans la bande nord
+    // au-dessus du terminus — et l'écran ARRÊTÉ ! figeait la ville avant la fin de la poursuite.
+    B.joueur.intouchable = true;
     L.Police.ajouterChaleur(2);
     B.recherche.etoiles = 2;
     for (let k = 0; k < 400 && B.entites.filter(function (e) { return e.type === 'affiche'; }).length < 2; k++) {

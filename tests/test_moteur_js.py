@@ -2127,7 +2127,10 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
         L.Entites.retirer(jog); L.Entites.retirer(flaneur);
 
         // 5. LE FACTEUR : il fait battre la porte, et il N'ENTRE PAS.
-        const porte = c.portesFermees.find(function (p) { return L.Monde.marchablePieton(p.x, p.y + 1); });
+        // ⚠️ Une porte de la VILLE D'AVANT (27 sept. 2026) : la première de la liste est maintenant dans la
+        // bande nord, loin de là où ce juge a été réglé, et le facteur ne finissait pas sa tournée à l'écran.
+        const n = L.B.defs.decalage_nord || 0;
+        const porte = c.portesFermees.find(function (p) { return p.y >= n && L.Monde.marchablePieton(p.x, p.y + 1); });
         j.x = porte.x * TT + 8; j.y = (porte.y + 4) * TT + 8; L.Monde.centrerCamera(j.x, j.y);
         const fac = o.poser('facteur', 0, -2 * TT);
         fac.etat = 'flane';
@@ -4540,7 +4543,8 @@ def test_le_frein_a_main_fait_deriver(banc):
 def test_un_mur_fait_mal_mais_ne_se_traverse_pas(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
-        const j = L.B.joueur, d = o.ligneDroite();
+        // ⚠️ La rue la plus au nord de la CARTE (au-dessus de la bande nord), pas de la ville d'avant.
+        const j = L.B.joueur, d = o.ligneDroite(true);
         j.x = d.x; j.y = d.y;
         const v = o.char('auto', 0, 0, -Math.PI / 2);   // plein nord : le bord de la carte
         L.Vehicules.monter(j, v);

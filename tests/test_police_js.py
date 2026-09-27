@@ -5,6 +5,10 @@ Chaque test pose ses agents lui-meme (`Police.creerAgent`) : attendre qu'une
 patrouille passe rendrait le banc lent et capricieux.
 """
 
+#: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : les juges qui cherchent leur rue (ou leur parc, leur gazon) en
+#: balayant la carte depuis le haut commencent à `decalage_nord` — sinon ils la trouvaient dans la bande
+#: nord (`app/nord.py`), loin de la caméra et hors du terrain où ils ont été réglés.
+
 # Un agent pose a cote du joueur, sur une tuile marchable, qui le regarde.
 # (L'aide vit DANS la fonction du banc : le banc ne prend qu'une expression.)
 # ⚠️ La voie doit etre libre de CORPS autant que de murs : depuis que la foule
@@ -657,7 +661,7 @@ PATROUILLE = """function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur, TT = L.TT, c = L.Monde.carte;
         let site = null;
-        chercher: for (let ty = 3; ty < c.h - 3; ty++) for (let tx = 3; tx < c.w - 18; tx++) {
+        chercher: for (let ty = (L.B.defs.decalage_nord || 0) + 3; ty < c.h - 3; ty++) for (let tx = 3; tx < c.w - 18; tx++) {
             let ok = true;
             for (let k = 0; k < 16 && ok; k++) if (!L.Monde.estChaussee(tx + k, ty) || !L.Monde.estChaussee(tx + k, ty + 1)) ok = false;
             if (ok && L.Monde.ligneLibre(tx * TT, ty * TT + 8, (tx + 15) * TT, ty * TT + 8)) { site = { tx: tx, ty: ty }; break chercher; }

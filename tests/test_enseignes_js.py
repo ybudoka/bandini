@@ -156,6 +156,10 @@ def test_un_char_lave_perd_un_cran_de_chaleur_une_fois_par_passage(banc):
         const x = (b.x + b.l / 2) * TT, y = (b.y + 1) * TT;
         const v = L.Vehicules.creer('auto', x, y, 0, { etat: 'stationne', couleur: '#c0392b' });
         L.Vehicules.monter(j, v);
+        // ⚠️ On juge la baie, pas la police : personne ne t'arrête. Le lave-auto est aux Érables, au haut de la
+        // ville d'avant — depuis que la bande nord est collée au-dessus, un agent pouvait y naître et venir te
+        // sortir du char à deux étoiles avant le deuxième lavage.
+        j.intouchable = true;
         B.partie.argent = 100;
         B.recherche.etoiles = 2; B.recherche.chaleur = 10;
         function rester(n) { for (let k = 0; k < n; k++) { v.x = x; v.y = y; v.vitesse = 0.2; B.recherche.vu = 0; o.frame(1); } }

@@ -509,9 +509,14 @@ function banc(corps) {
     return v;
   }
   /** La premiere rangee de voie « > » a la colonne 14 (milieu d'un bloc, loin d'une ligne d'arret). */
-  function ligneDroite() {
+  //: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : ces aides cherchent leur rue à partir du haut de la ville d'avant,
+  //: 110 rangées plus bas depuis que la bande nord est collée au-dessus (`app/nord.py`). Les juges qui s'en
+  //: servent gardent ainsi leur terrain de toujours.
+  function hautDeLaVille() { return (L.B.defs && L.B.defs.decalage_nord) || 0; }
+  function ligneDroite(depuisLeHaut) {
     const c = L.Monde.carte;
-    for (let y = 0; y < c.h; y++) if (c.voie[y][14] === '>') return { x: 14 * L.TT + 8, y: y * L.TT + 8 };
+    // `depuisLeHaut` : la toute premiere rangee de la CARTE (le bord nord, au-dessus de la bande).
+    for (let y = depuisLeHaut ? 0 : hautDeLaVille(); y < c.h; y++) if (c.voie[y][14] === '>') return { x: 14 * L.TT + 8, y: y * L.TT + 8 };
     return null;
   }
   /** Une tuile de voie « > » avec dix tuiles droites devant — assez loin d'une
@@ -522,7 +527,7 @@ function banc(corps) {
       carte n'en a pas. */
   function boulevard(double) {
     const c = L.Monde.carte;
-    for (let y = 3; y < c.h - 3; y++) {
+    for (let y = hautDeLaVille() + 3; y < c.h - 3; y++) {
       for (let x = 3; x < c.w - 14; x++) {
         if (c.voie[y][x] !== '>') continue;
         const gauche = c.voie[y - 1][x] === '>';
