@@ -2607,7 +2607,7 @@ const Vehicules = (function () {
     const portee = t.regard_tuiles * TT;
     const cx = Math.cos(v.angle), cy = Math.sin(v.angle);
     const ax = v.x + cx * (v.def.longueur / 2 + portee / 2), ay = v.y + cy * (v.def.longueur / 2 + portee / 2);
-    let dMin = Infinity;
+    let dMin = Infinity, eMin = null;
     // ⚠️ UNE RAME NE S'ARRETE PAS POUR TOI (M12) : ni pour le joueur, ni pour son char.
     const toi = v.rails && B.joueur, tonChar = toi && B.joueur.dansVehicule;
     for (const e of Entites.autour(ax, ay, portee / 2 + 16, function (q) {
@@ -2629,12 +2629,33 @@ const Vehicules = (function () {
         const face = Math.cos(e.angle) * cx + Math.sin(e.angle) * cy;
         if (face < -0.5 && cote > 6) continue;         // il vient en face, dans sa voie : rien a craindre
       }
-      if (devant < dMin) dMin = devant - v.def.longueur / 2;
+      if (devant < dMin) { dMin = devant - v.def.longueur / 2; eMin = e; }
     }
     // ⚠️ Et le SIGNALEUR d'un chantier, quand sa palette dit ARRÊT : le même
     // freinage que pour un piéton planté sur la voie, à la distance où il est.
     // (Infinity la plupart du temps : aucun chantier ne le fait parler.)
-    return Math.min(dMin, Chantiers.signalDevant(v));
+    const signal = Chantiers.signalDevant(v);
+    // Ce qu'on a devant soi, pour `suitUnChar` : le signaleur n'est pas un char.
+    v.devant = signal < dMin ? null : eMin;
+    return Math.min(dMin, signal);
+  }
+
+  /** Il SUIT un char : l'obstacle que `obstacleDevant` vient de voir est un char
+      CONDUIT qui va dans son sens. On ne force jamais dedans.
+
+      ⚠️ Retour de Martin, 27 sept. 2026 (capture a l'appui) : devant la Cantine des
+      Quais, les quatre autobus de la ligne 2, un camion et deux chars enfonces les uns
+      dans les autres. `force` avance a 25 % SANS REGARDER DEVANT : il sert a passer un
+      pieton plante sur la voie, un char garé, deux chars en travers dans une boite.
+      Derriere un char lui-meme arrete, il ne degage rien — chacun forcait dans celui
+      qu'il suit, la separation ne defait qu'un contact par char et par image, et la
+      file se tassait jusqu'a confondre deux autobus. Celui de devant a sa propre
+      patience : c'est lui qui forcera, s'il le faut. Un char sans conducteur (garé,
+      epave) se pousse toujours ; un char d'en face ou en travers aussi. */
+  function suitUnChar(v) {
+    const e = v.devant;
+    if (!e || e.type !== 'vehicule' || !e.conducteur || e.etat === 'epave') return false;
+    return Math.cos(e.angle) * Math.cos(v.angle) + Math.sin(e.angle) * Math.sin(v.angle) > 0.7;
   }
 
   /** Le chien de garde du trafic : dix secondes sans bouger, sans feu rouge
@@ -2789,7 +2810,8 @@ const Vehicules = (function () {
         const hors = p && Monde.fleche(tx, ty) === v.sens && monterSurLeTrottoir(v, tx, ty, p, true);
         if (hors) { v.cible = hors; v.patience = 0; }
       }
-      if (v.patience > t.patience_images) { v.force = 90; v.patience = 0; v.klaxonT = 30; }
+      // Derriere celui qu'on suit, on klaxonne ; on ne lui rentre pas dedans (`suitUnChar`).
+      if (v.patience > t.patience_images) { if (!suitUnChar(v)) v.force = 90; v.patience = 0; v.klaxonT = 30; }
     } else {
       if (obstacle < t.distance_securite_px * 2) vitesseVoulue *= 0.5;
       // ⚠️ Tant qu'on longe l'obstacle, on reste SOUS la vitesse qui renverse :
@@ -2797,7 +2819,7 @@ const Vehicules = (function () {
       if (deport && proche) vitesseVoulue = Math.min(vitesseVoulue, physique().renverse_vitesse_min * 0.9);
       v.patience = 0;
     }
-    if (v.force > 0) { v.force--; vitesseVoulue = Math.max(vitesseVoulue, v.def.vitesse_max * 0.25); }
+    if (v.force > 0) { v.force--; if (!(proche && suitUnChar(v))) vitesseVoulue = Math.max(vitesseVoulue, v.def.vitesse_max * 0.25); }
     void ecart;
     rouler(v, vitesseVoulue);
   }
@@ -4087,7 +4109,7 @@ const Vehicules = (function () {
     ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, majGaresDeService, typeDeRue, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, pousserLeDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
     majPhysique, allureDuSol, avancer, heurterVehicules, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
-    prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
+    prochaineCible, peutSortir, obstacleDevant, suitUnChar, majConducteur, commandesJoueur, rouler,
     pointDArret, approcheDeLaLigne, placeDeLaPanne, placeStationnee, garesVoulus,
     voieDeDepassement, voieLibre, changerDeVoie,
     estVeloDuTrafic, intentionDuVelo, coteDuVelo, aLaBordure, voieDuVelo, roulableHorsRue, boutDeTrottoir, traverseeDuParc, monterSurLeTrottoir,

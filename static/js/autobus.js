@@ -353,12 +353,16 @@ const Autobus = (function () {
       voulue = 0;
       // ⚠️ Deux fois la patience du trafic : un autobus ne force pas le passage
       // pour trois secondes derriere un char qui tourne.
-      if (++v.patience > t.patience_images * 2) { v.force = 90; v.patience = 0; v.klaxonT = 30; }
+      // Derriere celui qu'il suit, il klaxonne sans lui rentrer dedans (`Vehicules.suitUnChar`).
+      if (++v.patience > t.patience_images * 2) { if (!Vehicules.suitUnChar(v)) v.force = 90; v.patience = 0; v.klaxonT = 30; }
     } else {
       if (obstacle < t.distance_securite_px * 2) voulue *= 0.5;
       v.patience = 0;
     }
-    if (v.force > 0) { v.force--; voulue = Math.max(voulue, v.def.vitesse_max * 0.25); }
+    if (v.force > 0) {
+      v.force--;
+      if (!(obstacle < t.distance_securite_px && Vehicules.suitUnChar(v))) voulue = Math.max(voulue, v.def.vitesse_max * 0.25);
+    }
     Vehicules.rouler(v, voulue);
     // Le chien de garde : pris sans raison, hors de vue et sans personne a bord,
     // l'autobus rend sa place a l'horaire.

@@ -272,3 +272,86 @@ def test_la_grande_carte_montre_les_lignes(banc):
     }""")
     # Un rectangle par tuile de tracé, et deux par arrêt, en plus de la carte d'avant.
     assert r["avec"] - r["sans"] >= r["tuiles"], r
+
+
+def test_une_file_arretee_ne_se_tasse_pas_dans_celui_qu_elle_suit(banc):
+    """Retour de Martin, 27 sept. 2026, capture à l'appui : devant la Cantine des Quais,
+    les quatre autobus de la ligne 2, un camion et deux chars enfoncés les uns dans les
+    autres, un autobus de travers sur le trottoir.
+
+    ⚠️ Coincé plus de `patience_images` (le double pour un autobus), un char passe en
+    `force` : il avance à 25 % sans regarder devant. Derrière un char LUI-MÊME arrêté, ça ne
+    dégage rien — chacun force dans celui qu'il suit, la séparation ne défait qu'un contact
+    par char et par image, et la file se tasse (16 px au banc : deux autobus confondus).
+
+    La tête de file est tenue sur place à chaque image : c'est ce qui ne bouge pas pour de
+    bon (une épave coincée, un char qui attend légitimement). Ce qu'elle touche ne compte pas,
+    ce juge regarde la FILE."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const d = L.Autobus.donnees();
+        const fleches = ['>', '<', '^', 'v'];
+        // Un tronçon droit de 34 tuiles, sans abribus ni ligne d'arrêt ni boîte.
+        let ligne = null, i0 = -1;
+        for (const l of d.lignes) {
+            if (l.rails || i0 >= 0) continue;
+            for (let i = 0; i < l.n - 35 && i0 < 0; i++) {
+                let ok = true;
+                const a = l.tuiles[i], b = l.tuiles[i + 1];
+                const dx = b[0] - a[0], dy = b[1] - a[1];
+                for (let k = 0; k <= 34 && ok; k++) {
+                    const t = l.tuiles[i + k];
+                    if (t[0] !== a[0] + dx * k || t[1] !== a[1] + dy * k) ok = false;
+                    else if (fleches.indexOf(L.Monde.fleche(t[0], t[1])) < 0 || l.arretA.has(i + k)) ok = false;
+                }
+                if (ok) { i0 = i; ligne = l; }
+            }
+        }
+        if (i0 < 0) return { i0: i0 };
+        const a = ligne.tuiles[i0], b = ligne.tuiles[i0 + 1];
+        const angle = Math.atan2(b[1] - a[1], b[0] - a[0]), sens = L.Monde.fleche(a[0], a[1]);
+        const pos = function (k) { const t = ligne.tuiles[i0 + k]; return { x: t[0] * L.TT + 8, y: t[1] * L.TT + 8 }; };
+        // Le joueur regarde la scène d'à côté, hors de la chaussée.
+        const j = L.B.joueur, m = pos(20);
+        j.x = m.x - Math.sin(angle) * 40; j.y = m.y + Math.cos(angle) * 40;
+        L.Monde.centrerCamera(j.x, j.y);
+        for (const e of L.B.entites.slice()) if (e.type === 'vehicule') L.Entites.retirer(e);
+        const tete = L.Vehicules.creer('auto', pos(34).x, pos(34).y, angle, { couleur: '#44aa55' });
+        const chars = [31, 29, 27, 25].map(function (k) {
+            return L.Vehicules.creer('auto', pos(k).x, pos(k).y, angle, { couleur: '#cc3333', conducteur: 'trafic', etat: 'roule', sens: sens });
+        });
+        const bus = [21, 16, 11].map(function (k, rang) {
+            return L.Vehicules.creer('autobus', pos(k).x, pos(k).y, angle, {
+                conducteur: 'ligne', etat: 'roule', couleur: ligne.couleur, sprite: 'autobus', sens: sens, rails: false,
+                ligne: ligne.numero, rang: rang, etape: i0 + k + 1, servi: -1, arretT: 0, arret: null,
+                passager: null, demande: false, bloqueT: 0, bord: [] });
+        });
+        const file = chars.concat(bus);
+        L.Entites.indexer();
+        function pireChevauchement(p, q) {
+            let x = -Infinity;
+            for (const cp of L.Vehicules.cercles(p)) for (const cq of L.Vehicules.cercles(q)) x = Math.max(x, cp.r + cq.r - Math.hypot(cp.x - cq.x, cp.y - cq.y));
+            return x;
+        }
+        let pire = 0, paire = null, forces = 0;
+        for (let i = 0; i < 5000; i++) {
+            tete.x = pos(34).x; tete.y = pos(34).y; tete.angle = angle; tete.vx = 0; tete.vy = 0; tete.vitesse = 0;
+            o.frame(1);
+            j.vx = 0; j.vy = 0;
+            for (const v of file) if (v.force > 0) forces++;
+            for (let p = 0; p < file.length; p++) {
+                for (let q = p + 1; q < file.length; q++) {
+                    const c = pireChevauchement(file[p], file[q]);
+                    if (c > pire) { pire = c; paire = [file[p].slug, file[q].slug, i]; }
+                }
+            }
+        }
+        return { i0: i0, ligne: ligne.numero, pire: +pire.toFixed(1), paire: paire, forces: forces,
+                 enVie: file.map(function (v) { return L.B.entites.indexOf(v) >= 0; }),
+                 ecarts: file.map(function (v) { return Math.round(Math.hypot(v.x - pos(34).x, v.y - pos(34).y)); }) };
+    }""")
+    assert r["i0"] >= 0, "le décor du juge est faux : aucun tronçon droit sur la ligne %s" % r
+    assert all(r["enVie"]), "le décor du juge est faux : un char de la file a été retiré (%s)" % r
+    assert r["pire"] < 8.0, (
+        "une file arrêtée se tasse : %s et %s enfoncés de %s px l'un dans l'autre (image %s) — %s"
+        % (r["paire"][0], r["paire"][1], r["pire"], r["paire"][2], r))
