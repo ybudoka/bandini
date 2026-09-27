@@ -735,9 +735,9 @@ AMBIANCES_DE_DISTRICT: dict[str, str] = {
     "quais": "amb_quais",
     "pointe": "amb_pointe",
     "baie": "amb_quais",        # l'eau : la meme corne que le port
-    # ⚠️ L'ile EMPRUNTE le vent de La Pointe, et ca s'entend : c'est le choix
-    # d'une premiere vague, pas une musique a elle (trente credits la seconde).
-    "ile": "amb_pointe",
+    # L'ile a sa musique depuis sa 2e vague (27 sept. 2026) : en 1re vague elle
+    # EMPRUNTAIT le vent de La Pointe, et ca s'entendait.
+    "ile": "amb_ile",
 }
 
 AMBIANCES: list[Style] = [
@@ -760,6 +760,10 @@ AMBIANCES: list[Style] = [
     # La Pointe : le vent et les arbres. Majeure aeree.
     {"slug": "amb_pointe", "nom": "Le vent de La Pointe", "graine": 20011225,
      "bpm": 80, "tonique": 52, "gamme": MAJEURE, "grille": (0, 5, 3, 4),
+     "forme_chant": "triangle", "forme_nappe": "sine", "volume": 0.30},
+    # L'Ile-aux-Corneilles : le violon seul et le vent. Mineure, la plus lente.
+    {"slug": "amb_ile", "nom": "L'île sans cloche", "graine": 20260927,
+     "bpm": 60, "tonique": 38, "gamme": MINEURE, "grille": (0, 3, 5, 0),
      "forme_chant": "triangle", "forme_nappe": "sine", "volume": 0.30},
     # ⚠️ Les deux musiques d'ETAT : elles couvrent l'ambiance, jamais l'inverse
     # (voir `ECHELLE`). Rapides, mineures, et plus fortes — c'est le seul

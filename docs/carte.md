@@ -190,6 +190,8 @@ chacun dans [docs/personnages/](personnages/README.md).
 | `gilles` | Gilles Thériault | Patrick | porte:fourriere | — |
 | `bonimenteur` | Le Bonimenteur | Léo | foire (l'arche) | — |
 | `mireille` | Mireille Dion | Marie Line | point:cours (le DOJO DION) | — |
+| `jeanne` | Sœur Jeanne | Julia | porte:chapelle (l'Île-aux-Corneilles) | — |
+| `leo` | Léo Cyr | Alexandre | porte:hangar_ile (l'Île-aux-Corneilles) | — |
 
 ⚠️ **`ou: "foire"` est un lieu neuf** (22 sept. 2026) : le seul personnage posé DANS l'enceinte de la
 foire, vivant à l'arche — `histoire.js::lieuFoire`/`poserDonneurFoire` trouvent sa position dans la

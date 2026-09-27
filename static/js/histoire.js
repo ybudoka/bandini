@@ -1093,7 +1093,10 @@ const Histoire = (function () {
     // repliques_de_repos`). Sans le mp3 (pas encore genere), la boite reste muette — le filet.
     const voix = slug + '-repos-' + (apres ? 2 : 1);
     const dite = Son.Voix.histoire().some(function (v) { return v.slug === voix && v.fichier; });
-    Hud.dialogue(p.nom, [apres ? repos.texte_apres : (repos.texte || 'REVIENS ME VOIR PLUS TARD.')], dite ? 220 : 120,
+    // ⚠️ `p.repos` : un repos a lui (l'ile — « le Faubourg est tranquille » y mentirait).
+    const texte = p.repos ? p.repos[apres ? 1 : 0]
+      : (apres ? repos.texte_apres : (repos.texte || 'REVIENS ME VOIR PLUS TARD.'));
+    Hud.dialogue(p.nom, [texte], dite ? 220 : 120,
                  { slug: slug, humeur: 'neutre' });
     if (dite) { Son.Voix.chargerHistoire('repos'); if (Son.Voix.parler(voix, {}) && B.dialogue) B.dialogue.voix = true; }
     return true;

@@ -4,7 +4,7 @@ Deux sons qui ne disent rien de neuf et rendent lisible ce qui ne l'était qu'à
 l'oeil : la barre d'endurance (le souffle), et le district où l'on est (ses bruits).
 """
 
-from app import audio, carte
+from app import audio, carte, ile
 
 
 # --- Les fiches ----------------------------------------------------------------------
@@ -14,7 +14,10 @@ def test_chaque_district_s_entend():
     """Trois bruits ou plus par district, tous au catalogue, et au moins un qui
     n'a pas d'heures : un quartier qui se tait toute la nuit n'a pas de nuit."""
     sons = audio.QUARTIERS["sons"]
-    for district in (d["slug"] for d in carte.DISTRICTS):
+    # ⚠️ L'île est un district pour le son (`ile.zone`, `district: "ile"`) sans être dans
+    # `carte.DISTRICTS` : elle doit s'entendre comme les autres (2e vague de l'île).
+    connus = [d["slug"] for d in carte.DISTRICTS] + [ile.ILE["slug"]]
+    for district in connus:
         assert district in sons, f"{district} ne s'entend pas"
         assert len(sons[district]) >= 3, f"{district} n'a que {len(sons[district])} bruit(s)"
         assert any("heures" not in e for e in sons[district]), f"{district} se tait toute la nuit"
@@ -22,7 +25,7 @@ def test_chaque_district_s_entend():
             fiche = audio.par_slug(e["slug"])
             assert fiche, f"{district} : « {e['slug']} » n'est pas au catalogue"
             assert not fiche["boucle"], f"{e['slug']} : un bruit de quartier est un événement, pas une nappe"
-    assert set(sons) <= {d["slug"] for d in carte.DISTRICTS}, "un bruit pour un district qui n'existe pas"
+    assert set(sons) <= set(connus), "un bruit pour un district qui n'existe pas"
 
 
 def test_on_ne_tond_pas_son_gazon_a_trois_heures_du_matin():

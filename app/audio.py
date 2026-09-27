@@ -519,6 +519,16 @@ CATALOGUE: list[Echantillon] = [
     _e("klaxons_au_loin", "Des klaxons au loin", duree_s=3.0, volume=0.25, influence=0.5,
        prompt="a few impatient car horns honking in a traffic jam a few blocks away, "
               "downtown street, distant, no voices, no music"),
+    # --- L'Île-aux-Corneilles, 2e vague : ses bruits à elle. Elle porte leur nom, les
+    # corneilles ; et l'usine à poisson fermée depuis quinze ans a un volet qui bat au vent.
+    # ⚠️ PAS de cloche d'église : celle de la chapelle a fini chez Ti-Loup (i02, M16), et
+    # Sœur Jeanne le dit à qui passe. Elle sonnera le jour où on la lui rapporte.
+    _e("corneilles", "Des corneilles", duree_s=4.0, volume=0.3, influence=0.6,
+       prompt="a few american crows cawing harshly from the top of a spruce tree, one "
+              "answering another, open windy island, outdoors, no voices, no music"),
+    _e("volet_qui_claque", "Un volet qui claque", duree_s=3.0, volume=0.25, influence=0.6,
+       prompt="a loose wooden shutter of an abandoned fish factory banging a few times "
+              "in the sea wind, creaking hinge, a little way off, outdoors, no voices, no music"),
 ]
 
 # --- La finition des bruitages -------------------------------------------------------
@@ -796,6 +806,14 @@ MUSIQUES: list[Piece] = [
        "soft wind chimes, wind through trees on a headland above the sea, "
        "hopeful, no drums, no vocals, seamless loop",
        duree_s=60, volume=0.3),
+    # L'Île-aux-Corneilles (2e vague, 27 sept. 2026) : elle empruntait le vent de La
+    # Pointe, et ça s'entendait. Plus seule, plus lente, plus vieille : un village de
+    # trente âmes l'hiver, une chapelle sans cloche, et de l'eau dans toutes les directions.
+    _m("amb_ile",
+       "sparse lonely ambient score at 60 bpm in D minor, low bowed double bass drone, "
+       "a distant solo fiddle holding long plaintive notes, cold wind over a small "
+       "island in the gulf, empty chapel stillness, no drums, no vocals, seamless loop",
+       duree_s=45, volume=0.3),
 
     # --- Les deux musiques d'ETAT -------------------------------------------
     # ⚠️ Le seul moment ou la musique a le droit de prendre toute la place. Elle
@@ -1330,6 +1348,10 @@ QUARTIERS = {
         "baie": [{"slug": "corne_de_brume"}, {"slug": "cloche_de_bouee"}, {"slug": "huard", "heures": [0.75, 0.95]}],
         "pointe": [{"slug": "vent_dans_les_arbres"}, {"slug": "planche_a_roulettes", "heures": [0.35, 0.85]},
                    {"slug": "huard", "heures": [0.75, 0.95]}],
+        # L'île (`ile.zone`, `district: "ile"`) : ses corneilles, le volet de l'usine, la
+        # bouée et son quai. ⚠️ Pas de `cloche_d_eglise` : voir `corneilles`, plus haut.
+        "ile": [{"slug": "corneilles", "heures": [0.25, 0.8]}, {"slug": "volet_qui_claque"},
+                {"slug": "cloche_de_bouee"}, {"slug": "quai_qui_grince"}],
     },
 }
 

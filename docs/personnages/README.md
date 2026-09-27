@@ -53,6 +53,8 @@ Chaque fiche mêle deux sortes de faits.
 | [Le Bonimenteur](le-bonimenteur.md) | `bonimenteur` | à l'arche de la foire | Léo | p13 · p14 |
 | [Le capitaine Aurèle Bérubé](berube.md) | `berube` | au bout du quai du traversier, aux Quais | Paul K — Deep French Narrator | m99 |
 | [Mireille Dion](mireille.md) | `mireille` | au comptoir du DOJO DION, au Faubourg, dedans | Marie Line - Energetic and Clear | ses cours (le dojo) |
+| [Sœur Jeanne](jeanne.md) | `jeanne` | sur le parvis de la chapelle, sur l'Île-aux-Corneilles | Julia | aucune encore (i02 · i05, M16) |
+| [Léo Cyr](leo.md) | `leo` | devant le hangar sans nom, sur l'Île-aux-Corneilles | Alexandre | aucune encore (i04 · i07, M16) |
 
 ⚠️ **Deux voix du compte ne se donnent à personne** : celles du scanner de police (Clara Dupont, la
 répartitrice, et Frederic, l'agent — `audio.VOIX_RESERVEES`, jugé). Avant de donner une voix à un
@@ -61,14 +63,15 @@ Une voix **non québécoise** du compte est permise quand il n'y a plus de québ
 25 sept. 2026 : « elles sont souvent assez bonnes ») — l'ordre des choix est dans
 [M16](../jalons/m16-cent-missions.md#les-34-personnages-de-plus).
 
-⚠️ **Sept voix sont partagées**, et c'est pourquoi leurs personnages ne parlent **jamais dans le même
+⚠️ **Neuf voix sont partagées**, et c'est pourquoi leurs personnages ne parlent **jamais dans le même
 dialogue** (jugé) : Québec Tremblay fait Marco **et** Ti-Paul, l'annonceur fait le narrateur **et** Ovila,
 Alexandre Boutin fait Le Grand Mo **et** Gégé, Premium Male teacher (Adam) fait Fern **et** Xavier, Khaivan
 fait le sergent Bouchard **et** Gus, Jeanne Mance fait Josée **et** Ginette, Patrick fait Dr Lachance **et**
-Gilles. Ce qui les distingue alors, c'est l'écriture — les mots, la salutation, le rythme : Marco parle bas
+Gilles, Julia fait Madame Thibodeau **et** Sœur Jeanne, Alexandre fait le client du taxi **et** Léo Cyr. Ce qui les distingue alors, c'est l'écriture — les mots, la salutation, le rythme : Marco parle bas
 et court, Ti-Paul parle vite et trop ; le narrateur soupire, Ovila vouvoie ; Mo étire ses phrases, Gégé les
 coupe court ; Fern est bref et pressé, Xavier s'emballe et n'arrête plus ; Bouchard commande, Gus négocie ;
-Josée dirige la rue, Ginette dirige l'hôpital ; Lachance est clinique, Gilles est nostalgique.
+Josée dirige la rue, Ginette dirige l'hôpital ; Lachance est clinique, Gilles est nostalgique ; Madame
+Thibodeau gronde tendrement, Sœur Jeanne bénit avec ironie ; le client se trahit, Léo nie tout.
 
 ## On se présente une fois par mission — la salutation de chacun, d'un coup d'œil
 
@@ -101,6 +104,8 @@ fait **à sa façon**. Le tableau est l'aide-mémoire ; la fiche dit pourquoi.
 | Ginette | « C'est Ginette, de l'hôpital. » | la même, au téléphone | « Toi, viens voir. » | un mot sur un patient |
 | Gilles | « C'est Gilles, de la fourrière. » | la même, au téléphone | « Hé, le jeune! » | le mot « retraite » sans mélancolie |
 | Le Bonimenteur | « C'est le Bonimenteur, à l'arche de la foire. » | la même, au téléphone | « Approche, jeune! » | qu'il a peur, tout net |
+| Sœur Jeanne | (pas de téléphone : l'île n'a qu'une ligne, au quai) | « Sœur Jeanne. Bienvenue sur l'île, mon enfant. » | « Dieu te garde. » | un sacre ; une menace |
+| Léo Cyr | « Léo, de l'île. » | « Léo Cyr. J'garde le hangar. Non, y a rien dedans. » | « J'ai rien vu. » | un nom — ni Sven, ni Sal |
 
 ⚠️ **Une fois par mission, pas une fois par coup de fil.** L'échec, la fin et les `pendant` d'une mission
 ne redisent pas le nom : on a entendu la voix à l'appel. La colonne « Au téléphone » est donc celle de

@@ -8,18 +8,24 @@ def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
     assert [p["slug"] for p in missions.PERSONNAGES if p.get("ou")] == [
         "ti_guy", "thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu", "raymonde", "ovila",
         "mo", "fern", "mado", "gege", "xavier", "lachance", "gus", "rosa", "ginette", "gilles",
-        "bonimenteur", "sven", "berube", "mireille"]
+        "bonimenteur", "sven", "berube", "mireille", "jeanne", "leo"]
     # Mireille (le DOJO DION) ouvre ses COURS a chaque fois : pas de repos, comme le -2 de Josee.
     # Ti-Guy s'en va apres m1 (il a m1 a donner tant qu'il est la) ; Josee ouvre le marche noir
     # apres M5 (`marche_noir.apres`) au lieu de dire son repos : pas de voix pour ce qui ne s'entend pas.
     attendus = [f"{qui}-repos-{n}" for qui in ("thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu",
                                               "raymonde", "ovila", "mo", "fern", "mado", "gege",
                                               "xavier", "lachance", "gus", "rosa", "ginette", "gilles",
-                                              "bonimenteur", "sven", "berube") for n in (1, 2)
+                                              "bonimenteur", "sven", "berube", "jeanne", "leo") for n in (1, 2)
                 if (qui, n) != ("josee", 2)]
     repos = missions.repliques_de_repos()
-    assert [r["slug"] for r in repos] == attendus, "quarante et une voix, pas quarante-deux"
-    assert {r["texte"] for r in repos} == {missions.REPOS["texte"], missions.REPOS["texte_apres"]}
+    assert [r["slug"] for r in repos] == attendus, "quarante-cinq voix, pas quarante-six"
+    # ⚠️ Le même texte pour tous — sauf qui a le sien (`repos` : l'île, loin du Faubourg).
+    for r in repos:
+        p = missions.personnage(r["qui"])
+        attendu = p.get("repos") or (missions.REPOS["texte"], missions.REPOS["texte_apres"])
+        assert r["texte"] == attendu[int(r["slug"][-1]) - 1], r["slug"]
+    assert {r["texte"] for r in repos if "repos" not in missions.personnage(r["qui"])} == {
+        missions.REPOS["texte"], missions.REPOS["texte_apres"]}
     assert all(r["mission"] == "repos" and not r["telephone"] for r in repos)
     voix = {v["slug"]: v for v in audio.voix_repos()}
     assert set(voix) == {r["slug"] for r in repos}

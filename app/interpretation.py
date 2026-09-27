@@ -378,6 +378,11 @@ JEU: dict[str, str] = {
     "ginette-repos-2": "[firmly] Le Faubourg est tranquille… Merci.",
     "gilles-repos-1": "[somber] Reviens me voir… plus tard.",
     "gilles-repos-2": "[warmly] Le Faubourg est tranquille… Merci.",
+    # L'île a son repos à elle (`repos` du personnage) : « le Faubourg est tranquille » y mentirait.
+    "jeanne-repos-1": "[tenderly] Dieu te garde, mon enfant. Pis si tu croises ma cloche en ville, ramène-la-moi.",
+    "jeanne-repos-2": "[wryly] Trente âmes l'hiver, pas une police. Le bon Dieu fait bien les choses.",
+    "leo-repos-1": "[deadpan] J'ai rien vu. J'vois jamais rien. C'est pour ça que le monde m'aime.",
+    "leo-repos-2": "[mysteriously] Le hangar? Y a rien dedans. Pis s'il y a de quoi, c'est pas à moé.",
     "bonimenteur-repos-1": "[cheerful] Reviens me voir… plus tard.",
     "bonimenteur-repos-2": "[playfully] Le Faubourg est tranquille… Merci.",
 

@@ -155,3 +155,65 @@ def test_les_maisons_de_l_ile_se_peignent_en_bois_et_sans_escalier(banc):
     for m in r["maisons"]:
         assert m["planche"], f"une maison de l'île sans ses planches : {m}"
         assert m["marches"] == 0, f"un escalier de fer sur une maison de pêcheur : {m}"
+
+
+def test_soeur_jeanne_et_leo_cyr_habitent_l_ile_et_parlent_de_l_ile(banc, paquet):
+    """2e vague : les deux habitants de l'arc I (M16) se tiennent devant LEUR porte — Sœur
+    Jeanne sur le parvis de la chapelle, Léo Cyr devant le hangar sans nom — et, sans mission
+    à donner, disent leur repos à eux : pas « le Faubourg est tranquille », qui mentirait sur
+    l'île. ⚠️ Le témoin : Ti-Paul, au Faubourg, dit toujours le repos commun."""
+    communs = [paquet["repos"]["texte"], paquet["repos"]["texte_apres"]]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B, TT = L.TT, def = L.Monde.carte.def, fiche = def.ile;
+        const out = {};
+        for (const [qui, lieu] of [['jeanne', 'chapelle'], ['leo', 'hangar_ile'], ['tipaul', 'depanneur']]) {
+            const e = B.entites.find(function (x) { return x.personnage === qui; });
+            const porte = def.portes.find(function (p) { return p.lieu === lieu; });
+            const tx = e ? Math.floor(e.x / TT) : -1, ty = e ? Math.floor(e.y / TT) : -1;
+            B.dialogue = null;
+            L.Histoire.parler(qui);
+            out[qui] = { la: !!e, distance: e ? Math.abs(tx - porte.x) + Math.abs(ty - porte.y) : 99,
+                         ile: tx >= fiche.x && tx < fiche.x + fiche.l && ty >= fiche.y && ty < fiche.y + fiche.h,
+                         dit: B.dialogue ? B.dialogue.lignes[0] : null };
+            while (B.cinema) L.Histoire.suivante();
+        }
+        return out;
+    }""")
+    assert r["tipaul"]["dit"] in communs, f"le témoin ne mord pas : {r['tipaul']}"
+    for qui in ("jeanne", "leo"):
+        d = r[qui]
+        assert d["la"], f"{qui} n'est nulle part"
+        assert d["ile"] and d["distance"] <= 4, f"{qui} n'est pas devant sa porte : {d}"
+        propre = next(p for p in paquet["personnages"] if p["slug"] == qui)["repos"]
+        assert d["dit"] == propre[0], f"{qui} dit « {d['dit']} »"
+        assert d["dit"] not in communs
+
+
+def test_l_ile_s_entend_a_elle(banc):
+    """2e vague : l'île ne joue plus le vent de La Pointe — elle a SA musique (`amb_ile`) — et
+    ses bruits sont les siens : les corneilles, le volet de l'usine, la bouée, le quai. Jamais
+    la cloche d'église : celle de la chapelle est chez Ti-Loup (i02). ⚠️ Le témoin : le même
+    tour, en ville devant le terminus, joue la musique et les bruits de la ville."""
+    r = banc("""function (L, o) {""" + POSER + """
+        L.Jeu.commencer();
+        const B = L.B, Chef = L.Son.Chef, Q = L.Son.Quartier;
+        const out = {};
+        for (const ou of ['ville', 'ile']) {
+            poser(L, ou);
+            Chef.district = null; Chef.frontiere = null;
+            const musique = Chef.ambianceDuLieu();
+            Q.entendus.length = 0;
+            B.partie.heure = 0.5;
+            for (let i = 0; i < 12; i++) { Q.prochaineT = B.t; Q.maj(); }
+            out[ou] = { musique: musique, district: L.Monde.zoneA(B.joueur.x, B.joueur.y).district,
+                        bruits: Q.entendus.map(function (e) { return e.slug; }) };
+        }
+        return out;
+    }""")
+    assert r["ville"]["musique"] != "amb_ile" and r["ville"]["bruits"], f"le témoin ne mord pas : {r['ville']}"
+    assert not set(r["ville"]["bruits"]) & {"corneilles", "volet_qui_claque"}, r["ville"]
+    ile = r["ile"]
+    assert ile["district"] == "ile" and ile["musique"] == "amb_ile", ile
+    assert {"corneilles", "volet_qui_claque", "cloche_de_bouee", "quai_qui_grince"} <= set(ile["bruits"]), ile
+    assert "cloche_d_eglise" not in ile["bruits"], "la cloche de la chapelle est chez Ti-Loup"

@@ -169,6 +169,14 @@ VISAGES: dict[str, dict] = {
     # Mireille Dion, au DOJO DION : ancienne danseuse, la cinquantaine droite comme un i — le
     # chignon serre, le col roule noir, deux boucles d'oreilles, quelques rides au coin des yeux.
     "mireille": _v("fine", "chignon", "col_roule", signes=("boucles", "rides")),
+    # La dernière religieuse de l'île : le voile noir sur une mèche grise, des lunettes rondes,
+    # les rides de soixante-dix hivers sans chauffage — là où Ginette porte la coiffe blanche.
+    "jeanne": _v("ronde", "courte", "col_roule", lunettes="rondes", chapeau="coiffe",
+                 signes=("rides", "cernes"), t="#1a1a24"),
+    # L'insulaire du hangar : la tuque rouge vin, la barbe de trois semaines, les yeux plissés
+    # de celui qui regarde toujours ailleurs.
+    "leo": _v("longue", "hirsute", "veste", "barbe", chapeau="tuque",
+              signes=("yeux_plisses", "sourcils_epais"), t="#6a1f2a"),
 }
 
 #: Ceux qui parlent sans être des PERSONNAGES : l'agent qui t'interpelle dans la rue.

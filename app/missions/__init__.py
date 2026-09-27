@@ -105,6 +105,9 @@ class Personnage(TypedDict):
     # apres M1 : sa scene de fin le fait entrer au garage). ⚠️ Dans les donnees, pas
     # dans `histoire.js` : un juge y interdit tout slug de mission.
     parti_apres: NotRequired[str]
+    # Son repos à lui, au lieu de `REPOS` : `(avant, après)`, avant et après `REPOS["apres"]`.
+    # ⚠️ Pour qui vit LOIN du Faubourg — « le Faubourg est tranquille », dit sur l'île, ment.
+    repos: NotRequired[tuple[str, str]]
 
 
 #: ⚠️ La bulle est lue a l'ecran, en police 3x5 : plus long que ca et le mot
@@ -229,6 +232,22 @@ PERSONNAGES: list[Personnage] = [
     {"slug": "mireille", "nom": "Mireille Dion", "genre": "femme", "voix": "Marie Line - Energetic and Clear",
      "couleurs": {"c": "#1f1f2a", "h": "#4a3a30", "s": "#e8c0a0", "p": "#1f1f2a"}, "ou": "point:cours",
      "heler": "Au tatami."},
+    # --- L'Île-aux-Corneilles, 2e vague (27 sept. 2026) : les deux habitants de l'arc I (M16),
+    # posés avant leurs missions — on les croise, on leur parle, ils n'ont encore rien à
+    # donner. Sœur Jeanne sur le parvis de la chapelle, Léo Cyr devant le hangar sans nom.
+    # Fiches : docs/personnages/jeanne.md, docs/personnages/leo.md. Voix partagées, jamais
+    # dans la même mission : Julia (Mme Thibodeau, qui ne va pas sur l'île) et Alexandre
+    # (le client du taxi).
+    {"slug": "jeanne", "nom": "Sœur Jeanne", "genre": "femme", "voix": "Julia",
+     "couleurs": {"c": "#23232e", "h": "#9a9a9a", "s": "#e8c0a0", "p": "#23232e"}, "ou": "porte:chapelle",
+     "heler": "Dieu te garde.",
+     "repos": ("Dieu te garde, mon enfant. Pis si tu croises ma cloche en ville, ramène-la-moi.",
+               "Trente âmes l'hiver, pas une police. Le bon Dieu fait bien les choses.")},
+    {"slug": "leo", "nom": "Léo Cyr", "genre": "homme", "voix": "Alexandre - Authentic French Canadian",
+     "couleurs": {"c": "#6a4a2a", "h": "#3a2a1a", "s": "#c98d66", "p": "#2e3a4a"}, "ou": "porte:hangar_ile",
+     "heler": "J'ai rien vu.",
+     "repos": ("J'ai rien vu. J'vois jamais rien. C'est pour ça que le monde m'aime.",
+               "Le hangar? Y a rien dedans. Pis s'il y a de quoi, c'est pas à moé.")},
 ]
 
 
@@ -1067,7 +1086,7 @@ def repliques_de_repos() -> list[dict]:
     return [{"slug": f"{p['slug']}-repos-{n}", "qui": p["slug"], "texte": texte, "mission": "repos",
              "partie": "repos", "telephone": False}
             for p in PERSONNAGES if p.get("ou") and not _sa_mission_l_attend_toujours(p)
-            for n, texte in enumerate((REPOS["texte"], REPOS["texte_apres"]), start=1)
+            for n, texte in enumerate(p.get("repos") or (REPOS["texte"], REPOS["texte_apres"]), start=1)
             if not (p["slug"] == "josee" and n == 2)
             # Mireille ouvre ses COURS a chaque fois (`histoire.js`) : un repos qu'on n'entend
             # jamais ne se paie pas.
