@@ -90,6 +90,7 @@ pas quand l'ordre de travail change.
 | M13 Les deux fins | ⬜ **en cours** (vague 1 livrée : le générique, et _Sacrer son camp_ — m99, le capitaine Bérubé, `embarquer` ; reste _Le Boss_, qui attend les districts libérés de M16) | 25 sept. 2026 | **P4** | ajout | [fiche](jalons/m13-les-deux-fins.md#fiche) · [notes](jalons/m13-les-deux-fins.md#notes) |
 | Infiltration : portes verrouillées et gardes privés | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/infiltration-portes-verrouillees-et-gardes-prives.md#fiche) |
 | Le piratage devient un labyrinthe électrifié | ⬜ **en cours** | 27 sept. 2026 | **P4** | ajout | [fiche](jalons/le-piratage-devient-un-labyrinthe-electrifie.md#fiche) |
+| Le casse-croûte du ciné-parc au centre, et le projecteur | ⬜ **en cours** | 27 sept. 2026 | **P4** | ajout | [fiche](jalons/le-casse-croute-du-cine-parc-au-centre-et-le-projecteur.md#fiche) |
 | Générer les bruitages qui n'ont aucun équivalent payé | ⬜ **à faire** (⚠️ le quota n'est plus l'obstacle — **nouveau forfait le 24 sept. 2026** ; à trancher par Martin, c'est sa dépense) | — | **P4** | ajout | [fiche](jalons/les-bruitages-qui-n-ont-aucun-equivalent-paye.md#fiche) |
 | Des choses à collectionner, et la planque qu'on décore | ⬜ **à faire** (à trancher par Martin : les familles, leur nombre, les meubles) | — | **P4** | ajout | [fiche](jalons/des-choses-a-collectionner-et-la-planque-qu-on-decore.md#fiche) |
 | Des photos pour le Clairon | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/des-photos-pour-le-clairon.md#fiche) |
