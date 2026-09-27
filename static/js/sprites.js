@@ -6167,6 +6167,27 @@ const DECORS = {
     ctx.fillStyle = '#8a6a3f'; ctx.fillRect(1, 2, 16, 1);
   } },
 
+  // LA CARCASSE des Friches (`app/nord.py`) : une auto sans roues vue de haut, la tole rouillee, le
+  // pare-brise creve, posee sur ses essieux. Elle arrete un char comme une benne.
+  carcasse: { arrete: 4, w: 26, h: 14, ancre: [13, 13], r: 7, sol: [11, 4], solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(1, 11, 25, 3);
+    ctx.fillStyle = '#6b4a34'; ctx.fillRect(1, 3, 24, 9);                      // la caisse rouillee
+    ctx.fillStyle = '#7d5a3e'; ctx.fillRect(2, 4, 22, 2);
+    ctx.fillStyle = '#5a6a72'; ctx.fillRect(8, 4, 10, 6);                      // le toit, la peinture qui reste
+    ctx.fillStyle = '#1f2327'; ctx.fillRect(6, 4, 2, 6); ctx.fillRect(18, 4, 2, 6);   // les vitres crevees
+    ctx.fillStyle = '#9a4a1e'; ctx.fillRect(3, 9, 3, 2); ctx.fillRect(21, 5, 2, 3); ctx.fillRect(12, 10, 4, 1);
+    ctx.fillStyle = '#2b2b2b'; ctx.fillRect(3, 11, 3, 2); ctx.fillRect(20, 11, 3, 2); // les essieux, sans roues
+  } },
+  // LA PANCARTE « A BATIR » du Petit-Canton (`app/nord.py`) : un panneau blanc sur deux poteaux, une bande
+  // rouge et deux lignes de lettrage. On passe a cote : elle n'arrete personne.
+  pancarte_a_batir: { casse: 0.8, pv: 20, w: 20, h: 20, ancre: [10, 19], r: 3, solide: false, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.18)'; ctx.fillRect(3, 18, 15, 2);
+    ctx.fillStyle = '#5a3f25'; ctx.fillRect(4, 10, 2, 9); ctx.fillRect(14, 10, 2, 9);   // les poteaux
+    ctx.fillStyle = '#e8e4d8'; ctx.fillRect(1, 1, 18, 10);                    // le panneau
+    ctx.fillStyle = '#b3262a'; ctx.fillRect(1, 1, 18, 3);                     // la bande rouge
+    ctx.fillStyle = '#2c2c34'; ctx.fillRect(3, 6, 14, 1); ctx.fillRect(5, 8, 10, 1);   // le lettrage
+    ctx.fillStyle = '#9a968c'; ctx.fillRect(1, 10, 18, 1);
+  } },
   // LA BENNE : l'acier vert qui arrete un char, le couvercle rabattu, la rouille.
   benne: { arrete: 4, w: 18, h: 16, ancre: [9, 15], r: 6, sol: [8, 4], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(1, 13, 17, 3);

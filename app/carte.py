@@ -1375,6 +1375,8 @@ DECOR_SOLIDE = frozenset({
     # un dessin par cote du trottoir (`mobilier.BANCS_PAR_COTE`, `autobus.ABRIS`).
     "banc_nord", "banc_est", "banc_ouest",
     "abribus", "abribus_nord", "abribus_est", "abribus_ouest",
+    # L'épave des Friches (`nord.py`) : une auto sans roues, on la contourne.
+    "carcasse",
     "arbre", "banc", "baril", "bbq", "belvedere", "borne_fontaine", "cabanon",
     "caisse", "carrousel", "chaise_sauveteur", "chaises_volantes", "distributrice_cafe",
     "distributrice_grignotines", "distributrice_liqueur", "fontaine", "galerie_tir",
@@ -1825,6 +1827,8 @@ USAGE_DU_PLAN: dict[str, str] = {
     "w": "industriel", "i": "industriel", "g": "industriel",
     "p": "parc", "k": "parc", "n": "parc", "f": "parc", "o": "parc",
     "q": "port", "j": "port", "~": "eau",
+    # La bande nord (`nord.py`) : la friche, le terrain à bâtir du Petit-Canton, les voies de la gare.
+    "z": "parc", "b": "commercial", "v": "industriel",
 }
 
 #: Et celui d'un lieu garanti, par le GENRE d'ilot qui le batit (`SPECIAUX`) : le
