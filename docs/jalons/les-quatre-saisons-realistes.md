@@ -20,7 +20,17 @@ et la neige de M12 (`neige.js`, derrière l'option « TEMPÊTES DE NEIGE (ESSAI)
 trois jours, toute l'année** — une tempête en juillet est possible. Le verglas a ses jours (9 à 11)
 et le brouillard ses matins, sans lien avec la saison.
 
-**Ce qu'on veut**, en quatre vagues jouables (à trancher par Martin — l'ordre, et ce qui tombe) :
+**Aujourd'hui, au volant** (`vehicules.js`, « Adherence ») : un char ne dérape pas, il **flotte**. Sa
+vitesse glisse vers son cap d'une part `adh` par image, et `adh` est un seul nombre : l'adhérence du
+char × la neige (0,3 en pleine tempête, 0,75 derrière la charrue) × le verglas (0,4) × la rue mouillée
+(l'arroseuse), avec les **pneus d'hiver** du garage de Ti-Guy qui en rendent une part (`Garage.hiver`).
+Sur la glace, le char tourne donc comme au sec et dérive un peu plus : pas de sous-virage, pas de
+tête-à-queue, pas de contre-braquage, pas de roues bloquées. Le frein à main change `adh`, sans faire
+partir l'arrière. Rien ne marque le sol, et rien ne crisse. Seul le **nid-de-poule** fait déjà perdre
+le contrôle (`nid_derape_*` : quelques images sans direction et le nez qui part). Le trafic, lui,
+roule sur des rails : il lève le pied dans la neige, mais il ne glisse jamais.
+
+**Ce qu'on veut**, en cinq vagues jouables (à trancher par Martin — l'ordre, et ce qui tombe) :
 
 - **Vague 1 — le paysage.** Une **palette par saison** pour ce qui pousse : le gazon, les parcs, les
   arbres de rue, les haies, les sentiers — vert tendre au printemps, vert franc l'été et jauni en
@@ -29,18 +39,33 @@ et le brouillard ses matins, sans lien avec la saison.
   décembre à mars, pas seulement pendant la tempête ; et **les tempêtes seulement l'hiver** (plus de
   flocons en juillet). **La longueur du jour** : le soleil se couche vers 16 h en décembre, vers 21 h
   en juin — la lumière suit, sans toucher aux heures des commerces ni aux habitudes de la nuit.
-- **Vague 2 — ce qui tombe, et le sol.** **La pluie** (printemps et automne), **les orages** l'été ;
+- **Vague 2 — la glace et le dérapage.** La **glace de l'hiver**, qui n'attend plus les trois jours du
+  verglas : des **plaques de glace noire** qu'on voit à peine (sur les ponts, dans l'ombre des
+  bâtiments, aux arrêts où les chars ont poli la neige), tirées à l'empreinte de la tuile ; au
+  printemps, **le gel et le dégel** — la fonte le jour, le regel la nuit, la glace le matin ; les
+  **patinoires** des parcs, où l'on glisse à pied ; la baie gelée (le pont de glace existe). Et un
+  **vrai dérapage** quand ça glisse : l'**avant** qui refuse de tourner (**sous-virage** : tout droit
+  dans le banc de neige), l'**arrière** qui part quand on accélère ou qu'on tire le frein à main en
+  courbe (**survirage**), le **tête-à-queue** si on laisse faire, le **contre-braquage** qui rattrape,
+  les **roues bloquées** qui ne dirigent plus quand on freine trop fort. Le sol le montre : des
+  **traces de pneus** noires au sec, des **sillons** dans la neige, qui s'effacent. On l'entend : le
+  **crissement** au sec, le silence inquiétant sur la glace, le **banc de neige** qui étouffe et où
+  le char s'enlise (les roues patinent, on recule, on repart). À pied aussi : un passant qui court
+  sur la glace **glisse et tombe**, et le joueur comme les autres. Le **trafic et la police** ne
+  restent pas sur leurs rails partout : sur la glace, un char de la ville peut glisser dans le banc,
+  accrocher celui d'en avant, finir dans le fossé.
+- **Vague 3 — ce qui tombe, et le sol.** **La pluie** (printemps et automne), **les orages** l'été ;
   **la fonte** en avril : la gadoue brune, les flaques qui éclaboussent les passants, les bancs de
   neige sales qui rapetissent, les **nids-de-poule** ; **les feuilles mortes** au sol en octobre,
   soulevées derrière un char qui passe. L'**adhérence** suit le sol (gadoue, feuilles mouillées,
-  pluie), comme la neige le fait déjà.
-- **Vague 3 — les gens et la rue.** La **garde-robe par saison** (`garderobe.js`) : tuques, foulards
+  pluie) et dérape comme sur la glace de la vague 2 — moins fort.
+- **Vague 4 — les gens et la rue.** La **garde-robe par saison** (`garderobe.js`) : tuques, foulards
   et manteaux l'hiver, t-shirts et shorts l'été, imperméables sous la pluie ; les **abris Tempo** dans
   les entrées de novembre à avril ; les **bancs de neige** le long des trottoirs que la charrue
   laisse ; la fumée des cheminées l'hiver ; les terrasses, les bornes-fontaines ouvertes et les
   passants plus nombreux dehors l'été ; les citrouilles sur les perrons à l'Halloween (une date de
   plus dans `calendrier.DATES`).
-- **Vague 4 — le son.** Une ambiance par saison, par ElevenLabs : le vent et la charrue l'hiver,
+- **Vague 5 — le son.** Une ambiance par saison, par ElevenLabs : le vent et la charrue l'hiver,
   l'eau qui coule à la fonte, les cigales et les tondeuses l'été, les outardes et la pluie à
   l'automne — en fondu enchaîné d'une saison à l'autre.
 
@@ -60,6 +85,20 @@ et le brouillard ses matins, sans lien avec la saison.
   (l'hiver neige pour tout le monde), ou reste-t-elle l'interrupteur de toute la météo ? La motoneige
   et le pont de glace en dépendent aujourd'hui. Et les juges de la neige posent des jours précis
   (`premier: 2`, `tous_les: 3`) : les faire lire la saison, pas l'inverse.
+- **Le dérapage touche TOUTE la conduite** : les courses, les défis chronométrés, les poursuites, les
+  records déjà battus. ⚠️ **Au sec, le char se conduit exactement comme aujourd'hui** (le nouveau modèle
+  ne s'éveille que sous une adhérence de 1, et les juges de conduite du sec ne bougent pas) ; le
+  dérapage ne se tire pas au dé (le côté où part l'arrière vient du volant, de la vitesse et du sol —
+  le nid-de-poule, lui, lit l'empreinte de sa tuile).
+- **Glisser doit rester jouable** : au téléphone et à la manette de Martin, le contre-braquage doit se
+  sentir et rattraper — un char qu'on ne peut plus tenir n'est pas réaliste, il est injouable. Les
+  pneus d'hiver (Ti-Guy) doivent enfin valoir leur prix : la différence se sent dès le premier coin.
+- **Le trafic sur ses rails** : le laisser glisser, c'est le laisser quitter sa voie — et le trafic
+  sait mal revenir sur son chemin (les pilotes qui se perdent, les chars plantés sur la bordure). Une
+  glissade de la ville est donc **courte et finit arrêtée** (le banc, le fossé, l'accrochage), puis le
+  char repart ou attend la dépanneuse ; jamais en pleine poursuite une police qui se perd.
+- **Les traces de pneus** sont une mémoire, comme la neige déblayée : un nombre borné, qui s'efface,
+  peintes au sol sous les chars — et jamais sauvegardées.
 - **Une partie neuve commence le 1er janvier** : la première impression est une ville blanche et
   glissante. À trancher par Martin : la garder (c'est l'hiver québécois), ou faire commencer
   l'année ailleurs — ce qui déplace toutes les fenêtres de saison (cabane, Saint-Jean, Fêtes).
@@ -71,4 +110,7 @@ et le brouillard ses matins, sans lien avec la saison.
 **Juges** : la saison se lit du jour, la même pour tout le monde ; pas une tempête hors de l'hiver ;
 la palette d'un parc diffère d'une saison à l'autre et glisse d'un jour à l'autre sans saut ; le soleil
 se couche plus tôt en décembre qu'en juin, et les commerces ouvrent à la même heure ; rien de ce qui se
-pose pour une saison ne déplace la ville ; un passant de janvier porte un manteau.
+pose pour une saison ne déplace la ville ; un passant de janvier porte un manteau. Et au volant : au sec, la conduite ne change pas d'un
+pixel ; sur la glace, un char lancé en courbe sous-vire, le frein à main en courbe fait partir l'arrière,
+le contre-braquage rattrape et les pneus d'hiver rattrapent mieux ; des roues bloquées ne dirigent pas ;
+un passant qui court sur la glace tombe ; un char de la ville qui glisse finit arrêté, jamais perdu.
