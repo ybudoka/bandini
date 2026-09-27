@@ -42,3 +42,18 @@ def test_depuis_l_arrivee_on_rejoint_les_deux_portes_le_char_et_le_quai():
     # Le quai est un plancher sur l'eau : on le rejoint par la grève, une tuile de sable à côté.
     a_pied = blocs.a_pied_depuis_l_arrivee(rang.BLOC)
     assert set(quai) & a_pied, "on ne rejoint pas le quai à pied"
+
+
+def test_les_galeries_et_le_cine_parc_s_ouvrent_sur_un_chemin():
+    """Martin (27 sept. 2026) : « je veux des ouvertures de chemin pour ces endroits ». Le trottoir de ceinture
+    s'ouvre au milieu du passage : un bout de trottoir, trois tuiles d'asphalte, un bout de trottoir — et le
+    chemin rejoint la rue de l'ouest, sans que la circulation s'y engage."""
+    sol, voie = VILLE["sol"], VILLE["voie"]
+    for slug in ("galeries", "cineparc"):
+        p = blocs.par_slug(slug)["passage"]
+        tuiles = [sol[p["de"] + i][0] for i in range(p["l"])]
+        assert tuiles == [".", "#", "#", "#", "."], (slug, tuiles)
+        for i in range(1, p["l"] - 1):
+            y = p["de"] + i
+            assert sol[y][1] == "#", (slug, y, "le chemin ne rejoint pas la rue")
+            assert voie[y][0] == ".", (slug, y, "le chemin est une voie de circulation")

@@ -286,3 +286,4 @@ Deux documents d'avant la table :
 | Le traversier se prend pour vrai | ✅ **livré** | 26 sept. 2026 | **P1** | **correctif** | [fiche](le-traversier-se-prend-pour-vrai.md#fiche) · [notes](le-traversier-se-prend-pour-vrai.md#notes) |
 | Le sapin de la place se tient debout | ✅ **livré** | 26 sept. 2026 | **P2** | **correctif** | [fiche](le-sapin-de-la-place-se-tient-debout.md#fiche) · [notes](le-sapin-de-la-place-se-tient-debout.md#notes) |
 | Les chantiers restent en ville | ✅ **livré** | 27 sept. 2026 | **P2** | **correctif** | [fiche](les-chantiers-restent-en-ville.md#fiche) · [notes](les-chantiers-restent-en-ville.md#notes) |
+| Les Galeries et le ciné-parc s'ouvrent sur un chemin | ✅ **livré** | 27 sept. 2026 | **P3** | **correctif** | [fiche](les-galeries-et-le-cine-parc-s-ouvrent-sur-un-chemin.md#fiche) · [notes](les-galeries-et-le-cine-parc-s-ouvrent-sur-un-chemin.md#notes) |

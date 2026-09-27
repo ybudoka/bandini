@@ -6973,7 +6973,15 @@ class _Chantier:
 #: (`blocs/rang.py`) les couvre, avec les deux trottoirs. ⚠️ En DERNIER et sans un dé, et JAMAIS dans `voie` :
 #: la circulation ne s'engage pas dans un cul-de-sac au bord de la carte. ⚠️ Une retouche de la VILLE, pas du
 #: bloc : un bloc ne change pas un octet de la carte (`test_blocs`).
-OUVERTURES_DE_RUE: tuple[dict, ...] = ({"x": 0, "y": 172, "g": "#"}, {"x": 0, "y": 173, "g": "+"})
+#: ⚠️ LES GALERIES ET LE CINÉ-PARC (Martin, 27 sept. 2026 : « je veux des ouvertures de chemin pour ces
+#: endroits ») : aucune rue n'y traverse, alors le trottoir de ceinture s'ouvre au milieu de leur passage — trois
+#: tuiles d'asphalte qui partent de la rue de l'ouest, un bout de trottoir de chaque côté
+#: (docs/jalons/les-galeries-et-le-cine-parc-s-ouvrent-sur-un-chemin.md).
+OUVERTURES_DE_RUE: tuple[dict, ...] = (
+    {"x": 0, "y": 172, "g": "#"}, {"x": 0, "y": 173, "g": "+"},
+    {"x": 0, "y": 61, "g": "#"}, {"x": 0, "y": 62, "g": "#"}, {"x": 0, "y": 63, "g": "#"},
+    {"x": 0, "y": 95, "g": "#"}, {"x": 0, "y": 96, "g": "#"}, {"x": 0, "y": 97, "g": "#"},
+)
 
 
 def ouvrir_les_rues(ville: dict) -> None:
@@ -7232,8 +7240,8 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # bouge d'une tuile.
     from . import relief as relief_mod
     ville["relief"] = relief_mod.poser(chantier, ville)
-    # L'OUVERTURE DE RUE DU RANG, après le relief (il recopie le sol du chantier) : sur la ville finie et
-    # sans un dé, deux tuiles de trottoir deviennent chaussée.
+    # LES OUVERTURES DE RUE (le rang, les Galeries, le ciné-parc), après le relief (il recopie le sol du
+    # chantier) : sur la ville finie et sans un dé, des tuiles de trottoir deviennent chaussée.
     if plan == PLAN:
         ouvrir_les_rues(ville)
     return ville
