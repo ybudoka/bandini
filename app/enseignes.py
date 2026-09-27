@@ -108,11 +108,16 @@ def piece_de_bingo(largeur: int, hauteur: int, porte: int) -> dict:
 
 def piece_de_rialto(largeur: int, hauteur: int, porte: int) -> dict:
     """La salle : la toile au fond, les rangées de fauteuils et leur allée au milieu, le comptoir du maïs
-    soufflé à l'avant. `toile` et `siege` (en tuiles de la pièce, murs compris) servent au film."""
+    éclaté à l'avant. `toile` et `siege` (en tuiles de la pièce, murs compris) servent au film.
+
+    ⚠️ UN GRAND ÉCRAN (Martin, 27 sept. 2026 : « agrandis l'écran du Rialto ») : la toile prend toute la
+    largeur de la salle, sur les DEUX premières rangées (la seconde était un couloir vide devant les
+    fauteuils) — et le navigateur la peint jusque dans le mur du haut : trois tuiles de haut."""
     from .carte import _completer_les_meubles, _gens, _piece, _plan_de, _poser_le_point, _quelqu_un
     grille = [[" "] * largeur for _ in range(hauteur)]
-    for x in range(1, largeur - 1):
-        grille[0][x] = "]"
+    for y in (0, 1):
+        for x in range(largeur):
+            grille[y][x] = "]"
     allee = largeur // 2
     for y in range(2, hauteur - 2, 2):
         for x in range(1, largeur - 1):
@@ -126,7 +131,7 @@ def piece_de_rialto(largeur: int, hauteur: int, porte: int) -> dict:
             _quelqu_un(grille, "client", (0, 1), porte, pris)]
     piece = _piece("rialto", "Le cinéma Rialto", _plan_de(grille, porte), sol="t",
                    points=tuple(points), gens=_gens(*[g for g in gens if g]))
-    piece["toile"] = {"x": 2, "y": 1, "l": largeur - 2}
+    piece["toile"] = {"x": 1, "y": 1, "l": largeur, "h": 2}
     piece["siege"] = {"x": allee + 1, "y": 3}
     return piece
 

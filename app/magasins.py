@@ -189,7 +189,7 @@ def _art(slug: str, nom: str, tarif: str | None = None, *, pv: str | None = None
 #: un comptoir qui vend n'importe quoi ne dit plus ou l'on est.
 #: Ce qu'on grignote devant un film, au Rialto comme au ciné-parc.
 _CINEMA: tuple[Article, ...] = (
-    _art("mais", "Maïs soufflé", "mais", pv="mais_pv", souffle="mais_souffle"),
+    _art("mais", "Maïs éclaté", "mais", pv="mais_pv", souffle="mais_souffle"),
     _art("chips", "Chips", "chips", pv="chips_pv", souffle="chips_souffle"),
     _art("nachos", "Nachos", "nachos", pv="nachos_pv", souffle="nachos_souffle"),
     _art("liqueur", "Liqueur", "liqueur", pv="liqueur_pv", souffle="liqueur_souffle"),
@@ -320,7 +320,7 @@ HEURES_DES_COMPTOIRS: dict[str, tuple[float, float]] = {
     "sante": (7 / 24, 22 / 24),
     "mode": (7 / 24, 21 / 24),
     "sucre": (7 / 24, 22 / 24),
-    # ⚠️ Le Rialto vend son maïs soufflé le jour ; ses SÉANCES, elles, sont le soir (`enseignes.REGLES`).
+    # ⚠️ Le Rialto vend son maïs éclaté le jour ; ses SÉANCES, elles, sont le soir (`enseignes.REGLES`).
     "bingo": (8 / 24, 23 / 24),
     "rialto": (8 / 24, 23 / 24),
     # Le casse-croûte du ciné-parc ouvre avant la brunante et ferme après la dernière bobine.

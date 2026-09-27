@@ -27,7 +27,13 @@ SANS_MENU = ("escalier", "fouiller", "rame") + tuple(
 #: la partie commence (sa carte à l'écran, ACTION y marque les boules), le film commence (on s'assoit,
 #: la salle s'éteint) — un menu resté ouvert prendrait ACTION à la place de la partie.
 QUI_FERMENT = ("DORMIR JUSQU’AU MATIN", "DORMIR JUSQU’AU SOIR", "LE CLAIRON DE LA BAIE",
-               "UNE CARTE DE BINGO", "UN BILLET POUR LE FILM")
+               "UNE CARTE DE BINGO")
+#: Le billet du Rialto porte le titre du film du soir (« UN BILLET — LE POING DE LA BAIE ») : il se lit à son début.
+BILLET = "UN BILLET — "
+
+
+def referme(libelle: str) -> bool:
+    return libelle in QUI_FERMENT or libelle.startswith(BILLET)
 
 #: Les comptoirs de la ville livrée, un par type et par famille (`genre`).
 COMPTOIRS = sorted({(p["type"], p.get("genre") or "")
@@ -104,7 +110,7 @@ def test_chaque_ligne_de_chaque_comptoir_garde_le_menu_ouvert(banc):
     vus = r["vus"]
     assert len({v["comptoir"] for v in vus}) >= 8, f"trop peu de comptoirs jugés : {r}"
     fermes = [f"{v['comptoir']} → {v['libelle']}" for v in vus
-              if not v["reste"] and v["libelle"] not in QUI_FERMENT]
+              if not v["reste"] and not referme(v["libelle"])]
     assert fermes == [], f"ces choix referment encore le comptoir : {fermes}"
     # Un choix peut RENOMMER sa ligne (le commerce acheté devient la caisse, la
     # commande au hacker devient « IL Y TRAVAILLE ») : le pouce reste au même
@@ -114,7 +120,7 @@ def test_chaque_ligne_de_chaque_comptoir_garde_le_menu_ouvert(banc):
     assert bouges == [], f"le pouce a bougé : {bouges}"
     # Les départs, eux, partent encore.
     for v in vus:
-        if v["libelle"] in QUI_FERMENT:
+        if referme(v["libelle"]):
             assert not v["reste"], f"{v['libelle']} devait quitter le comptoir"
 
 

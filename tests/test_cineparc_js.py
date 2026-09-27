@@ -3,7 +3,9 @@ ne joue que les soirs d'été ; des spectateurs sont garés dans les rangées pe
 après ; le trafic n'y entre pas ; rouler phares allumés pendant le film fait klaxonner, se garer dans une
 case les éteint. Le casse-croûte est au milieu du terrain, dans l'axe de l'écran, et vend de quoi grignoter
 l'été ; c'est aussi la cabine du projecteur, dont le faisceau va jusqu'à la toile pendant la séance
-(docs/jalons/le-casse-croute-du-cine-parc-au-centre-et-le-projecteur.md)."""
+(docs/jalons/le-casse-croute-du-cine-parc-au-centre-et-le-projecteur.md). Trois films, un par soir — une
+poursuite et deux films de combat —, le même aux deux cinémas, sans un dé
+(docs/jalons/le-cinema-mais-eclate-films-de-combat-et-grand-ecran.md)."""
 
 from app import magasins
 from app.blocs import cineparc
@@ -90,7 +92,7 @@ def test_le_casse_croute_sert_l_ete_le_soir_et_se_dit_ferme_sinon(banc):
         return { piece: B.interieur.slug, soir: soir, matin: matin, hiver: hiver };
     }""")
     assert r["piece"] == "casse_croute_cineparc", r
-    for nom in ("MAÏS SOUFFLÉ", "CHIPS", "NACHOS", "LIQUEUR"):
+    for nom in ("MAÏS ÉCLATÉ", "CHIPS", "NACHOS", "LIQUEUR"):
         assert nom in r["soir"], r["soir"]
     assert len(r["matin"]) == 1 and r["matin"][0].startswith("FERMÉ"), r["matin"]
     assert r["hiver"] == ["FERMÉ — ON ROUVRE L'ÉTÉ"], r["hiver"]
@@ -171,3 +173,65 @@ def test_les_phares_pendant_le_film(banc):
     }""")
     assert r["roule"]["klaxon"] and not r["roule"]["eteints"], r
     assert r["gare"] and r["faisceaux"] == 0, r
+
+
+def test_trois_films_un_par_soir_le_meme_toute_la_seance(banc):
+    """La programmation : trois soirs, trois films (la poursuite, le karaté, la boxe) ; après minuit, c'est encore le
+    film de la veille ; en arrivant pendant la séance, l'affiche du soir."""
+    r = banc("async function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const B = L.B, C = L.Cineparc, soirs = [];
+        for (let d = 0; d < 3; d++) { B.partie.jour = 40 + d; B.partie.heure = 21 / 24; soirs.push(C.programme().slug); }
+        B.partie.jour = 41; B.partie.heure = 1.5 / 24; const apresMinuit = C.programme().slug;
+        const msgs = [], hud = L.Hud.message; L.Hud.message = function (m) { msgs.push(m); return hud.apply(null, arguments); };
+        await entrer(L, o, ete(L), 21.5);
+        L.Hud.message = hud;
+        return { soirs: soirs, apresMinuit: apresMinuit, films: C.FILMS, affiche: msgs.filter(function (m) { return /^CE SOIR/.test(m); }),
+                 titre: C.programme().titre };
+    }""")
+    assert sorted(r["soirs"]) == ["boxe", "karate", "poursuite"], r
+    assert r["apresMinuit"] == r["soirs"][0], r
+    assert r["affiche"] == ["CE SOIR : " + r["titre"]], r
+
+
+def test_chaque_film_se_peint_sans_un_de_et_ne_ressemble_a_aucun_autre(banc):
+    """Toute la bobine de chaque film, sur une toile du ciné-parc et une du Rialto : aucun `B.rng()`, et deux films
+    ne peignent jamais la même image (leurs rectangles diffèrent)."""
+    r = banc("function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const B = L.B, C = L.Cineparc;
+        let des = 0; const rng = B.rng; B.rng = function () { des++; return rng.apply(null, arguments); };
+        function toile() {
+          const p = { traits: [] };
+          p.save = p.restore = p.beginPath = p.closePath = p.clip = p.rect = p.moveTo = p.lineTo = p.fill = function () {};
+          p.fillRect = function (x, y, w, h) { p.traits.push([Math.round(x), Math.round(y), Math.round(w), Math.round(h), p.fillStyle].join()); };
+          p.fillText = function (m) { p.traits.push('texte:' + m); };
+          return p;
+        }
+        const out = {}, textes = {};
+        for (let d = 0; d < 3; d++) {
+          B.partie.jour = 50 + d; B.partie.heure = 21 / 24;
+          const slug = C.programme().slug, images = [];
+          textes[slug] = [];
+          for (let t = 0; t < 600; t += 7) {
+            B.t = t;
+            for (const [l, h] of [[320, 64], [144, 48]]) {
+              const p = toile(); C.film(p, 0, 0, l, h);
+              images.push(p.traits.join('|'));
+              for (const m of p.traits) if (m.indexOf('texte:') === 0 && textes[slug].indexOf(m) < 0) textes[slug].push(m);
+            }
+          }
+          out[slug] = images;
+        }
+        B.rng = rng;
+        const s = Object.keys(out), communes = [];
+        for (let i = 0; i < s.length; i++) for (let j = i + 1; j < s.length; j++)
+          out[s[i]].forEach(function (img, k) { if (img === out[s[j]][k]) communes.push(s[i] + '/' + s[j] + '@' + k); });
+        return { des: des, films: s, communes: communes.length, textes: textes };
+    }""")
+    assert r["des"] == 0, r
+    assert sorted(r["films"]) == ["boxe", "karate", "poursuite"], r
+    assert r["communes"] == 0, r
+    for combat in ("karate", "boxe"):
+        assert "texte:POW!" in r["textes"][combat] and "texte:FIN" in r["textes"][combat], r["textes"]
+

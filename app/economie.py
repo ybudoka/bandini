@@ -639,12 +639,12 @@ TARIFS = {
     "tire": 6,
     "tire_pv": 5,
     "tire_souffle": 30,
-    # Le maïs soufflé du Rialto (docs/jalons/les-enseignes-qui-ouvrent-pour-vrai.md) : 5 au dollar.
+    # Le maïs éclaté du Rialto (Martin, 27 sept. 2026 : le mot d'ici, pas « soufflé ») (docs/jalons/les-enseignes-qui-ouvrent-pour-vrai.md) : 5 au dollar.
     "mais": 4,
     "mais_pv": 6,
     "mais_souffle": 14,
     # Les nachos du casse-croûte du ciné-parc et du Rialto (docs/jalons/le-casse-croute-du-cine-parc-au-centre-et-le-projecteur.md) :
-    # le fromage fondu et les jalapeños, 5 au dollar comme le maïs soufflé — jamais mieux que le hot-dog (`test_reclame`).
+    # le fromage fondu et les jalapeños, 5 au dollar comme le maïs éclaté — jamais mieux que le hot-dog (`test_reclame`).
     "nachos": 6,
     "nachos_pv": 16,
     "nachos_souffle": 14,

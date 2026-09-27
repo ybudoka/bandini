@@ -91,7 +91,8 @@ const Enseignes = (function () {
     const r = regles('rialto');
     if (film) return { libelle: 'LE FILM JOUE', actif: false };
     if (!seance()) return { libelle: 'LA SÉANCE EST À ' + Math.round(r.seances[0]) + ' H', actif: false };
-    return { libelle: 'UN BILLET POUR LE FILM', detail: r.billet + ' $', actif: B.partie.argent >= r.billet,
+    // Le titre du film de ce soir : le meme qu'au cine-parc (`Cineparc.programme`).
+    return { libelle: 'UN BILLET — ' + Cineparc.programme().titre, detail: r.billet + ' $', actif: B.partie.argent >= r.billet,
              faire: function () {
                if (!Missions.payer(r.billet, 'BILLET DE CINÉMA')) return false;
                commencerFilm();
@@ -119,11 +120,12 @@ const Enseignes = (function () {
     Hud.message('FIN — LES LUMIÈRES SE RALLUMENT', 180);
   }
 
-  /** La toile du Rialto, en pixels d'ecran : sa tuile, et la rangee de mur au-dessus (un grand ecran). */
+  /** La toile du Rialto, en pixels d'ecran : ses rangees (`h`, deux depuis le grand ecran), et la rangee de mur
+      au-dessus — trois tuiles de haut, toute la largeur de la salle. */
   function toile(vue) {
     const t = B.interieur && B.interieur.toile;
     if (!t) return null;
-    return { x: Math.round(t.x * TT - vue.x), y: Math.round((t.y - 1) * TT - vue.y), l: t.l * TT, h: 2 * TT };
+    return { x: Math.round(t.x * TT - vue.x), y: Math.round((t.y - 1) * TT - vue.y), l: t.l * TT, h: ((t.h || 1) + 1) * TT };
   }
 
   // --- Le lave-auto -------------------------------------------------------------------

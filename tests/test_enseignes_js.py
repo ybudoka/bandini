@@ -36,7 +36,7 @@ def test_on_entre_dans_les_quatre_et_chaque_comptoir_donne_quelque_chose(banc):
         return out;
     }""")
     assert "UNE CARTE DE BINGO" in r["bingo"] and "CAFÉ" in r["bingo"], r["bingo"]
-    assert "MAÏS SOUFFLÉ" in r["rialto"] and "LA SÉANCE EST À 18 H" in r["rialto"], r["rialto"]
+    assert "MAÏS ÉCLATÉ" in r["rialto"] and "MAÏS SOUFFLÉ" not in r["rialto"] and "LA SÉANCE EST À 18 H" in r["rialto"], r["rialto"]
     assert "LA LIGUE DU MARDI — DÉFI" in r["quilles"] and "GROSSE BIÈRE" in r["quilles"], r["quilles"]
     assert any(i.startswith("LE LAVAGE") for i in r["lave_auto"]), r["lave_auto"]
 
@@ -168,7 +168,36 @@ def test_au_rialto_le_projecteur_eclaire_la_toile_depuis_le_fond_de_la_salle(ban
     sx, sy, x0, x1, ty, force, _t = r["appels"][0]
     t = r["toile"]
     assert force > 0 and x1 - x0 == t["l"] * 16 and abs(sx - (x0 + x1) / 2) < 1, r
-    assert sy - ty == (r["hauteur"] - 2 - t["y"]) * 16, r
+    assert sy - ty == (r["hauteur"] - 1 - t["y"] - t["h"]) * 16, r
+
+
+def test_la_toile_du_rialto_est_un_grand_ecran():
+    """Martin : « agrandis l'écran du Rialto ». La toile prend toute la largeur de la salle, sur deux rangées (plus la
+    rangée de mur au-dessus, où le navigateur la peint) ; les fauteuils et le siège du film restent devant."""
+    for largeur, hauteur, porte in ((6, 5, 2), (8, 6, 3), (11, 7, 9)):
+        piece = enseignes.piece_de_rialto(largeur, hauteur, porte)
+        t, plan = piece["toile"], piece["sol"]
+        assert t == {"x": 1, "y": 1, "l": largeur, "h": 2}, t
+        for y in (1, 2):
+            assert plan[y][1:-1] == "]" * largeur, plan
+        assert plan[piece["siege"]["y"]][piece["siege"]["x"]] not in "]", plan
+
+
+def test_le_billet_du_rialto_dit_le_film_du_soir(banc):
+    r = banc("function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const B = L.B, M = L.Missions;
+        B.partie.heure = 20 / 24;
+        const pt = entrer(L, o, 'rialto'), out = [];
+        for (let d = 0; d < 3; d++) {
+            B.partie.jour = 30 + d;
+            out.push([item(M.menuDuPoint(pt), 'UN BILLET').libelle, L.Cineparc.programme().titre]);
+        }
+        return out;
+    }""")
+    assert len({titre for _, titre in r}) == 3, r
+    for libelle, titre in r:
+        assert libelle == "UN BILLET — " + titre, r
 
 
 def test_un_char_lave_perd_un_cran_de_chaleur_une_fois_par_passage(banc):
