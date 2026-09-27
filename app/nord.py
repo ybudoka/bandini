@@ -504,6 +504,9 @@ def poser(ville: dict) -> None:
                           if z["district"] in slugs and not z.get("gang"))
     ville["districts"].extend({"slug": d["slug"], "nom": d["nom"], "gang": d["gang"], "eau": False}
                               for d in DISTRICTS_NORD)
+    # LE PETIT-CANTON, ÉTAPE 2, VAGUE B : son arche et ses lanternes, sur la carte finie, sans un dé.
+    from . import canton as canton_mod
+    ville["canton"] = canton_mod.poser(ville, ch, district("canton"), n)
     ville["grille_nord"] = {"colonnes": list(carte.COLONNES), "rangees": list(RANGEES_NORD),
                             "rues_v": list(carte.RUES_V), "rues_h": list(RUES_H_NORD),
                             "trottoir": carte.TROTTOIR, "standing": list(ch.standing),

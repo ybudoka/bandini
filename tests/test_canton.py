@@ -109,3 +109,47 @@ def test_ses_portes_restent_eparpillees(bande):
     colonnes = Counter(p["x"] for p in portes)
     assert len(colonnes) >= len(portes) * 2 / 3, (len(colonnes), len(portes))
     assert max(colonnes.values()) <= 3, colonnes.most_common(3)
+
+
+# --- Vague B : l'arche et les lanternes (`app/canton.py`) ----------------------------------------------
+
+@pytest.fixture(scope="module")
+def ville():
+    return carte.exporter()
+
+
+def test_l_arche_ouvre_la_rue_principale_sur_la_couture(ville):
+    """Une arche, au bout sud de la rue principale, à deux rangées de la couture : ses piliers sur les deux
+    trottoirs, solides, et jamais dans le devant d'une porte."""
+    from app import canton, devants
+    n = nord.DECALAGE_NORD
+    x0, large = canton.rue_principale(nord._bande(), nord.district("canton"))
+    assert ville["canton"]["arches"] == [{"x": x0, "y": n - canton.RECUL_DE_L_ARCHE, "l": large,
+                                         "paire": canton.PAIRE_DE_L_ARCHE}]
+    piliers = [d for d in ville["decor"] if d["type"] == "pilier_arche"]
+    assert sorted((d["x"], d["y"]) for d in piliers) == [(x0, n - 2), (x0 + large - 1, n - 2)]
+    assert "pilier_arche" in carte.DECOR_SOLIDE
+    larges, _pas = devants.devants(ville)
+    for d in piliers:
+        assert ville["sol"][d["y"]][d["x"]] == ".", d
+        assert (d["x"], d["y"]) not in larges, f"un pilier devant une porte : {d}"
+    # La chaussée entre les piliers reste une chaussée : l'arche enjambe la rue, elle ne la ferme pas.
+    assert all(ville["voie"][n - 2][x] != "." for x in range(x0 + 1, x0 + large - 1))
+
+
+def test_les_lanternes_passent_au_dessus_de_la_rue_et_s_allument(ville):
+    """Des cordes d'un trottoir à l'autre, au-dessus de la rue principale seulement (jamais d'un
+    croisement, où elles cacheraient les feux), et une lueur rouge sous chacune."""
+    from app import canton
+    n = nord.DECALAGE_NORD
+    x0, large = canton.rue_principale(nord._bande(), nord.district("canton"))
+    cordes = ville["canton"]["lanternes"]
+    assert len(cordes) >= 10, len(cordes)
+    carrefours = {(x, y) for i in ville["intersections"]
+                  for x in range(i["x"], i["x"] + i["l"]) for y in range(i["y"], i["y"] + i["h"])}
+    for c in cordes:
+        assert (c["x"], c["l"]) == (x0, large) and 0 <= c["y"] < n - canton.RECUL_DE_L_ARCHE, c
+        assert ville["sol"][c["y"]][c["x"]] == "." and ville["sol"][c["y"]][c["x"] + large - 1] == ".", c
+        assert not any((x, c["y"]) in carrefours for x in range(c["x"], c["x"] + large)), f"sur un croisement : {c}"
+    lueurs = [lp for lp in ville["lampes"] if lp.get("c") == "lanterne"]
+    assert sorted((lp["x"], lp["y"]) for lp in lueurs) == sorted((c["x"] + large // 2, c["y"]) for c in cordes)

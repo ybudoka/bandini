@@ -1392,6 +1392,8 @@ DECOR_SOLIDE = frozenset({
     "pop_corn", "poutine", "queues_de_castor",
     # Le pied d'acier de la montagne russe : la voie est en l'air, lui non.
     "pied_montagne_russe",
+    # Les deux piliers de l'arche du Petit-Canton (`canton.py`) : de la pierre peinte, on s'y cogne.
+    "pilier_arche",
     # Des quartiers qu'on reconnait : la poubelle qui deborde (pauvre), le bac a
     # fleurs (cossu), le caddie renverse au pied des plex. Le matelas, couche a
     # plat, ne l'est pas : on marche dessus, comme sur le pneu.

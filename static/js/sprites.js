@@ -5501,6 +5501,17 @@ const DECORS = {
   // coutaient vingt-quatre images par image, pour rien.
   // Sa boite se cale sur la semelle : `Foire` pose le treteau a quatre pixels
   // au-dessus du bas de la tuile, la ou l'entite a son pied.
+  // Le pilier de l'arche du Petit-Canton (`canton.py`) : une colonne de bois laque rouge sur un socle de
+  // pierre, un chapiteau d'or. ⚠️ Il ARRETE un char (`arrete`) et n'encaisse pas les balles (pas de `pv`) :
+  // le toit de l'arche se pose dessus (`canton.js`), il ne tombe pas.
+  pilier_arche: { arrete: 30, w: 8, h: 30, ancre: [4, 29], r: 4, solide: true, peindre: function (ctx) {
+    ctx.fillStyle = '#6a6a70'; ctx.fillRect(0, 25, 8, 5);                 // le socle de pierre
+    ctx.fillStyle = '#8a8a90'; ctx.fillRect(0, 25, 8, 1);
+    ctx.fillStyle = '#7a1612'; ctx.fillRect(2, 3, 5, 22);                 // la colonne, dans l'ombre
+    ctx.fillStyle = '#a3201c'; ctx.fillRect(2, 3, 3, 22);                 // sa face eclairee du nord-ouest
+    ctx.fillStyle = '#e0b040'; ctx.fillRect(1, 0, 6, 3);                  // le chapiteau d'or
+    ctx.fillRect(2, 14, 4, 1);                                            // et sa bague
+  } },
   pied_montagne_russe: { invisible: true, arrete: 30, w: 12, h: 6, ancre: [6, 6], r: 4, sol: [4, 3], solide: true, peindre: function (ctx) {
     ctx.fillStyle = '#6f737a'; ctx.fillRect(1, 2, 10, 3);
     ctx.fillStyle = '#e4e2da'; ctx.fillRect(3, 0, 1, 3);

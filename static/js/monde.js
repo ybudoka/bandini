@@ -53,6 +53,8 @@ const Monde = (function () {
     // ⚠️ LES BALISES DE LA PISTE : une petite lueur froide, au ras du sol. La nuit,
     // c'est tout ce qu'on voit de l'aeroport depuis La Pointe — deux pointilles.
     balise: { dy: 8, c: 'rgba(200,225,255,0.55)' },
+    // Les lanternes du Petit-Canton (`canton.py`) : une lueur rouge, sous la corde, au-dessus de la rue.
+    lanterne: { dy: -6, c: 'rgba(255,90,60,0.50)' },
   };
 
   let carte = null;

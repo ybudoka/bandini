@@ -128,3 +128,27 @@ le bus).
     `test_passage_pietons`, `test_techniques_js`, `test_police_js`.
 - **Reste, vague B** : les lanternes au-dessus des rues, l'arche aux entrées (la rue principale à la couture
   d'abord), le bus du Petit-Canton ; peut-être la couleur des trottoirs.
+
+### Étape 2, vague B (1re partie) — l'arche et les lanternes — **livrée le 27 sept. 2026**
+
+- **L'arche** (`app/canton.py`, posée en tout dernier par `nord.poser`, sans un dé) : au bout sud de la rue
+  principale, à deux rangées de la couture — c'est elle qu'on voit en montant du terminus. Deux **piliers**
+  sur les trottoirs (`pilier_arche` : un décor solide qui arrête un char et n'encaisse pas les balles), et,
+  au-dessus des gens (`static/js/canton.js`, peint après les entités comme la fumée des cheminées), un
+  linteau rouge, un toit de tuiles vertes aux coins relevés et un panneau d'or : 中山, Zhongshan, le nom de
+  mille rues. ⚠️ Le toit n'est PAS du décor : trié à son pied, on serait passé devant lui.
+- **Les lanternes** : une corde toutes les cinq rangées, d'un trottoir à l'autre de la rue principale, au-dessus
+  des rangées d'îlots seulement (jamais d'un croisement, où elles cacheraient les feux) — quatorze cordes. Les
+  lanternes se balancent d'après `B.t`, sans dé. La nuit, chaque corde a sa **lueur rouge** (une sorte de lampe
+  neuve, `lanterne`, dans `Monde`) ; vues de nuit à la capture.
+- ⚠️ **Seulement en ville** : dans un bloc, `Monde.carte` est le bloc (le piège du chalet) — `Canton.donnees`
+  ne rend rien dès que `B.bloc` ou `B.interieur`.
+- **Juges** : `test_canton.py` (l'arche ouvre la rue principale, ses piliers solides sur les trottoirs et hors
+  du devant des portes, la chaussée libre entre eux ; les cordes au-dessus de la rue, jamais d'un croisement,
+  chacune sa lueur) et `test_canton_js.py` (le toit et les lanternes se peignent quand la caméra est dessus,
+  rien ailleurs ni dans une pièce — le témoin ; la lueur est rouge). Deux mutations rouges.
+- **Reste** : **le bus du Petit-Canton**. ⚠️ Mesuré avant d'y toucher : une 4e ligne au bout de
+  `autobus.LIGNES` garde le tracé des trois autres, mais ses abribus et ses bancs s'insèrent dans
+  `ville["decor"]` avant le métro et le mobilier (tous les numéros d'entités qui suivent glissent) et les
+  arrêts sont renumérotés par position (`combienAttendent`, `B.abribusServis` en dépendent). À poser hors de
+  la suite (`enDehorsDeLaSuite`, comme la bande) et avec des identifiants d'arrêt stables.

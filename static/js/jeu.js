@@ -1222,7 +1222,8 @@ const Jeu = (function () {
     if (B.options.trace && !B.interieur) Vehicules.dessinerTrace(ctx, vue);
     if (!B.interieur) Police.dessinerHelico(ctx, vue);
     if (!B.interieur) Neige.dessinerTempete(ctx);
-    if (!B.interieur) Blocs.dessinerFumees(ctx, vue);   // la fumée des cheminées : au-dessus des toits ET des gens
+    if (!B.interieur) Blocs.dessinerFumees(ctx, vue);
+    if (!B.interieur) Canton.dessiner(ctx, vue);        // l'arche et les lanternes du Petit-Canton : au-dessus des gens   // la fumée des cheminées : au-dessus des toits ET des gens
     if (!B.interieur) Brouillard.dessiner(ctx);         // le voile du brouillard, SOUS la nuit aussi      // le voile et les flocons, SOUS la nuit
     const lampes = Monde.lampesVisibles(vue);
     // ⚠️ Les feux ont DEJA ete peints, deux lignes plus haut : leurs lampes
@@ -1514,7 +1515,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Canton: Canton, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,
