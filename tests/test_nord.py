@@ -262,3 +262,38 @@ def test_les_croisements_de_la_couture_s_ouvrent_au_nord():
     assert all("N" in i["bras"] for i in boites), [i for i in boites if "N" not in i["bras"]][:3]
     for x in couture:
         assert any(i["x"] <= x < i["x"] + i["l"] for i in boites), f"la voie x={x} débouche hors d'un croisement"
+
+
+# --- Corrections de la relecture ---------------------------------------------------------------
+
+def test_une_autre_graine_se_genere_et_se_decale_aussi():
+    """⚠️ Une autre graine n'a pas toujours tout (pas d'éboueurs, p. ex.) : une clé à `None` ne descend pas,
+    elle ne plante pas la génération. Treize fichiers de juges bâtissent d'autres graines."""
+    from app import nord
+    for graine in (1, 7, 777):
+        v = carte.generer(graine=graine)
+        assert v["hauteur"] == 304 + nord.DECALAGE_NORD, graine
+
+
+def test_les_cibles_de_la_galerie_descendent_avec_elle():
+    from app import nord
+    avant, v = _ville_d_avant(), carte.generer()
+    a = next(j for j in avant["jeux_de_foire"] if j.get("cibles"))
+    b = next(j for j in v["jeux_de_foire"] if j["slug"] == a["slug"])
+    assert [c[1] for c in b["cibles"]] == [c[1] + nord.DECALAGE_NORD for c in a["cibles"]]
+
+
+def test_la_bande_n_a_ni_pont_ni_quai():
+    """Le pont de La Pointe (`carte.PONTS`) est indexé sur la trame de la VILLE : il n'a rien à faire dans la
+    bande, dont la trame est autre (il y peignait du quai sur onze rangées de la gare)."""
+    ch = _bande()
+    assert not ch._ponts_de_la_trame, ch._ponts_de_la_trame
+    assert "Q" not in "".join("".join(r) for r in ch.sol[:110])
+
+
+def test_la_gare_n_a_qu_une_porte_le_poste_d_aiguillage():
+    """La spec : UNE pièce visitable à la Gare. Ni clinique, ni notaire, ni disco au milieu des wagons."""
+    ch = _bande()
+    portes = [p for p in ch.portes if _dans(ch, "gare", p)]
+    assert [p["interieur"] for p in portes] == ["nord_aiguillage"], [p["interieur"] for p in portes]
+    assert not [d for d in ch.devantures if _dans(ch, "gare", d)], "des devantures dans la gare"

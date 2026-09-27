@@ -23,7 +23,7 @@ RANGEES_NORD = (11, 11, 11, 12, 11, 11, 11)
 RUES_H_NORD = (6, 4, 4, 6, 4, 4, 4, 6)           # la dernière : la couture, jamais collée
 assert sum(RANGEES_NORD) + sum(RUES_H_NORD[:-1]) == DECALAGE_NORD
 
-#: `z` friche, `b` terrain à bâtir, `v` voies ferrées : trois lettres de plan que seule la bande emploie
+#: `z` friche, `b` terrain à bâtir, `v` voies ferrées, `y` hangars de la gare : des lettres de plan que seule la bande emploie
 #: (`carte.USAGE_DU_PLAN` les connaît ; la ville d'avant n'en a aucune).
 #: ⚠️ LES GANGS SONT CEUX DU VOISIN DU SUD, en attendant les Mantes (étape 4) : un district sans gang existe
 #: (la baie), mais personne n'y marche — on n'ouvre pas ce chemin ici.
@@ -41,12 +41,12 @@ DISTRICTS_NORD: tuple[dict, ...] = (
     {"slug": "gare", "nom": "La Gare de triage", "bx": 13, "by": 0,
      "gang": "boulonneux", "gang_nom": "Les Boulonneux", "brume": False,
      "pietons": 3, "vehicules": 2, "police": 0, "rythme": (0.15, 1.2, 0.6), "rares": (),
-     "plan": ("v<<<<<<", "^<<<<<<", "^<<<<<<", "^<<<<<<", "^<<<<<<", "w<w<w<i", "^<^<^<^"),
+     "plan": ("v<<<<<<", "^<<<<<<", "^<<<<<<", "^<<<<<<", "^<<<<<<", "y<y<y<y", "^<^<^<^"),
      "standing": ("-------",) * 7},
 )
 PLAN_NORD: tuple[str, ...] = carte._assembler(DISTRICTS_NORD)
 TRAME_NORD = {"colonnes": carte.COLONNES, "rangees": RANGEES_NORD, "rues_v": carte.RUES_V,
-              "rues_h": RUES_H_NORD, "districts": DISTRICTS_NORD,
+              "rues_h": RUES_H_NORD, "districts": DISTRICTS_NORD, "ponts": frozenset(),
               "standing": carte._assembler_le_standing(DISTRICTS_NORD, PLAN_NORD)}
 
 
@@ -114,8 +114,25 @@ def _voies_ferrees(ch, x, y, largeur, hauteur):
     ch.poser_porte(facades, special=POSTE)
 
 
+def _hangars(ch, x, y, largeur, hauteur):
+    """Les hangars de tôle de la gare : un long toit, une façade aveugle et ses portes CONDAMNÉES (`d`), des
+    palettes et des barils autour. ⚠️ Pas un îlot de la ville : ceux-là bâtissent des devantures, et la gare
+    n'a qu'une pièce, le poste d'aiguillage (une clinique et une disco poussaient entre les wagons)."""
+    ch.rect(x, y, largeur, hauteur, ",")
+    hx, hy, hl, hh = x + 2, y + 2, largeur - 4, hauteur - 6
+    if hl < 6 or hh < 4:
+        return
+    ch.rect(hx, hy, hl, hh - 1, "B")
+    ch.rect(hx, hy + hh - 1, hl, 1, "F")
+    for i in range(3, hl - 2, 7):
+        ch.sol[hy + hh - 1][hx + i] = "d"
+    for _ in range(max(3, largeur // 6)):
+        ch.poser_decor(ch.des.choix(("palettes", "baril", "caisse")), x + ch.des.entier(1, largeur - 2),
+                       hy + hh + ch.des.entier(0, 2))
+
+
 class _ChantierNord(carte._Chantier):
-    BATISSEURS = {"z": _friche, "b": _terrain_a_batir, "v": _voies_ferrees}
+    BATISSEURS = {"z": _friche, "b": _terrain_a_batir, "v": _voies_ferrees, "y": _hangars}
     A_ABORD = carte._Chantier.A_ABORD | {"b"}
 
 
@@ -258,8 +275,15 @@ def _montagne_russe(m, n):
     _y(m["zone"], n)
 
 
+def _jeux_de_foire(v, n):
+    _y(v, n)
+    for jeu in v:
+        _paires(jeu.get("cibles"), n)                    # [x, y] : les cibles de la galerie de tir
+
+
 def _relief(r, n):
-    r["montagnes"]["h"] += n                             # elles montent jusqu'en haut de la bande
+    if r.get("montagnes"):
+        r["montagnes"]["h"] += n                             # elles montent jusqu'en haut de la bande
 
 
 def _foire_enclos(v, n):
@@ -278,7 +302,7 @@ DECALAGES = {
     "entraves": _y, "fermeture": _rien, "fermetures": _y, "feux_pietons": _y, "flottants": _rien, "foire": _y,
     "foire_enclos": _foire_enclos, "fourriere": _y, "graffitis": _y, "graine": _rien, "grille": None,
     "grille_nord": _rien, "hauteur": None, "ile": _y, "incendies": _y, "interieurs": _rien,
-    "intersections": _y, "jeux_de_foire": _y, "kiosques_de_foire": _y, "lampes": _y, "lave_auto": _y, "largeur": _rien,
+    "intersections": _y, "jeux_de_foire": _jeux_de_foire, "kiosques_de_foire": _y, "lampes": _y, "lave_auto": _y, "largeur": _rien,
     "metro": _y, "montagne_russe": _montagne_russe, "mouillages": _mouillages, "neige": _neige,
     "nids_de_poule": _y, "nom": _rien, "paquets": _y, "plages": _y, "points_interet": _y, "ponts": _y,
     "portes": _y, "portes_garage": _y, "rampes": _y, "reclames": _y, "relief": _relief, "residences": _y,
@@ -297,7 +321,8 @@ def decaler(ville: dict, n: int) -> None:
     _VUS.clear()
     try:
         for cle, f in DECALAGES.items():
-            if f is not None and cle in ville:
+            # ⚠️ `None` : ce que cette graine n'a pas (des éboueurs sans tournée, p. ex.) ne descend pas.
+            if f is not None and ville.get(cle) is not None:
                 f(ville[cle], n)
     finally:
         _VUS.clear()

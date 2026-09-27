@@ -1828,7 +1828,7 @@ USAGE_DU_PLAN: dict[str, str] = {
     "p": "parc", "k": "parc", "n": "parc", "f": "parc", "o": "parc",
     "q": "port", "j": "port", "~": "eau",
     # La bande nord (`nord.py`) : la friche, le terrain à bâtir du Petit-Canton, les voies de la gare.
-    "z": "parc", "b": "commercial", "v": "industriel",
+    "z": "parc", "b": "commercial", "v": "industriel", "y": "industriel",
 }
 
 #: Et celui d'un lieu garanti, par le GENRE d'ilot qui le batit (`SPECIAUX`) : le
@@ -1881,6 +1881,9 @@ class _Chantier:
         # sienne (`nord.py`). Par défaut, celle de la ville — aucun tirage ne change.
         trame = trame or {"colonnes": COLONNES, "rangees": RANGEES, "rues_v": RUES_V, "rues_h": RUES_H,
                           "districts": DISTRICTS, "standing": STANDING if plan == PLAN else None}
+        #: ⚠️ Les ponts sont indexés sur la trame (`("v", rue, rangée)`) : ceux de la ville n'ont rien à
+        #: faire sur une autre (la bande nord y peignait onze rangées de quai au milieu de la gare).
+        self._ponts_de_la_trame = frozenset(trame.get("ponts", PONTS))
         self.colonnes, self.rangees = tuple(trame["colonnes"]), tuple(trame["rangees"])
         self.rues_v, self.rues_h = tuple(trame["rues_v"]), tuple(trame["rues_h"])
         self.districts = tuple(trame["districts"])
@@ -2094,7 +2097,7 @@ class _Chantier:
 
     def rue_v_existe(self, i: int, j: int) -> bool:
         """La rue verticale `i` longe-t-elle la rangee de blocs `j` ?"""
-        if ("v", i, j) in PONTS:
+        if ("v", i, j) in self._ponts_de_la_trame:
             return True                      # un pont : la rue passe SUR l'eau
         voisins = ([(i - 1, j)] if i > 0 else []) + ([(i, j)] if i < self.nc else [])
         if self._noyee(voisins):
@@ -2104,7 +2107,7 @@ class _Chantier:
         return self.maitre[(i - 1, j)] != self.maitre[(i, j)]
 
     def rue_h_existe(self, i: int, j: int) -> bool:
-        if ("h", i, j) in PONTS:
+        if ("h", i, j) in self._ponts_de_la_trame:
             return True
         voisins = ([(i, j - 1)] if j > 0 else []) + ([(i, j)] if j < self.nr else [])
         if self._noyee(voisins):
@@ -2166,7 +2169,7 @@ class _Chantier:
         sont deja les bonnes, et les repeindre effacerait les `S`.
         """
         sortie = []
-        for sens, i, j in sorted(PONTS):
+        for sens, i, j in sorted(self._ponts_de_la_trame):
             vertical = sens == "v"
             if vertical:
                 x, y, largeur, hauteur = self.xr[i], self.yb[j], self.rues_v[i], self.rangees[j]
@@ -5811,7 +5814,7 @@ class _Chantier:
         Un pont vertical relie la rive NORD a la rive SUD du bassin qu'il
         traverse ; un pont horizontal, l'OUEST a l'EST.
         """
-        for sens, i, j in sorted(PONTS):
+        for sens, i, j in sorted(self._ponts_de_la_trame):
             if sens == "v":
                 px, py = self.xr[i], self.yb[j]
                 pl, ph, cotes = self.rues_v[i], self.rangees[j], frozenset(("nord", "sud"))
