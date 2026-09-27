@@ -1478,7 +1478,7 @@ avec une relecture neuve de toute la branche et une passe de corrections.
   derrière leur grillage, pancarte « À BÂTIR »), **la Gare de triage** (voies, wagons, hangars de tôle et le **poste
   d'aiguillage**, sa seule pièce). Les croisements de la couture s'ouvrent au nord ; on y roule et on y marche.
 - **Mesures** : `generer` 1,58 s → 1,64 s ; la carte 53 → 64 Ko gzip (682 Ko bruts) — le plafond est relevé, comme
-  pour l'aéroport (`test_definitions`), ⚠️ **à confirmer par Martin**.
+  pour l'aéroport (`test_definitions`) — **confirmé par Martin** le 27 sept. 2026.
 
 ⚠️ **Ce qui a surpris** :
 - **Le scratchpad s'est vidé** en pleine exécution : un `cd` raté a fait un `checkout --detach dev` dans l'arbre
