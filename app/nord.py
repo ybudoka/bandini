@@ -130,3 +130,175 @@ def batir_la_bande() -> _ChantierNord:
         p["interieur"] = renomme.get(p["interieur"], p["interieur"])
         p["lieu"] = renomme.get(p["lieu"], "nord_" + p["lieu"] if not p["lieu"].startswith("nord_") else p["lieu"])
     return ch
+
+
+# --- La translation : toute la ville descend de `DECALAGE_NORD` rangées ------------------------------
+#
+# ⚠️ UNE ENTRÉE PAR CLÉ DE LA CARTE, et une clé inconnue LÈVE : une autre session qui ajoute une clé à
+# `carte.generer` doit dire ici comment elle descend, sinon elle resterait 110 rangées trop haut, en silence.
+# Les objets `{x, y}` descendent par `_y` (à toute profondeur) ; les PAIRES `[x, y]` et les tuples ont
+# chacune leur fonction, qui dit l'index du y — lu dans le module qui les produit.
+
+PX = carte.TUILE_PX
+
+#: ⚠️ UN OBJET NE DESCEND QU'UNE FOIS : la ville PARTAGE des objets entre ses listes (les amarrages de l'île
+#: sont aussi dans `amarrages`) ; les décaler deux fois les poserait 220 rangées plus bas. `decaler` vide ce
+#: registre à chaque appel, et chaque objet ou paire décalé y inscrit son `id`.
+_VUS: set[int] = set()
+
+
+def _une_fois(o) -> bool:
+    if id(o) in _VUS:
+        return False
+    _VUS.add(id(o))
+    return True
+
+
+def _y(o, n):
+    """Tout entier sous une clé `y`, à toute profondeur."""
+    if isinstance(o, dict):
+        if not _une_fois(o):
+            return
+        for k, v in o.items():
+            if k == "y" and isinstance(v, int):
+                o[k] = v + n
+            else:
+                _y(v, n)
+    elif isinstance(o, list):
+        for v in o:
+            _y(v, n)
+
+
+def _paire(p, n, i=1):
+    if _une_fois(p):
+        p[i] += n
+
+
+def _paires(liste, n, i=1):
+    for p in liste or ():
+        _paire(p, n, i)
+
+
+def _rien(v, n):
+    pass
+
+
+def _aeroport(a, n):
+    _y(a, n)
+    _paire(a["plan"], n)                                 # [x0, y0, largeur, hauteur]
+    for s in a["axes"]:                                  # [x0, y0, x1, y1]
+        if _une_fois(s):
+            s[1] += n
+            s[3] += n
+    _paires(a["balises"], n)
+    _paires(a["peints"], n, 2)                           # [type, x, y]
+    _paires(a["portes_peintes"], n)                      # [x, y, sens]
+    _paires(a["pont"]["piles"], n)
+    a["masque"]["carte_h"] += n                          # la hauteur de la ville au-dessus de lui
+
+
+def _chantiers(liste, n):
+    _y(liste, n)
+    for c in liste:
+        if isinstance(c.get("tranchee"), list):
+            _paires(c["tranchee"], n)
+        for cle in ("signaleur", "conteneur"):
+            if c.get(cle):
+                _paire(c[cle], n)
+        for ph in c["phases"]:
+            _paires(ph.get("equipe"), n)
+            if isinstance(ph.get("porte"), list):
+                _paire(ph["porte"], n)
+            for m in ph.get("machines", ()):
+                if m.get("frappe"):
+                    _paire(m["frappe"], n)
+
+
+def _autobus(a, n):
+    _y(a, n)
+    for ligne in a["lignes"]:
+        _paires(ligne["trace"], n)                       # `arrets` y est [id, rang] : des indices
+
+
+def _eboueurs(e, n):
+    _paires(e["trace"], n)
+    _paires(e["points"], n, 2)                           # [rang, x, y]
+
+
+def _tramway(t, n):
+    _paires(t["trace"], n)
+    _paires(t["arrets"], n, 2)                           # [rang, x, y, nom]
+
+
+def _neige(v, n):
+    _paires(v["charrue"]["trace"], n)
+    for paires in v["deneigement"]["panneaux"].values():
+        _paires(paires, n)
+
+
+def _traversier(t, n):
+    _y(t, n)
+    for e in t["escales"]:
+        _paires(e["acces"], n)
+
+
+def _train(t, n):
+    _paires(t["voie"], n)
+    _paire(t["quai"], n, 2)                              # [x0, x1, y]
+
+
+def _montagne_russe(m, n):
+    _paires(m["voie"], n * PX)                           # [x, y, z] en PIXELS
+    _paires(m["supports"], n, 2)                         # [rang, x, y]
+    _y(m["zone"], n)
+
+
+def _relief(r, n):
+    r["montagnes"]["h"] += n                             # elles montent jusqu'en haut de la bande
+
+
+def _foire_enclos(v, n):
+    _paires(v, n, 0)                                     # [y, x0, x1]
+
+
+def _mouillages(v, n):
+    _y(v, n * PX)                                        # en PIXELS, eux aussi
+
+
+DECALAGES = {
+    "aeroport": _aeroport, "amarrages": _y, "ambulants": _y, "apparition": _y, "aqueduc": _rien,
+    "aqueducs": _y, "arrets": None, "autobus": _autobus, "barrieres": _y, "chantiers": _chantiers,
+    "chemins_des_bois": _paires, "decalage_nord": _rien, "decor": _y, "decor_solide": _rien,
+    "devant": _rien, "devantures": _y, "districts": _rien, "eboueurs": _eboueurs, "entrave": _rien,
+    "entraves": _y, "fermeture": _rien, "fermetures": _y, "feux_pietons": _y, "flottants": _rien, "foire": _y,
+    "foire_enclos": _foire_enclos, "fourriere": _y, "graffitis": _y, "graine": _rien, "grille": None,
+    "grille_nord": _rien, "hauteur": None, "ile": _y, "incendies": _y, "interieurs": _rien,
+    "intersections": _y, "jeux_de_foire": _y, "kiosques_de_foire": _y, "lampes": _y, "lave_auto": _y, "largeur": _rien,
+    "metro": _y, "montagne_russe": _montagne_russe, "mouillages": _mouillages, "neige": _neige,
+    "nids_de_poule": _y, "nom": _rien, "paquets": _y, "plages": _y, "points_interet": _y, "ponts": _y,
+    "portes": _y, "portes_garage": _y, "rampes": _y, "reclames": _y, "relief": _relief, "residences": _y,
+    "roue": _y, "scenes": _y, "slug": _rien, "sol": None, "stationnement_du_poste": _y, "toits": _y,
+    "train_de_foire": _train, "tramway": _tramway, "traversier": _traversier, "tuile_px": _rien,
+    "tuiles_bouchees": _rien, "voie": None, "zones": _y,
+}
+
+
+def decaler(ville: dict, n: int) -> None:
+    """Toute la ville descend de `n` rangées ; les `n` rangées du haut restent inertes (`M`) en attendant la
+    bande. ⚠️ Une clé que `DECALAGES` ne connaît pas LÈVE, en la nommant."""
+    inconnues = sorted(set(ville) - set(DECALAGES))
+    if inconnues:
+        raise KeyError(f"nord.decaler ne sait pas décaler {inconnues} : ajoute-les à nord.DECALAGES")
+    _VUS.clear()
+    try:
+        for cle, f in DECALAGES.items():
+            if f is not None and cle in ville:
+                f(ville[cle], n)
+    finally:
+        _VUS.clear()
+    ville["arrets"] = {f"{k.split(',')[0]},{int(k.split(',')[1]) + n}": v for k, v in ville["arrets"].items()}
+    ville["sol"][:0] = ["M" * ville["largeur"]] * n
+    ville["voie"][:0] = ["." * ville["largeur"]] * n
+    ville["hauteur"] += n
+    ville["grille"]["y0"] = n
+    ville["decalage_nord"] = n

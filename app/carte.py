@@ -7009,7 +7009,7 @@ def ouvrir_les_rues(ville: dict) -> None:
         ville["sol"][o["y"]] = ligne[:o["x"]] + o["g"] + ligne[o["x"] + 1:]
 
 
-def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
+def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = True) -> dict:
     chantier = _Chantier(plan, graine)
     chantier.eaux()
     chantier.rues()
