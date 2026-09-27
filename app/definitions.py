@@ -36,7 +36,7 @@ import json
 from dataclasses import dataclass
 
 from . import (armes, audio, blocs, calendrier, carte, demenagement, derby, enseignes, fetes, garage, motoneige, saint_jean, devantures, dojo, economie, garderobe, interactions, journal, magasins,
-               brouillard, loto, manettes, missions, nuit, pietons, recherche, techniques, vehicules, verglas, videopoker,
+               brouillard, loto, manettes, missions, nord, nuit, pietons, recherche, techniques, vehicules, verglas, videopoker,
                pont_de_glace, visages)
 from .blocs import galeries as galeries_hantees
 from .version import VERSION
@@ -108,6 +108,9 @@ def assembler() -> dict:
         # Les blocs de carte : leur passage en ville, et rien d'autre — leur carte voyage
         # à part, à la demande (`/api/carte/bloc/<slug>`).
         "blocs": blocs.pour_le_navigateur(),
+        # La ville a descendu de tant de rangées (docs/jalons/la-ville-s-agrandit-au-nord.md) : une partie
+        # écrite avant descend avec elle (`Sauvegarde.completer`).
+        "decalage_nord": nord.DECALAGE_NORD,
         "defis": missions.DEFIS,
         "personnages": missions.PERSONNAGES,
         # Le portrait de qui parle, à gauche de la boîte de dialogue (`visages.js`).

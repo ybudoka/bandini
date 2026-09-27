@@ -7261,6 +7261,12 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
     # chantier) : sur la ville finie et sans un dé, des tuiles de trottoir deviennent chaussée.
     if plan == PLAN:
         ouvrir_les_rues(ville)
+    # ⚠️ LA VILLE S'AGRANDIT AU NORD (docs/jalons/la-ville-s-agrandit-au-nord.md), APRÈS ABSOLUMENT TOUT :
+    # elle descend de 110 rangées, et la bande (les Friches, le Petit-Canton, la Gare) se colle au-dessus.
+    # Sa graine est à elle ; la ville d'avant est la même à la tuile près. `nord=False` : la ville d'avant.
+    if nord and plan == PLAN:
+        from . import nord as nord_mod
+        nord_mod.poser(ville)
     return ville
 
 # --- Les interieurs ---------------------------------------------------------

@@ -80,12 +80,23 @@ def carte_du_bloc(bloc: dict) -> dict:
     }
 
 
+def passage_en_ville(bloc: dict) -> dict:
+    """Le passage sur la carte FINIE. ⚠️ Les blocs écrivent leur passage en coordonnées de la ville
+    d'avant ; la ville a descendu de `nord.DECALAGE_NORD` rangées (docs/jalons/la-ville-s-agrandit-au-nord.md) :
+    un passage de l'ouest ou de l'est descend avec elle."""
+    from .. import nord
+    p = dict(bloc["passage"])
+    if p["bord"] in ("ouest", "est"):
+        p["de"] += nord.DECALAGE_NORD
+    return p
+
+
 def pour_le_navigateur() -> list[dict]:
     """Ce que le paquet des définitions dit des blocs : où est leur passage en ville.
     ⚠️ Rien de leur carte : elle voyage à part, à la demande. Seulement leurs PORTES, avec le
     nom de la pièce : la triche ENDROITS CLÉS les liste (le chalet, la cabane à sucre) avant
     qu'aucune carte de bloc ne soit arrivée."""
-    return [{"slug": b["slug"], "nom": b["nom"], "passage": dict(b["passage"]),
+    return [{"slug": b["slug"], "nom": b["nom"], "passage": passage_en_ville(b),
              "panneau": b.get("panneau", b["nom"][:5].upper()),
              "portes": [{"x": p["x"], "y": p["y"], "nom": b.get("pieces", {})[p["interieur"]]["nom"]}
                         for p in b.get("portes", [])]} for b in BLOCS]
@@ -145,7 +156,7 @@ def erreurs(bloc: dict, ville: dict | None = None) -> list[str]:
             fautes.append(f"{slug} : la place du char ({c['x']}, {c['y']}) ne se rejoint pas depuis l'arrivée")
     # Le passage, dans la ville : sur son bord, et chacune de ses tuiles se marche.
     if ville is not None:
-        p = bloc["passage"]
+        p = passage_en_ville(bloc) if ville.get("decalage_nord") else bloc["passage"]
         for x, y in _tuiles_du_bord(p, ville["largeur"], ville["hauteur"]):
             g = ville["sol"][y][x] if 0 <= y < ville["hauteur"] and 0 <= x < ville["largeur"] else "B"
             if not marchable(g):

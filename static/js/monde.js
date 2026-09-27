@@ -133,10 +133,23 @@ const Monde = (function () {
     while (i + 1 < bornes.length && bornes[i + 1] <= v) i++;
     return i;
   }
+  /** Une trame du paquet (`grille`, `grille_nord`), prete a etre lue par `lettreDuBloc`. */
+  function quartiersDe(g, zonage) {
+    return g && g.standing ? {
+      standing: g.standing, usage: g.usage || null, oy: g.y0 || 0,
+      usages: Object.keys(zonage || {}).reduce(function (m, slug) { m[zonage[slug].lettre] = slug; return m; }, {}),
+      x: coupes(g.colonnes, g.rues_v), y: coupes(g.rangees, g.rues_h),
+      w: somme(g.colonnes) + somme(g.rues_v), h: somme(g.rangees) + somme(g.rues_h),
+    } : null;
+  }
   /** La lettre de ce bloc dans une grille du paquet (`standing`, `usage`). */
   function lettreDuBloc(nom, tx, ty, laquelle) {
     const k = laquelle || carte;
-    const q = k && k.quartiers;
+    // ⚠️ DEUX TRAMES (la ville s'agrandit au nord, 27 sept. 2026) : la bande nord (0 .. y0) a la sienne,
+    // la ville d'avant commence a `y0` de la sienne. `rang` se lit dans la trame, pas dans la carte.
+    const q0 = k && k.quartiers;
+    const q = q0 && ty < (q0.oy || 0) ? k.quartiersNord : q0;
+    ty -= q ? (q.oy || 0) : 0;
     // ⚠️ HORS DE LA TRAME, PAS DE QUARTIER : la carte a grandi sous elle (l'aeroport),
     // et `rang` rendait la derniere rangee de blocs a tout ce qui est plus bas — la
     // mer au sud des Quais etait « pauvre ». Python rend None au meme endroit.
@@ -153,7 +166,7 @@ const Monde = (function () {
   function usageA(tx, ty, laquelle) {
     const k = laquelle || carte;
     const lettre = lettreDuBloc('usage', tx, ty, k);
-    return (lettre && k.quartiers.usages[lettre]) || null;
+    return (lettre && k.quartiers && k.quartiers.usages[lettre]) || null;
   }
 
   //: Ce que le PEINTRE du sol doit savoir du quartier, en quatre bits : l'usage
@@ -275,12 +288,8 @@ const Monde = (function () {
       portesParTuile: portes, mini: null, croisements: croisements, arrets: def.arrets || {},
       nids: new Set((def.nids_de_poule || []).map(function (n) { return n.x + ',' + n.y; })), coeur: null,
       plaques: new Set(),
-      quartiers: def.grille && def.grille.standing ? {
-        standing: def.grille.standing, usage: def.grille.usage || null,
-        usages: Object.keys(def.zonage || {}).reduce(function (m, slug) { m[def.zonage[slug].lettre] = slug; return m; }, {}),
-        x: coupes(def.grille.colonnes, def.grille.rues_v), y: coupes(def.grille.rangees, def.grille.rues_h),
-        w: somme(def.grille.colonnes) + somme(def.grille.rues_v), h: somme(def.grille.rangees) + somme(def.grille.rues_h),
-      } : null,
+      quartiers: quartiersDe(def.grille, def.zonage),
+      quartiersNord: quartiersDe(def.grille_nord, def.zonage),
       intersections: def.intersections || [],
       // ⚠️ Trois sortes de lumiere, et elles ne se ressemblent pas : le
       // LAMPADAIRE (haut, large, blanc-jaune), la VITRINE (basse et chaude,

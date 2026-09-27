@@ -173,3 +173,92 @@ def test_les_paires_descendent_aussi():
     assert c1["tranchee"][0][1] == c0["tranchee"][0][1] + n and c1["signaleur"][1] == c0["signaleur"][1] + n
     x, y = next(iter(avant["arrets"])).split(",")
     assert f"{x},{int(y) + n}" in v["arrets"]
+
+
+# --- La pose : décaler, coller, coudre (tâche 5) ---------------------------------------------
+
+def test_la_carte_finie_a_la_bande_au_dessus_de_la_ville_d_avant():
+    from app import nord
+    avant = _ville_d_avant()
+    apres = carte.generer()
+    n = nord.DECALAGE_NORD
+    assert (apres["largeur"], apres["hauteur"]) == (avant["largeur"], avant["hauteur"] + n)
+    couture = {(x, n) for x in nord.colonnes_de_la_couture()}
+    assert couture, "aucune rue de la bande ne débouche sur le boulevard"
+    for y, ligne in enumerate(avant["sol"]):
+        for x, g in enumerate(ligne):
+            if (x, y + n) not in couture:
+                assert apres["sol"][y + n][x] == g, (x, y + n)
+    assert "M" not in "".join(apres["sol"][y][:419] for y in range(n)), "une rangée de la bande est restée vide"
+
+
+def _atteint(v, depart):
+    vues, pile = {depart}, [depart]
+    while pile:
+        for s in carte.suivre_voie(v, *pile.pop()):
+            if s not in vues:
+                vues.add(s)
+                pile.append(s)
+    return vues
+
+
+def _voies_de(v, slug):
+    z = next(z for z in v["zones"] if z["slug"] == slug and not z["gang"])
+    return [(x, y) for y in range(z["y"], z["y"] + z["h"]) for x in range(z["x"], z["x"] + z["l"])
+            if v["voie"][y][x] != "."]
+
+
+def test_on_roule_de_la_ville_au_canton_et_on_en_revient():
+    v = carte.generer()
+    assert set(_voies_de(v, "canton")) & _atteint(v, _voies_de(v, "faubourg")[0]), "le Faubourg → le Canton"
+    assert set(_voies_de(v, "faubourg")) & _atteint(v, _voies_de(v, "canton")[0]), "le Canton → le Faubourg"
+    assert set(_voies_de(v, "gare")) & _atteint(v, _voies_de(v, "friches")[0]), "les Friches → la Gare"
+
+
+def test_la_bande_se_marche_depuis_le_terminus():
+    v = carte.generer()
+    t = next(p for p in v["points_interet"] if p["slug"] == "terminus")
+    groupe = next(g for g in carte.composantes_par_terre(v)["ville"] if (t["x"], t["y"]) in g)
+    assert (0, 50) in groupe, "le trottoir de ceinture des Friches ne se rejoint pas à pied"
+    poste = next(p for p in v["portes"] if p["interieur"] == "nord_aiguillage")
+    assert (poste["x"], poste["y"] + 1) in groupe, "le poste d'aiguillage ne se rejoint pas"
+
+
+def test_les_trois_districts_de_la_bande_et_leurs_zones():
+    from app import nord
+    v = carte.generer()
+    assert [d["slug"] for d in v["districts"][-3:]] == ["friches", "canton", "gare"]
+    for slug in ("friches", "canton", "gare"):
+        z = next(z for z in v["zones"] if z["slug"] == slug)
+        assert z["y"] == 0 and z["y"] + z["h"] <= nord.DECALAGE_NORD, (slug, z)
+    assert v["grille_nord"]["y0"] == 0 and v["grille"]["y0"] == nord.DECALAGE_NORD
+
+
+def test_aucun_nom_de_la_bande_n_entre_en_collision():
+    v = carte.generer()
+    lieux = [p["lieu"] for p in v["portes"]]
+    assert len(lieux) == len(set(lieux)), [x for x in lieux if lieux.count(x) > 1][:5]
+    assert all(p["interieur"] in v["interieurs"] for p in v["portes"])
+
+
+def test_les_passages_de_blocs_suivent_la_ville():
+    from app import blocs, nord
+    v = carte.generer()
+    for b in blocs.BLOCS:
+        assert blocs.erreurs(b, v) == [], b["slug"]
+    rang = next(b for b in blocs.pour_le_navigateur() if b["slug"] == "rang")
+    assert rang["passage"]["de"] == 171 + nord.DECALAGE_NORD
+
+
+def test_les_croisements_de_la_couture_s_ouvrent_au_nord():
+    """⚠️ Les chars du navigateur choisissent leur sortie par `bras` (`Vehicules`, `inter.bras`) : sans « N »,
+    la circulation de la ville ne monterait jamais dans la bande, même si les flèches y mènent."""
+    from app import nord
+    v, n = carte.generer(), nord.DECALAGE_NORD
+    couture = nord.colonnes_de_la_couture()
+    boites = [i for i in v["intersections"] if i["y"] <= n + carte.TROTTOIR < i["y"] + i["h"]
+              and any(i["x"] <= x < i["x"] + i["l"] for x in couture)]
+    assert len(boites) >= 10, len(boites)
+    assert all("N" in i["bras"] for i in boites), [i for i in boites if "N" not in i["bras"]][:3]
+    for x in couture:
+        assert any(i["x"] <= x < i["x"] + i["l"] for i in boites), f"la voie x={x} débouche hors d'un croisement"

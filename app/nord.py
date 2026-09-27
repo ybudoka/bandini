@@ -302,3 +302,61 @@ def decaler(ville: dict, n: int) -> None:
     ville["hauteur"] += n
     ville["grille"]["y0"] = n
     ville["decalage_nord"] = n
+
+
+# --- La pose : décaler, coller, coudre ---------------------------------------------------------------
+
+_CACHE: dict = {}
+
+
+def _bande() -> _ChantierNord:
+    """La bande ne dépend que de sa trame et de sa graine : bâtie une fois par processus."""
+    if "bande" not in _CACHE:
+        _CACHE["bande"] = batir_la_bande()
+    return _CACHE["bande"]
+
+
+def colonnes_de_la_couture() -> list[int]:
+    """Les x où une voie nord-sud de la bande débouche sur le boulevard de la couture."""
+    ch = _bande()
+    return [x for x in range(ch.largeur) if ch.voie[DECALAGE_NORD - 1][x] != "."]
+
+
+def poser(ville: dict) -> None:
+    """Toute la ville descend de `DECALAGE_NORD` rangées, et la bande se colle au-dessus. Sans un dé de la
+    ville : ce qui suit ne lit que la ville finie et la bande, bâtie avec sa graine à elle."""
+    n, ch = DECALAGE_NORD, _bande()
+    decaler(ville, n)
+    est = ville["sol"][n][ch.largeur:]                   # la falaise et les montagnes de l'est
+    for y in range(n):
+        ville["sol"][y] = "".join(ch.sol[y]) + est
+        ville["voie"][y] = "".join(ch.voie[y]) + "." * len(est)
+    # LA COUTURE : là où une voie de la bande débouche, le trottoir nord du boulevard s'ouvre comme un
+    # croisement — la rangée 110 de la bande, qui l'a bâti ouvert — et le croisement gagne son bras nord.
+    couture = colonnes_de_la_couture()
+    for x in couture:
+        for cle, grille in (("sol", ch.sol), ("voie", ch.voie)):
+            ligne = ville[cle][n]
+            ville[cle][n] = ligne[:x] + grille[n][x] + ligne[x + 1:]
+    for inter in ville["intersections"]:
+        if (inter["y"] <= n + carte.TROTTOIR < inter["y"] + inter["h"]
+                and any(inter["x"] <= x < inter["x"] + inter["l"] for x in couture)):
+            inter["bras"] = "".join(c for c in "NSOE" if c in inter["bras"] or c == "N")
+    def haut(o):
+        return o["y"] < n
+    for cle, source in (("portes", ch.portes), ("decor", ch.decor), ("lampes", ch.lampes),
+                        ("residences", ch.residences), ("devantures", ch.devantures), ("toits", ch.toits),
+                        ("points_interet", ch.points), ("intersections", ch.intersections),
+                        ("feux_pietons", ch.feux_pietons())):
+        ville[cle].extend(o for o in source if haut(o))
+    ville["arrets"].update({k: v for k, v in ch.arrets.items() if int(k.split(",")[1]) < n})
+    ville["interieurs"].update(ch.pieces)
+    slugs = {d["slug"] for d in DISTRICTS_NORD}
+    ville["zones"].extend({**z, "h": min(z["h"], n - z["y"])} for z in ch.zones() if z["district"] in slugs
+                          and not z.get("gang"))
+    ville["districts"].extend({"slug": d["slug"], "nom": d["nom"], "gang": d["gang"], "eau": False}
+                              for d in DISTRICTS_NORD)
+    ville["grille_nord"] = {"colonnes": list(carte.COLONNES), "rangees": list(RANGEES_NORD),
+                            "rues_v": list(carte.RUES_V), "rues_h": list(RUES_H_NORD),
+                            "trottoir": carte.TROTTOIR, "standing": list(ch.standing),
+                            "usage": list(ch.usage), "y0": 0}
