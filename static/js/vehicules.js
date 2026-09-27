@@ -2363,7 +2363,9 @@ const Vehicules = (function () {
       return centre(tx + p[0], ty + p[1]);
     }
     if (f === '+') {
-      if (!v.sens) v.sens = FLECHE_DE[Math.round(Math.cos(v.angle)) + ',' + Math.round(Math.sin(v.angle))] || '>';
+      // ⚠️ Pas une fleche (un glyphe de tuile, `+` ou `S`, venu d'ailleurs) : on relit le cap,
+      // sinon `PAS_FLECHE[droit]` ci-dessous plante a chaque image et fige le jeu.
+      if (!PAS_FLECHE[v.sens]) v.sens = FLECHE_DE[Math.round(Math.cos(v.angle)) + ',' + Math.round(Math.sin(v.angle))] || '>';
       const droit = v.sens;
       const p = PAS_FLECHE[droit];
       const droite = FLECHE_DE[(-p[1]) + ',' + p[0]], gauche = FLECHE_DE[p[1] + ',' + (-p[0])];

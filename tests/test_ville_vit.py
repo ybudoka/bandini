@@ -1064,3 +1064,44 @@ def test_le_trafic_ne_conduit_pas_une_coque(banc, paquet):
     assert r["eau"], "la carte n'a plus d'eau à trois tuiles d'une voie : le juge ne mesure plus rien"
     assert r["auSec"] == 0, "le trafic a sorti une coque de l'eau (%s images au sec) : %s" % (r["auSec"], r)
     assert r["conducteur"] is None and r["etat"] == "stationne", "le trafic garde la coque en main : %s" % r
+
+
+def test_un_voleur_qui_emporte_un_char_arrete_dans_un_carrefour_ne_fige_pas_la_ville(banc, paquet):
+    """Retour de Martin, 27 sept. 2026 (le carambolage de la Cantine des Quais) : un autobus
+    en `force` avait poussé un char garé jusque dans le carrefour, et un voleur l'y a pris.
+
+    ⚠️ `emporterLeChar` copiait le glyphe de la tuile dans `v.sens` : `'+'` dans une boîte.
+    `cibleDeLaVoie` lit ensuite `PAS_FLECHE[v.sens]` — indéfini — et lève une exception à
+    CHAQUE image : la boucle redemande l'image avant `maj()`, l'écran reste figé pour de bon.
+    Un sens, c'est une flèche ; une tuile de boîte n'en donne pas."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(19);
+        const j = L.B.joueur;
+        // Une boîte du plein centre : une tuile `+` dont les quatre voisines sont de la voirie.
+        let boite = null;
+        const c = L.Monde.carte;
+        for (let ty = 20; ty < c.h - 20 && !boite; ty++) {
+            for (let tx = 20; tx < c.w - 20 && !boite; tx++) {
+                if (L.Monde.fleche(tx, ty) !== '+') continue;
+                if (['+', '>', '<', '^', 'v', 'S'].indexOf(L.Monde.fleche(tx + 1, ty)) < 0) continue;
+                boite = { x: tx * L.TT + 8, y: ty * L.TT + 8 };
+            }
+        }
+        j.x = boite.x + 60; j.y = boite.y + 60; L.Monde.centrerCamera(j.x, j.y);
+        for (const e of L.B.entites.slice()) if (e.type === 'vehicule') L.Entites.retirer(e);
+        const v = L.Vehicules.creer('auto', boite.x, boite.y, Math.PI, { couleur: '#44aa55' });
+        const voleur = L.Entites.creerPieton(boite.x + 12, boite.y + 12, L.Entites.archetype('passant'));
+        voleur.etat = 'vole_un_char'; voleur.charVise = v; voleur.voleChar = 400;
+        L.Entites.indexer();
+        let erreur = null, sensVole = null;
+        for (let i = 0; i < 300; i++) {
+            try { o.frame(1); } catch (e) { erreur = String(e); break; }
+            if (v.conducteur === 'trafic' && sensVole === null) sensVole = v.sens;
+        }
+        return { vole: v.conducteur === 'trafic', erreur: erreur, sensVole: sensVole, sens: v.sens,
+                 boite: [Math.floor(boite.x / 16), Math.floor(boite.y / 16)] };
+    }""")
+    assert r["vole"] is True, "le décor du juge est faux : le voleur n'a pas pris le char (%s)" % r
+    assert r["erreur"] is None, "la ville plante quand un voleur emporte un char dans un carrefour : %s" % r
+    assert r["sensVole"] in (None, ">", "<", "^", "v"), "un char volé dans une boîte a pour sens %r" % r["sensVole"]

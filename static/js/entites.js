@@ -1959,7 +1959,12 @@ const Entites = (function () {
     v.vole = true;
     const selle = SPRITES[v.sprite] && SPRITES[v.sprite].selle;
     if (selle) v.pilote = { swaps: e.swaps, tenue: e.tenue || null };
-    v.sens = Monde.fleche(Math.floor(v.x / TT), Math.floor(v.y / TT)) || v.sens;
+    // ⚠️ UN SENS, C'EST UNE FLECHE. Garé dans une boîte (un autobus en `force` l'y avait
+    // poussé), la tuile donnait `'+'` : `cibleDeLaVoie` lisait `PAS_FLECHE['+']` et plantait
+    // a chaque image, l'ecran fige pour de bon (rejoue au banc a la Cantine des Quais,
+    // 27 sept. 2026). Sans fleche sous lui, il garde le sien ; sans sens, la boite lit son cap.
+    const sous = Monde.fleche(Math.floor(v.x / TT), Math.floor(v.y / TT));
+    if (sous === '>' || sous === '<' || sous === '^' || sous === 'v') v.sens = sous;
     v.alarme = 0;
     // ⚠️ La rue le voit partir — et c'est LUI la menace, pas le joueur. On
     // n'appelle PAS `Police.signalerCrime` : la police du jeu est centree sur
