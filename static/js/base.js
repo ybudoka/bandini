@@ -94,6 +94,9 @@ function etatInitial(defs) {
   return {
     version: 1,
     empreinte: defs ? defs.empreinte : '',
+    //: De combien de rangées la ville avait descendu quand la partie s'est écrite (la ville s'agrandit
+    //: au nord, `app/nord.py`) : une partie d'avant n'en a pas, et `completer` la fait descendre.
+    decalage_nord: (defs && defs.decalage_nord) || 0,
     argent: eco.argent_depart || 50,
     casier: 0,
     jour: 1,
@@ -779,6 +782,24 @@ const Sauvegarde = (function () {
       const auChalet = out.bloc.slug === 'chalet';
       out.bloc = { slug: 'rang', x: (auChalet ? 43 : 77) * 16 + 8, y: (auChalet ? 17 : 24) * 16 + 8 };
     }
+    // ⚠️ LA VILLE S'AGRANDIT AU NORD (docs/jalons/la-ville-s-agrandit-au-nord.md) : une partie écrite avant
+    // descend avec elle. Ce qu'elle garde en coordonnées de la VILLE : sa position, le char de la planque de
+    // Rocco, ses skimmers (et leur clé « tx,ty »). Les chars des planques de blocs et `bloc.x/y` sont en
+    // coordonnées du bloc : ils ne bougent pas. Une partie neuve, ou déjà décalée, ne bouge pas.
+    // ⚠️ `partie`, pas `out` : `out` hérite du `decalage_nord` d'une partie neuve.
+    const dn = ((defs && defs.decalage_nord) || 0) - (partie.decalage_nord || 0);
+    if (dn) {
+      const px = dn * 16;
+      if (typeof out.y === 'number') out.y += px;
+      const garde = out.planque && out.planque.vehicule;
+      if (garde && typeof garde.y === 'number') garde.y += px;
+      out.skimmers.forEach(function (s) {
+        if (typeof s.y === 'number') s.y += px;
+        const c = String(s.cle).split(',');
+        if (c.length === 2 && c[1] !== '' && !isNaN(Number(c[1]))) s.cle = c[0] + ',' + (Number(c[1]) + dn);
+      });
+    }
+    out.decalage_nord = (defs && defs.decalage_nord) || 0;
     if (!out.choix || typeof out.choix !== 'object') out.choix = {};
     // ⚠️ Une partie d'avant les chantiers REPART de son jour : sinon elle
     // s'ouvrirait au trentieme jour sur trois batiments neufs qu'on n'a jamais

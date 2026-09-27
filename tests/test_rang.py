@@ -1,10 +1,12 @@
 """Le rang : le chalet, le lac de la clairière et la cabane à sucre, un seul bloc au bout d'une rue
 (docs/jalons/la-ville-s-agrandit-au-nord.md)."""
 
-from app import blocs, carte
+from app import blocs, carte, nord
 from app.blocs import rang
 
 VILLE = carte.generer()
+#: La rue qui traverse, sur la carte FINIE : la ville a descendu de `nord.DECALAGE_NORD` rangées.
+Y_RUE = carte.OUVERTURES_DE_RUE[0]["y"] + nord.DECALAGE_NORD
 
 
 def test_trois_blocs_tous_au_bord_ouest():
@@ -19,18 +21,19 @@ def test_trois_blocs_tous_au_bord_ouest():
 
 def test_l_entree_du_rang_est_une_rue_qui_va_jusqu_au_bord():
     sol = VILLE["sol"]
-    p = rang.BLOC["passage"]
+    p = blocs.passage_en_ville(rang.BLOC)
+    assert p["de"] == Y_RUE - 1, "le passage couvre la rue et ses deux trottoirs"
     tuiles = [sol[p["de"] + i][0] for i in range(p["l"])]
     assert tuiles == [".", "#", "+", "."], tuiles          # trottoir, deux voies, trottoir
     # La même rue, une tuile plus loin : c'est bien elle qui continue.
-    assert [sol[172][x] for x in range(1, 5)] == ["#"] * 4
+    assert [sol[Y_RUE][x] for x in range(1, 5)] == ["#"] * 4
 
 
 def test_aucun_char_de_la_circulation_ne_s_engage_vers_le_bord():
     voie = VILLE["voie"]
-    assert voie[172][0] == "." and voie[173][0] == ".", "l'ouverture n'est pas une voie de circulation"
+    assert voie[Y_RUE][0] == "." and voie[Y_RUE + 1][0] == ".", "l'ouverture n'est pas une voie de circulation"
     for inter in VILLE["intersections"]:
-        if inter["x"] <= 1 and inter["y"] <= 173 < inter["y"] + inter["h"]:
+        if inter["x"] <= 1 and inter["y"] <= Y_RUE + 1 < inter["y"] + inter["h"]:
             assert "O" not in inter["bras"], inter
 
 

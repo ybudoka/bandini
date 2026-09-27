@@ -3,6 +3,7 @@ s'achète, on y dort, une partie s'y réveille, son char revient avec elle, et l
 souvient de ce qu'on y laisse. Depuis le 26 sept. 2026, il est au RANG, avec le lac et la cabane
 (`app/blocs/rang.py`) : le bloc s'appelle `rang`, la pièce et la planque, toujours `chalet`."""
 
+from app import blocs
 from app.blocs import rang
 
 OUTILS = """
@@ -90,7 +91,7 @@ def test_on_dort_au_chalet_et_la_partie_s_y_reveille_avec_son_char(banc):
     }""")
     s = r["sauve"]
     assert s["bloc"] and s["bloc"]["slug"] == "rang", f"la sauvegarde ne sait pas qu'on dort au chalet : {s}"
-    p = rang.BLOC["passage"]
+    p = blocs.passage_en_ville(rang.BLOC)            # en coordonnées de la carte finie
     assert s["x"] < 40 and p["de"] * 16 < s["y"] < (p["de"] + p["l"]) * 16, f"le repli reste le passage en ville : {s}"
     assert s["char"] and s["char"]["slug"] == "cabriolet", s
     assert r["bloc"] == "rang" and r["noir"] is False, f"rouverte, la partie se réveille au chalet : {r}"
