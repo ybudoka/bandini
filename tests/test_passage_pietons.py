@@ -39,6 +39,11 @@ CHERCHER_LIGNE = """(function (L) {
         // trouvée était une voie de bordure par chance ; depuis que les croisements de la couture ont des feux
         // (`app/nord.py`), c'est la voie intérieure du boulevard du haut de la ville.
         if (!L.Monde.estTrottoir(sx - p[1], sy + p[0])) continue;
+        // ⚠️ ET UNE RUE À UNE VOIE PAR SENS : la voie de gauche va dans l'autre sens. Sur la bordure d'un
+        // boulevard, le vélo se colle au trottoir plus loin que les six pixels que le juge tolère ; la ligne que
+        // le juge a toujours trouvée était celle d'une rue à deux voies.
+        // (deux tuiles en arrière : à la ligne même, les deux voies portent la marque d'arrêt « S »)
+        if (L.Monde.fleche(sx - 2 * p[0] + p[1], sy - 2 * p[1] - p[0]) === sens) continue;
         let droit = true;
         for (let k = 1; k <= 8; k++) if (L.Monde.fleche(sx - p[0] * k, sy - p[1] * k) !== sens) droit = false;
         if (droit) return { sx: sx, sy: sy, sens: sens, p: p, inter: inter };

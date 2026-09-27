@@ -207,7 +207,10 @@ def test_un_passant_rejoue_la_meme_suite_pour_la_meme_empreinte(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         function suite() {
-            const p = o.poser(null, 12, 0); p.id = 4242; p.coups = 0;
+            // ⚠️ LE MÊME PASSANT les deux fois : `poser(null)` tire l'archétype au dé, et un corps d'une autre
+            // carrure change la distance du contact — le genou y remplace le crochet (`COLLE`). Le juge ne tenait
+            // que parce que le hasard donnait deux fois la même carrure.
+            const p = o.poser('passant', 12, 0); p.id = 4242; p.coups = 0;
             const vus = [];
             for (let i = 0; i < 6; i++) {
                 p.etat = 'attaque_joueur';
