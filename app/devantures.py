@@ -218,6 +218,33 @@ MURS: list[Mur] = [
      "vitre": "#36414d", "allumee": "#ffe6b8", "porte": "#2f3a44"},
 ]
 
+#: Le bois a clin des maisons de pecheur — l'Ile-aux-Corneilles seulement.
+#: ⚠️ Pas dans `MURS` : la ville tire son mur par `entier(0, len(MURS) - 1)`,
+#: et une brique de plus changerait la couleur de toutes ses fenetres. Une maison
+#: de l'ile se peint de planches sur toute sa facade, dans une couleur que le
+#: plan lui DONNE (`ile.BATIMENTS`) : c'est un village de bord de mer, chaque
+#: maison a la sienne, et aucune n'est la brique de la ville.
+class Declin(TypedDict):
+    slug: str
+    planche: str
+    ombre: str
+    coin: str
+
+
+DECLINS: list[Declin] = [
+    {"slug": "rouge_grange", "planche": "#9b3b2e", "ombre": "#74291f", "coin": "#e8e0cf"},
+    {"slug": "jaune_beurre", "planche": "#c9a64a", "ombre": "#9c7f33", "coin": "#f0ead8"},
+    {"slug": "bleu_large", "planche": "#4d6f8c", "ombre": "#39536a", "coin": "#e6e4dc"},
+    {"slug": "vert_sapin", "planche": "#4f7552", "ombre": "#3a583c", "coin": "#e6e2d2"},
+    {"slug": "blanc_chaux", "planche": "#d8d3c4", "ombre": "#aba592", "coin": "#5d6b5a"},
+]
+
+
+def declin(slug: str) -> int:
+    """L'index d'un bois a clin par son nom — c'est l'index qui voyage."""
+    return next(i for i, d in enumerate(DECLINS) if d["slug"] == slug)
+
+
 #: Le fer des escaliers exterieurs et des balcons — le meme pour toute la ville.
 #: ⚠️ Un escalier de couleur differente par maison ferait un decor de carton :
 #: dans un vrai quartier, c'est le meme ferblantier qui les a tous poses.
@@ -339,6 +366,7 @@ def exporter() -> dict:
     return {
         "genres": [dict(g) for g in GENRES],
         "murs": [dict(m) for m in MURS],
+        "declins": [dict(d) for d in DECLINS],
         "fer": dict(FER),
         "couleurs_tag": list(COULEURS_TAG),
         "motifs": list(MOTIFS),

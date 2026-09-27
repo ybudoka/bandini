@@ -4245,9 +4245,27 @@ const FACADES = (function () {
     }
   }
 
-  /** `r` = { x, y, l, etages, motifs, escalier, porte, mur, balcon }. */
-  function residence(ctx, r, m, fer, ox, oy) {
+  /** Le bois a clin d'une maison de pecheur (l'ile) : des planches couchees d'un
+      coin a l'autre, chacune avec son ombre dessous, et une planche de coin
+      debout a chaque bout. ⚠️ Peint AVANT les fenetres, sur toute la tuile :
+      c'est lui qui remplace la brique de la ville. */
+  function declin(ctx, d, ox, oy, large) {
+    ctx.fillStyle = d.planche;
+    ctx.fillRect(ox, oy, large, T);
+    ctx.fillStyle = d.ombre;
+    for (let y = 2; y < T; y += 3) ctx.fillRect(ox, oy + y, large, 1);
+    ctx.fillStyle = 'rgba(255,255,255,0.10)';
+    for (let y = 0; y < T; y += 3) ctx.fillRect(ox, oy + y, large, 1);
+    ctx.fillStyle = d.coin;
+    ctx.fillRect(ox, oy, 2, T);
+    ctx.fillRect(ox + large - 2, oy, 2, T);
+  }
+
+  /** `r` = { x, y, l, etages, motifs, escalier, porte, mur, balcon, declin? } ;
+      `d` = son bois a clin (`devantures.DECLINS`), ou rien pour la brique. */
+  function residence(ctx, r, m, fer, ox, oy, d) {
     const large = r.l * T;
+    if (d) declin(ctx, d, ox, oy, large);
     ctx.fillStyle = 'rgba(0,0,0,0.22)';                   // l'ombre de la corniche
     ctx.fillRect(ox, oy, large, CORNICHE_H);
     ctx.fillStyle = m.joint;
@@ -4271,7 +4289,8 @@ const FACADES = (function () {
         ctx.fillRect(x, oy + T - 1, T, 1);
       }
     }
-    if (r.etages >= 2) escalier(ctx, ferDuLogement, ox + r.porte * T, oy + T, r.escalier);
+    // ⚠️ `escalier: null` : une maison de pecheur n'a pas d'escalier de fer.
+    if (r.etages >= 2 && r.escalier !== null) escalier(ctx, ferDuLogement, ox + r.porte * T, oy + T, r.escalier);
   }
 
   //: Le fer rouille d'un escalier de rue pauvre : le meme dessin, d'autres couleurs.

@@ -392,11 +392,12 @@ def test_on_voit_toujours_par_ou_l_on_rentre_chez_soi(ville):
 def test_les_etages_restent_dans_les_bornes(ville):
     for r in ville["residences"]:
         assert 1 <= r["etages"] <= 3, r
-        assert r["escalier"] in (-1, 0, 1), r
+        # ⚠️ `None` : pas d'escalier du tout (l'ile — `ile._poser_residence`).
+        assert r["escalier"] in (-1, 0, 1, None), r
         assert 0 <= r["mur"] < len(devantures.MURS), r
         assert r["balcon"] in (0, 1), r
         # Un escalier exterieur sans etage a monter n'est qu'un obstacle.
-        assert r["etages"] >= 2 or r["escalier"] == 0, r
+        assert r["etages"] >= 2 or r["escalier"] in (0, None), r
 
 
 def test_l_escalier_exterieur_descend_sur_du_marchable(ville, sol):

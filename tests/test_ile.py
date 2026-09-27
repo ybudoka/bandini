@@ -13,7 +13,7 @@ from collections import deque
 
 import pytest
 
-from app import carte, economie, ile, recherche
+from app import carte, devantures, economie, ile, recherche
 
 VILLE = carte.exporter()
 SOL = VILLE["sol"]
@@ -203,6 +203,28 @@ def test_six_maisons_une_usine_fermee_et_un_couvent():
     condamnees = [(x, y) for y in range(FICHE["y"], FICHE["y"] + FICHE["h"])
                   for x in range(FICHE["x"], FICHE["x"] + FICHE["l"]) if SOL[y][x] == "d"]
     assert len(condamnees) == 1, condamnees
+
+
+def test_les_maisons_de_pecheur_sont_en_bois_d_un_coin_a_l_autre():
+    """2e vague : six maisons, six façades de bois à clin qui ne sont pas la
+    brique de la ville — peintes sur TOUTE la façade (sur quatre tuiles, la
+    cinquième restait de brique rouge), et sans escalier de fer, ni aux
+    maisons ni au couvent."""
+    residences = [r for r in VILLE["residences"] if dans_l_ile(r["x"], r["y"])]
+    maisons = [r for r in residences if "declin" in r]
+    assert len(maisons) == 6, len(maisons)
+    for r in residences:
+        assert r["escalier"] is None, f"un escalier de fer sur l'île : {r}"
+    for r in maisons:
+        assert 0 <= r["declin"] < len(devantures.DECLINS), r
+        facade = [x for x in range(r["x"] - 1, r["x"] + r["l"] + 1) if SOL[r["y"]][x] in ("F", "P")]
+        assert facade == list(range(r["x"], r["x"] + r["l"])), f"du bois sur une partie de la façade : {r}"
+    couleurs = {r["declin"] for r in maisons}
+    assert len(couleurs) == len(devantures.DECLINS), f"{len(couleurs)} couleurs pour six maisons"
+    voisines = sorted(maisons, key=lambda r: (r["y"], r["x"]))
+    for a, b in zip(voisines, voisines[1:]):
+        if a["y"] == b["y"]:
+            assert a["declin"] != b["declin"], f"deux voisines de la même couleur : {a}, {b}"
 
 
 def test_l_ile_ne_deplace_rien_de_la_ville(monkeypatch):

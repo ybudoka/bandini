@@ -154,7 +154,11 @@ PORTE = "D"
 #:           entre, sans repère), `peinte` (une porte fermée, peinte sur la
 #:           façade comme celle d'un logement) ou `condamnee` ;
 #: `etages`  pour une porte peinte : combien d'étages de fenêtres on lit ;
-#: `clocher` la tuile de toit (relative au bâtiment) où se dresse le clocher.
+#: `clocher` la tuile de toit (relative au bâtiment) où se dresse le clocher ;
+#: `declin`  une maison de pêcheur : du bois à clin sur TOUTE sa façade, de la
+#:           couleur nommée (`devantures.DECLINS`), et pas d'escalier de fer.
+#:           ⚠️ Nommée au plan, pas tirée : six maisons, six couleurs qu'on
+#:           reconnaît d'une partie à l'autre — la jaune est celle de Léo Cyr.
 #:
 #: ⚠️ L'usine est CONDAMNÉE, et le hangar s'ouvre sans rien promettre : le
 #: premier est fermé depuis quinze ans, le second n'a pas de nom sur la porte.
@@ -165,12 +169,12 @@ BATIMENTS: dict[str, dict] = {
     "U": {"toit": "B", "porte": "condamnee"},
     "H": {"toit": "B", "porte": "visite", "slug": "hangar_ile", "nom": "Le hangar sans nom",
           "interieur": "hangar_ile"},
-    "1": {"toit": "P", "porte": "peinte", "etages": 1},
-    "2": {"toit": "P", "porte": "peinte", "etages": 2},
-    "3": {"toit": "P", "porte": "peinte", "etages": 1},
-    "4": {"toit": "P", "porte": "peinte", "etages": 1},
-    "5": {"toit": "P", "porte": "peinte", "etages": 1},
-    "6": {"toit": "P", "porte": "peinte", "etages": 1},
+    "1": {"toit": "P", "porte": "peinte", "etages": 1, "declin": "rouge_grange"},
+    "2": {"toit": "P", "porte": "peinte", "etages": 2, "declin": "bleu_large"},
+    "3": {"toit": "P", "porte": "peinte", "etages": 1, "declin": "jaune_beurre"},
+    "4": {"toit": "P", "porte": "peinte", "etages": 1, "declin": "vert_sapin"},
+    "5": {"toit": "P", "porte": "peinte", "etages": 1, "declin": "blanc_chaux"},
+    "6": {"toit": "P", "porte": "peinte", "etages": 1, "declin": "rouge_grange"},
 }
 
 #: Les pièces de l'île. ⚠️ À la mesure de leur bâtiment, murs compris : la
@@ -386,7 +390,7 @@ def _batir(chantier, lettre: str, relatives: set[tuple[int, int]]) -> None:
         chantier.sol[py][px] = "d"
         _reserver_le_devant(chantier, px, py)
     else:
-        _poser_residence(chantier, facades, px, py, fiche["etages"])
+        _poser_residence(chantier, facades, px, py, fiche["etages"], fiche.get("declin"))
 
 
 def _reserver_le_devant(chantier, px: int, py: int, peinte: bool = False) -> None:
@@ -403,27 +407,35 @@ def _reserver_le_devant(chantier, px: int, py: int, peinte: bool = False) -> Non
             chantier.devants_peints.add((px, py + j))
 
 
-def _poser_residence(chantier, facades: list[tuple[int, int]], px: int, py: int, etages: int) -> None:
+def _poser_residence(chantier, facades: list[tuple[int, int]], px: int, py: int, etages: int,
+                     declin: str | None = None) -> None:
     """Des fenêtres et une porte peinte : une maison où l'on habite.
 
     ⚠️ La couche peinte de `carte._Chantier.poser_residence`, sans son dé : la
     couleur du mur se lit à la position (toujours la même d'une graine à
-    l'autre), et on n'accroche pas d'escalier de fer à une maison de pêcheur.
+    l'autre). Une maison de pêcheur (`declin`) est peinte de planches d'un
+    coin à l'autre — sur quatre tuiles seulement, la cinquième restait la
+    brique rouge de la ville, et c'est ce qui faisait de toutes les maisons de
+    l'île la même maison. Et on n'accroche d'escalier de fer ni à une maison
+    de pêcheur ni au couvent (`escalier: None`) : c'est une image de ruelle.
     """
     from . import devantures
 
     gauche = min(t[0] for t in facades)
     dispo = max(t[0] for t in facades) - gauche + 1
-    large = min(4, dispo)
+    large = dispo if declin else min(4, dispo)
     x0 = min(max(px - large // 2, gauche), gauche + dispo - large)
     motifs = "".join("P" if x0 + i == px else chantier.sol[py][x0 + i] for i in range(large))
     chantier.portes_peintes.add((px, py))
     _reserver_le_devant(chantier, px, py, peinte=True)
-    chantier.residences.append({
+    residence = {
         "x": x0, "y": py, "l": large, "etages": etages, "motifs": motifs,
-        "escalier": 0, "porte": px - x0,
+        "escalier": None, "porte": px - x0,
         "mur": (px * 7 + py * 3) % len(devantures.MURS),
         "balcon": 0,
-    })
+    }
+    if declin:
+        residence["declin"] = devantures.declin(declin)
+    chantier.residences.append(residence)
     for i in range(large):
         chantier.murs_tagges.add((x0 + i, py))

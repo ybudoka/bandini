@@ -120,3 +120,38 @@ def test_l_agent_qui_t_a_suivi_rentre(banc):
     assert r["ile"]["arrete"] is False, "l'agent t'a arrete sur l'ile"
     assert r["ile"]["etat"] == "flane", r["ile"]
     assert r["ile"]["vu"] > 100, f"l'agent te regarde encore : vu = {r['ile']['vu']}"
+
+
+def test_les_maisons_de_l_ile_se_peignent_en_bois_et_sans_escalier(banc):
+    """Le peintre lit `declin` : des planches de SA couleur d'un coin à l'autre,
+    et pas une marche de fer. ⚠️ Le témoin : un logement de ville à deux étages
+    et à escalier, peint par la même fonction, a ses marches — sans lui, « pas
+    d'escalier » pourrait vouloir dire que le banc n'en peint jamais."""
+    r = banc("""function (L, o) {
+        const def = L.B.defs, fiche = def.carte.ile, murs = def.devantures.murs;
+        const declins = def.devantures.declins, fer = def.devantures.fer;
+        const dans = function (r) { return r.x >= fiche.x && r.x < fiche.x + fiche.l
+                                         && r.y >= fiche.y && r.y < fiche.y + fiche.h; };
+        const peindre = function (r) {
+            const c = o.doc.createElement('canvas').getContext('2d');
+            c.traces = [];
+            L.FACADES.residence(c, r, murs[r.mur % murs.length], fer, 0, 0,
+                              r.declin != null ? declins[r.declin] : null);
+            return c.traces;
+        };
+        const maisons = def.carte.residences.filter(function (r) { return dans(r) && r.declin != null; });
+        const out = { maisons: [], temoin: null };
+        maisons.forEach(function (r) {
+            const t = peindre(r), d = declins[r.declin];
+            out.maisons.push({ l: r.l, planche: t.some(function (q) { return q[4] === d.planche && q[2] === r.l * 16; }),
+                               marches: t.filter(function (q) { return q[4] === fer.marche; }).length });
+        });
+        const ville = def.carte.residences.find(function (r) { return !dans(r) && r.etages >= 2 && r.escalier !== null; });
+        out.temoin = peindre(ville).filter(function (q) { return q[4] === fer.marche; }).length;
+        return out;
+    }""")
+    assert r["temoin"] > 0, "le témoin ne mord pas : même en ville, aucune marche de fer"
+    assert len(r["maisons"]) == 6
+    for m in r["maisons"]:
+        assert m["planche"], f"une maison de l'île sans ses planches : {m}"
+        assert m["marches"] == 0, f"un escalier de fer sur une maison de pêcheur : {m}"

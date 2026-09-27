@@ -1933,13 +1933,15 @@ const Monde = (function () {
     }
     const residences = carte.residences && carte.residences.get(cle);
     const murs = mursDeResidence();
+    const declins = (B.defs && B.defs.devantures && B.defs.devantures.declins) || [];
     if (residences && murs.length) {
       const fer = ferDesEscaliers();
       residences.forEach(function (r) {
         // ⚠️ Une facade de logement dont le batiment est en chantier : elle est
         // tombee avec les murs (voir `Chantiers.efface`).
         if (Chantiers.efface(r.x, r.y)) return;
-        FACADES.residence(ctx, r, murs[r.mur % murs.length], fer, (r.x - ox) * TT, (r.y - oy) * TT);
+        const bois = r.declin != null ? declins[r.declin % declins.length] : null;
+        FACADES.residence(ctx, r, murs[r.mur % murs.length], fer, (r.x - ox) * TT, (r.y - oy) * TT, bois);
       });
     }
     const toits = carte.toits && carte.toits.get(cle);
