@@ -294,3 +294,4 @@ Deux documents d'avant la table :
 | Le commerce à la mesure de son bâtiment | ✅ **livré** | 27 sept. 2026 | **P2** | **correctif** | [fiche](le-commerce-a-la-mesure-de-son-batiment.md#fiche) · [notes](le-commerce-a-la-mesure-de-son-batiment.md#notes) |
 | Les autobus ne s'empilent plus | ✅ **livré** | 27 sept. 2026 | **P1** | **correctif** | [fiche](les-autobus-ne-s-empilent-plus.md#fiche) · [notes](les-autobus-ne-s-empilent-plus.md#notes) |
 | Le piratage devient un labyrinthe électrifié | ✅ **livré** | 27 sept. 2026 | **P4** | ajout | [fiche](le-piratage-devient-un-labyrinthe-electrifie.md#fiche) · [notes](le-piratage-devient-un-labyrinthe-electrifie.md#notes) |
+| Le casse-croûte du ciné-parc au centre, et le projecteur | ✅ **livré** | 27 sept. 2026 | **P4** | ajout | [fiche](le-casse-croute-du-cine-parc-au-centre-et-le-projecteur.md#fiche) · [notes](le-casse-croute-du-cine-parc-au-centre-et-le-projecteur.md#notes) |

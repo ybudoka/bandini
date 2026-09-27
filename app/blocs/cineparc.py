@@ -11,7 +11,15 @@ la ville (la règle « agrandir la carte sous la trame »). Derrière un fondu a
 ⚠️ **L'ÉCRAN, LE FILM, LES HAUT-PARLEURS ET LES SPECTATEURS SONT AU NAVIGATEUR** (`static/js/cineparc.js`) :
 le plan pose le cadre de l'écran (une façade), l'asphalte, les rangées de cases, le grillage et le
 casse-croûte ; le reste se peint, et vit selon la saison et l'heure.
+
+⚠️ **LE CASSE-CROÛTE EST AU MILIEU DU TERRAIN** (Martin, 27 sept. 2026 : « la cabane doit être au centre »,
+docs/jalons/le-casse-croute-du-cine-parc-au-centre-et-le-projecteur.md) : dans l'axe de l'écran, au milieu
+de la 2e rangée de cases, comme dans un vrai ciné-parc. C'est aussi la CABINE DU PROJECTEUR : pendant la
+séance, le faisceau part de sa fenêtre nord (`cabine`) et s'ouvre jusqu'à la toile (`Cineparc.faisceau`).
+Sa porte, au sud, s'ouvre sur le comptoir (`magasins.COMPTOIRS["cineparc"]`, l'été, le soir).
 """
+
+from .. import carte
 
 PLAN: tuple[str, ...] = (
     "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
@@ -26,18 +34,18 @@ PLAN: tuple[str, ...] = (
     "A,,,f##################################f,,,A",
     "AA,,f##################################f,,AA",
     "A,,,f##################################f,,,A",
+    "AA,,f###^^^^^^^^^^OOOOOOOO^^^^^^^^^^###f,,AA",
+    "A,,,f#############OOOOOOOO#############f,,,A",
+    "AA,,f#############FWWFDWWF#############f,,AA",
+    "A,,,f##################################f,,,A",
     "AA,,f###^^^^^^^^^^^^^^^^^^^^^^^^^^^^###f,,AA",
     "A,,,f##################################f,,,A",
     "AA,,f##################################f,,AA",
     "A,,,f##################################f,,,A",
     "AA,,f###^^^^^^^^^^^^^^^^^^^^^^^^^^^^###f,,AA",
-    "A,,,f##################################f,,,A",
-    "AA,,f##################################f,,AA",
-    "A,,,f##################################f,,,A",
-    "AA,,f###^^^^^^^^^^^^^^^^^^^^^^^^^^^^###f,,AA",
-    "A,,,f#OOOOOO################################",
-    "AA,,f#OOOOOO################################",
-    "A,,,f#FWdFWF################################",
+    "A,,,f#######################################",
+    "AA,,f#######################################",
+    "A,,,f#######################################",
     "AA,,f#######################################",
     "A,,,ffffffffffffffffffffffffffffffffffff,,,A",
     "AA,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,AA",
@@ -49,6 +57,19 @@ PLAN: tuple[str, ...] = (
 DECORS: dict[str, tuple[str, str]] = {
     "A": (",", "arbre"),
 }
+
+#: Dedans : le projecteur contre le mur nord, braqué sur l'écran par sa fenêtre (la colonne de la porte, l'axe
+#: de l'écran) ; le frigo des liqueurs et l'étagère des chips ; le comptoir devant, la caissière derrière. À la mesure de la cabane : huit tuiles de
+#: large, comme sa façade, et la porte au même endroit.
+PIECE_CASSE_CROUTE = carte._piece("casse_croute_cineparc", "Le casse-croûte du ciné-parc", sol="u", plan="""
+BBBBBBBB
+Bj  mmeB
+B cccc B
+B      B
+B      B
+BWWBDWWB
+""", points=(carte._pt("emplettes", 3, 2, genre="cineparc"),),
+    gens=carte._gens(("commis", 3, 1), ("client", 6, 3)))
 
 BLOC = {
     "slug": "cineparc",
@@ -65,10 +86,16 @@ BLOC = {
     "retour": {"bord": "est", "de": 21, "l": 4},
     "arrivee": {"x": 41, "y": 22},
     "gens": False,
+    # Le casse-croûte, au milieu du terrain : sa porte, sa pièce.
+    "portes": [{"x": 22, "y": 14, "interieur": "casse_croute_cineparc", "lieu": "casse_croute_cineparc"}],
+    "pieces": {"casse_croute_cineparc": PIECE_CASSE_CROUTE},
     # Ses lampes : les vitrines du casse-croûte, et les deux lampadaires de l'entrée (le film, lui,
     # éclaire à part : `Cineparc.lampes`, quand il joue).
-    "lampes": [{"x": 7, "y": 24, "r": 26, "c": "fenetre"}, {"x": 10, "y": 24, "r": 26, "c": "fenetre"},
+    "lampes": [{"x": 20, "y": 15, "r": 26, "c": "fenetre"}, {"x": 24, "y": 15, "r": 26, "c": "fenetre"},
                {"x": 41, "y": 20, "r": 40, "c": "lampadaire"}, {"x": 41, "y": 25, "r": 40, "c": "lampadaire"}],
     # L'écran : son cadre (la façade du plan), en tuiles — le navigateur peint la toile au-dessus.
     "ecran": {"x": 12, "y": 2, "l": 20, "h": 2},
+    # La fenêtre de la cabine du projecteur : le bord nord du toit du casse-croûte, dans l'axe de l'écran
+    # (en tuiles : le faisceau part de là).
+    "cabine": {"x": 22, "y": 12},
 }

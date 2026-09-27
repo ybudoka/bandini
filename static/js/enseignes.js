@@ -195,13 +195,10 @@ const Enseignes = (function () {
     const t = toile(vue);
     if (!t) return;
     Cineparc.film(ctx, t.x, t.y, t.l, t.h);
-    // Le faisceau du projecteur, depuis le fond de la salle.
-    ctx.fillStyle = 'rgba(210,220,255,0.06)';
-    ctx.beginPath();
-    ctx.moveTo(t.x, t.y + t.h); ctx.lineTo(t.x + t.l, t.y + t.h);
-    ctx.lineTo(t.x + t.l / 2 + 6, t.y + t.h + 9 * TT); ctx.lineTo(t.x + t.l / 2 - 6, t.y + t.h + 9 * TT);
-    ctx.fill();
-    B.stats.rects += 3;
+    // Le faisceau du projecteur, du mur du fond (la porte : la cabine est au-dessus) jusqu'a la toile —
+    // le meme qu'au cine-parc (`Cineparc.faisceau`).
+    const fond = ((B.interieur.hauteur || 10) - 1) * TT - vue.y;
+    Cineparc.faisceau(ctx, t.x + t.l / 2, fond, t.x, t.x + t.l, t.y + t.h, fondu, film.t);
   }
 
   return { itemDuComptoir, commencerBingo, graineDuBingo, seance, commencerFilm, dansLaBaie, maj,

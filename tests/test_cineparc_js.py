@@ -1,7 +1,12 @@
 """Le ciné-parc, au banc (docs/jalons/le-cine-parc.md) : on y entre par le bord ouest des Érables ; le film
 ne joue que les soirs d'été ; des spectateurs sont garés dans les rangées pendant la séance et repartent
 après ; le trafic n'y entre pas ; rouler phares allumés pendant le film fait klaxonner, se garer dans une
-case les éteint."""
+case les éteint. Le casse-croûte est au milieu du terrain, dans l'axe de l'écran, et vend de quoi grignoter
+l'été ; c'est aussi la cabine du projecteur, dont le faisceau va jusqu'à la toile pendant la séance
+(docs/jalons/le-casse-croute-du-cine-parc-au-centre-et-le-projecteur.md)."""
+
+from app import magasins
+from app.blocs import cineparc
 
 OUTILS = """
   const TT = 16;
@@ -22,7 +27,101 @@ OUTILS = """
   }
   // Un jour d'ete, un jour d'hiver (l'annee du jeu).
   function ete(L) { return L.B.defs.calendrier.dates.saint_jean + 3; }
+  function entrerAuCasseCroute(L, o) {
+    const B = L.B, j = B.joueur, porte = L.Monde.carte.def.portes.find(function (q) { return q.interieur === 'casse_croute_cineparc'; });
+    if (!porte) return null;
+    j.x = porte.x * TT + 8; j.y = (porte.y + 1) * TT + 4; L.Entites.indexer();
+    L.Jeu.entrer(porte); o.fondu();
+    for (let k = 0; k < 200 && !B.interieur; k++) o.frame(1);
+    return B.interieur && B.interieur.points.find(function (q) { return q.type === 'emplettes'; });
+  }
+  function libelles(m) { return m ? m.items.map(function (i) { return i.libelle; }) : null; }
+  // Un faux pinceau : il note les points des cones et compte ce qu'il peint.
+  function pinceau() {
+    const p = { points: [], remplis: 0, grains: 0 };
+    p.save = p.restore = p.beginPath = p.closePath = function () {};
+    p.moveTo = p.lineTo = function (x, y) { p.points.push([x, y]); };
+    p.fill = function () { p.remplis++; };
+    p.fillRect = function () { p.grains++; };
+    return p;
+  }
 """
+
+
+def test_le_casse_croute_est_au_milieu_du_terrain_dans_l_axe_de_l_ecran():
+    """Martin : « la cabane doit être au centre ». Le seul bâtiment du stationnement est centré sur l'écran (à la
+    tuile près), entre la première et la dernière rangée de cases ; sa porte mène à son comptoir, et la fenêtre
+    de la cabine est sur son toit, dans le même axe."""
+    plan, b = cineparc.PLAN, cineparc.BLOC
+    rangees = [y for y, ligne in enumerate(plan) if "^" in ligne]
+    bati = [(x, y) for y, ligne in enumerate(plan) for x, g in enumerate(ligne)
+            if g in "OFWDd" and rangees[0] <= y <= rangees[-1]]
+    assert bati, "pas de casse-croûte dans le stationnement"
+    xs, ys = [x for x, _ in bati], [y for _, y in bati]
+    centre = (min(xs) + max(xs) + 1) / 2
+    e = b["ecran"]
+    assert abs(centre - (e["x"] + e["l"] / 2)) <= 0.5, (centre, e)
+    assert rangees[0] < min(ys) and max(ys) < rangees[-1], (ys, rangees)
+    assert len(bati) == (max(xs) - min(xs) + 1) * (max(ys) - min(ys) + 1), "un seul bâtiment, d'un bloc"
+    porte = b["portes"][0]
+    assert (porte["x"], porte["y"]) in bati
+    piece = b["pieces"][porte["interieur"]]
+    assert [p.get("genre") for p in piece["points"] if p["type"] == "emplettes"] == ["cineparc"]
+    c = b["cabine"]
+    assert c["y"] == min(ys) and c["x"] == e["x"] + e["l"] / 2, c
+
+
+def test_le_rialto_et_le_casse_croute_vendent_le_grignotage_du_cinema():
+    for genre in ("rialto", "cineparc"):
+        slugs = [a["slug"] for a in magasins.COMPTOIRS[genre]["articles"]]
+        assert {"mais", "chips", "nachos", "liqueur"} <= set(slugs), (genre, slugs)
+
+
+def test_le_casse_croute_sert_l_ete_le_soir_et_se_dit_ferme_sinon(banc):
+    r = banc("async function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const B = L.B, M = L.Missions;
+        await entrer(L, o, ete(L), 20);
+        const pt = entrerAuCasseCroute(L, o);
+        if (!pt) return { piece: B.interieur && B.interieur.slug };
+        const soir = libelles(M.menuDuPoint(pt));
+        B.partie.heure = 11 / 24; const matin = libelles(M.menuDuPoint(pt));
+        B.partie.jour = 2; B.partie.heure = 20 / 24; const hiver = libelles(M.menuDuPoint(pt));
+        return { piece: B.interieur.slug, soir: soir, matin: matin, hiver: hiver };
+    }""")
+    assert r["piece"] == "casse_croute_cineparc", r
+    for nom in ("MAÏS SOUFFLÉ", "CHIPS", "NACHOS", "LIQUEUR"):
+        assert nom in r["soir"], r["soir"]
+    assert len(r["matin"]) == 1 and r["matin"][0].startswith("FERMÉ"), r["matin"]
+    assert r["hiver"] == ["FERMÉ — ON ROUVRE L'ÉTÉ"], r["hiver"]
+
+
+def test_le_projecteur_eclaire_la_toile_depuis_la_cabine_pendant_la_seance(banc):
+    """Pendant la séance, le faisceau part de la fenêtre de la cabine et s'ouvre sur toute la largeur de la
+    toile, et le rendu du jeu le peint ; le midi, rien."""
+    r = banc("async function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const B = L.B, C = L.Cineparc;
+        await entrer(L, o, ete(L), 21.5);
+        const bloc = L.Monde.carte.def.bloc, e = bloc.ecran, c = bloc.cabine, vue = { x: 0, y: 0 };
+        const soir = pinceau(); C.dessinerFaisceau(soir, vue);
+        let appels = 0; const vrai = C.dessinerFaisceau;
+        C.dessinerFaisceau = function () { appels++; return vrai.apply(null, arguments); };
+        L.Jeu.rendre();
+        C.dessinerFaisceau = vrai;
+        B.partie.heure = 13 / 24; for (let i = 0; i < 5; i++) o.frame(1);
+        const midi = pinceau(); C.dessinerFaisceau(midi, vue);
+        return { soir: soir, midi: { remplis: midi.remplis, grains: midi.grains }, appels: appels,
+                 lentille: [c.x * TT, c.y * TT], toile: [e.x * TT, (e.x + e.l) * TT, (e.y + e.h) * TT] };
+    }""")
+    s, (lx, ly), (x0, x1, ty) = r["soir"], r["lentille"], r["toile"]
+    assert s["remplis"] >= 3 and s["grains"] >= 10, s
+    haut = [p for p in s["points"] if abs(p[1] - ly) < 1]
+    bas = [p for p in s["points"] if abs(p[1] - ty) < 1]
+    assert haut and all(abs(x - lx) <= 2 for x, _ in haut), (haut, r["lentille"])
+    assert bas and min(x for x, _ in bas) <= x0 + 1 and max(x for x, _ in bas) >= x1 - 1, (bas, r["toile"])
+    assert r["appels"] >= 1, "le rendu du jeu ne peint pas le faisceau"
+    assert r["midi"] == {"remplis": 0, "grains": 0}, r["midi"]
 
 
 def test_le_film_ne_joue_que_les_soirs_d_ete_et_les_spectateurs_avec_lui(banc):

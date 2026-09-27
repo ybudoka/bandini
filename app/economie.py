@@ -643,6 +643,11 @@ TARIFS = {
     "mais": 4,
     "mais_pv": 6,
     "mais_souffle": 14,
+    # Les nachos du casse-croûte du ciné-parc et du Rialto (docs/jalons/le-casse-croute-du-cine-parc-au-centre-et-le-projecteur.md) :
+    # le fromage fondu et les jalapeños, 5 au dollar comme le maïs soufflé — jamais mieux que le hot-dog (`test_reclame`).
+    "nachos": 6,
+    "nachos_pv": 16,
+    "nachos_souffle": 14,
     # ⚠️ La compagnie se paie et ne se montre pas : un fondu, une replique,
     # de la vie qui revient. Elle refuse quand la police te cherche.
     "compagnie": 60,

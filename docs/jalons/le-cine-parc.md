@@ -34,7 +34,7 @@ _Livré le 26 sept. 2026._
   bord NORD de La Shop (colonnes 350 à 354, le trottoir de ceinture), à pied ou au volant ; on arrive par
   le chemin du sud. Le bloc n'a pas une voie : **le trafic n'y entre pas** (juge).
 - **Le terrain** : l'écran au nord (son cadre est une façade du plan), le stationnement d'asphalte clos
-  de grillage, quatre rangées de 28 cases nez à l'écran, le casse-croûte au sud-ouest avec ses vitrines
+  de grillage, quatre rangées de 28 cases nez à l'écran, le casse-croûte au sud-ouest (⚠️ au milieu du terrain depuis le 27 sept. 2026 : [le casse-croûte du ciné-parc au centre, et le projecteur](le-casse-croute-du-cine-parc-au-centre-et-le-projecteur.md#notes)) avec ses vitrines
   allumées, deux lampadaires à l'entrée. `carte_du_bloc` lit maintenant les `lampes` d'un bloc (il n'en
   passait aucune).
 - **Le film** (`static/js/cineparc.js`) : les soirs d'été seulement (juin à août, crépuscule ou nuit —

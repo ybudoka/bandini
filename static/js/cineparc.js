@@ -8,6 +8,10 @@
    peints (ni entite ni de) ; les spectateurs naissent quand on arrive pendant la seance, garés dans les
    cases, de couleurs donnees (`Vehicules.creer` ne tire pas de de), et repartent quand elle finit.
 
+   ⚠️ LE PROJECTEUR : le casse-croute, au milieu du terrain, est aussi la cabine de projection. Pendant la
+   seance, un faisceau part de sa fenetre nord (`bloc.cabine`) et s'ouvre jusqu'a la toile — peint PAR-DESSUS
+   la nuit (`dessinerFaisceau`, apres `Base.fin`), sinon il s'y eteint. Le Rialto se sert du meme (`faisceau`).
+
    ⚠️ LES PHARES COMPTENT POUR VRAI : pendant le film, un char qui roule dans les rangees les a allumes —
    et les spectateurs klaxonnent. Gare dans une case et arrete, le tien les eteint (`pharesEteints`,
    lu par `Vehicules`). */
@@ -17,6 +21,7 @@ const Cineparc = (function () {
 
   function ici() { return !!(B.bloc && B.bloc.slug === 'cineparc' && Monde.carte && Monde.carte.def && Monde.carte.def.bloc); }
   function ecran() { return ici() ? Monde.carte.def.bloc.ecran : null; }
+  function cabine() { return ici() ? Monde.carte.def.bloc.cabine : null; }
 
   /** La seance joue : l'ete, au crepuscule ou la nuit. Pure (avec l'heure et le jour). */
   function seance() {
@@ -100,6 +105,7 @@ const Cineparc = (function () {
     // la carte (la camera ne monte pas au-dessus de la rangee 0).
     const h = (e.y + e.h) * TT, y = Math.round(-cam.y);
     dessinerPoteaux(ctx, cam);
+    dessinerCabine(ctx, cam);
     ctx.fillStyle = '#2a2a30'; ctx.fillRect(x - 2, y - 2, l + 4, h + 4);          // le cadre
     if (!seance()) {
       ctx.fillStyle = '#d8d8dc'; ctx.fillRect(x, y, l, h);
@@ -137,6 +143,61 @@ const Cineparc = (function () {
     B.stats.rects += 20;
   }
 
+  /** La fenetre de la cabine, au bord nord du toit du casse-croute : allumee pendant la seance. */
+  function dessinerCabine(ctx, cam) {
+    const c = cabine();
+    if (!c) return;
+    const x = Math.round(c.x * TT - cam.x), y = Math.round(c.y * TT - cam.y);
+    if (x < -8 || y < -8 || x > VW + 8 || y > VH + 8) return;
+    ctx.fillStyle = '#2a2a30'; ctx.fillRect(x - 4, y, 8, 4);                      // le cadre
+    ctx.fillStyle = seance() ? '#fff4c8' : '#3c4a5a'; ctx.fillRect(x - 3, y + 1, 6, 2);   // la vitre
+    B.stats.rects += 2;
+  }
+
+  /** LE FAISCEAU D'UN PROJECTEUR, en pixels d'ecran : de la lentille (sx, sy) jusqu'au bord de la toile
+      (de x0 a x1, a la hauteur ty). Trois cones l'un dans l'autre, en lumiere qui s'ADDITIONNE (le coeur
+      plus vif que les bords), qui tremblote comme une lampe a arc, et la poussiere qui y passe. `force` (0 a 1)
+      l'allume ou l'eteint en fondu ; `t` (images) le fait vivre. Fonction de l'image : ni de ni etat.
+      ⚠️ Le Rialto s'en sert aussi (`Enseignes.dessinerPardessus`). */
+  function faisceau(ctx, sx, sy, x0, x1, ty, force, t) {
+    if (!(force > 0)) return;
+    const l = x1 - x0, mx = (x0 + x1) / 2;
+    const vacille = 0.86 + 0.14 * Math.sin(t * 0.9) * Math.sin(t * 0.23);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const cone = function (demi, bord, a) {
+      ctx.fillStyle = 'rgba(220,228,255,' + (a * force * vacille).toFixed(3) + ')';
+      ctx.beginPath();
+      ctx.moveTo(sx - demi, sy); ctx.lineTo(sx + demi, sy);
+      ctx.lineTo(x1 - l * bord, ty); ctx.lineTo(x0 + l * bord, ty);
+      ctx.closePath(); ctx.fill();
+    };
+    cone(2, 0, 0.07);
+    cone(1.5, 0.16, 0.07);
+    cone(1, 0.34, 0.09);
+    // La poussiere qui monte dans la lumiere : des grains qui filent de la lentille vers la toile.
+    for (let k = 0; k < 16; k++) {
+      const f = (t * 0.005 + k * 0.1373) % 1, demi = 2 + (l / 2 - 2) * f;
+      const px = sx + (mx - sx) * f + (((k * 0.618) % 1) * 2 - 1) * demi * 0.85, py = sy + (ty - sy) * f;
+      const a = 0.22 + 0.18 * Math.sin(t * 0.11 + k * 1.7);
+      ctx.fillStyle = 'rgba(255,250,230,' + (a * force).toFixed(3) + ')';
+      ctx.fillRect(Math.round(px), Math.round(py), 1, 1);
+    }
+    // La lentille : un point blanc.
+    ctx.fillStyle = 'rgba(255,250,225,' + (0.85 * force).toFixed(3) + ')';
+    ctx.fillRect(Math.round(sx) - 2, Math.round(sy) - 1, 4, 2);
+    ctx.restore();
+    B.stats.rects += 20;
+  }
+
+  /** Par-dessus la nuit (apres `Base.fin`) : le faisceau de la cabine jusqu'a la toile, pendant la seance. */
+  function dessinerFaisceau(ctx, cam) {
+    const e = ecran(), c = cabine();
+    if (!e || !c || !seance()) return;
+    const x0 = e.x * TT - cam.x;
+    faisceau(ctx, c.x * TT - cam.x, c.y * TT - cam.y, x0, x0 + e.l * TT, (e.y + e.h) * TT - cam.y, 1, B.t);
+  }
+
   /** Un poteau a haut-parleur a la tete de chaque paire de cases (peint : ni entite ni obstacle). */
   function dessinerPoteaux(ctx, cam) {
     const cs = cases();
@@ -160,5 +221,5 @@ const Cineparc = (function () {
   }
 
   // ⚠️ `film` sert aussi a la toile du Rialto (`Enseignes`) : le meme film muet, en ville.
-  return { ici, seance, dansUneCase, cases, spectateurs, maj, dessiner, lampes, film };
+  return { ici, seance, dansUneCase, cases, spectateurs, maj, dessiner, dessinerFaisceau, lampes, film, faisceau };
 })();

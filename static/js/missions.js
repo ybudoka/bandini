@@ -1381,9 +1381,10 @@ const Missions = (function () {
       « ACHETER » devant un comptoir ferme se lit comme un bogue. */
   function comptoirFerme(point) {
     const comptoir = (B.defs.comptoirs || {})[point.genre], cn = B.defs.nuit && B.defs.nuit.comptoirs;
-    // ⚠️ UN COMPTOIR DE SAISON (la cabane a sucre, au printemps) : hors saison, il le DIT.
+    // ⚠️ UN COMPTOIR DE SAISON (la cabane a sucre au printemps, le casse-croute du cine-parc l'ete) : hors
+    // saison, il le DIT — chacun avec son mot (`magasins.COMPTOIRS[…]["hors_saison"]`).
     if (comptoir && comptoir.saison && typeof Calendrier !== 'undefined' && Calendrier.saisonDuJour() !== comptoir.saison) {
-      return 'FERMÉ — ON OUVRE AU TEMPS DES SUCRES';
+      return comptoir.hors_saison || 'FERMÉ';
     }
     if (!comptoir || !comptoir.heures || !cn) return null;
     if (B.interieur && cn.toujours_ouverts.indexOf(B.interieur.slug) >= 0) return null;

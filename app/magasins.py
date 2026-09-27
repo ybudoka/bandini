@@ -187,6 +187,15 @@ def _art(slug: str, nom: str, tarif: str | None = None, *, pv: str | None = None
 #: sandwich n'est pas un depanneur, et une taverne sans ailes de poulet n'est
 #: pas une taverne. La friperie, elle, n'en vend pas — ca ne « fitte » pas, et
 #: un comptoir qui vend n'importe quoi ne dit plus ou l'on est.
+#: Ce qu'on grignote devant un film, au Rialto comme au ciné-parc.
+_CINEMA: tuple[Article, ...] = (
+    _art("mais", "Maïs soufflé", "mais", pv="mais_pv", souffle="mais_souffle"),
+    _art("chips", "Chips", "chips", pv="chips_pv", souffle="chips_souffle"),
+    _art("nachos", "Nachos", "nachos", pv="nachos_pv", souffle="nachos_souffle"),
+    _art("liqueur", "Liqueur", "liqueur", pv="liqueur_pv", souffle="liqueur_souffle"),
+    _art("chocolat", "Barre de chocolat", "chocolat", pv="chocolat_pv", souffle="chocolat_souffle"),
+)
+
 COMPTOIRS: dict[str, dict] = {
     "bouffe": {"nom": "Le comptoir", "marge": 1.0, "rabais": 1.0, "articles": [
         _art("sandwich", "Sandwich", "sandwich", pv="sandwich_pv", souffle="sandwich_souffle"),
@@ -252,7 +261,7 @@ COMPTOIRS: dict[str, dict] = {
     # ⚠️ `bloc` : ce comptoir n'est pas une famille de devantures (il n'y en a qu'un, dans un bloc de carte, le rang) —
     # en ajouter une ferait glisser la ville (`devantures.GENRES` se tire à l'empreinte des bâtiments).
     "sucre": {"nom": "La cabane à sucre", "marge": 1.0, "rabais": 1.0, "saison": "printemps", "defi": "tire",
-              "bloc": "rang",
+              "hors_saison": "FERMÉ — ON OUVRE AU TEMPS DES SUCRES", "bloc": "rang",
               "articles": [
         _art("oreilles", "Oreilles de crisse", "oreilles", pv="oreilles_pv", souffle="oreilles_souffle"),
         _art("feves", "Fèves au lard", "feves", pv="feves_pv", souffle="feves_souffle"),
@@ -268,12 +277,15 @@ COMPTOIRS: dict[str, dict] = {
         _art("cafe", "Café", "cafe", pv="cafe_pv", souffle="cafe_souffle", effet="cafe"),
         _art("beigne", "Beigne", "beigne", pv="beigne_pv", souffle="beigne_souffle"),
     ]},
+    # Le Rialto et le casse-croûte du ciné-parc vendent la même chose (Martin, 27 sept. 2026 : « popcorn, chips,
+    # liqueur, nachos etc. », « cinéma aussi ») : `_CINEMA`, une seule liste.
     "rialto": {"nom": "Le cinéma Rialto", "marge": 1.0, "rabais": 1.0, "enseigne": True, "joue": "film",
-               "articles": [
-        _art("mais", "Maïs soufflé", "mais", pv="mais_pv", souffle="mais_souffle"),
-        _art("liqueur", "Liqueur", "liqueur", pv="liqueur_pv", souffle="liqueur_souffle"),
-        _art("chocolat", "Barre de chocolat", "chocolat", pv="chocolat_pv", souffle="chocolat_souffle"),
-    ]},
+               "articles": list(_CINEMA)},
+    # LE CASSE-CROÛTE DU CINÉ-PARC (docs/jalons/le-casse-croute-du-cine-parc-au-centre-et-le-projecteur.md) : la
+    # cabane au milieu du terrain, qui est aussi la cabine du projecteur. L'été seulement, comme le film ; le
+    # soir, comme les séances. ⚠️ `bloc`, comme la cabane à sucre : pas une famille de devantures.
+    "cineparc": {"nom": "Le casse-croûte du ciné-parc", "marge": 1.0, "rabais": 1.0, "saison": "ete",
+                 "hors_saison": "FERMÉ — ON ROUVRE L'ÉTÉ", "bloc": "cineparc", "articles": list(_CINEMA)},
     "quilles": {"nom": "La salle de quilles", "marge": 1.0, "rabais": 1.0, "enseigne": True, "defi": "quilles",
                 "articles": [
         _art("biere", "Grosse bière", "biere", pv="biere_pv", souffle="biere_souffle"),
@@ -311,6 +323,8 @@ HEURES_DES_COMPTOIRS: dict[str, tuple[float, float]] = {
     # ⚠️ Le Rialto vend son maïs soufflé le jour ; ses SÉANCES, elles, sont le soir (`enseignes.REGLES`).
     "bingo": (8 / 24, 23 / 24),
     "rialto": (8 / 24, 23 / 24),
+    # Le casse-croûte du ciné-parc ouvre avant la brunante et ferme après la dernière bobine.
+    "cineparc": (17 / 24, 2 / 24),
     "quilles": (8 / 24, 23 / 24),
     "lave_auto": (7 / 24, 20 / 24),
 }

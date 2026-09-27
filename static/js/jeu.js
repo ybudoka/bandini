@@ -1254,6 +1254,7 @@ const Jeu = (function () {
     if (!B.interieur) SaintJean.dessinerFeux(Base.ecran(), vue);
     Galeries.dessiner(Base.ecran(), vue);    // le noir qui gagne aux Galeries, la nuit (une piece n'a pas de nuit a elle)
     Enseignes.dessinerPardessus(Base.ecran(), vue);   // la salle du Rialto dans le noir, le film qui brille
+    if (!B.interieur) Cineparc.dessinerFaisceau(Base.ecran(), vue);   // le projecteur du cine-parc : sa lumiere, par-dessus la nuit
     Hud.dessiner();
   }
 

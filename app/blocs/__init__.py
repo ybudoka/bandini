@@ -76,7 +76,9 @@ def carte_du_bloc(bloc: dict) -> dict:
                  # Ses cheminées (le chalet) : une pierre sur le toit, et la fumée qui en sort.
                  "cheminees": [dict(c) for c in bloc.get("cheminees", [])],
                  # L'ecran du cine-parc : son cadre, en tuiles (`Cineparc` peint la toile).
-                 "ecran": dict(bloc["ecran"]) if bloc.get("ecran") else None},
+                 "ecran": dict(bloc["ecran"]) if bloc.get("ecran") else None,
+                 # La fenêtre de sa cabine de projection (`Cineparc.faisceau` en part).
+                 "cabine": dict(bloc["cabine"]) if bloc.get("cabine") else None},
     }
 
 

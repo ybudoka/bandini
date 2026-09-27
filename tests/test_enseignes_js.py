@@ -148,6 +148,29 @@ def test_le_rialto_passe_son_film_le_soir_et_on_en_sort_repose(banc):
     assert r["vie"] >= 40 + rr["repos_pv"], r
 
 
+def test_au_rialto_le_projecteur_eclaire_la_toile_depuis_le_fond_de_la_salle(banc):
+    """Pendant le film, le faisceau (`Cineparc.faisceau`, le même qu'au ciné-parc) part du mur du fond de la
+    salle et s'ouvre sur toute la toile (docs/jalons/le-casse-croute-du-cine-parc-au-centre-et-le-projecteur.md)."""
+    r = banc("function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const B = L.B, M = L.Missions, C = L.Cineparc;
+        B.partie.heure = 20 / 24;
+        const pt = entrer(L, o, 'rialto');
+        item(M.menuDuPoint(pt), 'UN BILLET').faire();
+        for (let k = 0; k < 120; k++) o.frame(1);
+        const appels = [], vrai = C.faisceau;
+        C.faisceau = function () { appels.push(Array.prototype.slice.call(arguments, 1)); return vrai.apply(null, arguments); };
+        L.Jeu.rendre();
+        C.faisceau = vrai;
+        return { appels: appels, hauteur: B.interieur.hauteur, toile: B.interieur.toile };
+    }""")
+    assert len(r["appels"]) == 1, r
+    sx, sy, x0, x1, ty, force, _t = r["appels"][0]
+    t = r["toile"]
+    assert force > 0 and x1 - x0 == t["l"] * 16 and abs(sx - (x0 + x1) / 2) < 1, r
+    assert sy - ty == (r["hauteur"] - 2 - t["y"]) * 16, r
+
+
 def test_un_char_lave_perd_un_cran_de_chaleur_une_fois_par_passage(banc):
     rl = enseignes.REGLES["lave_auto"]
     r = banc("function (L, o) {" + OUTILS + """
