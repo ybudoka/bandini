@@ -230,6 +230,11 @@ def poser(chantier, ville: dict) -> list[str]:
                           and devantures_mod.tient_en(t, devanture["l"], TUILE_PX)), None)
             if not texte:
                 continue
+            # ⚠️ Et le BATIMENT a sa mesure, pas seulement la piece (`devantures.TAILLES`) : une salle de
+            # quilles se lit de la rue, et un cinema dans une boutique de coin de rue ne se lit pas.
+            aire = chantier.aires_des_devantures.get((devanture["x"], devanture["y"]))
+            if aire is not None and not devantures_mod.a_sa_taille(texte, aire):
+                continue
             deja = devanture["texte"] == fiche["prefere"]
             ailleurs = chantier.district_en(porte["x"], porte["y"]) != fiche["district"]
             if fiche["sans_standing"] and devanture.get("standing") == fiche["sans_standing"]:

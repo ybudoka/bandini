@@ -75,9 +75,14 @@ def monter_et_descendre(chantier, ville: dict) -> dict[str, int]:
         liste = devantures.COMMERCES_COSSUS if standing == "cossu" else devantures.COMMERCES_PAUVRES
         interdits = pauvres if standing == "cossu" else cossus
 
+        aire = chantier.aires_des_devantures.get((d["x"], d["y"]))
+
         def convient(nom: str) -> bool:
+            # ⚠️ Et a la mesure du mur (`a_la_mesure`) : un VIDEO POKER dans un hangar
+            # de soixante-douze tuiles, c'est ce que le standing tirait sans regarder.
             return (devantures.tient_en(nom, d["l"], carte.TUILE_PX) and nom not in interdits
-                    and _loin(places, nom, d["x"], d["y"]))
+                    and _loin(places, nom, d["x"], d["y"])
+                    and (aire is None or devantures.a_sa_taille(nom, aire)))
 
         # ⚠️ À LOUER n'est offert qu'à un commerce qui ne s'ouvre PAS : une enseigne
         # « à louer » derrière laquelle on trouve un magasin meublé ment deux fois.
@@ -126,4 +131,64 @@ def monter_et_descendre(chantier, ville: dict) -> dict[str, int]:
         standing = chantier.standing_en(r["x"], r["y"])
         if standing in carte.STANDING_LETTRE:
             r["standing"] = carte.STANDING_LETTRE[standing]
+    return comptes
+
+
+def a_la_mesure(chantier, ville: dict) -> dict[str, int]:
+    """Le commerce a la mesure de son batiment (docs/jalons/le-commerce-a-la-mesure-de-son-batiment.md).
+
+    Demande de Martin (27 sept. 2026) : « valide la grandeur des batiments avec ce qu'il y a
+    comme commerce, il faut que ce soit logique ». Une enseigne dont le nom n'a pas la taille
+    de la part de batiment derriere elle (`devantures.TAILLES`) prend un autre nom :
+
+    - de la MEME famille — la piece derriere la porte est meublee par elle, et elle reste la
+      bonne ; la couleur du bandeau ne bouge pas non plus ;
+    - qui tient dans le MEME bandeau — le mur ne bouge pas ;
+    - du standing du bloc d'abord (un bloc pauvre garde un nom pauvre s'il y en a un a sa
+      mesure), puis du catalogue du district, puis de la reserve (`devantures.RESERVE`) ;
+      jamais un nom de l'autre bout du standing ;
+    - jamais « A LOUER » : ce passage ne ferme pas un commerce, il le rebaptise ;
+    - loin d'un doublon si l'on peut, sinon celui dont la copie est la plus loin.
+
+    ⚠️ **Apres coup et sans un de**, pour la raison ecrite en tete de ce module : un nom tire
+    a la construction elargit le bandeau et decale le de des devantures. Le choix se lit a la
+    position (`carte.empreinte_de_tuile`). Rend les comptes ; `sans_nom` compte les enseignes
+    qu'aucun nom de leur famille ne sait loger — un juge l'exige nul.
+    """
+    from . import carte, devantures
+
+    cossus = {nom for nom, _ in devantures.COMMERCES_COSSUS}
+    pauvres = {nom for nom, _ in devantures.COMMERCES_PAUVRES}
+    places: dict[str, list[tuple[int, int]]] = {}
+    for d in chantier.devantures:
+        places.setdefault(d["texte"], []).append((d["x"], d["y"]))
+    comptes = {"renommees": 0, "sans_nom": 0}
+
+    for d in chantier.devantures:
+        aire = chantier.aires_des_devantures.get((d["x"], d["y"]))
+        if aire is None or devantures.a_sa_taille(d["texte"], aire):
+            continue
+        famille = devantures.GENRES[d["genre"]]["slug"]
+        standing = chantier.standing_en(d["x"], d["y"])
+        du_standing = {"cossu": devantures.COMMERCES_COSSUS,
+                       "pauvre": devantures.COMMERCES_PAUVRES}.get(standing, ())
+        interdits = {"cossu": pauvres, "pauvre": cossus}.get(standing, cossus | pauvres)
+        du_district = devantures.commerces_du_district(chantier.district_en(d["x"], d["y"]))
+        reserve = tuple((nom, famille) for nom in devantures.RESERVE[famille])
+        noms = list(dict.fromkeys(nom for nom, f in (*du_standing, *du_district, *reserve)
+                                  if f == famille and nom != devantures.A_LOUER
+                                  and (nom not in interdits or (nom, f) in du_standing)
+                                  and devantures.a_sa_taille(nom, aire)
+                                  and devantures.tient_en(nom, d["l"], carte.TUILE_PX)))
+        if not noms:
+            comptes["sans_nom"] += 1
+            continue
+        libres = [nom for nom in noms if _loin(places, nom, d["x"], d["y"])]
+        if libres:
+            nouveau = libres[int(carte.empreinte_de_tuile(d["x"], d["y"]) * len(libres))]
+        else:
+            nouveau = max(noms, key=lambda nom: min((max(abs(px - d["x"]), abs(py - d["y"]))
+                                                     for px, py in places.get(nom, ())), default=10 ** 6))
+        _renommer(chantier, d, nouveau, places)
+        comptes["renommees"] += 1
     return comptes

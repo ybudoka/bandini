@@ -184,6 +184,92 @@ COMMERCES_PAUVRES: tuple[tuple[str, str], ...] = (
     ("LIQUIDATION", "commerce"), ("TATOUAGE", "mode"), ("BIÈRE ET VIN", "bouffe"),
 )
 
+# --- La taille ---------------------------------------------------------------
+
+#: ⚠️ **LE COMMERCE A LA MESURE DE SON BATIMENT** (27 sept. 2026, Martin : « valide
+#: la grandeur des batiments avec ce qu'il y a comme commerce, il faut que ce soit
+#: logique »). Le nom etait tire sans regarder le mur : un HOTEL DES QUAIS dans 24
+#: tuiles, un CHANTIER NAVAL dans 42, un TATOUAGE dans un hangar de 90. La taille se
+#: lit en TUILES DE BATIMENT derriere la vitrine (la « part » de `carte`), bornes
+#: comprises : un comptoir tient dans une boutique, une salle de quilles non.
+TAILLES: dict[str, tuple[int, int]] = {
+    "petit": (0, 49),
+    "moyen": (0, 130),
+    "grand": (60, 10 ** 6),
+    # Ce qui va partout : un garage ou l'on rentre son char (sa place est choisie
+    # par la baie, `poser_les_carrosseries` — un atelier d'une baie comme de six est
+    # logique) et le local vide.
+    "libre": (0, 10 ** 6),
+}
+
+#: La taille de chaque nom qui n'est pas `moyen` — un nom absent de la table est
+#: moyen. ⚠️ Un nom neuf au catalogue se range ici s'il est une boutique ou une
+#: grande salle : sinon il ira partout ou va un magasin ordinaire.
+TAILLE_DU_NOM: dict[str, str] = {
+    **{nom: "petit" for nom in (
+        # Un comptoir, une chaise, une vitrine : la boutique de coin de rue.
+        "TABAGIE DUBOIS", "BARBIER GILLES", "SALON LOUISE", "CORDONNERIE", "BIJOUTERIE",
+        "PHOTO EXPRESS", "OPTICIEN", "TAILLEUR ROMÉO", "MERCERIE", "SERRURIER",
+        "NOTAIRE BÉLIVEAU", "FLEURISTE ROSE", "NETTOYEUR", "COIFFURE LINE", "CRÉMERIE",
+        "BEIGNES CHEZ TI", "COUTURE CHEZ EVA", "TAXI DIAMANT", "PHOTOGRAPHE", "DÉPANNEUR",
+        "CASSE-CROÛTE", "CAFÉ DU MATIN", "CANTINE MOBILE", "APPÂTS ET LIGNES",
+        "TABAGIE DU PORT", "HUÎTRES ET CIE", "SOUVENIRS", "PHOTO SOUVENIR", "PATATES FRITES",
+        "CABANE À HOMARD",
+        # Le cossu vend petit et cher ; le pauvre prete au guichet.
+        "FLEURISTE", "TAILLEUR", "CHOCOLATIER", "PARFUMERIE", "ENCADREUR",
+        "PRÊT SUR GAGES", "CHÈQUES CASH", "DÉPANNEUR 24 H", "PRÊTS RAPIDES", "TATOUAGE",
+        "BIÈRE ET VIN", "VIDÉO POKER",
+    )},
+    **{nom: "grand" for nom in (
+        # Une salle, un plancher de vente ou une cour : ca ne tient pas dans une boutique.
+        "MEUBLES GAGNON", "CINÉMA RIALTO", "SALLE DE QUILLES", "BRASSERIE", "DISCO LE MIRAGE",
+        "MARCHÉ BEAUDOIN", "BIBLIOTHÈQUE", "PÉPINIÈRE", "MACHINERIE", "ACIER DU NORD",
+        "BOIS DE SCIAGE", "FERRAILLE", "ENTREPÔT 7", "PALETTES", "SABLAGE AU JET",
+        "CHANTIER NAVAL", "HÔTEL DES QUAIS", "MOTEL LA POINTE", "QUILLES",
+    )},
+    **{nom: "libre" for nom in ("CARROSSERIE", "PEINTURE MINUTE", "PEINTURE AUTO", "LAVE-AUTO",
+                                "À LOUER")},
+}
+
+#: ⚠️ **LA RESERVE** : des noms de chaque taille pour chaque famille, que SEUL
+#: `vitrines.a_la_mesure` pioche, apres le standing et le catalogue du district. Sans
+#: elle, La Shop n'a que deux noms de bouffe, petits tous les deux (CANTINE MOBILE,
+#: CAFE DU MATIN), et une cantine tombee dans un entrepot de cent tuiles ne savait
+#: pas quoi devenir (graine 1). ⚠️ Pas dans `COMMERCES` : un catalogue qui s'allonge
+#: change le tirage de `choisir_enseigne`, et toute la ville change de noms.
+#: Chaque famille a un nom de SEPT lettres au plus par taille : il tient sur un
+#: bandeau de deux tuiles, le plus etroit qu'on pose.
+RESERVE: dict[str, tuple[str, ...]] = {
+    "bouffe": ("FRITES", "RESTO", "ÉPICERIE", "MARCHÉ", "SUPERMARCHÉ", "CONSERVERIE"),
+    "service": ("BARBIER", "BUREAU", "DÉPÔT", "ENTREPOSAGE"),
+    "artisan": ("VITRIER", "ATELIER", "SCIERIE", "MENUISERIE"),
+    "nuit": ("BAR", "TAVERNE", "DANCING", "SALLE DE BAL"),
+    "commerce": ("TABAGIE", "MAGASIN", "SURPLUS", "GROSSISTE"),
+    "marine": ("APPÂTS", "MARINA", "CRIÉE", "CALE SÈCHE"),
+    "industrie": ("SOUDURE", "MOTEURS", "USINAGE", "FONDERIE"),
+    "sante": ("OPTIQUE", "DOCTEUR", "HOSPICE", "POLYCLINIQUE"),
+    "mode": ("MODISTE", "HABITS", "TEXTILE", "MANUFACTURE"),
+    "savoir": ("KIOSQUE", "LIVRES", "ÉCOLE", "ARCHIVES"),
+}
+TAILLE_DU_NOM.update({nom: "petit" for nom in (
+    "FRITES", "BARBIER", "VITRIER", "BAR", "TABAGIE", "APPÂTS", "SOUDURE", "OPTIQUE", "MODISTE",
+    "KIOSQUE")})
+TAILLE_DU_NOM.update({nom: "grand" for nom in (
+    "MARCHÉ", "SUPERMARCHÉ", "CONSERVERIE", "DÉPÔT", "ENTREPOSAGE", "SCIERIE", "MENUISERIE",
+    "DANCING", "SALLE DE BAL", "SURPLUS", "GROSSISTE", "CRIÉE", "CALE SÈCHE", "USINAGE", "FONDERIE",
+    "HOSPICE", "POLYCLINIQUE", "TEXTILE", "MANUFACTURE", "ÉCOLE", "ARCHIVES")})
+
+
+def taille_du_nom(nom: str) -> str:
+    return TAILLE_DU_NOM.get(nom, "moyen")
+
+
+def a_sa_taille(nom: str, aire: int) -> bool:
+    """Ce nom tient-il dans une part de batiment de `aire` tuiles ?"""
+    bas, haut = TAILLES[taille_du_nom(nom)]
+    return bas <= aire <= haut
+
+
 #: Le local vide : ses vitrines sont TOUTES placardees, sa porte ne s'ouvre pas,
 #: et sa vitrine ne s'allume pas la nuit. Une enseigne « A LOUER » derriere
 #: laquelle on trouve un magasin meuble ment deux fois.

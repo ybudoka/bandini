@@ -1994,6 +1994,10 @@ class _Chantier:
         #: Ou l'on a deja pose chaque nom d'enseigne, pour ne jamais en voir
         #: deux pareilles du meme trottoir (`choisir_enseigne`).
         self.enseignes_posees: dict[str, list[tuple[int, int]]] = {}
+        #: La part de batiment derriere chaque enseigne ordinaire, en tuiles, par
+        #: la place de son bandeau (x, y) : ce que `vitrines.a_la_mesure` compare a
+        #: la taille du nom. ⚠️ Cote chantier seulement — le paquet n'en a que faire.
+        self.aires_des_devantures: dict[tuple[int, int], int] = {}
         #: Combien de portes ordinaires ouvertes : elles ont besoin d'un `lieu`
         #: unique (le juge `test_les_portes_menent_a_un_interieur` l'exige).
         self.visites = 0
@@ -3057,6 +3061,9 @@ class _Chantier:
             "porte": 1 if (special is not None or "D" in motifs) else 0,
         })
         self.enseignes_posees.setdefault(texte, []).append((ax, ay))
+        if bande is not None and special is None:
+            self.aires_des_devantures[(x0, ay)] = sum(
+                1 for tx, _ in self.tuiles_du_batiment if depart <= tx < depart + dispo)
         # ⚠️ Une vitrine eclaire le trottoir. Sans ca, la rue commercante et la
         # rangee d'entrepots sont le meme noir a minuit, et tout le travail des
         # enseignes disparaît la moitie du temps de jeu. Lueur BASSE et courte :
@@ -7189,6 +7196,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
     # et barriere du cargo comprises.
     from . import vitrines as vitrines_mod
     vitrines_mod.monter_et_descendre(chantier, ville)
+    # ⚠️ Juste apres le standing, qui renomme sans regarder la taille du mur : le nom de
+    # chaque enseigne a la mesure de son batiment, avant que les distributrices lisent
+    # les facades (`mobilier.semer`) et que les enseignes neuves choisissent leur porte.
+    vitrines_mod.a_la_mesure(chantier, ville)
     # ⚠️ LE MOBILIER DE RUE EN TOUT DERNIER, dans son propre de : un arbre de
     # plus ne deplace ni un abribus, ni un paquet, ni une enseigne.
     from . import mobilier as mobilier_mod
