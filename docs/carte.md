@@ -26,6 +26,21 @@ trame — le même principe que l'aéroport au sud), et une ligne de falaises qu
 referme le large au sud de l'aéroport. Infranchissable partout (`solide 1`) :
 ni à pied, ni en char, ni à la nage.
 
+**Au-dessus de la grille, depuis le 27 sept. 2026 : la bande nord** (`app/nord.py`). La
+carte fait 459 × 414 tuiles au lieu de 459 × 304 : **toute la ville descend de 110
+rangées** (`nord.DECALAGE_NORD`), en tout dernier dans `generer` et sans un dé, et une
+deuxième ville, bâtie par le même chantier sur sa trame (`TRAME_NORD` : les mêmes colonnes,
+ses rangées) et sa graine (`GRAINE_NORD`), se colle au-dessus : les Friches, la place du
+Petit-Canton, la Gare de triage. Elle se coud au boulevard qui bordait la ville au nord : ses
+rues nord-sud y débouchent, et les croisements gagnent leur bras nord.
+⚠️ **Une clé neuve dans la carte = une ligne dans `nord.DECALAGES`** : la translation connaît
+chaque clé de `generer` et dit comment elle descend (un objet `{x, y}`, une paire `[x, y]`, des
+pixels) ; une clé qu'elle ne connaît pas fait échouer la génération en la nommant.
+⚠️ Le navigateur lit DEUX trames (`grille`, qui commence à `y0 = 110`, et `grille_nord`) ;
+les blocs de carte écrivent leur passage en coordonnées de la ville d'avant, et
+`blocs.passage_en_ville` les fait descendre. Une partie écrite avant descend avec la ville
+(`Sauvegarde.completer`, `decalage_nord`).
+
 ---
 
 ## 1. Les districts
@@ -35,6 +50,9 @@ rythme de vie (matin/soir/nuit) et ses propres bâtiments garantis.
 
 | District | Slug | Gang | Brume | Notes |
 |---|---|---|---|---|
+| **Les Friches** | `friches` | Les Chevreuils | ➖ | La bande nord, au-dessus des Érables (`nord.py`) : herbes hautes, sentiers de terre battue, terrains vagues clôturés, carcasses d'autos. Aucune porte. |
+| **Le Petit-Canton** | `canton` | Les Cravates (en attendant les Mantes) | ➖ | La bande nord, au-dessus du Faubourg : ses rues sont tracées, ses îlots sont des **terrains à bâtir** (palissade, gravier, pancarte « À BÂTIR ») jusqu'à l'étape 2 du quartier chinois. |
+| **La Gare de triage** | `gare` | Les Boulonneux | ➖ | La bande nord, au-dessus de La Shop : des voies tous les trois rangs, des wagons, des hangars, et le **poste d'aiguillage** (`nord_aiguillage`, une pièce). |
 | **Le Faubourg** | `faubourg` | Les Cravates | ✅ | Centre-ville, le plus peuplé (34 piétons). On y débarque de l'autobus. La cour des Cravates au centre. |
 | **Les Érables** | `erables` | Les Chevreuils | ➖ | La banlieue cossue : maisons détachées, deux parcs, un dépanneur. |
 | **La Shop** | `shop` | Les Boulonneux | ➖ | L'industriel : entrepôts 2×2, presque pas de rues, désert la nuit. |

@@ -13,6 +13,8 @@ la bâtit pour que les croisements s'y ouvrent, et on ne la colle pas.
 
 from __future__ import annotations
 
+import copy
+
 from . import carte
 
 DECALAGE_NORD = 110
@@ -123,6 +125,9 @@ def batir_la_bande() -> _ChantierNord:
     for etape in ("eaux", "rues", "croisements", "ilots", "ponts", "lampadaires", "bornes"):
         getattr(ch, etape)()
     ch.pieces["nord_aiguillage"] = PIECE_AIGUILLAGE
+    # ⚠️ UNE FOIS : `feux_pietons` réserve ses tuiles (`occupe`) et un deuxième appel n'en rend plus
+    # aucun ; or la bande est gardée pour tout le processus (`_bande`).
+    ch.feux_nord = ch.feux_pietons()
     # ⚠️ LES NOMS DE LA BANDE : `logement_1` existe déjà en ville.
     renomme = {k: (k if k.startswith("nord_") else "nord_" + k) for k in ch.pieces}
     ch.pieces = {renomme[k]: v for k, v in ch.pieces.items()}
@@ -347,13 +352,15 @@ def poser(ville: dict) -> None:
     for cle, source in (("portes", ch.portes), ("decor", ch.decor), ("lampes", ch.lampes),
                         ("residences", ch.residences), ("devantures", ch.devantures), ("toits", ch.toits),
                         ("points_interet", ch.points), ("intersections", ch.intersections),
-                        ("feux_pietons", ch.feux_pietons())):
-        ville[cle].extend(o for o in source if haut(o))
+                        ("feux_pietons", ch.feux_nord)):
+        # ⚠️ DES COPIES : la bande est bâtie une fois par processus (`_bande`), et la ville qu'on rend
+        # est à qui la lit (le paquet la modifie) ; partager ses objets rendait le deuxième paquet autre.
+        ville[cle].extend(copy.deepcopy([o for o in source if haut(o)]))
     ville["arrets"].update({k: v for k, v in ch.arrets.items() if int(k.split(",")[1]) < n})
-    ville["interieurs"].update(ch.pieces)
+    ville["interieurs"].update(copy.deepcopy(ch.pieces))
     slugs = {d["slug"] for d in DISTRICTS_NORD}
-    ville["zones"].extend({**z, "h": min(z["h"], n - z["y"])} for z in ch.zones() if z["district"] in slugs
-                          and not z.get("gang"))
+    ville["zones"].extend(copy.deepcopy({**z, "h": min(z["h"], n - z["y"])}) for z in ch.zones()
+                          if z["district"] in slugs and not z.get("gang"))
     ville["districts"].extend({"slug": d["slug"], "nom": d["nom"], "gang": d["gang"], "eau": False}
                               for d in DISTRICTS_NORD)
     ville["grille_nord"] = {"colonnes": list(carte.COLONNES), "rangees": list(RANGEES_NORD),

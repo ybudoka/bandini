@@ -120,9 +120,17 @@ def test_le_paquet_reste_leger():
     57 336 avec les enseignes, 57 757 avec le garage de Ti-Guy (ses pièces, ses répliques, l'air du klaxon),
     58 258 avec le 1er juillet (les places de seize camions et de trente-deux meubles) — 257 937 bruts. Le
     remède reste celui d'en haut ; ce plafond-ci le rapproche.
+
+    ⚠️ **La carte : 55 000 → 67 000 octets gzip, 520 000 → 720 000 bruts, le 27 sept. 2026** — la ville
+    s'agrandit au nord (demande de Martin : le Petit-Canton « comme le Faubourg », au nord, avec des friches
+    et des voies ferrées ; `app/nord.py`). Mesure : 53 023 → 64 120 octets gzip (niveau 6) pour le paquet de
+    la carte (682 287 bruts) : 110 rangées de 459 tuiles sur deux calques, et une deuxième ville
+    dessus — des rues, des terrains, des wagons, pas de l'eau que gzip avale. Une carte plus grande pèse
+    plus : c'est le prix de la demande. Trois Ko de marge, et la même règle : le vrai juge est la dette des
+    districts chargés autour du joueur.
     """
     paquets = definitions.construire()
-    for nom, brut_max, fil_max in (("definitions", 270_000, 60_000), ("carte", 520_000, 55_000)):
+    for nom, brut_max, fil_max in (("definitions", 270_000, 60_000), ("carte", 720_000, 67_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))
@@ -146,7 +154,8 @@ def test_l_empreinte_des_definitions_suit_la_carte(monkeypatch):
 
     avant = definitions.construire()
     monkeypatch.setattr(carte, "GRAINE", carte.GRAINE + 1)
-    monkeypatch.setattr(carte.generer, "__defaults__", (carte.PLAN, carte.GRAINE))
+    # ⚠️ Trois défauts depuis le 27 sept. 2026 : `nord` (la bande nord, `app/nord.py`).
+    monkeypatch.setattr(carte.generer, "__defaults__", (carte.PLAN, carte.GRAINE, True))
     apres = definitions.construire()
     assert apres.carte.etag != avant.carte.etag, "la carte n'a pas change : le juge ne mesure rien"
     assert apres.definitions.etag != avant.definitions.etag, "la carte a change et la sauvegarde ne le saura pas"
