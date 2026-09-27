@@ -1934,3 +1934,53 @@ def test_la_grue_pilotee_se_dessine_a_la_pose_qu_on_lui_donne(banc):
     """))
     assert r["jour"] and set(r["jour"]) == {"decor|grue|7"}, r
     assert r["nuit"] and set(r["nuit"]) == {"decor|grue|11"}, f"la nuit, la grue pilotée retombe à sa pose de repos : {r}"
+
+
+def test_rien_ne_bouge_quand_on_est_dans_un_bloc_de_carte(banc):
+    """Dans un bloc de carte (le chalet), `B.interieur` est nul et `Monde.carte` est le BLOC : la phase
+    s'y posait, se croyait posée, et la ville ne la recevait jamais ; l'équipe naissait dans le bloc, et
+    `efface` effaçait des toits du bloc aux coordonnées d'un chantier de la ville."""
+    r = banc("async function (L, o) {" + LOIN + """
+        L.Jeu.commencer();
+        const B = L.B, Mo = L.Monde, ville = Mo.carte;
+        poserLeJoueur(L, loin(L));
+        const ch = L.Chantiers.liste.find(function (c) { return c.posee < 4 && !c.dort; });
+        // Toutes les tuiles des chantiers déjà entamés : en ville, `efface` y répond oui.
+        function effacees() {
+            let n = 0;
+            for (const c of L.Chantiers.liste) c.tuiles.forEach(function (k) {
+                const t = k.split(',').map(Number); if (L.Chantiers.efface(t[0], t[1])) n++; });
+            return n;
+        }
+        const effaceesEnVille = effacees();
+        L.Blocs.charger('chalet');
+        for (let i = 0; i < 200 && !L.Blocs.cartes.chalet; i++) { o.frame(1); await o.attendre(); }
+        const bloc = L.Blocs.liste().find(function (q) { return q.slug === 'chalet'; });
+        const j = B.joueur;
+        L.Jeu.passerDansLeBloc(bloc, L.Blocs.cartes.chalet, { x: j.x, y: j.y }, null);
+        const bc = Mo.carte, avant = Array.from(bc.solide);
+        L.B.partie.jour += ch.def.pas * 2;
+        tourner(L, 3);
+        const d = ch.def, efface = effacees();
+        const dansLeBloc = {
+            bloc: bc !== ville, posee: ch.posee,
+            intact: Array.from(bc.solide).every(function (v, i) { return v === avant[i]; }),
+            equipe: B.entites.filter(function (e) { return e.equipeDe !== undefined; }).length,
+            efface: efface, effaceesEnVille: effaceesEnVille,
+        };
+        L.Jeu.sortirDuBloc();
+        for (let i = 0; i < 200 && (B.bloc || B.transition); i++) o.frame(1);
+        poserLeJoueur(L, loin(L));
+        tourner(L, 3);
+        const voulue = L.Chantiers.phaseVoulue(d);
+        return { dansLeBloc: dansLeBloc, revenu: Mo.carte === ville, dehors: ch.posee, voulue: voulue,
+                 sol: Mo.carte.sol[d.y].slice(d.x, d.x + d.l) === d.phases[voulue].sol[0] };
+    }""")
+    b = r["dansLeBloc"]
+    assert b["bloc"] and r["revenu"], r
+    assert b["posee"] < r["voulue"], "une phase s'est posée pendant qu'on était au chalet"
+    assert b["intact"], "le chantier a écrit dans la carte du bloc"
+    assert b["equipe"] == 0, "l'équipe du chantier est née au chalet"
+    assert b["effaceesEnVille"] > 0, "aucun chantier entamé : le juge d'`efface` ne juge rien"
+    assert b["efface"] == 0, "au chalet, le chantier de la ville efface encore des toits"
+    assert r["dehors"] == r["voulue"] and r["sol"], f"de retour en ville, la phase n'est pas posée : {r}"

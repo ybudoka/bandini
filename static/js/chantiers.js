@@ -87,6 +87,13 @@ const Chantiers = (function () {
   let liste = [];                  // { def, posee, machines, tuiles:Set }
   let effacees = new Set();        // « x,y » des tuiles dont le bâtiment est tombé
   let attente = 0;
+  //: La carte de la VILLE, celle que `demarrer` a lue. ⚠️ Dans un bloc de carte (le chalet),
+  //: `B.interieur` est nul et `Monde.carte` est le bloc : une phase s'y posait (et plantait la boucle,
+  //: une rangée de la ville n'existant pas dans le bloc), l'équipe y naissait, `efface` y effaçait des
+  //: toits. Tout ce qui écrit, peint ou invite ne répond donc que sur CETTE carte (`enVille`).
+  let ville = null;
+
+  function enVille() { return !!ville && Monde.carte === ville; }
   //: Ce qui est parti, pour les juges : { son, t, x, y }. Les quarante derniers.
   const journal = [];
 
@@ -327,6 +334,7 @@ const Chantiers = (function () {
   /** Au début d'une partie : TOUT se pose tout de suite. Personne n'a encore
       rien vu, et la ville doit être celle du jour avant la première image. */
   function demarrer() {
+    ville = Monde.carte;
     const def = Monde.carte && Monde.carte.def;
     liste = ((def && def.chantiers) || []).map(function (d) {
       return { def: d, posee: -1, dort: false, machines: [], equipe: [], signaleur: null, panneau: null, conteneur: null, tuiles: tuilesDe(d) };
@@ -350,6 +358,7 @@ const Chantiers = (function () {
 
   function maj() {
     if (!liste.length) return;
+    if (!enVille()) { Son.SFX.rumeur_chantier(0); return; }
     piloter();
     travailler();
     regarder();
@@ -436,7 +445,7 @@ const Chantiers = (function () {
       les fonctions « sous la main » : on la mesure au bord de sa boîte (`sol`), et il faut lui faire
       face (`faceA`) — le bouton ne promet que ce qu'il fera. Le décor brisé n'est plus une pelle. */
   function pelleSousLaMain(j) {
-    if (!j || j.dansVehicule || B.interieur) return null;
+    if (!j || j.dansVehicule || B.interieur || !enVille()) return null;
     for (const ch of liste) {
       for (const m of ch.machines) {
         if (m.decor !== 'pelleteuse' || m.brise) continue;
@@ -476,7 +485,7 @@ const Chantiers = (function () {
 
   /** La grue du chantier à portée de main, ou null : mêmes règles que la pelle. */
   function grueSousLaMain(j) {
-    if (!j || j.dansVehicule || j.manege || B.interieur) return null;
+    if (!j || j.dansVehicule || j.manege || B.interieur || !enVille()) return null;
     for (const ch of liste) {
       for (const m of ch.machines) {
         if (m.decor !== 'grue' || m.brise) continue;
@@ -545,7 +554,7 @@ const Chantiers = (function () {
       une poursuite (la police ne s'arrête pas pour un signaleur), et seulement quand
       sa palette dit ARRÊT — la même pose que celle qu'on voit. */
   function signalDevant(v) {
-    if (v.rails || v.poursuite) return Infinity;
+    if (v.rails || v.poursuite || !enVille()) return Infinity;
     for (const ch of liste) {
       const e = ch.signaleur, s = ch.def.signaleur;
       if (!e || !ch.panneau || !s) continue;
@@ -671,7 +680,7 @@ const Chantiers = (function () {
 
   // --- La couche peinte --------------------------------------------------------------
 
-  function efface(x, y) { return effacees.has(cle(x, y)); }
+  function efface(x, y) { return enVille() && effacees.has(cle(x, y)); }
 
   //: ⚠️ LA OU LA FACADE PEINT SES FENETRES. Une maison de la ville ne montre pas
   //: ses fenetres par ses tuiles (`W`) mais par sa facade de logement
@@ -761,6 +770,7 @@ const Chantiers = (function () {
 
   /** Ce que le chantier ajoute au morceau, selon sa phase posée. */
   function peindre(ctx, mx, my) {
+    if (!enVille()) return;
     const ox = mx * 16, oy = my * 16;
     for (const ch of liste) {
       const d = ch.def;

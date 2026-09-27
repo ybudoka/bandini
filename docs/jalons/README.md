@@ -285,3 +285,4 @@ Deux documents d'avant la table :
 | Le dojo du quartier : apprendre les techniques | ✅ **livré** | 26 sept. 2026 | **P4** | ajout | [fiche](le-dojo-du-quartier.md#fiche) · [notes](le-dojo-du-quartier.md#notes) |
 | Le traversier se prend pour vrai | ✅ **livré** | 26 sept. 2026 | **P1** | **correctif** | [fiche](le-traversier-se-prend-pour-vrai.md#fiche) · [notes](le-traversier-se-prend-pour-vrai.md#notes) |
 | Le sapin de la place se tient debout | ✅ **livré** | 26 sept. 2026 | **P2** | **correctif** | [fiche](le-sapin-de-la-place-se-tient-debout.md#fiche) · [notes](le-sapin-de-la-place-se-tient-debout.md#notes) |
+| Les chantiers restent en ville | ✅ **livré** | 27 sept. 2026 | **P2** | **correctif** | [fiche](les-chantiers-restent-en-ville.md#fiche) · [notes](les-chantiers-restent-en-ville.md#notes) |
