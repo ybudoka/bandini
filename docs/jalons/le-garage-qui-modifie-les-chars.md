@@ -47,9 +47,10 @@ menu de Ti-Guy (`Missions.menuGarage`), cinq voix de Ti-Guy (une série, `ti_guy
   prix de ses pièces en plus).
 - **Ti-Guy commente** chaque pièce posée (sa voix, et la ligne à l'écran). ⚠️ Les cinq voix sont
   générées, **pas écoutées**.
-- ⚠️ **Le klaxon ne joue PAS encore « Gens du pays »** : la mélodie n'a pas été transcrite note pour note,
-  et une fausse aurait été pire qu'une fanfare. `garage.KLAXON_AIR` joue une fanfare de klaxon qui monte ;
-  c'est une donnée (Hz, secondes) — la vraie phrase la remplace sans une ligne de code.
+- **Le klaxon joue « Gens du pays »** depuis le 27 sept. : le début du refrain (« Gens du pa-ys, c'est
+  vo-tre tour » — la sol fa do, la sol fa ré), transcrit de la partition des Choralies que Martin a
+  fournie, avec une quinte par-dessus pour faire klaxon. La première version, faute de partition, jouait
+  une fanfare. `garage.KLAXON_AIR` est une donnée ; `tests/test_garage.py` la tient contre la partition.
 - ⚠️ **La police** : une auto au moteur gonflé (4,8) file aussi vite qu'une sport du catalogue, plus vite
   qu'une auto-patrouille (4,4). Rien n'a été retouché de ce côté : à 5★, les barrages et l'hélico restent
   la menace. À surveiller en jouant.

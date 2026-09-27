@@ -752,7 +752,7 @@ const Son = (function () {
     gensDuPays: function () {
       let t = 0;
       ((B.defs && B.defs.garage && B.defs.garage.klaxon_air) || []).forEach(function (n) {
-        ton(n[0], n[1] * 0.95, 'sawtooth', 0.18, 1, t); ton(n[0] * 1.26, n[1] * 0.95, 'sawtooth', 0.12, 1, t);
+        ton(n[0], n[1] * 0.95, 'sawtooth', 0.18, 1, t); ton(n[0] * 1.5, n[1] * 0.95, 'sawtooth', 0.09, 1, t);   // la quinte : reste en fa majeur
         t += n[1];
       });
     },

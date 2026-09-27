@@ -34,11 +34,14 @@ CLASSES_EXCLUES = ("velo",)
 RACHAT_PART = 0.5
 
 #: L'air du klaxon : (note en Hz, durée en secondes), joué au bouton du klaxon, au volant seulement.
-#: ⚠️ **PAS ENCORE LE BON AIR** (26 sept. 2026) : la mélodie de « Gens du pays » n'a pas été transcrite
-#: note pour note — ces six notes sont une fanfare de klaxon qui monte, en attendant la vraie phrase
-#: (« Gens du pa-ys, c'est vo-tre tour »). C'est une DONNÉE : la remplacer ne demande aucun code.
+#: « Gens du pa-ys, c'est vo-tre tour » — le début du refrain de Gilles Vigneault, en fa majeur, à 3/4
+#: (la partition des Choralies que Martin a fournie le 27 sept. 2026, chant 1, mesures 5 à 8) : trois
+#: noires qui descendent, une blanche pointée qui remonte, deux fois. La noire à 0,2 s : un klaxon ne
+#: chante pas, il claironne.
+NOIRE = 0.2
 KLAXON_AIR: list[list[float]] = [
-    [392.0, 0.18], [523.3, 0.18], [659.3, 0.18], [784.0, 0.36], [659.3, 0.18], [784.0, 0.6],
+    [440.00, NOIRE], [392.00, NOIRE], [349.23, NOIRE], [523.25, 3 * NOIRE],     # Gens du pa-ys (la sol fa do)
+    [440.00, NOIRE], [392.00, NOIRE], [349.23, NOIRE], [587.33, 3 * NOIRE],     # c'est vo-tre tour (la sol fa ré)
 ]
 
 #: Ce que Ti-Guy dit quand une pièce est posée. Le slug de la voix : `ti_guy-garage-<cle>` ; le jeu
