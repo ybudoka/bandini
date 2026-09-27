@@ -1471,21 +1471,16 @@ const Histoire = (function () {
   // --- Le piratage (M16, demande de Martin, 21 sept. 2026 : « de l'infiltration
   // et du hacking ») -----------------------------------------------------------
   //
-  // Une sequence de 4 directions a reproduire, avec le MEME axe unifie que la
-  // marche (`Entree.axe` : clavier, manette, joystick tactile) — rien de neuf a
-  // apprendre au pouce, et `Combat.creneauVise` (la roue d'armes) sait deja lire
-  // un flick de stick comme un cran parmi n. `B.piratage` cloue le joueur
-  // (`Entites.majJoueur`) et affame la roue, le combat, l'entree en char et les
-  // interactions (memes portes que `B.roue`) : un seul bouton a la fois.
+  // Depuis le 27 sept. 2026 (Martin : « je veux un jeu de labyrinthe electrifie »), un
+  // LABYRINTHE (`Circuit`, `circuit.js`) : on guide une etincelle de la prise au port avec
+  // le MEME axe unifie que la marche (`Entree.axe` : clavier, manette, joystick tactile),
+  // et chaque fil touche est un zap. Il remplace la sequence de directions d'avant.
+  // `B.piratage` cloue le joueur (`Entites.majJoueur`) et affame la roue, le combat,
+  // l'entree en char et les interactions (memes portes que `B.roue`) : un seul bouton a
+  // la fois.
 
-  //: Cran 0 EN HAUT, puis dans le sens des aiguilles — la lecture de `Combat.creneauVise`.
-  const DIRS_PIRATAGE = ['haut', 'droite', 'bas', 'gauche'];
-  //: Au-dela, un flick COMPTE ; en deca, on est revenu au neutre et le prochain
-  //: comptera. Le seuil haut est celui de la roue d'armes (`Combat.ROUE_ZONE_MORTE`,
-  //: non exportee — le meme chiffre, 0.45, c'est le meme geste au pouce). Le bas est
-  //: plus permissif : sans hysteresis, un stick qui tremble pile sur 0.45 compterait
-  //: deux fois le meme flick.
-  const PIRATAGE_SEUIL_HAUT = 0.45, PIRATAGE_SEUIL_BAS = 0.22;
+  //: Le labyrinthe fait `longueur + 3` colonnes sur `RANGS_PIRATAGE` rangees (m53, 4 : 7 × 4).
+  const RANGS_PIRATAGE = 4;
 
   /** L'objectif `pirater` EN COURS, ou null. Un seul a la fois : `p.etape` le dit. */
   function objectifDePiratage() {
@@ -1518,9 +1513,12 @@ const Histoire = (function () {
   function commencerPiratage() {
     const p = B.partie.mission, o = objectifDePiratage();
     if (!o) return false;
-    const longueur = o.longueur || 4, sequence = [];
-    for (let i = 0; i < longueur; i++) sequence.push(DIRS_PIRATAGE[Math.floor(B.rng() * DIRS_PIRATAGE.length)]);
-    B.piratage = { etape: p.etape, sequence: sequence, pos: 0, ratees: 0, relache: true,
+    // ⚠️ SANS DE : le trace vient de l'empreinte du terminal (la mission, l'etape) — le meme a
+    // chaque essai, et la ville ne glisse pas. Les zaps deja pris sur CE terminal reviennent :
+    // abandonner ne remet pas le compteur a zero.
+    const plan = Circuit.generer(courante().slug + ':' + p.etape, (o.longueur || 4) + 3, RANGS_PIRATAGE);
+    const zaps = B.mission && B.mission.zaps ? B.mission.zaps[p.etape] || 0 : 0;
+    B.piratage = { etape: p.etape, circuit: Circuit.ouvrir(plan, zaps),
                    essais: o.essais != null ? o.essais : 3 };
     Entree.contexte('piratage');
     Son.SFX.menu();
@@ -1540,26 +1538,21 @@ const Histoire = (function () {
 
   /** Lue a chaque image tant que `B.piratage` est ouvert (depuis `majObjectif`,
       cas `pirater`). ⚠️ FRAPPE ABANDONNE (comme `Combat.majRoue` referme la roue
-      au relachement d'ARME) : on garde ce qu'on a fait, on peut revenir. */
+      au relachement d'ARME) : on peut revenir, mais on repart de la prise et les
+      zaps restent comptes (`B.mission.zaps`, par etape). Un zap secoue l'ecran ;
+      au-dela de `essais`, l'alarme. */
   function majPiratage() {
     const r = B.piratage;
     if (Entree.neuf('attaque')) { fermerPiratage(); return; }
-    const mag = Entree.axe.mag;
-    if (r.relache && mag > PIRATAGE_SEUIL_HAUT) {
-      r.relache = false;
-      const cran = Combat.creneauVise(Entree.axe, DIRS_PIRATAGE.length);
-      const dir = cran >= 0 ? DIRS_PIRATAGE[cran] : null;
-      if (dir === r.sequence[r.pos]) {
-        r.pos++;
-        Son.SFX.menu();
-        if (r.pos >= r.sequence.length) { fermerPiratage(); avancer(); }
-      } else if (dir) {
-        r.pos = 0; r.ratees++;
-        Son.SFX.erreur();
-        if (r.ratees > r.essais) { fermerPiratage(); echouer('alarme'); }
-      }
-    } else if (mag < PIRATAGE_SEUIL_BAS) {
-      r.relache = true;
+    const res = Circuit.maj(r.circuit, Entree.axe);
+    if (res === 'zap') {
+      if (B.mission) (B.mission.zaps = B.mission.zaps || {})[r.etape] = r.circuit.zaps;
+      Son.SFX.erreur();
+      B.cam.secousse = Math.max(B.cam.secousse || 0, 0.4);
+      if (r.circuit.zaps > r.essais) { fermerPiratage(); echouer('alarme'); }
+    } else if (res === 'fini') {
+      Son.SFX.menu();
+      fermerPiratage(); avancer();
     }
   }
 

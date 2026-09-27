@@ -265,12 +265,27 @@ OUTILS = """
     images(L, o, 4);
     return eux.length;
   }
-  // Pirater au clavier : ACTION ouvre, la séquence au stick, un cran par flick.
+  // Pirater au clavier : ACTION ouvre le labyrinthe, puis une touche tenue à la fois, du centre
+  // d'une case de la solution à la suivante, et tout droit dans le port (le pilote de
+  // `test_piratage_js.py`).
   function pirater(L, o) {
     o.tape('KeyE', 2);
     if (!L.B.piratage) return false;
-    const TOUCHE = { haut: 'KeyW', bas: 'KeyS', gauche: 'KeyA', droite: 'KeyD' };
-    L.B.piratage.sequence.slice().forEach(function (dir) { o.touche(TOUCHE[dir]); o.frame(3); o.relacher(TOUCHE[dir]); o.frame(3); });
+    const TOUCHE = { haut: 'KeyW', bas: 'KeyS', gauche: 'KeyA', droite: 'KeyD' }, C = L.Circuit;
+    let tenue = null;
+    const tenir = function (t) { if (tenue !== t) { if (tenue) o.relacher(tenue); if (t) o.touche(t); tenue = t; } };
+    const p = L.B.piratage.circuit.plan;
+    for (let i = 1; i < p.solution.length && L.B.piratage; i++) {
+      const cx = (p.solution[i].c + 0.5) * C.CASE, cy = (p.solution[i].r + 0.5) * C.CASE;
+      for (let k = 0; k < 60 && L.B.piratage; k++) {
+        const e = L.B.piratage.circuit, dx = cx - e.x, dy = cy - e.y;
+        if (Math.abs(dx) < C.VITESSE / 2 + 0.05 && Math.abs(dy) < C.VITESSE / 2 + 0.05) break;
+        tenir(Math.abs(dx) >= C.VITESSE / 2 + 0.05 ? (dx > 0 ? TOUCHE.droite : TOUCHE.gauche) : (dy > 0 ? TOUCHE.bas : TOUCHE.haut));
+        o.frame(1);
+      }
+    }
+    for (let k = 0; k < 40 && L.B.piratage; k++) { tenir(TOUCHE.droite); o.frame(1); }
+    tenir(null);
     fermer(L); images(L, o, 2);
     return !L.B.piratage;
   }

@@ -62,4 +62,64 @@ Chromium du labyrinthe peint est regardée avant de livrer : les juges verts ne 
 la capture, pas au juge. La boîte ne doit pas cacher le terminal ni l'étincelle derrière le HUD d'une
 mission (le bandeau d'objectif en haut).
 
+### Plan d'exécution
+
+> Exécuté dans la session (Martin, 27 sept. 2026 : « oui code »), tâche par tâche, dans un worktree.
+
+**But.** Remplacer la séquence de `pirater` par un labyrinthe à parcourir au stick. **Architecture** :
+un module pur `Circuit` (tracé, pas, dessin) ; `Histoire` l'ouvre, le fait avancer et tranche
+(avancer, `alarme`) ; `Hud` le peint. **Contraintes** : aucun `B.rng` ; aucune clé neuve dans les
+missions ; `B.piratage` reste la porte que lisent `combat.js`, `entites.js`, `interactions.js`.
+
+**À surveiller (aucun juge ne l'attrape de lui-même).** Une diagonale au clavier qui frotte un
+coin (les poteaux aux croisements comptent comme des fils) ; l'étincelle qui sort de la boîte par la
+prise ; un zap qui recompte à chaque image tant qu'on reste collé (l'immunité) ; ouvrir, abandonner et
+rouvrir pour remettre les zaps à zéro ; la mission qui finit ailleurs pendant que la boîte est ouverte.
+
+**Tâche 1 — le module `static/js/circuit.js`.** `Circuit.generer(empreinte: string, cols, rangs)` →
+`{ cols, rangs, est: bool[], sud: bool[], entree: rang, sortie: rang, solution: [{c, r}], relais: {c, r} }`
+(labyrinthe parfait, retour arrière sur pile, graine FNV-1a de l'empreinte, générateur mulberry32) ;
+`Circuit.ouvrir(plan, zaps)` → l'état `{ plan, x, y, relais, zaps, immunite, eclair, trace }` ;
+`Circuit.maj(etat, axe)` → `'zap'`, `'fini'` ou `null` ; `Circuit.touche(plan, x, y)` ;
+`Circuit.dessiner(ctx, etat, x0, y0)` et `Circuit.taille(plan)`. Chargé dans `templates/index.html`
+avant `histoire.js`. Juges (`tests/test_circuit_js.py`) : même empreinte → même tracé, deux empreintes →
+deux tracés ; toute case atteinte depuis la prise, la solution va de la prise au port par des
+passages ouverts ; `B.rng` intact ; au centre d'un couloir rien ne touche, contre un fil ou un poteau
+ça touche ; `maj` pousse l'étincelle, le zap la ramène au relais et ne recompte pas pendant
+l'immunité ; passer le relais le retient ; atteindre le port rend `'fini'`.
+
+**Tâche 2 — le brancher.** `commencerPiratage` : `Circuit.generer(slug + ':' + étape, longueur + 3, 4)`,
+zaps repris de `B.mission.zaps[étape]` ; `majPiratage` : FRAPPE abandonne, `'zap'` → son d'erreur,
+secousse, zaps notés, au-delà de `essais` → `alarme` ; `'fini'` → `avancer()`. `DIRS_PIRATAGE` et les
+seuils partent. `Hud.dessinerPiratage` peint la boîte (le circuit, les zaps restants, la consigne) et
+pose l'ancre `piratage`. Juges : `tests/test_piratage_js.py` réécrit (ouvrir au bouton, le pilote au
+clavier qui suit la solution fait avancer l'objectif, un fil → zap et relais, `essais` + 1 → alarme,
+FRAPPE abandonne et les zaps restent, l'étiquette du bouton, le HUD dessine) ; le pilote `pirater` de
+`tests/test_sven_missions_js.py` suit la solution au lieu de la séquence.
+
+**Tâche 3 — les mots.** m53 (texte de l'étape 2, réplique `sven-m53-10` et sa voix), les commentaires
+qui décrivent la séquence, `comment-monter-les-missions.md`, `architecture.md` (le module),
+la fiche du jalon de Sven.
+
+**Tâche 4 — le regarder.** Capture Chromium du labyrinthe ouvert (m53 puis m54) dans `captures/`,
+réglage de la taille et des couleurs à l'œil, puis les juges ciblés, `ruff`, atterrir.
+
 ## Notes
+
+**Livré le 27 sept. 2026.** Les cinq terminaux de m53 et m54 sont des labyrinthes : `circuit.js`
+(le tracé, l'étincelle, le dessin), `Histoire.commencerPiratage` / `majPiratage` (les zaps notés dans
+`B.mission.zaps` par étape, la secousse, l'alarme), `Hud.dessinerPiratage` (la boîte, un point par
+essai, rouge une fois brûlé). m53 dit « SANS TOUCHER LES FILS », et Sven « Suis le courant jusqu'au
+bout, sans toucher les fils » (voix `sven-m53-10` refaite).
+
+- ⚠️ **Réglé à la capture, pas au juge** : à 14 px la case, la boîte de m53 faisait 100 × 60 px sur
+  480 — illisible au téléphone. Elle a maintenant 18 px la case, une étincelle de 3 px de rayon
+  (10 px de jeu dans un couloir) et 1,3 px par image à fond : m53 fait 146 × 99 px, m54 164 × 99. La
+  boîte descend à y = 84 : le titre de la mission (« SOUS PAVILLON ») la chevauchait à 70.
+- ⚠️ **Tous les poteaux touchent**, même entre deux côtés ouverts — dans un labyrinthe parfait,
+  aucun croisement n'est libre de ses quatre fils ; c'est là qu'une diagonale au clavier frotte.
+- ⚠️ **Le pilote du banc** (`test_piratage_js.py`, `test_sven_missions_js.py`) tient une touche à la
+  fois vers le centre de la case suivante de la solution, avec une tolérance d'une demi-`VITESSE` :
+  plus serrée, il oscille autour du centre sans jamais s'arrêter.
+- Juges : `test_circuit_js.py` (6, le module seul — trois mutations mordent : sans poteaux, sans
+  immunité, sans relais) et `test_piratage_js.py` réécrit (7).

@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (264 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (265 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -89,7 +89,6 @@ pas quand l'ordre de travail change.
 | M16 Cent missions | ⬜ **en cours** (la tranche 1 « le moteur » avance : dix missions de plus livrées — `f04`, `f05`, `f06`, `f07`, `f09`, `f11`, `h01`, `p01`, `q03`, `e12` — avec le premier juge de banc joué pour huit des neuf types neufs ; ✅ **tout ce qui sert à JOUER une mission est sorti du paquet** — répliques, scènes, voix et objectifs, par `/api/mission/<slug>` avec son ETag : 369 224 → **220 367** octets bruts, 75 138 → **48 971** gzip, le juge est vert et le catalogue passe de 170 à 53 octets gzip par mission (**94 missions de marge** au lieu de cinq) ; ✅ **quatre missions de plus** — `q01` (Lulu), `q10`/`q11` (le premier choix du catalogue, Sven ou Josée), `s08` (Gilles) ; restent `eteindre` (pas de feu qu'une mission puisse allumer elle-même), le téléphone qui trie, et le reste de l'arc F) | 18 sept. 2026 | **P4** | ajout | [fiche](jalons/m16-cent-missions.md#fiche) · [notes](jalons/m16-cent-missions.md#notes) |
 | M13 Les deux fins | ⬜ **en cours** (vague 1 livrée : le générique, et _Sacrer son camp_ — m99, le capitaine Bérubé, `embarquer` ; reste _Le Boss_, qui attend les districts libérés de M16) | 25 sept. 2026 | **P4** | ajout | [fiche](jalons/m13-les-deux-fins.md#fiche) · [notes](jalons/m13-les-deux-fins.md#notes) |
 | Infiltration : portes verrouillées et gardes privés | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/infiltration-portes-verrouillees-et-gardes-prives.md#fiche) |
-| Le piratage devient un labyrinthe électrifié | ⬜ **en cours** | 27 sept. 2026 | **P4** | ajout | [fiche](jalons/le-piratage-devient-un-labyrinthe-electrifie.md#fiche) |
 | Le casse-croûte du ciné-parc au centre, et le projecteur | ⬜ **en cours** | 27 sept. 2026 | **P4** | ajout | [fiche](jalons/le-casse-croute-du-cine-parc-au-centre-et-le-projecteur.md#fiche) |
 | Générer les bruitages qui n'ont aucun équivalent payé | ⬜ **à faire** (⚠️ le quota n'est plus l'obstacle — **nouveau forfait le 24 sept. 2026** ; à trancher par Martin, c'est sa dépense) | — | **P4** | ajout | [fiche](jalons/les-bruitages-qui-n-ont-aucun-equivalent-paye.md#fiche) |
 | Des choses à collectionner, et la planque qu'on décore | ⬜ **à faire** (à trancher par Martin : les familles, leur nombre, les meubles) | — | **P4** | ajout | [fiche](jalons/des-choses-a-collectionner-et-la-planque-qu-on-decore.md#fiche) |
@@ -128,7 +127,6 @@ Ce que chaque ligne à faire attend (la table de tri du 13 sept. 2026, réduite 
 | **P4** | ajout | L'Île-aux-Corneilles | 3 | **les zones conditionnelles** d'abord ; l'eau est livrée, le traversier (M12) viendra après et l'île l'attend sans lui |
 | **P4** | ajout | Quatre activités que le jeu n'a pas | 2 | ⚠️ la **refonte des véhicules** d'abord (les deux boulots neufs ne demandent aucun char de plus, mais la liste du quai fait regarder le parc de près) |
 | **P4** | ajout | M16 Cent missions | 8 (4 × 2) | le **carnet** d'abord (c'est lui qui rend cent missions lisibles) et **les missions mises en scène** (chaque mission porte ses scènes et ses dialogues) ; ⚠️ les dialogues et les scènes sortent du paquet ; M13 en est la dernière tranche |
-| **P4** | ajout | Le piratage devient un labyrinthe électrifié | 2 | rien ne l'attend ; remplace la séquence de directions des cinq terminaux de m53 et m54 (Martin, 27 sept. 2026) ; ⚠️ tracé à l'empreinte, jamais `B.rng` |
 | **P4** | ajout | M13 Les deux fins | 4 | **M8** pour les districts, et ça gagne à suivre **M10** : la dette de Rocco est le fil des deux fins. C'est la fin — elle se pose en dernier |
 | **P4** | ajout | Des choses à collectionner, et la planque qu'on décore | 3 | rien ne l'attend ; ⚠️ poser les objets **en dernier, sans dé** (sinon la ville glisse) ; le décor conditionnel de la planque sert aussi à la deuxième |
 | **P4** | ajout | Des photos pour le Clairon | 2 | le **personnage de Louise** d'abord (M16, arc C) ; le mode photo existe |

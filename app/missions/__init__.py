@@ -53,12 +53,14 @@ TYPES_OBJECTIFS = (
     "boulots",     # `n` boulots d'une `sorte` (généralise `courses`, qui reste au taxi)
     # --- Le piratage (Martin, 21 sept. 2026 : « je veux … de l'infiltration et du
     # hacking ») : s'approcher de `ou` (résolu comme `monter`), tenir ACTION dedans
-    # `rayon` tuiles pour l'ouvrir, puis reproduire une séquence de `longueur`
-    # directions — le MÊME axe unifié que la marche (`Entree.axe` : clavier, manette,
-    # joystick tactile), donc rien de neuf à apprendre au doigt. Une mauvaise
-    # direction recommence la séquence ; après `essais` ratés, l'alarme sonne (échec
-    # `alarme`). Voir `Histoire.majPiratage`.
-    "pirater",     # `ou`, `rayon` (def. 3), `longueur` (def. 4), `essais` (def. 3)
+    # `rayon` tuiles pour l'ouvrir, puis guider une étincelle dans un LABYRINTHE
+    # ÉLECTRIFIÉ (Martin, 27 sept. 2026 ; `circuit.js`) de la prise au port — le MÊME
+    # axe unifié que la marche (`Entree.axe` : clavier, manette, joystick tactile),
+    # donc rien de neuf à apprendre au doigt. Un fil touché est un zap (retour au
+    # relais) ; au-delà de `essais` zaps, l'alarme sonne (échec `alarme`). Le tracé
+    # vient de l'empreinte (mission, étape) : le même à chaque essai, sans dé. Voir
+    # `Histoire.majPiratage`.
+    "pirater",     # `ou`, `rayon` (def. 3), `longueur` (def. 4 : longueur + 3 colonnes), `essais` (def. 3)
     # --- M13 : la deuxième fin part en traversier. À bord (à pied ou au volant) quand
     # il QUITTE `escale` (un district de `traversier.ESCALES`) : manquer le départ, c'est
     # attendre le suivant, pas un échec.
@@ -81,7 +83,7 @@ TYPES_OBJECTIFS = (
 # ⚠️ `etoile` (les missions discrètes, `sans_etoile`) et `protege_mort`
 # (`proteger`, sa cible est tombée) sont les deux échecs que M16 ajoute aux
 # quatre de la v1. `alarme` (21 sept. 2026) est celui du piratage raté : trop
-# d'erreurs sur la séquence. Ils vivent ICI, lus par `histoire.js` comme le reste.
+# de zaps dans le labyrinthe. Ils vivent ICI, lus par `histoire.js` comme le reste.
 ECHECS = ("mort", "arrete", "vehicule_detruit", "chrono", "etoile", "protege_mort", "alarme")
 
 #: Les quatre options qui TRAVERSENT les types d'objectifs (M16). Une clé

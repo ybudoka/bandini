@@ -11,8 +11,8 @@ MISSION = {
     "echec": ["mort", "arrete", "vehicule_detruit", "etoile", "alarme"],
     "donne": {"message": "LE RELAIS DE JOSÉE EST MUET"},
 
-    # ⚠️ **PREMIER USAGE DU PIRATAGE** (type `pirater` : une séquence de 4 directions, le même
-    # axe unifié que la marche — Combat.creneauVise, la roue d'armes). Deux quais de chalutier
+    # ⚠️ **PREMIER USAGE DU PIRATAGE** (type `pirater` : un labyrinthe électrifié depuis le
+    # 27 sept. 2026, `circuit.js` — l'étincelle au stick, le même axe que la marche). Deux quais de chalutier
     # existent dans chaque ville (`navires.FLOTTE`) : on prend celui-ci, on pirate l'autre — un
     # chalutier ne se remarque pas comme une chaloupe qui traverse toute la baie de nuit.
     "objectifs": [
@@ -26,7 +26,7 @@ MISSION = {
         {"type": "livrer", "texte": "AMARRE-LE AU RELAIS — SOUS SON NOM, PERSONNE NE REGARDE",
          "lieu": "mouillage:chalutier:1", "rayon": 5, "sans_etoile": True},
 
-        {"type": "pirater", "texte": "PIRATE LE RELAIS — SUIS LA SÉQUENCE",
+        {"type": "pirater", "texte": "PIRATE LE RELAIS — SANS TOUCHER LES FILS",
          "ou": "mouillage:chalutier:1", "rayon": 5, "longueur": 4, "essais": 3},
 
         # ⚠️ **Plus long, plus loin** (Martin, 22 sept. 2026 : « des missions plus longues ») : le
@@ -65,8 +65,8 @@ MISSION = {
         "pendant": [
             _p("sven", "Doucement. Un chalutier pressé, ça se remarque.", 1,
                jeu="[Norwegian accent][gravely] Doucement. [quietly] Un chalutier pressé… ça se remarque."),
-            _p("sven", "Le boîtier est sur le quai. Reproduis ce qu'il montre, rien de plus.", 2,
-               jeu="[Norwegian accent][calm] Le boîtier est… sur le quai. [matter-of-fact] Reproduis ce qu'il montre… rien de plus."),
+            _p("sven", "Le boîtier est sur le quai. Suis le courant jusqu'au bout, sans toucher les fils.", 2,
+               jeu="[Norwegian accent][calm] Le boîtier est… sur le quai. [matter-of-fact] Suis le courant jusqu'au bout… sans toucher les fils."),
             _p("sven", "Le relais a crié avant de se taire. Deux hommes viennent voir pourquoi.", 3,
                jeu="[Norwegian accent][gravely] Le relais a crié… avant de se taire. [coldly] Deux hommes viennent voir… pourquoi."),
             _p("sven", "La lunette du clocher n'était pas seule. Un relais y écoute encore.", 4,
