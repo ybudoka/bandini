@@ -1,4 +1,5 @@
-"""La cabane à sucre, au banc (docs/jalons/la-cabane-a-sucre.md) : on y entre par le bord nord du Faubourg ;
+"""La cabane à sucre, au banc (docs/jalons/la-cabane-a-sucre.md) : elle est au rang (le bloc du chalet et du lac,
+docs/jalons/la-ville-s-agrandit-au-nord.md), où l'on entre par la rue qui traverse jusqu'au bord ouest des Quais ;
 son comptoir sert le repas des sucres au printemps et se dit fermé hors saison (pas un menu vide) ; il
 propose la tire sur la neige, qui se gagne à point et se rate trop chaude ou trop froide, sans un dé."""
 
@@ -6,14 +7,14 @@ OUTILS = """
   const TT = 16;
   async function laisserArriver(L, o) { for (let i = 0; i < 6; i++) { o.frame(1); await o.attendre(); } }
   async function entrerDansLeBloc(L, o, jour, heure) {
-    const B = L.B, j = B.joueur, p = B.defs.blocs.find(function (b) { return b.slug === 'cabane'; }).passage;
+    const B = L.B, j = B.joueur, p = B.defs.blocs.find(function (b) { return b.slug === 'rang'; }).passage;
     B.partie.jour = jour; B.partie.heure = heure / 24;
     if (B.menu) L.Hud.fermerMenu();
-    j.x = (p.de + 2) * TT + 8; j.y = TT + 8; L.Entites.indexer();
+    j.x = TT + 8; j.y = (p.de + 1) * TT + 8; L.Entites.indexer();
     await laisserArriver(L, o);
-    o.touche('KeyW');
+    o.touche('KeyA');
     for (let i = 0; i < 120 && !B.transition; i++) o.frame(1);
-    o.relacher('KeyW');
+    o.relacher('KeyA');
     for (let i = 0; i < 100; i++) o.frame(1);
     await laisserArriver(L, o);
     for (let i = 0; i < 20; i++) o.frame(1);
@@ -43,7 +44,7 @@ def test_le_comptoir_des_sucres_au_printemps_et_ferme_hors_saison(banc):
         B.partie.jour = 22; const ete = libelles(M.menuDuPoint(pt));
         return { bloc: bloc, piece: B.interieur.slug, printemps: printemps, hiver: hiver, ete: ete };
     }""")
-    assert r["bloc"] == "cabane" and r["piece"] == "cabane", r
+    assert r["bloc"] == "rang" and r["piece"] == "cabane", r
     assert "OREILLES DE CRISSE" in r["printemps"] and "TIRE SUR LA NEIGE" in r["printemps"], r["printemps"]
     assert "LA TIRE SUR LA NEIGE — DÉFI" in r["printemps"], r["printemps"]
     for hors in (r["hiver"], r["ete"]):

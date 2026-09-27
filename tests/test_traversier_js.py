@@ -364,10 +364,10 @@ def test_un_bloc_de_carte_ne_laisse_pas_de_pont_fantome(banc):
         const avant = Array.from(c.solide);
         heure(L, 1.9); o.frame(2);
         const aQuai = !L.Monde.estEau(a.x + 3, a.y);
-        L.Blocs.charger('chalet');
-        for (let i = 0; i < 200 && !L.Blocs.cartes.chalet; i++) { o.frame(1); await o.attendre(); }
-        const bloc = L.Blocs.liste().find(function (q) { return q.slug === 'chalet'; });
-        L.Jeu.passerDansLeBloc(bloc, L.Blocs.cartes.chalet, { x: j.x, y: j.y }, null);
+        L.Blocs.charger('rang');
+        for (let i = 0; i < 200 && !L.Blocs.cartes.rang; i++) { o.frame(1); await o.attendre(); }
+        const bloc = L.Blocs.liste().find(function (q) { return q.slug === 'rang'; });
+        L.Jeu.passerDansLeBloc(bloc, L.Blocs.cartes.rang, { x: j.x, y: j.y }, null);
         const bc = L.Monde.carte, blocAvant = Array.from(bc.solide);
         o.frame(3);
         heure(L, 2.5); o.frame(3);

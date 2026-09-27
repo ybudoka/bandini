@@ -18,9 +18,12 @@ Comme une mission : rien d'autre à toucher.
 from __future__ import annotations
 
 from .. import carte
-from . import cabane, chalet, cineparc, clairiere, galeries
+from . import cineparc, galeries, rang
 
-BLOCS: list[dict] = [clairiere.BLOC, chalet.BLOC, cineparc.BLOC, cabane.BLOC, galeries.BLOC]
+#: ⚠️ LE RANG (26 sept. 2026) : le chalet, la clairière et la cabane à sucre ne font plus qu'UN bloc, et
+#: les trois passages sont au bord OUEST — la bande nord de la ville couvre l'ancien bord nord
+#: (docs/jalons/la-ville-s-agrandit-au-nord.md).
+BLOCS: list[dict] = [rang.BLOC, cineparc.BLOC, galeries.BLOC]
 
 BORDS = ("nord", "sud", "est", "ouest")
 
@@ -116,17 +119,9 @@ def erreurs(bloc: dict, ville: dict | None = None) -> list[str]:
     if not (0 <= a["x"] < largeur and 0 <= a["y"] < hauteur) or not marchable(sol[a["y"]][a["x"]]):
         fautes.append(f"{slug} : l'arrivée ne se marche pas")
     else:
-        vues, pile = {(a["x"], a["y"])}, [(a["x"], a["y"])]
-        while pile:
-            x, y = pile.pop()
-            for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
-                if (0 <= nx < largeur and 0 <= ny < hauteur and (nx, ny) not in vues
-                        and marchable(sol[ny][nx]) and (nx, ny) not in decor):
-                    vues.add((nx, ny))
-                    pile.append((nx, ny))
-        if not set(ouverture) <= vues:
+        a_pied = a_pied_depuis_l_arrivee(bloc)
+        if not set(ouverture) <= a_pied:
             fautes.append(f"{slug} : de l'arrivée, on ne rejoint pas le retour à pied")
-        a_pied = vues
     # Ses portes : sur une porte dessinée, vers une pièce qu'il déclare, et on les atteint à
     # pied depuis l'arrivée (le pas devant la porte).
     for porte in bloc.get("portes", []):
@@ -152,6 +147,23 @@ def erreurs(bloc: dict, ville: dict | None = None) -> list[str]:
             if not marchable(g):
                 fautes.append(f"{slug} : la tuile ({x}, {y}) du passage en ville ne se marche pas ({g!r})")
     return fautes
+
+
+def a_pied_depuis_l_arrivee(bloc: dict) -> set[tuple[int, int]]:
+    """Les tuiles qu'on rejoint à pied depuis l'arrivée du bloc (les arbres arrêtent)."""
+    sol = sol_du_bloc(bloc)
+    hauteur, largeur = len(sol), len(sol[0])
+    arbres = {(d["x"], d["y"]) for d in decor_du_bloc(bloc) if d["type"] == "arbre"}
+    a = bloc["arrivee"]
+    vues, pile = {(a["x"], a["y"])}, [(a["x"], a["y"])]
+    while pile:
+        x, y = pile.pop()
+        for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if (0 <= nx < largeur and 0 <= ny < hauteur and (nx, ny) not in vues
+                    and carte.LEGENDE.get(sol[ny][nx], {}).get("solide", 0) == 0 and (nx, ny) not in arbres):
+                vues.add((nx, ny))
+                pile.append((nx, ny))
+    return vues
 
 
 def _tuiles_du_bord(ouverture: dict, largeur: int, hauteur: int) -> list[tuple[int, int]]:

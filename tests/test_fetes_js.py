@@ -67,10 +67,10 @@ def test_le_tronc_du_sapin_arrete_en_decembre_et_janvier_rend_la_carte(banc):
         o.touche('KeyW'); o.frame(90); o.relacher('KeyW'); o.frame(2);
         const arret = { ty: Math.floor(j.y / TT), dessous: j.y > s.y * TT + 12 };
         // Au chalet, en décembre : rien ne se pose dans le bloc.
-        L.Blocs.charger('chalet');
-        for (let i = 0; i < 200 && !L.Blocs.cartes.chalet; i++) { o.frame(1); await o.attendre(); }
-        const bloc = L.Blocs.liste().find(function (q) { return q.slug === 'chalet'; });
-        L.Jeu.passerDansLeBloc(bloc, L.Blocs.cartes.chalet, { x: j.x, y: j.y }, null);
+        L.Blocs.charger('rang');
+        for (let i = 0; i < 200 && !L.Blocs.cartes.rang; i++) { o.frame(1); await o.attendre(); }
+        const bloc = L.Blocs.liste().find(function (q) { return q.slug === 'rang'; });
+        L.Jeu.passerDansLeBloc(bloc, L.Blocs.cartes.rang, { x: j.x, y: j.y }, null);
         const bc = Mo.carte, blocAvant = Array.from(bc.solide);
         o.frame(3);
         const blocIntact = bc !== c && Array.from(bc.solide).every(function (v, i) { return v === blocAvant[i]; });

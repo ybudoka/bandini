@@ -6967,6 +6967,23 @@ class _Chantier:
         return {"x": x0, "y": y0, "l": x1 - x0, "h": y1 - y0}
 
 
+#: LES RUES QUI TRAVERSENT JUSQU'AU BORD (Martin, 26 sept. 2026 : « l'entrée de la ville au rang [doit être]
+#: une ouverture de rue »). La rue à deux voies des Quais (y 172-173) s'arrêtait sur la rue de l'ouest, contre
+#: le trottoir de ceinture : ses deux tuiles de trottoir à x 0 deviennent sa chaussée, et le passage du rang
+#: (`blocs/rang.py`) les couvre, avec les deux trottoirs. ⚠️ En DERNIER et sans un dé, et JAMAIS dans `voie` :
+#: la circulation ne s'engage pas dans un cul-de-sac au bord de la carte. ⚠️ Une retouche de la VILLE, pas du
+#: bloc : un bloc ne change pas un octet de la carte (`test_blocs`).
+OUVERTURES_DE_RUE: tuple[dict, ...] = ({"x": 0, "y": 172, "g": "#"}, {"x": 0, "y": 173, "g": "+"})
+
+
+def ouvrir_les_rues(ville: dict) -> None:
+    for o in OUVERTURES_DE_RUE:
+        ligne = ville["sol"][o["y"]]
+        if ligne[o["x"]] != ".":
+            raise ValueError(f"l'ouverture ({o['x']}, {o['y']}) ne tombe pas sur le trottoir : {ligne[o['x']]!r}")
+        ville["sol"][o["y"]] = ligne[:o["x"]] + o["g"] + ligne[o["x"] + 1:]
+
+
 def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     chantier = _Chantier(plan, graine)
     chantier.eaux()
@@ -7215,6 +7232,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # bouge d'une tuile.
     from . import relief as relief_mod
     ville["relief"] = relief_mod.poser(chantier, ville)
+    # L'OUVERTURE DE RUE DU RANG, après le relief (il recopie le sol du chantier) : sur la ville finie et
+    # sans un dé, deux tuiles de trottoir deviennent chaussée.
+    if plan == PLAN:
+        ouvrir_les_rues(ville)
     return ville
 
 # --- Les interieurs ---------------------------------------------------------

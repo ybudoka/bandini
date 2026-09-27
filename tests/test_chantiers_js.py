@@ -1953,11 +1953,11 @@ def test_rien_ne_bouge_quand_on_est_dans_un_bloc_de_carte(banc):
             return n;
         }
         const effaceesEnVille = effacees();
-        L.Blocs.charger('chalet');
-        for (let i = 0; i < 200 && !L.Blocs.cartes.chalet; i++) { o.frame(1); await o.attendre(); }
-        const bloc = L.Blocs.liste().find(function (q) { return q.slug === 'chalet'; });
+        L.Blocs.charger('rang');
+        for (let i = 0; i < 200 && !L.Blocs.cartes.rang; i++) { o.frame(1); await o.attendre(); }
+        const bloc = L.Blocs.liste().find(function (q) { return q.slug === 'rang'; });
         const j = B.joueur;
-        L.Jeu.passerDansLeBloc(bloc, L.Blocs.cartes.chalet, { x: j.x, y: j.y }, null);
+        L.Jeu.passerDansLeBloc(bloc, L.Blocs.cartes.rang, { x: j.x, y: j.y }, null);
         const bc = Mo.carte, avant = Array.from(bc.solide);
         L.B.partie.jour += ch.def.pas * 2;
         tourner(L, 3);

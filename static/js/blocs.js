@@ -80,7 +80,10 @@ const Blocs = (function () {
   function marge(e) {
     if (e && e.type === 'vehicule') {
       const d = Vehicules.vehiculeDef(e.slug);
-      return (d && d.longueur ? d.longueur / 2 : 14) + 2;
+      // ⚠️ PLUS UNE IMAGE DE ROUTE (27 sept. 2026) : le rang s'ouvre au bout d'une vraie rue, et on y
+      // entre lancé. Le choc contre le bord se joue dans la physique, AVANT cette image : une moto à
+      // 2,7 px/image touchait le bord et éjectait son pilote, qui passait seul, sans elle.
+      return (d && d.longueur ? d.longueur / 2 : 14) + 2 + Math.abs(e.vitesse || 0);
     }
     return BORD_PX;
   }

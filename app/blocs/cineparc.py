@@ -1,8 +1,8 @@
-"""Le ciné-parc du Belvédère, au bout de La Shop (docs/jalons/le-cine-parc.md).
+"""Le ciné-parc du Belvédère, au bout des Érables (docs/jalons/le-cine-parc.md).
 
 L'été, le soir, un film sur un écran géant à la sortie de la ville ; on y entre en char, on se gare dans
-une rangée, on éteint ses phares. On le rejoint par le bord NORD de La Shop : on pousse contre le bord,
-la carte fait un noir, et on est sur le chemin du ciné-parc.
+une rangée, on éteint ses phares. On le rejoint par le bord OUEST des Érables : on pousse contre le
+bord, la carte fait un noir, et on est dans l'allée qui entre par le côté est du terrain.
 
 ⚠️ **UN BLOC, PAS UN TERRAIN DE PLUS EN VILLE** : un grand terrain en bord de ville aurait fait glisser
 la ville (la règle « agrandir la carte sous la trame »). Derrière un fondu au noir, il ne pèse rien sur
@@ -35,15 +35,15 @@ PLAN: tuple[str, ...] = (
     "AA,,f##################################f,,AA",
     "A,,,f##################################f,,,A",
     "AA,,f###^^^^^^^^^^^^^^^^^^^^^^^^^^^^###f,,AA",
-    "A,,,f#OOOOOO###########################f,,,A",
-    "AA,,f#OOOOOO###########################f,,AA",
-    "A,,,f#FWdFWF###########################f,,,A",
-    "AA,,f##################################f,,AA",
-    "A,,,ffffffffffffffff####ffffffffffffffff,,,A",
-    "AA,,,,,,,,,,,,,,,,,,####,,,,,,,,,,,,,,,,,,AA",
-    "A,,,,,,,,,,,,,,,,,,,####,,,,,,,,,,,,,,,,,,,A",
-    "AA,,,,,,,,,,,,,,,,,,####,,,,,,,,,,,,,,,,,,AA",
-    "A,,,,,,,,,,,,,,,,,,,####,,,,,,,,,,,,,,,,,,,A",
+    "A,,,f#OOOOOO################################",
+    "AA,,f#OOOOOO################################",
+    "A,,,f#FWdFWF################################",
+    "AA,,f#######################################",
+    "A,,,ffffffffffffffffffffffffffffffffffff,,,A",
+    "AA,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,AA",
+    "A,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A",
+    "AA,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,AA",
+    "A,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A",
 )
 
 DECORS: dict[str, tuple[str, str]] = {
@@ -56,17 +56,19 @@ BLOC = {
     "panneau": "CINÉ", "panneau_retour": "VILLE",
     "plan": PLAN,
     "decors": DECORS,
-    # Le passage : le trottoir de ceinture du bord NORD de La Shop, à l'autre bout du bord nord par
-    # rapport à la clairière (aux Érables, colonnes 55 à 59).
-    "passage": {"bord": "nord", "de": 350, "l": 5},
-    # Le chemin arrive par le bord SUD du bloc, ses quatre colonnes d'asphalte.
-    "retour": {"bord": "sud", "de": 20, "l": 4},
-    "arrivee": {"x": 21, "y": 27},
+    # Le passage : le trottoir de ceinture du bord OUEST des Érables, un tronçon droit (94 à 98).
+    # ⚠️ Il était au bord nord de La Shop : la bande nord de la ville le couvre depuis le 26 sept. 2026
+    # (Martin : « déplace le ciné-parc à l'ouest et ajuste son entrée »).
+    "passage": {"bord": "ouest", "de": 94, "l": 5},
+    # L'allée arrive par le bord EST du terrain, ses quatre rangées d'asphalte, le long du casse-croûte :
+    # on entre par le côté et on longe les rangées de cases, qui font toujours face à l'écran.
+    "retour": {"bord": "est", "de": 21, "l": 4},
+    "arrivee": {"x": 41, "y": 22},
     "gens": False,
     # Ses lampes : les vitrines du casse-croûte, et les deux lampadaires de l'entrée (le film, lui,
     # éclaire à part : `Cineparc.lampes`, quand il joue).
     "lampes": [{"x": 7, "y": 24, "r": 26, "c": "fenetre"}, {"x": 10, "y": 24, "r": 26, "c": "fenetre"},
-               {"x": 19, "y": 26, "r": 40, "c": "lampadaire"}, {"x": 24, "y": 26, "r": 40, "c": "lampadaire"}],
+               {"x": 41, "y": 20, "r": 40, "c": "lampadaire"}, {"x": 41, "y": 25, "r": 40, "c": "lampadaire"}],
     # L'écran : son cadre (la façade du plan), en tuiles — le navigateur peint la toile au-dessus.
     "ecran": {"x": 12, "y": 2, "l": 20, "h": 2},
 }

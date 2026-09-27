@@ -764,6 +764,21 @@ const Sauvegarde = (function () {
     if (!Array.isArray(out.planques)) out.planques = [];
     if (!out.charsDesPlanques || typeof out.charsDesPlanques !== 'object') out.charsDesPlanques = {};
     if (out.bloc && (typeof out.bloc !== 'object' || typeof out.bloc.slug !== 'string')) out.bloc = null;
+    // ⚠️ LE RANG (26 sept. 2026) : le chalet, la clairière et la cabane sont UN bloc, `rang`. Une partie
+    // d'avant garde sa planque (le chalet acheté), son char (à la place du rang : il y a changé de tuile)
+    // et se réveille au rang — devant le chalet si elle y dormait, à l'arrivée sinon (en pixels du bloc,
+    // `app/blocs/rang.py` : la porte du chalet en 43, 16 ; l'arrivée en 77, 24).
+    const FONDUS = { chalet: 1, clairiere: 1, cabane: 1 };
+    out.planques = out.planques.map(function (s) { return s === 'chalet' ? 'rang' : s; })
+      .filter(function (s, i, t) { return t.indexOf(s) === i; });
+    if (out.charsDesPlanques.chalet) {
+      out.charsDesPlanques.rang = Object.assign({}, out.charsDesPlanques.chalet, { x: null, y: null });
+      delete out.charsDesPlanques.chalet;
+    }
+    if (out.bloc && FONDUS[out.bloc.slug]) {
+      const auChalet = out.bloc.slug === 'chalet';
+      out.bloc = { slug: 'rang', x: (auChalet ? 43 : 77) * 16 + 8, y: (auChalet ? 17 : 24) * 16 + 8 };
+    }
     if (!out.choix || typeof out.choix !== 'object') out.choix = {};
     // ⚠️ Une partie d'avant les chantiers REPART de son jour : sinon elle
     // s'ouvrirait au trentieme jour sur trois batiments neufs qu'on n'a jamais
