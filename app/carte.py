@@ -1868,18 +1868,29 @@ USAGE_DE_LA_LETTRE: dict[str, str] = {fiche["lettre"]: usage for usage, fiche in
 class _Chantier:
     """L'echafaudage : la trame, puis les rues, puis les ilots, puis le decor."""
 
-    def __init__(self, plan: tuple[str, ...], graine: int) -> None:
+    #: Les lettres de plan qu'un chantier DÉRIVÉ sait bâtir en plus (`nord.py` : la friche, le terrain à
+    #: bâtir, les voies ferrées) : `glyphe -> fonction(chantier, x, y, largeur, hauteur)`.
+    BATISSEURS: dict = {}
+
+    def __init__(self, plan: tuple[str, ...], graine: int, trame: dict | None = None) -> None:
+        # ⚠️ LA TRAME EST UN PARAMÈTRE (27 sept. 2026) : la bande nord se bâtit par le même chantier, sur la
+        # sienne (`nord.py`). Par défaut, celle de la ville — aucun tirage ne change.
+        trame = trame or {"colonnes": COLONNES, "rangees": RANGEES, "rues_v": RUES_V, "rues_h": RUES_H,
+                          "districts": DISTRICTS, "standing": STANDING if plan == PLAN else None}
+        self.colonnes, self.rangees = tuple(trame["colonnes"]), tuple(trame["rangees"])
+        self.rues_v, self.rues_h = tuple(trame["rues_v"]), tuple(trame["rues_h"])
+        self.districts = tuple(trame["districts"])
         self.plan = plan
         # ⚠️ Un plan d'essai n'a pas de standing ecrit : il est ordinaire partout
         # ou il y a du sol. La ville, elle, lit la grille de `DISTRICTS`.
-        self.standing = STANDING if plan == PLAN else tuple(
+        self.standing = trame["standing"] or tuple(
             "".join(SANS_STANDING if g == "~" else "=" for g in ligne) for ligne in plan)
         self.usage = grille_des_usages(plan)
         self.nc = len(plan[0])
         self.nr = len(plan)
-        if len(COLONNES) != self.nc or len(RANGEES) != self.nr:
+        if len(self.colonnes) != self.nc or len(self.rangees) != self.nr:
             raise ValueError("COLONNES/RANGEES ne collent pas au plan")
-        if len(RUES_V) != self.nc + 1 or len(RUES_H) != self.nr + 1:
+        if len(self.rues_v) != self.nc + 1 or len(self.rues_h) != self.nr + 1:
             raise ValueError("il faut une rue de plus que de blocs dans chaque sens")
         self.maitre = regions_du_plan(plan)
 
@@ -1888,24 +1899,24 @@ class _Chantier:
         x = 0
         for i in range(self.nc):
             self.xr.append(x)
-            x += RUES_V[i]
+            x += self.rues_v[i]
             self.xb.append(x)
-            x += COLONNES[i]
+            x += self.colonnes[i]
         self.xr.append(x)
-        self.largeur = x + RUES_V[self.nc]
+        self.largeur = x + self.rues_v[self.nc]
         self.yr, self.yb = [], []
         y = 0
         for j in range(self.nr):
             self.yr.append(y)
-            y += RUES_H[j]
+            y += self.rues_h[j]
             self.yb.append(y)
-            y += RANGEES[j]
+            y += self.rangees[j]
         self.yr.append(y)
-        self.hauteur = y + RUES_H[self.nr]
+        self.hauteur = y + self.rues_h[self.nr]
         #: Ou commence chaque colonne (et chaque rangee) de blocs pour
         #: `standing_en` : au MILIEU de la rue qui la precede.
-        self._coupes_x = [0] + [self.xr[i] + RUES_V[i] // 2 for i in range(1, self.nc)]
-        self._coupes_y = [0] + [self.yr[j] + RUES_H[j] // 2 for j in range(1, self.nr)]
+        self._coupes_x = [0] + [self.xr[i] + self.rues_v[i] // 2 for i in range(1, self.nc)]
+        self._coupes_y = [0] + [self.yr[j] + self.rues_h[j] // 2 for j in range(1, self.nr)]
 
         self.sol = [[","] * self.largeur for _ in range(self.hauteur)]
         self.voie = [["."] * self.largeur for _ in range(self.hauteur)]
@@ -2119,8 +2130,8 @@ class _Chantier:
                 voisins = ([(i - 1, j)] if i > 0 else []) + ([(i, j)] if i < self.nc else [])
                 if not self._noyee(voisins):
                     continue                 # avalee par un superbloc : pas de l'eau
-                self.rect(self.xr[i], self.yb[j], RUES_V[i], RANGEES[j], "~")
-                self.bouchon_rect(self.xr[i], self.yb[j], RUES_V[i], RANGEES[j], "~")
+                self.rect(self.xr[i], self.yb[j], self.rues_v[i], self.rangees[j], "~")
+                self.bouchon_rect(self.xr[i], self.yb[j], self.rues_v[i], self.rangees[j], "~")
         for j in range(self.nr + 1):
             for i in range(self.nc):
                 if self.rue_h_existe(i, j):
@@ -2128,16 +2139,16 @@ class _Chantier:
                 voisins = ([(i, j - 1)] if j > 0 else []) + ([(i, j)] if j < self.nr else [])
                 if not self._noyee(voisins):
                     continue
-                self.rect(self.xb[i], self.yr[j], COLONNES[i], RUES_H[j], "~")
-                self.bouchon_rect(self.xb[i], self.yr[j], COLONNES[i], RUES_H[j], "~")
+                self.rect(self.xb[i], self.yr[j], self.colonnes[i], self.rues_h[j], "~")
+                self.bouchon_rect(self.xb[i], self.yr[j], self.colonnes[i], self.rues_h[j], "~")
         for j in range(self.nr + 1):
             for i in range(self.nc + 1):
                 coins = [(bx, by) for bx, by in ((i - 1, j - 1), (i, j - 1), (i - 1, j), (i, j))
                          if 0 <= bx < self.nc and 0 <= by < self.nr]
                 if not self._noyee(coins):
                     continue
-                self.rect(self.xr[i], self.yr[j], RUES_V[i], RUES_H[j], "~")
-                self.bouchon_rect(self.xr[i], self.yr[j], RUES_V[i], RUES_H[j], "~")
+                self.rect(self.xr[i], self.yr[j], self.rues_v[i], self.rues_h[j], "~")
+                self.bouchon_rect(self.xr[i], self.yr[j], self.rues_v[i], self.rues_h[j], "~")
 
     def ponts(self) -> list[dict]:
         """Le tablier des ponts — repose APRES les ilots.
@@ -2154,10 +2165,10 @@ class _Chantier:
         for sens, i, j in sorted(PONTS):
             vertical = sens == "v"
             if vertical:
-                x, y, largeur, hauteur = self.xr[i], self.yb[j], RUES_V[i], RANGEES[j]
+                x, y, largeur, hauteur = self.xr[i], self.yb[j], self.rues_v[i], self.rangees[j]
                 coupe = _coupe(largeur, True)
             else:
-                x, y, largeur, hauteur = self.xb[i], self.yr[j], COLONNES[i], RUES_H[j]
+                x, y, largeur, hauteur = self.xb[i], self.yr[j], self.colonnes[i], self.rues_h[j]
                 coupe = _coupe(hauteur, False)
             for dy in range(hauteur):
                 for dx in range(largeur):
@@ -2178,8 +2189,8 @@ class _Chantier:
             bx1 = max(c[0] for c in cellules)
             by1 = max(c[1] for c in cellules)
             x0, y0 = self.xb[bx], self.yb[by]
-            largeur = self.xb[bx1] + COLONNES[bx1] - x0
-            hauteur = self.yb[by1] + RANGEES[by1] - y0
+            largeur = self.xb[bx1] + self.colonnes[bx1] - x0
+            hauteur = self.yb[by1] + self.rangees[by1] - y0
             sortie.append((self.plan[by][bx], x0, y0, largeur, hauteur))
         return sortie
 
@@ -2647,7 +2658,7 @@ class _Chantier:
             return None
 
         posees: list[dict] = []
-        for district in DISTRICTS:
+        for district in self.districts:
             fiche = devantures_mod.CARROSSERIES.get(district["slug"])
             if district.get("eau") or not fiche:
                 continue
@@ -2710,7 +2721,7 @@ class _Chantier:
         """
         from . import chantiers as chantiers_mod
         enseigne = "DOJO DION"
-        x0, _, dl, _ = self.rect_district(next(d for d in DISTRICTS if d["slug"] == "faubourg"))
+        x0, _, dl, _ = self.rect_district(next(d for d in self.districts if d["slug"] == "faubourg"))
         cx = x0 + dl / 2
         interdites: set[tuple[int, int]] = set()
         for ch in ville.get("chantiers") or []:
@@ -2834,7 +2845,7 @@ class _Chantier:
                 return tuiles, sorted(set(bords[0]) | set(bords[1]))
             return None
 
-        centres = {d["slug"]: self.rect_district(d) for d in DISTRICTS}
+        centres = {d["slug"]: self.rect_district(d) for d in self.districts}
         candidats = []
         for r in self.residences:
             trouvee = place(r)
@@ -2891,7 +2902,7 @@ class _Chantier:
         coupe en deux, comme entre deux districts (`rect_district`) : chaque
         trottoir est du standing du bloc qu'il borde. ⚠️ Hors de la TRAME, None : la
         carte grandit sous elle (`aeroport.py`), et ce n'est pas un quartier."""
-        if not (0 <= x < self.xr[self.nc] + RUES_V[self.nc] and 0 <= y < self.yr[self.nr] + RUES_H[self.nr]):
+        if not (0 <= x < self.xr[self.nc] + self.rues_v[self.nc] and 0 <= y < self.yr[self.nr] + self.rues_h[self.nr]):
             return None
         bx = bisect.bisect_right(self._coupes_x, x) - 1
         by = bisect.bisect_right(self._coupes_y, y) - 1
@@ -2900,7 +2911,7 @@ class _Chantier:
     def usage_en(self, x: int, y: int) -> str | None:
         """`commercial`, `residentiel`, `industriel`, `parc`, `port` ou `eau` —
         avec la meme coupe au milieu des rues que `standing_en` (et None hors de la trame)."""
-        if not (0 <= x < self.xr[self.nc] + RUES_V[self.nc] and 0 <= y < self.yr[self.nr] + RUES_H[self.nr]):
+        if not (0 <= x < self.xr[self.nc] + self.rues_v[self.nc] and 0 <= y < self.yr[self.nr] + self.rues_h[self.nr]):
             return None
         bx = bisect.bisect_right(self._coupes_x, x) - 1
         by = bisect.bisect_right(self._coupes_y, y) - 1
@@ -2908,11 +2919,11 @@ class _Chantier:
 
     def district_en(self, x: int, y: int) -> str:
         """Le quartier d'une tuile — il decide des noms sur les enseignes."""
-        for district in DISTRICTS:
+        for district in self.districts:
             dx, dy, dl, dh = self.rect_district(district)
             if dx <= x < dx + dl and dy <= y < dy + dh:
                 return district["slug"]
-        return DISTRICTS[0]["slug"]
+        return self.districts[0]["slug"]
 
     def _bande_de_facade(self, facades: set[tuple[int, int]],
                          ax: int, ay: int) -> tuple[int, int]:
@@ -3674,22 +3685,22 @@ class _Chantier:
         """Chaque rue est posee SEGMENT PAR SEGMENT : un segment avale par un
         superbloc n'est simplement pas peint."""
         for i in range(self.nc + 1):
-            coupe = _coupe(RUES_V[i], True)
+            coupe = _coupe(self.rues_v[i], True)
             for j in range(self.nr):
                 if not self.rue_v_existe(i, j):
                     continue
-                for y in range(self.yb[j], self.yb[j] + RANGEES[j]):
+                for y in range(self.yb[j], self.yb[j] + self.rangees[j]):
                     for d, (glyphe, fleche) in enumerate(coupe):
                         self.sol[y][self.xr[i] + d] = glyphe
                         self.voie[y][self.xr[i] + d] = fleche
         for j in range(self.nr + 1):
-            coupe = _coupe(RUES_H[j], False)
+            coupe = _coupe(self.rues_h[j], False)
             for i in range(self.nc):
                 if not self.rue_h_existe(i, j):
                     continue
                 for d, (glyphe, fleche) in enumerate(coupe):
                     y = self.yr[j] + d
-                    for x in range(self.xb[i], self.xb[i] + COLONNES[i]):
+                    for x in range(self.xb[i], self.xb[i] + self.colonnes[i]):
                         self.sol[y][x] = glyphe
                         self.voie[y][x] = fleche
 
@@ -3697,7 +3708,7 @@ class _Chantier:
         for j in range(self.nr + 1):
             for i in range(self.nc + 1):
                 nord, sud, ouest, est = self.bras(i, j)
-                x0, y0, lv, lh = self.xr[i], self.yr[j], RUES_V[i], RUES_H[j]
+                x0, y0, lv, lh = self.xr[i], self.yr[j], self.rues_v[i], self.rues_h[j]
 
                 if not (nord or sud or ouest or est):
                     continue                      # entierement avale par un superbloc
@@ -3739,7 +3750,7 @@ class _Chantier:
     def _lignes_arret(self, i: int, j: int, nord: bool, sud: bool,
                       ouest: bool, est: bool) -> None:
         """Une ligne d'arret juste avant chaque entree du croisement."""
-        x0, y0, lv, lh = self.xr[i], self.yr[j], RUES_V[i], RUES_H[j]
+        x0, y0, lv, lh = self.xr[i], self.yr[j], self.rues_v[i], self.rues_h[j]
         voies_h = lh - 2 * TROTTOIR
         voies_v = lv - 2 * TROTTOIR
         approches = []
@@ -3818,6 +3829,8 @@ class _Chantier:
                 self._quai(x, y, largeur, hauteur, sur_eau=True)
             elif glyphe == "~":
                 self._eau(x, y, largeur, hauteur)
+            elif glyphe in self.BATISSEURS:
+                self.BATISSEURS[glyphe](self, x, y, largeur, hauteur)
             else:  # pragma: no cover - garde-fou de relecture du plan
                 raise ValueError(f"glyphe de plan inconnu : {glyphe!r}")
 
@@ -5797,10 +5810,10 @@ class _Chantier:
         for sens, i, j in sorted(PONTS):
             if sens == "v":
                 px, py = self.xr[i], self.yb[j]
-                pl, ph, cotes = RUES_V[i], RANGEES[j], frozenset(("nord", "sud"))
+                pl, ph, cotes = self.rues_v[i], self.rangees[j], frozenset(("nord", "sud"))
             else:
                 px, py = self.xb[i], self.yr[j]
-                pl, ph, cotes = COLONNES[i], RUES_H[j], frozenset(("ouest", "est"))
+                pl, ph, cotes = self.colonnes[i], self.rues_h[j], frozenset(("ouest", "est"))
             if px < x + largeur and x < px + pl and py < y + hauteur and y < py + ph:
                 return cotes
         return frozenset()
@@ -6903,17 +6916,17 @@ class _Chantier:
         a un seul."""
         bx, by = district["bx"], district["by"]
         bx1, by1 = bx + len(district["plan"][0]), by + len(district["plan"])
-        x0 = 0 if bx == 0 else self.xr[bx] + RUES_V[bx] // 2
-        y0 = 0 if by == 0 else self.yr[by] + RUES_H[by] // 2
-        x1 = self.largeur if bx1 == self.nc else self.xr[bx1] + RUES_V[bx1] // 2
-        y1 = self.hauteur if by1 == self.nr else self.yr[by1] + RUES_H[by1] // 2
+        x0 = 0 if bx == 0 else self.xr[bx] + self.rues_v[bx] // 2
+        y0 = 0 if by == 0 else self.yr[by] + self.rues_h[by] // 2
+        x1 = self.largeur if bx1 == self.nc else self.xr[bx1] + self.rues_v[bx1] // 2
+        y1 = self.hauteur if by1 == self.nr else self.yr[by1] + self.rues_h[by1] // 2
         return x0, y0, x1 - x0, y1 - y0
 
     def zones(self) -> list[dict]:
         """Les districts d'abord, leurs cours de gang ensuite : `Monde.zoneA`
         garde la DERNIERE qui contient le point, donc la plus precise."""
         sortie = []
-        for district in DISTRICTS:
+        for district in self.districts:
             x, y, largeur, hauteur = self.rect_district(district)
             sortie.append({"slug": district["slug"], "nom": district["nom"],
                            "district": district["slug"], "x": x, "y": y, "l": largeur, "h": hauteur,
@@ -6921,7 +6934,7 @@ class _Chantier:
                            "pietons": district["pietons"], "vehicules": district["vehicules"],
                            "police": district["police"], "rythme": list(district["rythme"]),
                            "rares": list(district.get("rares", ()))})
-        for district in DISTRICTS:
+        for district in self.districts:
             if not district.get("gang"):
                 continue
             cour = self._enveloppe("g", district)
