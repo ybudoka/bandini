@@ -72,4 +72,59 @@ par la pose ; les juges de la carte à la nouvelle taille.
 
 ## Notes
 
-_Rien de livré._
+### Étape 2, vague A — les bâtiments, les enseignes et leurs plaques — **livrée le 27 sept. 2026**
+
+Tranché avec Martin le 27 sept. 2026 : **« rue principale + place »**, des enseignes **« avec idéogrammes
+stylisés »**, et l'étape 2 en **deux vagues** (A : les bâtiments et les enseignes ; B : les lanternes, l'arche et
+le bus).
+
+- **Les 56 terrains à bâtir sont bâtis** par le même générateur, avec les lettres de plan ordinaires (`c`
+  commerces, `h` logements, `o<` la place) : `nord.DISTRICTS_NORD`, district `canton`. La rue principale descend
+  entre la 4e et la 5e colonne d'îlots jusqu'à la couture — c'est elle que l'arche ouvrira (vague B) ; la place
+  du marché est à son flanc est, au cœur du quartier. Des logements tout autour. Le standing mêle le cossu de
+  la rue et le pauvre des bords (auvents déchirés, vitrines placardées).
+- ⚠️ **Chaque îlot a SES dés** (`nord._ChantierNord._a_ses_des`) : tous les flux du chantier (`des`,
+  `des_devanture`, `des_toit`…) sont remplacés le temps de l'îlot par un dé de `GRAINE_CANTON`, mêlé à la
+  position de l'îlot et au nom du flux (`crc32`). Bâtis avec les dés de la bande, les îlots en auraient mangé
+  des milliers, et tout ce qui se tire après eux dans les Friches et la Gare aurait bougé. **Mesuré : la ville
+  entière, hors du rectangle du canton, est identique à l'unité près** (sol et objets, comparés en JSON), et
+  un juge le tient contre une bande témoin dont le canton est resté en terrains à bâtir.
+- **Ses enseignes** : `devantures.COMMERCES["canton"]`, 38 noms français avec un nom de famille cantonais en
+  lettres latines — JARDIN DE JADE, DIM SUM LOTUS, MARCHÉ KAM FUNG, HERBORISTE CHAN, NOTAIRE LEUNG, SOIERIE
+  MEI, CLUB MAH-JONG… Quinze caractères au plus : c'est ce qui tient dans un bandeau de quatre tuiles
+  (`tient_en`), et sept noms de seize ont été raccourcis. L'école de kung-fu n'y est pas (étape 4).
+- **Les plaques verticales** : chaque commerce du quartier (et lui seul) porte `ideo`, l'index d'une paire de
+  `devantures.PAIRES`, choisi à la position de la devanture (aucun dé). Le peintre (`FACADES.plaqueVerticale`)
+  pend une plaque rouge au cadre doré au bout de la devanture, sous l'enseigne, avec deux **vrais
+  caractères** de cinq pixels sur cinq (中 山 大 米 日 月 王 : Zhongshan, le riz, le soleil et la lune, le grand
+  roi) plutôt que des traits au hasard. ⚠️ Vu à la capture, grossie huit fois : collés au cadre, les
+  caractères s'y fondaient — la plaque fait 9 × 15, un pixel de rouge autour de chacun.
+- **Juges** : `tests/test_canton.py` (le quartier a ses commerces, ses logements et sa place ; ses enseignes
+  sont les siennes et tiennent ; la plaque au canton et nulle part ailleurs ; **la bande ne bouge pas**) et
+  `tests/test_canton_js.py` (le peintre pose la plaque — témoins : la même devanture sans `ideo`, et une de la
+  ville d'avant). Deux mutations rouges : sans les dés propres, le décor de la bande bouge ; sans l'appel au
+  peintre, pas de plaque. `test_nord` juge maintenant un canton bâti, sans une pancarte « À BÂTIR ».
+- ⚠️ **Ce que la suite a trouvé** (onze fichiers rouges, départagés un à un contre `dev` nu) :
+  - **Le renommage `nord_` oubliait ce que les pièces se disent entre elles** : le `slug` de chaque pièce, et
+    le `vers` de ses escaliers. Un logement à étage du quartier montait à l'étage de `logement_27` de la ville
+    d'avant — un 7 × 5 au-dessus d'une cabane de 3 × 3 (`test_carte`, `test_interieurs`). La bande n'avait
+    encore aucune pièce à étage : le défaut dormait. `batir_la_bande` renomme les deux.
+  - **Le terrain vague de la ville** peut poser sa trouée contre un coin (une clôture droite qui ne tourne
+    jamais) : le quartier prend celui de la bande, et sous six tuiles de large sa trouée n'a qu'une tuile.
+  - **Les portes du quartier donnent sur la couture**, où `devants.deplacer` (passé avant la bande) n'a rien
+    vu : un bris d'aqueduc de la ville d'avant y tombait devant une porte (graine 1). `nord.poser` MARQUE
+    (`ecartee`) ce qui tombe devant les portes de la bande ; le juge des listes tirées ôte le drapeau des deux
+    côtés, puisque le témoin pose la bande lui aussi.
+  - **« Les portes s'alignent »** : 29 portes dans 149 colonnes, plus serrées que la ville (21 colonnes, contre
+    ~26 au hasard). Le juge de la ville garde la ville d'avant ; le quartier a le sien (deux tiers de colonnes
+    distinctes, jamais plus de trois portes dans une colonne).
+  - **Le Petit-Canton est dans la bulle de naissance du terminus** : dès la première image, les passants et
+    les chars naissent ailleurs (compté : les appels à `B.rng` divergent à l'image 1, dans `placeDeNaissance`
+    et `placeDansLeTrafic`). Deux juges qui tenaient par ce hasard sont tombés : **f09** (une remorqueuse garée
+    en travers de la route du Cravate — 11 graines sur 12 passent, sur la base comme ici ; le juge ôte
+    maintenant le trafic devant le char suivi) et **la course de motoneige** (la dette de la bande : graine 5,
+    une des cinq sur 24 qui gagnent). ⚠️ **Chaque vague du quartier rebattra ce hasard**, la B comprise.
+  - Pas de moi, rouges aussi sur `dev` nu : `test_carte_du_depot` (un `test_garage.py` d'une autre session),
+    `test_passage_pietons`, `test_techniques_js`, `test_police_js`.
+- **Reste, vague B** : les lanternes au-dessus des rues, l'arche aux entrées (la rue principale à la couture
+  d'abord), le bus du Petit-Canton ; peut-être la couleur des trottoirs.

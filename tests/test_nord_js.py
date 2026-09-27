@@ -6,11 +6,13 @@ def test_le_quartier_se_lit_des_deux_cotes_de_la_couture(banc):
         L.Jeu.commencer();
         const n = L.B.defs.decalage_nord;
         return { n: n, bande: L.Monde.standingA(10, 10), dessous: L.Monde.standingA(10, n + 10),
-                 canton: L.Monde.usageA(140, 20), faubourg: L.Monde.usageA(140, n + 20) };
+                 canton: L.Monde.usageA(140, 20), rue: L.Monde.usageA(175, 20),
+                 faubourg: L.Monde.usageA(140, n + 20) };
     }""")
     assert r["n"] == 110, r
     assert r["bande"] == "pauvre" and r["dessous"] == "cossu", r
-    assert r["canton"] == "commercial", r
+    # Le Petit-Canton bâti (étape 2) : des logements à l'ouest, sa rue commerçante au milieu.
+    assert r["canton"] == "residentiel" and r["rue"] == "commercial", r
 
 
 def test_une_vieille_partie_descend_avec_la_ville(banc):

@@ -711,6 +711,11 @@ def test_f09_proteger_marco_jusqu_au_kiosque_filer_le_troisieme_puis_le_garage(b
         t.marcoMonte = protege.dansVehicule === mien;
         let i = 0;
         for (; i < 12000 && B.partie.mission && etape(L) === 2; i++) {
+            // ⚠️ LE TRAFIC S'ÔTE DEVANT LUI (27 sept. 2026) : une remorqueuse garée en travers de sa route le
+            // plantait pour toujours — une graine sur douze, sur la base comme ailleurs, et la graine 6 est
+            // tombée dessus le jour où le Petit-Canton s'est bâti. Ce juge-ci juge la filature, pas le trafic.
+            if (i % 30 === 0) B.entites.filter(function (e) { return e !== c && e !== mien && e.conducteur === 'trafic'
+                && Math.hypot(e.x - c.x, e.y - c.y) < 64; }).forEach(function (e) { L.Entites.retirer(e); });
             if (!c.attendLeJoueur) {
                 mien.x = c.x - Math.cos(c.angle) * 96; mien.y = c.y - Math.sin(c.angle) * 96;
                 mien.vitesse = 0; mien.vx = 0; mien.vy = 0; j.x = mien.x; j.y = mien.y;

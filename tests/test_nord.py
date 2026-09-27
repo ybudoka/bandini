@@ -53,11 +53,12 @@ def test_la_gare_a_ses_voies_ses_wagons_et_son_poste():
     assert "nord_aiguillage" in ch.pieces
 
 
-def test_le_canton_n_a_que_des_terrains_a_batir():
+def test_le_canton_est_bati_et_n_a_plus_un_terrain_a_batir():
+    """⚠️ Étape 2 du Petit-Canton (27 sept. 2026) : ses terrains à bâtir sont bâtis
+    (`tests/test_canton.py` juge le quartier)."""
     ch = _bande()
-    assert not [p for p in ch.portes if _dans(ch, "canton", p)], "personne n'y habite encore"
-    pancartes = [d for d in ch.decor if d["type"] == "pancarte_a_batir" and _dans(ch, "canton", d)]
-    assert len(pancartes) >= 20, len(pancartes)
+    assert len([p for p in ch.portes if _dans(ch, "canton", p)]) >= 15, "le quartier a ses portes"
+    assert not [d for d in ch.decor if d["type"] == "pancarte_a_batir" and _dans(ch, "canton", d)]
 
 
 def test_les_friches_ont_leurs_carcasses_et_pas_une_porte():

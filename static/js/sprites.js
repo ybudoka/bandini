@@ -4003,6 +4003,33 @@ const FACADES = (function () {
     }
 
     if (d.pancarte) pancarte(ctx, d, g, ox, oy);
+    if (d.ideo != null) plaqueVerticale(ctx, d, ox + large - 11, oy);
+  }
+
+  /** La plaque verticale d'un commerce du Petit-Canton : rouge, un cadre dore, et deux ideogrammes
+      empiles (`devantures.IDEOGRAMMES`, de vrais caracteres de cinq pixels sur cinq). Elle pend SOUS
+      l'enseigne, au bout de la devanture : elle ne cache ni le nom ni la porte. */
+  function plaqueVerticale(ctx, d, x, y) {
+    const table = (typeof B !== 'undefined' && B.defs && B.defs.devantures && B.defs.devantures.ideogrammes) || null;
+    if (!table) return;
+    const paire = table.paires[d.ideo % table.paires.length];
+    // ⚠️ UN PIXEL DE ROUGE autour de chaque caractere : colle au cadre dore, il se fond dedans (vu a la
+    // capture, grossie huit fois). 9 × 15 : cadre, marge, cinq pixels, marge, cadre.
+    ctx.fillStyle = 'rgba(0,0,0,0.30)';
+    ctx.fillRect(x + 1, y + 1, 9, 15);                 // l'ombre, sur la vitrine
+    ctx.fillStyle = '#e0b040';
+    ctx.fillRect(x, y, 9, 15);                         // le cadre dore
+    ctx.fillStyle = '#a3201c';
+    ctx.fillRect(x + 1, y + 1, 7, 13);
+    ctx.fillStyle = '#f2cc5a';
+    Array.from(paire).forEach(function (car, k) {
+      const rangs = table.glyphes[car] || [];
+      for (let j = 0; j < rangs.length; j++) {
+        for (let i = 0; i < rangs[j].length; i++) {
+          if (rangs[j][i] === '#') ctx.fillRect(x + 2 + i, y + 2 + k * 6 + j, 1, 1);
+        }
+      }
+    });
   }
 
   /** Le panneau du commerce, POSE SUR LE HAUT DU MUR et debordant sur le toit.

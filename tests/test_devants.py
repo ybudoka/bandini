@@ -91,8 +91,11 @@ def test_la_ville_ne_bouge_que_ce_qui_bouchait(graine):
         "les chantiers ont change : le deplacement touche a la ville"
     # ⚠️ Les listes dans lesquelles le jeu TIRE (`hash % longueur`) gardent leur longueur et leur
     # ordre : une entree de moins rebattrait tous les jours. Elles portent seulement un drapeau.
+    # ⚠️ Le drapeau s'ôte DES DEUX CÔTÉS : la bande nord marque aussi ce qui tombe devant SES portes, sur la
+    # couture (`nord.poser`), et le témoin la pose comme la ville.
+    sans_drapeau = lambda liste: [{k: v for k, v in o.items() if k != "ecartee"} for o in liste]  # noqa: E731
     for cle in ("entraves", "fermetures", "aqueducs"):
-        assert [{k: v for k, v in o.items() if k != "ecartee"} for o in avec[cle]] == sans[cle], \
+        assert sans_drapeau(avec[cle]) == sans_drapeau(sans[cle]), \
             f"« {cle} » n'a plus la meme longueur ou le meme ordre"
 
     # ⚠️ Les autobus : un arrêt qui collait la porte d'un lieu de mission GLISSE le long de sa voie,

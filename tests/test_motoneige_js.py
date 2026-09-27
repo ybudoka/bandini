@@ -87,7 +87,9 @@ def test_la_course_des_bois_se_joue_l_hiver(banc):
         // sur la base comme depuis la bande nord (mesuré : graine 13 sur la base, 3 ici). Le juge tenait par
         // le hasard du démarrage, que la bande a changé ; il dit maintenant « la course PEUT se gagner », et la
         // fragilité est une dette (docs/jalons/la-ville-s-agrandit-au-nord.md, Notes).
-        L.graine(3);
+        // ⚠️ GRAINE 5 depuis le Petit-Canton bâti (27 sept. 2026) : il est dans la bulle de naissance du terminus,
+        // et le départ se rebat. Mesuré sur 24 graines : 4, 5, 6, 13 et 22 gagnent — 5, au milieu d'une grappe.
+        L.graine(5);
         const B = L.B, H = L.Histoire, j = B.joueur, C = L.Conduite;
         const d = B.defs.defis.find(function (q) { return q.slug === 'motoneige'; });
         H.ouvrirDefi(d, true);

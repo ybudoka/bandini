@@ -114,8 +114,13 @@ def test_la_ville_est_irreguliere():
     # portes tombent parfois dans la meme colonne a deux quartiers d'ecart —
     # ce n'est pas un damier, c'est un anniversaire partage. Ce qui compte,
     # c'est qu'elles restent EPARPILLEES.
-    colonnes = {porte["x"] for porte in CARTE["portes"]}
-    assert len(colonnes) >= len(CARTE["portes"]) * 0.8, "les portes s'alignent"
+    # ⚠️ LA VILLE D'AVANT (27 sept. 2026) : le Petit-Canton, bâti dans la bande nord, met 29 portes dans 149
+    # colonnes — plus serré que la ville, donc plus d'anniversaires partagés. Il a son juge
+    # (`test_canton.test_ses_portes_restent_eparpillees`) ; celui-ci garde la ville où il a été écrit.
+    from app import nord
+    portes = [porte for porte in CARTE["portes"] if porte["y"] >= nord.DECALAGE_NORD]
+    colonnes = {porte["x"] for porte in portes}
+    assert len(colonnes) >= len(portes) * 0.8, "les portes s'alignent"
     fronts = _empreintes_de_batiments(CARTE)
     assert len(fronts) >= 20, f"seulement {len(fronts)} batiments"
     assert len(set(fronts)) >= 8, "les batiments ont tous la meme boite"

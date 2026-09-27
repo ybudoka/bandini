@@ -157,7 +157,48 @@ COMMERCES: dict[str, tuple[tuple[str, str], ...]] = {
         ("PHOTO SOUVENIR", "service"), ("CHALOUPES", "marine"),
         ("FRUITS DE MER", "marine"), ("CABANE À HOMARD", "marine"),
     ),
+    # Le Petit-Canton (étape 2, 27 sept. 2026) : un quartier chinois de Baie-des-Brumes — des noms
+    # français et des noms de famille cantonais en lettres latines (Martin : « bilingues »). ⚠️ Le
+    # ton de la fiche : un quartier à ses habitants — restos, épiceries, herboriste, tailleur,
+    # notaire —, jamais un décor de carton-pâte ; et l'école de kung-fu n'est PAS ici (étape 4).
+    "canton": (
+        ("JARDIN DE JADE", "bouffe"), ("DIM SUM LOTUS", "bouffe"),
+        ("MARCHÉ KAM FUNG", "bouffe"), ("PÂTISSERIE WAH", "bouffe"),
+        ("BOULANGER HUNG", "bouffe"), ("CANARD LAQUÉ", "bouffe"),
+        ("NOUILLES WONG", "bouffe"), ("POISSONS LAM", "bouffe"),
+        ("FRUITERIE TAM", "bouffe"), ("THÉ CHEZ YAN", "bouffe"),
+        ("BBQ CANTONAIS", "bouffe"), ("TRAITEUR HO", "bouffe"),
+        ("HERBORISTE CHAN", "sante"), ("ACUPUNCTURE LEE", "sante"),
+        ("PHARMACIE TANG", "sante"), ("DENTISTE DR LO", "sante"),
+        ("BARBIER WONG", "service"), ("COIFFURE JENNY", "service"),
+        ("BUANDERIE SUN", "service"), ("NOTAIRE LEUNG", "service"),
+        ("ASSOCIATION LI", "service"), ("STUDIO LAU", "service"),
+        ("CAISSE POP", "service"), ("BIJOUX CHEUNG", "commerce"),
+        ("RADIO-TV KWOK", "commerce"), ("LANTERNES FUNG", "commerce"),
+        ("IMPORT YIP", "commerce"), ("CERFS-VOLANTS", "commerce"),
+        ("FLEURISTE MEI", "commerce"), ("SOIERIE MEI", "mode"),
+        ("TAILLEUR NG", "mode"), ("TISSUS ET SOIES", "mode"),
+        ("LIBRAIRIE CHUNG", "savoir"), ("JOURNAUX YEE", "savoir"),
+        ("FERRONNERIE YU", "artisan"), ("VAISSELLE CHOW", "artisan"),
+        ("CLUB MAH-JONG", "nuit"), ("KARAOKÉ PERLE", "nuit"),
+    ),
 }
+
+#: Les IDÉOGRAMMES des plaques verticales du Petit-Canton (Martin, 27 sept. 2026 : « avec idéogrammes
+#: stylisés »). ⚠️ De VRAIS caractères, les plus simples qui soient, lisibles à cinq pixels sur cinq —
+#: pas des traits au hasard qui « font chinois ». Une plaque en porte deux, empilés (`PAIRES`), tirés à la
+#: POSITION de la devanture (`nord._ChantierNord`), sans dé.
+IDEOGRAMMES: dict[str, tuple[str, ...]] = {
+    "中": ("..#..", "#####", "#.#.#", "#####", "..#.."),
+    "山": ("..#..", "#.#.#", "#.#.#", "#.#.#", "#####"),
+    "大": ("..#..", "#####", "..#..", ".#.#.", "#...#"),
+    "米": ("#.#.#", ".###.", "#####", ".###.", "#.#.#"),
+    "日": (".###.", ".#.#.", ".###.", ".#.#.", ".###."),
+    "月": (".###.", ".#.#.", ".###.", ".#.#.", "#..##"),
+    "王": ("#####", "..#..", ".###.", "..#..", "#####"),
+}
+#: Les paires : Zhongshan (le nom de mille rues), le riz, le soleil et la lune, le grand roi.
+PAIRES: tuple[str, ...] = ("中山", "大米", "日月", "大王")
 
 # --- Le standing -------------------------------------------------------------
 
@@ -453,6 +494,7 @@ def exporter() -> dict:
         "genres": [dict(g) for g in GENRES],
         "murs": [dict(m) for m in MURS],
         "declins": [dict(d) for d in DECLINS],
+        "ideogrammes": {"glyphes": {k: list(v) for k, v in IDEOGRAMMES.items()}, "paires": list(PAIRES)},
         "fer": dict(FER),
         "couleurs_tag": list(COULEURS_TAG),
         "motifs": list(MOTIFS),

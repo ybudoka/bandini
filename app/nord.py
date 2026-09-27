@@ -14,8 +14,9 @@ la bâtit pour que les croisements s'y ouvrent, et on ne la colle pas.
 from __future__ import annotations
 
 import copy
+import zlib
 
-from . import carte
+from . import carte, devantures
 
 DECALAGE_NORD = 110
 GRAINE_NORD = 20260926
@@ -35,11 +36,28 @@ DISTRICTS_NORD: tuple[dict, ...] = (
      "pietons": 4, "vehicules": 1, "police": 1, "rythme": (0.2, 1.0, 0.5), "rares": (),
      "plan": ("z<<<<", "^<<<<", "^<<<<", "z<<<<", "^<<<<", "^<<<<", "^<<<<"),
      "standing": ("-----",) * 7},
+    # ⚠️ LE PETIT-CANTON, ÉTAPE 2 (27 sept. 2026) : ses terrains à bâtir sont bâtis. Martin : « rue principale
+    # + place » — la rue commerçante descend entre la 4e et la 5e colonne d'îlots jusqu'à la couture (c'est là
+    # que l'arche l'ouvrira, vague B), des logements tout autour, et la place du marché au cœur, sur la rue.
+    # ⚠️ Chaque îlot du quartier se bâtit avec SES dés (`_ChantierNord._a_ses_des`) : les Friches et la Gare
+    # gardent leurs tirages à l'unité près.
     {"slug": "canton", "nom": "Le Petit-Canton", "bx": 5, "by": 0,
      "gang": "cravates", "gang_nom": "Les Cravates", "brume": False,
-     "pietons": 2, "vehicules": 2, "police": 1, "rythme": (0.2, 1.0, 0.5), "rares": (),
-     "plan": ("bbbbbbbb",) * 7,
-     "standing": ("========",) * 7},
+     "pietons": 16, "vehicules": 5, "police": 1, "rythme": (0.3, 1.0, 0.9), "rares": (),
+     "plan": ("hhhcchhh",
+              "hhccchhh",
+              "hhcccchh",
+              "hhcco<hh",
+              "hhccchhh",
+              "hhhccchh",
+              "hhhcchhh"),
+     "standing": ("-==++==-",
+                  "-=+++==-",
+                  "==+++===",
+                  "==++++==",
+                  "-=+++==-",
+                  "-==++=--",
+                  "--=++=--")},
     {"slug": "gare", "nom": "La Gare de triage", "bx": 13, "by": 0,
      "gang": "boulonneux", "gang_nom": "Les Boulonneux", "brume": False,
      "pietons": 3, "vehicules": 2, "police": 1, "rythme": (0.15, 1.2, 0.6), "rares": (),
@@ -86,8 +104,11 @@ def _terrain_vague(ch, x, y, largeur, hauteur):
         ch.sol[y + j][x] = carte.GRILLAGE
         ch.sol[y + j][x + largeur - 1] = carte.GRILLAGE
     milieu = x + largeur // 2
+    # ⚠️ UNE tuile de trouée sous six de large : deux, dans un lot de cinq (le Petit-Canton en a), touchent
+    # forcément un coin, et le côté ne tourne plus (`test_carte`). Les lots des Friches font plus de six.
+    trouee = 2 if largeur >= 6 else 1
     for i in range(largeur):
-        if not milieu - 1 <= x + i <= milieu:
+        if not milieu - trouee + 1 <= x + i <= milieu:
             ch.sol[y + hauteur - 1][x + i] = carte.GRILLAGE
     for _ in range(max(2, largeur * hauteur // 10)):
         ch.poser_decor(ch.des.choix(carte.DECHETS), x + ch.des.entier(1, largeur - 2),
@@ -159,9 +180,55 @@ def _hangars(ch, x, y, largeur, hauteur):
         ch.poser_decor(ch.des.choix(("palettes", "baril", "caisse")), x + dx, hy + ch.des.entier(0, hh - 2))
 
 
+#: La graine du Petit-Canton : chaque îlot en tire la sienne, mêlée à sa position (`_a_ses_des`).
+GRAINE_CANTON = 20260927
+
+
 class _ChantierNord(carte._Chantier):
     BATISSEURS = {"z": _friche, "b": _terrain_a_batir, "v": _voies_ferrees, "y": _hangars}
     A_ABORD = carte._Chantier.A_ABORD | {"b"}
+
+    def _a_ses_des(self, x: int, y: int, batir) -> None:
+        """Bâtit un îlot du Petit-Canton avec SES dés, puis rend ceux de la bande tels qu'il les a trouvés.
+
+        ⚠️ C'est ce qui laisse les Friches et la Gare à l'unité près : bâtis avec les dés de la bande, les
+        56 îlots du quartier en auraient mangé des milliers, et tout ce qui se tire après eux — les
+        épaves, les wagons, les lampadaires — aurait changé de place. Tous les flux du chantier
+        (`des`, `des_devanture`, `des_toit`…) sont remplacés le temps de l'îlot : chacun par un dé
+        neuf, de la graine du quartier mêlée à la position de l'îlot et au NOM du flux (`crc32`, pas
+        `hash` : celui des chaînes change d'un processus à l'autre).
+        """
+        flux = {k: v for k, v in vars(self).items() if isinstance(v, carte.Des)}
+        for nom in flux:
+            setattr(self, nom, carte.Des(GRAINE_CANTON ^ (x * 7919 + y * 104729) ^ zlib.crc32(nom.encode())))
+        avant = len(self.devantures)
+        try:
+            batir()
+        finally:
+            for nom, d in flux.items():
+                setattr(self, nom, d)
+        # La plaque verticale de chaque commerce du quartier : deux idéogrammes (`devantures.PAIRES`),
+        # choisis à la POSITION de la devanture — aucun dé.
+        for d in self.devantures[avant:]:
+            d["ideo"] = zlib.crc32(f"{d['x']},{d['y']}".encode()) % len(devantures.PAIRES)
+
+    def _ilot_bati(self, x, y, largeur, hauteur, **options):
+        if self.district_en(x, y) != "canton":
+            return super()._ilot_bati(x, y, largeur, hauteur, **options)
+        return self._a_ses_des(x, y, lambda: super(_ChantierNord, self)._ilot_bati(x, y, largeur, hauteur, **options))
+
+    def _terrain_vague(self, x, y, largeur, hauteur):
+        """Un lot abandonné du Petit-Canton : celui de la bande (`_terrain_vague`, sa trouée au MILIEU du côté
+        sud), pas celui de la ville, dont la trouée peut tomber contre un coin et laisser une clôture droite
+        qui ne tourne jamais (`test_carte` l'a vu deux fois au quartier)."""
+        if self.district_en(x, y) != "canton":
+            return super()._terrain_vague(x, y, largeur, hauteur)
+        return _terrain_vague(self, x, y, largeur, hauteur)
+
+    def _place(self, x, y, largeur, hauteur):
+        if self.district_en(x, y) != "canton":
+            return super()._place(x, y, largeur, hauteur)
+        return self._a_ses_des(x, y, lambda: super(_ChantierNord, self)._place(x, y, largeur, hauteur))
 
 
 def batir_la_bande() -> _ChantierNord:
@@ -175,7 +242,16 @@ def batir_la_bande() -> _ChantierNord:
     ch.feux_nord = ch.feux_pietons()
     # ⚠️ LES NOMS DE LA BANDE : `logement_1` existe déjà en ville.
     renomme = {k: (k if k.startswith("nord_") else "nord_" + k) for k in ch.pieces}
-    ch.pieces = {renomme[k]: v for k, v in ch.pieces.items()}
+    # ⚠️ ET CE QUE LES PIÈCES SE DISENT ENTRE ELLES : le `slug` de chacune, et le `vers` de ses escaliers.
+    # Oubliés, un logement à étage du Petit-Canton montait à l'étage de `logement_27` de la VILLE D'AVANT
+    # — un 7 × 5 au-dessus d'une cabane de 3 × 3 (`test_carte`, la pièce à la mesure de son bâtiment).
+    pieces = {}
+    for k, v in ch.pieces.items():
+        v = dict(v, slug=renomme.get(v.get("slug", k), v.get("slug", k)))
+        v["points"] = [dict(pt, vers=renomme.get(pt["vers"], pt["vers"])) if pt.get("vers") else pt
+                       for pt in v.get("points", [])]
+        pieces[renomme[k]] = v
+    ch.pieces = pieces
     for p in ch.portes:
         p["interieur"] = renomme.get(p["interieur"], p["interieur"])
         p["lieu"] = renomme.get(p["lieu"], "nord_" + p["lieu"] if not p["lieu"].startswith("nord_") else p["lieu"])
@@ -414,6 +490,13 @@ def poser(ville: dict) -> None:
         # ⚠️ DES COPIES : la bande est bâtie une fois par processus (`_bande`), et la ville qu'on rend
         # est à qui la lit (le paquet la modifie) ; partager ses objets rendait le deuxième paquet autre.
         ville[cle].extend(copy.deepcopy([o for o in source if haut(o)]))
+    # ⚠️ LES PORTES DU PETIT-CANTON DONNENT SUR LA COUTURE : leur devant est le boulevard de la ville d'avant,
+    # où `devants.deplacer` (passé avant la bande) n'a rien vu. Un bris d'aqueduc y tombait devant une porte
+    # (`test_devants`, graine 1). On MARQUE ce qui s'y tient (`ecartee`), on ne retire rien : le jeu tire
+    # dans ces listes par `hash % longueur`.
+    from . import devants as devants_mod
+    larges = {(x + dx, y + dy) for (x, y) in devants_mod.portes(ville) if y < n for dx, dy in devants_mod.DEVANT}
+    devants_mod._ecarter_les_evenements(ville, larges)
     ville["arrets"].update({k: v for k, v in ch.arrets.items() if int(k.split(",")[1]) < n})
     ville["interieurs"].update(copy.deepcopy(ch.pieces))
     slugs = {d["slug"] for d in DISTRICTS_NORD}
