@@ -53,7 +53,7 @@ def test_les_galeries_et_le_cine_parc_s_ouvrent_sur_un_chemin():
     chemin rejoint la rue de l'ouest, sans que la circulation s'y engage."""
     sol, voie = VILLE["sol"], VILLE["voie"]
     for slug in ("galeries", "cineparc"):
-        p = blocs.par_slug(slug)["passage"]
+        p = blocs.passage_en_ville(blocs.par_slug(slug))      # en coordonnées de la carte finie
         tuiles = [sol[p["de"] + i][0] for i in range(p["l"])]
         assert tuiles == [".", "#", "#", "#", "."], (slug, tuiles)
         for i in range(1, p["l"] - 1):
