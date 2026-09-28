@@ -90,3 +90,8 @@ jour**, et **sans bosse** (90 % de sa vie, sinon « TROP DE BOSSES »). Juges : 
 (hors liste rien, cabossé refusé, propre payé et parti, pas deux le même jour, oui le lendemain, la liste
 qui change ; la même pour deux graines) ; trois mutations les font rougir. Restent **les frénésies**, à
 trancher par Martin.
+
+**Les frénésies — en cours (28 sept. 2026)** : Martin a tranché, « la frénésie on y va ». Des icônes
+cachées dans les districts (posées EN DERNIER, sans dé, la ville ne glisse pas), chacune une arme du
+catalogue, un chrono et un compte à faire (gangs, chars…) ; les enfants restent intouchables et une
+frénésie se prend **exprès**, jamais au téléphone ; celles réussies se sauvegardent et se lisent au bilan.
