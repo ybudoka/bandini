@@ -83,24 +83,32 @@ def test_les_quatre_amuseurs_naissent_au_centre_ville(banc, paquet):
     )
 
 
-def test_ils_partagent_un_plafond_et_ne_sont_jamais_tous_les_quatre(banc):
-    """⚠️ Quatre sortes à deux exemplaires, ce sont huit artistes dans la bulle
-    — donc de 24 à 40 spectateurs, pour un budget de foule de 28. Le cercle
-    serait resté vide et la rue n'aurait plus eu un seul passant qui passe. Ils
-    partagent donc UN plafond, et c'est aussi ce qui les garde rares."""
-    r = banc("""function (L, o) {
+@pytest.fixture(scope="module")
+def centre_ville(banc):
+    """⚠️ **UN BANC POUR DEUX JUGES** (vague C, 28 sept. 2026) : le plafond et la
+    scène posaient tous deux le joueur au centre du Faubourg et regardaient les
+    amuseurs naître pendant deux mille images — l'un comptait, l'autre regardait
+    où ils se posaient. Ce sont deux lectures du MÊME monde, qui ne le touchent
+    pas : on les fait dans la même boucle. (Le juge de la scène jouait la graine
+    44 sur 2 000 images ; il lit maintenant la 12 sur 2 400, et la règle est un
+    invariant — un amuseur est sur une scène à chaque image où il existe.)"""
+    return banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(12);
-        // ⚠️ **AU CENTRE DU FAUBOURG, pas au terminus** (voir `test_quand_on_le_voit_...`) : un
-        // amuseur naît sur une scène HORS CHAMP mais dans la bulle, et au départ de la partie les
-        // scènes du terminus sont à l'écran. Ce juge tenait donc à la trame — sur vingt graines de
-        // jeu, une seule voyait naître un amuseur, dans la ville d'avant comme dans la nouvelle —
-        // et « aucun amuseur n'est jamais né » disait la chance, pas la règle du plafond.
+        // ⚠️ **AU CENTRE DU FAUBOURG, pas au terminus.** Un amuseur naît sur une
+        // scène HORS CHAMP mais dans la bulle (`sceneLibre`) : au départ de la
+        // partie, les scènes du terminus sont toutes à l'écran — elles ne
+        // comptent pas — et les suivantes sont hors de la bulle. Ces juges
+        // tenaient donc à la trame — sur vingt graines de jeu, une seule voyait
+        // naître un amuseur au terminus, dans la ville d'avant comme dans la
+        // nouvelle — et le 17 sept. 2026 elle a bougé : plus un seul amuseur en
+        // 2 000 images, alors que la règle n'avait pas changé.
         const zf = (L.Monde.carte.zones || []).find(function (q) { return q.slug === 'faubourg'; });
         L.B.joueur.x = (zf.x + zf.l / 2) * L.TT; L.B.joueur.y = (zf.y + zf.h / 2) * L.TT;
         L.Monde.centrerCamera(L.B.joueur.x, L.B.joueur.y);
         let pire = 0;
         const sortes = {};
+        const sur = [], hors = [];
         for (let i = 0; i < 2400; i++) {
             o.frame(1);
             let n = 0;
@@ -110,10 +118,28 @@ def test_ils_partagent_un_plafond_et_ne_sont_jamais_tous_les_quatre(banc):
                 n++; sortes[a.metier] = true;
             }
             pire = Math.max(pire, n);
+            if (i % 50) continue;
+            for (const a of L.B.entites) {
+                if (a.type !== 'pieton' || !a.vivant) continue;
+                if (L.Entites.SPECTACLES.indexOf(a.metier) < 0) continue;
+                const s = (L.B.defs.carte.scenes || []).find(function (q) {
+                    return Math.abs(q.x * L.TT + 8 - a.x) < 12 && Math.abs(q.y * L.TT + 8 - a.y) < 12;
+                });
+                if (s) sur.push(s.ilot); else hors.push(a.metier);
+            }
         }
-        return { pire: pire, max: L.B.defs.pietons.spectacle.artistes_max,
-                 sortes: Object.keys(sortes).sort() };
+        return { plafond: { pire: pire, max: L.B.defs.pietons.spectacle.artistes_max,
+                            sortes: Object.keys(sortes).sort() },
+                 scene: { sur: sur.length, hors: hors.length, ilots: Array.from(new Set(sur)).sort() } };
     }""")
+
+
+def test_ils_partagent_un_plafond_et_ne_sont_jamais_tous_les_quatre(centre_ville):
+    """⚠️ Quatre sortes à deux exemplaires, ce sont huit artistes dans la bulle
+    — donc de 24 à 40 spectateurs, pour un budget de foule de 28. Le cercle
+    serait resté vide et la rue n'aurait plus eu un seul passant qui passe. Ils
+    partagent donc UN plafond, et c'est aussi ce qui les garde rares."""
+    r = centre_ville["plafond"]
     assert r["pire"] <= r["max"], (
         "%s amuseurs a la fois, le plafond de la fiche est %s" % (r["pire"], r["max"])
     )
@@ -157,6 +183,7 @@ def test_quand_on_le_voit_il_a_entre_trois_et_cinq_personnes_autour(banc, specta
         const j = L.B.joueur;
         const releves = [];
         let vues = 0, seuls = 0;
+        const temoinsFaibles = [];
         const rayonPeur = L.B.defs.pietons.reactions.peur_rayon_tuiles * L.TT;
         for (let tour = 0; tour < 3; tour++) {
             let a = null;
@@ -191,17 +218,21 @@ def test_quand_on_le_voit_il_a_entre_trois_et_cinq_personnes_autour(banc, specta
                 if (L.Entites.pietonsAutour(a.x, a.y, rayonPeur).some(function (q) {
                     return q.vivant && (q.etat === 'fuit' || q.etat === 'temoin'); })) break;
                 if (!L.Entites.visibleAEcran(a.x, a.y, 0)) continue;
-                const cercle = L.Entites.badauds(a).length;
+                const gens = L.Entites.badauds(a), cercle = gens.length;
                 if (cercle >= mini) rassemble = true;
                 if (!rassemble) continue;
                 vues++;
                 releves.push({ metier: a.metier, n: cercle });
                 if (cercle === 0) seuls++;
+                for (const q of gens) {
+                    const arch = L.B.defs.pietons.catalogue.find(function (p) { return p.slug === q.arch; });
+                    if (arch && q.probaTemoin <= arch.temoin) temoinsFaibles.push(q.arch);
+                }
             }
             L.Entites.retirer(a);
         }
         const ns = releves.map(function (x) { return x.n; });
-        return { vues: vues, seuls: seuls,
+        return { vues: vues, seuls: seuls, temoinsFaibles: temoinsFaibles.length,
                  plusPetit: ns.length ? Math.min.apply(null, ns) : null,
                  plusGrand: ns.length ? Math.max.apply(null, ns) : null,
                  metiers: Array.from(new Set(releves.map(function (x) { return x.metier; }))).sort() };
@@ -216,17 +247,21 @@ def test_quand_on_le_voit_il_a_entre_trois_et_cinq_personnes_autour(banc, specta
         "vu avec %s personnes autour : au-delà de %s on ne voit plus le numéro"
         % (r["plusGrand"], spectacle["maximum"])
     )
+    # ⚠️ Un badaud qui regarde un spectacle REGARDE : il témoigne mieux que le
+    # même passant qui marchait en pensant à autre chose. (Venu de
+    # `test_moteur_js::test_une_sorte_de_gens_est_un_corps_et_une_routine`, 28 sept. 2026.)
+    assert r["temoinsFaibles"] == 0, (
+        "l'attroupement ne fait pas de meilleurs témoins : %s badaud(s) témoin(s) ordinaire(s)"
+        % r["temoinsFaibles"]
+    )
 
 
-def test_chacun_des_quatre_fait_un_numero_qui_bouge(banc, spectacle):
-    """⚠️ « Présentement ils ne font rien. » Un corps à `vitesse: 0` ne parcourt
-    aucune distance, `imageDe` choisit son image d'après la distance parcourue,
-    et les deux amuseurs livrés tenaient donc **l'image zéro** du début à la fin
-    de la partie. Une seule image, ce n'est pas un numéro, c'est un mannequin.
-
-    On les pose tous les quatre à la main ici — ce juge-là ne mesure pas la
-    naissance, il mesure le GESTE."""
-    r = banc("""function (L, o) {
+@pytest.fixture(scope="module")
+def numeros(banc):
+    """Les quatre posés à la main, leur geste mesuré — et les hauteurs de leurs
+    corps (⚠️ vague C, 28 sept. 2026 : l'échassier avait son banc à lui pour lire
+    `SPRITES`, qui ne change pas d'un banc à l'autre)."""
+    return banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(5);
         const out = {};
@@ -254,8 +289,25 @@ def test_chacun_des_quatre_fait_un_numero_qui_bouge(banc, spectacle):
                           zero: images.size === 1 && images.has(0) };
             L.Entites.retirer(e);
         }
-        return out;
+        // Les hauteurs des corps, pour l'echassier : une lecture de SPRITES, qui ne
+        // touche a rien.
+        const h = {};
+        for (const nom of ['echassier', 'jongleur', 'amuseur', 'musicien', 'joueur']) {
+            h[nom] = { h: L.SPRITES[nom].h, ancre: L.SPRITES[nom].ancre[1] };
+        }
+        return { numeros: out, hauteurs: h };
     }""" % list(AMUSEURS))
+
+
+def test_chacun_des_quatre_fait_un_numero_qui_bouge(numeros):
+    """⚠️ « Présentement ils ne font rien. » Un corps à `vitesse: 0` ne parcourt
+    aucune distance, `imageDe` choisit son image d'après la distance parcourue,
+    et les deux amuseurs livrés tenaient donc **l'image zéro** du début à la fin
+    de la partie. Une seule image, ce n'est pas un numéro, c'est un mannequin.
+
+    On les pose tous les quatre à la main ici — ce juge-là ne mesure pas la
+    naissance, il mesure le GESTE."""
+    r = numeros["numeros"]
     for slug in AMUSEURS:
         n = r[slug]
         assert n["corps"] == slug, "%s porte le corps « %s »" % (slug, n["corps"])
@@ -269,17 +321,11 @@ def test_chacun_des_quatre_fait_un_numero_qui_bouge(banc, spectacle):
         )
 
 
-def test_l_echassier_depasse_la_foule(banc):
+def test_l_echassier_depasse_la_foule(numeros):
     """⚠️ C'est la seule chose qu'un échassier fait qu'un homme ne fait pas : on
     le voit PAR-DESSUS son propre attroupement, de l'autre bout de la rue. Un
     échassier à hauteur d'homme serait un homme."""
-    r = banc("""function (L, o) {
-        const h = {};
-        for (const nom of ['echassier', 'jongleur', 'amuseur', 'musicien', 'joueur']) {
-            h[nom] = { h: L.SPRITES[nom].h, ancre: L.SPRITES[nom].ancre[1] };
-        }
-        return h;
-    }""")
+    r = numeros["hauteurs"]
     ordinaire = max(r[nom]["h"] for nom in ("joueur", "amuseur", "musicien"))
     assert r["echassier"]["h"] >= ordinaire + 8, (
         "l'échassier fait %s px, le plus grand corps de la ville en fait %s — "
@@ -357,10 +403,13 @@ def test_le_musicien_joue_vraiment_et_plus_fort_de_pres(banc, paquet):
             return { boucle: !!(cle && L.Son.boucleActive(cle)), notes: siennes() };
         }
         const avant = siennes();
+        const poste = { x: e.x, y: e.y };
         o.frame(60);
         const s = sonne();
         const pres = { notes: s.notes - avant, boucle: s.boucle, slug: L.Son.Rue.jouee,
-                       volume: L.Son.Rue.g, muettes: L.Son.contexte.sourcesMuettes() };
+                       volume: L.Son.Rue.g, muettes: L.Son.contexte.sourcesMuettes(),
+                       cercle: L.Entites.badauds(e).length,
+                       bouge: Math.round(Math.hypot(e.x - poste.x, e.y - poste.y)) };
         // On s'en va : plus loin, plus faible.
         e.x = j.x + 200; e.plante = { x: e.x, y: e.y };
         L.Entites.indexer();
@@ -380,6 +429,10 @@ def test_le_musicien_joue_vraiment_et_plus_fort_de_pres(banc, paquet):
     assert len(pieces) == 5, "cinq pièces de rue, pas %s" % len(pieces)
     assert r["toune"] in pieces, "le musicien ne joue rien : %s" % r["toune"]
     assert r["pres"]["slug"] == r["toune"], "sa toune n'est pas celle qui joue : %s" % r["pres"]
+    # ⚠️ Il ATTROUPE aussi, et il TIENT SON COIN : venus de
+    # `test_moteur_js::test_une_sorte_de_gens_est_un_corps_et_une_routine` (28 sept. 2026).
+    assert r["pres"]["cercle"] >= 1, "personne ne s'arrête pour le musicien : %s" % r["pres"]
+    assert r["pres"]["bouge"] <= 2, "le musicien quitte son coin de rue : %s px" % r["pres"]["bouge"]
     assert r["pres"]["notes"] > 0 or r["pres"]["boucle"], (
         "il ne sort rien du musicien : ni notes, ni boucle (%s)" % r["pres"]
     )
@@ -444,7 +497,7 @@ def test_le_public_applaudit_paie_et_se_renouvelle(banc, paquet):
     assert r["bravos"] > 0, "personne n'applaudit"
 
 
-def test_un_amuseur_se_pose_sur_une_scene_de_la_carte(banc, paquet):
+def test_un_amuseur_se_pose_sur_une_scene_de_la_carte(centre_ville, paquet):
     """⚠️ Un amuseur ne choisit pas un coin de rue au hasard : il se met LÀ OÙ
     LE MONDE PASSE ET S'ARRÊTE. `naitreLesSortes` le posait sur la première
     tuile marchable venue hors de l'écran — c'est-à-dire souvent dans une
@@ -461,32 +514,6 @@ def test_un_amuseur_se_pose_sur_une_scene_de_la_carte(banc, paquet):
     assert len(centre) >= 6, "le centre-ville n'a que %s scènes" % len(centre)
     ilots = {s["ilot"] for s in centre}
     assert "o" in ilots, "la place publique n'est pas une scène"
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        L.graine(44);
-        // ⚠️ **AU CENTRE DU FAUBOURG, pas au terminus.** Un amuseur naît sur une
-        // scène HORS CHAMP mais dans la bulle (`sceneLibre`) : au départ de la
-        // partie, les scènes du terminus sont toutes à l'écran — elles ne
-        // comptent pas — et les suivantes sont hors de la bulle. Ce juge tenait
-        // donc à la trame, et le 17 sept. 2026 elle a bougé : plus un seul
-        // amuseur en 2 000 images, alors que la règle n'avait pas changé.
-        const zf = (L.Monde.carte.zones || []).find(function (q) { return q.slug === 'faubourg'; });
-        L.B.joueur.x = (zf.x + zf.l / 2) * L.TT; L.B.joueur.y = (zf.y + zf.h / 2) * L.TT;
-        L.Monde.centrerCamera(L.B.joueur.x, L.B.joueur.y);
-        const sur = [], hors = [];
-        for (let i = 0; i < 2000; i++) {
-            o.frame(1);
-            if (i % 50) continue;
-            for (const a of L.B.entites) {
-                if (a.type !== 'pieton' || !a.vivant) continue;
-                if (L.Entites.SPECTACLES.indexOf(a.metier) < 0) continue;
-                const s = (L.B.defs.carte.scenes || []).find(function (q) {
-                    return Math.abs(q.x * L.TT + 8 - a.x) < 12 && Math.abs(q.y * L.TT + 8 - a.y) < 12;
-                });
-                if (s) sur.push(s.ilot); else hors.push(a.metier);
-            }
-        }
-        return { sur: sur.length, hors: hors.length, ilots: Array.from(new Set(sur)).sort() };
-    }""")
+    r = centre_ville["scene"]
     assert r["sur"] > 0, "aucun amuseur ne s'est posé sur une scène"
     assert r["hors"] == 0, "%s amuseur(s) plantés hors de toute scène" % r["hors"]

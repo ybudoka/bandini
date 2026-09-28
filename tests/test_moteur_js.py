@@ -1734,7 +1734,14 @@ def test_une_sorte_de_gens_est_un_corps_et_une_routine(banc, paquet):
     personne.
 
     **Une sorte = un corps + une routine.** Le corps est jugé côté Python ;
-    ici, c'est la **routine** — ce qu'elle fait que les autres ne font pas."""
+    ici, c'est la **routine** — ce qu'elle fait que les autres ne font pas.
+
+    ⚠️ **L'amuseur et le musicien se jugent dans `test_amuseurs_js.py`** (vague C,
+    28 sept. 2026), plus sévèrement : l'attroupement de 3 à 5 à chaque image vue
+    et les témoins attentifs (`test_quand_on_le_voit_il_a_entre_trois_et_cinq_personnes_autour`),
+    le numéro qui bouge et le corps de chacun (`test_chacun_des_quatre_fait_un_numero_qui_bouge`),
+    la toune, le public et le poste du musicien (`test_le_musicien_joue_vraiment_et_plus_fort_de_pres`).
+    Il reste ici l'exhibitionniste, que personne d'autre ne regarde."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(101);
@@ -1750,96 +1757,7 @@ def test_une_sorte_de_gens_est_un_corps_et_une_routine(banc, paquet):
             return e;
         }
 
-        // 1. L'AMUSEUR attroupe — et un attroupement est une FOULE DE TEMOINS.
-        // ⚠️ ON NE GARNIT PLUS LE CERCLE A LA MAIN, ET ON NE POSE PLUS
-        // L'ARTISTE A LA MAIN NON PLUS. L'ancien juge posait lui-meme quatre
-        // badauds avant de mesurer : il mesurait donc l'attroupement d'une
-        // foule qu'il avait fabriquee, et la vraie regle — « toujours entre 3
-        // et 5 personnes autour » — n'etait jugee nulle part. Ici c'est le
-        // MOTEUR qui installe l'amuseur, sur une scene de la carte et hors
-        // champ, exactement comme en partie ; le juge ne fait que regarder.
-        const regles = L.B.defs.pietons.spectacle;
-        // ⚠️ ON OUVRE LE SPECTACLE NOUS-MEMES sur la scene la plus proche. Le
-        // juge attendait qu'un amuseur naisse tout seul en 400 images pres du
-        // joueur : un pari sur les des, tombe le jour ou la ville a bouge.
-        const TT = L.TT;
-        const scenes = (L.Monde.carte.def.scenes || []);
-        let proche = null, dMin = 1e9;
-        scenes.forEach(function (sc) { const d = Math.hypot(sc.x * TT - j.x, sc.y * TT - j.y); if (d < dMin) { dMin = d; proche = sc; } });
-        if (proche) { j.x = proche.x * TT + 8; j.y = proche.y * TT + 40; L.Monde.centrerCamera(j.x, j.y); }
-        // ⚠️ UN AMUSEUR NE NAIT QUE HORS ECRAN (`naitreLesSortes`) : attendre
-        // qu'il apparaisse a cote du joueur, c'est attendre pour rien. On le
-        // pose nous-memes sur la scene, exactement comme le moteur le fait —
-        // fige, face au sud, plante la — et on ouvre son spectacle.
-        let amuseur = null;
-        if (proche) {
-            amuseur = o.poser('amuseur', 0, 0);
-            amuseur.x = proche.x * TT + 8; amuseur.y = proche.y * TT + 8;
-            amuseur.etat = 'fige'; amuseur.face = 'bas'; amuseur.plante = { x: amuseur.x, y: amuseur.y };
-            L.Entites.indexer();
-            L.Entites.ouvrirLeSpectacle(amuseur);
-        }
-        if (!amuseur) return { pasDAmuseur: true };
-        // ⚠️ ON MARCHE JUSQU'A LUI, comme un joueur. Le contrat porte sur ce
-        // qu'on VOIT : un artiste ne d'un coup a l'autre bout du quartier met
-        // quelques secondes a rassembler son monde (les badauds traversent la
-        // rue a pied, ils ne se materialisent pas), et personne ne regarde ces
-        // secondes-la. Ce qui doit etre vrai, et l'est a chaque image, c'est :
-        // quand il est A L'ECRAN, il y a entre 3 et 5 personnes autour.
-        const cercles = [], temoinsFaibles = [];
-        let vuImages = 0, images = new Set();
-        for (let i = 0; i < 1200; i++) {
-            const dx = amuseur.x - j.x, dy = amuseur.y - j.y, n = Math.hypot(dx, dy) || 1;
-            if (n > 44) { j.x += dx / n * 0.9; j.y += dy / n * 0.9; L.Monde.centrerCamera(j.x, j.y); }
-            o.frame(1);
-            if (!amuseur.vivant) break;
-            images.add(amuseur.poseFixe);
-            if (!L.Entites.visibleAEcran(amuseur.x, amuseur.y, 0)) continue;
-            vuImages++;
-            const cercle = L.Entites.badauds(amuseur);
-            cercles.push(cercle.length);
-            for (const q of cercle) {
-                const arch = L.B.defs.pietons.catalogue.find(function (p) { return p.slug === q.arch; });
-                if (arch && q.probaTemoin <= arch.temoin) temoinsFaibles.push(q.arch);
-            }
-        }
-        out.attroupement = {
-            vuImages: vuImages,
-            mini: regles.minimum, maxi: regles.maximum,
-            plusPetit: cercles.length ? Math.min.apply(null, cercles) : null,
-            plusGrand: cercles.length ? Math.max.apply(null, cercles) : null,
-            temoinsFaibles: temoinsFaibles.length,
-        };
-        // Et il BOUGE : c'etait tout le defaut. Un corps a `vitesse: 0` tombait
-        // sur l'image zero de son sprite du debut a la fin de la partie.
-        out.mime = { images: images.size, corps: amuseur.sprite };
-        L.Entites.retirer(amuseur);
-
-        // 2. Le MUSICIEN attroupe aussi, il tient son poste, et IL JOUE.
-        // ⚠️ On le fait naitre par le moteur lui aussi — mais l'amuseur qu'on
-        // vient de retirer laisse la place a n'importe lequel des quatre, et
-        // l'ordre est tire au sort (sans quoi les deux premiers de la liste
-        // seraient les seuls a jamais naitre). On attend donc le musicien.
-        let mus = null;
-        for (let i = 0; i < 900 && !mus; i++) {
-            o.frame(1);
-            mus = L.B.entites.find(function (q) { return q.metier === 'musicien' && q.vivant; }) || null;
-            if (!mus) {
-                const autre = L.B.entites.find(function (q) {
-                    return q.vivant && L.Entites.SPECTACLES.indexOf(q.metier) >= 0; });
-                if (autre) L.Entites.retirer(autre);
-            }
-        }
-        if (!mus) return { pasDeMusicien: true };
-        const poste = { x: mus.x, y: mus.y };
-        o.frame(120);
-        out.musicien = { cercle: L.Entites.badauds(mus).length,
-                         toune: mus.toune,
-                         bouge: Math.round(Math.hypot(mus.x - poste.x, mus.y - poste.y)),
-                         corps: mus.sprite };
-        L.Entites.retirer(mus);
-
-        // 3. L'EXHIBITIONNISTE ouvre son manteau : elle crie et fuit.
+        // L'EXHIBITIONNISTE ouvre son manteau : elle crie et fuit.
         // ⚠️ On vide la rue d'abord : il ouvre son manteau AU PREMIER QUI
         // FLANE, et le juge regarde SA dame. Un passant de la ville arrive
         // entre-temps, c'est lui qui prend le geste — et le juge conclut qu'il
@@ -1865,40 +1783,6 @@ def test_une_sorte_de_gens_est_un_corps_et_une_routine(banc, paquet):
         out.police = { fuit: ex.etat === 'fuit', menace: ex.menace === agent, suit: !!agent.but };
         return out;
     }""")
-    a = r["attroupement"]
-    assert a["vuImages"] > 300, "le juge n'a jamais vu l'amuseur à l'écran : %s" % a
-    # ⚠️ « Je veux qu'il y ait TOUJOURS entre 3 et 5 personnes autour »
-    # (Martin) — mesuré à CHAQUE IMAGE où on le voit, et les deux bornes
-    # viennent de la fiche, pas du juge.
-    assert a["plusPetit"] >= a["mini"], (
-        "l'amuseur s'est retrouvé devant %s personne(s) (la fiche en demande %s)"
-        % (a["plusPetit"], a["mini"])
-    )
-    assert a["plusGrand"] <= a["maxi"], (
-        "%s personnes autour : au-delà de %s on ne voit plus le numéro"
-        % (a["plusGrand"], a["maxi"])
-    )
-    # ⚠️ Un badaud qui regarde un spectacle REGARDE : il témoigne mieux que le
-    # même passant qui marchait en pensant à autre chose.
-    assert a["temoinsFaibles"] == 0, (
-        "l'attroupement ne fait pas de meilleurs témoins : %s" % a
-    )
-    # ⚠️ ET IL BOUGE. C'est le retour de Martin, et c'est ce qu'aucun juge ne
-    # regardait : `imageDe` choisit son image d'après la distance parcourue, un
-    # corps à `vitesse: 0` n'en parcourt aucune, et le mime tenait l'image zéro
-    # toute la partie. Une seule image, c'est un mannequin.
-    assert r["mime"]["images"] >= 3, (
-        "le mime ne fait aucun numéro : %s image(s) en 300" % r["mime"]["images"]
-    )
-    assert r["mime"]["corps"] == "amuseur"
-    m = r["musicien"]
-    assert m["cercle"] >= 1, "personne ne s'arrête pour le musicien : %s" % m
-    # ⚠️ Et il a une TOUNE À LUI, tirée à la naissance parmi les cinq. Sans
-    # elle, le sprite porte une guitare et il ne sort pas une note — ce qui
-    # était exactement le cas jusqu'ici.
-    assert m["toune"] and m["toune"].startswith("rue_"), "le musicien ne joue rien : %s" % m
-    assert m["bouge"] <= 2, "le musicien quitte son coin de rue : %s px" % m["bouge"]
-    assert m["corps"] == "musicien", "le musicien porte le corps commun"
     m = r["manteau"]
     assert m["ouvert"] is True and m["image"] == 1, (
         "le manteau ne s'ouvre pas, ou sur la mauvaise image : %s" % m
