@@ -62,14 +62,14 @@ def test_les_chevaux_trottent_quand_elle_roule_et_rien_n_est_tire_au_de(banc):
         L.Jeu.commencer();
         const B = L.B, C = L.Cabane;
         await auRang(L, o, 12, 13);
+        // Les images qu'on peint (`drawImage`), chacune par son numéro : l'attelage en volume a une image par pas.
+        const numeros = new Map();
         function traces() {
-            const c = C.caleche(), ctx = L.Base.nouveauCanvas(600, 400).getContext('2d'), vis = [];
-            ctx.traces = [];
+            const c = C.caleche(), ctx = L.Base.nouveauCanvas(600, 400).getContext('2d'), vis = [], peintes = [];
+            ctx.drawImage = function (img) { if (!numeros.has(img)) numeros.set(img, numeros.size); peintes.push(numeros.get(img)); };
             C.ajouterVisibles(vis, c.chevaux.x - 300, c.chevaux.y - 200);
             vis.filter(function (v) { return v.id === 910000001; }).forEach(function (v) { v.peindreFoire(ctx); });
-            // (Les traces sont en coordonnées d'écran : la vue suit les chevaux, 300 px à gauche.)
-            // Les SABOTS (la robe du premier cheval, `#1e140e`) : c'est le trot, pas la queue qui balance.
-            return JSON.stringify(ctx.traces.filter(function (q) { return q[4] === '#1e140e'; }));
+            return JSON.stringify(peintes);
         }
         const e = C.etat;
         e.attente = 500; const arret1 = traces(); e.s = 0; const arret2 = traces();
@@ -175,3 +175,57 @@ def test_la_table_de_tire_propose_le_defi_au_temps_des_sucres(banc):
     assert r["invite"] == "LA TIRE SUR LA NEIGE", r
     assert r["menu"] and "TIRE" in r["menu"], f"ACTION à la table ne propose pas le défi : {r}"
     assert not r["menuEte"] and "FERMÉ" in (r["ete"] or ""), r
+
+
+def test_la_pancarte_a_ses_poteaux_dans_l_herbe_au_bord_du_sentier(banc):
+    """Martin (28 sept. 2026) : « la pancarte est pas alignée au chemin » — centrée sur sa tuile, son poteau de
+    gauche tombait dans le passage qui descend de la cabane. Ses deux poteaux sont dans l'herbe, et leurs pieds
+    touchent le sentier de la calèche."""
+    r = banc("async function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const B = L.B, C = L.Cabane, M = L.Monde;
+        await auRang(L, o, 12, 13);
+        const p = C.pancarte();
+        return { p: p, sous: p.poteaux.map(function (x) { return M.glyphe(Math.floor(x / TT), Math.floor(p.y / TT)); }),
+                 pieds: p.poteaux.map(function (x) { return M.glyphe(Math.floor(x / TT), Math.floor((p.y + 1) / TT)); }),
+                 sentier: M.glyphe(60, 30) };
+    }""")
+    assert r["sentier"] == "g", r
+    assert all(g != r["sentier"] for g in r["sous"]), f"un poteau de la pancarte est planté dans le chemin : {r}"
+    assert all(g == r["sentier"] for g in r["pieds"]), f"la pancarte ne se tient pas au bord du sentier : {r}"
+
+
+def test_la_caleche_tourne_comme_un_vrai_vehicule(banc):
+    """Martin (28 sept. 2026) : « je veux que les virages soient mieux, comme un vrai véhicule ». Sur tout le tour :
+    le cap de la caisse et celui des chevaux ne sautent jamais d'un coup (au plus un cran des 32 d'une image à
+    l'autre) ; dans un coin, les chevaux tournent D'ABORD et la caisse suit ; et jamais l'attelage ne se met en
+    travers de la caisse."""
+    r = banc("async function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const B = L.B, C = L.Cabane, V = L.Vehicules;
+        await auRang(L, o, 12, 13);
+        const e = C.etat, L0 = C.chemin.longueur, v = C.chemin.def.vitesse;
+        const ecart = function (a, b) { let d = Math.abs(a - b) % 32; return Math.min(d, 32 - d); };
+        const angle = function (a, b) { let d = Math.abs(a - b) % (2 * Math.PI); return Math.min(d, 2 * Math.PI - d); };
+        let sautCaisse = 0, sautChevaux = 0, travers = 0, avant = null, chevauxDabord = false, caisseApres = false;
+        e.attente = 0;
+        for (let s = 0; s < L0; s += v) {
+            e.s = s;
+            const c = C.caleche(), cap = V.capDe(c.a), capC = V.capDe(c.chevaux.a);
+            if (avant) {
+                sautCaisse = Math.max(sautCaisse, ecart(cap, avant.cap));
+                sautChevaux = Math.max(sautChevaux, ecart(capC, avant.capC));
+                // Au premier coin (vers le sud) : les chevaux descendent pendant que la caisse regarde encore l'ouest.
+                if (angle(c.chevaux.a, Math.PI / 2) < 0.2 && angle(c.a, Math.PI) < 0.5) chevauxDabord = true;
+                if (chevauxDabord && angle(c.a, Math.PI * 3 / 4) < 0.2) caisseApres = true;
+            }
+            travers = Math.max(travers, angle(c.a, c.chevaux.a));
+            avant = { cap: cap, capC: capC };
+        }
+        return { sautCaisse: sautCaisse, sautChevaux: sautChevaux, travers: travers, chevauxDabord: chevauxDabord,
+                 caisseApres: caisseApres };
+    }""")
+    assert r["sautCaisse"] <= 1, f"la caisse vire d'un coup : {r}"
+    assert r["sautChevaux"] <= 1, f"les chevaux virent d'un coup : {r}"
+    assert r["chevauxDabord"] and r["caisseApres"], f"la caisse ne suit pas ses chevaux dans le virage : {r}"
+    assert r["travers"] < 1.75, f"l'attelage se met en travers de la caisse : {r}"

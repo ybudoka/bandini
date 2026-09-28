@@ -2304,6 +2304,97 @@ const FOIRE_EN_VOLUME = {
   nacelle_vide: enVolume(nacelleDeRoue(true), 6, 28, PALETTE_CHARIOT),
 };
 
+/* LA CALECHE DE LA CABANE A SUCRE, en volume (docs/jalons/la-caleche-sa-pancarte-dans-l-axe-des-virages-de-vrai-vehicule.md).
+   Martin (28 sept. 2026) : « je veux que les virages soient mieux, comme un vrai vehicule ». Dessinee a la main,
+   elle n'avait que quatre dessins — profil, dos, face — et virait d'un coup, les chevaux a angle droit de la
+   caisse. En volume, elle se projette a chacun des 32 caps, comme le petit train de la foire et les chars.
+
+   La CAISSE (`u` vers l'avant, 40 px de long) : quatre roues de bois — les grandes derriere —, le plancher, les
+   ridelles rouges et leur filet dore, trois bancs, et devant, le siege haut du cocher. `phase` : les rayons, un
+   cran sur deux (ils tournent avec le chemin fait). Ceux qui sont assis sont des passants poses sur ses `bancs`
+   ([u, w, z]), comme dans le wagon du petit train ; le dernier est le siege du cocher. */
+function caisseDeCaleche(phase) {
+  const pieces = [];
+  [[-12, 6.0], [11, 4.5]].forEach(function (r) {
+    for (const w of [-10.8, 10.8]) {
+      pieces.push(['roue', r[0], r[1], 'r', 'x', 'M', 1, w]);
+      // Deux rayons en croix, a plat sur la roue : droits, ou tournes d'un huitieme de tour.
+      const dehors = w + Math.sign(w) * 0.2;
+      for (let k = 0; k < 2; k++) {
+        const t = (phase % 2) * Math.PI / 4 + k * Math.PI / 2, du = Math.cos(t) * (r[1] - 1.2), dz = Math.sin(t) * (r[1] - 1.2);
+        pieces.push(['tube', [r[0] - du, dehors, r[1] - dz], [r[0] + du, dehors, r[1] + dz], 'x', 0.02]);
+      }
+    }
+  });
+  pieces.push(
+    ['bloc', [-19, 17], [-7, 7], [3.6, 5.4], 'q', 'q', 'q', 0],                  // le chassis
+    ['bloc', [-20, 9], [-9.6, 9.6], [5.4, 6.4], 'u', 'u', 'u', 0.01],            // le plancher
+    ['bloc', [-20, 9], [8.8, 9.6], [6.4, 11], 'C', 'c', 'D', 0.02],              // les ridelles
+    ['bloc', [-20, 9], [-9.6, -8.8], [6.4, 11], 'C', 'c', 'D', 0.02],
+    ['bloc', [-20, -19.2], [-9.6, 9.6], [6.4, 11], 'C', 'D', 'D', 0.02],         // le panneau du fond
+    ['tube', [-19.8, 9.65, 9.2], [8.8, 9.65, 9.2], 'y', 0.05], ['tube', [-19.8, -9.65, 9.2], [8.8, -9.65, 9.2], 'y', 0.05],
+    ['tube', [-20.05, -9, 9.2], [-20.05, 9, 9.2], 'y', 0.05],
+    ['bloc', [-15, -13], [-8.6, 8.6], [6.4, 7.8], 'u', 'q', 'q', 0.02],          // les trois bancs
+    ['bloc', [-8, -6], [-8.6, 8.6], [6.4, 7.8], 'u', 'q', 'q', 0.02],
+    ['bloc', [-1, 1], [-8.6, 8.6], [6.4, 7.8], 'u', 'q', 'q', 0.02],
+    ['bloc', [9, 16], [-7, 7], [5.4, 10.6], 'D', 'c', 'D', 0.02],                // le coffre du cocher, et son siege
+    ['bloc', [9, 11], [-7, 7], [10.6, 13.6], 'D', 'c', 'D', 0.03],               // son dossier
+    ['tube', [16.4, -5, 10.6], [18, -5, 7], 'n', 0.04], ['tube', [16.4, 5, 10.6], [18, 5, 7], 'n', 0.04],   // le garde-boue
+    ['tube', [16.4, -5, 10.6], [16.4, 5, 10.6], 'n', 0.04],
+    ['tube', [17, 0, 4.4], [21, 0, 4.4], 'q', 0],                                // le bout du timon
+  );
+  return { profondeur: BIAIS_DU_SOL, contour: true, arrondi: true, pieces: pieces,
+           bancs: [[-14, -4.2, 7.8], [-14, 4.2, 7.8], [-7, -4.2, 7.8], [-7, 4.2, 7.8], [0, -4.2, 7.8], [0, 4.2, 7.8], [12.5, 0, 10.6]] };
+}
+/* L'ATTELAGE : deux chevaux cote a cote (un bai a gauche `a b g`, un alezan a droite `d e f` : robe, ombre,
+   crins), leur harnais noir et les traits qui filent vers la caisse. `f` : le pas du trot, sur quatre images —
+   une paire diagonale de pattes levee (la gauche de l'un quand c'est la droite de l'autre), la queue qui balance
+   une fois sur deux ; `null` : a l'arret, les quatre pieds au sol. */
+function attelageDeCaleche(f) {
+  const pieces = [];
+  // ⚠️ Deux corps minces et un jour entre eux : collés, les deux chevaux se lisaient comme une seule bête carrée.
+  [[-4.8, 'a', 'b', 'g', 0], [4.8, 'd', 'e', 'f', 1]].forEach(function (h) {
+    const c = h[0], robe = h[1], ombre = h[2], crin = h[3];
+    const leve = f === null ? -1 : (f + h[4]) % 2;
+    // Les pattes : [u, cote] ; les paires diagonales : arriere gauche et avant droite, puis l'inverse.
+    for (const [u, cote, paire] of [[-6, -1, 0], [4, 1, 0], [-6, 1, 1], [4, -1, 1]]) {
+      const w = c + cote * 1.4, haut = paire === leve ? 2.2 : 0, du = haut ? 1 : 0;
+      pieces.push(['bloc', [u - 0.7 + du, u + 0.7 + du], [w - 0.6, w + 0.6], [haut + 1, 7.6], ombre, ombre, ombre, 0]);
+      pieces.push(['bloc', [u - 0.8 + du, u + 0.8 + du], [w - 0.7, w + 0.7], [haut, haut + 1], 's', 's', 's', 0]);   // le sabot
+    }
+    const hoche = f !== null && f % 2 === h[4] ? -0.8 : 0;
+    pieces.push(
+      ['bloc', [-8.5, 6], [c - 2.3, c + 2.3], [7.4, 12.6], robe, robe, ombre, 0.01],                  // le corps
+      ['bloc', [4.4, 8], [c - 1.2, c + 1.2], [11, 17.4 + hoche], robe, robe, robe, 0.02],             // l'encolure
+      // La tete, longue et penchee vers l'avant : le front, puis le chanfrein qui descend au bout du nez.
+      ['bloc', [7, 10.6], [c - 1.3, c + 1.3], [15.2 + hoche, 18.4 + hoche], robe, robe, ombre, 0.03],
+      ['bloc', [10.6, 13.8], [c - 1, c + 1], [13.8 + hoche, 16.6 + hoche], robe, robe, ombre, 0.03],
+      ['bloc', [13, 14.4], [c - 0.9, c + 0.9], [13.6 + hoche, 15.4 + hoche], ombre, ombre, ombre, 0.04],   // le bout du nez
+      ['tube', [8.4, c, 18.5 + hoche], [13.4, c, 16.7 + hoche], 'l', 0.08],                           // la liste, blanche
+      ['bloc', [4, 5.4], [c - 0.5, c + 0.5], [13, 19.2 + hoche], crin, crin, crin, 0.05],             // la criniere
+      ['point', [7.4, c - 0.8, 19.4 + hoche], crin, 0.06], ['point', [7.4, c + 0.8, 19.4 + hoche], crin, 0.06],   // les oreilles
+      ['point', [10.2, c - 1.35, 17.2 + hoche], 'k', 0.07], ['point', [10.2, c + 1.35, 17.2 + hoche], 'k', 0.07],  // les yeux
+      ['tube', [-8.6, c, 12.2], [f !== null && f < 2 ? -10.6 : -9.6, c + (f !== null && f < 2 ? 0.8 : 0), 6.4], crin, 0.02],   // la queue
+      ['bloc', [5, 6.4], [c - 1.7, c + 1.7], [11, 15], 'n', 'n', 'n', 0.06],                         // le collier
+      ['point', [6.5, c, 13], 'y', 0.1],
+      ['bloc', [-2, 0.6], [c - 2.5, c + 2.5], [12.4, 13.1], 'n', 'n', 'n', 0.05],                    // la sellette
+      ['tube', [5, c - 2.5, 10.2], [-17, c - 2.5, 7.2], 'n', 0.04], ['tube', [5, c + 2.5, 10.2], [-17, c + 2.5, 7.2], 'n', 0.04],   // les traits
+    );
+  });
+  return { profondeur: BIAIS_DU_SOL, contour: true, arrondi: true, pieces: pieces };
+}
+const PALETTE_CALECHE = { k: '#101018', c: '#a8322a', u: '#8a5a2b', q: '#3a2413', r: '#2a1d12', x: '#8a6a3a', M: '#5a4a30',
+                          y: '#e8c070', n: '#1b1b1f', s: '#1e140e', l: '#efe6d0',
+                          a: '#7a4a26', b: '#5a3418', g: '#241610', d: '#9a5a2a', e: '#6e3e1c', f: '#3a2012' };
+
+//: La caleche et son attelage, cuits comme un char (`enVolume`) — et lus par `Cabane` seul. `caisse` : une par
+//: phase des rayons ; `chevaux` : une par pas du trot, et `arret`.
+const CABANE_EN_VOLUME = {
+  caisse: [0, 1].map(function (p) { return enVolume(caisseDeCaleche(p), 40, 56, PALETTE_CALECHE); }),
+  chevaux: [0, 1, 2, 3].map(function (f) { return enVolume(attelageDeCaleche(f), 24, 48, PALETTE_CALECHE); }),
+  arret: enVolume(attelageDeCaleche(null), 24, 48, PALETTE_CALECHE),
+};
+
 /* Peintres de tuiles 16x16 : (ctx, variante, T). Le bruit vient de la variante,
    un entier stable par position (hash2), pour que la ville ne scintille pas. */
 const TUILES = (function () {

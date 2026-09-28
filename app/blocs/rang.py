@@ -122,7 +122,9 @@ BBBWWBDBWWBBB
 #:
 #: ⚠️ `caleche` : le sentier, en COUTURES de tuiles (le sentier fait deux tuiles de large, la calèche roule sur
 #: la couture du milieu), une boucle fermée qui part de l'arrêt et y revient. Elle attend `attente` images à
-#: l'arrêt, puis fait le tour à `vitesse` pixels par image — sans un dé. `pancarte` : la tuile de son écriteau.
+#: l'arrêt, puis fait le tour à `vitesse` pixels par image — sans un dé ; `Cabane` arrondit les coins. `pancarte` : la
+#: tuile de son poteau de GAUCHE — l'écriteau s'étend vers l'est, dans l'herbe, contre le passage qui descend de la
+#: cabane (colonnes 61-62), les pieds au bord du sentier.
 #: ⚠️ `tubulure` : le tuyau maître descend la colonne `x` du rang `de` jusqu'au toit de la cabane (`a`) ; chaque
 #: rang d'érables en tubulure y court, d'arbre en arbre.
 #: ⚠️ `gens` : qui est à la cabane au temps des sucres, pendant les heures du comptoir `sucre` — le tireur
@@ -140,8 +142,8 @@ CABANE = {
         {"qui": "musicien", "arch": "musicien", "x": 61, "y": 18, "face": "bas"},
         {"qui": "client", "arch": "dame", "x": 56, "y": 18, "face": "droite"},
         {"qui": "client", "arch": "passant", "x": 57, "y": 18, "face": "gauche"},
-        {"qui": "client", "arch": "promeneur", "x": 64, "y": 28, "face": "gauche"},
-        {"qui": "client", "arch": "banlieusard", "x": 65, "y": 28, "face": "gauche"},
+        {"qui": "client", "arch": "promeneur", "x": 66, "y": 28, "face": "gauche"},
+        {"qui": "client", "arch": "banlieusard", "x": 67, "y": 28, "face": "gauche"},
     ],
 }
 

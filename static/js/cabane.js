@@ -41,16 +41,41 @@ const Cabane = (function () {
   //: La caleche : la moitie de sa longueur, la moitie de sa largeur, et ou sont les chevaux (devant elle,
   //: le long du sentier). En pixels.
   const CAISSE = { l: 20, w: 11 };
-  const CHEVAUX = { avance: 38, l: 12, w: 10 };
+  const CHEVAUX = { avance: 38, l: 12, w: 9 };
   //: A quelle distance de l'arriere de la caleche on peut y monter.
   const PORTEE_MONTER = 30;
   const INVITE = 'UN TOUR DE CALÈCHE';
+  //: LES VIRAGES (Martin, 28 sept. 2026 : « comme un vrai vehicule ») : le rayon des coins du sentier, et ou
+  //: sont les essieux de part et d'autre du milieu de la caisse. En pixels.
+  //: ⚠️ La caisse ne suit pas le sentier, elle est TIREE : ses deux essieux roulent dessus, et elle va de l'un a
+  //: l'autre — dans un coin, les chevaux tournent d'abord, la caisse pivote apres eux et coupe un peu le virage,
+  //: comme une vraie voiture attelee. Les chevaux, de meme, d'un bout a l'autre de leur longueur.
+  const RAYON = 40;
+  const ESSIEUX = 12;
 
   let cal = null;          // { s, attente, tours, visite }
   let chemin = null;       // la boucle, en pixels : [{ x, y, s }], et sa longueur
 
+  /** La boucle du sentier, en pixels, ses coins arrondis en arcs de `RAYON` (un point tous les deux pixels). */
   function construireChemin(d) {
-    const pts = d.caleche.chemin.map(function (p) { return { x: p[0] * TT, y: p[1] * TT }; });
+    const coins = d.caleche.chemin.map(function (p) { return { x: p[0] * TT, y: p[1] * TT }; });
+    const pts = [coins[0]];
+    for (let i = 1; i < coins.length - 1; i++) {
+      const a = coins[i - 1], b = coins[i], c = coins[i + 1];
+      const l1 = Math.hypot(b.x - a.x, b.y - a.y), l2 = Math.hypot(c.x - b.x, c.y - b.y);
+      const u1 = { x: (b.x - a.x) / l1, y: (b.y - a.y) / l1 }, u2 = { x: (c.x - b.x) / l2, y: (c.y - b.y) / l2 };
+      const phi = Math.atan2(u1.x * u2.y - u1.y * u2.x, u1.x * u2.x + u1.y * u2.y);
+      if (Math.abs(phi) < 1e-3) { pts.push(b); continue; }
+      // Le coin se coupe a `t` de part et d'autre, jamais plus loin que la moitie d'un troncon.
+      const t = Math.min(RAYON * Math.tan(Math.abs(phi) / 2), l1 / 2, l2 / 2), r = t / Math.tan(Math.abs(phi) / 2);
+      const p1 = { x: b.x - u1.x * t, y: b.y - u1.y * t };
+      let nx = -u1.y, ny = u1.x;
+      if (nx * u2.x + ny * u2.y < 0) { nx = -nx; ny = -ny; }
+      const cx = p1.x + nx * r, cy = p1.y + ny * r, a0 = Math.atan2(p1.y - cy, p1.x - cx);
+      const n = Math.max(2, Math.ceil(r * Math.abs(phi) / 2));
+      for (let k = 0; k <= n; k++) pts.push({ x: cx + Math.cos(a0 + phi * k / n) * r, y: cy + Math.sin(a0 + phi * k / n) * r });
+    }
+    pts.push(coins[coins.length - 1]);
     let s = 0;
     pts[0].s = 0;
     for (let i = 1; i < pts.length; i++) { s += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y); pts[i].s = s; }
@@ -72,18 +97,18 @@ const Cabane = (function () {
     return { x: z.x, y: z.y, a: 0 };
   }
 
-  /** Le cap dessine : est, ouest, nord ou sud. */
-  function sens(a) {
-    const c = Math.cos(a), s = Math.sin(a);
-    if (Math.abs(c) >= Math.abs(s)) return c >= 0 ? 'est' : 'ouest';
-    return s >= 0 ? 'sud' : 'nord';
+  /** Ce qui roule d'un point du sentier a un autre (`s - demi` derriere, `s + demi` devant) : son milieu, et
+      son cap de l'un a l'autre. */
+  function tire(s, demi) {
+    const ar = point(s - demi), av = point(s + demi);
+    return { x: (ar.x + av.x) / 2, y: (ar.y + av.y) / 2, a: Math.atan2(av.y - ar.y, av.x - ar.x) };
   }
 
-  /** La caleche et ses chevaux, maintenant : ou, dans quel sens, et si elle roule. */
+  /** La caleche et ses chevaux, maintenant : ou, dans quel cap, et si elle roule. */
   function caleche() {
     if (!cal || !chemin) return null;
-    const p = point(cal.s), c = point(cal.s + CHEVAUX.avance);
-    return { x: p.x, y: p.y, a: p.a, sens: sens(p.a), chevaux: { x: c.x, y: c.y, a: c.a, sens: sens(c.a) },
+    const p = tire(cal.s, ESSIEUX), c = tire(cal.s + CHEVAUX.avance, CHEVAUX.l * 0.6);
+    return { x: p.x, y: p.y, a: p.a, chevaux: { x: c.x, y: c.y, a: c.a },
              roule: cal.attente <= 0, s: cal.s, tours: cal.tours };
   }
 
@@ -115,8 +140,9 @@ const Cabane = (function () {
     return Math.hypot(j.x - arriere.x, j.y - arriere.y) <= PORTEE_MONTER || Math.hypot(j.x - c.x, j.y - c.y) <= PORTEE_MONTER;
   }
 
-  //: Ou l'on s'assoit : le banc du fond, a gauche (en pixels, le long de la caleche et en travers).
-  const SIEGE = { u: -12, v: 0 };
+  //: Ou l'on s'assoit : le banc du fond, a gauche (en pixels, le long de la caleche et en travers) — la premiere
+  //: place des bancs de `CABANE_EN_VOLUME`, ou le joueur se peint.
+  const SIEGE = { u: -14, v: -4.2 };
 
   function siege() {
     const c = caleche();
@@ -365,196 +391,97 @@ const Cabane = (function () {
   ];
   const COCHER = { c: '#5a2d1a', h: '#1b1b1f', s: '#e8b088', p: '#2a2a3a' };
 
-  function assis(tenue, face) {
-    const cuit = Atlas.cuire('joueur', SPRITES.joueur, tenue);
-    const p = cuit.poses['assis_' + face] || cuit.poses.assis_bas;
-    return p ? { img: p[0], ancre: cuit.ancre } : null;
+  //: Qui est assis ou, sur les six places des bancs (`CABANE_EN_VOLUME`, du fond a gauche jusqu'au banc de devant
+  //: a droite) : un promeneur, ou personne (`null`). La premiere est la place du joueur quand il fait le tour.
+  const PLACES = [0, null, 1, 2, null, 3];
+
+  //: Les bancs, prets pour `Vehicules.imageDuCavalier` (la selle se tire du banc comme dans le petit train), et
+  //: de combien chacun est plus haut que le siege d'un char : ceux de la caleche sont hauts sur leurs roues.
+  const SIEGE_D_UN_CHAR = 4.6;
+  let ASSISES = null;
+  function assises() {
+    const m = CABANE_EN_VOLUME.caisse[0].machine;
+    return m.bancs.map(function (b) {
+      return { u: b[0], w: b[1], z: b[2] - SIEGE_D_UN_CHAR, def: { selle: [b[1], -b[0] - 20], posture: 'volant', machine: m } };
+    });
   }
 
-  function peindreAssis(ctx, tenue, face, x, y) {
-    const a = assis(tenue, face);
-    if (!a) return;
-    ctx.drawImage(a.img, Math.round(x - a.ancre[0]), Math.round(y - a.ancre[1]));
+  /** L'ombre d'une machine, orientee comme elle et ecrasee comme le sol (`Foire`, `Vehicules.dessinerUn`). */
+  function ombre(ctx, x, y, a, l, w) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(1, BIAIS_DU_SOL);
+    ctx.rotate(a);
+    ctx.fillStyle = 'rgba(20,18,26,0.26)';
+    ctx.fillRect(-l - 1, -w - 1, 2 * l + 2, 2 * w + 2);
+    ctx.restore();
+  }
+
+  /** Une machine de la caleche cuite au cap `a`, son point de sol en `x, y` (a l'ecran). */
+  function peindreMachine(ctx, nom, fiche, x, y, a) {
+    const image = Atlas.cuireCap(nom, fiche, null, Vehicules.ROTATIONS, Vehicules.capDe(a), [0, 0]);
+    ctx.drawImage(image, Math.round(x - image.width / 2), Math.round(y - image.height / 2));
     B.stats.images++;
   }
 
-  /** Une roue de bois, de profil : la jante, deux rayons qui tournent avec le chemin fait. */
-  function roue(ctx, cx, cy, r, tour) {
-    ctx.fillStyle = '#2a1d12';
-    for (let k = 0; k < 16; k++) {
-      const t = k / 16 * Math.PI * 2;
-      ctx.fillRect(Math.round(cx + Math.cos(t) * r), Math.round(cy + Math.sin(t) * r), 1, 1);
-    }
-    ctx.fillStyle = '#8a6a3a';
-    for (let k = 0; k < 2; k++) {
-      const t = tour + k * Math.PI / 2;
-      for (let q = -r + 1; q <= r - 1; q++) ctx.fillRect(Math.round(cx + Math.cos(t) * q), Math.round(cy + Math.sin(t) * q), 1, 1);
-    }
-    ctx.fillStyle = '#1b1410'; ctx.fillRect(Math.round(cx) - 1, Math.round(cy) - 1, 2, 2);
-    B.stats.rects += 20;
-  }
-
-  /** La caleche, de profil, tournee vers l'est (`ox, oy` : son milieu au sol, a l'ecran ; la ville la peint
-      en miroir vers l'ouest). Les gens assis dedans : trois promeneurs (le joueur au banc du fond s'il y est),
-      et le cocher sur son siege haut, devant. */
-  function peindreCaisseProfil(ctx, ox, oy, c, lui) {
-    const tour = c.s / 5.5;
-    ctx.fillStyle = 'rgba(20,18,26,0.28)'; ctx.fillRect(ox - 21, oy - 2, 44, 4);        // l'ombre
-    // Les gens d'abord : on les voit par-dessus les ridelles.
-    [-14, -7, 0].forEach(function (u, i) {
-      const tenue = lui && i === 0 ? (B.joueur.swaps || {}) : PROMENEURS[(i + (c.tours || 0)) % PROMENEURS.length];
-      peindreAssis(ctx, tenue, 'droite', ox + u, oy - 9);
-    });
-    if (c.cocher) peindreAssis(ctx, COCHER, 'droite', ox + 13, oy - 14);
-    // La caisse : rouge, bordee de brun, son filet dore ; devant, le siege du cocher et son garde-boue.
-    ctx.fillStyle = '#5a1a14'; ctx.fillRect(ox - 20, oy - 16, 30, 10);
-    ctx.fillStyle = '#a8322a'; ctx.fillRect(ox - 19, oy - 15, 28, 8);
-    ctx.fillStyle = '#c9483c'; ctx.fillRect(ox - 19, oy - 15, 28, 1);
-    ctx.fillStyle = '#e8c070'; ctx.fillRect(ox - 17, oy - 12, 24, 1); ctx.fillRect(ox - 17, oy - 9, 24, 1);
-    ctx.fillStyle = '#5a1a14'; ctx.fillRect(ox + 10, oy - 19, 7, 12);                     // le siege du cocher
-    ctx.fillStyle = '#7a2a20'; ctx.fillRect(ox + 11, oy - 18, 5, 10);
-    ctx.fillStyle = '#1b1b1f'; ctx.fillRect(ox + 17, oy - 12, 4, 1); ctx.fillRect(ox + 20, oy - 12, 1, 4);   // le garde-boue
-    ctx.fillStyle = '#3a2413'; ctx.fillRect(ox - 20, oy - 7, 38, 2);                     // le chassis
-    ctx.fillStyle = '#4a3218'; ctx.fillRect(ox + 17, oy - 9, 11, 1);                     // le brancard, vers les chevaux
-    roue(ctx, ox - 12, oy - 5.5, 5.5, tour);
-    roue(ctx, ox + 12, oy - 4.5, 4.5, tour * 1.2);
-    B.stats.rects += 14;
-  }
-
-  /** La caleche de dos (vers le nord) ou de face (vers le sud) : le plancher et ses bancs vus d'en haut, les
-      roues de chaque cote, et le panneau du bout qui est vers nous. */
-  function peindreCaisseDebout(ctx, ox, oy, c, lui, versLeNord) {
-    ctx.fillStyle = 'rgba(20,18,26,0.28)'; ctx.fillRect(ox - 12, oy - 20, 26, 42);
-    const ray = Math.floor(c.s / 3) % 4;
-    const roues = [[-14, -18], [12, -18], [-14, 6], [12, 6]];
-    for (const [dx, dy] of roues) {
-      ctx.fillStyle = '#2a1d12'; ctx.fillRect(ox + dx, oy + dy, 2, 11);
-      ctx.fillStyle = '#8a6a3a'; ctx.fillRect(ox + dx, oy + dy + 1 + ray * 2, 2, 1); ctx.fillRect(ox + dx, oy + dy + 9 - ray * 2, 2, 1);
-    }
-    ctx.fillStyle = '#5a1a14'; ctx.fillRect(ox - 11, oy - 22, 23, 40);                   // les ridelles
-    ctx.fillStyle = '#8a5a2b'; ctx.fillRect(ox - 10, oy - 21, 21, 38);                    // le plancher
-    ctx.fillStyle = '#7a4c24'; for (let k = 0; k < 9; k++) ctx.fillRect(ox - 10, oy - 19 + k * 4, 21, 1);
-    ctx.fillStyle = '#a8322a'; ctx.fillRect(ox - 11, oy - 22, 2, 40); ctx.fillRect(ox + 10, oy - 22, 2, 40);
-    B.stats.rects += 14;
-    const face = versLeNord ? 'haut' : 'bas';
-    // Du haut de l'ecran vers le bas : ce qui est plus au sud cache ce qui est derriere.
-    const bancs = versLeNord ? ['cocher', 1, 2] : [2, 1, 'cocher'];
-    const ys = versLeNord ? [-14, -2, 10] : [-12, 0, 12];
-    bancs.forEach(function (qui, k) {
-      const y = oy + ys[k];
-      ctx.fillStyle = '#3a2413'; ctx.fillRect(ox - 9, y - 2, 19, 2);
-      if (qui === 'cocher') { if (c.cocher) peindreAssis(ctx, COCHER, face, ox, y); return; }
-      const a = PROMENEURS[(qui + (c.tours || 0)) % 4], b = PROMENEURS[(qui + 2 + (c.tours || 0)) % 4];
-      if (qui === 2) { peindreAssis(ctx, lui ? (B.joueur.swaps || {}) : a, face, ox - 4, y); return; }
-      peindreAssis(ctx, a, face, ox - 4, y); peindreAssis(ctx, b, face, ox + 5, y);
-    });
-    // Le panneau du bout qu'on voit, en bas : rouge, filet dore.
-    ctx.fillStyle = '#5a1a14'; ctx.fillRect(ox - 11, oy + 15, 23, 6);
-    ctx.fillStyle = '#a8322a'; ctx.fillRect(ox - 10, oy + 16, 21, 4);
-    ctx.fillStyle = '#e8c070'; ctx.fillRect(ox - 8, oy + 17, 17, 1);
-    if (!versLeNord) { ctx.fillStyle = '#4a3218'; ctx.fillRect(ox - 1, oy + 21, 2, 8); }  // le timon, vers les chevaux
-    B.stats.rects += 6;
-  }
-
-  //: Les robes des deux chevaux : un bai et un alezan, criniere et queue noires.
-  const ROBES = [{ corps: '#7a4a26', ombre: '#5a3418', crin: '#241610', bas: '#1e140e' },
-                 { corps: '#9a5a2a', ombre: '#6e3e1c', crin: '#3a2012', bas: '#2a1a10' }];
-
-  /** Un cheval de profil, tourne vers l'est (`x, y` : sous son ventre, au sol). Le trot : les pattes par
-      paires diagonales, levees une image sur deux ; la tete qui hoche ; la queue qui balance. */
-  function cheval(ctx, x, y, robe, pas, roule) {
-    const leve = roule ? pas % 2 : -1, hoche = roule ? (pas % 2) : 0;
-    ctx.fillStyle = 'rgba(20,18,26,0.25)'; ctx.fillRect(x - 9, y - 1, 20, 2);
-    // Les pattes : arriere (-6, -3), avant (4, 7). Paires diagonales : (-6, 7) et (-3, 4).
-    const pattes = [[-6, 0], [-3, 1], [4, 1], [7, 0]];
-    for (const [px, paire] of pattes) {
-      const haut = paire === leve ? 2 : 0;
-      ctx.fillStyle = robe.ombre; ctx.fillRect(x + px, y - 9, 2, 8 - haut);
-      ctx.fillStyle = robe.bas; ctx.fillRect(x + px + (haut ? 1 : 0), y - 2 - haut, 2, 2);          // le sabot
-    }
-    ctx.fillStyle = robe.corps; ctx.fillRect(x - 8, y - 15, 17, 7);                                     // le corps
-    ctx.fillStyle = robe.ombre; ctx.fillRect(x - 8, y - 10, 17, 2);                                     // le ventre
-    ctx.fillStyle = robe.corps; ctx.fillRect(x + 6, y - 19 + hoche, 4, 7);                               // l'encolure
-    ctx.fillRect(x + 8, y - 21 + hoche, 5, 4);                                                           // la tete
-    ctx.fillStyle = robe.ombre; ctx.fillRect(x + 12, y - 19 + hoche, 2, 3);                              // le bout du nez
-    ctx.fillStyle = robe.crin; ctx.fillRect(x + 6, y - 21 + hoche, 2, 6); ctx.fillRect(x + 8, y - 22 + hoche, 1, 1);   // criniere, oreille
-    ctx.fillStyle = '#0d0906'; ctx.fillRect(x + 10, y - 20 + hoche, 1, 1);                               // l'oeil
-    const q = roule ? (pas % 4 < 2 ? 0 : 1) : 0;
-    ctx.fillStyle = robe.crin; ctx.fillRect(x - 10, y - 15, 2, 2); ctx.fillRect(x - 11 + q, y - 13, 2, 6);   // la queue
-    // Le harnais : le collier, la sellette et les traits qui filent vers la caleche.
-    ctx.fillStyle = '#1b1b1f'; ctx.fillRect(x + 5, y - 16 + hoche, 2, 6); ctx.fillRect(x - 2, y - 15, 3, 7);
-    ctx.fillStyle = '#c9a24a'; ctx.fillRect(x + 5, y - 13 + hoche, 1, 1);
-    ctx.fillStyle = '#1b1b1f'; ctx.fillRect(x - 12, y - 11, 17, 1);
-    B.stats.rects += 22;
-  }
-
-  /** Un cheval de dos (vers le nord) ou de face (vers le sud), debout (`x, y` : au sol, sous lui). */
-  function chevalDebout(ctx, x, y, robe, pas, roule, versLeNord) {
-    const leve = roule ? pas % 2 : -1;
-    ctx.fillStyle = 'rgba(20,18,26,0.25)'; ctx.fillRect(x - 4, y - 1, 9, 2);
-    // Deux pattes qu'on voit, qui se levent tour a tour.
-    for (const [px, k] of [[-3, 0], [2, 1]]) {
-      const haut = k === leve ? 2 : 0;
-      ctx.fillStyle = robe.ombre; ctx.fillRect(x + px, y - 7, 2, 6 - haut);
-      ctx.fillStyle = robe.bas; ctx.fillRect(x + px, y - 2 - haut, 2, 2);
-    }
-    if (versLeNord) {
-      // La croupe ronde, la queue au milieu, le dos qui file vers le haut de l'ecran, la tete tout au bout.
-      ctx.fillStyle = robe.corps; ctx.fillRect(x - 4, y - 22, 9, 16); ctx.fillRect(x - 3, y - 25, 7, 3);
-      ctx.fillStyle = robe.ombre; ctx.fillRect(x + 3, y - 20, 2, 13);
-      ctx.fillStyle = robe.crin; ctx.fillRect(x - 1, y - 30, 3, 8);                                    // la criniere
-      ctx.fillRect(x - 2, y - 32, 1, 2); ctx.fillRect(x + 2, y - 32, 1, 2);                            // les oreilles
-      const q = roule ? (pas % 4 < 2 ? -1 : 1) : 0;
-      ctx.fillRect(x + q, y - 13, 2, 8);                                                               // la queue
-      ctx.fillStyle = '#1b1b1f'; ctx.fillRect(x - 4, y - 17, 9, 1);                                    // l'avaloire
-    } else {
-      // De face : le poitrail, l'encolure, la tete longue et son liste blanc.
-      ctx.fillStyle = robe.corps; ctx.fillRect(x - 4, y - 16, 9, 10);
-      ctx.fillStyle = robe.ombre; ctx.fillRect(x + 3, y - 16, 2, 10);
-      ctx.fillStyle = robe.corps; ctx.fillRect(x - 2, y - 26, 5, 11);
-      ctx.fillStyle = '#efe6d0'; ctx.fillRect(x, y - 25, 1, 7);                                         // le liste
-      ctx.fillStyle = robe.ombre; ctx.fillRect(x - 2, y - 17, 5, 2);                                    // le bout du nez
-      ctx.fillStyle = '#0d0906'; ctx.fillRect(x - 2, y - 23, 1, 1); ctx.fillRect(x + 2, y - 23, 1, 1);   // les yeux
-      ctx.fillStyle = robe.crin; ctx.fillRect(x - 2, y - 28, 1, 2); ctx.fillRect(x + 2, y - 28, 1, 2); ctx.fillRect(x, y - 27, 1, 2);
-      ctx.fillStyle = '#1b1b1f'; ctx.fillRect(x - 4, y - 14, 9, 2);                                    // le collier
-      ctx.fillStyle = '#c9a24a'; ctx.fillRect(x, y - 14, 1, 1);
-    }
-    B.stats.rects += 16;
-  }
-
-  /** Les deux chevaux, cote a cote, selon le sens ; `c` : la caleche (le trot suit le chemin fait). */
+  /** Les deux chevaux et leur harnais, au trot (le pas suit le chemin fait) ou a l'arret. */
   function peindreChevaux(ctx, ox, oy, c) {
-    const s = c.chevaux.sens, pas = Math.floor(c.s / 6), roule = c.roule;
-    if (s === 'est' || s === 'ouest') {
-      ctx.save();
-      if (s === 'ouest') { ctx.translate(ox * 2, 0); ctx.scale(-1, 1); }
-      cheval(ctx, ox - 1, oy - 3, ROBES[1], pas + 1, roule);           // celui d'en face, un peu plus haut
-      cheval(ctx, ox, oy + 2, ROBES[0], pas, roule);
-      ctx.restore();
-      return;
-    }
-    const nord = s === 'nord';
-    chevalDebout(ctx, ox - 5, oy + 3, ROBES[0], pas, roule, nord);
-    chevalDebout(ctx, ox + 5, oy + 3, ROBES[1], pas + 1, roule, nord);
+    const ch = c.chevaux, pas = Math.floor(c.s / 6) % 4;
+    ombre(ctx, ox, oy, ch.a, CHEVAUX.l - 2, CHEVAUX.w - 1);
+    if (c.roule) peindreMachine(ctx, 'caleche_chevaux_' + pas, CABANE_EN_VOLUME.chevaux[pas], ox, oy, ch.a);
+    else peindreMachine(ctx, 'caleche_chevaux_arret', CABANE_EN_VOLUME.arret, ox, oy, ch.a);
   }
 
+  /** La caisse au cap, ses rayons qui tournent, et ceux qui y sont assis — du plus au nord au plus au sud, pour
+      que le banc de devant cache celui de derriere quand elle descend. Le cocher a son siege quand il travaille,
+      le joueur a la premiere place quand il fait le tour. */
   function peindreCaleche(ctx, ox, oy, c) {
     const j = B.joueur, lui = !!(j && j.manege && j.manege.quoi === 'caleche');
-    if (c.sens === 'est' || c.sens === 'ouest') {
-      ctx.save();
-      if (c.sens === 'ouest') { ctx.translate(ox * 2, 0); ctx.scale(-1, 1); }
-      peindreCaisseProfil(ctx, ox, oy, c, lui);
-      ctx.restore();
-    } else peindreCaisseDebout(ctx, ox, oy, c, lui, c.sens === 'nord');
+    const phase = Math.floor(c.s / 5) % 2;
+    ombre(ctx, ox, oy, c.a, CAISSE.l, CAISSE.w - 1);
+    peindreMachine(ctx, 'caleche_caisse_' + phase, CABANE_EN_VOLUME.caisse[phase], ox, oy, c.a);
+    if (!ASSISES) ASSISES = assises();
+    const ca = Math.cos(c.a), sa = Math.sin(c.a);
+    const faux = { x: ox, y: oy, angle: c.a, def: { longueur: 40 } };
+    const ordre = ASSISES.map(function (b, i) { return i; }).sort(function (p, q) {
+      const b1 = ASSISES[p], b2 = ASSISES[q];
+      return (b1.u * sa + b1.w * ca) - (b2.u * sa + b2.w * ca);
+    });
+    for (const i of ordre) {
+      let tenue;
+      if (i === ASSISES.length - 1) { if (!c.cocher) continue; tenue = COCHER; }
+      else if (i === 0 && lui) tenue = j.swaps || {};
+      else if (PLACES[i] === null) continue;
+      else tenue = PROMENEURS[(PLACES[i] + (c.tours || 0)) % PROMENEURS.length];
+      const assis = Vehicules.imageDuCavalier(ASSISES[i].def, faux, tenue);
+      if (!assis) continue;
+      ctx.drawImage(assis.canvas, Math.round(assis.x), Math.round(assis.y - ASSISES[i].z));
+      B.stats.images++;
+    }
   }
 
-  /** La pancarte de l'arret : CALÈCHE, sur deux poteaux. */
-  function peindrePancarte(ctx, x, y) {
-    const TEXTE = 'CALÈCHE', large = Atlas.largeurTexte(TEXTE) + 6, x0 = Math.round(x - large / 2);
+  //: L'ecriteau de l'arret, et sa largeur (le texte et trois pixels de chaque cote).
+  const PANCARTE = 'CALÈCHE';
+  function largePancarte() { return Atlas.largeurTexte(PANCARTE) + 6; }
+
+  /** Ou est la pancarte, dans le monde : `x0` son bord gauche, `y` le pied de ses poteaux.
+      ⚠️ Son poteau de GAUCHE est planté dans la tuile `pancarte` (Martin, 28 sept. 2026 : « la pancarte est pas
+      alignée au chemin ») : centrée sur sa tuile, elle débordait d'une demi-largeur vers l'ouest, et son poteau
+      tombait dans le passage qui descend de la cabane. Les poteaux dans l'herbe, les pieds au bord du sentier. */
+  function pancarte() {
+    const d = chemin && chemin.def;
+    if (!d || !d.pancarte) return null;
+    const large = largePancarte(), x0 = d.pancarte[0] * TT + 1;
+    return { x0: x0, y: d.pancarte[1] * TT + 15, large: large, poteaux: [x0 + 2, x0 + large - 3] };
+  }
+
+  /** La pancarte de l'arret : CALÈCHE, sur deux poteaux (`x0`, `y` a l'ecran). */
+  function peindrePancarte(ctx, x0, y) {
+    const large = largePancarte();
     ctx.fillStyle = '#4a3218'; ctx.fillRect(x0 + 2, y - 16, 1, 17); ctx.fillRect(x0 + large - 3, y - 16, 1, 17);
     ctx.fillStyle = '#4a3218'; ctx.fillRect(x0, y - 22, large, 9);
     ctx.fillStyle = '#8a5a2b'; ctx.fillRect(x0 + 1, y - 21, large - 2, 7);
-    Atlas.texte(ctx, TEXTE, x0 + 3, y - 20, '#f4e4c1');
+    Atlas.texte(ctx, PANCARTE, x0 + 3, y - 20, '#f4e4c1');
     B.stats.rects += 5;
   }
 
@@ -566,7 +493,6 @@ const Cabane = (function () {
     if (!ici() || !cal || !chemin) return;
     const c = caleche();
     c.cocher = heures() || c.roule;
-    const d = chemin.def;
     const dans = function (x, y) { return x > cx - 48 && x < cx + VW + 48 && y > cy - 48 && y < cy + VH + 48; };
     if (dans(c.x, c.y)) {
       visibles.push({ id: ID_TRI, vivant: true, x: c.x, y: c.y + CAISSE.w,
@@ -576,14 +502,14 @@ const Cabane = (function () {
       visibles.push({ id: ID_TRI + 1, vivant: true, x: c.chevaux.x, y: c.chevaux.y + 3,
                       peindreFoire: function (ctx) { peindreChevaux(ctx, Math.round(c.chevaux.x - cx), Math.round(c.chevaux.y - cy), c); } });
     }
-    if (d.pancarte) {
-      const px = d.pancarte[0] * TT + 8, py = d.pancarte[1] * TT + 14;
-      if (dans(px, py)) visibles.push({ id: ID_TRI + 2, vivant: true, x: px, y: py,
-                                        peindreFoire: function (ctx) { peindrePancarte(ctx, Math.round(px - cx), Math.round(py - cy)); } });
+    const p = pancarte();
+    if (p && dans(p.x0 + p.large / 2, p.y)) {
+      visibles.push({ id: ID_TRI + 2, vivant: true, x: p.x0 + p.large / 2, y: p.y,
+                      peindreFoire: function (ctx) { peindrePancarte(ctx, Math.round(p.x0 - cx), Math.round(p.y - cy)); } });
     }
   }
 
   return { ici, temps, heures, onFaitBouillir, maj, majSons, caleche, sousLaMain, invite, agir, monter, descendre, bloquer,
-           dessinerSol, ajouterVisibles, gens, tableSousLaMain, calecheSousLaMain, chalumeau, sansDe,
-           get chemin() { return chemin; }, get etat() { return cal; }, CAISSE, CHEVAUX, SIEGE, INVITE };
+           dessinerSol, ajouterVisibles, gens, tableSousLaMain, calecheSousLaMain, chalumeau, sansDe, pancarte,
+           get chemin() { return chemin; }, get etat() { return cal; }, CAISSE, CHEVAUX, SIEGE, INVITE, RAYON };
 })();
