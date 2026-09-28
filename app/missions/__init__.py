@@ -486,7 +486,7 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 # n'a besoin que de `_commun`, mais `CATALOGUE` se complete juste apres (les
 # cles par defaut et les scenes), et il faut donc que le moteur soit defini.
 from . import (  # noqa: E402
-    e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f11, h01, h02, m1, m2, m3,
+    e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f11, f13, h01, h02, m1, m2, m3,
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
     s03, s08, v01, v02, v03,
 )
@@ -504,6 +504,7 @@ from . import (  # noqa: E402
 # chacune `ferme` l'autre ; q10 après m54, Sven ayant dit « une dernière fois »), s08 (Gilles, après s01).
 # ⚠️ Trois infiltrations (28 sept. 2026) : v01 (Josée, après q04), v02 (Bouchard), v03 (Sven) — la
 # villa du maire, un bloc (`app/blocs/villa.py`), avant m97.
+# ⚠️ f13 (28 sept. 2026) : Mado et ses trois feux, la première mission qui allume le sien (`eteindre`).
 # ⚠️ m99 (M13, 25 sept. 2026) — _Sacrer son camp_, la fin qu'on peut jouer — tout au bout : son appel
 # ne sonne qu'avec 15 000 $ en poche (`exige`), et une fin n'a rien à précéder.
 CATALOGUE: list[Mission] = [
@@ -517,6 +518,7 @@ CATALOGUE: list[Mission] = [
     m52.MISSION, m53.MISSION, m54.MISSION,
     q01.MISSION, q10.MISSION, q11.MISSION, s08.MISSION,
     v01.MISSION, v02.MISSION, v03.MISSION,
+    f13.MISSION,
     m97.MISSION, m99.MISSION,
 ]
 

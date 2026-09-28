@@ -34,9 +34,21 @@ const Incendies = (function () {
   //: À cette distance, on VOIT la fumée et le feu s'entend.
   const PORTEE_FUMEE_PX = 420;
 
+  //: Le feu d'une MISSION (M16, `eteindre`) résiste : il faut tenir le jet
+  //: dessus ce nombre d'images (un tiers de seconde), pas une seule. Trois feux
+  //: en coûtent 60 sur les 100 d'un extincteur plein — de quoi en rater un peu.
+  const FORCE_DE_MISSION = 20;
+
   const eteints = {};      // jour:heure -> true : déjà éteint, jamais re-payé
   const allumes = {};      // jour:heure -> { f } : le feu en train de brûler à l'écran
   const signales = {};     // jour:heure -> true : le message « INCENDIE » est parti
+  // ⚠️ LE FEU D'UNE MISSION n'est PAS un feu de l'heure (M16, 28 sept. 2026) :
+  // `feuActif()` est un tirage de la ville entière, et aucune mission ne pouvait
+  // allumer le sien. Celui-ci est posé par `Histoire` (objectif `eteindre`) sur
+  // la façade la plus proche du lieu qu'il nomme — un seul à la fois, éteint au
+  // même jet, jamais payé à la prime (c'est la mission qui paie), et retiré avec
+  // la mission. Rien ne se sauvegarde : une mission ne survit pas au chargement.
+  let feuMission = null;
 
   function donnees() { return B.defs && B.defs.carte && B.defs.carte.incendies; }
 
@@ -59,6 +71,45 @@ const Incendies = (function () {
     const f = d.facades[hash2(graine, 0x5EA0) % d.facades.length];
     return { f: f, r: r, jour: jour, heuredelajour: hh, minute: ecoule };
   }
+
+  /** La façade la plus proche d'un pixel : une tuile qui n'est PAS marchable (le
+      mur) avec du trottoir juste au sud, pour qu'on puisse s'en approcher. Une
+      spirale déterministe — jamais un dé — qui préfère un mur à une porte : un
+      feu sur le pas de la porte boucherait l'entrée. */
+  function facadePres(x, y, rayonMax) {
+    const tx = Math.floor(x / TT), ty = Math.floor(y / TT);
+    const portes = (Monde.carte && Monde.carte.def && Monde.carte.def.portes) || [];
+    const estPorte = function (a, b) { return portes.some(function (q) { return q.x === a && q.y === b; }); };
+    let repli = null;
+    for (let r = 0; r <= (rayonMax || 6); r++) {
+      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const a = tx + dx, b = ty + dy;
+        if (Monde.marchablePieton(a, b) || !Monde.marchablePieton(a, b + 1)) continue;
+        if (!estPorte(a, b)) return { x: a, y: b };
+        if (!repli) repli = { x: a, y: b };
+      }
+    }
+    return repli;
+  }
+
+  /** Allume LE feu d'une mission sur la façade la plus proche de `(x, y)`, et le
+      rend — ou null s'il n'y a pas de mur à brûler par là. */
+  function allumerPourMission(x, y) {
+    const f = facadePres(x, y, 6);
+    if (!f) { feuMission = null; return null; }
+    const d = donnees();
+    const r = (d && d.regle) || { rayon_px: 44, prime: 0 };
+    feuMission = { f: { x: f.x, y: f.y, genre: 'commerce' }, r: r, mission: true,
+                   force: FORCE_DE_MISSION, forceMax: FORCE_DE_MISSION, eteint: false, signale: false };
+    return feuMission;
+  }
+
+  /** Le feu de la mission qui brûle encore, ou null. */
+  function feuDeMission() { return feuMission && !feuMission.eteint ? feuMission : null; }
+
+  /** La mission s'en va (réussie, ratée, abandonnée) : son feu avec elle. */
+  function oublierLeFeuDeMission() { feuMission = null; }
 
   function feuActif() {
     if (!B.partie || B.interieur) return null;
@@ -102,12 +153,38 @@ const Incendies = (function () {
   function majJet(e) {
     const arme = e.arc;
     if (!arme || arme.type !== 'jet' || e.phase !== 'actif') return;
+    // Le feu de la mission d'abord : il RÉSISTE (`force`), une image de jet à la fois.
+    const fm = feuDeMission();
+    if (fm && dansLeJet(e, arme, fm)) {
+      fm.force--;
+      if (fm.force <= 0) eteindreLeFeuDeMission(fm);
+      return;
+    }
     const fe = feuActif();
-    if (!fe) return;
-    const p = position(fe);
-    if (dist2(e.x, e.y, p.x, p.y) > (arme.portee + fe.r.rayon_px) * (arme.portee + fe.r.rayon_px)) return;
-    if (Math.abs(ecartAngle(e.angle, angleVers(e.x, e.y, p.x, p.y))) > 0.9) return;
+    if (!fe || !dansLeJet(e, arme, fe)) return;
     eteindre(fe);
+  }
+
+  function dansLeJet(e, arme, fe) {
+    const p = position(fe);
+    if (dist2(e.x, e.y, p.x, p.y) > (arme.portee + fe.r.rayon_px) * (arme.portee + fe.r.rayon_px)) return false;
+    return Math.abs(ecartAngle(e.angle, angleVers(e.x, e.y, p.x, p.y))) <= 0.9;
+  }
+
+  /** La bouffée blanche de l'eau sur la braise — le même adieu pour les deux feux. */
+  function bouffee(p) {
+    for (let i = 0; i < 14; i++) {
+      Entites.particule(p.x + (B.rng() - 0.5) * 26, p.y - 4 - B.rng() * 10,
+                        (B.rng() - 0.5) * 0.5, -0.4 - B.rng() * 0.4, 26 + B.rng() * 14, '#e8e6de', 2, -0.01);
+    }
+  }
+
+  /** ⚠️ Pas de prime : c'est la mission qui paie. Le feu dit seulement qu'il est mort. */
+  function eteindreLeFeuDeMission(fm) {
+    fm.eteint = true;
+    bouffee(position(fm));
+    if (typeof Hud !== 'undefined') Hud.message('FEU ÉTEINT', 150);
+    if (typeof Son !== 'undefined') Son.SFX.eau();
   }
 
   function eteindre(fe) {
@@ -115,10 +192,7 @@ const Incendies = (function () {
     // ⚠️ Le feu qui s'éteint ne laisse pas une façade charbonneuse : il laisse
     // une bouffée de fumée blanche — l'eau sur la braise. Puis plus rien.
     const p = position(fe);
-    for (let i = 0; i < 14; i++) {
-      Entites.particule(p.x + (B.rng() - 0.5) * 26, p.y - 4 - B.rng() * 10,
-                        (B.rng() - 0.5) * 0.5, -0.4 - B.rng() * 0.4, 26 + B.rng() * 14, '#e8e6de', 2, -0.01);
-    }
+    bouffee(p);
     if (typeof Missions !== 'undefined') Missions.encaisser(fe.r.prime, 'INCENDIE MAÎTRISÉ');
     if (typeof Hud !== 'undefined') Hud.message('INCENDIE MAÎTRISÉ — ' + p.nom.toUpperCase(), 240);
     if (typeof Son !== 'undefined') { Son.SFX.argent(); Son.SFX.eau(); }
@@ -147,34 +221,51 @@ const Incendies = (function () {
       }
       if (fe && !allumes[cle(fe.jour, fe.heuredelajour)]) allumer(fe);
     }
+    // Le feu d'une mission brûle PLUS FORT que celui de l'heure (il « gagne la
+    // façade »), et il recule quand on tient le jet dessus : ses flammes suivent
+    // sa `force`. Il n'a pas de message « INCENDIE » : la mission l'a déjà dit.
+    let bruit = null;
+    const fm = feuDeMission();
+    if (fm) bruit = flammes(fm, 0.5 + fm.force / fm.forceMax);
     const k = Object.keys(allumes)[0];
-    if (!k) return;
-    const fe = allumes[k];
+    if (k) {
+      const fe = allumes[k];
+      const p = position(fe);
+      const b = flammes(fe, 1);
+      bruit = bruit === null ? b : Math.max(bruit, b);
+      // Et le feu se signale : une fois, quand on est assez près pour le voir.
+      if (!signales[k] && Entites.visibleAEcran(p.x, p.y, PORTEE_FUMEE_PX) && typeof Hud !== 'undefined') {
+        signales[k] = true;
+        Hud.message('INCENDIE — ' + p.nom.toUpperCase(), 240);
+      }
+    }
+    // Le feu s'entend quand on s'en approche.
+    if (bruit !== null && typeof Son !== 'undefined') Son.SFX.rumeur_incendie(bruit);
+  }
+
+  /** La fumée et les flammes d'un feu, `vif` fois celles du feu de l'heure ; rend
+      à quel point il s'entend d'où l'on est (1 dessus, 0 et moins au loin).
+
+      ⚠️ DÉTERMINISTES, comme le bris d'aqueduc : elles se tirent de l'empreinte
+      de la façade et de l'image (`hash2`), pas de `B.rng()` — un feu qui brûle au
+      fond de la ville ne doit pas décaler le dé de tout le monde, ni une scène de
+      mission qui le filme. C'est la leçon du champ de hasard, qui a fait tomber
+      des juges sans rapport plus d'une fois. */
+  function flammes(fe, vif) {
     const p = position(fe);
-    const enVue = Entites.visibleAEcran(p.x, p.y, PORTEE_FUMEE_PX);
-    // ⚠️ La fumée et les flammes sont DÉTERMINISTES, comme le bris d'aqueduc :
-    // elles se tirent de l'empreinte de la façade et de l'image (`hash2`), pas
-    // de `B.rng()` — un feu qui brûle au fond de la ville ne doit pas décaler le
-    // dé de tout le monde. C'est la leçon du champ de hasard, qui a fait tomber
-    // des juges sans rapport plus d'une fois.
     const h = function (sel) { return hash2(fe.f.x * 397 + sel, fe.f.y * 71 + B.t) / 4294967296; };
-    if (B.t % 3 === 0) {
-      Entites.particule(p.x + (h(1) - 0.5) * 12, p.y - 6,
+    const fumee = vif > 1.2 ? 2 : 3, feu = vif > 1.2 ? 3 : 6;
+    if (B.t % fumee === 0) {
+      Entites.particule(p.x + (h(1) - 0.5) * 12 * vif, p.y - 6,
                         (h(2) - 0.5) * 0.15, -0.35 - h(3) * 0.3, 42 + h(4) * 20, '#3a3a3a', 3, -0.01);
     }
-    if (B.t % 6 === 0) {
-      const a = h(5) * Math.PI * 2, d = h(6) * 5;
+    if (B.t % feu === 0) {
+      const a = h(5) * Math.PI * 2, d = h(6) * 5 * vif;
       Entites.particule(p.x + Math.cos(a) * d, p.y - Math.abs(Math.sin(a)) * d * 0.4,
                         (h(7) - 0.5) * 0.2, -0.5 - h(8) * 0.5, 14 + h(9) * 10,
                         h(10) < 0.5 ? '#ff8c1a' : '#ffd23a', 2, -0.02);
     }
-    // Le feu s'entend quand on s'en approche.
-    if (typeof Son !== 'undefined') Son.SFX.rumeur_incendie(1 - Math.hypot(p.x - B.joueur.x, p.y - B.joueur.y) / PORTEE_FUMEE_PX);
-    // Et le feu se signale : une fois, quand on est assez près pour le voir.
-    if (!signales[k] && enVue && typeof Hud !== 'undefined') {
-      signales[k] = true;
-      Hud.message('INCENDIE — ' + p.nom.toUpperCase(), 240);
-    }
+    return 1 - Math.hypot(p.x - B.joueur.x, p.y - B.joueur.y) / PORTEE_FUMEE_PX;
   }
 
   /** Remet la mémoire à zéro : une nouvelle partie repart sans feux éteints. */
@@ -182,7 +273,9 @@ const Incendies = (function () {
     for (const k in eteints) delete eteints[k];
     for (const k in allumes) delete allumes[k];
     for (const k in signales) delete signales[k];
+    feuMission = null;
   }
 
-  return { donnees, feuActifA, feuActif, cible, position, majJet, maj, oublier };
+  return { donnees, feuActifA, feuActif, cible, position, majJet, maj, oublier,
+           allumerPourMission, feuDeMission, oublierLeFeuDeMission, facadePres };
 })();

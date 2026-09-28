@@ -1366,6 +1366,14 @@ const Histoire = (function () {
     if (!o) return;
     // ⚠️ Toujours dans la VILLE, même quand on est dans une pièce : une scène
     // qui coupe vers la rue doit y trouver ce qu'on pose (`dansLaVille`).
+    // `remet` (M16, 28 sept. 2026) : ce que le donneur te met dans les mains quand
+    // l'objectif commence — une arme, chargée à plein, et en main. Le seau d'eau de
+    // Mado avant les feux (f13) : sans lui, `eteindre` demandait un extincteur que
+    // rien ne garantissait, ni plein. Déjà dans le sac, il se remplit.
+    if (o.remet && Combat.armeDef(o.remet)) {
+      Combat.ramasserArme(o.remet, Combat.armeDef(o.remet).munitions_max || null);
+      if (j.arme !== o.remet) Combat.degainer(j, o.remet);
+    }
     dansLaVille(function () {
       if (o.type === 'monter') {
         const v = poserLeChar(m, o, p.etape);
@@ -1417,6 +1425,12 @@ const Histoire = (function () {
           B.mission.protege = e;
         }
         Entites.indexer();
+      } else if (o.type === 'eteindre') {
+        // ⚠️ LE FEU DE LA MISSION, pas celui de l'heure (28 sept. 2026) : il prend sur
+        // la façade la plus proche de `ou` (`Incendies.allumerPourMission`), une spirale
+        // sans dé. Posé avant l'intro comme le reste : la caméra le filme qui brûle.
+        const l = resoudre(o.ou, m);
+        B.mission.feu = l ? Incendies.allumerPourMission(l.x, l.y) : null;
       } else if (o.type === 'suivre') {
         poserLeSuivi(m, o);
       } else if (o.type === 'pickpocket') {
@@ -1934,10 +1948,12 @@ const Histoire = (function () {
         return;
       }
       case 'eteindre': {
-        // L'extincteur éteint déjà le feu de bâtiment (`Incendies`). Ce type
-        // attend qu'aucun feu ne brûle plus au lieu nommé — ou, faute de feu
-        // de mission, le feu actif du moment.
-        if (typeof Incendies !== 'undefined' && !Incendies.feuActif()) avancer();
+        // Le feu que la mission a allumé (`poser`) : l'objectif tombe quand le jet l'a
+        // éteint. ⚠️ Avant le 28 sept. 2026, ce cas attendait qu'AUCUN feu de l'heure ne
+        // brûle — vrai presque toujours : l'objectif passait dans la même image. Pas de
+        // mur à brûler près de `ou` : il passe aussi, plutôt que de bloquer la mission.
+        const fe = B.mission.feu;
+        if (!fe || fe.eteint) avancer();
         return;
       }
       case 'payer': {
@@ -2292,6 +2308,8 @@ const Histoire = (function () {
     fermerPiratage();
     if (!B.mission) return;
     lacherLeProtege();
+    // Le feu d'une mission s'en va avec elle — éteint ou non, il n'est plus le sien.
+    if (B.mission.feu) { Incendies.oublierLeFeuDeMission(); B.mission.feu = null; }
     for (const e of B.mission.entites) {
       if (e.type === 'vehicule') {
         // Celui qu'on filait repart comme un autre, qu'on l'ait mené au bout ou
@@ -3145,6 +3163,7 @@ const Histoire = (function () {
       else if (o.type === 'detruire') l = B.mission && B.mission.chars ? B.mission.chars[p.mission.etape] : null;
       else if (o.type === 'sauter') l = resoudre(o.ou, m);
       else if (o.type === 'acheter') l = resoudre(o.ou, m);
+      else if (o.type === 'eteindre') { const fe = B.mission && B.mission.feu; l = fe && !fe.eteint ? Incendies.position(fe) : null; }
       // ⚠️ `pirater` : le terminal, sur le POSTE quand il est sur un mouillage (le quai, là où
       // `piratageSousLaMain` l'ouvre). Sans ce cas, un terminal loin du donneur (l'île de m53,
       // m54) n'avait ni flèche ni repère.
@@ -3215,6 +3234,12 @@ const Histoire = (function () {
     }
     if (o.type === 'sauter') compte = ' VOL ' + Math.round(B.mission ? B.mission.vol : 0) + '/' + o.vol_px;
     if (o.type === 'suivre' && B.mission && B.mission.suivi) compte = filature(B.mission);
+    // ⚠️ `chrono_s` sur un objectif (M16) : le temps qui reste, comme au défi. Il
+    // tombait en silence (q10 : « la moto au phare en une minute », sans montre).
+    if (o.chrono_s && typeof B.partie.mission.debutT === 'number') {
+      const reste = Math.max(0, o.chrono_s * 60 - (B.t - B.partie.mission.debutT));
+      compte += ' ' + Math.floor(reste / 3600) + ':' + ('0' + Math.floor(reste % 3600 / 60)).slice(-2);
+    }
     return o.texte + compte;
   }
 
