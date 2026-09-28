@@ -1451,7 +1451,57 @@ def test_la_mini_carte_est_cuite_une_seule_fois(banc, paquet):
     assert r["taille"] == [64, 48]
 
 
-def test_on_se_trouve_sur_la_carte_et_l_objectif_ne_bat_pas_pareil(banc):
+@pytest.fixture(scope="module")
+def reperes(banc):
+    """⚠️ **LA MINI-CARTE, PUIS LA CARTE OUVERTE, UN BANC** (vague C, 28 sept. 2026) : les
+    deux juges posent le même objectif à deux pas et regardent battre les repères
+    96 images. Le second ouvre la carte (N) là où le premier s'arrête : rien d'autre
+    n'a bougé (personne n'a touché une touche), et les battements — 40 et 16 images —
+    tiennent plus de deux fois dans chaque fenêtre, quel que soit l'instant de départ."""
+    return banc("""function (L, o) {
+        L.Jeu.commencer();
+        const out = {};
+        // test_on_se_trouve_sur_la_carte_et_l_objectif_ne_bat_pas_pareil
+        out.fermee = (function () {
+            const j = L.B.joueur, c = L.Monde.carte;
+            // Un objectif a deux pas, dans le cadre de la mini-carte.
+            L.Histoire.cible = function () { return { x: j.x + 40, y: j.y + 40, nom: 'ESSAI', couleur: '#e8b33c' }; };
+            const joueur = [], cible = [], rayons = [];
+            for (let i = 0; i < 96; i++) {
+                o.frame(1);
+                const m = L.Hud.marqueurs();
+                joueur.push(m.joueur ? 1 : 0);
+                rayons.push(m.joueur ? m.joueur.r : -1);
+                cible.push(m.cible && m.cible.visible ? 1 : 0);
+            }
+            const m = L.Hud.marqueurs();
+            return { joueur: joueur, cible: cible, rayons: rayons,
+                     formes: [m.joueur.forme, m.cible.forme], dedans: m.cible.dedans,
+                     pulse: L.Hud.PULSE_JOUEUR, battement: L.Hud.BATTEMENT_CIBLE };
+        })();
+        // test_la_carte_ouverte_les_reperes_battent_encore
+        out.ouverte = (function () {
+            const j = L.B.joueur;
+            L.Histoire.cible = function () { return { x: j.x + 40, y: j.y + 40, nom: 'ESSAI', couleur: '#e8b33c' }; };
+            o.tape('KeyN');
+            const ouverte = L.B.etat === 'carte';
+            const t = L.B.t, rayons = [], cible = [], joueur = [];
+            // On n'appuie sur RIEN : la carte reste ouverte, on ne fait que regarder.
+            for (let i = 0; i < 96; i++) {
+                o.frame(1);
+                const m = L.Hud.marqueurs();
+                joueur.push(m.joueur ? 1 : 0);
+                rayons.push(m.joueur ? m.joueur.r : -1);
+                cible.push(m.cible && m.cible.visible ? 1 : 0);
+            }
+            return { ouverte: ouverte, fige: L.B.t === t, etat: L.B.etat,
+                     joueur: joueur, rayons: rayons, cible: cible };
+        })();
+        return out;
+    }""")
+
+
+def test_on_se_trouve_sur_la_carte_et_l_objectif_ne_bat_pas_pareil(reperes):
     """⚠️ La demande de Martin : « un icone clignotant pour savoir ou on est ».
     Le joueur ETAIT dessine — un carre blanc de 2 px — mais depuis M8 la ville
     fait 421 x 213 tuiles et ce carre s'est perdu dans le gris. Ce n'etait pas un
@@ -1461,24 +1511,7 @@ def test_on_se_trouve_sur_la_carte_et_l_objectif_ne_bat_pas_pareil(banc):
     image sur deux (on ne cache pas la seule chose qu'on cherche — le joueur
     pulse, il ne disparait jamais), et deux choses qui battent au meme rythme se
     confondent (l'anneau du joueur contre le losange de l'objectif)."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const j = L.B.joueur, c = L.Monde.carte;
-        // Un objectif a deux pas, dans le cadre de la mini-carte.
-        L.Histoire.cible = function () { return { x: j.x + 40, y: j.y + 40, nom: 'ESSAI', couleur: '#e8b33c' }; };
-        const joueur = [], cible = [], rayons = [];
-        for (let i = 0; i < 96; i++) {
-            o.frame(1);
-            const m = L.Hud.marqueurs();
-            joueur.push(m.joueur ? 1 : 0);
-            rayons.push(m.joueur ? m.joueur.r : -1);
-            cible.push(m.cible && m.cible.visible ? 1 : 0);
-        }
-        const m = L.Hud.marqueurs();
-        return { joueur: joueur, cible: cible, rayons: rayons,
-                 formes: [m.joueur.forme, m.cible.forme], dedans: m.cible.dedans,
-                 pulse: L.Hud.PULSE_JOUEUR, battement: L.Hud.BATTEMENT_CIBLE };
-    }""")
+    r = reperes["fermee"]
     assert all(r["joueur"]), "le repere du joueur disparait : on cache ce qu'on cherche"
     assert len(set(r["rayons"])) > 2, "l'anneau du joueur ne pulse pas : rien ne le ramene a l'oeil"
     assert 0 in r["cible"] and 1 in r["cible"], "l'objectif ne clignote plus"
@@ -1487,7 +1520,7 @@ def test_on_se_trouve_sur_la_carte_et_l_objectif_ne_bat_pas_pareil(banc):
     assert r["dedans"] is True
 
 
-def test_la_carte_ouverte_les_reperes_battent_encore(banc):
+def test_la_carte_ouverte_les_reperes_battent_encore(reperes):
     """⚠️ Sur la carte plein ecran, Martin ne voyait plus rien clignoter. Le
     dessin etait bon : c'est l'HORLOGE qui etait mauvaise. L'anneau et le
     losange battaient sur `B.t`, le temps du MONDE — et le monde est fige tant
@@ -1497,24 +1530,7 @@ def test_la_carte_ouverte_les_reperes_battent_encore(banc):
 
     Le test ouvre la carte et REGARDE, sans toucher a rien : ce qui bat a
     l'ecran doit battre sur les images dessinees, pas sur celles simulees."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const j = L.B.joueur;
-        L.Histoire.cible = function () { return { x: j.x + 40, y: j.y + 40, nom: 'ESSAI', couleur: '#e8b33c' }; };
-        o.tape('KeyN');
-        const ouverte = L.B.etat === 'carte';
-        const t = L.B.t, rayons = [], cible = [], joueur = [];
-        // On n'appuie sur RIEN : la carte reste ouverte, on ne fait que regarder.
-        for (let i = 0; i < 96; i++) {
-            o.frame(1);
-            const m = L.Hud.marqueurs();
-            joueur.push(m.joueur ? 1 : 0);
-            rayons.push(m.joueur ? m.joueur.r : -1);
-            cible.push(m.cible && m.cible.visible ? 1 : 0);
-        }
-        return { ouverte: ouverte, fige: L.B.t === t, etat: L.B.etat,
-                 joueur: joueur, rayons: rayons, cible: cible };
-    }""")
+    r = reperes["ouverte"]
     assert r["ouverte"] and r["etat"] == "carte", "la carte ne s'est pas ouverte sur N"
     assert r["fige"] is True, "le monde tourne sous la carte : le test ne prouve plus rien"
     assert all(r["joueur"]), "le repere du joueur disparait sur la carte"
@@ -3637,26 +3653,69 @@ def test_la_mere_ne_sort_pas_sans_son_petit(banc):
     assert r["apres"] < r["avant"], "le petit ne rejoint pas sa mere"
 
 
-def test_le_kiosque_vend_de_la_vie_contre_de_l_argent(banc, paquet):
-    tarifs = paquet["economie"]["tarifs"]
-    r = banc("""function (L, o) {
+@pytest.fixture(scope="module")
+def etals(banc):
+    """⚠️ **DEUX PASSAGES AUX ÉTALS, UN BANC** (vague C, 28 sept. 2026) : le kiosque qui
+    vend de la vie, puis manger et le café. Aucun ne joue d'image — on se pose devant
+    l'étal et on appuie. ⚠️ Entre les deux, on remet ce que le second avait au départ :
+    la caféine à zéro (le premier n'en donne pas, mais on ne le suppose pas), la vie et
+    le souffle pleins, l'argent de la partie neuve ; le reste, il le pose lui-même."""
+    return banc("""function (L, o) {
         L.Jeu.commencer();
-        const j = L.B.joueur;
-        const etal = L.B.entites.filter(function (e) { return e.type === 'ambulant' && e.slug === 'hotdog'; })[0];
-        j.x = etal.x; j.y = etal.y + 22; j.vie = 40; L.B.partie.argent = 100;
-        // ⚠️ On regarde le kiosque : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
-        L.Entites.regarder(j, 0, -1);
-        L.Entites.indexer();
-        const achat = L.Missions.interagir(j);
-        const apres = { vie: j.vie, argent: L.B.partie.argent };
-        // Sans le sou, on ne mange pas.
-        L.B.partie.argent = 1; j.vie = 40;
-        const refus = L.Missions.interagir(j);
-        const vendeurs = L.B.entites.filter(function (e) { return e.metier === 'ambulant'; }).length;
-        const etals = L.B.entites.filter(function (e) { return e.type === 'ambulant'; }).length;
-        return { achat: achat, apres: apres, refus: refus, vieApresRefus: j.vie,
-                 argentApresRefus: L.B.partie.argent, vendeurs: vendeurs, etals: etals };
+        const neuf = { vie: L.B.joueur.vie, endurance: L.B.joueur.endurance, cafeine: L.B.joueur.cafeine,
+                       argent: L.B.partie.argent, heure: L.B.partie.heure };
+        const out = {};
+        // test_le_kiosque_vend_de_la_vie_contre_de_l_argent
+        out.kiosque = (function () {
+            const j = L.B.joueur;
+            const etal = L.B.entites.filter(function (e) { return e.type === 'ambulant' && e.slug === 'hotdog'; })[0];
+            j.x = etal.x; j.y = etal.y + 22; j.vie = 40; L.B.partie.argent = 100;
+            // ⚠️ On regarde le kiosque : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+            L.Entites.regarder(j, 0, -1);
+            L.Entites.indexer();
+            const achat = L.Missions.interagir(j);
+            const apres = { vie: j.vie, argent: L.B.partie.argent };
+            // Sans le sou, on ne mange pas.
+            L.B.partie.argent = 1; j.vie = 40;
+            const refus = L.Missions.interagir(j);
+            const vendeurs = L.B.entites.filter(function (e) { return e.metier === 'ambulant'; }).length;
+            const etals = L.B.entites.filter(function (e) { return e.type === 'ambulant'; }).length;
+            return { achat: achat, apres: apres, refus: refus, vieApresRefus: j.vie,
+                     argentApresRefus: L.B.partie.argent, vendeurs: vendeurs, etals: etals };
+        })();
+        // test_manger_redonne_du_souffle_et_le_cafe_reveille
+        L.B.joueur.vie = neuf.vie; L.B.joueur.endurance = neuf.endurance; L.B.joueur.cafeine = neuf.cafeine;
+        L.B.partie.argent = neuf.argent; L.B.partie.heure = neuf.heure;
+        out.manger = (function () {
+            const j = L.B.joueur;
+            L.B.partie.heure = 0.4;                    // la roulotte a cafe est ouverte
+            L.B.partie.argent = 200;
+            function acheter(slug) {
+              const etal = L.B.entites.filter(function (e) { return e.type === 'ambulant' && e.slug === slug; })[0];
+              j.x = etal.x; j.y = etal.y + 22;
+              // ⚠️ On regarde l'étal : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+              L.Entites.regarder(j, 0, -1);
+              L.Entites.indexer();
+              return L.Missions.interagir(j);
+            }
+            j.endurance = 20; j.vie = 40;
+            const hotdog = acheter('hotdog');
+            const apres = { souffle: j.endurance, vie: j.vie, cafeine: j.cafeine };
+            // Manger a plein souffle ne fait pas deborder la barre.
+            j.endurance = 100; acheter('hotdog');
+            const plein = j.endurance;
+            j.endurance = 20;
+            const achatCafe = acheter('cafe');
+            return { hotdog: hotdog, apres: apres, plein: plein, achatCafe: achatCafe,
+                     souffleCafe: j.endurance, cafeine: j.cafeine };
+        })();
+        return out;
     }""")
+
+
+def test_le_kiosque_vend_de_la_vie_contre_de_l_argent(etals, paquet):
+    tarifs = paquet["economie"]["tarifs"]
+    r = etals["kiosque"]
     assert r["achat"] is True
     assert r["apres"]["argent"] == 100 - tarifs["hotdog"]
     assert r["apres"]["vie"] == 40 + tarifs["hotdog_pv"]
@@ -3664,33 +3723,10 @@ def test_le_kiosque_vend_de_la_vie_contre_de_l_argent(banc, paquet):
     assert r["etals"] >= 6 and r["vendeurs"] == r["etals"], "un kiosque sans personne derriere"
 
 
-def test_manger_redonne_du_souffle_et_le_cafe_reveille(banc, paquet):
+def test_manger_redonne_du_souffle_et_le_cafe_reveille(etals, paquet):
     tarifs = paquet["economie"]["tarifs"]
     cafe = paquet["economie"]["cafe"]
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const j = L.B.joueur;
-        L.B.partie.heure = 0.4;                    // la roulotte a cafe est ouverte
-        L.B.partie.argent = 200;
-        function acheter(slug) {
-          const etal = L.B.entites.filter(function (e) { return e.type === 'ambulant' && e.slug === slug; })[0];
-          j.x = etal.x; j.y = etal.y + 22;
-          // ⚠️ On regarde l'étal : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
-          L.Entites.regarder(j, 0, -1);
-          L.Entites.indexer();
-          return L.Missions.interagir(j);
-        }
-        j.endurance = 20; j.vie = 40;
-        const hotdog = acheter('hotdog');
-        const apres = { souffle: j.endurance, vie: j.vie, cafeine: j.cafeine };
-        // Manger a plein souffle ne fait pas deborder la barre.
-        j.endurance = 100; acheter('hotdog');
-        const plein = j.endurance;
-        j.endurance = 20;
-        const achatCafe = acheter('cafe');
-        return { hotdog: hotdog, apres: apres, plein: plein, achatCafe: achatCafe,
-                 souffleCafe: j.endurance, cafeine: j.cafeine };
-    }""")
+    r = etals["manger"]
     assert r["hotdog"] is True
     assert r["apres"]["souffle"] == 20 + tarifs["hotdog_souffle"]
     assert r["apres"]["vie"] == 40 + tarifs["hotdog_pv"]
@@ -3892,33 +3928,9 @@ def test_le_kiosque_a_journaux_ferme_la_nuit(banc):
     assert r["nuit"] == [False, True], "le camion-restaurant, lui, veille"
 
 
-def test_la_compagnie_se_paie_et_refuse_quand_la_police_cherche(banc, paquet):
+def test_la_compagnie_se_paie_et_refuse_quand_la_police_cherche(la_brume, paquet):
     tarifs = paquet["economie"]["tarifs"]
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        L.graine(33);
-        const j = L.B.joueur;
-        // ⚠️ **PAS DE ROULOTTE DANS LE DOS.** ACTION sert le plus proche : le jour
-        // où la trame a bougé (17 sept. 2026), une roulotte à café s'est installée
-        // au terminus, et le juge a vu 4 $ de café là où il attendait un refus.
-        L.B.defs.ambulants = [];
-        for (const q of L.B.entites.slice()) if (q !== j && q.type !== 'joueur') L.Entites.retirer(q);
-        const fille = o.poser('racoleuse', 12, 0);
-        fille.etat = 'arret';
-        // ⚠️ On regarde la fille : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
-        L.Entites.regarder(j, 1, 0);
-        L.Entites.indexer();
-        j.vie = 50; L.B.partie.argent = 200;
-        L.B.recherche.etoiles = 2;
-        const recherche = L.Missions.interagir(j);
-        const apresRecherche = { vie: j.vie, argent: L.B.partie.argent };
-        L.B.recherche.etoiles = 0;
-        const ok = L.Missions.interagir(j);
-        const fondu = !!L.B.transition;
-        o.fondu();
-        return { metier: fille.metier, recherche: recherche, apresRecherche: apresRecherche,
-                 ok: ok, vie: j.vie, argent: L.B.partie.argent, fondu: fondu };
-    }""")
+    r = la_brume["compagnie"]
     assert r["metier"] == "compagnie"
     assert r["recherche"] is True and r["apresRecherche"]["argent"] == 200, \
         "elle a servi alors que la police cherchait le joueur"
@@ -4044,32 +4056,73 @@ def test_la_fille_de_la_brume_tient_son_coin(banc):
     )
 
 
-def test_le_hud_nomme_la_fille_de_la_brume(banc, paquet):
+@pytest.fixture(scope="module")
+def la_brume(banc):
+    """⚠️ **LA FILLE DE LA BRUME, DEUX FOIS, UN BANC** (vague C, 28 sept. 2026) : l'invite
+    qui la nomme (aucune image jouée), puis la compagnie qui se paie. ⚠️ Le second
+    juge vidait déjà la rue lui-même et posait SA graine (33) : il repart donc du
+    même monde qu'avant, l'invite remise à rien et la fille d'avant retirée avec le
+    reste de la rue."""
+    return banc("""function (L, o) {
+        L.Jeu.commencer();
+        const out = {};
+        // test_le_hud_nomme_la_fille_de_la_brume
+        out.invite = (function () {
+            const j = L.B.joueur;
+            // ⚠️ **PAS DE ROULOTTE DANS LE DOS.** L'invite ACTION nomme ce qu'il y a
+            // de plus proche, et la ville pose ses ambulants où elle veut : le jour
+            // où la trame a bougé (17 sept. 2026), une roulotte à café s'est
+            // installée au terminus et c'est elle que le juge lisait. Ce juge-ci
+            // parle de la fille, pas de ce qui se vend à côté.
+            L.B.defs.ambulants = [];
+            for (const q of L.B.entites.slice()) if (q !== j && q.type !== 'joueur') L.Entites.retirer(q);
+            const fille = o.poser('racoleuse', 14, 0);
+            fille.etat = 'arret';
+            // ⚠️ On regarde la fille : l'invite n'apparaît que pour ce qu'on regarde (test_regard_js.py).
+            L.Entites.regarder(j, 1, 0);
+            L.Entites.indexer();
+            L.Missions.majInvite(j);
+            const pres = L.B.invite;
+            fille.x = j.x + 200; fille.y = j.y + 200;
+            L.Entites.indexer();
+            L.Missions.majInvite(j);
+            return { pres: pres, loin: L.B.invite };
+        })();
+        // test_la_compagnie_se_paie_et_refuse_quand_la_police_cherche
+        L.B.invite = null;
+        out.compagnie = (function () {
+            L.graine(33);
+            const j = L.B.joueur;
+            // ⚠️ **PAS DE ROULOTTE DANS LE DOS.** ACTION sert le plus proche : le jour
+            // où la trame a bougé (17 sept. 2026), une roulotte à café s'est installée
+            // au terminus, et le juge a vu 4 $ de café là où il attendait un refus.
+            L.B.defs.ambulants = [];
+            for (const q of L.B.entites.slice()) if (q !== j && q.type !== 'joueur') L.Entites.retirer(q);
+            const fille = o.poser('racoleuse', 12, 0);
+            fille.etat = 'arret';
+            // ⚠️ On regarde la fille : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+            L.Entites.regarder(j, 1, 0);
+            L.Entites.indexer();
+            j.vie = 50; L.B.partie.argent = 200;
+            L.B.recherche.etoiles = 2;
+            const recherche = L.Missions.interagir(j);
+            const apresRecherche = { vie: j.vie, argent: L.B.partie.argent };
+            L.B.recherche.etoiles = 0;
+            const ok = L.Missions.interagir(j);
+            const fondu = !!L.B.transition;
+            o.fondu();
+            return { metier: fille.metier, recherche: recherche, apresRecherche: apresRecherche,
+                     ok: ok, vie: j.vie, argent: L.B.partie.argent, fondu: fondu };
+        })();
+        return out;
+    }""")
+
+
+def test_le_hud_nomme_la_fille_de_la_brume(la_brume, paquet):
     """Derniere preuve, a bout de bras : l'invite ACTION la nomme et donne le
     prix — avant, on appuyait sur ACTION en esperant que c'en etait une."""
     tarifs = paquet["economie"]["tarifs"]
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const j = L.B.joueur;
-        // ⚠️ **PAS DE ROULOTTE DANS LE DOS.** L'invite ACTION nomme ce qu'il y a
-        // de plus proche, et la ville pose ses ambulants où elle veut : le jour
-        // où la trame a bougé (17 sept. 2026), une roulotte à café s'est
-        // installée au terminus et c'est elle que le juge lisait. Ce juge-ci
-        // parle de la fille, pas de ce qui se vend à côté.
-        L.B.defs.ambulants = [];
-        for (const q of L.B.entites.slice()) if (q !== j && q.type !== 'joueur') L.Entites.retirer(q);
-        const fille = o.poser('racoleuse', 14, 0);
-        fille.etat = 'arret';
-        // ⚠️ On regarde la fille : l'invite n'apparaît que pour ce qu'on regarde (test_regard_js.py).
-        L.Entites.regarder(j, 1, 0);
-        L.Entites.indexer();
-        L.Missions.majInvite(j);
-        const pres = L.B.invite;
-        fille.x = j.x + 200; fille.y = j.y + 200;
-        L.Entites.indexer();
-        L.Missions.majInvite(j);
-        return { pres: pres, loin: L.B.invite };
-    }""")
+    r = la_brume["invite"]
     assert r["pres"] == "LA BRUME — " + str(tarifs["compagnie"]) + " $"
     assert r["loin"] != r["pres"], "l'invite la promet alors qu'elle est partie"
 
