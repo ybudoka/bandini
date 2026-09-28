@@ -291,6 +291,8 @@ const Missions = (function () {
     const comptoir = typeof Foire !== 'undefined' ? Foire.jeuSousLaMain(j) : null;
     const jeu = comptoir ? Histoire.defiDuComptoir(comptoir) : null;
     if (jeu) return Histoire.proposerDefi(jeu.slug);
+    // La cabane a sucre : la table de tire (le defi), la caleche a son arret (`Cabane`).
+    if (Cabane.sousLaMain(j)) return Cabane.agir(j);
     const etal = etalSousLaMain(j);
     if (etal) return acheterAmbulant(j, etal);
     // ⚠️ LES HOMMES DE SAL AVANT TOUT LE MONDE : quand ils sont sur toi, il
@@ -3557,6 +3559,8 @@ const Missions = (function () {
     if (perso) { const d = Histoire.personnage(perso.personnage); B.invite = 'PARLER À ' + (d ? d.nom.toUpperCase() : '?'); return; }
     const panneau = Histoire.panneauSousLaMain(j);
     if (panneau) { B.invite = 'DÉFI'; return; }
+    const cabane = Cabane.invite(j);
+    if (cabane) { B.invite = cabane; return; }
     const etal = etalSousLaMain(j);
     if (etal) {
       const c = commerceDe(etal.slug);

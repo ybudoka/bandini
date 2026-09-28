@@ -247,6 +247,7 @@ const Blocs = (function () {
       sur les bardeaux. Peinte par-dessus le toit (le plan n'en sait rien). */
   function dessinerCheminees(ctx, cam) {
     for (const c of cheminees()) {
+      if (c.genre === 'tole' || c.genre === 'lanterneau') { dessinerEvaporateur(ctx, cam, c); continue; }
       const x = Math.round(c.x * TT - cam.x) + 3, y = Math.round(c.y * TT - cam.y) - 4, l = c.l * TT - 6, h = TT + 2;
       if (x < -40 || x > VW + 40 || y < -40 || y > VH + 40) continue;
       ctx.fillStyle = 'rgba(0,0,0,0.30)'; ctx.fillRect(x + 3, y + h, l, 5);            // l'ombre sur le toit
@@ -268,6 +269,36 @@ const Blocs = (function () {
     }
   }
 
+  /** La cabane à sucre (docs/jalons/la-cabane-a-sucre-pour-vrai.md) : la cheminée de TÔLE de l'évaporateur
+      (un tuyau noir, son chapeau chinois), et le LANTERNEAU du faîte — la petite toiture à persiennes d'où
+      sort la vapeur du sirop qui bout. */
+  function dessinerEvaporateur(ctx, cam, c) {
+    const x = Math.round(c.x * TT - cam.x), y = Math.round(c.y * TT - cam.y), l = c.l * TT;
+    if (x < -60 || x > VW + 60 || y < -60 || y > VH + 60) return;
+    if (c.genre === 'tole') {
+      ctx.fillStyle = 'rgba(0,0,0,0.30)'; ctx.fillRect(x + 8, y + 12, 5, 6);            // l'ombre
+      ctx.fillStyle = '#2a2c30'; ctx.fillRect(x + 5, y - 10, 5, 22);                    // le tuyau
+      ctx.fillStyle = '#4a4d54'; ctx.fillRect(x + 5, y - 10, 1, 22);
+      ctx.fillStyle = '#3a3d44'; ctx.fillRect(x + 4, y + 2, 7, 1); ctx.fillRect(x + 4, y - 4, 7, 1);   // les brides
+      ctx.fillStyle = '#1b1c20'; ctx.fillRect(x + 2, y - 14, 11, 2); ctx.fillRect(x + 4, y - 16, 7, 2);  // le chapeau
+      B.stats.rects += 8;
+      return;
+    }
+    // Le lanterneau : un petit toit sur des persiennes, à cheval sur le faîte.
+    ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(x + 4, y + 12, l - 2, 4);
+    ctx.fillStyle = '#6b4a2a'; ctx.fillRect(x + 2, y + 2, l - 4, 10);                   // les planches
+    ctx.fillStyle = '#2e1d10'; for (let k = 0; k < 3; k++) ctx.fillRect(x + 4, y + 4 + k * 3, l - 8, 1);   // les persiennes
+    ctx.fillStyle = '#5a534a'; ctx.fillRect(x, y - 2, l, 5);                            // son toit
+    ctx.fillStyle = '#7d766b'; ctx.fillRect(x, y - 2, l, 1);
+    B.stats.rects += 7;
+  }
+
+  /** Une cheminée fume-t-elle ? Celles de la cabane seulement quand on fait bouillir (`Cabane`). */
+  function fume(c) { return !c.sucres || (typeof Cabane !== 'undefined' && Cabane.onFaitBouillir()); }
+
+  //: La vapeur du lanterneau : plus de bouffées, plus blanches, plus grosses, et qui montent plus vite.
+  const VAPEUR = { bouffees: 12, vie: 130, monte: 70, derive: 30, rayon: 16 };
+
   //: La fumée : combien de bouffées à la fois, leur vie (en images), combien elles montent et
   //: dérivent (le vent vient de l'ouest), et leur plus grand rayon.
   const FUMEE = { bouffees: 8, vie: 170, monte: 56, derive: 46, rayon: 10 };
@@ -276,15 +307,18 @@ const Blocs = (function () {
       fumées pareilles, et le banc la juge. Au-dessus des toits et des gens (`Jeu.rendre`). */
   function dessinerFumees(ctx, cam) {
     for (const c of cheminees()) {
-      const bx = c.x * TT + c.l * TT / 2 - cam.x, by = c.y * TT - 6 - cam.y;
+      if (!fume(c)) continue;
+      const F = c.genre === 'lanterneau' ? VAPEUR : FUMEE;
+      const teinte = c.genre === 'lanterneau' ? '245,245,242,' : c.genre === 'tole' ? '150,150,152,' : '205,205,200,';
+      const bx = c.x * TT + c.l * TT / 2 - cam.x, by = c.y * TT - (c.genre === 'tole' ? 16 : 6) - cam.y;
       if (bx < -80 || bx > VW + 80 || by < -120 || by > VH + 40) continue;
-      for (let i = 0; i < FUMEE.bouffees; i++) {
-        const p = (((B.t || 0) + i * FUMEE.vie / FUMEE.bouffees) % FUMEE.vie) / FUMEE.vie;   // 0 à la bouche, 1 dissipée
-        const x = bx + FUMEE.derive * p * p + Math.sin(p * 6 + i) * 2;
-        const y = by - FUMEE.monte * p;
-        const r = 2 + (FUMEE.rayon - 2) * p;
-        const a = 0.55 * (1 - p) * Math.min(1, p * 6);
-        ctx.fillStyle = 'rgba(205,205,200,' + a.toFixed(3) + ')';
+      for (let i = 0; i < F.bouffees; i++) {
+        const p = (((B.t || 0) + i * F.vie / F.bouffees) % F.vie) / F.vie;   // 0 à la bouche, 1 dissipée
+        const x = bx + F.derive * p * p + Math.sin(p * 6 + i) * 2 + (c.genre === 'lanterneau' ? ((i * 7) % 5 - 2) * c.l * 2 * (1 - p) : 0);
+        const y = by - F.monte * p;
+        const r = 2 + (F.rayon - 2) * p;
+        const a = (c.genre === 'lanterneau' ? 0.7 : 0.55) * (1 - p) * Math.min(1, p * 6);
+        ctx.fillStyle = 'rgba(' + teinte + a.toFixed(3) + ')';
         ctx.fillRect(Math.round(x - r), Math.round(y - r * 0.8), Math.round(2 * r), Math.round(1.6 * r));
         ctx.fillRect(Math.round(x - r * 0.7), Math.round(y - r), Math.round(1.4 * r), Math.round(2 * r));
         B.stats.rects += 2;
@@ -353,7 +387,7 @@ const Blocs = (function () {
     return { x: c.x, y: c.y, nom: 'Vers la ville', couleur: '#7fc4ff' };
   }
 
-  return { dessinerFumees, cheminees, FUMEE, init, maj, charger, liste, sauter, contreLeBord, recul, marge, porteur, capVersLInterieur, poursuiteAuBord,
+  return { dessinerFumees, cheminees, fume, FUMEE, VAPEUR, init, maj, charger, liste, sauter, contreLeBord, recul, marge, porteur, capVersLInterieur, poursuiteAuBord,
            garder, souvenir, enMemoire, oublier, reprendre,
            cibleDeSortie, dessiner, texteDInfo, DELAI_POURSUIVANTS,
            get cartes() { return cartes; }, BORD_PX, PRES, RELANCE };

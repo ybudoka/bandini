@@ -21,52 +21,52 @@ from .. import carte
 PLAN: tuple[str, ...] = (
     "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
     "AA,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A",
-    "A,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,b,,,,,,,,,,,A,,AA",
-    "AAb,,,A,A,AA,sssssssssss,AA,,,,,,,,,,,,bA,,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,b,,A",
-    "A,,,,,,,,,ssss~~~~~~~~~ssss,,,,,,,,,,,,,,,,,,,,,,,,,b,,,,,,,,,,A,,,,,,,,,,,,,,AA",
-    "AA,,,,,,sss~~~~~~~~~~~~~~~sss,,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,,b,,,,,,,,,,,,,A",
-    "A,,,,,,ss~~~~~~~~~~~~~~~~~~~ss,,,,,,,,,,,b,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,AA",
-    "AA,,,,ss~~~~~~~~~~~~~~~~~~~~~ss,,,,,,,,,,,,,,A,,,,,,,,b,,,,,,,,,,,,,,,,,,,A,,,,A",
-    "A,,,,sss~~~~~~~~~~~~~~~~~~~~~sss,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,,bA,,,,,,,,,AA",
-    "AA,,,ss~~~~~~~~~~~~~~~~~~~~~~~ss,,,,,,,,,,,b,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,A",
-    "A,,,,sss~~~~~~~~~~~~~~~~~~~~~sss,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,AA",
+    "A,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A",
+    "AAb,,,A,A,AA,sssssssssss,AA,,,,,,,,,,,,bA,,,,,,,,,,,,T,,T,,T,,T,,,,,T,,T,,T,,T,A",
+    "A,,,,,,,,,ssss~~~~~~~~~ssss,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A",
+    "AA,,,,,,sss~~~~~~~~~~~~~~~sss,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A",
+    "A,,,,,,ss~~~~~~~~~~~~~~~~~~~ss,,,,,,,,,,,b,,,,,,,,,,,,T,,T,,T,,T,,,T,,T,,T,,T,,A",
+    "AA,,,,ss~~~~~~~~~~~~~~~~~~~~~ss,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A",
+    "A,,,,sss~~~~~~~~~~~~~~~~~~~~~sss,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A",
+    "AA,,,ss~~~~~~~~~~~~~~~~~~~~~~~ss,,,,,,,,,,,b,,,,,,,,,T,,T,,T,,T,,,,,T,,T,,T,,T,A",
+    "A,,,,sss~~~~~~~~~~~~~~~~~~~~~sss,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A",
     "AA,,,,ss~~~~~~~~~~~~~~~~~~~~~ss,,,,,,,PPPPPPPPPPP,,,,,,,,,PPPPPPPPPPPPPP,,,,,,,A",
-    "A,,,,,,ss~~~~~~~~~~~~~~~~~~~ss,,,,,,,,PPPPPPPPPPP,,,,,,,,,PPPPPPPPPPPPPP,A,,,,AA",
+    "A,,,,,,ss~~~~~~~~~~~~~~~~~~~ss,,,,,,,,PPPPPPPPPPP,,,,,,,,,PPPPPPPPPPPPPP,LLLLL,A",
     "AA,,,,b,sss~~~~~~~~~~~~~~~sss,,,,,,,,,PPPPPPPPPPP,,,,,,,,,PPPPPPPPPPPPPP,,,,,,,A",
-    "A,,,,,,,,,ssss~~~QQQ~~~ssss,,,,,,,,,,,PPPPPPPPPPP,,,,,,,,,PPPPPPPPPPPPPP,,,,,,AA",
-    "AA,,b,,,,,,,,ssssgggssss,,,,,,,,,,,,,,PPPPPPPPPPP,,,,,,A,,PPPPPPPPPPPPPP,,,,,,,A",
-    "A,,,,,,,,,,,,,,,,ggg,,,,,,,,,,,,,,,,,,HWWFFDFFWWH,,,,,,,,,HWWFFFDFFFFWWH,,,,,,AA",
-    "AA,,,,,,,,,,,,,,,ggg,,,,,,,,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,,,,,,,g,,,,,,,,b,,,,,A",
-    "A,,,,,,,A,,,b,,,,ggg,,,,,,,,,,,,,,,,,,,,,,,g,ppp,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,AA",
-    "AAA,,,,,,,,,,,,,,ggg,,,,,b,,,,,A,,,,,,,,,,,g,ppp,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,A",
-    "A,,,,,,,,,,,,,,,,ggg,,,,,A,,,,,,,,,,,,,,,,,g,,,,,,,,,,A,,,,,,,,,g,,,,,,,,,,b,,AA",
-    "AA,,,,,,,,,,,,b,,ggg,,,,,,,,,,,,,,,,,,,,,,,g,,,,,,,b,,,,,,,,,,,,g,,,,,,,,,,,,A,A",
-    "A,,,,,,,,,,,,A,,,ggg,,,,,,,b,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,AA",
+    "A,,,,,,,,,ssss~~~QQQ~~~ssss,,,,,,,,,,,PPPPPPPPPPP,,,,LLLL,PPPPPPPPPPPPPP,,,,,,,A",
+    "AA,,b,,,,,,,,ssssgggssss,,,,,,,,,,,,,,PPPPPPPPPPP,,,,,,,,,PPPPPPPPPPPPPP,LLLLL,A",
+    "A,,,,,,,,,,,,,,,,ggg,,,,,,,,,,,,,,,,,,HWWFFDFFWWH,,,,,,,,,HWWFFFDFFFFWWH,,,,,,,A",
+    "AA,,,,,,,,,,,,,,,ggg,,,,,,,,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,A",
+    "A,,,,,,,A,,,b,,,,ggg,,,,,,,,,,,,,,,,,,,,,,,g,ppp,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,A",
+    "AAA,,,,,,,,,,,,,,ggg,,,,,b,,,,,A,,,,,,,,,,,g,ppp,,,,,,,,,,,,,,,,g,,=,,,,,,,,,,,A",
+    "A,,,,,,,,,,,,,,,,ggg,,,,,A,,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,A",
+    "AA,,,,,,,,,,,,b,,ggg,,,,,,,,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,A",
+    "A,,,,,,,,,,,,A,,,ggg,,,,,,,b,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,A",
     "AA,b,,,A,,,,,,,,,ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
     "A,,,,,,,,,,,,,,,bggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
     "AA,,,,,,,,,,,,,,,ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
     "A,,,,b,,,,,,,,,,,ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
-    "AA,,,,,,,,,,A,,,,,b,,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,b,,,,,,,,,,,,,,A,,,,,,,,A",
-    "A,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,b,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,b,,,,,,,,,AA",
-    "AA,,,,,b,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,b,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,A",
-    "A,,,,,,,,,,,,,,,,,,,b,,A,,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,b,,,,,,,,,,,,,,,,,,,,AA",
-    "AA,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,b,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,b,,,,A,,,A",
-    "A,,,,,,,,b,A,,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,b,,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,AA",
-    "AA,,,A,,,,,,,,,,,,,,,,b,,,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,b,,,A,,,,,,,,,,,,,,,A",
-    "A,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,b,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,b,,,,,AA",
-    "AA,,,,,,,,,b,,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,b,,A,,,,,,,,,,,,,,,,,,,,,,,,,,,A",
-    "A,,,,,,,,,,,,,,,A,,,,,,,b,,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,b,,,,,,,,,,,,A,,,AA",
-    "AA,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,b,A,,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,b,,,,A",
-    "A,,,A,,,,,,,,b,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,b,,,,,,,,,,,A,,,,,,,,,,,,,,,AA",
-    "AA,,,,,,,,,,,,,,,,,,,,,,,,bA,,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,b,,,,,,,,,,,,,,,A",
-    "A,b,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,b,,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,b,AA",
-    "AA,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,,b,,,,,,,,,,,,,,,,,,,,A,,,,,A",
-    "A,,,,,,,,A,,,,,,,,,,,,,,,,,,b,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,b,A,,,,,,,,,,AA",
-    "AA,Ab,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,b,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,A",
-    "A,,,,,,,,,,,,,,,,b,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,,bA,,,,,,,,,,,,,,,,,,,,,,AA",
-    "AA,,,,,,,,,,,,,,,,,,A,,,,,,,,,b,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,b,,,,,,,,,,,A",
-    "A,,,,,b,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,AA",
-    "AA,,,,,,A,,,,,,,,,,b,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,,b,,,,,,,,,A,,,,,,,,,,,,A",
+    "AA,,,,,,,,,,A,,,,,b,,,,,,,,,,,,,,,,,,,,,,A,,,E,,,,,E,,,E,,,,,gg,,,E,,,E,,E,,,E,A",
+    "A,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,b,,,A,,,,,,,,,,,,,,,,,,,,,,,,,gg,,,,,,,,,,,,,,,,A",
+    "AA,,,,,b,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,ggggggggggggggggggggggggggggg,,,A",
+    "A,,,,,,,,,,,,,,,,,,,b,,A,,,,,,,,,,,,,,,,,,,,,,,ggggggggggggggggggggggggggggg,,,A",
+    "AA,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,b,,,,,,,,,,,,,gg,,,,,,,,,,,,,,,,,,,,,,,,,gg,,,A",
+    "A,,,,,,,,b,A,,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,gg,E,,E,,,E,,E,,E,,E,,,E,,,gg,,,A",
+    "AA,,,A,,,,,,,,,,,,,,,,b,,,,,,,,,,,A,,,,,,,,,,E,gg,,,,,,E,,,,,,,,,,,,E,,,E,gg,,EA",
+    "A,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,b,,,,,,,,,,,gg,E,,,,,,E,,E,,,E,,,,,E,,,gg,,,A",
+    "AA,,,,,,,,,b,,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,gg,,,E,,,,,,,,,E,,,E,,,,,E,gg,,,A",
+    "A,,,,,,,,,,,,,,,A,,,,,,,b,,,,,,,,,,,,,,,,,,,,,,gg,,,,,E,,E,,,,,,E,,,E,,,,,gg,,,A",
+    "AA,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,b,A,,,,,E,gg,E,,,,,,,,E,,,,,,E,,,,,E,gg,,EA",
+    "A,,,A,,,,,,,,b,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,gg,,,E,,E,,,,,E,,E,,,E,,,,,gg,,,A",
+    "AA,,,,,,,,,,,,,,,,,,,,,,,,bA,,,,,,,,,,,,,,,,,,,gg,E,,,,,,E,,,,,,,,E,,,E,,,gg,,,A",
+    "A,b,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,b,,,,,,,gg,,,E,,E,,,E,,E,,,,,E,,,E,gg,,,A",
+    "AA,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,,,,E,gg,E,,,,,,E,,,,,,E,,,,,E,,,gg,,EA",
+    "A,,,,,,,,A,,,,,,,,,,,,,,,,,,b,,,,,,,,,A,,,,,,,,gg,,,,,,,,,,,,,,,,,,,,,,,,,gg,,,A",
+    "AA,Ab,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,b,,,,,ggggggggggggggggggggggggggggg,,,A",
+    "A,,,,,,,,,,,,,,,,b,,,,,,,,A,,,,,,,,,,,,,,,,,,,,ggggggggggggggggggggggggggggg,,,A",
+    "AA,,,,,,,,,,,,,,,,,,A,,,,,,,,,b,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A",
+    "A,,,,,b,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A",
+    "AA,,,,,,A,,,,,,,,,,b,,,,,,,,,,,,,,,,,A,,,,,,,E,,,,E,,,E,,,E,,,,E,,,E,,,E,,,,,E,A",
     "A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,AA",
     "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
 )
@@ -74,6 +74,14 @@ PLAN: tuple[str, ...] = (
 DECORS: dict[str, tuple[str, str]] = {
     "A": (",", "arbre"),
     "b": (",", "buisson"),
+    # L'ÉRABLIÈRE (docs/jalons/la-cabane-a-sucre-pour-vrai.md) : au nord de la cabane, les érables en
+    # TUBULURE (`T`, leur chalumeau et la ligne bleue d'arbre en arbre, peinte par `Cabane`) ; au sud, le long
+    # du sentier de la calèche, les érables aux CHAUDIÈRES (`E`, le seau de tôle au couvercle pointu).
+    "T": (",", "erable_tube"),
+    "E": (",", "erable_seau"),
+    # Les cordes de bois de l'évaporateur, contre la cabane ; la table de tire, dans la cour.
+    "L": (",", "corde_bois"),
+    "=": (",", "table_tire"),
 }
 
 #: Dedans : un vrai camp en bois rond (Martin, 26 sept. 2026 : « je veux que ça ait vraiment l'air
@@ -110,6 +118,33 @@ BBBWWBDBWWBBB
     materiaux={"B": "bois_rond", "W": "bois_rond", "D": "bois_rond", "z": "chalet", "L": "chalet", "e": "chalet",
                "a": "chalet", "h": "chalet"})
 
+#: LA CABANE, POUR VRAI (docs/jalons/la-cabane-a-sucre-pour-vrai.md) — ce que `static/js/cabane.js` anime.
+#:
+#: ⚠️ `caleche` : le sentier, en COUTURES de tuiles (le sentier fait deux tuiles de large, la calèche roule sur
+#: la couture du milieu), une boucle fermée qui part de l'arrêt et y revient. Elle attend `attente` images à
+#: l'arrêt, puis fait le tour à `vitesse` pixels par image — sans un dé. `pancarte` : la tuile de son écriteau.
+#: ⚠️ `tubulure` : le tuyau maître descend la colonne `x` du rang `de` jusqu'au toit de la cabane (`a`) ; chaque
+#: rang d'érables en tubulure y court, d'arbre en arbre.
+#: ⚠️ `gens` : qui est à la cabane au temps des sucres, pendant les heures du comptoir `sucre` — le tireur
+#: derrière la table, ceux qui roulent leur tire, le musicien à la porte, ceux qui attendent la calèche.
+CABANE = {
+    "caleche": {"chemin": [[60, 30], [48, 30], [48, 44], [75, 44], [75, 30], [60, 30]],
+                "attente": 420, "vitesse": 0.75, "pancarte": [63, 28]},
+    "tubulure": {"x": 65, "de": 3, "a": 11},
+    "table": {"x": 67, "y": 19},
+    "gens": [
+        {"qui": "tireur", "arch": "commis", "x": 67, "y": 18, "face": "bas"},
+        {"qui": "client", "arch": "passante", "x": 66, "y": 20, "face": "haut"},
+        {"qui": "client", "arch": "ouvrier", "x": 68, "y": 20, "face": "haut"},
+        {"qui": "client", "arch": "ado", "x": 69, "y": 19, "face": "gauche"},
+        {"qui": "musicien", "arch": "musicien", "x": 61, "y": 18, "face": "bas"},
+        {"qui": "client", "arch": "dame", "x": 56, "y": 18, "face": "droite"},
+        {"qui": "client", "arch": "passant", "x": 57, "y": 18, "face": "gauche"},
+        {"qui": "client", "arch": "promeneur", "x": 64, "y": 28, "face": "gauche"},
+        {"qui": "client", "arch": "banlieusard", "x": 65, "y": 28, "face": "gauche"},
+    ],
+}
+
 BLOC = {
     "slug": "rang",
     "nom": "Le rang",
@@ -129,8 +164,13 @@ BLOC = {
     "pieces": {"chalet": PIECE_CHALET, "cabane": PIECE_CABANE},
     # ⚠️ LA PLANQUE : le chalet, son prix, et la place où son char attend (le milieu du `ppp` d'en haut).
     "planque": {"piece": "chalet", "prix": 2500, "char": {"x": 46, "y": 18}},
-    # La cheminée du chalet, au-dessus de son foyer : elle fume (`Blocs.dessiner`).
-    "cheminees": [{"x": 43, "y": 12, "l": 2}],
+    # La cheminée du chalet, au-dessus de son foyer : elle fume (`Blocs.dessiner`). Celles de la CABANE ne
+    # fument qu'au temps des sucres, quand on fait bouillir (`sucres`) : la cheminée de tôle de l'évaporateur,
+    # et le lanterneau du faîte d'où sort la vapeur blanche (`genre`, `Blocs.dessinerCheminees`).
+    "cheminees": [{"x": 43, "y": 12, "l": 2},
+                  {"x": 69, "y": 11, "l": 1, "genre": "tole", "sucres": True},
+                  {"x": 62, "y": 11, "l": 3, "genre": "lanterneau", "sucres": True}],
     # Les fenêtres de la cabane, devant sa façade.
     "lampes": [{"x": 59, "y": 17, "r": 26, "c": "fenetre"}, {"x": 70, "y": 17, "r": 26, "c": "fenetre"}],
+    "cabane": CABANE,
 }

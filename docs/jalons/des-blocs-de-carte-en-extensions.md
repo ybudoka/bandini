@@ -163,3 +163,6 @@ Ce que la mécanique des blocs y a gagné, pour tous les blocs à venir :
   jamais plus de dix secondes) — hors ligne, on retombe au passage en ville.
 - ⚠️ La vague « un vrai dehors » (trafic, passants, police, nuit d'un bloc) attend un bloc qui en a
   besoin : le chalet n'a ni rue ni voisin. Elle viendra avec le ciné-parc ou le centre d'achat.
+- ⚠️ **La cabane à sucre, pour vrai (28 sept. 2026) ne l'a pas demandée non plus** : ses gens tiennent leur
+  place et naissent avec la cabane (`Cabane`, un dé prêté), sa calèche suit son sentier — ni trafic, ni
+  passants qui flânent, ni police de ronde ([notes](la-cabane-a-sucre-pour-vrai.md#notes)).

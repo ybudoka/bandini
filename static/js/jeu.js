@@ -1106,6 +1106,7 @@ const Jeu = (function () {
         pas('pont', Pont.maj);             // le pont de glace : il prend, craque au degel, et rend l'eau
         pas('fetes', Fetes.maj);           // decembre : le tronc du sapin est une tuile pleine
         pas('saintjean', SaintJean.maj);   // la Saint-Jean : le bruit des feux
+        pas('cabane', Cabane.maj);         // la cabane a sucre : la caleche, ses gens, la table de tire
         pas('cineparc', Cineparc.maj);     // le cine-parc : ses spectateurs, et les phares qui fachent
         pas('galeries', Galeries.maj);     // la nuit aux Galeries : les lumieres, la voix, le gardien
         pas('enseignes', Enseignes.maj);   // le bingo, le film du Rialto, le lave-auto
@@ -1209,7 +1210,7 @@ const Jeu = (function () {
     if (B.interieur) Metro.dessiner(ctx, vue);
     // ⚠️ Les battants PAR-DESSUS le sol, jamais dedans : repeindre un
     // morceau de 256 px a chaque image pour une porte tuerait le cache.
-    if (!B.interieur) { Autobus.dessinerRails(ctx, vue); Neige.dessinerPanneaux(ctx, vue); Blocs.dessiner(ctx, vue); Monde.dessinerBattants(ctx, vue); Monde.dessinerPortesDeGarage(ctx, vue); Monde.dessinerBarrieresCoulissantes(ctx, vue); Monde.dessinerBarrieres(ctx, vue); }
+    if (!B.interieur) { Autobus.dessinerRails(ctx, vue); Neige.dessinerPanneaux(ctx, vue); Blocs.dessiner(ctx, vue); Cabane.dessinerSol(ctx, vue); Monde.dessinerBattants(ctx, vue); Monde.dessinerPortesDeGarage(ctx, vue); Monde.dessinerBarrieresCoulissantes(ctx, vue); Monde.dessinerBarrieres(ctx, vue); }
     Entites.dessinerDecals(ctx, vue);     // le sang est SOUS les pieds
     if (!B.interieur) Histoire.dessinerCheminCourse(ctx, vue);   // le trace d'une course, sur la chaussee
     if (!B.interieur) { Conduite.dessinerSol(ctx, vue); Rue.dessinerSol(ctx, vue); SaintJean.dessinerDefile(ctx, vue); }   // la case, les lignes, les cones d'une epreuve au volant
@@ -1518,7 +1519,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Canton: Canton, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,

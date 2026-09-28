@@ -5141,6 +5141,22 @@ function peindreOrignal(ctx) {
   ctx.fillRect(28, 3, 4, 2); ctx.fillRect(29, 1, 1, 2); ctx.fillRect(31, 1, 1, 2); ctx.fillRect(28, 5, 1, 3);
 }
 
+/** Un érable de l'érablière (20 × 28, le pied à [10, 27]) : l'écorce grise et gercée, la cime ronde et
+    lobée, quelques bourgeons rouges. Ses deux fiches (`erable_seau`, `erable_tube`) y accrochent leur récolte. */
+function peindreErable(ctx) {
+  ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(4, 27, 13, 3);
+  ctx.fillStyle = '#5e5248'; ctx.fillRect(8, 16, 4, 13);                   // le tronc
+  ctx.fillStyle = '#7d7266'; ctx.fillRect(8, 16, 1, 13);
+  ctx.fillStyle = '#433a33'; ctx.fillRect(10, 18, 1, 3); ctx.fillRect(9, 24, 1, 3); ctx.fillRect(11, 26, 1, 2);   // l'écorce gercée
+  // La cime : large, ronde, lobée — elle couvre le haut du tronc.
+  ctx.fillStyle = '#2b6327'; ctx.fillRect(3, 2, 14, 16); ctx.fillRect(1, 5, 18, 10); ctx.fillRect(0, 7, 20, 6);
+  ctx.fillRect(6, 0, 8, 2); ctx.fillRect(2, 16, 5, 2); ctx.fillRect(13, 16, 5, 2);
+  ctx.fillStyle = '#3f8d38'; ctx.fillRect(5, 2, 5, 4); ctx.fillRect(11, 3, 4, 3); ctx.fillRect(2, 7, 4, 4); ctx.fillRect(8, 8, 3, 3);
+  ctx.fillStyle = '#56a746'; ctx.fillRect(6, 2, 2, 2); ctx.fillRect(3, 8, 2, 1);
+  ctx.fillStyle = '#1d4a1b'; ctx.fillRect(13, 10, 6, 5); ctx.fillRect(5, 13, 9, 4); ctx.fillRect(0, 12, 3, 2);
+  ctx.fillStyle = '#c0432f'; ctx.fillRect(4, 4, 1, 1); ctx.fillRect(15, 6, 1, 1); ctx.fillRect(2, 10, 1, 1); ctx.fillRect(10, 5, 1, 1); ctx.fillRect(12, 12, 1, 1);
+}
+
 const DECORS = {
   // L'ORIGNAL de La Pointe (`Entites.majOrignal`) : une tonne de bete, plus haute qu'un char. Le
   // panache en palettes, la bosse au garrot, le fanon sous le menton, les pattes trop longues.
@@ -5156,6 +5172,70 @@ const DECORS = {
     ctx.fillStyle = '#3f8d38'; ctx.fillRect(4, 3, 6, 5); ctx.fillRect(2, 9, 5, 4);
     ctx.fillStyle = '#204d1e'; ctx.fillRect(10, 10, 6, 6); ctx.fillRect(6, 14, 8, 3);
   } },
+  // L'ÉRABLIÈRE de la cabane à sucre (docs/jalons/la-cabane-a-sucre-pour-vrai.md) : un érable, plus haut et
+  // plus rond qu'un arbre de la ville, l'écorce grise ; la cime lobée, et les bourgeons rouges du printemps.
+  // `erable_seau` porte sa CHAUDIÈRE (le seau de tôle au couvercle pointu, accroché sous le chalumeau) ;
+  // `erable_tube` son chalumeau bleu, d'où la tubulure part vers l'arbre voisin (`Cabane.dessinerSol`,
+  // `Cabane.chalumeau` : le bout du chalumeau est à (+3, -8) du pied).
+  erable_seau: { arrete: 2.0, w: 20, h: 30, ancre: [10, 29], r: 5, solide: true, peindre: function (ctx, w, h) {
+    peindreErable(ctx);
+    ctx.fillStyle = '#1b1b1f'; ctx.fillRect(11, 20, 2, 1);                 // le chalumeau
+    ctx.fillStyle = '#5c636b'; ctx.fillRect(9, 21, 6, 1);                  // le couvercle, en pointe
+    ctx.fillStyle = '#c3c9ce'; ctx.fillRect(10, 20, 4, 1);
+    ctx.fillStyle = '#9ea5ac'; ctx.fillRect(10, 22, 4, 4);                 // la chaudière
+    ctx.fillStyle = '#d9dee2'; ctx.fillRect(10, 22, 1, 4);                 // le reflet de la tôle
+    ctx.fillStyle = '#6e757c'; ctx.fillRect(13, 22, 1, 4); ctx.fillRect(10, 24, 4, 1);   // l'ombre, le cerclage
+  } },
+  erable_tube: { arrete: 2.0, w: 20, h: 30, ancre: [10, 29], r: 5, solide: true, peindre: function (ctx, w, h) {
+    peindreErable(ctx);
+    ctx.fillStyle = '#2f86d6'; ctx.fillRect(11, 21, 3, 1);                 // le chalumeau bleu
+    ctx.fillStyle = '#1d5a94'; ctx.fillRect(12, 22, 2, 1);
+  } },
+  // LA CORDE DE BOIS de l'évaporateur : des bûches fendues, les bouts vers nous, en trois rangs décalés.
+  // Quatre bûches de quatre pixels : deux cordes côte à côte se continuent sans couture.
+  corde_bois: { arrete: 3.0, w: 16, h: 24, ancre: [8, 23], r: 6, sol: [8, 5], solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0, 22, 16, 2);
+    ctx.fillStyle = '#2e1d10'; ctx.fillRect(0, 4, 16, 18);                 // les jours entre les bûches
+    ctx.fillStyle = '#5a3a1a'; ctx.fillRect(0, 2, 16, 3);                  // l'écorce, sur le dessus
+    ctx.fillStyle = '#6e4a24'; for (let x = 1; x < 16; x += 3) ctx.fillRect(x, 2, 1, 1);
+    // Trois rangs de bouts de bûches RONDS (les coins mangés), décalés d'un demi-bout d'un rang à l'autre.
+    for (let r = 0; r < 3; r++) {
+      for (let k = -1; k < 5; k++) {
+        const x = k * 4 + (r % 2 ? 2 : 0), y = 5 + r * 6;
+        for (let dy = 0; dy < 5; dy++) {
+          const bord = dy === 0 || dy === 4;
+          const x0 = Math.max(0, x + (bord ? 1 : 0)), x1 = Math.min(16, x + (bord ? 3 : 4));
+          if (x1 <= x0) continue;
+          ctx.fillStyle = (r + k) % 3 === 0 ? '#c38f52' : '#d8aa6c';        // le bout de la bûche, le bois clair
+          ctx.fillRect(x0, y + dy, x1 - x0, 1);
+        }
+        if (x + 1 >= 0 && x + 2 < 16) { ctx.fillStyle = '#9a6a36'; ctx.fillRect(x + 1, y + 2, 2, 1); }   // le cœur
+        if (x + 3 >= 0 && x + 3 < 16) { ctx.fillStyle = '#7a4c24'; ctx.fillRect(x + 3, y + 1, 1, 3); }   // l'ombre
+      }
+    }
+  } },
+  // LA TABLE DE TIRE : l'auge de bois sur ses pattes, pleine de neige tassée — le banc de neige où l'on verse
+  // le sirop bouillant en rubans, et où on le roule sur un bâton. `variantes` : combien de rubans sont
+  // versés (0 : la neige propre, hors saison — `Cabane.maj` l'y tient par `poseManuelle`). `anime` : un
+  // ruban de plus toutes les 45 images, puis tout est mangé et on recommence.
+  table_tire: { arrete: 3.0, w: 52, h: 24, ancre: [26, 19], r: 10, sol: [24, 6], solide: true, variantes: 8, anime: 45,
+    peindre: function (ctx, w, h, v) {
+      ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(2, 20, 48, 3);
+      ctx.fillStyle = '#4a3218'; ctx.fillRect(3, 14, 2, 8); ctx.fillRect(47, 14, 2, 8); ctx.fillRect(25, 14, 2, 7);  // les pattes
+      ctx.fillStyle = '#6e4a24'; ctx.fillRect(0, 3, 52, 12);               // l'auge
+      ctx.fillStyle = '#8a5a2b'; ctx.fillRect(0, 12, 52, 4);               // la planche de devant
+      ctx.fillStyle = '#a0703a'; ctx.fillRect(0, 12, 52, 1);
+      ctx.fillStyle = '#eef3f8'; ctx.fillRect(2, 4, 48, 8);                // la neige tassée
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(3, 4, 46, 2);
+      ctx.fillStyle = '#d3dde8'; for (let x = 4; x < 48; x += 7) ctx.fillRect(x, 9 + (x % 3), 3, 1);
+      // Les rubans de tire, du plus vieux (roulé, sombre) au dernier versé (doré, luisant).
+      for (let i = 0; i < v; i++) {
+        const x = 5 + i * 6, neuf = i === v - 1;
+        ctx.fillStyle = neuf ? '#e9a93a' : '#c27c22'; ctx.fillRect(x, 5, 2, 6);
+        ctx.fillStyle = neuf ? '#ffd27a' : '#dc9a3e'; ctx.fillRect(x, 5, 1, 3);
+        if (!neuf) { ctx.fillStyle = '#efe6d0'; ctx.fillRect(x + 1, 2, 1, 4); }   // le bâton, planté dedans
+      }
+    } },
   lampadaire: { casse: 0.7, pv: 60, w: 8, h: 30, ancre: [3, 29], r: 2, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#3a3d44'; ctx.fillRect(2, 4, 2, 26); ctx.fillRect(0, 28, 6, 2);
     ctx.fillStyle = '#4a4d55'; ctx.fillRect(2, 2, 6, 2);

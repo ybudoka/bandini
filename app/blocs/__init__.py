@@ -17,6 +17,8 @@ Comme une mission : rien d'autre à toucher.
 
 from __future__ import annotations
 
+import copy
+
 from .. import carte
 from . import cineparc, galeries, rang
 
@@ -78,7 +80,9 @@ def carte_du_bloc(bloc: dict) -> dict:
                  # L'ecran du cine-parc : son cadre, en tuiles (`Cineparc` peint la toile).
                  "ecran": dict(bloc["ecran"]) if bloc.get("ecran") else None,
                  # La fenêtre de sa cabine de projection (`Cineparc.faisceau` en part).
-                 "cabine": dict(bloc["cabine"]) if bloc.get("cabine") else None},
+                 "cabine": dict(bloc["cabine"]) if bloc.get("cabine") else None,
+                 # La cabane à sucre, pour vrai : la calèche, la tubulure, la table de tire et ses gens (`Cabane`).
+                 "cabane": copy.deepcopy(bloc["cabane"]) if bloc.get("cabane") else None},
     }
 
 

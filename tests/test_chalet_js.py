@@ -249,7 +249,8 @@ def test_de_dehors_la_cheminee_fume(banc):
         L.Jeu.commencer();
         const B = L.B;
         await auChalet(L, o);
-        const c = L.Blocs.cheminees();
+        // La souche de pierre du chalet : celles de la cabane à sucre (sa tôle, son lanterneau) ont leur `genre`.
+        const c = L.Blocs.cheminees().filter(function (q) { return !q.genre; });
         const vue = { x: c[0].x * TT - 120, y: c[0].y * TT - 120 };
         function peindre(quoi, t) {
             B.t = t;
