@@ -5,6 +5,8 @@ tournée ; sa ritournelle joue quand il roule et se tait quand il s'arrête ; le
 suivent sans jamais toucher la rue ; et la police le soupçonne moins, tant qu'on n'y tire pas.
 """
 
+import pytest
+
 from app import economie, vehicules
 
 #: Le joueur à 300 px de la place du camion (hors champ), et les images qu'il faut pour qu'il naisse.
@@ -24,31 +26,29 @@ APPROCHE = """
 """
 
 
-def test_il_attend_gare_pres_du_depanneur_et_nait_quand_on_approche(banc):
-    r = banc("function (L, o) {" + APPROCHE + """
+@pytest.fixture(scope="module")
+def camion_puis_tournee(banc):
+    """UN banc : on approche (il naît, garé), on le regarde encore 130 images — puis on monte, et
+    c'est la tournée.
+
+    ⚠️ La 1re partie ne fait que LIRE : le camion est né par `approcher` et on n'y touche pas.
+    La 2e trouvait, dans son banc, le même camion né et garé par le même `approcher` — on y monte
+    directement, au lieu d'approcher une seconde fois."""
+    return banc("function (L, o) {" + APPROCHE + """
         L.Jeu.commencer();
-        const B = L.B;
+        const B = L.B, M = L.Missions;
         const auDemarrage = B.entites.filter(function (e) { return e.type === 'vehicule' && e.slug === 'creme_glacee'; }).length;
         const camions = approcher(L, o);
         for (let k = 0; k < 130; k++) o.frame(1);
         const encore = B.entites.filter(function (e) { return e.type === 'vehicule' && e.slug === 'creme_glacee'; }).length;
-        const c = camions[0], place = L.Missions.placeDuCamion();
-        return { auDemarrage: auDemarrage, n: camions.length, encore: encore, gare: c && c.etat,
-                 pres: c ? Math.round(Math.hypot(c.x - place.x, c.y - place.y)) : null };
-    }""")
-    assert r["auDemarrage"] == 0, "il est né au démarrage : un identifiant de plus pour toute la partie"
-    assert r["n"] == 1 and r["encore"] == 1, r
-    assert r["gare"] == "stationne" and r["pres"] < 16, r
-
-
-def test_au_klaxon_la_tournee_et_la_ritournelle_quand_il_roule(banc):
-    r = banc("function (L, o) {" + APPROCHE + """
-        L.Jeu.commencer();
-        const B = L.B, M = L.Missions;
+        const c = camions[0], place = M.placeDuCamion();
+        const nait = { auDemarrage: auDemarrage, n: camions.length, encore: encore, gare: c && c.etat,
+                       pres: c ? Math.round(Math.hypot(c.x - place.x, c.y - place.y)) : null };
+        // --- La tournee, au volant du meme camion.
         const demandes = [];
         const vrai = L.Son.Rue.demander;
         L.Son.Rue.demander = function (slug, v) { demandes.push(slug); return vrai.apply(null, arguments); };
-        const c = auVolant(L, o);
+        L.Vehicules.monter(B.joueur, c);
         o.tape('KeyJ', 2);
         const tournee = { slug: M.boulot.slug, etape: M.boulot.etape, dest: M.boulot.destination };
         // A l'arret : silence.
@@ -63,18 +63,37 @@ def test_au_klaxon_la_tournee_et_la_ritournelle_quand_il_roule(banc):
         const argent = B.partie.argent;
         c.x = M.boulot.destination.x; c.y = M.boulot.destination.y; c.vitesse = 0; c.vx = 0; c.vy = 0;
         L.Entites.indexer(); o.frame(3);
-        return { tournee: tournee, arret: arret, roule: roule, vente: B.partie.argent - argent, etapes: M.boulot.etapesFaites };
+        return { nait: nait,
+                 tournee: { tournee: tournee, arret: arret, roule: roule, vente: B.partie.argent - argent, etapes: M.boulot.etapesFaites } };
     }""")
+
+
+def test_il_attend_gare_pres_du_depanneur_et_nait_quand_on_approche(camion_puis_tournee):
+    r = camion_puis_tournee["nait"]
+    assert r["auDemarrage"] == 0, "il est né au démarrage : un identifiant de plus pour toute la partie"
+    assert r["n"] == 1 and r["encore"] == 1, r
+    assert r["gare"] == "stationne" and r["pres"] < 16, r
+
+
+def test_au_klaxon_la_tournee_et_la_ritournelle_quand_il_roule(camion_puis_tournee):
+    r = camion_puis_tournee["tournee"]
     assert r["tournee"]["slug"] == "creme_glacee" and r["tournee"]["etape"] == "route" and r["tournee"]["dest"], r
     assert r["arret"] == 0, "la ritournelle joue à l'arrêt"
     assert r["roule"] >= 8, "la ritournelle ne joue pas quand il roule"
     assert r["vente"] > 0 and r["etapes"] == 1, r
 
 
-def test_les_enfants_a_velo_suivent_la_ritournelle_sans_toucher_la_rue(banc):
-    r = banc("function (L, o) {" + APPROCHE + """
+@pytest.fixture(scope="module")
+def enfants_puis_police(banc):
+    """UN banc : au volant, la tournée et un enfant à vélo qui la suit — puis, toujours au volant du
+    camion, ce que la police en pense.
+
+    ⚠️ La police se lit en posant la chaleur à zéro avant chaque délit (`chaleur`), comme son juge
+    le faisait ; on remet aussi les étoiles et les crimes, que 400 images de tournée auraient pu
+    laisser. Le camion est le même : on n'approche pas une seconde fois."""
+    return banc("function (L, o) {" + APPROCHE + """
         L.Jeu.commencer();
-        const B = L.B, M = L.Missions, Mo = L.Monde;
+        const B = L.B, M = L.Missions, Mo = L.Monde, P = L.Police;
         const c = auVolant(L, o);
         o.tape('KeyJ', 2);
         // Un enfant a velo sur un trottoir, a 150 px.
@@ -92,21 +111,12 @@ def test_les_enfants_a_velo_suivent_la_ritournelle_sans_toucher_la_rue(banc):
             o.frame(1);
             if (Mo.estChaussee(Math.floor(e.x / 16), Math.floor(e.y / 16))) surLaRue++;
         }
-        return { suit: !!e.poste, poste: e.poste ? Math.round(Math.hypot(e.poste.x - c.x, e.poste.y - c.y)) : null,
-                 surLaRue: surLaRue, vivant: e.vivant };
-    }""")
-    assert r["suit"], "l'enfant n'entend pas la ritournelle"
-    assert r["poste"] is not None and r["poste"] < 80, r
-    assert r["surLaRue"] == 0, f"l'enfant a roulé {r['surLaRue']} images sur la chaussée"
-    assert r["vivant"]
-
-
-def test_la_police_le_soupconne_moins_tant_qu_on_n_y_tire_pas(banc):
-    """Le même délit, vu : dans le camion, la moitié de la chaleur ; une arme sortie, toute."""
-    r = banc("function (L, o) {" + APPROCHE + """
-        L.Jeu.commencer();
-        const B = L.B, P = L.Police;
-        const c = auVolant(L, o);
+        const enfants = { suit: !!e.poste, poste: e.poste ? Math.round(Math.hypot(e.poste.x - c.x, e.poste.y - c.y)) : null,
+                          surLaRue: surLaRue, vivant: e.vivant };
+        // --- La police : le meme delit, vu, dans le camion puis a pied.
+        c.vitesse = 0; c.vx = 0; c.vy = 0;
+        if (B.joueur.dansVehicule !== c) L.Vehicules.monter(B.joueur, c);
+        B.recherche.etoiles = 0; B.crimes.length = 0;
         function chaleur(type) {
             B.recherche.chaleur = 0; B.recherche.redites = {};
             P.signalerCrime(type, B.joueur.x, B.joueur.y, true);
@@ -115,15 +125,29 @@ def test_la_police_le_soupconne_moins_tant_qu_on_n_y_tire_pas(banc):
         const dansLeCamion = chaleur('carjacking'), armeDansLeCamion = chaleur('arme_sortie');
         L.Vehicules.descendre(B.joueur, true);
         const aPied = chaleur('carjacking');
-        return { dansLeCamion: dansLeCamion, aPied: aPied, arme: armeDansLeCamion, armeAPied: chaleur('arme_sortie') };
+        return { enfants: enfants,
+                 police: { dansLeCamion: dansLeCamion, aPied: aPied, arme: armeDansLeCamion, armeAPied: chaleur('arme_sortie') } };
     }""")
+
+
+def test_les_enfants_a_velo_suivent_la_ritournelle_sans_toucher_la_rue(enfants_puis_police):
+    r = enfants_puis_police["enfants"]
+    assert r["suit"], "l'enfant n'entend pas la ritournelle"
+    assert r["poste"] is not None and r["poste"] < 80, r
+    assert r["surLaRue"] == 0, f"l'enfant a roulé {r['surLaRue']} images sur la chaussée"
+    assert r["vivant"]
+
+
+def test_la_police_le_soupconne_moins_tant_qu_on_n_y_tire_pas(enfants_puis_police):
+    """Le même délit, vu : dans le camion, la moitié de la chaleur ; une arme sortie, toute."""
+    r = enfants_puis_police["police"]
     part = vehicules.par_slug("creme_glacee")["discret"]
     assert abs(r["dansLeCamion"] - r["aPied"] * part) < 0.01, r
     assert r["arme"] == r["armeAPied"], "une arme sortie dans le camion chauffe moins"
 
 
 def test_la_tournee_tient_l_economie():
-    f = economie.BOULOTS["creme_glacee"]
-    taxi = economie.gain_boulot(economie.BOULOTS["taxi"])
-    assert taxi <= economie.gain_boulot(f) <= 4 * taxi
+    # « Entre le taxi et quatre fois le taxi » : `test_economie::test_chaque_boulot_vaut_la_peine…`
+    # le juge pour CHAQUE boulot — à condition que la tournée en soit un.
+    assert "creme_glacee" in economie.BOULOTS
     assert vehicules.par_slug("creme_glacee")["frequence"] == 0, "il ne roule pas dans le trafic"
