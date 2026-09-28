@@ -3474,12 +3474,33 @@ const Entites = (function () {
         return;
       }
     }
-    // Sur le territoire d'une gang, ce sont ses membres qui trainent dehors.
-    const gang = zone && zone.gang && !(B.partie && B.partie.faubourgLibere) && B.rng() < 0.5
+    // Sur le territoire d'une gang, ce sont ses membres qui trainent dehors — tant que son
+    // district n'est pas LIBERE (`gangChasse`). ⚠️ Avant le 28 sept. 2026, c'etait
+    // `faubourgLibere` pour TOUTES les zones : apres m5, plus un Chevreuil, plus une Morue,
+    // plus un Boulonneux ne sortait nulle part en ville.
+    const gang = zone && zone.gang && !gangChasse(zone.gang) && B.rng() < 0.5
       ? (B.defs.pietons.gangs.find(function (g) { return g.slug === zone.gang; }) || null)
       : null;
     const ne = creerPieton(place.x, place.y, gang ? archetype(gang.pieton) : null);
     if (ne && sortie) ne.sortie = sortie;
+  }
+
+  /** Le gang `slug` a-t-il perdu son district (M16, `donne.libere`) ? Ses membres ne
+      trainent plus dehors : la zone est aux passants. Le Faubourg compte aussi par
+      `faubourgLibere` (m5, et les parties d'avant `libere`). */
+  function gangChasse(slug) {
+    const p = B.partie;
+    if (!p) return false;
+    const g = ((B.defs.pietons && B.defs.pietons.gangs) || []).find(function (q) { return q.slug === slug; });
+    if (!g) return false;
+    if (g.district === 'faubourg' && p.faubourgLibere) return true;
+    return (p.libere || []).indexOf(g.district) >= 0;
+  }
+
+  /** Le gang `slug` est-il CALME (M16, `donne.calme`) : il ne te saute plus dessus parce
+      que tu tiens une arme sur son territoire. Frappe-le, il riposte quand meme. */
+  function gangCalme(slug) {
+    return !!(B.partie && (B.partie.calmes || []).indexOf(slug) >= 0);
   }
 
   /** Un flaneur qui se choisit une porte et rentre chez lui.
@@ -4559,7 +4580,8 @@ const Entites = (function () {
       if (--e.minuterie <= 0) { retirer(e); return; }
     } else {
       // Un Cravate sur son territoire : le joueur arme au poing, c'est une provocation.
-      if (e.gang && !e.cible && B.joueur.arme !== 'poings' && !B.joueur.dansVehicule && e.t % 15 === 0
+      // ⚠️ Un gang CALME (`donne.calme`, M16) ne prend plus l'arme au poing pour une provocation.
+      if (e.gang && !e.cible && !gangCalme(e.gang) && B.joueur.arme !== 'poings' && !B.joueur.dansVehicule && e.t % 15 === 0
           && dist2(e.x, e.y, B.joueur.x, B.joueur.y) < (6 * TT) * (6 * TT) && Monde.ligneLibre(e.x, e.y, B.joueur.x, B.joueur.y)) {
         const zone = Monde.zoneA(e.x, e.y);
         if (zone && zone.gang === e.gang) { e.etat = 'attaque_joueur'; e.cri = 90; }
@@ -5528,7 +5550,7 @@ const Entites = (function () {
   }
 
   return {
-    orignalDeLaNuit, majOrignal, faireFuirLOrignal,
+    orignalDeLaNuit, majOrignal, faireFuirLOrignal, gangChasse, gangCalme,
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES, PORTEE_DECOR,
     creer, enDehorsDeLaSuite, sauterDesNumeros, dansLaBande, retirer, vider, creerJoueur, creerJoueur2, joueurs, estJoueur, creerDecor, creerAmbulants, majKiosques, creerPaquets, creerPieton, reindexerDecor,
     briser, endommagerDecor, reparerLeDecor, releverDecor, DEBRIS_MAX,
