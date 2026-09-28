@@ -7,6 +7,8 @@ l'été ; c'est aussi la cabine du projecteur, dont le faisceau va jusqu'à la t
 poursuite et deux films de combat —, le même aux deux cinémas, sans un dé
 (docs/jalons/le-cinema-mais-eclate-films-de-combat-et-grand-ecran.md)."""
 
+import pytest
+
 from app import magasins
 from app.blocs import cineparc
 
@@ -98,65 +100,31 @@ def test_le_casse_croute_sert_l_ete_le_soir_et_se_dit_ferme_sinon(banc):
     assert r["hiver"] == ["FERMÉ — ON ROUVRE L'ÉTÉ"], r["hiver"]
 
 
-def test_le_projecteur_eclaire_la_toile_depuis_la_cabine_pendant_la_seance(banc):
-    """Pendant la séance, le faisceau part de la fenêtre de la cabine et s'ouvre sur toute la largeur de la
-    toile, et le rendu du jeu le peint ; le midi, rien."""
-    r = banc("async function (L, o) {" + OUTILS + """
+@pytest.fixture(scope="module")
+def seance(banc):
+    """Le projecteur, le film et les phares dans UN banc : une seule entrée au ciné-parc, un soir
+    d'été à 21 h 30, comme chacun des trois juges la faisait.
+
+    ⚠️ L'ordre : d'abord tout ce qui se LIT pendant la séance (le faisceau peint, le rendu, les
+    spectateurs, le trafic, la lueur) ; puis les phares, qui ajoutent un char et le conduisent —
+    rendu ensuite (le joueur descend, le char s'en va, le message du HUD redevient le vrai) ; puis
+    midi, puis l'hiver, que les deux juges lisaient dans cet ordre-là."""
+    return banc("async function (L, o) {" + OUTILS + """
         L.Jeu.commencer();
-        const B = L.B, C = L.Cineparc;
+        const B = L.B, C = L.Cineparc, V = L.Vehicules, j = B.joueur;
         await entrer(L, o, ete(L), 21.5);
+        // --- Le soir : le projecteur, et le film.
         const bloc = L.Monde.carte.def.bloc, e = bloc.ecran, c = bloc.cabine, vue = { x: 0, y: 0 };
-        const soir = pinceau(); C.dessinerFaisceau(soir, vue);
+        const faisceau = pinceau(); C.dessinerFaisceau(faisceau, vue);
         let appels = 0; const vrai = C.dessinerFaisceau;
         C.dessinerFaisceau = function () { appels++; return vrai.apply(null, arguments); };
         L.Jeu.rendre();
         C.dessinerFaisceau = vrai;
-        B.partie.heure = 13 / 24; for (let i = 0; i < 5; i++) o.frame(1);
-        const midi = pinceau(); C.dessinerFaisceau(midi, vue);
-        return { soir: soir, midi: { remplis: midi.remplis, grains: midi.grains }, appels: appels,
-                 lentille: [c.x * TT, c.y * TT], toile: [e.x * TT, (e.x + e.l) * TT, (e.y + e.h) * TT] };
-    }""")
-    s, (lx, ly), (x0, x1, ty) = r["soir"], r["lentille"], r["toile"]
-    assert s["remplis"] >= 3 and s["grains"] >= 10, s
-    haut = [p for p in s["points"] if abs(p[1] - ly) < 1]
-    bas = [p for p in s["points"] if abs(p[1] - ty) < 1]
-    assert haut and all(abs(x - lx) <= 2 for x, _ in haut), (haut, r["lentille"])
-    assert bas and min(x for x, _ in bas) <= x0 + 1 and max(x for x, _ in bas) >= x1 - 1, (bas, r["toile"])
-    assert r["appels"] >= 1, "le rendu du jeu ne peint pas le faisceau"
-    assert r["midi"] == {"remplis": 0, "grains": 0}, r["midi"]
-
-
-def test_le_film_ne_joue_que_les_soirs_d_ete_et_les_spectateurs_avec_lui(banc):
-    r = banc("async function (L, o) {" + OUTILS + """
-        L.Jeu.commencer();
-        const B = L.B, C = L.Cineparc;
-        await entrer(L, o, ete(L), 21.5);
         const soir = { ici: C.ici(), bloc: B.bloc && B.bloc.slug, seance: C.seance(), spectateurs: C.spectateurs().length,
                        dansLesCases: C.spectateurs().every(function (v) { return C.dansUneCase(v.x, v.y - 4); }),
                        trafic: B.entites.filter(function (e) { return e.type === 'vehicule' && e.conducteur === 'trafic'; }).length,
                        lueur: C.lampes({ x: 0, y: 0 }).length };
-        B.partie.heure = 13 / 24; for (let i = 0; i < 5; i++) o.frame(1);
-        const midi = { seance: C.seance(), spectateurs: C.spectateurs().length, lueur: C.lampes({ x: 0, y: 0 }).length };
-        B.partie.jour = 2; B.partie.heure = 21.5 / 24; for (let i = 0; i < 5; i++) o.frame(1);
-        const hiver = { seance: C.seance(), spectateurs: C.spectateurs().length };
-        return { soir: soir, midi: midi, hiver: hiver };
-    }""")
-    s = r["soir"]
-    assert s["ici"] and s["bloc"] == "cineparc", r
-    assert s["seance"] and s["spectateurs"] >= 4 and s["dansLesCases"] and s["lueur"] >= 1, s
-    assert s["trafic"] == 0, "le trafic est entré au ciné-parc"
-    assert r["midi"] == {"seance": False, "spectateurs": 0, "lueur": 0}, r["midi"]
-    assert r["hiver"] == {"seance": False, "spectateurs": 0}, r["hiver"]
-
-
-def test_les_phares_pendant_le_film(banc):
-    """Au volant pendant la séance : rouler dans les rangées fait klaxonner ; garé dans une case et
-    arrêté, les phares s'éteignent — et plus un faisceau ne part du char."""
-    r = banc("async function (L, o) {" + OUTILS + """
-        L.Jeu.commencer();
-        const B = L.B, C = L.Cineparc, V = L.Vehicules, j = B.joueur;
-        await entrer(L, o, ete(L), 21.5);
-        // Un char, dans l'allee derriere la derniere rangee.
+        // --- Les phares : un char, dans l'allee derriere la derniere rangee.
         const cs = C.cases(), libre = cs.find(function (c) { return !C.spectateurs().some(function (v) { return Math.hypot(v.x - c.x, v.y - c.y - 4) < 20; }); });
         const v = V.creer('auto', libre.x - 60, libre.y + 32, 0, { etat: 'stationne', couleur: '#888' });
         V.monter(j, v); L.Entites.indexer();
@@ -169,8 +137,49 @@ def test_les_phares_pendant_le_film(banc):
         for (let i = 0; i < 40; i++) o.frame(1);
         L.Jeu.rendre && L.Jeu.rendre();
         const faisceaux = V.lampesDesPhares().filter(function (l) { return l.faisceau === v || l.phare === v; }).length;
-        return { roule: roule, gare: !!v.pharesEteints, faisceaux: faisceaux };
+        const phares = { roule: roule, gare: !!v.pharesEteints, faisceaux: faisceaux };
+        L.Hud.message = hud;
+        V.descendre(j, true); L.Entites.retirer(v); L.Entites.indexer();
+        // --- Midi, puis l'hiver.
+        B.partie.heure = 13 / 24; for (let i = 0; i < 5; i++) o.frame(1);
+        const faisceauMidi = pinceau(); C.dessinerFaisceau(faisceauMidi, vue);
+        const midi = { seance: C.seance(), spectateurs: C.spectateurs().length, lueur: C.lampes({ x: 0, y: 0 }).length };
+        B.partie.jour = 2; B.partie.heure = 21.5 / 24; for (let i = 0; i < 5; i++) o.frame(1);
+        const hiver = { seance: C.seance(), spectateurs: C.spectateurs().length };
+        return { projecteur: { soir: faisceau, midi: { remplis: faisceauMidi.remplis, grains: faisceauMidi.grains }, appels: appels,
+                               lentille: [c.x * TT, c.y * TT], toile: [e.x * TT, (e.x + e.l) * TT, (e.y + e.h) * TT] },
+                 film: { soir: soir, midi: midi, hiver: hiver }, phares: phares };
     }""")
+
+
+def test_le_projecteur_eclaire_la_toile_depuis_la_cabine_pendant_la_seance(seance):
+    """Pendant la séance, le faisceau part de la fenêtre de la cabine et s'ouvre sur toute la largeur de la
+    toile, et le rendu du jeu le peint ; le midi, rien."""
+    r = seance["projecteur"]
+    s, (lx, ly), (x0, x1, ty) = r["soir"], r["lentille"], r["toile"]
+    assert s["remplis"] >= 3 and s["grains"] >= 10, s
+    haut = [p for p in s["points"] if abs(p[1] - ly) < 1]
+    bas = [p for p in s["points"] if abs(p[1] - ty) < 1]
+    assert haut and all(abs(x - lx) <= 2 for x, _ in haut), (haut, r["lentille"])
+    assert bas and min(x for x, _ in bas) <= x0 + 1 and max(x for x, _ in bas) >= x1 - 1, (bas, r["toile"])
+    assert r["appels"] >= 1, "le rendu du jeu ne peint pas le faisceau"
+    assert r["midi"] == {"remplis": 0, "grains": 0}, r["midi"]
+
+
+def test_le_film_ne_joue_que_les_soirs_d_ete_et_les_spectateurs_avec_lui(seance):
+    r = seance["film"]
+    s = r["soir"]
+    assert s["ici"] and s["bloc"] == "cineparc", r
+    assert s["seance"] and s["spectateurs"] >= 4 and s["dansLesCases"] and s["lueur"] >= 1, s
+    assert s["trafic"] == 0, "le trafic est entré au ciné-parc"
+    assert r["midi"] == {"seance": False, "spectateurs": 0, "lueur": 0}, r["midi"]
+    assert r["hiver"] == {"seance": False, "spectateurs": 0}, r["hiver"]
+
+
+def test_les_phares_pendant_le_film(seance):
+    """Au volant pendant la séance : rouler dans les rangées fait klaxonner ; garé dans une case et
+    arrêté, les phares s'éteignent — et plus un faisceau ne part du char."""
+    r = seance["phares"]
     assert r["roule"]["klaxon"] and not r["roule"]["eteints"], r
     assert r["gare"] and r["faisceaux"] == 0, r
 
