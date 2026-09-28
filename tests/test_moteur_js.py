@@ -8454,7 +8454,13 @@ def test_un_char_coince_dix_secondes_est_debloque(banc):
         L.Monde.centrerCamera(j.x, j.y);
         const x0 = v.x, y0 = v.y, angle0 = v.angle;
         let bouge = 0;
+        // ⚠️ Le joueur reste en vie ICI AUSSI (la raison est plus bas) : plante
+        // devant un char qui repart, il se fait renverser. Le Petit-Canton a
+        // deplace la ville (27 sept. 2026) et il en est mort — reveille a
+        // l'hopital, la seconde moitie jouait dans une piece, sans un char a
+        // surveiller.
         for (let i = 0; i < 1500; i++) {
+            j.vie = j.vieMax; j.invincible = 30;
             o.frame(1);
             j.x = v.x + Math.cos(v.angle) * 24; j.y = v.y + Math.sin(v.angle) * 24;   // le joueur reste devant
             if (Math.hypot(v.x - x0, v.y - y0) > 40 && !bouge) bouge = i;
@@ -8476,9 +8482,11 @@ def test_un_char_coince_dix_secondes_est_debloque(banc):
             o.frame(1);
             if (w.debloques) mordu = i; else { w.x = wx; w.y = wy; }
         }
-        return { bouge: bouge, debloques: v.debloques || 0, droit: droit, angle0: angle0,
+        const dedans = L.B.interieur ? L.B.interieur.slug : null;
+        return { bouge: bouge, debloques: v.debloques || 0, droit: droit, angle0: angle0, dedans: dedans,
                  surRoute: L.Monde.estRoute(Math.floor(v.x / T), Math.floor(v.y / T)), mordu: mordu };
     }""")
+    assert r["dedans"] is None, "le joueur a fini dans une piece : dehors, plus rien ne roule"
     assert 0 < r["bouge"] < 700, "le char n'est jamais reparti (seul, ou par le chien de garde a 600 images)"
     assert 600 <= r["mordu"] < 1300, "un char qui bouge sans avancer doit se faire mordre par le chien de garde"
     assert r["surRoute"], "le char debloque a fini hors de la route"
