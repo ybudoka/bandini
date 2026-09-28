@@ -1394,6 +1394,8 @@ DECOR_SOLIDE = frozenset({
     "carcasse",
     # Le baril où l'on fait du feu, au bidonville de la gare (`nord._bidonville`).
     "baril_feu",
+    # La cour à scrap de la gare (`nord._cour_a_scrap`) : ses piles et sa grue à aimant.
+    "pile_de_carcasses", "cubes_de_ferraille", "tas_de_pneus", "grue_aimant",
     "arbre", "banc", "baril", "bbq", "belvedere", "borne_fontaine", "cabanon",
     "caisse", "carrousel", "chaise_sauveteur", "chaises_volantes", "distributrice_cafe",
     "distributrice_grignotines", "distributrice_liqueur", "fontaine", "galerie_tir",
@@ -3401,7 +3403,8 @@ class _Chantier:
     COTES = "NSEO"
 
     def clore(self, x: int, y: int, largeur: int, hauteur: int, glyphe: str, *,
-              cotes: str = COTES, ouverture: int = 2, cote_ouvert: str = "S") -> int:
+              cotes: str = COTES, ouverture: int = 2, cote_ouvert: str = "S",
+              depart: int | None = None) -> int:
         """Ceinture un terrain de cloture, avec une TROUEE. Rend le nombre de
         tuiles posees — zero si l'enceinte n'a pas pu se faire.
 
@@ -3470,7 +3473,10 @@ class _Chantier:
                    if all(self.marchable_en(tuile(d + k)[0] + dehors[0],
                                             tuile(d + k)[1] + dehors[1])
                           for k in range(ouverture))]
-        depart = self.des_cloture.choix(donnent or departs)
+        # ⚠️ `depart` : une trouée VOULUE à cet endroit (le portail de la cour à scrap, à côté du bureau du
+        # ferrailleur, `nord._cour_a_scrap`) — sans dé.
+        if depart is None:
+            depart = self.des_cloture.choix(donnent or departs)
         trouee = {tuile(depart + k) for k in range(ouverture)}
         voulues = [t for t in voulues if t not in trouee]
 

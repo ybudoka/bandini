@@ -5253,6 +5253,123 @@ function peindreErable(ctx) {
   ctx.fillStyle = '#c0432f'; ctx.fillRect(4, 4, 1, 1); ctx.fillRect(15, 6, 1, 1); ctx.fillRect(2, 10, 1, 1); ctx.fillRect(10, 5, 1, 1); ctx.fillRect(12, 12, 1, 1);
 }
 
+/* --- LA COUR A SCRAP DE LA GARE (`app/nord.py`, `_cour_a_scrap`) ------------------------------
+
+   Martin : « je n'aime pas la partie avec les morceaux de train ». Les wagons de la Gare de triage
+   sont partis ; a leur place, la casse des Boulonneux : des rangees de piles entre des allees, et
+   la grue a aimant. ⚠️ UNE PILE PAR TROIS TUILES : chaque decor coute au paquet de la carte, alors
+   une pile en dit trois (deux ou trois chars ecrases, des cubes, des pneus). */
+
+//: Ce qui reste de peinture aux chars de la casse : delavee, jamais vive.
+const PEINTURES_DE_SCRAP = ['#5a6a72', '#7a3b2e', '#3f5f45', '#8a7a4a', '#4a4f6a', '#6e6a64', '#8a5a2a'];
+
+/** Un char de la casse vu de haut, a plat : la caisse rouillee, ce qui reste de peinture au toit,
+    les vitres crevees. `ecrase` : l'aplati sous les autres, plus bas et sans toit qui depasse. */
+function peindreEpave(ctx, x, y, l, peinture, ecrase) {
+  const h = ecrase ? 6 : 8;
+  ctx.fillStyle = '#4e3626'; ctx.fillRect(x, y, l, h);                       // la caisse, cote ombre
+  ctx.fillStyle = '#6b4a34'; ctx.fillRect(x, y, l, h - 2);
+  ctx.fillStyle = peinture; ctx.fillRect(x + 2, y + 1, l - 4, h - 3);        // la peinture qui reste
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(x + 2, y + 1, l - 4, 1);
+  if (!ecrase) {
+    const tx = x + Math.round(l * 0.3), tl = Math.round(l * 0.38);
+    ctx.fillStyle = '#1f2327'; ctx.fillRect(tx - 2, y + 1, 2, h - 3); ctx.fillRect(tx + tl, y + 1, 2, h - 3);
+  } else {
+    ctx.fillStyle = '#2b2b2b'; ctx.fillRect(x + 1, y + h - 2, l - 2, 1);     // le pli de l'aplati
+  }
+  ctx.fillStyle = '#9a4a1e';                                                  // la rouille, par plaques
+  ctx.fillRect(x + 1, y + h - 3, 3, 2); ctx.fillRect(x + l - 5, y + 1, 3, 2); ctx.fillRect(x + (l >> 1), y + h - 3, 2, 1);
+}
+
+function peindrePileDeCarcasses(ctx, w, h, v) {
+  const p = function (k) { return PEINTURES_DE_SCRAP[(v * 3 + k) % PEINTURES_DE_SCRAP.length]; };
+  ctx.fillStyle = 'rgba(20,18,26,0.26)'; ctx.fillRect(2, 25, w - 4, 4);
+  peindreEpave(ctx, 1, 19, 46, p(0), true);                                   // l'aplati du dessous
+  peindreEpave(ctx, 3 + (v % 3) * 2, 13, 40, p(1), true);
+  if (v % 2) peindreEpave(ctx, 8 - (v % 3), 5, 30, p(2), false);             // un troisieme, pas tout a fait droit
+  else peindreEpave(ctx, 12, 6, 26, p(2), false);
+  ctx.fillStyle = '#2b2b2b'; ctx.fillRect(4, 27, 4, 2); ctx.fillRect(w - 9, 27, 4, 2);  // les essieux du dessous
+}
+
+/** Les cubes de ferraille compactee : des chars passes a la presse, empiles. Trois en bas, deux, parfois un. */
+function peindreCubesDeFerraille(ctx, w, h, v) {
+  ctx.fillStyle = 'rgba(20,18,26,0.26)'; ctx.fillRect(2, 25, w - 4, 4);
+  const cube = function (x, y, k) {
+    const c = PEINTURES_DE_SCRAP[(v + k * 2) % PEINTURES_DE_SCRAP.length];
+    ctx.fillStyle = '#3a2e26'; ctx.fillRect(x, y, 12, 10);                  // le flanc, dans l'ombre
+    ctx.fillStyle = c; ctx.fillRect(x, y, 12, 4);                             // le dessus, la couleur du char
+    ctx.fillStyle = 'rgba(255,255,255,0.14)'; ctx.fillRect(x, y, 12, 1);
+    ctx.fillStyle = c; ctx.fillRect(x + 1, y + 5, 3 + (k % 3), 2); ctx.fillRect(x + 6, y + 7, 4, 1);  // des bouts de carrosserie
+    ctx.fillStyle = '#8a8a8a'; ctx.fillRect(x + 2 + (k % 4) * 2, y + 6, 2, 1);                       // un chrome, un pare-choc
+    ctx.fillStyle = '#9a4a1e'; ctx.fillRect(x + 8 - (k % 3), y + 5, 2, 2);
+    ctx.fillStyle = '#1f1a16'; ctx.fillRect(x, y + 4, 12, 1); ctx.fillRect(x + 11, y, 1, 10);
+  };
+  cube(2, 17, 0); cube(14, 17, 1); cube(26, 17, 2);
+  cube(8, 8, 3); cube(20, 8, 4);
+  if (v % 3 !== 2) cube(14 + (v % 2 ? -5 : 5), 0, 5);
+}
+
+/** Un tas de pneus : des couches de pneus a plat, et un debout qui a roule contre. */
+function peindreTasDePneus(ctx, w, h, v) {
+  ctx.fillStyle = 'rgba(20,18,26,0.24)'; ctx.fillRect(2, 21, w - 4, 4);
+  const pneu = function (x, y) {
+    ctx.fillStyle = '#1c1c20'; ctx.fillRect(x, y + 1, 11, 5); ctx.fillRect(x + 1, y, 9, 7);
+    ctx.fillStyle = '#44444c'; ctx.fillRect(x + 1, y + 1, 9, 1); ctx.fillRect(x, y + 2, 1, 3);   // le flanc qui accroche la lumiere
+    ctx.fillStyle = '#5a5a62'; for (let k = 2; k < 10; k += 3) ctx.fillRect(x + k, y, 1, 1);      // les crampons
+    ctx.fillStyle = '#4a4238'; ctx.fillRect(x + 3, y + 2, 5, 3);                // le trou, et la terre au fond
+    ctx.fillStyle = '#26262a'; ctx.fillRect(x + 4, y + 3, 3, 1);
+  };
+  for (let i = 0; i < 4; i++) pneu(1 + i * 9, 15);
+  for (let i = 0; i < 3; i++) pneu(5 + i * 9 + (v % 2), 9);
+  for (let i = 0; i < 2 - (v === 2 ? 1 : 0); i++) pneu(10 + i * 9, 3);
+  // Le pneu debout, contre le tas.
+  const dx = v === 1 ? 2 : w - 9;
+  ctx.fillStyle = '#1c1c20'; ctx.fillRect(dx, 10, 6, 13); ctx.fillRect(dx + 1, 9, 4, 15);
+  ctx.fillStyle = '#4a4a52'; for (let y = 11; y < 22; y += 3) ctx.fillRect(dx + 1, y, 4, 1);
+}
+
+/** LA GRUE A AIMANT de la casse : sur ses chenilles, la cabine, la fleche levee qui PIVOTE lentement
+    le jour (seize poses, comme la grue a tour), et au bout du cable l'aimant qui tient un char. */
+function peindreGrueAimant(ctx, w, h, v) {
+  const trait = function (x0, y0, x1, y1, e, c) {
+    ctx.fillStyle = c;
+    const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
+    for (let k = 0; k <= n; k++) {
+      ctx.fillRect(Math.round(x0 + (x1 - x0) * k / n), Math.round(y0 + (y1 - y0) * k / n), e, e);
+    }
+  };
+  const t = v / 16 * Math.PI * 2;
+  // ⚠️ La fleche monte HAUT, le cable est court : la carcasse pend AU-DESSUS de la cabine a toutes les poses
+  // (vu sur une capture : plus bas, le char se posait sur le toit de la tourelle).
+  const pied = { x: 56, y: 68 };
+  const bout = { x: 56 + Math.cos(t) * 45, y: 13 + Math.sin(t) * 8 };
+  const devant = Math.sin(t) >= 0;
+  const fleche = function () {
+    trait(pied.x - 1, pied.y, bout.x, bout.y, 2, '#d88a1c');
+    trait(pied.x + 2, pied.y, bout.x + 1, bout.y + 1, 1, '#a8661a');
+    const ax = Math.round(bout.x), ay = Math.round(bout.y);
+    trait(ax, ay + 1, ax, ay + 15, 1, '#2a2d33');                              // le cable
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(ax - 6, ay + 16, 13, 4);           // l'aimant
+    ctx.fillStyle = '#5a5e66'; ctx.fillRect(ax - 6, ay + 16, 13, 1);
+    peindreEpave(ctx, ax - 10, ay + 21, 21, PEINTURES_DE_SCRAP[(v >> 2) % PEINTURES_DE_SCRAP.length], false);
+  };
+  ctx.fillStyle = 'rgba(20,18,26,0.28)'; ctx.fillRect(36, 84, 40, 6);
+  if (!devant) fleche();
+  // Les chenilles.
+  ctx.fillStyle = '#26262a'; ctx.fillRect(38, 76, 36, 5); ctx.fillRect(38, 84, 36, 4);
+  ctx.fillStyle = '#44444a'; for (let x = 39; x < 74; x += 3) { ctx.fillRect(x, 77, 1, 3); ctx.fillRect(x, 85, 1, 2); }
+  ctx.fillStyle = '#5f6267'; ctx.fillRect(42, 80, 28, 4);
+  // La tourelle et la cabine.
+  ctx.fillStyle = '#b8741a'; ctx.fillRect(42, 64, 28, 14);
+  ctx.fillStyle = '#d88a1c'; ctx.fillRect(42, 64, 28, 3);
+  ctx.fillStyle = '#243447'; ctx.fillRect(58, 67, 9, 6);                       // la vitre de la cabine
+  ctx.fillStyle = '#3d5673'; ctx.fillRect(58, 67, 9, 1);
+  ctx.fillStyle = '#5f6267'; ctx.fillRect(44, 68, 10, 8);                      // le contrepoids
+  ctx.fillStyle = '#2a2d33'; ctx.fillRect(48, 60, 3, 5);                       // l'echappement
+  ctx.fillStyle = 'rgba(40,36,34,0.5)'; ctx.fillRect(47, 57, 4, 2);
+  if (devant) fleche();
+}
+
 const DECORS = {
   // L'ORIGNAL de La Pointe (`Entites.majOrignal`) : une tonne de bete, plus haute qu'un char. Le
   // panache en palettes, la bosse au garrot, le fanon sous le menton, les pattes trop longues.
@@ -6392,6 +6509,12 @@ const DECORS = {
     ctx.fillStyle = '#9a4a1e'; ctx.fillRect(3, 9, 3, 2); ctx.fillRect(21, 5, 2, 3); ctx.fillRect(12, 10, 4, 1);
     ctx.fillStyle = '#2b2b2b'; ctx.fillRect(3, 11, 3, 2); ctx.fillRect(20, 11, 3, 2); // les essieux, sans roues
   } },
+  // LA COUR A SCRAP de la gare (`app/nord.py`) : trois tuiles de large par pile, une rangee qu'on ne
+  // traverse pas — quatre pixels entre deux piles, un passant en demande dix. ⚠️ `sol` sous PORTEE_DECOR.
+  pile_de_carcasses: { arrete: 7, variantes: 6, w: 48, h: 30, ancre: [24, 25], r: 12, sol: [22, 7], solide: true, peindre: peindrePileDeCarcasses },
+  cubes_de_ferraille: { arrete: 9, variantes: 6, w: 40, h: 30, ancre: [20, 25], r: 12, sol: [18, 7], solide: true, peindre: peindreCubesDeFerraille },
+  tas_de_pneus: { arrete: 3, variantes: 3, w: 40, h: 26, ancre: [20, 21], r: 12, sol: [18, 6], solide: true, peindre: peindreTasDePneus },
+  grue_aimant: { anime: 24, arrete: 9.0, w: 112, h: 92, ancre: [56, 84], r: 8, sol: [16, 7], solide: true, variantes: 16, travaille: 'jour', peindre: peindreGrueAimant },
   // LA PANCARTE « A BATIR » du Petit-Canton (`app/nord.py`) : un panneau blanc sur deux poteaux, une bande
   // rouge et deux lignes de lettrage. On passe a cote : elle n'arrete personne.
   pancarte_a_batir: { casse: 0.8, pv: 20, w: 20, h: 20, ancre: [10, 19], r: 3, solide: false, peindre: function (ctx, w, h) {

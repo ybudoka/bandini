@@ -24,7 +24,8 @@ RANGEES_NORD = (11, 11, 11, 12, 11, 11, 11)
 RUES_H_NORD = (6, 4, 4, 6, 4, 4, 4, 6)           # la dernière : la couture, jamais collée
 assert sum(RANGEES_NORD) + sum(RUES_H_NORD[:-1]) == DECALAGE_NORD
 
-#: `z` friche, `b` terrain à bâtir, `v` voies ferrées, `y` hangars de la gare : des lettres de plan que seule la bande emploie
+#: `z` friche, `b` terrain à bâtir, `v` la cour à scrap de la gare (c'étaient ses voies ferrées), `y` ses hangars :
+#: des lettres de plan que seule la bande emploie
 #: (`carte.USAGE_DU_PLAN` les connaît ; la ville d'avant n'en a aucune).
 #: ⚠️ UN AGENT PAR DISTRICT, comme aux Érables et à La Shop : à `police: 0`, la police retirait ses autos
 #: en entrant dans la bande — un refuge au bout de la rue (`test_police_js` l'a vu).
@@ -60,7 +61,8 @@ DISTRICTS_NORD: tuple[dict, ...] = (
                   "--=++=--")},
     # ⚠️ LE BIDONVILLE DE LA GARE (28 sept. 2026). Martin : « dans le quartier des trains, je veux plus un
     # bidonville et des maisons pauvres pour la partie est ». Les voies gardent les quatre colonnes de l'ouest
-    # (le poste d'aiguillage ne bouge pas) et les hangars le sud ; à l'est, le bidonville (`t`) sur trois
+    # (le poste d'aiguillage ne bouge pas ; le soir même, la cour à scrap et le bureau du ferrailleur les
+    # remplacent) et les hangars le sud ; à l'est, le bidonville (`t`) sur trois
     # rangées, un seul lot, et dessous deux rangées de maisons pauvres (`h`, standing `-`).
     # ⚠️ Ses îlots neufs se bâtissent avec LEURS dés (`_ChantierNord._a_ses_des`), comme le Petit-Canton.
     {"slug": "gare", "nom": "La Gare de triage", "bx": 13, "by": 0,
@@ -87,19 +89,20 @@ def district(slug: str) -> dict:
 
 # --- Les trois bâtisseurs --------------------------------------------------------------------
 
-#: Le poste d'aiguillage : des leviers (`m`), le classeur des horaires qu'on fouille, la chaise et le poêle.
+#: Le bureau du ferrailleur, à l'entrée de la cour à scrap (28 sept. 2026 ; c'était le poste d'aiguillage) : le
+#: comptoir où l'on pèse et paie, le classeur des reçus qu'on fouille, l'étagère des pièces, la chaise et le poêle.
 #: ⚠️ À LA MESURE DE SON BÂTIMENT (cinq sur quatre dedans, comme dehors) : `test_carte` le tient pour toute
 #: la ville. Une porte de MAISON : personne au comptoir, il n'y en a pas.
-PIECE_AIGUILLAGE = carte._piece("nord_aiguillage", "Le poste d'aiguillage", porte="maison", plan="""
+PIECE_FERRAILLEUR = carte._piece("nord_ferrailleur", "Le bureau du ferrailleur", porte="maison", plan="""
 BBWWWBB
-Bmm  kB
+Bcc  kB
 B     B
 Bh   zB
-B     B
+Be    B
 BBBDBBB
 """, points=(carte._pt("fouiller", 4, 1),))
-POSTE = {"slug": "nord_aiguillage", "nom": "Le poste d'aiguillage", "interieur": "nord_aiguillage",
-         "famille": "repere", "genre": "industriel"}
+BUREAU = {"slug": "nord_ferrailleur", "nom": "Le bureau du ferrailleur", "interieur": "nord_ferrailleur",
+          "famille": "repere", "genre": "industriel"}
 
 #: Ce qu'on a laissé rouiller dans les Friches, et ce qui y a poussé tout seul.
 EPAVES = ("carcasse", "carcasse", "cabanon", "pneu", "baril", "caddie", "arbre", "arbre", "buisson", "buisson")
@@ -155,28 +158,81 @@ def _terrain_a_batir(ch, x, y, largeur, hauteur):
     ch.poser_decor("pancarte_a_batir", x + largeur // 2 + 1, y + hauteur)
 
 
-def _voies_ferrees(ch, x, y, largeur, hauteur):
-    """Des voies tous les trois rangs, des wagons (un toit de tôle long de six, posé sur la voie), et le poste
-    d'aiguillage au coin sud-ouest, sa porte au sud."""
-    for j in range(hauteur):
-        ch.rect(x, y + j, largeur, 1, "," if j % 3 else "T")
-    for j in range(0, hauteur, 3):
-        for i in range(2 + (j * 5) % 11, largeur - 8, 17):
-            ch.rect(x + i, y + j, 6, 1, "B")
+#: Ce qui s'empile dans les rangées de la cour à scrap, à poids : des chars surtout, puis des cubes de
+#: ferraille compactée et des pneus. ⚠️ UNE PILE PAR TROIS TUILES, pas une carcasse par tuile : la carte n'a
+#: que quelques centaines d'octets gzip sous son plafond (`test_definitions`), et chaque décor en coûte.
+PILES_DE_SCRAP = ("pile_de_carcasses", "pile_de_carcasses", "pile_de_carcasses", "cubes_de_ferraille",
+                  "cubes_de_ferraille", "tas_de_pneus")
+#: Le pas d'une pile dans sa rangée (tuiles), et celui des rangées : une rangée, puis trois tuiles d'allée.
+PAS_PILE, PAS_RANGEE = 3, 4
+
+
+def _empreinte(*n: int) -> int:
+    """Un tirage À LA POSITION, sans dé (`crc32`, pas `hash` : celui des chaînes change d'un processus à
+    l'autre) : la cour se bâtit pareil à chaque génération et ne prend rien aux dés de la bande."""
+    return zlib.crc32(",".join(map(str, n)).encode())
+
+
+def _cour_a_scrap(ch, x, y, largeur, hauteur):
+    """La cour à scrap des Boulonneux (docs/jalons/la-cour-a-scrap-de-la-gare.md) : l'ouest de la Gare de triage.
+
+    Martin (28 sept. 2026) : « je n'aime pas la partie avec les morceaux de train » — des wagons de 6 × 1 posés
+    sur des voies tous les trois rangs, d'un bord à l'autre. Il en reste UNE voie, rouillée, au nord ; dessous,
+    une cour de barbelé : des rangées de piles (carcasses, cubes, pneus) entre des allées de trois tuiles, une
+    allée maîtresse du portail jusqu'au fond, une allée en travers et la grue à aimant sur sa place. Le bureau
+    du ferrailleur garde la place du poste d'aiguillage, au coin sud-ouest, sa porte au sud.
+
+    ⚠️ Les piles se tirent À LA POSITION (`_empreinte`) ; la clôture tire dans les dés de la gare
+    (`_ChantierNord._a_ses_des`), qui rend ceux de la bande intacts : les hangars n'ont pas bougé d'une palette.
+    ⚠️ Une TROUÉE DANS CHAQUE RANGÉE entre deux allées : sans elle, une allée ne se rejoint que par ses bouts.
+    """
+    ch.rect(x, y, largeur, hauteur, ",")
+    ch.rect(x, y, largeur, 1, "T")                        # la voie qui reste
     px, py = x + 2, y + hauteur - 6
-    ch.rect(px - 1, py - 1, 7, 7, ",")                   # le poste a son terrain
+    ch.rect(px - 1, py - 1, 7, 7, ",")                   # le bureau a son terrain
     ch.rect(px, py, 5, 3, "O")                           # 5 × 4 avec sa façade : sa pièce en a autant
     facades = [(px + i, py + 3) for i in range(5)]
     for fx, fy in facades:
         ch.sol[fy][fx] = "F"
     ch.rect(px, py + 4, 5, 1, ".")
-    ch.poser_porte(facades, special=POSTE)
+    ch.poser_porte(facades, special=BUREAU)
+
+    # La cour : de la voie (deux rangs d'herbe) jusqu'au-dessus du terrain du bureau.
+    cx, cy, cl, cht = x + 1, y + 3, largeur - 2, hauteur - 11
+    portail = px + 8 - cx                                # quatre tuiles, juste à l'est du bureau
+    ch.rect(cx, cy, cl, cht, ";")
+    ch.clore(cx, cy, cl, cht, carte.BARBELE, cote_ouvert="S", ouverture=4, depart=portail)
+    gx = cx + portail
+    ch.rect(gx, cy + cht - 1, 4, y + hauteur - (cy + cht - 1), "g")   # du portail à la rue
+    ix, iy, il, ih = cx + 2, cy + 2, cl - 4, cht - 4     # une allée de ronde le long du barbelé
+    ch.rect(gx, iy, 4, ih, "g")                          # l'allée maîtresse
+    travers = iy + (ih // 2 // PAS_RANGEE) * PAS_RANGEE + 1
+    ch.rect(ix, travers, il, 3, "g")                     # l'allée en travers
+    grue_x = ix + il * 2 // 3
+    ch.rect(grue_x - 4, travers - 3, 9, 9, "g")          # la place de la grue
+    libre = {(gx + i, j) for i in range(-1, 5) for j in range(iy, iy + ih)}
+    libre |= {(i, travers + j) for i in range(ix, ix + il) for j in range(-1, 4)}
+    libre |= {(grue_x + i, travers + j) for i in range(-5, 6) for j in range(-4, 7)}
+    ch.poser_decor("grue_aimant", grue_x, travers + 1)
+    for ry in range(iy + PAS_RANGEE - 1, iy + ih - 1, PAS_RANGEE):
+        # La trouée de la rangée : trois tuiles, une par segment de part et d'autre de l'allée maîtresse.
+        for x0, x1 in ((ix, gx - 1), (gx + 5, ix + il)):
+            if x1 - x0 < 2 * PAS_PILE:
+                continue
+            trou = x0 + PAS_PILE + _empreinte(x0, ry) % max(1, x1 - x0 - 2 * PAS_PILE)
+            for px_ in range(x0, x1 - PAS_PILE + 1, PAS_PILE):
+                if (px_, ry) in libre or any((px_ + k, ry) in libre for k in (1, 2)):
+                    continue
+                if trou - PAS_PILE < px_ <= trou + 1:
+                    continue
+                quoi = PILES_DE_SCRAP[_empreinte(px_, ry, 7) % len(PILES_DE_SCRAP)]
+                ch.poser_decor(quoi, px_ + 1, ry)
 
 
 def _hangars(ch, x, y, largeur, hauteur):
     """Les hangars de tôle de la gare : un long toit, une façade aveugle et ses portes CONDAMNÉES (`d`), des
     palettes et des barils autour. ⚠️ Pas un îlot de la ville : ceux-là bâtissent des devantures, et la gare
-    n'a qu'une pièce, le poste d'aiguillage (une clinique et une disco poussaient entre les wagons)."""
+    n'a qu'une pièce, le bureau du ferrailleur (une clinique et une disco poussaient entre les wagons)."""
     ch.rect(x, y, largeur, hauteur, ",")
     hx, hy, hl, hh = x + 2, y + 2, largeur - 4, hauteur - 6
     if hl < 6 or hh < 4:
@@ -318,7 +374,8 @@ GRAINES_A_PART = {"canton": GRAINE_CANTON, "gare": GRAINE_GARE}
 
 
 class _ChantierNord(carte._Chantier):
-    BATISSEURS = {"z": _friche, "b": _terrain_a_batir, "v": _voies_ferrees, "y": _hangars,
+    BATISSEURS = {"z": _friche, "b": _terrain_a_batir, "y": _hangars,
+                  "v": lambda ch, x, y, large, h: ch._a_ses_des(x, y, lambda: _cour_a_scrap(ch, x, y, large, h)),
                   "t": lambda ch, x, y, large, h: ch._a_ses_des(x, y, lambda: _bidonville(ch, x, y, large, h)),
                   casino.CASINO_DU_PLAN: casino.batir}
     A_ABORD = carte._Chantier.A_ABORD | {"b", casino.CASINO_DU_PLAN}
@@ -328,7 +385,7 @@ class _ChantierNord(carte._Chantier):
 
         ⚠️ C'est ce qui laisse les Friches et la Gare à l'unité près : bâtis avec les dés de la bande, les
         56 îlots du quartier en auraient mangé des milliers, et tout ce qui se tire après eux — les
-        épaves, les wagons, les lampadaires — aurait changé de place. Tous les flux du chantier
+        épaves, les hangars, les lampadaires — aurait changé de place. Tous les flux du chantier
         (`des`, `des_devanture`, `des_toit`…) sont remplacés le temps de l'îlot : chacun par un dé
         neuf, de la graine du quartier mêlée à la position de l'îlot et au NOM du flux (`crc32`, pas
         `hash` : celui des chaînes change d'un processus à l'autre).
@@ -362,7 +419,7 @@ class _ChantierNord(carte._Chantier):
 
     def poser_la_piece(self, famille, part, ancre, *args, **options):
         """⚠️ À LA GARE, ON N'ENTRE PAS : ni dans une cabane du bidonville, ni dans ses maisons pauvres — la
-        seule pièce de la gare reste le poste d'aiguillage. Pas un choix de décor seulement : le logement
+        seule pièce de la gare reste le bureau du ferrailleur. Pas un choix de décor seulement : le logement
         visitable se décide sur un état commun à toute la bande (`premiere_du_genre`, le compteur `visites`),
         et le Petit-Canton décidait alors quelles portes de la gare s'ouvraient (`test_canton`, le témoin)."""
         if self.district_en(*ancre) == "gare":
@@ -415,7 +472,7 @@ def batir_la_bande() -> _ChantierNord:
     ch.pieces[casino.PIECE["slug"]] = casino.PIECE
     for etape in ("eaux", "rues", "croisements", "ilots", "ponts", "lampadaires", "bornes"):
         getattr(ch, etape)()
-    ch.pieces["nord_aiguillage"] = PIECE_AIGUILLAGE
+    ch.pieces["nord_ferrailleur"] = PIECE_FERRAILLEUR
     # ⚠️ LE STANDING DES LOGEMENTS : `vitrines.monter_et_descendre` le marque, mais pour la ville d'avant
     # seulement. Sans lui, les maisons pauvres de la gare n'avaient ni fer rouillé ni planches — des maisons
     # ordinaires dans un quartier écrit `-`. Les devantures, elles, gardent leurs noms (le Petit-Canton a les

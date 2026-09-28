@@ -148,8 +148,13 @@ def test_le_paquet_reste_leger(paquets):
     son point dans le hall — en ajoute 151, soit 60 134. Cinquante octets gzip par mission, c'est ce que le
     catalogue coûte depuis que les objectifs voyagent à part (24 sept.) ; soixante-dix missions de M16 restent
     à écrire, ≈ 3,5 Ko. Le remède reste celui d'en haut.
+
+    ⚠️ **La carte : 68 000 → 69 000 octets gzip, le 28 sept. 2026, la nuit** — la cour à scrap de la gare
+    (Martin : « je n'aime pas la partie avec les morceaux de train »). Mesure : 67 248 sur `dev`, 68 270 avec
+    la cour — 287 piles de décor (+1 Ko ; les wagons partis ne rendaient presque rien, gzip avalait déjà leurs
+    rangées répétées). Déjà UNE pile par trois tuiles au lieu d'une carcasse par tuile ; moins, la cour se vide.
     """
-    for nom, brut_max, fil_max in (("definitions", 270_000, 62_000), ("carte", 720_000, 68_000)):
+    for nom, brut_max, fil_max in (("definitions", 270_000, 62_000), ("carte", 720_000, 69_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))

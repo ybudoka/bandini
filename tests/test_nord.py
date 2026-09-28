@@ -42,17 +42,47 @@ def test_trois_districts_dans_la_bande_avec_leur_gang():
         ("friches", "chevreuils"), ("canton", "cravates"), ("gare", "boulonneux")]
 
 
-def test_la_gare_a_ses_voies_ses_wagons_et_son_poste():
+def test_la_gare_a_sa_cour_a_scrap_et_plus_un_wagon():
+    """La cour à scrap (docs/jalons/la-cour-a-scrap-de-la-gare.md). Martin : « je n'aime pas la partie avec les
+    morceaux de train » — plus un toit de tôle sur une rangée de voie ; UNE voie qui reste, au nord ; une cour
+    de barbelé, ses rangées de piles, la grue à aimant ; et le bureau du ferrailleur, qu'on rejoint."""
     from app import nord
     ch = _bande()
-    x0, y0, large, _h = ch.rect_district(nord.district("gare"))
-    zone = ["".join(ch.sol[y][x0:x0 + large]) for y in range(y0, nord.DECALAGE_NORD)]
-    assert sum(ligne.count("T") for ligne in zone) > 200, "des voies ferrées"
-    # Les wagons : du toit de tôle SUR une rangée de voie (les hangars de la gare en ont aussi, à côté).
-    assert sum(ligne.count("B") for ligne in zone if "T" in ligne) > 30, "des wagons"
-    postes = [p for p in ch.portes if p["interieur"] == "nord_aiguillage"]
-    assert len(postes) == 1 and ch.marchable_en(postes[0]["x"], postes[0]["y"] + 1)
-    assert "nord_aiguillage" in ch.pieces
+    x, y, large, haut = next(r[1:] for r in ch.regions() if r[0] == "v")
+    zone = ["".join(ch.sol[j][x:x + large]) for j in range(y, y + haut)]
+    rails = [j for j, ligne in enumerate(zone) if "T" in ligne]
+    assert rails == [0] and zone[0] == "T" * large, "une seule voie, au bord nord, d'un bout à l'autre"
+    assert not any("B" in ligne for ligne in zone), "un wagon (un toit de tôle) dans la cour"
+    assert sum(ligne.count(carte.BARBELE) for ligne in zone) > 250, "la cour n'est pas ceinturée de barbelé"
+    dans = [d for d in ch.decor if x <= d["x"] < x + large and y <= d["y"] < y + haut]
+    sortes = {s: sum(d["type"] == s for d in dans) for s in set(nord.PILES_DE_SCRAP) | {"grue_aimant"}}
+    assert sortes["grue_aimant"] == 1 and sortes["pile_de_carcasses"] > 100, sortes
+    assert sortes["cubes_de_ferraille"] > 30 and sortes["tas_de_pneus"] > 15, sortes
+    bureaux = [p for p in ch.portes if p["interieur"] == "nord_ferrailleur"]
+    assert len(bureaux) == 1 and ch.marchable_en(bureaux[0]["x"], bureaux[0]["y"] + 1)
+    assert "nord_ferrailleur" in ch.pieces and "nord_aiguillage" not in ch.pieces
+
+
+def test_chaque_allee_de_la_cour_a_scrap_se_rejoint_du_portail():
+    """Les piles sont SOLIDES (`carte.DECOR_SOLIDE`) et leurs rangées murent les allées : chacune se rejoint par
+    l'allée maîtresse, par l'allée de ronde le long du barbelé et par la trouée de ses rangées. On marche du
+    portail, et toute tuile libre de la cour est atteinte, piles et grue comptées comme des murs. ⚠️ Chacun des
+    trois passages suffit : le juge ne rougit que s'ils tombent TOUS (mutation vue : 3 587 tuiles isolées)."""
+    ch = _bande()
+    x, y, large, haut = next(r[1:] for r in ch.regions() if r[0] == "v")
+    pleins = {(d["x"] + dx, d["y"]) for d in ch.decor if d["type"] in carte.DECOR_SOLIDE
+              for dx in ((-1, 0, 1) if d["type"] != "grue_aimant" else (0,))}
+    libres = {(i, j) for j in range(y + 4, y + haut - 9) for i in range(x + 2, x + large - 2)
+              if ch.marchable_en(i, j) and (i, j) not in pleins}
+    depart = next((i, j) for i, j in sorted(libres, key=lambda t: -t[1]) if ch.sol[j][i] == "g")
+    vus, pile = {depart}, [depart]
+    while pile:
+        i, j = pile.pop()
+        for v in ((i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1)):
+            if v in libres and v not in vus:
+                vus.add(v)
+                pile.append(v)
+    assert libres - vus == set(), f"{len(libres - vus)} tuiles de la cour qu'on ne rejoint pas : {sorted(libres - vus)[:8]}"
 
 
 def test_le_canton_est_bati_et_n_a_plus_un_terrain_a_batir():
@@ -225,8 +255,8 @@ def test_la_bande_se_marche_depuis_le_terminus():
     t = next(p for p in v["points_interet"] if p["slug"] == "terminus")
     groupe = next(g for g in carte.composantes_par_terre(v)["ville"] if (t["x"], t["y"]) in g)
     assert (0, 50) in groupe, "le trottoir de ceinture des Friches ne se rejoint pas à pied"
-    poste = next(p for p in v["portes"] if p["interieur"] == "nord_aiguillage")
-    assert (poste["x"], poste["y"] + 1) in groupe, "le poste d'aiguillage ne se rejoint pas"
+    bureau = next(p for p in v["portes"] if p["interieur"] == "nord_ferrailleur")
+    assert (bureau["x"], bureau["y"] + 1) in groupe, "le bureau du ferrailleur ne se rejoint pas"
 
 
 def test_les_trois_districts_de_la_bande_et_leurs_zones():
@@ -302,12 +332,13 @@ def _regions_de_la_gare(ch, glyphes):
     return [(x, y, large, h) for g, x, y, large, h in ch.regions() if g in glyphes and x0 <= x < x0 + large_gare]
 
 
-def test_la_gare_n_a_qu_une_porte_le_poste_d_aiguillage():
-    """La spec : UNE pièce visitable à la Gare. Ni clinique, ni notaire, ni disco au milieu des wagons. ⚠️ Et
+def test_la_gare_n_a_qu_une_porte_le_bureau_du_ferrailleur():
+    """La spec : UNE pièce visitable à la Gare (le poste d'aiguillage, devenu le bureau du ferrailleur). Ni
+    clinique, ni notaire, ni disco au milieu des wagons. ⚠️ Et
     depuis le bidonville (28 sept. 2026), ni cabane ni maison pauvre qu'on visite (`_ChantierNord.poser_la_piece`)."""
     ch = _bande()
     portes = [p for p in ch.portes if _dans(ch, "gare", p)]
-    assert [p["interieur"] for p in portes] == ["nord_aiguillage"], [p["interieur"] for p in portes]
+    assert [p["interieur"] for p in portes] == ["nord_ferrailleur"], [p["interieur"] for p in portes]
     assert not [d for d in ch.devantures if _dans(ch, "gare", d)], "des devantures dans la gare"
 
 
