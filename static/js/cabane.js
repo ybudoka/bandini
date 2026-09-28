@@ -131,6 +131,8 @@ const Cabane = (function () {
       return true;
     }
     j.manege = { quoi: 'caleche', tours: cal.tours, monteT: B.t, z: 0 };
+    const ch = caleche().chevaux;
+    Son.SFX.hennissement(ch.x, ch.y);            // les chevaux savent qu'on part
     j.dessine = false; j.vx = 0; j.vy = 0;
     const s = siege();
     j.x = s.x; j.y = s.y;
@@ -254,21 +256,45 @@ const Cabane = (function () {
         e.cabane = g.qui;
         e.etat = 'fige'; e.plante = { x: e.x, y: e.y }; e.face = g.face || 'bas';
         e.vx = 0; e.vy = 0;
-        // Le musicien de la cabane joue le reel (`musique.RUE`) : un air de danse, pour la cabane.
-        if (g.qui === 'musicien') e.toune = 'rue_reel';
+        // Le musicien de la cabane est un violoneux (`musique.VIOLON`, 28 sept. 2026) : son reel à lui.
+        if (g.qui === 'musicien') e.toune = 'cabane_violon';
         if (g.qui === 'tireur') e.poste = { x: e.x, y: e.y };
       });
     });
     Entites.indexer();
   }
 
+  //: Jusqu'où s'entendent la calèche qui roule et l'évaporateur, en pixels.
+  const PORTEE_SONS = { caleche: 360, evaporateur: 260 };
+
+  /** LES SONS DU RANG : la calèche qui roule (ses sabots, ses grelots), dosée à la distance, et
+      l'évaporateur qui bout — au plus fort DANS la cabane, au temps des sucres. Hors du rang, tout se tait. */
+  function majSons() {
+    const j = B.joueur;
+    const dansLaCabane = !!(B.bloc && B.interieur && B.interieur.slug === 'cabane');
+    if (!j || !ici()) {
+      Son.SFX.caleche(0);
+      Son.SFX.evaporateur(dansLaCabane && onFaitBouillir() ? 1 : 0);
+      return;
+    }
+    Son.Lieu.charger('cabane');               // ses sons, une fois, en arrivant au rang
+    const c = caleche();
+    const aBord = !!(j.manege && j.manege.quoi === 'caleche');
+    const dc = c ? Math.hypot(j.x - c.chevaux.x, j.y - c.chevaux.y) : Infinity;
+    Son.SFX.caleche(c && c.roule ? (aBord ? 0.8 : Math.max(0, 1 - dc / PORTEE_SONS.caleche)) : 0);
+    const porte = (Monde.carte.def.portes || []).find(function (p) { return p.lieu === 'cabane'; });
+    const de = porte ? Math.hypot(j.x - (porte.x * TT + 8), j.y - (porte.y * TT + 8)) : Infinity;
+    Son.SFX.evaporateur(onFaitBouillir() ? Math.max(0, 1 - de / PORTEE_SONS.evaporateur) * 0.6 : 0);
+  }
+
   function maj() {
-    if (!ici()) { if (cal) cal = null; return; }
+    if (!ici()) { if (cal) cal = null; majSons(); return; }
     const d = def();
     if (!cal || cal.visite !== B.bloc) nouvelleVisite(d);
     majCaleche();
     majPassager();
     majGens(d);
+    majSons();
     // La table de tire : ses rubans s'allongent quand on fait bouillir ; sinon, la neige toute propre.
     const t = d.table;
     if (t) {
@@ -557,7 +583,7 @@ const Cabane = (function () {
     }
   }
 
-  return { ici, temps, heures, onFaitBouillir, maj, caleche, sousLaMain, invite, agir, monter, descendre, bloquer,
+  return { ici, temps, heures, onFaitBouillir, maj, majSons, caleche, sousLaMain, invite, agir, monter, descendre, bloquer,
            dessinerSol, ajouterVisibles, gens, tableSousLaMain, calecheSousLaMain, chalumeau, sansDe,
            get chemin() { return chemin; }, get etat() { return cal; }, CAISSE, CHEVAUX, SIEGE, INVITE };
 })();

@@ -249,7 +249,9 @@ const Son = (function () {
     // en y entrant. Les charger tous au demarrage doublait presque le budget
     // de bruitages (2,83 Mo pour 2,5 Mo) pour des sons qu'une partie n'entend
     // peut-etre jamais si on ne visite pas le quartier.
+    // ⚠️ NI LES SONS D'UN LIEU (la cabane, le casino) : `Lieu.charger`, en approchant.
     const deQuartier = slugsDeQuartier();
+    Object.keys(audio.lieux || {}).forEach(function (l) { audio.lieux[l].forEach(function (slug) { deQuartier.add(slug); }); });
     audio.echantillons.forEach(function (e) {
       if (deQuartier.has(e.slug)) return;
       (e.fichiers || []).forEach(function (nom) {
@@ -686,6 +688,17 @@ const Son = (function () {
     [523, 659, 784, 1047].forEach(function (f, i) { ton(f, i === 3 ? pas * 2.5 : pas, 'square', volume, 1, depart + i * pas); });
   }
 
+  /** UNE BOUCLE DU MONDE tenue a un volume (0 = elle se tait) : la calèche qui roule, l'évaporateur, la
+      salle du casino — la même mécanique que les cris de la foire, dite une fois. `repli(v)` joue le filet
+      synthétisé tant que le fichier n'est pas là. */
+  function tenir(slug, volume, repli) {
+    const v = Math.max(0, Math.min(1, volume || 0));
+    if (!estCharge(slug)) { if (v > 0.02 && repli) repli(v); return; }
+    if (v <= 0.02) { if (boucleActive(slug)) boucle(slug, false); return; }
+    if (!boucleActive(slug)) boucle(slug, true, v);
+    reglerBoucle(slug, v);
+  }
+
   const SFX = {
     pas: function () { if (!joue('pas')) bruit(0.05, 0.12, 900, 300); },
     coup: function () { if (!joue('coup')) { ton(140, 0.08, 'square', 0.3, 0.5); bruit(0.08, 0.3, 800, 200); } },
@@ -718,6 +731,36 @@ const Son = (function () {
       ton(880, 1.1, 'sine', 0.10, 1.3, 0.02);
     },
     argent: function () { if (!joue('argent')) { ton(1500, 0.06, 'sine', 0.2); ton(2000, 0.1, 'sine', 0.18, 1, 0.06); } },
+    // --- LA CABANE ET LE CASINO S'ENTENDENT (28 sept. 2026) ---------------------------------------
+    //: La calèche qui roule, dosée à la distance (`Cabane`) ; le repli : le trot se reconnaît à son
+    //: rythme — deux sabots secs par demi-seconde, et un grelot.
+    caleche: function (volume) {
+      tenir('caleche', volume, function (v) {
+        if (B.t % 15 === 0) { ton(180, 0.04, 'square', 0.07 * v, 0.5); ton(150, 0.04, 'square', 0.06 * v, 0.5, 0.12); }
+        if (B.t % 30 === 0) ton(2400, 0.12, 'sine', 0.035 * v, 1.2);
+      });
+    },
+    //: L'évaporateur de la cabane : le bouillon, au temps des sucres.
+    evaporateur: function (volume) { tenir('evaporateur', volume, function (v) { if (B.t % 24 === 0) bruit(0.5, 0.035 * v, 500, 160); }); },
+    //: La salle du Dragon d'or, tant qu'on y est ; le repli : une machine qui tinte, au loin, de temps en temps.
+    salle_du_casino: function (volume) {
+      tenir('casino_salle', volume, function (v) { if (B.t % 40 === 0) ton(880 + (B.t % 5) * 110, 0.08, 'sine', 0.03 * v, 1.5); });
+    },
+    //: Un cheval hennit, là où il est.
+    hennissement: function (x, y) {
+      if (estCharge('hennissement')) { jouerA('hennissement', x, y, 360); return; }
+      ton(620, 0.5, 'sawtooth', 0.05, 0.6); ton(880, 0.25, 'sawtooth', 0.03, 0.7, 0.1);
+    },
+    //: La machine à sous : le bras et les rouleaux, le gain, le gros lot.
+    bras_machine: function () { if (!joue('bras_machine')) { ton(110, 0.08, 'square', 0.18, 0.5); bruit(0.6, 0.07, 1400, 500); } },
+    gain_machine: function () { if (!joue('gain_machine')) { ton(1760, 0.3, 'sine', 0.16, 1.4); ton(2217, 0.3, 'sine', 0.12, 1.4, 0.12); } },
+    jackpot: function () { if (!joue('jackpot')) for (let k = 0; k < 6; k++) ton(k % 2 ? 1760 : 2217, 0.12, 'square', 0.1, 1, k * 0.14); },
+    videopoker_donne: function () { if (!joue('videopoker_donne')) for (let k = 0; k < 5; k++) ton(990, 0.03, 'square', 0.08, 1, k * 0.07); },
+    //: Les tables (vague 2 du casino) : la bille, les cartes, les jetons, les dés.
+    roulette_bille: function () { if (!joue('roulette_bille')) { bruit(1.6, 0.05, 2600, 900); ton(2600, 0.03, 'square', 0.06, 1, 1.7); } },
+    cartes_donnees: function () { if (!joue('cartes_donnees')) { bruit(0.05, 0.1, 3000, 1200); bruit(0.05, 0.1, 3000, 1200); } },
+    jetons: function () { if (!joue('jetons')) { ton(3200, 0.03, 'square', 0.07); ton(2900, 0.03, 'square', 0.06, 1, 0.05); } },
+    des_sic_bo: function () { if (!joue('des_sic_bo')) { bruit(0.5, 0.1, 1800, 700); ton(140, 0.08, 'square', 0.2, 0.5, 0.55); } },
     menu: function () { if (!joue('menu')) ton(660, 0.05, 'square', 0.15); },
     // ⚠️ Le filet du refus suit la meme regle que l'echantillon (voir
     // `audio.py`) : deux petites notes qui descendent, pas un buzzer. La
@@ -1584,6 +1627,25 @@ const Son = (function () {
     Il vient d'une direction qui TOURNE (l'angle d'or) : jamais deux fois du meme
     cote, et `jouerA` le place a gauche ou a droite. `entendus` garde ce qui a
     joue, fichier ou pas. */
+  /** LES SONS D'UN LIEU (`audio.LIEUX`) : chargés une fois, en approchant — la cabane, le casino. Tant
+      qu'ils ne sont pas là, chaque geste joue son repli synthétisé. */
+  const Lieu = {
+    charges: new Set(),
+    charger: function (lieu) {
+      if (Lieu.charges.has(lieu) || !ctx || !fenetre || !fenetre.fetch || !B.defs || !B.defs.audio) return;
+      Lieu.charges.add(lieu);
+      const dossier = base + B.defs.audio.dossier + '/';
+      ((B.defs.audio.lieux || {})[lieu] || []).forEach(function (slug) {
+        const def = defEchantillon(slug);
+        (def && def.fichiers || []).forEach(function (nom) {
+          decoder(dossier + nom)
+            .then(function (tampon) { const l = tampons.get(slug) || []; l.push(tampon); tampons.set(slug, l); })
+            .catch(function () { Lieu.charges.delete(lieu); });
+        });
+      });
+    },
+  };
+
   const Quartier = {
     prochaineT: null,
     n: 0,
@@ -2386,7 +2448,7 @@ const Son = (function () {
   return {
     init, reveiller, sonder, etatSon, enAttente, surEtat, pret, suspendre, fermer, majVolume, prechauffer, ton, bruit, SFX, Mus, Chef, Rue,
     chargerEchantillons, echantillon, joue, estCharge, jouerA, presence, depuis, boucle, boucleActive, reglerBoucle, volumeBoucle, etouffer, coupureBoucle,
-    Radio, Ambiance, Rumeur, Voix, Ondes, Souffle, Quartier,
+    Radio, Ambiance, Rumeur, Voix, Ondes, Souffle, Quartier, Lieu,
     get contexte() { return ctx; },
     // ⚠️ Les bruitages seuls : les voix, l'ambiance et les radios ont leurs
     // propres clefs dans `tampons`, et le test des bruitages compte l'egalite.

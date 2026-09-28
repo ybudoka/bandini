@@ -61,9 +61,17 @@ def test_le_poids_audio_reste_raisonnable():
     # et vingt-quatre clips de 40 Ko en font 960 — il aurait sauté de moitie. Relever
     # un plafond qui protege la 3G du premier ecran est une decision de Martin.
     a_la_volee = {f"voix-{v['slug']}" for v in audio.voix_a_la_volee()}
+    # ⚠️ Les sons d'un LIEU (la cabane, le casino, 28 sept. 2026) se chargent en approchant, comme ceux
+    # d'un quartier : ils ont leur plafond de DÉPÔT plus bas, pas celui du premier écran.
+    slugs_de_lieu = {s for slugs in audio.LIEUX.values() for s in slugs}
+    lieux = [f for f in fichiers if f.stem.rsplit("-", 1)[0] in slugs_de_lieu]
+    for fichier in lieux:
+        assert fichier.stat().st_size < 80_000, fichier.name
+    assert sum(f.stat().st_size for f in lieux) < 1_000_000
     bruitages = [f for f in fichiers
                  if not f.name.startswith(("radio-", "histoire-", "musique-"))
                  and f.stem.rsplit("-", 1)[0] not in slugs_de_quartier
+                 and f.stem.rsplit("-", 1)[0] not in slugs_de_lieu
                  and f.stem not in a_la_volee]
     radios = [f for f in fichiers if f.name.startswith("radio-")]
     histoire = [f for f in fichiers if f.name.startswith("histoire-")]

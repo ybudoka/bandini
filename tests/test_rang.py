@@ -18,9 +18,11 @@ def livree():
 Y_RUE = carte.OUVERTURES_DE_RUE[0]["y"] + nord.DECALAGE_NORD
 
 
-def test_trois_blocs_tous_au_bord_ouest():
+def test_les_blocs_tous_au_bord_ouest():
+    """Quatre depuis la villa du maire (l'infiltration, 28 sept. 2026) — tous au bord ouest, et deux passages
+    ne se chevauchent jamais."""
     slugs = [b["slug"] for b in blocs.BLOCS]
-    assert sorted(slugs) == ["cineparc", "galeries", "rang"], slugs
+    assert sorted(slugs) == ["cineparc", "galeries", "rang", "villa"], slugs
     assert all(b["passage"]["bord"] == "ouest" for b in blocs.BLOCS)
     pris = [range(b["passage"]["de"], b["passage"]["de"] + b["passage"]["l"]) for b in blocs.BLOCS]
     for i, a in enumerate(pris):

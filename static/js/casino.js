@@ -75,6 +75,9 @@ const Casino = (function () {
     const slug = evaluerRouleaux(arret), gain = gainDe(arret);
     const g = r.gains.find(function (q) { return q.slug === slug; });
     B.machineASous = { arret: arret, images: 0, resultat: { slug: slug, nom: g ? g.nom : 'RIEN', gain: gain } };
+    Son.SFX.bras_machine();
+    // Le gros lot sonne en gros lot : la table la plus haute de la machine, pas un gain de cerises.
+    if (gain > 0) { if (g.paie >= Math.max.apply(null, r.gains.map(function (q) { return q.paie; }))) Son.SFX.jackpot(); else Son.SFX.gain_machine(); }
     if (gain > 0) Missions.encaisser(gain, g.nom);
     else Hud.message('RIEN — LA MACHINE GARDE TES ' + r.mise + ' $');
     return true;
@@ -199,11 +202,17 @@ const Casino = (function () {
   /** Le portier, a deux tuiles a l'est de la porte, sur le trottoir, face a la rue — jamais DANS le devant
       de la porte. Nait quand le joueur approche, si personne ne tient le poste. */
   function maj() {
+    // La rumeur de la grande salle, tant qu'on y est — elle se tait en sortant.
+    const dedans = !!(B.interieur && B.interieur.slug === 'nord_casino');
+    Son.SFX.salle_du_casino(dedans ? 1 : 0);
+    if (dedans) Son.Lieu.charger('casino');
     if (B.interieur || (B.t || 0) % PORTIER.pas !== 0) return;
     const porte = porteDuCasino(), j = B.joueur;
     if (!porte || !j) return;
     const px = (porte.x + 2) * TT + 8, py = (porte.y + 1) * TT + 8;
-    if (Math.hypot(j.x - px, j.y - py) > PORTIER.portee * TT || portier()) return;
+    if (Math.hypot(j.x - px, j.y - py) > PORTIER.portee * TT) return;
+    Son.Lieu.charger('casino');               // ses sons, une fois, quand on approche de sa porte
+    if (portier()) return;
     const arch = Entites.archetype('gardien');
     if (!arch) return;
     const g = Entites.enDehorsDeLaSuite(function () {

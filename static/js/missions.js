@@ -3147,6 +3147,7 @@ const Missions = (function () {
     c.total++; c.mains++;
     B.videopoker = { phase: 'garde', cartes: paquet.slice(0, 5), pioche: paquet.slice(5, 10),
                      gardes: [false, false, false, false, false], resultat: null };
+    Son.SFX.videopoker_donne();
     return true;
   }
 
@@ -3156,6 +3157,7 @@ const Missions = (function () {
     if (!v || v.phase !== 'garde') return false;
     let k = 0;
     v.cartes = v.cartes.map(function (c, i) { return v.gardes[i] ? c : v.pioche[k++]; });
+    if (v.gardes.indexOf(false) >= 0) Son.SFX.videopoker_donne();
     const slug = evaluerMain(v.cartes), gain = gainDuVideopoker(v.cartes);
     const g = reglesDuVideopoker().gains.find(function (q) { return q.slug === slug; });
     v.phase = 'mise';

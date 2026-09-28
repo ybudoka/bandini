@@ -301,7 +301,7 @@ def duree_s(morceau: Morceau) -> float:
 
 def exporter() -> list[Morceau]:
     return ([dict(m) for m in MORCEAUX] + stations() + ambiances()  # type: ignore[misc]
-            + rues() + commerces() + [orgue(), ritournelle()])
+            + rues() + commerces() + [orgue(), ritournelle(), violon()])
 
 
 # --- Les stations procedurales (M9) ----------------------------------------
@@ -599,7 +599,7 @@ def rues() -> list[Morceau]:
 
 
 def rue_par_slug(slug: str) -> Morceau | None:
-    for style in RUE + [ORGUE, RITOURNELLE]:
+    for style in RUE + [ORGUE, RITOURNELLE, VIOLON]:
         if style["slug"] == slug:
             return generer_rue(style)
     return None
@@ -652,6 +652,23 @@ def ritournelle() -> Morceau:
     return generer_rue(RITOURNELLE)
 
 
+#: LE VIOLONEUX DE LA CABANE A SUCRE (docs/jalons/la-cabane-et-le-casino-s-entendent.md) : le musicien a la
+#: porte de la cabane ne joue plus le reel du trottoir a la guitare — un vrai reel au violon, le pied qui tape
+#: (Martin, 28 sept. 2026). Une musique qui sort de QUELQU'UN, comme le musicien de rue (`e.toune`), mais
+#: HORS de `RUE` : un guitariste du Faubourg ne doit jamais tomber sur la toune du violoneux. Majeure, plus
+#: vite que le reel du trottoir, et en RE — la tonalite des violoneux.
+VIOLON: StyleRue = {
+    "slug": "cabane_violon", "nom": "Le reel de la cabane", "graine": 19480321,
+    "bpm": 138, "tonique": 62, "gamme": MAJEURE, "grille": (0, 3, 4, 0), "mesure": 8,
+    "forme_chant": "sawtooth", "forme_gratte": "triangle", "volume": 0.5,
+}
+
+
+def violon() -> Morceau:
+    """Le reel du violoneux, en notes — le filet si le mp3 manque."""
+    return generer_rue(VIOLON)
+
+
 #: --- La musique qui dit ou tu es et ce qui t'arrive -------------------------
 #:
 #: ⚠️ ECRITES EN NOTES, comme le theme du menu et les stations du camion — et
@@ -702,6 +719,11 @@ COMMERCES: list[Style] = [
     {"slug": "com_garage", "nom": "Le poste de l'atelier", "graine": 19810307,
      "bpm": 118, "tonique": 45, "gamme": MINEURE, "grille": (0, 0, 3, 4),
      "forme_chant": "sawtooth", "forme_nappe": "square", "volume": 0.31},
+    # Le casino du Dragon d'or (28 sept. 2026) : le lounge de nuit sous les neons, un peu de pentatonique
+    # du Petit-Canton dans la melodie. Mineure, feutree, riche — on y perd son argent sans s'en apercevoir.
+    {"slug": "com_casino", "nom": "Le salon du Dragon d'or", "graine": 19880808,
+     "bpm": 100, "tonique": 50, "gamme": MINEURE, "grille": (0, 5, 3, 4),
+     "forme_chant": "sine", "forme_nappe": "triangle", "volume": 0.32},
 ]
 
 #: Quel morceau joue dans quelle piece. ⚠️ **Une piece sans entree ici reste
@@ -719,6 +741,7 @@ MUSIQUES_DE_COMMERCE: dict[str, str] = {
     "cantine": "com_casse_croute",
     "depanneur": "com_casse_croute",
     "garage": "com_garage",
+    "nord_casino": "com_casino",
 }
 
 

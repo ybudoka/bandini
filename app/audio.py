@@ -538,6 +538,58 @@ CATALOGUE: list[Echantillon] = [
     _e("volet_qui_claque", "Un volet qui claque", duree_s=3.0, volume=0.25, influence=0.6,
        prompt="a loose wooden shutter of an abandoned fish factory banging a few times "
               "in the sea wind, creaking hinge, a little way off, outdoors, no voices, no music"),
+    # --- LA CABANE A SUCRE ET LE CASINO S'ENTENDENT (28 sept. 2026) ----------------------
+    # La caleche : deux chevaux au trot, leurs grelots, les roues de bois — UNE boucle, dosee a la
+    # distance tant qu'elle roule (`Son.SFX.caleche`). Le hennissement, quand on monte derriere.
+    _e("caleche", "La calèche qui roule", duree_s=6.0, volume=0.32, boucle=True, influence=0.5,
+       prompt="two draft horses trotting at a steady pace on a packed snowy forest trail pulling "
+              "a wooden wagon, rhythmic hoofbeats, sleigh bells jingling on the harness, faint "
+              "creak of wooden wheels, seamless loop, no voices, no music"),
+    _e("hennissement", "Un cheval hennit", variantes=2, duree_s=2.0, volume=0.35, influence=0.6,
+       prompt="a single horse whinnying then snorting through its nostrils, outdoors in the "
+              "cold, close by, no voices, no music"),
+    # L'evaporateur : la seve qui bout a gros bouillons dans la panne, le feu de bois qui craque
+    # dessous, la vapeur. Il s'entend pres de la cabane quand elle fait bouillir.
+    _e("evaporateur", "L'évaporateur qui bout", duree_s=8.0, volume=0.3, boucle=True, influence=0.5,
+       prompt="maple sap boiling hard in a large wood fired evaporator pan inside a sugar "
+              "shack, rolling bubbling, crackling logs in the firebox, soft steam hiss, "
+              "seamless loop, no voices, no music"),
+    # Le casino : la rumeur de la grande salle, en boucle tant qu'on y est (`Son.SFX.salle_du_casino`).
+    _e("casino_salle", "La salle du casino", duree_s=8.0, volume=0.26, boucle=True, influence=0.45,
+       prompt="casino gaming floor ambience, many slot machines chiming and jingling softly in "
+              "the background, chips clicking on tables, murmuring crowd, seamless loop, "
+              "no music, no announcer"),
+    # La machine a sous : le bras, puis les rouleaux qui tournent et s'arretent un a un.
+    _e("bras_machine", "Le bras de la machine à sous", duree_s=2.2, volume=0.4, influence=0.6,
+       prompt="pulling the lever of an old mechanical slot machine, a heavy spring clunk, then "
+              "three reels spinning with a ratcheting whirr and stopping one after another "
+              "with three sharp clicks, close up, no music, no voices"),
+    _e("gain_machine", "La machine paie", duree_s=2.5, volume=0.42, influence=0.6,
+       prompt="slot machine small win, a bright ringing bell and a short cascade of metal coins "
+              "dropping into a steel tray, close up, no music, no voices"),
+    _e("jackpot", "Le gros lot", duree_s=5.0, volume=0.45, influence=0.55,
+       prompt="slot machine jackpot, a loud alarm bell ringing and fast electronic beeps, then a "
+              "long heavy cascade of metal coins pouring into a steel tray, close up, no voices, "
+              "no music"),
+    # Le videopoker : les cinq cartes a l'ecran, cinq bips courts.
+    _e("videopoker_donne", "Le vidéopoker donne", duree_s=1.0, volume=0.3, influence=0.65,
+       prompt="a video poker machine dealing five cards on screen, five quick soft electronic "
+              "blips in a row, retro arcade casino machine, close up, no music, no voices"),
+    # Les tables du casino (vague 2 : blackjack, roulette, poker, sic bo) — leurs gestes.
+    _e("roulette_bille", "La bille de la roulette", duree_s=5.0, volume=0.38, influence=0.6,
+       prompt="a casino roulette wheel spinning, the small ivory ball launched and rolling fast "
+              "around the wooden rim, slowing down, bouncing over the metal frets with little "
+              "clicks and dropping into a pocket, close up, no voices, no music"),
+    _e("cartes_donnees", "Des cartes distribuées", variantes=2, duree_s=1.2, volume=0.3,
+       influence=0.6,
+       prompt="a casino dealer sliding and flicking two playing cards onto a green felt table, "
+              "soft quick card snaps, close up, no voices, no music"),
+    _e("jetons", "Des jetons", variantes=2, duree_s=1.0, volume=0.3, influence=0.6,
+       prompt="a small stack of clay casino chips placed on a felt table then clicked together, "
+              "crisp ceramic clacks, close up, no voices, no music"),
+    _e("des_sic_bo", "Les dés du sic bo", duree_s=2.0, volume=0.34, influence=0.6,
+       prompt="three dice shaken hard inside a small covered cup, rattling, then the cup "
+              "slammed down on a wooden table, close up, no voices, no music"),
 ]
 
 # --- La finition des bruitages -------------------------------------------------------
@@ -921,6 +973,22 @@ MUSIQUES: list[Piece] = [
        "a simple pipe melody, bells and small percussion, old carousel limonaire, "
        "slightly out of tune, no vocals, seamless loop",
        duree_s=30, volume=0.42),
+    # LE VIOLONEUX DE LA CABANE A SUCRE (`musique.VIOLON`) : un musicien, un violon, un pied qui tape sur le
+    # plancher de bois — pas un groupe. Il joue a la porte de la cabane, le temps des sucres.
+    _m("cabane_violon",
+       "solo quebecois fiddle reel at 138 bpm in D major, one old fiddler playing a fast "
+       "traditional sugar shack dance tune alone, lively bowing and ornaments, his feet "
+       "tapping a steady podorythmie beat on a wooden floor, close mic, no guitar, no "
+       "other instruments, no vocals, seamless loop",
+       duree_s=30, volume=0.46),
+    # LE CASINO DU DRAGON D'OR (`musique.COMMERCES`, `com_casino`) : sa musique d'interieur. Elle joue SOUS la
+    # rumeur de la salle et le cliquetis des machines : feutree, sans melodie qui accroche.
+    _m("com_casino",
+       "smooth late night casino lounge jazz at 100 bpm in D minor, soft vibraphone melody "
+       "with a hint of chinese pentatonic phrasing, a gentle erhu answering it, warm rhodes "
+       "chords, upright bass, brushed drums, neon glamour and velvet, relaxed and seductive, "
+       "no vocals, seamless loop",
+       duree_s=60, volume=0.32),
 ]
 
 
@@ -1364,6 +1432,18 @@ QUARTIERS = {
     },
 }
 
+#: LES SONS D'UN LIEU (28 sept. 2026) : comme les bruits de quartier, ils ne se chargent JAMAIS au
+#: démarrage — `Son.Lieu.charger` les demande en approchant (la cabane dès qu'on est au rang, le casino
+#: près de sa porte). Le démarrage portait déjà 2,48 Mo sur son plafond de 2,5 : les 440 Ko de la
+#: calèche, de l'évaporateur et des machines du Dragon d'or ne s'entendent qu'à deux endroits de la
+#: carte, et une partie qui n'y va pas ne les télécharge pas. ⚠️ Le vidéopoker n'y est PAS : il y en a
+#: un au Brouillard aussi.
+LIEUX: dict[str, list[str]] = {
+    "cabane": ["caleche", "hennissement", "evaporateur"],
+    "casino": ["casino_salle", "bras_machine", "gain_machine", "jackpot",
+               "roulette_bille", "cartes_donnees", "jetons", "des_sic_bo"],
+}
+
 #: Ce qui passe sur les ondes, et ne s'affiche donc jamais dans une bulle.
 GENRES_DES_ONDES = (frozenset({g for genres in ONDES["stations"].values() for g in genres})
                     | {"police"}) - GENRES_SANS_CLIP
@@ -1737,6 +1817,7 @@ def exporter() -> dict:
         "quartiers": {**QUARTIERS, "intervalle_s": list(QUARTIERS["intervalle_s"]),
                       "sons": {d: [dict(e) for e in sons] for d, sons in QUARTIERS["sons"].items()}},
         "coups_des_autres": dict(COUPS_DES_AUTRES),
+        "lieux": {lieu: list(slugs) for lieu, slugs in LIEUX.items()},
         # LA MUSIQUE. Chaque morceau part de `app/musique.py` (les notes, le
         # filet) et recoit ici le mp3 genere quand il est sur le disque — plus
         # le volume qui va AVEC ce fichier, qui n'est pas celui des notes.
@@ -1759,9 +1840,14 @@ def exporter() -> dict:
         # c'est voulu — le poste, l'hopital et la planque ne sont pas des
         # commerces, et le silence y dit ce qu'aucune toune ne dirait.
         "musiques_de_commerce": dict(musique.MUSIQUES_DE_COMMERCE),
+        # ⚠️ Ce que le NAVIGATEUR lit d'un bruitage, et rien d'autre (28 sept. 2026) : le prompt, la
+        # duree demandee et l'influence ne servent qu'a le generer (`scripts/audio_elevenlabs.py` lit le
+        # CATALOGUE, pas le paquet). Ils pesaient 32 Ko bruts sur les definitions — plus que tout ce
+        # que la cabane et le casino y ajoutent.
         "echantillons": [
-            {**echantillon, "fichiers": fichiers_presents(echantillon)}
-            for echantillon in CATALOGUE
+            {"slug": e["slug"], "nom": e["nom"], "categorie": e["categorie"], "volume": e["volume"],
+             "boucle": e["boucle"], "fichiers": fichiers_presents(e)}
+            for e in CATALOGUE
         ],
         # Les radios se chargent au premier tour de cle, jamais au demarrage.
         "radios": [

@@ -147,10 +147,14 @@ def test_le_theme_pese_moins_qu_une_seconde_de_mp3():
 
     ⚠️ **Deuxième cran, de 52 à 56 Ko, le 26 sept. 2026** — la ritournelle du camion de crème glacée,
     une autre musique qui sort d'un endroit (mesuré avant : 52 358 octets, deux Ko et demi de plus).
-    Même règle : un cran franc, pour la prochaine aussi, pas deux Ko à chaque ajout."""
+    Même règle : un cran franc, pour la prochaine aussi, pas deux Ko à chaque ajout.
+
+    ⚠️ **Troisième cran, de 56 à 62 Ko, le 28 sept. 2026** — deux morceaux d'un coup : le violoneux de la
+    cabane à sucre (1 913 octets) et la musique du casino du Dragon d'or (2 584). Mesuré avant : 55 000,
+    59 491 après. Un cran franc de six Ko, pour les deux suivants aussi."""
     import json
     octets = len(json.dumps(audio.exporter()["musiques"]))
-    assert octets < 56000, f"{octets} octets : le catalogue enfle"
+    assert octets < 62000, f"{octets} octets : le catalogue enfle"
 
 
 # --- M9 : les stations procedurales -----------------------------------------

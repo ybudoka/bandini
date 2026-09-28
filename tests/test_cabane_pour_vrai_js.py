@@ -110,7 +110,7 @@ def test_les_gens_de_la_cabane_au_temps_des_sucres_et_personne_l_hiver(banc):
         return { printemps: printemps, toune: musicien && musicien.toune, fige: fige, vu: vu, restent: restent, nuit: nuit };
     }""")
     assert "tireur" in r["printemps"] and "musicien" in r["printemps"] and r["printemps"].count("client") >= 4, r
-    assert r["toune"] == "rue_reel", "le musicien de la cabane ne joue pas le reel"
+    assert r["toune"] == "cabane_violon", "le musicien de la cabane n'est pas le violoneux (28 sept. 2026)"
     assert r["fige"], "les gens de la cabane flânent (ils tireraient au dé à chaque pas)"
     assert r["vu"] > 0 and r["restent"] >= r["vu"], "à la fermeture, des gens se sont évaporés sous nos yeux"
     assert r["nuit"] == 0, "la cabane fermée, ses gens sont encore là"
