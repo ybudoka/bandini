@@ -2,6 +2,8 @@
 des Érables ; une partie finit toujours (le chrono) ; un tir droit au filet vide marque ; les jeunes ne
 sortent pas de la ruelle et ne tirent aucun `B.rng()` ; on gagne par trois buts ; l'hiver, la balle glisse."""
 
+import pytest
+
 OUTILS = """
   function hockey(L, heure) {
     const B = L.B, H = L.Histoire, j = B.joueur;
@@ -20,8 +22,12 @@ OUTILS = """
 """
 
 
-def test_le_soir_dans_une_ruelle_des_erables(banc):
-    r = banc("function (L, o) {" + OUTILS + """
+@pytest.fixture(scope="module")
+def le_soir_puis_un_tir(banc):
+    """UNE partie (vague C, 28 sept. 2026 — deux bancs) : à midi le hockey ne part pas, le soir il
+    part dans une ruelle des Érables ; puis on entre sur la patinoire et on tire au filet vide.
+    Le tir part du défi du soir, commencé comme son juge le commençait : `hockey(L, 21)`."""
+    return banc("function (L, o) {" + OUTILS + """
         L.Jeu.commencer();
         const B = L.B;
         hockey(L, 12); const midi = !!B.defi;
@@ -30,8 +36,21 @@ def test_le_soir_dans_une_ruelle_des_erables(banc):
         let ruelle = true;
         if (p) for (let x = p.x0 + 8; x < p.x1; x += 16) for (const y of [p.haut + 8, p.bas - 8]) ruelle = ruelle && Mo.glyphe(Math.floor(x / 16), Math.floor(y / 16)) === 'x';
         const z = p ? Mo.zoneA((p.x0 + p.x1) / 2, p.y) : null;
-        return { midi: midi, soir: !!B.defi, sorte: e && e.sorte, ruelle: ruelle, district: z && z.district, jeunes: e ? e.jeunes.length : 0 };
+        const soir = { midi: midi, soir: !!B.defi, sorte: e && e.sorte, ruelle: ruelle, district: z && z.district, jeunes: e ? e.jeunes.length : 0 };
+        // Le tir : le gardien des Chevreuils parti a l'autre bout ; le joueur, la balle au baton, face au filet.
+        entrer(L, o);
+        const j = B.joueur;
+        for (const y of e.jeunes) { y.x = p.x0 + 20; y.y = p.y; y.depart = { x: p.x0 + 20, y: p.y }; }
+        j.x = p.x1 - 60; j.y = p.y; j.angle = 0; L.Entites.indexer();
+        e.balle.x = j.x + 6; e.balle.y = j.y; e.balle.vx = 0; e.balle.vy = 0; e.porteur = { q: j, equipe: 'nous', joueur: true };
+        o.tape('KeyJ', 1);
+        for (let k = 0; k < 40 && !e.nous; k++) o.frame(1);
+        return { soir: soir, tir: { nous: e.nous, eux: e.eux } };
     }""")
+
+
+def test_le_soir_dans_une_ruelle_des_erables(le_soir_puis_un_tir):
+    r = le_soir_puis_un_tir["soir"]
     assert r["midi"] is False, "le hockey part en plein jour"
     assert r["soir"] and r["sorte"] == "hockey" and r["ruelle"] and r["district"] == "erables", r
     assert r["jeunes"] == 5, "trois contre trois : toi, deux jeunes, et trois Chevreuils"
@@ -65,33 +84,40 @@ def test_une_partie_finit_toujours_et_les_jeunes_restent_dans_la_ruelle(banc):
     assert r["buts"] > 0, "trois minutes sans un but : les Chevreuils ne jouent pas"
 
 
-def test_un_tir_droit_au_filet_vide_marque(banc):
-    r = banc("function (L, o) {" + OUTILS + """
-        L.Jeu.commencer();
-        const B = L.B;
-        hockey(L, 21); entrer(L, o);
-        const e = B.rue, p = e.piste, j = B.joueur;
-        // Le gardien des Chevreuils parti a l'autre bout ; le joueur, la balle au baton, face au filet.
-        for (const y of e.jeunes) { y.x = p.x0 + 20; y.y = p.y; y.depart = { x: p.x0 + 20, y: p.y }; }
-        j.x = p.x1 - 60; j.y = p.y; j.angle = 0; L.Entites.indexer();
-        e.balle.x = j.x + 6; e.balle.y = j.y; e.balle.vx = 0; e.balle.vy = 0; e.porteur = { q: j, equipe: 'nous', joueur: true };
-        o.tape('KeyJ', 1);
-        for (let k = 0; k < 40 && !e.nous; k++) o.frame(1);
-        return { nous: e.nous, eux: e.eux };
-    }""")
+def test_un_tir_droit_au_filet_vide_marque(le_soir_puis_un_tir):
+    r = le_soir_puis_un_tir["tir"]
     assert r == {"nous": 1, "eux": 0}, r
 
 
-def test_les_jeunes_ne_tirent_aucun_de_du_jeu(banc):
-    r = banc("function (L, o) {" + OUTILS + """
+@pytest.fixture(scope="module")
+def la_balle_sans_de_puis_sur_la_glace(banc):
+    """UNE partie du soir (vague C, 28 sept. 2026 — deux bancs), menée par l'épreuve seule
+    (`EPREUVES.hockey.maj`, sans image) : quinze secondes sans un dé du jeu ; puis la même balle
+    lancée l'été et l'hiver. ⚠️ La glissade remet d'elle-même tout ce qu'elle lit — les jeunes,
+    le joueur, la balle, le porteur, la pause — avant chaque lancer : le score et le chrono
+    laissés par les quinze secondes n'y entrent pas."""
+    return banc("function (L, o) {" + OUTILS + """
         L.Jeu.commencer();
         const B = L.B, d = hockey(L, 21);
         entrer(L, o);
-        const e = B.rue, ep = L.Rue.EPREUVES.hockey;
+        const e = B.rue, p = e.piste, ep = L.Rue.EPREUVES.hockey;
         L.graine(9); const temoin = [B.rng(), B.rng()]; L.graine(9);
         for (let k = 0; k < 900; k++) { ep.maj(e, d.regles); }
-        return { temoin: temoin, apres: [B.rng(), B.rng()], buts: e.nous + e.eux };
+        const des = { temoin: temoin, apres: [B.rng(), B.rng()], buts: e.nous + e.eux };
+        function glisse(jour, neige) {
+            B.partie.jour = jour; B.options.neige = neige;
+            for (const y of e.jeunes) { y.x = p.x0 + 10; y.y = p.bas - 5; y.depart = { x: y.x, y: y.y }; y.repit = 999; }
+            B.joueur.x = p.x0 + 10; B.joueur.y = p.haut + 5; e.repitJoueur = 999;
+            e.porteur = null; e.pause = 0; e.balle.x = p.x0 + 60; e.balle.y = p.y; e.balle.vx = 3; e.balle.vy = 0;
+            for (let k = 0; k < 60; k++) ep.maj(e, d.regles);
+            return Math.round(e.balle.x - (p.x0 + 60));
+        }
+        return { des: des, glace: { ete: glisse(22, false), hiver: glisse(2, true) } };
     }""")
+
+
+def test_les_jeunes_ne_tirent_aucun_de_du_jeu(la_balle_sans_de_puis_sur_la_glace):
+    r = la_balle_sans_de_puis_sur_la_glace["des"]
     assert r["apres"] == r["temoin"], "le hockey a tiré au dé du jeu"
     assert r["buts"] > 0, "le juge n'a rien fait jouer"
 
@@ -123,20 +149,6 @@ def test_on_gagne_par_trois_buts(banc):
     assert r["fait"] and r["nous"] - r["eux"] >= 3, r
 
 
-def test_l_hiver_la_balle_glisse(banc):
-    r = banc("function (L, o) {" + OUTILS + """
-        L.Jeu.commencer();
-        const B = L.B, d = hockey(L, 21);
-        entrer(L, o);
-        const e = B.rue, p = e.piste, ep = L.Rue.EPREUVES.hockey;
-        function glisse(jour, neige) {
-            B.partie.jour = jour; B.options.neige = neige;
-            for (const y of e.jeunes) { y.x = p.x0 + 10; y.y = p.bas - 5; y.depart = { x: y.x, y: y.y }; y.repit = 999; }
-            B.joueur.x = p.x0 + 10; B.joueur.y = p.haut + 5; e.repitJoueur = 999;
-            e.porteur = null; e.pause = 0; e.balle.x = p.x0 + 60; e.balle.y = p.y; e.balle.vx = 3; e.balle.vy = 0;
-            for (let k = 0; k < 60; k++) ep.maj(e, d.regles);
-            return Math.round(e.balle.x - (p.x0 + 60));
-        }
-        return { ete: glisse(22, false), hiver: glisse(2, true) };
-    }""")
+def test_l_hiver_la_balle_glisse(la_balle_sans_de_puis_sur_la_glace):
+    r = la_balle_sans_de_puis_sur_la_glace["glace"]
     assert r["hiver"] > r["ete"] * 1.3, r

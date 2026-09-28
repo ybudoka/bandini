@@ -7,6 +7,8 @@ regardent ce que le navigateur fait — la bulle, la voix demandee, le repos —
 en remplacant `Son.Voix.dire` par un carnet : le banc n'a pas d'oreille.
 """
 
+import pytest
+
 
 def _brume(paquet):
     return [v for v in paquet["audio"]["voix"] if v["genre"] == "brume"]
@@ -18,20 +20,50 @@ ESPION = """
 """
 
 
-def test_elle_t_accoste_quand_tu_passes_pres_de_son_coin(banc, paquet):
-    """Une bulle avec une de SES repliques, et sa voix demandee sur le meme
-    slug — jamais une replique de passante."""
-    r = banc("""function (L, o) {
+@pytest.fixture(scope="module")
+def trois_passages(banc):
+    """UNE ville, trois passages de trois images (vague C, 28 sept. 2026 — trois bancs) : elle
+    t'accoste ; au volant, elle ne dit rien ; une passante parle toujours comme avant.
+
+    ⚠️ Entre deux passages, la rue que chaque juge avait au départ : la fille d'avant RETIRÉE (et
+    sa bulle avec elle), le carnet vidé, le joueur descendu du char qu'on lui avait donné, la
+    chance de parole remise à la fiche. Le premier passage garde sa graine (5)."""
+    return banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(5);
         """ + ESPION + """
         const j = L.B.joueur;
+        // 1. Elle t'accoste.
         const fille = o.poser('racoleuse', 40, 0);
         o.frame(3);
-        return { metier: fille.metier, poste: !!fille.poste,
-                 bulle: fille.bulle ? fille.bulle.texte : null, dits: dits,
-                 regarde: fille.face };
+        const accoste = { metier: fille.metier, poste: !!fille.poste,
+                          bulle: fille.bulle ? fille.bulle.texte : null, dits: dits.slice(),
+                          regarde: fille.face };
+        L.Entites.retirer(fille); L.Entites.indexer();
+        dits.length = 0;
+        // 2. Au volant, sans démarrer : pas un mot.
+        const fille2 = o.poser('racoleuse', 40, 0);
+        const v = o.char('auto', 0, 0, 0);
+        j.dansVehicule = v;
+        o.frame(3);
+        const enChar = { dits: dits.length, bulle: !!fille2.bulle };
+        L.Entites.retirer(fille2);
+        j.dansVehicule = null; L.Entites.retirer(v); L.Entites.indexer();
+        dits.length = 0;
+        // 3. Une passante, la chance de parler à 1.
+        const chance = L.B.defs.audio.parole.chance;
+        L.B.defs.audio.parole.chance = 1;
+        o.poser('passante', 20, 0);
+        o.frame(3);
+        L.B.defs.audio.parole.chance = chance;
+        return { accoste: accoste, enChar: enChar, passante: dits.slice() };
     }""")
+
+
+def test_elle_t_accoste_quand_tu_passes_pres_de_son_coin(trois_passages, paquet):
+    """Une bulle avec une de SES repliques, et sa voix demandee sur le meme
+    slug — jamais une replique de passante."""
+    r = trois_passages["accoste"]
     textes = {v["texte"]: v["slug"] for v in _brume(paquet)}
     assert r["metier"] == "compagnie" and r["poste"] is True
     assert r["bulle"] in textes, f"pas une replique de la Brume : {r['bulle']!r}"
@@ -97,20 +129,12 @@ def test_elle_se_repose_une_demi_minute_et_se_tait_quand_elle_fuit(banc):
     assert r["enFuite"] == 1 and r["bulleEnFuite"] is False, "elle accoste en fuyant"
 
 
-def test_en_char_elle_ne_dit_rien(banc):
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        """ + ESPION + """
-        const j = L.B.joueur;
-        const fille = o.poser('racoleuse', 40, 0);
-        j.dansVehicule = o.char('auto', 0, 0, 0);   // au volant, sans demarrer
-        o.frame(3);
-        return { dits: dits.length, bulle: !!fille.bulle };
-    }""")
+def test_en_char_elle_ne_dit_rien(trois_passages):
+    r = trois_passages["enChar"]
     assert r["dits"] == 0 and r["bulle"] is False
 
 
-def test_une_passante_parle_toujours_comme_avant(banc):
+def test_une_passante_parle_toujours_comme_avant(trois_passages):
     """Le chemin des passants n'a pas bouge : on frole une passante, elle dit un
     mot de femme — et la Brume ne se met pas devant elle quand elle n'est pas la.
 
@@ -119,16 +143,9 @@ def test_une_passante_parle_toujours_comme_avant(banc):
     huit repliques fatigantes bien avant qu'elles soient usees. Le juge met donc
     la chance a 1 : ce qu'il mesure, c'est le CHEMIN de la parole, pas le de.
     Le de, lui, se juge dans `test_moteur_js.py`."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        L.B.defs.audio.parole.chance = 1;
-        """ + ESPION + """
-        o.poser('passante', 20, 0);
-        o.frame(3);
-        return { dits: dits };
-    }""")
-    assert [d["genre"] for d in r["dits"]] == ["femme"], r["dits"]
-    assert r["dits"][0]["slug"] is None, "un passant tire sa replique au hasard, comme avant"
+    dits = trois_passages["passante"]
+    assert [d["genre"] for d in dits] == ["femme"], dits
+    assert dits[0]["slug"] is None, "un passant tire sa replique au hasard, comme avant"
 
 
 # ⚠️ LA NUIT QUI DURE (Martin, 21 sept. 2026, devant treize filles en grappe sur le

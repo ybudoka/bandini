@@ -5,6 +5,8 @@ qu'un objectif atteint passe au suivant, qu'une arrestation fait rater la
 mission, que le donneur suivant appelle, que chaque replique demande sa voix.
 """
 
+import pytest
+
 
 def test_les_donneurs_attendent_devant_leur_porte_et_ti_guy_parle(banc, paquet, a_jouer):
     r = banc("""function (L, o) {
@@ -179,24 +181,44 @@ def test_une_arrestation_fait_rater_la_mission_et_on_peut_recommencer(banc):
     assert r["encore"] == "m1", "ratee, la mission se redonne"
 
 
-def test_le_donneur_suivant_appelle_au_telephone(banc, paquet, a_jouer):
-    m2 = paquet["missions"][1]
-    r = banc("""function (L, o) {
+@pytest.fixture(scope="module")
+def l_appel_de_madame_thibodeau(banc):
+    """M1 faite, on attend que le téléphone sonne (vague C, 28 sept. 2026 — deux bancs de
+    3 600 images attendaient le même appel) : UNE attente, qui guette la sonnerie ET le premier
+    mot, puis on lit l'appel décroché, et le GPS une fois l'appel fini.
+
+    ⚠️ Chaque mesure est prise au même moment que dans son juge d'avant : ce que le cinéma dit
+    et ce que la sonnerie a duré AVANT `finir()`, le GPS et les appels marqués APRÈS."""
+    return banc("""function (L, o) {
         L.Jeu.commencer();
-        const j = L.B.joueur;
         L.B.partie.missionsFaites.m1 = 1;
-        let quand = -1;
-        for (let i = 0; i < 3600 && quand < 0; i++) { o.frame(1); if (L.B.cinema) quand = i; }
+        let sonne = -1, parle = -1, ensemble = false;
+        for (let i = 0; i < 3600 && parle < 0; i++) {
+          o.frame(1);
+          if (L.B.sonnerie && sonne < 0) sonne = i;
+          if (L.B.sonnerie && L.B.cinema) ensemble = true;   // on parle pendant que ca sonne
+          if (L.B.cinema) parle = i;
+        }
         const c = L.B.cinema;
         const ligne = c ? c.lignes[0] : null;
+        const sonnerie = { sonne: sonne, parle: parle, ensemble: ensemble,
+                           duree: L.Son.SFX.telephone(), sonnerie: L.B.sonnerie,
+                           partie: c && c.partie, qui: c && c.lignes[0].qui,
+                           appels: JSON.parse(JSON.stringify(L.B.partie.appels)) };
         const gpsPendant = L.Histoire.cible();
         L.Histoire.finir();
         const gps = L.Histoire.cible();
         const t = L.Histoire.donneur('thibodeau');
-        return { quand: quand, partie: c && c.partie, qui: ligne && ligne.qui, telephone: ligne && ligne.telephone,
-                 slug: ligne && ligne.slug, dialogueQui: gpsPendant && gpsPendant.nom, gps: gps && gps.nom,
-                 versThibodeau: gps && t && Math.hypot(gps.x - t.x, gps.y - t.y) < 4, appels: L.B.partie.appels };
+        return { sonnerie: sonnerie,
+                 appel: { quand: parle, partie: c && c.partie, qui: ligne && ligne.qui, telephone: ligne && ligne.telephone,
+                          slug: ligne && ligne.slug, dialogueQui: gpsPendant && gpsPendant.nom, gps: gps && gps.nom,
+                          versThibodeau: gps && t && Math.hypot(gps.x - t.x, gps.y - t.y) < 4, appels: L.B.partie.appels } };
     }""")
+
+
+def test_le_donneur_suivant_appelle_au_telephone(l_appel_de_madame_thibodeau, paquet, a_jouer):
+    m2 = paquet["missions"][1]
+    r = l_appel_de_madame_thibodeau["appel"]
     # ⚠️ 45 s depuis le 25 sept. 2026 (`DELAI_APPEL`, « un appel a la fois ») : plus tot, ca sonnait a la chaine.
     assert 2600 <= r["quand"] < 3600, "Madame Thibodeau appelle une quarantaine de secondes apres M1"
     assert r["partie"] == "appel" and r["qui"] == "thibodeau" and r["telephone"] is True
@@ -240,28 +262,14 @@ def test_un_appel_a_la_fois(banc):
     assert ecart < 11000, "le telephone ne relance jamais une mission qu'on laisse attendre"
 
 
-def test_le_dialogue_de_l_appel_attend_la_fin_de_la_sonnerie(banc):
+def test_le_dialogue_de_l_appel_attend_la_fin_de_la_sonnerie(l_appel_de_madame_thibodeau):
     """Demande de Martin (17 sept. 2026) : « quand on reçoit des appels, le
     dialogue commence après la fin de la sonnerie ».
 
     ⚠️ Au banc, aucun mp3 n'est decode : la sonnerie est celle de la SYNTHESE
     (0,37 s, soit 22 images). C'est l'ecart qu'on mesure — pas les deux
     secondes du fichier, qui ne sont pas la."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        L.B.partie.missionsFaites.m1 = 1;
-        let sonne = -1, parle = -1, ensemble = false;
-        for (let i = 0; i < 3600 && parle < 0; i++) {
-          o.frame(1);
-          if (L.B.sonnerie && sonne < 0) sonne = i;
-          if (L.B.sonnerie && L.B.cinema) ensemble = true;   // on parle pendant que ca sonne
-          if (L.B.cinema) parle = i;
-        }
-        const c = L.B.cinema;
-        return { sonne: sonne, parle: parle, ensemble: ensemble,
-                 duree: L.Son.SFX.telephone(), sonnerie: L.B.sonnerie,
-                 partie: c && c.partie, qui: c && c.lignes[0].qui, appels: L.B.partie.appels };
-    }""")
+    r = l_appel_de_madame_thibodeau["sonnerie"]
     duree = r.get("duree") or 0
     assert duree > 0, "la sonnerie ne dit pas ce qu'elle dure : personne ne peut l'attendre"
     assert 0 <= r["sonne"] < r["parle"], "le telephone sonne, PUIS le donneur parle"

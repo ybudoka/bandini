@@ -2,16 +2,23 @@
 les vitrines prennent les couleurs des guirlandes la nuit, le sapin brille sur la place, le camion livre
 des dindes, et le Clairon l'annonce ; rien au dé, et tout s'en va en janvier."""
 
+import pytest
+
 DECEMBRE = """
   function aLHeure(L, jour, h) { L.B.partie.jour = jour; L.B.partie.heure = h / 24; }
   function decembre(L) { return L.B.defs.fetes.jours[0]; }
 """
 
 
-def test_les_guirlandes_en_decembre_seulement(banc):
-    r = banc("function (L, o) {" + DECEMBRE + """
+@pytest.fixture(scope="module")
+def trois_lectures(banc):
+    """UNE partie, trois lectures (vague C, 28 sept. 2026 — trois bancs) : les guirlandes, le
+    sapin, la ligne du Clairon. Aucune image jouée : chacune pose son jour et son heure avant de
+    lire, comme chaque juge le faisait seul."""
+    return banc("function (L, o) {" + DECEMBRE + """
         L.Jeu.commencer();
         const Mo = L.Monde, B = L.B, F = L.Fetes;
+        // 1. Les guirlandes, sur une fenêtre et pas sur un poteau.
         const fenetre = Mo.carte.lampes.find(function (l) { return l.sorte === 'fenetre'; });
         const poteau = Mo.carte.lampes.find(function (l) { return l.sorte !== 'fenetre' && l.sorte !== 'vitrine'; });
         aLHeure(L, decembre(L), 22);
@@ -20,28 +27,35 @@ def test_les_guirlandes_en_decembre_seulement(banc):
         const nov = { fenetre: F.couleur(fenetre) };
         aLHeure(L, decembre(L) + 4, 22);
         const jan = { fenetre: F.couleur(fenetre) };
-        return { dec: dec, nov: nov, jan: jan, mois: [L.Calendrier.mois(decembre(L)), L.Calendrier.mois(decembre(L) + 4)] };
+        const guirlandes = { dec: dec, nov: nov, jan: jan, mois: [L.Calendrier.mois(decembre(L)), L.Calendrier.mois(decembre(L) + 4)] };
+        // 2. Le sapin sur la place.
+        const s = B.defs.fetes.sapin;
+        let traits = 0;
+        const ctx = { fillRect: function () { traits++; }, set fillStyle(c) {} };
+        const cam = { x: s.x * 16 - 240, y: s.y * 16 - 135 };
+        function peindre() { const v = []; F.ajouterVisibles(v, cam.x, cam.y); v.forEach(function (e) { e.peindreFoire(ctx); }); return v; }
+        aLHeure(L, decembre(L), 22); const vus = peindre();
+        const traitsDec = traits, lueur = F.lampes(cam).length;
+        traits = 0; aLHeure(L, decembre(L) + 4, 22); peindre();
+        const sapin = { dec: traitsDec, lueur: lueur, jan: traits, lueurJan: F.lampes(cam).length,
+                        pied: vus.length ? vus[0].y : null, attendu: s.y * 16 + 14 };
+        // 3. Le Clairon, la veille, le jour et le lendemain.
+        const clairon = {};
+        for (const k of [-1, 0, 1]) { aLHeure(L, decembre(L) + k, 7); clairon[k] = L.Fetes.ligneDuClairon(); }
+        return { guirlandes: guirlandes, sapin: sapin, clairon: clairon };
     }""")
+
+
+def test_les_guirlandes_en_decembre_seulement(trois_lectures):
+    r = trois_lectures["guirlandes"]
     assert r["mois"] == ["decembre", "janvier"], r
     assert r["dec"]["fenetre"] and r["dec"]["fenetre"].startswith("rgba("), r
     assert r["dec"]["poteau"] is None, "un lampadaire de rue ne porte pas de guirlande"
     assert r["nov"]["fenetre"] is None and r["jan"]["fenetre"] is None, r
 
 
-def test_le_sapin_brille_sur_la_place_en_decembre(banc):
-    r = banc("function (L, o) {" + DECEMBRE + """
-        L.Jeu.commencer();
-        const B = L.B, F = L.Fetes, s = B.defs.fetes.sapin;
-        let traits = 0;
-        const ctx = { fillRect: function () { traits++; }, set fillStyle(c) {} };
-        const cam = { x: s.x * 16 - 240, y: s.y * 16 - 135 };
-        function peindre() { const v = []; F.ajouterVisibles(v, cam.x, cam.y); v.forEach(function (e) { e.peindreFoire(ctx); }); return v; }
-        aLHeure(L, decembre(L), 22); const vus = peindre();
-        const dec = traits, lueur = F.lampes(cam).length;
-        traits = 0; aLHeure(L, decembre(L) + 4, 22); peindre();
-        return { dec: dec, lueur: lueur, jan: traits, lueurJan: F.lampes(cam).length,
-                 pied: vus.length ? vus[0].y : null, attendu: s.y * 16 + 14 };
-    }""")
+def test_le_sapin_brille_sur_la_place_en_decembre(trois_lectures):
+    r = trois_lectures["sapin"]
     assert r["dec"] > 20 and r["lueur"] == 1, r
     assert r["jan"] == 0 and r["lueurJan"] == 0, r
     # ⚠️ Il se trie avec les gens par le pied de son tronc : peint au sol, on marchait dans ses branches.
@@ -113,12 +127,7 @@ def test_le_camion_livre_des_dindes_en_decembre(banc):
     assert r == {"dec": "dindes", "juillet": None, "verglas": "generatrices"}, r
 
 
-def test_le_clairon_l_annonce_le_premier_matin(banc):
-    r = banc("function (L, o) {" + DECEMBRE + """
-        L.Jeu.commencer();
-        const out = {};
-        for (const k of [-1, 0, 1]) { aLHeure(L, decembre(L) + k, 7); out[k] = L.Fetes.ligneDuClairon(); }
-        return out;
-    }""")
+def test_le_clairon_l_annonce_le_premier_matin(trois_lectures):
+    r = trois_lectures["clairon"]
     from app import fetes
     assert r["-1"] is None and r["0"] == fetes.CLAIRON and r["1"] is None, r
