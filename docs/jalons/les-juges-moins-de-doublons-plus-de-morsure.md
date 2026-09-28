@@ -65,3 +65,34 @@ Restés à voir : la borne de `test_ombre` (la « ligne de sol » depuis la vue 
 10 ne rougit pas), la ligne `routes.py` de `architecture.md` qui annonce encore « scores ». Rouges
 connus, pas de cette vague : `test_moteur_js::la_foule…`, `test_police_js::deux_dehors…`,
 `test_carte_du_depot` (`tests/test_garage.py`), les deux du ciné-parc.
+
+**Vague B livrée le 28 sept. 2026** — la ville partagée. `tests/villes.py` génère chaque ville
+(`generer(plan, graine, nord)`, `exporter()`, `assembler()`) **une fois par processus** et la rend
+**en copie** à chaque appel (0,02 s contre 6 à 7) : un juge qui salit sa ville ne salit pas celle
+du suivant. `test_villes.py` le juge (la même ville que le jeu, une copie par juge, la graine et
+la bande nord dans la clé — mutation « la clé oublie `nord` » : rouge). La fixture `app` et le
+`serveur` reprennent le paquet de la session (`conftest._creer_app`) au lieu de rebâtir
+`construire()` à chaque juge.
+
+- 73 fichiers migrés : les villes bâties **à la collecte** (payées même par un `-k` ailleurs)
+  deviennent des fixtures de module ; `_villes_de_la_rue()` de `test_chantiers`, les graines de
+  `test_carte` et de `test_devantures` passent par le cache.
+- **Mesure appariée** (les 73 fichiers en quatre lots, l'ancienne base et la nouvelle lancées EN MÊME
+  TEMPS, même charge) : **2 057 s → 1 519 s** (−26 %), mêmes verts et mêmes rouges des deux côtés.
+  Les plus gros : `test_chantiers` 140 → 49 s, `test_nord` 47 → 13, `test_carte` 79 → 42,
+  `test_devantures` 52 → 18, `test_routes` 30 → 0.
+- ⚠️ **Restent en génération directe, avec un ⚠️ qui dit pourquoi** : tout juge qui patche le jeu avant
+  de bâtir (le cache ne voit pas le patch — la ville « avec », bâtie avant le patch, passe par le
+  cache), les juges de déterminisme (`generer() == generer()` doit en bâtir deux), les sous-processus,
+  les espions (`test_terrains_vagues`, `test_commerce_a_la_mesure`), et
+  `test_aeroport::…l_aerogare…`, qui exige `is` (une copie n'est jamais le même objet).
+- ⚠️ Deux fichiers ont déjà une fixture `villes` (mobilier, quartiers) : le module y est importé
+  `villes as villes_gardees`.
+- Ce que la vague B ne règle pas : le coût vient maintenant surtout des **bancs** (Node) —
+  `test_missions_en_scene_js` (≈ 1 000 s), `test_interpretation` (ffmpeg), `test_moteur_js` :
+  c'est la vague C.
+
+Rouges sur `dev` au moment d'atterrir, tous rejoués sur la base d'avant (aucun de cette vague) :
+`test_interieurs::…lieux_des_missions…` (`villa_chemin`), `test_rang::…trois_blocs…` (la villa),
+`test_quai_se_marche` (friche enfermée), `test_missions_en_scene_js` ×10 (v01, v02),
+`test_parole::…la_rue_se_tait…`, `test_velos_js[23]` (HORS VOIE autobus), et les deux du ciné-parc.
