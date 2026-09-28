@@ -3922,7 +3922,7 @@ const Hud = (function () {
   return { init, voile, etat, progression, partDesScripts, finirChargement, message, prime, majPrime, montantDeLaPrime, PRIME, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, toutesLesTechniques, glyphesDOnglets, menuSautMissions, menuSautDefis, menuChezUnDonneur, menuEndroitsCles, menuJukebox, pointDuDefi, menuCarnet,
     ouvrirOnglet, toucherMenu, onglets: function () { return ongletsVisibles().map(function (o) { return o.slug; }); },
     ciblesDuMenu: function () { return cibles.slice(); }, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
-    menuCommandes, ouvrirCommandes, majAideDuTitre, lignesDAide, glypheDAction,
+    menuCommandes, ouvrirCommandes, majAideDuTitre, lignesDAide, glypheDAction, dessinerGlyphe, largeurGlyphe,
     menuParties, menuEffacer, menuCopier, tempsDeJeu, quand,
     legendeDeLaCarte, legendeDuZonage, lieuxSurLaCarte, couleurDeLieu, cibleDuBoulot, PULSE_JOUEUR, BATTEMENT_CIBLE, CALQUE_ALPHA,
     iconeAppareil, dessinerAppareils, defisSurLaCarte, tournerFiltreDeCarte, filtreDesDefis, DRAPEAU,

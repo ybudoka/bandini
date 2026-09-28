@@ -14,13 +14,17 @@ from . import techniques
 #: Le dojo ouvre de 8 h a 22 h (fractions du jour, comme `magasins.HEURES_DES_COMPTOIRS`).
 #: ⚠️ La nuit, c'est le MENU qui ferme, pas la porte — comme tous les comptoirs du jeu.
 HEURES = (8 / 24, 22 / 24)
-#: « un… deux… et… » : un temps toutes les 45 images (0,75 s) ; le « et » ouvre 24 images.
+#: « un… deux… et… » : un temps toutes les 45 images (0,75 s) ; le « et » ouvre 36 images.
+#: ⚠️ 24 images (0,4 s) le 26 sept. : Martin, le 28, « trop dur et pas clair » — 0,6 s, et une
+#: barre qui se vide sous le « ET » tant que la fenetre est ouverte.
 #: ⚠️ LE COMPTE EST UN METRONOME, pas une voix : deux claquements de bois, puis un fort sur
 #: le « et » (`Son.SFX`, synthetise). Une voix generee ne tombe jamais pile sur le temps, et
 #: les vingt-cinq voix faisaient deborder le paquet (`test_definitions`, 54 000 gzip).
 TEMPS_IMAGES = 45
-FENETRE_IMAGES = 24
+FENETRE_IMAGES = 36
 REUSSITES = 3
+#: ⚠️ Des TENTATIVES ratees : un « et » ou l'on ne fait rien ne compte pas (Martin, 28 sept. :
+#: la lecon s'arretait pendant qu'on cherchait encore le bouton).
 RATES_MAX = 5
 #: Ou Kevin se tient, en pixels devant Bandini, selon la mise en place (`techniques.lecon`).
 #: ⚠️ Au contact, c'est 12 : deux corps ne s'approchent jamais sous 10 px (`Entites.demeler`).

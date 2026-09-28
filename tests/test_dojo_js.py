@@ -291,3 +291,97 @@ def test_pas_de_cours_achete_pendant_une_lecon(banc):
                  etat: L.Dojo.etatDuCours('pied_circulaire'), argent: L.B.partie.argent };
     }""")
     assert r == {"achat": False, "autre": False, "cours": "uppercut", "etat": "verrouille", "argent": 4700}, r
+
+
+# --- Des leçons qu'on comprend (docs/jalons/le-dojo-des-lecons-qu-on-comprend.md) ---------
+
+def test_ne_rien_faire_n_est_pas_un_rate(banc):
+    """Martin, 28 sept. : la leçon s'arrêtait pendant qu'on cherchait le bouton. Dix « et »
+    sans un geste : pas un raté, la leçon attend."""
+    r = banc("""function (L, o) { """ + ENTRER + """
+        auDojo(L, o);
+        L.B.partie.argent = 1000;
+        L.Dojo.acheter('uppercut');
+        let fenetres = 0;
+        for (let n = 0; n < 1400 && L.B.cours; n++) { o.frame(1); if (L.B.cours) fenetres = L.B.cours.ouverte; }
+        return { fenetres: fenetres, cours: L.B.cours ? { rates: L.B.cours.rates, reussis: L.B.cours.reussis } : null };
+    }""")
+    assert r["fenetres"] >= 10, r                  # sinon le juge ne juge rien
+    assert r["cours"] == {"rates": 0, "reussis": 0}, r
+
+
+def test_un_geste_rate_compte_encore(banc):
+    """Le pendant : un geste TENTÉ au mauvais moment reste un raté (un par « et »)."""
+    r = banc("""function (L, o) { """ + ENTRER + """
+        auDojo(L, o);
+        L.B.partie.argent = 1000;
+        L.Dojo.acheter('uppercut');
+        while (L.B.transition) o.frame(1);
+        let rates = 0;
+        for (let n = 0; n < 300 && L.B.cours; n++) {
+            if (L.B.cours.t % 135 === 20) o.tape('KeyX', 1); else o.frame(1);
+            if (L.B.cours) rates = L.B.cours.rates;
+        }
+        return rates;
+    }""")
+    assert r == 2, r
+
+
+def test_la_fenetre_dure_six_dixiemes(banc):
+    r = banc("""function (L, o) { """ + ENTRER + """
+        auDojo(L, o);
+        L.B.partie.argent = 1000;
+        L.Dojo.acheter('uppercut');
+        while (L.B.transition) o.frame(1);
+        let ouverte = 0;
+        for (let n = 0; n < 135; n++) { o.frame(1); if (L.B.cours.fenetre) ouverte++; }
+        return ouverte;
+    }""")
+    assert r == 36, r
+
+
+#: Ce que chaque carte doit montrer : le BOUTON de la technique (une action d'`Entree`).
+BOUTONS = {"uppercut": ["attaque"], "pied_circulaire": ["attaque"], "pied_de_cote": ["attaque"],
+           "pied_saute": ["esquive", "attaque"], "balayage": ["esquive", "attaque"],
+           "projection_hanche": ["saisir"], "grand_fauchage": ["saisir"], "sacrifice": ["saisir"],
+           "retournement_poignet": ["saisir"], "etranglement": ["saisir"]}
+
+
+def test_chaque_cours_a_sa_carte_et_ses_boutons(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const out = {};
+        for (const t of L.B.defs.techniques) {
+            if (t.gratuite) continue;
+            const carte = L.Dojo.carte(t.slug);
+            out[t.slug] = { boutons: carte.filter(function (p) { return p.action; }).map(function (p) { return p.action; }),
+                            mots: carte.filter(function (p) { return p.texte; }).map(function (p) { return p.texte; }).join(' '),
+                            inconnus: carte.filter(function (p) { return p.texte; }).map(function (p) { return p.texte; }).join('')
+                                .split('').filter(function (ch) { return ch !== ' ' && !L.Atlas.connait(ch); }) };
+        }
+        return out;
+    }""")
+    assert sorted(r) == sorted(BOUTONS), r
+    for slug, c in r.items():
+        assert c["boutons"] == BOUTONS[slug], (slug, c)
+        assert c["mots"], (slug, c)
+        assert c["inconnus"] == [], (slug, c)       # la police les dessinerait en « ? »
+
+
+def test_la_carte_parle_l_appareil_qu_on_tient(banc):
+    """Au clavier, la touche (X pour frapper) ; à la manette, son bouton ; au doigt, le nom du
+    bouton tactile — jamais une touche de clavier à qui tient une manette."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        function glyphe() {
+            const p = L.Dojo.carte('uppercut').find(function (q) { return q.action; });
+            return p.glyphe ? p.glyphe.s : 'mot:' + p.texte;
+        }
+        o.tape('KeyZ', 1);
+        const clavier = glyphe();
+        o.pad([0, 0, 0, 0], [1]); o.frame(2); o.pad([0, 0, 0, 0], [0]); o.frame(2);
+        const manette = glyphe();
+        return { clavier: clavier, manette: manette, appareil: L.Entree.appareil };
+    }""")
+    assert r["appareil"] == "manette", r
+    assert r["clavier"] == "touche" and r["manette"] not in ("touche", None) and not r["manette"].startswith("mot:"), r

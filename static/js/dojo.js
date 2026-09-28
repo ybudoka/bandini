@@ -13,6 +13,35 @@ const Dojo = (function () {
 
   function regles() { return B.defs.dojo; }
 
+  //: La carte de la lecon : ce qu'on fait, BOUTON compris. Une action d'`Entree` (en minuscules)
+  //: se dessine pour l'appareil qu'on tient ; le reste est un mot. Martin, 28 sept. : « trop dur
+  //: et pas clair » — les annonces de Mireille disent la hanche et la jambe, jamais le bouton.
+  //: ⚠️ Ici, pas dans `app/dojo.py` : le paquet des definitions est a son plafond
+  //: (`test_definitions`), et c'est de l'affichage.
+  const RECETTES = {
+    uppercut: ['FRAPPE', 'attaque'],
+    pied_circulaire: ['FRAPPE', 'attaque'],
+    pied_de_cote: ['TIENS', 'attaque', '... LÂCHE SUR LE ET'],
+    pied_saute: ['COURS VERS LUI', 'esquive', '+', 'attaque'],
+    balayage: ['IL ATTAQUE : ROULE', 'esquive', 'PUIS', 'attaque'],
+    projection_hanche: ['SAISIS', 'saisir', '+ POUSSE VERS LUI'],
+    grand_fauchage: ['SAISIS', 'saisir', '+ TIRE VERS TOI'],
+    sacrifice: ['SAISIS', 'saisir', '+ POUSSE DE CÔTÉ'],
+    retournement_poignet: ['IL ARME SON COUP :', 'saisir'],
+    etranglement: ['DANS SON DOS : TIENS', 'saisir', "JUSQU'AU BOUT"],
+  };
+  const ACTIONS = ['attaque', 'saisir', 'esquive'];
+
+  /** Les pieces de la carte de `slug` : { action, glyphe } pour un bouton (au doigt, sans
+      glyphe, le nom du bouton tactile dans `texte`), { texte } pour un mot. */
+  function carte(slug) {
+    return (RECETTES[slug] || []).map(function (m) {
+      if (ACTIONS.indexOf(m) < 0) return { texte: m };
+      const g = Hud.glypheDAction(m);
+      return g ? { action: m, glyphe: g } : { action: m, texte: Entree.etiquettesTactiles('pied')[m] };
+    });
+  }
+
   /** Le maillon d'avant, pour une tape de la chaine : le circulaire (rang 5) attend l'uppercut. */
   function avant(t) {
     if (t.geste !== 'tape' || t.rang <= 1) return null;
@@ -113,7 +142,7 @@ const Dojo = (function () {
     const d = regles().distances[(regles().lecons || {})[slug] || 'contact'];
     const cx = piece.tatami.x * TT + 8, cy = piece.tatami.y * TT + 8;
     B.cours = { slug: slug, t: 0, ouverte: 0, fenetre: false, lance: false, vu: false, attend: false,
-                reussis: 0, rates: 0, kevin: k, dit: '', ditT: 0 };
+                tente: false, occupe: false, reussis: 0, rates: 0, kevin: k, dit: '', ditT: 0 };
     Jeu.transiter([10, 10], function () {
       const j = B.joueur;
       j.x = cx - d / 2; j.y = cy; j.vx = 0; j.vy = 0; Entites.regarder(j, 1, 0);
@@ -154,6 +183,9 @@ const Dojo = (function () {
   function juger(c) {
     const r = regles();
     c.attend = false;
+    // Un « et » sans un geste n'est pas un rate : on cherchait peut-etre le bouton.
+    const tente = c.tente; c.tente = false;
+    if (!c.vu && !tente) return false;
     if (c.vu) { c.reussis++; c.dit = 'OUI !'; dire('oui_' + ((c.reussis - 1) % 2 + 1)); }
     else { c.rates++; c.dit = 'RATÉ'; dire('rate_' + ((c.rates - 1) % 2 + 1)); }
     c.ditT = 40;
@@ -171,6 +203,11 @@ const Dojo = (function () {
       return;
     }
     if (B.transition) return;
+    // Une TENTATIVE : un geste qui part (le coup, la prise, la roulade) — au front, pour
+    // qu'un coup qui dure ne se compte pas deux fois.
+    const occupe = j.etat === 'attaque' || !!j.prise || j.roule > 0;
+    if (occupe && !c.occupe) c.tente = true;
+    c.occupe = occupe;
     const r = regles(), phase = c.t % r.temps_images, temps = Math.floor(c.t / r.temps_images) % 3;
     // Le metronome : deux claquements de bois, puis un fort sur le « et ».
     if (phase === 0 && typeof Son !== 'undefined') Son.SFX.claquement(temps === 2);
@@ -220,26 +257,49 @@ const Dojo = (function () {
     if (c && c.kevin) { c.kevin.marque = null; c.kevin.regard = null; if (c.kevin.etat === 'attaque_joueur') c.kevin.etat = 'fige'; }
   }
 
-  /** En haut de l'ecran : « UPPERCUT · 2/3 », les trois temps, et le dernier verdict. */
+  /** En haut de l'ecran : « UPPERCUT · 2/3 », le compte (UN DEUX ET, la barre du « et » qui
+      se vide tant qu'il est ouvert), la carte de ce qu'on fait, et le dernier verdict. */
   function dessiner(ctx) {
     const c = B.cours;
     if (!c || B.transition) return;
     const t = Techniques.def(c.slug), r = regles();
     const titre = t.nom.toUpperCase() + ' · ' + c.reussis + '/' + r.reussites;
+    const pieces = carte(c.slug);
+    let lc = 0;
+    for (const p of pieces) lc += (p.glyphe ? Hud.largeurGlyphe(p.glyphe) : Atlas.largeurTexte(p.texte, 1)) + 4;
+    lc -= 4;
+    const COMPTE = ['UN', 'DEUX', 'ET'];
+    const lcompte = Atlas.largeurTexte(COMPTE.join('  '), 1);
     // ⚠️ SOUS les etoiles de recherche (en haut, au centre) : a y = 6, le bandeau les couvrait.
-    const l = Atlas.largeurTexte(titre, 1) + 16, x = Math.round((VW - l) / 2), y = 26;
-    ctx.fillStyle = 'rgba(11,10,18,0.78)'; ctx.fillRect(x, y, l, 26);
-    Atlas.texte(ctx, titre, x + 8, y + 4, '#efe6d0', 1);
-    const temps = Math.floor(c.t / r.temps_images) % 3;
+    const l = Math.max(Atlas.largeurTexte(titre, 1), lc, lcompte) + 16, x = Math.round((VW - l) / 2), y = 26;
+    ctx.fillStyle = 'rgba(11,10,18,0.78)'; ctx.fillRect(x, y, l, 42);
+    Atlas.texte(ctx, titre, Math.round((VW - Atlas.largeurTexte(titre, 1)) / 2), y + 4, '#efe6d0', 1);
+    // Le compte : le temps en cours s'allume, le « ET » en or ; sous lui, la fenetre qui se vide.
+    const temps = Math.floor(c.t / r.temps_images) % 3, phase = c.t % r.temps_images;
+    let cx = Math.round((VW - lcompte) / 2);
     for (let k = 0; k < 3; k++) {
-      ctx.fillStyle = k === temps ? (k === 2 ? '#e8b33c' : '#efe6d0') : '#4a4560';
-      ctx.fillRect(Math.round(VW / 2) - 13 + k * 10, y + 16, k === 2 ? 7 : 5, k === 2 ? 7 : 5);
+      const allume = k === temps;
+      Atlas.texte(ctx, COMPTE[k], cx, y + 13, allume ? (k === 2 ? '#e8b33c' : '#efe6d0') : '#4a4560', 1);
+      if (k === 2 && c.fenetre) {
+        const lt = Atlas.largeurTexte('ET', 1) + 6, part = 1 - phase / r.fenetre_images;
+        ctx.fillStyle = '#e8b33c'; ctx.fillRect(cx - 3, y + 20, Math.max(1, Math.round(lt * part)), 2);
+      }
+      cx += Atlas.largeurTexte(COMPTE[k] + '  ', 1) + 1;
+    }
+    // La carte : les mots et les boutons de l'appareil qu'on tient, sur une ligne.
+    let px = Math.round((VW - lc) / 2);
+    for (const p of pieces) {
+      if (p.glyphe) px += Hud.dessinerGlyphe(ctx, p.glyphe, px, y + 27) + 4;
+      else {
+        Atlas.texte(ctx, p.texte, px, y + 29, p.action ? '#e8b33c' : '#efe6d0', 1);
+        px += Atlas.largeurTexte(p.texte, 1) + 4;
+      }
     }
     if (c.ditT > 0 && c.dit) {
-      Atlas.texte(ctx, c.dit, Math.round((VW - Atlas.largeurTexte(c.dit, 1)) / 2), y + 32,
+      Atlas.texte(ctx, c.dit, Math.round((VW - Atlas.largeurTexte(c.dit, 1)) / 2), y + 46,
                   c.dit === 'OUI !' ? '#8fd46a' : '#ff8a7a', 1);
     }
   }
 
-  return { menuCours, accueillir, etatDuCours, acheter, commencer, maj, annuler, dessiner };
+  return { menuCours, accueillir, etatDuCours, acheter, commencer, maj, annuler, dessiner, carte };
 })();

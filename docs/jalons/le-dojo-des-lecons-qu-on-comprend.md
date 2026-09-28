@@ -23,3 +23,22 @@ qu'on cherche encore le bouton.
   dorée se vide sous les trois points pendant qu'elle est ouverte.
 - **Juges au banc, au bouton** : une leçon sans geste ne s'arrête pas ; un geste trop tôt est un raté ; chaque
   cours a sa recette ; la carte change de glyphe entre clavier et manette. Mutations, et une capture.
+
+## Notes
+
+**Livré le 28 sept. 2026.**
+
+- **La carte** (`Dojo.carte`, `RECETTES` dans `static/js/dojo.js`) : sous le titre de la leçon, une ligne de
+  mots et de boutons — « SAISIS [U] + POUSSE VERS LUI », « TIENS [ESPACE] … LÂCHE SUR LE ET ». Les boutons
+  sont ceux de l'appareil qu'on tient (`Hud.glypheDAction`, exporté avec `dessinerGlyphe` et
+  `largeurGlyphe`) ; au doigt, le nom du bouton tactile. ⚠️ Les recettes sont dans le JS et pas dans
+  `app/dojo.py` : le paquet des définitions est à son plafond, et c'est de l'affichage.
+- **Le compte en mots** : « UN DEUX ET » remplace les trois points ; le temps en cours s'allume, le « ET » en
+  or, et une barre dorée se vide sous lui tant que la fenêtre est ouverte.
+- **La fenêtre** : 24 → 36 images (0,6 s), `dojo.FENETRE_IMAGES`.
+- **Ne rien faire n'est pas un raté** : `B.cours.tente` se lève au FRONT d'un geste qui part (un coup, une
+  prise, une roulade — `j.etat === 'attaque' || j.prise || j.roule`), et `juger` ne compte rien sans lui. Un
+  geste trop tôt reste un raté, un par « et ».
+- **Juges** (`test_dojo_js.py`) : dix « et » sans geste, zéro raté ; deux gestes trop tôt, deux ratés ; la
+  fenêtre dure 36 images ; chaque cours a sa carte, ses boutons et des lettres que la police connaît ; la
+  carte passe de la touche au bouton de manette. Chaque règle mutée une fois, chaque juge a rougi.
