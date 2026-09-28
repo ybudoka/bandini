@@ -1,5 +1,7 @@
 """Les techniques d'arts martiaux, au banc (docs/jalons/les-techniques-d-arts-martiaux.md)."""
 
+import pytest
+
 #: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : les juges qui cherchent leur rue (ou leur parc, leur gazon) en
 #: balayant la carte depuis le haut commencent à `decalage_nord` — sinon ils la trouvaient dans la bande
 #: nord (`app/nord.py`), loin de la caméra et hors du terrain où ils ont été réglés.
@@ -72,63 +74,77 @@ def test_une_disposition_sauvee_avant_saisir_donne_l_epaule_a_saisir(banc):
     assert r["profil"]["attaque"] == [2] and r["profil"]["saisir"] == [5], r
 
 
-def test_l_epaule_de_droite_tourne_encore_les_onglets(banc):
-    """`lireEpaules` lisait le numéro de l'épaule dans FRAPPE ; il le lit dans SAISIR."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        o.pad([0, 0], %s);
-        // ⚠️ L'appui NEUF se vide a la fin de l'image (`videPresse`) : on le lit
-        // entre la lecture de la manette et la fin, comme le classeur le lit.
-        L.Entree.debutImage();
-        return L.Entree.neufEpaule('d');
-    }""" % RB)
-    assert r is True
-
-
 # --- Le moteur : la chaîne, la réserve, les passants (tâche 4) ---------------------------
 
-def _chaine(banc, sait, tapes, espace=4):
-    """Les techniques qui partent, dans l'ordre, pour `tapes` tapes à `espace`
-    images d'écart. ⚠️ SANS CIBLE : un passant posé à côté se rapprocherait
-    (`majPieton` tourne dans `o.frame`) et le genou volerait la place du poing.
-    La tape part au RELÂCHER (`majGestes` : on charge tant que c'est tenu)."""
-    return banc("""function (L, o) {
+#: La graine posée avant CHAQUE chaîne et CHAQUE prise, avant `Jeu.commencer` : la foule de
+#: départ et l'archétype que `poser(null)` tire en dépendent. Voir `prises`.
+GRAINE = 7
+
+#: Les chaînes jouées : `sait` (ce qu'on a appris), le nombre de tapes, l'écart entre deux.
+CHAINES = {
+    "trois": ("", 3, 14),
+    "allonge": ("L.B.partie.techniques = { uppercut: true, pied_circulaire: true };", 5, 18),
+    "sans_cours": ("", 4, 16),
+    "reserve": ("", 2, 2),
+}
+
+
+@pytest.fixture(scope="module")
+def chaines(banc):
+    """Les techniques qui partent, dans l'ordre, pour `tapes` tapes à `espace` images d'écart —
+    les quatre chaînes dans UN banc. ⚠️ SANS CIBLE : un passant posé à côté se rapprocherait
+    (`majPieton` tourne dans `o.frame`) et le genou volerait la place du poing. La tape part au
+    RELÂCHER (`majGestes` : on charge tant que c'est tenu).
+
+    ⚠️ Chaque chaîne repart d'une partie neuve (`Jeu.commencer` : le joueur renaît, à l'arrêt,
+    sans technique en cours), avec les techniques d'une partie neuve — `commencer` ne touche pas
+    `B.partie`, et la 2e chaîne en apprend deux — et la même graine (voir `prises`)."""
+    corps = "".join("""
+        L.graine(%d);
         L.Jeu.commencer();
+        L.B.partie.techniques = JSON.parse(neuves);
         L.B.joueur.angle = 0; L.B.joueur.face = 'droite';
         %s
-        const vus = []; let dernier = null;
-        function regarder(n) {
-            for (let k = 0; k < n; k++) {
-                const t = L.B.joueur.technique || null;
-                if (t && t !== dernier) vus.push(t);
-                dernier = t; o.frame(1);
+        sorties['%s'] = jouer(%d, %d);""" % (GRAINE, sait, nom, tapes, espace) for nom, (sait, tapes, espace) in CHAINES.items())
+    return banc("""function (L, o) {
+        L.Jeu.commencer();
+        const neuves = JSON.stringify(L.B.partie.techniques), sorties = {};
+        function jouer(tapes, espace) {
+            const vus = []; let dernier = null;
+            function regarder(n) {
+                for (let k = 0; k < n; k++) {
+                    const t = L.B.joueur.technique || null;
+                    if (t && t !== dernier) vus.push(t);
+                    dernier = t; o.frame(1);
+                }
             }
-        }
-        for (let i = 0; i < %d; i++) { o.touche('KeyX'); regarder(1); o.relacher('KeyX'); regarder(%d); }
-        regarder(60);
-        return vus;
-    }""" % (sait, tapes, espace))
+            for (let i = 0; i < tapes; i++) { o.touche('KeyX'); regarder(1); o.relacher('KeyX'); regarder(espace); }
+            regarder(60);
+            return vus;
+        }""" + corps + """
+        return sorties;
+    }""")
 
 
-def test_trois_tapes_font_gauche_droit_crochet(banc):
-    r = _chaine(banc, "", 3, espace=14)
+def test_trois_tapes_font_gauche_droit_crochet(chaines):
+    r = chaines["trois"]
     assert r[:3] == ["direct_gauche", "direct_droit", "crochet"], r
 
 
-def test_la_chaine_s_allonge_avec_ce_qu_on_sait(banc):
-    r = _chaine(banc, "L.B.partie.techniques = { uppercut: true, pied_circulaire: true };", 5, espace=18)
+def test_la_chaine_s_allonge_avec_ce_qu_on_sait(chaines):
+    r = chaines["allonge"]
     assert r == ["direct_gauche", "direct_droit", "crochet", "uppercut", "pied_circulaire"], r
 
 
-def test_sans_le_cours_la_chaine_repart_au_direct(banc):
-    r = _chaine(banc, "", 4, espace=16)
+def test_sans_le_cours_la_chaine_repart_au_direct(chaines):
+    r = chaines["sans_cours"]
     assert r == ["direct_gauche", "direct_droit", "crochet", "direct_gauche"], r
 
 
-def test_une_tape_pendant_le_coup_est_gardee_en_reserve(banc):
+def test_une_tape_pendant_le_coup_est_gardee_en_reserve(chaines):
     """Deux tapes à deux images d'écart : la seconde tombe PENDANT le direct, et
     doit quand même donner le direct du droit."""
-    r = _chaine(banc, "", 2, espace=2)
+    r = chaines["reserve"]
     assert r == ["direct_gauche", "direct_droit"], r
 
 
@@ -239,12 +255,12 @@ def test_un_direct_touche_la_cible_devant(banc):
 
 # --- La prise, les projections, l'étranglement, la parade (tâche 5) ----------------------
 
-#: Pose une victime à (dx, dy), la saisit (U tenu), joue `geste()`, laisse finir
-#: le coup et le vol, relâche U. Rend où elle est tombée, et dans quel état.
+#: Pose une victime à (dx, dy) — de l'archétype `arch` —, la saisit (U tenu), joue `geste()`, laisse
+#: finir le coup et le vol, relâche U. Rend où elle est tombée, et dans quel état.
 PRISE = """
-    function prise(L, o, sait, dx, dy, geste) {
+    function prise(L, o, sait, dx, dy, geste, arch) {
         Object.assign(L.B.partie.techniques, sait);
-        const j = L.B.joueur, p = o.poser(null, dx, dy);
+        const j = L.B.joueur, p = o.poser(arch, dx, dy);
         p.etat = 'flane'; p.courage = 0; p.angle = Math.atan2(dy, dx); j.angle = Math.atan2(dy, dx);
         j.face = dx > 0 ? 'droite' : 'bas';
         L.Entites.indexer();
@@ -260,83 +276,96 @@ PRISE = """
 """
 
 
-def test_la_hanche_le_fait_passer_devant(banc):
-    r = banc("""function (L, o) { """ + PRISE + """
+
+
+#: Un mur (ou l'eau, `%s`) deux tuiles à droite de trois tuiles libres : le joueur sur la 1re, la
+#: victime sur la 2e — la hanche l'enverrait dedans.
+DEVANT = """
+            const c = L.Monde.carte, TT = L.TT;
+            let pose = null;
+            for (let y = (L.B.defs.decalage_nord || 0) + 10; y < c.h - 10 && !pose; y++) for (let x = 10; x < c.w - 10 && !pose; x++) {
+                if (L.Monde.solidite(x - 1, y) === 0 && L.Monde.solidite(x, y) === 0 && L.Monde.solidite(x + 1, y) === 0
+                    && %s) pose = { x: x * TT + 8, y: y * TT + 8 };
+            }
+            L.B.joueur.x = pose.x - 4; L.B.joueur.y = pose.y;      // tuile x ; la victime, tuile x+1
+            L.Monde.centrerCamera(pose.x, pose.y);"""
+
+
+@pytest.fixture(scope="module")
+def prises(banc):
+    """Les sept prises dans UN banc, chacune sur une partie neuve.
+
+    ⚠️ **Ce que chaque juge trouvait au départ, on le remet** : `Jeu.commencer` (le joueur
+    renaît à l'arrêt, à son point d'apparition, les passants d'avant s'en vont), les techniques
+    d'une partie neuve (`commencer` ne touche pas `B.partie`, et chaque prise en apprend une), et
+    la même graine avant chaque prise (la foule qui naît autour).
+
+    ⚠️ **ET LE CORPS DE LA VICTIME EST NOMMÉ.** Chaque juge tirait le sien au dé (`poser(null)`),
+    et la graine du banc lui donnait une passante — un ouvrier devant le mur et devant l'eau.
+    Fusionnées, les prises héritaient des dés des prises d'avant ; rejouées sur dix graines, une
+    sur dix tirait un ENFANT, qui ne se saisit pas (`test_un_enfant_ne_se_saisit_pas`) : six
+    rouges pour une règle qui tient. On nomme donc le corps que chaque juge avait (28 sept. 2026)."""
+    def essai(nom, sait, geste, avant="", arch="passante"):
+        # ⚠️ Chaque prise dans son bloc : `DEVANT` déclare ses `const`.
+        return """
+        {
+        L.graine(%d);
         L.Jeu.commencer();
-        return prise(L, o, { projection_hanche: true }, 12, 0, function () {
-            o.touche('ArrowRight'); o.frame(3); o.relacher('ArrowRight'); });
+        L.B.partie.techniques = JSON.parse(neuves);%s
+        sorties['%s'] = prise(L, o, %s, 12, 0, function () { %s }, '%s');
+        }""" % (GRAINE, avant, nom, sait, geste, arch)
+
+    droite = "o.touche('ArrowRight'); o.frame(3); o.relacher('ArrowRight');"
+    corps = "".join([
+        essai("hanche", "{ projection_hanche: true }", droite),
+        essai("sacrifice", "{ sacrifice: true }", "o.touche('ArrowDown'); o.frame(3); o.relacher('ArrowDown');"),
+        essai("fauchage", "{ grand_fauchage: true }", "o.touche('ArrowLeft'); o.frame(3); o.relacher('ArrowLeft');"),
+        essai("sans_cours", "{}", droite),
+        essai("relacher", "{}", ""),
+        essai("mur", "{ projection_hanche: true }", droite, DEVANT % "L.Monde.solidite(x + 2, y) === 1", "ouvrier"),
+        essai("eau", "{ projection_hanche: true }", droite, DEVANT % "L.Monde.estEau(x + 2, y)", "ouvrier"),
+    ])
+    return banc("""function (L, o) { """ + PRISE + """
+        L.Jeu.commencer();
+        const neuves = JSON.stringify(L.B.partie.techniques), sorties = {};""" + corps + """
+        return sorties;
     }""")
+
+
+def test_la_hanche_le_fait_passer_devant(prises):
+    r = prises["hanche"]
     assert r["tenait"] and r["etat"] == "assomme" and r["dx"] > 20 and not r["vol"], r
 
 
-def test_le_sacrifice_le_fait_passer_par_dessus(banc):
-    r = banc("""function (L, o) { """ + PRISE + """
-        L.Jeu.commencer();
-        return prise(L, o, { sacrifice: true }, 12, 0, function () {
-            o.touche('ArrowDown'); o.frame(3); o.relacher('ArrowDown'); });
-    }""")
+def test_le_sacrifice_le_fait_passer_par_dessus(prises):
+    r = prises["sacrifice"]
     assert r["etat"] == "assomme" and r["dx"] < 0, r
 
 
-def test_le_grand_fauchage_le_couche_sur_place(banc):
-    r = banc("""function (L, o) { """ + PRISE + """
-        L.Jeu.commencer();
-        return prise(L, o, { grand_fauchage: true }, 12, 0, function () {
-            o.touche('ArrowLeft'); o.frame(3); o.relacher('ArrowLeft'); });
-    }""")
+def test_le_grand_fauchage_le_couche_sur_place(prises):
+    r = prises["fauchage"]
     assert r["etat"] == "assomme" and 8 < r["dx"] < 30, r
 
 
-def test_sans_le_cours_le_stick_ne_projette_pas(banc):
-    r = banc("""function (L, o) { """ + PRISE + """
-        L.Jeu.commencer();
-        return prise(L, o, {}, 12, 0, function () {
-            o.touche('ArrowRight'); o.frame(3); o.relacher('ArrowRight'); });
-    }""")
+def test_sans_le_cours_le_stick_ne_projette_pas(prises):
+    r = prises["sans_cours"]
     assert r["etat"] != "assomme", r
 
 
-def test_relacher_sans_rien_repousse(banc):
-    r = banc("""function (L, o) { """ + PRISE + """
-        L.Jeu.commencer();
-        return prise(L, o, {}, 12, 0, function () {});
-    }""")
+def test_relacher_sans_rien_repousse(prises):
+    r = prises["relacher"]
     assert r["tenait"] and r["dx"] > 14 and not r["tenu"] and not r["prise"], r
 
 
-def test_une_projection_vers_un_mur_tombe_sur_une_tuile_libre(banc):
+def test_une_projection_vers_un_mur_tombe_sur_une_tuile_libre(prises):
     """La victime entre le joueur et un mur : la hanche l'enverrait dedans."""
-    r = banc("""function (L, o) { """ + PRISE + """
-        L.Jeu.commencer();
-        const c = L.Monde.carte, TT = L.TT;
-        let pose = null;
-        for (let y = (L.B.defs.decalage_nord || 0) + 10; y < c.h - 10 && !pose; y++) for (let x = 10; x < c.w - 10 && !pose; x++) {
-            if (L.Monde.solidite(x - 1, y) === 0 && L.Monde.solidite(x, y) === 0 && L.Monde.solidite(x + 1, y) === 0
-                && L.Monde.solidite(x + 2, y) === 1) pose = { x: x * TT + 8, y: y * TT + 8 };
-        }
-        L.B.joueur.x = pose.x - 4; L.B.joueur.y = pose.y;      // tuile x ; la victime, tuile x+1
-        L.Monde.centrerCamera(pose.x, pose.y);
-        return prise(L, o, { projection_hanche: true }, 12, 0, function () {
-            o.touche('ArrowRight'); o.frame(3); o.relacher('ArrowRight'); });
-    }""")
+    r = prises["mur"]
     assert r["etat"] == "assomme" and r["solide"] == 0, r
 
 
-def test_une_projection_vers_l_eau_retombe_au_sec(banc):
+def test_une_projection_vers_l_eau_retombe_au_sec(prises):
     """À surveiller no 1 : pas de victime dans la baie."""
-    r = banc("""function (L, o) { """ + PRISE + """
-        L.Jeu.commencer();
-        const c = L.Monde.carte, TT = L.TT;
-        let pose = null;
-        for (let y = (L.B.defs.decalage_nord || 0) + 10; y < c.h - 10 && !pose; y++) for (let x = 10; x < c.w - 10 && !pose; x++) {
-            if (L.Monde.solidite(x - 1, y) === 0 && L.Monde.solidite(x, y) === 0 && L.Monde.solidite(x + 1, y) === 0
-                && L.Monde.estEau(x + 2, y)) pose = { x: x * TT + 8, y: y * TT + 8 };
-        }
-        L.B.joueur.x = pose.x - 4; L.B.joueur.y = pose.y;
-        L.Monde.centrerCamera(pose.x, pose.y);
-        return prise(L, o, { projection_hanche: true }, 12, 0, function () {
-            o.touche('ArrowRight'); o.frame(3); o.relacher('ArrowRight'); });
-    }""")
+    r = prises["eau"]
     assert r["etat"] == "assomme" and r["solide"] == 0, r
 
 
