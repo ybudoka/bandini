@@ -11,6 +11,8 @@ la face d'un corps — deux jeux de seuils auraient fini par diverger, et le cha
 aurait changé de pose à un cap où le passant à côté de lui n'en change pas.
 """
 
+import pytest
+
 from app import vehicules
 
 
@@ -53,27 +55,339 @@ def test_la_pose_suit_le_cap_par_la_meme_regle_que_la_face_d_un_passant(banc):
     assert min(r["vus"].values()) >= 10, "une face ne sert presque jamais : %s" % r["vus"]
 
 
-def test_les_trois_poses_existent_et_aucune_n_est_empruntee(banc):
+#: ⚠️ **UN BANC POUR QUINZE JUGES** (vague C, 28 sept. 2026). Ceux-ci ne lisent que les
+#: dessins — `SPRITES`, `Atlas.projeter`, `Atlas.toitDe`, `ombreDe` — ou font naître des
+#: chars à des places fixes pour compter leurs silhouettes (tirées à l'empreinte, sans
+#: dé) : rien de ce qu'ils touchent ne change ce que lit le suivant. Chacun refaisait
+#: `Jeu.commencer()` dans son propre banc ; la fixture le fait une fois, garde chaque corps
+#: tel quel dans sa fonction, et chaque juge lit sa part. ⚠️ Celui qui pose `TRACER`
+#: (des canevas qui gardent leurs traces, l'atlas vidé) passe EN DERNIER.
+@pytest.fixture(scope="module")
+def machines(banc):
+    return banc("""function (L, o) {
+        L.Jeu.commencer();
+        const out = {};
+        // test_les_trois_poses_existent_et_aucune_n_est_empruntee
+        out.troisPoses = (function () {
+            const out = {};
+            ['auto', 'taxi', 'police'].forEach(function (slug) {
+                const def = L.SPRITES[slug];
+                const p = def.poses;
+                out[slug] = {
+                    poses: Object.keys(p).sort(),
+                    cote: p.cote[0].join('|'), haut: p.haut[0].join('|'), bas: p.bas[0].join('|'),
+                    ancre: def.ancre, w: def.w, h: def.h,
+                };
+            });
+            // Et la cuisson miroite `cote` en gauche/droite, comme un corps.
+            const cuit = L.Atlas.cuire('auto', L.SPRITES.auto, null);
+            out.cuites = Object.keys(cuit.poses).sort();
+            return out;
+        })();
+        // test_tout_le_parc_est_en_volume_et_sa_toile_ne_rogne_rien
+        out.volume = (function () {
+            const n = L.Vehicules.ROTATIONS, out = {};
+            // ⚠️ Chaque sprite du catalogue ET ses variantes : une benne ou un VUS
+            // se rogne aussi bien que la silhouette d'origine.
+            const noms = [];
+            L.B.defs.vehicules.forEach(function (v) {
+                const def = L.SPRITES[v.sprite];
+                if (!def) return;
+                [v.sprite].concat(Object.keys(def.variantes || {})).forEach(function (n) { if (noms.indexOf(n) < 0) noms.push(n); });
+            });
+            noms.forEach(function (nom) {
+                const def = L.SPRITES[nom];
+                if (!def || out[nom]) return;
+                const m = { machine: !!def.machine, bords: [] };
+                if (def.machine) {
+                    const cote = def.w;
+                    for (let i = 0; i < n; i++) {
+                        const g = L.Atlas.projeter(def.machine, i * 2 * Math.PI / n - Math.PI / 2, cote);
+                        const bord = g[0] + g[cote - 1] + g.map(function (l) { return l[0] + l[cote - 1]; }).join('');
+                        if (/[^.]/.test(bord)) m.bords.push(i);
+                    }
+                    m.posesTirees = def.poses.cote[0].join('') === L.Atlas.projeter(def.machine, 0, cote).join('');
+                }
+                out[nom] = m;
+            });
+            return out;
+        })();
+        // test_le_char_tourne_comme_son_ombre
+        out.commeSonOmbre = (function () {
+            const v = o.char('auto', 0, 0, 0);
+            const n = L.Vehicules.ROTATIONS;
+            const vus = {}; let pire = 0;
+            for (let deg = 0; deg < 720; deg++) {
+                const a = deg * Math.PI / 180 - Math.PI;     // -180° a +540° : les tours negatifs aussi
+                v.angle = a;
+                const i = L.Vehicules.capDe(a);
+                vus[i] = true;
+                // Le cap dessine, ramene en radians, contre l'angle de l'ombre.
+                const dessine = i * 2 * Math.PI / n - Math.PI / 2;
+                let ecart = (dessine - L.Vehicules.ombreDe(v).angle) % (Math.PI * 2);
+                if (ecart > Math.PI) ecart -= Math.PI * 2;
+                if (ecart < -Math.PI) ecart += Math.PI * 2;
+                ecart = Math.abs(ecart);
+                if (ecart > pire) pire = ecart;
+            }
+            return { caps: Object.keys(vus).length, n: n, pire: pire * 180 / Math.PI };
+        })();
+        // test_chaque_char_debout_se_sert_de_ses_tons
+        out.tons = (function () {
+            const out = {};
+            ['auto', 'sport', 'luxe', 'ambulance', 'camion', 'remorqueuse', 'autobus'].forEach(function (slug) {
+                const p = L.SPRITES[slug].poses;
+                const tout = p.cote[0].join('') + p.haut[0].join('') + p.bas[0].join('');
+                out[slug] = { C: (tout.match(/C/g) || []).length, D: (tout.match(/D/g) || []).length,
+                              M: (tout.match(/M/g) || []).length, G: (tout.match(/G/g) || []).length,
+                              B: (tout.match(/B/g) || []).length };
+            });
+            return out;
+        })();
+        // test_de_face_et_de_dos_la_vitre_est_cernee
+        out.vitre = (function () {
+            const out = {};
+            Object.keys(L.SPRITES).forEach(function (slug) {
+                const def = L.SPRITES[slug];
+                if (!def.machine) return;
+                const vues = { face: Math.PI / 2, dos: -Math.PI / 2 };
+                Object.keys(vues).forEach(function (nom) {
+                    const g = L.Atlas.projeter(def.machine, vues[nom], def.w);
+                    const vitres = [], touches = [];
+                    g.forEach(function (ligne, y) {
+                        ligne.split('').forEach(function (ch, x) {
+                            if (ch !== 'v' && ch !== 'G') return;
+                            vitres.push([x, y]);
+                            [-1, 1].forEach(function (dy) {
+                                const voisin = (g[y + dy] || '')[x];
+                                if (voisin === 'c' || voisin === 'C') touches.push([x, y, voisin]);
+                            });
+                        });
+                    });
+                    if (vitres.length) out[slug + ' ' + nom] = { vitres: vitres.length, touches: touches.slice(0, 6), n: touches.length };
+                });
+            });
+            return out;
+        })();
+        // test_le_taxi_et_la_police_ont_retrouve_leur_livree_et_l_auto_n_en_porte_pas
+        out.livree = (function () {
+            const machine = function (slug) { return L.SPRITES[slug].machine.pieces.map(function (p) { return JSON.stringify(p); }); };
+            const a = machine('auto'), t = machine('taxi'), p = machine('police');
+            const dedans = function (petit, grand) { return petit.every(function (q) { return grand.indexOf(q) >= 0; }); };
+            const lettres = function (slug) {
+                const def = L.SPRITES[slug];
+                const tout = ['cote', 'haut', 'bas'].map(function (n) { return def.poses[n][0].join(''); }).join('');
+                return { x: (tout.match(/x/g) || []).length, y: (tout.match(/y/g) || []).length };
+            };
+            const tp = L.SPRITES.taxi.pal, pp = L.SPRITES.police.pal;
+            // ⚠️ Chacun a maintenant SON toit (l'enseigne, la rampe) : ils portent la
+            // carrosserie de l'auto et la meme livree, pas la meme machine.
+            const livree = t.filter(function (q) { return a.indexOf(q) < 0 && /"[xy]"/.test(q); });
+            return { carrosserie: dedans(a, t) && dedans(a, p) && livree.length > 0 && dedans(livree, p),
+                     auto: lettres('auto'), taxi: lettres('taxi'), police: lettres('police'),
+                     tX: tp.x, tC: tp.c, pY: pp.y, pC: pp.c };
+        })();
+        // test_le_velo_et_la_moto_ne_portent_plus_leur_conducteur_cuit
+        out.deuxRoues = (function () {
+            const out = {};
+            ['velo', 'moto'].forEach(function (slug) {
+                const def = L.SPRITES[slug];
+                const tout = ['cote', 'haut', 'bas'].map(function (n) { return def.poses[n][0].join(''); }).join('');
+                out[slug] = { corps: (tout.match(/[hsp]/g) || []).length,
+                              selle: def.selle ? Object.keys(def.selle).sort() : null,
+                              palette: Object.keys(def.pal).filter(function (k) { return 'hsp'.indexOf(k) >= 0; }) };
+            });
+            const j = L.Atlas.cuire('joueur', L.SPRITES.joueur, null).poses;
+            out.assis = ['assis_bas', 'assis_cote', 'assis_droite', 'assis_gauche', 'assis_haut']
+                .filter(function (n) { return !!j[n]; });
+            return out;
+        })();
+        // test_la_sport_est_basse_et_ses_roues_sont_dans_les_ailes
+        out.sport = (function () {
+            // ⚠️ ON MESURE LE DESSIN, pas la fiche : la hauteur va du premier
+            // pixel au dernier DE LA GRILLE. Mesuree depuis l'ancre declaree, une
+            // grille etrangere d'une autre taille passait au travers du juge.
+            const mesure = function (slug) {
+                const def = L.SPRITES[slug], g = def.poses.cote[0];
+                let haut = -1, sol = -1;
+                for (let y = 0; y < g.length; y++) if (/[^.]/.test(g[y])) { if (haut < 0) haut = y; sol = y; }
+                const large = Math.max.apply(null, g.map(function (l) { return l.replace(/[.]/g, ' ').trim().length; }));
+                // La rangee du bas de caisse : la premiere rangee, en montant depuis le
+                // sol, qui traverse la caisse d'un bout a l'autre.
+                let bas = -1;
+                for (let y = sol; y >= 0; y--) {
+                    const l = g[y].replace(/[.]/g, ' ').trim();
+                    if (l.length >= large * 0.9) { bas = y; break; }
+                }
+                return { hauteur: sol - haut, pneuDansLaCaisse: (g[bas].match(/r/g) || []).length, bas: bas, sol: sol };
+            };
+            return { sport: mesure('sport'), auto: mesure('auto') };
+        })();
+        // test_de_profil_une_machine_montre_ses_roues
+        out.roues = (function () {
+            const n = L.Vehicules.ROTATIONS, out = {};
+            Object.keys(L.SPRITES).filter(function (s) {
+                return L.SPRITES[s].machine && L.SPRITES[s].machine.pieces.some(function (p) { return p[0] === 'roue'; });
+            }).forEach(function (slug) {
+                const def = L.SPRITES[slug];
+                const g = L.Atlas.projeter(def.machine, L.Vehicules.capDe(0) * 2 * Math.PI / n - Math.PI / 2, def.w);
+                const peintes = [];
+                g.forEach(function (ligne, y) { if (/[^.]/.test(ligne)) peintes.push(y); });
+                const sol = g[peintes[peintes.length - 1]];
+                const touches = sol.match(/[^.]+/g) || [];
+                const ecart = sol.replace(/^\\.*[^.]+/, '').match(/^\\.*/)[0].length;
+                const roue = def.machine.pieces.find(function (p) { return p[0] === 'roue'; });
+                out[slug] = { touches: touches.length, ecart: ecart, haut: peintes[peintes.length - 1] - peintes[0] + 1,
+                              diametre: roue ? 2 * roue[2] : null, sol: sol };
+            });
+            return out;
+        })();
+        // test_le_taxi_et_les_urgences_portent_leurs_lumieres_sur_le_toit
+        out.lumieres = (function () {
+            const n = L.Vehicules.ROTATIONS, out = {};
+            ['auto', 'taxi', 'police'].forEach(function (slug) {
+                const def = L.SPRITES[slug], manque = { e: 0, a: 0, b: 0 }, vus = { e: 0, a: 0, b: 0 };
+                for (let i = 0; i < n; i++) {
+                    const g = L.Atlas.projeter(def.machine, i * 2 * Math.PI / n - Math.PI / 2, def.w).join('');
+                    ['e', 'a', 'b'].forEach(function (ch) { if (g.indexOf(ch) >= 0) vus[ch]++; else manque[ch]++; });
+                }
+                out[slug] = vus;
+            });
+            ['ambulance', 'remorqueuse'].forEach(function (slug) {
+                const toit = L.Atlas.toitDe(slug, L.SPRITES[slug]).join('');
+                out[slug] = { a: (toit.match(/a/g) || []).length, b: (toit.match(/b/g) || []).length,
+                              gyrophares: !!L.SPRITES[slug].gyrophares };
+            });
+            out.n = n;
+            return out;
+        })();
+        // test_la_berline_est_arrondie
+        out.berline = (function () {
+            const n = L.Vehicules.ROTATIONS, out = {};
+            ['auto', 'taxi', 'police'].forEach(function (slug) {
+                const def = L.SPRITES[slug], cote = def.w;
+                const nu = Object.assign({}, def.machine, { contour: false });
+                let vifs = 0;
+                const exemples = [];
+                for (let i = 0; i < n; i++) {
+                    const g = L.Atlas.projeter(nu, i * 2 * Math.PI / n - Math.PI / 2, cote);
+                    const vide = function (x, y) { return x < 0 || y < 0 || x >= cote || y >= cote || g[y][x] === '.'; };
+                    for (let y = 0; y < cote; y++) for (let x = 0; x < cote; x++) {
+                        if (vide(x, y)) continue;
+                        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (d) {
+                            const dx = d[0], dy = d[1];
+                            if (vide(x + dx, y) && vide(x, y + dy) && vide(x + dx, y + dy) &&
+                                !vide(x - dx, y) && vide(x - dx, y + dy) && !vide(x, y - dy) && vide(x + dx, y - dy)) {
+                                vifs++;
+                                if (exemples.length < 4) exemples.push([i, x, y]);
+                            }
+                        });
+                    }
+                }
+                const pince = {};
+                [['face', Math.PI / 2], ['dos', -Math.PI / 2]].forEach(function (q) {
+                    const g = L.Atlas.projeter(nu, q[1], cote);
+                    const larges = g.map(function (l) { const m = l.match(/[^.].*[^.]/); return m ? m[0].length : 0; }).filter(function (v) { return v > 0; });
+                    const caisse = Math.max.apply(null, larges);
+                    pince[q[0]] = { rentre: larges.slice(-3).reduce(function (t, v) { return t + caisse - v; }, 0), bout: larges.slice(-3), caisse: caisse };
+                });
+                out[slug] = { vifs: vifs, exemples: exemples, pince: pince };
+            });
+            return out;
+        })();
+        // test_de_dos_un_char_montre_sa_longueur
+        out.dos = (function () {
+            const out = {};
+            L.B.defs.vehicules.forEach(function (v) {
+                const def = L.SPRITES[v.sprite];
+                if (!def || !def.machine || out[v.slug]) return;
+                const rangees = function (a) {
+                    return L.Atlas.projeter(def.machine, a, def.w).filter(function (l) { return /[^.]/.test(l); }).length;
+                };
+                out[v.slug] = { longueur: v.longueur, dos: rangees(-Math.PI / 2), face: rangees(Math.PI / 2) };
+            });
+            return out;
+        })();
+        // test_les_autos_ne_sont_pas_toutes_la_meme
+        out.autos = (function () {
+            const compte = {}, flottes = {};
+            for (let i = 0; i < 240; i++) {
+                const x = 120 + (i % 20) * 37, y = 120 + Math.floor(i / 20) * 23;
+                const v = L.Vehicules.creer('auto', x, y, 0, { etat: 'stationne', couleur: '#2980b9' });
+                compte[v.sprite] = (compte[v.sprite] || 0) + 1;
+                L.Entites.retirer(v);
+                ['taxi', 'police'].forEach(function (slug) {
+                    const w = L.Vehicules.creer(slug, x, y, 0, { etat: 'stationne' });
+                    flottes[w.sprite] = true;
+                    L.Entites.retirer(w);
+                });
+            }
+            const variantes = Object.keys(L.SPRITES.auto.variantes || { auto: 1 });
+            const profils = variantes.map(function (n) { return L.SPRITES[n].poses.cote[0].join(''); });
+            const caisse = function (n) { return L.SPRITES[n].machine.pieces.slice(0, 5).map(function (p) { return JSON.stringify(p); }).join(); };
+            return { compte: compte, variantes: variantes, flottes: Object.keys(flottes).sort(),
+                     profilsDistincts: new Set(profils).size,
+                     memeCaisse: variantes.every(function (n) { return caisse(n) === caisse('auto'); }),
+                     memeToile: variantes.every(function (n) { return L.SPRITES[n].w === L.SPRITES.auto.w; }) };
+        })();
+        // test_des_variantes_pour_tout_le_parc_mais_pas_pour_les_flottes
+        out.variantes = (function () {
+            const out = {};
+            ['camion', 'autobus', 'luxe', 'bateau', 'taxi', 'police', 'ambulance', 'remorqueuse'].forEach(function (slug) {
+                const compte = {}, couleurs = {};
+                for (let i = 0; i < 200; i++) {
+                    const v = L.Vehicules.creer(slug, 150 + (i % 20) * 41, 150 + Math.floor(i / 20) * 29, 0, { etat: 'stationne' });
+                    compte[v.sprite] = (compte[v.sprite] || 0) + 1;
+                    (couleurs[v.sprite] = couleurs[v.sprite] || {})[v.couleur] = true;
+                    L.Entites.retirer(v);
+                }
+                out[slug] = { compte: compte, couleurs: couleurs, sprite: L.B.defs.vehicules.find(function (d) { return d.slug === slug; }).sprite };
+            });
+            return out;
+        })();
+        // test_la_machine_se_projette_au_cap_et_suit_son_ombre
+        out.projette = (function () {
+            """ + TRACER + """
+            const n = L.Vehicules.ROTATIONS, out = {};
+            Object.keys(L.SPRITES).filter(function (s) { return L.SPRITES[s].machine; }).forEach(function (slug) {
+                const def = L.SPRITES[slug], K = def.machine.profondeur;
+                const dessins = {}, faux = [], envers = [];
+                let deux = 0;
+                for (let i = 0; i < n; i++) {
+                    const a = i * 2 * Math.PI / n - Math.PI / 2;
+                    const g = L.Atlas.projeter(def.machine, a, def.w);
+                    dessins[g.join('|')] = true;
+                    const peints = g.join('').replace(/\\./g, '').length;
+                    const c = L.Atlas.cuireCap(slug, def, null, n, i, [0, 0]);
+                    const traces = c.getContext('2d').traces;
+                    const ici = {};
+                    traces.forEach(function (t) { ici[t[0] + ',' + t[1]] = true; });
+                    const pareil = traces.length === peints && g.every(function (ligne, y) {
+                        return ligne.split('').every(function (ch, x) { return (ch === '.') === !ici[x + ',' + y]; });
+                    });
+                    if (!pareil) faux.push(i);
+                    const lampes = { l: [], t: [] };
+                    g.forEach(function (ligne, y) { ligne.split('').forEach(function (ch, x) { if (lampes[ch]) lampes[ch].push([x, y]); }); });
+                    if (!lampes.l.length || !lampes.t.length) continue;
+                    deux++;
+                    const moy = function (p, k) { return p.reduce(function (s, q) { return s + q[k]; }, 0) / p.length; };
+                    const avant = (moy(lampes.l, 0) - moy(lampes.t, 0)) * Math.cos(a) + (moy(lampes.l, 1) - moy(lampes.t, 1)) * Math.sin(a) * K;
+                    if (avant <= 0) envers.push([i, avant]);
+                }
+                out[slug] = { dessins: Object.keys(dessins).length, faux: faux, envers: envers, deux: deux, K: K };
+            });
+            out.n = n;
+            return out;
+        })();
+        return out;
+    }""")
+
+
+def test_les_trois_poses_existent_et_aucune_n_est_empruntee(machines):
     """⚠️ « Aucune manquante et aucune empruntée à un autre » : deux poses
     identiques, c'est un véhicule qui n'a pas été dessiné et qui fait semblant.
     On compare les grilles, pas les canevas — un canevas se compare mal."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const out = {};
-        ['auto', 'taxi', 'police'].forEach(function (slug) {
-            const def = L.SPRITES[slug];
-            const p = def.poses;
-            out[slug] = {
-                poses: Object.keys(p).sort(),
-                cote: p.cote[0].join('|'), haut: p.haut[0].join('|'), bas: p.bas[0].join('|'),
-                ancre: def.ancre, w: def.w, h: def.h,
-            };
-        });
-        // Et la cuisson miroite `cote` en gauche/droite, comme un corps.
-        const cuit = L.Atlas.cuire('auto', L.SPRITES.auto, null);
-        out.cuites = Object.keys(cuit.poses).sort();
-        return out;
-    }""")
+    r = machines["troisPoses"]
     assert r["cuites"] == ["bas", "cote", "droite", "gauche", "haut"], (
         "la cuisson ne miroite pas le profil comme elle le fait pour un corps : %s" % r["cuites"]
     )
@@ -84,7 +398,7 @@ def test_les_trois_poses_existent_et_aucune_n_est_empruntee(banc):
         )
 
 
-def test_tout_le_parc_est_en_volume_et_sa_toile_ne_rogne_rien(banc):
+def test_tout_le_parc_est_en_volume_et_sa_toile_ne_rogne_rien(machines):
     """⚠️ **Depuis le 16 sept. 2026, plus aucun char ne roule sur son toit.**
     Ce juge-ci tenait l'ANCRE des grilles dessinées à la main — une ancre à la
     ligne de sol, la même pour les trois poses, sinon le char flottait ou
@@ -96,34 +410,7 @@ def test_tout_le_parc_est_en_volume_et_sa_toile_ne_rogne_rien(banc):
     machine à certains caps — le toit d'un camion vu de dos, le crochet d'une
     remorqueuse vue de face — sans que rien ne casse. On la mesure : à aucun
     des 32 caps, aucun pixel ne touche le bord."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const n = L.Vehicules.ROTATIONS, out = {};
-        // ⚠️ Chaque sprite du catalogue ET ses variantes : une benne ou un VUS
-        // se rogne aussi bien que la silhouette d'origine.
-        const noms = [];
-        L.B.defs.vehicules.forEach(function (v) {
-            const def = L.SPRITES[v.sprite];
-            if (!def) return;
-            [v.sprite].concat(Object.keys(def.variantes || {})).forEach(function (n) { if (noms.indexOf(n) < 0) noms.push(n); });
-        });
-        noms.forEach(function (nom) {
-            const def = L.SPRITES[nom];
-            if (!def || out[nom]) return;
-            const m = { machine: !!def.machine, bords: [] };
-            if (def.machine) {
-                const cote = def.w;
-                for (let i = 0; i < n; i++) {
-                    const g = L.Atlas.projeter(def.machine, i * 2 * Math.PI / n - Math.PI / 2, cote);
-                    const bord = g[0] + g[cote - 1] + g.map(function (l) { return l[0] + l[cote - 1]; }).join('');
-                    if (/[^.]/.test(bord)) m.bords.push(i);
-                }
-                m.posesTirees = def.poses.cote[0].join('') === L.Atlas.projeter(def.machine, 0, cote).join('');
-            }
-            out[nom] = m;
-        });
-        return out;
-    }""")
+    r = machines["volume"]
     assert len(r) >= 20, "le décor du juge est faux : %s" % list(r)
     dessines = sorted(s for s, m in r.items() if not m["machine"])
     assert dessines == [], f"des véhicules roulent encore sur un dessin fait main : {dessines}"
@@ -132,40 +419,7 @@ def test_tout_le_parc_est_en_volume_et_sa_toile_ne_rogne_rien(banc):
         assert m["bords"] == [], f"{sprite} : sa toile rogne la machine aux caps {m['bords']}"
 
 
-def test_le_char_se_dessine_centre_sur_son_empreinte(banc):
-    """Le dessin, pas seulement la fiche : on regarde **où l'image est posée**.
-
-    ⚠️ **Un char qui tourne ne se pose plus par sa ligne de sol : il se pose par
-    son MILIEU**, parce que c'est autour de son milieu qu'il tourne. Le canevas
-    d'un cap est carré — la diagonale du dessin, pour qu'aucun cap ne soit rogné
-    — et son centre tombe sur `v.x`, `v.y` : là où l'ombre est posée, là où les
-    cercles de collision sont. Un dessin ancré ailleurs que son ombre, c'est un
-    char qui ne se gare plus dans ses lignes."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const d = o.ligneDroite();
-        const j = L.B.joueur; j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
-        const v = o.char('auto', 0, 0, 0);
-        v.x = 200; v.y = 100; v.z = 0; v.angle = 0;
-        const poses = [];
-        const ctx = L.Base.ecran();
-        ctx.drawImage = function (img, x, y) { poses.push([x, y, img.width, img.height]); };
-        L.Vehicules.dessinerUn(ctx, v, 0, 0);
-        const auSol = poses[0];
-        v.z = 20;
-        poses.length = 0;
-        L.Vehicules.dessinerUn(ctx, v, 0, 0);
-        return { auSol: auSol, enVol: poses[0], x: v.x, y: v.y };
-    }""")
-    x, y, w, h = r["auSol"]
-    assert w == h, "le canevas d'un cap n'est pas carré : %s" % r
-    assert x == r["x"] - w / 2, "le char n'est pas centré sur son axe : %s" % r
-    assert y == r["y"] - h / 2, "le char n'est pas centré sur son empreinte : %s" % r
-    # ⚠️ Et en vol il MONTE, il ne grandit pas : `z` sort du dessin, pas du centre.
-    assert r["enVol"][1] == y - 20, "le saut ne lève pas le char : %s" % r
-
-
-def test_le_char_tourne_comme_son_ombre(banc):
+def test_le_char_tourne_comme_son_ombre(machines):
     """⚠️ **LE JUGE DE LA LIGNE.** Retour de Martin : « le pilotage des
     véhicules est vraiment impossible maintenant, il faut que le véhicule
     tourne vraiment comme l'ombre le fait, sinon impossible de conduire ».
@@ -176,26 +430,7 @@ def test_le_char_tourne_comme_son_ombre(banc):
     entre le cap DESSINÉ et le cap de l'ombre ne dépasse jamais un demi-cran
     (5,6°), et les 32 crans servent tous. Avec quatre poses, l'écart montait à
     45° et trois caps sur quatre étaient un mensonge."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const v = o.char('auto', 0, 0, 0);
-        const n = L.Vehicules.ROTATIONS;
-        const vus = {}; let pire = 0;
-        for (let deg = 0; deg < 720; deg++) {
-            const a = deg * Math.PI / 180 - Math.PI;     // -180° a +540° : les tours negatifs aussi
-            v.angle = a;
-            const i = L.Vehicules.capDe(a);
-            vus[i] = true;
-            // Le cap dessine, ramene en radians, contre l'angle de l'ombre.
-            const dessine = i * 2 * Math.PI / n - Math.PI / 2;
-            let ecart = (dessine - L.Vehicules.ombreDe(v).angle) % (Math.PI * 2);
-            if (ecart > Math.PI) ecart -= Math.PI * 2;
-            if (ecart < -Math.PI) ecart += Math.PI * 2;
-            ecart = Math.abs(ecart);
-            if (ecart > pire) pire = ecart;
-        }
-        return { caps: Object.keys(vus).length, n: n, pire: pire * 180 / Math.PI };
-    }""")
+    r = machines["commeSonOmbre"]
     assert r["caps"] == r["n"], (
         "le char ne se dessine qu'en %s caps sur %s : il claque au lieu de tourner" % (r["caps"], r["n"])
     )
@@ -308,29 +543,18 @@ def test_les_nuances_sont_les_memes_a_la_naissance_et_dans_la_palette(banc):
         assert val, "le ton fixe « %s » manque à la palette" % cle
 
 
-def test_chaque_char_debout_se_sert_de_ses_tons(banc):
+def test_chaque_char_debout_se_sert_de_ses_tons(machines):
     """Un ton déclaré et jamais posé n'est qu'une couleur de plus dans une
     palette. ⚠️ On regarde les GRILLES : chaque char debout doit poser un rehaut
     `C`, une ombre `D` et un moyeu `M` — sinon il est revenu au slab d'une seule
     couleur que Martin a demandé de raffiner."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const out = {};
-        ['auto', 'sport', 'luxe', 'ambulance', 'camion', 'remorqueuse', 'autobus'].forEach(function (slug) {
-            const p = L.SPRITES[slug].poses;
-            const tout = p.cote[0].join('') + p.haut[0].join('') + p.bas[0].join('');
-            out[slug] = { C: (tout.match(/C/g) || []).length, D: (tout.match(/D/g) || []).length,
-                          M: (tout.match(/M/g) || []).length, G: (tout.match(/G/g) || []).length,
-                          B: (tout.match(/B/g) || []).length };
-        });
-        return out;
-    }""")
+    r = machines["tons"]
     for slug, n in r.items():
         for ton in ("C", "D", "M", "G", "B"):
             assert n[ton] > 0, f"{slug} ne pose jamais le ton « {ton} » : {n}"
 
 
-def test_de_face_et_de_dos_la_vitre_est_cernee(banc):
+def test_de_face_et_de_dos_la_vitre_est_cernee(machines):
     """Retour de Martin : « une légère séparation entre le pare-brise et le
     reste pour mieux démarquer de face et de dos ». ⚠️ De face, le pare-brise
     bleu pâle touchait le capot et le toit : sur la police blanche, on ne
@@ -340,37 +564,13 @@ def test_de_face_et_de_dos_la_vitre_est_cernee(banc):
     qui a des vitres : au-dessus et au-dessous de chaque pixel de vitre (`v`,
     son reflet `G`), il n'y a jamais de tôle (`c`, son rehaut `C`) — il y a le
     cadre, ou encore de la vitre."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const out = {};
-        Object.keys(L.SPRITES).forEach(function (slug) {
-            const def = L.SPRITES[slug];
-            if (!def.machine) return;
-            const vues = { face: Math.PI / 2, dos: -Math.PI / 2 };
-            Object.keys(vues).forEach(function (nom) {
-                const g = L.Atlas.projeter(def.machine, vues[nom], def.w);
-                const vitres = [], touches = [];
-                g.forEach(function (ligne, y) {
-                    ligne.split('').forEach(function (ch, x) {
-                        if (ch !== 'v' && ch !== 'G') return;
-                        vitres.push([x, y]);
-                        [-1, 1].forEach(function (dy) {
-                            const voisin = (g[y + dy] || '')[x];
-                            if (voisin === 'c' || voisin === 'C') touches.push([x, y, voisin]);
-                        });
-                    });
-                });
-                if (vitres.length) out[slug + ' ' + nom] = { vitres: vitres.length, touches: touches.slice(0, 6), n: touches.length };
-            });
-        });
-        return out;
-    }""")
+    r = machines["vitre"]
     assert {"auto face", "auto dos", "taxi face", "police dos"} <= set(r), "le décor du juge est faux : %s" % list(r)
     for vue, m in r.items():
         assert m["n"] == 0, f"{vue} : {m['n']} pixels de vitre touchent la tôle sans cadre ({m['touches']})"
 
 
-def test_le_taxi_et_la_police_ont_retrouve_leur_livree_et_l_auto_n_en_porte_pas(banc):
+def test_le_taxi_et_la_police_ont_retrouve_leur_livree_et_l_auto_n_en_porte_pas(machines):
     """⚠️ Les premières grilles debout avaient PERDU les bandes `x` et `y` : le
     taxi et la police se dessinaient comme une auto repeinte. La carrosserie
     commune porte maintenant une bande `y` et un damier `x` — invisibles sur
@@ -384,24 +584,7 @@ def test_le_taxi_et_la_police_ont_retrouve_leur_livree_et_l_auto_n_en_porte_pas(
     où son flanc s'est dessiné. La livrée s'AJOUTE donc à la carrosserie : le
     taxi et la police portent toutes les pièces de l'auto, plus leur livrée, et
     l'auto n'en porte pas."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const machine = function (slug) { return L.SPRITES[slug].machine.pieces.map(function (p) { return JSON.stringify(p); }); };
-        const a = machine('auto'), t = machine('taxi'), p = machine('police');
-        const dedans = function (petit, grand) { return petit.every(function (q) { return grand.indexOf(q) >= 0; }); };
-        const lettres = function (slug) {
-            const def = L.SPRITES[slug];
-            const tout = ['cote', 'haut', 'bas'].map(function (n) { return def.poses[n][0].join(''); }).join('');
-            return { x: (tout.match(/x/g) || []).length, y: (tout.match(/y/g) || []).length };
-        };
-        const tp = L.SPRITES.taxi.pal, pp = L.SPRITES.police.pal;
-        // ⚠️ Chacun a maintenant SON toit (l'enseigne, la rampe) : ils portent la
-        // carrosserie de l'auto et la meme livree, pas la meme machine.
-        const livree = t.filter(function (q) { return a.indexOf(q) < 0 && /"[xy]"/.test(q); });
-        return { carrosserie: dedans(a, t) && dedans(a, p) && livree.length > 0 && dedans(livree, p),
-                 auto: lettres('auto'), taxi: lettres('taxi'), police: lettres('police'),
-                 tX: tp.x, tC: tp.c, pY: pp.y, pC: pp.c };
-    }""")
+    r = machines["livree"]
     assert r["carrosserie"] is True, "le taxi et la police ne sont plus la carrosserie de l'auto plus une livrée : %s" % r
     assert r["auto"] == {"x": 0, "y": 0}, "l'auto porte une livrée, qui ne suit pas sa couleur : %s" % r["auto"]
     for slug in ("taxi", "police"):
@@ -414,26 +597,12 @@ def test_le_taxi_et_la_police_ont_retrouve_leur_livree_et_l_auto_n_en_porte_pas(
 # --- Le passant assis : le conducteur n'est plus cuit dans le deux-roues -----
 
 
-def test_le_velo_et_la_moto_ne_portent_plus_leur_conducteur_cuit(banc):
+def test_le_velo_et_la_moto_ne_portent_plus_leur_conducteur_cuit(machines):
     """⚠️ La palette du vélo portait une peau (`s`) et des cheveux (`h`) : tous
     les cyclistes de la ville avaient la même tête pour toujours. Debout, le
     conducteur est un passant posé dessus — donc le deux-roues n'a plus AUCUN
     pixel de corps, et il déclare où sa selle est, pose par pose."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const out = {};
-        ['velo', 'moto'].forEach(function (slug) {
-            const def = L.SPRITES[slug];
-            const tout = ['cote', 'haut', 'bas'].map(function (n) { return def.poses[n][0].join(''); }).join('');
-            out[slug] = { corps: (tout.match(/[hsp]/g) || []).length,
-                          selle: def.selle ? Object.keys(def.selle).sort() : null,
-                          palette: Object.keys(def.pal).filter(function (k) { return 'hsp'.indexOf(k) >= 0; }) };
-        });
-        const j = L.Atlas.cuire('joueur', L.SPRITES.joueur, null).poses;
-        out.assis = ['assis_bas', 'assis_cote', 'assis_droite', 'assis_gauche', 'assis_haut']
-            .filter(function (n) { return !!j[n]; });
-        return out;
-    }""")
+    r = machines["deuxRoues"]
     for slug in ("velo", "moto"):
         assert r[slug]["corps"] == 0, f"{slug} porte encore un corps cuit dedans : {r[slug]}"
         assert r[slug]["palette"] == [], f"{slug} garde une peau ou des cheveux en palette : {r[slug]}"
@@ -566,33 +735,13 @@ def test_le_motard_qu_on_fait_descendre_ne_remonte_pas_sur_sa_moto(banc):
     assert r["fuyardCavalier"] == "null", "un deux-roues quitté par son pilote a encore quelqu'un dessus : %s" % r
 
 
-def test_la_sport_est_basse_et_ses_roues_sont_dans_les_ailes(banc):
+def test_la_sport_est_basse_et_ses_roues_sont_dans_les_ailes(machines):
     """Retour de Martin : « la voiture sport devrait être basse, les roues plus
     dans les ailes ». ⚠️ Deux mesures, pas une impression : de profil, sa
     caisse est plus courte que celle de l'auto (toit plus bas pour un même sol),
     et la rangée de bas de caisse passe PAR-DESSUS le haut des pneus — on y
     trouve du pneu là où l'auto n'a que de la tôle."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        // ⚠️ ON MESURE LE DESSIN, pas la fiche : la hauteur va du premier
-        // pixel au dernier DE LA GRILLE. Mesuree depuis l'ancre declaree, une
-        // grille etrangere d'une autre taille passait au travers du juge.
-        const mesure = function (slug) {
-            const def = L.SPRITES[slug], g = def.poses.cote[0];
-            let haut = -1, sol = -1;
-            for (let y = 0; y < g.length; y++) if (/[^.]/.test(g[y])) { if (haut < 0) haut = y; sol = y; }
-            const large = Math.max.apply(null, g.map(function (l) { return l.replace(/[.]/g, ' ').trim().length; }));
-            // La rangee du bas de caisse : la premiere rangee, en montant depuis le
-            // sol, qui traverse la caisse d'un bout a l'autre.
-            let bas = -1;
-            for (let y = sol; y >= 0; y--) {
-                const l = g[y].replace(/[.]/g, ' ').trim();
-                if (l.length >= large * 0.9) { bas = y; break; }
-            }
-            return { hauteur: sol - haut, pneuDansLaCaisse: (g[bas].match(/r/g) || []).length, bas: bas, sol: sol };
-        };
-        return { sport: mesure('sport'), auto: mesure('auto') };
-    }""")
+    r = machines["sport"]
     assert r["sport"]["hauteur"] < r["auto"]["hauteur"], "la sport n'est pas plus basse que l'auto : %s" % r
     assert r["sport"]["pneuDansLaCaisse"] > 0, "les roues de la sport pendent sous la caisse : %s" % r
     # ⚠️ Le décor d'avant disait « l'auto, elle, n'a pas ses roues dans les
@@ -616,7 +765,12 @@ def test_le_char_tourne_autour_de_son_empreinte(banc):
     catalogue**. On mesure donc les deux bouts du toit depuis ce centre : une
     demi-longueur devant le nez, une demi-longueur derrière le pare-chocs. Et le
     canevas du cap se pose centré sur `v.x`, `v.y` — à tous les caps, pas
-    seulement aux quatre cardinaux."""
+    seulement aux quatre cardinaux.
+
+    ⚠️ **Un char qui tourne ne se pose plus par sa ligne de sol : il se pose par
+    son MILIEU**, parce que c'est autour de son milieu qu'il tourne — là où
+    l'ombre est posée, là où les cercles de collision sont. Un dessin ancré
+    ailleurs que son ombre, c'est un char qui ne se gare plus dans ses lignes."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const d = o.ligneDroite();
@@ -633,7 +787,7 @@ def test_le_char_tourne_autour_de_son_empreinte(banc):
             let premier = -1, dernier = -1;
             toit.forEach(function (ligne, y) { if (/[^.]/.test(ligne)) { if (premier < 0) premier = y; dernier = y; } });
             const centre = L.Vehicules.centreDuToit(v);
-            const poses = [];
+            const poses = [], pasCarres = [];
             for (let i = 0; i < L.Vehicules.ROTATIONS; i++) {
                 v.angle = i * 2 * Math.PI / L.Vehicules.ROTATIONS;
                 const mises = [];
@@ -642,9 +796,22 @@ def test_le_char_tourne_autour_de_son_empreinte(banc):
                 ctx.drawImage = vrai;
                 const m = mises[0];
                 poses.push([m[2] + m[0] / 2 - v.x, m[3] + m[1] / 2 - v.y]);
+                if (m[0] !== m[1]) pasCarres.push([i, m[0], m[1]]);
             }
+            // ⚠️ Et en vol il MONTE, il ne grandit pas : `z` sort du dessin, pas du centre.
+            v.angle = 0;
+            const auSol = [];
+            ctx.drawImage = function (img, x, y) { auSol.push([x, y]); };
+            L.Vehicules.dessinerUn(ctx, v, 0, 0);
+            v.z = 20;
+            const enVol = [];
+            ctx.drawImage = function (img, x, y) { enVol.push([x, y]); };
+            L.Vehicules.dessinerUn(ctx, v, 0, 0);
+            ctx.drawImage = vrai;
+            v.z = 0;
             out[def.slug] = { longueur: def.longueur, nez: centre[1] - premier,
-                              cul: dernier + 1 - centre[1], poses: poses, machine: !!sprite.machine };
+                              cul: dernier + 1 - centre[1], poses: poses, machine: !!sprite.machine,
+                              pasCarres: pasCarres, monte: enVol[0][1] - auSol[0][1], glisse: enVol[0][0] - auSol[0][0] };
             L.Entites.retirer(v);
         });
         return out;
@@ -656,6 +823,14 @@ def test_le_char_tourne_autour_de_son_empreinte(banc):
             assert (dx, dy) == (0, 0), (
                 f"{slug} au cap {i} : son dessin est posé à ({dx}, {dy}) de son centre"
             )
+        # ⚠️ Venus de `test_le_char_se_dessine_centre_sur_son_empreinte` (vague C, 28 sept. 2026),
+        # qui le vérifiait pour l'auto au cap zéro : le canevas d'un cap est CARRÉ — la diagonale
+        # du dessin, pour qu'aucun cap ne soit rogné — et en vol le char MONTE de son `z`, il ne
+        # grandit pas et ne glisse pas.
+        assert m["pasCarres"] == [], f"{slug} : le canevas d'un cap n'est pas carré (cap, l, h) : {m['pasCarres']}"
+        assert m["monte"] == -20 and m["glisse"] == 0, (
+            f"{slug} : à 20 px d'altitude son dessin bouge de ({m['glisse']}, {m['monte']}) — le saut ne lève pas le char"
+        )
         # ⚠️ Un deux-roues n'a pas de toit : ses bouts ne se mesurent pas sur
         # une grille qui tourne, mais sur sa projection (« de profil, un
         # deux-roues montre ses deux roues »). Son dessin, lui, reste centré.
@@ -755,7 +930,7 @@ TRACER = """
 """
 
 
-def test_de_profil_une_machine_montre_ses_roues(banc):
+def test_de_profil_une_machine_montre_ses_roues(machines):
     """⚠️ **Retour de Martin, capture à l'appui : « il faut améliorer ça ».**
 
     Le vélo qui roulait était son TOIT, tourné comme celui d'un char — et vu
@@ -772,25 +947,7 @@ def test_de_profil_une_machine_montre_ses_roues(banc):
     ⚠️ Et la berline (16 sept. 2026) : vers l'est, on voyait son toit couché sur
     le flanc. De profil, elle touche le sol par ses deux roues du côté qu'on
     voit. Toute machine qui a des roues — la chaloupe n'en a pas."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const n = L.Vehicules.ROTATIONS, out = {};
-        Object.keys(L.SPRITES).filter(function (s) {
-            return L.SPRITES[s].machine && L.SPRITES[s].machine.pieces.some(function (p) { return p[0] === 'roue'; });
-        }).forEach(function (slug) {
-            const def = L.SPRITES[slug];
-            const g = L.Atlas.projeter(def.machine, L.Vehicules.capDe(0) * 2 * Math.PI / n - Math.PI / 2, def.w);
-            const peintes = [];
-            g.forEach(function (ligne, y) { if (/[^.]/.test(ligne)) peintes.push(y); });
-            const sol = g[peintes[peintes.length - 1]];
-            const touches = sol.match(/[^.]+/g) || [];
-            const ecart = sol.replace(/^\\.*[^.]+/, '').match(/^\\.*/)[0].length;
-            const roue = def.machine.pieces.find(function (p) { return p[0] === 'roue'; });
-            out[slug] = { touches: touches.length, ecart: ecart, haut: peintes[peintes.length - 1] - peintes[0] + 1,
-                          diametre: roue ? 2 * roue[2] : null, sol: sol };
-        });
-        return out;
-    }""")
+    r = machines["roues"]
     assert {"velo", "moto", "auto", "taxi", "police", "camion", "autobus"} <= set(r), "le décor du juge est faux : %s" % list(r)
     assert "bateau" not in r, "le décor du juge est faux : la chaloupe a des roues"
     for slug, m in r.items():
@@ -804,7 +961,7 @@ def test_de_profil_une_machine_montre_ses_roues(banc):
         )
 
 
-def test_la_machine_se_projette_au_cap_et_suit_son_ombre(banc, paquet):
+def test_la_machine_se_projette_au_cap_et_suit_son_ombre(machines, paquet):
     """⚠️ Un deux-roues ne tourne pas de toit : il se PROJETTE au cap. Ce qu'on
     tient, c'est ce qui faisait le correctif « le char tourne comme son ombre »
     — et rien ne doit en être perdu :
@@ -816,40 +973,7 @@ def test_la_machine_se_projette_au_cap_et_suit_son_ombre(banc, paquet):
       tous les deux, le phare est devant, dans le sens du cap à l'écran ;
     - et le sol se voit du **même biais** que sous l'ombre — deux biais, c'est
       une machine qui ne se pose pas sur son ombre."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        """ + TRACER + """
-        const n = L.Vehicules.ROTATIONS, out = {};
-        Object.keys(L.SPRITES).filter(function (s) { return L.SPRITES[s].machine; }).forEach(function (slug) {
-            const def = L.SPRITES[slug], K = def.machine.profondeur;
-            const dessins = {}, faux = [], envers = [];
-            let deux = 0;
-            for (let i = 0; i < n; i++) {
-                const a = i * 2 * Math.PI / n - Math.PI / 2;
-                const g = L.Atlas.projeter(def.machine, a, def.w);
-                dessins[g.join('|')] = true;
-                const peints = g.join('').replace(/\\./g, '').length;
-                const c = L.Atlas.cuireCap(slug, def, null, n, i, [0, 0]);
-                const traces = c.getContext('2d').traces;
-                const ici = {};
-                traces.forEach(function (t) { ici[t[0] + ',' + t[1]] = true; });
-                const pareil = traces.length === peints && g.every(function (ligne, y) {
-                    return ligne.split('').every(function (ch, x) { return (ch === '.') === !ici[x + ',' + y]; });
-                });
-                if (!pareil) faux.push(i);
-                const lampes = { l: [], t: [] };
-                g.forEach(function (ligne, y) { ligne.split('').forEach(function (ch, x) { if (lampes[ch]) lampes[ch].push([x, y]); }); });
-                if (!lampes.l.length || !lampes.t.length) continue;
-                deux++;
-                const moy = function (p, k) { return p.reduce(function (s, q) { return s + q[k]; }, 0) / p.length; };
-                const avant = (moy(lampes.l, 0) - moy(lampes.t, 0)) * Math.cos(a) + (moy(lampes.l, 1) - moy(lampes.t, 1)) * Math.sin(a) * K;
-                if (avant <= 0) envers.push([i, avant]);
-            }
-            out[slug] = { dessins: Object.keys(dessins).length, faux: faux, envers: envers, deux: deux, K: K };
-        });
-        out.n = n;
-        return out;
-    }""")
+    r = machines["projette"]
     n = r.pop("n")
     biais = paquet["conduite"]["ombre"]["profondeur"]
     assert {"velo", "moto", "auto", "taxi", "police"} <= set(r), "le décor du juge est faux : %s" % list(r)
@@ -1127,7 +1251,7 @@ def test_le_barreur_s_assoit_sur_son_banc_et_tient_la_barre(banc):
 # --- Le toit, comme en vrai : l'enseigne et les gyrophares --------------------
 
 
-def test_le_taxi_et_les_urgences_portent_leurs_lumieres_sur_le_toit(banc):
+def test_le_taxi_et_les_urgences_portent_leurs_lumieres_sur_le_toit(machines):
     """Demande de Martin : « taxi et tous les véhicules qui en ont besoin doivent
     avoir des indicateurs ou gyrophare sur leur toit. comme en vrai. »
     ⚠️ **Mesuré avant** : aucun char n'en avait — la police n'avait jamais eu de
@@ -1139,25 +1263,7 @@ def test_le_taxi_et_les_urgences_portent_leurs_lumieres_sur_le_toit(banc):
     taxi (`e`) et la rampe de la police (`a` rouge, `b` bleu) se voient à tous
     les caps ; l'auto n'a ni l'une ni l'autre ; l'ambulance et la remorqueuse
     ont leur rampe sur le toit qui tourne."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const n = L.Vehicules.ROTATIONS, out = {};
-        ['auto', 'taxi', 'police'].forEach(function (slug) {
-            const def = L.SPRITES[slug], manque = { e: 0, a: 0, b: 0 }, vus = { e: 0, a: 0, b: 0 };
-            for (let i = 0; i < n; i++) {
-                const g = L.Atlas.projeter(def.machine, i * 2 * Math.PI / n - Math.PI / 2, def.w).join('');
-                ['e', 'a', 'b'].forEach(function (ch) { if (g.indexOf(ch) >= 0) vus[ch]++; else manque[ch]++; });
-            }
-            out[slug] = vus;
-        });
-        ['ambulance', 'remorqueuse'].forEach(function (slug) {
-            const toit = L.Atlas.toitDe(slug, L.SPRITES[slug]).join('');
-            out[slug] = { a: (toit.match(/a/g) || []).length, b: (toit.match(/b/g) || []).length,
-                          gyrophares: !!L.SPRITES[slug].gyrophares };
-        });
-        out.n = n;
-        return out;
-    }""")
+    r = machines["lumieres"]
     n = r["n"]
     assert r["taxi"]["e"] == n, f"l'enseigne du taxi ne se voit qu'à {r['taxi']['e']} caps sur {n}"
     assert r["police"]["a"] == n and r["police"]["b"] == n, f"la rampe de la police manque à des caps : {r['police']}"
@@ -1221,7 +1327,7 @@ def test_les_gyrophares_ne_battent_que_quand_ils_servent(banc):
             assert (a == allumes[0]) != (b == allumes[1]), f"{slug} : ses deux lampes ne s'alternent pas ({a}, {b})"
 
 
-def test_la_berline_est_arrondie(banc):
+def test_la_berline_est_arrondie(machines):
     """Retour de Martin : « arrondit un peu (léger) les véhicules ». ⚠️ La
     berline en volume était une boîte : de face et de dos un rectangle à angles
     vifs, et vue de trois quarts un pavé.
@@ -1235,40 +1341,7 @@ def test_la_berline_est_arrondie(banc):
       bout (le nez ou la queue, et le pare-chocs) rentrent ensemble d'au moins
       7 pixels sur la largeur de la caisse — 8 pincée, 5 pour une caisse
       carrée dont seul le coin est rogné."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const n = L.Vehicules.ROTATIONS, out = {};
-        ['auto', 'taxi', 'police'].forEach(function (slug) {
-            const def = L.SPRITES[slug], cote = def.w;
-            const nu = Object.assign({}, def.machine, { contour: false });
-            let vifs = 0;
-            const exemples = [];
-            for (let i = 0; i < n; i++) {
-                const g = L.Atlas.projeter(nu, i * 2 * Math.PI / n - Math.PI / 2, cote);
-                const vide = function (x, y) { return x < 0 || y < 0 || x >= cote || y >= cote || g[y][x] === '.'; };
-                for (let y = 0; y < cote; y++) for (let x = 0; x < cote; x++) {
-                    if (vide(x, y)) continue;
-                    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (d) {
-                        const dx = d[0], dy = d[1];
-                        if (vide(x + dx, y) && vide(x, y + dy) && vide(x + dx, y + dy) &&
-                            !vide(x - dx, y) && vide(x - dx, y + dy) && !vide(x, y - dy) && vide(x + dx, y - dy)) {
-                            vifs++;
-                            if (exemples.length < 4) exemples.push([i, x, y]);
-                        }
-                    });
-                }
-            }
-            const pince = {};
-            [['face', Math.PI / 2], ['dos', -Math.PI / 2]].forEach(function (q) {
-                const g = L.Atlas.projeter(nu, q[1], cote);
-                const larges = g.map(function (l) { const m = l.match(/[^.].*[^.]/); return m ? m[0].length : 0; }).filter(function (v) { return v > 0; });
-                const caisse = Math.max.apply(null, larges);
-                pince[q[0]] = { rentre: larges.slice(-3).reduce(function (t, v) { return t + caisse - v; }, 0), bout: larges.slice(-3), caisse: caisse };
-            });
-            out[slug] = { vifs: vifs, exemples: exemples, pince: pince };
-        });
-        return out;
-    }""")
+    r = machines["berline"]
     for slug, m in r.items():
         assert m["vifs"] == 0, f"{slug} : {m['vifs']} coins vifs sur les 32 caps (cap, x, y : {m['exemples']})"
         for vue, p in m["pince"].items():
@@ -1281,7 +1354,7 @@ def test_la_berline_est_arrondie(banc):
 # --- Des autos qui ne sont pas toutes la même -----------------------------------
 
 
-def test_les_autos_ne_sont_pas_toutes_la_meme(banc):
+def test_les_autos_ne_sont_pas_toutes_la_meme(machines):
     """Demande de Martin : « je veux aussi avoir parfois des différences
     structurelles, pas juste la couleur ». ⚠️ **Mesuré avant** : toutes les
     autos de la ville étaient la même berline repeinte.
@@ -1291,28 +1364,7 @@ def test_les_autos_ne_sont_pas_toutes_la_meme(banc):
     profil diffère de celui des autres) posée sur la MÊME caisse — même
     empreinte, mêmes roues. Le taxi et la police, eux, ne varient jamais : ce
     sont des flottes."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const compte = {}, flottes = {};
-        for (let i = 0; i < 240; i++) {
-            const x = 120 + (i % 20) * 37, y = 120 + Math.floor(i / 20) * 23;
-            const v = L.Vehicules.creer('auto', x, y, 0, { etat: 'stationne', couleur: '#2980b9' });
-            compte[v.sprite] = (compte[v.sprite] || 0) + 1;
-            L.Entites.retirer(v);
-            ['taxi', 'police'].forEach(function (slug) {
-                const w = L.Vehicules.creer(slug, x, y, 0, { etat: 'stationne' });
-                flottes[w.sprite] = true;
-                L.Entites.retirer(w);
-            });
-        }
-        const variantes = Object.keys(L.SPRITES.auto.variantes || { auto: 1 });
-        const profils = variantes.map(function (n) { return L.SPRITES[n].poses.cote[0].join(''); });
-        const caisse = function (n) { return L.SPRITES[n].machine.pieces.slice(0, 5).map(function (p) { return JSON.stringify(p); }).join(); };
-        return { compte: compte, variantes: variantes, flottes: Object.keys(flottes).sort(),
-                 profilsDistincts: new Set(profils).size,
-                 memeCaisse: variantes.every(function (n) { return caisse(n) === caisse('auto'); }),
-                 memeToile: variantes.every(function (n) { return L.SPRITES[n].w === L.SPRITES.auto.w; }) };
-    }""")
+    r = machines["autos"]
     compte = r["compte"]
     assert set(compte) <= set(r["variantes"]), f"une auto est née d'une silhouette inconnue : {compte}"
     assert len(compte) >= 3, f"les autos ne varient pas : {compte}"
@@ -1395,7 +1447,7 @@ def test_la_silhouette_et_ses_tons_reviennent_du_lot_et_de_la_planque(banc):
     assert r["taxi"] == "taxi", f"un taxi est revenu en {r['taxi']}"
 
 
-def test_de_dos_un_char_montre_sa_longueur(banc, paquet):
+def test_de_dos_un_char_montre_sa_longueur(machines, paquet):
     """⚠️ **Retour de Martin : « oui plus long ».** La règle date de la vue
     plongeante (« de dos comme de face, un char occupe à l'écran sa longueur »)
     et elle mesurait un toit tourné ; le parc en volume l'avait perdue sans que
@@ -1406,18 +1458,7 @@ def test_de_dos_un_char_montre_sa_longueur(banc, paquet):
     On la mesure à nouveau, sur la projection de chaque machine du catalogue,
     de dos et de face : jamais moins que sa longueur (à une rangée près). Les
     plus hauts en prennent davantage — un autobus monte, et c'est vrai."""
-    r = banc("""function (L, o) {
-        const out = {};
-        L.B.defs.vehicules.forEach(function (v) {
-            const def = L.SPRITES[v.sprite];
-            if (!def || !def.machine || out[v.slug]) return;
-            const rangees = function (a) {
-                return L.Atlas.projeter(def.machine, a, def.w).filter(function (l) { return /[^.]/.test(l); }).length;
-            };
-            out[v.slug] = { longueur: v.longueur, dos: rangees(-Math.PI / 2), face: rangees(Math.PI / 2) };
-        });
-        return out;
-    }""")
+    r = machines["dos"]
     assert len(r) >= 12, "le décor du juge est faux : %s" % list(r)
     for slug, m in r.items():
         for vue in ("dos", "face"):
@@ -1426,7 +1467,7 @@ def test_de_dos_un_char_montre_sa_longueur(banc, paquet):
             )
 
 
-def test_des_variantes_pour_tout_le_parc_mais_pas_pour_les_flottes(banc):
+def test_des_variantes_pour_tout_le_parc_mais_pas_pour_les_flottes(machines):
     """Retour de Martin : « aussi des variantes ». ⚠️ **Mesuré avant** : seule
     l'auto avait des silhouettes ; un camion, un autobus, une luxe ou une
     chaloupe étaient une seule machine repeinte.
@@ -1436,21 +1477,7 @@ def test_des_variantes_pour_tout_le_parc_mais_pas_pour_les_flottes(banc):
     la remorqueuse, eux, ne varient jamais — une flotte se reconnaît parce
     qu'elle ne varie pas. Et l'autobus scolaire est toujours JAUNE, quelle que
     soit la couleur tirée pour l'autobus."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const out = {};
-        ['camion', 'autobus', 'luxe', 'bateau', 'taxi', 'police', 'ambulance', 'remorqueuse'].forEach(function (slug) {
-            const compte = {}, couleurs = {};
-            for (let i = 0; i < 200; i++) {
-                const v = L.Vehicules.creer(slug, 150 + (i % 20) * 41, 150 + Math.floor(i / 20) * 29, 0, { etat: 'stationne' });
-                compte[v.sprite] = (compte[v.sprite] || 0) + 1;
-                (couleurs[v.sprite] = couleurs[v.sprite] || {})[v.couleur] = true;
-                L.Entites.retirer(v);
-            }
-            out[slug] = { compte: compte, couleurs: couleurs, sprite: L.B.defs.vehicules.find(function (d) { return d.slug === slug; }).sprite };
-        });
-        return out;
-    }""")
+    r = machines["variantes"]
     for slug in ("camion", "autobus", "luxe", "bateau"):
         m = r[slug]
         assert len(m["compte"]) >= 2, f"{slug} ne varie pas : {m['compte']}"
