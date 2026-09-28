@@ -55,10 +55,29 @@ def test_la_trace_voit_un_char_hors_voie_et_le_chien_de_garde(banc):
 
 
 def test_l_adresse_allume_la_trace(banc):
+    """`?trace=1` (ou `?perf=1`) dans l'adresse allume le mode sans passer par le
+    menu. ⚠️ Le banc démarre le jeu avec une adresse vide (`location.search`) :
+    on la change, puis on REDÉMARRE le jeu sur la même fenêtre — c'est
+    `Jeu.demarrer` qui lit l'adresse, une fois, à l'ouverture de la page.
+
+    (Le juge d'avant ne lisait que la valeur par défaut : une adresse qui
+    n'allumait plus rien passait, et `perf` n'était jamais vérifié.)"""
     r = banc("""function (L, o) {
-        return { trace: L.B.options.trace, perf: !!L.B.options.perf };
+        const avant = { trace: !!L.B.options.trace, perf: !!L.B.options.perf };
+        function ouvrir(adresse) {
+          L.B.options.trace = false; L.B.options.perf = false;
+          o.fenetre.location.search = adresse;
+          L.Jeu.demarrer(o.fenetre, o.doc);
+          return { trace: !!L.B.options.trace, perf: !!L.B.options.perf };
+        }
+        return { avant: avant, trace: ouvrir('?trace=1'), perf: ouvrir('?perf=1'),
+                 lesDeux: ouvrir('?coop=0&perf=1&trace=1'), rien: ouvrir('?trace=0') };
     }""")
-    assert r["trace"] is False, "sans ?trace=1, la trace reste eteinte"
+    assert r["avant"] == {"trace": False, "perf": False}, "sans ?trace=1, la trace reste eteinte"
+    assert r["trace"] == {"trace": True, "perf": False}, f"?trace=1 n'allume pas la trace : {r['trace']}"
+    assert r["perf"] == {"trace": False, "perf": True}, f"?perf=1 n'allume pas le compteur : {r['perf']}"
+    assert r["lesDeux"] == {"trace": True, "perf": True}, f"au milieu de l'adresse, rien ne s'allume : {r['lesDeux']}"
+    assert r["rien"] == {"trace": False, "perf": False}, f"?trace=0 allume quelque chose : {r['rien']}"
 
 
 def test_de_chaque_tuile_de_chaque_boite_la_cascade_sort(banc):

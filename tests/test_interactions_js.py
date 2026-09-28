@@ -183,7 +183,11 @@ def test_un_coup_recu_ou_donne_nous_leve_et_ACTION_aussi_sans_faire_les_poches(b
     assert r["argent"] == 0 and r["poches"] == 50, "la pression qui nous leve ne fait pas les poches"
 
 
-def test_assis_on_se_sauvegarde_la_ou_l_on_se_tenait_et_on_ne_s_assoit_pas_devant_une_porte(banc):
+def test_assis_on_se_sauvegarde_la_ou_l_on_se_tenait(banc):
+    # ⚠️ Sa moitié « porte » est partie (vague A, 28 sept. 2026) : aucun banc
+    # n'était posé près de la porte, et « la porte passe avant le décor » se
+    # jugeait dans le vide. `test_une_porte_passe_avant_le_banc_qui_la_jouxte`
+    # plante un banc dans le cône de la porte et tient la règle.
     r = jouer(banc, """
         const d = devant('banc');
         if (!d) return { pasDeBanc: true };
@@ -191,18 +195,12 @@ def test_assis_on_se_sauvegarde_la_ou_l_on_se_tenait_et_on_ne_s_assoit_pas_devan
         o.tape('KeyE');
         L.Missions.sauvegarderPartie();
         const sauve = { x: p.x, y: p.y };
-        // Une porte devant nous : ACTION entre, elle ne s'assoit pas.
-        j.assis = null;
-        const porte = L.Monde.carte.portes.find(function (q) { return q.lieu; });
-        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 8; j.vx = 0; j.vy = 0; nettoyer(); o.viser({ x: porte.x * L.TT + 8, y: porte.y * L.TT + 8 });
-        const laPorte = L.Monde.porteDevant(j);
-        const decorAvecPorte = L.Interactions.decorSousLaMain(j);
-        return { avant: avant, sauve: sauve, laPorte: !!laPorte, decorAvecPorte: !!decorAvecPorte };
+        return { avant: avant, sauve: sauve, assis: !!j.assis };
     """)
     assert not r.get("pasDeBanc")
+    assert r["assis"], "ACTION devant le banc ne nous assoit pas"
     assert (r["sauve"]["x"], r["sauve"]["y"]) == (round(r["avant"]["x"]), round(r["avant"]["y"])), \
         "assis, on se sauvegarde la ou l'on se tenait : le banc est un mur"
-    assert r["laPorte"] and not r["decorAvecPorte"], "la porte passe avant le decor"
 
 
 # --- Fouiller -------------------------------------------------------------------

@@ -349,6 +349,56 @@ def test_la_galerie_prete_sa_carabine_a_bouchon_et_la_reprend(banc):
     assert r["armeEnfin"] == "poings" and not r["gardeBouchon"], "le forain ne reprend pas sa carabine"
 
 
+def test_la_peche_aux_canards_se_joue_au_bouton_et_paie(banc):
+    """⚠️ **On la joue COMME UN JOUEUR** : on regarde le bassin et on appuie sur
+    ACTION quand le canard passe sous le crochet (`canardAuCrochet`, ce que le
+    dessin montre). Cinq canards, UN PAR PASSAGE — trois appuis dans la même
+    fenêtre ne pêchent qu'un canard —, puis la prime et le défi noté.
+
+    (Ex-`test_zz_smoke.py::test_canards` : il jouait la même partie et ne
+    faisait que l'imprimer ; une pêche qui ne payait rien passait.)"""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const g = L.Foire.jeux().find(function (q) { return q.slug === 'peche_canards'; });
+        const d = L.B.defs.defis.find(function (q) { return q.slug === 'canards'; });
+        const f = L.DECORS.peche_canards;
+        const j = L.B.joueur, p = L.B.partie;
+        j.x = g.x * L.TT + 8; j.y = (g.y + 2) * L.TT + 8;
+        // ⚠️ On regarde le comptoir : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser({ x: g.x * L.TT + 8, y: g.y * L.TT + 15 });
+        L.Entites.indexer();
+        o.frame(1);
+        const sous = L.Foire.jeuSousLaMain(j);
+        o.tape('KeyE'); o.frame(1);      // le comptoir
+        o.tape('KeyE'); o.frame(1);      // COMMENCER
+        const parti = L.B.defi && L.B.defi.slug;
+        const argentAvant = p.argent;
+        const duJour = L.Defi.aPayer('canards');
+        // On tire à CHAQUE image où le canard est sous la canne : c'est la règle
+        // « un canard par passage » qui doit empêcher d'en pêcher cinq d'un coup.
+        let appuis = 0, k = 0;
+        for (; k < 2400 && L.B.defi; k++) {
+          if (L.Histoire.canardAuCrochet()) { o.tape('KeyE'); appuis++; }
+          o.frame(1);
+        }
+        return { sous: sous, parti: parti, appuis: appuis, enCours: !!L.B.defi,
+                 fait: p.defisFaits.canards || null, gain: p.argent - argentAvant,
+                 prime: d.prime, duJour: duJour, canards: d.canards,
+                 passage: f.anime * f.variantes, fenetre: f.anime };
+    }""")
+    assert r["sous"] == "peche_canards", "on n'est pas sous le comptoir de la pêche"
+    assert r["parti"] == "canards", f"ACTION au comptoir a lancé {r['parti']!r}, pas la pêche"
+    assert r["appuis"] >= r["canards"], f"{r['appuis']} appui(s) : le canard ne passe jamais sous le crochet"
+    assert not r["enCours"] and r["fait"], "cinq canards au crochet et la pêche n'est pas gagnée"
+    # Cinq canards en cinq passages : au moins quatre tours de bassin entre le
+    # premier et le dernier, moins une fenêtre.
+    assert r["fait"]["temps"] >= (r["canards"] - 1) * r["passage"] - r["fenetre"], (
+        f"cinq canards en {r['fait']['temps']} images : on en pêche plusieurs par passage")
+    assert r["prime"] > 0, "la pêche aux canards n'a pas de prime"
+    attendu = r["prime"] * (2 if r["duJour"] else 1)
+    assert r["gain"] == attendu, f"la pêche a rapporté {r['gain']} $, pas {attendu} $"
+
+
 def test_la_foire_se_remplit_de_monde_et_de_mascottes(banc, paquet):
     """« Beaucoup de monde », « des mascottes ». ⚠️ Ils naissent DANS l'enceinte,
     y restent, et personne n'apparaît sous les yeux du joueur. Au premier essai,

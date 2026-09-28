@@ -103,3 +103,6 @@ def test_le_feu_ne_se_redeclare_pas_dans_l_heure_apres_eteint(banc):
     }""")
     assert not r.get("aucun")
     assert r["apresEteintro"] is False, "le feu brûle encore après l'extinction"
+    # ⚠️ Le juge rendait `encore` sans jamais l'affirmer : un feu qui revenait
+    # dès qu'on avait tourné le dos passait.
+    assert r["encore"] is False, "le feu éteint se redéclare dans la même heure"

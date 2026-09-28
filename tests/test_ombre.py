@@ -188,13 +188,13 @@ def test_l_ombre_ne_traine_pas_devant_un_char_qui_roule_vers_le_nord(banc):
         L.B.defs.vehicules.forEach(function (def) {
             const v = o.char(def.slug, 0, 0, 0);
             if (!v) return;
-            // ⚠️ Le bateau n'a pas encore de sprite (dette connue) : on ne peut
-            // pas mesurer la hauteur d'un dessin qui n'existe pas.
+            // ⚠️ Chaque véhicule a son dessin de profil (le bateau compris) : un
+            // char sans flanc rend `hauteur: null`, et c'est un rouge, pas un saut.
             const sprite = L.SPRITES[v.sprite];
             const cuit = sprite ? L.Atlas.cuire(v.sprite, sprite, v.swaps) : null;
             // Ce que le FLANC monte au-dessus de la ligne de sol.
             let hauteur = null;
-            if (cuit && !sprite.rotations) {
+            if (cuit && sprite.poses && sprite.poses.cote) {
                 const g = sprite.poses.cote[0];
                 let premier = g.length;
                 for (let y = 0; y < g.length; y++) if (/[^.]/.test(g[y])) { premier = y; break; }
@@ -214,14 +214,14 @@ def test_l_ombre_ne_traine_pas_devant_un_char_qui_roule_vers_le_nord(banc):
         return out;
     }""")
     assert len(r) >= 8, "le décor du juge est faux : trop peu de véhicules (%s)" % list(r)
-    debout = 0
+    # ⚠️ Plus de saut : le juge passait par-dessus les sprites « en rotations »,
+    # un champ qu'aucun dessin ne porte — il ne sautait rien, et un char sans
+    # dessin de profil aurait glissé dehors sans un mot.
+    sans_flanc = sorted(slug for slug, m in r.items() if m["hauteur"] is None)
+    assert sans_flanc == [], f"ces véhicules n'ont pas de dessin de profil à mesurer : {sans_flanc}"
     for slug, m in r.items():
-        if m["hauteur"] is None:
-            continue           # un sprite encore en rotations : il montre sa longueur
-        debout += 1
         for cap, sous in m["caps"].items():
             assert sous <= m["hauteur"], (
                 f"{slug} vers le {cap} : l'ombre traîne {sous} px sous ses roues, "
                 f"et le dessin n'est haut que de {m['hauteur']} px"
             )
-    assert debout >= 8, "presque aucun véhicule n'est debout : le juge ne mesure rien"

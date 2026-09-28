@@ -870,7 +870,10 @@ def test_les_defis_ont_un_panneau_et_un_chrono(banc, paquet):
     assert r["panneaux"] == ["livraison", "saut", "tour", "tour_erables", "tour_pointe", "tour_quais", "tour_shop"]
     assert r["invite"] == "DÉFI" and r["menu"] == "TOUR DU FAUBOURG"
     assert r["defi"] == "tour" and r["ligne"] == "TOUR DU FAUBOURG 3:00 — MONTE DANS UN CHAR"
-    assert r["gps"] == "Terminus Baie-des-Brumes" or r["gps"]
+    # ⚠️ Le GPS d'une course montre la ligne de départ tant qu'on n'est pas en
+    # piste (`repereDeCircuit`). Le juge d'avant finissait par `or r["gps"]` :
+    # n'importe quel nom passait.
+    assert r["gps"] == "LA LIGNE DE DÉPART", f"le GPS du tour pointe {r['gps']!r}, pas la ligne de départ"
     assert r["attend"] == {"defi": "tour", "ligne": "TOUR DU FAUBOURG 3:00 — MONTE DANS UN CHAR"}, (
         "a pied, le defi attend son char et le chrono ne court pas : %s" % r["attend"])
     assert r["apres"] is None and r["msg"] == "DÉFI RATÉ — IL FAUT UN CHAR"

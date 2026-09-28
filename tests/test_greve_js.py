@@ -5,8 +5,13 @@ tuiles de l'eau, là où aucun décor n'allait jamais. C'était une ligne de jug
 écrire *exprès*, pas à découvrir.
 """
 
-MEUBLES = ("parasol", "serviette", "table_pique_nique", "chateau_sable",
-           "poteau_amarrage", "belvedere", "bouee")
+from app import carte
+
+#: ⚠️ LA LISTE DU JEU, pas une copie : celle que lit la règle d'écart de la rive
+#: (`carte.MEUBLES_DU_BORD`). La copie d'ici en avait sept, trois de moins que la
+#: grève n'en sème — la chaise longue, le kayak et la chaise du sauveteur
+#: pouvaient perdre leur dessin sans que ce juge le voie.
+MEUBLES = carte.MEUBLES_DU_BORD
 
 
 def test_chaque_meuble_de_greve_a_un_dessin(banc, paquet):
