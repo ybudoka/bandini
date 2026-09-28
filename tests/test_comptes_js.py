@@ -11,6 +11,8 @@ titre et se joue. Rien ici ne doit jamais barrer le chemin de JOUER.
 
 import json
 
+import pytest
+
 #: Une partie d'ici, telle que `Sauvegarde` la garde.
 def partie(jour=5, argent=1200, secondes=600, missions=1, sauvee_le=1_750_000_000_000):
     return {"jour": jour, "argent": argent, "x": 100, "y": 100,
@@ -57,19 +59,40 @@ CALME = """
 # --- Personne n'a de compte : le jeu ne change pas d'un poil ---------------------------
 
 
-def test_sans_compte_le_jeu_arrive_au_titre_et_se_tait(banc):
+@pytest.fixture(scope="module")
+def sans_rien(banc):
+    """UN chargement sans compte, sans NIP, sans réseau programmé : ce que le titre montre, puis
+    l'écran du compte, puis les deux gestes du NIP qu'on peut tenter sans compte.
+
+    ⚠️ Dans cet ordre-là : on lit l'état et les appels AVANT de toucher à quoi que ce soit —
+    l'écran ne parle à personne, `nipRefus` non plus, et `activerNip` (refusé sans compte)
+    passe en dernier, là où rien ne le relit."""
+    return banc("""function (L, o) {""" + CALME + """
+        const sorties = {};
+        return calme(o).then(function () {
+          sorties.titre = { etat: L.B.etat, compte: L.Compte.etat().etat, configure: L.Compte.etat().nipConfigure,
+                            appels: o.compte.appels.map(function (a) { return a.chemin; }),
+                            bouton: o.elements['bouton-compte'].textContent };
+          L.Hud.montrerCompte();
+          sorties.ecran = { ligne: !o.elements['compte-effacer-ligne'].hidden, form: !o.elements['compte-effacer-form'].hidden };
+          sorties.nipRefus = L.Compte.nipRefus('4821');
+          return L.Compte.activerNip('4821');
+        }).then(function (res) { sorties.activer = res; return sorties; });
+    }""")
+
+
+def test_sans_compte_le_jeu_arrive_au_titre_et_se_tait(sans_rien):
     """⚠️ Le juge le plus important du fichier : l'ouverture part, le serveur dit
     « personne », et plus rien ne bouge. Un jeu qui bavarde avec le serveur alors
-    que personne n'a de compte est un jeu qui a oublie qu'il se joue hors ligne."""
-    r = banc("""function (L, o) {""" + CALME + """
-        return calme(o).then(function () {
-          return { etat: L.B.etat, compte: L.Compte.etat().etat,
-                   appels: o.compte.appels.map(function (a) { return a.chemin; }),
-                   bouton: o.elements['bouton-compte'].textContent };
-        });
-    }""")
+    que personne n'a de compte est un jeu qui a oublie qu'il se joue hors ligne.
+
+    Et sans NIP configure sur cet appareil, la session longue s'ouvre TOUTE SEULE,
+    exactement comme les 1re et 2e vagues — le NIP est facultatif, il ne remplace
+    jamais rien par defaut (regression a ne jamais perdre)."""
+    r = sans_rien["titre"]
     assert r["etat"] == "titre"
     assert r["compte"] == "ferme"
+    assert r["configure"] is False
     assert r["appels"] == ["ouvrir"]
 
 
@@ -706,48 +729,60 @@ def test_se_deconnecter_monte_la_partie_avant_de_partir(banc):
 # =========================================================================================
 
 
-def test_sans_nip_rien_ne_change_a_l_ouverture(banc):
-    """⚠️ Regression a ne jamais perdre : sans NIP configure sur cet appareil, la
-    session longue s'ouvre TOUTE SEULE, exactement comme les 1re et 2e vagues — le
-    NIP est facultatif, il ne remplace jamais rien par defaut."""
-    r = banc("""function (L, o) {""" + CALME + """
+#: Un NIP configuré sur cet appareil (le blob n'a pas à se déchiffrer : on ne le tape jamais).
+VERROUILLE = {"bandini-nip-v1": json.dumps({"sel": "AA==", "iv": "AA==", "corps": "AA==", "essais": 0})}
+
+
+@pytest.fixture(scope="module")
+def verrouille(banc):
+    """UN chargement verrouillé : l'état au démarrage, le NIP qu'on essaie de retirer sans
+    lui, l'écran (le NIP seul, pas de ligne EFFACER), puis une partie jouée et le retour au titre.
+
+    ⚠️ Dans cet ordre : chaque étape laisse le verrou tel quel (le retrait est REFUSÉ, l'écran
+    ne parle à personne) ; le retrait passe avant l'écran, pour que le mot « Déverrouille… »
+    lu dans `compte-etat` vienne du refus et pas de l'écran ; la partie jouée, en dernier. Les
+    comptes d'appels sont lus depuis le chargement : ils valaient 0 à chaque étape."""
+    return banc("""function (L, o) {""" + CALME + """
+        const sorties = {};
         return calme(o).then(function () {
-          return { etat: L.Compte.etat().etat, configure: L.Compte.etat().nipConfigure,
-                   appels: o.compte.appels.map(function (a) { return a.chemin; }) };
-        });
-    }""")
-    assert r["configure"] is False
-    assert r["appels"] == ["ouvrir"]
-
-
-def test_avec_un_nip_configure_rien_ne_part_au_demarrage(banc):
-    """⚠️ Le coeur du verrou : `init()` ne doit MEME PAS appeler l'ouverture quand un
-    NIP est configure sur cet appareil. Un jeu qui bavarde avec le serveur avant
-    d'avoir vu le NIP n'est pas un verrou, c'est une case a cocher."""
-    r = banc("""function (L, o) {""" + CALME + """
-        return calme(o).then(function () {
-          return { etat: L.Compte.etat().etat, appels: o.compte.appels.length,
-                   configure: L.Compte.etat().nipConfigure };
-        });
-    }""", stockage={"bandini-nip-v1": json.dumps({"sel": "AA==", "iv": "AA==", "corps": "AA==", "essais": 0})})
-    assert r["etat"] == "verrouille"
-    assert r["appels"] == 0
-    assert r["configure"] is True
-
-
-def test_verrouille_le_jeu_se_joue_sans_toucher_au_reseau(banc):
-    """Un compte est un confort, jamais une condition — meme verrouille : JOUER
-    joue, une partie se sauve, le retour au titre ne parle a personne."""
-    r = banc("""function (L, o) {""" + CALME + """
-        return calme(o).then(function () {
+          sorties.demarrage = { etat: L.Compte.etat().etat, appels: o.compte.appels.length,
+                                configure: L.Compte.etat().nipConfigure };
+          const avant = L.Compte.etat().nipConfigure;
+          const rendu = L.Compte.desactiverNip();
+          o.elements['bouton-nip-retirer'].dispatch('click', {});
+          sorties.retirer = { avant: avant, rendu: rendu, apres: L.Compte.etat().nipConfigure,
+                              etat: L.Compte.etat().etat, message: o.elements['compte-etat'].textContent,
+                              appels: o.compte.appels.length };
+          L.Hud.montrerCompte();
+          sorties.ecran = { nip: !o.elements['nip-form'].hidden, form: !o.elements['compte-form'].hidden,
+                            bouton: o.elements['bouton-compte'].textContent };
+          L.Hud.montrerCompte();
+          sorties.effacer = { ligne: !o.elements['compte-effacer-ligne'].hidden, garde: !o.elements['compte-garde'].hidden };
           L.Jeu.jouerPartie(1);
           o.frame(5);
           L.Jeu.retourTitre();
           return calme(o);
         }).then(function () {
-          return { etat: L.B.etat, appels: o.compte.appels.length, beacons: o.compte.beacons.length };
+          sorties.jouer = { etat: L.B.etat, appels: o.compte.appels.length, beacons: o.compte.beacons.length };
+          return sorties;
         });
-    }""", stockage={"bandini-nip-v1": json.dumps({"sel": "AA==", "iv": "AA==", "corps": "AA==", "essais": 0})})
+    }""", stockage=VERROUILLE)
+
+
+def test_avec_un_nip_configure_rien_ne_part_au_demarrage(verrouille):
+    """⚠️ Le coeur du verrou : `init()` ne doit MEME PAS appeler l'ouverture quand un
+    NIP est configure sur cet appareil. Un jeu qui bavarde avec le serveur avant
+    d'avoir vu le NIP n'est pas un verrou, c'est une case a cocher."""
+    r = verrouille["demarrage"]
+    assert r["etat"] == "verrouille"
+    assert r["appels"] == 0
+    assert r["configure"] is True
+
+
+def test_verrouille_le_jeu_se_joue_sans_toucher_au_reseau(verrouille):
+    """Un compte est un confort, jamais une condition — meme verrouille : JOUER
+    joue, une partie se sauve, le retour au titre ne parle a personne."""
+    r = verrouille["jouer"]
     assert r["etat"] == "titre"
     assert r["appels"] == 0
     assert r["beacons"] == 0
@@ -791,21 +826,31 @@ def test_activer_un_nip_refuse_les_plus_tapes_et_les_formats_invalides(banc):
     assert r["appels"] == ["ouvrir"], "aucun de ces refus ne doit parler au serveur"
 
 
-def test_un_nip_valide_et_pas_dans_la_liste_est_accepte(banc):
-    r = banc("""function (L, o) {""" + CALME + """
-        return calme(o).then(function () { return L.Compte.nipRefus('4821'); });
-    }""")
-    assert r is None
+def test_un_nip_valide_et_pas_dans_la_liste_est_accepte(sans_rien):
+    assert sans_rien["nipRefus"] is None
 
 
-def test_deverrouiller_avec_le_bon_nip_rouvre_normalement(banc):
-    """Le chemin heureux, sur DEUX chargements distincts — la vraie forme d'un
-    rechargement de page, localStorage garde ce qui a ete ecrit, rien de plus."""
-    premier = banc("""function (L, o) {""" + CALME + """
+@pytest.fixture(scope="module")
+def store_avec_nip(banc):
+    """Ce que le navigateur garde après `activerNip('4821')` sur un compte ouvert — le premier
+    des DEUX chargements (la vraie forme d'un rechargement de page). Un seul banc pour les
+    cinq juges qui repartent de là.
+
+    ⚠️ Le compte s'appelle « Rocco » (le témoin de synchro le retient) : c'est ce que les deux
+    juges qui DÉVERROUILLENT attendent ; les trois autres ne rouvrent jamais le compte, et rien
+    chez eux ne lit ce nom. Le sel et l'IV sont tirés par WebCrypto : un blob neuf par banc
+    comme avant, et aucun juge n'en lit les octets."""
+    return banc("""function (L, o) {""" + CALME + """
         return calme(o).then(function () { return L.Compte.activerNip('4821'); })
           .then(function () { return o.store; });
     }""", reseau={"ouvrir": ouvert([case(1), case(2), case(3)], pseudo="Rocco"),
                   "nip": {"statut": 200, "corps": {"jeton": "un-jeton-de-test"}}})
+
+
+def test_deverrouiller_avec_le_bon_nip_rouvre_normalement(banc, store_avec_nip):
+    """Le chemin heureux, sur DEUX chargements distincts — la vraie forme d'un
+    rechargement de page, localStorage garde ce qui a ete ecrit, rien de plus."""
+    premier = store_avec_nip
     r = banc("""function (L, o) {
         const avant = { etat: L.Compte.etat().etat, appels: o.compte.appels.length };
         return L.Compte.deverrouiller('4821').then(function (res) {
@@ -820,16 +865,12 @@ def test_deverrouiller_avec_le_bon_nip_rouvre_normalement(banc):
     assert r["appels"] == ["ouvrir"]
 
 
-def test_cinq_echecs_effacent_le_nip_local_sans_toucher_au_reseau(banc):
+def test_cinq_echecs_effacent_le_nip_local_sans_toucher_au_reseau(banc, store_avec_nip):
     """⚠️ Le compte ne se bloque JAMAIS : la preuve la plus directe est qu'aucun de
     ces cinq essais ne parle au serveur — tout se joue en local, et un NIP faux
     LEVE (l'etiquette d'authentification d'AES-GCM), il ne rend pas une reponse
     qu'on pourrait mal lire."""
-    premier = banc("""function (L, o) {""" + CALME + """
-        return calme(o).then(function () { return L.Compte.activerNip('4821'); })
-          .then(function () { return o.store; });
-    }""", reseau={"ouvrir": ouvert([case(1), case(2), case(3)]),
-                  "nip": {"statut": 200, "corps": {"jeton": "un-jeton-de-test"}}})
+    premier = store_avec_nip
     r = banc("""function (L, o) {
         let p = Promise.resolve();
         const tentatives = [];
@@ -886,21 +927,12 @@ def test_retirer_le_nip_est_purement_local(banc):
     assert r["appels"] == ["ouvrir", "nip"]
 
 
-def test_un_nip_ne_se_retire_pas_tant_que_l_appareil_est_verrouille(banc):
+def test_un_nip_ne_se_retire_pas_tant_que_l_appareil_est_verrouille(verrouille):
     """⚠️ Un verrou qu'on enleve sans le NIP n'est pas un verrou. Le bouton « Retirer le
     NIP » s'affichait sous l'ecran VERROUILLE (`.boutons` en `display: flex` battait
     `hidden`) : c'est le MODELE qui tient la regle, quoi que l'ecran montre — meme
     en pressant le bouton a la main."""
-    r = banc("""function (L, o) {""" + CALME + """
-        return calme(o).then(function () {
-          const avant = L.Compte.etat().nipConfigure;
-          const rendu = L.Compte.desactiverNip();
-          o.elements['bouton-nip-retirer'].dispatch('click', {});
-          return { avant: avant, rendu: rendu, apres: L.Compte.etat().nipConfigure,
-                   etat: L.Compte.etat().etat, message: o.elements['compte-etat'].textContent,
-                   appels: o.compte.appels.length };
-        });
-    }""", stockage={"bandini-nip-v1": json.dumps({"sel": "AA==", "iv": "AA==", "corps": "AA==", "essais": 0})})
+    r = verrouille["retirer"]
     assert r["avant"] is True
     assert r["rendu"] is False
     assert r["apres"] is True, "le NIP est toujours la : le verrou tient"
@@ -922,34 +954,22 @@ def test_se_deconnecter_efface_aussi_le_nip_local(banc):
     assert r["configure"] is False
 
 
-def test_activer_un_nip_sans_compte_ouvert_est_refuse(banc):
-    r = banc("""function (L, o) {""" + CALME + """
-        return calme(o).then(function () { return L.Compte.activerNip('4821'); });
-    }""")  # personne n'a de compte : l'ouverture rend `{compte: null}`
-    assert r["ok"] is False
+def test_activer_un_nip_sans_compte_ouvert_est_refuse(sans_rien):
+    # personne n'a de compte : l'ouverture rend `{compte: null}`
+    assert sans_rien["activer"]["ok"] is False
 
 
-def test_l_ecran_montre_le_nip_seul_puis_le_reglage_une_fois_ouvert(banc):
+def test_l_ecran_montre_le_nip_seul_puis_le_reglage_une_fois_ouvert(verrouille):
     """L'ecran DOM : le formulaire de NIP seul quand verrouille, le reglage du NIP
     (ajouter/retirer) une fois le compte ouvert — jamais les deux en meme temps."""
-    r = banc("""function (L, o) {""" + CALME + """
-        return calme(o).then(function () {
-          L.Hud.montrerCompte();
-          return { nip: !o.elements['nip-form'].hidden, form: !o.elements['compte-form'].hidden,
-                   bouton: o.elements['bouton-compte'].textContent };
-        });
-    }""", stockage={"bandini-nip-v1": json.dumps({"sel": "AA==", "iv": "AA==", "corps": "AA==", "essais": 0})})
+    r = verrouille["ecran"]
     assert r["nip"] is True
     assert r["form"] is False
     assert r["bouton"] == "Compte verrouillé"
 
 
-def test_deverrouiller_depuis_l_ecran_ouvre_le_compte(banc):
-    premier = banc("""function (L, o) {""" + CALME + """
-        return calme(o).then(function () { return L.Compte.activerNip('4821'); })
-          .then(function () { return o.store; });
-    }""", reseau={"ouvrir": ouvert([case(1), case(2), case(3)], pseudo="Rocco"),
-                  "nip": {"statut": 200, "corps": {"jeton": "un-jeton-de-test"}}})
+def test_deverrouiller_depuis_l_ecran_ouvre_le_compte(banc, store_avec_nip):
+    premier = store_avec_nip
     r = banc("""function (L, o) {""" + CALME + """
         return calme(o).then(function () {
           L.Hud.montrerCompte();
@@ -966,12 +986,8 @@ def test_deverrouiller_depuis_l_ecran_ouvre_le_compte(banc):
     assert r["code"] == "", "le NIP ne traine pas dans le champ apres coup"
 
 
-def test_un_nip_faux_le_dit_a_l_ecran_avec_le_compte_d_essais(banc):
-    premier = banc("""function (L, o) {""" + CALME + """
-        return calme(o).then(function () { return L.Compte.activerNip('4821'); })
-          .then(function () { return o.store; });
-    }""", reseau={"ouvrir": ouvert([case(1), case(2), case(3)]),
-                  "nip": {"statut": 200, "corps": {"jeton": "un-jeton-de-test"}}})
+def test_un_nip_faux_le_dit_a_l_ecran_avec_le_compte_d_essais(banc, store_avec_nip):
+    premier = store_avec_nip
     r = banc("""function (L, o) {""" + CALME + """
         return calme(o).then(function () {
           L.Hud.montrerCompte();
@@ -983,14 +999,10 @@ def test_un_nip_faux_le_dit_a_l_ecran_avec_le_compte_d_essais(banc):
     assert "4" in r
 
 
-def test_mot_de_passe_plutot_montre_le_formulaire_sans_toucher_au_nip(banc):
+def test_mot_de_passe_plutot_montre_le_formulaire_sans_toucher_au_nip(banc, store_avec_nip):
     """⚠️ Un contournement d'UN chargement, pas un « oublie mon NIP » : le blob local
     reste intact apres coup."""
-    premier = banc("""function (L, o) {""" + CALME + """
-        return calme(o).then(function () { return L.Compte.activerNip('4821'); })
-          .then(function () { return o.store; });
-    }""", reseau={"ouvrir": ouvert([case(1), case(2), case(3)]),
-                  "nip": {"statut": 200, "corps": {"jeton": "un-jeton-de-test"}}})
+    premier = store_avec_nip
     r = banc("""function (L, o) {""" + CALME + """
         return calme(o).then(function () {
           L.Hud.montrerCompte();
@@ -1126,17 +1138,9 @@ def test_l_ecran_propose_effacer_puis_demande_le_mot_de_passe(banc):
     assert r["appels"] == 1, "rien n'est parti (l'ouverture seule)"
 
 
-def test_effacer_n_existe_pas_sur_un_compte_ferme_ni_verrouille(banc):
-    ferme = banc("""function (L, o) {""" + CALME + """
-        return calme(o).then(function () { L.Hud.montrerCompte();
-          return { ligne: !o.elements['compte-effacer-ligne'].hidden, form: !o.elements['compte-effacer-form'].hidden }; });
-    }""")
-    verrouille = banc("""function (L, o) {""" + CALME + """
-        return calme(o).then(function () { L.Hud.montrerCompte();
-          return { ligne: !o.elements['compte-effacer-ligne'].hidden, garde: !o.elements['compte-garde'].hidden }; });
-    }""", stockage={"bandini-nip-v1": json.dumps({"sel": "AA==", "iv": "AA==", "corps": "AA==", "essais": 0})})
-    assert ferme == {"ligne": False, "form": False}
-    assert verrouille == {"ligne": False, "garde": False}, "le verrou montre le NIP seul"
+def test_effacer_n_existe_pas_sur_un_compte_ferme_ni_verrouille(sans_rien, verrouille):
+    assert sans_rien["ecran"] == {"ligne": False, "form": False}
+    assert verrouille["effacer"] == {"ligne": False, "garde": False}, "le verrou montre le NIP seul"
 
 
 def test_confirmer_sans_mot_de_passe_ne_parle_pas_au_serveur(banc):
