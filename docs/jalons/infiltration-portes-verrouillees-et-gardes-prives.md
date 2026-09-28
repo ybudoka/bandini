@@ -25,3 +25,24 @@ trouve ou qu'on vole devient une vraie clé.
   poursuite, arrestation : c'est le même moteur, un cône et une palette différents. La
   mission elle-même (le bâtiment, ses pièces, où poser le garde et la clé) reste à écrire
   par-dessus ces deux briques.
+
+### Vague 2 — les missions (28 sept. 2026, en cours)
+
+Martin : « fais des missions d'infiltration ». Trois, jouables de bout en bout, sur un seul bâtiment
+grand et labyrinthique : **la villa du maire Tanguay**, que le plan de M16 attendait comme lieu spécial.
+
+- ⚠️ **Un BLOC, pas un lieu de la ville** (`app/blocs/villa.py`) : une pièce de la taille voulue en
+  ville la ferait glisser, et une PIÈCE arrête tout — `Histoire.majObjectif` et `Police.maj` ne
+  tournent pas dedans. Dans un bloc (`B.interieur` nul), les objectifs, les gardes et les étoiles
+  tournent. Le passage : au bout de la rue est-ouest du bord ouest des Érables. Le terrain, la
+  villa à pièces, un étage et un sous-sol reliés par des escaliers (un fondu, dans le même bloc).
+- **Des lieux de bloc** : un bloc déclare ses `lieux` (ses `points_interet`) ; une mission peut les
+  nommer ; en ville le GPS vise le passage, dans le bloc il vise le lieu.
+- **Les gardes du domaine** : le bloc déclare leurs rondes ; ils naissent quand on y entre
+  (`Police.creerAgent(…, 'garde')`), marchent leur ronde, et un garde qui te voit sur le terrain
+  privé donne l'alerte (une étoile, il te court après) — `sans_etoile` fait le reste.
+- **La serrure** : la porte de service est une barrière `objet` du bloc (`cle_villa`) ; la clé se
+  vole dans la poche d'un garde (un objectif `obtenir`, qui met un objet dans le sac).
+- **Les missions** : Josée (la clé de la porte de service), le sergent Bouchard (son dossier, dans le
+  bureau d'en haut), Sven (la chambre forte du sous-sol, au piratage). Chacune a son juge de banc qui
+  la JOUE au bouton.
