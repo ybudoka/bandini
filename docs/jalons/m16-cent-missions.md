@@ -891,6 +891,13 @@ catalogue.
     compte les images qui ont vraiment passé ; et `B.msg` est une chaîne, pas un objet.
   - ⚠️ **Le paquet** : `dev` était à 59 983 octets gzip pour 60 000 ; la vague en ajoute 151 —
     plafond à 62 000, mesure écrite dans `test_definitions.py`.
+  - **`libere` et `calme` lus par la rue** (`Entites.gangChasse`, `Entites.gangCalme`) : un
+    district libéré n'a plus de membres de son gang qui traînent dehors, et un gang calmé ne
+    prend plus l'arme au poing pour une provocation (frappé, il riposte quand même). ⚠️ Avant,
+    `faubourgLibere` (m5) coupait la naissance des membres de TOUS les gangs : après m5, plus
+    une Morue ni un Chevreuil ne sortait en ville. Juge : `test_libere_calme_js.py` (deux,
+    sauvegarde comprise). Aucune mission ne donne encore `libere` ni `calme` : ce sont
+    `q13`, `e10`, `s11`, `p11` (districts) et `q06`, `e04`, `s05` (gangs) qui les écriront.
   - **Ce qui reste** : les arcs Q, E, S, P, H, D, C, R, T, I, X (≈ 70 missions), dont les quatre
     qui libèrent un district (`q13`, `e10`, `s11`, `p11`) — c'est ce qu'attend _Le Boss_ (M13) ;
     `sans_arme` toujours lue par personne ; `cible: "arch:"` d'un `parler` ne pose aucun
