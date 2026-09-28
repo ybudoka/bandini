@@ -1,5 +1,7 @@
 """Le catalogue des sons — et le fait que le jeu sonne meme sans les fichiers."""
 
+import functools
+import json
 import math
 import re
 import shutil
@@ -370,22 +372,46 @@ def test_les_voix_de_l_histoire_sont_declarees_par_mission(paquet, a_jouer):
 # a bien tourne, pas que le son est le bon.
 
 
-def _ffprobe(chemin, entrees):
-    fait = subprocess.run(["ffprobe", "-v", "error", "-show_entries", entrees,
-                           "-of", "default=nw=1:nk=1", str(chemin)],
-                          capture_output=True, text=True)
-    return fait.stdout.split()
+@functools.cache
+def _mesure(chemin) -> dict:
+    """⚠️ **UNE PASSE PAR FICHIER, LUE PAR LES QUATRE JUGES** (vague C, 28 sept. 2026) : chacun
+    lançait son ffprobe ou son ffmpeg, cinq ou six sous-processus par bruitage. Un `ffprobe`
+    (fréquence, canaux, durée), puis UN `ffmpeg` qui décode une fois et partage le son entre
+    les quatre mesures d'avant (`asplit`) : le pic (`volumedetect`), le silence de la queue,
+    le calme qui laisse voir le souffle, le plancher (`astats`). Chaque mesure se lit comme
+    avant, dans les lignes de SON filtre.
 
-
-def _pic_dbfs(chemin):
-    """⚠️ `volumedetect` ecrit au niveau `info`, sur la sortie d'ERREUR : avec
+    ⚠️ `volumedetect` ecrit au niveau `info`, sur la sortie d'ERREUR : avec
     un `-v error` de trop on mesure un silence et tous les juges passent."""
-    fait = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(chemin),
-                           "-af", "volumedetect", "-f", "null", "-"],
-                          capture_output=True, text=True)
-    trouve = re.search(r"max_volume: (-?[\d.]+) dB", fait.stderr)
-    assert trouve, f"pas de pic mesurable dans {chemin.name}"
-    return float(trouve.group(1))
+    infos = json.loads(subprocess.run(["ffprobe", "-v", "error", "-show_entries",
+                                       "stream=sample_rate,channels:format=duration", "-of", "json", str(chemin)],
+                                      capture_output=True, text=True).stdout)
+    graphe = ("[0:a]asplit=4[a][b][c][d];[a]volumedetect,anullsink;"
+              f"[b]silencedetect=n={audio.SEUIL_QUEUE_DBFS}dB:d=0.2,anullsink;"
+              "[c]silencedetect=n=-40dB:d=0.05,anullsink;"
+              "[d]astats=measure_overall=Noise_floor+Peak_level:measure_perchannel=0[s]")
+    sortie = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(chemin), "-filter_complex", graphe,
+                             "-map", "[s]", "-f", "null", "-"], capture_output=True, text=True).stderr
+    # Chaque filtre signe ses lignes de son rang dans le graphe (asplit 0, volumedetect 1, anullsink 2,
+    # silencedetect 3, anullsink 4, silencedetect 5…) : les deux `silencedetect` se distinguent ainsi.
+    # ⚠️ Un graphe retouché décale les rangs : `volumedetect` parle toujours, il sert de témoin.
+    assert "[Parsed_volumedetect_1 @" in sortie, "le graphe a changé : relire les rangs des filtres"
+
+    def signees(rang):
+        return "\n".join(ligne for ligne in sortie.splitlines() if f"[Parsed_silencedetect_{rang} @" in ligne)
+    pic = re.search(r"max_volume: (-?[\d.]+) dB", sortie)
+    assert pic, f"pas de pic mesurable dans {chemin.name}"
+    plancher = re.search(r"Noise floor dB: (-?[\d.]+)", sortie)
+    pic_astats = re.search(r"Peak level dB: (-?[\d.]+)", sortie)
+    return {
+        "sonde": [str(flux[cle]) for flux in infos["streams"] for cle in ("sample_rate", "channels") if cle in flux],
+        "duree": float(infos["format"]["duration"]),
+        "pic": float(pic.group(1)),
+        "queue": signees(3),
+        "calme": signees(5),
+        "plancher": plancher and plancher.group(1),
+        "pic_astats": pic_astats and pic_astats.group(1),
+    }
 
 
 ffmpeg_present = pytest.mark.skipif(
@@ -404,8 +430,7 @@ def test_un_bruitage_est_mono_et_en_44_khz(echantillon, indice):
     """⚠️ Mono n'est pas une economie, c'est une CORRECTION : `son.js` place
     ses sons avec un `StereoPanner`, et un fichier deja large arrive a gauche
     quoi qu'on lui demande. Deux des premiers fichiers etaient dans ce cas."""
-    frequence, canaux = _ffprobe(audio.chemin(echantillon, indice),
-                                 "stream=sample_rate,channels")
+    frequence, canaux = _mesure(audio.chemin(echantillon, indice))["sonde"]
     assert int(canaux) == 1, "un son large ne se laisse pas placer"
     assert int(frequence) == 44100, "en 22 kHz il n'y a plus rien au-dessus de 11 kHz"
 
@@ -422,7 +447,7 @@ def test_un_bruitage_part_du_meme_niveau(echantillon, indice):
     marge tient a 1,2 : l'ecart total est passe de **34,4 dB a 1,8 dB**, et
     c'est ca que le juge protege.
     """
-    pic = _pic_dbfs(audio.chemin(echantillon, indice))
+    pic = _mesure(audio.chemin(echantillon, indice))["pic"]
     assert abs(pic - audio.PIC_VISE_DBFS) <= 1.2, \
         f"{pic:+.1f} dBFS au lieu de {audio.PIC_VISE_DBFS:+.1f} : le melange ne tient plus"
 
@@ -435,12 +460,10 @@ def test_un_bruitage_bref_ne_finit_pas_par_du_vide(echantillon, indice):
     """On ne paie pas pour du silence. ⚠️ Les boucles sont exclues : c'est
     exactement leur couture qu'un rognage abimerait."""
     chemin = audio.chemin(echantillon, indice)
-    fait = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(chemin), "-af",
-                           f"silencedetect=n={audio.SEUIL_QUEUE_DBFS}dB:d=0.2",
-                           "-f", "null", "-"], capture_output=True, text=True)
-    duree = float(_ffprobe(chemin, "format=duration")[0])
-    debuts = [float(m) for m in re.findall(r"silence_start: (-?[\d.]+)", fait.stderr)]
-    fins = [float(m) for m in re.findall(r"silence_end: ([\d.]+)", fait.stderr)]
+    m = _mesure(chemin)
+    duree = m["duree"]
+    debuts = [float(x) for x in re.findall(r"silence_start: (-?[\d.]+)", m["queue"])]
+    fins = [float(x) for x in re.findall(r"silence_end: ([\d.]+)", m["queue"])]
     if debuts and len(debuts) > len(fins):      # un silence ouvert jusqu'au bout
         assert duree - debuts[-1] < 0.25, \
             f"{duree - debuts[-1]:.2f} s de rien a la fin de {chemin.name}"
@@ -477,7 +500,7 @@ def test_les_bruitages_ont_de_l_aigu():
         chemin = audio.chemin(echantillon, 1)
         if not chemin.is_file():
             pytest.skip(f"{slug} n'est pas genere")
-        entier = _pic_dbfs(chemin)
+        entier = _mesure(chemin)["pic"]
         fait = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(chemin), "-af",
                                "highpass=f=8000:poles=2,volumedetect", "-f", "null", "-"],
                               capture_output=True, text=True)
@@ -507,20 +530,13 @@ def test_un_bruitage_bref_ne_souffle_pas(echantillon, indice):
     pas de verdict.
     """
     chemin = audio.chemin(echantillon, indice)
-    calme = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(chemin), "-af",
-                            "silencedetect=n=-40dB:d=0.05", "-f", "null", "-"],
-                           capture_output=True, text=True)
-    if "silence_start" not in calme.stderr:
+    m = _mesure(chemin)
+    if "silence_start" not in m["calme"]:
         pytest.skip("son continu : son plancher, c'est son son")
-    fait = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(chemin), "-af",
-                           "astats=measure_overall=Noise_floor+Peak_level:"
-                           "measure_perchannel=0", "-f", "null", "-"],
-                          capture_output=True, text=True)
-    plancher = re.search(r"Noise floor dB: (-?[\d.]+)", fait.stderr)
-    pic = re.search(r"Peak level dB: (-?[\d.]+)", fait.stderr)
+    plancher, pic = m["plancher"], m["pic_astats"]
     if not plancher or not pic:
         pytest.skip("plancher non mesurable sur ce fichier")
-    rsb = float(pic.group(1)) - float(plancher.group(1))
+    rsb = float(pic) - float(plancher)
     assert rsb >= audio.RSB_PLANCHER_DB, \
         f"{chemin.name} : {rsb:.0f} dB de rapport signal/bruit, ca souffle"
 
