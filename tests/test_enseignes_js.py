@@ -3,6 +3,8 @@ entre au bingo, au Rialto, à la salle de quilles et au lave-auto, et chaque com
 bingo et les quilles se jouent sans un `B.rng()` ; le Rialto passe son film le soir ; un char lavé perd un
 cran de chaleur, une fois par passage."""
 
+import pytest
+
 from app import enseignes
 
 OUTILS = """
@@ -152,42 +154,59 @@ def test_les_quilles_se_calculent_et_la_ligue_se_gagne_au_milieu_de_l_allee(banc
     assert r["de"] and r["total"] >= 32, r
 
 
-def test_le_rialto_passe_son_film_le_soir_et_on_en_sort_repose(banc):
-    rr = enseignes.REGLES["rialto"]
-    r = banc("function (L, o) {" + OUTILS + """
+@pytest.fixture(scope="module")
+def une_soiree_au_rialto(banc):
+    """UNE entrée au Rialto à 20 h (vague C, 28 sept. 2026 — trois bancs) : le billet de trois
+    soirs lu au comptoir, puis on en prend un, et le film passe — le projecteur regardé à deux
+    secondes du début, la fin et le repos à la fin.
+
+    ⚠️ Le jour remis à celui d'avant les trois soirs, avant d'acheter : le film du juge du repos
+    est celui de la partie, pas celui du 32. Le projecteur n'est pas une autre séance : c'est la
+    même, deux secondes après le début — et on la laisse finir."""
+    return banc("function (L, o) {" + OUTILS + """
         L.Jeu.commencer();
-        const B = L.B, M = L.Missions, E = L.Enseignes;
+        const B = L.B, M = L.Missions, E = L.Enseignes, C = L.Cineparc;
         B.partie.heure = 20 / 24;
         const pt = entrer(L, o, 'rialto');
+        // 1. Le billet dit le film du soir, trois soirs de suite.
+        const jour = B.partie.jour, billets = [];
+        for (let d = 0; d < 3; d++) {
+            B.partie.jour = 30 + d;
+            billets.push([item(M.menuDuPoint(pt), 'UN BILLET').libelle, L.Cineparc.programme().titre]);
+        }
+        B.partie.jour = jour;
+        // 2. On prend un billet, la vie basse.
         const billet = item(M.menuDuPoint(pt), 'UN BILLET');
         const actif = billet && billet.actif;
         B.joueur.vie = 40;
         billet.faire();
         const pendant = !!E.film, assis = { x: Math.floor(B.joueur.x / TT), y: Math.floor(B.joueur.y / TT) };
-        for (let k = 0; k < B.defs.enseignes.regles.rialto.film_s * 60 + 5; k++) o.frame(1);
-        return { actif: actif, pendant: pendant, assis: assis, siege: B.interieur.siege, apres: !!E.film, vie: B.joueur.vie };
-    }""")
-    assert r["actif"] and r["pendant"] and not r["apres"], r
-    assert r["assis"] == r["siege"], r
-    assert r["vie"] >= 40 + rr["repos_pv"], r
-
-
-def test_au_rialto_le_projecteur_eclaire_la_toile_depuis_le_fond_de_la_salle(banc):
-    """Pendant le film, le faisceau (`Cineparc.faisceau`, le même qu'au ciné-parc) part du mur du fond de la
-    salle et s'ouvre sur toute la toile (docs/jalons/le-casse-croute-du-cine-parc-au-centre-et-le-projecteur.md)."""
-    r = banc("function (L, o) {" + OUTILS + """
-        L.Jeu.commencer();
-        const B = L.B, M = L.Missions, C = L.Cineparc;
-        B.partie.heure = 20 / 24;
-        const pt = entrer(L, o, 'rialto');
-        item(M.menuDuPoint(pt), 'UN BILLET').faire();
+        // 3. Deux secondes plus tard, le projecteur éclaire la toile.
         for (let k = 0; k < 120; k++) o.frame(1);
         const appels = [], vrai = C.faisceau;
         C.faisceau = function () { appels.push(Array.prototype.slice.call(arguments, 1)); return vrai.apply(null, arguments); };
         L.Jeu.rendre();
         C.faisceau = vrai;
-        return { appels: appels, hauteur: B.interieur.hauteur, toile: B.interieur.toile };
+        const projecteur = { appels: appels, hauteur: B.interieur.hauteur, toile: B.interieur.toile };
+        // 4. Le film va au bout : on en sort reposé.
+        for (let k = 120; k < B.defs.enseignes.regles.rialto.film_s * 60 + 5; k++) o.frame(1);
+        return { billets: billets, projecteur: projecteur,
+                 film: { actif: actif, pendant: pendant, assis: assis, siege: B.interieur.siege, apres: !!E.film, vie: B.joueur.vie } };
     }""")
+
+
+def test_le_rialto_passe_son_film_le_soir_et_on_en_sort_repose(une_soiree_au_rialto):
+    rr = enseignes.REGLES["rialto"]
+    r = une_soiree_au_rialto["film"]
+    assert r["actif"] and r["pendant"] and not r["apres"], r
+    assert r["assis"] == r["siege"], r
+    assert r["vie"] >= 40 + rr["repos_pv"], r
+
+
+def test_au_rialto_le_projecteur_eclaire_la_toile_depuis_le_fond_de_la_salle(une_soiree_au_rialto):
+    """Pendant le film, le faisceau (`Cineparc.faisceau`, le même qu'au ciné-parc) part du mur du fond de la
+    salle et s'ouvre sur toute la toile (docs/jalons/le-casse-croute-du-cine-parc-au-centre-et-le-projecteur.md)."""
+    r = une_soiree_au_rialto["projecteur"]
     assert len(r["appels"]) == 1, r
     sx, sy, x0, x1, ty, force, _t = r["appels"][0]
     t = r["toile"]
@@ -207,18 +226,8 @@ def test_la_toile_du_rialto_est_un_grand_ecran():
         assert plan[piece["siege"]["y"]][piece["siege"]["x"]] not in "]", plan
 
 
-def test_le_billet_du_rialto_dit_le_film_du_soir(banc):
-    r = banc("function (L, o) {" + OUTILS + """
-        L.Jeu.commencer();
-        const B = L.B, M = L.Missions;
-        B.partie.heure = 20 / 24;
-        const pt = entrer(L, o, 'rialto'), out = [];
-        for (let d = 0; d < 3; d++) {
-            B.partie.jour = 30 + d;
-            out.push([item(M.menuDuPoint(pt), 'UN BILLET').libelle, L.Cineparc.programme().titre]);
-        }
-        return out;
-    }""")
+def test_le_billet_du_rialto_dit_le_film_du_soir(une_soiree_au_rialto):
+    r = une_soiree_au_rialto["billets"]
     assert len({titre for _, titre in r}) == 3, r
     for libelle, titre in r:
         assert libelle == "UN BILLET — " + titre, r

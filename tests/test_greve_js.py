@@ -5,6 +5,8 @@ tuiles de l'eau, là où aucun décor n'allait jamais. C'était une ligne de jug
 écrire *exprès*, pas à découvrir.
 """
 
+import pytest
+
 from app import carte
 
 #: ⚠️ LA LISTE DU JEU, pas une copie : celle que lit la règle d'écart de la rive
@@ -14,18 +16,47 @@ from app import carte
 MEUBLES = carte.MEUBLES_DU_BORD
 
 
-def test_chaque_meuble_de_greve_a_un_dessin(banc, paquet):
+@pytest.fixture(scope="module")
+def la_greve(banc):
+    """UN banc (vague C, 28 sept. 2026 — quatre bancs) : les fiches de dessin lues AVANT la
+    partie (rien ne les change), puis la ville bâtie — le semis lu dans la carte, puis le château
+    de sable cassé et réparé, en dernier parce que c'est le seul qui touche à quelque chose."""
+    return banc("""function (L, o) {
+        const dessins = {};
+        for (const quoi of %s) {
+          const d = L.DECORS[quoi];
+          dessins[quoi] = d ? { w: d.w, h: d.h, ancre: !!d.ancre, peint: typeof d.peindre } : null;
+        }
+        const flotte = { flottants: Object.keys(L.DECORS).filter(function (k) { return L.DECORS[k].flotte; }),
+                         parasolSolide: !!L.DECORS.parasol.solide,
+                         belvedereArrete: L.DECORS.belvedere.arrete || 0,
+                         chateauPv: L.DECORS.chateau_sable.pv };
+        L.Jeu.commencer();
+        const semis = { eau: [], sansDessin: [] };
+        for (const d of L.Monde.carte.def.decor) {
+          const fiche = L.DECORS[d.type];
+          if (!fiche) { semis.sansDessin.push(d.type); continue; }
+          const glyphe = L.Monde.glyphe(d.x, d.y);
+          if (glyphe === '~' && !fiche.flotte) semis.eau.push(d.type + '@' + d.x + ',' + d.y);
+        }
+        let chateau = { trouve: false };
+        const c = L.B.entites.find(function (e) { return e.decor === 'chateau_sable'; });
+        if (c) {
+          const avant = !!c.brise;
+          L.Entites.briser(c);
+          const casse = !!c.brise;
+          L.Entites.reparerLeDecor();
+          chateau = { trouve: true, avant: avant, casse: casse, apres: !!c.brise };
+        }
+        return { dessins: dessins, flotte: flotte, semis: semis, chateau: chateau };
+    }""" % list(MEUBLES))
+
+
+def test_chaque_meuble_de_greve_a_un_dessin(la_greve):
     """Un décor sans fiche `DECORS` est **invisible** — `dessiner` fait
     `if (!d) continue`, sans un mot. Six fiches semées et cinq dessinées, ça ne
     se voit pas dans un test Python : ça se voit à l'écran, ou jamais."""
-    r = banc("""function (L, o) {
-        const out = {};
-        for (const quoi of %s) {
-          const d = L.DECORS[quoi];
-          out[quoi] = d ? { w: d.w, h: d.h, ancre: !!d.ancre, peint: typeof d.peindre } : null;
-        }
-        return out;
-    }""" % list(MEUBLES))
+    r = la_greve["dessins"]
     for quoi in MEUBLES:
         d = r[quoi]
         assert d, f"{quoi} est semé dans la ville et n'a aucun dessin"
@@ -33,16 +64,15 @@ def test_chaque_meuble_de_greve_a_un_dessin(banc, paquet):
         assert d["ancre"] and d["w"] > 0 and d["h"] > 0, f"{quoi} : {d}"
 
 
-def test_seule_la_bouee_declare_flotter(banc, paquet):
+def test_seule_la_bouee_declare_flotter(la_greve, paquet):
     """⚠️ Le seul décor du jeu qui ait raison de flotter le **dit** (`flotte`),
     et c'est ce drapeau qui permet de juger les autres. Sans lui, « aucun décor
-    sur l'eau » serait une phrase qu'on répète en espérant."""
-    r = banc("""function (L, o) {
-        const flottants = Object.keys(L.DECORS).filter(function (k) { return L.DECORS[k].flotte; });
-        return { flottants: flottants, parasolSolide: !!L.DECORS.parasol.solide,
-                 belvedereArrete: L.DECORS.belvedere.arrete || 0,
-                 chateauPv: L.DECORS.chateau_sable.pv };
-    }""")
+    sur l'eau » serait une phrase qu'on répète en espérant.
+
+    (Et c'est ce juge qui tient `carte.FLOTTANTS == ("bouee",)` : la ville, elle, est jugée par
+    `test_carte::test_le_decor_ne_bouche_ni_la_rue_ni_les_portes` — ce qui flotte est sur l'eau,
+    le reste sur un sol marchable. Vague C : `test_greve.py::test_seule_la_bouee_flotte` retiré.)"""
+    r = la_greve["flotte"]
     # ⚠️ **Une seule vérité, vérifiée des deux côtés** : la liste vit en Python
     # (`carte.FLOTTANTS`), le paquet la porte, et les fiches de dessin doivent
     # dire exactement la même chose. Deux listes, c'est deux vérités le jour où
@@ -59,20 +89,11 @@ def test_seule_la_bouee_declare_flotter(banc, paquet):
     assert r["chateauPv"] <= 10, "un château de sable qui encaisse"
 
 
-def test_un_chateau_de_sable_se_rase_et_revient_au_matin(banc, paquet):
+def test_un_chateau_de_sable_se_rase_et_revient_au_matin(la_greve):
     """⚠️ **Le seul du lot qui ait une règle**, et c'est ce qui en fait autre
     chose qu'un ornement. Un enfant qui recommence son château tous les jours,
     c'est une blague que la ville raconte sans qu'on l'écrive."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const chateau = L.B.entites.find(function (e) { return e.decor === 'chateau_sable'; });
-        if (!chateau) return { trouve: false };
-        const avant = !!chateau.brise;
-        L.Entites.briser(chateau);
-        const casse = !!chateau.brise;
-        L.Entites.reparerLeDecor();
-        return { trouve: true, avant: avant, casse: casse, apres: !!chateau.brise };
-    }""")
+    r = la_greve["chateau"]
     assert r["trouve"], "aucun château de sable n'est né avec la ville"
     assert r["avant"] is False, "un château déjà cassé au lever du jour"
     assert r["casse"] is True, "le château a encaissé"
@@ -112,20 +133,10 @@ def test_un_parasol_varie_d_une_tuile_a_l_autre_sans_tirer_un_de(banc, paquet):
     assert r["stable"], "la même tuile ne rend pas la même couleur deux fois"
 
 
-def test_le_semis_de_la_greve_tient_a_l_ecran(banc, paquet):
+def test_le_semis_de_la_greve_tient_a_l_ecran(la_greve):
     """Le juge qui relie les deux moitiés : ce que Python sème doit être ce que
     le navigateur dessine — et rien de ce qui est semé ne doit se retrouver sur
     l'eau, sauf ce qui déclare flotter."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const sur = { eau: [], sansDessin: [] };
-        for (const d of L.Monde.carte.def.decor) {
-          const fiche = L.DECORS[d.type];
-          if (!fiche) { sur.sansDessin.push(d.type); continue; }
-          const glyphe = L.Monde.glyphe(d.x, d.y);
-          if (glyphe === '~' && !fiche.flotte) sur.eau.push(d.type + '@' + d.x + ',' + d.y);
-        }
-        return sur;
-    }""")
+    r = la_greve["semis"]
     assert r["sansDessin"] == [], "des décors semés sans dessin : %s" % set(r["sansDessin"])
     assert r["eau"] == [], "des décors flottent sans le déclarer : %s" % r["eau"][:5]

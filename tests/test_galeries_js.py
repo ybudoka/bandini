@@ -3,6 +3,8 @@ entre par le bord ouest des Érables ; le jour, des gens et des comptoirs ; la n
 s'éteignent une à une, la voix au haut-parleur sait où tu es, le gardien s'évanouit quand on approche, et
 l'objet perdu du rayon 4 se rapporte une fois par nuit."""
 
+import pytest
+
 from app.blocs import galeries
 
 OUTILS = """
@@ -54,57 +56,85 @@ def test_le_jour_du_monde_la_nuit_personne(banc):
     assert "galeries-entree" in n["voix"], n
 
 
-def test_les_lumieres_s_eteignent_une_a_une_et_la_voix_sait_ou_tu_es(banc):
-    h = galeries.HANTISE
-    r = banc("async function (L, o) {" + OUTILS + """
+#: Ressortir des Galeries, puis y rentrer par la même porte, à 23 h : une visite de nuit NEUVE.
+#: ⚠️ C'est `Galeries.maj` qui oublie la visite, à la première image hors de la pièce (`visite = null`) :
+#: les lumières rallumées, les coins pas encore dits, le gardien à son premier poste. L'objet perdu,
+#: lui, se souvient de la nuit (`partie.galeriesNuit`) — et aucune scène d'avant n'y touche.
+REVENIR = """
+  function revenir(L, o) {
+    const B = L.B, j = B.joueur;
+    L.Jeu.sortir(); o.fondu(); for (let k = 0; k < 200 && B.interieur; k++) o.frame(1);
+    o.frame(2);
+    const vide = !L.Galeries.visite;
+    B.partie.heure = 23 / 24;
+    const porte = L.Monde.carte.def.portes.find(function (q) { return q.interieur === 'galeries'; });
+    j.x = porte.x * TT + 8; j.y = (porte.y + 1) * TT + 4; L.Entites.indexer();
+    L.Jeu.entrer(porte); o.fondu();
+    for (let k = 0; k < 200 && !B.interieur; k++) o.frame(1);
+    return vide && !!B.interieur;
+  }
+"""
+
+
+@pytest.fixture(scope="module")
+def trois_visites_de_nuit(banc):
+    """UNE entrée par le bord ouest des Érables, trois visites de nuit (vague C, 28 sept. 2026 —
+    trois bancs refaisaient le même passage) : les lumières et la voix, le gardien, l'objet perdu.
+    Entre deux visites, on ressort et on rentre (`REVENIR`) : chaque juge avait une visite neuve."""
+    return banc("async function (L, o) {" + OUTILS + REVENIR + """
         L.Jeu.commencer();
-        const B = L.B, G = L.Galeries, V = L.Son.Voix;
+        const B = L.B, G = L.Galeries, V = L.Son.Voix, h = B.defs.galeries.hantise;
+        // 1. Les lumières s'éteignent une à une, et la voix sait où tu es.
         await entrer(L, o, 23);
         o.frame(2);
-        const s = B.defs.galeries.hantise.lumiere_s * 60, eteintes = [];
+        const s = h.lumiere_s * 60, eteintes = [];
         aller(L, 12, 6);
         for (let k = 0; k < 5; k++) { for (let i = 0; i < s; i++) o.frame(1); eteintes.push(G.visite.eteintes); }
         V.demandees.length = 0;
         aller(L, 15, 3); o.frame(2); aller(L, 9, 3); o.frame(2); aller(L, 2, 8); o.frame(2);
-        return { eteintes: eteintes, voix: V.demandees.slice() };
-    }""")
-    assert r["eteintes"] == [1, 2, 3, 4, 4][: len(r["eteintes"])] and h["lumieres"] == 4, r
-    for coin in ("fontaine", "escalier", "rayon"):
-        assert f"galeries-{coin}" in r["voix"], (coin, r["voix"])
-
-
-def test_le_gardien_s_evanouit_quand_on_approche_et_revient_ailleurs(banc):
-    r = banc("async function (L, o) {" + OUTILS + """
-        L.Jeu.commencer();
-        const B = L.B, G = L.Galeries, V = L.Son.Voix, h = B.defs.galeries.hantise;
-        await entrer(L, o, 23);
+        const lumieres = { eteintes: eteintes, voix: V.demandees.slice() };
+        // 2. Le gardien s'évanouit quand on approche, et revient ailleurs.
+        const neuve2 = revenir(L, o);
         aller(L, 12, 6);
         for (let i = 0; i < h.lumiere_s * 60 * 2 + 10; i++) o.frame(1);
         const g1 = G.visite.gardien && { x: G.visite.gardien.x, y: G.visite.gardien.y };
         const loin = g1 ? Math.round(Math.hypot(g1.x - B.joueur.x, g1.y - B.joueur.y)) : 0;
         V.demandees.length = 0;
         B.joueur.x = g1.x + 10; B.joueur.y = g1.y; L.Entites.indexer(); o.frame(2);
-        const parti = !G.visite.gardien, voix = V.demandees.slice();
+        const parti = !G.visite.gardien, voixGardien = V.demandees.slice();
         for (let i = 0; i < (h.gardien_revient_s + 1) * 60; i++) o.frame(1);
         const g2 = G.visite.gardien && { x: G.visite.gardien.x, y: G.visite.gardien.y };
-        return { g1: g1, loin: loin, parti: parti, voix: voix, g2: g2, px: h.gardien_px };
-    }""")
-    assert r["g1"] and r["loin"] > r["px"] * 2, f"le gardien ne se montre pas, ou trop près : {r}"
-    assert r["parti"] and "galeries-gardien" in r["voix"], r
-    assert r["g2"] and r["g2"] != r["g1"], f"il ne revient pas, ou revient à la même place : {r}"
-
-
-def test_l_objet_perdu_une_fois_par_nuit(banc):
-    r = banc("async function (L, o) {" + OUTILS + """
-        L.Jeu.commencer();
-        const B = L.B, o0 = { x: 2, y: 9 };
-        await entrer(L, o, 23);
+        const gardien = { neuve: neuve2, g1: g1, loin: loin, parti: parti, voix: voixGardien, g2: g2, px: h.gardien_px };
+        // 3. L'objet perdu du rayon 4, une fois par nuit.
+        const neuve3 = revenir(L, o);
+        const o0 = { x: 2, y: 9 };
         o.frame(2);
         const argent = B.partie.argent;
         aller(L, o0.x, o0.y); o.frame(2); o.tape('KeyE', 1); o.frame(2);
         const premier = B.partie.argent - argent;
         o.tape('KeyE', 1); o.frame(2);
         const second = B.partie.argent - argent - premier;
-        return { premier: premier, second: second };
+        return { lumieres: lumieres, gardien: gardien, objet: { neuve: neuve3, premier: premier, second: second } };
     }""")
+
+
+def test_les_lumieres_s_eteignent_une_a_une_et_la_voix_sait_ou_tu_es(trois_visites_de_nuit):
+    h = galeries.HANTISE
+    r = trois_visites_de_nuit["lumieres"]
+    assert r["eteintes"] == [1, 2, 3, 4, 4][: len(r["eteintes"])] and h["lumieres"] == 4, r
+    for coin in ("fontaine", "escalier", "rayon"):
+        assert f"galeries-{coin}" in r["voix"], (coin, r["voix"])
+
+
+def test_le_gardien_s_evanouit_quand_on_approche_et_revient_ailleurs(trois_visites_de_nuit):
+    r = trois_visites_de_nuit["gardien"]
+    assert r["neuve"], f"le décor du juge est faux : la visite d'avant n'a pas été oubliée : {r}"
+    assert r["g1"] and r["loin"] > r["px"] * 2, f"le gardien ne se montre pas, ou trop près : {r}"
+    assert r["parti"] and "galeries-gardien" in r["voix"], r
+    assert r["g2"] and r["g2"] != r["g1"], f"il ne revient pas, ou revient à la même place : {r}"
+
+
+def test_l_objet_perdu_une_fois_par_nuit(trois_visites_de_nuit):
+    r = trois_visites_de_nuit["objet"]
+    assert r["neuve"], f"le décor du juge est faux : la visite d'avant n'a pas été oubliée : {r}"
     assert r["premier"] == galeries.HANTISE["recompense"] and r["second"] == 0, r

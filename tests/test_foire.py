@@ -400,12 +400,22 @@ def test_la_peche_aux_canards_se_joue_au_bouton_et_paie(banc):
     assert r["gain"] == attendu, f"la pêche a rapporté {r['gain']} $, pas {attendu} $"
 
 
-def test_la_foire_se_remplit_de_monde_et_de_mascottes(banc, paquet):
-    """« Beaucoup de monde », « des mascottes ». ⚠️ Ils naissent DANS l'enceinte,
-    y restent, et personne n'apparaît sous les yeux du joueur. Au premier essai,
-    la foule naissait au bout de la foire, hors de la bulle — et `peupler`
-    l'effaçait à l'image suivante : six forains sur trente."""
-    r = banc("""function (L, o) {
+@pytest.fixture(scope="module")
+def la_foire_et_son_monde(banc):
+    """UN banc (vague C, 28 sept. 2026 — trois bancs) : les fiches de dessin des manèges et des
+    kiosques, lues AVANT la partie (rien ne les change), puis la partie et la foule de la foire."""
+    return banc("""function (L, o) {
+        const maneges = {};
+        for (const nom of %s) {
+          const d = L.DECORS[nom];
+          maneges[nom] = d ? { anime: d.anime || 0, variantes: d.variantes || 0,
+                               arrete: d.arrete || 0, pv: d.pv || 0, solide: !!d.solide } : null;
+        }
+        const kiosques = {};
+        for (const k of L.B.defs.carte.kiosques_de_foire) {
+          const d = L.DECORS[k.slug];
+          kiosques[k.slug] = d ? { variantes: d.variantes || 0, peint: typeof d.peindre } : null;
+        }
         L.Jeu.commencer();
         const B = L.B, TT = L.TT, f = L.Monde.carte.def.foire, k = L.Monde.carte.def.kiosques_de_foire;
         B.joueur.x = (f.x + 20) * TT + 8; B.joueur.y = (k[0].y + 1) * TT + 8;
@@ -425,9 +435,18 @@ def test_la_foire_se_remplit_de_monde_et_de_mascottes(banc, paquet):
         const dehors = gens.filter(function (e) {
           return !L.Monde.dansLaFoire(Math.floor(e.x / TT), Math.floor(e.y / TT)); }).length;
         const mascottes = gens.filter(function (e) { return e.metier === 'mascotte'; });
-        return { forains: gens.length - mascottes.length, mascottes: mascottes.length, dehors: dehors,
-                 vus: vus, salue: salue, voulus: B.defs.pietons.foule_de_foire };
-    }""")
+        return { maneges: maneges, kiosques: kiosques,
+                 foule: { forains: gens.length - mascottes.length, mascottes: mascottes.length, dehors: dehors,
+                          vus: vus, salue: salue, voulus: B.defs.pietons.foule_de_foire } };
+    }""" % list(MANEGES + ("grande_roue",)))
+
+
+def test_la_foire_se_remplit_de_monde_et_de_mascottes(la_foire_et_son_monde):
+    """« Beaucoup de monde », « des mascottes ». ⚠️ Ils naissent DANS l'enceinte,
+    y restent, et personne n'apparaît sous les yeux du joueur. Au premier essai,
+    la foule naissait au bout de la foire, hors de la bulle — et `peupler`
+    l'effaçait à l'image suivante : six forains sur trente."""
+    r = la_foire_et_son_monde["foule"]
     assert r["forains"] >= r["voulus"]["forains"] * 0.8, f"{r['forains']} forains : ce n'est pas beaucoup de monde"
     assert r["mascottes"] == r["voulus"]["mascottes"], "il manque des mascottes"
     assert r["dehors"] <= 2, f"{r['dehors']} forains sont sortis de l'enceinte"
@@ -435,16 +454,8 @@ def test_la_foire_se_remplit_de_monde_et_de_mascottes(banc, paquet):
     assert r["salue"], "aucune mascotte ne salue"
 
 
-def test_les_manèges_tournent_et_on_n_y_monte_pas(banc, paquet):
-    r = banc("""function (L, o) {
-        const out = {};
-        for (const nom of %s) {
-          const d = L.DECORS[nom];
-          out[nom] = d ? { anime: d.anime || 0, variantes: d.variantes || 0,
-                           arrete: d.arrete || 0, pv: d.pv || 0, solide: !!d.solide } : null;
-        }
-        return out;
-    }""" % list(MANEGES + ("grande_roue",)))
+def test_les_manèges_tournent_et_on_n_y_monte_pas(la_foire_et_son_monde):
+    r = la_foire_et_son_monde["maneges"]
     for nom, d in r.items():
         assert d, f"{nom} n'a aucun dessin"
         assert d["anime"] > 0 and d["variantes"] > 1, f"{nom} ne tourne pas"
@@ -470,18 +481,11 @@ def test_les_manèges_sont_a_l_echelle_de_la_grande_roue():
         assert 2 * demi >= 0.8 * mesure_de_dessin(nom, "w"), f"{nom} : on marche sur le plancher"
 
 
-def test_chaque_kiosque_a_un_vendeur_peint(banc, paquet):
+def test_chaque_kiosque_a_un_vendeur_peint(la_foire_et_son_monde):
     """« Plein de vendeurs. » ⚠️ Peints dans le kiosque, pas posés comme des
     entités — et deux kiosques voisins n'ont pas le même visage : la variante
     se tire à l'empreinte de la tuile."""
-    r = banc("""function (L, o) {
-        const out = {};
-        for (const k of L.B.defs.carte.kiosques_de_foire) {
-          const d = L.DECORS[k.slug];
-          out[k.slug] = d ? { variantes: d.variantes || 0, peint: typeof d.peindre } : null;
-        }
-        return out;
-    }""")
+    r = la_foire_et_son_monde["kiosques"]
     for slug, d in r.items():
         assert d, f"le kiosque {slug} n'a pas de dessin"
         assert d["peint"] == "function"
@@ -632,15 +636,44 @@ def test_la_montagne_russe_tient_sur_ses_pieds(ville):
 # --- Au banc : ils roulent ------------------------------------------------------
 
 
-def test_le_train_fait_le_tour_sans_quitter_ses_rails(banc, paquet):
-    """Un tour complet, chaque wagon toujours sur une tuile de voie, et attelés :
-    l'écart d'un wagon au suivant ne bouge pas (un peu moins en courbe, la
-    corde)."""
-    r = banc("""function (L, o) {
+@pytest.fixture(scope="module")
+def deux_tours_du_petit_train(banc):
+    """UNE partie, deux mesures du train mené par `Foire.maj` (vague C, 28 sept. 2026 — deux
+    bancs) : il marque l'arrêt en gare à chaque tour, puis il fait le tour sans quitter ses rails.
+
+    ⚠️ Entre les deux, le train et le joueur remis tels que la partie les avait posés — `Foire.maj`
+    ne tire aucun dé et ne bouge personne (`test_la_foire_qui_roule_ne_tire_aucun_de`), donc le
+    reste de la ville n'a pas bougé d'un pixel : c'est le monde que le second juge voyait seul.
+    Le sifflet espionné de la première mesure est rendu."""
+    return banc("""function (L, o) {
         L.Jeu.commencer();
-        const F = L.Foire, t = F.train, d = t.def, TT = L.TT;
+        const F = L.Foire, t = F.train, d = t.def, TT = L.TT, j = L.B.joueur;
+        const cles = ['s', 'v', 'sifflet', 'bloque', 'bloquePar', 'attente', 'tours', 'passager'];
+        const depart = {};
+        cles.forEach(function (k) { depart[k] = t[k]; });
+        const joueur = { x: j.x, y: j.y };
+        // 1. L'arrêt en gare, deux tours.
+        let sifflets = 0;
+        const vraiSifflet = L.Son.SFX.sifflet_train;
+        L.Son.SFX.sifflet_train = function () { sifflets++; };
+        j.x = t.xs[t.sGare]; j.y = t.ys[t.sGare] - 40;
+        const arrets = [], tuiles = [];
+        let images = 0, aQuai = 0;
+        const tours0 = t.tours;
+        while (t.tours < tours0 + 2 || t.attente > 0) {
+          F.maj(); images++;
+          if (t.attente > 0) { aQuai++; if (aQuai === 1) { const p = F.pointDuTrain(t.s); tuiles.push([Math.floor(p.x / TT), Math.floor(p.y / TT)]); } }
+          else if (aQuai) { arrets.push(aQuai); aQuai = 0; }
+          if (images > 9000) break;
+        }
+        const gare = { arrets: arrets, tuiles: tuiles, gare: d.voie[d.gare], attendu: d.gare_images, images: images, sifflets: sifflets };
+        L.Son.SFX.sifflet_train = vraiSifflet;
+        cles.forEach(function (k) { t[k] = depart[k]; });
+        j.x = joueur.x; j.y = joueur.y;
+        // 2. Un tour complet, chaque wagon sur la voie, attelés.
         const rails = new Set(d.voie.map(function (c) { return c[0] + ',' + c[1]; }));
-        let parcouru = 0, hors = 0, ecartMin = 1e9, ecartMax = 0, images = 0;
+        let parcouru = 0, hors = 0, ecartMin = 1e9, ecartMax = 0;
+        images = 0;
         while (parcouru < t.n + 20 && images < 6000) {
           const avant = t.s;
           F.maj(); images++;
@@ -656,10 +689,18 @@ def test_le_train_fait_le_tour_sans_quitter_ses_rails(banc, paquet):
         }
         // Et dans le jeu, c'est la boucle qui le fait avancer.
         const s0 = t.s; o.frame(30);
-        return { parcouru: parcouru, n: t.n, images: images, hors: hors, ecartMin: ecartMin, ecartMax: ecartMax,
-                 ecart: d.ecart_px, wagons: F.wagons().length, attendus: d.wagons + 1,
-                 dansLeJeu: (t.s - s0 + t.n) % t.n };
+        return { gare: gare,
+                 tour: { parcouru: parcouru, n: t.n, images: images, hors: hors, ecartMin: ecartMin, ecartMax: ecartMax,
+                         ecart: d.ecart_px, wagons: F.wagons().length, attendus: d.wagons + 1,
+                         dansLeJeu: (t.s - s0 + t.n) % t.n } };
     }""")
+
+
+def test_le_train_fait_le_tour_sans_quitter_ses_rails(deux_tours_du_petit_train):
+    """Un tour complet, chaque wagon toujours sur une tuile de voie, et attelés :
+    l'écart d'un wagon au suivant ne bouge pas (un peu moins en courbe, la
+    corde)."""
+    r = deux_tours_du_petit_train["tour"]
     assert r["parcouru"] >= r["n"], f"le train n'a pas fait le tour : {r}"
     assert r["hors"] == 0, f"{r['hors']} fois un wagon hors des rails"
     assert r["wagons"] == r["attendus"] >= 4
@@ -881,26 +922,10 @@ def test_le_petit_train_a_sa_gare_et_son_quai(ville):
     assert t["gare_images"] >= 240, "on n'a pas le temps de monter"
 
 
-def test_le_petit_train_marque_l_arret_en_gare_a_chaque_tour(banc, paquet):
+def test_le_petit_train_marque_l_arret_en_gare_a_chaque_tour(deux_tours_du_petit_train):
     """Il s'arrête à la gare, la locomotive sur sa tuile, le temps qu'on dit —
     puis il siffle et repart. Deux tours, deux arrêts."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const F = L.Foire, t = F.train, d = t.def, TT = L.TT;
-        let sifflets = 0;
-        L.Son.SFX.sifflet_train = function () { sifflets++; };
-        L.B.joueur.x = t.xs[t.sGare]; L.B.joueur.y = t.ys[t.sGare] - 40;
-        const arrets = [], tuiles = [];
-        let images = 0, aQuai = 0;
-        const tours0 = t.tours;
-        while (t.tours < tours0 + 2 || t.attente > 0) {
-          F.maj(); images++;
-          if (t.attente > 0) { aQuai++; if (aQuai === 1) { const p = F.pointDuTrain(t.s); tuiles.push([Math.floor(p.x / TT), Math.floor(p.y / TT)]); } }
-          else if (aQuai) { arrets.push(aQuai); aQuai = 0; }
-          if (images > 9000) break;
-        }
-        return { arrets: arrets, tuiles: tuiles, gare: d.voie[d.gare], attendu: d.gare_images, images: images, sifflets: sifflets };
-    }""")
+    r = deux_tours_du_petit_train["gare"]
     assert len(r["arrets"]) == 2, f"il ne marque pas l'arrêt à chaque tour : {r}"
     assert all(a >= r["attendu"] - 1 for a in r["arrets"]), r["arrets"]
     assert all(tuile == r["gare"] for tuile in r["tuiles"]), f"la locomotive s'arrête hors de sa gare : {r['tuiles']}"
