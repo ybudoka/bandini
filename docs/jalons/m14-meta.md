@@ -656,6 +656,12 @@ deuxième joueur.
 
 ---
 
+### Livré — le verdict de Martin (28 sept. 2026)
+
+Martin, manette en main, sur la coop locale et le reste de M14 : « M14 Meta, c'est ok ». La
+ligne quitte le plan. La coop en ligne reste une porte ouverte, pas une promesse : elle n'aura
+de ligne que si Martin la demande.
+
 ## Remaniement : **2 vrais joueurs** (22 sept. 2026)
 
 Martin, après l'essai : « **2 vrais joueurs** ». C'est le mot qui a tout décidé — l'essai

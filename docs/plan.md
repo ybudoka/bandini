@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (267 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (268 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -79,7 +79,6 @@ pas quand l'ordre de travail change.
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
 | Le décor, les bêtes et les gens répondent — deuxième vague | ⬜ **en cours** (livrés : manger au barbecue, caresser le chat, vider un parcomètre, arracher une affiche ; le buisson est annulé ; restent le caddie et le panneau, à préciser par Martin) | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/le-decor-les-betes-et-les-gens-repondent.md#fiche-de-la-deuxième-vague) |
-| M14 Meta | ⬜ **en cours** (6 vagues livrées : le compte, la session longue, les parties sur le serveur, le jeu qui se synchronise, le NIP, effacer son compte, le défi du jour, et le mode photo ; la coop locale à **deux vrais joueurs** (un clavier, une manette, chacun sur sa source d'entrées : ses coups portent, il suit dans les pièces et monte en passager, portes, missions et volant restent au joueur 1 — la porte reste ouverte à une coop en ligne) ; reste le verdict de Martin, manette en main) | 17 sept. 2026 | **P4** | ajout | [fiche](jalons/m14-meta.md#fiche) · [notes](jalons/m14-meta.md#notes) |
 | Les juges : moins de doublons, plus de morsure | ⬜ **en cours** (vague A : les juges qui ne mordent pas) | 28 sept. 2026 | **P3** | **correctif** | [fiche](jalons/les-juges-moins-de-doublons-plus-de-morsure.md#fiche) |
 | Des blocs de carte en extensions | ⬜ **en cours** (✅ vagues 1 à 3 livrées : à pied, au volant, à deux, la police qui reprend au bord, et le premier vrai bloc — le chalet du rang, la deuxième planque ; reste « un vrai dehors », avec le bloc qui en aura besoin) | 25 sept. 2026 | **P3** | ajout | [fiche](jalons/des-blocs-de-carte-en-extensions.md#fiche) |
 | Le quartier chinois : le Petit-Canton, un 7e district | ⬜ **en cours** (étape 2 sur 4 : le quartier — ✅ vague A livrée, ses bâtiments, ses enseignes et leurs plaques à idéogrammes ; reste la vague B, les lanternes, l'arche et le bus ; ✅ étape 1 [la ville s'agrandit au nord](jalons/la-ville-s-agrandit-au-nord.md#notes) ; puis le donneur et ses missions, les Mantes) | 26 sept. 2026 | **P3** | ajout | [fiche](jalons/le-quartier-chinois.md#fiche) |
@@ -125,7 +124,6 @@ Ce que chaque ligne à faire attend (la table de tri du 13 sept. 2026, réduite 
 | **P3** | ajout | Des blocs de carte en extensions | 3 | ⚠️ **porte** la deuxième planque, la cabane à sucre, le centre d'achat hanté et le ciné-parc ; une carte à part derrière un fondu au noir (Martin) — le mécanisme des pièces, en plein air et au volant ; l'île et l'aéroport ne bougent pas |
 | **P3** | ajout | Le quartier chinois : le Petit-Canton, un 7e district | 4 | ⚠️ **porte** l'école rivale ; redessine la ville — donc à côté de la trame, posé en dernier et sans dé (la recette de l'aéroport) ; touche aux frontières des gangs, donc à voir avec « Les territoires des gangs bougent » |
 | **P4** | ajout | L'école rivale : les Mantes, un gang qui sait se battre | 3 | le Petit-Canton d'abord (Martin, 26 sept. 2026 : un gang neuf, les Mantes, dans le quartier chinois au nord) |
-| **P4** | ajout | M14 Meta | 4 | de l'**infrastructure** (serveur, BD, comptes, sessions, NIP) : un autre métier que le reste. ⚠️ Rien n'en dépend, et rien n'en doit dépendre : un compte est un **confort**, le jeu se joue serveur éteint |
 | **P4** | ajout | L'Île-aux-Corneilles | 3 | **les zones conditionnelles** d'abord ; l'eau est livrée, le traversier (M12) viendra après et l'île l'attend sans lui |
 | **P4** | ajout | Quatre activités que le jeu n'a pas | 2 | ⚠️ la **refonte des véhicules** d'abord (les deux boulots neufs ne demandent aucun char de plus, mais la liste du quai fait regarder le parc de près) |
 | **P4** | ajout | M16 Cent missions | 8 (4 × 2) | le **carnet** d'abord (c'est lui qui rend cent missions lisibles) et **les missions mises en scène** (chaque mission porte ses scènes et ses dialogues) ; ⚠️ les dialogues et les scènes sortent du paquet ; M13 en est la dernière tranche |
