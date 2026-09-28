@@ -96,6 +96,7 @@ pas quand l'ordre de travail change.
 | Le marché aux puces du dimanche | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-marche-aux-puces-du-dimanche.md#fiche) |
 | Une amélioration générale des toits | ⬜ **à faire** (à trancher par Martin : la liste, et par où commencer) | — | **P4** | ajout | [fiche](jalons/une-amelioration-generale-des-toits.md#fiche) |
 | Les quatre saisons, réalistes | ⬜ **à faire** (à trancher par Martin : l'ordre des vagues, l'option de la neige, et le mois où commence une partie) | — | **P4** | ajout | [fiche](jalons/les-quatre-saisons-realistes.md#fiche) |
+| Des statues dans les parcs | ⬜ **en cours** (une statue de bronze au milieu de la place pavée de chaque parc de ville — le fondateur, le cavalier, le hockeyeur —, posée après tout et sans dé, numérotée à part ; et sa plaque qu'on lit) | 28 sept. 2026 | **P4** | ajout | [fiche](jalons/des-statues-dans-les-parcs.md#fiche) |
 
 ## L'ordre
 
