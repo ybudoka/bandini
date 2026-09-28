@@ -448,11 +448,14 @@ const Histoire = (function () {
   }
 
   /** Le passage d'un bloc de carte (`B.defs.blocs`), en pixels de la VILLE : le milieu de l'ouverture,
-      un pas en deca du bord. Null dans un bloc — il n'y a pas de ville autour. */
+      un pas en deca du bord. Null dans un bloc — il n'y a pas de ville autour — et dans une piece :
+      ⚠️ `Monde.carte` y est la carte de la PIECE, et ses mesures posaient le passage de la villa dans le
+      bar de Josee. Null, la scene le cherche dans la ville (`Scenes.lieu` → `dansLaVille`), et l'y trouve
+      marque `dehors` : une coupe y va, au noir. */
   function passageDuBloc(slug) {
-    if (B.bloc) return null;
+    if (B.bloc || !Monde.carte || Monde.carte.interieur) return null;
     const b = ((B.defs && B.defs.blocs) || []).find(function (q) { return q.slug === slug; });
-    if (!b || !Monde.carte) return null;
+    if (!b) return null;
     const o = b.passage, w = Monde.carte.w, h = Monde.carte.h, milieu = (o.de + o.l / 2) * TT;
     const place = o.bord === 'nord' ? { x: milieu, y: TT } : o.bord === 'sud' ? { x: milieu, y: (h - 1) * TT }
       : o.bord === 'ouest' ? { x: TT, y: milieu } : { x: (w - 1) * TT, y: milieu };

@@ -132,7 +132,15 @@ OUTILS = ('  const ORDRE = ' + json.dumps(missions.ordre_topologique()) + ';' + 
     // donneur, lui, est reste chez lui. Poser le joueur sur le donneur dans ce
     // dernier cas faisait parler en personne quelqu'un que la vraie partie
     // aurait mis au combine.
-    if (o.lieu) { const l = L.Histoire.lieu(o.lieu); j.x = l.x; j.y = l.y; }
+    // ⚠️ Un lieu DANS UN BLOC (la villa de v01/v02) n'a pas de pixel en ville, et le banc n'entre pas
+    // dans un bloc (sa carte arrive par le réseau) : on se pose à son passage, comme la flèche
+    // (`Histoire.passageDuBloc`). Le donneur est aussi loin de l'un que de l'autre : la fin se dit
+    // pareil, au combiné.
+    if (o.lieu) {
+      const bloc = L.Histoire.blocDuLieu(o.lieu);
+      const l = L.Histoire.lieu(o.lieu) || (bloc && L.Histoire.passageDuBloc(bloc));
+      j.x = l.x; j.y = l.y;
+    }
     else if (o.type === 'retourner') {
       const e = L.Histoire.donneur(m.donneur) || L.Histoire.lieuDuPersonnage(m.donneur);
       j.x = e.x - 14; j.y = e.y;
