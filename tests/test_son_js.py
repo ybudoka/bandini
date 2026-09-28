@@ -11,6 +11,8 @@ toute la ville en silence, sans le moindre message — la panne de Martin, le
 fixe et un accumulateur.
 """
 
+import pytest
+
 
 def test_sans_audio_du_tout_le_jeu_tourne_et_le_dit(banc):
     """Le banc n'a pas d'AudioContext : le jeu doit tourner, muet, sans planter."""
@@ -173,23 +175,65 @@ def test_sans_son_accorde_la_musique_ne_pose_aucune_note(banc):
     assert r["debutT"] == 0
 
 
-def test_le_theme_joue_des_que_le_son_est_accorde(banc):
-    r = banc("""function (L, o) {
+@pytest.fixture(scope="module")
+def sequenceur(banc):
+    """⚠️ **UN BANC POUR LES TROIS JUGES DU SÉQUENCEUR QUI JOUE** (vague C, 28 sept. 2026) :
+    ils branchaient le même son accordé, retiraient le même `fichier` et laissaient jouer le
+    thème 200, 400 puis un tour de basse d'images. On le joue une fois, jusqu'au plus long, et
+    l'on note où en était la liste des notes à chacune de leurs bornes : chaque juge lit
+    EXACTEMENT les notes qu'il voyait (`o.frame(200)` puis `o.frame(200)` = `o.frame(400)`,
+    le banc n'a pas d'autre horloge que ses images).
+
+    ⚠️ Pas celui du son RETENU (`test_sans_son_accorde…`) : son contexte est suspendu, et le
+    jeu ne rebranche pas un autre contexte en cours de route."""
+    return banc("""function (L, o) {
         const joues = o.brancherAudio(true);
         L.Son.sonder();
-        // ⚠️ EN NOTES, expres. Ce juge parle du SEQUENCEUR — devenu le FILET
+        // ⚠️ EN NOTES, expres. Ces juges parlent du SEQUENCEUR — devenu le FILET
         // le 14 sept. 2026, quand les quinze morceaux sont passes en mp3. Sans
-        // cette ligne il jugerait la boucle d'un fichier, qui n'a ni pas, ni
-        // note, ni derive : il resterait vert en ne gardant plus rien, et le
+        // cette ligne ils jugeraient la boucle d'un fichier, qui n'a ni pas, ni
+        // note, ni derive : ils resteraient verts en ne gardant plus rien, et le
         // filet ne serait plus garde par personne.
         delete L.Son.Mus.def('titre').fichier;
-        o.frame(200);
-        const tons = joues.filter(function (n) { return n.quoi === 'ton'; });
-        return { total: joues.length, tons: tons.length,
+        const def = L.Son.Mus.def('titre');
+        const pasS = 60 / def.bpm / def.pas_par_temps;
+        // Un tour complet de la BASSE (son motif, pas celui du morceau) + un peu.
+        const basseMotif = def.voix.filter(function (v) { return v.role === 'basse'; })[0].motif;
+        const images = Math.ceil((basseMotif + 2) * pasS * 60) + 30;
+        const bornes = { theme: 200, mesure: 400, boucle: images }, marques = {};
+        let joue = 0;
+        Object.keys(bornes).sort(function (a, b) { return bornes[a] - bornes[b]; }).forEach(function (nom) {
+            o.frame(bornes[nom] - joue); joue = bornes[nom];
+            marques[nom] = { notes: joues.slice(), debut: L.Son.Mus.debutT };
+        });
+        const basse = function (liste) {
+            return liste.filter(function (n) { return n.quoi === 'ton' && n.forme === 'triangle'; });
+        };
+        // Le thème, à 200 images.
+        const tons = marques.theme.notes.filter(function (n) { return n.quoi === 'ton'; });
+        const theme = { total: marques.theme.notes.length, tons: tons.length,
                  formes: Array.from(new Set(tons.map(function (n) { return n.forme; }))).sort(),
                  hz: tons.slice(0, 6).map(function (n) { return Math.round(n.hz); }),
                  instants: tons.slice(0, 6).map(function (n) { return Math.round(n.t * 1000); }) };
+        // La mesure, à 400.
+        const b400 = basse(marques.mesure.notes), ecarts = [];
+        for (let i = 1; i < b400.length; i++) ecarts.push(b400[i].t - b400[i - 1].t);
+        const mesure = { combien: b400.length, ecarts: ecarts, pasS: pasS };
+        // La boucle, au bout d'un tour de basse.
+        const bb = basse(marques.boucle.notes), debut = marques.boucle.debut;
+        // La note posee au pas 0 et celle posee au pas `basseMotif` : meme hauteur.
+        function auPas(p) {
+            const t = debut + p * pasS;
+            return bb.filter(function (n) { return Math.abs(n.t - t) < 0.001; })
+                     .map(function (n) { return Math.round(n.hz); });
+        }
+        return { theme: theme, mesure: mesure,
+                 boucle: { premier: auPas(0), tour: auPas(basseMotif), motif: basseMotif } };
     }""")
+
+
+def test_le_theme_joue_des_que_le_son_est_accorde(sequenceur):
+    r = sequenceur["theme"]
     assert r["tons"] > 0, "le theme ne sort pas"
     # Basse (triangle), nappe (sine), chant (square) : les trois doivent sonner.
     assert set(r["formes"]) >= {"triangle", "sine", "square"}, r["formes"]
@@ -198,26 +242,10 @@ def test_le_theme_joue_des_que_le_son_est_accorde(banc):
     assert r["instants"] == sorted(r["instants"]), "les notes doivent etre posees dans l'ordre"
 
 
-def test_les_notes_tombent_en_mesure(banc):
+def test_les_notes_tombent_en_mesure(sequenceur):
     """Le rythme ne doit rien devoir a la cadence des images : deux attaques de
     basse sont separees d'un nombre entier de pas, au millieme pres."""
-    r = banc("""function (L, o) {
-        const joues = o.brancherAudio(true);
-        L.Son.sonder();
-        // ⚠️ EN NOTES, expres. Ce juge parle du SEQUENCEUR — devenu le FILET
-        // le 14 sept. 2026, quand les quinze morceaux sont passes en mp3. Sans
-        // cette ligne il jugerait la boucle d'un fichier, qui n'a ni pas, ni
-        // note, ni derive : il resterait vert en ne gardant plus rien, et le
-        // filet ne serait plus garde par personne.
-        delete L.Son.Mus.def('titre').fichier;
-        o.frame(400);
-        const basse = joues.filter(function (n) { return n.quoi === 'ton' && n.forme === 'triangle'; });
-        const ecarts = [];
-        for (let i = 1; i < basse.length; i++) ecarts.push(basse[i].t - basse[i - 1].t);
-        const def = L.Son.Mus.def('titre');
-        return { combien: basse.length, ecarts: ecarts,
-                 pasS: 60 / def.bpm / def.pas_par_temps };
-    }""")
+    r = sequenceur["mesure"]
     assert r["combien"] >= 4, r["combien"]
     pas_s = r["pasS"]
     for ecart in r["ecarts"]:
@@ -226,34 +254,10 @@ def test_les_notes_tombent_en_mesure(banc):
         assert round(rapport) >= 1
 
 
-def test_la_boucle_reboucle_sur_elle_meme(banc):
+def test_la_boucle_reboucle_sur_elle_meme(sequenceur):
     """Apres un tour complet, on doit retrouver exactement la meme note au meme
     endroit — sinon la boucle derive et finit par jouer n'importe quoi."""
-    r = banc("""function (L, o) {
-        const joues = o.brancherAudio(true);
-        L.Son.sonder();
-        // ⚠️ EN NOTES, expres. Ce juge parle du SEQUENCEUR — devenu le FILET
-        // le 14 sept. 2026, quand les quinze morceaux sont passes en mp3. Sans
-        // cette ligne il jugerait la boucle d'un fichier, qui n'a ni pas, ni
-        // note, ni derive : il resterait vert en ne gardant plus rien, et le
-        // filet ne serait plus garde par personne.
-        delete L.Son.Mus.def('titre').fichier;
-        const def = L.Son.Mus.def('titre');
-        const pasS = 60 / def.bpm / def.pas_par_temps;
-        // Un tour complet de la BASSE (son motif, pas celui du morceau) + un peu.
-        const basseMotif = def.voix.filter(function (v) { return v.role === 'basse'; })[0].motif;
-        const images = Math.ceil((basseMotif + 2) * pasS * 60) + 30;
-        o.frame(images);
-        const basse = joues.filter(function (n) { return n.quoi === 'ton' && n.forme === 'triangle'; });
-        const debut = L.Son.Mus.debutT;
-        // La note posee au pas 0 et celle posee au pas `basseMotif` : meme hauteur.
-        function auPas(p) {
-            const t = debut + p * pasS;
-            return basse.filter(function (n) { return Math.abs(n.t - t) < 0.001; })
-                        .map(function (n) { return Math.round(n.hz); });
-        }
-        return { premier: auPas(0), tour: auPas(basseMotif), motif: basseMotif };
-    }""")
+    r = sequenceur["boucle"]
     assert r["premier"], "aucune note au pas 0"
     assert r["premier"] == r["tour"], f"la boucle derive : {r['premier']} puis {r['tour']}"
 
@@ -303,51 +307,81 @@ def test_le_son_coupe_ne_pose_pas_de_musique(banc):
 # Ces juges regardent donc le BRANCHEMENT, pas l'intention.
 
 
-def test_un_echantillon_atteint_la_sortie(banc):
-    r = banc("""async function (L, o) {
+@pytest.fixture(scope="module")
+def sorties(banc):
+    """⚠️ **UN BANC POUR LES CINQ « … ATTEINT LA SORTIE » ET LES DEUX JUGES DU COMBINÉ**
+    (vague C, 28 sept. 2026). Ils branchaient tous le même son accordé et attendaient ses
+    chargements ; les cinq premiers sont des DIAGNOSTICS de `test_aucune_source_ne_joue_dans_le_vide`
+    (qui dit « une source muette », pas laquelle) : on les garde, chacun sous son nom, mais un seul
+    banc les joue l'un après l'autre. Chaque son est mesuré AU MOMENT où il part, avant le suivant.
+
+    ⚠️ La voix directe, puis la même au combiné : c'était déjà l'ordre du juge « plus forte qu'en
+    direct ». Celui de la bande lit la chaîne de CE combiné-là."""
+    return banc("""async function (L, o) {
         o.brancherAudio(true);
         L.Son.reveiller();
         await o.attendre(); await o.attendre(); await o.attendre();
-        const j = L.Son.echantillon('coup', { volume: 1 });
         const ctx = L.Son.contexte;
-        return { charges: L.Son.charges, joue: !!j,
+        // Un echantillon.
+        const j = L.Son.echantillon('coup', { volume: 1 });
+        const echantillon = { charges: L.Son.charges, joue: !!j,
                  relie: j ? ctx.atteintLaSortie(j.source) : null,
                  gainRelie: j ? ctx.atteintLaSortie(j.gain) : null };
+        // Le meme, pose dans le monde (un `pan`).
+        const jp = L.Son.echantillon('coup', { volume: 1, pan: 0.8 });
+        const panoramique = { joue: !!jp, relie: jp ? ctx.atteintLaSortie(jp.source) : null };
+        // Une boucle.
+        L.Son.boucle('foule', true, 0.5);
+        const active = L.Son.boucleActive('foule');
+        // On retrouve la source par le registre des boucles : elle doit sortir.
+        const jb = L.Son.echantillon('foule', { boucle: true, volume: 0.5 });
+        const boucle = { active: active, relie: jb ? ctx.atteintLaSortie(jb.source) : null };
+        // Les repliques de l'histoire : en direct, puis au combine.
+        const h = (L.B.defs.audio.histoire || [])[0];
+        L.Son.Voix.chargerHistoire(h.mission);
+        await o.attendre(); await o.attendre(); await o.attendre();
+        // On suit les branchements du gain de la voix jusqu'au maitre, en
+        // relevant chaque filtre rencontre : c'est le chemin reel du son.
+        function chaine(v) {
+            const filtres = [];
+            const vus = new Set();
+            let n = v.gain;
+            while (n && !vus.has(n)) {
+                vus.add(n);
+                if (n.frequency && n.Q) filtres.push({ type: n.type, frequence: n.frequency.value, q: n.Q.value });
+                n = (n.__vers || [])[0];
+            }
+            return { gain: v.gain.gain.value, filtres: filtres };
+        }
+        const v = L.Son.Voix.parler(h.slug, {});
+        const replique = { slug: h.slug, joue: !!v, relie: v ? ctx.atteintLaSortie(v.source) : null };
+        const direct = v ? chaine(v) : null;
+        const vt = L.Son.Voix.parler(h.slug, { telephone: true });
+        const telephone = { joue: !!vt, relie: vt ? ctx.atteintLaSortie(vt.source) : null };
+        return { echantillon: echantillon, panoramique: panoramique, boucle: boucle, replique: replique,
+                 telephone: telephone, direct: direct, tel: vt ? chaine(vt) : null };
     }""")
+
+
+def test_un_echantillon_atteint_la_sortie(sorties):
+    r = sorties["echantillon"]
     assert r["charges"] > 0, "aucun echantillon charge : le banc ne suit pas le bon chemin"
     assert r["joue"] is True, "l'echantillon n'a meme pas ete cree"
     assert r["relie"] is True, "la source ne va nulle part : elle jouera dans le vide"
     assert r["gainRelie"] is True
 
 
-def test_un_echantillon_pose_dans_le_monde_atteint_la_sortie(banc):
+def test_un_echantillon_pose_dans_le_monde_atteint_la_sortie(sorties):
     """Avec un `pan` : la chaîne est plus longue (source, gain, panoramique),
     et c'est justement la qu'une soudure manque le plus facilement."""
-    r = banc("""async function (L, o) {
-        o.brancherAudio(true);
-        L.Son.reveiller();
-        await o.attendre(); await o.attendre(); await o.attendre();
-        const j = L.Son.echantillon('coup', { volume: 1, pan: 0.8 });
-        const ctx = L.Son.contexte;
-        return { joue: !!j, relie: j ? ctx.atteintLaSortie(j.source) : null };
-    }""")
+    r = sorties["panoramique"]
     assert r["joue"] is True
     assert r["relie"] is True, "avec un panoramique, le son n'atteint plus la sortie"
 
 
-def test_une_boucle_atteint_la_sortie(banc):
+def test_une_boucle_atteint_la_sortie(sorties):
     """L'ambiance, la sirene, le moteur : tout ce qui tourne en fond."""
-    r = banc("""async function (L, o) {
-        o.brancherAudio(true);
-        L.Son.reveiller();
-        await o.attendre(); await o.attendre(); await o.attendre();
-        L.Son.boucle('foule', true, 0.5);
-        const ctx = L.Son.contexte;
-        const active = L.Son.boucleActive('foule');
-        // On retrouve la source par le registre des boucles : elle doit sortir.
-        const j = L.Son.echantillon('foule', { boucle: true, volume: 0.5 });
-        return { active: active, relie: j ? ctx.atteintLaSortie(j.source) : null };
-    }""")
+    r = sorties["boucle"]
     assert r["active"] is True
     assert r["relie"] is True
 
@@ -398,36 +432,15 @@ def test_aucune_source_ne_joue_dans_le_vide(banc):
     assert r["muettes"] == 0, f"{r['muettes']} sources ont demarre sans atteindre la sortie"
 
 
-def test_une_replique_de_l_histoire_atteint_la_sortie(banc):
-    r = banc("""async function (L, o) {
-        o.brancherAudio(true);
-        L.Son.reveiller();
-        await o.attendre(); await o.attendre();
-        const h = (L.B.defs.audio.histoire || [])[0];
-        L.Son.Voix.chargerHistoire(h.mission);
-        await o.attendre(); await o.attendre(); await o.attendre();
-        const v = L.Son.Voix.parler(h.slug, {});
-        const ctx = L.Son.contexte;
-        return { slug: h.slug, joue: !!v,
-                 relie: v ? ctx.atteintLaSortie(v.source) : null };
-    }""")
+def test_une_replique_de_l_histoire_atteint_la_sortie(sorties):
+    r = sorties["replique"]
     assert r["joue"] is True, f"la replique {r['slug']} ne joue pas"
     assert r["relie"] is True, "la voix joue mais n'atteint pas la sortie : on n'entend rien"
 
 
-def test_une_replique_au_telephone_atteint_la_sortie(banc):
+def test_une_replique_au_telephone_atteint_la_sortie(sorties):
     """Le combine ajoute un filtre : une soudure de plus, un risque de plus."""
-    r = banc("""async function (L, o) {
-        o.brancherAudio(true);
-        L.Son.reveiller();
-        await o.attendre(); await o.attendre();
-        const h = (L.B.defs.audio.histoire || [])[0];
-        L.Son.Voix.chargerHistoire(h.mission);
-        await o.attendre(); await o.attendre(); await o.attendre();
-        const v = L.Son.Voix.parler(h.slug, { telephone: true });
-        const ctx = L.Son.contexte;
-        return { joue: !!v, relie: v ? ctx.atteintLaSortie(v.source) : null };
-    }""")
+    r = sorties["telephone"]
     assert r["joue"] is True
     assert r["relie"] is True, "au telephone, la voix n'atteint pas la sortie"
 
@@ -475,34 +488,11 @@ def _sortie(chaine, f):
 BANDE_DE_LA_PAROLE = (400, 600, 900, 1400, 2000, 3000)
 
 
-def test_au_telephone_la_voix_est_plus_forte_qu_en_direct(banc):
+def test_au_telephone_la_voix_est_plus_forte_qu_en_direct(sorties):
     """Une voix privee de ses graves s'entend moins fort a puissance egale, et
     un appel se prend au milieu des moteurs. Le combine doit donc sortir AU-DESSUS
     de la voix en direct sur toute la bande de la parole — jamais en dessous."""
-    r = banc("""async function (L, o) {
-        o.brancherAudio(true);
-        L.Son.reveiller();
-        await o.attendre(); await o.attendre();
-        const h = (L.B.defs.audio.histoire || [])[0];
-        L.Son.Voix.chargerHistoire(h.mission);
-        await o.attendre(); await o.attendre(); await o.attendre();
-        // On suit les branchements du gain de la voix jusqu'au maitre, en
-        // relevant chaque filtre rencontre : c'est le chemin reel du son.
-        function chaine(v) {
-            const filtres = [];
-            const vus = new Set();
-            let n = v.gain;
-            while (n && !vus.has(n)) {
-                vus.add(n);
-                if (n.frequency && n.Q) filtres.push({ type: n.type, frequence: n.frequency.value, q: n.Q.value });
-                n = (n.__vers || [])[0];
-            }
-            return { gain: v.gain.gain.value, filtres: filtres };
-        }
-        const direct = chaine(L.Son.Voix.parler(h.slug, {}));
-        const tel = chaine(L.Son.Voix.parler(h.slug, { telephone: true }));
-        return { direct: direct, tel: tel };
-    }""")
+    r = sorties
     assert r["tel"]["filtres"], "le telephone ne filtre rien : ce n'est plus un combine"
     for f in BANDE_DE_LA_PAROLE:
         direct, tel = _sortie(r["direct"], f), _sortie(r["tel"], f)
@@ -512,28 +502,11 @@ def test_au_telephone_la_voix_est_plus_forte_qu_en_direct(banc):
         )
 
 
-def test_le_combine_laisse_passer_toute_la_bande_telephonique(banc):
+def test_le_combine_laisse_passer_toute_la_bande_telephonique(sorties):
     """Un filtre trop pince sonne « radio cassee » et mange les formants. La
     bande d'un vrai telephone (300 Hz - 3,4 kHz) doit rester a peu pres plate :
     d'un bout a l'autre, pas plus de 6 dB d'ecart."""
-    r = banc("""async function (L, o) {
-        o.brancherAudio(true);
-        L.Son.reveiller();
-        await o.attendre(); await o.attendre();
-        const h = (L.B.defs.audio.histoire || [])[0];
-        L.Son.Voix.chargerHistoire(h.mission);
-        await o.attendre(); await o.attendre(); await o.attendre();
-        const v = L.Son.Voix.parler(h.slug, { telephone: true });
-        const filtres = [];
-        const vus = new Set();
-        let n = v.gain;
-        while (n && !vus.has(n)) {
-            vus.add(n);
-            if (n.frequency && n.Q) filtres.push({ type: n.type, frequence: n.frequency.value, q: n.Q.value });
-            n = (n.__vers || [])[0];
-        }
-        return { gain: v.gain.gain.value, filtres: filtres };
-    }""")
+    r = sorties["tel"]
     import math
     niveaux = {f: _sortie(r, f) for f in (400, 700, 1000, 1500, 2200, 3000)}
     creux, sommet = min(niveaux.values()), max(niveaux.values())
@@ -678,21 +651,43 @@ def test_la_radio_allumee_au_bouton_fait_taire_la_ville(banc):
         "descendu, la ville doit reprendre et la radio se taire : %s" % r["descendu"]
 
 
-def test_une_station_procedurale_baisse_quand_quelqu_un_parle(banc):
+@pytest.fixture(scope="module")
+def ducking_des_notes(banc):
+    """⚠️ **UN BANC POUR LES DEUX JUGES DU SÉQUENCEUR QUI BAISSE** (vague C, 28 sept. 2026) :
+    la même partie commencée, le même `Mus.tick()` à la main. D'abord une réplique seule (la
+    station baisse, puis remonte à 1) ; ENSUITE la conversation. ⚠️ La seconde part d'une
+    atténuation revenue à 1 exactement — c'est ce que le premier juge exige (`apres == 1`) —,
+    donc de l'état d'une partie qui commence : si elle n'y revient pas, le premier rougit."""
+    return banc("""function (L, o) {
+        L.Jeu.commencer();
+        const S = L.Son;
+        // Une replique seule.
+        const avant = S.Mus.attenuation;
+        S.Voix.baisserLeReste(true);
+        // ⚠️ Le ducking GLISSE (voir « Le ducking ») : une seconde de pas fixes.
+        for (let k = 0; k < 60; k++) S.Mus.tick();
+        const pendant = S.Mus.attenuation;
+        S.Voix.baisserLeReste(false);
+        for (let k = 0; k < 240; k++) S.Mus.tick();
+        const seule = { avant: avant, pendant: pendant, apres: S.Mus.attenuation };
+        // Deux repliques qui s'enchainent.
+        S.Voix.baisserLeReste(true);
+        for (let k = 0; k < 90; k++) S.Mus.tick();       // la premiere replique, bien installee
+        S.Voix.baisserLeReste(false);
+        let entre = 0;
+        for (let k = 0; k < 10; k++) { S.Mus.tick(); entre = Math.max(entre, S.Mus.attenuation); }
+        S.Voix.baisserLeReste(true);                       // la suivante, un sixieme de seconde apres
+        let pire = 0;
+        for (let k = 0; k < 60; k++) { S.Mus.tick(); pire = Math.max(pire, S.Mus.attenuation); }
+        return { seule: seule, deux: { entre: entre, pire: pire, plancher: L.B.defs.audio.musique.ducking } };
+    }""")
+
+
+def test_une_station_procedurale_baisse_quand_quelqu_un_parle(ducking_des_notes):
     """⚠️ Le ducking passait par les BOUCLES (`radio-*`, `ambiance-*`), et une
     station procedurale n'en traverse aucune : elle aurait couvert la voix au
     telephone sans que rien ne baisse."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const avant = L.Son.Mus.attenuation;
-        L.Son.Voix.baisserLeReste(true);
-        // ⚠️ Le ducking GLISSE (voir « Le ducking ») : une seconde de pas fixes.
-        for (let k = 0; k < 60; k++) L.Son.Mus.tick();
-        const pendant = L.Son.Mus.attenuation;
-        L.Son.Voix.baisserLeReste(false);
-        for (let k = 0; k < 240; k++) L.Son.Mus.tick();
-        return { avant: avant, pendant: pendant, apres: L.Son.Mus.attenuation };
-    }""")
+    r = ducking_des_notes["seule"]
     assert r["avant"] == 1 and r["apres"] == 1
     assert 0 < r["pendant"] < 1, "le sequenceur ne baisse pas pendant une replique"
 
@@ -756,32 +751,14 @@ def test_un_mp3_qui_n_arrive_pas_rend_la_main_aux_notes(banc):
     assert r["muettes"] == 0
 
 
-def test_la_musique_en_mp3_baisse_quand_quelqu_un_parle(banc):
+def test_la_musique_en_mp3_baisse_quand_quelqu_un_parle(ducking_du_mp3):
     """⚠️ Le ducking passait par les boucles `radio-*` et `ambiance-*`. Sans
     `musique-*`, l'ambiance du district et la musique de poursuite couvriraient
-    la replique — exactement le bug que la station procedurale avait deja."""
-    r = banc("""async function (L, o) {
-        o.brancherAudio(true);
-        L.Son.reveiller();
-        await o.attendre(); await o.attendre();
-        const def = L.Son.Mus.def('titre');
-        def.fichier = 'musique-titre.mp3'; def.volume_fichier = 0.5;
-        L.Son.Mus.jouer('titre');
-        o.frame(2); await o.attendre(); await o.attendre(); o.frame(2);
-        function volume() {
-            const ctx = L.Son.contexte;
-            const g = ctx.sources.filter(function (s) { return s.__demarree; });
-            return g.length ? g[g.length - 1].__vers[0].gain.value : null;
-        }
-        const avant = volume();
-        L.Son.Voix.baisserLeReste(true);
-        // ⚠️ Le ducking GLISSE : on laisse passer une seconde de pas fixes.
-        for (let k = 0; k < 60; k++) L.Son.Mus.tick();
-        const pendant = volume();
-        L.Son.Voix.baisserLeReste(false);
-        for (let k = 0; k < 240; k++) L.Son.Mus.tick();
-        return { avant: avant, pendant: pendant, apres: volume() };
-    }""")
+    la replique — exactement le bug que la station procedurale avait deja.
+
+    ⚠️ Avec les réglages de PYTHON : le juge de la courbe les double, celui-ci dit que les
+    vrais font baisser la musique et la ramènent en quatre secondes."""
+    r = ducking_du_mp3["reel"]
     assert r["avant"] and r["avant"] > 0, "le mp3 ne joue pas : %s" % r
     assert r["pendant"] < r["avant"], "la musique ne baisse pas pendant la replique : %s" % r
     assert abs(r["apres"] - r["avant"]) < 1e-9, "la musique ne remonte pas apres : %s" % r
@@ -1509,22 +1486,34 @@ def _est_graduelle(serie, depart, arrivee, ce_qu_on_juge):
     return next(i for i, v in enumerate(serie) if abs(v - arrivee) < 1e-9) + 1
 
 
-def test_la_musique_baisse_puis_remonte_graduellement_et_remonte_plus_lentement(banc):
-    """Deux moities, et une troisieme : elle baisse sans saut, elle remonte sans
-    saut ET ELLE REMONTE PLUS LENTEMENT — c'est ce qui laisse deux repliques
-    d'une meme conversation sans faire sauter la musique entre les deux."""
-    r = banc("""async function (L, o) {""" + _OUTILS_FONDU + """
+@pytest.fixture(scope="module")
+def ducking_du_mp3(banc):
+    """⚠️ **UN BANC POUR LES DEUX JUGES DU MP3 QUI BAISSE** (vague C, 28 sept. 2026) : le même
+    thème en mp3, posé et lancé pareil. D'abord avec les réglages de Python (une réplique, et la
+    musique revient) ; ENSUITE avec les réglages doublés du juge de la courbe. ⚠️ La seconde part
+    d'un volume revenu EXACTEMENT au plein — c'est ce que le premier juge exige (`apres == avant`) :
+    si la musique n'y revient pas, c'est lui qui rougit, et la courbe partirait d'ailleurs."""
+    return banc("""async function (L, o) {""" + _OUTILS_FONDU + """
         o.brancherAudio(true);
         L.Son.reveiller();
         await o.attendre(); await o.attendre();
+        poser('titre');
+        L.Son.Mus.jouer('titre');
+        o.frame(2); await o.attendre(); await o.attendre(); o.frame(2);
+        function volume() { const g = sources(); return g.length ? g[g.length - 1].__vers[0].gain.value : null; }
+        // Les reglages de Python.
+        const avant = volume();
+        L.Son.Voix.baisserLeReste(true);
+        // ⚠️ Le ducking GLISSE : on laisse passer une seconde de pas fixes.
+        for (let k = 0; k < 60; k++) image();
+        const pendant = volume();
+        L.Son.Voix.baisserLeReste(false);
+        for (let k = 0; k < 240; k++) image();
+        const reel = { avant: avant, pendant: pendant, apres: volume() };
         // ⚠️ LES CHIFFRES SONT CEUX DU JUGE, pas ceux de Python : un `0.25`, un `0.3` ou
         // un `1.2` ecrits en dur dans le JS donneraient la meme courbe que le paquet
         // et ne rougiraient jamais. Ici, tout est double : la courbe doit suivre.
         Object.assign(L.B.defs.audio.musique, { ducking: 0.4, baisse_s: 0.6, remonte_s: 2.4 });
-        poser('titre');
-        L.Son.Mus.jouer('titre');
-        image(); await o.attendre(); await o.attendre(); image();
-        function volume() { const g = sources(); return g[g.length - 1].__vers[0].gain.value; }
         const plein = volume();
         L.Son.Voix.baisserLeReste(true);
         const descente = [];
@@ -1533,8 +1522,16 @@ def test_la_musique_baisse_puis_remonte_graduellement_et_remonte_plus_lentement(
         const montee = [];
         for (let k = 0; k < 420; k++) { image(); montee.push(volume()); }
         const m = L.B.defs.audio.musique;
-        return { plein: plein, descente: descente, montee: montee, ducking: m.ducking, baisse: m.baisse_s, remonte: m.remonte_s };
+        return { reel: reel, double: { plein: plein, descente: descente, montee: montee,
+                 ducking: m.ducking, baisse: m.baisse_s, remonte: m.remonte_s } };
     }""")
+
+
+def test_la_musique_baisse_puis_remonte_graduellement_et_remonte_plus_lentement(ducking_du_mp3):
+    """Deux moities, et une troisieme : elle baisse sans saut, elle remonte sans
+    saut ET ELLE REMONTE PLUS LENTEMENT — c'est ce qui laisse deux repliques
+    d'une meme conversation sans faire sauter la musique entre les deux."""
+    r = ducking_du_mp3["double"]
     assert r["plein"] > 0
     bas = r["plein"] * r["ducking"]
     n_baisse = _est_graduelle(r["descente"], r["plein"], bas, "la descente")
@@ -1551,23 +1548,11 @@ def test_la_musique_baisse_puis_remonte_graduellement_et_remonte_plus_lentement(
             "%s prend %d pas, il en faut ~%d pour %s s : la duree ne vient pas de Python" % (ce, n, attendu, duree)
 
 
-def test_deux_repliques_qui_s_enchainent_ne_font_pas_sauter_la_musique(banc):
+def test_deux_repliques_qui_s_enchainent_ne_font_pas_sauter_la_musique(ducking_des_notes):
     """⚠️ Le vrai defaut : une conversation, c'est des repliques a une seconde
     l'une de l'autre. Avant, la musique remontait a fond entre chacune ; elle n'en
     a maintenant pas le temps, elle reste sous la voix d'un bout a l'autre."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const S = L.Son;
-        S.Voix.baisserLeReste(true);
-        for (let k = 0; k < 90; k++) S.Mus.tick();       // la premiere replique, bien installee
-        S.Voix.baisserLeReste(false);
-        let entre = 0;
-        for (let k = 0; k < 10; k++) { S.Mus.tick(); entre = Math.max(entre, S.Mus.attenuation); }
-        S.Voix.baisserLeReste(true);                       // la suivante, un sixieme de seconde apres
-        let pire = 0;
-        for (let k = 0; k < 60; k++) { S.Mus.tick(); pire = Math.max(pire, S.Mus.attenuation); }
-        return { entre: entre, pire: pire, plancher: L.B.defs.audio.musique.ducking };
-    }""")
+    r = ducking_des_notes["deux"]
     assert r["entre"] < 0.6, "entre deux repliques la musique remonte a %.2f : elle saute" % r["entre"]
     assert r["pire"] < 0.6 and r["pire"] > r["plancher"], r
 
