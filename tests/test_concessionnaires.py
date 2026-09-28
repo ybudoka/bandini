@@ -202,3 +202,12 @@ def test_ti_pout_ne_deplace_rien(monkeypatch):
 
 def test_la_ville_d_avant_n_a_pas_ti_pout():
     assert not _lot(carte.generer(nord=False), "ti_pout")
+
+
+def test_une_facade_etroite_garde_son_enseigne():
+    """Relecture finale : sur une façade de six tuiles (`F....F`), aucune fenêtre de cinq ne couvre la porte sans
+    toucher un coin — `min()` sur une séquence vide faisait planter la génération."""
+    ville = {"devantures": [], "lampes": []}
+    concessionnaires._devanture(ville, 10, 20, "FWWDWF", 3, ("PRESTIGE",), "commerce", "+")
+    d = ville["devantures"][0]
+    assert "F" not in d["motifs"] and d["motifs"][d["porte"]] == "D", d

@@ -3715,7 +3715,7 @@ const Missions = (function () {
         const entites = B.bloc ? B.bloc.ville.entites : B.exterieur ? B.exterieur.entites : B.entites;
         for (const e of entites) {
           if (e.type === 'vehicule' && e.etat !== 'epave' && dist2(e.x, e.y, porte.x * TT + 8, (porte.y + 1) * TT) < 100 * 100) {
-            p.planque.vehicule = { slug: e.slug, sprite: e.sprite, couleur: e.couleur, vie: e.vie, x: Math.round(e.x), y: Math.round(e.y), angle: e.angle, vole: e.vole, mods: Garage.fiche(e) };
+            p.planque.vehicule = { slug: e.slug, sprite: e.sprite, couleur: e.couleur, vie: e.vie, x: Math.round(e.x), y: Math.round(e.y), angle: e.angle, vole: e.vole, aToi: e.aToi, mods: Garage.fiche(e) };
             break;
           }
         }
@@ -3739,7 +3739,7 @@ const Missions = (function () {
       if (!entites || !def || !def.bloc.planque) continue;
       const c = def.bloc.planque.char, cx = c.x * TT + 8, cy = c.y * TT + 8;
       const v = entites.find(function (e) { return e.type === 'vehicule' && e.etat !== 'epave' && dist2(e.x, e.y, cx, cy) < 48 * 48; });
-      p.charsDesPlanques[b.slug] = v ? { slug: v.slug, sprite: v.sprite, couleur: v.couleur, vie: v.vie, x: Math.round(v.x), y: Math.round(v.y), angle: v.angle, vole: v.vole, mods: Garage.fiche(v) } : null;
+      p.charsDesPlanques[b.slug] = v ? { slug: v.slug, sprite: v.sprite, couleur: v.couleur, vie: v.vie, x: Math.round(v.x), y: Math.round(v.y), angle: v.angle, vole: v.vole, aToi: v.aToi, mods: Garage.fiche(v) } : null;
     }
   }
 

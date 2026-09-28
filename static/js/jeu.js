@@ -155,7 +155,8 @@ const Jeu = (function () {
       if (garde.couleur) { v.couleur = garde.couleur; v.swaps = nuances(garde.couleur); }
       // Les pieces du garage d'abord (le blindage change la vie pleine), puis la vie gardee.
       Garage.poser(v, garde.mods);
-      v.vie = Math.max(1, garde.vie); v.vole = !!garde.vole;
+      // ⚠️ `aToi` aussi : un char PAYÉ (concessionnaire, fourrière) redevenait un char à voler au rechargement.
+      v.vie = Math.max(1, garde.vie); v.vole = !!garde.vole; v.aToi = !!garde.aToi;
     }
     return v;
   }

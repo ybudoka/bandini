@@ -2008,6 +2008,9 @@ const Entites = (function () {
         // ⚠️ Ni un char qui ATTEND le joueur a sa place (le camion de creme glacee, celui
         // d'asphalte : `resteGare`) — il n'y en a qu'un, et vole il ne revient pas.
         && !q.resteGare
+        // ⚠️ Ni un char PAYÉ (`aToi`), ni un char d'un lot de concession : le premier est au joueur, et
+        // l'autre partirait sans que l'alarme du lot sonne.
+        && !q.aToi && !q.placeDeLot
         // ⚠️ **Ni une COQUE** (retour de Martin, capture a l'appui : « un
         // bateau sur la route ?? »). Une chaloupe amarree est `stationne` comme
         // une auto garee, et pour un passant du quai c'etait le premier char a

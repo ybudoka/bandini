@@ -225,3 +225,62 @@ def test_les_passants_ne_tirent_pas_leur_porte_chez_les_concessionnaires(banc):
         return { dedans: dedans, lots: lots.length };
     }""")
     assert r["lots"] == 2 and r["dedans"] == [], r
+
+
+def test_un_char_achete_garde_a_la_planque_reste_a_toi(banc):
+    """Relecture finale : la sauvegarde gardait `vole`, pas `aToi` — un char PAYÉ garé devant la planque redevenait,
+    au rechargement, un char à voler (l'alarme de la sport, une étoile)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const TT = L.TT, p = L.B.partie;
+        const porte = L.Monde.carte.def.portes.find(function (q) { return q.lieu === 'planque'; });
+        const v = L.Vehicules.creer('sport', porte.x * TT + 8, (porte.y + 2) * TT, 0, { etat: 'stationne', couleur: '#16a085' });
+        v.aToi = true;
+        L.Missions.sauvegarderPartie();
+        const garde = Object.assign({}, p.planque.vehicule);
+        L.Sauvegarde.ecrire(p);
+        L.B.partie = L.Sauvegarde.completer(L.Sauvegarde.lire(), L.B.defs);
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        const w = L.B.entites.find(function (e) { return e.type === 'vehicule' && e.couleur === '#16a085'; });
+        if (j.dansVehicule) L.Vehicules.descendre(j, true);
+        j.x = w.x; j.y = w.y;
+        const volees = L.B.partie.stats.volees;
+        L.Vehicules.monter(j, w);
+        return { garde: garde.aToi, aToi: w.aToi, vole: w.vole, alarme: w.alarme, volees: L.B.partie.stats.volees - volees };
+    }""")
+    assert r == {"garde": True, "aToi": True, "vole": False, "alarme": 0, "volees": 0}, r
+
+
+def test_un_passant_ne_vole_ni_le_char_paye_ni_ceux_du_lot(banc):
+    """Relecture finale : le vol de char d'un passant (`majVolDeChar`) prenait le char qu'on venait de payer, et les
+    neufs du lot sans que l'alarme sonne. Seul candidat à l'écran : le char payé, puis un char du lot."""
+    r = banc("""function (L, o) {
+        %(aller)s
+        L.Jeu.commencer();
+        const lot = lotDe(L, 'ti_pout'), j = L.B.joueur, f = L.B.defs.pietons.vol_de_char;
+        aller(L, lot, 330);
+        L.Vehicules.majLotsDeConcession();
+        const duLotLa = duLot(L, lot)[0];
+        f.chance_par_minute = 1;
+        function essayer(cible) {
+            L.B.entites.filter(function (e) { return e.type === 'vehicule' && e !== cible; }).forEach(function (e) { L.Entites.retirer(e); });
+            j.x = cible.x + 40; j.y = cible.y; L.Monde.centrerCamera(j.x, j.y);
+            const pieton = L.Entites.creerPieton(cible.x + 20, cible.y + 20);
+            pieton.etat = 'flane';
+            L.Entites.indexer();
+            L.B.volMinute = null;
+            const vise = L.Entites.majVolDeChar();
+            L.Entites.retirer(pieton);
+            return vise;
+        }
+        const paye = L.Vehicules.creer('auto', duLotLa.x + 200, duLotLa.y, 0, { etat: 'stationne', couleur: '#c0392b' });
+        paye.aToi = true;
+        const surLePaye = essayer(paye);
+        const surLeLot = essayer(duLotLa);
+        const temoin = L.Vehicules.creer('auto', duLotLa.x + 200, duLotLa.y, 0, { etat: 'stationne', couleur: '#2c3e50' });
+        const surUnAutre = essayer(temoin);
+        return { paye: surLePaye, lot: surLeLot, temoin: surUnAutre };
+    }""" % {"aller": ALLER})
+    assert r["temoin"] == 1, f"le juge ne voit pas le vol d'un char ordinaire : {r}"
+    assert r["paye"] == 0 and r["lot"] == 0, r

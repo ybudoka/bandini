@@ -113,12 +113,14 @@ def _devanture(ville: dict, x: int, y: int, motifs: str, porte: int, textes: tup
     """L'enseigne au-dessus de la porte, et la lampe de sa vitrine. ⚠️ Les règles de toutes les devantures
     (`test_devantures`) : au plus `ENSEIGNE_ETIREE` tuiles, centrée sur la porte ; rien que des vitrines et la
     porte dessous (pas les coins de façade) ; le `standing` du bloc ; une lampe de vitrine au trottoir."""
-    large = min(len(motifs), carte._Chantier.ENSEIGNE_ETIREE)
     # La fenêtre qui couvre la porte sans toucher un coin `F`, la plus centrée sur elle (la porte ne tombe pas
-    # toujours au milieu : elle se pose où son devant est libre).
-    dx = min((d for d in range(len(motifs) - large + 1)
-              if d <= porte < d + large and "F" not in motifs[d:d + large]),
-             key=lambda d: (abs(d + large // 2 - porte), d))
+    # toujours au milieu : elle se pose où son devant est libre) ; sur une façade étroite, l'enseigne rétrécit.
+    for large in range(min(len(motifs), carte._Chantier.ENSEIGNE_ETIREE), 0, -1):
+        fenetres = [d for d in range(len(motifs) - large + 1)
+                    if d <= porte < d + large and "F" not in motifs[d:d + large]]
+        if fenetres:
+            dx = min(fenetres, key=lambda d: (abs(d + large // 2 - porte), d))
+            break
     dessous = motifs[dx:dx + large]
     ville["devantures"].append({"x": x + dx, "y": y, "l": large, "genre": devantures.genre_index(genre),
                                 "texte": _enseigne(textes, large), "pancarte": -1, "motifs": dessous,
