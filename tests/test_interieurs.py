@@ -298,6 +298,9 @@ def test_les_lieux_des_missions_existent():
     (`mouillage:<slug>[:n]`, m52-m54) — de l'eau, sans porte ni point d'intérêt."""
     lieux = {p["slug"] for p in VILLE["points_interet"]}
     lieux |= {p["lieu"] for p in VILLE["portes"]}
+    # Un lieu DANS UN BLOC de carte (la villa du maire, l'infiltration) : déclaré par son bloc.
+    from app import blocs
+    lieux |= set(blocs.lieux_des_blocs())
     mouillages = VILLE["mouillages"]
     for mission in missions.CATALOGUE:
         for objectif in mission["objectifs"]:
