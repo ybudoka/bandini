@@ -8,23 +8,37 @@ elles se voient ici, avant de dessiner une tuile.
 """
 
 import pytest
+import villes
 
 from app import carte, nord
 
-CARTE = carte.exporter()
 DISTRICTS = {d["slug"]: d for d in carte.DISTRICTS}
-ZONES = {z["slug"]: z for z in CARTE["zones"]}
 TERRE = [d for d in carte.DISTRICTS if not d.get("eau")]
 
 
-def _tuiles_de(slug):
+@pytest.fixture(scope="module")
+def CARTE():
+    """La ville du jeu, exportée — prise dans `villes`, plus bâtie à la collecte."""
+    return villes.exporter()
+
+
+def _zones(plan_carte):
+    return {z["slug"]: z for z in plan_carte["zones"]}
+
+
+@pytest.fixture(scope="module")
+def ZONES(CARTE):
+    return _zones(CARTE)
+
+
+def _tuiles_de(CARTE, slug):
     """Les tuiles de rue d'un district (sa zone, moins ce qui deborde)."""
-    z = ZONES[slug]
+    z = _zones(CARTE)[slug]
     return [(x, y) for y in range(z["y"], z["y"] + z["h"])
             for x in range(z["x"], z["x"] + z["l"]) if CARTE["voie"][y][x] != "."]
 
 
-def _atteignables(depart, voie=None):
+def _atteignables(CARTE, depart, voie=None):
     """Tout ce qu'un char atteint depuis cette tuile en suivant les fleches."""
     plan = CARTE if voie is None else {**CARTE, "voie": voie}
     vues = {depart}
@@ -55,13 +69,13 @@ def test_les_districts_pavent_la_grille():
         assert "^" not in d["plan"][0], d["slug"]
 
 
-def _trame(district):
+def _trame(CARTE, district):
     """Les trois chiffres qui font la trame d'un quartier."""
     maitre = carte.regions_du_plan(carte.PLAN)
     bx, by = district["bx"], district["by"]
     largeur, hauteur = len(district["plan"][0]), len(district["plan"])
     blocs = [(bx + i, by + j) for j in range(hauteur) for i in range(largeur)]
-    zone = ZONES[district["slug"]]
+    zone = _zones(CARTE)[district["slug"]]
     rues = sum(1 for y in range(zone["y"], zone["y"] + zone["h"])
                for x in range(zone["x"], zone["x"] + zone["l"]) if CARTE["voie"][y][x] != ".")
     colonnes = carte.COLONNES[bx:bx + largeur]
@@ -70,7 +84,7 @@ def _trame(district):
             "colonne": sum(colonnes) / len(colonnes)}
 
 
-def test_chaque_district_a_sa_trame():
+def test_chaque_district_a_sa_trame(CARTE):
     """⚠️ Un quartier qu'on ne reconnait pas est un decor, pas un quartier.
 
     Trois chiffres le trahissent : combien de RUES au metre carre (La Shop en a
@@ -80,7 +94,7 @@ def test_chaque_district_a_sa_trame():
     un des trois, franchement — sinon on roule dedans sans savoir ou on est.
     """
     marges = {"rues": 0.03, "fusion": 0.10, "colonne": 1.5}
-    trames = {d["slug"]: _trame(d) for d in TERRE}
+    trames = {d["slug"]: _trame(CARTE, d) for d in TERRE}
     for i, a in enumerate(TERRE):
         for b in TERRE[i + 1:]:
             ta, tb = trames[a["slug"]], trames[b["slug"]]
@@ -98,19 +112,19 @@ def test_chaque_district_a_son_contenu():
         contenus[glyphes] = district["slug"]
 
 
-def test_on_roule_de_chaque_district_a_chaque_autre():
+def test_on_roule_de_chaque_district_a_chaque_autre(CARTE):
     """La promesse de M8 : du Faubourg a La Pointe sans chargement."""
-    depart = _tuiles_de("faubourg")[0]
-    joignables = _atteignables(depart)
+    depart = _tuiles_de(CARTE, "faubourg")[0]
+    joignables = _atteignables(CARTE, depart)
     for district in TERRE:
-        tuiles = _tuiles_de(district["slug"])
+        tuiles = _tuiles_de(CARTE, district["slug"])
         assert tuiles, f"{district['slug']} n'a aucune rue"
         touchees = sum(1 for t in tuiles if t in joignables)
         assert touchees == len(tuiles), \
             f"{district['slug']} : {len(tuiles) - touchees} tuiles de rue sur {len(tuiles)} hors d'atteinte"
 
 
-def test_le_pont_est_le_seul_lien_CARROSSABLE_vers_la_pointe():
+def test_le_pont_est_le_seul_lien_CARROSSABLE_vers_la_pointe(CARTE):
     """⚠️ Le chenal doit couper VRAIMENT : sans pont, La Pointe est une ile.
 
     Si ce test devient vert en enlevant le pont, c'est qu'une rue, une plage ou
@@ -138,7 +152,7 @@ def test_le_pont_est_le_seul_lien_CARROSSABLE_vers_la_pointe():
     for x, y in tablier:
         sans[y][x] = "."
     sans = ["".join(ligne) for ligne in sans]
-    coupees = _atteignables(_tuiles_de("faubourg")[0], sans)
+    coupees = _atteignables(CARTE, _tuiles_de(CARTE, "faubourg")[0], sans)
     # ⚠️ Pas la ZONE de La Pointe : elle partage le boulevard du bord avec La
     # Shop, et ce boulevard-la est du bon cote de l'eau. Ce sont les BLOCS du
     # district, chenal compris, qui doivent devenir injoignables.
@@ -154,7 +168,7 @@ def test_le_pont_est_le_seul_lien_CARROSSABLE_vers_la_pointe():
         "on rejoint La Pointe sans passer sur le pont"
 
 
-def test_la_baie_n_a_ni_rue_ni_batiment():
+def test_la_baie_n_a_ni_rue_ni_batiment(CARTE, ZONES):
     """⚠️ Hors de l'île, qui a sa chapelle et ses maisons, et ses juges à elle
     (`test_ile`) : aucune rue ne la relie, et c'est là que ça se juge."""
     z, ile = ZONES["baie"], CARTE["ile"]
@@ -168,7 +182,7 @@ def test_la_baie_n_a_ni_rue_ni_batiment():
 
 
 @pytest.mark.parametrize("district", TERRE, ids=lambda d: d["slug"])
-def test_chaque_district_a_sa_gang_et_son_point_de_repere(district):
+def test_chaque_district_a_sa_gang_et_son_point_de_repere(CARTE, ZONES, district):
     """Une raison d'y aller, et quelqu'un qui n'aime pas te voir."""
     zone = ZONES[district["slug"]]
     assert zone["nom"] and zone["pietons"] > 0
@@ -181,7 +195,7 @@ def test_chaque_district_a_sa_gang_et_son_point_de_repere(district):
     assert dedans, f"{district['slug']} : rien a y faire"
 
 
-def test_les_zones_de_district_ne_se_chevauchent_pas():
+def test_les_zones_de_district_ne_se_chevauchent_pas(CARTE, ZONES):
     """`Monde.zoneA` garde la derniere zone qui contient le point : si deux
     districts se superposaient, le nom sous la mini-carte mentirait."""
     # ⚠️ Et les trois districts de la bande nord (`app/nord.py`), au-dessus de la ville d'avant.
@@ -207,7 +221,7 @@ def test_les_zones_de_district_ne_se_chevauchent_pas():
 
 @pytest.mark.parametrize("graine", [3, 777, 20260913])
 def test_une_autre_graine_garde_la_ville_d_un_seul_tenant(graine):
-    ville = carte.generer(graine=graine)
+    ville = villes.generer(graine=graine)
     assert all(len(groupes) == 1 for groupes in carte.composantes_par_terre(ville).values())
     sans_aller, sans_retour = carte.voies_bloquees(ville)
     assert not sans_aller and not sans_retour

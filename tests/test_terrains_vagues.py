@@ -56,7 +56,7 @@ def ville_et_lots():
     chantier._parc_de_quartier = note("parc", parc)
     chantier._terrain_vague = note("vague", vague)
     try:
-        ville = carte.generer(nord=False)
+        ville = carte.generer(nord=False)  # ⚠️ pas `villes` : une ville en cache ne passe pas par les espions
     finally:
         chantier._parc_de_quartier, chantier._terrain_vague = parc, vague
     return ville, lots

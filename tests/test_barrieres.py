@@ -8,6 +8,7 @@ planque ni ne rend un lieu de mission inatteignable a pied."""
 from collections import deque
 
 import pytest
+import villes
 
 from app import aeroport, blocs, carte, economie, missions
 
@@ -49,7 +50,7 @@ def test_la_guerite_est_declaree_et_d_accord_avec_la_fourriere():
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.generer()
+    return villes.generer()
 
 
 def rect(b):

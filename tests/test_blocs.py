@@ -5,8 +5,7 @@ import json
 
 import pytest
 
-from app import blocs, create_app, definitions, hors_ligne
-from conftest import ConfigTest
+from app import blocs, definitions, hors_ligne
 
 
 @pytest.mark.parametrize("bloc", blocs.BLOCS, ids=lambda b: b["slug"])
@@ -29,13 +28,12 @@ def test_un_bloc_ne_change_pas_un_octet_de_la_ville(monkeypatch, paquets):
     """⚠️ LA PROMESSE DES BLOCS : la ville n'en sait rien. Bâtie sans aucun bloc, sa carte
     a exactement la même empreinte."""
     monkeypatch.setattr(blocs, "BLOCS", [])
-    sans = definitions.construire()
+    sans = definitions.construire()  # ⚠️ sous le patch : pas la fixture `paquets`
     assert sans.carte.etag == paquets.carte.etag
     assert sans.blocs == {}
 
 
-def test_la_carte_d_un_bloc_se_sert_a_part_et_se_revalide():
-    client = create_app(ConfigTest).test_client()
+def test_la_carte_d_un_bloc_se_sert_a_part_et_se_revalide(client):
     for bloc in blocs.BLOCS:
         r = client.get(f"/api/carte/bloc/{bloc['slug']}")
         assert r.status_code == 200 and r.headers["ETag"]
@@ -59,8 +57,7 @@ def test_le_paquet_nomme_les_passages_et_pas_les_cartes(paquet):
     assert paquet["blocs_empreinte"]
 
 
-def test_le_gabarit_des_blocs_est_dans_la_page_et_hors_de_la_coquille():
-    client = create_app(ConfigTest).test_client()
+def test_le_gabarit_des_blocs_est_dans_la_page_et_hors_de_la_coquille(client):
     page = client.get("/").get_data(as_text=True)
     assert 'data-url-bloc="/api/carte/bloc/SLUG?e=' in page
     assert not any("/api/carte/bloc/" in a for a in hors_ligne.coquille(page, "/"))

@@ -16,6 +16,7 @@ from collections import Counter
 from itertools import combinations
 
 import pytest
+import villes
 
 from app import carte, devantures, economie, magasins, recherche
 
@@ -29,7 +30,7 @@ GRAINES = (carte.GRAINE, 1, 2)
 
 @pytest.fixture(scope="module", params=GRAINES)
 def ville(request):
-    return carte.generer(graine=request.param, nord=False)
+    return villes.generer(graine=request.param, nord=False)
 
 
 def _machines(ville):
@@ -100,8 +101,7 @@ def test_la_spirale_et_la_secousse_sont_des_chances():
 
 
 def test_le_paquet_porte_les_machines():
-    from app import definitions
-    donnees = definitions.assembler()
+    donnees = villes.assembler()
     assert donnees["distributrices"] == magasins.DISTRIBUTRICES
     e = donnees["economie"]["distributrice"]
     assert list(e["monnaie"]) == list(FICHE["monnaie"])

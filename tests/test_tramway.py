@@ -10,13 +10,14 @@ from __future__ import annotations
 import time
 
 import pytest
+import villes
 
 from app import autobus, carte, tramway
 
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.generer()
+    return villes.generer()
 
 
 @pytest.fixture(scope="module")
@@ -116,7 +117,7 @@ def test_les_arrets_au_bord_du_trottoir_espaces_et_loin_des_abribus(ville, boucl
 
 def test_la_ville_est_la_meme_avec_ou_sans_tramway(ville, monkeypatch):
     monkeypatch.setattr(tramway, "tracer", lambda v: None)
-    sans = carte.generer()
+    sans = carte.generer()  # ⚠️ sous le patch : pas `villes`
     for cle in ville:
         if cle == "tramway":
             continue

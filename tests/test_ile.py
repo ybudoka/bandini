@@ -12,13 +12,25 @@ déplace rien de la ville.
 from collections import deque
 
 import pytest
+import villes
 
 from app import carte, devantures, economie, ile, recherche
 
-VILLE = carte.exporter()
-SOL = VILLE["sol"]
-LARGEUR, HAUTEUR = VILLE["largeur"], VILLE["hauteur"]
-FICHE = VILLE["ile"]
+#: La ville du jeu, exportée, et ce qu'on en lit partout — posés par `_la_ville` au
+#: premier juge du fichier, plus bâtis à la collecte (un `-k` ailleurs ne les paie plus).
+VILLE: dict = {}
+SOL: list[str] = []
+LARGEUR = HAUTEUR = 0
+FICHE: dict = {}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _la_ville():
+    global VILLE, SOL, LARGEUR, HAUTEUR, FICHE
+    VILLE = villes.exporter()
+    SOL = VILLE["sol"]
+    LARGEUR, HAUTEUR = VILLE["largeur"], VILLE["hauteur"]
+    FICHE = VILLE["ile"]
 
 
 def dans_l_ile(x: int, y: int) -> bool:
@@ -233,7 +245,7 @@ def test_l_ile_ne_deplace_rien_de_la_ville(monkeypatch):
     rien d'autre ne bouge, pas même un abribus ou un arbre de rue."""
     avec = VILLE
     monkeypatch.setattr(ile, "poser", lambda chantier, ville: None)
-    sans = carte.generer()
+    sans = carte.generer()  # ⚠️ sous le patch : pas `villes`
     for y in range(HAUTEUR):
         if FICHE["y"] <= y < FICHE["y"] + FICHE["h"]:
             x0, x1 = FICHE["x"], FICHE["x"] + FICHE["l"]
@@ -259,7 +271,7 @@ def test_l_ile_ne_deplace_rien_de_la_ville(monkeypatch):
 def test_une_autre_graine_a_la_meme_ile(graine):
     """L'île est dessinée : la chapelle est à la même place d'une graine à
     l'autre — c'est ce qui permet d'y écrire des missions."""
-    autre = carte.generer(graine=graine)
+    autre = villes.generer(graine=graine)
     assert autre["ile"] == FICHE
     y0, x0 = FICHE["y"], FICHE["x"]
     for y in range(y0, y0 + FICHE["h"]):

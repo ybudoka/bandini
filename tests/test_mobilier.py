@@ -9,6 +9,7 @@ terrain vague n'a rien à voir ici.
 """
 
 import pytest
+import villes as villes_gardees  # ⚠️ la fixture d'ici s'appelle déjà `villes`
 
 from app import autobus, carte, mobilier
 
@@ -19,11 +20,11 @@ from app import autobus, carte, mobilier
 
 @pytest.fixture(scope="module")
 def villes():
-    avec = carte.generer(nord=False)
+    avec = villes_gardees.generer(nord=False)  # avant le patch : sûr
     original = mobilier.semer
     mobilier.semer = lambda chantier, ville, graine: {}
     try:
-        sans = carte.generer(nord=False)
+        sans = carte.generer(nord=False)  # ⚠️ sous le patch : pas `villes`
     finally:
         mobilier.semer = original
     ajoutes = avec["decor"][len(sans["decor"]):]

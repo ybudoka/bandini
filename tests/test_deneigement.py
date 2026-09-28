@@ -7,13 +7,12 @@ interdiction de stationner cette nuit-là, et ce qui reste dans la rue part au l
 from __future__ import annotations
 
 import pytest
-
-from app import carte
+import villes
 
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.generer()
+    return villes.generer()
 
 
 def test_elle_s_annonce_bien_avant_la_nuit_ou_n_arrive_pas(ville):

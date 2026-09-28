@@ -15,6 +15,7 @@ from __future__ import annotations
 from collections import deque
 
 import pytest
+import villes
 
 from app import aeroport, carte, economie, missions, recherche
 
@@ -25,7 +26,7 @@ from app import aeroport, carte, economie, missions, recherche
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.generer(nord=False)
+    return villes.generer(nord=False)
 
 
 @pytest.fixture(scope="module")
@@ -247,10 +248,13 @@ def test_les_barrieres_de_l_aeroport_attendent_les_missions_a_venir(ville):
     assert fiches["aeroport"]["forcer"] is None
 
 
-def test_l_aerogare_est_un_lieu_et_elle_a_sa_piece(ville):
+def test_l_aerogare_est_un_lieu_et_elle_a_sa_piece():
     """Le seul bâtiment qui s'ouvre : un repère de la carte (famille transport), une
     porte, et la pièce que les missions de l'arc A attendent. Les autres portes de
     l'aéroport sont peintes et fermées."""
+    # ⚠️ Sa propre ville, pas la fixture (`villes`) : le juge tient la pièce par `is`,
+    # et une copie ne serait jamais LA pièce d'`aeroport.PIECES`.
+    ville = carte.generer(nord=False)
     points = [p for p in ville["points_interet"] if dedans(ville["aeroport"], p["x"], p["y"])]
     assert [(p["slug"], p["famille"]) for p in points] == [("aeroport", "transport")]
     portes = [p for p in ville["portes"] if dedans(ville["aeroport"], p["x"], p["y"])]
@@ -317,7 +321,7 @@ def test_une_autre_graine_a_le_meme_aeroport(graine, ville):
     """L'aéroport est dessiné : à la même place d'une graine à l'autre. ⚠️ Et le pont
     part parfois du SABLE : sur ces graines-là, la plage de La Pointe descend sous
     le tablier, et ce qui y traînait a déménagé — plus rien sur le pont ni à son flanc."""
-    autre = carte.generer(graine=graine, nord=False)
+    autre = villes.generer(graine=graine, nord=False)
     for cle in ("x", "y", "l", "h", "plan", "piste", "avions", "pont"):
         assert autre["aeroport"][cle] == ville["aeroport"][cle], cle
     pont = autre["aeroport"]["pont"]

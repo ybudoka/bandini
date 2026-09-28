@@ -8,6 +8,7 @@ import json
 import re
 
 import pytest
+import villes
 
 from app import carte, economie, vehicules
 
@@ -6311,9 +6312,7 @@ def test_aucune_borne_fontaine_ne_prend_le_coin_d_un_feu(racine):
     """Même règle que pour les lampadaires : le coin d'un croisement à feux est
     la place du **mât**. Une borne plantée dessus, c'est le feu qu'on ne voit
     pas en arrivant."""
-    from app import carte as c
-
-    ville = c.generer()
+    ville = villes.generer()
     reserves = set()
     for inter in ville["intersections"]:
         if len(inter["bras"]) < 4:

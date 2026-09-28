@@ -12,13 +12,14 @@
 from __future__ import annotations
 
 import pytest
+import villes
 
 from app import carte, relief
 
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.generer()
+    return villes.generer()
 
 
 @pytest.fixture(scope="module")
@@ -117,6 +118,7 @@ def test_sans_aeroport_pas_de_falaises_du_large():
 
 
 def test_deterministe():
+    # ⚠️ Deux générations POUR DE VRAI, pas `villes` : c'est le hasard qu'on juge.
     a, b = carte.generer(), carte.generer()
     assert a["relief"] == b["relief"]
     assert a["sol"] == b["sol"]

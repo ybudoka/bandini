@@ -8,6 +8,7 @@ a l'heure.
 """
 
 import pytest
+import villes
 
 from app import carte, economie, magasins, missions
 
@@ -70,7 +71,7 @@ def test_export_de_la_contrebande():
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.generer(nord=False)
+    return villes.generer(nord=False)
 
 
 def test_la_cale_est_posee_sur_les_planches_des_quais(ville):

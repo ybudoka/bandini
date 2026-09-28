@@ -14,14 +14,15 @@ import sys
 from pathlib import Path
 
 import pytest
+import villes
 from test_reproductible import GRAINES, RACINE
 
-from app import carte, definitions, economie, pietons
+from app import economie, pietons
 
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.exporter()
+    return villes.exporter()
 
 
 @pytest.fixture(scope="module")
@@ -49,7 +50,7 @@ def test_le_paquet_porte_la_bagarre_et_ses_frontieres():
     défaut huit fois. Les frontières sont le cas limite : elles ne sont *dans*
     aucune des deux fiches, c'est `definitions.assembler` qui les marie. Si
     personne ne les met dans le paquet, elles n'existent que pour Python."""
-    paquet = definitions.assembler()
+    paquet = villes.assembler()
     assert paquet["pietons"]["bagarre"] == pietons.BAGARRE
     portees = paquet["pietons"]["frontieres"]
     assert portees, "le navigateur ne reçoit aucune frontière"

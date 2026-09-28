@@ -344,16 +344,15 @@ def test_le_jeu_d_une_replique_de_mission_la_suit_quand_on_en_insere_une_avant()
     assert apres_ajout["Deux."][1] == "[quietly] Deux."
 
 
-def test_le_jeu_des_repliques_ne_part_pas_au_navigateur():
+def test_le_jeu_des_repliques_ne_part_pas_au_navigateur(paquets):
     """Le jeu sert à générer les voix, jamais à jouer : dans le paquet, ce ne serait que des balises
     entre crochets — de quoi alourdir chaque mission — et un texte que le jeu pourrait afficher."""
-    from app import definitions, missions
+    from app import missions
 
     # ⚠️ **NI DANS LE PAQUET, NI DANS LES DIALOGUES.** Depuis le 24 sept. 2026, les
     # répliques voyagent à part (`/api/mission/<slug>`) : le juge qui ne regardait que
     # le paquet serait devenu vert sans rien prouver — il ne reste plus une réplique
-    # dedans.
-    paquets = definitions.construire()
+    # dedans. (Le paquet de la session : `construire()` bâtit une ville.)
     corps = [paquets.definitions.corps.decode()] + [d.corps.decode() for d in paquets.a_jouer.values()]
     for texte in corps:
         assert '"jeu"' not in texte and "[casually]" not in texte and "[worried]" not in texte

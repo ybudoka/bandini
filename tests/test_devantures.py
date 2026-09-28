@@ -8,6 +8,7 @@ qu'on comprenne pourquoi. D'ou les juges d'ici : ils gardent la frontiere.
 """
 
 import pytest
+import villes
 
 from app import carte, devantures
 
@@ -22,7 +23,7 @@ MURS_DEVANTURE = frozenset({"W", "F", "D", "d", "G"})
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.generer(nord=False)
+    return villes.generer(nord=False)
 
 
 @pytest.fixture(scope="module")
@@ -215,6 +216,7 @@ def test_chaque_devanture_eclaire_son_trottoir(ville):
 
 
 def test_le_meme_grain_donne_la_meme_rue():
+    # ⚠️ Deux générations POUR DE VRAI, pas `villes` : c'est le hasard qu'on juge.
     a = carte.generer(graine=4242, nord=False)
     b = carte.generer(graine=4242, nord=False)
     assert a["devantures"] == b["devantures"]
@@ -222,14 +224,14 @@ def test_le_meme_grain_donne_la_meme_rue():
 
 
 def test_une_autre_graine_donne_d_autres_enseignes():
-    a = carte.generer(graine=1, nord=False)
-    b = carte.generer(graine=2, nord=False)
+    a = villes.generer(graine=1, nord=False)
+    b = villes.generer(graine=2, nord=False)
     assert a["devantures"] != b["devantures"]
 
 
 @pytest.mark.parametrize("graine", [1, 7, 99, 777])
 def test_les_regles_tiennent_sur_d_autres_graines(graine):
-    ville = carte.generer(graine=graine, nord=False)
+    ville = villes.generer(graine=graine, nord=False)
     sol = ville["sol"]
     assert ville["devantures"], graine
     for d in ville["devantures"]:
@@ -319,7 +321,7 @@ def test_les_commerces_visitables_montrent_leur_porte(ville):
 
 @pytest.mark.parametrize("graine", [1, 7, 99, 777])
 def test_on_voit_toujours_une_porte_sur_d_autres_graines(graine):
-    ville = carte.generer(graine=graine, nord=False)
+    ville = villes.generer(graine=graine, nord=False)
     for d in ville["devantures"]:
         assert set(d["motifs"]) & PORTES_VISIBLES, (graine, d)
         assert len(d["motifs"]) == d["l"], (graine, d)
@@ -475,7 +477,7 @@ def test_la_rue_porte_plusieurs_familles_de_commerce(ville):
 
 @pytest.mark.parametrize("graine", [1, 7, 99, 777])
 def test_les_logements_tiennent_sur_d_autres_graines(graine):
-    ville = carte.generer(graine=graine, nord=False)
+    ville = villes.generer(graine=graine, nord=False)
     sol = ville["sol"]
     assert ville["residences"], graine
     for r in ville["residences"]:
@@ -516,7 +518,7 @@ def test_une_enseigne_a_du_toit_au_dessus_d_elle(ville, sol):
 @pytest.mark.parametrize("graine", [1, 7, 99, 777])
 def test_l_enseigne_a_son_toit_sur_d_autres_graines(graine):
     """La même règle, sur des villes qu'on n'a jamais regardées."""
-    ville = carte.generer(graine=graine, nord=False)
+    ville = villes.generer(graine=graine, nord=False)
     sol = ville["sol"]
     assert ville["devantures"], graine
     for d in ville["devantures"]:

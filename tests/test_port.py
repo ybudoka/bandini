@@ -18,6 +18,7 @@ géographie.
 from __future__ import annotations
 
 import pytest
+import villes
 
 from app import carte
 
@@ -27,7 +28,7 @@ ENTRE_DEUX_INTERDIT = {"route", "trottoir", "abord"}
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.exporter()
+    return villes.exporter()
 
 
 @pytest.fixture(scope="module")

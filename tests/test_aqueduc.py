@@ -7,13 +7,14 @@ panneau DÉTOUR : une gerbe d'eau et un trou.
 """
 
 import pytest
+import villes
 
 from app import carte
 
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.exporter()
+    return villes.exporter()
 
 
 def test_la_fiche_du_bris_se_tient():

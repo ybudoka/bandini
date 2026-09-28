@@ -10,8 +10,9 @@ par seconde que la course de taxi type. Sinon le jeu se joue tout seul.
 from itertools import combinations
 
 import pytest
+import villes
 
-from app import carte, economie, magasins, recherche, vehicules
+from app import economie, magasins, recherche, vehicules
 
 
 def taxi_par_seconde() -> float:
@@ -101,7 +102,7 @@ def test_export_de_l_argent_sale():
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.generer()
+    return villes.generer()
 
 
 def test_les_guichets_sont_sous_une_vitrine_sur_l_abord(ville):

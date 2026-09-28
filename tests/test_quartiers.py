@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 
 import pytest
+import villes as villes_gardees  # ⚠️ la fixture d'ici s'appelle déjà `villes`
 
 from app import carte, chantiers, devantures, mobilier, pietons, salete, vitrines
 
@@ -38,7 +39,7 @@ CINQ_FOIS = 5
 
 
 def _sans(*quoi):
-    """Génère la ville avec ces fonctions remplacées par rien."""
+    """Génère la ville avec ces fonctions remplacées par rien. ⚠️ Sous le patch : pas `villes_gardees`."""
     originaux = [(module, nom, getattr(module, nom)) for module, nom in quoi]
     for module, nom, _ in originaux:
         setattr(module, nom, lambda *a, **k: {})
@@ -53,7 +54,7 @@ def _sans(*quoi):
 def villes():
     """`ville` : la ville livrée. `avant` et `apres` : sans le mobilier de rue,
     sans puis avec le déplacement de la saleté."""
-    ville = carte.generer(nord=False)
+    ville = villes_gardees.generer(nord=False)
     avant = _sans((salete, "deplacer"), (mobilier, "semer"))
     apres = _sans((mobilier, "semer"))
     return ville, avant, apres
@@ -85,7 +86,7 @@ def jeu():
     """⚠️ LA CARTE DU JEU (celle que joue le banc), et son lecteur de quartiers : pour les juges qui choisissent
     des tuiles ici et les font jouer au navigateur — la ville a descendu de 110 rangées sous la bande nord."""
     from app import nord
-    return carte.generer(), nord.LECTEUR
+    return villes_gardees.generer(), nord.LECTEUR
 
 
 def dechets(ville):
@@ -441,7 +442,7 @@ def test_le_zonage_ne_touche_ni_une_tuile_ni_un_arbre(villes, monkeypatch):
     même objet pour objet, dans le même ordre."""
     ville, _avant, _apres = villes
     monkeypatch.setattr(mobilier, "MEUBLES_PAR_USAGE", {})
-    sans = carte.generer(nord=False)
+    sans = carte.generer(nord=False)  # ⚠️ sous le patch : pas `villes_gardees`
     for cle in ville:
         if cle == "chantiers":
             assert chantiers.sans_annexes(ville[cle]) == chantiers.sans_annexes(sans[cle]), cle

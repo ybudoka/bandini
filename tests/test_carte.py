@@ -7,14 +7,25 @@ pour que la ville soit jouable par construction.
 """
 
 import pytest
+import villes
 
 from app import carte, economie, magasins, nord
 
-CARTE = carte.exporter()
-#: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : ce que rejouent les juges qui refont le chantier (ses rues, ses
-#: superblocs, ses sentiers) est dans SON repère ; la carte du jeu a descendu de 110 rangées sous la bande
-#: nord (`app/nord.py`). Les juges de toute la carte, eux, gardent `CARTE`.
-VILLE_D_AVANT = carte.generer(nord=False)
+
+@pytest.fixture(scope="module")
+def CARTE():
+    """La ville du jeu, exportée — prise dans `villes` (une génération par processus),
+    et plus bâtie à la collecte : un `-k` ailleurs ne la paie plus."""
+    return villes.exporter()
+
+
+@pytest.fixture(scope="module")
+def VILLE_D_AVANT():
+    """⚠️ LA VILLE D'AVANT (27 sept. 2026) : ce que rejouent les juges qui refont le chantier (ses rues, ses
+    superblocs, ses sentiers) est dans SON repère ; la carte du jeu a descendu de 110 rangées sous la bande
+    nord (`app/nord.py`). Les juges de toute la carte, eux, gardent `CARTE`."""
+    return villes.generer(nord=False)
+
 
 #: Les lieux qu'une ville DOIT avoir, quelle que soit la graine. ⚠️ Les autres
 #: portes (un commerce ordinaire qui ouvre, un logement qu'on peut visiter) sont
@@ -23,7 +34,7 @@ VILLE_D_AVANT = carte.generer(nord=False)
 LIEUX_GARANTIS = {special["slug"] for special in carte.SPECIAUX.values()} | {"kiosque"}
 
 
-def test_rectangulaire_et_glyphes_connus():
+def test_rectangulaire_et_glyphes_connus(CARTE):
     assert len(CARTE["sol"]) == CARTE["hauteur"]
     assert len(CARTE["voie"]) == CARTE["hauteur"]
     for ligne, voie in zip(CARTE["sol"], CARTE["voie"]):
@@ -33,7 +44,7 @@ def test_rectangulaire_et_glyphes_connus():
         assert set(voie) <= carte.VOIES, set(voie) - carte.VOIES
 
 
-def test_la_ville_a_la_taille_de_sa_trame():
+def test_la_ville_a_la_taille_de_sa_trame(CARTE):
     # ⚠️ La trame fait la ville ; l'aéroport (21 sept. 2026) l'allonge SOUS elle, de
     # l'eau et une île dessinée, sans toucher une rangée de blocs (`aeroport.py`) — et
     # le relief (21 sept. 2026) l'allonge À L'EST, d'une chaîne de montagnes, sans
@@ -48,7 +59,7 @@ def test_la_ville_a_la_taille_de_sa_trame():
     assert len(carte.RUES_H) == len(carte.RANGEES) + 1
 
 
-def test_les_fleches_sont_sur_la_route_et_menent_quelque_part():
+def test_les_fleches_sont_sur_la_route_et_menent_quelque_part(CARTE):
     for y, ligne in enumerate(CARTE["voie"]):
         for x, fleche in enumerate(ligne):
             if fleche == ".":
@@ -57,14 +68,14 @@ def test_les_fleches_sont_sur_la_route_et_menent_quelque_part():
             assert carte.suivre_voie(CARTE, x, y), f"cul-de-sac routier en {(x, y)}"
 
 
-def test_les_voies_sont_fortement_connexes():
+def test_les_voies_sont_fortement_connexes(CARTE):
     """De n'importe quelle tuile de rue on doit rejoindre n'importe quelle autre."""
     sans_aller, sans_retour = carte.voies_bloquees(CARTE)
     assert not sans_aller, f"{len(sans_aller)} tuiles inatteignables, p. ex. {sorted(sans_aller)[:5]}"
     assert not sans_retour, f"{len(sans_retour)} tuiles sans retour, p. ex. {sorted(sans_retour)[:5]}"
 
 
-def test_les_lignes_d_arret_disent_leur_sens():
+def test_les_lignes_d_arret_disent_leur_sens(CARTE):
     marquees = {(x, y) for y, ligne in enumerate(CARTE["voie"])
                 for x, fleche in enumerate(ligne) if fleche == "S"}
     declarees = {tuple(int(n) for n in cle.split(",")) for cle in CARTE["arrets"]}
@@ -77,7 +88,7 @@ def test_les_lignes_d_arret_disent_leur_sens():
         assert CARTE["voie"][y + dy][x + dx] == "+", "une ligne d'arret entre dans un croisement"
 
 
-def test_les_croisements_sont_des_croisements():
+def test_les_croisements_sont_des_croisements(CARTE):
     total = (len(carte.PLAN[0]) + 1) * (len(carte.PLAN) + 1)
     # Un superbloc avale des croisements : il en reste moins que la trame.
     assert 0 < len(CARTE["intersections"]) < total
@@ -89,7 +100,7 @@ def test_les_croisements_sont_des_croisements():
                 assert carte.routier(CARTE["sol"][y][x])
 
 
-def test_la_ville_est_irreguliere():
+def test_la_ville_est_irreguliere(CARTE):
     """⚠️ Le juge de l'asymetrie : une ville en damier n'a aucun repere.
 
     Chaque ligne ci-dessous protege une source d'irregularite ; si l'une saute,
@@ -152,7 +163,7 @@ def _empreintes_de_batiments(plan_carte):
     return boites
 
 
-def test_tout_ce_qui_est_marchable_est_relie():
+def test_tout_ce_qui_est_marchable_est_relie(CARTE):
     """⚠️ Un îlot PAR TERRE FERME depuis l'île (`carte.composantes_par_terre`) :
     la ville d'un seul tenant, l'île d'un seul tenant, et chaque repère sur
     l'une des deux."""
@@ -191,7 +202,7 @@ def test_les_trois_clotures_disent_ce_qu_elles_font():
     assert not carte.franchissable(carte.BARBELE), "le barbele s'enjambe : il ne veut plus rien dire"
 
 
-def test_la_ville_porte_les_trois_clotures_la_ou_elles_ont_un_sens():
+def test_la_ville_porte_les_trois_clotures_la_ou_elles_ont_un_sens(CARTE):
     """Chacune a un endroit et une raison : du barbele la ou quelqu'un a paye
     pour que personne n'entre (les cours de gang, les cours de La Shop), du
     grillage la ou l'on passe par-dessus (la fourriere, les terrains vagues), et
@@ -226,7 +237,7 @@ def test_la_ville_porte_les_trois_clotures_la_ou_elles_ont_un_sens():
     assert len(clotures) > 10 and set(clotures) == {carte.GRILLAGE},         "du barbele a la fourriere : il ne reste qu'une caisse a payer"
 
 
-def test_un_barbele_ne_referme_jamais_une_poche():
+def test_un_barbele_ne_referme_jamais_une_poche(CARTE):
     """⚠️ Le piege du barbele : c'est un mur pour un pieton. Une cour qu'il
     referme n'est plus dans la ville — et `boucher_les_poches`, qui est le filet
     du generateur, la MURE en silence (avec ses arbres, et parfois le devant
@@ -273,7 +284,7 @@ def test_une_cloture_relie_ses_deux_cotes_mais_le_barbele_coupe():
     assert (2, 1) not in groupe and {(1, 1), (3, 1)} <= groupe
 
 
-def test_chaque_lieu_declare_sa_famille_et_sa_couleur():
+def test_chaque_lieu_declare_sa_famille_et_sa_couleur(CARTE):
     """⚠️ Zero repli gris. Les couleurs des blips de la carte codent des familles
     — dore pour tes places, bleu pour les services, vert pour les magasins — mais
     la table vivait dans `hud.js`, ecrite a la main : elle declarait dix lieux, la
@@ -339,7 +350,7 @@ def test_deux_batiments_mitoyens_ne_portent_pas_la_meme_couverture():
     assert toit_premier in carte.COUVERTURES["commerces"]
 
 
-def test_ce_qu_un_toit_porte_ne_se_pose_jamais_n_importe_ou():
+def test_ce_qu_un_toit_porte_ne_se_pose_jamais_n_importe_ou(CARTE):
     """L'equipement de toit — ventilation, climatisation, cheminee, cage,
     reservoir, antennes — est ce qui rend un toit credible vu d'en haut.
 
@@ -371,7 +382,7 @@ def test_ce_qu_un_toit_porte_ne_se_pose_jamais_n_importe_ou():
                     raise AssertionError(f"deux equipements colles en ({x},{y})")
 
 
-def test_les_portes_menent_a_un_interieur():
+def test_les_portes_menent_a_un_interieur(CARTE):
     slugs = set()
     for porte in CARTE["portes"]:
         assert CARTE["sol"][porte["y"]][porte["x"]] == "D", porte
@@ -386,7 +397,7 @@ def test_les_portes_menent_a_un_interieur():
 
 
 @pytest.mark.parametrize("slug", sorted(carte.INTERIEURS))
-def test_un_interieur_est_une_piece_habitable(slug):
+def test_un_interieur_est_une_piece_habitable(CARTE, slug):
     piece = CARTE["interieurs"][slug]
     assert len(piece["sol"]) == piece["hauteur"]
     for ligne in piece["sol"]:
@@ -404,7 +415,7 @@ def test_un_interieur_est_une_piece_habitable(slug):
         assert 0 < point["y"] < piece["hauteur"] - 1
 
 
-def test_aucun_gabarit_ne_deborde_sur_une_rue_qui_existe():
+def test_aucun_gabarit_ne_deborde_sur_une_rue_qui_existe(VILLE_D_AVANT):
     """Une rue posee appartient a la rue : rien de solide dedans, et de la
     chaussee sur toute sa longueur. Un segment AVALE par un superbloc, lui,
     appartient a l'ilot — c'est tout l'interet des superblocs."""
@@ -437,7 +448,7 @@ def test_aucun_gabarit_ne_deborde_sur_une_rue_qui_existe():
     assert vues > 3000, f"seulement {vues} tuiles de chaussee verifiees"
 
 
-def test_un_superbloc_avale_bien_sa_rue():
+def test_un_superbloc_avale_bien_sa_rue(VILLE_D_AVANT):
     """La cour des Cravates couvre quatre blocs : au centre, plus de rue."""
     chantier = carte._Chantier(carte.PLAN, carte.GRAINE)
     avales = [(i, j) for i in range(1, chantier.nc) for j in range(chantier.nr)
@@ -449,7 +460,7 @@ def test_un_superbloc_avale_bien_sa_rue():
         assert VILLE_D_AVANT["voie"][y][milieu] == ".", f"la rue {i} existe encore en {(milieu, y)}"
 
 
-def test_le_decor_ne_bouche_ni_la_rue_ni_les_portes():
+def test_le_decor_ne_bouche_ni_la_rue_ni_les_portes(CARTE):
     devants = {(p["x"], p["y"] + 1) for p in CARTE["portes"]}
     devants |= {(p["x"], p["y"] + 2) for p in CARTE["portes"]}
     vus = set()
@@ -482,7 +493,7 @@ def _portes_a_l_oeil(ville):
 
 
 @pytest.mark.parametrize("graine", [carte.GRAINE, 1, 2, 7])
-def test_rien_ne_se_tient_devant_une_porte_meme_peinte(graine):
+def test_rien_ne_se_tient_devant_une_porte_meme_peinte(CARTE, graine):
     """Retour de Martin, capture a l'appui (16 sept. 2026) : une machine
     distributrice plantee devant la porte de la PIZZERIA NAPOLI — « jamais rien
     devant la porte d'une maison, d'un commerce ou autre ».
@@ -497,7 +508,7 @@ def test_rien_ne_se_tient_devant_une_porte_meme_peinte(graine):
     sans l'exception de la piste, la rampe du stationnement voisin de la
     NAPOLI tombait (sa reception passe devant la porte peinte d'un logement).
     """
-    ville = CARTE if graine == carte.GRAINE else carte.generer(graine=graine)
+    ville = CARTE if graine == carte.GRAINE else villes.generer(graine=graine)
     devants = {}
     for x, y, genre in _portes_a_l_oeil(ville):
         for j in (1, 2):
@@ -518,7 +529,7 @@ def test_rien_ne_se_tient_devant_une_porte_meme_peinte(graine):
         + ", ".join(f"{nom} en {ou} devant « {genre} » {porte[1:]}" for nom, ou, porte in bouchees[:6]))
 
 
-def test_les_lampadaires_eclairent_depuis_un_trottoir():
+def test_les_lampadaires_eclairent_depuis_un_trottoir(CARTE):
     """⚠️ Deux sortes de lumiere depuis les devantures : le LAMPADAIRE, qui a
     toujours son poteau planté dans du sol qu'on foule, et la VITRINE, qui n'en
     a pas — elle n'est qu'un reflet au pied d'un mur. Confondre les deux ferait
@@ -573,7 +584,7 @@ def test_les_lampadaires_eclairent_depuis_un_trottoir():
     )
 
 
-def test_aucun_lampadaire_ne_prend_le_coin_d_un_feu():
+def test_aucun_lampadaire_ne_prend_le_coin_d_un_feu(CARTE):
     """⚠️ **Retour de Martin : « ne mets pas de lampadaire aux intersections,
     déplace-les — ça va laisser la place libre aux feux ».**
 
@@ -614,7 +625,7 @@ def test_aucun_lampadaire_ne_prend_le_coin_d_un_feu():
     assert len(poteaux) >= 40, f"{len(poteaux)} lampadaires : la rue est noire"
 
 
-def test_les_lieux_des_magasins_et_des_proprietes_existent():
+def test_les_lieux_des_magasins_et_des_proprietes_existent(CARTE):
     lieux = {p["slug"] for p in CARTE["points_interet"]}
     for magasin in magasins.CATALOGUE:
         if magasin["phase"] == 1:
@@ -625,7 +636,7 @@ def test_les_lieux_des_magasins_et_des_proprietes_existent():
     assert "planque" in lieux and "terminus" in lieux
 
 
-def test_les_zones_tiennent_dans_la_carte():
+def test_les_zones_tiennent_dans_la_carte(CARTE):
     for zone in CARTE["zones"]:
         assert 0 <= zone["x"] and 0 <= zone["y"]
         assert zone["x"] + zone["l"] <= CARTE["largeur"]
@@ -634,14 +645,15 @@ def test_les_zones_tiennent_dans_la_carte():
     assert slugs[0] == "faubourg" and "cravates" in slugs
 
 
-def test_deterministe():
+def test_deterministe(CARTE):
+    # ⚠️ Deux générations POUR DE VRAI, pas `villes` : c'est le hasard qu'on juge.
     assert carte.generer() == carte.generer()
     assert carte.exporter()["sol"] == CARTE["sol"]
 
 
-def test_une_autre_graine_redecore_la_meme_ossature():
+def test_une_autre_graine_redecore_la_meme_ossature(CARTE):
     """Le hasard redessine les ilots ; il ne touche ni aux rues ni aux lieux."""
-    autre = carte.generer(graine=carte.GRAINE + 1)
+    autre = villes.generer(graine=carte.GRAINE + 1)
     assert autre["voie"] == CARTE["voie"], "les rues ne dependent pas du hasard"
     assert autre["sol"] != CARTE["sol"], "la graine ne change rien : le hasard est mort"
     assert {p["lieu"] for p in autre["portes"]} >= LIEUX_GARANTIS, \
@@ -664,7 +676,7 @@ def test_une_autre_graine_redecore_la_meme_ossature():
 def test_n_importe_quelle_graine_donne_une_ville_jouable(graine):
     """⚠️ Le decoupage en parcelles tire beaucoup de des : une seule graine
     verte ne prouve rien. Cinq villes entieres, cinq fois les memes juges."""
-    ville = carte.generer(graine=graine)
+    ville = villes.generer(graine=graine)
     assert all(len(groupes) == 1 for groupes in carte.composantes_par_terre(ville).values())
     sans_aller, sans_retour = carte.voies_bloquees(ville)
     assert not sans_aller and not sans_retour
@@ -699,7 +711,7 @@ def test_toute_rangee_de_stationnement_touche_une_allee():
             f"creux {creux} : {len(rangees)} rangees, il en tenait une de plus"
 
 
-def test_les_cases_de_stationnement_sont_au_gabarit_de_l_auto():
+def test_les_cases_de_stationnement_sont_au_gabarit_de_l_auto(CARTE):
     """Deux tuiles de creux — pas une de plus, pas une de moins — et le cote
     ouvert donne sur de quoi rouler. C'est ce qui fait qu'une auto garee tombe
     dans ses lignes au pixel pres, et qu'elle peut en ressortir."""
@@ -722,7 +734,7 @@ def test_les_cases_de_stationnement_sont_au_gabarit_de_l_auto():
     assert cases >= 400, f"seulement {cases} cases de stationnement dans la ville"
 
 
-def test_les_ilots_de_stationnement_sont_au_bout_des_rangees():
+def test_les_ilots_de_stationnement_sont_au_bout_des_rangees(CARTE):
     """Un ilot ferme une rangee : on marche dessus, on ne roule pas dedans, et
     il touche toujours des cases — un ilot au milieu de l'asphalte n'est qu'un
     obstacle."""
@@ -779,7 +791,7 @@ def _lots(sol) -> list[set[tuple[int, int]]]:
 
 
 @pytest.mark.parametrize("graine", [1, 7, 12345, 20260912, 99999999])
-def test_tout_stationnement_touche_la_rue(graine):
+def test_tout_stationnement_touche_la_rue(CARTE, graine):
     """⚠️ LA RÈGLE DE MARTIN : « les stationnements doivent absolument être
     rattachés à la route ou collés à un trottoir au moins une fois ». Un lot
     qu'aucune rue ne touche est un carré d'asphalte au fond d'une cour : on y
@@ -791,7 +803,7 @@ def test_tout_stationnement_touche_la_rue(graine):
     arrière d'un bloc de maisons du Faubourg (219, 28), entouré de gazon sur
     ses quatre côtés.
     """
-    sol = carte.generer(graine=graine)["sol"] if graine != carte.GRAINE else CARTE["sol"]
+    sol = villes.generer(graine=graine)["sol"] if graine != carte.GRAINE else CARTE["sol"]
     orphelins = []
     for lot in _lots(sol):
         # ⚠️ Une BARRIERE COULISSANTE (le lot du poste, clos de barbele) est la
@@ -859,7 +871,7 @@ def test_un_lot_ou_l_entree_ne_passe_pas_n_est_pas_un_lot():
     assert chantier._chemin_vers_la_rue(5, 3, 0, 1) == []
 
 
-def test_les_commerces_ambulants_ont_leur_place():
+def test_les_commerces_ambulants_ont_leur_place(CARTE):
     """Un kiosque se pose sur un trottoir au bord de la rue, un camion sur un
     stationnement — et jamais devant une porte."""
     from app import magasins
@@ -892,7 +904,7 @@ def test_les_commerces_ambulants_ont_leur_place():
 # --- La fourriere : une cour, pas un champ d'asphalte -----------------------
 
 
-def test_la_cour_de_la_fourriere_se_range_en_cases():
+def test_la_cour_de_la_fourriere_se_range_en_cases(CARTE):
     """⚠️ Elle etait un rectangle de « p » avec des places calculees a la main,
     alors que toute la ville range ses stationnements en cases depuis qu'on les
     dessine. Des chars saisis ranges de travers dans un lot municipal, c'est
@@ -919,7 +931,7 @@ def test_la_cour_de_la_fourriere_se_range_en_cases():
             f"la place {place} n'est pas le fond de sa case"
 
 
-def test_la_cour_de_la_fourriere_n_a_pas_de_tremplin():
+def test_la_cour_de_la_fourriere_n_a_pas_de_tremplin(CARTE):
     """⚠️ `_stationnement` finit par poser un tremplin dans une allee. Dans la
     cour de la fourriere, ce serait une sortie PAR-DESSUS LA CLOTURE sans
     payer — et toute l'idee du lot tombe : on le rachete au comptoir, ou on le
@@ -931,7 +943,7 @@ def test_la_cour_de_la_fourriere_n_a_pas_de_tremplin():
     assert not dedans, f"un tremplin dans la cour de la fourriere : {dedans}"
 
 
-def test_on_entre_dans_la_fourriere_par_une_seule_grille():
+def test_on_entre_dans_la_fourriere_par_une_seule_grille(CARTE):
     """La cloture arrete les chars et pas les gens (solidite 3) : c'est ce qui
     fait les deux facons de reprendre son char sans une ligne de code pour les
     distinguer. Mais il n'y a QU'UNE ouverture — deux, et sortir sans payer ne
@@ -950,7 +962,7 @@ def test_on_entre_dans_la_fourriere_par_une_seule_grille():
         f"{ouvertures} tuiles ouvertes dans la cloture, la grille en fait {grille['largeur']}"
 
 
-def test_aucun_arbre_ne_bouche_un_sentier_de_parc():
+def test_aucun_arbre_ne_bouche_un_sentier_de_parc(VILLE_D_AVANT):
     """⚠️ Retour de Martin : « les arbres ne devraient pas être dans les
     sentiers. » Et ce n'etait pas qu'une question de vue : un arbre est
     SOLIDE, rayon 5. `_parc` trace ses allees en baionnette puis seme ses
@@ -976,7 +988,7 @@ def test_aucun_arbre_ne_bouche_un_sentier_de_parc():
     assert chantier.reserve, "plus rien n'est reserve : les sentiers ne se protegent plus"
 
 
-def test_un_sentier_de_parc_se_traverse_de_bout_en_bout():
+def test_un_sentier_de_parc_se_traverse_de_bout_en_bout(CARTE):
     """La reserve ne sert a rien si l'allee est coupee autrement. On verifie
     qu'un parc se traverse : de chaque tuile d'allee, on rejoint les autres."""
     chantier = carte._Chantier(carte.PLAN, carte.GRAINE)
@@ -1082,7 +1094,7 @@ def test_la_piece_a_les_mesures_de_son_batiment(graine):
     juge le calcule lui-meme — il ne rappelle pas `mesures_de_la_part`, sans quoi
     il ne jugerait plus que sa propre copie.
     """
-    ville = carte.generer(graine=graine)
+    ville = villes.generer(graine=graine)
     sol, pieces = ville["sol"], ville["interieurs"]
     faux = []
     for porte in ville["portes"]:
@@ -1111,7 +1123,7 @@ def test_les_portes_s_ouvrent_quand_meme(graine):
     s'ouvraient pas du tout avant qu'on descende a trois sur trois), et les
     grandes sur des grandes.
     """
-    ville = carte.generer(graine=graine)
+    ville = villes.generer(graine=graine)
     pieces = ville["interieurs"]
     planchers = [carte.mesures_de_la_suite(p["interieur"], pieces) for p in ville["portes"]]
     assert len(planchers) >= 25, f"seulement {len(planchers)} portes s'ouvrent (graine {graine})"
@@ -1132,7 +1144,7 @@ def test_une_longue_facade_porte_plusieurs_vitrines(graine):
     facades qui en portent plusieurs ; la COUPE elle-meme se juge juste en
     dessous, sans generer quoi que ce soit.
     """
-    ville = carte.generer(graine=graine)
+    ville = villes.generer(graine=graine)
     par_rangee: dict[int, list[tuple[int, int]]] = {}
     for porte in ville["portes"]:
         par_rangee.setdefault(porte["y"], []).append(tuple(porte["vitrine"]))
@@ -1238,14 +1250,19 @@ def _tourne(course) -> bool:
         for x, y in course)
 
 
-#: Les villes que les juges de clôture regardent — générées UNE fois pour les
-#: deux. ⚠️ Les graines 7 et 777 ne sont pas là par hasard : ce sont celles où
-#: le terrain vague d'à côté de la fourrière doublait son grillage.
-VILLES_CLOTUREES = [CARTE] + [carte.generer(graine=g) for g in (1, 7, 99, 777)]
+#: Les villes que les juges de clôture regardent (`None` : la ville du jeu, exportée) —
+#: prises dans `villes`, générées UNE fois pour les deux juges. ⚠️ Les graines 7 et 777
+#: ne sont pas là par hasard : ce sont celles où le terrain vague d'à côté de la
+#: fourrière doublait son grillage.
+GRAINES_CLOTUREES = (None, 1, 7, 99, 777)
 
 
-@pytest.mark.parametrize("ville", VILLES_CLOTUREES)
-def test_une_cloture_cloture_un_terrain(ville):
+def _ville_cloturee(graine):
+    return villes.exporter() if graine is None else villes.generer(graine=graine)
+
+
+@pytest.mark.parametrize("graine", GRAINES_CLOTUREES)
+def test_une_cloture_cloture_un_terrain(graine):
     """⚠️ Demande de Martin : « les clôtures doivent clôturer les terrains, pas
     juste être là seules ». Il regardait le jeu, et la mesure lui donnait raison
     trois fois : sur la ville livrée, **361 tuiles de clôture en 80 morceaux,
@@ -1262,6 +1279,7 @@ def test_une_cloture_cloture_un_terrain(ville):
     Le juge tient la règle telle qu'elle se dit : **une clôture tourne, ou elle
     n'est pas là**.
     """
+    ville = _ville_cloturee(graine)
     courses = _courses_de_cloture(ville["sol"])
     assert courses, "plus une seule clôture dans la ville"
     droites = [c for c in courses if not _tourne(c)]
@@ -1274,8 +1292,8 @@ def test_une_cloture_cloture_un_terrain(ville):
     assert not seules, f"{len(seules)} tuiles de clôture toutes seules : {seules[:5]}"
 
 
-@pytest.mark.parametrize("ville", VILLES_CLOTUREES)
-def test_une_cloture_fait_une_tuile_d_epais(ville):
+@pytest.mark.parametrize("graine", GRAINES_CLOTUREES)
+def test_une_cloture_fait_une_tuile_d_epais(graine):
     """⚠️ Demande de Martin, capture à l'appui : « je ne devrais pas voir de
     double clôtures d'épais comme ça, seulement une d'épais ». Deux cours
     voisines ceinturaient chacune la sienne, et la ligne mitoyenne portait DEUX
@@ -1290,6 +1308,7 @@ def test_une_cloture_fait_une_tuile_d_epais(ville):
     de clôture**. Un coin en L, un T, une trouée n'en font jamais ; deux courses
     parallèles collées en font un à chaque rangée.
     """
+    ville = _ville_cloturee(graine)
     sol = ville["sol"]
     carres = [(x, y)
               for y in range(ville["hauteur"] - 1)

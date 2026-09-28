@@ -11,6 +11,7 @@ Gare gardent leurs tirages à l'unité près, parce que chaque îlot du quartier
 import copy
 
 import pytest
+import villes
 
 from app import carte, devantures, nord
 
@@ -118,7 +119,7 @@ def test_ses_portes_restent_eparpillees(bande):
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.exporter()
+    return villes.exporter()
 
 
 def test_l_arche_ouvre_la_rue_principale_sur_la_couture(ville):

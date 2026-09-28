@@ -21,8 +21,9 @@ from pathlib import Path
 import pytest
 from werkzeug.serving import make_server
 
-from app import create_app, hors_ligne
+from app import hors_ligne
 from config import Config
+from conftest import _creer_app
 
 RACINE = Path(__file__).resolve().parent.parent
 AUDIO = RACINE / "static" / "audio"
@@ -205,13 +206,13 @@ class Interrupteur:
 
 
 @pytest.fixture(scope="module")
-def site(tmp_path_factory):
+def site(tmp_path_factory, paquets):
     class ConfigHorsLigne(Config):
         TESTING = True
         SECRET_KEY = "test"
         DONNEES_DIR = str(tmp_path_factory.mktemp("donnees"))
 
-    interrupteur = Interrupteur(create_app(ConfigHorsLigne))
+    interrupteur = Interrupteur(_creer_app(ConfigHorsLigne, paquets))
     serveur_http = make_server("127.0.0.1", 0, interrupteur, threaded=True)
     fil = threading.Thread(target=serveur_http.serve_forever, daemon=True)
     fil.start()

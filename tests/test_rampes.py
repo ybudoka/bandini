@@ -10,10 +10,13 @@ ce temps-la.
 """
 
 import pytest
+import villes
 
 from app import carte, missions, vehicules
 
-CARTE = carte.generer()
+#: ⚠️ Bâtie À LA COLLECTE, et c'est voulu : les juges se paramètrent rampe par rampe (`RAMPES`).
+#: Prise dans `villes` : la même génération que les autres fichiers du processus.
+CARTE = villes.generer()
 SOL = CARTE["sol"]
 LARGEUR, HAUTEUR = len(SOL[0]), len(SOL)
 RAMPES = CARTE["rampes"]
@@ -304,7 +307,7 @@ def test_au_moins_une_rampe_recoit_la_moto_du_defi():
     # Un drapeau qui serait vrai partout et toujours serait un drapeau mort.
     refusees = 0
     for graine in (carte.GRAINE, 1, 2, 3, 4, 5):
-        rampes = carte.generer(graine=graine)["rampes"]
+        rampes = villes.generer(graine=graine)["rampes"]
         refusees += sum(1 for r in rampes if not r["defi"])
     assert refusees > 0, (
         "aucune rampe refusee sur six graines : `defi` est vrai partout, il ne mesure rien"

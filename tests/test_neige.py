@@ -7,13 +7,14 @@ la charrue suit une boucle d'autobus.
 from __future__ import annotations
 
 import pytest
+import villes
 
 from app import autobus, carte, neige
 
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.generer()
+    return villes.generer()
 
 
 def test_pas_de_tempete_le_premier_soir_et_une_tous_les_trois_jours(ville):
@@ -53,7 +54,7 @@ def test_la_charrue_fait_une_boucle_par_ses_lieux(ville):
 
 def test_la_ville_est_la_meme_avec_ou_sans_neige(ville, monkeypatch):
     monkeypatch.setattr(neige, "tracer", lambda v: None)
-    sans = carte.generer()
+    sans = carte.generer()  # ⚠️ sous le patch : pas `villes`
     for cle in ville:
         if cle == "neige":
             continue
