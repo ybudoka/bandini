@@ -7,6 +7,8 @@ main) : un voleur, sa victime de dos, un badaud planté qui regarde, et le joueu
 peut être confondu, pas le tirage.
 """
 
+import pytest
+
 VOL = """
     function vol(L, o, ecart) {
         L.Jeu.commencer();
@@ -96,72 +98,91 @@ def test_tout_pres_un_temoin_te_confond_et_ca_se_lit(banc):
     assert r["rapporte"] and r["chaleur"] > 0, f"le témoin n'a rien fait de sa méprise : {r}"
 
 
-def test_la_meprise_est_rare_lisible_et_jamais_au_volant(banc):
-    r = banc("function (L, o) {" + """
-        L.Jeu.commencer();
-        const P = L.Police, r = L.B.defs.recherche.autrui, j = L.B.joueur, TT = L.TT;
-        r.repos_s = 0;
-        const d = o.ligneDroite();
-        j.x = d.x; j.y = d.y - 3 * TT; L.Monde.centrerCamera(j.x, j.y);
-        for (const q of L.B.entites.slice()) if (q.type === 'pieton') L.Entites.retirer(q);
-        const coupable = o.poser('pickpocket', 30, 0), temoin = o.poser('passant', 0, 30);
-        L.Entites.indexer();
-        function essai(t) {
-            temoin.etat = 'flane'; temoin.bulle = null; L.B.recherche.autruiT = undefined;
-            L.B.t = t;
-            return P.crimeDAutrui('pickpocket', j.x + 20, j.y, coupable) ? 1 : 0;
-        }
-        let n = 0;
-        for (let t = 1000; t < 1400; t++) n += essai(t);
-        const part = n / 400;
-        // Lisible : la scene hors de l'ecran, personne ne te confond.
-        r.chance = 1;
-        L.Monde.centrerCamera(j.x + 2000, j.y);
-        const horsChamp = essai(5000);
-        L.Monde.centrerCamera(j.x, j.y);
-        // Au volant : on passe.
-        const v = L.Vehicules.creer('auto', j.x, j.y, 0, { etat: 'stationne', couleur: '#3a6fb0' });
-        L.Entites.indexer();
-        L.Vehicules.monter(j, v);
-        const auVolant = essai(5001);
-        L.Vehicules.descendre(j, true);
-        // Le repos : deux mepris coup sur coup, non.
-        r.repos_s = 90;
-        temoin.etat = 'flane'; L.B.recherche.autruiT = undefined; L.B.t = 6000;
-        const premiere = !!P.crimeDAutrui('pickpocket', j.x + 20, j.y, coupable);
-        temoin.etat = 'flane'; L.B.t = 6100;
-        const seconde = !!P.crimeDAutrui('pickpocket', j.x + 20, j.y, coupable);
-        return { part: part, reglage: 0.35, horsChamp: horsChamp, auVolant: auVolant, premiere: premiere, seconde: seconde };
+@pytest.fixture(scope="module")
+def meprises(banc):
+    """La fréquence de la méprise, puis ses dés, dans UN banc : les deux appellent
+    `Police.crimeDAutrui` à la main, sur une partie qu'ils commencent eux-mêmes.
+
+    ⚠️ La fréquence passe D'ABORD : elle se lit au hachage de `B.t` et du numéro du coupable,
+    et c'est ce premier coupable-là qu'elle a toujours eu. Entre les deux, on remet ce que
+    `Jeu.commencer` ne remet pas : le repos de la méprise (`B.recherche.autruiT` — la fréquence
+    le laisse à B.t = 6000, et les dés jouent à B.t = 2000 : il leur refuserait tout), les
+    crimes notés, et le réglage `chance` que la fréquence a forcé à 1."""
+    return banc("function (L, o) {" + """
+        const sorties = {}, chance = L.B.defs.recherche.autrui.chance;
+        sorties.rare = (function () {
+            L.Jeu.commencer();
+            const P = L.Police, r = L.B.defs.recherche.autrui, j = L.B.joueur, TT = L.TT;
+            r.repos_s = 0;
+            const d = o.ligneDroite();
+            j.x = d.x; j.y = d.y - 3 * TT; L.Monde.centrerCamera(j.x, j.y);
+            for (const q of L.B.entites.slice()) if (q.type === 'pieton') L.Entites.retirer(q);
+            const coupable = o.poser('pickpocket', 30, 0), temoin = o.poser('passant', 0, 30);
+            L.Entites.indexer();
+            function essai(t) {
+                temoin.etat = 'flane'; temoin.bulle = null; L.B.recherche.autruiT = undefined;
+                L.B.t = t;
+                return P.crimeDAutrui('pickpocket', j.x + 20, j.y, coupable) ? 1 : 0;
+            }
+            let n = 0;
+            for (let t = 1000; t < 1400; t++) n += essai(t);
+            const part = n / 400;
+            // Lisible : la scene hors de l'ecran, personne ne te confond.
+            r.chance = 1;
+            L.Monde.centrerCamera(j.x + 2000, j.y);
+            const horsChamp = essai(5000);
+            L.Monde.centrerCamera(j.x, j.y);
+            // Au volant : on passe.
+            const v = L.Vehicules.creer('auto', j.x, j.y, 0, { etat: 'stationne', couleur: '#3a6fb0' });
+            L.Entites.indexer();
+            L.Vehicules.monter(j, v);
+            const auVolant = essai(5001);
+            L.Vehicules.descendre(j, true);
+            // Le repos : deux mepris coup sur coup, non.
+            r.repos_s = 90;
+            temoin.etat = 'flane'; L.B.recherche.autruiT = undefined; L.B.t = 6000;
+            const premiere = !!P.crimeDAutrui('pickpocket', j.x + 20, j.y, coupable);
+            temoin.etat = 'flane'; L.B.t = 6100;
+            const seconde = !!P.crimeDAutrui('pickpocket', j.x + 20, j.y, coupable);
+            return { part: part, reglage: 0.35, horsChamp: horsChamp, auVolant: auVolant, premiere: premiere, seconde: seconde };
+        })();
+        L.B.recherche.autruiT = undefined; L.B.crimes.length = 0; L.B.defs.recherche.autrui.chance = chance;
+        sorties.des = (function () {
+            const tirage = { f: null, n: 0 };
+            const res = (function () {
+                L.Jeu.commencer();
+                tirage.f = L.B.rng;
+                const P = L.Police, avant = P.crimeDAutrui;
+                P.crimeDAutrui = function () {
+                    const b = L.B.rng;
+                    L.B.rng = function () { tirage.n++; return b(); };
+                    try { return avant.apply(null, arguments); } finally { L.B.rng = b; }
+                };
+                const j = L.B.joueur, d = o.ligneDroite();
+                j.x = d.x; j.y = d.y - 48; L.Monde.centrerCamera(j.x, j.y);
+                const coupable = o.poser('pickpocket', 30, 0), temoin = o.poser('passant', 0, 30);
+                L.Entites.indexer();
+                L.B.defs.recherche.autrui.chance = 1; L.B.defs.recherche.autrui.repos_s = 0;
+                let n = 0;
+                for (let t = 0; t < 50; t++) { temoin.etat = 'flane'; L.B.t = 2000 + t; if (P.crimeDAutrui('pickpocket', j.x + 20, j.y, coupable)) n++; }
+                P.crimeDAutrui = avant;
+                return n;
+            })();
+            return { meprises: res, des: tirage.n };
+        })();
+        return sorties;
     }""")
+
+
+def test_la_meprise_est_rare_lisible_et_jamais_au_volant(meprises):
+    r = meprises["rare"]
     assert 0.2 <= r["part"] <= 0.5, f"la méprise tombe {r['part']:.0%} du temps"
     assert r["horsChamp"] == 0, "on te confond pour une scène qu'on ne voit pas"
     assert r["auVolant"] == 0, "on confond un char avec un voleur à pied"
     assert r["premiere"] is True and r["seconde"] is False, r
 
 
-def test_la_meprise_ne_tire_aucun_de(banc):
-    r = banc("function (L, o) {" + VOL + """
-        const tirage = { f: null, n: 0 };
-        const res = (function () {
-            L.Jeu.commencer();
-            tirage.f = L.B.rng;
-            const P = L.Police, avant = P.crimeDAutrui;
-            P.crimeDAutrui = function () {
-                const b = L.B.rng;
-                L.B.rng = function () { tirage.n++; return b(); };
-                try { return avant.apply(null, arguments); } finally { L.B.rng = b; }
-            };
-            const j = L.B.joueur, d = o.ligneDroite();
-            j.x = d.x; j.y = d.y - 48; L.Monde.centrerCamera(j.x, j.y);
-            const coupable = o.poser('pickpocket', 30, 0), temoin = o.poser('passant', 0, 30);
-            L.Entites.indexer();
-            L.B.defs.recherche.autrui.chance = 1; L.B.defs.recherche.autrui.repos_s = 0;
-            let n = 0;
-            for (let t = 0; t < 50; t++) { temoin.etat = 'flane'; L.B.t = 2000 + t; if (P.crimeDAutrui('pickpocket', j.x + 20, j.y, coupable)) n++; }
-            P.crimeDAutrui = avant;
-            return n;
-        })();
-        return { meprises: res, des: tirage.n };
-    }""")
+def test_la_meprise_ne_tire_aucun_de(meprises):
+    r = meprises["des"]
     assert r["meprises"] > 0
     assert r["des"] == 0, f"{r['des']} dés tirés par la méprise"
