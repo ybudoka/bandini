@@ -10,7 +10,7 @@ station trop loin de son lieu, une rame qui ne passe qu'une fois par minute.
 import pytest
 import villes
 
-from app import autobus, carte, metro, mobilier
+from app import autobus, carte, metro, mobilier, statues
 
 #: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : ces juges jugent la construction de la ville — ils la comparent à
 #: elle-même sans un module, ou lisent ses quartiers par un `_Chantier` neuf, dans SON repère. La carte du jeu
@@ -128,9 +128,11 @@ def test_le_metro_ne_deplace_rien_de_la_ville(monkeypatch):
         if cle in ("decor", "metro"):
             continue
         assert avec[cle] == sans[cle], f"« {cle} » a bougé"
-    assert avec["decor"][:len(sans["decor"])] == sans["decor"]
-    assert {d["type"] for d in avec["decor"][len(sans["decor"]):]} <= set(REGARDE.values())
-    assert len(avec["decor"]) - len(sans["decor"]) == len(metro.LIGNE["stations"])
+    # ⚠️ Les statues des parcs se posent après tout, au bout du décor : on les retire des deux (`sans_statues`).
+    avec_d, sans_d = statues.sans_statues(avec["decor"]), statues.sans_statues(sans["decor"])
+    assert avec_d[:len(sans_d)] == sans_d
+    assert {d["type"] for d in avec_d[len(sans_d):]} <= set(REGARDE.values())
+    assert len(avec_d) - len(sans_d) == len(metro.LIGNE["stations"])
 
 
 @pytest.mark.parametrize("graine", [1, 7, 99])

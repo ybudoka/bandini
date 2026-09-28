@@ -1,6 +1,6 @@
 """Ce que ACTION fait devant le décor, les bêtes et ceux qui travaillent dans la rue (P4).
 
-Neuf gestes, et aucun n'est un menu : on regarde la chose (`faceA`, comme pour
+Dix gestes, et aucun n'est un menu : on regarde la chose (`faceA`, comme pour
 tout le reste) et on appuie.
 
 - **s'asseoir** sur un banc : le souffle revient, les forces un peu, la première
@@ -8,6 +8,8 @@ tout le reste) et on appuie.
 - **fouiller** une poubelle, une benne, un bac : quelques sous, une canette, un
   reste — ou un rat. Une fois par jour et par bac, et le quartier compte ;
 - **boire** à la fontaine de la place ;
+- **lire la plaque** d'une statue de parc (28 sept. 2026, `statues.py`) : une ligne
+  par pression, et la suivante à la prochaine — ne rapporte rien, comme le chat ;
 - **manger au barbecue** (deuxième vague, 22 sept. 2026) — un décor déjà posé
   devant les maisons de banlieue, jamais encore servi : quelques PV et un peu
   de souffle, une fois par jour et par barbecue, toujours sous le hot-dog acheté ;
@@ -31,6 +33,8 @@ bac reste sous le dixième de la plus petite prime de mission
 """
 
 from __future__ import annotations
+
+from . import statues
 
 #: La portée d'un geste sur le décor, en pixels du centre du décor : celle du guichet
 #: et de la machine distributrice — une machine et un banc se prennent de la même main.
@@ -128,6 +132,21 @@ BOIRE: dict = {
     "souffle": 40,
     # On ne rebuvait pas dix fois de suite : dix secondes avant d'avoir soif.
     "repit_images": 600,
+}
+
+# --- Lire la plaque d'une statue -------------------------------------------------
+
+#: ⚠️ **UNE LIGNE PAR PRESSION** : le toast du HUD tient une ligne (`Hud.message`), et une plaque en
+#: a quatre. La première pression lit la première, la suivante la suite, et on recommence au bout —
+#: comme on lit une plaque de bronze, en se penchant. Les mots sont dans `statues.MODELES`.
+LIRE: dict = {
+    "invite": "LIRE LA PLAQUE",
+    "decors": statues.TYPES,
+    # Le socle est large : on lit de devant, pas le nez sur le granit.
+    "portee_px": 26,
+    # Une ligne reste à l'écran un peu plus qu'un « ÇA SENT BON » : le temps de la lire.
+    "duree_images": 200,
+    "plaques": statues.exporter(),
 }
 
 # --- Manger au barbecue -----------------------------------------------------------
@@ -257,6 +276,7 @@ def exporter() -> dict:
                      "trouvailles": {s: {k: (list(v) if isinstance(v, tuple) else v) for k, v in t.items()}
                                      for s, t in FOUILLER["trouvailles"].items()}},
         "boire": {**BOIRE, "decors": list(BOIRE["decors"])},
+        "lire": {**LIRE, "decors": list(LIRE["decors"]), "plaques": dict(LIRE["plaques"])},
         "barbecue": {**BARBECUE, "decors": list(BARBECUE["decors"])},
         "parcometre": {**PARCOMETRE, "decors": list(PARCOMETRE["decors"]), "argent": list(PARCOMETRE["argent"])},
         "caresser": {**CARESSER, "mots": list(CARESSER["mots"])},

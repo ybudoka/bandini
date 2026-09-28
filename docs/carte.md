@@ -312,6 +312,12 @@ La foule anonyme, les sortes posées, et les gens d'intérieur. `frequence`
 - **Plages** : où naissent les baigneurs.
 - **Frénésies** (`frenesies.py`) : huit crânes cachés, un par district de terre — dans une ruelle (la friche aux Friches, l'herbe à la Gare de triage, qui n'ont pas de ruelle), près de la cour de la gang visée. Les Cravates au pistolet (Faubourg) et à la carabine (Petit-Canton), les Chevreuils à la batte (Érables) et à la mitraillette (Friches), les Morues au fusil (Quais), les Skateux au couteau (La Pointe), les Boulonneux au Molotov (la Gare de triage), et des chars au Molotov à la Shop.
 - **Métro** : quai (`metro_quai`) et rame (`metro_rame`).
+- **Statues** (`statues.py`) : au coeur de la place des trois parcs de ville, un grand homme de
+  bronze sur son socle — Samuel-Ovide Brumaire, le fondateur, aux Érables ; le général
+  Trudel-Laflamme et sa jument Princesse au Faubourg ; Gilles « La Toque » Bouchard, 1971, à la
+  Shop. Au bord du sentier des grands parcs de quartier des Érables, cinq bustes (la mairesse
+  Rose-Aimée Paradis, l'abbé Côté, l'inventeur Omer Gauthier). On lit leur plaque à ACTION, une
+  ligne par pression.
 - **Aéroport** (`aeroport.py`) : l'aérogare (lieu `aeroport`, famille transport,
   pièce `aerogare` — comptoirs, sièges, carrousel, portiques), la tour de contrôle,
   deux hangars et la guérite (portes condamnées), la piste 09-27, la voie de

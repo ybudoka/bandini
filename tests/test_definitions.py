@@ -153,8 +153,14 @@ def test_le_paquet_reste_leger(paquets):
     (Martin : « je n'aime pas la partie avec les morceaux de train »). Mesure : 67 248 sur `dev`, 68 270 avec
     la cour — 287 piles de décor (+1 Ko ; les wagons partis ne rendaient presque rien, gzip avalait déjà leurs
     rangées répétées). Déjà UNE pile par trois tuiles au lieu d'une carcasse par tuile ; moins, la cour se vide.
+
+    ⚠️ **Le brut des définitions : 270 000 → 275 000, le 28 sept. 2026, tard** — les statues des parcs
+    (demande de Martin : « ajoute des statues dans les parcs »). Mesure : 269 100 bruts / 60 504 gzip sur
+    `dev`, 270 194 / 61 038 avec les plaques qu'on lit à ACTION (`interactions.LIRE`, seize lignes : un
+    accent voyage en échappement unicode, six octets). Le gzip, le vrai juge, reste sous son plafond ; le
+    brut n'est qu'un indicateur, et il n'avait plus que 900 octets de marge.
     """
-    for nom, brut_max, fil_max in (("definitions", 270_000, 62_000), ("carte", 720_000, 69_000)):
+    for nom, brut_max, fil_max in (("definitions", 275_000, 62_000), ("carte", 720_000, 69_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))

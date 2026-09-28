@@ -30,6 +30,8 @@ const Interactions = (function () {
 
   //: Les fontaines qu'on vient de vider : tuile -> l'image où l'on a de nouveau soif.
   const fontaines = {};
+  //: Les plaques de statue : tuile -> la ligne qu'on lira à la prochaine pression (`lire`).
+  const plaques = {};
 
   function tuile(e) { return Math.floor(e.x / TT) + ',' + Math.floor(e.y / TT); }
 
@@ -174,7 +176,7 @@ const Interactions = (function () {
     return !!partie.fouilles && partie.fouilles['parc:' + tuile(p)] === partie.jour;
   }
 
-  /** Les six gestes de décor, dans l'ordre où l'on tranche à distance égale. `refus`
+  /** Les sept gestes de décor, dans l'ordre où l'on tranche à distance égale. `refus`
       dit pourquoi ce n'est pas possible MAINTENANT (le HUD l'écrit, ACTION le dit) —
       un refus se montre, comme « FERMÉ » devant un kiosque. */
   const SUR_LE_DECOR = [
@@ -187,6 +189,9 @@ const Interactions = (function () {
     { geste: 'boire', table: function (c) { return c.boire.decors; }, portee: function (c) { return c.boire.portee_px; },
       refus: function (j, d) { return fontaineSeche(d) ? cfg().boire.encore : null; },
       invite: function (c) { return c.boire.invite; }, faire: boire },
+    { geste: 'lire', table: function (c) { return c.lire.decors; }, portee: function (c) { return c.lire.portee_px; },
+      refus: function () { return null; },
+      invite: function (c) { return c.lire.invite; }, faire: lire },
     { geste: 'barbecue', table: function (c) { return c.barbecue.decors; }, portee: function (c) { return c.barbecue.portee_px; },
       refus: function (j, d) { return mangeDuJour(d) ? cfg().barbecue.deja : null; },
       invite: function (c) { return c.barbecue.invite; }, faire: manger },
@@ -352,6 +357,18 @@ const Interactions = (function () {
     return true;
   }
 
+  /** Lire la plaque d'une statue (`statues.py`) : UNE ligne par pression — le toast n'en tient
+      qu'une —, la suivante à la prochaine, et on recommence au bout. */
+  function lire(j, statue) {
+    const c = cfg().lire, lignes = c.plaques[statue.decor] || [];
+    if (!lignes.length) return false;
+    const k = tuile(statue), i = (plaques[k] || 0) % lignes.length;
+    plaques[k] = i + 1;
+    Hud.message(lignes[i], c.duree_images);
+    Son.SFX.menu();
+    return true;
+  }
+
   function manger(j, bbq) {
     const c = cfg().barbecue, p = B.partie;
     j.animT = 24; j.animType = 'ramasse';
@@ -507,6 +524,7 @@ const Interactions = (function () {
   /** Une nouvelle partie n'hérite pas de la soif de l'ancienne. */
   function oublier() {
     for (const k in fontaines) delete fontaines[k];
+    for (const k in plaques) delete plaques[k];
   }
 
   return { afficheSousLaMain, arracherLAffiche, peutAgir, artisteSousLaMain, touristeSousLaMain, chatSousLaMain, decorSousLaMain,

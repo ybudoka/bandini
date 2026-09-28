@@ -257,7 +257,10 @@ const Entites = (function () {
     const n = def.decalage_nord || 0;
     (def.decor || []).forEach(function (d) {
       const fiche = DECORS[d.type] || {};
-      if (d.y < n) horsSuite++;
+      // ⚠️ `fiche.horsSuite` : un decor AJOUTE a la ville finie (les statues des parcs, `statues.py`)
+      // prend lui aussi ses numeros a part — sinon tout ce qui nait apres lui glisse d'un cran.
+      const aPart = d.y < n || !!fiche.horsSuite;
+      if (aPart) horsSuite++;
       const e = creer('decor', d.x * TT + 8, d.y * TT + 15, {
         decor: d.type, r: fiche.r === undefined ? 3 : fiche.r, solide: !!fiche.solide,
         // ⚠️ `invisible` : un decor qui ARRETE sans se peindre lui-meme — le pied
@@ -270,7 +273,7 @@ const Entites = (function () {
         // sont la premiere fiche de decor a en avoir besoin.
         v: fiche.variantes ? hash2(d.x * 7919 + d.y, 0x5A11) % fiche.variantes : 0,
       });
-      if (d.y < n) horsSuite--;
+      if (aPart) horsSuite--;
       // ⚠️ `estIndexable`, PAS `e.solide` : c'etait le second exemplaire de la
       // regle, et il a survecu au premier correctif. Un buisson restait hors
       // de l'index a la construction de la ville — donc invisible au char

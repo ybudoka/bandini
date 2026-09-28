@@ -1396,6 +1396,9 @@ DECOR_SOLIDE = frozenset({
     "baril_feu",
     # La cour à scrap de la gare (`nord._cour_a_scrap`) : ses piles et sa grue à aimant.
     "pile_de_carcasses", "cubes_de_ferraille", "tas_de_pneus", "grue_aimant",
+    # Les statues des parcs (`statues.py`) : du bronze sur du granit, ça arrête tout.
+    "statue_fondateur", "statue_cavalier", "statue_hockeyeur",
+    "buste_mairesse", "buste_cure", "buste_inventeur",
     "arbre", "banc", "baril", "bbq", "belvedere", "borne_fontaine", "cabanon",
     "caisse", "carrousel", "chaise_sauveteur", "chaises_volantes", "distributrice_cafe",
     "distributrice_grignotines", "distributrice_liqueur", "fontaine", "galerie_tir",
@@ -1995,6 +1998,12 @@ class _Chantier:
         #: Les rectangles des BOIS (les parcs sauvages de La Pointe) : leurs sentiers s'exportent
         #: (`chemins_des_bois`), c'est la que traverse l'orignal.
         self.bois: list[tuple[int, int, int, int]] = []
+        #: Le coeur de la place de chaque parc de VILLE, dans l'ordre de construction : c'est la
+        #: qu'une statue se pose, a la toute fin (`statues.poser`). ⚠️ Note, jamais tiree.
+        self.places_de_parc: list[tuple[int, int]] = []
+        #: Le milieu du sentier de chaque parc de QUARTIER, ses deux bords et sa surface : un buste s'y
+        #: pose a la fin (`statues.poser`), sur le plus grand. ⚠️ Note, jamais tiree non plus.
+        self.sentiers_de_parc: list[tuple[tuple[int, int], tuple, int]] = []
         self.occupe: set[tuple[int, int]] = set()
         #: Les portes PEINTES (`P`) des devantures et des logements. Elles ne
         #: sont pas dans `sol` — le mur reste un mur, on ne la pousse pas — mais
@@ -4889,6 +4898,7 @@ class _Chantier:
         for cx, cy in sentier:
             self.sol[cy][cx] = self.SENTIER_DE_PARC
             self.reserver(cx, cy, 1, 1)
+        self.sentiers_de_parc.append((sentier[len(sentier) // 2], cotes, largeur * hauteur))
         # --- Les bancs, LE LONG du sentier ----------------------------------
         bords = [(cx + dx, cy + dy) for cx, cy in sentier for dx, dy in cotes
                  if x <= cx + dx < x + largeur and y <= cy + dy < y + hauteur]
@@ -5240,6 +5250,8 @@ class _Chantier:
                 depart = (x + largeur - 1, y + self.des.entier(2, hauteur - 3))
             self._allee(depart, centre, pave)
         self.rect(centre[0] - 2, centre[1] - 2, 5, 5, pave)
+        if not sauvage:
+            self.places_de_parc.append(centre)
         # Un etang, toujours a plus de trois tuiles du bord : il ne doit
         # enfermer aucun coin de pelouse.
         if largeur >= 16 and hauteur >= 12:
@@ -7304,6 +7316,11 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
     # chantier) : sur la ville finie et sans un dé, des tuiles de trottoir deviennent chaussée.
     if plan == PLAN:
         ouvrir_les_rues(ville)
+    # DES STATUES DANS LES PARCS (docs/jalons/des-statues-dans-les-parcs.md) : au coeur de la place de
+    # chaque parc de ville, sur la ville finie et sans un de — rien d'autre ne bouge. Avant la bande
+    # nord, qui les fait descendre avec le reste.
+    from . import statues as statues_mod
+    statues_mod.poser(chantier, ville)
     # ⚠️ LA VILLE S'AGRANDIT AU NORD (docs/jalons/la-ville-s-agrandit-au-nord.md), APRÈS ABSOLUMENT TOUT :
     # elle descend de 110 rangées, et la bande (les Friches, le Petit-Canton, la Gare) se colle au-dessus.
     # Sa graine est à elle ; la ville d'avant est la même à la tuile près. `nord=False` : la ville d'avant.

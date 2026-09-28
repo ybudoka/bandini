@@ -11,7 +11,7 @@ terrain vague n'a rien à voir ici.
 import pytest
 import villes as villes_gardees  # ⚠️ la fixture d'ici s'appelle déjà `villes`
 
-from app import autobus, carte, mobilier
+from app import autobus, carte, mobilier, statues
 
 #: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : ces juges jugent la construction de la ville — ils la comparent à
 #: elle-même sans un module, ou lisent ses quartiers par un `_Chantier` neuf, dans SON repère. La carte du jeu
@@ -27,7 +27,8 @@ def villes():
         sans = carte.generer(nord=False)  # ⚠️ sous le patch : pas `villes`
     finally:
         mobilier.semer = original
-    ajoutes = avec["decor"][len(sans["decor"]):]
+    # ⚠️ Les statues des parcs se posent APRÈS le mobilier, au bout du décor (`statues.sans_statues`).
+    ajoutes = statues.sans_statues(avec["decor"])[len(statues.sans_statues(sans["decor"])):]
     return avec, sans, ajoutes
 
 
