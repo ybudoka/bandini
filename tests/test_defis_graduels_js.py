@@ -96,37 +96,6 @@ ROBOT = """
 EPREUVES = ["roue", "anneaux", "ratons", "danse", "mannequin", "radio", "moteur", "crochet", "coffre", "tire", "quilles"]
 
 
-@pytest.mark.parametrize("slug", EPREUVES)
-def test_chaque_epreuve_se_gagne_au_bouton(banc, slug):
-    r = banc(_jeu(ROBOT + """
-        const d = aller(L, o, '%s');
-        if (!d) return { erreur: 'saut' };
-        const ouverte = !!L.B.epreuve, avant = L.B.partie.argent;
-        jouer(L, o, d);
-        return { ouverte: ouverte, defi: L.B.defi && L.B.defi.slug, epreuve: !!L.B.epreuve,
-                 fait: !!L.B.partie.defisFaits['%s'], gain: L.B.partie.argent - avant, prime: d.prime,
-                 carnet: L.B.partie.carnet.slice(-2).map(function (l) { return l.t; }) };
-    """ % (slug, slug)))
-    assert r.get("erreur") is None, r
-    assert r["ouverte"], "COMMENCER n'ouvre pas l'épreuve"
-    assert r["fait"], r
-    assert r["defi"] is None and r["epreuve"] is False
-    assert r["gain"] == r["prime"], r
-
-
-@pytest.mark.parametrize("slug", EPREUVES)
-def test_sans_rien_faire_chaque_epreuve_se_rate(banc, slug):
-    """Le juge d'en haut mord : un joueur qui ne touche à rien ne gagne rien."""
-    r = banc(_jeu("""
-        const d = aller(L, o, '%s'), avant = L.B.partie.argent;
-        for (let n = 0; n < d.chrono_s * 60 + 30 && L.B.defi; n++) o.frame(1);
-        return { defi: !!L.B.defi, fait: !!L.B.partie.defisFaits['%s'], gain: L.B.partie.argent - avant,
-                 carnet: L.B.partie.carnet.slice(-1)[0].t };
-    """ % (slug, slug)))
-    assert r["defi"] is False and r["fait"] is False and r["gain"] == 0, r
-    assert r["carnet"].startswith("DÉFI RATÉ"), r
-
-
 def test_esquive_abandonne_et_rend_les_boutons(banc):
     r = banc(_jeu("""
         aller(L, o, 'radio');
@@ -386,14 +355,63 @@ MALADROIT = """
 """
 
 
-@pytest.mark.parametrize("slug", EPREUVES)
-def test_le_joueur_maladroit_rate_chaque_epreuve(banc, slug):
-    r = banc(_jeu(MALADROIT + """
-        const d = aller(L, o, '%s'), avant = L.B.partie.argent;
+@pytest.fixture(scope="module", params=EPREUVES)
+def trois_joueurs(request, banc):
+    """UN banc par épreuve, trois joueurs l'un après l'autre : celui qui ne touche à rien, le
+    maladroit, puis le parfait.
+
+    ⚠️ **Les deux qui ratent passent D'ABORD** : un raté ne note rien dans `defisFaits` (voir
+    `Histoire.finirDefi`), donc le parfait trouve le défi jamais réussi, comme dans une partie
+    neuve — et sa prime est celle de la première fois. Le défi du jour suit la date du serveur,
+    pas l'heure du jeu. Entre deux joueurs, `aller` ferme scène, cinéma et menu, et rouvre
+    l'épreuve de zéro ; ce que les dés tirent (le lot, les cibles) change, et les trois joueurs
+    lisent l'état de l'épreuve au lieu de le deviner."""
+    slug = request.param
+    # ⚠️ ROBOT et MALADROIT déclarent tous deux `TOUCHE` et `taper` : chacun dans sa portée.
+    return banc(_jeu("const jouer = (function () {" + ROBOT + "return jouer; })();"
+                     + "const rater = (function () {" + MALADROIT + "return rater; })();" + """
+        const slug = '%s', sorties = {};
+        // 1. Sans rien faire.
+        let d = aller(L, o, slug), avant = L.B.partie.argent;
+        for (let n = 0; n < d.chrono_s * 60 + 30 && L.B.defi; n++) o.frame(1);
+        sorties.rien = { defi: !!L.B.defi, fait: !!L.B.partie.defisFaits[slug], gain: L.B.partie.argent - avant,
+                         carnet: L.B.partie.carnet.slice(-1)[0].t };
+        // 2. Le maladroit.
+        d = aller(L, o, slug); avant = L.B.partie.argent;
         rater(L, o, d);
-        return { defi: !!L.B.defi, fait: !!L.B.partie.defisFaits['%s'], gain: L.B.partie.argent - avant,
-                 carnet: L.B.partie.carnet.slice(-1)[0].t };
-    """ % (slug, slug)))
+        sorties.maladroit = { defi: !!L.B.defi, fait: !!L.B.partie.defisFaits[slug], gain: L.B.partie.argent - avant,
+                              carnet: L.B.partie.carnet.slice(-1)[0].t };
+        // 3. Le parfait, par le bouton.
+        d = aller(L, o, slug);
+        if (!d) { sorties.parfait = { erreur: 'saut' }; return sorties; }
+        const ouverte = !!L.B.epreuve;
+        avant = L.B.partie.argent;
+        jouer(L, o, d);
+        sorties.parfait = { ouverte: ouverte, defi: L.B.defi && L.B.defi.slug, epreuve: !!L.B.epreuve,
+                            fait: !!L.B.partie.defisFaits[slug], gain: L.B.partie.argent - avant, prime: d.prime,
+                            carnet: L.B.partie.carnet.slice(-2).map(function (l) { return l.t; }) };
+        return sorties;
+    """ % slug))
+
+
+def test_chaque_epreuve_se_gagne_au_bouton(trois_joueurs):
+    r = trois_joueurs["parfait"]
+    assert r.get("erreur") is None, r
+    assert r["ouverte"], "COMMENCER n'ouvre pas l'épreuve"
+    assert r["fait"], r
+    assert r["defi"] is None and r["epreuve"] is False
+    assert r["gain"] == r["prime"], r
+
+
+def test_sans_rien_faire_chaque_epreuve_se_rate(trois_joueurs):
+    """Le juge d'en haut mord : un joueur qui ne touche à rien ne gagne rien."""
+    r = trois_joueurs["rien"]
+    assert r["defi"] is False and r["fait"] is False and r["gain"] == 0, r
+    assert r["carnet"].startswith("DÉFI RATÉ"), r
+
+
+def test_le_joueur_maladroit_rate_chaque_epreuve(trois_joueurs):
+    r = trois_joueurs["maladroit"]
     assert r["defi"] is False and r["fait"] is False and r["gain"] == 0, r
     assert r["carnet"].startswith("DÉFI RATÉ"), r
 
@@ -473,56 +491,85 @@ VOLANT = """
 """
 
 
-def test_le_frein_pile_se_gagne_lance_et_s_arrete_dans_la_case(banc):
-    r = banc(_jeu(VOLANT + """
-        const d = aller(L, o, 'frein_pile'), r = d.regles, p = L.B.conduite.piste;
-        const v = auVolant(L, o, -8 * L.TT, 0);
-        let lanceA = null;
-        for (let n = 0; n < 900 && L.B.defi; n++) {
-            const q = L.Conduite.projeter(p, v.x, v.y);
-            if (L.B.conduite.phase === 'lance' && lanceA === null) lanceA = v.vitesse / v.def.vitesse_max;
-            const freine = L.B.conduite.phase === 'lance' && q.s + arretA(v) >= r.case * L.TT - 2;
-            piloter(o, freine ? 0 : 1, freine && v.vitesse > 0.05 ? 1 : 0, tenir(L, v, 0));
+@pytest.fixture(scope="module")
+def frein_pile(banc):
+    """Les quatre essais du frein pile dans UN banc : trop loin, trop court, au pas, puis gagné.
+
+    ⚠️ Entre deux essais, on remet ce que chaque juge trouvait au départ : le défi fermé (`aller`
+    rouvre l'épreuve), le char descendu et retiré, le frein pile jamais réussi. Les ratés passent
+    avant le gagné : un raté ne note rien dans `defisFaits`.
+
+    ⚠️ Le trafic qui roule s'en va à chaque image (`pas`) : une partie neuve ne l'a pas encore
+    amené devant l'hôpital, trois mille images plus tard si — voir `test_le_feu_se_mesure…`."""
+    return banc(_jeu(VOLANT + """
+        const sorties = {};
+        function pas(v) {
+            for (const q of L.B.entites.slice()) if (q.type === 'vehicule' && q !== v && q.etat === 'roule') L.Entites.retirer(q);
             o.frame(1);
         }
-        o.pad(null);
-        return { fait: !!L.B.partie.defisFaits.frein_pile, lanceA: lanceA, carnet: L.B.partie.carnet.slice(-1)[0].t };
+        function essai(nom, depart, conduire) {
+            const d = aller(L, o, 'frein_pile'), r = d.regles, p = L.B.conduite.piste;
+            const v = auVolant(L, o, depart * L.TT, 0);
+            sorties[nom] = conduire(r, p, v);
+            o.pad(null);
+            sorties[nom].fait = !!L.B.partie.defisFaits.frein_pile;
+            sorties[nom].carnet = L.B.partie.carnet.slice(-1)[0].t;
+            sorties[nom].phase = L.B.conduite && L.B.conduite.phase;
+            sorties[nom].defi = L.B.defi && L.B.defi.slug;
+            sorties[nom].message = L.B.msg;
+            if (L.B.defi) L.Histoire.abandonnerDefi();
+            L.Vehicules.descendre(L.B.joueur, true); L.Entites.retirer(v);
+            delete L.B.partie.defisFaits.frein_pile;
+        }
+        // `freinA` : on freine une tuile trop tard, ou deux trop tôt.
+        for (const [nom, freinA] of [['TROP LOIN', 1], ['TROP COURT', -2]]) essai(nom, -8, function (r, p, v) {
+            for (let n = 0; n < 900 && L.B.defi; n++) {
+                const q = L.Conduite.projeter(p, v.x, v.y);
+                const freine = L.B.conduite.phase === 'lance' && q.s + arretA(v) >= (r.case + freinA) * L.TT;
+                piloter(o, freine ? 0 : 1, freine && v.vitesse > 0.05 ? 1 : 0, tenir(L, v, 0));
+                pas(v);
+            }
+            return {};
+        });
+        essai('au pas', -3, function (r, p, v) {
+            for (let n = 0; n < 240 && L.B.defi; n++) {
+                piloter(o, v.vitesse < 1 ? 0.5 : 0, 0, tenir(L, v, 0));
+                pas(v);
+            }
+            return {};
+        });
+        essai('gagne', -8, function (r, p, v) {
+            let lanceA = null;
+            for (let n = 0; n < 900 && L.B.defi; n++) {
+                const q = L.Conduite.projeter(p, v.x, v.y);
+                if (L.B.conduite.phase === 'lance' && lanceA === null) lanceA = v.vitesse / v.def.vitesse_max;
+                const freine = L.B.conduite.phase === 'lance' && q.s + arretA(v) >= r.case * L.TT - 2;
+                piloter(o, freine ? 0 : 1, freine && v.vitesse > 0.05 ? 1 : 0, tenir(L, v, 0));
+                pas(v);
+            }
+            return { lanceA: lanceA };
+        });
+        return sorties;
     """))
+
+
+def test_le_frein_pile_se_gagne_lance_et_s_arrete_dans_la_case(frein_pile):
+    r = frein_pile["gagne"]
     assert r["fait"] is True, r
     assert r["lanceA"] >= 0.55
 
 
-@pytest.mark.parametrize("freinA,raison", [(1, "TROP LOIN"), (-2, "TROP COURT")])
-def test_le_frein_pile_se_rate_trop_loin_ou_trop_court(banc, freinA, raison):
-    """`freinA` : on freine une tuile trop tard, ou deux trop tôt."""
-    r = banc(_jeu(VOLANT + """
-        const d = aller(L, o, 'frein_pile'), r = d.regles, p = L.B.conduite.piste;
-        const v = auVolant(L, o, -8 * L.TT, 0);
-        for (let n = 0; n < 900 && L.B.defi; n++) {
-            const q = L.Conduite.projeter(p, v.x, v.y);
-            const freine = L.B.conduite.phase === 'lance' && q.s + arretA(v) >= (r.case + %d) * L.TT;
-            piloter(o, freine ? 0 : 1, freine && v.vitesse > 0.05 ? 1 : 0, tenir(L, v, 0));
-            o.frame(1);
-        }
-        o.pad(null);
-        return { fait: !!L.B.partie.defisFaits.frein_pile, carnet: L.B.partie.carnet.slice(-1)[0].t };
-    """ % freinA))
+@pytest.mark.parametrize("raison", ["TROP LOIN", "TROP COURT"])
+def test_le_frein_pile_se_rate_trop_loin_ou_trop_court(frein_pile, raison):
+    r = frein_pile[raison]
     assert r["fait"] is False
     assert r["carnet"] == "DÉFI RATÉ : LE FREIN PILE DE L'HÔPITAL", r
+    assert r["message"] == "DÉFI RATÉ — " + raison, r
 
 
-def test_le_frein_pile_refuse_qui_passe_la_ligne_au_pas(banc):
-    r = banc(_jeu(VOLANT + """
-        const d = aller(L, o, 'frein_pile'), p = L.B.conduite.piste;
-        const v = auVolant(L, o, -3 * L.TT, 0);
-        for (let n = 0; n < 240 && L.B.defi; n++) {
-            piloter(o, v.vitesse < 1 ? 0.5 : 0, 0, tenir(L, v, 0));
-            o.frame(1);
-        }
-        o.pad(null);
-        return { phase: L.B.conduite && L.B.conduite.phase, defi: L.B.defi && L.B.defi.slug };
-    """))
-    assert r == {"phase": "approche", "defi": "frein_pile"}
+def test_le_frein_pile_refuse_qui_passe_la_ligne_au_pas(frein_pile):
+    r = frein_pile["au pas"]
+    assert {"phase": r["phase"], "defi": r["defi"]} == {"phase": "approche", "defi": "frein_pile"}
 
 
 def test_le_demarrage_au_feu_se_gagne_au_vert_et_se_rate_avant(banc):
@@ -552,26 +599,50 @@ def test_le_demarrage_au_feu_se_gagne_au_vert_et_se_rate_avant(banc):
     assert r["tricheur"]["carnet"] == "DÉFI RATÉ : LE DÉMARRAGE DU TERMINUS"
 
 
-@pytest.mark.parametrize("vehicule", ["moto", "auto", "autobus", "pelleteuse"])
-@pytest.mark.parametrize("reflexe,gagne", [(18, True), (60, False)])
-def test_le_feu_se_mesure_au_char_qu_on_conduit(banc, vehicule, reflexe, gagne):
+FEU_CHARS = ["moto", "auto", "autobus", "pelleteuse"]
+FEU_REFLEXES = [(18, True), (60, False)]
+
+
+def test_le_feu_se_mesure_au_char_qu_on_conduit(banc):
     """Un réflexe d'un tiers de seconde gagne, avec la moto comme avec la pelleteuse ; une
-    seconde de rêverie au vert perd, avec les deux aussi."""
+    seconde de rêverie au vert perd, avec les deux aussi.
+
+    ⚠️ Les huit essais dans UN banc, remis à zéro entre deux comme `test_le_demarrage_au_feu…` :
+    on descend, le char repart, et le feu redevient jamais réussi.
+
+    ⚠️ **ET LE TRAFIC QUI ROULE S'EN VA, à chaque image.** Une partie neuve n'a encore amené
+    personne sur la rue du terminus ; mille images plus tard, un autobus de la ligne y passe et
+    l'essai tombe pour une autre raison (« PAS SANS CHAR », mesuré le 28 sept. 2026) — c'est le
+    réflexe qu'on juge, pas le trafic. D'où aussi la raison du raté, lue au message."""
     r = banc(_jeu(VOLANT + """
-        aller(L, o, 'feu');
-        const v = auVolant(L, o, -L.TT / 2, 0, '%s');
-        let attente = 0;
-        for (let n = 0; n < 1500 && L.B.defi; n++) {
-            const c = L.B.conduite;
-            if (c.phase === 'vert') attente++;
-            const go = c.phase === 'vert' && attente > %d;
-            piloter(o, go ? 1 : 0, 0, go ? tenir(L, v, 0) : 0);
-            o.frame(1);
+        const issues = {};
+        function sansTrafic(v) {
+            for (const q of L.B.entites.slice()) if (q.type === 'vehicule' && q !== v && q.etat === 'roule') L.Entites.retirer(q);
         }
-        o.pad(null);
-        return !!L.B.partie.defisFaits.feu;
-    """ % (vehicule, reflexe)))
-    assert r is gagne
+        for (const slug of %s) for (const reflexe of %s) {
+            aller(L, o, 'feu');
+            const v = auVolant(L, o, -L.TT / 2, 0, slug);
+            let attente = 0;
+            for (let n = 0; n < 1500 && L.B.defi; n++) {
+                sansTrafic(v);
+                const c = L.B.conduite;
+                if (c.phase === 'vert') attente++;
+                const go = c.phase === 'vert' && attente > reflexe;
+                piloter(o, go ? 1 : 0, 0, go ? tenir(L, v, 0) : 0);
+                o.frame(1);
+            }
+            o.pad(null);
+            issues[slug + '-' + reflexe] = { fait: !!L.B.partie.defisFaits.feu, message: L.B.msg };
+            if (L.B.defi) L.Histoire.abandonnerDefi();
+            L.Vehicules.descendre(L.B.joueur, true); L.Entites.retirer(v);
+            delete L.B.partie.defisFaits.feu;
+        }
+        return issues;
+    """ % (FEU_CHARS, [f for f, _ in FEU_REFLEXES])))
+    attendu = {f"{v}-{f}": g for v in FEU_CHARS for f, g in FEU_REFLEXES}
+    assert {k: r[k]["fait"] for k in attendu} == attendu, {k: r[k] for k in attendu if r[k]["fait"] is not attendu[k]}
+    perdus = {k: r[k]["message"] for k in attendu if not attendu[k]}
+    assert set(perdus.values()) == {"DÉFI RATÉ — TROP LENT AU VERT"}, perdus
 
 
 def test_le_creneau_pose_deux_chars_et_la_place_a_la_mesure_du_sien(banc):
