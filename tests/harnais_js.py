@@ -1,22 +1,23 @@
-"""Faire tourner un module du site sous Node — le seul endroit qui lance `node`.
+"""Faire tourner du JavaScript du jeu sous Node — le seul endroit qui lance `node`.
 
-Cinq fichiers de tests font parler du JavaScript hors du navigateur : c'est ce
-qui permet de mesurer la SORTIE de `mots.js`, `dessins.js`, `zoo.js`,
-`coloriage.js` et `decor.js` sans monter un Chromium pour
-des modules qui ne touchent ni au DOM ni au reseau.
+Son seul appelant est la fixture `banc` de `conftest.py` : elle colle le faux
+navigateur (`tests/banc.js`, qui charge `static/js/` dans l'ordre de
+`templates/index.html`) au corps d'un juge `_js`, et passe en `entree` le
+paquet de definitions, les missions et les blocs de carte. C'est ce qui juge le
+moteur sans monter un Chromium.
 
 ⚠️ **LE HARNAIS PASSE PAR UN FICHIER, JAMAIS PAR `node -e`**, et c'est toute la
 raison d'etre de ce module. Linux borne chaque argument d'`execve` a 128 Ko
-(`MAX_ARG_STRLEN`, 32 pages) — macOS, lui, ne borne que le TOTAL. Le jour ou
-`dessins.js` a depasse cette taille (214 Ko aujourd'hui), les quarante-neuf
-tests qui le chargent se sont mis a echouer **sur la CI seulement**, avec un
-`OSError: [Errno 7] Argument list too long` qui ne nomme ni le fichier ni la
-cause. Sur la machine du developpeur, tout restait vert.
+(`MAX_ARG_STRLEN`, 32 pages) — macOS, lui, ne borne que le TOTAL. Un script
+qui depasse cette taille (le paquet a lui seul la depasse de loin) fait echouer
+les juges **sur Linux seulement**, avec un `OSError: [Errno 7] Argument list
+too long` qui ne nomme ni le fichier ni la cause. Sur le Mac du developpeur,
+tout reste vert.
 
-⚠️ C'est le pire genre de panne que ce depot connaisse : elle n'apparait pas la
-ou l'on travaille, elle grandit toute seule avec la bibliotheque de dessins, et
-elle ne se declenche pas a l'ajout fautif mais quelques dessins plus tard. Un
-fichier n'a aucune de ces limites, et il n'en aura jamais.
+⚠️ C'est le pire genre de panne : elle n'apparait pas la ou l'on travaille,
+elle grandit toute seule avec le jeu, et elle ne se declenche pas a l'ajout
+fautif mais quelques ajouts plus tard. Un fichier n'a aucune de ces limites,
+et il n'en aura jamais.
 
 ⚠️ **L'entree se pose DANS le script, pas en argument** (`entree=`). Deux
 raisons, et la seconde compte plus que la premiere : un argument retomberait
@@ -71,10 +72,3 @@ def lancer_node(harnais: str, entree: Any = None) -> str:
             pytrace=False,
         )
     return resultat.stdout
-
-
-def lire_js(racine: Path, *noms: str) -> str:
-    """Le contenu de `static/js/<nom>`, dans l'ordre — les dependances d'abord."""
-    return "".join(
-        (racine / "static" / "js" / nom).read_text(encoding="utf-8") for nom in noms
-    )

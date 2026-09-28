@@ -16,7 +16,13 @@ from config import adresses_du_reseau_local, hote_est_local
 
 
 def test_des_adresses_ipv4_valides():
-    for adresse in adresses_du_reseau_local():
+    """⚠️ Le vrai reseau de la machine. Une liste vide passait la boucle au vert
+    sans rien juger ; hors ligne, elle est legitime (voir
+    `test_rien_a_annoncer_ne_leve_pas`) : on le DIT par un saut, pas par un vert."""
+    adresses = adresses_du_reseau_local()
+    if not adresses:
+        pytest.skip("aucune adresse a annoncer : machine sans reseau, rien a juger")
+    for adresse in adresses:
         ipaddress.IPv4Address(adresse)  # leve si ce n'est pas une IPv4
 
 
@@ -40,14 +46,31 @@ def test_sans_doublon(monkeypatch):
 
 
 def test_repli_quand_le_nom_ne_resout_rien(monkeypatch):
-    """Docker, CI : le nom de la machine ne resout pas. On ne casse pas le demarrage."""
+    """Docker, CI : le nom de la machine ne resout pas. On ne casse pas le demarrage,
+    et on annonce l'adresse par laquelle le systeme sort.
+
+    ⚠️ La sortie est simulee : sur le vrai reseau, une liste vide (« le repli, ou
+    rien du tout ») passait la boucle au vert sans que le repli ait servi."""
 
     def _echec(_nom):
         raise OSError("nom inconnu")
 
+    class PriseQuiSort:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def connect(self, _cible):
+            pass
+
+        def getsockname(self):
+            return ("192.168.4.188", 50000)
+
     monkeypatch.setattr(socket, "gethostbyname_ex", _echec)
-    for adresse in adresses_du_reseau_local():  # le repli, ou rien du tout
-        ipaddress.IPv4Address(adresse)
+    monkeypatch.setattr(socket, "socket", lambda *_a, **_k: PriseQuiSort())
+    assert adresses_du_reseau_local() == ["192.168.4.188"]
 
 
 def test_rien_a_annoncer_ne_leve_pas(monkeypatch):

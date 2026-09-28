@@ -11,6 +11,8 @@ C'est ce qui referme M11 : la premiere vague a fait que le dossier allonge le
 cone des agents, celle-ci fait qu'il transforme les passants en delateurs.
 """
 
+import json
+
 from app import recherche
 
 
@@ -66,11 +68,14 @@ def test_le_stool_a_de_quoi_parler():
         assert mots[cle] == mots[cle].upper(), f"{cle} : la bulle se lit en capitales"
 
 
-def test_la_fiche_descend_au_navigateur():
-    """⚠️ Le defaut qui revient : une fiche que le navigateur ne lisait pas."""
-    paquet = recherche.exporter()
-    assert paquet["stool"] == recherche.STOOL
-    assert paquet["stool"]["dit"] == recherche.STOOL["dit"]
+def test_la_fiche_descend_au_navigateur(paquet):
+    """⚠️ Le defaut qui revient : une fiche que le navigateur ne lisait pas.
+
+    Juge dans le PAQUET, la ou `police.js` la lit (`B.defs.recherche.stool`) :
+    comparer `recherche.exporter()` a `STOOL` ne voyait pas le paquet, et son
+    `dit` redisait la meme egalite."""
+    assert paquet["recherche"].get("stool") == json.loads(json.dumps(recherche.STOOL)), \
+        "la fiche du stool n'arrive pas entiere au navigateur (`defs.recherche.stool`)"
 
 
 # --- Le stool en jeu --------------------------------------------------------

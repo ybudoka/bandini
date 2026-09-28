@@ -16,7 +16,6 @@ ne les tranche sans lire la phrase. Ils se relisent.
 rectifications de 1990 admettent, sont refusés ici aussi.
 """
 
-import json
 import re
 from pathlib import Path
 
@@ -113,9 +112,13 @@ def test_aucun_texte_du_moteur_n_a_perdu_son_accent():
     assert trouves == [], "\n".join(trouves)
 
 
-def test_aucun_texte_du_paquet_n_a_perdu_son_accent(paquet):
+def test_aucun_texte_du_paquet_n_a_perdu_son_accent(paquet, a_jouer):
     """Tout ce que le serveur envoie au navigateur : enseignes, journal, paliers,
-    répliques, noms de lieux — la carte comprise."""
+    répliques, noms de lieux — la carte comprise.
+
+    ⚠️ Les répliques, scènes et objectifs des missions ne sont plus dans le
+    paquet depuis le 24 sept. (`missions.HORS_DU_PAQUET`) : chaque mission se
+    sert à part (`a_jouer`). Sans elles, le juge ne lisait plus un mot de dialogue."""
     trouves = []
 
     def parcourir(valeur, chemin):
@@ -131,6 +134,7 @@ def test_aucun_texte_du_paquet_n_a_perdu_son_accent(paquet):
                 trouves.append(f"{chemin} : {mot} dans {valeur[:60]!r}")
 
     parcourir(paquet, "paquet")
+    parcourir(a_jouer, "a_jouer")
     assert trouves == [], "\n".join(trouves[:40])
 
 
@@ -138,4 +142,3 @@ def test_la_liste_ne_contient_que_des_mots_sans_accent():
     """Un mot accentué dans la liste ne pourrait jamais être trouvé : le juge
     aurait l'air de garder une porte qui n'existe pas."""
     assert all(re.fullmatch(r"[A-Z]+", m) for m in SANS_ACCENT)
-    assert json.dumps(sorted(SANS_ACCENT)).isascii()

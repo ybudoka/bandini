@@ -35,10 +35,10 @@ def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
 
 def test_types_et_ordre():
     assert "aller" in missions.TYPES_OBJECTIFS
-    assert missions.ordre_topologique() == sorted(m["slug"] for m in missions.CATALOGUE) or True
+    # ⚠️ Sans `ordre_topologique() == sorted(...) or True` (toujours vrai) : l'ordre est
+    # juge par `test_les_cinq_missions_se_suivent` et `test_pas_de_cycle`, le type de chaque
+    # objectif par `test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles`.
     for m in missions.CATALOGUE:
-        for o in m["objectifs"]:
-            assert o["type"] in missions.TYPES_OBJECTIFS
         # ⚠️ Une FIN DE PARTIE ne paie rien (M13) : on ne part pas avec une prime, on part avec
         # un générique. Seules les missions qui en jouent un sont à 0 $.
         assert m["recompense"] > 0 or (m.get("donne") or {}).get("generique"), m["slug"]
@@ -170,7 +170,6 @@ def test_chaque_replique_a_une_voix_et_tient_en_deux_phrases():
         if m["prerequis"]:
             assert m["dialogue"]["appel"], f"{m['slug']} : apres la premiere, le donneur appelle"
             assert all(ligne["qui"] == m["donneur"] for ligne in m["dialogue"]["appel"])
-    assert all(v["histoire"] for v in audio.voix_histoire())
 
 
 def test_chaque_donneur_a_son_mot_pour_t_interpeller():

@@ -196,7 +196,9 @@ def depot(tmp_path, racine):
 def git(depot_path, *arguments, crochet=True):
     environnement = dict(os.environ)
     if not crochet:
-        environnement["JEUX_MALINS_VERSION"] = "1"
+        # ⚠️ La variable que le crochet LIT (`post-commit`, sa garde anti-boucle).
+        # Elle s'appelait `JEUX_MALINS_VERSION` ici : le crochet ne la voyait pas.
+        environnement["BANDINI_VERSION"] = "1"
     resultat = subprocess.run(
         ["git", *arguments],
         cwd=depot_path,
@@ -243,6 +245,17 @@ def test_le_crochet_pose_la_version_dans_le_commit_lui_meme(tmp_path, racine):
 
     # Le depot reste propre : rien ne traine hors du commit.
     assert git(d, "status", "--porcelain") == ""
+
+
+@exige_git
+def test_crochet_false_fait_vraiment_taire_le_crochet(tmp_path, racine):
+    """Le depot d'essai part d'un commit fait SANS crochet ; un `feat:` qui
+    passerait quand meme ferait avancer la version dans son dos."""
+    d = depot(tmp_path, racine)
+    (d / "jeu.py").write_text("sans crochet", encoding="utf-8")
+    git(d, "add", "jeu.py")
+    git(d, "commit", "-q", "-m", "feat: sans crochet", crochet=False)
+    assert version_du_depot(d) == "0.1.0", "crochet=False n'a pas fait taire le crochet"
 
 
 @exige_git

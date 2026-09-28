@@ -249,21 +249,7 @@ def test_la_nuit_vide_vraiment_chaque_district():
         assert nuit <= 0.5, f"{district['slug']} : {nuit} de nuit, ca ne se voit pas"
 
 
-def test_le_plafond_ne_masque_plus_le_rythme():
-    """Le juge du piege lui-meme : pour CHAQUE district, la nuit doit compter
-    moins de chars que le jour APRES plafonnement. C'est ce test qui aurait
-    rougi sur le Faubourg."""
-    from app import vehicules
-
-    plafond = vehicules.TRAFIC["vehicules_max"]
-    for district in carte.DISTRICTS:
-        if district.get("eau"):
-            continue
-        jour = min(plafond, district["vehicules"])
-        nuit = min(plafond, district["vehicules"]) * district["rythme"][0]
-        ancien_calcul = min(plafond, district["vehicules"] * district["rythme"][0])
-        assert nuit < jour
-        assert nuit <= ancien_calcul, (
-            f"{district['slug']} : l'ancien calcul donnait {ancien_calcul} la nuit "
-            f"pour {jour} le jour"
-        )
+# ⚠️ `test_le_plafond_ne_masque_plus_le_rythme` est parti (vague A, 28 sept.) : sa 1re assertion
+# redisait `jour_v * nuit < jour_v` du juge d'au-dessus, la 2e (min(p, v)·r <= min(p, v·r)) est
+# vraie par l'algebre pour 0 < r < 1 — il recalculait la formule ici sans lire le moteur. L'ordre
+# plafond PUIS rythme est juge dans le moteur par `test_districts_js::test_la_nuit_le_trafic_et_la_foule_tombent`.

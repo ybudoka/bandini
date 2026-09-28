@@ -6,11 +6,15 @@ elle ne lui met pas d'étoile, elle ne compte pas dans ses morts, et personne ne
 se retourne contre lui parce qu'elle a lieu.
 """
 
+import json
 import math
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
+from test_reproductible import GRAINES, RACINE
 
 from app import carte, definitions, economie, pietons
 
@@ -99,13 +103,28 @@ def test_une_frontiere_tient_dans_la_carte(lignes, ville):
         assert 0 <= f["y"] and f["y"] + long_y <= ville["hauteur"], f
 
 
-def test_les_frontieres_ne_dependent_pas_de_l_ordre_d_un_ensemble(ville):
+def test_les_frontieres_ne_dependent_pas_de_l_ordre_d_un_ensemble():
     """⚠️ La leçon de PYTHONHASHSEED : un `set` de chaînes parcouru dans l'ordre
     rendait la ville différente d'un processus à l'autre, et un juge tombait à
-    pile ou face. On les recalcule : c'est la même liste, dans le même ordre."""
-    assert pietons.frontieres(ville) == pietons.frontieres(ville)
-    # Et elle ne tient que des fiches : la même carte rend la même chose.
-    assert pietons.frontieres(carte.exporter()) == pietons.frontieres(ville)
+    pile ou face. Les frontières ne sont pas dans `carte.exporter()` (c'est
+    `definitions.assembler` qui les marie), donc `test_reproductible` ne les voit
+    pas : on les calcule dans DEUX processus qui ne hachent pas pareil.
+
+    ⚠️ Il les recalculait deux fois dans le même processus : la graine
+    d'empreinte n'y bouge pas, un ordre d'ensemble y passait au vert."""
+    code = ("import json; from app import carte, pietons;"
+            "print(json.dumps(pietons.frontieres(carte.exporter())))")
+    sorties = set()
+    for graine in GRAINES:
+        sortie = subprocess.run(
+            [sys.executable, "-c", code], cwd=RACINE, capture_output=True, text=True,
+            env={"PYTHONHASHSEED": graine, "PATH": "/usr/bin:/bin"},
+        )
+        assert sortie.returncode == 0, sortie.stderr[-800:]
+        sorties.add(sortie.stdout.strip())
+    assert len(sorties) == 1, \
+        "les frontières changent d'un lancement à l'autre : une rixe naît ailleurs à chaque partie"
+    assert json.loads(sorties.pop()), "plus une frontière : le juge ne compare que du vide"
 
 
 def test_une_rixe_se_fait_attendre():

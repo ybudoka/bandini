@@ -69,11 +69,11 @@ def test_le_metteur_en_scene_ne_connait_aucune_scene_par_son_nom():
         assert not re.search(rf"['\"]{re.escape(nom)}['\"]", code), f"scenes.js nomme « {nom} »"
 
 
-def test_histoire_ne_joue_plus_l_ouverture_en_dur():
-    histoire = (RACINE / "static" / "js" / "histoire.js").read_text(encoding="utf-8")
-    assert "Scenes.jouer(" in histoire
-    for reste in ("OUV_LOIN", "marcherVersLeQuai", "placerLeCar", "Vehicules.creer('autobus'"):
-        assert reste not in histoire, f"l'ancienne ouverture traîne encore : {reste}"
+# ⚠️ `test_histoire_ne_joue_plus_l_ouverture_en_dur` est parti (vague A, 28 sept.) : ses greps
+# cherchaient des noms (`OUV_LOIN`, `placerLeCar`…) qui n'existent plus nulle part, et
+# `"Scenes.jouer(" in histoire.js` restait vrai par les scènes de mission même si l'ouverture
+# repassait en dur. L'ouverture JOUÉE (le car hors champ, ses quatre répliques) est jugée au
+# banc par `test_ouverture.py::test_jouer_lance_l_ouverture_et_commencer_ne_la_lance_pas`.
 
 
 def test_les_six_gestes_sont_dessines_dans_les_trois_faces():

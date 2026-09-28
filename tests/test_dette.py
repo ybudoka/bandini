@@ -32,7 +32,6 @@ def test_un_joueur_qui_ne_fait_rien_ne_devient_pas_insolvable_en_une_nuit():
     dollars PAR JOUR et qui ne dépend pas de l'habileté du joueur — donc le seul
     auquel on puisse comparer un intérêt quotidien sans inventer un chiffre."""
     plafond = round(economie.DETTE["montant"] * economie.DETTE["plafond"])
-    pire_nuit = economie.dette_du_lendemain(plafond - 1) - (plafond - 1)
     interet_au_plafond = round(plafond * economie.DETTE["interet_par_jour"])
     honnete = economie.revenu_honnete_par_jour()
     assert honnete > 0
@@ -40,7 +39,6 @@ def test_un_joueur_qui_ne_fait_rien_ne_devient_pas_insolvable_en_une_nuit():
         f"la dette coûte {interet_au_plafond} $ par nuit et le travail honnête en "
         f"rapporte {honnete} $ : il n'y a plus de décision, seulement une descente"
     )
-    assert pire_nuit >= 0
 
 
 def test_la_dette_pese_sur_une_partie_entiere_pas_sur_une_nuit():

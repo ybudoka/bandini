@@ -1,6 +1,6 @@
 import pytest
 
-from app import carte, economie, recherche
+from app import economie, recherche
 
 
 @pytest.mark.parametrize("argent", [0, 10, 500, 100_000])
@@ -95,12 +95,12 @@ def test_le_cafe_fait_courir_plus_longtemps_sans_courir_plus_vite():
 def test_les_proprietes():
     slugs = [p["slug"] for p in economie.PROPRIETES]
     assert len(slugs) == len(set(slugs))
-    lieux = {p["slug"] for p in carte.exporter()["points_interet"]}
+    # ⚠️ Le lieu de chaque propriete sur la carte est juge STRICTEMENT par
+    # `test_carte.py::test_les_lieux_des_magasins_et_des_proprietes_existent` ;
+    # ici une branche `pass` batissait la ville pour ne rien verifier.
     for p in economie.PROPRIETES:
         assert p["prix"] > 0 and p["revenu_par_jour"] > 0
         assert 10 <= economie.retour_sur_investissement_min(p) <= 200
-        if p["phase"] == 1 and p["lieu"] in lieux:
-            pass  # place sur la carte ; le vrai Faubourg (M1) rendra ce test strict
     assert economie.FORTUNE_MAX >= 3 * sum(p["prix"] for p in economie.PROPRIETES)
 
 
