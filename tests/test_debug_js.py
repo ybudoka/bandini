@@ -148,56 +148,78 @@ def test_invincible_bascule_et_bloque_les_degats(banc):
     assert r["vieApresCoup2"] == r["vieMax"] - 5
 
 
-def test_teleporter_sans_objectif_ne_bouge_personne(banc):
-    r = banc("""function (L, o) {
+@pytest.fixture(scope="module")
+def teleporter(banc):
+    """À L'OBJECTIF trois fois dans UN banc : sans objectif, puis dans une pièce, puis dehors
+    avec un objectif — les deux qui ne bougent personne D'ABORD.
+
+    ⚠️ Entre deux, on remet ce que chaque juge trouvait au départ : le menu fermé, et
+    `B.interieur` tel qu'il était (le 2e essai le pose à la main)."""
+    return banc("""function (L, o) {
         L.Jeu.commencer();
-        const j = L.B.joueur;
-        const x = j.x, y = j.y;
-        L.Histoire.cible = function () { return null; };
-        L.Hud.ouvrirMenu(L.Hud.menuDebug());
-        const item = L.B.menu.items.filter(function (i) { return i.libelle === "À L'OBJECTIF"; })[0];
-        item.faire(item);
-        return { actif: item.actif, x: j.x, y: j.y, ax: x, ay: y };
+        const j = L.B.joueur, sorties = {}, interieur = L.B.interieur;
+        function objectif() {
+            L.Hud.ouvrirMenu(L.Hud.menuDebug());
+            return L.B.menu.items.filter(function (i) { return i.libelle === "À L'OBJECTIF"; })[0];
+        }
+        // 1. Sans objectif.
+        (function () {
+            const x = j.x, y = j.y;
+            L.Histoire.cible = function () { return null; };
+            const item = objectif();
+            item.faire(item);
+            sorties.sans = { actif: item.actif, x: j.x, y: j.y, ax: x, ay: y };
+        })();
+        L.Hud.fermerMenu();
+        // 2. Dans une pièce.
+        (function () {
+            L.B.interieur = {};
+            const x = j.x, y = j.y;
+            L.Histoire.cible = function () { return { x: j.x + 3000, y: j.y - 500 }; };
+            const item = objectif();
+            item.faire(item);
+            sorties.piece = { x: j.x, y: j.y, ax: x, ay: y };
+        })();
+        L.Hud.fermerMenu();
+        L.B.interieur = interieur;
+        // 3. Vers l'objectif.
+        (function () {
+            const cx = j.x + 3000, cy = j.y - 500;
+            L.Histoire.cible = function () { return { x: cx, y: cy }; };
+            const item = objectif();
+            const actif = item.actif;
+            item.faire(item);
+            sorties.vers = { actif: actif, x: j.x, y: j.y, cx: cx, cy: cy };
+        })();
+        return sorties;
     }""")
+
+
+def test_teleporter_sans_objectif_ne_bouge_personne(teleporter):
+    r = teleporter["sans"]
     assert r["actif"] is False
     assert (r["x"], r["y"]) == (r["ax"], r["ay"])
 
 
-def test_teleporter_vers_l_objectif(banc):
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const j = L.B.joueur;
-        const cx = j.x + 3000, cy = j.y - 500;
-        L.Histoire.cible = function () { return { x: cx, y: cy }; };
-        L.Hud.ouvrirMenu(L.Hud.menuDebug());
-        const item = L.B.menu.items.filter(function (i) { return i.libelle === "À L'OBJECTIF"; })[0];
-        const actif = item.actif;
-        item.faire(item);
-        return { actif: actif, x: j.x, y: j.y, cx: cx, cy: cy };
-    }""")
+def test_teleporter_vers_l_objectif(teleporter):
+    r = teleporter["vers"]
     assert r["actif"] is True
     assert (r["x"], r["y"]) == (r["cx"], r["cy"])
 
 
-def test_teleporter_refuse_dans_une_piece(banc):
+def test_teleporter_refuse_dans_une_piece(teleporter):
     """`Jeu.sortir` orchestre sa propre transition : le debug n'ecrase pas la
     sienne, alors il ne fait rien tant qu'on n'est pas dehors."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const j = L.B.joueur;
-        L.B.interieur = {};
-        const x = j.x, y = j.y;
-        L.Histoire.cible = function () { return { x: j.x + 3000, y: j.y - 500 }; };
-        L.Hud.ouvrirMenu(L.Hud.menuDebug());
-        const item = L.B.menu.items.filter(function (i) { return i.libelle === "À L'OBJECTIF"; })[0];
-        item.faire(item);
-        return { x: j.x, y: j.y, ax: x, ay: y };
-    }""")
+    r = teleporter["piece"]
     assert (r["x"], r["y"]) == (r["ax"], r["ay"])
 
 
-def test_objectif_suivant_et_terminer_actifs_seulement_en_mission(banc):
-    r = banc("""function (L, o) {
+@pytest.fixture(scope="module")
+def jouer_m1(banc):
+    """Les lignes de mission du menu, hors mission puis en mission — et TERMINER LA MISSION
+    dans ce même menu : c'est exactement ce que le juge de TERMINER ouvrait (m1 commencée,
+    cinéma coupé, menu ouvert)."""
+    return banc("""function (L, o) {
         L.Jeu.commencer();
         L.Hud.ouvrirMenu(L.Hud.menuDebug());
         const avant = {};
@@ -208,24 +230,23 @@ def test_objectif_suivant_et_terminer_actifs_seulement_en_mission(banc):
         L.Hud.ouvrirMenu(L.Hud.menuDebug());
         const pendant = {};
         L.B.menu.items.forEach(function (i) { pendant[i.libelle] = i.actif; });
-        return { avant: avant, pendant: pendant };
+        const item = L.B.menu.items.filter(function (i) { return i.libelle === 'TERMINER LA MISSION'; })[0];
+        const fini = item.faire(item);
+        return { avant: avant, pendant: pendant,
+                 terminer: { fini: fini, missionsFaites: L.B.partie.missionsFaites, enCours: L.B.partie.mission } };
     }""")
+
+
+def test_objectif_suivant_et_terminer_actifs_seulement_en_mission(jouer_m1):
+    r = jouer_m1
     assert r["avant"]["OBJECTIF SUIVANT"] is False
     assert r["avant"]["TERMINER LA MISSION"] is False
     assert r["pendant"]["OBJECTIF SUIVANT"] is True
     assert r["pendant"]["TERMINER LA MISSION"] is True
 
 
-def test_terminer_la_mission_compte_la_reussite(banc):
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        L.Histoire.commencer('m1');
-        L.B.cinema = null;
-        L.Hud.ouvrirMenu(L.Hud.menuDebug());
-        const item = L.B.menu.items.filter(function (i) { return i.libelle === 'TERMINER LA MISSION'; })[0];
-        const fini = item.faire(item);
-        return { fini: fini, missionsFaites: L.B.partie.missionsFaites, enCours: L.B.partie.mission };
-    }""")
+def test_terminer_la_mission_compte_la_reussite(jouer_m1):
+    r = jouer_m1["terminer"]
     assert r["fini"] is True
     assert "m1" in r["missionsFaites"]
     assert r["enCours"] is None
@@ -336,22 +357,37 @@ def test_les_munitions_infinies_sont_lues_dans_la_partie(banc):
     assert r["mun"] == 0
 
 
+@pytest.fixture(scope="module")
+def pas_arrete(banc):
+    """La même poursuite deux fois dans UN banc : triche allumée, puis éteinte.
+
+    ⚠️ **Allumée D'ABORD** : elle juge `stats.arrestations == 0`, et la partie garde ses stats
+    d'une poursuite à l'autre. Entre les deux, `Jeu.commencer` refait la ville (l'agent et sa
+    chaleur s'en vont, le joueur renaît)."""
+    return banc(AGENT + """
+        const sorties = {};
+        for (const allumee of [true, false]) {
+            L.Jeu.commencer();
+            const j = L.B.joueur;
+            L.B.partie.triches.pasArrete = allumee;
+            L.Police.ajouterChaleur(3);
+            const a = poserAgent(L, 'poursuit', 30);
+            a.but = { x: j.x, y: j.y };
+            a.vuT = 0;
+            const arrete = function () { return L.B.menu && L.B.menu.titre === 'ARRÊTÉ !'; };
+            let arrive = -1;
+            for (let i = 0; i < 300 && arrive < 0; i++) { o.frame(1); if (arrete()) arrive = i; }
+            sorties[allumee] = { arrive: arrive, arrestations: L.B.partie.stats.arrestations };
+            L.Hud.fermerMenu();
+        }
+        return sorties;
+    }""")
+
+
 @pytest.mark.parametrize("allumee", [False, True])
-def test_la_police_ne_t_arrete_pas_est_lue_dans_la_partie(banc, allumee):
+def test_la_police_ne_t_arrete_pas_est_lue_dans_la_partie(pas_arrete, allumee):
     """Le meme agent, la meme poursuite : seule la triche change s'il y a arrestation."""
-    r = banc(AGENT + """
-        L.Jeu.commencer();
-        const j = L.B.joueur;
-        L.B.partie.triches.pasArrete = %s;
-        L.Police.ajouterChaleur(3);
-        const a = poserAgent(L, 'poursuit', 30);
-        a.but = { x: j.x, y: j.y };
-        a.vuT = 0;
-        const arrete = function () { return L.B.menu && L.B.menu.titre === 'ARRÊTÉ !'; };
-        let arrive = -1;
-        for (let i = 0; i < 300 && arrive < 0; i++) { o.frame(1); if (arrete()) arrive = i; }
-        return { arrive: arrive, arrestations: L.B.partie.stats.arrestations };
-    }""" % ("true" if allumee else "false"))
+    r = pas_arrete[str(allumee).lower()]
     if allumee:
         assert r["arrive"] == -1 and r["arrestations"] == 0, "la triche allumee : la police ne t'arrete pas"
     else:
@@ -371,25 +407,36 @@ AU_VOLANT = """
 """
 
 
+@pytest.fixture(scope="module")
+def chars_proteges(banc):
+    """Le même choc et la même explosion, triche éteinte puis allumée, dans UN banc ;
+    `Jeu.commencer` entre les deux refait la ville (l'épave et le trafic s'en vont)."""
+    return banc("""function (L, o) {
+        """ + AU_VOLANT + """
+        const sorties = {};
+        for (const allumee of [false, true]) {
+            L.Jeu.commencer();
+            L.B.partie.triches.vehicules = allumee;
+            const v = auVolant(L, o);
+            const vieMax = v.vie;
+            L.Vehicules.endommager(v, 30, null);
+            const apresChoc = v.vie;
+            L.Vehicules.endommager(v, 99999, null);
+            const trafic = o.char('auto', 200, 0, 0);
+            trafic.conducteur = 'trafic';
+            L.Vehicules.endommager(trafic, 99999, null);
+            sorties[allumee] = { vieMax: vieMax, apresChoc: apresChoc, vie: v.vie, etat: v.etat, traficEtat: trafic.etat };
+        }
+        return sorties;
+    }""")
+
+
 @pytest.mark.parametrize("allumee", [False, True])
-def test_vehicules_invincibles_protege_le_char_qu_on_conduit(banc, allumee):
+def test_vehicules_invincibles_protege_le_char_qu_on_conduit(chars_proteges, allumee):
     """Le meme choc, la meme explosion : seule la triche change s'il en reste
     quelque chose. Le TRAFIC, lui, n'est jamais protege — un fuyard de mission
     doit pouvoir se faire casser."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        """ + AU_VOLANT + """
-        L.B.partie.triches.vehicules = %s;
-        const v = auVolant(L, o);
-        const vieMax = v.vie;
-        L.Vehicules.endommager(v, 30, null);
-        const apresChoc = v.vie;
-        L.Vehicules.endommager(v, 99999, null);
-        const trafic = o.char('auto', 200, 0, 0);
-        trafic.conducteur = 'trafic';
-        L.Vehicules.endommager(trafic, 99999, null);
-        return { vieMax: vieMax, apresChoc: apresChoc, vie: v.vie, etat: v.etat, traficEtat: trafic.etat };
-    }""" % ("true" if allumee else "false"))
+    r = chars_proteges[str(allumee).lower()]
     assert r["traficEtat"] == "epave", "le trafic n'est jamais protege"
     if allumee:
         assert r["apresChoc"] == r["vieMax"] and r["vie"] == r["vieMax"]
@@ -419,18 +466,34 @@ def test_un_char_gare_n_est_pas_protege_par_la_triche(banc):
     assert r["sansJoueur"] == "epave"
 
 
-@pytest.mark.parametrize("allumee", [False, True])
-def test_vehicules_invincibles_ne_coule_pas(banc, allumee):
-    """Couler, c'est disparaitre du monde : la triche le refuse aussi."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
+@pytest.fixture(scope="module")
+def chars_a_l_eau(banc):
+    """La baie partout, triche allumée puis éteinte, dans UN banc.
+
+    ⚠️ **Allumée D'ABORD** : le char reste et le joueur avec, à sec dedans. Éteinte, le char
+    coule et le joueur nage — ce qui suivrait ne partirait pas d'une partie neuve. Entre les
+    deux, l'eau est rendue (`estEau`) et `Jeu.commencer` refait la ville."""
+    return banc("""function (L, o) {
         """ + AU_VOLANT + """
-        L.B.partie.triches.vehicules = %s;
-        const v = auVolant(L, o);
-        L.Monde.estEau = function () { return true; };
-        o.frame(L.B.defs.recherche.nage.coule_s * 60 + 60);
-        return { present: L.B.entites.indexOf(v) >= 0 };
-    }""" % ("true" if allumee else "false"))
+        const sorties = {}, estEau = L.Monde.estEau;
+        for (const allumee of [true, false]) {
+            L.Monde.estEau = estEau;
+            L.Jeu.commencer();
+            L.B.partie.triches.vehicules = allumee;
+            const v = auVolant(L, o);
+            L.Monde.estEau = function () { return true; };
+            o.frame(L.B.defs.recherche.nage.coule_s * 60 + 60);
+            sorties[allumee] = { present: L.B.entites.indexOf(v) >= 0 };
+        }
+        L.Monde.estEau = estEau;
+        return sorties;
+    }""")
+
+
+@pytest.mark.parametrize("allumee", [False, True])
+def test_vehicules_invincibles_ne_coule_pas(chars_a_l_eau, allumee):
+    """Couler, c'est disparaitre du monde : la triche le refuse aussi."""
+    r = chars_a_l_eau[str(allumee).lower()]
     assert r["present"] is allumee, "avec la triche le char reste ; sans elle, la baie le mange"
 
 
@@ -632,19 +695,8 @@ def test_le_saut_sort_de_la_piece_et_abandonne_la_mission_en_cours(banc):
     assert r["distance"] is not None and r["distance"] <= 2.5 * r["tx"]
 
 
-def test_le_saut_descend_du_char(banc):
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        """ + CHOISIR_UNE_MISSION + """
-        rendreLaMain(L);
-        const j = L.B.joueur;
-        const v = o.char('auto', 0, 0, 0);
-        L.Vehicules.monter(j, v);
-        L.Entites.indexer();
-        choisir(L, 'm1');
-        return { auVolant: !!j.dansVehicule, conducteur: v.conducteur, mission: L.B.partie.mission && L.B.partie.mission.slug,
-                 distance: pres(L, 'ti_guy'), tx: L.TT };
-    }""")
+def test_le_saut_descend_du_char(sortir_du_char):
+    r = sortir_du_char["mission"]
     assert r["auVolant"] is False and r["conducteur"] is None
     assert r["mission"] == "m1" and r["distance"] <= 2.5 * r["tx"]
 
@@ -663,16 +715,9 @@ def test_le_saut_depuis_la_pause_reprend_la_partie_et_lance_la_mission(banc):
     assert r["mission"] == "m1"
 
 
-def test_le_saut_ne_se_lance_pas_pendant_une_scene(banc):
+def test_le_saut_ne_se_lance_pas_pendant_une_scene(pendant_une_scene):
     """Une scene qui joue garde la main : rien ne bouge, le menu reste ouvert."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        """ + CHOISIR_UNE_MISSION + """
-        L.B.scene = { bidon: true };
-        const j = L.B.joueur, x = j.x, y = j.y;
-        const c = choisir(L, 'm1');
-        return { rendu: c.rendu, mission: L.B.partie.mission, menu: !!L.B.menu, bouge: j.x !== x || j.y !== y };
-    }""")
+    r = pendant_une_scene["mission"]
     assert r["rendu"] is False and r["menu"] is True
     assert r["mission"] is None and r["bouge"] is False
 
@@ -804,26 +849,8 @@ def test_apres_le_saut_action_lit_le_panneau_et_commencer_lance_le_defi(banc):
         assert v["defi"] == slug, (slug, v)
 
 
-def test_le_saut_vers_un_defi_sort_du_char_et_de_la_piece(banc):
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        """ + ALLER_AU_DEFI + """
-        rendreLaMain(L);
-        const j = L.B.joueur;
-        const v = o.char('auto', 0, 0, 0);
-        L.Vehicules.monter(j, v);
-        L.Entites.indexer();
-        allerAu(L, 'saut');
-        const char = { auVolant: !!j.dansVehicule, conducteur: v.conducteur, sousLaMain: sousLaMain(L) };
-        L.Hud.fermerMenu();
-        // Dans une piece : le casse-croute du sergent, par la porte de sa mission.
-        const porte = L.Monde.carte.def.portes.filter(function (q) { return q.interieur; })[0];
-        L.Jeu.entrer(porte); L.Jeu.finirTransition();
-        const dedans = !!L.B.interieur;
-        allerAu(L, 'canards');
-        return { char: char, dedans: dedans, interieur: !!L.B.interieur, sousLaMain: sousLaMain(L),
-                 menu: L.B.menu && L.B.menu.titre };
-    }""")
+def test_le_saut_vers_un_defi_sort_du_char_et_de_la_piece(sortir_du_char):
+    r = sortir_du_char["defi"]
     assert r["char"]["auVolant"] is False and r["char"]["conducteur"] is None
     assert r["char"]["sousLaMain"] == "saut"
     assert r["dedans"] is True, "temoin : on etait bien dans une piece"
@@ -855,15 +882,8 @@ def test_le_saut_abandonne_le_defi_en_cours_sans_rien_noter(banc):
     assert not any("RATÉ" in n for n in r["notes"]), r["notes"]
 
 
-def test_le_saut_vers_un_defi_ne_se_lance_pas_pendant_une_scene(banc):
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        """ + ALLER_AU_DEFI + """
-        L.B.scene = { bidon: true };
-        const j = L.B.joueur, x = j.x, y = j.y;
-        const rendu = allerAu(L, 'saut');
-        return { rendu: rendu, menu: L.B.menu && L.B.menu.titre, bouge: j.x !== x || j.y !== y };
-    }""")
+def test_le_saut_vers_un_defi_ne_se_lance_pas_pendant_une_scene(pendant_une_scene):
+    r = pendant_une_scene["defi"]
     assert r["rendu"] is False and r["menu"] == "LANCER UN DÉFI" and r["bouge"] is False
 
 
@@ -1014,30 +1034,76 @@ def test_chaque_endroit_cle_se_rejoint_et_sa_porte_s_ouvre(banc):
             assert s["entre"] == r["lieux"][s["slug"]], s
 
 
-def test_les_sauts_sortent_du_char_et_de_la_piece(banc):
-    r = banc("""function (L, o) {
+@pytest.fixture(scope="module")
+def sortir_du_char(banc):
+    """Les trois sauts qui partent du volant (et d'une pièce), dans UN banc : LANCER UNE
+    MISSION, LANCER UN DÉFI, puis CHEZ UN DONNEUR et ENDROITS CLÉS — chacun dans sa portée.
+
+    ⚠️ **`Jeu.commencer` avant CHACUN** : le premier lance m1 (son intro, sa mission en cours),
+    le deuxième laisse le joueur devant la pêche aux canards, menu ouvert. `commencer` retire
+    la mission (« une mission ne survit pas au rechargement »), refait la ville et remet le
+    joueur à pied, dehors — comme chaque juge le trouvait."""
+    return banc("""function (L, o) {
+        const sorties = {};
         L.Jeu.commencer();
-        """ + ALLER + """
-        rendreLaMain(L);
-        const j = L.B.joueur;
-        const v = o.char('auto', 0, 0, 0);
-        L.Vehicules.monter(j, v);
-        L.Entites.indexer();
-        a(L, 'phare');
-        const char = { auVolant: !!j.dansVehicule, conducteur: v.conducteur };
-        rendreLaMain(L);
-        chez(L, 'bouchard');                     // dans le casse-croute, a cote du sergent
-        const dedans = L.B.interieur && L.B.interieur.slug;
-        rendreLaMain(L);
-        a(L, 'garage');
-        const g = L.Monde.carte.points.filter(function (p) { return p.slug === 'garage'; })[0];
-        const garage = { dedans: !!L.B.interieur, tuiles: g ? Math.hypot(j.x - (g.x * L.TT + 8), j.y - (g.y * L.TT + 8)) / L.TT : null };
-        rendreLaMain(L);
-        L.Vehicules.monter(j, v);
-        chez(L, 'gus');
-        return { char: char, dedans: dedans, garage: garage, apres: !!L.B.interieur, auVolant: !!j.dansVehicule,
-                 gus: pres(L, 'gus'), tx: L.TT, mission: L.B.partie.mission };
+        sorties.mission = (function () {""" + CHOISIR_UNE_MISSION + """
+            rendreLaMain(L);
+            const j = L.B.joueur;
+            const v = o.char('auto', 0, 0, 0);
+            L.Vehicules.monter(j, v);
+            L.Entites.indexer();
+            choisir(L, 'm1');
+            return { auVolant: !!j.dansVehicule, conducteur: v.conducteur, mission: L.B.partie.mission && L.B.partie.mission.slug,
+                     distance: pres(L, 'ti_guy'), tx: L.TT };
+        })();
+        L.B.scene = null; L.B.cinema = null; L.Hud.fermerMenu();
+        L.Jeu.commencer();
+        sorties.defi = (function () {""" + ALLER_AU_DEFI + """
+            rendreLaMain(L);
+            const j = L.B.joueur;
+            const v = o.char('auto', 0, 0, 0);
+            L.Vehicules.monter(j, v);
+            L.Entites.indexer();
+            allerAu(L, 'saut');
+            const char = { auVolant: !!j.dansVehicule, conducteur: v.conducteur, sousLaMain: sousLaMain(L) };
+            L.Hud.fermerMenu();
+            // Dans une piece : le casse-croute du sergent, par la porte de sa mission.
+            const porte = L.Monde.carte.def.portes.filter(function (q) { return q.interieur; })[0];
+            L.Jeu.entrer(porte); L.Jeu.finirTransition();
+            const dedans = !!L.B.interieur;
+            allerAu(L, 'canards');
+            return { char: char, dedans: dedans, interieur: !!L.B.interieur, sousLaMain: sousLaMain(L),
+                     menu: L.B.menu && L.B.menu.titre };
+        })();
+        L.Hud.fermerMenu();
+        L.Jeu.commencer();
+        sorties.sauts = (function () {""" + ALLER + """
+            rendreLaMain(L);
+            const j = L.B.joueur;
+            const v = o.char('auto', 0, 0, 0);
+            L.Vehicules.monter(j, v);
+            L.Entites.indexer();
+            a(L, 'phare');
+            const char = { auVolant: !!j.dansVehicule, conducteur: v.conducteur };
+            rendreLaMain(L);
+            chez(L, 'bouchard');                     // dans le casse-croute, a cote du sergent
+            const dedans = L.B.interieur && L.B.interieur.slug;
+            rendreLaMain(L);
+            a(L, 'garage');
+            const g = L.Monde.carte.points.filter(function (p) { return p.slug === 'garage'; })[0];
+            const garage = { dedans: !!L.B.interieur, tuiles: g ? Math.hypot(j.x - (g.x * L.TT + 8), j.y - (g.y * L.TT + 8)) / L.TT : null };
+            rendreLaMain(L);
+            L.Vehicules.monter(j, v);
+            chez(L, 'gus');
+            return { char: char, dedans: dedans, garage: garage, apres: !!L.B.interieur, auVolant: !!j.dansVehicule,
+                     gus: pres(L, 'gus'), tx: L.TT, mission: L.B.partie.mission };
+        })();
+        return sorties;
     }""")
+
+
+def test_les_sauts_sortent_du_char_et_de_la_piece(sortir_du_char):
+    r = sortir_du_char["sauts"]
     assert r["char"] == {"auVolant": False, "conducteur": None}
     assert r["dedans"], "temoin : chez le sergent, on est dans sa piece"
     assert r["garage"]["dedans"] is False, "de la piece du sergent, on ressort"
@@ -1047,17 +1113,45 @@ def test_les_sauts_sortent_du_char_et_de_la_piece(banc):
     assert r["mission"] is None
 
 
-def test_les_sauts_ne_se_font_pas_pendant_une_scene(banc):
-    r = banc("""function (L, o) {
+@pytest.fixture(scope="module")
+def pendant_une_scene(banc):
+    """Les trois sauts refusés pendant une scène, dans UN banc : LANCER UNE MISSION, LANCER UN
+    DÉFI, puis CHEZ UN DONNEUR et ENDROITS CLÉS. Chacun dans sa portée (les trois boîtes à
+    outils ont leur `rendreLaMain`, et elles ne font pas la même chose).
+
+    ⚠️ Refusés, ils ne changent rien : la même scène bidon reste posée, le joueur n'a pas
+    bougé ; entre deux, on ferme seulement le menu que le refus laisse ouvert."""
+    return banc("""function (L, o) {
         L.Jeu.commencer();
-        """ + ALLER + """
-        L.B.scene = { bidon: true };
-        const j = L.B.joueur, x = j.x, y = j.y;
-        const r1 = chez(L, 'marco');
-        const m1 = L.B.menu && L.B.menu.titre;
-        const r2 = a(L, 'garage');
-        return { r1: r1, m1: m1, r2: r2, m2: L.B.menu && L.B.menu.titre, bouge: j.x !== x || j.y !== y };
+        const sorties = {};
+        sorties.mission = (function () {""" + CHOISIR_UNE_MISSION + """
+            L.B.scene = { bidon: true };
+            const j = L.B.joueur, x = j.x, y = j.y;
+            const c = choisir(L, 'm1');
+            return { rendu: c.rendu, mission: L.B.partie.mission, menu: !!L.B.menu, bouge: j.x !== x || j.y !== y };
+        })();
+        L.Hud.fermerMenu();
+        sorties.defi = (function () {""" + ALLER_AU_DEFI + """
+            L.B.scene = { bidon: true };
+            const j = L.B.joueur, x = j.x, y = j.y;
+            const rendu = allerAu(L, 'saut');
+            return { rendu: rendu, menu: L.B.menu && L.B.menu.titre, bouge: j.x !== x || j.y !== y };
+        })();
+        L.Hud.fermerMenu();
+        sorties.sauts = (function () {""" + ALLER + """
+            L.B.scene = { bidon: true };
+            const j = L.B.joueur, x = j.x, y = j.y;
+            const r1 = chez(L, 'marco');
+            const m1 = L.B.menu && L.B.menu.titre;
+            const r2 = a(L, 'garage');
+            return { r1: r1, m1: m1, r2: r2, m2: L.B.menu && L.B.menu.titre, bouge: j.x !== x || j.y !== y };
+        })();
+        return sorties;
     }""")
+
+
+def test_les_sauts_ne_se_font_pas_pendant_une_scene(pendant_une_scene):
+    r = pendant_une_scene["sauts"]
     assert r == {"r1": False, "m1": "CHEZ UN DONNEUR", "r2": False, "m2": "ENDROITS CLÉS", "bouge": False}
 
 
