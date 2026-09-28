@@ -17,6 +17,8 @@ appels, et c'est la session qui cadence (`q.image(n)`), pas `o.frame(n)`.
 
 import json
 
+import pytest
+
 FAUX_QUEST = """
     function fauxQuest(o, supporte) {
         const appels = {};
@@ -192,8 +194,14 @@ def test_les_touch_tombent_comme_une_manette_xbox(banc):
         assert r["droit-" + sens]["actions"] == [sens], f"le stick droit fait la croix : {sens}"
 
 
-def test_au_stick_gauche_bandini_marche(banc):
-    r = banc(quest("""
+@pytest.fixture(scope="module")
+def au_stick_puis_a_la_gachette(banc):
+    """UNE entrée dans le casque, deux gestes (vague C, 28 sept. 2026 — deux bancs) : le stick
+    gauche fait marcher, puis la gâchette droite fait rouler un char.
+
+    ⚠️ Entre les deux, le joueur est remis au début de la ligne droite, comme le juge du char le
+    prenait : la marche l'avait avancé d'une soixantaine de pixels."""
+    return banc(quest("""
         const q = fauxQuest(o);
         L.B.partie.ouvertureVue = true;
         return q.entrer().then(function () {
@@ -205,30 +213,27 @@ def test_au_stick_gauche_bandini_marche(banc):
             q.stick('left', 1, 0); q.image(60);
             const source = L.Entree.axe.source, x1 = L.B.joueur.x;
             q.stick('left', 0, 0); q.image(10);
-            return { avance: x1 - x0, source: source, arrete: L.Entree.axe.mag };
+            const marche = { avance: x1 - x0, source: source, arrete: L.Entree.axe.mag };
+            j.x = d.x; j.y = d.y; j.vx = 0; j.vy = 0;
+            L.Entites.indexer();
+            const v = o.char('auto', 0, 0, 0);
+            L.Vehicules.monter(j, v);
+            const vx0 = v.x;
+            q.bouton('right', 0, 1); q.image(120);
+            return { marche: marche, char: { vitesse: v.vitesse, avance: v.x - vx0 } };
         });
     """))
+
+
+def test_au_stick_gauche_bandini_marche(au_stick_puis_a_la_gachette):
+    r = au_stick_puis_a_la_gachette["marche"]
     assert r["avance"] > 40, "pousser le stick gauche doit faire marcher Bandini"
     assert r["source"] == "manette", "le stick du casque est un stick de manette (marche a mi-course, menus)"
     assert r["arrete"] == 0
 
 
-def test_la_gachette_droite_fait_rouler_le_char(banc):
-    r = banc(quest("""
-        const q = fauxQuest(o);
-        L.B.partie.ouvertureVue = true;
-        return q.entrer().then(function () {
-            const j = L.B.joueur, d = o.ligneDroite();
-            j.x = d.x; j.y = d.y;
-            L.B.defs.conduite.trafic.vehicules_max = 0;
-            L.B.entites.filter(function (e) { return e.type === 'vehicule'; }).forEach(function (e) { L.Entites.retirer(e); });
-            const v = o.char('auto', 0, 0, 0);
-            L.Vehicules.monter(j, v);
-            const x0 = v.x;
-            q.bouton('right', 0, 1); q.image(120);
-            return { vitesse: v.vitesse, avance: v.x - x0 };
-        });
-    """))
+def test_la_gachette_droite_fait_rouler_le_char(au_stick_puis_a_la_gachette):
+    r = au_stick_puis_a_la_gachette["char"]
     assert r["vitesse"] > 0 and r["avance"] > 30, "la gachette droite est le gaz : le char doit avancer"
 
 
@@ -346,52 +351,62 @@ def test_le_choix_rouvert_apres_un_rechargement_rend_le_titre_sur_un_quest(banc,
     assert r["bouton"] is False
 
 
-def test_le_menu_du_systeme_met_le_jeu_en_pause(banc):
-    r = banc(quest("""
+@pytest.fixture(scope="module")
+def les_touch_puis_les_mains_puis_le_systeme(banc):
+    """UNE entrée dans le casque, trois scènes (vague C, 28 sept. 2026 — trois bancs) : les Touch
+    tremblent et l'écran MANETTE les voit ; posées, les mains nues ne touchent à rien ; le menu du
+    système met le jeu en pause.
+
+    ⚠️ Dans CET ordre, et c'est l'état que chaque juge avait au départ : la vibration veut les deux
+    Touch en main (après la main nue, `manetteInfo` n'en voit plus) ; la main nue veut le jeu qui
+    tourne (en pause, le gaz serait nul de toute façon — elle passerait à vide) ; le menu du système,
+    lui, ne lit pas les manettes. A est relâché avant la main nue."""
+    return banc(quest("""
         const q = fauxQuest(o);
         L.B.partie.ouvertureVue = true;
         return q.entrer().then(function () {
-            q.image(10);
-            const avant = L.B.etat;
-            q.session.visibilityState = 'visible-blurred';
-            q.session.emettre('visibilitychange');
-            return { avant: avant, apres: L.B.etat, actif: L.Casque.actif };
-        });
-    """))
-    assert r["avant"] == "jeu"
-    assert r["apres"] == "pause", "le menu du Quest par-dessus la partie : le jeu ne doit pas tourner derriere"
-    assert r["actif"] is True, "un menu du systeme ne ferme pas la session"
-
-
-def test_une_main_nue_ne_touche_a_rien(banc):
-    """Les manettes posees, le Quest suit les mains : un pincement ne doit pas
-    faire le gaz ni aucun bouton."""
-    r = banc(quest("""
-        const q = fauxQuest(o);
-        L.B.partie.ouvertureVue = true;
-        return q.entrer().then(function () {
-            q.mains.right.hand = {};
-            q.mains.left.hand = {};
-            q.bouton('right', 0, 1); q.bouton('left', 4, 1); q.image(4);
-            return { gaz: L.Entree.gaz, attaque: L.Entree.bas('attaque'), info: L.Entree.manetteInfo().branchee };
-        });
-    """))
-    assert r == {"gaz": 0, "attaque": False, "info": False}
-
-
-def test_les_mains_tremblent_et_l_ecran_manette_les_voit(banc):
-    r = banc(quest("""
-        const q = fauxQuest(o);
-        L.B.partie.ouvertureVue = true;
-        return q.entrer().then(function () {
+            // 1. Les Touch tremblent, et l'écran MANETTE les voit.
             q.image(4);
             L.Entree.vibrer(25);
             q.bouton('right', 4, 1); q.image(3);
             const info = L.Entree.manetteInfo();
             q.bouton('right', 4, 0); q.image(3);
-            return { gauche: q.mains.left.pulses, droite: q.mains.right.pulses, info: info };
+            const tremblent = { gauche: q.mains.left.pulses.slice(), droite: q.mains.right.pulses.slice(), info: info };
+            // 2. Les manettes posées, le Quest suit les mains : un pincement ne fait rien.
+            const avantMains = L.B.etat;
+            q.mains.right.hand = {};
+            q.mains.left.hand = {};
+            q.bouton('right', 0, 1); q.bouton('left', 4, 1); q.image(4);
+            const mains = { gaz: L.Entree.gaz, attaque: L.Entree.bas('attaque'), info: L.Entree.manetteInfo().branchee,
+                            etat: avantMains };
+            // 3. Le menu du Quest par-dessus la partie.
+            q.image(6);
+            const avant = L.B.etat;
+            q.session.visibilityState = 'visible-blurred';
+            q.session.emettre('visibilitychange');
+            const systeme = { avant: avant, apres: L.B.etat, actif: L.Casque.actif };
+            return { tremblent: tremblent, mains: mains, systeme: systeme };
         });
     """))
+
+
+def test_le_menu_du_systeme_met_le_jeu_en_pause(les_touch_puis_les_mains_puis_le_systeme):
+    r = les_touch_puis_les_mains_puis_le_systeme["systeme"]
+    assert r["avant"] == "jeu"
+    assert r["apres"] == "pause", "le menu du Quest par-dessus la partie : le jeu ne doit pas tourner derriere"
+    assert r["actif"] is True, "un menu du systeme ne ferme pas la session"
+
+
+def test_une_main_nue_ne_touche_a_rien(les_touch_puis_les_mains_puis_le_systeme):
+    """Les manettes posees, le Quest suit les mains : un pincement ne doit pas
+    faire le gaz ni aucun bouton."""
+    r = dict(les_touch_puis_les_mains_puis_le_systeme["mains"])
+    assert r.pop("etat") == "jeu", "le décor du juge est faux : le jeu ne tourne pas, le gaz serait nul de toute façon"
+    assert r == {"gaz": 0, "attaque": False, "info": False}
+
+
+def test_les_mains_tremblent_et_l_ecran_manette_les_voit(les_touch_puis_les_mains_puis_le_systeme):
+    r = les_touch_puis_les_mains_puis_le_systeme["tremblent"]
     assert r["gauche"] == [25] and r["droite"] == [25], "dans le casque, la vibration passe par les Touch"
     assert r["info"]["branchee"] is True, "l'ecran MANETTE ne doit pas dire AUCUNE MANETTE a qui en tient deux"
     assert r["info"]["mapping"] == "standard" and r["info"]["id"] == "Meta Quest Touch"

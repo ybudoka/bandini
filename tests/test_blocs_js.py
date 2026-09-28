@@ -235,22 +235,73 @@ def test_une_carte_pas_encore_arrivee_ne_noircit_pas_et_le_reseau_revenu_elle_pa
     assert r["apres"] == "rang" and r["demandes"] == 2, r
 
 
-def test_personne_ne_nait_au_rang(banc):
-    r = banc("async function (L, o) {" + OUTILS + """
+@pytest.fixture(scope="module")
+def au_rang_sans_bruit(banc):
+    """UNE entrée au rang, quatre scènes qui ne le dérangent pas (vague C, 28 sept. 2026 — quatre
+    bancs refaisaient la même entrée) : la plaque des deux côtés, la sauvegarde au rang, les arbres
+    du bloc, puis personne n'y naît ; et le retour en ville, où les arbres reviennent.
+
+    ⚠️ Entre deux scènes, le joueur est remis où chaque juge le prenait : à l'arrivée du bloc pour
+    les quinze secondes où personne ne doit naître (les arbres l'avaient poussé contre la rangée
+    de l'ouest)."""
+    return banc("async function (L, o) {" + OUTILS + """
         L.Jeu.commencer();
-        const B = L.B;
-        await entrer(L, o);
+        const B = L.B, j = B.joueur;
+        // 1. La plaque, en ville puis dans le bloc.
+        auPassage(L, o); await laisserArriver(L, o);
+        const enVille = L.Blocs.texteDInfo(j);
+        j.y = 20 * TT; L.Entites.indexer();
+        const loin = L.Blocs.texteDInfo(j);
+        auPassage(L, o);
+        pousser(L, o, 'KeyA');
+        const arrivee = { x: j.x, y: j.y };
+        const r0 = L.B.bloc.def.bloc.retour;
+        j.x = (L.Monde.carte.w - 2) * TT + 8; j.y = (r0.de + 1) * TT + 8;
+        const dansLeBloc = L.Blocs.texteDInfo(j);
+        L.Jeu.rendre();
+        const plaque = { enVille: enVille, loin: loin, dansLeBloc: dansLeBloc };
+        // 2. Sauvegardée au rang.
+        const retour = { x: B.bloc.ville.x, y: B.bloc.ville.y };
+        L.Missions.sauvegarderPartie();
+        const sauvee = { x: B.partie.x, y: B.partie.y, retour: retour, bloc: !!B.bloc };
+        // 3. Les arbres du bloc — contre la rangée de l'ouest (rangée 30 : les tuiles 1 à 4
+        // sont libres, l'arbre de la tuile 0 non) : on pousse vers la gauche, on reste au rang.
+        const arbres = B.entites.filter(function (e) { return e.type === 'decor' && e.decor === 'arbre'; });
+        j.x = 4 * TT + 8; j.y = 30 * TT + 8; L.Entites.indexer();
+        o.touche('KeyA'); for (let i = 0; i < 90; i++) o.frame(1); o.relacher('KeyA');
+        const bloque = j.x;
+        // 4. Personne ne naît au rang : quinze secondes, le joueur remis à l'arrivée.
+        j.x = arrivee.x; j.y = arrivee.y; L.Entites.indexer();
         for (let i = 0; i < 900; i++) o.frame(1);
-        return B.entites.filter(function (e) { return e.type === 'pieton'; }).map(function (e) { return e.archetype || e.arch || '?'; });
+        const pietons = B.entites.filter(function (e) { return e.type === 'pieton'; }).map(function (e) { return e.archetype || e.arch || '?'; });
+        const auRang = B.bloc && B.bloc.slug;
+        // 5. Le retour : les arbres de la ville reviennent.
+        versLeRetour(L, o);
+        const villeArbres = B.entites.filter(function (e) { return e.type === 'decor' && e.decor === 'arbre'; }).length;
+        return { plaque: plaque, sauvee: sauvee, arbres: arbres.length, bloque: bloque, pietons: pietons,
+                 auRang: auRang, villeArbres: villeArbres };
     }""")
-    assert r == [], f"des passants de la ville dans les bois : {r}"
 
 
-def test_jour_nuit_et_police_tournent_dans_le_bloc_sans_tomber(banc):
-    r = banc("async function (L, o) {" + OUTILS + """
+def test_personne_ne_nait_au_rang(au_rang_sans_bruit):
+    r = au_rang_sans_bruit
+    assert r["auRang"] == "rang", f"le décor du juge est faux : on n'est plus au rang ({r['auRang']})"
+    assert r["pietons"] == [], f"des passants de la ville dans les bois : {r['pietons']}"
+
+
+@pytest.fixture(scope="module")
+def au_rang_la_nuit_puis_arrete(banc):
+    """UNE entrée au rang (vague C, 28 sept. 2026 — deux bancs) : le jour, la nuit et la police y
+    tournent sans tomber ; puis arrêté, on se réveille au poste en ville.
+
+    ⚠️ Entre les deux : zéro étoile, comme le juge de l'arrestation au départ — `prison` est
+    appelée à la main, ce ne sont pas les agents de la nuit qui l'ont cueilli."""
+    return banc("async function (L, o) {" + OUTILS + """
         L.Jeu.commencer();
-        const B = L.B;
+        const B = L.B, j = B.joueur;
+        const ville = L.Monde.carte;
         await entrer(L, o);
+        const dedans = !!B.bloc;
         for (let i = 0; i < 300; i++) o.frame(1);
         let h = B.partie.heure; for (let k = 0; k < 400 && !L.Monde.estNuit(h); k++) h = (h + 0.005) % 1; B.partie.heure = h;
         for (let i = 0; i < 300; i++) o.frame(1);
@@ -258,79 +309,44 @@ def test_jour_nuit_et_police_tournent_dans_le_bloc_sans_tomber(banc):
         for (let i = 0; i < 300; i++) o.frame(1);
         L.Jeu.rendre();
         L.Jeu.ouvrirCarte(); L.Jeu.rendre(); L.Jeu.fermerCarte();
-        return { bloc: B.bloc && B.bloc.slug, etat: B.etat };
-    }""")
-    assert r["bloc"] == "rang"
-
-
-def test_arrete_au_rang_on_se_reveille_au_poste_en_ville(banc):
-    r = banc("async function (L, o) {" + OUTILS + """
-        L.Jeu.commencer();
-        const B = L.B, j = B.joueur;
-        auPassage(L, o); await laisserArriver(L, o);
-        const ville = L.Monde.carte;
-        pousser(L, o, 'KeyA');
-        const dedans = !!B.bloc;
+        const nuit = { bloc: B.bloc && B.bloc.slug, etat: B.etat };
+        B.recherche.etoiles = 0; B.recherche.chaleur = 0;
         L.Missions.prison(null);
         for (let i = 0; i < 400 && B.transition; i++) o.frame(1);
         if (B.menu) L.Hud.fermerMenu();
         const poste = ville.points.find(function (q) { return q.slug === 'poste'; });
-        return { dedans: dedans, bloc: !!B.bloc, laVille: L.Monde.carte === ville,
-                 loin: Math.round(Math.hypot(j.x - (poste.x * TT + 8), j.y - (poste.y * TT + 20)) / TT) };
+        return { nuit: nuit, arrete: { dedans: dedans, bloc: !!B.bloc, laVille: L.Monde.carte === ville,
+                 loin: Math.round(Math.hypot(j.x - (poste.x * TT + 8), j.y - (poste.y * TT + 20)) / TT) } };
     }""")
+
+
+def test_jour_nuit_et_police_tournent_dans_le_bloc_sans_tomber(au_rang_la_nuit_puis_arrete):
+    r = au_rang_la_nuit_puis_arrete["nuit"]
+    assert r["bloc"] == "rang"
+
+
+def test_arrete_au_rang_on_se_reveille_au_poste_en_ville(au_rang_la_nuit_puis_arrete):
+    r = au_rang_la_nuit_puis_arrete["arrete"]
     assert r["dedans"] is True
     assert r["bloc"] is False and r["laVille"] is True, "on se réveille en ville, pas au rang"
     assert r["loin"] <= 4, f"au poste : {r}"
 
 
-def test_tombe_au_rang_on_se_reveille_a_l_hopital_en_ville(banc):
-    r = banc("async function (L, o) {" + OUTILS + """
-        L.Jeu.commencer();
-        const B = L.B, j = B.joueur;
-        auPassage(L, o); await laisserArriver(L, o);
-        const ville = L.Monde.carte;
-        pousser(L, o, 'KeyA');
-        const dedans = !!B.bloc;
-        L.Missions.hopital('test');
-        for (let i = 0; i < 400 && B.transition; i++) o.frame(1);
-        return { dedans: dedans, bloc: !!B.bloc, piece: B.interieur && B.interieur.slug,
-                 laVille: (B.exterieur && B.exterieur.carte) === ville };
-    }""")
-    assert r["dedans"] is True
-    assert r == {"dedans": True, "bloc": False, "piece": "hopital", "laVille": True}, r
+# ⚠️ « Tombé au rang, on se réveille à l'hôpital en ville » : `test_chalet_js.py::
+# test_tombe_au_chalet_on_va_a_l_hopital_et_le_chalet_garde_le_char` (vague C) — tombé DANS le
+# chalet, au rang, le réveil passe par le même `revenirEnVille` (la pièce, puis le bloc).
 
 
-def test_sauvegardee_au_rang_la_partie_se_rouvre_au_passage_en_ville(banc):
-    r = banc("async function (L, o) {" + OUTILS + """
-        L.Jeu.commencer();
-        const B = L.B, j = B.joueur;
-        auPassage(L, o); await laisserArriver(L, o);
-        pousser(L, o, 'KeyA');
-        const retour = { x: B.bloc.ville.x, y: B.bloc.ville.y };
-        L.Missions.sauvegarderPartie();
-        return { x: B.partie.x, y: B.partie.y, retour: retour, bloc: !!B.bloc };
-    }""")
+def test_sauvegardee_au_rang_la_partie_se_rouvre_au_passage_en_ville(au_rang_sans_bruit):
+    r = au_rang_sans_bruit["sauvee"]
     assert r["bloc"] is True
     assert (r["x"], r["y"]) == (round(r["retour"]["x"]), round(r["retour"]["y"])), r
 
 
-def test_les_arbres_du_bloc_sont_la_et_arretent_le_joueur(banc, cartes_des_blocs):
+def test_les_arbres_du_bloc_sont_la_et_arretent_le_joueur(au_rang_sans_bruit, cartes_des_blocs):
     """Ses arbres sont des entités de décor, comme en ville — sinon on ne voyait que leurs
     pieds, et on marchait au travers."""
-    r = banc("async function (L, o) {" + OUTILS + """
-        L.Jeu.commencer();
-        const B = L.B, j = B.joueur;
-        await entrer(L, o);
-        const arbres = B.entites.filter(function (e) { return e.type === 'decor' && e.decor === 'arbre'; });
-        // Contre la rangée d'arbres de l'ouest (rangée 30 : les tuiles 1 à 4 sont libres, l'arbre
-        // de la tuile 0 non) : on pousse vers la gauche, on reste au rang.
-        j.x = 4 * TT + 8; j.y = 30 * TT + 8; L.Entites.indexer();
-        o.touche('KeyA'); for (let i = 0; i < 90; i++) o.frame(1); o.relacher('KeyA');
-        const bloque = j.x;
-        versLeRetour(L, o);
-        const ville = B.entites.filter(function (e) { return e.type === 'decor' && e.decor === 'arbre'; }).length;
-        return { arbres: arbres.length, bloque: bloque, villeArbres: ville };
-    }""")
+    r = au_rang_sans_bruit
     attendus = sum(1 for d in cartes_des_blocs["rang"]["decor"] if d["type"] == "arbre")
     assert r["arbres"] == attendus > 50, r
     # L'arbre de la tuile 0 arrête le joueur vers x = 12 ; sans lui, seul le bord de la
@@ -339,24 +355,10 @@ def test_les_arbres_du_bloc_sont_la_et_arretent_le_joueur(banc, cartes_des_blocs
     assert r["villeArbres"] > 100, "de retour, les arbres de la ville sont revenus"
 
 
-def test_une_plaque_dit_ou_pousser_des_deux_cotes(banc):
+def test_une_plaque_dit_ou_pousser_des_deux_cotes(au_rang_sans_bruit):
     """Un passage qu'on ne voit pas, personne ne le trouve : une plaque au sol, et la ligne
     du bas qui dit où il mène et dans quel sens pousser."""
-    r = banc("async function (L, o) {" + OUTILS + """
-        L.Jeu.commencer();
-        const B = L.B, j = B.joueur;
-        auPassage(L, o); await laisserArriver(L, o);
-        const enVille = L.Blocs.texteDInfo(j);
-        j.y = 20 * TT; L.Entites.indexer();
-        const loin = L.Blocs.texteDInfo(j);
-        auPassage(L, o);
-        pousser(L, o, 'KeyA');
-        const r0 = L.B.bloc.def.bloc.retour;
-        j.x = (L.Monde.carte.w - 2) * TT + 8; j.y = (r0.de + 1) * TT + 8;
-        const dansLeBloc = L.Blocs.texteDInfo(j);
-        L.Jeu.rendre();
-        return { enVille: enVille, loin: loin, dansLeBloc: dansLeBloc };
-    }""")
+    r = au_rang_sans_bruit["plaque"]
     assert r["enVille"] == "LE RANG : POUSSE VERS L'OUEST", r
     assert r["loin"] is None
     assert r["dansLeBloc"] == "VERS LA VILLE : POUSSE VERS L'EST", r

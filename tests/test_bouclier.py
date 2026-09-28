@@ -8,6 +8,8 @@ tant qu'on le tient. On gagne du temps, on ne gagne pas la partie — et on
 ressort plus recherche qu'on est entre.
 """
 
+import pytest
+
 from app import recherche
 
 
@@ -110,35 +112,27 @@ DECOR = """
 """
 
 
-def test_a_mains_nues_on_ne_prend_personne(banc):
-    """⚠️ IL FAUT UNE ARME. A mains nues, « prendre en otage » n'est qu'une
-    prise : rien ne dit a la police pourquoi elle devrait s'arreter, et le geste
-    n'aurait aucune lecture a l'ecran."""
-    r = banc("""function (L, o) {
+@pytest.fixture(scope="module")
+def mains_nues_puis_la_pression(banc):
+    """UN décor, deux scènes (vague C, 28 sept. 2026 — deux bancs) : à mains nues on ne prend
+    personne ; l'arme à la main, une pression ne prend personne et un maintien, oui.
+
+    ⚠️ Entre les deux, le décor tel que le second juge le prenait : la première victime RETIRÉE
+    (sinon deux passants sur la même place, et la prise tenue attrape le mauvais), le pistolet en
+    main, et le dé remis à la graine du décor — `o.poser` tire des dés (`creerPieton`)."""
+    return banc("""function (L, o) {
         %s
-        const p = victime();
+        // 1. À mains nues.
+        const p0 = victime();
         j.arme = 'poings';
         const aMainsNues = !!L.Combat.otageSousLaMain(j);
         j.arme = 'pistolet';
         const arme = !!L.Combat.otageSousLaMain(j);
-        return { aMainsNues: aMainsNues, arme: arme };
-    }""" % DECOR)
-    assert r["arme"] is True, "le décor du juge est faux : personne à portée (%s)" % r
-    assert r["aMainsNues"] is False, "on prend un otage à mains nues : %s" % r
-
-
-def test_une_pression_ne_prend_personne_un_maintien_oui(banc):
-    """⚠️ **LE JUGE DE LA DEMANDE DE MARTIN** : « il faudrait tenir le bouton
-    plus longtemps pour eviter de le faire par accident ». Le bouclier est le
-    DERNIER de la chaine d'ACTION — ce que le bouton fait quand il n'a rien
-    trouve d'autre a faire. Une pression suffisait : on visait une porte d'un
-    pas trop loin, une arme par terre, et on repartait avec un bonhomme dans
-    les bras et deux etoiles.
-
-    On mesure les deux cotes dans le meme decor : taper ne prend personne,
-    tenir prend — et l'invite du HUD dit qu'il faut tenir."""
-    r = banc("""function (L, o) {
-        %s
+        const mains = { aMainsNues: aMainsNues, arme: arme };
+        L.Entites.retirer(p0);
+        L.Entites.indexer();
+        L.graine(19);
+        // 2. La pression et le maintien.
         const p = victime();
         // ⚠️ IL NOUS REGARDE, comme quelqu'un qu'on met en joue. Dans le dos,
         // une tape lui fait les poches (`test_taper_fait_les_poches...`) : il
@@ -162,9 +156,31 @@ def test_une_pression_ne_prend_personne_un_maintien_oui(banc):
         saisir(Math.round(f.saisie_s * 60) - 10);
         const presque = !!j.otage;
         saisir();
-        return { tape: tape, presque: presque, tenu: j.otage === p, invite: invite,
-                 images: Math.round(f.saisie_s * 60) };
+        return { mains: mains, pression: { tape: tape, presque: presque, tenu: j.otage === p, invite: invite,
+                 images: Math.round(f.saisie_s * 60) } };
     }""" % DECOR)
+
+
+def test_a_mains_nues_on_ne_prend_personne(mains_nues_puis_la_pression):
+    """⚠️ IL FAUT UNE ARME. A mains nues, « prendre en otage » n'est qu'une
+    prise : rien ne dit a la police pourquoi elle devrait s'arreter, et le geste
+    n'aurait aucune lecture a l'ecran."""
+    r = mains_nues_puis_la_pression["mains"]
+    assert r["arme"] is True, "le décor du juge est faux : personne à portée (%s)" % r
+    assert r["aMainsNues"] is False, "on prend un otage à mains nues : %s" % r
+
+
+def test_une_pression_ne_prend_personne_un_maintien_oui(mains_nues_puis_la_pression):
+    """⚠️ **LE JUGE DE LA DEMANDE DE MARTIN** : « il faudrait tenir le bouton
+    plus longtemps pour eviter de le faire par accident ». Le bouclier est le
+    DERNIER de la chaine d'ACTION — ce que le bouton fait quand il n'a rien
+    trouve d'autre a faire. Une pression suffisait : on visait une porte d'un
+    pas trop loin, une arme par terre, et on repartait avec un bonhomme dans
+    les bras et deux etoiles.
+
+    On mesure les deux cotes dans le meme decor : taper ne prend personne,
+    tenir prend — et l'invite du HUD dit qu'il faut tenir."""
+    r = mains_nues_puis_la_pression["pression"]
     assert r["images"] > 8, "le décor du juge est faux : la fiche ne demande presque rien (%s)" % r
     assert r["tape"]["otage"] is False, (
         "une pression prend encore quelqu'un en otage : c'est le bug de Martin (%s)" % r
@@ -223,10 +239,14 @@ def test_taper_fait_les_poches_tenir_prend_l_otage(banc):
     )
 
 
-def test_le_prendre_coute_deux_etoiles_et_le_tenir_en_coute_plus(banc):
-    """⚠️ On gagne du temps, on ne gagne pas la partie : le compteur monte tant
-    qu'on le tient. C'est la seule chose qui empeche le bouclier d'etre un abri."""
-    r = banc("""function (L, o) {
+@pytest.fixture(scope="module")
+def une_prise_jusqu_au_bout(banc):
+    """UNE prise, suivie jusqu'au bout (vague C, 28 sept. 2026 — deux bancs faisaient la même
+    prise) : ce qu'elle coûte, ce que le tenir coûte en plus, puis il se débat et se dégage.
+
+    Ce n'est pas deux scènes, c'est la même : les deux secondes où l'on mesure la pression sont
+    les deux premières de la tenue, et le dégagement se compte depuis la prise, comme avant."""
+    return banc("""function (L, o) {
         %s
         const p = victime();
         // ⚠️ ON MESURE LA PRESSION, pas les etoiles. `DELITS[x].etoiles` est une
@@ -242,12 +262,26 @@ def test_le_prendre_coute_deux_etoiles_et_le_tenir_en_coute_plus(banc):
         saisir();
         const pris = { otage: j.otage === p, pression: pression(),
                        dit: p.bulle ? p.bulle.texte : null };
-        for (let i = 0; i < 120; i++) o.frame(1);   // deux secondes
-        return { avant: avant, pris: pris, apres: pression(),
-                 tientEncore: j.otage === p,
-                 gravite: L.B.defs.recherche.delits.otage.etoiles,
-                 parGravite: L.B.defs.recherche.chaleur_par_gravite };
+        let images = 0;
+        // ⚠️ `&& j.otage` : la même boucle que celle du dégagement, qui s'arrête à l'image où il
+        // se libère — s'il se dégageait avant deux secondes, `tientEncore` le dit.
+        for (; images < 120 && j.otage; images++) o.frame(1);   // deux secondes
+        const cout = { avant: avant, pris: pris, apres: pression(),
+                       tientEncore: j.otage === p,
+                       gravite: L.B.defs.recherche.delits.otage.etoiles,
+                       parGravite: L.B.defs.recherche.chaleur_par_gravite };
+        while (j.otage && images < 60 * 60) { o.frame(1); images++; }
+        return { cout: cout,
+                 debat: { images: images, libre: !j.otage, encoreOtage: !!p.otage,
+                          fuit: p.etat === 'fuit', dit: p.bulle ? p.bulle.texte : null,
+                          max: L.B.defs.recherche.bouclier.tenue_max_s * 60 } };
     }""" % DECOR)
+
+
+def test_le_prendre_coute_deux_etoiles_et_le_tenir_en_coute_plus(une_prise_jusqu_au_bout):
+    """⚠️ On gagne du temps, on ne gagne pas la partie : le compteur monte tant
+    qu'on le tient. C'est la seule chose qui empeche le bouclier d'etre un abri."""
+    r = une_prise_jusqu_au_bout["cout"]
     assert r["avant"] == 0, "le décor du juge est faux : on est déjà recherché (%s)" % r
     assert r["pris"]["otage"] is True, "ACTION ne l'a pas attrapé : %s" % r
     assert r["pris"]["pression"] >= r["gravite"] * r["parGravite"], (
@@ -260,19 +294,10 @@ def test_le_prendre_coute_deux_etoiles_et_le_tenir_en_coute_plus(banc):
     )
 
 
-def test_il_se_debat_et_finit_par_se_degager(banc):
+def test_il_se_debat_et_finit_par_se_degager(une_prise_jusqu_au_bout):
     """⚠️ La borne qui fait du bouclier une SORTIE et pas un abri. On le tient
     le temps de sortir de la ligne de tir, pas le temps de traverser la ville."""
-    r = banc("""function (L, o) {
-        %s
-        const p = victime();
-        saisir();
-        let images = 0;
-        while (j.otage && images < 60 * 60) { o.frame(1); images++; }
-        return { images: images, libre: !j.otage, encoreOtage: !!p.otage,
-                 fuit: p.etat === 'fuit', dit: p.bulle ? p.bulle.texte : null,
-                 max: L.B.defs.recherche.bouclier.tenue_max_s * 60 };
-    }""" % DECOR)
+    r = une_prise_jusqu_au_bout["debat"]
     assert r["libre"] is True, "il ne se dégage jamais : %s" % r
     assert r["images"] <= r["max"] + 2, "il se tient plus longtemps que la fiche : %s" % r
     assert r["images"] > r["max"] * 0.5, "il se dégage bien avant l'heure : %s" % r

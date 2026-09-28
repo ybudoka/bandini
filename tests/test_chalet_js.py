@@ -162,18 +162,22 @@ def test_sauvegarder_au_chalet_n_oublie_pas_le_char_de_la_planque_de_rocco(banc)
 
 
 def test_tombe_au_chalet_on_va_a_l_hopital_et_le_chalet_garde_le_char(banc):
+    """Tombé au rang, on se réveille à l'hôpital EN VILLE — la pièce de l'hôpital posée sur la
+    carte de la ville, pas sur celle du bloc (vague C, 28 sept. 2026 : ce juge tient aussi la règle
+    de l'ex-`test_blocs_js.py::test_tombe_au_rang_on_se_reveille_a_l_hopital_en_ville`)."""
     r = banc("async function (L, o) {" + OUTILS + """
         L.Jeu.commencer();
-        const B = L.B;
+        const B = L.B, ville = L.Monde.carte;
         await auChalet(L, o);
         const v = L.Vehicules.creer('auto', 46 * TT + 8, 18 * TT + 8, 0, { etat: 'stationne' });
         entrerDansLeChalet(L, o);
         L.Missions.hopital('test');
         for (let i = 0; i < 400 && B.transition; i++) o.frame(1);
         const hopital = B.interieur && B.interieur.slug;
-        return { hopital: hopital, bloc: !!B.bloc, garde: (L.Blocs.enMemoire('rang') || []).indexOf(v) >= 0 };
+        return { hopital: hopital, bloc: !!B.bloc, garde: (L.Blocs.enMemoire('rang') || []).indexOf(v) >= 0,
+                 laVille: (B.exterieur && B.exterieur.carte) === ville };
     }""")
-    assert r == {"hopital": "hopital", "bloc": False, "garde": True}, r
+    assert r == {"hopital": "hopital", "bloc": False, "garde": True, "laVille": True}, r
 
 
 def test_au_reveil_le_noir_attend_la_carte_du_chalet(banc):

@@ -10,6 +10,8 @@ la partie pour que l'autobus d'une ligne soit à `avance` tuiles EN AMONT de
 l'arrêt — hors de l'écran, dans la bulle — et il arrive de lui-même.
 """
 
+import pytest
+
 #: Le joueur sur le trottoir de l'arrêt ; l'heure réglée pour qu'un autobus
 #: de la ligne arrive d'`avance` tuiles plus haut sur son tracé.
 AMENER = """
@@ -45,14 +47,23 @@ AMENER = """
 """
 
 
-def test_l_autobus_passe_a_l_abribus_ou_l_on_attend_et_on_monte(banc):
-    r = banc("""function (L, o) {
+@pytest.fixture(scope="module")
+def a_l_abribus(banc):
+    """UN autobus amené, trois scènes à la suite (vague C, 28 sept. 2026 — trois bancs de 4 000
+    images en faisaient trois fois l'arrivée) : recherché puis fauché, le chauffeur n'ouvre pas ;
+    le joueur remis en règle, on monte ; il roule, on le fait descendre de force.
+
+    ⚠️ Entre deux scènes, l'état que chaque juge avait au départ : zéro étoile, l'argent d'avant
+    le refus. Le refus ne fait pas bouger l'autobus (il reste à l'arrêt, `arretT`), et la montée
+    se mesure comme avant, à l'arrivée."""
+    return banc("""function (L, o) {
         L.Jeu.commencer();
         %s
         const m = amener(L, 2, 45);
         const j = L.B.joueur;
         // ⚠️ On regarde la chaussée de l'arrêt, là où l'autobus s'arrêtera : ACTION
-        // n'agit que sur ce qu'on regarde (test_regard_js.py).
+        // n'agit que sur ce qu'on regarde (test_regard_js.py) — sans regard, rien ne
+        // fait monter et les juges passeraient à vide.
         o.viser({ x: m.arret.x * L.TT + 8, y: m.arret.y * L.TT + 8 });
         const attente = L.Autobus.texteDAttente(j);
         const arrive = attendreLAutobus(L, o, m.arret, 4000);
@@ -61,7 +72,18 @@ def test_l_autobus_passe_a_l_abribus_ou_l_on_attend_et_on_monte(banc):
         const out = { arrive: true, images: arrive.images, attente: attente,
                       ecart_px: Math.hypot(v.x - (m.arret.x * L.TT + 8), v.y - (m.arret.y * L.TT + 8)),
                       invite: L.B.invite, argent: L.B.partie.argent };
-        // Le dos tourne a l'autobus, il n'y a plus de portiere ; on se retourne, et on monte.
+        // 1. Recherché, puis fauché : le chauffeur n'ouvre pas.
+        L.B.recherche.etoiles = 1;
+        o.tape('KeyE', 1);
+        out.recherche = { passager: !!j.passager, msg: L.B.msg };
+        L.B.recherche.etoiles = 0;
+        L.B.partie.argent = 2;
+        o.tape('KeyE', 1);
+        out.fauche = { passager: !!j.passager, msg: L.B.msg, argent: L.B.partie.argent };
+        // 2. En règle (l'argent d'avant) : le dos tourné, il n'y a plus de portière ;
+        // on se retourne, et on monte.
+        L.B.partie.argent = out.argent;
+        out.aLArret = v.arretT > 0 && v.arret === m.arret.id;
         L.Entites.regarder(j, j.x - v.x, j.y - v.y);
         out.dos = !!L.Autobus.autobusSousLaMain(j);
         o.viser({ x: m.arret.x * L.TT + 8, y: m.arret.y * L.TT + 8 });
@@ -72,12 +94,24 @@ def test_l_autobus_passe_a_l_abribus_ou_l_on_attend_et_on_monte(banc):
         out.paye = out.argent - L.B.partie.argent;
         out.invite_a_bord = L.B.invite;
         out.conducteur = v.conducteur;
+        // 3. ⚠️ L'hôpital, une arrestation, un autobus en feu : tout ce qui appelle
+        // `Vehicules.descendre(j, true)` sur un passager.
+        for (let i = 0; i < 240; i++) o.frame(1);
+        const roule = Math.abs(v.vitesse) > 0.2;
+        L.Vehicules.descendre(j, true);
+        out.force = { roule: roule, passager: !!j.passager, dans: !!j.dansVehicule, dessine: j.dessine,
+                      conducteur: v.conducteur, laisse: v.laisse, a_bord: !!v.passager };
         return out;
     }""" % AMENER)
+
+
+def test_l_autobus_passe_a_l_abribus_ou_l_on_attend_et_on_monte(a_l_abribus):
+    r = a_l_abribus
     assert r["arrive"], f"aucun autobus à l'arrêt ({r['attente']})"
     assert r["attente"] and "DANS" in r["attente"], r["attente"]
     assert r["ecart_px"] < 8, f"arrêté à {r['ecart_px']:.0f} px de son arrêt"
     assert r["invite"].startswith("MONTER — LIGNE 2"), r["invite"]
+    assert r["aLArret"], "le décor du juge est faux : l'autobus a quitté l'arrêt pendant les refus (%s)" % r
     assert r["dos"] is False, "on voit la portiere de l'autobus dos tourne"
     assert r["passager"] and r["dansVehicule"] and not r["dessine"]
     assert r["paye"] == 3
@@ -138,52 +172,19 @@ def test_a_bord_on_demande_l_arret_et_on_descend_au_suivant(banc):
     assert r["dessine"] and r["paye"] == 0 and r["conducteur"] == "ligne"
 
 
-def test_recherche_ou_fauche_le_chauffeur_n_ouvre_pas(banc):
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        %s
-        const m = amener(L, 2, 45);
-        const j = L.B.joueur;
-        // On regarde la chaussée de l'arrêt (test_regard_js.py).
-        o.viser({ x: m.arret.x * L.TT + 8, y: m.arret.y * L.TT + 8 });
-        const arrive = attendreLAutobus(L, o, m.arret, 4000);
-        if (!arrive) return { arrive: false };
-        L.B.recherche.etoiles = 1;
-        o.tape('KeyE', 1);
-        const recherche = { passager: !!j.passager, msg: L.B.msg };
-        L.B.recherche.etoiles = 0;
-        L.B.partie.argent = 2;
-        o.tape('KeyE', 1);
-        return { arrive: true, recherche: recherche, fauche: { passager: !!j.passager, msg: L.B.msg, argent: L.B.partie.argent } };
-    }""" % AMENER)
+def test_recherche_ou_fauche_le_chauffeur_n_ouvre_pas(a_l_abribus):
+    r = a_l_abribus
     assert r["arrive"]
     assert not r["recherche"]["passager"] and "CHAUFFEUR" in r["recherche"]["msg"]
     assert not r["fauche"]["passager"] and "PAS ASSEZ" in r["fauche"]["msg"] and r["fauche"]["argent"] == 2
 
 
-def test_forcer_la_descente_ne_casse_pas_la_ligne(banc):
+def test_forcer_la_descente_ne_casse_pas_la_ligne(a_l_abribus):
     """⚠️ L'hôpital, une arrestation, un autobus en feu : tout ce qui appelle
     `Vehicules.descendre(j, true)` sur un passager doit le poser à côté, pas garer
     l'autobus « laissé » pour la fourrière ni lui retirer son chauffeur."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        %s
-        const m = amener(L, 2, 45);
-        const j = L.B.joueur;
-        // ⚠️ On regarde la chaussée de l'arrêt : sans regard, ACTION ne fait pas monter
-        // et le juge passerait à vide (test_regard_js.py).
-        o.viser({ x: m.arret.x * L.TT + 8, y: m.arret.y * L.TT + 8 });
-        const arrive = attendreLAutobus(L, o, m.arret, 4000);
-        if (!arrive) return { arrive: false };
-        const v = arrive.v;
-        o.tape('KeyE', 1);
-        for (let i = 0; i < 240; i++) o.frame(1);
-        const roule = Math.abs(v.vitesse) > 0.2;
-        L.Vehicules.descendre(j, true);
-        return { arrive: true, roule: roule, passager: !!j.passager, dans: !!j.dansVehicule, dessine: j.dessine,
-                 conducteur: v.conducteur, laisse: v.laisse, a_bord: !!v.passager };
-    }""" % AMENER)
-    assert r["arrive"] and r["roule"]
+    r = a_l_abribus["force"]
+    assert a_l_abribus["arrive"] and r["roule"]
     assert not r["passager"] and not r["dans"] and r["dessine"] and not r["a_bord"]
     assert r["conducteur"] == "ligne" and not r["laisse"]
 
