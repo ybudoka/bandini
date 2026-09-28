@@ -23,14 +23,7 @@ def js(nom: str) -> str:
 #: `test_plage_js.py`), cinq tuiles au nord : la grève est dans la bulle, une
 #: part hors champ.
 GREVE = """
-    // ⚠️ Mémorisée dans le banc : la carte ne change pas d'une partie à l'autre, et le
-    // balayage (fenêtre 25 × 25 sur toute la carte) coûte plus que les images jouées.
-    let _greve;
     function greve(L) {
-      if (_greve === undefined) _greve = greveCherchee(L);
-      return _greve;
-    }
-    function greveCherchee(L) {
       const c = L.Monde.carte, TT = L.TT;
       function eau(tx, ty, d) {
         return L.Monde.estEau(tx + d, ty) || L.Monde.estEau(tx - d, ty)
