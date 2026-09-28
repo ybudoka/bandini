@@ -3874,53 +3874,94 @@ const TUILES = (function () {
       ctx.fillStyle = '#1a0e0c';
       ctx.fillRect(4, 11, 7, 2);                        // la trappe
     },
-    /* Le videopoker du fond du bar (`videopoker.py`) : une borne noire, son ecran ou cinq cartes
-       attendent, et le voyant qui CLIGNOTE — c'est lui qu'on voit de la porte (`v >> 4` : deux
-       machines ne clignotent pas ensemble). */
+    /* Le videopoker du fond du bar (`videopoker.py`) : une borne noire bordee de chrome, son
+       ECRAN BLEU — la table des gains en jaune en haut, cinq cartes blanches dessous, comme sur
+       toutes les bornes de bar —, la tablette des boutons (quatre GARDER jaunes, DONNER en rouge)
+       et la chandelle qui CLIGNOTE sur le toit — c'est elle qu'on voit de la porte (`v >> 4` :
+       deux machines ne clignotent pas ensemble). */
     'S': function (ctx, v, T) {
-      ctx.fillStyle = 'rgba(0,0,0,0.20)';
-      ctx.fillRect(2, 14, 13, 2);                       // l'ombre au pied
+      ctx.fillStyle = 'rgba(0,0,0,0.22)';
+      ctx.fillRect(2, 14, 14, 2);                       // l'ombre au pied
       ctx.fillStyle = '#1d1a26';
-      ctx.fillRect(2, 1, 12, 14);                       // la borne
-      ctx.fillStyle = '#2e2940';
-      ctx.fillRect(2, 1, 12, 2);                        // le fronton
-      ctx.fillStyle = (v >> 4) % 2 ? '#ffd23a' : '#b8322a';
-      ctx.fillRect(6, 1, 4, 1);                         // le voyant qui clignote
-      ctx.fillStyle = '#0d2a3a';
-      ctx.fillRect(3, 4, 10, 6);                        // l'ecran
-      ctx.fillStyle = '#efe6d0';
-      for (let k = 0; k < 5; k++) ctx.fillRect(4 + k * 2, 6, 1, 2);   // les cinq cartes
-      ctx.fillStyle = '#c0392b';
-      ctx.fillRect(6, 6, 1, 1);                         // un coeur, quelque part
-      ctx.fillStyle = '#5a5570';
-      ctx.fillRect(3, 11, 10, 1);                       // le rebord des boutons
+      ctx.fillRect(2, 1, 13, 14);                       // la borne
+      ctx.fillStyle = '#8a879c';
+      ctx.fillRect(2, 1, 1, 14);                        // le chrome du flanc eclaire
+      ctx.fillStyle = '#0c0a12';
+      ctx.fillRect(14, 1, 1, 14);                       // et l'autre, dans l'ombre
+      ctx.fillStyle = '#9c2a22';
+      ctx.fillRect(3, 1, 11, 2);                        // le fronton rouge
       ctx.fillStyle = '#e8b33c';
-      ctx.fillRect(4, 12, 1, 1); ctx.fillRect(6, 12, 1, 1); ctx.fillRect(8, 12, 1, 1); ctx.fillRect(10, 12, 1, 1);
+      ctx.fillRect(4, 1, 1, 1); ctx.fillRect(6, 1, 2, 1); ctx.fillRect(9, 1, 1, 1); ctx.fillRect(11, 1, 2, 1);   // POKER, en lettres d'or
+      ctx.fillStyle = (v >> 4) % 2 ? '#ffd23a' : '#e0402e';
+      ctx.fillRect(7, 0, 3, 1);                         // la chandelle qui clignote
+      ctx.fillStyle = '#2456b0';
+      ctx.fillRect(3, 3, 11, 6);                        // l'ecran bleu
       ctx.fillStyle = '#ffd23a';
-      ctx.fillRect(12, 12, 1, 2);                       // la fente a monnaie
+      ctx.fillRect(4, 4, 3, 1); ctx.fillRect(9, 4, 4, 1);    // la table des gains
+      ctx.fillStyle = '#f4efe2';
+      for (let k = 0; k < 5; k++) ctx.fillRect(4 + k * 2, 6, 1, 3);   // les cinq cartes
+      ctx.fillStyle = '#d0302a';
+      ctx.fillRect(6, 7, 1, 1); ctx.fillRect(10, 7, 1, 1);   // deux coeurs, une paire
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.fillRect(3, 3, 1, 2);                         // le reflet de la vitre
+      ctx.fillStyle = '#5a5570';
+      ctx.fillRect(3, 10, 11, 1);                       // le rebord de la tablette
+      ctx.fillStyle = '#34304a';
+      ctx.fillRect(3, 11, 11, 1);                       // la tablette
+      ctx.fillStyle = '#ffd23a';
+      ctx.fillRect(4, 11, 1, 1); ctx.fillRect(6, 11, 1, 1); ctx.fillRect(8, 11, 1, 1); ctx.fillRect(10, 11, 1, 1);   // GARDER
+      ctx.fillStyle = '#e0402e';
+      ctx.fillRect(12, 11, 1, 1);                       // DONNER
+      ctx.fillStyle = '#6a6680';
+      ctx.fillRect(6, 13, 5, 1);                        // le bac a monnaie
     },
-    // La MACHINE A SOUS du casino du Dragon d'or (`machine_a_sous.py`) : une borne rouge et or, trois
-    // rouleaux derriere leur vitre, et le BRAS a droite — c'est lui qu'on tire.
+    // La MACHINE A SOUS du casino du Dragon d'or (`machine_a_sous.py`) : une borne rouge coiffee
+    // d'un dome d'or ou les AMPOULES courent (`v >> 4`), trois SEPT rouges dans leurs fenetres
+    // blanches, le bac a monnaie, et le BRAS a droite, boule rouge au bout — c'est lui qu'on tire.
     '$': function (ctx, v, T) {
-      ctx.fillStyle = 'rgba(0,0,0,0.20)';
-      ctx.fillRect(2, 14, 13, 2);                       // l'ombre au pied
-      ctx.fillStyle = '#6e1410';
-      ctx.fillRect(2, 1, 11, 14);                       // la borne
-      ctx.fillStyle = '#a3201c';
-      ctx.fillRect(2, 1, 11, 3);                        // le fronton
-      ctx.fillStyle = (v >> 4) % 2 ? '#ffd23a' : '#fff1b0';
-      ctx.fillRect(4, 2, 7, 1);                         // le neon du fronton
-      ctx.fillStyle = '#efe6d0';
-      ctx.fillRect(3, 5, 9, 5);                         // la vitre des rouleaux
-      ctx.fillStyle = '#c0392b'; ctx.fillRect(4, 6, 2, 3);   // une cerise,
-      ctx.fillStyle = '#e8b33c'; ctx.fillRect(7, 6, 1, 3);   // un sept,
-      ctx.fillStyle = '#2e8a4a'; ctx.fillRect(9, 6, 2, 3);   // un citron vert
+      const allume = (v >> 4) % 2;
+      ctx.fillStyle = 'rgba(0,0,0,0.22)';
+      ctx.fillRect(1, 14, 14, 2);                       // l'ombre au pied
+      ctx.fillStyle = '#7a1612';
+      ctx.fillRect(1, 1, 12, 14);                       // la borne
+      ctx.fillStyle = '#a3261e';
+      ctx.fillRect(1, 1, 1, 14);                        // son flanc eclaire
+      ctx.fillStyle = '#4a0c0a';
+      ctx.fillRect(12, 1, 1, 14);                       // et l'autre, dans l'ombre
+      ctx.fillStyle = '#d8a238';
+      ctx.fillRect(3, 0, 8, 1);                         // le dome d'or
+      for (let k = 0; k < 6; k++) {                     // et ses ampoules qui courent
+        ctx.fillStyle = (k + allume) % 2 ? '#fff4c0' : '#c8781e';
+        ctx.fillRect(2 + k * 2, 1, 1, 1);
+      }
+      ctx.fillStyle = '#ffd23a';
+      ctx.fillRect(4, 2, 6, 1);                         // le neon du fronton
+      ctx.fillStyle = '#2a0806';
+      ctx.fillRect(2, 4, 10, 6);                        // le cadre des rouleaux
+      for (let k = 0; k < 3; k++) {
+        const x = 3 + k * 3;
+        ctx.fillStyle = '#f4efe2';
+        ctx.fillRect(x, 5, 2, 4);                       // un rouleau,
+        ctx.fillStyle = '#c4b89e';
+        ctx.fillRect(x, 5, 2, 1); ctx.fillRect(x, 8, 2, 1);   // qui s'arrondit en haut et en bas
+        ctx.fillStyle = '#d0302a';
+        ctx.fillRect(x, 5, 2, 1); ctx.fillRect(x + 1, 6, 1, 1); ctx.fillRect(x, 7, 1, 1);   // et son SEPT
+      }
       ctx.fillStyle = '#e0b040';
-      ctx.fillRect(3, 11, 9, 1);                        // le rebord dore
+      ctx.fillRect(2, 10, 10, 1);                       // le rebord dore
+      ctx.fillStyle = '#ffd23a'; ctx.fillRect(3, 11, 2, 1);  // la mise
       ctx.fillStyle = '#9a9aa4';
-      ctx.fillRect(13, 4, 1, 6);                        // le bras
-      ctx.fillStyle = '#c0392b';
-      ctx.fillRect(13, 3, 2, 2);                        // et sa boule rouge
+      ctx.fillRect(4, 12, 6, 2);                        // le bac a monnaie
+      ctx.fillStyle = '#3a3a42';
+      ctx.fillRect(5, 13, 4, 1);                        // et son creux
+      ctx.fillStyle = '#9a9aa4';
+      ctx.fillRect(13, 8, 1, 3);                        // le pivot du bras
+      ctx.fillStyle = '#d4d4dc';
+      ctx.fillRect(14, 3, 1, 7);                        // le bras
+      ctx.fillStyle = '#d0302a';
+      ctx.fillRect(13, 1, 2, 2);                        // et sa boule rouge
+      ctx.fillStyle = '#ff9a8a';
+      ctx.fillRect(13, 1, 1, 1);                        // qui brille
     },
     /* Le DOJO DION (docs/jalons/le-dojo-du-quartier.md). Le TATAMI : des nattes vert pale, un
        joint sombre toutes les huit pixels (deux nattes par tuile), et le liseré noir aux bords
