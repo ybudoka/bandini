@@ -98,6 +98,7 @@ pas quand l'ordre de travail change.
 | Les territoires des gangs bougent | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/les-territoires-des-gangs-bougent.md#fiche) |
 | Le marché aux puces du dimanche | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-marche-aux-puces-du-dimanche.md#fiche) |
 | Une amélioration générale des toits | ⬜ **à faire** (à trancher par Martin : la liste, et par où commencer) | — | **P4** | ajout | [fiche](jalons/une-amelioration-generale-des-toits.md#fiche) |
+| Le bidonville de la gare : l'est de la Gare de triage | ⬜ **en cours** (le bidonville au nord-est, les maisons pauvres dessous) | 28 sept. 2026 | **P4** | ajout | [fiche](jalons/le-bidonville-de-la-gare.md#fiche) |
 | Les quatre saisons, réalistes | ⬜ **à faire** (à trancher par Martin : l'ordre des vagues, l'option de la neige, et le mois où commence une partie) | — | **P4** | ajout | [fiche](jalons/les-quatre-saisons-realistes.md#fiche) |
 
 ## L'ordre
