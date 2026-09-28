@@ -26,18 +26,28 @@ from app import aeroport, carte, economie, missions, recherche
 
 @pytest.fixture(scope="module")
 def ville():
-    return villes.generer(nord=False)
+    """⚠️ Sans les CONCESSIONNAIRES, des deux côtés : posés après l'aéroport, ils ajoutent leur porte au bout, et ce
+    juge veut ceux de l'aéroport au bout (juges « ce module ne déplace rien »)."""
+    from app import concessionnaires
+    pose = concessionnaires.poser_le_salon
+    concessionnaires.poser_le_salon = lambda chantier, v: None
+    try:
+        return carte.generer(nord=False)
+    finally:
+        concessionnaires.poser_le_salon = pose
 
 
 @pytest.fixture(scope="module")
 def sans(ville):
     """La même ville, l'aéroport jamais posé."""
-    pose = aeroport.poser
+    from app import concessionnaires
+    pose, salon = aeroport.poser, concessionnaires.poser_le_salon
     aeroport.poser = lambda chantier, v: None
+    concessionnaires.poser_le_salon = lambda chantier, v: None
     try:
         return carte.generer(nord=False)
     finally:
-        aeroport.poser = pose
+        aeroport.poser, concessionnaires.poser_le_salon = pose, salon
 
 
 def dedans(r, x, y):

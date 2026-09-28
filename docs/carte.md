@@ -109,6 +109,16 @@ vestiaire, le sac de frappe (`@`) et le mannequin de bois (`%`) au fond, le TATA
 le comptoir de Mireille Dion (point `cours`) et Kevin, l'élève partenaire (`eleve`). Point `dojo`,
 famille `service`. L'ancien SALON MIREILLE du Faubourg s'appelle SALON LOUISE.
 
+**Les concessionnaires** (28 sept. 2026, `app/concessionnaires.py`) : **Prestige Automobiles**, bâti sur
+la moitié sud du plus grand stationnement cossu des Érables (un salon de toit d'ardoise, façade vitrée) ;
+la moitié nord, ses cases `^` telles quelles, est le lot — huit chars neufs (sport, luxe, VUS de luxe,
+berline, familiale), au prix du catalogue, l'alarme sur tous. **Chez Ti-Pout — Autos usagées**, dans les
+Friches : une cour de poussière de pierre grillagée contre le boulevard, une trouée de cinq tuiles au sud,
+une roulotte-bureau (une fenêtre placardée) et sept minounes délavées à 60 % de vie, à 40 % du prix.
+Tous deux sur la ville finie, sans un dé ; point `concession` au comptoir (`lot` : le slug), famille
+`magasin`. Les chars naissent hors champ (`Vehicules.majLotsDeConcession`) ; payés, ils sont à toi
+(`aToi`) ; vendue, la place se regarnit le lendemain (`partie.concession`).
+
 **Les bungalows avec garage** (2e vague, 21 sept. 2026) : cinq logements de banlieue
 (`bungalow_1`…), posés sur la ville finie par `_Chantier.poser_les_garages_de_bungalows` — un
 rideau, une baie sous le toit, une entrée asphaltée jusqu'au trottoir. Pas sur la carte. On y

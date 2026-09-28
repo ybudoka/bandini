@@ -235,3 +235,27 @@ dans `generer`, juste après `ouvrir_les_rues(ville)`, avant le bloc `if nord`),
   suite complète (mémoire « Atterrir avant la suite complète »).
 
 ## Notes
+
+### Les deux vagues ensemble (28 sept. 2026)
+
+Livrées d'un coup : `test_interieurs` refuse une pièce dont le comptoir ne donne rien (« une porte qu'on ouvre pour
+rien »), et le Salon sans son comptoir en était une. Le plan de la vague 1 a tenu, avec ces écarts :
+
+- **La devanture fait 5 tuiles**, centrée sur la porte, sur les vitrines seulement (`ENSEIGNE_ETIREE`,
+  `MOTIFS_CONNUS` : pas les coins `F` de la façade) ; elle porte le `standing` du bloc et sa **lampe de
+  vitrine** (`test_devantures`, `test_quartiers`). L'enseigne du Salon se raccourcit donc d'elle-même
+  (`SALON_ENSEIGNES`, la première qui tient).
+- **Les îlots `I` des cases `v`** qu'on a bâties redeviennent de la pelouse : un îlot ne se tient qu'au bout d'une
+  rangée (`test_carte`). La `cour` du Salon déborde d'une colonne de chaque côté pour eux.
+- **La roulotte a une façade toute vitrée** (`WWDWB`, la dernière placardée : les Friches sont pauvres) — c'est
+  toute sa devanture.
+- **Le comptoir du Salon est au fond**, loin de la porte : devant elle, il lui volait ACTION (`RAYON_POINT`).
+- **Dedans, `Monde.carte` est la pièce** : le menu lit les lots dans `B.exterieur.carte` (mémoire « Monde.carte
+  est le bloc »).
+- **Un char acheté quitte son lot** (`placeDeLot = null`) : la place vendue reste vide le jour même
+  (`partie.concession`, sauvegardé avec la partie) et se regarnit le lendemain, même s'il roule encore.
+- **Les juges « ce module ne déplace rien »** de l'aéroport et des enseignes veulent LEURS ajouts au bout des
+  listes : le Salon (posé après eux) y est neutralisé des deux côtés.
+
+Juges : `test_concessionnaires.py` (13), `test_concessionnaires_js.py` (7) — dont trois mutations vues rouges (la
+place libre devant la porte, `alarmeDuLot`, `compteCommeGare`).

@@ -20,7 +20,7 @@ place), `usure`, `alarme`, et `cour` (le rectangle de tuiles touché, pour les j
 
 from __future__ import annotations
 
-from . import carte, devantures, vehicules
+from . import carte, devantures, devants, vehicules
 
 # --- Prestige Automobiles -------------------------------------------------------------------------
 
@@ -168,6 +168,11 @@ def poser_le_salon(chantier, ville: dict) -> None:
             if ville["sol"][y][x] == "I":
                 _ecrire(ville, x, y, ",")
     _degager(ville, {(x, y) for x in range(x0, x0 + largeur) for y in range(yb, yf + 1)} | {(px, yf + 1)})
+    # ⚠️ RIEN DEVANT LA PORTE, PLUS LARGE (`devants`, passé avant nous) : ce qui s'y déplace ailleurs (un arbre,
+    # un banc) s'en va du devant du Salon — la graine 2 y plantait un arbre.
+    devant = {(px + dx, yf + dy) for dx, dy in devants.DEVANT}
+    ville["decor"][:] = [d for d in ville["decor"]
+                         if not (d["type"] in devants.DECOR_MOBILE and (d["x"], d["y"]) in devant)]
     ville["portes"].append({"x": px, "y": yf, "interieur": SALON_SLUG, "lieu": SALON_SLUG, "nom": SALON_NOM,
                             "vitrine": [x0, largeur]})
     _devanture(ville, x0, yf, motifs, px - x0, SALON_ENSEIGNES, "commerce", "+")

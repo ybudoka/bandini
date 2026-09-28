@@ -144,6 +144,9 @@ def test_les_carrosseries_ne_deplacent_rien_d_autre(ville, monkeypatch):
     # Les ENSEIGNES qui ouvrent pour vrai (`enseignes.poser`) de meme : leurs points s'ajoutent au bout.
     from app import enseignes
     monkeypatch.setattr(enseignes, "poser", lambda chantier, ville_: [])
+    # Les CONCESSIONNAIRES de même : le Salon ajoute son point au bout.
+    from app import concessionnaires
+    monkeypatch.setattr(concessionnaires, "poser_le_salon", lambda chantier, ville_: None)
     avec = carte.generer(graine=ville["graine"], nord=False)
     monkeypatch.setattr(carte._Chantier, "poser_les_carrosseries", lambda self, ville_: [])
     sans = carte.generer(graine=ville["graine"], nord=False)
