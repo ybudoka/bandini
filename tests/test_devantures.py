@@ -215,12 +215,8 @@ def test_chaque_devanture_eclaire_son_trottoir(ville):
         assert lampe["r"] > 0
 
 
-def test_le_meme_grain_donne_la_meme_rue():
-    # ⚠️ Deux générations POUR DE VRAI, pas `villes` : c'est le hasard qu'on juge.
-    a = carte.generer(graine=4242, nord=False)
-    b = carte.generer(graine=4242, nord=False)
-    assert a["devantures"] == b["devantures"]
-    assert a["graffitis"] == b["graffitis"]
+# « Le même grain donne la même rue » : `test_carte::test_deterministe` génère la ville deux fois
+# pour de vrai et compare TOUT le dictionnaire — devantures et graffitis compris.
 
 
 def test_une_autre_graine_donne_d_autres_enseignes():

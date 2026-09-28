@@ -5,20 +5,19 @@ mis en cache. Une enseigne de cinq tuiles peut tomber a cheval sur deux carres �
 si on ne la range que dans le premier, elle est coupee net au milieu d'un mot.
 """
 
+import re
 
-def test_le_paquet_porte_les_devantures(banc):
-    r = banc("""function (L, o) {
-        const c = L.B.defs.carte, d = L.B.defs.devantures;
-        return { devantures: c.devantures.length, graffitis: c.graffitis.length,
-                 genres: d.genres.length, couleurs: d.couleurs_tag.length,
-                 premier: c.devantures[0] };
-    }""")
-    assert r["devantures"] >= 60
-    assert r["graffitis"] >= 15
-    assert r["genres"] >= 5
-    assert r["couleurs"] >= 3
+
+def test_le_paquet_porte_les_devantures(paquet):
+    """⚠️ Des données, sans banc : `paquet` est l'objet même que le banc donne au jeu (`L.B.defs`,
+    la carte remise dedans)."""
+    c, d = paquet["carte"], paquet["devantures"]
+    assert len(c["devantures"]) >= 60
+    assert len(c["graffitis"]) >= 15
+    assert len(d["genres"]) >= 5
+    assert len(d["couleurs_tag"]) >= 3
     for clef in ("x", "y", "l", "genre", "texte", "pancarte"):
-        assert clef in r["premier"], r["premier"]
+        assert clef in c["devantures"][0], c["devantures"][0]
 
 
 def test_chaque_devanture_est_rangee_dans_tous_ses_morceaux(banc):
@@ -133,13 +132,11 @@ def test_chaque_sorte_de_porte_a_son_dessin(banc):
     assert len(r["WWPW"]) != len(r["WWWW"])
 
 
-def test_toutes_les_devantures_de_la_ville_montrent_une_porte(banc):
-    r = banc("""function (L, o) {
-        const d = L.B.defs.carte.devantures;
-        const sans = d.filter(function (x) { return !/[DdGP]/.test(x.motifs); });
-        return { total: d.length, sans: sans.length,
-                 sortes: Array.from(new Set(d.map(function (x) {
-                     return (x.motifs.match(/[DdGP]/) || ['?'])[0]; }))).sort() };
-    }""")
-    assert r["sans"] == 0, f"{r['sans']} devantures sans porte visible"
-    assert set(r["sortes"]) >= {"D", "d", "P"}, r["sortes"]
+def test_toutes_les_devantures_de_la_ville_montrent_une_porte(paquet):
+    """La ville que le jeu REÇOIT (le paquet, bande nord comprise) ; `test_devantures` juge celle
+    que `carte.generer` bâtit. Sans banc : ce sont des données."""
+    d = paquet["carte"]["devantures"]
+    sans = [x for x in d if not re.search("[DdGP]", x["motifs"])]
+    sortes = {(re.search("[DdGP]", x["motifs"]) or ["?"])[0] for x in d}
+    assert len(sans) == 0, f"{len(sans)} devantures sans porte visible"
+    assert sortes >= {"D", "d", "P"}, sortes
