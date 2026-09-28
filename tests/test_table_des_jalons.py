@@ -21,6 +21,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 RACINE = Path(__file__).resolve().parent.parent
 SCRIPT = RACINE / "scripts" / "verifier_table_des_jalons.py"
 
@@ -118,11 +120,27 @@ def test_l_ancienne_forme_a_trois_colonnes_est_attrapee():
     assert "Un poteau par coin" in reproches[0]
 
 
-def test_une_colonne_de_trop_est_attrapee():
-    trop = "| M9 | ⬜ **en cours** | 13 sept. 2026 | **P1** | ajout | notes | de trop |"
-    reproches = _juge(trop)
-    assert len(reproches) == 1
-    assert "7 colonnes" in reproches[0]
+#: Une ligne du plan, fautive d'une seule façon : UN reproche, qui dit laquelle. ⚠️ Six juges
+#: d'une même forme jusqu'au 28 sept. 2026 (vague C) — leurs lignes et leurs mots, tels quels.
+FAUTES_SIMPLES = {
+    "colonne_de_trop": ("| M9 | ⬜ **en cours** | 13 sept. 2026 | **P1** | ajout | notes | de trop |",
+                        ("7 colonnes",)),
+    "etat_sans_icone": ("| M9 | **en cours** | 13 sept. 2026 | **P1** | ajout | notes |",
+                        ("sans son icône", "⬜ **en cours**")),
+    "etat_inconnu": ("| M9 | ⬜ **peut-être** | 13 sept. 2026 | **P1** | ajout | notes |", ("état",)),
+    "date_mal_ecrite": ("| M9 | ⬜ **en cours** | 2026-09-13 | **P1** | ajout | notes |", ("date",)),
+    "prio_hors_echelle": ("| M9 | ⬜ **en cours** | 13 sept. 2026 | **P5** | ajout | notes |", ("prio",)),
+    "genre_invente": ("| M9 | ⬜ **en cours** | 13 sept. 2026 | **P1** | amélioration | notes |", ("genre",)),
+}
+
+
+@pytest.mark.parametrize("faute", sorted(FAUTES_SIMPLES))
+def test_une_ligne_fautive_d_une_seule_facon_donne_un_reproche(faute):
+    ligne, mots = FAUTES_SIMPLES[faute]
+    reproches = _juge(ligne)
+    assert len(reproches) == 1, reproches
+    for mot in mots:
+        assert mot in reproches[0], (faute, reproches[0])
 
 
 def test_la_date_restee_collee_dans_l_etat_est_attrapee():
@@ -142,14 +160,6 @@ def test_un_etat_qui_ne_commence_pas_par_l_etat_est_attrape_deux_fois():
     assert len(reproches) == 2
     assert any("Les états connus" in r for r in reproches)
     assert any("garde sa date dans l'état" in r for r in reproches)
-
-
-def test_un_etat_sans_son_icone_est_attrape():
-    nue = "| M9 | **en cours** | 13 sept. 2026 | **P1** | ajout | notes |"
-    reproches = _juge(nue)
-    assert len(reproches) == 1
-    assert "sans son icône" in reproches[0]
-    assert "⬜ **en cours**" in reproches[0]
 
 
 def test_le_message_nomme_l_etat_tel_qu_il_est_ecrit():
@@ -185,37 +195,9 @@ def test_la_case_vide_va_devant_tout_ce_qui_n_est_pas_livre():
     assert _juge(livree, fichier=LIVRES) == []
 
 
-def test_un_etat_inconnu_est_attrape():
-    inconnu = "| M9 | ⬜ **peut-être** | 13 sept. 2026 | **P1** | ajout | notes |"
-    reproches = _juge(inconnu)
-    assert len(reproches) == 1
-    assert "état" in reproches[0]
-
-
-def test_une_date_mal_ecrite_est_attrapee():
-    mauvaise = "| M9 | ⬜ **en cours** | 2026-09-13 | **P1** | ajout | notes |"
-    reproches = _juge(mauvaise)
-    assert len(reproches) == 1
-    assert "date" in reproches[0]
-
-
 def test_le_tiret_est_une_date_une_prio_et_un_genre_valables():
     vide = "| M13 Les deux fins | ⬜ **à faire** | — | — | — | notes |"
     assert _juge(vide) == []
-
-
-def test_une_prio_hors_echelle_est_attrapee():
-    hors = "| M9 | ⬜ **en cours** | 13 sept. 2026 | **P5** | ajout | notes |"
-    reproches = _juge(hors)
-    assert len(reproches) == 1
-    assert "prio" in reproches[0]
-
-
-def test_un_genre_invente_est_attrape():
-    invente = "| M9 | ⬜ **en cours** | 13 sept. 2026 | **P1** | amélioration | notes |"
-    reproches = _juge(invente)
-    assert len(reproches) == 1
-    assert "genre" in reproches[0]
 
 
 def test_un_entete_change_est_attrape():
