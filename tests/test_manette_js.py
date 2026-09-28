@@ -10,6 +10,8 @@ manette n'a pas les memes numeros sur le telephone et sur le Mac — ca ne se
 devine pas, ca se reapprend. Retour de Martin, 13 sept. 2026.
 """
 
+import pytest
+
 
 def test_la_disposition_par_defaut_est_celle_d_une_manette_reconnue(banc):
     r = banc("""function (L, o) {
@@ -255,7 +257,61 @@ def test_on_commence_la_partie_au_clavier(banc):
     assert r["avant"] == "titre" and r["apres"] == "jeu"
 
 
-def test_la_croix_chapeau_s_apprend_et_le_tour_se_deduit(banc):
+@pytest.fixture(scope="module")
+def chapeau(banc):
+    """La croix-chapeau apprise en entier (HAUT et DROITE), puis à moitié (HAUT seul), dans UN banc.
+
+    ⚠️ Entre les deux, on remet la manette d'une partie neuve : rien à apprendre en cours, la
+    disposition par défaut (sans croix apprise), le repos oublié (`oublierRepos` : le 2e juge le
+    mesure lui-même), rien de gardé dans les options. Chacun joue SA séquence, telle quelle."""
+    return banc("""function (L, o) {
+        L.Jeu.commencer();
+        const sorties = {};
+        sorties.test_la_croix_chapeau_s_apprend_et_le_tour_se_deduit = (function () {
+            const REPOS = 1.2857142857142858;            // le chapeau au repos, hors de l'anneau
+            function hat(v) { o.pad([0, 0, 0, 0, 0, 0, 0, 0, 0, v], [0, 0, 0, 0]); }
+            function dirs() {
+                return ['haut', 'bas', 'gauche', 'droite'].filter(function (a) { return L.Entree.bas(a); });
+            }
+            hat(REPOS); o.frame(2);
+            // Aucun bouton ne s'allume quand on appuie sur la croix : le symptome.
+            hat(-1); o.frame(2);
+            const avant = { dirs: dirs(), boutons: L.Entree.manetteInfo().boutons.slice() };
+            // On l'apprend : HAUT, puis DROITE.
+            hat(REPOS); o.frame(2);
+            L.Entree.apprendre('haut'); o.frame(2);
+            hat(-1); o.frame(2);
+            hat(REPOS); o.frame(2);
+            L.Entree.apprendre('droite'); o.frame(2);
+            hat(-0.42857142857142855); o.frame(2);
+            const profil = L.Entree.profilManette();
+            const lu = {};
+            const positions = { haut: -1, diagonale: -0.7142857142857143, droite: -0.42857142857142855,
+                                bas: 0.14285714285714285, gauche: 0.7142857142857143, repos: REPOS };
+            for (const nom in positions) { hat(positions[nom]); o.frame(2); lu[nom] = dirs(); }
+            o.pad(null); o.frame(2);
+            return { avant: avant, croix: profil.croix, lu: lu };
+        })();
+        o.pad(null); o.frame(2);
+        L.Entree.annulerApprentissage(); L.Entree.reglerManette(null); L.Entree.oublierRepos();
+        L.B.options.manette = null;
+        sorties.test_une_croix_chapeau_a_moitie_apprise_ne_ment_pas = (function () {
+            function hat(v) { o.pad([0, 0, 0, 0, 0, 0, 0, 0, 0, v], [0, 0, 0, 0]); }
+            function dirs() { return ['haut', 'bas', 'gauche', 'droite'].filter(function (a) { return L.Entree.bas(a); }); }
+            hat(1.2857142857142858); o.frame(2);
+            L.Entree.apprendre('haut'); o.frame(2);
+            hat(-1); o.frame(2);
+            const surHaut = dirs();
+            hat(0.14285714285714285); o.frame(2);
+            const surBas = dirs();
+            o.pad(null); o.frame(2);
+            return { surHaut: surHaut, surBas: surBas };
+        })();
+        return sorties;
+    }""")
+
+
+def test_la_croix_chapeau_s_apprend_et_le_tour_se_deduit(chapeau):
     """⚠️ Le cas 8BitDo en Bluetooth : la croix n'est pas quatre boutons mais UN
     AXE. On appuie dessus et aucun numero ne s'allume — la croix a l'air morte.
 
@@ -263,32 +319,7 @@ def test_la_croix_chapeau_s_apprend_et_le_tour_se_deduit(banc):
     positions sont regulierement espacees, diagonales comprises. BAS et GAUCHE
     marchent sans qu'on les ait appris.
     """
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const REPOS = 1.2857142857142858;            // le chapeau au repos, hors de l'anneau
-        function hat(v) { o.pad([0, 0, 0, 0, 0, 0, 0, 0, 0, v], [0, 0, 0, 0]); }
-        function dirs() {
-            return ['haut', 'bas', 'gauche', 'droite'].filter(function (a) { return L.Entree.bas(a); });
-        }
-        hat(REPOS); o.frame(2);
-        // Aucun bouton ne s'allume quand on appuie sur la croix : le symptome.
-        hat(-1); o.frame(2);
-        const avant = { dirs: dirs(), boutons: L.Entree.manetteInfo().boutons.slice() };
-        // On l'apprend : HAUT, puis DROITE.
-        hat(REPOS); o.frame(2);
-        L.Entree.apprendre('haut'); o.frame(2);
-        hat(-1); o.frame(2);
-        hat(REPOS); o.frame(2);
-        L.Entree.apprendre('droite'); o.frame(2);
-        hat(-0.42857142857142855); o.frame(2);
-        const profil = L.Entree.profilManette();
-        const lu = {};
-        const positions = { haut: -1, diagonale: -0.7142857142857143, droite: -0.42857142857142855,
-                            bas: 0.14285714285714285, gauche: 0.7142857142857143, repos: REPOS };
-        for (const nom in positions) { hat(positions[nom]); o.frame(2); lu[nom] = dirs(); }
-        o.pad(null); o.frame(2);
-        return { avant: avant, croix: profil.croix, lu: lu };
-    }""")
+    r = chapeau["test_la_croix_chapeau_s_apprend_et_le_tour_se_deduit"]
     assert r["avant"]["dirs"] == [], "la croix-chapeau ne doit rien faire avant d'etre apprise"
     assert r["avant"]["boutons"] == [], "aucun bouton ne s'allume : c'est bien un axe"
     assert r["croix"]["i"] == 9
@@ -300,56 +331,78 @@ def test_la_croix_chapeau_s_apprend_et_le_tour_se_deduit(banc):
     assert r["lu"]["repos"] == [], "au repos, la croix ne doit rien tenir"
 
 
-def test_une_croix_chapeau_a_moitie_apprise_ne_ment_pas(banc):
+def test_une_croix_chapeau_a_moitie_apprise_ne_ment_pas(chapeau):
     """Une seule direction apprise : elle marche, et rien d'autre ne s'invente."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        function hat(v) { o.pad([0, 0, 0, 0, 0, 0, 0, 0, 0, v], [0, 0, 0, 0]); }
-        function dirs() { return ['haut', 'bas', 'gauche', 'droite'].filter(function (a) { return L.Entree.bas(a); }); }
-        hat(1.2857142857142858); o.frame(2);
-        L.Entree.apprendre('haut'); o.frame(2);
-        hat(-1); o.frame(2);
-        const surHaut = dirs();
-        hat(0.14285714285714285); o.frame(2);
-        const surBas = dirs();
-        o.pad(null); o.frame(2);
-        return { surHaut: surHaut, surBas: surBas };
-    }""")
+    r = chapeau["test_une_croix_chapeau_a_moitie_apprise_ne_ment_pas"]
     assert r["surHaut"] == ["haut"]
     assert r["surBas"] == [], "sans DROITE, le tour est inconnu : on n'invente pas BAS"
 
 
-def test_relacher_la_croix_n_est_pas_un_geste(banc):
+@pytest.fixture(scope="module")
+def reapprendre(banc):
+    """Le réapprentissage de la croix : par l'écran (les quatre gestes), puis par `apprendre`
+    enchaîné (HAUT puis BAS), dans UN banc.
+
+    ⚠️ Entre les deux, on remet la manette d'une partie neuve : rien à apprendre en cours, la
+    disposition par défaut (sans croix apprise), le repos oublié (`oublierRepos` : le 2e juge le
+    mesure lui-même), rien de gardé dans les options. Chacun joue SA séquence, telle quelle."""
+    return banc("""function (L, o) {
+        L.Jeu.commencer();
+        const sorties = {};
+        sorties.test_relacher_la_croix_n_est_pas_un_geste = (function () {
+            const REPOS = 1.2857142857142858;
+            function hat(v) { o.pad([0, 0, 0, 0, 0, 0, 0, 0, 0, v], [0, 0, 0, 0]); }
+            function dirs() { return ['haut', 'bas', 'gauche', 'droite'].filter(function (a) { return L.Entree.bas(a); }); }
+            const m = L.Hud.menuManetteBoutons();
+            // ⚠️ Une demi-seconde au repos : c'est la que le jeu mesure le repos de
+            // la croix. Dans la vraie vie, ouvrir le menu prend bien plus que ca.
+            hat(REPOS); o.frame(40);
+            m.items.find(function (i) { return i.quoi === 'croix'; }).faire();
+            const suite = [];
+            const gestes = [-1, 0.14285714285714285, 0.7142857142857143, -0.42857142857142855];
+            for (const v of gestes) {
+                suite.push(L.Entree.apprendEnCours());
+                hat(REPOS); o.frame(2);                  // le temps de bouger le pouce
+                hat(v); o.frame(2);                      // il appuie
+                hat(REPOS); o.frame(2);                  // il relache : ca ne doit RIEN apprendre
+            }
+            const croix = L.Entree.profilManette().croix;
+            const lu = {};
+            hat(REPOS); o.frame(2); lu.repos = dirs();
+            hat(-1); o.frame(2); lu.haut = dirs();
+            hat(0.14285714285714285); o.frame(2); lu.bas = dirs();
+            o.pad(null); o.frame(2);
+            return { suite: suite, croix: croix, lu: lu, fini: L.Entree.apprendEnCours() };
+        })();
+        o.pad(null); o.frame(2);
+        L.Entree.annulerApprentissage(); L.Entree.reglerManette(null); L.Entree.oublierRepos();
+        L.B.options.manette = null;
+        sorties.test_la_direction_suivante_attend_qu_on_relache = (function () {
+            const REPOS = 1.2857142857142858;
+            function hat(v) { o.pad([0, 0, 0, 0, 0, 0, 0, 0, 0, v], [0, 0, 0, 0]); }
+            hat(REPOS); o.frame(40);                      // le repos se mesure
+            L.Entree.apprendre('haut', function () { L.Entree.apprendre('bas'); });
+            o.frame(2);
+            hat(-1); o.frame(2);                          // HAUT appris, BAS enchaine
+            const tenu = { quoi: L.Entree.apprendEnCours(), attend: L.Entree.manetteInfo().attend,
+                           valeurs: Object.keys(L.Entree.profilManette().croix.valeurs) };
+            hat(REPOS); o.frame(2);                       // il relache
+            const apresRelache = Object.keys(L.Entree.profilManette().croix.valeurs);
+            hat(0.14285714285714285); o.frame(2);         // il appuie vraiment sur BAS
+            const valeurs = L.Entree.profilManette().croix.valeurs;
+            o.pad(null); o.frame(2);
+            return { tenu: tenu, apresRelache: apresRelache, valeurs: valeurs };
+        })();
+        return sorties;
+    }""")
+
+
+def test_relacher_la_croix_n_est_pas_un_geste(reapprendre):
     """⚠️ Sur une croix-chapeau, LACHER le haut fait bouger l'axe autant
     qu'appuyer sur le bas. Sans garde, « tout reapprendre » apprenait la
     direction suivante sur la valeur du REPOS — et la croix tenait alors les
     quatre directions enfoncees en permanence."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const REPOS = 1.2857142857142858;
-        function hat(v) { o.pad([0, 0, 0, 0, 0, 0, 0, 0, 0, v], [0, 0, 0, 0]); }
-        function dirs() { return ['haut', 'bas', 'gauche', 'droite'].filter(function (a) { return L.Entree.bas(a); }); }
-        const m = L.Hud.menuManetteBoutons();
-        // ⚠️ Une demi-seconde au repos : c'est la que le jeu mesure le repos de
-        // la croix. Dans la vraie vie, ouvrir le menu prend bien plus que ca.
-        hat(REPOS); o.frame(40);
-        m.items.find(function (i) { return i.quoi === 'croix'; }).faire();
-        const suite = [];
-        const gestes = [-1, 0.14285714285714285, 0.7142857142857143, -0.42857142857142855];
-        for (const v of gestes) {
-            suite.push(L.Entree.apprendEnCours());
-            hat(REPOS); o.frame(2);                  // le temps de bouger le pouce
-            hat(v); o.frame(2);                      // il appuie
-            hat(REPOS); o.frame(2);                  // il relache : ca ne doit RIEN apprendre
-        }
-        const croix = L.Entree.profilManette().croix;
-        const lu = {};
-        hat(REPOS); o.frame(2); lu.repos = dirs();
-        hat(-1); o.frame(2); lu.haut = dirs();
-        hat(0.14285714285714285); o.frame(2); lu.bas = dirs();
-        o.pad(null); o.frame(2);
-        return { suite: suite, croix: croix, lu: lu, fini: L.Entree.apprendEnCours() };
-    }""")
+    r = reapprendre["test_relacher_la_croix_n_est_pas_un_geste"]
     assert r["suite"] == ["haut", "bas", "gauche", "droite"], "la file doit avancer d'un cran par geste"
     assert r["croix"]["i"] == 9
     assert sorted(r["croix"]["valeurs"]) == ["bas", "droite", "gauche", "haut"]
@@ -360,27 +413,11 @@ def test_relacher_la_croix_n_est_pas_un_geste(banc):
     assert r["fini"] is None
 
 
-def test_la_direction_suivante_attend_qu_on_relache(banc):
+def test_la_direction_suivante_attend_qu_on_relache(reapprendre):
     """Le detail qui fait toute la difference dans l'enchainement : tant que la
     croix est tenue, l'apprentissage suivant ATTEND — il ne prend pas le
     relachement pour le geste."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const REPOS = 1.2857142857142858;
-        function hat(v) { o.pad([0, 0, 0, 0, 0, 0, 0, 0, 0, v], [0, 0, 0, 0]); }
-        hat(REPOS); o.frame(40);                      // le repos se mesure
-        L.Entree.apprendre('haut', function () { L.Entree.apprendre('bas'); });
-        o.frame(2);
-        hat(-1); o.frame(2);                          // HAUT appris, BAS enchaine
-        const tenu = { quoi: L.Entree.apprendEnCours(), attend: L.Entree.manetteInfo().attend,
-                       valeurs: Object.keys(L.Entree.profilManette().croix.valeurs) };
-        hat(REPOS); o.frame(2);                       // il relache
-        const apresRelache = Object.keys(L.Entree.profilManette().croix.valeurs);
-        hat(0.14285714285714285); o.frame(2);         // il appuie vraiment sur BAS
-        const valeurs = L.Entree.profilManette().croix.valeurs;
-        o.pad(null); o.frame(2);
-        return { tenu: tenu, apresRelache: apresRelache, valeurs: valeurs };
-    }""")
+    r = reapprendre["test_la_direction_suivante_attend_qu_on_relache"]
     assert r["tenu"]["quoi"] == "bas" and r["tenu"]["attend"] is True
     assert r["tenu"]["valeurs"] == ["haut"]
     assert r["apresRelache"] == ["haut"], "le relachement a ete pris pour un geste"
