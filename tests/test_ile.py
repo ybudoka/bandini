@@ -107,8 +107,8 @@ def test_un_ilot_par_terre_ferme():
     # ⚠️ Et l'aéroport, depuis le 21 sept. 2026 : une troisième terre, que son pont
     # inachevé laisse seule (`test_aeroport`).
     assert set(terres) == {"ville", "ile", "aeroport"}
-    assert len(terres["ville"]) == 1, f"{len(terres['ville'])} ilots en ville : un trottoir est enclave"
-    assert len(terres["ile"]) == 1, f"{len(terres['ile'])} morceaux d'ile : un bout ne se rejoint pas"
+    # ⚠️ « Chaque terre d'un seul tenant » : `test_carte::test_tout_ce_qui_est_marchable_est_relie`,
+    # sur la même ville, pour toutes les terres. Ici, ce qui est propre à l'île : elle est À SA PLACE.
     assert terres["ile"][0] <= terre_de_l_ile()
 
 

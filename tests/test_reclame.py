@@ -84,15 +84,19 @@ def test_rien_ne_bat_le_hot_dog_au_dollar():
     """⚠️ La regle de `economie.TARIFS` : ce qu'on achete au comptoir, on
     l'achete parce qu'on est DEVANT — pas parce que c'est une aubaine. Un
     article qui rendrait plus au dollar que le kiosque ferait du kiosque une
-    arnaque."""
+    arnaque.
+
+    ⚠️ Tout ce qui rend quelque chose — des PV, du souffle, ou les deux : une
+    boisson qui ne rend que du souffle passe le meme juge (il tenait aussi, en
+    double, dans `test_interieurs.py` jusqu'au 28 sept. 2026)."""
     for genre, comptoir in magasins.COMPTOIRS.items():
         for a in comptoir["articles"]:
             # Le cafe est l'exception assumee : il vend de la DUREE de sprint
             # (`economie.CAFE`), ses points ne sont que la soucoupe.
-            if not a["tarif"] or not a["gain_pv"] or a["effet"]:
+            if not a["tarif"] or not (a["gain_pv"] or a["gain_souffle"]) or a["effet"]:
                 continue
             prix = economie.TARIFS[a["tarif"]]
-            rend = economie.TARIFS[a["gain_pv"]] + economie.TARIFS.get(a["gain_souffle"] or "", 0)
+            rend = economie.TARIFS.get(a["gain_pv"] or "", 0) + economie.TARIFS.get(a["gain_souffle"] or "", 0)
             assert prix > 0 and rend > 0, a
             assert rend / prix <= PAR_DOLLAR_MAX + 1e-9, f"{genre}/{a['slug']} : {rend / prix:.2f} par dollar"
     for c in magasins.AMBULANTS:

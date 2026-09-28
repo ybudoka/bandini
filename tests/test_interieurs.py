@@ -186,33 +186,9 @@ def test_les_articles_des_comptoirs_existent():
                 assert arme and arme["prix"] > 0, f"{genre} : l'arme {article['arme']} ne se vend pas"
             if article["tenue"]:
                 assert article["tenue"] in tenues, article
-            for cle in ("gain_pv", "gain_souffle"):
-                if article[cle]:
-                    assert article[cle] in economie.TARIFS, article
+            # (Les gains d'un article qui nourrit : `test_reclame::test_un_article_qui_nourrit_a_ses_deux_gains_dans_les_tarifs`.)
             if article["effet"]:
                 assert article["effet"] in magasins.EFFETS, article
-
-
-def test_ce_qui_se_mange_au_comptoir_nourrit_moins_que_le_kiosque():
-    """⚠️ Un depanneur depanne, il ne nourrit pas : au dollar, son sandwich doit
-    rester moins bon que le hot-dog du trottoir. Sinon les kiosques — qui sont
-    dehors, donc dans le risque — ne servent plus a rien."""
-    from app import economie
-    tarifs = economie.TARIFS
-    reference = (tarifs["hotdog_pv"] + tarifs["hotdog_souffle"]) / tarifs["hotdog"]
-    for genre, comptoir in magasins.COMPTOIRS.items():
-        for article in comptoir["articles"]:
-            if not article["tarif"] or not (article["gain_pv"] or article["gain_souffle"]):
-                continue
-            # ⚠️ Le CAFE est hors concours : il ne se paie pas pour ce qu'il
-            # rend tout de suite, mais pour l'effet qui dure (`economie.CAFE`).
-            # Le compter ici reviendrait a dire qu'un cafe a 4 $ nourrit mieux
-            # qu'un hot-dog : vrai sur le papier, faux dans la partie.
-            if article["effet"]:
-                continue
-            gain = tarifs.get(article["gain_pv"], 0) + tarifs.get(article["gain_souffle"], 0)
-            assert gain / tarifs[article["tarif"]] <= reference, \
-                f"{genre}/{article['slug']} : meilleur que le kiosque a hot-dogs"
 
 
 def test_chaque_famille_de_commerce_sait_se_meubler():
