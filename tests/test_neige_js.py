@@ -4,6 +4,8 @@ trafic, se peint, et la charrue déblaie en poussant les chars mal garés.
 ⚠️ L'heure se règle à la main (`TEMPETE`) : un soir de tempête, en pleine tempête.
 """
 
+import pytest
+
 TEMPETE = """
     function soir(L, pleine) {
         const t = L.Neige.donnees().tempete;
@@ -14,11 +16,17 @@ TEMPETE = """
 """
 
 
-def test_sans_l_option_il_ne_neige_rien(banc):
-    """⚠️ Le jeu d'avant, octet pour octet : un soir de tempête, sans l'option, pas un
-    flocon, pas un coefficient, pas une charrue."""
-    r = banc("function (L, o) {" + TEMPETE + """
+#: ⚠️ UN SEUL BANC pour trois juges qui ne jouent aucune image (vague C, 28 sept. 2026) : sans
+#: l'option, d'abord — la partie telle que `Jeu.commencer` la rend, comme dans son banc à lui ;
+#: puis l'horaire, que `intensiteA` lit sans rien toucher (le `premier` prêté est rendu) ; puis
+#: le trafic, qui allume et éteint l'option lui-même.
+@pytest.fixture(scope="module")
+def _sans_images(banc):
+    return banc("function (L, o) {" + TEMPETE + """
         L.Jeu.commencer();
+        const res = {};
+        // 1. Sans l'option.
+        (function () {
         L.B.options.neige = false;
         soir(L, true);
         const j = L.B.joueur;
@@ -26,31 +34,53 @@ def test_sans_l_option_il_ne_neige_rien(banc):
         const ctx = { fillStyle: '', n: 0, fillRect: function () { this.n++; } };
         L.Neige.dessinerSol(ctx, { x: j.x - 240, y: j.y - 135 });
         L.Neige.dessinerTempete(ctx);
-        return { i: L.Neige.intensite(), adh: L.Neige.adherence(v), frein: L.Neige.frein(v), trafic: L.Neige.vitesseTrafic(),
-                 rects: ctx.n, prevue: L.Neige.intensiteA(L.B.partie.jour, L.B.partie.heure) };
-    }""")
-    assert r["prevue"] == 1, "le juge n'est pas un soir de tempête"
-    assert r["i"] == 0 and r["adh"] == 1 and r["frein"] == 1 and r["trafic"] == 1
-    assert r["rects"] == 0
-
-
-def test_la_tempete_monte_et_retombe_a_l_heure(banc):
-    r = banc("function (L, o) {" + TEMPETE + """
-        L.Jeu.commencer();
+        res.sans = { i: L.Neige.intensite(), adh: L.Neige.adherence(v), frein: L.Neige.frein(v), trafic: L.Neige.vitesseTrafic(),
+                     rects: ctx.n, prevue: L.Neige.intensiteA(L.B.partie.jour, L.B.partie.heure) };
+        })();
+        // 2. L'horaire.
+        (function () {
         const t = L.Neige.donnees().tempete, N = L.Neige;
         const a = function (jour, h) { return N.intensiteA(jour, h / 24); };
-        return { avant: a(t.premier, t.debut_h - 0.01), debut: a(t.premier, t.debut_h), mi: a(t.premier, (t.debut_h + t.fin_h) / 2),
+        res.horaire = { avant: a(t.premier, t.debut_h - 0.01), debut: a(t.premier, t.debut_h), mi: a(t.premier, (t.debut_h + t.fin_h) / 2),
                  montee: a(t.premier, t.debut_h + t.montee_h / 2), fin: a(t.premier, t.fin_h), veille: a(t.premier - 1, 20),
                  suivante: a(t.premier + t.tous_les, (t.debut_h + t.fin_h) / 2), lendemain: a(t.premier + 1, (t.debut_h + t.fin_h) / 2),
                  premierJour: a(1, (t.debut_h + t.fin_h) / 2),
                  // ⚠️ Un premier soir qui tomberait « au rythme » : le jour 1 est un multiple
                  // de la periode avant `premier`, et seul le garde-fou l'empeche de neiger.
                  avantLePremier: (function () { const p = t.premier; t.premier = 1 + t.tous_les; const r = a(1, (t.debut_h + t.fin_h) / 2); t.premier = p; return r; })() };
+        })();
+        // 3. Le trafic.
+        (function () {
+        L.B.options.neige = true;
+        soir(L, true);
+        const tempete = L.Neige.vitesseTrafic();
+        L.B.options.neige = false;
+        res.trafic = { tempete: tempete, sec: L.Neige.vitesseTrafic(), reglage: L.Neige.donnees().effets.vitesse_trafic };
+        })();
+        return res;
     }""")
+
+
+def test_sans_l_option_il_ne_neige_rien(_sans_images):
+    """⚠️ Le jeu d'avant, octet pour octet : un soir de tempête, sans l'option, pas un
+    flocon, pas un coefficient, pas une charrue."""
+    r = _sans_images["sans"]
+    assert r["prevue"] == 1, "le juge n'est pas un soir de tempête"
+    assert r["i"] == 0 and r["adh"] == 1 and r["frein"] == 1 and r["trafic"] == 1
+    assert r["rects"] == 0
+
+
+def test_la_tempete_monte_et_retombe_a_l_heure(_sans_images):
+    r = _sans_images["horaire"]
     assert r["avant"] == 0 and r["debut"] == 0 and r["fin"] == 0
     assert r["mi"] == 1 and abs(r["montee"] - 0.5) < 1e-9
     assert r["suivante"] == 1 and r["lendemain"] == 0 and r["veille"] == 0 and r["premierJour"] == 0
     assert r["avantLePremier"] == 0, "il neige avant le premier soir de tempête"
+
+
+def test_le_trafic_leve_le_pied(_sans_images):
+    r = _sans_images["trafic"]
+    assert r["sec"] == 1 and abs(r["tempete"] - r["reglage"]) < 1e-9
 
 
 def test_sur_la_neige_un_char_glisse_et_freine_mal(banc):
@@ -151,18 +181,6 @@ def test_la_charrue_sort_avec_la_tempete_deblaie_et_pousse_un_char_mal_gare(banc
     assert r["roule"] > 80, f"la charrue s'est arrêtée devant le char mal garé ({r['roule']:.0f} px)"
     assert r["pousse"] > 8, "le char mal garé n'a pas bougé"
     assert r["deblaye"] > 10, "la charrue ne déblaie rien"
-
-
-def test_le_trafic_leve_le_pied(banc):
-    r = banc("function (L, o) {" + TEMPETE + """
-        L.Jeu.commencer();
-        L.B.options.neige = true;
-        soir(L, true);
-        const tempete = L.Neige.vitesseTrafic();
-        L.B.options.neige = false;
-        return { tempete: tempete, sec: L.Neige.vitesseTrafic(), reglage: L.Neige.donnees().effets.vitesse_trafic };
-    }""")
-    assert r["sec"] == 1 and abs(r["tempete"] - r["reglage"]) < 1e-9
 
 
 def test_la_neige_ne_tire_aucun_de(banc):
