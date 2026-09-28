@@ -7,6 +7,8 @@ fonction de l'heure (`Metro.etatDeLaRame`) : `REGLER` met l'heure de la partie �
 `avance` images de l'arrivée d'une rame à une station.
 """
 
+import pytest
+
 OUTILS = """
     function regler(L, station, avance) {
       const jour = L.B.defs.economie.jour_secondes * 60;
@@ -159,24 +161,6 @@ def test_les_portes_ne_s_ouvrent_qu_en_station_et_on_remonte_ailleurs(banc):
     assert r["paye"] == 0
 
 
-def test_la_partie_se_sauve_a_la_station_ou_l_on_est(banc):
-    """⚠️ La sauvegarde lit `B.exterieur` : descendu à Faubourg et arrivé à
-    l'Hôpital, on doit se réveiller devant l'édicule de l'Hôpital."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        %s
-        surLeTrottoir(L, 0);
-        o.frame(2);
-        o.tape('KeyE', 1); o.fondu(); o.frame(2);
-        L.B.metro.station = 1;
-        o.frame(2);
-        L.Missions.sauvegarderPartie();
-        const s = L.Metro.donnees().stations[1];
-        return { tuile: [Math.floor(L.B.partie.x / L.TT), Math.floor(L.B.partie.y / L.TT)], sortie: [s.sortie.x, s.sortie.y] };
-    }""" % OUTILS)
-    assert r["tuile"] == r["sortie"]
-
-
 def test_le_metro_ne_tire_pas_un_de_du_jeu(banc):
     """Une rame est une heure : rien ne se tire au sort sous la ville."""
     r = banc("""function (L, o) {
@@ -203,13 +187,20 @@ def test_le_metro_ne_tire_pas_un_de_du_jeu(banc):
     assert r["dans"] == 0
 
 
-def test_le_quai_montre_la_rame_et_la_carte_la_ligne(banc):
-    r = banc("""function (L, o) {
+#: ⚠️ UN SEUL BANC pour deux juges qui descendaient tous deux à la station 0 (vague C, 28 sept.
+#: 2026) : on descend une fois, on regarde le quai et la carte (aucune image jouée, seulement
+#: l'heure réglée et deux dessins), puis on se sauve comme si la rame nous avait menés à
+#: l'Hôpital — ce que faisait le banc de la sauvegarde juste après sa descente.
+@pytest.fixture(scope="module")
+def _station_0(banc):
+    return banc("""function (L, o) {
         L.Jeu.commencer();
         %s
         surLeTrottoir(L, 0);
         o.frame(2);
         o.tape('KeyE', 1); o.fondu(); o.frame(2);
+        // Le quai et la carte.
+        const heure = L.B.partie.heure;
         regler(L, 0, -60);
         const vue = { x: L.B.cam.x, y: L.B.cam.y };
         let avant = L.B.stats.rects;
@@ -218,7 +209,26 @@ def test_le_quai_montre_la_rame_et_la_carte_la_ligne(banc):
         const d = L.Metro.donnees();
         avant = L.B.stats.rects;
         L.Metro.dessinerSurLaCarte(o.ctx, function (x, y) { return { x: Math.round(x / L.TT), y: Math.round(y / L.TT) }; });
-        return { quai: quai, rameEnVue: !!L.Metro.rameEnVue(0), carte: L.B.stats.rects - avant, stations: d.stations.length };
+        const vu = { quai: quai, rameEnVue: !!L.Metro.rameEnVue(0), carte: L.B.stats.rects - avant, stations: d.stations.length };
+        // La sauvegarde : l'heure d'avant remise (pas de rame à quai), arrivé à l'Hôpital.
+        L.B.partie.heure = heure;
+        L.B.metro.station = 1;
+        o.frame(2);
+        L.Missions.sauvegarderPartie();
+        const s = L.Metro.donnees().stations[1];
+        return { vu: vu, sauve: { tuile: [Math.floor(L.B.partie.x / L.TT), Math.floor(L.B.partie.y / L.TT)],
+                                  sortie: [s.sortie.x, s.sortie.y] } };
     }""" % OUTILS)
+
+
+def test_la_partie_se_sauve_a_la_station_ou_l_on_est(_station_0):
+    """⚠️ La sauvegarde lit `B.exterieur` : descendu à Faubourg et arrivé à
+    l'Hôpital, on doit se réveiller devant l'édicule de l'Hôpital."""
+    r = _station_0["sauve"]
+    assert r["tuile"] == r["sortie"]
+
+
+def test_le_quai_montre_la_rame_et_la_carte_la_ligne(_station_0):
+    r = _station_0["vu"]
     assert r["rameEnVue"] and r["quai"] > 10
     assert r["carte"] > 2 * r["stations"]

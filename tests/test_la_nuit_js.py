@@ -7,6 +7,8 @@ la brunante (19 h 41, la plage vient de fermer, il ne fait pas encore nuit).
 import re
 from pathlib import Path
 
+import pytest
+
 from app.vehicules import CATALOGUE
 
 JOUR, BRUNANTE, NUIT = 0.55, 0.82, 0.9
@@ -21,7 +23,14 @@ def js(nom: str) -> str:
 #: `test_plage_js.py`), cinq tuiles au nord : la grève est dans la bulle, une
 #: part hors champ.
 GREVE = """
+    // ⚠️ Mémorisée dans le banc : la carte ne change pas d'une partie à l'autre, et le
+    // balayage (fenêtre 25 × 25 sur toute la carte) coûte plus que les images jouées.
+    let _greve;
     function greve(L) {
+      if (_greve === undefined) _greve = greveCherchee(L);
+      return _greve;
+    }
+    function greveCherchee(L) {
       const c = L.Monde.carte, TT = L.TT;
       function eau(tx, ty, d) {
         return L.Monde.estEau(tx + d, ty) || L.Monde.estEau(tx - d, ty)
@@ -58,37 +67,21 @@ GREVE = """
 """
 
 
-def test_la_nuit_personne_ne_nait_sur_la_plage(banc, paquet):
-    """La même grève, la même graine : l'après-midi elle se peuple, la nuit elle
-    reste vide. ⚠️ Le jour sert de témoin — sans lui, un juge « personne la
-    nuit » passerait aussi sur une grève où il ne naît jamais personne."""
-    r = banc("""function (L, o) {
-        %s
-        const out = {};
-        for (const [nom, h] of [['jour', %s], ['nuit', %s]]) {
-          if (!surLaGreve(L, h)) return { greve: false };
-          for (let i = 0; i < 900; i++) { L.B.partie.heure = h; o.frame(1); }
-          out[nom] = baigneurs(L).length;
-        }
-        out.greve = true;
-        return out;
-    }""" % (GREVE, JOUR, NUIT))
-    assert r["greve"], "aucune grève sur la carte"
-    assert r["jour"] > 0, "l'après-midi, personne sur la grève : le témoin ne dit rien"
-    assert r["nuit"] == 0, "%s baigneurs sont nés sur la plage en pleine nuit" % r["nuit"]
-
-
-def test_a_la_fermeture_on_sort_de_l_eau_et_on_rentre_hors_champ(banc, paquet):
-    """La plage ferme : celui qui barbote sort de l'eau, et qui n'est pas à
-    l'écran est rentré. ⚠️ Personne ne s'évapore SOUS NOS YEUX : un baigneur qui
-    disparaît était hors champ l'image d'avant."""
-    r = banc("""function (L, o) {
+#: ⚠️ UN SEUL BANC pour les deux juges de la plage (vague C, 28 sept. 2026). Leurs deux bancs
+#: commençaient pareil — la grève, la graine 31, 900 images d'après-midi : on les joue une fois.
+#: Le témoin du jour se compte là, puis la plage ferme (la brunante, le second juge) ; la NUIT
+#: repart ensuite d'une partie neuve (`surLaGreve` rappelle `Jeu.commencer` et la graine 31),
+#: comme le faisait la boucle du premier juge entre son jour et sa nuit.
+@pytest.fixture(scope="module")
+def _plage(banc, paquet):
+    return banc("""function (L, o) {
         %s
         const g = surLaGreve(L, %s);
         if (!g) return { greve: false };
         for (let i = 0; i < 900; i++) { L.B.partie.heure = %s; o.frame(1); }
         const avant = baigneurs(L).slice();
-        if (!avant.length) return { greve: true, avant: 0 };
+        const out = { greve: true, jour: avant.length };
+        if (!avant.length) { out.fermeture = { avant: 0 }; return out; }
         // Un baigneur dans l'eau, A L'ECRAN, au moment ou la plage ferme.
         const TT = L.TT;
         let nageur = null;
@@ -115,11 +108,33 @@ def test_a_la_fermeture_on_sort_de_l_eau_et_on_rentre_hors_champ(banc, paquet):
         const mouilles = restent.filter(function (e) {
           return L.Monde.estEau(Math.floor(e.x / TT), Math.floor(e.y / TT));
         }).length;
-        return { greve: true, avant: avant.length, apres: restent.length, horsChamp: horsChamp,
-                 mouilles: mouilles, evapores: evapores, nageur: !!nageur,
-                 nageurSec: nageur ? !L.Monde.estEau(Math.floor(nageur.x / TT), Math.floor(nageur.y / TT)) : null };
-    }""" % (GREVE, JOUR, JOUR, BRUNANTE))
+        out.fermeture = { avant: avant.length, apres: restent.length, horsChamp: horsChamp,
+                          mouilles: mouilles, evapores: evapores, nageur: !!nageur,
+                          nageurSec: nageur ? !L.Monde.estEau(Math.floor(nageur.x / TT), Math.floor(nageur.y / TT)) : null };
+        // La nuit : une partie neuve, la meme greve, la meme graine.
+        if (!surLaGreve(L, %s)) { out.greve = false; return out; }
+        for (let i = 0; i < 900; i++) { L.B.partie.heure = %s; o.frame(1); }
+        out.nuit = baigneurs(L).length;
+        return out;
+    }""" % (GREVE, JOUR, JOUR, BRUNANTE, NUIT, NUIT))
+
+
+def test_la_nuit_personne_ne_nait_sur_la_plage(_plage):
+    """La même grève, la même graine : l'après-midi elle se peuple, la nuit elle
+    reste vide. ⚠️ Le jour sert de témoin — sans lui, un juge « personne la
+    nuit » passerait aussi sur une grève où il ne naît jamais personne."""
+    r = _plage
     assert r["greve"], "aucune grève sur la carte"
+    assert r["jour"] > 0, "l'après-midi, personne sur la grève : le témoin ne dit rien"
+    assert r["nuit"] == 0, "%s baigneurs sont nés sur la plage en pleine nuit" % r["nuit"]
+
+
+def test_a_la_fermeture_on_sort_de_l_eau_et_on_rentre_hors_champ(_plage):
+    """La plage ferme : celui qui barbote sort de l'eau, et qui n'est pas à
+    l'écran est rentré. ⚠️ Personne ne s'évapore SOUS NOS YEUX : un baigneur qui
+    disparaît était hors champ l'image d'avant."""
+    assert _plage["greve"], "aucune grève sur la carte"
+    r = _plage["fermeture"]
     assert r["avant"] > 0, "personne sur la grève avant la fermeture : le juge ne mesure rien"
     assert r["nageur"], "aucun baigneur à mettre à l'eau sous nos yeux"
     assert r["nageurSec"], "la plage est fermée, et il barbote encore"
@@ -696,20 +711,24 @@ MUR_ET_ROUTE = """
 """
 
 
-def test_le_faisceau_ne_passe_pas_a_travers_un_mur(banc, paquet):
-    """⚠️ **« Les phares ne doivent pas passer au travers des toits »** (Martin,
-    21 sept. 2026). Un toit partage la même solidité qu'un mur (`Monde.solidite`,
-    valeur 1) — la même règle que celle qui dit `Jeu.ligneLibre` — donc les deux
-    s'arrêtent pareil. Une auto posée à 3 tuiles (48 px) d'un mur, face à lui, a
-    un faisceau qui plafonne à 56 px normalement : sans la garde, il traverserait
-    le mur, tout un pâté de maisons plus loin s'il le fallait."""
-    r = banc("""function (L, o) {
+#: ⚠️ UN SEUL BANC pour les quatre juges du faisceau contre l'obstacle (vague C, 28 sept. 2026) :
+#: le mur, la route dégagée, l'autre char, le char seul. Chaque scène REPART de `preparer(L)`
+#: (`Jeu.commencer`, la graine 3, le trafic coupé) — ce que faisait chacun de leurs bancs — et
+#: aucune ne joue d'image : un seul `Jeu.rendre()` par scène.
+@pytest.fixture(scope="module")
+def _faisceaux(banc, paquet):
+    return banc("""function (L, o) {
         %s
         %s
+        const res = {};
+
+        // 1. Le mur.
+        (function () {
         preparer(L);
         const m = murProche(L, 5);
         const out = { trouve: !!m };
-        if (!m) return out;
+        res.mur = out;
+        if (!m) return;
         const tx = m.tx0 + m.dx * (m.d - 3), ty = m.ty0 + m.dy * (m.d - 3);
         L.B.entites.filter(function (e) { return e.type === 'vehicule'; }).forEach(L.Entites.retirer);
         L.B.partie.heure = %s;
@@ -722,26 +741,15 @@ def test_le_faisceau_ne_passe_pas_a_travers_un_mur(banc, paquet):
         const f = L.Vehicules.lampesDesPhares().find(function (l) { return l.faisceau === auto; });
         out.r = f ? f.r : null;
         out.portee = 56;
-        return out;
-    }""" % (PARC, MUR_ET_ROUTE, NUIT))
-    assert r["trouve"], "aucun mur trouvé près du joueur : le juge ne dit rien"
-    assert r["r"] is not None, "l'auto face au mur n'a pas de faisceau"
-    assert r["r"] < r["portee"], f"le faisceau garde sa pleine portée devant un mur à 48 px : {r}"
-    assert 0 < r["r"] <= 48, f"le faisceau dépasse le mur planté à 48 px devant lui : {r}"
-    assert r["r"] > 48 - 2 * 16, f"le faisceau s'arrête bien trop court (mur à 48 px) : {r}"
+        })();
 
-
-def test_le_faisceau_porte_sa_pleine_mesure_loin_de_tout_mur(banc, paquet):
-    """Le pendant du juge précédent : rien devant, et le faisceau du camion — le
-    plus long du parc — porte ses 68 px pleins, sans qu'un mur lointain le
-    raccourcisse par erreur."""
-    r = banc("""function (L, o) {
-        %s
-        %s
+        // 2. La route degagee, le camion.
+        (function () {
         preparer(L);
         const route = routeLibre(L, 6);
         const out = { trouve: !!route };
-        if (!route) return out;
+        res.pleine = out;
+        if (!route) return;
         L.B.entites.filter(function (e) { return e.type === 'vehicule'; }).forEach(L.Entites.retirer);
         L.B.partie.heure = %s;
         const camion = L.Vehicules.creer('camion', route.x, route.y, route.angle,
@@ -751,13 +759,80 @@ def test_le_faisceau_porte_sa_pleine_mesure_loin_de_tout_mur(banc, paquet):
         L.Jeu.rendre();
         const f = L.Vehicules.lampesDesPhares().find(function (l) { return l.faisceau === camion; });
         out.r = f ? f.r : null;
-        return out;
-    }""" % (PARC, MUR_ET_ROUTE, NUIT))
+        })();
+
+        // 3. Un autre char devant.
+        (function () {
+        preparer(L);
+        const route = routeLibre(L, 4);
+        const out = { trouve: !!route };
+        res.autreChar = out;
+        if (!route) return;
+        L.B.entites.filter(function (e) { return e.type === 'vehicule'; }).forEach(L.Entites.retirer);
+        L.B.partie.heure = %s;
+        // Le char MENÉ naît EN PREMIER — c'est le cas qui piège une garde posée
+        // trop tôt, avant que l'auto garée n'existe.
+        const mene = L.Vehicules.creer('auto', route.x, route.y, route.angle,
+                                        { conducteur: 'trafic', etat: 'roule', couleur: '#c0392b' });
+        mene.vitesse = 0;
+        const ca = Math.cos(route.angle), sa = Math.sin(route.angle);
+        L.Vehicules.creer('auto', route.x + ca * 40, route.y + sa * 40, route.angle,
+                          { etat: 'stationne', couleur: '#2980b9' });
+        L.Monde.centrerCamera(mene.x, mene.y);
+        L.Jeu.rendre();
+        const f = L.Vehicules.lampesDesPhares().find(function (l) { return l.faisceau === mene; });
+        out.r = f ? f.r : null;
+        out.portee = 56;
+        // La distance du phare (pas du centre) a l'avant de l'auto garee.
+        out.demi = mene.def.longueur / 2;
+        })();
+
+        // 4. La moto seule.
+        (function () {
+        preparer(L);
+        const route = routeLibre(L, 4);
+        const out = { trouve: !!route };
+        res.seul = out;
+        if (!route) return;
+        L.B.entites.filter(function (e) { return e.type === 'vehicule'; }).forEach(L.Entites.retirer);
+        L.B.partie.heure = %s;
+        const solo = L.Vehicules.creer('moto', route.x, route.y, route.angle,
+                                        { conducteur: 'trafic', etat: 'roule', couleur: '#c0392b' });
+        solo.vitesse = 0;
+        L.Monde.centrerCamera(solo.x, solo.y);
+        L.Jeu.rendre();
+        const f = L.Vehicules.lampesDesPhares().find(function (l) { return l.faisceau === solo; });
+        out.r = f ? f.r : null;
+        })();
+        return res;
+    }""" % (PARC, MUR_ET_ROUTE, NUIT, NUIT, NUIT, NUIT))
+
+
+def test_le_faisceau_ne_passe_pas_a_travers_un_mur(_faisceaux):
+    """⚠️ **« Les phares ne doivent pas passer au travers des toits »** (Martin,
+    21 sept. 2026). Un toit partage la même solidité qu'un mur (`Monde.solidite`,
+    valeur 1) — la même règle que celle qui dit `Jeu.ligneLibre` — donc les deux
+    s'arrêtent pareil. Une auto posée à 3 tuiles (48 px) d'un mur, face à lui, a
+    un faisceau qui plafonne à 56 px normalement : sans la garde, il traverserait
+    le mur, tout un pâté de maisons plus loin s'il le fallait."""
+    r = _faisceaux["mur"]
+    assert r["trouve"], "aucun mur trouvé près du joueur : le juge ne dit rien"
+    assert r["r"] is not None, "l'auto face au mur n'a pas de faisceau"
+    assert r["r"] < r["portee"], f"le faisceau garde sa pleine portée devant un mur à 48 px : {r}"
+    assert 0 < r["r"] <= 48, f"le faisceau dépasse le mur planté à 48 px devant lui : {r}"
+    assert r["r"] > 48 - 2 * 16, f"le faisceau s'arrête bien trop court (mur à 48 px) : {r}"
+
+
+def test_le_faisceau_porte_sa_pleine_mesure_loin_de_tout_mur(_faisceaux):
+    """Le pendant du juge précédent : rien devant, et le faisceau du camion — le
+    plus long du parc — porte ses 68 px pleins, sans qu'un mur lointain le
+    raccourcisse par erreur."""
+    r = _faisceaux["pleine"]
     assert r["trouve"], "aucune route dégagée sur 6 tuiles près du joueur : le juge ne dit rien"
     assert r["r"] == 68, f"loin de tout mur, le faisceau du camion ne porte pas ses 68 px pleins : {r}"
 
 
-def test_le_faisceau_ne_passe_pas_a_travers_un_autre_char(banc, paquet):
+def test_le_faisceau_ne_passe_pas_a_travers_un_autre_char(_faisceaux):
     """⚠️ **« Les phares éclairent encore au travers des véhicules eux-mêmes »**
     (Martin, 22 sept. 2026). Une auto garée 40 px devant le char qu'on mène, sur
     une route dégagée (aucun mur en cause) : le faisceau s'arrête avant elle —
@@ -769,32 +844,7 @@ def test_le_faisceau_ne_passe_pas_a_travers_un_autre_char(banc, paquet):
     ne verrait pas encore l'empreinte d'un char dessiné plus tard dans la même
     image — d'où la 2e passe dans `lampesDesPhares`, après que tous les chars
     visibles sont passés par `dessinerUn`."""
-    r = banc("""function (L, o) {
-        %s
-        %s
-        preparer(L);
-        const route = routeLibre(L, 4);
-        const out = { trouve: !!route };
-        if (!route) return out;
-        L.B.entites.filter(function (e) { return e.type === 'vehicule'; }).forEach(L.Entites.retirer);
-        L.B.partie.heure = %s;
-        // Le char MENÉ naît EN PREMIER — c'est le cas qui piège une garde posée
-        // trop tôt, avant que l'auto garée n'existe.
-        const mene = L.Vehicules.creer('auto', route.x, route.y, route.angle,
-                                        { conducteur: 'trafic', etat: 'roule', couleur: '#c0392b' });
-        mene.vitesse = 0;
-        const ca = Math.cos(route.angle), sa = Math.sin(route.angle);
-        const gare = L.Vehicules.creer('auto', route.x + ca * 40, route.y + sa * 40, route.angle,
-                                        { etat: 'stationne', couleur: '#2980b9' });
-        L.Monde.centrerCamera(mene.x, mene.y);
-        L.Jeu.rendre();
-        const f = L.Vehicules.lampesDesPhares().find(function (l) { return l.faisceau === mene; });
-        out.r = f ? f.r : null;
-        out.portee = 56;
-        // La distance du phare (pas du centre) a l'avant de l'auto garee.
-        out.demi = mene.def.longueur / 2;
-        return out;
-    }""" % (PARC, MUR_ET_ROUTE, NUIT))
+    r = _faisceaux["autreChar"]
     assert r["trouve"], "aucune route dégagée près du joueur : le juge ne dit rien"
     assert r["r"] is not None, "le char mené n'a pas de faisceau"
     assert r["r"] < r["portee"], f"le faisceau garde sa pleine portée devant une auto garée à 40 px : {r}"
@@ -804,7 +854,7 @@ def test_le_faisceau_ne_passe_pas_a_travers_un_autre_char(banc, paquet):
     assert r["r"] == 12, f"le faisceau ne s'arrête pas au bon endroit devant l'auto garée : {r}"
 
 
-def test_le_faisceau_d_un_char_ne_se_bloque_pas_lui_meme(banc, paquet):
+def test_le_faisceau_d_un_char_ne_se_bloque_pas_lui_meme(_faisceaux):
     """Chaque char visible pose son empreinte, y compris celui qui porte le
     faisceau — `sansCe` doit l'exclure, sinon tout faisceau s'éteindrait à sa
     propre caisse. Seul sur la route, il porte sa pleine mesure.
@@ -815,23 +865,7 @@ def test_le_faisceau_d_un_char_ne_se_bloque_pas_lui_meme(banc, paquet):
     rien. Le phare de la moto est bien plus en retrait (5,8 px sur 10) : sans
     `sansCe`, deux pas y suffisent encore, et le faisceau s'éteindrait tout
     court."""
-    r = banc("""function (L, o) {
-        %s
-        %s
-        preparer(L);
-        const route = routeLibre(L, 4);
-        const out = { trouve: !!route };
-        if (!route) return out;
-        L.B.entites.filter(function (e) { return e.type === 'vehicule'; }).forEach(L.Entites.retirer);
-        L.B.partie.heure = %s;
-        const solo = L.Vehicules.creer('moto', route.x, route.y, route.angle,
-                                        { conducteur: 'trafic', etat: 'roule', couleur: '#c0392b' });
-        solo.vitesse = 0;
-        L.Monde.centrerCamera(solo.x, solo.y);
-        L.Jeu.rendre();
-        const f = L.Vehicules.lampesDesPhares().find(function (l) { return l.faisceau === solo; });
-        return { trouve: true, r: f ? f.r : null };
-    }""" % (PARC, MUR_ET_ROUTE, NUIT))
+    r = _faisceaux["seul"]
     assert r["trouve"], "aucune route dégagée près du joueur : le juge ne dit rien"
     assert r["r"] == 54, f"seul sur la route, le char se bloque lui-même : {r}"
 
