@@ -3930,17 +3930,33 @@ def test_traverser_la_ville_en_courant_ne_coute_rien(banc, paquet):
         const souffle0 = j.endurance;
         const images = Math.ceil(%d * L.TT / L.B.defs.recherche.vitesses.joueur_course);
         o.touche('KeyD');
-        let bouge = 0, avant = j.x;
+        let bouge = 0, avant = j.x, souffleMin = j.endurance;
         for (let i = 0; i < images; i++) {
+            // ⚠️ La rue est une VOIE : le trafic arretait le joueur a un feu,
+            // puis l'envoyait a l'hopital, qui rend 100 de souffle. On la vide
+            // a chaque image — c'est la course qu'on juge, pas la circulation.
+            L.B.entites = L.B.entites.filter(function (e) {
+                return e === j || (e.type !== 'vehicule' && e.type !== 'pieton');
+            });
             o.frame(1);
             bouge += Math.abs(j.x - avant); avant = j.x;
+            souffleMin = Math.min(souffleMin, j.endurance);
         }
         o.relacher('KeyD');
-        return { souffle0: souffle0, souffle: j.endurance, images: images,
+        return { souffle0: souffle0, souffle: j.endurance, souffleMin: souffleMin, images: images,
                  bouge: Math.round(bouge), largeurPx: %d * L.TT };
     }""" % (largeur, largeur))
-    assert r["souffle"] == r["souffle0"] == 100, (
-        "courir a coûté du souffle : %s au lieu de %s" % (r["souffle"], r["souffle0"])
+    # ⚠️ Sans cette mesure, le juge restait vert sans avoir couru : `bouge`
+    # etait calcule, jamais affirme, et le joueur finissait a l'hopital apres
+    # 4 000 px sur 7 344 — l'hopital rendait le souffle plein. On exige les
+    # quatre cinquiemes de la largeur de la ville, parcourus a la course.
+    assert r["bouge"] >= 0.8 * r["largeurPx"], (
+        "le joueur n'a couru que %d px sur %d : il n'a pas traversé la ville, le souffle ne prouve rien"
+        % (r["bouge"], r["largeurPx"])
+    )
+    assert r["souffle"] == r["souffleMin"] == r["souffle0"] == 100, (
+        "courir a coûté du souffle : %s (au plus bas %s) au lieu de %s"
+        % (r["souffle"], r["souffleMin"], r["souffle0"])
     )
     # ⚠️ La mesure doit porter sur la VILLE ENTIERE, sinon elle ne dit rien :
     # 421 tuiles a la vitesse de course, c'est pres d'une minute de touche
@@ -5761,7 +5777,7 @@ def test_le_trafic_reste_dans_sa_voie(banc):
             o.frame(1);
             if (i < 200 || i % 20) continue;
             L.B.entites.forEach(function (v) {
-                if (v.type !== 'vehicule' || v.conducteur !== 'trafic' || v.def.classe === 'velo' && false) return;
+                if (v.type !== 'vehicule' || v.conducteur !== 'trafic') return;
                 // ⚠️ Un velo parti sur le trottoir ou au parc (`horsRue`) y est de son
                 // plein gre : ce n'est pas un char qui coupe un coin (`test_velos_js`).
                 if (v.horsRue) return;
@@ -5769,12 +5785,11 @@ def test_le_trafic_reste_dans_sa_voie(banc):
                 const tx = Math.floor(v.x / L.TT), ty = Math.floor(v.y / L.TT);
                 if (!L.Monde.estRoute(tx, ty)) horsRoute++;
                 const avant = caps.get(v.id);
-                if (avant !== undefined && Math.abs(L.ecartAngle ? 0 : 0) === 0 && Math.abs(v.sens !== avant ? 1 : 0)) tournes++;
+                if (avant !== undefined && v.sens !== avant) tournes++;
                 caps.set(v.id, v.sens);
             });
         }
-        return { releves: releves, horsRoute: horsRoute, tournes: tournes,
-                 velos: L.B.entites.filter(function (v) { return v.type === 'vehicule' && v.def.classe === 'velo'; }).length };
+        return { releves: releves, horsRoute: horsRoute, tournes: tournes };
     }""")
     assert r["releves"] > 300
     # 1 % : un char pousse d'une demi-tuile par un voisin a un coin, le temps
@@ -6296,8 +6311,6 @@ def test_aucune_borne_fontaine_ne_prend_le_coin_d_un_feu(racine):
     """Même règle que pour les lampadaires : le coin d'un croisement à feux est
     la place du **mât**. Une borne plantée dessus, c'est le feu qu'on ne voit
     pas en arrivant."""
-    import json
-
     from app import carte as c
 
     ville = c.generer()
@@ -6316,7 +6329,6 @@ def test_aucune_borne_fontaine_ne_prend_le_coin_d_un_feu(racine):
     assert len(bornes) >= 10, f"{len(bornes)} bornes-fontaines : la ville n'en a presque pas"
     dessus = [b for b in bornes if b in reserves]
     assert not dessus, f"{len(dessus)} bornes sur un coin reserve au feu (ex. {dessus[:4]})"
-    assert json.dumps(bornes[:1])          # la ville se serialise, comme le reste du decor
 
 
 def test_le_plafond_de_lampes_tient_les_lampadaires_ET_les_feux(racine):
@@ -6467,22 +6479,40 @@ def test_l_ambiance_du_district_joue_a_pied_et_cede_a_la_radio(banc, paquet):
 
 
 def test_la_rumeur_suit_la_foule_et_les_passants_parlent(banc):
+    """Une rue vide se tait, une rue pleine murmure ; et le passant qui nous
+    frôle tente de parler. ⚠️ Deux des trois affirmations se contentaient de
+    `typeof … === 'function'` : une rumeur figée à plein volume passait.
+    Le suivi fin (volume = foule du moment, la peur, le cri) est jugé par
+    `test_parole.py::test_la_rue_se_tait_devant_une_arme_et_crie_apres_un_coup_de_feu` ;
+    ici, les deux bouts."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(61);
         const j = L.B.joueur;
         // Sans audio sous Node : on verifie la mecanique, pas le son.
-        const avant = L.Son.Voix.dernierT;
         const p = o.poser('passante', 12, 0);
         p.etat = 'flane';
         o.frame(2);
         const parle = p.aParle === true;
-        const rumeur = typeof L.Son.Rumeur.maj === 'function';
-        return { parle: parle, rumeur: rumeur, dernierT: L.Son.Voix.dernierT, avant: avant,
-                 passage: typeof L.Son.jouerA === 'function' };
+        // La rumeur ne lit que les gens a 200 px ; on vide ce rayon, puis on
+        // y pose une foule figee (`poser`), et on laisse remonter.
+        const autour = function () {
+            return L.Entites.pietonsAutour(j.x, j.y, 200).filter(function (e) { return !e.metier; });
+        };
+        autour().forEach(function (e) { L.Entites.retirer(e); });
+        L.Entites.indexer();
+        o.frame(60);
+        const vide = { gens: autour().length, volume: +L.Son.Rumeur.volume.toFixed(3) };
+        for (let k = 0; k < 8; k++) o.poser('passante', 40 + 10 * k, 40);
+        o.frame(15 * 20);
+        const foule = { gens: autour().length, volume: +L.Son.Rumeur.volume.toFixed(3) };
+        return { parle: parle, vide: vide, foule: foule };
     }""")
     assert r["parle"] is True, "un passant qui nous frole doit tenter de parler"
-    assert r["rumeur"] and r["passage"]
+    assert r["vide"]["gens"] == 0, "la rue n'est pas vide, le juge ne prouve rien : %s" % r
+    assert r["vide"]["volume"] <= 0.02, "une rue vide murmure encore : %s" % r
+    assert r["foule"]["gens"] >= 8, "la foule posee s'est dispersee : %s" % r
+    assert r["foule"]["volume"] >= 0.6, "huit passants autour et la rue reste muette : %s" % r
 
 
 def test_deux_chars_qui_tournent_a_gauche_ne_se_bloquent_pas(banc):
@@ -6964,8 +6994,7 @@ def test_le_menu_fige_le_jeu_et_se_navigue(banc):
         const ferme = L.B.menu === null;
         L.Hud.ouvrirMenu({ titre: 'ESSAI', items: [{ libelle: 'X', faire: function () { return true; } }] });
         o.tape('Space', 2);
-        return { fige: fige, curseur: curseur, choisi: choisi, ferme: ferme, retour: L.B.menu === null,
-                 etiquette: o.elements.tactile.querySelectorAll('[data-a]')[1].textContent };
+        return { fige: fige, curseur: curseur, choisi: choisi, ferme: ferme, retour: L.B.menu === null };
     }""")
     assert r["fige"] is True, "le temps passe pendant un menu"
     assert r["curseur"] == 1 and r["choisi"] == "deux" and r["ferme"] is True
@@ -7535,7 +7564,7 @@ def test_le_journal_du_matin_raconte_hier_et_enseigne_les_matins_calmes(banc, pa
         L.Missions.nouveauJour();
         const sang = L.B.dialogue ? L.B.dialogue.lignes[0] : null;
         return { premiere: premiere, lues: lues, toutSu: toutSu, sang: sang,
-                 qui: L.B.dialogue.qui, retenues: p.leconsLues.length };
+                 qui: L.B.dialogue.qui };
     }""")
     assert r["qui"] == "LE CLAIRON DE LA BAIE"
     assert r["premiere"] == "LE SAVIEZ-VOUS?", (
@@ -7554,9 +7583,8 @@ def test_le_journal_du_matin_raconte_hier_et_enseigne_les_matins_calmes(banc, pa
         "il enseigne encore, ou le matin calme ne varie pas : %s" % r["toutSu"]
     )
     assert r["sang"] == "UN MORT DANS LA RUE", "une leçon passe avant un mort : %s" % r["sang"]
-    # ⚠️ `retenues` est mesuré APRÈS qu'on l'a remis à zéro dans le banc : ce
-    # qui compte ici, c'est qu'il ait grandi pendant les quatre premiers jours,
-    # et les quatre leçons distinctes ci-dessus le prouvent déjà.
+    # Les leçons retenues grandissent pendant les quatre premiers jours : les
+    # leçons distinctes ci-dessus le prouvent, encore faut-il qu'il y en ait.
     assert len(lecons) >= 4, "moins de quatre leçons : le journal a vite fini d'enseigner"
 
 
@@ -8835,13 +8863,10 @@ def test_l_icone_du_moment_se_dessine_devant_l_heure(banc):
     assert r["dedans"]["moment"]["periode"] == "nuit", "dans une piece, l'icone dit l'heure DEHORS"
 
 
-def test_le_niveau_de_recherche_ne_partage_pas_la_couleur_de_l_argent(banc):
+def test_le_niveau_de_recherche_ne_partage_pas_la_couleur_de_l_argent(racine):
     """⚠️ Le dore #e8b33c est deja celui de l'argent et de « ce qui est a toi »
     sur la carte. Deux choses differentes de la meme couleur dans le meme coin
     ne se lisent plus — c'est aussi pour ca que les etoiles ont demenage."""
-    import pathlib
-
-    racine = pathlib.Path(__file__).resolve().parent.parent
     source = (racine / "static" / "js" / "hud.js").read_text(encoding="utf-8")
     bloc = source[source.index("const ETOILE_ALLUMEE"):source.index("const ETOILE_L")]
     assert "#e8b33c" not in bloc, "l'etoile reprend le dore de l'argent"
