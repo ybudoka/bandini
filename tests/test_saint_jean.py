@@ -1,11 +1,13 @@
 """La Saint-Jean, côté Python (docs/jalons/la-saint-jean-sur-la-baie.md) : la rue du défilé est une rue que
 la carte sait déjà barrer sans couper la ville, dans le Faubourg ; le soir tient dans la journée."""
 
-from app import calendrier, carte, definitions, saint_jean
+import villes
+
+from app import calendrier, saint_jean
 
 
 def test_la_rue_du_defile_est_une_fermeture_du_faubourg_qui_n_enferme_rien():
-    v = carte.exporter()
+    v = villes.exporter()
     r = saint_jean.rue_du_defile(v)
     assert r, "pas de rue pour le défilé"
     rues = [{k: f[k] for k in ("x", "y", "l", "h")} for f in v["fermetures"] if not f.get("ecartee")]
@@ -19,4 +21,4 @@ def test_le_soir_de_la_fete_et_le_paquet():
     h = saint_jean.HORAIRE
     assert 17 <= h["defile"][0] < h["defile"][1] <= h["feux"][0] < h["feux"][1] <= 24
     assert calendrier.mois(calendrier.DATES["saint_jean"]) == "juin"
-    assert definitions.assembler()["saint_jean"] == saint_jean.pour_le_navigateur(carte.exporter())
+    assert villes.assembler()["saint_jean"] == saint_jean.pour_le_navigateur(villes.exporter())

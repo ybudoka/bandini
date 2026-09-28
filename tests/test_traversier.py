@@ -10,13 +10,14 @@ from __future__ import annotations
 import math
 
 import pytest
+import villes
 
 from app import carte, ile, traversier, vehicules
 
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.generer()
+    return villes.generer()
 
 
 def _zone_proche(ville, district, x, y, marge):
@@ -82,6 +83,7 @@ def test_le_couloir_est_de_l_eau_libre_loin_de_l_ile_et_des_chaloupes(ville):
 
 def test_la_ville_est_la_meme_avec_ou_sans_traversier(ville, monkeypatch):
     """Hors du débarcadère : là, le décor s'écarte pour qu'on monte à bord (`degager`)."""
+    # ⚠️ Sous le patch, `carte.generer` direct : le cache de `villes` rendrait la ville d'avant.
     monkeypatch.setattr(traversier, "tracer", lambda v: None)
     sans = carte.generer()
     assert set(sans) == set(ville)
@@ -168,7 +170,7 @@ def test_depart_a_l_heure_juste_et_jamais_plus_vite_qu_un_char(ville):
 
 
 def test_le_paquet_porte_le_traversier():
-    assert carte.exporter()["traversier"]["escales"]
+    assert villes.exporter()["traversier"]["escales"]
 
 
 def test_la_recherche_ne_ralentit_pas_la_ville(ville):

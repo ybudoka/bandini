@@ -12,13 +12,15 @@ d'endurance, c'est ici que ca tombe.
 from collections import deque
 
 import pytest
+import villes
 
 from app import carte, economie, recherche
 
-CARTE = carte.exporter()
-SOL = CARTE["sol"]
-LARGEUR, HAUTEUR = CARTE["largeur"], CARTE["hauteur"]
-ZONES = {z["slug"]: z for z in CARTE["zones"]}
+
+@pytest.fixture(scope="module")
+def exportee():
+    """La ville qui part au navigateur — celle de `tests/villes.py`, bâtie une fois par processus."""
+    return villes.exporter()
 
 NAGE = recherche.NAGE
 SOUFFLE = recherche.VITESSES["endurance"]
@@ -46,9 +48,10 @@ def test_une_tuile_d_eau_coute_ce_que_la_fiche_dit():
     assert tuiles_au_plus(cafe=True, surplus=True) == pytest.approx(40.0)
 
 
-def _chenal_du_pont() -> int:
+def _chenal_du_pont(exportee: dict) -> int:
     """La largeur d'eau que le pont enjambe, en tuiles."""
-    pont = CARTE["ponts"][0]
+    SOL, HAUTEUR, LARGEUR = exportee["sol"], exportee["hauteur"], exportee["largeur"]
+    pont = exportee["ponts"][0]
     if pont["h"] >= pont["l"]:
         x = pont["x"] + pont["l"] // 2
         haut = pont["y"]
@@ -68,7 +71,7 @@ def _chenal_du_pont() -> int:
     return droite - gauche
 
 
-def _nage_la_plus_courte_vers_la_pointe() -> int:
+def _nage_la_plus_courte_vers_la_pointe(exportee: dict) -> int:
     """Le plus court passage d'EAU entre La Pointe et le reste de la ville, le
     pont defait — en tuiles, et par l'eau seulement.
 
@@ -79,15 +82,16 @@ def _nage_la_plus_courte_vers_la_pointe() -> int:
     etait avance — la regle du tiers (`carte.PLAGES`) le permettait enfin. Un
     juge qui lit UNE colonne ne voit pas ca ; celui-ci fait le tour de l'eau.
     """
-    sol = [list(ligne) for ligne in SOL]
-    pont = CARTE["ponts"][0]
+    LARGEUR, HAUTEUR = exportee["largeur"], exportee["hauteur"]
+    sol = [list(ligne) for ligne in exportee["sol"]]
+    pont = exportee["ponts"][0]
     for y in range(pont["y"], pont["y"] + pont["h"]):
         for x in range(pont["x"], pont["x"] + pont["l"]):
             sol[y][x] = "~"                  # on defait le pont : reste la nage
     # ⚠️ Les îles ne sont pas « le reste de la ville » : ni celle des Corneilles, ni
     # celle de l'aéroport (21 sept. 2026), dont le pont inachevé part justement de
     # La Pointe — sa travée manquante se nage, et c'est voulu (`test_aeroport`).
-    iles = (CARTE["ile"], CARTE["aeroport"])
+    iles = (exportee["ile"], exportee["aeroport"])
 
     def dans_l_ile(x: int, y: int) -> bool:
         return any(ile["x"] <= x < ile["x"] + ile["l"] and ile["y"] <= y < ile["y"] + ile["h"]
@@ -101,7 +105,7 @@ def _nage_la_plus_courte_vers_la_pointe() -> int:
     def est_relief(x: int, y: int) -> bool:
         return sol[y][x] in ("M", "C")
 
-    foire = CARTE["foire"]
+    foire = exportee["foire"]
     depart = (foire["x"] + foire["l"] // 2, foire["y"] + foire["h"] // 2)
     assert sol[depart[1]][depart[0]] != "~", "la foire est a l'eau ?"
     pointe = {depart}
@@ -132,7 +136,7 @@ def _nage_la_plus_courte_vers_la_pointe() -> int:
     raise AssertionError("La Pointe ne voit aucune rive : elle est seule au monde ?")
 
 
-def test_le_chenal_du_pont_est_un_pari_pas_une_promenade():
+def test_le_chenal_du_pont_est_un_pari_pas_une_promenade(exportee):
     """⚠️ Si l'on nage, La Pointe n'est plus une ile — sauf si la traversee se
     paie. Elle doit coûter assez pour qu'on hesite, et pas assez pour qu'elle
     soit impossible : sinon l'eau redevient un mur, avec une animation en plus.
@@ -150,7 +154,7 @@ def test_le_chenal_du_pont_est_un_pari_pas_une_promenade():
     Une traversee en paie donc deux de moins, et ce juge compte comme le jeu
     compte — sinon il garde une marge qui n'existe plus.
     """
-    nage = _nage_la_plus_courte_vers_la_pointe()
+    nage = _nage_la_plus_courte_vers_la_pointe(exportee)
     a_payer = nage - 2
     assert a_payer * cout_par_tuile() > SOUFFLE, (
         f"{nage} tuiles d'eau jusqu'a La Pointe, soit {a_payer * cout_par_tuile():.0f} points "
@@ -168,20 +172,21 @@ def test_le_chenal_du_pont_est_un_pari_pas_une_promenade():
     )
 
 
-def test_le_tablier_va_d_une_rive_a_l_autre():
+def test_le_tablier_va_d_une_rive_a_l_autre(exportee):
     """⚠️ Le pont commence et finit sur la TERRE : un tablier qui s'arrete sur
     l'eau se conduit droit dans la baie, et un tablier qui mord sur le quartier
     est une rue, pas un pont. Le juge le dit en un chiffre — la largeur d'eau
     sous le tablier est exactement sa longueur."""
-    pont = CARTE["ponts"][0]
-    assert _chenal_du_pont() == pont["h"], (
-        f"le tablier fait {pont['h']} tuiles et le chenal {_chenal_du_pont()} : "
+    pont = exportee["ponts"][0]
+    assert _chenal_du_pont(exportee) == pont["h"], (
+        f"le tablier fait {pont['h']} tuiles et le chenal {_chenal_du_pont(exportee)} : "
         "le pont ne va pas d'une rive a l'autre"
     )
 
 
-def _loin_de_toute_terre() -> tuple[int, int, int]:
+def _loin_de_toute_terre(exportee: dict) -> tuple[int, int, int]:
     """La tuile d'eau la plus eloignee de la terre ferme, et sa distance."""
+    SOL, HAUTEUR, LARGEUR = exportee["sol"], exportee["hauteur"], exportee["largeur"]
     infini = LARGEUR * HAUTEUR
     dist = [[infini] * LARGEUR for _ in range(HAUTEUR)]
     file: deque = deque()
@@ -201,7 +206,7 @@ def _loin_de_toute_terre() -> tuple[int, int, int]:
                if SOL[y][x] == "~")
 
 
-def test_on_ne_va_meme_pas_au_milieu_de_la_baie():
+def test_on_ne_va_meme_pas_au_milieu_de_la_baie(exportee):
     """⚠️ « On ne traverse pas la baie, quel que soit le cafe bu. »
 
     Et le juge ne mesure pas une traversee — il n'y a rien de l'autre cote, la
@@ -210,7 +215,7 @@ def test_on_ne_va_meme_pas_au_milieu_de_la_baie():
     l'ATTEINDRE, on ne risque pas de traverser quoi que ce soit ; et comme il
     faut revenir, la marge reelle est du double.
     """
-    loin, x, y = _loin_de_toute_terre()
+    loin, x, y = _loin_de_toute_terre(exportee)
     plafond = tuiles_au_plus(cafe=True, surplus=True)
     # ⚠️ La premiere tuile est de l'eau basse, elle ne se paie pas : on compte
     # ce que la traversee coûte VRAIMENT, une tuile de moins.
@@ -220,14 +225,14 @@ def test_on_ne_va_meme_pas_au_milieu_de_la_baie():
     )
 
 
-def test_l_eau_ne_relie_aucun_trottoir():
+def test_l_eau_ne_relie_aucun_trottoir(exportee):
     """⚠️ Les juges de connexite gardent leur sens. `composantes_marchables`
     continue d'ignorer l'eau : il sert a prouver qu'aucun trottoir n'est
     enclave, et si l'eau reliait les rives, il ne dirait plus rien du tout."""
     assert not carte.marchable("~"), "l'eau est devenue marchable : tous les juges de connexite mentent"
     # ⚠️ L'île est un deuxième îlot, et c'est ce juge qui le prouve : si l'eau
     # reliait les rives, la ville et l'île n'en feraient plus qu'un.
-    terres = carte.composantes_par_terre(CARTE)
+    terres = carte.composantes_par_terre(exportee)
     assert len(terres["ville"]) == 1 and len(terres["ile"]) == 1, {t: len(g) for t, g in terres.items()}
 
 

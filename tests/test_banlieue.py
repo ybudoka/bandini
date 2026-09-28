@@ -12,13 +12,19 @@ piscine, et la part d'entrees avec une auto se MESURE au lieu de se croire.
 """
 
 import pytest
+import villes
 
 from app import carte
 
-CARTE = carte.exporter()
-SOL = CARTE["sol"]
-LARGEUR, HAUTEUR = CARTE["largeur"], CARTE["hauteur"]
-ZONE = {z["slug"]: z for z in CARTE["zones"]}["erables"]
+
+@pytest.fixture(scope="module")
+def exportee():
+    """La ville qui part au navigateur — celle de `tests/villes.py`, bâtie une fois par processus."""
+    return villes.exporter()
+
+
+def _erables(exportee: dict) -> dict:
+    return {z["slug"]: z for z in exportee["zones"]}["erables"]
 
 #: Les glyphes d'une entree de voiture : de l'asphalte de terrain, avec ou
 #: sans case. ⚠️ Les memes que le stationnement — c'est voulu : une entree EST
@@ -38,15 +44,16 @@ ENTREE = set("p^v<>")
 ENTREE_MAX = 14
 
 
-def _dans_les_erables(x: int, y: int) -> bool:
-    return (ZONE["x"] <= x < ZONE["x"] + ZONE["l"]
-            and ZONE["y"] <= y < ZONE["y"] + ZONE["h"])
+def _dans_les_erables(zone: dict, x: int, y: int) -> bool:
+    return (zone["x"] <= x < zone["x"] + zone["l"]
+            and zone["y"] <= y < zone["y"] + zone["h"])
 
 
-def _blocs(glyphes: set[str]) -> list[set[tuple[int, int]]]:
+def _blocs(exportee: dict, glyphes: set[str]) -> list[set[tuple[int, int]]]:
     """Les groupes de tuiles de ces glyphes, d'un seul tenant, dans Les Érables."""
-    tuiles = {(x, y) for y in range(ZONE["y"], ZONE["y"] + ZONE["h"])
-              for x in range(ZONE["x"], ZONE["x"] + ZONE["l"]) if SOL[y][x] in glyphes}
+    zone, sol = _erables(exportee), exportee["sol"]
+    tuiles = {(x, y) for y in range(zone["y"], zone["y"] + zone["h"])
+              for x in range(zone["x"], zone["x"] + zone["l"]) if sol[y][x] in glyphes}
     blocs, vus = [], set()
     for depart in sorted(tuiles):
         if depart in vus:
@@ -64,11 +71,11 @@ def _blocs(glyphes: set[str]) -> list[set[tuple[int, int]]]:
     return blocs
 
 
-def test_la_banlieue_a_des_entrees_et_des_piscines():
+def test_la_banlieue_a_des_entrees_et_des_piscines(exportee):
     """Le décor du juge : sans ça, tout ce qui suit passerait pour rien."""
-    entrees = [b for b in _blocs(ENTREE) if len(b) <= ENTREE_MAX]
+    entrees = [b for b in _blocs(exportee, ENTREE) if len(b) <= ENTREE_MAX]
     assert len(entrees) >= 15, f"{len(entrees)} entrées de voiture dans Les Érables"
-    piscines = _blocs({"o"})
+    piscines = _blocs(exportee, {"o"})
     assert piscines, "aucune piscine dans toute la banlieue"
     for bloc in piscines:
         # ⚠️ Un bloc de deux sur deux, jamais un L : un L n'est pas une
@@ -78,23 +85,24 @@ def test_la_banlieue_a_des_entrees_et_des_piscines():
         assert len(bloc) == len(xs) * len(ys), f"une piscine en L en {sorted(bloc)[0]}"
 
 
-def test_toute_entree_de_voiture_rejoint_la_chaussee():
+def test_toute_entree_de_voiture_rejoint_la_chaussee(exportee):
     """⚠️ Même règle que « toute rangée de stationnement touche une allée » :
     une entrée qui ne rejoint pas la rue n'est pas une entrée, c'est un carré
     d'asphalte. Et une auto garée dedans n'en sortirait jamais."""
+    sol, largeur, hauteur = exportee["sol"], exportee["largeur"], exportee["hauteur"]
     orphelines = []
-    for bloc in _blocs(ENTREE):
+    for bloc in _blocs(exportee, ENTREE):
         if len(bloc) > ENTREE_MAX:
             continue                      # un vrai stationnement, pas une entrée
         touche = False
         for (x, y) in bloc:
             for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
                 nx, ny = x + dx, y + dy
-                if not (0 <= nx < LARGEUR and 0 <= ny < HAUTEUR):
+                if not (0 <= nx < largeur and 0 <= ny < hauteur):
                     continue
                 if (nx, ny) in bloc:
                     continue
-                proprietes = carte.LEGENDE[SOL[ny][nx]]
+                proprietes = carte.LEGENDE[sol[ny][nx]]
                 if proprietes.get("route") or proprietes.get("trottoir"):
                     touche = True
         if not touche:
@@ -102,22 +110,23 @@ def test_toute_entree_de_voiture_rejoint_la_chaussee():
     assert not orphelines, f"{len(orphelines)} entrées ne rejoignent rien : {orphelines[:4]}"
 
 
-def test_un_sentier_mene_a_chaque_porte_de_banlieue_sans_passer_par_la_piscine():
+def test_un_sentier_mene_a_chaque_porte_de_banlieue_sans_passer_par_la_piscine(exportee):
     """⚠️ Sans sentier, on marche sur le gazon pour entrer chez les gens — et
     c'est précisément ce qui donne l'impression du « pas fini ».
 
     Et ⚠️ **une piscine ne coupe jamais un sentier** : elle se pose derrière la
     maison, après le sentier, justement pour ça."""
-    portes = [p for p in CARTE["portes"] if _dans_les_erables(p["x"], p["y"])]
+    sol, hauteur, zone = exportee["sol"], exportee["hauteur"], _erables(exportee)
+    portes = [p for p in exportee["portes"] if _dans_les_erables(zone, p["x"], p["y"])]
     assert portes, "le juge n'a trouvé aucune porte dans Les Érables : il ne prouve rien"
     sans_sentier, noyees = [], []
     for porte in portes:
         x, y = porte["x"], porte["y"]
         chemin = []
         for k in range(1, 12):
-            if not (0 <= y + k < HAUTEUR):
+            if not (0 <= y + k < hauteur):
                 break
-            glyphe = SOL[y + k][x]
+            glyphe = sol[y + k][x]
             if glyphe == "o":
                 noyees.append((x, y))
                 break

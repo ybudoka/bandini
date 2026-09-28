@@ -7,7 +7,7 @@ import sys
 import pytest
 
 from app import bd, comptes, create_app
-from conftest import RACINE, ConfigTest
+from conftest import RACINE, ConfigTest, _creer_app
 
 MDP = "la-brume-1987"
 T0 = 1_800_000_000
@@ -490,13 +490,13 @@ def test_par_http_le_cookie_est_httponly_lax_et_ne_part_qu_aux_appels_de_compte(
     assert reponse.headers["Cache-Control"] == "no-store"
 
 
-def test_par_http_le_cookie_est_secure_en_production(tmp_path):
+def test_par_http_le_cookie_est_secure_en_production(tmp_path, paquets):
     class Production(ConfigTest):
         PRODUCTION = True
         SECRET_KEY = "x" * 64
         DONNEES_DIR = str(tmp_path / "donnees")
 
-    client = create_app(Production).test_client()
+    client = _creer_app(Production, paquets).test_client()
     reponse = client.post("/api/compte/inscription", json={"pseudo": "Rocco", "mot_de_passe": MDP})
     assert "Secure" in reponse.headers["Set-Cookie"]
 
@@ -522,7 +522,7 @@ def test_par_http_emplacement_hors_des_cases_rend_404(client):
 # --- Le jeu sans la base ---------------------------------------------------------------
 
 
-def test_le_jeu_demarre_et_se_joue_avec_la_base_eteinte(tmp_path):
+def test_le_jeu_demarre_et_se_joue_avec_la_base_eteinte(tmp_path, paquets):
     """⚠️ Un compte est un confort, jamais une condition : un dossier de donnees
     illisible coupe les comptes (503, en JSON), pas la page ni la ville."""
     bloque = tmp_path / "pas-un-dossier"
@@ -531,7 +531,7 @@ def test_le_jeu_demarre_et_se_joue_avec_la_base_eteinte(tmp_path):
     class SansBase(ConfigTest):
         DONNEES_DIR = str(bloque)
 
-    client = create_app(SansBase).test_client()
+    client = _creer_app(SansBase, paquets).test_client()
     for chemin in ("/", "/api/definitions", "/api/carte", "/sante"):
         assert client.get(chemin).status_code == 200, chemin
     client.set_cookie(comptes.COOKIE, "x" * 43, path=comptes.CHEMIN_COOKIE)
@@ -560,13 +560,13 @@ def test_l_application_refuse_de_demarrer_en_production_avec_la_cle_de_developpe
         create_app(Production)
 
 
-def test_hors_production_la_cle_de_developpement_demarre(tmp_path):
+def test_hors_production_la_cle_de_developpement_demarre(tmp_path, paquets):
     class Salon(ConfigTest):
         PRODUCTION = False
         SECRET_KEY = "cle-de-developpement-a-changer"
         DONNEES_DIR = str(tmp_path)
 
-    assert create_app(Salon).test_client().get("/sante").status_code == 200
+    assert _creer_app(Salon, paquets).test_client().get("/sante").status_code == 200
 
 
 @pytest.mark.parametrize("url, production", [

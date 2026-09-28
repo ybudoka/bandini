@@ -1,10 +1,19 @@
 """Le rang : le chalet, le lac de la clairière et la cabane à sucre, un seul bloc au bout d'une rue
 (docs/jalons/la-ville-s-agrandit-au-nord.md)."""
 
+import pytest
+import villes
+
 from app import blocs, carte, nord
 from app.blocs import rang
 
-VILLE = carte.generer()
+
+@pytest.fixture(scope="module")
+def livree():
+    """La ville du jeu — celle de `tests/villes.py`, générée une fois par processus."""
+    return villes.generer()
+
+
 #: La rue qui traverse, sur la carte FINIE : la ville a descendu de `nord.DECALAGE_NORD` rangées.
 Y_RUE = carte.OUVERTURES_DE_RUE[0]["y"] + nord.DECALAGE_NORD
 
@@ -19,8 +28,8 @@ def test_trois_blocs_tous_au_bord_ouest():
             assert not set(a) & set(b), "deux passages se chevauchent"
 
 
-def test_l_entree_du_rang_est_une_rue_qui_va_jusqu_au_bord():
-    sol = VILLE["sol"]
+def test_l_entree_du_rang_est_une_rue_qui_va_jusqu_au_bord(livree):
+    sol = livree["sol"]
     p = blocs.passage_en_ville(rang.BLOC)
     assert p["de"] == Y_RUE - 1, "le passage couvre la rue et ses deux trottoirs"
     tuiles = [sol[p["de"] + i][0] for i in range(p["l"])]
@@ -29,16 +38,16 @@ def test_l_entree_du_rang_est_une_rue_qui_va_jusqu_au_bord():
     assert [sol[Y_RUE][x] for x in range(1, 5)] == ["#"] * 4
 
 
-def test_aucun_char_de_la_circulation_ne_s_engage_vers_le_bord():
-    voie = VILLE["voie"]
+def test_aucun_char_de_la_circulation_ne_s_engage_vers_le_bord(livree):
+    voie = livree["voie"]
     assert voie[Y_RUE][0] == "." and voie[Y_RUE + 1][0] == ".", "l'ouverture n'est pas une voie de circulation"
-    for inter in VILLE["intersections"]:
+    for inter in livree["intersections"]:
         if inter["x"] <= 1 and inter["y"] <= Y_RUE + 1 < inter["y"] + inter["h"]:
             assert "O" not in inter["bras"], inter
 
 
-def test_depuis_l_arrivee_on_rejoint_les_deux_portes_le_char_et_le_quai():
-    assert blocs.erreurs(rang.BLOC, VILLE) == []
+def test_depuis_l_arrivee_on_rejoint_les_deux_portes_le_char_et_le_quai(livree):
+    assert blocs.erreurs(rang.BLOC, livree) == []
     plan = rang.BLOC["plan"]
     quai = [(x, y) for y, ligne in enumerate(plan) for x, g in enumerate(ligne) if g == "Q"]
     assert quai, "le lac de la clairière a perdu son quai"
@@ -47,11 +56,11 @@ def test_depuis_l_arrivee_on_rejoint_les_deux_portes_le_char_et_le_quai():
     assert set(quai) & a_pied, "on ne rejoint pas le quai à pied"
 
 
-def test_les_galeries_et_le_cine_parc_s_ouvrent_sur_un_chemin():
+def test_les_galeries_et_le_cine_parc_s_ouvrent_sur_un_chemin(livree):
     """Martin (27 sept. 2026) : « je veux des ouvertures de chemin pour ces endroits ». Le trottoir de ceinture
     s'ouvre au milieu du passage : un bout de trottoir, trois tuiles d'asphalte, un bout de trottoir — et le
     chemin rejoint la rue de l'ouest, sans que la circulation s'y engage."""
-    sol, voie = VILLE["sol"], VILLE["voie"]
+    sol, voie = livree["sol"], livree["voie"]
     for slug in ("galeries", "cineparc"):
         p = blocs.passage_en_ville(blocs.par_slug(slug))      # en coordonnées de la carte finie
         tuiles = [sol[p["de"] + i][0] for i in range(p["l"])]

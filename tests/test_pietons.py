@@ -1,6 +1,7 @@
 """Le catalogue des passants — et ce que le navigateur en fait."""
 
 import pytest
+import villes
 
 from app import armes, carte, pietons
 
@@ -133,7 +134,7 @@ def test_le_courage_va_du_fuyard_au_bagarreur():
 
 
 def test_les_gangs_ont_un_territoire_et_un_archetype():
-    zones = {z["slug"] for z in carte.exporter()["zones"]}
+    zones = {z["slug"] for z in villes.exporter()["zones"]}
     for gang in pietons.GANGS:
         assert pietons.par_slug(gang["pieton"]), gang["pieton"]
         assert gang["zone"] in zones, f"{gang['slug']} : territoire {gang['zone']} absent de la carte"

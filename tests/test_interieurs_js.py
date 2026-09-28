@@ -10,7 +10,7 @@ qu'on touchait pour lire « PLUS TARD ».
 
 import json
 
-from app import carte, missions
+from app import missions
 
 #: Les points qui ne passent PAS par un menu : ils agissent tout de suite. ⚠️ Le point d'un
 #: PERSONNAGE posé dedans (`ou: "point:<type>"`) en est un, et se lit dans le catalogue :
@@ -26,18 +26,21 @@ SANS_MENU = ("escalier", "fouiller", "rame") + tuple(
 #: Vide depuis le 13 sept. 2026 : le lot de la fourriere a recu son menu.
 EN_CHANTIER: dict[str, str] = {}
 
-#: ⚠️ LES POINTS DE LA VILLE LIVREE, pas ceux du catalogue du module. Depuis
-#: que les commerces et les logements se POSENT a la mesure de leur batiment,
-#: `emplettes`, `salon`, `journal` et `fouiller` ne vivent plus dans
-#: `carte.INTERIEURS` : ils naissent avec la ville. Lire le catalogue seul
-#: laissait la moitie du contrat hors du juge.
-TYPES = sorted({p["type"] for piece in carte.exporter()["interieurs"].values()
-                for p in piece["points"]})
+def _types(paquet: dict) -> list[str]:
+    """⚠️ LES POINTS DE LA VILLE LIVREE, pas ceux du catalogue du module. Depuis
+    que les commerces et les logements se POSENT a la mesure de leur batiment,
+    `emplettes`, `salon`, `journal` et `fouiller` ne vivent plus dans
+    `carte.INTERIEURS` : ils naissent avec la ville. Lire le catalogue seul
+    laissait la moitie du contrat hors du juge. (La carte telle que le navigateur
+    la recoit : celle du paquet de la session, pas une ville regeneree.)"""
+    return sorted({p["type"] for piece in paquet["carte"]["interieurs"].values()
+                   for p in piece["points"]})
 
 
-def test_chaque_comptoir_dessine_est_servi_par_le_jeu(banc):
+def test_chaque_comptoir_dessine_est_servi_par_le_jeu(banc, paquet):
     """⚠️ LE contrat entre `carte.INTERIEURS` et `missions.js`. Un type de point
     qui n'a ni libelle ni menu est une porte qu'on ouvre pour rien."""
+    TYPES = _types(paquet)
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const types = %s, sansMenu = %s;

@@ -5,6 +5,8 @@ doit pouvoir s'en approcher à l'extincteur. Et il ne brûle jamais une cour de
 gang ni un lieu garanti — on ne brûle pas ce qu'une mission protège.
 """
 
+import villes
+
 from app import carte, incendies
 
 
@@ -31,7 +33,7 @@ def test_la_prime_ne_fait_pas_de_la_ville_un_salaire():
 
 
 def test_des_candidats_sur_du_marchable_et_jamais_un_lieu_intouchable():
-    ville = carte.generer()
+    ville = villes.generer()
     fronts = incendies.candidats(ville)
     sol = ville["sol"]
     assert fronts, "la ville n'offre aucune façade où un feu peut se déclarer"
@@ -57,7 +59,7 @@ def test_des_candidats_sur_du_marchable_et_jamais_un_lieu_intouchable():
 
 
 def test_l_incendie_voyage_dans_le_paquet():
-    ville = carte.generer()
+    ville = villes.generer()
     assert "incendies" in ville
     assert set(ville["incendies"]) == {"regle", "facades"}
     assert ville["incendies"]["regle"]["prime"] == incendies.REGLE["prime"]

@@ -9,13 +9,14 @@ une ville qui ne bouge pas d'une tuile pour les accueillir.
 import math
 
 import pytest
+import villes
 
 from app import carte, navires, traversier, vehicules
 
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.generer()
+    return villes.generer()
 
 
 def _rect(m: dict) -> tuple[int, int, int, int]:
@@ -120,6 +121,7 @@ def test_la_ville_est_la_meme_sans_les_grands_bateaux(monkeypatch, ville):
     """⚠️ Ce qu'on AJOUTE se pose en dernier : les mouillages ne posent rien, ne
     tirent aucun dé, et rien de ce qui précède ne les lit. La ville sans eux est la
     même, clé par clé."""
+    # ⚠️ Sous le patch, `carte.generer` direct : le cache de `villes` rendrait la ville d'avant.
     monkeypatch.setattr(navires, "amarrer", lambda chantier, v: [])
     sans = carte.generer()
     assert set(sans) == set(ville)

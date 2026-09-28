@@ -6,6 +6,8 @@ adhérence 0,05, trois cercles — et rien ne l'avait jamais fait flotter. Il ne
 manquait ni physique à part ni quai : **un dessin, et une règle de tuile**.
 """
 
+import villes
+
 from app import carte, vehicules
 
 
@@ -25,7 +27,7 @@ def test_la_ville_a_des_amarrages_et_ils_sont_sur_l_eau():
     à un trottoir du port, à une allée — on ne s'amarre pas à une plage, on y
     échoue. Sans endroit où la trouver, un véhicule de plus au catalogue ne
     change rien à la ville."""
-    ville = carte.exporter()
+    ville = villes.exporter()
     places = ville["amarrages"]
     mini, maxi = carte.AMARRAGES["par_ville"]
     # ⚠️ Le plafond est celui de la VILLE : les chaloupes de l'île s'ajoutent
@@ -57,7 +59,7 @@ def test_aucun_amarrage_au_pied_d_un_pont():
     """Un char lancé qui traverse n'a pas à trouver une coque en travers — la
     même règle que le mobilier de grève, et elle avait été trouvée par le juge
     du pont lui-même."""
-    ville = carte.exporter()
+    ville = villes.exporter()
     garde = carte.GREVE["pont_ecart"]
     for pont in ville["ponts"]:
         for p in ville["amarrages"]:

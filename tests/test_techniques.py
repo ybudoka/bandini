@@ -3,6 +3,8 @@
 import re
 from pathlib import Path
 
+import villes
+
 from app import techniques
 
 RACINE = Path(__file__).resolve().parent.parent
@@ -55,5 +57,4 @@ def test_aucune_portee_au_dela_de_ce_que_l_ecran_montre():
 
 
 def test_le_paquet_porte_les_techniques():
-    from app import definitions
-    assert definitions.assembler()["techniques"] == techniques.CATALOGUE
+    assert villes.assembler()["techniques"] == techniques.CATALOGUE

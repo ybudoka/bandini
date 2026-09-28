@@ -1,11 +1,13 @@
 """Le derby de démolition, côté Python (docs/jalons/le-derby-de-demolition-a-la-foire.md) : l'arène se
 lit sur la ville finie sans rien y poser, à côté de la foire et hors de tout ; le défi se tient."""
 
-from app import carte, definitions, derby, economie, missions
+import villes
+
+from app import derby, economie, missions
 
 
 def _ville():
-    return carte.generer()
+    return villes.generer()
 
 
 def test_l_arene_est_du_gazon_libre_a_cote_de_la_foire_et_hors_de_tout():
@@ -31,7 +33,7 @@ def test_l_arene_ne_deplace_rien_et_voyage_au_navigateur():
     avant = repr(v)
     a, b = derby.arene(v), derby.arene(v)
     assert repr(v) == avant and a == b
-    assert definitions.assembler()["derby"] == derby.pour_le_navigateur(carte.exporter())
+    assert villes.assembler()["derby"] == derby.pour_le_navigateur(villes.exporter())
 
 
 def test_le_defi_se_joue_le_soir_s_ouvre_apres_la_galerie_et_paie_modestement():

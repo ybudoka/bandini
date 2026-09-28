@@ -6,6 +6,8 @@ code : `Monde.estNuit` dit nuit quand la teinte passe 0,4 d'opacité, soit de
 changerait avec elle.
 """
 
+import villes
+
 from app import pietons, vehicules
 from app.carte import USAGES
 
@@ -59,7 +61,8 @@ def test_un_lampadaire_pauvre_gresille_sans_etre_mort_et_la_ville_ne_bouge_pas()
     drapeau sur la lampe, pas une tuile : les lampes restent où elles étaient."""
     from app import carte, mobilier
     # ⚠️ La ville d'avant (27 sept. 2026) : lue par un `_Chantier`, dans SON repère (`app/nord.py`).
-    ville = carte.generer(nord=False)
+    ville = villes.generer(nord=False)
+    # ⚠️ Sous le patch, `carte.generer` direct : le cache de `villes` rendrait la ville d'avant.
     original = mobilier.eclairer
     mobilier.eclairer = lambda chantier, bords, solides: {}
     try:
@@ -85,15 +88,15 @@ def test_un_lampadaire_pauvre_gresille_sans_etre_mort_et_la_ville_ne_bouge_pas()
 # --- Vague 3 : qui est dehors ------------------------------------------------------------
 
 def test_le_last_call_sonne_a_trois_heures_devant_les_bars_de_la_ville():
-    from app import definitions, devantures, nuit
+    from app import devantures, nuit
     lc = nuit.LAST_CALL
     assert lc["heure"] == 3 / 24, "au Québec, les bars ferment à 3 h"
     assert lc["heure"] < lc["jusqu_a"] <= 4 / 24, "à 4 h, la rue est retombée"
     assert 2 <= lc["fetards"][0] <= lc["fetards"][1] <= 6, "une grappe, pas une foule"
     assert lc["portee_px"] < 520, "le bar doit être dans la bulle, sinon on ne les voit pas vivre"
-    bars = definitions.assembler()["nuit"]["last_call"]["bars"]
+    bars = villes.assembler()["nuit"]["last_call"]["bars"]
     assert len(bars) >= 5, "presque pas de bars dans la ville"
-    ville = definitions.assembler()["carte"]
+    ville = villes.assembler()["carte"]
     nuit_ = devantures.genre_index("nuit")
     noms = {d["texte"] for d in ville["devantures"] if d["genre"] == nuit_}
     assert all(b["nom"] in noms for b in bars)
@@ -146,7 +149,7 @@ def test_les_comptoirs_ferment_la_nuit_ouvrent_avant_le_jeu_et_le_bar_ferme_au_l
 
 
 def test_l_arroseuse_sort_au_creux_de_la_nuit_et_mouille_sans_noyer():
-    from app import carte, neige, nuit
+    from app import neige, nuit
     a = nuit.ARROSEUSE
     debut, fin = a["heures"]
     # En pleine nuit : après minuit, et rentrée avant le jour.
@@ -155,4 +158,4 @@ def test_l_arroseuse_sort_au_creux_de_la_nuit_et_mouille_sans_noyer():
     assert neige.EFFETS["adherence"] < a["adherence"] < 1
     assert 0.6 <= a["frein"] < 1
     assert 10 <= a["mouille_minutes"] <= 120
-    assert neige.tracer_charrue(carte.generer()) is not None, "l'arroseuse fait la tournée de la charrue : il en faut une"
+    assert neige.tracer_charrue(villes.generer()) is not None, "l'arroseuse fait la tournée de la charrue : il en faut une"

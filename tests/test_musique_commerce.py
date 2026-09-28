@@ -8,7 +8,9 @@ entrer dans une boutique de linge ne se ressemblent pas. Une seule musique
 « d'intérieur » aurait été un rideau tiré sur seize pièces différentes.
 """
 
-from app import audio, carte, musique
+import villes
+
+from app import audio, musique
 
 
 def test_chaque_morceau_de_commerce_existe_et_est_instrumental():
@@ -41,7 +43,7 @@ def test_le_navigateur_recoit_la_carte_des_lieux():
 def test_chaque_lieu_de_la_carte_existe_vraiment():
     """Une entrée qui nomme une pièce inexistante est une toune que personne
     n'entendra jamais — et rien ne le dirait."""
-    ville = carte.exporter()
+    ville = villes.exporter()
     lieux = set(ville["interieurs"]) if isinstance(ville["interieurs"], dict) else set()
     for lieu in musique.MUSIQUES_DE_COMMERCE:
         assert lieu in lieux, f"« {lieu} » n'est pas une pièce de la ville"

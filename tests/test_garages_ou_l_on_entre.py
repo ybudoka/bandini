@@ -10,6 +10,7 @@ perd la trace) se juge au banc, dans `test_garages_ou_l_on_entre_js.py`.
 """
 
 import pytest
+import villes
 
 from app import carte, devantures, devants, economie, vehicules
 
@@ -22,7 +23,7 @@ GRAINES = (carte.GRAINE, 1, 2, 7)
 
 @pytest.fixture(scope="module", params=GRAINES)
 def ville(request):
-    return carte.generer(graine=request.param, nord=False)
+    return villes.generer(graine=request.param, nord=False)
 
 
 def _carrosseries(ville):
@@ -133,6 +134,7 @@ def test_les_carrosseries_ne_deplacent_rien_d_autre(ville, monkeypatch):
     apres, et ecarter ce qui tombe devant une porte neuve est son travail. L'aeroport
     aussi : pose apres tout, son point s'ajoute au bout de la liste, derriere ceux
     des carrosseries — des deux cotes, sinon « au bout » ne veut plus rien dire."""
+    # ⚠️ `carte.generer` direct, pas `villes` : les deux villes naissent sous un patch.
     from app import aeroport
     monkeypatch.setattr(devants, "deplacer", lambda chantier, ville_: {})
     monkeypatch.setattr(aeroport, "poser", lambda chantier, ville_: None)
@@ -237,6 +239,7 @@ def test_une_entree_asphaltee_du_rideau_a_la_rue(ville):
 
 
 def test_les_bungalows_ne_deplacent_rien_d_autre_et_ne_lisent_pas_les_carrosseries(ville, monkeypatch):
+    # ⚠️ `carte.generer` direct, pas `villes` : les trois villes naissent sous un patch.
     monkeypatch.setattr(devants, "deplacer", lambda chantier, ville_: {})
     avec = carte.generer(graine=ville["graine"], nord=False)
     monkeypatch.setattr(carte._Chantier, "poser_les_carrosseries", lambda self, ville_: [])

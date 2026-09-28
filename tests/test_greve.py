@@ -7,6 +7,7 @@ n'était pas le terrain — c'est que le bord de l'eau était un décor qu'on
 """
 
 import pytest
+import villes
 
 from app import carte
 
@@ -23,7 +24,7 @@ DE_PLAGE = ("parasol", "serviette", "chaise_longue", "kayak", "chateau_sable",
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.exporter()
+    return villes.exporter()
 
 
 @pytest.fixture(scope="module")

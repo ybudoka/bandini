@@ -8,13 +8,14 @@ tournée ne pose RIEN dans la ville : ses bacs naissent dans le navigateur.
 import copy
 
 import pytest
+import villes
 
 from app import autobus, carte, eboueurs
 
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.exporter()
+    return villes.exporter()
 
 
 def tournee(ville):
@@ -65,7 +66,8 @@ def test_la_tournee_ne_pose_rien_dans_la_ville(ville, monkeypatch):
     avant = copy.deepcopy(ville)
     eboueurs.tracer(ville)
     assert ville == avant, "tracer a modifié la ville qu'il lisait"
-    avec = carte.generer()
+    avec = villes.generer()
+    # ⚠️ Sous le patch, `carte.generer` direct : le cache de `villes` rendrait la ville d'avant.
     monkeypatch.setattr(eboueurs, "tracer", lambda v: None)
     sans = carte.generer()
     assert avec["eboueurs"] and sans["eboueurs"] is None

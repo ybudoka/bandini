@@ -8,6 +8,7 @@ station trop loin de son lieu, une rame qui ne passe qu'une fois par minute.
 """
 
 import pytest
+import villes
 
 from app import autobus, carte, metro, mobilier
 
@@ -18,7 +19,7 @@ from app import autobus, carte, metro, mobilier
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.exporter()
+    return villes.exporter()
 
 
 #: Le dessin de l'édicule selon le côté du trottoir. ⚠️ En toutes lettres, pas
@@ -111,7 +112,9 @@ def test_le_metro_ne_deplace_rien_de_la_ville(monkeypatch):
     s'ajouter au bout du décor.
 
     ⚠️ La saleté se déplace APRÈS le métro (`salete.deplacer`) et contourne ses
-    édicules, comme le mobilier : on la retire des deux villes."""
+    édicules, comme le mobilier : on la retire des deux villes.
+
+    ⚠️ `carte.generer` direct, pas `villes` : les deux villes naissent sous un patch."""
     from app import devants, salete
     monkeypatch.setattr(salete, "deplacer", lambda chantier, ville, graine: {})
     monkeypatch.setattr(mobilier, "semer", lambda chantier, ville, graine: {})
@@ -132,7 +135,7 @@ def test_le_metro_ne_deplace_rien_de_la_ville(monkeypatch):
 
 @pytest.mark.parametrize("graine", [1, 7, 99])
 def test_le_metro_se_creuse_sur_d_autres_graines(graine):
-    ville = carte.generer(graine=graine, nord=False)
+    ville = villes.generer(graine=graine, nord=False)
     assert len(ville["metro"]["stations"]) == len(metro.LIGNE["stations"])
     for rang in range(len(ville["metro"]["stations"])):
         sx, sy = metro.sortie(ville, rang)

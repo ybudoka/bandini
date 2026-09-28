@@ -10,6 +10,7 @@ import re
 from pathlib import Path
 
 import pytest
+import villes
 
 from app import missions
 from app.missions._commun import _l, _p, _r
@@ -101,8 +102,7 @@ def test_chaque_mission_est_finie():
 
 
 def test_les_lieux_des_scenes_existent_dans_la_ville():
-    from app import carte
-    ville = carte.generer()
+    ville = villes.generer()
     lieux = {p["slug"] for p in ville["points_interet"]} | {p["lieu"] for p in ville["portes"] if p.get("lieu")}
     zones = {z["slug"] for z in ville["zones"]}
     for m in missions.CATALOGUE:

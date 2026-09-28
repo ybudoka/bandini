@@ -1,3 +1,5 @@
+import villes
+
 from app import vehicules
 
 
@@ -263,7 +265,7 @@ def test_un_char_rare_ne_nait_que_la_ou_son_district_le_veut():
 
     # Et le paquet les sort, y compris pour les sous-zones : `Monde.zoneA` rend
     # la zone la PLUS PRECISE, donc une cour de gang doit heriter des siens.
-    zones = {z["slug"]: z for z in carte.generer()["zones"]}
+    zones = {z["slug"]: z for z in villes.generer()["zones"]}
     assert set(zones["faubourg"]["rares"]) == {"sport", "luxe", "cabriolet"}
     assert zones["cravates"]["rares"] == zones["faubourg"]["rares"], \
         "la cour des Cravates ne connait pas les chars de son district"

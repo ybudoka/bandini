@@ -9,6 +9,7 @@ navigateur n'invente rien.
 import itertools
 
 import pytest
+import villes
 
 from app import carte, pietons, vehicules
 
@@ -194,7 +195,7 @@ def test_le_matin_le_trafic_converge_et_le_soir_il_se_disperse(banc, paquet):
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.generer()
+    return villes.generer()
 
 
 def test_les_nids_sont_sur_la_chaussee_hors_croisement_et_espaces(ville):

@@ -1,7 +1,7 @@
 """L'année de Baie-des-Brumes (`app/calendrier.py`, `static/js/calendrier.js`) : quarante jours, douze mois
 dans l'ordre, quatre saisons, la même année des deux côtés."""
 
-from app import calendrier, definitions
+from app import calendrier
 
 
 def test_douze_mois_dans_l_ordre_et_chacun_a_ses_jours():
@@ -21,7 +21,7 @@ def test_les_dates_tombent_dans_leur_mois():
     assert calendrier.saison(calendrier.DATES["saint_jean"]) == "ete"
 
 
-def test_la_meme_annee_des_deux_cotes(banc):
+def test_la_meme_annee_des_deux_cotes(banc, paquet):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const C = L.Calendrier, out = [];
@@ -29,4 +29,4 @@ def test_la_meme_annee_des_deux_cotes(banc):
         return out;
     }""")
     assert r == [[calendrier.mois(j), calendrier.saison(j)] for j in range(1, 86)]
-    assert definitions.assembler()["calendrier"] == calendrier.pour_le_navigateur()
+    assert paquet["calendrier"] == calendrier.pour_le_navigateur()

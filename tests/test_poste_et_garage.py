@@ -11,6 +11,7 @@ dans `test_poste_et_garage_js.py`.
 """
 
 import pytest
+import villes
 
 from app import carte
 
@@ -24,7 +25,7 @@ BARBELE, BARRIERE = "X", "Z"
 
 @pytest.fixture(scope="module", params=GRAINES)
 def ville(request):
-    return carte.generer(graine=request.param)
+    return villes.generer(graine=request.param)
 
 
 def _roulable(sol, x, y):
@@ -184,6 +185,7 @@ def test_le_lot_et_la_porte_ne_deplacent_rien_d_autre_dans_la_ville(ville, monke
     # ⚠️ Et le devant des portes (`devants.deplacer`) des DEUX villes : il vient apres le lot, et
     # la porte du garage est une porte comme une autre — il ecarte ce qui tombe devant elle
     # (un nid-de-poule a quatre tuiles de son rideau). C'est son travail, pas un glissement.
+    # ⚠️ `carte.generer` direct, pas `villes` : les deux villes naissent sous un patch.
     from app import devants
     monkeypatch.setattr(devants, "deplacer", lambda chantier, ville_: {})
     avec = carte.generer(graine=ville["graine"])
