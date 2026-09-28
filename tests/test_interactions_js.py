@@ -11,6 +11,8 @@ fonction : la chaîne d'ACTION affame ce qui la suit, et un juge qui appelle
 ⚠️ Et **l'invite et le geste disent la même chose** : la même fonction les sert.
 """
 
+import pytest
+
 from app import interactions
 
 #: Les outils que chaque scénario reprend. ⚠️ On se plante DEVANT le décor (ni porte,
@@ -287,10 +289,13 @@ def test_on_boit_a_la_fontaine_puis_on_n_a_plus_soif(banc):
     assert r["inviteSoif"] == c["invite"], "dix secondes plus tard, on a de nouveau soif"
 
 
-def test_on_mange_au_barbecue_une_fois_par_jour_et_ca_reste_sous_le_hot_dog(banc):
-    c = interactions.BARBECUE
-    r = jouer(banc, """
-        const d = devant('bbq');
+#: ⚠️ UN SEUL BANC pour les deux juges du barbecue (vague C, 28 sept. 2026) : le premier mange,
+#: la veille et le lendemain ; le second revient au MÊME barbecue, le jour remis à 4 et les
+#: fouilles vidées (ce que faisait son banc à lui), une autre pression plus tard, à pleine vie.
+@pytest.fixture(scope="module")
+def _barbecue(banc):
+    return jouer(banc, """
+        let d = devant('bbq');
         if (!d) return { pasDeBbq: true };
         p.jour = 4; p.fouilles = {};
         j.vie = 10; j.endurance = 5;
@@ -304,9 +309,22 @@ def test_on_mange_au_barbecue_une_fois_par_jour_et_ca_reste_sous_le_hot_dog(banc
         const deuxieme = { vie: j.vie, msg: L.B.msg };
         // Le lendemain, le barbecue est de nouveau bon.
         p.jour = 5; const inviteLendemain = invite();
+        // Le second juge : a pleine vie, un barbecue tout neuf (jour 4, fouilles vides).
+        suivant();
+        d = devant('bbq');
+        if (!d) return { pasDeBbq: true };
+        p.jour = 4; p.fouilles = {};
+        j.vie = j.vieMax;
+        o.tape('KeyE');
+        const plein = { vie: j.vie, vieMax: j.vieMax };
         return { inviteAvant: inviteAvant, mange: mange, inviteApres: inviteApres, deuxieme: deuxieme,
-                 inviteLendemain: inviteLendemain };
+                 inviteLendemain: inviteLendemain, plein: plein };
     """)
+
+
+def test_on_mange_au_barbecue_une_fois_par_jour_et_ca_reste_sous_le_hot_dog(_barbecue):
+    c = interactions.BARBECUE
+    r = _barbecue
     assert not r.get("pasDeBbq"), "la ville n'a pas de barbecue devant lequel se planter"
     assert r["inviteAvant"] == c["invite"]
     assert r["mange"]["vie"] == 10 + c["pv"], "manger rend des PV"
@@ -320,19 +338,12 @@ def test_on_mange_au_barbecue_une_fois_par_jour_et_ca_reste_sous_le_hot_dog(banc
     assert r["inviteLendemain"] == c["invite"], "le lendemain, on peut remanger"
 
 
-def test_un_barbecue_ne_soigne_pas_au_dela_de_la_barre(banc):
+def test_un_barbecue_ne_soigne_pas_au_dela_de_la_barre(_barbecue):
     """`Missions.soigner` plafonne déjà à `vieMax` : le barbecue n'a pas sa propre borne,
     et c'est exactement pour ça qu'il ne doit jamais en avoir besoin."""
-    r = jouer(banc, """
-        const d = devant('bbq');
-        if (!d) return { pasDeBbq: true };
-        p.jour = 4; p.fouilles = {};
-        j.vie = j.vieMax;
-        o.tape('KeyE');
-        return { vie: j.vie, vieMax: j.vieMax };
-    """)
+    r = _barbecue
     assert not r.get("pasDeBbq"), "la ville n'a pas de barbecue devant lequel se planter"
-    assert r["vie"] == r["vieMax"], "manger a pleine vie ne fait pas déborder la barre"
+    assert r["plein"]["vie"] == r["plein"]["vieMax"], "manger a pleine vie ne fait pas déborder la barre"
 
 
 # --- Le parcomètre --------------------------------------------------------------
@@ -397,12 +408,12 @@ def test_la_borne_s_ouvre_a_la_main_on_s_y_rafraichit_et_on_la_ferme(banc):
 # --- Le chat -------------------------------------------------------------------------
 
 
-def test_on_caresse_le_chat_confiant_et_ca_ne_rapporte_rien(banc):
-    """⚠️ La confiance (`Entites.majBete`, `pietons.BETES["chat"]["confiance_px"]`) est
-    jugée à part, au banc des bêtes (`test_betes_js.py`) — ici, seulement le bouton :
-    ACTION près d'un chat confiant caresse, ne fait rien perdre ni gagner, et le chat
-    ne fuit pas pour autant (`utiliserSurLesBetes`, avant le décor, après le bouclier)."""
-    r = jouer(banc, CHAT + """
+#: ⚠️ UN SEUL BANC pour les deux juges du chat (vague C, 28 sept. 2026) : `unChat()` peut jouer
+#: des centaines d'images pour le faire naître — on le cherche une fois. Le second juge se place
+#: ensuite à 200 px du MÊME chat, comme le faisait son banc à lui.
+@pytest.fixture(scope="module")
+def _chat(banc):
+    return jouer(banc, CHAT + """
         const chat = unChat();
         if (!chat) return { pasDeChat: true };
         // Dans la fenêtre jouable : au-delà de `confiance_px` (il ne fuit pas), en
@@ -414,8 +425,19 @@ def test_on_caresse_le_chat_confiant_et_ca_ne_rapporte_rien(banc):
         const avant = { vie: j.vie, argent: p.argent, endurance: j.endurance };
         o.tape('KeyE');
         const apres = { vie: j.vie, argent: p.argent, endurance: j.endurance, msg: L.B.msg, fuite: chat.fuite > 0 };
-        return { pasDeChat: false, inviteAvant: inviteAvant, avant: avant, apres: apres };
+        // Le second juge : loin du chat.
+        j.x = chat.x + 200; j.y = chat.y; j.arme = 'poings';
+        L.Monde.centrerCamera(j.x, j.y); nettoyer(); o.frame(2);
+        return { pasDeChat: false, inviteAvant: inviteAvant, avant: avant, apres: apres, loin: { invite: invite() } };
     """)
+
+
+def test_on_caresse_le_chat_confiant_et_ca_ne_rapporte_rien(_chat):
+    """⚠️ La confiance (`Entites.majBete`, `pietons.BETES["chat"]["confiance_px"]`) est
+    jugée à part, au banc des bêtes (`test_betes_js.py`) — ici, seulement le bouton :
+    ACTION près d'un chat confiant caresse, ne fait rien perdre ni gagner, et le chat
+    ne fuit pas pour autant (`utiliserSurLesBetes`, avant le décor, après le bouclier)."""
+    r = _chat
     assert not r["pasDeChat"], "la ville n'a pas de chat auquel s'approcher"
     assert r["inviteAvant"] == interactions.CARESSER["invite"]
     assert r["apres"]["msg"] in interactions.CARESSER["mots"], "caresser dit un des mots du catalogue"
@@ -425,42 +447,34 @@ def test_on_caresse_le_chat_confiant_et_ca_ne_rapporte_rien(banc):
     assert not r["apres"]["fuite"], "le chat qu'on vient de caresser ne détale pas"
 
 
-def test_loin_du_chat_ACTION_ne_caresse_rien(banc):
-    r = jouer(banc, CHAT + """
-        const chat = unChat();
-        if (!chat) return { pasDeChat: true };
-        j.x = chat.x + 200; j.y = chat.y; j.arme = 'poings';
-        L.Monde.centrerCamera(j.x, j.y); nettoyer(); o.frame(2);
-        return { pasDeChat: false, invite: invite() };
-    """)
+def test_loin_du_chat_ACTION_ne_caresse_rien(_chat):
+    r = _chat
     assert not r["pasDeChat"], "la ville n'a pas de chat auquel s'approcher"
-    assert r["invite"] != interactions.CARESSER["invite"], "un chat à 200 px n'est pas sous la main"
+    assert r["loin"]["invite"] != interactions.CARESSER["invite"], "un chat à 200 px n'est pas sous la main"
 
 
 # --- Les gens ------------------------------------------------------------------------
 
 
-def test_un_dollar_dans_le_chapeau_de_l_artiste_change_vraiment_de_poche(banc):
-    c = interactions.POURBOIRE
-    r = jouer(banc, """
+#: ⚠️ UN SEUL BANC pour les trois juges de l'artiste (vague C, 28 sept. 2026) : le pourboire, le
+#: dos tourné, puis le char sous la main. Entre deux, `suivant()` — une autre image, et les passants
+#: (l'artiste d'avant compris) et les chars d'alentour effacés : chacun repose SON artiste, et le
+#: sien seulement, comme le faisait son banc.
+@pytest.fixture(scope="module")
+def _artiste(banc):
+    return jouer(banc, """
         p.argent = 20;
-        const a = o.poser('musicien', 0, 16);
+        let a = o.poser('musicien', 0, 16);
         a.argent = 5; a.angle = -Math.PI / 2;                          // il nous regarde : ACTION est un pourboire
         o.viser(a);
         const inviteAvant = invite();
         o.tape('KeyE');
-        return { inviteAvant: inviteAvant, argent: p.argent, sien: a.argent, bulle: a.bulle && a.bulle.texte, chapeau: a.chapeauT };
-    """)
-    assert r["inviteAvant"] == "%s — %d $" % (c["invite"], c["montant"])
-    assert r["argent"] == 20 - c["montant"] and r["sien"] == 5 + c["montant"], "la piece change de poche"
-    assert r["bulle"] in c["merci"]["musicien"], "l'artiste remercie"
-    assert r["chapeau"] > 0, "et le chapeau s'anime, comme pour un badaud"
+        const dollar = { inviteAvant: inviteAvant, argent: p.argent, sien: a.argent, bulle: a.bulle && a.bulle.texte, chapeau: a.chapeauT };
 
-
-def test_derriere_l_artiste_ACTION_reste_le_pickpocket_et_sans_un_dollar_aussi(banc):
-    r = jouer(banc, """
+        // Le deuxieme : dans son dos.
+        suivant();
         p.argent = 20;
-        const a = o.poser('musicien', 0, 16);
+        a = o.poser('musicien', 0, 16);
         a.argent = 30; a.angle = Math.PI / 2;                          // dos a nous, ses poches sont a prendre
         o.viser(a);
         const inviteDos = invite();
@@ -469,8 +483,33 @@ def test_derriere_l_artiste_ACTION_reste_le_pickpocket_et_sans_un_dollar_aussi(b
         // Face a lui mais sans un dollar : rien a laisser, ACTION retombe sur ce qui suit.
         a.angle = -Math.PI / 2; p.argent = 0; o.viser(a);
         const inviteFauche = invite();
-        return { inviteDos: inviteDos, dos: dos, inviteFauche: inviteFauche };
+        const derriere = { inviteDos: inviteDos, dos: dos, inviteFauche: inviteFauche };
+
+        // Le troisieme : un char sous la main.
+        suivant();
+        p.argent = 20;
+        a = o.poser('musicien', 0, 16);
+        a.argent = 5; a.angle = -Math.PI / 2;
+        const v = o.char('auto', 16, 14, 0);
+        o.viser(a);
+        const charSousLaMain = !!L.Vehicules.vehiculeSousLaMain(j);
+        o.tape('KeyE');
+        const char = { charSousLaMain: charSousLaMain, argent: p.argent, sien: a.argent, dansLeChar: !!j.dansVehicule };
+        return { dollar: dollar, derriere: derriere, char: char };
     """)
+
+
+def test_un_dollar_dans_le_chapeau_de_l_artiste_change_vraiment_de_poche(_artiste):
+    c = interactions.POURBOIRE
+    r = _artiste["dollar"]
+    assert r["inviteAvant"] == "%s — %d $" % (c["invite"], c["montant"])
+    assert r["argent"] == 20 - c["montant"] and r["sien"] == 5 + c["montant"], "la piece change de poche"
+    assert r["bulle"] in c["merci"]["musicien"], "l'artiste remercie"
+    assert r["chapeau"] > 0, "et le chapeau s'anime, comme pour un badaud"
+
+
+def test_derriere_l_artiste_ACTION_reste_le_pickpocket_et_sans_un_dollar_aussi(_artiste):
+    r = _artiste["derriere"]
     assert not (r["inviteDos"] or "").startswith(interactions.POURBOIRE["invite"]), "dans son dos, l'invite n'est pas un pourboire"
     assert r["dos"]["argent"] == 20, "dans son dos, on ne lui donne rien"
     assert not (r["inviteFauche"] or "").startswith(interactions.POURBOIRE["invite"]), "sans un dollar, pas de pourboire"
@@ -529,20 +568,11 @@ def test_une_personne_devant_un_banc_garde_ACTION_et_le_dos_tourne_ne_fait_rien(
     assert not r["dos"], "le dos tourne, ACTION ne fait rien : on agit sur ce qu'on regarde"
 
 
-def test_un_char_sous_la_main_ne_double_pas_le_pourboire_et_ne_prend_pas_la_pression(banc):
+def test_un_char_sous_la_main_ne_double_pas_le_pourboire_et_ne_prend_pas_la_pression(_artiste):
     """⚠️ `Vehicules.maj` rappelle `interagir` dans la MEME image quand un char est sous la main : un
     pourboire donné deux fois, ou une pression qui monte dans le char après avoir payé l'artiste, est
-    un bogue qu'aucun appel direct à la fonction ne voit — il faut le bouton."""
-    r = jouer(banc, """
-        p.argent = 20;
-        const a = o.poser('musicien', 0, 16);
-        a.argent = 5; a.angle = -Math.PI / 2;
-        const v = o.char('auto', 16, 14, 0);
-        o.viser(a);
-        const charSousLaMain = !!L.Vehicules.vehiculeSousLaMain(j);
-        o.tape('KeyE');
-        return { charSousLaMain: charSousLaMain, argent: p.argent, sien: a.argent, dansLeChar: !!j.dansVehicule };
-    """)
+    un bogue qu'aucun appel direct à la fonction ne voit — il faut le bouton. (Son banc : `_artiste`.)"""
+    r = _artiste["char"]
     assert r["charSousLaMain"], "le scenario doit avoir un char sous la main, sinon il ne juge rien"
     assert r["argent"] == 20 - interactions.POURBOIRE["montant"], "un seul pourboire, pas deux"
     assert not r["dansLeChar"], "la pression est depensee par le pourboire : on ne monte pas dans le char"
