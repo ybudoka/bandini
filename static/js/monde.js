@@ -224,6 +224,10 @@ const Monde = (function () {
     const passage = new Uint8Array(w * h);     // passage pieton : route ET trottoir
     const portesFermees = [];                   // les « d » : par ou les gens rentrent chez eux
     const portesVues = [];                      // toutes celles qu'on VOIT : D, d, G (et les peintes, plus bas)
+    // ⚠️ LES PORTES POSÉES APRÈS COUP (les concessionnaires) n'entrent pas dans `portesFermees` : c'est une liste
+    // TIRÉE par index (un passant qui sort d'une porte, `entites.js`) et relevée dans l'ordre de lecture — une porte
+    // de plus en haut de la carte décalait tous les tirages de la ville, même au terminus.
+    const apresCoup = new Set((def.concessionnaires || []).map(function (l) { return l.porte.x + ',' + l.porte.y; }));
     for (let y = 0; y < h; y++) {
       const ligne = def.sol[y];
       for (let x = 0; x < w; x++) {
@@ -235,7 +239,7 @@ const Monde = (function () {
         // sombre, pas de poignee de laiton, aucune enseigne) et un `D` mene a
         // un interieur. Les gens passent les deux ; le joueur, seulement les
         // `D` — et le dessin le dit deja, c'est ce qui rend la regle lisible.
-        if (ligne[x] === 'd' || ligne[x] === 'D') portesFermees.push({ x: x, y: y, glyphe: ligne[x] });
+        if ((ligne[x] === 'd' || ligne[x] === 'D') && !apresCoup.has(x + ',' + y)) portesFermees.push({ x: x, y: y, glyphe: ligne[x] });
         if (ligne[x] === 'd' || ligne[x] === 'D' || ligne[x] === 'G') portesVues.push({ x: x, y: y });
       }
     }

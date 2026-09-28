@@ -14,7 +14,7 @@ missions (`f04`, `p01`) y envoient acheter. Le Salon se BÂTIT sur la moitié su
 des Érables ; la moitié nord, ses cases `^` telles quelles, est le lot d'exposition.
 
 La donnée d'un lot (Python décide, le navigateur fait naître les chars — `Vehicules.majLotsDeConcession`) :
-`places` (y = la tuile du NEZ, comme au poste), `garees` (les index des places garnies), `stock` (un char par
+`porte` (la sienne : les passants n'en sortent pas, `Monde.charger`), `places` (y = la tuile du NEZ, comme au poste), `garees` (les index des places garnies), `stock` (un char par
 place), `usure`, `alarme`, et `cour` (le rectangle de tuiles touché, pour les juges).
 """
 
@@ -114,7 +114,11 @@ def _devanture(ville: dict, x: int, y: int, motifs: str, porte: int, textes: tup
     (`test_devantures`) : au plus `ENSEIGNE_ETIREE` tuiles, centrée sur la porte ; rien que des vitrines et la
     porte dessous (pas les coins de façade) ; le `standing` du bloc ; une lampe de vitrine au trottoir."""
     large = min(len(motifs), carte._Chantier.ENSEIGNE_ETIREE)
-    dx = max(0, min(len(motifs) - large, porte - large // 2))
+    # La fenêtre qui couvre la porte sans toucher un coin `F`, la plus centrée sur elle (la porte ne tombe pas
+    # toujours au milieu : elle se pose où son devant est libre).
+    dx = min((d for d in range(len(motifs) - large + 1)
+              if d <= porte < d + large and "F" not in motifs[d:d + large]),
+             key=lambda d: (abs(d + large // 2 - porte), d))
     dessous = motifs[dx:dx + large]
     ville["devantures"].append({"x": x + dx, "y": y, "l": large, "genre": devantures.genre_index(genre),
                                 "texte": _enseigne(textes, large), "pancarte": -1, "motifs": dessous,
@@ -156,7 +160,13 @@ def poser_le_salon(chantier, ville: dict) -> None:
     if not trouve:
         return
     x0, largeur, yb = trouve["x"], trouve["largeur"], trouve["batiment"]
-    yf, px = yb + SALON_PROFONDEUR - 1, x0 + largeur // 2
+    yf = yb + SALON_PROFONDEUR - 1
+    # LA PORTE SUR UN DEVANT DÉJÀ LIBRE : la colonne la plus proche du milieu dont le devant (`devants.DEVANT`)
+    # ne porte aucun décor — rien à déplacer, la liste du décor ne bouge pas. Aucune : le milieu, et on déplace.
+    occupees = {(d["x"], d["y"]) for d in ville["decor"]}
+    colonnes = sorted(range(x0 + 1, x0 + largeur - 1), key=lambda x: (abs(x - (x0 + largeur // 2)), x))
+    px = next((x for x in colonnes if not any((x + dx, yf + dy) in occupees for dx, dy in devants.DEVANT)),
+              x0 + largeur // 2)
     for j in range(yb, yf):
         _ecrire(ville, x0, j, "E" * largeur)
     motifs = _facade(largeur, px - x0)
@@ -167,12 +177,15 @@ def poser_le_salon(chantier, ville: dict) -> None:
         for x in (x0 - 1, x0 + largeur):
             if ville["sol"][y][x] == "I":
                 _ecrire(ville, x, y, ",")
-    _degager(ville, {(x, y) for x in range(x0, x0 + largeur) for y in range(yb, yf + 1)} | {(px, yf + 1)})
-    # ⚠️ RIEN DEVANT LA PORTE, PLUS LARGE (`devants`, passé avant nous) : ce qui s'y déplace ailleurs (un arbre,
-    # un banc) s'en va du devant du Salon — la graine 2 y plantait un arbre.
-    devant = {(px + dx, yf + dy) for dx, dy in devants.DEVANT}
-    ville["decor"][:] = [d for d in ville["decor"]
-                         if not (d["type"] in devants.DECOR_MOBILE and (d["x"], d["y"]) in devant)]
+    # ⚠️ ON DÉPLACE, ON NE RETIRE PAS : le décor mobile du bâtiment et de son devant (un banc devant la porte, un
+    # arbre à la graine 2) va sur la tuile voisine libre la plus proche, par `devants` — à SA place dans la liste.
+    # Retiré, il décalait l'identifiant de tout le décor qui suit, et le hasard de la police et des passants
+    # glissait avec lui (huit juges de banc tombés). Seul ce qui ne se déplace pas s'en va (une lampe de rue).
+    batiment = {(x, y) for x in range(x0, x0 + largeur) for y in range(yb, yf + 1)}
+    larges = batiment | {(px + dx, yf + dy) for dx, dy in devants.DEVANT}
+    devants._deplacer_le_decor(chantier, ville, larges, devants._pris(chantier, ville) | larges,
+                               devants._evitees(chantier, ville))
+    _degager(ville, batiment | {(px, yf + 1)})
     ville["portes"].append({"x": px, "y": yf, "interieur": SALON_SLUG, "lieu": SALON_SLUG, "nom": SALON_NOM,
                             "vitrine": [x0, largeur]})
     _devanture(ville, x0, yf, motifs, px - x0, SALON_ENSEIGNES, "commerce", "+")
@@ -182,7 +195,7 @@ def poser_le_salon(chantier, ville: dict) -> None:
     places = [{"x": x0 + i, "y": trouve["y"], "sens": "N"} for i in range(largeur)]
     en_face = px - x0
     ville["concessionnaires"].append({
-        "slug": SALON_SLUG, "nom": SALON_NOM, "genre": "neuf",
+        "slug": SALON_SLUG, "nom": SALON_NOM, "genre": "neuf", "porte": {"x": px, "y": yf},
         "places": places, "garees": [i for i in range(largeur) if i != en_face],
         "stock": _stock(NEUFS, largeur, 1.0),
         "usure": 1.0, "alarme": True,
@@ -281,7 +294,7 @@ def poser_ti_pout(ville: dict) -> None:
     ville["interieurs"][TI_POUT_SLUG] = piece_de_roulotte(TI_POUT_SLUG, rl, 3, px - rx + 1)
     places = [{"x": x0 + dx, "y": y0 + dy, "sens": sens} for dx, dy, sens in PLACES_TI_POUT]
     ville["concessionnaires"].append({
-        "slug": TI_POUT_SLUG, "nom": TI_POUT_NOM, "genre": "usage",
+        "slug": TI_POUT_SLUG, "nom": TI_POUT_NOM, "genre": "usage", "porte": {"x": px, "y": yf},
         "places": places, "garees": list(range(len(places))),
         "stock": _stock(USAGES, len(places), PRIX_USAGE),
         "usure": USURE_USAGEE, "alarme": False,

@@ -210,3 +210,18 @@ def test_la_place_vendue_se_regarnit_le_lendemain(banc):
         return { leJour: leJour, lendemain: lendemain, reste: p.concession['prestige:' + i] === undefined };
     }""" % {"aller": ALLER})
     assert r == {"leJour": 0, "lendemain": 1, "reste": True}, r
+
+
+def test_les_passants_ne_tirent_pas_leur_porte_chez_les_concessionnaires(banc):
+    """⚠️ `portesFermees` est une liste TIRÉE par index (`entites.js`, un passant qui sort d'une porte) et relevée
+    sur le sol dans l'ordre de lecture : une porte neuve, en haut de la carte, décalait tous les tirages de la ville
+    (`test_parole`, `test_police_js` rougissaient au terminus). Les portes des concessionnaires n'y entrent pas."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const c = L.Monde.carte, lots = c.def.concessionnaires;
+        const dedans = lots.filter(function (l) {
+            return c.portesFermees.some(function (p) { return p.x === l.porte.x && p.y === l.porte.y; });
+        }).map(function (l) { return l.slug; });
+        return { dedans: dedans, lots: lots.length };
+    }""")
+    assert r["lots"] == 2 and r["dedans"] == [], r

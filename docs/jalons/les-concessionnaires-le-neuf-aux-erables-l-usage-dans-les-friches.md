@@ -257,5 +257,16 @@ rien »), et le Salon sans son comptoir en était une. Le plan de la vague 1 a t
 - **Les juges « ce module ne déplace rien »** de l'aéroport et des enseignes veulent LEURS ajouts au bout des
   listes : le Salon (posé après eux) y est neutralisé des deux côtés.
 
-Juges : `test_concessionnaires.py` (13), `test_concessionnaires_js.py` (7) — dont trois mutations vues rouges (la
-place libre devant la porte, `alarmeDuLot`, `compteCommeGare`).
+- **Huit juges de banc rougissaient avec le build seul** (la suite contre la base, rejoués un par un) — deux causes,
+  deux leçons :
+  - **Le décor ne se retire pas** : le Salon retirait le banc planté devant sa porte, et l'identifiant de tout le
+    décor qui suit glissait (la police, les passants). La porte se pose maintenant sur la colonne la plus proche du
+    milieu dont le devant est DÉJÀ libre ; le décor est identique à la base, au JSON près. En repli seulement,
+    `devants._deplacer_le_decor`.
+  - **Une porte au sol est un tirage** : `Monde.charger` relève les `d`/`D` dans l'ordre de lecture dans
+    `portesFermees`, et un passant y tire sa porte par index (`entites.js`). La porte de Ti-Pout, en haut de la
+    carte, décalait tous les tirages — même au terminus, à 1 200 px de là. Les portes des lots (`lot.porte`) n'y
+    entrent pas : personne ne sort d'un concessionnaire, et la ville se tire comme avant.
+
+Juges : `test_concessionnaires.py` (13), `test_concessionnaires_js.py` (8) — dont quatre mutations vues rouges (la
+place libre devant la porte, `alarmeDuLot`, `compteCommeGare`, les portes tirées).
