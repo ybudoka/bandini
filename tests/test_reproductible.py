@@ -19,7 +19,6 @@ joueur, son char garé devant la planque, les paquets déjà ramassés — tout 
 rangé en coordonnées, et tout ça pointe à côté si la ville a bougé d'une tuile.
 """
 
-import hashlib
 import json
 import subprocess
 import sys
@@ -35,42 +34,48 @@ RACINE = Path(__file__).resolve().parents[1]
 GRAINES = ("0", "12345")
 
 
-def _empreinte(graine: str, quoi: str) -> str:
+#: Ce qu'on compare d'un lancement à l'autre : ce que la sauvegarde retrouve en coordonnées.
+CLES = ("sol", "decor", "portes", "paquets", "ambulants", "autobus", "metro")
+
+
+def _empreintes(graine: str) -> dict:
+    """UN processus par graine d'empreinte, qui hache les sept clés d'un coup (vague C, 28 sept.
+    2026 : sept processus par graine refaisaient chacun toute la ville pour une seule clé). Et le
+    témoin du sol : ses ruelles, comptées dans CE processus-là."""
     code = (
         "import json, hashlib;"
         "from app import carte;"
-        f"d = carte.exporter()[{quoi!r}];"
-        "print(hashlib.sha256(json.dumps(d, sort_keys=True, ensure_ascii=False)"
-        ".encode()).hexdigest())"
+        "v = carte.exporter();"
+        "e = {k: hashlib.sha256(json.dumps(v[k], sort_keys=True, ensure_ascii=False).encode()).hexdigest()"
+        f" for k in {CLES!r}}};"
+        "e['ruelles'] = json.dumps(v['sol']).count('x');"
+        "print(json.dumps(e))"
     )
     sortie = subprocess.run(
         [sys.executable, "-c", code], cwd=RACINE, capture_output=True, text=True,
         env={"PYTHONHASHSEED": graine, "PATH": "/usr/bin:/bin"},
     )
     assert sortie.returncode == 0, sortie.stderr[-800:]
-    return sortie.stdout.strip()
+    return json.loads(sortie.stdout.strip().splitlines()[-1])
 
 
-@pytest.mark.parametrize("quoi", ["sol", "decor", "portes", "paquets", "ambulants", "autobus", "metro"])
-def test_la_ville_est_la_meme_a_chaque_lancement(quoi):
+@pytest.fixture(scope="module")
+def empreintes() -> dict:
+    return {g: _empreintes(g) for g in GRAINES}
+
+
+@pytest.mark.parametrize("quoi", CLES)
+def test_la_ville_est_la_meme_a_chaque_lancement(empreintes, quoi):
     """⚠️ On lance DEUX PROCESSUS avec deux graines d'empreinte différentes. Dans
     un seul processus, `PYTHONHASHSEED` ne bouge pas : le défaut y est invisible,
-    et c'est pour ça qu'il a vécu si longtemps."""
-    empreintes = {_empreinte(g, quoi) for g in GRAINES}
-    assert len(empreintes) == 1, (
+    et c'est pour ça qu'il a vécu si longtemps.
+
+    ⚠️ Le témoin (il vivait dans `test_deux_appels_dans_le_meme_processus…`, parti le 28 sept.
+    2026 — « la même ville dans un seul processus » est `test_carte::test_deterministe`) : un
+    générateur cassé au point de ne rien rendre du tout passerait ce juge au vert."""
+    for g in GRAINES:
+        assert empreintes[g]["ruelles"] > 100, "le décor du juge est faux : plus une seule ruelle"
+    assert len({empreintes[g][quoi] for g in GRAINES}) == 1, (
         f"« {quoi} » change d'un lancement à l'autre : la ville n'est pas "
         f"reproductible, et une sauvegarde ne retrouvera pas son monde"
     )
-
-
-def test_deux_appels_dans_le_meme_processus_donnent_la_meme_ville():
-    """Le témoin du juge d'à côté : dans un seul processus, la ville a toujours
-    été stable. ⚠️ Sans cette mesure, un générateur cassé au point de ne rien
-    rendre du tout passerait le juge précédent au vert."""
-    from app import carte
-    # ⚠️ Deux générations POUR DE VRAI : la ville gardée des juges (`villes`) n'en ferait qu'une.
-    a = json.dumps(carte.exporter()["sol"])
-    b = json.dumps(carte.exporter()["sol"])
-    assert a == b
-    assert len(hashlib.sha256(a.encode()).hexdigest()) == 64
-    assert a.count("x") > 100, "le décor du juge est faux : plus une seule ruelle"

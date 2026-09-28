@@ -115,10 +115,3 @@ def test_sans_aeroport_pas_de_falaises_du_large():
     for y in range(chantier.hauteur):
         for x in range(fiche["montagnes"]["x"]):
             assert ville["sol"][y][x] == "~", (x, y, "le sud a bougé sans aéroport")
-
-
-def test_deterministe():
-    # ⚠️ Deux générations POUR DE VRAI, pas `villes` : c'est le hasard qu'on juge.
-    a, b = carte.generer(), carte.generer()
-    assert a["relief"] == b["relief"]
-    assert a["sol"] == b["sol"]

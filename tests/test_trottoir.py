@@ -156,7 +156,8 @@ def test_une_rue_garde_deux_voies_et_un_boulevard_quatre():
     assert voies == {2, 4}, f"des rues à {sorted(voies)} voies"
     coupe = carte._coupe(min(carte.RUES_V), True)
     assert coupe[0] == (".", ".") and coupe[-1] == (".", "."), "la rue ne commence pas par son trottoir"
-    assert sum(1 for g, _ in coupe if g == ".") == 2 * carte.TROTTOIR, "plus d'une tuile de trottoir par bord"
+    # (« Pas plus d'une tuile de trottoir par bord » : `test_aucune_largeur_de_trottoir_n_est_ecrite_en_dur`,
+    # pour toutes les largeurs de la trame et les deux sens.)
 
 
 def test_aucune_tuile_reservee_ne_tombe_sur_la_chaussee():
@@ -217,6 +218,8 @@ def test_aucune_largeur_de_trottoir_n_est_ecrite_en_dur():
             while bord < len(coupe) and coupe[bord][0] == ".":
                 bord += 1
             assert bord == carte.TROTTOIR, f"rue de {largeur} : {bord} tuiles de trottoir au bord"
+            assert sum(1 for g, _ in coupe if g == ".") == 2 * carte.TROTTOIR, \
+                f"rue de {largeur} : plus de {carte.TROTTOIR} tuile(s) de trottoir par bord"
 
 
 def test_le_flaneur_prefere_la_dalle_a_l_abord(banc):
