@@ -461,8 +461,9 @@ def test_un_superbloc_avale_bien_sa_rue(VILLE_D_AVANT):
 
 
 def test_le_decor_ne_bouche_ni_la_rue_ni_les_portes(CARTE):
-    devants = {(p["x"], p["y"] + 1) for p in CARTE["portes"]}
-    devants |= {(p["x"], p["y"] + 2) for p in CARTE["portes"]}
+    # ⚠️ « Rien devant une porte » se juge dans `test_rien_ne_se_tient_devant_une_porte_meme_peinte`
+    # (graine du jeu comprise) : les portes qui s'ouvrent ET les portes peintes, tout le décor et
+    # le reste de ce qui se pose. Ce juge-ci le refaisait pour le décor seul (vague C, 28 sept. 2026).
     vus = set()
     for morceau in CARTE["decor"]:
         position = (morceau["x"], morceau["y"])
@@ -476,7 +477,6 @@ def test_le_decor_ne_bouche_ni_la_rue_ni_les_portes(CARTE):
             assert glyphe == "~", f"{morceau} declare flotter et est au sec"
         else:
             assert carte.marchable(glyphe), morceau
-        assert position not in devants, f"{morceau} bouche une porte"
         assert position not in vus, f"deux decors sur {position}"
         vus.add(position)
 
@@ -510,6 +510,13 @@ def test_rien_ne_se_tient_devant_une_porte_meme_peinte(CARTE, graine):
     """
     ville = CARTE if graine == carte.GRAINE else villes.generer(graine=graine)
     devants = {}
+    # ⚠️ Les portes qui S'OUVRENT d'abord (`ville["portes"]`), par leur position et pas par
+    # leur glyphe : elles sont toutes sur un `D`, `d` ou `G` aujourd'hui, et ce juge tient
+    # aussi celui d'à côté (`test_le_decor_ne_bouche_ni_la_rue_ni_les_portes`, qui ne les
+    # regarde plus).
+    for p in ville["portes"]:
+        for j in (1, 2):
+            devants[(p["x"], p["y"] + j)] = ("porte", p["x"], p["y"])
     for x, y, genre in _portes_a_l_oeil(ville):
         for j in (1, 2):
             devants[(x, y + j)] = (genre, x, y)
@@ -584,6 +591,23 @@ def test_les_lampadaires_eclairent_depuis_un_trottoir(CARTE):
     )
 
 
+def _coins_des_feux(ville) -> set[tuple[int, int]]:
+    """Les tuiles réservées au MÂT d'un feu : les quatre coins de chaque croisement
+    à quatre bras, et leurs voisines."""
+    reserves = set()
+    for inter in ville["intersections"]:
+        if len(inter["bras"]) < 4:
+            continue
+        for cx, cy in ((inter["x"] + inter["l"], inter["y"] - 1),
+                       (inter["x"] - 1, inter["y"] + inter["h"]),
+                       (inter["x"] - 1, inter["y"] - 1),
+                       (inter["x"] + inter["l"], inter["y"] + inter["h"])):
+            for ix in (-1, 0, 1):
+                for iy in (-1, 0, 1):
+                    reserves.add((cx + ix, cy + iy))
+    return reserves
+
+
 def test_aucun_lampadaire_ne_prend_le_coin_d_un_feu(CARTE):
     """⚠️ **Retour de Martin : « ne mets pas de lampadaire aux intersections,
     déplace-les — ça va laisser la place libre aux feux ».**
@@ -599,17 +623,7 @@ def test_aucun_lampadaire_ne_prend_le_coin_d_un_feu(CARTE):
     s'écarte le long du trottoir — où il éclaire d'ailleurs mieux, entre deux
     croisements plutôt que dessus.
     """
-    reserves = set()
-    for inter in CARTE["intersections"]:
-        if len(inter["bras"]) < 4:
-            continue
-        for cx, cy in ((inter["x"] + inter["l"], inter["y"] - 1),
-                       (inter["x"] - 1, inter["y"] + inter["h"]),
-                       (inter["x"] - 1, inter["y"] - 1),
-                       (inter["x"] + inter["l"], inter["y"] + inter["h"])):
-            for ix in (-1, 0, 1):
-                for iy in (-1, 0, 1):
-                    reserves.add((cx + ix, cy + iy))
+    reserves = _coins_des_feux(CARTE)
     poteaux = [lampe for lampe in CARTE["lampes"]
                # ⚠️ Ni les guirlandes de la foire : elles pendent a un KIOSQUE,
                # pas a un poteau plante — la raison de la vitrine et de la fenetre.
@@ -623,6 +637,21 @@ def test_aucun_lampadaire_ne_prend_le_coin_d_un_feu(CARTE):
     # ⚠️ Et il en reste : ecarter n'est pas supprimer. Sans cette borne, la
     # regle serait tenue par une ville sans lampadaires.
     assert len(poteaux) >= 40, f"{len(poteaux)} lampadaires : la rue est noire"
+
+
+def test_aucune_borne_fontaine_ne_prend_le_coin_d_un_feu():
+    """Même règle que pour les lampadaires : le coin d'un croisement à feux est
+    la place du **mât**. Une borne plantée dessus, c'est le feu qu'on ne voit
+    pas en arrivant.
+
+    ⚠️ Venu de `test_moteur_js` (vague C, 28 sept. 2026), où il ne touchait pas
+    au moteur : il jugeait la ville de `generer`, et il la juge toujours."""
+    ville = villes.generer()
+    reserves = _coins_des_feux(ville)
+    bornes = [(d["x"], d["y"]) for d in ville["decor"] if d["type"] == "borne_fontaine"]
+    assert len(bornes) >= 10, f"{len(bornes)} bornes-fontaines : la ville n'en a presque pas"
+    dessus = [b for b in bornes if b in reserves]
+    assert not dessus, f"{len(dessus)} bornes sur un coin reserve au feu (ex. {dessus[:4]})"
 
 
 def test_les_lieux_des_magasins_et_des_proprietes_existent(CARTE):
@@ -667,7 +696,8 @@ def test_une_autre_graine_redecore_la_meme_ossature(CARTE):
     # qui enferme, et le nombre le dit. (Le juge exigeait zero ; il tenait par
     # chance, et le premier arbre deplace le faisait rougir.)
     assert autre["tuiles_bouchees"] < 40, autre["tuiles_bouchees"]
-    assert CARTE["tuiles_bouchees"] < 10, "la graine du jeu, elle, n'enferme pas une cour"
+    # (La graine du jeu, elle, n'enferme pas une cour : `CARTE["tuiles_bouchees"] < 10`
+    # est jugé par `test_un_barbele_ne_referme_jamais_une_poche`.)
     sans_aller, sans_retour = carte.voies_bloquees(autre)
     assert not sans_aller and not sans_retour
 

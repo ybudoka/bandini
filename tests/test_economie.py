@@ -1,6 +1,8 @@
+import math
+
 import pytest
 
-from app import economie, recherche
+from app import carte, economie, recherche
 
 
 @pytest.mark.parametrize("argent", [0, 10, 500, 100_000])
@@ -143,10 +145,19 @@ def test_la_fourriere_ne_peut_pas_devenir_une_machine_a_argent():
     se revend au garage de Ti-Guy, et on recommence."""
     from app import vehicules
 
-    for v in vehicules.de_phase(1):
+    # ⚠️ TOUT LE CATALOGUE, pas seulement la phase 1 : c'est tout le catalogue qui
+    # descend au navigateur, et le juge du moteur qui faisait la même boucle sur
+    # `paquet["vehicules"]` a été retiré (vague C, 28 sept. 2026) au profit de celui-ci.
+    for v in vehicules.CATALOGUE:
         rachat = economie.prix_rachat(v["prix"])
         revente = economie.prix_vente(v["prix"], v["vie"], v["vie"], 0)
         assert rachat > revente, f"{v['slug']} : rachat {rachat} $, revente {revente} $"
+    # Et ce sont ces nombres-là que le navigateur reçoit : une fraction exportée
+    # qui divergerait de celle de Python rouvrirait la machine à argent en jeu.
+    e = economie.exporter()
+    assert e["vente_fraction"] == economie.VENTE_FRACTION
+    for cle in ("rachat_fraction", "rachat_minimum"):
+        assert e["fourriere"][cle] == economie.FOURRIERE[cle], cle
     assert economie.prix_rachat(1) == economie.FOURRIERE["rachat_minimum"]
     assert economie.FOURRIERE["places"] >= 1
     assert economie.FOURRIERE["etoiles_vol"] >= 1, "reprendre son char sans payer, c'est un vol"
@@ -188,4 +199,42 @@ def test_la_fourriere_laisse_le_temps_de_se_garer():
     assert f["rachat_minimum"] > course, (
         f"racheter ({f['rachat_minimum']} $) coute moins qu'une course ({course} $) : "
         "se faire remorquer ne serait pas une punition"
+    )
+
+
+def test_un_sprint_plein_ouvre_un_ecart_borne_sur_la_police():
+    """⚠️ Rendre la course gratuite casserait toutes les poursuites à pied si on
+    s'arrêtait là : une course gratuite plus rapide que le policier, c'est
+    s'échapper **toujours**, sans rien dépenser. La parade est celle que le
+    dépôt s'est déjà donnée deux fois — le char rapide, les armes à feu : **la
+    vitesse achète de la distance, jamais l'impunité.**
+
+    Donc : le policier court **exactement** à la vitesse de la course (jugé par
+    `test_moteur_js::test_le_joueur_a_trois_vitesses_et_ne_traverse_pas_les_murs`),
+    et c'est le sprint — qui coûte — qui ouvre un écart. Le juge le mesure, et le
+    veut **borné** : assez pour casser une ligne de vue, pas assez pour semer
+    quelqu'un en ligne droite.
+
+    ⚠️ Venu de `test_moteur_js` (vague C, 28 sept. 2026) : le banc ne faisait que
+    multiplier des nombres qu'on lui passait — le calcul, pas la simulation."""
+    v = recherche.VITESSES
+
+    def ecart_px(depense):
+        # Un sprint dure `endurance / cout` images, et il gagne la différence de
+        # vitesse à chaque image. (Arrondi à la façon de `Math.round`.)
+        images = v["endurance"] / (v["endurance_par_image"] * depense)
+        return math.floor((v["joueur_sprint"] - v["policier"]) * images + 0.5)
+
+    tuiles_nu = ecart_px(1) / carte.TUILE_PX
+    tuiles_cafe = ecart_px(economie.CAFE["depense"]) / carte.TUILE_PX
+    assert 5 <= tuiles_nu <= 20, (
+        "un sprint plein ouvre %.1f tuiles : trop peu pour casser une ligne de vue, ou trop pour être une fuite"
+        % tuiles_nu
+    )
+    assert tuiles_cafe > tuiles_nu, "le café doit servir à s'échapper, pas seulement à courir"
+    # ⚠️ Borné, café compris : la vision d'un agent porte 9 tuiles de jour.
+    vision = recherche.VISION["policier"]["jour"]
+    assert tuiles_cafe <= vision * 4, (
+        "%.1f tuiles d'écart, c'est semer la police en ligne droite (vision : %s tuiles)"
+        % (tuiles_cafe, vision)
     )

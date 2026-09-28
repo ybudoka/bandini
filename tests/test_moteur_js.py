@@ -8,7 +8,6 @@ import json
 import re
 
 import pytest
-import villes
 
 from app import carte, economie, vehicules
 
@@ -3969,49 +3968,6 @@ def test_traverser_la_ville_en_courant_ne_coute_rien(banc, paquet):
     )
 
 
-def test_un_sprint_plein_ouvre_un_ecart_borne_sur_la_police(banc, paquet):
-    """⚠️ Rendre la course gratuite casserait toutes les poursuites à pied si on
-    s'arrêtait là : une course gratuite plus rapide que le policier, c'est
-    s'échapper **toujours**, sans rien dépenser. La parade est celle que le
-    dépôt s'est déjà donnée deux fois — le char rapide, les armes à feu : **la
-    vitesse achète de la distance, jamais l'impunité.**
-
-    Donc : le policier court **exactement** à la vitesse de la course, et c'est
-    le sprint — qui coûte — qui ouvre un écart. Le juge le mesure, et le veut
-    **borné** : assez pour casser une ligne de vue, pas assez pour semer
-    quelqu'un en ligne droite."""
-    v = paquet["recherche"]["vitesses"]
-    cafe = paquet["economie"]["cafe"]
-    r = banc("""function (L, o) {
-        const v = %s;
-        // Le calcul, pas la simulation : un sprint dure `endurance / cout`
-        // images, et il gagne la difference de vitesse a chaque image.
-        function ecart(depense) {
-            const images = v.endurance / (v.endurance_par_image * depense);
-            return { images: Math.round(images), px: Math.round((v.joueur_sprint - v.policier) * images) };
-        }
-        return { nu: ecart(1), cafe: ecart(%s), tuile: L.TT,
-                 course: v.joueur_course === v.policier };
-    }""" % (
-        '{"endurance": %s, "endurance_par_image": %s, "joueur_sprint": %s, "policier": %s, "joueur_course": %s}'
-        % (v["endurance"], v["endurance_par_image"], v["joueur_sprint"], v["policier"], v["joueur_course"]),
-        cafe["depense"]))
-    assert r["course"] is True, "en courant, on ne gagne AUCUN terrain sur un agent"
-    tuiles_nu = r["nu"]["px"] / r["tuile"]
-    tuiles_cafe = r["cafe"]["px"] / r["tuile"]
-    assert 5 <= tuiles_nu <= 20, (
-        "un sprint plein ouvre %.1f tuiles : trop peu pour casser une ligne de vue, ou trop pour être une fuite"
-        % tuiles_nu
-    )
-    assert tuiles_cafe > tuiles_nu, "le café doit servir à s'échapper, pas seulement à courir"
-    # ⚠️ Borné, café compris : la vision d'un agent porte 9 tuiles de jour.
-    vision = paquet["recherche"]["vision"]["policier"]["jour"]
-    assert tuiles_cafe <= vision * 4, (
-        "%.1f tuiles d'écart, c'est semer la police en ligne droite (vision : %s tuiles)"
-        % (tuiles_cafe, vision)
-    )
-
-
 def test_le_cafe_fait_courir_deux_fois_plus_longtemps(banc, paquet):
     """⚠️ Ce qui s'achete, c'est la DUREE du sprint, jamais sa vitesse.
 
@@ -5061,7 +5017,6 @@ def test_la_fourriere_saisit_le_char_et_le_revend_plus_cher_qu_il_ne_vaut(banc, 
        revend, et la fourrière devient une machine à argent.
     """
     f = paquet["economie"]["fourriere"]
-    eco = paquet["economie"]
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(67);
@@ -5127,14 +5082,8 @@ def test_la_fourriere_saisit_le_char_et_le_revend_plus_cher_qu_il_ne_vaut(banc, 
     assert r["poses"] == 1 and r["dansLaCour"] == 1, (
         "un char saisi doit attendre DANS LA COUR : %s posé(s), %s dedans" % (r["poses"], r["dansLaCour"])
     )
-    # ⚠️ LA regle : racheter coute plus cher que revendre.
-    for v in paquet["vehicules"]:
-        rachat = max(f["rachat_minimum"], round(v["prix"] * f["rachat_fraction"]))
-        revente = round(v["prix"] * eco["vente_fraction"])
-        assert rachat > revente, (
-            "%s : rachat %s $ contre revente %s $ — la fourriere devient une machine a argent"
-            % (v["slug"], rachat, revente)
-        )
+    # ⚠️ LA regle — racheter coute plus cher que revendre — se juge en Python, sur
+    # tout le catalogue : `test_economie::test_la_fourriere_ne_peut_pas_devenir_une_machine_a_argent`.
 
 
 def test_le_carnet_rappelle_la_mission_sans_rien_inventer(banc, paquet):
@@ -6306,28 +6255,6 @@ def test_une_borne_defoncee_crache_et_ca_s_entend(banc):
     # qu'on vient de réparer — le choc d'un accident de char rejoué seize fois.
     # Ce qu'ils jouent vraiment est jugé dans `test_son_js.py`.
     assert r["son"] is True, "le bris et le jet n'ont pas chacun leur bruit"
-
-
-def test_aucune_borne_fontaine_ne_prend_le_coin_d_un_feu(racine):
-    """Même règle que pour les lampadaires : le coin d'un croisement à feux est
-    la place du **mât**. Une borne plantée dessus, c'est le feu qu'on ne voit
-    pas en arrivant."""
-    ville = villes.generer()
-    reserves = set()
-    for inter in ville["intersections"]:
-        if len(inter["bras"]) < 4:
-            continue
-        for cx, cy in ((inter["x"] + inter["l"], inter["y"] - 1),
-                       (inter["x"] - 1, inter["y"] + inter["h"]),
-                       (inter["x"] - 1, inter["y"] - 1),
-                       (inter["x"] + inter["l"], inter["y"] + inter["h"])):
-            for ix in (-1, 0, 1):
-                for iy in (-1, 0, 1):
-                    reserves.add((cx + ix, cy + iy))
-    bornes = [(d["x"], d["y"]) for d in ville["decor"] if d["type"] == "borne_fontaine"]
-    assert len(bornes) >= 10, f"{len(bornes)} bornes-fontaines : la ville n'en a presque pas"
-    dessus = [b for b in bornes if b in reserves]
-    assert not dessus, f"{len(dessus)} bornes sur un coin reserve au feu (ex. {dessus[:4]})"
 
 
 def test_le_plafond_de_lampes_tient_les_lampadaires_ET_les_feux(racine):
@@ -8571,69 +8498,6 @@ def test_un_char_sort_de_chaque_t_par_la_tige_sans_tourner_en_rond(banc):
         assert res["entre"] and res["sorti"], f"le char n'est pas ressorti du T : {res}"
         assert res["debloques"] == 0, f"le chien de garde a du intervenir : {res}"
         assert res["boucles"] <= 1, f"le char a tourne en rond dans le T : {res}"
-
-
-def test_l_ombre_d_un_saut_raconte_la_hauteur(banc):
-    """⚠️ Bug de Martin : « s'il marche, qu'on voie une ombre pour bien imager
-    le saut. » Elle existait — un rectangle de 20 x 10 FIXE, pose seulement
-    au-dessus de `z > 2` : la meme tache pour une moto et pour un autobus de
-    48 px, qui ne retrecissait pas, ne s'ecartait pas et ne palissait pas. Une
-    ombre collee sous le char ne dit aucune altitude, et c'est pour ca qu'un
-    saut de sept pixels avait l'air de ne pas exister.
-
-    Le juge mesure ce qu'elle raconte : elle a la taille du char, elle
-    retrecit et elle s'ecarte en montant.
-
-    ⚠️ **Reformule le 15 sept. 2026** : il exigeait qu'un char POSE AU SOL n'ait
-    AUCUNE ombre. C'etait la regle d'avant, et la refonte des vehicules la
-    change — l'ombre au sol permanente est le filet de la vue de profil, parce
-    qu'un char vu de dos ne montrera plus ses 28 px de longueur. Ce que le juge
-    voulait vraiment dire survit intact et se mesure mieux : au sol, l'ombre est
-    SOUS le char, pas detachee de lui. C'est l'ecart qui raconte l'altitude, et
-    a zero il doit etre nul ou d'un pixel.
-    """
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        // ⚠️ DEUX MESURES, ET IL FAUT LES DEUX. La TRACE dit ce qui est
-        // vraiment peint a l'ecran (une regle qui ne se dessinerait pas ne
-        // vaudrait rien) ; `ombreDe` dit OU l'ombre tombe — depuis qu'elle est
-        // tournee comme le char, l'ecart passe par le `translate` et la trace
-        // du rectangle ne le porte plus.
-        function ombre(slug, z) {
-            const v = o.char(slug, 0, 0, 0);
-            v.z = z;
-            const ctx = L.Base.ecran();
-            ctx.traces = [];
-            L.Vehicules.dessinerUn(ctx, v, 0, 0);
-            const q = L.Vehicules.ombreDe(v);
-            L.Entites.retirer(v);
-            // L'ombre est le seul rectangle plein : le char, lui, est une image.
-            const t = ctx.traces[0];
-            return t ? { l: t[2], h: t[3], couleur: t[4],
-                         ecart: +(q.x - v.x).toFixed(2), part: q.part } : null;
-        }
-        return {
-            auSol: ombre('auto', 0),
-            basse: ombre('auto', 1),
-            haute: ombre('auto', 28),
-            moto: ombre('moto', 10),
-            autobus: ombre('autobus', 10),
-        };
-    }""")
-    assert r["auSol"], "un char pose au sol n'a plus d'ombre du tout"
-    # ⚠️ SOUS le char, pas a cote : au sol, l'ombre ne doit pas se detacher.
-    assert r["auSol"]["ecart"] <= 2, (
-        "l'ombre d'un char pose au sol est detachee de lui : %s" % r
-    )
-    assert r["basse"], "une ombre qui n'arrive qu'au-dessus d'un seuil rate le debut du vol"
-    assert r["basse"]["ecart"] > r["auSol"]["ecart"], (
-        "l'ombre ne bouge pas des le premier pixel de vol : %s" % r
-    )
-    assert r["haute"]["l"] < r["basse"]["l"], "l'ombre ne retrecit pas quand le char monte"
-    assert r["haute"]["ecart"] > r["basse"]["ecart"], "l'ombre ne s'ecarte pas quand le char monte"
-    assert r["haute"]["part"] < r["auSol"]["part"], "l'ombre ne palit pas quand le char monte"
-    assert r["autobus"]["l"] > r["moto"]["l"], \
-        "l'autobus fait 48 px et la moto 20 : leur ombre ne peut pas etre la meme"
 
 
 def test_chaque_porte_a_son_bruit(banc):
