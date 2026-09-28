@@ -52,12 +52,9 @@ def test_un_defi_qui_se_debloque_n_est_jamais_le_defi_du_jour():
     assert caches, "le catalogue a des defis a debloquer"
     vus = {defi.defi_du(date(2026, 1, 1) + timedelta(days=k)) for k in range(400)}
     assert not vus & caches
+    # Et toutes les réponses nomment un défi qui existe (et qui tourne).
+    assert vus <= set(SLUGS), vus - set(SLUGS)
     assert defi.defi_du(date(2026, 9, 23)) == "tour_shop", "le 23 sept. 2026 reste celui qu'il etait"
-
-
-def test_toutes_les_reponses_nomment_un_defi_qui_existe():
-    for k in range(400):
-        assert defi.defi_du(date(2026, 1, 1) + timedelta(days=k)) in SLUGS
 
 
 @pytest.mark.parametrize("veille,lendemain", [
