@@ -42,24 +42,6 @@ def test_m52_prend_la_chaloupe_amarree_pres_de_sven(banc):
                                             and abs(r["place"]["y"] - r["amarrage"]["y"]) < 20)
 
 
-def test_m52_va_jusqu_au_bout_et_paie(banc):
-    """La chaîne complète (les étapes qui ne dépendent pas du piratage) : sauter au dernier
-    objectif, réussir, encaisser — comme les juges existants le font pour m4/m5."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const avant = L.B.partie.argent;
-        L.Histoire.commencer('m52');
-        o.frame(2); L.B.cinema = null; L.B.scene = null;
-        L.B.partie.mission.etape = 6;                  // `retourner`, déjà fait ailleurs
-        L.Histoire.reussir();
-        return { argent: L.B.partie.argent - avant, mission: L.B.partie.mission,
-                 faite: L.B.partie.missionsFaites && L.B.partie.missionsFaites.m52 };
-    }""")
-    assert r["argent"] == 350, r
-    assert r["mission"] is None, "la mission reste ouverte après reussir()"
-    assert r["faite"]
-
-
 def test_m53_les_deux_quais_de_chalutier_sont_distincts(banc):
     """`mouillage:chalutier:0` et `:1` : deux places différentes — sinon `monter` et
     `livrer` de m53 visent la même coque et le trajet n'existe pas."""
@@ -87,19 +69,6 @@ def test_m53_prend_le_chalutier_au_bon_quai(banc):
     assert r["aQui"] == "sven"
     assert r["place"] == r["cible"], "le chalutier ne naît pas au centre exact de son mouillage"
     assert r["angle"] == r["cibleAngle"], "il ne part pas dans le sens de son chenal"
-
-
-def test_m53_va_jusqu_au_bout_et_paie(banc):
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const avant = L.B.partie.argent;
-        L.Histoire.commencer('m53');
-        o.frame(2); L.B.cinema = null; L.B.scene = null;
-        L.B.partie.mission.etape = 6;                  // `retourner`
-        L.Histoire.reussir();
-        return { argent: L.B.partie.argent - avant };
-    }""")
-    assert r["argent"] == 500, r
 
 
 def test_m54_prend_la_coque_decorative_sans_la_dedoubler(banc):
@@ -131,33 +100,6 @@ def test_m54_prend_la_coque_decorative_sans_la_dedoubler(banc):
     assert r["meme"], "la mission a fait naître un second porte-conteneurs au lieu de prendre celui qui dormait"
     assert r["aQui"] == "sven"
     assert r["combien"] == 1, "deux porte-conteneurs collés au même quai"
-
-
-def test_m54_semer_puis_le_hangar_et_ca_paie(banc):
-    """Le `semer` (2 étoiles) avance vers le hangar de l'île, puis la chaîne jusqu'au bout paie.
-    ⚠️ En sautant `monter`, aucun véhicule de mission n'existe : `livrer` le refuserait
-    (`vehicule_detruit`, à raison — sans char, rien à livrer) — on en pose un factice,
-    comme `poser()` l'aurait fait pour de vrai."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const avant = L.B.partie.argent;
-        L.Histoire.commencer('m54');
-        o.frame(2); L.B.cinema = null; L.B.scene = null;
-        L.B.partie.mission.etape = 2;                  // `semer`
-        L.B.mission.vehicule = { etat: 'stationne', mission: 'm54' };
-        L.B.recherche.etoiles = 2;
-        const enCoursDePoursuite = L.Histoire.objectif().type === 'semer';
-        L.B.recherche.etoiles = 0;                      // semée
-        o.frame(4);                                      // le pas fixe : jamais fier d'une seule image
-        const apresSemer = L.B.partie.mission.etape;
-        L.B.partie.mission.etape = 7;                  // `retourner`
-        L.Histoire.reussir();
-        return { argent: L.B.partie.argent - avant, enCoursDePoursuite: enCoursDePoursuite,
-                 apresSemer: apresSemer };
-    }""")
-    assert r["enCoursDePoursuite"]
-    assert r["apresSemer"] == 3, "semer à 0 étoile ne fait pas avancer vers le hangar de l'île"
-    assert r["argent"] == 900, r
 
 
 # --- Les trois actes joués jusqu'au bout (22 sept. 2026, « des missions plus longues ») ---------
@@ -289,9 +231,15 @@ OUTILS = """
     fermer(L); images(L, o, 2);
     return !L.B.piratage;
   }
+  // ⚠️ Chaque paiement, et si la mission le paie SANS BOSSE (`reussir` : la prime + la moitié) —
+  // lu au moment même où `reussir` le lit. Un juge exige ainsi la prime EXACTE de la fiche.
+  const SANS_BOSSE = [];
   function paiements(L) {
     const liste = [], vrai = L.Missions.encaisser;
-    L.Missions.encaisser = function (montant) { liste.push(montant); return vrai.apply(null, arguments); };
+    L.Missions.encaisser = function (montant) {
+      liste.push(montant); SANS_BOSSE.push(!!(L.B.mission && L.B.mission.sansBosse));
+      return vrai.apply(null, arguments);
+    };
     return liste;
   }
 """
@@ -331,7 +279,7 @@ def test_m52_joue_jusqu_au_bout_par_l_ile(banc):
         const sven = L.Histoire.donneur('sven');
         vu.marcheSven = marcher(L, o, sven, 14, bilan);
         images(L, o, 400); passer(L, o);
-        return { vu: vu, bilan: bilan, fait: !!B.partie.missionsFaites.m52, argent: argent,
+        return { vu: vu, bilan: bilan, fait: !!B.partie.missionsFaites.m52, argent: argent, sansBosse: SANS_BOSSE,
                  mission: B.partie.mission && B.partie.mission.etape, msg: B.msg };
     }""")
     vu = r["vu"]
@@ -343,6 +291,10 @@ def test_m52_joue_jusqu_au_bout_par_l_ile(banc):
     assert vu["rembarque"] and vu["navigueQuai"] and vu["guetteurQuai"] == 4, "l'autre quai ne se longe pas : %s" % r
     assert vu["navigueSven"] and vu["couches2"] == 1 and vu["retourner"] == 6, r
     assert r["fait"] and r["argent"] in ([350], [525]), "350 $, ou 525 avec la prime sans dégâts : %s" % r
+    # ⚠️ La prime EXACTE : 350, ou 525 seulement si `reussir` a payé sans bosse (le juge « sauter à
+    # la fin et encaisser » l'exigeait à 350 pile ; il est parti le 28 sept. 2026, sa règle est ici).
+    assert r["argent"] == ([525] if r["sansBosse"] == [True] else [350]), r
+    assert r["mission"] is None, "la mission reste ouverte après reussir()"
     assert r["bilan"]["eau"] > 25, "l'île est à l'autre bout de la baie : %s s d'eau à fond" % r["bilan"]
 
 
@@ -378,7 +330,7 @@ def test_m53_joue_jusqu_au_bout_par_le_clocher(banc):
         vu.retourner = etape(L);                                            // 6 : Sven
         vu.marcheSven = marcher(L, o, L.Histoire.donneur('sven'), 14, bilan);
         images(L, o, 400); passer(L, o);
-        return { vu: vu, bilan: bilan, fait: !!B.partie.missionsFaites.m53, argent: argent, msg: B.msg };
+        return { vu: vu, bilan: bilan, fait: !!B.partie.missionsFaites.m53, argent: argent, sansBosse: SANS_BOSSE, msg: B.msg };
     }""")
     vu = r["vu"]
     assert vu["monter"] == 1 and vu["navigueQuai"] and vu["relais"] == 2, r
@@ -389,6 +341,7 @@ def test_m53_joue_jusqu_au_bout_par_le_clocher(banc):
     assert vu["pirateClocher"] and vu["retour"] == 5, "le clocher ne se pirate pas : %s" % r
     assert vu["rembarque2"] and vu["navigueSven"] and vu["retourner"] == 6 and vu["marcheSven"], r
     assert r["fait"] and r["argent"] in ([500], [750]), "500 $, ou 750 avec la prime sans dégâts : %s" % r
+    assert r["argent"] == ([750] if r["sansBosse"] == [True] else [500]), r
     assert r["bilan"]["eau"] > 25, "l'île est à l'autre bout de la baie : %s s d'eau à fond" % r["bilan"]
 
 
@@ -409,6 +362,7 @@ def test_m54_joue_jusqu_au_bout_par_le_hangar(banc):
         vu.monter = etape(L);                                               // 1 : monter
         const v = B.mission.vehicule;
         vu.embarque = embarquer(L, o, v) && etape(L);                       // 2 : semer
+        vu.semer = L.Histoire.objectif() && L.Histoire.objectif().type;
         vu.etoiles = B.recherche.etoiles;
         B.recherche.etoiles = 0; images(L, o, 4);
         vu.hangar = etape(L);                                               // 3 : le hangar de l'île
@@ -432,15 +386,18 @@ def test_m54_joue_jusqu_au_bout_par_le_hangar(banc):
         vu.retourner = etape(L);                                            // 7 : Sven
         vu.marcheSven = marcher(L, o, L.Histoire.donneur('sven'), 14, bilan);
         images(L, o, 400); passer(L, o);
-        return { vu: vu, bilan: bilan, fait: !!B.partie.missionsFaites.m54, argent: argent, msg: B.msg };
+        return { vu: vu, bilan: bilan, fait: !!B.partie.missionsFaites.m54, argent: argent, sansBosse: SANS_BOSSE, msg: B.msg };
     }""")
     vu = r["vu"]
     assert vu["marcheRegistre"] and vu["pirateRegistre"] and vu["monter"] == 1, r
     assert vu["embarque"] == 2 and vu["etoiles"] == 2 and vu["hangar"] == 3, r
+    assert vu["semer"] == "semer", "l'étape 2 de m54 n'est pas une poursuite à semer : %s" % r
+    assert vu["hangar"] == 3, "semer à 0 étoile ne fait pas avancer vers le hangar de l'île"
     assert vu["gpsHangar"] is not None and vu["gpsHangar"] < 16, "la flèche ne mène pas au hangar : %s" % r
     assert vu["navigueIle"] and vu["debarque"] and vu["marcheIle"], "le porte-conteneurs ne mène pas à l'île : %s" % r
     assert vu["pirateHangar"] and vu["morues"] == 4 and vu["couches"] == 3 and vu["retour"] == 5, r
     assert vu["rembarque"] and vu["navigueSven"] and vu["registreRetour"] == 6, r
     assert vu["marcheRegistre2"] and vu["pirateRegistre2"] and vu["retourner"] == 7 and vu["marcheSven"], r
     assert r["fait"] and r["argent"] in ([900], [1350]), "900 $, ou 1 350 avec la prime sans dégâts : %s" % r
+    assert r["argent"] == ([1350] if r["sansBosse"] == [True] else [900]), r
     assert r["bilan"]["eau"] > 30, "l'île est à l'autre bout de la baie : %s s d'eau à fond" % r["bilan"]
