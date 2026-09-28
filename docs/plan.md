@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (273 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (274 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -85,7 +85,6 @@ pas quand l'ordre de travail change.
 | L'école rivale : les Mantes, un gang qui sait se battre | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/l-ecole-rivale.md#fiche) |
 | Le casino du Petit-Canton | ⬜ **en cours** (✅ vague 1 livrée : le Dragon d'or, sa grande salle, ses vidéopokers et ses machines à sous ; ⬜ vague 2 **en cours** — les tables : blackjack, roulette, poker à trois cartes, sic bo, baccara ; restent la triche, le tripot du sous-sol) | 28 sept. 2026 | **P4** | ajout | [fiche](jalons/le-casino-du-petit-canton.md#fiche) |
 | Une triche : les machines sans limite | ⬜ **en cours** | 28 sept. 2026 | **P4** | ajout | [fiche](jalons/une-triche-les-machines-sans-limite.md#fiche) |
-| Les concessionnaires — le char en montre | ⬜ **en cours** (en diagonale au coin, un autre chaque jour ; au Salon et chez Ti-Pout) | 28 sept. 2026 | **P4** | ajout | [fiche](jalons/les-concessionnaires-le-neuf-aux-erables-l-usage-dans-les-friches.md#fiche-du-char-en-montre) · [notes](jalons/les-concessionnaires-le-neuf-aux-erables-l-usage-dans-les-friches.md#notes) |
 | Les 4 roues | ⬜ **en cours** (vague 1 : le véhicule — hors route, stable, deux places, il saute — garé dans les Friches et au chalet ; puis la course des Friches, et le concessionnaire) | 28 sept. 2026 | **P4** | ajout | [fiche](jalons/les-4-roues.md#fiche) |
 | L'Île-aux-Corneilles — troisième vague : le traversier y accoste | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/l-ile-aux-corneilles.md#fiche) · [notes](jalons/l-ile-aux-corneilles-deuxieme-vague.md#notes) |
 | La réputation et la lecture des passants | ⬜ **à faire** (à trancher par Martin) | — | **P4** | ajout | [fiche](jalons/la-reputation-et-la-lecture-des-passants.md#fiche) |
@@ -129,7 +128,6 @@ Ce que chaque ligne à faire attend (la table de tri du 13 sept. 2026, réduite 
 | **P4** | ajout | L'Île-aux-Corneilles | 3 | **les zones conditionnelles** d'abord ; l'eau est livrée, le traversier (M12) viendra après et l'île l'attend sans lui |
 | **P4** | ajout | M16 Cent missions | 8 (4 × 2) | le **carnet** d'abord (c'est lui qui rend cent missions lisibles) et **les missions mises en scène** (chaque mission porte ses scènes et ses dialogues) ; ⚠️ les dialogues et les scènes sortent du paquet ; M13 en est la dernière tranche |
 | **P4** | ajout | M13 Les deux fins | 4 | **M8** pour les districts, et ça gagne à suivre **M10** : la dette de Rocco est le fil des deux fins. C'est la fin — elle se pose en dernier |
-| **P4** | ajout | Les concessionnaires — le char en montre | 1 | les concessionnaires sont livrés ; ⚠️ rien au décor (la dalle se peint au sol), sans dé |
 | **P4** | ajout | Des choses à collectionner, et la planque qu'on décore | 3 | rien ne l'attend ; ⚠️ poser les objets **en dernier, sans dé** (sinon la ville glisse) ; le décor conditionnel de la planque sert aussi à la deuxième |
 | **P4** | ajout | Des photos pour le Clairon | 2 | le **personnage de Louise** d'abord (M16, arc C) ; le mode photo existe |
 | **P4** | ajout | Les territoires des gangs bougent | 3 | `libere` et `calme` de M16 d'abord ; à trancher avec « La réputation et la lecture des passants » |

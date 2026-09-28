@@ -306,3 +306,12 @@ un char cabossé ou poussé se vend plein prix ; le camion de Ti-Pout (40 px) mo
 jour », à l'empreinte).
 
 **Et une ligne d'une autre session s'y branche** : « les 4 roues » veut en vendre chez le concessionnaire.
+
+### Le char en montre (28 sept. 2026)
+
+Livré comme la fiche le dit, au Salon et chez Ti-Pout (`lot["montre"]`, `Vehicules.majMontre`) : au Salon, la dalle
+prend deux tuiles de pelouse et d'abord à l'est de la façade, contre le croisement (une seule tuile de pelouse
+devient de l'abord : rien au décor) ; chez Ti-Pout, le coin sud-est de la cour, contre la trouée. Le modèle du jour
+se lit à `(jour - 1) % n`, et celui d'hier n'est rentré que s'il est encore sur sa dalle, stationné, à personne, et
+HORS CHAMP. Au comptoir, « EN MONTRE — » en tête, au prix du modèle (`prixDeMontre`). Juges : deux en Python, trois
+au banc (la garde « pas sous les yeux » vue rouge par mutation).
