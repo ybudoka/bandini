@@ -192,6 +192,9 @@ function etatInitial(defs) {
     mission: null,        // { slug, etape } — la mission en cours
     appels: {},           // les appels recus, par mission
     appelT: null,
+    //: LE TÉLÉPHONE QUI TRIE (M16) : la demi-journée (`jour * 2`, `+ 1` passé midi) du dernier
+    //: appel décroché. ⚠️ Jamais deux appels dans la même : null tant qu'on n'en a reçu aucun.
+    dernierAppel: null,
     defisFaits: {},
     //: Les defis DEBLOQUES en cours de partie (`debloque` du catalogue) : slug ->
     //: `{ jour, lu }`. ⚠️ Une fois ouvert, un defi le reste — meme ouvert par la

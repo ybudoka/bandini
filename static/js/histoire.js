@@ -1038,6 +1038,7 @@ const Histoire = (function () {
       // annonce une mission deja prise (ou deja annoncee) ne se dit pas.
       if (!m || p.appels[m.slug] || !disponibles().some(function (x) { return x.slug === m.slug; })) return;
       p.appels[m.slug] = true;
+      p.dernierAppel = demiJournee();
       dire(m, 'appel', function () { Hud.message('VA VOIR ' + personnage(m.donneur).nom.toUpperCase(), 180); });
       return;
     }
@@ -1046,7 +1047,7 @@ const Histoire = (function () {
     // deja une tautologie : la seule mission sans replique d'appel est la premiere, et
     // elle n'a pas de prerequis. Un juge de `missions.py` tient les deux ensemble.
     const dispo = disponibles();
-    const prochaine = dispo.find(function (m) { return m.prerequis.length && !p.appels[m.slug]; });
+    const prochaine = plusProche(dispo.filter(function (m) { return m.prerequis.length && !p.appels[m.slug]; }));
     if (!prochaine) return;
     // ⚠️ Son texte AVANT sa sonnerie : il vole pendant que le delai s'ecoule, et le
     // combine ne sonne jamais sur une mission qui n'aurait rien a dire.
@@ -1059,11 +1060,36 @@ const Histoire = (function () {
     // echeance plus loin que le plus long des delais vient d'une autre session.
     if (p.appelT === undefined || p.appelT === null || p.appelT - B.t > DELAI_RELANCE) { p.appelT = B.t + delai; return; }
     if (B.t < p.appelT) return;
+    // ⚠️ LE TÉLÉPHONE QUI TRIE (M16, 28 sept. 2026). Avec cent missions, il sonnerait sans
+    // arrêt : jamais deux appels dans la même DEMI-JOURNÉE (l'échéance tient, et ça sonne dès
+    // que la suivante commence), et jamais à trois étoiles et plus — on ne décroche pas en
+    // pleine poursuite. Le donneur qu'on croise hèle quand même (`majBulles`) : le téléphone
+    // n'est qu'une des deux portes.
+    if (typeof p.dernierAppel === 'number' && demiJournee() <= p.dernierAppel) return;
+    if (B.recherche && B.recherche.etoiles >= 3) return;
     p.appelT = null;
     // `Son.SFX.telephone()` rend ce que dure la sonnerie, en secondes (le mp3,
     // ou les trois bips de la synthese) ; 60 images font une seconde, et une
     // image au moins : le dialogue ne part jamais dans celle ou ca sonne.
     B.sonnerie = { slug: prochaine.slug, t: B.t + Math.max(1, Math.round((Son.SFX.telephone() || 0) * 60)) };
+  }
+
+  /** La demi-journée de la partie : deux par jour, minuit-midi puis midi-minuit. */
+  function demiJournee() { return B.partie.jour * 2 + (B.partie.heure >= 0.5 ? 1 : 0); }
+
+  /** Des missions à annoncer, celle dont le donneur se tient le PLUS PRÈS : il appelle
+      d'abord (M16). ⚠️ Sa porte en ville (`lieuDuPersonnage`), pas son sprite : un donneur
+      qui marche ne change pas qui appelle, et le choix ne dépend que de la carte. À égalité
+      — ou sans adresse —, l'ordre du catalogue, qui reste celui de l'histoire. */
+  function plusProche(liste) {
+    const j = B.joueur;
+    let meilleure = null, dMin = Infinity;
+    for (const m of liste) {
+      const l = lieuDuPersonnage(m.donneur);
+      const d = l && j ? dist2(l.x, l.y, j.x, j.y) : Infinity;
+      if (!meilleure || d < dMin) { meilleure = m; dMin = d; }
+    }
+    return meilleure;
   }
 
   // --- Parler a quelqu'un -----------------------------------------------------------------
