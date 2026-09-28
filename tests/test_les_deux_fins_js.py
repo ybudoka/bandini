@@ -10,6 +10,8 @@ _Le Boss_ (m98) viendra avec la vague 2 : il demande quatre districts libérés,
 aujourd'hui (docs/jalons/m13-les-deux-fins.md).
 """
 
+import pytest
+
 OUTILS = """
   function faites(L, slugs) { slugs.forEach(function (s) { L.B.partie.missionsFaites[s] = 1; }); }
   function ici(L, l) { const j = L.B.joueur; j.x = l.x; j.y = l.y; L.Entites.indexer(); }
@@ -31,15 +33,28 @@ PREPARER = """
 """
 
 
-def test_le_capitaine_berube_se_tient_au_bout_du_quai_du_traversier(banc):
+#: ⚠️ UN SEUL BANC pour les deux juges courts (vague C, 28 sept. 2026) : même mise en place
+#: (`PREPARER`), et aucun ne joue d'image. Bérubé et son quai se lisent d'abord ; l'argent, que
+#: le second juge touche, ne change rien à où ils se tiennent.
+@pytest.fixture(scope="module")
+def _courts(banc):
+    return banc("function (L, o) {" + OUTILS + PREPARER + """
+        const b = L.Histoire.donneur('berube'), q = L.Histoire.lieu('traversier:quais');
+        const quai = { b: b ? { x: b.x, y: b.y, marche: L.Monde.marchablePieton(Math.floor(b.x / L.TT), Math.floor(b.y / L.TT)) } : null,
+                       q: q ? { x: q.x, y: q.y, nom: q.nom } : null,
+                       pointe: !!L.Histoire.lieu('traversier:pointe'), rien: L.Histoire.lieu('traversier:nulle_part') };
+        B.partie.argent = 14999;
+        const pauvre = L.Histoire.disponibleDe ? !!L.Histoire.disponibleDe('berube') : null;
+        B.partie.argent = 15000;
+        const riche = L.Histoire.disponibleDe ? !!L.Histoire.disponibleDe('berube') : null;
+        return { quai: quai, argent: { pauvre: pauvre, riche: riche } };
+    }""")
+
+
+def test_le_capitaine_berube_se_tient_au_bout_du_quai_du_traversier(_courts):
     """`ou: "traversier:quais"` : posé à côté du bout du quai, sur du marchable, là où la flèche
     du GPS d'un `aller` vers `traversier:quais` le trouve."""
-    r = banc("function (L, o) {" + OUTILS + PREPARER + """
-        const b = L.Histoire.donneur('berube'), q = L.Histoire.lieu('traversier:quais');
-        return { b: b ? { x: b.x, y: b.y, marche: L.Monde.marchablePieton(Math.floor(b.x / L.TT), Math.floor(b.y / L.TT)) } : null,
-                 q: q ? { x: q.x, y: q.y, nom: q.nom } : null,
-                 pointe: !!L.Histoire.lieu('traversier:pointe'), rien: L.Histoire.lieu('traversier:nulle_part') };
-    }""")
+    r = _courts["quai"]
     assert r["q"], "le quai du traversier n'est pas un lieu"
     assert r["pointe"] and r["rien"] is None
     assert r["b"], "le capitaine Bérubé n'est pas en ville"
@@ -125,13 +140,7 @@ def test_m99_le_dernier_traversier_se_joue_jusqu_au_generique_puis_la_ville_rest
     assert r["bouge"] > 10, "après le générique, le joueur ne bouge plus"
 
 
-def test_m99_ne_s_ouvre_qu_avec_quinze_mille_piastres(banc):
+def test_m99_ne_s_ouvre_qu_avec_quinze_mille_piastres(_courts):
     """`exige: {argent_min: 15000}` : sans l'argent, Bérubé n'a pas de mission à donner."""
-    r = banc("function (L, o) {" + OUTILS + PREPARER + """
-        B.partie.argent = 14999;
-        const pauvre = L.Histoire.disponibleDe ? !!L.Histoire.disponibleDe('berube') : null;
-        B.partie.argent = 15000;
-        const riche = L.Histoire.disponibleDe ? !!L.Histoire.disponibleDe('berube') : null;
-        return { pauvre: pauvre, riche: riche };
-    }""")
+    r = _courts["argent"]
     assert r == {"pauvre": False, "riche": True}, r

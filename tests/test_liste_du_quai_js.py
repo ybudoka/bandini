@@ -5,6 +5,8 @@ Sven affiche quatre modèles ; on lui en livre un par jour, à l'arrêt au bout 
 la liste se renouvelle. Il paie mieux que le garage, jamais le neuf.
 """
 
+import pytest
+
 from app import economie, vehicules
 
 REGLES = economie.LISTE_DU_QUAI
@@ -34,8 +36,13 @@ AU_QUAI = """
 """
 
 
-def test_une_livraison_par_jour_sans_bosse_et_la_liste_se_renouvelle(banc):
-    r = banc("function (L, o) {" + AU_QUAI + """
+#: ⚠️ UN SEUL BANC pour les deux juges du navigateur (vague C, 28 sept. 2026) : la livraison se
+#: joue, puis on relit la liste sous deux graines. `listeDuQuai(jour)` ne lit que le jour — c'est
+#: la règle même que le second juge tient : une liste qui dépendrait d'autre chose (le dé, ou ce
+#: que la livraison a changé) ferait différer les deux graines, ou le renouvellement.
+@pytest.fixture(scope="module")
+def _quai(banc):
+    return banc("function (L, o) {" + AU_QUAI + """
         L.Jeu.commencer();
         const B = L.B, M = L.Missions, p = B.partie;
         const liste = M.listeDuQuai(p.jour);
@@ -60,9 +67,17 @@ def test_une_livraison_par_jour_sans_bosse_et_la_liste_se_renouvelle(banc):
         const avant = M.listeDuQuai(p.jour).join();
         p.jour += B.defs.economie.liste_du_quai.renouvelle_jours;
         const apres = M.listeDuQuai(p.jour).join();
-        return { liste: liste, horsListe: horsListe, bosse: bosse, livre: livre, memeJour: memeJour, lendemain: lendemain,
-                 change: avant !== apres, livres: M.etatDuQuai().livres.length, info: M.texteDuQuai(B.joueur) };
+        const livraison = { liste: liste, horsListe: horsListe, bosse: bosse, livre: livre, memeJour: memeJour, lendemain: lendemain,
+                            change: avant !== apres, livres: M.etatDuQuai().livres.length, info: M.texteDuQuai(B.joueur) };
+        // Le second juge : la meme liste pour tout le monde, quelle que soit la graine.
+        const graines = [];
+        for (const g of [1, 4242]) { L.graine(g); graines.push([1, 5, 9, 13].map(function (j) { return M.listeDuQuai(j).join(); })); }
+        return { livraison: livraison, graines: graines };
     }""")
+
+
+def test_une_livraison_par_jour_sans_bosse_et_la_liste_se_renouvelle(_quai):
+    r = _quai["livraison"]
     assert len(r["liste"]) == REGLES["nombre"] and len(set(r["liste"])) == REGLES["nombre"], r["liste"]
     assert r["horsListe"]["paye"] == 0 and r["horsListe"]["garde"], r
     assert r["bosse"]["paye"] == 0 and r["bosse"]["garde"], r
@@ -73,12 +88,7 @@ def test_une_livraison_par_jour_sans_bosse_et_la_liste_se_renouvelle(banc):
     assert r["info"] and r["info"].startswith("LA LISTE DE SVEN"), r["info"]
 
 
-def test_la_meme_liste_pour_tout_le_monde(banc):
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const out = [];
-        for (const g of [1, 4242]) { L.graine(g); out.push([1, 5, 9, 13].map(function (j) { return L.Missions.listeDuQuai(j).join(); })); }
-        return out;
-    }""")
+def test_la_meme_liste_pour_tout_le_monde(_quai):
+    r = _quai["graines"]
     assert r[0] == r[1]
     assert len(set(r[0])) > 1, "la liste ne se renouvelle jamais"
