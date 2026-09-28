@@ -171,7 +171,7 @@ attend son **juge de banc** avant de porter une mission) :
 | `acheter` | un article à un comptoir | `article`, `ou` |
 | `detruire` | un véhicule de la mission | `vehicule` (le char posé), `ou` (où il naît) |
 | `sauter` | une rampe | `vol_px` (le juge du Grand Saut) |
-| `eteindre` | un feu à l'extincteur (le jet existe, le feu de char aussi) | — |
+| `eteindre` | le feu **de la mission** (depuis le 28 sept. 2026) : il prend sur la façade la plus proche de `ou` (`Incendies.allumerPourMission`, une spirale sans dé), se pose avant l'intro (la caméra le filme), résiste un tiers de seconde au jet d'extincteur, ne paie pas la prime du pompier volontaire et s'en va avec la mission ; la flèche le pointe. Avec `remet: "extincteur"`, le donneur en met un plein dans les mains. Exemple : `f13` | `ou` (un lieu **déjà** de mission — une porte neuve élargirait son devant, et la ville glisserait) |
 | `boulots` | `n` boulots d'une `sorte` (généralise `courses`, qui reste au taxi) | `n`, `sorte` |
 | `pirater` | s'approcher de `ou`, ACTION l'ouvre, guider une étincelle dans un labyrinthe électrifié (`circuit.js`, depuis le 27 sept. 2026) de la prise au port avec le stick (le même axe unifié que la marche, `Entree.axe` — clavier, manette, doigt) ; un fil touché est un zap (retour au relais), au-delà de `essais` zaps c'est l'échec `alarme` ; le tracé vient de l'empreinte (mission, étape), `longueur` + 3 colonnes sur 4 rangées ; la flèche mène au terminal (le poste, pour un mouillage) — un `ou` loin du donneur se trouve (l'île de m53, m54) | `ou`, `rayon` (déf. 3), `longueur` (déf. 4), `essais` (déf. 3) |
 | `obtenir` | (l'infiltration, 28 sept. 2026) un objet dans le sac (`partie.objets[objet]`), d'où qu'il vienne : posé à son lieu (`ou`) et ramassé en marchant dessus, ou dans la poche d'un garde de ronde (`garde`, le slug de sa ronde dans la fiche du bloc — `ou` ne dit alors que où le chercher), volé par-derrière (ACTION, il ne sent rien) ou lâché quand on l'assomme ; `nom` : ce que le HUD dit en le prenant ; `dessin` : `cle`, `dossier`, `registre` ou `sac` (jugé). Une mission ratée fait retomber ce que ses objectifs avaient mis dans le sac (`Infiltration.rendre`) | `objet`, `ou`, `garde`, `nom`, `dessin` |
@@ -181,11 +181,16 @@ attend son **juge de banc** avant de porter une mission) :
 code que le terminal piraté crache (`pirater` de v03, `objet: code_voute`), et qui ouvre la serrure du
 bloc qui l'attend. `obtenir` le met lui-même, au moment où on le ramasse.
 
-**Les quatre options transverses** (`OPTIONS_OBJECTIFS`) : ce ne sont **pas**
+**Les options transverses** (`OPTIONS_OBJECTIFS`) : ce ne sont **pas**
 des types, mais des clés qui se posent sur **n'importe quel** objectif —
-`chrono_s` (le chrono, que le défi avait déjà), `sans_etoile` (échec `etoile`
-dès qu'on est vu), `sans_arme` (en territoire de gang les mains vides),
-`contre` (des adversaires sur une `course`).
+`chrono_s` (le chrono, que le défi avait déjà ; la ligne d'objectif affiche le temps qui
+reste depuis le 28 sept. 2026), `sans_etoile` (échec `etoile` dès qu'on est vu), `sans_arme`
+(en territoire de gang les mains vides — ⚠️ encore lue par personne), `contre` (des
+adversaires sur une `course`). Et deux de plus (28 sept. 2026) : **`remet`** — ce que le
+donneur te met dans les mains quand l'objectif commence : une arme, chargée à plein et en
+main (`f13`, l'extincteur), ou une tenue, mise au sac (`f10`, la chemise) — et **`tenue`** —
+l'objectif ne s'accomplit qu'en la **portant** : un `aller` arrivé dans le mauvais linge
+attend (« ENFILE : … »), un `parler` refuse la poignée de main (`f10`, Norbert).
 
 Contraintes **jugées** (voir `test_missions.py`) :
 

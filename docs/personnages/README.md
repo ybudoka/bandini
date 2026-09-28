@@ -28,7 +28,7 @@ Chaque fiche mêle deux sortes de faits.
 | Personnage | Slug | Où il se tient | Voix (ElevenLabs) | Missions |
 |---|---|---|---|---|
 | [Ti-Guy Lelièvre](ti-guy.md) | `ti_guy` | devant le terminus, puis au garage | Felix Tabarnak | m1 · m4 (au combiné) |
-| [Madame Thibodeau](madame-thibodeau.md) | `thibodeau` | devant son kiosque | Julia | m2 · m51 |
+| [Madame Thibodeau](madame-thibodeau.md) | `thibodeau` | devant son kiosque | Julia | m2 · m51 · f12 |
 | [Marco « le Cousin »](marco.md) | `marco` | devant le garage | Québec Tremblay | m3 · m50 · f01 · m97 |
 | [Le sergent Réjean Bouchard](sergent-bouchard.md) | `bouchard` | au casse-croûte, dedans | Khaivan | m4 · m51 · v02 |
 | [Josée « la Chef » Pelletier](josee.md) | `josee` | au bar Le Brouillard, dedans | Jeanne Mance | m5 · m6 · q04 · q11 · v01 |
@@ -41,13 +41,13 @@ Chaque fiche mêle deux sortes de faits.
 | [Rocco Bandini](rocco.md) | — | absent : c'est lui qu'on remplace | — | partout, en creux |
 | [Sven Haugen](sven.md) | `sven` | sur la jetée, près de son porte-conteneurs | Martin - Clear and Comforting | m52 · m53 · m54 · q10 · v03 |
 | [Le Grand Mo](le-grand-mo.md) | `mo` | le banc du terminus | Alexandre Boutin | f04 |
-| [Fern Côté](fern.md) | `fern` | le quai d'autobus du terminus | Premium Male teacher (Adam) | f05 |
-| [Mado](mado.md) | `mado` | devant le casse-croûte du Faubourg | Caroline | f11 |
+| [Fern Côté](fern.md) | `fern` | le quai d'autobus du terminus | Premium Male teacher (Adam) | f05 · f12 (une enveloppe) |
+| [Mado](mado.md) | `mado` | devant le casse-croûte du Faubourg | Caroline | f11 · f13 · f12 (une enveloppe) |
 | [Gérard « Gégé » Morin](gege.md) | `gege` | devant la cantine des Quais | Alexandre Boutin | q03 |
 | [Xavier](xavier.md) | `xavier` | devant le dépanneur | Premium Male teacher (Adam) | e12 |
 | [Dr Lachance](dr-lachance.md) | `lachance` | à l'hôpital, dedans | Patrick | h01 |
-| [Gus Lévesque](gus.md) | `gus` | à l'armurerie | Khaivan | f02 |
-| [Rosa Di Meo](rosa.md) | `rosa` | à la Boutique Rosa | Amélie | f03 |
+| [Gus Lévesque](gus.md) | `gus` | à l'armurerie | Khaivan | f02 · f12 (une enveloppe) |
+| [Rosa Di Meo](rosa.md) | `rosa` | à la Boutique Rosa | Amélie | f03 · f10 · f12 (une enveloppe) |
 | [Ginette](ginette.md) | `ginette` | à l'hôpital | Jeanne Mance | h02 |
 | [Gilles Thériault](gilles.md) | `gilles` | à la guérite de la fourrière | Patrick | s01 · s08 |
 | [Le Bonimenteur](le-bonimenteur.md) | `bonimenteur` | à l'arche de la foire | Léo | p13 · p14 |
@@ -55,6 +55,7 @@ Chaque fiche mêle deux sortes de faits.
 | [Mireille Dion](mireille.md) | `mireille` | au comptoir du DOJO DION, au Faubourg, dedans | Marie Line - Energetic and Clear | ses cours (le dojo) |
 | [Sœur Jeanne](jeanne.md) | `jeanne` | sur le parvis de la chapelle, sur l'Île-aux-Corneilles | Julia | aucune encore (i02 · i05, M16) |
 | [Léo Cyr](leo.md) | `leo` | devant le hangar sans nom, sur l'Île-aux-Corneilles | Alexandre | aucune encore (i04 · i07, M16) |
+| [Norbert](norbert.md) | `norbert` | dans le hall de l'Hôtel Bandini, au bout du comptoir | Martin Dupont Intime | f10 (sa cible) |
 
 ⚠️ **Deux voix du compte ne se donnent à personne** : celles du scanner de police (Clara Dupont, la
 répartitrice, et Frederic, l'agent — `audio.VOIX_RESERVEES`, jugé). Avant de donner une voix à un

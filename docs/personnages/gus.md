@@ -14,7 +14,7 @@
 | Voix | **Khaivan — Quebec accent** (partagée avec le sergent Bouchard : jamais dans le même dialogue) |
 | Bulle | « Quoi, jeune? » |
 | Couleurs | chandail olive délavé, cheveux gris, pantalon foncé |
-| Missions | donne **f02** |
+| Missions | donne **f02** ; une des cinq enveloppes de **f12** |
 
 ## Son histoire
 

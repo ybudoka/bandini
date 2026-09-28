@@ -383,6 +383,9 @@ JEU: dict[str, str] = {
     "jeanne-repos-2": "[wryly] Trente âmes l'hiver, pas une police. Le bon Dieu fait bien les choses.",
     "leo-repos-1": "[deadpan] J'ai rien vu. J'vois jamais rien. C'est pour ça que le monde m'aime.",
     "leo-repos-2": "[mysteriously] Le hangar? Y a rien dedans. Pis s'il y a de quoi, c'est pas à moé.",
+    # Norbert vouvoie la ville entière : le repos commun (« reviens me voir ») le ferait tutoyer.
+    "norbert-repos-1": "[calm] Monsieur désire? Je crains que la chambre douze ne soit pas libre.",
+    "norbert-repos-2": "[knowingly] Monsieur a l'air reposé. L'hôtel aussi, pour une fois.",
     "bonimenteur-repos-1": "[cheerful] Reviens me voir… plus tard.",
     "bonimenteur-repos-2": "[playfully] Le Faubourg est tranquille… Merci.",
 

@@ -14,7 +14,7 @@
 | Voix | **Caroline — Soft Quebec accent** |
 | Bulle | « T'as faim, toi? » |
 | Couleurs | chandail rose fané, cheveux auburn, pantalon ardoise |
-| Missions | donne **f11** |
+| Missions | donne **f11** et **f13** ; une enveloppe de **f12** |
 
 ## Son histoire
 
@@ -61,11 +61,12 @@ essaient sa caisse en premier — un commerce sans protection, ça se voit de lo
 ## Ce qu'elle a dit (le canon)
 
 - f11 : deux Cravates menacent sa caisse ; « Ouain... Reviens, j't'en garde une portion. »
+- f13 : trois feux dans le Faubourg, l'extincteur de sa cuisine ; « Le Faubourg a ses pompiers, astheure. »
+- f12 : son enveloppe, « pis une poutine pour la route ».
 
 ## Ce qui l'attend (M16)
 
-`f13` « Les volontaires » (trois feux dans la nuit, le boulot pompier volontaire) — en attente d'un système
-de feu propre à une mission.
+Rien de prévu au-delà de f13 pour l'instant.
 
 ## À trancher
 

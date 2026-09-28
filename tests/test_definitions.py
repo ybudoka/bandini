@@ -141,6 +141,12 @@ def test_le_paquet_reste_leger():
     60 168 avec les trois missions d'infiltration de la villa (le catalogue +693 bruts, les noms des lieux
     de la villa dans `blocs` +223). Troisième relève en trois jours : le remède d'en haut ne peut plus
     attendre.
+
+    ⚠️ **Et la fin de l'arc F de M16, le même soir, sous le même plafond.** Mesure : `dev` pesait
+    59 983 (dix-sept octets de marge, après les frénésies) ; la fin de l'arc F de M16 — f10, f12, f13, Norbert, son visage et
+    son point dans le hall — en ajoute 151, soit 60 134. Cinquante octets gzip par mission, c'est ce que le
+    catalogue coûte depuis que les objectifs voyagent à part (24 sept.) ; soixante-dix missions de M16 restent
+    à écrire, ≈ 3,5 Ko. Le remède reste celui d'en haut.
     """
     paquets = definitions.construire()
     for nom, brut_max, fil_max in (("definitions", 270_000, 62_000), ("carte", 720_000, 68_000)):

@@ -521,9 +521,9 @@ const Histoire = (function () {
 
   /** La cible d'un objectif `parler` : le slug du personnage a qui l'on doit
       parler. `cible: "<perso>"` ou `cible: "personnages:<perso>"` nomment un
-      personnage de l'histoire ; `cible: "arch:<slug>"` vise le premier
-      figurant de cet archetype pose en ville (les cinq commis de f12). Les
-      quatre contacts de m6 sont des personnages. */
+      personnage de l'histoire ; `cible: "arch:<slug>"` viserait un figurant
+      de cet archetype — ⚠️ rien ne le pose encore (f12 a pris cinq commerçants
+      qui existent). Les quatre contacts de m6 sont des personnages. */
   function cibleDuParler(o) {
     const c = o && o.cible;
     if (!c) return null;
@@ -1074,6 +1074,17 @@ const Histoire = (function () {
     B.sonnerie = { slug: prochaine.slug, t: B.t + Math.max(1, Math.round((Son.SFX.telephone() || 0) * 60)) };
   }
 
+  /** La tenue `slug` du catalogue (`B.defs.tenues`), ou null. */
+  function tenueDef(slug) { return (B.defs.tenues || []).find(function (t) { return t.slug === slug; }) || null; }
+
+  /** L'option `tenue` d'un objectif (M16, f10 — « en la portant ») : vrai tant qu'on ne
+      porte PAS cette tenue-là (le linge, ou le chapeau pour une tenue de tête). */
+  function tenueManque(o) {
+    if (!o || !o.tenue) return false;
+    const p = B.partie;
+    return p.tenue !== o.tenue && p.chapeau !== o.tenue;
+  }
+
   /** La demi-journée de la partie : deux par jour, minuit-midi puis midi-minuit. */
   function demiJournee() { return B.partie.jour * 2 + (B.partie.heure >= 0.5 ? 1 : 0); }
 
@@ -1105,6 +1116,11 @@ const Histoire = (function () {
     // c'est la poignee qui compte, et elle est ICI, dans le moteur.
     if (enCours) {
       const o = objectif();
+      if (o && o.type === 'parler' && cibleDuParler(o) === slug && tenueManque(o)) {
+        // « EN LA PORTANT » (f10) : il ne te reconnaît pas dans ce linge-là.
+        Hud.message('IL NE TE RECONNAÎT PAS — ENFILE : ' + tenueDef(o.tenue).nom.toUpperCase(), 180);
+        return true;
+      }
       if (o && o.type === 'parler' && cibleDuParler(o) === slug) {
         // ⚠️ LA POIGNEE DE MAIN SE DIT quand la fiche ecrit une replique `accueil` pour cette cible :
         // elle parle, puis l'objectif avance (`dire` appelle `fin` une fois la boite fermee, et tout
@@ -1399,6 +1415,10 @@ const Histoire = (function () {
     if (o.remet && Combat.armeDef(o.remet)) {
       Combat.ramasserArme(o.remet, Combat.armeDef(o.remet).munitions_max || null);
       if (j.arme !== o.remet) Combat.degainer(j, o.remet);
+    } else if (o.remet && tenueDef(o.remet) && B.partie.tenues.indexOf(o.remet) < 0) {
+      // Une TENUE (f10, la chemise de Rosa) : elle entre au sac comme achetée — on l'enfile
+      // au comptoir de Rosa ou à la penderie, pas d'office : se changer se fait quelque part.
+      B.partie.tenues.push(o.remet);
     }
     dansLaVille(function () {
       if (o.type === 'monter') {
@@ -1873,7 +1893,11 @@ const Histoire = (function () {
         if (o.nuit && !Monde.estNuit()) { B.mission.attend = 'ATTENDS LA NUIT'; return; }
         B.mission.attend = null;
         const l = lieu(o.lieu);
-        if (l && dist2(j.x, j.y, l.x, l.y) < (o.rayon * TT) * (o.rayon * TT)) avancer();
+        if (l && dist2(j.x, j.y, l.x, l.y) < (o.rayon * TT) * (o.rayon * TT)) {
+          // `tenue` (f10) : arrivé, mais pas dans le bon linge — la ligne dit quoi enfiler.
+          if (tenueManque(o)) { B.mission.attend = 'ENFILE : ' + tenueDef(o.tenue).nom.toUpperCase(); return; }
+          avancer();
+        }
         return;
       }
       case 'monter': {
@@ -3260,6 +3284,7 @@ const Histoire = (function () {
     }
     if (o.type === 'sauter') compte = ' VOL ' + Math.round(B.mission ? B.mission.vol : 0) + '/' + o.vol_px;
     if (o.type === 'suivre' && B.mission && B.mission.suivi) compte = filature(B.mission);
+    if (o.type === 'parler' && tenueManque(o) && tenueDef(o.tenue)) compte = ' — ENFILE : ' + tenueDef(o.tenue).nom.toUpperCase();
     // ⚠️ `chrono_s` sur un objectif (M16) : le temps qui reste, comme au défi. Il
     // tombait en silence (q10 : « la moto au phare en une minute », sans montre).
     if (o.chrono_s && typeof B.partie.mission.debutT === 'number') {

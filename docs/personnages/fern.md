@@ -14,7 +14,7 @@
 | Voix | **Premium Male teacher, E-learning, Informative** (partagée avec Xavier : jamais dans le même dialogue) |
 | Bulle | « Monte, le jeune! » |
 | Couleurs | chandail bleu (uniforme), cheveux gris, pantalon noir |
-| Missions | donne **f05** |
+| Missions | donne **f05** ; une des cinq enveloppes de **f12** |
 
 ## Son histoire
 

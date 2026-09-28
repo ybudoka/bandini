@@ -177,6 +177,9 @@ VISAGES: dict[str, dict] = {
     # de celui qui regarde toujours ailleurs.
     "leo": _v("longue", "hirsute", "veste", "barbe", chapeau="tuque",
               signes=("yeux_plisses", "sourcils_epais"), t="#6a1f2a"),
+    # Le concierge de l'Hôtel Bandini (f10) : cheveux gominés, fine moustache, nœud papillon
+    # sous le veston — vingt ans de comptoir, et pas une ride de surprise.
+    "norbert": _v("longue", "gominee", "veston", "moustache", signes=("noeud_pap", "yeux_plisses")),
 }
 
 #: Ceux qui parlent sans être des PERSONNAGES : l'agent qui t'interpelle dans la rue.

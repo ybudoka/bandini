@@ -15,7 +15,7 @@
 | Voix | **Amélie — Young, Confident and Friendly** |
 | Bulle | « Une minute! » |
 | Couleurs | chandail prune, cheveux foncés, pantalon sombre |
-| Missions | donne **f03** ; garde la clé de la berline de Rocco (**f08**) |
+| Missions | donne **f03** et **f10** (la chemise hawaïenne, la lettre pour Norbert) ; une enveloppe de **f12** ; garde la clé de la berline de Rocco (**f08**) |
 
 ## Son histoire
 

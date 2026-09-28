@@ -100,7 +100,10 @@ ECHECS = ("mort", "arrete", "vehicule_detruit", "chrono", "etoile", "protege_mor
 #: d'objectif, pas un type : `chrono_s` sur n'importe lequel (le défi l'avait),
 #: `sans_etoile` (échec `etoile` dès qu'on est vu), `sans_arme` (en territoire
 #: de gang les mains vides), `contre` (des adversaires sur une `course`).
-OPTIONS_OBJECTIFS = ("chrono_s", "sans_etoile", "sans_arme", "contre")
+#: Et deux de plus (28 sept. 2026) : `remet` — ce que le donneur te met dans les mains
+#: quand l'objectif commence (une arme, chargée à plein et en main ; une tenue, au sac) —
+#: et `tenue` — l'objectif ne s'accomplit qu'en la PORTANT (f10, « en la portant »).
+OPTIONS_OBJECTIFS = ("chrono_s", "sans_etoile", "sans_arme", "contre", "remet", "tenue")
 
 
 class Personnage(TypedDict):
@@ -260,6 +263,15 @@ PERSONNAGES: list[Personnage] = [
      "heler": "J'ai rien vu.",
      "repos": ("J'ai rien vu. J'vois jamais rien. C'est pour ça que le monde m'aime.",
                "Le hangar? Y a rien dedans. Pis s'il y a de quoi, c'est pas à moé.")},
+    # --- Norbert (28 sept. 2026, f10) : le concierge de l'Hôtel Bandini, derrière le bout du
+    # comptoir du hall (`point:norbert`, DEDANS : il ne tire aucun dé en ville, il naît quand
+    # on entre). Discret, tarifé, poli jusqu'au vouvoiement. Sa voix vient de France —
+    # permis (Martin, 25 sept. 2026) et voulu : le seul qui vouvoie la ville entière.
+    {"slug": "norbert", "nom": "Norbert", "genre": "homme", "voix": "Martin Dupont Intime",
+     "couleurs": {"c": "#5a1a2a", "h": "#2a2a2a", "s": "#e8c0a0", "p": "#1a1a1a"}, "ou": "point:norbert",
+     "heler": "Monsieur?",
+     "repos": ("Monsieur désire? Je crains que la chambre douze ne soit pas libre.",
+               "Monsieur a l'air reposé. L'hôtel aussi, pour une fois.")},
 ]
 
 
@@ -486,13 +498,14 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 # n'a besoin que de `_commun`, mais `CATALOGUE` se complete juste apres (les
 # cles par defaut et les scenes), et il faut donc que le moteur soit defini.
 from . import (  # noqa: E402
-    e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f11, f13, h01, h02, m1, m2, m3,
+    e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f10, f11, f12, f13, h01, h02, m1, m2, m3,
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
     s03, s08, v01, v02, v03,
 )
 
-# ⚠️ L'ordre est celui du téléphone : il sonne pour la première mission disponible dont l'appel n'a pas
-# été dit. Après m6, les contacts appellent dans l'ordre où le tour les a présentés (Ti-Paul, Lulu,
+# ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
+# sonne une fois par demi-journée au plus, jamais à 3★, pour le donneur dont la porte est la PLUS PROCHE
+# du joueur — et, à distance égale, pour la première mission disponible dont l'appel n'a pas été dit. Après m6, les contacts appellent dans l'ordre où le tour les a présentés (Ti-Paul, Lulu,
 # Raymonde), le sergent après eux, et m97 — la fin de Marco — reste la dernière du tronc.
 # ⚠️ Dix missions de plus (21 sept. 2026) : f04, f05, f06, f07, f09, f11 (Faubourg), h01 (l'hôpital),
 # p01 (La Pointe), q03 (Les Quais), e12 (Les Érables) — chacune après m6 (ou après une des dix,
@@ -504,7 +517,9 @@ from . import (  # noqa: E402
 # chacune `ferme` l'autre ; q10 après m54, Sven ayant dit « une dernière fois »), s08 (Gilles, après s01).
 # ⚠️ Trois infiltrations (28 sept. 2026) : v01 (Josée, après q04), v02 (Bouchard), v03 (Sven) — la
 # villa du maire, un bloc (`app/blocs/villa.py`), avant m97.
-# ⚠️ f13 (28 sept. 2026) : Mado et ses trois feux, la première mission qui allume le sien (`eteindre`).
+# ⚠️ f13 (28 sept. 2026) : Mado et ses trois feux, la première mission qui allume le sien (`eteindre`) ;
+# f10 (Rosa, la chemise hawaïenne — `tenue`, Norbert) et f12 (Madame Thibodeau, les cinq enveloppes :
+# la fin de l'arc F, après f08, f09 et f10).
 # ⚠️ m99 (M13, 25 sept. 2026) — _Sacrer son camp_, la fin qu'on peut jouer — tout au bout : son appel
 # ne sonne qu'avec 15 000 $ en poche (`exige`), et une fin n'a rien à précéder.
 CATALOGUE: list[Mission] = [
@@ -518,7 +533,7 @@ CATALOGUE: list[Mission] = [
     m52.MISSION, m53.MISSION, m54.MISSION,
     q01.MISSION, q10.MISSION, q11.MISSION, s08.MISSION,
     v01.MISSION, v02.MISSION, v03.MISSION,
-    f13.MISSION,
+    f13.MISSION, f10.MISSION, f12.MISSION,
     m97.MISSION, m99.MISSION,
 ]
 

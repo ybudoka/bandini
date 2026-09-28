@@ -7662,7 +7662,7 @@ Bn           n  B
 B               B
 Bn             nB
 BBBBBBWWDWWBBBBBB
-""", points=(_pt("caisse", 4, 3), _pt("escalier", 15, 2, vers="hotel_chambre")),
+""", points=(_pt("caisse", 4, 3), _pt("escalier", 15, 2, vers="hotel_chambre"), _pt("norbert", 11, 2)),
      gens=_gens(("commis", 4, 1), ("client", 8, 6))),
 
     # La chambre de l'Hotel Bandini : un lit, une fenetre sur la baie.

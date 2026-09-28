@@ -14,7 +14,7 @@
 | Voix | **Julia**, québécoise, rauque, aux fins de mots soufflées ; passée à l'isolateur (`VOIX_A_SECHER`) |
 | Bulle | « Psst! Toi! » — le ton de celle qui a quelque chose à te dire tout bas |
 | Couleurs | chandail prune, cheveux gris clair |
-| Missions | donne **m2** ; la première enveloppe de la tournée de Bouchard (**m51**) |
+| Missions | donne **m2** ; la première enveloppe de la tournée de Bouchard (**m51**) ; donne **f12**, la fin de l'arc du Faubourg |
 
 ## Son histoire
 

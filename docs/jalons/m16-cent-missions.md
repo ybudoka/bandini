@@ -848,3 +848,50 @@ catalogue.
     la même image — laisser filer 300 images) ; et la cour de la fourrière se roule jusqu'au
     point du lieu, alors que la rue fléchée la plus proche est à seize tuiles (`s01` et `s08`
     se livrent en entrant dans la cour).
+- **28 sept. 2026 : `eteindre` a son feu, le téléphone trie, et l'arc F est au complet.**
+  Trois missions de plus — `f13` (Mado, _Les volontaires_), `f10` (Rosa, _La chemise
+  hawaïenne_), `f12` (Madame Thibodeau, _Le Faubourg te dit merci_) — et avec elles les
+  douze missions du tableau de l'arc F existent toutes (f01–f13 ; f11 est devenue _Mado tient
+  tête_ le 21 sept., et le feu qu'elle devait éteindre est passé à f13). Un personnage de
+  plus : **Norbert**, le concierge de l'Hôtel Bandini (`point:norbert`, au bout du comptoir
+  du hall — un point dans une pièce déjà dessinée, aucune tuile de la ville ne bouge), sa
+  fiche, son visage, son repos au vouvoiement, une voix de France (Martin Dupont Intime).
+  41 voix générées (≈ 3 900 caractères).
+  - ⚠️ **`eteindre` passait dans la même image.** Il attendait qu'aucun feu DE L'HEURE ne
+    brûle (`Incendies.feuActif()`), vrai presque toujours. Chaque `eteindre` allume maintenant
+    LE SIEN (`Incendies.allumerPourMission`) sur la façade la plus proche de son `ou` — une
+    spirale sans dé qui préfère un mur à une porte — posé avant l'intro (la caméra le filme
+    qui brûle). Il résiste vingt images de jet (un tiers de seconde : trois feux en coûtent
+    60 sur les 100 d'un extincteur), fume et flambe plus fort que celui de l'heure, à
+    l'empreinte (`hash2`, aucun `B.rng()` : une scène qui le filme ne décale rien), ne paie
+    pas la prime du pompier volontaire, et s'en va avec la mission (`nettoyer`). La flèche le
+    pointe. ⚠️ Le `ou` doit être une porte **déjà** lieu de mission : une porte neuve
+    élargirait son devant (`devants.lieux_de_mission`) et la ville glisserait.
+  - **Deux options transverses de plus** : `remet` (le donneur met une arme dans les mains,
+    pleine et dégainée — ou une tenue au sac) et `tenue` (l'objectif ne s'accomplit qu'en la
+    portant : un `aller` attend « ENFILE : … », un `parler` refuse la poignée de main). Et la
+    ligne d'objectif affiche le temps qui reste d'un `chrono_s` — q10 avait « une minute »
+    sans montre.
+  - **Le téléphone qui trie** : jamais deux appels dans la même demi-journée (`p.dernierAppel`,
+    `jour × 2 + midi passé`, dans la sauvegarde — une vieille partie la reçoit à `null` par
+    `completer`), jamais à 3★ et plus, et le donneur dont la **porte** est la plus proche du
+    joueur appelle d'abord (l'ordre du catalogue ne départage plus qu'à distance égale). Le
+    donneur qu'on croise hélait déjà (`majBulles`) sans attendre le téléphone.
+  - **Juges** (neuf neufs, sept mutations, toutes rouges) : `test_eteindre_js.py` (f13 au jet
+    tenu au bouton J, de l'appel à la prime ; un coup ne suffit pas ; la mission ratée au
+    chrono oublie son feu ; un feu qui brûle ne tire aucun dé), `test_telephone_qui_trie_js.py`
+    (deux appels jamais dans la même demi-journée ; muet à 3★ puis il sonne ; le plus proche
+    d'abord, des deux bouts de la ville), `test_arc_f_js.py` (f10 : la chemise au sac, rien
+    n'avance dans le chandail, Norbert refuse puis accueille ; f12 : cinq poignées de main
+    dites, et une étoile fait tout rater).
+  - ⚠️ **Au banc, trois faux verts évités** : planté devant la cantine, le joueur se faisait
+    coucher par les Morues et l'hôpital (dedans) retenait le téléphone — invincible ; à 3★
+    vraies, la police l'arrêtait en cinq secondes et le menu figeait la partie (le juge
+    « muet à 3★ » passait sur une partie arrêtée) — la police se tait au banc et le juge
+    compte les images qui ont vraiment passé ; et `B.msg` est une chaîne, pas un objet.
+  - ⚠️ **Le paquet** : `dev` était à 59 983 octets gzip pour 60 000 ; la vague en ajoute 151 —
+    plafond à 62 000, mesure écrite dans `test_definitions.py`.
+  - **Ce qui reste** : les arcs Q, E, S, P, H, D, C, R, T, I, X (≈ 70 missions), dont les quatre
+    qui libèrent un district (`q13`, `e10`, `s11`, `p11`) — c'est ce qu'attend _Le Boss_ (M13) ;
+    `sans_arme` toujours lue par personne ; `cible: "arch:"` d'un `parler` ne pose aucun
+    figurant (f12 a pris cinq commerçants qui existent).
