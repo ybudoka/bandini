@@ -390,8 +390,18 @@ def _mesure(chemin) -> dict:
               f"[b]silencedetect=n={audio.SEUIL_QUEUE_DBFS}dB:d=0.2,anullsink;"
               "[c]silencedetect=n=-40dB:d=0.05,anullsink;"
               "[d]astats=measure_overall=Noise_floor+Peak_level:measure_perchannel=0[s]")
-    sortie = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(chemin), "-filter_complex", graphe,
-                             "-map", "[s]", "-f", "null", "-"], capture_output=True, text=True).stderr
+    # ⚠️ Avec un délai, relancé une fois : ffmpeg 8 s'est déjà figé sur un graphe à branches
+    # (`test_interpretation._mesure`, quatre fois sur deux mille) — jamais sur celui-ci en mille
+    # deux cents, mais une suite qui attend pour toujours est pire qu'un juge relancé.
+    for essai in (1, 2):
+        try:
+            sortie = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(chemin), "-filter_complex", graphe,
+                                     "-map", "[s]", "-f", "null", "-"], capture_output=True, text=True,
+                                    timeout=60).stderr
+            break
+        except subprocess.TimeoutExpired:
+            if essai == 2:
+                raise
     # Chaque filtre signe ses lignes de son rang dans le graphe (asplit 0, volumedetect 1, anullsink 2,
     # silencedetect 3, anullsink 4, silencedetect 5…) : les deux `silencedetect` se distinguent ainsi.
     # ⚠️ Un graphe retouché décale les rangs : `volumedetect` parle toujours, il sert de témoin.
