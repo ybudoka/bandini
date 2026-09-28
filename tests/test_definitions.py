@@ -128,9 +128,16 @@ def test_le_paquet_reste_leger():
     dessus — des rues, des terrains, des wagons, pas de l'eau que gzip avale. Une carte plus grande pèse
     plus : c'est le prix de la demande. Trois Ko de marge, et la même règle : le vrai juge est la dette des
     districts chargés autour du joueur.
+
+    ⚠️ **La carte : 67 000 → 68 000 octets gzip, le 28 sept. 2026** — le casino du Dragon d'or (demande de
+    Martin : « un grand casino dans le quartier Petit-Canton »). Mesure : 66 608 sur `dev` (le bidonville de
+    la gare venait d'en prendre sa part), 67 248 avec le casino — sa grande salle (228 octets), l'arche et les
+    lanternes (253, idéogrammes compris) et le bois à clin de l'île (168). Ces deux derniers ont QUITTÉ le
+    paquet des définitions, qui débordait (60 108 pour 60 000) : ils ne servent qu'à peindre la carte. Même
+    règle qu'au nord : le vrai juge est la dette des districts chargés autour du joueur.
     """
     paquets = definitions.construire()
-    for nom, brut_max, fil_max in (("definitions", 270_000, 60_000), ("carte", 720_000, 67_000)):
+    for nom, brut_max, fil_max in (("definitions", 270_000, 60_000), ("carte", 720_000, 68_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))

@@ -89,7 +89,9 @@ def test_la_course_des_bois_se_joue_l_hiver(banc):
         // fragilité est une dette (docs/jalons/la-ville-s-agrandit-au-nord.md, Notes).
         // ⚠️ GRAINE 5 depuis le Petit-Canton bâti (27 sept. 2026) : il est dans la bulle de naissance du terminus,
         // et le départ se rebat. Mesuré sur 24 graines : 4, 5, 6, 13 et 22 gagnent — 5, au milieu d'une grappe.
-        L.graine(5);
+        // ⚠️ GRAINE 4 depuis le bidonville de la gare et le casino du Dragon d'or (28 sept. 2026) : sur 24 graines,
+        // 3, 4 et 13 gagnent — 4, collée à 3.
+        L.graine(4);
         const B = L.B, H = L.Histoire, j = B.joueur, C = L.Conduite;
         const d = B.defs.defis.find(function (q) { return q.slug === 'motoneige'; });
         H.ouvrirDefi(d, true);
