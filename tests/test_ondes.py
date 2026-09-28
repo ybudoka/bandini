@@ -6,6 +6,8 @@ et aucune ligne du jeu ne les jouait. Les juges d'ici regardent donc ce qui PASS
 (`Son.Ondes.dites`), pas ce qui est déclaré.
 """
 
+import pytest
+
 from app import audio, economie, journal, missions
 
 
@@ -151,12 +153,50 @@ _ECOUTER = """
 """
 
 
-def test_la_radio_parle_entre_les_tounes(banc):
-    r = banc("""function (L, o) {
+@pytest.fixture(scope="module")
+def ecoutes(banc):
+    """⚠️ **UN BANC POUR LES SIX JUGES QUI ÉCOUTENT UNE STATION** (vague C, 28 sept. 2026) : ils
+    commençaient chacun une partie pour allumer une radio et compter ce qui passait. Une partie
+    ici, et six écoutes l'une après l'autre.
+
+    ⚠️ **CHAQUE ÉCOUTE REPART DES ONDES D'UNE PARTIE QUI COMMENCE** : tout l'état de `Son.Ondes`
+    (le tour de rôle, ce qui est passé, le repos des bulletins, la station comptée) est remis tel
+    qu'il était au sortir de `Jeu.commencer`, ainsi que la manchette de la veille et la voix de
+    mission. Sans ça, la deuxième écoute hériterait du tour de rôle de la première — l'animateur
+    ne dirait plus sa première réplique — et `dites` porterait les voix de la précédente.
+    ⚠️ `hier` passe en dernier : c'est la seule qui charge la voix du narrateur (`bulletin`)."""
+    premiere = audio.ONDES["premiere_s"]
+    return banc("""function (L, o) {
         L.Jeu.commencer();
         %s
-        return ecouter(L, 'taxi_radio', 600);
-    }""" % _ECOUTER)
+        const O = L.Son.Ondes;
+        const CLES = ['enCours', 'dites', 'tours', 'station', 'prochaineT', 'n', 'policeT', 'derniers', 'bulletins'];
+        const copie = function (x) { return x === undefined ? undefined : JSON.parse(JSON.stringify(x)); };
+        const zero = {};
+        CLES.forEach(function (k) { zero[k] = copie(O[k]); });
+        const veille = L.B.partie.derniereManchette;
+        function ecoute(station, secondes, manchette, pendant) {
+            CLES.forEach(function (k) { O[k] = copie(zero[k]); });
+            L.Son.Voix.enCours = null;
+            L.B.partie.derniereManchette = manchette;
+            return ecouter(L, station, secondes, pendant);
+        }
+        const mission = { slug: 'essai' };
+        return {
+            tounes: ecoute('taxi_radio', 600, veille),
+            choc: ecoute('le_choc', 400, veille),
+            mission: ecoute('taxi_radio', %d, veille, function (t) {
+                L.Son.Voix.enCours = t < %d ? mission : null;
+            }),
+            lecon: ecoute('taxi_radio', 400, L.B.defs.journal_lecons[0]),
+            sans: ecoute('la_brume', 400, null),
+            hier: ecoute('taxi_radio', 400, L.B.defs.journal[0]),
+        };
+    }""" % (_ECOUTER, premiere + 30, (premiere + 10) * 60))
+
+
+def test_la_radio_parle_entre_les_tounes(ecoutes):
+    r = ecoutes["tounes"]
     dites = r["dites"]
     assert r["des"] == 0, "les ondes tirent des dés : tout le hasard du jeu se décale"
     assert len(dites) >= 4, f"la radio ne parle pas : {dites}"
@@ -184,27 +224,16 @@ def test_la_radio_parle_aussi_dans_la_vraie_partie(banc):
     assert r and genres[r[0]] == "radio_brume", f"La Brume ne parle pas en jouant : {r}"
 
 
-def test_le_choc_ne_parle_pas(banc):
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        %s
-        return ecouter(L, 'le_choc', 400);
-    }""" % _ECOUTER)
+def test_le_choc_ne_parle_pas(ecoutes):
+    r = ecoutes["choc"]
     assert r["dites"] == [], "quelqu'un parle au micro du Choc"
 
 
-def test_la_radio_attend_la_fin_d_une_replique_de_mission(banc):
+def test_la_radio_attend_la_fin_d_une_replique_de_mission(ecoutes):
     """⚠️ La mission passe devant tout le monde : tant qu'une réplique joue,
     l'animateur garde son clip pour après."""
     premiere = audio.ONDES["premiere_s"]
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        %s
-        const mission = { slug: 'essai' };
-        return ecouter(L, 'taxi_radio', %d, function (t) {
-            L.Son.Voix.enCours = t < %d ? mission : null;
-        });
-    }""" % (_ECOUTER, premiere + 30, (premiere + 10) * 60))
+    r = ecoutes["mission"]
     assert len(r["dites"]) == 1, r
     assert r["dites"][0]["t"] >= (premiere + 10) * 60, "l'animateur a parlé par-dessus la mission"
 
@@ -309,7 +338,7 @@ def test_une_replique_de_mission_coupe_les_ondes(banc):
     assert r["apres"] is None, "une réplique de mission a commencé et la radio parle encore"
 
 
-def test_la_radio_lit_ce_que_tu_as_fait_hier(banc):
+def test_la_radio_lit_ce_que_tu_as_fait_hier(ecoutes):
     """⚠️ **LE SEUL MOMENT DE LA STATION QUI NE SOIT PAS LE MÊME POUR TOUT LE MONDE.**
     L'animateur et les pubs sont écrits d'avance ; le bulletin, lui, rejoue la
     manchette que le Clairon a lue au lever — donc ce que TU as fait hier, dans un
@@ -317,12 +346,7 @@ def test_la_radio_lit_ce_que_tu_as_fait_hier(banc):
 
     ⚠️ Et il la prend dans la banque du **narrateur** (`histoire-`), pas dans celle
     des ondes : c'est ce qui fait qu'il n'a coûté aucun crédit."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        %s
-        L.B.partie.derniereManchette = L.B.defs.journal[0];
-        return ecouter(L, 'taxi_radio', 400);
-    }""" % _ECOUTER)
+    r = ecoutes["hier"]
     assert r["des"] == 0, "les ondes tirent des dés : tout le hasard du jeu se décale"
     nouvelles = [d for d in r["dites"] if d["banque"] == "histoire"]
     assert nouvelles, f"la radio ne lit jamais les nouvelles : {r['dites']}"
@@ -336,7 +360,7 @@ def test_la_radio_lit_ce_que_tu_as_fait_hier(banc):
         == ["radio_taxi", "pub", "bulletin"], r["dites"]
 
 
-def test_la_radio_ne_lit_pas_une_lecon_aux_nouvelles(banc):
+def test_la_radio_ne_lit_pas_une_lecon_aux_nouvelles(ecoutes):
     """⚠️ « Le saviez-vous? Un coup de klaxon dans un taxi vous trouve un client » :
     au Clairon c'est une leçon, à la radio ce serait un mode d'emploi. La station
     joue sa musique à la place.
@@ -344,12 +368,7 @@ def test_la_radio_ne_lit_pas_une_lecon_aux_nouvelles(banc):
     ⚠️ Et **elle ne se tait pas pour autant** : le tour de rôle prend le premier
     genre qui a quelque chose à dire. Sans ça, un matin sans nouvelle rendrait la
     station muette deux minutes — on entendrait le trou, pas la règle."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        %s
-        L.B.partie.derniereManchette = L.B.defs.journal_lecons[0];
-        return ecouter(L, 'taxi_radio', 400);
-    }""" % _ECOUTER)
+    r = ecoutes["lecon"]
     assert [d for d in r["dites"] if d["banque"] == "histoire"] == [], \
         f"la radio lit une leçon aux nouvelles : {r['dites']}"
     genres = {v["slug"]: v["genre"] for v in audio.VOIX}
@@ -384,15 +403,10 @@ def test_la_meme_nouvelle_ne_repasse_pas_a_chaque_paire_de_tounes(banc):
         "un jour neuf attend le repos de la veille"
 
 
-def test_sans_manchette_la_radio_parle_quand_meme(banc):
+def test_sans_manchette_la_radio_parle_quand_meme(ecoutes):
     """Le premier matin, rien n'a encore été lu : le bulletin n'a rien à dire, et la
     station ne doit pas s'en apercevoir."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        %s
-        L.B.partie.derniereManchette = null;
-        return ecouter(L, 'la_brume', 400);
-    }""" % _ECOUTER)
+    r = ecoutes["sans"]
     assert [d for d in r["dites"] if d["banque"] == "histoire"] == []
     assert len(r["dites"]) >= 4, f"la station se tait faute de nouvelles : {r['dites']}"
 
