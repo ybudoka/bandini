@@ -4131,7 +4131,118 @@ def test_la_vitesse_max_et_la_marche_arriere(banc, paquet):
     assert r["sol"] == 0
 
 
-def test_le_cercle_d_un_char_ne_grandit_pas_avec_sa_vitesse(banc, paquet):
+@pytest.fixture(scope="module")
+def physique(banc):
+    """⚠️ **QUATRE MESURES DE `majPhysique`, UN BANC** (vague C, 28 sept. 2026) : le
+    cercle, le pivot, le volant qui prend et se recentre, le frein à main. Aucune ne
+    joue d'image — `majPhysique` à la main, sur un char posé. Chacune garde son corps
+    tel quel ; ENTRE DEUX, on descend le joueur de son char et on retire tout char
+    posé, pour que la suivante parte de la rue qu'avait son juge."""
+    return banc("""function (L, o) {
+        L.Jeu.commencer();
+        const vehicules0 = new Set(L.B.entites.filter(function (e) { return e.type === 'vehicule'; }));
+        function ranger() {
+            const j = L.B.joueur;
+            if (j.dansVehicule) L.Vehicules.descendre(j, true);
+            L.B.entites.filter(function (e) { return e.type === 'vehicule' && !vehicules0.has(e); })
+                .forEach(function (e) { L.Entites.retirer(e); });
+            L.Entites.indexer();
+        }
+        const out = {};
+        // test_le_cercle_d_un_char_ne_grandit_pas_avec_sa_vitesse
+        out.cercle = (function () {
+            L.graine(7);
+            const j = L.B.joueur, d = o.ligneDroite();
+            j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
+            function ecart(a, b) { let e = b - a; while (e > Math.PI) e -= 2 * Math.PI; while (e < -Math.PI) e += 2 * Math.PI; return e; }
+            const out = {};
+            ['auto', 'moto', 'camion', 'autobus'].forEach(function (slug) {
+                const v = o.char(slug, 0, 0, 0);
+                const cercles = [], glisses = [];
+                [0.25, 1.0].forEach(function (part) {
+                    v.x = 0; v.y = 0; v.angle = 0; v.z = 0; v.volant = 0;
+                    const vise = v.def.vitesse_max * part;
+                    v.vitesse = vise; v.vx = vise; v.vy = 0;
+                    let n = 0, x0 = 0, x1 = 0, y0 = 0, y1 = 0, tourne = 0, prec = 0;
+                    while (tourne < Math.PI * 2 && n < 3000) {
+                        L.Vehicules.majPhysique(v, { gaz: v.vitesse < vise ? 1 : 0,
+                                                     frein: v.vitesse > vise * 1.02 ? 0.4 : 0,
+                                                     direction: 1, freinMain: false });
+                        v.x += v.vx; v.y += v.vy; n++;
+                        tourne += Math.abs(ecart(prec, v.angle)); prec = v.angle;
+                        x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x);
+                        y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y);
+                    }
+                    cercles.push(+(((x1 - x0) + (y1 - y0)) / 4).toFixed(1));
+                    glisses.push(+(Math.abs(ecart(v.angle, Math.atan2(v.vy, v.vx))) * 180 / Math.PI).toFixed(1));
+                    if (tourne < Math.PI * 2) cercles.push('jamais bouclé');
+                });
+                out[slug] = { rayon: v.def.rayon_braquage, classe: v.def.classe, cercles: cercles, glisses: glisses };
+                L.Entites.retirer(v);
+            });
+            return out;
+        })();
+        ranger();
+        // test_un_char_pivote_sur_son_arriere_pas_sur_son_nombril
+        out.pivot = (function () {
+            const j = L.B.joueur, d = o.ligneDroite();
+            j.x = d.x; j.y = d.y;
+            const v = o.char('auto', 0, 0, 0);
+            v.vitesse = 1.2; v.vx = 1.2; v.vy = 0; v.volant = 0;
+            const demi = v.def.longueur / 2;
+            const bout = function (signe) { return { x: v.x + Math.cos(v.angle) * demi * signe, y: v.y + Math.sin(v.angle) * demi * signe }; };
+            const nez0 = bout(1), cul0 = bout(-1);
+            let n = 0;
+            while (v.angle < Math.PI / 2 && n < 600) { L.Vehicules.majPhysique(v, { gaz: 1, frein: 0, direction: 1 }); v.x += v.vx; v.y += v.vy; n++; }
+            const nez1 = bout(1), cul1 = bout(-1);
+            return { nez: +Math.hypot(nez1.x - nez0.x, nez1.y - nez0.y).toFixed(1),
+                     cul: +Math.hypot(cul1.x - cul0.x, cul1.y - cul0.y).toFixed(1), images: n };
+        })();
+        ranger();
+        // test_le_volant_se_tourne_et_se_recentre
+        out.volant = (function () {
+            const j = L.B.joueur, d = o.ligneDroite();
+            j.x = d.x; j.y = d.y;
+            const v = o.char('auto', 0, 0, 0);
+            L.Vehicules.monter(j, v);
+            v.vitesse = 2; v.vx = 2; v.vy = 0;
+            const neuf = v.volant;
+            const prise = [];
+            for (let i = 0; i < 6; i++) { L.Vehicules.majPhysique(v, { gaz: 0, frein: 0, direction: 1 }); prise.push(+v.volant.toFixed(3)); }
+            const plein = [];
+            for (let i = 0; i < 60; i++) { L.Vehicules.majPhysique(v, { gaz: 0, frein: 0, direction: 1 }); }
+            plein.push(+v.volant.toFixed(3));
+            const relache = [];
+            for (let i = 0; i < 30; i++) { L.Vehicules.majPhysique(v, { gaz: 0, frein: 0, direction: 0 }); relache.push(+v.volant.toFixed(3)); }
+            return { neuf: neuf, prise: prise, plein: plein[0], relache: relache };
+        })();
+        ranger();
+        // test_le_frein_a_main_fait_deriver
+        out.freinMain = (function () {
+            function virage(freinMain) {
+                const j = L.B.joueur, d = o.ligneDroite();
+                j.x = d.x; j.y = d.y;
+                if (j.dansVehicule) L.Vehicules.descendre(j, true);
+                const v = o.char('auto', 0, 0, 0);
+                v.vitesse = 3.5; v.vx = 3.5; v.vy = 0;
+                L.Vehicules.monter(j, v);
+                let ecartMax = 0;
+                for (let i = 0; i < 25; i++) {
+                    L.Vehicules.majPhysique(v, { gaz: 1, frein: 0, direction: 1, freinMain: freinMain });
+                    const capVitesse = Math.atan2(v.vy, v.vx);
+                    ecartMax = Math.max(ecartMax, Math.abs(L.Vehicules.courbeBraquage ? (capVitesse - v.angle) : 0));
+                }
+                L.Entites.retirer(v);
+                return ecartMax;
+            }
+            return { sans: virage(false), avec: virage(true) };
+        })();
+        ranger();
+        return out;
+    }""")
+
+
+def test_le_cercle_d_un_char_ne_grandit_pas_avec_sa_vitesse(physique, paquet):
     """⚠️ **Demande de Martin : « améliore les virages ».** Le char tournait
     d'un nombre fixe de radians par image, quelle que soit sa vitesse : le
     cercle qu'il décrivait valait donc `vitesse / braquage`, et il GRANDISSAIT
@@ -4143,38 +4254,7 @@ def test_le_cercle_d_un_char_ne_grandit_pas_avec_sa_vitesse(banc, paquet):
     Une vraie auto décrit **toujours le même cercle** à volant fixe. Le juge
     mesure le cercle réellement parcouru — pas la formule — à quatre vitesses,
     et exige qu'il ne double jamais entre le pas et le plein régime."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer(); L.graine(7);
-        const j = L.B.joueur, d = o.ligneDroite();
-        j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
-        function ecart(a, b) { let e = b - a; while (e > Math.PI) e -= 2 * Math.PI; while (e < -Math.PI) e += 2 * Math.PI; return e; }
-        const out = {};
-        ['auto', 'moto', 'camion', 'autobus'].forEach(function (slug) {
-            const v = o.char(slug, 0, 0, 0);
-            const cercles = [], glisses = [];
-            [0.25, 1.0].forEach(function (part) {
-                v.x = 0; v.y = 0; v.angle = 0; v.z = 0; v.volant = 0;
-                const vise = v.def.vitesse_max * part;
-                v.vitesse = vise; v.vx = vise; v.vy = 0;
-                let n = 0, x0 = 0, x1 = 0, y0 = 0, y1 = 0, tourne = 0, prec = 0;
-                while (tourne < Math.PI * 2 && n < 3000) {
-                    L.Vehicules.majPhysique(v, { gaz: v.vitesse < vise ? 1 : 0,
-                                                 frein: v.vitesse > vise * 1.02 ? 0.4 : 0,
-                                                 direction: 1, freinMain: false });
-                    v.x += v.vx; v.y += v.vy; n++;
-                    tourne += Math.abs(ecart(prec, v.angle)); prec = v.angle;
-                    x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x);
-                    y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y);
-                }
-                cercles.push(+(((x1 - x0) + (y1 - y0)) / 4).toFixed(1));
-                glisses.push(+(Math.abs(ecart(v.angle, Math.atan2(v.vy, v.vx))) * 180 / Math.PI).toFixed(1));
-                if (tourne < Math.PI * 2) cercles.push('jamais bouclé');
-            });
-            out[slug] = { rayon: v.def.rayon_braquage, classe: v.def.classe, cercles: cercles, glisses: glisses };
-            L.Entites.retirer(v);
-        });
-        return out;
-    }""")
+    r = physique["cercle"]
     for slug, m in r.items():
         lent, vite = m["cercles"]
         assert isinstance(lent, (int, float)) and isinstance(vite, (int, float)), (slug, m)
@@ -4203,27 +4283,11 @@ def test_le_cercle_d_un_char_ne_grandit_pas_avec_sa_vitesse(banc, paquet):
     assert max(r["auto"]["glisses"]) < 20, r["auto"]
 
 
-def test_le_volant_se_tourne_et_se_recentre(banc):
+def test_le_volant_se_tourne_et_se_recentre(physique):
     """⚠️ La direction passait de 0 à 1 en une image : au clavier, chaque appui
     était un coup de butée à butée. Le volant prend, et il se recentre quand on
     lâche — c'est ce qui fait qu'une courbe est une courbe."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const j = L.B.joueur, d = o.ligneDroite();
-        j.x = d.x; j.y = d.y;
-        const v = o.char('auto', 0, 0, 0);
-        L.Vehicules.monter(j, v);
-        v.vitesse = 2; v.vx = 2; v.vy = 0;
-        const neuf = v.volant;
-        const prise = [];
-        for (let i = 0; i < 6; i++) { L.Vehicules.majPhysique(v, { gaz: 0, frein: 0, direction: 1 }); prise.push(+v.volant.toFixed(3)); }
-        const plein = [];
-        for (let i = 0; i < 60; i++) { L.Vehicules.majPhysique(v, { gaz: 0, frein: 0, direction: 1 }); }
-        plein.push(+v.volant.toFixed(3));
-        const relache = [];
-        for (let i = 0; i < 30; i++) { L.Vehicules.majPhysique(v, { gaz: 0, frein: 0, direction: 0 }); relache.push(+v.volant.toFixed(3)); }
-        return { neuf: neuf, prise: prise, plein: plein[0], relache: relache };
-    }""")
+    r = physique["volant"]
     assert r["neuf"] == 0, "on hérite du volant de celui d'avant"
     assert 0 < r["prise"][0] < 0.5, "le volant claque à la butée en une image : %s" % r["prise"]
     assert r["prise"] == sorted(r["prise"]), "il ne prend pas régulièrement : %s" % r["prise"]
@@ -4315,53 +4379,20 @@ def test_l_option_du_volant_en_marche_arriere_se_bascule_et_se_garde(banc):
     assert r["retour"] == {"detail": "COMME UNE AUTO", "option": False}, r
 
 
-def test_un_char_pivote_sur_son_arriere_pas_sur_son_nombril(banc):
+def test_un_char_pivote_sur_son_arriere_pas_sur_son_nombril(physique):
     """⚠️ En tournant autour de son centre, le char balayait son coffre dans le
     mur derrière lui, et le nez ne « rentrait » jamais dans le virage. Le juge
     mesure les deux bouts : dans un quart de tour, le nez parcourt plus de
     chemin que le train arrière."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const j = L.B.joueur, d = o.ligneDroite();
-        j.x = d.x; j.y = d.y;
-        const v = o.char('auto', 0, 0, 0);
-        v.vitesse = 1.2; v.vx = 1.2; v.vy = 0; v.volant = 0;
-        const demi = v.def.longueur / 2;
-        const bout = function (signe) { return { x: v.x + Math.cos(v.angle) * demi * signe, y: v.y + Math.sin(v.angle) * demi * signe }; };
-        const nez0 = bout(1), cul0 = bout(-1);
-        let n = 0;
-        while (v.angle < Math.PI / 2 && n < 600) { L.Vehicules.majPhysique(v, { gaz: 1, frein: 0, direction: 1 }); v.x += v.vx; v.y += v.vy; n++; }
-        const nez1 = bout(1), cul1 = bout(-1);
-        return { nez: +Math.hypot(nez1.x - nez0.x, nez1.y - nez0.y).toFixed(1),
-                 cul: +Math.hypot(cul1.x - cul0.x, cul1.y - cul0.y).toFixed(1), images: n };
-    }""")
+    r = physique["pivot"]
     assert r["images"] < 600, "le char n'a pas bouclé son quart de tour : %s" % r
     assert r["nez"] > r["cul"], (
         "le nez et le coffre parcourent le même chemin : le char pivote sur son nombril (%s)" % r
     )
 
 
-def test_le_frein_a_main_fait_deriver(banc):
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        function virage(freinMain) {
-            const j = L.B.joueur, d = o.ligneDroite();
-            j.x = d.x; j.y = d.y;
-            if (j.dansVehicule) L.Vehicules.descendre(j, true);
-            const v = o.char('auto', 0, 0, 0);
-            v.vitesse = 3.5; v.vx = 3.5; v.vy = 0;
-            L.Vehicules.monter(j, v);
-            let ecartMax = 0;
-            for (let i = 0; i < 25; i++) {
-                L.Vehicules.majPhysique(v, { gaz: 1, frein: 0, direction: 1, freinMain: freinMain });
-                const capVitesse = Math.atan2(v.vy, v.vx);
-                ecartMax = Math.max(ecartMax, Math.abs(L.Vehicules.courbeBraquage ? (capVitesse - v.angle) : 0));
-            }
-            L.Entites.retirer(v);
-            return ecartMax;
-        }
-        return { sans: virage(false), avec: virage(true) };
-    }""")
+def test_le_frein_a_main_fait_deriver(physique):
+    r = physique["freinMain"]
     assert r["avec"] > r["sans"] * 1.3, f"la derive au frein a main ({r['avec']:.2f}) ne depasse pas la conduite normale ({r['sans']:.2f})"
 
 
@@ -7011,32 +7042,110 @@ def test_le_taxi_de_marco_ne_se_vend_pas(banc, paquet):
     assert r["autre"]["argent"] == round(auto["prix"] * paquet["economie"]["vente_fraction"])
     assert r["autre"]["la"] is False, "le char vendu est encore devant le garage"
 
-def test_l_armurerie_et_la_boutique_vendent(banc, paquet):
+@pytest.fixture(scope="module")
+def comptoirs(banc, paquet):
+    """⚠️ **TROIS COMPTOIRS, UN BANC** (vague C, 28 sept. 2026) : Gus et Rosa, le poing
+    américain, le pistolet qu'on ne paie qu'une fois. Chacun entrait par la porte de
+    l'armurerie dans sa partie à lui ; ils entrent maintenant l'un après l'autre dans la
+    même, et ⚠️ AVANT CHACUN on remet ce qu'avait son juge au départ : menu fermé,
+    dehors, le sac, la tenue et le chandail de la partie neuve (`remettre`). Sans ça,
+    la batte achetée chez Gus serait « DÉJÀ À TOI » pour le suivant."""
     batte = next(a for a in paquet["armes"] if a["slug"] == "batte")
-    coupe_vent = next(t for t in paquet["tenues"] if t["slug"] == "coupe_vent")
-    r = banc("""function (L, o) {
+    return banc("""function (L, o) {
         L.Jeu.commencer();
-        const j = L.B.joueur, c = L.Monde.carte;
-        function entrer(lieu, type) {
+        const neuf = JSON.stringify({ armes: L.B.partie.armes, tenue: L.B.partie.tenue, tenues: L.B.partie.tenues,
+                                      arme: L.B.joueur.arme, swaps: L.B.joueur.swaps, argent: L.B.partie.argent });
+        const depart = { x: L.B.joueur.x, y: L.B.joueur.y };
+        function remettre() {
+            if (L.B.menu) L.Hud.fermerMenu();
             if (L.B.interieur) o.sortir();
-            const porte = c.portes.find(function (p) { return p.lieu === lieu; });
+            const n = JSON.parse(neuf), p = L.B.partie, j = L.B.joueur;
+            p.armes = n.armes; p.tenue = n.tenue; p.tenues = n.tenues; p.argent = n.argent;
+            j.arme = n.arme; j.swaps = n.swaps;
+            j.x = depart.x; j.y = depart.y;
+        }
+        const out = {};
+        // test_l_armurerie_et_la_boutique_vendent
+        remettre();
+        out.boutiques = (function () {
+            const j = L.B.joueur, c = L.Monde.carte;
+            function entrer(lieu, type) {
+                if (L.B.interieur) o.sortir();
+                const porte = c.portes.find(function (p) { return p.lieu === lieu; });
+                j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+                o.entrer(porte);
+                const point = L.B.interieur.points.find(function (p) { return p.type === type; });
+                j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
+                L.Missions.utiliserPoint(j);
+                return L.B.menu;
+            }
+            L.B.partie.argent = 500;
+            const gus = entrer('armurerie', 'acheter');
+            gus.items.find(function (i) { return i.libelle === NOM_BATTE; }).faire();
+            const apresBaton = { arme: !!L.B.partie.armes.batte, argent: L.B.partie.argent, titre: gus.titre };
+            L.Hud.fermerMenu();
+            const rosa = entrer('vetements', 'acheter');
+            rosa.items.find(function (i) { return i.libelle === 'COUPE-VENT BLEU'; }).faire();
+            return { apresBaton: apresBaton, tenue: L.B.partie.tenue, tenues: L.B.partie.tenues, argent: L.B.partie.argent,
+                     swap: j.swaps.c, titre: rosa.titre };
+        })();
+        // test_le_poing_americain_se_paie_au_comptoir_de_gus
+        remettre();
+        out.poing = (function () {
+            const j = L.B.joueur, c = L.Monde.carte, p = L.B.partie;
+            const porte = c.portes.find(function (x) { return x.lieu === 'armurerie'; });
             j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
             o.entrer(porte);
-            const point = L.B.interieur.points.find(function (p) { return p.type === type; });
+            const point = L.B.interieur.points.find(function (x) { return x.type === 'acheter'; });
             j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
+            p.argent = 100;
             L.Missions.utiliserPoint(j);
-            return L.B.menu;
-        }
-        L.B.partie.argent = 500;
-        const gus = entrer('armurerie', 'acheter');
-        gus.items.find(function (i) { return i.libelle === %s; }).faire();
-        const apresBaton = { arme: !!L.B.partie.armes.batte, argent: L.B.partie.argent, titre: gus.titre };
-        L.Hud.fermerMenu();
-        const rosa = entrer('vetements', 'acheter');
-        rosa.items.find(function (i) { return i.libelle === 'COUPE-VENT BLEU'; }).faire();
-        return { apresBaton: apresBaton, tenue: L.B.partie.tenue, tenues: L.B.partie.tenues, argent: L.B.partie.argent,
-                 swap: j.swaps.c, titre: rosa.titre };
-    }""" % json.dumps(batte["nom"].upper()))
+            const menu = L.B.menu;
+            function ligne(m) { return m.items.find(function (i) { return i.libelle === 'POING AMÉRICAIN'; }) || null; }
+            const avant = ligne(menu);
+            if (!avant) return { titre: menu.titre, libelles: menu.items.map(function (i) { return i.libelle; }) };
+            const rang = menu.items.indexOf(avant);
+            menu.curseur = rang;
+            o.tape('KeyE', 2);
+            const apres = ligne(L.B.menu);
+            return { titre: menu.titre, rang: rang, avant: avant.detail, actif: avant.actif,
+                     apres: apres && apres.detail, argent: p.argent, sac: p.armes.poing_americain || null };
+        })();
+        // test_un_achat_unique_se_voit_tout_de_suite_au_comptoir
+        remettre();
+        out.pistolet = (function () {
+            const j = L.B.joueur, c = L.Monde.carte;
+            const porte = c.portes.find(function (p) { return p.lieu === 'armurerie'; });
+            j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+            o.entrer(porte);
+            const point = L.B.interieur.points.find(function (p) { return p.type === 'acheter'; });
+            j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
+            L.B.partie.argent = 2000;
+            L.Missions.utiliserPoint(j);
+            const menu = L.B.menu;
+            function ligne(m, libelle) { return m.items.find(function (i) { return i.libelle === libelle; }) || null; }
+            const avant = ligne(menu, 'PISTOLET');
+            const rang = menu.items.indexOf(avant);
+            menu.curseur = rang;
+            // On achete par le vrai chemin : la touche ACTION, et le menu reste ouvert.
+            o.tape('KeyE', 2);
+            const apres = ligne(L.B.menu, 'PISTOLET');
+            const etat = { ouvert: L.B.menu === menu, detail: apres && apres.detail, actif: apres && apres.actif,
+                           sur: L.B.menu && L.B.menu.sur, munitions: !!ligne(L.B.menu, 'MUNITIONS PISTOLET'),
+                           curseur: L.B.menu && L.B.menu.curseur };
+            // Et on rappuie : un achat unique ne se paie pas deux fois.
+            o.tape('KeyE', 2);
+            return { avant: avant.detail, rang: rang, etat: etat, argent: L.B.partie.argent,
+                     mun: L.B.partie.armes.pistolet ? L.B.partie.armes.pistolet.mun : 0 };
+        })();
+        return out;
+    }""".replace("NOM_BATTE", json.dumps(batte["nom"].upper())))
+
+
+def test_l_armurerie_et_la_boutique_vendent(comptoirs, paquet):
+    batte = next(a for a in paquet["armes"] if a["slug"] == "batte")
+    coupe_vent = next(t for t in paquet["tenues"] if t["slug"] == "coupe_vent")
+    r = comptoirs["boutiques"]
     assert r["apresBaton"]["titre"] == "CHEZ GUS" and r["apresBaton"]["arme"] is True
     assert r["apresBaton"]["argent"] == 500 - batte["prix"]
     assert r["titre"] == "BOUTIQUE ROSA" and r["tenue"] == "coupe_vent" and "coupe_vent" in r["tenues"]
@@ -7044,32 +7153,12 @@ def test_l_armurerie_et_la_boutique_vendent(banc, paquet):
     assert r["argent"] == 500 - batte["prix"] - coupe_vent["prix"]
 
 
-def test_le_poing_americain_se_paie_au_comptoir_de_gus(banc, paquet):
+def test_le_poing_americain_se_paie_au_comptoir_de_gus(comptoirs, paquet):
     """Martin : « on devrait aussi pouvoir l'acheter ». Par le vrai chemin : la
     porte de Chez Gus, le point `acheter`, la touche ACTION — et il entre dans
     le sac avec les autres, pret pour la roue."""
     americain = next(a for a in paquet["armes"] if a["slug"] == "poing_americain")
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const j = L.B.joueur, c = L.Monde.carte, p = L.B.partie;
-        const porte = c.portes.find(function (x) { return x.lieu === 'armurerie'; });
-        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
-        o.entrer(porte);
-        const point = L.B.interieur.points.find(function (x) { return x.type === 'acheter'; });
-        j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
-        p.argent = 100;
-        L.Missions.utiliserPoint(j);
-        const menu = L.B.menu;
-        function ligne(m) { return m.items.find(function (i) { return i.libelle === 'POING AMÉRICAIN'; }) || null; }
-        const avant = ligne(menu);
-        if (!avant) return { titre: menu.titre, libelles: menu.items.map(function (i) { return i.libelle; }) };
-        const rang = menu.items.indexOf(avant);
-        menu.curseur = rang;
-        o.tape('KeyE', 2);
-        const apres = ligne(L.B.menu);
-        return { titre: menu.titre, rang: rang, avant: avant.detail, actif: avant.actif,
-                 apres: apres && apres.detail, argent: p.argent, sac: p.armes.poing_americain || null };
-    }""")
+    r = comptoirs["poing"]
     assert r["titre"] == "CHEZ GUS"
     assert "avant" in r, "pas de poing americain au comptoir de Gus : %s" % r.get("libelles")
     assert r["rang"] == 0, "en tete de vitrine, c'est le moins cher"
@@ -7079,38 +7168,13 @@ def test_le_poing_americain_se_paie_au_comptoir_de_gus(banc, paquet):
     assert r["apres"] == "DÉJÀ À TOI"
 
 
-def test_un_achat_unique_se_voit_tout_de_suite_au_comptoir(banc, paquet):
+def test_un_achat_unique_se_voit_tout_de_suite_au_comptoir(comptoirs, paquet):
     """⚠️ Un menu est une PHOTO de l'etat au moment ou on l'ouvre. Le comptoir,
     lui, reste ouvert entre deux achats : sans un rafraichissement, le pistolet
     deja paye garde son prix, se rachete une deuxieme fois, et les munitions de
     l'arme qu'on vient d'acheter n'apparaissent qu'a la prochaine visite."""
     pistolet = next(a for a in paquet["armes"] if a["slug"] == "pistolet")
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const j = L.B.joueur, c = L.Monde.carte;
-        const porte = c.portes.find(function (p) { return p.lieu === 'armurerie'; });
-        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
-        o.entrer(porte);
-        const point = L.B.interieur.points.find(function (p) { return p.type === 'acheter'; });
-        j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
-        L.B.partie.argent = 2000;
-        L.Missions.utiliserPoint(j);
-        const menu = L.B.menu;
-        function ligne(m, libelle) { return m.items.find(function (i) { return i.libelle === libelle; }) || null; }
-        const avant = ligne(menu, 'PISTOLET');
-        const rang = menu.items.indexOf(avant);
-        menu.curseur = rang;
-        // On achete par le vrai chemin : la touche ACTION, et le menu reste ouvert.
-        o.tape('KeyE', 2);
-        const apres = ligne(L.B.menu, 'PISTOLET');
-        const etat = { ouvert: L.B.menu === menu, detail: apres && apres.detail, actif: apres && apres.actif,
-                       sur: L.B.menu && L.B.menu.sur, munitions: !!ligne(L.B.menu, 'MUNITIONS PISTOLET'),
-                       curseur: L.B.menu && L.B.menu.curseur };
-        // Et on rappuie : un achat unique ne se paie pas deux fois.
-        o.tape('KeyE', 2);
-        return { avant: avant.detail, rang: rang, etat: etat, argent: L.B.partie.argent,
-                 mun: L.B.partie.armes.pistolet ? L.B.partie.armes.pistolet.mun : 0 };
-    }""")
+    r = comptoirs["pistolet"]
     assert r["avant"] == "%d $" % pistolet["prix"]
     assert r["etat"]["ouvert"] is True, "le comptoir s'est ferme sous les doigts du joueur"
     assert r["etat"]["detail"] == "DÉJÀ À TOI", "le comptoir affiche encore le prix d'une arme payee"
