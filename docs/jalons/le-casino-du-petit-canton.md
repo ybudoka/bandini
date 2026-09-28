@@ -133,3 +133,5 @@ _Demande de Martin (28 sept. 2026) :_ « je veux un grand casino dans le quartie
   l'habit du croupier, GAUCHE / DROITE, le poker qui paie trop, le tableau de la banque).
 - **Reste** : vague 3 (tricher : le sabot et le compte des cartes, la chaleur, les gardes), vague 4 (le tripot du
   sous-sol).
+
+### Vague 3 — tricher : le sabot, le compte, la chaleur et les gardes — **en cours** (Martin, 28 sept. : « va y pour vague 3 »)
