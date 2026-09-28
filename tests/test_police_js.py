@@ -5,6 +5,8 @@ Chaque test pose ses agents lui-meme (`Police.creerAgent`) : attendre qu'une
 patrouille passe rendrait le banc lent et capricieux.
 """
 
+import pytest
+
 #: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : les juges qui cherchent leur rue (ou leur parc, leur gazon) en
 #: balayant la carte depuis le haut commencent à `decalage_nord` — sinon ils la trouvaient dans la bande
 #: nord (`app/nord.py`), loin de la caméra et hors du terrain où ils ont été réglés.
@@ -255,8 +257,15 @@ def test_le_pot_de_vin_accepte_ou_refuse(banc, paquet):
     assert r["refuse"]["crimes"] == 1, "un pot-de-vin refuse est un delit de plus"
 
 
-def test_le_temoin_court_vers_l_agent_et_rapporte(banc, paquet):
-    r = banc(AGENT + """
+@pytest.fixture(scope="module")
+def temoins(banc):
+    """⚠️ **DEUX SCÈNES DE TÉMOIN, UN BANC** (vague C, 28 sept. 2026). La seconde
+    vient de `test_moteur_js::test_un_meurtre_vu_fait_monter_les_etoiles` : le coup
+    rapporté par un passant (graine 3), puis le meurtre — sans témoin, puis avec
+    (graine 21). ⚠️ Entre les deux, on REMET ce que le juge du meurtre avait au
+    départ : sa graine, la police à zéro, les crimes effacés, les piétons (agents
+    compris) retirés — `meurtre()` le faisait déjà lui-même à chaque appel."""
+    return banc(AGENT + """
         L.Jeu.commencer();
         L.graine(3);
         const j = L.B.joueur;
@@ -269,15 +278,69 @@ def test_le_temoin_court_vers_l_agent_et_rapporte(banc, paquet):
         const vu = crime.vu, temoin = t.etat, avant = L.B.recherche.etoiles;
         let rapporte = -1;
         for (let i = 0; i < 600 && rapporte < 0; i++) { o.frame(1); if (crime.rapporte) rapporte = i; }
-        return { vu: vu, temoin: temoin, avant: avant, rapporte: rapporte,
-                 chaleur: L.B.recherche.chaleur + L.B.recherche.etoiles * 100,
-                 agent: a.etat, vers: t.vers === a || t.etat !== 'temoin' };
+        const coup = { vu: vu, temoin: temoin, avant: avant, rapporte: rapporte,
+                       chaleur: L.B.recherche.chaleur + L.B.recherche.etoiles * 100,
+                       agent: a.etat, vers: t.vers === a || t.etat !== 'temoin' };
+
+        // --- Le meurtre : je tue, quelqu'un voit, il le raconte a un agent, et LA
+        // la police le sait — pas avant (M4 : un temoin se rachete).
+        L.graine(21);
+        function meurtre(avecTemoin) {
+            L.Police.remiseAZero();
+            L.B.crimes.length = 0;
+            L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'pieton'; });
+            const victime = o.poser('passant', 14, 0);
+            let temoin = null;
+            if (avecTemoin) {
+                temoin = o.poser('passante', 60, 0);
+                temoin.probaTemoin = 1; temoin.etat = 'flane';
+                L.Entites.regarder(temoin, -1, 0);
+            }
+            L.Entites.indexer();
+            L.Entites.tuer(victime, L.B.joueur);
+            const surLeCoup = { etoiles: L.B.recherche.etoiles, chaleur: L.B.recherche.chaleur,
+                                temoin: temoin ? temoin.etat : null, crime: !!(temoin && temoin.crime) };
+            if (!temoin) return { surLeCoup: surLeCoup };
+            // Un agent arrive dans le coin, de dos : le temoin court le lui dire.
+            const a = L.Police.creerAgent(temoin.x + 40, temoin.y, 'flane');
+            L.Entites.regarder(a, 1, 0);
+            L.Entites.indexer();
+            let quand = -1;
+            for (let i = 0; i < 400 && quand < 0; i++) { o.frame(1); if (temoin.crime && temoin.crime.rapporte) quand = i; }
+            return { surLeCoup: surLeCoup, quand: quand,
+                     chaleur: L.B.recherche.chaleur + L.B.recherche.etoiles * 100 };
+        }
+        const sansTemoin = meurtre(false);
+        const avecTemoin = meurtre(true);
+        return { coup: coup, meurtre: { sans: sansTemoin, avec: avecTemoin,
+                                        chaleurParGravite: L.B.defs.recherche.chaleur_par_gravite } };
     }""")
+
+
+def test_le_temoin_court_vers_l_agent_et_rapporte(temoins, paquet):
+    r = temoins["coup"]
     assert r["vu"] is True, "le passant a vu"
     assert r["temoin"] == "temoin" and r["avant"] == 0, "vu par un passant, pas par un agent : rien n'est compte tant que ce n'est pas rapporte"
     assert 0 <= r["rapporte"] < 600, "le temoin a rejoint l'agent et lui a raconte"
     assert r["chaleur"] == paquet["recherche"]["chaleur_par_gravite"], "le crime rapporte chauffe, a sa gravite"
     assert r["agent"] in ("enquete", "poursuit")
+
+
+def test_un_meurtre_vu_fait_monter_les_etoiles(temoins, paquet):
+    """La chaine complete : je tue, quelqu'un voit, il le raconte a un agent,
+    et LA la police le sait — pas avant (M4 : un temoin se rachete). Venu de
+    `test_moteur_js` (vague C, 28 sept. 2026) : c'est le seul juge où la
+    GRAVITÉ d'un meurtre (`mort_pieton`, signalé par `Entites.tuer`) voyage du
+    témoin jusqu'à la chaleur."""
+    gravite = paquet["recherche"]["delits"]["mort_pieton"]["etoiles"]
+    r = temoins["meurtre"]
+    assert r["sans"]["surLeCoup"]["chaleur"] == 0, "un meurtre que personne ne voit ne chauffe pas"
+    assert r["avec"]["surLeCoup"]["chaleur"] == 0 and r["avec"]["surLeCoup"]["etoiles"] == 0, \
+        "sans agent dans le coin, la police ne sait rien encore"
+    assert r["avec"]["surLeCoup"]["temoin"] == "temoin" and r["avec"]["surLeCoup"]["crime"] is True
+    assert 0 <= r["avec"]["quand"] < 400, "le temoin n'a pas rejoint l'agent"
+    assert r["avec"]["chaleur"] == gravite * r["chaleurParGravite"], \
+        "le temoin n'a pas transmis la gravite du crime"
 
 
 def test_on_achete_le_silence_d_un_temoin(banc, paquet):
@@ -697,7 +760,7 @@ def test_l_equipage_ne_descend_que_d_une_auto_arretee(banc, paquet):
         const { j, v, avant } = lancer(L, 3.5);
         const equipage = new Set();
         const sorties = [];
-        let dehorsEnRoulant = 0, vitesseMin = 0, ecart = 0, garee = null, blesses = 0, images = 0;
+        let vitesseMin = 0, ecart = 0, garee = null, blesses = 0, images = 0;
         for (let i = 0; i < 260; i++) {
             o.frame(1);
             const roule = Math.hypot(v.vx, v.vy);
@@ -712,7 +775,6 @@ def test_l_equipage_ne_descend_que_d_une_auto_arretee(banc, paquet):
                     sorties.push({ i: i, roule: roule, axial: dx * c + dy * s, lateral: -dx * s + dy * c });
                 }
             }
-            if (roule > L.B.defs.recherche.police.auto_arret_sous) dehorsEnRoulant = Math.max(dehorsEnRoulant, dehors);
             if (dehors >= 2) {
                 garee = garee || { x: v.x, y: v.y };
                 ecart = Math.max(ecart, Math.hypot(v.x - garee.x, v.y - garee.y));
@@ -720,7 +782,7 @@ def test_l_equipage_ne_descend_que_d_une_auto_arretee(banc, paquet):
             }
             for (const a of equipage) if (!a.vivant || a.vie < a.vieMax || a.etat === 'assomme') blesses++;
         }
-        return { dehors: L.Police.equipageDe(v).dehors, equipage: equipage.size, sorties: sorties, dehorsEnRoulant: dehorsEnRoulant,
+        return { dehors: L.Police.equipageDe(v).dehors, equipage: equipage.size, sorties: sorties,
                  vitesseMin: vitesseMin, ecart: ecart, blesses: blesses, images: images, demi: v.def.largeur / 2, longueur: v.def.longueur };
     }""")
     assert r["dehors"] == 2 and r["equipage"] == 2, "l'auto s'est arrêtée sur le joueur et personne n'en est sorti : %s" % r
@@ -730,7 +792,8 @@ def test_l_equipage_ne_descend_que_d_une_auto_arretee(banc, paquet):
     assert premier["roule"] < p["auto_passager_saute_sous"], "le passager saute d'une auto lancée : %s" % r
     assert second["roule"] < p["auto_arret_sous"], "le conducteur descend d'une auto qui roule encore : %s" % r
     assert second["i"] > premier["i"], "les deux sortent dans la même image : c'est l'ancien « tous d'un coup » : %s" % r
-    assert r["dehorsEnRoulant"] <= 1, "deux agents dehors alors que l'auto roule : %s" % r
+    # (« Jamais deux dehors tant qu'elle roule » : `test_un_seul_dehors_l_auto_peut_rouler_mais_pas_les_deux`,
+    # le même `lancer(L, 3.5)` regardé mille images au lieu de 260 — vague C, 28 sept. 2026.)
     # ⚠️ Par la portière, pas dans l'axe : c'est la que l'auto roule.
     for s in r["sorties"]:
         assert abs(s["lateral"]) >= r["demi"] + 4, "un agent descend contre la carrosserie, dans l'axe de l'auto : %s" % r
@@ -862,7 +925,11 @@ def test_un_seul_dehors_l_auto_peut_rouler_mais_pas_les_deux(banc):
             const eq = L.Police.equipageDe(v), roule = Math.hypot(v.vx, v.vy);
             if (eq.dehors > 2) plusDeDeux++;
             if (eq.dehors === 2) deuxDehors++;
-            if (roule > 0.15 && eq.dehors === 2) deuxDehorsEnRoulant++;
+            // ⚠️ « Elle roule » : au plus bas des deux seuils, le 0,15 d'ici et celui de la fiche
+            // (`auto_arret_sous`, que lisait `test_l_equipage_ne_descend...` avant de lui laisser cette
+            // règle) — pour ne rien relâcher si l'un bouge sans l'autre.
+            const seuil = Math.min(0.15, L.B.defs.recherche.police.auto_arret_sous);
+            if (roule > seuil && eq.dehors === 2) deuxDehorsEnRoulant++;
             if (roule > 0.15 && eq.dehors === 1) unSeulEnRoulant++;
         }
         return { deuxDehorsEnRoulant: deuxDehorsEnRoulant, unSeulEnRoulant: unSeulEnRoulant, deuxDehors: deuxDehors, plusDeDeux: plusDeDeux };

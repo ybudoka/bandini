@@ -48,16 +48,32 @@ def test_le_moteur_charge_et_expose_son_api(banc, paquet):
     assert r["ouverture"] <= 6, "l'ouverture se prechauffe ; la ville, non"
 
 
-def test_les_sprites_sont_integres(banc):
-    r = banc("""function (L, o) {
+@pytest.fixture(scope="module")
+def ce_qui_est_recu(banc):
+    """⚠️ **DEUX LECTURES, UN BANC** (vague C, 28 sept. 2026) : l'intégrité des
+    sprites et la ville reçue ne touchent à rien — ni partie commencée, ni image
+    jouée. Elles se lisent dans le même chargement. « Une tuile de la légende sans
+    peintre » était vérifiée DEUX fois ; elle ne l'est plus que dans la ville
+    reçue, avec son message."""
+    return banc("""function (L, o) {
         const problemes = [];
         for (const nom in L.SPRITES) problemes.push.apply(problemes, L.Atlas.valider(nom, L.SPRITES[nom]));
         for (const ch in L.POLICE_PIXEL) if (L.POLICE_PIXEL[ch].length !== 15) problemes.push('police ' + ch);
-        const legende = L.B.defs.carte.legende;
-        for (const g in legende) if (!L.TUILES[g]) problemes.push('tuile sans peintre : ' + g);
-        return problemes;
+
+        const c = L.Monde.carte, d = L.B.defs.carte;
+        const types = {};
+        L.B.defs.carte.decor.forEach(function (m) { types[m.type] = true; });
+        return { sprites: problemes,
+                 ville: { w: c.w, h: c.h, portes: c.portes.length, points: c.points.length,
+                          decor: L.B.defs.carte.decor.length, lampes: c.lampes.length,
+                          zones: c.zones.length, sansPeintre: Object.keys(d.legende).filter(function (g) { return !L.TUILES[g]; }),
+                          decorSansPeintre: Object.keys(types).filter(function (t) { return !L.DECORS[t]; }),
+                          typesDecor: Object.keys(types).sort() } };
     }""")
-    assert r == []
+
+
+def test_les_sprites_sont_integres(ce_qui_est_recu):
+    assert ce_qui_est_recu["sprites"] == []
 
 
 def test_chaque_char_de_phase_1_a_son_sprite(banc, paquet):
@@ -632,6 +648,26 @@ def test_un_pieton_attend_le_blanc_et_ne_reste_pas_planté_la_ou_il_n_y_a_pas_de
         L.Jeu.commencer();
         const c = L.Monde.carte, TT = L.TT, out = {};
 
+        // 0. LE PASSAGE A L'OUEST DU CROISEMENT, aux deux bouts du cycle : au rouge des
+        // chars on passe, au vert on attend. ⚠️ Venu de `test_un_pieton_attend_au_feu_avant_de_traverser`
+        // (vague C, 28 sept. 2026) ; il posait l'heure du monde et la laissait la — on
+        // la remet, pour que la suite parte du meme instant qu'avant.
+        (function () {
+            const inter = c.intersections.find(function (i) { return i.feux; });
+            // Le passage a l'ouest du croisement, sur la rue est-ouest : tuile '='.
+            const tx = inter.x - 1, ty = inter.y;
+            const est = L.Monde.glyphe(tx, ty);
+            const t0 = L.B.t;
+            L.B.t = -inter.decalage;                      // phase 0 : nord-sud roule, est-ouest est au rouge
+            const rougeEO = !L.Monde.feuVert(inter, '>');
+            const surAuRouge = L.Entites.traverseeSure(tx, ty, [0, 1]);
+            L.B.t += Math.floor((L.B.defs.conduite.trafic.feu_vert_images + L.B.defs.conduite.trafic.feu_orange_images));
+            const vertEO = L.Monde.feuVert(inter, '>');
+            const surAuVert = L.Entites.traverseeSure(tx, ty, [0, 1]);
+            L.B.t = t0;
+            out.phases = { glyphe: est, rougeEO: rougeEO, surAuRouge: surAuRouge, vertEO: vertEO, surAuVert: surAuVert };
+        })();
+
         // 1. AU FEU : on ne s'engage que sur le blanc, jamais autrement.
         const inter = c.intersections.find(function (i) { return i.feux; });
         let passage = null;
@@ -687,6 +723,10 @@ def test_un_pieton_attend_le_blanc_et_ne_reste_pas_planté_la_ou_il_n_y_a_pas_de
         return out;
     }""")
 
+    p = r["phases"]
+    assert p["glyphe"] == "=", "la tuile choisie n'est pas un passage de la rue est-ouest"
+    assert p["rougeEO"] is True and p["surAuRouge"] is True, "au rouge des chars, le pieton doit pouvoir traverser"
+    assert p["vertEO"] is True and p["surAuVert"] is False, "au vert des chars, le pieton doit attendre"
     a = r["auFeu"]
     assert a["sûr"] > 0, "on ne traverse jamais au feu : la foule s'échoue"
     assert a["fautes"] == 0, (
@@ -1337,17 +1377,8 @@ def test_le_singe_ne_casse_rien(banc, graine):
 # --- M1 : la ville ---------------------------------------------------------
 
 
-def test_la_ville_recue_est_celle_du_serveur(banc, paquet):
-    r = banc("""function (L, o) {
-        const c = L.Monde.carte, d = L.B.defs.carte;
-        const types = {};
-        L.B.defs.carte.decor.forEach(function (m) { types[m.type] = true; });
-        return { w: c.w, h: c.h, portes: c.portes.length, points: c.points.length,
-                 decor: L.B.defs.carte.decor.length, lampes: c.lampes.length,
-                 zones: c.zones.length, sansPeintre: Object.keys(d.legende).filter(function (g) { return !L.TUILES[g]; }),
-                 decorSansPeintre: Object.keys(types).filter(function (t) { return !L.DECORS[t]; }),
-                 typesDecor: Object.keys(types).sort() };
-    }""")
+def test_la_ville_recue_est_celle_du_serveur(ce_qui_est_recu, paquet):
+    r = ce_qui_est_recu["ville"]
     carte = paquet["carte"]
     assert [r["w"], r["h"]] == [carte["largeur"], carte["hauteur"]]
     assert r["portes"] == len(carte["portes"]) >= 8
@@ -3534,83 +3565,20 @@ def test_la_bagarre_tient_le_budget(banc):
     assert r["images"] <= 160, f"{r['images']} drawImage par image"
 
 
-def test_un_meurtre_vu_fait_monter_les_etoiles(banc, paquet):
-    """La chaine complete : je tue, quelqu'un voit, il le raconte a un agent,
-    et LA la police le sait — pas avant (M4 : un temoin se rachete)."""
-    gravite = paquet["recherche"]["delits"]["mort_pieton"]["etoiles"]
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        L.graine(21);
-        function meurtre(avecTemoin) {
-            L.Police.remiseAZero();
-            L.B.crimes.length = 0;
-            L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'pieton'; });
-            const victime = o.poser('passant', 14, 0);
-            let temoin = null;
-            if (avecTemoin) {
-                temoin = o.poser('passante', 60, 0);
-                temoin.probaTemoin = 1; temoin.etat = 'flane';
-                L.Entites.regarder(temoin, -1, 0);
-            }
-            L.Entites.indexer();
-            L.Entites.tuer(victime, L.B.joueur);
-            const surLeCoup = { etoiles: L.B.recherche.etoiles, chaleur: L.B.recherche.chaleur,
-                                temoin: temoin ? temoin.etat : null, crime: !!(temoin && temoin.crime) };
-            if (!temoin) return { surLeCoup: surLeCoup };
-            // Un agent arrive dans le coin, de dos : le temoin court le lui dire.
-            const a = L.Police.creerAgent(temoin.x + 40, temoin.y, 'flane');
-            L.Entites.regarder(a, 1, 0);
-            L.Entites.indexer();
-            let quand = -1;
-            for (let i = 0; i < 400 && quand < 0; i++) { o.frame(1); if (temoin.crime && temoin.crime.rapporte) quand = i; }
-            return { surLeCoup: surLeCoup, quand: quand,
-                     chaleur: L.B.recherche.chaleur + L.B.recherche.etoiles * 100 };
-        }
-        const sansTemoin = meurtre(false);
-        const avecTemoin = meurtre(true);
-        return { sans: sansTemoin, avec: avecTemoin,
-                 chaleurParGravite: L.B.defs.recherche.chaleur_par_gravite };
-    }""")
-    assert r["sans"]["surLeCoup"]["chaleur"] == 0, "un meurtre que personne ne voit ne chauffe pas"
-    assert r["avec"]["surLeCoup"]["chaleur"] == 0 and r["avec"]["surLeCoup"]["etoiles"] == 0, \
-        "sans agent dans le coin, la police ne sait rien encore"
-    assert r["avec"]["surLeCoup"]["temoin"] == "temoin" and r["avec"]["surLeCoup"]["crime"] is True
-    assert 0 <= r["avec"]["quand"] < 400, "le temoin n'a pas rejoint l'agent"
-    assert r["avec"]["chaleur"] == gravite * r["chaleurParGravite"], \
-        "le temoin n'a pas transmis la gravite du crime"
-
-
 def test_des_armes_de_fortune_trainent_en_ville(banc, paquet):
+    """⚠️ La casse (une arme de fortune qui lâche après `usures` coups, et on
+    retombe aux poings) se juge dans `test_armes_js::test_une_arme_de_fortune_casse_en_le_disant`,
+    au coup près et avec son bruit (vague C, 28 sept. 2026). Ici : elles traînent
+    bel et bien dans la rue, et ce ne sont que des armes de fortune."""
     fortunes = {a["slug"] for a in paquet["armes"] if a["usures"] > 0 and a["prix"] == 0}
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         o.frame(900);
         const objets = L.B.entites.filter(function (e) { return e.type === 'ramassage'; });
-        // On en ramasse une et on la casse a force de cogner.
-        const arme = objets.length ? objets[0].arme : null;
-        let usure = null, casse = null;
-        if (arme) {
-            L.Combat.ramasserArme(arme, null);
-            L.B.joueur.arme = arme;
-            const def = L.Combat.armeDef(arme);
-            for (let coup = 0; coup < def.usures + 1; coup++) {
-                const cible = o.poser('ouvrier', 12, 0);
-                cible.vie = 999; cible.vieMax = 999;
-                o.viser(cible);
-                L.Combat.frapper(L.B.joueur, false);
-                for (let i = 0; i < 40; i++) { L.Entites.indexer(); L.Combat.maj(); }
-                L.Entites.retirer(cible);
-            }
-            usure = def.usures;
-            casse = !L.B.partie.armes[arme];
-        }
-        return { objets: objets.length, armes: objets.map(function (e) { return e.arme; }),
-                 arme: arme, usure: usure, casse: casse, porte: L.B.joueur.arme };
+        return { objets: objets.length, armes: objets.map(function (e) { return e.arme; }) };
     }""")
     assert r["objets"] > 0, "aucune arme de fortune ne traine dans la rue"
     assert set(r["armes"]) <= fortunes, r["armes"]
-    assert r["casse"] is True, f"la {r['arme']} n'a pas casse apres {r['usure']} coups"
-    assert r["porte"] == "poings", "on garde une arme cassee a la main"
 
 
 # --- La vie de rue : enfants, meres, kiosques, la Brume -------------------
@@ -5485,30 +5453,6 @@ def test_eteindre_sa_sirene_n_appelle_pas_un_nouveau_contrat(banc):
     )
 
 
-def test_l_hopital_ramasse_le_joueur_et_le_facture(banc, paquet):
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const j = L.B.joueur;
-        L.B.partie.argent = 400;
-        // ⚠️ Le point se lit AVANT : au reveil, `Monde.carte` est la piece de l'hopital.
-        const hopital = L.Monde.carte.points.find(function (p) { return p.slug === 'hopital'; });
-        L.Entites.blesser(j, 9999, null, {});
-        const pendant = { vivant: j.vivant, fondu: !!L.B.transition };
-        o.fondu();
-        // On se reveille dans la piece, et sa porte mene devant l'hopital.
-        const dehors = L.B.exterieur || { x: j.x, y: j.y };
-        return { pendant: pendant, vie: j.vie, max: j.vieMax, argent: L.B.partie.argent,
-                 piece: L.B.interieur && L.B.interieur.slug,
-                 loin: Math.hypot(dehors.x - hopital.x * L.TT, dehors.y - hopital.y * L.TT), etat: L.B.etat };
-    }""")
-    assert r["pendant"]["vivant"] is True and r["pendant"]["fondu"] is True
-    assert r["vie"] == r["max"], "le joueur ne s'est pas reveille en pleine forme"
-    assert r["argent"] < 400, "l'hopital n'a pas facture"
-    assert r["piece"] == "hopital", "le joueur ne s'est pas reveille DANS l'hopital"
-    assert r["loin"] < 48, "la porte de la piece ne mene pas devant l'hopital"
-    assert r["etat"] == "jeu"
-
-
 def test_la_radio_suit_le_char(banc, paquet):
     """⚠️ Le bouton RADIO parcourt DEUX SOURCES depuis M9 : les stations
     enregistrees (des mp3 ElevenLabs) et les stations PROCEDURALES, ecrites par
@@ -5577,27 +5521,6 @@ def test_les_pietons_restent_sur_les_trottoirs(banc):
     assert r["chaussee"] <= r["releves"] * 0.03, \
         f"{r['chaussee']} releves de pietons sur la chaussee (sur {r['releves']})"
     assert r["passage"] > 0, "personne ne traverse jamais"
-
-
-def test_un_pieton_attend_au_feu_avant_de_traverser(banc):
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const c = L.Monde.carte;
-        const inter = c.intersections.find(function (i) { return i.feux; });
-        // Le passage a l'ouest du croisement, sur la rue est-ouest : tuile '='.
-        const tx = inter.x - 1, ty = inter.y;
-        const est = L.Monde.glyphe(tx, ty);
-        L.B.t = -inter.decalage;                      // phase 0 : nord-sud roule, est-ouest est au rouge
-        const rougeEO = !L.Monde.feuVert(inter, '>');
-        const surAuRouge = L.Entites.traverseeSure(tx, ty, [0, 1]);
-        L.B.t += Math.floor((L.B.defs.conduite.trafic.feu_vert_images + L.B.defs.conduite.trafic.feu_orange_images));
-        const vertEO = L.Monde.feuVert(inter, '>');
-        const surAuVert = L.Entites.traverseeSure(tx, ty, [0, 1]);
-        return { glyphe: est, rougeEO: rougeEO, surAuRouge: surAuRouge, vertEO: vertEO, surAuVert: surAuVert };
-    }""")
-    assert r["glyphe"] == "=", "la tuile choisie n'est pas un passage de la rue est-ouest"
-    assert r["rougeEO"] is True and r["surAuRouge"] is True, "au rouge des chars, le pieton doit pouvoir traverser"
-    assert r["vertEO"] is True and r["surAuVert"] is False, "au vert des chars, le pieton doit attendre"
 
 
 def test_le_trafic_reste_dans_sa_voie(banc):
@@ -6658,7 +6581,7 @@ def test_l_hopital_et_la_prison_passent_par_la_machine_des_portes(banc):
         const avant = { t: L.B.t, heure: L.B.partie.heure, px: passant.x, cx: char.x, x: j.x, y: j.y };
         L.Entites.blesser(j, 9999, null, {});
         const lance = { fondu: !!L.B.transition, tient: L.B.transition && L.B.transition.tient,
-                        dejaLoin: Math.hypot(j.x - avant.x, j.y - avant.y) };
+                        vivant: j.vivant, dejaLoin: Math.hypot(j.x - avant.x, j.y - avant.y) };
         // Image par image : ou est le joueur, et a quel alpha ?
         const images = [];
         for (let i = 0; i < 300 && L.B.transition; i++) {
@@ -6673,6 +6596,7 @@ def test_l_hopital_et_la_prison_passent_par_la_machine_des_portes(banc):
         const hopital = L.B.exterieur.carte.points.find(function (p) { return p.slug === 'hopital'; });
         return { lance: lance, images: images, ecrits: ecrits, avant: avant, apres: apres,
                  repart: L.B.t - apres.t, vie: j.vie, max: j.vieMax,
+                 argent: L.B.partie.argent, etat: L.B.etat,
                  piece: L.B.interieur && L.B.interieur.slug,
                  arrive: Math.hypot(L.B.exterieur.x - hopital.x * L.TT, L.B.exterieur.y - hopital.y * L.TT) };
     }""")
@@ -6702,6 +6626,12 @@ def test_l_hopital_et_la_prison_passent_par_la_machine_des_portes(banc):
     assert r["apres"]["cx"] == r["avant"]["cx"], "un char a roule pendant le fondu"
     assert r["repart"] == 5, "le jeu n'est pas reparti apres le fondu"
     assert r["vie"] == r["max"] and r["piece"] == "hopital" and r["arrive"] < 48
+    # ⚠️ Venus de `test_l_hopital_ramasse_le_joueur_et_le_facture` (vague C, 28 sept. 2026),
+    # qui refaisait la même chute sans regarder le fondu : on tombe VIVANT (le fondu
+    # d'abord, le réveil ensuite), l'hôpital FACTURE, et on repart en jeu.
+    assert r["lance"]["vivant"] is True, "le joueur est mort au lieu de tomber : %s" % r["lance"]
+    assert r["argent"] < 400, "l'hopital n'a pas facture"
+    assert r["etat"] == "jeu", "on ne repart pas en jeu apres l'hopital : %s" % r["etat"]
 
 
 def test_se_faire_arreter_pendant_le_fondu_de_l_hopital_n_empile_pas_deux_noirs(banc):
