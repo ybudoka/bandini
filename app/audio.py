@@ -212,6 +212,15 @@ CATALOGUE: list[Echantillon] = [
        prompt="a soft muted user interface refusal, two quiet low blips "
               "descending gently, rounded and dull, very short, dry, "
               "no buzzer, no rasp, no alarm, no distortion, no music"),
+    # LES FRÉNÉSIES (`frenesies.js`) : le coup qui lance le chrono — il doit dire « c'est parti, et
+    # c'est pas beau » — et la fanfare courte qui le ferme, gagné.
+    _e("frenesie", "Frénésie : c'est parti", duree_s=1.5, volume=0.6, influence=0.6,
+       prompt="a short aggressive video game sound effect: a deep distorted bass hit and a low gong "
+              "crash with a fast rising synth swell, menacing, punchy, retro arcade, no voices, "
+              "no music"),
+    _e("frenesie_fin", "Frénésie : réussie", duree_s=1.8, volume=0.55, influence=0.6,
+       prompt="a short triumphant retro arcade video game victory sound effect: four quick rising "
+              "square-wave blips ending on a bright ringing chime, punchy, no voices, no music"),
     _e("etoile", "Niveau de recherche", duree_s=1.2, volume=0.79, influence=0.75,
        prompt="a police radio alert chirp followed by a burst of squelch "
               "static, tense and short, no voices, no music"),

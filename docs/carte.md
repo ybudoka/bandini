@@ -303,6 +303,7 @@ La foule anonyme, les sortes posées, et les gens d'intérieur. `frequence`
 - **Foire** : les trois jeux d'adresse (`galerie_tir`, `marteau_force`,
   `peche_canards`) — un par kiosque, joués à pied.
 - **Plages** : où naissent les baigneurs.
+- **Frénésies** (`frenesies.py`) : huit crânes cachés, un par district de terre — dans une ruelle (la friche aux Friches, l'herbe à la Gare de triage, qui n'ont pas de ruelle), près de la cour de la gang visée. Les Cravates au pistolet (Faubourg) et à la carabine (Petit-Canton), les Chevreuils à la batte (Érables) et à la mitraillette (Friches), les Morues au fusil (Quais), les Skateux au couteau (La Pointe), les Boulonneux au Molotov (la Gare de triage), et des chars au Molotov à la Shop.
 - **Métro** : quai (`metro_quai`) et rame (`metro_rame`).
 - **Aéroport** (`aeroport.py`) : l'aérogare (lieu `aeroport`, famille transport,
   pièce `aerogare` — comptoirs, sièges, carrousel, portiques), la tour de contrôle,

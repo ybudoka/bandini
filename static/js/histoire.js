@@ -3118,6 +3118,7 @@ const Histoire = (function () {
   }
 
   function ligneObjectif() {
+    if (B.frenesie && typeof Frenesies !== 'undefined') return Frenesies.ligne();
     const m = courante();
     if (B.defi) {
       const d = defis().find(function (q) { return q.slug === B.defi.slug; });

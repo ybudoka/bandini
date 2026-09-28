@@ -7283,6 +7283,12 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
     if nord and plan == PLAN:
         from . import nord as nord_mod
         nord_mod.poser(ville)
+    # ⚠️ LES FRÉNÉSIES (P4, docs/jalons/quatre-activites-que-le-jeu-n-a-pas.md), APRÈS ABSOLUMENT TOUT, bande
+    # nord comprise : une icône par district, dans une ruelle libre choisie par une règle — sans un dé, et rien
+    # de posé dans une liste que la ville lit. La ville d'avant est la même à la tuile près.
+    from . import frenesies as frenesies_mod
+    ville["frenesies"] = frenesies_mod.poser(ville)
+    ville["frenesies_regle"] = dict(frenesies_mod.REGLE)
     return ville
 
 # --- Les interieurs ---------------------------------------------------------

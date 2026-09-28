@@ -1204,6 +1204,8 @@ const Vehicules = (function () {
     v.vie -= degats;
     if (source) v.agresseur = source;
     if (v.vie > 0) return;
+    // Une frénésie de chars compte celui-ci si c'est un joueur qui l'a mis à zéro.
+    if (typeof Frenesies !== 'undefined') Frenesies.detruit(v);
     // ⚠️ Ce qui n'a pas de reservoir ne brule pas et n'explose pas : ca se
     // PLIE. C'est la fiche qui le dit (`reservoir`), pas un `slug === 'velo'`
     // cache ici — le jour ou une trottinette arrive, elle se plie toute seule.

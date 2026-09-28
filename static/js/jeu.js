@@ -108,6 +108,7 @@ const Jeu = (function () {
     Verglas.oublier();
     Pont.oublier();                          // la baie d'une partie rechargee a toute son eau
     Incendies.oublier();                     // une nouvelle partie n'hérite pas des feux éteints
+    Frenesies.oublier();                     // ni d'une frénésie en cours
     Interactions.oublier();                  // ni de la soif des fontaines
     Monde.oublierLesRuesMouillees();         // ni de l'arroseuse d'une autre nuit
     B.lastCall = null;                       // ni des bars qu'elle a vus se vider
@@ -1114,6 +1115,7 @@ const Jeu = (function () {
         pas('brouillard', Brouillard.maj);
         pas('police', Police.maj);
         pas('incendies', Incendies.maj);
+        pas('frenesies', Frenesies.maj);   // l'icône qu'on prend exprès, le chrono, le compte
         pas('interactions', Interactions.maj);
         pas('missions', Missions.maj);
         pas('chantiers', Chantiers.maj);
@@ -1217,6 +1219,7 @@ const Jeu = (function () {
     Entites.dessiner(ctx, vue);
     Entites.dessinerCible(ctx, vue);
     Entites.dessinerParticules(ctx, vue);
+    if (!B.interieur) Frenesies.dessiner(ctx, vue);    // le crâne d'une frénésie, au-dessus de sa ruelle
     // L'ecran du cine-parc, PAR-DESSUS les arbres qui sont derriere lui : il est haut (`Cineparc`).
     if (!B.interieur) Cineparc.dessiner(ctx, vue);
     if (B.options.trace && !B.interieur) Vehicules.dessinerTrace(ctx, vue);
@@ -1515,7 +1518,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Canton: Canton, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Canton: Canton, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,

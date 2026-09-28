@@ -391,6 +391,7 @@ const Missions = (function () {
     Police.remiseAZero();
     if (boulot.etape) boulot.abandonner();
     if (B.defi) Histoire.finirDefi(false, 'À L’HÔPITAL');
+    Frenesies.rater('À L’HÔPITAL');
     Histoire.evenement('mort');
     Jeu.transiter(FONDU_ELLIPSE, function () {
       j.vie = j.vieMax; j.saigne = 0; j.endurance = 100; j.cafeine = 0;
@@ -465,6 +466,7 @@ const Missions = (function () {
     Police.remiseAZero();
     if (boulot.etape) boulot.abandonner();
     if (B.defi) Histoire.finirDefi(false, 'EN PRISON');
+    Frenesies.rater('EN PRISON');
     Histoire.evenement('arrete');
     if (agent) { agent.etat = 'flane'; agent.but = null; }
     const heures = B.defs.recherche.police.prison_heures / 24;
@@ -3654,7 +3656,8 @@ const Missions = (function () {
       garderLesCharsDesPlanques(p);
     }
     p.empreinte = B.defs.empreinte;
-    return Sauvegarde.ecrire(p);
+    // ⚠️ Pendant une frénésie, le sac D'AVANT le prêt : l'arme prêtée ne se garde pas au rechargement.
+    return Sauvegarde.ecrire(Frenesies.sansLePret(p));
   }
 
   /** Le char gare sur la place de chaque planque de bloc achetee (le chalet) : celui du

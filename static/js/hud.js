@@ -1612,6 +1612,7 @@ const Hud = (function () {
       ['FORTUNE', fortune + ' $'],
       ['PROPRIÉTÉS', Object.keys(p.proprietes).length + ' / ' + B.defs.economie.proprietes.filter(function (q) { return q.phase === 1; }).length],
       ['PAQUETS', Object.keys(p.paquets).length + ' / ' + (Monde.carte.ville ? Monde.carte.ville : Monde.carte).def.paquets.length],
+      ['FRÉNÉSIES', Frenesies.reussies() + ' / ' + Frenesies.toutes().length],
       // M13 : ce que dit le générique, et ce qu'il reste à faire après lui — la partie continue.
       ['MISSIONS', Object.keys(p.missionsFaites || {}).length + ' / ' + (B.defs.missions || []).filter(function (m) { return m.phase !== 2; }).length],
       ['DETTE DE ROCCO', p.dette > 0 ? Math.round(p.dette) + ' $' : 'RÉGLÉE'],
@@ -3833,7 +3834,7 @@ const Hud = (function () {
         [boiteEtoiles, boiteBoulot, boiteArgent, boiteHeure].forEach(function (b) {
           if (b && x < b.x + b.l && x + l > b.x) y = Math.max(y, b.y + b.h + 2);
         });
-        texte(ctx, ligne, x, y, B.defi ? '#7fc4ff' : '#e8b33c', 1);
+        texte(ctx, ligne, x, y, B.frenesie ? '#ff5a4a' : B.defi ? '#7fc4ff' : '#e8b33c', 1);
         noter('objectif', x, y, l, 7);
       }
       // ⚠️ UNE fleche au bord de l'ecran, et c'est le BOULOT qui la prend quand

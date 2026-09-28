@@ -4962,6 +4962,8 @@ const Entites = (function () {
       // creditier le joueur d'une rixe qu'il a regardee de loin — ou d'un
       // passant qu'un char du trafic a fauche — est un mensonge imprime.
       if (source === B.joueur) B.partie.stats.tues++;
+      // Une frénésie en cours compte ce qu'elle compte (jamais un intouchable : `Frenesies.compte`).
+      if (typeof Frenesies !== 'undefined') Frenesies.abattu(e, source);
       alerter(e.x, e.y, source, 3);
       if (source === B.joueur) {
         if (e.agent) Police.signalerCrime('mort_policier', e.x, e.y, true);

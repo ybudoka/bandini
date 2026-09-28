@@ -1045,6 +1045,10 @@ const Son = (function () {
       if (actif && B.t % 8 === 0) SFX.extincteur();
     },
     mission: function () { ton(523, 0.1, 'square', 0.2); ton(659, 0.1, 'square', 0.2, 1, 0.1); ton(784, 0.25, 'square', 0.22, 1, 0.2); },
+    // LES FRÉNÉSIES (`frenesies.js`) : le coup de gong grave qui lance le chrono, et la fanfare
+    // courte qui le ferme. Synthèse en filet, comme partout : sans échantillon, ça sonne quand même.
+    frenesie: function () { if (!joue('frenesie')) { ton(98, 0.5, 'sawtooth', 0.3, 0.6); ton(147, 0.35, 'square', 0.2, 1, 0.12); bruit(0.25, 0.25, 600, 120); } },
+    frenesie_fin: function () { if (!joue('frenesie_fin')) { ton(392, 0.1, 'square', 0.22); ton(523, 0.1, 'square', 0.22, 1, 0.1); ton(659, 0.1, 'square', 0.22, 1, 0.2); ton(784, 0.35, 'square', 0.24, 1, 0.3); } },
     // --- La prime d'une mission : le son dit sa taille (`economie.PRIME_PALIERS`) ---
     // ⚠️ `prime(palier)` est le seul point d'entree : `Missions.annoncerPrime`
     // l'appelle avec le palier deja tranche. SYNTHESE SEULE pour l'instant :

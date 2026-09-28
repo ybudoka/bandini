@@ -91,7 +91,40 @@ jour**, et **sans bosse** (90 % de sa vie, sinon « TROP DE BOSSES »). Juges : 
 qui change ; la même pour deux graines) ; trois mutations les font rougir. Restent **les frénésies**, à
 trancher par Martin.
 
-**Les frénésies — en cours (28 sept. 2026)** : Martin a tranché, « la frénésie on y va ». Des icônes
-cachées dans les districts (posées EN DERNIER, sans dé, la ville ne glisse pas), chacune une arme du
-catalogue, un chrono et un compte à faire (gangs, chars…) ; les enfants restent intouchables et une
-frénésie se prend **exprès**, jamais au téléphone ; celles réussies se sauvegardent et se lisent au bilan.
+**Les frénésies — livrées le 28 sept. 2026** (4e et dernière des 4 activités ; Martin : « la frénésie on
+y va ») : huit crânes rouges, **un par district de terre**, cachés dans une ruelle (`app/frenesies.py` : la
+friche aux Friches et l'herbe à la Gare de triage, qui n'en ont pas) — la plus proche de la cour de la gang
+visée sans y être, ou du centre ; hors des chantiers, à huit tuiles d'un paquet, rejointe à pied depuis la
+rue. Une RÈGLE, pas un dé, posée après la bande nord : la ville d'avant est la même à l'octet. On marche
+dessus **exprès**, à pied, hors mission et hors défi (`static/js/frenesies.js`) : l'arme du catalogue est
+**prêtée** (tenue, sans fin de munitions, rendue à la fin), le chrono et le compte s'écrivent en rouge en
+haut (« FRÉNÉSIE 3/10 CRAVATES 1:12 »), et la gang visée **rapplique** hors de l'écran (quatre autour du
+joueur au moins : sinon le compte dépend d'une cour peuplée par hasard). Réussie : un son, la prime une fois
+(150 à 250 $, jamais plus que la mission médiane ; 500 $ de plus pour les huit), le carnet, et
+`partie.frenesies` — sauvegardé, lu au BILAN (« FRÉNÉSIES 3 / 8 ») ; l'icône ne revient plus. Ratée (le
+temps, l'hôpital, la prison, une porte), elle attend qu'on s'éloigne et qu'on revienne.
+
+Les huit : les Cravates au pistolet (Faubourg, 10 en 2:00) et à la carabine (Petit-Canton), les Chevreuils à
+la batte (Érables, 8 en 1:30) et à la mitraillette (Friches, 15), les Morues au fusil (Quais), les Skateux au
+couteau (La Pointe), les Boulonneux au Molotov (Gare de triage), et **quatre chars** au Molotov à la Shop —
+une balle ne mord pas la tôle d'un char vide, seul le feu le fait.
+
+- ⚠️ **Les enfants restent intouchables**, deux fois : `Entites.blesser` les refuse à tout le monde, et
+  `Frenesies.compte` ne compte jamais un intouchable (juge synthétique : un enfant « de la gang » ne compte pas).
+- ⚠️ **L'arme prêtée ne se garde pas** : la sauvegarde écrite pendant une frénésie écrit le sac d'avant
+  (`sansLePret`) — sans ça, un rechargement rendait un pistolet à 999 balles.
+- ⚠️ **Rien au démarrage** : le crâne se peint, ce n'est pas un décor (un décor de plus au chargement décale
+  le numéro de tout ce qui naît ensuite). Les renforts naissent pendant la frénésie seulement.
+- ⚠️ **Pas de chars au triage** : la Gare est une cour de rails sans trafic ; une frénésie de chars y était
+  impossible (vu à la capture).
+- Sons : `frenesie` (le coup qui lance) et `frenesie_fin` (la fanfare), générés par ElevenLabs, synthèse en
+  filet ; **pas écoutés** — à Martin de les juger.
+- Juges : `tests/test_frenesies.py` (une par district, une ruelle libre de son district, un paquet ou un mur
+  la chassent, rejointe à pied, une arme du catalogue, aucune ne paie mieux qu'une mission, elles ne
+  déplacent rien, la bande nord sait les décaler) et `tests/test_frenesies_js.py` (l'icône lance la frénésie
+  et prête l'arme, ni au volant ni pendant une mission, les enfants et les passants ne comptent jamais,
+  réussie elle paie une fois et se sauvegarde, le temps la rate, la sauvegarde n'emporte pas l'arme, les
+  chars du joueur seulement, la gang rapplique et l'hôpital la rate, le bilan) ; vingt mutations les font
+  toutes rougir.
+
+**La ligne est livrée** : les quatre activités sont là.

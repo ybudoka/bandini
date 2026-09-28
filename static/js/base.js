@@ -85,6 +85,7 @@ const B = {
   sonnerie: null,       // le combine sonne : { slug, t } — on decroche a l'image `t` (Histoire.majTelephone)
   mission: null,        // les figurants de la mission en cours (pas sauvegardes : voir Histoire)
   defi: null,           // le defi en cours
+  frenesie: null,       // la frénésie en cours (`Frenesies`) : jamais sauvegardée
   stats: { images: 0, rects: 0, entites: 0, actifs: 0, morceaux: 0, ms: 0 },
 };
 
@@ -224,6 +225,9 @@ function etatInitial(defs) {
     vehiculePlanque: null,
     manchetteForcee: null,
     paquets: {},
+    //: Les frénésies RÉUSSIES (`Frenesies`), par slug : `{ jour, temps }`. Une réussie ne revient
+    //: plus ; une ratée n'y est pas, et son icône attend qu'on revienne.
+    frenesies: {},
     journal: null,
     // ⚠️ Les lecons du Clairon deja lues. Elles vivent dans la PARTIE, pas
     // dans le moteur : une lecon relue dix parties de suite n'apprend rien la
@@ -747,7 +751,7 @@ const Sauvegarde = (function () {
     const base = etatInitial(defs);
     if (!partie || typeof partie !== 'object') return base;
     const out = Object.assign({}, base, partie);
-    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'defisOuverts', 'paquets', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance', 'contrebande', 'contacts', 'triches', 'techniques', 'coursPayes']) {
+    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'defisOuverts', 'paquets', 'frenesies', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance', 'contrebande', 'contacts', 'triches', 'techniques', 'coursPayes']) {
       out[k] = Object.assign({}, base[k], (partie[k] && typeof partie[k] === 'object') ? partie[k] : {});
     }
     if (!Array.isArray(out.tenues) || out.tenues.indexOf('chandail') < 0) out.tenues = ['chandail'].concat(Array.isArray(out.tenues) ? out.tenues : []);
