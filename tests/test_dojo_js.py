@@ -1,5 +1,7 @@
 """Le dojo du quartier, au banc (docs/jalons/le-dojo-du-quartier.md)."""
 
+import pytest
+
 ENTRER = """
     function auDojo(L, o) {
         L.Jeu.commencer();
@@ -37,47 +39,73 @@ def test_la_premiere_fois_elle_se_presente_puis_ouvre_ses_cours(banc):
     assert r["ensuite"] == "LES COURS", r
 
 
-def test_un_cours_se_paie_une_fois(banc):
-    r = banc("""function (L, o) { """ + ENTRER + """
+@pytest.fixture(scope="module")
+def achats(banc):
+    """Les cinq juges du comptoir de Mireille dans UN banc : sans argent, le circulaire verrouillé,
+    un cours payé une fois, pas d'achat pendant une leçon, puis le menu de nuit.
+
+    ⚠️ Aucun ne joue une image : ce sont des achats et un menu, lus sur place. Avant chacun, on
+    remet ce que le juge trouvait en entrant au dojo — pas de leçon (`B.cours`), aucun cours payé,
+    les techniques de la partie neuve, midi."""
+    return banc("""function (L, o) { """ + ENTRER + """
         auDojo(L, o);
+        const neuves = JSON.stringify(L.B.partie.techniques), sorties = {};
+        function remettre() {
+            L.B.cours = null; L.B.partie.coursPayes = {}; L.B.partie.techniques = JSON.parse(neuves);
+            L.B.partie.heure = 0.5;
+        }
+        remettre();
+        L.B.partie.argent = 10;
+        sorties.sansArgent = { ok: L.Dojo.acheter('uppercut'), cours: L.B.cours || null, etat: L.Dojo.etatDuCours('uppercut') };
+        remettre();
+        L.B.partie.argent = 5000;
+        sorties.circulaire = { avant: L.Dojo.etatDuCours('pied_circulaire'), achat: L.Dojo.acheter('pied_circulaire') };
+        remettre();
         L.B.partie.argent = 1000;
         L.Dojo.acheter('uppercut');
         const apres = L.B.partie.argent;
         L.B.cours = null;                                         // la leçon ratée
         L.Dojo.acheter('uppercut');
-        return { apres: apres, encore: L.B.partie.argent, etat: L.Dojo.etatDuCours('uppercut') };
+        sorties.uneFois = { apres: apres, encore: L.B.partie.argent, etat: L.Dojo.etatDuCours('uppercut') };
+        remettre();
+        L.B.partie.argent = 5000;
+        L.Dojo.acheter('uppercut');
+        const achat = L.Dojo.acheter('pied_circulaire');
+        // Un cours VRAIMENT achetable (le balayage n'attend rien) : pas pendant une leçon.
+        const autre = L.Dojo.acheter('balayage');
+        sorties.pendant = { achat: achat, autre: autre, cours: L.B.cours && L.B.cours.slug,
+                            etat: L.Dojo.etatDuCours('pied_circulaire'), argent: L.B.partie.argent };
+        remettre();
+        L.B.partie.heure = 23 / 24;
+        sorties.nuit = L.Dojo.menuCours().items.filter(function (i) { return i.actif !== false && !i.entete; }).length;
+        return sorties;
     }""")
-    assert r == {"apres": 700, "encore": 700, "etat": "paye"}, r
 
 
-def test_sans_argent_rien_ne_commence(banc):
+def test_un_cours_se_paie_une_fois(achats):
+    assert achats["uneFois"] == {"apres": 700, "encore": 700, "etat": "paye"}, achats["uneFois"]
+
+
+def test_sans_argent_rien_ne_commence(achats):
     """À surveiller no 5."""
-    r = banc("""function (L, o) { """ + ENTRER + """
-        auDojo(L, o);
-        L.B.partie.argent = 10;
-        const ok = L.Dojo.acheter('uppercut');
-        return { ok: ok, cours: L.B.cours || null, etat: L.Dojo.etatDuCours('uppercut') };
-    }""")
+    r = achats["sansArgent"]
     assert r == {"ok": False, "cours": None, "etat": "a_vendre"}, r
 
 
-def test_le_circulaire_attend_l_uppercut(banc):
-    r = banc("""function (L, o) { """ + ENTRER + """
-        auDojo(L, o);
-        L.B.partie.argent = 5000;
-        return { avant: L.Dojo.etatDuCours('pied_circulaire'), achat: L.Dojo.acheter('pied_circulaire') };
-    }""")
+def test_le_circulaire_attend_l_uppercut(achats):
+    r = achats["circulaire"]
     assert r == {"avant": "verrouille", "achat": False}, r
 
 
-def test_la_nuit_le_menu_est_ferme(banc):
-    r = banc("""function (L, o) { """ + ENTRER + """
-        auDojo(L, o);
-        L.B.partie.heure = 23 / 24;
-        const m = L.Dojo.menuCours();
-        return m.items.filter(function (i) { return i.actif !== false && !i.entete; }).length;
-    }""")
-    assert r == 0
+def test_la_nuit_le_menu_est_ferme(achats):
+    assert achats["nuit"] == 0
+
+
+def test_pas_de_cours_achete_pendant_une_lecon(achats):
+    """Pendant la leçon d'uppercut, l'uppercut « se sait » : le circulaire ne doit pas pour
+    autant devenir achetable, ni une leçon en remplacer une autre."""
+    r = achats["pendant"]
+    assert r == {"achat": False, "autre": False, "cours": "uppercut", "etat": "verrouille", "argent": 4700}, r
 
 
 def test_une_vieille_partie_a_ses_cours_vides(banc):
@@ -232,8 +260,6 @@ def test_la_lecon_ne_tire_aucun_de(banc):
 
 # --- La relecture de la branche : une leçon au bouton par mise en place -------------------
 
-import pytest  # noqa: E402
-
 GESTES = {
     # La parade : Kevin arme sur le « et » ; on lui prend le poignet tout de suite.
     "retournement_poignet": "o.tape('KeyU', 1);",
@@ -275,22 +301,6 @@ def test_kevin_revient_au_sac_et_se_redresse(banc):
     # ⚠️ « Au sac » a 8 px pres : Mireille se tient a cote, et deux corps restent a 10 px l'un
     # de l'autre (`Entites.demeler`) — il s'arrete ou elle le laisse.
     assert r["d"] <= 8 and r["recul"] == 0, r
-
-
-def test_pas_de_cours_achete_pendant_une_lecon(banc):
-    """Pendant la leçon d'uppercut, l'uppercut « se sait » : le circulaire ne doit pas pour
-    autant devenir achetable, ni une leçon en remplacer une autre."""
-    r = banc("""function (L, o) { """ + ENTRER + """
-        auDojo(L, o);
-        L.B.partie.argent = 5000;
-        L.Dojo.acheter('uppercut');
-        const achat = L.Dojo.acheter('pied_circulaire');
-        // Un cours VRAIMENT achetable (le balayage n'attend rien) : pas pendant une leçon.
-        const autre = L.Dojo.acheter('balayage');
-        return { achat: achat, autre: autre, cours: L.B.cours && L.B.cours.slug,
-                 etat: L.Dojo.etatDuCours('pied_circulaire'), argent: L.B.partie.argent };
-    }""")
-    assert r == {"achat": False, "autre": False, "cours": "uppercut", "etat": "verrouille", "argent": 4700}, r
 
 
 # --- Des leçons qu'on comprend (docs/jalons/le-dojo-des-lecons-qu-on-comprend.md) ---------
