@@ -1126,12 +1126,15 @@ const Missions = (function () {
   function charsAVendre(lot) {
     const dehors = B.exterieur ? B.exterieur.entites : B.entites;
     const vendus = (B.partie.concession || {});
-    return lot.garees.map(function (i) {
-      const place = lot.places[i];
-      const v = dehors.find(function (e) { return e.type === 'vehicule' && e.placeDeLot === place; });
-      return { i: i, v: v };
+    // Le char EN MONTRE d'abord (`Vehicules.majMontre`) : c'est lui qu'on a vu en arrivant.
+    const montre = lot.montre ? [{ cle: 'montre', place: 'montre', stock: null, lieu: lot.montre }] : [];
+    const places = lot.garees.map(function (i) { return { cle: String(i), place: i, stock: lot.stock[i], lieu: lot.places[i] }; });
+    return montre.concat(places).map(function (c) {
+      c.v = dehors.find(function (e) { return e.type === 'vehicule' && e.placeDeLot === c.lieu; });
+      if (c.v && !c.stock) c.stock = { slug: c.v.slug, sprite: c.v.sprite, prix: c.v.prixDeMontre };
+      return c;
     }).filter(function (c) {
-      return c.v && c.v.etat === 'stationne' && !c.v.conducteur && !c.v.vole && !c.v.aToi && vendus[lot.slug + ':' + c.i] === undefined;
+      return c.v && c.v.etat === 'stationne' && !c.v.conducteur && !c.v.vole && !c.v.aToi && vendus[lot.slug + ':' + c.cle] === undefined;
     });
   }
 
@@ -1151,22 +1154,23 @@ const Missions = (function () {
       return { titre: titre, items: items, aide: 'REVIENS DEMAIN, ON EN RENTRE' };
     }
     chars.forEach(function (c) {
-      const stock = lot.stock[c.i], def = Vehicules.vehiculeDef(stock.slug);
+      const stock = c.stock, def = Vehicules.vehiculeDef(stock.slug);
       const nom = MODELES[stock.sprite] || (def ? def.nom : stock.slug).toUpperCase();
-      items.push({ libelle: nom, detail: stock.prix + ' $', actif: p.argent >= stock.prix, place: c.i,
-                   faire: function () { acheterAuLot(lot, c.i, c.v); return false; } });
+      items.push({ libelle: (c.place === 'montre' ? 'EN MONTRE — ' : '') + nom, detail: stock.prix + ' $',
+                   actif: p.argent >= stock.prix, place: c.place,
+                   faire: function () { acheterAuLot(lot, c); return false; } });
     });
     return { titre: titre, items: items, sur: p.argent + ' $',
              aide: lot.usure < 1 ? 'VENDU TEL QUEL, SANS GARANTIE' : 'IL T’ATTEND DANS LE LOT' };
   }
 
-  function acheterAuLot(lot, i, v) {
-    const p = B.partie, prix = lot.stock[i].prix;
+  function acheterAuLot(lot, c) {
+    const p = B.partie, prix = c.stock.prix, v = c.v;
     if (p.argent < prix) { Son.SFX.erreur(); return false; }
     payer(prix, lot.nom.toUpperCase());
     // Le jour de la vente : la place reste vide jusqu'au lendemain (`Vehicules.majLotsDeConcession`).
     p.concession = p.concession || {};
-    p.concession[lot.slug + ':' + i] = p.jour;
+    p.concession[lot.slug + ':' + c.cle] = p.jour;
     // ⚠️ Il quitte le lot : sa place n'est plus la sienne (demain, le lot la regarnit meme s'il roule encore).
     v.aToi = true; v.vole = false; v.alarmeDuLot = false; v.placeDeLot = null;
     Hud.message('IL EST À TOI — IL T’ATTEND DEHORS');

@@ -20,6 +20,8 @@ place), `usure`, `alarme`, et `cour` (le rectangle de tuiles touché, pour les j
 
 from __future__ import annotations
 
+import math
+
 from . import carte, devantures, devants, vehicules
 
 # --- Prestige Automobiles -------------------------------------------------------------------------
@@ -37,6 +39,8 @@ SALON_PROFONDEUR = 4
 NEUFS = (("sport", "sport"), ("luxe", "luxe"), ("auto", "auto"), ("luxe", "luxe_vus"), ("auto", "auto_familiale"))
 #: Le devant du Salon : ce sur quoi on sort en poussant la porte.
 DEVANT = frozenset("_.,")
+#: Ce qu'une dalle de char en montre peut couvrir : la pelouse, l'abord, le trottoir — jamais la chaussée.
+DALLE = frozenset("_.,")
 
 
 def _rangee(sol: list[str], y: int, x0: int, largeur: int, glyphes) -> bool:
@@ -128,6 +132,23 @@ def _devanture(ville: dict, x: int, y: int, motifs: str, porte: int, textes: tup
     ville["lampes"].append({"x": x + dx + large // 2, "y": y + 1, "r": 20 + 4 * large, "c": "vitrine"})
 
 
+def _montre_du_salon(ville: dict, x0: int, largeur: int, yf: int, px: int) -> dict | None:
+    """LE CHAR EN MONTRE (Martin : « en diagonale sur le coin de rue, il change de temps en temps ») : deux tuiles sur
+    deux à côté de la façade, à l'est d'abord, sinon à l'ouest — sans décor, rien de solide ni de roulant, loin de
+    la porte. La pelouse qu'il prend devient une dalle (`_`, l'abord) ; ⚠️ rien au DÉCOR : un objet de plus
+    décalerait le hasard de toute la ville. Le char se tourne vers le coin, en diagonale."""
+    sol, occupees = ville["sol"], {(d["x"], d["y"]) for d in ville["decor"]}
+    for mx, dx in ((x0 + largeur, 1), (x0 - 2, -1)):
+        tuiles = [(mx + i, yf + j) for i in (0, 1) for j in (0, 1)]
+        if all(0 <= y < len(sol) and 0 <= x < len(sol[y]) and sol[y][x] in DALLE and (x, y) not in occupees
+               and abs(x - px) > 1 for x, y in tuiles):
+            for x, y in tuiles:
+                if sol[y][x] != "_":
+                    _ecrire(ville, x, y, "_")
+            return {"x": mx, "y": yf, "angle": math.atan2(1, dx)}
+    return None
+
+
 def _stock(modeles: tuple[tuple[str, str], ...], n: int, part: float) -> list[dict]:
     """Un char par place, et son prix : celui du catalogue (`vehicules.CATALOGUE`), fois `part`."""
     prix = {v["slug"]: v["prix"] for v in vehicules.CATALOGUE}
@@ -196,12 +217,18 @@ def poser_le_salon(chantier, ville: dict) -> None:
     ville["interieurs"][SALON_SLUG] = piece_de_salon(SALON_SLUG, largeur, SALON_PROFONDEUR, px - x0 + 1)
     places = [{"x": x0 + i, "y": trouve["y"], "sens": "N"} for i in range(largeur)]
     en_face = px - x0
+    montre = _montre_du_salon(ville, x0, largeur, yf, px)
+    cour = {"x": x0 - 1, "y": trouve["y"], "l": largeur + 2, "h": yf + 1 - trouve["y"]}
+    if montre:
+        montre["modeles"] = _stock(NEUFS, len(NEUFS), 1.0)
+        gauche, droite = min(cour["x"], montre["x"]), max(cour["x"] + cour["l"], montre["x"] + 2)
+        cour = {"x": gauche, "y": cour["y"], "l": droite - gauche, "h": max(cour["h"], montre["y"] + 2 - cour["y"])}
     ville["concessionnaires"].append({
         "slug": SALON_SLUG, "nom": SALON_NOM, "genre": "neuf", "porte": {"x": px, "y": yf},
         "places": places, "garees": [i for i in range(largeur) if i != en_face],
         "stock": _stock(NEUFS, largeur, 1.0),
-        "usure": 1.0, "alarme": True,
-        "cour": {"x": x0 - 1, "y": trouve["y"], "l": largeur + 2, "h": yf + 1 - trouve["y"]},
+        "usure": 1.0, "alarme": True, "montre": montre,
+        "cour": cour,
     })
 
 
@@ -220,6 +247,9 @@ ROULOTTE = (1, 5)
 #: devant la roulotte. ⚠️ Pas de cases peintes : un lot d'usagés n'a pas de lignes, et des `^` ici attireraient la
 #: nuit les chars de la rue (`placeDeNuit` choisit parmi les cases de la carte).
 PLACES_TI_POUT = ((8, 2, "S"), (10, 2, "S"), (12, 2, "S"), (14, 2, "S"), (2, 5, "N"), (4, 5, "N"), (6, 5, "N"))
+#: La minoune en montre : le coin nord-ouest de ses deux tuiles sur deux, dans le coin sud-est de la cour, contre la
+#: trouée — ce qu'on voit du boulevard.
+MONTRE_TI_POUT = (13, 5)
 #: Ce qui se vend usagé : des minounes et un vieux camion.
 USAGES = (("auto", "auto_compacte"), ("auto", "auto_familiale"), ("camion", "camion"), ("auto", "auto_camionnette"),
           ("auto", "auto"))
@@ -300,5 +330,7 @@ def poser_ti_pout(ville: dict) -> None:
         "places": places, "garees": list(range(len(places))),
         "stock": _stock(USAGES, len(places), PRIX_USAGE),
         "usure": USURE_USAGEE, "alarme": False,
+        "montre": {"x": x0 + MONTRE_TI_POUT[0], "y": y0 + MONTRE_TI_POUT[1], "angle": math.atan2(1, 1),
+                   "modeles": _stock(USAGES, len(USAGES), PRIX_USAGE)},
         "cour": {"x": x0, "y": y0, "l": TI_POUT_L, "h": TI_POUT_H},
     })

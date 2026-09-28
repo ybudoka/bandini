@@ -211,3 +211,36 @@ def test_une_facade_etroite_garde_son_enseigne():
     concessionnaires._devanture(ville, 10, 20, "FWWDWF", 3, ("PRESTIGE",), "commerce", "+")
     d = ville["devantures"][0]
     assert "F" not in d["motifs"] and d["motifs"][d["porte"]] == "D", d
+
+
+# --- Le char en montre --------------------------------------------------------------------------
+
+
+def test_le_salon_a_son_char_en_montre_au_coin():
+    """Martin : « un véhicule en montre en diagonale sur le coin de rue, il change de temps en temps ». Deux tuiles
+    sur deux, à côté de la façade, sans décor ni rien de solide, sur une dalle ; en diagonale ; dans la cour."""
+    ville = _ville()
+    lot, sol = _lot(ville, "prestige"), ville["sol"]
+    m = lot["montre"]
+    tuiles = [(m["x"] + i, m["y"] + j) for i in (0, 1) for j in (0, 1)]
+    decor = {(d["x"], d["y"]) for d in ville["decor"]}
+    assert all(sol[y][x] == "_" for x, y in tuiles), [sol[y][x] for x, y in tuiles]
+    assert not decor & set(tuiles)
+    assert abs(abs(m["angle"]) % (3.14159265 / 2) - 3.14159265 / 4) < 1e-6, "pas en diagonale"
+    c = lot["cour"]
+    assert all(c["x"] <= x < c["x"] + c["l"] and c["y"] <= y < c["y"] + c["h"] for x, y in tuiles)
+    porte = lot["porte"]
+    assert all(abs(x - porte["x"]) > 1 for x, _ in tuiles), "le char en montre bouche la porte"
+    assert len(m["modeles"]) >= 3 and {s["slug"] for s in m["modeles"]} <= {"sport", "luxe", "auto"}
+
+
+def test_ti_pout_a_sa_minoune_en_montre():
+    ville = _ville()
+    lot, sol = _lot(ville, "ti_pout"), ville["sol"]
+    m = lot["montre"]
+    tuiles = [(m["x"] + i, m["y"] + j) for i in (0, 1) for j in (0, 1)]
+    assert all(sol[y][x] == "g" for x, y in tuiles), "hors du gravier"
+    places = {(p["x"], y) for p in lot["places"] for y in (p["y"] - 1, p["y"], p["y"] + 1)}
+    assert not places & set(tuiles), "sur une place du lot"
+    assert {s["slug"] for s in m["modeles"]} <= {"auto", "camion"}
+    assert all(s["prix"] < 1000 for s in m["modeles"] if s["slug"] == "auto")

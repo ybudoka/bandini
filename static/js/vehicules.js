@@ -621,12 +621,56 @@ const Vehicules = (function () {
         const v = creer(stock.slug, x, y, Math.atan2(nez[1], nez[0]), { etat: 'stationne', couleur: couleur, sprite: stock.sprite });
         if (!v) continue;
         v.placeDeLot = place;
-        if (lot.usure < 1) { v.usure = lot.usure; v.vie = Math.max(1, Math.round(v.vieMax * lot.usure)); }
-        if (lot.alarme) v.alarmeDuLot = true;
+        garnirDuLot(v, lot);
         nees++;
       }
+      if (lot.montre) nees += majMontre(lot, portee);
     }
     return nees;
+  }
+
+  /** Ce qu'un char de lot tient de son lot : l'usure de l'usage, l'alarme du neuf. */
+  function garnirDuLot(v, lot) {
+    if (lot.usure < 1) { v.usure = lot.usure; v.vie = Math.max(1, Math.round(v.vieMax * lot.usure)); }
+    if (lot.alarme) v.alarmeDuLot = true;
+  }
+
+  /** Le modele en montre aujourd'hui : un autre chaque jour de jeu, lu au jour, sans de. */
+  function modeleEnMontre(montre) {
+    const jour = B.partie ? B.partie.jour : 1;
+    return montre.modeles[(((jour - 1) % montre.modeles.length) + montre.modeles.length) % montre.modeles.length];
+  }
+
+  /** **LE CHAR EN MONTRE** (Martin : « en diagonale sur le coin de rue, il change de temps en temps ») : au
+      milieu de sa dalle de deux tuiles sur deux, en biais vers le coin (`montre.angle`), le modele du jour.
+      Le lendemain, celui d'hier encore sur sa dalle est rentre et remplace — ⚠️ hors champ seulement : un char
+      qui change sous les yeux, c'est un tour de magie, pas une vitrine. Vendu, il revient le lendemain ; pris
+      (vole, pousse, a toi), on n'y touche plus et le lot ne le double pas. Sans de. */
+  function majMontre(lot, portee) {
+    const m = lot.montre, j = B.joueur, jour = B.partie ? B.partie.jour : 1;
+    const x = (m.x + 1) * TT, y = (m.y + 1) * TT;
+    if (dist2(x, y, j.x, j.y) > portee * portee) return 0;
+    const cle = lot.slug + ':montre';
+    const vendu = B.partie && B.partie.concession && B.partie.concession[cle];
+    if (vendu !== undefined) {
+      if (vendu >= jour) return 0;
+      delete B.partie.concession[cle];
+    }
+    const la = B.entites.find(function (q) { return q.type === 'vehicule' && q.placeDeLot === m; });
+    if (la) {
+      const surSaDalle = la.etat === 'stationne' && !la.conducteur && !la.vole && !la.aToi && dist2(la.x, la.y, x, y) < 64;
+      if (la.jourDeMontre === jour || !surSaDalle || Entites.visibleAEcran(la.x, la.y, 24)) return 0;
+      Entites.retirer(la);
+    }
+    if (Entites.visibleAEcran(x, y, 24) || !libreAutour(x, y, 12)) return 0;
+    const modele = modeleEnMontre(m), def = vehiculeDef(modele.slug);
+    if (!def) return 0;
+    const teinte = def.couleurs[(jour * 3 + 1) % def.couleurs.length];
+    const v = creer(modele.slug, x, y, m.angle, { etat: 'stationne', couleur: lot.usure < 1 ? delaver(teinte) : teinte, sprite: modele.sprite });
+    if (!v) return 0;
+    v.placeDeLot = m; v.jourDeMontre = jour; v.prixDeMontre = modele.prix;
+    garnirDuLot(v, lot);
+    return 1;
   }
 
   // --- Geometrie : la chaine de cercles ------------------------------------------

@@ -284,3 +284,98 @@ def test_un_passant_ne_vole_ni_le_char_paye_ni_ceux_du_lot(banc):
     }""" % {"aller": ALLER})
     assert r["temoin"] == 1, f"le juge ne voit pas le vol d'un char ordinaire : {r}"
     assert r["paye"] == 0 and r["lot"] == 0, r
+
+
+MONTRE = """
+    function enMontre(L, lot) {
+        return L.B.entites.filter(function (e) { return e.type === 'vehicule' && e.placeDeLot === lot.montre; });
+    }
+    // Loin de la dalle ELLE-MÊME (à l'ouest), hors champ mais dans la portée du lot.
+    function allerPresDeLaMontre(L, lot) {
+        const j = L.B.joueur, m = lot.montre, TT = L.TT;
+        j.x = (m.x + 1) * TT - 340; j.y = (m.y + 1) * TT; L.Monde.centrerCamera(j.x, j.y);
+        if (L.Entites.visibleAEcran((m.x + 1) * TT, (m.y + 1) * TT, 24)) throw new Error('la dalle est a l ecran');
+    }
+"""
+
+
+def test_le_char_en_montre_nait_en_diagonale_le_modele_du_jour(banc):
+    r = banc("""function (L, o) {
+        %(aller)s
+        %(montre)s
+        L.Jeu.commencer();
+        const out = {};
+        ['prestige', 'ti_pout'].forEach(function (slug) {
+            const lot = lotDe(L, slug), m = lot.montre, TT = L.TT, p = L.B.partie;
+            allerPresDeLaMontre(L, lot);
+            enMontre(L, lot).forEach(function (e) { L.Entites.retirer(e); });
+            let des = 0;
+            const rng = L.B.rng;
+            L.B.rng = function () { des++; return rng.apply(null, arguments); };
+            L.Vehicules.majLotsDeConcession();
+            L.B.rng = rng;
+            const v = enMontre(L, lot);
+            const attendu = m.modeles[(p.jour - 1) %% m.modeles.length];
+            out[slug] = { n: v.length, des: des, slug: v[0] && v[0].slug, sprite: v[0] && v[0].sprite, attendu: attendu,
+                          dx: v[0] && v[0].x - (m.x + 1) * TT, dy: v[0] && v[0].y - (m.y + 1) * TT,
+                          angle: v[0] && v[0].angle, voulu: m.angle, alarme: v[0] && !!v[0].alarmeDuLot };
+        });
+        return out;
+    }""" % {"aller": ALLER, "montre": MONTRE})
+    for slug, x in r.items():
+        assert x["n"] == 1 and x["des"] == 0, (slug, x)
+        assert x["slug"] == x["attendu"]["slug"] and x["sprite"] == x["attendu"]["sprite"], (slug, x)
+        assert abs(x["dx"]) < 1e-6 and abs(x["dy"]) < 1e-6 and abs(x["angle"] - x["voulu"]) < 1e-6, (slug, x)
+    assert r["prestige"]["alarme"] is True and r["ti_pout"]["alarme"] is False
+
+
+def test_le_char_en_montre_change_le_lendemain_mais_pas_sous_les_yeux(banc):
+    r = banc("""function (L, o) {
+        %(aller)s
+        %(montre)s
+        L.Jeu.commencer();
+        const lot = lotDe(L, 'prestige'), m = lot.montre, p = L.B.partie, j = L.B.joueur, TT = L.TT;
+        allerPresDeLaMontre(L, lot);
+        L.Vehicules.majLotsDeConcession();
+        const hier = enMontre(L, lot)[0];
+        p.jour += 1;
+        // Sous les yeux : il reste celui d'hier.
+        j.x = (m.x + 1) * TT; j.y = (m.y + 3) * TT; L.Monde.centrerCamera(j.x, j.y);
+        L.Vehicules.majLotsDeConcession();
+        const vu = enMontre(L, lot);
+        const resteSousLesYeux = vu.length === 1 && vu[0] === hier;
+        // Hors champ : celui du jour le remplace.
+        allerPresDeLaMontre(L, lot);
+        L.Vehicules.majLotsDeConcession();
+        const auj = enMontre(L, lot);
+        const attendu = m.modeles[(p.jour - 1) %% m.modeles.length];
+        return { resteSousLesYeux: resteSousLesYeux, n: auj.length, nouveau: auj[0] !== hier, hierParti: L.B.entites.indexOf(hier) < 0,
+                 slug: auj[0] && auj[0].slug, sprite: auj[0] && auj[0].sprite, attendu: attendu,
+                 hierModele: hier.sprite };
+    }""" % {"aller": ALLER, "montre": MONTRE})
+    assert r["resteSousLesYeux"] is True, r
+    assert r["n"] == 1 and r["nouveau"] and r["hierParti"], r
+    assert r["slug"] == r["attendu"]["slug"] and r["sprite"] == r["attendu"]["sprite"], r
+    assert r["sprite"] != r["hierModele"], "le modèle n'a pas changé d'un jour à l'autre"
+
+
+def test_on_achete_le_char_en_montre(banc):
+    r = banc("""function (L, o) {
+        %(aller)s
+        %(montre)s
+        %(acheter)s
+        L.Jeu.commencer();
+        allerPresDeLaMontre(L, lotDe(L, 'prestige'));
+        L.Vehicules.majLotsDeConcession();
+        const a = acheter(L, o, 'prestige', 100000);
+        const premier = a.menu.items.filter(function (it) { return it.faire; })[0];
+        const exterieur = L.B.exterieur ? L.B.exterieur.entites : L.B.entites;
+        const v = exterieur.find(function (e) { return e.placeDeLot === a.lot.montre; });
+        const prix = a.lot.montre.modeles[(L.B.partie.jour - 1) %% a.lot.montre.modeles.length].prix;
+        premier.faire();
+        return { libelle: premier.libelle, detail: premier.detail, prix: prix, aToi: v.aToi, argent: L.B.partie.argent,
+                 vendu: L.B.partie.concession['prestige:montre'] === L.B.partie.jour };
+    }""" % {"aller": ALLER, "montre": MONTRE, "acheter": ACHETER})
+    assert r["libelle"].startswith("EN MONTRE"), r
+    assert r["detail"] == f"{r['prix']} $" and r["argent"] == 100000 - r["prix"], r
+    assert r["aToi"] is True and r["vendu"] is True, r
