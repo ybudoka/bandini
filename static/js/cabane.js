@@ -42,8 +42,12 @@ const Cabane = (function () {
   //: le long du sentier). En pixels.
   const CAISSE = { l: 20, w: 11 };
   const CHEVAUX = { avance: 38, l: 12, w: 9 };
-  //: A quelle distance de l'arriere de la caleche on peut y monter.
-  const PORTEE_MONTER = 30;
+  //: A quelle distance de la caisse (ou des chevaux) on peut y monter, de n'importe quel cote. En pixels.
+  //: ⚠️ Martin (28 sept. 2026) : « je ne peux plus embarquer » — debout pres des chevaux, il etait trop loin de
+  //: l'ARRIERE, la seule place ou l'on montait, et rien ne le disait.
+  const PORTEE_MONTER = 16;
+  //: Ou, pres de l'arret, on apprend que la calèche n'est pas la (autour de la pancarte et de son arret).
+  const PORTEE_ARRET = 44;
   const INVITE = 'UN TOUR DE CALÈCHE';
   //: LES VIRAGES (Martin, 28 sept. 2026 : « comme un vrai vehicule ») : le rayon des coins du sentier, et ou
   //: sont les essieux de part et d'autre du milieu de la caisse. En pixels.
@@ -104,9 +108,10 @@ const Cabane = (function () {
     return { x: (ar.x + av.x) / 2, y: (ar.y + av.y) / 2, a: Math.atan2(av.y - ar.y, av.x - ar.x) };
   }
 
-  /** La caleche et ses chevaux, maintenant : ou, dans quel cap, et si elle roule. */
+  /** La caleche et ses chevaux, maintenant : ou, dans quel cap, et si elle roule. `null` : elle n'est pas la
+      (la cabane est fermee, voir `majCaleche`). */
   function caleche() {
-    if (!cal || !chemin) return null;
+    if (!cal || !chemin || cal.absente) return null;
     const p = tire(cal.s, ESSIEUX), c = tire(cal.s + CHEVAUX.avance, CHEVAUX.l * 0.6);
     return { x: p.x, y: p.y, a: p.a, chevaux: { x: c.x, y: c.y, a: c.a },
              roule: cal.attente <= 0, s: cal.s, tours: cal.tours };
@@ -115,15 +120,25 @@ const Cabane = (function () {
   /** Une visite neuve (on vient d'arriver au rang) : la caleche est a son arret, et les gens a leur place. */
   function nouvelleVisite(d) {
     chemin = construireChemin(d);
-    cal = { s: 0, attente: d.caleche.attente, tours: 0, visite: B.bloc, gens: false };
+    cal = { s: 0, attente: d.caleche.attente, tours: 0, visite: B.bloc, gens: false, absente: !onFaitBouillir() };
+  }
+
+  /** La caleche ou ses chevaux sont-ils a l'ecran ? */
+  function enVue() {
+    const p = tire(cal.s, ESSIEUX), c = tire(cal.s + CHEVAUX.avance, CHEVAUX.l * 0.6);
+    return Entites.visibleAEcran(p.x, p.y, 48) || Entites.visibleAEcran(c.x, c.y, 48);
   }
 
   function majCaleche() {
     const d = chemin.def;
     const j = B.joueur, aBord = !!(j && j.manege && j.manege.quoi === 'caleche');
+    // LA CABANE FERMEE, PAS DE CALECHE (Martin, 28 sept. 2026 : « la caleche devrait etre absente si fermee ») :
+    // hors des heures du comptoir et hors du temps des sucres, comme les gens de la cabane. Elle s'en va et revient
+    // a son arret, HORS DE LA VUE — personne ne s'evapore sous nos yeux —, et un tour commence se finit.
+    if (cal.attente > 0 && !aBord && cal.absente === onFaitBouillir() && !enVue()) cal.absente = !cal.absente;
+    if (cal.absente) return;
     if (cal.attente > 0) {
-      // ⚠️ Hors des heures, le cocher est couche : elle attend a l'arret — sauf s'il y a quelqu'un a bord.
-      if (heures() || aBord) cal.attente--;
+      if (onFaitBouillir() || aBord) cal.attente--;
       return;
     }
     cal.s += d.vitesse;
@@ -132,12 +147,33 @@ const Cabane = (function () {
     }
   }
 
-  /** Debout, libre, pres de l'arriere de la caleche arretee : on peut monter. */
+  /** A combien de pixels du bord d'une boite orientee (`x, y, a, l, w`) est ce point (0 : dedans). */
+  function horsDe(b, x, y) {
+    const ca = Math.cos(b.a), sa = Math.sin(b.a), dx = x - b.x, dy = y - b.y;
+    return Math.hypot(Math.max(0, Math.abs(dx * ca + dy * sa) - b.l), Math.max(0, Math.abs(-dx * sa + dy * ca) - b.w));
+  }
+
+  /** Debout, libre, a cote de la caleche arretee — n'importe quel cote, les chevaux compris : on peut monter. */
   function calecheSousLaMain(j) {
-    if (!ici() || !cal || cal.attente <= 0 || !heures()) return false;
+    if (!ici() || !cal || cal.attente <= 0 || !onFaitBouillir()) return false;
     if (!j || !j.vivant || j.manege || j.dansVehicule || j.aBord || j.enjambe) return false;
-    const c = caleche(), arriere = { x: c.x - Math.cos(c.a) * CAISSE.l, y: c.y - Math.sin(c.a) * CAISSE.l };
-    return Math.hypot(j.x - arriere.x, j.y - arriere.y) <= PORTEE_MONTER || Math.hypot(j.x - c.x, j.y - c.y) <= PORTEE_MONTER;
+    const c = caleche();
+    if (!c) return false;
+    return horsDe({ x: c.x, y: c.y, a: c.a, l: CAISSE.l, w: CAISSE.w }, j.x, j.y) <= PORTEE_MONTER ||
+           horsDe({ x: c.chevaux.x, y: c.chevaux.y, a: c.chevaux.a, l: CHEVAUX.l, w: CHEVAUX.w }, j.x, j.y) <= PORTEE_MONTER;
+  }
+
+  /** La cabane fermee, a l'arret (pres de la pancarte, ou de la caleche qui n'est pas encore partie) : ce qu'on en
+      dit — quand le cocher attelle. `null` : ouverte, ou pas pres de l'arret. */
+  function calecheFermee(j) {
+    if (!ici() || !cal || !chemin || onFaitBouillir() || !j || j.manege || j.dansVehicule) return null;
+    const p = pancarte(), arret = point(0);
+    const pres = Math.hypot(j.x - arret.x, j.y - arret.y) <= PORTEE_ARRET ||
+                 (p && Math.hypot(j.x - (p.x0 + p.large / 2), j.y - p.y) <= PORTEE_ARRET);
+    if (!pres) return null;
+    if (!temps()) return 'PAS DE CALÈCHE — ON ATTELLE AU TEMPS DES SUCRES';
+    const c = B.defs && B.defs.comptoirs && B.defs.comptoirs.sucre;
+    return 'PAS DE CALÈCHE — LE COCHER ATTELLE À ' + Math.round(((c && c.heures) || [7 / 24])[0] * 24) + ' H';
   }
 
   //: Ou l'on s'assoit : le banc du fond, a gauche (en pixels, le long de la caleche et en travers) — la premiere
@@ -196,6 +232,7 @@ const Cabane = (function () {
   function bloquer(e) {
     if (!cal || !chemin || !ici() || e.manege || (e.type !== 'joueur' && e.type !== 'pieton')) return;
     const c = caleche();
+    if (!c) return;
     const boites = [{ x: c.x, y: c.y, a: c.a, l: CAISSE.l, w: CAISSE.w },
                     { x: c.chevaux.x, y: c.chevaux.y, a: c.chevaux.a, l: CHEVAUX.l, w: CHEVAUX.w }];
     for (const b of boites) {
@@ -241,15 +278,19 @@ const Cabane = (function () {
     return true;
   }
 
-  function sousLaMain(j) { return tableSousLaMain(j) ? 'table' : calecheSousLaMain(j) ? 'caleche' : null; }
+  function sousLaMain(j) {
+    return tableSousLaMain(j) ? 'table' : calecheSousLaMain(j) ? 'caleche' : calecheFermee(j) ? 'arret' : null;
+  }
   function invite(j) {
     const t = inviteTable(j);
     if (t) return t;
-    return calecheSousLaMain(j) ? INVITE : null;
+    return calecheSousLaMain(j) ? INVITE : calecheFermee(j);
   }
   function agir(j) {
     if (tableSousLaMain(j)) return toucherLaTable(j);
     if (calecheSousLaMain(j)) return monter(j);
+    const fermee = calecheFermee(j);
+    if (fermee) { Hud.message(fermee, 150); return true; }
     return false;
   }
 
@@ -492,13 +533,13 @@ const Cabane = (function () {
   function ajouterVisibles(visibles, cx, cy) {
     if (!ici() || !cal || !chemin) return;
     const c = caleche();
-    c.cocher = heures() || c.roule;
     const dans = function (x, y) { return x > cx - 48 && x < cx + VW + 48 && y > cy - 48 && y < cy + VH + 48; };
-    if (dans(c.x, c.y)) {
+    if (c) c.cocher = true;
+    if (c && dans(c.x, c.y)) {
       visibles.push({ id: ID_TRI, vivant: true, x: c.x, y: c.y + CAISSE.w,
                       peindreFoire: function (ctx) { peindreCaleche(ctx, Math.round(c.x - cx), Math.round(c.y - cy), c); } });
     }
-    if (dans(c.chevaux.x, c.chevaux.y)) {
+    if (c && dans(c.chevaux.x, c.chevaux.y)) {
       visibles.push({ id: ID_TRI + 1, vivant: true, x: c.chevaux.x, y: c.chevaux.y + 3,
                       peindreFoire: function (ctx) { peindreChevaux(ctx, Math.round(c.chevaux.x - cx), Math.round(c.chevaux.y - cy), c); } });
     }
@@ -510,6 +551,6 @@ const Cabane = (function () {
   }
 
   return { ici, temps, heures, onFaitBouillir, maj, majSons, caleche, sousLaMain, invite, agir, monter, descendre, bloquer,
-           dessinerSol, ajouterVisibles, gens, tableSousLaMain, calecheSousLaMain, chalumeau, sansDe, pancarte,
+           dessinerSol, ajouterVisibles, gens, tableSousLaMain, calecheSousLaMain, calecheFermee, chalumeau, sansDe, pancarte,
            get chemin() { return chemin; }, get etat() { return cal; }, CAISSE, CHEVAUX, SIEGE, INVITE, RAYON };
 })();

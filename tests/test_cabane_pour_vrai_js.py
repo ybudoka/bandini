@@ -229,3 +229,85 @@ def test_la_caleche_tourne_comme_un_vrai_vehicule(banc):
     assert r["sautChevaux"] <= 1, f"les chevaux virent d'un coup : {r}"
     assert r["chevauxDabord"] and r["caisseApres"], f"la caisse ne suit pas ses chevaux dans le virage : {r}"
     assert r["travers"] < 1.75, f"l'attelage se met en travers de la caisse : {r}"
+
+
+def test_on_monte_de_n_importe_quel_cote_meme_pres_des_chevaux(banc):
+    """Martin (28 sept. 2026) : « je ne peux plus embarquer » — il se tenait au-dessus des chevaux, et on ne montait
+    qu'à 30 px de l'arrière. À côté de la caisse, de n'importe quel côté, ou à côté des chevaux : l'invite, et ACTION
+    fait monter."""
+    r = banc("async function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const B = L.B, C = L.Cabane, j = B.joueur;
+        await auRang(L, o, 12, 13);
+        const c0 = C.caleche(), n = -Math.sin(c0.a), m = Math.cos(c0.a);
+        const places = {
+            chevaux: [c0.chevaux.x - n * (C.CHEVAUX.w + 6), c0.chevaux.y - m * (C.CHEVAUX.w + 6)],
+            flanc_nord: [c0.x - n * (C.CAISSE.w + 8), c0.y - m * (C.CAISSE.w + 8)],
+            flanc_sud: [c0.x + n * (C.CAISSE.w + 8), c0.y + m * (C.CAISSE.w + 8)],
+        };
+        const vu = {};
+        for (const k of Object.keys(places)) {
+            if (j.manege) C.descendre(j, true);
+            C.etat.s = 0; C.etat.attente = 400;
+            poser(L, places[k][0], places[k][1]);
+            o.frame(1);
+            const invite = B.invite;
+            o.tape('KeyE', 1);
+            vu[k] = { invite: invite, aBord: !!(j.manege && j.manege.quoi === 'caleche') };
+        }
+        return vu;
+    }""")
+    for place, v in r.items():
+        assert v["invite"] == "UN TOUR DE CALÈCHE" and v["aBord"], f"on ne monte pas depuis {place} : {r}"
+
+
+def test_la_cabane_fermee_pas_de_caleche_et_le_cocher_dit_quand_il_attelle(banc):
+    """Martin (28 sept. 2026) : « la calèche devrait être absente si fermée ». La nuit, et hors du temps des sucres :
+    pas de calèche, et à sa pancarte, l'invite dit quand le cocher attelle. Elle ne s'évapore pas sous nos yeux : on
+    la regarde à la fermeture, elle reste ; on s'en va, elle part ; on revient à l'ouverture, elle est là."""
+    r = banc("async function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const B = L.B, C = L.Cabane, j = B.joueur;
+        const vu = {};
+        const aLaPancarte = function () {
+            const p = C.pancarte();
+            poser(L, p.x0 + p.large / 2, p.y - 12);
+            o.frame(1);
+            const invite = B.invite;
+            o.tape('KeyE', 1);
+            return { la: !!C.caleche(), invite: invite, msg: String((B.msg && B.msg.texte) || B.msg || ''),
+                     aBord: !!j.manege };
+        };
+        await auRang(L, o, 12, 2.9);
+        vu.nuit = aLaPancarte();
+        // Le jour : on la regarde quand la cabane ferme, elle reste ; on s'en va, elle part ; on revient, elle est là.
+        B.partie.heure = 13 / 24;
+        poser(L, 4 * TT, 46 * TT); for (let i = 0; i < 60; i++) o.frame(1);
+        poser(L, 60 * TT, 28 * TT); for (let i = 0; i < 60; i++) o.frame(1);
+        vu.jour = !!C.caleche();
+        B.partie.heure = 23 / 24; for (let i = 0; i < 5; i++) o.frame(1);
+        vu.sousNosYeux = !!C.caleche();
+        poser(L, 4 * TT, 46 * TT); for (let i = 0; i < 60; i++) o.frame(1);
+        vu.partie = !C.caleche();
+        B.partie.heure = 13 / 24; for (let i = 0; i < 5; i++) o.frame(1);
+        vu.revenue = !!C.caleche();
+        return vu;
+    }""")
+    hiver = banc("async function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const B = L.B, C = L.Cabane;
+        await auRang(L, o, 2, 13);
+        const p = C.pancarte();
+        poser(L, p.x0 + p.large / 2, p.y - 12);
+        o.frame(1);
+        return { la: !!C.caleche(), invite: B.invite };
+    }""")
+    nuit = r["nuit"]
+    assert not nuit["la"], f"la nuit, la calèche est là : {r}"
+    assert nuit["invite"] == "PAS DE CALÈCHE — LE COCHER ATTELLE À 7 H", r
+    assert "LE COCHER ATTELLE" in nuit["msg"] and not nuit["aBord"], r
+    assert r["jour"], f"le jour, pas de calèche : {r}"
+    assert r["sousNosYeux"], f"la calèche s'évapore sous nos yeux à la fermeture : {r}"
+    assert r["partie"], f"la cabane fermée, la calèche est encore là quand on ne la regarde plus : {r}"
+    assert r["revenue"], f"la calèche ne revient pas à l'ouverture : {r}"
+    assert not hiver["la"] and hiver["invite"] == "PAS DE CALÈCHE — ON ATTELLE AU TEMPS DES SUCRES", hiver
