@@ -13,6 +13,8 @@ cone des agents, celle-ci fait qu'il transforme les passants en delateurs.
 
 import json
 
+import pytest
+
 from app import recherche
 
 
@@ -100,16 +102,45 @@ DECOR = """
 """
 
 
-def test_le_stool_ne_naît_jamais_dans_le_dos_du_joueur(banc):
-    """⚠️ LE JUGE DE LA FICHE, mesure sur place. Le meme passant, a la meme
-    distance, devant puis derriere : devant il te reconnait, derriere il ne
-    peut pas. C'est la seule facon de rendre la denonciation JOUABLE — on la
-    voit partir, on a le temps de payer ou de frapper.
+#: ⚠️ DEUX BANCS POUR SEPT JUGES (vague C, 28 sept. 2026). Tous partaient du même `DECOR`. Entre
+#: deux scènes, `repartir()` remet ce que chaque banc avait au départ : les passants retirés, le
+#: casier à huit pages, le répit à zéro, le joueur à sa place et qui regarde vers l'est. ⚠️ Ce
+#: qu'elle ne remet PAS, et pourquoi c'est sans effet : `B.t` n'avance que par `occasions`, d'un
+#: multiple de `occasion_images` (le rendez-vous de `majStools` tombe toujours juste) ; l'argent et
+#: la tenue, que `majStools` ne lit pas ; les étoiles, qu'il ne lit pas non plus — et la scène qui
+#: en pose (l'appel) passe après celles qui les comptent, la seule qui joue des images (assommé)
+#: passe en dernier.
+REPARTIR = """
+    const depart = { x: j.x, y: j.y };
+    const repartir = function () {
+        L.B.entites.filter(function (e) { return e.type === 'pieton' && !e.agent; })
+                   .forEach(function (e) { L.Entites.retirer(e); });
+        L.B.partie.casier = 8;
+        L.B.recherche.stoolT = 0;
+        j.x = depart.x; j.y = depart.y; L.Monde.centrerCamera(j.x, j.y);
+        L.Entites.regarder(j, 1, 0);
+        L.Entites.indexer();
+    };
+    const unStool = function () {
+        repartir();
+        const p = o.poser('passant', 70, 0);
+        p.etat = 'flane'; p.porteBut = null;
+        L.Entites.indexer();
+        occasions(40);
+        return p;
+    };
+"""
 
-    ⚠️ Et le temoin du juge est indispensable : sans la mesure « devant », un
-    stool qui ne naitrait JAMAIS passerait ce juge au vert."""
-    r = banc("""function (L, o) {
+
+#: Le premier banc : OÙ et QUAND il naît — devant ou dans le dos, avec ou sans dossier, un seul.
+@pytest.fixture(scope="module")
+def _naissance(banc):
+    return banc("""function (L, o) {
         %s
+        %s
+        const res = {};
+        // 1. Devant, dans le dos, par-dessus l'epaule.
+        (function () {
         const essai = function (dx, dy) {
             L.B.entites.filter(function (e) { return e.type === 'pieton' && !e.agent; })
                        .forEach(function (e) { L.Entites.retirer(e); });
@@ -126,25 +157,11 @@ def test_le_stool_ne_naît_jamais_dans_le_dos_du_joueur(banc):
         // c'est 146 degres — dehors a 100, dedans a 359. C'est cette
         // mesure-la qui tient la regle.
         const devant = essai(70, 0), dos = essai(-70, 0), epaule = essai(-60, -40);
-        return { devant: devant, dos: dos, epaule: epaule };
-    }""" % DECOR)
-    assert r["devant"]["stool"] is True, (
-        "le décor du juge est faux : personne ne te reconnaît même de face (%s)" % r
-    )
-    assert r["devant"]["porte"] is True, "il te reconnaît et ne va nulle part : %s" % r
-    assert r["dos"]["stool"] is False, (
-        "il te reconnaît DE DOS : la dénonciation n'est plus jouable (%s)" % r
-    )
-    assert r["epaule"]["stool"] is False, (
-        "il te reconnaît par-dessus ton épaule : le cône est trop large (%s)" % r
-    )
-
-
-def test_sans_dossier_personne_ne_te_reconnaît(banc):
-    """Le temoin de la regle du casier : le meme passant, au meme endroit, une
-    fois avec un dossier et une fois sans."""
-    r = banc("""function (L, o) {
-        %s
+        res.dos = { devant: devant, dos: dos, epaule: epaule };
+        })();
+        // 2. Avec ou sans dossier.
+        (function () {
+        repartir();
         const essai = function (casier) {
             L.B.entites.filter(function (e) { return e.type === 'pieton' && !e.agent; })
                        .forEach(function (e) { L.Entites.retirer(e); });
@@ -158,68 +175,34 @@ def test_sans_dossier_personne_ne_te_reconnaît(banc):
         };
         const blanc = essai(0), sousLeSeuil = essai(L.B.defs.recherche.stool.casier_minimum - 1);
         const epais = essai(8);
-        return { blanc: blanc, sousLeSeuil: sousLeSeuil, epais: epais };
-    }""" % DECOR)
-    assert r["epais"] is True, "le décor du juge est faux : même à huit pages, personne (%s)" % r
-    assert r["blanc"] is False, "un dossier blanc se fait dénoncer : %s" % r
-    assert r["sousLeSeuil"] is False, "le minimum de la fiche ne tient pas : %s" % r
-
-
-def test_son_appel_pose_un_plancher_et_pas_de_la_chaleur(banc):
-    """⚠️ TOUTE LA DIFFERENCE AVEC LE TEMOIN. Un delit vu pose de la CHALEUR :
-    il en faut trois pour une etoile. Un signalement telephone pose un
-    PLANCHER : deux etoiles d'un coup, parce que le poste sait maintenant qui
-    te chercher. `police.js` le disait deja en toutes lettres (« la difference
-    entre quelqu'un a vu et quelqu'un a appele ») ; il manquait quelqu'un pour
-    decrocher.
-
-    ⚠️ Et `dernierVu` tombe SUR LE SEUIL, pas sur le joueur : c'est ce que le
-    stool a donne, et c'est la que les autos vont chercher. On a donc quelques
-    secondes pour ne plus y etre — sans ca, l'appel serait un mouchard colle
-    dans le dos."""
-    r = banc("""function (L, o) {
-        %s
-        const p = o.poser('passant', 70, 0);
-        p.etat = 'flane'; p.porteBut = null;
+        res.casier = { blanc: blanc, sousLeSeuil: sousLeSeuil, epais: epais };
+        })();
+        // 3. Un seul a la fois.
+        (function () {
+        repartir();
+        const gens = [o.poser('passant', 60, 0), o.poser('passant', 80, 10),
+                      o.poser('passant', 70, -10)];
+        gens.forEach(function (p) { p.etat = 'flane'; p.porteBut = null; });
         L.B.recherche.stoolT = 0;
         L.Entites.indexer();
-        occasions(40);
-        const avant = L.B.recherche.etoiles;
-        // On le plante loin du joueur pour que le seuil ne soit pas ses pieds.
-        p.x = j.x + 300; p.y = j.y + 200;
-        L.Police.appelDuStool(p);
-        const r2 = L.B.recherche;
-        return { etaitStool: true, avant: avant, apres: r2.etoiles,
-                 plancher: L.B.defs.recherche.stool.etoiles,
-                 chaleur: r2.chaleur, encoreStool: !!p.stool,
-                 vuX: Math.round(r2.dernierVu.x), vuY: Math.round(r2.dernierVu.y),
-                 seuilX: Math.round(p.x), seuilY: Math.round(p.y),
-                 joueurX: Math.round(j.x), joueurY: Math.round(j.y),
-                 repit: r2.stoolT > L.B.t };
-    }""" % DECOR)
-    assert r["avant"] == 0, "le décor du juge est faux : on a déjà des étoiles (%s)" % r
-    assert r["apres"] >= r["plancher"], "l'appel n'a rien donné : %s" % r
-    assert r["chaleur"] == 0, "un signalement chauffe l'ambiance au lieu de nommer : %s" % r
-    assert r["encoreStool"] is False, "il reste un stool après avoir appelé : %s" % r
-    assert (r["vuX"], r["vuY"]) == (r["seuilX"], r["seuilY"]), (
-        "la police va chercher où était le JOUEUR, pas où le stool a téléphoné : %s" % r
-    )
-    assert (r["vuX"], r["vuY"]) != (r["joueurX"], r["joueurY"])
-    assert r["repit"] is True, "la rue peut se relayer au téléphone tout de suite : %s" % r
+        occasions(60);
+        res.seul = { stools: gens.filter(function (p) { return L.Police.estStool(p); }).length };
+        })();
+        return res;
+    }""" % (DECOR, REPARTIR))
 
 
-def test_on_achete_son_silence_et_ca_coute_plus_cher_qu_un_temoin(banc):
-    """Il marchande QUI TU ES, pas ce qu'il a vu — et le prix monte avec le
-    dossier, comme l'amende, comme l'avocat. ⚠️ Le HUD doit l'annoncer AVANT
-    qu'on appuie : une invite qui dit autre chose que ce qu'ACTION va faire est
-    pire que pas d'invite du tout."""
-    r = banc("""function (L, o) {
+#: Le second banc : ce qu'on fait d'un stool en route — l'acheter, changer de tête, le laisser
+#: appeler, l'assommer. Chaque scène a SON stool, né de la même façon (`unStool`).
+@pytest.fixture(scope="module")
+def _en_route(banc):
+    return banc("""function (L, o) {
         %s
-        const p = o.poser('passant', 70, 0);
-        p.etat = 'flane'; p.porteBut = null;
-        L.B.recherche.stoolT = 0;
-        L.Entites.indexer();
-        occasions(40);
+        %s
+        const res = {};
+        // 1. On achete son silence.
+        (function () {
+        const p = unStool();
         const prix = L.Police.prixDuStool();
         // On s'approche a portee de main, et on regarde ce que le HUD annonce.
         p.x = j.x + 12; p.y = j.y;
@@ -231,13 +214,116 @@ def test_on_achete_son_silence_et_ca_coute_plus_cher_qu_un_temoin(banc):
         const encoreStool = L.Police.estStool(p);
         L.B.partie.argent = 50000;
         L.Missions.interagir(j);
-        return { prix: prix, invite: invite, tropPauvre: tropPauvre,
-                 encoreStoolQuandPauvre: encoreStool,
-                 achete: !L.Police.estStool(p), porte: !!p.porteBut,
-                 paye: 50000 - L.B.partie.argent, dit: p.bulle ? p.bulle.texte : null,
-                 repit: L.B.recherche.stoolT > L.B.t,
-                 silenceTemoin: L.B.defs.economie.tarifs.silence_temoin };
-    }""" % DECOR)
+        res.achat = { prix: prix, invite: invite, tropPauvre: tropPauvre,
+                      encoreStoolQuandPauvre: encoreStool,
+                      achete: !L.Police.estStool(p), porte: !!p.porteBut,
+                      paye: 50000 - L.B.partie.argent, dit: p.bulle ? p.bulle.texte : null,
+                      repit: L.B.recherche.stoolT > L.B.t,
+                      silenceTemoin: L.B.defs.economie.tarifs.silence_temoin };
+        })();
+        // 2. On change de tete.
+        (function () {
+        const p = unStool();
+        const enRoute = { stool: L.Police.estStool(p), porte: !!p.porteBut };
+        L.Missions.porterTenue('coupe_vent');
+        const apres = { stool: L.Police.estStool(p), porte: !!p.porteBut };
+        // ... et personne ne prend le relais pendant le repit.
+        const repit = L.B.recherche.stoolT - L.B.t;
+        occasions(10);
+        const relais = L.B.entites.filter(L.Police.estStool).length;
+        res.tete = { enRoute: enRoute, apres: apres, relais: relais,
+                     repitImages: repit,
+                     voulu: L.B.defs.recherche.stool.repit_deguisement_s * 60 };
+        })();
+        // 3. Il appelle.
+        (function () {
+        const p = unStool();
+        const avant = L.B.recherche.etoiles;
+        // On le plante loin du joueur pour que le seuil ne soit pas ses pieds.
+        p.x = j.x + 300; p.y = j.y + 200;
+        L.Police.appelDuStool(p);
+        const r2 = L.B.recherche;
+        res.appel = { etaitStool: true, avant: avant, apres: r2.etoiles,
+                      plancher: L.B.defs.recherche.stool.etoiles,
+                      chaleur: r2.chaleur, encoreStool: !!p.stool,
+                      vuX: Math.round(r2.dernierVu.x), vuY: Math.round(r2.dernierVu.y),
+                      seuilX: Math.round(p.x), seuilY: Math.round(p.y),
+                      joueurX: Math.round(j.x), joueurY: Math.round(j.y),
+                      repit: r2.stoolT > L.B.t };
+        })();
+        // 4. On l'assomme (la seule scene qui joue des images : la derniere).
+        (function () {
+        const p = unStool();
+        const avantCoup = { stool: L.Police.estStool(p), porte: !!p.porteBut };
+        L.Entites.assommer(p);
+        o.frame(5);
+        res.assomme = { avantCoup: avantCoup, apres: L.Police.estStool(p),
+                        porte: !!p.porteBut, etat: p.etat };
+        })();
+        return res;
+    }""" % (DECOR, REPARTIR))
+
+
+def test_le_stool_ne_naît_jamais_dans_le_dos_du_joueur(_naissance):
+    """⚠️ LE JUGE DE LA FICHE, mesure sur place. Le meme passant, a la meme
+    distance, devant puis derriere : devant il te reconnait, derriere il ne
+    peut pas. C'est la seule facon de rendre la denonciation JOUABLE — on la
+    voit partir, on a le temps de payer ou de frapper.
+
+    ⚠️ Et le temoin du juge est indispensable : sans la mesure « devant », un
+    stool qui ne naitrait JAMAIS passerait ce juge au vert."""
+    r = _naissance["dos"]
+    assert r["devant"]["stool"] is True, (
+        "le décor du juge est faux : personne ne te reconnaît même de face (%s)" % r
+    )
+    assert r["devant"]["porte"] is True, "il te reconnaît et ne va nulle part : %s" % r
+    assert r["dos"]["stool"] is False, (
+        "il te reconnaît DE DOS : la dénonciation n'est plus jouable (%s)" % r
+    )
+    assert r["epaule"]["stool"] is False, (
+        "il te reconnaît par-dessus ton épaule : le cône est trop large (%s)" % r
+    )
+
+
+def test_sans_dossier_personne_ne_te_reconnaît(_naissance):
+    """Le temoin de la regle du casier : le meme passant, au meme endroit, une
+    fois avec un dossier et une fois sans."""
+    r = _naissance["casier"]
+    assert r["epais"] is True, "le décor du juge est faux : même à huit pages, personne (%s)" % r
+    assert r["blanc"] is False, "un dossier blanc se fait dénoncer : %s" % r
+    assert r["sousLeSeuil"] is False, "le minimum de la fiche ne tient pas : %s" % r
+
+
+def test_son_appel_pose_un_plancher_et_pas_de_la_chaleur(_en_route):
+    """⚠️ TOUTE LA DIFFERENCE AVEC LE TEMOIN. Un delit vu pose de la CHALEUR :
+    il en faut trois pour une etoile. Un signalement telephone pose un
+    PLANCHER : deux etoiles d'un coup, parce que le poste sait maintenant qui
+    te chercher. `police.js` le disait deja en toutes lettres (« la difference
+    entre quelqu'un a vu et quelqu'un a appele ») ; il manquait quelqu'un pour
+    decrocher.
+
+    ⚠️ Et `dernierVu` tombe SUR LE SEUIL, pas sur le joueur : c'est ce que le
+    stool a donne, et c'est la que les autos vont chercher. On a donc quelques
+    secondes pour ne plus y etre — sans ca, l'appel serait un mouchard colle
+    dans le dos."""
+    r = _en_route["appel"]
+    assert r["avant"] == 0, "le décor du juge est faux : on a déjà des étoiles (%s)" % r
+    assert r["apres"] >= r["plancher"], "l'appel n'a rien donné : %s" % r
+    assert r["chaleur"] == 0, "un signalement chauffe l'ambiance au lieu de nommer : %s" % r
+    assert r["encoreStool"] is False, "il reste un stool après avoir appelé : %s" % r
+    assert (r["vuX"], r["vuY"]) == (r["seuilX"], r["seuilY"]), (
+        "la police va chercher où était le JOUEUR, pas où le stool a téléphoné : %s" % r
+    )
+    assert (r["vuX"], r["vuY"]) != (r["joueurX"], r["joueurY"])
+    assert r["repit"] is True, "la rue peut se relayer au téléphone tout de suite : %s" % r
+
+
+def test_on_achete_son_silence_et_ca_coute_plus_cher_qu_un_temoin(_en_route):
+    """Il marchande QUI TU ES, pas ce qu'il a vu — et le prix monte avec le
+    dossier, comme l'amende, comme l'avocat. ⚠️ Le HUD doit l'annoncer AVANT
+    qu'on appuie : une invite qui dit autre chose que ce qu'ACTION va faire est
+    pire que pas d'invite du tout."""
+    r = _en_route["achat"]
     assert r["prix"] > r["silenceTemoin"], "il vend au prix d'un témoin : %s" % r
     assert r["invite"] == "ACHETER SON SILENCE — %s $" % r["prix"], (
         "le HUD n'annonce pas ce qu'ACTION va faire : %s" % r
@@ -251,47 +337,26 @@ def test_on_achete_son_silence_et_ca_coute_plus_cher_qu_un_temoin(banc):
     assert r["repit"] is True, "un autre peut décrocher tout de suite : %s" % r
 
 
-def test_assomme_il_n_appelle_pas(banc):
+def test_assomme_il_n_appelle_pas(_en_route):
     """⚠️ La deuxieme facon de le faire taire, et elle a son prix en etoiles :
     assommer quelqu'un dans la rue, ca se voit. Mais il marchait jusqu'a la
     porte LES YEUX FERMES — `majPorte` ne regardait pas s'il tenait debout, et
     ca ne comptait guere tant qu'il s'agissait de rentrer souper."""
-    r = banc("""function (L, o) {
-        %s
-        const p = o.poser('passant', 70, 0);
-        p.etat = 'flane'; p.porteBut = null;
-        L.B.recherche.stoolT = 0;
-        L.Entites.indexer();
-        occasions(40);
-        const avantCoup = { stool: L.Police.estStool(p), porte: !!p.porteBut };
-        L.Entites.assommer(p);
-        o.frame(5);
-        return { avantCoup: avantCoup, apres: L.Police.estStool(p),
-                 porte: !!p.porteBut, etat: p.etat };
-    }""" % DECOR)
+    r = _en_route["assomme"]
     assert r["avantCoup"]["stool"] is True, "le décor du juge est faux : pas de stool (%s)" % r
     assert r["etat"] == "assomme"
     assert r["porte"] is False, "un homme assommé continue son chemin : %s" % r
     assert r["apres"] is False, "il téléphone dans les pommes : %s" % r
 
 
-def test_un_seul_stool_a_la_fois(banc):
+def test_un_seul_stool_a_la_fois(_naissance):
     """⚠️ Sans ca, un gros casier n'est plus une regle, c'est une condamnation :
     on paie le premier, le deuxieme decroche, et la rue entiere se relaie."""
-    r = banc("""function (L, o) {
-        %s
-        const gens = [o.poser('passant', 60, 0), o.poser('passant', 80, 10),
-                      o.poser('passant', 70, -10)];
-        gens.forEach(function (p) { p.etat = 'flane'; p.porteBut = null; });
-        L.B.recherche.stoolT = 0;
-        L.Entites.indexer();
-        occasions(60);
-        return { stools: gens.filter(function (p) { return L.Police.estStool(p); }).length };
-    }""" % DECOR)
+    r = _naissance["seul"]
     assert r["stools"] == 1, "%s stools en même temps : la rue se relaie au téléphone" % r["stools"]
 
 
-def test_changer_de_tete_fait_taire_celui_qui_est_deja_en_route(banc):
+def test_changer_de_tete_fait_taire_celui_qui_est_deja_en_route(_en_route):
     """⚠️ LE SEUL LEVIER QUE LE JOUEUR AIT VRAIMENT CONTRE LE STOOL. Le casier ne
     redescend qu'en payant l'avocat ou le comptoir du fond ; du linge neuf, lui,
     se trouve a la friperie pour quelques piastres. Sans ca, un gros dossier
@@ -301,24 +366,7 @@ def test_changer_de_tete_fait_taire_celui_qui_est_deja_en_route(banc):
     ⚠️ Et celui qui etait DEJA en route raccroche : il cherchait une tete qui
     n'existe plus. Un repit qui ne vaudrait que pour les prochains laisserait le
     telephone sonner quand meme."""
-    r = banc("""function (L, o) {
-        %s
-        const p = o.poser('passant', 70, 0);
-        p.etat = 'flane'; p.porteBut = null;
-        L.B.recherche.stoolT = 0;
-        L.Entites.indexer();
-        occasions(40);
-        const enRoute = { stool: L.Police.estStool(p), porte: !!p.porteBut };
-        L.Missions.porterTenue('coupe_vent');
-        const apres = { stool: L.Police.estStool(p), porte: !!p.porteBut };
-        // ... et personne ne prend le relais pendant le repit.
-        const repit = L.B.recherche.stoolT - L.B.t;
-        occasions(10);
-        const relais = L.B.entites.filter(L.Police.estStool).length;
-        return { enRoute: enRoute, apres: apres, relais: relais,
-                 repitImages: repit,
-                 voulu: L.B.defs.recherche.stool.repit_deguisement_s * 60 };
-    }""" % DECOR)
+    r = _en_route["tete"]
     assert r["enRoute"]["stool"] is True, "le décor du juge est faux : pas de stool (%s)" % r
     assert r["apres"]["stool"] is False, "il te reconnaît encore en coupe-vent : %s" % r
     assert r["apres"]["porte"] is False, "il continue vers le téléphone : %s" % r
