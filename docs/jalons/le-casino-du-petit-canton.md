@@ -28,7 +28,8 @@ _Demande de Martin (28 sept. 2026) :_ « je veux un grand casino dans le quartie
 2. **Les tables** : le **blackjack** et la **roulette**, un croupier à chacune ; les mises, les limites du jour — et
    le poker, le sic bo, le baccara.
 3. **Tricher** : compter les cartes au blackjack (et peut-être un complice à la roulette) ; la chaleur monte, les
-   gardes repèrent, et on se fait sortir — ou barrer du casino pour une semaine.
+   gardes repèrent, et on se fait sortir — ou barrer du casino pour une semaine. ✅ _Livrée le 28 sept. 2026 (le
+   complice, non : voir les notes)._
 4. **Le tripot du sous-sol** : une porte gardée, une mission pour l'ouvrir (avec le donneur du Petit-Canton,
    étape 3 du quartier), une salle enfumée où les mises sont plus grosses et où la maison triche aussi.
 
@@ -134,4 +135,65 @@ _Demande de Martin (28 sept. 2026) :_ « je veux un grand casino dans le quartie
 - **Reste** : vague 3 (tricher : le sabot et le compte des cartes, la chaleur, les gardes), vague 4 (le tripot du
   sous-sol).
 
-### Vague 3 — tricher : le sabot, le compte, la chaleur et les gardes — **en cours** (Martin, 28 sept. : « va y pour vague 3 »)
+### Vague 3 — tricher : le sabot, le compte, la sécurité — **livrée le 28 sept. 2026** (Martin : « va y pour vague 3 »)
+
+- **Un SABOT au blackjack** (`tables_de_jeu.PAQUETS_DU_SABOT`, `COUPE`) : deux paquets battus ensemble, qui servent
+  main après main ; le croupier rebrasse quand la carte de coupe sort, aux trois quarts (78 cartes données) — et ça
+  s'entend (`sabot_brasse`). ⚠️ Deux paquets plutôt que six : le compte monte et descend plus vite, un sabot chaud
+  arrive quelques fois par jour de jeu. Le sabot est DANS la partie (`B.partie.tables.sabot` : son numéro, qui sème
+  son brassage — la graine, le numéro, un sel à lui, jamais `B.rng()` —, et combien de cartes en sont sorties) :
+  on le retrouve au même point le lendemain. On le voit à droite du feutre, une pile qui baisse jusqu'au trait
+  rouge de la coupe.
+- **DOUBLER** (`bj_main`, le jumeau `Tables.bjMain`) : sur ses deux premières cartes, une deuxième mise et UNE
+  carte. ⚠️ Sans lui, le compte ne pouvait pas payer : mesuré, sans doubler, même un compte de +6 par paquet ne
+  rendait qu'un demi pour cent de plus — c'est en doublant, et avec les naturels, qu'un sabot chaud paie. Le
+  blackjack de l'habitué au sabot rend donc **99 %** (99,1 mesuré sur un million de mains), affiché 99 (c'était 97
+  sans doubler, paquet neuf à chaque main).
+- **Les mises du blackjack, de 10 à 500 $** (`MISES_BLACKJACK`, paires) — l'écart qu'il faut à un compteur ; les
+  autres tables gardent 10, 20, 50. Une ligne à elle dans `B.partie.tables` (`mise_bj`) : une mise de 500 $ posée
+  au blackjack ne se retrouve pas sur le numéro plein de la roulette.
+- **Compter** : on peut toujours compter soi-même (les cartes sont toutes montrées, le sabot baisse à vue). Et
+  **après vingt mains au sabot, on SAIT compter** (« À FORCE DE REGARDER LE SABOT, TU SAIS COMPTER LES CARTES ») :
+  une ligne COMPTER (NON / OUI) apparaît, et le compte Hi-Lo des cartes VUES s'affiche sous le sabot — le compte
+  courant et le compte PAR PAQUET (le compte réel), en or à partir de +2. ⚠️ Les cartes VUES : jamais la cachée du
+  croupier avant qu'il la retourne (jugé, et une mutation qui la compte rougit).
+- **LA MESURE** (`test_tables_de_jeu.py`, un million de mains au sabot, les mêmes pour tous) : **sans compter**, à
+  mise égale, l'habitué rend **99,1 %** — la maison garde près d'un pour cent ; **un compteur parfait** qui mise de
+  10 à 500 $ selon le compte par paquet avant la main (`compteur_parfait` : 10 sous +1, puis 20, 50, 100, 200, et
+  500 à +5) rend **101,2 %** par dollar misé, environ **+0,85 $ par main** (sur trois graines : 101,2 à 101,9 %) ;
+  un **compteur prudent** (de 10 à 100 $) rend 100,4 à 100,8 %, +0,13 à +0,24 $ par main. Le compte paie, un peu —
+  et quarante mains par jour, c'est quelques dizaines de dollars : pas de quoi casser l'économie.
+- **La SÉCURITÉ** (`SURVEILLANCE`, `Casino.surveillerMise` / `surveillerGain` / `refuseLaMise` / `refuseLaPorte`) :
+  un œil, une chaleur de 0 à 100 qui n'a RIEN d'une étoile de police. Elle monte quand la mise du blackjack saute
+  (une fois et demie sa mise d'habitude, une moyenne qui glisse) alors que le sabot est chaud — par doublement de
+  la mise, par point de compte au-delà de un ; et quand, au-delà de mille dollars gagnés aux tables dans la
+  journée, on gagne encore. Elle baisse à chaque main à sa mise d'habitude, quand la mise saute sur un sabot FROID
+  (on a l'air d'un joueur, pas d'un compteur : la couverture), et de six points par heure loin des tables. On la
+  voit en bas du menu de chaque table : un œil et cinq crans, vert, jaune, rouge, le mot SÉCURITÉ.
+  - À **50** : un **garde** (le garde de la salle, près de la porte — né à la demande, hors de la suite, avec un
+    dé prêté, comme le portier ; sans la batte de son archétype, vu à la capture) vient se poster à ton épaule :
+    « TU COMPTES BIEN. MOI AUSSI, JE COMPTE. », un grésillement de talkie (`talkie_securite`).
+  - À **100** : à ta mise suivante (jamais au milieu d'une main), il t'arrête la main — « LA MAISON TE REMERCIE. LA
+    PORTE AUSSI. » — et **te reconduit à la porte** (le fondu de la sortie). Le portier ne te rouvre que **le
+    lendemain** (« PAS CE SOIR, L'AMI. », l'invite dit LE PORTIER et plus ENTRER) ; à la **récidive**, **une
+    semaine** (« TA PHOTO EST AU MUR, L'AMI. ELLE EST BELLE. »). Pas une étoile (jugé).
+  - **Frapper la sécurité** (le garde, le portier) : barré une semaine d'un coup, et là, oui, la police (au moins
+    une étoile).
+  - Mesuré sur trois cents jours de quarante mains : qui mise toujours pareil (à 10 comme à 500 $) n'est jamais
+    inquiété ; le compteur parfait est averti trois jours sur quatre et sorti plus d'un jour sur deux, vers sa
+    quinzième main ; le prudent (10 à 100 $) sorti un jour sur six ; et quelques grosses mises sur un sabot froid le
+    couvrent encore mieux (un jour sur douze).
+- **MACHINES SANS LIMITE** ne lève que le plafond du jour : au-delà de quarante mains, le sabot sert et se rebrasse
+  pareil, et l'œil voit toujours (jugé ; une mutation où la triche aveuglerait la sécurité rougit).
+- **Le complice à la roulette : pas fait.** Il fallait un personnage de plus à la table, un signal qu'il te fait
+  (lisible sans texte), et une règle qui le rend payant sans casser la roue — ni lisible, ni pas cher. Laissé pour
+  plus tard, si Martin le veut.
+- **Les sons** : `sabot_brasse` (le croupier brasse deux paquets) et `talkie_securite` (le talkie du garde), générés
+  par ElevenLabs, chargés en approchant du casino (`audio.LIEUX['casino']`), chacun avec son repli synthétisé.
+- **Juges** : `test_tables_de_jeu.py` (doubler, le Hi-Lo, la coupe, la MESURE sur un million de mains, la sécurité sur
+  trois cents jours, ce que l'œil pense d'une mise), `test_triche_casino_js.py` (JS = Python sur deux mille bouts de
+  sabot et deux mille avis de l'œil ; le sabot au bouton qui se rebrasse et s'entend ; apprendre à compter et le
+  compte des cartes vues ; doubler au bouton ; l'avertissement, la sortie sans étoile, la porte refusée, le
+  lendemain, la semaine ; miser pareil ne chauffe pas ; frapper un garde ; le hasard du jeu intact et le dé prêté
+  du garde ; MACHINES SANS LIMITE ; quarante mille mains au hasard du navigateur). Treize mutations, treize rouges.
+- **Reste** : vague 4 (le tripot du sous-sol).

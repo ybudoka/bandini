@@ -761,6 +761,9 @@ const Son = (function () {
     cartes_donnees: function () { if (!joue('cartes_donnees')) { bruit(0.05, 0.1, 3000, 1200); bruit(0.05, 0.1, 3000, 1200); } },
     jetons: function () { if (!joue('jetons')) { ton(3200, 0.03, 'square', 0.07); ton(2900, 0.03, 'square', 0.06, 1, 0.05); } },
     des_sic_bo: function () { if (!joue('des_sic_bo')) { bruit(0.5, 0.1, 1800, 700); ton(140, 0.08, 'square', 0.2, 0.5, 0.55); } },
+    //: La triche (vague 3 du casino) : le croupier rebrasse le sabot ; le talkie du garde qui vient te voir.
+    sabot_brasse: function () { if (!joue('sabot_brasse')) { bruit(0.9, 0.08, 3600, 1200); ton(2800, 0.02, 'square', 0.04, 1, 0.95); } },
+    talkie_securite: function () { if (!joue('talkie_securite')) { bruit(0.14, 0.08, 2200, 900); ton(1450, 0.06, 'square', 0.06, 1, 0.16); } },
     menu: function () { if (!joue('menu')) ton(660, 0.05, 'square', 0.15); },
     // ⚠️ Le filet du refus suit la meme regle que l'echantillon (voir
     // `audio.py`) : deux petites notes qui descendent, pas un buzzer. La

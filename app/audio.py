@@ -590,6 +590,15 @@ CATALOGUE: list[Echantillon] = [
     _e("des_sic_bo", "Les dés du sic bo", duree_s=2.0, volume=0.34, influence=0.6,
        prompt="three dice shaken hard inside a small covered cup, rattling, then the cup "
               "slammed down on a wooden table, close up, no voices, no music"),
+    # La triche (vague 3 du casino) : le croupier rebrasse le sabot quand la carte de coupe sort, et le
+    # talkie-walkie du garde qui vient te glisser un mot (ou te reconduire).
+    _e("sabot_brasse", "Le croupier brasse le sabot", duree_s=2.0, volume=0.32, influence=0.6,
+       prompt="a casino dealer riffle shuffling two decks of playing cards together on a felt "
+              "table, two quick riffles and a bridge, then squaring the deck with a soft tap, "
+              "close up, no voices, no music"),
+    _e("talkie_securite", "Le talkie du garde", duree_s=1.2, volume=0.3, influence=0.6,
+       prompt="a short burst of walkie-talkie static and a squelch beep, a security guard "
+              "keying a handheld radio, no words, close up, no music"),
 ]
 
 # --- La finition des bruitages -------------------------------------------------------
@@ -1441,7 +1450,7 @@ QUARTIERS = {
 LIEUX: dict[str, list[str]] = {
     "cabane": ["caleche", "hennissement", "evaporateur"],
     "casino": ["casino_salle", "bras_machine", "gain_machine", "jackpot",
-               "roulette_bille", "cartes_donnees", "jetons", "des_sic_bo"],
+               "roulette_bille", "cartes_donnees", "jetons", "des_sic_bo", "sabot_brasse", "talkie_securite"],
 }
 
 #: Ce qui passe sur les ondes, et ne s'affiche donc jamais dans une bulle.

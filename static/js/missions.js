@@ -3701,7 +3701,8 @@ const Missions = (function () {
     const objet = Combat.objetSousLaMain(j);
     if (objet) { const a = Combat.armeDef(objet.arme); B.invite = 'RAMASSER ' + (a ? a.nom.toUpperCase() : ''); return; }
     const porte = Monde.porteDevant(j);
-    if (porte) { B.invite = 'ENTRER'; return; }
+    // Le Dragon d'or ne rouvre pas a qui sa securite a reconduit : l'invite ne promet pas d'entrer.
+    if (porte) { B.invite = porte.interieur === 'nord_casino' && Casino.barre() ? 'LE PORTIER' : 'ENTRER'; return; }
     const v = Vehicules.vehiculeSousLaMain(j);
     if (v) { B.invite = (v.conducteur === 'trafic' ? 'VOLER ' : 'MONTER : ') + v.def.nom.toUpperCase(); return; }
     // ⚠️ Au bout de la chaine, comme dans `interagir` : le bouclier humain est

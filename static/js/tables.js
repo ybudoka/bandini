@@ -18,7 +18,14 @@
    synthetise, et les fichiers ne se chargent qu'en approchant du casino (`audio.LIEUX`).
 
    ⚠️ LE GAIN EST PAYE TOUT DE SUITE, EN SILENCE, et ANNONCE quand la bille s'arrete (`annoncer`) : payer a
-   la fin de l'animation, c'etait ne jamais payer un joueur qui ferme le menu pendant que la roue tourne. */
+   la fin de l'animation, c'etait ne jamais payer un joueur qui ferme le menu pendant que la roue tourne.
+
+   ⚠️ LE BLACKJACK SE DONNE D'UN SABOT (vague 3, tricher) : deux paquets battus ensemble (`cartesDuSabot`), qui
+   servent main apres main jusqu'a la carte de coupe, puis le croupier rebrasse. Les cartes sorties ne
+   reviennent pas : on peut COMPTER (Hi-Lo, `hiLo`), et miser gros quand le compte monte rend la table payante
+   (mesure : `test_tables_de_jeu.py`). Apres vingt mains au sabot, on SAIT compter (la ligne COMPTER : le compte
+   s'affiche a cote du sabot). On peut DOUBLER. Et la securite du casino regarde tes mises (`Casino.surveiller*`,
+   l'oeil en bas du menu) : c'est elle qui te sort, pas la police. */
 
 const Tables = (function () {
   'use strict';
@@ -27,7 +34,10 @@ const Tables = (function () {
 
   //: Un sel par table : la main numero 3 du blackjack et le tour numero 3 de la roulette ne tirent pas le meme
   //: hasard (ni celui du videopoker, ni celui de la machine a sous).
-  const SELS = { blackjack: 0x7FEB352D, roulette: 0x846CA68B, poker: 0x5BD1E995, sic_bo: 0x27D4EB2F, baccara: 0x165667B1 };
+  const SELS = { blackjack: 0x7FEB352D, roulette: 0x846CA68B, poker: 0x5BD1E995, sic_bo: 0x27D4EB2F, baccara: 0x165667B1,
+                 sabot: 0x2C1B3C6D };
+  //: Combien de mains au sabot avant de savoir COMPTER : a force de regarder les cartes sortir.
+  const APPRENDRE = 20;
 
   //: Combien d'images dure chaque animation, et le pas des cartes qu'on retourne une a une.
   const ANIME = { roulette: 110, sic_bo: 50, carte: 9 };
@@ -39,8 +49,14 @@ const Tables = (function () {
   function etat() {
     const p = B.partie;
     p.tables = p.tables || { mise: regles().mises[0], roulette: 'rouge', numero: 17, sic_bo: 'petit', chiffre: 4, baccara: 'banque' };
+    // Vague 3 : la mise du blackjack a sa propre echelle (de 10 a 500 $), et le compte qu'on tient ou pas.
+    if (p.tables.mise_bj === undefined) p.tables.mise_bj = regles().sabot.mises[0];
+    if (p.tables.compter === undefined) p.tables.compter = false;
     return p.tables;
   }
+
+  /** La mise a cette table : le blackjack a son echelle a lui (l'ecart qu'il faut a un compteur). */
+  function miseDe(jeu) { const e = etat(); return jeu === 'blackjack' ? e.mise_bj : e.mise; }
 
   function compteur(jeu) {
     const p = B.partie, e = etat();
@@ -62,6 +78,54 @@ const Tables = (function () {
     }
     return cartes;
   }
+
+  // --- Le sabot du blackjack (vague 3) -------------------------------------------------------------------
+
+  /** Ou en est le sabot : `n`, son numero (qui seme son brassage), et `pos`, combien de cartes en sont sorties.
+      ⚠️ Dans la partie : on retrouve le meme sabot, au meme point, en revenant le lendemain. */
+  function sabot() { const e = etat(); e.sabot = e.sabot || { n: 0, pos: 0 }; return e.sabot; }
+
+  let sabotLu = null, sabotDe = null;
+  /** Les cartes du sabot numero `n` : deux paquets battus ensemble, a la graine et au sel du sabot. */
+  function cartesDuSabot(n) {
+    const cle = (B.graine | 0) + ':' + n;
+    if (sabotDe === cle) return sabotLu;
+    const r = regles().sabot, rng = mulberry(((B.graine | 0) ^ Math.imul(n + 1, SELS.sabot)) >>> 0), cartes = [];
+    for (let p = 0; p < r.paquets; p++) for (let c = 0; c < 52; c++) cartes.push(c);
+    for (let i = cartes.length - 1; i > 0; i--) {
+      const k = Math.floor(rng() * (i + 1));
+      const t = cartes[i]; cartes[i] = cartes[k]; cartes[k] = t;
+    }
+    sabotDe = cle; sabotLu = cartes;
+    return cartes;
+  }
+
+  /** Le compte HI-LO d'une carte (le jumeau de `hi_lo`) : du deux au six +1, du sept au neuf 0, du dix a l'as -1. */
+  function hiLo(c) { const r = c % 13; return r <= 4 ? 1 : r <= 7 ? 0 : -1; }
+  function compteDe(cartes) { let s = 0; for (const c of cartes) s += hiLo(c); return s; }
+
+  /** Le compte des cartes VUES : celles des mains finies du sabot, et ce qui est retourne de la main en cours
+      (tes cartes, celle du croupier qui est visible — sa cachee quand il la retourne). `parPaquet` : le compte
+      reel, divise par les paquets qui restent. */
+  function compte() {
+    const s = sabot(), cartes = cartesDuSabot(s.n), t = enCours('blackjack');
+    const enMain = t && t.sabot === s.n && t.phase === 'joue';
+    const depart = enMain ? t.depart : s.pos;
+    let courant = compteDe(cartes.slice(0, depart));
+    if (enMain) courant += compteDe(t.joueur) + hiLo(t.croupier[0]);
+    const restantes = cartes.length - (enMain ? depart + t.joueur.length + 1 : depart);
+    return { courant: courant, parPaquet: courant / (restantes / 52), restantes: restantes };
+  }
+
+  /** Le compte que tient un compteur PARFAIT avant la main : toutes les cartes sorties du sabot. C'est ce que
+      la securite regarde aussi (les cameras voient tout). */
+  function compteAvantLaMain() {
+    const s = sabot(), n = cartesDuSabot(s.n).length;
+    return compteDe(cartesDuSabot(s.n).slice(0, s.pos)) / ((n - s.pos) / 52);
+  }
+
+  /** Sait-on compter ? Apres `APPRENDRE` mains au sabot. */
+  function saitCompter() { return compteur('blackjack').total >= APPRENDRE; }
 
   /** La case ou tombe la bille au tour numero `n` (0 a 36). */
   function numeroDuTour(n) { return Math.floor(hasard('roulette', n)() * 37); }
@@ -93,15 +157,23 @@ const Tables = (function () {
     if (bjNaturel(croupier) || (c <= 21 && c > j)) return 0;
     return c === j ? 1 : 2;
   }
-  /** Une main entiere, `tirer(main, visible)` decidant pour le joueur — le jumeau de `bj_jouer`. */
+  /** Une main entiere, `tirer(main, visible)` decidant pour le joueur — le jumeau de `bj_jouer` (sans doubler). */
   function bjJouer(cartes, tirer) {
+    const m = bjMain(cartes, tirer, null);
+    return { paie: m.paie, joueur: m.joueur, croupier: m.croupier };
+  }
+  /** Une main ou l'on peut DOUBLER sur ses deux premieres cartes (`doubler(main, visible)`) : une deuxieme mise,
+      UNE carte. `paie` en mises de depart (une main doublee gagnee rend quatre), `fois` : les mises prises. Le
+      jumeau de `bj_main`. */
+  function bjMain(cartes, tirer, doubler) {
     const joueur = [cartes[0], cartes[2]];
-    let croupier = [cartes[1], cartes[3]], k = 4;
+    let croupier = [cartes[1], cartes[3]], k = 4, fois = 1;
     if (!bjNaturel(joueur)) {
-      while (bjValeur(joueur).total < 21 && tirer(joueur, croupier[0])) joueur.push(cartes[k++]);
+      if (doubler && doubler(joueur, croupier[0])) { joueur.push(cartes[k++]); fois = 2; }
+      else while (bjValeur(joueur).total < 21 && tirer(joueur, croupier[0])) joueur.push(cartes[k++]);
     }
     if (bjValeur(joueur).total <= 21 && !bjNaturel(joueur)) croupier = bjCroupier(croupier, cartes.slice(k));
-    return { paie: bjRegler(joueur, croupier), joueur: joueur, croupier: croupier };
+    return { paie: bjRegler(joueur, croupier) * fois, fois: fois, joueur: joueur, croupier: croupier };
   }
 
   /** La couleur d'une case : le zero est vert, et autour de la roue, rouge et noir alternent. */
@@ -194,7 +266,10 @@ const Tables = (function () {
   /** La mise part (et le coup est compte) : rend le compteur, ou null si la table refuse. `fois` : ce qu'il
       faut avoir en poche (le poker demande de quoi JOUER apres le depart). */
   function miser(jeu, fois) {
-    const r = regles(), c = compteur(jeu), mise = etat().mise;
+    const r = regles(), c = compteur(jeu), mise = miseDe(jeu);
+    // ⚠️ La securite AVANT la mise : barre, on ne te sert plus ; trop regarde, le garde t'arrete la main et te
+    // reconduit (`Casino.refuseLaMise`). Jamais au milieu d'une main : on a vu le resultat de la derniere.
+    if (Casino.refuseLaMise()) return null;
     if (c.coups >= r.par_jour && !triche('machines')) { Hud.message('LA TABLE EST FERMÉE POUR TOI AUJOURD’HUI'); Son.SFX.erreur(); return null; }
     if (B.partie.argent < mise * (fois || 1)) { Hud.message('PAS ASSEZ D’ARGENT'); Son.SFX.erreur(); return null; }
     if (!Missions.payer(mise, r.noms[jeu])) return null;
@@ -206,12 +281,14 @@ const Tables = (function () {
 
   /** Le coup est regle : ce qu'il rend est paye TOUT DE SUITE, en silence — l'annonce vient quand l'animation
       finit (`annoncer`). `mise` : ce qui a ete mise en tout. */
-  function regler(t, paie, nom, mise) {
-    const gain = Math.round(paie * etat().mise);
+  function regler(jeu, t, paie, nom, mise) {
+    const gain = Math.round(paie * miseDe(jeu));
+    t.jeu = jeu;
     t.phase = 'fin';
     t.resultat = { nom: nom, gain: gain, mise: mise };
     t.annonce = false;
     if (gain > 0) Missions.encaisser(gain, null, true);
+    Casino.surveillerGain(gain - mise);      // gagner gros, a la longue, se remarque aussi
     return gain;
   }
 
@@ -221,21 +298,45 @@ const Tables = (function () {
     t.annonce = true;
     const r = t.resultat;
     // Le gros lot (dix mises de profit et plus : un numero plein, un triple au sic bo) sonne comme a la machine.
-    if (r.gain > r.mise) { if (r.gain - r.mise >= 10 * etat().mise) Son.SFX.jackpot(); else Son.SFX.gain_machine(); Hud.message('+' + (r.gain - r.mise) + ' $ · ' + r.nom); }
+    if (r.gain > r.mise) { if (r.gain - r.mise >= 10 * miseDe(t.jeu)) Son.SFX.jackpot(); else Son.SFX.gain_machine(); Hud.message('+' + (r.gain - r.mise) + ' $ · ' + r.nom); }
     else if (r.gain === r.mise && r.gain > 0) Hud.message(r.nom + ' · LA MISE EST RENDUE');
     else if (r.gain > 0) Hud.message(r.nom + ' · ' + r.gain + ' $ RENDUS');
     else Hud.message(r.nom + ' · LA TABLE GARDE TES ' + r.mise + ' $');
   }
 
-  //: Le BLACKJACK : DONNER, puis TIRER ou RESTER ; le croupier tire jusqu'a dix-sept.
+  //: Le BLACKJACK : DONNER, puis TIRER, RESTER ou DOUBLER ; le croupier tire jusqu'a dix-sept. Les cartes
+  //: sortent du SABOT (vague 3) : quand la carte de coupe est sortie, le croupier rebrasse avant de donner.
   function bjDonner() {
     const c = miser('blackjack');
     if (!c) return false;
-    const cartes = paquet('blackjack', c.total++);
+    c.total++;
+    const s = sabot(), r = regles();
+    if (s.pos >= r.sabot.coupe) {
+      s.n++; s.pos = 0;
+      Son.SFX.sabot_brasse();
+      Hud.message('LE CROUPIER BRASSE LE SABOT');
+    }
+    // La securite voit la mise ET le sabot : une mise qui saute quand le compte est haut, ca se remarque.
+    Casino.surveillerMise(miseDe('blackjack'), compteAvantLaMain());
+    // Apprendre a compter : a force de regarder les cartes sortir.
+    if (c.total === APPRENDRE) Hud.message('À FORCE DE REGARDER LE SABOT, TU SAIS COMPTER LES CARTES', 240);
+    const cartes = cartesDuSabot(s.n).slice(s.pos);
     Son.SFX.cartes_donnees();
-    const t = B.tables.blackjack = { phase: 'joue', cartes: cartes, joueur: [cartes[0], cartes[2]],
-                                     croupier: [cartes[1], cartes[3]], k: 4, images: 0, fin: 0 };
+    const t = B.tables.blackjack = { phase: 'joue', cartes: cartes, joueur: [cartes[0], cartes[2]], sabot: s.n, depart: s.pos,
+                                     croupier: [cartes[1], cartes[3]], k: 4, images: 0, fin: 0, double: false };
     if (bjNaturel(t.joueur)) bjFinir(t);
+    return true;
+  }
+  /** DOUBLER : sur ses deux premieres cartes, une deuxieme mise, et UNE carte — puis le croupier joue. */
+  function bjDoubler() {
+    const t = enCours('blackjack');
+    if (!t || t.phase !== 'joue' || t.joueur.length !== 2) return false;
+    if (!Missions.payer(miseDe('blackjack'), 'BLACKJACK')) { Hud.message('PAS ASSEZ D’ARGENT'); Son.SFX.erreur(); return false; }
+    Son.SFX.jetons();
+    t.double = true;
+    t.joueur.push(t.cartes[t.k++]);
+    Son.SFX.cartes_donnees();
+    bjFinir(t);
     return true;
   }
   function bjTirer() {
@@ -255,12 +356,15 @@ const Tables = (function () {
   function bjFinir(t) {
     const j = bjValeur(t.joueur).total;
     if (j <= 21 && !bjNaturel(t.joueur)) t.croupier = bjCroupier(t.croupier, t.cartes.slice(t.k));
-    const paie = bjRegler(t.joueur, t.croupier), c = bjValeur(t.croupier).total;
-    const nom = j > 21 ? 'CRÈVE À ' + j : bjNaturel(t.joueur) && paie > 1 ? 'BLACKJACK'
+    const paie = bjRegler(t.joueur, t.croupier), c = bjValeur(t.croupier).total, fois = t.double ? 2 : 1;
+    const nom = (t.double ? 'DOUBLÉ · ' : '') + (j > 21 ? 'CRÈVE À ' + j : bjNaturel(t.joueur) && paie > 1 ? 'BLACKJACK'
       : paie === 2 ? j + ' CONTRE ' + (c > 21 ? 'LE CROUPIER QUI CRÈVE' : c) : paie === 1 ? 'ÉGALITÉ À ' + j
-      : bjNaturel(t.croupier) ? 'BLACKJACK DU CROUPIER' : j + ' CONTRE ' + c;
+      : bjNaturel(t.croupier) ? 'BLACKJACK DU CROUPIER' : j + ' CONTRE ' + c);
     t.fin = t.images;
-    regler(t, paie, nom, etat().mise);
+    // Les cartes de la main sont sorties du sabot : elles ne reviendront qu'au prochain brassage.
+    const s = sabot();
+    if (t.sabot === s.n) s.pos = t.depart + t.joueur.length + t.croupier.length;
+    regler('blackjack', t, paie * fois, nom, fois * miseDe('blackjack'));
   }
 
   //: La ROULETTE : un pari (une chance simple, ou un numero plein), et la bille.
@@ -272,7 +376,7 @@ const Tables = (function () {
     Son.SFX.roulette_bille();
     const t = B.tables.roulette = { phase: 'fin', n: n, pari: pari, images: 0, depart: hash2(c.total, 7) % 37 };
     const coul = couleurDe(n);
-    regler(t, roulettePaie(pari, n), n + (coul === 'vert' ? ' · LE ZÉRO' : ' ' + coul.toUpperCase()), etat().mise);
+    regler('roulette', t, roulettePaie(pari, n), n + (coul === 'vert' ? ' · LE ZÉRO' : ' ' + coul.toUpperCase()), etat().mise);
     return true;
   }
 
@@ -285,7 +389,7 @@ const Tables = (function () {
     Son.SFX.des_sic_bo();
     const t = B.tables.sic_bo = { phase: 'fin', des: des, pari: pari, images: 0 };
     const total = des[0] + des[1] + des[2], triple = des[0] === des[1] && des[1] === des[2];
-    regler(t, sicBoPaie(pari, des), des.join('-') + ' · ' + (triple ? 'TRIPLE' : total + (total <= 10 ? ' PETIT' : ' GRAND')), etat().mise);
+    regler('sic_bo', t, sicBoPaie(pari, des), des.join('-') + ' · ' + (triple ? 'TRIPLE' : total + (total <= 10 ? ' PETIT' : ' GRAND')), etat().mise);
     return true;
   }
 
@@ -308,7 +412,7 @@ const Tables = (function () {
       : nomJ + ' CONTRE ' + nomC;
     t.fin = t.images;
     t.joue = joue;
-    regler(t, paie, nom, joue ? 2 * mise : mise);
+    regler('poker', t, paie, nom, joue ? 2 * mise : mise);
     return true;
   }
 
@@ -321,7 +425,7 @@ const Tables = (function () {
     const coup = bacCoup(cartes), pj = bacPoint(coup.joueur), pb = bacPoint(coup.banque);
     const t = B.tables.baccara = { phase: 'fin', joueur: coup.joueur, banque: coup.banque, pari: pari, images: 0 };
     const nom = pj === pb ? 'ÉGALITÉ À ' + pj : (pj > pb ? 'LE JOUEUR ' : 'LA BANQUE ') + Math.max(pj, pb) + ' CONTRE ' + Math.min(pj, pb);
-    regler(t, bacRegler(pari, coup.joueur, coup.banque), nom, etat().mise);
+    regler('baccara', t, bacRegler(pari, coup.joueur, coup.banque), nom, etat().mise);
     return true;
   }
 
@@ -343,8 +447,9 @@ const Tables = (function () {
              faire: function () { ajuster(1); return false; } };
   }
 
-  function ligneDeMise() {
-    return ligneAChoix('MISE', regles().mises, 'mise', regles().mises.map(function (m) { return m + ' $'; }));
+  function ligneDeMise(jeu) {
+    const bj = jeu === 'blackjack', mises = bj ? regles().sabot.mises : regles().mises;
+    return ligneAChoix('MISE', mises, bj ? 'mise_bj' : 'mise', mises.map(function (m) { return m + ' $'; }));
   }
 
   function ligneDePari(jeu) {
@@ -364,21 +469,27 @@ const Tables = (function () {
   /** Les lignes du menu, dans la phase ou la table est. */
   function lignes(jeu) {
     const t = enCours(jeu), e = etat(), p = B.partie, r = regles();
-    const reste = r.par_jour - compteur(jeu).coups;
-    const peut = function (fois) { return (reste > 0 || triche('machines')) && p.argent >= e.mise * (fois || 1); };
+    const reste = r.par_jour - compteur(jeu).coups, mise = miseDe(jeu);
+    const peut = function (fois) { return (reste > 0 || triche('machines')) && p.argent >= mise * (fois || 1); };
     if (jeu === 'blackjack') {
       if (t && t.phase === 'joue') {
         return [{ libelle: 'TIRER', detail: String(bjValeur(t.joueur).total), faire: function () { bjTirer(); return curseurApres('blackjack', 0); } },
-                { libelle: 'RESTER', faire: function () { bjRester(); return curseurApres('blackjack', 1); } }];
+                { libelle: 'RESTER', faire: function () { bjRester(); return curseurApres('blackjack', 1); } },
+                { libelle: 'DOUBLER', detail: '+' + mise + ' $', actif: t.joueur.length === 2 && p.argent >= mise,
+                  faire: function () { bjDoubler(); return curseurApres('blackjack', 2); } }];
       }
-      return [ligneDeMise(), { libelle: 'DONNER', detail: e.mise + ' $', actif: peut(), faire: function () { bjDonner(); return curseurApres('blackjack', 0); } }];
+      const items = [ligneDeMise('blackjack')];
+      // COMPTER : une fois qu'on sait (vingt mains au sabot), le compte s'affiche a cote du sabot — ou pas.
+      if (saitCompter()) items.push(ligneAChoix('COMPTER', [false, true], 'compter', ['NON', 'OUI']));
+      items.push({ libelle: 'DONNER', detail: mise + ' $', actif: peut(), faire: function () { bjDonner(); return curseurApres('blackjack', 0); } });
+      return items;
     }
     if (jeu === 'poker') {
       if (t && t.phase === 'joue') {
-        return [{ libelle: 'JOUER', detail: '+' + e.mise + ' $', faire: function () { pkDecider(true); return curseurApres('poker', 0); } },
+        return [{ libelle: 'JOUER', detail: '+' + mise + ' $', faire: function () { pkDecider(true); return curseurApres('poker', 0); } },
                 { libelle: 'PASSER', faire: function () { pkDecider(false); return curseurApres('poker', 1); } }];
       }
-      return [ligneDeMise(), { libelle: 'DONNER', detail: e.mise + ' $', actif: peut(2), faire: function () { pkDonner(); return curseurApres('poker', 0); } }];
+      return [ligneDeMise(jeu), { libelle: 'DONNER', detail: mise + ' $', actif: peut(2), faire: function () { pkDonner(); return curseurApres('poker', 0); } }];
     }
     const items = [ligneDePari(jeu)];
     if (jeu === 'roulette' && e.roulette === 'numero') {
@@ -386,9 +497,9 @@ const Tables = (function () {
       items.push(ligneAChoix('NUMÉRO', numeros, 'numero'));
     }
     if (jeu === 'sic_bo' && e.sic_bo === 'chiffre') items.push(ligneAChoix('CHIFFRE', [1, 2, 3, 4, 5, 6], 'chiffre'));
-    items.push(ligneDeMise());
+    items.push(ligneDeMise(jeu));
     const geste = { roulette: ['LANCER LA BILLE', lancer], sic_bo: ['SECOUER LES DÉS', secouer], baccara: ['DONNER', bacDonner] }[jeu];
-    items.push({ libelle: geste[0], detail: e.mise + ' $', actif: peut(), faire: function () { geste[1](); return false; } });
+    items.push({ libelle: geste[0], detail: mise + ' $', actif: peut(), faire: function () { geste[1](); return false; } });
     return items;
   }
 
@@ -397,7 +508,8 @@ const Tables = (function () {
       la mise au lieu de redonner. Rend false : le menu reste ouvert. */
   function curseurApres(jeu, siJoue) {
     const t = enCours(jeu);
-    if (B.menu) B.menu.curseur = t && t.phase === 'joue' ? siJoue : 1;
+    // ⚠️ DONNER est la DERNIERE ligne (au blackjack, COMPTER s'intercale une fois qu'on sait compter).
+    if (B.menu) B.menu.curseur = t && t.phase === 'joue' ? siJoue : lignes(jeu).length - 1;
     return false;
   }
 
@@ -491,6 +603,7 @@ const Tables = (function () {
     else if (jeu === 'poker') fini = dessinerPoker(ctx, x0, y0, t, depuis);
     else if (jeu === 'sic_bo') fini = dessinerSicBo(ctx, x0, y0, t, depuis);
     else fini = dessinerBaccara(ctx, x0, y0, t, depuis);
+    Casino.dessinerOeil(ctx, x + 12, y + 128);          // l'oeil de la securite, a chaque table
     if (t && t.phase === 'fin') {
       sur(t, fini);
       if (fini) {
@@ -503,10 +616,35 @@ const Tables = (function () {
     B.stats.rects += 40;
   }
 
+  /** LE SABOT, a droite du feutre : la boite, ce qui reste dedans (une pile qui baisse), la carte de coupe
+      (le trait rouge : quand la pile passe dessous, le croupier rebrassera) — et, quand on COMPTE, le compte. */
+  function dessinerSabot(ctx, x, y) {
+    const r = regles().sabot, s = sabot(), total = 52 * r.paquets;
+    const reste = compte().restantes, h = 44, plein = Math.round(h * reste / total);
+    titre(ctx, 'SABOT', x, y);
+    ctx.fillStyle = '#3a3450'; ctx.fillRect(x, y + 10, 30, h + 4);
+    ctx.fillStyle = '#6b2a2a'; ctx.fillRect(x + 2, y + 12 + h - plein, 26, plein);
+    ctx.fillStyle = '#8a3a36'; for (let k = y + 12 + h - plein + 1; k < y + 12 + h; k += 3) ctx.fillRect(x + 3, k, 24, 1);
+    const coupe = y + 12 + h - Math.round(h * (total - r.coupe) / total);
+    ctx.fillStyle = '#e04030'; ctx.fillRect(x - 2, coupe, 34, 2);
+    // Le compte, discret : seulement pour qui sait compter et a choisi de le faire.
+    if (etat().compter && saitCompter()) {
+      const c = compte(), signe = function (v) { return (v > 0 ? '+' : '') + v; };
+      const reel = Math.trunc(c.parPaquet), chaud = reel >= 2;
+      titre(ctx, 'COMPTE', x - 2, y + 62);
+      Atlas.texte(ctx, signe(c.courant), x, y + 72, chaud ? ENCRE.or : ENCRE.papier, 1);
+      titre(ctx, 'PAR PAQ.', x - 2, y + 84);
+      Atlas.texte(ctx, signe(reel), x, y + 94, chaud ? ENCRE.or : ENCRE.papier, 1);
+    }
+    B.stats.rects += 20;
+    return s;
+  }
+
   function dessinerBlackjack(ctx, x0, y0, t, depuis) {
     const r = regles();
-    titre(ctx, 'LE CROUPIER TIRE JUSQU’À ' + r.croupier, x0, y0 + 124);
+    titre(ctx, 'LE CROUPIER TIRE JUSQU’À ' + r.croupier + ' · DOUBLER : UNE CARTE', x0, y0 + 124);
     titre(ctx, 'BLACKJACK 3 POUR 2 · LE RESTE 1 POUR 1', x0, y0 + 134);
+    dessinerSabot(ctx, x0 + 196, y0);
     if (!t) { titre(ctx, 'LE CROUPIER', x0, y0); titre(ctx, 'TOI', x0, y0 + 70); return true; }
     // Le croupier retourne sa carte cachee, puis tire les siennes, une a une.
     const fin = t.phase === 'fin';
@@ -514,7 +652,7 @@ const Tables = (function () {
     const cVu = t.croupier.slice(0, vues);
     titre(ctx, 'LE CROUPIER' + (fin ? ' · ' + bjValeur(cVu).total : ''), x0, y0);
     rangee(ctx, t.croupier, x0, y0 + 10, vues, !fin);
-    titre(ctx, 'TOI · ' + bjValeur(t.joueur).total, x0, y0 + 70);
+    titre(ctx, 'TOI · ' + bjValeur(t.joueur).total + (t.double ? ' · DOUBLÉ' : ''), x0, y0 + 70);
     rangee(ctx, t.joueur, x0, y0 + 80, t.joueur.length, false);
     return !fin || vues >= t.croupier.length;
   }
@@ -682,7 +820,8 @@ const Tables = (function () {
     B.stats.rects += 30;
   }
 
-  return { regles, etat, compteur, paquet, numeroDuTour, desDuJet, bjValeur, bjNaturel, bjCroupier, bjRegler, bjJouer,
+  return { regles, etat, compteur, paquet, numeroDuTour, desDuJet, bjValeur, bjNaturel, bjCroupier, bjRegler, bjJouer, bjMain,
            couleurDe, roulettePaie, sicBoPaie, pokerForce, pokerOuvre, pokerRegler, bacPoint, bacCoup, bacRegler,
-           bjDonner, bjTirer, bjRester, lancer, secouer, pkDonner, pkDecider, bacDonner, enCours, menu, dessinerSalle };
+           bjDonner, bjTirer, bjRester, bjDoubler, lancer, secouer, pkDonner, pkDecider, bacDonner, enCours, menu, dessinerSalle,
+           miseDe, sabot, cartesDuSabot, hiLo, compte, compteAvantLaMain, saitCompter, APPRENDRE };
 })();

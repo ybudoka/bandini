@@ -118,8 +118,12 @@ def test_chaque_ligne_de_chaque_comptoir_garde_le_menu_ouvert(banc):
     # Un choix peut RENOMMER sa ligne (le commerce acheté devient la caisse, la
     # commande au hacker devient « IL Y TRAVAILLE ») : le pouce reste au même
     # RANG, c'est tout ce qu'on exige — il ne file pas en haut de la liste.
+    # ⚠️ Une TABLE du Dragon d'or qui DONNE une main change de menu : la main se joue (TIRER, JOUER), et le
+    # pouce va sur sa première ligne (`Tables.curseurApres`, vague 2 du casino) — c'est voulu.
+    def main_donnee(v):
+        return v["items"] and v["curseur"] is not None and v["items"][v["curseur"]].split("|")[0] in ("TIRER", "JOUER")
     bouges = [f"{v['comptoir']} → {v['libelle']} (rang {v['rang']}, pouce au {v['curseur']})" for v in vus
-              if v["reste"] and v["curseur"] != v["rang"]]
+              if v["reste"] and v["curseur"] != v["rang"] and not main_donnee(v)]
     assert bouges == [], f"le pouce a bougé : {bouges}"
     # Les départs, eux, partent encore.
     for v in vus:

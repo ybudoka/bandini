@@ -383,6 +383,8 @@ const Jeu = (function () {
     // est plus laid qu'une porte qui ne s'ouvre pas.
     const interieurs = (Monde.carte.def && Monde.carte.def.interieurs) || {};
     if (!interieurs[porte.interieur]) return false;
+    // Le portier du Dragon d'or ne rouvre pas a qui la securite a reconduit (`Casino.refuseLaPorte`).
+    if (Casino.refuseLaPorte(porte)) return false;
     // ⚠️ Elle s'ouvre AVANT le fondu, pas au noir : la premiere moitie du
     // fondu se joue sur la rue, et c'est la — et seulement la — qu'on peut
     // voir le battant bouger. Au noir, il n'y aurait rien a voir.

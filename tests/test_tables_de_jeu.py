@@ -1,5 +1,6 @@
 """Les tables du Dragon d'or : leurs règles et ce qu'elles rendent (docs/jalons/le-casino-du-petit-canton.md,
-vague 2).
+vagues 2 et 3). La vague 3 (tricher) : le SABOT du blackjack, le compte des cartes qui le rend payant à qui mise
+gros quand le compte monte — mesuré sur un million de mains —, et l'œil de la sécurité qui le remarque.
 
 ⚠️ La règle d'or : **la maison gagne en moyenne, à chaque pari**, et le retour affiché au menu est le vrai —
 calculé sur tous les coups possibles (la roulette, le sic bo), ou MESURÉ sur deux cent mille coups joués avec la
@@ -17,6 +18,9 @@ from app import videopoker as vp
 #: Combien de coups pour mesurer. ⚠️ Deux cent mille : l'écart type d'une main de blackjack est d'environ 1,15
 #: mise, soit 0,26 point de retour — assez pour voir qu'on reste sous cent, et à un point de l'affiché.
 N = 200_000
+#: Au sabot, un million de mains (quatre secondes) : le compteur parfait mise de 10 à 500 $, et son retour varie
+#: d'environ 0,35 point sur un million — il en faut autant pour voir qu'il bat la maison.
+SABOT = 1_000_000
 
 
 def c(rang, couleur="pique"):
@@ -43,7 +47,12 @@ def mesurer(jeu, n=N, graine=1):
     """Le retour moyen de chaque pari de `jeu`, par dollar misé, sur `n` coups tirés au hasard."""
     rng = random.Random(graine)
     if jeu == "blackjack":
-        return {"main": sum(t.bj_jouer(rng.sample(range(52), 14), habitue_bj)[0] for _ in range(n)) / n}
+        # Au SABOT (vague 3), à mise égale, l'habitué double comme il faut. ⚠️ Un million de mains : c'est le même
+        # sabot que les mesures du compte, ci-dessous.
+        rendu = pris = 0
+        for _, _, paie, mise in t.jouer_au_sabot(rng, SABOT, lambda tc: 10):
+            rendu, pris = rendu + paie, pris + mise
+        return {"main": rendu / pris}
     if jeu == "poker":
         rendu = mise = 0
         for _ in range(n):
@@ -224,3 +233,116 @@ def test_les_mises_sont_paires_et_le_navigateur_recoit_les_regles():
     r = t.pour_le_navigateur()
     assert r["roue"] == list(t.ROUE) and r["mises"] == list(t.MISES) and r["par_jour"] == t.COUPS_PAR_JOUR
     assert set(r["retours"]) == set(t.JEUX) and all(v < 100 for d in r["retours"].values() for v in d.values())
+
+
+# --- La vague 3 : le sabot, le compte, doubler, la sécurité ----------------------------------------------------
+
+def test_doubler_prend_une_deuxieme_mise_et_une_seule_carte():
+    #          joueur  croupier joueur croupier  la carte   le croupier tire
+    paquet = [c("6"), c("6", "coeur"), c("5"), c("10"), c("10", "coeur"), c("10", "trefle"), c("2")]
+    paie, fois, joueur, croupier = t.bj_main(paquet, lambda m, v: True, lambda m, v: True)
+    assert fois == 2 and joueur == [c("6"), c("5"), c("10", "coeur")], "doubler : UNE carte, pas une de plus"
+    assert croupier == [c("6", "coeur"), c("10"), c("10", "trefle")] and paie == 4, "22 : le croupier crève, 4 mises"
+    assert t.bj_main(paquet, lambda m, v: False)[:2] == (2, 1), "sans doubler : une seule mise, gagnée"
+    naturel = [c("A"), c("9"), c("R"), c("7")]
+    assert t.bj_main(naturel, lambda m, v: True, lambda m, v: True)[:2] == (2.5, 1), "on ne double pas un naturel"
+    assert t.bj_jouer(paquet, lambda m, v: True)[0] == 2, "bj_jouer ne double jamais (le jumeau de la vague 2)"
+    assert t.bj_habitue_double([c("6"), c("5")], c("6")) and not t.bj_habitue_double([c("6"), c("5")], c("A"))
+
+
+def test_le_compte_hi_lo():
+    assert [t.hi_lo(c(r)) for r in vp.RANGS] == [1, 1, 1, 1, 1, 0, 0, 0, -1, -1, -1, -1, -1]
+    assert sum(t.hi_lo(x) for x in range(52)) == 0, "un paquet entier revient à zéro"
+    assert t.compte_par_paquet(6, 78) == 4 and t.compte_par_paquet(-3, 26) == -6
+    assert [t.compteur_parfait(tc) for tc in (-3, 0.5, 1, 2.5, 3.9, 4, 6)] == [10, 10, 20, 50, 100, 200, 500]
+    assert set(t.MISES_BLACKJACK) >= {t.compteur_parfait(tc) for tc in range(-5, 9)}, "chaque mise se pose à la table"
+    assert all(m % 2 == 0 for m in t.MISES_BLACKJACK), "paires : le naturel à 3 pour 2 tombe rond"
+
+
+def test_le_sabot_se_rebrasse_a_la_carte_de_coupe():
+    """Les cartes sortent dans l'ordre, main après main, et le croupier ne rebrasse qu'une fois la carte de coupe
+    sortie : environ une fois toutes les quinze mains (soixante-dix-huit cartes, un peu plus de cinq par main)."""
+    class Compte(random.Random):
+        brassages = 0
+
+        def shuffle(self, x):
+            Compte.brassages += 1
+            super().shuffle(x)
+    mains = list(t.jouer_au_sabot(Compte(4), 300, lambda tc: 10))
+    assert mains[0][0] == 0
+    assert 300 * 4.5 / t.COUPE <= Compte.brassages <= 300 * 6.5 / t.COUPE, Compte.brassages
+    assert len({round(m[0], 3) for m in mains}) > 30, "le compte bouge d'une main à l'autre"
+
+
+def test_sans_compter_la_maison_gagne_et_en_comptant_on_la_bat():
+    """⚠️ LA MESURE DE LA VAGUE 3, sur un million de mains au sabot, les mêmes pour tous : à mise égale, la
+    maison garde près d'un pour cent ; un compteur PARFAIT qui mise de 10 à 500 $ selon le compte par paquet la
+    bat d'environ un et demi ; un compteur prudent (de 10 à 100 $) la bat à peine."""
+    plat = parfait = prudent = 0.0
+    mises = {"plat": 0.0, "parfait": 0.0, "prudent": 0.0}
+    for tc, _, paie, pris in t.jouer_au_sabot(random.Random(1), SABOT, lambda tc: 1):
+        for nom, m in (("plat", 10), ("parfait", t.compteur_parfait(tc)), ("prudent", min(100, t.compteur_parfait(tc)))):
+            mises[nom] += pris * m
+            if nom == "plat":
+                plat += paie * m
+            elif nom == "parfait":
+                parfait += paie * m
+            else:
+                prudent += paie * m
+    retour = {"plat": plat / mises["plat"], "parfait": parfait / mises["parfait"], "prudent": prudent / mises["prudent"]}
+    assert retour["plat"] < 0.995, retour
+    assert int(100 * retour["plat"]) == t.RETOURS["blackjack"]["main"], "l'affiché est le retour au sabot"
+    assert retour["parfait"] > 1.005, f"compter parfaitement ne paie pas : {retour}"
+    assert retour["plat"] < retour["prudent"] < retour["parfait"], retour
+
+
+def jours_de_casino(miser, jours=300, graine=5):
+    """Des jours de quarante mains au sabot, l'œil de la sécurité ouvert : combien de jours on est averti,
+    combien on est sorti, et à quelle main."""
+    rng, des = random.Random(graine), random.Random(graine + 1)
+    averti = sorti = 0
+    quand = []
+    for _ in range(jours):
+        chaleur, habitude, net, deja = 0.0, None, 0.0, False
+        for k, (tc, mise, paie, pris) in enumerate(t.jouer_au_sabot(rng, 40, lambda tc: miser(tc, des))):
+            if chaleur >= t.SURVEILLANCE["sortir"]:
+                sorti += 1
+                quand.append(k)
+                break
+            chaleur, habitude = t.chaleur_de_la_mise(chaleur, habitude, mise, tc)
+            net += paie - pris
+            chaleur = t.chaleur_du_gain(chaleur, net, paie - pris)
+            if chaleur >= t.SURVEILLANCE["avertir"] and not deja:
+                deja, averti = True, averti + 1
+    return averti, sorti, sorted(quand)
+
+
+def test_la_securite_laisse_jouer_le_joueur_et_sort_le_compteur():
+    """Qui mise toujours pareil n'est jamais inquiété, à 10 comme à 500 $ ; le compteur parfait (de 10 à 500)
+    est sorti plus d'un jour sur trois, vers sa quinzième main ; le prudent (de 10 à 100) rarement ; et miser
+    gros sur un sabot froid, de temps en temps, couvre son jeu."""
+    for mise in (10, 500):
+        assert jours_de_casino(lambda tc, d: mise)[:2] == (0, 0), f"un joueur à {mise} $ inquiété"
+    averti, sorti, quand = jours_de_casino(lambda tc, d: t.compteur_parfait(tc))
+    assert averti > 150 and sorti > 100, (averti, sorti)
+    assert quand[len(quand) // 2] <= 25, f"sorti trop tard : main {quand[len(quand) // 2]}"
+    prudent = jours_de_casino(lambda tc, d: min(100, t.compteur_parfait(tc)))[1]
+    couvert = jours_de_casino(lambda tc, d: 50 if tc <= 0 and d.random() < 0.15 else min(100, t.compteur_parfait(tc)))[1]
+    assert couvert < prudent < sorti / 2, (couvert, prudent, sorti)
+
+
+def test_ce_que_l_oeil_pense_d_une_mise():
+    s = t.SURVEILLANCE
+    assert t.chaleur_de_la_mise(0, None, 50, 5) == (0, 50), "la première mise EST l'habitude"
+    chaud, hab = t.chaleur_de_la_mise(10, 10, 80, 3)
+    assert chaud == pytest.approx(10 + s["rampe"] * 3 * 2) and hab == pytest.approx(10 + 70 * s["habitude"])
+    assert t.chaleur_de_la_mise(30, 10, 80, 0)[0] == pytest.approx(30 - s["couverture"] * 3), "froid : ça couvre"
+    assert t.chaleur_de_la_mise(30, 10, 80, 1)[0] == 30, "tiède : rien à dire"
+    assert t.chaleur_de_la_mise(30, 20, 10, 5)[0] == 30 - s["calme"], "à sa mise ou moins : l'œil se calme"
+    assert t.chaleur_de_la_mise(1, 20, 10, 5)[0] == 0 and t.chaleur_de_la_mise(149, 10, 500, 9)[0] == 150
+    assert t.chaleur_du_gain(10, s["gains"] + 1, 20) == 10 + s["par_gain"]
+    assert t.chaleur_du_gain(10, s["gains"] - 1, 20) == 10 and t.chaleur_du_gain(10, 5000, -20) == 10
+    assert s["avertir"] < s["sortir"] and s["oublie_sous"] < s["avertir"]
+    r = t.pour_le_navigateur()
+    assert r["surveillance"] == s and r["sabot"] == {"paquets": t.PAQUETS_DU_SABOT, "coupe": t.COUPE,
+                                                      "mises": list(t.MISES_BLACKJACK)}

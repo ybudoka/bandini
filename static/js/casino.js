@@ -12,7 +12,16 @@
 
    ⚠️ LE PORTIER NAIT A LA DEMANDE, quand on approche du casino, et renait s'il a ete oublie : ne pas le poser
    au demarrage, c'est ne pas deplacer un numero d'entite ni un tirage du depart — le Petit-Canton est dans la
-   bulle de naissance du terminus. Et il nait HORS DE LA SUITE, avec un de PRETE. */
+   bulle de naissance du terminus. Et il nait HORS DE LA SUITE, avec un de PRETE.
+
+   LA SECURITE (vague 3, tricher) : l'OEIL du casino, une chaleur de 0 a 100 qui n'a rien a voir avec la
+   police (`tables_de_jeu.SURVEILLANCE`). Elle monte quand la mise du blackjack saute alors que le sabot est
+   chaud (`surveillerMise`), et quand on gagne gros dans la journee (`surveillerGain`) ; elle baisse a chaque
+   main a sa mise d'habitude, quand on mise gros sur un sabot froid, et avec les heures loin des tables. A
+   l'avertissement, un garde vient te glisser un mot ; a la sortie, il t'arrete la main et te reconduit a la
+   porte (`refuseLaMise`), et le portier ne te rouvre que le lendemain — une semaine a la recidive
+   (`refuseLaPorte`). Frapper un garde, c'est une semaine d'un coup, et la, oui, la police. Le garde de la
+   salle nait comme le portier : a la demande, hors de la suite, avec un de prete. */
 
 const Casino = (function () {
   'use strict';
@@ -205,7 +214,12 @@ const Casino = (function () {
     // La rumeur de la grande salle, tant qu'on y est — elle se tait en sortant.
     const dedans = !!(B.interieur && B.interieur.slug === 'nord_casino');
     Son.SFX.salle_du_casino(dedans ? 1 : 0);
-    if (dedans) Son.Lieu.charger('casino');
+    if (dedans) { Son.Lieu.charger('casino'); posterLeGarde(); }
+    // La securite ne se frappe pas (dedans : le garde ; dehors : le portier).
+    if (dedans || (!B.interieur && B.partie.casino && (B.t || 0) % 10 === 0)) majSecurite();
+    // Reconduit : le portier te souhaite bonne soiree, une fois.
+    const d = B.partie.casino;
+    if (!B.interieur && d && d.congedie && portier()) { d.congedie = false; Entites.bulle(portier(), 'BONNE SOIRÉE, L’AMI.', { duree: 180 }); }
     if (B.interieur || (B.t || 0) % PORTIER.pas !== 0) return;
     const porte = porteDuCasino(), j = B.joueur;
     if (!porte || !j) return;
@@ -254,5 +268,175 @@ const Casino = (function () {
     B.stats.rects += 8 + 2 * k;
   }
 
-  return { regles, compteur, arretDuTour, evaluerRouleaux, gainDe, tirer, menu, dessiner, maj, portier, dessinerMarquise };
+  // --- La securite (vague 3 : tricher) ---------------------------------------------------------------------
+
+  function surv() { return B.defs.tables_de_jeu.surveillance; }
+  /** L'heure de la partie, en jours (le jour et sa fraction) : ce que l'oeil oublie se compte la-dessus. */
+  function maintenant() { const p = B.partie; return (p.jour || 0) + (p.heure || 0); }
+
+  /** Le dossier que la securite tient sur toi : la chaleur, ta mise d'habitude au blackjack, ce que tu as gagne
+      aux tables aujourd'hui, les sorties, et le premier jour ou l'on te rouvre (`barre`). Le temps passe loin
+      des tables fait oublier (`oubli_h` par heure de jeu). */
+  function dossier() {
+    const p = B.partie, sv = surv();
+    const d = p.casino = p.casino || { chaleur: 0, habitude: null, t: maintenant(), net: { jour: p.jour, gain: 0 },
+                                        averti: false, sorties: 0, barre: 0 };
+    const t = maintenant();
+    if (t > d.t) { d.chaleur = Math.max(0, d.chaleur - sv.oubli_h * 24 * (t - d.t)); d.t = t; }
+    if (d.chaleur < sv.oublie_sous) d.averti = false;
+    if (d.net.jour !== p.jour) d.net = { jour: p.jour, gain: 0 };
+    return d;
+  }
+
+  /** Le jumeau de `chaleur_de_la_mise` : rend [chaleur, habitude]. */
+  function chaleurDeLaMise(chaleur, habitude, mise, tc) {
+    const sv = surv();
+    habitude = habitude === null || habitude === undefined ? mise : habitude;
+    const ratio = mise / habitude;
+    if (ratio >= 1.5) {
+      const doublements = Math.log2(ratio);
+      if (tc >= 2) chaleur += sv.rampe * doublements * Math.min(tc - 1, 4);
+      else if (tc <= 0) chaleur -= sv.couverture * doublements;
+    } else if (ratio <= 1.0) chaleur -= sv.calme;
+    return [Math.max(0, Math.min(150, chaleur)), habitude + (mise - habitude) * sv.habitude];
+  }
+
+  /** Le jumeau de `chaleur_du_gain`. */
+  function chaleurDuGain(chaleur, net, profit) {
+    const sv = surv();
+    if (profit > 0 && net > sv.gains) chaleur += sv.par_gain;
+    return Math.max(0, Math.min(150, chaleur));
+  }
+
+  /** Une mise au blackjack, quand le compte par paquet est `tc` : ce que l'oeil en pense. */
+  function surveillerMise(mise, tc) {
+    const d = dossier(), avant = d.chaleur;
+    const r = chaleurDeLaMise(d.chaleur, d.habitude, mise, tc);
+    d.chaleur = r[0]; d.habitude = r[1];
+    if (d.chaleur >= surv().avertir && avant < surv().avertir && !d.averti) avertir();
+  }
+
+  /** Une main reglee, a n'importe quelle table : `profit`, ce qu'elle a rapporte (ou coute). */
+  function surveillerGain(profit) {
+    const d = dossier(), avant = d.chaleur;
+    d.net.gain += profit;
+    d.chaleur = chaleurDuGain(d.chaleur, d.net.gain, profit);
+    if (d.chaleur >= surv().avertir && avant < surv().avertir && !d.averti) avertir();
+  }
+
+  /** Barre du Dragon d'or ? `barre` est le premier jour ou l'on te rouvre. */
+  function barre() { return dossier().barre > (B.partie.jour || 0); }
+  function joursBarre() { return Math.max(0, dossier().barre - (B.partie.jour || 0)); }
+
+  function dansLaSalle() { return !!(B.interieur && B.interieur.slug === 'nord_casino'); }
+
+  /** Le garde de la salle, s'il est la. */
+  function garde() {
+    return B.entites.find(function (e) { return e.securiteCasino && e.vivant; }) || null;
+  }
+
+  //: Ou le garde de la salle tient son poste (en tuiles) : pres de la porte, face aux tables.
+  const POSTE_DU_GARDE = { x: 13, y: 9 };
+
+  /** Le garde nait a la demande, hors de la suite, avec un de prete (la regle du portier). */
+  function posterLeGarde() {
+    if (!dansLaSalle() || garde()) return;
+    const arch = Entites.archetype('garde');
+    if (!arch) return;
+    const x = POSTE_DU_GARDE.x * TT + 8, y = POSTE_DU_GARDE.y * TT + 8;
+    const g = Entites.enDehorsDeLaSuite(function () {
+      return sansLeDe(hash2(POSTE_DU_GARDE.x, 0xCA51), function () { return Entites.creerPieton(x, y, arch); });
+    });
+    if (!g) return;
+    g.etat = 'fige'; g.face = 'haut'; g.securiteCasino = true; g.poste = { x: x, y: y }; g.plante = { x: x, y: y };
+    g.arme = null;             // l'archetype du garde porte une batte : pas dans une salle de jeu (vu a la capture)
+    Entites.indexer();
+  }
+
+  /** L'AVERTISSEMENT : le garde vient se poster a ton epaule, et il te glisse un mot. */
+  function avertir() {
+    const d = dossier();
+    d.averti = true;
+    Son.SFX.talkie_securite();
+    Hud.message('LA SÉCURITÉ T’A À L’ŒIL', 240);
+    const g = dansLaSalle() ? (posterLeGarde(), garde()) : null, j = B.joueur;
+    if (!g || !j) return;
+    g.x = j.x + 18; g.y = j.y; g.plante = { x: g.x, y: g.y }; g.poste = { x: g.x, y: g.y };
+    Entites.regarder(g, j.x - g.x, j.y - g.y);
+    Entites.bulle(g, 'TU COMPTES BIEN. MOI AUSSI, JE COMPTE.', { duree: 300 });
+    Entites.indexer();
+  }
+
+  /** LA SORTIE : le garde t'arrete la main et te reconduit a la porte. Le portier ne te rouvre que demain — dans
+      une semaine a la recidive. ⚠️ Pas une etoile : c'est la maison qui te remercie, pas la police. */
+  function sortir() {
+    const d = dossier(), p = B.partie;
+    d.sorties++;
+    const jours = d.sorties >= 2 ? surv().barre_jours : 1;
+    d.barre = Math.max(d.barre, (p.jour || 0) + jours);
+    d.chaleur = 0; d.habitude = null; d.averti = false; d.congedie = true;
+    Son.SFX.talkie_securite();
+    if (B.menu) Hud.fermerMenu();
+    const g = dansLaSalle() ? (posterLeGarde(), garde()) : null;
+    if (g) Entites.bulle(g, 'LA MAISON TE REMERCIE. LA PORTE AUSSI.', { duree: 200 });
+    Hud.message(jours > 1 ? 'LA SÉCURITÉ TE RECONDUIT · BARRÉ DU DRAGON D’OR POUR UNE SEMAINE'
+                          : 'LA SÉCURITÉ TE RECONDUIT À LA PORTE · REVIENS DEMAIN', 300);
+    if (dansLaSalle()) Jeu.sortir();
+  }
+
+  /** Avant chaque mise, a chaque table : barre, on ne te sert plus ; trop chaud, c'est la sortie. Rend true si
+      la mise est refusee. */
+  function refuseLaMise() {
+    if (barre()) { Hud.message('LE CROUPIER NE TE SERT PLUS'); Son.SFX.erreur(); return true; }
+    if (dossier().chaleur >= surv().sortir) { sortir(); return true; }
+    return false;
+  }
+
+  /** Le portier, devant une porte barree : rend true s'il te refuse (et le dit). */
+  function refuseLaPorte(porte) {
+    if (!porte || porte.interieur !== 'nord_casino' || !barre()) return false;
+    const n = joursBarre(), pt = portier();
+    Son.SFX.erreur();
+    Hud.message(n > 1 ? 'LE DRAGON D’OR NE TE LAISSE PAS ENTRER · ENCORE ' + n + ' JOURS'
+                      : 'LE DRAGON D’OR NE TE LAISSE PAS ENTRER · REVIENS DEMAIN', 200);
+    if (pt) Entites.bulle(pt, n > 1 ? 'TA PHOTO EST AU MUR, L’AMI. ELLE EST BELLE.' : 'PAS CE SOIR, L’AMI.', { duree: 200 });
+    return true;
+  }
+
+  /** Frapper la securite (le garde de la salle, le portier) : barre pour une semaine d'un coup — et la, oui, la
+      police s'en mele. */
+  function majSecurite() {
+    for (const e of B.entites) {
+      if (!(e.securiteCasino || e.portierCasino) || e.frappe) continue;
+      if (e.menace !== B.joueur || (e.vivant && e.vie >= e.vieMax)) continue;
+      e.frappe = true;
+      const d = dossier();
+      d.sorties = Math.max(d.sorties, 2);
+      d.barre = Math.max(d.barre, (B.partie.jour || 0) + surv().barre_jours);
+      d.chaleur = 0;
+      Police.etoilesAuMoins(1);
+      Hud.message('TU AS FRAPPÉ LA SÉCURITÉ · BARRÉ DU DRAGON D’OR POUR UNE SEMAINE', 300);
+    }
+  }
+
+  /** L'oeil, en bas du menu d'une table : un oeil et cinq crans qui s'allument avec la chaleur — vert, jaune,
+      rouge. Discret, mais on le voit. */
+  function dessinerOeil(ctx, x, y) {
+    const sv = surv(), c = dossier().chaleur, crans = Math.min(5, Math.ceil(5 * c / sv.sortir));
+    const couleur = c >= sv.avertir ? '#e04030' : c >= sv.oublie_sous ? '#e8b33c' : '#5aa05a';
+    // L'oeil : une amande claire, sa pupille.
+    ctx.fillStyle = '#8a8698'; ctx.fillRect(x + 2, y, 7, 1); ctx.fillRect(x, y + 1, 11, 3); ctx.fillRect(x + 2, y + 4, 7, 1);
+    ctx.fillStyle = '#efe6d0'; ctx.fillRect(x + 1, y + 2, 9, 1); ctx.fillRect(x + 3, y + 1, 5, 3);
+    ctx.fillStyle = crans > 0 ? couleur : '#1b1b24'; ctx.fillRect(x + 4, y + 1, 3, 3);
+    for (let k = 0; k < 5; k++) {
+      ctx.fillStyle = k < crans ? couleur : '#3a3450';
+      ctx.fillRect(x + 16 + k * 7, y + 1, 5, 3);
+    }
+    Atlas.texte(ctx, 'SÉCURITÉ', x + 54, y, crans > 0 ? couleur : '#8a8698', 1);
+    B.stats.rects += 12;
+  }
+
+  return { regles, compteur, arretDuTour, evaluerRouleaux, gainDe, tirer, menu, dessiner, maj, portier, dessinerMarquise,
+           dossier, chaleurDeLaMise, chaleurDuGain, surveillerMise, surveillerGain, barre, refuseLaMise, refuseLaPorte,
+           garde, sortir, dessinerOeil };
 })();
