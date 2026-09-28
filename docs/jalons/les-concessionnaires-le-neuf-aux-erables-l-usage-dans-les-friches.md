@@ -270,3 +270,25 @@ rien »), et le Salon sans son comptoir en était une. Le plan de la vague 1 a t
 
 Juges : `test_concessionnaires.py` (13), `test_concessionnaires_js.py` (8) — dont quatre mutations vues rouges (la
 place libre devant la porte, `alarmeDuLot`, `compteCommeGare`, les portes tirées).
+
+### Relecture finale (agent neuf) et ce qui reste
+
+Corrigés, chacun par un juge vu rouge : un char payé garé à la planque redevenait un vol au rechargement (la
+sauvegarde gardait `vole`, pas `aToi` — la fourrière avait le même trou) ; un passant pouvait voler le char qu'on
+venait de payer, et les neufs du lot sans alarme (`majVolDeChar`) ; une façade de six tuiles faisait planter
+l'enseigne (`min()` vide).
+
+**À trancher par Martin :**
+- **Un char payé s'oublie** comme tout char laissé loin (`peupler` ne protège que celui qu'on conduit) : payer
+  5 200 $ puis s'éloigner de 560 px, et il disparaît — la place vendue ne se regarnit que le lendemain. Le
+  protéger (`aToi` dans `peupler`), ou le dire au comptoir ?
+- **Voler au lot puis revendre chez Ti-Guy** : une place volée se regarnit dès que le char est oublié, sans
+  attendre le lendemain — une source de luxe à 5 200 $, freinée seulement par `vente_malus_doublon`.
+
+**Reportés (mineurs)** : un char de la rue peut se garer sur une case vide du lot du Salon (`placeStationnee`
+lit ses `^`) ; la place « en face de la porte » ne sert à rien, la porte donne au sud et le lot est au nord ;
+un char cabossé ou poussé se vend plein prix ; le camion de Ti-Pout (40 px) mord de 4 px dans le grillage nord ;
+`x0 - 1` hors bornes si un lot touchait le bord ouest ; le stock est fixe par place (la fiche le voulait « du
+jour », à l'empreinte).
+
+**Et une ligne d'une autre session s'y branche** : « les 4 roues » veut en vendre chez le concessionnaire.

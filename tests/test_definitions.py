@@ -159,8 +159,14 @@ def test_le_paquet_reste_leger(paquets):
     `dev`, 270 194 / 61 038 avec les plaques qu'on lit à ACTION (`interactions.LIRE`, seize lignes : un
     accent voyage en échappement unicode, six octets). Le gzip, le vrai juge, reste sous son plafond ; le
     brut n'est qu'un indicateur, et il n'avait plus que 900 octets de marge.
+
+    ⚠️ **La carte : 69 000 → 70 000 octets gzip, le 28 sept. 2026, tard** — les concessionnaires (Martin : « un
+    vendeur de voitures neuves dans un quartier riche […] et un vendeur de voitures usagées »). Mesure : 68 399
+    sur `dev` (601 octets de marge), 69 134 avec eux — le Salon et la cour de Ti-Pout au sol, leurs deux pièces,
+    et leurs lots (seize places, leur stock et leurs prix). Brut : 711 965 → 715 042, sous ses 720 000. Même
+    règle qu'au nord : le vrai juge est la dette des districts chargés autour du joueur.
     """
-    for nom, brut_max, fil_max in (("definitions", 275_000, 62_000), ("carte", 720_000, 69_000)):
+    for nom, brut_max, fil_max in (("definitions", 275_000, 62_000), ("carte", 720_000, 70_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))

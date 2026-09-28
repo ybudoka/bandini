@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (272 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (273 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -87,7 +87,6 @@ pas quand l'ordre de travail change.
 | La cabane et le casino s'entendent | ⬜ **en cours** | 28 sept. 2026 | **P4** | ajout | [fiche](jalons/la-cabane-et-le-casino-s-entendent.md#fiche) |
 | Les icônes du vidéopoker et de la machine à sous | ⬜ **en cours** | 28 sept. 2026 | **P4** | ajout | [fiche](jalons/les-icones-du-videopoker-et-de-la-machine-a-sous.md#fiche) |
 | Les 4 roues | ⬜ **en cours** (vague 1 : le véhicule — hors route, stable, deux places, il saute — garé dans les Friches et au chalet ; puis la course des Friches, et le concessionnaire) | 28 sept. 2026 | **P4** | ajout | [fiche](jalons/les-4-roues.md#fiche) |
-| Les concessionnaires : le neuf aux Érables, l'usagé dans les Friches | ⬜ **en cours** (vague 1 : les deux lots et leurs chars ; puis le comptoir et l'achat) | 28 sept. 2026 | **P4** | ajout | [fiche](jalons/les-concessionnaires-le-neuf-aux-erables-l-usage-dans-les-friches.md#fiche) |
 | L'Île-aux-Corneilles — troisième vague : le traversier y accoste | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/l-ile-aux-corneilles.md#fiche) · [notes](jalons/l-ile-aux-corneilles-deuxieme-vague.md#notes) |
 | La réputation et la lecture des passants | ⬜ **à faire** (à trancher par Martin) | — | **P4** | ajout | [fiche](jalons/la-reputation-et-la-lecture-des-passants.md#fiche) |
 | M16 Cent missions | ⬜ **en cours** (la tranche 1 « le moteur » avance : dix missions de plus livrées — `f04`, `f05`, `f06`, `f07`, `f09`, `f11`, `h01`, `p01`, `q03`, `e12` — avec le premier juge de banc joué pour huit des neuf types neufs ; ✅ **tout ce qui sert à JOUER une mission est sorti du paquet** — répliques, scènes, voix et objectifs, par `/api/mission/<slug>` avec son ETag : 369 224 → **220 367** octets bruts, 75 138 → **48 971** gzip, le juge est vert et le catalogue passe de 170 à 53 octets gzip par mission (**94 missions de marge** au lieu de cinq) ; ✅ **quatre missions de plus** — `q01` (Lulu), `q10`/`q11` (le premier choix du catalogue, Sven ou Josée), `s08` (Gilles) ; ✅ **28 sept. : `eteindre` allume son feu, le téléphone trie, l'arc F est au complet** — `f13` (Mado, trois feux), `f10` (Rosa, la chemise, Norbert), `f12` (les cinq enveloppes) ; et la rue lit enfin `libere` et `calme` (un district libéré se vide de son gang, un gang calmé ne te saute plus dessus) ; restent les arcs Q, E, S, P, H, D, C, R, T, I, X (≈ 70 missions), dont les quatre qui libèrent un district (`q13`, `e10`, `s11`, `p11`) qu'attend _Le Boss_ ; `q07` et `a_vendre` en brouillon sous `refs/wip/m16-q07`) | 18 sept. 2026 | **P4** | ajout | [fiche](jalons/m16-cent-missions.md#fiche) · [notes](jalons/m16-cent-missions.md#notes) |
@@ -130,7 +129,6 @@ Ce que chaque ligne à faire attend (la table de tri du 13 sept. 2026, réduite 
 | **P4** | ajout | L'Île-aux-Corneilles | 3 | **les zones conditionnelles** d'abord ; l'eau est livrée, le traversier (M12) viendra après et l'île l'attend sans lui |
 | **P4** | ajout | M16 Cent missions | 8 (4 × 2) | le **carnet** d'abord (c'est lui qui rend cent missions lisibles) et **les missions mises en scène** (chaque mission porte ses scènes et ses dialogues) ; ⚠️ les dialogues et les scènes sortent du paquet ; M13 en est la dernière tranche |
 | **P4** | ajout | M13 Les deux fins | 4 | **M8** pour les districts, et ça gagne à suivre **M10** : la dette de Rocco est le fil des deux fins. C'est la fin — elle se pose en dernier |
-| **P4** | ajout | Les concessionnaires : le neuf aux Érables, l'usagé dans les Friches | 2 | rien ne l'attend ; ⚠️ posé **en dernier, sans dé** (la recette du lot du poste), et les chars du lot hors du compte des chars garés |
 | **P4** | ajout | Des choses à collectionner, et la planque qu'on décore | 3 | rien ne l'attend ; ⚠️ poser les objets **en dernier, sans dé** (sinon la ville glisse) ; le décor conditionnel de la planque sert aussi à la deuxième |
 | **P4** | ajout | Des photos pour le Clairon | 2 | le **personnage de Louise** d'abord (M16, arc C) ; le mode photo existe |
 | **P4** | ajout | Les territoires des gangs bougent | 3 | `libere` et `calme` de M16 d'abord ; à trancher avec « La réputation et la lecture des passants » |
