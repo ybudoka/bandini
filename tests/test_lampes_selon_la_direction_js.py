@@ -48,15 +48,29 @@ def _alpha(c):
     return float(re.search(r"rgba\([^)]*,\s*([\d.]+)\)", c).group(1))
 
 
+#: ⚠️ UN SEUL BANC pour les deux juges et les deux chars (vague C, 28 sept. 2026) : « de profil »
+#: dessinait déjà le char vers le nord et vers le sud, et « qui monte, qui descend » refaisait ces
+#: deux-là dans un banc à lui. Chaque `lueurs` repart d'une partie neuve (`Jeu.commencer`) et
+#: retire son char : l'ordre des caps ne change rien à ce qu'un cap allume.
+@pytest.fixture(scope="module")
+def _caps(banc, paquet):
+    return banc("""function (L, o) {
+        %s
+        const out = {};
+        for (const slug of ['auto', 'camion']) {
+          out[slug] = { est: lueurs(L, slug, %s), ouest: lueurs(L, slug, %s), sud: lueurs(L, slug, %s),
+                        nord: lueurs(L, slug, %s) };
+        }
+        return out;
+    }""" % (UN_CHAR, EST, OUEST, SUD, NORD))
+
+
 @pytest.mark.parametrize("slug", ["auto", "camion"])
-def test_qui_monte_montre_ses_feux_arriere_et_qui_descend_ses_phares(banc, paquet, slug):
+def test_qui_monte_montre_ses_feux_arriere_et_qui_descend_ses_phares(_caps, slug):
     """Il monte l'écran : on voit son arrière — ses feux rouges ; ses phares sont sur la face
     d'en avant, cachés par la caisse. Il descend : ses phares, pas ses feux arrière. ⚠️ Le
     faisceau au sol, lui, éclaire devant lui dans les deux cas."""
-    r = banc("""function (L, o) {
-        %s
-        return { nord: lueurs(L, '%s', %s), sud: lueurs(L, '%s', %s) };
-    }""" % (UN_CHAR, slug, NORD, slug, SUD))
+    r = _caps[slug]
     assert r["nord"]["phare"] == [], "%s monte l'écran et on voit ses phares : %s" % (slug, r["nord"])
     assert r["nord"]["arriere"], "%s monte l'écran et on ne voit pas ses feux arrière" % slug
     assert r["sud"]["phare"], "%s descend l'écran et on ne voit pas ses phares" % slug
@@ -65,14 +79,10 @@ def test_qui_monte_montre_ses_feux_arriere_et_qui_descend_ses_phares(banc, paque
 
 
 @pytest.mark.parametrize("slug", ["auto", "camion"])
-def test_de_profil_on_devine_les_deux_et_moins_que_de_face(banc, paquet, slug):
+def test_de_profil_on_devine_les_deux_et_moins_que_de_face(_caps, slug):
     """De profil (vers l'est comme vers l'ouest), on devine le coin des phares ET des feux
     arrière — plus faiblement que de face : on n'en voit qu'une part."""
-    r = banc("""function (L, o) {
-        %s
-        return { est: lueurs(L, '%s', %s), ouest: lueurs(L, '%s', %s), sud: lueurs(L, '%s', %s),
-                 nord: lueurs(L, '%s', %s) };
-    }""" % (UN_CHAR, slug, EST, slug, OUEST, slug, SUD, slug, NORD))
+    r = _caps[slug]
     for cote in ("est", "ouest"):
         assert r[cote]["phare"] and r[cote]["arriere"], "%s de profil (%s) : %s" % (slug, cote, r[cote])
     de_face = sum(_alpha(c) for c in r["sud"]["phare"])
