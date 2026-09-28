@@ -58,4 +58,7 @@ def poser(ville: dict, ch, district: dict, n: int) -> dict:
                 continue
             lanternes.append({"x": x0, "y": y, "l": large})
             ville["lampes"].append({"x": x0 + large // 2, "y": y, "r": 34, "c": "lanterne"})
-    return {"arches": arches, "lanternes": lanternes}
+    # Les idéogrammes des plaques et du panneau de l'arche : avec la carte, qu'ils servent seuls à peindre.
+    ideogrammes = {"glyphes": {k: list(v) for k, v in devantures.IDEOGRAMMES.items()},
+                   "paires": list(devantures.PAIRES)}
+    return {"arches": arches, "lanternes": lanternes, "ideogrammes": ideogrammes}

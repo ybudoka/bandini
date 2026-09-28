@@ -129,7 +129,7 @@ def test_les_maisons_de_l_ile_se_peignent_en_bois_et_sans_escalier(banc):
     d'escalier » pourrait vouloir dire que le banc n'en peint jamais."""
     r = banc("""function (L, o) {
         const def = L.B.defs, fiche = def.carte.ile, murs = def.devantures.murs;
-        const declins = def.devantures.declins, fer = def.devantures.fer;
+        const declins = def.carte.ile.declins, fer = def.devantures.fer;
         const dans = function (r) { return r.x >= fiche.x && r.x < fiche.x + fiche.l
                                          && r.y >= fiche.y && r.y < fiche.y + fiche.h; };
         const peindre = function (r) {

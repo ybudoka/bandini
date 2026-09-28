@@ -3899,6 +3899,29 @@ const TUILES = (function () {
       ctx.fillStyle = '#ffd23a';
       ctx.fillRect(12, 12, 1, 2);                       // la fente a monnaie
     },
+    // La MACHINE A SOUS du casino du Dragon d'or (`machine_a_sous.py`) : une borne rouge et or, trois
+    // rouleaux derriere leur vitre, et le BRAS a droite — c'est lui qu'on tire.
+    '$': function (ctx, v, T) {
+      ctx.fillStyle = 'rgba(0,0,0,0.20)';
+      ctx.fillRect(2, 14, 13, 2);                       // l'ombre au pied
+      ctx.fillStyle = '#6e1410';
+      ctx.fillRect(2, 1, 11, 14);                       // la borne
+      ctx.fillStyle = '#a3201c';
+      ctx.fillRect(2, 1, 11, 3);                        // le fronton
+      ctx.fillStyle = (v >> 4) % 2 ? '#ffd23a' : '#fff1b0';
+      ctx.fillRect(4, 2, 7, 1);                         // le neon du fronton
+      ctx.fillStyle = '#efe6d0';
+      ctx.fillRect(3, 5, 9, 5);                         // la vitre des rouleaux
+      ctx.fillStyle = '#c0392b'; ctx.fillRect(4, 6, 2, 3);   // une cerise,
+      ctx.fillStyle = '#e8b33c'; ctx.fillRect(7, 6, 1, 3);   // un sept,
+      ctx.fillStyle = '#2e8a4a'; ctx.fillRect(9, 6, 2, 3);   // un citron vert
+      ctx.fillStyle = '#e0b040';
+      ctx.fillRect(3, 11, 9, 1);                        // le rebord dore
+      ctx.fillStyle = '#9a9aa4';
+      ctx.fillRect(13, 4, 1, 6);                        // le bras
+      ctx.fillStyle = '#c0392b';
+      ctx.fillRect(13, 3, 2, 2);                        // et sa boule rouge
+    },
     /* Le DOJO DION (docs/jalons/le-dojo-du-quartier.md). Le TATAMI : des nattes vert pale, un
        joint sombre toutes les huit pixels (deux nattes par tuile), et le liseré noir aux bords
        — lu comme le galon du tapis (`v & 1..8` : ou le tatami S'ARRETE). */
@@ -4053,7 +4076,9 @@ const FACADES = (function () {
       empiles (`devantures.IDEOGRAMMES`, de vrais caracteres de cinq pixels sur cinq). Elle pend SOUS
       l'enseigne, au bout de la devanture : elle ne cache ni le nom ni la porte. */
   function plaqueVerticale(ctx, d, x, y) {
-    const table = (typeof B !== 'undefined' && B.defs && B.defs.devantures && B.defs.devantures.ideogrammes) || null;
+    // Les ideogrammes voyagent avec la carte de la ville (`canton.poser`), pas dans les definitions.
+    const carte = typeof B !== 'undefined' && B.defs && B.defs.carte;
+    const table = (carte && carte.canton && carte.canton.ideogrammes) || null;
     if (!table) return;
     const paire = table.paires[d.ideo % table.paires.length];
     // ⚠️ UN PIXEL DE ROUGE autour de chaque caractere : colle au cadre dore, il se fond dedans (vu a la

@@ -55,12 +55,15 @@ def test_la_rue_principale_ses_logements_et_sa_place(bande):
     assert len(devs) >= 15 and len(logements) >= 40, (len(devs), len(logements))
     plan = nord.district("canton")["plan"]
     assert sum(r.count("o") for r in plan) == 1, "une place du marché"
-    # La rue principale : les deux colonnes d'îlots de part et d'autre sont commerçantes d'un bout à l'autre.
-    assert all(r[3] in "c" and r[4] in "co<" for r in plan), plan
+    # La rue principale : les deux colonnes d'îlots de part et d'autre sont commerçantes d'un bout à l'autre —
+    # le casino du Dragon d'or compris (`casino.CASINO_DU_PLAN`, au nord de la place).
+    from app import casino
+    assert all(r[3] in "c" and r[4] in "co<" + casino.CASINO_DU_PLAN for r in plan), plan
 
 
 def test_ses_enseignes_sont_les_siennes_et_tiennent_dans_leur_bandeau(bande):
-    siens = {t for t, _g in devantures.COMMERCES["canton"]}
+    # Les siennes, et celles de ses lieux garantis (le Dragon d'or : `devantures.ENSEIGNES`).
+    siens = {t for t, _g in devantures.COMMERCES["canton"]} | {t for t, _g in devantures.ENSEIGNES.values()}
     devs = [d for d in bande.devantures if _dans_le_canton(bande, d)]
     ailleurs = sorted({d["texte"] for d in devs} - siens)
     assert not ailleurs, f"des enseignes d'un autre quartier au Petit-Canton : {ailleurs}"

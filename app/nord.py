@@ -16,7 +16,7 @@ from __future__ import annotations
 import copy
 import zlib
 
-from . import carte, devantures
+from . import carte, casino, devantures
 
 DECALAGE_NORD = 110
 GRAINE_NORD = 20260926
@@ -46,14 +46,14 @@ DISTRICTS_NORD: tuple[dict, ...] = (
      "pietons": 16, "vehicules": 5, "police": 1, "rythme": (0.3, 1.0, 0.9), "rares": (),
      "plan": ("hhhcchhh",
               "hhccchhh",
-              "hhcccchh",
+              "hhcc¤<hh",                   # le casino du Dragon d'or, au nord de la place (`casino.py`)
               "hhcco<hh",
               "hhccchhh",
               "hhhccchh",
               "hhhcchhh"),
      "standing": ("-==++==-",
                   "-=+++==-",
-                  "==+++===",
+                  "==++++==",
                   "==++++==",
                   "-=+++==-",
                   "-==++=--",
@@ -319,8 +319,9 @@ GRAINES_A_PART = {"canton": GRAINE_CANTON, "gare": GRAINE_GARE}
 
 class _ChantierNord(carte._Chantier):
     BATISSEURS = {"z": _friche, "b": _terrain_a_batir, "v": _voies_ferrees, "y": _hangars,
-                  "t": lambda ch, x, y, large, h: ch._a_ses_des(x, y, lambda: _bidonville(ch, x, y, large, h))}
-    A_ABORD = carte._Chantier.A_ABORD | {"b"}
+                  "t": lambda ch, x, y, large, h: ch._a_ses_des(x, y, lambda: _bidonville(ch, x, y, large, h)),
+                  casino.CASINO_DU_PLAN: casino.batir}
+    A_ABORD = carte._Chantier.A_ABORD | {"b", casino.CASINO_DU_PLAN}
 
     def _a_ses_des(self, x: int, y: int, batir) -> None:
         """Bâtit un îlot du Petit-Canton avec SES dés, puis rend ceux de la bande tels qu'il les a trouvés.
@@ -368,6 +369,30 @@ class _ChantierNord(carte._Chantier):
             return None
         return super().poser_la_piece(famille, part, ancre, *args, **options)
 
+    def bornes(self):
+        """Les bornes-fontaines de la bande : la règle de la ville, mais UN DÉ PAR CROISEMENT, tiré de sa position.
+
+        ⚠️ La ville tire un dé par croisement, à la file : fusionner deux îlots du Petit-Canton (le casino du
+        Dragon d'or) retire un bout de rue, donc un croisement, et toutes les bornes de la bande glissaient d'un
+        cran jusqu'à la Gare (`test_canton`, la bande ne bouge pas). Tiré à la position, un croisement de plus
+        ou de moins ne touche que le sien.
+        """
+        # ⚠️ La boucle de `carte._Chantier.bornes`, recopiée : on ne peut pas lui passer un croisement à la fois,
+        # ses coins réservés aux feux se calculent sur TOUS les croisements.
+        reserves = self._coins_reserves_aux_feux()
+        for inter in self.intersections:
+            de = carte.Des(GRAINE_NORD ^ (inter["x"] * 7919 + inter["y"] * 104729) ^ zlib.crc32(b"borne"))
+            if not de.chance(0.30):
+                continue
+            x, y = inter["x"] + inter["l"], inter["y"] - 1
+            for dy in (-1, -2, 1):
+                cx, cy = x, y + dy
+                if (cx, cy) in reserves:
+                    continue
+                if 0 <= cx < self.largeur and 0 <= cy < self.hauteur and self.sol[cy][cx] == ".":
+                    if self.poser_decor("borne_fontaine", cx, cy):
+                        break
+
     def _terrain_vague(self, x, y, largeur, hauteur):
         """Un lot abandonné du Petit-Canton : celui de la bande (`_terrain_vague`, sa trouée au MILIEU du côté
         sud), pas celui de la ville, dont la trouée peut tomber contre un coin et laisser une clôture droite
@@ -385,6 +410,9 @@ class _ChantierNord(carte._Chantier):
 def batir_la_bande() -> _ChantierNord:
     """La bande, bâtie à part : 419 × 116 (ses rangées 110 à 115 sont le boulevard de la couture)."""
     ch = _ChantierNord(PLAN_NORD, GRAINE_NORD, trame=TRAME_NORD)
+    # ⚠️ LA SALLE DU CASINO AVANT DE BÂTIR : son bâtiment se taille à elle (`_ilot_bati` lit ses mesures dans
+    # les pièces du chantier), et une pièce inconnue donnait un casino de trois tuiles sur trois.
+    ch.pieces[casino.PIECE["slug"]] = casino.PIECE
     for etape in ("eaux", "rues", "croisements", "ilots", "ponts", "lampadaires", "bornes"):
         getattr(ch, etape)()
     ch.pieces["nord_aiguillage"] = PIECE_AIGUILLAGE

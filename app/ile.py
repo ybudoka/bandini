@@ -336,8 +336,11 @@ def poser(chantier, ville: dict) -> dict:
     ville["interieurs"].update(PIECES)
     ville["amarrages"].extend(amarrages)
     ville["zones"].append(zone())
+    from . import devantures
     return {"slug": ILE["slug"], "nom": ILE["nom"], "x": x0, "y": y0, "l": largeur, "h": hauteur,
-            "amarrages": amarrages, "lampes": len(chantier.lampes) - lampes_avant}
+            "amarrages": amarrages, "lampes": len(chantier.lampes) - lampes_avant,
+            # Le bois à clin de ses maisons (`_poser_residence`) : avec la carte, qu'il sert seul à peindre.
+            "declins": [dict(d) for d in devantures.DECLINS]}
 
 
 def _batir(chantier, lettre: str, relatives: set[tuple[int, int]]) -> None:

@@ -40,7 +40,7 @@ const Canton = (function () {
     ctx.fillRect(x + 6, y, large - 12, 1);
     ctx.fillRect(x, y + 3, 3, 2); ctx.fillRect(x + large - 3, y + 3, 3, 2);   // et ses coins releves
     ctx.fillRect(x - 1, y + 2, 2, 2); ctx.fillRect(x + large - 1, y + 2, 2, 2);
-    const table = B.defs && B.defs.devantures && B.defs.devantures.ideogrammes;
+    const table = d0().ideogrammes;
     if (!table) return;
     const paire = table.paires[(a.paire || 0) % table.paires.length];
     const px = Math.round(x + large / 2 - 8), py = y + 7;              // le panneau, au milieu du linteau
@@ -91,6 +91,8 @@ const Canton = (function () {
   }
 
   /** Au-dessus des entites (`Jeu.rendre`). */
+  function d0() { return donnees() || {}; }
+
   function dessiner(ctx, cam) {
     const d = donnees();
     if (!d) return;

@@ -98,7 +98,7 @@ const Jeu = (function () {
     Monde.centrerCamera(j.x, j.y);
     Entites.peuplerDabord();          // ⚠️ apres le joueur : la bulle est autour de lui
     if (p.mission) p.mission = null;  // une mission ne survit pas au rechargement : ses figurants non plus
-    B.mission = null; B.defi = null; B.epreuve = null; B.conduite = null; B.rue = null; B.cinema = null; B.ouverture = null; B.scene = null; B.finEnAttente = null; B.generiqueEnAttente = null; B.videopoker = null; B.orignal = null;
+    B.mission = null; B.defi = null; B.epreuve = null; B.conduite = null; B.rue = null; B.cinema = null; B.ouverture = null; B.scene = null; B.finEnAttente = null; B.generiqueEnAttente = null; B.videopoker = null; B.machineASous = null; B.orignal = null;
     B.sonnerie = null;                       // un telephone qui sonnait dans la partie d'avant ne sonne pas dans celle-ci
     B.abribusServis = {};                    // les abribus qu'un autobus vient de servir (Autobus)
     Traversier.oublier();                    // rien a bord, la carte neuve n'a pas de pont pose
@@ -1108,7 +1108,8 @@ const Jeu = (function () {
         pas('saintjean', SaintJean.maj);   // la Saint-Jean : le bruit des feux
         pas('cabane', Cabane.maj);         // la cabane a sucre : la caleche, ses gens, la table de tire
         pas('cineparc', Cineparc.maj);     // le cine-parc : ses spectateurs, et les phares qui fachent
-        pas('galeries', Galeries.maj);     // la nuit aux Galeries : les lumieres, la voix, le gardien
+        pas('galeries', Galeries.maj);
+        pas('casino', Casino.maj);         // le portier du Dragon d'or, quand on approche     // la nuit aux Galeries : les lumieres, la voix, le gardien
         pas('enseignes', Enseignes.maj);   // le bingo, le film du Rialto, le lave-auto
         pas('garage', Garage.maj);         // la nitro du char modifie chez Ti-Guy
         pas('demenagement', Demenagement.maj);   // le 1er juillet : les camions naissent a l'approche
@@ -1227,7 +1228,8 @@ const Jeu = (function () {
     if (!B.interieur) Police.dessinerHelico(ctx, vue);
     if (!B.interieur) Neige.dessinerTempete(ctx);
     if (!B.interieur) Blocs.dessinerFumees(ctx, vue);
-    if (!B.interieur) Canton.dessiner(ctx, vue);        // l'arche et les lanternes du Petit-Canton : au-dessus des gens   // la fumée des cheminées : au-dessus des toits ET des gens
+    if (!B.interieur) Canton.dessiner(ctx, vue);
+    if (!B.interieur) Casino.dessinerMarquise(ctx, vue); // la marquise de neon du Dragon d'or        // l'arche et les lanternes du Petit-Canton : au-dessus des gens   // la fumée des cheminées : au-dessus des toits ET des gens
     if (!B.interieur) Brouillard.dessiner(ctx);         // le voile du brouillard, SOUS la nuit aussi      // le voile et les flocons, SOUS la nuit
     const lampes = Monde.lampesVisibles(vue);
     // ⚠️ Les feux ont DEJA ete peints, deux lignes plus haut : leurs lampes
@@ -1519,7 +1521,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,

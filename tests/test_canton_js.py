@@ -20,7 +20,7 @@ def test_la_plaque_se_peint_au_petit_canton_et_nulle_part_ailleurs(banc):
         const ville = def.carte.devantures.find(function (x) { return x.ideo == null; });
         return { n: canton.length, rouge: rouge(peindre(d)), dore: dore(peindre(d)),
                  temoin: rouge(peindre(sans)), ville: rouge(peindre(ville)),
-                 paires: def.devantures.ideogrammes.paires.length };
+                 paires: def.carte.canton.ideogrammes.paires.length };
     }""")
     assert r["n"] >= 15 and r["paires"] >= 4, r
     assert r["rouge"] == 1 and r["dore"] >= 12, f"la plaque ne se peint pas : {r}"

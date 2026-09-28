@@ -55,6 +55,8 @@ TYPES_SERVIS = frozenset({
     "videopoker",
     # Le comptoir de Mireille au DOJO DION (docs/jalons/le-dojo-du-quartier.md).
     "cours",
+    # La machine à sous du casino du Dragon d'or (`machine_a_sous.py`, `Casino.menu`).
+    "machine_a_sous",
 })
 #: ⚠️ Le point d'un PERSONNAGE posé dedans (`ou: "point:<type>"` — le sergent, Josée, Lulu,
 #: Ovila, le Dr Lachance) est servi par `Histoire.personnageDuPoint`, et se lit dans le

@@ -1950,7 +1950,8 @@ const Monde = (function () {
     }
     const residences = carte.residences && carte.residences.get(cle);
     const murs = mursDeResidence();
-    const declins = (B.defs && B.defs.devantures && B.defs.devantures.declins) || [];
+    // Le bois a clin des maisons de l'ile voyage avec la carte (`ile.poser`), pas dans les definitions.
+    const declins = (B.defs && B.defs.carte && B.defs.carte.ile && B.defs.carte.ile.declins) || [];
     if (residences && murs.length) {
       const fer = ferDesEscaliers();
       residences.forEach(function (r) {

@@ -413,6 +413,8 @@ LEGENDE: dict[str, dict] = {
     # Le VIDEOPOKER (`videopoker.py`) : la machine qui clignote au fond du bar et du depanneur.
     # Il porte un point `videopoker`, sur sa tuile, comme la distributrice.
     "S": {"nom": "vidéopoker", "solide": 3, "meuble": True},
+    # Le casino du Dragon d'or (`casino.py`) : la machine à sous, trois rouleaux et un bras.
+    "$": {"nom": "machine à sous", "solide": 3, "meuble": True},
     # Le chalet du rang, dedans (26 sept. 2026, « que ça ait vraiment l'air d'un chalet ») :
     # le foyer de pierre et sa cheminée, la corde de bois, la peau d'ours, la berçante, et ce
     # qu'on accroche au mur d'un camp — le panache d'orignal et les raquettes.
@@ -1848,6 +1850,8 @@ USAGE_DU_PLAN: dict[str, str] = {
     "z": "industriel", "b": "commercial", "v": "industriel", "y": "industriel",
     # Le bidonville de la gare (`nord._bidonville`) : on y vit, dans des cabanes de tôle.
     "t": "residentiel",
+    # Le casino du Dragon d'or, au Petit-Canton (`casino.CASINO_DU_PLAN`) : un lieu garanti de la bande.
+    "¤": "commercial",
 }
 
 #: Et celui d'un lieu garanti, par le GENRE d'ilot qui le batit (`SPECIAUX`) : le
@@ -3958,7 +3962,7 @@ class _Chantier:
             # trois tuiles de batiment).
             bandes = self._bande_a_la_mesure(
                 y, hauteur, bandes, bande_vedette,
-                mesures_de_la_suite(special["interieur"])[1] + 4)
+                mesures_de_la_suite(special["interieur"], {**INTERIEURS, **self.pieces})[1] + 4)
         # ⚠️ LES SKATEUX TIENNENT LE STATIONNEMENT — tout entier, pas un coin.
         # Leur bande ne se decoupe donc pas : c'est une PISTE. Un terrain de
         # sept tuiles tire au sort n'en laisse que cinq d'elan une fois la
@@ -3990,7 +3994,7 @@ class _Chantier:
                 # forme, et une piece deux fois plus profonde que le batiment
                 # qui la porte. Un lieu garanti garde son plan dessine a la
                 # main — c'est son BATIMENT qui se taille a lui.
-                besoin_l, besoin_h = mesures_de_la_suite(special["interieur"])
+                besoin_l, besoin_h = mesures_de_la_suite(special["interieur"], {**INTERIEURS, **self.pieces})
                 large = min(largeur, max(3, besoin_l))
                 # ⚠️ ET IL MANGE SON DEVANT, ET SA RUELLE S'IL LE FAUT. Une
                 # bande garde quatre tuiles pour elles deux ; les ilots qui

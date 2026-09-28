@@ -393,6 +393,10 @@ DISTANCE_DOUBLON = 40
 #: Chez Ti-Paul »), l'enseigne est courte. Un slug absent d'ici prend son nom.
 ENSEIGNES: dict[str, tuple[str, str]] = {
     "terminus": ("TERMINUS", "service"),
+    # ⚠️ Le genre `nuit`, pas un genre à lui : une famille de devanture se meuble, se sert en machines et se
+    # range dans la réserve (`test_interieurs`, `test_distributrices`) — une par enseigne, c'était trop. Le
+    # rouge et or du Dragon d'or est sur sa marquise (`Casino.dessinerMarquise`).
+    "nord_casino": ("DRAGON D'OR", "nuit"),
     "armurerie": ("CHEZ GUS", "industrie"),
     "vetements": ("BOUTIQUE ROSA", "commerce"),
     "garage": ("GARAGE BANDINI", "industrie"),
@@ -493,8 +497,9 @@ def exporter() -> dict:
     return {
         "genres": [dict(g) for g in GENRES],
         "murs": [dict(m) for m in MURS],
-        "declins": [dict(d) for d in DECLINS],
-        "ideogrammes": {"glyphes": {k: list(v) for k, v in IDEOGRAMMES.items()}, "paires": list(PAIRES)},
+        # ⚠️ Ni le bois à clin de l'île ni les idéogrammes du Petit-Canton : ils voyagent avec la CARTE
+        # (`ile.poser`, `canton.poser`), qu'ils servent seuls à peindre — dans le paquet des définitions, ils le
+        # faisaient déborder (60 108 octets gzip pour 60 000, le jour du casino).
         "fer": dict(FER),
         "couleurs_tag": list(COULEURS_TAG),
         "motifs": list(MOTIFS),

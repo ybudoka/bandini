@@ -1145,7 +1145,7 @@ const Missions = (function () {
     lulu: 'PARLER', ovila: 'PARLER',
     emplettes: 'ACHETER', salon: 'SE FAIRE COIFFER', escalier: 'MONTER', fouiller: 'FOUILLER',
     fourriere: 'LE LOT', avocat: 'PARLER À L’AVOCAT', hacker: 'LE COMPTOIR DU FOND',
-    distributrice: 'LA MACHINE', videopoker: 'LE VIDÉOPOKER', cours: 'LES COURS',
+    distributrice: 'LA MACHINE', videopoker: 'LE VIDÉOPOKER', machine_a_sous: 'LA MACHINE À SOUS', cours: 'LES COURS',
     // Le metro : monter dans la rame au quai, en descendre dans la rame.
     rame: 'LA RAME',
   };
@@ -1371,6 +1371,8 @@ const Missions = (function () {
         return menuDistributrice(machineDuPoint(point));
       case 'videopoker':
         return menuVideopoker();
+      case 'machine_a_sous':
+        return Casino.menu();
       default:
         return null;
     }
