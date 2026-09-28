@@ -98,6 +98,7 @@ pas quand l'ordre de travail change.
 | Une amélioration générale des toits | ⬜ **à faire** (à trancher par Martin : la liste, et par où commencer) | — | **P4** | ajout | [fiche](jalons/une-amelioration-generale-des-toits.md#fiche) |
 | Les quatre saisons, réalistes | ⬜ **à faire** (à trancher par Martin : l'ordre des vagues, l'option de la neige, et le mois où commence une partie) | — | **P4** | ajout | [fiche](jalons/les-quatre-saisons-realistes.md#fiche) |
 | Des statues dans les parcs | ⬜ **en cours** (une statue de bronze au milieu de la place pavée de chaque parc de ville — le fondateur, le cavalier, le hockeyeur —, posée après tout et sans dé, numérotée à part ; et sa plaque qu'on lit) | 28 sept. 2026 | **P4** | ajout | [fiche](jalons/des-statues-dans-les-parcs.md#fiche) |
+| La cour à scrap de la gare | ⬜ **en cours** (l'ouest de la Gare de triage perd ses « morceaux de train » : une cour de barbelé, des allées de carcasses, des pneus, des cubes de ferraille compactée, une grue à aimant ; une seule voie rouillée au nord ; le poste d'aiguillage devient le bureau du ferrailleur) | 28 sept. 2026 | **P4** | ajout | [fiche](jalons/la-cour-a-scrap-de-la-gare.md#fiche) |
 
 ## L'ordre
 
