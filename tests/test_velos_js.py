@@ -291,7 +291,10 @@ def test_coince_derriere_un_char_arrete_un_cycliste_sur_deux_monte_sur_le_trotto
 ])
 def test_la_ville_roule_avec_ses_velos_sans_une_anomalie(banc, graine):
     """Toute la ville, la trace allumee, des velos qui montent souvent : la
-    surveillance du trafic ne releve ni hors-voie, ni chien de garde, ni tour en rond."""
+    surveillance du trafic ne releve ni hors-voie, ni chien de garde, ni tour en rond.
+
+    ⚠️ C'est aussi le juge du trafic NORMAL (venu de `test_trace_js::test_le_trafic_normal_ne_declenche_aucune_anomalie`,
+    vague C, 28 sept. 2026) : les chars du trafic ont un trajet, et la surveillance le regarde."""
     r = banc("""function (L, o) {""" + DECOR.replace("L.graine(5)", "L.graine(%d)" % graine) + """
         L.B.options.trace = true;
         f.trottoir_chance = 0.2; f.parc_chance = 0.5;
@@ -306,9 +309,11 @@ def test_la_ville_roule_avec_ses_velos_sans_une_anomalie(banc, graine):
                 if (v.horsRues) partis.add(v.id);
             });
         }
-        return { velos: velos.size, partis: partis.size,
+        return { velos: velos.size, partis: partis.size, bilan: L.Vehicules.bilanTrace(),
+                 traces: L.B.entites.filter(function (v) { return v.conducteur === 'trafic' && v.trace && v.trace.length > 10; }).length,
                  anomalies: L.B.trace.anomalies.map(function (a) { return a.quoi + ' ' + a.slug + ' ' + a.etat; }) };
     }""")
+    assert r["bilan"]["chars"] > 0 and r["traces"] > 0, "les chars du trafic ont un trajet"
     assert r["velos"] > 0 and r["partis"] > 0, f"aucun velo n'a quitte la rue : {r}"
     assert r["anomalies"] == [], f"la trace a releve : {r['anomalies']}"
 

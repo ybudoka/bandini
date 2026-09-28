@@ -8,19 +8,10 @@ declenche pas.
 """
 
 
-def test_le_trafic_normal_ne_declenche_aucune_anomalie(banc):
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        L.graine(5);
-        L.B.options.trace = true;
-        L.Vehicules.monter(L.B.joueur, o.char('auto', 0, 0, 0));   // en char, immobile : le trafic vit autour
-        o.frame(2400);
-        const bilan = L.Vehicules.bilanTrace();
-        return { bilan: bilan, anomalies: L.B.trace.anomalies.map(function (a) { return a.quoi + ' ' + a.tx + ',' + a.ty + ' ' + a.etat; }),
-                 traces: L.B.entites.filter(function (v) { return v.conducteur === 'trafic' && v.trace && v.trace.length > 10; }).length };
-    }""")
-    assert r["bilan"]["chars"] > 0 and r["traces"] > 0, "les chars du trafic ont un trajet"
-    assert r["anomalies"] == [], "le trafic normal a declenche la surveillance"
+# ⚠️ « Le trafic normal ne déclenche aucune anomalie » (graine 5, 2 400 images) se juge dans
+# `test_velos_js::test_la_ville_roule_avec_ses_velos_sans_une_anomalie` : la même ville, la trace
+# allumée, le joueur en char immobile — sur trois graines (dont la 5) et 3 000 images, avec des vélos
+# qui montent plus souvent. Il y a pris aussi « les chars du trafic ont un trajet » (vague C, 28 sept. 2026).
 
 
 def test_la_trace_voit_un_char_hors_voie_et_le_chien_de_garde(banc):
