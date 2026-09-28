@@ -203,8 +203,8 @@ def test_le_clairon_du_lundi_fait_le_decompte(banc):
 
 
 def test_la_voirie_tient_l_economie():
-    f = economie.BOULOTS["voirie"]
-    taxi = economie.gain_boulot(economie.BOULOTS["taxi"])
-    assert taxi <= economie.gain_boulot(f) <= 4 * taxi
+    # (« Entre le taxi et quatre fois le taxi » : `test_economie::test_chaque_boulot_vaut_la_peine…`,
+    # qui passe chaque boulot de `BOULOTS` — la voirie comprise.)
+    assert "voirie" in economie.BOULOTS
     assert vehicules.par_slug("asphalte")["frequence"] == 0, "il ne roule pas dans le trafic"
     assert [p["type"] for p in economie.PALIERS["voirie"]][-1] == "char"

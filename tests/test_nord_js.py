@@ -1,18 +1,17 @@
 """La ville s'agrandit au nord, au banc (docs/jalons/la-ville-s-agrandit-au-nord.md)."""
 
 
-def test_le_quartier_se_lit_des_deux_cotes_de_la_couture(banc):
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const n = L.B.defs.decalage_nord;
-        return { n: n, bande: L.Monde.standingA(10, 10), dessous: L.Monde.standingA(10, n + 10),
-                 canton: L.Monde.usageA(140, 20), rue: L.Monde.usageA(175, 20),
-                 faubourg: L.Monde.usageA(140, n + 20) };
-    }""")
-    assert r["n"] == 110, r
-    assert r["bande"] == "pauvre" and r["dessous"] == "cossu", r
+def test_le_quartier_se_lit_des_deux_cotes_de_la_couture(paquet):
+    """⚠️ PLUS AU BANC depuis le 28 sept. 2026 (vague C) : que le MOTEUR lise la même grille que le
+    générateur, des deux côtés de la couture, `test_quartiers::test_le_moteur_lit_les_memes_grilles` le
+    juge — `Monde.standingA` à chaque tuile de la carte finie, `Monde.usageA` une tuile sur trois, contre
+    `nord.LECTEUR`. Ici, ce que ce banc-ci avait en propre : ce que la grille DIT à ces tuiles-là."""
+    from app import nord
+    n, lecteur = nord.DECALAGE_NORD, nord.LECTEUR
+    assert n == 110 and paquet["decalage_nord"] == n, (n, paquet.get("decalage_nord"))
+    assert lecteur.standing_en(10, 10) == "pauvre" and lecteur.standing_en(10, n + 10) == "cossu"
     # Le Petit-Canton bâti (étape 2) : des logements à l'ouest, sa rue commerçante au milieu.
-    assert r["canton"] == "residentiel" and r["rue"] == "commercial", r
+    assert lecteur.usage_en(140, 20) == "residentiel" and lecteur.usage_en(175, 20) == "commercial"
 
 
 def test_une_vieille_partie_descend_avec_la_ville(banc):
