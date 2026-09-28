@@ -384,10 +384,9 @@ const Vehicules = (function () {
       // faisait naitre un char de moins — et chaque naissance evitee decale
       // tous les des qui suivent. Un juge d'amuseur est tombe pour ca.
       if (v.panneT > 0) continue;
-      // ⚠️ Ni une auto-patrouille garee au poste : c'est le LOT qui la fait
-      // naitre (`majGaresDeService`), pas le parc de la rue — la compter
-      // ferait naitre un char de moins, et les des de toute la ville glissent.
-      if (v.gareDeService && v.etat === 'stationne' && !v.laisse) continue;
+      // ⚠️ Ni une auto-patrouille garee au poste, ni un char de concession :
+      // c'est leur LOT qui les fait naitre, pas le parc de la rue (`compteCommeGare`).
+      if (!compteCommeGare(v)) continue;
       // ⚠️ Un autobus de ligne n'est ni du trafic ni un char gare : c'est l'horaire
       // qui le fait naitre (`Autobus.faireNaitre`), il ne prend la place de personne.
       if (v.conducteur === 'ligne') continue;
@@ -396,6 +395,7 @@ const Vehicules = (function () {
     if (B.t % 20 !== 0) return;
     majAmarrages();
     majGaresDeService();
+    majLotsDeConcession();
     const zone = Monde.zoneA(j.x, j.y);
     const voulu = Math.min(t.vehicules_max, zone ? zone.vehicules : 6) * Monde.rythme(zone);
     if (roulent < voulu) {
@@ -564,6 +564,67 @@ const Vehicules = (function () {
       if (Entites.visibleAEcran(x, y, 24) || !libreAutour(x, y, 12)) continue;
       const v = creer(lot.vehicule, x, y, Math.atan2(nez[1], nez[0]), { etat: 'stationne', couleur: def.couleurs[0] });
       if (v) { v.gareDeService = place; nees++; }
+    }
+    return nees;
+  }
+
+  /** ⚠️ CE QUE LE PARC DE LA RUE COMPTE (`peupler`) : ni l'auto-patrouille garee au
+      poste, ni le char d'un lot de concession — c'est leur LOT qui les fait naitre.
+      Les compter ferait naitre un char de moins, et les des de toute la ville glissent. */
+  function compteCommeGare(v) {
+    if ((v.gareDeService || v.placeDeLot) && v.etat === 'stationne' && !v.laisse) return false;
+    return true;
+  }
+
+  /** L'usage delave une couleur : mêlee a un gris de poussiere (`DELAVE`), sans un de. */
+  const DELAVE = { gris: [0x9a, 0x96, 0x8a], part: 0.4 };
+  function delaver(hex) {
+    const n = parseInt(hex.slice(1), 16), c = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    return '#' + c.map(function (v, i) {
+      return Math.round(v * (1 - DELAVE.part) + DELAVE.gris[i] * DELAVE.part).toString(16).padStart(2, '0');
+    }).join('');
+  }
+
+  /** **LES LOTS DES CONCESSIONNAIRES** (docs/jalons/les-concessionnaires-le-neuf-aux-erables-l-usage-dans-les-friches.md) :
+      Prestige Automobiles aux Erables, Chez Ti-Pout dans les Friches. Chaque place garnie
+      (`garees`) a son char, celui du `stock` ; comme les autos-patrouilles du poste, il nait
+      hors champ dans la bulle, et s'oublie hors d'elle.
+
+      ⚠️ Rien n'est tire au de du jeu : la couleur est DONNEE (l'index de la place dans les
+      couleurs de la fiche, delavee chez l'usage), la silhouette aussi (`stock.sprite`).
+      ⚠️ Pris et emmene, un char garde sa place tant qu'il existe : le lot ne le double pas.
+      ⚠️ `alarmeDuLot` : un neuf sonne quand on le prend, meme une berline (`monter`). */
+  function majLotsDeConcession() {
+    const lots = Monde.carte && Monde.carte.def && Monde.carte.def.concessionnaires;
+    const j = B.joueur;
+    if (!lots || !j || B.interieur) return 0;
+    const portee = trafic().oubli_px - GAREES_MARGE;
+    let nees = 0;
+    for (const lot of lots) {
+      for (const i of lot.garees) {
+        const place = lot.places[i], stock = lot.stock[i], nez = NEZ_DU_SENS[place.sens] || NEZ_DU_SENS.N;
+        const def = vehiculeDef(stock.slug);
+        if (!def) continue;
+        // ⚠️ VENDU AUJOURD'HUI, la place reste vide : le char payé est parti avec toi, et s'il s'est
+        // oublie loin d'ici, il n'en renait pas un gratuit. Le lendemain, le lot en rentre un.
+        const vendu = B.partie && B.partie.concession && B.partie.concession[lot.slug + ':' + i];
+        if (vendu !== undefined) {
+          if (vendu >= B.partie.jour) continue;
+          delete B.partie.concession[lot.slug + ':' + i];
+        }
+        const x = (place.x + 0.5 - nez[0] / 2) * TT, y = (place.y + 0.5 - nez[1] / 2) * TT;
+        if (dist2(x, y, j.x, j.y) > portee * portee) continue;
+        if (B.entites.some(function (q) { return q.type === 'vehicule' && q.placeDeLot === place; })) continue;
+        if (Entites.visibleAEcran(x, y, 24) || !libreAutour(x, y, 12)) continue;
+        const teinte = def.couleurs[(i * 3 + 1) % def.couleurs.length];
+        const couleur = lot.usure < 1 ? delaver(teinte) : teinte;
+        const v = creer(stock.slug, x, y, Math.atan2(nez[1], nez[0]), { etat: 'stationne', couleur: couleur, sprite: stock.sprite });
+        if (!v) continue;
+        v.placeDeLot = place;
+        if (lot.usure < 1) { v.usure = lot.usure; v.vie = Math.max(1, Math.round(v.vieMax * lot.usure)); }
+        if (lot.alarme) v.alarmeDuLot = true;
+        nees++;
+      }
     }
     return nees;
   }
@@ -1710,7 +1771,7 @@ const Vehicules = (function () {
       // comptoir ne servait plus a rien : autant sauter la cloture.
       crime = 'vol_vehicule';
       vu = Police.quelqu_un_voit(v.x, v.y, null);
-      if (v.def.alarme && declencherAlarme(v)) vu = true;
+      if ((v.def.alarme || v.alarmeDuLot) && declencherAlarme(v)) vu = true;
     }
     // Changer de char hors de vue : la police perd ta trace d'une etoile.
     const r = B.recherche, deg = B.defs.recherche.deguisement;
@@ -4108,7 +4169,7 @@ const Vehicules = (function () {
   }
 
   return {
-    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, majGaresDeService, typeDeRue, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, pousserLeDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
+    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, majGaresDeService, majLotsDeConcession, compteCommeGare, typeDeRue, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, pousserLeDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
     majPhysique, allureDuSol, avancer, heurterVehicules, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, suitUnChar, majConducteur, commandesJoueur, rouler,

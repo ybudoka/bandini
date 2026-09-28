@@ -1116,6 +1116,63 @@ const Missions = (function () {
              aide: 'UN CHAR RACHETÉ T’ATTEND DANS LA COUR' };
   }
 
+  // --- Les concessionnaires ---------------------------------------------------------
+
+  //: Le nom d'une silhouette qui n'est pas celle de la fiche : la berline s'appelle « auto » au catalogue.
+  const MODELES = { auto_compacte: 'COMPACTE', auto_familiale: 'FAMILIALE', auto_camionnette: 'CAMIONNETTE', luxe_vus: 'VUS DE LUXE' };
+
+  /** Les chars du lot qu'on peut acheter : ceux qui attendent DEHORS sur leur place (`placeDeLot`), ni pris, ni
+      deja vendus. ⚠️ Pas la place vide : ce qu'on paie, c'est le char qu'on a vu en entrant. */
+  function charsAVendre(lot) {
+    const dehors = B.exterieur ? B.exterieur.entites : B.entites;
+    const vendus = (B.partie.concession || {});
+    return lot.garees.map(function (i) {
+      const place = lot.places[i];
+      const v = dehors.find(function (e) { return e.type === 'vehicule' && e.placeDeLot === place; });
+      return { i: i, v: v };
+    }).filter(function (c) {
+      return c.v && c.v.etat === 'stationne' && !c.v.conducteur && !c.v.vole && !c.v.aToi && vendus[lot.slug + ':' + c.i] === undefined;
+    });
+  }
+
+  /** LE COMPTOIR D'UN CONCESSIONNAIRE (docs/jalons/les-concessionnaires-le-neuf-aux-erables-l-usage-dans-les-friches.md) :
+      les chars du lot, leur prix ; payer rend le char de dehors `aToi` — y monter n'est plus un vol. */
+  function menuConcession(point, items) {
+    // ⚠️ DEDANS, `Monde.carte` est la PIECE : la ville attend dans `B.exterieur`.
+    const ville = B.exterieur ? B.exterieur.carte : Monde.carte;
+    const lots = (ville && ville.def && ville.def.concessionnaires) || [];
+    const lot = lots.find(function (l) { return l.slug === point.lot; });
+    const p = B.partie;
+    if (!lot) return null;
+    const titre = lot.nom.toUpperCase();
+    const chars = charsAVendre(lot);
+    if (!chars.length) {
+      items.push({ libelle: 'LE LOT EST VIDE', actif: false });
+      return { titre: titre, items: items, aide: 'REVIENS DEMAIN, ON EN RENTRE' };
+    }
+    chars.forEach(function (c) {
+      const stock = lot.stock[c.i], def = Vehicules.vehiculeDef(stock.slug);
+      const nom = MODELES[stock.sprite] || (def ? def.nom : stock.slug).toUpperCase();
+      items.push({ libelle: nom, detail: stock.prix + ' $', actif: p.argent >= stock.prix, place: c.i,
+                   faire: function () { acheterAuLot(lot, c.i, c.v); return false; } });
+    });
+    return { titre: titre, items: items, sur: p.argent + ' $',
+             aide: lot.usure < 1 ? 'VENDU TEL QUEL, SANS GARANTIE' : 'IL T’ATTEND DANS LE LOT' };
+  }
+
+  function acheterAuLot(lot, i, v) {
+    const p = B.partie, prix = lot.stock[i].prix;
+    if (p.argent < prix) { Son.SFX.erreur(); return false; }
+    payer(prix, lot.nom.toUpperCase());
+    // Le jour de la vente : la place reste vide jusqu'au lendemain (`Vehicules.majLotsDeConcession`).
+    p.concession = p.concession || {};
+    p.concession[lot.slug + ':' + i] = p.jour;
+    // ⚠️ Il quitte le lot : sa place n'est plus la sienne (demain, le lot la regarnit meme s'il roule encore).
+    v.aToi = true; v.vole = false; v.alarmeDuLot = false; v.placeDeLot = null;
+    Hud.message('IL EST À TOI — IL T’ATTEND DEHORS');
+    return true;
+  }
+
   function racheter(c, prix) {
     const p = B.partie;
     if (p.argent < prix) { Son.SFX.erreur(); return false; }
@@ -1146,6 +1203,8 @@ const Missions = (function () {
     emplettes: 'ACHETER', salon: 'SE FAIRE COIFFER', escalier: 'MONTER', fouiller: 'FOUILLER',
     fourriere: 'LE LOT', avocat: 'PARLER À L’AVOCAT', hacker: 'LE COMPTOIR DU FOND',
     distributrice: 'LA MACHINE', videopoker: 'LE VIDÉOPOKER', machine_a_sous: 'LA MACHINE À SOUS', cours: 'LES COURS',
+    // Les concessionnaires : le comptoir qui vend les chars du lot.
+    concession: 'ACHETER UN CHAR',
     // Le metro : monter dans la rame au quai, en descendre dans la rame.
     rame: 'LA RAME',
   };
@@ -1363,6 +1422,8 @@ const Missions = (function () {
         return menuCasier();
       case 'fourriere':
         return menuFourriere(items);
+      case 'concession':
+        return menuConcession(point, items);
       case 'avocat':
         return menuAvocat();
       case 'hacker':

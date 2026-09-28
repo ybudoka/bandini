@@ -7321,12 +7321,21 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
     # nord, qui les fait descendre avec le reste.
     from . import statues as statues_mod
     statues_mod.poser(chantier, ville)
+    # LES CONCESSIONNAIRES (docs/jalons/les-concessionnaires-le-neuf-aux-erables-l-usage-dans-les-friches.md) :
+    # Prestige Automobiles, bâti sur le stationnement cossu des Érables — sur la ville finie et sans un dé, AVANT
+    # la bande nord (il descend avec la ville d'avant). Chez Ti-Pout, dans les Friches, se pose après elle.
+    from . import concessionnaires as concessionnaires_mod
+    ville["concessionnaires"] = []
+    if plan == PLAN:
+        concessionnaires_mod.poser_le_salon(chantier, ville)
     # ⚠️ LA VILLE S'AGRANDIT AU NORD (docs/jalons/la-ville-s-agrandit-au-nord.md), APRÈS ABSOLUMENT TOUT :
     # elle descend de 110 rangées, et la bande (les Friches, le Petit-Canton, la Gare) se colle au-dessus.
     # Sa graine est à elle ; la ville d'avant est la même à la tuile près. `nord=False` : la ville d'avant.
     if nord and plan == PLAN:
         from . import nord as nord_mod
         nord_mod.poser(ville)
+        # CHEZ TI-POUT : sa cour est dans la bande, contre le boulevard — elle se pose sur la bande collée.
+        concessionnaires_mod.poser_ti_pout(ville)
     # ⚠️ LES FRÉNÉSIES (P4, docs/jalons/quatre-activites-que-le-jeu-n-a-pas.md), APRÈS ABSOLUMENT TOUT, bande
     # nord comprise : une icône par district, dans une ruelle libre choisie par une règle — sans un dé, et rien
     # de posé dans une liste que la ville lit. La ville d'avant est la même à la tuile près.

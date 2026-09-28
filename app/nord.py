@@ -645,7 +645,7 @@ def _mouillages(v, n):
 DECALAGES = {
     "aeroport": _aeroport, "amarrages": _y, "ambulants": _y, "apparition": _y, "aqueduc": _rien,
     "aqueducs": _y, "arrets": None, "autobus": _autobus, "barrieres": _y, "chantiers": _chantiers,
-    "chemins_des_bois": _paires, "decalage_nord": _rien, "decor": _y, "decor_solide": _rien,
+    "chemins_des_bois": _paires, "concessionnaires": _y, "decalage_nord": _rien, "decor": _y, "decor_solide": _rien,
     "devant": _rien, "devantures": _y, "districts": _rien, "eboueurs": _eboueurs, "entrave": _rien,
     "entraves": _y, "fermeture": _rien, "fermetures": _y, "feux_pietons": _y, "flottants": _rien, "foire": _y,
     "foire_enclos": _foire_enclos, "fourriere": _y, "frenesies": _y, "frenesies_regle": _rien, "graffitis": _y, "graine": _rien, "grille": None,

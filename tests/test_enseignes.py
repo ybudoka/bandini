@@ -71,7 +71,10 @@ def test_les_enseignes_ne_deplacent_rien_d_autre(VILLE, monkeypatch):
     """⚠️ Posées sur la ville FINIE et sans dé, comme le dojo : la même ville sans elles est identique, hors
     de leurs portes (la pièce, le lieu, le nom), de leurs enseignes, des pièces reprises et des points
     ajoutés au bout. Et elles ne mordent sur aucune porte qui avait un lieu à elle."""
-    avec = villes.generer(graine=VILLE["graine"], nord=False)  # avant le patch : sûr
+    # ⚠️ Les CONCESSIONNAIRES se posent après et ajoutent leur point au bout : neutralisés des DEUX côtés.
+    from app import concessionnaires
+    monkeypatch.setattr(concessionnaires, "poser_le_salon", lambda chantier, ville: None)
+    avec = carte.generer(graine=VILLE["graine"], nord=False)
     monkeypatch.setattr(enseignes, "poser", lambda chantier, ville: [])
     sans = carte.generer(graine=VILLE["graine"], nord=False)  # ⚠️ sous le patch : pas `villes`
     for cle in ("sol", "decor", "paquets", "ambulants", "reclames", "scenes", "nids_de_poule", "barrieres",
