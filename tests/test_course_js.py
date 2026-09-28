@@ -15,6 +15,8 @@ de la piste, cinq secondes pour revenir, puis c'est raté ; et la flèche-avec-l
 GPS se tait sur la piste, puis revient.
 """
 
+import pytest
+
 #: Joue le panneau d'une course comme le jeu : le menu, COMMENCER — et le menu se referme.
 #: ⚠️ `faire()` appelé à la main ne ferme pas le menu (c'est `Hud.majMenu` qui lit son retour),
 #: et un menu ouvert FIGE la ville : sans `fermerMenu`, `majDefi` ne tournerait jamais.
@@ -43,51 +45,43 @@ COMMENCER = """
 """
 
 
-def test_le_chemin_de_char_suit_la_chaussee_et_roule_a_droite(banc):
-    r = banc("""function (L, o) {
+@pytest.fixture(scope="module")
+def trace(banc):
+    """Quatre juges qui tracent sans rouler, dans UN banc : `Monde.cheminRoute` deux fois (vers
+    nulle part, puis du terminus au garage), puis chaque circuit tiré à son panneau — le même tirage
+    donne sa forme au premier juge des circuits et sa longueur au juge des chronos.
+
+    ⚠️ Aucune image ne passe. `cheminRoute` ne fait que lire ; chaque circuit est rendu
+    (`finirDefi`) avant le suivant, comme les deux boucles le faisaient chacune. Le chemin vers
+    nulle part passe EN PREMIER : son plafond de temps est le plus serré (50 ms), et c'est lui qui
+    trouve le code encore froid, comme dans son propre banc."""
+    return banc("function (L, o) {" + COMMENCER + """
         L.Jeu.commencer();
-        const a = L.Histoire.lieu('terminus'), b = L.Histoire.lieu('garage');
-        const t0 = Date.now();
-        const chemin = L.Monde.cheminRoute(a.x, a.y, b.x, b.y);
-        const ms = Date.now() - t0;
-        const CONTRE = { '16,0': '<', '-16,0': '>', '0,16': '^', '0,-16': 'v' };
-        let horsChaussee = 0, contreSens = 0, prec = null;
-        for (const p of chemin || []) {
-            const tx = Math.floor(p.x / L.TT), ty = Math.floor(p.y / L.TT);
-            if (!L.Monde.estRoute(tx, ty)) horsChaussee++;
-            if (prec && L.Monde.fleche(tx, ty) === CONTRE[(p.x - prec.x) + ',' + (p.y - prec.y)]) contreSens++;
-            prec = p;
-        }
-        const dernier = chemin && chemin.length ? chemin[chemin.length - 1] : null;
-        return { n: chemin ? chemin.length : 0, horsChaussee: horsChaussee, contreSens: contreSens, ms: ms,
-                 pres: dernier ? Math.hypot(dernier.x - b.x, dernier.y - b.y) / L.TT : null };
-    }""")
-    assert r["n"] > 0, "aucun chemin de char entre le terminus et le garage"
-    assert r["horsChaussee"] == 0, "le tracé a quitté la chaussée"
-    assert r["contreSens"] == 0, f"le tracé roule à contre-sens sur {r['contreSens']} tuiles"
-    assert r["ms"] < 100, "un A* sur la chaussée ne doit pas geler l'image"
-    assert r["pres"] is not None and r["pres"] < 12, "le chemin ne finit pas près du garage"
-
-
-def test_une_cible_hors_de_toute_route_ne_gele_pas(banc):
-    """Une cible en dehors de la carte : `null`, tout de suite — pas de plantage."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const a = L.Histoire.lieu('terminus');
-        const t0 = Date.now();
-        return { chemin: L.Monde.cheminRoute(a.x, a.y, -500, -500), ms: Date.now() - t0 };
-    }""")
-    assert r["chemin"] is None
-    assert r["ms"] < 50
-
-
-def test_chaque_quartier_a_son_circuit_ferme_sur_ses_rues(banc):
-    """⚠️ Rouge avant : un circuit de la Shop tiré depuis la fourrière partait de la chaussée
-    de sa COUR, qui ne touche aucune rue — pas un seul tronçon ne sortait. Les ancres se
-    posent sur une vraie rue (une voie, un sens, `Monde.routeLaPlusProche`)."""
-    r = banc("function (L, o) {" + COMMENCER + """
-        L.Jeu.commencer();
-        const out = {};
+        const sorties = {};
+        sorties.nullePart = (function () {
+            const a = L.Histoire.lieu('terminus');
+            const t0 = Date.now();
+            return { chemin: L.Monde.cheminRoute(a.x, a.y, -500, -500), ms: Date.now() - t0 };
+        })();
+        sorties.chemin = (function () {
+            const a = L.Histoire.lieu('terminus'), b = L.Histoire.lieu('garage');
+            const t0 = Date.now();
+            const chemin = L.Monde.cheminRoute(a.x, a.y, b.x, b.y);
+            const ms = Date.now() - t0;
+            const CONTRE = { '16,0': '<', '-16,0': '>', '0,16': '^', '0,-16': 'v' };
+            let horsChaussee = 0, contreSens = 0, prec = null;
+            for (const p of chemin || []) {
+                const tx = Math.floor(p.x / L.TT), ty = Math.floor(p.y / L.TT);
+                if (!L.Monde.estRoute(tx, ty)) horsChaussee++;
+                if (prec && L.Monde.fleche(tx, ty) === CONTRE[(p.x - prec.x) + ',' + (p.y - prec.y)]) contreSens++;
+                prec = p;
+            }
+            const dernier = chemin && chemin.length ? chemin[chemin.length - 1] : null;
+            return { n: chemin ? chemin.length : 0, horsChaussee: horsChaussee, contreSens: contreSens, ms: ms,
+                     pres: dernier ? Math.hypot(dernier.x - b.x, dernier.y - b.y) / L.TT : null };
+        })();
+        const auto = L.Vehicules.vehiculeDef('auto');
+        const circuits = {}, chronos = { max: auto.vitesse_max * 60, courses: {} };
         for (const d of L.B.defs.defis.filter(function (q) { return q.circuit; })) {
             const t0 = Date.now();
             const f = commencer(L, d.slug), p = f.piste, ms = Date.now() - t0;
@@ -100,13 +94,38 @@ def test_chaque_quartier_a_son_circuit_ferme_sur_ses_rues(banc):
                 const s = p[(i + 1) % p.length];
                 if (Math.abs(s.x - q.x) + Math.abs(s.y - q.y) !== L.TT) trous++;
             });
-            out[d.slug] = { n: p ? p.length : 0, ms: ms, horsChaussee: horsChaussee, trous: trous,
-                            dedans: p ? dedans / p.length : 0,
-                            panneau: p && panneau ? Math.hypot(p[0].x - panneau.x, p[0].y - panneau.y) / L.TT : null };
+            circuits[d.slug] = { n: p ? p.length : 0, ms: ms, horsChaussee: horsChaussee, trous: trous,
+                                 dedans: p ? dedans / p.length : 0,
+                                 panneau: p && panneau ? Math.hypot(p[0].x - panneau.x, p[0].y - panneau.y) / L.TT : null };
+            chronos.courses[d.slug] = d.tours * p.length * L.TT / d.chrono_s;
             L.Histoire.finirDefi(false, 'JUGE');
         }
-        return out;
+        sorties.circuits = circuits; sorties.chronos = chronos;
+        return sorties;
     }""")
+
+
+def test_le_chemin_de_char_suit_la_chaussee_et_roule_a_droite(trace):
+    r = trace["chemin"]
+    assert r["n"] > 0, "aucun chemin de char entre le terminus et le garage"
+    assert r["horsChaussee"] == 0, "le tracé a quitté la chaussée"
+    assert r["contreSens"] == 0, f"le tracé roule à contre-sens sur {r['contreSens']} tuiles"
+    assert r["ms"] < 100, "un A* sur la chaussée ne doit pas geler l'image"
+    assert r["pres"] is not None and r["pres"] < 12, "le chemin ne finit pas près du garage"
+
+
+def test_une_cible_hors_de_toute_route_ne_gele_pas(trace):
+    """Une cible en dehors de la carte : `null`, tout de suite — pas de plantage."""
+    r = trace["nullePart"]
+    assert r["chemin"] is None
+    assert r["ms"] < 50
+
+
+def test_chaque_quartier_a_son_circuit_ferme_sur_ses_rues(trace):
+    """⚠️ Rouge avant : un circuit de la Shop tiré depuis la fourrière partait de la chaussée
+    de sa COUR, qui ne touche aucune rue — pas un seul tronçon ne sortait. Les ancres se
+    posent sur une vraie rue (une voie, un sens, `Monde.routeLaPlusProche`)."""
+    r = trace["circuits"]
     assert sorted(r) == ["tour", "tour_erables", "tour_pointe", "tour_quais", "tour_shop"]
     for slug, c in r.items():
         assert c["n"] >= 150, f"{slug} : pas de circuit (ou un circuit ridicule) — {c}"
@@ -117,7 +136,7 @@ def test_chaque_quartier_a_son_circuit_ferme_sur_ses_rues(banc):
         assert c["ms"] < 100, f"{slug} : tirer le circuit gèle l'image ({c['ms']} ms)"
 
 
-def test_les_chronos_exigent_la_meme_vitesse_que_le_tour_du_faubourg(banc):
+def test_les_chronos_exigent_la_meme_vitesse_que_le_tour_du_faubourg(trace):
     """⚠️ Un chrono se MESURE sur la longueur du circuit, il ne s'estime pas sur la surface du
     quartier : le Tour du Faubourg est l'étalon (joué depuis la v1), les autres exigent la même
     vitesse moyenne, arrondie en faveur du joueur — et aucun ne demande de rouler à fond.
@@ -126,17 +145,7 @@ def test_les_chronos_exigent_la_meme_vitesse_que_le_tour_du_faubourg(banc):
     de temps »). L'ancien plafond, 75 %, laissait passer un étalon à 69 % : un pilote parfait au
     banc — volant au pixel, char increvable, aucune hésitation — finissait la Pointe avec 2 s de
     reste. Un joueur, lui, freine avant les coins et croise du trafic."""
-    r = banc("function (L, o) {" + COMMENCER + """
-        L.Jeu.commencer();
-        const auto = L.Vehicules.vehiculeDef('auto');
-        const out = { max: auto.vitesse_max * 60, courses: {} };
-        for (const d of L.B.defs.defis.filter(function (q) { return q.circuit; })) {
-            const p = commencer(L, d.slug).piste;
-            out.courses[d.slug] = d.tours * p.length * L.TT / d.chrono_s;
-            L.Histoire.finirDefi(false, 'JUGE');
-        }
-        return out;
-    }""")
+    r = trace["chronos"]
     etalon = r["courses"]["tour"]
     for slug, vitesse in r["courses"].items():
         assert 0.9 * etalon <= vitesse <= etalon, f"{slug} : {vitesse:.0f} px/s exigés, l'étalon en demande {etalon:.0f}"
