@@ -9,6 +9,8 @@ coupées ». Trois choses a tenir, et trois endroits ou elles se perdent :
 - le JEU VIDEO ne doit pas passer a la ligne suivante pendant qu'on parle.
 """
 
+import functools
+import json
 import re
 import shutil
 import subprocess
@@ -34,15 +36,25 @@ def test_chaque_voix_a_son_jeu_et_chaque_jeu_sa_voix():
     assert not orphelins, f"ces jeux ne sont plus la voix de personne : {orphelins}"
 
 
-@pytest.mark.parametrize("voix", VOIX, ids=lambda v: v["slug"])
-def test_le_jeu_dit_exactement_les_mots_de_la_boite(voix):
+#: ⚠️ **TROIS JUGES, PAS TROIS FOIS 770** (vague C, 28 sept. 2026) : les trois règles du jeu
+#: écrit (les mots, les balises, l'accent) étaient paramétrées par voix — 2 300 cas pytest pour
+#: des lectures de chaînes. Chacune parcourt maintenant toutes les voix et nomme TOUTES les
+#: fautives d'un coup, chacune avec le message qu'elle avait.
+def _fautes(regle) -> str:
+    return "\n".join(faute for voix in VOIX for faute in regle(voix))
+
+
+def test_le_jeu_dit_exactement_les_mots_de_la_boite():
     """⚠️ Le jeu d'une replique de mission est colle a elle (`jeu=`, dans son fichier), donc une
     ligne inseree ne decale plus celui de sa voisine. Ce juge reste le filet des textes qui ne
     sont PAS des missions (passants, repos, journal, ouverture — leur slug suit une table) et de
     celui qui retouche un mot d'un cote sans l'autre : la voix dirait autre chose que la boite."""
-    dit = interpretation.dit(voix)
-    assert interpretation.mots(dit) == interpretation.mots(voix["texte"]), (
-        f"{voix['slug']} : la voix dirait « {dit} » sous « {voix['texte']} »")
+    def regle(voix):
+        dit = interpretation.dit(voix)
+        if interpretation.mots(dit) != interpretation.mots(voix["texte"]):
+            yield f"{voix['slug']} : la voix dirait « {dit} » sous « {voix['texte']} »"
+    fautes = _fautes(regle)
+    assert not fautes, fautes
 
 
 def test_chaque_jeu_porte_une_emotion_de_ton():
@@ -58,29 +70,37 @@ def test_chaque_jeu_porte_une_emotion_de_ton():
     assert not sans_ton, f"ces jeux n'expriment aucun ton ({sans_ton})"
 
 
-@pytest.mark.parametrize("voix", VOIX, ids=lambda v: v["slug"])
-def test_les_balises_sont_celles_que_v3_comprend(voix):
+def test_les_balises_sont_celles_que_v3_comprend():
     """Une balise inconnue se LIT a voix haute. Et `<break time>` est du v2 :
     v3 le prononce aussi, ou l'ignore — dans les deux cas, pas de pause."""
-    dit = interpretation.dit(voix)
-    inconnues = [b for b in interpretation.balises(dit) if b not in interpretation.BALISES]
-    assert not inconnues, f"{voix['slug']} : balises inconnues {inconnues}"
-    reste = re.sub(r"\[[^\[\]]*\]", "", dit)
-    assert "[" not in reste and "]" not in reste, f"{voix['slug']} : un crochet orphelin"
-    assert "<" not in dit, f"{voix['slug']} : pas de SSML, v3 ne le lit pas"
+    def regle(voix):
+        dit = interpretation.dit(voix)
+        inconnues = [b for b in interpretation.balises(dit) if b not in interpretation.BALISES]
+        if inconnues:
+            yield f"{voix['slug']} : balises inconnues {inconnues}"
+        reste = re.sub(r"\[[^\[\]]*\]", "", dit)
+        if "[" in reste or "]" in reste:
+            yield f"{voix['slug']} : un crochet orphelin"
+        if "<" in dit:
+            yield f"{voix['slug']} : pas de SSML, v3 ne le lit pas"
+    fautes = _fautes(regle)
+    assert not fautes, fautes
 
 
-@pytest.mark.parametrize("voix", VOIX, ids=lambda v: v["slug"])
-def test_une_balise_d_accent_est_seule_et_en_tete(voix):
+def test_une_balise_d_accent_est_seule_et_en_tete():
     """docs/ecrire-un-accent.md, docs/jeu-d-acteur.md § 3.8 : v3 ne tolere qu'UNE
     balise d'accent par replique, EN TETE — elle prendrait la place du ton si elle
     trainait au milieu."""
-    dit = interpretation.dit(voix)
-    b = interpretation.balises(dit)
-    accents = [x for x in b if x in interpretation.ACCENTS]
-    assert len(accents) <= 1, f"{voix['slug']} : plus d'une balise d'accent {accents}"
-    if accents:
-        assert b[0] == accents[0], f"{voix['slug']} : l'accent doit ouvrir la replique"
+    def regle(voix):
+        dit = interpretation.dit(voix)
+        b = interpretation.balises(dit)
+        accents = [x for x in b if x in interpretation.ACCENTS]
+        if len(accents) > 1:
+            yield f"{voix['slug']} : plus d'une balise d'accent {accents}"
+        elif accents and b[0] != accents[0]:
+            yield f"{voix['slug']} : l'accent doit ouvrir la replique"
+    fautes = _fautes(regle)
+    assert not fautes, fautes
 
 
 def test_le_script_envoie_le_jeu_avec_le_modele_qui_le_lit():
@@ -159,15 +179,52 @@ ffmpeg_present = pytest.mark.skipif(
 PRESENTES = [v for v in VOIX if audio.chemin_voix(v).is_file()]
 
 
-def _ffmpeg(chemin, filtre):
-    """⚠️ Les filtres de mesure ecrivent au niveau `info`, sur la sortie d'erreur."""
-    return subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", str(chemin), "-af", filtre,
-                           "-f", "null", "-"], capture_output=True, text=True).stderr
+def _graphe(chemin, graphe: str) -> str:
+    """Un ffmpeg à plusieurs branches (`asplit`), sa sortie d'erreur. ⚠️ Avec un délai : un ffmpeg
+    figé (voir `_mesure`) est relancé une fois au lieu de figer la suite."""
+    for essai in (1, 2):
+        try:
+            return subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", str(chemin), "-filter_complex", graphe,
+                                   "-map", "[s]", "-f", "null", "-"], capture_output=True, text=True, timeout=60).stderr
+        except subprocess.TimeoutExpired:
+            if essai == 2:
+                raise
 
 
-def _duree_s(chemin):
-    return float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
-                                 "-of", "csv=p=0", str(chemin)], capture_output=True, text=True).stdout)
+@functools.cache
+def _mesure(chemin: Path) -> dict:
+    """⚠️ **UNE PASSE PAR FICHIER, LUE PAR LES QUATRE JUGES** (vague C, 28 sept. 2026) : ils
+    lançaient chacun leurs ffprobe et leurs ffmpeg — plus de trois mille sous-processus pour
+    770 voix. Un `ffprobe` (la durée, la fréquence, l'étiquette `comment`) ; UN `ffmpeg` qui
+    décode le fichier entier une fois et le partage (`asplit`) entre le temps mort (à l'envers)
+    et le pic ; et le niveau sans le temps mort, à part, comme avant. Chaque mesure se lit comme
+    avant, dans les lignes de SON filtre.
+
+    ⚠️ Le niveau reste une passe à lui : dans le même graphe, sa branche coupée (`atrim`) finit
+    juste avant les autres, et ffmpeg 8 s'y est figé, sans rendre la main — quatre fois sur
+    deux mille, jamais sans elle en trois mille. Une suite qui attend pour toujours est pire
+    qu'un sous-processus de plus. Et le graphe qui reste a un délai (`_graphe`).
+
+    ⚠️ Les filtres de mesure ecrivent au niveau `info`, sur la sortie d'erreur."""
+    infos = json.loads(subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries",
+         "format=duration:format_tags=comment:stream=sample_rate", "-of", "json", str(chemin)],
+        capture_output=True, text=True).stdout)
+    entier = _graphe(chemin, "[0:a]asplit=2[a][b];[a]areverse,silencedetect=n=-50dB:d=0.02,anullsink;"
+                             "[b]ebur128=peak=sample[s]")
+    silences = "\n".join(ligne for ligne in entier.splitlines() if "silencedetect" in ligne)
+    trouve = re.search(r"silence_start: -?0(?:\.0+)?\b.*?silence_duration: ([\d.]+)", silences, re.S)
+    fin = float(infos["format"]["duration"]) - interpretation.TEMPS_MORT_S
+    sans_la_fin = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", str(chemin), "-af",
+                                  f"atrim=end={fin:.3f},ebur128", "-f", "null", "-"],
+                                 capture_output=True, text=True).stderr
+    return {
+        "comment": (infos["format"].get("tags") or {}).get("comment", ""),
+        "frequence": "\n".join(f["sample_rate"] for f in infos["streams"]),
+        "queue": float(trouve.group(1)) if trouve else 0.0,
+        "pic": float(re.findall(r"Peak:\s+(-?[\d.]+) dBFS", entier)[-1]),
+        "niveau": float(re.findall(r"I:\s+(-?[\d.]+) LUFS", sans_la_fin)[-1]),
+    }
 
 
 @ffmpeg_present
@@ -176,9 +233,7 @@ def test_une_voix_qui_sonnait_dans_une_piece_a_ete_sechee(voix):
     """C'est le FICHIER qui le prouve (son etiquette `comment`) : une replique
     regeneree par un chemin qui oublie l'isolateur reviendrait dans sa piece, et
     la liste de `VOIX_A_SECHER` continuerait de le promettre."""
-    tags = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format_tags=comment",
-                           "-of", "default=nw=1:nk=1", str(audio.chemin_voix(voix))],
-                          capture_output=True, text=True).stdout.strip()
+    tags = _mesure(audio.chemin_voix(voix))["comment"]
     assert tags == interpretation.MARQUE_SECHEE, f"{voix['slug']} n'est pas passee par l'isolateur"
 
 
@@ -187,9 +242,7 @@ def test_une_voix_qui_sonnait_dans_une_piece_a_ete_sechee(voix):
 def test_une_voix_de_la_rue_garde_ses_aigus(voix):
     """En 22 kHz, tout ce qui depasse 8 kHz etait coupe : les passants, les radios et
     les pubs sonnaient etouffes a cote de l'histoire, qui est en 44 kHz."""
-    frequence = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries",
-                                "stream=sample_rate", "-of", "csv=p=0", str(audio.chemin_voix(voix))],
-                               capture_output=True, text=True).stdout.strip()
+    frequence = _mesure(audio.chemin_voix(voix))["frequence"]
     assert frequence == "44100", f"{voix['slug']} : {frequence} Hz"
 
 
@@ -199,9 +252,7 @@ def test_une_voix_finit_sur_un_temps_mort(voix):
     """Mesure avant : les 19 repliques du narrateur finissaient a 10-47 ms du
     dernier son. Un navigateur qui enchaine sur `onended` coupe alors le souffle
     de la derniere syllabe."""
-    sortie = _ffmpeg(audio.chemin_voix(voix), "areverse,silencedetect=n=-50dB:d=0.02")
-    trouve = re.search(r"silence_start: -?0(?:\.0+)?\b.*?silence_duration: ([\d.]+)", sortie, re.S)
-    queue = float(trouve.group(1)) if trouve else 0.0
+    queue = _mesure(audio.chemin_voix(voix))["queue"]
     assert queue >= 0.8 * interpretation.TEMPS_MORT_S, (
         f"{voix['slug']} : {queue * 1000:.0f} ms de silence a la fin, "
         f"pour {interpretation.TEMPS_MORT_S * 1000:.0f} voulues")
@@ -223,11 +274,10 @@ def test_une_voix_est_au_niveau_des_autres(voix):
     ⚠️ Le pic, lui, se mesure sur le fichier entier et avec 0,2 dB de marge
     seulement : l'encodeur depassait jusqu'a 2,3 dB, et c'est la finition qui
     remesure et reencode — ce juge-ci dit qu'elle l'a bien fait."""
-    chemin = audio.chemin_voix(voix)
-    pic = float(re.findall(r"Peak:\s+(-?[\d.]+) dBFS", _ffmpeg(chemin, "ebur128=peak=sample"))[-1])
+    m = _mesure(audio.chemin_voix(voix))
+    pic = m["pic"]
     assert pic <= interpretation.PIC_MAX_DBFS + 0.2, f"{voix['slug']} : pic a {pic:+.1f} dBFS"
-    fin = _duree_s(chemin) - interpretation.TEMPS_MORT_S
-    niveau = float(re.findall(r"I:\s+(-?[\d.]+) LUFS", _ffmpeg(chemin, f"atrim=end={fin:.3f},ebur128"))[-1])
+    niveau = m["niveau"]
     if niveau <= -69:
         return
     au_niveau = abs(niveau - interpretation.NIVEAU_LUFS) <= 1.5
