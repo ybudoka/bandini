@@ -234,6 +234,20 @@ dans `generer`, juste après `ouvrir_les_rues(ville)`, avant le bloc `if nord`),
 - [ ] Juges ciblés + ruff verts → atterrir (`cherry-pick` sur `dev` à jour, `merge --ff-only`), pousser ; puis la
   suite complète (mémoire « Atterrir avant la suite complète »).
 
+## Fiche du char en montre
+
+_Demande de Martin (28 sept. 2026, après la livraison) :_ « je veux un véhicule en montre en diagonale sur le coin de
+rue, il change de temps en temps » — et oui aussi chez Ti-Pout.
+
+- **Prestige** : au coin de l'îlot, à côté de la façade, sur une dalle de pavé de 2 × 2 tuiles (peinte au sol, pas
+  un décor : un décor de plus décalerait le hasard de la ville), un char en diagonale (45°) tourné vers le coin.
+- **Ti-Pout** : dans le coin de sa cour côté rue, une minoune en biais sur le gravier.
+- **Il change chaque jour de jeu** : le modèle se lit au jour (`(jour - 1) % n`, sans dé) parmi ceux du lot ; il n'est
+  remplacé que hors champ. Vendu, il revient le lendemain ; volé, quand le volé est oublié.
+- **Au comptoir** : en tête du menu, « EN MONTRE », au prix de son modèle ; volé, le neuf sonne.
+- **La donnée** : `lot["montre"] = {x, y, angle, modeles}` (x, y : le coin nord-ouest des 2 × 2 tuiles) ; la place
+  se MESURE (le coin de la façade côté croisement, sinon l'autre), et la `cour` l'englobe.
+
 ## Notes
 
 ### Les deux vagues ensemble (28 sept. 2026)
