@@ -9,11 +9,13 @@ tuiles dans l'axe, une de chaque cote, et plus large encore devant un lieu de mi
 tient l'autre moitie de la promesse : on DEPLACE, on ne re-tire pas la ville.
 """
 
+import pickle
 from collections import Counter
 from functools import lru_cache
 from unittest import mock
 
 import pytest
+import villes
 
 from app import autobus, carte, chantiers, devants, missions
 
@@ -26,13 +28,19 @@ INTACT = ("sol", "voie", "portes", "devantures", "residences", "lampes", "rampes
           "points_interet", "interieurs", "arrets", "intersections", "portes_garage")
 
 
-@lru_cache(maxsize=None)
 def _ville(graine: int, deplace: bool = True) -> dict:
-    """La ville de cette graine, avec ou sans le deplacement (le temoin)."""
+    """La ville de cette graine, avec ou sans le deplacement (le temoin) — en copie, chaque fois."""
     if deplace:
-        return carte.generer(graine=graine)
+        return villes.generer(graine=graine)
+    return pickle.loads(_temoin(graine))
+
+
+@lru_cache(maxsize=None)
+def _temoin(graine: int) -> bytes:
+    """⚠️ Le temoin se genere sous `mock.patch` : la ville gardee des juges (`villes`) ne le
+    verrait pas. Garde ici en octets, pour que chaque juge recoive SA copie."""
     with mock.patch.object(devants, "deplacer", lambda chantier, ville: None):
-        return carte.generer(graine=graine)
+        return pickle.dumps(carte.generer(graine=graine), protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def _bouche(ville: dict) -> list[str]:
@@ -294,6 +302,7 @@ def test_le_deplacement_ne_tire_aucun_de():
                 mock.patch.object(carte.Des, "entier", side_effect=AssertionError("un de tire")):
             return original(chantier, ville)
 
+    # ⚠️ Générée sous l'espion : jamais par `villes`.
     with mock.patch.object(devants, "deplacer", surveille):
         ville = carte.generer(graine=1)
     assert ville["devant"]

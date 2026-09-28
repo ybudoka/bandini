@@ -27,6 +27,6 @@ def test_les_reglages_de_l_attente_tiennent_debout():
 
 
 def test_le_paquet_porte_l_attente():
-    from app import carte
-    ville = carte.generer()
+    import villes
+    ville = villes.generer()
     assert ville["autobus"]["attente"] == autobus.ATTENTE

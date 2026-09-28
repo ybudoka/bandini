@@ -1,5 +1,7 @@
 """La ville s'agrandit au nord (docs/jalons/la-ville-s-agrandit-au-nord.md)."""
 
+import villes
+
 from app import carte
 
 
@@ -75,6 +77,8 @@ def test_tout_ce_que_la_bande_nomme_commence_par_nord():
 
 def test_la_bande_ne_tire_rien_de_la_ville():
     """Même graine, même bande ; et bâtir la bande ne change pas la ville."""
+    # ⚠️ Deux générations POUR DE VRAI, de part et d'autre de la bande : la ville gardée
+    # (`villes`) ne verrait pas ce que bâtir la bande aurait sali.
     avant = carte.generer()
     a, b = _bande(), _bande()
     assert a.sol == b.sol and a.decor == b.decor
@@ -84,7 +88,7 @@ def test_la_bande_ne_tire_rien_de_la_ville():
 # --- La translation (tâche 4) ----------------------------------------------------------------
 
 def _ville_d_avant():
-    return carte.generer(nord=False)
+    return villes.generer(nord=False)
 
 
 def _decalee(ville):
@@ -181,7 +185,7 @@ def test_les_paires_descendent_aussi():
 def test_la_carte_finie_a_la_bande_au_dessus_de_la_ville_d_avant():
     from app import nord
     avant = _ville_d_avant()
-    apres = carte.generer()
+    apres = villes.generer()
     n = nord.DECALAGE_NORD
     assert (apres["largeur"], apres["hauteur"]) == (avant["largeur"], avant["hauteur"] + n)
     couture = {(x, n) for x in nord.colonnes_de_la_couture()}
@@ -210,14 +214,14 @@ def _voies_de(v, slug):
 
 
 def test_on_roule_de_la_ville_au_canton_et_on_en_revient():
-    v = carte.generer()
+    v = villes.generer()
     assert set(_voies_de(v, "canton")) & _atteint(v, _voies_de(v, "faubourg")[0]), "le Faubourg → le Canton"
     assert set(_voies_de(v, "faubourg")) & _atteint(v, _voies_de(v, "canton")[0]), "le Canton → le Faubourg"
     assert set(_voies_de(v, "gare")) & _atteint(v, _voies_de(v, "friches")[0]), "les Friches → la Gare"
 
 
 def test_la_bande_se_marche_depuis_le_terminus():
-    v = carte.generer()
+    v = villes.generer()
     t = next(p for p in v["points_interet"] if p["slug"] == "terminus")
     groupe = next(g for g in carte.composantes_par_terre(v)["ville"] if (t["x"], t["y"]) in g)
     assert (0, 50) in groupe, "le trottoir de ceinture des Friches ne se rejoint pas à pied"
@@ -227,7 +231,7 @@ def test_la_bande_se_marche_depuis_le_terminus():
 
 def test_les_trois_districts_de_la_bande_et_leurs_zones():
     from app import nord
-    v = carte.generer()
+    v = villes.generer()
     assert [d["slug"] for d in v["districts"][-3:]] == ["friches", "canton", "gare"]
     for slug in ("friches", "canton", "gare"):
         z = next(z for z in v["zones"] if z["slug"] == slug)
@@ -236,7 +240,7 @@ def test_les_trois_districts_de_la_bande_et_leurs_zones():
 
 
 def test_aucun_nom_de_la_bande_n_entre_en_collision():
-    v = carte.generer()
+    v = villes.generer()
     lieux = [p["lieu"] for p in v["portes"]]
     assert len(lieux) == len(set(lieux)), [x for x in lieux if lieux.count(x) > 1][:5]
     assert all(p["interieur"] in v["interieurs"] for p in v["portes"])
@@ -244,7 +248,7 @@ def test_aucun_nom_de_la_bande_n_entre_en_collision():
 
 def test_les_passages_de_blocs_suivent_la_ville():
     from app import blocs, nord
-    v = carte.generer()
+    v = villes.generer()
     for b in blocs.BLOCS:
         assert blocs.erreurs(b, v) == [], b["slug"]
     rang = next(b for b in blocs.pour_le_navigateur() if b["slug"] == "rang")
@@ -255,7 +259,7 @@ def test_les_croisements_de_la_couture_s_ouvrent_au_nord():
     """⚠️ Les chars du navigateur choisissent leur sortie par `bras` (`Vehicules`, `inter.bras`) : sans « N »,
     la circulation de la ville ne monterait jamais dans la bande, même si les flèches y mènent."""
     from app import nord
-    v, n = carte.generer(), nord.DECALAGE_NORD
+    v, n = villes.generer(), nord.DECALAGE_NORD
     couture = nord.colonnes_de_la_couture()
     boites = [i for i in v["intersections"] if i["y"] <= n + carte.TROTTOIR < i["y"] + i["h"]
               and any(i["x"] <= x < i["x"] + i["l"] for x in couture)]
@@ -272,13 +276,13 @@ def test_une_autre_graine_se_genere_et_se_decale_aussi():
     elle ne plante pas la génération. Treize fichiers de juges bâtissent d'autres graines."""
     from app import nord
     for graine in (1, 7, 777):
-        v = carte.generer(graine=graine)
+        v = villes.generer(graine=graine)
         assert v["hauteur"] == 304 + nord.DECALAGE_NORD, graine
 
 
 def test_les_cibles_de_la_galerie_descendent_avec_elle():
     from app import nord
-    avant, v = _ville_d_avant(), carte.generer()
+    avant, v = _ville_d_avant(), villes.generer()
     a = next(j for j in avant["jeux_de_foire"] if j.get("cibles"))
     b = next(j for j in v["jeux_de_foire"] if j["slug"] == a["slug"])
     assert [c[1] for c in b["cibles"]] == [c[1] + nord.DECALAGE_NORD for c in a["cibles"]]

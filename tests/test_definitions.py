@@ -5,6 +5,7 @@ from app import definitions
 
 
 def test_le_paquet_est_deterministe():
+    # ⚠️ Deux constructions POUR DE VRAI : la fixture `paquets` n'en ferait qu'une.
     a, b = definitions.construire(), definitions.construire()
     for nom in ("definitions", "carte"):
         assert getattr(a, nom).corps == getattr(b, nom).corps, nom
@@ -12,7 +13,7 @@ def test_le_paquet_est_deterministe():
         assert len(getattr(a, nom).etag) == 16, nom
 
 
-def test_le_paquet_reste_leger():
+def test_le_paquet_reste_leger(paquets):
     """⚠️ Budget releve a 600 Ko bruts le 13 sept. 2026 (demande de Martin).
 
     Mesure du 13 sept. 2026 : 370 Ko bruts / 43 Ko gzip, dont 306 Ko de carte
@@ -148,7 +149,6 @@ def test_le_paquet_reste_leger():
     catalogue coûte depuis que les objectifs voyagent à part (24 sept.) ; soixante-dix missions de M16 restent
     à écrire, ≈ 3,5 Ko. Le remède reste celui d'en haut.
     """
-    paquets = definitions.construire()
     for nom, brut_max, fil_max in (("definitions", 270_000, 62_000), ("carte", 720_000, 68_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
@@ -157,6 +157,7 @@ def test_le_paquet_reste_leger():
 
 
 def test_l_empreinte_change_avec_le_contenu(monkeypatch):
+    # ⚠️ Construit sous un `monkeypatch` du jeu : la fixture `paquets` ne le verrait pas.
     avant = definitions.construire()
     monkeypatch.setattr(definitions.economie, "ARGENT_DEPART", 51)
     apres = definitions.construire()
@@ -171,6 +172,7 @@ def test_l_empreinte_des_definitions_suit_la_carte(monkeypatch):
     sans qu'un seul catalogue bouge doit quand meme faire oublier la position."""
     from app import carte
 
+    # ⚠️ Construit sous un `monkeypatch` du jeu : la fixture `paquets` ne le verrait pas.
     avant = definitions.construire()
     monkeypatch.setattr(carte, "GRAINE", carte.GRAINE + 1)
     # ⚠️ Trois défauts depuis le 27 sept. 2026 : `nord` (la bande nord, `app/nord.py`).
@@ -187,11 +189,10 @@ def test_le_paquet_contient_tout(paquet):
     assert json.dumps(paquet)  # serialisable
 
 
-def test_la_carte_voyage_a_part_et_se_reconnait():
+def test_la_carte_voyage_a_part_et_se_reconnait(paquets):
     """Les definitions ne portent plus la carte, seulement son empreinte ; la
     carte porte la sienne, et c'est la meme. C'est ce que le navigateur verifie
     avant de les remettre ensemble."""
-    paquets = definitions.construire()
     defs = json.loads(paquets.definitions.corps)
     carte = json.loads(paquets.carte.corps)
     assert "carte" not in defs, "la carte est encore dans le paquet"

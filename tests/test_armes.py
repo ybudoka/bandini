@@ -152,9 +152,9 @@ def test_un_coup_de_feu_fait_du_bruit_et_le_marche_noir_le_vend():
 
 
 def test_les_regles_des_armes_voyagent():
-    from app import definitions
+    import villes
 
-    paquet = definitions.assembler()
+    paquet = villes.assembler()
     assert paquet["armes_regles"] == armes.REGLES
     for a in paquet["armes"]:
         for cle in ("auto", "dispersion_max", "bruit", "feu_s", "assomme"):

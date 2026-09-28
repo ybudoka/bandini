@@ -106,7 +106,9 @@ def test_le_lieu_neuf_du_pari_est_bien_a_la_shop():
     assert any("E" in rangee for rangee in shop["plan"]), (
         "le comptoir du fond a demenage hors de La Shop : le trajet ne coute plus rien"
     )
-    portes = [p for p in carte.exporter()["portes"] if p.get("lieu") == "electronique"]
+    import villes
+
+    portes = [p for p in villes.exporter()["portes"] if p.get("lieu") == "electronique"]
     assert len(portes) == 1, f"{len(portes)} portes pour Electronique Turcotte"
 
 

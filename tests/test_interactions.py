@@ -10,7 +10,9 @@ import json
 
 import pytest
 
-from app import carte, definitions, interactions, missions, recherche
+import villes
+
+from app import carte, interactions, missions, recherche
 
 
 def _mots_affiches():
@@ -32,7 +34,7 @@ def test_le_catalogue_voyage_dans_le_paquet_et_se_lit_en_json():
     assert set(exporte) == {"asseoir", "fouiller", "boire", "barbecue", "parcometre", "caresser", "borne",
                              "pourboire", "photo", "affiche"}
     assert json.loads(json.dumps(exporte)) == exporte, "des listes et des dicts, jamais des tuples"
-    assert definitions.assembler()["interactions"] == exporte, "le navigateur lit `B.defs.interactions`"
+    assert villes.assembler()["interactions"] == exporte, "le navigateur lit `B.defs.interactions`"
 
 
 def test_un_decor_ne_donne_qu_un_seul_geste():

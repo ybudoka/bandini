@@ -1,11 +1,13 @@
 """Le pont de glace, côté Python (docs/jalons/le-pont-de-glace.md) : le chemin se lit sur la ville finie
 sans la toucher — de l'eau entre l'île et une terre qui mène à une route — et le grand froid est en hiver."""
 
-from app import calendrier, carte, definitions, pont_de_glace
+import villes
+
+from app import calendrier, carte, pont_de_glace
 
 
 def test_le_chemin_est_de_l_eau_de_l_ile_a_une_route():
-    v = carte.generer()
+    v = villes.generer()
     c = pont_de_glace.chemin(v, carte.LEGENDE)
     assert c, "pas de chemin : la baie ne prendrait nulle part"
     sol, ile = v["sol"], v["ile"]
@@ -19,11 +21,11 @@ def test_le_chemin_est_de_l_eau_de_l_ile_a_une_route():
 
 
 def test_le_chemin_ne_touche_pas_la_ville_et_voyage_au_navigateur():
-    v = carte.generer()
+    v = villes.generer()
     avant = repr(v)
     assert pont_de_glace.chemin(v, carte.LEGENDE) == pont_de_glace.chemin(v, carte.LEGENDE)
     assert repr(v) == avant
-    assert definitions.assembler()["pont"] == pont_de_glace.pour_le_navigateur(carte.exporter(), carte.LEGENDE)
+    assert villes.assembler()["pont"] == pont_de_glace.pour_le_navigateur(villes.exporter(), carte.LEGENDE)
 
 
 def test_le_grand_froid_est_en_hiver_et_jamais_le_premier_jour():

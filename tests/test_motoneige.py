@@ -1,7 +1,9 @@
 """La motoneige, côté Python (docs/jalons/la-motoneige.md) : sa fiche, et la course des bois de La Pointe
 lue sur la ville finie."""
 
-from app import carte, definitions, missions, motoneige, vehicules
+import villes
+
+from app import missions, motoneige, vehicules
 
 
 def test_la_fiche_de_la_motoneige():
@@ -13,7 +15,7 @@ def test_la_fiche_de_la_motoneige():
 
 
 def test_la_course_suit_les_sentiers_du_phare_et_revient():
-    v = carte.generer()
+    v = villes.generer()
     c = motoneige.course(v)
     assert c, "pas de course : les sentiers des bois ne mènent nulle part"
     sentiers = {tuple(t) for t in v["chemins_des_bois"]}
@@ -22,7 +24,7 @@ def test_la_course_suit_les_sentiers_du_phare_et_revient():
     assert len(c["balises"]) == 2 * motoneige.COURSE["balises"]
     phare = next(p for p in v["points_interet"] if p["slug"] == "phare")
     assert abs(c["depart"][0] - phare["x"]) + abs(c["depart"][1] - phare["y"]) < 40
-    assert definitions.assembler()["motoneige"] == motoneige.pour_le_navigateur(carte.exporter())
+    assert villes.assembler()["motoneige"] == motoneige.pour_le_navigateur(villes.exporter())
 
 
 def test_le_defi_l_hiver_apres_le_tour_des_erables():

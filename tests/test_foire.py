@@ -10,6 +10,7 @@ ces phrases.
 """
 
 import pytest
+import villes
 
 from app import carte, economie
 
@@ -19,7 +20,7 @@ JEUX = ("galerie_tir", "marteau_force", "peche_canards")
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.exporter()
+    return villes.exporter()
 
 
 def fuite_de_la_foire(ville, sol):

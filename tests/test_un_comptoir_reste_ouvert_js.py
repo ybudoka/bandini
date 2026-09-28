@@ -13,7 +13,9 @@ ligne — un juge qui appellerait `item.faire()` ne verrait pas le menu partir.
 
 import json
 
-from app import carte, missions
+import villes
+
+from app import missions
 
 #: Les points qui ne passent PAS par un menu (voir test_interieurs_js.py).
 # Le point d'un personnage posé dedans se lit dans le catalogue (voir `test_interieurs_js.py`).
@@ -36,8 +38,9 @@ def referme(libelle: str) -> bool:
     return libelle in QUI_FERMENT or libelle.startswith(BILLET)
 
 #: Les comptoirs de la ville livrée, un par type et par famille (`genre`).
+#: ⚠️ Lue à la collecte (les juges s'y paramètrent) : par `villes`, la ville gardée du processus.
 COMPTOIRS = sorted({(p["type"], p.get("genre") or "")
-                    for piece in carte.exporter()["interieurs"].values()
+                    for piece in villes.exporter()["interieurs"].values()
                     for p in piece["points"] if p["type"] not in SANS_MENU})
 
 #: Ouvrir un menu comme le jeu l'ouvre — `refaire` compris —, poser le pouce

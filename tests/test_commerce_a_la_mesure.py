@@ -40,6 +40,7 @@ def _mesuree(graine: int = carte.GRAINE, sans_passage: bool = False) -> tuple[di
     if sans_passage:
         vitrines.a_la_mesure = lambda *a, **k: {}
     try:
+        # ⚠️ Générée sous l'espion : la ville gardée des juges (`villes`) ne le verrait pas.
         ville = carte.generer(graine=graine, nord=False)
     finally:
         carte._Chantier.poser_devanture = original

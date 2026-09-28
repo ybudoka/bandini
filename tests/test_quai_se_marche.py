@@ -22,13 +22,14 @@ Et **303 objets de saleté** dans la ville.
 from __future__ import annotations
 
 import pytest
+import villes
 
 from app import carte
 
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.exporter()
+    return villes.exporter()
 
 
 def atteignables(ville) -> set[tuple[int, int]]:

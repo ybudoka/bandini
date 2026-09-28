@@ -11,6 +11,7 @@ juge ici, sur la ville que le navigateur reçoit.
 """
 
 import pytest
+import villes
 
 from app import autobus, carte, chantiers
 
@@ -21,7 +22,7 @@ from app import autobus, carte, chantiers
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.exporter()
+    return villes.exporter()
 
 
 def boucles(ville):
@@ -210,6 +211,7 @@ def test_les_lignes_ne_deplacent_rien_de_la_ville(monkeypatch):
     ⚠️ La saleté se déplace APRÈS les lignes (`salete.deplacer`) et contourne
     leurs abribus, comme le mobilier : on la retire des deux villes."""
     from app import devants, metro, mobilier, salete
+    # ⚠️ Généré sous `monkeypatch` : la ville gardée (`villes`) ne verrait pas les patchs.
     monkeypatch.setattr(salete, "deplacer", lambda chantier, ville, graine: {})
     # ⚠️ Et le devant des portes (`devants.deplacer`) : il vient APRES tout, et lit les abribus
     # pour ne rien leur poser dessus — sans eux, il deplace autre chose. Il part des deux villes.

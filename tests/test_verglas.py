@@ -1,7 +1,9 @@
 """La tempête de verglas, côté Python (docs/jalons/la-tempete-de-verglas.md) : ses nombres se tiennent,
 ses quartiers existent, et le paquet la porte au navigateur."""
 
-from app import carte, definitions, economie, vehicules, verglas
+import villes
+
+from app import economie, vehicules, verglas
 
 
 def test_trois_jours_jamais_au_debut_et_la_glace_fond_le_soir():
@@ -21,7 +23,7 @@ def test_la_glace_retire_et_la_police_tarde():
 
 
 def test_les_quartiers_au_noir_existent_et_chaque_jour_en_eteint():
-    districts = {z.get("district") for z in carte.generer()["zones"]}
+    districts = {z.get("district") for z in villes.generer()["zones"]}
     p = verglas.PANNES
     assert set(p["quartiers"]) <= districts, set(p["quartiers"]) - districts
     assert len(p["par_jour"]) == verglas.TEMPETE["jours"]
@@ -32,7 +34,7 @@ def test_le_clairon_et_le_paquet():
     c = verglas.CLAIRON
     assert c["veille"] == c["veille"].upper() and c["pendant"] == c["pendant"].upper().replace("{QUARTIERS}", "{quartiers}")
     assert "{quartiers}" in c["pendant"]
-    assert definitions.assembler()["verglas"] == verglas.pour_le_navigateur()
+    assert villes.assembler()["verglas"] == verglas.pour_le_navigateur()
 
 
 def test_les_generatrices_tiennent_l_economie():

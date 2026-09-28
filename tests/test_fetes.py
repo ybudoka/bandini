@@ -1,15 +1,17 @@
 """Le temps des Fêtes, côté Python (docs/jalons/le-temps-des-fetes.md) : décembre, le sapin sur une place du
 Faubourg, et les dindes qui tiennent l'économie."""
 
-from app import calendrier, carte, definitions, economie, fetes
+import villes
+
+from app import calendrier, carte, economie, fetes
 
 
 def test_decembre_et_le_sapin_du_faubourg():
     assert fetes.jours() and all(calendrier.mois(j) == "decembre" for j in fetes.jours())
-    v = carte.exporter()
+    v = villes.exporter()
     s = fetes.sapin(v)
     assert s  # sa place : `test_le_sapin_a_une_place_libre_sur_la_place`
-    assert definitions.assembler()["fetes"] == fetes.pour_le_navigateur(v)
+    assert villes.assembler()["fetes"] == fetes.pour_le_navigateur(v)
 
 
 def test_les_dindes_tiennent_l_economie():
@@ -24,7 +26,7 @@ def test_le_sapin_a_une_place_libre_sur_la_place():
     autour, sans rue ; et l'amuseur de la scène voisine garde sa place."""
     from app import devants
 
-    v = carte.exporter()
+    v = villes.exporter()
     s = fetes.sapin(v)
     assert s
     pris = {(d["x"], d["y"]) for d in v["decor"]}

@@ -17,13 +17,15 @@ la constante ». Ces juges-ci sont ce « avant » — ils ne changent rien à la
 ville, et ils rendent le changement possible.
 """
 
+import villes
+
 from app import carte
 
 
 def test_la_largeur_du_trottoir_descend_dans_le_paquet():
     """⚠️ Le défaut qui revient : une fiche que le navigateur ne lisait pas. Ici
     c'est le symétrique — un nombre que le navigateur réécrivait tout seul."""
-    grille = carte.exporter()["grille"]
+    grille = villes.exporter()["grille"]
     assert grille["trottoir"] == carte.TROTTOIR
     assert grille["trottoir"] >= 1
 
@@ -41,7 +43,7 @@ def test_la_traverse_fait_exactement_la_largeur_du_trottoir():
     sa hauteur ; une « : », l'inverse. Mesuré sur le mauvais axe, on lit la
     largeur de la RUE (deux ou quatre voies) et le juge accuse la géométrie
     d'une chose qu'elle n'a jamais dite."""
-    ville = carte.exporter()
+    ville = villes.exporter()
     sol, largeur, hauteur = ville["sol"], ville["largeur"], ville["hauteur"]
     passages = {"=": [], ":": []}
     for y in range(hauteur):
@@ -134,7 +136,7 @@ def test_la_largeur_de_la_ville_suit_sa_trame():
     deux sens. ⚠️ C'est ce qui a permis de rétrécir les rues et d'élargir les
     blocs sans rien casser : un juge de trame ne dit rien de la beauté, mais il
     dit tout de suite si une rue a été comptée deux fois."""
-    ville = carte.exporter()
+    ville = villes.exporter()
     # ⚠️ À l'est de la trame, le relief (21 sept. 2026) : la carte s'allonge d'une
     # chaîne de montagnes après la dernière rue, et pas une colonne de blocs ne bouge.
     largeur_trame = sum(carte.COLONNES) + sum(carte.RUES_V)
@@ -162,7 +164,7 @@ def test_aucune_tuile_reservee_ne_tombe_sur_la_chaussee():
     dalle). ⚠️ Avec un trottoir d'une tuile, la deuxième réservée pouvait tomber
     sur la chaussée — la fiche le prévoyait. Ce n'est pas le cas parce que
     l'abord s'est glissé entre le bâtiment et la dalle, et ce juge le tient."""
-    ville = carte.exporter()
+    ville = villes.exporter()
     sol = ville["sol"]
     for porte in ville["portes"]:
         for j in (1, 2):
@@ -186,7 +188,7 @@ def test_rien_ne_bouche_la_seule_tuile_de_trottoir_devant_une_porte():
     lampadaire posé dessus devant une porte en ferait une impasse. Le mobilier
     de rue vit sur l'ABORD (la couronne du bloc) ; la dalle devant une porte
     reste libre."""
-    ville = carte.exporter()
+    ville = villes.exporter()
     sol = ville["sol"]
     occupe = {(d["x"], d["y"]) for d in ville["decor"]}
     occupe |= {(a["x"], a["y"]) for a in ville.get("ambulants", [])}

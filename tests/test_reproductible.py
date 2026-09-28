@@ -68,6 +68,7 @@ def test_deux_appels_dans_le_meme_processus_donnent_la_meme_ville():
     été stable. ⚠️ Sans cette mesure, un générateur cassé au point de ne rien
     rendre du tout passerait le juge précédent au vert."""
     from app import carte
+    # ⚠️ Deux générations POUR DE VRAI : la ville gardée des juges (`villes`) n'en ferait qu'une.
     a = json.dumps(carte.exporter()["sol"])
     b = json.dumps(carte.exporter()["sol"])
     assert a == b

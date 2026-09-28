@@ -14,10 +14,13 @@ y a DEDANS, et les promesses que les portes de la ville font au joueur.
 import math
 
 import pytest
+import villes
 
 from app import armes, carte, devantures, economie, magasins, missions, pietons
 
-VILLE = carte.exporter()
+#: ⚠️ Au niveau du module, payée à la collecte : les juges se paramètrent par ses pièces. Elle vient de
+#: `villes` — la ville gardée du processus, que les autres fichiers reçoivent ensuite sans la régénérer.
+VILLE = villes.exporter()
 
 #: ⚠️ TOUTES LES PIECES DE LA VILLE, dessinees et posees. Les juges d'a cote ne
 #: lisaient que `carte.INTERIEURS` — le catalogue du module — et depuis que les

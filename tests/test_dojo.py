@@ -2,11 +2,13 @@
 
 import json
 
+import villes
+
 from app import carte, devantures
 
 
 def test_un_seul_dojo_et_il_est_au_faubourg():
-    ville = carte.generer(nord=False)
+    ville = villes.generer(nord=False)
     portes = [p for p in ville["portes"] if p.get("interieur") == "dojo"]
     assert len(portes) == 1, portes
     p = portes[0]

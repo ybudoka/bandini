@@ -9,6 +9,7 @@ il te parle, le coupon vaut quelque chose) sont dans `test_reclame_js.py`.
 """
 
 import pytest
+import villes
 
 from app import audio, carte, devantures, economie, magasins, pietons
 
@@ -22,7 +23,7 @@ PAR_DOLLAR_MAX = (economie.TARIFS["hotdog_pv"] + economie.TARIFS["hotdog_souffle
 
 @pytest.fixture(scope="module")
 def ville():
-    return carte.generer(nord=False)
+    return villes.generer(nord=False)
 
 
 # --- Les fruits de mer ---------------------------------------------------------
@@ -178,9 +179,7 @@ def test_le_crieur_a_de_quoi_crier():
 
 
 def test_le_paquet_porte_la_reclame_et_les_postes():
-    from app import definitions
-
-    paquet = definitions.assembler()
+    paquet = villes.assembler()
     assert paquet["reclame"] == magasins.RECLAME
     assert paquet["carte"]["reclames"]
     assert any(c["slug"] == "fruits_de_mer" for c in paquet["ambulants"])
