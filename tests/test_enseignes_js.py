@@ -91,6 +91,30 @@ def test_le_bingo_se_gagne_au_crayon_et_se_perd_aux_madames_sans_un_de(banc):
     assert r["pure"]
 
 
+def test_la_carte_de_bingo_se_lit_sans_ombre_sous_ses_chiffres(banc):
+    """Le lettrage de la carte : l'en-tete B I N G O en double, le numero crie en triple, et AUCUNE ombre du
+    HUD sous un chiffre — decalee d'un pixel sous un trait sombre sur une case creme, elle le bavait."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B, A = L.Adresse;
+        A.commencer({ slug: 'bingo', epreuve: 'bingo', consigne: '',
+                      regles: { carte: 3, gros_lot: 20, appel_s: 3.2, fenetre_s: 2.6, madames: 3, graine: 12345 } });
+        const e = B.epreuve;
+        e.t = A.PRET + 1; e.k = 4; e.fenetre = 30; e.marques[0] = true;
+        const ecrits = [], vrai = L.Atlas.texte;
+        L.Atlas.texte = function (ctx, s, x, y, c, k) { ecrits.push({ s: String(s), c: c, k: k || 1 }); return vrai.apply(null, arguments); };
+        try { A.dessiner(o.ctx); } finally { L.Atlas.texte = vrai; }
+        return { ecrits: ecrits, carte: e.carte, boule: e.ordre[e.k] };
+    }""")
+    ecrits = r["ecrits"]
+    ombres = [t["s"] for t in ecrits if t["c"].startswith("rgba(11,10,18")]
+    chiffres = {str(n) for n in r["carte"] if n} | {str(r["boule"])}
+    assert not chiffres & set(ombres), f"une ombre sous un chiffre : {sorted(chiffres & set(ombres))}"
+    assert [t["s"] for t in ecrits if t["k"] == 2][:5] == list("BINGO"), ecrits
+    assert {"s": str(r["boule"]), "c": "#1a1a22", "k": 3} in ecrits, ecrits
+    assert all(t["s"] != "*" for t in ecrits), "la case gratuite est une etoile dessinee, pas un « * »"
+
+
 def test_les_quilles_se_calculent_et_la_ligue_se_gagne_au_milieu_de_l_allee(banc):
     """Au milieu de l'allée et à pleine force : un abat. Dans le dalot : rien. La ligue du mardi se gagne en
     visant le milieu, se perd en lançant n'importe comment — sans un dé."""

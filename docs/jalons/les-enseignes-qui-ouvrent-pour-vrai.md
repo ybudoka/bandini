@@ -77,3 +77,9 @@ de 53 000 à 55 000 (mesures dans `test_definitions`).
   départ, comme dormir : `QUI_FERMENT`), et la comparaison « avec et sans vitrines » neutralise les
   enseignes des deux côtés (le BINGO prend la façade qui porte son nom, un nom que les vitrines donnent).
 - Captures regardées : les quatre façades, les pièces, la partie de bingo, la ligue, le film, la baie.
+- **Le lettrage de la carte de bingo (28 sept. 2026)** : les chiffres sombres des cases crème portaient
+  l'ombre du HUD, décalée d'un pixel — elle les bavait (« 30 », « 38 » en pavés). Ils s'écrivent maintenant
+  sans ombre (`net`, dans `adresse.js`) ; l'en-tête B I N G O passe en double sur un bandeau rouge, la boule
+  criée porte sa lettre dans son bandeau et son numéro en triple, la case appelée s'allume en or (avant :
+  sombre sur brun foncé), et la case gratuite est une étoile dessinée. Juge :
+  `test_la_carte_de_bingo_se_lit_sans_ombre_sous_ses_chiffres` (mord : 25 chiffres ombrés sur l'ancien dessin).

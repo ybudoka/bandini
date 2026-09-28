@@ -425,25 +425,28 @@ const Adresse = (function () {
       },
       compte: function (e, r) { return e.k < 0 ? 'LE BOULIER TOURNE' : 'BOULE ' + (e.k + 1) + ' · ' + e.dit; },
       dessiner: function (ctx, e, r, x, y) {
-        // La carte, a gauche : B I N G O, et les cases marquees au crayon rouge.
-        const c = 15, gx = x + 8, gy = y + 10;
-        'BINGO'.split('').forEach(function (l, col) { ecrire(ctx, l, gx + col * c + c / 2, gy - 9, '#e8b33c'); });
+        // La carte, a gauche : le bandeau rouge B I N G O en double, et les cases marquees au crayon rouge.
+        // ⚠️ Sur une case creme, le chiffre s'ecrit SANS l'ombre du HUD (`net`) : decalee d'un pixel, elle
+        // bavait sous le trait sombre et « 30 », « 38 » se lisaient comme des paves.
+        const c = 15, gx = x + 8, gy = y + 14;
+        ctx.fillStyle = '#c0392b'; ctx.fillRect(gx, gy - 13, 5 * c - 1, 12);
+        'BINGO'.split('').forEach(function (l, col) { net(ctx, l, gx + col * c + (c - 1) / 2, gy - 12, '#efe6d0', 2); });
         for (let i = 0; i < 25; i++) {
           const cx = gx + (i % 5) * c, cy = gy + Math.floor(i / 5) * 11, n = e.carte[i];
           const appelee = n > 0 && n === e.ordre[e.k] && e.fenetre > 0;
-          ctx.fillStyle = e.marques[i] ? '#6b1f1c' : (appelee ? '#4a3a10' : '#efe6d0');
+          ctx.fillStyle = e.marques[i] ? '#6b1f1c' : (appelee ? '#e8b33c' : '#efe6d0');
           ctx.fillRect(cx, cy, c - 1, 10);
-          if (n) ecrire(ctx, String(n), cx + (c - 1) / 2, cy + 2, e.marques[i] ? '#ffd8c8' : '#1a1a22');
-          else ecrire(ctx, '*', cx + (c - 1) / 2, cy + 2, '#ffd8c8');
+          if (n) net(ctx, String(n), cx + (c - 1) / 2, cy + 3, e.marques[i] ? '#ffd8c8' : '#1a1a22');
+          else etoile(ctx, cx + (c - 1) / 2, cy + 5, '#ffd8c8');
         }
-        // La boule qu'on crie, a droite, en gros.
+        // La boule qu'on crie, a droite, en gros : sa lettre dans le bandeau, son numero en triple.
         if (e.k >= 0) {
-          const bx = x + 140, by = y + 26;
-          ctx.fillStyle = '#efe6d0'; ctx.fillRect(bx - 16, by - 12, 32, 30);
-          ctx.fillStyle = '#c0392b'; ctx.fillRect(bx - 16, by - 12, 32, 5);
-          ecrire(ctx, lettreBingo(e.ordre[e.k]), bx, by - 3, '#1a1a22');
-          ecrire(ctx, String(e.ordre[e.k]), bx, by + 5, '#1a1a22', 2);
-          ctx.fillStyle = '#e8b33c'; ctx.fillRect(bx - 16, by + 20, Math.round(32 * e.fenetre / s(r.fenetre_s)), 2);
+          const bx = x + 140, by = y + 26, n = e.ordre[e.k];
+          ctx.fillStyle = '#efe6d0'; ctx.fillRect(bx - 16, by - 14, 32, 34);
+          ctx.fillStyle = '#c0392b'; ctx.fillRect(bx - 16, by - 14, 32, 13);
+          net(ctx, lettreBingo(n), bx, by - 12, '#efe6d0', 2);
+          net(ctx, String(n), bx, by + 2, '#1a1a22', 3);
+          ctx.fillStyle = '#e8b33c'; ctx.fillRect(bx - 16, by + 22, Math.round(32 * e.fenetre / s(r.fenetre_s)), 2);
         }
       },
     },
@@ -644,6 +647,20 @@ const Adresse = (function () {
     const k = echelle || 1, x = Math.round(cx - Atlas.largeurTexte(t, k) / 2);
     Atlas.texte(ctx, t, x + 1, y + 1, 'rgba(11,10,18,0.8)', k);
     Atlas.texte(ctx, t, x, y, couleur, k);
+  }
+
+  /** Une ligne centrée SANS ombre : pour un trait sombre sur fond clair, ou l'ombre bave. */
+  function net(ctx, t, cx, y, couleur, echelle) {
+    Atlas.texte(ctx, t, Math.round(cx - Atlas.largeurTexte(t, echelle || 1) / 2), y, couleur, echelle);
+  }
+
+  //: La case gratuite du bingo : une etoile de 5 sur 5, centree sur (cx, cy).
+  const ETOILE = ['00100', '00100', '11111', '01010', '10001'];
+  function etoile(ctx, cx, cy, couleur) {
+    ctx.fillStyle = couleur;
+    ETOILE.forEach(function (rang, j) {
+      for (let i = 0; i < 5; i++) if (rang[i] === '1') ctx.fillRect(Math.round(cx) - 2 + i, cy - 2 + j, 1, 1);
+    });
   }
 
   // --- Le cycle -------------------------------------------------------------------------
