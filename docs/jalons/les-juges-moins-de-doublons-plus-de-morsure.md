@@ -96,3 +96,37 @@ Rouges sur `dev` au moment d'atterrir, tous rejoués sur la base d'avant (aucun 
 `test_interieurs::…lieux_des_missions…` (`villa_chemin`), `test_rang::…trois_blocs…` (la villa),
 `test_quai_se_marche` (friche enfermée), `test_missions_en_scene_js` ×10 (v01, v02),
 `test_parole::…la_rue_se_tait…`, `test_velos_js[23]` (HORS VOIE autobus), et les deux du ciné-parc.
+
+**Vague C livrée le 29 sept. 2026** — les doublons retirés, les bancs fusionnés. Cinq lots, 48 commits,
+75 fichiers de juges. Deux gestes, deux preuves : **un retrait** nomme le juge qui tient encore la règle
+(et ce qui était propre au retiré y est déplacé d'abord) ; **une fusion** garde chaque assertion et son
+message, remet l'état entre les scénarios, et se prouve par une mutation du jeu qui casse un scénario qui
+n'est PAS le premier — le juge fusionné rougit avec le bon message. Les noms des juges restent quand ils
+disent des règles différentes : une fixture de module joue le banc une fois, chaque juge lit sa part.
+
+- **Mesure appariée** (les 75 fichiers, `dev` d'avant et d'après lancés EN MÊME TEMPS) : **3 344 s →
+  2 576 s** (−23 %), les trois mêmes rouges des deux côtés ; 7 243 cas → 4 899.
+- **Les scènes** (`test_missions_en_scene_js`, le goulot) : un banc par mission au lieu d'un par cas —
+  **482 bancs → 58**, 930 s → 346 s. Chaque scénario repart d'une partie neuve (`neuve()`). Relevé
+  comparé de ce que voyaient les 423 juges avant et après : identique (à ±2 images près sur la durée
+  d'une scène, le pas fixe du banc).
+- **Le son** : une passe ffmpeg par fichier, lue par les quatre juges (`test_audio` ≈ 600 → 216
+  sous-processus, `test_interpretation` ≈ 3 300 → 2 310, et 4 081 cas → 1 774). ⚠️ Un graphe ffmpeg à
+  trois branches dont une coupée (`atrim`) figeait ffmpeg 8 environ 4 fois sur 2 200 : le niveau reste
+  une passe à part, les graphes gardés ont un délai de 60 s et une relance.
+- **Les défis** : `test_defis_graduels_js` 75 → 43 bancs (364 → 215 s) ; les trois joueurs d'une épreuve
+  dans un banc. ⚠️ Fusionnés, les essais tombaient pour une autre raison (« PAS SANS CHAR ») : mille images
+  plus tard, le trafic arrivait sur la piste — il est retiré à chaque image, et la raison du raté se lit.
+- **Le moteur** : `test_moteur_js` 185 → 179 juges, ≈ 181 → 163 bancs ; le sprint devient du Python pur,
+  la borne-fontaine passe dans `test_carte` (une aide `_coins_des_feux` commune avec les lampadaires).
+- ⚠️ **Deux juges verts par chance de graine, démasqués par la fusion** : les prises des techniques
+  (la graine 2 donnait un enfant, qu'on ne saisit pas — le corps est maintenant nommé, une graine posée
+  par scénario, dix graines passent) ; et le paramètre `raison` du frein pile, jamais lu.
+- **Refusés après mesure** (l'audit se trompait) : `greve()` du banc de la plage coûte 2 ms ; les sondes
+  de rythme du navigateur 0,4 s ; `magasins` (24 lettres = 95 px, plus strict que la bulle) ; `port`
+  (l'autre juge ignore les petits quais) ; le chrono du hockey et le mode photo (raccourcir changerait la
+  règle) ; `…laisse_finir_ses_repliques` (seul à exiger trois voix et leurs mp3).
+
+Rouges au moment d'atterrir, les mêmes avant et après : `test_debug_js::…portes_des_blocs…` (ciné-parc),
+`test_defis_graduels_js::test_l_esquive_se_gagne_sans_frapper` (« IL T'A SONNÉ » après 46 roulades),
+`test_velos_js[23]` (HORS VOIE autobus).
