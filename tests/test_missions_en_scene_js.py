@@ -7,6 +7,7 @@ part à 3★ ou au volant d'un char qui roule ; et une fin dite loin de celui qu
 parle se dit au combiné.
 """
 
+import functools
 import json
 import math
 import shutil
@@ -37,14 +38,6 @@ def scene_jugee(cas: str, partie: str) -> list[dict]:
     slug, mode = cas.split("-")
     m = missions.par_slug(slug)
     return m["scenes"][partie] if mode == "écrite" else missions.scene_par_defaut(m, partie)
-
-
-def poser(cas: str, partie: str) -> tuple[str, str]:
-    """Le slug, et le JS qui pose la scène à juger (rien, si elle est déjà là)."""
-    slug, mode = cas.split("-")
-    if mode == "écrite":
-        return slug, ""
-    return slug, f"mission(L, '{slug}').scenes['{partie}'] = {json.dumps(scene_jugee(cas, partie), ensure_ascii=False)};"
 
 
 #: ⚠️ **UNE FICHE RÉDUITE À L'OS**, pour le juge du bloc Lego : ce qui distingue
@@ -108,9 +101,26 @@ OUTILS = ('  const ORDRE = ' + json.dumps(missions.ordre_topologique()) + ';' + 
       }
     }
   }
+  // ⚠️ **UNE PARTIE NEUVE À CHAQUE SCÉNARIO** (`neuve()`, vague C, 28 sept. 2026), pour les bancs
+  // qui en jouent plusieurs : `retourTitre` SAUVEGARDE la partie qu'on quitte — la position du
+  // joueur, l'heure, l'argent, le char devant la planque — et `commencer` repartait de là. Une fin
+  // qui se dit « là où l'on est » ne se disait plus au même endroit que dans un banc neuf, et le
+  // combiné en dépendait. `neuve()` photographie la partie au PREMIER `retourTitre` (celle d'un banc
+  // qui s'ouvre : aucun joueur encore, rien à sauvegarder) et chaque `partie()` suivante la remet,
+  // en place, avec la graine du chargement (`B.rng` n'a encore rien tiré à l'ouverture du banc).
+  let NEUVE = null;
+  function neuve() { NEUVE = 'a prendre'; }
+  function remettre(L) {
+    if (NEUVE === 'a prendre') { NEUVE = { partie: JSON.stringify(L.B.partie), graine: L.B.graine }; return; }
+    if (!NEUVE) return;
+    const p = L.B.partie;
+    Object.keys(p).forEach(function (k) { delete p[k]; });
+    Object.assign(p, JSON.parse(NEUVE.partie));
+    L.graine(NEUVE.graine);
+  }
   // ⚠️ Les missions faites AVANT `commencer` : c'est lui qui pose les donneurs, et
   // Ti-Guy n'attend plus au terminus une fois M1 faite (`parti_apres`).
-  function partie(L, slug) { if (L.B.interieur) L.Jeu.quitterLaPiece(); L.Jeu.retourTitre(); L.B.partie.missionsFaites = {}; L.B.partie.mission = null; faites(L, slug); L.Jeu.commencer(); tenirExige(L, mission(L, slug)); }
+  function partie(L, slug) { if (L.B.interieur) L.Jeu.quitterLaPiece(); L.Jeu.retourTitre(); remettre(L); L.B.partie.missionsFaites = {}; L.B.partie.mission = null; faites(L, slug); L.Jeu.commencer(); tenirExige(L, mission(L, slug)); }
   function allerVoir(L, o, m) {
     const perso = L.B.defs.personnages.find(function (p) { return p.slug === m.donneur; });
     if (perso.ou.indexOf('point:') === 0) {
@@ -187,12 +197,38 @@ OUTILS = ('  const ORDRE = ' + json.dumps(missions.ordre_topologique()) + ';' + 
 """)
 
 
-@pytest.mark.parametrize("cas", CAS)
-def test_chaque_intro_se_joue_seule_et_rend_la_ville(banc, cas):
-    slug, pose = poser(cas, "intro")
-    r = banc("function (L, o) {" + OUTILS + """
-        const m = mission(L, '%s');
-        %s
+#: ⚠️ **UN BANC PAR MISSION, PAS NEUF** (vague C, 28 sept. 2026). Cinq juges paramétrés
+#: jouaient chacun la mission dans son propre banc : l'intro et la fin, chacune écrite et par
+#: défaut ; les voix de l'intro et de la fin ; « passer » l'intro et la fin ; les dés, avec et
+#: sans scènes — dix bancs par mission, 470 pour le catalogue, les trois quarts de ce fichier.
+#: Un banc les joue maintenant tous, l'un après l'autre, et chaque juge lit SA part : il garde
+#: son nom, ses paramètres, ses messages et ses `xfail`.
+#:
+#: ⚠️ CHAQUE SCÉNARIO REPART D'UNE PARTIE NEUVE (`neuve()`, voir `partie`) : la partie du banc qui
+#: s'ouvre, la même graine. Ce que la scène touche en dehors de la partie est remis après chacun :
+#: la scène écrite (un scénario « défaut » la remplace), `Hud.dialogue` (que `ecouter` espionne),
+#: `Son.Voix.parler`/`couper` (que `voixDuFichier` remplace). Les dés passent EN DERNIER : sans
+#: scènes, ils retirent celles de tout le catalogue. ⚠️ Un scénario qui plante rend son erreur,
+#: pas le banc : les autres juges de la mission restent jugés, et le sien la dit.
+#: (Le corps seulement : `jouee` le coud à `OUTILS` et à `VOIX_DU_FICHIER`.)
+MISSION_JOUEE = """
+    const SLUG = %(slug)s, DEFAUTS = %(defauts)s, DUREES = %(durees)s;
+    neuve();
+    const m = mission(L, SLUG);
+    const ECRITES = { intro: m.scenes.intro, fin: m.scenes.fin };
+    const V = L.Son.Voix, DIALOGUE = L.Hud.dialogue, PARLER = V.parler, COUPER = V.couper;
+    function erreur(e) { return { erreur: String((e && e.stack) || e) }; }
+    function jouer(quoi, laquelle, mode) {
+        m.scenes[laquelle] = mode === 'défaut' ? DEFAUTS[laquelle] : ECRITES[laquelle];
+        try { return quoi(laquelle); }
+        catch (e) { return erreur(e); }
+        finally {
+            m.scenes[laquelle] = ECRITES[laquelle];
+            L.Hud.dialogue = DIALOGUE; V.parler = PARLER; V.couper = COUPER; V.enCours = null;
+        }
+    }
+    // `test_chaque_intro_se_joue_seule_et_rend_la_ville`
+    function intro() {
         partie(L, m.slug);
         allerVoir(L, o, m);
         const avant = etat(L);
@@ -200,7 +236,96 @@ def test_chaque_intro_se_joue_seule_et_rend_la_ville(banc, cas):
         const s = L.B.scene, scene = !!s, posee = L.B.partie.mission && L.B.partie.mission.slug;
         const joue = jouerJusquauBout(L, o, 6000);
         return { scene: scene, sautes: s ? s.sautes : null, posee: posee, joue: joue, avant: avant, apres: etat(L) };
-    }""" % (slug, pose))
+    }
+    // `test_chaque_fin_se_joue_seule_et_se_dit_la_ou_il_faut`
+    function fin() {
+        partie(L, m.slug);
+        versLaFin(L, m);
+        const dites = ecouter(L);
+        L.Histoire.reussir();
+        const s = L.B.scene, scene = !!s, faite = !!L.B.partie.missionsFaites[m.slug];
+        const joue = jouerJusquauBout(L, o, 6000);
+        return { scene: scene, sautes: s ? s.sautes : null, faite: faite, joue: joue, dites: dites, apres: etat(L) };
+    }
+    // `test_aucune_voix_de_scene_n_est_coupee_par_la_suivante`
+    function voix(laquelle) {
+        partie(L, m.slug);
+        if (laquelle === 'intro') allerVoir(L, o, m); else versLaFin(L, m);
+        const v = voixDuFichier(L, DUREES);
+        if (laquelle === 'intro') L.Histoire.parler(m.donneur); else L.Histoire.reussir();
+        const n = ecouterJusquauBout(L, o, v);
+        return { n: n, coupees: v.coupees };
+    }
+    // `test_passer_une_scene_de_mission_a_n_importe_quel_moment`
+    function passer(laquelle) {
+        const sorties = [];
+        for (const k of [0, 5, 40, 120, 260, 420, -1]) {
+            partie(L, m.slug); L.graine(2468);
+            if (laquelle === 'intro') { allerVoir(L, o, m); L.Histoire.parler(m.donneur); }
+            else { versLaFin(L, m); L.Histoire.reussir(); }
+            let n = 0;
+            if (k < 0) jouerJusquauBout(L, o, 6000);
+            else {
+                for (; n < k && L.B.scene; n++) o.frame(1);
+                L.Scenes.passer();
+                while (L.B.cinema) L.Histoire.suivante();
+            }
+            const e = etat(L);
+            e.de = L.B.rng();
+            sorties.push({ k: k, e: e });
+        }
+        return sorties;
+    }
+    // `test_une_scene_de_mission_ne_tire_aucun_de` : AVEC, puis SANS les scènes du catalogue.
+    function mesurer(avec) {
+        if (!avec) L.B.defs.missions.forEach(function (q) { q.scenes = null; });
+        partie(L, m.slug); L.graine(1357);
+        allerVoir(L, o, m);
+        L.Histoire.parler(m.donneur);
+        jouerJusquauBout(L, o, 6000);
+        const e = etat(L);
+        L.Histoire.reussir();
+        jouerJusquauBout(L, o, 6000);
+        return { x: e.x, y: e.y, restes: e.restes, de: L.B.rng() };
+    }
+    const r = { intro: {}, fin: {}, voix: null, passer: {} };
+    for (const mode of ['écrite', 'défaut']) r.intro[mode] = jouer(intro, 'intro', mode);
+    for (const mode of ['écrite', 'défaut']) r.fin[mode] = jouer(fin, 'fin', mode);
+    if (DUREES) r.voix = { intro: jouer(voix, 'intro', 'écrite'), fin: jouer(voix, 'fin', 'écrite') };
+    for (const laquelle of ['intro', 'fin']) r.passer[laquelle] = jouer(passer, laquelle, 'écrite');
+    try { const avec = mesurer(true); r.de = { avec: avec, sans: mesurer(false) }; }
+    catch (e) { r.de = erreur(e); }
+    return r;
+}"""
+
+_JOUEES: dict[str, dict] = {}
+
+
+def jouee(banc, racine, slug: str, *cles: str):
+    """La part d'un juge dans le banc de sa mission (joué une fois, à la première demande)."""
+    if slug not in _JOUEES:
+        m = missions.par_slug(slug)
+        defauts = {partie: missions.scene_par_defaut(m, partie) for partie in ("intro", "fin")}
+        # Les voix se mesurent au fichier : sans ffprobe, leur juge se saute, et le banc ne les joue pas.
+        durees = None if shutil.which("ffprobe") is None else {
+            r["slug"]: math.ceil(_duree_s(racine / "static" / "audio" / f"histoire-{r['slug']}.mp3") * 60)
+            for r in missions.repliques()
+            if r["mission"] == slug and (racine / "static" / "audio" / f"histoire-{r['slug']}.mp3").exists()}
+        _JOUEES[slug] = banc("function (L, o) {" + OUTILS + VOIX_DU_FICHIER + MISSION_JOUEE % {
+            "slug": json.dumps(slug), "defauts": json.dumps(defauts, ensure_ascii=False),
+            "durees": json.dumps(durees)})
+    r = _JOUEES[slug]
+    for cle in cles:
+        r = r[cle]
+    if isinstance(r, dict) and "erreur" in r:
+        pytest.fail(f"{slug} ({' '.join(cles)}) : le banc s'est arrêté sur une erreur\n{r['erreur']}")
+    return r
+
+
+@pytest.mark.parametrize("cas", CAS)
+def test_chaque_intro_se_joue_seule_et_rend_la_ville(banc, racine, cas):
+    slug, mode = cas.split("-")
+    r = jouee(banc, racine, slug, "intro", mode)
     assert r["scene"], f"{slug} : parler au donneur ne joue pas sa scène d'intro"
     assert r["sautes"] == 0, f"{slug} : {r['sautes']} plan(s) de l'intro n'ont trouvé ni leur lieu ni leur acteur"
     assert r["posee"] == slug, "la mission se pose avant son intro"
@@ -213,19 +338,9 @@ def test_chaque_intro_se_joue_seule_et_rend_la_ville(banc, cas):
 
 
 @pytest.mark.parametrize("cas", CAS)
-def test_chaque_fin_se_joue_seule_et_se_dit_la_ou_il_faut(banc, cas):
-    slug, pose = poser(cas, "fin")
-    r = banc("function (L, o) {" + OUTILS + """
-        const m = mission(L, '%s');
-        %s
-        partie(L, m.slug);
-        versLaFin(L, m);
-        const dites = ecouter(L);
-        L.Histoire.reussir();
-        const s = L.B.scene, scene = !!s, faite = !!L.B.partie.missionsFaites[m.slug];
-        const joue = jouerJusquauBout(L, o, 6000);
-        return { scene: scene, sautes: s ? s.sautes : null, faite: faite, joue: joue, dites: dites, apres: etat(L) };
-    }""" % (slug, pose))
+def test_chaque_fin_se_joue_seule_et_se_dit_la_ou_il_faut(banc, racine, cas):
+    slug, mode = cas.split("-")
+    r = jouee(banc, racine, slug, "fin", mode)
     assert r["faite"] and r["scene"], f"{slug} : la fin ne joue pas sa scène"
     assert r["sautes"] == 0, f"{slug} : {r['sautes']} plan(s) de la fin n'ont trouvé ni leur lieu ni leur acteur"
     assert r["joue"]["n"] < 6000, f"{slug} : la scène de fin ne se termine pas"
@@ -244,33 +359,17 @@ def test_chaque_fin_se_joue_seule_et_se_dit_la_ou_il_faut(banc, cas):
 
 
 @pytest.mark.parametrize("cas", [f"{slug}-{partie}" for slug in MISSIONS for partie in ("intro", "fin")])
-def test_passer_une_scene_de_mission_a_n_importe_quel_moment(banc, cas):
+def test_passer_une_scene_de_mission_a_n_importe_quel_moment(banc, racine, cas):
     """PAUSE à n'importe quel plan tombe au même état que la scène vue jusqu'au bout
     — Ti-Guy rentré, la pièce rendue après une coupe dehors — et le même dé.
 
     ⚠️ **TOUTES les scènes du catalogue**, et plus quatre cas choisis à la main :
-    une mission de plus doit hériter de cette garantie sans qu'on l'inscrive ici."""
+    une mission de plus doit hériter de cette garantie sans qu'on l'inscrive ici.
+
+    ⚠️ Les sept arrêts repartent chacun d'une partie NEUVE (`neuve()`) : c'était la
+    partie laissée par l'arrêt d'avant."""
     slug, partie = cas.split("-")
-    r = banc("function (L, o) {" + OUTILS + """
-        const sorties = [];
-        for (const k of [0, 5, 40, 120, 260, 420, -1]) {
-            const m = mission(L, '%s');
-            partie(L, m.slug); L.graine(2468);
-            if ('%s' === 'intro') { allerVoir(L, o, m); L.Histoire.parler(m.donneur); }
-            else { versLaFin(L, m); L.Histoire.reussir(); }
-            let n = 0;
-            if (k < 0) jouerJusquauBout(L, o, 6000);
-            else {
-                for (; n < k && L.B.scene; n++) o.frame(1);
-                L.Scenes.passer();
-                while (L.B.cinema) L.Histoire.suivante();
-            }
-            const e = etat(L);
-            e.de = L.B.rng();
-            sorties.push({ k: k, e: e });
-        }
-        return sorties;
-    }""" % (slug, partie))
+    r = jouee(banc, racine, slug, "passer", partie)
     reference = r[-1]["e"]
     assert not reference["scene"] and not reference["cinema"]
     for s in r[:-1]:
@@ -278,23 +377,15 @@ def test_passer_une_scene_de_mission_a_n_importe_quel_moment(banc, cas):
 
 
 @pytest.mark.parametrize("slug", MISSIONS)
-def test_une_scene_de_mission_ne_tire_aucun_de(banc, slug):
+def test_une_scene_de_mission_ne_tire_aucun_de(banc, racine, slug):
     """Le prochain dé est le même avec les scènes et sans elles (répliques seules).
-    ⚠️ Chaque mission du catalogue, et plus la seule m3."""
-    def partie(avec):
-        return banc("function (L, o) {" + OUTILS + """
-            if (!%s) L.B.defs.missions.forEach(function (m) { m.scenes = null; });
-            const m = mission(L, '%s');
-            partie(L, m.slug); L.graine(1357);
-            allerVoir(L, o, m);
-            L.Histoire.parler(m.donneur);
-            jouerJusquauBout(L, o, 6000);
-            const e = etat(L);
-            L.Histoire.reussir();
-            jouerJusquauBout(L, o, 6000);
-            return { x: e.x, y: e.y, restes: e.restes, de: L.B.rng() };
-        }""" % ("true" if avec else "false", slug))
-    assert partie(True) == partie(False)
+    ⚠️ Chaque mission du catalogue, et plus la seule m3.
+
+    ⚠️ Les deux parties dans le banc de la mission (c'étaient deux bancs), comme
+    `test_scenes_js::test_une_scene_ne_tire_aucun_de` : AVEC d'abord, SANS ensuite —
+    retirer les scènes du catalogue ne se défait pas."""
+    r = jouee(banc, racine, slug, "de")
+    assert r["avec"] == r["sans"]
 
 
 def test_une_fin_attend_qu_on_soit_calme(banc):
@@ -541,7 +632,15 @@ TOUR_DE_M6 = """function (L, o) {""" + OUTILS + """
     }"""
 
 
-def test_le_tour_du_proprietaire_montre_ses_quatre_contacts(banc):
+@pytest.fixture(scope="module")
+def tour_de_m6(banc):
+    """⚠️ UN BANC POUR LES DEUX JUGES DU TOUR (vague C, 28 sept. 2026) : ils jouaient chacun
+    `TOUR_DE_M6`, la même intro de m6 image par image, et lisaient deux moitiés du même rendu
+    — ce que la caméra montre, et quand chaque réplique part."""
+    return banc(TOUR_DE_M6)
+
+
+def test_le_tour_du_proprietaire_montre_ses_quatre_contacts(tour_de_m6):
     """⚠️ Rouge avant (20 sept. 2026), demande de Martin : « améliore l'animation de la
     mission tour du propriétaire pour voir toutes les cibles, pas juste la première ».
     L'intro de m6 ne filmait que le dépanneur (159 images) alors que Josée nomme quatre
@@ -549,7 +648,7 @@ def test_le_tour_du_proprietaire_montre_ses_quatre_contacts(banc):
     être à l'écran (hors du noir) au moins une seconde, dans l'ordre du tour, et pendant la
     réplique qui le nomme — Ti-Paul et Lulu sous la première, Raymonde et Ovila sous la
     seconde."""
-    r = banc(TOUR_DE_M6)
+    r = tour_de_m6
     assert r["portes"] == ["tipaul", "lulu", "raymonde", "ovila"]
     assert r["sautes"] == 0, f"{r['sautes']} plan(s) de l'intro n'ont trouvé ni leur lieu ni leur acteur"
     for slug, vue in zip(r["portes"], r["vues"]):
@@ -569,13 +668,15 @@ def test_le_tour_du_proprietaire_montre_ses_quatre_contacts(banc):
 ffprobe_present = pytest.mark.skipif(shutil.which("ffprobe") is None, reason="ffprobe n'est pas installé : ce juge mesure des mp3")
 
 
+@functools.cache
 def _duree_s(chemin) -> float:
+    """⚠️ En cache : chaque réplique d'une mission était mesurée deux fois (ses voix d'intro et de fin)."""
     return float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
                                  str(chemin)], capture_output=True, text=True).stdout)
 
 
 @ffprobe_present
-def test_le_tour_du_proprietaire_laisse_finir_ses_repliques(banc, racine):
+def test_le_tour_du_proprietaire_laisse_finir_ses_repliques(tour_de_m6, racine):
     """⚠️ Rouge avant (20 sept. 2026) : la coupe qui portait la réplique 1 ne tenait que 230
     images, la voix en dure 360 — la réplique 2 la coupait à l'image 229, en plein « ma sœur
     Lulu à la cantine ». Une réplique suivante ne part qu'une fois la voix précédente finie,
@@ -584,7 +685,7 @@ def test_le_tour_du_proprietaire_laisse_finir_ses_repliques(banc, racine):
     ⚠️ La durée est celle du FICHIER : si une voix est régénérée plus longue, ce juge dit de
     recaler `scenes.intro` de `m6.py` — c'est ce qu'il garde."""
     CHARGEMENT = 30        # images : une demi-seconde
-    r = banc(TOUR_DE_M6)
+    r = tour_de_m6
     assert len(r["debuts"]) == len(r["voix"]) == 3, (r["debuts"], r["voix"])
     for i in (0, 1):
         voix = _duree_s(racine / "static" / "audio" / f"histoire-{r['voix'][i]}.mp3") * 60
@@ -639,18 +740,7 @@ def test_aucune_voix_de_scene_n_est_coupee_par_la_suivante(banc, racine, cas):
     ⚠️ La durée est celle du FICHIER : une voix régénérée plus longue peut faire rougir ce juge — recaler
     la scène (ou ne plus mettre ce `dire` en `ensemble`)."""
     slug, partie = cas.split("-")
-    durees = {r["slug"]: math.ceil(_duree_s(racine / "static" / "audio" / f"histoire-{r['slug']}.mp3") * 60)
-              for r in missions.repliques()
-              if r["mission"] == slug and (racine / "static" / "audio" / f"histoire-{r['slug']}.mp3").exists()}
-    r = banc("function (L, o) {" + OUTILS + VOIX_DU_FICHIER + """
-        const m = mission(L, '%s');
-        partie(L, m.slug);
-        if ('%s' === 'intro') allerVoir(L, o, m); else versLaFin(L, m);
-        const v = voixDuFichier(L, %s);
-        if ('%s' === 'intro') L.Histoire.parler(m.donneur); else L.Histoire.reussir();
-        const n = ecouterJusquauBout(L, o, v);
-        return { n: n, coupees: v.coupees };
-    }""" % (slug, partie, json.dumps(durees), partie))
+    r = jouee(banc, racine, slug, "voix", partie)
     assert r["n"] < 6000, f"{cas} : la scène ne se termine pas"
     assert r["coupees"] == [], "; ".join(
         f"{c['slug']} coupée {c['reste']} images avant sa fin (chargement compris) par {c['par'] or 'la fin de la scène'}"
