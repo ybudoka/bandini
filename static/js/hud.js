@@ -2550,6 +2550,7 @@ const Hud = (function () {
       bascule('endurance', 'ÉNERGIE INFINIE'),
       bascule('munitions', 'MUNITIONS INFINIES'),
       bascule('pasArrete', 'LA POLICE NE T\'ARRÊTE PAS'),
+      bascule('machines', 'MACHINES SANS LIMITE'),        // le videopoker, la machine a sous et les tables oublient leur plafond du jour
       // On y va, et rien ne se lance.
       entete('ALLER'),
       { libelle: 'À L\'OBJECTIF', actif: !!Histoire.cible(), faire: function () { teleporterVersObjectif(); return true; } },

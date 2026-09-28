@@ -213,6 +213,27 @@ def test_la_table_ferme_pour_toi_apres_quarante_coups(banc):
     assert r["lendemain"] is True, "la roulette ne rouvre pas le lendemain"
 
 
+def test_la_triche_machines_sans_limite_ouvre_les_tables_aussi(banc):
+    """La bascule MACHINES SANS LIMITE (onglet TRICHES) vaut aux tables : la roulette se lance au-delà de
+    ses quarante coups, son menu dit SANS LIMITE et garde son geste allumé ; éteinte, la table referme."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B, T = L.Tables, n = T.regles().par_jour;
+        B.partie.argent = 1000000;
+        B.partie.triches.machines = true;
+        let ok = 0;
+        for (let i = 0; i < n + 5; i++) if (T.lancer()) ok++;
+        const m = T.menu('roulette'), geste = m.items[m.items.length - 1];
+        B.partie.triches.machines = false;
+        const m2 = T.menu('roulette');
+        return { ok: ok, n: n, aide: m.aide, actif: geste.actif, eteinte: !!T.lancer(),
+                 actifEteinte: m2.items[m2.items.length - 1].actif };
+    }""")
+    assert r["ok"] == r["n"] + 5, r
+    assert "SANS LIMITE" in r["aide"] and r["actif"] is True, r
+    assert r["eteinte"] is False and r["actifEteinte"] is False, r
+
+
 def test_la_bille_roule_avant_qu_on_annonce_mais_le_gain_est_deja_paye(banc):
     """Payé tout de suite (fermer le menu pendant que la roue tourne ne vole personne), annoncé quand la bille
     s'arrête — et l'argent en haut du menu ne saute pas avant."""

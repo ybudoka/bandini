@@ -3145,7 +3145,7 @@ const Missions = (function () {
   /** DONNER : la mise part, cinq cartes arrivent. */
   function donnerAuVideopoker() {
     const r = reglesDuVideopoker(), c = compteurDuVideopoker();
-    if (c.mains >= r.mains_par_jour) { Hud.message('LA MACHINE A ASSEZ MANGÉ POUR AUJOURD’HUI'); Son.SFX.erreur(); return false; }
+    if (c.mains >= r.mains_par_jour && !triche('machines')) { Hud.message('LA MACHINE A ASSEZ MANGÉ POUR AUJOURD’HUI'); Son.SFX.erreur(); return false; }
     if (!payer(r.mise, 'VIDÉOPOKER')) { Hud.message('PAS ASSEZ D’ARGENT'); Son.SFX.erreur(); return false; }
     const paquet = paquetDuVideopoker(c.total);
     c.total++; c.mains++;
@@ -3176,7 +3176,7 @@ const Missions = (function () {
   /** Le menu de la machine, dans la phase ou elle est. */
   function menuVideopoker() {
     const r = reglesDuVideopoker(), c = compteurDuVideopoker(), v = B.videopoker, p = B.partie;
-    const reste = Math.max(0, r.mains_par_jour - c.mains);
+    const reste = Math.max(0, r.mains_par_jour - c.mains), libre = triche('machines');   // la triche MACHINES SANS LIMITE
     let items;
     if (v && v.phase === 'garde') {
       items = v.cartes.map(function (carte, i) {
@@ -3185,11 +3185,11 @@ const Missions = (function () {
       });
       items.push({ libelle: 'TIRER', faire: function () { tirerAuVideopoker(); return false; } });
     } else {
-      items = [{ libelle: 'DONNER', detail: r.mise + ' $', actif: p.argent >= r.mise && reste > 0,
+      items = [{ libelle: 'DONNER', detail: r.mise + ' $', actif: p.argent >= r.mise && (libre || reste > 0),
                  faire: function () { donnerAuVideopoker(); return false; } }];
     }
     return { titre: 'VIDÉOPOKER', sur: p.argent + ' $', items: items, largeur: 440, hauteur: 214, colonne: 176,
-             aide: 'RETOUR ' + r.retour + ' % · ' + reste + ' MAIN' + (reste > 1 ? 'S' : '') + ' AUJOURD’HUI',
+             aide: 'RETOUR ' + r.retour + ' % · ' + (libre ? 'SANS LIMITE' : reste + ' MAIN' + (reste > 1 ? 'S' : '') + ' AUJOURD’HUI'),
              dessiner: dessinerVideopoker };
   }
 

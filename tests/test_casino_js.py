@@ -103,6 +103,26 @@ def test_la_machine_a_assez_mange_pour_aujourd_hui(banc):
     assert r == m.TOURS_PAR_JOUR
 
 
+
+def test_la_triche_machines_sans_limite_leve_le_plafond_du_jour(banc):
+    """La bascule MACHINES SANS LIMITE (onglet TRICHES) : allumée, le bras se tire au-delà du plafond
+    du jour et le menu le dit ; éteinte, la limite revient, les tours déjà joués comptés."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B, C = L.Casino, n = C.regles().tours_par_jour;
+        B.partie.argent = 1000000;
+        B.partie.triches.machines = true;
+        let ok = 0;
+        for (let i = 0; i < n + 5; i++) if (C.tirer()) ok++;
+        const menu = C.menu();
+        B.partie.triches.machines = false;
+        return { ok: ok, n: n, actif: menu.items[0].actif, aide: menu.aide, eteinte: C.tirer(),
+                 actifEteinte: C.menu().items[0].actif };
+    }""")
+    assert r["ok"] == r["n"] + 5, r
+    assert r["actif"] is True and "SANS LIMITE" in r["aide"], r
+    assert r["eteinte"] is False and r["actifEteinte"] is False, r
+
 def test_le_portier_nait_quand_on_approche_sans_rien_deplacer(banc):
     """Au démarrage, personne à la porte (le hasard du départ est intact) ; on approche, il naît à deux tuiles
     de la porte, figé, hors de la suite des numéros — et le tirage suivant du jeu est le même qu'avant."""

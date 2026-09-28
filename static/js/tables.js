@@ -195,7 +195,7 @@ const Tables = (function () {
       faut avoir en poche (le poker demande de quoi JOUER apres le depart). */
   function miser(jeu, fois) {
     const r = regles(), c = compteur(jeu), mise = etat().mise;
-    if (c.coups >= r.par_jour) { Hud.message('LA TABLE EST FERMÉE POUR TOI AUJOURD’HUI'); Son.SFX.erreur(); return null; }
+    if (c.coups >= r.par_jour && !triche('machines')) { Hud.message('LA TABLE EST FERMÉE POUR TOI AUJOURD’HUI'); Son.SFX.erreur(); return null; }
     if (B.partie.argent < mise * (fois || 1)) { Hud.message('PAS ASSEZ D’ARGENT'); Son.SFX.erreur(); return null; }
     if (!Missions.payer(mise, r.noms[jeu])) return null;
     B.tables = B.tables || {};
@@ -365,7 +365,7 @@ const Tables = (function () {
   function lignes(jeu) {
     const t = enCours(jeu), e = etat(), p = B.partie, r = regles();
     const reste = r.par_jour - compteur(jeu).coups;
-    const peut = function (fois) { return reste > 0 && p.argent >= e.mise * (fois || 1); };
+    const peut = function (fois) { return (reste > 0 || triche('machines')) && p.argent >= e.mise * (fois || 1); };
     if (jeu === 'blackjack') {
       if (t && t.phase === 'joue') {
         return [{ libelle: 'TIRER', detail: String(bjValeur(t.joueur).total), faire: function () { bjTirer(); return curseurApres('blackjack', 0); } },
@@ -409,9 +409,9 @@ const Tables = (function () {
 
   function menu(jeu) {
     const r = regles(), p = B.partie;
-    const reste = Math.max(0, r.par_jour - compteur(jeu).coups);
+    const reste = Math.max(0, r.par_jour - compteur(jeu).coups), libre = triche('machines');   // la triche MACHINES SANS LIMITE
     const m = { titre: r.noms[jeu], sur: (p.argent - enAttente(jeu)) + ' $', items: lignes(jeu), largeur: 440, hauteur: 214, colonne: 176,
-                aide: 'RETOUR ' + retourAffiche(jeu) + ' % · ' + reste + ' COUP' + (reste > 1 ? 'S' : '') + ' AUJOURD’HUI',
+                aide: 'RETOUR ' + retourAffiche(jeu) + ' % · ' + (libre ? 'SANS LIMITE' : reste + ' COUP' + (reste > 1 ? 'S' : '') + ' AUJOURD’HUI'),
                 dessiner: function (ctx, x, y) { dessiner(jeu, ctx, x, y); },
                 maj: function (menu) { majMenu(menu); } };
     // Un coup en cours se reprend ou on l'avait laisse (TIRER, JOUER) ; sinon, le curseur sur le geste.

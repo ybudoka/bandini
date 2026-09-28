@@ -198,3 +198,24 @@ def test_la_machine_a_assez_mange_pour_aujourd_hui(banc):
     }""")
     assert r["donnees"] == r["n"] == vp.MAINS_PAR_JOUR, r
     assert r["eteint"] is False and r["lendemain"] is True, r
+
+
+def test_la_triche_machines_sans_limite_leve_le_plafond_du_jour(banc):
+    """La bascule MACHINES SANS LIMITE vaut aussi au vidéopoker : DONNER reste allumé au-delà de
+    `MAINS_PAR_JOUR`, le menu dit SANS LIMITE ; éteinte, la limite revient."""
+    r = banc("function (L, o) {" + """
+        L.Jeu.commencer();
+        const B = L.B, V = L.Missions, n = B.defs.videopoker.mains_par_jour;
+        B.partie.argent = 1000000;
+        B.partie.triches.machines = true;
+        let donnees = 0;
+        for (let i = 0; i < n + 5; i++) { if (V.donnerAuVideopoker()) { donnees++; V.tirerAuVideopoker(); } }
+        const menu = V.menuVideopoker();
+        B.partie.triches.machines = false;
+        const eteinte = V.donnerAuVideopoker();
+        return { donnees: donnees, n: n, actif: menu.items[0].actif, aide: menu.aide, eteinte: eteinte,
+                 actifEteinte: V.menuVideopoker().items[0].actif };
+    }""")
+    assert r["donnees"] == r["n"] + 5, r
+    assert r["actif"] is True and "SANS LIMITE" in r["aide"], r
+    assert r["eteinte"] is False and r["actifEteinte"] is False, r

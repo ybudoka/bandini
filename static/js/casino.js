@@ -68,7 +68,7 @@ const Casino = (function () {
   /** TIRER LE BRAS : la mise part, les rouleaux s'arretent, l'arret paie selon la table. */
   function tirer() {
     const r = regles(), c = compteur();
-    if (c.tours >= r.tours_par_jour) { Hud.message('LA MACHINE A ASSEZ MANGÉ POUR AUJOURD’HUI'); Son.SFX.erreur(); return false; }
+    if (c.tours >= r.tours_par_jour && !triche('machines')) { Hud.message('LA MACHINE A ASSEZ MANGÉ POUR AUJOURD’HUI'); Son.SFX.erreur(); return false; }
     if (!Missions.payer(r.mise, 'MACHINE À SOUS')) { Hud.message('PAS ASSEZ D’ARGENT'); Son.SFX.erreur(); return false; }
     const arret = arretDuTour(c.total);
     c.total++; c.tours++;
@@ -85,11 +85,11 @@ const Casino = (function () {
 
   function menu() {
     const r = regles(), c = compteur(), p = B.partie;
-    const reste = Math.max(0, r.tours_par_jour - c.tours);
+    const reste = Math.max(0, r.tours_par_jour - c.tours), libre = triche('machines');   // la triche MACHINES SANS LIMITE
     return { titre: 'MACHINE À SOUS', sur: p.argent + ' $', largeur: 440, hauteur: 214, colonne: 176,
-             items: [{ libelle: 'TIRER LE BRAS', detail: r.mise + ' $', actif: p.argent >= r.mise && reste > 0,
+             items: [{ libelle: 'TIRER LE BRAS', detail: r.mise + ' $', actif: p.argent >= r.mise && (libre || reste > 0),
                        faire: function () { tirer(); return false; } }],
-             aide: 'RETOUR ' + r.retour + ' % · ' + reste + ' TOUR' + (reste > 1 ? 'S' : '') + ' AUJOURD’HUI',
+             aide: 'RETOUR ' + r.retour + ' % · ' + (libre ? 'SANS LIMITE' : reste + ' TOUR' + (reste > 1 ? 'S' : '') + ' AUJOURD’HUI'),
              dessiner: dessiner };
   }
 

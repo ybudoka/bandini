@@ -138,20 +138,20 @@ def test_les_titres_de_section_se_sautent(banc):
         const libelle = function () { return m.items[m.curseur].libelle; };
         const entetes = m.items.filter(function (i) { return i.entete; }).map(function (i) { return i.entete; });
         const depart = libelle();
-        m.curseur = m.items.findIndex(function (i) { return i.libelle === 'LA POLICE NE T\\'ARRÊTE PAS'; });
-        o.tape('ArrowDown', 2); const apresPolice = libelle();
-        o.tape('ArrowUp', 2); const retourPolice = libelle();
+        m.curseur = m.items.findIndex(function (i) { return i.libelle === 'MACHINES SANS LIMITE'; });   // la derniere bascule
+        o.tape('ArrowDown', 2); const apresBascules = libelle();
+        o.tape('ArrowUp', 2); const retourBascules = libelle();
         const poses = [];
         for (let k = 0; k < m.items.length + 2; k++) { o.tape('ArrowDown', 2); poses.push(!!m.items[m.curseur].entete); }
         m.curseur = 1;
         o.tape('ArrowUp', 2); const tour = libelle();
-        return { entetes: entetes, depart: depart, apresPolice: apresPolice, retourPolice: retourPolice,
+        return { entetes: entetes, depart: depart, apresBascules: apresBascules, retourBascules: retourBascules,
                  surUnTitre: poses.some(Boolean), tour: tour, titre: m.titre };
     }""")
     assert r["entetes"] == ["LE JOUEUR", "TOUJOURS", "ALLER", "JOUER", "DIVERS"]
     assert r["depart"] == "ARGENT +1 000 $"
-    assert r["apresPolice"] == "À L'OBJECTIF", "le titre ALLER se saute"
-    assert r["retourPolice"] == "LA POLICE NE T'ARRÊTE PAS"
+    assert r["apresBascules"] == "À L'OBJECTIF", "le titre ALLER se saute"
+    assert r["retourBascules"] == "MACHINES SANS LIMITE"
     assert r["surUnTitre"] is False
     assert r["tour"] == "JUKEBOX", "en haut, un appui neuf fait le tour sans se poser sur LE JOUEUR"
 
