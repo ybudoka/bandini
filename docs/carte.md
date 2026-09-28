@@ -149,6 +149,12 @@ un paiement.
 | Le pont de l'aéroport | `pont_aeroport` | piéton + véhicule | après **a01** (pas encore écrite) — la barricade se défonce et s'enjambe, sans étoile, mais le tablier s'arrête au-dessus de l'eau : trente-deux tuiles de chantier et six piles |
 | La guérite de l'aéroport | `aeroport` | piéton + véhicule | après **a02** (pas encore écrite) — ne se force pas |
 
+**Les serrures des blocs** (l'infiltration, 28 sept. 2026) : un bloc de carte peut avoir ses propres
+barrières (`serrures` dans sa fiche, `app/blocs/villa.py`), exportées au même format et lues par le même
+`Monde.barriereFermee` — condition `objet`, pleines, elles ne se forcent pas. La villa du maire en a deux :
+la **porte de service** (`cle_villa`, la clé volée au garde du jardin, v01) et la **chambre forte** de la
+cave (`code_voute`, le code du terminal piraté, v03).
+
 ---
 
 ## 4. Les véhicules (`app/vehicules.py`)

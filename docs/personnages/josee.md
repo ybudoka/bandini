@@ -14,7 +14,7 @@
 | Voix | **Jeanne Mance — Charming, Clear and Young**, québécoise |
 | Bulle | « Approche, toi. » |
 | Couleurs | chandail rouge, cheveux noirs, pantalon noir |
-| Missions | donne **m5**, **m6**, **q04**, **q11** (les camions de Sven — le choix contre **q10**) ; ouvre le marché noir après m5 (au lieu de dire son repos) |
+| Missions | donne **m5**, **m6**, **q04**, **q11** (les camions de Sven — le choix contre **q10**), **v01** (la clé du maire, la première infiltration de la villa) ; ouvre le marché noir après m5 (au lieu de dire son repos) |
 
 ## Son histoire
 
@@ -77,6 +77,10 @@ portes de m6) : c'est elle qui décide où l'on regarde.
 - **Les Cravates** — ceux qu'elle a chassés du Faubourg (m5).
 
 ## Ce qu'elle a dit (le canon)
+
+- v01 : le maire Tanguay a une villa au bout des Érables, « gardée comme une banque » ; elle veut la clé de
+  la porte de service « sans qu'il sache qu'elle est partie » ; « un jour on va entrer chez le maire sans
+  sonner » ; « T'as les mains fines » — son `[warmly]` de la mission.
 
 - m5 : on l'appelle la Chef ; les Cravates tiennent trois coins ; leur chef, elle le veut couché ; le bar
   est à toi ; « Y a plus grand que le Faubourg. »

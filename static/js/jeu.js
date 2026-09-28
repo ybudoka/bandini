@@ -142,6 +142,7 @@ const Jeu = (function () {
     // le temps que sa carte arrive. Sans elle (hors ligne, un bloc retire), on reste au
     // passage en ville, ou `p.x`/`p.y` nous ont deja poses.
     Blocs.oublier();
+    Infiltration.oublier();
     if (p.bloc) Blocs.reprendre(p.bloc);
   }
 
@@ -1125,6 +1126,7 @@ const Jeu = (function () {
         pas('metro', Metro.maj);
         pas('histoire', Histoire.maj);
         pas('blocs', Blocs.maj);
+        pas('infiltration', Infiltration.maj);   // la villa : la releve des gardes, les escaliers, ce qu'on vient prendre
         Monde.majCamera();
         B.t++;
       }
@@ -1262,6 +1264,7 @@ const Jeu = (function () {
     Galeries.dessiner(Base.ecran(), vue);    // le noir qui gagne aux Galeries, la nuit (une piece n'a pas de nuit a elle)
     Enseignes.dessinerPardessus(Base.ecran(), vue);   // la salle du Rialto dans le noir, le film qui brille
     if (!B.interieur) Cineparc.dessinerFaisceau(Base.ecran(), vue);   // le projecteur du cine-parc : sa lumiere, par-dessus la nuit
+    Infiltration.dessiner(Base.ecran(), vue);   // les lampes de poche des gardes (la villa), par-dessus la nuit
     Hud.dessiner();
   }
 
@@ -1521,7 +1524,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,

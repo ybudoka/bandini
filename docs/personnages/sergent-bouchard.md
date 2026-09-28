@@ -14,7 +14,7 @@
 | Voix | **Khaivan — Quebec accent**, un accent bien dialectal |
 | Bulle | « Ici, le jeune! » |
 | Couleurs | chemise bleu police, cheveux gris, pantalon marine |
-| Missions | donne **m4**, **m51** ; souffle **m97** à Marco sans y parler |
+| Missions | donne **m4**, **m51**, **v02** (le dossier que le maire garde sur lui, dans le bureau d'en haut de la villa) ; souffle **m97** à Marco sans y parler |
 
 ## Son histoire
 
@@ -72,6 +72,10 @@ quand il parle d'ailleurs (la fin de m4). Il ne se lève pas pour toi : c'est to
 - **Ti-Guy** — assez fiable pour faire diversion (m4).
 
 ## Ce qu'il a dit (le canon)
+
+- v02 : le maire garde un dossier sur lui — « des enveloppes, des dates… des photos » ; « si un garde te
+  voit, je te connais pas » ; le dossier finira « dans le poêle du poste », et ton casier maigrit de deux
+  pages : « ça s'appelle de la gratitude ».
 
 - m4 : Marco lui a parlé de toi ; l'auto-patrouille aux papiers pas propres ; « tu dis mon nom » ; Josée,
   au bar, cherche du monde comme toi.

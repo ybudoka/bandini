@@ -6977,6 +6977,22 @@ const OBJETS = {
   monnaie: function (ctx) { ctx.fillStyle = '#9aa0a8'; ctx.fillRect(4, 4, 4, 3); ctx.fillStyle = '#d9dcdf'; ctx.fillRect(4, 4, 3, 2); ctx.fillStyle = '#b87333'; ctx.fillRect(8, 6, 4, 3); ctx.fillStyle = '#e0a060'; ctx.fillRect(8, 6, 3, 2); ctx.fillStyle = '#c9ccd2'; ctx.fillRect(10, 2, 3, 3); },
   canette: function (ctx) { ctx.fillStyle = '#8a241e'; ctx.fillRect(4, 4, 8, 4); ctx.fillStyle = '#c0392b'; ctx.fillRect(4, 4, 8, 2); ctx.fillStyle = '#f3efe6'; ctx.fillRect(6, 5, 3, 1); ctx.fillStyle = '#c9ccd2'; ctx.fillRect(12, 4, 1, 4); },
   sac: function (ctx) { ctx.fillStyle = '#c79a12'; ctx.fillRect(4, 2, 8, 7); ctx.fillStyle = '#f1c40f'; ctx.fillRect(4, 2, 7, 5); ctx.fillStyle = '#c0392b'; ctx.fillRect(5, 4, 5, 2); ctx.fillStyle = '#e8e6de'; ctx.fillRect(4, 2, 8, 1); },
+  // Ce qu'une infiltration vient prendre (la villa du maire). La CLE : un anneau et sa tige dentee, en
+  // laiton — a seize pixels, c'est l'anneau qui la nomme. Le DOSSIER : une chemise beige, son onglet et
+  // l'elastique rouge. Le REGISTRE : un gros livre relie de cuir vert, les tranches pales.
+  cle: function (ctx) {
+    ctx.fillStyle = '#6b4f12'; ctx.fillRect(3, 3, 5, 5); ctx.fillRect(7, 5, 7, 2);
+    ctx.fillStyle = '#e0b53a'; ctx.fillRect(4, 4, 3, 3); ctx.fillRect(8, 5, 6, 1); ctx.fillRect(11, 6, 1, 2); ctx.fillRect(13, 6, 1, 2);
+    ctx.fillStyle = '#6b4f12'; ctx.fillRect(5, 5, 1, 1);
+  },
+  dossier: function (ctx) {
+    ctx.fillStyle = '#8a7446'; ctx.fillRect(3, 3, 11, 7); ctx.fillStyle = '#d9c28a'; ctx.fillRect(3, 3, 10, 6);
+    ctx.fillStyle = '#c4a96a'; ctx.fillRect(3, 2, 4, 1); ctx.fillStyle = '#c0392b'; ctx.fillRect(8, 3, 1, 6);
+  },
+  registre: function (ctx) {
+    ctx.fillStyle = '#1d3b24'; ctx.fillRect(3, 2, 10, 8); ctx.fillStyle = '#2f6b3f'; ctx.fillRect(3, 2, 9, 7);
+    ctx.fillStyle = '#efe6d0'; ctx.fillRect(12, 3, 1, 6); ctx.fillStyle = '#d4af37'; ctx.fillRect(5, 4, 5, 1); ctx.fillRect(5, 6, 5, 1);
+  },
 };
 
 /* Ce qu'on voit DANS LA MAIN quand ce n'est pas l'objet du sol. Meme toile

@@ -65,7 +65,17 @@ TYPES_OBJECTIFS = (
     # il QUITTE `escale` (un district de `traversier.ESCALES`) : manquer le départ, c'est
     # attendre le suivant, pas un échec.
     "embarquer",   # `escale`
+    # --- L'infiltration (Martin, 28 sept. 2026 : « fais des missions d'infiltration ») : un objet dans le
+    # sac (`objet`, le slug que `partie.objets` retient), d'où qu'il vienne — posé à un lieu (`ou`) et
+    # ramassé en marchant dessus, ou dans la poche d'un garde (`garde`, sa ronde dans la fiche du bloc),
+    # volé par-derrière ou tombé quand on l'assomme. `dessin` : la clé, le dossier, le registre
+    # (`OBJETS` de `sprites.js`). Voir `static/js/infiltration.js`.
+    "obtenir",     # `objet`, `ou` (le lieu, ou la ronde du garde pour le GPS), `garde`, `dessin`
 )
+
+#: Ce qu'un objet de mission a l'air, par terre (`OBJETS` de `static/js/sprites.js`, que `Entites`
+#: sait peindre au sol). ⚠️ Un dessin inconnu se peindrait en sac : le juge le refuse.
+DESSINS_D_OBJET = ("cle", "dossier", "registre", "sac")
 
 #: ⚠️ **CE QUE PORTE UN HOMME DE MISSION SE DECLARE ICI.** Un objectif `tuer`
 #: pose des membres d'un `groupe` : ils sortent de l'archetype (`pietons.py`),
@@ -478,7 +488,7 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 from . import (  # noqa: E402
     e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f11, h01, h02, m1, m2, m3,
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
-    s03, s08,
+    s03, s08, v01, v02, v03,
 )
 
 # ⚠️ L'ordre est celui du téléphone : il sonne pour la première mission disponible dont l'appel n'a pas
@@ -492,6 +502,8 @@ from . import (  # noqa: E402
 # Bouchard), s01 (la Shop — Gilles), p13/p14 (La Pointe — la foire prend vie, le Bonimenteur).
 # ⚠️ Quatre de plus (25 sept. 2026) : q01 (Lulu, après q02), q10/q11 (le choix entre Sven et Josée —
 # chacune `ferme` l'autre ; q10 après m54, Sven ayant dit « une dernière fois »), s08 (Gilles, après s01).
+# ⚠️ Trois infiltrations (28 sept. 2026) : v01 (Josée, après q04), v02 (Bouchard), v03 (Sven) — la
+# villa du maire, un bloc (`app/blocs/villa.py`), avant m97.
 # ⚠️ m99 (M13, 25 sept. 2026) — _Sacrer son camp_, la fin qu'on peut jouer — tout au bout : son appel
 # ne sonne qu'avec 15 000 $ en poche (`exige`), et une fin n'a rien à précéder.
 CATALOGUE: list[Mission] = [
@@ -504,6 +516,7 @@ CATALOGUE: list[Mission] = [
     p13.MISSION, p14.MISSION,
     m52.MISSION, m53.MISSION, m54.MISSION,
     q01.MISSION, q10.MISSION, q11.MISSION, s08.MISSION,
+    v01.MISSION, v02.MISSION, v03.MISSION,
     m97.MISSION, m99.MISSION,
 ]
 
@@ -1111,7 +1124,7 @@ ACTEURS_DE_MISSION = ("joueur", "donneur", "vehicule", "cible", "fuyard")
 #: — les amarrages ordinaires (`carte.amarrages`) n'appartiennent à personne
 #: d'autre.
 FORMES_DE_LIEU = ("place", "porte", "ruelle", "zone", "chez", "boutique", "district", "rampe",
-                   "mouillage", "amarrage", "traversier")
+                   "mouillage", "amarrage", "traversier", "bloc")
 #: Les lieux NOMMÉS que `Histoire.resoudre` connaît sans forme (`pont` : la barrière du
 #: pont, `bois` : une tuile des bois, `foire` : l'arche) — le `ou` d'un objectif peut les
 #: nommer, et la scène par défaut les filme alors tels quels (q10 et sa moto au pont).
@@ -1268,8 +1281,15 @@ def lieu_a_montrer(mission: dict) -> str | None:
     plan, c'est un sur-place. Rien à montrer, et la scène se joue chez le
     donneur : la caméra ne bouge pas, le geste, lui, joue toujours.
     """
+    from .. import blocs
+
+    dans_un_bloc = blocs.lieux_des_blocs()
     for objectif in mission["objectifs"]:
         ou = objectif.get("ou")
+        # ⚠️ Un lieu de BLOC (la villa) n'a pas de pixel en ville : la caméra va voir son passage.
+        for nom in (ou, objectif.get("lieu")):
+            if nom in dans_un_bloc:
+                return "bloc:" + dans_un_bloc[nom]
         if ou and ou != "donneur" and not ou.startswith("point:"):
             return ou
         if objectif.get("lieu"):

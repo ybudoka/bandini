@@ -30,8 +30,8 @@ Chaque fiche mêle deux sortes de faits.
 | [Ti-Guy Lelièvre](ti-guy.md) | `ti_guy` | devant le terminus, puis au garage | Felix Tabarnak | m1 · m4 (au combiné) |
 | [Madame Thibodeau](madame-thibodeau.md) | `thibodeau` | devant son kiosque | Julia | m2 · m51 |
 | [Marco « le Cousin »](marco.md) | `marco` | devant le garage | Québec Tremblay | m3 · m50 · f01 · m97 |
-| [Le sergent Réjean Bouchard](sergent-bouchard.md) | `bouchard` | au casse-croûte, dedans | Khaivan | m4 · m51 |
-| [Josée « la Chef » Pelletier](josee.md) | `josee` | au bar Le Brouillard, dedans | Jeanne Mance | m5 · m6 · q04 · q11 |
+| [Le sergent Réjean Bouchard](sergent-bouchard.md) | `bouchard` | au casse-croûte, dedans | Khaivan | m4 · m51 · v02 |
+| [Josée « la Chef » Pelletier](josee.md) | `josee` | au bar Le Brouillard, dedans | Jeanne Mance | m5 · m6 · q04 · q11 · v01 |
 | [Ti-Paul Gagnon](ti-paul.md) | `tipaul` | devant son dépanneur | Québec Tremblay | m6 · e01 · m51 |
 | [Lucienne « Lulu » Pelletier](lulu.md) | `lulu` | à la cantine des Quais, dedans | Claudia | m6 · m50 · q02 · m51 · q01 |
 | [Raymonde Fortin](raymonde.md) | `raymonde` | devant l'usine Prévost | Nadine | m6 · s03 |
@@ -39,7 +39,7 @@ Chaque fiche mêle deux sortes de faits.
 | [Le narrateur du Clairon](le-narrateur.md) | `narrateur` | nulle part : c'est une voix | annonceur centre d'achat 1 | l'ouverture, le journal |
 | [Le client du taxi](le-client-du-taxi.md) | `civil` | sur la banquette arrière | Alexandre | m3 |
 | [Rocco Bandini](rocco.md) | — | absent : c'est lui qu'on remplace | — | partout, en creux |
-| [Sven Haugen](sven.md) | `sven` | sur la jetée, près de son porte-conteneurs | Martin - Clear and Comforting | m52 · m53 · m54 · q10 |
+| [Sven Haugen](sven.md) | `sven` | sur la jetée, près de son porte-conteneurs | Martin - Clear and Comforting | m52 · m53 · m54 · q10 · v03 |
 | [Le Grand Mo](le-grand-mo.md) | `mo` | le banc du terminus | Alexandre Boutin | f04 |
 | [Fern Côté](fern.md) | `fern` | le quai d'autobus du terminus | Premium Male teacher (Adam) | f05 |
 | [Mado](mado.md) | `mado` | devant le casse-croûte du Faubourg | Caroline | f11 |

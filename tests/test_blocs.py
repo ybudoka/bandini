@@ -48,10 +48,12 @@ def test_la_carte_d_un_bloc_se_sert_a_part_et_se_revalide():
 
 def test_le_paquet_nomme_les_passages_et_pas_les_cartes(paquet):
     """Le paquet dit OÙ passer ; la carte du bloc voyage à part, à la demande. Seules ses
-    PORTES voyagent avec lui (x, y, nom de la pièce) : la triche ENDROITS CLÉS les liste."""
+    PORTES voyagent avec lui (x, y, nom de la pièce) : la triche ENDROITS CLÉS les liste. Un
+    bloc qui a des lieux de mission (la villa) n'en envoie que les NOMS, pas les pixels."""
     assert [b["slug"] for b in paquet["blocs"]] == [b["slug"] for b in blocs.BLOCS]
     for b in paquet["blocs"]:
-        assert set(b) == {"slug", "nom", "passage", "panneau", "portes"}
+        assert set(b) - {"lieux"} == {"slug", "nom", "passage", "panneau", "portes"}
+        assert all(isinstance(nom, str) for nom in b.get("lieux", []))
         for p in b["portes"]:
             assert set(p) == {"x", "y", "nom"}
     assert paquet["blocs_empreinte"]

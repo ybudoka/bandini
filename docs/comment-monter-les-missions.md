@@ -174,7 +174,12 @@ attend son **juge de banc** avant de porter une mission) :
 | `eteindre` | un feu à l'extincteur (le jet existe, le feu de char aussi) | — |
 | `boulots` | `n` boulots d'une `sorte` (généralise `courses`, qui reste au taxi) | `n`, `sorte` |
 | `pirater` | s'approcher de `ou`, ACTION l'ouvre, guider une étincelle dans un labyrinthe électrifié (`circuit.js`, depuis le 27 sept. 2026) de la prise au port avec le stick (le même axe unifié que la marche, `Entree.axe` — clavier, manette, doigt) ; un fil touché est un zap (retour au relais), au-delà de `essais` zaps c'est l'échec `alarme` ; le tracé vient de l'empreinte (mission, étape), `longueur` + 3 colonnes sur 4 rangées ; la flèche mène au terminal (le poste, pour un mouillage) — un `ou` loin du donneur se trouve (l'île de m53, m54) | `ou`, `rayon` (déf. 3), `longueur` (déf. 4), `essais` (déf. 3) |
+| `obtenir` | (l'infiltration, 28 sept. 2026) un objet dans le sac (`partie.objets[objet]`), d'où qu'il vienne : posé à son lieu (`ou`) et ramassé en marchant dessus, ou dans la poche d'un garde de ronde (`garde`, le slug de sa ronde dans la fiche du bloc — `ou` ne dit alors que où le chercher), volé par-derrière (ACTION, il ne sent rien) ou lâché quand on l'assomme ; `nom` : ce que le HUD dit en le prenant ; `dessin` : `cle`, `dossier`, `registre` ou `sac` (jugé). Une mission ratée fait retomber ce que ses objectifs avaient mis dans le sac (`Infiltration.rendre`) | `objet`, `ou`, `garde`, `nom`, `dessin` |
 | `embarquer` | (M13) être à bord du traversier — à pied ou au volant — quand il **quitte** `escale` ; c'est `Traversier.embarquer` qui prend ce qui est sur le pont à l'heure du départ, et manquer le départ, c'est attendre le suivant (deux heures), pas un échec ; la flèche mène au bout du quai (`traversier:<escale>`) | `escale` (un district de `traversier.ESCALES` : `quais` ou `pointe`) |
+
+⚠️ **`objet` sur n'importe quel objectif** (l'infiltration) : ce que l'objectif FINI met dans le sac — le
+code que le terminal piraté crache (`pirater` de v03, `objet: code_voute`), et qui ouvre la serrure du
+bloc qui l'attend. `obtenir` le met lui-même, au moment où on le ramasse.
 
 **Les quatre options transverses** (`OPTIONS_OBJECTIFS`) : ce ne sont **pas**
 des types, mais des clés qui se posent sur **n'importe quel** objectif —
@@ -196,6 +201,14 @@ Contraintes **jugées** (voir `test_missions.py`) :
   n'est pas dans `carte.SPECIAUX`). On y envoie par l'`ou` d'un `tuer` ou d'un `pirater` — `"ou":
   "chapelle"`, `"ou": "hangar_ile"` : la flèche suit l'homme posé ou le terminal, on y va en bateau,
   on débarque et on monte à pied (m52-m54, juges `test_m5x_joue_jusqu_au_bout…`).
+- ⚠️ **Un lieu de BLOC** (la villa du maire, `app/blocs/villa.py` : `villa_chemin`, `villa_service`,
+  `villa_bureau`, `villa_terminal`, `villa_voute`) se nomme comme un lieu de la ville (`lieu`, `ou`) : ce sont
+  les `lieux` de la fiche du bloc, que `blocs.LIEUX_PAR_BLOC` recopie avant tout import. En ville, la flèche
+  vise le passage du bloc ; dedans, le lieu. Ils ne comptent pas dans `devants.lieux_de_mission` (la ville ne
+  bouge pas) et `blocs.erreurs` juge qu'on les rejoint à pied depuis l'arrivée — escaliers pris, serrures
+  ouvertes. Une scène les montre par `bloc:<slug>` (le passage en ville, le panneau) : c'est aussi ce que le
+  défaut vise. ⚠️ **Tout ce qui s'y joue doit tourner dans un BLOC, jamais dans une pièce** : dans une pièce,
+  `majObjectif` et la police dorment.
 - ⚠️ **Un `aller` sur le lieu du donneur veut un rayon de 6 tuiles, pas 4** : il se tient à ~48 px du
   point, et le joueur qui lui parle à 16 px de plus (Ti-Paul : 64,03 px contre 64) — on serait AU lieu et
   la mission demanderait un pas de plus.
@@ -387,7 +400,8 @@ attendre le précédent), `fond` (le plan ne retient pas la scène).
 
 **Les acteurs nommables** : `joueur`, `donneur`, `vehicule`, `cible`, `fuyard`,
 plus tout `slug` de `PERSONNAGES`. **Les formes de lieu** : un acteur,
-`place:<acteur>`, `porte:<lieu>`, `ruelle:<lieu>`, `zone:<x>`, `chez:<personnage>`.
+`place:<acteur>`, `porte:<lieu>`, `ruelle:<lieu>`, `zone:<x>`, `chez:<personnage>`, `bloc:<slug>` (le
+passage d'un bloc de carte, en ville — la villa de v01 à v03).
 
 ⚠️ **La fin ne parle pas par la bouche d'un absent.** Si le dernier objectif
 n'est pas `retourner` (et qu'on n'est pas chez le donneur), la scène de fin doit

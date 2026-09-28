@@ -17,15 +17,29 @@ Comme une mission : rien d'autre à toucher.
 
 from __future__ import annotations
 
-import copy
+#: ⚠️ **LES LIEUX DES BLOCS, AVANT TOUT IMPORT** (la villa, l'infiltration). Une mission peut nommer un
+#: lieu de bloc, et `missions` bâtit ses scènes par défaut EN SE CHARGEANT — pendant que ce module-ci
+#: attend `carte`, qui attend `missions`. Les noms sont donc écrits ici, avant l'import qui boucle ;
+#: `erreurs` juge qu'ils sont exactement ceux de la fiche du bloc.
+LIEUX_PAR_BLOC: dict[str, tuple[str, ...]] = {
+    "villa": ("villa_chemin", "villa_service", "villa_bureau", "villa_terminal", "villa_voute"),
+}
 
-from .. import carte
-from . import cineparc, galeries, rang
+
+def lieux_des_blocs() -> dict[str, str]:
+    """Chaque lieu de bloc et le bloc qui le porte — ce qu'une mission peut nommer en plus de la ville."""
+    return {lieu: bloc for bloc, lieux in LIEUX_PAR_BLOC.items() for lieu in lieux}
+
+
+import copy  # noqa: E402
+
+from .. import carte  # noqa: E402
+from . import cineparc, galeries, rang, villa  # noqa: E402
 
 #: ⚠️ LE RANG (26 sept. 2026) : le chalet, la clairière et la cabane à sucre ne font plus qu'UN bloc, et
 #: les trois passages sont au bord OUEST — la bande nord de la ville couvre l'ancien bord nord
 #: (docs/jalons/la-ville-s-agrandit-au-nord.md).
-BLOCS: list[dict] = [rang.BLOC, cineparc.BLOC, galeries.BLOC]
+BLOCS: list[dict] = [rang.BLOC, cineparc.BLOC, galeries.BLOC, villa.BLOC]
 
 BORDS = ("nord", "sud", "est", "ouest")
 
@@ -65,7 +79,14 @@ def carte_du_bloc(bloc: dict) -> dict:
         # Les glyphes peints autrement que dans la ville (le bois rond du chalet).
         "materiaux": dict(bloc.get("materiaux", {})),
         # Ses lampes, s'il en declare (le cine-parc : ses vitrines, ses lampadaires) ; aucune sinon.
-        "lampes": [dict(la) for la in bloc.get("lampes", [])], "zones": [], "points_interet": [], "intersections": [],
+        "lampes": [dict(la) for la in bloc.get("lampes", [])], "zones": [], "intersections": [],
+        # ⚠️ SES LIEUX (la villa, l'infiltration) : des points d'intérêt comme ceux de la ville — une
+        # mission les nomme (`lieu`, `ou`), et `Histoire.lieu` les trouve quand on est dans le bloc.
+        "points_interet": points_du_bloc(bloc),
+        # ⚠️ SES SERRURES : des barrières comme celles de la ville (`carte.BARRIERES`, condition
+        # `objet`), que `Monde.barrieres` lit dans la carte COURANTE — une porte de la villa se ferme
+        # tant que la clé n'est pas dans le sac, et elle ne se force pas.
+        "barrieres": [serrure(s) for s in bloc.get("serrures", ())],
         "arrets": {}, "ambulants": [],
         # Ce que le navigateur doit savoir pour en ressortir.
         "bloc": {"slug": bloc["slug"], "nom": bloc["nom"], "retour": dict(bloc["retour"]),
@@ -82,8 +103,30 @@ def carte_du_bloc(bloc: dict) -> dict:
                  # La fenêtre de sa cabine de projection (`Cineparc.faisceau` en part).
                  "cabine": dict(bloc["cabine"]) if bloc.get("cabine") else None,
                  # La cabane à sucre, pour vrai : la calèche, la tubulure, la table de tire et ses gens (`Cabane`).
-                 "cabane": copy.deepcopy(bloc["cabane"]) if bloc.get("cabane") else None},
+                 "cabane": copy.deepcopy(bloc["cabane"]) if bloc.get("cabane") else None,
+                 # ⚠️ L'INFILTRATION (la villa) : ses escaliers d'un étage à l'autre, les cadres où la
+                 # caméra se tient, le terrain privé, ses gardes et leurs règles (`Infiltration`,
+                 # `Police.garder`). Vides ailleurs.
+                 "escaliers": [dict(e) for e in bloc.get("escaliers", ())],
+                 "cadres": [list(c) for c in bloc.get("cadres", ())],
+                 "prive": [list(c) for c in bloc.get("prive", ())],
+                 "gardes": [dict(g) for g in bloc.get("gardes", ())],
+                 "regles_des_gardes": dict(bloc["regles_des_gardes"]) if bloc.get("regles_des_gardes") else None},
     }
+
+
+def points_du_bloc(bloc: dict) -> list[dict]:
+    """Les lieux d'un bloc, au format des points d'intérêt de la ville (`slug`, `nom`, `x`, `y`)."""
+    return [{"slug": slug, "nom": lieu["nom"], "x": lieu["x"], "y": lieu["y"]} for slug, lieu in bloc.get("lieux", {}).items()]
+
+
+def serrure(s: dict) -> dict:
+    """Une serrure de bloc, au format d'une barrière de la ville (`carte.BARRIERES`) : une porte qui arrête
+    tout le monde, pleine, qui ne se force pas, et qui se peint en porte cadenassée (`decor: serrure`)."""
+    return {"slug": s["slug"], "nom": s["nom"], "x": s["x"], "y": s["y"], "l": s.get("l", 1), "h": s.get("h", 1),
+            "arrete": ["pieton", "vehicule"], "condition": dict(s["condition"]), "forcer": None,
+            "raison": s["raison"], "decor": "serrure", "plein": True, "existant": False}
+
 
 
 def passage_en_ville(bloc: dict) -> dict:
@@ -105,7 +148,10 @@ def pour_le_navigateur() -> list[dict]:
     return [{"slug": b["slug"], "nom": b["nom"], "passage": passage_en_ville(b),
              "panneau": b.get("panneau", b["nom"][:5].upper()),
              "portes": [{"x": p["x"], "y": p["y"], "nom": b.get("pieces", {})[p["interieur"]]["nom"]}
-                        for p in b.get("portes", [])]} for b in BLOCS]
+                        for p in b.get("portes", [])],
+             # ⚠️ Les NOMS de ses lieux, seulement (la villa) : en ville, une mission qui en nomme un
+             # fait viser le passage du bloc au GPS — le pixel, lui, n'existe que dans le bloc.
+             **({"lieux": sorted(b["lieux"])} if b.get("lieux") else {})} for b in BLOCS]
 
 
 def erreurs(bloc: dict, ville: dict | None = None) -> list[str]:
@@ -160,6 +206,28 @@ def erreurs(bloc: dict, ville: dict | None = None) -> list[str]:
         c = planque["char"]
         if a_pied is not None and (c["x"], c["y"]) not in a_pied:
             fautes.append(f"{slug} : la place du char ({c['x']}, {c['y']}) ne se rejoint pas depuis l'arrivée")
+    # ⚠️ L'INFILTRATION (la villa) : chaque lieu, chaque marche d'escalier, chaque point de ronde se
+    # marche et se rejoint à pied depuis l'arrivée — en prenant les escaliers, et en passant les serrures
+    # (une mission donne toujours de quoi les ouvrir). Et un cadre de caméra plus petit que l'écran
+    # laisserait voir l'étage d'à côté.
+    if set(bloc.get("lieux", {})) != set(LIEUX_PAR_BLOC.get(slug, ())):
+        fautes.append(f"{slug} : ses lieux ne sont pas ceux de `LIEUX_PAR_BLOC`")
+    for nom, lieu in bloc.get("lieux", {}).items():
+        if a_pied is not None and (lieu["x"], lieu["y"]) not in a_pied:
+            fautes.append(f"{slug} : on ne rejoint pas le lieu {nom} ({lieu['x']}, {lieu['y']}) à pied")
+    for escalier in bloc.get("escaliers", ()):
+        for bout in (escalier["a"], escalier["b"]):
+            for x, y in list(bout["tuiles"]) + [bout["arrivee"]]:
+                if a_pied is not None and (x, y) not in a_pied:
+                    fautes.append(f"{slug} : l'escalier vers {bout['nom']} ({x}, {y}) ne se rejoint pas à pied")
+    for garde in bloc.get("gardes", ()):
+        for point in garde["ronde"]:
+            if a_pied is not None and (point[0], point[1]) not in a_pied:
+                fautes.append(f"{slug} : la ronde du garde {garde['slug']} passe par ({point[0]}, {point[1]}), "
+                              "qu'on ne rejoint pas")
+    for cx, cy, cl, ch in bloc.get("cadres", ()):
+        if cl * carte.TUILE_PX < ECRAN_PX[0] or ch * carte.TUILE_PX < ECRAN_PX[1]:
+            fautes.append(f"{slug} : le cadre ({cx}, {cy}, {cl}, {ch}) est plus petit que l'écran")
     # Le passage, dans la ville : sur son bord, et chacune de ses tuiles se marche.
     if ville is not None:
         p = passage_en_ville(bloc) if ville.get("decalage_nord") else bloc["passage"]
@@ -170,18 +238,32 @@ def erreurs(bloc: dict, ville: dict | None = None) -> list[str]:
     return fautes
 
 
+#: L'écran du jeu, en pixels (`VW`, `VH` de `base.js`) : un cadre de caméra plus petit laisserait voir à côté.
+ECRAN_PX = (480, 270)
+
+
 def a_pied_depuis_l_arrivee(bloc: dict) -> set[tuple[int, int]]:
-    """Les tuiles qu'on rejoint à pied depuis l'arrivée du bloc (les arbres arrêtent)."""
+    """Les tuiles qu'on rejoint à pied depuis l'arrivée du bloc (les arbres arrêtent). ⚠️ Un escalier
+    (la villa) mène à son autre bout : on y pose le pied, on arrive en haut."""
     sol = sol_du_bloc(bloc)
     hauteur, largeur = len(sol), len(sol[0])
     arbres = {(d["x"], d["y"]) for d in decor_du_bloc(bloc) if d["type"] == "arbre"}
+    sauts: dict[tuple[int, int], tuple[int, int]] = {}
+    for escalier in bloc.get("escaliers", ()):
+        for depart, arrivee in ((escalier["a"], escalier["b"]), (escalier["b"], escalier["a"])):
+            for x, y in depart["tuiles"]:
+                sauts[(x, y)] = tuple(arrivee["arrivee"])
     a = bloc["arrivee"]
     vues, pile = {(a["x"], a["y"])}, [(a["x"], a["y"])]
     while pile:
         x, y = pile.pop()
-        for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+        voisines = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+        if (x, y) in sauts:
+            voisines.append(sauts[(x, y)])
+        for nx, ny in voisines:
             if (0 <= nx < largeur and 0 <= ny < hauteur and (nx, ny) not in vues
-                    and carte.LEGENDE.get(sol[ny][nx], {}).get("solide", 0) == 0 and (nx, ny) not in arbres):
+                    and (carte.LEGENDE.get(sol[ny][nx], {}).get("solide", 0) == 0 or (nx, ny) in sauts)
+                    and (nx, ny) not in arbres):
                 vues.add((nx, ny))
                 pile.append((nx, ny))
     return vues

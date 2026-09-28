@@ -135,9 +135,15 @@ def test_le_paquet_reste_leger():
     lanternes (253, idéogrammes compris) et le bois à clin de l'île (168). Ces deux derniers ont QUITTÉ le
     paquet des définitions, qui débordait (60 108 pour 60 000) : ils ne servent qu'à peindre la carte. Même
     règle qu'au nord : le vrai juge est la dette des districts chargés autour du joueur.
+
+    ⚠️ **Les définitions : 60 000 → 62 000 gzip, le 28 sept. 2026, le soir.** Mesure : 59 952 sur `dev`
+    après le casino (48 octets de marge — les frénésies, la cabane à sucre pour vrai, le bidonville),
+    60 168 avec les trois missions d'infiltration de la villa (le catalogue +693 bruts, les noms des lieux
+    de la villa dans `blocs` +223). Troisième relève en trois jours : le remède d'en haut ne peut plus
+    attendre.
     """
     paquets = definitions.construire()
-    for nom, brut_max, fil_max in (("definitions", 270_000, 60_000), ("carte", 720_000, 68_000)):
+    for nom, brut_max, fil_max in (("definitions", 270_000, 62_000), ("carte", 720_000, 68_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))

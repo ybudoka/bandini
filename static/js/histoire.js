@@ -437,12 +437,32 @@ const Histoire = (function () {
     if (deux[0] === 'zone') { const z = Monde.carte.zones.find(function (q) { return q.slug === deux[1]; }); return z ? { x: (z.x + z.l / 2) * TT, y: (z.y + z.h / 2) * TT, zone: z } : null; }
     if (deux[0] === 'point') return null;                 // dedans : pas de pixel en ville
     if (deux[0] === 'district') return tuileDeDistrict(deux[1]);
+    // `bloc:<slug>` : le passage d'un bloc de carte, en ville — ce qu'une scene montre de la villa.
+    if (deux[0] === 'bloc') return passageDuBloc(deux[1]);
     if (deux[0] === 'boutique') return boutiquex(deux[1]);
     if (deux[0] === 'rampe') return tuileDeRampe(deux[1]);
     // ⚠️ Le CENTRE de la coque, pas son poste : une caméra le regarde, et
     // `poserLeChar` y fait naître le véhicule, à son cap (`m.angle`).
     if (deux[0] === 'mouillage') { const mo = trouverMouillage(deux.slice(1).join(':')); return mo ? { x: mo.x, y: mo.y, mouillage: mo } : null; }
     return lieu(ou);
+  }
+
+  /** Le passage d'un bloc de carte (`B.defs.blocs`), en pixels de la VILLE : le milieu de l'ouverture,
+      un pas en deca du bord. Null dans un bloc — il n'y a pas de ville autour. */
+  function passageDuBloc(slug) {
+    if (B.bloc) return null;
+    const b = ((B.defs && B.defs.blocs) || []).find(function (q) { return q.slug === slug; });
+    if (!b || !Monde.carte) return null;
+    const o = b.passage, w = Monde.carte.w, h = Monde.carte.h, milieu = (o.de + o.l / 2) * TT;
+    const place = o.bord === 'nord' ? { x: milieu, y: TT } : o.bord === 'sud' ? { x: milieu, y: (h - 1) * TT }
+      : o.bord === 'ouest' ? { x: TT, y: milieu } : { x: (w - 1) * TT, y: milieu };
+    return { x: place.x, y: place.y, nom: b.nom };
+  }
+
+  /** Le bloc qui porte ce lieu (la villa pour `villa_bureau`), ou null : un lieu de la ville. */
+  function blocDuLieu(slug) {
+    const b = ((B.defs && B.defs.blocs) || []).find(function (q) { return (q.lieux || []).indexOf(slug) >= 0; });
+    return b ? b.slug : null;
   }
 
   function lieuDuPersonnage(slug) {
@@ -1305,6 +1325,11 @@ const Histoire = (function () {
     // monterait sur un tableau absent. `maj` attend deja ; un appel direct (la
     // triche, un evenement) ne doit pas plus faire tomber la mission.
     if (!m.objectifs) return;
+    // ⚠️ `objet` (l'infiltration) : ce que l'objectif FINI met dans le sac — le code que le terminal
+    // pirate crache, et qui ouvre la chambre forte (une serrure `objet` du bloc). `obtenir` le met
+    // lui-meme, au moment ou on le ramasse.
+    const fait = m.objectifs[p.etape];
+    if (fait && fait.objet && fait.type !== 'obtenir') { if (!B.partie.objets) B.partie.objets = {}; B.partie.objets[fait.objet] = 1; }
     p.etape++;
     const o = m.objectifs[p.etape];
     if (!o) { reussir(); return; }
@@ -2015,6 +2040,12 @@ const Histoire = (function () {
         if (victime) avancer();
         return;
       }
+      case 'obtenir': {
+        // ⚠️ L'INFILTRATION : un objet dans le sac, d'ou qu'il vienne — ramasse a son lieu, vole dans la
+        // poche d'un garde, tombe d'un garde assomme (`Infiltration`). On ne regarde que le sac.
+        if (B.partie.objets && B.partie.objets[o.objet] > 0) avancer();
+        return;
+      }
       case 'pirater': {
         // ⚠️ DEMARRER passe par `Missions.interagir` (le bouton ACTION, la meme
         // chaine que parler/monter) : ici on ne fait QUE lire la sequence en
@@ -2091,6 +2122,9 @@ const Histoire = (function () {
     if (!m) return;
     retenirLesTombes(m);
     nettoyer(true);
+    // ⚠️ Ce que ses objectifs avaient mis dans le sac (le dossier, le code de la chambre forte) retombe :
+    // on l'a laisse en fuyant, et la mission se refait du debut (`Infiltration.rendre`).
+    if (typeof Infiltration !== 'undefined') Infiltration.rendre(m);
     B.partie.mission = null;
     B.mission = null;
     Hud.message('MISSION RATÉE — ' + m.titre.toUpperCase(), 200);
@@ -3041,13 +3075,32 @@ const Histoire = (function () {
 
   // --- Le GPS : ou aller, pour le HUD ------------------------------------------------------------
 
+  /** Ce que la fleche vise DANS un bloc : le lieu d'un `aller`, le terminal d'un `pirater`, l'objet d'un
+      `obtenir` (par terre, ou le garde qui l'a dans la poche) — seulement ce qui est de CE bloc. Null
+      sinon : la fleche vise la sortie. */
+  function cibleDansLeBloc(m, p) {
+    const o = m.objectifs && p.mission && m.objectifs[p.mission.etape];
+    if (!o) return null;
+    const nomme = o.lieu || o.ou;
+    if (nomme && blocDuLieu(nomme) !== B.bloc.slug) return null;
+    let l = null;
+    if (o.type === 'aller' || o.type === 'pirater') l = lieu(nomme);
+    else if (o.type === 'obtenir') {
+      l = B.entites.find(function (e) { return e.type === 'ramassage' && e.objetDeMission === o.objet; })
+        || B.entites.find(function (e) { return e.porteObjet === o.objet && e.vivant; })
+        || (nomme ? lieu(nomme) : null);
+    }
+    return l ? { x: l.x, y: l.y, nom: l.nom || o.texte, couleur: '#e8b33c' } : null;
+  }
+
   /** La cible du moment : un objectif, un appel a honorer, un defi en cours. */
   function cible() {
     const m = courante(), p = B.partie, j = B.joueur;
     if (!j) return null;
     // ⚠️ DANS UN BLOC DE CARTE, les lieux de la ville n'ont pas de pixel ici : la fleche
-    // vise la sortie, vers la ville (`Blocs`) — c'est par la que passe tout le reste.
-    if (B.bloc) return Blocs.cibleDeSortie();
+    // vise la sortie, vers la ville (`Blocs`) — c'est par la que passe tout le reste. Sauf ce que la
+    // mission vient faire DANS ce bloc (la villa : son lieu, son terminal, ce qu'on vient prendre).
+    if (B.bloc) return (m && cibleDansLeBloc(m, p)) || Blocs.cibleDeSortie();
     if (B.defi) {
       const d = defis().find(function (q) { return q.slug === B.defi.slug; });
       const l = d.rue ? Rue.cible(d) : d.conduite ? Conduite.cible(d) : d.circuit ? repereDeCircuit(B.defi) : d.lieu ? lieu(d.lieu) : null;
@@ -3096,6 +3149,8 @@ const Histoire = (function () {
       // `piratageSousLaMain` l'ouvre). Sans ce cas, un terminal loin du donneur (l'île de m53,
       // m54) n'avait ni flèche ni repère.
       else if (o.type === 'pirater') { const t = resoudre(o.ou, m); l = t && t.mouillage ? t.mouillage.poste : t; }
+      // ⚠️ Un lieu de BLOC (la villa) n'a pas de pixel en ville : on vise son passage.
+      if (!l) { const bloc = blocDuLieu(o.lieu || o.ou || ''); if (bloc) l = passageDuBloc(bloc); }
       return l ? { x: l.x, y: l.y, nom: (l.nom || o.texte), couleur: '#e8b33c' } : null;
     }
     // Un appel recu : le donneur a aller voir.
@@ -3228,6 +3283,6 @@ const Histoire = (function () {
            reinitialiser, noter, rencontrer, CARNET_MAX, init, charger,
            proposerDefi, commencerDefi, finirDefi, abandonnerDefi, actionDeDefi, defisDeFoire, comptoirDeDefi, defiDuComptoir, canardAuCrochet,
            appareilsDe, jouableAvec, defiOuvert, defisOuverts, defiNeuf, ouvrirDefi, majDeblocages, planterLesPanneauxOuverts, APPAREIL_DU_CATALOGUE,
-           cible, ligneObjectif, lieu, lieuDeLivraison, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, cibleDuParler, maj,
+           cible, ligneObjectif, lieu, lieuDeLivraison, passageDuBloc, blocDuLieu, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, cibleDuParler, maj,
            piratageSousLaMain, commencerPiratage, estCourse, dessinerCheminCourse, lampesDeCourse };
 })();

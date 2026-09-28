@@ -9,7 +9,7 @@ from collections import deque
 
 import pytest
 
-from app import aeroport, carte, economie, missions
+from app import aeroport, blocs, carte, economie, missions
 
 SORTES = {"pieton", "vehicule"}
 CONDITIONS = {"apres", "heure", "jour_tire", "payer", "objet"}
@@ -95,7 +95,10 @@ def lieux_de_mission():
             # point_interet : c'est de l'eau, sans porte ni barrière piétonne à
             # franchir — cette règle-ci ne le concerne pas. Le quai du traversier
             # (`traversier:<escale>`, m99) non plus : il est jugé dans test_traversier.
-            if o.get("lieu") and not o["lieu"].startswith(("mouillage:", "traversier:")):
+            # ⚠️ Un lieu de BLOC (la villa, l'infiltration) non plus : il est derrière un passage, dans
+            # une autre carte — `blocs.erreurs` juge qu'on l'y rejoint à pied.
+            if (o.get("lieu") and not o["lieu"].startswith(("mouillage:", "traversier:"))
+                    and o["lieu"] not in blocs.lieux_des_blocs()):
                 lieux.add(o["lieu"])
     for d in missions.DEFIS:
         if d.get("lieu"):

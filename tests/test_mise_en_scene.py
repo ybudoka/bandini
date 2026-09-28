@@ -128,6 +128,9 @@ def test_les_lieux_des_scenes_existent_dans_la_ville():
                         assert suite in zones, (m["slug"], partie, nom)
                     elif forme == "chez":
                         assert missions.personnage(suite)["ou"], (m["slug"], partie, nom)
+                    elif forme == "bloc":
+                        from app import blocs
+                        assert blocs.par_slug(suite), (m["slug"], partie, nom)
                     elif forme == "traversier":
                         assert suite in {q["district"] for q in ville["traversier"]["escales"]}, (m["slug"], partie, nom)
 

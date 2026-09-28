@@ -786,6 +786,19 @@ const Monde = (function () {
           if (b.plein ? !bout : !surLaCouronne(b, tx, ty)) continue;
           const px = tx * TT - cam.x, py = ty * TT - cam.y;
           if (px < -TT || py < -TT || px > cam.w + TT || py > cam.h + TT) continue;
+          if (b.decor === 'serrure') {
+            // ⚠️ UNE PORTE FERMEE A CLE (l'infiltration) : une porte pleine, ses deux ferrures, et le
+            // CADENAS de laiton au milieu — c'est lui qui dit « il te faut quelque chose », pas un mur.
+            // Elle disparait des qu'on a la cle (`barriereFermee`) : la porte est ouverte.
+            ctx.fillStyle = '#2a1c12'; ctx.fillRect(px, py, TT, TT);
+            ctx.fillStyle = '#6b4526'; ctx.fillRect(px + 1, py + 1, TT - 2, TT - 2);
+            ctx.fillStyle = '#80552f'; ctx.fillRect(px + 2, py + 2, 5, TT - 4); ctx.fillRect(px + 9, py + 2, 5, TT - 4);
+            ctx.fillStyle = '#3a3d44'; ctx.fillRect(px + 1, py + 3, TT - 2, 2); ctx.fillRect(px + 1, py + 11, TT - 2, 2);
+            ctx.fillStyle = '#d4af37'; ctx.fillRect(px + 6, py + 7, 4, 4);
+            ctx.fillStyle = '#8a6d1a'; ctx.fillRect(px + 7, py + 5, 2, 2); ctx.fillRect(px + 7, py + 9, 2, 1);
+            B.stats.rects += 9;
+            continue;
+          }
           if (b.decor === 'barricade') {
             // ⚠️ **LE DETOUR SE LIT.** Une rue barree sans detour affiche n'est
             // pas une entrave, c'est un piege : on arrive, on ne passe pas, et
@@ -2274,7 +2287,19 @@ const Monde = (function () {
 
   /** Une carte plus petite que l'ecran (une piece) se centre : la camera
       prend alors une valeur negative, et le sol se dessine au milieu. */
+  /** ⚠️ UN BLOC A ETAGES (la villa, l'infiltration) : la camera ne sort pas du CADRE ou se tient le
+      joueur — l'etage d'a cote est dans la meme carte, a quelques tuiles, et on ne doit jamais le voir.
+      Chaque cadre est plus grand que l'ecran (`blocs.erreurs`). */
+  function cadreDeCamera() {
+    const j = B.joueur, b = carte && carte.def && carte.def.bloc;
+    if (!j || !b || !b.cadres || !b.cadres.length) return null;
+    const tx = Math.floor(j.x / TT), ty = Math.floor(j.y / TT);
+    return b.cadres.find(function (c) { return tx >= c[0] && tx < c[0] + c[2] && ty >= c[1] && ty < c[1] + c[3]; }) || null;
+  }
+
   function cibleCamera(x, y) {
+    const c = cadreDeCamera();
+    if (c) return { x: borner(x - VW / 2, c[0] * TT, (c[0] + c[2]) * TT - VW), y: borner(y - VH / 2, c[1] * TT, (c[1] + c[3]) * TT - VH) };
     return {
       x: carte.pxW < VW ? (carte.pxW - VW) / 2 : borner(x - VW / 2, 0, carte.pxW - VW),
       y: carte.pxH < VH ? (carte.pxH - VH) / 2 : borner(y - VH / 2, 0, carte.pxH - VH),
@@ -2290,6 +2315,8 @@ const Monde = (function () {
       `cibleCamera`, exposees pour le mode photo (M14) : la camera s'y
       detache du joueur, mais reste dans la ville. */
   function limitesCamera() {
+    const c = cadreDeCamera();
+    if (c) return { xMin: c[0] * TT, xMax: (c[0] + c[2]) * TT - VW, yMin: c[1] * TT, yMax: (c[1] + c[3]) * TT - VH };
     return {
       xMin: carte.pxW < VW ? (carte.pxW - VW) / 2 : 0, xMax: carte.pxW < VW ? (carte.pxW - VW) / 2 : carte.pxW - VW,
       yMin: carte.pxH < VH ? (carte.pxH - VH) / 2 : 0, yMax: carte.pxH < VH ? (carte.pxH - VH) / 2 : carte.pxH - VH,

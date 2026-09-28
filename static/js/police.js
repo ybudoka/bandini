@@ -538,7 +538,84 @@ const Police = (function () {
       }
       return true;
     }
+    // ⚠️ UN GARDE DE RONDE (l'infiltration) ne flane pas : il tient sa ronde.
+    if (a.ronde) return garder(a);
     return false;   // il flane : un pieton comme un autre
+  }
+
+  // --- Les gardes de ronde (l'infiltration, la villa du maire) ------------------------------------------
+  //
+  // ⚠️ Un garde est un agent comme un autre (`creerAgent(…, 'garde')`) : a une etoile, il poursuit et il
+  // arrete, et c'est `gere` qui le mene. Tant que personne n'est recherche, il fait sa RONDE (les points de
+  // la fiche du bloc, `Infiltration.releve`), s'arrete a chacun le temps de balayer du regard, et il
+  // REGARDE : sur le terrain prive, te voir dans son cone le temps de te reconnaitre (`reperage_s`, plus
+  // court de pres) donne l'alerte. Avant, il s'arrete et se tourne vers toi — le « ? » : on a le temps de
+  // se cacher. Un policier, lui, ne remarque qu'un flagrant delit ; un garde remarque qu'on est la.
+
+  function reglesDesGardes() {
+    const b = B.bloc && B.bloc.def && B.bloc.def.bloc;
+    return (b && b.regles_des_gardes) || { reperage_s: 0.9, reperage_min: 0.3, pas: 0.45, balaye_deg: 35 };
+  }
+
+  /** Combien d'images il lui faut te voir, a cette distance, pour te reconnaitre. */
+  function seuilDeReperage(a, cible) {
+    const rg = reglesDesGardes(), vision = defs().vision.garde;
+    const portee = (Monde.estNuit() ? vision.nuit : vision.jour) * TT;
+    const part = Math.max(rg.reperage_min, Math.min(1, Math.hypot(cible.x - a.x, cible.y - a.y) / portee));
+    return rg.reperage_s * 60 * part;
+  }
+
+  /** L'alerte : une etoile, lui a tes trousses, et les gardes de son etage avec lui. */
+  function alerteDuGarde(a) {
+    const j = B.joueur, r = B.recherche;
+    a.soupcon = 0; a.soupconDe = null;
+    etoilesAuMoins(1);
+    r.vu = 0; r.dernierVu = { x: j.x, y: j.y, t: B.t };
+    Entites.bulle(a, 'HÉ! TOI!', { duree: 100 });
+    const ici = typeof Infiltration !== 'undefined' ? Infiltration.cadre(a.x, a.y) : null;
+    for (const g of agents()) {
+      if (!g.ronde || (g !== a && (ici !== (typeof Infiltration !== 'undefined' ? Infiltration.cadre(g.x, g.y) : null)
+                                   || Math.hypot(g.x - a.x, g.y - a.y) > 14 * TT))) continue;
+      g.etat = 'poursuit'; g.chemin = null; g.cheminT = 0; g.vuT = g === a ? 0 : 30; g.soupcon = 0;
+    }
+    Hud.message('UN GARDE T’A VU !', 150);
+  }
+
+  function garder(a) {
+    const j = B.joueur, rg = reglesDesGardes(), p = reglages();
+    const cible = j.dansVehicule ? j.dansVehicule : j;
+    // Regarder, au meme budget qu'un agent (une image sur trois).
+    if ((B.t + a.id) % p.regarde_toutes_les_images === 0) {
+      const chezLui = typeof Infiltration !== 'undefined' && Infiltration.prive(cible.x, cible.y);
+      if (chezLui && j.vivant && !j.hospitalise && voit(a, cible.x, cible.y, 'garde', false)) {
+        a.soupcon = (a.soupcon || 0) + p.regarde_toutes_les_images;
+        a.soupconDe = { x: cible.x, y: cible.y };
+      } else if (a.soupcon > 0) {
+        a.soupcon = Math.max(0, a.soupcon - p.regarde_toutes_les_images / 3);
+      }
+    }
+    if (a.soupcon > 0 && a.soupconDe && a.soupcon >= seuilDeReperage(a, a.soupconDe)) { alerteDuGarde(a); return true; }
+    // Il a cru voir : il s'arrete, et il regarde par la.
+    if (a.soupcon > 0 && a.soupconDe) {
+      a.vx = 0; a.vy = 0;
+      Entites.regarder(a, a.soupconDe.x - a.x, a.soupconDe.y - a.y);
+      return true;
+    }
+    // La ronde : au point suivant, au pas ; arrive, il balaie du regard, puis repart.
+    const n = a.ronde.length, pt = a.ronde[(a.rondeI || 0) % n];
+    if (a.pauseT > 0) {
+      a.vx = 0; a.vy = 0; a.pauseT--;
+      const base = pt.length > 2 ? pt[2] * Math.PI / 180 : (a.capPause !== undefined ? a.capPause : a.angle);
+      const balaye = rg.balaye_deg * Math.PI / 180 * Math.sin((a.pauseS * 60 - a.pauseT) / 45);
+      Entites.regarder(a, Math.cos(base + balaye), Math.sin(base + balaye));
+      if (a.pauseT === 0) a.rondeI = ((a.rondeI || 0) + 1) % n;
+      return true;
+    }
+    const but = { x: pt[0] * TT + 8, y: pt[1] * TT + 8 };
+    if (Math.hypot(but.x - a.x, but.y - a.y) < 3 || suivre(a, but, rg.pas)) {
+      a.vx = 0; a.vy = 0; a.capPause = a.angle; a.pauseT = Math.max(1, Math.round((a.pauseS || 2) * 60));
+    }
+    return true;
   }
 
   /** Une place de naissance pour un agent : hors ecran, sur le trottoir. */
@@ -1117,7 +1194,7 @@ const Police = (function () {
 
   return { dansLeCone, voit, porteeDuCasier, quelqu_un_voit, auRefuge, ajouterChaleur, etoilesAuMoins, signalerCrime, crimeDAutrui, rapporter, acheterLeSilence, remiseAZero, unCranDeMoins, entendre, palierDesRenforts,
            estStool, leStool, prixDuStool, majStools, appelDuStool, acheterLeStool, onNeTeReconnaitPlus,
-           creerAgent, agents, autos, gere, commandes, peuplerAgents, peuplerAutos, equipageDe: equipage, abandonnee,
+           creerAgent, agents, autos, gere, garder, seuilDeReperage, commandes, peuplerAgents, peuplerAutos, equipageDe: equipage, abandonnee,
            agentsVoulus, standingIci,
            helico, majHelico, majBruitHelico, taireHelico, bruitHelico, dessinerHelico, lampeHelico, barrages, poserBarrage, maj };
 })();

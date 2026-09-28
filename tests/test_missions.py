@@ -1,4 +1,6 @@
-from app import armes, audio, carte, economie, missions, pietons
+import re
+
+from app import armes, audio, blocs, carte, economie, missions, pietons
 
 
 def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
@@ -75,7 +77,9 @@ def test_les_cinq_missions_se_suivent():
 
 
 def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
-    lieux = {p["slug"] for p in carte.SPECIAUX.values()} | {"kiosque", "planque"}
+    # ⚠️ Et les lieux des BLOCS (la villa, l'infiltration) : un lieu de mission peut être derrière un
+    # passage — `blocs.erreurs` juge qu'on l'y rejoint à pied.
+    lieux = {p["slug"] for p in carte.SPECIAUX.values()} | {"kiosque", "planque"} | set(blocs.lieux_des_blocs())
     # Les zones qu'un `ou: zone:<x>` peut nommer : celle de chaque gang (`pietons.GANGS`, que
     # `Histoire.resoudre` trouve dans `carte.zones`), plus le port et le Faubourg. ⚠️ Lue, pas
     # recopiée : la liste à la main n'avait appris `boulonneux` qu'avec s01, et q01 (les Morues,
@@ -270,3 +274,27 @@ def test_toute_mission_qui_a_des_prerequis_s_annonce_au_telephone():
         assert bool(mission.get("prerequis")) == bool(appel), (
             f"{mission['slug']} : prerequis={mission.get('prerequis')} et {len(appel)} replique(s) d'appel"
         )
+
+
+def test_ce_qu_on_vient_obtenir_se_trouve():
+    """`obtenir` (l'infiltration) : un objet qui a un nom de sac, un dessin connu, et un endroit où le
+    trouver — un lieu, ou la poche d'un garde qui fait sa ronde dans le bloc de ce lieu. Sans endroit,
+    l'objectif attendrait un objet qui n'est nulle part ; un garde inconnu n'en porterait aucun."""
+    lieux = blocs.lieux_des_blocs()
+    vus = 0
+    for m in missions.CATALOGUE:
+        for o in m["objectifs"]:
+            if o.get("objet"):
+                assert re.fullmatch(r"[a-z_]+", o["objet"]), (m["slug"], o["objet"])
+            if o["type"] != "obtenir":
+                continue
+            vus += 1
+            assert o.get("objet") and o.get("ou"), f"{m['slug']} : `obtenir` veut un `objet` et un `ou`"
+            assert o.get("dessin", "sac") in missions.DESSINS_D_OBJET, (m["slug"], o.get("dessin"))
+            if o.get("garde"):
+                bloc = blocs.par_slug(lieux[o["ou"]])
+                gardes = {g["slug"]: g for g in bloc.get("gardes", ())}
+                assert o["garde"] in gardes, f"{m['slug']} : aucun garde {o['garde']!r} à {bloc['slug']}"
+                assert gardes[o["garde"]].get("porte") == o["objet"], \
+                    f"{m['slug']} : le garde {o['garde']} n'a pas {o['objet']} dans la poche"
+    assert vus, "aucune mission n'obtient rien : le juge est à vide"

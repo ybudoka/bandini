@@ -623,6 +623,8 @@ const Combat = (function () {
     const reactions = B.defs.pietons.reactions;
     const victime = victimeDesPoches(j);
     if (!victime) return false;
+    // ⚠️ LA CLE DANS LA POCHE D'UN GARDE (l'infiltration) : on la prend, lui ne sent rien.
+    if (victime.porteObjet && typeof Infiltration !== 'undefined') return Infiltration.voler(j, victime);
     Missions.encaisser(victime.argent, 'POCHES');
     victime.argent = 0;
     if (victime.etat !== 'assomme') {

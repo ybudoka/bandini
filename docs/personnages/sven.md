@@ -14,7 +14,7 @@
 | Voix | **Martin - Clear and Comforting** (norvégien, accent d'Oslo) |
 | Bulle | « Viens, discret. » |
 | Couleurs | veste gris-bleu, cheveux gris, pantalon noir |
-| Missions | donne **m52** · **m53** · **m54** · **q10** (« j'avais dit une dernière fois » — le choix contre **q11**) |
+| Missions | donne **m52** · **m53** · **m54** · **q10** (« j'avais dit une dernière fois » — le choix contre **q11**) · **v03** (la chambre forte de la villa du maire) |
 
 ## Son histoire
 
@@ -63,6 +63,10 @@ réveille un matin sans savoir comment elle a perdu.
 - **Les Morues** — le gang de Josée ; ses guetteurs sont le premier obstacle du joueur (m52).
 
 ## Ce qu'il a dit (le canon)
+
+- v03 : le maire « tient ses comptes dans une cave » ; un grand livre, vert, relié de cuir — « qui le maire
+  paie, et qui le paie » ; à la fin : « Maintenant… il m'en doit à moi. » (il se nomme d'un mot, « Sven. »,
+  comme en m52).
 
 - m52 : « Le repérage » — une chaloupe, une patrouille discrète, une lunette au clocher de l'Île-aux-Corneilles,
   l'antenne de l'autre quai, un guetteur des Morues à coucher sans bruit. « Même Dieu travaille pour Josée,

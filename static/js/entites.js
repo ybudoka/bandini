@@ -506,7 +506,7 @@ const Entites = (function () {
 
   //: Ce qui se ramasse par terre et se dessine par son NOM d'objet, pas par une
   //: arme : la liasse d'un guichet, et ce qu'une distributrice defoncee crache.
-  const OBJETS_PAR_TERRE = { billets: true, monnaie: true, canette: true, sac: true };
+  const OBJETS_PAR_TERRE = { billets: true, monnaie: true, canette: true, sac: true, cle: true, dossier: true, registre: true };
 
   /** Une ARME mord le decor : la balle, l'explosion, le feu. Rend vrai s'il
       est tombe de ce coup-ci.
@@ -3424,7 +3424,8 @@ const Entites = (function () {
       // coin de rue pour le rejoindre, et la course tombait « IL N'EST PLUS LA ».
       // ⚠️ Le marchand s'oubliait comme un passant : on debarquait de l'autobus
       // et les neuf comptoirs de la ville se vidaient a la premiere image.
-      if (loin && !e.personnage && !e.mission && !e.commerce && !e.client && !visibleAEcran(e.x, e.y, 40)) {
+      // ⚠️ Ni un garde de ronde (l'infiltration) : il tient son etage, meme loin de toi.
+      if (loin && !e.personnage && !e.mission && !e.commerce && !e.client && !e.ronde && !visibleAEcran(e.x, e.y, 40)) {
         // ⚠️ Un enfant oublie EMPORTE son ballon : sans ca, la balle reste a
         // voler toute seule au bord de l'eau, pour toujours.
         if (e.metier === 'baigneur') quitterLeJeu(e);
@@ -5116,7 +5117,9 @@ const Entites = (function () {
         // laquelle des gerbes s'entend le plus fort.
         jetProche = Math.max(jetProche, 1 - Math.hypot(e.x - B.joueur.x, e.y - B.joueur.y) / JET_EAU_PORTEE);
       }
-      else if (e.type === 'ramassage'
+      // ⚠️ Sauf ce qu'une mission est venue prendre (`objetDeMission`, l'infiltration) : le registre au
+      // fond de la chambre forte attend qu'on descende, il ne s'oublie pas parce qu'on est loin.
+      else if (e.type === 'ramassage' && !e.objetDeMission
                && (e.t > 3600 || dist2(e.x, e.y, B.joueur.x, B.joueur.y) > BULLE_OUBLI * BULLE_OUBLI)) {
         retirer(e);
       }
