@@ -5,25 +5,90 @@ qui attend, les hommes de main d'une mission, le panneau d'un defi. Un personnag
 un commerce est un obstacle qu'on contourne pour entrer.
 """
 
+import pytest
 
-def test_le_devant_d_une_porte_se_lit_dans_la_ville(banc, paquet):
+
+@pytest.fixture(scope="module")
+def lecture(banc):
+    """Six juges qui LISENT la ville du jeu tout juste commencée — la fenêtre du devant, les
+    donneurs, les panneaux, `Histoire.tuileLibre` — dans UN banc. Aucun ne joue une image ni ne
+    change quoi que ce soit (`tuileLibre` et `devantDUnePorte` ne font que lire) : chacun voit
+    la partie telle que `Jeu.commencer` la pose."""
+    return banc("""function (L, o) {
+        L.Jeu.commencer();
+        const sorties = {};
+        sorties.test_le_devant_d_une_porte_se_lit_dans_la_ville = (function () {
+            const def = L.Monde.carte.def;
+            const p = def.portes.find(function (q) { return def.sol[q.y][q.x] === 'D'; });
+            const dev = def.devantures.find(function (f) { return f.motifs.indexOf('P') >= 0; });
+            const px = dev.x + dev.motifs.indexOf('P'), py = dev.y;
+            const d = L.Monde.devantDUnePorte;
+            return {
+              axe: [1, 2, 3].map(function (j) { return d(p.x, p.y + j); }),
+              flancs: [d(p.x - 1, p.y + 1), d(p.x + 1, p.y + 2), d(p.x - 1, p.y + 3)],
+              dehors: [d(p.x, p.y + 4), d(p.x + 2, p.y + 1), d(p.x, p.y), d(p.x, p.y - 1)],
+              peinte: [d(px, py + 1), d(px, py + 3)], peinteDehors: d(px, py + 4),
+            };
+        })();
+        sorties.test_une_tuile_libre_de_mission_n_est_jamais_devant_une_porte = (function () {
+            const def = L.Monde.carte.def;
+            const mauvaises = [];
+            let essais = 0, perdues = 0;
+            // ⚠️ L'ancienne regle, telle quelle : la premiere tuile marchable hors chaussee. Une porte
+            // qu'elle ne servait pas (la fourriere, au fond de sa cour grillagee) n'est pas ma faute.
+            const ancienne = function (tx, ty) {
+              for (let r = 0; r <= 3; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+                if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+                if (L.Monde.marchablePieton(tx + dx, ty + dy) && !L.Monde.estChaussee(tx + dx, ty + dy)) return true;
+              }
+              return false;
+            };
+            for (const p of def.portes) {
+              essais++;
+              const t = L.Histoire.tuileLibre(p.x * 16 + 8, (p.y + 1) * 16 + 8, 3);
+              if (!t) { if (ancienne(p.x, p.y + 1)) perdues++; continue; }
+              if (L.Monde.devantDUnePorte(Math.floor(t.x / 16), Math.floor(t.y / 16))) mauvaises.push([p.x, p.y, t.x, t.y]);
+            }
+            return { essais: essais, mauvaises: mauvaises, perdues: perdues };
+        })();
+        sorties.test_faute_de_mieux_une_tuile_devant_une_porte_vaut_mieux_que_rien = (function () {
+            const p = L.Monde.carte.def.portes.find(function (q) { return q.lieu === 'garage'; });
+            const t = L.Histoire.tuileLibre(p.x * 16 + 8, (p.y + 1) * 16 + 8, 0);
+            return { t: t, devant: L.Monde.devantDUnePorte(p.x, p.y + 1) };
+        })();
+        sorties.test_les_donneurs_de_la_rue_n_attendent_pas_devant_une_porte = (function () {
+            const donneurs = L.B.entites.filter(function (e) { return e.type === 'pieton' && e.personnage; });
+            return donneurs.map(function (e) {
+              return { qui: e.personnage, devant: L.Monde.devantDUnePorte(Math.floor(e.x / 16), Math.floor(e.y / 16)) };
+            });
+        })();
+        sorties.test_un_panneau_de_defi_n_est_pas_devant_une_porte = (function () {
+            const panneaux = L.B.entites.filter(function (e) { return e.type === 'panneau'; });
+            return panneaux.map(function (e) {
+              return { defi: e.defi, devant: L.Monde.devantDUnePorte(Math.floor(e.x / 16), Math.floor(e.y / 16)) };
+            });
+        })();
+        sorties.test_un_panneau_de_defi_ne_se_plante_ni_sur_un_meuble_ni_entre_deux = (function () {
+            return L.B.entites.filter(function (e) { return e.type === 'panneau'; }).map(function (e) {
+              const tx = Math.floor(e.x / 16), ty = Math.floor(e.y / 16);
+              const autour = L.B.entites.filter(function (d) {
+                return d.decor && d.solide && d !== e
+                  && Math.max(Math.abs(Math.floor(d.x / 16) - tx), Math.abs(Math.floor(d.y / 16) - ty)) <= 1;
+              });
+              return { defi: e.defi, tuile: [tx, ty], autour: autour.map(function (d) { return d.decor; }),
+                       dessous: autour.filter(function (d) { return Math.floor(d.x / 16) === tx && Math.floor(d.y / 16) === ty; })
+                                      .map(function (d) { return d.decor; }) };
+            });
+        })();
+        return sorties;
+    }""")
+
+
+def test_le_devant_d_une_porte_se_lit_dans_la_ville(lecture, paquet):
     """Trois tuiles dans l'axe, une de chaque cote — la fenetre vient de la ville (`def.devant`),
     et les portes peintes en ont une comme les vraies."""
     assert paquet["carte"]["devant"] == {"cote": 1, "profondeur": 3}
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const def = L.Monde.carte.def;
-        const p = def.portes.find(function (q) { return def.sol[q.y][q.x] === 'D'; });
-        const dev = def.devantures.find(function (f) { return f.motifs.indexOf('P') >= 0; });
-        const px = dev.x + dev.motifs.indexOf('P'), py = dev.y;
-        const d = L.Monde.devantDUnePorte;
-        return {
-          axe: [1, 2, 3].map(function (j) { return d(p.x, p.y + j); }),
-          flancs: [d(p.x - 1, p.y + 1), d(p.x + 1, p.y + 2), d(p.x - 1, p.y + 3)],
-          dehors: [d(p.x, p.y + 4), d(p.x + 2, p.y + 1), d(p.x, p.y), d(p.x, p.y - 1)],
-          peinte: [d(px, py + 1), d(px, py + 3)], peinteDehors: d(px, py + 4),
-        };
-    }""")
+    r = lecture["test_le_devant_d_une_porte_se_lit_dans_la_ville"]
     assert r["axe"] == [True, True, True]
     assert r["flancs"] == [True, True, True]
     assert r["dehors"] == [False, False, False, False], "au-dela de la fenetre, la tuile est libre"
@@ -100,95 +165,45 @@ def test_une_piece_n_a_pas_de_devant_de_porte(banc):
     assert r["piece"] is True and r["devant"] is False
 
 
-def test_une_tuile_libre_de_mission_n_est_jamais_devant_une_porte(banc):
+def test_une_tuile_libre_de_mission_n_est_jamais_devant_une_porte(lecture):
     """⚠️ `Histoire.tuileLibre` est ou les missions posent leur monde (le donneur, les hommes de
     main, le fuyard, l'escorte). Elle rendait la premiere tuile marchable en spirale — et pour un
     lieu, le centre de la spirale EST le pas de la porte. Le juge tire un point sur chacune des
     portes de la ville : aucune reponse devant une porte, sauf faute de mieux dans le rayon."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const def = L.Monde.carte.def;
-        const mauvaises = [];
-        let essais = 0, perdues = 0;
-        // ⚠️ L'ancienne regle, telle quelle : la premiere tuile marchable hors chaussee. Une porte
-        // qu'elle ne servait pas (la fourriere, au fond de sa cour grillagee) n'est pas ma faute.
-        const ancienne = function (tx, ty) {
-          for (let r = 0; r <= 3; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
-            if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-            if (L.Monde.marchablePieton(tx + dx, ty + dy) && !L.Monde.estChaussee(tx + dx, ty + dy)) return true;
-          }
-          return false;
-        };
-        for (const p of def.portes) {
-          essais++;
-          const t = L.Histoire.tuileLibre(p.x * 16 + 8, (p.y + 1) * 16 + 8, 3);
-          if (!t) { if (ancienne(p.x, p.y + 1)) perdues++; continue; }
-          if (L.Monde.devantDUnePorte(Math.floor(t.x / 16), Math.floor(t.y / 16))) mauvaises.push([p.x, p.y, t.x, t.y]);
-        }
-        return { essais: essais, mauvaises: mauvaises, perdues: perdues };
-    }""")
+    r = lecture["test_une_tuile_libre_de_mission_n_est_jamais_devant_une_porte"]
     assert r["essais"] >= 40
     assert not r["mauvaises"], f"{len(r['mauvaises'])} tuiles libres devant une porte : {r['mauvaises'][:4]}"
     assert r["perdues"] == 0, "une porte que l'ancienne regle servait n'a plus de tuile libre"
 
 
-def test_faute_de_mieux_une_tuile_devant_une_porte_vaut_mieux_que_rien(banc):
+def test_faute_de_mieux_une_tuile_devant_une_porte_vaut_mieux_que_rien(lecture):
     """Le repli : si tout le rayon est devant des portes, on rend la premiere venue plutot que
     de perdre le donneur. Vu ici avec un rayon de zero — la tuile meme, devant sa porte."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const p = L.Monde.carte.def.portes.find(function (q) { return q.lieu === 'garage'; });
-        const t = L.Histoire.tuileLibre(p.x * 16 + 8, (p.y + 1) * 16 + 8, 0);
-        return { t: t, devant: L.Monde.devantDUnePorte(p.x, p.y + 1) };
-    }""")
+    r = lecture["test_faute_de_mieux_une_tuile_devant_une_porte_vaut_mieux_que_rien"]
     assert r["devant"] is True and r["t"] is not None, "sans alternative, le repli sert"
 
 
-def test_les_donneurs_de_la_rue_n_attendent_pas_devant_une_porte(banc):
+def test_les_donneurs_de_la_rue_n_attendent_pas_devant_une_porte(lecture):
     """Ti-Guy a cote du terminus, Thibodeau au kiosque, Marco au garage : ils attendent A COTE de
     leur porte (`creerDonneurs`), pas sur son pas."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const donneurs = L.B.entites.filter(function (e) { return e.type === 'pieton' && e.personnage; });
-        return donneurs.map(function (e) {
-          return { qui: e.personnage, devant: L.Monde.devantDUnePorte(Math.floor(e.x / 16), Math.floor(e.y / 16)) };
-        });
-    }""")
+    r = lecture["test_les_donneurs_de_la_rue_n_attendent_pas_devant_une_porte"]
     assert len(r) >= 3, "les donneurs de la rue existent"
     assert [d["qui"] for d in r if d["devant"]] == [], "un donneur plante devant une porte"
 
 
-def test_un_panneau_de_defi_n_est_pas_devant_une_porte(banc):
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const panneaux = L.B.entites.filter(function (e) { return e.type === 'panneau'; });
-        return panneaux.map(function (e) {
-          return { defi: e.defi, devant: L.Monde.devantDUnePorte(Math.floor(e.x / 16), Math.floor(e.y / 16)) };
-        });
-    }""")
+def test_un_panneau_de_defi_n_est_pas_devant_une_porte(lecture):
+    r = lecture["test_un_panneau_de_defi_n_est_pas_devant_une_porte"]
     assert r, "au moins un panneau de defi"
     assert [p["defi"] for p in r if p["devant"]] == []
 
 
-def test_un_panneau_de_defi_ne_se_plante_ni_sur_un_meuble_ni_entre_deux(banc):
+def test_un_panneau_de_defi_ne_se_plante_ni_sur_un_meuble_ni_entre_deux(lecture):
     """Retour de Martin (22 sept. 2026, capture du dépanneur) : « trop de choses collé devant chez
     Ti-Paul ». Le panneau de la course des Érables se plantait SUR le banc de l'abribus (`tuileLibre`
     ne regarde que la carte) ; l'arrêt parti, il se glissait entre l'édicule du métro et le guichet.
     Et au terminus, trois donneurs qui ne s'empilent plus lui prenaient toutes ses places : il
     disparaissait. Chaque panneau existe, et touche au plus un meuble, jamais dessous."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        return L.B.entites.filter(function (e) { return e.type === 'panneau'; }).map(function (e) {
-          const tx = Math.floor(e.x / 16), ty = Math.floor(e.y / 16);
-          const autour = L.B.entites.filter(function (d) {
-            return d.decor && d.solide && d !== e
-              && Math.max(Math.abs(Math.floor(d.x / 16) - tx), Math.abs(Math.floor(d.y / 16) - ty)) <= 1;
-          });
-          return { defi: e.defi, tuile: [tx, ty], autour: autour.map(function (d) { return d.decor; }),
-                   dessous: autour.filter(function (d) { return Math.floor(d.x / 16) === tx && Math.floor(d.y / 16) === ty; })
-                                  .map(function (d) { return d.decor; }) };
-        });
-    }""")
+    r = lecture["test_un_panneau_de_defi_ne_se_plante_ni_sur_un_meuble_ni_entre_deux"]
     defis = sorted(p["defi"] for p in r)
     assert defis == ["livraison", "saut", "tour", "tour_erables", "tour_pointe", "tour_quais", "tour_shop"], defis
     for p in r:
