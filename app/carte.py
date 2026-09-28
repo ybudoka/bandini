@@ -323,6 +323,11 @@ LEGENDE: dict[str, dict] = {
     # monde.js). Une banlieue de bungalows vue d'en haut, c'est ca.
     "P": {"nom": "toit à deux versants", "solide": 1, "toit": True, "pente": True},
     "F": {"nom": "façade", "solide": 1},
+    # ⚠️ LES CABANES DU BIDONVILLE de la gare (`nord._cabane`) : de la tôle rapiécée, rouillée par plaques,
+    # et un mur de planches et de retailles. La porte reste un `d` : un logement, les gens y entrent et en
+    # sortent (`Monde`, `portesFermees`) ; posée dans un mur `}`, elle se peint en planches (`monde.js`).
+    "{": {"nom": "tôle de cabane", "solide": 1, "toit": True},
+    "}": {"nom": "mur de planches", "solide": 1},
     # ⚠️ Le coin d'un mur de BOIS ROND : les bouts des rondins qui dépassent en alternance
     # (le chalet du rang, `app/blocs/chalet.py`). Aucun bâtiment de la ville ne s'en sert.
     "H": {"nom": "coin de bois rond", "solide": 1},
@@ -575,6 +580,8 @@ PAS = {">": (1, 0), "<": (-1, 0), "^": (0, -1), "v": (0, 1)}
 #: choisit sur le batiment — de la tole sur un hangar, du gravier sur un
 #: entrepot, de l'ardoise en ville, deux versants sur une maison.
 TOITS = "BEOP"
+#: La tôle rapiécée des cabanes du bidonville (`nord._cabane`) : un toit, mais jamais tiré pour un bâtiment.
+TOITS_DE_CABANE = "{"
 TOIT_PENTE = "P"
 COUVERTURES = {
     "maisons": "PPE",           # deux versants, presque toujours
@@ -603,6 +610,12 @@ EQUIPEMENTS_DE_TOIT = (
     # Il est pose a la main sur la chapelle de l'ile (`ile.BATIMENTS`), et il est
     # ici pour que le juge des toits le connaisse.
     {"type": "clocher", "poids": 1, "genres": ("chapelle",)},
+    # ⚠️ CE QUI TIENT LA TÔLE d'une cabane du bidonville (`nord._cabane`, `nord.SUR_LA_TOLE`) : jamais tiré non
+    # plus (aucun îlot n'est du genre « cabane »), posé à la main. Et lui touche le BORD du toit : sur une tôle
+    # de trois tuiles, c'est au bord qu'on met le pneu (`TOITS_DE_CABANE`, le juge des toits le sait).
+    {"type": "pneus", "poids": 1, "genres": ("cabane",)},
+    {"type": "bache", "poids": 1, "genres": ("cabane",)},
+    {"type": "tole", "poids": 1, "genres": ("cabane",)},
     # ⚠️ La cabine de la tour de controle non plus : posee a la main sur la tour
     # (`aeroport.BATIMENTS`). Filtree par son genre avant le tirage, elle ne change
     # pas d'un cran le de des toits de la ville.
@@ -1377,6 +1390,8 @@ DECOR_SOLIDE = frozenset({
     "abribus", "abribus_nord", "abribus_est", "abribus_ouest",
     # L'épave des Friches (`nord.py`) : une auto sans roues, on la contourne.
     "carcasse",
+    # Le baril où l'on fait du feu, au bidonville de la gare (`nord._bidonville`).
+    "baril_feu",
     "arbre", "banc", "baril", "bbq", "belvedere", "borne_fontaine", "cabanon",
     "caisse", "carrousel", "chaise_sauveteur", "chaises_volantes", "distributrice_cafe",
     "distributrice_grignotines", "distributrice_liqueur", "fontaine", "galerie_tir",
@@ -1831,6 +1846,8 @@ USAGE_DU_PLAN: dict[str, str] = {
     "q": "port", "j": "port", "~": "eau",
     # La bande nord (`nord.py`) : la friche, le terrain à bâtir du Petit-Canton, les voies de la gare.
     "z": "industriel", "b": "commercial", "v": "industriel", "y": "industriel",
+    # Le bidonville de la gare (`nord._bidonville`) : on y vit, dans des cabanes de tôle.
+    "t": "residentiel",
 }
 
 #: Et celui d'un lieu garanti, par le GENRE d'ilot qui le batit (`SPECIAUX`) : le

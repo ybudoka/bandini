@@ -55,6 +55,8 @@ const Monde = (function () {
     balise: { dy: 8, c: 'rgba(200,225,255,0.55)' },
     // Les lanternes du Petit-Canton (`canton.py`) : une lueur rouge, sous la corde, au-dessus de la rue.
     lanterne: { dy: -6, c: 'rgba(255,90,60,0.50)' },
+    // Le baril où l'on fait du feu, au bidonville de la gare (`nord._bidonville`) : une lueur orange, basse.
+    feu: { dy: 2, c: 'rgba(255,140,50,0.58)' },
   };
 
   let carte = null;
@@ -1829,6 +1831,10 @@ const Monde = (function () {
     if (SOLS_D_ILOT[g]) return varianteDeSol(g, tx, ty);
     if (g === '_') return varianteDAbord(tx, ty);
     if (g === 'R' || g === 'J') return varianteDeRampe(g, tx, ty);
+    // Les cabanes du bidonville (`nord._cabane`) : chaque planche du mur a son bois, et la porte d'un
+    // logement posée dans un mur de planches se peint en planches (1), pas dans la brique (0).
+    if (g === '}') return hash2(tx, ty) % 4;
+    if (g === 'd') return glyphe(tx - 1, ty) === '}' || glyphe(tx + 1, ty) === '}' ? 1 : 0;
     const p = carte.legende[g];
     if (p && p.bloc) return varianteDeBloc(g, tx, ty);
     if (p && p.cloture) return varianteDeCloture(tx, ty);

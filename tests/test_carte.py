@@ -8,7 +8,7 @@ pour que la ville soit jouable par construction.
 
 import pytest
 
-from app import carte, economie, magasins
+from app import carte, economie, magasins, nord
 
 CARTE = carte.exporter()
 #: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : ce que rejouent les juges qui refont le chantier (ses rues, ses
@@ -355,8 +355,12 @@ def test_ce_qu_un_toit_porte_ne_se_pose_jamais_n_importe_ou():
     assert {t["type"] for t in CARTE["toits"]} <= types
     for t in CARTE["toits"]:
         x, y = t["x"], t["y"]
-        assert sol[y][x] in carte.TOITS, f"{t['type']} sur « {sol[y][x]} »"
-        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        assert sol[y][x] in carte.TOITS + carte.TOITS_DE_CABANE, f"{t['type']} sur « {sol[y][x]} »"
+        # ⚠️ Sauf sur la tôle d'une cabane du bidonville (`nord._cabane`) : trois tuiles de large, et le pneu
+        # qui tient la tôle est au bord — mais seulement ce qui la tient, et jamais collé à un autre.
+        cabane = sol[y][x] in carte.TOITS_DE_CABANE
+        assert cabane == (t["type"] in nord.SUR_LA_TOLE), f"{t['type']} sur « {sol[y][x]} »"
+        for dx, dy in () if cabane else ((1, 0), (-1, 0), (0, 1), (0, -1)):
             voisine = sol[y + dy][x + dx]
             assert voisine in carte.TOITS, (
                 f"{t['type']} au bord du toit : « {voisine} » en ({x + dx},{y + dy})"
@@ -536,7 +540,9 @@ def test_les_lampadaires_eclairent_depuis_un_trottoir():
                # pas a un poteau plante — la raison de la vitrine et de la fenetre.
                # Ni les balises de la piste de l'aeroport : elles sont AU SOL.
                # Ni les lanternes du Petit-Canton : elles pendent a une CORDE, au-dessus de la rue.
-               if lampe.get("c") not in ("vitrine", "fenetre", "balise", "lanterne", *carte.FOIRE["lampes"])]
+               # Ni le feu d'un baril du bidonville (`nord._bidonville`) : il brule AU SOL, dans le baril.
+               if lampe.get("c") not in ("vitrine", "fenetre", "balise", "lanterne", "feu",
+                                         *carte.FOIRE["lampes"])]
     assert len(poteaux) >= 40
     # ⚠️ **Reformule le 15 sept. 2026, le jour du trottoir a une tuile.** Il
     # exigeait que 80 % des poteaux soient SUR le trottoir. Depuis que la dalle
@@ -598,7 +604,9 @@ def test_aucun_lampadaire_ne_prend_le_coin_d_un_feu():
                # pas a un poteau plante — la raison de la vitrine et de la fenetre.
                # Ni les balises de la piste de l'aeroport : elles sont AU SOL.
                # Ni les lanternes du Petit-Canton : elles pendent a une CORDE, au-dessus de la rue.
-               if lampe.get("c") not in ("vitrine", "fenetre", "balise", "lanterne", *carte.FOIRE["lampes"])]
+               # Ni le feu d'un baril du bidonville (`nord._bidonville`) : il brule AU SOL, dans le baril.
+               if lampe.get("c") not in ("vitrine", "fenetre", "balise", "lanterne", "feu",
+                                         *carte.FOIRE["lampes"])]
     dessus = [(lampe["x"], lampe["y"]) for lampe in poteaux if (lampe["x"], lampe["y"]) in reserves]
     assert not dessus, f"{len(dessus)} lampadaires sur un coin reserve au feu (ex. {dessus[:4]})"
     # ⚠️ Et il en reste : ecarter n'est pas supprimer. Sans cette borne, la

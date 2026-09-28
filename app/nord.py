@@ -58,10 +58,21 @@ DISTRICTS_NORD: tuple[dict, ...] = (
                   "-=+++==-",
                   "-==++=--",
                   "--=++=--")},
+    # ⚠️ LE BIDONVILLE DE LA GARE (28 sept. 2026). Martin : « dans le quartier des trains, je veux plus un
+    # bidonville et des maisons pauvres pour la partie est ». Les voies gardent les quatre colonnes de l'ouest
+    # (le poste d'aiguillage ne bouge pas) et les hangars le sud ; à l'est, le bidonville (`t`) sur trois
+    # rangées, un seul lot, et dessous deux rangées de maisons pauvres (`h`, standing `-`).
+    # ⚠️ Ses îlots neufs se bâtissent avec LEURS dés (`_ChantierNord._a_ses_des`), comme le Petit-Canton.
     {"slug": "gare", "nom": "La Gare de triage", "bx": 13, "by": 0,
      "gang": "boulonneux", "gang_nom": "Les Boulonneux", "brume": False,
-     "pietons": 3, "vehicules": 2, "police": 1, "rythme": (0.15, 1.2, 0.6), "rares": (),
-     "plan": ("v<<<<<<", "^<<<<<<", "^<<<<<<", "^<<<<<<", "^<<<<<<", "y<y<y<y", "^<^<^<^"),
+     "pietons": 9, "vehicules": 3, "police": 1, "rythme": (0.3, 1.0, 0.8), "rares": (),
+     "plan": ("v<<<t<<",
+              "^<<<^<<",
+              "^<<<^<<",
+              "^<<<hhh",
+              "^<<<hhh",
+              "y<y<y<y",
+              "^<^<^<^"),
      "standing": ("-------",) * 7},
 )
 PLAN_NORD: tuple[str, ...] = carte._assembler(DISTRICTS_NORD)
@@ -180,12 +191,135 @@ def _hangars(ch, x, y, largeur, hauteur):
         ch.poser_decor(ch.des.choix(("palettes", "baril", "caisse")), x + dx, hy + ch.des.entier(0, hh - 2))
 
 
+#: Ce qui traîne entre les cabanes du bidonville : le linge qui sèche, ce qu'on a rapporté, ce qu'on n'a pas jeté.
+#: ⚠️ Une liste A POIDS, comme `carte.DECHETS` : du linge et des sacs d'abord, une carcasse de temps en temps.
+BRIC_A_BRAC = ("corde_a_linge", "corde_a_linge", "matelas", "caddie", "pneu", "pneu", "palettes",
+               "ordures", "ordures", "debris", "debris", "poubelle_pleine", "caisse", "carcasse")
+#: Ce qui tient la tôle d'une cabane, vu d'en haut (`sprites.js`, `TOITURES`) : des pneus, une bâche, une pièce.
+SUR_LA_TOLE = ("pneus", "pneus", "bache", "bache", "tole")
+#: Le baril où l'on fait du feu : sa lueur, la nuit (`monde.js`, `SORTES_DE_LAMPE.feu`).
+FEU_RAYON = 22
+
+
+def _entre(ch, a: int, b: int) -> int:
+    """Entre a et b, bornes comprises, par les bits FORTS du dé. ⚠️ `Des.entier` prend le reste de l'état d'un
+    LCG, dont les bits faibles alternent : deux tirages de parité à la suite sont liés, et toutes les cabanes
+    d'une rangée finissaient leur façade sur la même ligne."""
+    return a + int(ch.des.flottant() * (b - a + 1))
+
+
+def _parmi(ch, options):
+    return options[_entre(ch, 0, len(options) - 1)]
+
+
+def _bidonville(ch, x, y, largeur, hauteur):
+    """Le bidonville de la gare : des cabanes de tôle serrées sur de la terre battue, en rangées qui ne
+    s'alignent jamais, trois tuiles d'allée devant chaque rangée ; une porte condamnée (`d`) à chaque cabane
+    — on n'y entre pas —, des pneus et des bâches sur la tôle, du linge et du bric-à-brac entre elles, et
+    des barils où brûle un feu, qui éclairent la nuit.
+
+    ⚠️ RIEN DEVANT UNE PORTE (`devants.DEVANT`, `test_devants`) : chaque cabane réserve le devant de la
+    sienne avant qu'on sème quoi que ce soit, et une rangée laisse `DEVANT_PROFONDEUR` tuiles d'allée
+    sous ses façades. ⚠️ Bâti avec SES dés (`_ChantierNord._a_ses_des`) : la bande n'en perd pas un."""
+    from . import devants as devants_mod
+    ch.rect(x, y, largeur, hauteur, ";")
+    allee = devants_mod.DEVANT_PROFONDEUR
+    interdit: set[tuple[int, int]] = set()
+    cours: list[tuple[int, int]] = []                    # les trous laissés dans les rangées
+    # Une rangée : des cabanes de hauteur et de recul inégaux (jamais un alignement de lotissement) ; la
+    # suivante commence sous la plus basse façade, plus l'allée.
+    cy = y + 1
+    while cy + 2 + allee <= y + hauteur:
+        bas = cy
+        cx = x + 1 + _entre(ch, 0, 2)
+        while cx + 3 <= x + largeur - 1:
+            large = min(_entre(ch, 3, 5), x + largeur - 1 - cx)
+            if large < 3:
+                break
+            recul, haut = _entre(ch, 0, 1), _entre(ch, 2, 3)       # la tôle, puis la façade
+            # La rangée du bas : deux tuiles d'allée, et l'accotement de la rue fait la troisième.
+            haut = min(haut, y + hauteur - allee - cy - recul)
+            if haut < 2 or ch.des.chance(0.1):
+                cours.append((cx + large // 2, cy + 1))
+            else:
+                _cabane(ch, cx, cy + recul, large, haut, interdit)
+                bas = max(bas, cy + recul + haut)
+            cx += large + (2 if ch.des.chance(0.3) else 1)                # serrées : une tuile, parfois deux
+        cy = bas + 1 + allee
+    # Le feu : un baril par cour, et quelques-uns dans les allées.
+    feux = cours + [(x + _entre(ch, 2, largeur - 3), y + _entre(ch, 2, hauteur - 3))
+                    for _ in range(max(3, largeur * hauteur // 250))]
+    for fx, fy in feux:
+        if (fx, fy) not in interdit and ch.poser_decor("baril_feu", fx, fy):
+            ch.lampes.append({"x": fx, "y": fy, "r": FEU_RAYON, "c": "feu"})
+    for _ in range(largeur * hauteur // 18):
+        bx, by = x + _entre(ch, 1, largeur - 2), y + _entre(ch, 1, hauteur - 2)
+        quoi = _parmi(ch, BRIC_A_BRAC)
+        if (bx, by) not in interdit:
+            ch.poser_decor(quoi, bx, by)
+
+
+def _cabane(ch, x, y, largeur, haut, interdit):
+    """Une cabane : `haut` rangées de tôle rapiécée (`{`), un mur de planches dessous (`}`) et sa porte — un
+    `d`, un logement —, un ou deux objets sur la tôle. Le devant de la porte va dans `interdit`."""
+    from . import devants as devants_mod
+    ch.rect(x, y, largeur, haut, "{")
+    fy = y + haut
+    ch.rect(x, fy, largeur, 1, "}")
+    porte = x + _entre(ch, 1, largeur - 2)
+    ch.sol[fy][porte] = "d"
+    interdit.update((porte + dx, fy + dy) for dx, dy in devants_mod.DEVANT)
+    # ⚠️ Jamais deux collés (`test_carte`, le juge des toits) : deux objets l'un contre l'autre font une tache.
+    poses: list[tuple[int, int]] = []
+    for _ in range(_entre(ch, 1, 2)):
+        tx, ty, quoi = x + _entre(ch, 0, largeur - 1), y + _entre(ch, 0, haut - 1), _parmi(ch, SUR_LA_TOLE)
+        if all(max(abs(tx - a), abs(ty - b)) > 1 for a, b in poses):
+            poses.append((tx, ty))
+            ch.toits.append({"x": tx, "y": ty, "type": quoi})
+
+
+#: Combien de choses traînent au pied des murs d'un îlot de maisons pauvres de la gare, par cent tuiles.
+#: ⚠️ Peu : Martin a renvoyé « trop de saleté partout » le 16 sept. 2026 (`salete.py`). Ce qu'on veut, c'est
+#: que la rue se LISE pauvre en y entrant, pas un dépotoir.
+SALETE_PAR_CENT_TUILES = 2
+
+
+def _salir_les_maisons(ch, x, y, largeur, hauteur):
+    """Ce que `salete.deplacer` pose au pied des murs pauvres de la ville d'avant — il passe avant que la bande
+    se colle, et ne l'a jamais vue : des sacs, des gravats, un matelas, un caddie, contre un mur, jamais devant
+    une porte ni à moins de `salete.ECART_DECHET` l'un de l'autre. Et la poubelle y déborde."""
+    from . import devants as devants_mod, salete as salete_mod
+    portes = {(i, j) for j in range(y, y + hauteur) for i in range(x, x + largeur)
+              if ch.sol[j][i] in carte.PORTES_DE_FACADE}
+    portes |= {(r["x"] + i, r["y"]) for r in ch.residences for i, m in enumerate(r["motifs"]) if m == "P"}
+    interdit = {(px + dx, py + dy) for px, py in portes for dx, dy in devants_mod.DEVANT}
+    poses: list[tuple[int, int]] = []
+    for _ in range(largeur * hauteur * SALETE_PAR_CENT_TUILES // 100 * 4):
+        if len(poses) >= largeur * hauteur * SALETE_PAR_CENT_TUILES // 100:
+            break
+        tx, ty = x + _entre(ch, 0, largeur - 1), y + _entre(ch, 0, hauteur - 1)
+        quoi = _parmi(ch, salete_mod.AU_PIED_DES_MURS)
+        if ((tx, ty) in interdit or not salete_mod._contre_un_mur(ch, tx, ty)
+                or any(abs(tx - a) + abs(ty - b) < salete_mod.ECART_DECHET for a, b in poses)):
+            continue
+        if ch.poser_decor(quoi, tx, ty):
+            poses.append((tx, ty))
+    for d in ch.decor:
+        if d["type"] == "poubelle" and x <= d["x"] < x + largeur and y <= d["y"] < y + hauteur:
+            d["type"] = "poubelle_pleine"
+
+
 #: La graine du Petit-Canton : chaque îlot en tire la sienne, mêlée à sa position (`_a_ses_des`).
 GRAINE_CANTON = 20260927
+#: Celle des îlots neufs de la gare, le bidonville et ses maisons pauvres (`_a_ses_des`).
+GRAINE_GARE = 20260928
+#: Les districts de la bande dont chaque îlot bâti tire SES dés, et la graine qu'ils mêlent à sa position.
+GRAINES_A_PART = {"canton": GRAINE_CANTON, "gare": GRAINE_GARE}
 
 
 class _ChantierNord(carte._Chantier):
-    BATISSEURS = {"z": _friche, "b": _terrain_a_batir, "v": _voies_ferrees, "y": _hangars}
+    BATISSEURS = {"z": _friche, "b": _terrain_a_batir, "v": _voies_ferrees, "y": _hangars,
+                  "t": lambda ch, x, y, large, h: ch._a_ses_des(x, y, lambda: _bidonville(ch, x, y, large, h))}
     A_ABORD = carte._Chantier.A_ABORD | {"b"}
 
     def _a_ses_des(self, x: int, y: int, batir) -> None:
@@ -198,9 +332,11 @@ class _ChantierNord(carte._Chantier):
         neuf, de la graine du quartier mêlée à la position de l'îlot et au NOM du flux (`crc32`, pas
         `hash` : celui des chaînes change d'un processus à l'autre).
         """
+        district = self.district_en(x, y)
+        graine = GRAINES_A_PART[district]
         flux = {k: v for k, v in vars(self).items() if isinstance(v, carte.Des)}
         for nom in flux:
-            setattr(self, nom, carte.Des(GRAINE_CANTON ^ (x * 7919 + y * 104729) ^ zlib.crc32(nom.encode())))
+            setattr(self, nom, carte.Des(graine ^ (x * 7919 + y * 104729) ^ zlib.crc32(nom.encode())))
         avant = len(self.devantures)
         try:
             batir()
@@ -209,13 +345,28 @@ class _ChantierNord(carte._Chantier):
                 setattr(self, nom, d)
         # La plaque verticale de chaque commerce du quartier : deux idéogrammes (`devantures.PAIRES`),
         # choisis à la POSITION de la devanture — aucun dé.
-        for d in self.devantures[avant:]:
+        for d in (self.devantures[avant:] if district == "canton" else ()):
             d["ideo"] = zlib.crc32(f"{d['x']},{d['y']}".encode()) % len(devantures.PAIRES)
 
     def _ilot_bati(self, x, y, largeur, hauteur, **options):
-        if self.district_en(x, y) != "canton":
+        district = self.district_en(x, y)
+        if district not in GRAINES_A_PART:
             return super()._ilot_bati(x, y, largeur, hauteur, **options)
-        return self._a_ses_des(x, y, lambda: super(_ChantierNord, self)._ilot_bati(x, y, largeur, hauteur, **options))
+
+        def batir():
+            super(_ChantierNord, self)._ilot_bati(x, y, largeur, hauteur, **options)
+            if district == "gare":                   # les maisons pauvres de l'est (le bidonville)
+                _salir_les_maisons(self, x, y, largeur, hauteur)
+        return self._a_ses_des(x, y, batir)
+
+    def poser_la_piece(self, famille, part, ancre, *args, **options):
+        """⚠️ À LA GARE, ON N'ENTRE PAS : ni dans une cabane du bidonville, ni dans ses maisons pauvres — la
+        seule pièce de la gare reste le poste d'aiguillage. Pas un choix de décor seulement : le logement
+        visitable se décide sur un état commun à toute la bande (`premiere_du_genre`, le compteur `visites`),
+        et le Petit-Canton décidait alors quelles portes de la gare s'ouvraient (`test_canton`, le témoin)."""
+        if self.district_en(*ancre) == "gare":
+            return None
+        return super().poser_la_piece(famille, part, ancre, *args, **options)
 
     def _terrain_vague(self, x, y, largeur, hauteur):
         """Un lot abandonné du Petit-Canton : celui de la bande (`_terrain_vague`, sa trouée au MILIEU du côté
@@ -237,6 +388,14 @@ def batir_la_bande() -> _ChantierNord:
     for etape in ("eaux", "rues", "croisements", "ilots", "ponts", "lampadaires", "bornes"):
         getattr(ch, etape)()
     ch.pieces["nord_aiguillage"] = PIECE_AIGUILLAGE
+    # ⚠️ LE STANDING DES LOGEMENTS : `vitrines.monter_et_descendre` le marque, mais pour la ville d'avant
+    # seulement. Sans lui, les maisons pauvres de la gare n'avaient ni fer rouillé ni planches — des maisons
+    # ordinaires dans un quartier écrit `-`. Les devantures, elles, gardent leurs noms (le Petit-Canton a les
+    # siens, `devantures.COMMERCES["canton"]`).
+    for r in ch.residences:
+        standing = ch.standing_en(r["x"], r["y"])
+        if standing in carte.STANDING_LETTRE:
+            r["standing"] = carte.STANDING_LETTRE[standing]
     # ⚠️ UNE FOIS : `feux_pietons` réserve ses tuiles (`occupe`) et un deuxième appel n'en rend plus
     # aucun ; or la bande est gardée pour tout le processus (`_bande`).
     ch.feux_nord = ch.feux_pietons()

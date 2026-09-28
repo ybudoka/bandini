@@ -292,12 +292,102 @@ def test_la_bande_n_a_ni_pont_ni_quai():
     assert "Q" not in "".join("".join(r) for r in ch.sol[:110])
 
 
+def _regions_de_la_gare(ch, glyphes):
+    from app import nord
+    x0, _y0, large_gare, _h = ch.rect_district(nord.district("gare"))
+    return [(x, y, large, h) for g, x, y, large, h in ch.regions() if g in glyphes and x0 <= x < x0 + large_gare]
+
+
 def test_la_gare_n_a_qu_une_porte_le_poste_d_aiguillage():
-    """La spec : UNE pièce visitable à la Gare. Ni clinique, ni notaire, ni disco au milieu des wagons."""
+    """La spec : UNE pièce visitable à la Gare. Ni clinique, ni notaire, ni disco au milieu des wagons. ⚠️ Et
+    depuis le bidonville (28 sept. 2026), ni cabane ni maison pauvre qu'on visite (`_ChantierNord.poser_la_piece`)."""
     ch = _bande()
     portes = [p for p in ch.portes if _dans(ch, "gare", p)]
     assert [p["interieur"] for p in portes] == ["nord_aiguillage"], [p["interieur"] for p in portes]
     assert not [d for d in ch.devantures if _dans(ch, "gare", d)], "des devantures dans la gare"
+
+
+# --- Le bidonville de la gare (docs/jalons/le-bidonville-de-la-gare.md) ------------------------
+
+def test_le_bidonville_a_ses_cabanes_de_tole_et_on_n_y_entre_pas():
+    """Martin (28 sept. 2026) : « un bidonville [...] pour la partie est ». Des cabanes de tôle, chacune sa
+    porte CONDAMNÉE, et pas une porte qu'on pousse ; des pneus et des bâches sur la tôle."""
+    ch = _bande()
+    [(x, y, large, h)] = _regions_de_la_gare(ch, "t")
+    zone = ["".join(ch.sol[j][x:x + large]) for j in range(y, y + h)]
+    assert sum(ligne.count("d") for ligne in zone) >= 30, "des cabanes, chacune sa porte condamnée"
+    assert not any("D" in ligne for ligne in zone), "une porte qu'on pousse au bidonville"
+    assert not [p for p in ch.portes if x <= p["x"] < x + large and y <= p["y"] < y + h]
+    sur_la_tole = {t["type"] for t in ch.toits if x <= t["x"] < x + large and y <= t["y"] < y + h}
+    assert {"pneus", "bache"} <= sur_la_tole, sur_la_tole
+    assert all(ch.sol[t["y"]][t["x"]] == "{" for t in ch.toits if x <= t["x"] < x + large and y <= t["y"] < y + h)
+    # De la tôle de cabane et des murs de planches, pas des maisons de brique au toit de goudron.
+    assert sum(ligne.count("{") for ligne in zone) > 200 and not any("F" in ligne or "B" in ligne for ligne in zone)
+
+
+def test_le_bidonville_a_ses_barils_en_feu_qui_eclairent_la_nuit():
+    ch = _bande()
+    [(x, y, large, h)] = _regions_de_la_gare(ch, "t")
+    feux = [(d["x"], d["y"]) for d in ch.decor if d["type"] == "baril_feu"]
+    assert len(feux) >= 5 and all(x <= fx < x + large and y <= fy < y + h for fx, fy in feux), feux
+    lueurs = {(lp["x"], lp["y"]) for lp in ch.lampes if lp.get("c") == "feu"}
+    assert lueurs == set(feux), "chaque baril a sa lueur, et aucune lueur sans baril"
+
+
+def test_rien_devant_la_porte_d_une_cabane():
+    """`devants.DEVANT` : même condamnée, une porte a son devant libre (`test_devants` le juge sur la ville
+    d'avant ; la bande se colle après `devants.deplacer`)."""
+    from app import devants
+    ch = _bande()
+    [(x, y, large, h)] = _regions_de_la_gare(ch, "t")
+    portes = [(i, j) for j in range(y, y + h) for i in range(x, x + large) if ch.sol[j][i] == "d"]
+    pris = {(d["x"], d["y"]) for d in ch.decor}
+    devant = [(px, py) for px, py in portes for dx, dy in devants.DEVANT if (px + dx, py + dy) in pris]
+    assert not devant, devant[:5]
+    # Et large'allée devant la porte est de la terre, pas le mur d'une autre cabane.
+    assert all(ch.marchable_en(px, py + 1) for px, py in portes)
+
+
+def test_les_maisons_de_l_est_sont_pauvres():
+    """« des maisons pauvres » : les îlots `h` de la gare, en standing `-`, et leurs logements le portent."""
+    ch = _bande()
+    maisons = _regions_de_la_gare(ch, "h")
+    assert len(maisons) == 6
+    assert all(ch.standing_en(x + 1, y + 1) == "pauvre" for x, y, _l, _h in maisons)
+    chez_eux = [r for r in ch.residences if any(x <= r["x"] < x + large and y <= r["y"] < y + h
+                                                   for x, y, large, h in maisons)]
+    assert len(chez_eux) >= 6 and all(r.get("standing") == "-" for r in chez_eux), chez_eux[:2]
+    # Et la rue se lit pauvre : la poubelle déborde, des sacs traînent au pied des murs — jamais devant une porte.
+    from app import devants, salete
+    dedans = [d for d in ch.decor if any(x <= d["x"] < x + large and y <= d["y"] < y + h for x, y, large, h in maisons)]
+    assert not [d for d in dedans if d["type"] == "poubelle"], "une poubelle propre chez les pauvres"
+    sacs = [d for d in dedans if d["type"] in salete.AU_PIED_DES_MURS]
+    assert len(sacs) >= 6, sacs
+    portes = {(i, j) for j, ligne in enumerate(ch.sol) for i, g in enumerate(ligne) if g in carte.PORTES_DE_FACADE}
+    portes |= {(r["x"] + i, r["y"]) for r in chez_eux for i, m in enumerate(r["motifs"]) if m == "P"}
+    devant = {(px + dx, py + dy) for px, py in portes for dx, dy in devants.DEVANT}
+    assert not [d for d in sacs if (d["x"], d["y"]) in devant]
+
+
+def test_le_bidonville_tire_ses_des_a_part(monkeypatch):
+    """⚠️ Le bidonville se bâtit avec SES dés (`_a_ses_des`). La gare passe EN DERNIER dans les îlots (ils se
+    bâtissent colonne par colonne), mais les bornes-fontaines de toute la bande se tirent après elle : sans ses
+    dés à lui, chaque cabane de plus déplacerait une borne du Petit-Canton. Le témoin : un bidonville qui
+    mange cent dés de plus ne change RIEN au décor hors de lui."""
+    from app import nord
+
+    def a_l_ouest(ch):
+        [(x, _y, _l, _h)] = _regions_de_la_gare(ch, "t")
+        return sorted(repr(sorted(d.items())) for d in ch.decor if d["x"] < x - 6)
+    avant = a_l_ouest(_bande())
+    vrai = nord._bidonville
+
+    def gourmand(ch, *args):
+        vrai(ch, *args)
+        for _ in range(100):
+            ch.des.suivant()
+    monkeypatch.setattr(nord, "_bidonville", gourmand)
+    assert a_l_ouest(_bande()) == avant
 
 
 def test_le_lecteur_de_la_carte_finie_lit_les_deux_trames():

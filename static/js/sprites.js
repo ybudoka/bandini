@@ -2947,6 +2947,22 @@ const TUILES = (function () {
   const TOIT_BARDEAU = { fond: '#6b5a4a', clair: '#8e7862', sombre: '#4a3d32', grain: '#7a6752',
                          faite: '#a08a72' };
 
+  //: Les plaques de tôle d'une cabane (`{`) : [fond, ondes]. Galvanisée, rouillée, brûlée, verte délavée.
+  const TOLES_DE_CABANE = [['#8a8f94', '#737880'], ['#8f5a34', '#7a4a2a'], ['#6e3f24', '#5a321c'],
+                           ['#6f7d62', '#5e6b52'], ['#9a9488', '#827c70']];
+  const TOIT_CABANE = { clair: '#a8a49c', sombre: '#3a2f28' };
+  //: Le bois des planches d'un mur de cabane, planche par planche.
+  const PLANCHES = ['#7a6246', '#8a7050', '#6a5238', '#8f8068', '#5e5a50'];
+
+  function mursDePlanches(ctx, v, T) {
+    for (let x = 0; x < T; x += 4) {
+      ctx.fillStyle = PLANCHES[(v * 3 + x) % PLANCHES.length]; ctx.fillRect(x, 0, 4, T);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(x + 3, 0, 1, T);          // le jour entre deux planches
+      ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(x + 1, (v * 7 + x * 3) % T, 2, 1);  // un noeud
+    }
+    ctx.fillStyle = '#4a3a2a'; ctx.fillRect(0, 2, T, 1); ctx.fillRect(0, T - 3, T, 1);   // les traverses
+  }
+
   /** Le champ d'un toit plat : sa matiere, avant le bord. */
   function champDeToit(ctx, bruitDe, T, style) {
     plein(ctx, style.fond, T);
@@ -3286,6 +3302,24 @@ const TUILES = (function () {
     'O': function (ctx, v, T) { toitPlat(ctx, v, T, TOIT_GRAVIER); },
     'P': function (ctx, v, T) { toitEnPente(ctx, v, T, TOIT_BARDEAU); },
     'F': function (ctx, v, T) { facade(ctx, v, T); },
+    // LES CABANES DU BIDONVILLE de la gare (`nord._cabane`). ⚠️ La tôle se lit par ses PLAQUES : chaque tuile
+    // en est une, d'une autre couleur que sa voisine (galvanisée, rouillée, peinte il y a longtemps), ses
+    // ondes, sa coulée de rouille et ses clous ; le bord du toit, lui, reste celui de tous les toits.
+    '{': function (ctx, v, T) {
+      const grain = v >> 4;
+      const plaque = TOLES_DE_CABANE[grain % TOLES_DE_CABANE.length];
+      plein(ctx, plaque[0], T);
+      ctx.fillStyle = plaque[1];
+      for (let x = grain % 2; x < T; x += 3) ctx.fillRect(x, 0, 1, T);            // les ondes
+      ctx.fillStyle = 'rgba(143,74,34,0.55)';                                    // la rouille, une plaque sur trois
+      if (grain % 3 === 0) ctx.fillRect(3 + grain % 7, 2, 2, 5 + grain % 5);
+      if (grain % 4 === 1) ctx.fillRect(9, 8 + grain % 3, 4, 3);
+      ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(0, (grain * 5) % T, T, 1);   // le chevauchement
+      ctx.fillStyle = '#c8c4bc'; ctx.fillRect(2, 2, 1, 1); ctx.fillRect(T - 3, T - 4, 1, 1);  // les clous
+      bordDeToit(ctx, v & 15, T, TOIT_CABANE);
+    },
+    // Le mur : des planches debout, chacune son bois (`v`, une tuile sur quatre), les jours entre elles.
+    '}': function (ctx, v, T) { mursDePlanches(ctx, v, T); },
     // Le COIN d'un mur de bois rond : le mur, et par-dessus les bouts des rondins qui
     // depassent — un sur deux, en alternance, comme se croisent les deux murs d'un chalet.
     // Chaque bout montre son grain : l'ecorce sombre, le bois clair, les cernes.
@@ -3500,7 +3534,16 @@ const TUILES = (function () {
     },
     'W': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#243447'; ctx.fillRect(3, 3, 10, 9); ctx.fillStyle = '#7fb3d8'; ctx.fillRect(4, 4, 3, 3); ctx.fillStyle = '#4d7ea3'; ctx.fillRect(8, 4, 4, 7); ctx.fillRect(4, 8, 3, 3); },
     'D': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#3d2a1c'; ctx.fillRect(4, 3, 8, 13); ctx.fillStyle = '#d8b83a'; ctx.fillRect(10, 9, 1, 1); },
-    'd': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#2e2118'; ctx.fillRect(4, 4, 8, 12); ctx.fillStyle = '#3a2a1e'; ctx.fillRect(5, 5, 6, 10); ctx.fillStyle = '#6b5a48'; ctx.fillRect(4, 8, 8, 1); },
+    'd': function (ctx, v, T) {
+      if (v === 1) {                                       // la porte d'une cabane : du contreplaque, une traverse
+        mursDePlanches(ctx, 2, T);
+        ctx.fillStyle = '#2a2016'; ctx.fillRect(4, 3, 8, 13);
+        ctx.fillStyle = '#7a6a4a'; ctx.fillRect(5, 4, 6, 12);
+        ctx.fillStyle = '#5e5036'; ctx.fillRect(5, 9, 6, 1); ctx.fillRect(6, 5, 1, 4); ctx.fillRect(9, 11, 1, 4);
+        ctx.fillStyle = '#b8b0a0'; ctx.fillRect(10, 10, 1, 1);  // le loquet
+        return;
+      }
+      facade(ctx, v, T); ctx.fillStyle = '#2e2118'; ctx.fillRect(4, 4, 8, 12); ctx.fillStyle = '#3a2a1e'; ctx.fillRect(5, 5, 6, 10); ctx.fillStyle = '#6b5a48'; ctx.fillRect(4, 8, 8, 1); },
     'G': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#7a7d82'; ctx.fillRect(1, 3, 14, 13); ctx.fillStyle = '#5f6267'; for (let y = 5; y < 16; y += 3) ctx.fillRect(1, y, 14, 1); },
     'f': function (ctx, v, T) { clotureTuile(ctx, v, T, CLOTURE_GRILLAGE); },
     'w': function (ctx, v, T) { clotureTuile(ctx, v, T, CLOTURE_BOIS); },
@@ -4461,6 +4504,34 @@ const FACADES = (function () {
       ctx.fillStyle = '#6a6660'; ctx.fillRect(x + 7, y + 5, 2, 5);           // le mat du radar
       ctx.fillStyle = '#e6e4da'; ctx.fillRect(x + 5, y + 6, 6, 1);
       ctx.fillStyle = '#d0342c'; ctx.fillRect(x + 7, y + 4, 2, 1);
+    },
+    // CE QUI TIENT LA TOLE d'une cabane du bidonville (`nord.SUR_LA_TOLE`) : deux pneus poses a plat, une
+    // bache bleue tendue, une piece de tole rouillee clouee de travers.
+    pneus: function (ctx, x, y, h) {
+      for (const [dx, dy] of (h % 2 ? [[2, 3], [9, 7]] : [[3, 6], [9, 2]])) {
+        ctx.fillStyle = 'rgba(11,10,18,0.3)'; ctx.fillRect(x + dx + 1, y + dy + 1, 6, 6);
+        ctx.fillStyle = '#1e1c1c'; ctx.fillRect(x + dx, y + dy + 1, 6, 4); ctx.fillRect(x + dx + 1, y + dy, 4, 6);
+        ctx.fillStyle = '#3a3634'; ctx.fillRect(x + dx + 1, y + dy + 1, 1, 1);
+        ctx.fillStyle = '#6a6660'; ctx.fillRect(x + dx + 2, y + dy + 2, 2, 2);  // la jante vide : on voit la tole
+      }
+    },
+    bache: function (ctx, x, y, h) {
+      ctx.fillStyle = 'rgba(11,10,18,0.3)'; ctx.fillRect(x + 2, y + 3, 14, 12);
+      ctx.fillStyle = '#2f6fb0'; ctx.fillRect(x + 1, y + 1, 14, 12);
+      ctx.fillStyle = '#3f86c8'; ctx.fillRect(x + 2, y + 2, 6, 10);
+      ctx.fillStyle = '#255a92'; ctx.fillRect(x + 1, y + 6 + (h % 3), 14, 1);  // le pli
+      ctx.fillStyle = '#d8d2c4';                                               // les oeillets
+      ctx.fillRect(x + 1, y + 1, 1, 1); ctx.fillRect(x + 14, y + 1, 1, 1);
+      ctx.fillRect(x + 1, y + 12, 1, 1); ctx.fillRect(x + 14, y + 12, 1, 1);
+      ctx.fillStyle = '#6a4a2c'; ctx.fillRect(x + 12, y + 8, 3, 3);            // la brique qui la retient
+    },
+    tole: function (ctx, x, y, h) {
+      ctx.fillStyle = 'rgba(11,10,18,0.3)'; ctx.fillRect(x + 4, y + 4, 11, 9);
+      ctx.fillStyle = '#8f4a22'; ctx.fillRect(x + 3, y + 2 + (h % 2), 11, 9);
+      ctx.fillStyle = '#a85c2c';
+      for (let i = 0; i < 11; i += 3) ctx.fillRect(x + 3 + i, y + 2 + (h % 2), 1, 9);  // les ondes
+      ctx.fillStyle = '#5e3016'; ctx.fillRect(x + 6, y + 6, 3, 2);
+      ctx.fillStyle = '#c8c4bc'; ctx.fillRect(x + 4, y + 3 + (h % 2), 1, 1); ctx.fillRect(x + 12, y + 9 + (h % 2), 1, 1);
     },
     antenne: function (ctx, x, y, h) {
       ctx.fillStyle = 'rgba(11,10,18,0.3)'; ctx.fillRect(x + 8, y + 8, 5, 1);
@@ -6446,6 +6517,27 @@ const DECORS = {
     ctx.fillStyle = '#9a7c48'; ctx.fillRect(3, 2, 5, 1);
     ctx.fillStyle = '#4e3620'; ctx.fillRect(1, 7, 10, 1); ctx.fillRect(1, 13, 10, 1);  // les deux cercles
     ctx.fillStyle = '#8f4a22'; ctx.fillRect(8, 5, 1, 7); ctx.fillRect(3, 9, 1, 5);     // la rouille qui coule
+  } },
+
+  // LE BARIL OU L'ON FAIT DU FEU, au bidonville de la gare (`nord._bidonville`) : le baril rouille, sa
+  // bouche noircie, et trois poses de flamme qui dansent (`anime`). Sa lueur, la nuit, est une LAMPE du
+  // paquet (`sorte: feu`, `monde.js`). ⚠️ Des trous perces dans la robe, qui rougeoient : sans eux, de loin,
+  // c'est un baril avec une touffe orange posee dessus.
+  baril_feu: { anime: 7, variantes: 3, casse: 0.75, pv: 45, w: 14, h: 24, ancre: [7, 23], r: 4, sol: [5, 3], solide: true, peindre: function (ctx, w, h, v) {
+    ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(2, 21, 10, 3);
+    ctx.fillStyle = '#5a3c24'; ctx.fillRect(2, 10, 10, 13);                   // la robe, plus sombre : elle chauffe
+    ctx.fillStyle = '#6e4a2c'; ctx.fillRect(3, 10, 5, 12);
+    ctx.fillStyle = '#3e2a18'; ctx.fillRect(2, 13, 10, 1); ctx.fillRect(2, 19, 10, 1);  // les deux cercles
+    ctx.fillStyle = '#ff9a3a';                                                // les trous qui rougeoient
+    ctx.fillRect(4, 16, 1, 1); ctx.fillRect(7, 15, 1, 1); ctx.fillRect(9, 17, 1, 1);
+    ctx.fillStyle = '#2a1f18'; ctx.fillRect(2, 8, 10, 3); ctx.fillRect(3, 7, 8, 1);    // la bouche, noircie
+    // LA FLAMME : trois poses, la pointe qui change de cote.
+    const pointe = [[4, 6], [7, 8], [6, 5]][v];
+    ctx.fillStyle = '#d8401e'; ctx.fillRect(3, 4, 8, 5);
+    ctx.fillRect(pointe[0], 1, 2, 4); ctx.fillRect(pointe[1], 2 + (v % 2), 2, 3);
+    ctx.fillStyle = '#ff9a3a'; ctx.fillRect(4, 5, 6, 4); ctx.fillRect(pointe[0], 3, 2, 2);
+    ctx.fillStyle = '#ffe07a'; ctx.fillRect(5 + (v % 2), 6, 3, 2);
+    ctx.fillStyle = 'rgba(120,110,105,0.45)'; ctx.fillRect(pointe[1] - 1, 0, 2, 1);     // un fil de fumee
   } },
 
   /* --- CE QUI TRAINE AU PIED DES PLEX ------------------------------------
