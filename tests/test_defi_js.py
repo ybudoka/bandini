@@ -114,20 +114,6 @@ def test_le_defi_du_jour_paie_sa_prime_meme_s_il_est_deja_fait(banc, defis):
     assert r["noté"] == {"date": D1, "slug": "tour", "temps": 600}
 
 
-def test_premiere_fois_et_defi_du_jour_paient_la_somme_en_un_seul_versement(banc, defis):
-    prime = defis["tour"]["prime"]
-    r = banc(_demarre("""
-        return o.attendre().then(function () { return o.attendre(); }).then(function () {
-          const paye = gagner(L, o, 'tour');
-          return { paye: paye, prime: L.B.prime };
-        });
-    """), defi=du_jour("tour"))
-    assert r["paye"] == 2 * prime, "la prime de la premiere fois ET celle du jour"
-    # ⚠️ UN seul `encaisser` : deux annonces « +250 $ » se recouvriraient a l'ecran.
-    # La somme se lit dans le bandeau de la prime (`Hud.prime`, test_prime_js.py).
-    assert r["prime"]["montant"] == 2 * prime and r["prime"]["quoi"] == "DÉFI DU JOUR"
-
-
 def test_un_autre_defi_ne_paie_pas_la_prime_du_jour(banc, defis):
     r = banc(_demarre("""
         return o.attendre().then(function () { return o.attendre(); }).then(function () {
@@ -142,20 +128,29 @@ def test_un_autre_defi_ne_paie_pas_la_prime_du_jour(banc, defis):
 
 
 def test_le_lendemain_le_defi_du_jour_repaie(banc, defis):
-    """La date est celle du SERVEUR : le jour suivant, la meme partie peut retoucher la prime."""
+    """La date est celle du SERVEUR : le jour suivant, la meme partie peut retoucher la prime.
+
+    Le lundi, c'est aussi la premiere fois : la prime de la premiere fois ET celle du jour, en
+    UN seul versement."""
     prime = defis["tour"]["prime"]
     r = banc(_demarre("""
         return o.attendre().then(function () { return o.attendre(); }).then(function () {
           const lundi = gagner(L, o, 'tour');
+          const bandeau = { montant: L.B.prime.montant, quoi: L.B.prime.quoi };
           const memeJour = gagner(L, o, 'tour');
           o.defi.repondre({ statut: 200, corps: { date: '""" + D2 + """', defi: 'tour' } });
           return L.Defi.actualiser().then(function () {
-            return { lundi: lundi, memeJour: memeJour, mardi: gagner(L, o, 'tour'), noté: L.B.partie.defiDuJour.date };
+            return { lundi: lundi, bandeau: bandeau, memeJour: memeJour, mardi: gagner(L, o, 'tour'),
+                     noté: L.B.partie.defiDuJour.date };
           });
         });
     """), defi=du_jour("tour", D1))
     assert (r["memeJour"], r["noté"]) == (0, D2)
-    assert r["lundi"] == 2 * prime and r["mardi"] == prime
+    assert r["lundi"] == 2 * prime, "la prime de la premiere fois ET celle du jour"
+    # ⚠️ UN seul `encaisser` : deux annonces « +250 $ » se recouvriraient a l'ecran.
+    # La somme se lit dans le bandeau de la prime (`Hud.prime`, test_prime_js.py).
+    assert r["bandeau"] == {"montant": 2 * prime, "quoi": "DÉFI DU JOUR"}
+    assert r["mardi"] == prime
 
 
 def test_un_defi_de_plus_au_catalogue_ne_paie_pas_deux_fois_le_meme_jour(banc, defis):
