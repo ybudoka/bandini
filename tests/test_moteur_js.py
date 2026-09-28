@@ -4388,12 +4388,20 @@ def test_un_mur_fait_mal_mais_ne_se_traverse_pas(banc):
     assert r["y"] > 0
 
 
-def test_le_trafic_roule_3000_images_sans_se_bloquer(banc, paquet):
-    maximum = paquet["conduite"]["trafic"]["vehicules_max"]
-    r = banc("""function (L, o) {
+@pytest.fixture(scope="module")
+def la_ville_roule(banc):
+    """⚠️ **TROIS JUGES, UNE PARTIE** (vague C, 28 sept. 2026) : le trafic qui ne se
+    bloque pas, le trafic qui reste dans sa voie et les piétons qui restent sur les
+    trottoirs laissaient chacun la ville tourner deux ou trois mille images, le
+    joueur immobile au départ, sans rien y toucher — seule la graine changeait (43,
+    52, 51). Ce ne sont que des LECTURES du même monde : une seule partie de 3 000
+    images les fait toutes, chacune sur la fenêtre qu'elle regardait. Les deux
+    graines abandonnées ont été rejouées sur les trois règles avant la fusion
+    (43, 51 et 52 : toutes vertes)."""
+    return banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(43);
-        o.frame(1200);
+        // --- le trafic ne se bloque pas (images 1200 a 3000) ---
         // ⚠️ On ne suit un char que tant qu'il est LA : la bulle d'oubli retire
         // ceux qui s'eloignent du joueur, et un char retire ne bouge plus —
         // le test les prenait pour des chars bloques.
@@ -4406,30 +4414,70 @@ def test_le_trafic_roule_3000_images_sans_se_bloquer(banc, paquet):
         // et accumule des images sans avancer d'un pixel : c'est exactement ce
         // qu'on cherche, et elargir l'echantillon le trouve mieux.
         const suivis = new Map();
-        for (let i = 0; i < 1800; i++) {
+        // --- la voie (des l'image 200, une sur 20) ---
+        let horsRoute = 0, releves = 0, tournes = 0;
+        const caps = new Map();
+        // --- les trottoirs (des l'image 300, une sur 30) ---
+        let surLaChaussee = 0, surUnPassage = 0, relevesPietons = 0;
+        for (let i = 0; i < 3000; i++) {
             o.frame(1);
-            L.B.entites.forEach(function (e) {
-                if (e.type !== 'vehicule' || e.conducteur !== 'trafic') return;
-                const s = suivis.get(e.id);
-                if (!s) { suivis.set(e.id, { x: e.x, y: e.y, d: 0, images: 0 }); return; }
-                s.d += Math.hypot(e.x - s.x, e.y - s.y); s.x = e.x; s.y = e.y; s.images++;
-            });
+            if (i >= 1200) {
+                L.B.entites.forEach(function (e) {
+                    if (e.type !== 'vehicule' || e.conducteur !== 'trafic') return;
+                    const s = suivis.get(e.id);
+                    if (!s) { suivis.set(e.id, { x: e.x, y: e.y, d: 0, images: 0 }); return; }
+                    s.d += Math.hypot(e.x - s.x, e.y - s.y); s.x = e.x; s.y = e.y; s.images++;
+                });
+            }
+            if (i >= 200 && i % 20 === 0) {
+                L.B.entites.forEach(function (v) {
+                    if (v.type !== 'vehicule' || v.conducteur !== 'trafic') return;
+                    // ⚠️ Un velo parti sur le trottoir ou au parc (`horsRue`) y est de son
+                    // plein gre : ce n'est pas un char qui coupe un coin (`test_velos_js`).
+                    if (v.horsRue) return;
+                    releves++;
+                    const tx = Math.floor(v.x / L.TT), ty = Math.floor(v.y / L.TT);
+                    if (!L.Monde.estRoute(tx, ty)) horsRoute++;
+                    const avant = caps.get(v.id);
+                    if (avant !== undefined && v.sens !== avant) tournes++;
+                    caps.set(v.id, v.sens);
+                });
+            }
+            if (i >= 300 && i % 30 === 0) {
+                L.B.entites.forEach(function (e) {
+                    if (e.type !== 'pieton' || !e.vivant || e.recul > 0) return;
+                    // Le marchand du camion-restaurant tient son comptoir sur un
+                    // stationnement : il n'y marche pas, il y est pose par la carte.
+                    if (e.commerce) return;
+                    const tx = Math.floor(e.x / L.TT), ty = Math.floor(e.y / L.TT);
+                    relevesPietons++;
+                    if (L.Monde.estChaussee(tx, ty)) surLaChaussee++;
+                    if (L.Monde.estPassage(tx, ty)) surUnPassage++;
+                });
+            }
         }
         const chars = L.B.entites.filter(function (e) { return e.type === 'vehicule'; });
-        let dansUnMur = 0, horsRoute = 0;
+        let dansUnMur = 0, horsRouteFin = 0;
         chars.forEach(function (v) {
             const tx = Math.floor(v.x / L.TT), ty = Math.floor(v.y / L.TT);
             if (L.Monde.solidite(tx, ty) === 1) dansUnMur++;
-            if (v.conducteur === 'trafic' && !L.Monde.estRoute(tx, ty)) horsRoute++;
+            if (v.conducteur === 'trafic' && !L.Monde.estRoute(tx, ty)) horsRouteFin++;
         });
         const presents = Array.from(suivis.values()).filter(function (s) { return s.images >= 300; });
         const distances = presents.map(function (s) { return s.d / s.images * 1800; });   // ramene a 1800 images
         const bouges = distances.filter(function (d) { return d > 300; }).length;
-        return { roulent: chars.filter(function (v) { return v.conducteur === 'trafic'; }).length,
-                 suivis: distances.length, bouges: bouges, dansUnMur: dansUnMur, horsRoute: horsRoute,
-                 total: chars.length, epaves: chars.filter(function (v) { return v.etat === 'epave'; }).length,
-                 ms: L.B.stats.ms };
+        return { trafic: { roulent: chars.filter(function (v) { return v.conducteur === 'trafic'; }).length,
+                           suivis: distances.length, bouges: bouges, dansUnMur: dansUnMur, horsRoute: horsRouteFin,
+                           total: chars.length, epaves: chars.filter(function (v) { return v.etat === 'epave'; }).length,
+                           ms: L.B.stats.ms },
+                 voie: { releves: releves, horsRoute: horsRoute, tournes: tournes },
+                 trottoirs: { releves: relevesPietons, chaussee: surLaChaussee, passage: surUnPassage } };
     }""")
+
+
+def test_le_trafic_roule_3000_images_sans_se_bloquer(la_ville_roule, paquet):
+    maximum = paquet["conduite"]["trafic"]["vehicules_max"]
+    r = la_ville_roule["trafic"]
     assert r["roulent"] >= 3, "le trafic ne se peuple pas"
     assert r["roulent"] <= maximum
     assert r["dansUnMur"] == 0, "un char est dans un mur"
@@ -5493,61 +5541,20 @@ def test_la_radio_suit_le_char(banc, paquet):
 # --- La rue dans la vraie vie : trottoirs, passages, feux, stops, velos ----
 
 
-def test_les_pietons_restent_sur_les_trottoirs(banc):
+def test_les_pietons_restent_sur_les_trottoirs(la_ville_roule):
     """⚠️ La regle de la ville : on ne pose pas le pied sur la chaussee. Le
     passage pieton est la seule exception — et un pieton pousse sur la rue
     par un char regagne le trottoir."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        L.graine(51);
-        let surLaChaussee = 0, surUnPassage = 0, releves = 0;
-        for (let i = 0; i < 2400; i++) {
-            o.frame(1);
-            if (i < 300 || i % 30) continue;
-            L.B.entites.forEach(function (e) {
-                if (e.type !== 'pieton' || !e.vivant || e.recul > 0) return;
-                // Le marchand du camion-restaurant tient son comptoir sur un
-                // stationnement : il n'y marche pas, il y est pose par la carte.
-                if (e.commerce) return;
-                const tx = Math.floor(e.x / L.TT), ty = Math.floor(e.y / L.TT);
-                releves++;
-                if (L.Monde.estChaussee(tx, ty)) surLaChaussee++;
-                if (L.Monde.estPassage(tx, ty)) surUnPassage++;
-            });
-        }
-        return { releves: releves, chaussee: surLaChaussee, passage: surUnPassage };
-    }""")
+    r = la_ville_roule["trottoirs"]
     assert r["releves"] > 200
     assert r["chaussee"] <= r["releves"] * 0.03, \
         f"{r['chaussee']} releves de pietons sur la chaussee (sur {r['releves']})"
     assert r["passage"] > 0, "personne ne traverse jamais"
 
 
-def test_le_trafic_reste_dans_sa_voie(banc):
+def test_le_trafic_reste_dans_sa_voie(la_ville_roule):
     """Sur des rails : un char du trafic ne coupe plus un coin, jamais."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        L.graine(52);
-        let horsRoute = 0, releves = 0, tournes = 0;
-        const caps = new Map();
-        for (let i = 0; i < 3000; i++) {
-            o.frame(1);
-            if (i < 200 || i % 20) continue;
-            L.B.entites.forEach(function (v) {
-                if (v.type !== 'vehicule' || v.conducteur !== 'trafic') return;
-                // ⚠️ Un velo parti sur le trottoir ou au parc (`horsRue`) y est de son
-                // plein gre : ce n'est pas un char qui coupe un coin (`test_velos_js`).
-                if (v.horsRue) return;
-                releves++;
-                const tx = Math.floor(v.x / L.TT), ty = Math.floor(v.y / L.TT);
-                if (!L.Monde.estRoute(tx, ty)) horsRoute++;
-                const avant = caps.get(v.id);
-                if (avant !== undefined && v.sens !== avant) tournes++;
-                caps.set(v.id, v.sens);
-            });
-        }
-        return { releves: releves, horsRoute: horsRoute, tournes: tournes };
-    }""")
+    r = la_ville_roule["voie"]
     assert r["releves"] > 300
     # 1 % : un char pousse d'une demi-tuile par un voisin a un coin, le temps
     # de regagner sa voie. Au-dela, c'est le trafic qui coupe les coins.
@@ -5555,38 +5562,100 @@ def test_le_trafic_reste_dans_sa_voie(banc):
     assert r["tournes"] > 3, "le trafic ne tourne jamais"
 
 
-def test_un_char_se_deporte_pour_contourner_un_pieton(banc):
+@pytest.fixture(scope="module")
+def deports(banc):
+    """⚠️ **TROIS SCÈNES DE DÉPORT, UN BANC** (vague C, 28 sept. 2026). Aucune ne
+    joue d'image : un char, un piéton figé, `majConducteur` à la main. Chacune
+    repart de ce que son juge avait au départ — SA graine (61, 62, 63), la rue vidée
+    de ses chars — et retire ce qu'elle a posé en partant."""
+    return banc("""function (L, o) {
+        L.Jeu.commencer();
+        const T = L.TT;
+        function scene(graine, deuxVoiesParSens) {
+            L.graine(graine);
+            const b = o.boulevard(deuxVoiesParSens);
+            if (!b) return null;
+            L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'vehicule'; });
+            const y0 = b.y;
+            const v = L.Vehicules.creer('auto', b.x, y0, 0, { conducteur: 'trafic', etat: 'roule', sens: '>' });
+            v.vitesse = 1.2;
+            // Un passant fige au milieu de la chaussee, cinq tuiles devant.
+            const p = L.Entites.creerPieton(b.x + 5 * T, y0, null);
+            p.etat = 'fige';
+            return { b: b, y0: y0, v: v, p: p };
+        }
+        function ranger(s, autres) {
+            [s.v, s.p].concat(autres || []).forEach(function (e) { L.Entites.retirer(e); });
+            L.Entites.indexer();
+        }
+        const out = {};
+
+        // test_un_char_se_deporte_pour_contourner_un_pieton
+        (function () {
+            const s = scene(61, true);
+            if (!s) { out.contourne = { trouve: false }; return; }
+            const v = s.v, p = s.p, y0 = s.y0;
+            let yMin = y0, depasse = false, renverse = false, voie = null;
+            for (let i = 0; i < 400; i++) {
+                L.Entites.indexer();
+                L.Vehicules.majConducteur(v);
+                v.x += v.vx; v.y += v.vy;
+                yMin = Math.min(yMin, v.y);
+                if (!p.vivant) renverse = true;
+                if (depasse) continue;
+                if (v.x > p.x + 24) {
+                    depasse = true;
+                    voie = L.Monde.fleche(Math.floor(v.x / T), Math.floor(v.y / T));   // ou roule-t-il en doublant ?
+                }
+            }
+            out.contourne = { trouve: true, depasse: depasse, deports: v.deports || 0, renverse: renverse,
+                              gauche: Math.round(y0 - yMin), voie: voie };
+            ranger(s);
+        })();
+
+        // test_sur_une_rue_a_deux_voies_le_char_attend
+        (function () {
+            const s = scene(62, false);
+            if (!s) { out.deuxVoies = { trouve: false }; return; }
+            const v = s.v, p = s.p, y0 = s.y0;
+            let ecart = 0;
+            for (let i = 0; i < 180; i++) {
+                L.Entites.indexer();
+                L.Vehicules.majConducteur(v);
+                v.x += v.vx; v.y += v.vy;
+                ecart = Math.max(ecart, Math.abs(v.y - y0));
+            }
+            out.deuxVoies = { trouve: true, deports: v.deports || 0, ecart: Math.round(ecart),
+                              arrete: Math.abs(v.vx) + Math.abs(v.vy) < 0.05, avant: v.x < p.x };
+            ranger(s);
+        })();
+
+        // test_on_ne_se_deporte_pas_dans_une_voie_occupee
+        (function () {
+            const s = scene(63, true);
+            if (!s) { out.occupee = { trouve: false }; return; }
+            const v = s.v, p = s.p, y0 = s.y0, b = s.b;
+            // Un char arrete dans la voie de gauche, juste a cote du pieton.
+            const mur = L.Vehicules.creer('auto', b.x + 5 * T, y0 - T, 0, { conducteur: 'trafic', etat: 'roule', sens: '>' });
+            mur.vitesse = 0;
+            let ecart = 0;
+            for (let i = 0; i < 180; i++) {
+                L.Entites.indexer();
+                L.Vehicules.majConducteur(v);
+                v.x += v.vx; v.y += v.vy;
+                ecart = Math.max(ecart, Math.abs(v.y - y0));
+            }
+            out.occupee = { trouve: true, deports: v.deports || 0, ecart: Math.round(ecart), avant: v.x < p.x };
+            ranger(s, [mur]);
+        })();
+        return out;
+    }""")
+
+
+def test_un_char_se_deporte_pour_contourner_un_pieton(deports):
     """Sur un boulevard, un pieton plante au milieu de la voie ne bloque plus :
     le char se tasse dans la voie d'a cote — par la gauche — et repart."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        L.graine(61);
-        const T = L.TT;
-        const b = o.boulevard(true);
-        if (!b) return { trouve: false };
-        L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'vehicule'; });
-        const y0 = b.y;
-        const v = L.Vehicules.creer('auto', b.x, y0, 0, { conducteur: 'trafic', etat: 'roule', sens: '>' });
-        v.vitesse = 1.2;
-        // Un passant fige au milieu de la chaussee, cinq tuiles devant.
-        const p = L.Entites.creerPieton(b.x + 5 * T, y0, null);
-        p.etat = 'fige';
-        let yMin = y0, depasse = false, renverse = false, voie = null;
-        for (let i = 0; i < 400; i++) {
-            L.Entites.indexer();
-            L.Vehicules.majConducteur(v);
-            v.x += v.vx; v.y += v.vy;
-            yMin = Math.min(yMin, v.y);
-            if (!p.vivant) renverse = true;
-            if (depasse) continue;
-            if (v.x > p.x + 24) {
-                depasse = true;
-                voie = L.Monde.fleche(Math.floor(v.x / T), Math.floor(v.y / T));   // ou roule-t-il en doublant ?
-            }
-        }
-        return { trouve: true, depasse: depasse, deports: v.deports || 0, renverse: renverse,
-                 gauche: Math.round(y0 - yMin), voie: voie };
-    }""")
+    r = deports["contourne"]
     assert r["trouve"], "aucun boulevard a deux voies dans le meme sens sur la carte"
     assert r["deports"] >= 1, "le char n'a jamais essaye de se tasser"
     assert r["gauche"] >= 10, f"il s'est tasse de {r['gauche']} px : ce n'est pas la voie de gauche"
@@ -5595,65 +5664,21 @@ def test_un_char_se_deporte_pour_contourner_un_pieton(banc):
     assert r["voie"] == ">", "en doublant, le char n'etait pas dans une voie de son sens"
 
 
-def test_sur_une_rue_a_deux_voies_le_char_attend(banc):
+def test_sur_une_rue_a_deux_voies_le_char_attend(deports):
     """⚠️ Le pendant du test precedent : sans voie parallele dans son sens, se
     deporter serait rouler a contresens. Le char attend, comme avant."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        L.graine(62);
-        const T = L.TT;
-        const b = o.boulevard(false);
-        if (!b) return { trouve: false };
-        L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'vehicule'; });
-        const y0 = b.y;
-        const v = L.Vehicules.creer('auto', b.x, y0, 0, { conducteur: 'trafic', etat: 'roule', sens: '>' });
-        v.vitesse = 1.2;
-        const p = L.Entites.creerPieton(b.x + 5 * T, y0, null);
-        p.etat = 'fige';
-        let ecart = 0;
-        for (let i = 0; i < 180; i++) {
-            L.Entites.indexer();
-            L.Vehicules.majConducteur(v);
-            v.x += v.vx; v.y += v.vy;
-            ecart = Math.max(ecart, Math.abs(v.y - y0));
-        }
-        return { trouve: true, deports: v.deports || 0, ecart: Math.round(ecart),
-                 arrete: Math.abs(v.vx) + Math.abs(v.vy) < 0.05, avant: v.x < p.x };
-    }""")
+    r = deports["deuxVoies"]
     assert r["trouve"], "aucune rue a une seule voie par sens sur la carte"
     assert r["deports"] == 0, "le char s'est deporte a contresens"
     assert r["ecart"] <= 4, f"il a quitte sa voie de {r['ecart']} px"
     assert r["arrete"] and r["avant"], "le char n'a pas attendu derriere le pieton"
 
 
-def test_on_ne_se_deporte_pas_dans_une_voie_occupee(banc):
+def test_on_ne_se_deporte_pas_dans_une_voie_occupee(deports):
     """La voie d'a cote n'est libre que si personne n'y roule — devant COMME
     derriere. Un char qui arrive vite par la gauche a la priorite ; celui qui
     est coince reste derriere son pieton plutot que de lui couper la route."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        L.graine(63);
-        const T = L.TT;
-        const b = o.boulevard(true);
-        if (!b) return { trouve: false };
-        L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'vehicule'; });
-        const y0 = b.y;
-        const v = L.Vehicules.creer('auto', b.x, y0, 0, { conducteur: 'trafic', etat: 'roule', sens: '>' });
-        v.vitesse = 1.2;
-        const p = L.Entites.creerPieton(b.x + 5 * T, y0, null);
-        p.etat = 'fige';
-        // Un char arrete dans la voie de gauche, juste a cote du pieton.
-        const mur = L.Vehicules.creer('auto', b.x + 5 * T, y0 - T, 0, { conducteur: 'trafic', etat: 'roule', sens: '>' });
-        mur.vitesse = 0;
-        let ecart = 0;
-        for (let i = 0; i < 180; i++) {
-            L.Entites.indexer();
-            L.Vehicules.majConducteur(v);
-            v.x += v.vx; v.y += v.vy;
-            ecart = Math.max(ecart, Math.abs(v.y - y0));
-        }
-        return { trouve: true, deports: v.deports || 0, ecart: Math.round(ecart), avant: v.x < p.x };
-    }""")
+    r = deports["occupee"]
     assert r["trouve"], "aucun boulevard a deux voies dans le meme sens sur la carte"
     assert r["deports"] == 0, "le char s'est tasse dans une voie occupee"
     assert r["ecart"] <= 4, f"il a quitte sa voie de {r['ecart']} px"
