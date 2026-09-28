@@ -444,7 +444,7 @@ const Entites = (function () {
       const e = creerPieton(g.x * TT + 8, y, arch);
       e.face = 'bas';
       // Le commis ne quitte pas sa caisse, la soignante son triage ; le client, lui, magasine.
-      if (g.qui === 'commis' || g.qui === 'soignant') e.poste = { x: e.x, y: e.y };
+      if (g.qui === 'commis' || g.qui === 'soignant' || g.qui === 'croupier') e.poste = { x: e.x, y: e.y };
       // KEVIN, le partenaire des lecons du DOJO DION (`dojo.js`) : sa place est au sac.
       if (g.qui === 'eleve') { e.partenaire = true; e.poste = { x: e.x, y: e.y }; }
       // ⚠️ `fige`, la regle du donneur : il TIENT sa place (on le bouscule, il y
@@ -480,6 +480,17 @@ const Entites = (function () {
       const commis = archetype('commis');
       return Object.assign({}, commis, { slug: 'eleve', nom: 'Kevin', metier: 'dojo', courage: 0, temoin: 0,
                                          couleurs: Object.assign({}, commis.couleurs, { c: '#f4f1e8', p: '#f4f1e8' }) });
+    }
+    // LE CROUPIER des tables du Dragon d'or (`tables.js`) : le corps du commis, chemise blanche et pantalon
+    // noir — le paquet des definitions n'a pas la place d'un archetype de plus (voir Kevin, ci-dessus).
+    if (g.qui === 'croupier') {
+      const commis = archetype('commis');
+      // La tete et le corps a l'empreinte de sa place (jamais un de du jeu), l'habit impose.
+      const tire = typeof Garderobe !== 'undefined' ? Garderobe.tirer('commis', hash2(g.x * 131 + g.y, 0xC0C)) : null;
+      return Object.assign({}, commis, { slug: 'croupier', nom: 'Croupier', metier: 'casino',
+                                         couleurs: Object.assign({}, commis.couleurs, { c: '#f4f1e8', p: '#1a1a22' }),
+                                         tenue: tire ? Object.assign({}, tire, { haut: 'chemise', couleur_haut: '#f4f1e8', motif: 'uni',
+                                                                                 bas: 'pantalon', couleur_bas: '#1a1a22' }) : undefined });
     }
     const hasard = (hash2(g.x * 131 + g.y, 0xD0C) % 1000) / 1000;
     if (g.qui === 'malade') {

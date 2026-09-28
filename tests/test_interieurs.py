@@ -62,6 +62,8 @@ TYPES_SERVIS = frozenset({
     "cours",
     # La machine à sous du casino du Dragon d'or (`machine_a_sous.py`, `Casino.menu`).
     "machine_a_sous",
+    # Les tables du Dragon d'or (`tables_de_jeu.py`, `Tables.menu`).
+    "blackjack", "roulette", "poker", "sic_bo", "baccara",
 })
 #: ⚠️ Le point d'un PERSONNAGE posé dedans (`ou: "point:<type>"` — le sergent, Josée, Lulu,
 #: Ovila, le Dr Lachance) est servi par `Histoire.personnageDuPoint`, et se lit dans le
@@ -423,7 +425,8 @@ def test_les_blocs_sont_le_lit_la_table_le_tapis_et_la_machine():
     # ⚠️ Le TATAMI du DOJO DION (« A ») aussi : son peintre lit le masque pour ne border de noir
     # que les cotes ou le tatami s'arrete, comme le galon du tapis.
     # ⚠️ L'ALLEE DE QUILLES (« [ ») de meme : les quilles au bout nord, les dalots sur ses bords.
-    assert BLOCS == {"l", "a", "y", "m", "o", "r", "Y", "U", "A", "["}
+    # ⚠️ La TABLE DE JEU du Dragon d'or (« ! ») : la bordure de bois seulement la ou le feutre s'arrete.
+    assert BLOCS == {"l", "a", "y", "m", "o", "r", "Y", "U", "A", "[", "!"}
 
 
 @pytest.mark.parametrize("slug", sorted(PIECES))

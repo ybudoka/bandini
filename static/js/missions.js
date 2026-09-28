@@ -1209,6 +1209,8 @@ const Missions = (function () {
     distributrice: 'LA MACHINE', videopoker: 'LE VIDÉOPOKER', machine_a_sous: 'LA MACHINE À SOUS', cours: 'LES COURS',
     // Les concessionnaires : le comptoir qui vend les chars du lot.
     concession: 'ACHETER UN CHAR',
+    // Les tables du Dragon d'or (`tables.js`).
+    blackjack: 'LE BLACKJACK', roulette: 'LA ROULETTE', poker: 'LE POKER', sic_bo: 'LE SIC BO', baccara: 'LE BACCARA',
     // Le metro : monter dans la rame au quai, en descendre dans la rame.
     rame: 'LA RAME',
   };
@@ -1438,6 +1440,8 @@ const Missions = (function () {
         return menuVideopoker();
       case 'machine_a_sous':
         return Casino.menu();
+      case 'blackjack': case 'roulette': case 'poker': case 'sic_bo': case 'baccara':
+        return Tables.menu(point.type);
       default:
         return null;
     }

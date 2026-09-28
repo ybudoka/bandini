@@ -3963,6 +3963,25 @@ const TUILES = (function () {
       ctx.fillStyle = '#ff9a8a';
       ctx.fillRect(13, 1, 1, 1);                        // qui brille
     },
+    /* Une TABLE DE JEU du Dragon d'or (`tables_de_jeu.py`) : le feutre vert, son grain, et la bordure de bois
+       rembourree la ou la table S'ARRETE (`v & 1..8`) — une table de cinq tuiles est UNE table, pas cinq.
+       Ce qu'il y a dessus (la roue, le sabot, la cloche) se peint par-dessus (`Tables.dessinerSalle`). */
+    '!': function (ctx, v, T) {
+      const nord = !(v & 1), est = !(v & 2), sud = !(v & 4), ouest = !(v & 8);
+      plein(ctx, '#1f6b3a', T);
+      ctx.fillStyle = '#23774a';
+      for (let y = 1 + ((v >> 4) & 1); y < T; y += 3) ctx.fillRect(0, y, T, 1);    // le grain du feutre
+      ctx.fillStyle = '#6b4226';
+      if (nord) ctx.fillRect(0, 0, T, 3);
+      if (sud) ctx.fillRect(0, T - 3, T, 3);
+      if (ouest) ctx.fillRect(0, 0, 3, T);
+      if (est) ctx.fillRect(T - 3, 0, 3, T);
+      ctx.fillStyle = '#8a5a34';                                                   // le rembourrage, sous la lumiere
+      if (nord) ctx.fillRect(0, 0, T, 1);
+      if (ouest) ctx.fillRect(0, 0, 1, T);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      if (sud) ctx.fillRect(0, T - 1, T, 1);                                       // l'ombre au pied
+    },
     /* Le DOJO DION (docs/jalons/le-dojo-du-quartier.md). Le TATAMI : des nattes vert pale, un
        joint sombre toutes les huit pixels (deux nattes par tuile), et le liseré noir aux bords
        — lu comme le galon du tapis (`v & 1..8` : ou le tatami S'ARRETE). */

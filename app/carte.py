@@ -415,6 +415,10 @@ LEGENDE: dict[str, dict] = {
     "S": {"nom": "vidéopoker", "solide": 3, "meuble": True},
     # Le casino du Dragon d'or (`casino.py`) : la machine à sous, trois rouleaux et un bras.
     "$": {"nom": "machine à sous", "solide": 3, "meuble": True},
+    # Ses TABLES DE JEU (`tables_de_jeu.py`) : un feutre vert bordé de bois, en BLOC (le peintre met la bordure
+    # là où la table s'arrête). Un seul glyphe pour les cinq : ce qu'il y a SUR le feutre (le sabot, la roue,
+    # la cloche du sic bo) se peint par-dessus, à la place de la table (`Tables.dessinerSalle`).
+    "!": {"nom": "table de jeu", "solide": 3, "meuble": True, "bloc": True},
     # Le chalet du rang, dedans (26 sept. 2026, « que ça ait vraiment l'air d'un chalet ») :
     # le foyer de pierre et sa cheminée, la corde de bois, la peau d'ours, la berçante, et ce
     # qu'on accroche au mur d'un camp — le panache d'orignal et les raquettes.
@@ -7368,7 +7372,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
 #: Me Desjardins, ASSIS a la table du fond ou l'on vient lui parler.
 #: ⚠️ Sans eux, une piece meublee reste un musee : c'est le monde qui parle au
 #: comptoir qui fait qu'on a l'impression d'etre entre quelque part.
-QUI_DEDANS = ("commis", "client", "patient", "malade", "soignant", "avocat", "eleve")
+QUI_DEDANS = ("commis", "client", "patient", "malade", "soignant", "avocat", "eleve", "croupier")
 
 #: ⚠️ Les seuls gens qui naissent DANS un meuble, et chacun dans le sien : le
 #: PATIENT attend assis sur une chaise de la salle d'attente, l'AVOCAT tient la

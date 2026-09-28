@@ -82,6 +82,7 @@ const B = {
   generiqueEnAttente: null,   // le slug d'une fin de partie (M13) : son generique suit la scene de fin
   videopoker: null,     // la main en cours a la machine (Missions, le videopoker du Brouillard)
   machineASous: null,   // le dernier tour de la machine a sous du Dragon d'or (Casino)
+  tables: null,         // le coup en cours a chaque table du Dragon d'or (Tables), par jeu
   orignal: null,        // l'orignal de La Pointe, quand il est en ville (Entites.majOrignal)
   sonnerie: null,       // le combine sonne : { slug, t } — on decroche a l'image `t` (Histoire.majTelephone)
   mission: null,        // les figurants de la mission en cours (pas sauvegardes : voir Histoire)

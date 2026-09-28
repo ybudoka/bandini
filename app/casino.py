@@ -29,31 +29,40 @@ from . import carte
 #: prenne pour un de ses lieux (« Glyphes libres disputés entre sessions »).
 CASINO_DU_PLAN = "¤"
 
+#: Les cinq tables de la salle (vague 2) : leur jeu, et la colonne du milieu de leur feutre — le croupier s'y
+#: tient au nord, le point d'ACTION est sur le bord sud.
+TABLES: tuple[tuple[str, int], ...] = (("blackjack", 4), ("roulette", 11), ("poker", 17), ("baccara", 23),
+                                       ("sic_bo", 29))
+
 #: La fiche du lieu garanti, au format de `carte.SPECIAUX`.
 CASINO: dict = {"slug": "nord_casino", "nom": "Casino du Dragon d'or", "interieur": "nord_casino",
                 "famille": "repere"}
 
 #: LA GRANDE SALLE. Le long du mur du nord, huit machines à sous (`$`) et quatre vidéopokers (`S`), un
-#: tabouret (`h`) entre deux ; au milieu, deux îlots de cinq machines ; le bar du fond (`c`) ; des plantes
-#: (`n`). ⚠️ UNE MACHINE SUR DEUX TUILES : deux points côte à côte se marchent dessus (`test_interieurs`),
-#: d'où les tabourets. ⚠️ Et assez de meubles pour une salle de 32 × 9 (un sur dix tuiles, jugé) — vide, elle
-#: se lisait comme un gymnase. La porte au milieu de la façade, entre ses vitrines.
+#: tabouret (`h`) entre deux ; le bar du fond (`c`). Au milieu, les CINQ TABLES (`!`, vague 2 :
+#: `tables_de_jeu.py`), d'ouest en est le blackjack, la roulette, le poker à trois cartes, le baccara et le sic
+#: bo — le croupier derrière, au nord, le joueur devant, au sud, où ACTION attrape le point posé sur le bord du
+#: feutre. Et au sud, deux îlots de cinq machines, loin de la porte. ⚠️ UNE MACHINE SUR DEUX TUILES, et deux
+#: tables jamais collées (deux blocs du même glyphe se peindraient comme un seul) : deux tuiles entre elles.
+#: ⚠️ La salle garde ses 32 × 9 : la grossir ferait glisser la ville (« Grossir un lieu garanti »).
 PIECE = carte._piece("nord_casino", "Casino du Dragon d'or", sol="u", plan="""
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 B$h$h$h$h$h$h$h$ ShShShS  ccccc nB
 B                                B
-B n                            n B
+Bn                              nB
+B !!!!!  !!!!!  !!!  !!!!!  !!!  B
+B !!!!!  !!!!!  !!!  !!!!!  !!!  B
 B                                B
-B   $h$h$h$h$       $h$h$h$h$    B
 B                                B
-B n                            n B
-B                                B
+B  $h$h$h$h$         $h$h$h$h$   B
 Bn                              nB
 BBBBBBBBBBBBBBWWDWWBBBBBBBBBBBBBBB
 """, points=tuple([carte._pt("machine_a_sous", x, 1) for x in range(1, 16, 2)]
-                  + [carte._pt("machine_a_sous", x, 5) for x in (4, 6, 8, 10, 12, 20, 22, 24, 26, 28)]
-                  + [carte._pt("videopoker", x, 1) for x in (17, 19, 21, 23)]),
-    gens=carte._gens(("client", 6, 3), ("client", 20, 3), ("client", 12, 6), ("commis", 28, 2)))
+                  + [carte._pt("machine_a_sous", x, 8) for x in (3, 5, 7, 9, 11, 21, 23, 25, 27, 29)]
+                  + [carte._pt("videopoker", x, 1) for x in (17, 19, 21, 23)]
+                  + [carte._pt(jeu, x, 5) for jeu, x in TABLES]),
+    gens=carte._gens(*[("croupier", x, 3) for _, x in TABLES],
+                     ("client", 6, 7), ("client", 20, 2), ("client", 25, 9), ("commis", 28, 2)))
 
 
 def batir(ch, x: int, y: int, largeur: int, hauteur: int) -> None:

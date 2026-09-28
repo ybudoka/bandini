@@ -11,7 +11,8 @@ _Demande de Martin (28 sept. 2026) :_ « je veux un grand casino dans le quartie
 - **Les deux** : un grand casino **légal** qu'on voit de la rue — le **Dragon d'or**, une façade de néons rouge et
   or, un portier —, et un **tripot clandestin** au sous-sol, qu'on découvre par une mission.
 - **Quatre jeux** : les **machines à sous**, le **blackjack**, la **roulette**, et le **vidéopoker** du Brouillard
-  (`videopoker.py`, réutilisé).
+  (`videopoker.py`, réutilisé). _Puis, à la vague 2 (Martin, le même soir) : « ajoute des machines : roulette,
+  poker, black jack et plus »_ — le **poker à trois cartes**, le **sic bo** et le **baccara** s'ajoutent.
 - **La place** : laissée à Claude — mesurer les îlots, prendre celui qui laisse le plus de place à un grand
   bâtiment, et que la place du marché lui serve de parvis si c'est possible.
 - **La maison gagne, mais on peut tricher** : chaque jeu rend moins qu'on y met, en moyenne, et le casino
@@ -24,7 +25,8 @@ _Demande de Martin (28 sept. 2026) :_ « je veux un grand casino dans le quartie
 1. **Le bâtiment et la salle** : le Dragon d'or bâti au Petit-Canton (un lieu garanti de la bande, sa façade, son
    enseigne, son portier), sa grande salle à la mesure du bâtiment, une rangée de **vidéopokers** et de
    **machines à sous** (trois rouleaux, la table des gains mesurée comme celle du vidéopoker).
-2. **Les tables** : le **blackjack** et la **roulette**, un croupier à chacune ; les mises, les limites du jour.
+2. **Les tables** : le **blackjack** et la **roulette**, un croupier à chacune ; les mises, les limites du jour — et
+   le poker, le sic bo, le baccara.
 3. **Tricher** : compter les cartes au blackjack (et peut-être un complice à la roulette) ; la chaleur monte, les
    gardes repèrent, et on se fait sortir — ou barrer du casino pour une semaine.
 4. **Le tripot du sous-sol** : une porte gardée, une mission pour l'ouvrir (avec le donneur du Petit-Canton,
@@ -82,4 +84,52 @@ _Demande de Martin (28 sept. 2026) :_ « je veux un grand casino dans le quartie
   déplacer ; la marquise). Deux mutations rouges (l'évaluation JS, le dé du portier). `test_canton` admet le
   casino sur la rue principale et son enseigne.
 - **Reste** : vague 2 (le blackjack et la roulette, leurs croupiers), vague 3 (tricher), vague 4 (le tripot du
+  sous-sol).
+
+### Vague 2 — les tables : blackjack, roulette, poker, sic bo, baccara — **livrée le 28 sept. 2026**
+
+- **Cinq tables au milieu de la salle** (`casino.TABLES`), d'ouest en est : le **blackjack**, la **roulette**, le
+  **poker à trois cartes**, le **baccara**, le **sic bo**. Un glyphe neuf, `!` (la table de jeu, un BLOC : la
+  bordure de bois seulement là où le feutre s'arrête) ; ce qu'il y a SUR le feutre (le sabot et les cercles, la
+  roue qui tourne plus vite quand on joue, les trois cartes, les cases JOUEUR et BANQUE, la cloche) se peint
+  par-dessus (`Tables.dessinerSalle`). Un **croupier** derrière chacune (`qui: "croupier"`, le corps du commis en
+  chemise blanche et pantalon noir, tenu à son poste — pas d'archétype neuf : le paquet est à son plafond). Les
+  dix machines du milieu descendent en deux îlots au sud, loin de la porte ; la salle garde ses 32 × 9 (la
+  grossir ferait glisser la ville), ses dix-huit machines et ses quatre vidéopokers.
+- **Un menu par table, comme la machine à sous** (`static/js/tables.js`) : MISE (10, 20 ou 50 $ — des mises
+  PAIRES, pour que le 3 pour 2 et la demi-paie de la banque tombent sur un dollar rond), PARI, puis le geste
+  (DONNER, LANCER LA BILLE, SECOUER LES DÉS) ; au blackjack TIRER / RESTER, au poker JOUER / PASSER. Une ligne
+  à choix change à ACTION (un cran) ou à GAUCHE / DROITE (le menu n'avait que haut, bas et ACTION : c'est la
+  table qui lit les deux autres, `maj`). Quarante coups par jour à CHAQUE table.
+- **Les règles, à Python** (`app/tables_de_jeu.py`), et leur jumeau en JS jugé coup pour coup sur deux mille
+  paquets : le **blackjack** sans doubler ni séparer, le croupier tire jusqu'à 17 et reste à 17 souple, le
+  naturel paie 3 pour 2 ; la **roulette européenne** (un seul zéro ; rouge, noir, pair, impair, ou un numéro
+  plein à 35 pour 1 — la roue alterne ses couleurs, le navigateur les lit ainsi) ; le **poker à trois cartes**
+  (la mise de départ, puis JOUER une mise de plus ou PASSER ; le croupier ouvre à la dame ; un bonus au départ
+  sur la quinte, le brelan, la quinte flush) — préféré au hold'em : trois cartes et deux choix, ça se lit d'un
+  coup d'œil et ça se joue à deux boutons ; le **sic bo** (petit, grand — un triple les perd —, ou un chiffre) ;
+  le **baccara sans commission** (la banque qui gagne à six ne paie que la moitié ; l'égalité 8 pour 1).
+- **La maison gagne à chaque pari, et le dit** (le retour du pari choisi dans l'aide du menu, arrondi en
+  dessous) : roulette **97 %** (36/37, calculé) ; sic bo petit/grand **97 %**, un chiffre **92 %** (calculés sur
+  les 216 jets) ; baccara joueur **98 %** (98,71), banque **98 %** (98,61), égalité **84 %** (84,25) — CALCULÉS
+  sur toutes les suites de valeurs de cartes (`bac_retours_exacts`) ; blackjack **97 %** (97,9 mesuré, avec la
+  stratégie de base) et poker **98 %** (98,0 par dollar misé, « jouer à partir de dame-six-quatre ») — MESURÉS
+  sur deux cent mille mains, et deux millions pour choisir le chiffre. Au banc, quarante mille coups par table
+  tirés par le hasard du navigateur retombent dessus.
+- **Un paquet neuf à chaque main**, semé par la graine, le numéro du coup et un SEL PAR TABLE — jamais `B.rng()`
+  (jugé : dix coups à chaque table ne décalent pas le tirage suivant). ⚠️ On ne peut donc PAS compter les cartes
+  au blackjack : la vague 3 devra y mettre un sabot de plusieurs mains.
+- ⚠️ **Payé tout de suite, annoncé quand la bille s'arrête** : payer à la fin de l'animation, c'était ne jamais
+  payer celui qui ferme le menu pendant que la roue tourne. Le gain entre en poche au geste, en silence ; l'argent
+  en haut du menu ne le montre qu'à l'annonce (jugé). Les animations se comptent en IMAGES DESSINÉES (la leçon de
+  la vague 1 : un menu ouvert fige `B.t`).
+- **Les sons** (« La cabane et le casino s'entendent », livré le même soir) : `Son.SFX.jetons` à la mise,
+  `cartes_donnees`, `roulette_bille`, `des_sic_bo` ; à l'annonce, `gain_machine`, et `jackpot` pour dix mises de
+  profit et plus (un numéro plein, un chiffre sorti trois fois). Chacun a son repli synthétisé.
+- **Juges** : `test_tables_de_jeu.py` (27 : la maison gagne au chiffre affiché, 200 000 mains, chaque règle main
+  par main, le tableau du baccara, la salle), `test_tables_js.py` (13 : chaque table au bouton, JS = Python coup
+  pour coup, 40 000 coups sous 100 %, le hasard intact, la limite du jour, la bille avant l'annonce, GAUCHE /
+  DROITE, un croupier par table, le bruit de chaque geste). Huit mutations, huit rouges (le naturel, le dé du jeu, le paiement, la limite,
+  l'habit du croupier, GAUCHE / DROITE, le poker qui paie trop, le tableau de la banque).
+- **Reste** : vague 3 (tricher : le sabot et le compte des cartes, la chaleur, les gardes), vague 4 (le tripot du
   sous-sol).

@@ -36,7 +36,7 @@ import json
 from dataclasses import dataclass
 
 from . import (armes, audio, blocs, calendrier, carte, demenagement, derby, enseignes, fetes, garage, motoneige, saint_jean, devantures, dojo, economie, garderobe, interactions, journal, magasins,
-               brouillard, loto, machine_a_sous, manettes, missions, nord, nuit, pietons, recherche, techniques, vehicules, verglas, videopoker,
+               brouillard, loto, machine_a_sous, manettes, tables_de_jeu, missions, nord, nuit, pietons, recherche, techniques, vehicules, verglas, videopoker,
                pont_de_glace, visages)
 from .blocs import galeries as galeries_hantees
 from .version import VERSION
@@ -70,6 +70,8 @@ def assembler() -> dict:
         "videopoker": videopoker.pour_le_navigateur(),
         # La machine à sous du casino du Dragon d'or (docs/jalons/le-casino-du-petit-canton.md).
         "machine_a_sous": machine_a_sous.pour_le_navigateur(),
+        # Les tables du Dragon d'or : blackjack, roulette, poker, sic bo, baccara (même fiche, vague 2).
+        "tables_de_jeu": tables_de_jeu.pour_le_navigateur(),
         # Les matins de brouillard (docs/jalons/le-brouillard-de-baie-des-brumes.md).
         "brouillard": brouillard.pour_le_navigateur(),
         # Trois jours de glace (docs/jalons/la-tempete-de-verglas.md).
