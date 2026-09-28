@@ -30,17 +30,6 @@ import verifier_ce_qui_casse as juge  # noqa: E402
 # --- Le catalogue et le câblage ---------------------------------------------
 
 
-def test_le_depot_passe_son_propre_juge(racine):
-    """Le dernier filet : ce que les gardes Claude Code disent plus tôt."""
-    sortie = subprocess.run(
-        [sys.executable, "scripts/verifier_ce_qui_casse.py"],
-        cwd=racine,
-        capture_output=True,
-        text=True,
-    )
-    assert sortie.returncode == 0, sortie.stderr
-
-
 def test_le_juge_lit_vraiment_le_catalogue(racine):
     """⚠️ Un juge qui ne lit rien ne rougit jamais. Celui-ci parse du JS : s'il
     perdait `const DECORS` (renommé, déplacé, réécrit en module), il rendrait un
@@ -70,7 +59,11 @@ def test_un_juge_qui_ne_lit_rien_ne_passe_pas_pour_content():
 def test_le_juge_trouve_le_depot_depuis_n_importe_ou(racine):
     """Il s'ancre sur **lui-même** (`__file__`), comme `verifier_carte_du_depot.py`
     — pas sur le dossier d'où on l'appelle. Une garde Claude Code ne promet pas
-    dans quel dossier elle tourne."""
+    dans quel dossier elle tourne.
+
+    Et c'est le dernier filet : le dépôt passe son propre juge, ce que les gardes
+    Claude Code disent plus tôt. (Vague C, 28 sept. 2026 : `test_le_depot_passe_son_propre_juge`
+    le lançait depuis la racine ; lancé d'ailleurs, il doit sortir vert de même.)"""
     assert juge.RACINE == racine
     sortie = subprocess.run(
         [sys.executable, str(racine / "scripts/verifier_ce_qui_casse.py")],

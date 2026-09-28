@@ -61,7 +61,7 @@ def test_le_skimmer_vaut_la_peine_mais_pas_plus_que_le_taxi():
 
 
 def test_le_marche_noir_vend_le_skimmer():
-    assert "skimmer" in magasins.MARCHE_NOIR["objets"]
+    # Qu'il soit dans les `objets` : `test_export_de_l_argent_sale` (`objets == ["skimmer"]`).
     assert "skimmer" not in magasins.MARCHE_NOIR["articles"], "ce n'est pas une arme"
 
 

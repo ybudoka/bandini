@@ -65,9 +65,12 @@ def test_chaque_piece_change_le_dessin_sur_chaque_squelette(banc):
                 if (s === 'enfant' && (c === 'tshirt' || c === 'camisole' || c === 'chemise' || c === 'coton_ouate')) return;
                 essai('haut ' + c, Object.assign({}, nu, { haut: c }));
             });
-            ['short', 'jupe'].forEach(function (c) { essai('bas ' + c, Object.assign({}, nu, { bas: c })); });
-            essai('bottes', Object.assign({}, nu, { souliers: 'bottes' }));
-            ['raye', 'carreaute'].forEach(function (m) { essai('motif ' + m, Object.assign({}, nu, { motif: m })); });
+            // ⚠️ Les listes du PAQUET, pas des listes en dur : une pièce que Python nomme et que
+            // `garderobe.js` ne dessine pas serait invisible (vague C : ce juge remplace la regex de
+            // `test_garderobe.py::test_le_dessin_connait_chaque_piece`).
+            D.bas.filter(function (c) { return c !== 'pantalon'; }).forEach(function (c) { essai('bas ' + c, Object.assign({}, nu, { bas: c })); });
+            D.souliers.filter(function (c) { return c !== 'souliers'; }).forEach(function (c) { essai('souliers ' + c, Object.assign({}, nu, { souliers: c })); });
+            D.motifs.filter(function (m) { return m !== 'uni'; }).forEach(function (m) { essai('motif ' + m, Object.assign({}, nu, { motif: m })); });
             D.accessoires.forEach(function (a) { essai('acc ' + a, Object.assign({}, nu, { accessoires: [a] })); });
         });
         return { rates: rates, inconnues: inconnues };

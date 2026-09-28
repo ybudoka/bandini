@@ -14,10 +14,10 @@ def test_decembre_et_le_sapin_du_faubourg():
     assert villes.assembler()["fetes"] == fetes.pour_le_navigateur(v)
 
 
-def test_les_dindes_tiennent_l_economie():
-    f = economie.BOULOTS["dindes"]
-    taxi = economie.gain_boulot(economie.BOULOTS["taxi"])
-    assert taxi <= economie.gain_boulot(f) <= 4 * taxi and f["vehicule"] == "camion"
+def test_les_dindes_se_livrent_en_camion():
+    """Le gain (entre le taxi et quatre fois le taxi) est jugé pour TOUS les boulots par
+    `test_economie::test_chaque_boulot_vaut_la_peine_sans_ecraser_les_autres`."""
+    assert economie.BOULOTS["dindes"]["vehicule"] == "camion"
 
 
 def test_le_sapin_a_une_place_libre_sur_la_place():

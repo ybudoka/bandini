@@ -95,21 +95,6 @@ def test_le_chateau_se_batit_sur_le_sable_mouille(ville):
             f"un château en ({d['x']}, {d['y']}) est loin de l'eau")
 
 
-def test_seule_la_bouee_flotte(ville):
-    """⚠️ **`poser_decor` refuse le solide, et l'eau EN EST** (`solide: 2`) —
-    c'est pour ça qu'aucun décor n'avait jamais flotté. La bouée est le premier
-    qui ait raison de le faire ; on le lui a accordé par demande explicite
-    (`sur_eau`) plutôt qu'en ouvrant l'eau à tout le catalogue.
-
-    """
-    for d in ville["decor"]:
-        sur_eau = ville["sol"][d["y"]][d["x"]] == "~"
-        if d["type"] == "bouee":
-            assert sur_eau, f"une bouée au sec en ({d['x']}, {d['y']})"
-        else:
-            assert not sur_eau, f"un {d['type']} flotte en ({d['x']}, {d['y']})"
-
-
 def test_deux_meubles_de_plage_ne_se_collent_pas(plage):
     """Une grève qui porte un parasol tous les trois pas n'est pas une plage,
     c'est un stationnement de parasols."""

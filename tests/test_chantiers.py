@@ -245,6 +245,9 @@ def test_les_phases_avancent_avec_les_jours(livree):
         assert chantiers.phase_du_jour(ch, 50, 50) == premier
         # Et une sauvegarde bricolée ne fait pas reculer le temps.
         assert chantiers.phase_du_jour(ch, 3, 10) == premier
+        # Vingt jours après son ouverture, le chantier est neuf (ex-`test_la_ville_est_neuve_au_bout_de_vingt_jours`,
+        # vague C : ce que ni `PAS_JOURS` ni la marche d'une phase par `pas` ne bornent à eux seuls).
+        assert chantiers.phase_du_jour(ch, 1 + ouvre + 20, 1) == chantiers.DERNIERE, ch
 
 
 def test_au_premier_matin_les_chantiers_ne_sont_pas_au_meme_stade(livree):
@@ -253,11 +256,6 @@ def test_au_premier_matin_les_chantiers_ne_sont_pas_au_meme_stade(livree):
     assert len(phases) == chantiers.OUVERTS
     assert len(set(phases)) == len(phases), phases
     assert any(chantiers.MACHINES.get(p) for p in phases), "aucune machine au premier matin"
-
-
-def test_la_ville_est_neuve_au_bout_de_vingt_jours(livree):
-    for ch in livree["chantiers"]:
-        assert chantiers.phase_du_jour(ch, 1 + ch.get("ouvre", 0) + 20, 1) == chantiers.DERNIERE, ch
 
 
 def test_deux_chantiers_ne_se_voisinent_pas(livree):

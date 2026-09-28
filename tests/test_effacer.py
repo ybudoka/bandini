@@ -112,19 +112,6 @@ def test_le_lieu_neuf_du_pari_est_bien_a_la_shop():
     assert len(portes) == 1, f"{len(portes)} portes pour Electronique Turcotte"
 
 
-def test_l_avocat_tient_la_table_du_fond_du_brouillard():
-    """Aucun lieu neuf pour lui : la table des personnages le place au Brouillard
-    depuis le debut, et un avocat qui tient salon au fond d'une taverne est plus
-    juste qu'une etude a lui. ⚠️ Mais il ne doit pas voler la porte ni le
-    comptoir de Josee — `test_interieurs` le verifie deja, celui-ci verifie
-    qu'il est bien LA."""
-    from app import carte
-    bar = carte.INTERIEURS["bar"]
-    types = [p["type"] for p in bar["points"]]
-    assert "avocat" in types, types
-    assert "contact" in types, "Josee a disparu du bar"
-
-
 def test_me_desjardins_est_assis_la_ou_l_on_vise():
     """⚠️ Retour de Martin : « je ne vois pas d'image de l'avocat dans le bar ».
     Le jeu promettait un avocat (« PARLER A L'AVOCAT ») et montrait une table
@@ -135,9 +122,18 @@ def test_me_desjardins_est_assis_la_ou_l_on_vise():
     - il est sur une CHAISE, a cote d'une TABLE — un avocat qui tient salon ;
     - son point est SA tuile : on vise l'homme qu'on voit (sur la table, le pas
       d'a cote de lui etait a deux tuiles, hors de `RAYON_POINT`) ;
-    - il a un CORPS A LUI : un complet fonce sur le corps commun est une Cravate."""
+    - il a un CORPS A LUI : un complet fonce sur le corps commun est une Cravate.
+
+    Aucun lieu neuf pour lui : la table des personnages le place au Brouillard
+    depuis le debut, et un avocat qui tient salon au fond d'une taverne est plus
+    juste qu'une etude a lui. ⚠️ Mais il ne doit pas voler la porte ni le
+    comptoir de Josee — `test_interieurs` le verifie deja, celui-ci verifie
+    qu'il est bien LA (vague C, 28 sept. 2026 : ex-`test_l_avocat_tient_la_table_du_fond_du_brouillard`)."""
     from app import carte, pietons
     bar = carte.INTERIEURS["bar"]
+    types = [p["type"] for p in bar["points"]]
+    assert "avocat" in types, types
+    assert "contact" in types, "Josee a disparu du bar"
     sol = bar["sol"]
     avocats = [g for g in bar["gens"] if g["qui"] == "avocat"]
     assert len(avocats) == 1, bar["gens"]

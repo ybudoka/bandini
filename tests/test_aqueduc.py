@@ -44,27 +44,6 @@ def test_le_paquet_porte_les_bris_et_leur_fiche(ville):
     assert mini <= len(ville["aqueducs"]) <= maxi
 
 
-def test_un_bris_est_sur_une_voie_avec_une_voisine_parallele(ville):
-    """⚠️ **C'est l'argument qui rend le bris inoffensif**, et il est le même que
-    celui des entraves du jour : le trou ne couvre qu'UNE tuile, et cette tuile a
-    une voisine **parallèle qui va dans le même sens** — celle qui restera
-    ouverte. Le champ de direction ne bouge donc pas d'une flèche."""
-    voie = ville["voie"]
-    arrets = {tuple(int(n) for n in cle.split(",")) for cle in ville["arrets"]}
-    boites = [(i["x"], i["y"], i["l"], i["h"]) for i in ville["intersections"]]
-    pas = {">": (1, 0), "<": (-1, 0), "^": (0, -1), "v": (0, 1)}
-    for c in ville["aqueducs"]:
-        x, y = c["x"], c["y"]
-        fleche = voie[y][x]
-        assert fleche in pas, f"({x}, {y}) n'est pas une voie dirigée : {fleche!r}"
-        assert (x, y) not in arrets, f"({x}, {y}) est une ligne d'arrêt"
-        assert not any(bx <= x < bx + bl and by <= y < by + bh
-                       for bx, by, bl, bh in boites), f"({x}, {y}) est dans un croisement"
-        dx, dy = pas[fleche]
-        assert any(voie[y + ny][x + nx] == fleche for nx, ny in ((-dy, dx), (dy, -dx))), (
-            f"({x}, {y}) n'a pas de voie de rechange à côté")
-
-
 def test_deux_bris_ne_se_voisinent_pas(ville):
     """Deux flaques collées ne font pas deux bris : elles font un quartier
     inondé, et le joueur croit à une inondation scriptée."""
@@ -95,9 +74,19 @@ def test_un_bris_se_contourne_par_la_voie_d_a_cote(ville):
     ce qui le rend franchissable n'est pas le graphe des flèches, c'est **le
     changement de voie**. La vraie garantie, celle dont le trafic se sert, est
     donc la manœuvre : on se déporte une tuile avant, on passe à côté du trou, on
-    continue. Ce juge la vérifie sur les trois tuiles qu'elle emprunte."""
+    continue. Ce juge la vérifie sur les trois tuiles qu'elle emprunte.
+
+    ⚠️ **C'est aussi l'argument qui rend le bris inoffensif**, le même que celui
+    des entraves du jour : le trou ne couvre qu'UNE tuile d'une voie dirigée, hors
+    des lignes d'arrêt et des croisements, et cette tuile a une voisine
+    **parallèle qui va dans le même sens** — celle qui restera ouverte. Le champ
+    de direction ne bouge donc pas d'une flèche. (Vague C, 28 sept. 2026 : le juge
+    `test_un_bris_est_sur_une_voie_avec_une_voisine_parallele` refaisait le même
+    contrôle de la voisine, plus lâche ; ses trois autres assertions vivent ici.)"""
     voie, sol = ville["voie"], ville["sol"]
     largeur, hauteur = ville["largeur"], ville["hauteur"]
+    arrets = {tuple(int(n) for n in cle.split(",")) for cle in ville["arrets"]}
+    boites = [(i["x"], i["y"], i["l"], i["h"]) for i in ville["intersections"]]
 
     def fleche_en(x, y):
         return voie[y][x] if 0 <= x < largeur and 0 <= y < hauteur else "."
@@ -108,8 +97,12 @@ def test_un_bris_se_contourne_par_la_voie_d_a_cote(ville):
 
     for c in ville["aqueducs"]:
         x, y = c["x"], c["y"]
-        dx, dy = PAS[voie[y][x]]
         sens = voie[y][x]
+        assert sens in PAS, f"({x}, {y}) n'est pas une voie dirigée : {sens!r}"
+        assert (x, y) not in arrets, f"({x}, {y}) est une ligne d'arrêt"
+        assert not any(bx <= x < bx + bl and by <= y < by + bh
+                       for bx, by, bl, bh in boites), f"({x}, {y}) est dans un croisement"
+        dx, dy = PAS[sens]
         # La voie d'à côté doit porter le même sens, ET mener quelque part des
         # deux bouts : une voisine qui commence ou finit pile au trou n'est pas
         # un détour, c'est une impasse d'une tuile.

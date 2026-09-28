@@ -1523,20 +1523,13 @@ def test_le_poids_de_la_benne_se_paie_selon_la_masse_du_char(banc):
     assert abs(r["leger"]["reste"] - (1 - r["ph"]["max"])) < 1e-3, f"le frein n'est pas borné : {r['leger']}"
 
 
-def test_la_portee_de_la_benne_tient_dans_son_bloc_libre(banc):
-    """La garantie de Python (un bloc de sol libre de cinq tuiles de large) et la portée du jeu
-    parlent de la même chose : la benne, poussée au bout, reste dans le bloc."""
-    r = banc(_juge("""
-        const f = L.DECORS.conteneur;
-        return { portee: f.portee, sol: f.sol, poussable: f.poussable, arrete: f.arrete };
-    """))
-    demi_bloc = (chantiers.CONTENEUR_LARGEUR // 2) * 16 + 8
-    assert r["portee"] + r["sol"][0] <= demi_bloc, "poussée au bout, la benne sortirait de son bloc libre"
-    assert r["poussable"] > 0 and r["arrete"], "une benne poussable garde `arrete` (elle arrête les balles)"
-
-
 def test_la_benne_bute_sur_un_autre_decor_solide(banc):
-    """Poussée contre un banc ou une machine, elle ne le traverse pas : `pousserDecor` refuse."""
+    """Poussée contre un banc ou une machine, elle ne le traverse pas : `pousserDecor` refuse.
+
+    Et sa portée tient dans son bloc libre : la garantie de Python (un bloc de sol libre de cinq
+    tuiles de large) et la portée du jeu parlent de la même chose — la benne, poussée au bout,
+    reste dans le bloc (vague C, 28 sept. 2026 : ex-`test_la_portee_de_la_benne_tient_dans_son_bloc_libre`,
+    qui ne lisait que `L.DECORS` dans un banc à lui)."""
     r = banc(_juge(BENNE + """
         L.Jeu.commencer();
         const i = chantierAvecBenne(L), f = L.DECORS.conteneur;
@@ -1547,8 +1540,12 @@ def test_la_benne_bute_sur_un_autre_decor_solide(banc):
         const contre = L.Entites.pousserDecor(b, 8, 0);
         const x1 = b.x;
         const libre = L.Entites.pousserDecor(b, -8, 0);
-        return { contre: contre, x1: x1, chez: b.chez.x, libre: libre, apres: b.x, solide: !!L.DECORS.banc };
+        return { contre: contre, x1: x1, chez: b.chez.x, libre: libre, apres: b.x, solide: !!L.DECORS.banc,
+                 portee: f.portee, sol: f.sol, poussable: f.poussable, arrete: f.arrete };
     """))
+    demi_bloc = (chantiers.CONTENEUR_LARGEUR // 2) * 16 + 8
+    assert r["portee"] + r["sol"][0] <= demi_bloc, "poussée au bout, la benne sortirait de son bloc libre"
+    assert r["poussable"] > 0 and r["arrete"], "une benne poussable garde `arrete` (elle arrête les balles)"
     assert r["solide"]
     assert r["contre"] is False and r["x1"] == r["chez"], f"la benne a traversé le banc : {r}"
     assert r["libre"] is True and r["apres"] == r["chez"] - 8, f"la benne ne recule pas quand la voie est libre : {r}"

@@ -55,8 +55,9 @@ def test_sans_de_la_meme_ville_donne_les_memes_places(places):
     assert demenagement.places(villes.exporter(), carte.LEGENDE) == places
 
 
-def test_le_demenageur_tient_l_economie():
+def test_le_demenageur_roule_en_camion_et_paie_ses_bosses():
+    """Le gain (entre le taxi et quatre fois le taxi) est jugé pour TOUS les boulots par
+    `test_economie::test_chaque_boulot_vaut_la_peine_sans_ecraser_les_autres`."""
     b = economie.BOULOTS["demenagement"]
-    taxi = economie.gain_boulot(economie.BOULOTS["taxi"])
-    assert taxi <= economie.gain_boulot(b) <= 4 * taxi and b["vehicule"] == "camion"
+    assert b["vehicule"] == "camion"
     assert b["malus_choc"] >= 0.3, "des boîtes de vaisselle : une bosse doit coûter"

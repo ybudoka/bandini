@@ -2,15 +2,11 @@
 
 Demande de Martin (22 sept. 2026) : « des squelettes qu'on habille, ce qui donne une presque
 infinité d'habillement », « plusieurs types de squelettes pour les types de personnes ».
-Le dessin est jugé dans `test_garderobe_js.py`.
+Le dessin est jugé dans `test_garderobe_js.py` — chaque pièce de chaque liste, sur chaque squelette
+(`test_chaque_piece_change_le_dessin_sur_chaque_squelette`).
 """
 
-import re
-from pathlib import Path
-
 from app import garderobe, missions, pietons, visages
-
-JS = (Path(__file__).resolve().parent.parent / "static" / "js" / "garderobe.js").read_text(encoding="utf-8")
 
 
 def test_chaque_garde_robe_habille_un_archetype_au_corps_commun():
@@ -59,18 +55,6 @@ def test_chaque_personnage_a_sa_tenue_et_le_chapeau_de_son_portrait():
     assert tenues["bouchard"]["chapeau"] == "kepi"
     assert tenues["mo"]["chapeau"] == "tuque"
     assert tenues["bonimenteur"]["chapeau"] == "canotier"
-
-
-def test_le_dessin_connait_chaque_piece():
-    """Une pièce que Python nomme et que `garderobe.js` ne dessine pas serait invisible."""
-    for chapeau in garderobe.CHAPEAUX:
-        if chapeau != "aucun":
-            assert re.search(rf"^\s+{chapeau}: ", JS, re.M), f"chapeau « {chapeau} » sans dessin"
-    for mot in (garderobe.COIFFURES + garderobe.HAUTS + garderobe.BAS + garderobe.SOULIERS
-                + garderobe.ACCESSOIRES + garderobe.MOTIFS + garderobe.SQUELETTES):
-        if mot in ("courte", "uni", "pantalon", "souliers", "chandail", "homme"):
-            continue   # le squelette tel quel
-        assert re.search(rf"['.]{mot}\b|\b{mot}:", JS), f"« {mot} » : garderobe.js ne le dessine nulle part"
 
 
 def test_le_paquet_porte_la_garde_robe(paquet):
