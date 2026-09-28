@@ -90,20 +90,49 @@ const Casino = (function () {
              dessiner: dessiner };
   }
 
-  //: Les symboles en pixels, 5 × 5, et leur couleur.
+  //: Les symboles en pixels, 12 × 12 (la barre en fait 13), chacun sa palette : la couleur, son ombre
+  //: en bas a droite, un reflet en haut a gauche — on les reconnait sans lire la table des gains.
   const DESSINS = {
-    cerise: { c: '#c0392b', p: ['..##.', '.#..#', '#...#', '##.##', '##.##'] },
-    citron: { c: '#e8d23a', p: ['.###.', '#####', '#####', '#####', '.###.'] },
-    prune: { c: '#7a3a9a', p: ['..#..', '.###.', '#####', '#####', '.###.'] },
-    cloche: { c: '#e8b33c', p: ['..#..', '.###.', '.###.', '#####', '..#..'] },
-    bar: { c: '#1b1b24', p: ['#####', '.....', '#####', '.....', '#####'] },
-    sept: { c: '#c0392b', p: ['#####', '...#.', '..#..', '.#...', '.#...'] },
-    dragon: { c: '#2e8a4a', p: ['##..#', '.####', '..##.', '.####', '#...#'] },
+    cerise: { pal: { r: '#c0392b', R: '#8e2418', w: '#ffc0b4', g: '#3a8a2e', G: '#236a1e' },
+              p: ['.......gGG..', '......ggGGG.', '.....g.g....', '....g...g...', '...g....g...', '..g......g..',
+                  '.rrr....rrr.', 'rrwrr..rrwrr', 'rwrrr..rwrrr', 'rrrrR..rrrrR', 'rrrRR..rrrRR', '.RRR....RRR.'] },
+    citron: { pal: { y: '#f2d23a', Y: '#c49a1a', w: '#fff6b8', g: '#3a8a2e' },
+              p: ['............', '......gg....', '....yyyy....', '..yywwyyyy..', '.yywwyyyyyy.', 'yyywyyyyyyyy',
+                  'yyyyyyyyyyyY', '.yyyyyyyyYY.', '..yyyyyYYY..', '....YYYY....', '............', '............'] },
+    prune: { pal: { p: '#7a3a9a', P: '#4e2266', w: '#c8a0e0', s: '#5a3a1a', g: '#3a8a2e' },
+             p: ['......s.....', '.....sgg....', '...pppppp...', '..ppwwpppp..', '.ppwwpppppP.', '.pwwpppppPP.',
+                 '.ppppppppPP.', '.ppppppppPP.', '.pppppppPPP.', '..ppppPPPP..', '...PPPPPP...', '............'] },
+    cloche: { pal: { o: '#e8b33c', O: '#a8721a', w: '#fff0a0', k: '#5a3a10' },
+              p: ['.....OO.....', '.....oo.....', '....owoo....', '...owoooO...', '...owoooO...', '...owoooO...',
+                  '..owooooOO..', '..owooooOO..', '.owoooooOOO.', 'OOOOOOOOOOOO', '.....kk.....', '............'] },
+    bar: { pal: { k: '#1b1b24', w: '#efe6d0', o: '#e0b040' },
+           p: ['.............', '.............', 'ooooooooooooo', 'kkkkkkkkkkkkk', 'kwwkkkwkkwwkk', 'kwkwkwkwkwkwk',
+               'kwwkkwwwkwwkk', 'kwkwkwkwkwkwk', 'kwwkkwkwkwkwk', 'kkkkkkkkkkkkk', 'ooooooooooooo', '.............'] },
+    sept: { pal: { r: '#d0302a', R: '#8e1a12', w: '#ff9a8a' },
+            p: ['............', '.rrrrrrrrrr.', '.rwwwwwwrrrR', '.RRRRRRrrrR.', '.......rrR..', '......rrR...',
+                '......rrR...', '.....rrR....', '.....rrR....', '....rrrR....', '....rrrR....', '....RRRR....'] },
+    dragon: { pal: { g: '#2e8a4a', G: '#1c5e30', y: '#e8b33c', r: '#d0302a', w: '#f4efe2', k: '#101018' },
+              p: ['........yy..', '.......ygg..', '......ggggg.', '....gggkgggG', '..gggggggggG', 'gggggggggGGG',
+                  '.w.w.w.gggGG', '......rrgggG', '.w.w.w.gggGG', 'yyyyyyyggGG.', '.......gGG..', '......gG....'] },
   };
 
+  /** Un symbole peint au centre d'une case de `cote` pixels, a l'echelle `e`. */
+  function peindreSymbole(ctx, slug, cx, cy, cote, e) {
+    const d = DESSINS[slug], l = d.p[0].length * e, h = d.p.length * e;
+    const x0 = cx + Math.floor((cote - l) / 2), y0 = cy + Math.floor((cote - h) / 2);
+    d.p.forEach(function (rang, yy) {
+      for (let xx = 0; xx < rang.length; xx++) {
+        const c = d.pal[rang[xx]];
+        if (!c) continue;
+        ctx.fillStyle = c; ctx.fillRect(x0 + xx * e, y0 + yy * e, e, e);
+      }
+    });
+  }
+
   /** Les trois rouleaux, a droite de la liste, et la table des gains dessous. Pendant une demi-seconde apres
-      le bras, les rouleaux DEFILENT, puis s'arretent un a un. ⚠️ Comptes en IMAGES DESSINEES, pas en `B.t` :
-      un menu ouvert fige le jeu, et les rouleaux defilaient pour toujours (vu a la capture). */
+      le bras, les rouleaux DEFILENT — les symboles glissent vers le bas dans leur fenetre —, puis s'arretent
+      un a un. ⚠️ Comptes en IMAGES DESSINEES, pas en `B.t` : un menu ouvert fige le jeu, et les rouleaux
+      defilaient pour toujours (vu a la capture). */
   function dessiner(ctx, x, y) {
     const r = regles(), m = B.machineASous;
     const x0 = x + 190, y0 = y + 30, L = 56, H = 56, pas = 64;
@@ -112,17 +141,24 @@ const Casino = (function () {
       const cx = x0 + i * pas;
       ctx.fillStyle = '#e0b040'; ctx.fillRect(cx - 2, y0 - 2, L + 4, H + 4);
       ctx.fillStyle = '#efe6d0'; ctx.fillRect(cx, y0, L, H);
-      let slug = m ? m.arret[i] : null;
-      if (m && depuis < 12 + i * 8) {                     // il defile encore
-        const rouleau = rouleaux()[i];
-        slug = rouleau[Math.floor(depuis / 2 + i * 5) % rouleau.length];
+      if (m && depuis < 12 + i * 8) {                     // il defile encore : deux symboles glissent
+        const rouleau = rouleaux()[i], pos = depuis / 2 + i * 5, k = Math.floor(pos), glisse = Math.round((pos - k) * H);
+        ctx.save(); ctx.beginPath(); ctx.rect(cx, y0, L, H); ctx.clip();
+        peindreSymbole(ctx, rouleau[k % rouleau.length], cx, y0 + glisse, L, 4);
+        peindreSymbole(ctx, rouleau[(k + 1) % rouleau.length], cx, y0 + glisse - H, L, 4);
+        ctx.restore();
+      } else if (m) {
+        peindreSymbole(ctx, m.arret[i], cx, y0, L, 4);
       }
-      if (!slug) continue;
-      const d = DESSINS[slug];
-      ctx.fillStyle = d.c;
-      for (let yy = 0; yy < 5; yy++) {
-        for (let xx = 0; xx < 5; xx++) if (d.p[yy][xx] === '#') ctx.fillRect(cx + 13 + xx * 6, y0 + 10 + yy * 6, 6, 6);
-      }
+      // Le rouleau est un cylindre : il s'assombrit en haut et en bas.
+      ctx.fillStyle = 'rgba(40,20,10,0.22)'; ctx.fillRect(cx, y0, L, 4); ctx.fillRect(cx, y0 + H - 4, L, 4);
+      ctx.fillStyle = 'rgba(40,20,10,0.10)'; ctx.fillRect(cx, y0 + 4, L, 4); ctx.fillRect(cx, y0 + H - 8, L, 4);
+    }
+    // La ligne payante : deux fleches rouges de part et d'autre des rouleaux.
+    ctx.fillStyle = '#d0302a';
+    for (let k = 0; k < 4; k++) {
+      ctx.fillRect(x0 - 10 + k, y0 + H / 2 - 4 + k, 1, 8 - 2 * k);
+      ctx.fillRect(x0 + 2 * pas + L + 9 - k, y0 + H / 2 - 4 + k, 1, 8 - 2 * k);
     }
     const gagne = m && depuis >= 28 ? m.resultat.slug : null;
     r.gains.forEach(function (g, i) {
@@ -135,7 +171,7 @@ const Casino = (function () {
       const t = m.resultat.gain > 0 ? m.resultat.nom + ' · +' + m.resultat.gain + ' $' : 'RIEN CETTE FOIS';
       Atlas.texte(ctx, t, x + 12, y + 50, m.resultat.gain > 0 ? '#e8b33c' : '#8a8698', 1);
     }
-    B.stats.rects += 90;
+    B.stats.rects += 300;
   }
 
   // --- Le portier ------------------------------------------------------------------------------------------

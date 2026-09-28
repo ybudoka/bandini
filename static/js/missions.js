@@ -3075,12 +3075,12 @@ const Missions = (function () {
   //: Les noms des rangs et des couleurs, pour les lignes du menu.
   const RANGS_DITS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'VALET', 'DAME', 'ROI', 'AS'];
   const COULEURS_DITES = ['PIQUE', 'COEUR', 'CARREAU', 'TRÈFLE'];
-  //: Les couleurs en pixels, 5 × 5 : pique, coeur, carreau, trefle.
+  //: Les couleurs en pixels, 7 × 7 : pique, coeur, carreau, trefle.
   const ENSEIGNES = [
-    ['..#..', '.###.', '#####', '..#..', '.###.'],
-    ['.#.#.', '#####', '#####', '.###.', '..#..'],
-    ['..#..', '.###.', '#####', '.###.', '..#..'],
-    ['..#..', '.###.', '#.#.#', '#####', '..#..'],
+    ['...#...', '..###..', '.#####.', '#######', '#######', '##.#.##', '..###..'],
+    ['.##.##.', '#######', '#######', '#######', '.#####.', '..###..', '...#...'],
+    ['...#...', '..###..', '.#####.', '#######', '.#####.', '..###..', '...#...'],
+    ['..###..', '..###..', '##.#.##', '#######', '##.#.##', '...#...', '..###..'],
   ];
 
   function reglesDuVideopoker() { return B.defs.videopoker; }
@@ -3183,6 +3183,12 @@ const Missions = (function () {
              dessiner: dessinerVideopoker };
   }
 
+  /** Les coins d'une carte, arrondis d'un pixel dans la couleur du cadre. */
+  function coinsArrondis(ctx, x, y, l, h, fond) {
+    ctx.fillStyle = fond;
+    ctx.fillRect(x, y, 1, 1); ctx.fillRect(x + l - 1, y, 1, 1); ctx.fillRect(x, y + h - 1, 1, 1); ctx.fillRect(x + l - 1, y + h - 1, 1, 1);
+  }
+
   /** Les cinq cartes, a droite de la liste, et la table des gains dessous — celle qui paie
       (`reglesDuVideopoker().gains`, la meme que `gainDuVideopoker` lit). */
   function dessinerVideopoker(ctx, x, y) {
@@ -3192,21 +3198,32 @@ const Missions = (function () {
       const cx = x0 + i * pas, carte = v ? v.cartes[i] : null;
       const vise = v && v.phase === 'garde' && m && m.curseur === i;
       ctx.fillStyle = vise ? '#e8b33c' : '#3a3450'; ctx.fillRect(cx - 1, y0 - 1, L + 2, H + 2);
-      if (carte === null) {
-        ctx.fillStyle = '#6b2a2a'; ctx.fillRect(cx, y0, L, H);                 // le dos de la carte
-        ctx.fillStyle = '#8a3a36'; for (let k = 2; k < H - 2; k += 4) ctx.fillRect(cx + 2, y0 + k, L - 4, 2);
+      if (carte === null) {                                                   // le dos de la carte :
+        ctx.fillStyle = '#efe6d0'; ctx.fillRect(cx, y0, L, H);                 // son liseré blanc,
+        ctx.fillStyle = '#7a2420'; ctx.fillRect(cx + 3, y0 + 3, L - 6, H - 6); // son rouge,
+        ctx.fillStyle = '#a8362e';                                             // et ses losanges
+        for (let yy = y0 + 5; yy < y0 + H - 5; yy += 6) {
+          for (let xx = cx + 5 + ((yy - y0 - 5) / 6 % 2) * 3; xx < cx + L - 6; xx += 6) {
+            ctx.fillRect(xx + 1, yy, 1, 1); ctx.fillRect(xx, yy + 1, 3, 1); ctx.fillRect(xx + 1, yy + 2, 1, 1);
+          }
+        }
+        coinsArrondis(ctx, cx, y0, L, H, vise ? '#e8b33c' : '#3a3450');
         continue;
       }
-      const rouge = Math.floor(carte / 13) === 1 || Math.floor(carte / 13) === 2;
+      const couleur = Math.floor(carte / 13), rouge = couleur === 1 || couleur === 2;
       const encre = rouge ? '#c0392b' : '#1b1b24';
       ctx.fillStyle = '#efe6d0'; ctx.fillRect(cx, y0, L, H);
+      ctx.fillStyle = '#d8ceb4'; ctx.fillRect(cx, y0 + H - 2, L, 2); ctx.fillRect(cx + L - 2, y0, 2, H);   // l'ombre du carton
+      coinsArrondis(ctx, cx, y0, L, H, vise ? '#e8b33c' : '#3a3450');
       const rang = r.rangs[carte % 13];
       Atlas.texte(ctx, rang, cx + 3, y0 + 3, encre, 2);
-      const e = ENSEIGNES[Math.floor(carte / 13)];
-      for (let yy = 0; yy < 5; yy++) {
-        for (let xx = 0; xx < 5; xx++) {
+      const e = ENSEIGNES[couleur];
+      for (let yy = 0; yy < 7; yy++) {
+        for (let xx = 0; xx < 7; xx++) {
           if (e[yy][xx] !== '#') continue;
-          ctx.fillStyle = encre; ctx.fillRect(cx + 11 + xx * 4, y0 + 24 + yy * 4, 4, 4);
+          ctx.fillStyle = encre;
+          ctx.fillRect(cx + 4 + xx, y0 + 18 + yy, 1, 1);                        // le rappel, sous le rang
+          ctx.fillRect(cx + 11 + xx * 3, y0 + 25 + yy * 3, 3, 3);                // et la grande, au milieu
         }
       }
       if (v.phase === 'garde' && v.gardes[i]) Atlas.texte(ctx, 'GARDÉE', cx + 3, y0 + H + 4, '#e8b33c', 1);
