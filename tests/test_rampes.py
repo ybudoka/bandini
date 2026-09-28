@@ -56,6 +56,8 @@ def test_une_rampe_a_son_elan_et_sa_reception(rampe):
     """LE juge de ce travail. Avant lui : deux tuiles collees a un grillage,
     qu'on ne pouvait aborder qu'en roulant sur le trottoir."""
     x, y, dx, dy = rampe["x"], rampe["y"], rampe["dx"], rampe["dy"]
+    # ⚠️ La tuile collée au pied est le PREMIER pas de l'élan : `elan >= ELAN_RAMPE` (sept tuiles) la veut
+    # roulable. (« Aucun obstacle collé au pied » était un juge à lui seul jusqu'au 28 sept. 2026.)
     elan = course(x, y, -dx, -dy, carte.ELAN_RAMPE)
     reception = course(x + dx, y + dy, dx, dy, carte.RECEPTION_RAMPE)
     assert elan >= carte.ELAN_RAMPE, \
@@ -130,12 +132,6 @@ def test_une_rampe_permet_le_vol_du_defi(rampe):
                        rampe["dx"], rampe["dy"], 30)
     assert reception * 16 >= vol, \
         f"rampe {rampe['x']},{rampe['y']} : on vole {vol:.0f} px et le degage n'en fait que {reception * 16}"
-
-
-def test_aucun_obstacle_colle_au_pied():
-    for rampe in RAMPES:
-        x, y = rampe["x"] - rampe["dx"], rampe["y"] - rampe["dy"]
-        assert roulable(x, y), f"rampe {rampe['x']},{rampe['y']} : un obstacle colle au pied"
 
 
 def test_la_cour_d_avant_se_ferait_refuser_sa_rampe():
@@ -258,26 +254,25 @@ def test_l_elan_et_la_reception_se_deduisent_de_la_physique():
     assert carte.ELAN_RAMPE * 16 >= px
 
 
-@pytest.mark.parametrize("rampe", RAMPES, ids=lambda r: f"{r['x']},{r['y']}")
+@pytest.mark.parametrize("rampe", [r for r in RAMPES if r["defi"]], ids=lambda r: f"{r['x']},{r['y']}")
 def test_on_retombe_sur_la_route_et_pas_dans_un_mur(rampe):
     """⚠️ Le juge REJOUE la trajectoire au lieu de compter des tuiles : pour
     chaque char capable d'atteindre cette rampe, la chute ET la marge de
     redressement tombent sur du roulable. Un saut par-dessus un mur est un bon
     saut ; un saut qui finit DANS un mur est un defi qu'on ne peut pas gagner.
     """
+    # ⚠️ La berline (toute rampe) : sa branche est partie le 28 sept. 2026 — elle découle de deux juges,
+    # `test_une_rampe_a_son_elan_et_sa_reception` (au moins RECEPTION_RAMPE tuiles roulables après la lèvre)
+    # et `test_l_elan_et_la_reception_se_deduisent_de_la_physique` (RECEPTION_RAMPE × 16 ≥ son dégagé).
+    # Reste la moto, que seules les rampes `defi` promettent de recevoir.
+    # (Qu'il y en ait au moins une : `test_au_moins_une_rampe_recoit_la_moto_du_defi`.)
     degage = course(rampe["x"] + rampe["dx"], rampe["y"] + rampe["dy"],
                     rampe["dx"], rampe["dy"], 40) * 16
-    auto = vehicules.saut(vehicules.par_slug("auto"))
-    assert degage >= auto["degage"], (
-        f"rampe {rampe['x']},{rampe['y']} : une berline a besoin de {auto['degage']:.0f} px "
-        f"et le degage n'en fait que {degage}"
+    moto = vehicules.saut(vehicules.par_slug("moto"))
+    assert degage >= moto["degage"], (
+        f"rampe {rampe['x']},{rampe['y']} marquee `defi` mais une moto y vole "
+        f"{moto['degage']:.0f} px pour {degage} px de degage"
     )
-    if rampe["defi"]:
-        moto = vehicules.saut(vehicules.par_slug("moto"))
-        assert degage >= moto["degage"], (
-            f"rampe {rampe['x']},{rampe['y']} marquee `defi` mais une moto y vole "
-            f"{moto['degage']:.0f} px pour {degage} px de degage"
-        )
 
 
 def test_au_moins_une_rampe_recoit_la_moto_du_defi():
