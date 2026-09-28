@@ -4,6 +4,7 @@ import shutil
 import sys
 import threading
 from pathlib import Path
+from unittest import mock
 
 import pytest
 from werkzeug.serving import make_server
@@ -27,12 +28,23 @@ class ConfigTest(Config):
     SECRET_KEY = "test"
 
 
+def _creer_app(config, paquets):
+    """`create_app`, sans rebâtir le paquet : il reprend celui de la session.
+
+    ⚠️ `create_app` appelle `construire()` — une ville, les définitions, un paquet
+    par mission, sept secondes — et la fixture `app` vit le temps d'UN juge :
+    l'audit du 27 sept. 2026 en comptait une quarantaine de constructions
+    identiques. Le paquet ne dépend que du code, pas de la config du juge."""
+    with mock.patch("app.construire", lambda: paquets):
+        return create_app(config)
+
+
 @pytest.fixture
-def app(tmp_path):
+def app(tmp_path, paquets):
     class ConfigTmp(ConfigTest):
         DONNEES_DIR = str(tmp_path / "donnees")
 
-    return create_app(ConfigTmp)
+    return _creer_app(ConfigTmp, paquets)
 
 
 @pytest.fixture
@@ -81,13 +93,13 @@ def cartes_des_blocs(paquets):
 
 
 @pytest.fixture(scope="session")
-def serveur(tmp_path_factory):
+def serveur(tmp_path_factory, paquets):
     """Vrai serveur HTTP, pour les tests de navigateur — port 0, jamais 5400 en dur."""
 
     class ConfigServeur(ConfigTest):
         DONNEES_DIR = str(tmp_path_factory.mktemp("donnees"))
 
-    serveur_http = make_server("127.0.0.1", 0, create_app(ConfigServeur), threaded=True)
+    serveur_http = make_server("127.0.0.1", 0, _creer_app(ConfigServeur, paquets), threaded=True)
     fil = threading.Thread(target=serveur_http.serve_forever, daemon=True)
     fil.start()
     try:
