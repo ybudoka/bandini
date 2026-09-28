@@ -11,6 +11,8 @@ prend le mauvais coin de rue ; et une flèche le montre au bord de l'écran et a
 de la mini-carte, puis montre la course une fois le client à bord.
 """
 
+import pytest
+
 #: Seize départs répartis sur toute la ville, sur une voie où le char roule droit,
 #: et la route du char recalculée ici : un parcours en largeur sur les tuiles où
 #: un char roule (ni mur, ni eau).
@@ -53,12 +55,15 @@ DEPARTS = """
 """
 
 
-def test_le_client_attend_sur_le_trottoir_d_une_rue_que_le_char_rejoint(banc):
-    """⚠️ Rouge avant : le client naissait par `placeDeNaissance`, n'importe où hors
-    route dans la bulle — un parc, une arrière-cour. Le juge klaxonne depuis seize
-    coins de la ville, en taxi et en ambulance (le blessé se ramasse de la même
-    façon), et regarde où chacun attend."""
-    r = banc("function (L, o) {" + DEPARTS + """
+@pytest.fixture(scope="module")
+def klaxons(banc):
+    """Les deux tournées de klaxons dans UN banc : seize coins en taxi et en ambulance (où le
+    client attend), puis huit en taxi (s'il naît hors de l'écran, face à la rue).
+
+    ⚠️ Chaque klaxon remet ce que le suivant trouve : la course abandonnée, le client et le char
+    retirés, le joueur descendu, et une graine à lui (`L.graine`). La seconde tournée enchaîne
+    sur la première comme ses propres départs s'enchaînent entre eux."""
+    return banc("function (L, o) {" + DEPARTS + """
         L.Jeu.commencer();
         const M = L.Monde, TT = L.TT, b = L.Missions.boulot, releves = [];
         departs(L, 16).forEach(function (d, i) {
@@ -86,21 +91,7 @@ def test_le_client_attend_sur_le_trottoir_d_une_rue_que_le_char_rejoint(banc):
             L.Vehicules.descendre(L.B.joueur, true);
             L.Entites.retirer(v);
         });
-        return releves;
-    }""")
-    sans = [x for x in r if not x["client"]]
-    assert not sans, f"le klaxon n'a trouvé personne : {sans}"
-    hors_trottoir = [x for x in r if not x["trottoir"]]
-    assert not hors_trottoir, f"des clients n'attendent pas sur un trottoir : {hors_trottoir}"
-    sans_rue = [x for x in r if not x["rue"]]
-    assert not sans_rue, f"des clients attendent loin d'une rue que le char rejoint : {sans_rue}"
-    assert {x["slug"] for x in r} == {"taxi", "ambulance"}
-
-
-def test_le_client_nait_hors_de_l_ecran_et_regarde_la_rue(banc):
-    r = banc("function (L, o) {" + DEPARTS + """
-        L.Jeu.commencer();
-        const b = L.Missions.boulot, TT = L.TT, releves = [];
+        const naissances = [];
         departs(L, 8).forEach(function (d, i) {
             L.graine(200 + i);
             const v = auVolant(L, o, 'taxi', d[0], d[1]);
@@ -113,7 +104,7 @@ def test_le_client_nait_hors_de_l_ecran_et_regarde_la_rue(banc):
                 const vers = [[1, 0, 'droite'], [-1, 0, 'gauche'], [0, 1, 'bas'], [0, -1, 'haut']].filter(function (q) {
                     return L.Monde.estChaussee(tx + q[0], ty + q[1]);
                 }).map(function (q) { return q[2]; });
-                releves.push({ vu: L.Entites.visibleAEcran(c.x, c.y, 0), face: c.face, vers: vers, bulle: c.bulle ? c.bulle.texte : null });
+                naissances.push({ vu: L.Entites.visibleAEcran(c.x, c.y, 0), face: c.face, vers: vers, bulle: c.bulle ? c.bulle.texte : null });
             }
             o.relacher('Space'); o.frame(1);
             b.abandonner();
@@ -121,8 +112,27 @@ def test_le_client_nait_hors_de_l_ecran_et_regarde_la_rue(banc):
             L.Vehicules.descendre(L.B.joueur, true);
             L.Entites.retirer(v);
         });
-        return releves;
+        return { releves: releves, naissances: naissances };
     }""")
+
+
+def test_le_client_attend_sur_le_trottoir_d_une_rue_que_le_char_rejoint(klaxons):
+    """⚠️ Rouge avant : le client naissait par `placeDeNaissance`, n'importe où hors
+    route dans la bulle — un parc, une arrière-cour. Le juge klaxonne depuis seize
+    coins de la ville, en taxi et en ambulance (le blessé se ramasse de la même
+    façon), et regarde où chacun attend."""
+    r = klaxons["releves"]
+    sans = [x for x in r if not x["client"]]
+    assert not sans, f"le klaxon n'a trouvé personne : {sans}"
+    hors_trottoir = [x for x in r if not x["trottoir"]]
+    assert not hors_trottoir, f"des clients n'attendent pas sur un trottoir : {hors_trottoir}"
+    sans_rue = [x for x in r if not x["rue"]]
+    assert not sans_rue, f"des clients attendent loin d'une rue que le char rejoint : {sans_rue}"
+    assert {x["slug"] for x in r} == {"taxi", "ambulance"}
+
+
+def test_le_client_nait_hors_de_l_ecran_et_regarde_la_rue(klaxons):
+    r = klaxons["naissances"]
     assert len(r) == 8, r
     assert not [x for x in r if x["vu"]], f"un client est né sous les yeux : {r}"
     assert not [x for x in r if x["face"] not in x["vers"]], f"un client tourne le dos à la rue : {r}"
