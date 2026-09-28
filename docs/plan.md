@@ -99,6 +99,7 @@ pas quand l'ordre de travail change.
 | Le marché aux puces du dimanche | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-marche-aux-puces-du-dimanche.md#fiche) |
 | Une amélioration générale des toits | ⬜ **à faire** (à trancher par Martin : la liste, et par où commencer) | — | **P4** | ajout | [fiche](jalons/une-amelioration-generale-des-toits.md#fiche) |
 | Les quatre saisons, réalistes | ⬜ **à faire** (à trancher par Martin : l'ordre des vagues, l'option de la neige, et le mois où commence une partie) | — | **P4** | ajout | [fiche](jalons/les-quatre-saisons-realistes.md#fiche) |
+| Les explosifs : grenades, dynamite, C4, roquettes — et le Molotov en mieux | ⬜ **en cours** (vague 1 : l'explosion commune, la grenade et la dynamite ; puis le Molotov en mieux, les murs fissurés et le C4, le char piégé et le lance-roquettes) | 28 sept. 2026 | **P4** | ajout | [fiche](jalons/les-explosifs.md#fiche) |
 
 ## L'ordre
 
@@ -136,6 +137,7 @@ Ce que chaque ligne à faire attend (la table de tri du 13 sept. 2026, réduite 
 | **P4** | ajout | Le marché aux puces du dimanche | 2 | après **les collections** (il vend leurs meubles et leurs cartes) |
 | **P4** | ajout | Une amélioration générale des toits | 3 | rien ne l'attend ; la moitié de l'écran, c'est des toits ; ⚠️ le cache des morceaux et le rythme sur le téléphone, et rien au dé (l'empreinte du bâtiment) ; le chalet du rang comme banc d'essai |
 | **P4** | ajout | Les quatre saisons, réalistes | 4 | le **calendrier** est livré (`calendrier.py`) ; ⚠️ touche au rendu de toute la ville **et** à la physique : la sonde de performance et le rythme sur le vrai téléphone ; ce qui se pose, en dernier et sans dé ; gagne à suivre **les toits** (la neige sur les toits) |
+| **P4** | ajout | Les explosifs : grenades, dynamite, C4, roquettes — et le Molotov en mieux | 4 | rien ne l'attend ; ⚠️ les murs fissurés posés **en dernier, sans dé** (sinon la ville glisse), et seulement là où il y a du sol des deux côtés ; le feu du Molotov borné (le rythme sur le téléphone) |
 
 M8 porte tout le reste (les gangs, les fins, le traversier, la fourrière ont besoin de la
 ville complète) ; il est livré. Rien n'oblige à suivre la liste à la lettre : à l'intérieur
