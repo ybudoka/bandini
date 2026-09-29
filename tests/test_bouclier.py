@@ -198,7 +198,7 @@ def test_taper_fait_les_poches_tenir_prend_l_otage(banc):
     La portee du bouclier couvre celle des poches : l'arme a la main, TOUTE
     victime des poches est aussi un otage. Depuis que la prise se tient, la
     pression armait la prise, rendait `true`, et n'allait jamais plus loin. Le
-    juge des poches (`test_moteur_js`) appelle `Combat.pickpocket` directement :
+    juge des poches (`test_combat_js`) appelle `Combat.pickpocket` directement :
     il ne passait pas par le bouton, et il n'a rien vu.
 
     On passe donc par le BOUTON, dans le dos d'un passant qui a de l'argent :

@@ -38,7 +38,7 @@ MEUBLES = frozenset(g for g, p in carte.LEGENDE.items() if p.get("meuble"))
 
 #: Ce qu'un point peut demander au navigateur. ⚠️ Cette liste est la moitie
 #: d'un contrat : l'autre moitie est dans `missions.js` (`LIBELLES` et
-#: `menuDuPoint`), et `tests/test_moteur_js.py` verifie que les deux
+#: `menuDuPoint`), et `tests/test_interieurs_js.py` verifie que les deux
 #: s'accordent. Un type ajoute ici sans son cas la-bas est un comptoir mort.
 TYPES_SERVIS = frozenset({
     "lit", "coffre", "garde_robe", "vendre", "reparer", "repeindre", "acheter",

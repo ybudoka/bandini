@@ -6,6 +6,8 @@ code : `Monde.estNuit` dit nuit quand la teinte passe 0,4 d'opacité, soit de
 changerait avec elle.
 """
 
+import re
+
 import villes
 
 from app import pietons, vehicules
@@ -159,3 +161,37 @@ def test_l_arroseuse_sort_au_creux_de_la_nuit_et_mouille_sans_noyer():
     assert 0.6 <= a["frein"] < 1
     assert 10 <= a["mouille_minutes"] <= 120
     assert neige.tracer_charrue(villes.generer()) is not None, "l'arroseuse fait la tournée de la charrue : il en faut une"
+
+
+def test_le_plafond_de_lampes_tient_les_lampadaires_ET_les_feux(racine):
+    """⚠️ `Base.fin` plafonnait à **25** lampes par image, taillé pour les
+    lampadaires seuls — c'est aussi ce que `Monde.lampesVisibles` en rend au
+    plus. Les feux s'y ajoutent maintenant : sous ce plafond-là, ils
+    **éteindraient** les lampadaires au lieu de s'ajouter à eux. Les trois
+    nombres se **lisent dans le JS**, ils ne sont pas recopiés ici.
+    """
+    js = lambda nom: (racine / "static" / "js" / nom).read_text(encoding="utf-8")  # noqa: E731
+    plafond = int(re.search(r"^  const LAMPES_MAX = (\d+);", js("base.js"), re.M).group(1))
+    lampadaires = int(re.search(r"out\.length >= (\d+)\) break;", js("monde.js")).group(1))
+    feux = int(re.search(r"^  const LAMPES_FEUX_MAX = (\d+);", js("vehicules.js"), re.M).group(1))
+    # Et depuis « la nuit a ses habitudes », les phares des chars menés — comptés
+    # en CHARS depuis « des phares à la mesure de chaque char » : tant de chars, à
+    # tant de lampes au plus.
+    chars = int(re.search(r"^  const CHARS_ECLAIRES_MAX = (\d+);", js("vehicules.js"), re.M).group(1))
+    par_char = int(re.search(r"^  const LAMPES_PAR_CHAR_MAX = (\d+);", js("vehicules.js"), re.M).group(1))
+    assert re.search(r"^  const LAMPES_PHARES_MAX = CHARS_ECLAIRES_MAX \* LAMPES_PAR_CHAR_MAX;", js("vehicules.js"), re.M)
+    phares = chars * par_char
+    assert plafond >= lampadaires + feux + phares + 1, (
+        f"{lampadaires} lampadaires + {feux} feux + {phares} phares + le projecteur de l'helico ne "
+        f"tiennent pas sous un plafond de {plafond} : les feux en eteindraient"
+    )
+
+
+def test_les_feux_s_allument_au_meme_seuil_de_brune_que_les_lampadaires(racine):
+    """Deux seuils voudraient dire deux réponses à « fait-il noir ? », et la
+    deuxième serait fausse un jour — on verrait les feux s'allumer une heure
+    avant (ou après) les lampadaires de la même rue."""
+    js = lambda nom: (racine / "static" / "js" / nom).read_text(encoding="utf-8")  # noqa: E731
+    lampadaires = float(re.search(r"ambiance\(\)\.alpha < ([\d.]+)\)", js("monde.js")).group(1))
+    feux = float(re.search(r"^  const BRUNE = ([\d.]+);", js("vehicules.js"), re.M).group(1))
+    assert feux == lampadaires, f"les feux s'allument a {feux}, les lampadaires a {lampadaires}"

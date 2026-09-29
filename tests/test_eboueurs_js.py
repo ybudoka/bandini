@@ -192,7 +192,7 @@ def test_un_bac_ne_sort_pas_sur_un_passant(banc):
 def test_un_bac_ne_barre_ni_le_trottoir_ni_la_voie(banc):
     """⚠️ Le trottoir de la banlieue fait UNE tuile. Un bac solide tous les cinq pas
     en faisait une suite de cages : les passants rebroussaient chemin devant chacun
-    (mesuré : l'ivrogne et le musicien de `test_moteur_js.py` sont tombés, leurs
+    (mesuré : l'ivrogne et le musicien de `test_pietons_js.py` sont tombés, leurs
     passants coincés). Et posé au bas de la tuile, un bac de trottoir nord était à
     onze pixels de la voie : le camion (rayon 8) le touche à douze.
 

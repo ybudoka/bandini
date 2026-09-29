@@ -210,7 +210,7 @@ def test_un_sprint_plein_ouvre_un_ecart_borne_sur_la_police():
     vitesse achète de la distance, jamais l'impunité.**
 
     Donc : le policier court **exactement** à la vitesse de la course (jugé par
-    `test_moteur_js::test_le_joueur_a_trois_vitesses_et_ne_traverse_pas_les_murs`),
+    `test_monde_js::test_le_joueur_a_trois_vitesses_et_ne_traverse_pas_les_murs`),
     et c'est le sprint — qui coûte — qui ouvre un écart. Le juge le mesure, et le
     veut **borné** : assez pour casser une ligne de vue, pas assez pour semer
     quelqu'un en ligne droite.

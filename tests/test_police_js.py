@@ -5,7 +5,11 @@ Chaque test pose ses agents lui-meme (`Police.creerAgent`) : attendre qu'une
 patrouille passe rendrait le banc lent et capricieux.
 """
 
+import json
+
 import pytest
+
+from app import economie
 
 #: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : les juges qui cherchent leur rue (ou leur parc, leur gazon) en
 #: balayant la carte depuis le haut commencent à `decalage_nord` — sinon ils la trouvaient dans la bande
@@ -1186,3 +1190,149 @@ def test_un_renfort_ne_sort_jamais_d_une_porte(banc):
     }""")
     assert r["parLaRue"] == 1, "le juge est faux : le renfort ne nait meme pas de la rue : %s" % r
     assert r["parLaPorte"] == 0, "un renfort est sorti d'une porte : %s" % r
+
+
+def test_la_recherche_monte_puis_retombe(banc, paquet):
+    palier1 = paquet["recherche"]["paliers"][1]["decroissance_s"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Police.signalerCrime('mort_policier', 100, 100, true);
+        const apres = L.B.recherche.etoiles;
+        o.frame(%d * 60 - 5);
+        const avantDecroissance = L.B.recherche.etoiles;
+        o.frame(10);
+        return { apres: apres, avant: avantDecroissance, fin: L.B.recherche.etoiles,
+                 nonVu: (function () { L.Police.signalerCrime('pickpocket', 0, 0, false); return L.B.recherche.etoiles; })() };
+    }""" % palier1)
+    assert r["apres"] == 1
+    assert r["avant"] == 1
+    assert r["fin"] == 0
+    assert r["nonVu"] == 0, "un crime non vu ne donne pas d'etoile"
+
+
+def test_le_cone_de_vision(banc):
+    r = banc("""function (L, o) {
+        const c = L.Police.dansLeCone;
+        const demi = 45 * Math.PI / 180;
+        return [c(0, 0, 0, demi, 100, 80, 0), c(0, 0, 0, demi, 100, -80, 0), c(0, 0, 0, demi, 100, 60, 70),
+                c(0, 0, 0, demi, 100, 200, 0), c(0, 0, Math.PI, demi, 100, -80, 0)];
+    }""")
+    assert r == [True, False, False, False, True]
+
+
+def test_les_amendes_du_navigateur_sont_celles_de_python(banc):
+    cas = [(1000, 1, 0), (1000, 2, 3), (50, 5, 20), (100000, 3, 7), (0, 1, 0)]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        return %s.map(function (c) { return [L.Missions.amende(c[0], c[1], c[2]), L.Missions.potDeVin(c[1], c[2]),
+                                              L.Missions.factureHopital(c[0])]; });
+    }""" % json.dumps(cas))
+    for (argent, etoiles, casier), (amende, pot, hopital) in zip(cas, r):
+        assert amende == economie.amende(argent, etoiles, casier)
+        assert pot == economie.pot_de_vin(etoiles, casier)
+        assert hopital == economie.facture_hopital(argent)
+
+
+def test_rien_n_est_compte_sans_temoin(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        // Personne autour : le crime passe inapercu.
+        L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'pieton'; });
+        L.Entites.indexer();
+        const seul = L.Police.quelqu_un_voit(j.x, j.y, null);
+        // Un passant qui regarde dans notre direction, lui, voit tout.
+        const temoin = o.poser('passant', 40, 0);
+        L.Entites.regarder(temoin, -1, 0);
+        L.Entites.indexer();
+        const vu = L.Police.quelqu_un_voit(j.x, j.y, null);
+        // ... mais pas s'il est assomme.
+        temoin.etat = 'assomme';
+        const assomme = L.Police.quelqu_un_voit(j.x, j.y, null);
+        temoin.etat = 'flane';
+        // ... ni s'il regarde ailleurs.
+        L.Entites.regarder(temoin, 1, 0);
+        const dosTourne = L.Police.quelqu_un_voit(j.x, j.y, null);
+        return { seul: seul, vu: vu, assomme: assomme, dosTourne: dosTourne };
+    }""")
+    assert r["seul"] is False, "un crime sans temoin ne doit rien declencher"
+    assert r["vu"] is True, "un passant en face ne voit rien ?"
+    assert r["assomme"] is False, "un temoin assomme ne temoigne pas"
+    assert r["dosTourne"] is False, "un temoin de dos ne voit pas"
+
+
+def test_renverser_un_pieton_est_un_crime(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(44);
+        const j = L.B.joueur, d = o.ligneDroite();
+        j.x = d.x; j.y = d.y;
+        const v = o.char('auto', 0, 0, 0);
+        L.Vehicules.monter(j, v);
+        const victime = o.poser('passant', 90, 0);
+        const enfant = o.poser('enfant', 90, 30);
+        const crimes = L.B.partie.stats.crimes;
+        v.vitesse = 3.5; v.vx = 3.5; v.vy = 0;
+        o.touche('KeyW'); o.frame(60); o.relacher('KeyW');
+        return { vie: victime.vie, max: victime.vieMax, etat: victime.etat, crimes: L.B.partie.stats.crimes - crimes,
+                 enfant: enfant.vie === enfant.vieMax && enfant.vivant };
+    }""")
+    assert r["vie"] < r["max"], "le pieton n'a pas ete renverse"
+    assert r["crimes"] >= 1, "renverser quelqu'un n'est pas compte comme un crime"
+    assert r["enfant"] is True, "un enfant a ete touche par un char"
+
+
+def test_le_carjacking_se_voit_toujours(banc, paquet):
+    gravite = paquet["recherche"]["delits"]["carjacking"]["etoiles"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(46);
+        const j = L.B.joueur;
+        L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'pieton'; });
+        const v = o.char('auto', 20, 0, 0);
+        v.conducteur = 'trafic'; v.etat = 'roule';
+        L.Entites.indexer();
+        L.Vehicules.monter(j, v);
+        const temoins = L.B.entites.filter(function (e) { return e.type === 'pieton' && e.etat === 'temoin'; }).length;
+        return { conducteur: v.conducteur === j, temoins: temoins,
+                 chaleur: L.B.recherche.chaleur + L.B.recherche.etoiles * 100,
+                 gravite: L.B.defs.recherche.chaleur_par_gravite };
+    }""")
+    assert r["conducteur"] is True
+    assert r["temoins"] == 1, "la victime du carjacking doit sortir et temoigner"
+    assert r["chaleur"] == gravite * r["gravite"], "le carjacking n'a pas chauffe la police"
+
+
+def test_le_a_etoile_contourne_un_batiment_et_ne_gele_pas(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const c = L.Monde.carte, j = L.B.joueur;
+        // Un batiment garanti : on part devant sa porte et on vise derriere lui (la ruelle).
+        const porte = c.portes.find(function (p) { return p.lieu === 'armurerie'; });
+        const x0 = porte.x * L.TT + 8, y0 = (porte.y + 1) * L.TT + 8;
+        let ty = porte.y - 1;
+        while (ty > 0 && L.Monde.solidite(porte.x, ty) === 1) ty--;
+        const x1 = porte.x * L.TT + 8, y1 = ty * L.TT + 8;
+        const t0 = Date.now();
+        const chemin = L.Monde.chemin(x0, y0, x1, y1, L.Monde.MASQUE_PIETON);
+        const ms = Date.now() - t0;
+        let traverseUnMur = false;
+        (chemin || []).forEach(function (p) { if (L.Monde.solidite(Math.floor(p.x / L.TT), Math.floor(p.y / L.TT)) === 1) traverseUnMur = true; });
+        const direct = Math.abs(y1 - y0) / L.TT;
+        // La file : deux demandes servies par image, la troisieme attend.
+        let servies = 0;
+        for (let i = 0; i < 3; i++) L.Monde.demanderChemin(x0, y0, x1, y1, L.Monde.MASQUE_PIETON, function () { servies++; });
+        L.Monde.majChemins();
+        const apresUneImage = servies, enAttente = L.Monde.cheminsEnAttente;
+        L.Monde.majChemins();
+        // Une cible dans un mur : null, tout de suite.
+        const impossible = L.Monde.chemin(x0, y0, porte.x * L.TT + 8, porte.y * L.TT + 8, L.Monde.MASQUE_PIETON);
+        return { trouve: !!chemin, longueur: chemin ? chemin.length : 0, direct: direct, traverseUnMur: traverseUnMur,
+                 ms: ms, apresUneImage: apresUneImage, enAttente: enAttente, servies: servies, impossible: impossible };
+    }""")
+    assert r["trouve"], "pas de chemin pour contourner l'armurerie"
+    assert r["traverseUnMur"] is False
+    assert r["longueur"] > r["direct"], "le chemin doit faire le tour, pas passer a travers"
+    assert r["ms"] < 50
+    assert r["apresUneImage"] == 2 and r["enAttente"] == 1 and r["servies"] == 3
+    assert r["impossible"] is None

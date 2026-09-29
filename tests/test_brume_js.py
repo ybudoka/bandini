@@ -142,7 +142,7 @@ def test_une_passante_parle_toujours_comme_avant(trois_passages):
     disent rien, parce qu'un passant qui parle chaque fois qu'on le frole rend
     huit repliques fatigantes bien avant qu'elles soient usees. Le juge met donc
     la chance a 1 : ce qu'il mesure, c'est le CHEMIN de la parole, pas le de.
-    Le de, lui, se juge dans `test_moteur_js.py`."""
+    Le de, lui, se juge dans `test_pietons_js.py`."""
     dits = trois_passages["passante"]
     assert [d["genre"] for d in dits] == ["femme"], dits
     assert dits[0]["slug"] is None, "un passant tire sa replique au hasard, comme avant"

@@ -518,3 +518,506 @@ def test_une_presse_de_huit_tuiles_est_une_seule_machine(banc):
     assert r["faces"] == [0, 0, 0, 1, 1, 1], f"la face ne se voit qu'au pied : {r['faces']}"
     assert r["courroies"] == [[3, 4, 16, 7], [0, 4, 16, 7], [0, 4, 13, 7], [3, 4, 16, 7], [0, 4, 16, 7], [0, 4, 13, 7]], r["courroies"]
     assert sorted(b[2] - b[0] for b in r["seules"]) == [3, 10], f"une machine seule connait les deux sens : {r['seules']}"
+
+
+def test_la_porte_s_ouvre_pour_le_joueur_aussi(banc):
+    """⚠️ Retour de Martin : « les portes doivent ouvrir quand j'entre aussi. »
+    Elles s'ouvraient pour les piétons et **pas pour lui** — il traversait un
+    battant fermé, et c'était d'autant plus voyant que les passants, eux,
+    attendaient poliment l'ouverture.
+
+    ⚠️ Et le piège est dans l'ordre : le jeu est **figé** pendant un fondu de
+    porte (`maj()` ne fait avancer que la transition). Un battant ouvert au
+    départ y resterait donc au premier pixel, et la porte serait toujours
+    fermée à l'écran. Les battants doivent battre **pendant** la transition —
+    c'est la seule chose qui bouge quand tout le reste est arrêté."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        L.Monde.centrerCamera(j.x, j.y);
+        // 1. On entre : le battant doit s'ouvrir PENDANT que la rue est encore
+        //    visible, c'est-a-dire dans la premiere moitie du fondu.
+        L.Jeu.entrer(porte);
+        const ouvertures = [];
+        for (let i = 0; i < 60 && L.B.transition; i++) {
+            const tr = L.B.transition;
+            const alpha = tr.t <= tr.ferme ? tr.t / tr.ferme : 0;
+            ouvertures.push({ a: Math.round(alpha * 100) / 100, p: L.Monde.battant(porte.x, porte.y) });
+            o.frame(1);
+        }
+        // Sur la rue (avant le noir), a-t-on vu la porte bouger ?
+        const surLaRue = ouvertures.filter(function (q) { return q.a < 1; });
+        const out = { dedans: !!L.B.interieur,
+                      vueSurLaRue: Math.max.apply(null, surLaRue.map(function (q) { return q.p; })) };
+        // 2. On ressort : la porte de la RUE doit s'ouvrir, pas celle de la piece.
+        L.Jeu.sortir();
+        o.fondu();
+        out.sortie = L.Monde.battant(porte.x, porte.y);
+        out.dehors = L.B.interieur === null;
+        // 3. Et elle se referme toute seule.
+        o.frame(60);
+        out.refermee = L.Monde.battant(porte.x, porte.y);
+        return out;
+    }""")
+    assert r["dedans"] is True and r["dehors"] is True, "l'aller-retour par la porte n'a pas marché"
+    # ⚠️ Sur la rue, pendant que le fondu noircit : c'est là qu'on peut la voir.
+    assert r["vueSurLaRue"] > 0.5, (
+        "la porte n'a pas bougé pendant qu'on voyait encore la rue (%s) : le joueur traverse un battant fermé"
+        % r["vueSurLaRue"]
+    )
+    assert r["sortie"] > 0.5, "en ressortant, la porte de la rue doit être ouverte : %s" % r["sortie"]
+    assert r["refermee"] == 0, "la porte reste ouverte derrière le joueur : %s" % r["refermee"]
+
+
+def test_les_portes_s_ouvrent_et_les_gens_les_passent(banc):
+    """⚠️ Demande de Martin : « les piétons devraient aussi sortir et entrer dans
+    les commerces. Profites-en pour aussi faire ouvrir concrètement les
+    portes. » Les deux demandes n'en font qu'une, et le code disait pourquoi.
+
+    **Un piéton sur trois sortait déjà d'une porte — et on ne le voyait
+    jamais** : `placeDeNaissance()` refusait la place si elle était visible à
+    l'écran. Ce n'était pas une sortie, c'était une naissance déguisée en
+    sortie, dont le seul intérêt aurait été d'être vue. **Personne n'entrait
+    nulle part**, et **aucune porte ne s'ouvrait**.
+
+    Le juge tient les règles qui coûtent : une porte ne s'ouvre jamais sur
+    rien, la planque du joueur n'avale personne, un commerce fermé non plus, et
+    ⚠️ **le cache de morceaux ne bouge pas** quand une porte s'ouvre — c'est lui
+    qui tient le rythme sur téléphone."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(97);
+        const j = L.B.joueur, c = L.Monde.carte;
+        const out = {};
+
+        // 1. Un battant s'ouvre, tient, et se referme — tout seul.
+        const porte = c.portesFermees.find(function (p) { return p.glyphe === 'd'; });
+        L.Monde.ouvrirPorte(porte.x, porte.y);
+        const courbe = [];
+        for (let i = 0; i < 60; i++) { courbe.push(L.Monde.battant(porte.x, porte.y)); o.frame(1); }
+        out.battant = { debut: courbe[0], max: Math.max.apply(null, courbe), fin: courbe[courbe.length - 1],
+                        monte: courbe[6] > courbe[0] };
+
+        // 2. ⚠️ Le cache de morceaux ne bouge pas : le sol est cuit, le battant
+        //    se pose PAR-DESSUS.
+        L.Jeu.rendre();
+        const morceaux0 = L.B.stats.morceaux;
+        L.Monde.ouvrirPorte(porte.x, porte.y);
+        L.Jeu.rendre();
+        out.morceaux = { avant: morceaux0, apres: L.B.stats.morceaux };
+
+        // 3. Quelles portes servent : jamais la planque, jamais le poste.
+        function sert(lieu) {
+            const p = (c.portes || []).find(function (q) { return q.lieu === lieu; });
+            return p ? L.Entites.porteQuiSert({ x: p.x, y: p.y, glyphe: 'D' }) : null;
+        }
+        out.regles = { planque: sert('planque'), poste: sert('poste'), hopital: sert('hopital'),
+                       logement: L.Entites.porteQuiSert({ x: porte.x, y: porte.y, glyphe: 'd' }) };
+        // Un commerce : ouvert le jour, ferme la nuit.
+        // ⚠️ Les interieurs n'ont pas d'heures declarees (seuls les kiosques
+        // de rue en ont) : la nuit tient lieu de fermeture, sauf pour le bar —
+        // qui vit justement la nuit.
+        const dep = (c.portes || []).find(function (q) { return q.lieu === 'depanneur'; });
+        const bar = (c.portes || []).find(function (q) { return q.lieu === 'bar'; });
+        L.B.partie.heure = 0.5;
+        const jour = dep ? L.Entites.porteQuiSert({ x: dep.x, y: dep.y, glyphe: 'D' }) : null;
+        L.B.partie.heure = 0.95;
+        const nuit = dep ? L.Entites.porteQuiSert({ x: dep.x, y: dep.y, glyphe: 'D' }) : null;
+        const barLaNuit = bar ? L.Entites.porteQuiSert({ x: bar.x, y: bar.y, glyphe: 'D' }) : null;
+        out.commerce = { jour: jour, nuit: nuit, barLaNuit: barLaNuit };
+        L.B.partie.heure = 0.5;
+
+        // 4. Sortir : ne DANS la porte, invisible tant qu'elle s'ouvre, puis
+        //    dehors — et VISIBLE, meme en plein ecran.
+        // ⚠️ ON REMET LA GRAINE ICI. Les soixante images du battant plus haut
+        // font vivre toute la ville, et elles puisent dans `B.rng` un nombre de
+        // fois qui depend d'elle : deux tuiles de cloture de plus a l'autre bout
+        // du Faubourg, et l'archetype tire ici n'est plus le meme, ni sa vitesse.
+        // La marge etait d'UN pixel (« avance > 8 » pour douze mesures), alors le
+        // juge tombait sur des changements qui n'ont rien a voir avec les portes —
+        // c'est deja arrive le 14 sept. 2026. Ce qu'on mesure ici ne doit dependre
+        // que de la porte et de celui qui en sort.
+        L.graine(97);
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 6) * L.TT + 8;
+        L.Monde.centrerCamera(j.x, j.y);
+        // ⚠️ On DEGAGE LE PAS DE PORTE : ce qu'on juge ici, c'est le battant et
+        // la sortie, pas la foule. Un passant plante sur la tuile d'en dessous
+        // et celui qui sort n'avance plus de quatre pixels — le juge parlerait
+        // alors de la densite du quartier, pas des portes.
+        for (const q of L.B.entites.slice()) {
+            if (q.type === 'pieton' && Math.hypot(q.x - j.x, q.y - j.y) < 120) L.Entites.retirer(q);
+        }
+        L.Entites.indexer();
+        const arch = L.Entites.archetypeDeRue();
+        const e = L.Entites.creerPieton(porte.x * L.TT + 8, (porte.y + 1) * L.TT + 8, arch);
+        e.sortie = { x: porte.x, y: porte.y, t: 0 };
+        L.Monde.ouvrirPorte(porte.x, porte.y);
+        const y0 = e.y;
+        const vus = [];
+        // ⚠️ LE PLUS LOIN qu'il soit alle, pas ou il est a la quarantieme image :
+        // une fois dehors il reprend sa vie, et flaner veut dire revenir sur ses
+        // pas. Sur une porte de ruelle (celle que ce juge tire depuis que la
+        // ville a bouge, 14 sept. 2026), il sortait de onze pixels puis
+        // rebroussait chemin — le juge lisait cinq et disait qu'il ne sortait
+        // pas. Ce qu'on juge, c'est qu'il SORT.
+        let loin = 0;
+        for (let i = 0; i < 40; i++) { o.frame(1); vus.push(e.dessine); loin = Math.max(loin, e.y - y0); }
+        out.sortie = { cacheAuDebut: vus[0] === false, vuEnsuite: vus.indexOf(true) > 0,
+                       avance: Math.round(loin), libre: !e.sortie,
+                       aLEcran: L.Entites.visibleAEcran(e.x, e.y, 0) };
+
+        // 5. Entrer : il marche jusqu'a la porte, elle s'ouvre, ET IL DISPARAIT
+        //    SEULEMENT APRES — jamais devant une porte fermee.
+        e.etat = 'flane'; e.porteBut = porte; e.porteT = 0; e.porteBloque = 0;
+        e.x = porte.x * L.TT + 8; e.y = (porte.y + 3) * L.TT + 8;
+        let disparu = -1, ouvertAlors = -1;
+        for (let i = 0; i < 300 && disparu < 0; i++) {
+            o.frame(1);
+            if (L.B.entites.indexOf(e) < 0) { disparu = i; ouvertAlors = L.Monde.battant(porte.x, porte.y); }
+        }
+        out.entree = { disparu: disparu, ouvertAlors: ouvertAlors };
+        return out;
+    }""")
+    b = r["battant"]
+    assert b["debut"] == 0 and b["monte"] is True and b["max"] >= 0.99 and b["fin"] == 0, (
+        "un battant doit s'ouvrir, tenir, puis se refermer tout seul : %s" % b
+    )
+    # ⚠️ LE juge du rythme : repeindre un morceau de 256 px pour une porte
+    # tuerait le cache qui tient le téléphone.
+    assert r["morceaux"]["apres"] == r["morceaux"]["avant"], (
+        "ouvrir une porte a fait repeindre des morceaux : %s" % r["morceaux"]
+    )
+    assert r["regles"] == {"planque": False, "poste": False, "hopital": False, "logement": True}, (
+        "les portes qui servent ne sont pas les bonnes : %s" % r["regles"]
+    )
+    assert r["commerce"] == {"jour": True, "nuit": False, "barLaNuit": True}, (
+        "un commerce fermé ne doit laisser entrer personne — sauf le bar : %s" % r["commerce"]
+    )
+    s = r["sortie"]
+    assert s["cacheAuDebut"] is True, "on le voit AVANT que la porte s'ouvre : %s" % s
+    assert s["vuEnsuite"] is True and s["aLEcran"] is True, (
+        "la sortie doit se voir, et en plein écran : %s" % s
+    )
+    assert s["avance"] > 8 and s["libre"] is True, "il doit sortir de la porte et reprendre sa vie : %s" % s
+    assert r["entree"]["disparu"] >= 0, "personne n'entre nulle part : %s" % r["entree"]
+    # ⚠️ Une porte ne s'ouvre jamais sur rien : il disparaît APRÈS l'ouverture.
+    assert r["entree"]["ouvertAlors"] >= 0.9, (
+        "il est entré par une porte encore fermée (%s) : une porte ne s'ouvre jamais sur rien"
+        % r["entree"]["ouvertAlors"]
+    )
+
+
+def test_le_fondu_de_porte_noircit_avant_de_changer_de_scene(banc):
+    """⚠️ Le defaut que Martin a nomme « la transition n'est pas juste » : la
+    piece se chargeait PUIS le fondu partait de transparent. Sa premiere moitie
+    noircissait donc sur la scene deja changee — on voyait la piece une image,
+    l'ecran noircissait, il s'eclaircissait sur la meme piece. Ce test mesure la
+    scene a CHAQUE image : aucune ne doit montrer la nouvelle avant le noir
+    complet, et la porte doit s'entendre la, au noir."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        const villeW = c.w;
+        // La porte s'entend-elle, et QUAND ?
+        const sons = [];
+        const vraiSon = L.Son.SFX.porte;
+        L.Son.SFX.porte = function () { sons.push({ noir: L.B.transition ? L.B.transition.t : -1, dedans: !!L.B.interieur }); return vraiSon.apply(null, arguments); };
+        L.Jeu.entrer(porte);
+        const images = [];
+        for (let i = 0; i < 120 && L.B.transition; i++) {
+            o.frame(1);
+            const tr = L.B.transition;
+            // L'alpha du noir, comme le HUD le calcule : 0 -> 1, puis 1 -> 0.
+            const alpha = tr ? (tr.t <= tr.ferme ? tr.t / tr.ferme : 1 - (tr.t - tr.ferme) / tr.ouvre) : 0;
+            images.push({ alpha: Math.round(alpha * 1000) / 1000, w: L.Monde.carte.w, dedans: !!L.B.interieur });
+        }
+        const entree = images.length;
+        // Et au retour : plus vif qu'a l'aller.
+        L.Jeu.sortir();
+        const sortie = o.fondu();
+        return { villeW: villeW, images: images, entree: entree, sortie: sortie, sons: sons,
+                 dedans: L.B.interieur, w: L.Monde.carte.w };
+    }""")
+    change = [i for i, im in enumerate(r["images"]) if im["dedans"]]
+    assert change, "on n'est jamais entre"
+    premiere = change[0]
+    assert r["images"][premiere]["alpha"] == 1.0, (
+        "la nouvelle scene se montre a %s de noir : le fondu clignote"
+        % r["images"][premiere]["alpha"]
+    )
+    for im in r["images"][:premiere]:
+        assert im["w"] == r["villeW"] and not im["dedans"], "la piece est chargee avant le noir"
+        assert im["alpha"] < 1.0
+    assert r["images"][-1]["alpha"] < 0.2, "le fondu ne finit pas en clair"
+    assert r["sons"][0] == {"noir": premiere + 1, "dedans": True}, (
+        "la porte doit s'entendre AU NOIR, a l'image du changement : %s" % r["sons"]
+    )
+    assert len(r["sons"]) == 2 and r["sons"][1]["dedans"] is False, (
+        "la porte de sortie s'entend aussi au noir, une fois la rue revenue : %s" % r["sons"]
+    )
+    assert r["sortie"] < r["entree"], "sortir doit etre plus vif qu'entrer"
+    assert 30 <= r["entree"] <= 90 and r["sortie"] >= 20, (
+        "un fondu de porte se sent : ni un clignotement, ni une attente (%s, %s)"
+        % (r["entree"], r["sortie"])
+    )
+
+
+def test_le_jeu_est_fige_pendant_un_fondu_de_porte(banc):
+    """⚠️ La simulation continuait pendant le fondu : on pouvait sortir d'une
+    piece et se faire renverser par un char qu'on n'a pas vu venir, sur un ecran
+    noir ou l'on ne controle rien. Un menu fige deja tout ; une porte pareil."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        o.frame(2);
+        // Un passant qui marche, un char qui roule : rien de tout ca ne doit
+        // avancer d'un pixel pendant le noir.
+        const passant = o.poser('flaneur', 24, 0);
+        passant.etat = 'flane';
+        const char = o.char('auto', -30, 0, 0);
+        char.etat = 'roule'; char.vitesse = 3;
+        j.vie = 60;
+        const avant = { t: L.B.t, vie: j.vie, px: passant.x, py: passant.y, cx: char.x, heure: L.B.partie.heure };
+        L.Jeu.entrer(porte);
+        const images = o.fondu();
+        const apres = { t: L.B.t, vie: j.vie, px: passant.x, py: passant.y, cx: char.x, heure: L.B.partie.heure };
+        // Et une fois dedans, le jeu repart : le temps passe de nouveau.
+        o.frame(5);
+        return { avant: avant, apres: apres, images: images, repart: L.B.t - apres.t, dedans: !!L.B.interieur };
+    }""")
+    assert r["dedans"] is True and r["images"] > 20
+    assert r["apres"]["t"] == r["avant"]["t"], "le temps de jeu a passe pendant le fondu"
+    assert r["apres"]["heure"] == r["avant"]["heure"], "l'heure a avance pendant le fondu"
+    assert r["apres"]["vie"] == r["avant"]["vie"], "le joueur a pris des coups pendant le fondu"
+    assert r["apres"]["px"] == r["avant"]["px"] and r["apres"]["py"] == r["avant"]["py"], "un passant a marche pendant le fondu"
+    assert r["apres"]["cx"] == r["avant"]["cx"], "un char a roule pendant le fondu"
+    assert r["repart"] == 5, "le jeu n'est pas reparti apres le fondu"
+
+
+def test_sortir_pendant_le_fondu_d_entree_ramene_devant_la_porte(banc):
+    """⚠️ Le cas qui casse tout : ressortir alors que le fondu d'entree joue
+    encore. La scene ne change qu'au noir — celui qui sort avant ne trouverait
+    aucun interieur, la sortie serait refusee, et le joueur se reveillerait
+    dedans sans l'avoir demande."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
+        const x0 = porte.x * L.TT + 8, y0 = (porte.y + 1) * L.TT + 10;
+        j.x = x0; j.y = y0;
+        // Aller-retour normal, d'abord : on revient au pixel.
+        o.entrer(porte);
+        o.sortir();
+        const normal = { x: j.x, y: j.y, dedans: L.B.interieur };
+        // Puis on ressort AVANT le noir : trois images de fondu, et on repart.
+        j.x = x0; j.y = y0;
+        L.Jeu.entrer(porte);
+        o.frame(3);
+        const avantLeNoir = { dedans: !!L.B.interieur, fondu: !!L.B.transition };
+        const sorti = L.Jeu.sortir();
+        o.fondu();
+        // L'elan qui reste au pas de la porte, avant que le jeu reprenne la main.
+        const elan = { garde: Math.abs(j.vy) > 0, vers: j.vy > 0, face: j.face };
+        // La camera ne saute pas : elle est deja posee quand le jeu repart.
+        const cam = { x: L.B.cam.x, y: L.B.cam.y };
+        o.frame(1);
+        const bouge = Math.hypot(L.B.cam.x - cam.x, L.B.cam.y - cam.y);
+        return { normal: normal, avantLeNoir: avantLeNoir, sorti: sorti, dedans: L.B.interieur,
+                 x: j.x, y: j.y, x0: x0, y0: y0, bouge: bouge, elan: elan };
+    }""")
+    assert r["normal"]["dedans"] is None and (r["normal"]["x"], r["normal"]["y"]) == (r["x0"], r["y0"]), (
+        "un aller-retour par la porte doit ramener a la tuile EXACTE"
+    )
+    assert r["avantLeNoir"] == {"dedans": False, "fondu": True}
+    assert r["sorti"] is True, "sortir pendant le fondu d'entree a ete refuse"
+    assert r["dedans"] is None, "on est reste dedans"
+    assert (r["x"], r["y"]) == (r["x0"], r["y0"]), "on ne revient pas devant la porte"
+    assert r["bouge"] < 2, "la camera saute a la premiere image jouable : %s px" % r["bouge"]
+    assert r["elan"] == {"garde": True, "vers": True, "face": "bas"}, (
+        "on sort d'une porte avec un reste d'elan vers la rue, pas d'un arret complet : %s" % r["elan"]
+    )
+
+
+def test_l_hopital_et_la_prison_passent_par_la_machine_des_portes(banc):
+    """⚠️ Retour de Martin : « il faut corriger le fade out et in quand on va a
+    l'hopital ou qu'on se fait enfermer. »
+
+    Les quatre ellipses (hopital, prison, compagnie, coucher) etaient restees
+    sur `Hud.fondu` + `setTimeoutJeu` : DEUX HORLOGES independantes, l'une dans
+    le dessin, l'autre dans la mise a jour. Rien ne liait le changement de scene
+    au noir — il tombait a 80 % d'alpha, donc a travers un voile transparent
+    d'un cinquieme, et le texte s'ecrivait par-dessus la rue qu'on voyait
+    encore, pendant que la ville continuait de tourner.
+
+    Ce juge mesure, image par image, les trois choses en meme temps : l'alpha a
+    l'instant OU l'on est teleporte, l'alpha a chaque fois que le texte se
+    dessine, et le temps du monde pendant le noir."""
+    r = banc(r"""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        L.B.partie.argent = 400;
+        // Ce que le texte du fondu voit du monde : on note l'alpha a chaque
+        // fois qu'Atlas l'ecrit (le banc ne garde aucun pixel). ⚠️ On guette
+        // « REVEIL », pas « HOPITAL » : la facture passe aussi par un message
+        // du HUD, et lui a le droit de s'ecrire sur la rue.
+        const ecrits = [];
+        const vraiTexte = L.Atlas.texte;
+        function alpha() {
+            const tr = L.B.transition;
+            if (!tr) return null;
+            const noir = tr.ferme + tr.tient;
+            return tr.t <= tr.ferme ? tr.t / tr.ferme
+                 : tr.t <= noir ? 1
+                 : 1 - (tr.t - noir) / tr.ouvre;
+        }
+        L.Atlas.texte = function (ctx, s, x, y, c, e) {
+            if (String(s).indexOf('RÉVEIL') >= 0) ecrits.push(alpha());
+            return vraiTexte.apply(null, arguments);
+        };
+        // Un passant et un char : rien de tout ca ne doit avancer dans le noir.
+        const passant = o.poser('flaneur', 40, 0);
+        passant.etat = 'flane';
+        const char = o.char('auto', -40, 0, 0);
+        char.etat = 'roule'; char.vitesse = 3;
+        const avant = { t: L.B.t, heure: L.B.partie.heure, px: passant.x, cx: char.x, x: j.x, y: j.y };
+        L.Entites.blesser(j, 9999, null, {});
+        const lance = { fondu: !!L.B.transition, tient: L.B.transition && L.B.transition.tient,
+                        vivant: j.vivant, dejaLoin: Math.hypot(j.x - avant.x, j.y - avant.y) };
+        // Image par image : ou est le joueur, et a quel alpha ?
+        const images = [];
+        for (let i = 0; i < 300 && L.B.transition; i++) {
+            o.frame(1);
+            images.push({ a: Math.round((alpha() === null ? 0 : alpha()) * 1000) / 1000,
+                          loin: Math.round(Math.hypot(j.x - avant.x, j.y - avant.y)) });
+        }
+        L.Atlas.texte = vraiTexte;
+        const apres = { t: L.B.t, heure: L.B.partie.heure, px: passant.x, cx: char.x };
+        o.frame(5);
+        // ⚠️ On arrive DANS la piece de l'hopital, couche : on juge ou sa porte mene.
+        const hopital = L.B.exterieur.carte.points.find(function (p) { return p.slug === 'hopital'; });
+        return { lance: lance, images: images, ecrits: ecrits, avant: avant, apres: apres,
+                 repart: L.B.t - apres.t, vie: j.vie, max: j.vieMax,
+                 argent: L.B.partie.argent, etat: L.B.etat,
+                 piece: L.B.interieur && L.B.interieur.slug,
+                 arrive: Math.hypot(L.B.exterieur.x - hopital.x * L.TT, L.B.exterieur.y - hopital.y * L.TT) };
+    }""")
+    assert r["lance"]["fondu"] is True, "tomber doit lancer un fondu de `Jeu.transiter`"
+    assert r["lance"]["tient"] > 0, "une ellipse tient le noir : c'est la que le temps passe"
+    assert r["lance"]["dejaLoin"] == 0, "le joueur est parti a l'hopital AVANT que le noir commence"
+    change = [i for i, im in enumerate(r["images"]) if im["loin"] > 8]
+    assert change, "on ne s'est jamais reveille a l'hopital"
+    assert r["images"][change[0]]["a"] == 1.0, (
+        "la teleportation se voit a %s de noir : c'est le defaut de l'ancien fondu"
+        % r["images"][change[0]]["a"]
+    )
+    assert r["ecrits"], "le fondu doit dire ou l'on se reveille et ce que ca coute"
+    assert all(a == 1.0 for a in r["ecrits"]), (
+        "le texte s'ecrit sur une rue qu'on voit encore (alphas %s)" % sorted(set(r["ecrits"]))
+    )
+    assert r["images"][-1]["a"] < 0.2, "le fondu ne finit pas en clair"
+    assert 120 <= len(r["images"]) <= 200, (
+        "une ellipse d'hopital se sent : ni un clignotement, ni une attente (%s images)"
+        % len(r["images"])
+    )
+    # ⚠️ La ville est FIGEE pendant : on gisait a 1 PV au milieu de la rue
+    # pendant deux secondes et demie, et un char pouvait repasser dessus.
+    assert r["apres"]["t"] == r["avant"]["t"], "le temps de jeu a passe pendant le fondu"
+    assert r["apres"]["heure"] == r["avant"]["heure"], "l'heure a avance pendant le fondu"
+    assert r["apres"]["px"] == r["avant"]["px"], "un passant a marche pendant le fondu"
+    assert r["apres"]["cx"] == r["avant"]["cx"], "un char a roule pendant le fondu"
+    assert r["repart"] == 5, "le jeu n'est pas reparti apres le fondu"
+    assert r["vie"] == r["max"] and r["piece"] == "hopital" and r["arrive"] < 48
+    # ⚠️ Venus de `test_l_hopital_ramasse_le_joueur_et_le_facture` (vague C, 28 sept. 2026),
+    # qui refaisait la même chute sans regarder le fondu : on tombe VIVANT (le fondu
+    # d'abord, le réveil ensuite), l'hôpital FACTURE, et on repart en jeu.
+    assert r["lance"]["vivant"] is True, "le joueur est mort au lieu de tomber : %s" % r["lance"]
+    assert r["argent"] < 400, "l'hopital n'a pas facture"
+    assert r["etat"] == "jeu", "on ne repart pas en jeu apres l'hopital : %s" % r["etat"]
+
+
+def test_se_faire_arreter_pendant_le_fondu_de_l_hopital_n_empile_pas_deux_noirs(banc):
+    """⚠️ Le cas qui casse tout, version ellipse : deux fondus en meme temps.
+
+    C'est celui que `finirTransition()` reglait deja pour les portes — passer
+    une porte pendant le noircissement d'une autre. Depuis que l'hopital et la
+    prison ont la meme machine, la regle doit valoir pour eux : le fondu qui
+    joue finit tout de suite (sa scene change, une fois), et le nouveau repart
+    du clair. Sinon on se reveille a l'hopital APRES etre sorti de prison."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        L.B.partie.argent = 900;
+        L.Entites.blesser(j, 9999, null, {});
+        o.frame(10);                                  // en plein noircissement
+        const pendant = { t: L.B.transition.t, fait: L.B.transition.fait };
+        L.B.recherche.etoiles = 3;
+        L.Missions.prison(null);
+        const repart = { t: L.B.transition.t, fait: L.B.transition.fait };
+        // ⚠️ Le reveil fini, on est couche dans un lit de l'hopital — et c'est de
+        // LA que la prison doit nous sortir, pas nous laisser dans la piece.
+        const auHopital = !!L.B.interieur && L.B.interieur.slug === 'hopital' && !!j.alite;
+        o.fondu();
+        const poste = L.Monde.carte.points.find(function (p) { return p.slug === 'poste'; });
+        return { pendant: pendant, repart: repart, auHopital: auHopital,
+                 auPoste: Math.hypot(j.x - poste.x * L.TT, j.y - poste.y * L.TT),
+                 fondus: !!L.B.transition, arrete: !!j.arrete, vie: j.vie, max: j.vieMax,
+                 dehors: !L.B.interieur && !L.B.exterieur, alite: !!j.alite };
+    }""")
+    assert r["pendant"]["fait"] is False and r["pendant"]["t"] > 0, "le premier fondu doit etre en cours"
+    assert r["auHopital"] is True, (
+        "le fondu interrompu doit avoir fait ce qu'il promettait (le reveil a l'hopital), une fois"
+    )
+    assert r["repart"] == {"t": 0, "fait": False}, (
+        "le fondu de la prison repart du clair : %s" % r["repart"]
+    )
+    assert r["fondus"] is False, "il reste un fondu ouvert"
+    assert r["auPoste"] < 48 and r["arrete"] is False and r["vie"] == r["max"]
+    assert r["dehors"] is True and r["alite"] is False, (
+        "sorti de prison encore couche, ou encore dans la piece de l'hopital : %s" % r
+    )
+
+
+def test_on_entre_dans_la_planque_et_on_en_ressort(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        // ⚠️ On regarde la porte : dehors, ENTRER n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 0, -1);
+        // Ce qui ne bouge pas : ni les pietons (oublies quand on s'eloigne), ni les
+        // chars, ni les armes de fortune (semees au fil des images).
+        // ⚠️ `bete` et `ballon` sont de la VIE DE RUE, pas du mobilier : un goéland
+        // qui se pose pendant qu'on est dans la planque n'est pas « la ville qui
+        // est entrée avec nous ». Ce juge dit que le mobilier fixe revient tel
+        // quel — on nomme donc ce qui va et vient, comme les piétons et les chars.
+        const fixes = function () { return L.B.entites.filter(function (e) { return ['pieton', 'vehicule', 'ramassage', 'projectile', 'bete', 'ballon'].indexOf(e.type) < 0; }).length; };
+        const dehors = { entites: fixes(), w: c.w };
+        o.tape('KeyE', 3);
+        // La porte passe par un fondu : la piece se charge AU NOIR, pas au clic.
+        const pendant = { interieur: L.B.interieur, t: L.B.t, fondu: !!L.B.transition };
+        o.fondu();
+        const dedans = { interieur: L.B.interieur ? L.B.interieur.slug : null, w: L.Monde.carte.w, entites: L.B.entites.length,
+                         nuit: L.Monde.ambiance().alpha, cam: L.B.cam.x < 0,
+                         sol: L.Monde.solidite(Math.floor(j.x / L.TT), Math.floor(j.y / L.TT)),
+                         invite: (function () { j.x = L.B.interieur.sortie.x * L.TT + 8; j.y = (L.B.interieur.sortie.y - 1) * L.TT + 8; L.Missions.majInvite(j); return L.B.invite; })() };
+        o.tape('KeyE', 3);
+        o.fondu();
+        return { dehors: dehors, pendant: pendant, dedans: dedans, apres: { interieur: L.B.interieur, w: L.Monde.carte.w, entites: fixes(),
+                 pres: Math.hypot(j.x - porte.x * L.TT - 8, j.y - (porte.y + 1) * L.TT - 10) } };
+    }""")
+    assert r["pendant"]["fondu"] is True, "passer une porte doit lancer un fondu"
+    assert r["pendant"]["interieur"] is None, "la piece est chargee AVANT le noir : le fondu clignote"
+    assert r["dedans"]["interieur"] == "planque" and r["dedans"]["w"] < r["dehors"]["w"]
+    assert r["dedans"]["entites"] == 1, "la ville est entree avec nous"
+    assert r["dedans"]["nuit"] == 0 and r["dedans"]["cam"] is True, "une piece se centre et n'a pas de nuit"
+    assert r["dedans"]["sol"] == 0 and r["dedans"]["invite"] == "SORTIR"
+    assert r["apres"]["interieur"] is None and r["apres"]["w"] == r["dehors"]["w"]
+    assert r["apres"]["entites"] == r["dehors"]["entites"], "la ville n'est pas revenue telle quelle"
+    assert r["apres"]["pres"] < 20, "on doit ressortir devant la porte"
