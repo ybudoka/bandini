@@ -1006,3 +1006,28 @@ catalogue.
     risque** : les notes de `musique.py` (`audio.musiques`, 62 089 bruts / 10 302 gzip — le sixième du paquet),
     qui peuvent venir avec leur district, par la route des mp3 ; c'était déjà écrit le 24 sept., et c'est le
     moment. Pas fait ici : ce n'est pas le chemin des libérations.
+- **29 sept. 2026 : vague 3 — l'arc P jusqu'à sa libération. La Pointe est libre.** Six missions : `p02` (M.
+  Bilodeau, _Le pont est bloqué_ : trois Skateux au pont, leur grand au cône — 150 $), `p05` (le Trappeur, _Les
+  collets du Trappeur_ : la nuit, deux Skateux derrière leur stationnement — 120 $ et sa fronde), `p04` (Zed, _Zed
+  veut un défi_ : **la première `course` d'une mission**, quatre points à pied sous son temps — 200 $, `calme:
+  skateux`), `p09` (Ovila, _Le phare s'éteint_ : trois Skateux en 90 s, puis rallumer avec lui — 300 $, la
+  manchette _Le phare a tenu_), `p10` (Zed, _Le saut de La Pointe_ : 80 px de vol — 250 $), `p11` (Josée, _Zed
+  et la Chef_ : mener Zed au Brouillard, les Skateux qui refusent la paix — 500 $, **`libere: pointe`**, la
+  manchette _La Pointe signe la paix_). Trois personnages neufs, tous devant le phare après une mission
+  (`arrive_apres`) : **Roméo Bilodeau** (voix Bill), **Zed** (voix Lutz), **Armand, le Trappeur** (voix George) —
+  fiches, visages, repos.
+  - ⚠️ **`course` est enfin lue** (elle avançait dans la même image) : ses `points` se passent dans l'ordre, à
+    `rayon` tuiles, la flèche vise le suivant, la ligne compte « 2/4 », `a_pied` ne compte rien au volant. Le
+    parcours de Zed mesure ≈ 324 tuiles de sentiers (un parcours en largeur au banc) : 33 s au sprint, 43 à la
+    course — 80 s de chrono. `contre` (courir CONTRE lui) reste lu par personne.
+  - ⚠️ **`ou: "bois"` ne pose rien**, comme `ou: "quai"` : `tuileDeBois` cherche le glyphe `n`, que la carte n'a
+    plus. Les deux Skateux de p05 naissaient sur le joueur ; ils sont derrière leur stationnement (`zone:skateux`).
+  - ⚠️ **La moto de Zed est une motoneige l'hiver** (« pas de moto l'hiver ») : les répliques disent « ma
+    machine », qui va aux deux.
+  - **Ce que M13 attend, vrai au banc** : **quatre districts libérés** (Faubourg, Quais, Érables, Pointe) —
+    `exigeTenu({liberes: 4})`, ce que _Le Boss_ demande.
+  - **Juges** (`tests/test_arc_p_js.py`, sept ; quatre mutations, toutes rouges) : chaque mission de l'appel à la
+    prime ; la course au volant qui ne compte pas, puis à pied dans l'ordre ; trop lente, ratée ; et La Pointe
+    libre dans le monde (« La Pointe » sous la mini-carte, le gang hors jeu, la sauvegarde relue, quatre districts).
+  - ⚠️ **Le paquet** : 290 969 bruts / 65 061 gzip — relevé à 300 000 / 67 000, pour l'arc S aussi (mesure dans
+    `test_definitions.py`).

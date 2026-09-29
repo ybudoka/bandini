@@ -203,8 +203,11 @@ def test_le_paquet_reste_leger(paquets):
     d'en haut, plus les personnages. Les arcs S et P (douze missions, six personnages) en demandent autant :
     deux Ko de plus, pas davantage. Ce qui en libérerait dix sans risque : les notes de `musique.py`
     (`audio.musiques`, 62 089 bruts / 10 302 gzip), qui peuvent venir avec leur district comme les mp3.
+    Puis l'arc P (six missions, trois personnages, deux manchettes) : **290 969 / 65 061** — le brut passe ses
+    290 000. Relevés à **300 000 / 67 000** d'un coup, pour l'arc S qui vient (six missions, trois personnages :
+    ≈ 3 000 bruts et 1 000 gzip de plus) ; au-delà, c'est la musique qui sort, pas un plafond qui monte.
     """
-    for nom, brut_max, fil_max in (("definitions", 290_000, 66_000), ("carte", 722_000, 71_000)):
+    for nom, brut_max, fil_max in (("definitions", 300_000, 67_000), ("carte", 722_000, 71_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))

@@ -1516,6 +1516,13 @@ const Histoire = (function () {
         // sans dé. Posé avant l'intro comme le reste : la caméra le filme qui brûle.
         const l = resoudre(o.ou, m);
         B.mission.feu = l ? Incendies.allumerPourMission(l.x, l.y) : null;
+      } else if (o.type === 'course') {
+        // ⚠️ `course` (29 sept. 2026, p04 : « la course de Zed ») : déclarée depuis la v1 et lue par personne — elle
+        // avançait dans la même image. Ses `points` (des lieux que `resoudre` connaît) se passent DANS L'ORDRE, à
+        // `rayon` tuiles (3), le chrono est l'option `chrono_s` ; `a_pied` : au volant, rien ne compte. Sans dé.
+        const pts = (o.points || []).map(function (s) { return resoudre(s, m); }).filter(Boolean)
+          .map(function (q) { return { x: q.x, y: q.y }; });
+        B.mission.course = { i: 0, points: pts };
       } else if (o.type === 'suivre') {
         poserLeSuivi(m, o);
       } else if (o.type === 'pickpocket') {
@@ -2037,6 +2044,20 @@ const Histoire = (function () {
       case 'survivre':
         if (B.t - p.debutT > (o.secondes || 30) * 60) avancer();
         return;
+      case 'course': {
+        const c = B.mission.course;
+        if (!c || !c.points.length) { avancer(); return; }
+        if (o.a_pied && j.dansVehicule) { B.mission.attend = texteDObjectif(o) + ' — À PIED, DESCENDS'; return; }
+        B.mission.attend = null;
+        const pt = c.points[c.i], ici = j.dansVehicule || j, r = (o.rayon || 3) * TT;
+        if (pt && dist2(ici.x, ici.y, pt.x, pt.y) < r * r) {
+          c.i++;
+          Son.SFX.ramasse();
+          if (c.i < c.points.length) Hud.message('POINT ' + c.i + ' / ' + c.points.length, 90);
+        }
+        if (c.i >= c.points.length) avancer();
+        return;
+      }
       case 'parler':
         return;
       // --- M16 : les neuf types de plus ------------------------------------
@@ -3303,6 +3324,7 @@ const Histoire = (function () {
       // `detruire`). `payer` et `boulots` n'ont pas de pixel à pointer : on
       // parle à qui est là, ou on roule au klaxon.
       else if (o.type === 'suivre') l = B.mission ? B.mission.suivi : null;
+      else if (o.type === 'course') l = B.mission && B.mission.course ? B.mission.course.points[B.mission.course.i] || null : null;
       else if (o.type === 'proteger') {
         // Lui d'abord, tant qu'on ne l'a pas rejoint ; puis où on l'emmène.
         const c = B.mission ? B.mission.protege : null;
@@ -3382,6 +3404,7 @@ const Histoire = (function () {
       compte = ' ' + Math.max(0, faits - B.mission.boulotsDepart) + '/' + o.n;
     }
     if (o.type === 'sauter') compte = ' VOL ' + Math.round(B.mission ? B.mission.vol : 0) + '/' + o.vol_px;
+    if (o.type === 'course' && B.mission && B.mission.course) compte = ' ' + B.mission.course.i + '/' + B.mission.course.points.length;
     if (o.type === 'suivre' && B.mission && B.mission.suivi) compte = filature(B.mission);
     if (o.type === 'parler' && tenueManque(o) && tenueDef(o.tenue)) compte = ' — ENFILE : ' + tenueDef(o.tenue).nom.toUpperCase();
     // `sans_arme` : tant qu'on tient une arme, la ligne le dit AVANT qu'on entre chez eux.

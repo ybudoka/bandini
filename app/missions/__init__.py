@@ -335,6 +335,24 @@ PERSONNAGES: list[Personnage] = [
     {"slug": "jo", "nom": "Jo Bellemare", "genre": "homme", "voix": "Omar J - Energetic,Engaging and Animated",
      "couleurs": {"c": "#b5651d", "h": "#1a1a1a", "s": "#e8b088", "p": "#3a2f22"}, "ou": "porte:depanneur",
      "heler": "Hé, le vieux!", "arrive_apres": "e01", "parti_apres": "e04"},
+    # --- La Pointe (29 sept. 2026, vague 3 des libérations) : trois habitants du bout de la ville, tous devant le
+    # phare (`porte:phare`, un lieu de mission depuis m6 : rien ne bouge ; Ovila, lui, est dedans) et seulement après
+    # une mission (`arrive_apres` : un personnage posé dès l'ouverture décale les identifiants de la ville). Roméo
+    # Bilodeau, le retraité qui ne passe plus le pont ; Zed, le chef des Skateux ; Armand, le Trappeur des bois.
+    # Voix de France ou multilingues du compte, vérifiées en français (`verified_languages`) — permises (Martin,
+    # 25 sept. 2026), en v3 à écouter.
+    {"slug": "bilodeau", "nom": "Roméo Bilodeau", "genre": "homme", "voix": "Bill - Wise, Mature, Balanced",
+     "couleurs": {"c": "#7a6a4a", "h": "#e0e0e0", "s": "#e8b088", "p": "#3a3a4a"}, "ou": "porte:phare",
+     "heler": "Monsieur!", "arrive_apres": "p01",
+     "repos": ("Revenez donc.", "Le pont est ouvert. Ma femme va pouvoir aller à la messe.")},
+    {"slug": "zed", "nom": "Zacharie « Zed » Lemieux", "genre": "homme", "voix": "Lutz - Chuckling, Giggly and Cheerful",
+     "couleurs": {"c": "#e84a8a", "h": "#f0d040", "s": "#e8c0a0", "p": "#2a3a5a"}, "ou": "porte:phare",
+     "heler": "Yo! Toi!", "arrive_apres": "p02",
+     "repos": ("Plus tard, man.", "La rampe est libre, man. Pis la police, elle, est loin.")},
+    {"slug": "trappeur", "nom": "Armand, le Trappeur", "genre": "homme", "voix": "George - Warm, Captivating Storyteller",
+     "couleurs": {"c": "#5a4a2a", "h": "#6a6a6a", "s": "#c98d66", "p": "#3a3a2a"}, "ou": "porte:phare",
+     "heler": "Psst. Viens.", "arrive_apres": "p01",
+     "repos": ("Reviens.", "Le bois te connaît, astheure. Marche pas sur mes collets.")},
 ]
 
 
@@ -564,7 +582,7 @@ from . import (  # noqa: E402
     e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f10, f11, f12, f13, h01, h02, m1, m2, m3,
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
     s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
-    e04, e06, e07, e10,
+    e04, e06, e07, e10, p02, p04, p05, p09, p10, p11,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -596,6 +614,9 @@ from . import (  # noqa: E402
 # (`libere: quais`), après l'un OU l'autre côté du choix de Sven (`exige.une_de`).
 # ⚠️ e04, e06, e07, e10 (29 sept. 2026, vague 2) : Jo et sa course, Diane, le maire suivi jusqu'à l'hôtel, son
 # dossier volé à la villa — et les Chevreuils vidés, leur chef couché : c'était Jo (`libere: erables`).
+# ⚠️ p02, p05, p04, p09, p10, p11 (29 sept. 2026, vague 3) : La Pointe — le pont de M. Bilodeau, les collets du
+# Trappeur, la course de Zed (la première `course` d'une mission), le phare qui s'éteint, le saut, et Zed mené à la
+# Chef (`libere: pointe`).
 # ⚠️ m99 (M13, 25 sept. 2026) — _Sacrer son camp_, la fin qu'on peut jouer — tout au bout : son appel
 # ne sonne qu'avec 15 000 $ en poche (`exige`), et une fin n'a rien à précéder.
 CATALOGUE: list[Mission] = [
@@ -614,6 +635,7 @@ CATALOGUE: list[Mission] = [
     c05.MISSION, c06.MISSION, c07.MISSION, c08.MISSION,
     q05.MISSION, q06.MISSION, q13.MISSION,
     e04.MISSION, e06.MISSION, e07.MISSION, e10.MISSION,
+    p02.MISSION, p05.MISSION, p04.MISSION, p09.MISSION, p10.MISSION, p11.MISSION,
     m97.MISSION, m99.MISSION,
 ]
 

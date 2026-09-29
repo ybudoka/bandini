@@ -194,6 +194,15 @@ VISAGES: dict[str, dict] = {
     "diane": _v("fine", "carre", "veston", signes=("boucles", "rouge", "rides")),
     # Jo Bellemare (e04), le chef des Chevreuils : la casquette à l'envers d'un fils de bonne famille qui joue au dur,
     # la mèche, la barbe de trois jours qui pousse mal, une cicatrice de drift sur le sourcil.
+    # Roméo Bilodeau (p02), le retraité du bout de La Pointe : la tuque grise, les lunettes à double foyer, les rides
+    # de quarante hivers au bord de l'eau.
+    "bilodeau": _v("ronde", "degarnie", "gilet", lunettes="carrees", chapeau="tuque", signes=("rides", "sourcils_epais"),
+                   t="#6a6a6a"),
+    # Zed (p04), le chef des Skateux : la mèche décolorée, la casquette, un grain de beauté et le sourire en coin.
+    "zed": _v("fine", "meche", "chandail", chapeau="casquette", signes=("grain", "yeux_plisses")),
+    # Armand, le Trappeur (p05) : la barbe hirsute, la tuque de laine, les rides du vent et les yeux qui voient loin.
+    "trappeur": _v("longue", "hirsute", "veste", "barbe", chapeau="tuque", signes=("rides", "yeux_plisses", "cicatrice"),
+                   t="#8a3a2a"),
     "jo": _v("longue", "meche", "veste", "mal_rase", chapeau="casquette", signes=("cicatrice",)),
     # Victor Tam, le vieux maître de l'ÉCOLE LA MANTE, revenu de Floride : le chapeau de paille du snowbird sur une
     # couronne de cheveux blancs, la chemise fleurie turquoise, le bronzage de trois hivers, les gros sourcils blancs

@@ -240,6 +240,9 @@ chacun dans [docs/personnages/](personnages/README.md).
 | `cindy` | Cindy Boivin | Ruby Roo | porte:cantine (la Brume des Quais — partie après q05, `parti_apres`) | — |
 | `diane` | Diane Larivière | Riya Rao | porte:depanneur (après e01, `arrive_apres`) | — |
 | `jo` | Jo Bellemare | Omar J | porte:depanneur (entre e01 et e04) | — |
+| `bilodeau` | Roméo Bilodeau | Bill | porte:phare (après p01) | — |
+| `zed` | Zacharie « Zed » Lemieux | Lutz | porte:phare (après p02) | — |
+| `trappeur` | Armand, le Trappeur | George | porte:phare (après p01) | — |
 | `maitre` | Victor Tam | Luca - Storyteller | point:maitre (sa salle de l'ÉCOLE LA MANTE, au Petit-Canton — une fois revenu de Floride, `arrive_apres: c04`) | — |
 
 ⚠️ **`ou: "foire"` est un lieu neuf** (22 sept. 2026) : le seul personnage posé DANS l'enceinte de la

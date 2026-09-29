@@ -415,8 +415,14 @@ JEU: dict[str, str] = {
     "narrateur-journal-pouce_parti": "[amused] Le Pouce plie bagage. [warmly] Le Petit-Canton retrouve sa paye, et la cave du Dragon d'or change de mains. [wryly] On l'aurait vu monter dans l'autobus de Sorel… sans ses valises.",
     # Diane Larivière : la politicienne qui sourit en disant non.
     "diane-repos-2": "[confident] Le conseil siège jeudi. [warmly] D'ici là, les Érables dorment en paix.",
+    # La Pointe : Bilodeau le retraité, Zed le chef des Skateux, Armand le Trappeur.
+    "bilodeau-repos-2": "[warmly] Le pont est ouvert. [amused] Ma femme va pouvoir aller à la messe.",
+    "zed-repos-2": "[playfully] La rampe est libre, man. [mischievously] Pis la police, elle, est loin.",
+    "trappeur-repos-2": "[quietly] Le bois te connaît, astheure. [wryly] Marche pas sur mes collets.",
     "narrateur-journal-quais_liberes": "[dramatic] Nuit blanche à l'Hôtel Bandini. [amused] Les matelots du cargo norvégien sont repartis à la rame, et les Quais dorment tranquilles. [warmly] Les débardeurs, eux, parlent d'une paix qui tiendra.",
     "narrateur-journal-erables_liberes": "[amused] Plus un drift dans les Érables. [calm] Les Chevreuils rangent leurs chars, et le conseil vote la paix jeudi. [wryly] La conseillère Larivière n'a pas voulu commenter.",
+    "narrateur-journal-phare_a_tenu": "[dramatic] Le phare a tenu. [serious] Un chalutier a évité les récifs de justesse, cette nuit ; [warmly] le gardien Saint-Onge remercie un inconnu, et ne veut pas en dire plus.",
+    "narrateur-journal-pointe_liberee": "[warmly] La Pointe signe la paix. [amused] Les Skateux rangent leurs planches, le pont reste ouvert, et monsieur Bilodeau dit qu'il ira enfin à la messe.",
     "narrateur-journal-ecole_rouverte": "[warmly] L'École La Mante rouvre ses portes. [amused] Son vieux maître est revenu de Floride, bronzé, et ses élèves aussi, un par un. [wryly] Premier cours à sept heures : les parents sont invités… les frimeurs aussi.",
     "narrateur-journal-orignal": "[dramatic] Un orignal gagne contre un char. [wryly] La bête est repartie dans le bois de La Pointe ; le char est au garage. [matter-of-fact] Ovila, au phare, le rappelle : un coup de klaxon, et ils s'en vont.",
     "narrateur-journal-lecon_klaxon": "[amused] Le saviez-vous? Un coup de klaxon dans un taxi vous trouve un client. Ça marche aussi avec la pizza… l'ambulance et la remorqueuse.",

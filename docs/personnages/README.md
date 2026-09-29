@@ -61,6 +61,9 @@ Chaque fiche mêle deux sortes de faits.
 | [Cindy Boivin](cindy.md) | `cindy` | devant la cantine des Quais, dans la Brume — jusqu'à q05 (Norbert l'engage à la réception) | Ruby Roo | q05 |
 | [Diane Larivière](diane.md) | `diane` | devant le dépanneur des Érables, après e01 | Riya Rao | e06 · e07 · e10 |
 | [Jo Bellemare](jo.md) | `jo` | devant le dépanneur, entre e01 et e04 — puis chez les Chevreuils | Omar J | e04 · le chef de e10 |
+| [Roméo Bilodeau](bilodeau.md) | `bilodeau` | devant le phare, après p01 | Bill | p02 |
+| [Zacharie « Zed » Lemieux](zed.md) | `zed` | devant le phare, après p02 | Lutz | p04 · p10 · p11 (mené à la Chef) |
+| [Armand, le Trappeur](trappeur.md) | `trappeur` | devant le phare, après p01 | George | p05 |
 | [Victor Tam, « Sifu Tam »](victor-tam.md) | `maitre` | dans sa salle de l'ÉCOLE LA MANTE, dedans — une fois revenu de Floride (après c04) | Luca - Storyteller | c05 (sa poignée de main) · c06 · c07 · c08 |
 
 ⚠️ **Deux voix du compte ne se donnent à personne** : celles du scanner de police (Clara Dupont, la

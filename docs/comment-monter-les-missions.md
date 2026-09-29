@@ -155,7 +155,7 @@ clés :
 | `ramasser` | ramasser un objet | `cible: fuyard` (le rattraper d'abord), `vehicule` |
 | `tuer` | mettre KO `n` membres d'un `groupe` | `groupe`, `n`, `chef`, `arme`, `vie`, `loin` |
 | `survivre` | tenir | `secondes` |
-| `course` | passer des points de passage, chrono | `points` |
+| `course` | passer des points de passage **dans l'ordre** (lue depuis le 29 sept. 2026 : avant, elle avançait dans la même image), le chrono par `chrono_s` ; la flèche vise le point suivant, la ligne compte « 2/4 » ; `a_pied` : au volant, rien ne compte (`p04`) | `points` (des lieux que `resoudre` connaît : un lieu, `zone:`, `pont`, `foire`…), `rayon` (3), `a_pied` |
 | `courses` | `n` courses de taxi (klaxon = client) | `n` |
 | `semer` | redescendre à 0 étoile | `etoiles` (posées au départ), `escorte` |
 | `retourner` | revenir au donneur | — |
@@ -188,8 +188,8 @@ des types, mais des clés qui se posent sur **n'importe quel** objectif —
 reste depuis le 28 sept. 2026), `sans_etoile` (échec `etoile` dès qu'on est vu), `sans_arme`
 (en territoire de gang les mains vides — lue depuis le 29 sept. 2026 : une arme au poing chez un
 gang, c'est l'échec `arme`, et la ligne d'objectif dit « RANGE TON ARME » avant qu'on y entre ;
-`q06`), `contre` (des adversaires sur une `course` — ⚠️ encore lue par personne, et `course`
-non plus). Et deux de plus (28 sept. 2026) : **`remet`** — ce que le
+`q06`), `contre` (des adversaires sur une `course` — ⚠️ encore lue par personne : `p04` bat le temps de
+Zed au lieu de courir contre lui). Et deux de plus (28 sept. 2026) : **`remet`** — ce que le
 donneur te met dans les mains quand l'objectif commence : une arme, chargée à plein et en
 main (`f13`, l'extincteur), ou une tenue, mise au sac (`f10`, la chemise) — et **`tenue`** —
 l'objectif ne s'accomplit qu'en la **portant** : un `aller` arrivé dans le mauvais linge
@@ -204,6 +204,9 @@ Contraintes **jugées** (voir `test_missions.py`) :
   termine ne se finirait pas de nuit sans défoncer la chaîne. Aujourd'hui, **`usine`** (la cour ferme la
   nuit) ne peut être le `lieu` d'aucun objectif — `parler` à quelqu'un qui s'y tient reste permis, mais
   on n'y `aller`/`livrer` pas. Le juge ne tourne pas au banc de la mission : il rougit à la suite complète.
+- ⚠️ **`ou: "quai"` et `ou: "bois"` ne posent rien** : `Histoire.tuileDeQuai` cherche les glyphes `q`/`j`
+  et `tuileDeBois` le glyphe `n`, que la carte n'a plus — ils rendent `null`, et ce qu'on voulait y poser naît sur
+  le joueur (q11, p05 l'ont vu au banc). Nommer un lieu, une `ruelle:` ou une `zone:` à la place.
 - ⚠️ **L'Île-aux-Corneilles (`ile.py`) n'est jamais un `lieu`** : elle ne se rejoint pas à pied, et
   `test_barrieres.py` veut qu'on atteigne à pied depuis la planque tout lieu de mission (et `chapelle`
   n'est pas dans `carte.SPECIAUX`). On y envoie par l'`ou` d'un `tuer` ou d'un `pirater` — `"ou":

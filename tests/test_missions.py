@@ -10,7 +10,7 @@ def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
     assert [p["slug"] for p in missions.PERSONNAGES if p.get("ou")] == [
         "ti_guy", "thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu", "raymonde", "ovila",
         "mo", "fern", "mado", "gege", "xavier", "lachance", "gus", "rosa", "ginette", "gilles",
-        "bonimenteur", "sven", "berube", "mireille", "jeanne", "leo", "norbert", "irene", "maitre", "cindy", "diane", "jo"]
+        "bonimenteur", "sven", "berube", "mireille", "jeanne", "leo", "norbert", "irene", "maitre", "cindy", "diane", "jo", "bilodeau", "zed", "trappeur"]
     # Cindy n'est devant la cantine qu'entre q04 et q05, et q05 l'attend toujours : pas de repos, comme Ti-Guy.
     # Mireille (le DOJO DION) ouvre ses COURS a chaque fois : pas de repos, comme le -2 de Josee.
     # Ti-Guy s'en va apres m1 (il a m1 a donner tant qu'il est la) ; Josee ouvre le marche noir
@@ -19,11 +19,12 @@ def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
                                               "raymonde", "ovila", "mo", "fern", "mado", "gege",
                                               "xavier", "lachance", "gus", "rosa", "ginette", "gilles",
                                               "bonimenteur", "sven", "berube", "jeanne", "leo", "norbert", "irene",
-                                              "maitre", "diane")
+                                              "maitre", "diane", "bilodeau", "zed", "trappeur")
                 for n in (1, 2)
                 # Le vieux maître n'arrive qu'après c04 (`arrive_apres`), bien après m5 : son premier repos ne
                 # s'entend jamais.
-                if (qui, n) not in (("josee", 2), ("maitre", 1), ("diane", 1))]
+                if (qui, n) not in (("josee", 2), ("maitre", 1), ("diane", 1), ("bilodeau", 1), ("zed", 1),
+                                           ("trappeur", 1))]
     repos = missions.repliques_de_repos()
     assert [r["slug"] for r in repos] == attendus, "quarante-sept voix, pas quarante-huit"
     # ⚠️ Le même texte pour tous — sauf qui a le sien (`repos` : l'île, loin du Faubourg).
@@ -108,6 +109,10 @@ def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
                 amarre = o["lieu"].startswith("amarrage:") and o["lieu"].split(":", 1)[1] in lieux
                 assert o["lieu"] in lieux or amarre or o["lieu"].startswith(("mouillage:", "traversier:")), \
                     f"{m['slug']} : lieu inconnu {o['lieu']}"
+            # `course` (p04) : ses points, des lieux que `Histoire.resoudre` connaît.
+            for point in o.get("points", []):
+                assert point in lieux or point in ("pont", "bois", "foire") or point.startswith(("zone:", "rampe:")), \
+                    f"{m['slug']} : point de course inconnu {point}"
             for etape in o.get("par", []):
                 assert etape in lieux, f"{m['slug']} : lieu du détour inconnu {etape}"
             if o.get("ou", "").startswith("zone:"):

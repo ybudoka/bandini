@@ -154,6 +154,15 @@ SPECIALES: list[dict] = [
      "texte": "LES CHEVREUILS RANGENT LEURS CHARS. LE CONSEIL VOTE LA PAIX.",
      "lu": "Plus un drift dans les Érables. Les Chevreuils rangent leurs chars, et le conseil vote la paix jeudi. "
            "La conseillère Larivière n'a pas voulu commenter."},
+    # Le phare a tenu (p09) et La Pointe libérée (p11), 29 sept. 2026.
+    {"slug": "phare_a_tenu", "titre": "LE PHARE A TENU",
+     "texte": "UN CHALUTIER ÉVITE LES RÉCIFS DE JUSTESSE. LE GARDIEN REMERCIE UN INCONNU.",
+     "lu": "Le phare a tenu. Un chalutier a évité les récifs de justesse, cette nuit ; le gardien Saint-Onge remercie "
+           "un inconnu, et ne veut pas en dire plus."},
+    {"slug": "pointe_liberee", "titre": "LA POINTE SIGNE LA PAIX",
+     "texte": "LES SKATEUX RANGENT LEURS PLANCHES. LE PONT RESTE OUVERT.",
+     "lu": "La Pointe signe la paix. Les Skateux rangent leurs planches, le pont reste ouvert, et monsieur Bilodeau "
+           "dit qu'il ira enfin à la messe."},
 ]
 
 
