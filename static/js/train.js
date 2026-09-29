@@ -195,31 +195,94 @@ const Train = (function () {
     return k;
   }
 
-  /** Les barrières d'un passage : un poteau de chaque côté de la rue, ses deux feux rouges qui alternent, et le
-      bras rayé qui s'abaisse sur la file qui arrive (au sud pour ceux qui montent, au nord pour ceux qui descendent). */
-  function dessinerPassages(ctx, cx, cy, y0) {
-    const d = donnees(), temps = Autobus.tempsDeLaPartie();
+  /** Les barrières d'un passage, EN VOLUME (Martin, 29 sept. 2026 : « il faut que ce soit 2.5D ») : un poteau
+      de chaque côté de la rue, debout — son mât, sa croix de Saint-André, ses deux feux rouges qui alternent —, et
+      le bras rayé qui PIVOTE sur la file qui arrive (au sud pour ceux qui montent, au nord pour ceux qui
+      descendent) : dressé quand le passage est ouvert, en arc pendant qu'il s'abaisse, à hauteur de capot une fois
+      baissé, un moignon penché quand on l'a défoncé. La hauteur `z` se peint à `y - z`, comme le viaduc ; l'ombre
+      tombe au sud-est, comme celle des chars. Rend, pour chaque poteau : son pied au sol en px d'écran, le sens du
+      bras, son angle (0 couché, π/2 dressé), sa longueur, et l'état des feux. */
+  const HAUT_MAT = 24, HAUT_BRAS = 7, HAUT_FEUX = 15, OMBRE = 0.35, PIVOT = 7;   // la charnière du bras, à côté du mât
+  function barrieres(cx, cy, y0) {
+    const d = donnees(), temps = Autobus.tempsDeLaPartie(), out = [];
     for (let i = 0; i < d.passages.length; i++) {
       const p = d.passages[i], xa = p[0] * TT - cx, xb = (p[1] + 1) * TT - cx;
-      if (xb < -40 || xa > VW + 40) continue;
+      if (xb < -60 || xa > VW + 60) continue;
       const ferme = passageFerme(i, temps), casse = brisee(i);
       const bas = ferme ? fermeDepuis(i, temps, 45) / 45 : 0;
-      const long = xb - xa;
-      // [x du poteau, y du bras, sens du bras]
-      for (const [px, yb, dir] of [[xb + 2, y0 + TT + 3, -1], [xa - 4, y0 - 5, 1]]) {
-        ctx.fillStyle = '#2d2d30'; ctx.fillRect(px, yb - 3, 3, 6);                     // le poteau
-        const allume = ferme && (Math.floor(temps / 30) % 2 === 0);
-        ctx.fillStyle = allume ? '#ff3b2f' : '#5a1d1a'; ctx.fillRect(px - 1, yb - 5, 2, 2);
-        ctx.fillStyle = ferme && !allume ? '#ff3b2f' : '#5a1d1a'; ctx.fillRect(px + 2, yb - 5, 2, 2);
-        const bras = Math.round((casse ? 0.3 : bas) * (long * 0.6));
-        for (let k = 0; k < bras; k++) {
-          ctx.fillStyle = Math.floor(k / 3) % 2 ? '#e6e6e6' : '#c8261e';
-          ctx.fillRect(dir < 0 ? px - 1 - k : px + 3 + k, yb, 1, 2);
-        }
-        if (!bras) { ctx.fillStyle = '#c8261e'; ctx.fillRect(px, yb - 1, 3, 1); }     // levé : le bras en l'air
+      const allume = ferme && (Math.floor(temps / 30) % 2 === 0);
+      const long = (xb - xa) * 0.6;
+      // [x du pied, y du pied, sens du bras] — le pied au sud-est, sur le trottoir est ; l'autre au nord-ouest.
+      for (const [fx, fy, dir] of [[xb + 3, y0 + TT + 7, -1], [xa - 4, y0 - 5, 1]]) {
+        const angle = casse ? -0.45 : (1 - bas) * Math.PI / 2;
+        out.push({ fx: fx, fy: fy, dir: dir, angle: angle, long: casse ? long * 0.3 : long,
+                   feux: [ferme && allume, ferme && !allume], ferme: ferme, casse: casse });
       }
-      B.stats.rects += 14;
     }
+    return out;
+  }
+  /** Les points du bras, de la charnière au bout : `[x, y d'écran, z]`, un par pixel de longueur. */
+  function pointsDuBras(b) {
+    const pts = [], c = Math.cos(b.angle), s = Math.sin(b.angle);
+    for (let k = 0; k < b.long; k++) {
+      const x = b.fx + b.dir * (PIVOT + k * c), z = HAUT_BRAS + k * s;
+      pts.push([Math.round(x), Math.round(b.fy - z), z, k]);
+    }
+    return pts;
+  }
+  /** Au sol, sous les gens : l'ombre du mât et celle du bras, projetées au sud-est. */
+  function dessinerOmbresDesBarrieres(ctx, bs) {
+    ctx.fillStyle = 'rgba(8,8,14,0.30)';
+    for (const b of bs) {
+      for (let z = 0; z < HAUT_MAT; z += 1) ctx.fillRect(Math.round(b.fx + z * OMBRE), Math.round(b.fy + z * OMBRE * 0.5), 2, 1);
+      for (const p of pointsDuBras(b)) {
+        if (p[2] < 0) continue;
+        ctx.fillRect(Math.round(p[0] + p[2] * OMBRE), Math.round(b.fy + p[2] * OMBRE * 0.5) + 1, 1, 2);
+      }
+      B.stats.rects += 2;
+    }
+  }
+  /** Un poteau et son bras, triés avec les gens et les chars par leur pied. */
+  function peindreBarriere(ctx, b) {
+    const fx = b.fx, fy = b.fy;
+    ctx.fillStyle = '#5f5b55'; ctx.fillRect(fx - 2, fy - 1, 6, 3);                        // le socle de béton
+    ctx.fillStyle = '#8a857d'; ctx.fillRect(fx - 2, fy - 1, 6, 1);
+    ctx.fillStyle = '#b9bec4'; ctx.fillRect(fx, fy - HAUT_MAT, 1, HAUT_MAT);               // le mât : le flanc au soleil
+    ctx.fillStyle = '#6b7077'; ctx.fillRect(fx + 1, fy - HAUT_MAT, 1, HAUT_MAT);           // et l'autre
+    // La croix de Saint-André : deux planches blanches bordées de rouge, en X.
+    const cy = fy - HAUT_MAT + 1;
+    for (let k = -3; k <= 3; k++) {
+      const y1 = cy + Math.round((k + 3) * 4 / 6);
+      ctx.fillStyle = Math.abs(k) === 3 ? '#c8261e' : '#f1efe9';
+      ctx.fillRect(fx + k, y1, 2, 1); ctx.fillRect(fx + k, cy + 4 - (y1 - cy), 2, 1);
+    }
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(fx - 3, cy + 5, 8, 1);
+    // Les deux feux sur leur traverse, chacun sa visière ; allumé, il éclaire autour de lui.
+    const ly = fy - HAUT_FEUX;
+    ctx.fillStyle = '#1b1b1e'; ctx.fillRect(fx - 4, ly, 10, 3);
+    for (let n = 0; n < 2; n++) {
+      const lx = n ? fx + 3 : fx - 3, on = b.feux[n];
+      if (on) { ctx.fillStyle = 'rgba(255,70,40,0.28)'; ctx.fillRect(lx - 2, ly - 1, 6, 5); }
+      ctx.fillStyle = on ? '#ff3b2f' : '#5a1d1a'; ctx.fillRect(lx, ly + 1, 2, 2);
+      if (on) { ctx.fillStyle = '#ffd0c0'; ctx.fillRect(lx, ly + 1, 1, 1); }
+      ctx.fillStyle = '#0c0c0e'; ctx.fillRect(lx - 1, ly - 1, 4, 1);                      // la visière
+    }
+    // Le boîtier de la barrière, sur son socle à côté du mât, son contrepoids de l'autre côté de la charnière ;
+    // puis le bras, rayé rouge et blanc, sa tranche dans l'ombre.
+    const px = fx + b.dir * PIVOT;
+    ctx.fillStyle = '#5f5b55'; ctx.fillRect(px - 2, fy - 1, 5, 3);
+    ctx.fillStyle = '#d8d4cc'; ctx.fillRect(px - 1, fy - HAUT_BRAS - 1, 1, HAUT_BRAS + 1);
+    ctx.fillStyle = '#a19c93'; ctx.fillRect(px, fy - HAUT_BRAS - 1, 2, HAUT_BRAS + 1);
+    ctx.fillStyle = '#2d2d30'; ctx.fillRect(px - b.dir * 3 - (b.dir > 0 ? 1 : 0), fy - HAUT_BRAS - 2, 2, 3);
+    const couche = Math.abs(Math.cos(b.angle)) > 0.7;
+    for (const p of pointsDuBras(b)) {
+      const blanc = Math.floor(p[3] / 4) % 2 === 1;
+      ctx.fillStyle = blanc ? '#ececec' : '#c8261e'; ctx.fillRect(p[0], p[1], 1, 1);
+      ctx.fillStyle = blanc ? '#9c9c9c' : '#7e1812';
+      if (couche) ctx.fillRect(p[0], p[1] + 1, 1, 1); else ctx.fillRect(p[0] + 1, p[1], 1, 1);
+    }
+    if (b.casse) { ctx.fillStyle = '#ececec'; const q = pointsDuBras(b).pop(); if (q) ctx.fillRect(q[0], q[1] - 1, 1, 1); }
+    B.stats.rects += 16;
   }
 
   // ---------------------------------------------------------------- les piliers et les rampes, solides
@@ -388,18 +451,68 @@ const Train = (function () {
         continue;
       }
       if (d.passages.some(function (q) { return tx >= q[0] && tx <= q[1]; })) {
-        ctx.fillStyle = '#4b4a48'; ctx.fillRect(x, y0 + 1, TT, 14);             // le passage : un tablier de caoutchouc
+        // Le passage : un tablier de caoutchouc AU RAS de la rue, les rails noyés dedans, leur ornière sombre.
+        ctx.fillStyle = '#4b4a48'; ctx.fillRect(x, y0 + 1, TT, 14);
         ctx.fillStyle = '#3c3b39'; ctx.fillRect(x, y0 + 1, TT, 1); ctx.fillRect(x, y0 + 14, TT, 1);
-      } else {
-        ctx.fillStyle = '#7d7466'; ctx.fillRect(x, y0 + 1, TT, 14);
-        ctx.fillStyle = '#5b3f28';
-        for (let k = 1; k < TT; k += 4) ctx.fillRect(x + k, y0 + 2, 2, 12);
+        ctx.fillStyle = '#2a2927'; ctx.fillRect(x, y0 + 4, TT, 1); ctx.fillRect(x, y0 + 11, TT, 1);
+        ctx.fillStyle = '#b9bcc1'; ctx.fillRect(x, y0 + 3, TT, 1); ctx.fillRect(x, y0 + 10, TT, 1);
+        continue;
       }
-      ctx.fillStyle = '#c9ccd1'; ctx.fillRect(x, y0 + 3, TT, 1); ctx.fillRect(x, y0 + 11, TT, 1);
-      ctx.fillStyle = '#8b9097'; ctx.fillRect(x, y0 + 4, TT, 1); ctx.fillRect(x, y0 + 12, TT, 1);
+      // Au sol, EN VOLUME : un talus de ballast (son dessus, son flanc sud dans l'ombre, l'ombre au pied), les
+      // traverses posées dessus, et les rails debout sur elles, chacun son ombre au sud.
+      ctx.fillStyle = '#8a8172'; ctx.fillRect(x, y0, TT, 1);                     // l'arête nord du talus, au soleil
+      ctx.fillStyle = '#7d7466'; ctx.fillRect(x, y0 + 1, TT, 12);
+      ctx.fillStyle = '#665e52'; ctx.fillRect(x, y0 + 13, TT, 2);                // le flanc sud
+      ctx.fillStyle = 'rgba(8,8,14,0.22)'; ctx.fillRect(x, y0 + 15, TT, 2);     // l'ombre du talus
+      ctx.fillStyle = '#948a7b'; ctx.fillRect(x + (tx * 7) % 13, y0 + 6, 1, 1); ctx.fillRect(x + (tx * 5) % 11 + 2, y0 + 12, 1, 1);
+      for (let k = 1; k < TT; k += 4) {
+        ctx.fillStyle = '#6e4d31'; ctx.fillRect(x + k, y0 + 2, 1, 11);         // la traverse : le chant au soleil
+        ctx.fillStyle = '#4e3520'; ctx.fillRect(x + k + 1, y0 + 2, 1, 11);
+        ctx.fillStyle = 'rgba(8,8,14,0.30)'; ctx.fillRect(x + k, y0 + 13, 2, 1);
+      }
+      ctx.fillStyle = '#dfe2e6'; ctx.fillRect(x, y0 + 3, TT, 1); ctx.fillRect(x, y0 + 10, TT, 1);   // le champignon
+      ctx.fillStyle = '#7b8088'; ctx.fillRect(x, y0 + 4, TT, 1); ctx.fillRect(x, y0 + 11, TT, 1);   // l'âme
+      ctx.fillStyle = 'rgba(8,8,14,0.35)'; ctx.fillRect(x, y0 + 5, TT, 1); ctx.fillRect(x, y0 + 12, TT, 1);
     }
-    B.stats.rects += (t1 - t0 + 1) * 6;
-    dessinerPassages(ctx, cx, cy, y0);
+    B.stats.rects += (t1 - t0 + 1) * 17;
+    dessinerBouche(ctx, d.tunnel * TT - cx, y0);
+    dessinerOmbresDesBarrieres(ctx, barrieres(cx, cy, y0));
+  }
+
+  /** La bouche du tunnel, AU SOL : le noir qui s'enfonce sous la montagne, et les rails qui s'y perdent. Le
+      cadre de béton se peint par-dessus, en haut (`dessinerPortail`).
+      ⚠️ LA HAUTEUR SE PEINT AU NORD (`y - z`, comme le viaduc) : la voûte d'un tunnel où passe une locomotive
+      de 20 px de haut monte donc bien au-dessus de la voie à l'écran — une ouverture centrée sur les rails
+      laissait le toit du train dépasser sur la roche. L'ouverture va du bord sud du ballast (le sol) jusqu'à
+      la voûte, arrondie au nord. */
+  const BOUCHE = 10, HAUT_BOUCHE = 24;
+  function bordsDeLaBouche(y0) { return [y0 - HAUT_BOUCHE, y0 + 16]; }
+  /** Les colonnes de l'ouverture : pour chaque rangée d'écran, sa largeur (la voûte arrondie au nord). */
+  function largeurDeBouche(y, y0) {
+    const b = bordsDeLaBouche(y0), r = BOUCHE / 2;
+    if (y < b[0] || y > b[1]) return 0;
+    const dy = b[0] + r - y;
+    if (dy <= 0) return BOUCHE;
+    return Math.max(0, Math.round(2 * Math.sqrt(Math.max(0, r * r - dy * dy))));
+  }
+  function dessinerBouche(ctx, mx, y0) {
+    if (mx < -40 || mx > VW + 40) return;
+    const b = bordsDeLaBouche(y0);
+    for (let y = b[0]; y <= b[1]; y++) {
+      const l = largeurDeBouche(y, y0);
+      if (!l) continue;
+      const x0 = mx + Math.round((BOUCHE - l) / 2);
+      for (let c = 0; c < l; c++) {
+        const f = (x0 + c - mx) / (BOUCHE - 1), sol = y > y0 ? 6 : 0;   // le sol, un peu moins noir que la voûte
+        ctx.fillStyle = 'rgb(' + Math.round(30 + sol - 24 * f) + ',' + Math.round(29 + sol - 23 * f) + ',' + Math.round(34 + sol - 26 * f) + ')';
+        ctx.fillRect(x0 + c, y, 1, 1);
+      }
+    }
+    for (let c = 0; c < 7; c++) {
+      ctx.fillStyle = 'rgba(223,226,230,' + (0.65 * (1 - c / 7)).toFixed(2) + ')';
+      ctx.fillRect(mx + c, y0 + 3, 1, 1); ctx.fillRect(mx + c, y0 + 10, 1, 1);
+    }
+    B.stats.rects += 60;
   }
 
   const ID_TRI = 1e9 + 900;
@@ -407,6 +520,14 @@ const Train = (function () {
   function ajouterVisibles(visibles, cx, cy) {
     const d = donnees();
     if (!d || !enVille()) return;
+    // Les poteaux des passages, debout : triés par leur pied, comme un lampadaire.
+    const y0 = d.rang * TT - Math.round(cy);
+    if (y0 < VH + 60 && y0 > -80) {
+      barrieres(Math.round(cx), Math.round(cy), y0).forEach(function (b, k) {
+        visibles.push({ id: ID_TRI + 10 + k, vivant: true, x: b.fx + Math.round(cx), y: b.fy + Math.round(cy),
+                        peindreFoire: function (ctx) { peindreBarriere(ctx, b); } });
+      });
+    }
     const e = etat(Autobus.tempsDeLaPartie());
     if (!e) return;
     const fin = d.tunnel * TT;
@@ -450,14 +571,51 @@ const Train = (function () {
         if (surLeViaduc(m) && w.b >= cx - 40 && w.a <= cx + VW + 40) peindreVoiture(ctx, voitureAPeindre(k, w, e, hauteur(m)), cx, cy, fin);
       });
     }
-    // Le portail : un arc de béton dans la falaise, et le noir du tunnel.
-    const px = fin - cx;
-    if (px > -40 && px < VW + 40) {
-      ctx.fillStyle = '#8c8880'; ctx.fillRect(px - 6, y0 - 12, 14, TT + 24);
-      ctx.fillStyle = '#6f6b64'; ctx.fillRect(px - 6, y0 - 12, 14, 3); ctx.fillRect(px - 6, y0 + TT + 9, 14, 3);
-      ctx.fillStyle = '#121214'; ctx.fillRect(px - 2, y0 - 2, 10, TT + 4);
-      B.stats.rects += 5;
+    dessinerPortail(ctx, fin - cx, y0);
+  }
+
+  /** Le portail, EN VOLUME : un cadre de béton encastré dans la falaise autour de la bouche — son intrados dans
+      l'ombre, son arête au soleil —, le chaperon du mur de tête posé sur la pente, deux murs en aile pleins qui
+      retiennent la roche (celui du nord au soleil, celui du sud montre sa face), et l'ombre du tout au sud-est.
+      Tout ce qui passe à l'est de sa face est sous la montagne (les voitures sont coupées là, `peindreVoiture`). */
+  function dessinerPortail(ctx, mx, y0) {
+    if (mx < -60 || mx > VW + 60) return;
+    const b = bordsDeLaBouche(y0), n = b[0], s = b[1], E = BOUCHE;
+    // L'ombre du portail sur la pente, au sud-est.
+    ctx.fillStyle = 'rgba(8,8,14,0.32)';
+    ctx.fillRect(mx + E + 9, n - 8, 3, s - n + 18); ctx.fillRect(mx, s + 9, E + 12, 2);
+    // Les murs en aile : au nord, un pan qui monte vers la crête (son dessus au soleil) ; au sud, la même pente,
+    // dont on voit la face.
+    for (let c = -3; c < E + 9; c++) {
+      const h = Math.max(0, Math.round((c + 3) * 0.55));
+      ctx.fillStyle = '#b3ada2'; ctx.fillRect(mx + c, n - 4 - h, 1, h + 1);
+      ctx.fillStyle = '#d0cabe'; ctx.fillRect(mx + c, n - 5 - h, 1, 1);
+      const hs = Math.max(0, Math.round((c + 3) * 0.4));
+      ctx.fillStyle = '#9a958c'; ctx.fillRect(mx + c, s + 1, 1, 2);
+      ctx.fillStyle = '#6f6b64'; ctx.fillRect(mx + c, s + 3, 1, hs + 2);
+      ctx.fillStyle = '#4f4c47'; ctx.fillRect(mx + c, s + 5 + hs, 1, 1);
     }
+    // Le cadre : les deux piédroits et la voûte, trois pixels de béton autour de l'ouverture — l'intrados sombre
+    // contre le noir, l'arête claire dehors.
+    for (let y = n - 3; y <= s; y++) {
+      const l = largeurDeBouche(y, y0);
+      const x0 = l ? mx + Math.round((E - l) / 2) : mx + E / 2, x1 = l ? x0 + l - 1 : x0 - 1;
+      const cadre = function (x, r) { ctx.fillRect(x, y, 1, 1); };
+      for (let r = 1; r <= 3; r++) {
+        if (x0 - r < mx - 3) continue;
+        ctx.fillStyle = ['#6a665f', '#a8a397', '#c6c0b4'][r - 1]; cadre(x0 - r, r);
+        ctx.fillStyle = ['#46433e', '#78736b', '#8c8880'][r - 1]; cadre(x1 + r, r);
+      }
+      if (!l) { ctx.fillStyle = y === n - 3 ? '#c6c0b4' : '#a8a397'; ctx.fillRect(mx - 3, y, E + 6, 1); }
+    }
+    ctx.fillStyle = '#a8a397'; ctx.fillRect(mx - 3, n - 3, 3, n + BOUCHE / 2 - (n - 3));   // les écoinçons de la voûte
+    ctx.fillRect(mx + E, n - 3, 3, n + BOUCHE / 2 - (n - 3));
+    ctx.fillStyle = '#d9d3c6'; ctx.fillRect(mx + E / 2 - 1, n - 3, 2, 3);                  // la clé de voûte
+    // Le chaperon du mur de tête : une dalle posée sur la pente, derrière le cadre.
+    ctx.fillStyle = '#9d988f'; ctx.fillRect(mx + E + 3, n - 10, 6, s - n + 16);
+    ctx.fillStyle = '#c4beb2'; ctx.fillRect(mx + E + 3, n - 10, 6, 1); ctx.fillRect(mx + E + 3, n - 10, 1, s - n + 16);
+    ctx.fillStyle = '#5f5b55'; ctx.fillRect(mx + E + 8, n - 9, 1, s - n + 15); ctx.fillRect(mx + E + 3, s + 5, 6, 1);
+    B.stats.rects += 60;
   }
 
   /** La grande carte : la voie pleine au sol, doublée sur le viaduc, en pointillé sous la montagne ; les gares
@@ -484,7 +642,7 @@ const Train = (function () {
 
   return { donnees: donnees, etat: etat, etendue: etendue, maj: maj, profil: profil,
            passageFerme: passageFerme, signalDevant: signalDevant, brisee: brisee, ligneHorsDeLaVoie: ligneHorsDeLaVoie, engage: engage,
-           surLeViaduc: surLeViaduc, auSol: auSol, hauteur: hauteur,
+           surLeViaduc: surLeViaduc, auSol: auSol, hauteur: hauteur, barrieres: barrieres,
            dessinerVoie: dessinerVoie, ajouterVisibles: ajouterVisibles, dessinerHaut: dessinerHaut,
            dessinerSurLaCarte: dessinerSurLaCarte };
 })();

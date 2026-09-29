@@ -1888,11 +1888,26 @@ const Monde = (function () {
     return m | (croise ? 16 : 0) | ((hash2(tx, ty) % USURES_DE_SOL) << 5);
   }
 
+  /** La variante d'une tuile de FALAISE (`C`) : de quel cote est le bas (ce qui
+      n'est ni falaise ni montagne : la ville, le large) et de quel cote est le
+      haut (la montagne `M`) — 1 nord, 2 est, 4 sud, 8 ouest, le bas aux bits 0 a
+      3, le haut aux bits 4 a 7 —, et son grain (bits 8 et 9). Martin (29 sept.
+      2026) : « il faut que ce soit 2.5D » — une paroi qui ne sait pas ou est sa
+      crete se peint en papier peint strie, comme une facade couchee. */
+  function varianteDeFalaise(tx, ty) {
+    const bas = function (x, y) { const g = glyphe(x, y); return g !== 'C' && g !== 'M'; };
+    const haut = function (x, y) { return glyphe(x, y) === 'M'; };
+    const b = (bas(tx, ty - 1) ? 1 : 0) | (bas(tx + 1, ty) ? 2 : 0) | (bas(tx, ty + 1) ? 4 : 0) | (bas(tx - 1, ty) ? 8 : 0);
+    const h = (haut(tx, ty - 1) ? 1 : 0) | (haut(tx + 1, ty) ? 2 : 0) | (haut(tx, ty + 1) ? 4 : 0) | (haut(tx - 1, ty) ? 8 : 0);
+    return b | (h << 4) | ((hash2(tx, ty) % 4) << 8);
+  }
+
   /** La variante d'une tuile : ce que son peintre a besoin de savoir de ses
       voisines. Passage pieton, case de stationnement, rampe et cloture en ont
       une ; les autres se contentent d'un bruit stable. */
   function varianteDeTuile(g, tx, ty) {
     if (CASES[g]) return varianteDeCase(g, tx, ty);
+    if (g === 'C') return varianteDeFalaise(tx, ty);
     if (g === 'T') return varianteDeRail(tx, ty);
     if (g === 'p') return hash2(tx, ty) % USURES;
     if (SOLS_D_ILOT[g]) return varianteDeSol(g, tx, ty);

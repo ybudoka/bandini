@@ -396,3 +396,64 @@ def test_le_train_se_peint_comme_les_autres_vehicules(banc):
     assert r["machines"] == [True, True]
     for x in ("70.5", "200.5"):
         assert r["vus"].get(x + " locomotive") == 1 and r["vus"].get(x + " voiture_train", 0) >= 2, r["vus"]
+
+
+def test_la_barriere_pivote_en_volume(banc):
+    # Martin (29 sept. 2026) : « il faut que ce soit 2.5D ». Le bras ne glisse plus au sol : il se DRESSE quand
+    # le passage est ouvert, se couche à hauteur de capot une fois baissé, et penche, cassé, sous le niveau.
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        %s
+        const t = avantLePassage(L, 1, 60), d = L.Train.donnees();
+        presDe(L, d.passages[1][0], d.rang + 3);
+        const angles = function (tt) {
+          aLHeure(L, tt);
+          const y0 = d.rang * L.TT - Math.round(L.B.cam.y);
+          return L.Train.barrieres(Math.round(L.B.cam.x), Math.round(L.B.cam.y), y0)
+            .filter(function (b) { return Math.abs(b.fx + L.B.cam.x - (d.passages[1][0] + 1) * L.TT) < 5 * L.TT; })
+            .map(function (b) { return Math.round(b.angle * 100) / 100; });
+        };
+        return { ouvert: angles(t), baisse: angles(t + 60 + 50), mi: angles(t + 60 + 22) };
+    }""" % ATTENTE)
+    dresse = round(3.14159265 / 2, 2)
+    assert r["ouvert"] == [dresse, dresse], r
+    assert r["baisse"] == [0, 0], r
+    assert all(0 < a < dresse for a in r["mi"]), r
+
+
+def test_les_poteaux_du_passage_se_trient_avec_les_gens(banc):
+    # Un poteau debout passe devant qui est au nord de son pied, derrière qui est au sud : il entre dans le tri des
+    # visibles par son pied, même quand le train est loin (sous la montagne ou hors carte).
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        %s
+        const d = L.Train.donnees();
+        let t = 0;
+        while (L.Train.etat(t)) t += 60;
+        aLHeure(L, t);
+        presDe(L, d.passages[1][0], d.rang + 3);
+        const vis = [];
+        L.Train.ajouterVisibles(vis, L.B.cam.x, L.B.cam.y);
+        const poteaux = vis.filter(function (v) { return v.peindreFoire; });
+        return { n: poteaux.length, ys: poteaux.map(function (v) { return Math.round(v.y - d.rang * L.TT); }).sort(function (a, b) { return a - b; }) };
+    }""" % HEURE)
+    assert r["n"] >= 2, r
+    assert r["ys"][0] < 0 and r["ys"][-1] > 16, r       # l'un au nord de la voie, l'autre au sud
+
+
+def test_la_falaise_sait_ou_est_sa_crete(banc):
+    # La paroi se peint du pied à la crête : `varianteDeFalaise` lui dit où est le bas (la ville, le large) et où
+    # est le haut (la montagne). Dans la chaîne de l'est, la ville est à l'ouest de la première colonne et la
+    # montagne à l'est de la dernière ; au large, l'eau est au nord.
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const M = L.Monde, x = L.Train.donnees().tunnel, c = L.B.defs.carte, rows = c.sol;
+        let sud = null;
+        for (let y = c.hauteur - 1; y > 0 && !sud; y--) for (let xx = 0; xx < c.largeur; xx++)
+          if (rows[y][xx] === 'C' && rows[y - 1][xx] === '~') { sud = [xx, y]; break; }
+        return { pied: M.varianteDeTuile('C', x, 40), crete: M.varianteDeTuile('C', x + 1, 40),
+                 sud: sud && M.varianteDeTuile('C', sud[0], sud[1]) };
+    }""")
+    assert r["pied"] & 8 and not (r["pied"] >> 4) & 2, r          # le bas à l'ouest, pas de montagne à l'est
+    assert (r["crete"] >> 4) & 2 and not r["crete"] & 8, r        # la montagne à l'est
+    assert r["sud"] is not None and r["sud"] & 1, r                # l'eau au nord

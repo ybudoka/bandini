@@ -3111,6 +3111,109 @@ const TUILES = (function () {
     }
   }
 
+  /* --- La falaise, en paroi (Martin, 29 sept. 2026 : « il faut que ce soit 2.5D »)
+
+     Elle se peignait en strates horizontales d'un bout a l'autre : une facade
+     couchee, la meme au pied qu'a la crete, et dans la chaine de l'est (une
+     bande qui court du nord au sud) elle se lisait comme un tapis. Une paroi a
+     un BAS et un HAUT : `varianteDeFalaise` (monde.js) lui dit ou est le bas
+     (la ville, le large) et ou est le haut (la montagne). La roche s'eclaircit
+     du pied a la crete, en cinq tons tramés ; des aretes descendent la pente,
+     leur flanc nord-ouest au soleil (la lumiere de toute la ville), l'autre
+     dans l'ombre ; la crete est une levre claire soulignee d'un surplomb noir,
+     et le pied porte ses eboulis. ⚠️ Toute la variete vient encore du bruit
+     (`bruit(v, i)`) : pas une forme fixe qu'on reconnaitrait d'une tuile a
+     l'autre sur une chaine de 414 rangées. */
+  const ROCHE = ['#2f2924', '#3d362f', '#4b433a', '#5b5247', '#6c6256', '#7f7466'];
+  function falaise(ctx, v, T) {
+    const b = v & 15, h = (v >> 4) & 15;
+    // Le sens de la pente : vers ou l'on descend (le pied).
+    let d = 8;
+    if (b & 8 || h & 2) d = 8; else if (b & 2 || h & 8) d = 2; else if (b & 1 || h & 4) d = 1; else if (b & 4 || h & 1) d = 4;
+    const oppose = { 1: 4, 2: 8, 4: 1, 8: 2 }[d];
+    const pied = !!(b & d), crete = !!(h & oppose);
+    const horiz = d === 2 || d === 8;
+    // ⚠️ UNE PAROI TOURNÉE VERS LE NORD NE SE VOIT PAS : on regarde la ville du sud, d'en haut. Les falaises du
+    // large (l'eau au nord, la montagne au sud) ne montrent donc que le REBORD du plateau — sa roche, et la levre
+    // claire au bord de l'eau, soulignee du noir de la chute. Les y peindre en paroi herissee, c'etait voir a
+    // travers la montagne.
+    if (d === 1) {
+      plein(ctx, '#4a433c', T);
+      points(ctx, v, T, '#5c5349', 14, 0);
+      points(ctx, v, T, '#332e29', 12, 70);
+      for (let x = 0; x < T; x++) {
+        const e = 1 + (bruit(v, 700 + (x >> 1)) > 0.5 ? 1 : 0);
+        ctx.fillStyle = '#1f1b17'; ctx.fillRect(x, 0, 1, 1);
+        ctx.fillStyle = '#a3967f'; ctx.fillRect(x, 1, 1, e);
+        ctx.fillStyle = '#7f7466'; ctx.fillRect(x, 1 + e, 1, 1);
+        ctx.fillStyle = '#3d362f'; ctx.fillRect(x, 2 + e, 1, 1);
+      }
+      for (let c = 0; c < 3; c++) {                          // quelques blocs au bord, leur eclat, leur ombre
+        const x = Math.floor(bruit(v, 720 + c) * (T - 3)), y = 5 + Math.floor(bruit(v, 730 + c) * (T - 8));
+        ctx.fillStyle = '#6c6256'; ctx.fillRect(x, y, 2, 2);
+        ctx.fillStyle = '#8d816f'; ctx.fillRect(x, y, 1, 1);
+        ctx.fillStyle = '#2f2924'; ctx.fillRect(x + 1, y + 2, 2, 1); ctx.fillRect(x + 2, y + 1, 1, 1);
+      }
+      return;
+    }
+    // u : 0 au pied, 1 a la crete ; s : la position le long de la paroi.
+    const u = function (x, y) {
+      const q = d === 8 ? (x + 0.5) / T : d === 2 ? 1 - (x + 0.5) / T : d === 1 ? (y + 0.5) / T : 1 - (y + 0.5) / T;
+      return pied && crete ? q : pied ? q * 0.5 : crete ? 0.5 + q * 0.5 : 0.25 + q * 0.5;
+    };
+    const xy = function (s, k) {        // (le long, dans la pente en px depuis le pied) -> (x, y)
+      return d === 8 ? [k, s] : d === 2 ? [T - 1 - k, s] : d === 1 ? [s, k] : [s, T - 1 - k];
+    };
+    const ton = function (x, y) {
+      return Math.max(0, Math.min(ROCHE.length - 1, Math.floor(u(x, y) * 4.6 + 0.6 + (bruit(v, x * 17 + y) - 0.5) * 1.1)));
+    };
+    for (let y = 0; y < T; y++) {
+      for (let x = 0; x < T; x++) { ctx.fillStyle = ROCHE[ton(x, y)]; ctx.fillRect(x, y, 1, 1); }
+    }
+    // Les corniches : elles descendent la pente, chacune sa longueur, et derivent d'un cran a mi-chemin. Le
+    // rebord au soleil (nord-ouest), l'ombre qu'il jette dessous, epaisse.
+    for (let r = 0; r < 3; r++) {
+      const s0 = Math.floor(bruit(v, 300 + r) * (T - 3)) + r * 2 % T;
+      const k0 = Math.floor(bruit(v, 310 + r) * 5), k1 = k0 + 7 + Math.floor(bruit(v, 320 + r) * (T - 7 - k0));
+      const mi = k0 + Math.floor((k1 - k0) * bruit(v, 330 + r)), cran = bruit(v, 340 + r) > 0.5 ? 1 : -1;
+      for (let k = k0; k < Math.min(T, k1); k++) {
+        const sk = (s0 + (k >= mi ? cran : 0) + T) % T;
+        const p = xy(sk, k), t = ton(p[0], p[1]);
+        ctx.fillStyle = ROCHE[Math.min(ROCHE.length - 1, t + 2)]; ctx.fillRect(p[0], p[1], 1, 1);
+        for (let o = 1; o <= 2; o++) {
+          if (sk + o >= T) break;
+          const q = xy(sk + o, k); ctx.fillStyle = ROCHE[Math.max(0, t - 3 + o)]; ctx.fillRect(q[0], q[1], 1, 1);
+        }
+      }
+    }
+    // La crete : une levre claire et pleine, dentelee d'un pixel, et le surplomb noir continu juste dessous.
+    if (crete) {
+      for (let s = 0; s < T; s++) {
+        const e = 2 + (bruit(v, 500 + (s >> 1)) > 0.5 ? 1 : 0);
+        for (let k = T - e; k < T; k++) { const p = xy(s, k); ctx.fillStyle = k >= T - 2 ? '#a3967f' : '#8d816f'; ctx.fillRect(p[0], p[1], 1, 1); }
+        const o = xy(s, T - e - 1); ctx.fillStyle = '#1f1b17'; ctx.fillRect(o[0], o[1], 1, 1);
+        const o2 = xy(s, T - e - 2); ctx.fillStyle = ROCHE[1]; ctx.fillRect(o2[0], o2[1], 1, 1);
+      }
+    }
+    // Le pied : l'ombre de contact, et les eboulis — des blocs de trois pixels, leur eclat au nord-ouest, leur
+    // ombre au sud-est.
+    if (pied) {
+      for (let s = 0; s < T; s++) { const p = xy(s, 0); ctx.fillStyle = 'rgba(15,12,10,0.55)'; ctx.fillRect(p[0], p[1], 1, 1); }
+      for (let c = 0; c < 3; c++) {
+        const s = Math.floor(bruit(v, 600 + c) * (T - 3)), k = 1 + Math.floor(bruit(v, 610 + c) * 4);
+        const n = bruit(v, 620 + c) > 0.5 ? 3 : 2;
+        for (let i = 0; i < n; i++) {
+          for (let j = 0; j < n; j++) {
+            const p = xy(s + i, k + j);
+            // le coin nord-ouest de la pierre au soleil, le coin sud-est dans l'ombre
+            const x = p[0], y = p[1], lum = (i === 0 ? 1 : 0) + (horiz ? 0 : (j === n - 1 ? 1 : 0)) - (i === n - 1 ? 1 : 0);
+            ctx.fillStyle = lum > 0 ? '#8d816f' : lum < 0 ? '#2f2924' : '#5b5247';
+            ctx.fillRect(x, y, 1, 1);
+          }
+        }
+      }
+    }
+  }
   function facade(ctx, v, T, teinte) {
     plein(ctx, teinte || '#8c4a3c', T);
     ctx.fillStyle = 'rgba(0,0,0,0.18)';
@@ -3690,15 +3793,7 @@ const TUILES = (function () {
       points(ctx, v, T, '#332e29', 14, 70);
       points(ctx, v, T, '#231f1a', 6, 120);
     },
-    'C': function (ctx, v, T) {
-      plein(ctx, '#5c5349', T);
-      ctx.fillStyle = '#6f6457';                       // les strates, une roche sedimentaire
-      for (let y = 1 + (v % 2); y < T; y += 4) ctx.fillRect(0, y, T, 1);
-      ctx.fillStyle = '#443d35';
-      for (let y = 3 - (v % 2); y < T; y += 4) ctx.fillRect(0, y, T, 1);
-      points(ctx, v, T, '#332e29', 10, 20);
-      points(ctx, v, T, '#7d7266', 5, 90);
-    },
+    'C': function (ctx, v, T) { falaise(ctx, v, T); },
     'B': function (ctx, v, T) { toitPlat(ctx, v, T, TOIT_TOLE); },
     'E': function (ctx, v, T) { toitPlat(ctx, v, T, TOIT_ARDOISE); },
     'O': function (ctx, v, T) { toitPlat(ctx, v, T, TOIT_GRAVIER); },
