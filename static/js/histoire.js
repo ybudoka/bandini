@@ -565,15 +565,22 @@ const Histoire = (function () {
       if (p.parti_apres && faite(p.parti_apres)) continue;
       // Pas encore arrive (`arrive_apres` : le vieux maitre des Mantes, en Floride jusqu'a la chute du Pouce).
       if (p.arrive_apres && !faite(p.arrive_apres)) continue;
-      if (p.ou.indexOf('porte:') === 0) poserDonneur(p);
-      // ⚠️ Sven se tient sur SON poste a quai (`mouillage:`), pas a une porte :
-      // les autres formes (`point:`) restent dedans, posees a l'entree de leur piece.
-      else if (p.ou.indexOf('mouillage:') === 0) poserDonneurMouillage(p);
-      // Le Bonimenteur, a l'arche de la foire — dehors, comme une porte, mais sans batiment.
-      else if (p.ou === 'foire') poserDonneurFoire(p);
-      // Le capitaine Bérubé, au bout du quai du traversier (M13).
-      else if (p.ou.indexOf('traversier:') === 0) poserDonneurAuQuai(p);
+      poserDehors(p);
     }
+  }
+
+  /** UN personnage du DEHORS, a sa place (null pour ceux du dedans : ils se posent a l'entree de leur
+      piece, `creerDonneursDedans`). */
+  function poserDehors(p) {
+    if (p.ou.indexOf('porte:') === 0) return poserDonneur(p);
+    // ⚠️ Sven se tient sur SON poste a quai (`mouillage:`), pas a une porte :
+    // les autres formes (`point:`) restent dedans, posees a l'entree de leur piece.
+    if (p.ou.indexOf('mouillage:') === 0) return poserDonneurMouillage(p);
+    // Le Bonimenteur, a l'arche de la foire — dehors, comme une porte, mais sans batiment.
+    if (p.ou === 'foire') return poserDonneurFoire(p);
+    // Le capitaine Bérubé, au bout du quai du traversier (M13).
+    if (p.ou.indexOf('traversier:') === 0) return poserDonneurAuQuai(p);
+    return null;
   }
 
   /** UN personnage posé au bout du quai du traversier (`ou: "traversier:<escale>"`) — même
@@ -1304,6 +1311,19 @@ const Histoire = (function () {
         const e = donneur(p.slug);
         if (e) Entites.retirer(e);
       }
+      // ⚠️ **ET QUI ARRIVE AUSSI** (`arrive_apres` : Cindy apres q04, Diane et Jo apres e01, Zed, le
+      // Trappeur, Ti-Loup…) : `creerDonneurs` ne le pose qu'au CHARGEMENT d'une partie — le joueur qui
+      // finissait q04 ne trouvait Cindy qu'apres avoir recharge. Ceux du dedans se posent deja a l'entree
+      // de leur piece (`creerDonneursDedans`).
+      // ⚠️ DANS LA VILLE, meme si la fin se joue dedans (`dansLaVille`) ; dans un bloc de carte (le
+      // chalet), le chargement suivant les posera.
+      if (!B.bloc) dansLaVille(function () {
+        for (const p of personnages()) {
+          if (p.arrive_apres !== m.slug || donneur(p.slug)) continue;
+          if (p.parti_apres && faite(p.parti_apres)) continue;
+          poserDehors(p);
+        }
+      });
       // ⚠️ UNE FIN DE PARTIE (M13) : le générique attend que la scène de fin soit finie
       // (`jouerLeGenerique`) — on est encore dans son dernier appel.
       if (d.generique) B.generiqueEnAttente = m.slug;
