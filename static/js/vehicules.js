@@ -1052,6 +1052,18 @@ const Vehicules = (function () {
       la greve : la neige n'y est jamais deblayee) ; ailleurs — l'asphalte, les trottoirs —, la part
       `hors_neige` de sa fiche. 1 pour tout ce qui roule pareil partout. */
   function allureDuSol(v) {
+    return allureHorsNeige(v) * allureHorsRoute(v);
+  }
+
+  /** LE HORS-ROUTE (les 4 roues) : sur la TERRE (herbe, friche, sable, allees : `terre` dans la legende), un
+      char garde `hors_route` de son allure — un tiers de moins pour une auto, rien pour le 4 roues. */
+  function allureHorsRoute(v) {
+    const r = v.def.hors_route;
+    if (r === undefined || r >= 1) return 1;
+    return Monde.estTerre(Math.floor(v.x / TT), Math.floor(v.y / TT)) ? r : 1;
+  }
+
+  function allureHorsNeige(v) {
     const h = v.def.hors_neige;
     if (h === undefined || h >= 1) return 1;
     const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
@@ -1166,7 +1178,9 @@ const Vehicules = (function () {
     if (v.conducteur === B.joueur) {
       B.cam.secousse = Math.min(1.2, force * 0.3);
       Entree.vibrer(Math.round(force * 12));
-      if (force >= ph.ejection_vitesse_min && v.def.ejecte) ejecter(B.joueur, v);
+      // ⚠️ `ejecte` : vrai pour le seuil de tout le monde, un NOMBRE pour un seuil a lui (le 4 roues, stable).
+      const seuil = typeof v.def.ejecte === 'number' ? v.def.ejecte : ph.ejection_vitesse_min;
+      if (v.def.ejecte && force >= seuil) ejecter(B.joueur, v);
     }
     Son.SFX.choc();
   }

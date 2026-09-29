@@ -68,7 +68,9 @@ class Vehicule(TypedDict):
     police: bool
     sirene: bool
     alarme: bool
-    ejecte: bool
+    #: On en tombe au choc : `True` au-dessus du seuil de tout le monde (`PHYSIQUE["ejection_vitesse_min"]`),
+    #: un NOMBRE pour un seuil à lui (le 4 roues : stable, on n'en tombe qu'en frappant fort), `False` jamais.
+    ejecte: bool | float
     eau: bool
     cercles: int
     reservoir: bool
@@ -90,6 +92,16 @@ class Vehicule(TypedDict):
     #: LA MOTONEIGE : sa vitesse et son elan HORS de la neige (et de la glace), en part des siens —
     #: 1 pour tout ce qui roule pareil partout (`Vehicules.allureDuSol`).
     hors_neige: float
+    #: LE HORS-ROUTE (les 4 roues, 28 sept. 2026) : la part de sa vitesse et de son élan qu'il garde sur la
+    #: TERRE — l'herbe, la friche, le sable, les allées (`Vehicules.allureDuSol`). Par classe
+    #: (`HORS_ROUTE_DE_CLASSE`) : un char s'enlise, une moto moins ; le 4 roues, rien.
+    hors_route: float
+
+
+#: Martin (28 sept. 2026) : « les chars ralentissent » hors route, et le 4 roues non. Un tiers de moins pour
+#: une auto, un peu plus pour ce qui est lourd, un cinquième pour une moto ou un vélo. ⚠️ Pour ce que le
+#: JOUEUR conduit (et la police qui le poursuit) : le trafic roule sur ses rails et ne quitte pas la rue.
+HORS_ROUTE_DE_CLASSE = {"auto": 0.66, "camion": 0.6, "moto": 0.8, "velo": 0.8}
 
 
 #: Les classes dont on claque la portiere. ⚠️ Une moto et un velo n'en ont
@@ -146,7 +158,7 @@ def _v(slug, nom, classe, lon, lat, vmax, accel, rayon, vie, places, prix, freq,
        masse=1.0, cercles=3, reservoir=True, defonce=0.0, soigne=0.0, crochet=False,
        plateau=False, boulot=None,
        radio=None, phase=1, klaxon="klaxon", rare=False, adherence=None, alarme_s=0.0,
-       au_volant=None, discret=1.0, hors_neige=1.0) -> Vehicule:
+       au_volant=None, discret=1.0, hors_neige=1.0, hors_route=None) -> Vehicule:
     return Vehicule(
         slug=slug, nom=nom, classe=classe, longueur=lon, largeur=lat,
         vitesse_max=vmax, vitesse_recul=round(vmax * 0.33, 2), acceleration=accel,
@@ -162,6 +174,8 @@ def _v(slug, nom, classe, lon, lat, vmax, accel, rayon, vie, places, prix, freq,
         defonce=defonce, soigne=soigne,
         crochet=crochet, plateau=plateau, boulot=boulot, radio=radio, phase=phase,
         portieres=classe in CLASSES_A_PORTIERES, klaxon=klaxon, discret=discret, hors_neige=hors_neige,
+        hors_route=(hors_route if hors_route is not None
+                    else 1.0 if eau else HORS_ROUTE_DE_CLASSE.get(classe, 1.0)),
     )
 
 
@@ -217,7 +231,14 @@ CATALOGUE: list[Vehicule] = [
     # glace de la baie, lente et bruyante ailleurs (`hors_neige`). ⚠️ `freq` 0 : elle ne roule pas dans le
     # trafic ; elle attend garee aux Erables, l'hiver, et naît a l'approche (`Missions.majMotoneiges`).
     _v("motoneige", "Motoneige", "moto", 22, 10, 4.6, 0.08, 16, 45, 2, 900, 0.0,
-       ["#d7263d", "#1b75bb", "#f2c230"], "motoneige", ejecte=True, hors_neige=0.45),
+       ["#d7263d", "#1b75bb", "#f2c230"], "motoneige", ejecte=True, hors_neige=0.45, hors_route=1.0),
+    # LE 4 ROUES (docs/jalons/les-4-roues.md, Martin, 28 sept. 2026) : le véhicule des Friches et du chalet.
+    # Plein régime sur la terre (`hors_route` 1, là où un char en perd un tiers), un peu moins vite qu'une
+    # moto sur l'asphalte ; STABLE — on n'en tombe qu'en frappant fort (`ejecte` : son seuil à lui) ; deux
+    # places ; il saute sur les rampes comme tout ce qui roule assez vite. ⚠️ `freq` 0 : il ne roule pas dans
+    # le trafic ; il attend garé, et naît à l'approche (`QuatreRoues.maj`).
+    _v("quatre_roues", "4 roues", "moto", 20, 12, 4.4, 0.085, 17, 70, 2, 1400, 0.0,
+       ["#2e7d32", "#c0392b", "#f2c230", "#1b75bb"], "quatre_roues", ejecte=4.2, hors_route=1.0),
     _v("remorqueuse", "Remorqueuse", "camion", 36, 15, 3.0, 0.04, 29, 220, 2, 1300, 0.05,
        ["#d98324", "#2c3e50", "#7f8c8d"], "remorqueuse", masse=2.2, cercles=4, adherence=0.24,
        defonce=0.6, crochet=True, boulot="remorquage", radio="station_remorqueuse"),

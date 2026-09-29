@@ -166,6 +166,9 @@ BLOC = {
     "pieces": {"chalet": PIECE_CHALET, "cabane": PIECE_CABANE},
     # ⚠️ LA PLANQUE : le chalet, son prix, et la place où son char attend (le milieu du `ppp` d'en haut).
     "planque": {"piece": "chalet", "prix": 2500, "char": {"x": 46, "y": 18}},
+    # ⚠️ LE 4 ROUES DU CHALET (docs/jalons/les-4-roues.md) : le tien, sur l'herbe à côté de la place du char —
+    # à plus de 48 px d'elle, sinon la planque le garde pour SON char (`garderLesCharsDesPlanques`).
+    "quatre_roues": {"x": 52, "y": 19},
     # La cheminée du chalet, au-dessus de son foyer : elle fume (`Blocs.dessiner`). Celles de la CABANE ne
     # fument qu'au temps des sucres, quand on fait bouillir (`sucres`) : la cheminée de tôle de l'évaporateur,
     # et le lanterneau du faîte d'où sort la vapeur blanche (`genre`, `Blocs.dessinerCheminees`).

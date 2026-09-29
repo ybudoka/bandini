@@ -41,4 +41,29 @@ _Demande de Martin (28 sept. 2026) :_ « je veux aussi des 4 roues ».
 
 ## Notes
 
-_Rien de livré._
+### Vague 1 — le véhicule, garé dans les Friches et au chalet — **livrée le 29 sept. 2026**
+
+- ⚠️ **Mesuré avant de coder : aucun char ne ralentissait hors route.** L'herbe, la friche et le sable ne
+  changeaient rien à la vitesse ; seule la motoneige ralentissait, sur l'asphalte. Martin a tranché (28 sept.) :
+  **« les chars ralentissent »**. Chaque fiche porte `hors_route`, la part de son allure gardée sur la TERRE
+  (`terre` dans la légende : herbe, friche, sable, allées) : auto 0,66, camion et autobus 0,6, moto et vélo
+  0,8 (`vehicules.HORS_ROUTE_DE_CLASSE`) ; ce qui flotte, la motoneige et le 4 roues, 1. Lu par
+  `Vehicules.allureDuSol` (avec `hors_neige`), pour le joueur et la police qui le poursuit : le trafic roule
+  sur ses rails.
+- **Le 4 roues** (`quatre_roues`, classe `moto`) : 4,4 px par image (la moto : 5,2), 70 PV, deux places,
+  1 400 $, `freq` 0. **Stable** : `ejecte` porte maintenant un SEUIL à lui (4,2), au lieu du 2,6 de toutes les
+  motos — un juge le prouve au banc, le même choc à 3,6 éjecte de la moto et pas de lui. **Il saute** comme
+  tout ce qui roule assez vite (rien à faire : aucune rampe ne filtre les classes). **Deux places** : le jeu ne
+  refuse personne de toute façon (la coop et un protégé montent dans n'importe quoi), et le passager ne se
+  DESSINE pas encore — une dette.
+- **Son dessin** (`MACHINE_QUATRE_ROUES`) : quatre pneus aux coins, deux ailes de couleur, le réservoir, la
+  selle, les porte-bagages et le guidon large ; le pilote se voit (`deuxRoues`). ⚠️ Le phare et le feu sont
+  AU-DESSUS des ailes : plus bas, ils ne se voyaient ensemble qu'à la moitié des caps (`test_poses_vehicules`).
+- **Garés** : trois dans les Friches, chacun à côté d'un cabanon (le premier, celui du milieu, le dernier),
+  calculés sur la carte finie sans un dé (`app/quatre_roues.py`, clé `quatre_roues`) ; et le tien au chalet du
+  rang (`blocs/rang.py`, à plus de 48 px de la place du char, sinon la planque le garde pour SON char). Ils
+  **naissent à l'approche** (`static/js/quatreroues.js`), hors de l'écran, hors de la suite des numéros, de
+  couleur donnée — rien au démarrage : la bande est dans la bulle de naissance du terminus.
+- **Juges** : `test_quatre_roues.py`, `test_quatre_roues_js.py`. Deux mutations rouges (le seuil d'éjection, la
+  terre qui ne ralentit plus).
+- **Reste** : la course des Friches (vague 2), le concessionnaire (vague 3), et le passager qu'on voit.

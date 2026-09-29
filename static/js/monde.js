@@ -861,6 +861,9 @@ const Monde = (function () {
   /** L'abord : la couronne d'un bloc, entre ses murs et le trottoir. On y
       marche, mais c'est un debordement — la dalle est prioritaire. */
   function estAbord(tx, ty) { return !!((carte && carte.legende[glyphe(tx, ty)] || {}).abord); }
+  /** La TERRE qu'on quitte la route pour prendre : herbe, friche, sable, allees (`terre` dans la legende) —
+      la ou un char s'enlise et ou le 4 roues file (`Vehicules.allureDuSol`). */
+  function estTerre(tx, ty) { return !!((carte && carte.legende[glyphe(tx, ty)] || {}).terre) && !estRoute(tx, ty); }
   function estTrottoir(tx, ty) { return !!((carte && carte.legende[glyphe(tx, ty)] || {}).trottoir) && !estRoute(tx, ty); }
   /** Une tuile qu'un pieton peut fouler en flanant : ni mur, ni eau, ni chaussee.
       ⚠️ Elle garde l'eau MEME depuis qu'on nage : ce qui flane ne se baigne
@@ -2578,7 +2581,7 @@ const Monde = (function () {
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
     dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau, sousLeToit, cacheSousLeToit, abrite,
     barrieresCoulissantes, majBarrieresCoulissantes, dessinerBarrieresCoulissantes, COULISSE_GLISSE, COULISSE_TIENT,
-estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
+estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, estNuit, periode, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
     miniCarte, couleurMini, couleurMiniA, masqueDeLaCarte, masquee, hauteurConnue, chemin, demanderChemin, majChemins,

@@ -7340,6 +7340,9 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
         nord_mod.poser(ville)
         # CHEZ TI-POUT : sa cour est dans la bande, contre le boulevard — elle se pose sur la bande collée.
         concessionnaires_mod.poser_ti_pout(ville)
+        # LES 4 ROUES des Friches : leurs places à côté des cabanons, lues sur la bande collée, sans un dé.
+        from . import quatre_roues as quatre_roues_mod
+        ville["quatre_roues"] = quatre_roues_mod.poser(ville)
     # ⚠️ LES FRÉNÉSIES (P4, docs/jalons/quatre-activites-que-le-jeu-n-a-pas.md), APRÈS ABSOLUMENT TOUT, bande
     # nord comprise : une icône par district, dans une ruelle libre choisie par une règle — sans un dé, et rien
     # de posé dans une liste que la ville lit. La ville d'avant est la même à la tuile près.

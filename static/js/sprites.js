@@ -726,6 +726,39 @@ const MACHINE_MOTONEIGE = {
   ],
 };
 
+// LE 4 ROUES (docs/jalons/les-4-roues.md) : quatre gros pneus a crampons aux quatre coins, deux ailes de
+// couleur qui les coiffent, le reservoir entre les genoux, la selle, un porte-bagages devant et derriere,
+// le guidon large. On s'y assoit comme sur la moto (`deuxRoues` : le pilote se voit).
+const MACHINE_QUATRE_ROUES = {
+  profondeur: BIAIS_DU_SOL,
+  assise: [-2.5, 0, 6.4],
+  guidon: [3.2, 3.4, 8.0],
+  pedales: [-0.4, 3.4, 3.8],
+  pieces: [
+    ['roue', 6.4, 2.8, 'r', 'M', 'M', 2, 4.6],                           // les quatre pneus
+    ['roue', 6.4, 2.8, 'r', 'M', 'M', 2, -4.6],
+    ['roue', -6.4, 2.8, 'r', 'M', 'M', 2, 4.6],
+    ['roue', -6.4, 2.8, 'r', 'M', 'M', 2, -4.6],
+    ['bloc', [-8.0, 8.0], [-2.6, 2.6], [2.4, 4.0], 'k', 'k', 'k'],        // le chassis
+    ['bloc', [3.4, 9.4], [-5.2, 5.2], [5.0, 5.8], 'c', 'D', 'D'],        // l'aile avant
+    ['bloc', [-9.4, -3.4], [-5.2, 5.2], [5.0, 5.8], 'c', 'D', 'D'],      // l'aile arriere
+    ['bloc', [0.6, 3.8], [-2.2, 2.2], [4.6, 6.6], 'c', 'D', 'D'],        // le reservoir
+    ['bloc', [-5.4, 0.6], [-1.9, 1.9], [4.8, 6.4], 'k', 'k', 'k'],       // la selle
+    ['tube', [5.0, -3.6, 6.2], [9.0, -3.6, 6.2], 'M', 0.3],              // le porte-bagages avant
+    ['tube', [5.0, 3.6, 6.2], [9.0, 3.6, 6.2], 'M', 0.3],
+    ['tube', [9.0, -3.6, 6.2], [9.0, 3.6, 6.2], 'M', 0.3],
+    ['tube', [-5.4, -3.6, 6.2], [-9.0, -3.6, 6.2], 'M', 0.3],            // et l'arriere
+    ['tube', [-5.4, 3.6, 6.2], [-9.0, 3.6, 6.2], 'M', 0.3],
+    ['tube', [-9.0, -3.6, 6.2], [-9.0, 3.6, 6.2], 'M', 0.3],
+    ['tube', [3.2, -3.4, 8.0], [3.2, 3.4, 8.0], 'k', 0.4],               // le guidon large
+    ['tube', [3.0, 0, 5.6], [3.2, 0, 8.0], 'k', 0.3],                    // sa colonne
+    // ⚠️ Le phare et le feu AU-DESSUS des ailes et des porte-bagages : plus bas, les ailes les cachaient a
+    // la moitie des caps (`test_poses_vehicules`).
+    ['bloc', [9.6, 10.4], [-1.6, 1.6], [6.6, 7.6], 'l', 'l', 'l', 0.3],  // les phares
+    ['bloc', [-10.4, -9.6], [-0.9, 0.9], [6.6, 7.4], 't', 't', 't', 0.3], // le feu
+  ],
+};
+
 const ASSIS_COTE = [
       '............',
       '............',
@@ -1398,6 +1431,7 @@ SPRITES.velo = deuxRoues(MACHINE_VELO, 16, 32, { k: '#101018', c: '#2980b9', r: 
 // pilote garde les pieds sur les repose-pieds.
 SPRITES.velo.pedale = 7;
 SPRITES.moto = deuxRoues(MACHINE_MOTO, 20, 36, { k: '#101018', c: '#1a1a1a', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e' });
+SPRITES.quatre_roues = deuxRoues(MACHINE_QUATRE_ROUES, 20, 36, { k: '#101018', c: '#2e7d32', r: '#1f1f24', l: '#fff3b0', t: '#ff4b3e' });
 SPRITES.motoneige = deuxRoues(MACHINE_MOTONEIGE, 22, 40, { k: '#101018', c: '#d7263d', r: '#1f1f24', v: '#9fd0ee', l: '#fff3b0', t: '#ff4b3e' });
 
 /* --- LE PARC EN VOLUME : le reste des chars, comme la berline ---------------------
