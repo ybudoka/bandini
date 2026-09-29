@@ -1212,9 +1212,18 @@ const Vehicules = (function () {
           // ou n'importe quel char qui s'est retrouvé là par ailleurs — qui
           // absorbe TOUTE la séparation. Si aucun des deux n'attend (ils se
           // frôlent à un coin, en roulant), le partage aux masses d'avant suffit.
+          // ⚠️ ET CELUI QUI FORCE (`force`) EST L'IMPATIENT, attente légitime ou pas chez l'autre
+          // (graine 23 de `test_velos_js`, 29 sept. 2026) : un autobus de ligne, le nez dans la
+          // boîte, attendait qu'une mère et son enfant finissent la traverse — pas un feu, donc
+          // pas « légitime ». L'auto engagée dans la même boîte, bloquée par ce nez, a perdu
+          // patience et forcé dans son flanc à 25 % : partagé aux masses, chaque image, pendant
+          // quatre-vingt-dix images, l'autobus a glissé de vingt pixels sur le trottoir (HORS
+          // VOIE). Celui qui force s'arrête contre l'autre ; il ne le déplace pas. S'ils forcent
+          // tous les deux, ou ni l'un ni l'autre, on revient aux règles d'au-dessus.
           const surDesRails = function (q) { return q.conducteur === 'trafic' || q.conducteur === 'ligne'; };
           if (surDesRails(v) && surDesRails(autre)) {
-            const vAttend = attenteLegitime(v), autreAttend = attenteLegitime(autre);
+            const vForce = v.force > 0, autreForce = autre.force > 0;
+            const vAttend = attenteLegitime(v) || (autreForce && !vForce), autreAttend = attenteLegitime(autre) || (vForce && !autreForce);
             if (vAttend && !autreAttend) { autre.x += nx * chevauche; autre.y += ny * chevauche; }
             else if (autreAttend && !vAttend) { v.x -= nx * chevauche; v.y -= ny * chevauche; }
             else { v.x -= nx * chevauche * (m2 / total); v.y -= ny * chevauche * (m2 / total); autre.x += nx * chevauche * (m1 / total); autre.y += ny * chevauche * (m1 / total); }
