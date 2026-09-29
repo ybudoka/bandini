@@ -1154,11 +1154,26 @@ def test_un_char_du_trafic_s_arrete_a_l_arret_et_repart_a_lentement(banc):
         L.Chantiers.equiper();
         const v = char(L, ch, 5);
         L.B.t = 0;
-        const sens = { '<': 1, '>': -1 }[s.sens], mx = homme(L, id).x;
+        const sens = { '<': 1, '>': -1 }[s.sens], mx = homme(L, id).x, my = homme(L, id).y;
         const avance = function () { return (v.x - mx) * sens; };      // > 0 : il n'a pas passé le signaleur
+        // ⚠️ LE SIGNALEUR SEUL, SANS LA FOULE (29 sept. 2026). Une passante qui flâne sur
+        // son trottoir bute contre lui (figé, il ne cède pas) ; `demeler` la pousse sur le
+        // bord de la chaussée, et elle y reste plantée huit secondes, dans la voie. Le char
+        // s'arrête pour elle — à raison, et il forcerait au bout de sa patience — mais ce
+        // n'est plus la palette qu'on juge. Le juge passait par CHANCE DE FOULE : « un char
+        // à la fois dans la boîte » (84d48f52) a changé qui naît en ville, et la passante
+        // est arrivée. Chaque image, on écarte donc les passants et les autres chars autour
+        // du poste ; l'équipe du chantier (`equipeDe`) reste.
+        const sansFoule = function () {
+            L.B.entites.filter(function (q) {
+                return q !== v && Math.hypot(q.x - mx, q.y - my) < 20 * 16
+                    && ((q.type === 'pieton' && q.equipeDe === undefined) || q.type === 'vehicule');
+            }).forEach(function (q) { L.Entites.retirer(q); });
+        };
         const trace = [];
         let force = 0;
         for (let k = 0; k < 175; k++) {
+            sansFoule();
             L.Chantiers.maj();
             o.frame(1);
             if (v.force > 0) force++;
@@ -1166,8 +1181,15 @@ def test_un_char_du_trafic_s_arrete_a_l_arret_et_repart_a_lentement(banc):
         }
         const arrete = { avance: avance(), vitesse: v.vitesse, force: force, patience: v.patience, t: L.B.t };
         L.B.t = 180;
-        for (let k = 0; k < 200; k++) o.frame(1);
-        return { arrete: arrete, trace: trace, apres: avance(), vitesseApres: v.vitesse, present: L.B.entites.indexOf(v) >= 0 };
+        // ⚠️ Et SANS FORCER : sous une palette qui dirait encore ARRÊT, le char passe quand même
+        // au bout de sa patience (`force`) — ce juge-là ne mordait pas sans ce compte.
+        let forceLent = 0;
+        for (let k = 0; k < 200; k++) {
+            sansFoule();
+            o.frame(1);
+            if (v.force > 0 && avance() > 0) forceLent++;
+        }
+        return { arrete: arrete, trace: trace, forceLent: forceLent, apres: avance(), vitesseApres: v.vitesse, present: L.B.entites.indexOf(v) >= 0 };
     """))
     a = r["arrete"]
     assert a["vitesse"] < 0.1, f"le char roule encore sous ARRÊT : {r['trace']}"
@@ -1175,6 +1197,7 @@ def test_un_char_du_trafic_s_arrete_a_l_arret_et_repart_a_lentement(banc):
     assert a["force"] == 0, f"le char force le passage pendant ARRÊT (patience {a['patience']}) : {r['trace']}"
     assert r["present"], "le char a disparu"
     assert r["apres"] < 0, f"à LENTEMENT, le char n'a pas repris sa route : {r}"
+    assert r["forceLent"] == 0, f"à LENTEMENT, le char n'a repris sa route qu'en forçant le passage : {r}"
 
 
 # --- 5e vague : le tas de terre fait rampe ---------------------------------------------------
