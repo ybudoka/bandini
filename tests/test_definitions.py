@@ -165,8 +165,14 @@ def test_le_paquet_reste_leger(paquets):
     sur `dev` (601 octets de marge), 69 134 avec eux — le Salon et la cour de Ti-Pout au sol, leurs deux pièces,
     et leurs lots (seize places, leur stock et leurs prix). Brut : 711 965 → 715 042, sous ses 720 000. Même
     règle qu'au nord : le vrai juge est la dette des districts chargés autour du joueur.
+
+    ⚠️ **La carte : 70 000 → 71 000 octets gzip, le 29 sept. 2026** — le lot de Prestige Automobiles retourné vers
+    la rue et clôturé de fer forgé (Martin : « les véhicules doivent être en avant et clôturé »). Mesure : 69 967 sur
+    `dev` (33 octets de marge, après le bus du Petit-Canton), 70 013 avec le lot — la clôture, son portail et ses
+    heures (+46 gzip ; le brut, lui, BAISSE de 84 : les cases peintes sont parties). Même règle qu'au nord : le vrai
+    juge est la dette des districts chargés autour du joueur.
     """
-    for nom, brut_max, fil_max in (("definitions", 275_000, 62_000), ("carte", 720_000, 70_000)):
+    for nom, brut_max, fil_max in (("definitions", 275_000, 62_000), ("carte", 720_000, 71_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))
