@@ -106,6 +106,7 @@ const Jeu = (function () {
     Fetes.oublier();                         // la tuile du tronc du sapin est rendue
     Neige.oublier();                         // la rue d'une partie rechargee est blanche
     Pluie.oublier();                         // et la pluie d'une autre partie se tait
+    Saisons.oublierSon();                    // et l'ambiance de sa saison
     Brouillard.oublier();
     Verglas.oublier();
     Pont.oublier();                          // la baie d'une partie rechargee a toute son eau
@@ -1141,6 +1142,7 @@ const Jeu = (function () {
         pas('demenagement', Demenagement.maj);   // le 1er juillet : les camions naissent a l'approche
         pas('neige', Neige.maj);
         pas('pluie', Pluie.maj);           // le bruit de la pluie, le tonnerre
+        pas('saisons', Saisons.majSon);    // le son des saisons, en fondu enchaine (lot 5)
         pas('brouillard', Brouillard.maj);
         pas('police', Police.maj);
         pas('incendies', Incendies.maj);

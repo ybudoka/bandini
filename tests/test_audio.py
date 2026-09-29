@@ -69,7 +69,11 @@ def test_le_poids_audio_reste_raisonnable():
     lieux = [f for f in fichiers if f.stem.rsplit("-", 1)[0] in slugs_de_lieu]
     for fichier in lieux:
         assert fichier.stat().st_size < 80_000, fichier.name
-    assert sum(f.stat().st_size for f in lieux) < 1_000_000
+    # ⚠️ Relevé de 1 000 000 à 1 350 000 le 29 sept. 2026 (les quatre saisons, lot 5) : les quatre ambiances
+    # de saison (4 × 76 Ko) — des sons qu'on n'avait pas ; la pluie, l'Halloween, le train et les explosifs
+    # avaient déjà mené les lieux à 0,94 Mo. Un seul se charge à la fois (la saison qu'on entend). À valider
+    # par Martin ; la prochaine fois, on compresse avant de relever.
+    assert sum(f.stat().st_size for f in lieux) < 1_350_000
     bruitages = [f for f in fichiers
                  if not f.name.startswith(("radio-", "histoire-", "musique-"))
                  and f.stem.rsplit("-", 1)[0] not in slugs_de_quartier

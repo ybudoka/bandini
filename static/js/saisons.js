@@ -216,6 +216,61 @@ const Saisons = (function () {
     return e.tenue.accent || '#2980b9';
   }
 
+  // ------------------------------------------------------------------ le son des saisons (lot 5)
+
+  //: LE SON DES SAISONS (docs/jalons/les-quatre-saisons-realistes.md, lot 5) : une boucle d'ambiance par
+  //: saison, dehors, dont le volume suit la palette du moment — pendant une transition, l'une descend
+  //: pendant que l'autre monte, palier par palier, et le volume GLISSE d'une image a l'autre (jamais une
+  //: coupure : la regle du fondu enchaine). ⚠️ Aucun de : une pure fonction du jour, de l'heure, de la
+  //: pluie et de la piece.
+
+  /** Le volume VOULU de chaque ambiance a ce moment : { slug: 0..1 }. Pure. */
+  function sonA(jour, heure, dedans, pluie, tempete) {
+    const d = donnees(), S = d && d.son, out = {};
+    if (!S) return out;
+    Object.keys(S.ambiances).forEach(function (k) { out[S.ambiances[k]] = 0; });
+    if (dedans) return out;
+    const p = position(jour, heure), t = p.de === p.vers ? 0 : p.palier / d.paliers;
+    const lumiere = heureDeLumiere(jour, heure);
+    let v = S.volume * (lumiere > 0.3 && lumiere < 0.8 ? 1 : S.nuit);
+    v *= 1 - (1 - S.sous_la_pluie) * Math.max(pluie || 0, tempete || 0);
+    out[S.ambiances[p.de]] += v * (1 - t);
+    out[S.ambiances[p.vers]] += v * t;
+    return out;
+  }
+
+  //: Ce qu'on entend, glisse image par image vers le voulu ; et quand on a demande chaque lieu.
+  const sonJoue = {}, sonDemande = {};
+
+  /** Chaque pas de jeu (`jeu.js`) : charge la saison qu'on va entendre, allume, regle et eteint ses boucles. */
+  function majSon() {
+    if (typeof Son === 'undefined' || !B.partie || !donnees() || !donnees().son) return;
+    const S = donnees().son;
+    const pluie = typeof Pluie !== 'undefined' ? Pluie.intensite() : 0;
+    const tempete = typeof Neige !== 'undefined' && Neige.intensite ? Neige.intensite() : 0;
+    const voulu = sonA(B.partie.jour, B.partie.heure, !!B.interieur, pluie, tempete);
+    const pas = 1 - Math.exp(-(1 / 60) / (S.glisse_s / 3));
+    const t = B.t || 0;
+    for (const slug in voulu) {
+      const avant = sonJoue[slug] || 0, cible = voulu[slug];
+      let v = avant + (cible - avant) * pas;
+      if (Math.abs(cible - v) < 0.004) v = cible;
+      sonJoue[slug] = v;
+      if (cible > 0 && Son.Lieu && t - (sonDemande[slug] === undefined ? -Infinity : sonDemande[slug]) >= 300) {
+        sonDemande[slug] = t; Son.Lieu.charger(slug);
+      }
+      if (v > 0.004) {
+        if (!Son.boucleActive(slug)) Son.boucle(slug, true, v, 0.5);
+        else Son.reglerBoucle(slug, v);
+      } else if (Son.boucleActive(slug)) Son.boucle(slug, false, 0, 0.5);
+    }
+  }
+
+  /** Une partie recommencee : les ambiances se taisent, et repartent de zero. */
+  function oublierSon() {
+    for (const slug in sonJoue) { if (typeof Son !== 'undefined' && Son.boucleActive(slug)) Son.boucle(slug, false, 0, 0.5); sonJoue[slug] = 0; }
+  }
+
   /** L'heure DE LUMIERE : l'heure de l'horloge fixe (`Monde.TEINTES`) qui a la meme lumiere que
       `heure` ce jour-la. Le jour reel (lever -> coucher, qui suivent l'annee) est etire sur le jour
       de reference (7 h 12 -> 19 h 12), la nuit reelle sur la nuit de reference. Pure et continue :
@@ -237,5 +292,5 @@ const Saisons = (function () {
   }
 
   return { paletteA, cleA, palette, cle, enneiger, enHiver, ficheDuMoment, heureDeLumiere,
-           vetir, parapluie, habiller, frilosite, aUnParapluie };
+           vetir, parapluie, habiller, frilosite, aUnParapluie, sonA, majSon, oublierSon, get sonJoue() { return sonJoue; } };
 })();

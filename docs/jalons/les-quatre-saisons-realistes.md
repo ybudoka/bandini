@@ -1367,3 +1367,27 @@ glace et le dérapage (lot 6) restent en dernier, à part._
   un Tempo ; les bancs n'ont pas de trouée devant les entrées de stationnement ; plus de passants dehors
   l'été : **tombé** (il touchait au dé de `peupler`) ; les bornes-fontaines ouvertes de l'été : pas faites.
 
+### Lot 5 — le son des saisons (livré le 29 sept. 2026)
+
+- **Quatre ambiances** (ElevenLabs, 860 crédits — générées une fois à 10 s, trop lourdes d'un
+  demi-Ko pour le plafond d'un fichier de lieu, puis refaites à 9,5 s : quatre boucles de 76 Ko) :
+  `saison_hiver` (le vent froid entre les maisons, une charrue qui gratte au loin), `saison_printemps` (la
+  fonte dans les gouttières, les merles), `saison_ete` (les cigales, une tondeuse au loin),
+  `saison_automne` (les feuilles sèches sur l'asphalte, les outardes). Août sonne comme l'été, novembre
+  comme l'automne (`saisons.SON`).
+- **En fondu enchaîné** (`Saisons.sonA`, `Saisons.majSon`, un pas de la boucle du jeu) : le volume voulu de
+  chaque ambiance suit la palette — pendant une transition, l'une descend pendant que l'autre monte, palier
+  par palier — et le volume joué glisse vers lui en deux secondes, image par image. Plus bas la nuit (× 0,45),
+  presque couvert sous la pluie et la tempête (× 0,3, elles ont leur boucle), muet dedans.
+- **Chargées à la demande** : chaque ambiance est un lieu (`LIEUX["saison_…"]`) — on ne télécharge que la
+  saison qu'on entend (et celle vers qui elle glisse). Hors ligne avant le chargement : muette, pas de
+  synthèse de repli (comme la pluie).
+- **Juges** : `test_saisons_son_js.py` (4 juges : le catalogue et les lieux, la bonne ambiance à chaque
+  saison, la nuit, la pluie, dedans ; le fondu image par image de novembre à l'hiver, sans dé, qui ne charge
+  que ce qu'il entend et éteint tout dedans ; la boucle du jeu qui l'allume) ; 8 mutations, toutes rouges.
+- **Le plafond des sons de lieu relevé** (`test_le_poids_audio_reste_raisonnable`) : de 1 000 000 à
+  1 350 000 octets — les lieux pesaient déjà 0,94 Mo (pluie, Halloween, train, explosifs), les quatre
+  ambiances en ajoutent 0,3. **À valider par Martin.**
+- **À écouter par Martin** : personne d'autre ne peut juger un son (`static/audio/saison_*.mp3`) ; s'il
+  en refuse un, `scripts/audio_elevenlabs.py --refaire saison_ete`.
+

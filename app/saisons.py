@@ -143,6 +143,16 @@ RUE = {
 }
 
 
+#: LE SON DES SAISONS (lot 5, `Saisons.majSon`) : l'ambiance de chaque palette (août sonne comme l'été,
+#: novembre comme l'automne), son volume de base, ce qui la baisse (la nuit, la pluie, la tempête) et le
+#: temps qu'elle met à glisser vers son volume (en secondes). Dedans : muette.
+SON = {
+    "ambiances": {"hiver": "saison_hiver", "printemps": "saison_printemps", "ete": "saison_ete",
+                  "fin_ete": "saison_ete", "automne": "saison_automne", "novembre": "saison_automne"},
+    "volume": 0.55, "nuit": 0.45, "sous_la_pluie": 0.3, "glisse_s": 2.0,
+}
+
+
 def palette_du_jour(jour_de_l_annee: float) -> str:
     """La palette qui TIENT ce jour-là (la clé précédente), sans le glissement — pour les juges."""
     nom = CLES[0][1]
@@ -154,4 +164,4 @@ def palette_du_jour(jour_de_l_annee: float) -> str:
 
 def pour_le_navigateur() -> dict:
     return {"paliers": PALIERS, "cles": [[j, s] for j, s in CLES], "palettes": PALETTES,
-            "lumiere": LUMIERE, "annee": calendrier.ANNEE, "habits": HABITS, "rue": RUE}
+            "lumiere": LUMIERE, "annee": calendrier.ANNEE, "habits": HABITS, "rue": RUE, "son": SON}

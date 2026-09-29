@@ -476,6 +476,25 @@ CATALOGUE: list[Echantillon] = [
     _e("eclaboussure", "Éclaboussure", duree_s=0.9, volume=0.55,
        prompt="a car tire driving fast through a big puddle, a sharp splash of water "
               "spraying onto a sidewalk, close, no engine, no music"),
+    # LE SON DES SAISONS (les quatre saisons, lot 5, 29 sept. 2026) : quatre BOUCLES d'ambiance, dehors,
+    # dont le volume suit la palette du moment (`Saisons.majSon`) — en fondu enchaîné d'une saison à l'autre.
+    # Chacune est un « lieu » (`LIEUX["saison_…"]`) : on ne charge que la saison qu'on entend.
+    _e("saison_hiver", "L'hiver dehors", duree_s=9.5, volume=0.3, boucle=True, influence=0.4,
+       prompt="cold winter wind whistling softly between snowy houses in a quiet small town, dry snow "
+              "blowing, a snowplow blade scraping the road far away, calm and cold, seamless loop, "
+              "no voices, no music"),
+    _e("saison_printemps", "Le printemps dehors", duree_s=9.5, volume=0.3, boucle=True, influence=0.4,
+       prompt="early spring thaw in a small town, melting snow water trickling down gutters and "
+              "downspouts into a storm drain, drops falling, robins singing in the trees, fresh and "
+              "calm, seamless loop, no voices, no music"),
+    _e("saison_ete", "L'été dehors", duree_s=9.5, volume=0.3, boucle=True, influence=0.4,
+       prompt="hot summer afternoon in a residential street, cicadas buzzing loudly in the trees, a "
+              "lawnmower running far away, a few songbirds, lazy and warm, seamless loop, no voices, "
+              "no music"),
+    _e("saison_automne", "L'automne dehors", duree_s=9.5, volume=0.3, boucle=True, influence=0.4,
+       prompt="autumn wind blowing through trees, dry fallen leaves rustling and skittering along the "
+              "asphalt, a flock of Canada geese honking as they fly high overhead, crisp and cool, "
+              "seamless loop, no voices, no music"),
     # Le feu du foyer (le chalet du rang, 26 sept. 2026) : une BOUCLE dont le volume suit la
     # distance au foyer de la pièce (`Monde.majFeuDeFoyer`) — plus fort quand on s'y chauffe.
     _e("foyer", "Feu de foyer", duree_s=8.0, volume=0.4, boucle=True, influence=0.45,
@@ -1548,6 +1567,10 @@ LIEUX: dict[str, list[str]] = {
     # La pluie (les saisons, lot 2) : pas un endroit, un TEMPS — ils se chargent a la premiere averse
     # (`Pluie.maj`). Une partie qui ne voit jamais la pluie (l'hiver) ne les telecharge pas.
     "pluie": ["pluie", "tonnerre", "eclaboussure"],
+    # Le son des saisons (lot 5) : une boucle par saison, chargée quand on l'entend (`Saisons.majSon`) —
+    # la saison du moment, et celle vers qui elle glisse pendant une transition.
+    "saison_hiver": ["saison_hiver"], "saison_printemps": ["saison_printemps"],
+    "saison_ete": ["saison_ete"], "saison_automne": ["saison_automne"],
     # L'Halloween (les saisons, lot 3) : un SOIR — ils se chargent le 31 (`Halloween.maj`).
     "halloween": ["rire_sorciere", "porte_grince", "souffle_fantome"],
     "casino": ["casino_salle", "bras_machine", "gain_machine", "jackpot",
