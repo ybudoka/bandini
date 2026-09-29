@@ -296,6 +296,14 @@ def test_les_lieux_des_missions_existent():
                 assert slug[len("traversier:"):] in {q["district"] for q in VILLE["traversier"]["escales"]}, \
                     f"{mission['slug']} : « {slug} » introuvable"
                 continue
+            # ⚠️ L'amarrage le plus près d'un lieu (`amarrage:<lieu>`, m53 : le relais de la rive nord,
+            # `Histoire.amarragePres`) : une forme neuve de fbd00fce (29 sept. 2026), apprise alors à
+            # test_missions et test_barrieres mais pas ici — ce juge rougissait sur un lieu valide. Il
+            # exige ce que le résolveur exige : un lieu connu, et des amarrages dans la ville.
+            if slug.startswith("amarrage:"):
+                assert slug[len("amarrage:"):] in lieux and VILLE["amarrages"], \
+                    f"{mission['slug']} : « {slug} » introuvable"
+                continue
             assert slug in lieux, f"{mission['slug']} : « {slug} » introuvable"
     for defi in missions.DEFIS:
         for lieu in defi.get("points", []) + ([defi["lieu"]] if defi.get("lieu") else []):
