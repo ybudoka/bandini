@@ -16,6 +16,7 @@ if OBLIGATOIRE:
     from playwright.sync_api import Error  # noqa: F401
 else:
     pytest.importorskip("playwright.sync_api")
+from playwright.sync_api import TimeoutError as DelaiDepasse  # noqa: E402
 
 ECRANS = {
     "bureau": (1280, 720),
@@ -53,6 +54,18 @@ def erreurs(page):
 
 
 COMMANDES_OUVERTES = "window.BANDINI.B.menu && window.BANDINI.B.menu.titre === 'COMMANDES'"
+
+
+def attendre_ou_nommer(page, condition, arg, manquants, quoi):
+    """Attend `condition` 20 s ; a l'echec, NOMME ce qui manque (`manquants`, du JS).
+
+    ⚠️ « Timeout 20000ms exceeded » tout court a fait croire une semaine a de la
+    lenteur (sept. 2026) : c'etaient trente-quatre bruitages et vingt-quatre voix que
+    personne ne demandait. Un rouge qui dit QUOI manque se lit en une ligne."""
+    try:
+        page.wait_for_function(condition, arg=arg, timeout=20000)
+    except DelaiDepasse:
+        pytest.fail(f"{quoi} jamais decodes en 20 s : {page.evaluate(manquants)}")
 
 
 def attendre_titre(page):
@@ -301,7 +314,15 @@ def test_la_premiere_mission_se_joue_en_scenes_de_l_intro_a_la_fin(page, serveur
         j.x = t.x - 14; j.y = t.y; L.Entites.indexer();
         L.Histoire.parler('ti_guy');
     }""")
-    assert page.evaluate("!!window.BANDINI.B.scene"), "parler a Ti-Guy ne joue pas sa scene d'intro"
+    # ⚠️ ATTENDRE LA SCENE, pas la lire dans la foulee : le texte de m1 n'est plus dans
+    # le paquet (1722dea4, 24 sept. 2026) et la porte ATTEND `/api/mission/m1` avant de
+    # poser la mission (`poserPuisDireLIntro`). La bulle de Ti-Guy le demande d'habitude
+    # bien avant ; ici on parle une image apres avoir ferme les COMMANDES, et sous charge
+    # la reponse n'est pas encore la — le juge rougissait sur un jeu qui marche.
+    try:
+        page.wait_for_function("!!window.BANDINI.B.scene", timeout=10000)
+    except DelaiDepasse:
+        pytest.fail("parler a Ti-Guy ne joue pas sa scene d'intro")
     page.wait_for_function("!window.BANDINI.B.scene && !window.BANDINI.B.cinema", timeout=90000)
     assert page.evaluate("window.BANDINI.B.partie.mission.slug") == "m1"
     # Au garage, puis dans le char de la ruelle, puis le char ramene au garage.
@@ -493,13 +514,28 @@ def test_les_echantillons_se_chargent_dans_un_vrai_navigateur(page, serveur, err
     attendre_titre(page)
     jouer(page)          # le clic reveille l'audio
     page.wait_for_selector('#bandini[data-etat="jeu"]')
+    # ⚠️ LES BRUITS DE QUARTIER ET LES SONS D'UN LIEU NE PARTENT PAS AU DEMARRAGE
+    # (7d5dae54, 21 sept. 2026 ; la cabane et le casino, 3845083d) : ils arrivent
+    # quand on entre dans le district ou qu'on approche de la porte — c'est le budget
+    # de demarrage, une decision ecrite dans `chargerEchantillons`. Ce juge attendait
+    # les cent fichiers sans que personne ne demande les trente-quatre differes : il
+    # restait a 66 jusqu'au delai, et « 20 s depassees » faisait croire a de la
+    # lenteur (tout arrive en moins de 4 s). On les demande donc ici, comme le jeu le
+    # fait en y allant — et c'est ici, seulement ici, qu'on prouve qu'ils se DECODENT.
+    page.evaluate("""() => {
+        const S = window.BANDINI.Son, a = window.BANDINI.B.defs.audio;
+        Object.keys((a.quartiers && a.quartiers.sons) || {}).forEach(d => S.Quartier.charger(d));
+        Object.keys(a.lieux || {}).forEach(l => S.Lieu.charger(l));
+    }""")
     # ⚠️ Attendre l'EGALITE, pas « au moins un » : les fichiers se decodent en
     # parallele, et un test qui part au premier decode ne verrait jamais un MP3
     # tronque au fond de la liste.
     attendus = page.evaluate(
         "window.BANDINI.B.defs.audio.echantillons.filter(e => e.fichiers.length).length")
-    page.wait_for_function(
-        "n => window.BANDINI.Son.charges === n", arg=attendus, timeout=20000)
+    attendre_ou_nommer(
+        page, "n => window.BANDINI.Son.charges === n", attendus,
+        "window.BANDINI.B.defs.audio.echantillons.filter(e => e.fichiers.length"
+        " && !window.BANDINI.Son.estCharge(e.slug)).map(e => e.slug)", "bruitages")
     assert page.evaluate("window.BANDINI.Son.charges") == attendus
     assert erreurs == []
 
@@ -538,11 +574,22 @@ def test_l_ambiance_et_les_voix_se_decodent(page, serveur, erreurs):
     # DECODE. On le demande donc explicitement.
     page.evaluate("window.BANDINI.Son.Ambiance.jouer()")
     page.wait_for_function("window.BANDINI.Son.Ambiance.courante === 'ville'", timeout=20000)
+    # ⚠️ LES REPLIQUES D'UN CONTEXTE (la peur, la gloire, la nuit) ne partent pas au
+    # demarrage (5c3474a2, `Voix.chargerContexte`) : elles arrivent quand leur monde
+    # arrive. Tant qu'elles n'avaient pas de mp3, ce juge ne les comptait pas ; le
+    # 25 sept. 2026 (26cf6f0a) elles ont ete generees, et il a attendu vingt-quatre
+    # voix que personne ne demandait. On les demande ici, contexte par contexte.
+    page.evaluate("""() => {
+        const S = window.BANDINI.Son;
+        new Set(window.BANDINI.B.defs.audio.voix.map(v => v.quand).filter(Boolean))
+            .forEach(q => S.Voix.chargerContexte(q));
+    }""")
     attendues = page.evaluate("window.BANDINI.B.defs.audio.voix.filter(v => v.fichier).length")
-    page.wait_for_function(
-        "n => n > 0 && window.BANDINI.B.defs.audio.voix.filter(v => v.fichier)"
-        ".every(v => window.BANDINI.Son.estCharge('voix-' + v.slug))",
-        arg=attendues, timeout=20000)
+    attendre_ou_nommer(
+        page, "n => n > 0 && window.BANDINI.B.defs.audio.voix.filter(v => v.fichier)"
+        ".every(v => window.BANDINI.Son.estCharge('voix-' + v.slug))", attendues,
+        "window.BANDINI.B.defs.audio.voix.filter(v => v.fichier"
+        " && !window.BANDINI.Son.estCharge('voix-' + v.slug)).map(v => v.fichier)", "voix")
     assert page.evaluate("window.BANDINI.Son.boucleActive('ambiance-ville')") is True
     assert erreurs == []
 
