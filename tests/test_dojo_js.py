@@ -120,57 +120,71 @@ def test_une_vieille_partie_a_ses_cours_vides(banc):
 
 # --- La leçon sur le tatami (tâche 4) -----------------------------------------------------
 
-#: Joue une leçon : `geste(L, o)` est appelé à la première image de chaque fenêtre (le « et »).
+#: Joue une leçon À SON RYTHME : `geste(L, o)` part quand tout le monde est en place (pas en plein
+#: essai, personne au sol ni en l'air ; pour la parade, quand Kevin ARME), puis après une attente
+#: qui change d'un essai à l'autre — le moment exact ne compte plus.
 LECON = """
+    function pret(L) {
+        const c = L.B.cours;
+        if (!c || L.B.transition || c.essai || c.remise > 0) return false;
+        const k = c.kevin;
+        if (k.etat === 'couche_dojo' || k.vol) return false;
+        if (c.slug === 'retournement_poignet') return k.etat === 'attaque' && k.phase === 'anticipation';
+        return true;
+    }
     function lecon(L, o, slug, geste, images) {
         L.B.partie.argent = 5000;
         const ok = L.Dojo.acheter(slug);
-        let vues = 0, n = 0;
-        for (; n < (images || 900) && L.B.cours; n++) {
-            // Un geste par fenêtre, à sa première image.
-            if (L.B.cours.fenetre && L.B.cours.ouverte !== vues) { vues = L.B.cours.ouverte; geste(L, o); }
-            else o.frame(1);
+        let essais = 0, attente = 0, n = 0;
+        for (; n < (images || 1400) && L.B.cours; n++) {
+            if (pret(L) && --attente <= 0) {
+                geste(L, o); essais++;
+                attente = (essais * 37) % 50;
+            } else o.frame(1);
         }
-        return { ok: ok, appris: !!L.B.partie.techniques[slug], paye: !!(L.B.partie.coursPayes || {})[slug],
-                 cours: L.B.cours ? { reussis: L.B.cours.reussis, rates: L.B.cours.rates } : null };
+        return { ok: ok, essais: essais, appris: !!L.B.partie.techniques[slug],
+                 paye: !!(L.B.partie.coursPayes || {})[slug],
+                 cours: L.B.cours ? { reussis: L.B.cours.reussis } : null };
     }
 """
 
 
-def test_trois_reussites_en_rythme_apprennent_l_uppercut(banc):
-    """On tape sur le « et », trois fois : la leçon met la chaîne au maillon d'avant, la
-    tape fait donc partir l'uppercut, sur Kevin."""
+def test_trois_reussites_a_son_rythme_apprennent_l_uppercut(banc):
+    """Martin, 29 sept. : « change comment on apprend ces techniques, c'est trop dur ». Trois
+    uppercuts sur Kevin, espacés comme ça vient : la leçon garde la chaîne au maillon d'avant, la
+    tape fait donc partir l'uppercut."""
     r = banc("""function (L, o) { """ + ENTRER + LECON + """
         auDojo(L, o);
         return lecon(L, o, 'uppercut', function (L, o) { o.tape('KeyX', 1); });
     }""")
-    assert r == {"ok": True, "appris": True, "paye": False, "cours": None}, r
+    assert r["essais"] == 3, r                     # trois essais, trois réussites : aucun de perdu
+    assert {k: r[k] for k in ("ok", "appris", "paye", "cours")} == \
+        {"ok": True, "appris": True, "paye": False, "cours": None}, r
 
 
-def test_hors_de_la_fenetre_ca_ne_compte_pas(banc):
-    r = banc("""function (L, o) { """ + ENTRER + """
+def test_des_coups_dans_le_vide_n_arretent_rien(banc):
+    """Aucun échec : vingt uppercuts dos à Kevin, et la leçon est toujours là, le cours payé —
+    Mireille le dit (PRESQUE), c'est tout."""
+    r = banc("""function (L, o) { """ + ENTRER + LECON + """
         auDojo(L, o);
         L.B.partie.argent = 1000;
         L.Dojo.acheter('uppercut');
-        let reussis = 0;
-        for (let n = 0; n < 700 && L.B.cours; n++) {
-            // Un UPPERCUT (la chaîne au maillon d'avant) au milieu de chaque temps « un » :
-            // la bonne technique, au mauvais moment — jamais dans la fenêtre.
-            if (L.B.cours && L.B.cours.t % 135 === 20) {
-                L.B.joueur.chaine = 3; L.B.joueur.chaineT = 24;
-                o.tape('KeyX', 1);
-            } else o.frame(1);
-            if (L.B.cours) reussis = Math.max(reussis, L.B.cours.reussis);
+        let coups = 0, presque = 0;
+        for (let n = 0; n < 2400 && L.B.cours && !(coups === 20 && pret(L)); n++) {
+            if (pret(L) && coups < 20) { L.Entites.regarder(L.B.joueur, -1, 0); o.tape('KeyX', 1); coups++; }
+            else o.frame(1);
+            if (L.B.cours && L.B.cours.dit === 'PRESQUE' && L.B.cours.ditT === 40) presque++;
         }
-        return { appris: !!L.B.partie.techniques.uppercut, reussis: reussis,
-                 paye: !!L.B.partie.coursPayes.uppercut, cours: L.B.cours || null };
+        return { coups: coups, presque: presque, paye: !!L.B.partie.coursPayes.uppercut,
+                 cours: L.B.cours ? { reussis: L.B.cours.reussis } : null };
     }""")
-    assert r == {"appris": False, "reussis": 0, "paye": True, "cours": None}, r
+    assert r["coups"] == 20, r                     # sinon le juge ne juge rien
+    assert r["cours"] == {"reussis": 0} and r["paye"] is True, r
+    assert r["presque"] == 20, r
 
 
-def test_la_projection_de_hanche_s_apprend_en_rythme(banc):
-    """SAISIR puis le stick vers l'avant, sur le « et » : la projection part dans la
-    fenêtre, et compte même si Kevin retombe après."""
+def test_la_projection_de_hanche_s_apprend_a_son_rythme(banc):
+    """SAISIR puis le stick vers l'avant : la projection compte quand Kevin retombe."""
     r = banc("""function (L, o) { """ + ENTRER + LECON + """
         auDojo(L, o);
         return lecon(L, o, 'projection_hanche', function (L, o) {
@@ -261,15 +275,14 @@ def test_la_lecon_ne_tire_aucun_de(banc):
 # --- La relecture de la branche : une leçon au bouton par mise en place -------------------
 
 GESTES = {
-    # La parade : Kevin arme sur le « et » ; on lui prend le poignet tout de suite.
+    # La parade : Kevin arme (lentement) ; on lui prend le poignet pendant qu'il arme.
     "retournement_poignet": "o.tape('KeyU', 1);",
     # De dos : on tient SAISIR le temps de l'étranglement.
     "etranglement": "o.touche('KeyU'); o.frame(95); o.relacher('KeyU'); o.frame(1);",
-    # Tenue : on charge sur le « et », on relâche avant la fin de la fenêtre.
+    # Tenue : on charge, on relâche.
     "pied_de_cote": "o.touche('KeyX'); o.frame(21); o.relacher('KeyX'); o.frame(1);",
     # Plus loin : on sprinte vers Kevin et on frappe en course, une fois sur lui. ⚠️ 9 images (23 px
-    # sur 70) frappaient de trop loin : ce juge n'etait vert que parce que Bandini ne revenait pas
-    # sur sa marque et restait colle a Kevin apres le premier essai.
+    # sur 70) frappaient de trop loin.
     "pied_saute": ("o.touche('ShiftLeft'); o.touche('ArrowRight'); o.frame(16); o.tape('KeyX', 1);"
                    " o.relacher('ArrowRight'); o.relacher('ShiftLeft'); o.frame(1);"),
     # Kevin attaque : on roule, et on balaie au sortir de la roulade.
@@ -307,49 +320,17 @@ def test_kevin_revient_au_sac_et_se_redresse(banc):
 
 # --- Des leçons qu'on comprend (docs/jalons/le-dojo-des-lecons-qu-on-comprend.md) ---------
 
-def test_ne_rien_faire_n_est_pas_un_rate(banc):
-    """Martin, 28 sept. : la leçon s'arrêtait pendant qu'on cherchait le bouton. Dix « et »
-    sans un geste : pas un raté, la leçon attend."""
+def test_ne_rien_faire_ne_finit_rien(banc):
+    """Martin, 28 sept. : la leçon s'arrêtait pendant qu'on cherchait le bouton. Vingt secondes
+    sans un geste : elle attend."""
     r = banc("""function (L, o) { """ + ENTRER + """
         auDojo(L, o);
         L.B.partie.argent = 1000;
         L.Dojo.acheter('uppercut');
-        let fenetres = 0;
-        for (let n = 0; n < 1400 && L.B.cours; n++) { o.frame(1); if (L.B.cours) fenetres = L.B.cours.ouverte; }
-        return { fenetres: fenetres, cours: L.B.cours ? { rates: L.B.cours.rates, reussis: L.B.cours.reussis } : null };
+        o.frame(1200);
+        return L.B.cours ? { reussis: L.B.cours.reussis } : null;
     }""")
-    assert r["fenetres"] >= 10, r                  # sinon le juge ne juge rien
-    assert r["cours"] == {"rates": 0, "reussis": 0}, r
-
-
-def test_un_geste_rate_compte_encore(banc):
-    """Le pendant : un geste TENTÉ au mauvais moment reste un raté (un par « et »)."""
-    r = banc("""function (L, o) { """ + ENTRER + """
-        auDojo(L, o);
-        L.B.partie.argent = 1000;
-        L.Dojo.acheter('uppercut');
-        while (L.B.transition) o.frame(1);
-        let rates = 0;
-        for (let n = 0; n < 300 && L.B.cours; n++) {
-            if (L.B.cours.t % 135 === 20) o.tape('KeyX', 1); else o.frame(1);
-            if (L.B.cours) rates = L.B.cours.rates;
-        }
-        return rates;
-    }""")
-    assert r == 2, r
-
-
-def test_la_fenetre_dure_six_dixiemes(banc):
-    r = banc("""function (L, o) { """ + ENTRER + """
-        auDojo(L, o);
-        L.B.partie.argent = 1000;
-        L.Dojo.acheter('uppercut');
-        while (L.B.transition) o.frame(1);
-        let ouverte = 0;
-        for (let n = 0; n < 135; n++) { o.frame(1); if (L.B.cours.fenetre) ouverte++; }
-        return ouverte;
-    }""")
-    assert r == 36, r
+    assert r == {"reussis": 0}, r
 
 
 #: Ce que chaque carte doit montrer : le BOUTON de la technique (une action d'`Entree`).
@@ -402,50 +383,89 @@ def test_la_carte_parle_l_appareil_qu_on_tient(banc):
 # --- Bandini revient sur sa marque (docs/jalons/le-dojo-bandini-revient-sur-sa-marque.md) ------
 
 def test_le_coup_de_pied_saute_s_apprend_essai_apres_essai(banc):
-    """Martin, 29 sept. : « trop difficile ». Un premier essai parti trop tôt (on court dès le
-    « deux », on frappe sur le « et ») laissait Bandini DERRIÈRE Kevin, dos à lui : Kevin reprend sa
-    marque là où Bandini se tient, et les deux corps se démêlent de travers. Tous les essais suivants
-    rataient. Joué comme un joueur : ensuite, sur chaque « et », COURIR vers lui et FRAPPE quelques
-    pas plus loin — sans jamais revenir soi-même."""
-    r = banc("""function (L, o) { """ + ENTRER + """
+    """Martin, 29 sept. : « trop difficile ». Un premier essai parti trop tôt laisse Bandini DERRIÈRE
+    Kevin, dos à lui : on souffle, et chacun reprend sa marque — les essais suivants portent."""
+    r = banc("""function (L, o) { """ + ENTRER + LECON + """
         auDojo(L, o);
         L.B.partie.argent = 5000;
         L.Dojo.acheter('pied_saute');
         while (L.B.transition) o.frame(1);
-        const j = L.B.joueur;
-        // Le premier essai, parti trop tôt.
-        while (Math.floor(L.B.cours.t / 45) % 3 !== 1) o.frame(1);
-        o.touche('ShiftLeft'); o.touche('ArrowRight');
-        while (!L.B.cours.fenetre) o.frame(1);
-        o.tape('KeyX', 1); o.relacher('ArrowRight'); o.relacher('ShiftLeft');
-        o.frame(20);
-        const depasse = L.B.cours.kevin.x - j.x;
-        let vues = L.B.cours.ouverte;
-        for (let n = 0; n < 1400 && L.B.cours; n++) {
-            const c = L.B.cours;
-            if (c.fenetre && c.ouverte !== vues) {
-                vues = c.ouverte;
-                o.touche('ShiftLeft'); o.touche('ArrowRight'); o.frame(16);
-                o.tape('KeyX', 1); o.relacher('ArrowRight'); o.relacher('ShiftLeft');
-            } else o.frame(1);
-        }
-        return { appris: !!L.B.partie.techniques.pied_saute, vues: vues, depasse: Math.round(depasse) };
+        const j = L.B.joueur, k = L.B.cours.kevin;
+        // Le premier essai est parti trop tôt : Bandini a filé DERRIÈRE Kevin, dos à lui.
+        j.x = k.x + 24; j.y = k.y; L.Entites.regarder(j, 1, 0); L.Entites.indexer();
+        o.tape('KeyX', 1);
+        const depasse = k.x - j.x;
+        const fin = lecon(L, o, 'pied_saute', function (L, o) {
+            o.touche('ShiftLeft'); o.touche('ArrowRight'); o.frame(16);
+            o.tape('KeyX', 1); o.relacher('ArrowRight'); o.relacher('ShiftLeft'); o.frame(1);
+        });
+        return { appris: fin.appris, depasse: Math.round(depasse) };
     }""")
     assert r["depasse"] < 0, r                     # sinon le juge ne juge rien : il l'a bien dépassé
     assert r["appris"] is True, r
 
 
-def test_bandini_revient_sur_sa_marque_face_a_kevin(banc):
-    r = banc("""function (L, o) { """ + ENTRER + """
-        auDojo(L, o);
+#: Un essai qui part dans le vide (dos à Kevin), puis on laisse retomber.
+DANS_LE_VIDE = """
+    function dansLeVide(L, o) {
         L.B.partie.argent = 5000;
-        L.Dojo.acheter('pied_saute');
+        L.Dojo.acheter('uppercut');
         while (L.B.transition) o.frame(1);
         const j = L.B.joueur, x0 = j.x, y0 = j.y;
-        // Il s'en va à l'autre bout du tatami, dos à Kevin.
-        j.x += 90; L.Entites.regarder(j, 1, 0); L.Entites.indexer();
-        while (!(Math.floor(L.B.cours.t / 45) % 3 === 1)) o.frame(1);
-        return { dx: Math.round(j.x - x0), dy: Math.round(j.y - y0), regard: j.regard ? Math.sign(j.regard.x) : null,
+        j.x += 40; L.Entites.regarder(j, 1, 0); L.Entites.indexer();
+        o.tape('KeyX', 1);
+        while (L.B.cours.essai || !L.B.cours.remise) o.frame(1);
+        return { x0: x0, y0: y0 };
+    }
+"""
+
+
+def test_bandini_revient_sur_sa_marque_face_a_kevin(banc):
+    """Derrière Kevin, dos à lui : un essai, on souffle, et il est sur sa marque."""
+    r = banc("""function (L, o) { """ + ENTRER + DANS_LE_VIDE + """
+        auDojo(L, o);
+        const m = dansLeVide(L, o), j = L.B.joueur;
+        o.frame(L.B.defs.dojo.remise_images + 2);
+        return { dx: Math.round(j.x - m.x0), dy: Math.round(j.y - m.y0), regard: j.regard ? Math.sign(j.regard.x) : null,
                  kevin: Math.sign(L.B.cours.kevin.x - j.x) };
     }""")
     assert r["dx"] == 0 and r["dy"] == 0 and r["kevin"] == 1, r
+
+
+def test_on_ne_ramene_personne_en_pleine_course(banc):
+    """Le pendant : qui marche après son essai n'est pas téléporté sous ses pieds."""
+    r = banc("""function (L, o) { """ + ENTRER + DANS_LE_VIDE + """
+        auDojo(L, o);
+        const m = dansLeVide(L, o), j = L.B.joueur;
+        // Un bond de plus de 4 px d'une image à l'autre : téléporté.
+        let bond = 0, px = j.x, py = j.y;
+        o.touche('ArrowUp');
+        for (let n = 0; n < L.B.defs.dojo.remise_images * 3; n++) {
+            o.frame(1); bond = Math.max(bond, Math.hypot(j.x - px, j.y - py)); px = j.x; py = j.y;
+        }
+        o.relacher('ArrowUp');
+        return { bond: Math.round(bond), bouge: Math.round(Math.hypot(j.x - m.x0 - 40, j.y - m.y0)) };
+    }""")
+    assert r["bouge"] > 10, r                      # sinon le juge ne juge rien : il a marché
+    assert r["bond"] <= 4, r
+
+
+def test_kevin_arme_lentement_pour_la_parade(banc):
+    """La parade : Kevin arme son coup à intervalle régulier, TIENT l'élan 0,75 s et crie — le coup
+    de rue n'armait que 5 images, c'était le vrai mur de cette leçon."""
+    r = banc("""function (L, o) { """ + ENTRER + """
+        auDojo(L, o);
+        L.B.partie.argent = 5000;
+        L.Dojo.acheter('retournement_poignet');
+        while (L.B.transition) o.frame(1);
+        const k = L.B.cours.kevin;
+        let arme = 0, plus = 0, cri = '', elans = k.elans || 0;
+        for (let n = 0; n < 400; n++) {
+            o.frame(1);
+            if (k.etat === 'attaque' && k.phase === 'anticipation') { arme++; if (k.bulle) cri = k.bulle.texte; }
+            else if (arme) { plus = Math.max(plus, arme); arme = 0; }
+        }
+        return { plus: plus, cri: cri, elans: (k.elans || 0) - elans };
+    }""")
+    assert r["elans"] >= 2, r                      # plus d'un coup en 400 images
+    assert r["plus"] >= 44 and r["cri"] == "HA !", r

@@ -2,9 +2,9 @@
 (docs/jalons/le-dojo-du-quartier.md). Python decide, `dojo.js` joue.
 
 Mireille Dion tient le DOJO DION, au Faubourg : ancienne danseuse contemporaine,
-venue a l'aikido puis au jiu-jitsu. Elle enseigne AU RYTHME — « un… deux… et… » —
-et une technique s'apprend quand on la place trois fois sur le « et », sur Kevin,
-l'eleve partenaire. Sa fiche : `docs/personnages/mireille.md`.
+venue a l'aikido puis au jiu-jitsu. Une technique s'apprend quand on la place trois fois
+sur Kevin, l'eleve partenaire — A SON RYTHME : ni metronome, ni fenetre, ni echec
+(docs/jalons/le-dojo-apprendre-a-son-rythme.md). Sa fiche : `docs/personnages/mireille.md`.
 """
 
 from __future__ import annotations
@@ -14,18 +14,20 @@ from . import techniques
 #: Le dojo ouvre de 8 h a 22 h (fractions du jour, comme `magasins.HEURES_DES_COMPTOIRS`).
 #: ⚠️ La nuit, c'est le MENU qui ferme, pas la porte — comme tous les comptoirs du jeu.
 HEURES = (8 / 24, 22 / 24)
-#: « un… deux… et… » : un temps toutes les 45 images (0,75 s) ; le « et » ouvre 36 images.
-#: ⚠️ 24 images (0,4 s) le 26 sept. : Martin, le 28, « trop dur et pas clair » — 0,6 s, et une
-#: barre qui se vide sous le « ET » tant que la fenetre est ouverte.
-#: ⚠️ LE COMPTE EST UN METRONOME, pas une voix : deux claquements de bois, puis un fort sur
-#: le « et » (`Son.SFX`, synthetise). Une voix generee ne tombe jamais pile sur le temps, et
-#: les vingt-cinq voix faisaient deborder le paquet (`test_definitions`, 54 000 gzip).
-TEMPS_IMAGES = 45
-FENETRE_IMAGES = 36
+#: ⚠️ PLUS DE METRONOME (Martin, 29 sept. : « change comment on apprend ces techniques, c'est
+#: trop dur ») : le « et » de 0,4 s (26 sept.), puis de 0,6 s (28 sept.), et Bandini ramene sur sa
+#: marque (29 sept.) n'y ont rien fait — c'etait le principe. Une reussite, c'est la technique
+#: enseignee qui PORTE sur Kevin, quand on veut ; trois, et elle est apprise. Aucun echec : un
+#: geste qui ne porte pas, Mireille le dit (« tu danses tout seul »), et on recommence.
 REUSSITES = 3
-#: ⚠️ Des TENTATIVES ratees : un « et » ou l'on ne fait rien ne compte pas (Martin, 28 sept. :
-#: la lecon s'arretait pendant qu'on cherchait encore le bouton).
-RATES_MAX = 5
+#: Apres un essai, le temps de souffler (0,75 s) avant que Kevin et Bandini reprennent leur marque
+#: — si Bandini ne bouge plus : on ne tire personne en pleine course.
+REMISE_IMAGES = 45
+#: La parade (le retournement du poignet) : Kevin arme un coup toutes les 2 s, et le TIENT arme
+#: 0,75 s, avec un cri. ⚠️ Le coup de rue n'arme que 5 images (0,08 s) : c'etait le vrai mur de
+#: cette lecon-la, rythme ou pas.
+CADENCE_ARME = 120
+ANTICIPATION_KEVIN = 45
 #: Ou Kevin se tient, en pixels devant Bandini, selon la mise en place (`techniques.lecon`).
 #: ⚠️ Au contact, c'est 12 : deux corps ne s'approchent jamais sous 10 px (`Entites.demeler`).
 DISTANCES = {"contact": 12, "dos": 11, "arme": 12, "loin": 70, "attaque": 40}
@@ -63,10 +65,8 @@ REPLIQUES: list[dict] = [
     {"cle": "cours", "texte": "Choisis. Moi, je fournis le geste et le rythme. Toi, la sueur."},
     {"cle": "oui_1", "texte": "Oui."},
     {"cle": "oui_2", "texte": "C'est ça."},
-    {"cle": "rate_1", "texte": "Trop tôt."},
-    {"cle": "rate_2", "texte": "Tu danses tout seul."},
+    {"cle": "dans_le_vide", "texte": "Tu danses tout seul."},
     {"cle": "appris", "texte": "Tu l'as. Garde-le propre."},
-    {"cle": "reprendre", "texte": "On reprendra. C'est payé. Reviens quand ton corps m'écoute."},
     {"cle": "abandon", "texte": "On arrête. Salue le tatami en sortant."},
     {"cle": "ferme", "texte": "Le dojo dort. Reviens à huit heures."},
 ] + [{"cle": f"annonce_{t['slug']}", "texte": ANNONCES[t["slug"]]}
@@ -80,15 +80,16 @@ def repliques() -> list[dict]:
              "mission": "dojo", "partie": "dojo", "telephone": False} for r in REPLIQUES]
 
 
-#: Les repliques qui s'AFFICHENT (une boite de dialogue, avec son visage) : les autres — le
-#: compte, les « oui », les rates, les annonces — ne font que se DIRE ; l'ecran les montre
+#: Les repliques qui s'AFFICHENT (une boite de dialogue, avec son visage) : les autres — les
+#: « oui », le geste dans le vide, les annonces — ne font que se DIRE ; l'ecran les montre
 #: par le compteur de la lecon et le nom de la technique.
 #: ⚠️ Le paquet des definitions est a son plafond (54 000 octets gzip, `test_definitions`) :
 #: les vingt-cinq textes le depassaient de 638 octets. Ce qui se dit sans s'afficher reste ici.
-AFFICHEES = ("salut", "appris", "reprendre")
+AFFICHEES = ("salut", "appris")
 
 
 def exporter() -> dict:
-    return {"heures": list(HEURES), "temps_images": TEMPS_IMAGES, "fenetre_images": FENETRE_IMAGES,
-            "reussites": REUSSITES, "rates_max": RATES_MAX, "distances": DISTANCES, "lecons": LECONS,
+    return {"heures": list(HEURES), "reussites": REUSSITES, "remise_images": REMISE_IMAGES,
+            "cadence_arme": CADENCE_ARME, "anticipation_kevin": ANTICIPATION_KEVIN,
+            "distances": DISTANCES, "lecons": LECONS,
             "repliques": {r["cle"]: r["texte"] for r in REPLIQUES if r["cle"] in AFFICHEES}}
