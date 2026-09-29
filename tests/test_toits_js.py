@@ -107,3 +107,82 @@ def test_les_teintes_ne_tirent_aucun_de_et_se_comptent_vite(banc):
     }""")
     assert r["tirages"] == 0, r
     assert r["ms"] < 400, r
+
+
+# --- Vague 2 : les bords, les gouttières et l'ombre --------------------------------------------------------------
+
+PEINDRE = """
+    function peindre(L, glyphe, v) {
+        const c = L.Base.nouveauCanvas(16, 16), ctx = c.getContext('2d');
+        ctx.traces = [];
+        L.TUILES[glyphe](ctx, v, 16);
+        return ctx.traces;
+    }
+"""
+
+
+def test_le_parapet_d_un_toit_plat_suit_le_soleil(banc):
+    """Le soleil vient du nord-ouest : le parapet du nord jette son ombre sur le toit, celui du sud prend la lumière
+    sur sa face intérieure. ⚠️ Le témoin : un plein toit, sans bord, n'a ni l'une ni l'autre."""
+    r = banc("function (L, o) {" + PEINDRE + """
+        const ombre = 'rgba(12,10,20,0.34)', lumiere = 'rgba(255,248,230,0.16)';
+        const a = function (t, c) { return t.filter(function (q) { return q[4] === c; }); };
+        const nord = peindre(L, 'B', 1), sud = peindre(L, 'B', 4), plein = peindre(L, 'B', 0), ouest = peindre(L, 'O', 8);
+        return { nordOmbre: a(nord, ombre).map(function (q) { return q.slice(0, 4); }),
+                 nordLumiere: a(nord, lumiere).length, sudLumiere: a(sud, lumiere).map(function (q) { return q.slice(0, 4); }),
+                 sudOmbre: a(sud, ombre).length, plein: a(plein, ombre).length + a(plein, lumiere).length,
+                 ouestOmbre: a(ouest, ombre).map(function (q) { return q.slice(0, 4); }) };
+    }""")
+    assert r["nordOmbre"] == [[0, 3, 16, 2]] and r["nordLumiere"] == 0, r
+    assert r["sudLumiere"] == [[0, 11, 16, 2]] and r["sudOmbre"] == 0, r
+    assert r["ouestOmbre"] == [[3, 0, 2, 16]] and r["plein"] == 0, r
+
+
+def test_un_toit_en_pente_a_ses_gouttieres_et_ses_rives(banc):
+    """Au bas de chaque versant (nord, sud), la gouttière de métal ; aux pignons (est, ouest), la rive, plus sombre
+    que le bardeau. ⚠️ Le témoin : au milieu du toit, ni gouttière ni rive."""
+    r = banc("function (L, o) {" + PEINDRE + """
+        const metal = '#8d9297';
+        const g = function (v) { return peindre(L, 'P', v).filter(function (q) { return q[4] === metal; }).map(function (q) { return q.slice(0, 4); }); };
+        const sombre = function (v) { return peindre(L, 'P', v + 128).filter(function (q) { return q[2] === 3 && q[3] === 16; }).map(function (q) { return q[0]; }); };
+        return { sud: g(4 + 32), nord: g(1), milieu: g(16), est: sombre(2), ouest: sombre(8), rien: sombre(0) };
+    }""")
+    assert r["sud"] == [[0, 13, 16, 3]] and r["nord"] == [[0, 0, 16, 2]] and r["milieu"] == [], r
+    assert r["est"] == [13] and r["ouest"] == [0] and r["rien"] == [], r
+
+
+def test_un_batiment_jette_son_ombre_sur_le_sol_a_son_est(banc):
+    """Le sol collé au flanc est d'un bâtiment porte une bande d'ombre ; la pointe se pose au pied de son coin
+    sud-est. ⚠️ Les témoins : un sol sans bâtiment à l'ouest n'en a pas ; et dans une pièce, aucune."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const M = L.Monde, c = M.carte;
+        const bat = function (x, y) { return M.estToit(x, y) || 'FWDdG}H'.indexOf(M.glyphe(x, y)) >= 0; };
+        const sol = function (x, y) { return !bat(x, y) && M.solidite(x, y) !== 1; };
+        let flanc = null, libre = null, coin = null;
+        for (let ty = 150; ty < c.h - 2 && !(flanc && libre && coin); ty++) {
+            for (let tx = 2; tx < c.w - 2 && !(flanc && libre && coin); tx++) {
+                if (!sol(tx, ty) || tx % 16 === 0) continue;
+                if (!flanc && bat(tx - 1, ty) && bat(tx - 1, ty - 1)) flanc = { x: tx, y: ty };
+                if (!coin && !bat(tx - 1, ty) && bat(tx - 1, ty - 1) && !bat(tx, ty - 1)) coin = { x: tx, y: ty };
+                if (!libre && !bat(tx - 1, ty) && !bat(tx - 1, ty - 1) && !bat(tx, ty - 1) && sol(tx - 1, ty)) libre = { x: tx, y: ty };
+            }
+        }
+        const traces = [], vrai = L.Base.nouveauCanvas;
+        L.Base.nouveauCanvas = function () { const k = vrai.apply(this, arguments); k.getContext('2d').traces = traces; return k; };
+        const bande = function (t, h) {
+            traces.length = 0;
+            c.morceaux.clear();
+            M.dessinerSol(o.doc.createElement('canvas').getContext('2d'), { x: t.x * 16 - 240, y: t.y * 16 - 135 });
+            return traces.filter(function (q) { return q[4] === 'rgba(11,10,18,0.34)' && q[2] === 4 && q[3] === (h || 16)
+                && q[0] === (t.x % 16) * 16 && q[1] === (t.y % 16) * 16; }).length;
+        };
+        const auFlanc = bande(flanc), aLibre = bande(libre) + bande(libre, 6), auCoin = bande(coin, 6);
+        c.interieur = { slug: 'banc' };
+        const dedans = bande(flanc);
+        delete c.interieur;
+        L.Base.nouveauCanvas = vrai;
+        return { flanc: flanc, auFlanc: auFlanc, aLibre: aLibre, dedans: dedans, coin: coin, auCoin: auCoin };
+    }""")
+    assert r["flanc"] and r["auFlanc"] == 1 and r["coin"] and r["auCoin"] == 1, r
+    assert r["aLibre"] == 0 and r["dedans"] == 0, r

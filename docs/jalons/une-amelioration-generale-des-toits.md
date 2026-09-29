@@ -85,3 +85,24 @@ d'abord)._
   à La Shop.
 - **Reste** : vague 2, les bords, les gouttières et l'ombre ; vague 3, des formes de toit ; vague 4, l'usure et
   des objets neufs.
+
+### Vague 2 — les bords, les gouttières et l'ombre — **livrée le 30 sept. 2026**
+
+- ⚠️ **Un seul soleil, au nord-ouest** : c'est lui qui jetait déjà l'ombre des murs au sud (`FACADES.ombreDeMur`)
+  et celle des objets de toit au sud-est. Tout ce qui s'ajoute le suit.
+- **Le parapet d'un toit plat** (`bordDeToit`) : au nord et à l'ouest, il jette son OMBRE sur le toit ; au sud et à
+  l'est, sa face intérieure prend la LUMIÈRE. Pareil des quatre côtés, c'était un cadre dessiné, pas un muret.
+- **Le toit en pente** (`bordDePente`) : au bas de chaque versant, la GOUTTIÈRE — un tube de métal galvanisé, son
+  reflet, l'ombre qu'il jette sur le bardeau ; aux pignons, la RIVE — la planche de bout, plus sombre, liserée de
+  la couleur de la faîte.
+- **L'ombre du flanc** (`FACADES.ombreDeFlanc`, peinte avec le morceau) : le sol collé au flanc est d'un bâtiment
+  porte une bande qui s'efface, et une pointe au pied de son coin sud-est la raccorde à l'ombre de la façade. Un
+  bâtiment seulement (un toit, ou un mur de façade, de vitrine, de porte, de planches) — ni falaise ni montagne ;
+  et DEHORS seulement : dans une pièce, chaque mur de l'ouest barrait le plancher.
+- Rien de plus dans le paquet ni dans la cuisson : les bords sont dans la tuile (même variante), l'ombre dans le
+  morceau (une passe de plus sur ses 256 tuiles).
+- **Juges** : trois de plus dans `test_toits_js.py` (le parapet suit le soleil, témoin : un plein toit sans l'un
+  ni l'autre ; la gouttière et la rive, témoin : le milieu du toit ; l'ombre au flanc et au coin, témoins : un sol
+  sans bâtiment à l'ouest, et une pièce). Six mutations rouges — une n'avait pas mordu tant que le juge confondait
+  la bande du flanc et la pointe du coin (même couleur) : il les distingue par leur hauteur.
+- **Reste** : vague 3, des formes de toit ; vague 4, l'usure et des objets neufs.

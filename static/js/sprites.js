@@ -3546,16 +3546,48 @@ const TUILES = (function () {
   /** Le bord : un parapet clair au ras du vide, et sa ligne d'ombre a
       l'interieur. C'est le premier repere d'un toit — celui qui dit ou finit
       le batiment. */
+  //: ⚠️ LE SOLEIL VIENT DU NORD-OUEST (les toits, vague 2) : c'est deja lui qui jette l'ombre des murs au sud
+  //: (`FACADES.ombreDeMur`) et celle des objets de toit au sud-est. Le parapet le suit : au nord et a l'ouest, il
+  //: jette son OMBRE sur le toit ; au sud et a l'est, sa face interieure prend la LUMIERE. Un parapet pareil des
+  //: quatre cotes etait un cadre dessine, pas un muret.
+  const OMBRE_DE_PARAPET = 'rgba(12,10,20,0.34)', LUMIERE_DE_PARAPET = 'rgba(255,248,230,0.16)';
   function bordDeToit(ctx, v, T, style) {
     const cotes = [[1, 0, -1], [2, 1, 0], [4, 0, 1], [8, -1, 0]];
     for (const [bit, dx, dy] of cotes) {
       if (!(v & bit)) continue;
-      ctx.fillStyle = style.clair;
+      ctx.fillStyle = style.clair;                                       // le chaperon, au ras du vide
       if (dy) ctx.fillRect(0, dy < 0 ? 0 : T - 2, T, 2);
       else ctx.fillRect(dx < 0 ? 0 : T - 2, 0, 2, T);
-      ctx.fillStyle = style.sombre;
+      ctx.fillStyle = style.sombre;                                      // l'arete interieure
       if (dy) ctx.fillRect(0, dy < 0 ? 2 : T - 3, T, 1);
       else ctx.fillRect(dx < 0 ? 2 : T - 3, 0, 1, T);
+      const ombre = dy < 0 || dx < 0;                                    // nord, ouest : cote soleil
+      ctx.fillStyle = ombre ? OMBRE_DE_PARAPET : LUMIERE_DE_PARAPET;
+      if (dy) ctx.fillRect(0, dy < 0 ? 3 : T - 5, T, 2);
+      else ctx.fillRect(dx < 0 ? 3 : T - 5, 0, 2, T);
+    }
+  }
+
+  //: La gouttiere d'un toit en pente : du metal galvanise, au bas de chaque versant (nord et sud).
+  const GOUTTIERE = { metal: '#8d9297', reflet: '#b9bdc1', ombre: 'rgba(12,10,20,0.38)' };
+  /** Les bords d'un toit en pente : au bas des versants (1 nord, 4 sud), la GOUTTIERE — un tube de metal avec son
+      reflet, et l'ombre qu'il jette sur le bardeau ; aux pignons (2 est, 8 ouest), la RIVE — la planche de bout,
+      plus sombre que le bardeau, liseree de la couleur de la faite. */
+  function bordDePente(ctx, v, T, style) {
+    if (v & 4) {
+      ctx.fillStyle = GOUTTIERE.ombre; ctx.fillRect(0, T - 4, T, 1);
+      ctx.fillStyle = GOUTTIERE.metal; ctx.fillRect(0, T - 3, T, 3);
+      ctx.fillStyle = GOUTTIERE.reflet; ctx.fillRect(0, T - 3, T, 1);
+    }
+    if (v & 1) {
+      ctx.fillStyle = GOUTTIERE.metal; ctx.fillRect(0, 0, T, 2);
+      ctx.fillStyle = GOUTTIERE.reflet; ctx.fillRect(0, 0, T, 1);
+      ctx.fillStyle = GOUTTIERE.ombre; ctx.fillRect(0, 2, T, 1);
+    }
+    for (const [bit, x] of [[2, T - 3], [8, 0]]) {
+      if (!(v & bit)) continue;
+      ctx.fillStyle = style.sombre; ctx.fillRect(x, 0, 3, T);
+      ctx.fillStyle = style.faite; ctx.fillRect(bit === 8 ? 0 : T - 1, 0, 1, T);
     }
   }
 
@@ -3625,7 +3657,7 @@ const TUILES = (function () {
     if (versant === 1) { ctx.fillStyle = style.faite; ctx.fillRect(0, T / 2 - 1, T, 2); }
     else if (versant === 0) { ctx.fillStyle = style.faite; ctx.fillRect(0, T - 1, T, 1); }
     else { ctx.fillStyle = style.faite; ctx.fillRect(0, 0, T, 1); }
-    bordDeToit(ctx, v & 15, T, style);
+    bordDePente(ctx, v & 15, T, style);
   }
 
   /* --- L'abord ----------------------------------------------------------------
@@ -5339,6 +5371,16 @@ const FACADES = (function () {
       un mur vu d'en haut est une tuile comme une autre, et la ville est plate.
       Elle se peint SOUS les enseignes : une ombre par-dessus une pancarte
       donnerait une pancarte sale. */
+  /** L'ombre qu'un batiment jette sur le sol a son EST (le soleil du nord-ouest) : une bande qui s'efface, collee
+      a son flanc — `coin` : la seule pointe, au pied de son coin sud-est, qui raccorde l'ombre du flanc a celle
+      de la facade (`ombreDeMur`). */
+  function ombreDeFlanc(ctx, ox, oy, coin) {
+    const h = coin ? 6 : T;
+    ctx.fillStyle = 'rgba(11,10,18,0.34)'; ctx.fillRect(ox, oy, 4, h);
+    ctx.fillStyle = 'rgba(11,10,18,0.18)'; ctx.fillRect(ox + 4, oy, 3, coin ? 4 : h);
+    ctx.fillStyle = 'rgba(11,10,18,0.08)'; ctx.fillRect(ox + 7, oy, 2, coin ? 2 : h);
+  }
+
   function ombreDeMur(ctx, ox, oy) {
     ctx.fillStyle = 'rgba(11,10,18,0.42)';
     ctx.fillRect(ox, oy, T, 5);
@@ -5349,7 +5391,7 @@ const FACADES = (function () {
   }
 
   return { devanture: devanture, residence: residence, graffiti: graffiti,
-           toiture: toiture, ombreDeMur: ombreDeMur, fosseDArbre: fosseDArbre,
+           toiture: toiture, ombreDeMur: ombreDeMur, ombreDeFlanc: ombreDeFlanc, fosseDArbre: fosseDArbre,
            TOITURES: TOITURES, T: T };
 })();
 

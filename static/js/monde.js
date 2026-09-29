@@ -2013,6 +2013,13 @@ const Monde = (function () {
     return varianteDePassage(g, tx, ty);
   }
 
+  //: Ce qui jette une ombre de flanc : un toit, ou un mur de batiment (facade, vitrine, portes, planches).
+  const MURS_QUI_OMBRENT = 'FWDdG}H';
+  function jetteUneOmbre(tx, ty) {
+    if (tx < 0 || ty < 0 || tx >= carte.w || ty >= carte.h) return false;
+    return estToit(tx, ty) || MURS_QUI_OMBRENT.indexOf(glyphe(tx, ty)) >= 0;
+  }
+
   /** Range des poses par morceau. ⚠️ Une pose qui deborde est rangee dans TOUS
       les morceaux qu'elle touche : chacun en peindra la part qui le regarde, et
       une enseigne a cheval sur deux morceaux n'est pas coupee en deux. */
@@ -2119,6 +2126,18 @@ const Monde = (function () {
         if (solidite(tx, ty) !== 1 || estToit(tx, ty)) continue;      // un MUR, pas un toit
         if (solidite(tx, ty + 1) === 1) continue;                      // il n'y a pas de rue dessous
         FACADES.ombreDeMur(ctx, i * TT, (j + 1) * TT);
+      }
+    }
+    // L'OMBRE DU FLANC (les toits, vague 2) : le soleil du nord-ouest jette aussi l'ombre d'un batiment sur le sol
+    // a son EST — une bande collee au flanc, et la pointe au pied de son coin sud-est. ⚠️ Un batiment, pas une
+    // falaise ni une montagne : un toit ou un mur de facade (`MURS_QUI_OMBRENT`).
+    // ⚠️ DEHORS seulement : dans une piece, chaque mur de l'ouest barrait le plancher d'une bande noire.
+    for (let j = 0; j < MORCEAU && !carte.interieur; j++) {
+      for (let i = 0; i < MORCEAU; i++) {
+        const tx = ox + i, ty = oy + j;
+        if (tx >= carte.w || ty >= carte.h || jetteUneOmbre(tx, ty) || solidite(tx, ty) === 1) continue;
+        if (jetteUneOmbre(tx - 1, ty)) FACADES.ombreDeFlanc(ctx, i * TT, j * TT, false);
+        else if (jetteUneOmbre(tx - 1, ty - 1) && !jetteUneOmbre(tx, ty - 1)) FACADES.ombreDeFlanc(ctx, i * TT, j * TT, true);
       }
     }
     const genres = genresDevanture();
