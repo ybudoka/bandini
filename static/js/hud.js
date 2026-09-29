@@ -3253,20 +3253,39 @@ const Hud = (function () {
     return (carte.points || []).filter(function (p) { return !Monde.masquee(p.x, p.y, carte); });
   }
 
+  /** Ce que les cartes montrent, en tuiles. ⚠️ UN BLOC A ETAGES (la villa) tient ses etages dans une
+      seule carte, collés : on n'en montre que le CADRE ou se tient le joueur — l'etage ou il est, comme
+      la camera (`Monde.cibleCamera`). Ailleurs, toute la carte. */
+  function partieMontree(carte, x, y) {
+    const c = typeof Infiltration !== 'undefined' && B.bloc ? Infiltration.cadre(x, y) : null;
+    return c ? { x: c[0], y: c[1], w: c[2], h: c[3], cadre: true, etage: Infiltration.nomDuCadre(x, y) }
+      : { x: 0, y: 0, w: carte.w, h: carte.h, cadre: false, etage: null };
+  }
+
+  function dansLaPartie(vue, tx, ty) { return tx >= vue.x && tx < vue.x + vue.w && ty >= vue.y && ty < vue.y + vue.h; }
+
   function miniCarte(ctx) {
     const carte = Monde.carte, j = B.joueur;
     if (!carte || !j) return;
     const mini = Monde.miniCarte();
-    const sx = borner(Math.round(j.x / TT) - MINI.l / 2, 0, Math.max(0, carte.w - MINI.l));
-    const sy = borner(Math.round(j.y / TT) - MINI.h / 2, 0, Math.max(0, carte.h - MINI.h));
+    // ⚠️ Un etage plus petit que la mini-carte (36 x 23 tuiles a la villa) s'y centre : (sx, sy) est
+    // alors la tuile du coin de la mini-carte, hors de l'etage, et on ne peint que l'etage.
+    const vue = partieMontree(carte, j.x, j.y);
+    const sx = vue.w < MINI.l ? vue.x - Math.floor((MINI.l - vue.w) / 2)
+      : borner(Math.round(j.x / TT) - MINI.l / 2, vue.x, vue.x + vue.w - MINI.l);
+    const sy = vue.h < MINI.h ? vue.y - Math.floor((MINI.h - vue.h) / 2)
+      : borner(Math.round(j.y / TT) - MINI.h / 2, vue.y, vue.y + vue.h - MINI.h);
     ctx.fillStyle = 'rgba(11,10,18,0.85)';
     ctx.fillRect(MINI.x - 1, MINI.y - 1, MINI.l + 2, MINI.h + 2);
-    ctx.drawImage(mini, sx, sy, MINI.l, MINI.h, MINI.x, MINI.y, MINI.l, MINI.h);
+    const ix = Math.max(sx, vue.x), iy = Math.max(sy, vue.y), il = Math.min(MINI.l, vue.w), ih = Math.min(MINI.h, vue.h);
+    ctx.drawImage(mini, ix, iy, il, ih, MINI.x + ix - sx, MINI.y + iy - sy, il, ih);
     B.stats.images++;
+    marqueurs.mini = { source: [ix, iy, il, ih], etage: vue.etage };
     SurPlace.dessinerMini(ctx, MINI, sx, sy);   // une mission gardee : le hors-zone grise
     for (const point of lieuxSurLaCarte(carte)) {
       const px = MINI.x + point.x - sx, py = MINI.y + point.y - sy;
       if (px < MINI.x || px >= MINI.x + MINI.l || py < MINI.y || py >= MINI.y + MINI.h) continue;
+      if (!dansLaPartie(vue, point.x, point.y)) continue;
       ctx.fillStyle = '#101018'; ctx.fillRect(px - 1, py - 1, 3, 3);
       ctx.fillStyle = couleurDeLieu(point); ctx.fillRect(px, py, 2, 2);
       B.stats.rects += 2;
@@ -3277,6 +3296,7 @@ const Hud = (function () {
       for (const e of B.entites) {
         if (!(e.agent && e.vivant) && !(e.type === 'vehicule' && e.conducteur === 'police')) continue;
         const bx = MINI.x + Math.round(e.x / TT) - sx, by = MINI.y + Math.round(e.y / TT) - sy;
+        if (!dansLaPartie(vue, Math.floor(e.x / TT), Math.floor(e.y / TT))) continue;
         if (bx >= MINI.x && bx < MINI.x + MINI.l && by >= MINI.y && by < MINI.y + MINI.h) { ctx.fillRect(bx, by, 2, 2); B.stats.rects++; }
       }
     }
@@ -3491,35 +3511,50 @@ const Hud = (function () {
     // dans le bandeau du bas, qui tient deja les familles de lieux sur trois rangees.
     const zonage = legendeDuZonage(carte);
     const yHaut = zonage.length ? 24 : 14, yBas = VH - 38;
+    // ⚠️ UN BLOC A ETAGES (la villa) : l'etage ou l'on est, a sa propre echelle — jamais les autres
+    // (Martin, 30 sept. 2026 : « je ne veux pas voir tous les étages d'un coup »).
+    const jx = B.exterieur ? B.exterieur.x : j.x, jy = B.exterieur ? B.exterieur.y : j.y;
+    const vue = partieMontree(carte, jx, jy);
     // ⚠️ LA CARTE QU'ON CONNAIT : tant que l'ile de l'aeroport est cachee, il n'y a que
     // de l'eau sous la ville, et la ville garde l'echelle qu'elle avait avant lui.
-    const hauteur = Monde.hauteurConnue(carte, B.exterieur ? B.exterieur.y : j.y);
-    const brut = Math.min((VW - 20) / carte.w, (yBas - yHaut) / hauteur);
+    const hauteur = vue.cadre ? vue.h : Monde.hauteurConnue(carte, jy);
+    const brut = Math.min((VW - 20) / vue.w, (yBas - yHaut) / hauteur);
     const echelle = brut >= 1 ? Math.floor(brut) : brut;
-    const l = carte.w * echelle, h = hauteur * echelle;
+    const l = vue.w * echelle, h = hauteur * echelle;
     const ox = Math.round((VW - l) / 2), oy = yHaut + Math.round((yBas - yHaut - h) / 2);
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(mini, 0, 0, carte.w, hauteur, ox, oy, l, h);
+    ctx.drawImage(mini, vue.x, vue.y, vue.w, hauteur, ox, oy, l, h);
     B.stats.images++;
     // Le calque du ZONAGE, par-dessus les tuiles et sous tout le reste : les
     // blocs se teignent de leur usage, les rues restent grises et se lisent.
     const calque = Monde.calqueDeZonage(carte);
     if (calque) {
       ctx.globalAlpha = CALQUE_ALPHA;
-      ctx.drawImage(calque, 0, 0, carte.w, hauteur, ox, oy, l, h);
+      ctx.drawImage(calque, vue.x, vue.y, vue.w, hauteur, ox, oy, l, h);
       ctx.globalAlpha = 1;
       B.stats.images++;
     }
-    const pos = function (x, y) { return { x: ox + Math.round(x / TT * echelle), y: oy + Math.round(y / TT * echelle) }; };
-    dessinerLignes(ctx, pos);
-    Metro.dessinerSurLaCarte(ctx, pos);
-    Train.dessinerSurLaCarte(ctx, pos);         // le train : pleine au sol, doublée sur le viaduc, pointillée sous la montagne
-    Territoires.dessinerSurLaCarte(ctx, pos);   // les ilots PRIS, aux couleurs de qui les tient
-    dessinerLaVilleDuBoss(ctx, carte, pos);     // M13 : apres m98, les districts a l'or des Bandini
-    SurPlace.dessinerSurLaCarte(ctx, pos);      // une mission gardee : le hors-zone grise
-    Traversier.dessinerSurLaCarte(ctx, pos);
-    Navette.dessinerSurLaCarte(ctx, pos);
+    const pos = function (x, y) { return { x: ox + Math.round((x / TT - vue.x) * echelle), y: oy + Math.round((y / TT - vue.y) * echelle) }; };
+    // ⚠️ Ce qui se dessine a sa place sur la carte ne deborde pas de l'etage montre : un lieu de la cave
+    // tomberait dans le vide a cote de l'etage. Le joueur et l'objectif, eux, sont toujours dedans.
+    ctx.save();
+    ctx.beginPath(); ctx.rect(ox, oy, l, h); ctx.clip();
+    // ⚠️ DANS UN BLOC, la carte n'est pas la ville : ses lignes d'autobus, son metro, son train, ses
+    // territoires tombaient en travers de la villa (le train, en pointille rouge, sur la capture de Martin).
+    if (!B.bloc) {
+      dessinerLignes(ctx, pos);
+      Metro.dessinerSurLaCarte(ctx, pos);
+      Train.dessinerSurLaCarte(ctx, pos);         // le train : pleine au sol, doublée sur le viaduc, pointillée sous la montagne
+      Territoires.dessinerSurLaCarte(ctx, pos);   // les ilots PRIS, aux couleurs de qui les tient
+      dessinerLaVilleDuBoss(ctx, carte, pos);     // M13 : apres m98, les districts a l'or des Bandini
+      SurPlace.dessinerSurLaCarte(ctx, pos);      // une mission gardee : le hors-zone grise
+      Traversier.dessinerSurLaCarte(ctx, pos);
+      Navette.dessinerSurLaCarte(ctx, pos);
+    }
+    marqueurs.carte = { partie: [vue.x, vue.y, vue.w, hauteur], etage: vue.etage, lieux: [] };
     for (const point of lieuxSurLaCarte(carte)) {
+      if (!dansLaPartie(vue, point.x, point.y)) continue;
+      marqueurs.carte.lieux.push(point.slug);
       const p = pos(point.x * TT, point.y * TT);
       ctx.fillStyle = '#101018'; ctx.fillRect(p.x - 2, p.y - 2, 5, 5);
       ctx.fillStyle = couleurDeLieu(point); ctx.fillRect(p.x - 1, p.y - 1, 3, 3);
@@ -3533,6 +3568,7 @@ const Hud = (function () {
         const p = pos(e.x, e.y); ctx.fillRect(p.x, p.y, 2, 2); B.stats.rects++;
       }
     }
+    ctx.restore();
     // L'objectif : un losange dore qui bat. La ville entiere tient a l'ecran,
     // alors il n'y a jamais de hors-cadre ici — pas de fleche a prevoir.
     const gps = Histoire.cible();
@@ -3566,7 +3602,7 @@ const Hud = (function () {
     B.stats.rects += 2;
     marqueurs.joueur = { x: pj.x, y: pj.y, r: rj, forme: 'anneau', visible: true };
     const zone = Monde.zoneA ? (B.exterieur ? null : Monde.zoneA(j.x, j.y)) : null;
-    const ville = (carte.def && carte.def.nom ? carte.def.nom : 'Baie-des-Brumes').toUpperCase();
+    const ville = (carte.def && carte.def.nom ? carte.def.nom : 'Baie-des-Brumes').toUpperCase() + (vue.etage ? ' — ' + vue.etage : '');
     // ⚠️ LA VILLE DU BOSS (M13) : le titre le dit, au-dessus de la ville teinte.
     const titre = ville + (B.partie && B.partie.boss ? ' — LA VILLE DU BOSS' : (zone ? ' — ' + zone.nom.toUpperCase() : ''));
     texte(ctx, titre, (VW - Atlas.largeurTexte(titre, 1)) / 2, 6, '#e8b33c', 1);

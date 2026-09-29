@@ -135,6 +135,9 @@ def assembler() -> dict:
         # Les blocs de carte : leur passage en ville, et rien d'autre — leur carte voyage
         # à part, à la demande (`/api/carte/bloc/<slug>`).
         "blocs": blocs.pour_le_navigateur(),
+        # Ce qui ouvre une serrure de bloc (la clé de la villa), et les missions qui le mettent au sac : une
+        # partie qui l'a perdue le retrouve au chargement (`Sauvegarde.completer`).
+        "cles_des_serrures": missions.cles_des_serrures(blocs.BLOCS),
         # La ville a descendu de tant de rangées (docs/jalons/la-ville-s-agrandit-au-nord.md) : une partie
         # écrite avant descend avec elle (`Sauvegarde.completer`).
         "decalage_nord": nord.DECALAGE_NORD,

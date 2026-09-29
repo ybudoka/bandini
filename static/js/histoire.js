@@ -1431,7 +1431,11 @@ const Histoire = (function () {
   function commencer(slug, enSilence) {
     const m = mission(slug);
     if (!m || B.partie.mission) return false;
-    B.partie.mission = { slug: slug, etape: -1, t: B.t, chocs: 0 };
+    // ⚠️ `avant` : ce qu'on avait dans le sac en commençant — une mission ratée ne fait retomber que ce
+    // qu'ELLE a fait prendre (`Infiltration.rendre`), jamais la clé d'une mission d'avant.
+    const objets = B.partie.objets || {};
+    B.partie.mission = { slug: slug, etape: -1, t: B.t, chocs: 0,
+                         avant: Object.keys(objets).filter(function (k) { return objets[k] > 0; }) };
     B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0,
                   vol: 0, boulotsDepart: 0, suit: null, protege: null, suivi: null };
     if (!enSilence) { Hud.message(m.titre.toUpperCase(), 180); Son.SFX.mission(); }
@@ -3420,7 +3424,12 @@ const Histoire = (function () {
     // ⚠️ DANS UN BLOC DE CARTE, les lieux de la ville n'ont pas de pixel ici : la fleche
     // vise la sortie, vers la ville (`Blocs`) — c'est par la que passe tout le reste. Sauf ce que la
     // mission vient faire DANS ce bloc (la villa : son lieu, son terminal, ce qu'on vient prendre).
-    if (B.bloc) return (m && cibleDansLeBloc(m, p)) || Blocs.cibleDeSortie();
+    // ⚠️ Et dans un bloc a ETAGES (la villa), ce qui est a un autre etage se vise par son escalier.
+    if (B.bloc) {
+      const c = (m && cibleDansLeBloc(m, p)) || Blocs.cibleDeSortie();
+      const esc = c && Infiltration.escalierVers(j, c.x, c.y);
+      return esc ? { x: esc.x, y: esc.y, nom: esc.nom, couleur: c.couleur } : c;
+    }
     if (B.defi) {
       const d = defis().find(function (q) { return q.slug === B.defi.slug; });
       const l = d.rue ? Rue.cible(d) : d.conduite ? Conduite.cible(d) : d.circuit ? repereDeCircuit(B.defi) : d.lieu ? lieu(d.lieu) : null;

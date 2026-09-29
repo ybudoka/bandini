@@ -831,6 +831,13 @@ const Sauvegarde = (function () {
     if (!partie.chantiers || typeof partie.chantiers.debut !== 'number') {
       out.chantiers = { debut: typeof out.jour === 'number' ? out.jour : 1 };
     }
+    // ⚠️ LA CLE D'UNE SERRURE DE BLOC (la villa) reste au sac apres la mission qui l'a donnee. Une mission
+    // ratee l'effacait meme quand elle venait d'une AUTRE (`Infiltration.rendre`, corrige le 30 sept.
+    // 2026) : une partie qui l'a perdue ainsi la retrouve — sinon v02 et v03 ne s'ouvrent plus jamais.
+    const cles = (defs && defs.cles_des_serrures) || {};
+    for (const objet of Object.keys(cles)) {
+      if (!(out.objets[objet] > 0) && cles[objet].some(function (s) { return out.missionsFaites[s]; })) out.objets[objet] = 1;
+    }
     if (!out.armes.poings) out.armes.poings = { mun: null };
     if (!out.armes[out.arme]) out.arme = 'poings';
     if (!out.armes[out.armePrecedente]) out.armePrecedente = 'poings';

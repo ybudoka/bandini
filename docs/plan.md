@@ -78,7 +78,6 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
-| La carte d'un bloc à étages : un étage à la fois | ⬜ **en cours** (la grande carte de la villa ne montre que l'étage du joueur ; puis les missions de la villa rejouées) | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/la-carte-d-un-bloc-a-etages.md#fiche) |
 | Une revue des façades des résidences et des appartements | ⬜ **à faire** (à préciser par Martin : ce qui le gêne aujourd'hui) | — | **P2** | **correctif** | [fiche](jalons/une-revue-des-facades-des-residences.md#fiche) |
 | Des intérieurs fidèles à l'extérieur : la revue complète | ⬜ **en cours** (✅ vague 1 livrée : le mur de la porte harmonisé, un seul plâtre dans toutes les pièces ; ensuite la revue, et les logements selon le standing) | 29 sept. 2026 | **P2** | **correctif** | [fiche](jalons/des-interieurs-fideles-a-l-exterieur.md#fiche) |
 | Le décor, les bêtes et les gens répondent — deuxième vague | ⬜ **en cours** (livrés : manger au barbecue, caresser le chat, vider un parcomètre, arracher une affiche ; le buisson est annulé ; restent le caddie et le panneau, à préciser par Martin) | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/le-decor-les-betes-et-les-gens-repondent.md#fiche-de-la-deuxième-vague) |

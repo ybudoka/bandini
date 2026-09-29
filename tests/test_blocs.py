@@ -81,3 +81,33 @@ def test_on_ressort_d_un_bloc_dans_le_sens_ou_l_on_est_venu():
     for bloc in blocs.BLOCS:
         assert bloc["retour"]["bord"] == oppose[bloc["passage"]["bord"]], (
             f"{bloc['slug']} : passage au {bloc['passage']['bord']}, retour au {bloc['retour']['bord']}")
+
+
+def test_chaque_mission_de_la_villa_a_sa_cle_avant_la_maison():
+    """Martin (30 sept. 2026) : « assure-toi que les prérequis des missions soient bien respectés ». Une
+    mission qui va DANS la maison de la villa (la porte de service, le bureau, la cave) a la clé avant :
+    un de ses objectifs d'avant la met au sac, ou une mission de ses prérequis (de proche en proche)."""
+    from app import missions
+    from app.blocs import villa
+    par_slug = {m["slug"]: m for m in missions.CATALOGUE}
+    donnent = set(missions.cles_des_serrures(blocs.BLOCS)["cle_villa"])
+    dedans = {"villa_service", "villa_bureau", "villa_terminal", "villa_voute"}
+    assert dedans <= set(villa.LIEUX)
+
+    def avant(slug, vus=None):
+        vus = set() if vus is None else vus
+        for p in par_slug[slug]["prerequis"]:
+            if p not in vus:
+                vus.add(p)
+                avant(p, vus)
+        return vus
+
+    vues = []
+    for m in missions.CATALOGUE:
+        etapes = [i for i, o in enumerate(m["objectifs"]) if (o.get("lieu") or o.get("ou")) in dedans]
+        if not etapes:
+            continue
+        vues.append(m["slug"])
+        soi = any(o.get("objet") == "cle_villa" for o in m["objectifs"][:etapes[0]])
+        assert soi or avant(m["slug"]) & donnent, f"{m['slug']} entre dans la villa sans que rien ne lui donne la clé"
+    assert sorted(vues) == ["e07", "v02", "v03"], vues

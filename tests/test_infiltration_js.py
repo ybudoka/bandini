@@ -524,3 +524,108 @@ def test_une_mission_ratee_fait_retomber_ce_qu_elle_avait_fait_prendre(banc):
     }""")
     assert r["mission"] is None, "vu, et la mission discrète continue"
     assert "dossier_bouchard" not in r["objets"] and r["objets"].get("cle_villa") == 1, r
+
+
+def test_la_carte_ne_montre_que_l_etage_ou_l_on_est(banc):
+    """Martin (30 sept. 2026) : « je ne veux pas voir tous les étages d'un coup ». La grande carte (N) et
+    la mini-carte ne montrent que le CADRE du joueur — le rez-de-chaussée, l'étage ou la cave — avec les
+    lieux de cet étage-là seulement, et le titre le nomme. Ni le train ni rien de la ville par-dessus."""
+    from app.blocs import villa
+    r = banc("async function (L, o) {" + OUTILS + """
+        L.Jeu.commencer(); L.B.partie.heure = 13 / 24;
+        await entrerALaVilla(L, o);
+        const B = L.B, j = B.joueur;
+        L.Infiltration.gardes().forEach(function (g) { L.Entites.retirer(g); });
+        let trainSurLaCarte = 0;
+        const train = L.Train.dessinerSurLaCarte;
+        L.Train.dessinerSurLaCarte = function () { trainSurLaCarte++; return train.apply(this, arguments); };
+        const regarder = function (x, y) {
+          j.x = x * TT + 8; j.y = y * TT + 8; L.Entites.indexer(); L.Monde.centrerCamera(j.x, j.y);
+          o.frame(2); fermer(L);
+          const mini = JSON.parse(JSON.stringify(L.Hud.marqueurs().mini));
+          o.tape('KeyN'); o.frame(2);
+          const carte = JSON.parse(JSON.stringify(L.Hud.marqueurs().carte || null));
+          const ouverte = B.etat === 'carte';
+          o.tape('KeyN'); o.frame(2); fermer(L);
+          return { mini: mini, carte: carte, ouverte: ouverte };
+        };
+        const out = { rez: regarder(66, 21), etage: regarder(18, 66), cave: regarder(40, 67) };
+        out.train = trainSurLaCarte;
+        return out;
+    }""")
+    attendus = {"rez": (0, ["villa_chemin", "villa_service"]), "etage": (1, ["villa_bureau"]),
+                "cave": (2, ["villa_terminal", "villa_voute"])}
+    for nom, (i, lieux) in attendus.items():
+        v = r[nom]
+        cx, cy, cl, ch = villa.CADRES[i]
+        assert v["ouverte"], f"{nom} : la carte ne s'ouvre pas"
+        assert v["carte"]["partie"] == [cx, cy, cl, ch], f"{nom} : la carte montre {v['carte']['partie']}, pas l'étage"
+        assert v["carte"]["etage"] == villa.NOMS_DES_CADRES[i], v["carte"]
+        assert sorted(v["carte"]["lieux"]) == lieux, f"{nom} : des lieux d'un autre étage sur la carte : {v['carte']['lieux']}"
+        sx, sy, sl, sh = v["mini"]["source"]
+        assert cx <= sx and sx + sl <= cx + cl and cy <= sy and sy + sh <= cy + ch, \
+            f"{nom} : la mini-carte déborde de l'étage : {v['mini']}"
+    assert r["train"] == 0, "le train de la ville se dessine sur la carte de la villa"
+
+
+def test_un_objectif_a_un_autre_etage_se_vise_par_son_escalier(banc):
+    """Le GPS dans la villa : ce qui est à un autre étage se vise par l'escalier à prendre DANS l'étage
+    où l'on est — sinon la flèche pointait à travers les murs, vers un étage qu'on ne voit pas. Au même
+    étage, l'objectif lui-même. De la cave à l'étage, on repasse par le rez-de-chaussée."""
+    from app.blocs import villa
+    r = banc("async function (L, o) {" + OUTILS + """
+        L.Jeu.commencer(); nuit(L);
+        const B = L.B, j = B.joueur;
+        B.partie.missionsFaites.v01 = 1; B.partie.objets.cle_villa = 1;
+        await entrerALaVilla(L, o);
+        L.Infiltration.gardes().forEach(function (g) { L.Entites.retirer(g); });
+        commencer(L, o, 'v02');
+        const vise = function (etape, x, y) {
+          B.partie.mission.etape = etape;
+          j.x = x * TT + 8; j.y = y * TT + 8; L.Entites.indexer();
+          const c = L.Histoire.cible();
+          return c ? { x: Math.floor(c.x / TT), y: Math.floor(c.y / TT), nom: c.nom } : null;
+        };
+        const out = {};
+        out.dossierDuRez = vise(2, 42, 17);        // le dossier est à l'étage : le grand escalier du hall
+        out.dossierDeLEtage = vise(2, 18, 60);     // à l'étage : le bureau
+        out.dossierDeLaCave = vise(2, 45, 64);     // de la cave : remonter à la cuisine d'abord
+        out.sortieDeLEtage = vise(3, 30, 52);      // ressortir : redescendre
+        return out;
+    }""")
+    hall, etage = villa.ESCALIERS[0]["a"], villa.ESCALIERS[0]["b"]
+    cave = villa.ESCALIERS[1]["b"]
+    assert (r["dossierDuRez"]["x"], r["dossierDuRez"]["y"]) in {tuple(t) for t in hall["tuiles"]}, r
+    assert "ÉTAGE" in r["dossierDuRez"]["nom"], r
+    bx, by = villa.LIEUX["villa_bureau"]["x"], villa.LIEUX["villa_bureau"]["y"]
+    assert (r["dossierDeLEtage"]["x"], r["dossierDeLEtage"]["y"]) == (bx, by), r
+    assert (r["dossierDeLaCave"]["x"], r["dossierDeLaCave"]["y"]) in {tuple(t) for t in cave["tuiles"]}, r
+    assert (r["sortieDeLEtage"]["x"], r["sortieDeLEtage"]["y"]) in {tuple(t) for t in etage["tuiles"]}, r
+
+
+def test_rater_une_mission_ne_fait_pas_perdre_la_cle_d_une_autre(banc):
+    """Deux missions donnent la clé de la porte de service (v01 au garde du jardin, e07 au chauffeur).
+    Rater e07 avec la clé de v01 dans le sac l'effaçait : v02 et v03 ne s'ouvraient plus (la partie de
+    Martin, jour 479). Elle reste ; celle qu'on vient de voler pendant la mission ratée, elle, retombe.
+    Et une partie qui l'a perdue ainsi la retrouve au chargement."""
+    r = banc("async function (L, o) {" + OUTILS + """
+        L.Jeu.commencer(); nuit(L);
+        const B = L.B, out = {};
+        B.partie.missionsFaites.e06 = 1; B.partie.missionsFaites.v01 = 1; B.partie.objets.cle_villa = 1;
+        commencer(L, o, 'e07');
+        L.Histoire.echouer('essai'); o.frame(2); fermer(L);
+        out.apresE07 = Object.assign({}, B.partie.objets);
+        delete B.partie.missionsFaites.v01; delete B.partie.objets.cle_villa;
+        commencer(L, o, 'v01');
+        B.partie.objets.cle_villa = 1;                  // volée pendant la mission
+        L.Histoire.echouer('essai'); o.frame(2); fermer(L);
+        out.apresV01 = Object.assign({}, B.partie.objets);
+        const perdue = { missionsFaites: { v01: 463 }, objets: { skimmer: 0 } };
+        out.reparee = L.Sauvegarde.completer(perdue, B.defs).objets;
+        out.neuve = L.Sauvegarde.completer({ missionsFaites: {}, objets: {} }, B.defs).objets;
+        return out;
+    }""")
+    assert r["apresE07"].get("cle_villa") == 1, f"rater e07 a fait perdre la clé de v01 : {r}"
+    assert "cle_villa" not in r["apresV01"], f"la clé volée pendant une mission ratée reste : {r}"
+    assert r["reparee"].get("cle_villa") == 1, f"une partie qui a perdu la clé ne la retrouve pas : {r}"
+    assert "cle_villa" not in r["neuve"], r

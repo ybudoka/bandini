@@ -136,6 +136,9 @@ ESCALIERS: tuple[dict, ...] = (
 #: Les cadres de la caméra, en tuiles (x, y, largeur, hauteur) : le terrain, l'étage, la cave. ⚠️ Chacun
 #: plus grand que l'écran (30 × 17 tuiles) : sinon on y verrait l'étage d'à côté.
 CADRES: tuple[tuple[int, int, int, int], ...] = ((0, 0, 72, 46), (0, 47, 36, 23), (36, 47, 36, 23))
+#: Le nom de chaque cadre, dans le même ordre : la grande carte n'en montre qu'un — celui où l'on se tient
+#: — et le titre le nomme.
+NOMS_DES_CADRES: tuple[str, ...] = ("LE REZ-DE-CHAUSSÉE", "L'ÉTAGE", "LA CAVE")
 
 #: Le terrain privé : dans la palissade, et les deux étages. Le chemin devant la grille est public — on
 #: y arrive, on peut s'y tenir.
@@ -179,6 +182,7 @@ BLOC = {
     "serrures": SERRURES,
     "escaliers": ESCALIERS,
     "cadres": CADRES,
+    "noms_des_cadres": NOMS_DES_CADRES,
     "prive": PRIVE,
     "gardes": GARDES,
     "regles_des_gardes": REGLES,

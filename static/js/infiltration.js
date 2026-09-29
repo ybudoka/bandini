@@ -53,6 +53,49 @@ const Infiltration = (function () {
     return f.cadres.find(function (c) { return dans(c, tx, ty); }) || null;
   }
 
+  /** Le numero du cadre qui contient cette tuile, ou -1. */
+  function numeroDuCadre(f, tx, ty) {
+    return f.cadres.findIndex(function (c) { return dans(c, tx, ty); });
+  }
+
+  /** Le nom du cadre ou se tient ce pixel (« L'ETAGE »), ou null. */
+  function nomDuCadre(x, y) {
+    const f = fiche();
+    if (!f || !f.cadres || !f.noms_des_cadres) return null;
+    return f.noms_des_cadres[numeroDuCadre(f, Math.floor(x / TT), Math.floor(y / TT))] || null;
+  }
+
+  /** ⚠️ UN OBJECTIF A UN AUTRE ETAGE : ce qu'on vise est l'escalier a prendre, dans l'etage ou l'on
+      est — le premier d'un plus court chemin d'etage en etage (de la cave a l'etage, on repasse par le
+      rez-de-chaussee). Viser le lieu lui-meme pointait a travers les murs, vers un etage qu'on ne voit
+      pas. Null au meme etage, hors d'un bloc a etages, ou si aucun escalier n'y mene. */
+  function escalierVers(de, x, y) {
+    const f = fiche();
+    if (!f || !f.cadres || !f.cadres.length || !f.escaliers) return null;
+    const ici = numeroDuCadre(f, Math.floor(de.x / TT), Math.floor(de.y / TT));
+    const la = numeroDuCadre(f, Math.floor(x / TT), Math.floor(y / TT));
+    if (ici < 0 || la < 0 || ici === la) return null;
+    const premier = new Map([[ici, null]]), file = [ici];
+    while (file.length && !premier.has(la)) {
+      const c = file.shift();
+      for (const e of f.escaliers) {
+        for (const paire of [[e.a, e.b], [e.b, e.a]]) {
+          if (numeroDuCadre(f, paire[0].tuiles[0][0], paire[0].tuiles[0][1]) !== c) continue;
+          const k = numeroDuCadre(f, paire[1].arrivee[0], paire[1].arrivee[1]);
+          if (k < 0 || premier.has(k)) continue;
+          premier.set(k, premier.get(c) || { bout: paire[0], vers: paire[1] });
+          file.push(k);
+        }
+      }
+    }
+    const p = premier.get(la);
+    if (!p) return null;
+    const t = p.bout.tuiles, n = t.length;
+    return { x: t.reduce(function (s, q) { return s + q[0]; }, 0) / n * TT + 8,
+             y: t.reduce(function (s, q) { return s + q[1]; }, 0) / n * TT + 8,
+             nom: "L'ESCALIER VERS " + p.vers.nom };
+  }
+
   function regles() { const f = fiche(); return (f && f.regles_des_gardes) || null; }
 
   function gardes() {
@@ -171,7 +214,11 @@ const Infiltration = (function () {
       finie) reste. */
   function rendre(m) {
     if (!m || !m.objectifs || !B.partie || !B.partie.objets) return;
-    for (const o of m.objectifs) if (o.objet) delete B.partie.objets[o.objet];
+    // ⚠️ Deux missions donnent la MEME cle (v01 au garde du jardin, e07 au chauffeur) : rater l'une avec
+    // la cle de l'autre dans le sac l'effacait, et la porte de service ne s'ouvrait plus jamais — v02
+    // et v03 bloquees (la partie de Martin, jour 479).
+    const avant = (B.partie.mission && B.partie.mission.avant) || [];
+    for (const o of m.objectifs) if (o.objet && avant.indexOf(o.objet) < 0) delete B.partie.objets[o.objet];
     for (const e of B.entites.slice()) if (e.type === 'ramassage' && e.objetDeMission) Entites.retirer(e);
   }
 
@@ -250,6 +297,6 @@ const Infiltration = (function () {
     }
   }
 
-  return { maj, releve, oublier, prive, cadre, gardes, escalierSous, voler, rendre, possede, dessiner,
+  return { maj, releve, oublier, prive, cadre, nomDuCadre, escalierVers, gardes, escalierSous, voler, rendre, possede, dessiner,
            RAMASSER_PX, FONDU_ESCALIER };
 })();

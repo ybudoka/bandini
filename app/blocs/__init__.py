@@ -109,6 +109,7 @@ def carte_du_bloc(bloc: dict) -> dict:
                  # `Police.garder`). Vides ailleurs.
                  "escaliers": [dict(e) for e in bloc.get("escaliers", ())],
                  "cadres": [list(c) for c in bloc.get("cadres", ())],
+                 "noms_des_cadres": list(bloc.get("noms_des_cadres", ())),
                  "prive": [list(c) for c in bloc.get("prive", ())],
                  "gardes": [dict(g) for g in bloc.get("gardes", ())],
                  "regles_des_gardes": dict(bloc["regles_des_gardes"]) if bloc.get("regles_des_gardes") else None},
@@ -225,6 +226,8 @@ def erreurs(bloc: dict, ville: dict | None = None) -> list[str]:
             if a_pied is not None and (point[0], point[1]) not in a_pied:
                 fautes.append(f"{slug} : la ronde du garde {garde['slug']} passe par ({point[0]}, {point[1]}), "
                               "qu'on ne rejoint pas")
+    if bloc.get("noms_des_cadres") and len(bloc["noms_des_cadres"]) != len(bloc.get("cadres", ())):
+        fautes.append(f"{slug} : {len(bloc['noms_des_cadres'])} noms pour {len(bloc.get('cadres', ()))} cadres")
     for cx, cy, cl, ch in bloc.get("cadres", ()):
         if cl * carte.TUILE_PX < ECRAN_PX[0] or ch * carte.TUILE_PX < ECRAN_PX[1]:
             fautes.append(f"{slug} : le cadre ({cx}, {cy}, {cl}, {ch}) est plus petit que l'écran")

@@ -1238,6 +1238,13 @@ def _sans_le_jeu(dialogue: dict) -> dict:
     return dialogue
 
 
+def cles_des_serrures(blocs: list[dict]) -> dict[str, list[str]]:
+    """Chaque objet qu'une serrure de bloc demande (`condition.objet`), et les missions dont un objectif le
+    met au sac — la clé de la villa : v01 (le garde du jardin) et e07 (le chauffeur)."""
+    objets = sorted({s["condition"]["objet"] for b in blocs for s in b.get("serrures", ()) if "objet" in s.get("condition", {})})
+    return {o: sorted(m["slug"] for m in CATALOGUE if any(ob.get("objet") == o for ob in m["objectifs"])) for o in objets}
+
+
 def pour_le_navigateur() -> list[dict]:
     """Le catalogue tel que le téléphone le reçoit : les missions SANS ce qu'elles
     disent ni ce qu'elles montrent (voir `HORS_DU_PAQUET`)."""
