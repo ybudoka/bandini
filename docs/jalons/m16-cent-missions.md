@@ -902,3 +902,45 @@ catalogue.
     qui libèrent un district (`q13`, `e10`, `s11`, `p11`) — c'est ce qu'attend _Le Boss_ (M13) ;
     `sans_arme` toujours lue par personne ; `cible: "arch:"` d'un `parler` ne pose aucun
     figurant (f12 a pris cinq commerçants qui existent).
+- **29 sept. 2026 : le chemin vers les quatre libérations — en cours** (Martin : « fais avancer M16 vers les
+  quatre missions qui LIBÈRENT un district », pour _Le Boss_ de M13). Ce qui manque avant chacune, dans
+  le catalogue tel qu'il est (les prérequis écrits dans le code ont parfois glissé de la fiche : `q04`
+  vient après `q02`, `q10` après `m54`) :
+
+  | Libération | Ce qui existe | Ce qui manque, dans l'ordre | Marches |
+  |---|---|---|---|
+  | `q13` Les Quais | `q01`–`q04`, `q10`/`q11` | `q05` → `q06` → `q13` | **3** |
+  | `e10` Les Érables | `e01`, `e02`, `e12` | `e04` ; `e06` → `e07` ; puis `e10` | **4** |
+  | `s11` La Shop | `s01`, `s03`, `s08` | `s02` → `s05` → `s09` ; `s06` → `s10` ; puis `s11` | **6** |
+  | `p11` La Pointe | `p01`, `p13`, `p14` | `p02` → `p04` → `p10` ; `p05` → `p09` ; puis `p11` | **6** |
+
+  Dix-neuf missions, **par vagues, un arc à la fois**, le plus court d'abord : **Q, puis E, puis S et P**.
+  Chaque vague atterrit seule, verte, avec ses voix, et un juge de banc qui JOUE chaque mission au bouton.
+  Ce que chacune demande au moteur ou au monde, trouvé en lisant `histoire.js` avant d'écrire :
+  - **Arc Q.** ⚠️ **La Mireille de la fiche ne peut plus s'appeler Mireille** : le slug `mireille` est
+    Mireille Dion, du DOJO DION (29 sept. 2026). La fille de la Brume qui veut sortir de la rue devient
+    **Cindy** (`cindy`, personnage neuf, voix à choisir), devant la cantine. `q05` : la protéger jusqu'à
+    l'hôtel, puis les gars du Beau Denis arrivent (le patron de `p14` : `proteger`, puis `tuer` `ou: donneur`).
+    `q06` : coucher Denis, `sans_arme` — ⚠️ **l'option est déclarée et lue par personne** : elle se branche
+    ici (dégainer une arme pendant l'objectif, c'est raté), puis semer ; `donne.calme: morues`. `q13` :
+    après `q06` **et l'un des deux côtés du choix** (`q10` ou `q11`) — un prérequis ne sait dire que « et » :
+    `exige.une_de` l'apprend (lu par `exigeTenu`, tenu par le banc) ; survivre à l'hôtel, puis coucher le
+    chef des matelots de Sven — ⚠️ **aucun matelot n'existe** (ni archétype ni gang) : un archétype
+    `matelot` de fréquence 0 (comme le `gardien`), et `tuer` apprend `pieton` (qui on envoie, le gang
+    restant ce qu'il est) ; `donne.libere: quais`.
+  - **Arc E.** Deux personnages neufs, **Diane** et **Jo** ; ⚠️ `contre` (des adversaires sur une `course`)
+    n'est **lu par personne** non plus : `e04` le branche ou se réécrit ; `e06` file la berline du maire
+    depuis la villa (le bloc de l'infiltration) ; `e07` fouille la villa (`obtenir`, comme `v01`) ; `e10`
+    couche six Chevreuils sur deux coins (`coins`), puis Jo, et `donne.libere: erables`.
+  - **Arc S.** Trois personnages neufs, **Ti-Loup** (la cour à scrap de la gare a son bureau du ferrailleur
+    depuis le 29 sept.), **Gros-Boulon**, **Réjean Prévost** ; Bob Sauvé est une cible (`s06`, `suivre`).
+    ⚠️ `usine` n'est jamais un `lieu` (barrière d'heure) : ce qui s'y prend se prend par `ou`. `s11` se
+    joue `sans_arme` et donne `libere: shop`.
+  - **Arc P.** Trois personnages neufs, **Bilodeau**, **Zed**, **le Trappeur** ; `p04` est la seconde
+    `course` `contre` ; `p11` protège Zed jusqu'au bar et donne `libere: pointe`.
+  - **Ce que M13 attend** : `p.libere` compte le district (m97 en veut 3, m98 4 : le Faubourg de m5 plus
+    trois des quatre suffisent). Le juge de chaque libération le vérifie **dans le monde** : le gang ne sort
+    plus dans son district (`Entites.gangChasse`), ne prend ni ne perd plus de coin (`Territoires.horsJeu`),
+    et `exigeTenu({liberes: n})` monte d'un cran — sauvegarde comprise.
+  - Hors du chemin : le brouillon `refs/wip/m16-q07` (`q07`, `a_vendre`) sert _Le Boss_ par la quatrième
+    propriété, pas `q13` : il reste où il est.
