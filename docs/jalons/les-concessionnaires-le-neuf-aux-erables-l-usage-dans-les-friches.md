@@ -248,6 +248,22 @@ rue, il change de temps en temps » — et oui aussi chez Ti-Pout.
 - **La donnée** : `lot["montre"] = {x, y, angle, modeles}` (x, y : le coin nord-ouest des 2 × 2 tuiles) ; la place
   se MESURE (le coin de la façade côté croisement, sinon l'autre), et la `cour` l'englobe.
 
+## Fiche du lot devant, clôturé
+
+_Demande de Martin (29 sept. 2026) :_ « améliore le vendeur de luxe, les véhicules doivent être en avant et clôturé ».
+Tranché avec lui : une clôture de **fer forgé** (noire, pointes dorées, basse : on voit les chars à travers ; elle
+s'enjambe à pied et arrête les chars), et un **portail ouvert de jour, fermé la nuit** — sauf pour un char à toi.
+
+- **Le Salon se retourne** : le bâtiment au fond (au nord, sur les anciennes cases `^`), sa vitrine et sa porte
+  face au sud, sur le lot ; les chars en rang contre la clôture, **nez sur la rue** ; une allée derrière eux ; le
+  portail (deux tuiles, dans l'axe de la porte) donne sur l'abord et le trottoir.
+- **Le char en montre reste dehors**, en diagonale sur sa dalle au coin, face au croisement.
+- **Le portail** : la mécanique de la barrière coulissante du poste (`Monde.majBarrieresCoulissantes`), avec sa
+  règle à lui — ouvert aux heures d'ouverture, sinon seulement devant un char `aToi` conduit ; il ne se referme
+  jamais sur quelqu'un.
+- ⚠️ Deux glyphes neufs (la clôture, le portail) : glyphes peu courants, disputés entre sessions (mémoire) ; leur
+  peintre dans `sprites.js` ; rien au décor.
+
 ## Notes
 
 ### Les deux vagues ensemble (28 sept. 2026)
