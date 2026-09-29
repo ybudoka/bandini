@@ -73,7 +73,7 @@ const Autobus = (function () {
       const arretA = new Map();
       for (const couple of l.arrets) arretA.set(couple[1], couple[0]);
       return {
-        numero: l.numero, nom: l.nom, couleur: l.couleur, autobus: l.autobus,
+        numero: l.numero, nom: l.nom, couleur: l.couleur, autobus: l.autobus, aPart: !!l.a_part,
         tuiles: tuiles, n: tuiles.length, longueurPx: tuiles.length * TT,
         arretA: arretA, ordre: l.arrets.map(function (c) { return { arret: c[0], i: c[1] }; }),
       };
@@ -202,14 +202,20 @@ const Autobus = (function () {
         if (d2 < t.naissance_px * t.naissance_px || d2 > (t.oubli_px - 80) * (t.oubli_px - 80)) continue;
         if (Entites.visibleAEcran(p.x, p.y, 60)) continue;
         if (Entites.autour(p.x, p.y, 48, function (q) { return q.type === 'vehicule' || q.type === 'joueur'; }).length) continue;
-        const v = Vehicules.creer('autobus', p.x, p.y, p.angle, {
-          // ⚠️ La couleur est DONNEE (aucun de) : celle de la ligne, ou celle que la
-          // silhouette porte (la caisse creme du tramway, sa bande rouge).
-          conducteur: 'ligne', etat: 'roule', couleur: (L.sprite && SPRITES[L.sprite].couleur) || L.couleur,
-          sprite: L.sprite || 'autobus', sens: p.sens, rails: !!L.rails,
-          ligne: L.numero, rang: rang, etape: (p.i + 1) % L.n, servi: -1, arretT: 0, arret: null,
-          passager: null, demande: false, bloqueT: 0, bord: [],
-        });
+        const creer = function () {
+          return Vehicules.creer('autobus', p.x, p.y, p.angle, {
+            // ⚠️ La couleur est DONNEE (aucun de) : celle de la ligne, ou celle que la
+            // silhouette porte (la caisse creme du tramway, sa bande rouge).
+            conducteur: 'ligne', etat: 'roule', couleur: (L.sprite && SPRITES[L.sprite].couleur) || L.couleur,
+            sprite: L.sprite || 'autobus', sens: p.sens, rails: !!L.rails,
+            ligne: L.numero, rang: rang, etape: (p.i + 1) % L.n, servi: -1, arretT: 0, arret: null,
+            passager: null, demande: false, bloqueT: 0, bord: [],
+          });
+        };
+        // ⚠️ LA LIGNE DU PETIT-CANTON (`a_part`, `bus_du_canton.py`) : ses autobus naissent HORS DE LA SUITE des
+        // numeros d'entites — elle longe la couture, dans la bulle du terminus, et un numero de plus y deplacerait
+        // tout ce qui se tire a l'empreinte d'un numero.
+        const v = L.aPart ? Entites.enDehorsDeLaSuite(creer) : creer();
         if (v) v.vitesse = v.def.vitesse_max * t.vitesse_ville * 0.5;
       }
     }
@@ -625,13 +631,17 @@ const Autobus = (function () {
     // la foule l'a vu a l'image d'apres. Il attendra le regard suivant.
     if (Entites.autour(x, y, 11, Entites.deboutDansLaFoule).length) return null;
     const graine = hash2(a.id * 31 + k, quartDHeure());
-    const e = sansLeDe(graine, function () {
-      let arch = null;
-      for (let essai = 0; essai < 6 && (!arch || arch.accompagne); essai++) {
-        arch = Entites.archetypeDeRue(x, y, (hash2(graine, essai) % 997) / 997);
-      }
-      return arch && !arch.accompagne ? Entites.creerPieton(x, y, arch) : null;
-    });
+    const naitre = function () {
+      return sansLeDe(graine, function () {
+        let arch = null;
+        for (let essai = 0; essai < 6 && (!arch || arch.accompagne); essai++) {
+          arch = Entites.archetypeDeRue(x, y, (hash2(graine, essai) % 997) / 997);
+        }
+        return arch && !arch.accompagne ? Entites.creerPieton(x, y, arch) : null;
+      });
+    };
+    // ⚠️ Un abribus de la BANDE (la ligne du Petit-Canton) : son voyageur nait hors de la suite des numeros.
+    const e = Entites.dansLaBande(Math.floor(y / TT)) ? Entites.enDehorsDeLaSuite(naitre) : naitre();
     if (!e) return null;
     // ⚠️ IL N'EST PAS LA FOULE : il attend, comme l'ouvrier a son chantier. Sans
     // cette marque, il passerait par-dessus le plafond de passants.

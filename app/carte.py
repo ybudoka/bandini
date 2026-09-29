@@ -7343,6 +7343,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
         # LES 4 ROUES des Friches : leurs places à côté des cabanons, lues sur la bande collée, sans un dé.
         from . import quatre_roues as quatre_roues_mod
         ville["quatre_roues"] = quatre_roues_mod.poser(ville)
+        # LE BUS DU PETIT-CANTON (la ligne 4) : tracé sur la bande collée, avec les outils des trois autres, sans
+        # rien renuméroter (`bus_du_canton`).
+        from . import bus_du_canton as bus_du_canton_mod
+        bus_du_canton_mod.tracer(ville, nord_mod.DECALAGE_NORD)
     # ⚠️ LES FRÉNÉSIES (P4, docs/jalons/quatre-activites-que-le-jeu-n-a-pas.md), APRÈS ABSOLUMENT TOUT, bande
     # nord comprise : une icône par district, dans une ruelle libre choisie par une règle — sans un dé, et rien
     # de posé dans une liste que la ville lit. La ville d'avant est la même à la tuile près.

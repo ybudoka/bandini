@@ -153,6 +153,25 @@ le bus).
   arrêts sont renumérotés par position (`combienAttendent`, `B.abribusServis` en dépendent). À poser hors de
   la suite (`enDehorsDeLaSuite`, comme la bande) et avec des identifiants d'arrêt stables.
 
+### Étape 2, vague B (2e partie) — le bus, la ligne 4 — **livrée le 29 sept. 2026**
+
+- **La ligne 4, « Le Petit-Canton »** (rouge, `app/bus_du_canton.py`) : du terminus, le long du boulevard de la
+  couture (elle y prend trois arrêts qui existent), la 12e Avenue jusqu'au casino du Dragon d'or, et retour par la
+  rue principale, sous l'arche. Deux autobus.
+- ⚠️ **Tracée APRÈS la bande, sur la carte finie**, avec les MÊMES outils que les trois autres (`autobus._Reseau`,
+  `_boucle`, `arret_possible`) : un petit adaptateur (`_SurLaVille`) leur donne ce qu'ils lisaient d'un chantier
+  — le sol, ce qui occupe une tuile, le devant des portes. Rien des trois lignes d'avant ne bouge (jugé contre la
+  ville sans elle) : **ses arrêts neufs prennent les numéros SUIVANTS** (51 à 55 : aucun renuméroté — le
+  navigateur tire à l'empreinte d'un numéro d'arrêt), **ses abribus et ses bancs s'ajoutent au bout du décor**,
+  dans la bande. Au terminus, elle prend l'arrêt qui existe.
+- **Ses autobus naissent hors de la suite des numéros d'entités** (`a_part`, lu par `Autobus.faireNaitre`), et
+  les voyageurs de ses abribus aussi : elle longe la couture, dans la bulle de naissance du terminus.
+- ⚠️ **Ses noms** : « 3e Rue / 10e Avenue » existe aussi dans la ville d'avant ; ses arrêts se nomment dans la
+  trame de la BANDE, préfixés (« Petit-Canton, 12e Avenue / 4e Rue ») — deux arrêts du même nom, c'était rouge
+  (`test_autobus`).
+- **Juges** : `test_bus_du_canton.py`, `test_bus_du_canton_js.py` ; une mutation rouge (les autobus nés dans la
+  suite). L'étape 2 est livrée.
+
 ### Étape 3 (1re partie) — le donneur et sa première mission — **livrée le 29 sept. 2026**, avec [le tripot du casino](le-casino-du-petit-canton.md#vague-4--le-tripot-du-sous-sol--la-barbotte-du-pouce--livrée-le-29-sept-2026-martin--va-y)
 
 Proposé par Claude (la fiche laissait le donneur au brainstorming ; Martin : « va y ») — **validé par Martin le 29 sept.
