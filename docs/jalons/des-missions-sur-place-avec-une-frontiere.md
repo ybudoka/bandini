@@ -74,6 +74,18 @@ grisent le hors-zone.
   au bord sans rater).
 - Captures Chromium regardées : la grande carte laisse les Quais en clair et grise le reste ; sur la
   mini-carte le gris est discret sur l'eau.
+- ⚠️ **Revue finale (30 sept. 2026)**, deux correctifs : (1) **v01 se ratait la clé en poche** — la bande
+  d'herbe à l'est de la palissade mène à la sortie sans passer à trois tuiles du chemin, et sous la
+  frontière, ressortir en ville sans avoir « fini » faisait rater ; le dernier objectif passe au rayon 6
+  (la sortie est à 5,4 tuiles au plus, la ronde du garde à plus de dix). Le garde-fou « v01 finit au
+  bord » passait **à vide** : `avancer` passe à l'étape SUIVANTE, et poser l'étape 2 puis avancer
+  finissait la mission sur-le-champ — il part maintenant de l'étape 2 et le vérifie. (2) **Dans une
+  pièce, le compte tournait sans se dire** (la ligne d'objectif s'y tait) : `SurPlace.ligne` écrit
+  « RETOURNE DANS LES QUAIS — REVIENS ! 7 S » même dedans. Reportés (mineurs) : un saut lancé depuis une
+  pièce du bloc visé ; une carte de bloc qui n'arrive jamais arme quand même la frontière ; le gris
+  ignore la zone `large` (district `baie`) et griserait l'île sous `baie` ; « PLUS TARD » pour une
+  fenêtre du lendemain ; un lieu de bloc sous une frontière de district n'est pas jugé ; le message
+  d'échec vit hors d'`echouer`.
 
 ## Plan d'implémentation
 

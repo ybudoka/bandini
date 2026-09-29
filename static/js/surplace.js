@@ -152,6 +152,14 @@ const SurPlace = (function () {
     ctx.restore();
   }
 
-  return { HORS_IMAGES, heureCible, avancerA, sauter, ici, dedans, nom, maj, suffixe,
+  /** La ligne d'objectif que le HUD ecrit : `l` et son compte. Sans `l` (le HUD se tait dans une
+      piece), le compte parle quand meme : « RETOURNE DANS LES QUAIS — REVIENS ! 7 S ». */
+  function ligne(l) {
+    if (l) return l + suffixe();
+    const m = Histoire.courante();
+    return B.mission && B.mission.hors && m && m.frontiere ? 'RETOURNE DANS ' + nom(m.frontiere) + suffixe() : l;
+  }
+
+  return { HORS_IMAGES, heureCible, avancerA, sauter, ici, dedans, nom, maj, suffixe, ligne,
            zonesHors, dessinerSurLaCarte, dessinerMini };
 })();

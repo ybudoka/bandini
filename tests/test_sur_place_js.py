@@ -285,10 +285,63 @@ def test_v01_finit_au_bord_sans_rater(banc):
         faites(L, ['q04']); p.heure = 0.90;
         commencer(L, o, 'v01'); p.mission.gardee = true;
         L.Blocs.sauter('villa'); for (let k = 0; k < 400 && B.transition; k++) { o.frame(1); await o.attendre(); }
-        p.mission.etape = 2; L.Histoire.avancer(true);
+        p.mission.etape = 1; L.Histoire.avancer(true);   // avancer passe a la SUIVANTE : la 2, « RESSORS »
+        const depart = p.mission && p.mission.etape;
         const l = L.Histoire.lieu('villa_chemin'); j.x = l.x; j.y = l.y; L.Entites.indexer();
         const echecs = p.stats.echecs || 0;
         for (let k = 0; k < 900; k++) { o.frame(1); if (B.transition) o.fondu(); }
-        return { faite: !!p.missionsFaites.v01, echecs: (p.stats.echecs || 0) - echecs };
+        return { depart: depart, faite: !!p.missionsFaites.v01, echecs: (p.stats.echecs || 0) - echecs };
     }""")
-    assert r == {"faite": True, "echecs": 0}
+    assert r == {"depart": 2, "faite": True, "echecs": 0}
+
+
+def test_v01_sortir_en_longeant_la_palissade_finit_la_mission(banc):
+    """⚠️ Revue finale : la bande d'herbe à l'est mène à la sortie sans passer à trois tuiles du chemin.
+    On ressort par le nord-est, comme Josée le dit — la mission doit être gagnée avant la ville, sinon la
+    frontière la fait rater, la clé en poche."""
+    r = banc("async function (L, o) {" + OUTILS + PLUS_LONGUES + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, p = B.partie, j = B.joueur, T = L.TT; j.invincible = 1e6;
+        faites(L, ['q04']); p.heure = 0.90;
+        commencer(L, o, 'v01'); p.mission.gardee = true;
+        L.Blocs.sauter('villa'); for (let k = 0; k < 400 && B.transition; k++) { o.frame(1); await o.attendre(); }
+        // Le départ de la bande est AVANT l'étape : l'arrivée du bloc est à trois tuiles du chemin, et
+        // l'objectif s'y ferait sur-le-champ.
+        j.x = 70 * T + 8; j.y = 16 * T + 8; L.Entites.indexer();
+        p.mission.etape = 1; L.Histoire.avancer(true);   // avancer passe a la SUIVANTE : la 2, « RESSORS »
+        const depart = p.mission && p.mission.etape;
+        const chemin = [[70, 16], [70, 18], [70, 19], [71, 20], [72, 20]];
+        const echecs = p.stats.echecs || 0;
+        for (let i = 0; i + 1 < chemin.length && B.bloc && !p.missionsFaites.v01; i++) {
+          const a = chemin[i], b = chemin[i + 1], n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) * T / 4);
+          for (let k = 0; k <= n && B.bloc && !p.missionsFaites.v01; k++) {
+            j.x = (a[0] + (b[0] - a[0]) * k / n) * T + 8; j.y = (a[1] + (b[1] - a[1]) * k / n) * T + 8;
+            L.Entites.indexer(); o.frame(1); ecouter(L);
+          }
+        }
+        const auBord = { depart: depart, bloc: !!B.bloc, faite: !!p.missionsFaites.v01, hors: B.mission ? B.mission.hors || 0 : null };
+        for (let k = 0; k < 900; k++) { o.frame(1); ecouter(L); if (B.transition) o.fondu(); }
+        return { faite: !!p.missionsFaites.v01, echecs: (p.stats.echecs || 0) - echecs, auBord: auBord };
+    }""")
+    assert r["auBord"]["depart"] == 2
+    assert {k: r[k] for k in ("faite", "echecs")} == {"faite": True, "echecs": 0}
+
+
+def test_dans_une_piece_le_compte_se_lit(banc):
+    """⚠️ Revue finale : la ligne d'objectif se tait dans une pièce ; le compte, lui, tourne. Il se dit."""
+    r = banc("function (L, o) {" + OUTILS + FRONTIERE + PIECE + """
+        L.Jeu.commencer(); L.graine(6); L.B.joueur.invincible = 1e6;
+        garder(L, o, 'q13', 'quais');
+        entrerChez(L, o, 'planque');
+        vivre(L, o, 60);
+        const ecrites = [], vraie = L.SurPlace.ligne;
+        L.SurPlace.ligne = function () { const t = vraie.apply(this, arguments); ecrites.push(t); return t; };
+        L.Jeu.rendre();
+        L.SurPlace.ligne = vraie;
+        return { dedans: !!L.B.interieur, ligne: L.SurPlace.ligne(null), dehors: L.SurPlace.ligne('TIENS L’HÔTEL'),
+                 hud: ecrites.some(function (t) { return t && t.indexOf('RETOURNE DANS') === 0; }) };
+    }""")
+    assert r["dedans"]
+    assert r["hud"], "le HUD écrit le compte dans la pièce"
+    assert r["ligne"] and "RETOURNE DANS LES QUAIS" in r["ligne"] and "9 S" in r["ligne"]
+    assert r["dehors"].startswith("TIENS L’HÔTEL — REVIENS !")

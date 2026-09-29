@@ -34,8 +34,12 @@ MISSION = {
          "objet": "cle_villa", "nom": "LA CLÉ DE LA PORTE DE SERVICE", "dessin": "cle",
          "garde": "jardin", "ou": "villa_chemin", "sans_etoile": True},
 
+        # ⚠️ Rayon 6, pas 3 (revue du 30 sept. 2026) : la bande d'herbe à l'est de la palissade mène à la
+        # sortie sans passer à trois tuiles du chemin — et sous la `frontiere`, ressortir en ville sans avoir
+        # « fini » faisait rater la mission la clé en poche. Toute la sortie est à 5,4 tuiles au plus ; la
+        # ronde du garde (x ≤ 50) reste à plus de dix.
         {"type": "aller", "texte": "RESSORS PAR LE CHEMIN, SANS TE FAIRE VOIR",
-         "lieu": "villa_chemin", "rayon": 3, "sans_etoile": True},
+         "lieu": "villa_chemin", "rayon": 6, "sans_etoile": True},
     ],
 
     # Le jeu de chaque réplique (`jeu=`) — Josée : la Chef qui prépare un coup de loin. Rien de pressé,
