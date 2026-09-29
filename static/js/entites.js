@@ -4486,9 +4486,16 @@ const Entites = (function () {
       const dx = B.joueur.x - e.x, dy = B.joueur.y - e.y;
       const norme = Math.hypot(dx, dy) || 1;
       if (norme > 260) { e.etat = 'flane'; }
-      e.vx = dx / norme * vitesse;
-      e.vy = dy / norme * vitesse;
-      if (norme < 18 && e.t % 40 === 0) Combat.frapper(e);
+      // ⚠️ `coupsDictes` : un autre décide quand il frappe — le cousin de l'esquive
+      // (`Rue`) annonce chacun de ses coups ; le tic des 40 images le ferait partir sans prévenir.
+      // Et collé, il boxe sur place : lancé à ta vitesse, il te poussait hors du ring (au banc,
+      // un joueur planté au milieu, sorti en deux secondes, « ESQUIVER, PAS FUIR »).
+      // Sur place, il se tourne vers toi : sans pas, `regarder` ne suit plus.
+      const colle = e.coupsDictes && norme < 14;
+      e.vx = colle ? 0 : dx / norme * vitesse;
+      e.vy = colle ? 0 : dy / norme * vitesse;
+      if (colle) regarder(e, dx, dy);
+      if (norme < 18 && e.t % 40 === 0 && !e.coupsDictes) Combat.frapper(e);
     } else if (e.etat === 'vole_un_char') {
       // Il marche droit sur le char qu'il a repere, d'un pas presse. ⚠️ Il
       // RENONCE : le char peut partir, exploser, ou quelqu'un monter dedans —

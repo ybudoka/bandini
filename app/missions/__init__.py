@@ -813,8 +813,17 @@ DEFIS: list[dict] = [
      # moins de tant de tuiles de là où il a chargé — hors du ring plus de
      # `dehors_s`, on ne l'esquive plus, on le fuit (on court plus vite que lui :
      # sans ring, il suffirait de tourner en rond au loin).
-     "regles": {"duree_s": 30, "vie_min": 0.4, "ring": 5, "dehors_s": 1.5},
-     "texte": "LE COUSIN DU GRAND MO CHARGE : TRENTE SECONDES DANS LE RING, SANS FRAPPER UNE SEULE FOIS. ESQUIVE !"},
+     # LE COUSIN BOXE (`Rue`, `boxer` ; 29 sept. 2026, « la roulade doit servir ») :
+     # `allure` — son pas de course, en part de `pieton_course` (1,35 px/image) : à
+     # 1,45 il court comme toi (2,0), tourner en rond ne le sème plus. À moins de
+     # `arme_px`, il ANNONCE son coup pendant `annonce_s` (il te suit encore, et un
+     # cercle se referme au sol) ; puis l'élan d'une tape (5 images) et le coup,
+     # qui porte à `coup_portee` px (+6), sur `coup_arc` radians, pour
+     # `coup_degats` ; puis il souffle `souffle_s`.
+     "regles": {"duree_s": 30, "vie_min": 0.4, "ring": 5, "dehors_s": 1.5,
+                "allure": 1.45, "arme_px": 20, "annonce_s": 0.35, "souffle_s": 1.2,
+                "coup_portee": 16, "coup_arc": 1.6, "coup_degats": 13},
+     "texte": "LE COUSIN DU GRAND MO CHARGE : TRENTE SECONDES DANS LE RING, SANS FRAPPER. SON CERCLE SE REFERME : ROULE !"},
     {"slug": "chef", "titre": "Le défi de la Chef des Quais", "ou": "porte:hotel", "conduite": "chef",
      "chrono_s": 300, "prime": 150, "debloque": {"apres": ["frein_pile", "slalom", "creneau"]},
      # ⚠️ Les étapes sont LES épreuves de ces trois défis, à leurs panneaux, avec

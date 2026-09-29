@@ -152,8 +152,11 @@ const Rue = (function () {
         const q = Entites.creerPieton(c.x, c.y, Entites.archetype('docker'));
         if (!q) return null;
         q.arme = null; q.etat = 'fige'; q.mission = true; q.plante = { x: c.x, y: c.y }; q.cousin = true;
+        // ⚠️ C'EST LUI QUI DÉCIDE QUAND IL FRAPPE, pas le tic des passants (`coupsDictes`) : il
+        // ANNONCE chaque coup, et il court aussi vite que toi — tourner en rond ne le sème plus.
+        q.coupsDictes = true; q.allure = r.allure;
         B.rue.poses.push(q);
-        return { adversaire: q, phase: 'attend', t: 0, dehors: 0, depart: c };
+        return { adversaire: q, phase: 'attend', t: 0, dehors: 0, depart: c, annonce: 0, souffle: 0, coups: 0 };
       },
       /** Le combat part quand on entre dans le ring. */
       engager: function (e) {
@@ -178,7 +181,26 @@ const Rue = (function () {
         } else e.dehors = 0;
         // ⚠️ Il reste sur toi : un passant qui cogne finit par se lasser.
         if (q.etat !== 'attaque_joueur' && q.etat !== 'attaque') q.etat = 'attaque_joueur';
+        EPREUVES.esquive.boxer(e, r, q, j);
         return e.t >= s(r.duree_s) ? { gagne: true } : null;
+      },
+      /** LE COUSIN BOXE : il te colle, il ANNONCE son coup (`annonce_s` — il continue de te
+          suivre, et le cercle de son poing se referme au sol), il cogne, il souffle (`souffle_s`).
+          ⚠️ LA ROULADE DOIT SERVIR (29 sept. 2026) : il court aussi vite que toi (`allure`), son
+          coup porte plus loin et plus large qu'une tape (`coup_portee`, `coup_arc`) — tourner
+          en rond ne le sème plus, s'écarter d'un pas non plus. Une roulade dans l'annonce passe
+          sous le coup (ses images d'invincibilité, `Combat.roulade`), ou hors de sa portée. */
+      boxer: function (e, r, q, j) {
+        if (q.etat !== 'attaque_joueur') return;
+        if (e.annonce > 0) {
+          if (--e.annonce > 0) return;
+          if (Combat.frapper(q)) {
+            q.arc = Object.assign({}, q.arc, { portee: r.coup_portee, arc: r.coup_arc, degats: r.coup_degats });
+            e.coups++;
+          }
+          e.souffle = s(r.souffle_s);
+        } else if (e.souffle > 0) e.souffle--;
+        else if (Math.hypot(q.x - j.x, q.y - j.y) < r.arme_px) e.annonce = s(r.annonce_s);
       },
       compte: function (e, r) {
         if (e.phase !== 'combat') return '— ENTRE DANS LE RING';
@@ -195,6 +217,19 @@ const Rue = (function () {
           ctx.fillRect(Math.round(e.depart.x + Math.cos(a) * R - vue.x), Math.round(e.depart.y + Math.sin(a) * R - vue.y), 2, 2);
         }
         B.stats.rects += 64;
+        // LE COUP S'ANNONCE : un cercle rouge autour du cousin, de deux fois sa portée à sa portée,
+        // qui se referme pendant l'annonce ; plein quand le poing part. ⚠️ C'est le signal qu'on
+        // lit pour rouler — sans lui, cinq images d'élan (83 ms) ne se voient pas venir.
+        const q = e.adversaire, T = s(r.annonce_s);
+        const part = q.etat === 'attaque' && (q.phase === 'anticipation' || q.phase === 'actif');
+        if (e.phase !== 'combat' || (!e.annonce && !part)) return;
+        const P = r.coup_portee + 6, rayon = part ? P : P * (1 + e.annonce / T);
+        ctx.fillStyle = part ? '#ff3a2e' : '#ff8a4e';
+        for (let k = 0; k < 32; k++) {
+          const a = k * Math.PI / 16;
+          ctx.fillRect(Math.round(q.x + Math.cos(a) * rayon - vue.x), Math.round(q.y + Math.sin(a) * rayon - vue.y), 2, 2);
+        }
+        B.stats.rects += 32;
       },
     },
   };

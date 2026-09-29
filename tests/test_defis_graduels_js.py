@@ -872,55 +872,95 @@ def test_la_filature_se_gagne_a_bonne_distance(banc, ecart, gagne, raison):
     assert r["suspect"] is False, "le suspect repart avec l'épreuve"
 
 
+#: Le boxeur du juge : il entre dans le ring et y tourne, sur un cercle de trois tuiles. `rouler` dit
+#: QUAND il roule, compté depuis que le coup du cousin s'annonce (le cercle rouge qui se referme au
+#: sol, `Rue`) — le poing part 26 images plus tard (l'annonce, 21, puis l'élan d'une tape, 5) :
+#: - `'tot'` : à 12 images (200 ms), de côté, sans lâcher son cercle — hors de sa portée ;
+#: - `'sous_le_poing'` : à 22 images (367 ms), À TRAVERS lui (la flèche vers lui, puis ESQUIVE) —
+#:   là, seules les images d'invincibilité de la roulade le sauvent ;
+#: - `'jamais'` ; `'hasard'` : toutes les 50 images, sans regarder ; `'apres'` : le coup parti.
+#: ⚠️ ON COMPTE LES ROULADES FAITES (`j.roule` qui repart), pas les appuis : une roulade refusée
+#: (souffle vide, `Combat.roulade`) ne compte pas.
 ESQUIVE = MARCHER + """
-    function combat(L, o, frappeur) {
+    const QUAND = { tot: 12, sous_le_poing: 22 };
+    function combat(L, o, frappeur, rouler) {
         const j = L.B.joueur, e = L.B.rue, q = e.adversaire, R = 3 * L.TT;
+        const T = Math.round(L.B.defs.defis.find(function (x) { return x.slug === 'esquive'; }).regles.annonce_s * 60);
         // D'abord, entrer dans le ring.
         for (let n = 0; n < 900 && L.B.defi && e.phase !== 'combat'; n++) { marcherVers(o, j, e.depart.x + R, e.depart.y, 4); o.frame(1); }
-        let roulades = 0, a = Math.atan2(j.y - e.depart.y, j.x - e.depart.x), avant = Infinity, cale = 0;
+        let roulades = 0, appuis = 0, touches = 0, vie = j.vie, roule = 0, vu = -1;
+        let a = Math.atan2(j.y - e.depart.y, j.x - e.depart.x), avant = Infinity, cale = 0;
         for (let n = 0; n < 2400 && L.B.defi; n++) {
             const d = Math.hypot(q.x - j.x, q.y - j.y);
             if (frappeur && d < 30) { toutLacher(o); o.tape('Space', 1); continue; }
-            // Il arme son coup, TOUT PRÈS : on roule. Sinon on tourne dans le ring, en
-            // gardant le cercle — c'est le pas du boxeur, pas la fuite.
-            if (q.phase === 'anticipation' && d < 24 && !j.roule) {
+            if (e.annonce === T) vu = 0; else if (vu >= 0) vu++;
+            const maintenant = !j.roule && (QUAND[rouler] !== undefined ? vu === QUAND[rouler]
+                : rouler === 'hasard' ? n % 50 === 0 : rouler === 'apres' ? q.phase === 'repos' : false);
+            if (maintenant) {
+                if (rouler !== 'tot') { toutLacher(o); marcherVers(o, j, q.x, q.y, 1); }
                 o.touche('ShiftLeft'); o.frame(1); o.relacher('ShiftLeft');
-                roulades++;
-                continue;
+                if (rouler !== 'tot') toutLacher(o);
+                appuis++;
+            } else {
+                // On tourne dans le ring, en gardant le cercle — c'est le pas du boxeur, pas la fuite.
+                // ⚠️ Ce qui barre le cercle, on le CONTOURNE : on vise le pas suivant. Le ring du
+                // parc du kiosque tient la statue du général (`statues.py`, 28 sept. 2026), du bronze
+                // sur l'orbite : un boxeur qui marchait droit sur le point du cercle s'y collait à
+                // chaque tour et se faisait sonner là (vu au banc : tous les coups contre le socle).
+                const ecart = Math.hypot(j.x - (e.depart.x + Math.cos(a) * R), j.y - (e.depart.y + Math.sin(a) * R));
+                cale = ecart > avant - 0.5 ? cale + 1 : 0;
+                avant = ecart;
+                if (ecart < 10 || cale > 12) { a += 0.35; avant = Infinity; cale = 0; }
+                marcherVers(o, j, e.depart.x + Math.cos(a) * R, e.depart.y + Math.sin(a) * R, 4);
+                o.frame(1);
             }
-            // ⚠️ Ce qui barre le cercle, on le CONTOURNE : on vise le pas suivant. Le ring du
-            // parc du kiosque tient la statue du général (`statues.py`, 28 sept. 2026), du bronze
-            // sur l'orbite : un boxeur qui marchait droit sur le point du cercle s'y collait à
-            // chaque tour et se faisait sonner là (vu au banc : tous les coups contre le socle).
-            // Il ne gagnait avant que parce que rien de solide n'était sur SON cercle.
-            const ecart = Math.hypot(j.x - (e.depart.x + Math.cos(a) * R), j.y - (e.depart.y + Math.sin(a) * R));
-            cale = ecart > avant - 0.5 ? cale + 1 : 0;
-            avant = ecart;
-            if (ecart < 10 || cale > 12) { a += 0.35; avant = Infinity; cale = 0; }
-            marcherVers(o, j, e.depart.x + Math.cos(a) * R, e.depart.y + Math.sin(a) * R, 4);
-            o.frame(1);
+            if (j.roule > roule) roulades++;
+            roule = j.roule;
+            if (j.vie < vie) touches++;
+            vie = j.vie;
         }
         toutLacher(o);
-        return { fait: !!L.B.partie.defisFaits.esquive, message: L.B.msg, roulades: roulades,
-                 vie: j.vie / j.vieMax, reste: L.B.entites.indexOf(q) >= 0 };
+        return { fait: !!L.B.partie.defisFaits.esquive, message: L.B.msg, roulades: roulades, appuis: appuis,
+                 coups: e.coups, touches: touches, vie: j.vie / j.vieMax, reste: L.B.entites.indexOf(q) >= 0 };
     }
 """
 
 
-def test_l_esquive_se_gagne_sans_frapper(banc):
+@pytest.mark.parametrize("rouler", ["tot", "sous_le_poing"])
+def test_l_esquive_se_gagne_sans_frapper(banc, rouler):
+    """La roulade SERT (29 sept. 2026) : quand son coup s'annonce, on roule — tôt et de côté,
+    hors de sa portée ; ou tard, à travers lui, et ses images d'invincibilité le laissent passer.
+    Trente secondes, une quinzaine de coups, rien d'encaissé. Sans l'invincibilité, celui qui
+    roule sous le poing est sonné."""
     r = banc(_jeu(ESQUIVE + """
         aller(L, o, 'esquive');
-        return combat(L, o, false);
-    """))
+        return combat(L, o, false, '%s');
+    """ % rouler))
     assert r["fait"] is True, r
-    assert r["roulades"] >= 3, "il a fallu esquiver pour de vrai"
+    assert r["coups"] >= 12, "il a cogné toutes les deux secondes : %s" % r
+    assert r["roulades"] >= 12, "une roulade FAITE par coup : %s" % r
+    assert r["touches"] <= 1 and r["vie"] >= 0.85, "gagné avec une marge : %s" % r
     assert r["reste"] is False
+
+
+@pytest.mark.parametrize("rouler", ["jamais", "hasard", "apres"])
+def test_l_esquive_se_perd_sans_rouler_au_bon_moment(banc, rouler):
+    """Le même pas du boxeur dans le ring — sans rouler, en roulant n'importe quand (le souffle
+    s'épuise, et le coup tombe entre deux roulades), ou une fois le coup parti : il nous sonne.
+    Tourner en rond ne le sème plus : il court comme nous (`allure`)."""
+    r = banc(_jeu(ESQUIVE + """
+        aller(L, o, 'esquive');
+        return combat(L, o, false, '%s');
+    """ % rouler))
+    assert r["fait"] is False and r["message"] == "DÉFI RATÉ — IL T'A SONNÉ", r
+    if rouler == "jamais":
+        assert r["roulades"] == 0 and r["appuis"] == 0, r
 
 
 def test_l_esquive_se_rate_au_premier_coup_de_poing(banc):
     r = banc(_jeu(ESQUIVE + """
         aller(L, o, 'esquive');
-        return combat(L, o, true);
+        return combat(L, o, true, 'tot');
     """))
     assert r["fait"] is False and r["message"] == "DÉFI RATÉ — TU AS FRAPPÉ", r
 
