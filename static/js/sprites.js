@@ -2983,6 +2983,15 @@ const TUILES = (function () {
         const h = 9 + (hash2(u, 7) % 3);
         bloc(ctx, sens, u, 13 - h, 2, h);
       }
+    } else if (style.barreaux) {
+      // LE FER FORGE (le lot de Prestige, 29 sept. 2026) : des barreaux serres, une POINTE DOREE au bout de
+      // chacun — c'est l'or qui dit « concessionnaire de luxe » et pas « poste de police ». Un sur deux pixels :
+      // on voit les chars a travers, c'est tout le point d'un lot en montre.
+      for (let u = u0; u < u1; u++) {
+        if (u % 2) continue;
+        ctx.fillStyle = style.barreaux; bloc(ctx, sens, u, style.rails[0] - 2, 1, style.rails[1] - style.rails[0] + 3);
+        ctx.fillStyle = style.pointes; bloc(ctx, sens, u, style.rails[0] - 3, 1, 1);
+      }
     } else {
       ctx.fillStyle = style.maille;
       for (let u = u0; u < u1; u++) {
@@ -3040,6 +3049,8 @@ const TUILES = (function () {
                  rails: [3, 11], poteau0: 2, epaisseur: 3 };
   const CLOTURE_BARBELE = { ombre: '#3a6c2d', lisse: '#5d5852', maille: '#6b655c', poteau: '#7d766a',
                     fils: '#d8d2c4', rails: [6, 11], poteau0: 0, epaisseur: 2 };
+  const CLOTURE_FER = { ombre: '#3f7331', lisse: '#1f1f24', barreaux: '#2b2b31', pointes: '#d9b44a', poteau: '#15151a',
+                        rails: [5, 11], poteau0: 2, epaisseur: 2 };
 
   /* --- La barriere coulissante (le lot du poste, 23 sept. 2026) ------------
 
@@ -3070,6 +3081,23 @@ const TUILES = (function () {
     ctx.fillRect(0, 1, 2, 12); ctx.fillRect(longueur - 2, 1, 2, 12);
     ctx.fillStyle = s.poteau;
     for (let u = 8; u < longueur - 4; u += 16) ctx.fillRect(u, 1, 1, 11);   // les raidisseurs
+    ctx.fillStyle = '#1c1b1f';                                     // les roulettes, sur le rail
+    for (const u of [3, longueur - 6]) ctx.fillRect(u, 13, 3, 2);
+    ctx.restore();
+  }
+
+  /** Le PANNEAU du portail de fer forge (le Salon) : les memes barreaux a pointes dorees que la cloture, dans un
+      cadre noir liseré d'or, sur ses roulettes — c'est le cadre qui dit que ca glisse. */
+  function panneauDeFer(ctx, x, y, longueur) {
+    const s = CLOTURE_FER;
+    ctx.save();
+    ctx.translate(x, y);
+    brinDeCloture(ctx, 'h', 0, longueur, TT, s);
+    ctx.fillStyle = '#15151a';                                     // le cadre : lisse basse et montants
+    ctx.fillRect(0, 11, longueur, 2);
+    ctx.fillRect(0, 1, 2, 12); ctx.fillRect(longueur - 2, 1, 2, 12);
+    ctx.fillStyle = s.pointes;                                     // le liseré d'or, en haut du cadre
+    ctx.fillRect(0, 1, longueur, 1);
     ctx.fillStyle = '#1c1b1f';                                     // les roulettes, sur le rail
     for (const u of [3, longueur - 6]) ctx.fillRect(u, 13, 3, 2);
     ctx.restore();
@@ -3705,6 +3733,10 @@ const TUILES = (function () {
     // ⚠️ Le sol seulement (voir `railDeCoulissante`) ; `TUILES.Z.panneau` est ce
     // que `Monde` peint par-dessus, au pixel ou le panneau a glisse.
     'Z': Object.assign(railDeCoulissante, { panneau: panneauCoulissant }),
+    // Le fer forge du Salon, et son portail : le meme rail, un autre panneau (une fonction A LUI — `Object.assign`
+    // sur `railDeCoulissante` changerait aussi le panneau du poste).
+    '(': function (ctx, v, T) { clotureTuile(ctx, v, T, CLOTURE_FER); },
+    ')': Object.assign(function (ctx, v, T) { railDeCoulissante(ctx, v, T); }, { panneau: panneauDeFer }),
 
     /* --- Dedans : le plancher et les meubles ------------------------------
 

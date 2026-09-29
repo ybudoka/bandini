@@ -1232,16 +1232,27 @@ const Monde = (function () {
 
   function coulissantesDe(def) {
     const lot = def.stationnement_du_poste;
-    if (!lot || !lot.barriere) return [];
-    const b = lot.barriere;
-    return [{ x: b.x, y: b.y, l: b.l, cle: lot.vehicule, ouverture: 0, tient: 0, libre: false }];
+    const out = [];
+    if (lot && lot.barriere) {
+      const b = lot.barriere;
+      out.push({ x: b.x, y: b.y, l: b.l, glyphe: 'Z', cle: lot.vehicule, ouverture: 0, tient: 0, libre: false });
+    }
+    // LE PORTAIL DE FER FORGE de Prestige Automobiles (Martin, 29 sept. 2026) : ouvert aux heures d'ouverture ;
+    // hors d'elles, il ne s'ouvre que devant un char A TOI, conduit (`cle: 'aToi'`). Un voleur de nuit reste dedans.
+    for (const c of def.concessionnaires || []) {
+      const p = c.portail;
+      if (p) out.push({ x: p.x, y: p.y, l: p.l, glyphe: ')', cle: 'aToi', heures: c.heures, lot: c.slug,
+                        ouverture: 0, tient: 0, libre: false });
+    }
+    return out;
   }
   function barrieresCoulissantes() { return (carte && carte.coulissantes) || []; }
 
   /** Ce char a-t-il la CLE de cette barriere : le bon modele, quelqu'un au volant,
       et le nez dans la zone qui la commande ? */
   function aLaCle(b, v) {
-    if (v.type !== 'vehicule' || v.slug !== b.cle || !v.conducteur || v.etat === 'epave') return false;
+    if (v.type !== 'vehicule' || !v.conducteur || v.etat === 'epave') return false;
+    if (b.cle === 'aToi' ? !v.aToi : v.slug !== b.cle) return false;
     return v.x >= (b.x - 0.5) * TT && v.x < (b.x + b.l + 0.5) * TT &&
            v.y >= (b.y - COULISSE_DEDANS) * TT && v.y < (b.y + 1 + COULISSE_DEHORS) * TT;
   }
@@ -1264,12 +1275,19 @@ const Monde = (function () {
     for (let i = 0; i < b.l; i++) carte.solide[b.y * carte.w + b.x + i] = libre ? 0 : 5;
   }
 
+  /** Un portail qui a ses HEURES (le Salon) est ouvert pendant elles, sans cle. */
+  function ouvertAuxHeures(b) {
+    if (!b.heures || !B.partie) return false;
+    const h = B.partie.heure;
+    return h >= b.heures[0] && h < b.heures[1];
+  }
+
   /** Rend vrai si un panneau vient de se mettre en marche — c'est la qu'il grince. */
   function majBarrieresCoulissantes() {
     let part = false;
     for (const b of barrieresCoulissantes()) {
       if (B.entites.some(function (v) { return aLaCle(b, v); })) b.tient = COULISSE_TIENT;
-      const voulu = b.tient > 0 || (b.ouverture > 0 && quelquUnDessous(b)) ? 1 : 0;
+      const voulu = b.tient > 0 || ouvertAuxHeures(b) || (b.ouverture > 0 && quelquUnDessous(b)) ? 1 : 0;
       if (b.tient > 0) b.tient--;
       if (b.ouverture !== voulu) {
         if (b.ouverture === 1 - voulu && Entites.visibleAEcran((b.x + b.l / 2) * TT, b.y * TT, TT * 2)) part = true;
@@ -1290,7 +1308,7 @@ const Monde = (function () {
       if (x + l < 0 || x > VW || y + TT < 0 || y > VH || b.ouverture >= 1) continue;
       ctx.save();
       ctx.beginPath(); ctx.rect(x, y - 2, l, TT + 2); ctx.clip();
-      TUILES.Z.panneau(ctx, x + Math.round(l * b.ouverture), y, l);
+      TUILES[b.glyphe || 'Z'].panneau(ctx, x + Math.round(l * b.ouverture), y, l);
       ctx.restore();
       B.stats.rects += 12;
     }
@@ -1763,7 +1781,8 @@ const Monde = (function () {
     const s = solidite(tx, ty);
     // ⚠️ Une barriere coulissante OUVERTE reste une cloture pour le dessin : sinon le
     // poteau d'a cote, recuit pendant qu'elle est ouverte, perdrait son bras.
-    return s === 4 || s === 5 || glyphe(tx, ty) === 'Z';
+    const p = carte.legende[glyphe(tx, ty)];
+    return s === 4 || s === 5 || !!(p && p.coulissante);
   }
 
   /** La variante d'une cloture : le masque des cotes ou elle CONTINUE — 1 nord,

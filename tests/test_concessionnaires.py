@@ -53,17 +53,49 @@ def test_le_salon_est_aux_erables_en_cossu():
 
 
 def test_le_lot_du_salon_est_garni():
+    """Martin (29 sept.) : « les véhicules doivent être en avant » — en rang DEVANT la vitrine, nez sur la rue, sur
+    l'asphalte du lot (pas de cases peintes : les chars de la rue n'y entrent pas se garer)."""
     ville = _ville()
     lot, porte = _lot(ville, "prestige"), _porte(ville, "prestige")
-    sol = ville["sol"]
-    assert len(lot["garees"]) >= 6, "« plusieurs voitures dans le stationnement »"
+    sol, portail = ville["sol"], lot["portail"]
+    assert len(lot["garees"]) >= 5, "« plusieurs voitures dans le stationnement »"
     for place in lot["places"]:
-        assert place["sens"] == "N"
-        assert sol[place["y"]][place["x"]] == sol[place["y"] + 1][place["x"]] == "^", place
-    # La place en face de la porte reste libre : c'est la qu'on se gare pour entrer acheter.
-    en_face = min(range(len(lot["places"])), key=lambda i: abs(lot["places"][i]["x"] - porte["x"]))
-    assert en_face not in lot["garees"]
+        assert place["sens"] == "S"
+        assert sol[place["y"]][place["x"]] == sol[place["y"] - 1][place["x"]] == "p", place
+        assert place["y"] > porte["y"], "un char derrière la vitrine"
+        assert place["y"] + 1 == portail["y"], "le char n'est pas contre la clôture, nez sur la rue"
+    # L'axe de la porte au portail reste libre : on sort à pied, et on sort en char.
+    assert not any(portail["x"] <= p["x"] < portail["x"] + portail["l"] for p in lot["places"])
     assert len(lot["stock"]) == len(lot["places"])
+
+
+def test_le_salon_est_retourne_vers_son_lot():
+    ville = _ville()
+    porte, sol = _porte(ville, "prestige"), ville["sol"]
+    assert sol[porte["y"] + 1][porte["x"]] == "p", "la porte ne donne pas sur le lot"
+    assert carte.solidite(sol[porte["y"] - 1][porte["x"]]) == 1, "pas de bâtiment derrière la porte"
+
+
+def test_le_lot_est_cloture_de_fer_forge_et_son_portail_donne_sur_la_rue():
+    """Le tour : la façade au nord, du fer forgé (`(`) à l'est, à l'ouest et au sud — sauf le portail (`)`), deux
+    tuiles qui donnent sur du marchable."""
+    ville = _ville()
+    lot, porte, sol = _lot(ville, "prestige"), _porte(ville, "prestige"), ville["sol"]
+    p = lot["portail"]
+    xs = [pl["x"] for pl in lot["places"]] + list(range(p["x"], p["x"] + p["l"]))
+    ouest, est, bas = min(xs) - 1, max(xs) + 1, p["y"]
+    for y in range(porte["y"] + 1, bas + 1):
+        assert sol[y][ouest] == "(" and sol[y][est] == "(", (y, sol[y][ouest], sol[y][est])
+    for x in range(ouest, est + 1):
+        attendu = ")" if p["x"] <= x < p["x"] + p["l"] else "("
+        assert sol[bas][x] == attendu, (x, sol[bas][x])
+    assert p["l"] == 2 and all(carte.solidite(sol[bas + 1][x]) == 0 for x in range(p["x"], p["x"] + 2))
+    assert all(sol[porte["y"]][x] in "FWD" for x in range(ouest, est + 1)), "le lot n'est pas fermé par la façade"
+    assert carte.LEGENDE["("]["cloture"] == carte.LEGENDE[")"]["cloture"] == "fer"
+    assert carte.solidite("(") == 4, "le fer forgé s'enjambe à pied et arrête les chars"
+    assert carte.LEGENDE[")"].get("coulissante") is True
+    ouvre, ferme = lot["heures"]
+    assert 0 < ouvre < ferme < 1
 
 
 def test_le_stock_du_neuf():

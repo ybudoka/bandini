@@ -39,6 +39,10 @@ SALON_PROFONDEUR = 4
 NEUFS = (("sport", "sport"), ("luxe", "luxe"), ("auto", "auto"), ("luxe", "luxe_vus"), ("auto", "auto_familiale"))
 #: Le devant du Salon : ce sur quoi on sort en poussant la porte.
 DEVANT = frozenset("_.,")
+#: La clôture de fer forgé et son portail (`carte.LEGENDE`), la largeur du portail — un char, et de quoi passer.
+FER, PORTAIL, PORTAIL_L = "(", ")", 2
+#: Les heures où le portail est ouvert, en fraction du jour : celles d'un commerce.
+HEURES_SALON = (8 / 24, 21 / 24)
 #: Ce qu'une dalle de char en montre peut couvrir : la pelouse, l'abord, le trottoir — jamais la chaussée.
 DALLE = frozenset("_.,")
 
@@ -75,7 +79,7 @@ def trouver_le_salon(chantier, ville: dict) -> dict | None:
             allee = y + 2
             while allee < hauteur and _rangee(sol, allee, x0, largeur, "p"):
                 allee += 1
-            if allee - (y + 2) < carte.ALLEE:
+            if allee - (y + 2) < carte.ALLEE + 1:           # le lot retourné garde une allée de deux
                 continue
             yb, yd = allee, allee + SALON_PROFONDEUR
             if yd >= hauteur or not all(_batissable(sol, j, x0, largeur) for j in range(yb, yd)):
@@ -178,56 +182,64 @@ def piece_de_salon(slug: str, largeur: int, hauteur: int, porte: int) -> dict:
 
 
 def poser_le_salon(chantier, ville: dict) -> None:
-    """Prestige Automobiles, bâti sur la moitié sud du stationnement trouvé ; la moitié nord est son lot."""
+    """Prestige Automobiles, sur le stationnement trouvé, RETOURNÉ vers la rue (Martin, 29 sept. 2026 : « les
+    véhicules doivent être en avant et clôturé ») : le bâtiment au fond, sur les cases `^` ; sa vitrine et sa porte
+    face au sud, sur le lot ; une allée ; les chars en rang, nez sur la rue, contre une clôture de fer forgé ; et le
+    portail, dans l'axe de la porte, qui donne sur l'abord et le trottoir. Le lot est de l'asphalte SANS cases
+    peintes : portail ouvert, un char de la rue n'y entre pas se garer (`placeStationnee` lit les cases)."""
     trouve = trouver_le_salon(chantier, ville)
     if not trouve:
         return
-    x0, largeur, yb = trouve["x"], trouve["largeur"], trouve["batiment"]
-    yf = yb + SALON_PROFONDEUR - 1
-    # LA PORTE SUR UN DEVANT DÉJÀ LIBRE : la colonne la plus proche du milieu dont le devant (`devants.DEVANT`)
-    # ne porte aucun décor — rien à déplacer, la liste du décor ne bouge pas. Aucune : le milieu, et on déplace.
-    occupees = {(d["x"], d["y"]) for d in ville["decor"]}
-    colonnes = sorted(range(x0 + 1, x0 + largeur - 1), key=lambda x: (abs(x - (x0 + largeur // 2)), x))
-    px = next((x for x in colonnes if not any((x + dx, yf + dy) in occupees for dx, dy in devants.DEVANT)),
-              x0 + largeur // 2)
-    for j in range(yb, yf):
+    x0, largeur, y = trouve["x"], trouve["largeur"], trouve["y"]
+    yf = y + SALON_PROFONDEUR - 1                         # la façade, face au sud
+    yclo = trouve["batiment"] + SALON_PROFONDEUR - 1      # la clôture, au sud du lot
+    px = x0 + largeur // 2                                # la porte, et le portail sous elle
+    # ⚠️ ON DÉPLACE, ON NE RETIRE PAS : le décor mobile du rectangle (un banc, un arbre) va sur la tuile voisine
+    # libre la plus proche, par `devants` — à SA place dans la liste. Retiré, il décalait l'identifiant de tout le
+    # décor qui suit, et le hasard de la police et des passants glissait avec lui. Seul ce qui ne se déplace pas
+    # s'en va (une lampe de rue).
+    rectangle = {(x, j) for x in range(x0, x0 + largeur) for j in range(y, yclo + 1)}
+    devants._deplacer_le_decor(chantier, ville, rectangle, devants._pris(chantier, ville) | rectangle,
+                               devants._evitees(chantier, ville))
+    _degager(ville, rectangle)
+    for j in range(y, yf):
         _ecrire(ville, x0, j, "E" * largeur)
     motifs = _facade(largeur, px - x0)
     _ecrire(ville, x0, yf, motifs)
-    # ⚠️ LES ÎLOTS DES CASES `v` qu'on a bâties : ils bordaient une rangée qui n'est plus là, et un îlot ne se
-    # tient qu'au bout d'une rangée (`test_carte`). Ils redeviennent de la pelouse.
-    for y in range(yb, yf + 1):
+    for j in range(yf + 1, yclo):
+        _ecrire(ville, x0, j, FER + "p" * (largeur - 2) + FER)
+    bas = "".join(PORTAIL if px <= x < px + PORTAIL_L else FER for x in range(x0, x0 + largeur))
+    _ecrire(ville, x0, yclo, bas)
+    # ⚠️ LES ÎLOTS des rangées bâties : un îlot ne se tient qu'au bout d'une rangée (`test_carte`). Pelouse.
+    for j in range(y, yclo + 1):
         for x in (x0 - 1, x0 + largeur):
-            if ville["sol"][y][x] == "I":
-                _ecrire(ville, x, y, ",")
-    # ⚠️ ON DÉPLACE, ON NE RETIRE PAS : le décor mobile du bâtiment et de son devant (un banc devant la porte, un
-    # arbre à la graine 2) va sur la tuile voisine libre la plus proche, par `devants` — à SA place dans la liste.
-    # Retiré, il décalait l'identifiant de tout le décor qui suit, et le hasard de la police et des passants
-    # glissait avec lui (huit juges de banc tombés). Seul ce qui ne se déplace pas s'en va (une lampe de rue).
-    batiment = {(x, y) for x in range(x0, x0 + largeur) for y in range(yb, yf + 1)}
-    larges = batiment | {(px + dx, yf + dy) for dx, dy in devants.DEVANT}
-    devants._deplacer_le_decor(chantier, ville, larges, devants._pris(chantier, ville) | larges,
-                               devants._evitees(chantier, ville))
-    _degager(ville, batiment | {(px, yf + 1)})
+            if ville["sol"][j][x] == "I":
+                _ecrire(ville, x, j, ",")
+    # ⚠️ Le bout de l'ANCIENNE allée, à l'est du bâtiment, ne mène plus nulle part : pelouse aussi.
+    for j in range(y, yclo + 1):
+        if ville["sol"][j][x0 + largeur] == "p":
+            _ecrire(ville, x0 + largeur, j, ",")
     ville["portes"].append({"x": px, "y": yf, "interieur": SALON_SLUG, "lieu": SALON_SLUG, "nom": SALON_NOM,
                             "vitrine": [x0, largeur]})
     _devanture(ville, x0, yf, motifs, px - x0, SALON_ENSEIGNES, "commerce", "+")
     ville["points_interet"].append({"type": SALON_SLUG, "slug": SALON_SLUG, "nom": SALON_NOM,
                                     "x": px, "y": yf + 1, "famille": "magasin"})
     ville["interieurs"][SALON_SLUG] = piece_de_salon(SALON_SLUG, largeur, SALON_PROFONDEUR, px - x0 + 1)
-    places = [{"x": x0 + i, "y": trouve["y"], "sens": "N"} for i in range(largeur)]
-    en_face = px - x0
-    montre = _montre_du_salon(ville, x0, largeur, yf, px)
-    cour = {"x": x0 - 1, "y": trouve["y"], "l": largeur + 2, "h": yf + 1 - trouve["y"]}
+    # Les chars : nez au sud contre la clôture, hors de l'axe porte-portail.
+    places = [{"x": x, "y": yclo - 1, "sens": "S"} for x in range(x0 + 1, x0 + largeur - 1)
+              if not px <= x < px + PORTAIL_L]
+    montre = _montre_du_salon(ville, x0, largeur, yclo, px)
+    cour = {"x": x0 - 1, "y": y, "l": largeur + 2, "h": yclo + 1 - y}
     if montre:
         montre["modeles"] = _stock(NEUFS, len(NEUFS), 1.0)
         gauche, droite = min(cour["x"], montre["x"]), max(cour["x"] + cour["l"], montre["x"] + 2)
         cour = {"x": gauche, "y": cour["y"], "l": droite - gauche, "h": max(cour["h"], montre["y"] + 2 - cour["y"])}
     ville["concessionnaires"].append({
         "slug": SALON_SLUG, "nom": SALON_NOM, "genre": "neuf", "porte": {"x": px, "y": yf},
-        "places": places, "garees": [i for i in range(largeur) if i != en_face],
-        "stock": _stock(NEUFS, largeur, 1.0),
+        "places": places, "garees": list(range(len(places))),
+        "stock": _stock(NEUFS, len(places), 1.0),
         "usure": 1.0, "alarme": True, "montre": montre,
+        "portail": {"x": px, "y": yclo, "l": PORTAIL_L}, "heures": list(HEURES_SALON),
         "cour": cour,
     })
 

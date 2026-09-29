@@ -360,6 +360,12 @@ LEGENDE: dict[str, dict] = {
     # d'autre. `coulissante` : c'est une OUVERTURE qui a une cle, donc la
     # connexite la traverse (`franchissable`) — sinon le lot serait une poche.
     "Z": {"nom": "barrière coulissante", "solide": 5, "cloture": "barbele", "coulissante": True},
+    # LE FER FORGÉ du lot de Prestige Automobiles (Martin, 29 sept. 2026 : « les véhicules doivent être en avant
+    # et clôturé ») : noir à pointes dorées, bas — on voit les chars à travers. Il s'enjambe à pied (solidité 4,
+    # comme le grillage) et arrête les chars. Son PORTAIL coulisse comme la barrière du poste, avec sa règle à
+    # lui : ouvert aux heures d'ouverture, sinon devant un char à toi (`Monde.majBarrieresCoulissantes`).
+    "(": {"nom": "clôture de fer forgé", "solide": 4, "cloture": "fer"},
+    ")": {"nom": "portail de fer forgé", "solide": 5, "cloture": "fer", "coulissante": True},
     # --- Dedans : les planchers et les meubles ------------------------------
     # ⚠️ Un MEUBLE est solide 3, comme la borne-fontaine et la cloture : il
     # arrete un char, pas un piéton. C'est ce qui permet d'en poser partout

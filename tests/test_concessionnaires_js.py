@@ -47,7 +47,8 @@ def test_les_chars_du_salon_naissent_hors_champ_sans_de(banc):
         const chars = duLot(L, lot).map(function (e) {
             const i = lot.places.indexOf(e.placeDeLot), p = lot.places[i];
             return { i: i, slug: e.slug, sprite: e.sprite, etat: e.etat, conducteur: e.conducteur,
-                     dx: e.x / TT - (p.x + 0.5), dy: e.y / TT - (p.y + 1), angle: e.angle,
+                     dx: e.x / TT - (p.x + 0.5), dy: e.y / TT - (p.sens === 'S' ? p.y : p.y + 1),
+                     angle: e.angle, voulu: Math.atan2(p.sens === 'S' ? 1 : -1, 0),
                      vie: e.vie, vieMax: e.vieMax, alarmeDuLot: !!e.alarmeDuLot };
         });
         return { dansLeChamp: dansLeChamp, sousLesYeux: sousLesYeux, visible: visible, nees: nees, des: des,
@@ -57,12 +58,12 @@ def test_les_chars_du_salon_naissent_hors_champ_sans_de(banc):
     assert r["sousLesYeux"] == 0, "un char est né dans le lot, à l'écran"
     assert r["visible"] is False, "le juge devait regarder ailleurs"
     assert r["des"] == 0, f"{r['des']} dés du jeu tirés pour garnir le lot"
-    assert r["nees"] == len(r["garees"]) == len(r["chars"]) >= 6
+    assert r["nees"] == len(r["garees"]) == len(r["chars"]) >= 5
     assert sorted(c["i"] for c in r["chars"]) == sorted(r["garees"])
     for c in r["chars"]:
         assert c["slug"] == r["stock"][c["i"]]["slug"] and c["sprite"] == r["stock"][c["i"]]["sprite"], c
         assert c["etat"] == "stationne" and c["conducteur"] is None, c
-        assert abs(c["dx"]) < 1e-6 and abs(c["dy"]) < 1e-6 and abs(c["angle"] + 3.14159265 / 2) < 1e-6, c
+        assert abs(c["dx"]) < 1e-6 and abs(c["dy"]) < 1e-6 and abs(c["angle"] - c["voulu"]) < 1e-6, c
         assert c["vie"] == c["vieMax"] and c["alarmeDuLot"] is True, c
 
 
@@ -80,7 +81,7 @@ def test_les_chars_du_lot_ne_comptent_pas_comme_gares(banc):
         return { garnis: garnis.length, comptes: garnis.filter(L.Vehicules.compteCommeGare).length,
                  ordinaire: L.Vehicules.compteCommeGare(ordinaire) };
     }""" % {"aller": ALLER})
-    assert r["garnis"] >= 6
+    assert r["garnis"] >= 5
     assert r["comptes"] == 0, r
     assert r["ordinaire"] is True, r
 
@@ -409,3 +410,51 @@ def test_on_achete_un_4_roues_chez_ti_pout(banc):
     assert r["quad"], "pas de 4 roues dans le lot de Ti-Pout"
     assert r["apres"] == 100000 - r["prix"] and r["prix"] > 0, r
     assert r["aToi"] is True and r["conducteur"] is True and r["vole"] is False and r["volees"] == 0, r
+
+
+PORTAIL = """
+    function portailDe(L, slug) {
+        return L.Monde.barrieresCoulissantes().find(function (b) { return b.lot === slug; });
+    }
+    function tuileLibre(L, b) { return L.Monde.carte.solide[b.y * L.Monde.carte.w + b.x] === 0; }
+"""
+
+
+def test_le_portail_du_salon_ouvert_de_jour_ferme_la_nuit_sauf_pour_un_char_a_toi(banc):
+    """Martin (29 sept.) : fer forgé, et un portail ouvert de jour, fermé la nuit — sauf pour un char à toi."""
+    r = banc("""function (L, o) {
+        %(portail)s
+        L.Jeu.commencer();
+        const p = L.B.partie, TT = L.TT, j = L.B.joueur;
+        const b = portailDe(L, 'prestige');
+        function attendre(n) { for (let k = 0; k < n; k++) L.Monde.majBarrieresCoulissantes(); }
+        j.x = b.x * TT; j.y = (b.y - 20) * TT;
+        p.heure = 12 / 24; attendre(80);
+        const midi = { ouverture: b.ouverture, libre: tuileLibre(L, b) };
+        p.heure = 2 / 24; attendre(80);
+        const nuit = { ouverture: b.ouverture, libre: tuileLibre(L, b) };
+        // La nuit, un char à toi, conduit, devant le portail (côté lot) : il s'ouvre.
+        const v = L.Vehicules.creer('sport', (b.x + 1) * TT, (b.y - 1) * TT, Math.PI / 2, { etat: 'stationne', couleur: '#16a085' });
+        v.aToi = true; j.x = v.x; j.y = v.y; L.Vehicules.monter(j, v);
+        attendre(80);
+        const aToi = { ouverture: b.ouverture, libre: tuileLibre(L, b) };
+        // Un char volé, la nuit : il reste fermé.
+        L.Vehicules.descendre(j, true); v.aToi = false; v.vole = true; attendre(200);
+        j.x = v.x; j.y = v.y; L.Vehicules.monter(j, v); attendre(80);
+        const vole = { ouverture: b.ouverture, libre: tuileLibre(L, b) };
+        return { existe: !!b, midi: midi, nuit: nuit, aToi: aToi, vole: vole };
+    }""" % {"portail": PORTAIL})
+    assert r["existe"], "pas de portail au Salon"
+    assert r["midi"] == {"ouverture": 1, "libre": True}, r
+    assert r["nuit"] == {"ouverture": 0, "libre": False}, r
+    assert r["aToi"] == {"ouverture": 1, "libre": True}, r
+    assert r["vole"] == {"ouverture": 0, "libre": False}, r
+
+
+def test_le_fer_forge_et_son_portail_se_peignent(banc):
+    r = banc("""function (L, o) {
+        const T = L.TUILES || (window.TUILES);
+        return { fer: typeof T['('] === 'function', portail: typeof T[')'] === 'function',
+                 panneau: typeof (T[')'] && T[')'].panneau) === 'function', z: T['Z'].panneau !== T[')'].panneau };
+    }""")
+    assert r == {"fer": True, "portail": True, "panneau": True, "z": True}, r
