@@ -152,7 +152,16 @@ def test_le_joueur_et_les_lieux_sont_sur_des_tuiles_marchables(banc):
             const rideau = L.Monde.portesDeGarage().some(function (pg) {
                 return pg.lieu === p.slug && pg.y === p.y - 1 && p.x >= pg.x && p.x < pg.x + pg.l;
             });
-            return [p.slug, L.Monde.solidite(p.x, p.y), !!L.Monde.porteA(p.x, p.y - 1) || rideau];
+            // ⚠️ Un lot clôturé (le Salon Prestige) : son point est devant le PORTAIL, du côté de la rue — devant
+            // la porte, on est déjà dans l'enclos (docs/jalons/les-concessionnaires-le-neuf-aux-erables-l-usage-
+            // dans-les-friches.md, « Le lot devant, clôturé » ; `test_barrieres`). La porte du lot, elle, reste
+            // dans l'axe : sur la même colonne, au nord du portail, et c'est une vraie porte.
+            const portail = ((L.Monde.carte.def && L.Monde.carte.def.concessionnaires) || []).some(function (c) {
+                const pt = c.portail;
+                return pt && c.slug === p.slug && pt.y === p.y - 1 && p.x >= pt.x && p.x < pt.x + pt.l
+                    && c.porte.x === p.x && c.porte.y < pt.y && !!L.Monde.porteA(c.porte.x, c.porte.y);
+            });
+            return [p.slug, L.Monde.solidite(p.x, p.y), !!L.Monde.porteA(p.x, p.y - 1) || rideau || portail];
         });
         return { dur: dur, lieux: lieux, zone: L.Monde.zoneA(j.x, j.y).slug,
                  horsCarte: L.Monde.porteA(-1, -1) };
