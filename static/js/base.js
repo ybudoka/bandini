@@ -224,6 +224,9 @@ function etatInitial(defs) {
     //: calme, un gang oublie `hostile_toujours` et `hostile_si_arme` — la seule
     //: facon de marcher dans La Shop (`s05`).
     calmes: [],
+    //: Les proprietes qu'une mission a mises EN VENTE (`donne.a_vendre`, M16) : l'hotel
+    //: (q07) est de phase 2, et rien d'autre ne le vendrait.
+    enVente: [],
     //: Les missions FERMEES de M16 (`ferme`, les choix) : un tableau de slugs.
     //: Une mission fermee n'apparait plus jamais, ni au telephone ni au carnet.
     fermees: [],
@@ -777,6 +780,7 @@ const Sauvegarde = (function () {
     // partie repart avec tout a vide.
     if (!Array.isArray(out.libere)) out.libere = [];
     if (!Array.isArray(out.calmes)) out.calmes = [];
+    if (!Array.isArray(out.enVente)) out.enVente = [];
     if (!Array.isArray(out.fermees)) out.fermees = [];
     // Les planques des blocs de carte : une partie d'avant elles n'en a aucune.
     if (!Array.isArray(out.planques)) out.planques = [];

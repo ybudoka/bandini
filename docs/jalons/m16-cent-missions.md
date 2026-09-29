@@ -1053,3 +1053,17 @@ catalogue.
   - **Ce que M13 attend** : les quatre districts de M16 (et le Faubourg de m5) se libèrent en jouant. _Le Boss_
     demande **aussi quatre propriétés**, et la quatrième, l'hôtel, n'est en vente nulle part (`phase: 2`) : c'est
     `q07` et `a_vendre`, en brouillon sous `refs/wip/m16-q07` — la dernière marche avant m98.
+- **29 sept. 2026 : vague 5 — la quatrième propriété. L'hôtel est à vendre.** Le brouillon `refs/wip/m16-q07`
+  repris, fini et joué : `q07` (Norbert, _La chambre 12_ : un comptable de Prévost mort dans la chambre douze ; de
+  nuit, le « colis » dans le camion de la buanderie, à la fourrière sans une étoile, et Gilles s'occupe du reste —
+  500 $, **`donne.a_vendre: hotel`**). L'Hôtel Bandini, `phase: 2` et vendu nulle part, se met en vente
+  (`partie.enVente`, gardée par la sauvegarde) : il s'achète 10 000 $ au comptoir du hall (`Missions.aVendre`), et
+  le BILAN compte les propriétés qu'on peut avoir, hôtel compris une fois en vente. 11 voix (Norbert, et Gilles à la
+  poignée de main).
+  - **Juge** (`tests/test_q07_hotel_a_vendre_js.py` ; trois mutations, toutes rouges) : q07 de l'appel à la prime,
+    l'hôtel qui n'est à vendre nulle part avant et l'est après, la sauvegarde (une partie abîmée repart à vide), puis
+    l'hôtel **acheté au comptoir du hall** : quatre propriétés, `exigeTenu({proprietes: 4})`.
+  - ⚠️ Le brouillon livrait le colis « à la cour de Ti-Loup », un lieu qui n'existe pas : il va à la fourrière, chez
+    Gilles — c'est aussi là que Ti-Loup compacte (s02).
+  - **Ce que M13 attend** : les **quatre districts** (vagues 1 à 4) et les **quatre propriétés** (celle-ci) se
+    gagnent en jouant. Reste à écrire _Le Boss_ lui-même — m98, son générique, la ville qui change de couleur.

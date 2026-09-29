@@ -600,7 +600,7 @@ from . import (  # noqa: E402
     e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f10, f11, f12, f13, h01, h02, m1, m2, m3,
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
     s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
-    e04, e06, e07, e10, p02, p04, p05, p09, p10, p11, s02, s05, s06, s09, s10, s11,
+    e04, e06, e07, e10, p02, p04, p05, p09, p10, p11, s02, s05, s06, s09, s10, s11, q07,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -638,6 +638,8 @@ from . import (  # noqa: E402
 # ⚠️ s02, s06, s05, s09, s10, s11 (29 sept. 2026, vague 4) : La Shop — Ti-Loup et sa remorqueuse, Bob Sauvé filé
 # jusqu'au bar, la berline de Prévost compactée, son camion-citerne qui saute, Raymonde menée au maire, et
 # l'accord porté sans arme à Gros-Boulon (`libere: shop`).
+# ⚠️ q07 (29 sept. 2026, vague 5) : Norbert et la chambre 12 — elle met l'hôtel EN VENTE (`donne.a_vendre`), la
+# quatrième propriété que _Le Boss_ (M13) demande.
 # ⚠️ m99 (M13, 25 sept. 2026) — _Sacrer son camp_, la fin qu'on peut jouer — tout au bout : son appel
 # ne sonne qu'avec 15 000 $ en poche (`exige`), et une fin n'a rien à précéder.
 CATALOGUE: list[Mission] = [
@@ -658,6 +660,7 @@ CATALOGUE: list[Mission] = [
     e04.MISSION, e06.MISSION, e07.MISSION, e10.MISSION,
     p02.MISSION, p05.MISSION, p04.MISSION, p09.MISSION, p10.MISSION, p11.MISSION,
     s02.MISSION, s06.MISSION, s05.MISSION, s09.MISSION, s10.MISSION, s11.MISSION,
+    q07.MISSION,
     m97.MISSION, m99.MISSION,
 ]
 

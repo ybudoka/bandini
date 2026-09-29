@@ -116,3 +116,8 @@ saute plus, sort du jeu des territoires, rend ses coins ; sous la mini-carte, sa
 ⚠️ **Ce qui manque encore à _Le Boss_** : la **quatrième propriété**. L'hôtel est `phase: 2` et rien ne le met en
 vente : `q07` (_La chambre 12_, Norbert) et `donne.a_vendre` sont en brouillon sous `refs/wip/m16-q07`. Puis m98,
 son générique et la ville qui change de couleur.
+
+**29 sept. 2026, le soir — et la quatrième propriété.** `q07` (Norbert, _La chambre 12_) met l'Hôtel Bandini en vente
+(`donne.a_vendre`, `partie.enVente`) : il s'achète au comptoir du hall, et le juge de banc fait les quatre propriétés.
+**_Le Boss_ est débloqué** : ses deux conditions (4 districts, 4 propriétés) se gagnent en jouant. Reste à l'écrire —
+m98, son générique, la ville qui change de couleur.

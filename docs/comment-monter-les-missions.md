@@ -458,6 +458,8 @@ En plus de `recompense`, la mission peut donner :
   (`Territoires.horsJeu`) et rend les coins qu'il avait pris (`Territoires.liberer`) ; sous la
   mini-carte, sa cour redevient le nom du quartier (`q13`, les Quais) ;
 - `calme: "<gang>"` — `hostile_toujours` et `hostile_si_arme` tombent ;
+- `a_vendre: "<propriété>"` — une propriété que rien ne vendait (`phase: 2`) se met en vente
+  (`partie.enVente`) : l'hôtel après `q07`, la quatrième propriété de _Le Boss_ ;
 - `contact` — un numéro de plus au téléphone ;
 - `vehicule`, `tenue`, `munitions`, `rabais` par comptoir ;
 - `dette: -n`, `casier: -n`, `ami`/`ennemi`, `boulot`, `manchette`.

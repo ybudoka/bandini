@@ -2270,6 +2270,9 @@ const Histoire = (function () {
       if (p.coursPayes) delete p.coursPayes[d.technique];
       Hud.message('TU SAIS ' + Techniques.def(d.technique).nom.toUpperCase() + ' !', 180);
     }
+    // ⚠️ `a_vendre` (M16) : une propriete qu'aucun comptoir ne vendait se met en vente
+    // (l'hotel apres q07) — `Missions.aVendre` la lit, la sauvegarde la garde.
+    if (d.a_vendre && p.enVente.indexOf(d.a_vendre) < 0) p.enVente.push(d.a_vendre);
     p.stats.missions = (p.stats.missions || 0) + 1;
     noter('MISSION : ' + m.titre + ' — ' + prime + ' $', true);
     B.mission = null;

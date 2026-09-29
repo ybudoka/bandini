@@ -67,7 +67,7 @@ Ne quitte pas le bout du comptoir ; les mains derrière le dos. `prendre` une le
 
 ## Ce qui l'attend (M16)
 
-`q07` « La chambre 12 » (un comptable de Prévost mort dans la chambre, un colis à porter chez Ti-Loup).
+✅ `q07` « La chambre 12 » (29 sept. 2026) : un comptable de Prévost mort dans la chambre douze, le colis porté à la fourrière — et l'hôtel mis en vente. « Je reste avec les murs, si le nouveau patron veut de moi. »
 
 ## À trancher
 

@@ -1608,7 +1608,7 @@ const Hud = (function () {
     const lignes = [
       ['JOUR ' + p.jour + ' · ' + minutes + ' MIN JOUÉES', ''],
       ['FORTUNE', fortune + ' $'],
-      ['PROPRIÉTÉS', Object.keys(p.proprietes).length + ' / ' + B.defs.economie.proprietes.filter(function (q) { return q.phase === 1; }).length],
+      ['PROPRIÉTÉS', Object.keys(p.proprietes).length + ' / ' + B.defs.economie.proprietes.filter(function (q) { return q.phase === 1 || (p.enVente || []).indexOf(q.slug) >= 0; }).length],
       ['PAQUETS', Object.keys(p.paquets).length + ' / ' + (Monde.carte.ville ? Monde.carte.ville : Monde.carte).def.paquets.length],
       ['FRÉNÉSIES', Frenesies.reussies() + ' / ' + Frenesies.toutes().length],
       // M13 : ce que dit le générique, et ce qu'il reste à faire après lui — la partie continue.

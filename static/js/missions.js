@@ -1304,7 +1304,10 @@ const Missions = (function () {
   /** La propriete de ce lieu si elle se vend aujourd'hui, sinon null. */
   function aVendre(lieu) {
     const prop = proprieteDe(lieu);
-    return prop && prop.phase === 1 && !possede(prop) ? prop : null;
+    // ⚠️ `enVente` (M16, `donne.a_vendre`) : une propriete de phase 2 qu'une mission met sur
+    // le marche — l'Hotel Bandini apres q07, la quatrieme propriete du _Boss_.
+    const ouverte = prop && (prop.phase === 1 || (B.partie.enVente || []).indexOf(prop.slug) >= 0);
+    return ouverte && !possede(prop) ? prop : null;
   }
 
   /** L'entree de menu « acheter » d'une propriete a vendre.
@@ -3878,7 +3881,7 @@ const Missions = (function () {
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, nourrir, cafeine, hopital,
            coupon, prixAmbulant, crieurSousLaMain, filleSousLaMain, stoolSousLaMain, etalSousLaMain, temoinSousLaMain, prendreCoupon,
            paliersDe, palierDebloque, avantage, compterLeBoulot,
-           boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, dansLaCour, majFourriere, malGare, majMalGares, estDeLaPlanque, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, proprieteDe, possede,
+           boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, dansLaCour, majFourriere, malGare, majMalGares, estDeLaPlanque, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, proprieteDe, possede, aVendre,
            dormir, dormirJusquAuSoir, porterTenue, fouiller, menuComptoir, comptoirFerme, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, majGarage, menuDuRideau, menuArmurerie, menuVetements,
            repeindre, prixCarrosserie, refusDuSeuil,
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais,
