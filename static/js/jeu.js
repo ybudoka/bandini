@@ -107,6 +107,7 @@ const Jeu = (function () {
     Neige.oublier();                         // la rue d'une partie rechargee est blanche
     Pluie.oublier();                         // et la pluie d'une autre partie se tait
     Saisons.oublierSon();                    // et l'ambiance de sa saison
+    Derapage.oublier();                      // les traces d'une autre partie
     Brouillard.oublier();
     Verglas.oublier();
     Pont.oublier();                          // la baie d'une partie rechargee a toute son eau
@@ -474,6 +475,7 @@ const Jeu = (function () {
       char de sa planque que la sauvegarde avait garde. */
   function passerDansLeBloc(bloc, def, retour, ici) {
     const j = B.joueur;
+    Derapage.oublier();                      // les traces de la ville ne suivent pas dans le bloc (autres coordonnees)
     const gens = voyageurs(), ville = B.entites;
     for (const e of gens) { const i = ville.indexOf(e); if (i >= 0) ville.splice(i, 1); }
     const passage = bloc.passage;
@@ -524,6 +526,7 @@ const Jeu = (function () {
     if (!B.bloc) return false;
     transiter(FONDU_SORTIE, function () {
       const gens = voyageurs(), ville = B.bloc.ville;
+      Derapage.oublier();                    // ni celles du bloc en ville
       quitterLeBloc(gens);
       for (const e of gens) if (B.entites.indexOf(e) < 0) B.entites.push(e);
       // Au meme endroit le long du bord, et assez loin pour qu'un char n'y reparte pas.
@@ -1241,6 +1244,7 @@ const Jeu = (function () {
     if (!B.interieur) Verglas.dessinerSol(ctx, vue);   // la glace : le reflet, les eclats, les branches cassees
     if (!B.interieur) Neige.dessinerSol(ctx, vue);     // la neige au sol, SOUS les rails et les gens
     if (!B.interieur) Monde.dessinerMouille(ctx, vue); // derriere l'arroseuse (la nuit a ses habitudes)
+    if (!B.interieur) Derapage.dessinerSol(ctx, vue);  // les traces de pneus, les sillons (les saisons, lot 6)
     if (!B.interieur) Pluie.dessinerSol(ctx, vue);     // la rue mouillee, les flaques, la gadoue d'avril (les saisons, lot 2)
     if (!B.interieur) RueDesSaisons.dessinerFlaques(ctx, vue);   // l'eau des bornes ouvertes de la canicule (vague 4c)
     // Le tunnel, la rame et ses fenetres : peints par-dessus le sol de la piece,
@@ -1575,7 +1579,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Train: Train, Navette: Navette, Neige: Neige, Pluie: Pluie, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, RueDesSaisons: RueDesSaisons, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Territoires: Territoires, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Galeries: Galeries, Fetes: Fetes, Halloween: Halloween, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Photos: Photos, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, SurPlace: SurPlace, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Train: Train, Navette: Navette, Neige: Neige, Pluie: Pluie, Derapage: Derapage, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, RueDesSaisons: RueDesSaisons, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Territoires: Territoires, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Galeries: Galeries, Fetes: Fetes, Halloween: Halloween, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Photos: Photos, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, SurPlace: SurPlace, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,

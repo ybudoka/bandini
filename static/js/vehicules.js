@@ -1137,6 +1137,11 @@ const Vehicules = (function () {
     v.vitesse = borner(v.vitesse, -d.vitesse_recul, d.vitesse_max * sol * Garage.pointe(v));
     if (Math.abs(v.vitesse) < 0.02 && !cmd.gaz && !cmd.frein) v.vitesse = 0;
     const t = v.vitesse / d.vitesse_max;
+    // ⚠️ CE QUE LE SOL TIENT : la neige et la glace (que les PNEUS D'HIVER de Ti-Guy rendent en partie),
+    // la rue mouillee, la pluie. Au sec, 1 — et le DERAPAGE (`Derapage`, les saisons, lot 6) ne
+    // s'eveille que sous 1 : au sec, la conduite ne change pas d'un pixel.
+    const g = Garage.hiver(v, Neige.adherence(v) * Verglas.adherence()) * Monde.adherenceMouillee(v) * Pluie.adherence(v);
+    const perte = 1 - Math.min(1, g);
     // ⚠️ LE VOLANT SE TOURNE, il ne se claque pas : il prend vers la consigne
     // et se recentre quand on lache. Au clavier, sans ca, chaque appui etait
     // un coup de butee a butee.
@@ -1153,17 +1158,20 @@ const Vehicules = (function () {
       // est lisse, et une consigne retournee au passage a vitesse nulle le
       // faisait traverser de butee a butee — le char tournait du mauvais cote
       // au debut de chaque recul.
-      const omega = Math.abs(v.vitesse) / d.rayon_braquage * courbeBraquage(t) * (cmd.freinMain ? 1.35 : 1);
+      const omega = Math.abs(v.vitesse) / d.rayon_braquage * courbeBraquage(t) * (cmd.freinMain ? 1.35 : 1)
+        * Derapage.volant(v, cmd, perte, t);        // le sous-virage, les roues bloquees (1 au sec)
       const ancien = v.angle;
       v.angle += v.volant * omega * (v.vitesse < 0 && !cmd.reculCommeEnAvant ? -1 : 1);
       pivoterSurLArriere(v, ancien);
     }
+    Derapage.majLacet(v, cmd, perte, g, t);         // le survirage, le tete-a-queue, le contre-braquage
     // Adherence : la vitesse reelle glisse vers le cap. Frein a main : elle traine.
     // ⚠️ LA NEIGE DIVISE L'ADHERENCE (M12) — la police glisse comme tout le monde.
     // Les PNEUS D'HIVER (le garage de Ti-Guy) rendent une part de ce que la neige et la glace prennent.
-    const adh = (cmd.freinMain ? d.adherence_frein : d.adherence) * Garage.hiver(v, Neige.adherence(v) * Verglas.adherence()) * Monde.adherenceMouillee(v) * Pluie.adherence(v);
+    const adh = (cmd.freinMain ? d.adherence_frein : d.adherence) * g;
     v.vx += (Math.cos(v.angle) * v.vitesse - v.vx) * adh;
     v.vy += (Math.sin(v.angle) * v.vitesse - v.vy) * adh;
+    Derapage.majSol(v, perte);                      // les traces, les sillons, le crissement
     // En l'air (rampe) : on retombe.
     if (v.z > 0 || v.vz !== 0) {
       v.z += v.vz; v.vz -= physique().gravite;

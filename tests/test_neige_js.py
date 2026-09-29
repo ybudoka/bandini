@@ -100,23 +100,26 @@ def test_sur_la_neige_un_char_glisse_et_freine_mal(banc):
             const v = L.Vehicules.creer('auto', j.x + 400, j.y + 400, 0, { etat: 'stationne', couleur: '#3a6fb0' });
             if (deblaye) L.Neige.deneiger(Math.floor(v.x / L.TT), Math.floor(v.y / L.TT), 3);
             v.vitesse = 3; v.vx = 3; v.vy = 0;
-            let derive = 0;
+            let derive = 0, chemin = 0, dir = Math.atan2(v.vy, v.vx);
             for (let k = 0; k < 20; k++) {
                 L.Vehicules.majPhysique(v, { gaz: 0.5, frein: 0, direction: 1, freinMain: false });
                 const cap = Math.atan2(Math.sin(v.angle), Math.cos(v.angle)), reel = Math.atan2(v.vy, v.vx);
                 derive += Math.abs(Math.atan2(Math.sin(cap - reel), Math.cos(cap - reel)));
+                chemin += Math.atan2(Math.sin(reel - dir), Math.cos(reel - dir)); dir = reel;   // ce que la trajectoire tourne vraiment
             }
             v.vitesse = 3;
             let freinage = 0;
             while (v.vitesse > 0.15 && freinage < 400) { L.Vehicules.majPhysique(v, { gaz: 0, frein: 1, direction: 0, freinMain: false }); freinage++; }
             L.Entites.retirer(v);
-            return { derive: derive, freinage: freinage };
+            return { derive: derive, chemin: Math.abs(chemin), freinage: freinage };
         }
         return { sec: essai(false, false), neige: essai(true, false), deblaye: essai(true, true) };
     }""")
-    assert r["neige"]["derive"] > 1.5 * r["sec"]["derive"], r
+    # ⚠️ « Glisser », c'est que la TRAJECTOIRE ne suit pas le volant (le vrai dérapage, lot 6 : le char
+    # sous-vire au lieu de flotter — l'écart entre le cap et la direction réelle ne le dit plus).
+    assert r["neige"]["chemin"] < 0.75 * r["sec"]["chemin"], r
     assert r["neige"]["freinage"] > 1.3 * r["sec"]["freinage"], r
-    assert r["deblaye"]["derive"] < r["neige"]["derive"] and r["deblaye"]["freinage"] < r["neige"]["freinage"], r
+    assert r["deblaye"]["chemin"] > r["neige"]["chemin"] and r["deblaye"]["freinage"] < r["neige"]["freinage"], r
 
 
 def test_la_neige_se_peint_sauf_derriere_la_charrue(banc):

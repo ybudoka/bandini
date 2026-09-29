@@ -1460,3 +1460,36 @@ glace et le dérapage (lot 6) restent en dernier, à part._
 - **À écouter par Martin** : personne d'autre ne peut juger un son (`static/audio/saison_*.mp3`) ; s'il
   en refuse un, `scripts/audio_elevenlabs.py --refaire saison_ete`.
 
+### Lot 6, vague 6a — le dérapage (livrée le 29 sept. 2026)
+
+- **Le modèle** (`static/js/derapage.js`, appelé par `Vehicules.majPhysique` ; ses réglages vivent dans le fichier, HORS du paquet : ils faisaient déborder le plafond gzip des définitions de 29 octets) : l'adhérence
+  du sol (`g` : la neige et la glace que les pneus d'hiver rendent en partie, la rue mouillée, la pluie) est
+  calculée une fois, avant le volant ; la PERTE (1 − g) mène tout le reste, et une perte nulle rend l'ancien
+  calcul au pixel près (jugé : la même trajectoire, scriptée sur 90 images, avec et sans le module).
+- **Le sous-virage** : le braquage perd jusqu'à 90 % à pleine vitesse sur un sol sans adhérence. **Les roues
+  bloquées** : frein à fond, lancé, sur un sol qui a perdu 30 % ou plus — il reste 12 % du braquage. **Le
+  survirage** : le frein à main en courbe (et, doucement, le gaz à fond en tournant) pousse un LACET qui
+  s'ajoute au cap ; le sol le reprend peu à peu, le **contre-braquage** beaucoup plus vite ; laissé faire, le
+  tête-à-queue. Les **pneus d'hiver** rendent une vraie part (jugé : 20 % de rotation de plus au moins).
+- **Au sol** : des traces noires au sec quand on glisse de biais (et le crissement, ElevenLabs, chargé la
+  première fois qu'on conduit), des sillons dans la neige, rien sur la glace ; 160 marques au plus, qui
+  s'effacent en 45 s.
+- ⚠️ **La motoneige** (et ce qui est fait pour la neige, `hors_neige` sous 1) n'a pas de dérapage : sur ses
+  skis, elle glisse comme avant — sa course des bois est réglée là-dessus (elle rougissait).
+- ⚠️ **Le gaz est doux** : plus fort, le survirage au gaz compensait le sous-virage et le char tournait sur la
+  glace autant qu'au sec (vu au banc).
+- **Juges** : `test_derapage_js.py` (10), chacun vu rougir sous sa mutation (sans sous-virage, sans
+  contre-braquage, roues bloquées qui dirigent, sans frein à main). Réécrits : la glissade de la neige et de
+  la pluie se mesure à la TRAJECTOIRE qui suit moins le volant (l'écart cap-direction ne le dit plus quand le
+  char sous-vire au lieu de flotter).
+- **La relecture** (un agent neuf) a trouvé, et c'est corrigé : le lacet durait plus que l'élan (un char
+  arrêté pivotait de trois quarts de tour sur la neige) — il s'éteint maintenant avec la vitesse ; les coques
+  marquaient l'eau et crissaient — exemptées ; au clavier (frein tout ou rien), freiner sur la neige bloquait
+  toujours les roues — elles ne bloquent qu'après un frein TENU 18 images (des coups de frein gardent le
+  volant : on pompe, comme en vrai), et plus sur la rue arrosée sous la pluie ; la police bloquait ses roues
+  et partait en tête-à-queue au demi-tour — l'IA ne bloque pas et rattrape son arrière d'elle-même ; la
+  marche arrière crissait ; les traces suivaient dans le chalet.
+- **Pas fait, à dire** : ça ne se juge qu'au volant — à la manette de Martin, le contre-braquage doit se
+  sentir et rattraper ; les réglages sont en tête de `static/js/derapage.js` (`REGLAGES`). Sous la pluie, une rue mouillée ne crisse
+  ni ne marque (voulu : le crissement est le son du sec).
+

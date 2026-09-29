@@ -926,6 +926,16 @@ const Son = (function () {
       if (!pret()) return;
       if (!joue('souffle_fantome')) bruit(1.4, 0.1, 900, 150);
     },
+    // LE CRISSEMENT des pneus qui glissent au sec (les saisons, lot 6), la ou est le char.
+    crissement: function (x, y) {
+      const j = B.joueur;
+      if (!j || !pret()) return 0;
+      const p = 480, v = 1 - Math.hypot(x - j.x, y - j.y) / p;
+      if (v <= 0) return 0;
+      if (estCharge('crissement')) return jouerA('crissement', x, y, p);
+      bruit(0.35, 0.07 * v, 5200, 3600);
+      return v;
+    },
     // LA PLUIE (les saisons, lot 2) : le tonnerre qui suit l'eclair, et l'eclaboussure d'un char dans
     // une flaque, la ou elle est. Tant que le groupe « pluie » n'est pas charge, la synthese.
     tonnerre: function () {

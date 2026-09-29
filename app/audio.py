@@ -473,6 +473,11 @@ CATALOGUE: list[Echantillon] = [
     _e("souffle_fantome", "Souffle de fantôme", duree_s=2.0, volume=0.5,
        prompt="a ghostly airy whoosh fading away with a faint hollow moan, spooky but soft, "
               "no music"),
+    # LE CRISSEMENT (le vrai derapage, les saisons, lot 6) : les pneus qui glissent au sec, frein a main
+    # ou coup de volant. Un « lieu » (`LIEUX["derapage"]`) : il se charge la premiere fois qu'on conduit.
+    _e("crissement", "Crissement de pneus", duree_s=1.2, volume=0.5,
+       prompt="short car tires screeching and squealing on dry asphalt during a skid, close, "
+              "no engine roar, no crash, no music"),
     _e("eclaboussure", "Éclaboussure", duree_s=0.9, volume=0.55,
        prompt="a car tire driving fast through a big puddle, a sharp splash of water "
               "spraying onto a sidewalk, close, no engine, no music"),
@@ -1580,6 +1585,8 @@ LIEUX: dict[str, list[str]] = {
     "saison_ete": ["saison_ete"], "saison_automne": ["saison_automne"],
     # La borne ouverte de la canicule (vague 4c) : chargée quand on en approche une (`RueDesSaisons.majSon`).
     "borne_ete": ["borne_ete"],
+    # Le derapage (les saisons, lot 6) : il se charge la premiere fois que le joueur conduit (`Derapage`).
+    "derapage": ["crissement"],
     # L'Halloween (les saisons, lot 3) : un SOIR — ils se chargent le 31 (`Halloween.maj`).
     "halloween": ["rire_sorciere", "porte_grince", "souffle_fantome"],
     "casino": ["casino_salle", "bras_machine", "gain_machine", "jackpot",
