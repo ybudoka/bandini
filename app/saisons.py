@@ -31,10 +31,11 @@ CLES = [
 ]
 
 #: Chaque palette : le gazon (`,`), la friche (`;`), l'arbre de rue (trois teintes [cime, clair, sombre],
-#: tirées à l'empreinte de sa tuile ; `feuillage` 0 = nu), et `neige` : la part de blanc sur les
-#: trottoirs et les toits.
+#: tirées à l'empreinte de sa tuile ; `feuillage` 0 = nu), `neige` : la part de blanc sur les
+#: trottoirs et les toits, et `mini` : l'herbe sur la mini-carte (l'été, le vert d'avant).
 PALETTES = {
     "ete": {
+        "mini": "#3f6b33",
         "gazon": {"fond": "#4f8d3e", "clair": "#5a9c47", "sombre": "#427a33", "brin": "#6aad55",
                   "terre": "#6d5c3e", "fleur": "#cfc95c", "feuille": "#4f8d3e", "feuille2": "#4f8d3e"},
         "friche": {"fond": "#6d6845", "clair": "#7b7551", "sombre": "#5b5638", "sec": "#a4975f"},
@@ -43,6 +44,7 @@ PALETTES = {
         "neige": 0,
     },
     "printemps": {
+        "mini": "#4d7f3a",
         "gazon": {"fond": "#5f9a45", "clair": "#74b057", "sombre": "#4d8438", "brin": "#8cc46a",
                   "terre": "#6a5536", "fleur": "#e8d85a", "feuille": "#5f9a45", "feuille2": "#5f9a45"},
         "friche": {"fond": "#6a6a44", "clair": "#787a50", "sombre": "#585a37", "sec": "#9a9a60"},
@@ -51,6 +53,7 @@ PALETTES = {
         "neige": 0,
     },
     "fin_ete": {
+        "mini": "#61703a",
         "gazon": {"fond": "#7a8c42", "clair": "#8f9c4f", "sombre": "#667838", "brin": "#a3a85c",
                   "terre": "#7a6443", "fleur": "#d9b24a", "feuille": "#7a8c42", "feuille2": "#7a8c42"},
         "friche": {"fond": "#7d7546", "clair": "#8b8252", "sombre": "#6a6339", "sec": "#b5a462"},
@@ -59,6 +62,7 @@ PALETTES = {
         "neige": 0,
     },
     "automne": {
+        "mini": "#8a5a2a",
         "gazon": {"fond": "#6f7a3c", "clair": "#7f8646", "sombre": "#5c6632", "brin": "#8e8a4c",
                   "terre": "#6d5536", "fleur": "#c8622a", "feuille": "#c0392b", "feuille2": "#e67e22"},
         "friche": {"fond": "#76663f", "clair": "#86744a", "sombre": "#625434", "sec": "#b08850"},
@@ -67,6 +71,7 @@ PALETTES = {
         "neige": 0,
     },
     "novembre": {
+        "mini": "#56533a",
         "gazon": {"fond": "#6b6a45", "clair": "#77744f", "sombre": "#57553a", "brin": "#83805a",
                   "terre": "#5e4a32", "fleur": "#8a5a34", "feuille": "#8a5a34", "feuille2": "#7a4a2a"},
         "friche": {"fond": "#6a5f42", "clair": "#776b4c", "sombre": "#574e36", "sec": "#948058"},
@@ -75,6 +80,7 @@ PALETTES = {
         "neige": 0,
     },
     "hiver": {
+        "mini": "#d6dde4",
         "gazon": {"fond": "#e8edf2", "clair": "#f6f8fb", "sombre": "#cfd8e2", "brin": "#b9c4cf",
                   "terre": "#8a7f70", "fleur": "#dfe6ee", "feuille": "#e8edf2", "feuille2": "#e8edf2"},
         "friche": {"fond": "#e3e7ea", "clair": "#f2f4f6", "sombre": "#c9d0d6", "sec": "#a89f86"},

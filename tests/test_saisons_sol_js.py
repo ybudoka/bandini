@@ -101,3 +101,29 @@ def test_une_carte_neuve_ne_prend_pas_les_tuiles_de_l_ancien_palier(banc):
         return { neuve: L.Atlas.cuireTuile(',', 3, L.TUILES[',']) !== t0, palier: c.palier };
     }""")
     assert r["palier"] == "automne" and r["neuve"], "la carte neuve a gardé les tuiles de l'été"
+
+
+def test_la_mini_carte_suit_la_saison_sans_se_recuire(banc):
+    """La mini-carte (et la carte ouverte) : l'herbe prend la couleur de la saison — blanche en
+    janvier, le vert d'avant en juillet — et seul l'herbe se reteint au palier : le fond, cuit une
+    fois (127 000 tuiles), ne se recuit pas."""
+    r = banc("""function (L) {
+        L.Jeu.commencer();
+        const p = L.B.partie, M = L.Monde;
+        p.jour = 21; p.heure = 0.5;
+        const ete = M.couleurMini(','), a = M.miniCarte(), a2 = M.miniCarte(), fond = M.carte.miniFond;
+        p.jour = 2;
+        const hiver = M.couleurMini(','), b = M.miniCarte();
+        p.jour = 32;
+        const automne = M.couleurMini(',');
+        return { ete: ete, hiver: hiver, automne: automne, meme: a === a2, change: b !== a,
+                 fondGarde: !!fond && M.carte.miniFond === fond,
+                 route: M.couleurMini('#'), eau: M.couleurMini('~'), mur: M.couleurMini('B'), terre: M.couleurMini(';') };
+    }""")
+    assert r["ete"] == "#3f6b33", "l'été n'a plus la mini-carte d'avant"
+    assert r["hiver"] != r["ete"] and int(r["hiver"][1:3], 16) > 0xc0, "l'herbe de janvier n'est pas blanche sur la carte"
+    assert r["automne"] not in (r["ete"], r["hiver"])
+    assert r["meme"], "la mini-carte est recuite sans changement de saison"
+    assert r["change"], "la mini-carte garde l'été en janvier"
+    assert r["fondGarde"], "le fond de la mini-carte est recuit au palier (127 000 tuiles)"
+    assert len({r["hiver"], r["route"], r["eau"], r["mur"], r["terre"]}) == 5, "l'herbe d'hiver se confond avec une autre famille"

@@ -2159,10 +2159,19 @@ const Monde = (function () {
 
   // --- Mini-carte -----------------------------------------------------------------
 
+  /** La tuile est-elle de l'HERBE sur la carte ? Une regle, lue par `couleurMini` et par le
+      masque de l'herbe (`cuireLeFond`) : ce qui est mur, cloture, route, trottoir ou abord
+      a sa couleur a lui, meme sur du gazon. */
+  function estHerbeMini(p) {
+    return !!p.herbe && p.solide !== 1 && p.solide !== 2 && !p.cloture && !p.route && !p.trottoir && !p.abord;
+  }
+
   /** Une couleur par FAMILLE de tuile, lue dans la legende : un glyphe ajoute
       demain apparait tout seul sur la mini-carte. */
   function couleurMini(glyphe) {
     const p = carte.legende[glyphe] || {};
+    // L'herbe suit la saison (les saisons, lot 1) : blanche l'hiver, rousse en octobre.
+    if (estHerbeMini(p)) return typeof Saisons !== 'undefined' ? Saisons.palette().mini : '#3f6b33';
     if (p.solide === 2) return '#24506f';
     if (p.solide === 1) return '#4a3f3f';
     // Une cloture se voit sur la carte : elle dit qu'une cour est fermee. Le
@@ -2171,7 +2180,6 @@ const Monde = (function () {
     if (p.route) return '#34373d';
     if (p.trottoir) return '#8a877c';
     if (p.abord) return '#6d665a';
-    if (p.herbe) return '#3f6b33';
     if (p.ruelle) return '#4a4741';
     return '#6b5a3a';
   }
@@ -2279,33 +2287,61 @@ const Monde = (function () {
   /** La ville entiere, une tuile = un pixel. Cuite une fois : 18 000 rectangles
       au chargement valent mieux que 64x48 relus a chaque image.
       ⚠️ Recuite quand le masque tombe (le pont de l'aeroport fini) : la cle dit
-      avec quel masque elle a ete peinte. */
+      avec quel masque elle a ete peinte.
+      ⚠️ L'HERBE SUIT LA SAISON (les saisons, lot 1), et la carte ne se recuit pas pour
+      autant : le FOND (tout sauf l'herbe) et le MASQUE de l'herbe se cuisent une fois par
+      masque ; a chaque palier, on ne fait que reteindre le masque et le poser sur le fond —
+      trois operations de canevas, pas 127 000 tuiles toutes les deux minutes. */
   function miniCarte(laquelle) {
     const k = laquelle || carte;                  // la ville, meme quand on est dedans
-    const cle = masqueDeLaCarte(k) ? 'masquee' : 'entiere';
+    const cleMasque = masqueDeLaCarte(k) ? 'masquee' : 'entiere';
+    const herbe = couleurMini(',');
+    const cle = cleMasque + '|' + herbe;
     if (k.mini && k.miniCle === cle) return k.mini;
+    if (!k.miniFond || k.miniFondCle !== cleMasque) cuireLeFond(k, cleMasque);
     const c = Base.nouveauCanvas(k.w, k.h);
     const ctx = c.getContext('2d');
+    ctx.fillStyle = herbe;
+    ctx.fillRect(0, 0, k.w, k.h);
+    ctx.globalCompositeOperation = 'destination-in';     // l'herbe seulement
+    ctx.drawImage(k.miniHerbe, 0, 0);
+    ctx.globalCompositeOperation = 'destination-over';   // le fond dessous
+    ctx.drawImage(k.miniFond, 0, 0);
+    ctx.globalCompositeOperation = 'source-over';
+    k.mini = c;
+    k.miniCle = cle;
+    return c;
+  }
+
+  /** Le fond de la mini-carte (tout sauf l'herbe, qui reste transparente) et le masque de
+      l'herbe, en une passe. */
+  function cuireLeFond(k, cleMasque) {
+    const fond = Base.nouveauCanvas(k.w, k.h), masque = Base.nouveauCanvas(k.w, k.h);
+    const ctx = fond.getContext('2d'), mtx = masque.getContext('2d');
+    mtx.fillStyle = '#fff';
     // ⚠️ Le masque se lit UNE fois, pas par tuile : 127 000 tuiles au premier dessin
     // de la mini-carte, et la premiere image du jeu les attend.
     const m = masqueDeLaCarte(k);
+    const HERBE = 'herbe';
     for (let y = 0; y < k.h; y++) {
       const ligne = k.sol[y];
       const x0 = m && y >= m.y && y < m.y + m.h ? m.x : k.w, x1 = m ? m.x + m.l : 0;
-      const couleurEn = function (x) { return x >= x0 && x < x1 ? EAU_MINI : couleurMini(ligne[x]); };
+      const couleurEn = function (x) {
+        if (x >= x0 && x < x1) return EAU_MINI;
+        const p = k.legende[ligne[x]] || {};
+        return estHerbeMini(p) ? HERBE : couleurMini(ligne[x]);
+      };
       let debut = 0, couleur = couleurEn(0);
       for (let x = 1; x <= k.w; x++) {
         const suivante = x < k.w ? couleurEn(x) : null;
         if (suivante !== couleur) {
-          ctx.fillStyle = couleur;
-          ctx.fillRect(debut, y, x - debut, 1);
+          if (couleur === HERBE) mtx.fillRect(debut, y, x - debut, 1);
+          else { ctx.fillStyle = couleur; ctx.fillRect(debut, y, x - debut, 1); }
           debut = x; couleur = suivante;
         }
       }
     }
-    k.mini = c;
-    k.miniCle = cle;
-    return c;
+    k.miniFond = fond; k.miniHerbe = masque; k.miniFondCle = cleMasque;
   }
 
   /** La couleur du ZONAGE d'une tuile sur la carte plein ecran : celle de son
