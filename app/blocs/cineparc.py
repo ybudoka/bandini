@@ -12,6 +12,9 @@ la ville (la règle « agrandir la carte sous la trame »). Derrière un fondu a
 le plan pose le cadre de l'écran (une façade), l'asphalte, les rangées de cases, le grillage et le
 casse-croûte ; le reste se peint, et vit selon la saison et l'heure.
 
+⚠️ **PAS UNE CASE EN ARRIÈRE DE LA CABANE** (Martin, 29 sept. 2026) : derrière elle, au sud, on regarderait un
+mur, pas l'écran — ses colonnes restent de l'asphalte dans les rangées d'en arrière.
+
 ⚠️ **LE CASSE-CROÛTE EST AU MILIEU DU TERRAIN** (Martin, 27 sept. 2026 : « la cabane doit être au centre »,
 docs/jalons/le-casse-croute-du-cine-parc-au-centre-et-le-projecteur.md) : dans l'axe de l'écran, au milieu
 de la 2e rangée de cases, comme dans un vrai ciné-parc. C'est aussi la CABINE DU PROJECTEUR : pendant la
@@ -38,11 +41,11 @@ PLAN: tuple[str, ...] = (
     "A,,,f#############OOOOOOOO#############f,,,A",
     "AA,,f#############FWWFDWWF#############f,,AA",
     "A,,,f##################################f,,,A",
-    "AA,,f###^^^^^^^^^^^^^^^^^^^^^^^^^^^^###f,,AA",
+    "AA,,f###^^^^^^^^^^########^^^^^^^^^^###f,,AA",
     "A,,,f##################################f,,,A",
     "AA,,f##################################f,,AA",
     "A,,,f##################################f,,,A",
-    "AA,,f###^^^^^^^^^^^^^^^^^^^^^^^^^^^^###f,,AA",
+    "AA,,f###^^^^^^^^^^########^^^^^^^^^^###f,,AA",
     "A,,,f#######################################",
     "AA,,f#######################################",
     "A,,,f#######################################",

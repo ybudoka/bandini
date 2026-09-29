@@ -67,6 +67,10 @@ def test_le_casse_croute_est_au_milieu_du_terrain_dans_l_axe_de_l_ecran():
     assert abs(centre - (e["x"] + e["l"] / 2)) <= 0.5, (centre, e)
     assert rangees[0] < min(ys) and max(ys) < rangees[-1], (ys, rangees)
     assert len(bati) == (max(xs) - min(xs) + 1) * (max(ys) - min(ys) + 1), "un seul bâtiment, d'un bloc"
+    # Martin (29 sept. 2026) : « ne mets pas de stationnement en arrière de la cabane » — derrière elle, on regarde un mur.
+    derriere = [(x, y) for y, ligne in enumerate(plan) for x, g in enumerate(ligne)
+                if g == "^" and y > max(ys) and min(xs) <= x <= max(xs)]
+    assert derriere == [], f"des cases en arrière de la cabane : {derriere}"
     porte = b["portes"][0]
     assert (porte["x"], porte["y"]) in bati
     piece = b["pieces"][porte["interieur"]]
