@@ -36,4 +36,32 @@ piétons ; une zone `libere` ne bouge plus ; tout survit à une sauvegarde.
 
 ## Notes
 
-_Rien de livré._
+### Vague 1 — la force, la frontière qui bouge la nuit, l'îlot pris qui se vit — **livrée le 29 sept. 2026**
+
+- ⚠️ **Mesuré avant de coder : le territoire d'un gang, c'était sa COUR.** Les zones de district n'ont pas de gang ;
+  seule la cour en a un, et c'est là seulement que ses membres naissent et défendent. Les cours de deux gangs
+  voisins sont loin l'une de l'autre : la frontière se joue donc à l'échelle des DISTRICTS, îlot par îlot.
+- **La carte des îlots** (`app/territoires.py`, dans le paquet des définitions : `pietons.territoires`) : les
+  îlots de chaque district de la ville d'avant, le gang du départ, et le **cœur** de chaque gang — les îlots de
+  sa cour (le glyphe `g` du plan et ce qu'il a avalé). La bande nord n'en est pas : son gang du Canton sera les
+  Mantes.
+- **La partie** garde le reste : `forcesDesGangs` (absente = pleine, 100) et `territoires` (« bx,by » → le gang
+  qui a PRIS l'îlot). Une nouvelle partie n'a rien de pris : rien ne change au départ.
+- **Coucher un membre** (assommé ou tué, par un joueur) coûte 4 à son gang — une fois par membre (`compteGang` :
+  un deuxième coup sur un assommé ne compte pas). Il reprend 8 par jour.
+- **La nuit** (`Territoires.nuit`, dans `Missions.nouveauJour`) : pour chaque paire de gangs, le plus fort de 15
+  au moins prend UN îlot au plus faible — un îlot à lui, voisin d'un îlot du fort, jamais son cœur ; choisi à
+  l'empreinte du jour, sans dé. Un district libéré (`libere`) sort du jeu. Le Clairon le dit (« LES CHEVREUILS
+  ONT PRIS UN COIN AUX CRAVATES »).
+- **L'îlot pris se vit** : `Territoires.gangA` remplace « le gang de la zone » là où il se lisait — la naissance
+  des membres (`Entites.peupler`) et l'hostilité à l'arme au poing. Chez lui = sa cour, ou un îlot que son gang a
+  pris. Les îlots d'origine restent ce qu'ils étaient (pas de gang dans la rue hors de la cour).
+- **La grande carte** (touche N) peint les îlots pris aux couleurs de qui les tient (la couleur du haut de ses
+  membres).
+- **Juges** : `test_territoires.py`, `test_territoires_js.py` (rien de pris au départ ; un membre couché compte
+  une fois ; la nuit prend un coin par voisin plus fort, jamais le cœur en soixante nuits — témoin : à forces
+  égales, rien ; un district libéré sort du jeu ; l'îlot pris se peuple de son nouveau gang ; tout survit à la
+  sauvegarde). Deux mutations rouges.
+- **Reste, vague 2** : reprendre un coin (une mission ou une activité qui rend l'îlot), les graffitis qui suivent
+  la frontière, une légende des territoires sur la carte, et le Petit-Canton quand les Mantes y seront.
+

@@ -35,7 +35,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-from . import (armes, audio, blocs, calendrier, saisons, carte, demenagement, derby, enseignes, fetes, garage, motoneige, quatre_roues, saint_jean, devantures, dojo, economie, mantes, garderobe, interactions, journal, magasins,
+from . import (armes, audio, blocs, calendrier, saisons, carte, demenagement, derby, enseignes, fetes, garage, motoneige, quatre_roues, saint_jean, territoires, devantures, dojo, economie, mantes, garderobe, interactions, journal, magasins,
                brouillard, loto, machine_a_sous, manettes, tables_de_jeu, missions, nord, nuit, pietons, recherche, techniques, vehicules, verglas, videopoker,
                pont_de_glace, visages)
 from .blocs import galeries as galeries_hantees
@@ -52,6 +52,8 @@ def assembler() -> dict:
     ville = carte.exporter()
     gens = pietons.exporter()
     gens["frontieres"] = pietons.frontieres(ville)
+    # Les territoires des gangs : les îlots de chaque district, et le cœur de chaque gang (`territoires.py`).
+    gens["territoires"] = territoires.pour_le_navigateur()
     return {
         "version": VERSION,
         "tuile_px": carte.TUILE_PX,

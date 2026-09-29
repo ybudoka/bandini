@@ -3537,8 +3537,11 @@ const Entites = (function () {
     // district n'est pas LIBERE (`gangChasse`). ⚠️ Avant le 28 sept. 2026, c'etait
     // `faubourgLibere` pour TOUTES les zones : apres m5, plus un Chevreuil, plus une Morue,
     // plus un Boulonneux ne sortait nulle part en ville.
-    const gang = zone && zone.gang && !gangChasse(zone.gang) && B.rng() < 0.5
-      ? (B.defs.pietons.gangs.find(function (g) { return g.slug === zone.gang; }) || null)
+    // ⚠️ LES TERRITOIRES BOUGENT (`Territoires.gangA`) : la cour, comme avant, ou l'ilot qu'un gang a PRIS. Une
+    // partie qui n'a rien de pris tire exactement les memes des qu'avant.
+    const ici = Territoires.gangA(B.joueur.x, B.joueur.y);
+    const gang = ici && !gangChasse(ici) && B.rng() < 0.5
+      ? (B.defs.pietons.gangs.find(function (g) { return g.slug === ici; }) || null)
       : null;
     const ne = creerPieton(place.x, place.y, gang ? archetype(gang.pieton) : null);
     if (ne && sortie) ne.sortie = sortie;
@@ -4668,8 +4671,8 @@ const Entites = (function () {
       // ⚠️ Un gang CALME (`donne.calme`, M16) ne prend plus l'arme au poing pour une provocation.
       if (e.gang && !e.cible && !gangCalme(e.gang) && B.joueur.arme !== 'poings' && !B.joueur.dansVehicule && e.t % 15 === 0
           && dist2(e.x, e.y, B.joueur.x, B.joueur.y) < (6 * TT) * (6 * TT) && Monde.ligneLibre(e.x, e.y, B.joueur.x, B.joueur.y)) {
-        const zone = Monde.zoneA(e.x, e.y);
-        if (zone && zone.gang === e.gang) { e.etat = 'attaque_joueur'; e.cri = 90; }
+        // Chez lui : sa cour, ou un ilot que son gang a pris (`Territoires.gangA`).
+        if (Territoires.gangA(e.x, e.y) === e.gang) { e.etat = 'attaque_joueur'; e.cri = 90; }
       }
       // Flaner : on suit une direction jusqu'a ce qu'elle ne mene plus nulle part.
       const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
@@ -5028,6 +5031,7 @@ const Entites = (function () {
     } else if (e.vie <= 0 && e.type === 'joueur') {
       assommer(e);                      // le deuxieme joueur : K.-O., voir `majJoueur`
     } else if (e.vie <= 0) {
+      Territoires.couche(e, source);   // un membre couche par un joueur : son gang s'affaiblit
       if (opts.assomme) assommer(e);
       else tuer(e, source);
     } else if (e.type === 'pieton') {

@@ -2231,7 +2231,9 @@ const Missions = (function () {
     const loto = B.defs.loto ? nuitDuLoto() : null;
     // Le brouillard de demain matin : le Clairon l'annonce la veille, sous la manchette.
     const brume = typeof Brouillard !== 'undefined' ? Brouillard.annonceDeDemain() : null;
-    const dessous = [loto, brume, Verglas.ligneDuClairon(), Pont.ligneDuClairon(), SaintJean.ligneDuClairon(), Demenagement.ligneDuClairon(), Fetes.ligneDuClairon(), decompteDesNids()].filter(Boolean);
+    // Les territoires des gangs : un coin par nuit (`Territoires.nuit`), et le Clairon le dit.
+    const gangs = Territoires.ligneDuClairon(Territoires.nuit());
+    const dessous = [loto, brume, gangs, Verglas.ligneDuClairon(), Pont.ligneDuClairon(), SaintJean.ligneDuClairon(), Demenagement.ligneDuClairon(), Fetes.ligneDuClairon(), decompteDesNids()].filter(Boolean);
     const m = manchetteDuJour();
     if (m) { B.partie.derniereManchette = m; direLaManchette(m, dessous); }
     else { Hud.message(dessous[0] || 'JOUR ' + B.partie.jour); direLeLoto(); }

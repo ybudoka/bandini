@@ -214,6 +214,10 @@ function etatInitial(defs) {
     //: Les districts liberes (`libere` de M16, generalise `faubourg_libere`) :
     //: un tableau de slugs — ordonne, comme tout ce qui voyage dans la partie.
     libere: [],
+    //: Les territoires des gangs (`Territoires`) : la force de chaque gang (absente = pleine), et les ilots PRIS
+    //: (« bx,by » -> le gang qui le tient ; absent = celui de son district).
+    forcesDesGangs: {},
+    territoires: {},
     //: Les gangs CALMES (`donne.calme` de M16) : un tableau de slugs. Une fois
     //: calme, un gang oublie `hostile_toujours` et `hostile_si_arme` — la seule
     //: facon de marcher dans La Shop (`s05`).
@@ -756,7 +760,7 @@ const Sauvegarde = (function () {
     const base = etatInitial(defs);
     if (!partie || typeof partie !== 'object') return base;
     const out = Object.assign({}, base, partie);
-    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'defisOuverts', 'paquets', 'frenesies', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance', 'contrebande', 'contacts', 'triches', 'techniques', 'coursPayes']) {
+    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'defisOuverts', 'paquets', 'frenesies', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance', 'contrebande', 'contacts', 'triches', 'techniques', 'coursPayes', 'forcesDesGangs', 'territoires']) {
       out[k] = Object.assign({}, base[k], (partie[k] && typeof partie[k] === 'object') ? partie[k] : {});
     }
     if (!Array.isArray(out.tenues) || out.tenues.indexOf('chandail') < 0) out.tenues = ['chandail'].concat(Array.isArray(out.tenues) ? out.tenues : []);
