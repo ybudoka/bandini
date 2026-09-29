@@ -183,3 +183,144 @@ def test_le_nom_sous_la_mini_carte_et_la_legende_disent_qui_tient_le_coin(banc):
     assert r["ici"] == {"nom": r["nom"], "gang": r["ici"]["gang"]} and r["ici"]["gang"], r
     assert r["puce"] and r["videRien"], r
     assert r["apres"]["gang"] is None, "un coin rendu se dit encore comme un territoire de gang"
+
+
+# --- Vague 3 : les graffitis suivent la frontière ------------------------------------------------------------------
+
+
+def test_un_coin_pris_porte_les_tags_de_qui_le_tient_sur_ses_murs_nus(banc):
+    """Un îlot pris se tague aux mots de son nouveau gang : sur un mur nu (`F`, `d`) qu'on voit du trottoir, jamais
+    sur une vitrine, une résidence ou un tag déjà là, au plus trois par îlot. ⚠️ Les témoins : rien de pris, rien de
+    tagué ; et rendu puis repris, les mêmes tags aux mêmes murs (l'empreinte, pas un dé)."""
+    r = banc("function (L, o) {" + PRENDRE + """
+        L.Jeu.commencer();
+        const T = L.Territoires, p = L.B.partie, carte = L.B.carte, def = L.B.defs.carte;
+        const rien = T.tagsDeLaFrontiere(carte).length;
+        const a = prendre(L);
+        const tags = T.tagsDeLaFrontiere(carte);
+        const reserves = new Set();
+        (def.devantures || []).concat(def.residences || []).forEach(function (d) {
+            for (let i = 0; i < d.l; i++) reserves.add((d.x + i) + ',' + d.y);
+        });
+        def.graffitis.forEach(function (g) { reserves.add(g.x + ',' + g.y); });
+        const pres = function (t) {
+            return def.graffitis.some(function (g) { return Math.abs(g.x - t.x) + Math.abs(g.y - t.y) < 4; });
+        };
+        const mots = L.B.defs.pietons.territoires.tags;
+        const parIlot = {}, mal = [];
+        const avant = JSON.stringify(tags), pris = Object.assign({}, p.territoires);
+        const dansLaPrise = tags.filter(function (t) { return T.ilotA(t.x, t.y).k === a.q.k; }).length;
+        // Puis TOUTE la ville prise (chaque îlot au gang d'à côté) : des centaines de murs à juger, pas trois.
+        const d = T.donnees();
+        Object.keys(d.ilots).forEach(function (k) {
+            const i = d.ilots[k];
+            p.territoires[k] = d.gangs[(d.gangs.indexOf(i.gang) + 1) % d.gangs.length];
+        });
+        const tous = T.tagsDeLaFrontiere(carte);
+        tous.forEach(function (t) {
+            const i = T.ilotA(t.x, t.y), g = carte.sol[t.y][t.x];
+            if (i) parIlot[i.k] = (parIlot[i.k] || 0) + 1;
+            if (!i || p.territoires[i.k] !== t.gang) mal.push(['pas chez lui', t]);
+            else if (g !== 'F' && g !== 'd') mal.push(['pas un mur', g, t]);
+            else if (carte.solide[(t.y + 1) * carte.w + t.x]) mal.push(['mur qui ne se voit pas', t]);
+            else if (reserves.has(t.x + ',' + t.y)) mal.push(['mur deja pris', t]);
+            else if (pres(t)) mal.push(['colle a un vieux tag', t]);
+            else if (!mots[t.gang].some(function (m) { return m[0] === t.texte; })) mal.push(['pas son mot', t]);
+        });
+        p.territoires = {};
+        const rendu = T.tagsDeLaFrontiere(carte).length;
+        p.territoires = pris;
+        return { rien: rien, n: tous.length, dansLaPrise: dansLaPrise, max: Math.max.apply(null, Object.values(parIlot)),
+                 mal: mal.slice(0, 5), rendu: rendu, memes: JSON.stringify(T.tagsDeLaFrontiere(carte)) === avant };
+    }""")
+    assert r["rien"] == 0, "une partie neuve tague déjà la frontière"
+    assert r["mal"] == [], r["mal"]
+    assert r["dansLaPrise"] >= 1 and r["max"] <= 3 and r["n"] >= 100, r
+    assert r["rendu"] == 0 and r["memes"], r
+
+
+def test_le_tag_du_perdant_est_barre_a_la_couleur_de_qui_tient_le_coin(banc):
+    """Un tag de gang cuit dans la ville, dans un îlot qu'un AUTRE gang tient : barré, à la couleur du tenant.
+    ⚠️ Les témoins : l'îlot rendu, ou tenu par le gang qui a signé, ou un tag libre — pas de trait."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const T = L.Territoires, p = L.B.partie;
+        const tags = L.B.defs.carte.graffitis;
+        const g = tags.find(function (t) { return t.motif !== 1 && T.gangDuTag(t.texte) && T.ilotA(t.x, t.y); });
+        const libre = tags.find(function (t) { return t.motif !== 1 && !T.gangDuTag(t.texte) && T.ilotA(t.x, t.y); });
+        const signe = T.gangDuTag(g.texte), i = T.ilotA(g.x, g.y);
+        const autre = T.donnees().gangs.find(function (q) { return q !== signe; });
+        const vierge = T.barre(g);
+        p.territoires[i.k] = autre;
+        const barre = T.barre(g);
+        p.territoires[T.ilotA(libre.x, libre.y).k] = autre;
+        const libreBarre = T.barre(libre);
+        p.territoires[i.k] = signe;
+        const siens = T.barre(g);
+        return { vierge: vierge, barre: barre, couleur: T.bombeDe(autre), libreBarre: libreBarre, siens: siens,
+                 texte: g.texte };
+    }""")
+    assert r["vierge"] is None and r["siens"] is None and r["libreBarre"] is None, r
+    assert r["barre"] and r["barre"]["couleur"] == r["couleur"] and 1 <= r["barre"]["tuiles"] <= 3, r
+
+
+def test_la_frontiere_qui_bouge_recuit_les_morceaux_de_la_ville(banc):
+    """Les tags sont peints DANS les morceaux de carte : quand un îlot change de mains, le morceau déjà peint se
+    repeint — le tag neuf y paraît, et le vieux tag de gang de l'îlot passe par le trait. ⚠️ Le témoin : sans
+    changement, le morceau reste en cache (rien ne se repeint)."""
+    r = banc("function (L, o) {" + PRENDRE + """
+        L.Jeu.commencer();
+        const T = L.Territoires, p = L.B.partie, carte = L.B.carte, M = L.Monde;
+        const a = prendre(L);
+        const t = T.tagsDeLaFrontiere(carte).find(function (q) { return T.ilotA(q.x, q.y).k === a.q.k; });
+        const pris = Object.assign({}, p.territoires);
+        p.territoires = {};
+        const vus = [], vraiGraffiti = L.FACADES.graffiti;
+        L.FACADES.graffiti = function (ctx, gr) { vus.push(gr); return vraiGraffiti.apply(this, arguments); };
+        const ctx = o.doc.createElement('canvas').getContext('2d');
+        const cam = { x: t.x * 16 - 240, y: t.y * 16 - 135 };
+        M.dessinerSol(ctx, cam);
+        const avant = vus.filter(function (q) { return q === t; }).length;
+        vus.length = 0;
+        M.dessinerSol(ctx, cam);
+        const enCache = vus.length;
+        p.territoires = pris;
+        M.dessinerSol(ctx, cam);
+        const apres = vus.filter(function (q) { return q.x === t.x && q.y === t.y && q.gang === t.gang; }).length;
+        L.FACADES.graffiti = vraiGraffiti;
+        return { avant: avant, enCache: enCache, apres: apres, laVille: carte.laVille };
+    }""")
+    assert r["laVille"] is True, r
+    assert r["avant"] == 0 and r["enCache"] == 0, r
+    assert r["apres"] >= 1, "la frontière a bougé et le morceau garde son ancienne peinture"
+
+
+def test_le_morceau_peint_le_trait_sur_le_vieux_tag(banc):
+    """Le trait se PEINT : le morceau qui porte un vieux tag de gang, dans un îlot qu'un autre tient, passe un trait
+    de bombe (des carrés de deux, à la couleur du tenant) en travers. ⚠️ Le témoin : l'îlot rendu, pas de trait."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const T = L.Territoires, p = L.B.partie, M = L.Monde;
+        const g = L.B.defs.carte.graffitis.find(function (t) { return t.motif !== 1 && T.gangDuTag(t.texte) && T.ilotA(t.x, t.y); });
+        const autre = T.donnees().gangs.find(function (q) { return q !== T.gangDuTag(g.texte); });
+        const couleur = T.bombeDe(autre);
+        const traces = [], vrai = L.Base.nouveauCanvas;
+        L.Base.nouveauCanvas = function () { const c = vrai.apply(this, arguments); c.getContext('2d').traces = traces; return c; };
+        const ctx = o.doc.createElement('canvas').getContext('2d');
+        const cam = { x: g.x * 16 - 240, y: g.y * 16 - 135 };
+        const traits = function () {
+            return traces.filter(function (t) { return t[4] === couleur && t[2] === 2 && t[3] === 2
+                && t[0] >= (g.x % 16) * 16 && t[0] < (g.x % 16) * 16 + 48 && t[1] >= (g.y % 16) * 16 && t[1] < (g.y % 16) * 16 + 16; }).length;
+        };
+        p.territoires[T.ilotA(g.x, g.y).k] = autre;
+        M.dessinerSol(ctx, cam);
+        const barre = traits();
+        traces.length = 0;
+        p.territoires = {};
+        M.dessinerSol(ctx, cam);
+        const rendu = traits();
+        L.Base.nouveauCanvas = vrai;
+        return { barre: barre, rendu: rendu };
+    }""")
+    assert r["barre"] >= 6, r
+    assert r["rendu"] == 0, r

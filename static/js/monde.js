@@ -353,6 +353,9 @@ const Monde = (function () {
         return !(def.legende[def.sol[d.y][d.x]] || {}).terre;
       }), function (d) { return [d.x, d.y, 1, 2]; }),
       graffitis: indexerParMorceau(def.graffitis || [], function () { return [0, 0, 1, 1]; }),
+      // La carte de LA VILLE (pas une piece, pas un bloc) : la seule ou la frontiere des gangs se tague
+      // (`Territoires.tagsDeLaFrontiere`).
+      laVille: !!(B.defs && def === B.defs.carte),
       // Ce qu'un toit porte : une tuile chacun, meme regle d'index.
       toits: indexerParMorceau(def.toits || [], function () { return [0, 0, 1, 1]; }),
     };
@@ -1938,6 +1941,17 @@ const Monde = (function () {
     return (B.defs && B.defs.devantures && B.defs.devantures.couleurs_tag) || ['#d34f3a'];
   }
 
+  /** Un trait de bombe en travers d'un tag, a mi-hauteur de ses lettres (elles tombent entre y+3 et y+13) : un
+      peu penche, sur toute sa longueur (`trait.tuiles`), avec son ombre — sans elle, il se perdait dans la brique. */
+  function barrerUnTag(ctx, trait, x, y) {
+    const l = trait.tuiles * TT;
+    for (const [c, d] of [['rgba(0,0,0,0.45)', 1], [trait.couleur, 0]]) {
+      ctx.fillStyle = c;
+      for (let i = 0; i < l - 2; i += 2) ctx.fillRect(x + 1 + i + d, y + 10 - Math.floor(i * 5 / l) + d, 2, 2);
+    }
+    B.stats.rects += 2;
+  }
+
   function peindreMorceau(mx, my) {
     const c = Base.nouveauCanvas(MORCEAU_PX, MORCEAU_PX);
     const ctx = c.getContext('2d');
@@ -2032,6 +2046,18 @@ const Monde = (function () {
         if (Chantiers.efface(gr.x, gr.y)) return;
         FACADES.graffiti(ctx, gr, couleurs[gr.couleur % couleurs.length],
                          (gr.x - ox) * TT, (gr.y - oy) * TT);
+        // ⚠️ Le tag d'un gang dans un ilot qu'un AUTRE lui a pris : barre, a la couleur de qui le tient.
+        const trait = carte.laVille && Territoires.barre(gr);
+        if (trait) barrerUnTag(ctx, trait, (gr.x - ox) * TT, (gr.y - oy) * TT);
+      });
+    }
+    // LES GRAFFITIS SUIVENT LA FRONTIERE : les tags de qui tient un ilot pris, a la couleur de son gang. ⚠️ Un tag
+    // deborde sur trois tuiles au plus : chaque morceau qu'il touche en peint sa part (pas de tag coupe a la couture).
+    if (carte.laVille) {
+      Territoires.tagsDeLaFrontiere(carte).forEach(function (gr) {
+        if (gr.y < oy || gr.y >= oy + MORCEAU || gr.x + 2 < ox || gr.x >= ox + MORCEAU) return;
+        if (Chantiers.efface(gr.x, gr.y)) return;
+        FACADES.graffiti(ctx, gr, Territoires.bombeDe(gr.gang), (gr.x - ox) * TT, (gr.y - oy) * TT);
       });
     }
     // Le chantier par-dessus tout : ses planches et son panneau pendent AU MUR.
@@ -2057,6 +2083,12 @@ const Monde = (function () {
       const k = Saisons.cle();
       if (atlasPalier !== k) { Atlas.oublier('tuile|'); Atlas.oublier('decor|arbre'); atlasPalier = k; }
       if (carte.palier !== k) { carte.morceaux.clear(); carte.palier = k; }
+    }
+    // ⚠️ LA FRONTIERE DES GANGS A BOUGE (un ilot pris ou repris) : ses tags sont peints dans les morceaux, qui se
+    // recuisent tous — une fois par nuit au plus, rien a chaque image.
+    if (carte.laVille) {
+      const f = Territoires.cle();
+      if (carte.frontiere !== f) { carte.morceaux.clear(); carte.frontiere = f; }
     }
     carte.visibles.clear();
     for (let my = m0y; my <= m1y; my++) {

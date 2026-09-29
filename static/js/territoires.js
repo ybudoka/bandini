@@ -243,6 +243,142 @@ const Territoires = (function () {
     });
   }
 
+  /* --- LES GRAFFITIS SUIVENT LA FRONTIERE (vague 3) ----------------------------------------------------------
+
+     Martin (29 sept. 2026) : un ilot pris porte les tags de qui le tient, et ceux du perdant y sont BARRES.
+
+     ⚠️ UNE COUCHE, PAS LA VILLE : les tags de la ville sont cuits une fois dans les morceaux de carte
+     (`carte.graffitis`) ; les refaire, c'etait regenerer la ville. Ceux d'un ilot pris se calculent ici, sans
+     un de, depuis la carte finie : les murs nus (`F`, `d`) qu'on voit du trottoir, pas deja pris par une
+     vitrine, une residence ou un tag — la regle de `Chantier.mur_taggable`. `Monde` les peint par-dessus, et
+     recuit ses morceaux quand la frontiere bouge (`cle`).
+     ⚠️ Choisis a l'EMPREINTE (`hash2` de la tuile et du gang) : le meme ilot pris par le meme gang porte les
+     memes tags d'une partie a l'autre, et rendu puis repris, les memes encore. */
+
+  /** Au plus tant de tags neufs par ilot pris, et pas plus pres que ca l'un de l'autre (en tuiles). */
+  const TAGS_PAR_ILOT = 3, ECART_TAG = 4;
+
+  /** La signature de la frontiere : change quand un ilot change de mains (et seulement la). */
+  function cle() {
+    const p = B.partie;
+    if (!p || !p.territoires) return '';
+    return Object.keys(p.territoires).sort().map(function (k) { return k + '=' + p.territoires[k]; }).join(';');
+  }
+
+  let reserves = null, reservesDe = null, gangDuTexte = null;
+
+  /** Les murs deja pris, dans la ville cuite : les vitrines, les residences et les tags (`murs_tagges`). */
+  function mursReserves() {
+    const def = B.defs && B.defs.carte;
+    if (!def) return new Set();
+    if (reservesDe === def) return reserves;
+    reservesDe = def;
+    reserves = new Set();
+    (def.devantures || []).concat(def.residences || []).forEach(function (d) {
+      for (let i = 0; i < (d.l || 1); i++) reserves.add((d.x + i) + ',' + d.y);
+    });
+    (def.graffitis || []).forEach(function (g) { reserves.add(g.x + ',' + g.y); });
+    return reserves;
+  }
+
+  /** Le gang qui signe ce texte (« CRV » -> cravates), ou null (un tag libre). */
+  function gangDuTag(texte) {
+    const d = donnees();
+    if (!d) return null;
+    if (!gangDuTexte) {
+      gangDuTexte = {};
+      const t = B.defs.pietons.territoires.tags || {};
+      Object.keys(t).forEach(function (g) { t[g].forEach(function (m) { gangDuTexte[m[0]] = { gang: g, tuiles: m[1] }; }); });
+    }
+    const q = gangDuTexte[texte];
+    return q ? q.gang : null;
+  }
+
+  /** Le rectangle de tuiles d'un ilot (coupe au milieu des rues, comme `ilotA`). */
+  function rectangle(d, i) {
+    return { x0: d.x[i.bx], x1: i.bx + 1 < d.x.length ? d.x[i.bx + 1] : d.w,
+             y0: d.y[i.by] + d.y0, y1: (i.by + 1 < d.y.length ? d.y[i.by + 1] : d.h) + d.y0 };
+  }
+
+  /** Les tags que `gang` pose dans l'ilot `i` de `carte` : [{ x, y, texte, motif, penche, gang }]. */
+  function tagsDuCoin(carte, d, i, gang) {
+    const mots = (B.defs.pietons.territoires.tags || {})[gang] || [];
+    if (!mots.length) return [];
+    const pris = mursReserves(), r = rectangle(d, i);
+    const mur = function (x, y) {
+      if (x < 0 || y < 0 || x >= carte.w || y + 1 >= carte.h || pris.has(x + ',' + y)) return false;
+      const g = carte.sol[y][x];
+      return (g === 'F' || g === 'd') && !carte.solide[(y + 1) * carte.w + x];
+    };
+    const sel = gang.length * 7919 + gang.charCodeAt(0);
+    const candidats = [];
+    for (let y = r.y0; y < r.y1; y++) {
+      for (let x = r.x0; x < r.x1; x++) if (mur(x, y)) candidats.push({ x: x, y: y, h: hash2(x * 31 + sel, y) >>> 0 });
+    }
+    candidats.sort(function (a, b) { return a.h - b.h || a.y - b.y || a.x - b.x; });
+    // ⚠️ L'ECART vaut aussi pour les tags CUITS de l'ilot : un tag neuf colle a un vieux s'ecrivait par-dessus.
+    const cuits = (B.defs.carte.graffitis || []).filter(function (g) {
+      return g.x >= r.x0 - ECART_TAG && g.x < r.x1 + ECART_TAG && g.y >= r.y0 - ECART_TAG && g.y < r.y1 + ECART_TAG;
+    });
+    const poses = [];
+    const loin = function (c) {
+      return !poses.concat(cuits).some(function (q) { return Math.abs(q.x - c.x) + Math.abs(q.y - c.y) < ECART_TAG; });
+    };
+    for (const c of candidats) {
+      if (poses.length >= TAGS_PAR_ILOT) break;
+      if (!loin(c)) continue;
+      // La place REELLE, jusqu'a trois tuiles de mur d'un seul tenant — puis un mot qui y tient.
+      let place = 1;
+      while (place < 3 && mur(c.x + place, c.y)) place++;
+      const possibles = mots.filter(function (m) { return m[1] <= place; });
+      if (!possibles.length) continue;
+      poses.push({ x: c.x, y: c.y, texte: possibles[c.h % possibles.length][0], motif: (c.h >> 4) % 2 ? 2 : 0,
+                   penche: (c.h >> 6) % 2, gang: gang });
+    }
+    return poses;
+  }
+
+  let tagsCle = null, tagsCarte = null, tagsListe = [];
+
+  /** Tous les tags neufs de la frontiere (les ilots pris), pour la carte de la ville `carte`. */
+  function tagsDeLaFrontiere(carte) {
+    const k = cle(), d = donnees();
+    if (!d || !k) return [];
+    if (tagsCle === k && tagsCarte === carte) return tagsListe;
+    tagsCle = k; tagsCarte = carte;
+    const p = B.partie;
+    tagsListe = [];
+    Object.keys(p.territoires).sort().forEach(function (ik) {
+      const i = d.ilots[ik];
+      if (i) tagsListe = tagsListe.concat(tagsDuCoin(carte, d, i, p.territoires[ik]));
+    });
+    return tagsListe;
+  }
+
+  /** La couleur de bombe d'un gang : la sienne, eclaircie d'un tiers. ⚠️ Le brun des Chevreuils, tel quel, ne se
+      lisait pas sur la brique (vu a la capture). */
+  function bombeDe(gang) {
+    const c = couleurDe(gang);
+    const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(c);
+    if (!m) return c;
+    return '#' + [m[1], m[2], m[3]].map(function (h) {
+      const v = Math.round(parseInt(h, 16) + (255 - parseInt(h, 16)) / 3);
+      return (v < 16 ? '0' : '') + v.toString(16);
+    }).join('');
+  }
+
+  /** Un tag CUIT de la ville est-il barre ? Oui s'il signe un gang, dans un ilot pris par un autre : rend
+      { couleur (celle de qui tient l'ilot), tuiles (la longueur du trait) }, sinon null. */
+  function barre(gr) {
+    const p = B.partie;
+    if (!p || !p.territoires || gr.motif === 1) return null;
+    const signe = gangDuTag(gr.texte);
+    if (!signe) return null;
+    const i = ilotA(gr.x, gr.y);
+    const tient = i && p.territoires[i.k];
+    return tient && tient !== signe ? { couleur: bombeDe(tient), tuiles: gangDuTexte[gr.texte].tuiles } : null;
+  }
+
   return { donnees, ilotA, tenuPar, force, horsJeu, gangA, couche, nuit, ligneDuClairon, couleurDe, nomDe,
-           dessinerSurLaCarte, dessinerLaLegende };
+           dessinerSurLaCarte, dessinerLaLegende, cle, tagsDeLaFrontiere, barre, gangDuTag, bombeDe };
 })();

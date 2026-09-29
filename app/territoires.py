@@ -16,6 +16,10 @@ PARTIE et se calcule dans le navigateur (`static/js/territoires.js`), sans un d�
 from __future__ import annotations
 
 from . import carte
+from . import devantures
+
+#: Au plus trois tuiles de mur d'un seul tenant pour un tag (la règle de `Chantier.taguer`).
+TAG_TUILES_MAX = 3
 
 #: Les règles. `force` : la force d'un gang au départ et au plus haut ; `coup` : ce qu'un membre couché par le
 #: joueur lui coûte ; `regain` : ce qu'il reprend par jour ; `marge` : de combien un gang doit dépasser son voisin
@@ -42,4 +46,21 @@ def pour_le_navigateur() -> dict:
                 mx, my = maitre[b]
                 if carte.PLAN[my][mx] == "g":
                     coeurs.setdefault(d["gang"], []).append(list(b))
-    return {"districts": districts, "coeurs": coeurs, "eau": sorted(PAS_UN_ILOT), "regles": dict(REGLES)}
+    return {"districts": districts, "coeurs": coeurs, "eau": sorted(PAS_UN_ILOT), "regles": dict(REGLES),
+            "tags": tags_des_gangs()}
+
+
+def tags_des_gangs() -> dict[str, list[list]]:
+    """LES GRAFFITIS SUIVENT LA FRONTIÈRE (vague 3) : pour chaque gang, ses tags et le nombre de tuiles de mur
+    qu'il faut à chacun (`[mot, tuiles]`). Le navigateur ne mesure pas un texte : il reçoit la place, calculée
+    comme `Chantier.taguer` la calcule (`tient_en`, sans marge)."""
+    sortie = {}
+    for gang, mots in devantures.TAGS_GANG.items():
+        tailles = []
+        for mot in mots:
+            n = next((n for n in range(1, TAG_TUILES_MAX + 1) if devantures.tient_en(mot, n, carte.TUILE_PX, marge=0)),
+                     None)
+            if n is not None:
+                tailles.append([mot, n])
+        sortie[gang] = tailles
+    return sortie

@@ -24,3 +24,18 @@ def test_le_paquet_porte_les_territoires():
     from app import definitions
     assert definitions.construire().definitions.taille > 0
     assert "territoires" in __import__("json").loads(definitions.construire().definitions.corps)["pietons"]
+
+
+def test_chaque_gang_exporte_ses_tags_et_la_place_qu_il_leur_faut():
+    """Vague 3 : le navigateur tague un coin pris sans mesurer un texte — il reçoit, pour chaque mot, le nombre de
+    tuiles de mur qu'il lui faut (le plus petit qui le tient, trois au plus). Chaque gang a un mot d'UNE tuile : un
+    mur seul peut porter sa signature."""
+    from app import devantures
+
+    tags = territoires.pour_le_navigateur()["tags"]
+    assert set(tags) == set(devantures.TAGS_GANG)
+    for gang, mots in tags.items():
+        for mot, n in mots:
+            assert 1 <= n <= territoires.TAG_TUILES_MAX, (gang, mot, n)
+            assert devantures.tient_en(mot, n, 16, marge=0) and not devantures.tient_en(mot, n - 1, 16, marge=0), mot
+        assert any(n == 1 for _, n in mots), gang

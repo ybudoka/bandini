@@ -81,3 +81,29 @@ piétons ; une zone `libere` ne bouge plus ; tout survit à une sauvegarde.
   Une mutation rouge (la reprise qui compterait n'importe quel gang) — après avoir ajouté le témoin qui manquait.
 - **Reste** : les graffitis qui suivent la frontière (ils sont cuits dans les morceaux de carte : les recuire), et
   les Mantes du Petit-Canton dans le jeu des territoires (la bande nord a sa propre trame).
+
+### Vague 3 — les graffitis suivent la frontière — **livrée le 29 sept. 2026**
+
+- ⚠️ **Une couche, pas la ville.** Les tags de la ville sont cuits une fois dans les morceaux de carte
+  (`carte.graffitis`) : les refaire, c'était regénérer la ville. Ceux de la frontière se calculent dans le
+  navigateur (`Territoires.tagsDeLaFrontiere`), sans dé, depuis la carte finie, et `Monde` les peint par-dessus.
+- **Un îlot pris se tague aux mots de qui le tient** : trois tags au plus, sur les murs nus (`F`, `d`) qu'on voit
+  du trottoir — jamais une vitrine, une résidence ni un mur déjà tagué (la règle de `Chantier.mur_taggable`), à
+  quatre tuiles au moins l'un de l'autre et des vieux tags. Choisis à l'empreinte (`hash2` de la tuile et du
+  gang) : rendu puis repris, les mêmes tags aux mêmes murs. À la couleur du gang, éclaircie d'un tiers
+  (`bombeDe` : le brun des Chevreuils ne se lisait pas sur la brique — vu à la capture).
+- **Le tag du perdant est barré** : un tag de gang cuit dans la ville, dans un îlot qu'un AUTRE tient, prend un
+  trait de bombe à la couleur du tenant (`Territoires.barre`, `barrerUnTag`). Un tag libre ne se barre pas.
+- **Le navigateur ne mesure pas un texte** : `pietons.territoires.tags` donne, pour chaque mot de gang, les tuiles
+  de mur qu'il lui faut (le plus petit nombre qui le tient, comme `Chantier.taguer` le calcule). Chaque gang a un
+  mot d'une tuile.
+- **Les morceaux se recuisent** quand la frontière bouge (`Territoires.cle`, lue par `Monde.dessinerSol` sur la
+  carte de la ville seulement, `carte.laVille`) — une fois par nuit au plus, rien à chaque image. Un tag neuf qui
+  déborde sur le morceau voisin y peint sa part.
+- **Juges** : quatre de plus dans `test_territoires_js.py` (les tags neufs sur toute la ville prise : chez leur
+  gang, sur un mur nu qui se voit, pas pris, pas collé à un vieux tag, trois au plus par îlot — témoins : rien de
+  pris, rien de tagué ; rendu puis repris, les mêmes ; le trait du perdant, à la couleur du tenant, et ses trois
+  témoins ; le morceau qui se recuit, témoin : en cache sans changement ; le trait réellement peint) et un dans
+  `test_territoires.py` (la place de chaque mot). Sept mutations rouges — deux n'avaient pas mordu tant que le juge
+  ne regardait qu'un îlot : il juge maintenant toute la ville prise.
+- **Reste** : les Mantes du Petit-Canton dans le jeu des territoires (la bande nord a sa propre trame).
