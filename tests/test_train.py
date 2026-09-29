@@ -67,3 +67,10 @@ def test_poser_ne_tire_rien_et_redit_la_meme_chose(ville):
 
 def test_sans_la_bande_pas_de_train():
     assert "train" not in villes.generer(nord=False)
+
+
+def test_sans_montagnes_la_voie_sort_au_bord(ville):
+    import copy
+    v = copy.deepcopy(ville)
+    v["relief"] = {"montagnes": None}
+    assert train.poser(v)["tunnel"] == v["largeur"]

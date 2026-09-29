@@ -53,7 +53,10 @@ def _passages(ville, tunnel):
 
 
 def poser(ville):
-    tunnel = ville["relief"]["montagnes"]["x"]
+    # Le portail est dans la falaise de l'est ; sans montagnes (le juge du relief les retire), la voie sort au bord
+    # de la carte.
+    montagnes = (ville.get("relief") or {}).get("montagnes")
+    tunnel = montagnes["x"] if montagnes else ville["largeur"]
     return {
         "rang": RANG, "tunnel": tunnel, "viaduc": list(VIADUC), "rampe": RAMPE,
         "piliers": _piliers(ville), "passages": _passages(ville, tunnel),
