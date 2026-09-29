@@ -82,3 +82,58 @@ def test_les_4_roues_des_friches_naissent_a_l_approche_sans_rien_deplacer(banc):
     assert r["id"] >= 1e9, "il a pris un numéro de la suite de la ville"
     assert r["apres"] == r["temoin"], "sa naissance a tiré un dé du jeu"
     assert r["deux"] == 1, "un deuxième est né sur la même place"
+
+
+def test_la_course_des_friches_pose_le_4_roues_compte_les_fanions_et_paie(banc):
+    """Le défi pose le 4 roues au départ ; les fanions se passent dans l'ordre et la course se gagne. ⚠️ Pas de
+    pilote de juge (celui de la motoneige ne gagne qu'une graine sur huit) : la faisabilité est jugée en
+    Python, sur le chemin réel ; ici, la mécanique. Et le témoin : en auto, la course est refusée."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B, H = L.Histoire, j = B.joueur;
+        const d = B.defs.defis.find(function (q) { return q.slug === 'quatre_roues'; });
+        const c = B.defs.quatre_roues.course, out = {};
+        const partir = function () {
+            H.ouvrirDefi(d, true);
+            j.x = c.depart[0] * 16 + 8 + 30; j.y = c.depart[1] * 16 + 8; L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer();
+            H.commencerDefi(d);
+            return B.conduite;
+        };
+        let e = partir(), m = e && e.monture;
+        out.monture = m ? m.slug : null;
+        out.pres = m ? Math.hypot(m.x - (c.depart[0] * 16 + 8), m.y - (c.depart[1] * 16 + 8)) : 1e9;
+        L.Vehicules.monter(j, m);
+        const argent = B.partie.argent;
+        for (const b of e.balises) { m.x = b.x; m.y = b.y; o.frame(2); }
+        out.fait = !!B.partie.defisFaits.quatre_roues;
+        out.gagne = B.partie.argent - argent;
+        // Le témoin : en auto, refusée.
+        if (j.dansVehicule) L.Vehicules.descendre(j, true);
+        e = partir();
+        if (j.dansVehicule) L.Vehicules.descendre(j, true);
+        const auto = L.Vehicules.creer('auto', j.x + 20, j.y, 0, { etat: 'stationne', couleur: '#ffffff' });
+        L.Vehicules.monter(j, auto);
+        o.frame(3);
+        out.refuse = !B.defi;
+        return out;
+    }""")
+    assert r["monture"] == "quatre_roues" and r["pres"] < 24, r
+    assert r["fait"] and r["gagne"] >= 100, r
+    assert r["refuse"], "en auto, la course des Friches est partie quand même"
+
+
+def test_le_panneau_de_la_course_se_plante_au_depart_quand_elle_s_ouvre(banc):
+    """Pas au démarrage (elle se débloque après le tour des Érables) ; ouverte, son panneau se plante au départ
+    de la piste. ⚠️ Un lieu de défi neuf (`course:`), qu'il faut aussi laisser passer là où l'on plante les
+    panneaux qui s'ouvrent — oublié, le panneau ne naissait jamais."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B, H = L.Histoire;
+        const trouve = function () { return B.entites.find(function (k) { return k.type === 'panneau' && k.defi === 'quatre_roues'; }); };
+        const avant = !!trouve();
+        const d = B.defs.defis.find(function (q) { return q.slug === 'quatre_roues'; });
+        H.ouvrirDefi(d, true); H.planterLesPanneauxOuverts();
+        const e = trouve(), c = B.defs.quatre_roues.course;
+        return { avant: avant, la: !!e, d: e ? Math.hypot(e.x / 16 - c.depart[0], e.y / 16 - c.depart[1]) : 99 };
+    }""")
+    assert r["avant"] is False and r["la"] and r["d"] <= 12, r

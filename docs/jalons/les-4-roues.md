@@ -67,3 +67,25 @@ _Demande de Martin (28 sept. 2026) :_ « je veux aussi des 4 roues ».
 - **Juges** : `test_quatre_roues.py`, `test_quatre_roues_js.py`. Deux mutations rouges (le seuil d'éjection, la
   terre qui ne ralentit plus).
 - **Reste** : la course des Friches (vague 2), le concessionnaire (vague 3), et le passager qu'on voit.
+
+### Vague 2 — la course des Friches — **livrée le 29 sept. 2026**
+
+- **La piste** (`quatre_roues.course`, lue sur la carte finie, sans dé) : les Friches sont deux grands terrains
+  (au nord et au sud du boulevard du milieu), chacun traversé d'un sentier en croix. Départ au bout SUD de la
+  croix du bas — près de la ville, à côté de la cour de Ti-Pout —, puis huit fanions : les bouts ouest et nord
+  de la croix du bas, les bouts ouest, nord, est et sud de celle du haut, le bout est de celle du bas, et retour
+  au départ. ⚠️ Les croix se trouvent par leur ÉTENDUE (les deux composantes d'allée les plus larges dans les
+  deux sens) : la cour de Ti-Pout est en allée elle aussi.
+- **Le défi** (`missions.DEFIS`, `quatre_roues`) : l'épreuve `balises` de la motoneige, généralisée — sa course
+  se lit dans `regles.course` (`B.defs[...]`, la motoneige par défaut), et le refus dit le véhicule (« EN 4
+  ROUES SEULEMENT »). Un lieu de défi neuf, `course:<clé>` : le panneau se plante au départ de la piste.
+  60 s, 100 $. ⚠️ Il s'ouvre après le tour des Érables, comme la motoneige : son panneau ne se plante pas au
+  démarrage (la bande est dans la bulle de naissance du terminus). Toute l'année. ⚠️ Le lieu neuf est à
+  laisser passer AUSSI là où l'on plante les panneaux des défis qui s'ouvrent (`planterLesPanneauxOuverts`) :
+  oublié, le panneau ne naissait jamais — c'est le saut des triches vers les défis (`test_debug_js`) qui l'a vu.
+- **Faisable, et prouvé sans pilote** : le chemin réel, roulé sans traverser un grillage ni un décor solide
+  (un juge le cherche en largeur d'abord), fait 626 tuiles — 38 s à la pleine vitesse du 4 roues ; le chrono
+  en laisse 60 pour les virages. ⚠️ Pas de pilote de juge au banc : celui de la motoneige ne gagne qu'une graine
+  sur huit. Au banc, la mécanique : le 4 roues posé au départ, les fanions dans l'ordre, la prime payée — et le
+  témoin, refusé en auto. Une mutation rouge (l'épreuve qui relirait la course de la motoneige).
+- **Reste** : le concessionnaire (vague 3), et le passager qu'on voit.

@@ -2485,6 +2485,12 @@ const Histoire = (function () {
         if (tuileLibre(c.x - TT * 3, c.y, 3) || tuileLibre(c.x + TT * 3, c.y, 3)) { l = c; break; }
       }
     } else if (d.ou.indexOf('porte:') === 0) l = lieu(d.ou.slice(6));
+    // UNE COURSE AUX FANIONS (`course:<cle>`, la course des Friches en 4 roues) : a son depart, lu par Python
+    // sur la ville finie (`B.defs[cle].course.depart`).
+    else if (d.ou.indexOf('course:') === 0) {
+      const c = B.defs[d.ou.slice(7)] && B.defs[d.ou.slice(7)].course;
+      if (c) l = { x: c.depart[0] * TT + 8, y: c.depart[1] * TT + 8 };
+    }
     // LE DERBY : au bord sud de son arene (`derby.arene`, lue par Python sur la ville finie).
     else if (d.ou === 'derby') {
       const a = B.defs.derby && B.defs.derby.arene;
@@ -2611,7 +2617,8 @@ const Histoire = (function () {
       foire : la baraque sert de panneau). */
   function planterLesPanneauxOuverts() {
     for (const d of defisOuverts()) {
-      if (!d.debloque || !d.ou || (d.ou.indexOf('porte:') !== 0 && d.ou !== 'derby')) continue;   // le derby : au bord de son arene
+      // Le derby : au bord de son arene ; une course aux fanions (`course:<cle>`) : a son depart.
+      if (!d.debloque || !d.ou || (d.ou.indexOf('porte:') !== 0 && d.ou !== 'derby' && d.ou.indexOf('course:') !== 0)) continue;
       if (B.entites.some(function (e) { return e.type === 'panneau' && e.defi === d.slug; })) continue;
       poserPanneau(d);
     }

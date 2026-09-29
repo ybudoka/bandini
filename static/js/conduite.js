@@ -482,13 +482,13 @@ const Conduite = (function () {
       },
     },
 
-    // LA COURSE AUX FANIONS (la motoneige, docs/jalons/la-motoneige.md) : la piste est lue par Python
-    // (`motoneige.course` : le phare, le bout des sentiers des bois de La Pointe, et retour) ; les fanions
-    // sont PEINTS, on les passe dans l'ordre, sur le vehicule de la fiche (`regles.vehicule`), qui attend
-    // au depart. Le chrono est celui du defi.
+    // LA COURSE AUX FANIONS (la motoneige, docs/jalons/la-motoneige.md ; les 4 roues, docs/jalons/les-4-roues.md) :
+    // la piste est lue par Python (`B.defs[regles.course]` : la motoneige par defaut, `quatre_roues` pour la
+    // course des Friches) ; les fanions sont PEINTS, on les passe dans l'ordre, sur le vehicule de la fiche
+    // (`regles.vehicule`), qui attend au depart. Le chrono est celui du defi.
     balises: {
       preparer: function (d, r) {
-        const m = B.defs.motoneige, c = m && m.course;
+        const m = B.defs[r.course || 'motoneige'], c = m && m.course;
         if (!c) return null;
         const px = function (t) { return { x: t[0] * TT + 8, y: t[1] * TT + 8 }; };
         const balises = c.balises.map(px), depart = px(c.depart);
@@ -497,7 +497,10 @@ const Conduite = (function () {
         return { balises: balises, i: 0, rayon: m.regles.rayon_tuiles * TT, monture: v };
       },
       maj: function (e, r, v) {
-        if (v.slug !== r.vehicule) return { gagne: false, raison: 'À MOTONEIGE SEULEMENT' };
+        if (v.slug !== r.vehicule) {
+          const nom = (Vehicules.vehiculeDef(r.vehicule) || { nom: r.vehicule }).nom.toUpperCase();
+          return { gagne: false, raison: 'EN ' + nom + ' SEULEMENT' };
+        }
         const b = e.balises[e.i];
         if (Math.hypot(v.x - b.x, v.y - b.y) < e.rayon) {
           e.i++;

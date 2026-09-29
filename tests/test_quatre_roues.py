@@ -49,3 +49,52 @@ def test_le_tien_attend_au_chalet_loin_de_la_place_du_char():
     q, char = rang.BLOC["quatre_roues"], rang.BLOC["planque"]["char"]
     assert math.hypot(q["x"] - char["x"], q["y"] - char["y"]) * carte.TUILE_PX > 48
     assert carte.LEGENDE[rang.PLAN[q["y"]][q["x"]]].get("terre"), q
+
+
+# --- Vague 2 : la course des Friches --------------------------------------------------------------------
+
+def _roulable(ville):
+    """Les tuiles où roule un 4 roues : aucun sol solide (mur, grillage, eau…) et aucun décor solide dessus."""
+    solides = {(d["x"], d["y"]) for d in ville["decor"] if d["type"] in carte.DECOR_SOLIDE}
+    return lambda x, y: (0 <= y < len(ville["sol"]) and 0 <= x < len(ville["sol"][0])
+                         and not carte.LEGENDE.get(ville["sol"][y][x], {}).get("solide")
+                         and (x, y) not in solides)
+
+
+def _chemin(roulable, de, a):
+    """La longueur du plus court chemin roulable de `de` à `a` (en tuiles), ou None."""
+    from collections import deque
+    vus, file = {de: 0}, deque([de])
+    while file:
+        t = file.popleft()
+        if t == a:
+            return vus[t]
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            q = (t[0] + dx, t[1] + dy)
+            if q not in vus and roulable(*q):
+                vus[q] = vus[t] + 1
+                file.append(q)
+    return None
+
+
+def test_la_course_des_friches_se_roule_d_un_fanion_au_suivant_dans_le_chrono():
+    """Huit fanions sur les sentiers des Friches, le dernier au départ ; chacun ATTEINT du précédent sans
+    traverser un grillage ni un décor solide ; et le chrono laisse une marge sur le chemin réel, roulé à la
+    pleine vitesse du 4 roues."""
+    from app import missions, nord
+    ville = carte.exporter()
+    c = quatre_roues.course(ville)
+    assert c and len(c["balises"]) == 8 and c["balises"][-1] == c["depart"], c
+    for b in [c["depart"]] + c["balises"]:
+        assert nord.LECTEUR.district_en(*b) == "friches" and ville["sol"][b[1]][b[0]] == "g", b
+    roulable = _roulable(ville)
+    total, trajet = 0, [c["depart"]] + c["balises"]
+    for p, q in zip(trajet, trajet[1:]):
+        n = _chemin(roulable, tuple(p), tuple(q))
+        assert n is not None, f"on ne roule pas de {p} à {q}"
+        total += n
+    defi = next(d for d in missions.DEFIS if d["slug"] == "quatre_roues")
+    assert defi["ou"] == "course:quatre_roues" and defi["conduite"] == "balises"
+    assert defi["regles"] == {"vehicule": "quatre_roues", "course": "quatre_roues"}
+    a_pleine_vitesse = total / quatre_roues.COURSE["allure_tuiles_s"]
+    assert 1.2 * a_pleine_vitesse <= defi["chrono_s"] <= 2.5 * a_pleine_vitesse, (total, a_pleine_vitesse)

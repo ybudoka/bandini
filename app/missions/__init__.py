@@ -841,6 +841,16 @@ DEFIS: list[dict] = [
      "hiver": True, "chrono_s": 24, "prime": 90, "debloque": {"apres": ["tour_erables"]},
      "regles": {"vehicule": "motoneige"},
      "texte": "UNE MOTONEIGE T'ATTEND AU BORD DU BOIS : HUIT FANIONS, JUSQU'AU BOUT DES SENTIERS ET RETOUR, EN 24 S"},
+    # LA COURSE DES FRICHES (docs/jalons/les-4-roues.md, vague 2 ; Martin, 28 sept. 2026) : en 4 roues, du
+    # bout sud du sentier des Friches du bas aux bouts des bras des deux croix, et retour (`quatre_roues.
+    # course`) — huit fanions dans l'ordre (l'épreuve `balises`, sa course lue dans `regles.course`). On coupe
+    # par l'herbe : là, une auto perdrait un tiers de sa vitesse, et le 4 roues rien. Toute l'année. ⚠️ Elle
+    # s'ouvre après le tour des Érables : son panneau ne se plante pas au démarrage (la bande est dans la
+    # bulle de naissance du terminus).
+    {"slug": "quatre_roues", "titre": "La course des Friches", "ou": "course:quatre_roues", "conduite": "balises",
+     "chrono_s": 60, "prime": 100, "debloque": {"apres": ["tour_erables"]},
+     "regles": {"vehicule": "quatre_roues", "course": "quatre_roues"},
+     "texte": "UN 4 ROUES T'ATTEND AU BOUT DU SENTIER : HUIT FANIONS À TRAVERS LES FRICHES, EN 60 S"},
     # LE HOCKEY DE RUELLE (docs/jalons/le-hockey-de-ruelle.md) : le soir, dans la ruelle la plus proche du
     # dépanneur des Érables, trois contre trois contre les Chevreuils — toi et deux jeunes du quartier.
     # Gagner par trois buts d'écart avant la fin du chrono (le seul à l'écran : trois minutes et demie,
