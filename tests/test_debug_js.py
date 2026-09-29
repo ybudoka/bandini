@@ -1199,10 +1199,10 @@ def test_l_onglet_triches_est_classe_par_intention(banc):
         return { entetes: Object.keys(sections), sections: sections, pages: pages };
     }""")
     assert r["entetes"] == ["LE JOUEUR", "TOUJOURS", "ALLER", "JOUER", "DIVERS"]
-    assert r["sections"]["ALLER"] == ["À L'OBJECTIF", "CHEZ UN DONNEUR", "ENDROITS CLÉS"]
+    assert r["sections"]["ALLER"] == ["À L'OBJECTIF", "CHEZ UN DONNEUR", "ENDROITS CLÉS", "COLLECTIONS"]
     assert r["sections"]["JOUER"] == ["LANCER UNE MISSION", "LANCER UN DÉFI", "OBJECTIF SUIVANT", "TERMINER LA MISSION"]
     assert len(r["sections"]["TOUJOURS"]) == len(NOMS_DES_BASCULES)
-    assert {p["libelle"] for p in r["pages"]} == {"CHEZ UN DONNEUR", "ENDROITS CLÉS", "LANCER UNE MISSION",
+    assert {p["libelle"] for p in r["pages"]} == {"CHEZ UN DONNEUR", "ENDROITS CLÉS", "COLLECTIONS", "LANCER UNE MISSION",
                                                    "LANCER UN DÉFI", "JUKEBOX"}
     for p in r["pages"]:
         assert p["rendu"] is False and p["titre"] == p["libelle"], p

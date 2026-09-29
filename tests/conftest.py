@@ -89,6 +89,13 @@ def notes_de_la_musique(paquets):
 
 
 @pytest.fixture(scope="session")
+def collections_du_paquet(paquets):
+    """Les collections — un `/api/collections`, hors du paquet et de la carte depuis le 30 sept. 2026 : le
+    catalogue des cartes de hockey et leurs places. Le banc les sert comme le serveur."""
+    return json.loads(paquets.collections.corps.decode("utf-8"))
+
+
+@pytest.fixture(scope="session")
 def a_jouer(paquets):
     """Tout ce que chaque mission demande pour se jouer — un `/api/mission/<slug>`.
 
@@ -123,7 +130,7 @@ def serveur(tmp_path_factory, paquets):
 
 
 @pytest.fixture(scope="session")
-def banc(paquet, a_jouer, cartes_des_blocs, notes_de_la_musique):
+def banc(paquet, a_jouer, cartes_des_blocs, notes_de_la_musique, collections_du_paquet):
     """Fait tourner `corps` (une fonction JS `(L, o) => resultat`) dans le banc Node."""
     if OBLIGATOIRE and shutil.which("node") is None:
         pytest.fail("node est obligatoire (BANDINI_TESTS_OBLIGATOIRES=1) et il manque")
@@ -132,7 +139,7 @@ def banc(paquet, a_jouer, cartes_des_blocs, notes_de_la_musique):
     def executer(corps: str, graine: int = 0x1A2B3C4D, stockage: dict | None = None, session: dict | None = None,
                  reseau: dict | None = None, defi: dict | None = None, poser_les_missions: bool = True,
                  missions_panne: int = 0, blocs_panne: int = 0, poser_les_notes: bool = True,
-                 notes_panne: int = 0):
+                 notes_panne: int = 0, collections_panne: int = 0):
         # `stockage` / `session` : ce que le navigateur gardait AVANT le chargement.
         # `reseau` : ce que /api/compte/ repond (M14) — l'ouverture part des que la
         # ville est batie, donc ses reponses se posent avant, jamais pendant.
@@ -145,7 +152,10 @@ def banc(paquet, a_jouer, cartes_des_blocs, notes_de_la_musique):
                   # Les notes de la musique (`/api/musiques`) : le banc les sert comme le serveur.
                   # `poser_les_notes=False` les retire du paquet avant le demarrage, et
                   # `notes_panne` fait tomber les premieres demandes.
-                  "notes": notes_de_la_musique, "poser_les_notes": poser_les_notes, "notes_panne": notes_panne}
+                  "notes": notes_de_la_musique, "poser_les_notes": poser_les_notes, "notes_panne": notes_panne,
+                  # Les collections (`/api/collections`) : servies comme le serveur ; `collections_panne` fait
+                  # tomber les premières demandes.
+                  "collections": collections_du_paquet, "collections_panne": collections_panne}
         if stockage is not None:
             entree["stockage"] = stockage
         if session is not None:

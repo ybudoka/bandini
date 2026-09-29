@@ -699,6 +699,14 @@ const Son = (function () {
     reglerBoucle(slug, v);
   }
 
+  /** Le filet de l'orgue d'aréna (`SFX.orgue_arena`) : la charge, six notes, la dernière tenue. */
+  function charge() {
+    [[392, 0], [523, 0.14], [659, 0.28], [784, 0.42], [659, 0.7], [784, 0.84]].forEach(function (n, i) {
+      const long = i === 5 ? 0.6 : 0.12;
+      ton(n[0], long, 'square', 0.12, 1, n[1]); ton(n[0] * 2, long, 'triangle', 0.08, 1, n[1]);
+    });
+  }
+
   const SFX = {
     pas: function () { if (!joue('pas')) bruit(0.05, 0.12, 900, 300); },
     coup: function () { if (!joue('coup')) { ton(140, 0.08, 'square', 0.3, 0.5); bruit(0.08, 0.3, 800, 200); } },
@@ -1165,6 +1173,12 @@ const Son = (function () {
       if (estCharge('extincteur')) { boucle('extincteur', !!actif); return; }
       if (actif && B.t % 8 === 0) SFX.extincteur();
     },
+    // LES COLLECTIONS (`collections.js`) : la carte de hockey qu'on ramasse — le carton qu'on pince, et un
+    // tintement clair — et l'orgue d'aréna des paliers, la charge qu'on joue quand le club compte. Synthèse en
+    // filet : sans échantillon, ça sonne quand même.
+    carte_hockey: function () { if (!joue('carte_hockey')) { bruit(0.05, 0.18, 3200, 1400); ton(1319, 0.08, 'triangle', 0.16, 1, 0.05); ton(1760, 0.18, 'triangle', 0.14, 1, 0.12); } },
+    // La charge : sol, do, mi, sol… mi, SOL — l'orgue de l'aréna, en carré et en triangle.
+    orgue_arena: function () { if (!joue('orgue_arena')) charge(); },
     mission: function () { ton(523, 0.1, 'square', 0.2); ton(659, 0.1, 'square', 0.2, 1, 0.1); ton(784, 0.25, 'square', 0.22, 1, 0.2); },
     // LES FRÉNÉSIES (`frenesies.js`) : le coup de gong grave qui lance le chrono, et la fanfare
     // courte qui le ferme. Synthèse en filet, comme partout : sans échantillon, ça sonne quand même.
@@ -1709,6 +1723,17 @@ const Son = (function () {
       qu'ils ne sont pas là, chaque geste joue son repli synthétisé. */
   const Lieu = {
     charges: new Set(),
+    /** Un lieu dont les sons voyagent avec leur paquet, hors des définitions (`audio.LIEUX_A_PART` : les cartes de
+        hockey) : ses échantillons et son lieu rejoignent le paquet à l'arrivée, une fois. */
+    declarer: function (sons) {
+      const audio = B.defs && B.defs.audio;
+      if (!audio || !sons || !sons.lieu) return;
+      (sons.echantillons || []).forEach(function (e) {
+        if (!audio.echantillons.some(function (q) { return q.slug === e.slug; })) audio.echantillons.push(e);
+      });
+      audio.lieux = audio.lieux || {};
+      audio.lieux[sons.lieu] = (sons.echantillons || []).map(function (e) { return e.slug; });
+    },
     charger: function (lieu) {
       if (Lieu.charges.has(lieu) || !ctx || !fenetre || !fenetre.fetch || !B.defs || !B.defs.audio) return;
       Lieu.charges.add(lieu);

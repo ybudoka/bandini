@@ -49,6 +49,7 @@ def _page_d_accueil() -> str:
                            empreinte_definitions=current_app.extensions["definitions"].etag,
                            empreinte_carte=current_app.extensions["carte"].etag,
                            empreinte_musiques=current_app.extensions["musiques"].etag,
+                           empreinte_collections=current_app.extensions["collections"].etag,
                            empreinte_missions=current_app.extensions["missions_empreinte"],
                            empreinte_blocs=current_app.extensions["blocs_empreinte"],
                            url_compte=comptes.CHEMIN_COOKIE + "/")
@@ -103,6 +104,18 @@ def api_musiques():
     que les autres ; les definitions nomment son empreinte (`musiques_empreinte`).
     """
     return _revalide(current_app.extensions["musiques"])
+
+
+@bp.route("/api/collections")
+def api_collections():
+    """Les collections : le catalogue des cartes de hockey (noms, positions, dos, équipes) et leurs places dans
+    la ville (`collectionner`) — hors du paquet ET de la carte, les deux au ras de leur plafond (30 sept. 2026).
+
+    ⚠️ Demandées juste APRÈS les définitions, en arrière-plan, et gardées par le travailleur, comme les notes de
+    la musique : une carte de hockey ne se ramasse pas plus hors ligne qu'en ligne si son catalogue manque.
+    Même revalidation que les autres ; les définitions nomment son empreinte (`collections_empreinte`).
+    """
+    return _revalide(current_app.extensions["collections"])
 
 
 @bp.route("/api/mission/<slug>")

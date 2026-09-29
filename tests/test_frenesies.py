@@ -141,7 +141,8 @@ def test_les_frenesies_ne_deplacent_rien(monkeypatch):
     avant, apres = json.loads(vu["avant"]), json.loads(vu["apres"])
     touchees = sorted(k for k in set(avant) | set(apres) if avant.get(k) != apres.get(k))
     assert not touchees, f"poser les frénésies a touché la ville : {touchees}"
-    sans = {k: val for k, val in v.items() if k not in ("frenesies", "frenesies_regle")}
+    # ⚠️ Les cartes de hockey (`collectionner`) se posent APRÈS elles, et lisent leurs icônes : hors de la comparaison.
+    sans = {k: val for k, val in v.items() if k not in ("frenesies", "frenesies_regle", "collections")}
     derniere = json.dumps(sans, sort_keys=True) == vu["avant"]
     assert derniere, "les frénésies ne se posent pas en dernier"
 

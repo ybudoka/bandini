@@ -49,6 +49,8 @@ def create_app(config_object: type[Config] = Config) -> Flask:
     app.extensions["carte"] = paquets.carte
     # Les notes de la musique (le filet du sequenceur), hors du paquet depuis le 29 sept. 2026.
     app.extensions["musiques"] = paquets.musiques
+    # Les collections (le catalogue des cartes de hockey et leurs places), hors du paquet ET de la carte.
+    app.extensions["collections"] = paquets.collections
     # Tout ce qu'une mission demande pour se jouer : ce qu'elle dit, ce qu'elle montre,
     # avec quelles voix, et ce qu'elle demande de faire. Hors du paquet depuis le
     # 24 sept. 2026 — voir `definitions.py`.

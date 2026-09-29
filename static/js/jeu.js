@@ -1155,6 +1155,7 @@ const Jeu = (function () {
         pas('police', Police.maj);
         pas('incendies', Incendies.maj);
         pas('frenesies', Frenesies.maj);   // l'icône qu'on prend exprès, le chrono, le compte
+        pas('collections', Collections.maj);   // une carte de hockey par terre, qu'on ramasse en marchant dessus
         pas('interactions', Interactions.maj);
         pas('missions', Missions.maj);
         pas('chantiers', Chantiers.maj);
@@ -1262,6 +1263,7 @@ const Jeu = (function () {
     if (B.interieur) Tables.dessinerSalle(ctx, vue);   // la roue, le sabot, la cloche : sur le feutre des tables du Dragon d'or
     if (B.interieur) Tripot.dessinerSalle(ctx, vue);   // la barbotte du Pouce, ses dés sur le feutre, la lampe qui pend
     Demenagement.dessiner(ctx, vue);                   // le 1er juillet : les meubles sur le trottoir
+    if (!B.interieur) Collections.dessiner(ctx, vue);  // une carte de hockey par terre, et son éclat : sous les pieds
     if (!B.interieur) Entites.dessinerBetes(ctx, vue);   // un goeland passe sous personne
     Entites.dessiner(ctx, vue);
     Entites.dessinerCible(ctx, vue);
@@ -1509,6 +1511,9 @@ const Jeu = (function () {
       // 2026 : demandees MAINTENANT, en arriere-plan, pendant que la ville se batit. Pas au
       // moment ou un mp3 rate : c'est souvent que le reseau vient de tomber (`Son.Notes`).
       Son.Notes.charger(racine.dataset.urlMusiques, defs.musiques_empreinte);
+      // Les collections (le catalogue des cartes de hockey et leurs places), hors du paquet ET de la carte : en
+      // arrière-plan elles aussi — personne ne ramasse une carte avant d'avoir quitté le titre.
+      Collections.charger(w, racine.dataset.urlCollections, defs.collections_empreinte);
       Hud.progression(95);
       Monde.charger(defs.carte);
       // La partie du dernier emplacement joue : celle que JOUER propose d'abord.
@@ -1579,7 +1584,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Train: Train, Navette: Navette, Neige: Neige, Pluie: Pluie, Derapage: Derapage, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, RueDesSaisons: RueDesSaisons, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Territoires: Territoires, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Galeries: Galeries, Fetes: Fetes, Halloween: Halloween, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Photos: Photos, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, SurPlace: SurPlace, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Train: Train, Navette: Navette, Neige: Neige, Pluie: Pluie, Derapage: Derapage, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, RueDesSaisons: RueDesSaisons, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Territoires: Territoires, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Galeries: Galeries, Fetes: Fetes, Halloween: Halloween, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Collections: Collections, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Photos: Photos, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, SurPlace: SurPlace, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,

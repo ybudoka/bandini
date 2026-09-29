@@ -47,6 +47,7 @@ from dataclasses import dataclass
 from . import (armes, audio, blocs, calendrier, saisons, pluie, halloween, carte, demenagement, derby, enseignes, fetes, garage, motoneige, photos, quatre_roues, saint_jean, territoires, devantures, dojo, economie, mantes, garderobe, interactions, journal, magasins,
                brouillard, loto, machine_a_sous, manettes, tables_de_jeu, missions, nord, nuit, pietons, recherche, techniques, vehicules, verglas, videopoker,
                musique, pont_de_glace, visages)
+from . import collectionner
 from .blocs import galeries as galeries_hantees
 from .version import VERSION
 
@@ -209,6 +210,10 @@ class Paquets:
     #: restent au paquet (`musique.NOTES_DANS_LE_PAQUET`). Les definitions nomment son
     #: empreinte (`musiques_empreinte`), comme celle de la carte.
     musiques: Paquet
+    #: Les collections (`/api/collections`) : le catalogue des cartes de hockey et leurs places dans la ville
+    #: (`collectionner`). ⚠️ Hors des définitions ET de la carte : les deux sont au ras de leur plafond. Les
+    #: définitions nomment son empreinte (`collections_empreinte`), comme celle des notes.
+    collections: Paquet
 
 
 def _json(donnees: dict) -> bytes:
@@ -240,7 +245,12 @@ def construire() -> Paquets:
     donnees = assembler()
     # ⚠️ UNE SEULE ville generee pour les deux : `generer` coute une seconde et
     # demie, et deux villes batties separement pourraient ne pas etre la meme.
-    carte = _signer(donnees.pop("carte"))
+    ville = donnees.pop("carte")
+    # ⚠️ Les places des cartes de hockey sortent de la carte AVANT qu'on la signe : elles voyagent avec leur
+    # catalogue sur `/api/collections` (`collectionner.exporter`), pas un octet de plus sur `/api/carte`.
+    collections = _signer(collectionner.exporter(ville.pop("collections", None), audio.echantillons_a_part("collections")))
+    donnees["collections_empreinte"] = collections.etag
+    carte = _signer(ville)
     donnees["carte_empreinte"] = carte.etag
     musiques = _signer(sortir_les_notes(donnees["audio"]))
     donnees["musiques_empreinte"] = musiques.etag
@@ -261,4 +271,4 @@ def construire() -> Paquets:
     donnees["blocs_empreinte"] = des_blocs
     return Paquets(definitions=_signer(donnees), carte=carte, a_jouer=a_jouer,
                    missions_empreinte=des_missions, blocs=des_cartes, blocs_empreinte=des_blocs,
-                   musiques=musiques)
+                   musiques=musiques, collections=collections)

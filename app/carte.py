@@ -7366,6 +7366,12 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
     from . import frenesies as frenesies_mod
     ville["frenesies"] = frenesies_mod.poser(ville)
     ville["frenesies_regle"] = dict(frenesies_mod.REGLE)
+    # ⚠️ LES CARTES DE HOCKEY (P4, docs/jalons/des-choses-a-collectionner-et-la-planque-qu-on-decore.md), APRÈS
+    # LES FRÉNÉSIES : un recoin par carte, choisi par une règle sur la ville finie — sans un dé, loin des paquets et
+    # des icônes, rien de posé dans une liste que la ville lit. ⚠️ Cette clé ne voyage pas dans la carte :
+    # `definitions.construire` la sort et la sert sur `/api/collections`, avec le catalogue.
+    from . import collectionner as collectionner_mod
+    ville["collections"] = collectionner_mod.poser(ville)
     return ville
 
 # --- Les interieurs ---------------------------------------------------------

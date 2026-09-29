@@ -1611,6 +1611,8 @@ const Hud = (function () {
       ['PROPRIÉTÉS', Object.keys(p.proprietes).length + ' / ' + B.defs.economie.proprietes.filter(function (q) { return q.phase === 1 || (p.enVente || []).indexOf(q.slug) >= 0; }).length],
       ['PAQUETS', Object.keys(p.paquets).length + ' / ' + (Monde.carte.ville ? Monde.carte.ville : Monde.carte).def.paquets.length],
       ['FRÉNÉSIES', Frenesies.reussies() + ' / ' + Frenesies.toutes().length],
+      // Les collections (`Collections`) : l'album de la Ligue. « ? » tant que son catalogue n'est pas arrivé.
+      ['CARTES DE HOCKEY', Collections.nombre() + ' / ' + (Collections.total() || '?')],
       // M13 : ce que dit le générique, et ce qu'il reste à faire après lui — la partie continue.
       ['MISSIONS', Object.keys(p.missionsFaites || {}).length + ' / ' + (B.defs.missions || []).filter(function (m) { return m.phase !== 2; }).length],
       ['DETTE DE ROCCO', p.dette > 0 ? Math.round(p.dette) + ' $' : 'RÉGLÉE'],
@@ -1828,6 +1830,9 @@ const Hud = (function () {
         faire: function () { ouvrirMenu(menuCarnetJournal()); return false; } },
       { libelle: 'RÉPERTOIRE', cle: 'repertoire', detail: connus + ' PERSONNE' + (connus > 1 ? 'S' : ''),
         faire: function () { ouvrirMenu(menuCarnetRepertoire()); return false; } },
+      // LES COLLECTIONS : l'album des cartes de hockey. Le compte PAR ÉQUIPE est l'indice : il dit où chercher.
+      { libelle: 'COLLECTIONS', cle: 'collections', detail: 'CARTES ' + Collections.nombre() + ' / ' + (Collections.total() || '?'),
+        faire: function () { ouvrirMenu(menuCarnetCollections()); return false; } },
       // ⚠️ LA DETTE SE LIT ICI, sinon on l'oublie entre deux appels. C'est la
       // même règle que le carnet du poste : une pression qu'on subit sans
       // jamais pouvoir la regarder n'est pas une pression, c'est une
@@ -1928,6 +1933,43 @@ const Hud = (function () {
     items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet('repertoire')); return false; } });
     return surLaLigne(depuis, { titre: 'RÉPERTOIRE', largeur: 320, hauteur: VH - 30, items: items,
              retour: function () { ouvrirMenu(menuCarnet('repertoire')); } });
+  }
+
+  /** COLLECTIONS : les cartes de hockey de la Ligue, équipe par équipe — celles qu'on a, par leur nom, et
+      « ??? » pour celles qui manquent. ⚠️ L'équipe EST l'indice : « LES CASTORS DU FAUBOURG 2 / 5 » dit dans
+      quel district il en reste, pas où — une carte au trésor tuerait la fouille. */
+  function menuCarnetCollections(depuis) {
+    const items = [];
+    if (!Collections.total()) items.push(ligne('L’ALBUM N’EST PAS ENCORE ARRIVÉ'));
+    for (const e of Collections.parEquipe()) {
+      items.push(entete(e.nom + ' ' + e.n + ' / ' + e.total));
+      for (const c of Collections.cartes()) {
+        if (c.district !== e.district) continue;
+        if (!Collections.trouvee(c.numero)) { items.push(ligne('N° ' + c.numero + '  ???')); continue; }
+        items.push({ libelle: 'N° ' + c.numero + '  ' + c.nom, cle: 'carte' + c.numero, detail: c.position,
+                     faire: function () { ouvrirMenu(menuCarnetCarte(c.numero)); return false; } });
+      }
+    }
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet('collections')); return false; } });
+    return surLaLigne(depuis, { titre: 'CARTES DE HOCKEY', sur: Collections.nombre() + ' / ' + (Collections.total() || '?'),
+             largeur: 320, hauteur: VH - 30, items: items, retour: function () { ouvrirMenu(menuCarnet('collections')); } });
+  }
+
+  /** Une carte, recto verso : son joueur, son équipe, sa position, son dos — et la carte elle-même, en grand. */
+  function menuCarnetCarte(numero) {
+    const c = Collections.fiche(numero), eq = c && Collections.equipe(c.district);
+    const a = c && B.partie.collections.cartes[c.numero];
+    const retour = function () { ouvrirMenu(menuCarnetCollections('carte' + numero)); };
+    const items = c ? [ligne(eq ? eq.nom : c.district.toUpperCase()), ligne(Collections.position(c.position))]
+      .concat(c.dos.map(function (l) { return ligne(l); }))
+      .concat([ligne('TROUVÉE', a ? 'JOUR ' + a.jour : '')]) : [];
+    items.push({ libelle: 'RETOUR', faire: function () { retour(); return false; } });
+    return { titre: c ? c.nom : 'N° ' + numero, sur: 'N° ' + numero, largeur: 320, colonne: 250,
+             curseur: items.length - 1, items: items, retour: retour,
+             // La carte en grand, dans le coin : le même dessin que par terre, un pixel = quatre.
+             dessiner: function (ctx, x, y, l) {
+               if (c) Collections.peindreCarte(ctx, c, x + l - 10 - 28, y + 22, 4);
+             } };
   }
 
   /** Le lieu d'un personnage, en francais : « porte:terminus » est une adresse
@@ -2476,6 +2518,55 @@ const Hud = (function () {
              retour: function () { ouvrirMenu(menuDebug()); } };
   }
 
+  /** COLLECTIONS (TRICHES > ALLER) : les cartes de hockey qui manquent, et on y va — à deux tuiles, pas
+      dessus : on vient la VOIR (son éclat, sa place), pas la ramasser d'office. La plus proche d'abord. */
+  function menuDebugCollections() {
+    const j = B.joueur;
+    const proche = j ? Collections.plusProche(j.x, j.y) : null;
+    const items = [];
+    if (proche) items.push({ libelle: 'LA PLUS PROCHE', detail: 'N° ' + proche.numero, faire: function () { return allerALaCarte(proche); } });
+    for (const c of Collections.cartes()) {
+      if (typeof c.x !== 'number' || Collections.trouvee(c.numero)) continue;
+      items.push({ libelle: 'N° ' + c.numero + '  ' + c.nom, detail: c.district.toUpperCase(), carte: c.numero,
+                   faire: function () { return allerALaCarte(c); } });
+    }
+    if (!items.length) items.push(ligne(Collections.total() ? 'TOUTES TROUVÉES' : 'L’ALBUM N’EST PAS ENCORE ARRIVÉ'));
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuDebug()); return false; } });
+    return { titre: 'COLLECTIONS', largeur: 320, hauteur: VH - 30, items: items, retour: function () { ouvrirMenu(menuDebug()); } };
+  }
+
+  /** À pied, à deux ou trois tuiles d'une carte, sur une tuile qu'on marche. */
+  function allerALaCarte(c) {
+    if (!aPiedEnVille()) return false;
+    const j = B.joueur;
+    let place = null;
+    for (let r = 2; r <= 5 && !place; r++) {
+      for (let dy = -r; dy <= r && !place; dy++) for (let dx = -r; dx <= r && !place; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const tx = c.x + dx, ty = c.y + dy, x = tx * TT + 8, y = ty * TT + 8;
+        if (Monde.bloque(tx, ty, Monde.MASQUE_PIETON) || Monde.estMeuble(tx, ty) || dansUnDecor(x, y)) continue;
+        place = { x: x, y: y };
+      }
+    }
+    if (!place) { message('INTROUVABLE'); return false; }
+    j.x = place.x; j.y = place.y; j.vx = 0; j.vy = 0;
+    Entites.indexer();
+    Monde.centrerCamera(j.x, j.y);
+    if (B.etat === 'pause') Jeu.reprendre();
+    fermerMenu();
+    message('CARTE N° ' + c.numero + ' — TOUT PRÈS');
+    return true;
+  }
+
+  /** TOUTES LES CARTES (TRICHES > LE JOUEUR) : l'album rempli, en silence — ni prime ni palier. */
+  function toutesLesCartes() {
+    if (!B.partie) { message('PAS DE PARTIE'); return false; }
+    const n = Collections.toutes();
+    Son.SFX.argent();
+    message(Collections.total() ? 'TOUTES LES CARTES (+' + n + ')' : 'L’ALBUM N’EST PAS ENCORE ARRIVÉ');
+    return false;
+  }
+
   /** JUKEBOX : toutes les musiques de `B.defs.audio.musiques`, jouables a la
       demande. Le morceau choisit joue TANT QU'ON n'arrete pas (`Son.Chef` le
       respecte des qu'il lit `B.jukebox`) ; la note en bas le rappelle. */
@@ -2554,6 +2645,7 @@ const Hud = (function () {
       { libelle: 'SANTÉ COMPLÈTE', faire: function () { Missions.soigner(B.joueur, B.joueur.vieMax); return false; } },
       { libelle: 'TOUS LES ITEMS', faire: function () { tousLesItems(); return false; } },
       { libelle: 'TOUTES LES TECHNIQUES', faire: function () { toutesLesTechniques(); return false; } },
+      { libelle: 'TOUTES LES CARTES', faire: function () { toutesLesCartes(); return false; } },
       // Les bascules : elles tiennent jusqu'a ce qu'on les eteigne, et se sauvent avec la partie.
       entete('TOUJOURS'),
       bascule('invincible', 'INVINCIBLE'),
@@ -2567,6 +2659,7 @@ const Hud = (function () {
       { libelle: 'À L\'OBJECTIF', actif: !!Histoire.cible(), faire: function () { teleporterVersObjectif(); return true; } },
       page('CHEZ UN DONNEUR', menuChezUnDonneur),
       page('ENDROITS CLÉS', menuEndroitsCles),
+      page('COLLECTIONS', menuDebugCollections),
       // On y va ET ca part : l'histoire et les defis.
       entete('JOUER'),
       page('LANCER UNE MISSION', menuSautMissions),
@@ -4041,7 +4134,7 @@ const Hud = (function () {
   return {
     nomIci, dessinerLaVilleDuBoss, init, voile, etat, progression, partDesScripts, finirChargement, message, prime, majPrime, montantDeLaPrime, PRIME, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, toutesLesTechniques, glyphesDOnglets, menuSautMissions, menuSautDefis, menuChezUnDonneur, menuEndroitsCles, menuJukebox, pointDuDefi, menuCarnet,
     ouvrirOnglet, toucherMenu, onglets: function () { return ongletsVisibles().map(function (o) { return o.slug; }); },
-    ciblesDuMenu: function () { return cibles.slice(); }, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
+    ciblesDuMenu: function () { return cibles.slice(); }, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuCarnetCollections, menuCarnetCarte, menuDebugCollections, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     menuCommandes, ouvrirCommandes, majAideDuTitre, lignesDAide, glypheDAction, dessinerGlyphe, largeurGlyphe,
     menuParties, menuEffacer, menuCopier, tempsDeJeu, quand,
     legendeDeLaCarte, legendeDuZonage, lieuxSurLaCarte, couleurDeLieu, cibleDuBoulot, PULSE_JOUEUR, BATTEMENT_CIBLE, CALQUE_ALPHA,

@@ -221,6 +221,15 @@ CATALOGUE: list[Echantillon] = [
     _e("frenesie_fin", "Frénésie : réussie", duree_s=1.8, volume=0.55, influence=0.6,
        prompt="a short triumphant retro arcade video game victory sound effect: four quick rising "
               "square-wave blips ending on a bright ringing chime, punchy, no voices, no music"),
+    # LES COLLECTIONS (`collections.js`) : la carte de hockey qu'on ramasse par terre — le carton qu'on pince
+    # et une petite étincelle —, et l'orgue d'aréna des paliers (dix, vingt-cinq, l'album complet).
+    _e("carte_hockey", "Carte de hockey trouvée", duree_s=1.0, volume=0.5, influence=0.65,
+       prompt="a small cardboard trading card being picked up off the ground and flicked with a crisp snap, "
+              "followed by a tiny bright magical sparkle chime, short, close, dry, no voices, no music"),
+    _e("orgue_arena", "Orgue d'aréna", duree_s=3.0, volume=0.55, influence=0.55,
+       prompt="a hockey arena pipe organ playing a short bright rising charge fanfare, six punchy notes ending "
+              "on a long held chord, big reverberant ice rink, a short burst of crowd cheering at the end, "
+              "the organ alone with no music underneath, no speech, no singing"),
     _e("etoile", "Niveau de recherche", duree_s=1.2, volume=0.79, influence=0.75,
        prompt="a police radio alert chirp followed by a burst of squelch "
               "static, tense and short, no voices, no music"),
@@ -1587,6 +1596,9 @@ LIEUX: dict[str, list[str]] = {
     "borne_ete": ["borne_ete"],
     # Le derapage (les saisons, lot 6) : il se charge la premiere fois que le joueur conduit (`Derapage`).
     "derapage": ["crissement"],
+    # Les cartes de hockey (des choses à collectionner, vague 1) : chargées quand une carte qui manque est à moins
+    # d'un écran (`Collections.maj`). Le premier écran n'avait plus que six Ko de marge.
+    "collections": ["carte_hockey", "orgue_arena"],
     # L'Halloween (les saisons, lot 3) : un SOIR — ils se chargent le 31 (`Halloween.maj`).
     "halloween": ["rire_sorciere", "porte_grince", "souffle_fantome"],
     "casino": ["casino_salle", "bras_machine", "gain_machine", "jackpot",
@@ -1905,6 +1917,23 @@ def chemin(echantillon: Echantillon, indice: int) -> Path:
     return RACINE_STATIQUE / DOSSIER / nom_fichier(echantillon, indice)
 
 
+#: LES LIEUX QUI VOYAGENT AVEC LEUR PAQUET, hors des définitions (30 sept. 2026) : les sons des cartes de hockey
+#: partent sur `/api/collections` avec le catalogue (`echantillons_a_part`), et `Son.Lieu.declarer` les remet
+#: au paquet à leur arrivée. ⚠️ Les définitions étaient à 27 octets gzip de leur plafond sans eux : deux bruitages
+#: et leur lieu y pesaient 35 octets. Le CATALOGUE les garde (la génération, les orphelins, les juges).
+LIEUX_A_PART: frozenset[str] = frozenset({"collections"})
+
+
+def _slugs_a_part() -> set[str]:
+    return {s for lieu in LIEUX_A_PART for s in LIEUX[lieu]}
+
+
+def echantillons_a_part(lieu: str) -> dict:
+    """Ce qu'un paquet à part déclare de ses sons : le lieu, et ses échantillons comme le paquet les déclarerait."""
+    return {"lieu": lieu, "echantillons": [{"slug": e["slug"], "volume": e["volume"], "fichiers": fichiers_presents(e)}
+                                           for e in CATALOGUE if e["slug"] in LIEUX[lieu]]}
+
+
 def fichiers_presents(echantillon: Echantillon) -> list[str]:
     return [nom_fichier(echantillon, i) for i in range(1, echantillon["variantes"] + 1)
             if chemin(echantillon, i).is_file()]
@@ -1997,7 +2026,7 @@ def exporter() -> dict:
         "quartiers": {**QUARTIERS, "intervalle_s": list(QUARTIERS["intervalle_s"]),
                       "sons": {d: [dict(e) for e in sons] for d, sons in QUARTIERS["sons"].items()}},
         "coups_des_autres": dict(COUPS_DES_AUTRES),
-        "lieux": {lieu: list(slugs) for lieu, slugs in LIEUX.items()},
+        "lieux": {lieu: list(slugs) for lieu, slugs in LIEUX.items() if lieu not in LIEUX_A_PART},
         # LA MUSIQUE. Chaque morceau part de `app/musique.py` (les notes, le
         # filet) et recoit ici le mp3 genere quand il est sur le disque — plus
         # le volume qui va AVEC ce fichier, qui n'est pas celui des notes.
@@ -2033,7 +2062,7 @@ def exporter() -> dict:
         "echantillons": [
             {"slug": e["slug"], "volume": e["volume"], "fichiers": fichiers_presents(e),
              **({"duree_s": e["duree_s"]} if e["slug"] in DUREES_LUES else {})}
-            for e in CATALOGUE
+            for e in CATALOGUE if e["slug"] not in _slugs_a_part()
         ],
         # Les radios se chargent au premier tour de cle, jamais au demarrage.
         "radios": [

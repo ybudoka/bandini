@@ -128,6 +128,11 @@ function banc(corps) {
       if (NOTES.musiques[m.slug]) delete m.voix;
     });
   }
+  /*: LES COLLECTIONS (`/api/collections`, 30 sept. 2026) : le catalogue des cartes de hockey et leurs places,
+    hors du paquet et de la carte. Le jeu les demande au chargement, et la réponse arrive avant la première
+    image du banc (une micro-tâche) ; `collections_panne` fait tomber les premières demandes. */
+  const COLLECTIONS = ENTREE.collections || null;
+  let collectionsEnPanne = ENTREE.collections_panne || 0;
   const html = fs.readFileSync(path.join(racine, 'templates', 'index.html'), 'utf8');
   const SCRIPTS = Array.from(html.matchAll(/filename='js\/([^']+)'/g)).map(function (m) { return m[1]; });
   if (!SCRIPTS.length) throw new Error('aucun script trouve dans templates/index.html');
@@ -140,6 +145,7 @@ function banc(corps) {
   const bandini = faireElement('main', 'bandini');
   bandini.dataset = { etat: 'chargement', urlDefinitions: '/api/definitions', urlCarte: '/api/carte',
                       urlMusiques: '/api/musiques?e=' + (NOTES.empreinte || ''),
+                      urlCollections: '/api/collections?e=' + ((COLLECTIONS && COLLECTIONS.empreinte) || ''),
                       urlCompte: '/api/compte/', urlDefi: '/api/defi' };
   elements.bandini = bandini;
   const tactile = faireElement('div', 'tactile');
@@ -333,6 +339,11 @@ function banc(corps) {
       if (adresse.indexOf('/api/musiques') === 0) {
         if (notesEnPanne > 0) { notesEnPanne--; return Promise.reject(new Error('reseau coupe')); }
         return Promise.resolve({ ok: true, status: 200, json: function () { return Promise.resolve(NOTES); } });
+      }
+      if (adresse.indexOf('/api/collections') === 0) {
+        if (collectionsEnPanne > 0) { collectionsEnPanne--; return Promise.reject(new Error('reseau coupe')); }
+        return Promise.resolve({ ok: !!COLLECTIONS, status: COLLECTIONS ? 200 : 404,
+                                 json: function () { return Promise.resolve(COLLECTIONS || {}); } });
       }
       if (String(url).indexOf('definitions') >= 0) return Promise.resolve({ ok: true, json: function () { return Promise.resolve(defs); } });
       // ⚠️ La carte a sa requete depuis qu'elle est sortie du paquet : le banc

@@ -83,7 +83,8 @@ def test_les_paquets_se_demandent_par_leur_empreinte(client):
     sequenceur, et un filet qu'il faudrait aller chercher hors ligne ne tiendrait rien."""
     page = client.get("/").get_data(as_text=True)
     coquille = config_du_travailleur(client)["coquille"]
-    for nom, route in (("definitions", "/api/definitions"), ("carte", "/api/carte"), ("musiques", "/api/musiques")):
+    for nom, route in (("definitions", "/api/definitions"), ("carte", "/api/carte"), ("musiques", "/api/musiques"),
+                       ("collections", "/api/collections")):
         adresse = re.search(rf'data-url-{nom}="([^"]+)"', page).group(1)
         etag = client.get(route).headers["ETag"].strip('"')
         assert adresse == f"{route}?e={etag}", adresse
@@ -263,6 +264,9 @@ def test_la_ville_s_ouvre_quand_le_reseau_se_tait(browser, ville):
     # 29 sept. 2026, et hors ligne elles doivent venir de la coquille, pas d'un reseau absent.
     page.wait_for_function("BANDINI.Son.Notes.etat === 'arrivees'", timeout=10000)
     assert page.evaluate("!!BANDINI.Son.Mus.def('amb_quais').voix"), "hors ligne, l'ambiance n'a plus de filet"
+    # Et les collections (`/api/collections`, 30 sept. 2026) : l'album des cartes de hockey, de la coquille aussi.
+    page.wait_for_function("BANDINI.Collections.etatDeLaDemande() === 'arrive'", timeout=10000)
+    assert page.evaluate("BANDINI.Collections.total()") == 40, "hors ligne, l'album des cartes n'est pas là"
     assert ville.requetes == avant, "hors ligne, rien n'a du toucher le serveur"
     assert page.erreurs == []
     contexte.close()

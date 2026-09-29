@@ -104,4 +104,49 @@ complète pose son objet dans la planque, et il survit à une sauvegarde.
 
 ## Notes
 
-_Rien de livré._
+### Vague 1 — les cartes de hockey (✅ livrée le 30 sept. 2026)
+
+- **Le catalogue** : `app/collectionner.py` — quarante cartes (`CARTES`), cinq par district de terre, chacune
+  un numéro stable (le nom qu'en garde la sauvegarde), un joueur, une position, deux lignes de dos. La n° 1
+  est Gilles « La Toque » Bouchard (la statue du parc), la n° 23 le petit-fils du buste d'Omer Gauthier, la
+  n° 32 le neveu d'Irène Lam, la n° 40 l'organiste de l'aréna. Huit équipes et leurs deux couleurs
+  (`EQUIPES`).
+- **Les places** : `collectionner.poser`, appelé tout au bout de `carte.generer` (après les frénésies), sans
+  un dé. Dans chaque district : un recoin (ruelle, friche, herbe, quai) d'au moins trois murs sur huit — un
+  cran de moins s'il en manque —, à dix tuiles au moins des autres cartes et à six des paquets et des
+  frénésies, jamais dans une cour de gang ni autour d'un chantier, rejoint à pied depuis la planque **toutes
+  barrières piétonnes fermées**. Les plus encaissés d'abord, puis le plus loin possible des cartes déjà
+  posées ; l'égalité en ordre de lecture. Ce que ça donne : le fond des ruelles d'herbe entre deux toits du
+  Faubourg et du Canton, les coins de friche derrière les grillages de la Shop et des Friches, le bout des
+  quais, et la friche entre deux cabanes du bidonville de la Gare. La ville d'avant la bande nord n'en a que
+  vingt-cinq.
+- **Le poids** : presque rien dans les définitions (l'empreinte : 58 990 gzip sur 59 000) et rien dans la
+  carte — tout part sur `/api/collections` (8 249 bruts / 3 218 gzip), **sons compris** : les définitions
+  étaient à 27 octets gzip de leur plafond sans rien de nous, et les deux bruitages et leur lieu y pesaient
+  35 octets. Ils voyagent donc avec le catalogue (`audio.LIEUX_A_PART`, `audio.echantillons_a_part`) et
+  `Son.Lieu.declarer` les remet au paquet à l'arrivée. Le catalogue est demandé juste après les définitions,
+  redemandé toutes les dix secondes s'il rate, gardé dans la coquille hors ligne (`hors_ligne._ADRESSES`),
+  servi par le banc (`collections_panne`).
+- **En jeu** : `static/js/collections.js` — la carte se PEINT par terre (7 × 9 pixels aux couleurs de
+  l'équipe, aucune entité au chargement), un éclat de quatorze images toutes les trois secondes, décalé par
+  le numéro. À pied seulement, en ville seulement. 25 $, le son `carte_hockey`, « CARTE 12/40 — GASTON
+  OUELLET », une ligne au journal du carnet ; aux paliers (10, 25, 40) : 250 $, 500 $, 1 000 $, l'orgue
+  d'aréna (`orgue_arena`) et le bandeau des primes. `donner(numero, source)` est la seule porte de l'album :
+  la rue, les triches, et demain le marché aux puces.
+- **Le carnet** : LE CARNET > COLLECTIONS (« CARTES n / 40 ») ouvre l'album par équipe — « LES CASTORS DU
+  FAUBOURG 2 / 5 », c'est l'indice —, « ??? » pour celles qui manquent ; une carte trouvée ouvre sa fiche,
+  son dos et la carte en grand. Le BILAN compte « CARTES DE HOCKEY n / 40 ».
+- **La sauvegarde** : `partie.collections.cartes[numero] = { jour, source }` ; une partie d'avant, ou
+  abîmée, repart avec un album vide (`Sauvegarde.completer`).
+- **Les triches** : TRICHES > ALLER > COLLECTIONS… (la plus proche, puis chacune : on se pose à deux ou trois
+  tuiles, pour la voir sans la ramasser) et LE JOUEUR > TOUTES LES CARTES (l'album rempli, sans prime).
+- **Les sons** (ElevenLabs, `app/audio.py`) : `carte_hockey` (le carton pincé et une étincelle, 0,8 s) et
+  `orgue_arena` (la charge de l'orgue, 2,2 s) ; la synthèse reste le filet. ⚠️ À écouter par Martin. Ce sont
+  des sons **de lieu** (`audio.LIEUX["collections"]`) : chargés quand une carte qui manque est à moins d'un
+  écran, jamais au démarrage (le premier écran n'avait plus que six Ko de marge). ⚠️ **Recompressés à
+  64 kbit/s** (le crissement du dérapage est arrivé le même jour dans le même budget : 1 357 733 pour
+  1 350 000 — « la prochaine fois, on compresse avant de relever ») : 6 940 + 18 016 octets, les sons de lieu
+  à 1 345 297. Un `--refaire` les rendrait à 96 kbit/s : recompresser après.
+- **Juges** : `tests/test_collections.py` (douze) et `tests/test_collections_js.py` (dix), mutations vues
+  rouges ; `test_debug_js` (l'onglet TRICHES), `test_hors_ligne` (la coquille), `test_definitions` (le
+  plafond du paquet).

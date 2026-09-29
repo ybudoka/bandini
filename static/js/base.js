@@ -245,6 +245,9 @@ function etatInitial(defs) {
     //: Les frénésies RÉUSSIES (`Frenesies`), par slug : `{ jour, temps }`. Une réussie ne revient
     //: plus ; une ratée n'y est pas, et son icône attend qu'on revienne.
     frenesies: {},
+    //: LES COLLECTIONS (`Collections`) : par famille, ce qu'on a trouvé, par NUMÉRO — `cartes[12] = { jour,
+    //: source }` (`rue`, `puces`, `debug`). ⚠️ Jamais un index : le catalogue peut grandir sans rien décaler.
+    collections: { cartes: {} },
     journal: null,
     // ⚠️ Les lecons du Clairon deja lues. Elles vivent dans la PARTIE, pas
     // dans le moteur : une lecon relue dix parties de suite n'apprend rien la
@@ -776,6 +779,11 @@ const Sauvegarde = (function () {
     // partie d'avant la fourriere arriverait avec `undefined`, et le comptoir
     // planterait au premier clic.
     if (!Array.isArray(out.fourriere)) out.fourriere = [];
+    // Les collections : un objet de familles, chacune un objet par numéro. ⚠️ Deux niveaux : la fusion
+    // d'en haut ne descend pas, et une partie d'avant elles n'a rien — l'album repart vide, pas `undefined`.
+    const col = partie.collections && typeof partie.collections === 'object' && !Array.isArray(partie.collections) ? partie.collections : {};
+    out.collections = Object.assign({}, base.collections, col);
+    if (!out.collections.cartes || typeof out.collections.cartes !== 'object' || Array.isArray(out.collections.cartes)) out.collections.cartes = {};
     if (!Array.isArray(out.carnet)) out.carnet = [];
     if (!Array.isArray(out.skimmers)) out.skimmers = [];
     // ⚠️ M16 : les trois champs des choix et des gangs, en tableau ordonne (un
