@@ -58,8 +58,10 @@ FRENESIES: tuple[dict, ...] = (
      "cible": "gang", "gang": "skateux", "arme": "couteau", "n": 8, "chrono_s": 90, "prime": 200},
     {"slug": "friches", "district": "friches", "titre": "Le nettoyage des Friches",
      "cible": "gang", "gang": "chevreuils", "arme": "mitraillette", "n": 15, "chrono_s": 120, "prime": 250},
-    {"slug": "canton", "district": "canton", "titre": "Les Cravates au Canton",
-     "cible": "gang", "gang": "cravates", "arme": "carabine", "n": 8, "chrono_s": 120, "prime": 250},
+    # ⚠️ LES MANTES (29 sept. 2026, `mantes.py`) : le Petit-Canton avait les Cravates du voisin du sud en les
+    # attendant. Huit élèves de l'ÉCOLE LA MANTE, et une carabine contre leur kung-fu.
+    {"slug": "canton", "district": "canton", "titre": "Kung-fu contre carabine",
+     "cible": "gang", "gang": "mantes", "arme": "carabine", "n": 8, "chrono_s": 120, "prime": 250},
     # ⚠️ Pas de chars à la Gare de triage : c'est une cour de rails, sans trafic — une frénésie de
     # chars y serait impossible. Les Boulonneux, eux, descendent jusque-là.
     {"slug": "triage", "district": "gare", "titre": "Le feu au triage",

@@ -334,6 +334,18 @@ const Garderobe = (function () {
       pose(g, milieu, t0 + 1, 'w'); pose(g, milieu + 1, t0 + 1, 'w');
       for (let y = t0 + 2; y < g.length && ligneA(g[y], 'c'); y++) if (g[y][milieu] === 'c') g[y][milieu] = 'C';
     }
+    // La veste de kung-fu des Mantes : le col montant (plus sombre) et les boutons de corde, deux par deux,
+    // une rangee sur deux — les brandebourgs qu'on reconnait de loin.
+    if (h === 'veste_kungfu' && face) {
+      for (let x = milieu - 1; x <= milieu + 2; x++) if (lit(g, x, t0) === 'c') pose(g, x, t0, 'C');
+      for (let y = t0 + 1; y < g.length && ligneA(g[y], 'c'); y += 2) {
+        if (g[y][milieu] === 'c') g[y][milieu] = 'w';
+        if (g[y][milieu + 1] === 'c') g[y][milieu + 1] = 'w';
+      }
+    }
+    if (h === 'veste_kungfu' && vue === 'cote' && g[t0]) {
+      for (let x = 0; x < g[t0].length; x++) if (g[t0][x] === 'c') g[t0][x] = 'C';
+    }
     if (h === 'coton_ouate' && face && ligneA(g[t0 + 3] || [], 'c')) {
       for (let x = milieu - 1; x <= milieu + 2; x++) if (g[t0 + 3][x] === 'c') g[t0 + 3][x] = 'C';
     }

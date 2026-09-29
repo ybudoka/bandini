@@ -97,8 +97,10 @@ const Techniques = (function () {
     if (e.etat === 'attaque' && e.technique) { e.reserve = true; return false; }
     if (e.etat === 'attaque' || e.roule > 0) return false;
     if (!Entites.estJoueur(e)) {
-      // La rue seulement, a l'empreinte : gauche, droit, crochet — le genou colle.
       e.coups = (e.coups || 0) + 1;
+      // LES MANTES (`app/mantes.py`) : les pieds et les projections du repertoire, a l'empreinte.
+      if (e.techniques && e.techniques.length && frapperEnMante(e)) return true;
+      // La rue seulement, a l'empreinte : gauche, droit, crochet — le genou colle.
       return lancerTape(e, parGeste('tape', ((e.id + e.coups) % 3) + 1).slug);
     }
     const geste = gesteDeFrappe(e, fort);
@@ -108,6 +110,112 @@ const Techniques = (function () {
     if (!lancerTape(e, choisir(e, 'tape'))) return false;
     if (geste === 'tenue') e.fort = true;
     return true;
+  }
+
+  // --- Les Mantes : un gang qui sait se battre (docs/jalons/l-ecole-rivale.md) -------------
+
+  function mantes() { return B.defs.mantes || null; }
+
+  /** Celui qu'un passant combat en ce moment : son rival dans une rixe, sinon le joueur. */
+  function adversaire(e) {
+    const rixe = e.etat === 'bagarre' || (e.etat === 'attaque' && e.avantLeCoup === 'bagarre');
+    return rixe ? e.rival : B.joueur;
+  }
+
+  /** `c` se laisse-t-il saisir et projeter ? Ni en char, ni en l'air, ni en roulade, ni intouchable. */
+  function saisissable(c) {
+    return !!c && c.vivant && !c.dansVehicule && !c.vol && !(c.roule > 0) && !(c.invincible > 0)
+      && !c.intouchable && !c.partenaire && c.etat !== 'assomme' && !(c.auSol > 0) && !c.enjambe && !c.aBord;
+  }
+
+  /** Le coup d'un Mante, a l'EMPREINTE de son numero et de son compte de coups — jamais `B.rng()`.
+      Colle a l'adversaire, une part de ses coups sont des PRISES (la projection suit) ; une autre part,
+      des PIEDS (de plus loin, le pied de cote, qui porte le plus) ; le reste, les poings de rue.
+      Rend false s'il n'a rien de mieux que la rue : l'appelant tape. */
+  function frapperEnMante(e) {
+    const m = mantes();
+    if (!m) return false;
+    const c = adversaire(e);
+    const d = c ? Math.hypot(c.x - e.x, c.y - e.y) : Infinity;
+    const k = hash2(e.id, e.coups) % 100;
+    if (c && d <= m.saisie_px && k < m.part_projection && saisissable(c)) {
+      const slug = k % 2 ? 'projection_hanche' : 'grand_fauchage';
+      if (sait(e, slug)) return saisir(e, slug, c);
+    }
+    if (k >= 100 - m.part_pieds) {
+      const slug = d > COLLE + 5 ? 'pied_de_cote' : 'pied_circulaire';
+      if (sait(e, slug)) {
+        if (c) Entites.regarder(e, c.x - e.x, c.y - e.y);
+        return demarrer(e, slug, null);
+      }
+    }
+    return false;
+  }
+
+  /** Un Mante saisit `c` pour le projeter : la prise TIENT le temps d'une roulade (`saisie_images`), et le
+      joueur saisi ne marche plus (`saisiPar`, lu par `Entites.majJoueur` et `Combat.majGestes`).
+      ⚠️ Son etape est l'anticipation : c'est la fenetre de la parade (SAISIR, le retournement du poignet). */
+  function saisir(e, slug, c) {
+    Entites.regarder(e, c.x - e.x, c.y - e.y);
+    if (!demarrer(e, slug, c)) return false;
+    e.techT = Math.max(e.techT, mantes().saisie_images);
+    if (Entites.estJoueur(c)) {
+      if (c.prise) lacher(c);
+      c.saisiPar = e; c.vx = 0; c.vy = 0;
+    }
+    return true;
+  }
+
+  /** Le joueur est-il encore dans la prise d'un Mante ? Sinon, on l'oublie. */
+  function tenuPar(j) {
+    const e = j.saisiPar;
+    if (e && e.vivant && e.etat === 'attaque' && e.techCible === j && e.phase === 'anticipation' && !j.dansVehicule) return true;
+    j.saisiPar = null;
+    return false;
+  }
+
+  /** Le joueur se degage (ESQUIVE) : le Mante lache, et chancelle — et il t'en veut toujours : qui te saisit
+      se bat avec toi (c'est aussi ce qui laisse la roulade partir, `Combat.roulade` veut une menace). */
+  function seDegager(j) {
+    const e = j.saisiPar;
+    j.saisiPar = null;
+    if (!e || e.techCible !== j) return;
+    e.technique = null; e.techPose = null; e.techCible = null; e.phase = null;
+    e.etat = 'attaque_joueur'; e.avantLeCoup = null;
+    e.recul = Math.max(e.recul || 0, 12);
+  }
+
+  /** Les boutons du joueur saisi : ESQUIVE le degage (la roulade suit), SAISIR fait la parade s'il connait le
+      retournement du poignet (`majPrise` la trouve). Le reste ne fait rien : vrai si le geste s'arrete ici. */
+  function majSaisi(j, ent) {
+    if (!j.saisiPar || !tenuPar(j)) return false;
+    if (ent.neuf('saisir') && sait(j, 'retournement_poignet')) return false;
+    if (ent.neuf('esquive')) { seDegager(j); return false; }
+    return true;
+  }
+
+  /** LA PARADE D'UN MANTE : son adversaire (`a` : le joueur, ou son rival dans une rixe) ARME son coup a
+      portee — mains nues ou arme de melee, la batte d'une Cravate comprise —, et le Mante lui retourne le
+      poignet — une fois sur trois environ (`parade_chance`), a l'empreinte du Mante et du coup, puis il se
+      repose (`parade_repos_images`). Vrai si la parade part. */
+  function parer(e, a) {
+    const m = mantes(), j = a || B.joueur;
+    if (!m || !j || !(e.paradeT <= 0 || e.paradeT === undefined) || !sait(e, 'retournement_poignet')) return false;
+    if (j.etat !== 'attaque' || j.phase !== 'anticipation' || !j.arc || j.arc.type !== 'melee' || !saisissable(j)) return false;
+    const t = def('retournement_poignet');
+    if (dist2(e.x, e.y, j.x, j.y) > t.portee * t.portee) return false;
+    // Une decision par coup : le meme elan ne se rejoue pas a chaque image.
+    if (e.paradeVue === j.elans) return false;
+    e.paradeVue = j.elans;
+    if (hash2(e.id * 131 + (j.elans || 0), 0x9A2E) % 1000 >= m.parade_chance * 1000) return false;
+    // On lui prend le poignet avant que ca parte : son coup s'arrete (un passant reprend ce qu'il faisait).
+    j.etat = Entites.estJoueur(j) ? 'flane' : (j.avantLeCoup || 'flane'); j.avantLeCoup = null;
+    j.technique = null; j.techPose = null; j.techCible = null; j.phase = null;
+    j.reserve = false; j.fort = false; j.charge = 0;
+    if (j.prise) lacher(j);
+    Entites.regarder(e, j.x - e.x, j.y - e.y);
+    e.paradeT = m.parade_repos_images;
+    return demarrer(e, 'retournement_poignet', j);
   }
 
   /** Ce que `Combat.arcDeMelee` sait lire : une arme de la forme d'`armes.py`. */
@@ -127,6 +235,8 @@ const Techniques = (function () {
     // ⚠️ ON SE SOUVIENT DE CE QU'ON FAISAIT (voir `Combat.frapper`) : un passant
     // qui se battait avec l'autre gang y retourne apres son coup.
     if (e.etat !== 'attaque') e.avantLeCoup = e.etat;
+    // Le compte des elans : la parade d'un Mante decide UNE fois par coup (`parer`).
+    e.elans = (e.elans || 0) + 1;
     e.etat = 'attaque';
     e.technique = slug;
     e.techCible = cible || null;
@@ -206,6 +316,7 @@ const Techniques = (function () {
   function majCompteurs(e) {
     if (e.chaineT > 0 && e.etat !== 'attaque') e.chaineT--;
     if (e.sortieRoulade > 0 && !(e.roule > 0)) e.sortieRoulade--;
+    if (e.paradeT > 0) e.paradeT--;
   }
 
   // --- La prise : SAISIR, et ce qu'on fait de celui qu'on tient -----------------------
@@ -349,6 +460,8 @@ const Techniques = (function () {
     // lanceur (un mur derriere lui l'arrete), pas depuis la victime.
     const depart = t.geste === 'prise_cote' ? auteur : c;
     const fin = chute(depart.x, depart.y, cx, cy);
+    // LE JOUEUR PROJETE (par un Mante) : il lache ce qu'il tenait, et plus personne ne le tient.
+    if (Entites.estJoueur(c)) { c.saisiPar = null; if (c.prise) lacher(c); c.charge = 0; }
     c.tenu = false; c.vx = 0; c.vy = 0;
     c.etat = 'flane'; c.technique = null; c.techPose = null; c.phase = null;
     c.vol = { x0: c.x, y0: c.y, x1: fin.x, y1: fin.y, t: 0, duree: 24 + Math.round(t.projete / 3),
@@ -382,6 +495,14 @@ const Techniques = (function () {
       // Et seulement si la chute a PORTE : `blesser` refuse un intouchable.
       // Kevin, au dojo, se releve de lui-meme (`Entites.blesser`, le partenaire) : jamais assomme.
       if (porte && c.vivant && c.etat !== 'assomme' && c.type === 'pieton' && !c.partenaire) Entites.assommer(c);
+      // ⚠️ LE JOUEUR PROJETE SE COUCHE SANS ETRE ASSOMME (`mantes.COMBAT.au_sol_images`) : il reste au sol le
+      // temps de reprendre son souffle, intouchable — on ne s'acharne pas sur un homme a terre —, et se releve.
+      if (Entites.estJoueur(c) && c.vivant && c.vie > 0 && c.etat !== 'assomme') {
+        const m = mantes(), sol = m ? m.au_sol_images : 45;
+        c.auSol = sol; c.face = 'couche'; c.vx = 0; c.vy = 0;
+        c.invincible = Math.max(c.invincible || 0, sol + 10);
+        if (c === B.joueur) B.cam.secousse = 1;
+      }
     }
   }
 
@@ -389,7 +510,16 @@ const Techniques = (function () {
   function surActif(e, t) {
     const c = e.techCible;
     if (!c || !c.vivant) return;
-    if (t.projete > 0 && !frappeEnArc(t)) { projeter(c, e, t); return; }
+    if (t.projete > 0 && !frappeEnArc(t)) {
+      // ⚠️ La prise d'un PASSANT (un Mante) a tenu vingt images : sa victime a pu rouler, monter en char ou
+      // s'eloigner. Le joueur, lui, projette ce qu'il tient.
+      if (!Entites.estJoueur(e) && (!saisissable(c) || dist2(e.x, e.y, c.x, c.y) > (t.portee + 8) * (t.portee + 8))) {
+        if (c.saisiPar === e) c.saisiPar = null;
+        return;
+      }
+      projeter(c, e, t);
+      return;
+    }
     if (t.geste === 'prise') {
       const a = angleVers(e.x, e.y, c.x, c.y);
       relacherCible(c);
@@ -407,6 +537,8 @@ const Techniques = (function () {
 
   const api = { FENETRE, COLLE, SORTIE_ROULADE, PRISE_MAX, def, sait, choisir, frapper, demarrer, maj, majCompteurs,
                 cibleProche, majPrise, projeter, majVols, lacher, chute, surActif: surActif,
+                // Les Mantes : leurs coups, leur prise et leur parade.
+                frapperEnMante, saisir, tenuPar, seDegager, majSaisi, parer,
                 // Le crochet de la lecon du dojo : (auteur, slug, cible) quand une technique PORTE.
                 quandPorte: null };
   return api;

@@ -341,6 +341,9 @@ def test_les_commerces_ont_quelqu_un_derriere_le_comptoir():
         # comptoir (le point `cours`, docs/jalons/le-dojo-du-quartier.md).
         if any(p["type"] == "cours" for p in PIECES[slug]["points"]):
             continue
+        # ⚠️ L'ÉCOLE LA MANTE non plus (`mantes.py`) : ce sont ses élèves qui la tiennent — des Mantes.
+        if gens and all(g["qui"] == "mante" for g in gens):
+            continue
         assert any(g["qui"] == "commis" for g in gens), f"{slug} : personne au comptoir"
 
 

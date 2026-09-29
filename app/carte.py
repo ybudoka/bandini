@@ -7390,8 +7390,9 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
 #: comptoir qui fait qu'on a l'impression d'etre entre quelque part.
 #: Au tripot du sous-sol du Dragon d'or (`tripot.py`) : `pouce`, qui tient la barbotte, et ses `gros_bras`, qui
 #: tiennent les portes — le corps du garde, sans sa batte (`Tripot`).
+#: À l'ÉCOLE LA MANTE (`mantes.py`) : `mante`, un élève qui s'entraîne — un Mante, qui se bat comme dehors.
 QUI_DEDANS = ("commis", "client", "patient", "malade", "soignant", "avocat", "eleve", "croupier", "pouce",
-              "gros_bras")
+              "gros_bras", "mante")
 
 #: ⚠️ Les seuls gens qui naissent DANS un meuble, et chacun dans le sien : le
 #: PATIENT attend assis sur une chaise de la salle d'attente, l'AVOCAT tient la

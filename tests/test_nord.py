@@ -38,8 +38,10 @@ def test_la_bande_fait_110_rangees_plus_la_couture_et_la_largeur_de_la_trame():
 
 def test_trois_districts_dans_la_bande_avec_leur_gang():
     from app import nord
+    # ⚠️ Le Petit-Canton est aux Mantes depuis l'étape 4 (29 sept. 2026, `mantes.py`) : il n'avait les
+    # Cravates du voisin du sud qu'en les attendant.
     assert [(d["slug"], d["gang"]) for d in nord.DISTRICTS_NORD] == [
-        ("friches", "chevreuils"), ("canton", "cravates"), ("gare", "boulonneux")]
+        ("friches", "chevreuils"), ("canton", "mantes"), ("gare", "boulonneux")]
 
 
 def test_la_gare_a_sa_cour_a_scrap_et_plus_un_wagon():

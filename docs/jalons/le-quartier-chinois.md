@@ -238,3 +238,16 @@ bagarre, l'arc n'en a plus qu'une petite, au bout d'une poursuite.
   après c04. Quatre mutations rouges (la reprise oubliée dans `miser`, l'objet de table posé en ville, GLISSER hors de
   la mission, le Pouce qui revient au sous-sol). Voisins : `test_missions` (un objet de table vient du tripot),
   `test_mise_en_scene` (le renvoi d'Irène compté).
+
+### Étape 4 — les Mantes — **livrée le 29 sept. 2026**
+
+Le gang du quartier, et l'école dont il sort : tout est dans [l'école rivale](l-ecole-rivale.md#notes). En bref :
+l'**ÉCOLE LA MANTE** reprend la CAISSE POP, au nord-ouest du quartier, loin de la rue principale et du casino
+(`mantes.py`, posée par `nord.poser` sans un dé) ; le district passe aux Mantes (il avait les Cravates du voisin du
+sud en les attendant), leur territoire est le coin de l'école, et leur frontière la couture, face aux Cravates. Ils se
+battent avec le répertoire — pieds, projections, parade —, plus durs que tous les autres gangs, et c'est jugé.
+⚠️ Le ton tenu : le quartier est à ses habitants, l'école est une adresse, le gang ce sont ses élèves ; dans
+l'histoire d'Irène (c01 à c04), les Mantes n'y sont pour rien.
+
+**Les quatre étapes sont livrées.** Ce que la fiche laissait ouvert : la musique du quartier (« à revoir avec
+Martin »), la couleur des trottoirs (« peut-être »), et une mission des Mantes (l'école rivale, vague 2 à trancher).

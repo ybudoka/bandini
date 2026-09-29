@@ -51,7 +51,7 @@ rythme de vie (matin/soir/nuit) et ses propres bâtiments garantis.
 | District | Slug | Gang | Brume | Notes |
 |---|---|---|---|---|
 | **Les Friches** | `friches` | Les Chevreuils | ➖ | La bande nord, au-dessus des Érables (`nord.py`) : herbes hautes, sentiers de terre battue, terrains vagues clôturés, carcasses d'autos. Aucune porte. |
-| **Le Petit-Canton** | `canton` | Les Cravates (en attendant les Mantes) | ➖ | La bande nord, au-dessus du Faubourg : une **rue principale** commerçante nord-sud jusqu'à la couture, des logements tout autour, la **place du marché** au cœur (étape 2, vague A). Ses enseignes sont à lui (`devantures.COMMERCES["canton"]` : JARDIN DE JADE, HERBORISTE CHAN, NOTAIRE LEUNG…), et chaque commerce porte une **plaque verticale** rouge et or à deux idéogrammes (`devantures.IDEOGRAMMES`). Au nord de la place, le **casino du Dragon d'or** (`nord_casino`, `casino.py`) : une façade de trente-deux tuiles, sa marquise de néon, son portier ; dedans, dix-huit machines à sous et quatre vidéopokers, cinq tables, Irène Lam au bout du bar (le donneur du quartier) — et, derrière une porte gardée qu'ouvre c01, l'escalier du **tripot du Pouce** (`nord_tripot`, `tripot.py`) : la barbotte aux dés pipés, sous la grande salle. Après c04, le tripot a **changé de mains** (`tripot.REPRISE`) : le Pouce et ses gros bras sont partis, le vieux Chan tient la barbotte pour Irène, les dés sont blancs. |
+| **Le Petit-Canton** | `canton` | Les Mantes | ➖ | La bande nord, au-dessus du Faubourg : une **rue principale** commerçante nord-sud jusqu'à la couture, des logements tout autour, la **place du marché** au cœur (étape 2, vague A). Ses enseignes sont à lui (`devantures.COMMERCES["canton"]` : JARDIN DE JADE, HERBORISTE CHAN, NOTAIRE LEUNG…), et chaque commerce porte une **plaque verticale** rouge et or à deux idéogrammes (`devantures.IDEOGRAMMES`). Au nord de la place, le **casino du Dragon d'or** (`nord_casino`, `casino.py`) : une façade de trente-deux tuiles, sa marquise de néon, son portier ; dedans, dix-huit machines à sous et quatre vidéopokers, cinq tables, Irène Lam au bout du bar (le donneur du quartier) — et, derrière une porte gardée qu'ouvre c01, l'escalier du **tripot du Pouce** (`nord_tripot`, `tripot.py`) : la barbotte aux dés pipés, sous la grande salle. Après c04, le tripot a **changé de mains** (`tripot.REPRISE`) : le Pouce et ses gros bras sont partis, le vieux Chan tient la barbotte pour Irène, les dés sont blancs. Au nord-ouest, à l'écart de la rue principale, l'**ÉCOLE LA MANTE** (`ecole_mante`, `mantes.py`) : le territoire des Mantes est le coin de leur école. |
 | **La Gare de triage** | `gare` | Les Boulonneux | ➖ | La bande nord, au-dessus de La Shop : à l'ouest, la **cour à scrap** des Boulonneux (une seule voie rouillée au nord, puis une cour de barbelé : rangées de piles de carcasses, de cubes de ferraille et de pneus entre des allées, la grue à aimant) et le **bureau du ferrailleur** (`nord_ferrailleur`, une pièce) ; au sud, des hangars. À l'est, le **bidonville** (`t` : cabanes de tôle `{` et de planches `}`, barils en feu, linge, pneus sur la tôle) et, dessous, des **maisons pauvres** (standing `-`), dont quelques logements se visitent (`nord_logement_1001`…, comptés à part) ; on n'entre dans aucune cabane. |
 | **Le Faubourg** | `faubourg` | Les Cravates | ✅ | Centre-ville, le plus peuplé (34 piétons). On y débarque de l'autobus. La cour des Cravates au centre. |
 | **Les Érables** | `erables` | Les Chevreuils | ➖ | La banlieue cossue : maisons détachées, deux parcs, un dépanneur. |
@@ -108,6 +108,13 @@ sans un dé, aux mêmes mesures (au moins 9 × 5). Son intérieur (`piece_de_doj
 vestiaire, le sac de frappe (`@`) et le mannequin de bois (`%`) au fond, le TATAMI (`A`) au milieu,
 le comptoir de Mireille Dion (point `cours`) et Kevin, l'élève partenaire (`eleve`). Point `dojo`,
 famille `service`. L'ancien SALON MIREILLE du Faubourg s'appelle SALON LOUISE.
+
+**L'ÉCOLE LA MANTE** (l'école rivale, 29 sept. 2026, `app/mantes.py`) : la pièce d'un commerce du
+Petit-Canton (c'était la CAISSE POP), reprise par `nord.poser` sur la carte finie et sans un dé — la plus
+au nord des portes de commerce à l'ouest de la rue principale, au moins 8 × 5. Dedans (`piece_d_ecole`) :
+un plancher de bois nu, deux mannequins de bois (`%`), le sac (`@`), les casiers des élèves (`k`, le point
+`fouiller`, **gardé** : les Mantes présents te tombent dessus), un banc de chaises, et trois élèves
+(`mante`). Point `ecole_mante`, famille `service`. Autour, le territoire des Mantes (zone `mantes`).
 
 **Les concessionnaires** (28 sept. 2026, `app/concessionnaires.py`) : **Prestige Automobiles**, bâti sur
 la moitié sud du plus grand stationnement cossu des Érables (un salon de toit d'ardoise, façade vitrée) ;
@@ -250,6 +257,7 @@ hors de leur zone).
 | Les Chevreuils | `chevreuils` | `chevreuil` | erables | 6 | si arme sortie |
 | Les Boulonneux | `boulonneux` | `boulonneux` | shop | 9 | **toujours** |
 | Les Skateux | `skateux` | `skateux` | pointe | 6 | si arme sortie |
+| Les Mantes | `mantes` | `mante` | canton (leur zone : le coin de l'ÉCOLE LA MANTE) | 7 | si arme sortie — mains nues : les pieds, les projections, la parade (`mantes.COMBAT`) |
 
 ---
 
@@ -308,6 +316,7 @@ La foule anonyme, les sortes posées, et les gens d'intérieur. `frequence`
 | `soignante` | Infirmière | hôpital |
 | `malade` | Malade | lits de l'hôpital |
 | `avocat` | Me Desjardins | table du fond, Le Brouillard |
+| `mante` | Une Mante | l'ÉCOLE LA MANTE : trois élèves qui s'entraînent (l'archétype du gang, `pietons.py`) |
 | `eleve` | Kevin | le DOJO DION : au sac, et sur le tatami pendant une leçon (le corps du commis en kimono blanc, `entites.archetypeDedans` — pas un archétype de `pietons.py`) |
 | `policier` | Agent | patrouille (posé par `police.js`) |
 | `garde` | Garde de sécurité | vigile privé de l'infiltration, posé à la main par une mission (`Police.creerAgent(x, y, etat, 'garde')`) |
@@ -318,12 +327,12 @@ La foule anonyme, les sortes posées, et les gens d'intérieur. `frequence`
 ## 8. Les points d'intérêt et zones
 
 - **Zones nommées** : rectangles de districts, territoires de gang (`cravates`,
-  `morues`, `chevreuils`, `boulonneux`, `skateux`), port, etc.
+  `morues`, `chevreuils`, `boulonneux`, `skateux`, `mantes`), port, etc.
 - **Rampe / Grand Saut** : le tremplin du défi « Le Grand Saut » (`ELAN_RAMPE`).
 - **Foire** : les trois jeux d'adresse (`galerie_tir`, `marteau_force`,
   `peche_canards`) — un par kiosque, joués à pied.
 - **Plages** : où naissent les baigneurs.
-- **Frénésies** (`frenesies.py`) : huit crânes cachés, un par district de terre — dans une ruelle (la friche aux Friches, l'herbe à la Gare de triage, qui n'ont pas de ruelle), près de la cour de la gang visée. Les Cravates au pistolet (Faubourg) et à la carabine (Petit-Canton), les Chevreuils à la batte (Érables) et à la mitraillette (Friches), les Morues au fusil (Quais), les Skateux au couteau (La Pointe), les Boulonneux au Molotov (la Gare de triage), et des chars au Molotov à la Shop.
+- **Frénésies** (`frenesies.py`) : huit crânes cachés, un par district de terre — dans une ruelle (la friche aux Friches, l'herbe à la Gare de triage, qui n'ont pas de ruelle), près de la cour de la gang visée. Les Cravates au pistolet (Faubourg), les Mantes à la carabine (Petit-Canton, « Kung-fu contre carabine »), les Chevreuils à la batte (Érables) et à la mitraillette (Friches), les Morues au fusil (Quais), les Skateux au couteau (La Pointe), les Boulonneux au Molotov (la Gare de triage), et des chars au Molotov à la Shop.
 - **Métro** : quai (`metro_quai`) et rame (`metro_rame`).
 - **Statues** (`statues.py`) : au coeur de la place des trois parcs de ville, un grand homme de
   bronze sur son socle — Samuel-Ovide Brumaire, le fondateur, aux Érables ; le général

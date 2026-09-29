@@ -344,6 +344,9 @@ const Entites = (function () {
                                          peau: c.s || tenue.peau, couleur_bas: c.p || tenue.couleur_bas });
     }
     if (tenue) { e.tenue = tenue; e.swaps = imposees ? arch.couleurs : Garderobe.couleurs(tenue); }
+    // LES MANTES (`app/mantes.py`) : ce qu'ils savent du repertoire, lu par `Techniques.sait`. Les autres
+    // archetypes n'ont que les poings de rue, et pas de champ du tout.
+    if (p.techniques) e.techniques = p.techniques;
     // ⚠️ Une fille de la Brume TIENT SON COIN : sans poste, elle se remettait
     // a flaner comme n'importe qui au bout de dix secondes, et le seul indice
     // qui restait etait sa robe. On reconnait d'abord celle qui ATTEND.
@@ -455,6 +458,8 @@ const Entites = (function () {
       }
       // KEVIN, le partenaire des lecons du DOJO DION (`dojo.js`) : sa place est au sac.
       if (g.qui === 'eleve') { e.partenaire = true; e.poste = { x: e.x, y: e.y }; }
+      // Les eleves de l'ECOLE LA MANTE s'entrainent a leur place ; frappe-les, et c'est un Mante qui repond.
+      if (g.qui === 'mante') e.poste = { x: e.x, y: e.y };
       // ⚠️ `fige`, la regle du donneur : il TIENT sa place (on le bouscule, il y
       // revient) et il ne se retourne pas — c'est ce qui garde un malade couche
       // et un patient ou un avocat assis. Qu'on le frappe, et il redevient un
@@ -527,6 +532,8 @@ const Entites = (function () {
                                                                                bas: 'pantalon', couleur_bas: bas, chapeau: 'aucun',
                                                                                accessoires: pouce ? ['moustache'] : [] }) : undefined });
     }
+    // L'ECOLE LA MANTE (`app/mantes.py`) : ses eleves sont des Mantes, habilles et armes de leur repertoire.
+    if (g.qui === 'mante') return archetype('mante');
     const hasard = (hash2(g.x * 131 + g.y, 0xD0C) % 1000) / 1000;
     if (g.qui === 'malade') {
       const jaquette = archetype('malade'), rue = archetypeDeRue(g.x * TT, g.y * TT, hasard);
@@ -4086,6 +4093,16 @@ const Entites = (function () {
       }
       return;
     }
+    // PROJETE PAR UN MANTE (`techniques.js`) : en l'air, `majVols` le porte ; retombe, il reste couche le temps
+    // de reprendre son souffle (`auSol`), puis se releve tout seul — il n'est pas assomme. Et tant qu'un Mante
+    // le tient (`saisiPar`), il ne marche plus : ESQUIVE le degage (`Combat.majGestes`).
+    if (j.vol) { j.vx = 0; j.vy = 0; return; }
+    if (j.auSol > 0) {
+      j.vx = 0; j.vy = 0;
+      if (--j.auSol <= 0) j.face = 'bas';
+      return;
+    }
+    if (j.saisiPar && Techniques.tenuPar(j)) { j.vx = 0; j.vy = 0; return; }
     // Il tient quelqu'un (SAISIR) : il ne marche pas. ⚠️ SOUS le compte du K.-O. :
     // au-dessus, un deuxieme joueur assomme en pleine prise ne se relevait jamais.
     if (j.prise) { j.vx = 0; j.vy = 0; return; }
@@ -4512,7 +4529,12 @@ const Entites = (function () {
       e.vx = colle ? 0 : dx / norme * vitesse;
       e.vy = colle ? 0 : dy / norme * vitesse;
       if (colle) regarder(e, dx, dy);
-      if (norme < 18 && e.t % 40 === 0 && !e.coupsDictes) Combat.frapper(e);
+      // LES MANTES (`app/mantes.py`) frappent de plus loin et plus souvent — le pied porte plus loin que le
+      // poing —, et parent ton coup quand tu l'armes a portee (`Techniques.parer`).
+      const mante = e.techniques && B.defs.mantes;
+      if (mante && Techniques.parer(e, B.joueur)) return;
+      const portee = mante ? mante.portee_px : 18, cadence = mante ? mante.cadence_images : 40;
+      if (norme < portee && e.t % cadence === 0 && !e.coupsDictes) Combat.frapper(e);
     } else if (e.etat === 'vole_un_char') {
       // Il marche droit sur le char qu'il a repere, d'un pas presse. ⚠️ Il
       // RENONCE : le char peut partir, exploser, ou quelqu'un monter dedans —
@@ -4546,13 +4568,17 @@ const Entites = (function () {
       if (!e.rival) { finirLaBagarre(e); return; }
       vitesse = v.pieton_course * e.allure;
       const dx = e.rival.x - e.x, dy = e.rival.y - e.y, norme = Math.hypot(dx, dy) || 1;
-      if (norme > f.portee_px) {
+      // LES MANTES (`app/mantes.py`) se battent AUTREMENT dans une rixe aussi : ils viennent au contact (la
+      // prise), frappent plus souvent, et retournent le poignet de celui qui arme sa batte.
+      const mante = e.techniques && B.defs.mantes;
+      if (mante && Techniques.parer(e, e.rival)) return;
+      if (norme > (mante ? mante.saisie_px - 2 : f.portee_px)) {
         e.vx = dx / norme * vitesse;
         e.vy = dy / norme * vitesse;
       } else {
         e.vx = 0; e.vy = 0;
         regarder(e, dx, dy);
-        if (e.t % f.cadence_images === 0) {
+        if (e.t % (mante ? mante.cadence_images : f.cadence_images) === 0) {
           Combat.frapper(e, false);
           // ⚠️ Tu passais par la : un passant te prend pour un des leurs (M12).
           Police.crimeDAutrui('coup_pieton', e.x, e.y, e);

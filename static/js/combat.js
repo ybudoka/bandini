@@ -138,6 +138,8 @@ const Combat = (function () {
     e.phase = 'anticipation';
     e.phaseT = arme.anticipation;
     e.touches = [];
+    // Le compte des elans : un Mante decide sa parade une fois par coup (`Techniques.parer`).
+    e.elans = (e.elans || 0) + 1;
     if (Entites.estJoueur(e) && arme.etoiles_usage > 0) {
       Police.signalerCrime('arme_sortie', e.x, e.y, Police.quelqu_un_voit(e.x, e.y, e));
     }
@@ -1178,6 +1180,8 @@ const Combat = (function () {
     // son partenaire : le compte se fait dans `majJoueur`, pas au bouton.
     majEnMain(j);
     if (!j || j.dansVehicule || j.manege || !j.vivant || j.enjambe || j.alite || j.assis || j.etat === 'assomme') return;
+    // ⚠️ PROJETE (un Mante, `techniques.js`) : en l'air ou couche, on ne fait rien — on retombe, on se releve.
+    if (j.vol || j.auSol > 0) return;
     // ⚠️ ROUE OUVERTE, ON NE SE BAT PAS. Le monde rampe tant qu'elle est la :
     // pouvoir tirer dedans, ce serait un ralenti a la demande — tenir ARME,
     // viser tranquillement, tirer. On choisit son arme OU on se bat.
@@ -1191,6 +1195,9 @@ const Combat = (function () {
     // parade. ⚠️ APRES toutes les gardes du dessus (char, cloture, lit, manege,
     // roue, epreuve) : elles valent pour elle aussi. Et tant qu'on tient quelqu'un,
     // FRAPPE et ACTION sont a la prise, pas au reste.
+    // SAISI PAR UN MANTE : ESQUIVE le degage (et la roulade part juste en dessous), SAISIR fait la parade si on
+    // connait le retournement du poignet ; FRAPPE et ACTION ne font rien.
+    if (Techniques.majSaisi(j, ent)) return;
     if (Techniques.majPrise(j, ent)) return;
 
     if (ent.neuf('esquive')) roulade(j);

@@ -29,8 +29,8 @@ assert sum(RANGEES_NORD) + sum(RUES_H_NORD[:-1]) == DECALAGE_NORD
 #: (`carte.USAGE_DU_PLAN` les connaît ; la ville d'avant n'en a aucune).
 #: ⚠️ UN AGENT PAR DISTRICT, comme aux Érables et à La Shop : à `police: 0`, la police retirait ses autos
 #: en entrant dans la bande — un refuge au bout de la rue (`test_police_js` l'a vu).
-#: ⚠️ LES GANGS SONT CEUX DU VOISIN DU SUD, en attendant les Mantes (étape 4) : un district sans gang existe
-#: (la baie), mais personne n'y marche — on n'ouvre pas ce chemin ici.
+#: ⚠️ LES GANGS SONT CEUX DU VOISIN DU SUD, sauf au Petit-Canton, où ce sont les Mantes (étape 4) : un district
+#: sans gang existe (la baie), mais personne n'y marche — on n'ouvre pas ce chemin ici.
 DISTRICTS_NORD: tuple[dict, ...] = (
     {"slug": "friches", "nom": "Les Friches", "bx": 0, "by": 0,
      "gang": "chevreuils", "gang_nom": "Les Chevreuils", "brume": False,
@@ -42,8 +42,11 @@ DISTRICTS_NORD: tuple[dict, ...] = (
     # que l'arche l'ouvrira, vague B), des logements tout autour, et la place du marché au cœur, sur la rue.
     # ⚠️ Chaque îlot du quartier se bâtit avec SES dés (`_ChantierNord._a_ses_des`) : les Friches et la Gare
     # gardent leurs tirages à l'unité près.
+    # ⚠️ LES MANTES (étape 4, 29 sept. 2026) : le quartier est à EUX pour les gangs (sa frontière, la couture face
+    # aux Cravates), mais leur territoire n'est que le coin de leur école (`mantes.ZONE`) — pas de cour `g` dans le
+    # plan, qui re-tirerait le quartier.
     {"slug": "canton", "nom": "Le Petit-Canton", "bx": 5, "by": 0,
-     "gang": "cravates", "gang_nom": "Les Cravates", "brume": False,
+     "gang": "mantes", "gang_nom": "Les Mantes", "brume": False,
      "pietons": 16, "vehicules": 5, "police": 1, "rythme": (0.3, 1.0, 0.9), "rares": (),
      "plan": ("hhhcchhh",
               "hhccchhh",
@@ -770,6 +773,10 @@ def poser(ville: dict) -> None:
     # LE PETIT-CANTON, ÉTAPE 2, VAGUE B : son arche et ses lanternes, sur la carte finie, sans un dé.
     from . import canton as canton_mod
     ville["canton"] = canton_mod.poser(ville, ch, district("canton"), n)
+    # LES MANTES (étape 4) : leur école, la pièce d'un commerce du quartier reprise, et leur territoire autour, au
+    # BOUT des zones. Sur la carte finie, sans un dé — comme le DOJO DION au Faubourg.
+    from . import mantes as mantes_mod
+    mantes_mod.poser(ville, ch, district("canton"), n)
     ville["grille_nord"] = {"colonnes": list(carte.COLONNES), "rangees": list(RANGEES_NORD),
                             "rues_v": list(carte.RUES_V), "rues_h": list(RUES_H_NORD),
                             "trottoir": carte.TROTTOIR, "standing": list(ch.standing),

@@ -1647,6 +1647,13 @@ const Missions = (function () {
     p.fouilles = p.fouilles || {};
     if (p.fouilles[cle]) { Hud.message('LES TIROIRS SONT VIDES'); return true; }
     p.fouilles[cle] = 1;
+    // Un point GARDE (les casiers de l'ECOLE LA MANTE, `mantes.py`) : les membres du gang presents dans la piece
+    // le voient faire, et te tombent dessus.
+    if (point.garde) {
+      for (const e of B.entites) {
+        if (e.type === 'pieton' && e.vivant && e.gang === point.garde && e.etat !== 'assomme') { e.etat = 'attaque_joueur'; e.cri = 90; }
+      }
+    }
     const dehors = B.exterieur && B.exterieur.carte;
     const gain = gainDeFouille(porte && dehors ? Monde.standingA(porte.x, porte.y, dehors) : null);
     encaisser(gain, 'DANS LES TIROIRS');

@@ -34,8 +34,9 @@ COIFFURES = ("courte", "rase", "chauve", "degarnie", "longue", "queue", "chignon
 CHAPEAUX = ("aucun", "casquette", "casquette_arriere", "tuque", "feutre", "casque_chantier",
             "kepi", "canotier", "beret", "bandana", "cowboy", "marin", "capuche")
 
+#: `veste_kungfu` : la veste à col montant et à boutons de corde (les brandebourgs) des Mantes (`mantes.py`).
 HAUTS = ("chandail", "tshirt", "chemise", "veston", "manteau", "coton_ouate", "camisole",
-         "robe", "salopette", "tablier", "veste_travail", "sarrau")
+         "robe", "salopette", "tablier", "veste_travail", "sarrau", "veste_kungfu")
 
 MOTIFS = ("uni", "raye", "carreaute")
 
@@ -69,6 +70,8 @@ COULEURS = {
                  "#7a5a2a", "#8e44ad", "#e67e22"),
     # Les uniformes : UNE couleur chacun, celle que la rue reconnaît.
     "police": ("#16264a",),
+    # Le noir de l'école : le pantalon et le bandeau des Mantes.
+    "mantes": ("#15151c",),
     "garde": ("#3a3d33",),
 }
 
@@ -149,6 +152,13 @@ GARDE_ROBES: dict[str, dict] = {
                   ("short", "pantalon"), chapeaux=("casquette_arriere", "capuche", "tuque"),
                   chapeau_chance=0.7, couleurs_haut=("gang",), couleurs_bas=("jeans", "sobres"),
                   accessoires={"sac_a_dos": 0.3}),
+    # LES MANTES (docs/jalons/l-ecole-rivale.md) : la veste de kung-fu vert mante, le pantalon et les souliers
+    # noirs de l'école — et le bandeau de ceux qui se croient dans un film. Des gars ET des filles : l'école
+    # prenait tout le monde, et tout le monde a mal tourné pareil.
+    "mante": _g(("homme", "grand", "femme", "homme"), ("courte", "rase", "queue", "meche", "longue"),
+                ("veste_kungfu",), ("pantalon",), chapeaux=("bandana",), chapeau_chance=0.45,
+                couleurs_haut=("gang",), couleurs_bas=("mantes",), couleurs_chapeau=("mantes",),
+                souliers=("souliers",), accessoires={"lunettes_soleil": 0.2}),
     "docker": _g(("costaud", "costaud", "homme"), ("courte", "rase", "degarnie"),
                  ("chandail", "veste_travail", "salopette"), ("pantalon",),
                  chapeaux=("tuque", "tuque", "marin", "casquette"), chapeau_chance=0.75,

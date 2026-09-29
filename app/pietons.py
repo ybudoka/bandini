@@ -16,7 +16,7 @@ de seulement fuir — c'est le deuxieme canal de detection de la police (M4).
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 
 class Pieton(TypedDict):
@@ -39,6 +39,7 @@ class Pieton(TypedDict):
     standings: tuple[str, ...] | None
     frequence: float
     phase: int
+    techniques: NotRequired[list[str]]
 
 
 def _p(slug, nom, chandail, cheveux, peau, pantalon, *, sprite="joueur", vitesse=1.0,
@@ -86,6 +87,17 @@ CATALOGUE: list[Pieton] = [
     _p("skateux", "Un Skateux", "#9b3fa8", "#1a1a1a", "#e8b088", "#2a2a3a",
        courage=0.55, vie=70, vitesse=1.3, argent=(5, 40), arme=None,
        gang="skateux", frequence=0.0, temoin=0.0),
+    # LES MANTES, le gang du Petit-Canton (docs/jalons/l-ecole-rivale.md) : les élèves de l'ÉCOLE LA MANTE,
+    # qui ont mal tourné. Vert mante, pantalon noir — et PAS DE BATTE : ils se battent avec le répertoire
+    # (`techniques.py`), leurs pieds et leurs projections, et parent ton coup (`mantes.COMBAT`). Plus durs
+    # que les autres : plus de vie, plus vite, et ils frappent de plus loin.
+    # ⚠️ `techniques` n'existe QUE sur eux : `Techniques.sait` le lit sur chaque passant, et un champ vide sur
+    # les quarante autres archétypes alourdirait le paquet pour rien.
+    {**_p("mante", "Une Mante", "#4c9a2a", "#101018", "#e8b088", "#1a1a22",
+          courage=0.95, vie=110, vitesse=1.15, argent=(10, 60), arme=None,
+          gang="mantes", frequence=0.0, temoin=0.0),
+     "techniques": ["pied_circulaire", "pied_de_cote", "projection_hanche", "grand_fauchage",
+                    "retournement_poignet"]},
     # ⚠️ Les passants de quartier : `districts` les ENFERME chez eux. Un
     # debardeur aux Erables, un banlieusard sur les quais, et les cinq
     # quartiers redeviennent le meme quartier repeint.
@@ -421,6 +433,11 @@ GANGS: list[dict] = [
      "hostile_toujours": True, "phase": 1},
     {"slug": "skateux", "nom": "Les Skateux", "pieton": "skateux", "zone": "skateux",
      "district": "pointe", "membres": 6, "hostile_si_arme": True,
+     "hostile_toujours": False, "phase": 1},
+    # Le Petit-Canton (au nord, `nord.DISTRICTS_NORD`) : leur territoire est autour de leur école
+    # (`mantes.ZONE`), et leur frontière, celle du quartier — la couture, face aux Cravates.
+    {"slug": "mantes", "nom": "Les Mantes", "pieton": "mante", "zone": "mantes",
+     "district": "canton", "membres": 7, "hostile_si_arme": True,
      "hostile_toujours": False, "phase": 1},
 ]
 

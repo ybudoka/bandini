@@ -35,7 +35,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-from . import (armes, audio, blocs, calendrier, saisons, carte, demenagement, derby, enseignes, fetes, garage, motoneige, quatre_roues, saint_jean, devantures, dojo, economie, garderobe, interactions, journal, magasins,
+from . import (armes, audio, blocs, calendrier, saisons, carte, demenagement, derby, enseignes, fetes, garage, motoneige, quatre_roues, saint_jean, devantures, dojo, economie, mantes, garderobe, interactions, journal, magasins,
                brouillard, loto, machine_a_sous, manettes, tables_de_jeu, missions, nord, nuit, pietons, recherche, techniques, vehicules, verglas, videopoker,
                pont_de_glace, visages)
 from .blocs import galeries as galeries_hantees
@@ -65,6 +65,8 @@ def assembler() -> dict:
         "techniques": techniques.CATALOGUE,
         # Le DOJO DION : les regles de la lecon et ce que Mireille dit (docs/jalons/le-dojo-du-quartier.md).
         "dojo": dojo.exporter(),
+        # Les MANTES, le gang de l'école rivale du Petit-Canton : leur façon de se battre (docs/jalons/l-ecole-rivale.md).
+        "mantes": mantes.exporter(),
         "economie": economie.exporter(),
         # La machine du fond du bar (docs/jalons/le-videopoker-du-brouillard.md).
         "videopoker": videopoker.pour_le_navigateur(),
