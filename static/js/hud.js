@@ -3263,6 +3263,7 @@ const Hud = (function () {
     ctx.fillRect(MINI.x - 1, MINI.y - 1, MINI.l + 2, MINI.h + 2);
     ctx.drawImage(mini, sx, sy, MINI.l, MINI.h, MINI.x, MINI.y, MINI.l, MINI.h);
     B.stats.images++;
+    SurPlace.dessinerMini(ctx, MINI, sx, sy);   // une mission gardee : le hors-zone grise
     for (const point of lieuxSurLaCarte(carte)) {
       const px = MINI.x + point.x - sx, py = MINI.y + point.y - sy;
       if (px < MINI.x || px >= MINI.x + MINI.l || py < MINI.y || py >= MINI.y + MINI.h) continue;
@@ -3515,6 +3516,7 @@ const Hud = (function () {
     Train.dessinerSurLaCarte(ctx, pos);         // le train : pleine au sol, doublée sur le viaduc, pointillée sous la montagne
     Territoires.dessinerSurLaCarte(ctx, pos);   // les ilots PRIS, aux couleurs de qui les tient
     dessinerLaVilleDuBoss(ctx, carte, pos);     // M13 : apres m98, les districts a l'or des Bandini
+    SurPlace.dessinerSurLaCarte(ctx, pos);      // une mission gardee : le hors-zone grise
     Traversier.dessinerSurLaCarte(ctx, pos);
     Navette.dessinerSurLaCarte(ctx, pos);
     for (const point of lieuxSurLaCarte(carte)) {

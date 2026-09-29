@@ -122,5 +122,36 @@ const SurPlace = (function () {
     return bm && bm.hors ? ' — REVIENS ! ' + Math.max(1, Math.ceil((HORS_IMAGES - bm.hors) / 60)) + ' S' : '';
   }
 
-  return { HORS_IMAGES, heureCible, avancerA, sauter, ici, dedans, nom, maj, suffixe };
+  // --- Le hors-zone GRISE, sur la mini-carte et la grande carte -------------------------------
+  const GRIS = 'rgba(11,10,18,0.55)';
+
+  /** Les districts (en tuiles) autres que la frontiere d'une mission gardee. Vide sans elle, pour
+      une frontiere de bloc (le bloc est toute sa carte), et dans un bloc (sa carte n'a pas la ville). */
+  function zonesHors(carte) {
+    const m = Histoire.courante(), pm = B.partie && B.partie.mission;
+    if (!m || !m.frontiere || !pm || !pm.gardee || m.frontiere.indexOf('bloc:') === 0 || B.bloc) return [];
+    return ((carte && carte.zones) || []).filter(function (z) { return z.district === z.slug && z.slug !== m.frontiere; });
+  }
+
+  function dessinerSurLaCarte(ctx, pos) {
+    ctx.fillStyle = GRIS;
+    for (const z of zonesHors(Monde.carte)) {
+      const a = pos(z.x * TT, z.y * TT), c = pos((z.x + z.l) * TT, (z.y + z.h) * TT);
+      ctx.fillRect(a.x, a.y, c.x - a.x, c.y - a.y);
+    }
+  }
+
+  /** La mini-carte est a une tuile par pixel, decalee de (sx, sy) ; on ne deborde pas de son cadre. */
+  function dessinerMini(ctx, mini, sx, sy) {
+    const zones = zonesHors(Monde.carte);
+    if (!zones.length) return;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(mini.x, mini.y, mini.l, mini.h); ctx.clip();
+    ctx.fillStyle = GRIS;
+    for (const z of zones) ctx.fillRect(mini.x + z.x - sx, mini.y + z.y - sy, z.l, z.h);
+    ctx.restore();
+  }
+
+  return { HORS_IMAGES, heureCible, avancerA, sauter, ici, dedans, nom, maj, suffixe,
+           zonesHors, dessinerSurLaCarte, dessinerMini };
 })();

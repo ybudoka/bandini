@@ -230,3 +230,33 @@ def test_pas_de_frontiere_pas_de_compte(banc):
         return { compte: L.B.mission.hors || 0, mission: !!L.B.partie.mission };
     }""")
     assert r == {"compte": 0, "mission": True}
+
+
+def test_les_districts_hors_de_la_frontiere_se_grisent(banc):
+    r = banc("function (L, o) {" + OUTILS + FRONTIERE + """
+        L.Jeu.commencer(); L.graine(6);
+        const avant = L.SurPlace.zonesHors(L.Monde.carte).length;
+        garder(L, o, 'q13', 'quais');
+        const z = L.SurPlace.zonesHors(L.Monde.carte);
+        return { avant: avant, n: z.length, quais: z.some(function (q) { return q.slug === 'quais'; }),
+                 faubourg: z.some(function (q) { return q.slug === 'faubourg'; }) };
+    }""")
+    assert r["avant"] == 0
+    assert r["n"] >= 8 and not r["quais"] and r["faubourg"]
+
+
+def test_les_deux_cartes_peignent_le_gris(banc):
+    """Le HUD appelle bien le gris : la mini-carte en jeu, la grande carte ouverte."""
+    r = banc("function (L, o) {" + OUTILS + FRONTIERE + """
+        L.Jeu.commencer(); L.graine(6);
+        garder(L, o, 'q13', 'quais');
+        const vus = { mini: 0, carte: 0 }, sp = L.SurPlace;
+        const mini = sp.dessinerMini, carte = sp.dessinerSurLaCarte;
+        sp.dessinerMini = function () { vus.mini += 1; return mini.apply(this, arguments); };
+        sp.dessinerSurLaCarte = function () { vus.carte += 1; return carte.apply(this, arguments); };
+        L.Jeu.rendre();
+        L.Jeu.ouvrirCarte(); L.Jeu.rendre(); L.Jeu.fermerCarte();
+        sp.dessinerMini = mini; sp.dessinerSurLaCarte = carte;
+        return vus;
+    }""")
+    assert r["mini"] >= 1 and r["carte"] >= 1
