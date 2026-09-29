@@ -331,3 +331,19 @@ devient de l'abord : rien au décor) ; chez Ti-Pout, le coin sud-est de la cour,
 se lit à `(jour - 1) % n`, et celui d'hier n'est rentré que s'il est encore sur sa dalle, stationné, à personne, et
 HORS CHAMP. Au comptoir, « EN MONTRE — » en tête, au prix du modèle (`prixDeMontre`). Juges : deux en Python, trois
 au banc (la garde « pas sous les yeux » vue rouge par mutation).
+
+### Le lot devant, clôturé (29 sept. 2026)
+
+Livré comme la fiche le dit. Le Salon s'est retourné sur son stationnement : le bâtiment sur les anciennes cases `^`,
+la vitrine face au sud, deux rangées d'allée, puis **cinq chars nez sur la rue** contre la clôture — de l'asphalte
+sans cases peintes, pour que les chars de la rue n'y entrent pas se garer portail ouvert. La clôture de **fer
+forgé** (`(`, solidité 4 : elle s'enjambe à pied) et son **portail** (`)`, coulissant, deux tuiles dans l'axe de
+la porte) ; le portail rejoint les barrières du poste (`Monde.coulissantesDe`) avec sa règle à lui : ouvert de
+8 h à 21 h (`heures`), sinon seulement devant un char `aToi` conduit — un char volé de nuit reste dedans. Le char
+en montre reste dehors, sur sa dalle au coin.
+
+Deux effets de bord réglés : le blip du Salon mène maintenant **devant le portail** (devant la porte, on est déjà
+dans l'enclos — `test_barrieres` exige un lieu atteignable à pied) ; et le juge du lampadaire (`test_ce_qui_casse`)
+prenait le PREMIER lampadaire de la ville — celui collé au Salon — et plantait son tireur dans le toit neuf : il
+prend maintenant le premier dont la ligne de tir est libre.
+
