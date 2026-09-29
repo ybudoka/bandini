@@ -729,7 +729,12 @@ def test_les_personnages_disent_leur_repos_a_voix_haute(banc, paquet):
     disait « reviens me voir plus tard » (avant M5) ou « le Faubourg est tranquille » (après) en
     silence. Rouge avant : aucune voix demandée."""
     import json
-    abordables = [p["slug"] for p in paquet["personnages"] if p.get("ou") and not p.get("parti_apres")]
+    from app import missions
+    # ⚠️ Qui PART après une mission garde son repos tant qu'il est là, si elle n'est pas à lui dès la première
+    # minute (`missions.repliques_de_repos`) : Marco (m97, 29 sept. 2026), Bérubé (m99). Ti-Guy (m1) l'a toujours à
+    # donner ; Cindy, Jo et le maire n'arrivent qu'après une mission et repartent après la suivante.
+    abordables = [p["slug"] for p in paquet["personnages"] if p.get("ou")
+                  and not (p.get("parti_apres") and (p.get("arrive_apres") or missions._sa_mission_l_attend_toujours(p)))]
     tous = [m["slug"] for m in paquet["missions"]]
     # ⚠️ Un PLANCHER, pas la liste : figée au 20 sept., elle rougissait à chaque personnage
     # neuf (Gus, Rosa, Ginette, Gilles, le Bonimenteur…). Ce qu'on juge, c'est que CHACUN des

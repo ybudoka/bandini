@@ -158,6 +158,27 @@ const Histoire = (function () {
       C'est ce qui fait les choix (q10/q11, r03/r04, d07/d08, e11, x04). */
   function estFermee(slug) { return (B.partie.fermees || []).indexOf(slug) >= 0; }
 
+  /** La mission `m` a-t-elle besoin du personnage `slug` en ville : il la DONNE, ou l'on doit lui PARLER ? */
+  function aBesoinDe(m, slug) {
+    return m.donneur === slug || (m.objectifs || []).some(function (o) {
+      return !!o && o.type === 'parler' && cibleDuParler(o) === slug;
+    });
+  }
+
+  /** PARTI (`parti_apres`) : sa mission de depart est faite, et plus rien ne le RETIENT en ville.
+
+      ⚠️ Ce qui le retient : une mission ni faite ni fermee qui a besoin de lui (`aBesoinDe`). Marco
+      disparait apres m97 (« Moi, je disparais », Martin, 29 sept. 2026) — mais m97 ne demande que m5 et
+      trois districts : on peut la jouer avant f08 et f09 (les siennes, apres f02, f03 et f06), et avant f12,
+      ou Madame Thibodeau t'envoie chercher SON enveloppe au garage. Parti tout de suite, il laissait trois
+      missions qu'on ne pouvait plus jamais jouer. Il s'en va donc apres la derniere des deux : m97, ou la
+      derniere qui avait besoin de lui (`jouerLaFin`). Ti-Guy, Berube, Cindy, Jo et le maire ne sont
+      attendus par aucune autre mission : pour eux, rien ne change. */
+  function estParti(p) {
+    if (!p || !p.parti_apres || !faite(p.parti_apres)) return false;
+    return !defs().some(function (m) { return !faite(m.slug) && !estFermee(m.slug) && aBesoinDe(m, p.slug); });
+  }
+
   /** Les missions qu'on peut commencer : prerequis faits, pas encore faites,
       aucune en cours, `exige` tenu, et pas fermees. */
   function disponibles() {
@@ -575,8 +596,8 @@ const Histoire = (function () {
   function creerDonneurs() {
     for (const p of personnages()) {
       // Parti apres sa mission (Ti-Guy entre au garage a la fin de M1) : dans les
-      // donnees, parce qu'ici aucun slug de mission ne s'ecrit.
-      if (p.parti_apres && faite(p.parti_apres)) continue;
+      // donnees, parce qu'ici aucun slug de mission ne s'ecrit (`estParti`).
+      if (estParti(p)) continue;
       // Pas encore arrive (`arrive_apres` : le vieux maitre des Mantes, en Floride jusqu'a la chute du Pouce).
       if (p.arrive_apres && !faite(p.arrive_apres)) continue;
       poserDehors(p);
@@ -783,7 +804,7 @@ const Histoire = (function () {
       if (p.arrive_apres && !faite(p.arrive_apres)) continue;
       // ⚠️ `parti_apres` DEDANS AUSSI (M13) : le maire Tanguay quitte la chambre de l'hotel apres m98. Jusque-la,
       // aucun personnage de piece ne partait — la regle n'etait ecrite que pour ceux de la rue.
-      if (p.parti_apres && faite(p.parti_apres)) continue;
+      if (estParti(p)) continue;
       const point = (piece.points || []).find(function (q) { return q.type === p.ou.slice(6); });
       if (!point) continue;
       const place = placeDebout(point);
@@ -1323,8 +1344,11 @@ const Histoire = (function () {
       // faisait entrer au garage, et une mission qui n'ecrit pas la sienne
       // laissait son donneur plante devant sa porte jusqu'au rechargement.
       // Ici, aucun slug ne s'ecrit : la fiche dit apres quelle mission il part.
+      // ⚠️ Apres SA mission de depart, ou apres la derniere qui le retenait (`estParti` : Marco, m97
+      // jouee avant f08, f09 ou f12 — il s'en va a la fin de la derniere).
       for (const p of personnages()) {
-        if (p.parti_apres !== m.slug) continue;
+        if (p.parti_apres !== m.slug && !aBesoinDe(m, p.slug)) continue;
+        if (!estParti(p)) continue;
         const e = donneur(p.slug);
         if (e) Entites.retirer(e);
       }
@@ -1337,7 +1361,7 @@ const Histoire = (function () {
       if (!B.bloc) dansLaVille(function () {
         for (const p of personnages()) {
           if (p.arrive_apres !== m.slug || donneur(p.slug)) continue;
-          if (p.parti_apres && faite(p.parti_apres)) continue;
+          if (estParti(p)) continue;
           poserDehors(p);
         }
       });
@@ -3577,7 +3601,7 @@ const Histoire = (function () {
     majDeblocages(false);
   }
 
-  return { texteDObjectif, exigeTenu, disponibles, disponibleDe, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
+  return { texteDObjectif, exigeTenu, disponibles, disponibleDe, estParti, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
            donneur, creerDonneurs, poserDonneur, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
            parler, dire, suivante, finir, commencer, demarrer, avancer, objectif, courante, reussir, echouer, evenement,
            ouverture, passerOuverture, fichiersDeLOuverture, direLignes, majCinema, resoudre,

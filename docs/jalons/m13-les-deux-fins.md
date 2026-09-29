@@ -190,6 +190,17 @@ m98, son générique, la ville qui change de couleur.
   scène de fin la fait jouer (on va la voir, par l'escalier s'il le faut) : le maire y parle en personne, Josée au
   combiné.
 - **Vu à la capture** : la teinte seule de la grande carte se confondait avec la brique — un liseré d'or l'entoure.
-- ⚠️ **Ce qui reste hors de M13** : Marco ne disparaît toujours pas après m97 (il a encore des missions à donner
-  dans certains chemins) ; se cacher dedans pendant les 90 secondes de la police fait tomber les étoiles comme
+- ⚠️ **Ce qui reste hors de M13** : se cacher dedans pendant les 90 secondes de la police fait tomber les étoiles comme
   partout — le chrono, lui, court.
+- **Marco disparaît après m97** (Martin, 29 sept. 2026 ; correctif d'une bouchée, pas de ligne au plan). Après t'avoir
+  vendu (« Moi, je disparais »), il attendait encore devant le garage. Il a maintenant `parti_apres: "m97"`, comme
+  Ti-Guy et Bérubé : retiré à la fin de m97 sans recharger, absent à la partie suivante, grisé PARTI dans « chez un
+  donneur ». ⚠️ **Mais m97 ne demande que m5 et trois districts** : f08 et f09 (les siennes, après f02, f03 et f06) et
+  f12 (Madame Thibodeau t'envoie chercher son enveloppe au garage, un `parler` qui le vise) peuvent venir APRÈS. Parti
+  tout de suite, il laissait trois missions à jamais injouables. La règle a donc un garde générique,
+  `Histoire.estParti` : on ne part pas tant qu'une mission ni faite ni fermée a besoin de soi (donneur, ou cible d'un
+  `parler`) — et `jouerLaFin` retire aussi le personnage à la fin de la DERNIÈRE qui le retenait. Ti-Guy, Bérubé,
+  Cindy, Jo et le maire ne sont attendus par aucune autre mission : pour eux, rien ne change. Le taxi de m97
+  (`vehiculePlanque`) et celui de M3 (`aQui`, jamais vendable) ne dépendent pas de lui ; son repos reste payé (m97 a des
+  prérequis). Juge : `test_marco_disparait_apres_m97` (`tests/test_personnages_tardifs_js.py`) — trois mutations
+  rouges (sans `parti_apres`, sans la retenue, sans le retrait à la fin de f08).

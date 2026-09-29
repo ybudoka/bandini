@@ -2320,12 +2320,11 @@ const Hud = (function () {
       MISSION a droite : il en a une a donner ; son titre se lit en bas, sous le
       curseur (il ne tiendrait pas a cote du nom).
       ⚠️ Un personnage PARTI apres sa mission (`parti_apres` : Ti-Guy au garage,
-      Berube) est grise : aller le voir le reposerait en ville pour de bon. Le
+      Berube, Marco apres m97 — `Histoire.estParti`) est grise : aller le voir le reposerait en ville pour de bon. Le
       saut de mission, lui, le repose expres — sa mission se refait. */
   function menuChezUnDonneur() {
-    const p = B.partie;
     const items = (B.defs.personnages || []).filter(function (q) { return !!q.ou; }).map(function (q) {
-      const parti = !!(q.parti_apres && p.missionsFaites[q.parti_apres]);
+      const parti = Histoire.estParti(q);
       const m = !parti && Histoire.disponibleDe(q.slug);
       return { libelle: q.nom.toUpperCase(), detail: parti ? 'PARTI' : (m ? 'MISSION' : ''), actif: !parti,
                personnage: q.slug, mission: m ? m.titre.toUpperCase() : null,

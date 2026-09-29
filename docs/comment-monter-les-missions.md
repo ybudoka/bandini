@@ -136,7 +136,10 @@ Règles à respecter :
 - **`ou` vide** est réservé aux personnages qui ne se tiennent nulle part (le
   client de taxi, le narrateur).
 - **`parti_apres`** ne s'écrit **jamais** en dur dans le JS : c'est une donnée
-  ici, et un juge interdit tout slug de mission du côté navigateur.
+  ici, et un juge interdit tout slug de mission du côté navigateur. ⚠️ Il ne part
+  pas tant qu'une mission ni faite ni fermée a **besoin de lui** (il la donne, ou un
+  `parler` le vise) : `Histoire.estParti`. Marco (`m97`) reste pour f08, f09 et f12
+  si on les joue après, et s'en va à la fin de la dernière.
 
 ---
 

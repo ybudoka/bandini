@@ -10,7 +10,7 @@
 |---|---|
 | Slug | `marco` |
 | Rôle | le taxi du garage, la contrebande à voix basse, et celui qui te vendra (m97) |
-| Où | devant le garage (`porte:garage`) |
+| Où | devant le garage (`porte:garage`) ; après m97, il disparaît (`parti_apres: "m97"`) — pas avant la fin de f08, f09 et f12 si on les joue après : elles ont besoin de lui (`Histoire.estParti`) |
 | Voix | **Québec Tremblay — Confident and Measured** (partagée avec Ti-Paul : jamais dans le même dialogue) |
 | Bulle | « Hé! Viens ici! » |
 | Couleurs | chandail jaune, cheveux noirs, peau hâlée |

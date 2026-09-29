@@ -152,9 +152,12 @@ PERSONNAGES: list[Personnage] = [
     {"slug": "thibodeau", "nom": "Madame Thibodeau", "genre": "femme", "voix": "Julia",
      "couleurs": {"c": "#8e44ad", "h": "#d0d0d0", "s": "#e8b088", "p": "#4a3a5a"}, "ou": "porte:kiosque",
      "heler": "Psst! Toi!"},
+    # ⚠️ Marco disparaît après m97, _Marco te vend_ (« Moi, je disparais », Martin, 29 sept. 2026) — mais pas tant
+    # qu'une mission a encore besoin de lui : f08 et f09 (les siennes) et f12 (son enveloppe, au garage) peuvent venir
+    # APRÈS m97, qui ne demande que m5 et trois districts. `estParti` (`histoire.js`) le garde jusqu'à la dernière.
     {"slug": "marco", "nom": "Marco", "genre": "homme", "voix": "Québec Tremblay - Confident and Measured",
      "couleurs": {"c": "#f1c40f", "h": "#101018", "s": "#c98d66", "p": "#2a2a3a"}, "ou": "porte:garage",
-     "heler": "Hé! Viens ici!"},
+     "heler": "Hé! Viens ici!", "parti_apres": "m97"},
     {"slug": "bouchard", "nom": "Sergent Bouchard", "genre": "homme", "voix": "Khaivan - Quebec accent",
      "couleurs": {"c": "#1f3a6e", "h": "#8a8a8a", "s": "#e8b088", "p": "#16264a"}, "ou": "point:sergent",
      "heler": "Ici, le jeune!"},
