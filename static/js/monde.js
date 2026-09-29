@@ -2088,6 +2088,9 @@ const Monde = (function () {
         FACADES.graffiti(ctx, gr, Territoires.bombeDe(gr.gang), (gr.x - ox) * TT, (gr.y - oy) * TT);
       });
     }
+    // LA RUE DES SAISONS (lot 4b) : les bancs de neige au bord des trottoirs, les abris Tempo dans les
+    // entrees, les terrasses de l'ete — peints ici, ils se repeignent au palier avec le reste du morceau.
+    if (typeof RueDesSaisons !== 'undefined') RueDesSaisons.peindre(ctx, carte, mx, my, TT, MORCEAU);
     // Le chantier par-dessus tout : ses planches et son panneau pendent AU MUR.
     Chantiers.peindre(ctx, mx, my);
     // L'aeroport : la piste, ses avions, et le pont qui s'arrete au-dessus de l'eau.

@@ -1291,3 +1291,39 @@ glace et le dérapage (lot 6) restent en dernier, à part._
   mais pas « un manteau d'hiver » ; les mitaines et les bottes d'hiver ne se voient pas à cette taille ;
   les enfants (dessinés à la main, sans garde-robe) ne s'habillent pas ; le joueur non plus.
 
+### Lot 4, vague 4b — la rue des saisons (livrée le 29 sept. 2026)
+
+- **Tout est peint, rien n'est posé** (`static/js/rue_des_saisons.js`, les données dans `saisons.RUE`) :
+  aucune tuile, aucun décor, aucun identifiant, aucun dé ; la ville ne bouge pas d'un octet. Bancs, Tempo
+  et terrasses se peignent dans les morceaux cuits (`Monde.peindreDevantures`) et ne lisent que la
+  palette du moment : ils se repeignent au palier avec le gazon, jamais à chaque image.
+- **Les bancs de neige** : dans la rue, le long de chaque trottoir (jamais sur une traverse, une entrée,
+  une ruelle ou un rail), tant que la neige tient ; leur largeur suit la neige (3 à 6 px), leur profil une
+  houle continue d'une tuile à l'autre (au hasard pur, il faisait un peigne — vu sur la capture) ; au
+  dégel, ils rapetissent et se salissent de gravier.
+- **Les abris Tempo** (22 dans la ville) : dans l'entrée de stationnement qui longe une maison (quatre
+  sur cinq, à l'empreinte) et devant le rideau d'un garage de maison ; montés dès novembre (froid ≥ 0,5),
+  démontés au dégel quand la neige a fondu de moitié. Un char passe dessous comme avant (peints au sol).
+- **La fumée des cheminées** (les `cheminee` des toits) : dès novembre, une part des cheminées égale au
+  froid (toutes en janvier) ; des bouffées grises qui montent et dérivent vers l'est, d'après `B.t`, pour
+  les morceaux à l'écran seulement.
+- **Les terrasses** (34) : l'été, sur le trottoir devant les restos et les bars (`bouffe`, `nuit`), une
+  table ronde et deux chaises par tuile, un parasol rayé sur deux ; jamais devant une porte ni sur du
+  décor (banc, poubelle, lampadaire). Les passants marchent par-dessus (peintes au sol).
+- **Le rythme** : 1,7 à 2,0 ms par image en janvier sous quatre cheminées qui fument ; la repeinte de
+  tous les morceaux à l'écran (un changement de palier) : 4,3 ms avec la rue des saisons, 2,6 ms sans
+  (Chromium, Mac ; `test_la_rue_d_hiver_tient_le_rythme`). Les tuiles à banc se cherchent une fois par
+  morceau et par carte.
+- **Juges** : `test_saisons_rue_js.py` (5 juges : les bancs, les Tempo, les terrasses, la fumée, rien de
+  posé ni tiré et le rendu qui passe par la rue) ; 21 mutations, toutes rouges (bancs toujours, sur une
+  traverse, dans les entrées, dégel propre, Tempo jamais démonté, Tempo l'été, Tempo sur le gazon,
+  terrasses l'hiver, devant la porte, sur le décor, partout, fumée en octobre, toutes les cheminées, fumée
+  au dé, rue et fumée débranchées…). Deux mutations n'ont d'abord rien dit (la fumée et la rue
+  débranchées du rendu, un garde de fumée redondant) : le juge « rien de posé » épie maintenant le rendu.
+- **Captures** (`captures/saisons-rue-*.png`) : les maisons, un resto et des cheminées en janvier (le
+  jour et le soir), au dégel, en juillet (le jour et le soir) et en novembre.
+- **Pas fait, à dire** : les passants marchent sur les tables des terrasses et les chars roulent sous les
+  Tempo (peints au sol, ils ne bloquent rien — les poser déplacerait la ville) ; pas de char garé sous
+  un Tempo ; les bancs n'ont pas de trouée devant les entrées de stationnement ; plus de passants dehors
+  l'été : **tombé** (il touchait au dé de `peupler`) ; les bornes-fontaines ouvertes de l'été : pas faites.
+

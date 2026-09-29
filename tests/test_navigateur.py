@@ -767,6 +767,44 @@ def test_la_foule_des_saisons_tient_le_rythme(page, serveur, erreurs):
     assert erreurs == []
 
 
+def test_la_rue_d_hiver_tient_le_rythme(page, serveur, erreurs):
+    """La rue des saisons (lot 4b) : en janvier, sous les cheminées qui fument, entre les bancs de neige et
+    les Tempo — le rythme à chaque image, et ce que coûte une repeinte de tous les morceaux à l'écran (un
+    changement de palier), avec et sans la rue des saisons. Les chiffres s'impriment."""
+    page.goto(serveur)
+    attendre_titre(page)
+    jouer(page)
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.evaluate("""() => {
+        const L = window.BANDINI, j = L.B.joueur, p = L.B.partie;
+        j.intouchable = true;
+        p.jour = 2; p.heure = 0.45;
+        const ch = L.B.defs.carte.toits.filter(function (t) { return t.type === 'cheminee'; });
+        const t = ch[Math.floor(ch.length / 2)];
+        j.x = t.x * 16 + 8; j.y = (t.y + 3) * 16; L.Monde.centrerCamera(j.x, j.y);
+    }""")
+    page.wait_for_timeout(4000)
+    etat = page.evaluate("""() => {
+        const L = window.BANDINI, c = L.Monde.carte, R = L.RueDesSaisons;
+        const repeinte = function () {
+            let total = 0;
+            for (let i = 0; i < 5; i++) { c.morceaux.clear(); const t0 = performance.now(); L.Jeu.rendre(); total += performance.now() - t0; }
+            return total / 5;
+        };
+        const avec = repeinte(), p0 = R.peindre;
+        R.peindre = function () {};
+        const sans = repeinte();
+        R.peindre = p0;
+        return { ms: L.B.stats.ms, cheminees: R.cheminees().length, avec: avec, sans: sans };
+    }""")
+    print(f"\n[perf] {etat['ms']:.1f} ms par image en janvier ({etat['cheminees']} cheminées qui fument) ; "
+          f"repeinte des morceaux : {etat['avec']:.1f} ms avec la rue des saisons, {etat['sans']:.1f} ms sans")
+    assert etat["cheminees"] > 0, "la sonde ne voit aucune cheminée qui fume"
+    assert etat["ms"] < 40
+    assert etat["avec"] < etat["sans"] * 1.5 + 2, "la rue des saisons alourdit la repeinte d'un palier"
+    assert erreurs == []
+
+
 def test_le_brouillard_tient_le_rythme(page, serveur, erreurs):
     """⚠️ La SONDE que la fiche du brouillard exige avant de l'allumer pour tout le monde (la dette
     « rythme mesuré sur le vrai téléphone ») : le même pire cas que la neige — au volant, recherché —

@@ -122,6 +122,27 @@ HABITS = {
 }
 
 
+#: LA RUE DES SAISONS (lot 4b, `static/js/rue_des_saisons.js`) : ce qui se PEINT dans la ville selon la
+#: palette, jamais posé (rien ne bouge, aucun dé). Tout se lit de la palette du moment (`neige`, `froid`) :
+#: les morceaux cuits ne se repeignent qu'au palier, comme le gazon.
+RUE = {
+    #: Les bancs de neige, dans la rue au bord du trottoir, tant que la neige tient : `largeur` en pixels
+    #: à pleine neige (0,7), `sale` la teinte de la fonte (la palette « hiver>… » : le dégel).
+    "bancs": {"largeur": [3, 6], "neige": "#f2f5f8", "ombre": "#c3ccd6", "sale": "#8b8479"},
+    #: Les abris Tempo, dans les entrées (`p`, le stationnement) à côté d'une maison, ou devant son
+    #: rideau de garage : montés dès que le froid passe `froid_min` (novembre), démontés au dégel quand la
+    #: neige qui tient passe sous `demonte_neige`.
+    "tempo": {"froid_min": 0.5, "demonte_neige": 0.35, "part": 0.8, "toile": "#dfe4ea", "arceau": "#aeb8c3",
+              "bord": "#6f7984", "ouverture": "#363b42"},
+    #: La fumée des cheminées (`toits`, `cheminee`) : au-dessus de `froid_min`, une part `froid` des
+    #: cheminées fume ; `bouffees`, `vie` (images), `monte`, `derive` (px) — la recette du chalet.
+    "fumee": {"froid_min": 0.5, "bouffees": 7, "vie": 180, "monte": 60, "derive": 40, "rayon": 9},
+    #: Les terrasses, sur le trottoir devant les restos et les bars (`genres`), sous `froid_max`.
+    "terrasses": {"froid_max": 0.15, "genres": ["bouffe", "nuit"],
+                  "parasols": [["#c0392b", "#f4efe6"], ["#2e7d4f", "#f4efe6"], ["#1f5f99", "#f4d35e"]]},
+}
+
+
 def palette_du_jour(jour_de_l_annee: float) -> str:
     """La palette qui TIENT ce jour-là (la clé précédente), sans le glissement — pour les juges."""
     nom = CLES[0][1]
@@ -133,4 +154,4 @@ def palette_du_jour(jour_de_l_annee: float) -> str:
 
 def pour_le_navigateur() -> dict:
     return {"paliers": PALIERS, "cles": [[j, s] for j, s in CLES], "palettes": PALETTES,
-            "lumiere": LUMIERE, "annee": calendrier.ANNEE, "habits": HABITS}
+            "lumiere": LUMIERE, "annee": calendrier.ANNEE, "habits": HABITS, "rue": RUE}

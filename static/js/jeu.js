@@ -1264,6 +1264,7 @@ const Jeu = (function () {
     if (!B.interieur) Neige.dessinerTempete(ctx);
     if (!B.interieur) Pluie.dessiner(ctx);             // la pluie qui tombe, et l'eclair de l'orage
     if (!B.interieur) Blocs.dessinerFumees(ctx, vue);
+    if (!B.interieur) RueDesSaisons.dessinerFumees(ctx, vue);   // la fumee des cheminees de la ville, l'hiver (les saisons, lot 4b)
     if (!B.interieur) Canton.dessiner(ctx, vue);
     if (!B.interieur) Casino.dessinerMarquise(ctx, vue); // la marquise de neon du Dragon d'or        // l'arche et les lanternes du Petit-Canton : au-dessus des gens   // la fumée des cheminées : au-dessus des toits ET des gens
     if (!B.interieur) Brouillard.dessiner(ctx);         // le voile du brouillard, SOUS la nuit aussi      // le voile et les flocons, SOUS la nuit
@@ -1566,7 +1567,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Train: Train, Navette: Navette, Neige: Neige, Pluie: Pluie, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Territoires: Territoires, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Galeries: Galeries, Fetes: Fetes, Halloween: Halloween, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Train: Train, Navette: Navette, Neige: Neige, Pluie: Pluie, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, RueDesSaisons: RueDesSaisons, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Territoires: Territoires, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Galeries: Galeries, Fetes: Fetes, Halloween: Halloween, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,
