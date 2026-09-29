@@ -708,6 +708,8 @@ const Jeu = (function () {
     if (B.entites.indexOf(j) < 0) B.entites.push(j);
     B.particules.length = 0;
     B.interieur = null;
+    // L'heure de la sortie : on voit ou l'on est avant qu'un Mante vienne nous defier (`Entites.defier`).
+    j.sortiA = B.t;
     Son.Radio.dedans(null);                 // on ressort : la toune du commerce s'arrete
     B.exterieur = null;
     Entites.reindexerDecor();

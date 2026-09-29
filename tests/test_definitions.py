@@ -183,8 +183,14 @@ def test_le_paquet_reste_leger(paquets):
     marge), 275 321 / 61 442 avec ses trois sons au catalogue (le klaxon, la cloche du passage, le roulement) et leur
     lieu (`audio.LIEUX["train"]`). Le gzip, le vrai juge, reste sous son plafond ; le brut n'est qu'un indicateur.
     La carte ne bouge pas de plafond : 720 500 / 70 449 avec la clé `train`.
+
+    ⚠️ **Les définitions : 62 000 → 64 000 gzip, le 29 sept. 2026, le soir** — l'ambiance du Petit-Canton et le défi
+    des Mantes (docs/jalons/les-mantes-provoquent-et-le-petit-canton-a-sa-musique.md). Mesure : 275 603 bruts / 61 557
+    gzip sur `dev` (443 octets de marge), 278 071 / 62 234 avec eux — dont 2 604 bruts pour `amb_canton` (ses notes :
+    le filet de toute musique, comme les six autres ambiances) et le reste pour `mantes.PROVOCATION` (huit répliques et
+    ses garde-fous). Un cran franc de deux Ko ; le brut reste sous ses 280 000. La carte ne bouge pas.
     """
-    for nom, brut_max, fil_max in (("definitions", 280_000, 62_000), ("carte", 722_000, 71_000)):
+    for nom, brut_max, fil_max in (("definitions", 280_000, 64_000), ("carte", 722_000, 71_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))

@@ -897,7 +897,7 @@ MUSIQUES: list[Piece] = [
        "no vocals, loopable",
        duree_s=45, volume=0.42),
 
-    # --- Les cinq ambiances de district (ce qu'on entend a pied) ------------
+    # --- Les ambiances de district (ce qu'on entend a pied) -----------------
     # ⚠️ Elles jouent SOUS la rumeur de la foule, les moteurs et les voix : pas
     # de batterie, pas de melodie qui accroche. Une musique de district qu'on
     # remarque est une musique de district ratee.
@@ -934,6 +934,17 @@ MUSIQUES: list[Piece] = [
        "a distant solo fiddle holding long plaintive notes, cold wind over a small "
        "island in the gulf, empty chapel stillness, no drums, no vocals, seamless loop",
        duree_s=45, volume=0.3),
+    # LE PETIT-CANTON (29 sept. 2026, demande de Martin : « lâche-toi lousse ») : le soir sur la rue principale,
+    # les lanternes qui s'allument, les commerces qui ferment. Une touche d'instruments du Sud de la Chine (guzheng,
+    # erhu, dizi) sur une nappe douce — ⚠️ respectueuse, PAS une carte postale : ni gong, ni « musique chinoise »
+    # de film, un quartier d'ici où des gens vivent. Et comme les autres ambiances : sous la rumeur, sans batterie.
+    _m("amb_canton",
+       "quiet intimate evening ambient score at 66 bpm in D major pentatonic, a soft warm string and analog synth "
+       "pad, a guzheng plucking a few sparse notes far apart, an erhu answering with one long gentle phrase now and "
+       "then, a breathy dizi flute drifting far in the background, the chinatown of a small quebec harbour town at "
+       "dusk, paper lanterns coming on, neighbours closing their shops, calm, warm and respectful, not a postcard, "
+       "no gong, no drums, no percussion, no vocals, seamless loop",
+       duree_s=60, volume=0.28),
 
     # --- Les deux musiques d'ETAT -------------------------------------------
     # ⚠️ Le seul moment ou la musique a le droit de prendre toute la place. Elle

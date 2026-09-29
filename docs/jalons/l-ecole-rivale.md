@@ -139,3 +139,10 @@ pyjama vert ») qui en a assez de les voir racketter la boulangerie de la rue ; 
 Floride, qui veut qu'on lui ramène la plaque de son école et ses élèves à la raison — un nouveau personnage, sa fiche
 et sa voix. Et, si Martin le veut : que les Mantes provoquent un joueur à mains nues (aujourd'hui, comme les autres
 gangs, ils n'attaquent que si tu sors une arme ou que tu frappes).
+
+### Les Mantes provoquent — **livré le 29 sept. 2026** (tranché par Martin)
+
+Le dernier point du « Reste » de la vague 1 : chez elles — le coin de l'école —, les Mantes défient maintenant un
+joueur à mains nues (une réplique en bulle, le salut, puis le combat) ; hors de leur territoire, rien ne change. Un
+gang **calme** (`Entites.gangCalme`, ce que la vague 2 posera après c08) ne défie plus. Le détail, les garde-fous et
+les juges : [les Mantes provoquent, et le Petit-Canton a sa musique](les-mantes-provoquent-et-le-petit-canton-a-sa-musique.md#notes).

@@ -151,10 +151,14 @@ def test_le_theme_pese_moins_qu_une_seconde_de_mp3():
 
     ⚠️ **Troisième cran, de 56 à 62 Ko, le 28 sept. 2026** — deux morceaux d'un coup : le violoneux de la
     cabane à sucre (1 913 octets) et la musique du casino du Dragon d'or (2 584). Mesuré avant : 55 000,
-    59 491 après. Un cran franc de six Ko, pour les deux suivants aussi."""
+    59 491 après. Un cran franc de six Ko, pour les deux suivants aussi.
+
+    ⚠️ **Quatrième cran, de 62 à 68 Ko, le 29 sept. 2026** — l'ambiance du Petit-Canton (`amb_canton`, demandée par
+    Martin) : 2 604 octets de notes et de fichier. Mesuré avant : 59 491 sur `dev` ; 62 097 après — 97 octets
+    au-dessus. Le cran franc de six Ko que le précédent promettait, pour les deux suivants aussi."""
     import json
     octets = len(json.dumps(audio.exporter()["musiques"]))
-    assert octets < 62000, f"{octets} octets : le catalogue enfle"
+    assert octets < 68000, f"{octets} octets : le catalogue enfle"
 
 
 # --- M9 : les stations procedurales -----------------------------------------

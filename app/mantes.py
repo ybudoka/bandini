@@ -64,6 +64,40 @@ COMBAT: dict = {
 }
 
 
+#: LE DÉFI (29 sept. 2026, tranché par Martin — docs/jalons/les-mantes-provoquent-et-le-petit-canton-a-sa-musique.md) :
+#: sur LEUR territoire, un Mante qui te voit de près vient te défier même à MAINS NUES, une réplique en bulle — ils se
+#: croient dans un film. Hors de leur territoire, ils font comme les autres gangs (l'arme au poing, ou un coup).
+#: ⚠️ Aucun dé (`Entites.defier`) : le Mante qui provoque est le premier dont le tour de regard tombe (le même tic
+#: que l'arme au poing), et sa réplique se tire à l'empreinte de son numéro et du compte des défis.
+#: ⚠️ Ce qui rend ça juste, chaque garde-fou a son chiffre :
+PROVOCATION: dict = {
+    "gang": "mantes",
+    # « De près » : cinq tuiles, et il doit te VOIR (une ligne libre). L'arme au poing se voit de six.
+    "portee_px": 80,
+    # On sort d'une porte (l'école, un commerce) : le temps de voir où l'on est avant qu'on vienne nous chercher.
+    "sortie_images": 360,
+    # Un défi à la fois, puis ce délai avant qu'un DEUXIÈME ne remette ça — compté depuis le premier. Et un Mante
+    # ne défie qu'une fois dans sa vie : battu ou semé, il a eu son film.
+    "delai_images": 1800,
+    # LE SALUT : il s'arrête, se tourne vers toi, dit sa réplique, et ne part qu'après — le temps de lire la bulle et
+    # de choisir entre la garde et les jambes.
+    "salut_images": 50,
+    "bulle_images": 150,
+    # ⚠️ Frimeurs, pas caricatures : on rit du gars qui se prend pour un héros de film de kung-fu (et de son maître
+    # parti en Floride), jamais d'un accent ni d'une origine (docs/ecrire-drole.md). Courtes : une bulle, une ligne.
+    "repliques": [
+        "TON KUNG-FU EST FAIBLE!",
+        "ATTENDS, J’PRENDS LA POSE.",
+        "PREMIÈRE LEÇON : GRATIS.",
+        "T’AS PAS SALUÉ, TOÉ.",
+        "UN CONTRE UN, LE GRAND.",
+        "MONTRE-MOÉ TON STYLE!",
+        "LE MAÎTRE EST EN FLORIDE.",
+        "ICITTE, C’EST NOTRE COIN.",
+    ],
+}
+
+
 def zone(ch, district: dict, n: int) -> dict:
     """Le territoire des Mantes, lu dans la trame de la bande (`ch`) — aucune tuile, aucun dé."""
     c0, c1 = (district["bx"] + c for c in ZONE["colonnes"])
@@ -148,4 +182,4 @@ def poser(ville: dict, ch, district: dict, n: int) -> dict | None:
 
 
 def exporter() -> dict:
-    return dict(COMBAT)
+    return {**COMBAT, "provocation": PROVOCATION}

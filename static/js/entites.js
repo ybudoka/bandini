@@ -1683,6 +1683,48 @@ const Entites = (function () {
     if ((h >>> 10) % 1000 < c.part * 1000) { e.etat = 'attaque_joueur'; e.cri = 90; }
   }
 
+  /** **LE DEFI DES MANTES** (docs/jalons/les-mantes-provoquent-et-le-petit-canton-a-sa-musique.md) : sur LEUR
+      territoire, un Mante qui te voit de pres vient te defier meme a MAINS NUES — il se croit dans un film. Il
+      s'arrete, se tourne vers toi, dit sa replique (`salut`), puis attaque. Hors de leur territoire, rien : ils font
+      comme les autres gangs (l'arme au poing, un coup).
+
+      ⚠️ AUCUN DE : le Mante qui provoque est le premier dont le tour de regard tombe (`e.t % 15`, le tic de l'arme au
+      poing), et sa replique se tire a l'empreinte de son numero et du compte des defis.
+
+      ⚠️ Ce qui rend ca JUSTE (`mantes.PROVOCATION`) : jamais dedans (l'ecole et ses eleves ne sautent pas sur qui
+      entre), ni dans les `sortie_images` qui suivent une porte ; jamais un joueur a terre, en l'air, tenu, dans un
+      char ou deja occupe (une mission qui ne les nomme pas, un defi, une frenesie, une epreuve) ; UN defi a la fois
+      — un Mante deja sur toi, et les autres regardent le film —, `delai_images` avant qu'un deuxieme ne remette ca,
+      et chaque Mante ne defie qu'une fois dans sa vie. */
+  let defiDesMantes = { t: -Infinity, n: 0 };
+  function defier(e) {
+    const d = B.defs.mantes && B.defs.mantes.provocation, j = B.joueur;
+    if (!d || e.gang !== d.gang || e.defie || B.interieur || B.cinema || !j) return false;
+    if (!j.vivant || j.dansVehicule || j.arme !== 'poings' || j.etat === 'assomme' || j.vol || j.auSol > 0
+        || j.saisiPar || j.alite || j.assis || j.manege || j.enjambe) return false;
+    if (B.t - defiDesMantes.t < d.delai_images || B.t - (j.sortiA === undefined ? -Infinity : j.sortiA) < d.sortie_images) return false;
+    if (dist2(e.x, e.y, j.x, j.y) > d.portee_px * d.portee_px) return false;
+    if (Territoires.gangA(e.x, e.y) !== e.gang || Territoires.gangA(j.x, j.y) !== e.gang) return false;
+    if (B.defi || B.epreuve || B.frenesie || !missionDesMantes(e.gang)) return false;
+    if (!Monde.ligneLibre(e.x, e.y, j.x, j.y)) return false;
+    for (const q of pietonsAutour(j.x, j.y, 260)) {
+      if (q.gang === e.gang && q.vivant && q.etat === 'attaque_joueur') return false;
+    }
+    const mots = d.repliques || [];
+    e.defie = true;
+    defiDesMantes = { t: B.t, n: defiDesMantes.n + 1 };
+    regarder(e, j.x - e.x, j.y - e.y);
+    if (mots.length) bulle(e, mots[hash2(e.id, defiDesMantes.n) % mots.length], { duree: d.bulle_images });
+    e.etat = 'attaque_joueur'; e.cri = 90; e.salut = d.salut_images;
+    return true;
+  }
+  /** Aucune mission, ou une mission qui NOMME ce gang (`groupe` d'un de ses objectifs) : alors on peut le defier. */
+  function missionDesMantes(gang) {
+    if (!B.partie || !B.partie.mission) return true;
+    const m = Histoire.courante();
+    return !!(m && (m.objectifs || []).some(function (o) { return o && o.groupe === gang; }));
+  }
+
   /** **LE LAST CALL** (la nuit a ses habitudes) : a 3 h, chaque bar de la bulle
       (`nuit.last_call.bars`) laisse sortir sa grappe de fetards — une fois par bar
       et par nuit. Nes DANS LA PORTE, qui s'ouvre : comme le flaneur qui sort de
@@ -4612,7 +4654,11 @@ const Entites = (function () {
       vitesse = v.pieton_course * e.allure;
       const dx = B.joueur.x - e.x, dy = B.joueur.y - e.y;
       const norme = Math.hypot(dx, dy) || 1;
-      if (norme > 260) { e.etat = 'flane'; }
+      if (norme > 260) { e.etat = 'flane'; e.salut = 0; }
+      // LE SALUT d'un Mante qui te defie (`defier`) : il reste la, tourne vers toi, le temps de sa replique.
+      // Tu frappes le premier : il laisse tomber la pose et se bat.
+      if (e.salut > 0 && B.joueur.etat === 'attaque') e.salut = 0;
+      if (e.salut > 0) { e.salut--; e.vx = 0; e.vy = 0; regarder(e, dx, dy); return; }
       // ⚠️ `coupsDictes` : un autre décide quand il frappe — le cousin de l'esquive
       // (`Rue`) annonce chacun de ses coups ; le tic des 40 images le ferait partir sans prévenir.
       // Et collé, il boxe sur place : lancé à ta vitesse, il te poussait hors du ring (au banc,
@@ -4751,6 +4797,9 @@ const Entites = (function () {
       // On s'arrete : on regarde une vitrine, on attend quelqu'un, on respire.
       e.vx = 0; e.vy = 0;
       if (--e.minuterie <= 0) e.etat = 'flane';
+      // Arrete devant une vitrine, un Mante te voit passer quand meme (`defier`) — sinon, un sur trois regardait
+      // ailleurs au moment ou l'on passait.
+      if (e.techniques && e.gang && !e.cible && !gangCalme(e.gang) && e.t % 15 === 0) defier(e);
       return;
     } else if (e.etat === 'entre') {
       // Il rentre chez lui : un pas vers la porte, et il n'est plus la.
@@ -4764,6 +4813,8 @@ const Entites = (function () {
         // Chez lui : sa cour, ou un ilot que son gang a pris (`Territoires.gangA`).
         if (Territoires.gangA(e.x, e.y) === e.gang) { e.etat = 'attaque_joueur'; e.cri = 90; }
       }
+      // LES MANTES, chez elles, n'attendent pas l'arme : elles te defient a mains nues (`defier`).
+      else if (e.techniques && e.gang && !e.cible && !gangCalme(e.gang) && e.t % 15 === 0) defier(e);
       // Flaner : on suit une direction jusqu'a ce qu'elle ne mene plus nulle part.
       const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
       if (Monde.estChaussee(tx, ty)) {
@@ -5736,7 +5787,7 @@ const Entites = (function () {
   }
 
   return {
-    orignalDeLaNuit, majOrignal, faireFuirLOrignal, gangChasse, gangCalme,
+    orignalDeLaNuit, majOrignal, faireFuirLOrignal, gangChasse, gangCalme, defier,
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES, PORTEE_DECOR,
     creer, enDehorsDeLaSuite, sauterDesNumeros, dansLaBande, retirer, vider, creerJoueur, creerJoueur2, joueurs, estJoueur, creerDecor, creerAmbulants, majKiosques, creerPaquets, creerPieton, reindexerDecor,
     briser, endommagerDecor, reparerLeDecor, releverDecor, DEBRIS_MAX,

@@ -251,3 +251,7 @@ l'histoire d'Irène (c01 à c04), les Mantes n'y sont pour rien.
 
 **Les quatre étapes sont livrées.** Ce que la fiche laissait ouvert : la musique du quartier (« à revoir avec
 Martin »), la couleur des trottoirs (« peut-être »), et une mission des Mantes (l'école rivale, vague 2 à trancher).
+
+**La musique du quartier : livrée le 29 sept. 2026, demandée par Martin** — `amb_canton`, « Lanternes du
+Petit-Canton », et les Mantes qui défient à mains nues chez elles : [les Mantes provoquent, et le Petit-Canton a sa
+musique](les-mantes-provoquent-et-le-petit-canton-a-sa-musique.md#notes).

@@ -105,3 +105,14 @@ La Pointe aux Quais.
   district + poursuite + bagarre, **écrites en notes** (aucun mp3, aucun crédit :
   `musique.py` promettait cette porte depuis le premier jour), avec **hystérésis** aux
   frontières et **queue** sur les musiques d'état — c'est elle qui fait qu'on souffle
+
+### Le Petit-Canton a la sienne — demandée par Martin le 29 sept. 2026
+
+Le septième district (la bande nord, [le quartier chinois](le-quartier-chinois.md#fiche)) n'avait pas d'ambiance :
+`Chef.ambianceDuLieu` gardait celle du dernier district traversé, et la fiche du quartier renvoyait ici (« à revoir
+avec Martin »). **Martin l'a demandée explicitement** (29 sept. 2026 : « une musique de quartier pour le
+Petit-Canton », et pour le prompt : « lâche-toi lousse »). C'est `amb_canton`, « Lanternes du Petit-Canton » — une
+ambiance comme les autres, sous la rumeur, sans batterie : écrite en notes (pentatonique, 66 bpm, le filet) et jouée
+par un mp3 ElevenLabs de 60 s (guzheng, erhu et dizi sur une nappe douce). Les règles de cette fiche tiennent telles
+quelles : l'échelle, l'hystérésis, le fondu, et la piste qui ne se charge qu'en entrant. Notes : [les Mantes
+provoquent, et le Petit-Canton a sa musique](les-mantes-provoquent-et-le-petit-canton-a-sa-musique.md#notes).

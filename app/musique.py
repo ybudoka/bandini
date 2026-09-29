@@ -356,6 +356,9 @@ class Style(TypedDict):
 #: sonne vient donc de la gamme, par construction.
 MAJEURE = (0, 2, 4, 5, 7, 9, 11)
 MINEURE = (0, 2, 3, 5, 7, 8, 10)
+#: La pentatonique majeure (gong) : cinq notes, sans demi-ton — celle du Petit-Canton (`amb_canton`). ⚠️ Ses
+#: « tierces » (un degre sur deux) donnent des accords ouverts, en quartes : c'est voulu, c'est ce qu'on entend.
+PENTATONIQUE = (0, 2, 4, 7, 9)
 
 STATIONS: list[Style] = [
     # Le camion : country-rock de grand-route, do majeur, quatre accords qui
@@ -761,6 +764,9 @@ AMBIANCES_DE_DISTRICT: dict[str, str] = {
     # L'ile a sa musique depuis sa 2e vague (27 sept. 2026) : en 1re vague elle
     # EMPRUNTAIT le vent de La Pointe, et ca s'entendait.
     "ile": "amb_ile",
+    # Le Petit-Canton (29 sept. 2026, demande de Martin) : il jouait l'ambiance du dernier district traverse — la
+    # decision « une seule musique pour toute la ville » le laissait « a revoir avec Martin », et il l'a demandee.
+    "canton": "amb_canton",
 }
 
 AMBIANCES: list[Style] = [
@@ -788,6 +794,11 @@ AMBIANCES: list[Style] = [
     {"slug": "amb_ile", "nom": "L'île sans cloche", "graine": 20260927,
      "bpm": 60, "tonique": 38, "gamme": MINEURE, "grille": (0, 3, 5, 0),
      "forme_chant": "triangle", "forme_nappe": "sine", "volume": 0.30},
+    # Le Petit-Canton : le soir sur la rue principale, les lanternes allumees. Pentatonique, lente, peu de notes —
+    # une nappe, et un chant pince qui passe de loin en loin (le guzheng du mp3).
+    {"slug": "amb_canton", "nom": "Lanternes du Petit-Canton", "graine": 20260929,
+     "bpm": 66, "tonique": 50, "gamme": PENTATONIQUE, "grille": (0, 3, 1, 4),
+     "forme_chant": "triangle", "forme_nappe": "sine", "volume": 0.28},
     # ⚠️ Les deux musiques d'ETAT : elles couvrent l'ambiance, jamais l'inverse
     # (voir `ECHELLE`). Rapides, mineures, et plus fortes — c'est le seul
     # moment ou la musique a le droit de prendre toute la place.
