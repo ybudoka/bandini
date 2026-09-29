@@ -3705,6 +3705,7 @@ const Missions = (function () {
           : braquable(j, point) ? 'BRAQUER'
           : vente ? 'ACHETER ' + vente.nom.toUpperCase()
           : (point.type === 'distributrice' ? inviteDistributrice(machineDuPoint(point))
+            : point.type === 'escalier' && point.descend ? 'DESCENDRE'
             : (point.type === 'emplettes' && comptoirFerme(point)) || (LIBELLES[point.type] || point.type.toUpperCase()));
         return;
       }

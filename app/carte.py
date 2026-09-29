@@ -7652,7 +7652,7 @@ Birqirqirq   B
 B r  r  r    B
 Bn          nB
 BBBBBBBBBBDBBB
-""", points=(_pt("soigner", 5, 5), _pt("escalier", 12, 1, vers="hopital")),
+""", points=(_pt("soigner", 5, 5), _pt("escalier", 12, 1, vers="hopital", descend=True)),
      gens=_gens(("soignant", 5, 3),
                 ("malade", 2, 1), ("malade", 5, 1), ("malade", 8, 1),
                 ("malade", 2, 6), ("malade", 5, 6), ("malade", 8, 6),
@@ -7735,7 +7735,7 @@ B  a h   e  B
 B  a h      B
 Bn         /B
 BBBBBBDBBBBBB
-""", points=(_pt("lit", 2, 1), _pt("escalier", 11, 6, vers="hotel"),
+""", points=(_pt("lit", 2, 1), _pt("escalier", 11, 6, vers="hotel", descend=True),
              # Le maire Tanguay (M13, m98), près de la fenêtre sur la baie : un point dans la pièce, rien dans la ville.
              _pt("maire", 7, 3)),
      gens=()),
@@ -8276,7 +8276,8 @@ def piece_de_logement(slug: str, largeur: int, hauteur: int, porte: int,
             marche = max(marches, key=lambda t: math.hypot(t[0] - (porte - 1),
                                                            t[1] - (hauteur - 1)))
             grille[marche[1]][marche[0]] = "/"
-            points.append(_pt("escalier", marche[0] + 1, marche[1] + 1, vers=etage))
+            # Celui du haut REDESCEND : l'invite dit DESCENDRE (`Missions.majInvite`).
+            points.append(_pt("escalier", marche[0] + 1, marche[1] + 1, vers=etage, **({"descend": True} if haut else {})))
     fouille = [(x, y) for y in range(hauteur) for x in range(largeur)
                if grille[y][x] in ("l", "k", "e", "j", "z")]
     points.append(_poser_le_point(grille, "fouiller", None, porte, fouille,

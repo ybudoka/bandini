@@ -3855,6 +3855,78 @@ const TUILES = (function () {
       ctx.fillStyle = '#5e3e24'; ctx.fillRect(4, 9, 8, 1);
       ctx.fillStyle = '#d8b83a'; ctx.fillRect(10, 10, 1, 2);    // la poignée
     },
+    /* --- La cave du tripot, sous le Dragon d'or (29 sept. 2026) ----------------------------
+       Martin : un tripot, pas un bureau. Les memes glyphes (`tripot.PIECE`), repeints par les
+       `materiaux` de la piece : le mur de fondation en pierre des champs, le plancher de beton,
+       les caisses de bière (`k`), les étagères de bouteilles (`e`), les tonneaux (`n`) et les
+       petites tables de cartes en feutre vert (`a`). Ils gardent ce qu'ils font ; seul le
+       peintre change. */
+    'B@cave': function (ctx, v, T) {
+      pierres(ctx, v, T);
+      ctx.fillStyle = 'rgba(24,18,12,0.38)'; ctx.fillRect(0, 0, T, T);            // la cave : pas de jour
+      ctx.fillStyle = 'rgba(30,40,24,0.30)'; ctx.fillRect(0, T - 3, T, 3);        // l'humidité au pied du mur
+    },
+    'D@cave': function (ctx, v, T) {
+      TUILES['B@cave'](ctx, v, T);
+      ctx.fillStyle = '#2e1e12'; ctx.fillRect(3, 1, 10, 15);    // le chambranle
+      ctx.fillStyle = '#5a3a20'; ctx.fillRect(4, 2, 8, 14);     // la porte d'en arrière, en planches
+      ctx.fillStyle = '#432a16'; ctx.fillRect(6, 2, 1, 14); ctx.fillRect(9, 2, 1, 14);
+      ctx.fillStyle = '#6e6e72'; ctx.fillRect(4, 8, 8, 1);      // la barre de fer
+      ctx.fillStyle = '#b09a4a'; ctx.fillRect(11, 10, 1, 1);    // la poignée
+    },
+    // Le beton du sous-sol : gris brun, piqué d'un grain fin.
+    // ⚠️ Même teinte partout (jamais selon `v`) : une teinte par tuile ferait un damier. Et pas de tache ni de
+    // fissure tirée de `v` : un plancher n'a que quatre variantes (`varianteDePassage`), elles tombaient en grille.
+    't@cave': function (ctx, v, T) {
+      plein(ctx, '#6c655a', T);
+      points(ctx, v, T, '#736c60', 12, 30);
+      points(ctx, v, T, '#645e53', 10, 70);
+    },
+    // Une caisse de 24, en bois, vue d'en haut : ses bouteilles brunes et leurs capsules.
+    'k@cave': function (ctx, v, T) {
+      ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(2, 3, 14, 13);
+      ctx.fillStyle = '#9a6a38'; ctx.fillRect(1, 1, 14, 13);    // la caisse
+      ctx.fillStyle = '#7a5028'; ctx.fillRect(1, 7, 14, 1);     // la planche du milieu
+      ctx.fillStyle = '#2a1a0e'; ctx.fillRect(2, 2, 12, 11);    // le dedans
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 4; c++) {
+          const x = 2 + c * 3, y = 2 + r * 4;
+          const vide = hash2(v * 5 + r, c + 11) % 9 === 0;       // une bouteille partie
+          if (vide) continue;
+          ctx.fillStyle = '#5a3212'; ctx.fillRect(x, y, 3, 3);   // l'épaule de la bouteille brune
+          ctx.fillStyle = '#c9a23a'; ctx.fillRect(x + 1, y + 1, 1, 1);   // la capsule
+        }
+      }
+      ctx.fillStyle = 'rgba(255,230,190,0.18)'; ctx.fillRect(1, 1, 14, 1);
+    },
+    // L'étagère du bar clandestin : des bouteilles debout, brunes, vertes et claires, sur deux tablettes.
+    'e@cave': function (ctx, v, T) {
+      plein(ctx, '#3e2a1a', T);
+      ctx.fillStyle = '#5a3c22'; ctx.fillRect(0, 7, T, 2); ctx.fillRect(0, T - 2, T, 2);   // les tablettes
+      const verres = ['#5a3212', '#2f5a2a', '#7a8a6a', '#6a2a1a', '#3a4a3a'];
+      for (let r = 0; r < 2; r++) {
+        for (let k = 0; k < 4; k++) {
+          const x = 1 + k * 4, y = 1 + r * 7;
+          if (hash2(v * 3 + r, k + 5) % 6 === 0) continue;       // un trou dans la rangée
+          ctx.fillStyle = verres[hash2(v + r * 4, k) % verres.length];
+          ctx.fillRect(x, y + 2, 3, 4);                           // le corps
+          ctx.fillRect(x + 1, y, 1, 2);                           // le goulot
+          ctx.fillStyle = 'rgba(255,240,210,0.30)'; ctx.fillRect(x, y + 2, 1, 3);   // le reflet
+        }
+      }
+    },
+    // Le tonneau, vu d'en haut : le fond de chêne, ses douelles, deux cerclages de fer et la bonde.
+    'n@cave': function (ctx, v, T) {
+      ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(4, 4, 11, 11);
+      ctx.fillStyle = '#3a3a3e'; ctx.fillRect(3, 2, 10, 12); ctx.fillRect(2, 3, 12, 10);   // le cerclage
+      ctx.fillStyle = '#7a4a24'; ctx.fillRect(4, 3, 8, 10); ctx.fillRect(3, 4, 10, 8);     // le fond
+      ctx.fillStyle = '#5e3818'; for (let x = 5; x < 12; x += 2) ctx.fillRect(x, 3, 1, 10);   // les douelles
+      ctx.fillStyle = '#4a4a50'; ctx.fillRect(3, 6, 10, 1);                                // le deuxième cerclage
+      ctx.fillStyle = '#2a1a0e'; ctx.fillRect(7, 8, 2, 2);                                 // la bonde
+      ctx.fillStyle = 'rgba(255,220,170,0.20)'; ctx.fillRect(4, 3, 6, 1);
+    },
+    // Les petites tables des habitués : du feutre vert, pour les cartes.
+    'a@cave': function (ctx, v, T) { table(ctx, v, T, '#3a2616', '#2e5a3a', '#3e6e48'); },
     // Le chalet du rang : les memes glyphes, en bois rond (`materiaux` d'une carte de bloc).
     'F@bois_rond': function (ctx, v, T) { boisRond(ctx, v, T); },
     'W@bois_rond': function (ctx, v, T) {

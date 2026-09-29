@@ -145,7 +145,10 @@ const Tripot = (function () {
     e.coups++;
     const n = e.total++, t = tirages(n);
     // ⚠️ Repris, le tripot ne pipe plus jamais : c'est tout ce qu'Irene a change a la table.
-    const pipes = !repris() && e.tranquille !== (p.jour || 0) && pipe(e.mise, t.u);
+    // ⚠️ ENVOYE PAR IRENE (c02, `enMission`) : un gros poisson — le Pouce pipe CHAQUE mise du seuil et plus, meme
+    // apres une denonciation (Martin, 29 sept. 2026 : « je ne vois que peu de des jaunes pour la mission »).
+    const pipes = !repris() && (enMission() ? e.mise >= r.pipes.seuil
+                                            : e.tranquille !== (p.jour || 0) && pipe(e.mise, t.u));
     B.tripot = { phase: 'joue', n: n, pipes: pipes, poids: pipes ? poidsContre(e.pari) : null, pari: e.pari,
                  depart: e.pari, mise: e.mise, tirages: t.liste, images: 0, fin: 0, retourne: false, glisse: false };
     return true;
@@ -286,6 +289,8 @@ const Tripot = (function () {
 
   function menu() {
     const r = regles(), e = etat(), p = B.partie;
+    // Envoye par Irene, on s'assoit a la mise qui fait tricher le Pouce : le HUD dit « MISE 500 $ ».
+    if (enMission() && e.mise < r.pipes.seuil) e.mise = r.pipes.seuil;
     const reste = Math.max(0, r.par_jour - e.coups), libre = triche('machines');
     const m = { titre: repris() ? r.reprise.titre : 'LA BARBOTTE DU POUCE', sur: (p.argent - enAttente()) + ' $', items: lignes(), largeur: 440, hauteur: 214,
                 colonne: 176,

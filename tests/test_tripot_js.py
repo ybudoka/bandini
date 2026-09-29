@@ -136,7 +136,7 @@ def test_la_porte_du_sous_sol_attend_c01_puis_on_descend_au_bouton(banc):
     assert r["bloque"] is True and r["msg"] == tripot.PORTE["raison"], r
     assert r["passeFermee"] is False, "la porte fermée laisse passer au clavier"
     assert r["passeOuverte"] is True, "la porte ouverte ne laisse pas passer"
-    assert r["invite"] == "MONTER" and r["ici"] == "nord_tripot", r
+    assert r["invite"] == "DESCENDRE" and r["ici"] == "nord_tripot", r
     assert r["pouce"] == 1 and r["gros"] == 2, r
     assert r["inviteTable"] == "LA BARBOTTE" and r["menu"]["titre"] == "LA BARBOTTE DU POUCE", r
     assert r["menu"]["lignes"] == ["PARI", "MISE", "MISER"] and "RETOUR 97 %" in r["menu"]["aide"], r

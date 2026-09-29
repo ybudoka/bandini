@@ -442,3 +442,22 @@ def test_un_bloc_est_un_rectangle_plein_et_deux_blocs_ne_se_touchent_pas(slug):
             if g == "r":
                 # Un lit d'hopital est un lit d'UNE place : une tuile sur deux.
                 assert (large, haut) == (1, 2), f"{slug} : un lit d'hôpital de {large} × {haut} tuiles en {x0},{y0}"
+
+
+def test_de_deux_escaliers_qui_se_repondent_un_seul_descend():
+    """L'invite dit MONTER ou DESCENDRE selon le `descend` du point (Martin, 29 sept. 2026 : en haut de l'escalier
+    du tripot, elle disait MONTER). Deux pièces reliées ont chacune leur marche : une monte, l'autre descend — le
+    sous-sol du Dragon d'or, les soins de l'hôpital, la chambre de l'hôtel, l'étage de chaque plex."""
+    paires, fautes = 0, []
+    for slug, piece in PIECES.items():
+        for pt in piece["points"]:
+            if pt["type"] != "escalier":
+                continue
+            retour = [q for q in PIECES[pt["vers"]]["points"] if q["type"] == "escalier" and q.get("vers") == slug]
+            if len(retour) != 1 or bool(pt.get("descend")) == bool(retour[0].get("descend")):
+                fautes.append((slug, pt["vers"], pt.get("descend"), [q.get("descend") for q in retour]))
+            paires += 1
+    assert not fautes, fautes[:8]
+    assert paires >= 8, paires
+    assert any(p.get("descend") for p in PIECES["nord_casino"]["points"] if p["type"] == "escalier")
+    assert not any(p.get("descend") for p in PIECES["nord_tripot"]["points"] if p["type"] == "escalier")

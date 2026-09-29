@@ -200,6 +200,9 @@ def jouer_des_jours(rng: random.Random, jours: int, mise: int, strategie: str) -
 #: manche et on pose une paire honnête à la place — le truc du Pouce, retourné contre lui. La ligne n'apparaît au
 #: menu que pendant un objectif `obtenir` dont la `table` est le tripot et l'`objet` celui-ci : c'est ce que la
 #: mission dit, pas un nom de mission écrit dans le navigateur. Le coup se joue alors avec des dés honnêtes.
+#: ⚠️ ENVOYÉ PAR IRÈNE, on est un gros poisson (Martin, 29 sept. 2026 : « je ne vois que peu de dés jaunes pour la
+#: mission ») : tant que la preuve manque, le Pouce pipe CHAQUE mise de `PIPES["seuil"]` et plus — pas trois fois
+#: sur cinq —, même après une dénonciation, et la table s'ouvre à cette mise-là.
 PREUVE: dict = {"objet": "des_pipes", "nom": "LES DÉS PIPÉS DU POUCE"}
 
 #: LE TRIPOT CHANGE DE MAINS (c04, _La barbotte change de mains_ ; Martin, 29 sept. 2026 : « on fait tomber le
@@ -221,6 +224,13 @@ def pour_le_navigateur() -> dict:
 
 # --- La salle ------------------------------------------------------------------------------------------------
 
+#: UNE CAVE, PAS UN BUREAU (Martin, 29 sept. 2026) : les glyphes gardent leur règle, les `materiaux` de la pièce
+#: changent le peintre (`TUILES['k@cave']`…) — le mur de fondation en pierre des champs, le plancher de béton, les
+#: caisses de bière (`k`), les étagères de bouteilles (`e`), les tonneaux (`n`) et le feutre vert des petites tables
+#: de cartes (`a`). ⚠️ Des matériaux REMPLACENT les murs de plâtre des pièces (`Monde.MATERIAUX_DE_PIECE`) : le mur
+#: et la porte d'en arrière ont donc les leurs.
+CAVE = {"B": "cave", "D": "cave", "t": "cave", "k": "cave", "e": "cave", "n": "cave", "a": "cave"}
+
 #: LE TRIPOT, sous le Dragon d'or (vingt-quatre tuiles sur neuf, murs en plus). On y arrive par l'escalier du
 #: coin (`/`), qui remonte à la grande salle. Au milieu, la table de la BARBOTTE (`!`, le feutre) et le Pouce
 #: derrière ; au fond, le comptoir du bar et ses tabourets ; deux petites tables de cartes où jouent les habitués
@@ -229,7 +239,7 @@ def pour_le_navigateur() -> dict:
 #: : elle ramène sur le trottoir du Dragon d'or, là où l'on est entré (le jeu ressort toujours par la porte d'en
 #: haut, `B.exterieur`). ⚠️ À la mesure : plus petit que la grande salle (34 × 11), sinon le bâtiment du casino
 #: grandirait et la ville glisserait (`carte.mesures_de_la_suite`).
-PIECE = carte._piece("nord_tripot", "Le tripot du Pouce", sol="t", porte="maison", plan="""
+PIECE = carte._piece("nord_tripot", "Le tripot du Pouce", sol="t", porte="maison", materiaux=CAVE, plan="""
 BBBBBBBBBBBBBBBBBBBBBBBBBB
 B/ kk  eee     ccccc  e nB
 B                h h h   B

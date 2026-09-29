@@ -171,15 +171,18 @@ def test_l_escalier_monte_a_l_etage_et_redescend(banc):
         // On redescend par l'escalier de l'etage.
         const retour = L.B.interieur.points.find(function (p) { return p.type === 'escalier'; });
         j.x = retour.x * L.TT + 8; j.y = retour.y * L.TT + 8;
+        L.Missions.majInvite(j);
+        const inviteHaut = L.B.invite;
         L.Missions.utiliserPoint(j);
         o.fondu();
         const revenu = L.B.interieur.slug;
         o.sortir();
-        return { bas: bas, invite: invite, haut: haut, revenu: revenu,
+        return { bas: bas, invite: invite, inviteHaut: inviteHaut, haut: haut, revenu: revenu,
                  sorti: L.B.interieur, pres: Math.hypot(j.x - porte.x * L.TT - 8, j.y - (porte.y + 1) * L.TT - 10) };
     }""")
     assert r["bas"]["dehors"] is True
     assert r["invite"] == "MONTER"
+    assert r["inviteHaut"] == "DESCENDRE", "l'escalier de l'étage dit MONTER pour redescendre"
     assert r["haut"]["slug"] != r["bas"]["slug"], "l'escalier n'a pas change de plancher"
     assert r["haut"]["dehors"] is True, "monter a oublie par ou l'on est entre"
     assert r["haut"]["sol"] != 1, "on arrive dans un mur"

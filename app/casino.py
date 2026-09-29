@@ -64,7 +64,7 @@ BBBBBBBBBBBBBBWWDWWBBBBBBBBBBBBBBB
                   + [carte._pt("videopoker", x, 1) for x in (17, 19, 21, 23)]
                   + [carte._pt(jeu, x, 5) for jeu, x in TABLES]
                   # Vague 4 : Irène Lam au bout du bar, et l'escalier du sous-sol, dans son coin.
-                  + [carte._pt("irene", 31, 1), carte._pt("escalier", 32, 9, vers=tripot.PIECE["slug"])]),
+                  + [carte._pt("irene", 31, 1), carte._pt("escalier", 32, 9, vers=tripot.PIECE["slug"], descend=True)]),
     gens=carte._gens(*[("croupier", x, 3) for _, x in TABLES],
                      ("client", 6, 7), ("client", 20, 2), ("client", 25, 9), ("commis", 28, 2),
                      ("gros_bras", 31, 7)))

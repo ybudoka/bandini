@@ -338,3 +338,51 @@ def test_avant_c04_le_pouce_pipe_encore_apres_jamais(banc):
     assert r["avant"]["pipes"] >= 40, f"avant c04, le Pouce pipe six fois sur dix : {r['avant']}"
     assert r["apres"]["qui"] == {"pouce": 0, "gros": 0, "chan": 1}, r["apres"]
     assert r["apres"]["pipes"] == 0, r["apres"]
+
+
+def test_c02_envoye_par_irene_le_pouce_pipe_chaque_grosse_mise(banc):
+    """Martin, 29 sept. 2026 : « je ne vois que peu de dés jaunes pour la mission ». Hors mission, à 500 $, le Pouce
+    pipe trois fois sur cinq, et une dénonciation le rend honnête jusqu'au lendemain. Envoyé par Irène (c02, la
+    preuve pas encore en poche) : la table s'ouvre à 500 $, CHAQUE mise de 500 $ et plus voit ses dés jaunes — même
+    juste après les avoir dénoncés —, et sous 500 $, jamais."""
+    r = banc("function (L, o) {" + OUTILS + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, j = B.joueur, T = L.Tripot; j.invincible = 1e6;
+        faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'c01']);
+        B.partie.argent = 1e6;
+        const serie = function (mise, n) {
+            const e = T.etat(); let vus = 0;
+            for (let k = 0; k < n; k++) {
+                e.mise = mise; e.coups = 0; e.mefiance = 0;
+                choisir(L, o, 'MISER');
+                const t = T.enCours();
+                if (t && t.pipes) vus++;
+                choisir(L, o, 'LANCER');
+            }
+            return vus;
+        };
+        // Hors mission : le hasard du Pouce, et la paix après une dénonciation.
+        dansLaPorte(L, o, 'nord_casino'); descendre(L, o); aLaTable(L, o);
+        const miseHors = T.etat().mise;
+        const hors = serie(500, 30);
+        jusquAuxPipes(L, o); choisir(L, o, 'DÉNONCER LES DÉS');
+        const apresDenonceHors = serie(1000, 10);
+        L.Hud.fermerMenu(); dehors(L, o);
+        // Envoyé par Irène.
+        T.etat().mise = 100; T.etat().tranquille = -1;
+        const debut = commencerChezIrene(L, o);   // chez Irène, au bout du bar : l'escalier est dans la salle
+        jouer(L, o); descendre(L, o); aLaTable(L, o);
+        const miseMission = T.etat().mise;
+        const mission = serie(500, 12);
+        const petite = serie(200, 12);
+        T.etat().mise = 500; choisir(L, o, 'MISER'); choisir(L, o, 'DÉNONCER LES DÉS');
+        const apresDenonce = serie(1000, 6);
+        return { miseHors: miseHors, hors: hors, apresDenonceHors: apresDenonceHors, debut: debut.mission,
+                 miseMission: miseMission, mission: mission, petite: petite, apresDenonce: apresDenonce,
+                 preuve: (B.partie.objets || {}).des_pipes || 0 };
+    }""")
+    assert r["debut"] == "c02", r
+    assert r["miseHors"] == tripot.MISES[0] and 10 <= r["hors"] < 30 and r["apresDenonceHors"] == 0, r
+    assert r["miseMission"] == tripot.PIPES["seuil"], r
+    assert r["mission"] == 12 and r["petite"] == 0 and r["apresDenonce"] == 6, r
+    assert r["preuve"] == 0, "on n'a rien glissé : la mission attend toujours ses dés"
