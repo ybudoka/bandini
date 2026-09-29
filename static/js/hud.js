@@ -3875,7 +3875,7 @@ const Hud = (function () {
         barre(ctx, 6, 19, 30, 3, part, part >= 1 ? '#efe6d0' : '#8a6a3f');
       }
       // L'objectif de l'histoire, en haut au centre, et la fleche vers lui au bord de l'ecran.
-      const ligne = !B.interieur ? Histoire.ligneObjectif() : null;
+      const ligne = !B.interieur ? (function (l) { return l ? l + SurPlace.suffixe() : l; })(Histoire.ligneObjectif()) : null;
       if (ligne) {
         const l = Atlas.largeurTexte(ligne, 1);
         const x = (VW - l) / 2;

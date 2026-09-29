@@ -3604,6 +3604,9 @@ const Histoire = (function () {
         dire(courante(), 'pendant', null, function (l) { return l.objectif === etape; });
         return;
       }
+      // La frontiere (`frontiere`) se compte meme dans une piece : c'est sa porte qui compte.
+      SurPlace.maj(courante());
+      if (!B.partie.mission) return;             // la frontiere vient de la faire rater
       if (!B.interieur) {
         majObjectif();
       }

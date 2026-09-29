@@ -67,5 +67,60 @@ const SurPlace = (function () {
     bloc ? function () { return !Blocs.cartes[bloc]; } : null);
   }
 
-  return { HORS_IMAGES, heureCible, avancerA, sauter };
+  /** Ou l'on est EN VILLE : dans un bloc, son passage ; dans une piece, sa porte ; sinon, soi.
+      ⚠️ `Monde.zoneA` lit la carte COURANTE, et les pieces et les blocs n'ont pas de zones. */
+  function ici() {
+    const j = B.joueur;
+    if (B.bloc) return { carte: B.bloc.ville.carte, x: B.bloc.ville.x, y: B.bloc.ville.y };
+    if (B.interieur && B.exterieur) return { carte: B.exterieur.carte, x: B.exterieur.x, y: B.exterieur.y };
+    return { carte: Monde.carte, x: j.x, y: j.y };
+  }
+
+  /** Le district d'un pixel sur une carte donnee (la derniere zone gagne, comme `Monde.zoneA`). */
+  function districtA(carte, x, y) {
+    let trouvee = null;
+    for (const z of (carte && carte.zones) || []) {
+      if (x >= z.x * TT && x < (z.x + z.l) * TT && y >= z.y * TT && y < (z.y + z.h) * TT) trouvee = z;
+    }
+    return trouvee ? trouvee.district : null;
+  }
+
+  function dedans(f) {
+    if (f.indexOf('bloc:') === 0) return !!B.bloc && B.bloc.slug === f.slice(5);
+    const l = ici();
+    return districtA(l.carte, l.x, l.y) === f;
+  }
+
+  /** Le nom de la frontiere, en majuscules : « LES QUAIS », le nom du bloc. */
+  function nom(f) {
+    if (f.indexOf('bloc:') === 0) {
+      const b = Blocs.liste().find(function (q) { return q.slug === f.slice(5); });
+      return ((b && b.nom) || f.slice(5)).toUpperCase();
+    }
+    const carte = ici().carte, d = ((carte && carte.def && carte.def.districts) || []).find(function (q) { return q.slug === f; });
+    return ((d && d.nom) || f).toUpperCase();
+  }
+
+  /** Chaque image de mission, meme dans une piece (`Histoire.maj`). Figee sous une scene, un menu, la
+      pause : la boucle n'appelle pas `Histoire.maj`. Le compte vit dans `B.mission.hors`, en images. */
+  function maj(m) {
+    const pm = B.partie.mission;
+    if (!m || !m.frontiere || !pm || !pm.gardee || !B.mission) return;
+    if (dedans(m.frontiere)) { B.mission.hors = 0; return; }
+    if (!B.mission.hors) Hud.message('RETOURNE DANS ' + nom(m.frontiere), 120);
+    B.mission.hors = (B.mission.hors || 0) + 1;
+    if (B.mission.hors > HORS_IMAGES) {
+      const n = nom(m.frontiere);
+      Histoire.echouer('hors_zone');
+      Hud.message('MISSION RATÉE — TU AS QUITTÉ ' + n, 200);
+    }
+  }
+
+  /** Ce que la ligne d'objectif porte dehors : « — REVIENS ! 7 S ». */
+  function suffixe() {
+    const bm = B.mission;
+    return bm && bm.hors ? ' — REVIENS ! ' + Math.max(1, Math.ceil((HORS_IMAGES - bm.hors) / 60)) + ' S' : '';
+  }
+
+  return { HORS_IMAGES, heureCible, avancerA, sauter, ici, dedans, nom, maj, suffixe };
 })();

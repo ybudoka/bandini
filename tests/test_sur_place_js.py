@@ -103,3 +103,130 @@ def test_une_mission_sans_sur_place_ne_bouge_rien(banc):
                  gardee: !!p.mission.gardee };
     }""")
     assert r == {"fini": 1, "heure": 0.40, "bouge": False, "transition": False, "gardee": True}
+
+
+FRONTIERE = """
+  // ⚠️ Une réplique ouverte (l'intro, une `pendant`) fige la ville et le compte avec elle : on la
+  // ferme à chaque image, sinon un juge « rien ne bouge » passe à vide.
+  function vivre(L, o, n) { for (let k = 0; k < n; k++) { o.frame(1); fermer(L); } }
+  function garder(L, o, slug, f) {
+    commencer(L, o, slug);
+    L.Histoire.courante().frontiere = f;
+    L.B.partie.mission.gardee = true;
+    vivre(L, o, 2);
+  }
+  function a(L, lieu) { const l = L.Histoire.lieu(lieu), j = L.B.joueur; j.x = l.x; j.y = l.y + 24; L.Entites.indexer(); }
+"""
+
+
+def test_sortir_lance_le_compte_et_zero_fait_rater(banc):
+    r = banc("function (L, o) {" + OUTILS + FRONTIERE + """
+        L.Jeu.commencer(); L.graine(6); L.B.joueur.invincible = 1e6;
+        garder(L, o, 'q13', 'quais');
+        a(L, 'hotel'); vivre(L, o, 30);
+        const dedans = L.B.mission.hors || 0;
+        a(L, 'bar'); vivre(L, o, 60);
+        const ligne = L.SurPlace.suffixe();
+        vivre(L, o, L.SurPlace.HORS_IMAGES);
+        return { dedans: dedans, ligne: ligne, mission: L.B.partie.mission && L.B.partie.mission.slug,
+                 echecs: L.B.partie.stats.echecs || 0 };
+    }""")
+    assert r["dedans"] == 0
+    assert "REVIENS" in r["ligne"] and "9 S" in r["ligne"]
+    assert r["mission"] is None and r["echecs"] == 1
+
+
+def test_revenir_annule_le_compte(banc):
+    r = banc("function (L, o) {" + OUTILS + FRONTIERE + """
+        L.Jeu.commencer(); L.graine(6); L.B.joueur.invincible = 1e6;
+        garder(L, o, 'q13', 'quais');
+        a(L, 'bar'); vivre(L, o, L.SurPlace.HORS_IMAGES - 60);
+        a(L, 'hotel'); vivre(L, o, 2);
+        const remis = L.B.mission.hors;
+        a(L, 'bar'); vivre(L, o, L.SurPlace.HORS_IMAGES - 60);
+        return { remis: remis, mission: !!L.B.partie.mission };
+    }""")
+    assert r == {"remis": 0, "mission": True}
+
+
+def test_la_pause_fige_le_compte(banc):
+    r = banc("function (L, o) {" + OUTILS + FRONTIERE + """
+        L.Jeu.commencer(); L.graine(6); L.B.joueur.invincible = 1e6;
+        garder(L, o, 'q13', 'quais');
+        a(L, 'bar'); vivre(L, o, 60);
+        const avant = L.B.mission.hors;
+        L.Jeu.pause(); const figee = L.B.etat; vivre(L, o, L.SurPlace.HORS_IMAGES); L.Jeu.reprendre();
+        return { figee: figee, avant: avant, apres: L.B.mission.hors, mission: !!L.B.partie.mission };
+    }""")
+    assert r["figee"] == "pause"
+    assert r["mission"] and r["avant"] > 0 and r["apres"] == r["avant"]
+
+
+PIECE = """
+  // Entre dans la pièce du lieu, puis remet le compte à zéro : ce qui compte, c'est DEDANS.
+  function entrerChez(L, o, lieu) {
+    const B = L.B, j = B.joueur;
+    const porte = L.Monde.carte.portes.find(function (p) { return p.lieu === lieu; });
+    j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10; o.entrer(porte);
+    for (let k = 0; k < 400 && B.transition; k++) o.frame(1);
+    B.mission.hors = 0;
+    return !!B.interieur;
+  }
+"""
+
+
+def test_une_piece_hors_de_la_frontiere_compte_dehors(banc):
+    r = banc("function (L, o) {" + OUTILS + FRONTIERE + PIECE + """
+        L.Jeu.commencer(); L.graine(6); L.B.joueur.invincible = 1e6;
+        garder(L, o, 'q13', 'quais');
+        const dedans = entrerChez(L, o, 'planque');   // la planque est au Faubourg
+        vivre(L, o, 60);
+        return { dedans: dedans && !!L.B.interieur, compte: L.B.mission.hors || 0 };
+    }""")
+    assert r["dedans"] and r["compte"] >= 55
+
+
+def test_une_piece_dans_la_frontiere_ne_compte_pas(banc):
+    """⚠️ Une pièce n'a pas de zones : sans la porte, on y serait « nulle part », donc dehors."""
+    r = banc("function (L, o) {" + OUTILS + FRONTIERE + PIECE + """
+        L.Jeu.commencer(); L.graine(6); L.B.joueur.invincible = 1e6;
+        garder(L, o, 'q13', 'quais');
+        const dedans = entrerChez(L, o, 'hotel');     // l'hôtel est aux Quais
+        vivre(L, o, 60);
+        return { dedans: dedans && !!L.B.interieur, compte: L.B.mission.hors || 0 };
+    }""")
+    assert r["dedans"] and r["compte"] == 0
+
+
+def test_un_bloc_hors_du_district_compte_dehors_et_bloc_dedans(banc):
+    r = banc("async function (L, o) {" + OUTILS + FRONTIERE + """
+        L.Jeu.commencer(); L.graine(6);
+        garder(L, o, 'q13', 'bloc:villa');
+        a(L, 'hotel'); vivre(L, o, 10);
+        const enVille = L.SurPlace.dedans('bloc:villa');
+        L.Blocs.sauter('villa'); for (let k = 0; k < 400 && L.B.transition; k++) { o.frame(1); await o.attendre(); }
+        return { enVille: enVille, dansLeBloc: L.SurPlace.dedans('bloc:villa'),
+                 quaisDepuisLeBloc: L.SurPlace.dedans('quais'), erablesDepuisLeBloc: L.SurPlace.dedans('erables') };
+    }""")
+    assert r == {"enVille": False, "dansLeBloc": True, "quaisDepuisLeBloc": False, "erablesDepuisLeBloc": True}
+
+
+def test_une_partie_rechargee_garde_sa_frontiere(banc):
+    r = banc("function (L, o) {" + OUTILS + FRONTIERE + """
+        L.Jeu.commencer(); L.graine(6); L.B.joueur.invincible = 1e6;
+        garder(L, o, 'q13', 'quais');
+        L.B.mission = null;                        // ce que fait un rechargement : B.mission se refait vide
+        a(L, 'bar'); vivre(L, o, 60);
+        return { compte: L.B.mission ? L.B.mission.hors || 0 : -1 };
+    }""")
+    assert r["compte"] > 0
+
+
+def test_pas_de_frontiere_pas_de_compte(banc):
+    r = banc("function (L, o) {" + OUTILS + FRONTIERE + """
+        L.Jeu.commencer(); L.graine(6); L.B.joueur.invincible = 1e6;
+        commencer(L, o, 'q13'); delete L.Histoire.courante().frontiere; L.B.partie.mission.gardee = true;
+        a(L, 'bar'); vivre(L, o, L.SurPlace.HORS_IMAGES + 10);
+        return { compte: L.B.mission.hors || 0, mission: !!L.B.partie.mission };
+    }""")
+    assert r == {"compte": 0, "mission": True}
