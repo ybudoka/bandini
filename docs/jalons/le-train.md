@@ -1039,6 +1039,17 @@ pointillée sous la montagne.
   lampes débordent du coin comme celles de l'autobus. La voiture n'a ni phare ni feu, et le déclare (`sansLampes`) :
   le juge des lampes la laisse passer sur ce point seul. Sans le montant vertical de l'autobus, une rangée de
   fenêtres ne se peignait pas — l'aperçu agrandi l'a montré.
+- ⚠️ **Les proportions d'un vrai train, et sa livrée** (Martin : « regarde sur le net pour que ça ressemble plus à
+  un train », puis la livrée **B** sur une page à quatre choix). Une voiture de passagers fait 26 m sur 3,2 (la LRC de
+  VIA : 25,91 × 3,19 — huit pour un) ; à 52 px sur 16, la nôtre avait la silhouette d'un autobus, et la rame en
+  lisait trois à la queue leu leu. Les voitures font **80 px** : une bande de vitres d'un bout à l'autre, deux
+  climatiseurs sur le toit arrondi, les portes près des bouts, les soufflets entre elles. La locomotive est une
+  **F40PH** (17,12 × 3,23 m) : la cabine pleine largeur devant, et sur le toit, d'avant en arrière, le klaxon, le
+  ventilateur du frein dynamique, la cheminée, puis les trois ventilateurs de radiateur. Le train passe de 14 à
+  **19 tuiles** (`train.HORAIRE["longueur"]`). Livrée **bleu et jaune** — le train canadien qu'on reconnaît au premier
+  coup d'œil, les couleurs seulement, ni nom ni logo ; écartées : bordeaux et jaune, argent à filets rouge et bleu,
+  vert et crème. Sources : [LRC](https://en.wikipedia.org/wiki/LRC_(train)),
+  [EMD F40PH](https://en.wikipedia.org/wiki/EMD_F40PH), [Rapido — F40PH Masterclass](https://rapidotrains.com/emd-f40ph-master-class/).
 - 27 juges : `test_train.py` (7), `test_train_js.py` (20). Restent : **on monte** (vague 2), **on s'assoit**
   (vague 3).
 

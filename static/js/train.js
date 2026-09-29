@@ -360,7 +360,7 @@ const Train = (function () {
                                             def: { classe: 'train', largeur: 16, longueur: 0 } });
     o.sprite = w.loco ? 'locomotive' : 'voiture_train';
     o.conducteur = w.loco ? 'train' : null;          // la locomotive allume ses phares, les voitures non
-    o.def.longueur = w.loco ? 64 : 52;
+    o.def.longueur = w.loco ? 64 : 80;
     o.x = (w.a + w.b) / 2; o.y = donnees().yPx; o.z = z;
     o.angle = e.sens > 0 ? 0 : Math.PI;
     return o;

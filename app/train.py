@@ -19,7 +19,9 @@ PAS_PILIERS = 8
 GARES = (("Les Friches", 50), ("Petit-Canton", 236), ("Gare centrale", 310))
 #: px/image, px/image², images d'arrêt en gare, images d'attente à chaque bout (hors carte), longueur en tuiles,
 #: et à combien de px devant sa tête un passage à niveau se ferme.
-HORAIRE = {"vitesse": 4.5, "acceleration": 0.04, "arret": 600, "bout": 900, "longueur": 14, "annonce": 1100}
+#: ⚠️ 19 tuiles (29 sept. 2026) : une locomotive de 64 px et trois voitures de 80 — les proportions d'un vrai train
+#: (une voiture de 26 m sur 3,2 : huit pour un). À 14, les voitures faisaient 52 px, la silhouette d'un autobus.
+HORAIRE = {"vitesse": 4.5, "acceleration": 0.04, "arret": 600, "bout": 900, "longueur": 19, "annonce": 1100}
 
 
 def _libre(ville, x):
