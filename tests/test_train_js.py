@@ -134,11 +134,20 @@ def test_un_char_attend_au_passage(banc):
         const v = L.Vehicules.creer('auto', (354 + 0.5) * L.TT, 12.5 * L.TT, -Math.PI / 2,
                                       { conducteur: 'trafic', etat: 'roule', sens: '^', couleur: '#cc3333' });
         L.Entites.indexer();
+        const vie = v.vie;
         let plusHaut = 99;
-        for (let k = 0; k < 300; k++) { o.frame(1); plusHaut = Math.min(plusHaut, v.y / L.TT); }
-        return { plusHaut: plusHaut };
+        let devant = 0;                               // le témoin : le train a couvert le passage
+        for (let k = 0; k < 1600; k++) {
+          o.frame(1);
+          // tant que c'est fermé : ensuite, il a le droit de traverser
+          if (L.Train.passageFerme(1, L.Autobus.tempsDeLaPartie())) plusHaut = Math.min(plusHaut, (v.y - v.def.longueur / 2) / L.TT);
+          const e = L.Train.etat(L.Autobus.tempsDeLaPartie());
+          if (e) { const x = L.Train.etendue(e); if (x[0] < 355 * L.TT && x[1] > 353 * L.TT) devant++; }
+        }
+        return { plusHaut: plusHaut, intact: v.vie === vie, devant: devant > 0 };
     }""" % ATTENTE)
-    assert r["plusHaut"] > 7.0          # le nez n'a jamais franchi le rang 7
+    assert r["plusHaut"] >= 7.0 - 0.01   # le NEZ n'a jamais passé le bord de la voie (rang 7)
+    assert r["devant"] and r["intact"]   # et le train, passé devant lui, ne l'a pas touché
 
 
 def test_la_police_en_poursuite_ne_s_arrete_pas(banc):
@@ -306,3 +315,57 @@ def test_la_ligne_sur_la_grande_carte(banc):
                  tunnel: tunnel.filter(Boolean).length, gares: d.gares.map(function (g) { return pts[(g[1] - 2) + ',4']; }) };
     }""")
     assert r["sol"] and r["viaduc"] and 3 <= r["tunnel"] <= 5 and r["gares"] == ["5x5", "5x5", "5x5"]
+
+
+def test_un_long_char_qui_deborde_sur_la_voie_est_pousse(banc):
+    # ⚠️ Le train regardait le CENTRE des chars : un autobus debout dans la rue, le nez sur les rails et le centre
+    # à 18 px, passait dessous sans une égratignure (la relecture finale l'a mesuré).
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        %s
+        const d = L.Train.donnees(), x = 353.5 * L.TT;
+        aLHeure(L, trainDevant(L, x, 60));
+        presDe(L, 350, 11);
+        const v = L.Vehicules.creer('autobus', x, d.yPx + 18 + L.TT, -Math.PI / 2, { couleur: '#cc3333' });
+        v.y = d.yPx + v.def.longueur / 2 - 4;               // le nez 4 px sur la voie
+        L.Entites.indexer();
+        const vie = v.vie;
+        for (let k = 0; k < 120; k++) o.frame(1);
+        const nez = v.y - v.def.longueur / 2;
+        return { degats: v.vie < vie || !v.vivant, degage: nez > d.yPx + 10 || v.y + v.def.longueur / 2 < d.yPx - 10 };
+    }""" % DEVANT)
+    assert r == {"degats": True, "degage": True}
+
+
+def test_engage_sur_la_voie_on_ne_s_y_arrete_pas(banc):
+    # ⚠️ « Jamais derrière soi » : un char qui avait passé la ligne reculée quand le carrefour se remplissait
+    # s'arrêtait là où il était — sur les rails. Engagé, il va jusqu'au carrefour.
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        %s
+        const d = L.Train.donnees();
+        let t0 = -1;
+        for (let t = 0; t < d.periode && t0 < 0; t += 20) {
+          let ouvert = true;
+          for (let k = 0; k < 300 && ouvert; k += 10) ouvert = !L.Train.passageFerme(2, t + k);
+          if (ouvert) t0 = t;
+        }
+        aLHeure(L, t0);
+        presDe(L, 410, 14);
+        // un STOP au carrefour du boulevard : à la ligne, on s'immobilise — mais la ligne est sur les rails
+        const inter = L.Monde.intersectionA(416, 5);
+        if (inter) inter.stop = '^';
+        const v = L.Vehicules.creer('auto', 416.5 * L.TT, 0, -Math.PI / 2,
+                                    { conducteur: 'trafic', etat: 'roule', sens: '^', couleur: '#cc3333' });
+        v.y = 7 * L.TT + v.def.longueur / 2 - 3;          // le nez vient de passer la ligne reculée
+        v.vitesse = 1;
+        L.Entites.indexer();
+        let surLaVoie = 0;
+        for (let k = 0; k < 200; k++) {
+          o.frame(1);
+          const nez = v.y - v.def.longueur / 2, queue = v.y + v.def.longueur / 2;
+          if (v.vitesse < 0.05 && nez < d.yPx + 10 && queue > d.yPx - 10) surLaVoie++;
+        }
+        return { t0: t0, surLaVoie: surLaVoie, stop: !!inter };
+    }""" % ATTENTE)
+    assert r["t0"] >= 0 and r["stop"] and r["surLaVoie"] == 0

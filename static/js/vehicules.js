@@ -2143,7 +2143,15 @@ const Vehicules = (function () {
       (`test_chaque_char_du_catalogue_s_arrete_le_nez_a_la_ligne`) qui le dira. */
   function ligneDevant(v, tx, ty, p) {
     const sx = tx + p[0], sy = ty + p[1];
-    if (Monde.fleche(sx, sy) !== 'S' || Monde.sensArret(sx, sy) !== v.sens) return null;
+    if (Monde.fleche(sx, sy) !== 'S' || Monde.sensArret(sx, sy) !== v.sens) {
+      // ⚠️ LA LIGNE POSÉE SUR UN PASSAGE À NIVEAU recule d'une tuile (`Train.ligneHorsDeLaVoie`) : on la guette
+      // donc une tuile plus tôt, comme une vraie ligne — sinon on la découvre déjà dans son dos.
+      const ax = sx + p[0], ay = sy + p[1];
+      if (Monde.fleche(ax, ay) !== 'S' || Monde.sensArret(ax, ay) !== v.sens) return null;
+      const l = Train.ligneHorsDeLaVoie(ax, ay, p);
+      if (l[0] !== sx || l[1] !== sy) return null;
+      return { tx: ax, ty: ay, inter: Monde.intersectionA(ax + p[0], ay + p[1]) };
+    }
     return { tx: sx, ty: sy, inter: Monde.intersectionA(sx + p[0], sy + p[1]) };
   }
 
@@ -2477,7 +2485,8 @@ const Vehicules = (function () {
       const ligne = !v.poursuite && ligneDevant(v, tx, ty, p);
       if (ligne) {
         v.guetteLigne = true;                        // on relit le feu a chaque image
-        if (attendreALaLigne(v, v.sens, ligne.inter)) {
+        // Engagé sur un passage à niveau (le nez a passé la ligne reculée) : on ne s'arrête plus (`Train.engage`).
+        if (!Train.engage(v, ligne.tx, ligne.ty, p) && attendreALaLigne(v, v.sens, ligne.inter)) {
           v.attendFeu = true;
           // ⚠️ Jamais sur les rails : une ligne posée sur un passage à niveau recule d'une tuile (`Train`).
           const l = Train.ligneHorsDeLaVoie(ligne.tx, ligne.ty, p);
@@ -2511,7 +2520,7 @@ const Vehicules = (function () {
         v.attenteBoite = 0; v.stopT = undefined; v.enBoite = inter || null;
         return centre(tx + p[0], ty + p[1]);
       }
-      if (attendreALaLigne(v, sens, inter)) { v.attendFeu = true; return pointDArret(v, tx, ty, p); }
+      if (!Train.engage(v, tx, ty, p) && attendreALaLigne(v, sens, inter)) { v.attendFeu = true; return pointDArret(v, tx, ty, p); }
       v.attenteBoite = 0;
       v.stopT = undefined;
       v.enBoite = inter || null;                     // on prend le croisement
@@ -2971,7 +2980,8 @@ const Vehicules = (function () {
         if (hors) { v.cible = hors; v.patience = 0; }
       }
       // Derriere celui qu'on suit, on klaxonne ; on ne lui rentre pas dedans (`suitUnChar`).
-      if (v.patience > t.patience_images) { if (!suitUnChar(v)) v.force = 90; v.patience = 0; v.klaxonT = 30; }
+      // ⚠️ Devant une BARRIÈRE BAISSÉE, on klaxonne tant qu'on veut, on ne force pas : le train passe (`Train`).
+      if (v.patience > t.patience_images) { if (!suitUnChar(v) && !(Train.signalDevant(v) < Infinity)) v.force = 90; v.patience = 0; v.klaxonT = 30; }
     } else {
       if (obstacle < t.distance_securite_px * 2) vitesseVoulue *= 0.5;
       // ⚠️ Tant qu'on longe l'obstacle, on reste SOUS la vitesse qui renverse :

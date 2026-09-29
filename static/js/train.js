@@ -132,6 +132,18 @@ const Train = (function () {
     return [sx, sy];
   }
 
+  /** ENGAGÉ : le nez a passé la ligne reculée d'un passage. Un char engagé ne s'arrête plus avant le carrefour
+      (ni feu, ni STOP, ni boîte) — sinon « jamais derrière soi » (`pointDArret`) l'arrêtait là où il était, sur
+      les rails. Faux partout ailleurs. */
+  function engage(v, sx, sy, p) {
+    const l = ligneHorsDeLaVoie(sx, sy, p);
+    if (l[0] === sx && l[1] === sy) return false;
+    const demi = v.def.longueur / 2;
+    const nx = v.x + p[0] * demi, ny = v.y + p[1] * demi;
+    const bx = l[0] * TT + 8 + p[0] * 8, by = l[1] * TT + 8 + p[1] * 8;
+    return (nx - bx) * p[0] + (ny - by) * p[1] > 0;
+  }
+
   const PAS_RUE = { '^': -1, 'v': 1 };
   /** La distance d'un char jusqu'à sa ligne d'arrêt devant un passage FERMÉ, dans sa file. Jamais pour une rame
       ni pour une poursuite (comme le signaleur de chantier, `Chantiers.signalDevant`) : la police passe, et le
@@ -267,6 +279,17 @@ const Train = (function () {
   // ⚠️ LE TRAIN NE FREINE JAMAIS : il klaxonne, et il passe. La source des dégâts est le train, jamais le
   // joueur : ni meurtre ni crime à son compte (`Entites.tuer` ne crédite que `source === B.joueur`).
   const TRAIN = { type: 'train', nom: 'le train', x: 0, y: 0 };
+  // ⚠️ CE QUI FRAPPE TIENT DANS LA RANGÉE DES RAILS (7 px de part et d'autre de l'axe), pas dans les 20 px peints :
+  // un char arrêté le nez au bord de la voie (la ligne d'arrêt, le signal du passage) doit être hors d'atteinte.
+  // À 10 px, le juge des T du trafic a vu le train écraser un char sage, arrêté à sa ligne.
+  const DEMI_TRAIN = 7;
+  /** La demi-étendue [en x, en y] d'une chose : un char selon son cap, un passant par son rayon. */
+  function demiEtendue(q) {
+    if (q.type !== 'vehicule' || !q.def) return [q.r || 5, q.r || 5];
+    const c = Math.abs(Math.cos(q.angle || 0)), si = Math.abs(Math.sin(q.angle || 0));
+    const L = q.def.longueur / 2, W = q.def.largeur / 2;
+    return [c * L + si * W, si * L + c * W];
+  }
   function heurter() {
     const d = donnees(), e = etat(Autobus.tempsDeLaPartie());
     if (!e || e.vitesse <= 0) return;
@@ -276,12 +299,15 @@ const Train = (function () {
     for (const q of Entites.autour(cx, d.yPx, demi, function (q) {
       return q.vivant && (q.type === 'vehicule' || q.type === 'pieton' || (q.type === 'joueur' && !q.dansVehicule));
     })) {
-      if (!auSol(q.x) || q.x < ext[0] - 4 || q.x > ext[1] + 4 || Math.abs(q.y - d.yPx) > TT) continue;
+      // ⚠️ SON ÉTENDUE, PAS SON CENTRE : un autobus debout dans la rue, le nez sur les rails et le centre à
+      // 18 px, passait sous le train sans une égratignure (la relecture finale l'a mesuré).
+      const dm = demiEtendue(q);
+      if (!auSol(q.x) || q.x + dm[0] < ext[0] || q.x - dm[0] > ext[1] || Math.abs(q.y - d.yPx) >= DEMI_TRAIN + dm[1]) continue;
       const cote = q.y >= d.yPx ? 1 : -1;             // on le jette du côté où il est déjà
       if (q.type === 'vehicule') {
         if (q.conducteur !== B.joueur) q.conducteur = null;   // un char du trafic ne se remet pas en voie
         q.etat = q.etat === 'epave' ? q.etat : 'roule';
-        q.y = d.yPx + cote * (TT + q.def.largeur / 2);
+        q.y = d.yPx + cote * (DEMI_TRAIN + dm[1] + 2);
         q.vx = e.sens * e.vitesse * 0.6; q.vy = cote * e.vitesse * 0.8;
         const vite = e.vitesse > d.horaire.vitesse * 0.66;
         Vehicules.endommager(q, vite ? q.vie - q.vieMax * feu * 0.5 : q.vieMax * 0.3, TRAIN);
@@ -304,7 +330,7 @@ const Train = (function () {
     const nez = e.tete, loin = nez + e.sens * 12 * TT;
     const devant = Entites.autour((nez + loin) / 2, d.yPx, 7 * TT, function (q) {
       return q.vivant && (q.type === 'vehicule' || q.type === 'pieton' || q.type === 'joueur')
-        && Math.abs(q.y - d.yPx) <= TT && (q.x - nez) * e.sens > 0 && auSol(q.x);
+        && Math.abs(q.y - d.yPx) < DEMI_TRAIN + demiEtendue(q)[1] && (q.x - nez) * e.sens > 0 && auSol(q.x);
     });
     if (devant.length) { Son.SFX.klaxon_train(nez, d.yPx); klaxonT = COOLDOWN_KLAXON; }
   }
@@ -479,7 +505,7 @@ const Train = (function () {
   }
 
   return { donnees: donnees, etat: etat, etendue: etendue, maj: maj, profil: profil,
-           passageFerme: passageFerme, signalDevant: signalDevant, brisee: brisee, ligneHorsDeLaVoie: ligneHorsDeLaVoie,
+           passageFerme: passageFerme, signalDevant: signalDevant, brisee: brisee, ligneHorsDeLaVoie: ligneHorsDeLaVoie, engage: engage,
            surLeViaduc: surLeViaduc, auSol: auSol, hauteur: hauteur,
            dessinerVoie: dessinerVoie, ajouterVisibles: ajouterVisibles, dessinerHaut: dessinerHaut, lampes: lampes,
            dessinerSurLaCarte: dessinerSurLaCarte };

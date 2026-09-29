@@ -1020,6 +1020,16 @@ pointillée sous la montagne.
 - ⚠️ Trois juges du plan **ne mordaient pas** : le char « qui attend » était hors de la bulle (la ville ne vit
   qu'autour du joueur — `presDe`), le joueur « sous le viaduc » se réveillait à l'hôpital la vie pleine (on guette
   maintenant les coups portés par le train), et la pièce où l'on entrait n'existait pas (on rebâtit la carte).
-- 17 juges : `test_train.py` (6), `test_train_js.py` (17). Restent : **on monte** (vague 2), **on s'assoit**
+- ⚠️ **La relecture finale (un agent neuf) en a trouvé deux, et la correction deux autres.** (1) Le train lisait
+  le CENTRE des chars : un autobus debout, le nez sur les rails, passait dessous intact — il lit maintenant leur
+  étendue selon leur cap. (2) Un char qui avait passé la ligne reculée quand le STOP ou la boîte le retenait
+  s'arrêtait sur place, sur les rails (« jamais derrière soi ») : un char **engagé** va au carrefour
+  (`Train.engage`), et la ligne reculée se **guette une tuile plus tôt** (`ligneDevant`), comme une vraie ligne.
+  (3) Ce qui frappe tient dans la **rangée des rails** (7 px de part et d'autre), pas dans les 20 px peints : à
+  10 px, un char sage arrêté à sa ligne se faisait écraser (le juge des T du trafic l'a vu). (4) L'**impatience**
+  du trafic forçait une barrière baissée après `patience_images` : devant elle, on klaxonne, on ne force pas.
+  Huit mineurs restent notés dans le registre de la vague (conducteur vidé pour tout char frappé, l'enfant que le
+  train traverse, la barrière cassée pour l'aller ET le retour…).
+- 26 juges : `test_train.py` (7), `test_train_js.py` (19). Restent : **on monte** (vague 2), **on s'assoit**
   (vague 3).
 
