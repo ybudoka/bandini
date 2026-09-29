@@ -1233,9 +1233,14 @@ ALLER_DANS_UN_BLOC = """
 
 
 def test_chaque_porte_des_blocs_se_rejoint_et_s_ouvre(banc):
-    """Le chalet et la cabane a sucre au rang, les Galeries : on arrive dans le bloc
-    devant la porte, et ACTION l'ouvre. Le cine-parc, sans porte : a son arrivee. Et de
-    la, un endroit de la ville nous y ramene."""
+    """Le chalet et la cabane a sucre au rang, les Galeries, le casse-croute du cine-parc :
+    on arrive dans le bloc devant la porte, et ACTION l'ouvre. La villa, sans porte : a son
+    arrivee. Et de la, un endroit de la ville nous y ramene.
+
+    ⚠️ Le cine-parc etait le bloc SANS porte jusqu'au 27 sept. 2026 : depuis « le casse-croute
+    du cine-parc au centre, et le projecteur » (Martin : la cabane « doit vendre popcorn, chips »),
+    sa cabane s'ouvre, et le menu le liste par sa porte (`cineparc:<nom de la piece>`), plus par
+    son arrivee. La villa tient maintenant le cas « a son arrivee »."""
     r = banc("async function (L, o) {" + """
         L.Jeu.commencer();
         """ + ALLER + ALLER_DANS_UN_BLOC + """
@@ -1263,7 +1268,9 @@ def test_chaque_porte_des_blocs_se_rejoint_et_s_ouvre(banc):
         return { sorties: sorties, retour: { rendu: retour, bloc: L.B.bloc, interieur: !!L.B.interieur } };
     }""")
     faits = {s["endroit"] for s in r["sorties"]}
-    assert {"rang:Le chalet du rang", "rang:La cabane à sucre", "galeries:Les Galeries de la Baie", "cineparc"} <= faits
+    assert {"rang:Le chalet du rang", "rang:La cabane à sucre", "galeries:Les Galeries de la Baie",
+            "cineparc:Le casse-croûte du ciné-parc", "villa"} <= faits, sorted(faits)
+    assert any("arrivee" in s for s in r["sorties"]), "aucun bloc n'a ete juge a son arrivee"
     for s in r["sorties"]:
         assert s["rendu"] is True and s["menu"] is False and s["etat"] == "jeu", s
         assert s["bloc"] == s["attendu"], s

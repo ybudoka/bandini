@@ -138,6 +138,18 @@ def test_les_comptoirs_ferment_la_nuit_ouvrent_avant_le_jeu_et_le_bar_ferme_au_l
     from app import carte, magasins, nuit
     for famille, comptoir in magasins.COMPTOIRS.items():
         ouvre, ferme = comptoir["heures"]
+        if famille == "cineparc":
+            # ⚠️ LE CASSE-CROÛTE DU CINÉ-PARC EST UN COMPTOIR DE SOIR, comme le bar est un comptoir de nuit :
+            # « l'été seulement, comme le film ; le soir, comme les séances » — de 17 h à 2 h
+            # (docs/jalons/le-casse-croute-du-cine-parc-au-centre-et-le-projecteur.md, Martin, 27 sept. 2026 ;
+            # et la fiche du ciné-parc : « ouvert que les soirs d'été »). `test_cineparc_js` le veut FERMÉ à
+            # 11 h : la règle « ouvert avant le jeu » ne vaut pas pour lui (il n'existait pas avant : son heure
+            # ne change pas le jour). Ce qu'il doit tenir : fermé le midi, ouvert avant la nuit (la séance
+            # commence à la brunante), et fermé après minuit, avant le last call du bar et avant le jour.
+            assert 12 / 24 < ouvre < NUIT_DEBUT, f"le casse-croûte du ciné-parc ouvre à {ouvre * 24:.1f} h"
+            assert 0 < ferme <= nuit.LAST_CALL["heure"] and ferme < NUIT_FIN, (
+                f"le casse-croûte du ciné-parc ferme à {ferme * 24:.1f} h : après la dernière bobine, avant le jour")
+            continue
         # Le jeu commence à 8 h 24 : tout est déjà ouvert — le jour ne change pas.
         assert ouvre <= 8 / 24, f"{famille} ouvre après 8 h"
         if famille == "nuit":
