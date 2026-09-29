@@ -1276,7 +1276,9 @@ const Histoire = (function () {
     }
     porteEnAttente = null;
     commencer(m.slug, true);
-    jouerOuDire(m, 'intro', function () { annoncer(m); });
+    // La fin de l'intro passe par `SurPlace` : le saut a l'heure et au lieu (`sur_place`), et la
+    // frontiere qui s'arme (`gardee`) — une mission sans ces cles annonce tout de suite.
+    jouerOuDire(m, 'intro', function () { SurPlace.sauter(m, function () { annoncer(m); }); });
   }
 
   /** LANCE une mission comme si son donneur venait de nous parler, sans regarder

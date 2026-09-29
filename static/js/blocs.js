@@ -372,11 +372,18 @@ const Blocs = (function () {
     if (!b) return false;
     charger(b.slug);
     Jeu.transiter([1, 0, 24], function () {
-      const def = cartes[b.slug];
-      if (!def || B.bloc) return;
-      Jeu.passerDansLeBloc(b, def, recul(b.passage, Monde.carte, B.joueur), ici || null);
-      if (apres) apres();
+      if (entrerAuNoir(b.slug, ici) && apres) apres();
     }, null, function () { return !cartes[b.slug]; });
+    return true;
+  }
+
+  /** Au noir : passe dans le bloc `slug` si sa carte est la, a `ici` (a son arrivee sans lui).
+      Rend false sans rien faire si la carte manque ou qu'on est deja dans un bloc. `sauter` et
+      les missions sur place (`SurPlace.sauter`, qui tient son propre fondu) passent par ici. */
+  function entrerAuNoir(slug, ici) {
+    const b = liste().find(function (q) { return q.slug === slug; }), def = cartes[slug];
+    if (!b || !def || B.bloc) return false;
+    Jeu.passerDansLeBloc(b, def, recul(b.passage, Monde.carte, B.joueur), ici || null);
     return true;
   }
 
@@ -387,7 +394,7 @@ const Blocs = (function () {
     return { x: c.x, y: c.y, nom: 'Vers la ville', couleur: '#7fc4ff' };
   }
 
-  return { dessinerFumees, cheminees, fume, FUMEE, VAPEUR, init, maj, charger, liste, sauter, contreLeBord, recul, marge, porteur, capVersLInterieur, poursuiteAuBord,
+  return { dessinerFumees, cheminees, fume, FUMEE, VAPEUR, init, maj, charger, liste, sauter, entrerAuNoir, contreLeBord, recul, marge, porteur, capVersLInterieur, poursuiteAuBord,
            garder, souvenir, enMemoire, oublier, reprendre,
            cibleDeSortie, dessiner, texteDInfo, DELAI_POURSUIVANTS,
            get cartes() { return cartes; }, BORD_PX, PRES, RELANCE };
