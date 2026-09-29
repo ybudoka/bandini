@@ -2080,11 +2080,52 @@ const Vehicules = (function () {
     // ⚠️ Feu vert ou stop, on ne S'ENGAGE que si la boite est libre : deux
     // chars qui tournent a gauche de bouts opposes se retrouvaient nez a nez
     // au milieu, chacun attendant l'autre. Un croisement, un char a la fois.
-    // Passe un long moment (un char stationne dans la boite), on y va quand meme.
+    // Passe un long moment (un char stationne dans la boite), on y va quand meme — `soupapeOuverte`.
     if (inter && !croisementLibre(inter, v)) {
       v.attenteBoite = (v.attenteBoite || 0) + 1;
-      if (v.attenteBoite < trafic().patience_images * 2) return true;
+      if (!soupapeOuverte(inter, v)) return true;
     }
+    return false;
+  }
+
+  //: L'occupant d'une boite qui n'a pas avance d'une demi-tuile en dix secondes (le chien de garde
+  //: compte pareil) est COINCE : c'est alors seulement que la soupape s'ouvre contre lui.
+  const OCCUPANT_COINCE_IMAGES = 600, OCCUPANT_AVANCE_PX = 8;
+
+  /** Celui qui tient la boite (`enBoite`) : un char du trafic ou d'une ligne, a portee. */
+  function occupantDeLaBoite(inter, v) {
+    const cx = (inter.x + inter.l / 2) * TT, cy = (inter.y + inter.h / 2) * TT;
+    const approche = Math.max(inter.l, inter.h) * TT / 2 + 2 * TT + 12 + APPROCHE_TRAM_TUILES * TT;
+    return Entites.autour(cx, cy, approche, function (q) {
+      return q.type === 'vehicule' && q !== v && q.etat !== 'epave' && q.enBoite === inter && (q.conducteur === 'trafic' || q.conducteur === 'ligne');
+    })[0] || null;
+  }
+
+  /** LA SOUPAPE DE LA BOITE : passe `patience x 2` d'attente, on s'engage quand meme. Elle est
+      faite pour ce qui ne sortira jamais seul — un char stationne, le joueur plante au milieu.
+
+      ⚠️ **PAS CONTRE UN OCCUPANT QUI AVANCE** (29 sept. 2026, « deux chars dans la meme boite »).
+      Mesure, 120 000 images a 8 h 25, midi et 18 h 40 : les deux fois ou elle s'est ouverte sur une
+      boite reservee, l'occupant roulait — une moto entree cinq images plus tot (le camion, lui,
+      avait vu passer la file entiere avant son tour), une auto au pas derriere un flaneur. Et
+      contre un occupant ARRETE, il a sa propre patience : un autobus derriere un passant plante
+      sur la voie (graine 13 des velos) force au bout de `patience x 2`, et le camion d'en face
+      s'engageait trente images avant — deux chars dans la boite. On attend donc qu'il n'ait pas
+      avance d'une demi-tuile en dix secondes : sa patience, son `force` et le chien de garde ont
+      alors echoue, et la boite ne se liberera plus seule.
+
+      Tant qu'on attend un occupant qui avance, l'attente reste LEGITIME (`attenteLegitime` : le
+      compte est retenu sous `patience x 2`) — sinon le chien de garde mordait le char sage. */
+  function soupapeOuverte(inter, v) {
+    const pat2 = trafic().patience_images * 2;
+    const occupant = occupantDeLaBoite(inter, v), vu = v.occupantVu;
+    if (!occupant) v.occupantVu = null;
+    else if (!vu || vu.id !== occupant.id || dist2(vu.x, vu.y, occupant.x, occupant.y) > OCCUPANT_AVANCE_PX * OCCUPANT_AVANCE_PX) {
+      v.occupantVu = { id: occupant.id, x: occupant.x, y: occupant.y, images: 0 };
+    } else vu.images++;
+    if ((v.attenteBoite || 0) < pat2) return false;
+    if (!occupant || v.occupantVu.images >= OCCUPANT_COINCE_IMAGES) return true;
+    v.attenteBoite = pat2 - 1;
     return false;
   }
 
@@ -2779,7 +2820,8 @@ const Vehicules = (function () {
       boite qu'un autre char n'a pas encore rendue.
 
       ⚠️ Elle est BORNEE, sinon elle serait une excuse a tout : un feu rouge
-      dure au plus 480 images, l'attente de boite au plus `patience x 2`. Un
+      dure au plus 480 images, l'attente de boite au plus `patience x 2` — ou tant
+      que l'occupant de la boite avance (`soupapeOuverte`, qui retient le compte). Un
       char pris pour de vrai n'est jamais dans un de ces trois cas bien
       longtemps — et on ne compte pas contre lui le temps ou il a raison
       d'attendre. (C'est ce qui mordait a tort : 480 images de feu rouge PUIS
@@ -4225,7 +4267,7 @@ const Vehicules = (function () {
     pointDArret, approcheDeLaLigne, placeDeLaPanne, placeStationnee, garesVoulus,
     voieDeDepassement, voieLibre, changerDeVoie,
     estVeloDuTrafic, intentionDuVelo, coteDuVelo, aLaBordure, voieDuVelo, roulableHorsRue, boutDeTrottoir, traverseeDuParc, monterSurLeTrottoir,
-    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPlaque, majTas, majPanne, majAmarrages, majMouillages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, lampesDesPhares, corpsDesPhares, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, tenueDuCavalier, imageDuCavalier,
+    croisementLibre, soupapeOuverte, creerSignalisation, pointeDuMoment, majNidDePoule, majPlaque, majTas, majPanne, majAmarrages, majMouillages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, lampesDesPhares, corpsDesPhares, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, tenueDuCavalier, imageDuCavalier,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };
 })();

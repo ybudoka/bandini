@@ -202,6 +202,13 @@ const Autobus = (function () {
         if (d2 < t.naissance_px * t.naissance_px || d2 > (t.oubli_px - 80) * (t.oubli_px - 80)) continue;
         if (Entites.visibleAEcran(p.x, p.y, 60)) continue;
         if (Entites.autour(p.x, p.y, 48, function (q) { return q.type === 'vehicule' || q.type === 'joueur'; }).length) continue;
+        // ⚠️ NE ET DEJA DANS UNE BOITE, il la TIENT — ou il ne nait pas. L'horaire le pose ou il
+        // en est, parfois en plein carrefour : il n'est jamais passe par `peutEntrer`, et sans
+        // reservation une auto s'y engageait sous lui (29 sept. 2026 : apres la reservation rendue
+        // trop tot, c'etait la derniere source de deux chars dans la meme boite — le meme autobus
+        // du terminus, graines 5 et 23 a 18 h 40). Boite prise : il naitra au regard suivant.
+        const boite = Monde.intersectionA(Math.floor(p.x / TT), Math.floor(p.y / TT));
+        if (boite && !Vehicules.croisementLibre(boite, {})) continue;
         const creer = function () {
           return Vehicules.creer('autobus', p.x, p.y, p.angle, {
             // ⚠️ La couleur est DONNEE (aucun de) : celle de la ligne, ou celle que la
@@ -209,7 +216,7 @@ const Autobus = (function () {
             conducteur: 'ligne', etat: 'roule', couleur: (L.sprite && SPRITES[L.sprite].couleur) || L.couleur,
             sprite: L.sprite || 'autobus', sens: p.sens, rails: !!L.rails,
             ligne: L.numero, rang: rang, etape: (p.i + 1) % L.n, servi: -1, arretT: 0, arret: null,
-            passager: null, demande: false, bloqueT: 0, bord: [],
+            passager: null, demande: false, bloqueT: 0, bord: [], enBoite: boite,
           });
         };
         // ⚠️ LA LIGNE DU PETIT-CANTON (`a_part`, `bus_du_canton.py`) : ses autobus naissent HORS DE LA SUITE des
@@ -238,7 +245,7 @@ const Autobus = (function () {
     }
     if (!Vehicules.croisementLibre(inter, v)) {
       v.attenteBoite = (v.attenteBoite || 0) + 1;
-      if (v.attenteBoite < t.patience_images * 2) return false;
+      if (!Vehicules.soupapeOuverte(inter, v)) return false;
     }
     v.attenteBoite = 0;
     v.stopT = undefined;
@@ -300,6 +307,17 @@ const Autobus = (function () {
     let cible = centre(L.tuiles[v.etape]);
     if (dist2(cible.x, cible.y, v.x, v.y) < 36) {
       const ici = v.etape;
+      // ⚠️ LA BOITE SE REND SUR LA VOIE DE SORTIE, comme le trafic (`cibleDeLaVoie`) — ni sur la
+      // ligne d'arret, ni dans la boite. On la rendait des qu'il visait une tuile qui n'etait pas
+      // `+` : la ligne d'arret `S` elle-meme, a l'image ou `peutEntrer` venait de la prendre. Aucun
+      // autobus ne la tenait donc jamais, et `croisementLibre` ne regarde pas un autobus de ligne
+      // pose dans la boite : une auto s'engageait sous son nez pendant qu'il attendait une mere et
+      // son enfant sur la traverse — l'autobus pousse sur le trottoir de la graine 23 de
+      // `test_velos_js` (29 sept. 2026). Mesure a 18 h 40, 3 graines x 10 000 images : 12 doublons
+      // de boite sur 13 etaient un autobus sans reservation ; le 13e, la soupape.
+      // Et on la rend AVANT l'abribus : un arret juste apres la boite ne la garde pas fermee.
+      const fIci = Monde.fleche(L.tuiles[ici][0], L.tuiles[ici][1]);
+      if (v.enBoite && fIci !== '+' && fIci !== 'S') v.enBoite = null;
       // L'abribus : on s'arrete, portes ouvertes, une fois par passage.
       if (L.arretA.has(ici) && v.servi !== ici) {
         v.servi = ici;
@@ -339,7 +357,6 @@ const Autobus = (function () {
       // tour suivant de la boucle, l'autobus passait devant l'abribus sans
       // s'arreter — il croyait l'avoir deja servi.
       if (v.servi !== ici) v.servi = -1;
-      if (Monde.fleche(suivante[0], suivante[1]) !== '+') v.enBoite = null;
       cible = centre(suivante);
     }
     v.cible = cible;

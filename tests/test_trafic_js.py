@@ -1078,3 +1078,147 @@ def test_un_char_sort_de_chaque_t_par_la_tige_sans_tourner_en_rond(banc):
         assert res["entre"] and res["sorti"], f"le char n'est pas ressorti du T : {res}"
         assert res["debloques"] == 0, f"le chien de garde a du intervenir : {res}"
         assert res["boucles"] <= 1, f"le char a tourne en rond dans le T : {res}"
+
+
+# --- Le carrefour : un char a la fois dans la boite (29 sept. 2026) ---------------------------------
+
+
+@pytest.mark.parametrize("graine", [5, 23])
+def test_deux_chars_du_trafic_ne_sont_jamais_dans_la_meme_boite(banc, graine):
+    """Martin, 29 sept. 2026 : « deux chars dans la même boîte » — la vraie racine de l'autobus
+    poussé sur le trottoir (graine 23 de `test_velos_js`).
+
+    Mesuré (sonde, chaque image : les chars du trafic et des lignes dont le centre est dans la
+    même boîte, passages compris) : 1 à 2 doublons par partie de 3 000 images sur quatre graines
+    sur six, 3 à 5 par 10 000 images à 18 h 40 — et tous, sauf un, un AUTOBUS DE LIGNE sans
+    réservation. Il rendait la boîte à l'image même où il la prenait (`peutEntrer`, puis « la
+    suivante n'est pas un `+` » : c'était la ligne d'arrêt), et il naissait parfois en plein
+    carrefour, là où l'horaire le posait ; `croisementLibre` ne regarde pas un autobus de ligne
+    posé dans la boîte, et une auto s'engageait sous lui. Corrigé : 0 doublon sur 36 parties
+    (216 000 images, trois heures, dix graines), et pas une morsure du chien de garde de plus.
+
+    Plafond : ZÉRO. La soupape contre un occupant coincé (dix secondes sans avancer) reste
+    permise, mais elle ne s'est jamais ouverte dans ces parties ; si elle tombe un jour ici,
+    lire le cas avant de relâcher. La police en poursuite brûle tout : elle ne compte pas."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(%d);
+        const T = L.TT, j = L.B.joueur; j.invincible = 99999;
+        L.Vehicules.monter(j, o.char('auto', 0, 0, 0));
+        let doublons = 0, images = 0;
+        const cas = [];
+        let avant = new Set();
+        for (let i = 0; i < 2000; i++) {
+            o.frame(1);
+            const boites = new Map();
+            L.B.entites.forEach(function (v) {
+                if (v.type !== 'vehicule' || v.etat === 'epave' || v.poursuite) return;
+                if (v.conducteur !== 'trafic' && v.conducteur !== 'ligne') return;
+                const b = L.Monde.intersectionA(Math.floor(v.x / T), Math.floor(v.y / T));
+                if (!b) return;
+                if (!boites.has(b)) boites.set(b, []);
+                boites.get(b).push(v);
+            });
+            const ici = new Set();
+            boites.forEach(function (l) {
+                if (l.length < 2) return;
+                images++;
+                const cle = l.map(function (v) { return v.id; }).sort().join('-');
+                ici.add(cle);
+                if (avant.has(cle)) return;
+                doublons++;
+                if (cas.length < 5) cas.push(L.B.t + ' : ' + l.map(function (v) { return v.conducteur + '/' + v.slug + ' ' + L.Vehicules.etatCourt(v) + (v.enBoite ? '' : ' (sans réservation)'); }).join(' + '));
+            });
+            avant = ici;
+        }
+        return { doublons: doublons, images: images, cas: cas };
+    }""" % graine)
+    assert r["doublons"] == 0, (
+        f"{r['doublons']} fois deux chars du trafic dans la même boîte ({r['images']} images à deux) : {r['cas']}"
+    )
+
+#: Une boite tenue par un OCCUPANT qu'on promene a la main (`attendLeJoueur` coupe sa conduite), et
+#: un char du trafic qui arrive par un bras du T sans STOP : seule la boite peut le retenir.
+BOITE_TENUE = """function (L, o) {
+    L.Jeu.commencer();
+    L.graine(%(graine)d);
+    const T = L.TT, V = L.Vehicules, c = L.Monde.carte, j = L.B.joueur;
+    const PAS = { '<': [-1, 0], '>': [1, 0], '^': [0, -1], 'v': [0, 1] };
+    L.B.defs.conduite.trafic.vehicules_max = 0;
+    j.invincible = 99999;
+    // Un T, et un bras qui n'est pas sa tige : ni feu ni STOP devant la boite.
+    let inter = null, s = null, sx = 0, sy = 0;
+    for (const i of c.intersections) {
+        if (!i.stop || i.y < (L.B.defs.decalage_nord || 0)) continue;
+        for (const cle in c.arrets) {
+            const sens = c.arrets[cle], xy = cle.split(',').map(Number), p = PAS[sens];
+            if (sens === i.stop || L.Monde.intersectionA(xy[0] + p[0], xy[1] + p[1]) !== i) continue;
+            inter = i; s = sens; sx = xy[0]; sy = xy[1]; break;
+        }
+        if (inter) break;
+    }
+    const p = PAS[s];
+    let occupant = null, char = null;
+    const vider = function () { L.B.entites = L.B.entites.filter(function (e) { return e === j || (e.type !== 'vehicule' && e.type !== 'pieton') || e === occupant || e === char; }); };
+    vider();
+    j.x = (inter.x - 1) * T + 8; j.y = (inter.y - 1) * T + 8;
+    L.Monde.centrerCamera(j.x, j.y);
+    const cx = (inter.x + inter.l / 2) * T, cy = (inter.y + inter.h / 2) * T;
+    occupant = V.creer('auto', cx, cy, 0, { conducteur: 'trafic', etat: 'roule', sens: '>', enBoite: inter, attendLeJoueur: true });
+    char = V.creer('auto', (sx - p[0] * 3) * T + 8, (sy - p[1] * 3) * T + 8, Math.atan2(p[1], p[0]), { conducteur: 'trafic', etat: 'roule', sens: s });
+    L.Entites.indexer();
+    let entre = null, ensemble = 0;
+    for (let i = 0; i < %(images)d; i++) {
+        L.B.partie.heure = 0.5;
+        if (i === %(depart)d) { L.B.entites = L.B.entites.filter(function (e) { return e !== occupant; }); L.Entites.indexer(); occupant = null; }
+        // L'occupant qui AVANCE : il va et vient d'une douzaine de pixels, sans jamais sortir.
+        if (occupant && %(avance)s) { occupant.x = cx + 12 * Math.sin(i / 60); occupant.y = cy; }
+        o.frame(1);
+        vider();
+        if (char.enBoite === inter && entre === null) entre = i;
+        if (occupant && char.enBoite === inter) ensemble++;
+    }
+    return { trouve: !!inter, entre: entre, ensemble: ensemble, debloques: char.debloques || 0 };
+}"""
+
+
+@pytest.mark.parametrize("graine", [3, 17])
+def test_on_n_entre_pas_dans_une_boite_dont_l_occupant_avance(banc, graine):
+    """Martin, 29 sept. 2026 : « deux chars dans la même boîte », l'enquêter et la resserrer.
+
+    La soupape (`soupapeOuverte`) laisse entrer, passé `patience x 2`, dans une boîte déjà
+    tenue. Mesurée sur 120 000 images de trafic (8 h 25, midi, 18 h 40), elle ne s'est ouverte
+    sur une boîte réservée que DEUX fois — et les deux fois, l'occupant roulait encore (une moto
+    entrée cinq images plus tôt ; une auto au pas derrière un flâneur). Contre un occupant qui
+    avance, on attend : l'attente reste légitime (pas de chien de garde), et on entre dès qu'il
+    rend la boîte. Sans la règle : le char entre à `patience x 2` sous l'occupant. Et 1 200 images
+    d'attente, c'est au-delà de `patience x 2` PLUS les dix secondes du chien de garde : une attente
+    qu'on cesserait de retenir le ferait mordre."""
+    r = banc(BOITE_TENUE % {"graine": graine, "images": 1400, "depart": 1200, "avance": "true"})
+    assert r["trouve"], "aucun T avec un bras sans STOP"
+    assert r["ensemble"] == 0, (
+        f"le char est entré dans la boîte pendant que son occupant y roulait encore "
+        f"({r['ensemble']} images à deux, entré à l'image {r['entre']}) : la soupape s'ouvre contre un "
+        "occupant qui avance"
+    )
+    assert r["entre"] is not None and 1200 <= r["entre"] < 1260, (
+        f"l'occupant parti à l'image 1200, le char n'est entré qu'à {r['entre']} : l'attente se fige"
+    )
+    assert r["debloques"] == 0, "le chien de garde a mordu un char qui attendait sagement la boîte"
+
+
+@pytest.mark.parametrize("graine", [3, 17])
+def test_contre_un_occupant_coince_la_soupape_s_ouvre_encore(banc, graine):
+    """L'autre moitié de la règle : un occupant qui n'avance plus d'une demi-tuile en dix
+    secondes ne rendra pas la boîte seul (sa patience, son `force` et le chien de garde ont
+    échoué). La soupape s'ouvre alors — sinon le carrefour se fige, pire qu'un frôlement.
+    Et pas avant : à `patience x 2` (400 images), l'autobus de la graine 13 des vélos, arrêté
+    derrière un passant, allait justement forcer ; le camion d'en face entrait trente images
+    plus tôt."""
+    r = banc(BOITE_TENUE % {"graine": graine, "images": 1300, "depart": -1, "avance": "false"})
+    assert r["trouve"], "aucun T avec un bras sans STOP"
+    assert r["entre"] is not None, "contre un occupant figé, la soupape ne s'ouvre plus : le carrefour se fige"
+    assert 600 <= r["entre"] < 1200, (
+        f"entré à l'image {r['entre']} : la soupape doit attendre dix secondes d'un occupant figé, pas plus"
+    )
+    assert r["debloques"] == 0, "le chien de garde a mordu un char qui attendait sagement la boîte"
