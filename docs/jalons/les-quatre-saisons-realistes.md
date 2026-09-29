@@ -1162,6 +1162,20 @@ glace et le dérapage (lot 6) restent en dernier, à part._
 - Plus de passants dehors l'été : ⚠️ touche au dé de `peupler` — à mesurer contre les juges avant de le
   promettre ; sinon, ça tombe.
 
+### Lot 5 — le son des saisons (29 sept. 2026)
+
+- **Quatre ambiances** (ElevenLabs, des boucles de dix secondes, `LIEUX["saisons"]`) : l'hiver, le vent
+  froid qui siffle entre les maisons et une charrue qui gratte au loin ; le printemps, l'eau de fonte qui
+  coule dans les gouttières et les merles ; l'été, les cigales et une tondeuse au loin ; l'automne, le vent
+  dans les feuilles sèches et les outardes qui passent. Août sonne comme l'été, novembre comme l'automne.
+- **En fondu enchaîné** : le volume de chaque ambiance suit la palette du moment — pendant une transition,
+  l'une descend pendant que l'autre monte, palier par palier, et le volume glisse d'une image à l'autre
+  (jamais une coupure). Une pure fonction du jour et de l'heure, aucun dé.
+- **Discrètes** : sous la musique du district, plus basses la nuit, presque couvertes sous la pluie et la
+  tempête (qui ont leur boucle), muettes dedans.
+- **Juges** : la bonne ambiance à chaque saison, le fondu sans saut (d'une image à l'autre et d'un palier à
+  l'autre), le silence dedans, aucun dé ; les sons au paquet (le poids).
+
 ## Notes
 
 ### Lot 1 — le paysage des quatre saisons (livré le 29 sept. 2026)
