@@ -1110,6 +1110,32 @@ def test_le_pont_rend_son_eau_apres_un_saut(banc):
   posé, la ville ne bouge pas ; la maison hantée seulement le 31 au soir, le sac paie une fois ; les enfants
   bornés ; captures du soir du 31 et la sonde du rythme.
 
+### Lot 6 — la glace et le vrai dérapage (design approuvé par Martin le 29 sept. 2026)
+
+Trois vagues jouables. ⚠️ **La règle d'or : au sec, la conduite ne change pas d'un pixel** — le nouveau
+modèle ne s'éveille que sous une adhérence de 1 (neige, glace, pluie, gadoue, feuilles).
+
+- **Vague 6a — le dérapage** (les chars du joueur, de la police, des missions) : le **sous-virage** (lancé
+  sur la glace, le volant mord moins, tout droit), le **survirage** (le frein à main en courbe ou trop de gaz
+  en tournant font partir l'arrière ; laissé faire, le **tête-à-queue**), le **contre-braquage** qui rattrape
+  (au clavier comme à la manette), les **roues bloquées** (frein à fond sur la glace : le volant ne dirige
+  plus) ; les **pneus d'hiver** de Ti-Guy en rendent une vraie part. Le sol le montre (des traces noires au
+  sec, des sillons dans la neige, bornées, qui s'effacent) et l'oreille l'entend (le crissement au sec, le
+  silence sur la glace).
+- **Vague 6b — la glace** : de la glace noire l'hiver (sur les ponts, et sur des tuiles de rue à
+  l'empreinte), le gel et le dégel au printemps (la glace le matin, fondue l'après-midi) ; un passant qui
+  court sur la glace glisse et tombe, le joueur compris. **Le verglas** : son option disparaît, comme celle de
+  la neige, et il tombe les derniers jours de mars, pour tout le monde (Martin, 29 sept. 2026).
+- **Vague 6c — la ville glisse aussi** : un char du trafic qui freine sur la glace glisse un peu et finit
+  ARRÊTÉ, jamais perdu hors de sa voie (pas de glissade pour la police en pleine poursuite) ; les bancs de
+  neige (lot 4) enlisent — les roues patinent, on recule, on repart.
+- **Les courses et les défis chronométrés** d'un jour d'hiver deviennent plus durs : gardé (Martin) ; les
+  records déjà battus restent.
+- **Juges** : au sec, la même trajectoire au pixel que l'ancien modèle ; sur la glace, un char lancé en courbe
+  sous-vire, le frein à main en courbe fait partir l'arrière, le contre-braquage rattrape et les pneus d'hiver
+  rattrapent mieux ; des roues bloquées ne dirigent pas ; un passant qui court sur la glace tombe ; un char de
+  la ville qui glisse finit arrêté, jamais perdu.
+
 ## Notes` de ce fichier, « Lot 1 livré le … » (ce qui est fait, ce qui ne l'est
   pas, les juges et leurs mutations) ; la cellule du plan : « ✅ lot 1 livré : … ; lot 2 à faire : la
   pluie et le sol » ; `docs/architecture.md` (tâches 1-2). La ligne reste ⬜ **en cours** (cinq lots
