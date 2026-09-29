@@ -97,7 +97,8 @@ DESSINS_D_OBJET = ("cle", "dossier", "registre", "sac")
 # quatre de la v1. `alarme` (21 sept. 2026) est celui du piratage raté : trop
 # de zaps dans le labyrinthe. Ils vivent ICI, lus par `histoire.js` comme le reste.
 # `arme` (29 sept. 2026) : l'option `sans_arme` enfin lue — une arme au poing en territoire de gang, c'est raté.
-ECHECS = ("mort", "arrete", "vehicule_detruit", "chrono", "etoile", "protege_mort", "alarme", "arme")
+# `hors_zone` (29 sept. 2026) : sorti plus de dix secondes de la `frontiere` de la mission (`surplace.js`).
+ECHECS = ("mort", "arrete", "vehicule_detruit", "chrono", "etoile", "protege_mort", "alarme", "arme", "hors_zone")
 
 #: Les quatre options qui TRAVERSENT les types d'objectifs (M16). Une clé
 #: d'objectif, pas un type : `chrono_s` sur n'importe lequel (le défi l'avait),
@@ -425,6 +426,10 @@ class Mission(TypedDict):
     # `estFermee`) et par le carnet.
     exige: NotRequired[dict]   # ce qu'il faut AVOIR en plus des prerequis
     ferme: NotRequired[str]    # le slug de la mission que celle-ci ferme
+    # --- Sur place, avec une frontiere (29 sept. 2026) — lues par `surplace.js`, jugees par
+    # `erreurs_de_sur_place`.
+    sur_place: NotRequired[dict]  # le saut : {"lieu": …, "heure": "nuit" | (h0, h1)}, apres l'intro
+    frontiere: NotRequired[str]   # un district, ou "bloc:<slug>" : on ne la quitte pas plus de 10 s
 
 
 #: ⚠️ **CE QU'UNE MISSION RECOIT QUAND SON FICHIER NE LE DIT PAS.** Demande de
@@ -1370,6 +1375,48 @@ def _lieux_du_plan(plan: dict) -> list[str]:
         valeur = plan.get(cle)
         lieux += [v for v in (valeur if isinstance(valeur, list) else [valeur]) if isinstance(v, str)]
     return lieux
+
+
+#: Les districts qu'une frontière peut nommer : ceux de la ville et du nord, plus l'île et l'aéroport
+#: (des zones dont le district est elles-mêmes — `carte.exporter()["zones"]`).
+DISTRICTS_HORS_TRAME = ("ile", "aeroport")
+
+
+def districts_de_frontiere() -> frozenset[str]:
+    from .. import carte, nord
+
+    return frozenset([d["slug"] for d in carte.DISTRICTS] + [d["slug"] for d in nord.DISTRICTS_NORD]
+                     + list(DISTRICTS_HORS_TRAME))
+
+
+def erreurs_de_sur_place(mission: dict) -> list[str]:
+    """Ce qui cloche dans `sur_place` et `frontiere` — la FORME seulement ; que chaque lieu soit dans sa
+    frontière se juge sur la ville (`tests/test_sur_place.py`)."""
+    from .. import blocs, carte
+
+    erreurs = []
+    f = mission.get("frontiere")
+    if f is not None:
+        if f.startswith("bloc:"):
+            if f[5:] not in set(blocs.lieux_des_blocs().values()):
+                erreurs.append(f"bloc inconnu : {f}")
+        elif f not in districts_de_frontiere():
+            erreurs.append(f"district inconnu : {f}")
+    sp = mission.get("sur_place")
+    if sp is not None:
+        if set(sp) - {"lieu", "heure"}:
+            erreurs.append(f"clé inconnue dans sur_place : {sorted(set(sp) - {'lieu', 'heure'})}")
+        lieux = ({p["slug"] for p in carte.SPECIAUX.values()} | {"kiosque", "planque"}
+                 | set(blocs.lieux_des_blocs()))
+        if sp.get("lieu") not in lieux:
+            erreurs.append(f"lieu inconnu dans sur_place : {sp.get('lieu')}")
+        h = sp.get("heure")
+        if h != "nuit":
+            if not (isinstance(h, (tuple, list)) and len(h) == 2):
+                erreurs.append(f"heure mal formée : {h!r}")
+            elif not all(isinstance(v, (int, float)) and 0 <= v < 1 for v in h):
+                erreurs.append(f"heure hors de [0, 1) : {h!r}")
+    return erreurs
 
 
 def erreurs_de_mise_en_scene(mission: dict) -> list[str]:
