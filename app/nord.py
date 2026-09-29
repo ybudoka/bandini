@@ -314,6 +314,14 @@ def _bidonville(ch, x, y, largeur, hauteur):
         quoi = _parmi(ch, BRIC_A_BRAC)
         if (bx, by) not in interdit:
             ch.poser_decor(quoi, bx, by)
+    # ⚠️ **ET ON DÉGAGE** (`_Chantier.degager_le_decor`, comme le terrain vague et le quai). Deux cabanes
+    # serrées laissent entre elles une ruelle d'UNE tuile : une palette à un bout, une carcasse à l'autre, et
+    # la ruelle est murée — (375, 16), (381, 24), (381, 25) le 28 sept. 2026 (`test_quai_se_marche`). Sans dé :
+    # on enlève ce qui ferme, après le semis, et le bidonville garde ses tirages. Un baril retiré éteint son feu.
+    if ch.degager_le_decor(x, y, largeur, hauteur):
+        feux_restants = {(d["x"], d["y"]) for d in ch.decor if d["type"] == "baril_feu"}
+        ch.lampes[:] = [lampe for lampe in ch.lampes if lampe.get("c") != "feu"
+                        or (lampe["x"], lampe["y"]) in feux_restants]
 
 
 def _cabane(ch, x, y, largeur, haut, interdit):
