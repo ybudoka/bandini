@@ -862,6 +862,97 @@ def test_celui_qui_tient_son_poste_cede_puis_revient(banc):
     assert r["etat"] == "fige"
 
 
+def test_demeler_ne_pousse_pas_un_passant_sur_la_chaussee(banc):
+    """⚠️ Martin, 29 sept. 2026 : « garder les passants au trottoir ». Une passante qui
+    flânait contre le signaleur d'un chantier (figé, il ne cède pas) était poussée par
+    `demeler` au bord de la voie, le corps dedans, et y restait huit secondes : le trafic
+    s'arrêtait pour elle, puis forçait. Ici le geste entier, hors chantier : un homme figé
+    au bord du trottoir, une passante qui marche sur lui en longeant la bordure (un pixel
+    côté rue), et un char du trafic qui arrive sur la voie d'à côté. Elle ne mord jamais la
+    chaussée, elle ne lui passe pas au travers, et le char passe sans s'arrêter pour elle."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.B.partie.heure = 0.5;
+        const c = L.Monde.carte, M = L.Monde, TT = L.TT;
+        // Un bout de trottoir droit sur sept tuiles, une voie droite dessous : ni croisement
+        // ni ligne d'arrêt huit tuiles en amont, pour que rien d'autre n'arrête le char.
+        function scene() {
+            for (let y = 20; y < c.h - 3; y++) {
+                for (let x = 12; x < c.w - 12; x++) {
+                    const sens = c.voie[y + 1][x];
+                    if (sens !== '<' && sens !== '>') continue;
+                    const p = sens === '<' ? 1 : -1;
+                    let ok = true;
+                    for (let k = -3; k <= 3 && ok; k++) {
+                        ok = M.estTrottoir(x + k, y) && !M.bloque(x + k, y, M.MASQUE_PIETON)
+                            && !M.bloque(x + k, y - 1, M.MASQUE_PIETON) && M.estChaussee(x + k, y + 1);
+                    }
+                    for (let k = -4; k <= 8 && ok; k++) {
+                        const vx = x + p * k;
+                        ok = c.voie[y + 1][vx] === sens && !M.intersectionA(vx, y + 1) && !c.arrets[vx + ',' + (y + 1)];
+                    }
+                    if (ok) return { tx: x, ty: y, sens: sens, p: p };
+                }
+            }
+            return null;
+        }
+        const s = scene();
+        if (!s) return { trouve: false };
+        const j = L.B.joueur;
+        j.x = s.tx * TT + 8; j.y = s.ty * TT + 8 - 220; j.vx = 0; j.vy = 0; j.intouchable = true;
+        const homme = L.Entites.creerPieton(s.tx * TT + 8, s.ty * TT + 8, L.Entites.archetype('ouvrier'));
+        homme.etat = 'fige'; homme.intouchable = true;
+        const elle = L.Entites.creerPieton(s.tx * TT + 8 - 26, s.ty * TT + 8 + 1, L.Entites.archetype('passante'));
+        const bordure = (s.ty + 1) * TT;
+        const nous = [homme, elle, j];
+        // La rue autour d'eux, vide : ce qu'on juge, c'est eux trois.
+        function vider(v) {
+            L.B.entites.filter(function (q) {
+                return nous.indexOf(q) < 0 && q !== v && Math.hypot(q.x - homme.x, q.y - homme.y) < 20 * TT
+                    && (q.type === 'pieton' || q.type === 'vehicule');
+            }).forEach(function (q) { L.Entites.retirer(q); });
+        }
+        let mord = 0, auCentre = 0, dmin = Infinity;
+        function mesurer() {
+            // Elle marche sur lui, toujours : ni arrêt, ni demi-tour.
+            elle.etat = 'flane'; elle.dir = 0; elle.butT = 1000;
+            mord = Math.max(mord, elle.y + elle.r - bordure);
+            if (M.estChaussee(Math.floor(elle.x / TT), Math.floor(elle.y / TT))) auCentre++;
+            dmin = Math.min(dmin, Math.hypot(elle.x - homme.x, elle.y - homme.y));
+        }
+        // 1. Elle bute contre lui, et pousse, cinq secondes.
+        for (let k = 0; k < 300; k++) { L.B.partie.heure = 0.5; vider(null); mesurer(); o.frame(1); }
+        mesurer();
+        const avantLeChar = { mord: +mord.toFixed(2), y: +(elle.y - s.ty * TT).toFixed(2) };
+        // 2. Un char du trafic arrive sur la voie du bord, six tuiles en amont.
+        const v = L.Vehicules.creer('auto', (s.tx + s.p * 6) * TT + 8, (s.ty + 1) * TT + 8, s.sens === '<' ? Math.PI : 0,
+                                    { conducteur: 'trafic', etat: 'roule', sens: s.sens });
+        const avance = function () { return (v.x - homme.x) * s.p; };     // > 0 : pas encore passé
+        let pourElle = 0, force = 0, arret = 0;
+        for (let k = 0; k < 300; k++) {
+            L.B.partie.heure = 0.5; vider(v); mesurer();
+            o.frame(1);
+            if (avance() > 0) {
+                if (v.devant === elle) pourElle++;
+                if (v.force > 0) force++;
+                if (Math.abs(v.vitesse) < 0.05) arret++;
+            }
+        }
+        mesurer();
+        return { trouve: true, avantLeChar: avantLeChar, mord: +mord.toFixed(2), auCentre: auCentre,
+                 dmin: +dmin.toFixed(2), rayons: elle.r + homme.r, pourElle: pourElle, force: force,
+                 arret: arret, passe: avance() < 0, present: L.B.entites.indexOf(v) >= 0 };
+    }""")
+    assert r["trouve"], "aucun trottoir droit au bord d'une voie droite : le juge ne prouve rien"
+    assert r["mord"] <= 0, (
+        f"démêlée contre un corps figé, la passante mord la chaussée de {r['mord']} px "
+        f"({r['auCentre']} images le centre dessus ; avant le char : {r['avantLeChar']})"
+    )
+    assert r["dmin"] > r["rayons"] - 1.5, f"elle lui passe au travers : {r['dmin']} px entre les centres"
+    assert r["present"] and r["passe"], f"le char n'a pas passé l'homme au bord du trottoir : {r}"
+    assert r["pourElle"] == 0 and r["force"] == 0, f"le char s'arrête pour elle, ou force le passage : {r}"
+
+
 def test_la_rue_se_peuple_puis_s_oublie(banc, paquet):
     r = banc("""function (L, o) {
         L.Jeu.commencer();

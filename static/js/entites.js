@@ -3839,6 +3839,66 @@ const Entites = (function () {
     return dist2(e.x, e.y, e.plante.x, e.plante.y) < ECART_PLANTE * ECART_PLANTE;
   }
 
+  //: ⚠️ LE PASSANT QUI NE TRAVERSE PAS RESTE AU TROTTOIR (Martin, 29 sept. 2026 :
+  //: « garder les passants au trottoir »). Une passante qui flanait contre le
+  //: signaleur d'un chantier (fige, il ne cede pas) etait poussee par `demeler` au
+  //: bord de la voie, le corps dedans, et y restait huit secondes : le trafic
+  //: s'arretait pour elle jusqu'a ce qu'un char force. Mesure avant correctif, trois
+  //: graines x 3 000 images a midi : 59 fois un centre pose sur la chaussee, 1 067 fois
+  //: un corps enfonce plus avant dedans. `demeler` n'en protegeait que l'enfant a velo.
+
+  /** Ceux qui ont a faire sur la rue et qu'on laisse libres : qui fuit, qui court
+      raconter, qui se bat, qui vole un char. (Celui qui traverse se lit a sa
+      tuile — voir `resteAuTrottoir` — et la police se dirige ailleurs.) */
+  const PRESSES = { fuit: true, temoin: true, attaque_joueur: true, bagarre: true, vole_un_char: true };
+
+  /** Le demeler le garde-t-il au trottoir ? Un passant a pied, pas un agent, pas
+      presse, et qui ne se tient pas deja sur la rue (passage pieton compris : il
+      traverse). */
+  function resteAuTrottoir(e) {
+    return e.type === 'pieton' && !e.agent && !PRESSES[e.etat]
+      && !Monde.estRoute(Math.floor(e.x / TT), Math.floor(e.y / TT));
+  }
+
+  /** De combien un corps de rayon `r` centre en (x, y) mord la chaussee, en px (le
+      passage pieton n'en est pas). Les quatre points cardinaux du cercle suffisent :
+      le long d'une bordure, c'est l'un d'eux qui touche le premier. Un centre sur
+      la chaussee, c'est le corps entier : on rend plus que tout le reste. */
+  function enfoncement(x, y, r) {
+    const ch = function (px, py) { return Monde.estChaussee(Math.floor(px / TT), Math.floor(py / TT)); };
+    if (ch(x, y)) return TT + r;
+    let p = 0;
+    if (ch(x + r, y)) p = Math.max(p, x + r - Math.floor((x + r) / TT) * TT);
+    if (ch(x - r, y)) p = Math.max(p, (Math.floor((x - r) / TT) + 1) * TT - (x - r));
+    if (ch(x, y + r)) p = Math.max(p, y + r - Math.floor((y + r) / TT) * TT);
+    if (ch(x, y - r)) p = Math.max(p, (Math.floor((y - r) / TT) + 1) * TT - (y - r));
+    return p;
+  }
+
+  /** Pousse de (dx, dy), ce passant irait-il plus avant sur la chaussee ? */
+  function buteSurLaChaussee(e, dx, dy) {
+    return resteAuTrottoir(e) && enfoncement(e.x + dx, e.y + dy, e.r) > enfoncement(e.x, e.y, e.r) + 0.01;
+  }
+
+  /** Ce passant ne peut pas s'ecarter de l'autre vers la chaussee : il s'en ecarte
+      LE LONG du trottoir, sur un axe seul, d'autant qu'il faut pour que les deux
+      corps soient a `min` l'un de l'autre (`part` : sa part du chemin). (dx, dy) va
+      de l'autre a lui. Rend [gx, gy], ou [0, 0] si aucun axe ne le permet.
+
+      ⚠️ Pas la poussee d'origine rabattue sur l'axe : collee sous le signaleur, la
+      passante n'en recevait que le peu qui allait le long de la bordure — moins que
+      son pas —, et elle lui passait au travers a 3,6 px (mesure du 29 sept. 2026). */
+  function glissade(p, dx, dy, min, part) {
+    const sx = dx ? Math.sign(dx) : (p.id % 2 ? 1 : -1), sy = dy ? Math.sign(dy) : (p.id % 2 ? 1 : -1);
+    const enX = [sx * (Math.sqrt(Math.max(0, min * min - dy * dy)) - Math.abs(dx)) * part, 0];
+    const enY = [0, sy * (Math.sqrt(Math.max(0, min * min - dx * dx)) - Math.abs(dy)) * part];
+    let mieux = null;
+    for (const g of Math.abs(enX[0]) <= Math.abs(enY[1]) ? [enX, enY] : [enY, enX]) {
+      if (!buteSurLaChaussee(p, g[0], g[1])) { mieux = g; break; }
+    }
+    return mieux || [0, 0];
+  }
+
   /** ⚠️ Personne ne traverse personne. Sans cette passe, deux passants qui se
       croisent se superposent EXACTEMENT : on voit une tete a quatre bras, et
       une foule tient sur une tuile. Mesure avant correctif, en marchant deux
@@ -3875,10 +3935,23 @@ const Entites = (function () {
         }
         // Chacun sa moitie ; celui qui ne bougera pas laisse la sienne a l'autre.
         const chevauche = min - d;
-        const pourE = cede(autre) ? chevauche / 2 : chevauche;
-        const pourAutre = cede(e) ? chevauche / 2 : chevauche;
-        e.pousseX += dx / d * pourE; e.pousseY += dy / d * pourE;
-        autre.pousseX -= dx / d * pourAutre; autre.pousseY -= dy / d * pourAutre;
+        let pourE = cede(autre) ? chevauche / 2 : chevauche;
+        let pourAutre = cede(e) ? chevauche / 2 : chevauche;
+        // ⚠️ Celui que sa part mettrait sur la chaussee s'ecarte LE LONG du trottoir
+        // (`glissade`), et l'autre prend tout le chemin — s'il cede et que rien ne le
+        // retient pareil. Le premier garde quand meme sa moitie en glissade : l'autre
+        // peut etre cale contre un banc, et trois corps a la bordure se sont enfonces
+        // de 4 px quand il restait seul a s'ecarter (mesure du 29 sept. 2026).
+        const eBute = buteSurLaChaussee(e, dx / d * pourE, dy / d * pourE);
+        const autreBute = buteSurLaChaussee(autre, -dx / d * pourAutre, -dy / d * pourAutre);
+        if (eBute && !autreBute && cede(autre)) pourAutre = chevauche;
+        else if (autreBute && !eBute && cede(e)) pourE = chevauche;
+        const ge = eBute ? glissade(e, dx, dy, min, pourE / chevauche) : null;
+        const ga = autreBute ? glissade(autre, -dx, -dy, min, pourAutre / chevauche) : null;
+        if (ge) { e.pousseX += ge[0]; e.pousseY += ge[1]; }
+        else { e.pousseX += dx / d * pourE; e.pousseY += dy / d * pourE; }
+        if (ga) { autre.pousseX += ga[0]; autre.pousseY += ga[1]; }
+        else { autre.pousseX -= dx / d * pourAutre; autre.pousseY -= dy / d * pourAutre; }
       }
     }
     const pas = pasDeDemele();
@@ -3887,8 +3960,25 @@ const Entites = (function () {
       const n = Math.hypot(e.pousseX, e.pousseY);
       const k = n > pas ? pas / n : 1;
       const x0 = e.x, y0 = e.y;
-      deplacerCercle(e, e.pousseX * k, e.pousseY * k, Monde.MASQUE_PIETON);
+      const gx = e.pousseX * k, gy = e.pousseY * k;
+      const auTrottoir = resteAuTrottoir(e), avant = auTrottoir ? enfoncement(x0, y0, e.r) : 0;
+      deplacerCercle(e, gx, gy, Monde.MASQUE_PIETON);
       dansLaCarte(e);
+      // ⚠️ Et la regle dure : un passant qui ne traverse pas n'est jamais pose plus
+      // avant sur la chaussee. Il GLISSE le long du trottoir (un axe seul, celui qui
+      // l'emmene le plus loin sans y descendre), ou il reste ou il est.
+      if (auTrottoir && enfoncement(e.x, e.y, e.r) > avant + 0.01) {
+        let mieux = null;
+        for (const axe of [[gx, 0], [0, gy]]) {
+          e.x = x0; e.y = y0;
+          if (!axe[0] && !axe[1]) continue;
+          deplacerCercle(e, axe[0], axe[1], Monde.MASQUE_PIETON);
+          dansLaCarte(e);
+          const loin = Math.hypot(e.x - x0, e.y - y0);
+          if (enfoncement(e.x, e.y, e.r) <= avant + 0.01 && (!mieux || loin > mieux.loin)) mieux = { x: e.x, y: e.y, loin: loin };
+        }
+        e.x = mieux ? mieux.x : x0; e.y = mieux ? mieux.y : y0;
+      }
       // ⚠️ La foule ne pousse pas l'enfant a velo sur la rue. Au coin, ceux qui
       // attendent la traverse le serraient contre le poteau du feu, et il finissait
       // un pixel sur les bandes, coince la : il garde sa place, l'autre cede.

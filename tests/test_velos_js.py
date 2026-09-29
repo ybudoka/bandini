@@ -278,7 +278,12 @@ def test_coince_derriere_un_char_arrete_un_cycliste_sur_deux_monte_sur_le_trotto
 
 
 @pytest.mark.parametrize("graine", [
-    1,
+    # ⚠️ 2, PLUS 1 (29 sept. 2026, « les passants restent au trottoir ») : « un velo au moins
+    # quitte la rue » est une CHANCE — deux ou trois velos en 3 000 images. Mesure sur les
+    # graines 1 a 30 : aucun depart sur 2 graines avant la garde du trottoir (3, 6), sur 3
+    # apres (1, 6, 28), meme compte de departs (119 contre 120) ; la graine 1 est tombee du
+    # mauvais cote. La 2 part des deux cotes (5 et 6 velos partis).
+    2,
     # ⚠️ DEUX FACONS DE RESTER HORS VOIE EN REDESCENDANT DU TROTTOIR (26 sept. 2026, ligne du plan
     # « Un velo qui redescend du trottoir reste plante »). Graine 5 : une remorqueuse arretee au feu
     # pile sur la tuile de retour ; le velo attendait quatre secondes, rendait son tour de trottoir
