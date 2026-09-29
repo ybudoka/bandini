@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (285 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (286 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -79,7 +79,6 @@ pas quand l'ordre de travail change.
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
 | Le décor, les bêtes et les gens répondent — deuxième vague | ⬜ **en cours** (livrés : manger au barbecue, caresser le chat, vider un parcomètre, arracher une affiche ; le buisson est annulé ; restent le caddie et le panneau, à préciser par Martin) | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/le-decor-les-betes-et-les-gens-repondent.md#fiche-de-la-deuxième-vague) |
-| Trois juges rouges neufs sur dev | ⬜ **en cours** | 29 sept. 2026 | **P2** | **correctif** | [fiche](jalons/trois-juges-rouges-neufs-sur-dev.md#fiche) |
 | Des blocs de carte en extensions | ⬜ **en cours** (✅ vagues 1 à 3 livrées : à pied, au volant, à deux, la police qui reprend au bord, et le premier vrai bloc — le chalet du rang, la deuxième planque ; reste « un vrai dehors », avec le bloc qui en aura besoin) | 25 sept. 2026 | **P3** | ajout | [fiche](jalons/des-blocs-de-carte-en-extensions.md#fiche) |
 | Le quartier chinois : le Petit-Canton, un 7e district | ⬜ **en cours** (étape 2 : le quartier — ✅ vague A livrée, ses bâtiments, ses enseignes et leurs plaques à idéogrammes ; ✅ vague B livrée : l'arche, les lanternes et le bus (la ligne 4) ; ✅ étape 1 [la ville s'agrandit au nord](jalons/la-ville-s-agrandit-au-nord.md#notes) ; ✅ étape 3 livrée : Irène Lam, le donneur (validée par Martin le 29 sept. 2026), c01 qui ouvre le tripot du casino, et [la chute du Pouce](jalons/le-quartier-chinois.md#notes) — c02 à c04, le tripot qui change de mains ; ✅ étape 4 livrée : [les Mantes](jalons/l-ecole-rivale.md#notes) ; les quatre étapes sont livrées — reste à clore avec Martin : une mission des Mantes ? la musique du quartier ?) | 26 sept. 2026 | **P3** | ajout | [fiche](jalons/le-quartier-chinois.md#fiche) |
 | La réputation et la lecture des passants | ⬜ **à faire** (à trancher par Martin) | — | **P4** | ajout | [fiche](jalons/la-reputation-et-la-lecture-des-passants.md#fiche) |
