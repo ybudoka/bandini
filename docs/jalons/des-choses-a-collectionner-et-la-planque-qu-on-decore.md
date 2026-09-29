@@ -150,3 +150,30 @@ complète pose son objet dans la planque, et il survit à une sauvegarde.
 - **Juges** : `tests/test_collections.py` (douze) et `tests/test_collections_js.py` (dix), mutations vues
   rouges ; `test_debug_js` (l'onglet TRICHES), `test_hors_ligne` (la coquille), `test_definitions` (le
   plafond du paquet).
+
+### Vague 2 — la planque qu'on décore (✅ livrée le 30 sept. 2026)
+
+- **Le catalogue** : `app/decoration.py` — trois **trophées** (le cadre des dix cartes, le grand cadre doré des
+  vingt-cinq, la coupe de la Ligue à l'album complet), qui se posent d'eux-mêmes au palier ; six **meubles** du
+  catalogue Beausoleil (le juke-box 1 500 $, l'aquarium et Gérald 600 $, le sofa à carreaux 400 $, le téléviseur
+  à oreilles de lapin 350 $, la lampe à lave 150 $, le tapis tressé 90 $), chacun sa ligne de catalogue et `ou`
+  il se vend (`catalogue`, et déjà `puces` pour quatre d'entre eux : le marché aux puces n'aura qu'à les lire).
+- **Les places** : une tuile écrite par objet **et par pièce** (`PLACES`) — la planque de Rocco et le chalet du
+  rang, le même mécanisme ; une pose par objet (`POSES` : au mur, sur la table, debout, à plat). Les cadres
+  au-dessus du lit, la coupe et la lampe sur la table, le coin salon (le téléviseur contre le mur, le sofa en
+  face), l'aquarium à côté du coffre, le juke-box sous les fenêtres, le tapis tressé devant la porte ; au chalet,
+  les cadres sur les rondins de part et d'autre de la cheminée. Rien au dé.
+- **En jeu** : `static/js/decoration.js` — les neuf dessins (posés dans `DECORS` : le juke-box et ses lumières,
+  Gérald qui fait ses longueurs, la lave qui monte, l'écran qui grésille — animés comme la grande roue) ; en
+  entrant dans une planque (`Jeu.chargerPiece`), `meubler` fait naître ce qui s'y tient, **numéroté à part**
+  (`Entites.enDehorsDeLaSuite`) — une planque vide ne crée rien. Le catalogue est un point de la table
+  (`catalogue`, dans les deux pièces) : payé tout de suite, **livré le lendemain** (`partie.meubles[pièce][meuble]
+  = { jour }`), annoncé au lever du jour et noté au carnet. Le chalet qui n'est pas encore à toi n'offre, à son
+  catalogue, que de l'acheter.
+- **Le juke-box** se touche (ACTION : la station suivante de la radio, puis le silence) et se tait quand on sort.
+- **Le poids** : le catalogue voyage avec les collections (`/api/collections` : 10 050 bruts / 3 822 gzip) ; la
+  carte gagne les deux points `catalogue` (+9 gzip).
+- **Captures** : la planque vide, la planque pleine, le chalet plein, le catalogue.
+- **Juges** : `tests/test_decoration.py` (sept) et `tests/test_decoration_js.py` (sept), mutations vues rouges.
+- **Ce qui reste pour les vagues d'après** : les bebelles (vague 3) se poseront sur une étagère de la planque par
+  le même `PLACES` ; le marché aux puces lira `ou: puces`.

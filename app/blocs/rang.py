@@ -100,7 +100,9 @@ B        zB
 Bhaah     B
 B        LB
 BBBBWWDWWBB
-""", points=(carte._pt("lit", 2, 2), carte._pt("coffre", 1, 3), carte._pt("garde_robe", 9, 1)),
+""", points=(carte._pt("lit", 2, 2), carte._pt("coffre", 1, 3), carte._pt("garde_robe", 9, 1),
+             # Le catalogue Beausoleil, sur la table de pin : les meubles du chalet (`decoration.py`).
+             carte._pt("catalogue", 2, 5)),
     materiaux={"B": "bois_rond", "W": "bois_rond", "D": "bois_rond", "t": "chalet", "l": "chalet",
                "k": "chalet", "e": "chalet", "z": "chalet", "a": "chalet", "h": "chalet"})
 

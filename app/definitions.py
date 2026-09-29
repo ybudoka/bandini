@@ -47,7 +47,7 @@ from dataclasses import dataclass
 from . import (armes, audio, blocs, calendrier, saisons, pluie, halloween, carte, demenagement, derby, enseignes, fetes, garage, motoneige, photos, quatre_roues, saint_jean, territoires, devantures, dojo, economie, mantes, garderobe, interactions, journal, magasins,
                brouillard, loto, machine_a_sous, manettes, tables_de_jeu, missions, nord, nuit, pietons, recherche, techniques, vehicules, verglas, videopoker,
                musique, pont_de_glace, visages)
-from . import collectionner
+from . import collectionner, decoration
 from .blocs import galeries as galeries_hantees
 from .version import VERSION
 
@@ -248,7 +248,10 @@ def construire() -> Paquets:
     ville = donnees.pop("carte")
     # ⚠️ Les places des cartes de hockey sortent de la carte AVANT qu'on la signe : elles voyagent avec leur
     # catalogue sur `/api/collections` (`collectionner.exporter`), pas un octet de plus sur `/api/carte`.
-    collections = _signer(collectionner.exporter(ville.pop("collections", None), audio.echantillons_a_part("collections")))
+    # ⚠️ Et la planque qu'on décore (`decoration`) : ses trophées, son catalogue et leurs places, avec elles.
+    a_part = collectionner.exporter(ville.pop("collections", None), audio.echantillons_a_part("collections"))
+    a_part["planque"] = decoration.exporter()
+    collections = _signer(a_part)
     donnees["collections_empreinte"] = collections.etag
     carte = _signer(ville)
     donnees["carte_empreinte"] = carte.etag

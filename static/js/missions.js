@@ -1219,6 +1219,8 @@ const Missions = (function () {
     barbotte: 'LA BARBOTTE',
     // Le metro : monter dans la rame au quai, en descendre dans la rame.
     rame: 'LA RAME',
+    // La planque qu'on décore (`decoration.js`) : le catalogue sur la table, le juke-box une fois livré.
+    catalogue: 'LE CATALOGUE', jukebox: 'LE JUKE-BOX',
   };
 
   /** Le libelle d'invite d'un type de point — et la preuve qu'il est servi. */
@@ -1261,6 +1263,7 @@ const Missions = (function () {
     if (point.type === 'escalier') return Tripot.refuseLEscalier(point) || Jeu.changerEtage(point.vers);
     if (point.type === 'rame') return Metro.utiliser(j, point);
     if (point.type === 'fouiller') return fouiller(point);
+    if (point.type === 'jukebox') return Decoration.jukebox();
     // ⚠️ UNE ARME EN MAIN AU COMPTOIR : ACTION braque, avant le menu — l'invite l'a promis.
     if (braquable(j, point)) { braquer(point); return true; }
     // Et le commerce braque ne te sert plus, tant qu'il s'en souvient.
@@ -1367,7 +1370,7 @@ const Missions = (function () {
     // lit, son coffre et sa garde-robe ne proposent que de l'acheter — pas de nuit, pas de
     // sauvegarde, pas de magot dans le coffre d'un chalet qui n'est pas a toi.
     const planqueIci = planqueAVendre(piece);
-    if (planqueIci && (point.type === 'lit' || point.type === 'coffre' || point.type === 'garde_robe')) {
+    if (planqueIci && (point.type === 'lit' || point.type === 'coffre' || point.type === 'garde_robe' || point.type === 'catalogue')) {
       items.push(itemAchatPlanque(planqueIci));
       return { titre: piece.nom.toUpperCase(), items: items, sur: p.argent + ' $',
                aide: 'TA DEUXIÈME PLANQUE : Y DORMIR, SAUVEGARDER, GARER UN CHAR' };
@@ -1391,6 +1394,8 @@ const Missions = (function () {
         return { titre: piece.nom.toUpperCase(), items: items };
       case 'coffre':
         return menuCoffre();
+      case 'catalogue':
+        return Decoration.menuCatalogue();
       case 'garde_robe':
         return menuGardeRobe();
       case 'vendre':
@@ -2235,6 +2240,8 @@ const Missions = (function () {
     // veille est parti avec lui.
     B.coincees = {};
     revenusDuJour();
+    // Les meubles commandés la veille au catalogue arrivent à la planque (`Decoration`).
+    if (typeof Decoration !== 'undefined') Decoration.nouveauJour();
     const loto = B.defs.loto ? nuitDuLoto() : null;
     // Le brouillard de demain matin : le Clairon l'annonce la veille, sous la manchette.
     const brume = typeof Brouillard !== 'undefined' ? Brouillard.annonceDeDemain() : null;

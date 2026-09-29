@@ -46,6 +46,8 @@ TYPES_SERVIS = frozenset({
     "fourriere", "emplettes", "salon", "escalier", "fouiller",
     # Les concessionnaires : le comptoir qui vend les chars du lot.
     "concession",
+    # La planque qu'on décore : le catalogue Beausoleil, sur la table (`Decoration.menuCatalogue`).
+    "catalogue",
     # M11, 2e vague — les deux moities du meme choix : effacer une page, sur,
     # cher, une fois par jour (l'avocat) ou payer d'avance et revenir demain
     # sans savoir ce qu'on a achete (le comptoir du fond de La Shop).

@@ -173,9 +173,10 @@ def test_elles_voyagent_a_part_hors_de_la_carte_et_des_definitions(paquets, clie
     r = client.get("/api/collections")
     assert r.status_code == 200 and r.headers["ETag"].strip('"') == paquets.collections.etag
     assert client.get("/api/collections", headers={"If-None-Match": r.headers["ETag"]}).status_code == 304
-    # Leur plafond à elles : 8 249 bruts / 3 218 gzip à la mesure, sons compris (30 sept. 2026).
-    assert paquets.collections.taille < 10_000
-    assert len(gzip.compress(paquets.collections.corps, 6)) < 4_000
+    # Leur plafond à elles : 8 249 bruts / 3 218 gzip à la mesure, sons compris (30 sept. 2026) ; puis 10 050 / 3 822
+    # avec le catalogue de la planque qu'on décore (vague 2). Les bebelles (vague 3) y viendront : 14 000 / 6 000.
+    assert paquets.collections.taille < 14_000
+    assert len(gzip.compress(paquets.collections.corps, 6)) < 6_000
 
 
 def test_leurs_sons_voyagent_avec_elles_pas_dans_les_definitions(paquets):

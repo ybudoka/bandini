@@ -7562,7 +7562,9 @@ B ah yyy  B
 B    yyy eB
 Bj z    n B
 BBBBWWDWWBB
-""", points=(_pt("lit", 2, 2), _pt("coffre", 6, 1), _pt("garde_robe", 9, 5)),
+""", points=(_pt("lit", 2, 2), _pt("coffre", 6, 1), _pt("garde_robe", 9, 5),
+             # Le catalogue Beausoleil, sur la table : les meubles de la planque qu'on décore (`decoration.py`).
+             _pt("catalogue", 2, 4)),
      gens=()),
 
     # Le garage : deux ponts, un mur d'outils, des pneus empiles.

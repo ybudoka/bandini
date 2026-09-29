@@ -240,7 +240,8 @@ def test_dedans_c_est_un_chalet_et_le_foyer_brule(banc):
     assert lignes[y - 1][x:x + 2] == "KK", "la cheminée monte au-dessus du foyer, dans le mur"
     assert r["mats"]["B"] == r["mats"]["W"] == r["mats"]["D"] == "bois_rond", "dedans aussi, des rondins"
     assert r["sansPeintre"] == [], f"un meuble repeint sans peintre : {r['sansPeintre']}"
-    assert dict(r["points"]) == {"lit": "l", "coffre": "k", "garde_robe": "e"}, "la planque sert encore"
+    # Et le catalogue Beausoleil sur la table de pin (la planque qu'on décore, `decoration.py`).
+    assert dict(r["points"]) == {"lit": "l", "coffre": "k", "garde_robe": "e", "catalogue": "a"}, "la planque sert encore"
     assert r["foyers"] == [{"x": x, "y": y, "l": 2}], r["foyers"]
     assert r["feu1"] and r["feu2"] and r["feu1"] != r["feu2"], "le feu danse : deux images, deux feux"
 

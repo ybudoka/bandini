@@ -248,6 +248,9 @@ function etatInitial(defs) {
     //: LES COLLECTIONS (`Collections`) : par famille, ce qu'on a trouvé, par NUMÉRO — `cartes[12] = { jour,
     //: source }` (`rue`, `puces`, `debug`). ⚠️ Jamais un index : le catalogue peut grandir sans rien décaler.
     collections: { cartes: {} },
+    //: LA PLANQUE QU'ON DÉCORE (`Decoration`) : les meubles commandés, par PIÈCE de planque puis par meuble —
+    //: `meubles.planque.jukebox = { jour }`, le jour de la commande (livré le lendemain).
+    meubles: {},
     journal: null,
     // ⚠️ Les lecons du Clairon deja lues. Elles vivent dans la PARTIE, pas
     // dans le moteur : une lecon relue dix parties de suite n'apprend rien la
@@ -784,6 +787,17 @@ const Sauvegarde = (function () {
     const col = partie.collections && typeof partie.collections === 'object' && !Array.isArray(partie.collections) ? partie.collections : {};
     out.collections = Object.assign({}, base.collections, col);
     if (!out.collections.cartes || typeof out.collections.cartes !== 'object' || Array.isArray(out.collections.cartes)) out.collections.cartes = {};
+    // Les meubles : un objet par pièce, chacun un objet par meuble ; ce qui n'en a pas la forme repart vide.
+    const meubles = {};
+    if (partie.meubles && typeof partie.meubles === 'object' && !Array.isArray(partie.meubles)) {
+      for (const piece in partie.meubles) {
+        const m = partie.meubles[piece];
+        if (!m || typeof m !== 'object' || Array.isArray(m)) continue;
+        meubles[piece] = {};
+        for (const slug in m) if (m[slug] && typeof m[slug].jour === 'number') meubles[piece][slug] = { jour: m[slug].jour };
+      }
+    }
+    out.meubles = meubles;
     if (!Array.isArray(out.carnet)) out.carnet = [];
     if (!Array.isArray(out.skimmers)) out.skimmers = [];
     // ⚠️ M16 : les trois champs des choix et des gangs, en tableau ordonne (un
