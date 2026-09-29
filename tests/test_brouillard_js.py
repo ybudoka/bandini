@@ -1,6 +1,7 @@
 """Le brouillard de Baie-des-Brumes, au banc (docs/jalons/le-brouillard-de-baie-des-brumes.md) : le même
 brouillard le même matin pour tout le monde, la vue de la police qui baisse et revient, aucun dé, et le
-Clairon qui l'annonce la veille. Derrière son option : éteinte, il n'existe pas."""
+Clairon qui l'annonce la veille. Derrière son option : éteinte, il n'existe pas. Et les règles, côté Python :
+un matin qui monte à l'aube et se lève avant midi, une vue raccourcie sans être éteinte."""
 
 from app import brouillard
 
@@ -112,3 +113,21 @@ def test_le_brouillard_ne_tire_aucun_de_et_le_clairon_l_annonce_la_veille(banc):
     assert r["annonce"] == brouillard.ANNONCE
     assert brouillard.ANNONCE in r["veille"], "la veille, le Clairon ne l'annonce pas"
     assert (brouillard.ANNONCE in r["jourJ"]) == r["lendemain"], "il annonce un brouillard qui ne vient pas"
+
+
+# --- Les règles, côté Python -------------------------------------------------------------------------
+
+
+def test_un_matin_de_brouillard_monte_a_l_aube_et_se_leve_avant_midi():
+    m = brouillard.MATINS
+    assert 0 < m["chance"] < 0.5, "un brouillard qui revient plus d'un matin sur deux n'est plus un événement"
+    assert 0 < m["debut_h"] < m["plein_h"] < m["leve_h"] < m["fin_h"] <= 12
+
+
+def test_il_raccourcit_la_vue_sans_l_eteindre():
+    e = brouillard.EFFETS
+    assert 0.2 < e["vision"] < 1, "la police voit moins loin — pas plus, et pas du tout n'est pas un brouillard"
+    assert e["voile_centre"] < e["voile_bord"] < 1, "on voit autour de soi, pas au bout de la rue"
+    assert set(e["pres_de_l_eau"]) == {"quais", "pointe"}
+    assert 0 < e["ailleurs"] < 1
+    assert brouillard.ANNONCE.isupper() and len(brouillard.ANNONCE) <= 60
