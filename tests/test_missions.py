@@ -1,6 +1,6 @@
 import re
 
-from app import armes, audio, blocs, carte, casino, economie, missions, pietons, tripot
+from app import armes, audio, blocs, carte, casino, economie, mantes, missions, pietons, tripot
 
 
 def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
@@ -10,16 +10,19 @@ def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
     assert [p["slug"] for p in missions.PERSONNAGES if p.get("ou")] == [
         "ti_guy", "thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu", "raymonde", "ovila",
         "mo", "fern", "mado", "gege", "xavier", "lachance", "gus", "rosa", "ginette", "gilles",
-        "bonimenteur", "sven", "berube", "mireille", "jeanne", "leo", "norbert", "irene"]
+        "bonimenteur", "sven", "berube", "mireille", "jeanne", "leo", "norbert", "irene", "maitre"]
     # Mireille (le DOJO DION) ouvre ses COURS a chaque fois : pas de repos, comme le -2 de Josee.
     # Ti-Guy s'en va apres m1 (il a m1 a donner tant qu'il est la) ; Josee ouvre le marche noir
     # apres M5 (`marche_noir.apres`) au lieu de dire son repos : pas de voix pour ce qui ne s'entend pas.
     attendus = [f"{qui}-repos-{n}" for qui in ("thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu",
                                               "raymonde", "ovila", "mo", "fern", "mado", "gege",
                                               "xavier", "lachance", "gus", "rosa", "ginette", "gilles",
-                                              "bonimenteur", "sven", "berube", "jeanne", "leo", "norbert", "irene")
+                                              "bonimenteur", "sven", "berube", "jeanne", "leo", "norbert", "irene",
+                                              "maitre")
                 for n in (1, 2)
-                if (qui, n) != ("josee", 2)]
+                # Le vieux maître n'arrive qu'après c04 (`arrive_apres`), bien après m5 : son premier repos ne
+                # s'entend jamais.
+                if (qui, n) not in (("josee", 2), ("maitre", 1))]
     repos = missions.repliques_de_repos()
     assert [r["slug"] for r in repos] == attendus, "quarante-sept voix, pas quarante-huit"
     # ⚠️ Le même texte pour tous — sauf qui a le sien (`repos` : l'île, loin du Faubourg).
@@ -81,9 +84,10 @@ def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
     # ⚠️ Et les lieux des BLOCS (la villa, l'infiltration) : un lieu de mission peut être derrière un
     # passage — `blocs.erreurs` juge qu'on l'y rejoint à pied.
     # ⚠️ Et le Dragon d'or : un lieu garanti de la BANDE du nord (`casino.CASINO`), pas de `carte.SPECIAUX` — c01
-    # y ramène le jeton.
+    # y ramène le jeton. Et l'ÉCOLE LA MANTE (`mantes.SLUG`), posée par `mantes.poser` sur la bande : c07 y livre
+    # Monsieur Bois.
     lieux = ({p["slug"] for p in carte.SPECIAUX.values()} | {"kiosque", "planque"} | set(blocs.lieux_des_blocs())
-             | {casino.CASINO["slug"]})
+             | {casino.CASINO["slug"], mantes.SLUG})
     # Les zones qu'un `ou: zone:<x>` peut nommer : celle de chaque gang (`pietons.GANGS`, que
     # `Histoire.resoudre` trouve dans `carte.zones`), plus le port et le Faubourg. ⚠️ Lue, pas
     # recopiée : la liste à la main n'avait appris `boulonneux` qu'avec s01, et q01 (les Morues,

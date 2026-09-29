@@ -389,6 +389,8 @@ JEU: dict[str, str] = {
     # Irène Lam, au Petit-Canton : son repos est à elle (« le Faubourg est tranquille » y mentirait).
     "irene-repos-1": "[amused] La chance, ça existe pas, mon pigeon. [knowingly] Y a juste du monde qui sait compter.",
     "irene-repos-2": "[wryly] Je surveille les croupiers d'en haut. [quietly] Ceux d'en bas, c'est une autre histoire.",
+    # Victor Tam, le vieux maître des Mantes : il n'arrive qu'après c04, on n'entend que son second repos.
+    "maitre-repos-2": "[warmly] Un, deux, la mante. [cheerful] Reviens quand tu veux… la porte est ouverte.",
     "bonimenteur-repos-1": "[cheerful] Reviens me voir… plus tard.",
     "bonimenteur-repos-2": "[playfully] Le Faubourg est tranquille… Merci.",
 
@@ -413,6 +415,7 @@ JEU: dict[str, str] = {
     "narrateur-journal-matin_silence": "[warmly] Un matin tranquille. Rien à signaler à Baie-des-Brumes… le meilleur genre de matin.",
     "narrateur-journal-cravates_chassees": "[excited] Les Cravates chassées du Faubourg! Trois coins de rue libérés en une nuit… toute la ville en parle.",
     "narrateur-journal-pouce_parti": "[amused] Le Pouce plie bagage. [warmly] Le Petit-Canton retrouve sa paye, et la cave du Dragon d'or change de mains. [wryly] On l'aurait vu monter dans l'autobus de Sorel… sans ses valises.",
+    "narrateur-journal-ecole_rouverte": "[warmly] L'École La Mante rouvre ses portes. [amused] Son vieux maître est revenu de Floride, bronzé, et ses élèves aussi, un par un. [wryly] Premier cours à sept heures : les parents sont invités… les frimeurs aussi.",
     "narrateur-journal-orignal": "[dramatic] Un orignal gagne contre un char. [wryly] La bête est repartie dans le bois de La Pointe ; le char est au garage. [matter-of-fact] Ovila, au phare, le rappelle : un coup de klaxon, et ils s'en vont.",
     "narrateur-journal-lecon_klaxon": "[amused] Le saviez-vous? Un coup de klaxon dans un taxi vous trouve un client. Ça marche aussi avec la pizza… l'ambulance et la remorqueuse.",
     "narrateur-journal-lecon_fourriere": "[matter-of-fact] Votre char a disparu? Mal garé, il est à la fourrière municipale. On peut l'y racheter… à un prix qui dépend de ce qu'il vaut.",

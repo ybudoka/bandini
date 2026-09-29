@@ -255,3 +255,14 @@ Martin »), la couleur des trottoirs (« peut-être »), et une mission des Mant
 **La musique du quartier : livrée le 29 sept. 2026, demandée par Martin** — `amb_canton`, « Lanternes du
 Petit-Canton », et les Mantes qui défient à mains nues chez elles : [les Mantes provoquent, et le Petit-Canton a sa
 musique](les-mantes-provoquent-et-le-petit-canton-a-sa-musique.md#notes).
+
+### L'arc du vieux maître — c05 à c08 — **livré le 29 sept. 2026**
+
+Martin a tranché la mission des Mantes : « les deux ». Irène appelle en Floride (c05, le droit de table au mah-jong),
+et **Victor Tam**, le vieux maître de l'ÉCOLE LA MANTE, revient reprendre ses élèves un par un — Kenny chez Gus (c06),
+Monsieur Bois à la fourrière et une technique en échange (c07), les portes ouvertes jusqu'au Dragon d'or (c08). Après
+c08, **l'école rouvre ses cours** : les élèves font face au maître dans la salle, beaucoup moins de Mantes traînent
+dans la rue, et le gang est calme. Tout est dans [l'école rivale, vague 2](l-ecole-rivale.md#vague-2--le-vieux-maître-revient-de-floride--livrée-le-29-sept-2026).
+
+**Le Petit-Canton est livré le 29 sept. 2026** : ses quatre étapes, la musique, le défi des Mantes et l'arc du vieux
+maître. Reste seulement, si Martin le veut, la couleur des trottoirs (« peut-être ») — elle n'a pas de ligne.

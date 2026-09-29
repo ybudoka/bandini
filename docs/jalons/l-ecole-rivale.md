@@ -133,12 +133,8 @@ reste à ses habitants (le territoire est le coin de l'école, jamais la rue pri
   Neuf mutations, toutes rouges. Capture regardée (Chromium) : les tenues pose par pose, la façade, la salle, le
   joueur en l'air et au sol.
 
-**Reste (une vague 2, à trancher avec Martin)** : une mission des Mantes et son donneur — la fiche ne la prévoyait pas.
-Deux pistes : **Irène** (« je gage cinq piasses que tu te fais mettre sur le dos par un gamin de dix-neuf ans en
-pyjama vert ») qui en a assez de les voir racketter la boulangerie de la rue ; ou le **vieux maître** revenu de
-Floride, qui veut qu'on lui ramène la plaque de son école et ses élèves à la raison — un nouveau personnage, sa fiche
-et sa voix. Et, si Martin le veut : que les Mantes provoquent un joueur à mains nues (aujourd'hui, comme les autres
-gangs, ils n'attaquent que si tu sors une arme ou que tu frappes).
+**La vague 2 a été tranchée par Martin le 29 sept. 2026 (« les deux »)** : voir la fiche de la vague 2 ci-dessus et ses
+notes ci-dessous. La provocation à mains nues et la musique du quartier ont été [une autre ligne](les-mantes-provoquent-et-le-petit-canton-a-sa-musique.md#fiche).
 
 ### Les Mantes provoquent — **livré le 29 sept. 2026** (tranché par Martin)
 
@@ -146,3 +142,61 @@ Le dernier point du « Reste » de la vague 1 : chez elles — le coin de l'éco
 joueur à mains nues (une réplique en bulle, le salut, puis le combat) ; hors de leur territoire, rien ne change. Un
 gang **calme** (`Entites.gangCalme`, ce que la vague 2 posera après c08) ne défie plus. Le détail, les garde-fous et
 les juges : [les Mantes provoquent, et le Petit-Canton a sa musique](les-mantes-provoquent-et-le-petit-canton-a-sa-musique.md#notes).
+
+### Vague 2 — le vieux maître revient de Floride — **livrée le 29 sept. 2026**
+
+Irène appelle en Floride, et le vieux maître reprend ses élèves un par un : une seule histoire, quatre missions, jamais
+deux fois la même mécanique.
+
+- **Victor Tam, « Sifu Tam »** (`maitre`, fiche : [`docs/personnages/victor-tam.md`](../personnages/victor-tam.md)) —
+  soixante-quatorze ans, quarante à enseigner la mante religieuse, trois hivers à Hollywood Beach ; revenu bronzé, en
+  chemise fleurie, en bermudas (`garderobe._BAS_DU`) et en chapeau de paille (son visage, `visages.py` : il cligne). Le
+  seul qui ait jamais battu Irène au mah-jong. Il appelle le neveu « petit scarabée ». Voix : **Luca - Storyteller**
+  (libre, un Français de France — permis ; en v3, à écouter). Il se tient **au milieu de sa salle** (`point:maitre`,
+  `mantes.POINT_DU_MAITRE` ; au milieu parce que `placeDebout` range un personnage sur la tuile libre la plus proche du
+  centre), ses trois élèves en rang entre la porte et lui ; **une fois revenu** seulement — `arrive_apres: c04`, une
+  clé de donnée neuve (`Personnage`), lue par `creerDonneurs` et `creerDonneursDedans` : avant, sa salle n'a que ses
+  élèves. Son premier repos ne s'entend jamais (il arrive bien après m5) : on ne le paie pas (`_vient_apres`).
+- **c05, _Le droit de table_ (Irène, 500 $)** — les Mantes ont renversé la table du club de mah-jong ; Irène a appelé
+  Victor. On va le voir dans sa salle (`parler`, sa poignée de main : il se nomme) ; il t'envoie chercher par l'oreille
+  les trois frimeurs (`tuer`, `zone:mantes`, aux poings, 70 de vie). La fin se dit chez Irène : elle gage cinq piasses
+  qu'il repart en janvier.
+- **c06, _Le chemin de chez Gus_ (700 $)** — Kenny, son meilleur élève devenu le caïd, va s'acheter un fusil : on file
+  son char de frime (`suivre`, une sport) jusqu'à l'armurerie, puis un duel à mains nues avec lui à la porte de Gus
+  (`tuer`, `chef`). ⚠️ Deux retouches du moteur, pour tous : **le chef attend où la fiche le dit** (`ou` ; sans `ou`, il
+  vient au joueur comme avant — m5, e01, f01, p14) et **il garde l'arme et la vie de la fiche** quand elle les dit
+  (`arme: ""`, `vie`) — le bâton et 160 de vie restent le défaut.
+- **c07, _Monsieur Bois_ (600 $, + la moitié sans une bosse)** — les élèves ont vendu le mannequin d'érable de 1976 à
+  la fourrière ; Gilles te prête son camion (`monter`, `prete`), on le livre à la porte de l'école (`livrer`,
+  `ecole_mante` — un lieu de la bande, accepté par le juge des lieux comme le Dragon d'or ; rayon 6 : la rue est à
+  quatre tuiles en diagonale de la porte), `sans_degats`. **En échange, il t'apprend le retournement du poignet**
+  (`donne.technique`, neuf, lu par `Histoire.recompenser` : comme une leçon réussie au DOJO DION, sans la payer ; déjà
+  sue, rien de plus). Le camion détruit, c'est raté.
+- **c08, _Les portes ouvertes_ (1 200 $)** — on escorte le vieux maître à pied jusqu'au Dragon d'or (`proteger` : un
+  donneur DEDANS est posé à la porte de son école quand on sort, et suit sur nos pas), où Irène pose son affiche ; les
+  quatre derniers frimeurs arrivent en courant (`tuer`, `ou: donneur`, `loin`). ⚠️ Retouche du moteur : **un personnage
+  qu'une escorte a posé ne se sauve plus avec les figurants** (`Histoire.nettoyer`) — il reste planté là, et la fin se
+  dit devant lui (Irène y gage cinq piasses qu'il en aura dix au cours).
+- **Ce qui change au quartier** (`mantes.REPRISE`, `apres: c08`, comme `tripot.REPRISE`) : dans la salle, les élèves ne
+  sont plus du gang, tiennent leur place et font face au maître, qui compte — « UN, DEUX… LA MANTE! », deux secondes
+  sur quatre (`Histoire.majBulles`) ; dans la rue, sur leur territoire, **une naissance sur six** est encore un Mante au
+  lieu d'une sur deux (`Entites.partDehors`, sans un dé de plus : le même tirage, un autre seuil) ; le gang est
+  **calme** (`donne.calme`) ; et le lendemain, le Clairon titre **L'ÉCOLE LA MANTE ROUVRE** (`journal.SPECIALES`).
+  La provocation à mains nues (l'autre ligne, livrée le même jour) lit `Entites.gangCalme` : après c08, plus aucun
+  Mante ne défie personne.
+- **Le paquet** : les définitions passent 62 235 → 62 874 gzip (+639 : le catalogue, le personnage, son visage, sa
+  tenue, la reprise), sous les 64 000 que l'autre ligne avait posés le même soir ; le brut passe 280 599, et son
+  plafond (un indicateur) 280 000 → 285 000, la mesure écrite dans `test_definitions`. Le remède d'en haut (sortir du
+  paquet ce qui ne sert pas à tout le monde) reste à trancher par Martin.
+- **Juges** : `tests/test_vieux_maitre_js.py` (7) — le maître absent avant c04, dans sa salle après, son repos ; c05,
+  c06, c07 et c08 joués au bouton de la poignée de main à la prime (les hommes nés où il faut, avec ce qu'ils tiennent ;
+  la filature ; le camion prêté, livré sans bosse, la prime et demie, la technique apprise ; l'escorte, les frimeurs,
+  le maître qui ne se sauve pas, le gang calme, la une) ; le monde d'après contre le même monde avant (la salle, la
+  bulle, la rue : 149 Mantes sur 280 naissances avant, 33 sur 124 après, graine 11) ; ce qu'un donneur apprend est une
+  technique payante. `test_mantes` (le point du maître, sur le plancher, personne sous lui), `test_missions` (le lieu
+  de l'école, son repos unique). Sept mutations, toutes rouges : le maître là avant c04, la même part de Mantes
+  dehors, des élèves encore du gang, la technique jamais apprise, le maître qui se sauve, Kenny qui vient au joueur,
+  Kenny à la batte. Captures regardées (Chromium) : la salle en classe, sa bulle, son portrait.
+- **Les voix** : 45 fichiers générés le 29 sept. 2026 (eleven_v3) — les 32 répliques du maître (Luca) et son repos,
+  les 11 d'Irène (Meera), et la une du Clairon lue par le narrateur ; ≈ 4 700 caractères, **2 938 crédits**
+  (compteur ElevenLabs : 34 032 → 36 970). Luca en v3, à écouter par Martin.

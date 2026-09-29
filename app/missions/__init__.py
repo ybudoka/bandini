@@ -122,6 +122,10 @@ class Personnage(TypedDict):
     # apres M1 : sa scene de fin le fait entrer au garage). ⚠️ Dans les donnees, pas
     # dans `histoire.js` : un juge y interdit tout slug de mission.
     parti_apres: NotRequired[str]
+    # La mission AVANT laquelle il n'est pas encore là (le vieux maître des Mantes revient de Floride après c04 :
+    # avant, sa salle n'a que ses élèves). ⚠️ Dans les données, comme `parti_apres` : `histoire.js` ne le pose
+    # qu'une fois cette mission faite, et il n'y écrit aucun slug.
+    arrive_apres: NotRequired[str]
     # Son repos à lui, au lieu de `REPOS` : `(avant, après)`, avant et après `REPOS["apres"]`.
     # ⚠️ Pour qui vit LOIN du Faubourg — « le Faubourg est tranquille », dit sur l'île, ment.
     repos: NotRequired[tuple[str, str]]
@@ -288,6 +292,19 @@ PERSONNAGES: list[Personnage] = [
     # part pour une mission (`ou` vide, comme le client du taxi) — au tripot, c'est son corps de commis au veston
     # moutarde (`carte.QUI_DEDANS`, `pouce`), pas ce personnage-ci. On ne l'entend qu'une fois, en se sauvant (c04).
     # Sa voix : Callum, libre, un français « d'ailleurs » (multilingue v2 ; en v3, à écouter).
+    # Victor Tam, « Sifu Tam » (l'école rivale, vague 2 — 29 sept. 2026, Martin : « les deux ») : quarante ans à
+    # enseigner la mante religieuse au Petit-Canton, trois hivers à Hollywood Beach, en Floride — et ses élèves ont
+    # mal tourné pendant qu'il jouait au shuffleboard. Il revient bronzé, en chemise fleurie, en bermudas et en chapeau
+    # de paille (docs/personnages/victor-tam.md). Il se tient dans SA salle (`point:maitre`, `mantes.POINT_DU_MAITRE`,
+    # DEDANS : il naît quand on entre, sans un dé en ville), et seulement une fois revenu (`arrive_apres` : Irène
+    # l'appelle quand le Pouce est tombé). Sa voix : Luca, libre, un Français de France, chaleureux et naturel —
+    # permis (Martin, 25 sept. 2026) ; en v3, à écouter.
+    {"slug": "maitre", "nom": "Victor Tam", "genre": "homme", "voix": "Luca - Storyteller",
+     "couleurs": {"c": "#1f9aa8", "h": "#ececec", "s": "#c68a5a", "p": "#e2d4b0"}, "ou": "point:maitre",
+     "heler": "Approche, élève!", "arrive_apres": "c04",
+     # ⚠️ Le premier repos ne se dit jamais (il arrive bien après m5, `repliques_de_repos`) : court, il pèse moins.
+     "repos": ("Un, deux, la mante.",
+               "Un, deux, la mante. Reviens quand tu veux, la porte est ouverte.")},
     {"slug": "pouce", "nom": "Réal « le Pouce » Vachon", "genre": "homme", "voix": "Callum - Husky Trickster",
      "couleurs": {"c": "#9a7a2a", "h": "#2a1a10", "s": "#e8b088", "p": "#1a1a22"}, "ou": "",
      "heler": ""},
@@ -519,7 +536,7 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 from . import (  # noqa: E402
     e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f10, f11, f12, f13, h01, h02, m1, m2, m3,
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
-    s03, s08, v01, v02, v03, c01, c02, c03, c04,
+    s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -543,6 +560,9 @@ from . import (  # noqa: E402
 # tripot sous le Dragon d'or qui s'ouvre après elle (`tripot.PORTE`), avant m97. Puis la chute du Pouce (29 sept.
 # 2026, Martin : « on fait tomber le Pouce pour de bon ») : c02 (ses dés, glissés à la barbotte), c03 (son livre,
 # par Norbert et une filature), c04 (sa caisse, et le tripot qui change de mains — `tripot.REPRISE`).
+# ⚠️ c05 à c08 (29 sept. 2026, Martin : « les deux ») : le vieux maître des Mantes revient de Floride. Irène l'a
+# appelé (c05, le droit de table au mah-jong) ; lui reprend ses élèves un par un — Kenny chez Gus (c06), Monsieur Bois
+# à la fourrière et une technique en échange (c07), et les portes ouvertes (c08 : l'école rouvre, `mantes.REPRISE`).
 # ⚠️ m99 (M13, 25 sept. 2026) — _Sacrer son camp_, la fin qu'on peut jouer — tout au bout : son appel
 # ne sonne qu'avec 15 000 $ en poche (`exige`), et une fin n'a rien à précéder.
 CATALOGUE: list[Mission] = [
@@ -558,6 +578,7 @@ CATALOGUE: list[Mission] = [
     v01.MISSION, v02.MISSION, v03.MISSION,
     f13.MISSION, f10.MISSION, f12.MISSION,
     c01.MISSION, c02.MISSION, c03.MISSION, c04.MISSION,
+    c05.MISSION, c06.MISSION, c07.MISSION, c08.MISSION,
     m97.MISSION, m99.MISSION,
 ]
 
@@ -1169,7 +1190,26 @@ def repliques_de_repos() -> list[dict]:
             if not (p["slug"] == "josee" and n == 2)
             # Mireille ouvre ses COURS a chaque fois (`histoire.js`) : un repos qu'on n'entend
             # jamais ne se paie pas.
-            and p["slug"] != "mireille"]
+            and p["slug"] != "mireille"
+            # ⚠️ Qui n'ARRIVE qu'après `REPOS["apres"]` (`arrive_apres` : le vieux maître, revenu après c04) ne dit
+            # jamais le premier : on ne le paie pas.
+            and not (n == 1 and p.get("arrive_apres") and _vient_apres(p["arrive_apres"], REPOS["apres"]))]
+
+
+def _vient_apres(slug: str, avant: str) -> bool:
+    """La mission `slug` ne s'ouvre-t-elle qu'une fois `avant` faite (elle, ou l'un de ses prérequis, de proche en
+    proche) ?"""
+    vues: set[str] = set()
+    a_voir = [slug]
+    while a_voir:
+        s = a_voir.pop()
+        if s == avant:
+            return True
+        if s in vues or not par_slug(s):
+            continue
+        vues.add(s)
+        a_voir.extend(par_slug(s)["prerequis"])
+    return False
 
 
 #: Les acteurs qu'une scène de mission peut nommer, en plus des personnages : ce que

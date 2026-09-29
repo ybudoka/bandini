@@ -138,6 +138,11 @@ SPECIALES: list[dict] = [
      "texte": "LE PETIT-CANTON RETROUVE SA PAYE. LA CAVE DU DRAGON D'OR CHANGE DE MAINS.",
      "lu": "Le Pouce plie bagage. Le Petit-Canton retrouve sa paye, et la cave du Dragon d'or change de mains. "
            "On l'aurait vu monter dans l'autobus de Sorel, sans ses valises."},
+    # L'école rouvre (c08, 29 sept. 2026) : le lendemain des portes ouvertes, le Clairon est là pour le premier cours.
+    {"slug": "ecole_rouverte", "titre": "L'ÉCOLE LA MANTE ROUVRE",
+     "texte": "LE VIEUX MAÎTRE EST REVENU DE FLORIDE. SES ÉLÈVES AUSSI, UN PAR UN.",
+     "lu": "L'École La Mante rouvre ses portes. Son vieux maître est revenu de Floride, bronzé, et ses élèves aussi, "
+           "un par un. Premier cours à sept heures : les parents sont invités, les frimeurs aussi."},
 ]
 
 

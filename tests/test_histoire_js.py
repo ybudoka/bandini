@@ -763,6 +763,11 @@ def test_les_personnages_disent_leur_repos_a_voix_haute(banc, paquet):
         if qui == "mireille":
             assert d["ok"] and d["voix"] and all(v.startswith("mireille-dojo-") for v in d["voix"]), (qui, d)
             continue
+        # ⚠️ Qui n'ARRIVE qu'après une mission (`arrive_apres` : le vieux maître, après c04) n'est pas là avant M5 :
+        # son premier repos ne s'entend jamais, on ne le paie pas (`missions.repliques_de_repos`).
+        if any(p["slug"] == qui and p.get("arrive_apres") for p in paquet["personnages"]):
+            assert d["voix"] == [], (qui, d)
+            continue
         assert d["ok"] and not d["cinema"] and d["voix"] == [f"{qui}-repos-1"], (qui, d)
     for qui, d in r["apres"].items():
         if qui == "mireille":

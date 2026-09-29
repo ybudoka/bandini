@@ -40,6 +40,17 @@ ZONE = {"colonnes": (2, 4), "rangees": (0, 2)}
 #: Ce que leur territoire fait naître (comme une cour de gang, `carte._Chantier.zones`).
 ZONE_PIETONS = 10
 
+#: Le point où se tient le vieux maître, dans sa salle (`missions.PERSONNAGES`, `ou: point:maitre`).
+POINT_DU_MAITRE = "maitre"
+
+#: L'ÉCOLE ROUVRE (l'arc du vieux maître, c05 à c08 — docs/jalons/l-ecole-rivale.md, vague 2). Quand la mission
+#: `apres` est faite, comme `tripot.REPRISE` : dans la salle, les élèves ne sont plus du gang — ils font face au maître,
+#: le cours a repris ; dans la rue, sur leur territoire, une naissance sur six (`part_dehors`) est encore un Mante
+#: (les autres sont des passants : une sur deux avant, `PART_DEHORS` des gangs dans `entites.js`). Le gang est
+#: CALME, lui, par `donne.calme` de la mission. ⚠️ Lu par `entites.js` : aucun slug de mission n'y est écrit.
+REPRISE: dict = {"apres": "c08", "gang": "mantes", "point": POINT_DU_MAITRE, "part_dehors": 0.17,
+                 "bulle": "UN, DEUX… LA MANTE!"}
+
 #: LEUR COMBAT. Les autres gangs cognent à la batte ou aux poings de rue ; les Mantes ont le répertoire.
 #: ⚠️ Toutes les durées en images (60 par seconde), les distances en pixels.
 COMBAT: dict = {
@@ -131,9 +142,18 @@ def piece_d_ecole(slug: str, largeur: int, hauteur: int, porte: int) -> dict:
     # Le point : fouiller les casiers (`Missions.fouiller`). ⚠️ `garde` : les Mantes présents le voient faire et
     # te tombent dessus — on vole des élèves, dans leur école.
     points = [carte._poser_le_point(grille, "fouiller", None, porte, casiers, garde="mantes")]
-    pris: set[tuple[int, int]] = set()
+    # LE VIEUX MAÎTRE (`point:maitre`, docs/personnages/victor-tam.md) : au milieu de sa salle, face à la porte — là
+    # où il a donné quarante ans de cours. ⚠️ AU MILIEU, parce qu'un personnage dedans se tient sur la tuile libre la
+    # plus proche du centre de la pièce (`Histoire.placeDebout`) : posé ailleurs, il glisserait d'une tuile. Posé AVANT
+    # les élèves et gardé (`pris`) : aucun ne naît sous ses sandales. Il n'est là qu'une fois revenu de Floride
+    # (`arrive_apres`, dans `missions.PERSONNAGES`).
+    maitre = (largeur // 2, hauteur // 2)
+    points.append(carte._pt(POINT_DU_MAITRE, maitre[0] + 1, maitre[1] + 1))
+    pris: set[tuple[int, int]] = {maitre}
+    # Ses élèves, en rang entre la porte et lui : face au maître quand le cours reprend (`REPRISE`). ⚠️ Pas dans l'allée
+    # du milieu — on va de la porte au maître sans bousculer personne.
     eleves = [carte._quelqu_un(grille, "mante", autour, porte, pris)
-              for autour in ((1, 1), (largeur - 2, 1), (largeur // 2, hauteur // 2))]
+              for autour in ((1, hauteur - 2), (largeur - 2, hauteur - 2), (largeur // 2 - 2, hauteur - 2))]
     return carte._piece(slug, ENSEIGNE, carte._plan_de(grille, porte), sol="t", points=tuple(points),
                         gens=carte._gens(*[e for e in eleves if e]))
 
@@ -182,4 +202,4 @@ def poser(ville: dict, ch, district: dict, n: int) -> dict | None:
 
 
 def exporter() -> dict:
-    return {**COMBAT, "provocation": PROVOCATION}
+    return {**COMBAT, "provocation": PROVOCATION, "reprise": dict(REPRISE)}

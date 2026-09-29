@@ -186,6 +186,12 @@ VISAGES: dict[str, dict] = {
     "irene": _v("ronde", "permanente", "gilet", lunettes="epaisses", signes=("rides", "boucles")),
     # Le Pouce (c04) : le veston moutarde du tripot, la moustache, les cheveux gominés du vendeur, un cure-dent.
     "pouce": _v("large", "gominee", "veston", "moustache_epaisse", signes=("cure_dent", "sourcils_epais")),
+    # Victor Tam, le vieux maître de l'ÉCOLE LA MANTE, revenu de Floride : le chapeau de paille du snowbird sur une
+    # couronne de cheveux blancs, la chemise fleurie turquoise, le bronzage de trois hivers, les gros sourcils blancs
+    # et les rides de quelqu'un qui rit plus qu'il ne crie. ⚠️ Ni lunettes épaisses ni yeux plissés : il CLIGNE
+    # (`test_visages_js`), et un maître qui te regarde, ça se voit aux yeux.
+    "maitre": _v("ronde", "degarnie", "blouse", chapeau="canotier", signes=("rides", "sourcils_epais"),
+                 t="#e6d49a"),
 }
 
 #: Ceux qui parlent sans être des PERSONNAGES : l'agent qui t'interpelle dans la rue.

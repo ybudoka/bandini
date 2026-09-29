@@ -49,9 +49,14 @@ def test_l_ecole_a_ses_mannequins_son_sac_et_ses_eleves(ville):
     sol = "".join(piece["sol"])
     assert sol.count("%") == 2 and "@" in sol, piece["sol"]
     assert "A" not in sol, "un kwoon a un plancher de bois, pas le tatami du DOJO DION"
-    assert [(q["type"], q.get("garde")) for q in piece["points"]] == [("fouiller", "mantes")], piece["points"]
+    assert [(q["type"], q.get("garde")) for q in piece["points"]] == [("fouiller", "mantes"), ("maitre", None)], \
+        piece["points"]
     qui = [g["qui"] for g in piece["gens"]]
     assert qui and set(qui) == {"mante"} and len(qui) >= 2, qui
+    # Le vieux maître (vague 2) se tient devant le sac, face à la salle — sur le plancher, et personne sous lui.
+    maitre = next(q for q in piece["points"] if q["type"] == mantes.POINT_DU_MAITRE)
+    assert piece["sol"][maitre["y"]][maitre["x"]] == "t", "le maître se tient sur le plancher, pas dans un meuble"
+    assert (maitre["x"], maitre["y"]) not in {(g["x"], g["y"]) for g in piece["gens"]}, "un élève sous ses sandales"
     assert "mante" in carte.QUI_DEDANS
 
 

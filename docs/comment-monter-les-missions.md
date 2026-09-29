@@ -118,6 +118,7 @@ passage. Chaque personnage :
     "ou": "porte:garage",            # où il se tient : `porte:<lieu>` (dehors) ou `point:<type>` (dedans)
     "heler": "Hé! Viens ici!",       # sa BULLE quand il a une job pour toi — ≤ 16 caractères
     "parti_apres": "m5",             # FACULTATIF : il quitte sa place après cette mission
+    "arrive_apres": "c04",           # FACULTATIF : il n'est à sa place qu'après cette mission (le vieux maître)
 }
 ```
 
@@ -235,6 +236,8 @@ son arme. Deux clés passent par-dessus, **seulement pour CES hommes-là** :
 - `arme` — ce qu'ils tiennent ; `""` = les poings (un homme sans arme ne peut
   pas non plus en **lâcher** une en tombant) ;
 - `vie` — leurs points de vie ;
+- `chef` — **le chef** : le bâton et 160 de vie par défaut, et il vient au joueur ; mais `arme`, `vie` et `ou`
+  passent aussi par-dessus pour lui (c06 : Kenny attend à la porte de chez Gus, à mains nues) ;
 - `loin` — **ils arrivent** : au lieu d'attendre là où `ou` les pose, ils naissent à `loin`
   tuiles du joueur (16 au plus : au-delà de 260 px ils renoncent), juste hors de l'écran,
   **une fois l'intro finie**, et courent sur lui. Pendant l'intro, `cible` nomme le point d'où
@@ -432,6 +435,8 @@ En plus de `recompense`, la mission peut donner :
 À partir de M16, `donne` grossit. Chaque clé a **un** endroit qui la lit, dans
 `Histoire.recompenser()` :
 
+- `technique` — une technique du répertoire (payante au DOJO DION) que le donneur t'**apprend** (c07, le retournement
+  du poignet) ; déjà sue, rien de plus ;
 - `libere: "<district>"` — généralise `faubourg_libere` : le gang devient des
   passants, la zone s'efface de `carte.zones()` ;
 - `calme: "<gang>"` — `hostile_toujours` et `hostile_si_arme` tombent ;

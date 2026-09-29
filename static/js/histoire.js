@@ -560,6 +560,8 @@ const Histoire = (function () {
       // Parti apres sa mission (Ti-Guy entre au garage a la fin de M1) : dans les
       // donnees, parce qu'ici aucun slug de mission ne s'ecrit.
       if (p.parti_apres && faite(p.parti_apres)) continue;
+      // Pas encore arrive (`arrive_apres` : le vieux maitre des Mantes, en Floride jusqu'a la chute du Pouce).
+      if (p.arrive_apres && !faite(p.arrive_apres)) continue;
       if (p.ou.indexOf('porte:') === 0) poserDonneur(p);
       // ⚠️ Sven se tient sur SON poste a quai (`mouillage:`), pas a une porte :
       // les autres formes (`point:`) restent dedans, posees a l'entree de leur piece.
@@ -752,6 +754,9 @@ const Histoire = (function () {
     if (!piece) return;
     for (const p of personnages()) {
       if (p.ou.indexOf('point:') !== 0) continue;
+      // ⚠️ `arrive_apres` : pas encore la (le vieux maitre, en Floride jusqu'a la chute du Pouce). Sa salle n'a
+      // que ses eleves, et personne ne s'y tient a sa place.
+      if (p.arrive_apres && !faite(p.arrive_apres)) continue;
       const point = (piece.points || []).find(function (q) { return q.type === p.ou.slice(6); });
       if (!point) continue;
       const place = placeDebout(point);
@@ -1710,7 +1715,8 @@ const Histoire = (function () {
     if (reste <= 0) return;
     const arrivee = o.loin ? B.mission.arrivee || placeDArrivee(o.loin) : null;
     if (arrivee && enSilence) { B.mission.arrivee = arrivee; return; }
-    const centre = arrivee || (o.chef ? { x: B.joueur.x, y: B.joueur.y } : resoudre(o.ou, m) || { x: B.joueur.x, y: B.joueur.y });
+    // Le chef vient à toi (m5) — sauf si la fiche dit où il attend (`ou` : Kenny à la porte de chez Gus, c06).
+    const centre = arrivee || (o.chef && !o.ou ? { x: B.joueur.x, y: B.joueur.y } : resoudre(o.ou, m) || { x: B.joueur.x, y: B.joueur.y });
     // Côte à côte, en travers de leur route : le second n'est pas derrière le premier.
     const dx = B.joueur.x - centre.x, dy = B.joueur.y - centre.y, norme = Math.hypot(dx, dy) || 1;
     for (let c = 0; c < coins; c++) {
@@ -1739,7 +1745,10 @@ const Histoire = (function () {
         if (o.arme !== undefined) e.arme = o.arme || null;
         if (o.vie) { e.vie = e.vieMax = o.vie; }
         if (o.chef) {
-          e.chef = true; e.vie = e.vieMax = 160; e.arme = 'batte'; e.swaps = Object.assign({}, e.swaps, { c: '#101018' });
+          // Le chef de m5 : le baton et 160 de vie — sauf si la fiche dit autre chose (c06 : Kenny, le caid des
+          // Mantes, se bat a mains nues ; `arme: ""`), comme pour ses hommes.
+          e.chef = true; e.vie = e.vieMax = o.vie || 160; e.arme = o.arme !== undefined ? (o.arme || null) : 'batte';
+          e.swaps = Object.assign({}, e.swaps, { c: '#101018' });
           // Habille (`Garderobe`), c'est sa TENUE qui se dessine : le chef la porte en noir aussi.
           if (e.tenue) e.tenue = Object.assign({}, e.tenue, { couleur_haut: '#101018' });
         }
@@ -2192,6 +2201,13 @@ const Histoire = (function () {
                             vie: 100, angle: 0, vole: false };
     }
     if (d.manchette) p.manchetteForcee = d.manchette;
+    // ⚠️ `technique` : ce que le donneur t'APPREND en paiement (le vieux maitre des Mantes, c07) — comme une lecon
+    // reussie au DOJO DION (`dojo.js`), sans la payer. Deja sue, il n'y a rien de plus a apprendre.
+    if (d.technique && p.techniques && !p.techniques[d.technique] && Techniques.def(d.technique)) {
+      p.techniques[d.technique] = true;
+      if (p.coursPayes) delete p.coursPayes[d.technique];
+      Hud.message('TU SAIS ' + Techniques.def(d.technique).nom.toUpperCase() + ' !', 180);
+    }
     p.stats.missions = (p.stats.missions || 0) + 1;
     noter('MISSION : ' + m.titre + ' — ' + prime + ' $', true);
     B.mission = null;
@@ -2389,7 +2405,13 @@ const Histoire = (function () {
         if (e.suivi && B.joueur.dansVehicule !== e) { e.suivi = false; e.attendLeJoueur = false; e.destination = null; e.mission = null; }
         else if (tout || e.fuyard || e.escorte) { if (B.joueur.dansVehicule === e) Vehicules.descendre(B.joueur, true); Entites.retirer(e); }
         else { e.mission = null; }
-      } else if (e.type === 'pieton') { e.cible = false; e.chef = false; if (e.vivant && e.etat !== 'assomme') { e.etat = 'fuit'; e.minuterie = 300; } }
+      } else if (e.type === 'pieton') {
+        e.cible = false; e.chef = false;
+        // ⚠️ UN PERSONNAGE qu'une escorte a pose (le vieux maitre de c08, qui ne se tient pas en ville) ne se sauve
+        // pas avec les figurants : la mission finie, il reste la ou elle l'a mene, et la fin se dit DEVANT lui.
+        if (e.personnage) { e.mission = null; e.suit = null; e.piste = null; e.intouchable = true; e.etat = 'fige'; e.vx = 0; e.vy = 0; }
+        else if (e.vivant && e.etat !== 'assomme') { e.etat = 'fuit'; e.minuterie = 300; }
+      }
       else Entites.retirer(e);
     }
   }
@@ -3334,6 +3356,10 @@ const Histoire = (function () {
       plus rien — sinon elle ne voudrait plus rien dire. */
   function majBulles() {
     const m = courante(), o = objectif();
+    // L'ECOLE LA MANTE ROUVERTE (`mantes.REPRISE`) : dans sa salle, le maitre donne son cours — il compte, deux
+    // secondes sur quatre, quand il n'a rien pour toi.
+    const r = B.defs.mantes && B.defs.mantes.reprise;
+    const cours = !!(r && B.interieur && faite(r.apres)) && B.t % 240 < 120;
     for (const e of B.entites) {
       if (!e.personnage || !e.vivant) continue;
       const dispo = disponibleDe(e.personnage);
@@ -3342,7 +3368,8 @@ const Histoire = (function () {
       if (dispo && !dispo.dialogue) charger(dispo.slug);
       const attend = (m && m.donneur === e.personnage && o && o.type === 'retourner') || !!dispo;
       const p = attend ? personnage(e.personnage) : null;
-      Entites.bulle(e, p ? p.heler : '');
+      const compte = !p && cours && personnage(e.personnage).ou === 'point:' + r.point;
+      Entites.bulle(e, p ? p.heler : (compte ? r.bulle : ''));
     }
   }
 

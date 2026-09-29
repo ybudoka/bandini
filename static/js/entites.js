@@ -460,6 +460,14 @@ const Entites = (function () {
       if (g.qui === 'eleve') { e.partenaire = true; e.poste = { x: e.x, y: e.y }; }
       // Les eleves de l'ECOLE LA MANTE s'entrainent a leur place ; frappe-les, et c'est un Mante qui repond.
       if (g.qui === 'mante') e.poste = { x: e.x, y: e.y };
+      // ⚠️ L'ECOLE ROUVERTE (`mantes.REPRISE`, apres l'arc du vieux maitre) : le cours a repris. Ils ne sont plus du
+      // gang, ils tiennent leur place (`fige`, comme le donneur) et font face au maitre — la ou il se tient, qu'il
+      // soit la ou non. Aucun de : un corps plante ne flane pas.
+      if (g.qui === 'mante' && ecoleRouverte()) {
+        const m = (piece.points || []).find(function (q) { return q.type === B.defs.mantes.reprise.point; });
+        e.gang = null; e.eleve = true; e.etat = 'fige'; e.plante = { x: e.x, y: e.y };
+        if (m) regarder(e, m.x * TT + 8 - e.x, m.y * TT + 8 - e.y);
+      }
       // ⚠️ `fige`, la regle du donneur : il TIENT sa place (on le bouscule, il y
       // revient) et il ne se retourne pas — c'est ce qui garde un malade couche
       // et un patient ou un avocat assis. Qu'on le frappe, et il redevient un
@@ -3582,7 +3590,7 @@ const Entites = (function () {
     // ⚠️ LES TERRITOIRES BOUGENT (`Territoires.gangA`) : la cour, comme avant, ou l'ilot qu'un gang a PRIS. Une
     // partie qui n'a rien de pris tire exactement les memes des qu'avant.
     const ici = Territoires.gangA(B.joueur.x, B.joueur.y);
-    const gang = ici && !gangChasse(ici) && B.rng() < 0.5
+    const gang = ici && !gangChasse(ici) && B.rng() < partDehors(ici)
       ? (B.defs.pietons.gangs.find(function (g) { return g.slug === ici; }) || null)
       : null;
     const ne = creerPieton(place.x, place.y, gang ? archetype(gang.pieton) : null);
@@ -3599,6 +3607,22 @@ const Entites = (function () {
     if (!g) return false;
     if (g.district === 'faubourg' && p.faubourgLibere) return true;
     return (p.libere || []).indexOf(g.district) >= 0;
+  }
+
+  /** L'ECOLE LA MANTE a-t-elle rouvert ses cours (`mantes.REPRISE`, sa mission `apres` faite) ? */
+  function ecoleRouverte() {
+    const r = B.defs.mantes && B.defs.mantes.reprise;
+    return !!(r && B.partie && B.partie.missionsFaites && B.partie.missionsFaites[r.apres]);
+  }
+
+  //: Sur le territoire d'un gang, la part des naissances qui sont ses membres (les autres sont des passants).
+  const PART_DEHORS = 0.5;
+
+  /** La part des naissances du territoire de `slug` qui sont des siens : une sur deux — et moins de Mantes dans
+      la rue quand leur ecole a rouvert (`mantes.REPRISE.part_dehors`) : les autres sont retournes au cours. */
+  function partDehors(slug) {
+    const r = B.defs.mantes && B.defs.mantes.reprise;
+    return r && slug === r.gang && ecoleRouverte() ? r.part_dehors : PART_DEHORS;
   }
 
   /** Le gang `slug` est-il CALME (M16, `donne.calme`) : il ne te saute plus dessus parce
@@ -5787,7 +5811,7 @@ const Entites = (function () {
   }
 
   return {
-    orignalDeLaNuit, majOrignal, faireFuirLOrignal, gangChasse, gangCalme, defier,
+    orignalDeLaNuit, majOrignal, faireFuirLOrignal, gangChasse, gangCalme, defier, ecoleRouverte, partDehors,
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES, PORTEE_DECOR,
     creer, enDehorsDeLaSuite, sauterDesNumeros, dansLaBande, retirer, vider, creerJoueur, creerJoueur2, joueurs, estJoueur, creerDecor, creerAmbulants, majKiosques, creerPaquets, creerPieton, reindexerDecor,
     briser, endommagerDecor, reparerLeDecor, releverDecor, DEBRIS_MAX,

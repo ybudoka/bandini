@@ -189,8 +189,14 @@ def test_le_paquet_reste_leger(paquets):
     gzip sur `dev` (443 octets de marge), 278 071 / 62 234 avec eux — dont 2 604 bruts pour `amb_canton` (ses notes :
     le filet de toute musique, comme les six autres ambiances) et le reste pour `mantes.PROVOCATION` (huit répliques et
     ses garde-fous). Un cran franc de deux Ko ; le brut reste sous ses 280 000. La carte ne bouge pas.
+
+    ⚠️ **Et le vieux maître, le même soir, sous le même plafond gzip** (l'arc c05 à c08, docs/jalons/l-ecole-rivale.md).
+    Mesure : 278 071 bruts / 62 235 gzip sur `dev`, 280 599 / 62 874 avec lui — le catalogue de ses quatre missions (les cinquante octets
+    gzip par mission d'en haut), le personnage et son repos (son premier, jamais dit, raccourci), son visage, sa tenue
+    et la reprise de l'école (`mantes.REPRISE`). Le gzip, le vrai juge, reste sous ses 64 000 ; le brut, un
+    indicateur, passe 280 000 → 285 000.
     """
-    for nom, brut_max, fil_max in (("definitions", 280_000, 64_000), ("carte", 722_000, 71_000)):
+    for nom, brut_max, fil_max in (("definitions", 285_000, 64_000), ("carte", 722_000, 71_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))
