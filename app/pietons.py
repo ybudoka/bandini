@@ -413,6 +413,14 @@ CATALOGUE: list[Pieton] = [
        sprite="pickpocket", vitesse=1.1, courage=0.2, temoin=0.1, vie=65,
        argent=(20, 80), metier="pickpocket", frequence=0.0,
        districts=("faubourg", "quais"), standings=("pauvre",)),
+    # ⚠️ LES MATELOTS DE SVEN (M16, q13 — 29 sept. 2026) : un piéton DE MISSION, comme le gardien du lot.
+    # Fréquence 0 : il ne naît jamais dans la foule, seulement quand un `tuer` l'envoie (`pieton: "matelot"`).
+    # Le caban bleu marine, la tuque grise, un couteau de pont — il ne tient aucun quartier : il débarque.
+    # ⚠️ Au BOUT du catalogue : les tirages de la foule ne lisent que les fréquences, et un archétype de
+    # plus n'y change rien — mais ici, rien de ce qui est avant lui ne se renumérote.
+    _p("matelot", "Matelot", "#1f2e4a", "#5a5a5a", "#d9a07a", "#2a2a33",
+       vitesse=1.05, courage=1.0, temoin=0.0, vie=90, argent=(10, 40), arme="couteau",
+       frequence=0.0),
 ]
 
 #: Les gangs : leur archetype, leur territoire (zone de la carte), leur humeur.

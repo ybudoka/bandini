@@ -85,6 +85,8 @@ OUTILS = ('  const ORDRE = ' + json.dumps(missions.ordre_topologique()) + ';' + 
     if (e.argent_min !== undefined) p.argent = Math.max(p.argent || 0, e.argent_min);
     if (e.dette !== undefined) p.dette = Math.min(p.dette || 0, e.dette);
     if (e.tenue) { p.tenues = p.tenues || []; if (p.tenues.indexOf(e.tenue) < 0) p.tenues.push(e.tenue); }
+    // `une_de` (q13) : l'un des cotes d'un choix — le premier, si aucun n'est fait.
+    if (e.une_de && !e.une_de.some(function (s) { return p.missionsFaites[s]; })) p.missionsFaites[e.une_de[0]] = 1;
     // ⚠️ `exigeTenu` ne fait que COMPTER ces deux-la ; on prend quand meme les
     // vrais slugs de la ville et du catalogue, pour que le carnet et le HUD
     // lisent quelque chose qui existe.

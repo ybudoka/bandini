@@ -58,6 +58,7 @@ Chaque fiche mêle deux sortes de faits.
 | [Norbert](norbert.md) | `norbert` | dans le hall de l'Hôtel Bandini, au bout du comptoir | Martin Dupont Intime | f10 (sa cible) · c03 |
 | [Irène Lam](irene.md) | `irene` | au bout du bar du casino du Dragon d'or, au Petit-Canton, dedans | Meera | c01 · c02 · c03 · c04 · c05 |
 | [Réal « le Pouce » Vachon](le-pouce.md) | `pouce` | nulle part : au tripot, puis parti pour Sorel | Callum - Husky Trickster | c04 (une réplique, en se sauvant) |
+| [Cindy Boivin](cindy.md) | `cindy` | devant la cantine des Quais, dans la Brume — jusqu'à q05 (Norbert l'engage à la réception) | Ruby Roo | q05 |
 | [Victor Tam, « Sifu Tam »](victor-tam.md) | `maitre` | dans sa salle de l'ÉCOLE LA MANTE, dedans — une fois revenu de Floride (après c04) | Luca - Storyteller | c05 (sa poignée de main) · c06 · c07 · c08 |
 
 ⚠️ **Deux voix du compte ne se donnent à personne** : celles du scanner de police (Clara Dupont, la

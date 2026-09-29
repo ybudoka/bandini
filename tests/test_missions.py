@@ -10,7 +10,8 @@ def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
     assert [p["slug"] for p in missions.PERSONNAGES if p.get("ou")] == [
         "ti_guy", "thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu", "raymonde", "ovila",
         "mo", "fern", "mado", "gege", "xavier", "lachance", "gus", "rosa", "ginette", "gilles",
-        "bonimenteur", "sven", "berube", "mireille", "jeanne", "leo", "norbert", "irene", "maitre"]
+        "bonimenteur", "sven", "berube", "mireille", "jeanne", "leo", "norbert", "irene", "maitre", "cindy"]
+    # Cindy n'est devant la cantine qu'entre q04 et q05, et q05 l'attend toujours : pas de repos, comme Ti-Guy.
     # Mireille (le DOJO DION) ouvre ses COURS a chaque fois : pas de repos, comme le -2 de Josee.
     # Ti-Guy s'en va apres m1 (il a m1 a donner tant qu'il est la) ; Josee ouvre le marche noir
     # apres M5 (`marche_noir.apres`) au lieu de dire son repos : pas de voix pour ce qui ne s'entend pas.
@@ -113,6 +114,11 @@ def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
                 assert o["ou"][5:] in zones
             if o.get("groupe"):
                 assert any(g["slug"] == o["groupe"] for g in pietons.GANGS)
+            # `pieton` (q13, les matelots de Sven) : QUI on envoie — un piéton de mission, qui ne naît jamais dans
+            # la foule (fréquence 0), sinon la mission changerait la rue.
+            if o.get("pieton"):
+                arch = next((p for p in pietons.CATALOGUE if p["slug"] == o["pieton"]), None)
+                assert o["type"] == "tuer" and arch and arch["frequence"] == 0.0, f"{m['slug']} : pieton {o['pieton']}"
             if o.get("vehicule"):
                 assert o["vehicule"] in {v["slug"] for v in __import__("app.vehicules", fromlist=["CATALOGUE"]).CATALOGUE}
         donne = m["donne"]

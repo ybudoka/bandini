@@ -186,6 +186,9 @@ VISAGES: dict[str, dict] = {
     "irene": _v("ronde", "permanente", "gilet", lunettes="epaisses", signes=("rides", "boucles")),
     # Le Pouce (c04) : le veston moutarde du tripot, la moustache, les cheveux gominés du vendeur, un cure-dent.
     "pouce": _v("large", "gominee", "veston", "moustache_epaisse", signes=("cure_dent", "sourcils_epais")),
+    # Cindy (q05), la fille de la Brume : une blonde décolorée aux racines foncées, le fard et le rouge de la nuit,
+    # deux grandes boucles d'oreilles — et les cernes de qui n'a pas dormi dans un vrai lit depuis longtemps.
+    "cindy": _v("fine", "longue", "blouse", signes=("fard", "rouge", "boucles", "cernes")),
     # Victor Tam, le vieux maître de l'ÉCOLE LA MANTE, revenu de Floride : le chapeau de paille du snowbird sur une
     # couronne de cheveux blancs, la chemise fleurie turquoise, le bronzage de trois hivers, les gros sourcils blancs
     # et les rides de quelqu'un qui rit plus qu'il ne crie. ⚠️ Ni lunettes épaisses ni yeux plissés : il CLIGNE

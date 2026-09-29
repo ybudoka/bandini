@@ -145,6 +145,9 @@ const Histoire = (function () {
     if (exige.proprietes !== undefined && (p.proprietes && Object.keys(p.proprietes).length < exige.proprietes)) return false;
     if (exige.dette !== undefined && (p.dette || 0) > exige.dette) return false;
     if (exige.tenue && (p.tenues || []).indexOf(exige.tenue) < 0) return false;
+    // ⚠️ `une_de` (29 sept. 2026, q13) : un prerequis ne sait dire que « et ». Apres un CHOIX
+    // (q10 ou q11, l'autre est fermee pour de bon), la suite s'ouvre par l'un OU l'autre cote.
+    if (exige.une_de && !exige.une_de.some(faite)) return false;
     // ⚠️ `exige.heure` ne se juge PAS ici : `disponibles()` est un filtre
     // statique, sans le moment du jour. L'heure se vérifie au DECLENCHEMENT du
     // téléphone (tranche 3, la police : être au casse-croûte à midi).
@@ -1720,7 +1723,9 @@ const Histoire = (function () {
   function poserLesCravates(m, o, enSilence) {
     const gang = B.defs.pietons.gangs.find(function (g) { return g.slug === o.groupe; });
     if (!gang) return;
-    const arch = Entites.archetype(gang.pieton);
+    // ⚠️ `pieton` (29 sept. 2026, q13) : QUI on envoie, quand ce n'est pas un membre de rue du gang — les
+    // matelots de Sven (`matelot`, un piéton de mission, fréquence 0). Le gang reste ce qu'il est.
+    const arch = Entites.archetype(o.pieton || gang.pieton);
     const coins = o.coins || 1;
     const etape = B.partie.mission.etape, parCoin = tombesDe(m.slug, etape);
     const reste = o.n - dejaTombes(m.slug, etape);
@@ -1943,6 +1948,10 @@ const Histoire = (function () {
     if (o.chrono_s && B.t - p.debutT > o.chrono_s * 60) { echouer('chrono'); return; }
     // `sans_etoile` : échec `etoile` dès qu'on est vu (les missions discrètes).
     if (o.sans_etoile && B.recherche.etoiles > 0) { echouer('etoile'); return; }
+    // `sans_arme` (29 sept. 2026, q06 : « coucher Denis à mains nues ») : une arme AU POING en territoire
+    // de gang, c'est raté (échec `arme`). Hors de son territoire, on a le temps de la ranger — la ligne
+    // d'objectif le dit (`ligneObjectif`).
+    if (o.sans_arme && armeAuPoing(j) && Territoires.gangA(j.x, j.y)) { echouer('arme'); return; }
     switch (o.type) {
       case 'aller': {
         if (o.nuit && !Monde.estNuit()) { B.mission.attend = 'ATTENDS LA NUIT'; return; }
@@ -2179,6 +2188,11 @@ const Histoire = (function () {
     }
   }
 
+  /** Une arme AU POING (pas les poings, pas le poing américain, pas au volant) : ce que `sans_arme` refuse. */
+  function armeAuPoing(j) {
+    return !!(j && !j.dansVehicule && j.arme && j.arme !== 'poings' && j.arme !== 'poing_americain');
+  }
+
   function reussir() {
     const m = courante();
     if (!m) return;
@@ -2200,6 +2214,9 @@ const Histoire = (function () {
     // ⚠️ `libere` : un district de plus (m98 comptera la liste). `faubourg_libere`
     // alimente la MEME liste, pour qu'il n'y ait qu'une verite.
     if (d.libere && p.libere.indexOf(d.libere) < 0) p.libere.push(d.libere);
+    // ⚠️ LE GANG PERD SON QUARTIER, ET CE QU'IL AVAIT PRIS AILLEURS (29 sept. 2026) : ses coins pris a la
+    // frontiere reviennent a leurs gangs (`Territoires.liberer`) — il est hors jeu, il ne les defendrait plus.
+    if (d.libere && typeof Territoires !== 'undefined') Territoires.liberer(d.libere);
     if (d.faubourg_libere && p.libere.indexOf('faubourg') < 0) p.libere.push('faubourg');
     // ⚠️ `calme` (M16) : un gang de plus qui oublie son hostilite (la seule
     // facon de marcher dans La Shop, s05 — et Les Erables, e04). Comme `libere`,
@@ -3367,6 +3384,8 @@ const Histoire = (function () {
     if (o.type === 'sauter') compte = ' VOL ' + Math.round(B.mission ? B.mission.vol : 0) + '/' + o.vol_px;
     if (o.type === 'suivre' && B.mission && B.mission.suivi) compte = filature(B.mission);
     if (o.type === 'parler' && tenueManque(o) && tenueDef(o.tenue)) compte = ' — ENFILE : ' + tenueDef(o.tenue).nom.toUpperCase();
+    // `sans_arme` : tant qu'on tient une arme, la ligne le dit AVANT qu'on entre chez eux.
+    if (o.sans_arme && armeAuPoing(B.joueur)) compte += ' — RANGE TON ARME';
     // ⚠️ `chrono_s` sur un objectif (M16) : le temps qui reste, comme au défi. Il
     // tombait en silence (q10 : « la moto au phare en une minute », sans montre).
     if (o.chrono_s && typeof B.partie.mission.debutT === 'number') {
@@ -3438,7 +3457,7 @@ const Histoire = (function () {
     majDeblocages(false);
   }
 
-  return { texteDObjectif, disponibles, disponibleDe, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
+  return { texteDObjectif, exigeTenu, disponibles, disponibleDe, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
            donneur, creerDonneurs, poserDonneur, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
            parler, dire, suivante, finir, commencer, demarrer, avancer, objectif, courante, reussir, echouer, evenement,
            ouverture, passerOuverture, fichiersDeLOuverture, direLignes, majCinema, resoudre,

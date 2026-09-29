@@ -944,3 +944,39 @@ catalogue.
     et `exigeTenu({liberes: n})` monte d'un cran — sauvegarde comprise.
   - Hors du chemin : le brouillon `refs/wip/m16-q07` (`q07`, `a_vendre`) sert _Le Boss_ par la quatrième
     propriété, pas `q13` : il reste où il est.
+- **29 sept. 2026 : vague 1 — l'arc Q jusqu'à sa libération. Les Quais sont libres.** Trois missions :
+  `q05` (Cindy, _Cindy veut sortir_ : l'escorter de la cantine à l'hôtel, puis les deux gars du Beau Denis
+  qui arrivent là où elle est — 100 $, elle quitte la rue), `q06` (Josée, _Le Beau Denis_ : ses deux gardes
+  puis lui, chez les Morues, **à mains nues**, puis semer — 350 $, `calme: morues`), `q13` (Josée, _La nuit
+  des Morues_ : de nuit devant l'hôtel, deux chaloupes de matelots de Sven puis leur bosco — 500 $,
+  **`libere: quais`**, la manchette _Nuit blanche à l'Hôtel Bandini_). Un personnage neuf, **Cindy Boivin**
+  (sa fiche, son visage, voix Ruby Roo — à écouter), qui n'est devant la cantine qu'entre q04 et q05.
+  35 voix générées (≈ 3 300 caractères).
+  - **Le moteur apprend quatre choses, chacune jugée et mutée** : `sans_arme` enfin lue (une arme au poing
+    en territoire de gang, c'est l'échec `arme` — un échec de plus dans `ECHECS` — et la ligne dit « RANGE TON
+    ARME » avant qu'on y entre) ; `exige.une_de` (q13 s'ouvre après q10 **ou** q11 : un prérequis ne sait dire
+    que « et ») ; `tuer` `pieton` (qui on envoie : les **matelots**, un archétype de fréquence 0 au bout de
+    `pietons.CATALOGUE`, comme le gardien) ; et la libération **se voit** : le gang libéré ne saute plus sur
+    personne (`gangCalme`), rend les coins qu'il avait pris (`Territoires.liberer`), et sa cour redevient le
+    nom du quartier sous la mini-carte (`Hud.nomIci` : « Les Quais », en blanc).
+  - **Juges** (`tests/test_arc_q_js.py`, six ; sept mutations, toutes rouges) : q05 de l'appel à la prime,
+    et Cindy couchée qui fait rater ; q06 ratée pistolet au poing, puis gagnée à mains nues (`calmes`) ; q13
+    fermée sans le choix, ouverte par l'un ou l'autre côté ; q13 jouée — trois vagues de matelots, puis **les
+    Quais libres dans le monde** : le gang sort du jeu, les Chevreuils non, le coin pris aux Cravates revient,
+    celui pris AUX Morues ne bouge pas, « Les Quais » sous la mini-carte, `exigeTenu({liberes: 2})`, la
+    sauvegarde relue. `test_missions_en_scene_js.py` complet : vert (531, 3 xfail connus).
+  - ⚠️ **La « Mireille » de la fiche s'appelle Cindy** : le slug `mireille` est Mireille Dion, du DOJO DION.
+  - ⚠️ **Un personnage posé dès l'ouverture décale les identifiants de la ville** (la mémoire « décor eager ») :
+    Cindy `arrive_apres: q04`. Et comme q05 ne demande que q04, elle a toujours sa mission à donner : pas de
+    repos (`_sa_mission_l_attend_toujours` l'apprend — ses deux repos, générés avant qu'on s'en rende compte,
+    sont effacés : ≈ 156 caractères perdus).
+  - ⚠️ **Le Beau Denis ne parle pas** : un `pendant` dit par quelqu'un d'absent passe au combiné, et Denis n'a
+    pas ton numéro. Il est un chef (`chef`, 180 de vie, les poings) et c'est tout — sa voix attendra une
+    mission où il est là quand il parle.
+  - ⚠️ **Le paquet** : 280 579 bruts / 62 857 gzip sur `dev`, **282 815 / 63 357** avec la vague (+500 gzip :
+    trois missions au catalogue, Cindy, le matelot, la manchette). Plafond 64 000 : **643 octets de marge**. La
+    vague E ne tiendra pas dessous.
+  - **Ce qui reste jusqu'aux trois autres libérations** : `e04`, `e06`, `e07`, `e10` (Érables — Diane et Jo,
+    et `contre`/`course` qui ne sont lus par personne : `e04` se réécrit) ; `s02`, `s05`, `s06`, `s09`,
+    `s10`, `s11` (La Shop — Ti-Loup, Gros-Boulon, Prévost) ; `p02`, `p04`, `p05`, `p09`, `p10`, `p11` (La
+    Pointe — Bilodeau, Zed, le Trappeur). _Le Boss_ en demande quatre : Faubourg et Quais, plus deux.

@@ -96,7 +96,8 @@ DESSINS_D_OBJET = ("cle", "dossier", "registre", "sac")
 # (`proteger`, sa cible est tombée) sont les deux échecs que M16 ajoute aux
 # quatre de la v1. `alarme` (21 sept. 2026) est celui du piratage raté : trop
 # de zaps dans le labyrinthe. Ils vivent ICI, lus par `histoire.js` comme le reste.
-ECHECS = ("mort", "arrete", "vehicule_detruit", "chrono", "etoile", "protege_mort", "alarme")
+# `arme` (29 sept. 2026) : l'option `sans_arme` enfin lue — une arme au poing en territoire de gang, c'est raté.
+ECHECS = ("mort", "arrete", "vehicule_detruit", "chrono", "etoile", "protege_mort", "alarme", "arme")
 
 #: Les quatre options qui TRAVERSENT les types d'objectifs (M16). Une clé
 #: d'objectif, pas un type : `chrono_s` sur n'importe lequel (le défi l'avait),
@@ -308,6 +309,16 @@ PERSONNAGES: list[Personnage] = [
     {"slug": "pouce", "nom": "Réal « le Pouce » Vachon", "genre": "homme", "voix": "Callum - Husky Trickster",
      "couleurs": {"c": "#9a7a2a", "h": "#2a1a10", "s": "#e8b088", "p": "#1a1a22"}, "ou": "",
      "heler": ""},
+    # --- Cindy (29 sept. 2026, q05) : la fille de la Brume qui veut sortir de la rue — la « Mireille » de la fiche
+    # M16, rebaptisée : le slug `mireille` est Mireille Dion, du DOJO DION. Devant la cantine des Quais, le soir comme
+    # le jour (`porte:cantine`, un lieu de mission depuis m50 : rien ne bouge). Elle n'y est qu'entre q04 et q05
+    # (`arrive_apres`, `parti_apres` : Norbert l'engage à la réception) — ⚠️ et c'est voulu : un personnage posé dès
+    # l'ouverture décale les identifiants de toute la ville (la mémoire « décor eager »), et rougit des juges qui
+    # n'ont rien à voir. Elle a toujours sa mission à donner : pas de repos. Sa voix : Ruby Roo, libre, jeune, un « fr-quebec » d'aperçu en
+    # multilingue v2 — permise (Martin, 25 sept. 2026) ; en v3, à écouter. Son repos est à elle.
+    {"slug": "cindy", "nom": "Cindy Boivin", "genre": "femme", "voix": "Ruby Roo",
+     "couleurs": {"c": "#d6336c", "h": "#e0b85a", "s": "#e8c0a0", "p": "#1a1a22"}, "ou": "porte:cantine",
+     "heler": "Pst! Toi!", "arrive_apres": "q04", "parti_apres": "q05"},
 ]
 
 
@@ -536,7 +547,7 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 from . import (  # noqa: E402
     e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f10, f11, f12, f13, h01, h02, m1, m2, m3,
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
-    s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08,
+    s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -563,6 +574,9 @@ from . import (  # noqa: E402
 # ⚠️ c05 à c08 (29 sept. 2026, Martin : « les deux ») : le vieux maître des Mantes revient de Floride. Irène l'a
 # appelé (c05, le droit de table au mah-jong) ; lui reprend ses élèves un par un — Kenny chez Gus (c06), Monsieur Bois
 # à la fourrière et une technique en échange (c07), et les portes ouvertes (c08 : l'école rouvre, `mantes.REPRISE`).
+# ⚠️ q05, q06, q13 (29 sept. 2026, « le chemin vers les quatre libérations ») : Cindy qui veut sortir de la rue, le
+# Beau Denis couché à mains nues (`calme: morues`), et la nuit des Morues — la première libération de M16
+# (`libere: quais`), après l'un OU l'autre côté du choix de Sven (`exige.une_de`).
 # ⚠️ m99 (M13, 25 sept. 2026) — _Sacrer son camp_, la fin qu'on peut jouer — tout au bout : son appel
 # ne sonne qu'avec 15 000 $ en poche (`exige`), et une fin n'a rien à précéder.
 CATALOGUE: list[Mission] = [
@@ -579,6 +593,7 @@ CATALOGUE: list[Mission] = [
     f13.MISSION, f10.MISSION, f12.MISSION,
     c01.MISSION, c02.MISSION, c03.MISSION, c04.MISSION,
     c05.MISSION, c06.MISSION, c07.MISSION, c08.MISSION,
+    q05.MISSION, q06.MISSION, q13.MISSION,
     m97.MISSION, m99.MISSION,
 ]
 
@@ -1173,9 +1188,13 @@ def repliques_ouverture() -> list[dict]:
 
 def _sa_mission_l_attend_toujours(p: dict) -> bool:
     """Il part après une mission qui est à lui dès la première minute (sans prérequis ni
-    `exige`) : tant qu'il est là, on lui parle pour la prendre, jamais pour rien."""
+    `exige`, ou sans autre prérequis que ce qui le fait arriver) : tant qu'il est là, on lui parle pour la
+    prendre, jamais pour rien."""
     m = par_slug(p["parti_apres"]) if p.get("parti_apres") else None
-    return bool(m) and not m["prerequis"] and not m.get("exige")
+    # ⚠️ Ou dès qu'il ARRIVE (`arrive_apres`) : Cindy n'est devant la cantine qu'entre q04 et q05, et q05 ne demande
+    # que q04 — elle a toujours sa mission à donner.
+    arrivee = {p["arrive_apres"]} if p.get("arrive_apres") else set()
+    return bool(m) and set(m["prerequis"]) <= arrivee and not m.get("exige")
 
 
 def repliques_de_repos() -> list[dict]:

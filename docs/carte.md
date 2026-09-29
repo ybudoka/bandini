@@ -237,6 +237,7 @@ chacun dans [docs/personnages/](personnages/README.md).
 | `norbert` | Norbert | Martin Dupont Intime | point:norbert (le hall de l'Hôtel Bandini) | — |
 | `irene` | Irène Lam | Meera | point:irene (le bout du bar du Dragon d'or, au Petit-Canton) | — |
 | `pouce` | Réal « le Pouce » Vachon | Callum - Husky Trickster | — (on ne l'entend qu'en se sauvant, c04) | — |
+| `cindy` | Cindy Boivin | Ruby Roo | porte:cantine (la Brume des Quais — partie après q05, `parti_apres`) | — |
 | `maitre` | Victor Tam | Luca - Storyteller | point:maitre (sa salle de l'ÉCOLE LA MANTE, au Petit-Canton — une fois revenu de Floride, `arrive_apres: c04`) | — |
 
 ⚠️ **`ou: "foire"` est un lieu neuf** (22 sept. 2026) : le seul personnage posé DANS l'enceinte de la
@@ -322,6 +323,7 @@ La foule anonyme, les sortes posées, et les gens d'intérieur. `frequence`
 | `policier` | Agent | patrouille (posé par `police.js`) |
 | `garde` | Garde de sécurité | vigile privé de l'infiltration, posé à la main par une mission (`Police.creerAgent(x, y, etat, 'garde')`) |
 | `gardien` | Gardien du lot | grille de la fourrière |
+| `matelot` | Matelot | les gars de Sven : ne naît jamais dans la foule (fréquence 0), seulement quand une mission l'envoie (`tuer` avec `pieton: "matelot"`, q13) |
 
 ---
 

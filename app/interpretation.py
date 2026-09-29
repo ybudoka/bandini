@@ -413,6 +413,7 @@ JEU: dict[str, str] = {
     "narrateur-journal-matin_silence": "[warmly] Un matin tranquille. Rien à signaler à Baie-des-Brumes… le meilleur genre de matin.",
     "narrateur-journal-cravates_chassees": "[excited] Les Cravates chassées du Faubourg! Trois coins de rue libérés en une nuit… toute la ville en parle.",
     "narrateur-journal-pouce_parti": "[amused] Le Pouce plie bagage. [warmly] Le Petit-Canton retrouve sa paye, et la cave du Dragon d'or change de mains. [wryly] On l'aurait vu monter dans l'autobus de Sorel… sans ses valises.",
+    "narrateur-journal-quais_liberes": "[dramatic] Nuit blanche à l'Hôtel Bandini. [amused] Les matelots du cargo norvégien sont repartis à la rame, et les Quais dorment tranquilles. [warmly] Les débardeurs, eux, parlent d'une paix qui tiendra.",
     "narrateur-journal-ecole_rouverte": "[warmly] L'École La Mante rouvre ses portes. [amused] Son vieux maître est revenu de Floride, bronzé, et ses élèves aussi, un par un. [wryly] Premier cours à sept heures : les parents sont invités… les frimeurs aussi.",
     "narrateur-journal-orignal": "[dramatic] Un orignal gagne contre un char. [wryly] La bête est repartie dans le bois de La Pointe ; le char est au garage. [matter-of-fact] Ovila, au phare, le rappelle : un coup de klaxon, et ils s'en vont.",
     "narrateur-journal-lecon_klaxon": "[amused] Le saviez-vous? Un coup de klaxon dans un taxi vous trouve un client. Ça marche aussi avec la pizza… l'ambulance et la remorqueuse.",

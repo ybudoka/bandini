@@ -186,8 +186,10 @@ bloc qui l'attend. `obtenir` le met lui-même, au moment où on le ramasse.
 des types, mais des clés qui se posent sur **n'importe quel** objectif —
 `chrono_s` (le chrono, que le défi avait déjà ; la ligne d'objectif affiche le temps qui
 reste depuis le 28 sept. 2026), `sans_etoile` (échec `etoile` dès qu'on est vu), `sans_arme`
-(en territoire de gang les mains vides — ⚠️ encore lue par personne), `contre` (des
-adversaires sur une `course`). Et deux de plus (28 sept. 2026) : **`remet`** — ce que le
+(en territoire de gang les mains vides — lue depuis le 29 sept. 2026 : une arme au poing chez un
+gang, c'est l'échec `arme`, et la ligne d'objectif dit « RANGE TON ARME » avant qu'on y entre ;
+`q06`), `contre` (des adversaires sur une `course` — ⚠️ encore lue par personne, et `course`
+non plus). Et deux de plus (28 sept. 2026) : **`remet`** — ce que le
 donneur te met dans les mains quand l'objectif commence : une arme, chargée à plein et en
 main (`f13`, l'extincteur), ou une tenue, mise au sac (`f10`, la chemise) — et **`tenue`** —
 l'objectif ne s'accomplit qu'en la **portant** : un `aller` arrivé dans le mauvais linge
@@ -236,6 +238,8 @@ son arme. Deux clés passent par-dessus, **seulement pour CES hommes-là** :
 - `arme` — ce qu'ils tiennent ; `""` = les poings (un homme sans arme ne peut
   pas non plus en **lâcher** une en tombant) ;
 - `vie` — leurs points de vie ;
+- `pieton` — **qui** on envoie, quand ce n'est pas le membre de rue du gang : un piéton de mission
+  de fréquence 0 (`matelot`, les gars de Sven, q13 — jugé) ; le gang, lui, reste ce qu'il est ;
 - `chef` — **le chef** : le bâton et 160 de vie par défaut, et il vient au joueur ; mais `arme`, `vie` et `ou`
   passent aussi par-dessus pour lui (c06 : Kenny attend à la porte de chez Gus, à mains nues) ;
 - `loin` — **ils arrivent** : au lieu d'attendre là où `ou` les pose, ils naissent à `loin`
@@ -446,8 +450,10 @@ En plus de `recompense`, la mission peut donner :
 
 - `technique` — une technique du répertoire (payante au DOJO DION) que le donneur t'**apprend** (c07, le retournement
   du poignet) ; déjà sue, rien de plus ;
-- `libere: "<district>"` — généralise `faubourg_libere` : le gang devient des
-  passants, la zone s'efface de `carte.zones()` ;
+- `libere: "<district>"` — généralise `faubourg_libere` : son gang ne sort plus dans la rue
+  (`Entites.gangChasse`), ne saute plus sur personne (`gangCalme`), sort du jeu des territoires
+  (`Territoires.horsJeu`) et rend les coins qu'il avait pris (`Territoires.liberer`) ; sous la
+  mini-carte, sa cour redevient le nom du quartier (`q13`, les Quais) ;
 - `calme: "<gang>"` — `hostile_toujours` et `hostile_si_arme` tombent ;
 - `contact` — un numéro de plus au téléphone ;
 - `vehicule`, `tenue`, `munitions`, `rabais` par comptoir ;
@@ -456,7 +462,9 @@ En plus de `recompense`, la mission peut donner :
 **`exige` et `ferme`** (M16) viennent compléter `prerequis` :
 
 - `exige` — ce qu'il faut avoir **en plus** des prérequis : `argent_min`,
-  `proprietes`, `liberes`, `dette`, `tenue`, `heure`. Un prérequis dit « après
+  `proprietes`, `liberes`, `dette`, `tenue`, `heure`, et `une_de` (29 sept. 2026, q13 : l'une
+  **ou** l'autre de ces missions faite — un prérequis ne sait dire que « et », et après un choix
+  `ferme`, la suite s'ouvre par l'un ou l'autre côté). Un prérequis dit « après
   quoi » ; `exige` dit « dans quel état ».
 - `ferme` — une mission qui en **ferme** une autre (un choix) : une mission
   fermée n'apparaît plus jamais, ni au téléphone ni au carnet.

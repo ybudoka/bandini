@@ -143,6 +143,12 @@ SPECIALES: list[dict] = [
      "texte": "LE VIEUX MAÎTRE EST REVENU DE FLORIDE. SES ÉLÈVES AUSSI, UN PAR UN.",
      "lu": "L'École La Mante rouvre ses portes. Son vieux maître est revenu de Floride, bronzé, et ses élèves aussi, "
            "un par un. Premier cours à sept heures : les parents sont invités, les frimeurs aussi."},
+    # La nuit des Morues (q13, 29 sept. 2026) : la première libération de M16. Le Clairon ne dit ni Josée ni
+    # Sven — il dit ce que le port a vu.
+    {"slug": "quais_liberes", "titre": "NUIT BLANCHE À L'HÔTEL BANDINI",
+     "texte": "LES MATELOTS REPARTIS À LA RAME. LES QUAIS DORMENT TRANQUILLES.",
+     "lu": "Nuit blanche à l'Hôtel Bandini. Les matelots du cargo norvégien sont repartis à la rame, "
+           "et les Quais dorment tranquilles. Les débardeurs, eux, parlent d'une paix qui tiendra."},
 ]
 
 

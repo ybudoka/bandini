@@ -3936,6 +3936,12 @@ const Hud = (function () {
   function nomIci(j, zone) {
     const z = zone || (j ? Monde.zoneA(j.x, j.y) : null);
     if (!z) return null;
+    // ⚠️ La cour d'un gang dont le district est LIBERE (`libere`, M16) redevient son quartier : « Les Quais »,
+    // en blanc, plus « Les Morues » en rose — c'est la que le joueur VOIT qu'il a gagne.
+    if (z.gang && Entites.gangChasse(z.gang)) {
+      const q = (Monde.carte.zones || []).find(function (w) { return w.slug === z.district && !w.gang; });
+      return { nom: q ? q.nom : z.nom, gang: null };
+    }
     const pris = !z.gang && j && Territoires.gangA(j.x, j.y);
     return pris ? { nom: Territoires.nomDe(pris), gang: pris } : { nom: z.nom, gang: z.gang || null };
   }

@@ -3636,7 +3636,9 @@ const Entites = (function () {
   /** Le gang `slug` est-il CALME (M16, `donne.calme`) : il ne te saute plus dessus parce
       que tu tiens une arme sur son territoire. Frappe-le, il riposte quand meme. */
   function gangCalme(slug) {
-    return !!(B.partie && (B.partie.calmes || []).indexOf(slug) >= 0);
+    // ⚠️ Un gang qui a PERDU son district (`libere`) ne te saute plus dessus non plus : ceux qui trainent
+    // encore ne tiennent plus rien (29 sept. 2026, les quatre liberations).
+    return !!(B.partie && ((B.partie.calmes || []).indexOf(slug) >= 0 || gangChasse(slug)));
   }
 
   /** Un flaneur qui se choisit une porte et rentre chez lui.

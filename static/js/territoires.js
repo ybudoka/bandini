@@ -104,6 +104,21 @@ const Territoires = (function () {
     return (p.libere || []).indexOf(district.district) >= 0;
   }
 
+  /** UN DISTRICT LIBERE (M16, `donne.libere`, 29 sept. 2026) : son gang sort du jeu (`horsJeu`), et les coins
+      qu'il avait PRIS ailleurs a la frontiere reviennent a leurs gangs — il ne les defendrait plus. Rend combien. */
+  function liberer(district) {
+    const p = partie(), d = donnees();
+    if (!p || !d) return 0;
+    const i = Object.keys(d.ilots).map(function (k) { return d.ilots[k]; }).find(function (q) { return q.district === district; });
+    const gang = i && i.gang;
+    if (!gang) return 0;
+    let n = 0;
+    Object.keys(p.territoires).forEach(function (k) {
+      if (p.territoires[k] === gang) { delete p.territoires[k]; n++; }
+    });
+    return n;
+  }
+
   /** Le gang CHEZ LUI a ce pixel : celui de la cour ou l'on est (`zone.gang`), sinon celui qui a PRIS l'ilot —
       null sur un ilot qui n'a jamais change de mains (comme avant). */
   function gangA(x, y) {
@@ -379,6 +394,6 @@ const Territoires = (function () {
     return tient && tient !== signe ? { couleur: bombeDe(tient), tuiles: gangDuTexte[gr.texte].tuiles } : null;
   }
 
-  return { donnees, ilotA, tenuPar, force, horsJeu, gangA, couche, nuit, ligneDuClairon, couleurDe, nomDe,
+  return { donnees, ilotA, tenuPar, force, horsJeu, liberer, gangA, couche, nuit, ligneDuClairon, couleurDe, nomDe,
            dessinerSurLaCarte, dessinerLaLegende, cle, tagsDeLaFrontiere, barre, gangDuTag, bombeDe };
 })();
