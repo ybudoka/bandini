@@ -64,6 +64,23 @@ D'où deux vagues :
    fermé, les commandes rendues) ; le catalogue atteint m99 en respectant prérequis et `exige` ; chaque
    réplique a son personnage, sa voix et son jeu.
 
+### Vague 2 : le plan (29 sept. 2026)
+
+_Le Boss_ (m98), la fin qu'on gagne — Josée la donne, comme elle a donné le Faubourg puis la ville.
+
+1. **m98 _Le Boss_** (Josée ; après m97, `exige` 4 districts libérés et 4 propriétés) : sortir devant le
+   Brouillard ; les hommes du maire arrivent, **les Morues, les Skateux et les Boulonneux à tes côtés** (une option
+   neuve d'objectif, `allies` : ils courent sur les hommes de la mission, jamais sur toi) ; puis la police du maire
+   (`survivre` à 5★ — `etoiles` sur `survivre`) ; Bouchard rappelle ses chiens (`treve` : la police rentre) ;
+   l'Hôtel Bandini, sa garde devant la porte ; et le maire Réal Tanguay (personnage neuf, dedans, dans la chambre de
+   l'hôtel) qui cède — et rend le billet de Rocco, qu'il avait racheté à Sal : **la dette de Rocco finit déchirée**.
+2. **Son générique** : l'autre fin, pendant de celui de m99 — ses coupes, ses cartons (les quartiers, la dette
+   déchirée), et sa musique à lui.
+3. **La ville qui change de couleur** (`donne.boss`, `partie.boss`, gardé par la sauvegarde) : les gangs reviennent
+   dans leurs quartiers à tes couleurs et te saluent, les passants aussi ; plus de rixes aux frontières ; le nom
+   sous la mini-carte et la grande carte à l'or des Bandini ; la une du Clairon.
+4. **Juges** : m98 jouée au bouton, de l'appel au générique puis à la ville d'après ; chaque mécanisme neuf muté.
+
 ## Notes
 
 une mission par district, Marco qui te vend, Dr Lachance donneur, _Le Boss_ et _Sacrer son
