@@ -183,7 +183,7 @@ VISAGES: dict[str, dict] = {
     # Irène Lam, au bout du bar du Dragon d'or (c01) : la permanente argentée, les grosses lunettes de qui a lu
     # trente ans de cartes sous les néons, le gilet de laine jade, deux boucles d'oreilles de jade — et le coin
     # des yeux plissé de qui gage sur tout.
-    "irene": _v("ronde", "permanente", "gilet", lunettes="epaisses", signes=("rides", "boucles", "yeux_plisses")),
+    "irene": _v("ronde", "permanente", "gilet", lunettes="epaisses", signes=("rides", "boucles")),
     # Le Pouce (c04) : le veston moutarde du tripot, la moustache, les cheveux gominés du vendeur, un cure-dent.
     "pouce": _v("large", "gominee", "veston", "moustache_epaisse", signes=("cure_dent", "sourcils_epais")),
 }
