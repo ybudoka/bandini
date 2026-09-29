@@ -278,3 +278,14 @@ def test_ti_pout_a_sa_minoune_en_montre():
     assert not places & set(tuiles), "sur une place du lot"
     assert {s["slug"] for s in m["modeles"]} <= {"auto", "camion", "quatre_roues"}
     assert all(s["prix"] < 1000 for s in m["modeles"] if s["slug"] == "auto")
+
+
+def test_le_point_du_salon_mene_au_portail():
+    """Le blip de la carte mène à l'ENTRÉE du lot, devant le portail, du côté de la rue : le lot est clôturé, et
+    devant la porte, on est déjà dedans (`test_barrieres` : un lieu atteignable à pied)."""
+    ville = _ville()
+    lot = _lot(ville, "prestige")
+    point = next(p for p in ville["points_interet"] if p["slug"] == "prestige")
+    p = lot["portail"]
+    assert (point["x"], point["y"]) == (p["x"], p["y"] + 1), point
+    assert carte.marchable(ville["sol"][point["y"]][point["x"]])

@@ -143,8 +143,14 @@ def test_une_arme_debranchee_est_vue(racine):
 #: `recul` pixels à sa gauche, en le rendant intouchable (on tire, pas on meurt).
 _DEVANT = """
     function devant(sorte, recul) {
+      // ⚠️ Le premier dont la LIGNE DE TIR est libre : le tireur se tient `recul` pixels a l'ouest, et un
+      // batiment neuf colle au premier lampadaire de la ville (le Salon, 29 sept. 2026) le mettait dans un toit.
+      const libre = function (x, y) {
+        return !L.Monde.bloque(Math.floor(x / L.TT), Math.floor(y / L.TT), L.Monde.MASQUE_PIETON);
+      };
       const d = L.B.entites.find(function (q) {
-        return q.type === 'decor' && q.decor === sorte && !q.brise;
+        return q.type === 'decor' && q.decor === sorte && !q.brise
+          && libre(q.x - recul, q.y) && libre(q.x - recul / 2, q.y);
       });
       if (!d) throw new Error('aucun ' + sorte + ' dans la ville');
       const j = L.B.joueur;

@@ -222,8 +222,9 @@ def poser_le_salon(chantier, ville: dict) -> None:
     ville["portes"].append({"x": px, "y": yf, "interieur": SALON_SLUG, "lieu": SALON_SLUG, "nom": SALON_NOM,
                             "vitrine": [x0, largeur]})
     _devanture(ville, x0, yf, motifs, px - x0, SALON_ENSEIGNES, "commerce", "+")
+    # Le blip mène à l'ENTRÉE du lot, devant le portail : devant la porte, on est déjà dans l'enclos.
     ville["points_interet"].append({"type": SALON_SLUG, "slug": SALON_SLUG, "nom": SALON_NOM,
-                                    "x": px, "y": yf + 1, "famille": "magasin"})
+                                    "x": px, "y": yclo + 1, "famille": "magasin"})
     ville["interieurs"][SALON_SLUG] = piece_de_salon(SALON_SLUG, largeur, SALON_PROFONDEUR, px - x0 + 1)
     # Les chars : nez au sud contre la clôture, hors de l'axe porte-portail.
     places = [{"x": x, "y": yclo - 1, "sens": "S"} for x in range(x0 + 1, x0 + largeur - 1)
