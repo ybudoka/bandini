@@ -55,7 +55,7 @@ OUTILS = OUTILS_MISSIONS + PLUS_LONGUES + """
   function jusquAuxPipes(L, o) {
     const T = L.Tripot, e = T.etat();
     for (let k = 0; k < 60; k++) {
-      e.mise = 1000; e.coups = 0; e.mefiance = 0; e.tranquille = -1;
+      e.mise = 1000; e.coups = 0; e.mefiance = 0; e.propre = 0;
       choisir(L, o, 'MISER');
       const t = T.enCours();
       if (t && t.pipes) return lignes(L);
@@ -323,7 +323,7 @@ def test_avant_c04_le_pouce_pipe_encore_apres_jamais(banc):
             const e = T.etat();
             let pipes = 0;
             for (let k = 0; k < 120; k++) {
-                e.mise = 1000; e.coups = 0; e.mefiance = 0; e.tranquille = -1; e.total = k;
+                e.mise = 1000; e.coups = 0; e.mefiance = 0; e.propre = 0; e.total = k;
                 choisir(L, o, 'MISER'); if (T.enCours() && T.enCours().pipes) pipes++; choisir(L, o, 'LANCER');
             }
             L.Hud.fermerMenu(); dehors(L, o);
@@ -342,7 +342,7 @@ def test_avant_c04_le_pouce_pipe_encore_apres_jamais(banc):
 
 def test_c02_envoye_par_irene_le_pouce_pipe_chaque_grosse_mise(banc):
     """Martin, 29 sept. 2026 : « je ne vois que peu de dés jaunes pour la mission ». Hors mission, à 500 $, le Pouce
-    pipe trois fois sur cinq, et une dénonciation le rend honnête jusqu'au lendemain. Envoyé par Irène (c02, la
+    pipe trois fois sur cinq, et une dénonciation le fait jouer propre trois coups. Envoyé par Irène (c02, la
     preuve pas encore en poche) : la table s'ouvre à 500 $, CHAQUE mise de 500 $ et plus voit ses dés jaunes — même
     juste après les avoir dénoncés —, et sous 500 $, jamais."""
     r = banc("function (L, o) {" + OUTILS + """
@@ -366,10 +366,11 @@ def test_c02_envoye_par_irene_le_pouce_pipe_chaque_grosse_mise(banc):
         const miseHors = T.etat().mise;
         const hors = serie(500, 30);
         jusquAuxPipes(L, o); choisir(L, o, 'DÉNONCER LES DÉS');
-        const apresDenonceHors = serie(1000, 10);
+        const apresDenonceHors = serie(1000, T.regles().pipes.propre);
+        const ensuiteHors = serie(1000, 10);
         L.Hud.fermerMenu(); dehors(L, o);
         // Envoyé par Irène.
-        T.etat().mise = 100; T.etat().tranquille = -1;
+        T.etat().mise = 100; T.etat().propre = 0;
         const debut = commencerChezIrene(L, o);   // chez Irène, au bout du bar : l'escalier est dans la salle
         jouer(L, o); descendre(L, o); aLaTable(L, o);
         const miseMission = T.etat().mise;
@@ -377,12 +378,13 @@ def test_c02_envoye_par_irene_le_pouce_pipe_chaque_grosse_mise(banc):
         const petite = serie(200, 12);
         T.etat().mise = 500; choisir(L, o, 'MISER'); choisir(L, o, 'DÉNONCER LES DÉS');
         const apresDenonce = serie(1000, 6);
-        return { miseHors: miseHors, hors: hors, apresDenonceHors: apresDenonceHors, debut: debut.mission,
+        return { miseHors: miseHors, hors: hors, apresDenonceHors: apresDenonceHors, ensuiteHors: ensuiteHors, debut: debut.mission,
                  miseMission: miseMission, mission: mission, petite: petite, apresDenonce: apresDenonce,
                  preuve: (B.partie.objets || {}).des_pipes || 0 };
     }""")
     assert r["debut"] == "c02", r
     assert r["miseHors"] == tripot.MISES[0] and 10 <= r["hors"] < 30 and r["apresDenonceHors"] == 0, r
+    assert r["ensuiteHors"] > 0, "après ses coups propres, le Pouce ne ressort plus ses pipés"
     assert r["miseMission"] == tripot.PIPES["seuil"], r
     assert r["mission"] == 12 and r["petite"] == 0 and r["apresDenonce"] == 6, r
     assert r["preuve"] == 0, "on n'a rien glissé : la mission attend toujours ses dés"

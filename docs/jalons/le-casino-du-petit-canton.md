@@ -239,7 +239,9 @@ _Demande de Martin (28 sept. 2026) :_ « je veux un grand casino dans le quartie
   leurs faces 3-3-2-3-2-2 ou 2-2-3-2-3-3 sur quinze. Qui les voit a trois choix :
   - **lancer quand même** : le côté du Pouce sort sept fois sur dix — la table rend **60 %** (calculé) ;
   - **DÉNONCER** : justes, le Pouce rend la mise (« ÇA S'EST GLISSÉ TOUT SEUL, MON AMI. ») et ne pipe plus de la
-    journée — mais +40 de méfiance ; faux (des dés honnêtes), les gros bras te sortent par la porte d'en arrière,
+    journée — mais +40 de méfiance ⚠️ (**corrigé le 29 sept. 2026**, [la barbotte à l'essai](la-barbotte-du-pouce-a-l-essai.md#notes) :
+    **cinq coups** propres, affichés au menu, et +10 — une journée sans dé jaune, sans un mot, se lisait comme un
+    tripot brisé) ; faux (des dés honnêtes), les gros bras te sortent par la porte d'en arrière,
     la mise perdue, l'escalier refusé jusqu'au lendemain ;
   - **CHANGER DE CÔTÉ** une fois ses pipés posés : ils jouent pour toi — **135 %** (calculé) ; le Pouce le voit
     (+25, et +15 si tu gagnes).
@@ -248,7 +250,8 @@ _Demande de Martin (28 sept. 2026) :_ « je veux un grand casino dans le quartie
   une semaine aussi. **Jamais une étoile** : dans un tripot, on n'appelle pas la police.
 - **LA MESURE** (`test_tripot.py`, 4 500 jours de vingt coups, trois graines) : à 200 $ (sous le seuil), **97,3 %** ; le
   **naïf** à 1 000 $ qui lance quoi qu'il voie, **75,0 %** (−5 000 $ par jour : la leçon est chère) ; qui **dénonce**
-  les pipés, **98,2 %** — mais il finit dehors de temps en temps (345 sorties) ; qui **retourne** les pipés, **117 %**
+  les pipés, **98,2 %** — mais il finit dehors de temps en temps (345 sorties) ; depuis les cinq coups propres, **98,3 %** et
+  sept sorties ; qui **retourne** les pipés, **117 %**
   par dollar misé, sorti 645 fois, l'escalier fermé 3 855 jours sur 4 500 : **+133 $ par jour** en moyenne — pas de quoi
   casser l'économie. Au banc, 20 000 coups du navigateur retombent dessus (≈ 97 % et ≈ 75 %), et deux mille coups
   retournés rendent ≈ 135 %.

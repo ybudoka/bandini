@@ -196,7 +196,7 @@ def test_les_pipes_se_voient_plus_jaunes_et_seulement_quand_la_mise_grossit(banc
         };
         const compte = { 100: 0, 200: 0, 500: 0, 1000: 0 }, vus = { pipe: 0, vrai: 0, faux: 0 };
         for (let k = 0; k < 160; k++) {
-            e.mise = [100, 200, 500, 1000][k % 4]; e.coups = 0; e.mefiance = 0; e.tranquille = -1;
+            e.mise = [100, 200, 500, 1000][k % 4]; e.coups = 0; e.mefiance = 0; e.propre = 0;
             choisir(L, o, 'MISER');
             const t = T.enCours(), c = couleurs();
             if (t.pipes) compte[e.mise]++;
@@ -212,9 +212,10 @@ def test_les_pipes_se_voient_plus_jaunes_et_seulement_quand_la_mise_grossit(banc
     assert r["vus"]["faux"] == 0 and r["vus"]["pipe"] == c["500"] + c["1000"], r
 
 
-def test_denoncer_juste_rend_la_mise_et_la_paix_du_jour_denoncer_faux_te_sort(banc):
-    """Dénoncer des pipés : la mise rendue, la méfiance qui monte, et plus un pipé de la journée ; le lendemain, il
-    recommence. Dénoncer des dés honnêtes : les gros bras te sortent (dehors, devant le Dragon d'or), la mise est
+def test_denoncer_juste_rend_la_mise_et_quelques_coups_propres_denoncer_faux_te_sort(banc):
+    """Dénoncer des pipés : la mise rendue, la méfiance qui monte, et le Pouce joue propre `PIPES["propre"]` coups —
+    le menu le dit, coup par coup —, puis il recommence LE JOUR MÊME (Martin, 29 sept. 2026 : « TOUJOURS AUCUN DÉ
+    JAUNE ! » — la paix durait la journée, sans un mot). Une vieille partie qui garde `tranquille` n'y change rien. Dénoncer des dés honnêtes : les gros bras te sortent (dehors, devant le Dragon d'or), la mise est
     perdue, l'escalier refusé jusqu'au lendemain — et pas une étoile."""
     r = banc("function (L, o) {" + OUTILS + """
         L.Jeu.commencer();
@@ -230,14 +231,18 @@ def test_denoncer_juste_rend_la_mise_et_la_paix_du_jour_denoncer_faux_te_sort(ba
         choisir(L, o, 'DÉNONCER LES DÉS');
         const juste = { argent: B.partie.argent - avant, mef: e.mefiance, phase: t.phase, nom: t.resultat.nom,
                         ici: B.interieur && B.interieur.slug };
+        const aide = B.menu.aide;
         let pipesApres = 0;
-        for (let k = 0; k < 15; k++) { choisir(L, o, 'MISER'); if (T.enCours().pipes) pipesApres++; choisir(L, o, 'LANCER'); }
-        // Le lendemain : il recommence.
-        B.partie.jour++; e.coups = 0;
-        let pipesDemain = 0;
-        for (let k = 0; k < 15; k++) { choisir(L, o, 'MISER'); if (T.enCours().pipes) pipesDemain++; choisir(L, o, 'LANCER'); }
+        for (let k = 0; k < T.regles().pipes.propre; k++) { choisir(L, o, 'MISER'); if (T.enCours().pipes) pipesApres++; choisir(L, o, 'LANCER'); }
+        L.Hud.fermerMenu(); aLaTable(L, o);
+        const aideApres = B.menu.aide;
+        // Le jour même : il recommence. Et le `tranquille` d'une vieille partie (le jour de la dénonciation) est lu pour rien.
+        e.tranquille = B.partie.jour || 0; e.coups = 0;   // vingt coups par jour : on en a déjà joué
+        let pipesMeme = 0;
+        for (let k = 0; k < 15; k++) { choisir(L, o, 'MISER'); if (T.enCours().pipes) pipesMeme++; choisir(L, o, 'LANCER'); }
+        const pipesDemain = pipesMeme;
         // Faux : des dés honnêtes.
-        e.mise = 100;
+        e.mise = 100; e.coups = 0;
         const argentFaux = B.partie.argent;
         choisir(L, o, 'MISER');
         const honnete = !T.enCours().pipes;
@@ -252,13 +257,16 @@ def test_denoncer_juste_rend_la_mise_et_la_paix_du_jour_denoncer_faux_te_sort(ba
         const refuse = { ici: B.interieur.slug, msg: B.msg || null };
         B.partie.jour++;
         descendre(L, o);
-        return { juste: juste, pipesApres: pipesApres, pipesDemain: pipesDemain, honnete: honnete, faux: faux,
+        return { juste: juste, aide: aide, aideApres: aideApres, pipesApres: pipesApres, pipesDemain: pipesDemain, honnete: honnete, faux: faux,
                  refuse: refuse, lendemain: B.interieur.slug };
     }""")
     j = r["juste"]
     assert j["argent"] == 1000 and j["mef"] == tripot.MEFIANCE["denoncer"] and "PIPÉS" in j["nom"], j
     assert j["ici"] == "nord_tripot", "dénoncer juste ne te sort pas"
     assert r["pipesApres"] == 0 and r["pipesDemain"] > 0, r
+    n = tripot.PIPES["propre"]
+    assert f"LE POUCE JOUE PROPRE · ENCORE {n} COUPS" in r["aide"] and "PROPRE" not in r["aideApres"], r
+    assert f"{n} COUPS PROPRES" in j["nom"], j
     assert r["honnete"] and r["faux"]["argent"] == -100 and r["faux"]["dehors"] and r["faux"]["barre"], r
     assert r["faux"]["etoiles"] == 0, "dans un tripot, on n'appelle pas la police"
     assert r["refuse"]["ici"] == "nord_casino" and "NE VEUT PLUS TE VOIR" in (r["refuse"]["msg"] or ""), r

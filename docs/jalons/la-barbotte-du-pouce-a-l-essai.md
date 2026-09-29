@@ -49,3 +49,19 @@ pipés n'ont de sens que si les côtés sont fixes). Joué dans Chromium, tout m
   `test_c02_envoye_par_irene_le_pouce_pipe_chaque_grosse_mise` (hors mission, le hasard et la paix ; en mission,
   12 sur 12, 0 sous 500 $, 6 sur 6 après une dénonciation) ; deux mutations rouges (la règle de mission retirée :
   8 sur 12 ; la mise d'ouverture retirée : 100 au lieu de 500).
+
+**Deuxième passage, le même soir** — Martin : « TOUJOURS AUCUN DÉ JAUNE !! », avec une capture (jour 477, 23 h 25, hors
+mission, 1 000 $). Sa partie locale le disait : `tripot.tranquille = 477`. Il avait dénoncé des pipés plus tôt dans
+la journée, et le Pouce jouait propre **jusqu'au lendemain** — sans un mot à l'écran.
+
+- **Cinq coups propres, pas la journée** (`PIPES["propre"]`, `Tripot.miser`, le jumeau `jouer_des_jours`) : après une
+  dénonciation juste, le Pouce joue propre cinq coups, le menu le dit (« LE POUCE JOUE PROPRE · ENCORE 4 COUPS »,
+  et le résultat « PIPÉS! MISE RENDUE · 5 COUPS PROPRES »), puis ses pipés reviennent le jour même. L'ancien
+  `tranquille` d'une vieille partie est ignoré : la partie de Martin retrouve ses dés jaunes au rechargement.
+- ⚠️ **La dénonciation vaut 10 de méfiance, plus 40** : qui dénonce à chaque fois dénonce maintenant quatre fois plus
+  souvent. À 40, il se faisait sortir trois jours sur quatre (3 852 jours barrés sur 4 500) ; à 10, **98,3 %**, sept
+  sorties (simulé : 3 coups et 5 de méfiance rendaient 98,0 %, 5 et 10 ont gardé l'esprit « il s'en souvient »).
+- **Juges** : `test_denoncer_juste_rend_la_mise_et_quelques_coups_propres_denoncer_faux_te_sort` (aucun pipé les cinq
+  coups suivants, le menu qui le dit, les pipés qui reviennent le jour même, même avec un `tranquille` du jour) ; le
+  juge de c02 compte les coups propres hors mission, puis les pipés qui reviennent. Mutation : les coups propres qui
+  ne se décomptent plus font rougir les deux.

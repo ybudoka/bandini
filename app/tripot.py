@@ -14,8 +14,8 @@ glisse ses DÉS PIPÉS sur le feutre — une fois sur… (`PIPES["chance"]`), et
 Ils se reconnaissent : de la vieille ivoire, plus JAUNE que les vrais (Irène te le dit à la fin de c01, et ça se
 voit sur le feutre avant de lancer). Qui les voit a trois choix, et chacun se paie :
 - **lancer quand même** : le côté du Pouce sort sept fois sur dix (mesuré au juge : la table rend 60 %) ;
-- **DÉNONCER les dés** : juste, le Pouce te rend ta mise pour que la salle se taise, et te laisse tranquille
-  jusqu'au lendemain — mais il s'en souvient (`MEFIANCE["denoncer"]`) ; faux (des dés honnêtes), les gros bras te
+- **DÉNONCER les dés** : juste, le Pouce te rend ta mise pour que la salle se taise, et joue propre les
+  quelques coups suivants (`PIPES["propre"]`, affichés au menu) — mais il s'en souvient (`MEFIANCE["denoncer"]`) ; faux (des dés honnêtes), les gros bras te
   sortent par la porte d'en arrière, et tu perds ta mise (`MEFIANCE["faux"]`) ;
 - **CHANGER DE CÔTÉ** après que ses dés sont posés : ses pipés jouent pour TOI (la table te rend 135 %) — tant que
   le Pouce ne voit pas le manège (`MEFIANCE["retourner"]`, et plus si tu gagnes).
@@ -60,6 +60,12 @@ RELANCES = 64
 PIPES: dict = {
     "seuil": 500,
     "chance": 0.6,
+    # ⚠️ Après une dénonciation juste, il joue propre tant de coups, pas la journée : une journée entière sans un dé
+    # jaune, sans un mot à l'écran, se lisait comme un tripot brisé (Martin, 29 sept. 2026 : « TOUJOURS AUCUN DÉ
+    # JAUNE ! », au jour 477 à 23 h 25, après avoir dénoncé plus tôt). ⚠️ Cinq coups, et `MEFIANCE["denoncer"]` à 10
+    # (plus 40) : qui dénonce à chaque fois dénonce quatre fois plus souvent qu'avant, et à 40 il se faisait sortir
+    # trois jours sur quatre — mesuré sur 4 500 jours : 98,3 %, sept sorties (`test_tripot.py`).
+    "propre": 5,
     "contre": (3, 3, 2, 3, 2, 2),   # les basses : ce qu'il pose quand tu mises POUR
     "pour": (2, 2, 3, 2, 3, 3),     # les hautes : ce qu'il pose quand tu mises CONTRE
 }
@@ -69,7 +75,7 @@ PIPES: dict = {
 #: le dire tout haut (il rend la mise, il s'en souvient). À `sortir`, les gros bras te raccompagnent par la porte
 #: d'en arrière, et l'escalier te reste fermé `barre_jours`. Accuser des dés honnêtes (`faux`) : dehors tout de
 #: suite, et jusqu'au lendemain. Elle fond de `oubli` par jour.
-MEFIANCE: dict = {"retourner": 25, "gagne": 15, "denoncer": 40, "sortir": 100, "oubli": 30, "barre_jours": 7,
+MEFIANCE: dict = {"retourner": 25, "gagne": 15, "denoncer": 10, "sortir": 100, "oubli": 30, "barre_jours": 7,
                   "faux_jours": 1}
 
 #: Le retour AFFICHÉ au menu, en pour cent : celui d'une barbotte honnête (calculé : un sur deux, moins la piastre).
@@ -162,22 +168,23 @@ def jouer_des_jours(rng: random.Random, jours: int, mise: int, strategie: str) -
     les coups joués, les sorties et les jours barrés. ⚠️ Pour MESURER : le jeu tire ses coups au hasard du
     navigateur (`Tripot`)."""
     mise_totale = rendu = coups = sorties = barres = 0
-    mefiance, barre_jusqu_a = 0.0, -1
+    mefiance, barre_jusqu_a, propre = 0.0, -1, 0
     for jour in range(jours):
         mefiance = max(0.0, mefiance - MEFIANCE["oubli"])
         if jour < barre_jusqu_a:
             barres += 1
             continue
-        tranquille = False
         for _ in range(COUPS_PAR_JOUR):
             pari = "pour"
-            pipes = not tranquille and pipe(mise, rng.random())
+            u = rng.random()
+            pipes = propre == 0 and pipe(mise, u)
+            propre = max(0, propre - 1)
             poids = poids_contre(pari) if pipes else None
             coups += 1
             mise_totale += mise
             if pipes and strategie == "denonce":
                 rendu += mise
-                tranquille = True
+                propre = PIPES["propre"]
                 mefiance = mefiance_apres(mefiance, "denoncer")
             else:
                 if pipes and strategie == "retourne":

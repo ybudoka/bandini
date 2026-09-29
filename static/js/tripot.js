@@ -9,7 +9,7 @@
    ⚠️ LA MAISON TRICHE, ET CA SE VOIT : a partir de 500 $, le Pouce glisse souvent ses DES PIPES sur le feutre,
    contre le cote que tu as pris — plus JAUNES que les vrais (de la vieille ivoire). Une fois ses des poses
    (MISER), on peut LANCER quand meme, CHANGER DE COTE (ses pipes jouent pour toi), ou DENONCER LES DES (justes :
-   il te rend ta mise et te laisse tranquille jusqu'a demain ; faux : les gros bras te sortent). Il se MEFIE
+   il te rend ta mise et joue propre les quelques coups suivants, affiches au menu ; faux : les gros bras te sortent). Il se MEFIE
    (`mefiance`, cinq crans en bas du menu) : a cent, les gros bras te raccompagnent par la porte d'en arriere, et
    l'escalier te reste ferme une semaine. Pas une etoile : dans un tripot, on n'appelle pas la police.
 
@@ -85,12 +85,12 @@ const Tripot = (function () {
   // --- Ce que la partie garde ---------------------------------------------------------------------------
 
   /** La mise et le pari choisis, les coups du jour, la mefiance du Pouce et le jour ou il te rouvre (`barre`),
-      le jour ou il te laisse tranquille (`tranquille`, apres une denonciation juste). La mefiance fond de
+      les coups qu'il joue encore propre (`propre`, apres une denonciation juste). La mefiance fond de
       `oubli` par jour. */
   function etat() {
     const p = B.partie, r = regles();
     const e = p.tripot = p.tripot || { mise: r.mises[0], pari: 'pour', jour: p.jour || 0, coups: 0, total: 0,
-                                       mefiance: 0, vu: p.jour || 0, barre: 0, tranquille: -1, sorties: 0 };
+                                       mefiance: 0, vu: p.jour || 0, barre: 0, propre: 0, sorties: 0 };
     const jour = p.jour || 0;
     if (jour > e.vu) { e.mefiance = Math.max(0, e.mefiance - r.mefiance.oubli * (jour - e.vu)); e.vu = jour; }
     if (e.jour !== jour) { e.jour = jour; e.coups = 0; }
@@ -147,8 +147,10 @@ const Tripot = (function () {
     // ⚠️ Repris, le tripot ne pipe plus jamais : c'est tout ce qu'Irene a change a la table.
     // ⚠️ ENVOYE PAR IRENE (c02, `enMission`) : un gros poisson — le Pouce pipe CHAQUE mise du seuil et plus, meme
     // apres une denonciation (Martin, 29 sept. 2026 : « je ne vois que peu de des jaunes pour la mission »).
-    const pipes = !repris() && (enMission() ? e.mise >= r.pipes.seuil
-                                            : e.tranquille !== (p.jour || 0) && pipe(e.mise, t.u));
+    // Apres une denonciation, il joue propre `propre` coups (pas la journee : l'ancien `tranquille` est ignore).
+    const propre = e.propre > 0;
+    const pipes = !repris() && (enMission() ? e.mise >= r.pipes.seuil : !propre && pipe(e.mise, t.u));
+    if (propre) e.propre--;
     B.tripot = { phase: 'joue', n: n, pipes: pipes, poids: pipes ? poidsContre(e.pari) : null, pari: e.pari,
                  depart: e.pari, mise: e.mise, tirages: t.liste, images: 0, fin: 0, retourne: false, glisse: false };
     return true;
@@ -197,7 +199,7 @@ const Tripot = (function () {
     return true;
   }
 
-  /** DENONCER LES DES. Justes : la mise rendue, et la paix jusqu'a demain — il s'en souviendra. Faux : dehors. */
+  /** DENONCER LES DES. Justes : la mise rendue, et quelques coups propres — il s'en souviendra. Faux : dehors. */
   function denoncer() {
     const t = enCours(), e = etat(), r = regles(), p = B.partie;
     if (!t || t.phase !== 'joue') return false;
@@ -206,8 +208,8 @@ const Tripot = (function () {
     if (t.pipes) {
       Missions.encaisser(t.mise, null, true);
       e.mefiance = mefianceApres(e.mefiance, 'denoncer');
-      e.tranquille = p.jour || 0;
-      t.resultat = { nom: 'LES DÉS SONT PIPÉS · LE POUCE TE REND TA MISE', gain: t.mise, mise: t.mise };
+      e.propre = r.pipes.propre;
+      t.resultat = { nom: 'PIPÉS! MISE RENDUE · ' + r.pipes.propre + ' COUPS PROPRES', gain: t.mise, mise: t.mise };
       if (pouce) Entites.bulle(pouce, 'ÇA S’EST GLISSÉ TOUT SEUL, MON AMI.', { duree: 240 });
       t.annonce = false;
       return true;
@@ -294,7 +296,8 @@ const Tripot = (function () {
     const reste = Math.max(0, r.par_jour - e.coups), libre = triche('machines');
     const m = { titre: repris() ? r.reprise.titre : 'LA BARBOTTE DU POUCE', sur: (p.argent - enAttente()) + ' $', items: lignes(), largeur: 440, hauteur: 214,
                 colonne: 176,
-                aide: 'RETOUR ' + r.retour + ' % · ' + (libre ? 'SANS LIMITE' : reste + ' COUP' + (reste > 1 ? 'S' : '') + ' AUJOURD’HUI'),
+                aide: (e.propre > 0 && !repris() ? 'LE POUCE JOUE PROPRE · ENCORE ' + e.propre + ' COUP' + (e.propre > 1 ? 'S' : '')
+                       : 'RETOUR ' + r.retour + ' %') + ' · ' + (libre ? 'SANS LIMITE' : reste + ' COUP' + (reste > 1 ? 'S' : '') + ' AUJOURD’HUI'),
                 dessiner: function (ctx, x, y) { dessiner(ctx, x, y); },
                 maj: function (menu) { majMenu(menu); } };
     const t = enCours();
