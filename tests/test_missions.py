@@ -1,6 +1,6 @@
 import re
 
-from app import armes, audio, blocs, carte, casino, economie, missions, pietons
+from app import armes, audio, blocs, carte, casino, economie, missions, pietons, tripot
 
 
 def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
@@ -297,6 +297,12 @@ def test_ce_qu_on_vient_obtenir_se_trouve():
             vus += 1
             assert o.get("objet") and o.get("ou"), f"{m['slug']} : `obtenir` veut un `objet` et un `ou`"
             assert o.get("dessin", "sac") in missions.DESSINS_D_OBJET, (m["slug"], o.get("dessin"))
+            # ⚠️ Un objet qui vient d'une TABLE de jeu (c02 : les dés du Pouce, glissés au sous-sol) : la table doit
+            # le donner — sinon rien ne le mettrait jamais dans le sac, et rien ne le pose en ville non plus.
+            if o.get("table"):
+                assert o["table"] == "tripot" and o["objet"] == tripot.PREUVE["objet"], \
+                    f"{m['slug']} : la table {o['table']!r} ne donne pas {o['objet']!r}"
+                assert not o.get("garde"), f"{m['slug']} : un objet de table n'est dans aucune poche"
             if o.get("garde"):
                 bloc = blocs.par_slug(lieux[o["ou"]])
                 gardes = {g["slug"]: g for g in bloc.get("gardes", ())}

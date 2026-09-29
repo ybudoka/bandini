@@ -16,6 +16,11 @@
    ⚠️ LE HASARD EST A LA TABLE : un coup se tire d'un generateur seme par la graine de la partie, le numero du
    coup et le SEL du tripot — jamais `B.rng()`. Un coup joue ne decale pas un de du reste du jeu.
 
+   ⚠️ LA PREUVE ET LA REPRISE (l'arc d'Irene, c02 a c04) se lisent dans les regles, jamais dans un nom de mission :
+   pendant un objectif `obtenir` dont la `table` est le tripot (`preuve`), on peut GLISSER TES DES — ses pipes
+   dans ta manche, une paire honnete sur le feutre ; et quand la mission de `reprise` est faite, le tripot a
+   change de mains : plus de Pouce, plus de gros bras, jamais de pipes, et le vieux Chan tient la table.
+
    ⚠️ LE GAIN EST PAYE TOUT DE SUITE, EN SILENCE, et ANNONCE quand les des s'arretent (la regle des tables : payer
    a la fin de l'animation, c'etait ne jamais payer qui ferme le menu pendant que les des roulent). Les animations
    se comptent en IMAGES DESSINEES : un menu ouvert fige `B.t`. */
@@ -92,7 +97,24 @@ const Tripot = (function () {
     return e;
   }
 
-  function barre() { return etat().barre > (B.partie.jour || 0); }
+  // --- La preuve (c02) et la reprise (c04) : ce que les regles en disent (`preuve`, `reprise`) ------------
+
+  /** L'objectif en cours qui veut la preuve a cette table (`obtenir`, `table: 'tripot'`, l'objet de `preuve`). */
+  function objectifDeLaTable() {
+    const pr = regles().preuve, m = B.partie && B.partie.mission;
+    const o = m && typeof Histoire !== 'undefined' ? Histoire.objectif() : null;
+    return pr && o && o.type === 'obtenir' && o.table === 'tripot' && o.objet === pr.objet ? o : null;
+  }
+  function aLaPreuve() { const pr = regles().preuve; return !!(pr && B.partie.objets && B.partie.objets[pr.objet] > 0); }
+  /** Irene t'envoie chercher ses des : l'escalier et la table ne te refusent pas, quoi que le Pouce en pense. */
+  function enMission() { return !!objectifDeLaTable() && !aLaPreuve(); }
+  /** LE TRIPOT A CHANGE DE MAINS : la mission de `reprise` est faite (c04). */
+  function repris() {
+    const r = regles().reprise, p = B.partie;
+    return !!(r && p && p.missionsFaites && p.missionsFaites[r.apres]);
+  }
+
+  function barre() { if (repris() || enMission()) return false; return etat().barre > (B.partie.jour || 0); }
   function joursBarre() { return Math.max(0, etat().barre - (B.partie.jour || 0)); }
   function dansLaSalle() { return !!(B.interieur && B.interieur.slug === SALLE); }
 
@@ -115,16 +137,17 @@ const Tripot = (function () {
     const r = regles(), e = etat(), p = B.partie;
     if (barre()) { Hud.message('LE POUCE NE TE SERT PLUS'); Son.SFX.erreur(); return false; }
     // ⚠️ La sortie a la mise suivante, jamais au milieu d'un coup : on a vu le resultat du dernier.
-    if (e.mefiance >= r.mefiance.sortir) { sortir(r.mefiance.barre_jours, 'LES GROS BRAS TE RACCOMPAGNENT · LE POUCE NE VEUT PLUS TE VOIR D’UNE SEMAINE'); return false; }
-    if (e.coups >= r.par_jour && !triche('machines')) { Hud.message('LE POUCE FERME SA TABLE POUR TOI AUJOURD’HUI'); Son.SFX.erreur(); return false; }
+    if (!repris() && e.mefiance >= r.mefiance.sortir) { sortir(r.mefiance.barre_jours, 'LES GROS BRAS TE RACCOMPAGNENT · LE POUCE NE VEUT PLUS TE VOIR D’UNE SEMAINE'); return false; }
+    if (e.coups >= r.par_jour && !triche('machines') && !enMission()) { Hud.message('LE POUCE FERME SA TABLE POUR TOI AUJOURD’HUI'); Son.SFX.erreur(); return false; }
     if (p.argent < e.mise) { Hud.message('PAS ASSEZ D’ARGENT'); Son.SFX.erreur(); return false; }
     if (!Missions.payer(e.mise, 'LA BARBOTTE')) return false;
     Son.SFX.jetons();
     e.coups++;
     const n = e.total++, t = tirages(n);
-    const pipes = e.tranquille !== (p.jour || 0) && pipe(e.mise, t.u);
+    // ⚠️ Repris, le tripot ne pipe plus jamais : c'est tout ce qu'Irene a change a la table.
+    const pipes = !repris() && e.tranquille !== (p.jour || 0) && pipe(e.mise, t.u);
     B.tripot = { phase: 'joue', n: n, pipes: pipes, poids: pipes ? poidsContre(e.pari) : null, pari: e.pari,
-                 depart: e.pari, mise: e.mise, tirages: t.liste, images: 0, fin: 0, retourne: false };
+                 depart: e.pari, mise: e.mise, tirages: t.liste, images: 0, fin: 0, retourne: false, glisse: false };
     return true;
   }
 
@@ -152,6 +175,22 @@ const Tripot = (function () {
     t.pari = t.pari === 'pour' ? 'contre' : 'pour';
     if (t.pipes && !t.retourne) { t.retourne = true; e.mefiance = mefianceApres(e.mefiance, 'retourner'); }
     Son.SFX.jetons();
+    return true;
+  }
+
+  /** GLISSER TES DES (c02, `preuve`) : ses pipes dans ta manche, une paire honnete sur le feutre. Il ne voit rien
+      — c'est son propre truc. Le coup se joue avec des des honnetes, et la preuve est dans le sac (l'objectif
+      `obtenir` avance a la sortie, comme tout objectif : dans une piece, `majObjectif` dort). */
+  function glisser() {
+    const t = enCours(), o = objectifDeLaTable(), pr = regles().preuve;
+    if (!t || t.phase !== 'joue' || !t.pipes || t.glisse || !o || aLaPreuve()) return false;
+    t.glisse = true; t.pipes = false; t.poids = null;
+    if (!B.partie.objets) B.partie.objets = {};
+    B.partie.objets[pr.objet] = 1;
+    Son.SFX.jetons();
+    Hud.message(o.nom || pr.nom, 200);
+    const pouce = lePouce();
+    if (pouce) Entites.bulle(pouce, 'TIENS. ILS SONT BEN BLANCS, À SOIR.', { duree: 240 });
     return true;
   }
 
@@ -199,7 +238,7 @@ const Tripot = (function () {
     const r = t.resultat;
     if (r.gain > r.mise) { Son.SFX.gain_machine(); Hud.message('+' + (r.gain - r.mise) + ' $ · ' + r.nom); }
     else if (r.gain === r.mise) Hud.message(r.nom);
-    else Hud.message(r.nom + ' · LE POUCE GARDE TES ' + r.mise + ' $');
+    else Hud.message(r.nom + (repris() ? ' · LA TABLE GARDE TES ' : ' · LE POUCE GARDE TES ') + r.mise + ' $');
   }
 
   // --- Le menu ------------------------------------------------------------------------------------------
@@ -214,9 +253,17 @@ const Tripot = (function () {
   function lignes() {
     const t = enCours(), e = etat(), r = regles(), p = B.partie;
     if (t && t.phase === 'joue') {
-      return [{ libelle: 'LANCER', detail: t.pari === 'pour' ? 'POUR' : 'CONTRE', faire: function () { lancer(); return curseurApres(); } },
-              { libelle: 'CHANGER DE CÔTÉ', detail: t.pari === 'pour' ? 'VERS CONTRE' : 'VERS POUR', faire: function () { changer(); Hud.rafraichirMenu(); return false; } },
-              { libelle: 'DÉNONCER LES DÉS', faire: function () { denoncer(); return curseurApres(); } }];
+      const l = [{ libelle: 'LANCER', detail: t.pari === 'pour' ? 'POUR' : 'CONTRE', faire: function () { lancer(); return curseurApres(); } },
+                 { libelle: 'CHANGER DE CÔTÉ', detail: t.pari === 'pour' ? 'VERS CONTRE' : 'VERS POUR', faire: function () { changer(); Hud.rafraichirMenu(); return false; } }];
+      // Repris, il n'y a plus rien a denoncer : les des sont blancs.
+      if (!repris()) l.push({ libelle: 'DÉNONCER LES DÉS', faire: function () { denoncer(); return curseurApres(); } });
+      // La preuve d'Irene : seulement quand ses pipes sont sur le feutre, et qu'on est venu pour eux.
+      if (t.pipes && !t.glisse && enMission()) {
+        // ⚠️ Sans `detail` : la colonne (176 px) n'a pas la place d'un mot de plus après le libellé (vu à la capture).
+        l.push({ libelle: 'GLISSER TES DÉS',
+                 faire: function () { glisser(); Hud.rafraichirMenu(); if (B.menu) B.menu.curseur = 0; return false; } });
+      }
+      return l;
     }
     const reste = r.par_jour - e.coups;
     return [ligneAChoix('PARI', ['pour', 'contre'], 'pari', ['POUR', 'CONTRE']),
@@ -240,7 +287,7 @@ const Tripot = (function () {
   function menu() {
     const r = regles(), e = etat(), p = B.partie;
     const reste = Math.max(0, r.par_jour - e.coups), libre = triche('machines');
-    const m = { titre: 'LA BARBOTTE DU POUCE', sur: (p.argent - enAttente()) + ' $', items: lignes(), largeur: 440, hauteur: 214,
+    const m = { titre: repris() ? r.reprise.titre : 'LA BARBOTTE DU POUCE', sur: (p.argent - enAttente()) + ' $', items: lignes(), largeur: 440, hauteur: 214,
                 colonne: 176,
                 aide: 'RETOUR ' + r.retour + ' % · ' + (libre ? 'SANS LIMITE' : reste + ' COUP' + (reste > 1 ? 'S' : '') + ' AUJOURD’HUI'),
                 dessiner: function (ctx, x, y) { dessiner(ctx, x, y); },
@@ -315,7 +362,7 @@ const Tripot = (function () {
     titre(ctx, 'CONTRE', tx, y0 + 30, ENCRE.or); titre(ctx, '1-1 2-2 4-4 1-2', tx, y0 + 40, ENCRE.papier);
     titre(ctx, 'LE RESTE SE RELANCE', tx, y0 + 56);
     titre(ctx, 'GAGNÉ : 1 POUR 1', tx, y0 + 70, ENCRE.papier);
-    titre(ctx, 'LE POUCE PREND 5 %', tx, y0 + 80);
+    titre(ctx, repris() ? regles().reprise.piastre : 'LE POUCE PREND 5 %', tx, y0 + 80);
     titre(ctx, 'MISES DE ' + regles().mises[0] + ' À ' + regles().mises[regles().mises.length - 1] + ' $', x0, y0 + 124);
     dessinerMefiance(ctx, x + 12, y + 128);
     if (t && t.phase === 'fin') {
@@ -332,6 +379,8 @@ const Tripot = (function () {
 
   /** La mefiance du Pouce : cinq crans qui s'allument, vert, jaune, rouge, et son nom. */
   function dessinerMefiance(ctx, x, y) {
+    // Repris : plus personne ne se mefie de toi. On lit a la place qui tient la table.
+    if (repris()) { Atlas.texte(ctx, regles().reprise.croupier.toUpperCase(), x, y, ENCRE.gris, 1); return; }
     const r = regles().mefiance, m = etat().mefiance, crans = Math.min(5, Math.ceil(5 * m / r.sortir));
     const couleur = m >= 60 ? '#e04030' : m >= 25 ? '#e8b33c' : '#5aa05a';
     for (let k = 0; k < 5; k++) { ctx.fillStyle = k < crans ? couleur : '#3a3450'; ctx.fillRect(x + k * 7, y + 1, 5, 3); }
@@ -414,13 +463,21 @@ const Tripot = (function () {
   function maj() {
     const dedans = dansLaSalle();
     Son.SFX.tripot_salle(dedans ? 1 : 0);
-    if (!B.interieur) { B.tripotDit = null; return; }
+    if (!B.interieur) { B.tripotDit = null; B.tripotChan = null; return; }
     const pb = porte(), j = B.joueur;
     if (pb && j && B.tripotDit !== B.interieur) {
       const gb = B.entites.find(function (q) { return q.grosBras && q.vivant; });
       if (gb && Math.hypot(j.x - (pb.x + 0.5) * TT, j.y - (pb.y + 0.5) * TT) < 4 * TT) {
         B.tripotDit = B.interieur;
         Entites.bulle(gb, Monde.barriereFermee(pb) ? 'SUR INVITATION.' : 'LE JETON? DESCENDS.', { duree: 220 });
+      }
+    }
+    // Repris : le vieux Chan le dit, une fois par visite, quand on s'approche du feutre.
+    if (dedans && j && B.tripotChan !== B.interieur) {
+      const chan = B.entites.find(function (q) { return q.chan && q.vivant; });
+      if (chan && Math.hypot(j.x - chan.x, j.y - chan.y) < 4 * TT) {
+        B.tripotChan = B.interieur;
+        Entites.bulle(chan, regles().reprise.bulle, { duree: 240 });
       }
     }
     if (!dedans && !pb) return;
@@ -433,5 +490,5 @@ const Tripot = (function () {
   }
 
   return { regles, face, coup, jet, pipe, poidsContre, gain, mefianceApres, etat, barre, enCours, tirages, miser, lancer,
-           changer, denoncer, menu, dessiner, dessinerSalle, dessinerFumee, refuseLEscalier, porte, maj, IVOIRE, SALLE };
+           changer, denoncer, glisser, repris, enMission, menu, dessiner, dessinerSalle, dessinerFumee, refuseLEscalier, porte, maj, IVOIRE, SALLE };
 })();

@@ -196,12 +196,27 @@ def jouer_des_jours(rng: random.Random, jours: int, mise: int, strategie: str) -
     return {"mise": mise_totale, "rendu": rendu, "coups": coups, "sorties": sorties, "barres": barres}
 
 
+#: LA PREUVE (c02, _Une paire dans la manche_) : quand ses pipés sont sur le feutre, on GLISSE les siens dans sa
+#: manche et on pose une paire honnête à la place — le truc du Pouce, retourné contre lui. La ligne n'apparaît au
+#: menu que pendant un objectif `obtenir` dont la `table` est le tripot et l'`objet` celui-ci : c'est ce que la
+#: mission dit, pas un nom de mission écrit dans le navigateur. Le coup se joue alors avec des dés honnêtes.
+PREUVE: dict = {"objet": "des_pipes", "nom": "LES DÉS PIPÉS DU POUCE"}
+
+#: LE TRIPOT CHANGE DE MAINS (c04, _La barbotte change de mains_ ; Martin, 29 sept. 2026 : « on fait tomber le
+#: Pouce pour de bon »). Après `apres`, le Pouce et ses gros bras ne sont plus là — ni au sous-sol, ni à la porte
+#: d'en haut —, et c'est `croupier` qui tient la barbotte pour Irène : jamais de pipés, plus de méfiance ni de
+#: semaine barrée, plus rien à dénoncer, et la piastre va à la caisse du quartier (`piastre`). Le retour affiché
+#: (`RETOUR`, 97 %) cesse d'être un mensonge.
+REPRISE: dict = {"apres": "c04", "titre": "LA BARBOTTE DU QUARTIER", "croupier": "Le vieux Chan",
+                 "piastre": "5 % AU QUARTIER", "bulle": "ICI, LES DÉS SONT BLANCS."}
+
+
 def pour_le_navigateur() -> dict:
     """Les règles, en chiffres : le navigateur tient le jumeau de chaque fonction (`Tripot`)."""
     return {"mises": list(MISES), "par_jour": COUPS_PAR_JOUR, "pour": [list(p) for p in POUR],
             "contre": [list(p) for p in CONTRE], "piastre": PIASTRE, "relances": RELANCES,
             "pipes": {k: list(v) if isinstance(v, tuple) else v for k, v in PIPES.items()},
-            "mefiance": MEFIANCE, "retour": RETOUR}
+            "mefiance": MEFIANCE, "retour": RETOUR, "preuve": PREUVE, "reprise": REPRISE}
 
 
 # --- La salle ------------------------------------------------------------------------------------------------

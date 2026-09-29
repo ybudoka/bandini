@@ -197,7 +197,44 @@ Proposé par Claude (la fiche laissait le donneur au brainstorming ; Martin : «
   le Pouce ? les voisins plumés, le vieux Chan, la boulangère ?) reste à écrire avec Martin.
 - **Les voix** : les dix répliques de c01 et les deux repos d'Irène, générées le 29 sept. 2026 (eleven_v3).
 
-### Étape 3 (2e partie) — la chute du Pouce — ⬜ **en cours** (29 sept. 2026)
+### Étape 3 (2e partie) — la chute du Pouce — **livrée le 29 sept. 2026**
 
-Martin, 29 sept. 2026 : Irène validée, « on fait tomber le Pouce pour de bon ». La suite des missions d'Irène (c02 et
-suivantes) : un petit arc qui prouve la triche, retrouve l'argent des voisins et finit par le tripot qui change de mains.
+Martin, 29 sept. 2026 : Irène validée (« oui »), et « on fait tomber le Pouce pour de bon ». Trois missions de plus,
+chacune avec son intention — la preuve, l'argent, la chute — et jamais deux fois la même mécanique ; c01 était la
+bagarre, l'arc n'en a plus qu'une petite, au bout d'une poursuite.
+
+- **c02, _Une paire dans la manche_** (500 $, `exige` 500 $ en poche : le Pouce ne pipe pas en dessous) — Irène veut
+  ses dés DANS SA MAIN. Elle te donne une paire honnête ; au sous-sol, quand le Pouce pose ses pipés, le menu offre
+  **GLISSER TES DÉS** : les siens dans ta manche, les tiens sur le feutre, le coup se joue honnête. Un `obtenir` dont la
+  `table` est le tripot (`tripot.PREUVE`) : l'objet ne se pose nulle part en ville (`Infiltration` le sait), et
+  l'objectif avance à la sortie. Parler à Irène pendant l'objectif : elle renvoie au sous-sol (`renvoi`). Pendant la
+  mission, ni la semaine barrée ni la limite du jour ne ferment la table.
+- **c03, _La suite royale_** (600 $) — « un tricheur écrit tout ce qu'il gagne ». On fait jaser **Norbert** à l'hôtel
+  (sa poignée de main, deux répliques : il ne dit pas le nom de son client, il vend le reste) ; on **file le comptable**
+  du Pouce jusqu'au terminus (`suivre`) ; le livre (un registre) attend à la porte du terminus, **trente secondes**
+  avant que les rabatteurs passent le prendre (`obtenir` + `chrono_s`). ⚠️ La suite royale, pas la chambre 12 : c'est
+  celle de q07, en brouillon sous `refs/wip/m16-q07`.
+- **c04, _La barbotte change de mains_** (1 500 $) — le Pouce vide la caisse (« la paye du quartier ») : son chauffeur,
+  une Cravate qu'il paie mal, file EN CHAR de la porte du Dragon d'or (`ramasser`, `fuyard`) ; on l'accroche, on
+  reprend la caisse, et le Pouce — qu'on entend enfin, une fois, en se sauvant — prend l'autobus de Sorel. On la
+  rapporte au Dragon d'or.
+- **Ce qui change dans le monde quand le Pouce tombe** (`tripot.REPRISE`, `apres: c04`) : au sous-sol, plus de Pouce
+  ni de gros bras, et plus de gros bras à la porte d'en haut ; **le vieux Chan** (celui qui y avait laissé sa pension)
+  tient la barbotte pour Irène — « ICI, LES DÉS SONT BLANCS. » ; le menu devient **LA BARBOTTE DU QUARTIER** : jamais de
+  pipés, plus de méfiance ni de semaine barrée, plus rien à dénoncer, la piastre « AU QUARTIER ». Le lendemain matin, le
+  Clairon titre **LE POUCE PLIE BAGAGE** (`donne.manchette`, `journal.SPECIALES`, lu par le narrateur).
+- **Le Pouce parle** : un personnage de plus, `pouce` (Réal « le Pouce » Vachon, `ou` vide comme le client du taxi ;
+  son visage, `visages.VISAGES`), voix **Callum - Husky Trickster** (libre, un français « d'ailleurs » ; en v3, à
+  écouter). Fiche : [`docs/personnages/le-pouce.md`](../personnages/le-pouce.md).
+- **Petit correctif en passant** : le fuyard d'un `ramasser` annonçait « LE FUYARD FILE EN MOTO ! » même en auto (m5,
+  m50, m97…) ; il dit maintenant « EN CHAR » quand c'en est un.
+- **Les voix** : 37 fichiers générés le 29 sept. 2026 (eleven_v3) — les 30 répliques d'Irène de c02 à c04, les deux de
+  Norbert, celle du Pouce, et la manchette du narrateur ; trois refaites après le passage de la chambre 12 à la suite
+  royale. ≈ 4 100 caractères, **1 930 crédits** (compteur ElevenLabs : 30 580 → 32 510).
+- **Juges** : `tests/test_chute_du_pouce_js.py` (5, joués au bouton) — c02 de la poignée de main à la prime (avant la
+  mission, rien à glisser ; pendant, GLISSER TES DÉS ; rien de posé en ville) ; c03 de Norbert au livre ; le chrono du
+  livre qui mord ; c04 jusqu'au monde d'après (plus de Pouce ni de gros bras, le vieux Chan et sa bulle, le titre, 200
+  coups à 1 000 $ sans un pipé malgré une méfiance à 150 et une semaine barrée) ; et le témoin, la même partie avant et
+  après c04. Quatre mutations rouges (la reprise oubliée dans `miser`, l'objet de table posé en ville, GLISSER hors de
+  la mission, le Pouce qui revient au sous-sol). Voisins : `test_missions` (un objet de table vient du tripot),
+  `test_mise_en_scene` (le renvoi d'Irène compté).

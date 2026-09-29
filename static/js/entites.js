@@ -448,7 +448,10 @@ const Entites = (function () {
       // Le tripot du Dragon d'or (`tripot.js`) : le Pouce tient sa barbotte, ses gros bras tiennent les portes.
       if (g.qui === 'pouce' || g.qui === 'gros_bras') {
         e.poste = { x: e.x, y: e.y }; e.plante = { x: e.x, y: e.y }; e.etat = 'fige';
-        if (g.qui === 'pouce') e.pouce = true; else e.grosBras = true;
+        // ⚠️ Repris (`tripot.REPRISE`), la place du Pouce est au vieux Chan : pas de drapeau `pouce` — il ne
+        // se mefie de personne, et le frapper ne ferme aucun escalier.
+        if (arch.slug === 'chan') e.chan = true;
+        else if (g.qui === 'pouce') e.pouce = true; else e.grosBras = true;
       }
       // KEVIN, le partenaire des lecons du DOJO DION (`dojo.js`) : sa place est au sac.
       if (g.qui === 'eleve') { e.partenaire = true; e.poste = { x: e.x, y: e.y }; }
@@ -501,6 +504,20 @@ const Entites = (function () {
     // moustache — et SES GROS BRAS, le corps du garde, en cuir noir et sans batte (vague 4 du casino). Pas
     // d'archetype neuf : le paquet est a son plafond (voir Kevin et le croupier, plus haut).
     if (g.qui === 'pouce' || g.qui === 'gros_bras') {
+      // ⚠️ LE TRIPOT A CHANGE DE MAINS (c04, `tripot.REPRISE`) : le Pouce et ses gros bras sont partis — ni au
+      // sous-sol, ni a la porte d'en haut —, et le vieux Chan tient la barbotte pour Irene. Le corps du commis,
+      // les cheveux gris, un veston brun et ses lunettes ; sa tete a l'empreinte de sa place, comme le Pouce.
+      if (typeof Tripot !== 'undefined' && Tripot.repris()) {
+        if (g.qui === 'gros_bras') return null;
+        const commis = archetype('commis');
+        const tire = typeof Garderobe !== 'undefined' ? Garderobe.tirer('commis', hash2(g.x * 131 + g.y, 0x7A1)) : null;
+        return Object.assign({}, commis, { slug: 'chan', nom: Tripot.regles().reprise.croupier, metier: 'tripot', arme: null,
+                                           couleurs: Object.assign({}, commis.couleurs, { c: '#6b4a2a', h: '#c8c8cc', p: '#2a2a33' }),
+                                           tenue: tire ? Object.assign({}, tire, { haut: 'veston', couleur_haut: '#6b4a2a', motif: 'uni',
+                                                                                   bas: 'pantalon', couleur_bas: '#2a2a33', chapeau: 'aucun',
+                                                                                   coiffure: 'degarnie', cheveux: '#c8c8cc',
+                                                                                   accessoires: ['lunettes'] }) : undefined });
+      }
       const pouce = g.qui === 'pouce', base = archetype(pouce ? 'commis' : 'garde');
       const haut = pouce ? '#9a7a2a' : '#1c1c22', bas = pouce ? '#1a1a22' : '#2a2a2e';
       const tire = typeof Garderobe !== 'undefined' ? Garderobe.tirer(pouce ? 'commis' : 'garde', hash2(g.x * 131 + g.y, 0x7A1)) : null;

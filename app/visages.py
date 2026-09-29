@@ -184,6 +184,8 @@ VISAGES: dict[str, dict] = {
     # trente ans de cartes sous les néons, le gilet de laine jade, deux boucles d'oreilles de jade — et le coin
     # des yeux plissé de qui gage sur tout.
     "irene": _v("ronde", "permanente", "gilet", lunettes="epaisses", signes=("rides", "boucles", "yeux_plisses")),
+    # Le Pouce (c04) : le veston moutarde du tripot, la moustache, les cheveux gominés du vendeur, un cure-dent.
+    "pouce": _v("large", "gominee", "veston", "moustache_epaisse", signes=("cure_dent", "sourcils_epais")),
 }
 
 #: Ceux qui parlent sans être des PERSONNAGES : l'agent qui t'interpelle dans la rue.

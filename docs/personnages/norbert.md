@@ -14,7 +14,7 @@
 | Voix | **Martin Dupont Intime** — une voix de France, permise (Martin, 25 sept. 2026) et voulue : il est le seul à vouvoyer la ville |
 | Bulle | « Monsieur? » |
 | Couleurs | veston bordeaux, cheveux noirs gominés, pantalon noir |
-| Missions | la cible de **f10** ; un contact au téléphone après elle |
+| Missions | la cible de **f10** ; un contact au téléphone après elle ; il jase de la suite royale dans **c03** |
 
 ## Son histoire
 

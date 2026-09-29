@@ -263,3 +263,8 @@ _Demande de Martin (28 sept. 2026) :_ « je veux un grand casino dans le quartie
   tuile à l'image 120 tenait par la graine, et deux gens de plus dans la salle l'ont rebattue).
 - **Reste** : rien de la fiche. Le complice de la roulette (vague 3) n'est toujours pas fait ; la suite de l'étape 3
   du quartier (faire tomber le Pouce pour de bon ?) est à écrire avec Martin.
+- ✅ **29 sept. 2026 — le Pouce est tombé** ([le Petit-Canton, étape 3](le-quartier-chinois.md#notes)) :
+  pendant c02, la barbotte offre **GLISSER TES DÉS** quand les pipés sont sur le feutre (`tripot.PREUVE`) ; après c04,
+  le tripot **a changé de mains** (`tripot.REPRISE`) — plus de Pouce ni de gros bras (en bas comme à la porte d'en
+  haut), le vieux Chan tient la table, jamais de pipés, plus de méfiance ni de semaine barrée, plus rien à dénoncer,
+  et la piastre va au quartier : le « RETOUR 97 % » du menu cesse de mentir.

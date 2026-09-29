@@ -70,7 +70,9 @@ TYPES_OBJECTIFS = (
     # ramassé en marchant dessus, ou dans la poche d'un garde (`garde`, sa ronde dans la fiche du bloc),
     # volé par-derrière ou tombé quand on l'assomme. `dessin` : la clé, le dossier, le registre
     # (`OBJETS` de `sprites.js`). Voir `static/js/infiltration.js`.
-    "obtenir",     # `objet`, `ou` (le lieu, ou la ronde du garde pour le GPS), `garde`, `dessin`
+    # `table` (c02) : l'objet vient d'une table de jeu (`tripot` : les dés pipés du Pouce, `tripot.PREUVE`) —
+    # rien ne se pose en ville, `ou` ne dit que où aller.
+    "obtenir",     # `objet`, `ou` (le lieu, ou la ronde du garde pour le GPS), `garde`, `table`, `dessin`
 )
 
 #: Ce qu'un objet de mission a l'air, par terre (`OBJETS` de `static/js/sprites.js`, que `Entites`
@@ -275,13 +277,20 @@ PERSONNAGES: list[Personnage] = [
     # --- Le Petit-Canton, étape 3 (29 sept. 2026) : son donneur. Irène Lam, croupière du Dragon d'or pendant
     # trente ans, reine du mah-jong du quartier, qui vient encore chaque soir au bout du bar « surveiller le
     # travail des jeunes » (`point:irene`, DEDANS : elle naît quand on entre, sans un dé en ville). Proposée par
-    # Claude, à valider par Martin (docs/personnages/irene.md). Sa voix : Meera, libre, vérifiée « quebec » en
+    # Claude, validée par Martin le 29 sept. 2026 (docs/personnages/irene.md). Sa voix : Meera, libre, vérifiée « quebec » en
     # multilingue v2 — en v3, à écouter. Son repos est à elle : « le Faubourg est tranquille » y mentirait.
     {"slug": "irene", "nom": "Irène Lam", "genre": "femme", "voix": "Meera - Friendly and Conversational",
      "couleurs": {"c": "#2e7d62", "h": "#c8c8cc", "s": "#e8c49a", "p": "#2a2a33"}, "ou": "point:irene",
      "heler": "Hé, le pigeon!",
      "repos": ("La chance, ça existe pas, mon pigeon. Y a juste du monde qui sait compter.",
                "Je surveille les croupiers d'en haut. Ceux d'en bas, c'est une autre histoire.")},
+    # Le Pouce (Réal Vachon), qui tenait la barbotte du sous-sol : un escroc venu d'ailleurs. Il ne se tient nulle
+    # part pour une mission (`ou` vide, comme le client du taxi) — au tripot, c'est son corps de commis au veston
+    # moutarde (`carte.QUI_DEDANS`, `pouce`), pas ce personnage-ci. On ne l'entend qu'une fois, en se sauvant (c04).
+    # Sa voix : Callum, libre, un français « d'ailleurs » (multilingue v2 ; en v3, à écouter).
+    {"slug": "pouce", "nom": "Réal « le Pouce » Vachon", "genre": "homme", "voix": "Callum - Husky Trickster",
+     "couleurs": {"c": "#9a7a2a", "h": "#2a1a10", "s": "#e8b088", "p": "#1a1a22"}, "ou": "",
+     "heler": ""},
 ]
 
 
@@ -510,7 +519,7 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 from . import (  # noqa: E402
     e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f10, f11, f12, f13, h01, h02, m1, m2, m3,
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
-    s03, s08, v01, v02, v03, c01,
+    s03, s08, v01, v02, v03, c01, c02, c03, c04,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -531,7 +540,9 @@ from . import (  # noqa: E402
 # f10 (Rosa, la chemise hawaïenne — `tenue`, Norbert) et f12 (Madame Thibodeau, les cinq enveloppes :
 # la fin de l'arc F, après f08, f09 et f10).
 # ⚠️ c01 (29 sept. 2026) : Irène Lam, la première du Petit-Canton — les rabatteurs du Pouce, et la porte du
-# tripot sous le Dragon d'or qui s'ouvre après elle (`tripot.PORTE`), avant m97.
+# tripot sous le Dragon d'or qui s'ouvre après elle (`tripot.PORTE`), avant m97. Puis la chute du Pouce (29 sept.
+# 2026, Martin : « on fait tomber le Pouce pour de bon ») : c02 (ses dés, glissés à la barbotte), c03 (son livre,
+# par Norbert et une filature), c04 (sa caisse, et le tripot qui change de mains — `tripot.REPRISE`).
 # ⚠️ m99 (M13, 25 sept. 2026) — _Sacrer son camp_, la fin qu'on peut jouer — tout au bout : son appel
 # ne sonne qu'avec 15 000 $ en poche (`exige`), et une fin n'a rien à précéder.
 CATALOGUE: list[Mission] = [
@@ -546,7 +557,7 @@ CATALOGUE: list[Mission] = [
     q01.MISSION, q10.MISSION, q11.MISSION, s08.MISSION,
     v01.MISSION, v02.MISSION, v03.MISSION,
     f13.MISSION, f10.MISSION, f12.MISSION,
-    c01.MISSION,
+    c01.MISSION, c02.MISSION, c03.MISSION, c04.MISSION,
     m97.MISSION, m99.MISSION,
 ]
 

@@ -17,7 +17,7 @@ Proposée par Claude le 29 sept. 2026 (la fiche du quartier laissait le donneur 
 | Voix | **Meera - Friendly and Conversational** — libre, vérifiée « quebec » en multilingue v2 ; en v3, son accent est à écouter |
 | Bulle | « Hé, le pigeon! » |
 | Couleurs | gilet de laine jade, permanente argentée, grosses lunettes, pantalon anthracite |
-| Missions | **c01** (la porte du tripot) |
+| Missions | **c01** (la porte du tripot) · **c02** (ses dés) · **c03** (son livre) · **c04** (sa caisse, et le tripot qui change de mains) |
 
 ## Son histoire
 
@@ -58,6 +58,7 @@ elle, c'est voler quelqu'un qui te regarde dans les yeux.
 | Situation | Ce qu'elle dit | Pourquoi |
 |---|---|---|
 | Au téléphone | « Irène Lam, du Dragon d'or. Madame Lam pour toi, tant que tu m'as pas battue au mah-jong. » (c01) | le nom complet, puis la règle du jeu entre elle et toi |
+| Au téléphone, ensuite | « C'est Irène Lam, mon pigeon. » (c02) · « Irène Lam, mon pigeon. » (c03) · « Irène Lam. » (c04, sèche : ce soir, pas de taquinerie) | le nom, puis l'affaire ; plus il fait sérieux, plus c'est court |
 | À la première rencontre, en personne | « Irène Lam. Assis-toi pas là, c'est la place de ceux qui gagnent. » | la même taquinerie |
 | Déjà connue, en personne | « Hé, le pigeon! » (sa bulle) | son surnom pour toi |
 
@@ -79,11 +80,20 @@ c01) ; elle ne regarde pas l'escalier du sous-sol en en parlant. Elle `montrer` 
 - c01 : le Pouce tient une barbotte sous le Dragon d'or ; ses dés sont pipés ; on y entre avec un jeton de laiton que
   ses rabatteurs (deux Cravates) distribuent au terminus ; les pipés sont « plus jaunes que les vrais, de la vieille
   ivoire » ; « change de côté, ou crie-le ».
+- c02 : « il a l'air croche », ça ne fait tomber personne — il lui faut ses dés dans sa main ; elle te donne une paire
+  honnête, et tu lui fais son propre truc (« une paire dans la manche ») ; le Pouce ne pipe pas sous 500 $.
+- c03 : le Pouce loge à l'Hôtel Bandini, dans la suite royale ; « un tricheur écrit tout ce qu'il gagne, pour se le relire le
+  soir » ; le livre dit « Chan, trois mille deux cents. Boulangerie, un camion », et que le Pouce ne paie pas ses
+  rabatteurs ce qu'il leur doit.
+- c04 : la caisse du sous-sol est « la paye du quartier » ; le Pouce sort par la porte des descentes de police et prend
+  l'autobus de Sorel ; le vieux Chan a sa pension, la boulangère s'achète un camion (« usagé, mais neuf pour elle ») ;
+  **la barbotte d'en bas est à elle** — des dés blancs, la piastre au quartier, et le vieux Chan qui tient la table ;
+  le neveu a une place à sa table de mah-jong (« tu vas perdre, mais t'as une place »).
 
 ## Ce qui l'attend
 
-L'étape 3 du Petit-Canton continue avec elle (à écrire) : faire tomber le Pouce pour de bon, peut-être avec le
-sergent Bouchard ; et l'étape 4, les Mantes — l'école de kung-fu dont les élèves ont mal tourné, qu'elle a vu ouvrir.
+L'étape 3 du Petit-Canton est faite avec elle (c01 à c04, 29 sept. 2026). Reste l'étape 4, les Mantes — l'école de
+kung-fu dont les élèves ont mal tourné, qu'elle a vu ouvrir ; et, un jour, la partie de mah-jong promise.
 
 ## À trancher
 

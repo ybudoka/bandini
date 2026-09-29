@@ -1763,7 +1763,8 @@ const Histoire = (function () {
     if (!v) return;
     v.vitesse = 1.5;
     B.mission.vehicule = v; B.mission.fuyard = v; B.mission.entites.push(v);
-    Hud.message('LE FUYARD FILE EN MOTO !', 150);
+    // ⚠️ En moto OU en char : « EN MOTO » s'affichait aussi quand l'auto de m5 ou le taxi de m97 filaient.
+    Hud.message((o.vehicule || 'moto') === 'moto' ? 'LE FUYARD FILE EN MOTO !' : 'LE FUYARD FILE EN CHAR !', 150);
   }
 
   /** Aucun char dans la voie, sur `n` tuiles devant cette place (ou jusqu'au

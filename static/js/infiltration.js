@@ -138,7 +138,9 @@ const Infiltration = (function () {
     }
     // ⚠️ Un objet PORTE par un garde ne se pose pas a son lieu : `ou` ne dit alors que ou le chercher
     // (le GPS, en ville, vise le passage du bloc).
-    if (o && o.type === 'obtenir' && o.ou && !o.garde && !possede(o.objet) && !objetPose(o.objet)) {
+    // ⚠️ Ni un objet qui vient d'une TABLE de jeu (`table`, c02 : les des pipes du Pouce, qu'on glisse dans sa
+    // manche au sous-sol — `Tripot.glisser`) : `ou` ne dit alors que ou aller.
+    if (o && o.type === 'obtenir' && o.ou && !o.garde && !o.table && !possede(o.objet) && !objetPose(o.objet)) {
       const l = Histoire.lieu(o.ou);
       if (l && !B.interieur) poserObjet(o, l.x, l.y);
     }

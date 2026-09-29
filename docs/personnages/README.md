@@ -55,8 +55,9 @@ Chaque fiche mêle deux sortes de faits.
 | [Mireille Dion](mireille.md) | `mireille` | au comptoir du DOJO DION, au Faubourg, dedans | Marie Line - Energetic and Clear | ses cours (le dojo) |
 | [Sœur Jeanne](jeanne.md) | `jeanne` | sur le parvis de la chapelle, sur l'Île-aux-Corneilles | Julia | aucune encore (i02 · i05, M16) |
 | [Léo Cyr](leo.md) | `leo` | devant le hangar sans nom, sur l'Île-aux-Corneilles | Alexandre | aucune encore (i04 · i07, M16) |
-| [Norbert](norbert.md) | `norbert` | dans le hall de l'Hôtel Bandini, au bout du comptoir | Martin Dupont Intime | f10 (sa cible) |
-| [Irène Lam](irene.md) | `irene` | au bout du bar du casino du Dragon d'or, au Petit-Canton, dedans | Meera | c01 — ⚠️ proposée par Claude, à valider |
+| [Norbert](norbert.md) | `norbert` | dans le hall de l'Hôtel Bandini, au bout du comptoir | Martin Dupont Intime | f10 (sa cible) · c03 |
+| [Irène Lam](irene.md) | `irene` | au bout du bar du casino du Dragon d'or, au Petit-Canton, dedans | Meera | c01 · c02 · c03 · c04 |
+| [Réal « le Pouce » Vachon](le-pouce.md) | `pouce` | nulle part : au tripot, puis parti pour Sorel | Callum - Husky Trickster | c04 (une réplique, en se sauvant) |
 
 ⚠️ **Deux voix du compte ne se donnent à personne** : celles du scanner de police (Clara Dupont, la
 répartitrice, et Frederic, l'agent — `audio.VOIX_RESERVEES`, jugé). Avant de donner une voix à un

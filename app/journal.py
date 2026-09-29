@@ -132,6 +132,12 @@ SPECIALES: list[dict] = [
      "texte": "LA BÊTE EST REPARTIE DANS LE BOIS. LE CHAR EST AU GARAGE.",
      "lu": "Un orignal gagne contre un char. La bête est repartie dans le bois de La Pointe ; le char est au garage. "
            "Ovila, au phare, le rappelle : un coup de klaxon, et ils s'en vont."},
+    # La chute du Pouce (c04, 29 sept. 2026) : le lendemain, le Petit-Canton fait la une. Le Clairon ne sait pas
+    # tout — il ne dit ni barbotte ni dés pipés, seulement ce que le quartier raconte.
+    {"slug": "pouce_parti", "titre": "LE POUCE PLIE BAGAGE",
+     "texte": "LE PETIT-CANTON RETROUVE SA PAYE. LA CAVE DU DRAGON D'OR CHANGE DE MAINS.",
+     "lu": "Le Pouce plie bagage. Le Petit-Canton retrouve sa paye, et la cave du Dragon d'or change de mains. "
+           "On l'aurait vu monter dans l'autobus de Sorel, sans ses valises."},
 ]
 
 
