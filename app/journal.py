@@ -163,6 +163,11 @@ SPECIALES: list[dict] = [
      "texte": "LES SKATEUX RANGENT LEURS PLANCHES. LE PONT RESTE OUVERT.",
      "lu": "La Pointe signe la paix. Les Skateux rangent leurs planches, le pont reste ouvert, et monsieur Bilodeau "
            "dit qu'il ira enfin à la messe."},
+    # La Shop libérée (s11, 29 sept. 2026) : le Clairon parle de l'usine, pas des Boulonneux.
+    {"slug": "prevost_rembauche", "titre": "LA PRÉVOST REMBAUCHE",
+     "texte": "CENT CINQUANTE POSTES AU SALAIRE D'AVANT. LA SHOP RESPIRE.",
+     "lu": "La Prévost rembauche. Cent cinquante postes au salaire d'avant, dès lundi, et La Shop respire. "
+           "Monsieur Prévost parle d'une décision d'affaires ; ses employés, d'un miracle."},
 ]
 
 

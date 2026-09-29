@@ -7764,7 +7764,9 @@ B               B
 Bcccc       eee B
 B               B
 BBBBBBWWDWWBBBBBB
-""", points=(_pt("emplettes", 2, 8, genre="industrie"),),
+""", points=(_pt("emplettes", 2, 8, genre="industrie"),
+             # Réjean Prévost (s11, 29 sept. 2026), à son bureau du fond : un point dans la pièce, rien dans la ville.
+             _pt("prevost", 15, 2)),
      gens=_gens(("commis", 2, 6), ("client", 10, 3))),
 
     # La fourriere : un comptoir, un classeur, et la cour derriere la vitre.

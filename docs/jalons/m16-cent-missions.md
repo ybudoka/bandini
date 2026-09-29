@@ -1031,3 +1031,25 @@ catalogue.
     libre dans le monde (« La Pointe » sous la mini-carte, le gang hors jeu, la sauvegarde relue, quatre districts).
   - ⚠️ **Le paquet** : 290 969 bruts / 65 061 gzip — relevé à 300 000 / 67 000, pour l'arc S aussi (mesure dans
     `test_definitions.py`).
+- **29 sept. 2026 : vague 4 — l'arc S jusqu'à sa libération. La Shop est libre, et les quatre libérations sont
+  livrées.** Six missions : `s02` (Ti-Loup, _La ferraille de Ti-Loup_ : sa remorqueuse, trois épaves au lot —
+  250 $), `s06` (Raymonde, _Le rat de l'usine_ : filer le char de Bob Sauvé jusqu'au Brouillard, où Prévost
+  l'attend — 250 $), `s05` (Gros-Boulon, _Gros-Boulon te parle_ : la berline de Prévost au compacteur — 400 $,
+  `calme: boulonneux`), `s09` (Gros-Boulon, _L'explosion_ : le camion-citerne de Prévost, trois étoiles — 600 $),
+  `s10` (Raymonde, _Raymonde négocie_ : la mener au maire, qui dort à l'hôtel (e06), et les gardiens de Prévost qui
+  la suivaient — 300 $), `s11` (Prévost, _La paix des Boulonneux_ : l'accord porté à Gros-Boulon **sans arme** —
+  500 $, **`libere: shop`**, la manchette _La Prévost rembauche_). Trois personnages neufs : **Ti-Loup** (voix
+  Chris) et **Gros-Boulon** (voix Roger) devant la fourrière après une mission, **Réjean Prévost** (voix Roland
+  Lescalde) **dedans**, à son bureau de l'usine (`point:prevost`, un point de plus dans la pièce : aucune tuile de
+  la ville ne bouge) — fiches, visages, repos.
+  - ⚠️ **Écarts à la fiche, et pourquoi** : Ti-Loup n'a pas de cour à lui — son compacteur est au lot de Gilles
+    (la cour à scrap de la gare existe depuis le 28 sept., mais en faire un lieu de mission élargirait le devant de
+    sa porte, et la bande du nord glisserait) ; s10 mène Raymonde **à l'hôtel** et non à la villa (un lieu de bloc
+    ne se rejoint pas avec quelqu'un qui te suit, et l'usine n'est jamais un `lieu`) — le maire y dort, e06 l'a
+    montré ; les gardiens de Prévost sont des `gardien` du lot (`tuer` `pieton: gardien`, Prévost les loue).
+  - **Juges** (`tests/test_arc_s_js.py`, sept ; quatre mutations, toutes rouges) : chaque mission de l'appel à la
+    prime ; s11 ratée pistolet au poing dans le coin des Boulonneux, puis gagnée les mains vides ; et La Shop libre
+    dans le monde (« La Shop » sous la mini-carte, le gang hors jeu) — **cinq districts** libérés.
+  - **Ce que M13 attend** : les quatre districts de M16 (et le Faubourg de m5) se libèrent en jouant. _Le Boss_
+    demande **aussi quatre propriétés**, et la quatrième, l'hôtel, n'est en vente nulle part (`phase: 2`) : c'est
+    `q07` et `a_vendre`, en brouillon sous `refs/wip/m16-q07` — la dernière marche avant m98.

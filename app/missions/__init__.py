@@ -353,6 +353,24 @@ PERSONNAGES: list[Personnage] = [
      "couleurs": {"c": "#5a4a2a", "h": "#6a6a6a", "s": "#c98d66", "p": "#3a3a2a"}, "ou": "porte:phare",
      "heler": "Psst. Viens.", "arrive_apres": "p01",
      "repos": ("Reviens.", "Le bois te connaît, astheure. Marche pas sur mes collets.")},
+    # --- La Shop (29 sept. 2026, vague 4 des libérations) : Ti-Loup le ferrailleur et Gros-Boulon, le chef des
+    # Boulonneux (les gars que Prévost a mis dehors), devant la fourrière (`porte:fourriere`, un lieu de mission
+    # depuis s01 : rien ne bouge) et seulement après une mission (`arrive_apres`) ; Réjean Prévost, lui, se tient
+    # DEDANS, à son bureau de l'usine (`point:prevost` : un point de plus dans la pièce de l'usine, aucune tuile de
+    # la ville ne bouge — le patron de Norbert). Voix du compte vérifiées en français (`verified_languages`) —
+    # permises (Martin, 25 sept. 2026), en v3 à écouter.
+    {"slug": "tiloup", "nom": "Ti-Loup Ferraille", "genre": "homme", "voix": "Chris - Charming, Down-to-Earth",
+     "couleurs": {"c": "#6a5a3a", "h": "#3a2a1a", "s": "#c98d66", "p": "#2a2a2a"}, "ou": "porte:fourriere",
+     "heler": "Hé, le jeune.", "arrive_apres": "s01",
+     "repos": ("Pas de ferraille?", "T'as une épave? Je paie comptant, pis j'oublie vite.")},
+    {"slug": "boulon", "nom": "Marcel « Gros-Boulon » Boulanger", "genre": "homme", "voix": "Roger - Laid-Back, Casual, Resonant",
+     "couleurs": {"c": "#3a4a5a", "h": "#2a2a2a", "s": "#d9a07a", "p": "#2a3a4a"}, "ou": "porte:fourriere",
+     "heler": "Toi. Approche.", "arrive_apres": "s02",
+     "repos": ("Pas astheure.", "Dans La Shop, personne te touche. Je l'ai dit.")},
+    {"slug": "prevost", "nom": "Réjean Prévost", "genre": "homme", "voix": "Roland Lescalde - Epic Narrator",
+     "couleurs": {"c": "#1a1a2a", "h": "#b0b0b0", "s": "#e8c0a0", "p": "#1a1a2a"}, "ou": "point:prevost",
+     "heler": "Vous.", "arrive_apres": "s10",
+     "repos": ("Mon usine ne se visite pas.", "Mon usine ne se visite pas. Même rouverte.")},
 ]
 
 
@@ -582,7 +600,7 @@ from . import (  # noqa: E402
     e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f10, f11, f12, f13, h01, h02, m1, m2, m3,
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
     s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
-    e04, e06, e07, e10, p02, p04, p05, p09, p10, p11,
+    e04, e06, e07, e10, p02, p04, p05, p09, p10, p11, s02, s05, s06, s09, s10, s11,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -617,6 +635,9 @@ from . import (  # noqa: E402
 # ⚠️ p02, p05, p04, p09, p10, p11 (29 sept. 2026, vague 3) : La Pointe — le pont de M. Bilodeau, les collets du
 # Trappeur, la course de Zed (la première `course` d'une mission), le phare qui s'éteint, le saut, et Zed mené à la
 # Chef (`libere: pointe`).
+# ⚠️ s02, s06, s05, s09, s10, s11 (29 sept. 2026, vague 4) : La Shop — Ti-Loup et sa remorqueuse, Bob Sauvé filé
+# jusqu'au bar, la berline de Prévost compactée, son camion-citerne qui saute, Raymonde menée au maire, et
+# l'accord porté sans arme à Gros-Boulon (`libere: shop`).
 # ⚠️ m99 (M13, 25 sept. 2026) — _Sacrer son camp_, la fin qu'on peut jouer — tout au bout : son appel
 # ne sonne qu'avec 15 000 $ en poche (`exige`), et une fin n'a rien à précéder.
 CATALOGUE: list[Mission] = [
@@ -636,6 +657,7 @@ CATALOGUE: list[Mission] = [
     q05.MISSION, q06.MISSION, q13.MISSION,
     e04.MISSION, e06.MISSION, e07.MISSION, e10.MISSION,
     p02.MISSION, p05.MISSION, p04.MISSION, p09.MISSION, p10.MISSION, p11.MISSION,
+    s02.MISSION, s06.MISSION, s05.MISSION, s09.MISSION, s10.MISSION, s11.MISSION,
     m97.MISSION, m99.MISSION,
 ]
 

@@ -64,6 +64,9 @@ Chaque fiche mêle deux sortes de faits.
 | [Roméo Bilodeau](bilodeau.md) | `bilodeau` | devant le phare, après p01 | Bill | p02 |
 | [Zacharie « Zed » Lemieux](zed.md) | `zed` | devant le phare, après p02 | Lutz | p04 · p10 · p11 (mené à la Chef) |
 | [Armand, le Trappeur](trappeur.md) | `trappeur` | devant le phare, après p01 | George | p05 |
+| [Ti-Loup Ferraille](tiloup.md) | `tiloup` | devant la fourrière, après s01 | Chris | s02 · s05 (son compacteur) |
+| [Marcel « Gros-Boulon » Boulanger](boulon.md) | `boulon` | devant la fourrière, après s02 | Roger | s05 · s09 · s11 (l'accord) |
+| [Réjean Prévost](prevost.md) | `prevost` | à son bureau de l'usine, dedans, après s10 | Roland Lescalde | s11 |
 | [Victor Tam, « Sifu Tam »](victor-tam.md) | `maitre` | dans sa salle de l'ÉCOLE LA MANTE, dedans — une fois revenu de Floride (après c04) | Luca - Storyteller | c05 (sa poignée de main) · c06 · c07 · c08 |
 
 ⚠️ **Deux voix du compte ne se donnent à personne** : celles du scanner de police (Clara Dupont, la

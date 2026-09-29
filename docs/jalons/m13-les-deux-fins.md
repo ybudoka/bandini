@@ -107,3 +107,12 @@ camp_
 **Ce qui reste (vague 2)** : _Le Boss_ (m98), son générique et la ville qui change de couleur,
 `p.libere` qui efface les zones de gang, Marco qui disparaît après m97 — dès que les arcs de M16
 libèrent assez de districts pour qu'on y arrive en jouant (et que l'hôtel se vende).
+
+**29 sept. 2026 — les districts de _Le Boss_ sont débloqués (M16).** Les quatre missions qui libèrent un district
+sont livrées : `q13` (les Quais), `e10` (les Érables), `p11` (La Pointe), `s11` (La Shop) — avec le Faubourg de m5,
+cinq districts peuvent être libérés en jouant. Chacune écrit `libere` et la rue le montre (le gang ne sort plus, ne
+saute plus, sort du jeu des territoires, rend ses coins ; sous la mini-carte, sa cour redevient le quartier) ;
+`exigeTenu({liberes: n})` est jugé au banc à chaque cran, et _Marco te vend_ (m97, trois districts) s'ouvre.
+⚠️ **Ce qui manque encore à _Le Boss_** : la **quatrième propriété**. L'hôtel est `phase: 2` et rien ne le met en
+vente : `q07` (_La chambre 12_, Norbert) et `donne.a_vendre` sont en brouillon sous `refs/wip/m16-q07`. Puis m98,
+son générique et la ville qui change de couleur.

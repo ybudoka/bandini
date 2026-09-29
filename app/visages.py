@@ -203,6 +203,14 @@ VISAGES: dict[str, dict] = {
     # Armand, le Trappeur (p05) : la barbe hirsute, la tuque de laine, les rides du vent et les yeux qui voient loin.
     "trappeur": _v("longue", "hirsute", "veste", "barbe", chapeau="tuque", signes=("rides", "yeux_plisses", "cicatrice"),
                    t="#8a3a2a"),
+    # Ti-Loup (s02), le ferrailleur : la casquette graisseuse, la barbe de trois jours, le cure-dent, les sourcils
+    # de qui a soulevé des moteurs toute sa vie.
+    "tiloup": _v("carree", "brosse", "veste", "mal_rase", chapeau="casquette", signes=("cure_dent", "sourcils_epais")),
+    # Gros-Boulon (s05), le chef des Boulonneux : la tête large, rasée, la barbe pleine, une cicatrice de l'usine.
+    "boulon": _v("large", "chauve", "chandail", "barbe", signes=("cicatrice", "sourcils_epais", "rides")),
+    # Réjean Prévost (s11), le patron : les cheveux argent gominés, les lunettes demi-lune, le veston noir, les
+    # rides de qui ne sourit qu'aux actionnaires.
+    "prevost": _v("longue", "gominee", "veston", lunettes="demi", signes=("rides", "yeux_plisses")),
     "jo": _v("longue", "meche", "veste", "mal_rase", chapeau="casquette", signes=("cicatrice",)),
     # Victor Tam, le vieux maître de l'ÉCOLE LA MANTE, revenu de Floride : le chapeau de paille du snowbird sur une
     # couronne de cheveux blancs, la chemise fleurie turquoise, le bronzage de trois hivers, les gros sourcils blancs

@@ -243,6 +243,9 @@ chacun dans [docs/personnages/](personnages/README.md).
 | `bilodeau` | Roméo Bilodeau | Bill | porte:phare (après p01) | — |
 | `zed` | Zacharie « Zed » Lemieux | Lutz | porte:phare (après p02) | — |
 | `trappeur` | Armand, le Trappeur | George | porte:phare (après p01) | — |
+| `tiloup` | Ti-Loup Ferraille | Chris | porte:fourriere (après s01) | — |
+| `boulon` | Marcel « Gros-Boulon » Boulanger | Roger | porte:fourriere (après s02) | — |
+| `prevost` | Réjean Prévost | Roland Lescalde | point:prevost (son bureau, dans l'usine — après s10) | — |
 | `maitre` | Victor Tam | Luca - Storyteller | point:maitre (sa salle de l'ÉCOLE LA MANTE, au Petit-Canton — une fois revenu de Floride, `arrive_apres: c04`) | — |
 
 ⚠️ **`ou: "foire"` est un lieu neuf** (22 sept. 2026) : le seul personnage posé DANS l'enceinte de la
