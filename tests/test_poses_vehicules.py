@@ -783,10 +783,19 @@ def test_le_char_tourne_autour_de_son_empreinte(banc):
             const v = o.char(def.slug, 0, 0, 0);
             if (!v) return;
             v.x = 200; v.y = 100; v.z = 0;
-            const toit = L.Atlas.toitDe(def.sprite, sprite);
-            let premier = -1, dernier = -1;
-            toit.forEach(function (ligne, y) { if (/[^.]/.test(ligne)) { if (premier < 0) premier = y; dernier = y; } });
-            const centre = L.Vehicules.centreDuToit(v);
+            // ⚠️ Les deux bouts se mesurent sur la PROJECTION, de profil (cap 0 :
+            // l'est, le nez a droite ; cap pi : l'ouest, le nez a gauche), autour du
+            // milieu de la grille — le point de sol, celui autour duquel elle tourne.
+            // Le contour (un trait d'encre d'un pixel autour de tout) n'est pas la
+            // caisse : on le retire pour mesurer ce qui pretend etre l'empreinte.
+            const corps = Object.assign({}, sprite.machine, { contour: false });
+            const bouts = function (angle) {
+                const g = L.Atlas.projeter(corps, angle, sprite.w);
+                let x0 = Infinity, x1 = -Infinity;
+                g.forEach(function (l) { for (let x = 0; x < l.length; x++) if (l[x] !== '.') { x0 = Math.min(x0, x); x1 = Math.max(x1, x); } });
+                return { droite: x1 + 1 - sprite.w / 2, gauche: sprite.w / 2 - x0 };
+            };
+            const est = bouts(0), ouest = bouts(Math.PI);
             const poses = [], pasCarres = [];
             for (let i = 0; i < L.Vehicules.ROTATIONS; i++) {
                 v.angle = i * 2 * Math.PI / L.Vehicules.ROTATIONS;
@@ -809,8 +818,10 @@ def test_le_char_tourne_autour_de_son_empreinte(banc):
             L.Vehicules.dessinerUn(ctx, v, 0, 0);
             ctx.drawImage = vrai;
             v.z = 0;
-            out[def.slug] = { longueur: def.longueur, nez: centre[1] - premier,
-                              cul: dernier + 1 - centre[1], poses: poses, machine: !!sprite.machine,
+            out[def.slug] = { longueur: def.longueur, nez: Math.max(est.droite, ouest.gauche),
+                              cul: Math.max(est.gauche, ouest.droite),
+                              court: Math.min(est.droite, ouest.gauche, est.gauche, ouest.droite),
+                              poses: poses, machine: !!sprite.machine,
                               pasCarres: pasCarres, monte: enVol[0][1] - auSol[0][1], glisse: enVol[0][0] - auSol[0][0] };
             L.Entites.retirer(v);
         });
@@ -831,27 +842,29 @@ def test_le_char_tourne_autour_de_son_empreinte(banc):
         assert m["monte"] == -20 and m["glisse"] == 0, (
             f"{slug} : à 20 px d'altitude son dessin bouge de ({m['glisse']}, {m['monte']}) — le saut ne lève pas le char"
         )
-        # ⚠️ Un deux-roues n'a pas de toit : ses bouts ne se mesurent pas sur
-        # une grille qui tourne, mais sur sa projection (« de profil, un
-        # deux-roues montre ses deux roues »). Son dessin, lui, reste centré.
-        if m["machine"]:
-            continue
+    # ⚠️ Les deux bouts, sur la projection : la moitié qui mesurait le toit ne
+    # tournait plus depuis que tout le parc est en volume (`continue` sur chaque
+    # machine) — seul le centrage du canevas mordait, et un dessin décalé DANS son
+    # canevas passait (28 sept. 2026). Ce que le juge interdit : la demi-longueur
+    # de décalage d'avant (un bout trop court, l'autre trop long) et tout
+    # dépassement — un bout qui SORT de l'empreinte ment sur ce qui bloque. Un
+    # pixel de jeu : le pare-chocs est à une demi-tuile près.
+    hors = []
+    for slug, m in r.items():
         demi = m["longueur"] / 2
-        assert abs(m["cul"] - demi) <= 1, (
-            f"{slug} : du centre de rotation à son pare-chocs arrière il y a {m['cul']} px, "
-            f"et sa demi-longueur en fait {demi} — il tourne à côté de sa place"
-        )
-        # ⚠️ Devant, le juge est plus lâche, et il faut savoir pourquoi :
-        # quatre dessins sont plus COURTS que leur fiche (l'ambulance et la
-        # remorqueuse de 5 px, le camion et l'autobus de 3), parce que leur
-        # grille a été taillée à la longueur du char au lieu de longueur + 4.
-        # Le manque se voit au nez. Ce que le juge interdit, c'est la
-        # demi-longueur de décalage d'avant — un char dessiné en entier au
-        # nord de son empreinte — et tout dépassement : un nez qui SORT de
-        # l'empreinte, lui, est un mensonge sur ce qui bloque.
-        assert demi - 5 <= m["nez"] <= demi + 1, (
-            f"{slug} : son nez est à {m['nez']} px du centre de rotation pour une demi-longueur de {demi}"
-        )
+        permis = demi + max(1, DEBORDS_TOLERES.get(slug, 0))
+        if m["court"] < demi - 1 or m["nez"] > permis or m["cul"] > permis:
+            hors.append(f"{slug} (demi {demi} : nez {m['nez']}, cul {m['cul']}, bout le plus court {m['court']})")
+    assert not hors, "dessin hors de son empreinte : " + " ; ".join(hors)
+
+
+#: ⚠️ **Les débords tolérés, décidés par Martin le 29 sept. 2026 (« on tolère »)** : cinq
+#: dessins dépassent leur empreinte de collision, en pixels au-delà de la demi-longueur —
+#: le godet de la pelleteuse (que `sprites.js` promet pourtant replié), la poupe du bateau,
+#: les skis de la motoneige, la flèche de la remorqueuse, le coffre du cabriolet. Ils
+#: frôlent sans bloquer. Chacun à la valeur MESURÉE ce jour-là : un débord qui grandit, ou
+#: un sixième char qui déborde, rougit encore.
+DEBORDS_TOLERES = {"pelleteuse": 9, "bateau": 3, "motoneige": 2, "remorqueuse": 2, "cabriolet": 1.5}
 
 
 def test_le_cavalier_reste_assis_quand_sa_machine_tourne(banc):
