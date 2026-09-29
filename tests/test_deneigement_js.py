@@ -41,7 +41,8 @@ def test_le_calendrier_de_l_operation(banc):
             soirDeTempete: a(s, 22), lendemainMatin: a(s + 1, o2.annonce_h - 0.5), annonce: a(s + 1, o2.annonce_h + 0.5),
             nuit: a(s + 1, o2.debut_h + 0.5), petitMatin: a(s + 2, o2.fin_h - 0.5), fini: a(s + 2, o2.fin_h + 0.5),
             secteur1: secteurDe(L, 1), secteur0: N.operationA(jourDeTempete(L, 0) + 1, (o2.debut_h + 0.5) / 24).secteur,
-            sansOption: (function () { L.B.options.neige = false; regler(L, s + 1, o2.debut_h + 0.5); return N.operation(); })(),
+            // Le lendemain d'un soir « au rythme » de juillet : il n'a pas neigé, rien a deblayer.
+            horsHiver: (function () { const t = N.donnees().tempete, e = 21 + ((t.premier - 21) % t.tous_les + t.tous_les) % t.tous_les; regler(L, e + 1, o2.debut_h + 0.5); return N.operation(); })(),
             reste: [N.couvertureA(s, 23.8 / 24), N.couvertureA(s + 1, 10 / 24), N.couvertureA(s + 2, (o2.fin_h - 0.5) / 24), N.couvertureA(s + 2, (o2.fin_h + 0.5) / 24)],
             resteReglage: o2.reste,
         };
@@ -50,7 +51,7 @@ def test_le_calendrier_de_l_operation(banc):
     assert r["annonce"] == "annonce:" + r["secteur1"]
     assert r["nuit"] == "nuit:" + r["secteur1"] and r["petitMatin"] == "nuit:" + r["secteur1"]
     assert r["secteur0"] != r["secteur1"], "les secteurs ne se suivent pas"
-    assert r["sansOption"] is None
+    assert r["horsHiver"] is None
     assert r["reste"][:3] == [r["resteReglage"]] * 3 and r["reste"][3] == 0, r["reste"]
 
 
@@ -85,7 +86,6 @@ def test_ce_qui_reste_dans_la_rue_part_au_lot(banc):
     tant qu'on le regarde, on ne le voit pas disparaître."""
     r = banc("function (L, o) {" + OPERATION + """
         L.Jeu.commencer();
-        L.B.options.neige = true;
         const s = jourDeTempete(L, 1), secteur = secteurDe(L, 1), autre = secteurDe(L, 2), o2 = L.Neige.donnees().deneigement;
         const j = L.B.joueur; j.intouchable = true;
         const dans = function (v) { return L.B.entites.indexOf(v) >= 0; };
@@ -132,7 +132,6 @@ def test_ce_qui_reste_dans_la_rue_part_au_lot(banc):
 def test_les_panneaux_clignotent_et_la_ligne_du_bas_le_dit(banc):
     r = banc("function (L, o) {" + OPERATION + """
         L.Jeu.commencer();
-        L.B.options.neige = true;
         const s = jourDeTempete(L, 1), secteur = secteurDe(L, 1), o2 = L.Neige.donnees().deneigement;
         const p = o2.panneaux[secteur][0], j = L.B.joueur;
         j.x = p[0] * L.TT + 8; j.y = p[1] * L.TT + 8 + 16;
@@ -160,7 +159,6 @@ def test_les_panneaux_clignotent_et_la_ligne_du_bas_le_dit(banc):
 def test_la_charrue_sort_la_nuit_de_deneigement(banc):
     r = banc("function (L, o) {" + OPERATION + """
         L.Jeu.commencer();
-        L.B.options.neige = true;
         const s = jourDeTempete(L, 1), o2 = L.Neige.donnees().deneigement;
         regler(L, s + 1, o2.debut_h + 1);
         const nuit = { dehors: L.Neige.charrueDehors(), tempete: L.Neige.intensite() };

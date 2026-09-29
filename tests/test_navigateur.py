@@ -614,8 +614,8 @@ def test_la_ville_tient_le_rythme_de_nuit_a_trois_etoiles(page, serveur, erreurs
 
 def test_la_tempete_de_neige_tient_le_rythme(page, serveur, erreurs):
     """⚠️ La SONDE que le plan exigeait avant d'allumer la neige (M12) : le même pire
-    cas que la nuit à trois étoiles — au volant, recherché — un soir de pleine tempête,
-    l'option allumée, la charrue dehors. Le chiffre s'imprime à côté de celui de la nuit :
+    cas que la nuit à trois étoiles — au volant, recherché — un soir de pleine tempête
+    d'hiver (pour tout le monde depuis le 29 sept. 2026), la charrue dehors. Le chiffre s'imprime à côté de celui de la nuit :
     c'est la différence qu'on regarde avant de mettre l'option à OUI par défaut."""
     page.goto(serveur)
     attendre_titre(page)
@@ -624,7 +624,6 @@ def test_la_tempete_de_neige_tient_le_rythme(page, serveur, erreurs):
     page.evaluate("""() => {
         const L = window.BANDINI, j = L.B.joueur, t = L.Neige.donnees().tempete;
         j.intouchable = true;
-        L.B.options.neige = true;
         L.B.partie.jour = t.premier;
         L.B.partie.heure = (t.debut_h + t.fin_h) / 2 / 24;
         L.Police.ajouterChaleur(9);

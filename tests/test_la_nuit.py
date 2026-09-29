@@ -204,6 +204,6 @@ def test_les_feux_s_allument_au_meme_seuil_de_brune_que_les_lampadaires(racine):
     deuxième serait fausse un jour — on verrait les feux s'allumer une heure
     avant (ou après) les lampadaires de la même rue."""
     js = lambda nom: (racine / "static" / "js" / nom).read_text(encoding="utf-8")  # noqa: E731
-    lampadaires = float(re.search(r"ambiance\(\)\.alpha < ([\d.]+)\)", js("monde.js")).group(1))
+    lampadaires = float(re.search(r"ambiance(?:Vue)?\(\)\.alpha < ([\d.]+)\)", js("monde.js")).group(1))
     feux = float(re.search(r"^  const BRUNE = ([\d.]+);", js("vehicules.js"), re.M).group(1))
     assert feux == lampadaires, f"les feux s'allument a {feux}, les lampadaires a {lampadaires}"

@@ -1279,3 +1279,36 @@ def test_chaque_porte_des_blocs_se_rejoint_et_s_ouvre(banc):
         else:
             assert s["entre"] == s["libelle"], s
     assert r["retour"] == {"rendu": True, "bloc": None, "interieur": False}
+
+
+def test_mois_suivant_avance_au_premier_du_mois(banc):
+    r = banc("""function (L) {
+        L.Jeu.commencer();
+        const p = L.B.partie; p.jour = 5; p.heure = 0.4;
+        L.Hud.ouvrirMenu(L.Hud.menuDebug());
+        const item = L.B.menu.items.find(function (i) { return i.libelle === 'MOIS SUIVANT'; });
+        const out = [];
+        for (let k = 0; k < 13; k++) { item.faire(item); out.push([p.jour, L.Calendrier.mois(p.jour), item.detail]); }
+        return { out: out, heure: p.heure };
+    }""")
+    mois = [m for _, m, _ in r["out"]]
+    assert mois[:3] == ["mars", "avril", "mai"] and mois[10] == "janvier" and mois[11] == "fevrier"
+    assert r["out"][0][0] == 7 and r["out"][10][0] == 41, "janvier de la deuxième année"
+    assert r["out"][0][2] == "MARS" and r["heure"] == 0.4
+
+
+def test_le_pont_rend_son_eau_apres_un_saut(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const p = L.B.partie; p.jour = 4; p.heure = 0.5; o.frame(2);
+        const avant = L.Pont.froid();
+        L.Hud.ouvrirMenu(L.Hud.menuDebug());
+        const item = L.B.menu.items.find(function (i) { return i.libelle === 'MOIS SUIVANT'; });
+        const c = L.Monde.carte, eau = function () { return L.Pont.tuiles().map(function (t) { return c.solide[t[1] * c.w + t[0]]; }); };
+        o.frame(62); const glace = eau();
+        item.faire(item); item.faire(item); L.Hud.fermerMenu && L.Hud.fermerMenu(); o.frame(62);
+        return { avant: avant, apres: L.Pont.froid(), jour: p.jour, glace: glace, eau: eau() };
+    }""")
+    assert r["avant"] is True and r["apres"] is False and r["jour"] == 11
+    assert r["glace"] and all(s == 0 for s in r["glace"]), "le juge n'a jamais vu la baie prise"
+    assert all(s == 2 for s in r["eau"]), "après le saut, la baie n'a pas rendu son eau"

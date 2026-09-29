@@ -1,5 +1,5 @@
-"""La motoneige, au banc (docs/jalons/la-motoneige.md) : elle n'attend aux Érables que l'hiver (avec la
-neige), naît à l'approche et repart au printemps ; elle file dans la neige et hors des rues, se traîne
+"""La motoneige, au banc (docs/jalons/la-motoneige.md) : elle n'attend aux Érables que l'hiver (la
+saison a remplacé l'option de la neige le 29 sept. 2026), naît à l'approche et repart au printemps ; elle file dans la neige et hors des rues, se traîne
 sur l'asphalte ; la course des bois se joue, l'hiver seulement — en suivant les sentiers."""
 
 #: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : les juges qui cherchent leur rue (ou leur parc, leur gazon) en
@@ -7,9 +7,8 @@ sur l'asphalte ; la course des bois se joue, l'hiver seulement — en suivant le
 #: nord (`app/nord.py`), loin de la caméra et hors du terrain où ils ont été réglés.
 
 HIVER = """
-  function saison(L, jour, neige) {
+  function saison(L, jour) {
     const B = L.B;
-    B.options.neige = neige !== false;
     B.partie.jour = jour; B.partie.heure = 13 / 24;
   }
   function approcher(L, o) {
@@ -27,18 +26,17 @@ def test_elles_n_attendent_aux_erables_que_l_hiver(banc):
         const B = L.B;
         const auDemarrage = B.entites.filter(function (e) { return e.slug === 'motoneige'; }).length;
         saison(L, 22); const ete = approcher(L, o);
-        saison(L, 2, false); const sansNeige = approcher(L, o);
         saison(L, 2); const hiver = approcher(L, o);
         // Le printemps venu, hors champ (le joueur est a 320 px : pas assez loin pour que la ville les
         // oublie d'elle-meme) : elles repartent.
         saison(L, 12);
         for (let k = 0; k < 130; k++) o.frame(1);
         const printemps = B.entites.filter(function (e) { return e.slug === 'motoneige'; }).length;
-        return { auDemarrage: auDemarrage, ete: ete, sansNeige: sansNeige, hiver: hiver, printemps: printemps,
+        return { auDemarrage: auDemarrage, ete: ete, hiver: hiver, printemps: printemps,
                  saisons: [L.Calendrier.saison(2), L.Calendrier.saison(12), L.Calendrier.saison(22)] };
     }""")
     assert r["saisons"] == ["hiver", "printemps", "ete"], r
-    assert r["auDemarrage"] == 0 and r["ete"] == 0 and r["sansNeige"] == 0, r
+    assert r["auDemarrage"] == 0 and r["ete"] == 0, r
     assert r["hiver"] == 2, r
     assert r["printemps"] == 0, f"l'hiver fini, les motoneiges attendent encore : {r}"
 

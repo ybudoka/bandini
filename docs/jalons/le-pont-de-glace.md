@@ -28,7 +28,8 @@ dégel, rien ne reste coincé dans une glace disparue.
 
 ## Notes
 
-_Livré le 26 sept. 2026._ ⚠️ **Derrière l'option « NEIGE (ESSAI) »** : c'est l'hiver du jeu.
+_Livré le 26 sept. 2026._ ⚠️ **Derrière l'option « NEIGE (ESSAI) »** : c'est l'hiver du jeu. _(Depuis le 29 sept. 2026, l'option
+n'existe plus : l'hiver pour tout le monde — [les quatre saisons](les-quatre-saisons-realistes.md#tranché-par-martin-le-29-sept-2026).)_
 
 - **L'année du jeu** (`app/calendrier.py`, `static/js/calendrier.js`) : le jeu n'avait pas de saisons, et
   cinq idées du plan en demandent (le pont, la motoneige, la cabane à sucre, la Saint-Jean, le ciné-parc,

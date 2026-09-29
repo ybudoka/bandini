@@ -1,15 +1,14 @@
-"""Le pont de glace, au banc (docs/jalons/le-pont-de-glace.md) : il n'existe que les jours de grand froid,
-l'option de la neige allumée ; un char le traverse sans couler ; une coque ne le passe pas et la baie
+"""Le pont de glace, au banc (docs/jalons/le-pont-de-glace.md) : il n'existe que les jours de grand froid
+(l'hiver, pour tout le monde) ; un char le traverse sans couler ; une coque ne le passe pas et la baie
 n'en prend pas une ; au dégel un char arrêté passe au travers ; après, la baie a toute son eau."""
 
 #: Un jour de grand froid (ou un autre), a midi ou a l'heure dite ; quelques images pour que la baie prenne.
 FROID = """
   // ⚠️ Le joueur au bout ouest du chemin (a terre, sur l'ile) : un char gare LOIN du joueur, la ville
   // l'oublie (`peupler`), et le juge ne verrait rien.
-  function aLHeure(L, o, jour, heure, neige) {
+  function aLHeure(L, o, jour, heure) {
     const B = L.B, d = B.defs.pont.chemin;
     if (!B.joueur.dansVehicule) { B.joueur.x = d.ouest.x * 16 + 8; B.joueur.y = d.ouest.y * 16 + 8; L.Monde.centrerCamera(B.joueur.x, B.joueur.y); }
-    B.options.neige = neige !== false;
     B.partie.jour = jour; B.partie.heure = (heure === undefined ? 10 : heure) / 24;
     for (let k = 0; k < 62; k++) o.frame(1);
   }
@@ -21,21 +20,20 @@ FROID = """
 """
 
 
-def test_la_baie_ne_prend_que_les_jours_de_grand_froid_avec_la_neige(banc):
+def test_la_baie_ne_prend_que_les_jours_de_grand_froid(banc):
     r = banc("function (L, o) {" + FROID + """
         L.Jeu.commencer();
         const B = L.B, f = premierFroid(L);
         const avant = eauDuChemin(L).join(',');
-        aLHeure(L, o, f, 10, false); const sansNeige = !!L.Pont.pose;
         aLHeure(L, o, f + 20, 10); const autreJour = !!L.Pont.pose;
         aLHeure(L, o, f, 10); const froid = eauDuChemin(L);
         aLHeure(L, o, f + B.defs.pont.froid.jours.length, 10); const apres = eauDuChemin(L).join(',');
         aLHeure(L, o, f + B.defs.calendrier.annee, 10); const anDApres = !!L.Pont.pose;
-        return { avant: avant, sansNeige: sansNeige, autreJour: autreJour, glace: froid.every(function (s) { return s === 0; }),
+        return { avant: avant, autreJour: autreJour, glace: froid.every(function (s) { return s === 0; }),
                  apres: apres, anDApres: anDApres };
     }""")
     assert r["avant"].split(",") == ["2"] * len(r["avant"].split(",")), "le chemin n'est pas de l'eau au départ"
-    assert not r["sansNeige"] and not r["autreJour"], r
+    assert not r["autreJour"], r
     assert r["glace"], "le jour du grand froid, la baie n'a pas pris"
     assert r["apres"] == r["avant"], "après le grand froid, la baie n'a pas retrouvé toute son eau"
     assert r["anDApres"], "le grand froid ne revient pas l'hiver suivant"
@@ -114,10 +112,9 @@ def test_le_clairon_annonce_le_grand_froid(banc):
     r = banc("function (L, o) {" + FROID + """
         L.Jeu.commencer();
         const B = L.B, f = premierFroid(L);
-        B.options.neige = true;
         const l = {};
         for (const k of [-2, -1, 0, 1]) { B.partie.jour = f + k; l[k] = L.Pont.ligneDuClairon(); }
-        B.options.neige = false; B.partie.jour = f - 1; l.sans = L.Pont.ligneDuClairon();
+        B.partie.jour = f - 1 + 20; l.sans = L.Pont.ligneDuClairon();   // la même veille, en juin
         return l;
     }""")
     from app import pont_de_glace

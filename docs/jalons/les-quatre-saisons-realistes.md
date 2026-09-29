@@ -1070,3 +1070,39 @@ def test_le_pont_rend_son_eau_apres_un_saut(banc):
   pas, les juges et leurs mutations) ; la cellule du plan : « ✅ lot 1 livré : … ; lot 2 à faire : la
   pluie et le sol » ; `docs/architecture.md` (tâches 1-2). La ligne reste ⬜ **en cours** (cinq lots
   restent).
+
+## Notes
+
+### Lot 1 — le paysage des quatre saisons (livré le 29 sept. 2026)
+
+- **La palette du moment** (`app/saisons.py`, `static/js/saisons.js`) : six palettes (hiver, printemps,
+  été, fin d'été, automne, novembre) et les images-clés de l'année ; une transition glisse en huit
+  paliers sur un jour et demi à deux jours. L'Halloween (jour 33) est en plein rouge.
+- **Ce qui la lit** : tout ce qui peint du gazon (`gazonDuMoment` — la pelouse, la bande devant les
+  maisons, le pied des clôtures, le tour de la piscine ; la relecture a trouvé les trois derniers, restés
+  vert d'été dans une ville blanche), la friche, les trottoirs et les toits (`Saisons.enneiger`, la neige
+  qui tient l'hiver), et l'arbre de rue — trois teintes à l'empreinte de sa tuile (`variantes`, sans dé :
+  jugé en deux bancs, avec et sans), érables rouges, orange et jaunes en octobre, branches nues poudrées
+  l'hiver. L'été, c'est la ville d'avant, au pixel.
+- **Le cache** : `Monde.dessinerSol` jette les tuiles cuites et les arbres de l'atlas (`Atlas.oublier`)
+  quand la clé de palier change — une clé pour l'atlas, une par carte pour ses morceaux (une pièce
+  traversée, une carte qui naît). L'image du changement coûte 3,8 ms contre 0,6 (Chromium, Mac).
+- **La neige suit l'hiver, l'option a disparu** : une tempête tous les trois soirs, les jours d'hiver
+  seulement, pour tout le monde ; la motoneige, le pont de glace et le hockey suivent l'hiver ; une vieille
+  sauvegarde qui avait l'option la perd au chargement. Le rythme en pleine tempête : 1,8 ms par image.
+  ⚠️ Une partie neuve a donc sa première tempête le soir du jour 2.
+- **La longueur du jour** (`Saisons.heureDeLumiere`, `Monde.ambianceVue`) : le voile, les lampadaires,
+  les phares, les feux et le traversier suivent la saison — noir vers 17 h 30 en décembre, clair à 21 h
+  en juin. Les **règles** gardent l'horloge fixe (`ambiance(h)`, `estNuit`, `periode`) : commerces,
+  barrières, police, missions, l'icône du HUD.
+- **La triche MOIS SUIVANT** (TRICHES › DIVERS) : au premier du mois suivant, à la même heure, un seul
+  `nouveauJour`.
+- **Juges** : `test_saisons.py`, `test_saisons_js.py`, `test_saisons_sol_js.py`, `test_saisons_arbres_js.py`,
+  `test_saisons_lumiere_js.py`, et dans `test_neige_js.py`, `test_debug_js.py` ; chacun vu rougir sous sa
+  mutation. Réécrits : les juges « sans l'option » de la neige, du déneigement, de la motoneige, du pont
+  et du hockey (un soir au rythme, en juillet) ; `test_quartiers` et le faisceau de `test_la_nuit_js`
+  posent l'été ou fin septembre (ils jugent le quartier et l'horloge, pas la saison).
+- **Pas fait, à dire** : la mini-carte et les buissons restent verts l'hiver ; les pavés de l'abord et
+  les toits des cabanes ne prennent pas la neige ; l'icône du HUD montre le soleil sous le voile d'un
+  17 h 30 de décembre (elle dit l'heure des règles) ; le verglas garde son option et son jour d'avril
+  (lot 6).

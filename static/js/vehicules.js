@@ -1068,7 +1068,7 @@ const Vehicules = (function () {
     if (h === undefined || h >= 1) return 1;
     const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
     if (Pont.glace(tx, ty)) return 1;
-    const hiver = !!(B.options && B.options.neige && Calendrier.saisonDuJour() === 'hiver');
+    const hiver = Calendrier.saisonDuJour() === 'hiver';
     if (hiver && !Monde.estRoute(tx, ty) && !Monde.estTrottoir(tx, ty) && !Monde.estEau(tx, ty)) return 1;
     return Neige.couverture() >= 0.3 && !Neige.deneigee(tx, ty) ? 1 : h;
   }
@@ -3515,7 +3515,7 @@ const Vehicules = (function () {
       lampesFeux.image = B.image;
       lampesFeux.liste.length = 0;
       // L'heure ne se demande qu'UNE FOIS par image, pas une fois par ampoule.
-      lampesFeux.allume = Monde.ambiance().alpha >= BRUNE;
+      lampesFeux.allume = Monde.ambianceVue().alpha >= BRUNE;
     }
     if (!lampesFeux.allume || lampesFeux.liste.length >= LAMPES_FEUX_MAX) return;
     lampesFeux.liste.push({ x: x, y: y, r: RAYON_LAMPE, c: c });
@@ -3591,7 +3591,7 @@ const Vehicules = (function () {
     lampesPhares.corps.length = 0;
     lampesPhares.corpsMonde.length = 0;
     lampesPhares.finalise = false;
-    const noir = Monde.ambiance().alpha;
+    const noir = Monde.ambianceVue().alpha;
     lampesPhares.allume = noir >= BRUNE;
     lampesPhares.fondu = FAISCEAU_A_LA_BRUNE + (1 - FAISCEAU_A_LA_BRUNE)
       * Math.max(0, Math.min(1, (noir - BRUNE) / (NUIT_FAITE - BRUNE)));

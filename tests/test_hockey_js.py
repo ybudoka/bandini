@@ -104,15 +104,15 @@ def la_balle_sans_de_puis_sur_la_glace(banc):
         L.graine(9); const temoin = [B.rng(), B.rng()]; L.graine(9);
         for (let k = 0; k < 900; k++) { ep.maj(e, d.regles); }
         const des = { temoin: temoin, apres: [B.rng(), B.rng()], buts: e.nous + e.eux };
-        function glisse(jour, neige) {
-            B.partie.jour = jour; B.options.neige = neige;
+        function glisse(jour) {
+            B.partie.jour = jour;
             for (const y of e.jeunes) { y.x = p.x0 + 10; y.y = p.bas - 5; y.depart = { x: y.x, y: y.y }; y.repit = 999; }
             B.joueur.x = p.x0 + 10; B.joueur.y = p.haut + 5; e.repitJoueur = 999;
             e.porteur = null; e.pause = 0; e.balle.x = p.x0 + 60; e.balle.y = p.y; e.balle.vx = 3; e.balle.vy = 0;
             for (let k = 0; k < 60; k++) ep.maj(e, d.regles);
             return Math.round(e.balle.x - (p.x0 + 60));
         }
-        return { des: des, glace: { ete: glisse(22, false), hiver: glisse(2, true) } };
+        return { des: des, glace: { ete: glisse(22), hiver: glisse(2) } };
     }""")
 
 

@@ -10,8 +10,9 @@ tire aucun dé : il dit QUAND il neige (une fonction du jour et de l'heure, la m
 partie à l'autre), ce que la neige fait aux chars, et la tournée de la charrue — une
 boucle tracée avec la machinerie des autobus, comme celle des éboueurs.
 
-⚠️ **Derrière une option** (`B.options.neige`, NON par défaut) : sans elle, pas un
-flocon, pas un coefficient — le jeu est celui d'avant, octet pour octet.
+⚠️ **L'hiver neige pour tout le monde** (Martin, 29 sept. 2026 : la saison a remplacé l'option
+« TEMPÊTES DE NEIGE (ESSAI) ») : une tempête tous les `tous_les` soirs, seulement les jours d'hiver
+du calendrier (`calendrier.py`) — hors de l'hiver, pas un flocon, pas un coefficient.
 """
 
 from __future__ import annotations

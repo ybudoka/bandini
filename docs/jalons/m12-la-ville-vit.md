@@ -532,7 +532,8 @@ elles sonnent —, et le trafic leur cède.
   la ville (un meuble, un abribus) là où la graine n'en mettait pas.
 
 ✅ **14e vague livrée** (17 sept. 2026) — *la tempête de neige et la charrue*, **derrière une
-option** (OPTIONS › TEMPÊTES DE NEIGE, NON par défaut). Un soir sur trois à partir du
+option** (OPTIONS › TEMPÊTES DE NEIGE, NON par défaut ; _l'option a disparu le 29 sept. 2026 : l'hiver
+neige pour tout le monde — [les quatre saisons](les-quatre-saisons-realistes.md#tranché-par-martin-le-29-sept-2026)_). Un soir sur trois à partir du
 deuxième, de 17 h à 23 h 30 : la ville blanchit, la neige tombe en biais, les chars glissent
 et freinent mal — la police aussi —, le trafic lève le pied, et une charrue orange sort
 déblayer sa tournée en poussant les chars mal garés.

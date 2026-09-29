@@ -835,7 +835,7 @@ DEFIS: list[dict] = [
      "texte": "LE BONIMENTEUR TE PRÊTE UN BAZOU : QUATRE AUTRES FONCENT SUR TOUT CE QUI ROULE. LE DERNIER QUI ROULE GAGNE"},
     # LA COURSE DE MOTONEIGE (docs/jalons/la-motoneige.md) : du phare au bout des sentiers des bois de La
     # Pointe et retour (`motoneige.course`), huit fanions dans l'ordre (l'épreuve `balises`). L'HIVER
-    # seulement (`hiver` : la saison du calendrier, et l'option de la neige) ; la motoneige attend au
+    # seulement (`hiver` : la saison du calendrier, pour tout le monde) ; la motoneige attend au
     # départ. Elle s'ouvre après le tour des Érables.
     {"slug": "motoneige", "titre": "La course des bois de La Pointe", "ou": "porte:phare", "conduite": "balises",
      "hiver": True, "chrono_s": 24, "prime": 90, "debloque": {"apres": ["tour_erables"]},

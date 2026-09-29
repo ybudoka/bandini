@@ -9,8 +9,8 @@ pied, l'eau ne se marche pas). Ce module LIT la ville finie et dit OÙ passe le 
 c'est le navigateur (`static/js/pont.js`) qui rend ces tuiles praticables le temps du grand froid, comme
 le traversier pose sa passerelle, et les rend à l'eau au dégel.
 
-⚠️ **DERRIÈRE L'OPTION DE LA NEIGE** : l'hiver du jeu, c'est la neige de M12 (« NEIGE (ESSAI) ») ;
-sans elle, pas de grand froid — le jeu d'avant, octet pour octet.
+⚠️ **L'HIVER DU JEU, POUR TOUT LE MONDE** : depuis le 29 sept. 2026, la saison a remplacé l'option de
+la neige (« TEMPÊTES DE NEIGE (ESSAI) ») — le grand froid revient chaque hiver du calendrier.
 """
 
 from __future__ import annotations

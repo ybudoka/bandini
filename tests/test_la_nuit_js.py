@@ -645,6 +645,9 @@ def test_le_soir_le_faisceau_monte_avec_la_nuit(banc, paquet):
     r = banc("""function (L, o) {
         %s
         preparer(L);
+        // ⚠️ FIN SEPTEMBRE : le soleil s'y couche vers 19 h, l'heure du juge. En janvier (le jour 1
+        // d'une partie), 19 h est deja la pleine nuit : la lumiere suit la saison (les saisons, lot 1).
+        L.B.partie.jour = 28;
         const auto = parc(L).find(function (p) { return p.sprite === 'auto'; });
         const alpha = function (c) { return +/,([0-9.]+)\\)$/.exec(c)[1]; };
         const out = {};
@@ -652,7 +655,7 @@ def test_le_soir_le_faisceau_monte_avec_la_nuit(banc, paquet):
           const s = seul(L, auto, h, 0);
           out[nom] = { faisceau: alpha(s.lampes.find(function (l) { return l.faisceau === s.v; }).c),
                        lueur: s.lampes.find(function (l) { return l.phare === s.v; }).c,
-                       noir: L.Monde.ambiance().alpha };
+                       noir: L.Monde.ambianceVue().alpha };
         }
         return out;
     }""" % (PARC, NUIT))

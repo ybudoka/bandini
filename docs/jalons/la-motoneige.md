@@ -23,7 +23,8 @@ sa vitesse (la friction déduite).
 ## Notes
 
 _Livré le 26 sept. 2026._ ⚠️ **L'hiver du jeu** : la saison du calendrier (`calendrier.py`, décembre à
-mars) ET l'option « NEIGE (ESSAI) » — sans neige, pas de motoneige.
+mars) ET l'option « NEIGE (ESSAI) » — sans neige, pas de motoneige. _(Depuis le 29 sept. 2026, l'option
+n'existe plus : l'hiver neige pour tout le monde — [les quatre saisons](les-quatre-saisons-realistes.md#tranché-par-martin-le-29-sept-2026).)_
 
 - **La bête** (`vehicules.CATALOGUE`, `motoneige`) : classe `moto` (on la voit, on s'y assoit, on en est
   éjecté contre un arbre), 4,6 px/image, `freq` 0 (le trafic ne la conduit pas). Son dessin

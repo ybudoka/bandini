@@ -479,6 +479,9 @@ def test_le_sol_se_peint_selon_le_quartier(banc, jeu):
     }
     r = banc("""function (L, o) {
         L.Jeu.commencer();
+        // ⚠️ L'ÉTÉ : une partie commence en janvier, et la neige qui tient blanchit tous les
+        // trottoirs (les saisons, lot 1) — ce juge regarde le quartier, pas la saison.
+        L.B.partie.jour = 21;
         const sortie = {};
         for (const nom in o.tuiles) {
             const t = o.tuiles[nom], couleurs = [];

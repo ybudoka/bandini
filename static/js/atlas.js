@@ -509,5 +509,9 @@ const Atlas = (function () {
 
   function vider() { cache.clear(); }
 
-  return { valider, cuire, toitDe, projeter, cuireCap, grilleDuCap, ouTombe, cuireTuile, cuirePeintre, texte, largeurTexte, normaliser, connait, vider, get taille() { return cache.size; } };
+  /** Jette ce qui commence par `prefixe` (`'tuile|'`, `'decor|arbre'`) : la saison change de palier,
+      et seuls les dessins qui la lisent se recuisent — pas les chars ni les passants. */
+  function oublier(prefixe) { for (const k of Array.from(cache.keys())) if (k.indexOf(prefixe) === 0) cache.delete(k); }
+
+  return { valider, cuire, toitDe, projeter, cuireCap, grilleDuCap, ouTombe, cuireTuile, cuirePeintre, texte, largeurTexte, normaliser, connait, vider, oublier, get taille() { return cache.size; } };
 })();

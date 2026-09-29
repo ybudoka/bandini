@@ -8,9 +8,9 @@ toutes : Martin a dit « fais tout le reste », et c'est la décision la plus si
 ⚠️ **UNE PURE FONCTION DU JOUR** : `mois(jour)`, `saison(jour)`. Rien à sauvegarder, aucun dé, la même
 année pour tout le monde. Le jour 1 d'une partie est le premier janvier.
 
-⚠️ **ELLE NE CHANGE RIEN À CE QUI EXISTE** : la neige tombe toujours tous les trois jours (derrière son
-option), le verglas garde ses jours (9 à 11, la fin de mars — la saison des tempêtes de glace).
-Seuls les jalons qui la lisent en dépendent.
+⚠️ **SEULS LES JALONS QUI LA LISENT EN DÉPENDENT** : la neige ne tombe que l'hiver (depuis le
+29 sept. 2026, pour tout le monde), la ville change de couleur avec elle (`saisons.py`) ; le verglas
+garde ses jours (9 à 11) et son option.
 """
 
 from __future__ import annotations

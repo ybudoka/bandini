@@ -1,41 +1,47 @@
-"""La tempête de neige (M12) au banc : derrière son option, elle fait glisser, ralentit le
-trafic, se peint, et la charrue déblaie en poussant les chars mal garés.
+"""La tempête de neige (M12) au banc : l'hiver, pour tout le monde (la saison a remplacé l'option,
+29 sept. 2026), elle fait glisser, ralentit le trafic, se peint, et la charrue déblaie en poussant
+les chars mal garés.
 
-⚠️ L'heure se règle à la main (`TEMPETE`) : un soir de tempête, en pleine tempête.
+⚠️ L'heure se règle à la main (`TEMPETE`) : un soir de tempête, en pleine tempête — un soir d'hiver
+(`t.premier`), ou le même soir au rythme mais en juillet (`ete`), où il ne neige plus.
 """
 
 import pytest
 
 TEMPETE = """
-    function soir(L, pleine) {
+    function ete(L) {
         const t = L.Neige.donnees().tempete;
-        L.B.partie.jour = t.premier;
+        return 21 + ((t.premier - 21) % t.tous_les + t.tous_les) % t.tous_les;
+    }
+    function soir(L, pleine, jour) {
+        const t = L.Neige.donnees().tempete;
+        L.B.partie.jour = jour === undefined ? t.premier : jour;
         const h = pleine ? (t.debut_h + t.fin_h) / 2 : t.debut_h - 1;
         L.B.partie.heure = h / 24;
     }
 """
 
 
-#: ⚠️ UN SEUL BANC pour trois juges qui ne jouent aucune image (vague C, 28 sept. 2026) : sans
-#: l'option, d'abord — la partie telle que `Jeu.commencer` la rend, comme dans son banc à lui ;
+#: ⚠️ UN SEUL BANC pour trois juges qui ne jouent aucune image (vague C, 28 sept. 2026) : hors de
+#: l'hiver, d'abord — la partie telle que `Jeu.commencer` la rend, comme dans son banc à lui ;
 #: puis l'horaire, que `intensiteA` lit sans rien toucher (le `premier` prêté est rendu) ; puis
-#: le trafic, qui allume et éteint l'option lui-même.
+#: le trafic, un soir d'hiver puis le même soir en juillet.
 @pytest.fixture(scope="module")
 def _sans_images(banc):
     return banc("function (L, o) {" + TEMPETE + """
         L.Jeu.commencer();
         const res = {};
-        // 1. Sans l'option.
+        // 1. Hors de l'hiver : un soir « au rythme » de juillet.
         (function () {
-        L.B.options.neige = false;
-        soir(L, true);
+        soir(L, true, ete(L));
         const j = L.B.joueur;
         const v = L.Vehicules.creer('auto', j.x + 30, j.y, 0, { etat: 'stationne', couleur: '#3a6fb0' });
         const ctx = { fillStyle: '', n: 0, fillRect: function () { this.n++; } };
         L.Neige.dessinerSol(ctx, { x: j.x - 240, y: j.y - 135 });
         L.Neige.dessinerTempete(ctx);
         res.sans = { i: L.Neige.intensite(), adh: L.Neige.adherence(v), frein: L.Neige.frein(v), trafic: L.Neige.vitesseTrafic(),
-                     rects: ctx.n, prevue: L.Neige.intensiteA(L.B.partie.jour, L.B.partie.heure) };
+                     rects: ctx.n, rythme: (L.B.partie.jour - L.Neige.donnees().tempete.premier) % L.Neige.donnees().tempete.tous_les,
+                     saison: L.Calendrier.saison(L.B.partie.jour) };
         })();
         // 2. L'horaire.
         (function () {
@@ -51,21 +57,20 @@ def _sans_images(banc):
         })();
         // 3. Le trafic.
         (function () {
-        L.B.options.neige = true;
         soir(L, true);
         const tempete = L.Neige.vitesseTrafic();
-        L.B.options.neige = false;
+        soir(L, true, ete(L));
         res.trafic = { tempete: tempete, sec: L.Neige.vitesseTrafic(), reglage: L.Neige.donnees().effets.vitesse_trafic };
         })();
         return res;
     }""")
 
 
-def test_sans_l_option_il_ne_neige_rien(_sans_images):
-    """⚠️ Le jeu d'avant, octet pour octet : un soir de tempête, sans l'option, pas un
-    flocon, pas un coefficient, pas une charrue."""
+def test_hors_de_l_hiver_il_ne_neige_rien(_sans_images):
+    """⚠️ Un soir « au rythme » des tempêtes, mais en juillet : pas un flocon, pas un
+    coefficient, pas une charrue — la saison a remplacé l'option (29 sept. 2026)."""
     r = _sans_images["sans"]
-    assert r["prevue"] == 1, "le juge n'est pas un soir de tempête"
+    assert r["rythme"] == 0 and r["saison"] == "ete", "le juge n'est pas un soir au rythme, en été"
     assert r["i"] == 0 and r["adh"] == 1 and r["frein"] == 1 and r["trafic"] == 1
     assert r["rects"] == 0
 
@@ -91,8 +96,7 @@ def test_sur_la_neige_un_char_glisse_et_freine_mal(banc):
         L.Jeu.commencer();
         const j = L.B.joueur;
         function essai(neige, deblaye) {
-            L.B.options.neige = neige;
-            soir(L, true);
+            soir(L, true, neige ? undefined : ete(L));
             const v = L.Vehicules.creer('auto', j.x + 400, j.y + 400, 0, { etat: 'stationne', couleur: '#3a6fb0' });
             if (deblaye) L.Neige.deneiger(Math.floor(v.x / L.TT), Math.floor(v.y / L.TT), 3);
             v.vitesse = 3; v.vx = 3; v.vy = 0;
@@ -118,7 +122,6 @@ def test_sur_la_neige_un_char_glisse_et_freine_mal(banc):
 def test_la_neige_se_peint_sauf_derriere_la_charrue(banc):
     r = banc("function (L, o) {" + TEMPETE + """
         L.Jeu.commencer();
-        L.B.options.neige = true;
         soir(L, true);
         const j = L.B.joueur, tx = Math.floor(j.x / L.TT), ty = Math.floor(j.y / L.TT);
         function surface() {
@@ -141,7 +144,6 @@ def test_la_neige_se_peint_sauf_derriere_la_charrue(banc):
 def test_la_charrue_sort_avec_la_tempete_deblaie_et_pousse_un_char_mal_gare(banc):
     r = banc("function (L, o) {" + TEMPETE + """
         L.Jeu.commencer();
-        L.B.options.neige = true;
         soir(L, true);
         const T = L.Autobus.ligne('charrue');
         // Le joueur dans la bulle, a cote de la place de la charrue a l'heure.
@@ -186,7 +188,6 @@ def test_la_charrue_sort_avec_la_tempete_deblaie_et_pousse_un_char_mal_gare(banc
 def test_la_neige_ne_tire_aucun_de(banc):
     r = banc("function (L, o) {" + TEMPETE + """
         L.Jeu.commencer();
-        L.B.options.neige = true;
         soir(L, true);
         L.graine(3);
         const tirage = L.B.rng;
@@ -198,3 +199,27 @@ def test_la_neige_ne_tire_aucun_de(banc):
         return { des: des };
     }""")
     assert r["des"] == 0
+
+
+def test_une_tempete_seulement_l_hiver_sur_trois_ans(banc):
+    r = banc("""function (L) {
+        L.Jeu.commencer();
+        const N = L.Neige, C = L.Calendrier, hors = [], dedans = [];
+        for (let j = 1; j <= 120; j++) {
+            const i = Math.max(N.intensiteA(j, 20 / 24), N.intensiteA(j, 22 / 24));
+            if (i > 0) (C.saison(j) === 'hiver' ? dedans : hors).push(j);
+        }
+        return { hors: hors, dedans: dedans };
+    }""")
+    assert r["hors"] == [], f"des tempêtes hors de l'hiver : {r['hors']}"
+    assert len(r["dedans"]) >= 9, "l'hiver ne neige presque plus"
+
+
+def test_une_vieille_option_eteinte_n_empeche_pas_l_hiver(banc):
+    r = banc("""function (L) {
+        L.Jeu.commencer();
+        const t = L.B.defs.carte.neige.tempete;
+        L.B.partie.jour = t.premier; L.B.partie.heure = 21 / 24;
+        return { i: L.Neige.intensite(), cle: 'neige' in L.B.options };
+    }""", stockage={"bandini-options-v1": '{"neige": false, "brouillard": false}'})
+    assert r["i"] > 0 and r["cle"] is False

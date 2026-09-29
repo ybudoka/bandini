@@ -2021,10 +2021,24 @@ const Monde = (function () {
     Aeroport.peindre(ctx, mx, my);
   }
 
+  //: Le palier de saison des tuiles cuites de l'atlas (voir `dessinerSol`).
+  let atlasPalier;
+
   function dessinerSol(ctx, cam) {
     const cx = Math.round(cam.x), cy = Math.round(cam.y);
     const m0x = Math.floor(cx / MORCEAU_PX), m0y = Math.floor(cy / MORCEAU_PX);
     const m1x = Math.floor((cx + VW - 1) / MORCEAU_PX), m1y = Math.floor((cy + VH - 1) / MORCEAU_PX);
+    // ⚠️ LA SAISON CHANGE DE PALIER (les saisons, lot 1) : les tuiles cuites et les arbres de
+    // l'atlas se recuisent — pas les chars ni les passants — et les morceaux de CETTE carte se
+    // repeignent. DEUX cles : celle de l'atlas (`atlasPalier`, commun a toutes les cartes) et celle
+    // de la carte (ses morceaux) — une piece traversee pendant le changement ne laisse pas la ville
+    // a l'ancienne couleur, et une carte qui nait apres un changement jamais peint ne reprend pas
+    // les tuiles de l'ancien palier.
+    if (typeof Saisons !== 'undefined') {
+      const k = Saisons.cle();
+      if (atlasPalier !== k) { Atlas.oublier('tuile|'); Atlas.oublier('decor|arbre'); atlasPalier = k; }
+      if (carte.palier !== k) { carte.morceaux.clear(); carte.palier = k; }
+    }
     carte.visibles.clear();
     for (let my = m0y; my <= m1y; my++) {
       for (let mx = m0x; mx <= m1x; mx++) {
@@ -2436,6 +2450,15 @@ const Monde = (function () {
       ce que le lit doit savoir, lui qui est toujours dans une piece. */
   function estNuit(heure) { return ambiance(heure).alpha > 0.4; }
 
+  /** La lumiere QU'ON VOIT, qui suit la saison (`Saisons.heureDeLumiere`) : le voile, les lampes,
+      les phares. ⚠️ Pour les yeux seulement — les regles lisent `ambiance()` / `estNuit()`, a
+      l'horloge fixe : une mission ne change pas d'heure selon le mois. */
+  function ambianceVue() {
+    if ((carte && carte.interieur) || !B.partie || typeof Saisons === 'undefined') return ambiance();
+    return ambiance(Saisons.heureDeLumiere(B.partie.jour, B.partie.heure));
+  }
+  function estNuitVue() { return ambianceVue().alpha > 0.4; }
+
   /** Le moment de la journee, pour l'icone du HUD : 'nuit', 'aube', 'jour' ou
       'crepuscule'. ⚠️ Lu sur la teinte du ciel, pas sur des heures a part : la
       lune apparait quand `estNuit` le dit (les barrieres, les fenetres, la
@@ -2569,7 +2592,7 @@ const Monde = (function () {
 
   function lampesVisibles(cam) {
     // Les lampadaires n'eclairent qu'a la brune : en plein jour, rien.
-    if (!carte || ambiance().alpha < 0.2) return [];
+    if (!carte || ambianceVue().alpha < 0.2) return [];     // la lumiere qu'on voit (la saison)
     const out = [];
     const cx = Math.round(cam.x), cy = Math.round(cam.y);
     for (const l of carte.lampes) {
@@ -2601,7 +2624,7 @@ const Monde = (function () {
     barrieresCoulissantes, majBarrieresCoulissantes, dessinerBarrieresCoulissantes, COULISSE_GLISSE, COULISSE_TIENT,
 estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
-    dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, estNuit, periode, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
+    dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, ambianceVue, estNuit, estNuitVue, periode, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
     miniCarte, couleurMini, couleurMiniA, masqueDeLaCarte, masquee, hauteurConnue, chemin, demanderChemin, majChemins,
     largeRefuse, sortieDuLarge, retenirAuLarge, avertirDuLarge, vueSurLeMasque, AVANCE_CAMERA,
     cheminRoute, routeLaPlusProche,

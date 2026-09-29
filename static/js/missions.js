@@ -2829,13 +2829,13 @@ const Missions = (function () {
   }
 
   // --- Les motoneiges des Erables --------------------------------------------------------------
-  //: docs/jalons/la-motoneige.md. L'HIVER (`Calendrier`, et l'option de la neige : c'est l'hiver du
-  //: jeu), deux motoneiges attendent garees dans une rue des Erables — pas celle du camion de creme
+  //: docs/jalons/la-motoneige.md. L'HIVER (`Calendrier` : l'hiver du jeu, pour tout le monde depuis le
+  //: 29 sept. 2026), deux motoneiges attendent garees dans une rue des Erables — pas celle du camion de creme
   //: glacee. Elles naissent a l'approche, hors champ, comme lui ; l'hiver fini, celles qu'on n'a pas
   //: prises repartent (hors champ aussi).
 
   function hiverDeMotoneige() {
-    return !!(B.options && B.options.neige && B.partie && Calendrier.saisonDuJour() === 'hiver');
+    return !!(B.partie && Calendrier.saisonDuJour() === 'hiver');
   }
 
   /** La rue des motoneiges : la plus proche du coeur des Erables, a trois tuiles au moins du camion. */

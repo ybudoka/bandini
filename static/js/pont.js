@@ -9,7 +9,7 @@
    traversier — `solide`, `route`, `passage` sauves), et `lever` les rend a l'eau, exactement comme
    avant. Ce qui est dessus a ce moment-la tombe a l'eau : un char coule, un passant nage.
 
-   ⚠️ DERRIERE L'OPTION DE LA NEIGE (`B.options.neige`) : l'hiver du jeu. Sans elle, jamais de glace.
+   ⚠️ L'HIVER DU JEU, POUR TOUT LE MONDE (la saison a remplace l'option de la neige, 29 sept. 2026).
 
    ⚠️ UN BATEAU NE SE FAIT PAS PRENDRE : tant qu'une coque est sur le chemin, la baie attend pour prendre
    (on reessaie a la seconde suivante). Et une fois la glace posee, une coque s'y bute (`tuileInterdite`
@@ -23,10 +23,10 @@ const Pont = (function () {
   //: La glace posee : { carte, sauve: [[i, solide, route, passage]], fondues: Set d'indices }.
   let pose = null;
 
-  /** Le grand froid ce jour-la ? Pure (avec l'option). */
+  /** Le grand froid ce jour-la ? Pure. */
   function froidA(jour) {
     const d = donnees();
-    return !!(d && d.chemin && B.options && B.options.neige && typeof Calendrier !== 'undefined'
+    return !!(d && d.chemin && typeof Calendrier !== 'undefined'
               && d.froid.jours.indexOf(Calendrier.jourDeLAnnee(jour)) >= 0);
   }
 

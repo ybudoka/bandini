@@ -738,8 +738,6 @@ const Hud = (function () {
       bascule('muet', 'SON COUPÉ'),
       bascule('daltonien', 'PALETTE DALTONIENNE'),
       bascule('trace', 'TRACE DES VÉHICULES'),
-      // ⚠️ M12 : derriere une option tant que la sonde de performance ne l'a pas jugee.
-      bascule('neige', 'TEMPÊTES DE NEIGE (ESSAI)'),
       bascule('brouillard', 'BROUILLARD (ESSAI)'),
       bascule('verglas', 'VERGLAS (ESSAI)'),
       // ⚠️ Retour de Martin : vue de dessus, on n'est pas assis dans l'auto. Le
@@ -2563,6 +2561,14 @@ const Hud = (function () {
       { libelle: 'OBJECTIF SUIVANT', actif: !!m, faire: function () { Histoire.avancer(); return true; } },
       { libelle: 'TERMINER LA MISSION', actif: !!m, faire: function () { Histoire.reussir(); return true; } },
       entete('DIVERS'),
+      // Les saisons se voient sans jouer vingt-six jours (les quatre saisons, lot 1). Un seul
+      // `nouveauJour` : la manchette et les effets d'UNE nuit, pas d'un mois.
+      { libelle: 'MOIS SUIVANT', detail: Calendrier.moisEcrit(B.partie.jour), faire: function (item) {
+        B.partie.jour = Calendrier.premierDuMoisSuivant(B.partie.jour);
+        Missions.nouveauJour(); Missions.sauvegarderPartie();
+        item.detail = Calendrier.moisEcrit(B.partie.jour);
+        return false;
+      } },
       // ⚠️ Coop locale (M14, essai) : PAS une triche de `B.partie.triches` — elle
       // n'est jamais sauvegardee (on la rallume a chaque essai) et bascule une
       // VRAIE entite dans le monde, pas juste un drapeau.

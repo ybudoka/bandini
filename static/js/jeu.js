@@ -1269,14 +1269,14 @@ const Jeu = (function () {
     // Les fleches d'une course : lumineuses, meme la nuit.
     if (!B.interieur) for (const l of Histoire.lampesDeCourse(vue)) lampes.push(l);
     const projecteur = !B.interieur ? Police.lampeHelico(vue) : null;
-    if (projecteur && Monde.ambiance().alpha > 0.2) lampes.unshift(projecteur);
+    if (projecteur && Monde.ambianceVue().alpha > 0.2) lampes.unshift(projecteur);
     // Les empreintes des chars, pour decouper les faisceaux qui les recouvrent.
     const corpsPhares = !B.interieur ? Vehicules.corpsDesPhares() : [];
     // ⚠️ Le filtre du mode photo se pose sur l'ECRAN (`Base.ecran()`), pas dans
     // `Base.fin` : il ne doit teindre QUE le dernier `drawImage` de cette
     // fonction-la (la ville deja peinte), jamais le HUD dessine juste apres.
     if (B.photo) Base.ecran().filter = FILTRES_PHOTO[B.photo.filtre].css;
-    Base.fin(Verglas.ambiance(Monde.ambiance()), lampes, corpsPhares);   // au noir, la nuit est plus noire
+    Base.fin(Verglas.ambiance(Monde.ambianceVue()), lampes, corpsPhares);   // au noir, la nuit est plus noire
     if (B.photo) Base.ecran().filter = 'none';
     // ⚠️ LES FEUX D'ARTIFICE PAR-DESSUS LA NUIT : une fusee fait sa propre lumiere. Peints sous la nuit,
     // ils s'y eteignaient (vu a la capture : une lueur, pas un eclat) ; leurs lampes eclairent la ville.
@@ -1427,6 +1427,7 @@ const Jeu = (function () {
     try { session = w.sessionStorage || null; } catch (e) { session = null; }
     Sauvegarde.init(w.localStorage, session);
     Object.assign(B.options, Sauvegarde.lireOptions() || {});
+    delete B.options.neige;   // l'option n'existe plus : l'hiver neige pour tout le monde (29 sept. 2026)
     // Les boutons de manette reappris par le joueur (ecran OPTIONS > MANETTE).
     Entree.reglerManette(B.options.manette);
     // ?trace=1 (ou ?perf=1) dans l'adresse : le mode s'allume sans passer par le menu.
@@ -1544,7 +1545,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,

@@ -330,7 +330,7 @@ const Traversier = (function () {
 
   function peindreCoque(ctx, x0, y0, s) {
     const d = donnees(), L = d.largeurPx, H = d.hauteurPx, C = d.coque.cabine * TT;
-    const nuit = Monde.estNuit();
+    const nuit = Monde.estNuitVue();
     const quai = s.phase === 'quai';
     // Le sillage, derriere la poupe, quand il file.
     if (!quai) {

@@ -51,5 +51,15 @@ const Calendrier = (function () {
     return 'JOUR ' + jour + (m ? ' · ' + ECRITS[m] : '');
   }
 
-  return { donnees, jourDeLAnnee, mois, saison, estLe, saisonDuJour, jourEcrit };
+  /** Le jour de partie ou commence le mois qui suit `jour` (janvier de l'annee suivante apres
+      decembre). La triche MOIS SUIVANT. */
+  function premierDuMoisSuivant(jour) {
+    const d = donnees(), j = jourDeLAnnee(jour);
+    for (const m of d.mois) if (m[1] > j) return jour + (m[1] - j);
+    return jour + (d.annee - j) + 1;
+  }
+
+  function moisEcrit(jour) { const m = mois(jour); return m ? ECRITS[m] : ''; }
+
+  return { donnees, jourDeLAnnee, mois, saison, estLe, saisonDuJour, jourEcrit, premierDuMoisSuivant, moisEcrit };
 })();

@@ -2609,7 +2609,9 @@ const TUILES = (function () {
   function trottoir(ctx, v, T) {
     const joinOuest = (v & 1) === 0, joinNord = (v & 2) === 0;
     const usure = (v >> 2) & 15, usage = (v >> 6) & 3, rang = (v >> 8) & 3;
-    const pal = usage === 3 ? BETON_USINE : rang === 1 ? BETON_CHIC : BETON;
+    const pal0 = usage === 3 ? BETON_USINE : rang === 1 ? BETON_CHIC : BETON;
+    // L'hiver, la neige qui tient blanchit la dalle (les saisons, lot 1).
+    const pal = typeof Saisons !== 'undefined' ? Saisons.enneiger(pal0) : pal0;
     // ⚠️ L'USURE SE DEPLACE, comme la salete : une rue cossue n'a ni fissure ni
     // rapiecage ; une rue pauvre en a davantage — les memes dessins, pas un motif
     // de plus. Et le beton d'usine est tache une dalle sur quatre.
@@ -2645,14 +2647,25 @@ const TUILES = (function () {
   const GAZON = { fond: '#4f8d3e', clair: '#5a9c47', sombre: '#427a33',
                   brin: '#6aad55', terre: '#6d5c3e', terre2: '#7d6c4c', fleur: '#cfc95c' };
 
+  /** Le gazon DE LA SAISON (docs/jalons/les-quatre-saisons-realistes.md, lot 1) : la palette du
+      moment par-dessus `GAZON` — l'ete, c'est `GAZON`, au pixel. ⚠️ TOUT ce qui peint du gazon le
+      lit (la pelouse, la bande devant les maisons, le pied des clotures, le tour de la piscine) :
+      un seul vert d'ete oublie, et la ville de janvier est blanche rayee de vert. */
+  function gazonDuMoment() {
+    return typeof Saisons !== 'undefined' ? Object.assign({}, GAZON, Saisons.palette().gazon) : GAZON;
+  }
+  //: Le gazon brule des rues pauvres, que la neige couvre comme le reste.
+  const GAZON_BRULE = { fond: '#6f8a3e' };
+
   function herbe(ctx, v, T) {
-    plein(ctx, GAZON.fond, T);
-    points(ctx, v + 1, T, GAZON.clair, 12, 3);
-    points(ctx, v + 1, T, GAZON.sombre, 8, 60);
+    const G = gazonDuMoment();
+    plein(ctx, G.fond, T);
+    points(ctx, v + 1, T, G.clair, 12, 3);
+    points(ctx, v + 1, T, G.sombre, 8, 60);
     if (v === 12 || v === 13) {
       // Des touffes : trois brins debout, et c'est tout ce qu'il faut pour que
       // le gazon cesse d'etre un aplat.
-      ctx.fillStyle = GAZON.brin;
+      ctx.fillStyle = G.brin;
       for (let i = 0; i < 3; i++) {
         const x = 3 + Math.floor(bruit(v + 1, 13 + i) * (T - 6));
         const y = 3 + Math.floor(bruit(v + 1, 23 + i) * (T - 7));
@@ -2663,19 +2676,29 @@ const TUILES = (function () {
       // Le gazon a pele : de la terre, la ou l'on coupe toujours au meme
       // endroit. Jamais jusqu'au bord — sinon c'est un carre de terre.
       const x = 4 + Math.floor(bruit(v + 1, 33) * 4), y = 4 + Math.floor(bruit(v + 1, 34) * 4);
-      ctx.fillStyle = GAZON.terre;
+      ctx.fillStyle = G.terre;
       ctx.fillRect(x, y, 6, 4); ctx.fillRect(x + 1, y - 1, 4, 6);
-      ctx.fillStyle = GAZON.terre2;
+      ctx.fillStyle = G.terre2;
       ctx.fillRect(x + 2, y + 1, 3, 2);
     } else if (v === 15) {
       // Des pissenlits : TROIS, et jamais alignes — quatre points tires dans
       // la meme suite se rangeaient en diagonale, et une pelouse entiere de
       // diagonales jaunes n'est pas une pelouse (c'est la lecon du bruit, deja
       // apprise en haut de ce fichier pour l'asphalte).
-      ctx.fillStyle = GAZON.fleur;
+      ctx.fillStyle = G.fleur;
       for (let i = 0; i < 3; i++) {
         ctx.fillRect(3 + Math.floor(bruit(v + 1, 43 + i * 7) * (T - 6)),
                      3 + Math.floor(bruit(v + 1, 91 - i * 5) * (T - 6)), 1, 1);
+      }
+    }
+    // Les FEUILLES MORTES (les saisons, lot 1) : deux ou trois feuilles par tuile, jamais alignees
+    // (la lecon des pissenlits), rouges et orange — la palette d'ete les a de la couleur du fond.
+    if (G.feuille !== G.fond) {
+      for (let i = 0; i < 3; i++) {
+        if (bruit(v + 1, 71 + i) < 0.35) continue;
+        ctx.fillStyle = i === 1 ? G.feuille2 : G.feuille;
+        const x = 2 + Math.floor(bruit(v + 1, 51 + i * 5) * (T - 4)), y = 2 + Math.floor(bruit(v + 1, 61 - i * 3) * (T - 4));
+        ctx.fillRect(x, y, 2, 1); ctx.fillRect(x, y + 1, 1, 1);
       }
     }
   }
@@ -2692,23 +2715,24 @@ const TUILES = (function () {
                    gravier: '#8b8878', suie: '#43402f' };
 
   function friche(ctx, v, T) {
-    plein(ctx, FRICHE.fond, T);
-    points(ctx, v + 1, T, FRICHE.clair, 11, 5);
-    points(ctx, v + 1, T, FRICHE.sombre, 9, 63);
+    const F = typeof Saisons !== 'undefined' ? Object.assign({}, FRICHE, Saisons.palette().friche) : FRICHE;
+    plein(ctx, F.fond, T);
+    points(ctx, v + 1, T, F.clair, 11, 5);
+    points(ctx, v + 1, T, F.sombre, 9, 63);
     if (v === 12 || v === 13) {
       // La terre a perce. ⚠️ Plus large que le rond pele d'un gazon (`herbe`,
       // v === 14), et c'est voulu : la pelouse pele la ou l'on passe toujours
       // au meme endroit, une friche pele parce que plus rien ne la tient.
       const x = 3 + Math.floor(bruit(v + 1, 33) * 4), y = 3 + Math.floor(bruit(v + 1, 34) * 4);
-      ctx.fillStyle = FRICHE.terre;
+      ctx.fillStyle = F.terre;
       ctx.fillRect(x, y, 8, 6); ctx.fillRect(x + 1, y - 1, 6, 8);
-      ctx.fillStyle = FRICHE.terre2;
+      ctx.fillStyle = F.terre2;
       ctx.fillRect(x + 2, y + 1, 4, 3); ctx.fillRect(x + 3, y + 4, 2, 2);
     } else if (v === 14) {
       // Les herbes hautes : ce qui pousse quand plus personne ne tond. Des
       // brins de CINQ pixels — le gazon en met trois, et c'est a peu pres
       // toute la difference entre une pelouse et un lot laisse a lui-meme.
-      ctx.fillStyle = FRICHE.sec;
+      ctx.fillStyle = F.sec;
       for (let i = 0; i < 4; i++) {
         const x = 3 + Math.floor(bruit(v + 1, 13 + i) * (T - 6));
         const y = 3 + Math.floor(bruit(v + 1, 23 + i) * (T - 9));
@@ -2716,8 +2740,8 @@ const TUILES = (function () {
         ctx.fillRect(x + 1, y + 2, 1, 3);
       }
     } else if (v === 15) {
-      points(ctx, v + 1, T, FRICHE.gravier, 8, 81);      // du gravat en miettes
-      points(ctx, v + 1, T, FRICHE.suie, 4, 17);         // et ce qu'on y a brule
+      points(ctx, v + 1, T, F.gravier, 8, 81);      // du gravat en miettes
+      points(ctx, v + 1, T, F.suie, 4, 17);         // et ce qu'on y a brule
     }
   }
 
@@ -2982,7 +3006,7 @@ const TUILES = (function () {
   }
 
   function clotureTuile(ctx, v, T, style) {
-    plein(ctx, '#4f8d3e', T);
+    plein(ctx, gazonDuMoment().fond, T);
     const N = (v & 1) !== 0, E = (v & 2) !== 0, S = (v & 4) !== 0, O = (v & 8) !== 0;
     // ⚠️ Une cloture toute seule se peint quand meme, est-ouest : sans ca,
     // elle n'aurait aucun bras a dessiner et le terrain vague montrerait un
@@ -3153,6 +3177,7 @@ const TUILES = (function () {
   }
 
   function toitPlat(ctx, v, T, style) {
+    if (typeof Saisons !== 'undefined') style = Saisons.enneiger(style);   // la neige qui tient (lot 1)
     const grain = v >> 4;
     champDeToit(ctx, grain + 1, T, style);
     usureDeToit(ctx, grain, T, style);
@@ -3165,6 +3190,7 @@ const TUILES = (function () {
       faite d'apparaitre toute seule la ou les deux pentes se rencontrent, sans
       qu'une tuile ait besoin de savoir qu'elle est au milieu. */
   function toitEnPente(ctx, v, T, style) {
+    if (typeof Saisons !== 'undefined') style = Saisons.enneiger(style);   // la neige qui tient (lot 1)
     const versant = (v >> 4) & 3;           // 0 nord, 1 faite, 2 sud
     plein(ctx, style.fond, T);
     for (let y = 0; y < T; y++) {
@@ -3218,16 +3244,18 @@ const TUILES = (function () {
   /** La bande de gazon devant les maisons : tondue en rayures chez les riches,
       brulee par plaques chez les pauvres. */
   function bandeDeGazon(ctx, usure, rang, T) {
-    plein(ctx, rang === 2 ? '#6f8a3e' : GAZON.fond, T);
+    const G = gazonDuMoment();
+    const brule = typeof Saisons !== 'undefined' ? Saisons.enneiger(GAZON_BRULE).fond : GAZON_BRULE.fond;
+    plein(ctx, rang === 2 ? brule : G.fond, T);
     if (rang === 1) {
       // Les passes de tondeuse : des bandes de quatre pixels, qui se raccordent
       // d'une tuile a l'autre parce qu'elles tombent aux memes rangees.
-      ctx.fillStyle = GAZON.clair;
+      ctx.fillStyle = G.clair;
       for (let y = 0; y < T; y += 8) ctx.fillRect(0, y, T, 4);
       return;
     }
-    points(ctx, usure + 1, T, GAZON.clair, 10, 3);
-    points(ctx, usure + 1, T, GAZON.sombre, 6, 60);
+    points(ctx, usure + 1, T, G.clair, 10, 3);
+    points(ctx, usure + 1, T, G.sombre, 6, 60);
     if (rang === 2 && usure >= 6) {
       const x = 3 + Math.floor(bruit(usure + 1, 80) * 5), y = 3 + Math.floor(bruit(usure + 1, 81) * 5);
       ctx.fillStyle = '#9a8a4a'; ctx.fillRect(x, y, 7, 5); ctx.fillRect(x + 2, y - 1, 4, 7);
@@ -3381,7 +3409,8 @@ const TUILES = (function () {
     // pale. Le meme bleu que la baie, et le joueur se demanderait s'il peut s'y
     // noyer — la reponse est non, et l'image doit le dire avant lui.
     'o': function (ctx, v, T) {
-      plein(ctx, '#4f8d3e', T); points(ctx, v, T, '#427a33', 8, 60);     // le gazon dessous
+      const G = gazonDuMoment();
+      plein(ctx, G.fond, T); points(ctx, v, T, G.sombre, 8, 60);     // le gazon dessous
       const cx = (v & 2) ? T : 0, cy = (v & 4) ? T : 0;                  // est / sud
       const bord = T - 0.5, eau = T - 2.5;
       for (let y = 0; y < T; y++) {
@@ -5783,11 +5812,32 @@ const DECORS = {
   orignal_g: { arrete: 99, w: 32, h: 26, ancre: [16, 25], r: 9, solide: true, peindre: function (ctx, w, h) {
     ctx.save(); ctx.translate(w, 0); ctx.scale(-1, 1); peindreOrignal(ctx); ctx.restore();
   } },
-  arbre: { arrete: 2.0, w: 18, h: 26, ancre: [9, 25], r: 5, solide: true, peindre: function (ctx, w, h) {
+  // ⚠️ L'ARBRE SUIT LA SAISON (docs/jalons/les-quatre-saisons-realistes.md, lot 1) : `variantes` est sa
+  // TEINTE (trois erables : rouge, orange, jaune en octobre ; trois verts l'ete), tiree a l'empreinte
+  // de sa tuile par `creerDecor`. `feuillage` 0 = nu ; `neige` poudre les branches. L'atlas le jette au
+  // changement de palier (`Monde.dessinerSol`). L'ete, c'est l'arbre d'avant, au pixel.
+  arbre: { arrete: 2.0, w: 18, h: 26, ancre: [9, 25], r: 5, solide: true, variantes: 3, peindre: function (ctx, w, h, teinte) {
+    const a = typeof Saisons !== 'undefined' ? Saisons.palette().arbre
+      : { teintes: [['#2f6b2a', '#3f8d38', '#204d1e']], feuillage: 1, neige: 0 };
+    const t = a.teintes[(teinte || 0) % a.teintes.length];
     ctx.fillStyle = '#5a3a1a'; ctx.fillRect(8, 16, 3, 9);
-    ctx.fillStyle = '#2f6b2a'; ctx.fillRect(2, 4, 14, 13); ctx.fillRect(5, 1, 8, 3); ctx.fillRect(0, 7, 18, 7);
-    ctx.fillStyle = '#3f8d38'; ctx.fillRect(4, 3, 6, 5); ctx.fillRect(2, 9, 5, 4);
-    ctx.fillStyle = '#204d1e'; ctx.fillRect(10, 10, 6, 6); ctx.fillRect(6, 14, 8, 3);
+    if (a.feuillage >= 0.5) {
+      ctx.fillStyle = t[0]; ctx.fillRect(2, 4, 14, 13); ctx.fillRect(5, 1, 8, 3); ctx.fillRect(0, 7, 18, 7);
+      ctx.fillStyle = t[1]; ctx.fillRect(4, 3, 6, 5); ctx.fillRect(2, 9, 5, 4);
+      ctx.fillStyle = t[2]; ctx.fillRect(10, 10, 6, 6); ctx.fillRect(6, 14, 8, 3);
+    } else {
+      // Les branches nues : un Y et ses fourches.
+      ctx.fillStyle = '#5a3a1a';
+      ctx.fillRect(9, 8, 1, 8); ctx.fillRect(5, 5, 1, 6); ctx.fillRect(13, 4, 1, 7); ctx.fillRect(6, 10, 3, 1); ctx.fillRect(10, 9, 3, 1);
+      ctx.fillRect(3, 3, 1, 3); ctx.fillRect(15, 2, 1, 3); ctx.fillRect(8, 2, 1, 6);
+      if (a.feuillage > 0) {        // novembre : les dernieres feuilles
+        ctx.fillStyle = t[0]; ctx.fillRect(4, 4, 2, 1); ctx.fillRect(12, 3, 2, 1); ctx.fillRect(9, 6, 2, 1);
+      }
+      if (a.neige > 0) {
+        ctx.fillStyle = '#eef2f6';
+        ctx.fillRect(5, 4, 1, 1); ctx.fillRect(13, 3, 1, 1); ctx.fillRect(8, 1, 1, 1); ctx.fillRect(3, 2, 1, 1); ctx.fillRect(15, 1, 1, 1); ctx.fillRect(6, 9, 3, 1);
+      }
+    }
   } },
   // L'ÉRABLIÈRE de la cabane à sucre (docs/jalons/la-cabane-a-sucre-pour-vrai.md) : un érable, plus haut et
   // plus rond qu'un arbre de la ville, l'écorce grise ; la cime lobée, et les bourgeons rouges du printemps.

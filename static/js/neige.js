@@ -8,10 +8,11 @@
    fonction du jour et de l'heure (`intensiteA`) : rien a simuler, et deux joueurs voient
    la meme tempete le meme soir.
 
-   ⚠️ DERRIERE UNE OPTION (`B.options.neige`, NON par defaut). Sans elle, `intensite()`
-   rend 0, et 0 ne change rien : l'adherence est multipliee par 1, le trafic roule a sa
-   vitesse, rien ne se peint et la charrue ne sort pas. La sonde de performance du
-   navigateur la mesure allumee avant qu'on l'allume pour tout le monde.
+   ⚠️ L'HIVER NEIGE POUR TOUT LE MONDE (Martin, 29 sept. 2026 : la saison remplace l'option
+   « TEMPETES DE NEIGE (ESSAI) ») : une tempete tous les `tous_les` soirs, seulement les jours
+   d'hiver du calendrier (`Calendrier.saison`). Hors de l'hiver, `intensite()` rend 0, et 0 ne
+   change rien : l'adherence est multipliee par 1, le trafic roule a sa vitesse, rien ne se
+   peint et la charrue ne sort pas.
 
    ⚠️ LA NEIGE DEBLAYEE EST LA SEULE MEMOIRE. La charrue note les tuiles qu'elle passe
    (`deneiger`) ; une tuile deblayee se recouvre au bout de `deneige_images`. Rien d'autre
@@ -34,21 +35,23 @@ const Neige = (function () {
   function intensiteA(jour, heure) {
     const d = donnees();
     if (!d) return 0;
+    if (Calendrier.saison(jour) !== 'hiver') return 0;          // la saison, pas une option (29 sept. 2026)
     const t = d.tempete, h = heure * 24;
     if (jour < t.premier || (jour - t.premier) % t.tous_les !== 0) return 0;
     if (h < t.debut_h || h >= t.fin_h) return 0;
     return Math.max(0, Math.min(1, (h - t.debut_h) / t.montee_h, (t.fin_h - h) / t.montee_h));
   }
 
-  /** La tempete, maintenant, pour ce joueur : 0 sans l'option, dedans, ou par beau temps. */
+  /** La tempete, maintenant, pour ce joueur : 0 dedans, hors de l'hiver ou par beau temps. */
   function intensite() {
-    if (!B.options || !B.options.neige || !B.partie || B.interieur) return 0;
+    if (!B.partie || B.interieur) return 0;
     return intensiteA(B.partie.jour, B.partie.heure);
   }
 
   /** Le jour d'une tempete ? Et laquelle (0, 1, 2...) : c'est elle qui choisit le secteur. */
   function rangDeTempete(jour) {
     const t = donnees().tempete;
+    if (Calendrier.saison(jour) !== 'hiver') return -1;       // pas de tempete : rien a deblayer
     if (jour < t.premier || (jour - t.premier) % t.tous_les !== 0) return -1;
     return (jour - t.premier) / t.tous_les;
   }
@@ -68,7 +71,7 @@ const Neige = (function () {
   }
 
   function operation() {
-    if (!B.options || !B.options.neige || !B.partie) return null;
+    if (!B.partie) return null;
     return operationA(B.partie.jour, B.partie.heure);
   }
 
@@ -85,7 +88,7 @@ const Neige = (function () {
   }
 
   function couverture() {
-    if (!B.options || !B.options.neige || !B.partie || B.interieur) return 0;
+    if (!B.partie || B.interieur) return 0;
     return couvertureA(B.partie.jour, B.partie.heure);
   }
 
