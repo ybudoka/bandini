@@ -130,3 +130,30 @@ disent des règles différentes : une fixture de module joue le banc une fois, c
 Rouges au moment d'atterrir, les mêmes avant et après : `test_debug_js::…portes_des_blocs…` (ciné-parc),
 `test_defis_graduels_js::test_l_esquive_se_gagne_sans_frapper` (« IL T'A SONNÉ » après 46 roulades),
 `test_velos_js[23]` (HORS VOIE autobus).
+
+**Vague D livrée le 29 sept. 2026** — le rangement. Un juge déplacé reste le même juge : **6 647 noms
+collectés avant, 6 647 après, `diff` vide** ; chaque fichier touché passe (1 255 verts, le seul rouge
+est celui du ciné-parc, d'avant).
+
+- **`test_moteur_js.py` découpé** (8 960 lignes, 179 juges ; ses sections mentaient) : il garde le socle
+  (10 juges : API, sprites, ville reçue, sauvegarde, singe, son sans audio, cache) ; neuf fichiers neufs —
+  `test_conduite_js` (25), `test_trafic_js` (21), `test_boulots_js` (9), `test_commerces_js` (21),
+  `test_pietons_js` (14), `test_combat_js` (13), `test_hud_js` (24), `test_coop_js` (12), `test_monde_js`
+  (13) — et des juges rendus à leur fichier : la police (+7), les portes et fondus (`test_interieurs_js`,
+  +8), la musique (`test_son_js`, +2), les lampes (`test_la_nuit`, +2). Un script a retrouvé les 189
+  définitions, texte pour texte ; chaque fixture de module est partie avec tous ses juges.
+- **Les petites paires** : `test_garage`, `test_brouillard`, `test_canton_js`, `test_saint_jean`, `test_loto`
+  rejoignent leur jumeau ; `test_viser_a_la_gachette_js` → `test_manette_js` ; `test_trois_defauts_js`
+  dispersé (histoire, interactions) ; les nids-de-poule de `test_ville_vit` → `test_nids_de_poule_js` ;
+  l'hôpital sort des distributrices (`test_hopital.py`, `test_hopital_js.py`).
+- **Les outils des missions** : `tests/outils_missions.py` (`outils(*noms, plafond=100)`, `OUTILS`,
+  `PLUS_LONGUES`) — les aides identiques mot pour mot dans au moins deux fichiers ; celles qui avaient
+  divergé (`boite`, `hommes`, `chemin`, deux `paiements`…) restent locales : les aligner changerait ce que
+  les juges regardent. Les deux fichiers du tronc n'en font qu'un (`test_tronc_plus_long_js`).
+- ⚠️ Le garde d'écriture de Claude Code lit la carte du dépôt PRINCIPAL, pas celle du worktree : un
+  fichier neuf créé dans un worktree peut être refusé alors que sa carte est à jour. Le vérificateur lancé
+  DANS le worktree fait foi.
+
+**Le jalon est livré.** Ce qui reste — les deux rouges honnêtes de la vague A (le kiosque sur l'allée,
+l'empreinte des chars) — a sa ligne au plan : « Les juges : deux rouges honnêtes à trancher ».
+

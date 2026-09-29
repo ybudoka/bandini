@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (274 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (275 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -79,7 +79,7 @@ pas quand l'ordre de travail change.
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
 | Le décor, les bêtes et les gens répondent — deuxième vague | ⬜ **en cours** (livrés : manger au barbecue, caresser le chat, vider un parcomètre, arracher une affiche ; le buisson est annulé ; restent le caddie et le panneau, à préciser par Martin) | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/le-decor-les-betes-et-les-gens-repondent.md#fiche-de-la-deuxième-vague) |
-| Les juges : moins de doublons, plus de morsure | ⬜ **en cours** (✅ vague A livrée : les juges qui ne mordaient pas, et le char coincé ; deux rouges honnêtes à trancher par Martin ; ✅ vague B livrée : la ville partagée, −26 % sur les 73 fichiers migrés ; ✅ vague C livrée : doublons retirés et bancs fusionnés, −23 % sur les 75 fichiers touchés ; vague D en cours : le découpage de test_moteur_js, les petites paires, les outils des missions en commun) | 28 sept. 2026 | **P3** | **correctif** | [fiche](jalons/les-juges-moins-de-doublons-plus-de-morsure.md#fiche) · [notes](jalons/les-juges-moins-de-doublons-plus-de-morsure.md#notes) |
+| Les juges : deux rouges honnêtes à trancher | ⬜ **à faire** (à trancher par Martin : le kiosque de Madame Thibodeau posé sur l'allée est du parc ; cinq dessins de chars qui dépassent leur collision, la pelleteuse de 9 px) | — | **P3** | **correctif** | [fiche](jalons/les-juges-deux-rouges-honnetes-a-trancher.md#fiche) |
 | Des blocs de carte en extensions | ⬜ **en cours** (✅ vagues 1 à 3 livrées : à pied, au volant, à deux, la police qui reprend au bord, et le premier vrai bloc — le chalet du rang, la deuxième planque ; reste « un vrai dehors », avec le bloc qui en aura besoin) | 25 sept. 2026 | **P3** | ajout | [fiche](jalons/des-blocs-de-carte-en-extensions.md#fiche) |
 | Le quartier chinois : le Petit-Canton, un 7e district | ⬜ **en cours** (étape 2 sur 4 : le quartier — ✅ vague A livrée, ses bâtiments, ses enseignes et leurs plaques à idéogrammes ; ✅ vague B (1re partie) livrée : l'arche et les lanternes ; reste le bus ; ✅ étape 1 [la ville s'agrandit au nord](jalons/la-ville-s-agrandit-au-nord.md#notes) ; étape 3 commencée : le donneur du Petit-Canton et ses premières missions, en cours avec le tripot du casino ; puis les Mantes) | 26 sept. 2026 | **P3** | ajout | [fiche](jalons/le-quartier-chinois.md#fiche) |
 | L'école rivale : les Mantes, un gang qui sait se battre | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/l-ecole-rivale.md#fiche) |
