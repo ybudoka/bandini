@@ -1275,7 +1275,6 @@ const Jeu = (function () {
     // La lueur de l'ecran du cine-parc, pendant le film.
     if (!B.interieur) for (const l of Cineparc.lampes(vue)) lampes.push(l);
     if (!B.interieur) for (const l of Fetes.lampes(vue)) lampes.push(l);
-    if (!B.interieur) for (const l of Train.lampes(vue)) lampes.push(l);   // le phare de la locomotive
     // Les fleches d'une course : lumineuses, meme la nuit.
     if (!B.interieur) for (const l of Histoire.lampesDeCourse(vue)) lampes.push(l);
     const projecteur = !B.interieur ? Police.lampeHelico(vue) : null;

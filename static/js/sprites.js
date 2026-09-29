@@ -2117,6 +2117,91 @@ const MACHINE_TRAMWAY = Object.assign({}, MACHINE_AUTOBUS, {
 SPRITES.tramway = enVolume(MACHINE_TRAMWAY, 48, 80, Object.assign({}, SPRITES.autobus.pal, { c: '#e9e3d0', s: '#c0392b', e: '#3a3d44' }));
 SPRITES.tramway.couleur = '#e9e3d0';
 SPRITES.tramway.de = 'autobus';
+
+/* --- LE TRAIN : une locomotive et ses voitures, en volume comme le parc -------------
+
+   ⚠️ Martin (29 sept. 2026) : « le visuel du train doit être comme les autres véhicules ». Il roulait en
+   rectangles peints à la main ; ce sont maintenant deux MACHINES projetées au cap, comme l'autobus et le
+   tramway, et chaque voiture passe par le peintre des chars (`Vehicules.dessinerUn`, depuis `Train`).
+   16 px de large : la rangée de la voie. Ce ne sont pas des chars du catalogue — rien ne les vole, rien ne
+   les conduit : `Train` les pose à l'heure. */
+// ⚠️ UN BOGIE, UNE ROUE : deux essieux par bogie faisaient quatre roues au sol de profil, et à cette taille on
+// lisait une machine vue d'en haut (`test_de_profil_une_machine_montre_ses_roues`). Une roue un peu plus grande
+// par bogie se lit comme le bogie.
+function bogieDeTrain(u) { return essieuDeChar(u, 3.0, 6.4); }
+// La locomotive : 64 px, un nez incliné et sa cabine, la bande jaune, les grilles du moteur, les ventilateurs.
+const MACHINE_LOCOMOTIVE = {
+  profondeur: BIAIS_DU_SOL, contour: true, arrondi: true,
+  pieces: [].concat(
+    bogieDeTrain(21.5), bogieDeTrain(-21.5),
+    [caisseDeChar({ dessus: [[32, 10.6], [30.2, 16.4], [28.4, 18.2], [-30.8, 18.2], [-32, 16.8]], bas: 2.0,
+                    essieux: [21.5, -21.5], r: 3.0, plan: planPince(64, 8.0, 6.8), aretes: 'ccCc' })],
+    [
+      ['bloc', [30.2, 31.4], [-6.0, 6.0], [11.8, 15.8], 'v', 'v', 'v', 0.05],              // le pare-brise, sur le nez,
+      ['tube', [31.6, -6.4, 11.4], [31.6, 6.4, 11.4], 'D', 0.5], ['tube', [30.3, -6.4, 16.1], [30.3, 6.4, 16.1], 'D', 0.5],   // et son cadre
+      ['tube', [31.6, -6.4, 11.4], [30.3, -6.4, 16.1], 'D', 0.5], ['tube', [31.6, 6.4, 11.4], [30.3, 6.4, 16.1], 'D', 0.5],
+      ['bloc', [24.2, 28.4], [8.01, 8.03], [10.6, 15.0], 'v', 'v', 'v', 0.04],              // les vitres de la cabine
+      ['bloc', [24.2, 28.4], [-8.03, -8.01], [10.6, 15.0], 'v', 'v', 'v', 0.04],
+      ['tube', [23.8, 8.04, 10.3], [28.8, 8.04, 10.3], 'D', 0.5], ['tube', [23.8, 8.04, 15.3], [28.8, 8.04, 15.3], 'D', 0.5],
+      ['tube', [29.0, 8.04, 10.3], [29.0, 8.04, 15.3], 'D', 0.5],
+      ['tube', [23.8, -8.04, 10.3], [28.8, -8.04, 10.3], 'D', 0.5], ['tube', [23.8, -8.04, 15.3], [28.8, -8.04, 15.3], 'D', 0.5],
+      ['tube', [29.0, -8.04, 10.3], [29.0, -8.04, 15.3], 'D', 0.5],
+      ['bloc', [20.4, 23.0], [8.02, 8.06], [2.6, 15.0], 'E', 'E', 'E', 0.05],              // la porte de la cabine
+      ['bloc', [20.4, 23.0], [-8.06, -8.02], [2.6, 15.0], 'E', 'E', 'E', 0.05],
+      ['tube', [31.6, 8.05, 6.2], [-31.6, 8.05, 6.2], 's', 1.0], ['tube', [31.6, -8.05, 6.2], [-31.6, -8.05, 6.2], 's', 1.0],   // la bande jaune
+      ['tube', [31.6, 8.05, 7.4], [-31.6, 8.05, 7.4], 's', 1.0], ['tube', [31.6, -8.05, 7.4], [-31.6, -8.05, 7.4], 's', 1.0],
+      ['bloc', [-26.0, -6.0], [8.02, 8.06], [10.2, 14.6], 'D', 'D', 'D', 0.05],             // les grilles du moteur
+      ['bloc', [-26.0, -6.0], [-8.06, -8.02], [10.2, 14.6], 'D', 'D', 'D', 0.05],
+      ['bloc', [-26.0, -20.0], [-4.2, 4.2], [18.2, 18.9], 'C', 'D', 'D', 0.1],              // les ventilateurs du toit
+      ['bloc', [-17.0, -11.0], [-4.2, 4.2], [18.2, 18.9], 'C', 'D', 'D', 0.1],
+      ['bloc', [-8.0, -2.0], [-4.2, 4.2], [18.2, 18.9], 'C', 'D', 'D', 0.1],
+      ['tube', [26.0, -1.2, 18.4], [26.0, 1.2, 19.6], 'k', 0.4],                            // le klaxon, sur la cabine
+      ['bloc', [31.8, 32.8], [-7.0, 7.0], [0.6, 3.0], 'B', 'B', 'B', 0.1],                  // le chasse-pierres
+    ],
+    lampesDeChar(31.8, -31.8, 4.4, 7.9, 4.4, 6.2),
+  ),
+};
+// La voiture de passagers : 52 px d'acier, une rangée de fenêtres, la bande bordeaux, une porte à chaque bout.
+const FENETRES_VOITURE_TRAIN = [];
+// ⚠️ LE PATRON DE L'AUTOBUS, montant compris (`FENETRES_AUTOBUS`) : sans le montant vertical, la vitre et ses
+// deux traverses ne se peignaient pas — l'aperçu agrandi montrait un flanc nu.
+[-21.2, -15.2, -9.2, -3.2, 2.8, 8.8, 14.8].forEach(function (u) {
+  [-1, 1].forEach(function (sgn) {
+    const w = sgn * 8.02;
+    FENETRES_VOITURE_TRAIN.push(['bloc', [u, u + 4.2], [w - 0.01, w + 0.01], [10.6, 15.0], 'v', 'v', 'v', 0.04]);
+    FENETRES_VOITURE_TRAIN.push(['tube', [u - 0.4, sgn * 8.04, 10.3], [u + 4.6, sgn * 8.04, 10.3], 'D', 0.5],
+                                ['tube', [u - 0.4, sgn * 8.04, 15.3], [u + 4.6, sgn * 8.04, 15.3], 'D', 0.5]);
+    FENETRES_VOITURE_TRAIN.push(['tube', [u + 4.8, sgn * 8.04, 10.3], [u + 4.8, sgn * 8.04, 15.3], 'D', 0.5]);
+  });
+});
+const MACHINE_VOITURE_TRAIN = {
+  profondeur: BIAIS_DU_SOL, contour: true, arrondi: true,
+  pieces: [].concat(
+    bogieDeTrain(18.0), bogieDeTrain(-18.0),
+    [caisseDeChar({ dessus: [[26, 16.6], [25.0, 18.0], [-25.0, 18.0], [-26, 16.6]], bas: 2.0,
+                    essieux: [18.0, -18.0], r: 3.0, plan: planPince(52, 8.0, 7.2), aretes: 'cCc' })],
+    FENETRES_VOITURE_TRAIN,
+    [
+      ['tube', [25.6, 8.05, 6.4], [-25.6, 8.05, 6.4], 's', 1.0], ['tube', [25.6, -8.05, 6.4], [-25.6, -8.05, 6.4], 's', 1.0],   // la bande
+      ['bloc', [21.6, 24.2], [8.02, 8.06], [2.6, 15.2], 'E', 'E', 'E', 0.05],               // les portes, aux deux bouts
+      ['bloc', [21.6, 24.2], [-8.06, -8.02], [2.6, 15.2], 'E', 'E', 'E', 0.05],
+      ['bloc', [-24.2, -21.6], [8.02, 8.06], [2.6, 15.2], 'E', 'E', 'E', 0.05],
+      ['bloc', [-24.2, -21.6], [-8.06, -8.02], [2.6, 15.2], 'E', 'E', 'E', 0.05],
+      ['tube', [22.9, 8.08, 2.6], [22.9, 8.08, 15.2], 'D', 0.06], ['tube', [22.9, -8.08, 2.6], [22.9, -8.08, 15.2], 'D', 0.06],   // leur battant
+      ['tube', [-22.9, 8.08, 2.6], [-22.9, 8.08, 15.2], 'D', 0.06], ['tube', [-22.9, -8.08, 2.6], [-22.9, -8.08, 15.2], 'D', 0.06],
+      ['bloc', [26.0, 26.4], [-3.4, 3.4], [2.6, 16.0], 'D', 'D', 'D', 0.1],                 // les soufflets, entre deux voitures
+      ['bloc', [-26.4, -26.0], [-3.4, 3.4], [2.6, 16.0], 'D', 'D', 'D', 0.1],
+      ['tube', [22.0, 0, 18.3], [-22.0, 0, 18.3], 'C', 1.4],                                // l'échine du toit
+    ],
+  ),
+};
+SPRITES.locomotive = enVolume(MACHINE_LOCOMOTIVE, 64, 88,
+  { k: '#101018', c: '#7a1f2b', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', s: '#e8b923', e: '#5e1822' });
+SPRITES.voiture_train = enVolume(MACHINE_VOITURE_TRAIN, 52, 72,
+  { k: '#101018', c: '#a9aeb4', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', s: '#7a1f2b', e: '#8a9096' });
+// ⚠️ Une voiture de train n'a ni phare ni feu : c'est la locomotive qui les porte. Le juge des lampes
+// (`test_la_machine_se_projette_au_cap_et_suit_son_ombre`) la laisse passer sur ce point, et sur lui seul.
+SPRITES.voiture_train.sansLampes = true;
 SPRITES.luxe_vus = enVolume(MACHINE_LUXE_VUS, 32, 56, SPRITES.luxe.pal);
 SPRITES.luxe.variantes = { luxe: 3, luxe_vus: 2 };
 SPRITES.bateau_console = assisDedans(MACHINE_BATEAU_CONSOLE, 30, 48, 'volant', SPRITES.bateau.pal);

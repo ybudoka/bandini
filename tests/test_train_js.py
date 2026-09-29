@@ -369,3 +369,30 @@ def test_engage_sur_la_voie_on_ne_s_y_arrete_pas(banc):
         return { t0: t0, surLaVoie: surLaVoie, stop: !!inter };
     }""" % ATTENTE)
     assert r["t0"] >= 0 and r["stop"] and r["surLaVoie"] == 0
+
+
+def test_le_train_se_peint_comme_les_autres_vehicules(banc):
+    # Martin (29 sept. 2026) : « le visuel du train doit être comme les autres véhicules ». Chaque voiture est une
+    # MACHINE en volume (`sprites.js`), peinte par le même peintre que les chars (`Vehicules.dessinerUn`) : au sol
+    # comme sur le viaduc.
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        %s
+        const vus = {};
+        for (const [x, cam] of [[70.5, 62], [200.5, 192]]) {
+          aLHeure(L, trainDevant(L, x * L.TT, 0));
+          presDe(L, cam, 9);
+          const avant = L.Vehicules.dessinerUn;
+          L.Vehicules.dessinerUn = function (ctx, v) {
+            if (v.type === 'train') vus[x + ' ' + v.sprite] = (vus[x + ' ' + v.sprite] || 0) + 1;
+            return avant.apply(this, arguments);
+          };
+          o.frame(1);
+          L.Vehicules.dessinerUn = avant;
+        }
+        const S = L.SPRITES;
+        return { vus: vus, machines: ['locomotive', 'voiture_train'].map(function (s) { return !!S[s] && !!S[s].machine; }) };
+    }""" % DEVANT)
+    assert r["machines"] == [True, True]
+    for x in ("70.5", "200.5"):
+        assert r["vus"].get(x + " locomotive") == 1 and r["vus"].get(x + " voiture_train", 0) >= 2, r["vus"]

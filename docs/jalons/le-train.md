@@ -1030,6 +1030,15 @@ pointillée sous la montagne.
   du trafic forçait une barrière baissée après `patience_images` : devant elle, on klaxonne, on ne force pas.
   Huit mineurs restent notés dans le registre de la vague (conducteur vidé pour tout char frappé, l'enfant que le
   train traverse, la barrière cassée pour l'aller ET le retour…).
-- 26 juges : `test_train.py` (7), `test_train_js.py` (19). Restent : **on monte** (vague 2), **on s'assoit**
+- ⚠️ **Peint comme les autres véhicules** (Martin, 29 sept. 2026 : « le visuel du train doit être comme les autres
+  véhicules »). Les rectangles peints à la main sont partis : la locomotive et la voiture de passagers sont deux
+  **machines en volume** (`SPRITES.locomotive`, `SPRITES.voiture_train`, bâties comme le tramway), et chaque voiture
+  passe par le peintre des chars (`Vehicules.dessinerUn`) — même projection, même ombre, mêmes phares la nuit ; `z` la
+  lève sur le viaduc. Les juges des machines (`test_poses_vehicules`) les jugent comme les autres : le pare-brise a
+  son cadre, **une roue par bogie** (deux essieux faisaient quatre roues de profil — une machine vue d'en haut), les
+  lampes débordent du coin comme celles de l'autobus. La voiture n'a ni phare ni feu, et le déclare (`sansLampes`) :
+  le juge des lampes la laisse passer sur ce point seul. Sans le montant vertical de l'autobus, une rangée de
+  fenêtres ne se peignait pas — l'aperçu agrandi l'a montré.
+- 27 juges : `test_train.py` (7), `test_train_js.py` (20). Restent : **on monte** (vague 2), **on s'assoit**
   (vague 3).
 

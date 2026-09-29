@@ -374,7 +374,7 @@ def machines(banc):
                     const avant = (moy(lampes.l, 0) - moy(lampes.t, 0)) * Math.cos(a) + (moy(lampes.l, 1) - moy(lampes.t, 1)) * Math.sin(a) * K;
                     if (avant <= 0) envers.push([i, avant]);
                 }
-                out[slug] = { dessins: Object.keys(dessins).length, faux: faux, envers: envers, deux: deux, K: K };
+                out[slug] = { dessins: Object.keys(dessins).length, faux: faux, envers: envers, deux: deux, K: K, sansLampes: !!def.sansLampes };
             });
             out.n = n;
             return out;
@@ -996,7 +996,12 @@ def test_la_machine_se_projette_au_cap_et_suit_son_ombre(machines, paquet):
         assert m["envers"] == [], f"{slug} : son phare est derrière son feu aux caps {m['envers']}"
         # ⚠️ Un juge qui ne regarde rien passe : les deux lampes doivent se voir
         # ensemble à la plupart des caps (28 sur 32 le jour du correctif).
-        assert m["deux"] >= n * 3 // 4, f"{slug} : phare et feu ne se voient ensemble qu'à {m['deux']} caps sur {n}"
+        # ⚠️ Sauf ce qui n'en porte AUCUNE, et le déclare (`sansLampes`) : une voiture de train — sa
+        # locomotive, elle, passe le juge comme les autres.
+        if m["sansLampes"]:
+            assert m["deux"] == 0, f"{slug} se dit sans lampes et en montre"
+        else:
+            assert m["deux"] >= n * 3 // 4, f"{slug} : phare et feu ne se voient ensemble qu'à {m['deux']} caps sur {n}"
         assert m["K"] == biais, f"{slug} : le sol se voit à {m['K']} sous la machine et à {biais} sous son ombre"
 
 

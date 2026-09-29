@@ -350,40 +350,27 @@ const Train = (function () {
     return out;
   }
 
-  /** Une voiture vue d'en haut : 20 px de large, `z` la lève (le viaduc), `fin` la coupe au portail. */
-  function peindreVoiture(ctx, w, cx, cy, sens, z, fin) {
-    const d = donnees();
-    let a = w.a - cx, b = w.b - cx;
-    const coupe = fin - cx;
-    if (a >= coupe) return;
-    b = Math.min(b, coupe);
-    const y = Math.round(d.yPx - cy - 10 - z), long = Math.round(b - a);
-    a = Math.round(a);
-    if (long <= 0) return;
-    ctx.fillStyle = 'rgba(0,0,0,0.28)';              // l'ombre, au sol
-    ctx.fillRect(a + 2, Math.round(d.yPx - cy - 8) + 3, long, 18);
-    if (w.loco) {
-      ctx.fillStyle = '#6e1a26'; ctx.fillRect(a, y, long, 20);
-      ctx.fillStyle = '#3b3b3f'; ctx.fillRect(a + 2, y + 3, long - 4, 14);      // le toit
-      ctx.fillStyle = '#e8b923'; ctx.fillRect(a, y + 1, long, 1); ctx.fillRect(a, y + 18, long, 1);
-      ctx.fillStyle = '#595960';
-      for (let k = a + 8; k < a + long - 8; k += 9) ctx.fillRect(k, y + 7, 5, 6);   // les grilles du moteur
-      const nez = sens > 0 ? a + long - 6 : a;
-      if (nez + 6 <= a + long) {
-        ctx.fillStyle = '#8a2232'; ctx.fillRect(nez, y + 2, 6, 16);            // la cabine
-        ctx.fillStyle = '#9fc3d6'; ctx.fillRect(sens > 0 ? nez + 3 : nez + 1, y + 5, 2, 10);   // son pare-brise
-        ctx.fillStyle = '#fff4b0';
-        ctx.fillRect(sens > 0 ? a + long - 1 : a, y + 4, 1, 3); ctx.fillRect(sens > 0 ? a + long - 1 : a, y + 13, 1, 3);
-      }
-    } else {
-      ctx.fillStyle = '#9ea4ab'; ctx.fillRect(a, y, long, 20);
-      ctx.fillStyle = '#b9bec4'; ctx.fillRect(a + 1, y + 4, long - 2, 12);     // le toit bombé
-      ctx.fillStyle = '#6e1a26'; ctx.fillRect(a, y + 2, long, 1); ctx.fillRect(a, y + 17, long, 1);
-      ctx.fillStyle = '#2b3a4a';
-      for (let k = a + 4; k < a + long - 4; k += 7) { ctx.fillRect(k, y, 4, 2); ctx.fillRect(k, y + 18, 4, 2); }   // les fenêtres
-      ctx.fillStyle = '#8b9097'; ctx.fillRect(a + 3, y + 9, long - 6, 2);         // les ventilateurs du toit
-    }
-    B.stats.rects += 8;
+  /** ⚠️ COMME LES AUTRES VÉHICULES (Martin, 29 sept. 2026) : chaque voiture est une machine en volume
+      (`SPRITES.locomotive`, `SPRITES.voiture_train`) peinte par le peintre des chars, `Vehicules.dessinerUn` —
+      même projection, même ombre, mêmes phares la nuit. On lui passe un objet qui a la forme d'un char (un par
+      voiture, réutilisé d'une image à l'autre) ; `z` le lève sur le viaduc comme un char qui saute. */
+  const PEINTES = [];
+  function voitureAPeindre(k, w, e, z) {
+    const o = PEINTES[k] || (PEINTES[k] = { type: 'train', etat: 'roule', panneT: 0, swaps: null,
+                                            def: { classe: 'train', largeur: 16, longueur: 0 } });
+    o.sprite = w.loco ? 'locomotive' : 'voiture_train';
+    o.conducteur = w.loco ? 'train' : null;          // la locomotive allume ses phares, les voitures non
+    o.def.longueur = w.loco ? 64 : 52;
+    o.x = (w.a + w.b) / 2; o.y = donnees().yPx; o.z = z;
+    o.angle = e.sens > 0 ? 0 : Math.PI;
+    return o;
+  }
+  /** Peinte, et coupée au portail : ce qui est passé à l'est de `fin` est sous la montagne. */
+  function peindreVoiture(ctx, o, cx, cy, fin) {
+    ctx.save();
+    ctx.beginPath(); ctx.rect(-100000, -100000, fin - cx + 100000, 200000); ctx.clip();
+    Vehicules.dessinerUn(ctx, o, cx, cy);
+    ctx.restore();
   }
 
   /** Au sol : la voie (ballast, traverses, rails d'écartement de vrai train), et l'ombre du tablier. */
@@ -423,13 +410,14 @@ const Train = (function () {
     const e = etat(Autobus.tempsDeLaPartie());
     if (!e) return;
     const fin = d.tunnel * TT;
-    for (const w of voitures(e)) {
+    voitures(e).forEach(function (w, k) {
       const m = (w.a + w.b) / 2;
-      if (surLeViaduc(m) || w.a >= fin || w.b < cx - 20 || w.a > cx + VW + 20) continue;
-      if (d.yPx < cy - 40 || d.yPx > cy + VH + 40) continue;
-      visibles.push({ id: ID_TRI, vivant: true, x: m, y: d.yPx + 10,
-                      peindreFoire: function (ctx) { peindreVoiture(ctx, w, cx, cy, e.sens, 0, fin); } });
-    }
+      if (surLeViaduc(m) || w.a >= fin || w.b < cx - 40 || w.a > cx + VW + 40) return;
+      if (d.yPx < cy - 40 || d.yPx > cy + VH + 40) return;
+      const o = voitureAPeindre(k, w, e, 0);
+      visibles.push({ id: ID_TRI, vivant: true, x: m, y: d.yPx + 8,
+                      peindreFoire: function (ctx) { peindreVoiture(ctx, o, cx, cy, fin); } });
+    });
   }
 
   /** En haut, par-dessus les gens et les chars : le viaduc (ses rampes, son tablier, ses piliers), les voitures
@@ -457,10 +445,10 @@ const Train = (function () {
     B.stats.rects += (Math.max(0, t1 - t0 + 1)) * 9;
     const e = etat(Autobus.tempsDeLaPartie()), fin = d.tunnel * TT;
     if (e) {
-      for (const w of voitures(e)) {
+      voitures(e).forEach(function (w, k) {
         const m = (w.a + w.b) / 2;
-        if (surLeViaduc(m) && w.b >= cx - 20 && w.a <= cx + VW + 20) peindreVoiture(ctx, w, cx, cy, e.sens, hauteur(m), fin);
-      }
+        if (surLeViaduc(m) && w.b >= cx - 40 && w.a <= cx + VW + 40) peindreVoiture(ctx, voitureAPeindre(k, w, e, hauteur(m)), cx, cy, fin);
+      });
     }
     // Le portail : un arc de béton dans la falaise, et le noir du tunnel.
     const px = fin - cx;
@@ -494,19 +482,9 @@ const Train = (function () {
     }
   }
 
-  /** La nuit : le phare de la locomotive. */
-  function lampes(vue) {
-    const d = donnees();
-    if (!d || !enVille()) return [];
-    const e = etat(Autobus.tempsDeLaPartie());
-    if (!e || e.tete >= d.tunnel * TT) return [];
-    const x = e.tete + e.sens * 20;
-    return [{ x: x - vue.x, y: d.yPx - hauteur(e.tete) - vue.y, r: 60, c: 'rgba(255,240,190,0.55)' }];
-  }
-
   return { donnees: donnees, etat: etat, etendue: etendue, maj: maj, profil: profil,
            passageFerme: passageFerme, signalDevant: signalDevant, brisee: brisee, ligneHorsDeLaVoie: ligneHorsDeLaVoie, engage: engage,
            surLeViaduc: surLeViaduc, auSol: auSol, hauteur: hauteur,
-           dessinerVoie: dessinerVoie, ajouterVisibles: ajouterVisibles, dessinerHaut: dessinerHaut, lampes: lampes,
+           dessinerVoie: dessinerVoie, ajouterVisibles: ajouterVisibles, dessinerHaut: dessinerHaut,
            dessinerSurLaCarte: dessinerSurLaCarte };
 })();
