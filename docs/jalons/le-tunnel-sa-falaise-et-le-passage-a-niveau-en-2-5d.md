@@ -47,3 +47,8 @@ descendent, les éboulis au pied.
   l'eau au nord, ne montrent que le rebord du plateau et sa lèvre au bord de l'eau.
 - Juges : `test_la_barriere_pivote_en_volume`, `test_les_poteaux_du_passage_se_trient_avec_les_gens`,
   `test_la_falaise_sait_ou_est_sa_crete` (`test_train_js.py`), chacun vu rouge sous sa mutation.
+- **Le train entre vraiment** (Martin, 29 sept. 2026, sur une capture : « ici on dirait pas que le train
+  entre »). Il était coupé net à la face du portail, et le piédroit ouest se peignait DEVANT lui : il butait
+  contre le béton. Maintenant la voiture reste visible dans l'ouverture (`peindreVoiture` coupe rangée par rangée
+  selon `largeurDeBouche`), le noir du tunnel l'avale du seuil au fond, et la bouche est ouverte à l'ouest — plus
+  de piédroit sous la voûte.

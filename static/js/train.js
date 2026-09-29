@@ -428,10 +428,19 @@ const Train = (function () {
     o.angle = e.sens > 0 ? 0 : Math.PI;
     return o;
   }
-  /** Peinte, et coupée au portail : ce qui est passé à l'est de `fin` est sous la montagne. */
+  /** Peinte, et coupée au portail : ce qui est passé à l'est de `fin` est sous la montagne — sauf ce qui se voit
+      encore DANS la bouche. Martin (29 sept. 2026), le train coupé net contre la face : « ici on dirait pas que le
+      train entre ». La voiture passe dans l'ouverture, rangée par rangée, et le noir du tunnel l'avale
+      (`dessinerPortail`). */
   function peindreVoiture(ctx, o, cx, cy, fin) {
+    const mx = fin - cx, y0 = donnees().rang * TT - cy, bords = bordsDeLaBouche(y0);
     ctx.save();
-    ctx.beginPath(); ctx.rect(-100000, -100000, fin - cx + 100000, 200000); ctx.clip();
+    ctx.beginPath(); ctx.rect(-100000, -100000, mx + 100000, 200000);
+    for (let y = bords[0]; y <= bords[1]; y++) {
+      const l = largeurDeBouche(y, y0);
+      if (l) ctx.rect(mx + Math.round((BOUCHE - l) / 2), y, l, 1);
+    }
+    ctx.clip();
     Vehicules.dessinerUn(ctx, o, cx, cy);
     ctx.restore();
   }
@@ -595,15 +604,27 @@ const Train = (function () {
       ctx.fillStyle = '#6f6b64'; ctx.fillRect(mx + c, s + 3, 1, hs + 2);
       ctx.fillStyle = '#4f4c47'; ctx.fillRect(mx + c, s + 5 + hs, 1, 1);
     }
-    // Le cadre : les deux piédroits et la voûte, trois pixels de béton autour de l'ouverture — l'intrados sombre
-    // contre le noir, l'arête claire dehors.
+    // Le noir du tunnel, par-dessus ce qui y entre : presque rien sur le seuil, tout au fond.
+    for (let y = n; y <= s; y++) {
+      const l = largeurDeBouche(y, y0);
+      if (!l) continue;
+      const x0 = mx + Math.round((E - l) / 2);
+      for (let c = 0; c < l; c++) {
+        const f = (x0 + c - mx + 1) / E;
+        ctx.fillStyle = 'rgba(5,5,8,' + Math.min(0.97, 0.12 + f * f * 0.9).toFixed(2) + ')';
+        ctx.fillRect(x0 + c, y, 1, 1);
+      }
+    }
+    // Le cadre : la voûte et le piédroit du fond, trois pixels de béton autour de l'ouverture — l'intrados sombre
+    // contre le noir, l'arête claire dehors. ⚠️ PAS DE PIÉDROIT À L'OUEST sous la voûte : c'est par là que le
+    // train entre, et un pilier peint devant lui le faisait buter contre le béton.
     for (let y = n - 3; y <= s; y++) {
       const l = largeurDeBouche(y, y0);
       const x0 = l ? mx + Math.round((E - l) / 2) : mx + E / 2, x1 = l ? x0 + l - 1 : x0 - 1;
       const cadre = function (x, r) { ctx.fillRect(x, y, 1, 1); };
       for (let r = 1; r <= 3; r++) {
         if (x0 - r < mx - 3) continue;
-        ctx.fillStyle = ['#6a665f', '#a8a397', '#c6c0b4'][r - 1]; cadre(x0 - r, r);
+        if (l < E) { ctx.fillStyle = ['#6a665f', '#a8a397', '#c6c0b4'][r - 1]; cadre(x0 - r, r); }
         ctx.fillStyle = ['#46433e', '#78736b', '#8c8880'][r - 1]; cadre(x1 + r, r);
       }
       if (!l) { ctx.fillStyle = y === n - 3 ? '#c6c0b4' : '#a8a397'; ctx.fillRect(mx - 3, y, E + 6, 1); }
