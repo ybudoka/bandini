@@ -2114,6 +2114,12 @@ const Hud = (function () {
   function allerChezLeDonneur(slug) {
     const j = B.joueur, perso = Histoire.personnage(slug);
     if (!j || !perso) return false;
+    // ⚠️ Un personnage qui n'est PAS ENCORE ARRIVE (`arrive_apres` : le vieux maitre, en Floride jusqu'a
+    // la chute du Pouce) n'existe ni dehors ni dans sa piece. Sauter jusqu'a lui, c'est sauter par-dessus
+    // ce qui le fait venir : la mission de son arrivee se marque faite, comme la partie l'aurait jouee.
+    if (perso.arrive_apres && B.partie && !B.partie.missionsFaites[perso.arrive_apres]) {
+      B.partie.missionsFaites[perso.arrive_apres] = true;
+    }
     Jeu.finirTransition();
     if (j.dansVehicule) Vehicules.descendre(j, true);
     // ⚠️ Dehors D'ABORD, toujours : `quitterLaPiece` ne pose pas le joueur, et un
