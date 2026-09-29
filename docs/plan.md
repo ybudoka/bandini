@@ -94,6 +94,7 @@ pas quand l'ordre de travail change.
 | Les explosifs : grenades, dynamite, C4, roquettes — et le Molotov en mieux | ⬜ **en cours** (✅ vague 1 livrée : l'explosion commune, la grenade et la dynamite ; reste la vague 2, le Molotov en mieux ; puis les murs fissurés et le C4, le char piégé et le lance-roquettes) | 28 sept. 2026 | **P4** | ajout | [fiche](jalons/les-explosifs.md#fiche) · [notes](jalons/les-explosifs.md#notes) |
 | Le train : au sol, sur le viaduc, dans le tunnel | ⬜ **en cours** (✅ vague 1 livrée : le train passe — au sol dans les Friches, sur son viaduc au-dessus du Petit-Canton, à la gare centrale, dans son tunnel ; les passages à niveau, il écrase et il klaxonne ; restent : on monte (vague 2), on s'assoit (vague 3)) | 29 sept. 2026 | **P4** | ajout | [fiche](jalons/le-train.md#fiche) · [notes](jalons/le-train.md#notes) |
 | Pas de moto ni de vélo l'hiver, pas de moto sous la pluie | ⬜ **en cours** (tranché par Martin le 29 sept. 2026) | 29 sept. 2026 | **P4** | ajout | [fiche](jalons/pas-de-moto-ni-de-velo-l-hiver-pas-de-moto-sous-la-pluie.md#fiche) |
+| Les Mantes provoquent, et le Petit-Canton a sa musique | ⬜ **en cours** | 29 sept. 2026 | **P4** | ajout | [fiche](jalons/les-mantes-provoquent-et-le-petit-canton-a-sa-musique.md#fiche) |
 
 ## L'ordre
 
