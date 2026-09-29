@@ -206,9 +206,27 @@ def test_la_rue_se_tait_devant_une_arme_et_crie_apres_un_coup_de_feu(banc):
               .filter(function (e) { return !e.metier; }).length;
             return { v: +R().volume.toFixed(3), voulu: +Math.min(1, gens / 10).toFixed(3) };
         };
+        // ⚠️ AU CALME, ON JUGE CHAQUE MISE A JOUR, pas une photo a l'image 300.
+        // La rumeur TOMBE d'un coup et REMONTE au pas de la fiche (`RUMEUR`,
+        // quatre secondes pour le plein) : c'est voulu (m15). Une photo prise
+        // pendant qu'elle remonte apres un passant parti puis revenu la trouve
+        // sous la foule du moment — et le juge rougissait pour rien. Le 28 sept.
+        // 2026, le bidonville de la gare (36c20bd2) a deplace les passants du
+        // depart : la foule passe 9 -> 6 -> 9 vers l'image 240, la rumeur en
+        // etait a 0,78 pour 0,9 voulu a l'image 300. Avant, la foule restait a
+        // 9 d'un bout a l'autre : le juge passait par CHANCE DE FOULE.
+        // On ecoute donc `maj` elle-meme : la foule qu'elle recoit, le volume
+        // qu'elle rend, l'image ou elle tourne.
+        const majs = [];
+        const majDuJeu = R().maj;
+        R().maj = function (gens) {
+            majDuJeu(gens);
+            majs.push({ t: L.B.t, gens: gens, v: R().volume });
+        };
         j.arme = 'poings';
         for (let i = 0; i < 300; i++) o.frame(1);
         const calme = mesure();
+        const majsAuCalme = majs.slice();
         // Une arme au poing : la rue tombe.
         j.arme = 'batte';
         for (let i = 0; i < 60; i++) o.frame(1);
@@ -235,11 +253,32 @@ def test_la_rue_se_tait_devant_une_arme_et_crie_apres_un_coup_de_feu(banc):
         R().crier();
         o.frame(15);
         const cri = mesure();
-        return { calme: calme, peur: peur, justeApres: justeApres, revenue: revenue, cri: cri };
+        return { calme: calme, peur: peur, justeApres: justeApres, revenue: revenue, cri: cri,
+                 majsAuCalme: majsAuCalme };
     }""")
+    majs = r.pop("majsAuCalme")
     assert r["calme"]["v"] > 0.05, "la rue est déjà muette : le juge ne prouve rien (%s)" % r
-    # Au calme, la rumeur colle à la foule du moment.
-    assert abs(r["calme"]["v"] - r["calme"]["voulu"]) < 0.06, "la rumeur ne suit pas la foule : %s" % r
+    assert len(majs) >= 10, "la rumeur ne se met presque jamais à jour : %s" % majs
+    # Au calme, la rumeur suit la foule : jamais plus fort qu'elle, elle tombe
+    # d'un coup quand des gens s'en vont, et quand elle est dessous, elle remonte
+    # au pas de la fiche — par image écoulée depuis la mise à jour d'avant.
+    pas = audio.RUMEUR["retour_par_image"]
+    avant = {"t": majs[0]["t"], "v": 0.0}
+    for m in majs:
+        voulu = min(1.0, m["gens"] / 10)
+        assert m["v"] <= voulu + 1e-9, (
+            "la rumeur ne suit pas la foule : plus fort que les %d passants autour à l'image %d (%s)"
+            % (m["gens"], m["t"], majs)
+        )
+        if m["v"] < voulu - 1e-9:
+            assert m["v"] - avant["v"] >= pas * (m["t"] - avant["t"]) - 1e-9, (
+                "la rumeur ne suit pas la foule : sous les %d passants à l'image %d, elle ne remonte "
+                "pas au pas de la fiche (%s)" % (m["gens"], m["t"], majs)
+            )
+        avant = m
+    assert any(abs(m["v"] - min(1.0, m["gens"] / 10)) < 1e-9 for m in majs), (
+        "la rumeur ne suit pas la foule : elle ne la rattrape jamais (%s)" % majs
+    )
     assert r["peur"]["v"] < r["peur"]["voulu"] * 0.5, "la rue ne se tait pas devant une arme : %s" % r
     # ⚠️ Elle TOMBE d'un coup et REMONTE doucement.
     assert r["justeApres"]["v"] < r["justeApres"]["voulu"] * 0.9, (
