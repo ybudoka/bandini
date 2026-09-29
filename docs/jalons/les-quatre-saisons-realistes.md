@@ -1066,7 +1066,30 @@ def test_le_pont_rend_son_eau_apres_un_saut(banc):
 - [ ] **La suite ciblée** : tous les fichiers touchés et leurs juges, `test_definitions.py`,
   `test_table_des_jalons.py`, puis `uv run ruff check .` ; atterrir (mémoire « Atterrir avant la suite
   complète »), la suite complète après.
-- [ ] **La doc** : sous `## Notes` de ce fichier, « Lot 1 livré le … » (ce qui est fait, ce qui ne l'est
+- [ ] **La doc** : sous `### Lot 2 — la pluie et le sol (design approuvé par Martin le 29 sept. 2026)
+
+- **Quand il pleut** (`app/pluie.py`, `static/js/pluie.js`, la recette du brouillard : à l'empreinte du
+  jour, jamais au dé) : au printemps et à l'automne, une averse un jour sur deux environ, à une heure et
+  pour une durée tirées du jour ; l'été, un soir d'orage sur trois (éclairs et tonnerre). Jamais l'hiver.
+  Pour tout le monde, sans option (comme la neige).
+- **Ce qu'on voit** : la pluie en traits obliques et un voile gris léger, plus dense à l'orage, avec un
+  flash blanc bref à l'éclair. Toute la chaussée est mouillée pendant l'averse et sèche une heure après
+  (le reflet de l'arroseuse). Des **flaques** sur les rues et les trottoirs, à l'empreinte de la tuile,
+  qui restent un peu après la pluie et rapetissent.
+- **Ce qu'on sent** : la rue mouillée glisse comme celle de l'arroseuse (0,8) et freine plus long ; au
+  sec, rien ne change. Un char qui passe dans une flaque éclabousse (gouttes, son) ; un passant tout près
+  proteste.
+- **La fonte d'avril** (jours 10 à 12) : de la gadoue brune au bord des rues et sur les trottoirs, qui
+  glisse un peu. Les bancs de neige sales viendront avec les bancs de neige (lot 4).
+- **Les feuilles d'octobre** : un char qui roule en soulève derrière lui (bornées) ; mouillées, elles
+  glissent un peu plus.
+- **Le son** (ElevenLabs) : une boucle de pluie en fondu enchaîné, deux tonnerres, une éclaboussure.
+- **Pas dans ce lot** : les parapluies (lot 4), l'ambiance par saison (lot 5), le vrai dérapage (lot 6).
+- **Juges** : jamais de pluie l'hiver, la même pour tout le monde ; mouillé glisse, sec ne change rien ;
+  aucun dé, rien de posé ; une flaque éclabousse ; des feuilles seulement l'automne ; le rythme sous
+  l'orage ; des captures sous la pluie.
+
+## Notes` de ce fichier, « Lot 1 livré le … » (ce qui est fait, ce qui ne l'est
   pas, les juges et leurs mutations) ; la cellule du plan : « ✅ lot 1 livré : … ; lot 2 à faire : la
   pluie et le sol » ; `docs/architecture.md` (tâches 1-2). La ligne reste ⬜ **en cours** (cinq lots
   restent).
