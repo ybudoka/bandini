@@ -495,6 +495,13 @@ CATALOGUE: list[Echantillon] = [
        prompt="autumn wind blowing through trees, dry fallen leaves rustling and skittering along the "
               "asphalt, a flock of Canada geese honking as they fly high overhead, crisp and cool, "
               "seamless loop, no voices, no music"),
+    # LA BORNE-FONTAINE OUVERTE DE LA CANICULE (les saisons, vague 4c, 29 sept. 2026) : une BOUCLE, l'eau qui
+    # crache sur l'asphalte et les enfants qui crient de joie autour ; son volume suit la distance à la borne
+    # ouverte la plus proche (`RueDesSaisons.majSon`). Un lieu chargé à la demande (`LIEUX["borne_ete"]`).
+    _e("borne_ete", "La borne ouverte", duree_s=8.0, volume=0.35, boucle=True, influence=0.45,
+       prompt="an open fire hydrant gushing a powerful stream of water onto hot asphalt on a summer day in a "
+              "city street, water splashing and spraying, children laughing, shrieking with joy and running "
+              "through the spray, playful and lively, seamless loop, no music, no words"),
     # Le feu du foyer (le chalet du rang, 26 sept. 2026) : une BOUCLE dont le volume suit la
     # distance au foyer de la pièce (`Monde.majFeuDeFoyer`) — plus fort quand on s'y chauffe.
     _e("foyer", "Feu de foyer", duree_s=8.0, volume=0.4, boucle=True, influence=0.45,
@@ -1571,6 +1578,8 @@ LIEUX: dict[str, list[str]] = {
     # la saison du moment, et celle vers qui elle glisse pendant une transition.
     "saison_hiver": ["saison_hiver"], "saison_printemps": ["saison_printemps"],
     "saison_ete": ["saison_ete"], "saison_automne": ["saison_automne"],
+    # La borne ouverte de la canicule (vague 4c) : chargée quand on en approche une (`RueDesSaisons.majSon`).
+    "borne_ete": ["borne_ete"],
     # L'Halloween (les saisons, lot 3) : un SOIR — ils se chargent le 31 (`Halloween.maj`).
     "halloween": ["rire_sorciere", "porte_grince", "souffle_fantome"],
     "casino": ["casino_salle", "bras_machine", "gain_machine", "jackpot",

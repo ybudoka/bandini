@@ -140,6 +140,34 @@ SPRITES.enfant = {
   },
 };
 
+/* L'ENFANT HABILLE POUR LA SAISON (les quatre saisons, vague 4c ; `Saisons.ficheDuMoment`). Dessine a
+   la main, sans garde-robe : deux habits de plus, tires de ses poses lettre par lettre, et ses couleurs a
+   lui (`e.swaps`) y restent — un enfant se reconnait d'une saison a l'autre.
+   - `frais` (novembre, le printemps) : les manches longues — la peau des bras (sous le cou) prend la
+     couleur du haut.
+   - `froid` (le grand froid) : l'habit de neige — le manteau et la tuque (au pompon blanc) de la couleur
+     de son haut (`c`), les mitaines de celle de son pantalon de neige (`p`). */
+(function () {
+  const E = SPRITES.enfant;
+  function habit(tete, mains) {
+    const poses = {};
+    Object.keys(E.poses).forEach(function (k) {
+      poses[k] = E.poses[k].map(function (grille) {
+        return grille.map(function (rangee, y) {
+          // La tuque : le pompon blanc sur le dessus, la laine de la couleur de son manteau (`c`) — de la
+          // couleur d'un pantalon noir, elle se perdait dans le contour (vu a la capture).
+          if (tete && y === 0) return rangee.replace('kkkk', 'kook');
+          if (tete && (y === 1 || y === 2)) return rangee.replace(/h/g, tete);
+          if (y >= 7) return rangee.replace(/s/g, mains);
+          return rangee;
+        });
+      });
+    });
+    return Object.assign({}, E, { poses: poses, saisons: undefined });
+  }
+  E.saisons = { frais: habit(null, 'c'), froid: habit('c', 'p') };
+})();
+
 /* L'ENFANT A VELO : 16x15, un corps a lui — Martin (21 sept. 2026) : « des
    enfants a velo, seulement sur trottoir, casque, parc ».
 

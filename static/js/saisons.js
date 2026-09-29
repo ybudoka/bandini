@@ -97,6 +97,13 @@ const Saisons = (function () {
       rendrait l'image d'ete sous la cle d'ete. */
   function ficheDuMoment(nom, fiche) {
     if (fiche && fiche.hiver && enHiver()) return [nom + '~hiver', fiche.hiver];
+    // ⚠️ LES HABITS D'UN CORPS DESSINE A LA MAIN (l'enfant, vague 4c) : `fiche.saisons.froid` au grand
+    // froid, `fiche.saisons.frais` a la mi-saison — d'apres le froid de la palette, dehors seulement.
+    if (fiche && fiche.saisons && !B.interieur && habitsDonnees()) {
+      const f = momentDesHabits().froid, H = habitsDonnees();
+      if (f >= H.grand_froid && fiche.saisons.froid) return [nom + '~froid', fiche.saisons.froid];
+      if (f >= H.frais && fiche.saisons.frais) return [nom + '~frais', fiche.saisons.frais];
+    }
     return [nom, fiche];
   }
 
@@ -132,9 +139,9 @@ const Saisons = (function () {
 
   /** L'habit d'une tenue pour un froid SENTI `c` (et la pluie). Pure : rend `tn` lui-meme quand rien
       ne change (la cuisson de `Garderobe` reste la meme), sinon une copie. */
-  function habiller(tn, arch, c, pluie) {
+  function habiller(tn, arch, c, pluie, perso) {
     const H = habitsDonnees(), h = empreinte(tn), fr = frilosite(tn);
-    const gr = B.defs.garderobe && B.defs.garderobe.garde_robes && B.defs.garderobe.garde_robes[arch];
+    const gr = arch && B.defs.garderobe && B.defs.garderobe.garde_robes && B.defs.garderobe.garde_robes[arch];
     const o = Object.assign({}, tn);
     const metier = H.hauts_de_metier.indexOf(tn.haut) >= 0;
     const uniforme = H.chapeau_d_uniforme.indexOf(arch) >= 0;
@@ -143,9 +150,19 @@ const Saisons = (function () {
       // Le grand froid : manteau (de la couleur du haut — le gang et l'uniforme se reconnaissent),
       // pantalon, bottes, tuque, et le foulard des frileux.
       if (!metier) { o.haut = 'manteau'; o.motif = 'uni'; }
+      // ⚠️ UN VRAI MANTEAU D'HIVER (vague 4c) : fonce, pour une part des passants, a l'empreinte — jamais un
+      // gang ni un uniforme (`haut_fixe` : sa couleur le fait reconnaitre), ni un personnage ou le joueur.
+      const M = H.manteaux;
+      if (!metier && M && !perso && !(gr && gr.haut_fixe) && ((h >>> 20) % 1000) / 1000 < M.part) {
+        o.couleur_haut = M.couleurs[(h >>> 7) % M.couleurs.length];
+      }
       if (o.bas === 'short') o.bas = 'pantalon';
       o.souliers = 'bottes';
-      if (!uniforme && H.chapeaux_chauds.indexOf(o.chapeau) < 0) o.chapeau = 'tuque';
+      if (!uniforme && H.chapeaux_chauds.indexOf(o.chapeau) < 0) {
+        o.chapeau = 'tuque';
+        // La tuque d'un personnage (ou du joueur) est dans SA palette : la couleur de son bas.
+        if (perso) o.couleur_chapeau = tn.couleur_bas || tn.couleur_chapeau;
+      }
       if (!uniforme && fr > 0.4 && acc.indexOf('foulard') < 0 && acc.indexOf('cravate') < 0) acc = acc.concat(['foulard']);
       acc = acc.filter(function (a) { return a !== 'lunettes_soleil'; });
     } else if (c >= H.frais) {
@@ -154,7 +171,7 @@ const Saisons = (function () {
       if (o.bas === 'short') o.bas = 'pantalon';
       if (o.chapeau === 'canotier') o.chapeau = 'aucun';
       if (!uniforme && fr > 0.85 && o.chapeau === 'aucun') o.chapeau = 'tuque';
-    } else if (c < H.chaud) {
+    } else if (c < H.chaud && !perso) {
       // L'ete : le manteau et la tuque restent a la maison ; des shorts pour qui en porte.
       if (!metier && (o.haut === 'manteau' || o.haut === 'coton_ouate' || (o.haut === 'chandail' && (h & 2)))) {
         o.haut = (h & 4) ? 'chemise' : 'tshirt';
@@ -167,7 +184,7 @@ const Saisons = (function () {
     // Sous la pluie, sans parapluie : la capuche des frileux.
     if (pluie && !aUnParapluie(tn) && !uniforme && fr > 0.5 && H.chapeaux_chauds.indexOf(o.chapeau) < 0) o.chapeau = 'capuche';
     o.accessoires = acc;
-    const pareil = ['haut', 'motif', 'bas', 'souliers', 'chapeau'].every(function (k) { return o[k] === tn[k]; }) &&
+    const pareil = ['haut', 'motif', 'bas', 'souliers', 'chapeau', 'couleur_haut', 'couleur_chapeau'].every(function (k) { return o[k] === tn[k]; }) &&
       acc.join('+') === (tn.accessoires || []).join('+');
     return pareil ? tn : o;
   }
@@ -192,17 +209,20 @@ const Saisons = (function () {
   }
 
   const habits = new WeakMap();
-  /** L'HABIT DU MOMENT d'un passant : `tn` (sa tenue tiree) habillee pour la saison et la pluie. Les
-      personnages et le joueur gardent la leur, et dedans on a enleve son manteau. */
+  /** L'HABIT DU MOMENT d'un passant : `tn` (sa tenue tiree) habillee pour la saison et la pluie. Dedans,
+      on a enleve son manteau. ⚠️ Les personnages et le joueur (vague 4c, Martin : « il change juste a
+      l'exterieur ») s'habillent DEHORS, du cote du froid seulement et dans leur palette : leur tenue de
+      tous les jours est leur tenue d'ete. La meme tenue sert aux deux (un personnage et un passant ne
+      partagent jamais une tenue), d'ou la cle qui porte `perso`. */
   function vetir(tn, e) {
     if (!tn || !habitsDonnees() || B.interieur) return tn;
-    if (e && (e.personnage || e.type === 'joueur')) return tn;
-    const m = momentDesHabits();
+    const perso = !!(e && (e.personnage || e.type === 'joueur'));
+    const m = momentDesHabits(), cle = perso ? m.cle + '|perso' : m.cle;
     const deja = habits.get(tn);
-    if (deja && deja.cle === m.cle) return deja.tn;
+    if (deja && deja.cle === cle) return deja.tn;
     const c = m.froid + (frilosite(tn) - 0.5) * habitsDonnees().ecart;
-    const r = habiller(tn, e ? e.arch : null, c, m.pluie);
-    habits.set(tn, { cle: m.cle, tn: r });
+    const r = habiller(tn, perso ? null : (e ? e.arch : null), c, m.pluie, perso);
+    habits.set(tn, { cle: cle, tn: r });
     return r;
   }
 

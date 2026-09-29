@@ -744,6 +744,9 @@ const Monde = (function () {
       qui se bute lit la raison, et pousse (`buteT`) : c'est ce qui ouvre
       l'enjambee. */
   function barriereBloque(e, tx, ty) {
+    // ⚠️ L'ABRI TEMPO DE L'HIVER (les saisons, vague 4c) : un char n'y entre plus — toutes les regles des
+    // chars passent par ici (le pas, le trafic, la route). Rien de pose : `RueDesSaisons` le lit.
+    if (e && e.type === 'vehicule' && typeof RueDesSaisons !== 'undefined' && RueDesSaisons.tempoBloque(e, tx, ty)) return true;
     if (!e || !barrieres().length || e.forceT > 0) return false;
     const sorte = e.type === 'vehicule' ? 'vehicule' : 'pieton';
     const b = barriereA(tx, ty, sorte);

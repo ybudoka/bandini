@@ -46,7 +46,9 @@ def test_aucun_fichier_orphelin():
 
 def test_le_poids_audio_reste_raisonnable():
     """Un telephone en 3G telecharge les BRUITAGES au demarrage : on se tient
-    loin du megaoctet. Les radios, elles, n'arrivent qu'au tour de cle."""
+    loin du megaoctet. Les radios, elles, n'arrivent qu'au tour de cle.
+
+    Le plafond des sons de LIEU (1,35 Mo, les quatre saisons) : validé par Martin (29 sept. 2026)."""
     dossier = audio.RACINE_STATIQUE / audio.DOSSIER
     fichiers = list(dossier.glob("*.mp3")) if dossier.is_dir() else []
     # ⚠️ LES BRUITS DE QUARTIER (M15, 2e vague) SORTENT DU BUDGET DE DEMARRAGE,
@@ -71,8 +73,9 @@ def test_le_poids_audio_reste_raisonnable():
         assert fichier.stat().st_size < 80_000, fichier.name
     # ⚠️ Relevé de 1 000 000 à 1 350 000 le 29 sept. 2026 (les quatre saisons, lot 5) : les quatre ambiances
     # de saison (4 × 76 Ko) — des sons qu'on n'avait pas ; la pluie, l'Halloween, le train et les explosifs
-    # avaient déjà mené les lieux à 0,94 Mo. Un seul se charge à la fois (la saison qu'on entend). À valider
-    # par Martin ; la prochaine fois, on compresse avant de relever.
+    # avaient déjà mené les lieux à 0,94 Mo. Un seul se charge à la fois (la saison qu'on entend). **Validé
+    # par Martin le 29 sept. 2026.** La borne ouverte de l'été (vague 4c, 65 Ko) y tient : 1,31 Mo. La
+    # prochaine fois, on compresse avant de relever.
     assert sum(f.stat().st_size for f in lieux) < 1_350_000
     bruitages = [f for f in fichiers
                  if not f.name.startswith(("radio-", "histoire-", "musique-"))

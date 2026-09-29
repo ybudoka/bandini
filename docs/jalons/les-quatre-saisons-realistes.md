@@ -1384,6 +1384,58 @@ glace et le dérapage (lot 6) restent en dernier, à part._
   un Tempo ; les bancs n'ont pas de trouée devant les entrées de stationnement ; plus de passants dehors
   l'été : **tombé** (il touchait au dé de `peupler`) ; les bornes-fontaines ouvertes de l'été : pas faites.
 
+### Lot 4, vague 4c — les restes (livrée le 29 sept. 2026)
+
+- **Le plafond des sons de lieu** (1,35 Mo) : validé par Martin, écrit dans le juge
+  (`test_le_poids_audio_reste_raisonnable`). Les lieux pèsent maintenant 1,31 Mo avec la borne.
+- **Les personnages et le joueur s'habillent DEHORS** (`Saisons.vetir`) : du côté du froid seulement — au
+  grand froid un manteau de LEUR couleur (jamais un manteau foncé de passant), des bottes, une tuque de la
+  couleur de leur bas (un képi, un feutre restent), le foulard des frileux ; à la mi-saison, les manches
+  longues. Dedans, et l'été, leur tenue de tous les jours, telle quelle. Le portrait des dialogues ne change
+  pas. Le joueur 2 de la coop (dessiné à la main, sans tenue) ne change pas.
+- **Des manteaux d'hiver de vraies couleurs** (`saisons.HABITS["manteaux"]`) : au grand froid, 65 % des
+  passants (à l'empreinte de la tenue) portent un manteau foncé — marine, noir, bourgogne, forêt, brun,
+  charbon, bleu, rouille, aubergine, kaki ; les autres reprennent la couleur de leur haut. Jamais un gang ni
+  un uniforme (`haut_fixe`).
+- **Les enfants habillés** (`SPRITES.enfant.saisons`, lus par `Saisons.ficheDuMoment`) : deux habits tirés de
+  ses poses lettre par lettre — les manches longues au frais (novembre, le printemps, l'Halloween), l'habit
+  de neige au grand froid (la tuque au pompon blanc de la couleur de son manteau, les mitaines de celle de
+  son pantalon). Ses couleurs à lui restent (`e.swaps`) ; dehors seulement. La tuque était d'abord de la
+  couleur du pantalon : sur un pantalon noir, elle disparaissait dans le contour (vu à la capture).
+- **Terrasses et Tempo solides** (`RueDesSaisons.tempoBloque`, `RueDesSaisons.bloquer`) : un char n'entre
+  plus sous un Tempo monté (par `Monde.barriereBloque` : le pas, le trafic, la route) ; un piéton y passe. On
+  bute sur la table et les chaises d'une terrasse l'été (par `Entites.bloquerParDecor`, comme la calèche).
+  Rien de posé : la collision se lit dans `lieux(carte)` et la palette, comme le dessin. **Personne n'y
+  reste pris** : un char déjà sous un Tempo quand on le monte en sort (le Tempo ne l'arrête que s'il n'y est
+  pas déjà) ; quand les tables sortent, qui s'y tenait est poussé au sud, sur le trottoir, jamais vers la
+  façade. **Aucun Tempo devant une cachette de bungalow** (`portes_garage`) : cinq en avaient un, retirés —
+  il en reste 17. Aucune table devant ni à côté d'une porte, aucun donneur sur une terrasse.
+- **Les bornes-fontaines ouvertes de la canicule** (`saisons.RUE["bornes"]`) : les jours de chaleur de l'été
+  (six sur dix environ, à l'empreinte du jour, jamais sous la pluie), de 11 h à 19 h 30, une borne sur sept
+  environ crache vers la rue (à l'empreinte de la borne et du jour) : le jet de gouttes qui monte et retombe,
+  la flaque qui brille, et trois enfants en maillot qui courent dans l'eau et sautent — triés avec les gens.
+  Quand un char roule à côté, ils remontent sur le trottoir derrière la borne et attendent. Tout est peint
+  d'après `B.t` : ni entité, ni dé. Le son : une boucle ElevenLabs (`borne_ete`, 8 s, 65 Ko, **340
+  crédits**), l'eau sur l'asphalte et les enfants qui crient de joie, plus forte en approchant, muette
+  dedans, un lieu chargé à la demande. Le geste « FERMER LA BORNE » répond « LES ENFANTS JOUENT : ON LA
+  LAISSE COULER », et l'eau rend le souffle comme une borne qu'on ouvre soi-même.
+- **La ville d'avant ne bouge pas** : `carte.generer()` en JSON, avant et après, identiques à l'octet
+  (772 Ko) ; aucune entité née, aucun dé tiré (jugé).
+- **Le rythme** (Chromium, Mac, machine chargée) : un jour de canicule (15 bornes ouvertes dans la ville),
+  1,9 ms par image ; le rendu 1,27 ms avec la borne et ses enfants à l'écran, 1,24 ms sans
+  (`test_la_canicule_tient_le_rythme`). En janvier, 2,3 ms par image ; la foule des saisons, 3,1 ms.
+- **Juges** : `test_saisons_habits_js.py` (3 de plus : les personnages et le joueur dehors, les manteaux
+  foncés, les enfants), `test_saisons_rue_js.py` (8 de plus : les tables, le passant qui en sort, les Tempo
+  au volant, portes et garages, les bornes du jour de chaleur, la borne peinte sans rien poser, les enfants
+  prudents, le son, le geste et le souffle), la sonde `test_la_canicule_tient_le_rythme`. **34 mutations**, 33 rouges ; la 34e (retirer le garde « un char seulement » de `tempoBloque`) est équivalente — `Monde.barriereBloque` ne l'appelle que pour un char. Une mutation est d'abord restée verte : le Tempo qui bloque aussi le char déjà dessous — le garde-fou des murs le SAUTAIT dehors ; le juge suit maintenant le char image par image (il sort en roulant, sans bond).
+- **Captures** (`captures/saisons-restes-*.png`) : la planche des personnages et du joueur (janvier dehors,
+  janvier dedans, juillet), les manteaux de janvier, les enfants (juillet, novembre, janvier), Marco et le
+  joueur dans la rue en janvier, une terrasse en juillet, un char arrêté devant un Tempo, une borne ouverte.
+- **Pas fait, à dire** : les enfants de la borne sont peints (on ne les bouscule pas, on ne leur parle pas) ;
+  l'enfant à vélo ne s'habille pas ; un char qui roule SUR le trottoir traverse encore les tables (seuls les
+  piétons butent, comme demandé) ; un passant immobile sur une table au changement de palier est poussé,
+  mais un personnage « figé » dont le poste tomberait sur une table y reviendrait (aucun ne l'est : jugé).
+
 ### Lot 5 — le son des saisons (livré le 29 sept. 2026)
 
 - **Quatre ambiances** (ElevenLabs, 860 crédits — générées une fois à 10 s, trop lourdes d'un

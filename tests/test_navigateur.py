@@ -805,6 +805,42 @@ def test_la_rue_d_hiver_tient_le_rythme(page, serveur, erreurs):
     assert erreurs == []
 
 
+def test_la_canicule_tient_le_rythme(page, serveur, erreurs):
+    """Les restes des saisons (vague 4c) : un jour de canicule devant une borne ouverte (le jet, la flaque, les
+    enfants triés avec les gens), les terrasses et les Tempo solides. Le rythme à chaque image, et ce que coûte
+    un rendu avec et sans les bornes. Les chiffres s'impriment."""
+    page.goto(serveur)
+    attendre_titre(page)
+    jouer(page)
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    borne = page.evaluate("""() => {
+        const L = window.BANDINI, j = L.B.joueur, p = L.B.partie, R = L.RueDesSaisons;
+        j.intouchable = true;
+        for (let d = 18; d < 24; d++) {
+            p.jour = d; p.heure = 14 / 24;
+            const b = R.bornesOuvertes()[0];
+            if (b && L.Pluie.intensite() <= 0.05) { j.x = b.x + 40; j.y = b.y + 30; L.Monde.centrerCamera(j.x, j.y); return [d, b.x, b.y]; }
+        }
+        return null;
+    }""")
+    assert borne, "aucune borne ouverte en juillet"
+    page.wait_for_timeout(4000)
+    etat = page.evaluate("""() => {
+        const L = window.BANDINI, R = L.RueDesSaisons;
+        const rendu = function () { let t = 0; for (let i = 0; i < 30; i++) { const t0 = performance.now(); L.Jeu.rendre(); t += performance.now() - t0; } return t / 30; };
+        const avec = rendu(), a0 = R.ajouterVisibles, f0 = R.dessinerFlaques;
+        R.ajouterVisibles = function () {}; R.dessinerFlaques = function () {};
+        const sans = rendu();
+        R.ajouterVisibles = a0; R.dessinerFlaques = f0;
+        return { ms: L.B.stats.ms, avec: avec, sans: sans, ouvertes: R.bornesOuvertes().length };
+    }""")
+    print(f"\n[perf] {etat['ms']:.1f} ms par image un jour de canicule ({etat['ouvertes']} bornes ouvertes) ; "
+          f"rendu {etat['avec']:.2f} ms avec la borne et ses enfants, {etat['sans']:.2f} ms sans")
+    assert etat["ms"] < 40
+    assert etat["avec"] < etat["sans"] + 1.5, "la borne ouverte alourdit le rendu"
+    assert erreurs == []
+
+
 def test_le_brouillard_tient_le_rythme(page, serveur, erreurs):
     """⚠️ La SONDE que la fiche du brouillard exige avant de l'allumer pour tout le monde (la dette
     « rythme mesuré sur le vrai téléphone ») : le même pire cas que la neige — au volant, recherché —

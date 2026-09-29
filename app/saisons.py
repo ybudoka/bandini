@@ -107,7 +107,9 @@ LUMIERE = {"solstice_ete": 19.7, "coucher": [18.5, 2.25], "lever": [6.25, -1.2],
 #: s'habille. Le froid qu'un passant sent = `froid` de la palette + (frileux − ½) × `ecart` (frileux : à
 #: l'empreinte de sa tenue, jamais au dé). Au-dessus de `grand_froid` : manteau, bottes, tuque (et le
 #: foulard des plus frileux) ; au-dessus de `frais` : plus de t-shirt ni de short ; sous `chaud` : l'été.
-#: Les personnages et le joueur ne changent pas (on les reconnaît à leur tenue), ni rien dedans.
+#: Les personnages et le joueur (vague 4c, Martin : « il change juste à l'extérieur ») s'habillent aussi,
+#: DEHORS seulement et du côté du froid seulement : manteau et tuque dans LEUR palette (leur haut, leur
+#: bas) — leur tenue de tous les jours est leur tenue d'été. Dedans, rien ne change pour personne.
 HABITS = {
     "ecart": 0.3, "grand_froid": 0.75, "frais": 0.4, "chaud": 0.2,
     #: Ce qu'on garde au grand froid : un chapeau qui tient déjà chaud ou qui dit un métier.
@@ -119,6 +121,16 @@ HABITS = {
     #: Sous la pluie (`Pluie.intensite()` au-dessus de `seuil`) : `part` des passants ouvrent un
     #: parapluie ; les autres remontent leur capuche s'ils sont frileux.
     "parapluie": {"seuil": 0.15, "part": 0.5},
+    #: LES MANTEAUX D'HIVER (vague 4c, Martin : « des manteaux d'hiver de vraies couleurs ») : au grand
+    #: froid, `part` des passants enfilent un manteau foncé (à l'empreinte de leur tenue) ; les autres
+    #: reprennent la couleur de leur haut. Jamais un gang ni un uniforme (leur couleur les fait
+    #: reconnaître), jamais un personnage ni le joueur (leur palette).
+    "manteaux": {"part": 0.65,
+                 "couleurs": ["#1f2a44", "#16161c", "#5a1f2b", "#264232", "#4a3322", "#3b3f46",
+                              "#2c3e5c", "#6a2a22", "#3d2f45", "#50452e"]},
+    #: Les ENFANTS (vague 4c) : dessinés à la main, sans garde-robe — leur sprite a deux habits de plus
+    #: (`SPRITES.enfant.saisons`) : les manches longues au frais, l'habit de neige, la tuque et les
+    #: mitaines au grand froid. Les parents habillent tous les enfants le même jour : pas de frileux.
 }
 
 
@@ -140,6 +152,16 @@ RUE = {
     #: Les terrasses, sur le trottoir devant les restos et les bars (`genres`), sous `froid_max`.
     "terrasses": {"froid_max": 0.15, "genres": ["bouffe", "nuit"],
                   "parasols": [["#c0392b", "#f4efe6"], ["#2e7d4f", "#f4efe6"], ["#1f5f99", "#f4d35e"]]},
+    #: LES BORNES-FONTAINES OUVERTES (vague 4c, Martin : « lâche-toi lousse ») : les jours de CHALEUR de
+    #: l'été (froid sous `froid_max`, `part_jours` des jours, à l'empreinte du jour, jamais sous la pluie),
+    #: de `heures[0]` à `heures[1]`, `part` des bornes crachent vers la rue (à l'empreinte de la borne et du
+    #: jour) et `enfants` enfants courent dans l'eau autour. Tout est PEINT d'après `B.t` : ni entité, ni
+    #: dé. `portee_px` : jusqu'où s'entend la boucle `borne_ete` (un lieu chargé à la demande).
+    "bornes": {"froid_max": 0.05, "part_jours": 0.6, "heures": [11, 19.5], "part": 0.15, "enfants": 3,
+               "jet_px": 30, "portee_px": 260, "volume": 0.6,
+               "chandails": ["#e74c3c", "#f1c40f", "#3498db", "#2ecc71", "#e67e22", "#9b59b6", "#ff6fa8",
+                             "#1abc9c"],
+               "maillots": ["#1f5f99", "#c0392b", "#2e7d4f", "#f39c12", "#16161c"]},
 }
 
 

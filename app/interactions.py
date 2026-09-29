@@ -210,6 +210,9 @@ CARESSER: dict = {
 BORNE: dict = {
     "invite_ouvrir": "OUVRIR LA BORNE",
     "invite_fermer": "FERMER LA BORNE",
+    # Une borne que les enfants du quartier ont ouverte pour la canicule (les saisons, vague 4c) : on la
+    # laisse couler.
+    "enfants": "LES ENFANTS JOUENT : ON LA LAISSE COULER",
     "decors": ("borne_fontaine",),
     "portee_px": PORTEE_PX,
     # ⚠️ La même gerbe que celle d'une borne défoncée (`Entites.JET_EAU_IMAGES`, dix

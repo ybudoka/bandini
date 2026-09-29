@@ -1147,6 +1147,7 @@ const Jeu = (function () {
         pas('neige', Neige.maj);
         pas('pluie', Pluie.maj);           // le bruit de la pluie, le tonnerre
         pas('saisons', Saisons.majSon);    // le son des saisons, en fondu enchaine (lot 5)
+        pas('bornes', RueDesSaisons.majSon);   // l'eau des bornes ouvertes et les enfants qui crient (vague 4c)
         pas('brouillard', Brouillard.maj);
         pas('police', Police.maj);
         pas('incendies', Incendies.maj);
@@ -1241,6 +1242,7 @@ const Jeu = (function () {
     if (!B.interieur) Neige.dessinerSol(ctx, vue);     // la neige au sol, SOUS les rails et les gens
     if (!B.interieur) Monde.dessinerMouille(ctx, vue); // derriere l'arroseuse (la nuit a ses habitudes)
     if (!B.interieur) Pluie.dessinerSol(ctx, vue);     // la rue mouillee, les flaques, la gadoue d'avril (les saisons, lot 2)
+    if (!B.interieur) RueDesSaisons.dessinerFlaques(ctx, vue);   // l'eau des bornes ouvertes de la canicule (vague 4c)
     // Le tunnel, la rame et ses fenetres : peints par-dessus le sol de la piece,
     // sous les gens du quai.
     if (B.interieur) Metro.dessiner(ctx, vue);

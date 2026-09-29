@@ -199,7 +199,8 @@ const Interactions = (function () {
       refus: function (j, d) { return videDuJour(d) ? cfg().parcometre.deja : null; },
       invite: function (c) { return c.parcometre.invite; }, faire: forcerLeParcometre },
     { geste: 'borne', table: function (c) { return c.borne.decors; }, portee: function (c) { return c.borne.portee_px; },
-      refus: function () { return null; },
+      // Ouverte par la canicule (les saisons, vague 4c) : les enfants jouent, on la laisse couler.
+      refus: function (j, d) { return typeof RueDesSaisons !== 'undefined' && RueDesSaisons.borneOuverte(d) ? cfg().borne.enfants : null; },
       invite: function (c, j, d) { return jetDe(d) ? c.borne.invite_fermer : c.borne.invite_ouvrir; }, faire: ouvrirLaBorne },
   ];
 
@@ -513,6 +514,8 @@ const Interactions = (function () {
     for (const e of B.entites) {
       if (e.type === 'jet_eau' && dist2(e.x, e.y, j.x, j.y) < r * r) { dedans = true; break; }
     }
+    // Et l'eau d'une borne que la canicule a ouverte (les saisons, vague 4c).
+    if (!dedans && typeof RueDesSaisons !== 'undefined') dedans = RueDesSaisons.dansUnJet(j.x, j.y, r);
     if (!dedans) return;
     const v = B.defs.recherche.vitesses;
     // Quatre images d'un coup : la reprise ordinaire (`* 0,6`) est déjà comptée par
