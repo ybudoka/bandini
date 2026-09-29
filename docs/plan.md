@@ -95,7 +95,7 @@ pas quand l'ordre de travail change.
 | Les territoires des gangs bougent | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/les-territoires-des-gangs-bougent.md#fiche) |
 | Le marché aux puces du dimanche | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-marche-aux-puces-du-dimanche.md#fiche) |
 | Une amélioration générale des toits | ⬜ **à faire** (à trancher par Martin : la liste, et par où commencer) | — | **P4** | ajout | [fiche](jalons/une-amelioration-generale-des-toits.md#fiche) |
-| Les quatre saisons, réalistes | ⬜ **à faire** (à trancher par Martin : l'ordre des vagues, l'option de la neige, et le mois où commence une partie) | — | **P4** | ajout | [fiche](jalons/les-quatre-saisons-realistes.md#fiche) |
+| Les quatre saisons, réalistes | ⬜ **en cours** (tranché par Martin : six lots, l'Halloween et la pluie compris ; lot 1 en cours : le paysage des quatre saisons, la neige l'hiver seulement, la longueur du jour, la triche « changer de mois ») | 29 sept. 2026 | **P4** | ajout | [fiche](jalons/les-quatre-saisons-realistes.md#fiche) |
 | Les explosifs : grenades, dynamite, C4, roquettes — et le Molotov en mieux | ⬜ **en cours** (vague 1 : l'explosion commune, la grenade et la dynamite ; puis le Molotov en mieux, les murs fissurés et le C4, le char piégé et le lance-roquettes) | 28 sept. 2026 | **P4** | ajout | [fiche](jalons/les-explosifs.md#fiche) |
 
 ## L'ordre
