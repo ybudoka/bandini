@@ -363,6 +363,11 @@ const Monde = (function () {
     return carte;
   }
 
+  //: Les murs d'une pièce qui n'a pas les siens (docs/jalons/des-interieurs-fideles-a-l-exterieur.md) : les trois
+  //: glyphes de ses murs, peints dans le même plâtre (`TUILES['B@piece']`, `W@piece`, `D@piece`).
+  const MATERIAUX_DE_PIECE = Object.freeze({ B: 'piece', W: 'piece', D: 'piece' });
+  const MURS_DE_PIECE = 'BWD';
+
   /** Entre dans une piece : on garde la ville de cote et on charge la petite
       carte ASCII de l'interieur (meme legende, aucune voie, aucune lampe). */
   function entrer(porte) {
@@ -379,7 +384,9 @@ const Monde = (function () {
       plancher: inte.plancher,
       // Les matériaux d'une pièce (le chalet du rang : ses rondins, son lit à carreaux) —
       // `charger` les range comme ceux d'une carte de bloc, et le même peintre les lit.
-      materiaux: inte.materiaux || null,
+      // ⚠️ Et sinon, LES MURS D'UNE PIÈCE (`MATERIAUX_DE_PIECE`) : un seul mur de plâtre, la porte et les
+      // fenêtres peintes dessus, vues de dedans — plus la brique de la façade ni la tôle d'un toit.
+      materiaux: inte.materiaux || MATERIAUX_DE_PIECE,
       voie: inte.sol.map(function (l) { return '.'.repeat(l.length); }), legende: ville.legende,
       portes: [{ x: inte.sortie.x, y: inte.sortie.y, interieur: null, lieu: 'sortie' }],
       lampes: [], decor: [], zones: [], points_interet: [], intersections: [], arrets: {},
@@ -1891,6 +1898,12 @@ const Monde = (function () {
     if (SOLS_D_ILOT[g]) return varianteDeSol(g, tx, ty);
     if (g === '_') return varianteDAbord(tx, ty);
     if (g === 'R' || g === 'J') return varianteDeRampe(g, tx, ty);
+    // Un mur de pièce : sa plinthe du côté du plancher, pas un bord de toit entre le mur et sa fenêtre.
+    if (carte.materiaux && carte.materiaux[g] === 'piece') {
+      const mur = function (x, y) { return MURS_DE_PIECE.indexOf(glyphe(x, y)) >= 0; };
+      return (mur(tx, ty - 1) ? 0 : 1) | (mur(tx + 1, ty) ? 0 : 2) | (mur(tx, ty + 1) ? 0 : 4)
+        | (mur(tx - 1, ty) ? 0 : 8) | ((hash2(tx, ty) % 4) << 4);
+    }
     // Les cabanes du bidonville (`nord._cabane`) : chaque planche du mur a son bois, et la porte d'un
     // logement posée dans un mur de planches se peint en planches (1), pas dans la brique (0).
     if (g === '}') return hash2(tx, ty) % 4;

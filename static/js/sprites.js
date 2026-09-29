@@ -3336,6 +3336,21 @@ const TUILES = (function () {
   //: Le bois des planches d'un mur de cabane, planche par planche.
   const PLANCHES = ['#7a6246', '#8a7050', '#6a5238', '#8f8068', '#5e5a50'];
 
+  //: Le plâtre d'un mur de pièce, et la plinthe du côté du plancher (`v` & 15 : les côtés qui touchent autre
+  //: chose qu'un mur — 1 nord, 2 est, 4 sud, 8 ouest ; `Monde.varianteDeTuile`).
+  //: ⚠️ Un rideau de la même couleur à toutes les fenêtres d'une pièce : tiré par tuile, c'était bariolé.
+  const PLATRE = { fond: '#d8d0c2', grain: '#cbc2b2', plinthe: '#8f8270', rideau: '#b5584a' };
+
+  function murDePiece(ctx, v, T) {
+    ctx.fillStyle = PLATRE.fond; ctx.fillRect(0, 0, T, T);
+    points(ctx, v >> 4, T, PLATRE.grain, 7, 11);
+    const cotes = [[1, 0, 0, T, 2], [2, T - 2, 0, 2, T], [4, 0, T - 2, T, 2], [8, 0, 0, 2, T]];
+    for (const [bit, x, y, w, h] of cotes) {
+      if (!(v & bit)) continue;
+      ctx.fillStyle = PLATRE.plinthe; ctx.fillRect(x, y, w, h);
+    }
+  }
+
   function mursDePlanches(ctx, v, T) {
     for (let x = 0; x < T; x += 4) {
       ctx.fillStyle = PLANCHES[(v * 3 + x) % PLANCHES.length]; ctx.fillRect(x, 0, 4, T);
@@ -3719,6 +3734,31 @@ const TUILES = (function () {
         ctx.fillStyle = '#b3824a'; ctx.fillRect(cx - 1, cy, 3, 2);                                           // un cerne
         ctx.fillStyle = '#7a4c24'; ctx.fillRect(cx, cy, 1, 1);                                               // le coeur
       }
+    },
+    // LES MURS D'UNE PIÈCE (docs/jalons/des-interieurs-fideles-a-l-exterieur.md, vague 1). Martin (29 sept.
+    // 2026) : « les portes et murs des portes intérieur doivent avoir des murs harmonisés ». Le mur `B` d'une
+    // pièce se peignait en TOIT DE TÔLE (qui prenait la neige l'hiver), et le mur de la porte en FAÇADE DE
+    // BRIQUE, comme vu de la rue. ⚠️ UN SEUL MUR : la fenêtre et la porte se peignent SUR le plâtre des trois
+    // autres, vues de dedans. `Monde.entrer` donne ces matériaux à toute pièce qui n'a pas les siens.
+    'B@piece': function (ctx, v, T) { murDePiece(ctx, v, T); },
+    'W@piece': function (ctx, v, T) {
+      murDePiece(ctx, v, T);
+      ctx.fillStyle = '#efeae0'; ctx.fillRect(2, 2, 12, 11);    // le cadre, peint blanc
+      ctx.fillStyle = '#9cc4e0'; ctx.fillRect(3, 3, 10, 9);     // la vitre, le jour dehors
+      ctx.fillStyle = '#c8e2f2'; ctx.fillRect(4, 4, 3, 3);      // un reflet
+      ctx.fillStyle = '#efeae0'; ctx.fillRect(7, 3, 2, 9); ctx.fillRect(3, 7, 10, 1);   // les croisillons
+      ctx.fillStyle = PLATRE.rideau;                            // les rideaux, tirés de chaque côté
+      ctx.fillRect(2, 1, 3, 13); ctx.fillRect(11, 1, 3, 13);
+      ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(3, 1, 1, 13); ctx.fillRect(12, 1, 1, 13);   // leurs plis
+      ctx.fillStyle = '#8a7e6c'; ctx.fillRect(1, 1, 14, 1);     // la tringle
+    },
+    'D@piece': function (ctx, v, T) {
+      murDePiece(ctx, v, T);
+      ctx.fillStyle = '#efeae0'; ctx.fillRect(3, 2, 10, 14);    // le chambranle, peint comme les cadres
+      ctx.fillStyle = '#7a5434'; ctx.fillRect(4, 3, 8, 13);     // la porte, en bois
+      ctx.fillStyle = '#8e6440'; ctx.fillRect(5, 4, 6, 5); ctx.fillRect(5, 10, 6, 5);   // ses deux panneaux
+      ctx.fillStyle = '#5e3e24'; ctx.fillRect(4, 9, 8, 1);
+      ctx.fillStyle = '#d8b83a'; ctx.fillRect(10, 10, 1, 2);    // la poignée
     },
     // Le chalet du rang : les memes glyphes, en bois rond (`materiaux` d'une carte de bloc).
     'F@bois_rond': function (ctx, v, T) { boisRond(ctx, v, T); },

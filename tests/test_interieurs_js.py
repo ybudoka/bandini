@@ -1021,3 +1021,52 @@ def test_on_entre_dans_la_planque_et_on_en_ressort(banc):
     assert r["apres"]["interieur"] is None and r["apres"]["w"] == r["dehors"]["w"]
     assert r["apres"]["entites"] == r["dehors"]["entites"], "la ville n'est pas revenue telle quelle"
     assert r["apres"]["pres"] < 20, "on doit ressortir devant la porte"
+
+
+# --- Les murs d'une pièce, harmonisés (docs/jalons/des-interieurs-fideles-a-l-exterieur.md) -----
+
+def test_tous_les_murs_d_une_piece_sont_du_meme_platre(banc):
+    """Martin (29 sept. 2026) : « les portes et murs des portes intérieur doivent avoir des murs harmonisés ».
+    Le mur `B` d'une pièce se peignait en toit de tôle (neigeux l'hiver), la fenêtre `W` et la porte `D` en
+    façade de brique, comme vues de la rue. ⚠️ Dans CHAQUE pièce de la ville qui n'a pas ses propres
+    matériaux : ses trois glyphes de mur vont au même peintre `@piece`, et il existe."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const c = L.Monde.carte, vues = {}, fautes = [];
+        for (const porte of c.portes) {
+            const piece = c.def.interieurs[porte.interieur];
+            if (!piece || vues[porte.interieur] || piece.materiaux) continue;
+            vues[porte.interieur] = true;
+            o.entrer(porte);
+            const k = L.Monde.carte, mats = k.materiaux || {};
+            for (let y = 0; y < k.h; y++) for (let x = 0; x < k.w; x++) {
+                const g = k.sol[y][x];
+                if ('BWD'.indexOf(g) < 0) continue;
+                if (mats[g] !== 'piece' || !L.TUILES[g + '@piece']) fautes.push(porte.interieur + ' ' + g + ' ' + x + ',' + y);
+            }
+            o.sortir();
+        }
+        return { pieces: Object.keys(vues).length, fautes: fautes.slice(0, 5),
+                 dehors: L.Monde.carte.materiaux ? Object.keys(L.Monde.carte.materiaux) : [] };
+    }""")
+    assert r["pieces"] >= 60, r
+    assert not r["fautes"], r["fautes"]
+    assert r["dehors"] == [], "la ville a pris les murs d'une pièce en ressortant"
+
+
+def test_la_fenetre_et_la_porte_se_peignent_sur_le_platre_du_mur(banc):
+    """Le même mur : la fenêtre et la porte d'une pièce commencent par le plâtre plein du mur `B@piece`, pas
+    par la brique de la façade (`W` et `D` de la ville, eux, gardent la leur)."""
+    r = banc("""function (L, o) {
+        function premier(nom, v) {
+            let style = null, pris = null;
+            const ctx = { fillRect: function (x, y, w, h) { if (!pris && w >= 16 && h >= 16) pris = style; } };
+            Object.defineProperty(ctx, 'fillStyle', { get: function () { return style; }, set: function (s) { style = s; } });
+            L.TUILES[nom](ctx, v, 16);
+            return pris;
+        }
+        return { mur: premier('B@piece', 5), fenetre: premier('W@piece', 5), porte: premier('D@piece', 5),
+                 facade: premier('W', 5) };
+    }""")
+    assert r["mur"] and r["fenetre"] == r["mur"] and r["porte"] == r["mur"], r
+    assert r["facade"] != r["mur"], "la façade de la rue a pris le plâtre du dedans"

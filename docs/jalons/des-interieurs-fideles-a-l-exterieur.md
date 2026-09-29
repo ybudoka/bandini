@@ -63,3 +63,26 @@ des écarts ; puis corriger par vagues, chacune jouable et jugée.
   les maisons pauvres de la gare.
 
 ## Notes
+
+**Vague 1, livrée le 29 sept. 2026 : le mur de la porte, harmonisé.** Deux défauts dans le même mur, vus sur la
+capture du logement `nord_logement_1001` : le mur `B` d'une pièce se peignait en **toit de tôle** (le même
+glyphe que dehors — et l'hiver venu, les saisons le couvraient de neige, dedans), et le mur de la porte en
+**façade de brique** (`W`, `D` peints par `facade()`, comme vus de la rue).
+
+- `Monde.entrer` donne à toute pièce qui n'a pas ses propres matériaux `MATERIAUX_DE_PIECE` = `{B, W, D :
+  'piece'}` — le mécanisme des rondins du chalet (`materiaux`), qui garde les siens.
+- Trois peintres (`sprites.js`) : `B@piece`, un plâtre et sa plinthe du côté du plancher (`murDePiece`) ;
+  `W@piece`, la fenêtre vue de dedans (cadre blanc, rideaux tirés, la tringle) ; `D@piece`, la porte en bois et
+  son chambranle — **les deux peints sur le plâtre du mur**. Un rideau de la même couleur à toutes les
+  fenêtres d'une pièce (tiré par tuile, c'était bariolé).
+- `varianteDeTuile` : un mur de pièce a sa plinthe là où il touche autre chose qu'un mur (`BWD`), pas un bord
+  de toit entre le mur et sa fenêtre.
+- Plus de neige sur les murs d'une pièce : `B@piece` ne passe pas par `Saisons.enneiger`.
+- Regardé : le logement de la gare, le dépanneur, le terminus (fenêtres en haut et en bas).
+- Juges (`test_interieurs_js.py`) : `test_tous_les_murs_d_une_piece_sont_du_meme_platre` (chaque pièce de la
+  ville, chaque tuile de mur ; rouge sans les matériaux par défaut), `test_la_fenetre_et_la_porte_se_peignent_sur_le_platre_du_mur`
+  (un faux contexte : la fenêtre et la porte commencent par le plâtre plein du mur ; rouge si la fenêtre
+  repasse sur la brique).
+- Pour la vague des logements selon le standing : le plâtre et le rideau sont dans `PLATRE` — un plâtre défraîchi
+  chez les pauvres, une autre couleur chez les cossus, par un matériau de plus (`'piece_pauvre'`…).
+
