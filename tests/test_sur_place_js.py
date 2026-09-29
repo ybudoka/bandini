@@ -3,7 +3,7 @@
 Le saut : fondu au noir, l'horloge avance (jamais en arrière), on se relève au lieu, sans étoile.
 """
 
-from tests.outils_missions import OUTILS
+from tests.outils_missions import OUTILS, PLUS_LONGUES
 
 MISSION = """
   function mission(L, slug) { return L.B.defs.missions.find(function (m) { return m.slug === slug; }); }
@@ -260,3 +260,35 @@ def test_les_deux_cartes_peignent_le_gris(banc):
         return vus;
     }""")
     assert r["mini"] >= 1 and r["carte"] >= 1
+
+
+def test_q13_se_joue_sur_place_et_gardee(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, p = B.partie, j = B.joueur; j.invincible = 1e6;
+        faites(L, ['q06']); p.heure = 0.40;
+        L.Histoire.demarrer('q13');
+        for (let k = 0; k < 40 && !(p.mission && p.mission.gardee); k++) { ecouter(L); o.frame(10); if (B.transition) o.fondu(); }
+        const h = L.Histoire.lieu('hotel');
+        return { gardee: !!(p.mission && p.mission.gardee), nuit: L.Monde.estNuit(p.heure),
+                 loin: Math.hypot(j.x - h.x, j.y - h.y), frontiere: L.Histoire.courante().frontiere };
+    }""")
+    assert r["gardee"] and r["nuit"] and r["loin"] < 6 * 16 and r["frontiere"] == "quais"
+
+
+def test_v01_finit_au_bord_sans_rater(banc):
+    """⚠️ Le dernier objectif (« RESSORS PAR LE CHEMIN ») se joue au bord du bloc : la mission est
+    gagnée avant que le passage ne ramène en ville, et rien ne la fait rater après."""
+    r = banc("async function (L, o) {" + OUTILS + PLUS_LONGUES + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, p = B.partie, j = B.joueur; j.invincible = 1e6;
+        faites(L, ['q04']); p.heure = 0.90;
+        commencer(L, o, 'v01'); p.mission.gardee = true;
+        L.Blocs.sauter('villa'); for (let k = 0; k < 400 && B.transition; k++) { o.frame(1); await o.attendre(); }
+        p.mission.etape = 2; L.Histoire.avancer(true);
+        const l = L.Histoire.lieu('villa_chemin'); j.x = l.x; j.y = l.y; L.Entites.indexer();
+        const echecs = p.stats.echecs || 0;
+        for (let k = 0; k < 900; k++) { o.frame(1); if (B.transition) o.fondu(); }
+        return { faite: !!p.missionsFaites.v01, echecs: (p.stats.echecs || 0) - echecs };
+    }""")
+    assert r == {"faite": True, "echecs": 0}

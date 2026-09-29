@@ -13,6 +13,10 @@ MISSION = {
     "titre": "La clé du maire",
     "donneur": "josee",
     "prerequis": ["q04"],
+    # Sur place, de nuit, au chemin de la villa (29 sept. 2026) : on ne traverse pas la ville pour
+    # attendre la noirceur devant une haie — et une infiltration ne se quitte pas.
+    "sur_place": {"lieu": "villa_chemin", "heure": "nuit"},
+    "frontiere": "bloc:villa",
     "recompense": 500,
     "echec": ["mort", "arrete", "etoile"],
     "donne": {"message": "LA CLÉ DE LA PORTE DE SERVICE, DANS TA POCHE"},

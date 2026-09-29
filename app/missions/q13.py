@@ -10,6 +10,9 @@ MISSION = {
     # prérequis ne sait dire que « et » : `exige.une_de` dit « l'un ou l'autre » (`Histoire.exigeTenu`).
     # Sven a eu son argent ou a perdu ses camions : dans les deux cas, il revient chercher le port.
     "prerequis": ["q06"],
+    # Sur place, de nuit, devant l'hôtel (29 sept. 2026) : on tient l'hôtel, on ne va pas se promener.
+    "sur_place": {"lieu": "hotel", "heure": "nuit"},
+    "frontiere": "quais",
     "exige": {"une_de": ["q10", "q11"]},
     "recompense": 500,
     # ⚠️ LA PREMIÈRE LIBÉRATION DE M16 (`libere: quais`) : les Morues rangent leurs couteaux — plus une ne
