@@ -831,8 +831,12 @@ DEFIS: list[dict] = [
      # cercle se referme au sol) ; puis l'élan d'une tape (5 images) et le coup,
      # qui porte à `coup_portee` px (+6), sur `coup_arc` radians, pour
      # `coup_degats` ; puis il souffle `souffle_s`.
+     # ⚠️ `souffle_s` : 1,2 → 1,6 (Martin, 29 sept. 2026, « allonger le souffle d'avance ») — à 1,2,
+     # dix-sept roulades à 25 laissaient le joueur à 16 de souffle au plus bas, sans rien pour
+     # sprinter (le même bouton). À 1,6, il se refait entre deux coups (75 au plus bas), le cousin
+     # cogne encore quatorze fois en trente secondes, et rouler au hasard épuise toujours.
      "regles": {"duree_s": 30, "vie_min": 0.4, "ring": 5, "dehors_s": 1.5,
-                "allure": 1.45, "arme_px": 20, "annonce_s": 0.35, "souffle_s": 1.2,
+                "allure": 1.45, "arme_px": 20, "annonce_s": 0.35, "souffle_s": 1.6,
                 "coup_portee": 16, "coup_arc": 1.6, "coup_degats": 13},
      "texte": "LE COUSIN DU GRAND MO CHARGE : TRENTE SECONDES DANS LE RING, SANS FRAPPER. SON CERCLE SE REFERME : ROULE !"},
     {"slug": "chef", "titre": "Le défi de la Chef des Quais", "ou": "porte:hotel", "conduite": "chef",

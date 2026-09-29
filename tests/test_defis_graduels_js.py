@@ -888,7 +888,7 @@ ESQUIVE = MARCHER + """
         const T = Math.round(L.B.defs.defis.find(function (x) { return x.slug === 'esquive'; }).regles.annonce_s * 60);
         // D'abord, entrer dans le ring.
         for (let n = 0; n < 900 && L.B.defi && e.phase !== 'combat'; n++) { marcherVers(o, j, e.depart.x + R, e.depart.y, 4); o.frame(1); }
-        let roulades = 0, appuis = 0, touches = 0, vie = j.vie, roule = 0, vu = -1;
+        let roulades = 0, appuis = 0, touches = 0, vie = j.vie, roule = 0, vu = -1, souffleMin = j.endurance;
         let a = Math.atan2(j.y - e.depart.y, j.x - e.depart.x), avant = Infinity, cale = 0;
         for (let n = 0; n < 2400 && L.B.defi; n++) {
             const d = Math.hypot(q.x - j.x, q.y - j.y);
@@ -917,11 +917,13 @@ ESQUIVE = MARCHER + """
             if (j.roule > roule) roulades++;
             roule = j.roule;
             if (j.vie < vie) touches++;
+            souffleMin = Math.min(souffleMin, j.endurance);
             vie = j.vie;
         }
         toutLacher(o);
         return { fait: !!L.B.partie.defisFaits.esquive, message: L.B.msg, roulades: roulades, appuis: appuis,
-                 coups: e.coups, touches: touches, vie: j.vie / j.vieMax, reste: L.B.entites.indexOf(q) >= 0 };
+                 coups: e.coups, touches: touches, vie: j.vie / j.vieMax, reste: L.B.entites.indexOf(q) >= 0,
+                 souffleMin: souffleMin };
     }
 """
 
@@ -940,6 +942,9 @@ def test_l_esquive_se_gagne_sans_frapper(banc, rouler):
     assert r["coups"] >= 12, "il a cogné toutes les deux secondes : %s" % r
     assert r["roulades"] >= 12, "une roulade FAITE par coup : %s" % r
     assert r["touches"] <= 1 and r["vie"] >= 0.85, "gagné avec une marge : %s" % r
+    # ⚠️ Et il reste du souffle (Martin, 29 sept. 2026) : la roulade et le sprint tirent sur la
+    # même réserve — un joueur qui roule bien doit pouvoir encore courir (`souffle_s`).
+    assert r["souffleMin"] >= 50, "le souffle ne se refait pas entre deux coups : %s" % r
     assert r["reste"] is False
 
 
