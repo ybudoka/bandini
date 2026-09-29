@@ -48,3 +48,7 @@ Livré le 29 sept. 2026. Chaque rouge trouvé par `git bisect`, et tranché : le
 4. deux chars finissent encore ensemble dans une boîte quand l'attente déborde — la soupape voulue, la vraie
    racine de l'autobus : non touchée.
 
+**Tranché par Martin le 29 sept. 2026** : (1) le bronze reste dans le ring ; (3) le chien de garde et le vélo
+qui redescend reculent quand ils forcent, ça lui va. (2) l'esquive se durcit — la roulade doit servir —, et
+(4) la soupape du carrefour s'enquête et se resserre : deux lignes à part au plan.
+
