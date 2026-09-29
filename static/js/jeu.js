@@ -1488,6 +1488,10 @@ const Jeu = (function () {
 
     return chargerDefinitions(racine).then(function (defs) {
       B.defs = defs;
+      // Les notes de la musique — le filet du sequenceur, hors du paquet depuis le 29 sept.
+      // 2026 : demandees MAINTENANT, en arriere-plan, pendant que la ville se batit. Pas au
+      // moment ou un mp3 rate : c'est souvent que le reseau vient de tomber (`Son.Notes`).
+      Son.Notes.charger(racine.dataset.urlMusiques, defs.musiques_empreinte);
       Hud.progression(95);
       Monde.charger(defs.carte);
       // La partie du dernier emplacement joue : celle que JOUER propose d'abord.

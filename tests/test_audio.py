@@ -259,6 +259,20 @@ def test_les_fichiers_sont_servis(client, paquet):
     assert servis >= len(audio.CATALOGUE), "des sons du catalogue ne sont pas servis"
 
 
+def test_un_bruitage_ne_voyage_qu_avec_ce_que_le_navigateur_en_lit(paquet):
+    """⚠️ Dans les deux sens (29 sept. 2026). Le nom, la categorie et `boucle` d'un bruitage
+    ne sont lus par aucun script : ils ne voyagent plus. Mais la DUREE de la sonnerie l'est
+    (`Son.SFX.telephone()`, que l'appel attend) — le paquet l'avait perdue le 28 avec les
+    prompts, et l'appel parlait 0,37 s apres le premier coup d'une sonnerie de deux secondes."""
+    catalogue = {e["slug"]: e for e in audio.CATALOGUE}
+    for e in paquet["audio"]["echantillons"]:
+        assert set(e) <= {"slug", "volume", "fichiers", "duree_s"}, f"{e['slug']} : {sorted(e)}"
+    telephone = next(e for e in paquet["audio"]["echantillons"] if e["slug"] == "telephone")
+    assert telephone["duree_s"] == catalogue["telephone"]["duree_s"], "l'appel n'attend plus la fin de la sonnerie"
+    son = (RACINE_JS / "son.js").read_text(encoding="utf-8")
+    assert "defEchantillon('telephone')" in son and "def.duree_s" in son, "le juge garde une lecture qui n'existe plus"
+
+
 def test_l_ambiance_et_les_voix_sont_declarees_a_part(paquet):
     """L'ambiance n'est pas une radio (elle joue a pied) et les voix ne sont
     pas des bruitages (elles ont un texte et une voix nommee)."""

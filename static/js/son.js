@@ -2000,12 +2000,16 @@ const Son = (function () {
     /** Une station de `audio.musiques` plutot qu'un mp3 de `audio.radios`.
         ⚠️ Elle a MAINTENANT un fichier elle aussi (toute la musique est
         generee) : ce qui la distingue n'est donc plus `!fichier` mais d'ou
-        elle vient — un morceau porte ses `voix`, une station enregistree
-        n'en a pas. C'est `Mus` qui choisit ensuite entre le mp3 et les notes,
-        et la radio n'a pas a le savoir. */
+        elle vient — la liste des morceaux (`audio.musiques`) ou celle des radios.
+        C'est `Mus` qui choisit ensuite entre le mp3 et les notes, et la radio
+        n'a pas a le savoir.
+
+        ⚠️ Plus « elle porte ses `voix` » depuis le 29 sept. 2026 : les notes voyagent a
+        part (`Notes`) et arrivent apres le paquet — la station du camion aurait ete
+        prise pour un mp3 de radio le temps qu'elles arrivent. */
     estProcedurale: function (slug) {
       const s = Radio.station(slug);
-      return !!(s && s.voix);
+      return !!s && Mus.morceaux().indexOf(s) >= 0;
     },
 
     /** Allume une station. Le fichier se telecharge la premiere fois : la
@@ -2151,6 +2155,78 @@ const Son = (function () {
     return !def.fichier || morceauxCharges.get(cle) === 'ratee';
   }
 
+  // --- Les notes voyagent a part (29 sept. 2026) ------------------------------
+  //
+  /*: ⚠️ LES NOTES SONT LE FILET, ET ELLES SONT SORTIES DU PAQUET. Le paquet des
+    definitions voyait son plafond releve presque chaque jour ; les partitions de
+    `musique.py` y pesaient 45 Ko bruts pour un joueur qui, la plupart du temps,
+    entend les mp3. Elles arrivent sur `/api/musiques`, et c'est ICI qu'on les remet
+    a leur morceau — le reste du jeu les lit la ou elles ont toujours ete
+    (`def.voix`).
+
+    ⚠️ QUAND : TOUT DE SUITE APRES LES DEFINITIONS, en arriere-plan (`Jeu.demarrer`),
+    jamais au moment ou un mp3 rate. Un mp3 qui rate, c'est souvent un reseau qui vient
+    de tomber : un filet qu'on irait chercher a cet instant-la ne tiendrait rien. Hors
+    ligne, le travailleur les a gardees dans sa coquille, comme la carte. Et ce qui joue
+    AVANT tout reseau — le theme du menu — n'a jamais quitte le paquet
+    (`musique.NOTES_DANS_LE_PAQUET`).
+
+    ⚠️ Un morceau qui doit jouer en notes et ne les a pas encore SE TAIT (comme pendant
+    le telechargement d'un mp3) et les REDEMANDE si la demande a rate — une fois toutes
+    les `REESSAI_IMAGES`, pas a chaque image : un reseau coupe ne se martele pas. */
+  const REESSAI_IMAGES = 600;          // dix secondes de jeu
+  const Notes = {
+    etat: null,          // null | 'en cours' | 'arrivees' | 'ratee' | 'etrangere'
+    url: null,
+    empreinte: null,
+    essaiT: 0,           // l'image du dernier essai (`B.t`)
+
+    /** Va chercher les notes. `empreinte` : celle que les definitions nomment
+        (`musiques_empreinte`) — des notes d'une autre construction ne se posent pas. */
+    charger: function (url, empreinte) {
+      Notes.url = url || null; Notes.empreinte = empreinte || null;
+      Notes._tenter();
+    },
+
+    _tenter: function () {
+      if (!Notes.url || Notes.etat === 'en cours' || Notes.etat === 'arrivees'
+          || Notes.etat === 'etrangere') return;
+      if (!fenetre || !fenetre.fetch) return;
+      Notes.etat = 'en cours';
+      Notes.essaiT = B.t;
+      fenetre.fetch(Notes.url)
+        .then(function (r) {
+          if (!r.ok) throw new Error('notes ' + r.status);
+          return r.json();
+        })
+        .then(function (paquet) {
+          // ⚠️ Un deploiement tombe entre les deux requetes : ces notes-la iraient a des
+          // morceaux d'une autre construction. On ne les pose pas, et on ne redemande pas
+          // — la meme adresse rendrait la meme chose.
+          if (!paquet || !paquet.musiques || (Notes.empreinte && paquet.empreinte !== Notes.empreinte)) {
+            Notes.etat = 'etrangere';
+            return;
+          }
+          Notes.poser(paquet.musiques);
+          Notes.etat = 'arrivees';
+        })
+        .catch(function () { Notes.etat = 'ratee'; });
+    },
+
+    /** Remet a chaque morceau ses notes. Un morceau qui les a deja (le theme du menu)
+        garde les siennes. */
+    poser: function (notes) {
+      Mus.morceaux().forEach(function (m) {
+        if (!m.voix && notes[m.slug]) m.voix = notes[m.slug];
+      });
+    },
+
+    /** Un morceau doit jouer en notes et ne les a pas : on redemande si c'est rate. */
+    reclamer: function () {
+      if (Notes.etat === 'ratee' && B.t - Notes.essaiT >= REESSAI_IMAGES) { Notes.etat = null; Notes._tenter(); }
+    },
+  };
+
   // --- La musique : un sequenceur, un catalogue de notes (app/musique.py) ------
 
   //: On programme toujours un quart de seconde d'avance. En dessous, un a-coup
@@ -2236,6 +2312,7 @@ const Son = (function () {
 
     /** Pose toutes les notes d'un pas, a l'instant `t`, dans `sortie`. */
     poser: function (def, p, t, pasS, sortie) {
+      if (!def.voix) return;             // les notes ne sont pas encore la (`Notes`)
       for (let v = 0; v < def.voix.length; v++) {
         const voix = def.voix[v];
         const motif = voix.motif || def.pas;
@@ -2299,6 +2376,9 @@ const Son = (function () {
         if (!boucles.has(cle)) chargerMorceau(cle, def.fichier, Mus._demarrer);
         return;
       }
+      // ⚠️ Ses notes voyagent a part et ne sont pas encore la (`Notes`) : on se tait,
+      // comme pendant le telechargement d'un mp3, et le morceau part des qu'elles arrivent.
+      if (!def.voix) { Notes.reclamer(); Mus.pas++; Mus.debutT = 0; Mus.prochain = 0; return; }
       // ⚠️ Tant que le son n'est pas accorde (banc sans audio, ou navigateur qui
       // attend un geste), on avance un simple compteur : l'horloge audio est
       // figee, et programmer dedans ferait sortir toute la boucle d'un coup au
@@ -2439,6 +2519,8 @@ const Son = (function () {
         else chargerMorceau(cle, def.fichier, Rue._demarrer);
         return;
       }
+      // Ses notes ne sont pas encore la (`Notes`) : il se tait en attendant.
+      if (!def.voix) { Notes.reclamer(); return; }
       const sortie = Rue._sortie();
       if (!sortie) return;
       sortie.gain.value = Rue.g;
@@ -2457,6 +2539,7 @@ const Son = (function () {
     /** Les notes d'un pas, dans SA sortie. Meme calcul que `Mus.poser` — le
         volume de la distance est sur le gain, pas sur chaque note. */
     poser: function (def, p, t, pasS, sortie) {
+      if (!def.voix) return;
       for (let v = 0; v < def.voix.length; v++) {
         const voix = def.voix[v];
         const motif = voix.motif || def.pas;
@@ -2497,7 +2580,7 @@ const Son = (function () {
   return {
     init, reveiller, sonder, etatSon, enAttente, surEtat, pret, suspendre, fermer, majVolume, prechauffer, ton, bruit, SFX, Mus, Chef, Rue,
     chargerEchantillons, echantillon, joue, estCharge, jouerA, presence, depuis, boucle, boucleActive, reglerBoucle, volumeBoucle, etouffer, coupureBoucle,
-    Radio, Ambiance, Rumeur, Voix, Ondes, Souffle, Quartier, Lieu,
+    Radio, Ambiance, Rumeur, Voix, Ondes, Souffle, Quartier, Lieu, Notes,
     get contexte() { return ctx; },
     // ⚠️ Les bruitages seuls : les voix, l'ambiance et les radios ont leurs
     // propres clefs dans `tampons`, et le test des bruitages compte l'egalite.

@@ -39,7 +39,9 @@ def test_le_moteur_charge_et_expose_son_api(banc, paquet):
     # ⚠️ Plus UNE requete pour le defi du jour (M14, 5e vague) : `GET /api/defi`, sans
     # cookie et sans que rien n'attende sa reponse.
     assert r["defi"] == 1
-    assert r["fetchs"] == 4 + r["ouverture"]
+    # ⚠️ Plus UNE pour les notes de la musique (29 sept. 2026) : `GET /api/musiques`, le filet
+    # du sequenceur, sorti du paquet et demande juste apres lui (`Son.Notes`).
+    assert r["fetchs"] == 5 + r["ouverture"]
     assert r["ouverture"] <= 6, "l'ouverture se prechauffe ; la ville, non"
 
 

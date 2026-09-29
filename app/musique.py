@@ -304,6 +304,15 @@ def exporter() -> list[Morceau]:
             + rues() + commerces() + [orgue(), ritournelle(), violon()])
 
 
+#: ⚠️ **LES NOTES QUI RESTENT DANS LE PAQUET** (29 sept. 2026). Les notes de tous les
+#: autres morceaux voyagent a part (`/api/musiques`, voir `definitions.py`) : 45 Ko bruts,
+#: 8,7 Ko gzip qu'un telephone n'a pas a lire pour ouvrir le menu. Celles-ci, non : le
+#: theme du menu est ce qui joue AVANT tout autre reseau que le paquet lui-meme, et un
+#: filet qui attendrait une deuxieme requete pour tenir le premier morceau n'en serait
+#: plus un. Un morceau de plus ici, c'est le paquet qui regrossit : il faut une raison.
+NOTES_DANS_LE_PAQUET: frozenset[str] = frozenset({"titre"})
+
+
 # --- Les stations procedurales (M9) ----------------------------------------
 
 #: ⚠️ Une station par char, ecrite par une GRAINE plutot qu'a la main. Le

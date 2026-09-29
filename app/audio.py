@@ -1886,6 +1886,12 @@ COUPS_DES_AUTRES = {
 }
 
 
+#: Les bruitages dont le navigateur lit la DUREE (`duree_s`) : la sonnerie du telephone, que
+#: `Son.SFX.telephone()` rend pour que l'appel attende sa fin. Les autres ne voyagent pas avec la
+#: leur — elle ne sert qu'a les generer.
+DUREES_LUES: frozenset[str] = frozenset({"telephone"})
+
+
 def exporter() -> dict:
     """⚠️ Ne declare QUE les fichiers presents : le navigateur ne demande jamais
     un son qui n'existe pas, et se rabat sur la synthese sans un 404."""
@@ -1926,9 +1932,15 @@ def exporter() -> dict:
         # duree demandee et l'influence ne servent qu'a le generer (`scripts/audio_elevenlabs.py` lit le
         # CATALOGUE, pas le paquet). Ils pesaient 32 Ko bruts sur les definitions — plus que tout ce
         # que la cabane et le casino y ajoutent.
+        #
+        # ⚠️ **ET LE 29 SEPT. 2026, DANS LES DEUX SENS.** Le nom, la categorie et `boucle` ne sont lus
+        # par AUCUN script (4,6 Ko bruts) : partis. Mais la duree, elle, l'etait — une seule fois :
+        # `Son.SFX.telephone()` rend ce que dure la sonnerie, et le dialogue de l'appel l'attend. Sans
+        # elle depuis le 28, l'appel parlait 0,37 s apres le premier coup d'une sonnerie de deux
+        # secondes. Elle revient pour ceux qui la RENDENT (`DUREES_LUES`), pas pour les cent autres.
         "echantillons": [
-            {"slug": e["slug"], "nom": e["nom"], "categorie": e["categorie"], "volume": e["volume"],
-             "boucle": e["boucle"], "fichiers": fichiers_presents(e)}
+            {"slug": e["slug"], "volume": e["volume"], "fichiers": fichiers_presents(e),
+             **({"duree_s": e["duree_s"]} if e["slug"] in DUREES_LUES else {})}
             for e in CATALOGUE
         ],
         # Les radios se chargent au premier tour de cle, jamais au demarrage.

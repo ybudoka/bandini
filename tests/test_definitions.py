@@ -206,8 +206,26 @@ def test_le_paquet_reste_leger(paquets):
     Puis l'arc P (six missions, trois personnages, deux manchettes) : **290 969 / 65 061** — le brut passe ses
     290 000. Relevés à **300 000 / 67 000** d'un coup, pour l'arc S qui vient (six missions, trois personnages :
     ≈ 3 000 bruts et 1 000 gzip de plus) ; au-delà, c'est la musique qui sort, pas un plafond qui monte.
+
+    ⚠️ **ET ELLE EST SORTIE, LE 29 SEPT. 2026 — LES PLAFONDS DESCENDENT : 300 000 → 256 000 bruts,
+    67 000 → 59 000 gzip** (docs/jalons/le-paquet-des-definitions-maigrit.md). Mesure : **296 109 bruts /
+    66 090 gzip** sur `dev`, **246 381 / 56 345** après deux sorties :
+    - les NOTES de la musique (`/api/musiques`, `Son.Notes`) : 43 504 bruts / 8 783 gzip. Le morceau reste
+      déclaré (slug, fichier, tempo) ; seules ses `voix` partent, sauf celles du thème du menu
+      (`musique.NOTES_DANS_LE_PAQUET`), qui joue avant tout autre réseau. Elles sont demandées juste APRÈS
+      les définitions, en arrière-plan, et la coquille du travailleur les garde : le filet tient hors ligne ;
+    - ce que le navigateur ne lit pas d'un bruitage (nom, catégorie, `boucle`) : 6 224 bruts / 961 gzip.
+      Et la durée de la sonnerie, que la cure du 28 sept. avait emportée alors que `Son.SFX.telephone()` la
+      lit, revient seule (`audio.DUREES_LUES`).
+    ⚠️ Ce que la sortie des notes n'achète pas, comme pour la carte : au premier chargement, le téléphone
+    reçoit presque autant d'octets, en une requête de plus, APRÈS les définitions au lieu de dedans. Ce
+    qu'elle achète : un `JSON.parse` plus petit avant le menu, des notes qui revalident en 304 quand un
+    catalogue change, et DIX Ko de marge rendus aux missions. Les notes ont leur plafond à elles
+    (43 775 bruts / 8 382 gzip à la mesure). Deux Ko et demi de marge gzip, pas plus : le prochain qui
+    relève ce plafond regarde d'abord ce qui peut encore sortir (la fiche en nomme).
     """
-    for nom, brut_max, fil_max in (("definitions", 300_000, 67_000), ("carte", 722_000, 71_000)):
+    for nom, brut_max, fil_max in (("definitions", 256_000, 59_000), ("carte", 722_000, 71_000),
+                                   ("musiques", 50_000, 10_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))
@@ -257,3 +275,44 @@ def test_la_carte_voyage_a_part_et_se_reconnait(paquets):
     assert defs["carte_empreinte"] == carte["empreinte"] == paquets.carte.etag
     assert defs["empreinte"] == paquets.definitions.etag
     assert carte["largeur"] > 0 and carte["sol"]
+
+
+def test_les_notes_de_la_musique_voyagent_a_part(paquets):
+    """⚠️ Les notes de `musique.py` — le FILET du sequenceur — sont sorties du paquet le
+    29 sept. 2026 (`/api/musiques`). Le morceau reste DECLARE dans le paquet (slug, fichier,
+    tempo : `Mus.def`, la radio et le jukebox le lisent tout de suite) ; seules ses `voix`
+    partent — sauf celles du theme du menu, qui joue avant tout autre reseau."""
+    from app import audio, musique
+
+    defs = json.loads(paquets.definitions.corps)
+    notes = json.loads(paquets.musiques.corps)
+    assert defs["musiques_empreinte"] == notes["empreinte"] == paquets.musiques.etag
+    completes = {m["slug"]: m for m in audio.exporter()["musiques"]}
+    au_paquet = {m["slug"]: m for m in defs["audio"]["musiques"]}
+    assert au_paquet.keys() == completes.keys(), "un morceau a disparu du paquet avec ses notes"
+    assert musique.NOTES_DANS_LE_PAQUET <= au_paquet.keys()
+    for slug, morceau in au_paquet.items():
+        for cle in ("bpm", "pas", "nom", "fichier", "volume"):
+            assert cle in morceau, f"{slug} : `{cle}` est parti avec les notes"
+        if slug in musique.NOTES_DANS_LE_PAQUET:
+            assert morceau["voix"] == completes[slug]["voix"], f"{slug} : le menu doit garder son filet"
+            assert slug not in notes["musiques"]
+        else:
+            assert "voix" not in morceau, f"{slug} : ses notes voyagent encore dans le paquet"
+            assert notes["musiques"][slug] == completes[slug]["voix"], f"{slug} : ses notes ne sont nulle part"
+
+
+def test_des_notes_qui_changent_ne_font_pas_retelecharger_le_paquet(monkeypatch):
+    """Une note corrigee change l'empreinte des notes, pas celle de la carte ; et les
+    definitions, qui NOMMENT l'empreinte des notes, suivent — comme pour la carte."""
+    from app import musique
+
+    avant = definitions.construire()
+    morceaux = [dict(m) for m in musique.MORCEAUX]
+    ouv = next(m for m in morceaux if m["slug"] == "ouverture")
+    ouv["voix"] = [dict(v) for v in ouv["voix"]]
+    ouv["voix"][0]["volume"] = ouv["voix"][0]["volume"] + 0.01
+    monkeypatch.setattr(musique, "MORCEAUX", morceaux)
+    apres = definitions.construire()
+    assert apres.musiques.etag != avant.musiques.etag
+    assert apres.carte.etag == avant.carte.etag

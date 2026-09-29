@@ -115,6 +115,19 @@ function banc(corps) {
       (d.voix || []).forEach(function (v) { defs.audio.histoire.push(v); });
     });
   }
+  /*: LES NOTES DE LA MUSIQUE (`/api/musiques`, 29 sept. 2026) : le filet du sequenceur,
+    hors du paquet. Le banc les sert comme le serveur ; par defaut elles sont DEJA posees
+    (la fixture `paquet` les remet a leur morceau), parce que dans le vrai jeu elles
+    arrivent pendant que la ville se batit. `poser_les_notes: false` les retire avant le
+    demarrage — le jeu doit alors aller les chercher —, et `notes_panne` fait tomber les
+    premieres demandes. */
+  const NOTES = ENTREE.notes || { musiques: {} };
+  let notesEnPanne = ENTREE.notes_panne || 0;
+  if (ENTREE.poser_les_notes === false) {
+    ((defs.audio && defs.audio.musiques) || []).forEach(function (m) {
+      if (NOTES.musiques[m.slug]) delete m.voix;
+    });
+  }
   const html = fs.readFileSync(path.join(racine, 'templates', 'index.html'), 'utf8');
   const SCRIPTS = Array.from(html.matchAll(/filename='js\/([^']+)'/g)).map(function (m) { return m[1]; });
   if (!SCRIPTS.length) throw new Error('aucun script trouve dans templates/index.html');
@@ -126,6 +139,7 @@ function banc(corps) {
   elements.toile = toile;
   const bandini = faireElement('main', 'bandini');
   bandini.dataset = { etat: 'chargement', urlDefinitions: '/api/definitions', urlCarte: '/api/carte',
+                      urlMusiques: '/api/musiques?e=' + (NOTES.empreinte || ''),
                       urlCompte: '/api/compte/', urlDefi: '/api/defi' };
   elements.bandini = bandini;
   const tactile = faireElement('div', 'tactile');
@@ -313,6 +327,12 @@ function banc(corps) {
         const d = BLOCS[slug];
         return Promise.resolve({ ok: !!d, status: d ? 200 : 404,
                                  json: function () { return Promise.resolve(d || {}); } });
+      }
+      // Les notes de la musique, comme le serveur. ⚠️ AVANT `definitions` et la carte : aucune
+      // des deux adresses ne la contient, mais l'ordre des prefixes a deja trompe ce banc.
+      if (adresse.indexOf('/api/musiques') === 0) {
+        if (notesEnPanne > 0) { notesEnPanne--; return Promise.reject(new Error('reseau coupe')); }
+        return Promise.resolve({ ok: true, status: 200, json: function () { return Promise.resolve(NOTES); } });
       }
       if (String(url).indexOf('definitions') >= 0) return Promise.resolve({ ok: true, json: function () { return Promise.resolve(defs); } });
       // ⚠️ La carte a sa requete depuis qu'elle est sortie du paquet : le banc

@@ -751,6 +751,87 @@ def test_un_mp3_qui_n_arrive_pas_rend_la_main_aux_notes(banc):
     assert r["muettes"] == 0
 
 
+# --- Les notes voyagent a part (29 sept. 2026) ------------------------------------------
+#
+# ⚠️ Les notes de `musique.py` — le FILET — sont sorties du paquet des definitions
+# (`/api/musiques`, `Son.Notes`). Ces juges partent du paquet NU (`poser_les_notes=False`) :
+# le jeu doit aller les chercher lui-meme, juste apres les definitions, et le filet doit
+# tenir sans mp3 comme avant.
+
+
+def test_les_notes_arrivent_apres_le_paquet_et_le_filet_joue_sans_mp3(banc):
+    """Le paquet ne porte plus que les notes du menu ; celles d'une ambiance arrivent par
+    leur requete, pendant que la ville se batit. Puis un mp3 qui n'arrive pas rend la main
+    aux notes — exactement comme avant qu'elles voyagent a part."""
+    r = banc("""async function (L, o) {
+        const joues = o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre();
+        const demandees = o.fetchs.filter(function (f) { return String(f.url).indexOf('/api/musiques') === 0; }).length;
+        const def = L.Son.Mus.def('amb_quais');
+        const arrivees = !!def.voix;
+        def.fichier = 'musique-amb_quais.introuvable';
+        // ⚠️ La manivelle a la main, pas `o.frame` : au titre, le chef d'orchestre redemande
+        // le theme du menu — qui a ses notes dans le paquet, et ferait passer ce juge a vide.
+        L.Son.Mus.jouer('amb_quais', 0);
+        L.Son.Mus.tick(); L.Son.Mus.tick();
+        await o.attendre(); await o.attendre();
+        for (let i = 0; i < 6; i++) L.Son.Mus.tick();
+        return { demandees: demandees, arrivees: arrivees, etat: L.Son.Notes.etat,
+                 courante: L.Son.Mus.courante, titre: !!L.Son.Mus.def('titre').voix,
+                 notes: joues.filter(function (x) { return x.quoi === 'ton'; }).length };
+    }""", poser_les_notes=False)
+    assert r["demandees"] == 1, "les notes ne sont pas demandees au demarrage : %s" % r
+    assert r["arrivees"] and r["etat"] == "arrivees", "les notes ne sont pas remises a leur morceau : %s" % r
+    assert r["titre"], "le theme du menu a perdu ses notes"
+    assert r["courante"] == "amb_quais", r
+    assert r["notes"] > 0, "le mp3 a rate ET le sequenceur se tait : le filet ne tient plus"
+
+
+def test_un_reseau_qui_tombe_au_demarrage_ne_tue_pas_le_filet(banc):
+    """La demande des notes tombe une fois. Le morceau qui devait jouer en notes se TAIT
+    (sans planter : une exception dans `maj()` fige le jeu) et les REDEMANDE — pas a chaque
+    image : une fois le delai passe. Quand elles arrivent, il joue."""
+    r = banc("""async function (L, o) {
+        const joues = o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre();
+        const apresPanne = L.Son.Notes.etat;
+        const def = L.Son.Mus.def('amb_quais');
+        def.fichier = null;                         // pas de mp3 : les notes ou rien
+        L.Son.Mus.jouer('amb_quais', 0);
+        function tons() { return joues.filter(function (x) { return x.quoi === 'ton'; }).length; }
+        function demandes() { return o.fetchs.filter(function (f) { return String(f.url).indexOf('/api/musiques') === 0; }).length; }
+        for (let i = 0; i < 20; i++) L.Son.Mus.tick();
+        await o.attendre(); await o.attendre();
+        const muet = tons(), avant = demandes();
+        L.B.t += 600;                               // dix secondes plus tard
+        L.Son.Mus.tick();
+        await o.attendre(); await o.attendre();
+        L.Son.Mus.tick(); L.Son.Mus.tick();
+        return { apresPanne: apresPanne, muet: muet, avant: avant, apres: demandes(),
+                 etat: L.Son.Notes.etat, notes: tons() };
+    }""", poser_les_notes=False, notes_panne=1)
+    assert r["apresPanne"] == "ratee", r
+    assert r["muet"] == 0, r
+    assert r["avant"] == 1, "les notes se redemandent a chaque image : un reseau coupe ne se martele pas (%s)" % r
+    assert r["apres"] == 2 and r["etat"] == "arrivees", "les notes ne se redemandent jamais : %s" % r
+    assert r["notes"] > 0, "les notes sont arrivees et le morceau se tait : %s" % r
+
+
+def test_la_radio_du_camion_reste_une_station_en_notes_avant_ses_notes(banc):
+    """⚠️ `Radio.estProcedurale` lisait « le morceau porte ses `voix` ». Sans ses notes (pas
+    encore arrivees), la station du camion etait prise pour un mp3 de radio."""
+    r = banc("""async function (L, o) {
+        return { avant: !!L.Son.Mus.def('station_camion').voix,
+                 procedurale: L.Son.Radio.estProcedurale('station_camion'),
+                 radio: L.Son.Radio.estProcedurale((L.B.defs.audio.radios[0] || {}).slug) };
+    }""", poser_les_notes=False, notes_panne=1)
+    assert r["avant"] is False, "le juge ne mesure rien : les notes sont deja la"
+    assert r["procedurale"] is True
+    assert r["radio"] is False
+
+
 def test_la_musique_en_mp3_baisse_quand_quelqu_un_parle(ducking_du_mp3):
     """⚠️ Le ducking passait par les boucles `radio-*` et `ambiance-*`. Sans
     `musique-*`, l'ambiance du district et la musique de poursuite couvriraient

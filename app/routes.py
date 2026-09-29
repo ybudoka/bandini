@@ -48,6 +48,7 @@ def _page_d_accueil() -> str:
     return render_template("index.html", scripts_du_jeu=_scripts_du_jeu(gabarit),
                            empreinte_definitions=current_app.extensions["definitions"].etag,
                            empreinte_carte=current_app.extensions["carte"].etag,
+                           empreinte_musiques=current_app.extensions["musiques"].etag,
                            empreinte_missions=current_app.extensions["missions_empreinte"],
                            empreinte_blocs=current_app.extensions["blocs_empreinte"],
                            url_compte=comptes.CHEMIN_COOKIE + "/")
@@ -90,6 +91,18 @@ def api_carte():
     deux reponses sont de la meme construction.
     """
     return _revalide(current_app.extensions["carte"])
+
+
+@bp.route("/api/musiques")
+def api_musiques():
+    """Les notes de la musique — le filet du sequenceur, hors du paquet (29 sept. 2026).
+
+    ⚠️ Demandees juste APRES les definitions, en arriere-plan, et gardees par le
+    travailleur (la coquille) : un filet qu'on irait chercher au moment ou un mp3 rate —
+    souvent parce que le reseau vient de tomber — ne tiendrait rien. Meme revalidation
+    que les autres ; les definitions nomment son empreinte (`musiques_empreinte`).
+    """
+    return _revalide(current_app.extensions["musiques"])
 
 
 @bp.route("/api/mission/<slug>")

@@ -72,7 +72,20 @@ def paquet(paquets):
     # le 16 sept. 2026, mais aucun lecteur ne la cherche ailleurs.
     donnees = json.loads(paquets.definitions.corps.decode("utf-8"))
     donnees["carte"] = json.loads(paquets.carte.corps.decode("utf-8"))
+    # ⚠️ Et les NOTES de la musique remises a leur morceau (`Son.Notes`) : elles voyagent a
+    # part depuis le 29 sept. 2026, et arrivent juste apres les definitions. Un juge qui
+    # veut le paquet NU (les notes pas encore la) passe `banc(..., poser_les_notes=False)`.
+    notes = json.loads(paquets.musiques.corps.decode("utf-8"))["musiques"]
+    for morceau in donnees["audio"]["musiques"]:
+        if morceau["slug"] in notes:
+            morceau["voix"] = notes[morceau["slug"]]
     return donnees
+
+
+@pytest.fixture(scope="session")
+def notes_de_la_musique(paquets):
+    """Les notes de la musique — un `/api/musiques`, hors du paquet depuis le 29 sept. 2026."""
+    return json.loads(paquets.musiques.corps.decode("utf-8"))
 
 
 @pytest.fixture(scope="session")
@@ -110,7 +123,7 @@ def serveur(tmp_path_factory, paquets):
 
 
 @pytest.fixture(scope="session")
-def banc(paquet, a_jouer, cartes_des_blocs):
+def banc(paquet, a_jouer, cartes_des_blocs, notes_de_la_musique):
     """Fait tourner `corps` (une fonction JS `(L, o) => resultat`) dans le banc Node."""
     if OBLIGATOIRE and shutil.which("node") is None:
         pytest.fail("node est obligatoire (BANDINI_TESTS_OBLIGATOIRES=1) et il manque")
@@ -118,7 +131,8 @@ def banc(paquet, a_jouer, cartes_des_blocs):
 
     def executer(corps: str, graine: int = 0x1A2B3C4D, stockage: dict | None = None, session: dict | None = None,
                  reseau: dict | None = None, defi: dict | None = None, poser_les_missions: bool = True,
-                 missions_panne: int = 0, blocs_panne: int = 0):
+                 missions_panne: int = 0, blocs_panne: int = 0, poser_les_notes: bool = True,
+                 notes_panne: int = 0):
         # `stockage` / `session` : ce que le navigateur gardait AVANT le chargement.
         # `reseau` : ce que /api/compte/ repond (M14) — l'ouverture part des que la
         # ville est batie, donc ses reponses se posent avant, jamais pendant.
@@ -127,7 +141,11 @@ def banc(paquet, a_jouer, cartes_des_blocs):
         # chercher chaque mission — c'est ainsi qu'on juge la porte elle-meme.
         entree = {"racine": str(RACINE), "defs": paquet, "graine": graine,
                   "missions": a_jouer, "poser_les_missions": poser_les_missions,
-                  "missions_panne": missions_panne, "blocs": cartes_des_blocs, "blocs_panne": blocs_panne}
+                  "missions_panne": missions_panne, "blocs": cartes_des_blocs, "blocs_panne": blocs_panne,
+                  # Les notes de la musique (`/api/musiques`) : le banc les sert comme le serveur.
+                  # `poser_les_notes=False` les retire du paquet avant le demarrage, et
+                  # `notes_panne` fait tomber les premieres demandes.
+                  "notes": notes_de_la_musique, "poser_les_notes": poser_les_notes, "notes_panne": notes_panne}
         if stockage is not None:
             entree["stockage"] = stockage
         if session is not None:

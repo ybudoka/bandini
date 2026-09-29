@@ -22,6 +22,15 @@ entier) ; ce qu'elle DIT, MONTRE, ses VOIX et ses OBJECTIFS partent sur
 meme instant que ses mp3 (`Son.Voix.chargerHistoire`). Mesure : 369 224 a **220 367**
 octets bruts, 75 138 a **48 971** gzip. Voir `missions.HORS_DU_PAQUET`.
 
+⚠️ **LES NOTES DE LA MUSIQUE SORTENT DU PAQUET** (29 sept. 2026) — le plafond gzip avait
+ete releve cinq fois en quatre jours. Les partitions de `musique.py` (le FILET : ce que le
+sequenceur joue quand un mp3 manque) partent sur `/api/musiques`, une reponse pour toutes,
+avec son ETag ; le navigateur la demande juste apres les definitions, en arriere-plan, et la
+coquille du travailleur la garde (le filet tient hors ligne). Ce qui reste : tout ce qui
+DECRIT un morceau (slug, nom, fichier, tempo — `Mus.def`, le jukebox et la radio le lisent
+tout de suite), et les notes du theme du menu (`musique.NOTES_DANS_LE_PAQUET`), qui joue
+avant tout autre reseau. Comme la carte, `assembler()` rend le tout, notes comprises.
+
 ⚠️ **Les definitions portent l'empreinte de la carte** (`carte_empreinte`), et
 c'est ce qui garde la sauvegarde honnete : elle oublie une position quand
 `empreinte` change, et `empreinte` change donc des que la CARTE change — meme
@@ -37,7 +46,7 @@ from dataclasses import dataclass
 
 from . import (armes, audio, blocs, calendrier, saisons, pluie, carte, demenagement, derby, enseignes, fetes, garage, motoneige, quatre_roues, saint_jean, territoires, devantures, dojo, economie, mantes, garderobe, interactions, journal, magasins,
                brouillard, loto, machine_a_sous, manettes, tables_de_jeu, missions, nord, nuit, pietons, recherche, techniques, vehicules, verglas, videopoker,
-               pont_de_glace, visages)
+               musique, pont_de_glace, visages)
 from .blocs import galeries as galeries_hantees
 from .version import VERSION
 
@@ -189,6 +198,10 @@ class Paquets:
     #: ⚠️ Hors de `/api/carte` : un bloc de plus ne change pas un octet de la ville.
     blocs: dict[str, Paquet]
     blocs_empreinte: str
+    #: Les notes des morceaux (`/api/musiques`) : slug -> ses `voix`, sauf celles qui
+    #: restent au paquet (`musique.NOTES_DANS_LE_PAQUET`). Les definitions nomment son
+    #: empreinte (`musiques_empreinte`), comme celle de la carte.
+    musiques: Paquet
 
 
 def _json(donnees: dict) -> bytes:
@@ -204,12 +217,26 @@ def _signer(donnees: dict) -> Paquet:
     return Paquet(corps=_json(donnees), etag=etag)
 
 
+def sortir_les_notes(audio_du_paquet: dict) -> dict:
+    """Retire du paquet les notes des morceaux (le filet du sequenceur) et les rend.
+
+    ⚠️ Seules les `voix` partent : le morceau reste declare (slug, nom, fichier, tempo,
+    volume), et le navigateur les lui remet a l'arrivee (`Son.Notes`)."""
+    notes = {}
+    for morceau in audio_du_paquet["musiques"]:
+        if morceau["slug"] not in musique.NOTES_DANS_LE_PAQUET:
+            notes[morceau["slug"]] = morceau.pop("voix")
+    return {"musiques": notes}
+
+
 def construire() -> Paquets:
     donnees = assembler()
     # ⚠️ UNE SEULE ville generee pour les deux : `generer` coute une seconde et
     # demie, et deux villes batties separement pourraient ne pas etre la meme.
     carte = _signer(donnees.pop("carte"))
     donnees["carte_empreinte"] = carte.etag
+    musiques = _signer(sortir_les_notes(donnees["audio"]))
+    donnees["musiques_empreinte"] = musiques.etag
     # Un paquet par mission, signe comme les autres.
     a_jouer = {m["slug"]: _signer(missions.pour_jouer(m["slug"])) for m in missions.CATALOGUE}
     # ⚠️ UNE empreinte pour les trente-six, posee dans l'adresse (`?e=`) comme celles
@@ -226,4 +253,5 @@ def construire() -> Paquets:
     des_blocs = empreinte(_json({slug: paquet.etag for slug, paquet in sorted(des_cartes.items())}))
     donnees["blocs_empreinte"] = des_blocs
     return Paquets(definitions=_signer(donnees), carte=carte, a_jouer=a_jouer,
-                   missions_empreinte=des_missions, blocs=des_cartes, blocs_empreinte=des_blocs)
+                   missions_empreinte=des_missions, blocs=des_cartes, blocs_empreinte=des_blocs,
+                   musiques=musiques)
