@@ -3432,6 +3432,43 @@ const TUILES = (function () {
   const TOIT_BARDEAU = { fond: '#6b5a4a', clair: '#8e7862', sombre: '#4a3d32', grain: '#7a6752',
                          faite: '#a08a72' };
 
+  /* --- UNE TEINTE PAR BATIMENT (docs/jalons/une-amelioration-generale-des-toits.md, vague 1) ----------------
+
+     Martin (29 sept. 2026) : fini « une couleur par matiere pour toute la ville ». Chaque matiere a SIX teintes,
+     de la plus neuve a la plus delavee ; le quartier choisit dans lesquelles un toit tire (`Monde`,
+     `TEINTES_DE_STANDING` : un cossu n'a jamais le toit delave, un pauvre jamais le neuf), l'empreinte du
+     batiment choisit laquelle (`Monde.teinteDeToit`). La teinte voyage dans la VARIANTE de la tuile (au-dessus du bord et du grain) : la
+     cuisson reste une image par variante, et rien ne change dans le paquet.
+     ⚠️ La teinte d'origine de chaque matiere est gardee (la troisieme) : l'ordinaire ne change pas d'air. */
+  function teinteDeToit(fond, reste) {
+    return Object.assign({ fond: fond, clair: eclaircir(fond, 0.22), sombre: assombrir(fond, 0.3),
+                           grain: eclaircir(fond, 0.08) }, reste || {});
+  }
+  function eclaircir(c, k) { return melerHex(c, '#ffffff', k); }
+  function assombrir(c, k) { return melerHex(c, '#000000', k); }
+  function melerHex(a, b, k) {
+    const x = parseInt(a.slice(1), 16), y = parseInt(b.slice(1), 16);
+    const canal = function (d) { return Math.round(((x >> d) & 255) * (1 - k) + ((y >> d) & 255) * k); };
+    return '#' + ((1 << 24) | (canal(16) << 16) | (canal(8) << 8) | canal(0)).toString(16).slice(1);
+  }
+  //: Du plus neuf au plus delave. La tole : peinte en vert, en bleu, en rouge de grange ; la sienne ; galvanisee
+  //: grise ; rouillee.
+  const TOITS_TOLE = [teinteDeToit('#4a5e4c', { tole: true }), teinteDeToit('#4a5670', { tole: true }), TOIT_TOLE,
+                      teinteDeToit('#6e423c', { tole: true }), teinteDeToit('#6a6d70', { tole: true }),
+                      teinteDeToit('#6e4e38', { tole: true })];
+  //: L'ardoise : bleu nuit, violacee, la sienne, verte, grise, poussiereuse.
+  const TOITS_ARDOISE = [teinteDeToit('#3c4358', { rangs: 4 }), teinteDeToit('#51495e', { rangs: 4 }), TOIT_ARDOISE,
+                         teinteDeToit('#46524f', { rangs: 4 }), teinteDeToit('#5a5c62', { rangs: 4 }),
+                         teinteDeToit('#625d58', { rangs: 4 })];
+  //: Le gravier : membrane blanche d'un toit refait, gris pale, le sien, brun chaud, gris sale, goudron noirci.
+  const TOITS_GRAVIER = [teinteDeToit('#8a8680', { gravier: true }), teinteDeToit('#74726c', { gravier: true }),
+                         TOIT_GRAVIER, teinteDeToit('#77624e', { gravier: true }),
+                         teinteDeToit('#5f5a52', { gravier: true }), teinteDeToit('#4c4640', { gravier: true })];
+  //: Le bardeau : vert foret, bourgogne, le sien, cedre, asphalte gris, delave.
+  const TOITS_BARDEAU = [teinteDeToit('#445a40', { faite: '#6a8062' }), teinteDeToit('#5e4046', { faite: '#86646a' }),
+                         TOIT_BARDEAU, teinteDeToit('#7a5a3e', { faite: '#a4825e' }),
+                         teinteDeToit('#56585c', { faite: '#7c7e82' }), teinteDeToit('#77706a', { faite: '#9a938c' })];
+
   //: Les plaques de tôle d'une cabane (`{`) : [fond, ondes]. Galvanisée, rouillée, brûlée, verte délavée.
   const TOLES_DE_CABANE = [['#8a8f94', '#737880'], ['#8f5a34', '#7a4a2a'], ['#6e3f24', '#5a321c'],
                            ['#6f7d62', '#5e6b52'], ['#9a9488', '#827c70']];
@@ -3527,9 +3564,11 @@ const TUILES = (function () {
     }
   }
 
-  function toitPlat(ctx, v, T, style) {
+  //: La variante d'un toit plat : le bord (bits 0 a 3), le grain (4 a 6), la TEINTE (7 et au-dessus).
+  function toitPlat(ctx, v, T, famille) {
+    let style = famille[(v >> 7) % famille.length];
     if (typeof Saisons !== 'undefined') style = Saisons.enneiger(style);   // la neige qui tient (lot 1)
-    const grain = v >> 4;
+    const grain = (v >> 4) & 7;
     champDeToit(ctx, grain + 1, T, style);
     usureDeToit(ctx, grain, T, style);
     bordDeToit(ctx, v & 15, T, style);
@@ -3540,7 +3579,9 @@ const TUILES = (function () {
       compte les tuiles de toit au nord et au sud) : c'est ce qui permet a la
       faite d'apparaitre toute seule la ou les deux pentes se rencontrent, sans
       qu'une tuile ait besoin de savoir qu'elle est au milieu. */
-  function toitEnPente(ctx, v, T, style) {
+  //: La variante d'un toit en pente : le bord (bits 0 a 3), le versant (4 et 5), la TEINTE (6 et au-dessus).
+  function toitEnPente(ctx, v, T, famille) {
+    let style = famille[(v >> 6) % famille.length];
     if (typeof Saisons !== 'undefined') style = Saisons.enneiger(style);   // la neige qui tient (lot 1)
     const versant = (v >> 4) & 3;           // 0 nord, 1 faite, 2 sud
     plein(ctx, style.fond, T);
@@ -3794,10 +3835,10 @@ const TUILES = (function () {
       points(ctx, v, T, '#231f1a', 6, 120);
     },
     'C': function (ctx, v, T) { falaise(ctx, v, T); },
-    'B': function (ctx, v, T) { toitPlat(ctx, v, T, TOIT_TOLE); },
-    'E': function (ctx, v, T) { toitPlat(ctx, v, T, TOIT_ARDOISE); },
-    'O': function (ctx, v, T) { toitPlat(ctx, v, T, TOIT_GRAVIER); },
-    'P': function (ctx, v, T) { toitEnPente(ctx, v, T, TOIT_BARDEAU); },
+    'B': function (ctx, v, T) { toitPlat(ctx, v, T, TOITS_TOLE); },
+    'E': function (ctx, v, T) { toitPlat(ctx, v, T, TOITS_ARDOISE); },
+    'O': function (ctx, v, T) { toitPlat(ctx, v, T, TOITS_GRAVIER); },
+    'P': function (ctx, v, T) { toitEnPente(ctx, v, T, TOITS_BARDEAU); },
     'F': function (ctx, v, T) { facade(ctx, v, T); },
     // LES CABANES DU BIDONVILLE de la gare (`nord._cabane`). ⚠️ La tôle se lit par ses PLAQUES : chaque tuile
     // en est une, d'une autre couleur que sa voisine (galvanisée, rouillée, peinte il y a longtemps), ses

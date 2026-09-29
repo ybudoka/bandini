@@ -1749,6 +1749,85 @@ const Monde = (function () {
   //: coulee de rouille sous un event.
   const GRAINS_DE_TOIT = 8;
 
+  /* --- UNE TEINTE PAR BATIMENT (docs/jalons/une-amelioration-generale-des-toits.md, vague 1) --------------
+
+     Martin (29 sept. 2026) : fini « une couleur par matiere pour toute la ville ». Chaque matiere a six teintes
+     (`sprites.js`, `TOITS_TOLE`…), de la plus neuve a la plus delavee.
+
+     ⚠️ LE BATIMENT SE RETROUVE SANS UNE DONNEE DE PLUS : le generateur ne couvre jamais deux batiments colles
+     de la meme matiere (`Chantier.batiment_forme`), donc un toit, c'est un morceau d'un seul tenant d'un meme
+     glyphe de toit. On les compte une fois par carte (`carte.teintes`) ; la carte, a son plafond, ne grossit
+     pas d'un octet.
+     ⚠️ RIEN AU DE : la teinte se tire a l'EMPREINTE du batiment (`hash2` de sa premiere tuile, dans l'ordre de
+     lecture), dans les teintes de son QUARTIER (`TEINTES_DE_STANDING`) ; et deux toits de meme matiere voisins
+     (a `VOISINAGE_DE_TEINTE` tuiles) n'ont pas la meme, tant que le quartier en a une autre a offrir — sinon
+     deux maisons pareilles face a face se liraient comme un seul pate. Les memes d'une partie a l'autre.
+     ⚠️ Un toit peint par une MATIERE de bloc (`carte.materiaux` : le chalet, les pieces) garde son peintre :
+     les bits de teinte n'y sont pas. */
+  const TEINTES_DE_STANDING = { cossu: [0, 1, 2, 3], ordinaire: [1, 2, 3, 4], pauvre: [2, 3, 4, 5] };
+  const VOISINAGE_DE_TEINTE = 3;
+  const MATIERES_TEINTES = 'BEOP';
+
+  function teintesDesToits() {
+    if (carte.teintes) return carte.teintes;
+    const w = carte.w, h = carte.h, qui = new Int32Array(w * h).fill(-1), pile = new Int32Array(w * h);
+    const glyphes = [], teintes = [];
+    // ⚠️ Les quatre matieres, pas la tole des cabanes (`{`) : chaque plaque y a deja sa couleur.
+    const estUnToit = function (g) {
+      return MATIERES_TEINTES.indexOf(g) >= 0 && !(carte.materiaux && carte.materiaux[g]);
+    };
+    for (let i = 0; i < w * h; i++) {
+      if (qui[i] >= 0) continue;
+      const ty = (i / w) | 0, tx = i - ty * w, g = carte.sol[ty][tx];
+      if (!estUnToit(g)) continue;
+      const n = teintes.length, bords = [];
+      let haut = 0;
+      pile[haut++] = i; qui[i] = n;
+      while (haut) {
+        const k = pile[--haut], y = (k / w) | 0, x = k - y * w;
+        let bord = false;
+        for (const [dx, dy] of VOISINES) {
+          const xx = x + dx, yy = y + dy;
+          if (xx < 0 || yy < 0 || xx >= w || yy >= h || carte.sol[yy][xx] !== g) { bord = true; continue; }
+          const j = yy * w + xx;
+          if (qui[j] < 0) { qui[j] = n; pile[haut++] = j; }
+        }
+        if (bord) bords.push(k);
+      }
+      // Les teintes deja prises autour : des toits de la meme matiere, deja comptes (l'ordre de lecture).
+      const prises = new Set();
+      for (const k of bords) {
+        const y = (k / w) | 0, x = k - y * w;
+        for (let dy = -VOISINAGE_DE_TEINTE; dy <= VOISINAGE_DE_TEINTE; dy++) {
+          for (let dx = -VOISINAGE_DE_TEINTE; dx <= VOISINAGE_DE_TEINTE; dx++) {
+            const xx = x + dx, yy = y + dy;
+            if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+            const autre = qui[yy * w + xx];
+            if (autre >= 0 && autre !== n && glyphes[autre] === g) prises.add(teintes[autre]);
+          }
+        }
+      }
+      const offre = TEINTES_DE_STANDING[standingA(tx, ty)] || TEINTES_DE_STANDING.ordinaire;
+      const d = hash2(tx * 7 + 3, ty * 13 + 5) % offre.length;
+      let t = offre[d];
+      for (let k = 0; k < offre.length; k++) {
+        if (!prises.has(offre[(d + k) % offre.length])) { t = offre[(d + k) % offre.length]; break; }
+      }
+      glyphes.push(g);
+      teintes.push(t);
+    }
+    carte.teintes = { qui: qui, teintes: teintes, glyphes: glyphes };
+    return carte.teintes;
+  }
+  const VOISINES = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+
+  /** La teinte du toit a cette tuile (0 a 5), ou 0 hors d'un toit teint. */
+  function teinteDeToit(tx, ty) {
+    if (tx < 0 || ty < 0 || tx >= carte.w || ty >= carte.h) return 0;
+    const t = teintesDesToits(), n = t.qui[ty * carte.w + tx];
+    return n >= 0 ? t.teintes[n] : 0;
+  }
+
   /** La variante d'un toit plat : les quatre bits des cotes ou il S'ARRETE
       (1 nord, 2 est, 4 sud, 8 ouest), et le grain par-dessus.
 
@@ -1759,7 +1838,7 @@ const Monde = (function () {
   function varianteDeToit(g, tx, ty) {
     const bord = (glyphe(tx, ty - 1) !== g ? 1 : 0) | (glyphe(tx + 1, ty) !== g ? 2 : 0)
       | (glyphe(tx, ty + 1) !== g ? 4 : 0) | (glyphe(tx - 1, ty) !== g ? 8 : 0);
-    return bord + 16 * (hash2(tx, ty) % GRAINS_DE_TOIT);
+    return bord + 16 * (hash2(tx, ty) % GRAINS_DE_TOIT) + 128 * teinteDeToit(tx, ty);
   }
 
   /** La variante d'un toit a deux versants : le bord, et le VERSANT — 0 nord,
@@ -1777,7 +1856,7 @@ const Monde = (function () {
     while (nord < 12 && glyphe(tx, ty - 1 - nord) === g) nord++;
     while (sud < 12 && glyphe(tx, ty + 1 + sud) === g) sud++;
     const versant = nord === sud ? 1 : (nord < sud ? 0 : 2);
-    return bord + 16 * versant;
+    return bord + 16 * versant + 64 * teinteDeToit(tx, ty);
   }
 
   /** Un toit a cette tuile ? (les quatre couvertures) */
@@ -2740,7 +2819,7 @@ const Monde = (function () {
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
     dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau, sousLeToit, cacheSousLeToit, abrite,
     barrieresCoulissantes, majBarrieresCoulissantes, dessinerBarrieresCoulissantes, COULISSE_GLISSE, COULISSE_TIENT,
-estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
+estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, teinteDeToit, teintesDesToits, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, ambianceVue, estNuit, estNuitVue, periode, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
     miniCarte, couleurMini, couleurMiniA, masqueDeLaCarte, masquee, hauteurConnue, chemin, demanderChemin, majChemins,

@@ -55,4 +55,33 @@ que par ses objets de toit ; le temps de cuisson d'un morceau reste sous son bud
 
 ## Notes
 
-_Rien de livré._
+_Tranché par Martin le 29 sept. 2026 : les quatre — une teinte par bâtiment ; les bords, les gouttières et
+l'ombre ; des formes de toit ; l'usure et des objets neufs — sur toute la ville, vague par vague (pas le chalet
+d'abord)._
+
+### Vague 1 — une teinte par bâtiment — **livrée le 29 sept. 2026**
+
+- **Six teintes par matière** (`sprites.js`, `TOITS_TOLE`, `TOITS_ARDOISE`, `TOITS_GRAVIER`, `TOITS_BARDEAU`), de
+  la plus neuve à la plus délavée : la tôle peinte verte, bleue, rouge de grange, la sienne, galvanisée, rouillée ;
+  l'ardoise bleu nuit, violacée, verte, grise ; le gravier en membrane blanche refaite ou en goudron noirci ; le
+  bardeau vert forêt, bourgogne, cèdre, asphalte gris, délavé. La teinte d'avant de chaque matière est la
+  troisième : l'ordinaire ne change pas d'air.
+- **Le quartier choisit dans lesquelles** (`Monde`, `TEINTES_DE_STANDING`) : le cossu dans les quatre plus
+  neuves, le pauvre dans les quatre plus délavées, l'ordinaire au milieu.
+- ⚠️ **Le bâtiment se retrouve sans une donnée de plus.** Le générateur ne couvre jamais deux bâtiments collés de
+  la même matière (`Chantier.batiment_forme`) : un toit, c'est un morceau d'un seul tenant d'un même glyphe. Le
+  navigateur les compte une fois par carte (`Monde.teintesDesToits`, un remplissage), au premier morceau peint —
+  la carte, à son plafond gzip, ne grossit pas d'un octet.
+- **Rien au dé** : la teinte se tire à l'empreinte du bâtiment (`hash2` de sa première tuile dans l'ordre de
+  lecture) ; et deux toits de même matière à trois tuiles ou moins l'un de l'autre n'ont pas la même, tant que
+  le quartier en a une autre à offrir.
+- **Dans la variante de la tuile** : au-dessus du bord et du grain (bit 7 pour un toit plat, bit 6 pour une pente)
+  — la cuisson reste une image par variante, et la neige des saisons (`Saisons.enneiger`) blanchit chaque teinte.
+  Les toits peints par une matière de bloc (le chalet, les pièces) et la tôle des cabanes (`{`) gardent leur
+  peintre.
+- **Juges** : `test_toits_js.py` (les mêmes teintes d'un compte à l'autre, portées par la variante, quatre au
+  moins par matière ; deux voisins de même matière jamais pareils, chaque toit dans les teintes de son quartier ;
+  aucun `B.rng()`, et le compte sous 400 ms). Cinq mutations rouges. Capture avant/après aux Quais, au Faubourg,
+  à La Shop.
+- **Reste** : vague 2, les bords, les gouttières et l'ombre ; vague 3, des formes de toit ; vague 4, l'usure et
+  des objets neufs.
