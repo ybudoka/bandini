@@ -1115,6 +1115,53 @@ def test_le_pont_rend_son_eau_apres_un_saut(banc):
   pluie et le sol » ; `docs/architecture.md` (tâches 1-2). La ligne reste ⬜ **en cours** (cinq lots
   restent).
 
+### Lot 4 — les gens et la rue (découpé le 29 sept. 2026, en deux vagues)
+
+_Le lot 3 (l'Halloween) avance dans une autre session ; le lot 4 ne touche pas à ses fichiers
+(`halloween.*`) et se greffe à côté de son déguisé dans `Entites.imageDe` (le déguisement du 31 passe
+AVANT la saison : une sorcière n'enfile pas de manteau par-dessus sa robe). L'ordre de Martin tient : la
+glace et le dérapage (lot 6) restent en dernier, à part._
+
+**Vague 4a — la garde-robe des saisons, et le parapluie** (la plus visible, zéro physique) :
+
+- **Le froid du moment** (`froid`, une valeur de plus dans chaque palette de `app/saisons.py` : 1
+  l'hiver, 0,65 en novembre, 0,45 au printemps, 0,4 à l'automne, 0,1 en août, 0 en juillet) glisse
+  en huit paliers comme le reste. Chaque passant est plus ou moins **frileux**, à l'empreinte de sa
+  tenue : le froid qu'il sent = `froid + (frileux − ½) × 0,3`. Personne ne change d'habit d'un coup
+  à minuit, et tout le monde ne se couvre pas le même jour.
+- **L'habit du moment** (`Saisons.vetir(tenue, passant)`, pure, mémorisée par tenue et par palier) :
+  la tenue TIRÉE ne change pas (le tirage, les couleurs, `e.swaps`, la sauvegarde : rien) ; c'est
+  l'image qui s'habille. Au grand froid : **manteau** (de la couleur du haut : le gang et l'uniforme
+  restent reconnaissables), pantalon, **bottes**, **tuque** (sauf un chapeau d'uniforme : képi, casque
+  de chantier, casquette du garde et du livreur, bandeau des Mantes), et un **foulard** pour les
+  frileux. À mi-saison fraîche : le coton ouaté ou le chandail au lieu du t-shirt, plus de short. L'été
+  : **t-shirt** au lieu du manteau, la tuque tombe, des **shorts**, les souliers au lieu des bottes
+  (sauf les bottes de travail). Le tablier, le sarrau, la veste de travail et la veste de kung-fu
+  restent. **Dedans** (une pièce), on garde l'habit de base : on a enlevé son manteau.
+- **Sous la pluie** (`Pluie.intensite()`), un passant sur deux environ ouvre un **parapluie** de la
+  couleur de son accent (peint par-dessus sa tête, cuit une fois par couleur) ; les autres remontent
+  leur **capuche**. Un passant qui court, se bat ou fuit le referme.
+- **Ni les personnages ni le joueur** ne changent : on les reconnaît à leur tenue (Martin tranchera
+  s'il veut Marco en tuque).
+- **Juges** : un passant de janvier porte un manteau, des bottes et une tuque ; un passant de juillet,
+  jamais de manteau ni de tuque ; l'uniforme et le gang gardent leur couleur et leur chapeau ; la tenue
+  tirée n'est pas touchée et aucun dé n'est tiré ; le passage de novembre à l'hiver est graduel (pas
+  une coupure) ; dedans, l'habit de base ; le parapluie sous la pluie seulement, jamais au sec ; la
+  sonde du rythme en foule, en janvier et sous l'averse ; des captures de chaque saison, le jour et la
+  nuit.
+
+**Vague 4b — la rue** (du décor PEINT, jamais posé : la ville ne bouge pas) :
+
+- **Les bancs de neige** le long des trottoirs, tant que la neige tient, que la charrue laisse (peints
+  dans la tuile de rue au bord du trottoir, à l'empreinte ; sales et plus bas au dégel) ;
+- **la fumée des cheminées** l'hiver sur les toits des maisons (la recette du chalet, `Blocs.FUMEE`,
+  pure fonction du temps, bornée à l'écran) ;
+- **les abris Tempo** dans les entrées de novembre à avril (à l'empreinte de la maison, s'il y a une
+  entrée à côté) ;
+- **les terrasses** l'été devant les restos et les bars (tables et parasols peints sur le trottoir).
+- Plus de passants dehors l'été : ⚠️ touche au dé de `peupler` — à mesurer contre les juges avant de le
+  promettre ; sinon, ça tombe.
+
 ## Notes
 
 ### Lot 1 — le paysage des quatre saisons (livré le 29 sept. 2026)
