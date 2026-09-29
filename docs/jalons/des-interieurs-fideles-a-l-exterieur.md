@@ -48,6 +48,8 @@ des écarts ; puis corriger par vagues, chacune jouable et jugée.
   du bâtiment) pour TOUTES les portes de la ville, et qu'on fait rougir en retirant la règle.
 - ⚠️ **Se regarde** : une capture dedans et dehors par genre avant de livrer, parce qu'aucun juge ne dit qu'un
   intérieur « fait pauvre ».
+- ⚠️ **Après les façades**, ou avec elles ([la revue des façades](une-revue-des-facades-des-residences.md#fiche)) :
+  l'intérieur suit ce que la façade dit, alors la façade doit d'abord bien le dire.
 - La première vague qui s'impose : les logements selon le standing (pauvre, ordinaire, cossu), en commençant par
   les maisons pauvres de la gare.
 
