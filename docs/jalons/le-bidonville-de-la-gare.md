@@ -21,6 +21,16 @@ changent de vocation.
 - La gare garde sa règle « une seule pièce, le poste d'aiguillage » : on n'entre ni dans les cabanes ni dans
   les maisons pauvres.
 
+## Fiche de la deuxième vague
+
+_Martin (29 sept. 2026), à « tu veux pouvoir entrer dans les maisons pauvres ? » :_ « Oui ».
+
+Les logements des maisons pauvres de la gare se visitent, comme ceux du reste de la ville (une porte `D` sur
+quelques-unes, la pièce à la mesure du bâtiment, en pauvre). ⚠️ Le logement visitable se décidait sur un état
+COMMUN à toute la bande (`premiere_du_genre`, le compteur `visites`) : la gare doit tenir le sien, sinon le
+Petit-Canton décide encore quelles portes de la gare s'ouvrent (`test_canton`, le témoin). Les cabanes du
+bidonville restent fermées.
+
 ## Notes
 
 **Livré le 28 sept. 2026.** `app/nord.py` (`_bidonville`, `_cabane`, `_salir_les_maisons`), `app/carte.py`
