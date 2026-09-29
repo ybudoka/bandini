@@ -1018,20 +1018,65 @@ def test_aucun_arbre_ne_bouche_un_sentier_de_parc(VILLE_D_AVANT):
     assert chantier.reserve, "plus rien n'est reserve : les sentiers ne se protegent plus"
 
 
-def test_un_sentier_de_parc_se_traverse_de_bout_en_bout(CARTE):
-    """La reserve ne sert a rien si l'allee est coupee autrement. On verifie
-    qu'un parc se traverse : de chaque tuile d'allee, on rejoint les autres."""
+def _batiment_de_la_porte(sol, porte, plafond=40):
+    """Les tuiles solides du bâtiment auquel s'adosse `porte` : de proche en proche
+    depuis ses voisines solides, sans déborder sur un voisin collé (`plafond`)."""
+    x0, y0 = porte["x"], porte["y"]
+    a_voir = [(x0 + dx, y0 + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+    vus: set[tuple[int, int]] = set()
+    while a_voir and len(vus) < plafond:
+        x, y = a_voir.pop()
+        if (x, y) in vus or not (0 <= y < len(sol) and 0 <= x < len(sol[0])):
+            continue
+        if carte.solidite(sol[y][x]) == 0:
+            continue
+        vus.add((x, y))
+        a_voir += [(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+    return vus
+
+
+def test_un_sentier_de_parc_se_traverse_de_bout_en_bout(VILLE_D_AVANT):
+    """La reserve ne sert a rien si l'allee est coupee autrement — l'etang du
+    parc, un toit, un comptoir peint par-dessus apres coup. Une allee est tracee
+    d'un seul tenant (baionnette jusqu'au coeur) : si AUCUNE de ses tuiles n'est
+    solide dans la ville finie, le parc se traverse de bout en bout.
+
+    ⚠️ Les tuiles d'allee sont celles que `_allee` RESERVE (espionne pendant le
+    chantier), pas « la reserve qui reste marchable » : la reserve tient aussi
+    le devant des portes, et filtrer sur `marchable` jetait justement les
+    tuiles bouchees avant de verifier qu'elles ne l'etaient pas. Il lisait en
+    plus `CARTE`, decalee de 110 rangees par la bande nord : il jugeait des
+    tuiles au hasard (28 sept. 2026). Le chantier rejoue la ville d'avant.
+
+    ⚠️ **UNE tolérance, décidée par Martin le 29 sept. 2026 (« on tolère »)** : le
+    kiosque de Madame Thibodeau, que `_parc` bâtit APRES les allées, se pose sur
+    l'allée est de son parc — on en fait le tour par l'herbe. Seules les tuiles de
+    CE bâtiment (retrouvé depuis sa porte, où qu'il soit) sont excusées : tout
+    autre toit, étang ou comptoir sur une allée rougit encore."""
     chantier = carte._Chantier(carte.PLAN, carte.GRAINE)
+    allees: set[tuple[int, int]] = set()
+    tracer = chantier._allee
+
+    def espion(depart, arrivee, pave="."):
+        avant = set(chantier.reserve)
+        tracer(depart, arrivee, pave)
+        allees.update(chantier.reserve - avant)
+
+    chantier._allee = espion
     chantier.eaux()
     chantier.rues()
     chantier.croisements()
     chantier.ilots()
-    allees = {(x, y) for (x, y) in chantier.reserve
-              if carte.marchable(CARTE["sol"][y][x])}
     assert len(allees) > 100, f"seulement {len(allees)} tuiles de sentier dans toute la ville"
-    for x, y in allees:
-        assert carte.solidite(CARTE["sol"][y][x]) == 0, \
-            f"la tuile de sentier {(x, y)} est solide : on ne passe pas"
+    sol = VILLE_D_AVANT["sol"]
+    excuses: set[tuple[int, int]] = set()
+    for porte in VILLE_D_AVANT["portes"]:
+        if porte.get("interieur") == "kiosque":
+            excuses |= _batiment_de_la_porte(sol, porte)
+    bouchees = sorted((x, y, sol[y][x]) for x, y in allees
+                      if carte.solidite(sol[y][x]) != 0 and (x, y) not in excuses)
+    assert not bouchees, \
+        f"{len(bouchees)} tuiles de sentier solides, on ne passe pas : {bouchees[:6]}"
 
 
 # --- Une piece plus grande que sa maison ------------------------------------
