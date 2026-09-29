@@ -442,6 +442,18 @@ CATALOGUE: list[Echantillon] = [
        prompt="a winter blizzard wind howling and gusting through city streets at "
               "night, snow hissing, steady intensity, seamless loop, no voices, "
               "no music"),
+    # LA PLUIE (les quatre saisons, lot 2, 29 sept. 2026) : une BOUCLE dont le volume suit l'averse
+    # (`Pluie.maj`), le tonnerre qui suit l'eclair de l'orage, et l'eclaboussure d'un char dans une
+    # flaque. ⚠️ Un « lieu » (`LIEUX["pluie"]`) : ils se chargent a la premiere averse.
+    _e("pluie", "Pluie", duree_s=8.0, volume=0.4, boucle=True, influence=0.45,
+       prompt="steady rain falling on a city street and rooftops, drops on asphalt and puddles, "
+              "gutters trickling, medium intensity, seamless loop, no thunder, no voices, no music"),
+    _e("tonnerre", "Tonnerre", variantes=2, duree_s=4.0, volume=0.8, influence=0.5,
+       prompt="a distant thunder clap rolling and rumbling across the sky over a city, "
+              "deep and long, no rain, no music"),
+    _e("eclaboussure", "Éclaboussure", duree_s=0.9, volume=0.55,
+       prompt="a car tire driving fast through a big puddle, a sharp splash of water "
+              "spraying onto a sidewalk, close, no engine, no music"),
     # Le feu du foyer (le chalet du rang, 26 sept. 2026) : une BOUCLE dont le volume suit la
     # distance au foyer de la pièce (`Monde.majFeuDeFoyer`) — plus fort quand on s'y chauffe.
     _e("foyer", "Feu de foyer", duree_s=8.0, volume=0.4, boucle=True, influence=0.45,
@@ -1480,6 +1492,9 @@ LIEUX: dict[str, list[str]] = {
     # chargent la premiere fois qu'un explosif entre dans le sac ou qu'on en allume
     # un (`combat.js`). Une partie qui n'en touche jamais ne les telecharge pas.
     "explosifs": ["meche", "goupille", "rebond"],
+    # La pluie (les saisons, lot 2) : pas un endroit, un TEMPS — ils se chargent a la premiere averse
+    # (`Pluie.maj`). Une partie qui ne voit jamais la pluie (l'hiver) ne les telecharge pas.
+    "pluie": ["pluie", "tonnerre", "eclaboussure"],
     "casino": ["casino_salle", "bras_machine", "gain_machine", "jackpot",
                "roulette_bille", "cartes_donnees", "jetons", "des_sic_bo", "sabot_brasse", "talkie_securite",
                # Le tripot du sous-sol (vague 4) : on n'y descend que par la grande salle.

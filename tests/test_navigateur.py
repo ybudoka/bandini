@@ -686,6 +686,32 @@ def test_la_tempete_de_neige_tient_le_rythme(page, serveur, erreurs):
     assert erreurs == []
 
 
+
+def test_l_orage_tient_le_rythme(page, serveur, erreurs):
+    """La même sonde que la tempête (les saisons, lot 2) : au volant, recherché, en plein orage d'été —
+    la pluie, le voile, les éclairs, la rue mouillée et ses flaques, à chaque image."""
+    page.goto(serveur)
+    attendre_titre(page)
+    jouer(page)
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.evaluate("""() => {
+        const L = window.BANDINI, j = L.B.joueur, P = L.Pluie;
+        j.intouchable = true;
+        let jo = 17; while (!(P.journee(jo) && P.journee(jo).orage)) jo++;
+        const a = P.journee(jo);
+        L.B.partie.jour = jo;
+        L.B.partie.heure = (a.debut + a.fin) / 2 / 24;
+        L.Police.ajouterChaleur(9);
+        const v = L.Vehicules.creer('auto', j.x + 24, j.y, 0, { etat: 'stationne' });
+        L.Entites.indexer();
+        L.Vehicules.monter(j, v);
+    }""")
+    page.wait_for_timeout(4000)
+    etat = page.evaluate("({ ms: window.BANDINI.B.stats.ms, i: window.BANDINI.Pluie.intensite(), orage: window.BANDINI.Pluie.orage(), images: window.BANDINI.B.stats.images })")
+    print(f"\n[perf] {etat['ms']:.1f} ms par image, orage {etat['i']:.2f}, {etat['images']} images, 3 etoiles")
+    assert etat["i"] > 0.9 and etat["orage"], "la sonde ne mesure pas un orage"
+    assert etat["ms"] < 40, f"{etat['ms']:.1f} ms par image : l'orage ne tient pas le rythme"
+    assert erreurs == []
 def test_le_brouillard_tient_le_rythme(page, serveur, erreurs):
     """⚠️ La SONDE que la fiche du brouillard exige avant de l'allumer pour tout le monde (la dette
     « rythme mesuré sur le vrai téléphone ») : le même pire cas que la neige — au volant, recherché —

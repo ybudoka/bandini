@@ -1079,7 +1079,7 @@ def test_le_pont_rend_son_eau_apres_un_saut(banc):
 - **Ce qu'on sent** : la rue mouillée glisse comme celle de l'arroseuse (0,8) et freine plus long ; au
   sec, rien ne change. Un char qui passe dans une flaque éclabousse (gouttes, son) ; un passant tout près
   proteste.
-- **La fonte d'avril** (jours 10 à 12) : de la gadoue brune au bord des rues et sur les trottoirs, qui
+- **La fonte d'avril** (jours 11 à 13 — avril commence au jour 11) : de la gadoue brune au bord des rues et sur les trottoirs, qui
   glisse un peu. Les bancs de neige sales viendront avec les bancs de neige (lot 4).
 - **Les feuilles d'octobre** : un char qui roule en soulève derrière lui (bornées) ; mouillées, elles
   glissent un peu plus.
@@ -1132,3 +1132,29 @@ def test_le_pont_rend_son_eau_apres_un_saut(banc):
   les toits des cabanes ne prennent pas la neige ; l'icône du HUD montre le soleil sous le voile d'un
   17 h 30 de décembre — **voulu, tranché par Martin le 29 sept. 2026 : elle dit l'heure des règles** ; le verglas garde son option et son jour d'avril
   (lot 6).
+
+### Lot 2 — la pluie et le sol (livré le 29 sept. 2026)
+
+- **Le temps qu'il fait** (`app/pluie.py`, `static/js/pluie.js`) : une averse un jour sur deux environ au
+  printemps et à l'automne (entre 6 h et 16 h, de deux à sept heures), un orage un soir sur trois l'été
+  (entre 16 h 30 et 23 h), jamais l'hiver — à l'empreinte du jour, pour tout le monde, sans option.
+- **La rue mouillée** : pendant l'averse et une heure après, l'adhérence tombe à 0,8 (0,75 sur les feuilles
+  mouillées, quand il y en a au sol), le freinage à 0,85, le trafic lève le pied de 10 %. Au sec : 1,
+  exactement. Derrière l'arroseuse sous la pluie, les deux s'ajoutent (0,64) — laissé ainsi.
+- **À l'écran** : les traits de pluie et le voile gris, plus denses à l'orage ; l'éclair par-dessus la nuit
+  (la relecture l'a trouvé terne, peint dessous) ; le reflet de la rue mouillée ; les **flaques** (3,5 % des
+  tuiles de rue et de trottoir, à l'empreinte), qui durent trois heures et rapetissent ; la **gadoue**
+  d'avril (jours 11 à 13) sur les trottoirs et au bord des rues, qui glisse un peu (0,9).
+- **Les chars** : dans une flaque, au-dessus de 1,2, un char éclabousse (gouttes, son) et le passant le plus
+  proche proteste — jamais le passager du char, un passant assommé, ni quelqu'un qui parle déjà. En octobre
+  et novembre, un char lancé soulève des feuilles derrière lui.
+- **Le son** (ElevenLabs, 296 crédits) : une boucle de pluie de 8 s (en fondu, son volume suit l'averse —
+  la relecture l'a trouvée figée presque muette, corrigé), deux tonnerres qui suivent l'éclair après un
+  délai, une éclaboussure ; un groupe `LIEUX["pluie"]` chargé à la première averse (demandé une fois toutes
+  les 300 images, pas à chaque image). Le tonnerre et l'éclaboussure ont leur synthèse de repli.
+- **Le rythme** : 2,2 ms par image en plein orage (Chromium, comme la nuit).
+- **Juges** : `test_pluie.py`, `test_pluie_js.py` (19 juges), la sonde `test_l_orage_tient_le_rythme` ;
+  chacun vu rougir sous sa mutation (garde d'hiver, physique, appel dans `vehicules.js`, tonnerre, volume).
+- **Pas fait, à dire** : la boucle de pluie n'a pas de synthèse de repli (hors ligne à la première averse, la
+  pluie est muette) ; les parapluies (lot 4) ; l'ambiance par saison (lot 5).
+

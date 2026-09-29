@@ -887,6 +887,21 @@ const Son = (function () {
       for (let k = 0; k < 2; k++) { ton(98, 1.1, 'sawtooth', 0.09 * v, 1, k * 1.5); ton(147, 1.1, 'square', 0.03 * v, 1, k * 1.5); }
       return v;
     },
+    // LA PLUIE (les saisons, lot 2) : le tonnerre qui suit l'eclair, et l'eclaboussure d'un char dans
+    // une flaque, la ou elle est. Tant que le groupe « pluie » n'est pas charge, la synthese.
+    tonnerre: function () {
+      if (!pret()) return;
+      if (!joue('tonnerre')) { bruit(2.4, 0.22, 160, 35); bruit(0.4, 0.12, 900, 120); }
+    },
+    eclaboussure: function (x, y) {
+      const j = B.joueur;
+      if (!j || !pret()) return 0;
+      const p = 520, v = 1 - Math.hypot(x - j.x, y - j.y) / p;
+      if (v <= 0) return 0;
+      if (estCharge('eclaboussure')) return jouerA('eclaboussure', x, y, p);
+      bruit(0.28, 0.1 * v, 3200, 700);
+      return v;
+    },
     rumeur_chantier: function (volume) {
       const v = Math.max(0, Math.min(1, volume || 0));
       if (!estCharge('chantier')) {
