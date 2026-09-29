@@ -19,7 +19,7 @@ changent de vocation.
 - ⚠️ **Les dés** : chaque îlot neuf se bâtit avec les SIENS (la recette du Petit-Canton, `_a_ses_des`) ; les
   Friches et le Petit-Canton ne doivent pas bouger d'une tuile.
 - La gare garde sa règle « une seule pièce, le poste d'aiguillage » : on n'entre ni dans les cabanes ni dans
-  les maisons pauvres.
+  les maisons pauvres. _(Deuxième vague, le 29 sept. : on entre dans les maisons.)_
 
 ## Fiche de la deuxième vague
 
@@ -52,9 +52,9 @@ bidonville restent fermées.
   toucher ses enseignes. Et la saleté que `salete.py` pose au pied des murs pauvres de la ville d'avant — il
   passe avant la bande —, posée ici, peu (`SALETE_PAR_CENT_TUILES`), jamais devant une porte ; la poubelle
   y déborde.
-- ⚠️ **On n'entre pas dans les maisons de la gare** (`_ChantierNord.poser_la_piece`) : le logement visitable se
-  décide sur un état COMMUN à toute la bande (`premiere_du_genre`, le compteur `visites`), et le témoin de
-  `test_canton` l'a vu — le Petit-Canton décidait quelles portes de la gare s'ouvraient.
+- ⚠️ **On n'entrait pas dans les maisons de la gare** (première vague) : le logement visitable se décidait sur un
+  état COMMUN à toute la bande (`premiere_du_genre`, le compteur `visites`), et le témoin de `test_canton` l'a vu
+  — le Petit-Canton décidait quelles portes de la gare s'ouvraient. La deuxième vague donne ses comptes à la gare.
 - ⚠️ **Le dé d'un LCG** : `Des.entier(0, 1)` puis `Des.entier(2, 3)` à la suite donnaient toujours la même
   somme (les bits faibles alternent) — toutes les façades d'une rangée tombaient sur la même ligne. Le
   bidonville tire par les bits forts (`_entre`, `_parmi`).
@@ -63,3 +63,17 @@ bidonville restent fermées.
   (`_a_ses_des`) : le mettre au goût du jour ne les rebattra plus (`test_le_bidonville_tire_ses_des_a_part`).
 - Juges : `tests/test_nord.py` (cabanes, feux, rien devant une porte, maisons pauvres, dés à part),
   `test_carte` (le juge des toits, celui des lampadaires) ; mutations rouges pour chacun.
+
+**Deuxième vague, livrée le 29 sept. 2026 : on entre chez les pauvres.** La gare tient ses comptes
+(`nord.COMPTES`, `COMPTES_DE_LA_GARE`) : `posees`, `visites` et `genres_ouverts` sont échangés le temps de
+chacun de ses îlots (`_ChantierNord._a_ses_des`), et numérotent à partir de mille — `nord_logement_1001`,
+`1002` ne croisent aucun nom du Petit-Canton. La première maison de la gare s'ouvre toujours (« la première
+du genre », dans ses comptes à elle). Le verrou de la première vague (`poser_la_piece`) est retiré ; les
+cabanes restent fermées (elles ne posent pas de pièce). Juges : `test_la_gare_n_a_qu_une_piece_publique_…`,
+`test_la_gare_tient_ses_comptes` (un canton qui pose cent pièces de plus ne change rien à la gare ; rouge sans
+les comptes à part) ; le témoin de `test_canton` reste vert.
+⚠️ **Les bornes-fontaines de la bande se décident à la position** (`_ChantierNord.bornes`, `empreinte_de_tuile`) :
+au dé commun, c'était un tirage par croisement dans l'ordre de la liste, et le Petit-Canton a un croisement de moins
+que son témoin — toutes les bornes qui suivent glissaient. Le témoin de `test_canton` ne tenait que par chance
+(mesuré sur dev : 93 croisements contre 94) ; les logements de la gare ont changé où une borne peut se poser, et
+il a rougi. Les bornes de la bande bougent une fois de plus ; celles de la ville d'avant, pas d'une tuile.

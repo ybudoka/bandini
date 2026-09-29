@@ -332,14 +332,45 @@ def _regions_de_la_gare(ch, glyphes):
     return [(x, y, large, h) for g, x, y, large, h in ch.regions() if g in glyphes and x0 <= x < x0 + large_gare]
 
 
-def test_la_gare_n_a_qu_une_porte_le_bureau_du_ferrailleur():
-    """La spec : UNE pièce visitable à la Gare (le poste d'aiguillage, devenu le bureau du ferrailleur). Ni
-    clinique, ni notaire, ni disco au milieu des wagons. ⚠️ Et
-    depuis le bidonville (28 sept. 2026), ni cabane ni maison pauvre qu'on visite (`_ChantierNord.poser_la_piece`)."""
+def test_la_gare_n_a_qu_une_piece_publique_le_bureau_du_ferrailleur():
+    """La spec : UNE pièce publique à la Gare (le poste d'aiguillage, devenu le bureau du ferrailleur). Ni
+    clinique, ni notaire, ni disco au milieu des wagons. ⚠️ Depuis le bidonville (28 sept. 2026) : ses
+    maisons pauvres ont leurs logements — Martin, le 29 : on y entre —, et rien d'autre ; ses cabanes, aucun."""
     ch = _bande()
     portes = [p for p in ch.portes if _dans(ch, "gare", p)]
-    assert [p["interieur"] for p in portes] == ["nord_ferrailleur"], [p["interieur"] for p in portes]
+    maisons = _regions_de_la_gare(ch, "h")
+
+    def chez_les_pauvres(p):
+        return any(x <= p["x"] < x + large and y <= p["y"] < y + h for x, y, large, h in maisons)
+    assert [p["interieur"] for p in portes if not chez_les_pauvres(p)] == ["nord_ferrailleur"], portes
+    logements = [p for p in portes if chez_les_pauvres(p)]
+    assert logements and all(p["interieur"].startswith("nord_logement_1") for p in logements), logements
+    assert all(p["interieur"] in ch.pieces for p in logements)
     assert not [d for d in ch.devantures if _dans(ch, "gare", d)], "des devantures dans la gare"
+
+
+def test_la_gare_tient_ses_comptes():
+    """⚠️ Qui s'ouvre, à la gare, ne dépend que d'elle : ses comptes (`COMPTES_DE_LA_GARE`) numérotent à part
+    — des noms qui ne croisent jamais ceux du Petit-Canton — et un canton qui a posé cent pièces de plus ne
+    change ni ses portes ni leurs noms (le témoin de `test_canton` le tient pour toute la bande)."""
+    from app import nord
+    ch = _bande()
+    gare = [p for p in ch.portes if _dans(ch, "gare", p) and p["interieur"] != "nord_ferrailleur"]
+    ailleurs = {p["lieu"] for p in ch.portes if not _dans(ch, "gare", p)}
+    assert not {p["lieu"] for p in gare} & ailleurs
+    assert all(int(p["lieu"].rsplit("_", 1)[1]) > nord.COMPTES_DE_LA_GARE for p in gare), gare
+    vrai = carte._Chantier.poser_la_piece
+
+    def gourmand(self, *args, **options):
+        self.posees += 100 * (self.district_en(*args[2]) == "canton")
+        self.visites += 100 * (self.district_en(*args[2]) == "canton")
+        return vrai(self, *args, **options)
+    carte._Chantier.poser_la_piece = gourmand
+    try:
+        autre = _bande()
+    finally:
+        carte._Chantier.poser_la_piece = vrai
+    assert [p for p in autre.portes if _dans(autre, "gare", p) and p["interieur"] != "nord_ferrailleur"] == gare
 
 
 # --- Le bidonville de la gare (docs/jalons/le-bidonville-de-la-gare.md) ------------------------

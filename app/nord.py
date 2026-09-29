@@ -64,7 +64,8 @@ DISTRICTS_NORD: tuple[dict, ...] = (
     # (le poste d'aiguillage ne bouge pas ; le soir même, la cour à scrap et le bureau du ferrailleur les
     # remplacent) et les hangars le sud ; à l'est, le bidonville (`t`) sur trois
     # rangées, un seul lot, et dessous deux rangées de maisons pauvres (`h`, standing `-`).
-    # ⚠️ Ses îlots neufs se bâtissent avec LEURS dés (`_ChantierNord._a_ses_des`), comme le Petit-Canton.
+    # ⚠️ Ses îlots neufs se bâtissent avec LEURS dés et LEURS comptes (`_ChantierNord._a_ses_des`), comme le
+    # Petit-Canton ; on entre dans les maisons pauvres, pas dans les cabanes.
     {"slug": "gare", "nom": "La Gare de triage", "bx": 13, "by": 0,
      "gang": "boulonneux", "gang_nom": "Les Boulonneux", "brume": False,
      "pietons": 9, "vehicules": 3, "police": 1, "rythme": (0.3, 1.0, 0.8), "rares": (),
@@ -371,6 +372,13 @@ GRAINE_CANTON = 20260927
 GRAINE_GARE = 20260928
 #: Les districts de la bande dont chaque îlot bâti tire SES dés, et la graine qu'ils mêlent à sa position.
 GRAINES_A_PART = {"canton": GRAINE_CANTON, "gare": GRAINE_GARE}
+#: ⚠️ ET LA GARE TIENT SES COMPTES : le logement visitable se décide sur trois compteurs de tout le chantier —
+#: `posees` (le numéro de la pièce, et son plan : `variante`), `visites` (le numéro de la porte) et
+#: `genres_ouverts` (« la première du genre ouvre ») —, et bâtis dans les comptes de la bande, c'était le
+#: Petit-Canton qui décidait quelles maisons de la gare s'ouvraient (`test_canton`, le témoin). La gare
+#: numérote à partir de mille : aucun nom de pièce ni de porte ne croise ceux du quartier.
+COMPTES = ("posees", "visites", "genres_ouverts")
+COMPTES_DE_LA_GARE = 1000
 
 
 class _ChantierNord(carte._Chantier):
@@ -395,12 +403,23 @@ class _ChantierNord(carte._Chantier):
         flux = {k: v for k, v in vars(self).items() if isinstance(v, carte.Des)}
         for nom in flux:
             setattr(self, nom, carte.Des(graine ^ (x * 7919 + y * 104729) ^ zlib.crc32(nom.encode())))
+        comptes = {}
+        if district == "gare":
+            if not hasattr(self, "comptes_de_la_gare"):
+                self.comptes_de_la_gare = {"posees": COMPTES_DE_LA_GARE, "visites": COMPTES_DE_LA_GARE,
+                                           "genres_ouverts": set()}
+            comptes = {k: getattr(self, k) for k in COMPTES}
+            for k in COMPTES:
+                setattr(self, k, self.comptes_de_la_gare[k])
         avant = len(self.devantures)
         try:
             batir()
         finally:
             for nom, d in flux.items():
                 setattr(self, nom, d)
+            for k, v in comptes.items():
+                self.comptes_de_la_gare[k] = getattr(self, k)
+                setattr(self, k, v)
         # La plaque verticale de chaque commerce du quartier : deux idéogrammes (`devantures.PAIRES`),
         # choisis à la POSITION de la devanture — aucun dé.
         for d in (self.devantures[avant:] if district == "canton" else ()):
@@ -417,29 +436,18 @@ class _ChantierNord(carte._Chantier):
                 _salir_les_maisons(self, x, y, largeur, hauteur)
         return self._a_ses_des(x, y, batir)
 
-    def poser_la_piece(self, famille, part, ancre, *args, **options):
-        """⚠️ À LA GARE, ON N'ENTRE PAS : ni dans une cabane du bidonville, ni dans ses maisons pauvres — la
-        seule pièce de la gare reste le bureau du ferrailleur. Pas un choix de décor seulement : le logement
-        visitable se décide sur un état commun à toute la bande (`premiere_du_genre`, le compteur `visites`),
-        et le Petit-Canton décidait alors quelles portes de la gare s'ouvraient (`test_canton`, le témoin)."""
-        if self.district_en(*ancre) == "gare":
-            return None
-        return super().poser_la_piece(famille, part, ancre, *args, **options)
+    #: Une borne-fontaine sur trois coins de rue environ, comme la ville (`_Chantier.bornes`).
+    PART_DES_BORNES = 0.30
 
-    def bornes(self):
-        """Les bornes-fontaines de la bande : la règle de la ville, mais UN DÉ PAR CROISEMENT, tiré de sa position.
-
-        ⚠️ La ville tire un dé par croisement, à la file : fusionner deux îlots du Petit-Canton (le casino du
-        Dragon d'or) retire un bout de rue, donc un croisement, et toutes les bornes de la bande glissaient d'un
-        cran jusqu'à la Gare (`test_canton`, la bande ne bouge pas). Tiré à la position, un croisement de plus
-        ou de moins ne touche que le sien.
-        """
-        # ⚠️ La boucle de `carte._Chantier.bornes`, recopiée : on ne peut pas lui passer un croisement à la fois,
-        # ses coins réservés aux feux se calculent sur TOUS les croisements.
+    def bornes(self) -> None:
+        """Les bornes-fontaines de la bande, décidées à la POSITION du croisement (`carte.empreinte_de_tuile`),
+        pas au dé commun. ⚠️ Au dé, c'était un tirage par croisement, dans l'ordre de la liste : un bras de moins
+        au Petit-Canton (il en a un de moins que son témoin, `test_canton`) décalait toutes les bornes qui
+        suivent — celles de la gare comprises —, et le témoin ne tenait que par chance. La ville d'avant garde
+        les siennes (`_Chantier.bornes`) : elle ne bouge pas d'une tuile."""
         reserves = self._coins_reserves_aux_feux()
         for inter in self.intersections:
-            de = carte.Des(GRAINE_NORD ^ (inter["x"] * 7919 + inter["y"] * 104729) ^ zlib.crc32(b"borne"))
-            if not de.chance(0.30):
+            if carte.empreinte_de_tuile(inter["x"], inter["y"]) >= self.PART_DES_BORNES:
                 continue
             x, y = inter["x"] + inter["l"], inter["y"] - 1
             for dy in (-1, -2, 1):
