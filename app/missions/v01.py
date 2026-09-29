@@ -26,7 +26,7 @@ MISSION = {
         {"type": "aller", "texte": "VA À LA VILLA DU MAIRE, DE NUIT",
          "lieu": "villa_chemin", "rayon": 6, "nuit": True},
 
-        {"type": "obtenir", "texte": "VOLE LA CLÉ DU GARDE DU JARDIN, SANS TE FAIRE VOIR",
+        {"type": "obtenir", "texte": "VOLE LA CLÉ DU GARDE : ACTION DANS SON DOS, SANS ÊTRE VU",
          "objet": "cle_villa", "nom": "LA CLÉ DE LA PORTE DE SERVICE", "dessin": "cle",
          "garde": "jardin", "ou": "villa_chemin", "sans_etoile": True},
 
@@ -50,9 +50,24 @@ MISSION = {
             _l("josee", "Pas de bagarre, pas d'étoile. Un garde qui te voit, pis le maire change ses serrures.",
                jeu="[serious] Pas de bagarre, pas d'étoile. [menacingly] Un garde qui te voit… pis le maire change ses serrures.")
         ],
+        # ⚠️ LE MODE D'EMPLOI DU VOL, AU COMBINÉ (Martin, 29 sept. 2026 : « ajoute cette explication en
+        # vocal dans le jeu ») : Josée le dit quand on arrive sur le chemin — la ville est figée tant qu'elle
+        # parle, le garde n'avance pas. Ce qu'elle dit, c'est ce que le banc a montré : le trou au nord
+        # (`blocs/villa.py`, la grille a son garde), le chemin public derrière la palissade, le garde qui se
+        # TOURNE à chaque coin, le vol DANS LE DOS (`Combat.pochesAPrendre`), le « ? » avant l'alerte.
+        # ⚠️ Un slug de voix se compte à sa place : la dernière réplique (l'objectif 2) a gardé sa voix,
+        # renommée de `-9` à `-13`.
         "pendant": [
-            _p("josee", "Ils ont des lampes de poche. Reste dans le noir, pis passe derrière eux.", 1,
-               jeu="[quietly] Ils ont des lampes de poche. [calm] Reste dans le noir… pis passe derrière eux."),
+            _p("josee", "Passe pas par la grille, elle a son garde. Fais le tour : au nord, il manque une planche à la palissade.", 1,
+               jeu="[quietly] Passe pas par la grille… elle a son garde. [matter-of-fact] Fais le tour : au nord, il manque une planche à la palissade."),
+            _p("josee", "Attends dehors, collé sur la palissade. Tant que t'es pas sur son terrain, il a rien à te dire.", 1,
+               jeu="[calm] Attends dehors, collé sur la palissade. [coldly] Tant que t'es pas sur son terrain… il a rien à te dire."),
+            _p("josee", "Celui du jardin fait le tour de la maison. À chaque coin, il s'arrête, pis il se retourne.", 1,
+               jeu="[matter-of-fact] Celui du jardin fait le tour de la maison. [gravely] À chaque coin… il s'arrête, pis il se retourne."),
+            _p("josee", "Suis-le dans une longue ligne droite, loin des coins. Colle-toi dans son dos, pis sers-toi dans sa poche.", 1,
+               jeu="[quietly] Suis-le dans une longue ligne droite… loin des coins. [mischievously] Colle-toi dans son dos, pis sers-toi dans sa poche."),
+            _p("josee", "Ils ont des lampes de poche. S'il regarde de ton bord, recule dans le noir. Tout de suite.", 1,
+               jeu="[serious] Ils ont des lampes de poche. [firmly] S'il regarde de ton bord, recule dans le noir. Tout de suite."),
             _p("josee", "La clé est à toi. Sors par où t'es entré, pas plus vite qu'un chat.", 2,
                jeu="[satisfied] La clé est à toi. [quietly] Sors par où t'es entré… pas plus vite qu'un chat.")
         ],
