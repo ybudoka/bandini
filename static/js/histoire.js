@@ -496,7 +496,11 @@ const Histoire = (function () {
     if (ou[0] === 'porte') return lieu(ou[1]);
     if (ou[0] === 'point') {                                // il est dedans : la porte de son commerce
       const piece = pieceDuPoint(ou[1]);
-      return piece ? lieu(piece.slug) : null;
+      if (!piece) return null;
+      // ⚠️ UN ÉTAGE n'a pas de porte en ville (la chambre de l'hôtel, où dort le maire de m98) : c'est la porte de
+      // la pièce dont l'escalier y monte.
+      const dessous = lieu(piece.slug) ? null : pieceDessous(piece.slug);
+      return lieu(piece.slug) || (dessous ? lieu(dessous) : null);
     }
     // ⚠️ Le POSTE, pas le centre de la coque : Sven se tient sur la jetée, pas
     // dans l'eau (`navires.py` l'exporte pour chaque mouillage).
@@ -533,6 +537,16 @@ const Histoire = (function () {
     const pieces = (ville.def && ville.def.interieurs) || {};
     for (const slug in pieces) {
       if ((pieces[slug].points || []).some(function (q) { return q.type === type; })) return pieces[slug];
+    }
+    return null;
+  }
+
+  /** La pièce dont l'ESCALIER mène à `slug` (le hall de l'hôtel, pour sa chambre), ou null. */
+  function pieceDessous(slug) {
+    const ville = Monde.carte.ville || Monde.carte;
+    const pieces = (ville.def && ville.def.interieurs) || {};
+    for (const s in pieces) {
+      if ((pieces[s].points || []).some(function (q) { return q.type === 'escalier' && q.vers === slug; })) return s;
     }
     return null;
   }
@@ -760,6 +774,9 @@ const Histoire = (function () {
       // ⚠️ `arrive_apres` : pas encore la (le vieux maitre, en Floride jusqu'a la chute du Pouce). Sa salle n'a
       // que ses eleves, et personne ne s'y tient a sa place.
       if (p.arrive_apres && !faite(p.arrive_apres)) continue;
+      // ⚠️ `parti_apres` DEDANS AUSSI (M13) : le maire Tanguay quitte la chambre de l'hotel apres m98. Jusque-la,
+      // aucun personnage de piece ne partait — la regle n'etait ecrite que pour ceux de la rue.
+      if (p.parti_apres && faite(p.parti_apres)) continue;
       const point = (piece.points || []).find(function (q) { return q.type === p.ou.slice(6); });
       if (!point) continue;
       const place = placeDebout(point);
@@ -1413,6 +1430,7 @@ const Histoire = (function () {
     if (fait && fait.objet && fait.type !== 'obtenir') { if (!B.partie.objets) B.partie.objets = {}; B.partie.objets[fait.objet] = 1; }
     p.etape++;
     const o = m.objectifs[p.etape];
+    if (!o || !o.allies) relacherLesAllies();
     if (!o) { reussir(); return; }
     // ⚠️ Tout le monde est deja tombe a un essai rate : l'objectif est FAIT.
     // On ne repose pas des morts pour les recoucher.
@@ -1459,7 +1477,13 @@ const Histoire = (function () {
       // au comptoir de Rosa ou à la penderie, pas d'office : se changer se fait quelque part.
       B.partie.tenues.push(o.remet);
     }
+    // ⚠️ `treve` (M13, m98 : Bouchard rappelle ses chiens) : la police rentre au poste quand l'objectif
+    // commence — les etoiles tombent a zero, comme au garage (`Police.remiseAZero`).
+    if (o.treve) Police.remiseAZero();
     dansLaVille(function () {
+      // ⚠️ `allies` (M13, m98 : « les Morues, les Skateux et les Boulonneux a tes cotes ») : ils arrivent
+      // quand l'objectif commence, et restent tant que les objectifs suivants les nomment (`avancer`).
+      if (o.allies) poserLesAllies(m, o);
       if (o.type === 'monter') {
         const v = poserLeChar(m, o, p.etape);
         if (v) B.mission.vehicule = v;
@@ -1467,7 +1491,8 @@ const Histoire = (function () {
         poserLesCravates(m, o, enSilence);
       } else if (o.type === 'ramasser' && o.cible === 'fuyard') {
         poserLeFuyard(m, o);
-      } else if (o.type === 'semer') {
+      } else if (o.type === 'semer' || (o.type === 'survivre' && o.etoiles)) {
+        // ⚠️ `survivre` + `etoiles` (M13, m98 : la police du maire) : TENIR a ce niveau-la, pas le semer.
         B.recherche.etoiles = Math.max(B.recherche.etoiles, o.etoiles || 1); B.recherche.vu = 0; B.recherche.flash = 60;
         B.recherche.dernierVu = { x: j.x, y: j.y, t: B.t };
         if (o.escorte) poserLEscorte(m, o);
@@ -1701,13 +1726,15 @@ const Histoire = (function () {
       renonce à la première image.
 
       `null` : dedans (le joueur n'a pas de coordonnées de ville) ou nulle part. */
-  function placeDArrivee(loin) {
+  function placeDArrivee(loin, tour) {
     const j = B.joueur;
     if (B.interieur) return null;
     for (const horsChamp of [true, false]) {
       for (let r = loin; r >= loin - 3; r--) {
         for (let k = 0; k < 16; k++) {
-          const a = k * Math.PI / 8;
+          // `tour` (m98, les allies) : on commence le tour ailleurs — de l'autre cote de la rue que ceux
+          // qui viennent te chercher. Sans lui, le premier angle libre, comme toujours.
+          const a = ((k + (tour || 0)) % 16) * Math.PI / 8;
           const tx = Math.floor((j.x + Math.cos(a) * r * TT) / TT), ty = Math.floor((j.y + Math.sin(a) * r * TT) / TT);
           if (!Monde.marchablePieton(tx, ty)) continue;
           const place = { x: tx * TT + 8, y: ty * TT + 8 };
@@ -1722,6 +1749,48 @@ const Histoire = (function () {
       }
     }
     return null;
+  }
+
+  /** LES ALLIES (`allies`, M13 — m98) : deux membres de chacun de ces gangs arrivent a tes cotes, a la
+      course, de l'autre cote de la rue que ceux qui viennent te chercher (`placeDArrivee`, un demi-tour plus
+      loin). Ils visent les hommes de la mission (`Entites`, l'etat `allie`) et ne te touchent jamais.
+      ⚠️ Deja la (l'objectif d'avant les avait poses) : on ne double pas la troupe. Dedans (`placeDArrivee`
+      rend null), personne ne nait — la rue n'a pas de pixel ou poser. */
+  function poserLesAllies(m, o) {
+    const deja = (B.mission.allies || []).filter(function (e) { return e.vivant && e.etat !== 'assomme'; });
+    if (deja.length) return;
+    const place = placeDArrivee(o.loin || 10, 8);
+    if (!place) return;
+    const j = B.joueur, dx = j.x - place.x, dy = j.y - place.y, norme = Math.hypot(dx, dy) || 1;
+    B.mission.allies = [];
+    let i = 0;
+    for (const slug of o.allies) {
+      const gang = B.defs.pietons.gangs.find(function (g) { return g.slug === slug; });
+      const arch = gang && Entites.archetype(gang.pieton);
+      if (!arch) continue;
+      for (let k = 0; k < (o.allies_par || 2); k++, i++) {
+        const ici = tuileLibre(place.x - dy / norme * (i - 2.5) * 18, place.y + dx / norme * (i - 2.5) * 18, 3);
+        if (!ici) continue;
+        const e = Entites.creerPieton(ici.x, ici.y, arch);
+        // ⚠️ `metier` : ils ne sont pas la foule (le plafond de passants ne les compte pas), et `mission` :
+        // ils ne s'oublient pas hors de la bulle.
+        e.allie = true; e.metier = 'allie'; e.mission = m.slug; e.etat = 'allie'; e.courage = 1; e.cri = 90;
+        e.rival = null;
+        B.mission.allies.push(e);
+      }
+    }
+    Entites.indexer();
+  }
+
+  /** Les allies rentrent chez eux : l'objectif ne les nomme plus, ou la mission est finie. Ils redeviennent
+      des membres de leur gang comme les autres — et s'oublient hors de la bulle. */
+  function relacherLesAllies() {
+    if (!B.mission || !B.mission.allies) return;
+    for (const e of B.mission.allies) {
+      e.allie = false; e.metier = null; e.mission = null; e.rival = null;
+      if (e.vivant && e.etat !== 'assomme' && e.etat !== 'attaque') { e.etat = 'flane'; e.vx = 0; e.vy = 0; }
+    }
+    B.mission.allies = null;
   }
 
   /** `enSilence` : l'intro va se dire. Ceux qui `arrivent` (`loin`) attendent la fin
@@ -2273,6 +2342,10 @@ const Histoire = (function () {
     // ⚠️ `a_vendre` (M16) : une propriete qu'aucun comptoir ne vendait se met en vente
     // (l'hotel apres q07) — `Missions.aVendre` la lit, la sauvegarde la garde.
     if (d.a_vendre && p.enVente.indexOf(d.a_vendre) < 0) p.enVente.push(d.a_vendre);
+    // ⚠️ `boss` (M13, m98 _Le Boss_) : la ville change de couleur — les gangs reviennent a tes couleurs et te
+    // saluent, les passants aussi, plus de rixes aux frontieres, la carte a l'or des Bandini (`Entites`,
+    // `Hud`, `B.defs.boss`). Une fois boss, on le reste : la sauvegarde le garde.
+    if (d.boss && !p.boss) p.boss = { jour: p.jour };
     p.stats.missions = (p.stats.missions || 0) + 1;
     noter('MISSION : ' + m.titre + ' — ' + prime + ' $', true);
     B.mission = null;
@@ -2461,6 +2534,7 @@ const Histoire = (function () {
     fermerPiratage();
     if (!B.mission) return;
     lacherLeProtege();
+    relacherLesAllies();
     // Le feu d'une mission s'en va avec elle — éteint ou non, il n'est plus le sien.
     if (B.mission.feu) { Incendies.oublierLeFeuDeMission(); B.mission.feu = null; }
     for (const e of B.mission.entites) {
@@ -3487,7 +3561,7 @@ const Histoire = (function () {
            donneur, creerDonneurs, poserDonneur, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
            parler, dire, suivante, finir, commencer, demarrer, avancer, objectif, courante, reussir, echouer, evenement,
            ouverture, passerOuverture, fichiersDeLOuverture, direLignes, majCinema, resoudre,
-           lieuDuPersonnage, ouTrouver, present, calme, jouerOuDire,
+           lieuDuPersonnage, pieceDessous, ouTrouver, present, calme, jouerOuDire,
            reinitialiser, noter, rencontrer, CARNET_MAX, init, charger,
            proposerDefi, commencerDefi, finirDefi, abandonnerDefi, actionDeDefi, defisDeFoire, comptoirDeDefi, defiDuComptoir, canardAuCrochet,
            appareilsDe, jouableAvec, defiOuvert, defisOuverts, defiNeuf, ouvrirDefi, majDeblocages, planterLesPanneauxOuverts, APPAREIL_DU_CATALOGUE,

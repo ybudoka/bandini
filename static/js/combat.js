@@ -200,7 +200,10 @@ const Combat = (function () {
       // une raison : un coup perdu dans une rixe ne doit pas faucher le passant
       // qui regardait, et c'est le meme test qui l'en protege.
       if (e.type === 'pieton' && c.type === 'pieton'
-          && !(e.gang && c.gang && e.gang !== c.gang)) continue;
+          && !(e.gang && c.gang && e.gang !== c.gang) && !(e.allie && c.cible)) continue;
+      // ⚠️ L'ALLIE (m98) ne frappe ni toi ni un autre allie — une Morue et un Skateux sont de deux gangs,
+      // et la regle du dessus les aurait laisses se cogner entre eux.
+      if (e.allie && (c.type === 'joueur' || c.allie)) continue;
       const ecart = Math.abs(ecartAngle(angle, angleVers(e.x, e.y, c.x, c.y)));
       if (ecart > demi) continue;
       if (!Monde.ligneLibre(e.x, e.y, c.x, c.y)) continue;

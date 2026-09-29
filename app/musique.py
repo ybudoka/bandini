@@ -214,7 +214,73 @@ _GEN_CHANT: list[list[float]] = [
     [64, 73, 8], [72, 76, 8],
 ]
 
+#: LE GÉNÉRIQUE DU BOSS (M13, m98) : l'autre fin, qui ne part pas. Ré mineur, plus rond que la corne de brume de
+#: l'ouverture, et qui se RÉSOUT en ré majeur à la dernière mesure — la tierce levée de « Le dernier traversier »,
+#: mais tenue par tout le monde : la trompette qui était seule sur le quai finit avec la section. Treize mesures à
+#: 72 : 43 s, la durée de la recette ElevenLabs (45 s).
+_BOSS_BASSE: list[list[float]] = [
+    [0, 38, 4], [4, 45, 4],      # Dm  : ré, la
+    [8, 34, 4], [12, 41, 4],     # Bb  : si bémol, fa
+    [16, 31, 4], [20, 38, 4],    # Gm  : sol, ré
+    [24, 33, 4], [28, 40, 4],    # A7  : la, mi
+    [32, 38, 4], [36, 45, 4],    # Dm
+    [40, 34, 4], [44, 41, 4],    # Bb
+    [48, 36, 4], [52, 43, 4],    # C   : do, sol
+    [56, 41, 4], [60, 36, 4],    # F   : fa, do
+    [64, 38, 4], [68, 45, 4],    # Dm
+    [72, 34, 4], [76, 41, 4],    # Bb
+    [80, 31, 4], [84, 38, 4],    # Gm
+    [88, 33, 4], [92, 40, 4],    # A7
+    [96, 38, 8],                 # D   : ré, tenu
+]
+
+_BOSS_NAPPE = _accords(
+    (62, 65, 69),       # Dm
+    (62, 65, 70),       # Bb
+    (62, 67, 70),       # Gm
+    (61, 64, 67),       # A7
+    (62, 65, 69),       # Dm
+    (62, 65, 70),       # Bb
+    (60, 64, 67),       # C
+    (60, 65, 69),       # F
+    (62, 65, 69),       # Dm
+    (62, 65, 70),       # Bb
+    (62, 67, 70),       # Gm
+    (61, 64, 67),       # A7
+    (62, 66, 69),       # D   — la tierce levée
+)
+
+#: La trompette : elle monte par paliers, redescend d'un cran, et remonte plus haut — une démarche, pas une plainte.
+_BOSS_CHANT: list[list[float]] = [
+    [0, 62, 4], [4, 65, 4],
+    [8, 69, 8],
+    [16, 67, 4], [20, 70, 4],
+    [24, 69, 8],
+    [32, 74, 6], [38, 72, 2],
+    [40, 70, 8],
+    [48, 72, 4], [52, 76, 4],
+    [56, 77, 8],
+    [64, 74, 4], [68, 77, 4],
+    [72, 81, 8],
+    [80, 79, 4], [84, 77, 4],
+    [88, 76, 8],
+    [96, 78, 8],
+]
+
 MORCEAUX: list[Morceau] = [
+    {
+        "slug": "generique_boss",
+        "nom": "Le Boss",
+        "bpm": 72,
+        "pas_par_temps": PAS_PAR_TEMPS,
+        "pas": 13 * PAS_PAR_MESURE,
+        "volume": 0.85,
+        "voix": [
+            {"role": "basse", "forme": "triangle", "volume": 0.42, "notes": _BOSS_BASSE},
+            {"role": "nappe", "forme": "sine", "volume": 0.12, "notes": _BOSS_NAPPE},
+            {"role": "chant", "forme": "square", "volume": 0.12, "notes": _BOSS_CHANT},
+        ],
+    },
     {
         "slug": "generique",
         "nom": "Le dernier traversier",

@@ -211,6 +211,9 @@ VISAGES: dict[str, dict] = {
     # Réjean Prévost (s11), le patron : les cheveux argent gominés, les lunettes demi-lune, le veston noir, les
     # rides de qui ne sourit qu'aux actionnaires.
     "prevost": _v("longue", "gominee", "veston", lunettes="demi", signes=("rides", "yeux_plisses")),
+    # Le maire Réal Tanguay (m98), en robe de chambre bordeaux : la tête ronde et rose du banquet, la mèche grise
+    # rabattue sur le crâne, la moustache de politicien, le nœud papillon qu'il n'enlève jamais — même pour dormir.
+    "maire": _v("ronde", "degarnie", "gilet", "moustache", signes=("rouge", "noeud_pap", "cernes")),
     "jo": _v("longue", "meche", "veste", "mal_rase", chapeau="casquette", signes=("cicatrice",)),
     # Victor Tam, le vieux maître de l'ÉCOLE LA MANTE, revenu de Floride : le chapeau de paille du snowbird sur une
     # couronne de cheveux blancs, la chemise fleurie turquoise, le bronzage de trois hivers, les gros sourcils blancs

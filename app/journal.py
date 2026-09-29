@@ -168,6 +168,12 @@ SPECIALES: list[dict] = [
      "texte": "CENT CINQUANTE POSTES AU SALAIRE D'AVANT. LA SHOP RESPIRE.",
      "lu": "La Prévost rembauche. Cent cinquante postes au salaire d'avant, dès lundi, et La Shop respire. "
            "Monsieur Prévost parle d'une décision d'affaires ; ses employés, d'un miracle."},
+    # _Le Boss_ (m98, M13, 29 sept. 2026) : le maire démissionne, et la ville a un nouveau boss. Le Clairon écrit le
+    # nom de Rocco une dernière fois — et, pour une fois, il n'y a pas de dette à côté.
+    {"slug": "le_boss", "titre": "LE MAIRE TANGUAY DÉMISSIONNE",
+     "texte": "LE NEVEU DE ROCCO BANDINI TIENT LA VILLE. PAS UN COIN DE RUE NE LUI ÉCHAPPE.",
+     "lu": "Le maire Tanguay démissionne, en robe de chambre, à l'Hôtel Bandini. Le neveu de Rocco tient la ville, "
+           "et pas un coin de rue ne lui échappe. Ceux qui le connaissent disent qu'il salue tout le monde."},
 ]
 
 

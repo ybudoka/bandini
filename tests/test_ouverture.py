@@ -78,13 +78,13 @@ def test_les_voix_de_l_ouverture_se_generent_comme_le_journal():
     assert len(toutes) == len(audio.toutes_les_voix()), "aucun slug en double dans tout le catalogue"
 
 
-@pytest.mark.parametrize("slug", ["ouverture", "generique"])
+@pytest.mark.parametrize("slug", ["ouverture", "generique", "generique_boss"])
 def test_la_musique_de_l_ouverture_existe_des_deux_cotes(slug):
     """⚠️ Un mp3 ET des notes. `scripts/audio_elevenlabs.py --musiques` ne
     genere que les slugs que `musique.py` connait (`manquants_musique`) : une
     recette dans `audio.MUSIQUES` sans morceau ecrit ne se genere JAMAIS, et
     personne ne s'en apercoit — le jeu joue simplement le silence. Le generique
-    (M13) de meme : les deux bouts de la ligne d'histoire."""
+    (M13) de meme : les deux bouts de la ligne d'histoire — et ses deux fins (celui du Boss, m98)."""
     recette = audio.piece_par_slug(slug)
     assert recette is not None, "la recette ElevenLabs manque"
     ecrit = musique.par_slug(slug)

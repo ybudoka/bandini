@@ -65,6 +65,8 @@ NEUVE: dict = {
 #: ⚠️ L'ordre vient de `ordre_topologique()`, jamais d'une liste recopiée : elle
 #: s'était déjà arrêtée à m5 pendant que le catalogue en comptait huit.
 OUTILS = ('  const ORDRE = ' + json.dumps(missions.ordre_topologique()) + ';' + """
+  // Les outils du banc, sous un nom qu'aucun `o` d'objectif ne cache (`versLaFin`).
+  const BANC = o;
   function mission(L, slug) { return L.B.defs.missions.find(function (m) { return m.slug === slug; }); }
   function faites(L, slug) {
     for (const s of ORDRE) { if (s === slug) break; L.B.partie.missionsFaites[s] = 1; }
@@ -156,6 +158,26 @@ OUTILS = ('  const ORDRE = ' + json.dumps(missions.ordre_topologique()) + ';' + 
     else if (o.type === 'retourner') {
       const e = L.Histoire.donneur(m.donneur) || L.Histoire.lieuDuPersonnage(m.donneur);
       j.x = e.x - 14; j.y = e.y;
+    }
+    // ⚠️ UNE POIGNÉE DE MAIN finit DEVANT sa cible quand la scène de fin la fait JOUER (m98 : le maire, dans la
+    // chambre de l'hôtel) : on va la voir — dedans s'il se tient dedans, par l'escalier pour un étage (la chambre
+    // n'a pas de porte en ville). Une fin qui ne la nomme pas se dit là où l'on est, comme avant.
+    else if (o.type === 'parler' && o.cible && (m.scenes.fin || []).some(function (p) { return p.acteur === o.cible.replace('personnages:', ''); })) {
+      const cible = o.cible.replace('personnages:', '');
+      const perso = L.B.defs.personnages.find(function (q) { return q.slug === cible; });
+      if (perso && perso.ou.indexOf('point:') === 0) {
+        const piece = L.Histoire.pieceDuPoint(perso.ou.slice(6));
+        const pieces = L.Monde.carte.def.interieurs || {};
+        const dessous = Object.keys(pieces).find(function (s) {
+          return (pieces[s].points || []).some(function (q) { return q.type === 'escalier' && q.vers === piece.slug; });
+        });
+        const porte = L.Monde.carte.portes.find(function (p) { return p.lieu === piece.slug; })
+          || L.Monde.carte.portes.find(function (p) { return p.lieu === dessous; });
+        BANC.entrer(porte);
+        if (L.B.interieur && L.B.interieur.slug !== piece.slug) { L.Jeu.changerEtage(piece.slug); BANC.fondu(); }
+      }
+      const e = L.Histoire.donneur(cible);
+      if (e) { j.x = e.x - 14; j.y = e.y; }
     }
     // Ce qu'on LIVRE est la, a l'arret, a cote de soi : comme dans une vraie partie.
     const monter = m.objectifs.slice().reverse().find(function (q) { return q.type === 'monter'; });
@@ -349,6 +371,17 @@ def test_chaque_fin_se_joue_seule_et_se_dit_la_ou_il_faut(banc, racine, cas):
     fin = missions.par_slug(slug)["dialogue"]["fin"]
     assert len(r["dites"]) == len(fin), (slug, r["dites"])
     au_combine = [("(AU TÉLÉPHONE)" in qui) for qui in r["dites"]]
+    # ⚠️ CELUI QU'ON EST ALLÉ VOIR parle en personne (m98 : le maire, à la poignée de main qui finit la mission) ;
+    # le donneur, lui, suit la règle d'avant — au combiné s'il n'est pas là.
+    m = missions.par_slug(slug)
+    dernier = m["objectifs"][-1]
+    devant = (dernier.get("cible") or "").replace("personnages:", "") if dernier.get("type") == "parler" else None
+    if devant and devant != m["donneur"] and any(p.get("acteur") == devant for p in scene_jugee(cas, "fin")):
+        attendus = [ligne["qui"] != devant for ligne in fin]
+        loin = not missions.fin_dite_en_personne(m, scene_jugee(cas, "fin"))
+        assert au_combine == [a and loin if ligne["qui"] == m["donneur"] else a for a, ligne in zip(attendus, fin)], \
+            f"{slug} : {r['dites']} — {devant} parle devant toi, le donneur au combiné s'il n'est pas là"
+        return
     # ⚠️ m6 se conclut après le dernier contact : Josée est dedans (au bar), le
     # joueur dehors — sa fin se dit au combiné, comme M4 et M5.
     # ⚠️ **LA RÈGLE SE LIT DANS LES DONNÉES**, pas dans une liste de slugs : une

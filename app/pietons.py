@@ -527,6 +527,31 @@ BAGARRE: dict = {
     "frontiere_min_tuiles": 16,
 }
 
+#: **LA VILLE DU BOSS** (M13, 29 sept. 2026 — `donne.boss` de m98, `partie.boss`). Le neveu de Rocco est le
+#: boss, et la ville change de couleur :
+#:
+#: - **les gangs reviennent**, dans leur quartier libéré, **à tes couleurs** (`couleur`, le haut de leur tenue) —
+#:   ceux de `gangs` seulement : les Cravates ont servi le maire jusqu'au bout, et les Mantes ont leur école ;
+#: - **on te salue** : un passant sur deux qui passe à `salut_px` de toi (tiré à l'EMPREINTE de son numéro,
+#:   jamais au dé), un mot de `passants` — et un membre de gang, un mot de `gangs` ; un salut au plus toutes
+#:   les `salut_images`, et chacun ne salue qu'une fois ;
+#: - **plus de rixes aux frontières** : la paix du Boss (`Entites.majBagarre`) ;
+#: - le nom sous la mini-carte et la grande carte **à l'or des Bandini** (`Hud`).
+#:
+#: ⚠️ `couleur` est l'or de TES PLACES et du losange de l'objectif (`hud.js`) : la ville prend la couleur de ce
+#: qui est à toi.
+BOSS: dict = {
+    "couleur": "#e8b33c",
+    "gangs": ("morues", "chevreuils", "boulonneux", "skateux"),
+    "salut_px": 56,
+    "salut_images": 150,
+    "salut_part": 0.5,
+    "salut_duree": 120,
+    # ⚠️ Courts, comme la bulle d'un personnage (`missions.HELER_MAX`) : la police 3 x 5 déborde de la tête au-delà.
+    "passants": ("SALUT, BOSS!", "BONJOUR, BOSS.", "M'SIEUR BANDINI!", "LE BOSS!", "BONNE JOURNÉE!"),
+    "gangs_saluts": ("BOSS.", "SALUT, BOSS.", "TOUT EST CALME.", "À TON SERVICE."),
+}
+
 #: **LES ENFANTS JOUENT.** ⚠️ **Jouer, c'est un `metier`, pas un costume.** La
 #: regle des sortes de gens est ecrite trois fois dans ce fichier, et le depot
 #: l'a deja payee une fois avec les filles de la Brume : une sorte sans routine
@@ -1020,5 +1045,7 @@ def exporter() -> dict:
                       "poses": {m: list(p) for m, p in SPECTACLE["poses"].items()}},
         "musicien": dict(MUSICIEN),
         "paroles": {slug: dict(mots) for slug, mots in PAROLES.items()},
+        "boss": {**BOSS, "gangs": list(BOSS["gangs"]), "passants": list(BOSS["passants"]),
+                 "gangs_saluts": list(BOSS["gangs_saluts"])},
         "poids_total": round(sum(p["frequence"] for p in ordinaires()), 3),
     }

@@ -106,7 +106,12 @@ ECHECS = ("mort", "arrete", "vehicule_detruit", "chrono", "etoile", "protege_mor
 #: Et deux de plus (28 sept. 2026) : `remet` — ce que le donneur te met dans les mains
 #: quand l'objectif commence (une arme, chargée à plein et en main ; une tenue, au sac) —
 #: et `tenue` — l'objectif ne s'accomplit qu'en la PORTANT (f10, « en la portant »).
-OPTIONS_OBJECTIFS = ("chrono_s", "sans_etoile", "sans_arme", "contre", "remet", "tenue")
+#: Et deux de plus (M13, 29 sept. 2026, m98 _Le Boss_) : `allies` — des membres de ces gangs arrivent à tes côtés
+#: quand l'objectif commence, visent les hommes de la mission et jamais toi, et restent tant que les objectifs
+#: suivants les nomment (`Histoire.poserLesAllies`, l'état `allie` d'`Entites`) — et `treve` : la police rentre au
+#: poste quand l'objectif commence (Bouchard rappelle ses chiens). Et `etoiles`, qu'avait `semer`, sert aussi
+#: `survivre` : TENIR à ce niveau-là.
+OPTIONS_OBJECTIFS = ("chrono_s", "sans_etoile", "sans_arme", "contre", "remet", "tenue", "allies", "treve")
 
 
 class Personnage(TypedDict):
@@ -371,6 +376,17 @@ PERSONNAGES: list[Personnage] = [
      "couleurs": {"c": "#1a1a2a", "h": "#b0b0b0", "s": "#e8c0a0", "p": "#1a1a2a"}, "ou": "point:prevost",
      "heler": "Vous.", "arrive_apres": "s10",
      "repos": ("Mon usine ne se visite pas.", "Mon usine ne se visite pas. Même rouverte.")},
+    # --- M13 (29 sept. 2026, _Le Boss_) : le maire Réal Tanguay — celui qu'on a filé jusqu'à l'hôtel (e06) et que
+    # Raymonde a réveillé en pantoufles (s10). Il se tient DEDANS, dans la chambre de l'Hôtel Bandini (`point:maire`, un
+    # point de plus dans la pièce : aucune tuile de la ville ne bouge), à partir de m97 — quand Marco a vendu la mèche et
+    # que la ville bascule — jusqu'à m98, où il démissionne (`parti_apres`, dedans aussi depuis). Voix : Eric (un
+    # français « standard » vérifié en multilingue v2) — le politicien lisse ; permise (Martin, 25 sept. 2026), en v3
+    # à écouter. `maire` est un titre (`TITRES`) : c'est « Tanguay » ou « Réal » qui le nomme.
+    {"slug": "maire", "nom": "Maire Tanguay", "genre": "homme", "voix": "Eric - Smooth, Trustworthy",
+     "couleurs": {"c": "#7a1f3d", "h": "#a8a8a8", "s": "#f0c8a8", "p": "#3a3a5a"}, "ou": "point:maire",
+     "heler": "Mon garçon!", "arrive_apres": "m97", "parti_apres": "m98",
+     # ⚠️ Le premier repos ne se dit jamais (il arrive bien après m5) : court, il pèse moins.
+     "repos": ("Pas ce soir.", "Réal Tanguay, maire. La chambre douze est louée à l'année, mon garçon.")},
 ]
 
 
@@ -600,7 +616,7 @@ from . import (  # noqa: E402
     e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f10, f11, f12, f13, h01, h02, m1, m2, m3,
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
     s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
-    e04, e06, e07, e10, p02, p04, p05, p09, p10, p11, s02, s05, s06, s09, s10, s11, q07,
+    e04, e06, e07, e10, p02, p04, p05, p09, p10, p11, s02, s05, s06, s09, s10, s11, q07, m98,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -640,6 +656,8 @@ from . import (  # noqa: E402
 # l'accord porté sans arme à Gros-Boulon (`libere: shop`).
 # ⚠️ q07 (29 sept. 2026, vague 5) : Norbert et la chambre 12 — elle met l'hôtel EN VENTE (`donne.a_vendre`), la
 # quatrième propriété que _Le Boss_ (M13) demande.
+# ⚠️ m98 (M13, 29 sept. 2026) — _Le Boss_, la fin qu'on gagne : après m97, quatre districts libérés et quatre
+# propriétés (`exige`). Le siège du Brouillard, le maire dans la chambre de l'hôtel, et la ville qui change de couleur.
 # ⚠️ m99 (M13, 25 sept. 2026) — _Sacrer son camp_, la fin qu'on peut jouer — tout au bout : son appel
 # ne sonne qu'avec 15 000 $ en poche (`exige`), et une fin n'a rien à précéder.
 CATALOGUE: list[Mission] = [
@@ -661,7 +679,7 @@ CATALOGUE: list[Mission] = [
     p02.MISSION, p05.MISSION, p04.MISSION, p09.MISSION, p10.MISSION, p11.MISSION,
     s02.MISSION, s06.MISSION, s05.MISSION, s09.MISSION, s10.MISSION, s11.MISSION,
     q07.MISSION,
-    m97.MISSION, m99.MISSION,
+    m97.MISSION, m98.MISSION, m99.MISSION,
 ]
 
 
@@ -1056,7 +1074,7 @@ def personnage(slug: str) -> Personnage | None:
 #: Les mots d'un `nom` qui ne nomment personne à eux seuls : « le sergent » n'est pas Bouchard
 #: (Lulu dit « le sergent va être content »), « Madame » n'est pas Thibodeau.
 TITRES = frozenset({"madame", "monsieur", "sergent", "docteur", "dr", "me", "le", "la", "les",
-                    "de", "du", "des"})
+                    "de", "du", "des", "maire"})
 
 
 def on_le_rencontre(qui: str) -> bool:

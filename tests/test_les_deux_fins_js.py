@@ -6,8 +6,7 @@ attend, le passage qu'on paie, le traversier qui largue avec le joueur sur le po
 le générique (le narrateur, les chiffres de la partie dans les cartons), le BILAN, et une ville
 où l'on joue encore.
 
-_Le Boss_ (m98) viendra avec la vague 2 : il demande quatre districts libérés, et un seul se libère
-aujourd'hui (docs/jalons/m13-les-deux-fins.md).
+_Le Boss_ (m98), l'autre fin, se joue dans `test_le_boss_js.py`.
 """
 
 import pytest

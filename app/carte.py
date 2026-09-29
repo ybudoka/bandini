@@ -7735,7 +7735,9 @@ B  a h   e  B
 B  a h      B
 Bn         /B
 BBBBBBDBBBBBB
-""", points=(_pt("lit", 2, 1), _pt("escalier", 11, 6, vers="hotel")),
+""", points=(_pt("lit", 2, 1), _pt("escalier", 11, 6, vers="hotel"),
+             # Le maire Tanguay (M13, m98), près de la fenêtre sur la baie : un point dans la pièce, rien dans la ville.
+             _pt("maire", 7, 3)),
      gens=()),
 
     # La cantine des Quais : on y mange debout, la fenetre donne sur l'eau.

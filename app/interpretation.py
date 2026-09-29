@@ -422,11 +422,13 @@ JEU: dict[str, str] = {
     # La Shop : Ti-Loup le ferrailleur, Gros-Boulon, Prévost (vouvoie, et ne cède rien).
     "tiloup-repos-2": "[gruffly] T'as une épave? [wryly] Je paie comptant, pis j'oublie vite.",
     "boulon-repos-2": "[calm] Dans La Shop, personne te touche. [firmly] Je l'ai dit.",
+    "maire-repos-2": "[cheerful] Réal Tanguay, maire. [smugly] La chambre douze est louée à l'année, mon garçon.",
     "prevost-repos-2": "[coldly] Mon usine ne se visite pas. [wryly] Même rouverte.",
     "narrateur-journal-quais_liberes": "[dramatic] Nuit blanche à l'Hôtel Bandini. [amused] Les matelots du cargo norvégien sont repartis à la rame, et les Quais dorment tranquilles. [warmly] Les débardeurs, eux, parlent d'une paix qui tiendra.",
     "narrateur-journal-erables_liberes": "[amused] Plus un drift dans les Érables. [calm] Les Chevreuils rangent leurs chars, et le conseil vote la paix jeudi. [wryly] La conseillère Larivière n'a pas voulu commenter.",
     "narrateur-journal-phare_a_tenu": "[dramatic] Le phare a tenu. [serious] Un chalutier a évité les récifs de justesse, cette nuit ; [warmly] le gardien Saint-Onge remercie un inconnu, et ne veut pas en dire plus.",
     "narrateur-journal-pointe_liberee": "[warmly] La Pointe signe la paix. [amused] Les Skateux rangent leurs planches, le pont reste ouvert, et monsieur Bilodeau dit qu'il ira enfin à la messe.",
+    "narrateur-journal-le_boss": "[dramatic] Le maire Tanguay démissionne… en robe de chambre, à l'Hôtel Bandini. [serious] Le neveu de Rocco tient la ville, et pas un coin de rue ne lui échappe. [wryly] Ceux qui le connaissent disent qu'il salue tout le monde.",
     "narrateur-journal-prevost_rembauche": "[excited] La Prévost rembauche! [warmly] Cent cinquante postes au salaire d'avant, dès lundi, et La Shop respire. [wryly] Monsieur Prévost parle d'une décision d'affaires ; ses employés, d'un miracle.",
     "narrateur-journal-ecole_rouverte": "[warmly] L'École La Mante rouvre ses portes. [amused] Son vieux maître est revenu de Floride, bronzé, et ses élèves aussi, un par un. [wryly] Premier cours à sept heures : les parents sont invités… les frimeurs aussi.",
     "narrateur-journal-orignal": "[dramatic] Un orignal gagne contre un char. [wryly] La bête est repartie dans le bois de La Pointe ; le char est au garage. [matter-of-fact] Ovila, au phare, le rappelle : un coup de klaxon, et ils s'en vont.",

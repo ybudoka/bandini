@@ -3355,6 +3355,20 @@ const Entites = (function () {
     return nes;
   }
 
+  /** La cible d'un allie (`allie`, M13) : l'homme de la mission debout le plus pres du JOUEUR, a portee
+      de vue de la rixe — on defend celui qu'on accompagne, pas le premier venu. */
+  function cibleDeLAllie(e) {
+    const j = B.joueur, f = B.defs.pietons.bagarre;
+    if (!j) return null;
+    let meilleur = null, dMin = Infinity;
+    for (const q of pietonsAutour(j.x, j.y, f.rival_px * 2)) {
+      if (!q.cible || !q.vivant || q.etat === 'assomme' || q.personnage || q.allie) continue;
+      const d = dist2(q.x, q.y, j.x, j.y);
+      if (d < dMin) { dMin = d; meilleur = q; }
+    }
+    return meilleur;
+  }
+
   /** Il n'y a plus personne en face, ou le temps est fait : on s'en va. */
   function finirLaBagarre(e) {
     e.etat = 'flane';
@@ -3375,6 +3389,8 @@ const Entites = (function () {
   function majBagarre() {
     const f = B.defs.pietons && B.defs.pietons.bagarre;
     if (!f || !B.joueur || B.interieur || !B.partie) return 0;
+    // ⚠️ LA PAIX DU BOSS (M13, m98) : plus une rixe aux frontieres. Avant le tirage : le de n'est pas tire.
+    if (B.partie.boss) return 0;
     const minute = Math.floor(B.partie.heure * 24 * 60);
     if (B.rixeMinute === minute) return 0;
     B.rixeMinute = minute;
@@ -3560,6 +3576,7 @@ const Entites = (function () {
     if (B.t % 40 === 0) naitreLesBetes();
     if (B.t % 30 === 0) majVolDeChar();
     if (B.t % 30 === 0) majBagarre();
+    if (B.t % 10 === 0) majSaluts();
     if (B.t % 30 === 0) majAqueduc();
     if (B.t % 90 === 0) naitreLesSortes();
     if (B.t % 30 === 0) naitreLeLastCall();
@@ -3597,12 +3614,15 @@ const Entites = (function () {
     // plus un Boulonneux ne sortait nulle part en ville.
     // ⚠️ LES TERRITOIRES BOUGENT (`Territoires.gangA`) : la cour, comme avant, ou l'ilot qu'un gang a PRIS. Une
     // partie qui n'a rien de pris tire exactement les memes des qu'avant.
+    // ⚠️ LA VILLE DU BOSS (M13, m98) : un gang dont le district est libere REVIENT dans sa cour, a tes
+    // couleurs (`aTesCouleurs`) — la paix qu'on a gagnee n'est pas une rue vide. Avant m98, rien ne change.
     const ici = Territoires.gangA(B.joueur.x, B.joueur.y);
-    const gang = ici && !gangChasse(ici) && B.rng() < partDehors(ici)
+    const gang = ici && (!gangChasse(ici) || aTesCouleurs(ici)) && B.rng() < partDehors(ici)
       ? (B.defs.pietons.gangs.find(function (g) { return g.slug === ici; }) || null)
       : null;
     const ne = creerPieton(place.x, place.y, gang ? archetype(gang.pieton) : null);
     if (ne && sortie) ne.sortie = sortie;
+    if (ne && gang && aTesCouleurs(gang.slug)) auxCouleursDuBoss(ne);
   }
 
   /** Le gang `slug` a-t-il perdu son district (M16, `donne.libere`) ? Ses membres ne
@@ -3615,6 +3635,48 @@ const Entites = (function () {
     if (!g) return false;
     if (g.district === 'faubourg' && p.faubourgLibere) return true;
     return (p.libere || []).indexOf(g.district) >= 0;
+  }
+
+  /** LA VILLE DU BOSS (M13, `partie.boss`, `pietons.BOSS`) : ce gang porte-t-il TES couleurs ? Seulement une fois
+      boss, et seulement ceux de la liste — les Cravates ont servi le maire jusqu'au bout. */
+  function aTesCouleurs(slug) {
+    const b = B.defs.pietons && B.defs.pietons.boss;
+    return !!(B.partie && B.partie.boss && b && b.gangs.indexOf(slug) >= 0);
+  }
+
+  /** Le haut de sa tenue a l'or des Bandini — le dessin lit `swaps` (le corps commun repeint) et, habille, sa
+      TENUE (`Garderobe`) : les deux, comme le chef en noir de `Histoire.poserLesCravates`. */
+  function auxCouleursDuBoss(e) {
+    const or = B.defs.pietons.boss.couleur;
+    e.swaps = Object.assign({}, e.swaps, { c: or });
+    if (e.tenue) e.tenue = Object.assign({}, e.tenue, { couleur_haut: or });
+    e.auBoss = true;
+  }
+
+  /** ON SALUE LE BOSS (M13) : un passant sur deux qui passe pres de toi — tire a l'EMPREINTE de son numero,
+      jamais au de : la ville d'apres m98 tire exactement les memes des que si personne ne saluait. Un membre
+      de gang a tes couleurs dit un mot des siens. Un salut au plus toutes les `salut_images`, et chacun ne
+      salue qu'une fois. Rend celui qui a salue, ou null. */
+  function majSaluts() {
+    const b = B.defs.pietons && B.defs.pietons.boss, j = B.joueur;
+    if (!b || !B.partie || !B.partie.boss || !j || B.interieur || B.cinema || B.scene) return null;
+    if (B.t < (B.salutBossT || 0)) return null;
+    let meilleur = null, dMin = b.salut_px * b.salut_px;
+    for (const e of pietonsAutour(j.x, j.y, b.salut_px)) {
+      if (e.salue || !e.vivant || e.personnage || e.agent || e.cible || e.allie || e.intouchable || e.bulle) continue;
+      if (e.etat !== 'flane' && e.etat !== 'arret' && e.etat !== 'cap') continue;
+      const d = dist2(e.x, e.y, j.x, j.y);
+      if (d < dMin) { dMin = d; meilleur = e; }
+    }
+    if (!meilleur) return null;
+    meilleur.salue = true;
+    const h = hash2(meilleur.id * 7 + 3, 0xB055) >>> 0;
+    if ((h % 1000) / 1000 >= b.salut_part) return null;
+    const mots = meilleur.auBoss ? b.gangs_saluts : b.passants;
+    bulle(meilleur, mots[(h >> 10) % mots.length], { duree: b.salut_duree });
+    regarder(meilleur, j.x - meilleur.x, j.y - meilleur.y);
+    B.salutBossT = B.t + b.salut_images;
+    return meilleur;
   }
 
   /** L'ECOLE LA MANTE a-t-elle rouvert ses cours (`mantes.REPRISE`, sa mission `apres` faite) ? */
@@ -4723,6 +4785,29 @@ const Entites = (function () {
       e.vx = dx / norme * vitesse;
       e.vy = dy / norme * vitesse;
       if (norme < f.portee_px) emporterLeChar(e, cible);
+    } else if (e.etat === 'allie') {
+      // ⚠️ L'ALLIE (M13, m98 : « les Morues, les Skateux et les Boulonneux a tes cotes », l'option
+      // `allies` d'un objectif). La rixe de gangs savait deja viser quelqu'un d'autre que le joueur ;
+      // l'allie vise les hommes de la MISSION (`cible`) : il court sur celui qui est debout le plus pres
+      // de toi, s'arrete a portee de poing et cogne a la cadence de la rixe. Sans personne a coucher, il
+      // te suit a quelques pas. ⚠️ Ses coups ne te touchent jamais, ni un autre allie (`Combat`), et rien
+      // ne le retourne contre toi (`alerter`, `blesser`).
+      const f = B.defs.pietons.bagarre, j = B.joueur;
+      if (!e.rival || !e.rival.vivant || e.rival.etat === 'assomme' || !e.rival.cible) e.rival = cibleDeLAllie(e);
+      vitesse = v.pieton_course * e.allure;
+      const vers = e.rival || j;
+      const dx = vers.x - e.x, dy = vers.y - e.y, norme = Math.hypot(dx, dy) || 1;
+      // Sans cible, chacun garde sa distance (trois rangs, par son numero) : une grappe collee au joueur
+      // le coincerait contre un mur.
+      const arret = e.rival ? f.portee_px : 28 + (e.id % 3) * 10;
+      if (norme > arret) {
+        e.vx = dx / norme * vitesse;
+        e.vy = dy / norme * vitesse;
+      } else {
+        e.vx = 0; e.vy = 0;
+        regarder(e, dx, dy);
+        if (e.rival && e.t % f.cadence_images === 0) Combat.frapper(e, false);
+      }
     } else if (e.etat === 'bagarre') {
       // ⚠️ IL VISE QUELQU'UN D'AUTRE QUE LE JOUEUR, et c'est tout ce qui
       // manquait a la ville : `attaque_joueur` ne savait viser que lui. Il
@@ -5080,6 +5165,9 @@ const Entites = (function () {
       // gang est « attaquer le joueur » : sans cette ligne, six hommes qui se
       // tapaient dessus se retournaient tous contre lui au premier poing.
       if (enPleineRixe(e)) continue;
+      // ⚠️ L'ALLIE (m98) est dans le coup : un coup que TU portes a un homme du maire ne le retourne pas
+      // contre toi (`e.gang` et `contreLeJoueur`, plus bas, l'y enverraient).
+      if (e.allie) continue;
       if (!Monde.ligneLibre(e.x, e.y, x, y)) continue;
       // ⚠️ L'IVROGNE NE FUIT PAS. Il n'a pas peur : il n'a rien compris, et il
       // repond. C'est le seul de la ville — une rue ou tout le monde detale de
@@ -5216,7 +5304,8 @@ const Entites = (function () {
       // premier coup d'une rixe envoyait les deux camps sur lui, et il n'avait
       // rien fait — il passait par la. Mais si c'est LUI qui cogne, la regle
       // ordinaire reprend, et la gang lui tombe dessus comme chez elle.
-      if (e.etat !== 'attaque_joueur' && !(enPleineRixe(e) && source !== B.joueur)) {
+      // ⚠️ L'ALLIE (m98) blesse encaisse et continue : il ne fuit pas, et ne se retourne pas contre toi.
+      if (e.etat !== 'attaque_joueur' && !(enPleineRixe(e) && source !== B.joueur) && !e.allie) {
         e.etat = (e.courage > 0 && B.rng() < e.courage) ? 'attaque_joueur' : 'fuit';
         e.minuterie = B.defs.pietons.reactions.fuite_secondes * 60;
         e.avantLeCoup = null;      // il ne reprendra pas ce qu'il faisait
@@ -5821,7 +5910,7 @@ const Entites = (function () {
   }
 
   return {
-    orignalDeLaNuit, majOrignal, faireFuirLOrignal, gangChasse, gangCalme, defier, ecoleRouverte, partDehors,
+    orignalDeLaNuit, majOrignal, faireFuirLOrignal, gangChasse, gangCalme, aTesCouleurs, auxCouleursDuBoss, majSaluts, defier, ecoleRouverte, partDehors,
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES, PORTEE_DECOR,
     creer, enDehorsDeLaSuite, sauterDesNumeros, dansLaBande, retirer, vider, creerJoueur, creerJoueur2, joueurs, estJoueur, creerDecor, creerAmbulants, majKiosques, creerPaquets, creerPieton, reindexerDecor,
     briser, endommagerDecor, reparerLeDecor, releverDecor, DEBRIS_MAX,

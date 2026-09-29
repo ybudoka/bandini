@@ -885,6 +885,15 @@ MUSIQUES: list[Piece] = [
        "no drums, no vocals",
        duree_s=45, volume=0.44),
 
+    # LE GÉNÉRIQUE DU BOSS (M13, m98) : l'autre fin — elle ne part pas, elle reste. Même durée que celui de m99 (sa
+    # scène en dure autant : quatre quartiers, l'hôtel, les chiffres). Martin : « lâche-toi lousse ».
+    _m("generique_boss",
+       "triumphant noir end credits at 72 bpm in D minor resolving to D major, a lone muted trumpet over "
+       "harbour fog that swells into a full brass section with low strings, timpani and a walking upright "
+       "bass, the swagger of a crime saga finale, a small foggy port town at dawn that now has a new boss, "
+       "no vocals",
+       duree_s=45, volume=0.44),
+
     # --- Les deux stations de char (le bouton RADIO peut tomber dessus) ------
     _m("station_camion",
        "mid-tempo country rock instrumental at 104 bpm in C major, twangy "

@@ -89,6 +89,9 @@ portes de m6) : c'est elle qui décide où l'on regarde.
 - m6 : Ti-Paul au dépanneur, « ma sœur Lulu » à la cantine, Raymonde au syndicat, Ovila au phare ; « Dans
   cette ville, tout commence par là » (une poignée de main).
 - m6 : « L'auto sans phares? Je sais. Elle est à moi. »
+- m98 (_Le Boss_, la fin) : le maire « a compris qui tient la ville » ; ses Cravates et la police de Bouchard sur le
+  Brouillard ; les Morues, les Skateux et les Boulonneux avec toi ; « Y avait plus grand que le Faubourg. Bienvenue chez
+  toi, Boss. » — son `[warmly]` de la mission est le dernier mot du jeu.
 
 ## Ce qui l'attend (M16)
 

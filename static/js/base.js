@@ -238,6 +238,9 @@ function etatInitial(defs) {
     //: laisse soi-meme) pour ne pas ecraser la sauvegarde.
     vehiculePlanque: null,
     manchetteForcee: null,
+    //: LE BOSS (M13, `donne.boss` de m98) : `{ jour }` le jour ou la ville a change de couleur, null avant.
+    //: Les gangs a tes couleurs, les saluts, la carte a l'or des Bandini lisent ce champ-la, et lui seul.
+    boss: null,
     paquets: {},
     //: Les frénésies RÉUSSIES (`Frenesies`), par slug : `{ jour, temps }`. Une réussie ne revient
     //: plus ; une ratée n'y est pas, et son icône attend qu'on revienne.
@@ -782,6 +785,8 @@ const Sauvegarde = (function () {
     if (!Array.isArray(out.calmes)) out.calmes = [];
     if (!Array.isArray(out.enVente)) out.enVente = [];
     if (!Array.isArray(out.fermees)) out.fermees = [];
+    // Le Boss (M13) : un objet `{ jour }` ou rien — une partie abimee ne devient pas boss par accident.
+    if (!out.boss || typeof out.boss !== 'object' || typeof out.boss.jour !== 'number') out.boss = null;
     // Les planques des blocs de carte : une partie d'avant elles n'en a aucune.
     if (!Array.isArray(out.planques)) out.planques = [];
     if (!out.charsDesPlanques || typeof out.charsDesPlanques !== 'object') out.charsDesPlanques = {};

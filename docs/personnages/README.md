@@ -67,6 +67,7 @@ Chaque fiche mêle deux sortes de faits.
 | [Ti-Loup Ferraille](tiloup.md) | `tiloup` | devant la fourrière, après s01 | Chris | s02 · s05 (son compacteur) |
 | [Marcel « Gros-Boulon » Boulanger](boulon.md) | `boulon` | devant la fourrière, après s02 | Roger | s05 · s09 · s11 (l'accord) |
 | [Réjean Prévost](prevost.md) | `prevost` | à son bureau de l'usine, dedans, après s10 | Roland Lescalde | s11 |
+| [Le maire Réal Tanguay](maire.md) | `maire` | dans la chambre de l'Hôtel Bandini, dedans, entre m97 et m98 | Eric - Smooth, Trustworthy | m98 (la poignée de main, et il cède) |
 | [Victor Tam, « Sifu Tam »](victor-tam.md) | `maitre` | dans sa salle de l'ÉCOLE LA MANTE, dedans — une fois revenu de Floride (après c04) | Luca - Storyteller | c05 (sa poignée de main) · c06 · c07 · c08 |
 
 ⚠️ **Deux voix du compte ne se donnent à personne** : celles du scanner de police (Clara Dupont, la

@@ -11,7 +11,7 @@ def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
         "ti_guy", "thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu", "raymonde", "ovila",
         "mo", "fern", "mado", "gege", "xavier", "lachance", "gus", "rosa", "ginette", "gilles",
         "bonimenteur", "sven", "berube", "mireille", "jeanne", "leo", "norbert", "irene", "maitre", "cindy", "diane", "jo", "bilodeau", "zed", "trappeur", "tiloup", "boulon",
-        "prevost"]
+        "prevost", "maire"]
     # Cindy n'est devant la cantine qu'entre q04 et q05, et q05 l'attend toujours : pas de repos, comme Ti-Guy.
     # Mireille (le DOJO DION) ouvre ses COURS a chaque fois : pas de repos, comme le -2 de Josee.
     # Ti-Guy s'en va apres m1 (il a m1 a donner tant qu'il est la) ; Josee ouvre le marche noir
@@ -21,12 +21,13 @@ def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
                                               "xavier", "lachance", "gus", "rosa", "ginette", "gilles",
                                               "bonimenteur", "sven", "berube", "jeanne", "leo", "norbert", "irene",
                                               "maitre", "diane", "bilodeau", "zed", "trappeur", "tiloup",
-                                              "boulon", "prevost")
+                                              "boulon", "prevost", "maire")
                 for n in (1, 2)
                 # Le vieux maître n'arrive qu'après c04 (`arrive_apres`), bien après m5 : son premier repos ne
                 # s'entend jamais.
                 if (qui, n) not in (("josee", 2), ("maitre", 1), ("diane", 1), ("bilodeau", 1), ("zed", 1),
-                                           ("trappeur", 1), ("tiloup", 1), ("boulon", 1), ("prevost", 1))]
+                                           ("trappeur", 1), ("tiloup", 1), ("boulon", 1), ("prevost", 1),
+                                           ("maire", 1))]
     repos = missions.repliques_de_repos()
     assert [r["slug"] for r in repos] == attendus, "quarante-sept voix, pas quarante-huit"
     # ⚠️ Le même texte pour tous — sauf qui a le sien (`repos` : l'île, loin du Faubourg).
@@ -176,7 +177,9 @@ def test_chaque_replique_a_une_voix_et_tient_en_deux_phrases():
     # ⚠️ m6 : quatre répliques de plus (la poignée de main de ses quatre contacts, `accueil`) — Martin,
     # 20 sept. 2026, « enrichir leur dialogue » : une chacune, donc 12. Un plafond par mission qui le
     # demande, jamais un plafond global relevé : les autres restent à 10.
-    PLAFONDS = {"m6": 20}
+    # ⚠️ m98, _Le Boss_ (M13, 29 sept. 2026) : la fin du jeu — six étapes et leurs six `pendant` (Josée, Zed,
+    # Gros-Boulon, Bouchard, Norbert deux fois), la poignée de main du maire et les cinq phrases du générique : 21.
+    PLAFONDS = {"m6": 20, "m98": 21}
     par_mission: dict[str, int] = {}
     for r in missions.repliques():
         par_mission[r["mission"]] = par_mission.get(r["mission"], 0) + 1

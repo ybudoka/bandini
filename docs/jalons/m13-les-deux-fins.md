@@ -138,3 +138,58 @@ son générique et la ville qui change de couleur.
 (`donne.a_vendre`, `partie.enVente`) : il s'achète au comptoir du hall, et le juge de banc fait les quatre propriétés.
 **_Le Boss_ est débloqué** : ses deux conditions (4 districts, 4 propriétés) se gagnent en jouant. Reste à l'écrire —
 m98, son générique, la ville qui change de couleur.
+
+**29 sept. 2026 — vague 2 livrée : _Le Boss_. Les deux fins se jouent ; M13 est livré.**
+
+- **m98 _Le Boss_** (`app/missions/m98.py`, Josée ; après m97, `exige` quatre districts libérés et quatre
+  propriétés). Le téléphone sonne : « Josée. Quatre quartiers, quatre propriétés. » Six étapes :
+  0. **sortir devant le Brouillard** (l'intro se joue dedans : Josée croise les bras, la caméra va voir la porte du
+     bar puis l'Hôtel Bandini, elle montre la sortie) ;
+  1. **les Cravates du maire** (six, qui arrivent de la grande rue) — **les Morues, les Skateux et les Boulonneux à
+     tes côtés** : deux de chaque gang arrivent en courant de l'autre bout de la rue et cognent les hommes du maire
+     (Zed appelle : « On arrive! ») ;
+  2. **la police du maire, à cinq étoiles** : tenir 90 secondes (Gros-Boulon a barré le boulevard de l'usine) ;
+  3. **Bouchard rappelle ses chiens** (`treve` : zéro étoile) ; les alliés rentrent chez eux ; direction l'hôtel,
+     « le maire dort chez toi » ;
+  4. **la garde du maire** (quatre gardes de sécurité) devant ta porte — Norbert appelle de la réception ;
+  5. **la chambre douze** : par l'escalier du hall, le maire Réal Tanguay (personnage neuf, dedans, en robe de
+     chambre) se présente à la poignée de main — « Pour encore cinq minutes, j'imagine. »
+  La **fin** se joue devant lui : il hausse les épaules (« Trois mandats pour avoir cette ville-là. Toi, t'as pris un
+  mois. »), tend **le billet de Rocco — il l'avait racheté à Sal, « pour te tenir en laisse »** —, un silence ; la
+  caméra va chez Josée, et quand elle revient, il est parti (« Bienvenue chez toi… Boss. », le seul `[warmly]` de
+  Josée). **La dette de Rocco est déchirée** (`donne.dette`, le billet entier, plafond compris) : c'est le
+  dénouement du fil des deux fins.
+- **Son générique** — le pendant de celui de m99 : le narrateur (cinq phrases, « Mais c'est toi qu'elle salue, le
+  Boss. »), une coupe sur chacun des quatre quartiers libérés (la cantine, le dépanneur, la fourrière, le phare), puis
+  l'Hôtel Bandini où la caméra reste pendant que les chiffres montent : fortune, **QUARTIERS À TOI** (`{liberes}`),
+  propriétés, missions, jours, **LA DETTE DE ROCCO — DÉCHIRÉE**, et le logo sur « LE BOSS ». Sa musique à lui,
+  **`generique_boss`** « Le Boss » : ré mineur qui se résout en ré majeur, la trompette seule sur le quai qui finit
+  avec toute la section (notes dans `musique.py`, et 45 s d'ElevenLabs). Puis le BILAN, et la partie continue.
+- **La ville qui change de couleur** (`donne.boss`, `partie.boss`, gardé par la sauvegarde ; `pietons.BOSS`) : les
+  gangs des districts libérés (Morues, Chevreuils, Boulonneux, Skateux — pas les Cravates, au maire jusqu'au bout,
+  ni les Mantes) **reviennent dans leur cour, à tes couleurs** (le haut de leur tenue à l'or des Bandini) ; **on te
+  salue** — un passant sur deux qui passe à deux pas (« SALUT, BOSS! », « M'SIEUR BANDINI! »), un membre de gang
+  (« TOUT EST CALME. »), tiré à l'empreinte, jamais au dé ; **plus de rixe aux frontières** ; le nom du quartier
+  sous la mini-carte et les cinq districts de la grande carte **à l'or des Bandini**, le titre « LA VILLE DU BOSS » ;
+  la **une du Clairon** : « LE MAIRE TANGUAY DÉMISSIONNE » ; et le maire a quitté l'hôtel pour de bon.
+- **Le moteur apprend** (chaque clé jugée et mutée) : deux options d'objectif, **`allies`** (l'état `allie`
+  d'`Entites` : il vise la `cible` debout la plus proche du joueur, ne frappe ni le joueur ni un autre allié, et ni
+  `alerter` ni `blesser` ne le retournent contre toi) et **`treve`** ; `etoiles` sur `survivre` ; `parti_apres`
+  vaut aussi pour un personnage de pièce ; la flèche trouve un personnage d'**étage** (la chambre n'a pas de porte en
+  ville : celle de la pièce dont l'escalier y monte) ; `maire` est un titre (`TITRES`).
+- **Les voix** : 21 répliques de m98, le repos du maire et la une du Clairon — 23 voix, ≈ 2 400 caractères, le
+  narrateur passé à l'isolateur ; la musique, 619 crédits ; ≈ 2 160 crédits en tout. Le maire a la voix **Eric —
+  Smooth, Trustworthy** (multilingue, un français « standard » vérifié en v2 ; Scribe relit ses trois répliques mot
+  pour mot). ⚠️ **Personne ne les a encore écoutées.**
+- **Juges** (`tests/test_le_boss_js.py`, neuf, sur une partie JOUÉE au bouton : l'appel qui sonne tout seul, ACTION
+  devant Josée, les combats, la chambre, ACTION devant le maire, la fin, le générique, le BILAN, puis la ville
+  d'après, la sauvegarde et un joueur qui marche) ; **treize mutations, toutes rouges** (les alliés jamais posés,
+  `alerter`, `blesser`, le coup allié sur le joueur, `etoiles` sur `survivre`, `treve`, `boss`, les gangs qui
+  reviennent, les saluts, la paix aux frontières, le maire qui reste dans sa chambre, la flèche de l'étage, la
+  sauvegarde). `test_missions_en_scene_js.py` apprend qu'une poignée de main finit **devant sa cible** quand la
+  scène de fin la fait jouer (on va la voir, par l'escalier s'il le faut) : le maire y parle en personne, Josée au
+  combiné.
+- **Vu à la capture** : la teinte seule de la grande carte se confondait avec la brique — un liseré d'or l'entoure.
+- ⚠️ **Ce qui reste hors de M13** : Marco ne disparaît toujours pas après m97 (il a encore des missions à donner
+  dans certains chemins) ; se cacher dedans pendant les 90 secondes de la police fait tomber les étoiles comme
+  partout — le chrono, lui, court.

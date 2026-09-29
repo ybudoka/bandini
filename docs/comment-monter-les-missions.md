@@ -194,6 +194,12 @@ donneur te met dans les mains quand l'objectif commence : une arme, chargée à 
 main (`f13`, l'extincteur), ou une tenue, mise au sac (`f10`, la chemise) — et **`tenue`** —
 l'objectif ne s'accomplit qu'en la **portant** : un `aller` arrivé dans le mauvais linge
 attend (« ENFILE : … »), un `parler` refuse la poignée de main (`f10`, Norbert).
+Et deux encore (29 sept. 2026, M13, `m98` _Le Boss_) : **`allies`** — une liste de gangs dont deux membres
+chacun arrivent à tes côtés quand l'objectif commence, en courant de l'autre bout de la rue ; ils visent les
+hommes de la mission (`cible`) et jamais toi ni l'un des leurs, rien ne les retourne contre toi, et ils restent
+tant que les objectifs suivants les nomment (puis rentrent chez eux) — et **`treve`** : la police rentre au poste
+quand l'objectif commence (les étoiles à zéro : Bouchard rappelle ses chiens). **`etoiles`**, qu'avait `semer`,
+sert aussi `survivre` : on TIENT à ce niveau-là, le chrono court.
 
 Contraintes **jugées** (voir `test_missions.py`) :
 
@@ -462,7 +468,11 @@ En plus de `recompense`, la mission peut donner :
   (`partie.enVente`) : l'hôtel après `q07`, la quatrième propriété de _Le Boss_ ;
 - `contact` — un numéro de plus au téléphone ;
 - `vehicule`, `tenue`, `munitions`, `rabais` par comptoir ;
-- `dette: -n`, `casier: -n`, `ami`/`ennemi`, `boulot`, `manchette`.
+- `dette: -n`, `casier: -n`, `ami`/`ennemi`, `boulot`, `manchette` ;
+- `boss: true` (M13, `m98`) — **la ville change de couleur**, pour de bon (`partie.boss`, gardé par la
+  sauvegarde) : les gangs des districts libérés reviennent dans leur cour à tes couleurs, on te salue dans la
+  rue, plus de rixe aux frontières, le nom sous la mini-carte et la grande carte à l'or des Bandini
+  (`pietons.BOSS`).
 
 **`exige` et `ferme`** (M16) viennent compléter `prerequis` :
 
@@ -484,7 +494,8 @@ sans scène est muet, une scène sans `donne.generique` ne se joue jamais. `gene
 dernier dans `PARTIES` (les voix déjà payées gardent leur slug). Un plan `titre` y écrit les chiffres
 de la partie entre accolades — `{fortune}`, `{missions}`, `{proprietes}`, `{jours}`, `{dette}`,
 `{liberes}` (`VALEURS_DE_TITRE`, toute autre clé est refusée). Une fin de partie paie `recompense: 0`,
-et c'est la seule mission qui le peut. Exemple : `m99.py`.
+et c'est la seule mission qui le peut. Exemples : `m99.py` (on part), `m98.py` (on reste — sa musique à lui,
+`generique_boss`, et un carton écrit en toutes lettres, « DÉCHIRÉE »).
 
 ---
 

@@ -2130,8 +2130,16 @@ const Hud = (function () {
     let e = null;
     if (perso.ou.indexOf('point:') === 0) {
       const piece = Histoire.pieceDuPoint(perso.ou.slice(6));
-      const porte = piece && (Monde.carte.def.portes || []).find(function (q) { return q.lieu === piece.slug && q.interieur; });
-      if (porte && Jeu.entrer(porte)) { Jeu.finirTransition(); e = Histoire.donneur(slug); }
+      // ⚠️ UN ÉTAGE n'a pas de porte en ville (le maire, dans la chambre de l'hôtel) : on entre par la pièce dont
+      // l'escalier y monte, et on monte.
+      const dessous = piece && Histoire.pieceDessous(piece.slug);
+      const porte = piece && (Monde.carte.def.portes || []).find(function (q) { return q.lieu === piece.slug && q.interieur; })
+        || (dessous && (Monde.carte.def.portes || []).find(function (q) { return q.lieu === dessous && q.interieur; }));
+      if (porte && Jeu.entrer(porte)) {
+        Jeu.finirTransition();
+        if (B.interieur && B.interieur.slug !== piece.slug) { Jeu.changerEtage(piece.slug); Jeu.finirTransition(); }
+        e = Histoire.donneur(slug);
+      }
     } else {
       e = Histoire.donneur(slug) || Histoire.poserDonneur(perso);
     }
@@ -3507,6 +3515,7 @@ const Hud = (function () {
     Metro.dessinerSurLaCarte(ctx, pos);
     Train.dessinerSurLaCarte(ctx, pos);         // le train : pleine au sol, doublée sur le viaduc, pointillée sous la montagne
     Territoires.dessinerSurLaCarte(ctx, pos);   // les ilots PRIS, aux couleurs de qui les tient
+    dessinerLaVilleDuBoss(ctx, carte, pos);     // M13 : apres m98, les districts a l'or des Bandini
     Traversier.dessinerSurLaCarte(ctx, pos);
     Navette.dessinerSurLaCarte(ctx, pos);
     for (const point of lieuxSurLaCarte(carte)) {
@@ -3557,7 +3566,8 @@ const Hud = (function () {
     marqueurs.joueur = { x: pj.x, y: pj.y, r: rj, forme: 'anneau', visible: true };
     const zone = Monde.zoneA ? (B.exterieur ? null : Monde.zoneA(j.x, j.y)) : null;
     const ville = (carte.def && carte.def.nom ? carte.def.nom : 'Baie-des-Brumes').toUpperCase();
-    const titre = ville + (zone ? ' — ' + zone.nom.toUpperCase() : '');
+    // ⚠️ LA VILLE DU BOSS (M13) : le titre le dit, au-dessus de la ville teinte.
+    const titre = ville + (B.partie && B.partie.boss ? ' — LA VILLE DU BOSS' : (zone ? ' — ' + zone.nom.toUpperCase() : ''));
     texte(ctx, titre, (VW - Atlas.largeurTexte(titre, 1)) / 2, 6, '#e8b33c', 1);
     dessinerLegende(ctx, carte);
     dessinerLegendeDuZonage(ctx, zonage);
@@ -3566,6 +3576,33 @@ const Hud = (function () {
     // le reste de ce qu'on peut faire — en haut, la rangée du zonage prend toute la largeur.
     const aide = (gps ? gps.nom.toUpperCase() + ' · ' : '') + 'ARME : DÉFIS · N : FERMER';
     texte(ctx, aide, (VW - Atlas.largeurTexte(aide, 1)) / 2, VH - 12, '#cdc6e6', 1);
+  }
+
+  /** LA VILLE DU BOSS sur la grande carte (M13, `partie.boss`) : chaque district LIBERE se teint de l'or des
+      Bandini (`pietons.BOSS.couleur`) — les cinq qu'on a pris ; le Petit-Canton, l'aeroport et le nord restent a
+      eux. Rien avant m98. Rend le nombre de districts teints. */
+  function dessinerLaVilleDuBoss(ctx, carte, pos) {
+    const b = B.defs.pietons && B.defs.pietons.boss;
+    if (!b || !B.partie || !B.partie.boss) return 0;
+    let n = 0;
+    const libres = B.partie.libere || [];
+    ctx.fillStyle = b.couleur;
+    for (const z of (carte.zones || [])) {
+      if (z.gang || z.district !== z.slug || libres.indexOf(z.slug) < 0) continue;
+      const a = pos(z.x * TT, z.y * TT), c = pos((z.x + z.l) * TT, (z.y + z.h) * TT);
+      const x = Math.round(a.x), y = Math.round(a.y);
+      const l = Math.max(1, Math.round(c.x - a.x)), h = Math.max(1, Math.round(c.y - a.y));
+      // Une teinte (on lit encore la ville dessous), et un liseré plein : vu à la capture, la teinte seule se
+      // confondait avec la brique de la carte.
+      ctx.globalAlpha = 0.3;
+      ctx.fillRect(x, y, l, h);
+      ctx.globalAlpha = 0.9;
+      ctx.fillRect(x, y, l, 1); ctx.fillRect(x, y + h - 1, l, 1); ctx.fillRect(x, y, 1, h); ctx.fillRect(x + l - 1, y, 1, h);
+      n++;
+    }
+    ctx.globalAlpha = 1;
+    B.stats.rects += 5 * n;
+    return n;
   }
 
   /** Le bandeau du mode photo (M14) : un bord discret plutot que le fond noir
@@ -3811,7 +3848,8 @@ const Hud = (function () {
       if (ici) {
         // Une ombre portee d'un pixel : sans elle, le nom disparait sur le
         // trottoir en plein jour — teste a l'oeil, pas en theorie.
-        texte(ctx, ici.nom, MINI.x, MINI.y + MINI.h + 4, ici.gang ? '#e88a98' : '#e8e2f4', 1);
+        texte(ctx, ici.nom, MINI.x, MINI.y + MINI.h + 4,
+              ici.gang ? '#e88a98' : (ici.boss ? B.defs.pietons.boss.couleur : '#e8e2f4'), 1);
       }
       // Arme en bas a droite.
       const arme = Combat.armeCourante();
@@ -3944,16 +3982,21 @@ const Hud = (function () {
     if (!z) return null;
     // ⚠️ La cour d'un gang dont le district est LIBERE (`libere`, M16) redevient son quartier : « Les Quais »,
     // en blanc, plus « Les Morues » en rose — c'est la que le joueur VOIT qu'il a gagne.
+    // ⚠️ LA VILLE DU BOSS (M13, m98) : dans un district LIBERE, la ou aucun gang ne tient la rue, le quartier est
+    // a toi — son nom s'ecrit a l'or des Bandini (`boss`).
+    // (`boss` n'est posé que VRAI : ce que la rue disait avant m98 ne change pas d'un mot.)
+    const boss = !!(B.partie && B.partie.boss && (B.partie.libere || []).indexOf(z.district) >= 0);
+    const auBoss = function (ici) { if (boss && !ici.gang) ici.boss = true; return ici; };
     if (z.gang && Entites.gangChasse(z.gang)) {
       const q = (Monde.carte.zones || []).find(function (w) { return w.slug === z.district && !w.gang; });
-      return { nom: q ? q.nom : z.nom, gang: null };
+      return auBoss({ nom: q ? q.nom : z.nom, gang: null });
     }
     const pris = !z.gang && j && Territoires.gangA(j.x, j.y);
-    return pris ? { nom: Territoires.nomDe(pris), gang: pris } : { nom: z.nom, gang: z.gang || null };
+    return pris ? { nom: Territoires.nomDe(pris), gang: pris } : auBoss({ nom: z.nom, gang: z.gang || null });
   }
 
   return {
-    nomIci, init, voile, etat, progression, partDesScripts, finirChargement, message, prime, majPrime, montantDeLaPrime, PRIME, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, toutesLesTechniques, glyphesDOnglets, menuSautMissions, menuSautDefis, menuChezUnDonneur, menuEndroitsCles, menuJukebox, pointDuDefi, menuCarnet,
+    nomIci, dessinerLaVilleDuBoss, init, voile, etat, progression, partDesScripts, finirChargement, message, prime, majPrime, montantDeLaPrime, PRIME, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, toutesLesTechniques, glyphesDOnglets, menuSautMissions, menuSautDefis, menuChezUnDonneur, menuEndroitsCles, menuJukebox, pointDuDefi, menuCarnet,
     ouvrirOnglet, toucherMenu, onglets: function () { return ongletsVisibles().map(function (o) { return o.slug; }); },
     ciblesDuMenu: function () { return cibles.slice(); }, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     menuCommandes, ouvrirCommandes, majAideDuTitre, lignesDAide, glypheDAction, dessinerGlyphe, largeurGlyphe,

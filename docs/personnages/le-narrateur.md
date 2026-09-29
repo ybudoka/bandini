@@ -56,6 +56,8 @@ Avec tout le monde, et avec personne : il les a tous imprimés.
   garage, la planque, le nom ; la dette de quinze mille piastres à Sal le Barbier ; cinquante piastres et un
   billet aller simple.
 - Le journal : les manchettes du matin et les leçons (`journal.py`).
+- Les deux génériques (M13) : m99, le jeune repart par le dernier traversier ; m98, il reste — « Mais c'est toi
+  qu'elle salue, le Boss. » Et la une du lendemain : « Le maire Tanguay démissionne ».
 
 ## À trancher
 

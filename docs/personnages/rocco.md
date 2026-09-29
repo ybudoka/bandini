@@ -43,6 +43,14 @@ d'un absent qui prend encore de la place. Une mission qui le nomme choisit **qui
 version : celle de Ti-Guy (l'ami, au présent), celle de Marco (le cousin, avec rancune), celle de Sal (le
 débiteur, en chiffres).
 
+## Les deux fins (M13) : sa dette
+
+La dette de Rocco est le fil des deux fins. **_Sacrer son camp_** (m99) : on part avec quinze mille piastres en
+poche, que Sal ait été payé ou non — le générique dit ce qui reste dû (« LA DETTE DE ROCCO »). **_Le Boss_** (m98) :
+le maire Tanguay avait racheté le billet de Rocco à Sal, « pour te tenir en laisse » ; il le rend en cédant la ville,
+et la dette finit dans le poêle de l'Hôtel Bandini (`donne.dette`, le billet entier, plafond compris) — le carton du
+générique dit « DÉCHIRÉE ».
+
 ## Ce qui l'attend (M16)
 
 Il reste le fil : `f08` « Le char de Rocco » (sa berline de luxe au lot), `d01` « Le barbier » (« Rocco me
