@@ -5475,7 +5475,7 @@ const Entites = (function () {
     // wagon passe devant un passant ou derriere, selon sa rangee — mais ils ne
     // sont PAS dans `B.entites` (la lecon des betes). `Foire` ajoute ce qui est
     // a l'ecran, et chacun porte son peintre.
-    if (!B.interieur) { Foire.ajouterVisibles(visibles, cx, cy); Traversier.ajouterVisibles(visibles, cx, cy); Fetes.ajouterVisibles(visibles, cx, cy); Cabane.ajouterVisibles(visibles, cx, cy); }
+    if (!B.interieur) { Foire.ajouterVisibles(visibles, cx, cy); Traversier.ajouterVisibles(visibles, cx, cy); Navette.ajouterVisibles(visibles, cx, cy); Fetes.ajouterVisibles(visibles, cx, cy); Cabane.ajouterVisibles(visibles, cx, cy); }
     const profond = function (e) { return e.remorqueePar ? e.remorqueePar.y + 0.5 : e.y; };
     visibles.sort(function (a, b) {
       return (a.vivant ? 1 : 0) - (b.vivant ? 1 : 0) || profond(a) - profond(b) || a.id - b.id;

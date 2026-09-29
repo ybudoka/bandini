@@ -7353,6 +7353,9 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
         # rien renuméroter (`bus_du_canton`).
         from . import bus_du_canton as bus_du_canton_mod
         bus_du_canton_mod.tracer(ville, nord_mod.DECALAGE_NORD)
+        # LA NAVETTE DE L'ÎLE : un deuxième bateau, des Quais à la jetée de l'île, lu sur la carte finie, sans un dé.
+        from . import navette as navette_mod
+        ville["navette"] = navette_mod.tracer(ville)
     # ⚠️ LES FRÉNÉSIES (P4, docs/jalons/quatre-activites-que-le-jeu-n-a-pas.md), APRÈS ABSOLUMENT TOUT, bande
     # nord comprise : une icône par district, dans une ruelle libre choisie par une règle — sans un dé, et rien
     # de posé dans une liste que la ville lit. La ville d'avant est la même à la tuile près.

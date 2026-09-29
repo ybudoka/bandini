@@ -26,14 +26,19 @@
    ⚠️ A DEUX, les deux joueurs montent : ce qui compte, c'est `Entites.estJoueur`, pas
    `B.joueur`. Et une partie rouverte en pleine traversee (la sauvegarde auto tombe
    toutes les dix secondes, la traversee en dure treize) remet a bord le joueur que
-   la sauvegarde a laisse sur le pont (`adopter`) — il se reveillait a la nage. */
+   la sauvegarde a laisse sur le pont (`adopter`) — il se reveillait a la nage.
 
-const Traversier = (function () {
+   ⚠️ UNE FABRIQUE, DEUX BATEAUX (29 sept. 2026, l'Ile-aux-Corneilles, 3e vague) : le traversier des Quais a
+   La Pointe (`carte.traversier`) et la NAVETTE des Quais a l'ile (`carte.navette`, `app/navette.py`) sont la
+   meme coque et le meme code — chacun lit SA cle, dit SON nom, se trie a SON rang, et l'horaire de la navette
+   est decale d'une heure (`horaire.decalage_h`). Ajouter l'ile comme troisieme escale changeait la route et
+   l'heure du traversier de la fin m99. */
+
+/** Un bateau a l'heure : `cle` sa fiche dans la carte, `NOM` ce que le HUD en dit, `ID_TRI` son rang dans le tri
+    du dessin (la coque se range avec le reste par sa ligne de flottaison NORD, pour que ce qui est a bord — plus
+    au sud — se peigne par-dessus ; ses panneaux suivent). */
+function fabriqueDeTraversier(cle, NOM, ID_TRI) {
   'use strict';
-
-  //: Le tri du dessin : la coque se range avec le reste par sa ligne de flottaison
-  //: NORD, pour que ce qui est a bord (plus au sud) se peigne par-dessus.
-  const ID_TRI = 1e9 + 500;
 
   //: A combien de pixels d'un bout de quai on lit l'horaire au HUD.
   const PORTEE_INFO_PX = 5 * 16;
@@ -56,13 +61,15 @@ const Traversier = (function () {
 
   function donnees() {
     const def = B.defs && B.defs.carte;
-    const brut = def && def.traversier;
+    const brut = def && def[cle];
     if (!brut) return null;
     if (source === brut) return prepare;
     source = brut;
-    const c = brut.coque;
+    // ⚠️ La navette n'envoie que ses escales et son decalage : sa coque et son horaire sont ceux du traversier.
+    const modele = brut.coque ? brut : def.traversier;
+    const c = modele.coque;
     prepare = {
-      coque: c, horaire: brut.horaire,
+      coque: c, horaire: brut.horaire || Object.assign({}, modele.horaire, { decalage_h: brut.decalage_h || 0 }),
       largeurPx: c.longueur * TT, hauteurPx: c.largeur * TT,
       escales: brut.escales.map(function (q, k) {
         return { k: k, nom: q.nom, district: q.district, x: q.x, y: q.y, cote: q.cote, acces: q.acces,
@@ -82,7 +89,7 @@ const Traversier = (function () {
     const d = donnees();
     if (!d) return null;
     const h = d.horaire, P = h.periode_h, demi = P / 2, T = h.traversee_h;
-    const t = ((heure * 24) % P + P) % P;
+    const t = ((heure * 24 - (h.decalage_h || 0)) % P + P) % P;
     if (t < T) return { phase: 'traverse', de: 0, vers: 1, u: t / T, reste_h: T - t };
     if (t < demi) return { phase: 'quai', escale: 1, reste_h: demi - t };
     if (t < demi + T) return { phase: 'traverse', de: 1, vers: 0, u: (t - demi) / T, reste_h: demi + T - t };
@@ -314,16 +321,16 @@ const Traversier = (function () {
     if (!d || !j || !p || B.interieur) return null;
     const s = etatA(p.heure);
     if (j.aBord && s.phase === 'traverse') {
-      return 'TRAVERSIER · ' + d.escales[s.vers].nom.toUpperCase() + ' DANS ' + dureeTexte(s.reste_h);
+      return NOM + ' · ' + d.escales[s.vers].nom.toUpperCase() + ' DANS ' + dureeTexte(s.reste_h);
     }
     const q = escaleIci(j);
     if (!q) return null;
     const vers = d.escales[1 - q.k].nom.toUpperCase();
-    if (s.phase === 'quai' && s.escale === q.k) return 'TRAVERSIER POUR ' + vers + ' · DÉPART DANS ' + dureeTexte(s.reste_h);
-    // Le prochain depart d'ici : les heures paires aux Quais, impaires en face.
-    const h = p.heure * 24, P = d.horaire.periode_h, decale = q.k * P / 2;
+    if (s.phase === 'quai' && s.escale === q.k) return NOM + ' POUR ' + vers + ' · DÉPART DANS ' + dureeTexte(s.reste_h);
+    // Le prochain depart d'ici : les heures paires aux Quais, impaires en face (decalees pour la navette).
+    const h = p.heure * 24, P = d.horaire.periode_h, decale = q.k * P / 2 + (d.horaire.decalage_h || 0);
     const prochain = Math.floor((h - decale) / P + 1) * P + decale;
-    return 'TRAVERSIER POUR ' + vers + ' · DÉPART ' + heureTexte(prochain);
+    return NOM + ' POUR ' + vers + ' · DÉPART ' + heureTexte(prochain);
   }
 
   // --- Le dessin ---------------------------------------------------------------------------
@@ -437,4 +444,8 @@ const Traversier = (function () {
     donnees, etatA, placeA, avance, maj, oublier, aBord, texteDInfo, escaleIci, ajouterVisibles, dessinerSurLaCarte,
     get pose() { return pose; }, get bord() { return bord.slice(); },
   };
-})();
+}
+
+const Traversier = fabriqueDeTraversier('traversier', 'TRAVERSIER', 1e9 + 500);
+//: La navette de l'ile (`app/navette.py`) : son rang de tri apres les panneaux du traversier.
+const Navette = fabriqueDeTraversier('navette', 'NAVETTE', 1e9 + 520);

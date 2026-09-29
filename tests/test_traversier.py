@@ -90,8 +90,9 @@ def test_la_ville_est_la_meme_avec_ou_sans_traversier(ville, monkeypatch):
     zone = set().union(*(traversier.debarcadere(q) for q in ville["traversier"]["escales"]))
     for cle in ville:
         # ⚠️ Le tramway, lui, a son terminus au quai du traversier : sans traversier, il
-        # s'arrête à la cantine. Il en dépend — ce qui ne bouge pas, c'est le reste.
-        if cle in ("traversier", "tramway", "decor"):
+        # s'arrête à la cantine. Il en dépend — ce qui ne bouge pas, c'est le reste. ⚠️ La navette de l'île
+        # aussi : elle garde ses distances du traversier (`navette.tracer`), donc sans lui elle se place autrement.
+        if cle in ("traversier", "tramway", "decor", "navette"):
             continue
         assert sans[cle] == ville[cle], f"« {cle} » a bougé"
     ecartes = [d for d in sans["decor"] if (d["x"], d["y"]) in zone]

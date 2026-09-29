@@ -45,3 +45,23 @@ comme il le devrait, mesuré sur l'île), et **le traversier de M12** qui y acco
   Quais et La Pointe ; une escale de plus déplace sa route, donc à mesurer contre `test_l_ile_ne_deplace_
   rien_de_la_ville`).
 
+### 3e vague — le traversier y accoste : la navette de l'île — **livrée le 29 sept. 2026**
+
+- ⚠️ **Un deuxième bateau, pas une troisième escale.** Le traversier des Quais à La Pointe porte la fin m99 (le
+  capitaine Bérubé, son quai, son horaire) et une dizaine de juges : lui ajouter l'île changeait sa route et son
+  heure. La **navette** (`app/navette.py`) est la même coque et le même code — `static/js/traversier.js` est
+  devenu une FABRIQUE (`fabriqueDeTraversier`) : `Traversier` et `Navette` lisent chacun leur clé de carte,
+  disent leur nom (« NAVETTE POUR L'ÎLE-AUX-CORNEILLES ») et se trient à leur rang. Son horaire est celui du
+  traversier DÉCALÉ d'une heure (`decalage_h`) : elle quitte les Quais aux heures impaires, quand il en arrive.
+- **Sa route, lue sur la carte finie sans un dé** : aux Quais, une place du traversier (`traversier._quais`) ; à
+  l'île, qui n'a pas une rue, un accostage le long de ses PLANCHES (`Q`) — on débarque sur une jetée, jamais sur
+  l'herbe. La traversée la plus courte l'emporte : la vieille jetée de l'usine à poisson, au sud-ouest (celle du
+  nord-ouest a sa chaloupe amarrée). ⚠️ Rien ne se pose ni ne se déplace : on ne retient qu'un débarcadère déjà
+  libre de décor, et un couloir qui ne croise ni le traversier ni son débarcadère.
+- **On y va en char** : la fiche le disait (« le premier char que tu y emmènes par le traversier est un
+  événement ») — un char garé sur le pont aux Quais arrive au quai de l'île (jugé au banc).
+- **Juges** : `test_navette.py`, `test_navette_js.py` ; trois juges d'avant apprennent qu'il y a deux bateaux (la
+  ville avec ou sans traversier, avec ou sans l'île, et la carte rendue intacte : on lève les deux coques). Une
+  mutation rouge (l'horaire qui ignorerait le décalage).
+- **Reste** (pas au plan) : la dernière image de m99 — le traversier qui passe devant l'île, Sœur Jeanne qui
+  sonne sa cloche — reste à M16 (arc I).

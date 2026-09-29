@@ -63,7 +63,9 @@ def test_a_quai_le_pont_se_roule_et_la_carte_est_rendue_intacte(banc):
         poser(L, j, { x: a.px - 200, y: a.py - 200 });
         heure(L, 1.2);
         o.frame(2);
-        L.Traversier.oublier();
+        // ⚠️ La navette de l'île pose SA coque elle aussi (le même code, `fabriqueDeTraversier`) : on la lève
+        // avec, avant de photographier la carte et après les allers-retours.
+        L.Traversier.oublier(); L.Navette.oublier();
         const avant = { solide: Array.from(c.solide), route: Array.from(c.route), passage: Array.from(c.passage) };
         heure(L, 1.9); o.frame(2);
         const aQuai = { pont: L.Monde.estEau(a.x + 3, a.y), cabine: L.Monde.bloque(a.x + 3, a.y + 2, L.Monde.MASQUE_PIETON),
@@ -71,7 +73,7 @@ def test_a_quai_le_pont_se_roule_et_la_carte_est_rendue_intacte(banc):
         heure(L, 2.3); o.frame(2);
         const enRoute = { a: L.Monde.estEau(a.x + 3, a.y) && L.Monde.estEau(a.x + 3, a.y + 2), b: L.Monde.estEau(b.x + 3, b.y) };
         for (const h of [2.8, 3.3, 3.9, 4.3, 4.8, 5.3, 5.9]) { heure(L, h); o.frame(2); }
-        L.Traversier.oublier();
+        L.Traversier.oublier(); L.Navette.oublier();
         const pareil = ['solide', 'route', 'passage'].every(function (k) {
             const t = c[k]; return avant[k].every(function (v, i) { return t[i] === v; });
         });

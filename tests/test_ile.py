@@ -262,7 +262,9 @@ def test_l_ile_ne_deplace_rien_de_la_ville(monkeypatch):
     assert {k: v for k, v in avec["interieurs"].items() if k not in ile.PIECES} == sans["interieurs"]
     for cle in sans:
         if cle in ("sol", "decor", "portes", "points_interet", "lampes", "residences", "toits",
-                   "amarrages", "zones", "interieurs", "ile", "legende", "familles"):
+                   "amarrages", "zones", "interieurs", "ile", "legende", "familles",
+                   # La navette de l'île (3e vague) : sans île, pas de navette.
+                   "navette"):
             continue
         assert avec[cle] == sans[cle], f"« {cle} » a bouge"
 

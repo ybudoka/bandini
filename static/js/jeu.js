@@ -101,7 +101,7 @@ const Jeu = (function () {
     B.mission = null; B.defi = null; B.epreuve = null; B.conduite = null; B.rue = null; B.cinema = null; B.ouverture = null; B.scene = null; B.finEnAttente = null; B.generiqueEnAttente = null; B.videopoker = null; B.machineASous = null; B.tables = null; B.orignal = null;
     B.sonnerie = null;                       // un telephone qui sonnait dans la partie d'avant ne sonne pas dans celle-ci
     B.abribusServis = {};                    // les abribus qu'un autobus vient de servir (Autobus)
-    Traversier.oublier();                    // rien a bord, la carte neuve n'a pas de pont pose
+    Traversier.oublier(); Navette.oublier();                    // rien a bord, la carte neuve n'a pas de pont pose
     Fetes.oublier();                         // la tuile du tronc du sapin est rendue
     Neige.oublier();                         // la rue d'une partie rechargee est blanche
     Brouillard.oublier();
@@ -1117,6 +1117,7 @@ const Jeu = (function () {
         pas('vehicules', Vehicules.maj);
         pas('coop', majCoop);              // apres les chars : le passager suit sa tole
         pas('traversier', Traversier.maj); // apres les chars : ce qui est a bord suit la coque
+        pas('navette', Navette.maj);       // la navette de l'ile, pareil
         pas('pont', Pont.maj);             // le pont de glace : il prend, craque au degel, et rend l'eau
         pas('fetes', Fetes.maj);           // decembre : le tronc du sapin est une tuile pleine
         pas('saintjean', SaintJean.maj);   // la Saint-Jean : le bruit des feux
@@ -1545,7 +1546,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Navette: Navette, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,
