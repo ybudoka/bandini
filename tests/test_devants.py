@@ -192,9 +192,10 @@ def _glissements(sans: dict, avec: dict) -> list[dict]:
 
 
 #: L'air d'un lieu de mission pour un abribus, écrit ici en toutes lettres : deux tuiles de côté
-#: sans donneur (le devant de mission), trois pour un donneur, cinq pour deux, sept pour trois.
+#: sans donneur (le devant de mission), trois pour un donneur, cinq pour deux, sept pour trois,
+#: neuf pour quatre — le dépanneur depuis les Érables (b729a387) : Ti-Paul, Xavier, Diane et Jo.
 #: ⚠️ Pas relu dans `devants` : un juge qui relit la table qu'il juge ne rougit jamais.
-AIR = {0: 2, 1: 3, 2: 5, 3: 7}
+AIR = {0: 2, 1: 3, 2: 5, 3: 7, 4: 9}
 
 
 def _abribus_colles(ville: dict) -> list[str]:
@@ -202,6 +203,8 @@ def _abribus_colles(ville: dict) -> list[str]:
     donneurs = Counter(p["ou"][6:] for p in missions.PERSONNAGES if p["ou"].startswith("porte:"))
     lieux = devants.lieux_de_mission(ville)
     portes = [p for p in ville["portes"] if p["lieu"] in lieux]
+    trop = {lieu: n for lieu, n in donneurs.items() if n not in AIR}
+    assert not trop, f"un lieu a plus de donneurs que la table AIR n'en prévoit, l'écrire à la main : {trop}"
     colles = []
     for rang, arret in enumerate(ville["autobus"]["arrets"]):
         a = autobus.detail(ville, rang)
