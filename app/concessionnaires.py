@@ -250,9 +250,11 @@ PLACES_TI_POUT = ((8, 2, "S"), (10, 2, "S"), (12, 2, "S"), (14, 2, "S"), (2, 5, 
 #: La minoune en montre : le coin nord-ouest de ses deux tuiles sur deux, dans le coin sud-est de la cour, contre la
 #: trouée — ce qu'on voit du boulevard.
 MONTRE_TI_POUT = (13, 5)
-#: Ce qui se vend usagé : des minounes et un vieux camion.
+#: Ce qui se vend usagé : des minounes, un vieux camion — et un 4 roues (docs/jalons/les-4-roues.md, vague 3 ;
+#: Martin, 28 sept. 2026 : « chez le concessionnaire »). ⚠️ AU BOUT : le stock se tire par `i % len(USAGES)`, les
+#: modèles d'avant gardent leur place.
 USAGES = (("auto", "auto_compacte"), ("auto", "auto_familiale"), ("camion", "camion"), ("auto", "auto_camionnette"),
-          ("auto", "auto"))
+          ("auto", "auto"), ("quatre_roues", "quatre_roues"))
 #: La vie d'un usagé, en fraction : celle des minounes des rues pauvres (`STANDING_DU_PARC`).
 USURE_USAGEE = 0.6
 #: Le prix d'un usagé, en fraction de celui du catalogue.

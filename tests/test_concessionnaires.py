@@ -161,7 +161,9 @@ def test_la_cour_de_ti_pout():
     for place in lot["places"]:
         autre = place["y"] - 1 if place["sens"] == "S" else place["y"] + 1
         assert sol[place["y"]][place["x"]] == sol[autre][place["x"]] == "g", place
-    assert {s["slug"] for s in lot["stock"]} <= {"auto", "camion"}
+    # Des minounes, un vieux camion — et un 4 roues (docs/jalons/les-4-roues.md, vague 3).
+    assert {s["slug"] for s in lot["stock"]} <= {"auto", "camion", "quatre_roues"}
+    assert "quatre_roues" in {s["slug"] for s in lot["stock"]}, "pas de 4 roues chez Ti-Pout"
     assert lot["usure"] == 0.6 and lot["alarme"] is False and lot["genre"] == "usage"
 
 
@@ -242,5 +244,5 @@ def test_ti_pout_a_sa_minoune_en_montre():
     assert all(sol[y][x] == "g" for x, y in tuiles), "hors du gravier"
     places = {(p["x"], y) for p in lot["places"] for y in (p["y"] - 1, p["y"], p["y"] + 1)}
     assert not places & set(tuiles), "sur une place du lot"
-    assert {s["slug"] for s in m["modeles"]} <= {"auto", "camion"}
+    assert {s["slug"] for s in m["modeles"]} <= {"auto", "camion", "quatre_roues"}
     assert all(s["prix"] < 1000 for s in m["modeles"] if s["slug"] == "auto")

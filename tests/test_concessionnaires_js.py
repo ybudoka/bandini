@@ -379,3 +379,33 @@ def test_on_achete_le_char_en_montre(banc):
     assert r["libelle"].startswith("EN MONTRE"), r
     assert r["detail"] == f"{r['prix']} $" and r["argent"] == 100000 - r["prix"], r
     assert r["aToi"] is True and r["vendu"] is True, r
+
+
+def test_on_achete_un_4_roues_chez_ti_pout(banc):
+    """Les 4 roues, vague 3 (docs/jalons/les-4-roues.md) : au comptoir de la roulotte, le 4 roues du lot se vend
+    à son prix d'usagé ; payé, celui de dehors est à toi — pas un vol."""
+    r = banc("""function (L, o) {
+        %(aller)s
+        %(acheter)s
+        L.Jeu.commencer();
+        const a = acheter(L, o, 'ti_pout', 100000);
+        const items = a.menu.items.filter(function (it) { return it.faire; });
+        const exterieur = L.B.exterieur ? L.B.exterieur.entites : L.B.entites;
+        const quad = exterieur.find(function (e) { return e.placeDeLot && e.slug === 'quatre_roues' && a.lot.places.indexOf(e.placeDeLot) >= 0; });
+        if (!quad) return { quad: false };
+        const i = a.lot.places.indexOf(quad.placeDeLot), prix = a.lot.stock[i].prix;
+        const item = items.find(function (it) { return it.place === i; });
+        item.faire();
+        const apres = L.B.partie.argent;
+        L.Jeu.sortir(); o.fondu();
+        for (let k = 0; k < 200 && L.B.interieur; k++) o.frame(1);
+        const j = L.B.joueur;
+        j.x = quad.x; j.y = quad.y;
+        const volees = L.B.partie.stats.volees;
+        L.Vehicules.monter(j, quad);
+        return { quad: true, libelle: item.libelle, prix: prix, apres: apres, aToi: quad.aToi, vole: quad.vole,
+                 volees: L.B.partie.stats.volees - volees, conducteur: quad.conducteur === j };
+    }""" % {"aller": ALLER, "acheter": ACHETER})
+    assert r["quad"], "pas de 4 roues dans le lot de Ti-Pout"
+    assert r["apres"] == 100000 - r["prix"] and r["prix"] > 0, r
+    assert r["aToi"] is True and r["conducteur"] is True and r["vole"] is False and r["volees"] == 0, r

@@ -89,3 +89,12 @@ _Demande de Martin (28 sept. 2026) :_ « je veux aussi des 4 roues ».
   sur huit. Au banc, la mécanique : le 4 roues posé au départ, les fanions dans l'ordre, la prime payée — et le
   témoin, refusé en auto. Une mutation rouge (l'épreuve qui relirait la course de la motoneige).
 - **Reste** : le concessionnaire (vague 3), et le passager qu'on voit.
+
+### Vague 3 — chez le concessionnaire — **livrée le 29 sept. 2026**
+
+- **Chez Ti-Pout** (le lot d'usagés des Friches, `concessionnaires.USAGES`) : un 4 roues parmi les minounes, à
+  560 $ (40 % des 1 400 du catalogue, la règle de l'usagé) — sur sa sixième place, et un jour sur six en montre.
+  ⚠️ AU BOUT de la liste : le stock se tire par `i % len(USAGES)`, les minounes d'avant gardent leur place.
+- **Juges** : `test_concessionnaires` (le lot et la montre admettent le 4 roues, et le lot en a un) ;
+  `test_concessionnaires_js` (on l'achète au comptoir de la roulotte, à son prix, et il est à toi — pas un vol).
+- **Le jalon est livré** ; reste une dette : le passager ne se DESSINE pas derrière le pilote.
