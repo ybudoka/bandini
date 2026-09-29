@@ -390,6 +390,15 @@ PERSONNAGES: list[Personnage] = [
      "heler": "Mon garçon!", "arrive_apres": "m97", "parti_apres": "m98",
      # ⚠️ Le premier repos ne se dit jamais (il arrive bien après m5) : court, il pèse moins.
      "repos": ("Pas ce soir.", "Réal Tanguay, maire. La chambre douze est louée à l'année, mon garçon.")},
+    # --- Des photos pour le Clairon (29 sept. 2026, Martin : « Louise d'abord ») : Louise Tremblay-Dion, journaliste au
+    # Clairon de la Baie (M16, arc C). Elle achète UNE photo par jour (`app/photos.py`) : on lui parle, elle ouvre son
+    # menu (`Photos.accueillir`, comme Mireille au dojo) — pas de repos. Devant le kiosque de Mme Thibodeau
+    # (`porte:kiosque`, un lieu garanti : rien ne bouge), où le Clairon se vend, et seulement après m2 (`arrive_apres` :
+    # un personnage posé dès l'ouverture décale les identifiants de toute la ville). Sa voix : Ana Rita, libre, vérifiée
+    # « quebec » en multilingue v2 ; en v3, à écouter (docs/personnages/louise.md).
+    {"slug": "louise", "nom": "Louise Tremblay-Dion", "genre": "femme", "voix": "Ana Rita - Smooth, Expressive and Bright",
+     "couleurs": {"c": "#c8a86a", "h": "#6b3e1e", "s": "#e8b890", "p": "#2a2a33"}, "ou": "porte:kiosque",
+     "heler": "Une photo?", "arrive_apres": "m2"},
 ]
 
 
@@ -1303,9 +1312,9 @@ def repliques_de_repos() -> list[dict]:
             for p in PERSONNAGES if p.get("ou") and not _sa_mission_l_attend_toujours(p)
             for n, texte in enumerate(p.get("repos") or (REPOS["texte"], REPOS["texte_apres"]), start=1)
             if not (p["slug"] == "josee" and n == 2)
-            # Mireille ouvre ses COURS a chaque fois (`histoire.js`) : un repos qu'on n'entend
-            # jamais ne se paie pas.
-            and p["slug"] != "mireille"
+            # Mireille ouvre ses COURS a chaque fois (`histoire.js`), Louise son menu de photos : un repos
+            # qu'on n'entend jamais ne se paie pas.
+            and p["slug"] not in ("mireille", "louise")
             # ⚠️ Qui n'ARRIVE qu'après `REPOS["apres"]` (`arrive_apres` : le vieux maître, revenu après c04) ne dit
             # jamais le premier : on ne le paie pas.
             and not (n == 1 and p.get("arrive_apres") and _vient_apres(p["arrive_apres"], REPOS["apres"]))]

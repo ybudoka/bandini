@@ -1233,6 +1233,8 @@ const Histoire = (function () {
     // Mireille (le DOJO DION, `dojo.js`) : la premiere fois, elle se PRESENTE (« Qui parle se
     // nomme ») ; ensuite, ACTION ouvre ses COURS. Elle n'a pas de repos.
     if (slug === 'mireille') { Dojo.accueillir(premiere); return true; }
+    // Louise, du Clairon : elle regarde ta photo (docs/jalons/des-photos-pour-le-clairon.md).
+    if (slug === 'louise') { Photos.accueillir(premiere); return true; }
     const repos = B.defs.repos || {};
     const apres = !!(repos.apres && faite(repos.apres));
     // ⚠️ Le repos se DIT aussi : `<qui>-repos-1` avant `repos.apres`, `-2` ensuite (`missions.

@@ -60,6 +60,7 @@ Chaque fiche mêle deux sortes de faits.
 | [Réal « le Pouce » Vachon](le-pouce.md) | `pouce` | nulle part : au tripot, puis parti pour Sorel | Callum - Husky Trickster | c04 (une réplique, en se sauvant) |
 | [Cindy Boivin](cindy.md) | `cindy` | devant la cantine des Quais, dans la Brume — jusqu'à q05 (Norbert l'engage à la réception) | Ruby Roo | q05 |
 | [Diane Larivière](diane.md) | `diane` | devant le dépanneur des Érables, après e01 | Riya Rao | e06 · e07 · e10 |
+| [Louise Tremblay-Dion](louise.md) | `louise` | devant le kiosque de Mme Thibodeau, après m2 | Ana Rita | ses photos (une par jour, pour la une) |
 | [Jo Bellemare](jo.md) | `jo` | devant le dépanneur, entre e01 et e04 — puis chez les Chevreuils | Omar J | e04 · le chef de e10 |
 | [Roméo Bilodeau](bilodeau.md) | `bilodeau` | devant le phare, après p01 | Bill | p02 |
 | [Zacharie « Zed » Lemieux](zed.md) | `zed` | devant le phare, après p02 | Lutz | p04 · p10 · p11 (mené à la Chef) |
@@ -122,6 +123,7 @@ fait **à sa façon**. Le tableau est l'aide-mémoire ; la fiche dit pourquoi.
 | Léo Cyr | « Léo, de l'île. » | « Léo Cyr. J'garde le hangar. Non, y a rien dedans. » | « J'ai rien vu. » | un nom — ni Sven, ni Sal |
 | Irène Lam | « Irène Lam, du Dragon d'or. Madame Lam pour toi, tant que tu m'as pas battue au mah-jong. » | la même taquinerie, en personne | « Hé, le pigeon! » | « bonne chance » ; « chanceux » |
 | Victor Tam | « Sifu Tam, petit scarabée. » (c06) | « Victor Tam. Sifu, pour mes élèves, pis pour toi aussi, tant qu'à faire. » (c05) | « Approche, élève! » | du mal d'un élève devant quelqu'un ; « vengeance » ; un proverbe de biscuit chinois |
+| Louise Tremblay-Dion | (pas de téléphone : elle achète, elle n'appelle pas) | « Louise Tremblay-Dion, du Clairon. Tu traînes où ça brasse : rapporte-moi une photo, je paie. » | « Une photo? » | « pas de commentaire » |
 
 ⚠️ **Une fois par mission, pas une fois par coup de fil.** L'échec, la fin et les `pendant` d'une mission
 ne redisent pas le nom : on a entendu la voix à l'appel. La colonne « Au téléphone » est donc celle de

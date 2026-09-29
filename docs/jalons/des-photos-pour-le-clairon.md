@@ -29,4 +29,24 @@ lendemain nomme le sujet de la meilleure photo.
 
 ## Notes
 
-_Rien de livré._
+**Livré le 29 sept. 2026** (Martin : « Louise d'abord »). `app/photos.py`, `static/js/photos.js`, Louise dans
+`missions.PERSONNAGES` (son visage, sa tenue, sa fiche `docs/personnages/louise.md`, sept voix `louise-clairon-*`) ;
+juges `tests/test_photos.py` et `tests/test_photos_js.py` (huit mutations, toutes mordent).
+
+- **Louise Tremblay-Dion** se tient devant le kiosque de Mme Thibodeau, où le Clairon se vend (`porte:kiosque`, un
+  lieu garanti), à partir de m2. ⚠️ **Sa fiche est une proposition** (à valider) ; sa voix, Ana Rita (libre,
+  vérifiée « quebec » en multilingue v2), est générée, **pas écoutée**. On lui parle : la première fois elle se
+  présente, ensuite elle regarde ta photo (son menu, comme Mireille au dojo — pas de repos).
+- **Au déclic**, le jeu juge ce qui est dans le cadre de la vue détachée — les entités à l'écran, jamais les pixels :
+  un char en feu (ou le bâtiment qui brûle), 150 $ ; un char qui vole, 120 $ ; une poursuite (la police à l'écran,
+  des étoiles), 90 $ plus 20 par étoile ; une figure du quartier, 40 $ ; **toi en pleine poursuite, 300 $**. Le
+  bandeau du mode photo dit ce que Louise en donnerait. La meilleure photo du jour attend dans la partie.
+- **Une par jour** : Louise en achète une ; le lendemain, « j'ai ma une ». Une photo d'avant-hier ne se vend plus.
+- **La une du lendemain** ouvre le Clairon (une ligne sous la manchette, en tête) et nomme le sujet — texte seul,
+  sans voix du narrateur. **Ta face en une** : ce matin-là, une étoile.
+- ⚠️ **Pas fait** : l'arc C de M16 (les six missions de Louise — leurs slugs c01 à c06 sont pris par le
+  Petit-Canton) ; le bureau du Clairon comme lieu (Louise est au kiosque) ; une vraie manchette lue par le narrateur
+  pour la une (il faudrait une voix par sujet).
+- Capture regardée : Louise devant le kiosque, à côté de Mme Thibodeau ; le bandeau après le déclic sur un char en
+  feu. ⚠️ En Chromium sans tête, le téléchargement du PNG fait perdre le focus et referme le mode photo — le
+  bandeau ne se voit qu'avec le téléchargement coupé ; à vérifier en jouant.

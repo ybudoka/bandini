@@ -44,7 +44,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-from . import (armes, audio, blocs, calendrier, saisons, pluie, halloween, carte, demenagement, derby, enseignes, fetes, garage, motoneige, quatre_roues, saint_jean, territoires, devantures, dojo, economie, mantes, garderobe, interactions, journal, magasins,
+from . import (armes, audio, blocs, calendrier, saisons, pluie, halloween, carte, demenagement, derby, enseignes, fetes, garage, motoneige, photos, quatre_roues, saint_jean, territoires, devantures, dojo, economie, mantes, garderobe, interactions, journal, magasins,
                brouillard, loto, machine_a_sous, manettes, tables_de_jeu, missions, nord, nuit, pietons, recherche, techniques, vehicules, verglas, videopoker,
                musique, pont_de_glace, visages)
 from .blocs import galeries as galeries_hantees
@@ -113,6 +113,8 @@ def assembler() -> dict:
         "demenagement": demenagement.pour_le_navigateur(ville, carte.LEGENDE),
         # Les pièces que Ti-Guy pose sur un char (docs/jalons/le-garage-qui-modifie-les-chars.md).
         "garage": garage.exporter(),
+        # Louise achète une photo par jour, et la une du lendemain l'affiche (docs/jalons/des-photos-pour-le-clairon.md).
+        "photos": photos.pour_le_navigateur(),
         # Le chemin sur la baie gelée, lu sur la ville finie (docs/jalons/le-pont-de-glace.md).
         "pont": pont_de_glace.pour_le_navigateur(ville, carte.LEGENDE),
         # L'arène du derby, lue sur la ville finie (docs/jalons/le-derby-de-demolition-a-la-foire.md).

@@ -2240,7 +2240,9 @@ const Missions = (function () {
     const brume = typeof Brouillard !== 'undefined' ? Brouillard.annonceDeDemain() : null;
     // Les territoires des gangs : un coin par nuit (`Territoires.nuit`), et le Clairon le dit.
     const gangs = Territoires.ligneDuClairon(Territoires.nuit());
-    const dessous = [loto, brume, gangs, Verglas.ligneDuClairon(), Pont.ligneDuClairon(), SaintJean.ligneDuClairon(), Demenagement.ligneDuClairon(), Fetes.ligneDuClairon(), Halloween.ligneDuClairon(), decompteDesNids()].filter(Boolean);
+    // La une de la photo vendue a Louise hier, EN TETE (et ta face en une : la police t'a vu).
+    Photos.matin();
+    const dessous = [Photos.ligneDuClairon(), loto, brume, gangs, Verglas.ligneDuClairon(), Pont.ligneDuClairon(), SaintJean.ligneDuClairon(), Demenagement.ligneDuClairon(), Fetes.ligneDuClairon(), Halloween.ligneDuClairon(), decompteDesNids()].filter(Boolean);
     const m = manchetteDuJour();
     if (m) { B.partie.derniereManchette = m; direLaManchette(m, dessous); }
     else { Hud.message(dessous[0] || 'JOUR ' + B.partie.jour); direLeLoto(); }

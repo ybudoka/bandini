@@ -219,6 +219,8 @@ VISAGES: dict[str, dict] = {
     # couronne de cheveux blancs, la chemise fleurie turquoise, le bronzage de trois hivers, les gros sourcils blancs
     # et les rides de quelqu'un qui rit plus qu'il ne crie. ⚠️ Ni lunettes épaisses ni yeux plissés : il CLIGNE
     # (`test_visages_js`), et un maître qui te regarde, ça se voit aux yeux.
+    # Louise Tremblay-Dion, du Clairon : le carré brun, l'imper, le crayon derrière l'oreille, des taches de rousseur.
+    "louise": _v("fine", "carre", "veste", signes=("crayon", "rousseur")),
     "maitre": _v("ronde", "degarnie", "blouse", chapeau="canotier", signes=("rides", "sourcils_epais"),
                  t="#e6d49a"),
 }

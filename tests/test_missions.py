@@ -11,7 +11,7 @@ def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
         "ti_guy", "thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu", "raymonde", "ovila",
         "mo", "fern", "mado", "gege", "xavier", "lachance", "gus", "rosa", "ginette", "gilles",
         "bonimenteur", "sven", "berube", "mireille", "jeanne", "leo", "norbert", "irene", "maitre", "cindy", "diane", "jo", "bilodeau", "zed", "trappeur", "tiloup", "boulon",
-        "prevost", "maire"]
+        "prevost", "maire", "louise"]
     # Cindy n'est devant la cantine qu'entre q04 et q05, et q05 l'attend toujours : pas de repos, comme Ti-Guy.
     # Mireille (le DOJO DION) ouvre ses COURS a chaque fois : pas de repos, comme le -2 de Josee.
     # Ti-Guy s'en va apres m1 (il a m1 a donner tant qu'il est la) ; Josee ouvre le marche noir

@@ -3613,6 +3613,11 @@ const Hud = (function () {
     const aide = Entree.estTactile ? 'ACTION : CAPTURER · ARME : FILTRE'
       : 'ACTION : CAPTURER · ARME : FILTRE · ANNULER : RETOUR';
     texte(ctx, aide, VW - 6 - Atlas.largeurTexte(aide, 1), VH - 10, '#cdc6e6', 1);
+    // Ce que le cadre vaut au Clairon, apres le declic (`Photos.declic`).
+    if (B.photo.dit) {
+      ctx.fillStyle = 'rgba(11,10,18,0.55)'; ctx.fillRect(0, VH - 26, VW, 13); B.stats.rects++;
+      texte(ctx, B.photo.dit, 6, VH - 23, '#e8b33c', 1);
+    }
   }
 
   //: La transparence du calque de zonage. ⚠️ Assez pour qu'un bloc d'usine et

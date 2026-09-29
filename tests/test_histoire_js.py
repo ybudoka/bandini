@@ -764,9 +764,13 @@ def test_les_personnages_disent_leur_repos_a_voix_haute(banc, paquet):
     }""".replace("ENTREE_TOUS", json.dumps(tous)).replace("ENTREE_ABORDABLES", json.dumps(abordables)))
     # Mireille (le DOJO DION) se presente, puis ouvre ses COURS : jamais de repos — ses voix a elle
     # (`mireille-dojo-salut` la premiere fois, `-cours` ensuite).
+    # Louise (le Clairon) de meme : elle se presente, puis regarde ta photo — ses voix `louise-clairon-*`.
     for qui, d in r["avant"].items():
         if qui == "mireille":
             assert d["ok"] and d["voix"] and all(v.startswith("mireille-dojo-") for v in d["voix"]), (qui, d)
+            continue
+        if qui == "louise":
+            assert d["ok"] and d["voix"] and all(v.startswith("louise-clairon-") for v in d["voix"]), (qui, d)
             continue
         # ⚠️ Qui n'ARRIVE qu'après une mission (`arrive_apres` : le vieux maître, après c04) n'est pas là avant M5 :
         # son premier repos ne s'entend jamais, on ne le paie pas (`missions.repliques_de_repos`).
@@ -777,6 +781,8 @@ def test_les_personnages_disent_leur_repos_a_voix_haute(banc, paquet):
     for qui, d in r["apres"].items():
         if qui == "mireille":
             assert d["ok"] and all(v.startswith("mireille-dojo-") for v in d["voix"]), (qui, d)
+        elif qui == "louise":
+            assert d["ok"] and all(v.startswith("louise-clairon-") for v in d["voix"]), (qui, d)
         elif qui == "josee":   # apres M5 elle ouvre le marche noir : pas de repos, donc pas de voix
             assert d["ok"] and d["voix"] == [], (qui, d)
         else:

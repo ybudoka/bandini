@@ -518,3 +518,15 @@ JEU.update({
     "ti_guy-garage-nitro": "[knowingly] La bonbonne est branchée. [laughs] Appuie pas là-dessus dans un stationnement.",
     "ti_guy-garage-klaxon": "[mischievously] Klaxonne pour voir. Si ça te donne pas des frissons, t'es pas d'icitte.",
 })
+
+# LOUISE TREMBLAY-DION, DU CLAIRON (`photos.REPLIQUES`) : la journaliste qui veut la une — vive, pince-sans-rire,
+# jamais dupe ; elle se nomme dans sa salutation, et nulle part ailleurs.
+JEU.update({
+    "louise-clairon-salut": "[confident] Louise Tremblay-Dion, du Clairon. Tu traînes où ça brasse : rapporte-moi une photo, je paie.",
+    "louise-clairon-rien": "[wryly] Pas de photo? Reviens quand ça brûle, quand ça vole ou quand ça sirène.",
+    "louise-clairon-vide": "[sarcastic] Un trottoir vide, magnifique. Le Clairon paie pas pour du trottoir.",
+    "louise-clairon-achat": "[excited] Ça, c'est une une : tiens, ton argent. Tu la verras demain matin.",
+    "louise-clairon-toi": "[amused] C'est toi, ça, en pleine poursuite? Je la prends — la police va l'aimer aussi.",
+    "louise-clairon-vieille": "[teasing] Ta photo date d'avant-hier. Le Clairon sort tous les matins, mon beau.",
+    "louise-clairon-deja": "[matter-of-fact] J'ai ma une pour demain. Reviens demain avec mieux.",
+})

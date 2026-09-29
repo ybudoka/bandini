@@ -1732,6 +1732,17 @@ def voix_dojo() -> list[dict]:
             for r in dojo.repliques()]
 
 
+def voix_photos() -> list[dict]:
+    """Ce que Louise Tremblay-Dion dit quand on lui montre une photo (`app/photos.py`) — sa banque (`clairon`),
+    en série dans le paquet, chargée quand on lui parle (`Photos.accueillir`)."""
+    from . import missions, photos
+    perso = missions.personnage("louise")
+    return [{"slug": r["slug"], "texte": r["texte"], "genre": perso["genre"], "voix": perso["voix"],
+             "volume": 0.9, "histoire": True, "qui": r["qui"], "mission": r["mission"],
+             "partie": r["partie"], "telephone": False}
+            for r in photos.repliques()]
+
+
 def voix_garage() -> list[dict]:
     """Ce que Ti-Guy dit quand une pièce est posée sur un char (`app/garage.py`) — sa banque (`garage`),
     en série dans le paquet, chargée au comptoir (`Garage.commenter`)."""
@@ -1745,7 +1756,7 @@ def voix_garage() -> list[dict]:
 
 def toutes_les_voix() -> list[dict]:
     return (list(VOIX) + list(VOIX_DE_LA_POLICE) + voix_histoire() + voix_journal() + voix_loto() + voix_ouverture()
-            + voix_repos() + voix_dojo() + voix_galeries() + voix_halloween() + voix_garage())
+            + voix_repos() + voix_dojo() + voix_galeries() + voix_halloween() + voix_garage() + voix_photos())
 
 
 #: LES VOIX QUI NE SE PARTAGENT PAS — la table, ecrite UNE fois : la voix, et le
@@ -2055,5 +2066,5 @@ def exporter() -> dict:
         # Declarees une par une, elles pesaient 8 870 octets bruts et firent deborder le paquet
         # (`test_le_paquet_reste_leger`, 26 sept. 2026). `Son.Voix.histoire()` les deplie au chargement.
         "series": [serie_de_voix("narrateur-loto-", voix_loto()), serie_de_voix("galeries-", voix_galeries()), serie_de_voix("halloween-", voix_halloween()),
-                   serie_de_voix("ti_guy-garage-", voix_garage())],
+                   serie_de_voix("ti_guy-garage-", voix_garage()), serie_de_voix("louise-clairon-", voix_photos())],
     }
