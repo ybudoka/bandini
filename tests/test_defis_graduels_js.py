@@ -877,7 +877,7 @@ ESQUIVE = MARCHER + """
         const j = L.B.joueur, e = L.B.rue, q = e.adversaire, R = 3 * L.TT;
         // D'abord, entrer dans le ring.
         for (let n = 0; n < 900 && L.B.defi && e.phase !== 'combat'; n++) { marcherVers(o, j, e.depart.x + R, e.depart.y, 4); o.frame(1); }
-        let roulades = 0, a = Math.atan2(j.y - e.depart.y, j.x - e.depart.x);
+        let roulades = 0, a = Math.atan2(j.y - e.depart.y, j.x - e.depart.x), avant = Infinity, cale = 0;
         for (let n = 0; n < 2400 && L.B.defi; n++) {
             const d = Math.hypot(q.x - j.x, q.y - j.y);
             if (frappeur && d < 30) { toutLacher(o); o.tape('Space', 1); continue; }
@@ -888,7 +888,15 @@ ESQUIVE = MARCHER + """
                 roulades++;
                 continue;
             }
-            if (Math.hypot(j.x - (e.depart.x + Math.cos(a) * R), j.y - (e.depart.y + Math.sin(a) * R)) < 10) a += 0.35;
+            // ⚠️ Ce qui barre le cercle, on le CONTOURNE : on vise le pas suivant. Le ring du
+            // parc du kiosque tient la statue du général (`statues.py`, 28 sept. 2026), du bronze
+            // sur l'orbite : un boxeur qui marchait droit sur le point du cercle s'y collait à
+            // chaque tour et se faisait sonner là (vu au banc : tous les coups contre le socle).
+            // Il ne gagnait avant que parce que rien de solide n'était sur SON cercle.
+            const ecart = Math.hypot(j.x - (e.depart.x + Math.cos(a) * R), j.y - (e.depart.y + Math.sin(a) * R));
+            cale = ecart > avant - 0.5 ? cale + 1 : 0;
+            avant = ecart;
+            if (ecart < 10 || cale > 12) { a += 0.35; avant = Infinity; cale = 0; }
             marcherVers(o, j, e.depart.x + Math.cos(a) * R, e.depart.y + Math.sin(a) * R, 4);
             o.frame(1);
         }
