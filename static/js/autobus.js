@@ -209,6 +209,18 @@ const Autobus = (function () {
         // du terminus, graines 5 et 23 a 18 h 40). Boite prise : il naitra au regard suivant.
         const boite = Monde.intersectionA(Math.floor(p.x / TT), Math.floor(p.y / TT));
         if (boite && !Vehicules.croisementLibre(boite, {})) continue;
+        // ⚠️ NE PASSE LE POINT OU IL AURAIT DEMANDE LA BOITE, il ne la demandera jamais. `conduire`
+        // consulte `peutEntrer` (feu, stop, boite) en arrivant sur la tuile D'AVANT la ligne d'arret ;
+        // pose par l'horaire entre cette tuile et la ligne, ou sur la ligne elle-meme, il visait deja
+        // la ligne ou la boite et traversait sans feu, sans stop et sans reservation — une auto ou un
+        // autre autobus entrait sous lui (29 sept. 2026, graine 23 de « deux chars dans la meme
+        // boite » : la ligne 3 nee a l'image 1587 une tuile avant son STOP, dans la boite a 1608 avec
+        // la ligne 2 qui venait de la prendre). Il naitra au regard suivant, hors de ce bout de rue.
+        if (!boite) {
+          const a = L.tuiles[p.i], b = L.tuiles[(p.i + 1) % L.n], c = L.tuiles[(p.i + 2) % L.n];
+          if (Monde.fleche(b[0], b[1]) === 'S' && Monde.intersectionA(c[0], c[1])) continue;
+          if (Monde.fleche(a[0], a[1]) === 'S' && Monde.intersectionA(b[0], b[1])) continue;
+        }
         const creer = function () {
           return Vehicules.creer('autobus', p.x, p.y, p.angle, {
             // ⚠️ La couleur est DONNEE (aucun de) : celle de la ligne, ou celle que la

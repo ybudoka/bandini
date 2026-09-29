@@ -89,6 +89,10 @@ def test_au_clignotant_rouge_le_trafic_s_arrete_puis_repart(banc, paquet):
     — et la ville de nuit se serait figée d'un bloc."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
+        // ⚠️ SANS LA REMISE (29 sept. 2026) : ce juge tient a l'etat exact de la rue de janvier, et l'hiver
+        // motos et velos sont remises — des berlines a leur place (test_motos_velos_remises_js.py). Il
+        // mesure autre chose que la saison : sans la cle, la rue est celle d'avant.
+        L.B.defs.vehicules.forEach(function (v) { delete v.remise; });
         L.graine(23);
         const t = L.B.defs.conduite.trafic;
         L.B.partie.heure = (t.clignotant_depuis + 0.04) % 1;

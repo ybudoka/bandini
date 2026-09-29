@@ -467,6 +467,10 @@ def test_le_public_applaudit_paie_et_se_renouvelle(banc, paquet):
     son travail, et c'est la graine 64 que le juge joue."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
+        // ⚠️ SANS LA REMISE (29 sept. 2026) : ce juge tient a l'etat exact de la rue de janvier, et l'hiver
+        // motos et velos sont remises — des berlines a leur place (test_motos_velos_remises_js.py). Il
+        // mesure autre chose que la saison : sans la cle, la rue est celle d'avant.
+        L.B.defs.vehicules.forEach(function (v) { delete v.remise; });
         L.graine(64);
         const a = L.Entites.archetype('jongleur');
         const j = L.B.joueur;
