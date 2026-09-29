@@ -1139,7 +1139,8 @@ ACTEURS_DE_MISSION = ("joueur", "donneur", "vehicule", "cible", "fuyard")
 #: un personnage y entre par l'eau, pas par une porte. `amarrage:sven` : la
 #: chaloupe amarrée le plus près du mouillage de Sven (`Histoire.amarrageDeSven`)
 #: — les amarrages ordinaires (`carte.amarrages`) n'appartiennent à personne
-#: d'autre.
+#: d'autre ; `amarrage:<lieu>` : celui le plus près d'un lieu (`Histoire.amarragePres`,
+#: m53 et son relais de la rive nord).
 FORMES_DE_LIEU = ("place", "porte", "ruelle", "zone", "chez", "boutique", "district", "rampe",
                    "mouillage", "amarrage", "traversier", "bloc")
 #: Les lieux NOMMÉS que `Histoire.resoudre` connaît sans forme (`pont` : la barrière du

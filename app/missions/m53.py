@@ -19,15 +19,17 @@ MISSION = {
         {"type": "monter", "texte": "PRENDS LE CHALUTIER, AU QUAI DE SVEN",
          "vehicule": "chalutier", "ou": "mouillage:chalutier:0", "prete": "sven"},
 
-        # ⚠️ **Le titre, c'est ça** : l'autre quai n'est qu'à une dizaine de tuiles (les deux
-        # chalutiers se rangent autour du cargo, `navires.amarrer`) — on n'y va pas en bateau pour
-        # la distance, mais parce qu'un chalutier au nom de Josée s'amarre à SON relais sans que
-        # personne regarde. Naviguer sous pavillon.
-        {"type": "livrer", "texte": "AMARRE-LE AU RELAIS — SOUS SON NOM, PERSONNE NE REGARDE",
-         "lieu": "mouillage:chalutier:1", "rayon": 5, "sans_etoile": True},
+        # ⚠️ **Le titre, c'est ça** : un chalutier au nom de Josée s'amarre à SON relais sans
+        # que personne regarde. Naviguer sous pavillon. ⚠️ **De l'autre côté de la baie** (Martin,
+        # 29 sept. 2026 : « éloigne le premier truc à décoder ») : le relais était sur l'autre quai
+        # de chalutier, à onze tuiles du cargo (`navires.amarrer` range les deux autour de lui) ;
+        # il est maintenant sur la rive nord, à l'amarrage sous l'hôpital (`amarrage:hopital`,
+        # ≈ 200 tuiles de Sven) — puis l'île (≈ 60), puis le retour : une boucle de la baie.
+        {"type": "livrer", "texte": "TRAVERSE LA BAIE — SOUS SON NOM, PERSONNE NE REGARDE",
+         "lieu": "amarrage:hopital", "rayon": 6, "sans_etoile": True},
 
         {"type": "pirater", "texte": "PIRATE LE RELAIS — SANS TOUCHER LES FILS",
-         "ou": "mouillage:chalutier:1", "rayon": 5, "longueur": 4, "essais": 3},
+         "ou": "amarrage:hopital", "rayon": 5, "longueur": 4, "essais": 3},
 
         # ⚠️ **Plus long, plus loin** (Martin, 22 sept. 2026 : « des missions plus longues ») : le
         # relais a crié avant de se taire — deux Morues accourent (`loin` : elles naissent hors
@@ -55,8 +57,8 @@ MISSION = {
                jeu="[Norwegian accent][calm] C'est encore Sven. [wryly] Un chalutier passe… partout. [firmly] Aujourd'hui, il travaille… pour moi.")
         ],
         "intro": [
-            _l("sven", "L'autre quai porte un relais. Il écoute la baie pour le compte de Josée.",
-               jeu="[Norwegian accent][matter-of-fact] L'autre quai porte… un relais. [coldly] Il écoute la baie… pour le compte de Josée."),
+            _l("sven", "L'antenne de l'autre quai n'était qu'une oreille. Le relais de Josée est sur la rive nord.",
+               jeu="[Norwegian accent][matter-of-fact] L'antenne de l'autre quai… n'était qu'une oreille. [coldly] Le relais de Josée… est sur la rive nord."),
             _l("sven", "Fais-le taire. Une bonne pêche ne pose jamais de questions.",
                jeu="[Norwegian accent][firmly] Fais-le taire. [wryly] Une bonne pêche… ne pose jamais de questions."),
             _l("sven", "Le chalutier s'appelle la Belle-Josée. Sous ce nom-là, personne ne le regarde.",

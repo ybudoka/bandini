@@ -57,6 +57,35 @@ def test_m53_les_deux_quais_de_chalutier_sont_distincts(banc):
     assert r["distincts"], "les deux quais de chalutier se confondent"
 
 
+def test_m53_le_relais_est_de_l_autre_cote_de_la_baie(banc):
+    """Martin, 29 sept. 2026 : « éloigne le premier truc à décoder ». Le relais de m53 n'est plus
+    sur l'autre quai de chalutier (onze tuiles du cargo) : `amarrage:hopital` est l'amarrage le plus
+    près de l'hôpital, sur la rive nord — un point d'EAU, à plus de 150 tuiles du chalutier, et la
+    flèche de `livrer` y mène."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Histoire.commencer('m53');
+        o.frame(2); L.B.cinema = null; L.B.scene = null;
+        const m = L.Histoire.courante();
+        const depart = L.Histoire.resoudre('mouillage:chalutier:0', m);
+        const relais = L.Histoire.resoudre('amarrage:hopital', m);
+        const hopital = L.Histoire.resoudre('hopital', m);
+        const plusPres = L.B.defs.carte.amarrages.every(function (a) {
+            return Math.hypot(a.x * 16 + 8 - hopital.x, a.y * 16 + 8 - hopital.y) >= Math.hypot(relais.x - hopital.x, relais.y - hopital.y);
+        });
+        L.B.partie.mission.etape = 1; o.frame(1);
+        const gps = L.Histoire.cible();
+        return { tuiles: Math.hypot(relais.x - depart.x, relais.y - depart.y) / 16, plusPres: plusPres,
+                 eau: L.Monde.estEau(Math.floor(relais.x / 16), Math.floor(relais.y / 16)),
+                 gps: gps && Math.hypot(gps.x - relais.x, gps.y - relais.y), objectifs: [m.objectifs[1].lieu, m.objectifs[2].ou] };
+    }""")
+    assert r["objectifs"] == ["amarrage:hopital", "amarrage:hopital"], r
+    assert r["tuiles"] > 150, f"le relais n'est qu'à {r['tuiles']:.0f} tuiles du chalutier"
+    assert r["plusPres"], "`amarrage:hopital` n'est pas l'amarrage le plus près de l'hôpital"
+    assert r["eau"], "l'amarrage du relais n'est pas sur l'eau : le chalutier n'y accoste pas"
+    assert r["gps"] is not None and r["gps"] < 16, "la flèche de la traversée ne mène pas au relais : %s" % r
+
+
 def test_m53_prend_le_chalutier_au_bon_quai(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
@@ -285,19 +314,20 @@ def test_m52_joue_jusqu_au_bout_par_l_ile(banc):
 
 
 def test_m53_joue_jusqu_au_bout_par_le_clocher(banc):
-    """Sous pavillon, sept étapes : le chalutier, l'autre quai, le relais, les deux Morues qui
-    accourent, le clocher de l'île (à l'autre bout de la baie : on y mène le chalutier, on
-    débarque, on pirate le jumeau du relais), le retour à quai, Sven."""
+    """Sous pavillon, sept étapes : le chalutier, la traversée jusqu'au relais de la rive nord, le
+    relais, les deux Morues qui accourent, le clocher de l'île (on y mène le chalutier, on débarque,
+    on pirate le jumeau du relais), le retour à quai, Sven."""
     r = banc("function (L, o) {" + OUTILS + """
         L.Jeu.commencer();
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         const argent = paiements(L), bilan = {}, vu = {};
         L.Histoire.commencer('m53'); passer(L, o);
         const v = B.mission.vehicule, m = L.Histoire.courante();
-        vu.monter = embarquer(L, o, v) && etape(L);                         // 1 : l'autre quai
-        vu.navigueQuai = naviguer(L, o, L.Histoire.resoudre('mouillage:chalutier:1', m), 4 * 16, bilan);
+        vu.monter = embarquer(L, o, v) && etape(L);                         // 1 : la traversée
+        const relais = L.Histoire.resoudre('amarrage:hopital', m);
+        vu.navigueQuai = naviguer(L, o, relais, 4 * 16, bilan);
         vu.relais = etape(L);                                               // 2 : pirater le relais
-        vu.marcheRelais = marcher(L, o, L.Histoire.resoudre('mouillage:chalutier:1', m).mouillage.poste, 24, bilan);
+        vu.marcheRelais = marcher(L, o, relais, 3 * 16, bilan);
         vu.pirateRelais = pirater(L, o);
         vu.morues = etape(L);                                               // 3 : deux Morues
         vu.couches = coucher(L, o);
@@ -328,7 +358,7 @@ def test_m53_joue_jusqu_au_bout_par_le_clocher(banc):
     assert vu["rembarque2"] and vu["navigueSven"] and vu["retourner"] == 6 and vu["marcheSven"], r
     assert r["fait"] and r["argent"] in ([500], [750]), "500 $, ou 750 avec la prime sans dégâts : %s" % r
     assert r["argent"] == ([750] if r["sansBosse"] == [True] else [500]), r
-    assert r["bilan"]["eau"] > 25, "l'île est à l'autre bout de la baie : %s s d'eau à fond" % r["bilan"]
+    assert r["bilan"]["eau"] > 45, "le relais de la rive nord, puis l'île, puis le retour : %s s d'eau à fond" % r["bilan"]
 
 
 def test_m54_joue_jusqu_au_bout_par_le_hangar(banc):

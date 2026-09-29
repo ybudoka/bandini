@@ -96,7 +96,9 @@ def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
             if "lieu" in o:
                 # ⚠️ Livrer une COQUE, c'est la ramener à son mouillage (`navires.py`) :
                 # il n'y a pas de baie de garage sur l'eau, `carte.SPECIAUX` n'en sait rien.
-                assert o["lieu"] in lieux or o["lieu"].startswith(("mouillage:", "traversier:")), \
+                # Ou l'amarrer ailleurs, au pied d'un lieu connu (`amarrage:<lieu>`, m53).
+                amarre = o["lieu"].startswith("amarrage:") and o["lieu"].split(":", 1)[1] in lieux
+                assert o["lieu"] in lieux or amarre or o["lieu"].startswith(("mouillage:", "traversier:")), \
                     f"{m['slug']} : lieu inconnu {o['lieu']}"
             for etape in o.get("par", []):
                 assert etape in lieux, f"{m['slug']} : lieu du détour inconnu {etape}"

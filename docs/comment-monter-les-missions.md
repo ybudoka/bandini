@@ -222,7 +222,9 @@ Contraintes **jugées** (voir `test_missions.py`) :
 - `ou` de la forme `zone:<x>` → `x` dans `{cravates, port, faubourg}`.
 - ⚠️ **Un `monter`/`livrer`/`pirater` sur l'eau** : `ou`/`lieu` en `mouillage:<slug>[:n]` (un grand
   bateau — `carte.mouillages`, `navires.py` ; le centre de la coque, à son cap, hors de `tuileDeRue`) ou
-  `amarrage:sven` (la chaloupe amarrée le plus près de son mouillage). Le personnage qui se tient sur un
+  `amarrage:sven` (la chaloupe amarrée le plus près de son mouillage), ou `amarrage:<lieu>` (l'amarrage de la
+  ville le plus près d'un lieu — un point d'eau au pied d'un quai, où l'on accoste : m53, `amarrage:hopital`, le
+  relais de la rive nord). Le personnage qui se tient sur un
   mouillage (`ou: "mouillage:<slug>[:n]"` dans `PERSONNAGES`) se pose sur son **poste** — la tuile de quai
   d'à côté, jamais le centre de la coque — pour ne pas boucher l'accès au bateau (m52-m54, Sven).
 

@@ -98,7 +98,7 @@ def lieux_de_mission():
             # (`traversier:<escale>`, m99) non plus : il est jugé dans test_traversier.
             # ⚠️ Un lieu de BLOC (la villa, l'infiltration) non plus : il est derrière un passage, dans
             # une autre carte — `blocs.erreurs` juge qu'on l'y rejoint à pied.
-            if (o.get("lieu") and not o["lieu"].startswith(("mouillage:", "traversier:"))
+            if (o.get("lieu") and not o["lieu"].startswith(("mouillage:", "traversier:", "amarrage:"))
                     and o["lieu"] not in blocs.lieux_des_blocs()):
                 lieux.add(o["lieu"])
     for d in missions.DEFIS:

@@ -196,6 +196,8 @@ const Histoire = (function () {
     // ⚠️ Livrer UNE COQUE, c'est la ramener à son mouillage — il n'y a pas de
     // baie de garage sur l'eau. Le centre du mouillage, comme `poserLeChar`.
     if (slug.indexOf('mouillage:') === 0) { const mo = trouverMouillage(slug.slice(10)); return mo ? { x: mo.x, y: mo.y, nom: 'son mouillage' } : null; }
+    // Une coque qu'on AMARRE ailleurs qu'à son mouillage (m53 : le relais de la rive nord).
+    if (slug.indexOf('amarrage:') === 0) return resoudre(slug, courante());
     const pg = Monde.porteDeGarage(slug);
     if (!pg) return lieu(slug);
     const baie = Monde.baieDeLaPorteDeGarage(pg), l = lieu(slug);
@@ -422,6 +424,21 @@ const Histoire = (function () {
     return meilleure;
   }
 
+  /** `amarrage:<lieu>` : l'amarrage de la ville (`carte.amarrages`) le plus près d'un lieu —
+      un point d'EAU au pied d'un quai, où une coque accoste et d'où l'on débarque. m53 y met le
+      relais de Josée, de l'autre côté de la baie (`amarrage:hopital`, la rive nord). `nom` : celui
+      du lieu, pour la flèche. Null dans une pièce ou un bloc (pas d'amarrages). */
+  function amarragePres(slug) {
+    const places = (Monde.carte.def && Monde.carte.def.amarrages) || [], l = lieu(slug);
+    if (!places.length || !l) return null;
+    let meilleure = null, dMin = Infinity;
+    for (const a of places) {
+      const x = a.x * TT + 8, y = a.y * TT + 8, d2 = (x - l.x) * (x - l.x) + (y - l.y) * (y - l.y);
+      if (d2 < dMin) { dMin = d2; meilleure = { x: x, y: y, amarrage: a, nom: l.nom }; }
+    }
+    return meilleure;
+  }
+
   /** `ou` d'un objectif ou d'un personnage → un pixel. */
   function resoudre(ou, m) {
     if (!ou) return null;
@@ -433,6 +450,7 @@ const Histoire = (function () {
     if (ou === 'amarrage:sven') return amarrageDeSven();
     const deux = ou.split(':');
     if (deux[0] === 'porte') return lieu(deux[1]);
+    if (deux[0] === 'amarrage') return amarragePres(deux[1]);
     if (deux[0] === 'ruelle') return ruellePres(deux[1], Number(deux[2]) || 0);   // `ruelle:garage:24`
     if (deux[0] === 'zone') { const z = Monde.carte.zones.find(function (q) { return q.slug === deux[1]; }); return z ? { x: (z.x + z.l / 2) * TT, y: (z.y + z.h / 2) * TT, zone: z } : null; }
     if (deux[0] === 'point') return null;                 // dedans : pas de pixel en ville
