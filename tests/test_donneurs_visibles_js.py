@@ -9,6 +9,14 @@ peint APRÈS lui recouvre (rectangles des fiches, pixels transparents compris : 
 
 ⚠️ Il refait le calcul de son côté, avec les vraies dimensions du sprite (`Entites.imageDe`) : un
 juge qui appellerait la fonction du jeu serait d'accord avec elle même quand elle se trompe.
+
+⚠️ Rouge du 29 sept. 2026 (« maitre : il n'est pas là (dedans) », puis « cindy : … (dehors) ») : le
+juge supposait que TOUS les personnages de l'histoire sont là dès la naissance de la partie. Depuis
+9ee0ae6f, un personnage peut n'ARRIVER qu'après une mission (`arrive_apres` : le vieux maître en
+Floride jusqu'à c04, Cindy devant la cantine après q04, puis Diane, Jo, Zed, Ti-Loup, Prévost…), et
+c'est voulu — posé dès l'ouverture, il décalerait les identifiants de toute la ville. Les donneurs se
+posent au chargement : le juge regarde donc ceux-là APRÈS leur mission d'arrivée, partie rechargée,
+et vérifie en passant qu'ils ne sont pas déjà là à la naissance.
 """
 
 #: Au-delà de cette part de son sprite sous du décor, un personnage est caché.
@@ -35,25 +43,38 @@ PART_CACHEE = """
 
 
 def test_aucun_donneur_n_est_cache_par_du_decor(banc):
-    """Dehors, à la naissance de la partie ; dedans, en entrant chez eux."""
+    """Dehors, à la naissance de la partie ; dedans, en entrant chez eux. Ceux qui n'arrivent
+    qu'après une mission (`arrive_apres`) : absents à la naissance, jugés une fois arrivés."""
     r = banc("function (L, o) {" + PART_CACHEE + """
-        L.Jeu.commencer();
-        const persos = L.B.defs.personnages, vus = [];
-        for (const p of persos.filter(function (q) { return q.ou.indexOf('porte:') === 0; })) {
-          const e = L.Histoire.donneur(p.slug);
-          vus.push({ slug: p.slug, dehors: true, present: !!e, cache: e ? partCachee(L, e) : null });
-        }
-        for (const p of persos.filter(function (q) { return q.ou.indexOf('point:') === 0; })) {
+        function juger(tardifs) {
+          const persos = L.B.defs.personnages.filter(function (q) { return !!q.arrive_apres === tardifs; }), vus = [];
+          for (const p of persos.filter(function (q) { return q.ou.indexOf('porte:') === 0; })) {
+            const e = L.Histoire.donneur(p.slug);
+            vus.push({ slug: p.slug, dehors: true, present: !!e, cache: e ? partCachee(L, e) : null });
+          }
+          for (const p of persos.filter(function (q) { return q.ou.indexOf('point:') === 0; })) {
+            if (L.B.interieur) L.Jeu.quitterLaPiece();
+            const piece = L.Histoire.pieceDuPoint(p.ou.slice(6));
+            o.entrer(L.Monde.carte.portes.find(function (q) { return q.lieu === piece.slug; }));
+            const e = L.Histoire.donneur(p.slug);
+            vus.push({ slug: p.slug, dehors: false, present: !!e, cache: e ? partCachee(L, e) : null });
+          }
           if (L.B.interieur) L.Jeu.quitterLaPiece();
-          const piece = L.Histoire.pieceDuPoint(p.ou.slice(6));
-          o.entrer(L.Monde.carte.portes.find(function (q) { return q.lieu === piece.slug; }));
-          const e = L.Histoire.donneur(p.slug);
-          vus.push({ slug: p.slug, dehors: false, present: !!e, cache: e ? partCachee(L, e) : null });
+          return vus;
         }
-        return vus;
+        L.Jeu.commencer();
+        const tardifs = L.B.defs.personnages.filter(function (q) { return q.arrive_apres; });
+        const trop_tot = tardifs.filter(function (p) { return L.Histoire.donneur(p.slug); }).map(function (p) { return p.slug; });
+        const vus = juger(false);
+        // Leurs missions d'arrivée faites, la partie rechargée : c'est au chargement qu'ils se posent.
+        tardifs.forEach(function (p) { L.B.partie.missionsFaites[p.arrive_apres] = 1; });
+        L.Jeu.retourTitre(); L.Jeu.commencer();
+        return { vus: vus, arrives: juger(true), trop_tot: trop_tot, tardifs: tardifs.length };
     }""")
-    assert len(r) >= 9, f"le juge ne voit que {len(r)} personnages : {r}"
-    for v in r:
+    assert not r["trop_tot"], f"déjà là à la naissance, avant leur mission d'arrivée : {r['trop_tot']}"
+    assert r["tardifs"] >= 2 and len(r["arrives"]) == r["tardifs"], r["arrives"]
+    assert len(r["vus"]) >= 9, f"le juge ne voit que {len(r['vus'])} personnages : {r['vus']}"
+    for v in r["vus"] + r["arrives"]:
         assert v["present"], f"{v['slug']} : il n'est pas là ({'dehors' if v['dehors'] else 'dedans'})"
         assert v["cache"]["part"] < CACHE_MAX, (
             f"{v['slug']} est caché à {v['cache']['part']:.0%} par {v['cache']['par']} "
