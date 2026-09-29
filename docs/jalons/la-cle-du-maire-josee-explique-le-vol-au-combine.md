@@ -23,6 +23,6 @@ part.
   de l'objectif dit le bouton : « VOLE LA CLÉ DU GARDE : ACTION DANS SON DOS, SANS ÊTRE VU » (60 caractères au plus : une ligne).
 - ⚠️ **Les slugs de voix se comptent à leur place** : les répliques neuves s'insèrent avant « La clé
   est à toi » (objectif 2), dont la voix a été renommée de `josee-v01-9` à `josee-v01-13` sans être
-  refaite. `josee-v01-8` à `-12` sont neuves (≈ 680 caractères avec la 11 refaite plus courte, eleven_v3).
+  refaite. `josee-v01-8` à `-12` sont neuves (1 479 caractères au compteur ElevenLabs, la 11 refaite plus courte comprise, eleven_v3).
 - **À voir par Martin** : les cinq voix (générées, pas écoutées), et si c'est trop long d'un coup au
   combiné.
