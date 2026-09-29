@@ -33,6 +33,14 @@ logement du Petit-Canton est au Petit-Canton, un bungalow de banlieue n'est pas 
   non.
 - **Les matériaux et l'état** : la façade (brique, bois, planches), les fenêtres placardées, le fer rouillé — dedans,
   des murs propres et des meubles neufs partout.
+- ⚠️ **Le mur de la porte, vu de dedans, n'est pas un mur de la pièce** — Martin (29 sept. 2026) : « les portes
+  et murs des portes intérieur doivent avoir des murs harmonisés ». Dans le logement `nord_logement_1001`
+  (capture du 29 sept.), trois murs sont en plâtre gris et le quatrième, celui de la porte, est la **façade
+  de brique rouge** et ses fenêtres bleues, peinte comme dehors (le plan de la pièce emploie les tuiles de
+  façade `F`, `W`, `D`). Le mur de la porte et la porte elle-même doivent être du même mur que les trois
+  autres : même matière, même couleur, fenêtres et porte vues de l'intérieur. À vérifier dans **toutes** les
+  pièces (logements, commerces, lieux garantis, blocs), avec un juge qui compare la matière du mur de la porte
+  à celle des autres murs.
 - **Les pièces faites à la main** (les lieux garantis, les blocs de carte, les pièces des missions) : chacune à
   relire contre son extérieur.
 
@@ -50,7 +58,8 @@ des écarts ; puis corriger par vagues, chacune jouable et jugée.
   intérieur « fait pauvre ».
 - ⚠️ **Après les façades**, ou avec elles ([la revue des façades](une-revue-des-facades-des-residences.md#fiche)) :
   l'intérieur suit ce que la façade dit, alors la façade doit d'abord bien le dire.
-- La première vague qui s'impose : les logements selon le standing (pauvre, ordinaire, cossu), en commençant par
+- La première vague qui s'impose : **le mur de la porte harmonisé** (il se voit dans chaque pièce, et c'est
+  une règle de dessin, pas de contenu), puis les logements selon le standing (pauvre, ordinaire, cossu), en commençant par
   les maisons pauvres de la gare.
 
 ## Notes
