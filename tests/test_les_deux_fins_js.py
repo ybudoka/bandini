@@ -12,15 +12,9 @@ aujourd'hui (docs/jalons/m13-les-deux-fins.md).
 
 import pytest
 
-OUTILS = """
-  function faites(L, slugs) { slugs.forEach(function (s) { L.B.partie.missionsFaites[s] = 1; }); }
-  function ici(L, l) { const j = L.B.joueur; j.x = l.x; j.y = l.y; L.Entites.indexer(); }
-  function fermer(L) { let g = 0; while (L.B.cinema && g < 100) { L.Histoire.suivante(); g++; } }
-  function passer(L, o) {
-    let n = 0;
-    while ((L.B.scene || L.B.cinema) && n < 6000) { o.frame(1); if (L.B.cinema && n % 30 === 0) L.Histoire.suivante(); n++; }
-  }
-  function etape(L) { return L.B.partie.mission ? L.B.partie.mission.etape : null; }
+from outils_missions import outils
+
+OUTILS = outils("faites", "ici", "fermer", "passer", "etape") + """
   function pas(L, o, n) { for (let k = 0; k < (n || 3); k++) { o.frame(1); fermer(L); } }
   // L'heure `h` (en heures) — le traversier ne dépend que d'elle (`Traversier.placeA`).
   function aLHeure(L, h) { L.B.partie.heure = (h / 24) % 1; }

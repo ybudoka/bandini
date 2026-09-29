@@ -7,34 +7,18 @@ ce que le jeu fait vraiment — les hommes qui arrivent de loin, le char qui dor
 poignée de main dite, l'argent encaissé.
 """
 
-OUTILS = """
-  function passer(L, o) {
-    let n = 0;
-    while ((L.B.scene || L.B.cinema) && n < 6000) { o.frame(1); if (L.B.cinema && n % 30 === 0) L.Histoire.suivante(); n++; }
-  }
+from outils_missions import outils
+
+OUTILS = outils("passer", "etape", "fermer", "faites", "heure", "paiements", "finir") + """
   function boite(L) {
     const c = L.B.cinema;
     return c ? { partie: c.partie, qui: c.lignes[0].qui, slug: c.lignes[0].slug, telephone: c.lignes[0].telephone } : null;
-  }
-  function etape(L) { return L.B.partie.mission ? L.B.partie.mission.etape : null; }
-  function fermer(L) { let g = 0; while (L.B.cinema && g < 100) { L.Histoire.suivante(); g++; } }
-  function faites(L, slugs) { slugs.forEach(function (s) { L.B.partie.missionsFaites[s] = 1; }); }
-  function heure(L, nuit) {
-    let h = L.B.partie.heure;
-    for (let k = 0; k < 400 && L.Monde.estNuit(h) !== nuit; k++) h = (h + 0.005) % 1;
-    L.B.partie.heure = h;
-  }
-  function paiements(L) {
-    const liste = [], vrai = L.Missions.encaisser;
-    L.Missions.encaisser = function (montant, raison) { liste.push({ montant: montant, raison: raison || null }); return vrai.apply(null, arguments); };
-    return liste;
   }
   function hommes(L, etape) {
     const j = L.B.joueur;
     return L.B.mission.entites.filter(function (e) { return e.type === 'pieton' && e.cible && e.etape === etape; })
       .map(function (e) { return { e: e, d: Math.round(Math.hypot(e.x - j.x, e.y - j.y)) }; });
   }
-  function finir(L, o) { for (let k = 0; k < 400 && L.B.partie.mission; k++) o.frame(1); passer(L, o); }
   // Entrer chez quelqu'un qui se tient DEDANS et se planter sur son point, comme un joueur.
   function dedans(L, o, lieu, point) {
     const B = L.B, j = B.joueur, M = L.Monde;

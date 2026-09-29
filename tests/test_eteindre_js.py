@@ -8,7 +8,7 @@ pas la prime du pompier volontaire (c'est la mission qui paie) et s'en va avec l
 
 Les juges tiennent le jet AU BOUTON (J), comme le joueur — pas `j.phase` posé à la main."""
 
-from test_dix_missions_deux_js import OUTILS, PLUS_LONGUES
+from outils_missions import OUTILS, PLUS_LONGUES
 
 #: Se planter au sud du feu, face au mur, et tenir J `n` images.
 ARROSER = """

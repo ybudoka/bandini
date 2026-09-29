@@ -8,25 +8,7 @@ partie : `Incendies.feuActif()` dépend de l'heure ambiante de la ville (`jour:h
 d'un feu que la mission pourrait allumer elle-même — aucune des dix ne s'en sert.
 """
 
-OUTILS = """
-  function passer(L, o) {
-    let n = 0;
-    while ((L.B.scene || L.B.cinema) && n < 6000) { o.frame(1); if (L.B.cinema && n % 30 === 0) L.Histoire.suivante(); n++; }
-  }
-  function etape(L) { return L.B.partie.mission ? L.B.partie.mission.etape : null; }
-  function fermer(L) { let g = 0; while (L.B.cinema && g < 100) { L.Histoire.suivante(); g++; } }
-  function faites(L, slugs) { slugs.forEach(function (s) { L.B.partie.missionsFaites[s] = 1; }); }
-  function paiements(L) {
-    const liste = [], vrai = L.Missions.encaisser;
-    L.Missions.encaisser = function (montant, raison) { liste.push({ montant: montant, raison: raison || null }); return vrai.apply(null, arguments); };
-    return liste;
-  }
-  function commencer(L, o, slug) {
-    L.Histoire.commencer(slug);
-    L.B.cinema = null; L.B.scene = null;
-  }
-  function finir(L, o) { for (let k = 0; k < 400 && L.B.partie.mission; k++) o.frame(1); passer(L, o); }
-"""
+from outils_missions import OUTILS, PLUS_LONGUES
 
 
 def test_f04_acheter_un_couteau_chasser_les_cravates_puis_les_trois_caches(banc):
@@ -483,63 +465,6 @@ def test_h02_on_file_le_commis_ti_paul_jase_on_seme_et_on_rapporte(banc):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and 250 in r["argent"], r
 
-#: Les missions allongées (22 sept. 2026, Martin : « des missions plus longues ») : ce que
-#: leurs juges partagent — la nuit, se cacher pour semer, parler au bouton, et les
-#: répliques qu'on a entendues (`dites`), pour juger que chaque étape neuve PARLE.
-PLUS_LONGUES = """
-  const dites = [];
-  function ecouter(L) {
-    let g = 0;
-    while (L.B.cinema && g < 100) {
-      const c = L.B.cinema;
-      if (c.partie) c.lignes.forEach(function (l) { const k = c.partie + ':' + l.qui + ':' + (l.objectif === undefined ? '' : l.objectif); if (dites.indexOf(k) < 0) dites.push(k); });
-      L.Histoire.suivante(); g++;
-    }
-  }
-  // Quelques images, en passant les répliques qui s'ouvrent : un `pendant` part une image
-  // APRÈS le changement d'étape, et tant qu'il parle, aucun objectif n'avance.
-  function jouer(L, o, n) { for (let k = 0; k < (n || 6); k++) { o.frame(1); ecouter(L); } }
-  function laNuit(L, o) {
-    let h = L.B.partie.heure;
-    for (let k = 0; k < 400 && !L.Monde.estNuit(h); k++) h = (h + 0.005) % 1;
-    L.B.partie.heure = h; o.frame(2);
-  }
-  function aPied(L) { if (L.B.joueur.dansVehicule) L.Vehicules.descendre(L.B.joueur, true); }
-  // Serrer la main au BOUTON : à deux pas de lui, ACTION.
-  function serrer(L, o, slug) {
-    aPied(L);
-    const d = L.Histoire.donneur(slug), j = L.B.joueur;
-    j.x = d.x - 16; j.y = d.y; j.angle = 0; j.face = 'droite'; L.Entites.indexer();
-    o.frame(1); j.angle = 0; j.face = 'droite'; L.Missions.majInvite(j); o.tape('KeyE', 2);
-    const partie = L.B.cinema ? L.B.cinema.partie : null;
-    ecouter(L); jouer(L, o);
-    return partie;
-  }
-  // Semer : à pied, dans la pièce la plus proche, jusqu'à zéro étoile — puis ressortir.
-  function seCacher(L, o) {
-    const B = L.B, j = B.joueur;
-    aPied(L);
-    const avant = B.recherche.etoiles;
-    let p = null, d = 1e12;
-    (L.Monde.carte.def.portes || []).forEach(function (q) {
-      if (!q.interieur) return;
-      const dd = Math.pow(q.x * 16 + 8 - j.x, 2) + Math.pow((q.y + 1) * 16 + 8 - j.y, 2);
-      if (dd < d) { d = dd; p = q; }
-    });
-    j.x = p.x * 16 + 8; j.y = (p.y + 1) * 16 + 4; L.Entites.indexer();
-    L.Jeu.entrer(p); o.fondu();
-    for (let k = 0; k < 200 && !B.interieur; k++) o.frame(1);
-    const dedans = !!B.interieur;
-    let n = 0;
-    for (; n < 9000 && B.recherche.etoiles > 0; n++) o.frame(1);
-    L.Jeu.sortir(); o.fondu();
-    for (let k = 0; k < 200 && B.interieur; k++) o.frame(1);
-    jouer(L, o);
-    return { avant: avant, dedans: dedans, images: n, porte: p.lieu, apres: B.recherche.etoiles };
-  }
-  function loinDe(L, a, b) { const p = L.Histoire.lieu(a), q = L.Histoire.lieu(b); return Math.round(Math.hypot(p.x - q.x, p.y - q.y) / 16); }
-"""
-
 
 def test_h01_trois_transports_puis_le_phare_puis_les_cles_a_ginette(banc):
     """h01 jouée de bout en bout, les trois étapes neuves comprises : la nuit tombe à
@@ -802,7 +727,6 @@ def test_q03_detruire_le_camion_puis_les_boulonneux_la_police_et_gege(banc):
     for dite in ("pendant:gege:1", "pendant:gege:2", "pendant:gege:3"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [300]
-
 
 
 def test_q03_le_camion_pousse_a_l_eau_est_detruit(banc):

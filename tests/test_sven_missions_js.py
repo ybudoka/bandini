@@ -3,6 +3,8 @@ posé sur son mouillage, un véhicule qui naît à la bonne place sur l'eau, ave
 prêté par lui, et une récompense qui tombe à la fin. Le piratage lui-même a ses juges
 (`test_piratage_js.py`) ; ceux-ci portent sur ce qui est PROPRE aux missions."""
 
+from outils_missions import outils
+
 
 def test_sven_nait_sur_son_poste_pres_du_porte_conteneurs(banc):
     """⚠️ Sur le POSTE (`carte.mouillages[…].poste`), pas sur le centre de la coque — et pas
@@ -110,14 +112,7 @@ def test_m54_prend_la_coque_decorative_sans_la_dedoubler(banc):
 # Morues arrivent et tombent. Seuls `survivre` (du temps) et le `semer` (des étoiles) se
 # raccourcissent : ce ne sont pas des étapes neuves, et leurs juges sont ailleurs.
 
-OUTILS = """
-  function fermer(L) { let g = 0; while (L.B.cinema && g < 200) { L.Histoire.suivante(); g++; } }
-  function passer(L, o) {
-    let n = 0;
-    while ((L.B.scene || L.B.cinema) && n < 6000) { o.frame(1); if (L.B.cinema && n % 30 === 0) L.Histoire.suivante(); n++; }
-  }
-  function etape(L) { return L.B.partie.mission ? L.B.partie.mission.etape : null; }
-  function images(L, o, n) { for (let k = 0; k < n; k++) { o.frame(1); fermer(L); } }
+OUTILS = outils("fermer", "passer", "etape", "images", "coucher", plafond=200) + """
   // Un chemin de tuiles (4-voisins) de la tuile du départ jusqu'à la première qui est dans
   // `rayon` px de `cible`, par les tuiles que `ok(de, vers)` laisse passer.
   function chemin(L, x0, y0, cible, rayon, ok, rive) {
@@ -197,15 +192,6 @@ OUTILS = """
     const j = L.B.joueur;
     j.x = v.x; j.y = v.y; L.Vehicules.monter(j, v); L.Entites.indexer(); images(L, o, 3);
     return j.dansVehicule === v;
-  }
-  // Coucher les hommes de l'étape en cours (les K.-O. se font au poing ailleurs : ici, c'est
-  // l'enchaînement qu'on juge — qu'ils naissent, qu'on les trouve, que l'étape avance).
-  function coucher(L, o) {
-    const e0 = etape(L);
-    const eux = L.B.mission.entites.filter(function (e) { return e.cible && e.etape === e0 && e.vivant; });
-    eux.forEach(function (e) { L.Entites.assommer(e); });
-    images(L, o, 4);
-    return eux.length;
   }
   // Pirater au clavier : ACTION ouvre le labyrinthe, puis une touche tenue à la fois, du centre
   // d'une case de la solution à la suivante, et tout droit dans le port (le pilote de

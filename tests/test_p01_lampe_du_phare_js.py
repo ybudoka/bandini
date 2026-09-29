@@ -3,14 +3,9 @@ de banc. Allongée le 22 sept. 2026 (Martin : « des missions plus longues ») :
 la Shop après le bâton, et les Skateux qui reviennent en bande au phare, une fois la lampe
 calée. Chaque étape se joue : la marche jusqu'au phare suit la terre ferme, tuile par tuile."""
 
-OUTILS = """
-  function fermer(L) { let g = 0; while (L.B.cinema && g < 200) { L.Histoire.suivante(); g++; } }
-  function passer(L, o) {
-    let n = 0;
-    while ((L.B.scene || L.B.cinema) && n < 6000) { o.frame(1); if (L.B.cinema && n % 30 === 0) L.Histoire.suivante(); n++; }
-  }
-  function etape(L) { return L.B.partie.mission ? L.B.partie.mission.etape : null; }
-  function images(L, o, n) { for (let k = 0; k < n; k++) { o.frame(1); fermer(L); } }
+from outils_missions import outils
+
+OUTILS = outils("fermer", "passer", "etape", "images", "coucher", plafond=200) + """
   // À pied jusqu'à `cible`, par la terre ferme (4-voisins) : rend le nombre de tuiles, ou -1.
   function marcher(L, o, cible, rayon) {
     const j = L.B.joueur, W = L.Monde.carte.w, H = L.Monde.carte.h;
@@ -36,13 +31,6 @@ OUTILS = """
     }
     L.Entites.indexer(); images(L, o, 3);
     return pas.length;
-  }
-  function coucher(L, o) {
-    const e0 = etape(L);
-    const eux = L.B.mission.entites.filter(function (e) { return e.cible && e.etape === e0 && e.vivant; });
-    eux.forEach(function (e) { L.Entites.assommer(e); });
-    images(L, o, 4);
-    return eux.length;
   }
 """
 

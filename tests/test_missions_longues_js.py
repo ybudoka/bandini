@@ -24,11 +24,9 @@ Ce que ces juges font vraiment, et ce qu'ils ne font pas :
   réplique de la cible, pas celle d'un autre.
 """
 
-OUTILS = """
-  function passer(L, o) {
-    let n = 0;
-    while ((L.B.scene || L.B.cinema) && n < 6000) { o.frame(1); if (L.B.cinema && n % 30 === 0) L.Histoire.suivante(); n++; }
-  }
+from outils_missions import outils
+
+OUTILS = outils("passer", "etape", "fermer", "faites", "heure") + """
   function boite(L) {
     const c = L.B.cinema;
     if (!c) return null;
@@ -40,14 +38,6 @@ OUTILS = """
   function ecouter(L, o) {
     for (let k = 0; k < 3 && !L.B.cinema; k++) o.frame(1);
     const b = boite(L); fermer(L); return b;
-  }
-  function etape(L) { return L.B.partie.mission ? L.B.partie.mission.etape : null; }
-  function fermer(L) { let g = 0; while (L.B.cinema && g < 100) { L.Histoire.suivante(); g++; } }
-  function faites(L, slugs) { slugs.forEach(function (s) { L.B.partie.missionsFaites[s] = 1; }); }
-  function heure(L, nuit) {
-    let h = L.B.partie.heure;
-    for (let k = 0; k < 400 && L.Monde.estNuit(h) !== nuit; k++) h = (h + 0.005) % 1;
-    L.B.partie.heure = h;
   }
   function paiements(L) {
     const liste = [], vrai = L.Missions.encaisser;

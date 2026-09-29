@@ -2,7 +2,7 @@
 l'appel à la prime, sur le modèle de `test_dix_missions_deux_js.py`. Plus le choix que
 q10 et q11 portent (`ferme`) : faire l'une ferme l'autre, pour de bon."""
 
-from test_dix_missions_deux_js import OUTILS, PLUS_LONGUES
+from outils_missions import OUTILS, PLUS_LONGUES
 
 #: Le fuyard d'un `ramasser` (le patron de `test_cinq_missions_js.py`) : le char casse, le
 #: porteur tombe, on ramasse la caisse à pied.

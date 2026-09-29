@@ -10,27 +10,12 @@ Les trajets sont téléportés (le banc n'a pas de pilote) ; les étoiles des `s
 tombent à la main, comme dans `test_cinq_missions_js.py`.
 """
 
-OUTILS = """
-  function passer(L, o) {
-    let n = 0;
-    while ((L.B.scene || L.B.cinema) && n < 6000) { o.frame(1); if (L.B.cinema && n % 30 === 0) L.Histoire.suivante(); n++; }
-  }
+from outils_missions import outils
+
+OUTILS = outils("passer", "etape", "fermer", "faites", "heure", "paiements", "ici", "finir") + """
   function boite(L) {
     const c = L.B.cinema, l = c && c.lignes[Math.max(0, c.i)];
     return l ? { partie: c.partie, qui: l.qui, slug: l.slug, telephone: l.telephone } : null;
-  }
-  function etape(L) { return L.B.partie.mission ? L.B.partie.mission.etape : null; }
-  function fermer(L) { let g = 0; while (L.B.cinema && g < 100) { L.Histoire.suivante(); g++; } }
-  function faites(L, slugs) { slugs.forEach(function (s) { L.B.partie.missionsFaites[s] = 1; }); }
-  function heure(L, nuit) {
-    let h = L.B.partie.heure;
-    for (let k = 0; k < 400 && L.Monde.estNuit(h) !== nuit; k++) h = (h + 0.005) % 1;
-    L.B.partie.heure = h;
-  }
-  function paiements(L) {
-    const liste = [], vrai = L.Missions.encaisser;
-    L.Missions.encaisser = function (montant, raison) { liste.push({ montant: montant, raison: raison || null }); return vrai.apply(null, arguments); };
-    return liste;
   }
   function hommes(L, etape) {
     const j = L.B.joueur;
@@ -48,8 +33,6 @@ OUTILS = """
     const j = L.B.joueur;
     v.x = l.x; v.y = l.y; v.vitesse = 0; v.vx = 0; v.vy = 0; j.x = v.x; j.y = v.y; L.Entites.indexer();
   }
-  function ici(L, l) { const j = L.B.joueur; j.x = l.x; j.y = l.y; L.Entites.indexer(); }
-  function finir(L, o) { for (let k = 0; k < 400 && L.B.partie.mission; k++) o.frame(1); passer(L, o); }
 """
 
 

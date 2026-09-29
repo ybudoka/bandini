@@ -7,7 +7,7 @@ sur le modèle de `test_quatre_missions_js.py`. f13, la troisième, a son juge a
   la porte pas. `remet` met la chemise au sac.
 - f12, _Le Faubourg te dit merci_ : cinq poignées de main, dehors, `sans_etoile` sur chacune."""
 
-from test_dix_missions_deux_js import OUTILS, PLUS_LONGUES
+from outils_missions import OUTILS, PLUS_LONGUES
 
 DEDANS = """
   function dedans(L, o, lieu) {

@@ -11,18 +11,13 @@ n'est remis à zéro à la main.
 à quelqu'un qui est déjà là, semer UNE étoile. Le juge le mesure (une étoile, tombée en moins de 40 s).
 """
 
-OUTILS = """
-  function passer(L, o) {
-    let n = 0;
-    while ((L.B.scene || L.B.cinema) && n < 6000) { o.frame(1); if (L.B.cinema && n % 30 === 0) L.Histoire.suivante(); n++; }
-  }
+from outils_missions import outils
+
+OUTILS = outils("passer", "etape", "fermer", "faites") + """
   function boite(L) {
     const c = L.B.cinema;
     return c ? { partie: c.partie, qui: c.lignes[0].qui, slug: c.lignes[0].slug } : null;
   }
-  function etape(L) { return L.B.partie.mission ? L.B.partie.mission.etape : null; }
-  function fermer(L) { let g = 0; while (L.B.cinema && g < 100) { L.Histoire.suivante(); g++; } }
-  function faites(L, slugs) { slugs.forEach(function (s) { L.B.partie.missionsFaites[s] = 1; }); }
   function paiements(L) {
     const liste = [], vrai = L.Missions.encaisser;
     L.Missions.encaisser = function (montant, raison) { liste.push(montant); return vrai.apply(null, arguments); };

@@ -12,15 +12,11 @@ piratage au clavier (le pilote de `test_piratage_js.py`), l'entrée et la sortie
 le bord.
 """
 
-OUTILS = """
+from outils_missions import outils
+
+OUTILS = outils("fermer", "passer", "etape") + """
   const TT = 16;
   async function laisserArriver(L, o) { for (let i = 0; i < 6; i++) { o.frame(1); await o.attendre(); } }
-  function fermer(L) { let g = 0; while (L.B.cinema && g < 100) { L.Histoire.suivante(); g++; } }
-  function passer(L, o) {
-    let n = 0;
-    while ((L.B.scene || L.B.cinema) && n < 6000) { o.frame(1); if (L.B.cinema && n % 30 === 0) L.Histoire.suivante(); n++; }
-  }
-  function etape(L) { return L.B.partie.mission ? L.B.partie.mission.etape : null; }
   function nuit(L) { L.B.partie.heure = 23 / 24; }
   function commencer(L, o, slug) { L.Histoire.commencer(slug); L.B.cinema = null; L.B.scene = null; o.frame(2); fermer(L); }
 
