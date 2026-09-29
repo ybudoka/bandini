@@ -1001,7 +1001,15 @@ def test_endroits_cles_ranges_comme_la_legende(banc):
 
 def test_chaque_endroit_cle_se_rejoint_et_sa_porte_s_ouvre(banc):
     """Pour chaque endroit qu'on voit : pose a pied devant sa porte, dehors, le
-    menu referme — et ACTION ouvre SA porte (on entre dans ce lieu-la)."""
+    menu referme — et ACTION ouvre SA porte (on entre dans ce lieu-la).
+
+    ⚠️ Un lot clôturé (le Salon Prestige) : son point est devant le PORTAIL, du côté de la
+    rue — devant la porte, on est déjà dans l'enclos (docs/jalons/les-concessionnaires-le-neuf-
+    aux-erables-l-usage-dans-les-friches.md, « Le lot devant, clôturé » ; `test_barrieres`).
+    Martin, 29 sept. 2026 : « laisser comme ça » — le menu pose devant le portail, pas devant
+    la porte, et ACTION n'y ouvre rien. Le juge exige alors le portail du lot au-dessus du
+    point, et que la porte du lot, dans l'axe au nord, mène à CE lieu (comme
+    `test_moteur_js::test_le_joueur_et_les_lieux_sont_sur_des_tuiles_marchables`)."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         """ + ALLER + """
@@ -1015,6 +1023,12 @@ def test_chaque_endroit_cle_se_rejoint_et_sa_porte_s_ouvre(banc):
             const s = { slug: p.slug, rendu: rendu, menu: !!L.B.menu, etat: L.B.etat, dehors: !L.B.interieur,
                         tuiles: Math.hypot(j.x - (p.x * L.TT + 8), j.y - (p.y * L.TT + 8)) / L.TT,
                         sol: !L.Monde.bloque(Math.floor(j.x / L.TT), Math.floor(j.y / L.TT), L.Monde.MASQUE_PIETON) };
+            const lot = ((ville.def && ville.def.concessionnaires) || []).filter(function (c) {
+                const pt = c.portail;
+                return pt && c.slug === p.slug && pt.y === p.y - 1 && p.x >= pt.x && p.x < pt.x + pt.l
+                    && c.porte.x === p.x && c.porte.y < pt.y;
+            })[0];
+            if (lot) { const q = L.Monde.porteA(lot.porte.x, lot.porte.y); s.porteDuLot = q ? q.interieur : null; }
             o.tape('KeyE', 2);
             L.Jeu.finirTransition();
             s.entre = L.B.interieur ? L.B.interieur.slug : null;
@@ -1030,8 +1044,12 @@ def test_chaque_endroit_cle_se_rejoint_et_sa_porte_s_ouvre(banc):
         assert s["menu"] is False and s["etat"] == "jeu", s
         assert s["dehors"] is True and s["sol"] is True, s
         assert s["tuiles"] <= 1.5, s
-        if s["slug"] in r["lieux"]:
+        if "porteDuLot" in s:
+            assert s["porteDuLot"] is not None and s["porteDuLot"] == r["lieux"].get(s["slug"]), \
+                f"{s['slug']} : la porte du lot, dans l'axe du portail — {s}"
+        elif s["slug"] in r["lieux"]:
             assert s["entre"] == r["lieux"][s["slug"]], s
+    assert any("porteDuLot" in s for s in r["sorties"]), "temoin : le Salon clôturé est au menu"
 
 
 @pytest.fixture(scope="module")
