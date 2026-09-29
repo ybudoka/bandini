@@ -123,6 +123,27 @@ const Territoires = (function () {
     if (!p || !d) return;
     e.compteGang = true;
     p.forcesDesGangs[e.gang] = Math.max(0, force(e.gang) - d.regles.coup);
+    reprendre(e, p, d);
+  }
+
+  /** REPRENDRE UN COIN (vague 2) : dans un ilot qu'un gang a PRIS, coucher `regles.reprise` de ses membres le meme
+      jour le rend au gang de son district. Le compte est par ilot et par jour (`partie.reprises`) : il ne
+      s'accumule pas d'une semaine a l'autre. */
+  function reprendre(e, p, d) {
+    const i = ilotA(Math.floor(e.x / TT), Math.floor(e.y / TT));
+    if (!i || p.territoires[i.k] !== e.gang) return;
+    p.reprises = p.reprises || {};
+    const avant = p.reprises[i.k];
+    const r = avant && avant.jour === p.jour ? avant : { jour: p.jour, n: 0 };
+    r.n++;
+    if (r.n < d.regles.reprise) {
+      p.reprises[i.k] = r;
+      Hud.message('COIN DISPUTÉ · ' + r.n + ' / ' + d.regles.reprise, 90);
+      return;
+    }
+    delete p.territoires[i.k];
+    delete p.reprises[i.k];
+    Hud.message('LE COIN EST REPRIS · ' + nomDe(i.gang).toUpperCase() + ' SONT CHEZ EUX', 180);
   }
 
   /** Les ilots voisins (les quatre cotes) d'un ilot. */
@@ -184,6 +205,26 @@ const Territoires = (function () {
     return (a && a.couleurs && a.couleurs.c) || '#c0392b';
   }
 
+  /** La legende des territoires, sur la grande carte : qui tient les ilots pris (une puce de sa couleur, son nom),
+      dans la marge de gauche. Rien tant que rien n'est pris. */
+  function dessinerLaLegende(ctx, x, y) {
+    const p = B.partie;
+    if (!p || !p.territoires) return;
+    const gangs = [];
+    Object.keys(p.territoires).sort().forEach(function (k) {
+      if (gangs.indexOf(p.territoires[k]) < 0) gangs.push(p.territoires[k]);
+    });
+    if (!gangs.length) return;
+    Atlas.texte(ctx, 'COINS PRIS', x, y, '#e88a98', 1);
+    gangs.forEach(function (g, n) {
+      const yy = y + 10 + n * 9;
+      ctx.fillStyle = '#101018'; ctx.fillRect(x, yy - 1, 7, 7);
+      ctx.fillStyle = couleurDe(g); ctx.fillRect(x + 1, yy, 5, 5);
+      Atlas.texte(ctx, nomDe(g).toUpperCase(), x + 10, yy, '#e8e2f4', 1);
+    });
+    B.stats.rects += 2 * gangs.length;
+  }
+
   /** Sur la grande carte : les ilots PRIS, aux couleurs de qui les tient. `pos(x, y)` : pixel de ville -> carte. */
   function dessinerSurLaCarte(ctx, pos) {
     const p = B.partie, d = donnees();
@@ -202,5 +243,6 @@ const Territoires = (function () {
     });
   }
 
-  return { donnees, ilotA, tenuPar, force, horsJeu, gangA, couche, nuit, ligneDuClairon, couleurDe, dessinerSurLaCarte };
+  return { donnees, ilotA, tenuPar, force, horsJeu, gangA, couche, nuit, ligneDuClairon, couleurDe, nomDe,
+           dessinerSurLaCarte, dessinerLaLegende };
 })();

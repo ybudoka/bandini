@@ -65,3 +65,19 @@ piétons ; une zone `libere` ne bouge plus ; tout survit à une sauvegarde.
 - **Reste, vague 2** : reprendre un coin (une mission ou une activité qui rend l'îlot), les graffitis qui suivent
   la frontière, une légende des territoires sur la carte, et le Petit-Canton quand les Mantes y seront.
 
+### Vague 2 — reprendre un coin, le nom sous la mini-carte, la légende — **livrée le 29 sept. 2026**
+
+- **Reprendre un coin** (`Territoires.couche` → `reprendre`) : dans un îlot qu'un gang a PRIS, coucher quatre de
+  SES membres le même jour (`regles.reprise`) le rend au gang de son district. Le jeu compte à voix haute
+  (« COIN DISPUTÉ · 3 / 4 », puis « LE COIN EST REPRIS · LES CRAVATES SONT CHEZ EUX »). Le compte est par îlot et
+  par jour (`partie.reprises`) : trois un jour et un le lendemain ne suffisent pas ; un membre couché hors de
+  l'îlot, ou d'un autre gang que l'occupant, ne compte pas. Sans script, sans voix : une activité, pas une
+  mission.
+- **Le nom sous la mini-carte** (`Hud.nomIci`) : dans un îlot pris, le nom du gang qui le tient, en rose — comme
+  dans une cour.
+- **La légende de la grande carte** (`Territoires.dessinerLaLegende`) : « COINS PRIS », une puce de la couleur de
+  chaque gang qui en tient, dans la marge de gauche ; rien tant que rien n'est pris.
+- **Juges** : deux de plus dans `test_territoires_js.py` (la reprise et ses trois témoins ; le nom et la légende).
+  Une mutation rouge (la reprise qui compterait n'importe quel gang) — après avoir ajouté le témoin qui manquait.
+- **Reste** : les graffitis qui suivent la frontière (ils sont cuits dans les morceaux de carte : les recuire), et
+  les Mantes du Petit-Canton dans le jeu des territoires (la bande nord a sa propre trame).

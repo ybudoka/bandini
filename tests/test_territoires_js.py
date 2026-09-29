@@ -103,3 +103,83 @@ def test_l_ilot_pris_se_peuple_de_son_nouveau_gang_et_survit_a_la_sauvegarde(ban
     }""")
     assert r["vus"] > 0, f"aucun membre des {r['gang']} dans l'îlot qu'ils ont pris"
     assert r["relu"] == r["gang"] and r["force"] is not None, r
+
+
+# --- Vague 2 : reprendre un coin, le nom sous la mini-carte, la légende --------------------------------------
+
+PRENDRE = """
+    function prendre(L) {
+        const T = L.Territoires, p = L.B.partie;
+        p.forcesDesGangs.cravates = 0; p.jour = 3;
+        const q = T.nuit()[0], i = T.donnees().ilots[q.k];
+        const d = T.donnees();
+        return { q: q, i: i, x: (d.x[i.bx] + 4) * 16 + 8, y: (d.y[i.by] + d.y0 + 4) * 16 + 8 };
+    }
+    function coucher(L, gang, x, y) {
+        const g = L.B.defs.pietons.gangs.find(function (q) { return q.slug === gang; });
+        const m = L.Entites.creerPieton(x, y, L.Entites.archetype(g.pieton));
+        L.Entites.blesser(m, 999, L.B.joueur, { assomme: true });
+    }
+"""
+
+
+def test_quatre_membres_couches_le_meme_jour_reprennent_le_coin(banc):
+    """Dans l'îlot qu'un gang a pris : trois de ses membres couchés, le coin est encore à lui ; le quatrième, et il
+    revient au gang de son district. ⚠️ Les témoins : trois un jour et un le lendemain ne suffisent pas ; un
+    membre couché hors de l'îlot ne compte pas, ni un d'un autre gang que l'occupant."""
+    r = banc("function (L, o) {" + PRENDRE + """
+        L.Jeu.commencer();
+        const T = L.Territoires, p = L.B.partie;
+        const a = prendre(L), out = {};
+        // Le lendemain remet le compte à zéro.
+        for (let n = 0; n < 3; n++) coucher(L, a.q.gang, a.x, a.y);
+        p.jour++;
+        coucher(L, a.q.gang, a.x, a.y);
+        out.lendemain = p.territoires[a.q.k] || null;
+        // Hors de l'îlot : rien.
+        coucher(L, a.q.gang, 20 * 16, (L.B.defs.decalage_nord + 20) * 16);
+        out.dehors = p.territoires[a.q.k] || null;
+        // D'un autre gang que l'occupant : rien, même quatre.
+        p.jour++;
+        const autre = a.q.gang === 'cravates' ? 'morues' : 'cravates';
+        for (let n = 0; n < 4; n++) coucher(L, autre, a.x, a.y);
+        out.autre = p.territoires[a.q.k] || null;
+        // Le même jour : trois, puis le quatrième.
+        p.jour++;
+        for (let n = 0; n < 3; n++) coucher(L, a.q.gang, a.x, a.y);
+        out.trois = p.territoires[a.q.k] || null;
+        out.message3 = L.B.msg;
+        coucher(L, a.q.gang, a.x, a.y);
+        out.quatre = p.territoires[a.q.k] || null;
+        out.message4 = L.B.msg;
+        out.gang = a.q.gang;
+        return out;
+    }""")
+    g = r["gang"]
+    assert r["lendemain"] == g and r["dehors"] == g and r["autre"] == g and r["trois"] == g, r
+    assert "COIN DISPUTÉ" in (r["message3"] or ""), r
+    assert r["quatre"] is None, "quatre membres couchés et le coin n'est pas repris"
+    assert "LE COIN EST REPRIS" in (r["message4"] or ""), r
+
+
+def test_le_nom_sous_la_mini_carte_et_la_legende_disent_qui_tient_le_coin(banc):
+    r = banc("function (L, o) {" + PRENDRE + """
+        L.Jeu.commencer();
+        const T = L.Territoires, p = L.B.partie, j = L.B.joueur;
+        const a = prendre(L);
+        j.x = a.x; j.y = a.y;
+        const ici = L.Hud.nomIci(j);
+        const c = o.doc.createElement('canvas').getContext('2d');
+        c.traces = [];
+        T.dessinerLaLegende(c, 8, 30);
+        const couleur = T.couleurDe(a.q.gang);
+        const puce = c.traces.some(function (t) { return t[4] === couleur; });
+        p.territoires = {};
+        const vide = o.doc.createElement('canvas').getContext('2d');
+        vide.traces = [];
+        T.dessinerLaLegende(vide, 8, 30);
+        return { ici: ici, nom: T.nomDe(a.q.gang), puce: puce, videRien: vide.traces.length === 0, apres: L.Hud.nomIci(j) };
+    }""")
+    assert r["ici"] == {"nom": r["nom"], "gang": r["ici"]["gang"]} and r["ici"]["gang"], r
+    assert r["puce"] and r["videRien"], r
+    assert r["apres"]["gang"] is None, "un coin rendu se dit encore comme un territoire de gang"

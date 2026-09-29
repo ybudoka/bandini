@@ -3554,6 +3554,7 @@ const Hud = (function () {
     texte(ctx, titre, (VW - Atlas.largeurTexte(titre, 1)) / 2, 6, '#e8b33c', 1);
     dessinerLegende(ctx, carte);
     dessinerLegendeDuZonage(ctx, zonage);
+    Territoires.dessinerLaLegende(ctx, 8, yHaut + 8);   // qui tient les coins pris
     // ⚠️ ARME tourne le filtre des défis (`tournerFiltreDeCarte`) : on le dit ici, en bas, avec
     // le reste de ce qu'on peut faire — en haut, la rangée du zonage prend toute la largeur.
     const aide = (gps ? gps.nom.toUpperCase() + ' · ' : '') + 'ARME : DÉFIS · N : FERMER';
@@ -3799,10 +3800,11 @@ const Hud = (function () {
       // Le quartier ou l'on se trouve, sous la mini-carte.
       const zone = j && !B.interieur ? Monde.zoneA(j.x, j.y) : null;
       if (!B.interieur) noter('minicarte', MINI.x - 1, MINI.y - 1, MINI.l + 2, MINI.h + 2);
-      if (zone) {
+      const ici = zone ? nomIci(j, zone) : null;
+      if (ici) {
         // Une ombre portee d'un pixel : sans elle, le nom disparait sur le
         // trottoir en plein jour — teste a l'oeil, pas en theorie.
-        texte(ctx, zone.nom, MINI.x, MINI.y + MINI.h + 4, zone.gang ? '#e88a98' : '#e8e2f4', 1);
+        texte(ctx, ici.nom, MINI.x, MINI.y + MINI.h + 4, ici.gang ? '#e88a98' : '#e8e2f4', 1);
       }
       // Arme en bas a droite.
       const arme = Combat.armeCourante();
@@ -3927,7 +3929,18 @@ const Hud = (function () {
     }
   }
 
-  return { init, voile, etat, progression, partDesScripts, finirChargement, message, prime, majPrime, montantDeLaPrime, PRIME, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, toutesLesTechniques, glyphesDOnglets, menuSautMissions, menuSautDefis, menuChezUnDonneur, menuEndroitsCles, menuJukebox, pointDuDefi, menuCarnet,
+
+  /** Le nom sous la mini-carte : la zone ou l'on est (la cour d'un gang : son nom, en rose) — et un ilot PRIS par
+      un gang (`Territoires`) se dit comme une cour. `{ nom, gang }`. */
+  function nomIci(j, zone) {
+    const z = zone || (j ? Monde.zoneA(j.x, j.y) : null);
+    if (!z) return null;
+    const pris = !z.gang && j && Territoires.gangA(j.x, j.y);
+    return pris ? { nom: Territoires.nomDe(pris), gang: pris } : { nom: z.nom, gang: z.gang || null };
+  }
+
+  return {
+    nomIci, init, voile, etat, progression, partDesScripts, finirChargement, message, prime, majPrime, montantDeLaPrime, PRIME, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, toutesLesTechniques, glyphesDOnglets, menuSautMissions, menuSautDefis, menuChezUnDonneur, menuEndroitsCles, menuJukebox, pointDuDefi, menuCarnet,
     ouvrirOnglet, toucherMenu, onglets: function () { return ongletsVisibles().map(function (o) { return o.slug; }); },
     ciblesDuMenu: function () { return cibles.slice(); }, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     menuCommandes, ouvrirCommandes, majAideDuTitre, lignesDAide, glypheDAction, dessinerGlyphe, largeurGlyphe,

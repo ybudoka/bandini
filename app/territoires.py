@@ -19,8 +19,9 @@ from . import carte
 
 #: Les règles. `force` : la force d'un gang au départ et au plus haut ; `coup` : ce qu'un membre couché par le
 #: joueur lui coûte ; `regain` : ce qu'il reprend par jour ; `marge` : de combien un gang doit dépasser son voisin
-#: pour lui prendre un îlot (à égalité, rien ne bouge).
-REGLES = {"force": 100, "coup": 4, "regain": 8, "marge": 15}
+#: pour lui prendre un îlot (à égalité, rien ne bouge) ; `reprise` : combien de ses membres coucher dans un îlot
+#: qu'il a PRIS, le même jour, pour le rendre au gang de son district (vague 2).
+REGLES = {"force": 100, "coup": 4, "regain": 8, "marge": 15, "reprise": 4}
 
 #: Les îlots qu'on ne prend pas : l'eau.
 PAS_UN_ILOT = frozenset("~")

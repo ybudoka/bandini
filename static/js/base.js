@@ -218,6 +218,8 @@ function etatInitial(defs) {
     //: (« bx,by » -> le gang qui le tient ; absent = celui de son district).
     forcesDesGangs: {},
     territoires: {},
+    //: Les coins qu'on reprend (« bx,by » -> { jour, n }) : les membres du gang occupant couches ce jour-la.
+    reprises: {},
     //: Les gangs CALMES (`donne.calme` de M16) : un tableau de slugs. Une fois
     //: calme, un gang oublie `hostile_toujours` et `hostile_si_arme` — la seule
     //: facon de marcher dans La Shop (`s05`).
@@ -760,7 +762,7 @@ const Sauvegarde = (function () {
     const base = etatInitial(defs);
     if (!partie || typeof partie !== 'object') return base;
     const out = Object.assign({}, base, partie);
-    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'defisOuverts', 'paquets', 'frenesies', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance', 'contrebande', 'contacts', 'triches', 'techniques', 'coursPayes', 'forcesDesGangs', 'territoires']) {
+    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'defisOuverts', 'paquets', 'frenesies', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance', 'contrebande', 'contacts', 'triches', 'techniques', 'coursPayes', 'forcesDesGangs', 'territoires', 'reprises']) {
       out[k] = Object.assign({}, base[k], (partie[k] && typeof partie[k] === 'object') ? partie[k] : {});
     }
     if (!Array.isArray(out.tenues) || out.tenues.indexOf('chandail') < 0) out.tenues = ['chandail'].concat(Array.isArray(out.tenues) ? out.tenues : []);
