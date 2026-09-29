@@ -6,7 +6,7 @@ tirage la nuit (`nuitDuLoto`) et le publie sous la manchette du matin.
 
 ⚠️ **LES CHANCES SONT LES VRAIES**, donc minuscules : trois bons numéros une fois sur 57, quatre une fois
 sur mille, six une fois sur quatorze millions. Presque personne ne gagne, et c'est drôle. Un billet
-rend en moyenne moins du cinquième de ce qu'il coûte (`test_loto.py` le calcule exactement) — un jeu
+rend en moyenne moins du cinquième de ce qu'il coûte (`test_loto_js.py` le calcule exactement) — un jeu
 d'argent ne bat jamais un boulot honnête.
 
 ⚠️ **LE GROS LOT EST PLAFONNÉ** (`LOTS[6]`) : un million en poche casserait l'économie (`fortune_max`),

@@ -725,7 +725,7 @@ def poser(ville: dict) -> None:
             inter["couture"] = True
     def haut(o):
         # ⚠️ Pas de borne-fontaine au pied de la couture : ses croisements ont maintenant quatre bras, et
-        # leurs coins sont aux feux (`Moteur`, `test_moteur_js`).
+        # leurs coins sont aux feux (`Moteur`, `test_trafic_js`).
         return o["y"] < n and not (o.get("type") == "borne_fontaine" and o["y"] >= n - 2)
     for cle, source in (("portes", ch.portes), ("decor", ch.decor), ("lampes", ch.lampes),
                         ("residences", ch.residences), ("devantures", ch.devantures), ("toits", ch.toits),
