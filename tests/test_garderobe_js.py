@@ -200,7 +200,7 @@ def test_une_vieille_sauvegarde_qui_portait_la_casquette_comme_linge(banc):
 
 def test_le_cavalier_se_dessine_habille_et_les_agents_portent_le_kepi(banc):
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21;  // ⚠️ EN JUILLET : l'hiver, motos et vélos sont remisés (test_motos_velos_remises_js.py)
         const B = L.B, j = B.joueur, V = L.Vehicules;
         const d = o.ligneDroite();
         j.x = d.x; j.y = d.y;

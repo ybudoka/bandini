@@ -823,9 +823,13 @@ const Histoire = (function () {
   function lignesDe(m, partie, filtre) {
     const toujours = partie === 'appel' || partie === 'echec';
     const auto = partie === 'intro' || partie === 'fin' || partie === 'pendant';
+    // ⚠️ L'HIVER, la variante d'hiver (`hiver`, `_l(..., hiver=...)`) : l'hiver la moto est remisee
+    // et le fuyard file en motoneige — la replique le dit, avec SA voix (le slug suivi de `-hiver`).
+    const hiver = typeof Saisons !== 'undefined' && Saisons.enHiver();
     return ((m && m.dialogue && m.dialogue[partie]) || []).map(function (l, i) {
-      return { qui: l.qui, texte: l.texte, telephone: toujours, auto: auto, objectif: l.objectif,
-               slug: slugDeVoix(m, partie, i), humeur: l.humeur };
+      const h = hiver && l.hiver;
+      return { qui: l.qui, texte: h ? l.hiver : l.texte, telephone: toujours, auto: auto, objectif: l.objectif,
+               slug: slugDeVoix(m, partie, i) + (h ? '-hiver' : ''), humeur: l.humeur };
     }).filter(function (l) { return !filtre || filtre(l); });
   }
 
@@ -853,6 +857,12 @@ const Histoire = (function () {
 
   /** Le slug de voix d'une replique : `<qui>-<mission>-<n>`, n compte a travers
       appel, intro, client, fin, echec, pendant, renvoi, accueil — exactement comme `missions.repliques()`. */
+  /** Le texte d'un objectif EN CE MOMENT : l'hiver, sa variante (`hiver`, « RATTRAPE LE FUYARD EN
+      MOTONEIGE ») — la meme saison que les repliques (`lignesDe`) et que le char (`charDeSaison`). */
+  function texteDObjectif(o) {
+    return o && o.hiver && typeof Saisons !== 'undefined' && Saisons.enHiver() ? o.hiver : (o && o.texte);
+  }
+
   function slugDeVoix(m, partie, i) {
     // ⚠️ `pendant` APRES `echec`, puis `renvoi`, comme `missions.PARTIES` : inseree plus tot,
     // elle renommerait des voix deja generees.
@@ -1367,7 +1377,7 @@ const Histoire = (function () {
     if (!B.partie.mission || B.partie.mission.slug !== m.slug) return;
     Hud.message(m.titre.toUpperCase(), 180);
     Son.SFX.mission();
-    if (o) Hud.message(o.texte, 200);
+    if (o) Hud.message(texteDObjectif(o), 200);
     // ⚠️ La réplique PENDANT du premier objectif : `avancer(true)` ne l'arme pas (il
     // se tait sous l'intro) — elle attendait ici, et ne se disait jamais (m6, m54, e02…).
     if (o && B.mission && (m.dialogue.pendant || []).some(function (l) { return l.objectif === B.partie.mission.etape; })) {
@@ -1408,7 +1418,7 @@ const Histoire = (function () {
     // Un `acheter` dont l'article est DÉJÀ en poche au départ : l'étape le dira (`majObjectif`).
     if (o.type === 'acheter' && B.mission && (B.partie.objets[o.article] || B.partie.armes[o.article])) B.mission.acheterDeja = p.etape;
     poser(enSilence);
-    if (!enSilence) Hud.message(o.texte, 200);
+    if (!enSilence) Hud.message(texteDObjectif(o), 200);
     // La replique PENDANT de cet objectif, des qu'aucune autre ne parle (`maj`).
     if (!enSilence && (m.dialogue.pendant || []).some(function (l) { return l.objectif === p.etape; })) B.mission.pendant = p.etape;
   }
@@ -1567,7 +1577,10 @@ const Histoire = (function () {
       v = dejaAmarre;
       v.mission = m.slug; v.aQui = o.prete || null;
     } else {
-      v = Vehicules.creer(o.vehicule, place.x, place.y, angle, { etat: 'stationne', mission: m.slug, aQui: o.prete || null });
+      // ⚠️ L'HIVER, la moto qui attend (q10, au pont) est une motoneige (`charDeSaison`). Sous la
+      // pluie, non : une moto GAREE attend la fin de l'averse, c'est le trafic qui rentre.
+      const slug = typeof Vehicules !== 'undefined' && Vehicules.remise(o.vehicule) === 'hiver' ? charDeSaison(o.vehicule) : o.vehicule;
+      v = Vehicules.creer(slug, place.x, place.y, angle, { etat: 'stationne', mission: m.slug, aQui: o.prete || null });
       if (!v) return null;
       // ⚠️ LE MOUILLAGE OU L'AMARRAGE EST PRIS : sans `amarrage`, le decor
       // (`Vehicules.majMouillages`/`majAmarrages`) ferait naitre un second
@@ -1761,6 +1774,16 @@ const Histoire = (function () {
     else Entites.alerter(centre.x, centre.y, B.joueur, 1);     // ils t'ont vu venir
   }
 
+  /** LE CHAR D'UNE MISSION, A LA SAISON (Martin, 29 sept. 2026) : un deux-roues remise
+      (`Vehicules.remise`) ne sort pas — l'hiver, la moto devient une MOTONEIGE (le fuyard file dans
+      la neige, la moto de Sven attend au pont) ; sous la pluie, une berline. Le reste de l'annee, et
+      tout ce qui n'est pas remise, reste ce que la mission demande. */
+  function charDeSaison(slug) {
+    const pourquoi = typeof Vehicules !== 'undefined' ? Vehicules.remise(slug) : null;
+    if (pourquoi === 'hiver') return slug === 'moto' ? 'motoneige' : 'auto';
+    return pourquoi === 'pluie' ? 'auto' : slug;
+  }
+
   function poserLeFuyard(m, o) {
     // ⚠️ Le fuyard naît dans la ville, près de la porte quand on est dedans (m50 : Lulu le
     // voit filer depuis la cantine), et pas dans le char qu'on a garé devant elle.
@@ -1768,12 +1791,13 @@ const Histoire = (function () {
     const rue = tuileDeRue(ici.x, ici.y, 10, sansChar) || tuileDeRue(ici.x, ici.y, 10);
     if (!rue) return;
     const angle = { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 }[rue.sens];
-    const v = Vehicules.creer(o.vehicule || 'moto', rue.x, rue.y, angle, { conducteur: 'trafic', etat: 'roule', poursuite: true, fuite: true, sens: rue.sens, mission: m.slug, fuyard: true });
+    const slug = charDeSaison(o.vehicule || 'moto');
+    const v = Vehicules.creer(slug, rue.x, rue.y, angle, { conducteur: 'trafic', etat: 'roule', poursuite: true, fuite: true, sens: rue.sens, mission: m.slug, fuyard: true });
     if (!v) return;
     v.vitesse = 1.5;
     B.mission.vehicule = v; B.mission.fuyard = v; B.mission.entites.push(v);
     // ⚠️ En moto OU en char : « EN MOTO » s'affichait aussi quand l'auto de m5 ou le taxi de m97 filaient.
-    Hud.message((o.vehicule || 'moto') === 'moto' ? 'LE FUYARD FILE EN MOTO !' : 'LE FUYARD FILE EN CHAR !', 150);
+    Hud.message(slug === 'moto' ? 'LE FUYARD FILE EN MOTO !' : slug === 'motoneige' ? 'LE FUYARD FILE EN MOTONEIGE !' : 'LE FUYARD FILE EN CHAR !', 150);
   }
 
   /** Aucun char dans la voie, sur `n` tuiles devant cette place (ou jusqu'au
@@ -2798,6 +2822,13 @@ const Histoire = (function () {
       Hud.message('ÇA SE JOUE L\'HIVER, DANS LA NEIGE', 150); Son.SFX.erreur();
       return;
     }
+    // ⚠️ ET L'INVERSE : un defi a moto (Le Grand Saut) ne se joue pas l'hiver — la moto est remisee
+    // (`Vehicules.remise`, docs/jalons/pas-de-moto-ni-de-velo-l-hiver-pas-de-moto-sous-la-pluie.md).
+    if (d.vehicule && Vehicules.remise(d.vehicule) === 'hiver') {
+      B.defi = null;
+      Hud.message('LA MOTO EST REMISÉE — REVIENS AU PRINTEMPS', 150); Son.SFX.erreur();
+      return;
+    }
     if (d.rue) {
       if (!Rue.commencer(d)) { B.defi = null; Hud.message('PAS DE PLACE ICI POUR CE DÉFI', 150); Son.SFX.erreur(); return; }
       partir(d, null);
@@ -3209,7 +3240,7 @@ const Histoire = (function () {
         || B.entites.find(function (e) { return e.porteObjet === o.objet && e.vivant; })
         || (nomme ? lieu(nomme) : null);
     }
-    return l ? { x: l.x, y: l.y, nom: l.nom || o.texte, couleur: '#e8b33c' } : null;
+    return l ? { x: l.x, y: l.y, nom: l.nom || texteDObjectif(o), couleur: '#e8b33c' } : null;
   }
 
   /** La cible du moment : un objectif, un appel a honorer, un defi en cours. */
@@ -3271,7 +3302,7 @@ const Histoire = (function () {
       else if (o.type === 'pirater') { const t = resoudre(o.ou, m); l = t && t.mouillage ? t.mouillage.poste : t; }
       // ⚠️ Un lieu de BLOC (la villa) n'a pas de pixel en ville : on vise son passage.
       if (!l) { const bloc = blocDuLieu(o.lieu || o.ou || ''); if (bloc) l = passageDuBloc(bloc); }
-      return l ? { x: l.x, y: l.y, nom: (l.nom || o.texte), couleur: '#e8b33c' } : null;
+      return l ? { x: l.x, y: l.y, nom: (l.nom || texteDObjectif(o)), couleur: '#e8b33c' } : null;
     }
     // Un appel recu : le donneur a aller voir.
     const attendue = disponibles().find(function (q) { return p.appels[q.slug]; }) || disponibles().find(function (q) { return !q.prerequis.length; });
@@ -3342,7 +3373,7 @@ const Histoire = (function () {
       const reste = Math.max(0, o.chrono_s * 60 - (B.t - B.partie.mission.debutT));
       compte += ' ' + Math.floor(reste / 3600) + ':' + ('0' + Math.floor(reste % 3600 / 60)).slice(-2);
     }
-    return o.texte + compte;
+    return texteDObjectif(o) + compte;
   }
 
   // --- La boucle -------------------------------------------------------------------------------
@@ -3407,7 +3438,7 @@ const Histoire = (function () {
     majDeblocages(false);
   }
 
-  return { disponibles, disponibleDe, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
+  return { texteDObjectif, disponibles, disponibleDe, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
            donneur, creerDonneurs, poserDonneur, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
            parler, dire, suivante, finir, commencer, demarrer, avancer, objectif, courante, reussir, echouer, evenement,
            ouverture, passerOuverture, fichiersDeLOuverture, direLignes, majCinema, resoudre,

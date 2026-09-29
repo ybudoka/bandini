@@ -1061,6 +1061,11 @@ def repliques() -> list[dict]:
                                # Ce qu'ElevenLabs DIT (`interpretation.JEU` le rassemble) : None si la
                                # réplique n'a pas encore son jeu, et un juge le refuse.
                                "jeu": ligne.get("jeu")})
+                # ⚠️ Sa variante d'HIVER, juste derrière, sous le même slug suivi de `-hiver` : `n` ne
+                # bouge pas, et aucune voix déjà payée ne change de nom.
+                if ligne.get("hiver"):
+                    sortie.append({**sortie[-1], "slug": sortie[-1]["slug"] + "-hiver",
+                                   "texte": ligne["hiver"]["texte"], "jeu": ligne["hiver"].get("jeu")})
     return sortie
 
 
@@ -1110,6 +1115,9 @@ def _sans_le_jeu(dialogue: dict) -> dict:
             h = visages.humeur(ligne.pop("jeu", None))
             if h != "neutre":
                 ligne["humeur"] = h
+            # La variante d'hiver voyage sans son jeu, elle aussi : son TEXTE seulement.
+            if ligne.get("hiver"):
+                ligne["hiver"] = ligne["hiver"]["texte"]
     return dialogue
 
 

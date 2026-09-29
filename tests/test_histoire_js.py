@@ -283,7 +283,7 @@ def test_le_dialogue_de_l_appel_attend_la_fin_de_la_sonnerie(l_appel_de_madame_t
 
 def test_les_cravates_de_madame_thibodeau_et_le_fuyard(banc):
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21;  // ⚠️ EN JUILLET : l'hiver, motos et vélos sont remisés (test_motos_velos_remises_js.py)
         L.graine(6);
         const j = L.B.joueur;
         L.B.partie.missionsFaites.m1 = 1;

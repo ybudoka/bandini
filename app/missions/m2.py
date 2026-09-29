@@ -23,7 +23,7 @@ MISSION = {
         # a 15 tuiles (juste hors de l'ecran), et courent sur le joueur.
         {"type": "tuer", "groupe": "cravates", "n": 2, "ou": "donneur", "arme": "", "vie": 55, "loin": 15,
          "texte": "METS LES DEUX CRAVATES K.-O."},
-        {"type": "ramasser", "cible": "fuyard", "vehicule": "moto", "texte": "RATTRAPE LE FUYARD EN MOTO"},
+        {"type": "ramasser", "cible": "fuyard", "vehicule": "moto", "texte": "RATTRAPE LE FUYARD EN MOTO", "hiver": "RATTRAPE LE FUYARD EN MOTONEIGE"},
         # ⚠️ « Des missions plus longues » (Martin, 22 sept. 2026) : trois étapes de plus.
         # Le fuyard a sifflé ses chums — deux de plus, aux poings eux aussi, qui ARRIVENT où
         # l'on est (`loin`) : la même bagarre que la première, sans rien de neuf à apprendre.
@@ -65,7 +65,9 @@ MISSION = {
             _l("thibodeau", "Ils rôdent encore au coin. Fais-leur comprendre. Avec tes poings, pas plus.",
                jeu="[quietly] Ils rôdent encore au coin. Fais-leur comprendre… avec tes poings, pas plus."),
             _l("thibodeau", "Le troisième s'est sauvé en moto avec mon argent. Rattrape-le.",
-               jeu="[angry] Le troisième s'est sauvé en moto avec mon argent. Rattrape-le."),
+               jeu="[angry] Le troisième s'est sauvé en moto avec mon argent. Rattrape-le.",
+               hiver=("Le troisième s'est sauvé en motoneige avec mon argent. Rattrape-le.",
+                      "[angry] Le troisième s'est sauvé en motoneige avec mon argent. Rattrape-le.")),
             _l("thibodeau", "Fais attention à toi, veux-tu? Ces grands escogriffes-là ont toujours des amis.",
                jeu="[concerned] Fais attention à toi, veux-tu? [bitterly] Ces grands escogriffes-là ont toujours des amis."),
         ],

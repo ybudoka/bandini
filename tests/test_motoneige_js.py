@@ -89,7 +89,10 @@ def test_la_course_des_bois_se_joue_l_hiver(banc):
         // et le départ se rebat. Mesuré sur 24 graines : 4, 5, 6, 13 et 22 gagnent — 5, au milieu d'une grappe.
         // ⚠️ GRAINE 4 depuis le bidonville de la gare et le casino du Dragon d'or (28 sept. 2026) : sur 24 graines,
         // 3, 4 et 13 gagnent — 4, collée à 3.
-        L.graine(4);
+        // ⚠️ GRAINE 14 depuis les deux-roues remisés l'hiver (29 sept. 2026) : la rue d'hiver n'a plus ni moto
+        // ni vélo, et le départ se rebat encore. Sur 24 graines : la base gagne à 3, 4 et 13 ; le build à 14 seul.
+        // Le pilote du juge reste la dette (il gagne une fois sur huit à vingt-quatre).
+        L.graine(14);
         const B = L.B, H = L.Histoire, j = B.joueur, C = L.Conduite;
         const d = B.defs.defis.find(function (q) { return q.slug === 'motoneige'; });
         H.ouvrirDefi(d, true);

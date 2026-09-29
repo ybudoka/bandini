@@ -335,6 +335,15 @@ Ce que ça change, et ce que ça ne change pas :
   que des balises entre crochets dans le paquet.
 - **`jeu=` est facultatif pour l'usine, pas pour le juge** : `_l("marco", "…")` s'écrit sans, mais
   `test_interpretation.py` refuse la réplique — une mission n'est pas finie avant.
+- **La variante d'HIVER** (`hiver=(texte, jeu)`, 29 sept. 2026) : ce que la réplique dit tant que la
+  neige tient — l'hiver, la moto est remisée et le fuyard file en motoneige, et la mission ne peut plus
+  dire « en moto ». `_l(...)` et `_p(...)` la prennent : les mêmes mots, et le même jeu, à la saison
+  près. Elle a **sa voix**, au slug de la réplique suivi de `-hiver` (`missions.repliques`) : aucune
+  autre voix ne change de nom, et `--refaire <slug>-hiver` la génère seule. Le navigateur choisit
+  (`Histoire.lignesDe`, `Saisons.enHiver`). Un **objectif** a la sienne aussi : `"hiver": "RATTRAPE LE
+  FUYARD EN MOTONEIGE"` à côté de `"texte"` (`Histoire.texteDObjectif`). ⚠️ Un fuyard ou un char de
+  mission en moto devient une motoneige l'hiver, une berline sous la pluie (`charDeSaison`) : une
+  réplique qui dit « moto » veut sa variante (m2, f04, p13, q10 l'ont).
 
 ---
 

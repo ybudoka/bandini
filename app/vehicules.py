@@ -41,7 +41,7 @@ n'a pas a le deviner de son slug :
 from __future__ import annotations
 
 import math
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 
 class Vehicule(TypedDict):
@@ -96,6 +96,11 @@ class Vehicule(TypedDict):
     #: TERRE — l'herbe, la friche, le sable, les allées (`Vehicules.allureDuSol`). Par classe
     #: (`HORS_ROUTE_DE_CLASSE`) : un char s'enlise, une moto moins ; le 4 roues, rien.
     hors_route: float
+    #: LA REMISE (Martin, 29 sept. 2026 : « pas de moto et velo lhiver », « pas de moto durant la
+    #: pluie non plus ») : QUAND ce char ne sort pas — `hiver` (la neige tient), `pluie` (l'averse).
+    #: Seuls la moto et le velo la portent (la cle manque aux autres : le poids du paquet).
+    #: `Vehicules.remise` la lit ; docs/jalons/pas-de-moto-ni-de-velo-l-hiver-pas-de-moto-sous-la-pluie.md.
+    remise: NotRequired[list[str]]
 
 
 #: Martin (28 sept. 2026) : « les chars ralentissent » hors route, et le 4 roues non. Un tiers de moins pour
@@ -158,8 +163,8 @@ def _v(slug, nom, classe, lon, lat, vmax, accel, rayon, vie, places, prix, freq,
        masse=1.0, cercles=3, reservoir=True, defonce=0.0, soigne=0.0, crochet=False,
        plateau=False, boulot=None,
        radio=None, phase=1, klaxon="klaxon", rare=False, adherence=None, alarme_s=0.0,
-       au_volant=None, discret=1.0, hors_neige=1.0, hors_route=None) -> Vehicule:
-    return Vehicule(
+       au_volant=None, discret=1.0, hors_neige=1.0, hors_route=None, remise=None) -> Vehicule:
+    v = Vehicule(
         slug=slug, nom=nom, classe=classe, longueur=lon, largeur=lat,
         vitesse_max=vmax, vitesse_recul=round(vmax * 0.33, 2), acceleration=accel,
         frein=round(accel * 2, 3),
@@ -177,6 +182,9 @@ def _v(slug, nom, classe, lon, lat, vmax, accel, rayon, vie, places, prix, freq,
         hors_route=(hors_route if hors_route is not None
                     else 1.0 if eau else HORS_ROUTE_DE_CLASSE.get(classe, 1.0)),
     )
+    if remise:
+        v["remise"] = list(remise)
+    return v
 
 
 #: ⚠️ L'auto est la reference (vitesse 100 %). Les prix sont ceux du garage
@@ -192,7 +200,7 @@ CATALOGUE: list[Vehicule] = [
     # plus rapide du jeu est aussi celui dont on tombe au premier choc.
     _v("moto", "Moto", "moto", 20, 8, 5.2, 0.09, 14, 40, 2, 450, 0.15,
        ["#1a1a1a", "#c0392b", "#2980b9"], "moto", ejecte=True, boulot="pizza",
-       radio="le_choc", plateau=True),
+       radio="le_choc", plateau=True, remise=("hiver", "pluie")),
     # ⚠️ Le velo est un vehicule comme un autre : il suit la rue, on peut le
     # prendre a son cycliste (qui temoigne), on en tombe au premier choc.
     # ⚠️ `reservoir=False` : un velo n'a pas d'essence, donc il ne brule pas et
@@ -200,7 +208,7 @@ CATALOGUE: list[Vehicule] = [
     # endroit ou ca se decide.
     _v("velo", "Vélo", "velo", 16, 8, 2.0, 0.05, 12, 30, 1, 120, 0.18,
        ["#2980b9", "#c0392b", "#27ae60", "#f1c40f"], "velo", ejecte=True, reservoir=False,
-       klaxon="sonnette", plateau=True),
+       klaxon="sonnette", plateau=True, remise=("hiver",)),
     _v("police", "Auto-patrouille", "auto", 28, 14, 4.4, 0.07, 20, 150, 4, 2500, 0.0,
        ["#ffffff"], "police", police=True, sirene=True, alarme=True, radio="dix_quatre",
        boulot="patrouille"),

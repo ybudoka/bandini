@@ -154,6 +154,54 @@ const Vehicules = (function () {
     return table[standing] || { rares: 1, usure: 1 };
   }
 
+  /** POURQUOI ce char est REMISE en ce moment : 'hiver' (la neige tient), 'pluie' (l'averse), ou
+      null. La fiche dit quand (`remise`, app/vehicules.py : la moto l'hiver et sous la pluie, le velo
+      l'hiver) ; le moment est une pure fonction du jour et de l'heure — aucun de. ⚠️ La pluie A
+      L'HEURE du jeu (`intensiteA`), pas `intensite()` : celle-la tombe a zero des qu'on entre quelque
+      part, et le trafic ne doit pas changer d'avis pendant qu'on est au depanneur.
+      docs/jalons/pas-de-moto-ni-de-velo-l-hiver-pas-de-moto-sous-la-pluie.md */
+  function remise(slugOuDef) {
+    const def = typeof slugOuDef === 'string' ? vehiculeDef(slugOuDef) : slugOuDef;
+    const quand = def && def.remise;
+    if (!quand || !B.partie) return null;
+    if (quand.indexOf('hiver') >= 0 && typeof Saisons !== 'undefined' && Saisons.enHiver()) return 'hiver';
+    if (quand.indexOf('pluie') >= 0 && typeof Pluie !== 'undefined' && Pluie.intensiteA(B.partie.jour, B.partie.heure) > 0) return 'pluie';
+    return null;
+  }
+
+  /** Le modele tire, s'il peut sortir ; sinon une BERLINE a sa place. ⚠️ On ne retire rien de la
+      liste de `typeDeRue` : le meme de, le meme total — seul le modele change, et seulement quand
+      le deux-roues est remise. Retirer la moto aurait fait glisser TOUT ce qui nait (la lecon des
+      tirages : on marque, on ne retire pas). */
+  /** Ce deux-roues DORT-IL SOUS SA BACHE ? L'hiver, gare et sans personne dessus : ce que le
+      balayage (`rentrerLesRemises`) a laisse est a quelqu'un — la moto du livreur a la planque, celle
+      qu'on a volee — et il attend le printemps. On n'y monte pas (`monter`). */
+  function remisee(v) {
+    return !!(v && v.def && v.def.remise && v.etat === 'stationne' && !v.conducteur && remise(v.def) === 'hiver');
+  }
+
+  function horsRemise(v) {
+    return v && remise(v) ? (vehiculeDef('auto') || v) : v;
+  }
+
+  /** ⚠️ LES DEUX-ROUES REMISES RENTRENT HORS CHAMP, comme les motoneiges au degel : l'hiver, les
+      motos et les velos du trafic ET ceux qui sont gares ; sous la pluie, les motos qui ROULENT
+      (garee, une moto attend la fin de l'averse). Jamais sous nos yeux, et jamais ce qui est a
+      quelqu'un : le char du joueur, celui qu'il a vole ou paye, celui d'une mission. */
+  function rentrerLesRemises() {
+    const j = B.joueur;
+    for (const v of B.entites.slice()) {
+      if (v.type !== 'vehicule' || !v.def || !v.def.remise || v.etat === 'epave') continue;
+      if (v.aToi || v.vole || v.aLaPlanque || v.mission || v.fuyard || v.resteGare || (j && (j.dansVehicule === v || v.conducteur === j))) continue;
+      const pourquoi = remise(v.def);
+      if (!pourquoi) continue;
+      const roule = v.conducteur === 'trafic';
+      if (!roule && (pourquoi !== 'hiver' || v.etat !== 'stationne' || v.conducteur)) continue;
+      if (Entites.visibleAEcran(v.x, v.y, 40)) continue;
+      Entites.retirer(v);
+    }
+  }
+
   function typeDeRue(zone, standing) {
     const rares = (zone && zone.rares) || [];
     // ⚠️ ET PAS DANS UNE RUE PAUVRE (4e vague des quartiers) : une decapotable
@@ -165,8 +213,8 @@ const Vehicules = (function () {
     });
     if (!types.length) return null;
     let tirage = B.rng() * types.reduce(function (s, v) { return s + v.frequence; }, 0);
-    for (const v of types) { tirage -= v.frequence; if (tirage <= 0) return v; }
-    return types[0];
+    for (const v of types) { tirage -= v.frequence; if (tirage <= 0) return horsRemise(v); }
+    return horsRemise(types[0]);
   }
 
   /** LA MINOUNE D'UNE RUE PAUVRE : la carrosserie qu'il lui reste (`usure`). Elle
@@ -396,6 +444,7 @@ const Vehicules = (function () {
     majAmarrages();
     majGaresDeService();
     majLotsDeConcession();
+    if (B.t % 60 === 0) rentrerLesRemises();
     const zone = Monde.zoneA(j.x, j.y);
     const voulu = Math.min(t.vehicules_max, zone ? zone.vehicules : 6) * Monde.rythme(zone);
     if (roulent < voulu) {
@@ -1785,6 +1834,8 @@ const Vehicules = (function () {
     // deux volontes, un seul lien rigide. Et le refus SE DIT — une porte qui ne
     // s'ouvre pas sans un mot se lit comme un bogue.
     if (v.remorqueePar) { Hud.message('IL EST SUR LA FOURCHE'); Son.SFX.erreur(); return false; }
+    // ⚠️ ET PAS SUR UN DEUX-ROUES REMISE (l'hiver, sous sa bache) : ca se dit aussi.
+    if (remisee(v)) { Hud.message('REMISÉE POUR L\'HIVER — REVIENS AU PRINTEMPS'); Son.SFX.erreur(); return false; }
     let crime = null, vu = false;
     if (v.conducteur === 'trafic' && v.def.classe === 'velo') {
       // On prend le velo au cycliste : il tombe, il a tout vu, il le dit.
@@ -4141,6 +4192,8 @@ const Vehicules = (function () {
       et les collisions restent celles de `v.sprite` : la capote ne change que le dessus. */
   function ficheDuMoment(v) {
     const def = SPRITES[v.sprite];
+    // ⚠️ Un deux-roues remise dort SOUS SA BACHE (`fiche.bache`, `remisee`).
+    if (def && def.bache && remisee(v)) return [v.sprite + '~bache', def.bache];
     return typeof Saisons !== 'undefined' ? Saisons.ficheDuMoment(v.sprite, def) : [v.sprite, def];
   }
 
@@ -4287,7 +4340,7 @@ const Vehicules = (function () {
   }
 
   return {
-    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, majGaresDeService, majLotsDeConcession, compteCommeGare, typeDeRue, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, pousserLeDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
+    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, majGaresDeService, majLotsDeConcession, compteCommeGare, typeDeRue, remise, remisee, rentrerLesRemises, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, pousserLeDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
     majPhysique, allureDuSol, avancer, heurterVehicules, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, suitUnChar, majConducteur, commandesJoueur, rouler,

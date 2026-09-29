@@ -632,6 +632,9 @@ const Missions = (function () {
       les generatrices pendant le verglas, les boites le 1er juillet, les dindes en decembre, rien le reste du temps (son klaxon
       reste un klaxon). */
   function boulotDuChar(v) {
+    // ⚠️ LA BERLINE DE LIVREUR (l'hiver, la moto est remisee) : c'est son TOIT qui dit la pizza — une
+    // berline ordinaire garde son klaxon pour la circulation (`majBerlineDeLivreur`).
+    if (v && v.sprite === SPRITE_LIVREUR) return 'pizza';
     if (!v || !v.def.boulot) return null;
     if (v.def.boulot !== 'generatrices') return v.def.boulot;
     if (Verglas.intensite()) return 'generatrices';
@@ -824,7 +827,8 @@ const Missions = (function () {
       // ⚠️ Le char du boulot, c'est celui de SA FICHE (`economie.BOULOTS[slug].vehicule`) — pas le `boulot` de la
       // fiche du char : le camion en porte deux selon la saison (les generatrices, les dindes).
       const ficheDuBoulot = B.defs.economie.boulots[boulot.slug];
-      if (!v || !ficheDuBoulot || ficheDuBoulot.vehicule !== v.slug || v.etat === 'epave') { boulot.abandonner('BOULOT PERDU'); return; }
+      const bonChar = v && ficheDuBoulot && (ficheDuBoulot.vehicule === v.slug || (boulot.slug === 'pizza' && v.sprite === SPRITE_LIVREUR));
+      if (!bonChar || v.etat === 'epave') { boulot.abandonner('BOULOT PERDU'); return; }
       if (boulot.slug === 'creme_glacee') ritournelleDuCamion(v);
       if (boulot.etape === 'ramasse' && sorte.ramasser === 'fuyard') { boulot.majSuspect(v); return; }
       if (boulot.etape === 'ramasse') {
@@ -2837,6 +2841,52 @@ const Missions = (function () {
     Entites.indexer();
   }
 
+  // --- La berline de livreur -------------------------------------------------------------------
+  //: docs/jalons/pas-de-moto-ni-de-velo-l-hiver-pas-de-moto-sous-la-pluie.md. L'HIVER, la moto est remisee
+  //: (`Vehicules.remise`) et la pizza se livre en BERLINE — mais pas dans n'importe laquelle : le klaxon
+  //: lance le boulot, et une berline sur deux de la ville deviendrait un contrat a chaque coup de klaxon.
+  //: C'est donc UNE berline blanche au toit lumineux PIZZA (`SPRITE_LIVREUR`), garee pres de la planque.
+  //: Comme le camion de creme glacee : elle nait a l'approche, hors champ, sans de (couleur donnee) ; au
+  //: degel, si on ne l'a pas prise, elle repart hors champ.
+
+  //: La silhouette qui fait le boulot (le toit PIZZA, `sprites.js`), et sa couleur.
+  const SPRITE_LIVREUR = 'auto_pizza', BLANC_LIVREUR = '#ecf0f1';
+
+  function hiverDuLivreur() {
+    return !!(B.partie && Vehicules.remise('moto') === 'hiver');
+  }
+
+  //: De combien de tuiles elle se gare a cote de la porte, sur le trottoir.
+  const LIVREUR_A_COTE = 8;
+
+  /** Sa place : sur le TROTTOIR devant la planque, la ou on laisse son char (`donnerLePalier` : deux
+      rangees sous la porte), huit tuiles plus loin. ⚠️ Pas dans une voie : garee dans la rue, elle
+      arretait le trafic derriere elle (le suivi de h02 s'y est arrete pour de bon) — et il n'y a pas
+      de case de stationnement a moins de 500 px de la planque. ⚠️ Et a PLUS DE 100 px de la porte : la
+      sauvegarde garde le premier char dans ce rayon (`sauvegarder`), et ce doit etre le tien. */
+  function placeDuLivreur() {
+    const porte = (Monde.carte.def.portes || []).find(function (q) { return q.lieu === 'planque'; });
+    if (!porte) return null;
+    const tx = porte.x + LIVREUR_A_COTE, ty = porte.y + 2;
+    if (!Monde.estTrottoir(tx, ty)) return null;
+    return { x: tx * TT + 8, y: ty * TT, angle: 0 };
+  }
+
+  function majBerlineDeLivreur() {
+    const j = B.joueur;
+    if (!j || B.interieur || B.bloc || B.t % 60 !== 30) return;
+    const garees = B.entites.filter(function (e) { return e.type === 'vehicule' && e.sprite === SPRITE_LIVREUR && e.etat !== 'epave'; });
+    if (!hiverDuLivreur()) {
+      for (const v of garees) if (v.resteGare && !v.conducteur && !v.aToi && !v.vole && !Entites.visibleAEcran(v.x, v.y, 40)) Entites.retirer(v);
+      return;
+    }
+    if (garees.length) return;
+    const place = placeDuLivreur();
+    if (!place || dist2(place.x, place.y, j.x, j.y) > 500 * 500 || Entites.visibleAEcran(place.x, place.y, 60)) return;
+    Vehicules.creer('auto', place.x, place.y, place.angle, { etat: 'stationne', sprite: SPRITE_LIVREUR, couleur: BLANC_LIVREUR, resteGare: true });
+    Entites.indexer();
+  }
+
   // --- Les motoneiges des Erables --------------------------------------------------------------
   //: docs/jalons/la-motoneige.md. L'HIVER (`Calendrier` : l'hiver du jeu, pour tout le monde depuis le
   //: 29 sept. 2026), deux motoneiges attendent garees dans une rue des Erables — pas celle du camion de creme
@@ -2893,7 +2943,9 @@ const Missions = (function () {
   function listeDuQuai(jour) {
     const r = reglesDuQuai(), periode = Math.floor((jour - 1) / r.renouvelle_jours), pool = r.modeles.slice(), liste = [];
     for (let k = 0; k < r.nombre && pool.length; k++) liste.push(pool.splice(hash2(periode, r.sel + k) % pool.length, 1)[0]);
-    return liste;
+    // ⚠️ L'HIVER, la moto est remisee : Sven veut une MOTONEIGE a sa place (il y en a deux aux
+    // Erables). Le tirage ne bouge pas — on remplace apres coup, on ne retire rien du pool.
+    return liste.map(function (slug) { return Vehicules.remise(slug) === 'hiver' && slug === 'moto' ? 'motoneige' : slug; });
   }
 
   /** Ce que la partie retient : la periode, les modeles deja livres, et le jour de la derniere livraison. */
@@ -3802,6 +3854,7 @@ const Missions = (function () {
     majCremeGlacee();
     majAsphalte();
     majMotoneiges();
+    majBerlineDeLivreur();
     rendreLesNidsBouches();
     if (B.t % 60 === 0) oublierLaRitournelle();
     majInvite(B.joueur);
@@ -3815,7 +3868,7 @@ const Missions = (function () {
     if (B.t % 60 === 0) B.partie.stats.secondes++;
   }
 
-  return { hiverDeMotoneige, placeDesMotoneiges, majMotoneiges, sequenceDuLoto, direLeLoto, boucherLeNid, rendreLesNidsBouches, placeDeLAsphalte, majAsphalte, decompteDesNids,
+  return { majBerlineDeLivreur, hiverDeMotoneige, placeDesMotoneiges, majMotoneiges, sequenceDuLoto, direLeLoto, boucherLeNid, rendreLesNidsBouches, placeDeLAsphalte, majAsphalte, decompteDesNids,
     majCremeGlacee, placeDuCamion, ritournelleDuCamion,
     listeDuQuai, etatDuQuai, posteDuQuai, prixAuQuai, texteDuQuai, majQuai,
     braquable, braquer, rancuneIci,

@@ -43,7 +43,7 @@ AU_QUAI = """
 @pytest.fixture(scope="module")
 def _quai(banc):
     return banc("function (L, o) {" + AU_QUAI + """
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21;  // ⚠️ EN JUILLET : l'hiver, motos et vélos sont remisés (test_motos_velos_remises_js.py)
         const B = L.B, M = L.Missions, p = B.partie;
         const liste = M.listeDuQuai(p.jour);
         const hors = ['auto', 'taxi', 'moto', 'camion', 'sport', 'luxe', 'cabriolet'].find(function (s) { return liste.indexOf(s) < 0; });

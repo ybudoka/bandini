@@ -22,6 +22,10 @@ from app import pietons, vehicules
 # ses chars, et de quoi faire naitre un velo du trafic ou l'on veut.
 DECOR = """
         L.Jeu.commencer();
+        // ⚠️ SANS LA REMISE : ces juges mesurent le velo, pas la saison. Une partie nait en janvier, et
+        // l'hiver motos et velos sont remises (test_motos_velos_remises_js.py) ; changer de jour change
+        // toute la ville, et ces juges tiennent a son etat. Sans la cle, la ville est celle d'avant.
+        L.B.defs.vehicules.forEach(function (v) { delete v.remise; });
         L.graine(5);
         const T = L.TT, M = L.Monde, V = L.Vehicules;
         const PAS = { '>': [1, 0], '<': [-1, 0], '^': [0, -1], 'v': [0, 1] };

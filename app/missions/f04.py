@@ -32,7 +32,7 @@ MISSION = {
         {"type": "aller", "texte": "LE DEUXIÈME : AU PIED DU PHARE DE LA POINTE",
          "lieu": "phare", "rayon": 6},
 
-        {"type": "ramasser", "texte": "LE TROISIÈME FILE EN MOTO : RATTRAPE-LE",
+        {"type": "ramasser", "texte": "LE TROISIÈME FILE EN MOTO : RATTRAPE-LE", "hiver": "LE TROISIÈME FILE EN MOTONEIGE : RATTRAPE-LE",
          "cible": "fuyard", "vehicule": "moto"},
 
         {"type": "retourner", "texte": "RETOURNE VOIR LE GRAND MO"}
@@ -60,7 +60,9 @@ MISSION = {
             _p("mo", "La deuxième, au pied du phare. Il aimait ça, les places où on voit venir le monde.", 3,
                jeu="[somber] La deuxième, au pied du phare. [knowingly] Il aimait ça, les places où on voit venir le monde."),
             _p("mo", "Le troisième s'en va en moto? Ah ben. Y a d'autre monde qui a de la mémoire, faut croire.", 4,
-               jeu="[surprised] Le troisième s'en va en moto? [amused] Ah ben. Y a d'autre monde qui a de la mémoire, faut croire."),
+               jeu="[surprised] Le troisième s'en va en moto? [amused] Ah ben. Y a d'autre monde qui a de la mémoire, faut croire.",
+               hiver=("Le troisième s'en va en motoneige? Ah ben. Y a d'autre monde qui a de la mémoire, faut croire.",
+                      "[surprised] Le troisième s'en va en motoneige? [amused] Ah ben. Y a d'autre monde qui a de la mémoire, faut croire.")),
             _p("mo", "Rapporte-moi ça au banc. Prends ton temps, moi, j'ai rien que ça.", 5,
                jeu="[warmly] Rapporte-moi ça au banc. [amused] Prends ton temps… moi, j'ai rien que ça.")
         ],

@@ -1894,7 +1894,7 @@ const Hud = (function () {
         // ⚠️ « Barre » en police 5x7 : on ne peut pas rayer un texte, alors on
         // le marque et on l'eteint. Une coche, un point, et la couleur fait
         // le reste (`actif: false` grise deja tout).
-        items.push({ libelle: (fait ? '\u00B7 ' : i === p.mission.etape ? '> ' : '  ') + o.texte,
+        items.push({ libelle: (fait ? '\u00B7 ' : i === p.mission.etape ? '> ' : '  ') + Histoire.texteDObjectif(o),
                      actif: false });
       });
       const gps = Histoire.cible();

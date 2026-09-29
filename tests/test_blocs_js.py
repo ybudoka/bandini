@@ -110,7 +110,7 @@ def test_au_volant_on_passe_avec_son_char_et_on_revient_avec_lui(banc, slug):
     """⚠️ Vague 2 : le char passe le bord, tourné vers l'intérieur du bloc, le joueur dedans ;
     et il revient avec lui, assez loin du bord pour ne pas repartir aussitôt."""
     r = banc("async function (L, o) {" + OUTILS + VOLANT + """
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21;  // ⚠️ EN JUILLET : l'hiver, motos et vélos sont remisés (test_motos_velos_remises_js.py)
         const B = L.B, j = B.joueur;
         auPassage(L, o); await laisserArriver(L, o);
         const v = auVolant(L, o, '""" + slug + """');

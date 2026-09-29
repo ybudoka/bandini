@@ -80,7 +80,7 @@ def test_q01_trois_morues_dehors_la_caisse_du_midi_puis_la_cantine_moins_chere(b
 
 def _q10(banc, bosse=False, lent=False):
     return banc("function (L, o) {" + OUTILS + PLUS_LONGUES + RATTRAPER + """
-        L.Jeu.commencer(); L.graine(6);
+        L.Jeu.commencer(); L.graine(6); L.B.partie.jour = 21;  // ⚠️ EN JUILLET : l'hiver, motos et vélos sont remisés (test_motos_velos_remises_js.py)
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         faites(L, """ + AVANT_LES_QUAIS + """.concat(['m52', 'm53', 'm54']));
         const argent = paiements(L);

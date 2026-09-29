@@ -666,7 +666,7 @@ def test_les_quatre_chars_de_m9_roulent_et_se_conduisent(banc, paquet):
     sans que rien ne se touche."""
     slugs = [v["slug"] for v in paquet["vehicules"] if v["phase"] == 1]
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21;  // ⚠️ EN JUILLET : l'hiver, motos et vélos sont remisés (test_motos_velos_remises_js.py)
         const j = L.B.joueur;
         const out = {};
         // ⚠️ On remet le joueur a SA place a chaque tour : `descendre()` le
@@ -1101,7 +1101,7 @@ def test_une_epave_reste_une_epave_quand_on_etait_au_volant(banc):
     venait de sauter sous le joueur redevenait un char : on y remontait, et elle
     sautait une deuxieme fois. Tout au bouton."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21;  // ⚠️ EN JUILLET : l'hiver, motos et vélos sont remisés (test_motos_velos_remises_js.py)
         const B = L.B, j = B.joueur;
         j.invincible = 1e6;
         const route = o.ligneDroite();
@@ -1284,7 +1284,7 @@ def test_chaque_porte_a_son_bruit(banc):
     enfourche. C'etait le meme grincement pour tout le monde, taxi compris.
     Le genre vient de la fiche (la piece, le char), pas du JS."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21;  // ⚠️ EN JUILLET : l'hiver, motos et vélos sont remisés (test_motos_velos_remises_js.py)
         const j = L.B.joueur, c = L.Monde.carte;
         const genres = [], montees = [];
         L.Son.SFX.porte = function (genre) { genres.push(genre || null); };
@@ -1324,7 +1324,7 @@ def test_le_velo_sonne_au_bouton_du_klaxon(banc):
     qu'une auto — et l'etiquette du bouton tactile le dit. ⚠️ C'est la fiche
     qui nomme l'avertisseur (`klaxon`, `vehicules.py`), pas un `slug === 'velo'`."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21;  // ⚠️ EN JUILLET : l'hiver, motos et vélos sont remisés (test_motos_velos_remises_js.py)
         const j = L.B.joueur;
         const sons = [];
         L.Son.SFX.klaxon = function () { sons.push('klaxon'); };

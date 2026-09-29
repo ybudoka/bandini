@@ -615,6 +615,7 @@ def test_le_feu_se_mesure_au_char_qu_on_conduit(banc):
     l'essai tombe pour une autre raison (« PAS SANS CHAR », mesuré le 28 sept. 2026) — c'est le
     réflexe qu'on juge, pas le trafic. D'où aussi la raison du raté, lue au message."""
     r = banc(_jeu(VOLANT + """
+        L.B.partie.jour = 13; L.B.partie.dette = 0;  // ⚠️ EN AVRIL (l'hiver, la moto est remisée : test_motos_velos_remises_js.py), et SANS DETTE : dès le 2e jour, les hommes de Rocco se servent au contact, et c'est le réflexe qu'on juge
         const issues = {};
         function sansTrafic(v) {
             for (const q of L.B.entites.slice()) if (q.type === 'vehicule' && q !== v && q.etat === 'roule') L.Entites.retirer(q);

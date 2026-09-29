@@ -159,6 +159,9 @@ const Jeu = (function () {
       Garage.poser(v, garde.mods);
       // ⚠️ `aToi` aussi : un char PAYÉ (concessionnaire, fourrière) redevenait un char à voler au rechargement.
       v.vie = Math.max(1, garde.vie); v.vole = !!garde.vole; v.aToi = !!garde.aToi;
+      // ⚠️ Le char d'une planque est a toi, paye ou pas (la moto du livreur, un palier) : l'hiver,
+      // le balayage des deux-roues remises ne l'emporte pas (`Vehicules.rentrerLesRemises`).
+      v.aLaPlanque = true;
     }
     return v;
   }

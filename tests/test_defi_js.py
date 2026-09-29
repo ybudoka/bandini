@@ -116,6 +116,7 @@ def test_le_defi_du_jour_paie_sa_prime_meme_s_il_est_deja_fait(banc, defis):
 
 def test_un_autre_defi_ne_paie_pas_la_prime_du_jour(banc, defis):
     r = banc(_demarre("""
+        L.B.partie.jour = 21;  // ⚠️ EN JUILLET : l'hiver, Le Grand Saut ne part pas (test_motos_velos_remises_js.py)
         return o.attendre().then(function () { return o.attendre(); }).then(function () {
           const premiere = gagner(L, o, 'saut');       // ce n'est PAS le defi d'aujourd'hui
           const encore = gagner(L, o, 'saut');
@@ -188,6 +189,7 @@ def test_un_defi_rate_ne_paie_rien_et_ne_note_rien(banc):
 def test_le_menu_du_defi_dit_ce_qu_on_va_toucher(banc, defis):
     prime = defis["tour"]["prime"]
     r = banc(_demarre("""
+        L.B.partie.jour = 21;  // ⚠️ EN JUILLET : l'hiver, Le Grand Saut ne part pas (test_motos_velos_remises_js.py)
         return o.attendre().then(function () { return o.attendre(); }).then(function () {
           function sur(slug) { L.Histoire.proposerDefi(slug); const s = L.B.menu.sur; L.Hud.fermerMenu(); return s; }
           const avant = { jour: sur('tour'), autre: sur('saut') };

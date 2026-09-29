@@ -19,7 +19,7 @@ MISSION = {
     # `livrer` : 81 tuiles à vol d'oiseau, une moto en fait 19 à la seconde) ; sans une bosse, la prime de la moitié (`sans_degats`, `sansBosse`) —
     # le texte de l'objectif le dit tel quel, c'est une prime et pas une condition.
     "objectifs": [
-        {"type": "monter", "texte": "PRENDS LA MOTO QUI T'ATTEND AU PONT",
+        {"type": "monter", "texte": "PRENDS LA MOTO QUI T'ATTEND AU PONT", "hiver": "PRENDS LA MOTONEIGE QUI T'ATTEND AU PONT",
          "vehicule": "moto", "ou": "pont"},
 
         {"type": "livrer", "texte": "AU PHARE EN 1 MIN — SANS BOSSE, IL PAIE PLUS",
@@ -37,7 +37,9 @@ MISSION = {
         ],
         "intro": [
             _l("sven", "Une moto attend près du pont. Ce qu'elle transporte n'a pas de nom.",
-               jeu="[Norwegian accent][matter-of-fact] Une moto attend… près du pont. [coldly] Ce qu'elle transporte… n'a pas de nom."),
+               jeu="[Norwegian accent][matter-of-fact] Une moto attend… près du pont. [coldly] Ce qu'elle transporte… n'a pas de nom.",
+               hiver=("Une motoneige attend près du pont. Ce qu'elle transporte n'a pas de nom.",
+                      "[Norwegian accent][matter-of-fact] Une motoneige attend… près du pont. [coldly] Ce qu'elle transporte… n'a pas de nom.")),
             _l("sven", "Le phare, en une minute. Sans une rayure, je paie la moitié de plus.",
                jeu="[Norwegian accent][firmly] Le phare… en une minute. [calm] Sans une rayure… je paie la moitié de plus."),
             _l("sven", "Josée te demandera de choisir. Choisis maintenant, c'est plus élégant.",
@@ -59,7 +61,9 @@ MISSION = {
         ],
         "echec": [
             _l("sven", "La moto n'est pas arrivée. Tu n'étais pas prêt.",
-               jeu="[Norwegian accent][coldly] La moto n'est pas arrivée. [calm] Tu n'étais pas prêt.")
+               jeu="[Norwegian accent][coldly] La moto n'est pas arrivée. [calm] Tu n'étais pas prêt.",
+               hiver=("La motoneige n'est pas arrivée. Tu n'étais pas prêt.",
+                      "[Norwegian accent][coldly] La motoneige n'est pas arrivée. [calm] Tu n'étais pas prêt."))
         ]
     }
 }

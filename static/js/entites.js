@@ -2831,6 +2831,14 @@ const Entites = (function () {
     const f = B.defs.pietons && B.defs.pietons.enfants_a_velo;
     const arch = archetype('enfant_velo');
     if (!f || !arch || arch.slug !== 'enfant_velo' || !B.joueur || B.interieur) return 0;
+    // ⚠️ L'HIVER, LE VELO EST REMISE (`Vehicules.remise`, la fiche du velo) : aucun ne nait, et ceux
+    // qui roulent encore rentrent hors champ — jamais sous nos yeux.
+    if (typeof Vehicules !== 'undefined' && Vehicules.remise('velo') === 'hiver') {
+      for (const q of B.entites.slice()) {
+        if (q.type === 'pieton' && q.arch === 'enfant_velo' && !visibleAEcran(q.x, q.y, 40)) retirer(q);
+      }
+      return 0;
+    }
     if (!enService(arch.heures)) return 0;
     const n = B.entites.filter(function (q) { return q.type === 'pieton' && q.arch === 'enfant_velo' && q.vivant; }).length;
     if (n >= f.combien) return 0;

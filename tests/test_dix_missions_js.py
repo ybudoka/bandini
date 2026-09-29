@@ -21,7 +21,7 @@ def test_f04_acheter_un_couteau_chasser_les_cravates_puis_les_trois_caches(banc)
     au volant : derrière l'hôtel (sud-ouest), au pied du phare (est), puis le troisième, qu'un
     Cravate emporte en moto — rattrapé, cogné, il lâche la caisse — et on revient au terminus."""
     r = banc("function (L, o) {" + OUTILS + ROUTE + """
-        L.Jeu.commencer(); L.graine(6);
+        L.Jeu.commencer(); L.B.partie.jour = 21;  // ⚠️ EN JUILLET : l'hiver, motos et vélos sont remisés (test_motos_velos_remises_js.py) L.graine(6);
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6']);
         const argent = paiements(L);
@@ -544,7 +544,7 @@ def test_f07_la_cantine_les_poches_par_derriere_puis_le_complice(banc):
     près du joueur) —, et, sa clé prise, son complice file en moto avec la caisse : rattrapé,
     cogné, il la lâche. Puis le kiosque."""
     r = banc("function (L, o) {" + OUTILS + ROUTE + """
-        L.Jeu.commencer(); L.graine(6);
+        L.Jeu.commencer(); L.B.partie.jour = 21;  // ⚠️ EN JUILLET : l'hiver, motos et vélos sont remisés (test_motos_velos_remises_js.py) L.graine(6);
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'f04']);
         const argent = paiements(L);

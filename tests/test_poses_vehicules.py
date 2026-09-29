@@ -646,7 +646,7 @@ def test_le_joueur_sur_sa_moto_est_peint_avec_ses_couleurs_et_en_deux_images(ban
     enfourchant. On compte les images : une moto avec quelqu'un dessus, c'est
     la machine ET le passant assis."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21;  // ⚠️ EN JUILLET : l'hiver, motos et vélos sont remisés (test_motos_velos_remises_js.py)
         const d = o.ligneDroite();
         const j = L.B.joueur; j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
         const v = o.char('moto', 0, 0, 0);
@@ -1018,7 +1018,7 @@ def test_le_cycliste_s_assoit_sur_la_selle_et_tient_son_guidon(banc):
     que c'est là que le guidon change de place à l'écran (devant lui, donc plus
     haut quand il s'éloigne, plus bas quand il vient)."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21;  // ⚠️ EN JUILLET : l'hiver, motos et vélos sont remisés (test_motos_velos_remises_js.py)
         """ + TRACER + """
         const d = o.ligneDroite();
         const j = L.B.joueur; j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);

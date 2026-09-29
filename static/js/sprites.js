@@ -634,6 +634,18 @@ const MACHINE_CAMIONNETTE = Object.assign({}, MACHINE_BERLINE, {
   ]),
 });
 const MACHINE_TAXI = Object.assign({}, MACHINE_BERLINE, { pieces: MACHINE_BERLINE.pieces.concat(LIVREE, ENSEIGNE_TAXI) });
+/* LA BERLINE DE LIVREUR (l'hiver, la moto est remisee : docs/jalons/pas-de-moto-ni-de-velo-l-hiver-pas-
+   de-moto-sous-la-pluie.md) : la berline blanche avec, sur le toit, la boite lumineuse PIZZA — plus
+   longue que celle du taxi, rouge sur les flancs, allumee dessus (`e`), un trait vert et un blanc en
+   travers comme le drapeau de la Napoli. C'est ce toit qui fait le boulot (`Missions.boulotDuChar`). */
+const ENSEIGNE_PIZZA = [
+  ['bloc', [-4.4, -0.4], [-2.8, 2.8], [11.0, 13.0], 'e', 'q', 'q', 0.2],
+  ['bloc', [-4.45, -3.2], [-2.85, 2.85], [11.2, 12.8], 'g', 'g', 'g', 0.25],
+  ['bloc', [-1.6, -0.35], [-2.85, 2.85], [11.2, 12.8], 'q', 'q', 'q', 0.25],
+  ['tube', [-4.45, 2.85, 11.1], [-0.35, 2.85, 11.1], 'k', 0.3],
+  ['tube', [-4.45, -2.85, 11.1], [-0.35, -2.85, 11.1], 'k', 0.3],
+];
+const MACHINE_BERLINE_PIZZA = Object.assign({}, MACHINE_BERLINE, { pieces: MACHINE_BERLINE.pieces.concat(ENSEIGNE_PIZZA) });
 const MACHINE_POLICE = Object.assign({}, MACHINE_BERLINE, { pieces: MACHINE_BERLINE.pieces.concat(LIVREE, RAMPE_POLICE) });
 
 /* --- Les deux-roues : decrits EN VOLUME, et projetes au cap -------------------
@@ -1441,6 +1453,9 @@ SPRITES.auto_camionnette = enVolume(MACHINE_CAMIONNETTE, 28, 48, PALETTE_AUTO);
    de la tete du pilote : un de de plus decale tout ce qui nait apres. Le taxi
    et la police n'en ont pas : ce sont des flottes. */
 SPRITES.auto.variantes = { auto: 5, auto_compacte: 2, auto_familiale: 2, auto_camionnette: 1 };
+// ⚠️ `de: 'auto'` : une silhouette DE la berline qui ne se tire jamais au sort (comme le tramway) —
+// seule `Missions.majBerlineDeLivreur` la pose, et la planque la rend telle quelle.
+SPRITES.auto_pizza = Object.assign(enVolume(MACHINE_BERLINE_PIZZA, 28, 48, Object.assign({}, PALETTE_AUTO, { c: '#ecf0f1', e: '#fff0b8', q: '#c0392b', g: '#2e8b3e' })), { de: 'auto' });
 SPRITES.taxi = enVolume(MACHINE_TAXI, 28, 48, { k: '#101018', c: '#f1c40f', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#101018', y: '#101018', e: '#fff4c4', q: '#d8c37a' });
 SPRITES.police = enVolume(MACHINE_POLICE, 28, 48, { k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8', a: '#7a2320', b: '#233f7a' });
 /* ⚠️ LES GYROPHARES : les lettres qui tournent, [allumee, eteinte], et QUAND
@@ -1456,8 +1471,33 @@ SPRITES.velo = deuxRoues(MACHINE_VELO, 16, 32, { k: '#101018', c: '#2980b9', r: 
 // pilote garde les pieds sur les repose-pieds.
 SPRITES.velo.pedale = 7;
 SPRITES.moto = deuxRoues(MACHINE_MOTO, 20, 36, { k: '#101018', c: '#1a1a1a', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e' });
+/* --- L'HIVER, SOUS LA BACHE (Martin, 29 sept. 2026 : « pas de moto et velo lhiver ») -------------
+   Un deux-roues REMISE (`Vehicules.remisee` : l'hiver, gare, a quelqu'un — la moto du livreur a la
+   planque, celle qu'on a volee) dort sous une bache grise bombee, attachee d'une corde, les roues qui
+   depassent en bas. On n'y monte pas avant le printemps (`Vehicules.monter` le dit). Rangee DANS la
+   fiche (`fiche.bache`), sans selle : personne n'est assis dessous.
+   docs/jalons/pas-de-moto-ni-de-velo-l-hiver-pas-de-moto-sous-la-pluie.md */
+const TOILE_DE_BACHE = { q: '#5f6f7d', Q: '#46525d' };
+/** Une bache sur un deux-roues : ses deux roues (`essieux`, rayon `r`), de `queue` a `nez`, bombee
+    jusqu'a `haut`, large de `demi`. */
+function bacheDeDeuxRoues(essieux, r, queue, nez, haut, demi) {
+  const L = nez - queue;
+  return [
+    ['roue', essieux[0], r, 'k', 'M', 'M', 2], ['roue', essieux[1], r, 'k', 'M', 'M', 2],
+    ['profil', [[nez, r * 0.6], [nez - L * 0.08, haut * 0.8], [nez - L * 0.3, haut], [queue + L * 0.35, haut * 0.92],
+                [queue + L * 0.06, haut * 0.78], [queue, r * 0.6]],
+     [[queue, demi * 0.8], [queue + L * 0.5, demi], [nez, demi * 0.8]], 'q', 'qqqqq.', 0.1],
+    ['tube', [queue + L * 0.5, -demi - 0.05, r * 0.9], [queue + L * 0.5, -demi - 0.05, haut + 0.05], 'Q', 0.05],   // la corde
+    ['tube', [queue + L * 0.5, -demi - 0.05, haut + 0.05], [queue + L * 0.5, demi + 0.05, haut + 0.05], 'Q', 0.05],
+    ['tube', [queue + L * 0.5, demi + 0.05, haut + 0.05], [queue + L * 0.5, demi + 0.05, r * 0.9], 'Q', 0.05],
+  ];
+}
 SPRITES.quatre_roues = deuxRoues(MACHINE_QUATRE_ROUES, 20, 36, { k: '#101018', c: '#2e7d32', r: '#1f1f24', l: '#fff3b0', t: '#ff4b3e' });
 SPRITES.motoneige = deuxRoues(MACHINE_MOTONEIGE, 22, 40, { k: '#101018', c: '#d7263d', r: '#1f1f24', v: '#9fd0ee', l: '#fff3b0', t: '#ff4b3e' });
+SPRITES.moto.bache = enVolume({ profondeur: BIAIS_DU_SOL, pieces: bacheDeDeuxRoues([-6.0, 6.2], 3.4, -9.2, 7.4, 9.0, 2.6) },
+                              20, 36, Object.assign({}, SPRITES.moto.pal, TOILE_DE_BACHE));
+SPRITES.velo.bache = enVolume({ profondeur: BIAIS_DU_SOL, pieces: bacheDeDeuxRoues([-4.8, 4.8], 3.2, -7.6, 7.6, 7.6, 2.0) },
+                              16, 32, Object.assign({}, SPRITES.velo.pal, TOILE_DE_BACHE));
 
 /* --- LE PARC EN VOLUME : le reste des chars, comme la berline ---------------------
 
