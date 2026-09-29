@@ -5176,8 +5176,10 @@ const Entites = (function () {
       }
       // ⚠️ Sauf ce qu'une mission est venue prendre (`objetDeMission`, l'infiltration) : le registre au
       // fond de la chambre forte attend qu'on descende, il ne s'oublie pas parce qu'on est loin.
+      // ⚠️ La dynamite d'un chantier (`e.dynamiteDe`) n'a pas de minute : elle attend au pied de la
+      // benne ; seule la bulle l'oublie, et le chantier la repose (`Chantiers.poserLaDynamite`).
       else if (e.type === 'ramassage' && !e.objetDeMission
-               && (e.t > 3600 || dist2(e.x, e.y, B.joueur.x, B.joueur.y) > BULLE_OUBLI * BULLE_OUBLI)) {
+               && ((e.t > 3600 && !e.dynamiteDe) || dist2(e.x, e.y, B.joueur.x, B.joueur.y) > BULLE_OUBLI * BULLE_OUBLI)) {
         retirer(e);
       }
     }
@@ -5523,6 +5525,8 @@ const Entites = (function () {
         } else Vehicules.dessinerUn(ctx, e, cx, cy);
         continue;
       }
+      // La grenade, la dynamite en l'air : leur peintre est au combat.
+      if (e.type === 'lance') { Combat.dessinerLance(ctx, e, cx, cy); continue; }
       if (e.type === 'ramassage' && e.objet === 'caisse') {
         const d = DECORS.caisse;
         const c = Atlas.cuirePeintre('decor|caisse', d.w, d.h, d.peindre);

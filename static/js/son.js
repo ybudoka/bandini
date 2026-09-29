@@ -1066,6 +1066,11 @@ const Son = (function () {
     //: Synthétisé, comme le sifflet du petit train : le son de la foire est une
     //: piste à part, et un `joue` sans mp3 réclamerait un fichier absent.
     carabine_foire: function () { if (!joue('carabine_foire')) { ton(240, 0.05, 'sine', 0.3, 2.2); bruit(0.06, 0.18, 1400, 500); } },
+    // La meche qu'on allume (la grenade, la dynamite) : l'allumette, puis le
+    // gresillement. Et la grenade qui rebondit : un clac sourd de metal.
+    meche: function () { if (!joue('meche')) { bruit(0.05, 0.3, 5000, 2000); bruit(0.9, 0.12, 7000, 3500, 0.06); } },
+    goupille: function () { if (!joue('goupille')) { ton(2400, 0.05, 'square', 0.1, 0.9); ton(3200, 0.12, 'triangle', 0.12, 1, 0.08); } },
+    rebond: function () { if (!joue('rebond')) { ton(420, 0.08, 'square', 0.12, 0.3); bruit(0.06, 0.2, 1800, 400); } },
     molotov: function () { if (!joue('molotov')) { bruit(0.1, 0.4, 7000, 2500); bruit(0.5, 0.5, 900, 150); ton(55, 0.4, 'sine', 0.3, 0.6, 0.08); } },
     // Un souffle de poudre, seul ; le jet en continu, c'est `jet()` qui le tient.
     extincteur: function () { if (!joue('extincteur')) bruit(0.25, 0.18, 5000, 2500); },

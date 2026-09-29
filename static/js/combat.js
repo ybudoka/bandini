@@ -67,7 +67,8 @@ const Combat = (function () {
   }
 
   function regles() {
-    return B.defs.armes_regles || { rafale_images: 45, incendie: { rayon_px: 20, degats_par_seconde: 12 } };
+    return B.defs.armes_regles || { rafale_images: 45, incendie: { rayon_px: 20, degats_par_seconde: 12 },
+                                    explosion: { bruit_tuiles: 30, gravite: 0.12, rebond_amorti: 0.45, tombe_amorti: 0.3, roule_friction: 0.9 } };
   }
 
   function armeCourante() { return armeDe(B.joueur); }
@@ -87,6 +88,8 @@ const Combat = (function () {
   function ramasserArme(slug, mun) {
     const def = armeDef(slug);
     if (!def) return false;
+    // Les sons des explosifs arrivent avec le premier (`audio.LIEUX.explosifs`).
+    if (def.type === 'lance') Son.Lieu.charger('explosifs');
     const sac = B.partie.armes[slug];
     if (!sac) {
       B.partie.armes[slug] = { mun: def.chargeur === null ? null : (mun || def.chargeur), usure: 0 };
@@ -120,6 +123,10 @@ const Combat = (function () {
     if (arme && (arme.slug === 'poings' || arme.slug === 'poing_americain')) return Techniques.frapper(e, fort);
     if (!arme || e.etat === 'attaque' || e.roule > 0) return false;
     if (arme.type === 'tir') return tirer(e, arme);
+    // ⚠️ Ce qui se LANCE ne passe pas par ici : on l'allume et on le lache
+    // (`allumerMeche`, `lacherMeche`). Sans cette porte, un PNJ qui tiendrait
+    // une grenade la « frapperait » comme un baton.
+    if (arme.type === 'lance') return false;
     // ⚠️ ON SE SOUVIENT DE CE QU'ON FAISAIT. `e.etat` est ecrase par 'attaque'
     // le temps des trois temps du coup ; sans memoire, la seule sortie ecrite
     // etait « attaquer le joueur », et un Cravate qui se battait avec une Morue
@@ -565,6 +572,190 @@ const Combat = (function () {
     }
   }
 
+  // --- Ce qui se lance (la grenade, la dynamite) ----------------------------------
+
+  /** Allume l'arme `lance` en main : la meche brule DES MAINTENANT, dans la main
+      (`majEnMain`). Le sac perd une munition ici — une meche allumee ne se
+      rallume pas. */
+  function allumerMeche(j) {
+    const arme = armeDe(j);
+    if (arme.type !== 'lance' || j.enMain) return false;
+    const sac = B.partie.armes[arme.slug];
+    if (!triche('munitions') && (!sac || !sac.mun)) { Son.SFX.vide(); return false; }
+    if (!triche('munitions')) sac.mun--;
+    Son.Lieu.charger('explosifs');                        // une partie rechargee avec une grenade au sac
+    j.enMain = { arme: arme.slug, reste: arme.meche };
+    Son.SFX.arme(arme);                                   // la goupille, ou l'allumette et le gresillement
+    if (Entites.estJoueur(j)) Police.signalerCrime('arme_sortie', j.x, j.y, Police.quelqu_un_voit(j.x, j.y, j));
+    return true;
+  }
+
+  /** Au noir d'un changement de scene : ce qui vole « saute sans nous ». ⚠️ Rangee
+      avec la ville (`B.exterieur`), une grenade y restait FIGEE — sa meche ne
+      brulait plus — et sautait au retour, a six pixels du joueur (la relecture
+      du 29 sept. 2026). On la retire donc, sans bruit : c'est hors champ. */
+  function oublierLances() {
+    for (let i = B.entites.length - 1; i >= 0; i--) if (B.entites[i].type === 'lance') Entites.retirer(B.entites[i]);
+  }
+
+  /** Lache la meche : `force` 1 la lance devant soi, 0 la laisse tomber aux pieds. */
+  function lacherMeche(j, force) {
+    const m = j && j.enMain;
+    if (!m) return null;
+    j.enMain = null;
+    return lancer(j, armeDef(m.arme), m.reste, force);
+  }
+
+  /** L'objet qui vole : une entite `lance` (pas un `projectile` — elle rebondit,
+      roule, a une meche, et SE DESSINE). */
+  function lancer(e, arme, reste, force) {
+    const angle = e === B.joueur && force ? viseeAssistee(e, e.angle) : e.angle;
+    const v = arme.vitesse_projectile * force;
+    return Entites.creer('lance', e.x + Math.cos(angle) * 6, e.y + Math.sin(angle) * 6, {
+      r: 3, dessine: true, solide: false, arme: arme.slug, tireur: e, reste: reste,
+      vx: Math.cos(angle) * v, vy: Math.sin(angle) * v, z: 6, vz: force ? 1.6 : 0, angle: angle, tour: 0,
+    });
+  }
+
+  function exploserLa(x, y, arme, qui) {
+    Explosions.faire(x, y, { rayon: arme.souffle, degats: arme.degats,
+                             coupable: Entites.estJoueur(qui) ? qui : null, auteur: qui });
+  }
+
+  /** La meche tenue : elle brule, et saute DANS LA MAIN a zero. Ce qu'on ne
+      tient plus (une autre arme, un char, la mort) tombe aux pieds et saute
+      quand meme. ⚠️ Appelee en TETE de `majGestes`, avant les gardes qui
+      sortent (char, cloture, roue) : sinon une meche tenue en montant dans un
+      char ne brulait plus jamais. */
+  function majEnMain(j) {
+    const m = j && j.enMain;
+    if (!m) return;
+    if (!j.vivant || j.dansVehicule || armeDe(j).slug !== m.arme) { lacherMeche(j, 0); return; }
+    if (B.t % 3 === 0) Entites.particule(j.x + Math.cos(j.angle) * 6, j.y - 8, (B.rng() - 0.5) * 0.6, -0.5, 8, '#ffd23a', 1, 0.05);
+    if (--m.reste <= 0) {
+      j.enMain = null;
+      exploserLa(j.x, j.y, armeDef(m.arme), j);
+    }
+  }
+
+  /** La grenade ou la dynamite en l'air : son ombre au sol (plus petite quand
+      elle monte), puis l'objet qui TOURNE, leve de `z`. ⚠️ Jusqu'au 29 sept.
+      2026 rien de ce qui vole ne se dessinait (`projectile`, `dessine: false`) :
+      la bouteille partait invisible, et Martin voulait « la voir voler ». */
+  function dessinerLance(ctx, g, cx, cy) {
+    const def = armeDef(g.arme);
+    const ombre = Atlas.cuirePeintre('ombre', DECORS.ombre.w, DECORS.ombre.h, DECORS.ombre.peindre);
+    const k = Math.max(0.4, 1 - g.z / 40);
+    const w = Math.round(DECORS.ombre.w * 0.6 * k), h = Math.max(2, Math.round(DECORS.ombre.h * 0.6 * k));
+    ctx.drawImage(ombre, Math.round(g.x - w / 2 - cx), Math.round(g.y - h / 2 - cy), w, h);
+    const img = Atlas.cuirePeintre('objet|' + def.sprite, 16, 10, function (c, lw, lh) { OBJETS[def.sprite](c, lw, lh); });
+    ctx.save();
+    ctx.translate(Math.round(g.x - cx), Math.round(g.y - g.z - 4 - cy));
+    ctx.rotate(g.tour);
+    ctx.drawImage(img, -8, -5);
+    ctx.restore();
+    B.stats.images++;
+  }
+
+  /** Le char contre lequel ce qui vole va se cogner a la prochaine image, et la
+      normale de sa tole (en monde) — ou null. ⚠️ Un char est un RECTANGLE oriente
+      (28 × 14 px pour l'auto) : son `r` n'en couvre que la demi-largeur, et une
+      grenade passait a travers le capot (l'essai du 29 sept. 2026). */
+  //: La hauteur d'un char, pour ce qui vole : on se cogne a sa tole en dessous,
+  //: on se pose sur son toit au-dessus.
+  const TOIT_CHAR = 14;
+
+  /** Le char sous (x, y) — le point est dans son rectangle — ou null. */
+  function charSous(x, y) {
+    for (const v of Entites.autour(x, y, 40, function (q) { return q.type === 'vehicule'; })) {
+      const c = Math.cos(v.angle), s = Math.sin(v.angle);
+      const lx = (x - v.x) * c + (y - v.y) * s, ly = -(x - v.x) * s + (y - v.y) * c;
+      if (Math.abs(lx) < v.def.longueur / 2 && Math.abs(ly) < v.def.largeur / 2) return v;
+    }
+    return null;
+  }
+
+  function toleDevant(g) {
+    const nx = g.x + g.vx, ny = g.y + g.vy;
+    for (const v of Entites.autour(nx, ny, 40, function (q) { return q.type === 'vehicule'; })) {
+      const c = Math.cos(v.angle), s = Math.sin(v.angle);
+      const demiL = v.def.longueur / 2 + 2, demiW = v.def.largeur / 2 + 2;
+      const lx = (nx - v.x) * c + (ny - v.y) * s, ly = -(nx - v.x) * s + (ny - v.y) * c;
+      if (Math.abs(lx) >= demiL || Math.abs(ly) >= demiW) continue;
+      // La face par ou elle ENTRE : l'axe ou elle est encore dehors a cette image.
+      // (« Ou elle s'enfonce le moins » se trompait dans l'axe du char : 14 px de
+      // large contre 28 de long, la normale sortait par le flanc.) Deja dedans
+      // (elle est tombee sur le toit) : l'axe de sa vitesse.
+      const ax = (g.x - v.x) * c + (g.y - v.y) * s, ay = -(g.x - v.x) * s + (g.y - v.y) * c;
+      if (Math.abs(ax) < demiL && Math.abs(ay) < demiW) continue;      // deja au-dessus : c'est le toit
+      const lvx = g.vx * c + g.vy * s, lvy = -g.vx * s + g.vy * c;
+      const parX = Math.abs(ax) >= demiL ? true : Math.abs(ay) >= demiW ? false : Math.abs(lvx) >= Math.abs(lvy);
+      const locX = parX ? (Math.abs(ax) >= demiL ? Math.sign(ax) : -Math.sign(lvx)) || 1 : 0;
+      const locY = parX ? 0 : (Math.abs(ay) >= demiW ? Math.sign(ay) : -Math.sign(lvy)) || 1;
+      return { nx: locX * c - locY * s, ny: locX * s + locY * c };
+    }
+    return null;
+  }
+
+  /** Ce qui vole, rebondit, roule — et saute au bout de sa meche. Le mur se
+      juge axe par axe : c'est ce qui fait rebondir d'equerre. Dans l'eau, la
+      meche s'eteint. */
+  function majLances() {
+    const R = regles().explosion;
+    for (let i = B.entites.length - 1; i >= 0; i--) {
+      const g = B.entites[i];
+      if (g.type !== 'lance') continue;
+      const arme = armeDef(g.arme);
+      // ⚠️ UN MUR DE BATIMENT EST HAUT : elle y rebondit a toute hauteur. (La
+      // bille de fronde et la bouteille passent par-dessus a plus de 8 px — une
+      // grenade qui franchissait une facade tombait sur le toit, et y restait.)
+      {
+        if (Monde.solidite(Math.floor((g.x + g.vx) / TT), Math.floor(g.y / TT)) === 1) {
+          g.vx = arme.rebond ? -g.vx * R.rebond_amorti : 0;
+          if (arme.rebond) Son.depuis(g, Son.SFX.rebond);
+        }
+        if (Monde.solidite(Math.floor(g.x / TT), Math.floor((g.y + g.vy) / TT)) === 1) {
+          g.vy = arme.rebond ? -g.vy * R.rebond_amorti : 0;
+          if (arme.rebond) Son.depuis(g, Son.SFX.rebond);
+        }
+      }
+      // Un char est une boite haute de `TOIT_CHAR` : on se cogne a sa tole en
+      // arrivant de cote, dessous ; on se pose sur son toit en descendant dessus.
+      if (g.z < TOIT_CHAR) {
+        const n = toleDevant(g);
+        const vn = n ? g.vx * n.nx + g.vy * n.ny : 0;
+        if (n && vn < 0) {
+          if (arme.rebond) {
+            g.vx -= (1 + R.rebond_amorti) * vn * n.nx; g.vy -= (1 + R.rebond_amorti) * vn * n.ny;
+            Son.depuis(g, Son.SFX.rebond);
+          } else { g.vx = 0; g.vy = 0; }
+        }
+      }
+      g.x += g.vx; g.y += g.vy;
+      const sol = g.z >= TOIT_CHAR - 1 && charSous(g.x, g.y) ? TOIT_CHAR : 0;
+      const enLAir = g.z > sol;
+      g.z += g.vz; g.vz -= R.gravite;
+      if (g.z <= sol) {
+        g.z = sol;
+        // En TOUCHANT le sol, elle perd de sa course : un rebond en garde un peu,
+        // ce qui ne rebondit pas presque rien.
+        if (enLAir) { const k = arme.rebond ? R.rebond_amorti : R.tombe_amorti; g.vx *= k; g.vy *= k; }
+        if (!sol && Monde.estEau(Math.floor(g.x / TT), Math.floor(g.y / TT))) {
+          Entites.remous(g.x, g.y, 6); Entites.retirer(g); continue;
+        }
+        if (arme.rebond && g.vz < -0.8) { g.vz = -g.vz * R.rebond_amorti; Son.depuis(g, Son.SFX.rebond); }
+        else g.vz = 0;
+        g.vx *= R.roule_friction; g.vy *= R.roule_friction;
+      }
+      g.tour += Math.hypot(g.vx, g.vy) * 0.25;
+      if (B.t % 3 === 0) Entites.particule(g.x, g.y - g.z - 2, (B.rng() - 0.5) * 0.5, -0.4, 8, '#ffd23a', 1, 0.05);
+      if (--g.reste <= 0) {
+        Entites.retirer(g);
+        exploserLa(g.x, g.y, arme, g.tireur);
+      }
+    }
+  }
+
   // --- Jet (extincteur) -----------------------------------------------------------
 
   function majJet(e) {
@@ -945,6 +1136,7 @@ const Combat = (function () {
     else if (j) { j.cible = null; verrouTenu = 0; }
     majProjectiles();
     majBrasiers();
+    majLances();
     Techniques.majVols();
     // ⚠️ Une prise ne survit pas a un char, a la mort ni a une porte : sans ca, la
     // cible restait figee `tenu` dans la rue qu'on venait de quitter.
@@ -984,6 +1176,7 @@ const Combat = (function () {
     // ⚠️ Assis dans un manège (`j.manege`), on ne frappe pas et on ne ramasse rien.
     // ⚠️ Assomme (le deuxieme joueur a terre, `Entites.blesser`), on attend
     // son partenaire : le compte se fait dans `majJoueur`, pas au bouton.
+    majEnMain(j);
     if (!j || j.dansVehicule || j.manege || !j.vivant || j.enjambe || j.alite || j.assis || j.etat === 'assomme') return;
     // ⚠️ ROUE OUVERTE, ON NE SE BAT PAS. Le monde rampe tant qu'elle est la :
     // pouvoir tirer dedans, ce serait un ralenti a la demande — tenir ARME,
@@ -1014,6 +1207,11 @@ const Combat = (function () {
       } else {
         j.rafale = 0;
       }
+    } else if (arme.type === 'lance') {
+      // APPUYER allume, RELACHER lance. Entre les deux, la meche brule dans la
+      // main (`majEnMain`) : la tenir, c'est la « cuire ».
+      if (ent.neuf('attaque')) allumerMeche(j);
+      else if (!ent.bas('attaque') && j.enMain) lacherMeche(j, 1);
     } else if (ent.bas('attaque') && arme.type === 'melee') {
       j.charge++;
     } else if (j.charge > 0) {
@@ -1086,6 +1284,8 @@ const Combat = (function () {
   /** Se pencher, prendre l'arme par terre, l'annoncer. */
   function ramasser(j, objet) {
     j.animT = 14; j.animType = 'ramasse';         // on se penche
+    // La dynamite d'un chantier : ramassée, elle ne revient pas (`Chantiers.poserLaDynamite`).
+    if (objet.dynamiteDe) { objet.dynamiteDe.dynamitePrise = true; objet.dynamiteDe.dynamite = null; }
     if (ramasserArme(objet.arme, objet.munitions)) {
       Hud.message((armeDef(objet.arme) || {}).nom || 'ARME');
       j.arme = objet.arme;
@@ -1102,6 +1302,7 @@ const Combat = (function () {
     armesDuSac, aSec, degainer, retourRapide, ouvrirRoue, fermerRoue, creneauVise, majRoue, tempsQuiPasse,
     frapper, tirer, cycler, roulade, pickpocket, pochesAPrendre, victimeDesPoches, ramasserArme, objetSousLaMain,
     viseeAssistee, dispersionDe, allumer, majBrasiers, majAttaque, arcDeMelee, majProjectiles, maj,
+    allumerMeche, lacherMeche, lancer, majEnMain, majLances, dessinerLance, ramasser, oublierLances,
     majCible, ciblesVerrouillables, VERROU_PORTEE,
     otageSousLaMain, viserOtage, prendreEnOtage, lacherOtage, majOtage, majSaisie,
   };

@@ -42,7 +42,7 @@ Et du cablage, parce qu'une fiche sans appelant ne vaut rien :
 
 5. `Entites.endommagerDecor` existe et s'exporte ;
 6. les trois armes s'en servent — la balle et le feu (`combat.js`), l'explosion
-   (`vehicules.js`) ;
+   (`explosions.js` : le char, la grenade, la dynamite) ;
 7. le char garde le sien : `Entites.briser` reste appele depuis `vehicules.js`.
 
 Trois facons de l'appeler, comme ses voisins `verifier_carte_du_depot.py` et
@@ -73,10 +73,13 @@ SPRITES = "static/js/sprites.js"
 ENTITES = "static/js/entites.js"
 COMBAT = "static/js/combat.js"
 VEHICULES = "static/js/vehicules.js"
+#: L'explosion commune (29 sept. 2026, « les explosifs ») : celle du char, de la
+#: grenade et de la dynamite — la boucle du decor y est passee.
+EXPLOSIONS = "static/js/explosions.js"
 
-#: Ecrire dans l'un de ces quatre fichiers peut casser l'invariant ; ailleurs,
+#: Ecrire dans l'un de ces cinq fichiers peut casser l'invariant ; ailleurs,
 #: le juge se tait.
-SURVEILLES = (SPRITES, ENTITES, COMBAT, VEHICULES)
+SURVEILLES = (SPRITES, ENTITES, COMBAT, VEHICULES, EXPLOSIONS)
 
 #: Les fiches qui ne sont pas du mobilier : un effet, un rendu, un objet de
 #: mission. Elles n'ont ni a arreter un char ni a tomber sous une balle.
@@ -313,11 +316,11 @@ CABLAGE = (
         "  un projectile retraverse le mobilier urbain comme avant le 15 sept. 2026.",
     ),
     (
-        VEHICULES,
+        EXPLOSIONS,
         r"Entites\.endommagerDecor\s*\(",
-        "L'explosion n'emporte plus le décor dans `vehicules.js`.",
+        "L'explosion n'emporte plus le décor dans `explosions.js`.",
         "`Entites.autour(…, q.vivant)` ne voit pas le décor : il faut la boucle sur\n"
-        "  `decorAutour` dans `exploser`, sinon le lampadaire reste debout dans le cratère.",
+        "  `decorAutour` dans `Explosions.faire`, sinon le lampadaire reste debout dans le cratère.",
     ),
     (
         VEHICULES,

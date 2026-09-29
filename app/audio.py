@@ -264,6 +264,23 @@ CATALOGUE: list[Echantillon] = [
        prompt="a car exploding, a sharp cracking blast then a deep "
               "body-shaking boom, metal debris and glass raining down onto "
               "asphalt, no music"),
+    # La meche qu'on allume : l'allumette, puis le gresillement — le son de la
+    # dynamite (`armes.py`, `son="meche"`). Une meche qu'on n'entend pas, on ne
+    # sait pas qu'elle brule. ⚠️ Les trois sons des explosifs sont un « lieu »
+    # (`LIEUX["explosifs"]`) : ils se chargent avec le premier explosif.
+    _e("meche", "Mèche allumée", duree_s=1.6, volume=0.55,
+       prompt="a match struck then a short fuse catching and fizzing, crackling "
+              "sparks, close-up, no explosion, no music"),
+    # La grenade qui rebondit sur l'asphalte ou contre un mur (`combat.js`,
+    # `majLances`). Deux variantes : elle rebondit souvent deux fois de suite.
+    # La grenade qu'on degoupille : l'anneau qu'on tire, la cuillere qui saute.
+    _e("goupille", "Grenade dégoupillée", duree_s=0.6, volume=0.55,
+       prompt="a hand grenade pin pulled out with a metallic ring click, then the "
+              "safety lever springing off with a sharp ping, close-up, no explosion, "
+              "no music"),
+    _e("rebond", "Grenade qui rebondit", variantes=2, duree_s=0.5, volume=0.5,
+       prompt="a small heavy metal object bouncing once on asphalt, a single "
+              "dull clank, close, no music"),
     _e("klaxon", "Klaxon", variantes=2, duree_s=0.8, volume=0.79, influence=0.75,
        prompt="one short car horn honk from an old sedan, slightly flat "
               "two-tone blare, city street, no music"),
@@ -1459,6 +1476,10 @@ QUARTIERS = {
 #: un au Brouillard aussi.
 LIEUX: dict[str, list[str]] = {
     "cabane": ["caleche", "hennissement", "evaporateur"],
+    # Les explosifs (29 sept. 2026) : pas un endroit, une POSSESSION — ils se
+    # chargent la premiere fois qu'un explosif entre dans le sac ou qu'on en allume
+    # un (`combat.js`). Une partie qui n'en touche jamais ne les telecharge pas.
+    "explosifs": ["meche", "goupille", "rebond"],
     "casino": ["casino_salle", "bras_machine", "gain_machine", "jackpot",
                "roulette_bille", "cartes_donnees", "jetons", "des_sic_bo", "sabot_brasse", "talkie_securite",
                # Le tripot du sous-sol (vague 4) : on n'y descend que par la grande salle.

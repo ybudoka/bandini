@@ -107,7 +107,10 @@ def test_trois_armes_a_feu_qui_repondent_a_trois_questions():
     assert mit["cadence"] < pis["cadence"] and mit["degats"] < pis["degats"]
     tirs = [a for a in armes.CATALOGUE if a["type"] == "tir"]
     assert car["portee"] == max(a["portee"] for a in tirs) and car["dispersion"] == 0
-    assert car["degats"] >= max(a["degats"] for a in armes.CATALOGUE if a["slug"] != "carabine")
+    # ⚠️ Ce qui SAUTE (`lance`) n'entre pas dans la comparaison : ses degats sont
+    # ceux du centre d'une explosion qui baisse avec la distance, pas une balle.
+    assert car["degats"] >= max(a["degats"] for a in armes.CATALOGUE
+                                if a["slug"] != "carabine" and a["type"] != "lance")
     assert mol["cloche"] is True and mol["feu_s"] > 0
     assert [a["slug"] for a in armes.CATALOGUE if a["feu_s"]] == ["molotov"]
     for a in armes.CATALOGUE:
@@ -124,7 +127,7 @@ def test_aucune_portee_ne_depasse_ce_que_l_ecran_montre():
     source = (RACINE / "static" / "js" / "base.js").read_text(encoding="utf-8")
     vw = int(re.search(r"^const VW = (\d+);", source, re.M).group(1))
     for a in armes.CATALOGUE:
-        if a["type"] == "tir":
+        if a["type"] in ("tir", "lance"):
             assert a["portee"] <= vw // 2, f"{a['slug']} : {a['portee']} px, l'ecran en montre {vw // 2}"
 
 
@@ -157,5 +160,43 @@ def test_les_regles_des_armes_voyagent():
     paquet = villes.assembler()
     assert paquet["armes_regles"] == armes.REGLES
     for a in paquet["armes"]:
-        for cle in ("auto", "dispersion_max", "bruit", "feu_s", "assomme"):
+        for cle in ("auto", "dispersion_max", "bruit", "feu_s", "assomme", "meche", "souffle", "rebond"):
             assert cle in a, f"{a['slug']} : {cle}"
+
+
+def test_ce_qui_se_lance_a_sa_meche_et_son_souffle():
+    """La grenade et la dynamite : on les allume, la meche brule, elles sautent.
+    La grenade rebondit, la dynamite non ; la dynamite coute moins cher et
+    souffle plus large (« les explosifs », 28 sept. 2026)."""
+    lancees = [a for a in armes.CATALOGUE if a["type"] == "lance"]
+    assert sorted(a["slug"] for a in lancees) == ["dynamite", "grenade"]
+    for a in lancees:
+        assert a["meche"] > 0 and a["souffle"] > 0 and a["cloche"] is True, a["slug"]
+        assert a["bruit"] == 0, "le bruit est celui de l'explosion (REGLES), pas du lancer"
+    g, d = armes.par_slug("grenade"), armes.par_slug("dynamite")
+    assert g["rebond"] is True and d["rebond"] is False
+    assert d["prix"] < g["prix"] and d["souffle"] > g["souffle"] and d["meche"] > g["meche"]
+    for a in armes.CATALOGUE:
+        if a["type"] != "lance":
+            assert a["meche"] == 0 and a["souffle"] == 0 and a["rebond"] is False, a["slug"]
+    assert armes.REGLES["explosion"]["bruit_tuiles"] > armes.par_slug("carabine")["bruit"]
+
+
+def test_le_marche_noir_vend_ce_qui_saute():
+    from app import magasins
+
+    mn, gus = magasins.MARCHE_NOIR, magasins.par_slug("armurerie")
+    for slug in ("grenade", "dynamite"):
+        assert slug in mn["articles"] and slug in mn["munitions"], slug
+        assert slug not in gus["articles"], f"{slug} : pas de vitrine chez Gus"
+
+
+def test_les_sons_des_explosifs_ne_pesent_pas_sur_le_premier_ecran():
+    """La grenade se degoupille, la dynamite s'allume : deux sons, et le rebond. Ils ne
+    s'entendent que chez qui en a un — ils se chargent a la demande (`audio.LIEUX`), pas
+    au demarrage : le plafond de la 3G du premier ecran etait plein a 6 Ko pres."""
+    from app import audio
+
+    assert armes.par_slug("grenade")["son"] == "goupille"
+    assert armes.par_slug("dynamite")["son"] == "meche"
+    assert set(audio.LIEUX["explosifs"]) == {"goupille", "meche", "rebond"}

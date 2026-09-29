@@ -271,6 +271,34 @@ const Chantiers = (function () {
     Entites.reindexerDecor();
   }
 
+  /** LA DYNAMITE DU CHANTIER (29 sept. 2026, « les explosifs ») : trois bâtons au pied de la
+      benne, tant qu'il y a des machines. Comme la benne : LAZY, jamais sous les yeux, dans la
+      bulle — rien ne naît au démarrage (les identifiants). Ramassée, elle ne revient pas de la
+      partie (`dynamitePrise`, posé par `Combat.ramasser`). ⚠️ `dynamiteDe`, pas `chantier` : sur
+      une entité, `chantier` dit « ouvrier de la voie fermée ». `forcer` : les juges, qui n'ont ni
+      bulle ni écran à respecter. */
+  function poserLaDynamite(ch, forcer) {
+    const phase = ch.posee < 0 ? null : ch.def.phases[ch.posee];
+    const maison = ch.def.conteneur;
+    if (!maison || !phase || !phase.machines.length) {
+      if (ch.dynamite) { Entites.retirer(ch.dynamite); ch.dynamite = null; }
+      return;
+    }
+    // Oubliée par la bulle (`Entites.maj`), pas ramassée : on la reposera.
+    if (ch.dynamite && B.entites.indexOf(ch.dynamite) < 0) ch.dynamite = null;
+    if (ch.dynamite || ch.dynamitePrise) return;
+    const j = B.joueur;
+    if (!j) return;
+    const x = (maison[0] + 1) * TT + 8, y = maison[1] * TT + 15;
+    if (!forcer) {
+      if (dist2(x, y, j.x, j.y) > Entites.BULLE_OUBLI * Entites.BULLE_OUBLI) return;
+      if (Entites.visibleAEcran(x, y, 24)) return;
+    }
+    ch.dynamite = Entites.creer('ramassage', x, y, {
+      r: 4, objet: 'arme', arme: 'dynamite', munitions: 3, t: 0, solide: false, dynamiteDe: ch,
+    });
+  }
+
   /** Ce qui traîne par terre dans l'empreinte (une arme lâchée, un paquet)
       ressort devant la porte du neuf : sinon il finit muré, et le jeu montre
       une arme qu'on ne ramassera jamais. */
@@ -436,6 +464,7 @@ const Chantiers = (function () {
       }
       tenirLaPalette(ch);
       poserLaBenneSiBesoin(ch, phase);
+      poserLaDynamite(ch, false);
     }
   }
 
@@ -855,5 +884,6 @@ const Chantiers = (function () {
     get journal() { return journal; },
     // Pour les juges : poser une phase comme le ferait la journée.
     appliquer: function (i, phase) { appliquer(liste[i], phase); },
+    poserLaDynamite: poserLaDynamite,
   };
 })();

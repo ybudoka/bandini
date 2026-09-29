@@ -107,7 +107,8 @@ const Jeu = (function () {
     Brouillard.oublier();
     Verglas.oublier();
     Pont.oublier();                          // la baie d'une partie rechargee a toute son eau
-    Incendies.oublier();                     // une nouvelle partie n'hérite pas des feux éteints
+    Incendies.oublier();
+    Explosions.oublier();                    // ni une chaine de chars en cours                     // une nouvelle partie n'hérite pas des feux éteints
     Frenesies.oublier();                     // ni d'une frénésie en cours
     Interactions.oublier();                  // ni de la soif des fontaines
     Monde.oublierLesRuesMouillees();         // ni de l'arroseuse d'une autre nuit
@@ -305,6 +306,10 @@ const Jeu = (function () {
       pas l'ecran noir, on change la scene quand meme, et `faire` fait avec ce qu'il a. */
   const ATTENTE_MAX = 600;
   function transiter(duree, faire, texte, attente) {
+    // ⚠️ Une meche allumee ne change pas de scene : elle tombe LA OU L'ON ETAIT
+    // (une porte, un bloc, l'arrestation, l'hopital) et y saute sans nous
+    // (`auNoir`). Les DEUX joueurs : en coop, le deuxieme passe la porte aussi.
+    for (const q of Entites.joueurs()) Combat.lacherMeche(q, 0);
     // ⚠️ Un fondu par-dessus un autre n'en empile pas deux : celui qui joue
     // finit tout de suite (sa scene change AU NOIR, une fois), et le nouveau
     // repart du clair. Se faire arreter en tombant dans la rue passait sinon
@@ -320,6 +325,10 @@ const Jeu = (function () {
     const tr = B.transition;
     if (!tr || tr.fait) return;
     tr.fait = true;
+    // Ce qui allait sauter saute ICI, avant qu'on parte : la chaine de chars se
+    // joue dans le monde qu'on quitte, et ce qui vole saute sans nous, hors champ.
+    Explosions.solder();
+    Combat.oublierLances();
     tr.faire();
   }
 
@@ -1103,6 +1112,7 @@ const Jeu = (function () {
         pas('son', function () { Son.Chef.maj(); Son.Ondes.maj(); Son.Souffle.maj(B.joueur); Son.Quartier.maj(); });
         pas('entites', Entites.maj);
         pas('combat', Combat.maj);
+        pas('explosions', Explosions.maj);        // la chaine : un char par image
         pas('dojo', Dojo.maj);            // la lecon du DOJO DION : apres les coups, qu'elle juge
         pas('vehicules', Vehicules.maj);
         pas('coop', majCoop);              // apres les chars : le passager suit sa tole
@@ -1534,7 +1544,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,

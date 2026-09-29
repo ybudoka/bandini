@@ -131,7 +131,7 @@ se dessine), et la mèche tenue en main (`j.enMain`).
 l'explosion en px, 0 = aucune), `rebond: bool` ; `TYPES = ("melee", "tir", "jet", "lance")` ;
 `REGLES["explosion"] = {"bruit_tuiles": 30, "gravite": 0.12, "rebond_amorti": 0.45, "roule_friction": 0.9}`.
 
-- [ ] **Juges d'abord**, dans `tests/test_armes.py` :
+- [x] **Juges d'abord**, dans `tests/test_armes.py` :
 
 ```python
 def test_ce_qui_se_lance_a_sa_meche_et_son_souffle():
@@ -163,8 +163,8 @@ def test_le_marche_noir_vend_ce_qui_saute():
   et dans les juges existants : `test_aucune_portee_ne_depasse_ce_que_l_ecran_montre` juge
   `a["type"] in ("tir", "lance")` ; `test_les_regles_des_armes_voyagent` ajoute `"meche", "souffle", "rebond"` à sa
   liste de clés.
-- [ ] **Les voir rougir** : `uv run pytest -q tests/test_armes.py` → `KeyError: 'meche'` / liste vide.
-- [ ] **Le catalogue** : `_a(..., meche=0, souffle=0, rebond=False)` passés à `Arme(...)`, les trois clés dans le
+- [x] **Les voir rougir** : `uv run pytest -q tests/test_armes.py` → `KeyError: 'meche'` / liste vide.
+- [x] **Le catalogue** : `_a(..., meche=0, souffle=0, rebond=False)` passés à `Arme(...)`, les trois clés dans le
   `TypedDict`, et la docstring du module dit ce qu'est `lance`. Les deux entrées, **dynamite entre le fusil
   (600) et le Molotov (700), grenade entre le Molotov et la mitraillette (900)** :
 
@@ -185,10 +185,10 @@ def test_le_marche_noir_vend_ce_qui_saute():
 
   et `REGLES["explosion"]`, commenté (le bruit en tuiles : on entend une explosion de plus loin qu'une carabine).
   `MARCHE_NOIR["articles"]` et `["munitions"]` : ajouter `"dynamite"` et `"grenade"`.
-- [ ] **Vert** : `uv run pytest -q tests/test_armes.py tests/test_magasins*.py tests/test_definitions.py`. ⚠️
+- [x] **Vert** : `uv run pytest -q tests/test_armes.py tests/test_magasins*.py tests/test_definitions.py`. ⚠️
   `test_chaque_arme_a_son_son` rougira (pas de son `meche`), comme `test_chaque_arme_qu_on_tient_a_son_dessin` (pas
   de dessin) : ils se règlent en tâches 4 et 5 — les marquer ici comme attendus, pas les tordre.
-- [ ] **Commit** : `feat: la grenade et la dynamite au catalogue` (au moment d'atterrir, les commits de la vague
+- [x] **Commit** : `feat: la grenade et la dynamite au catalogue` (au moment d'atterrir, les commits de la vague
   se fondent en un seul `feat:`).
 
 #### Tâche 2 : l'explosion commune — `static/js/explosions.js`
@@ -207,7 +207,7 @@ et le pas de la boucle), `docs/architecture.md` (la ligne du module) ; juges dan
 - `Explosions.differer(v)` / `Explosions.maj()` — **la chaîne** : pendant un `faire`, un char mis à zéro ne saute
   pas dans la boucle ; il attend l'image suivante.
 
-- [ ] **Juges d'abord** (`tests/test_explosions_js.py`, fixture `banc`) :
+- [x] **Juges d'abord** (`tests/test_explosions_js.py`, fixture `banc`) :
 
 ```python
 """L'explosion commune : celle du char, de la grenade, de la dynamite — une seule."""
@@ -266,8 +266,8 @@ def test_les_chars_sautent_en_chaine_un_par_image(banc):
 ```
 
   (le slug `berline` est à vérifier dans `app/vehicules.py` — prendre un char à réservoir qui existe.)
-- [ ] **Les voir rougir** : `uv run pytest -q tests/test_explosions_js.py` → `L.Explosions` indéfini.
-- [ ] **Le module** — ce qui était dans `exploser` (particules, décalque, son, secousse, les vivants, le décor, le
+- [x] **Les voir rougir** : `uv run pytest -q tests/test_explosions_js.py` → `L.Explosions` indéfini.
+- [x] **Le module** — ce qui était dans `exploser` (particules, décalque, son, secousse, les vivants, le décor, le
   délit) passe ici, **à l'identique**, plus le bruit :
 
 ```js
@@ -343,18 +343,18 @@ const Explosions = (function () {
 
   ⚠️ Vérifier avant d'écrire que `Police.entendre` n'existe que pour le joueur (lire `police.js`) : une explosion
   **sans** coupable (un char du trafic qui brûle tout seul) ne doit rien signaler, comme aujourd'hui.
-- [ ] **Le char y passe** : `Vehicules.exploser(v)` garde ce qui est **à lui** (l'épave, les nuances, le câble,
+- [x] **Le char y passe** : `Vehicules.exploser(v)` garde ce qui est **à lui** (l'épave, les nuances, le câble,
   `epaveT`, l'alarme, faire descendre le conducteur) et remplace le reste par
   `Explosions.faire(v.x, v.y, { rayon: ph.explosion_rayon_px, degats: ph.explosion_degats, coupable: coupable, auteur: coupable || v, source: v })`.
   Dans `endommager` : `if (v.def.reservoir === false || v.derby) plier(v); else if (!Explosions.differer(v)) exploser(v);`
   — ⚠️ l'épave doit être marquée **tout de suite** (sinon `endommager` la remet à zéro à chaque éclat) : poser
   `v.vie = 0` avant `differer`, et `exploser` ne doit pas sauter deux fois (`if (v.etat === 'epave' && v.epaveT) return;`
   en tête, à vérifier contre `perdu(v)`).
-- [ ] **La boucle** : `pas('explosions', Explosions.maj)` dans `jeu.js`, juste **après** `pas('combat', Combat.maj)` ;
+- [x] **La boucle** : `pas('explosions', Explosions.maj)` dans `jeu.js`, juste **après** `pas('combat', Combat.maj)` ;
   `Explosions.oublier()` à côté de `Incendies.oublier()` (une partie neuve) ; `Explosions` dans `window.BANDINI`.
-- [ ] **Vert, et rien de cassé** : `uv run pytest -q tests/test_explosions_js.py tests/test_vehicules_js.py tests/test_vehicules.py tests/test_ce_qui_casse.py tests/test_moteur_js.py tests/test_police*.py tests/test_frenesies_js.py`.
+- [x] **Vert, et rien de cassé** : `uv run pytest -q tests/test_explosions_js.py tests/test_vehicules_js.py tests/test_vehicules.py tests/test_ce_qui_casse.py tests/test_moteur_js.py tests/test_police*.py tests/test_frenesies_js.py`.
   Un rouge dans les anciens : le rejouer sur la base (mémoire « Un rouge est-il de moi ? ») avant de toucher.
-- [ ] **Commit** : `feat: une seule explosion pour tout le jeu`.
+- [x] **Commit** : `feat: une seule explosion pour tout le jeu`.
 
 #### Tâche 3 : allumer, tenir, lancer — la mèche
 
@@ -371,7 +371,7 @@ const Explosions = (function () {
 - `majEnMain(j)` : la mèche tenue (appelée en tête de `majGestes`) ; et `dessinerLance(ctx, g, cx, cy)` (tâche 4).
   Les cinq s'ajoutent au `return { … }` de `Combat` — les juges les appellent par `L.Combat`.
 
-- [ ] **Juges d'abord** (`tests/test_explosifs_js.py`) :
+- [x] **Juges d'abord** (`tests/test_explosifs_js.py`) :
 
 ```python
 """La grenade et la dynamite : on allume, la mèche brûle dans la main, on lance, ça saute."""
@@ -482,8 +482,8 @@ def test_la_triche_munitions_ne_vide_pas_le_sac(banc):
 
   (⚠️ la forme de la triche — `B.triches.munitions` — est à lire dans `combat.js`, fonction `triche`, et le
   prélude à ajuster à ce qu'elle lit vraiment ; un juge qui pose une clé que le jeu ne lit pas ne mord pas.)
-- [ ] **Les voir rougir** : `uv run pytest -q tests/test_explosifs_js.py` → `allumerMeche` indéfini.
-- [ ] **Le code**, dans `combat.js`, une section `// --- Ce qui se lance ---` après celle du feu :
+- [x] **Les voir rougir** : `uv run pytest -q tests/test_explosifs_js.py` → `allumerMeche` indéfini.
+- [x] **Le code**, dans `combat.js`, une section `// --- Ce qui se lance ---` après celle du feu :
 
 ```js
   /** Allume l'arme `lance` en main : la mèche brûle DÈS MAINTENANT, dans la main.
@@ -571,7 +571,7 @@ def test_la_triche_munitions_ne_vide_pas_le_sac(banc):
 ```
 
   ⚠️ `regles()` a un repli sans `explosion` : l'étendre (`explosion: { bruit_tuiles: 30, gravite: 0.12, … }`).
-- [ ] **Les gestes**, dans `majGestes` :
+- [x] **Les gestes**, dans `majGestes` :
   - **tout en haut**, avant la garde qui sort pour un char, une clôture ou la roue : `majEnMain(j);` — sinon une
     mèche tenue en montant dans un char ne brûle plus jamais.
   - avec les autres armes : `else if (arme.type === 'lance') { if (ent.neuf('attaque')) allumerMeche(j); else if (!ent.bas('attaque') && j.enMain) lacherMeche(j, 1); }`
@@ -579,7 +579,7 @@ def test_la_triche_munitions_ne_vide_pas_le_sac(banc):
     `frapper` lui-même refuse `lance` (`if (arme.type === 'lance') return false;`) pour que les PNJ ne tirent pas
     une grenade par la voie des balles.
   - `majLances()` dans `maj`, après `majBrasiers()`.
-- [ ] **Passer une porte** : dans `Jeu.entrer` / `Jeu.sortir` (lire `jeu.js`), `Combat.lacherMeche(B.joueur, 0)`
+- [x] **Passer une porte** : dans `Jeu.entrer` / `Jeu.sortir` (lire `jeu.js`), `Combat.lacherMeche(B.joueur, 0)`
   **avant** de changer de carte — la grenade reste dehors et y saute. Juge :
 
 ```python
@@ -596,17 +596,17 @@ def test_passer_une_porte_laisse_la_meche_dehors(banc):
 ```
 
   (la forme de `Monde.carte.portes` et de `Jeu.entrer(porte)` est à lire dans `monde.js`/`jeu.js` avant d'écrire.)
-- [ ] **Vert** : `uv run pytest -q tests/test_explosifs_js.py tests/test_explosions_js.py tests/test_armes_js.py tests/test_roue_js.py tests/test_combat*_js.py`.
-- [ ] **Mutation** (mémoire « Un juge qui ne mord pas ») : retirer `g.vx = -g.vx…` → le juge du rebond rougit ;
+- [x] **Vert** : `uv run pytest -q tests/test_explosifs_js.py tests/test_explosions_js.py tests/test_armes_js.py tests/test_roue_js.py tests/test_combat*_js.py`.
+- [x] **Mutation** (mémoire « Un juge qui ne mord pas ») : retirer `g.vx = -g.vx…` → le juge du rebond rougit ;
   retirer `majEnMain(j)` du haut de `majGestes` → celui de la porte rougit. Remettre, vider `__pycache__`.
-- [ ] **Commit** : `feat: allumer, tenir, lancer — la mèche`.
+- [x] **Commit** : `feat: allumer, tenir, lancer — la mèche`.
 
 #### Tâche 4 : les voir — dans la main, dans la roue, en l'air
 
 **Fichiers :** `static/js/sprites.js` (`OBJETS.grenade`, `OBJETS.dynamite`), `static/js/combat.js`
 (`dessinerLance`), `static/js/entites.js` (`dessiner` : la branche `lance`).
 
-- [ ] **Juge d'abord** : `test_chaque_arme_qu_on_tient_a_son_dessin` rougit déjà (tâche 1). Ajouter, dans
+- [x] **Juge d'abord** : `test_chaque_arme_qu_on_tient_a_son_dessin` rougit déjà (tâche 1). Ajouter, dans
   `tests/test_explosifs_js.py` :
 
 ```python
@@ -623,7 +623,7 @@ def test_on_voit_la_grenade_voler_et_son_ombre(banc):
     assert r["z"] > 0 and r["dessins"] >= 2, r
 ```
 
-- [ ] **Les dessins** (16 × 10, la même grille que `molotov`) : la grenade, un ovale vert olive quadrillé, sa
+- [x] **Les dessins** (16 × 10, la même grille que `molotov`) : la grenade, un ovale vert olive quadrillé, sa
   cuillère et son anneau ; la dynamite, un bâton rouge et sa mèche blanche. Puis :
 
 ```js
@@ -647,18 +647,18 @@ def test_on_voit_la_grenade_voler_et_son_ombre(banc):
   (un `fillRect` pour l'ombre, un `drawImage` pour l'objet : si le juge compte les `drawImage`, peindre l'ombre
   par le peintre `DECORS.ombre` cuit, comme les gens — lire ce que `dessiner` fait pour eux.) Dans
   `Entites.dessiner`, avant `imageDe(e)` : `if (e.type === 'lance') { Combat.dessinerLance(ctx, e, cx, cy); continue; }`.
-- [ ] **Regarder** : une capture Chromium (mémoire « Capturer une pièce du jeu ») — la grenade au sommet de sa
+- [x] **Regarder** : une capture Chromium (mémoire « Capturer une pièce du jeu ») — la grenade au sommet de sa
   cloche, avec son ombre ; la dynamite dans la roue d'armes. L'ouvrir dans Aperçu (copie dans `captures/`).
-- [ ] **Vert** : `uv run pytest -q tests/test_armes.py tests/test_explosifs_js.py tests/test_roue_js.py`.
-- [ ] **Commit** : `feat: on voit la grenade voler`.
+- [x] **Vert** : `uv run pytest -q tests/test_armes.py tests/test_explosifs_js.py tests/test_roue_js.py`.
+- [x] **Commit** : `feat: on voit la grenade voler`.
 
 #### Tâche 5 : les sons — la mèche, le rebond
 
 **Fichiers :** `app/audio.py` (`CATALOGUE`), `static/js/son.js` (`SFX.meche`, `SFX.rebond`, et leur repli
 synthétisé), `static/audio/…` (les deux mp3).
 
-- [ ] **Juges** : `test_chaque_arme_a_son_son` (rouge depuis la tâche 1) et `tests/test_audio.py` suffisent.
-- [ ] **Le catalogue**, à côté de `explosion` :
+- [x] **Juges** : `test_chaque_arme_a_son_son` (rouge depuis la tâche 1) et `tests/test_audio.py` suffisent.
+- [x] **Le catalogue**, à côté de `explosion` :
 
 ```python
     # La mèche qu'on allume : l'allumette, puis le grésillement — c'est le son de
@@ -672,19 +672,19 @@ synthétisé), `static/audio/…` (les deux mp3).
               "close, no music"),
 ```
 
-- [ ] **Générer** : `uv run python scripts/audio_elevenlabs.py --essai` (doit lister `meche`, `rebond-1`,
+- [x] **Générer** : `uv run python scripts/audio_elevenlabs.py --essai` (doit lister `meche`, `rebond-1`,
   `rebond-2` et rien d'autre), puis `uv run python scripts/audio_elevenlabs.py`. Écouter les trois fichiers (`afplay`)
   avant de garder.
-- [ ] **Le navigateur** : `meche` et `rebond` dans `SFX`, chacun avec son repli (`if (!joue('meche')) { bruit(…) }`,
+- [x] **Le navigateur** : `meche` et `rebond` dans `SFX`, chacun avec son repli (`if (!joue('meche')) { bruit(…) }`,
   sur le modèle de `molotov`).
-- [ ] **Vert** : `uv run pytest -q tests/test_audio.py tests/test_armes.py tests/test_armes_js.py tests/test_definitions.py`.
-- [ ] **Commit** : `feat: la mèche grésille, la grenade rebondit`.
+- [x] **Vert** : `uv run pytest -q tests/test_audio.py tests/test_armes.py tests/test_armes_js.py tests/test_definitions.py`.
+- [x] **Commit** : `feat: la mèche grésille, la grenade rebondit`.
 
 #### Tâche 6 : la dynamite des chantiers
 
 **Fichiers :** `static/js/chantiers.js` ; juge dans `tests/test_explosifs_js.py`.
 
-- [ ] **Juge d'abord** :
+- [x] **Juge d'abord** :
 
 ```python
 def test_un_chantier_ouvert_a_sa_dynamite_et_elle_ne_revient_pas(banc):
@@ -701,29 +701,66 @@ def test_un_chantier_ouvert_a_sa_dynamite_et_elle_ne_revient_pas(banc):
 ```
 
   (les noms `ouverts` et la forme d'un chantier sont à lire dans `chantiers.js` et à ajuster au juge.)
-- [ ] **Le code** : `poserLaDynamite(ch, forcer)` — une `ramassage` `{ objet: 'arme', arme: 'dynamite', munitions: 3 }`
+- [x] **Le code** : `poserLaDynamite(ch, forcer)` — une `ramassage` `{ objet: 'arme', arme: 'dynamite', munitions: 3 }`
   au pied de la benne (`ch.def.conteneur`, une tuile à côté), **lazy et gardée par la même bulle que la benne**
   (`poserLaBenneSiBesoin` : hors écran, dans `BULLE_OUBLI`), une seule par chantier et par partie
   (`ch.dynamitePrise`, posé quand on la ramasse — dans `Combat.ramasser`, `if (objet.chantier) objet.chantier.dynamitePrise = true`).
   Appelée à côté de `poserLaBenneSiBesoin`, retirée avec la benne.
-- [ ] **Les juges « ce module ne déplace rien »** : les lancer (`uv run pytest -q -k "deplace" tests/`) — une
+- [x] **Les juges « ce module ne déplace rien »** : les lancer (`uv run pytest -q -k "deplace" tests/`) — une
   ramassage neuve ne doit rien décaler (mémoire « Juges ce module ne déplace rien », « Décor eager »).
-- [ ] **Vert** : `uv run pytest -q tests/test_explosifs_js.py tests/test_chantiers*.py`.
-- [ ] **Commit** : `feat: la dynamite traîne sur les chantiers`.
+- [x] **Vert** : `uv run pytest -q tests/test_explosifs_js.py tests/test_chantiers*.py`.
+- [x] **Commit** : `feat: la dynamite traîne sur les chantiers`.
 
 #### Tâche 7 : livrer la vague 1
 
-- [ ] `uv run ruff check .` ; les juges ciblés de toutes les tâches ensemble, plus `tests/test_definitions.py`,
+- [x] `uv run ruff check .` ; les juges ciblés de toutes les tâches ensemble, plus `tests/test_definitions.py`,
   `tests/test_table_des_jalons.py`, `tests/test_architecture*.py` s'il existe (la carte du dépôt nomme
   `explosions.js` et les deux juges neufs).
-- [ ] **Jouer au banc** une vraie partie : acheter une grenade au marché noir, la lancer sur un char garé, le voir
+- [x] **Jouer au banc** une vraie partie : acheter une grenade au marché noir, la lancer sur un char garé, le voir
   sauter ; une capture.
-- [ ] Les commits de la vague fondus en un `feat:` (`git reset --soft <base>` puis un commit), **atterrir tout de
+- [x] Les commits de la vague fondus en un `feat:` (`git reset --soft <base>` puis un commit), **atterrir tout de
   suite** (`cherry-pick` sur `dev` à jour, `merge --ff-only` depuis `~/dev/bandini`), puis la suite complète
   (mémoire « Atterrir avant la suite complète »).
-- [ ] La ligne du plan : « ✅ vague 1 livrée » dans sa cellule d'état, la vague 2 (le Molotov en mieux) en cours ;
+- [x] La ligne du plan : « ✅ vague 1 livrée » dans sa cellule d'état, la vague 2 (le Molotov en mieux) en cours ;
   la note de livraison sous `## Notes`.
 
 ## Notes
 
-_Rien de livré._
+### Vague 1 — l'explosion commune, la grenade, la dynamite — **livrée le 29 sept. 2026**
+
+- **Le geste** : APPUYER allume (la dynamite) ou dégoupille (la grenade) — la mèche brûle dès cet instant, dans la
+  main, et on voit ses étincelles ; RELÂCHER lance. La tenir, c'est la « cuire » ; trop longtemps, elle saute dans
+  la main. Changer d'arme ou monter dans un char la laisse tomber aux pieds, et elle saute quand même. Passer
+  une porte (tout `Jeu.transiter` : un bloc, l'arrestation, l'hôpital aussi) la lâche pour les DEUX joueurs, et
+  **au noir** ce qui vole « saute sans nous », hors champ (`Combat.oublierLances`), et la chaîne de chars en
+  attente se joue dans le monde qu'on quitte (`Explosions.solder`). ⚠️ C'est la relecture finale qui l'a trouvé :
+  rangée avec la ville (`B.exterieur`), la grenade y restait figée et sautait au retour, à 6 px du joueur (1 PV)
+  — et à l'arrestation, elle sautait sur les policiers restés dehors.
+- **Le vol** (`combat.js`, `majLances`) : en cloche ; elle rebondit sur un mur de bâtiment **à toute hauteur** (la
+  bille et la bouteille passent au-dessus à 8 px — une grenade tombait sur le toit d'une façade et y restait) ; un
+  char est une boîte haute de 14 px : on se cogne à sa tôle de côté, on se **pose sur son toit** en descendant
+  dessus (à courte portée, elle passe par-dessus — voulu) ; en touchant le sol elle perd sa course (`rebond_amorti`,
+  `tombe_amorti`) — sans ça, lancée pour 150 px, elle roulait jusqu'à 228 ; dans l'eau, la mèche s'éteint. **On la
+  voit voler** : l'objet tourne, son ombre rapetisse quand il monte (`dessinerLance`).
+- **Une seule explosion** (`explosions.js`) : le char qui saute y passe aussi. La chaîne se joue un char par image
+  (`differer`, `sauteBientot`). ⚠️ **Sa propre explosion blesse le joueur** : `blesser` refuse qu'un joueur blesse
+  un joueur (la règle de la coop) — accusée par lui-même, la grenade tenue trop longtemps ne lui faisait rien, ni
+  le char qu'il faisait sauter à côté de lui. On l'accuse du char qui saute, ou de personne ; celle du partenaire
+  reste refusée. ⚠️ Ça vaut aussi pour le char : le joueur est maintenant blessé par un char qu'il a lui-même
+  mis à zéro (jusqu'à 90 PV s'il est collé ou dedans) — avant, la règle de la coop l'en protégeait par accident.
+  Et une explosion s'entend (`REGLES["explosion"]["bruit_tuiles"]` : 30 tuiles, plus loin qu'une
+  carabine).
+- **Les chiffres** : grenade 800 $, **150** au centre (pas 110 : tombée à 14 px d'un char, elle le laissait à 23/100
+  sans feu — l'essai dans Chromium), souffle 48 px, mèche 2,5 s ; dynamite 650 $, 140, souffle 64 px, mèche 4 s,
+  elle ne rebondit pas. Au marché noir, munitions comprises ; la dynamite traîne aussi **au pied de la benne des
+  chantiers** qui travaillent (lazy, dans la bulle, jamais sous les yeux ; ramassée, elle ne revient pas de la
+  partie ; elle n'a pas la minute d'une arme lâchée). ⚠️ `dynamiteDe`, pas `chantier` : sur une entité,
+  `chantier` veut dire « ouvrier de la voie fermée » — `test_l_equipe_prend_son_poste_hors_de_l_ecran` l'a vu.
+- **Les sons** : `meche` (la dynamite), `goupille` (la grenade — un son par arme, c'est jugé), `rebond` ×2.
+  ⚠️ **Hors du premier écran** : le plafond de 2,5 Mo n'avait plus que 6 Ko de marge ; les trois vont dans
+  `audio.LIEUX["explosifs"]` et se chargent avec le premier explosif (`Son.Lieu.charger`, depuis `ramasserArme` et
+  `allumerMeche`) — la synthèse joue d'ici là. **À écouter par Martin** : personne d'autre ne peut juger un son.
+- **Les juges** : `test_explosions_js.py` (le rayon, le délit, rien sans coupable, le char par la même explosion, la
+  chaîne), `test_explosifs_js.py` (la mèche, la cuisson, dans la main, la porte, le char, l'eau, le mur, le flanc,
+  le toit, la portée, la triche, le bouton, le dessin, les sons, le chantier) ; `test_armes.py` étendu.
+  `verifier_ce_qui_casse.py` surveille maintenant `explosions.js` (la boucle du décor y est passée).

@@ -28,6 +28,13 @@ Les armes a feu (14 sept. 2026) :
 - `assomme` : ce qu'elle couche se RELEVE. Un coup de poing assomme, il ne
   tue pas : c'est ce qui fait taire un temoin sans en faire un meurtre, et
   la difference vaut deux etoiles.
+- `lance` (28 sept. 2026, « les explosifs ») : la grenade et la dynamite. On
+  les ALLUME (la `meche`, en images, brule des cet instant, dans la main), on
+  les lance en cloche, et elles sautent au bout de la meche par l'explosion
+  commune (`explosions.js`) : `souffle` est son rayon en pixels, `degats` ce
+  qu'elle mord au centre. `rebond` : la grenade rebondit sur les murs et au
+  sol, la dynamite tombe et roule un peu. ⚠️ `bruit` 0 : ce qu'on entend,
+  c'est l'EXPLOSION (`REGLES["explosion"]`), pas le lancer.
 - ⚠️ Aucune portee ne depasse ce que l'ecran montre : la vue fait 480 px et
   le joueur est au milieu, donc 240 px devant lui. Au-dela, on tire sur ce
   qu'on ne voit pas — `test_armes` lit la borne dans `base.js`.
@@ -37,7 +44,7 @@ from __future__ import annotations
 
 from typing import TypedDict
 
-TYPES = ("melee", "tir", "jet")
+TYPES = ("melee", "tir", "jet", "lance")
 
 
 class Arme(TypedDict):
@@ -71,13 +78,16 @@ class Arme(TypedDict):
     feu_s: int
     assomme: bool
     foire: bool
+    meche: int
+    souffle: int
+    rebond: bool
 
 
 def _a(slug, nom, type_, degats, portee, cadence, prix, *, arc=0.9, anticipation=5, actif=4,
        renverse=False, saigne=0, chargeur=None, munitions_max=None, vproj=0.0,
        dispersion=0.0, cloche=False, plombs=1, prix_munitions=None, etoiles=0, usures=0,
        sprite=None, phase=1, son=None, auto=False, dispersion_max=None, bruit=0,
-       feu_s=0, assomme=False, foire=False) -> Arme:
+       feu_s=0, assomme=False, foire=False, meche=0, souffle=0, rebond=False) -> Arme:
     return Arme(
         slug=slug, nom=nom, type=type_, degats=degats, portee=portee, arc=arc,
         cadence=cadence, anticipation=anticipation, actif=actif, renverse=renverse,
@@ -87,6 +97,7 @@ def _a(slug, nom, type_, degats, portee, cadence, prix, *, arc=0.9, anticipation
         sprite=sprite or slug, phase=phase, son=son or slug, auto=auto,
         dispersion_max=dispersion if dispersion_max is None else dispersion_max,
         bruit=bruit, feu_s=feu_s, assomme=assomme, foire=foire,
+        meche=meche, souffle=souffle, rebond=rebond,
     )
 
 
@@ -103,6 +114,17 @@ REGLES: dict = {
     # et le feu le pousse dehors). Un char qui reste dessus tombe sous le
     # cinquieme de sa vie et brule ensuite tout seul (`vehicules.PHYSIQUE`).
     "incendie": {"rayon_px": 20, "degats_par_seconde": 12},
+    # Ce qui se lance (`lance`) et ce qui saute. `bruit_tuiles` : le rayon dans
+    # lequel un agent ENTEND l'explosion — plus loin qu'une carabine (22) : une
+    # detonation de chantier s'entend a l'autre bout du quartier. Le reste est
+    # la physique du vol : la gravite (celle de la bille de fronde), ce qu'un
+    # rebond garde de la vitesse, et ce que le sol en laisse a chaque image.
+    # ⚠️ `tombe_amorti` : ce que garde de sa vitesse ce qui NE rebondit pas en
+    # touchant le sol (la dynamite tombe, roule un peu, s'arrete). Sans lui — et
+    # sans l'amorti du rebond sur la vitesse AU SOL — une grenade lancee pour
+    # 150 px roulait jusqu'a 228 (l'essai du 29 sept. 2026).
+    "explosion": {"bruit_tuiles": 30, "gravite": 0.12, "rebond_amorti": 0.45,
+                  "tombe_amorti": 0.3, "roule_friction": 0.9},
 }
 
 
@@ -144,7 +166,7 @@ CATALOGUE: list[Arme] = [
        vproj=7.0, dispersion=0.03, prix_munitions=40, etoiles=1, bruit=14),
     _a("fusil", "Fusil à pompe", "tir", 12, 90, 45, 600, chargeur=8, munitions_max=24,
        vproj=6.0, dispersion=0.18, plombs=6, prix_munitions=60, etoiles=1, bruit=18),
-    # ⚠️ Les trois qui suivent ne se vendent qu'au MARCHE NOIR (`magasins`) :
+    # ⚠️ Les cinq qui suivent ne se vendent qu'au MARCHE NOIR (`magasins`) :
     # ce qui fait du bruit se vend sans facture. Chacune repond a une question
     # que les deux autres ne savent pas regler.
     #
@@ -152,8 +174,22 @@ CATALOGUE: list[Arme] = [
     # CLOCHE, comme la bille de fronde, et la ou elle casse, une flaque de feu
     # brule `feu_s` secondes. Elle ne fait pas de detonation (`bruit` 0) : ce
     # qu'on entend, c'est le verre qui casse — a l'arrivee, pas au depart.
+    # « Ils sont derriere le mur. » Elle part en cloche, TOMBE et roule un peu —
+    # elle ne rebondit pas — et saute au bout d'une meche qu'on voit gresiller.
+    # Moins chere que la grenade, plus lente, un souffle plus large. On en trouve
+    # aussi sur les chantiers (`chantiers.js`).
+    _a("dynamite", "Dynamite", "lance", 140, 110, 45, 650, chargeur=3, munitions_max=6,
+       vproj=3.0, cloche=True, prix_munitions=90, etoiles=1, son="meche", meche=240, souffle=64),
     _a("molotov", "Cocktail Molotov", "tir", 6, 140, 40, 700, chargeur=3, munitions_max=9,
        vproj=3.4, cloche=True, prix_munitions=90, etoiles=1, feu_s=5),
+    # « Ils sont au coin. » Elle rebondit sur les murs et roule ; la meche
+    # (2,5 s) brule DES qu'on la degoupille : la tenir, c'est la « cuire ».
+    # Son son est la GOUPILLE, pas la meche : une grenade ne s'allume pas.
+    # ⚠️ 150 au centre, pas 110 : a 110, tombee a 14 px d'un char, elle le laissait
+    # a 23/100, sans feu (l'essai du 29 sept. 2026). Un passant meurt a 16 px.
+    _a("grenade", "Grenade", "lance", 150, 150, 40, 800, chargeur=3, munitions_max=9,
+       vproj=3.6, cloche=True, prix_munitions=120, etoiles=1, son="goupille", meche=150, souffle=48,
+       rebond=True),
     # « Ils sont trois. » Automatique : on TIENT. Peu de degats par balle, une
     # cadence quatre fois celle du pistolet, et la dispersion qui s'ouvre tant
     # qu'on tient. ⚠️ Les munitions font l'equilibre, pas les degats : le

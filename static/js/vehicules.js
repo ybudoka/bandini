@@ -1328,7 +1328,7 @@ const Vehicules = (function () {
   }
 
   function endommager(v, degats, source) {
-    if (v.etat === 'epave' || degats <= 0 || blinde(v)) return;
+    if (v.etat === 'epave' || v.sauteBientot || degats <= 0 || blinde(v)) return;
     v.vie -= degats;
     if (source) v.agresseur = source;
     if (v.vie > 0) return;
@@ -1339,7 +1339,13 @@ const Vehicules = (function () {
     // cache ici — le jour ou une trottinette arrive, elle se plie toute seule.
     // ⚠️ Un bazou du DERBY se plie, il n'explose pas : la deflagration tuait le joueur dans le sien,
     // et on se reveillait a l'hopital pour avoir perdu un jeu de foire.
-    if (v.def.reservoir === false || v.derby) plier(v); else exploser(v);
+    // ⚠️ Mis a zero PENDANT une explosion, il saute a l'image suivante
+    // (`Explosions.differer`) : la chaine se joue une image a la fois. D'ici la,
+    // `sauteBientot` le tient hors de portee — sinon chaque eclat le remettait
+    // a zero, et la frenesie le comptait deux fois.
+    if (v.def.reservoir === false || v.derby) plier(v);
+    else if (Explosions.differer(v)) v.sauteBientot = true;
+    else exploser(v);
   }
 
   /** Un char sans reservoir a zero PV : il tombe sur le cote, tordu, et c'est
@@ -1714,39 +1720,15 @@ const Vehicules = (function () {
     v.swaps = Object.assign(nuances('#2a2a2a'), { v: '#1a1a1e', l: '#2a2a2a', t: '#2a2a2a', x: '#2a2a2a', y: '#2a2a2a', G: '#1a1a1e', B: '#2a2a2a', M: '#2a2a2a' });
     v.epaveT = ph.epave_secondes * 60;
     v.alarme = 0;
-    for (let i = 0; i < 40; i++) {
-      const a = B.rng() * Math.PI * 2, s = 1 + B.rng() * 3;
-      Entites.particule(v.x, v.y, Math.cos(a) * s, Math.sin(a) * s * 0.6, 30 + B.rng() * 20, i % 3 ? '#ff8c1a' : '#3a3a3a', 2 + (i % 2), 0.1);
-    }
-    Entites.decal(v.x, v.y, 'impact');
-    Son.SFX.explosion();
-    B.cam.secousse = Math.max(B.cam.secousse, 1.2);
+    v.sauteBientot = false;
     // ⚠️ Un bazou du derby qui saute, c'est le spectacle, pas un crime.
     const coupable = v.agresseur === B.joueur && !v.derby ? B.joueur : null;
-    for (const e of Entites.autour(v.x, v.y, ph.explosion_rayon_px, function (q) { return q !== v && q.vivant; })) {
-      const d = Math.hypot(e.x - v.x, e.y - v.y);
-      const part = 1 - d / ph.explosion_rayon_px;
-      if (e.type === 'vehicule') endommager(e, Math.round(ph.explosion_degats * part), coupable);
-      else if (e.type === 'pieton' || e.type === 'joueur') {
-        if (e.dansVehicule === v) descendre(e, true);
-        Entites.blesser(e, Math.round(ph.explosion_degats * part), coupable || v, { renverse: true, angle: angleVers(v.x, v.y, e.x, e.y), saigne: 120 });
-      }
-    }
-    // ⚠️ Le DECOR aussi. `Entites.autour(..., q.vivant)` ne le voit pas — le
-    // decor ne vit pas — et une explosion qui laisse le lampadaire debout au
-    // milieu du cratere ne se croit pas une seconde.
-    for (const d of Entites.decorAutour(v.x, v.y, ph.explosion_rayon_px)) {
-      if (d.brise) continue;
-      const part = 1 - Math.hypot(d.x - v.x, d.y - v.y) / ph.explosion_rayon_px;
-      if (part <= 0) continue;
-      Entites.endommagerDecor(d, Math.round(ph.explosion_degats * part));
-    }
+    // L'explosion elle-meme — les gens, les chars voisins, le decor, le delit —
+    // est celle de tout le jeu (`explosions.js`).
+    Explosions.faire(v.x, v.y, { rayon: ph.explosion_rayon_px, degats: ph.explosion_degats,
+                                 coupable: coupable, auteur: coupable || v, source: v });
     if (v.conducteur && v.conducteur !== 'trafic' && v.conducteur !== 'derby') descendre(v.conducteur, true);
     if (v.conducteur === 'trafic' || v.conducteur === 'derby') { v.conducteur = null; }
-    if (coupable) {
-      Police.signalerCrime('explosion', v.x, v.y, true);
-      Entites.alerter(v.x, v.y, coupable, 3);
-    }
   }
 
   function declencherAlarme(v) {

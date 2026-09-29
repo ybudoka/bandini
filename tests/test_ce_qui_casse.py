@@ -127,7 +127,7 @@ def test_une_arme_debranchee_est_vue(racine):
     chacun des trois chemins, un par un."""
     for fichier, motif in (
         (juge.COMBAT, "Entites.endommagerDecor("),      # la balle et le feu
-        (juge.VEHICULES, "Entites.endommagerDecor("),   # l'explosion
+        (juge.EXPLOSIONS, "Entites.endommagerDecor("),  # l'explosion
         (juge.VEHICULES, "Entites.briser("),            # le char
         (juge.ENTITES, "function endommagerDecor("),    # la fonction elle-même
     ):

@@ -424,12 +424,14 @@ def par_slug(slug: str) -> Magasin | None:
 
 
 #: Le marche noir : Josee, au bar, une fois le Faubourg libere (M5). Les
-#: armes de Chez Gus a ce prix-la, sans facture — et ⚠️ les trois qui font
-#: du bruit (Molotov, mitraillette, carabine) ne se vendent QU'ICI, munitions
+#: armes de Chez Gus a ce prix-la, sans facture — et ⚠️ ce qui fait du bruit
+#: (Molotov, mitraillette, carabine, dynamite, grenade) ne se vend QU'ICI, munitions
 #: comprises : Gus a une vitrine, Josee n'en a pas. `test_armes` le verifie.
 MARCHE_NOIR: dict = {"apres": "m5", "rabais": 0.7,
-                     "articles": ["couteau", "pistolet", "fusil", "molotov", "mitraillette", "carabine"],
-                     "munitions": ["pistolet", "fusil", "molotov", "mitraillette", "carabine"],
+                     "articles": ["couteau", "pistolet", "fusil", "dynamite", "molotov", "grenade",
+                                  "mitraillette", "carabine"],
+                     "munitions": ["pistolet", "fusil", "dynamite", "molotov", "grenade",
+                                   "mitraillette", "carabine"],
                      # ⚠️ Ce qui n'est pas une arme : le skimmer (`economie.GUICHET`),
                      # qu'on pose sur un guichet et qu'on revient vider le lendemain.
                      "objets": ["skimmer"]}

@@ -7515,6 +7515,10 @@ const OBJETS = {
   // carabine, le chiffon allume au goulot du Molotov.
   mitraillette: function (ctx) { ctx.fillStyle = '#3a3d44'; ctx.fillRect(2, 4, 11, 2); ctx.fillRect(6, 6, 2, 4); ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 6, 2, 2); },
   carabine: function (ctx) { ctx.fillStyle = '#6b4b2c'; ctx.fillRect(1, 5, 6, 2); ctx.fillRect(2, 7, 2, 2); ctx.fillStyle = '#3a3d44'; ctx.fillRect(6, 4, 10, 2); ctx.fillStyle = '#9aa0a8'; ctx.fillRect(8, 2, 3, 1); },
+  // La grenade : un ovale vert olive quadrille, sa cuillere et son anneau.
+  grenade: function (ctx) { ctx.fillStyle = '#4b5a2a'; ctx.fillRect(5, 3, 5, 6); ctx.fillRect(4, 4, 7, 4); ctx.fillStyle = '#35401d'; ctx.fillRect(5, 5, 5, 1); ctx.fillRect(7, 3, 1, 6); ctx.fillStyle = '#8a8d92'; ctx.fillRect(6, 1, 3, 2); ctx.fillRect(9, 2, 1, 3); ctx.fillStyle = '#c9ccd1'; ctx.fillRect(4, 1, 2, 1); ctx.fillRect(3, 2, 1, 1); },
+  // Le baton de dynamite : rouge, ses deux bagues de papier, et sa meche blanche.
+  dynamite: function (ctx) { ctx.fillStyle = '#b8322a'; ctx.fillRect(3, 4, 9, 4); ctx.fillStyle = '#8e231d'; ctx.fillRect(3, 7, 9, 1); ctx.fillStyle = '#e8dcc0'; ctx.fillRect(5, 4, 1, 4); ctx.fillRect(9, 4, 1, 4); ctx.fillStyle = '#efe6d0'; ctx.fillRect(12, 5, 1, 1); ctx.fillRect(13, 4, 1, 1); ctx.fillStyle = '#ffd23a'; ctx.fillRect(14, 3, 1, 1); },
   molotov: function (ctx) { ctx.fillStyle = '#2f6b2a'; ctx.fillRect(5, 3, 4, 6); ctx.fillRect(6, 1, 2, 2); ctx.fillStyle = '#efe6d0'; ctx.fillRect(6, 0, 2, 1); ctx.fillStyle = '#ff8c1a'; ctx.fillRect(8, 0, 1, 1); ctx.fillStyle = '#ffd23a'; ctx.fillRect(9, 1, 1, 1); },
   // La liasse d'un guichet defonce : du vert, une bande de papier, une
   // deuxieme liasse qui depasse — a seize pixels, c'est la couleur qui la nomme.
