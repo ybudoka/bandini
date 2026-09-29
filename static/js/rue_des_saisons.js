@@ -335,6 +335,16 @@ const RueDesSaisons = (function () {
 
   function bornesDonnees() { const d = donnees(); return d && d.bornes; }
 
+  /** Jusqu'ou crache le panache : le bord du trottoir, puis `traverse` de la chaussee (le reste, l'eau le
+      franchit en gouttes et en ecume), jamais plus que `jet_px`. Pur : la borne, sa tuile, la rue. */
+  function panacheDe(e, tx, ty, dir) {
+    const d = bornesDonnees(), T = 16, dx = dir[0], dy = dir[1];
+    let n = 0;
+    while (n < 6 && Monde.estRoute(tx + dx * (n + 1), ty + dy * (n + 1)) && !Monde.estTrottoir(tx + dx * (n + 1), ty + dy * (n + 1))) n++;
+    const bord = dx ? (dx < 0 ? e.x - tx * T : (tx + 1) * T - e.x) : (dy < 0 ? e.y - 1 - ty * T : (ty + 1) * T - e.y + 1);
+    return { portee: Math.round(Math.max(d.jet_min_px, Math.min(d.jet_px, bord + n * T * d.traverse))), bord: bord, chaussee: n * T };
+  }
+
   /** Les bornes de la carte, trouvees une fois : leur entite (pour savoir si elle est cassee), leur tuile,
       et le cote de la rue — le jet crache vers la chaussee, les enfants courent le long du trottoir. */
   function bornesDe(carte) {
@@ -347,7 +357,8 @@ const RueDesSaisons = (function () {
       for (const q of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
         if (Monde.estRoute(tx + q[0], ty + q[1]) && !Monde.estTrottoir(tx + q[0], ty + q[1])) { dir = q; break; }
       }
-      out.push({ e: e, tx: tx, ty: ty, x: e.x, y: e.y, dir: dir });
+      const g = panacheDe(e, tx, ty, dir);
+      out.push({ e: e, tx: tx, ty: ty, x: e.x, y: e.y, dir: dir, portee: g.portee, bord: g.bord, chaussee: g.chaussee });
     }
     // ⚠️ Pas de souvenir d'une ville encore vide : le premier rendu (sous l'ecran titre) passe avant que le
     // decor ne naisse, et la liste vide y serait restee pour toute la partie (vu a la capture).
@@ -389,63 +400,202 @@ const RueDesSaisons = (function () {
     return bornesOuvertes().some(function (b) { return b.e === e; });
   }
 
-  /** Le pied du jet : a une douzaine de pixels de la borne, du cote de la rue. */
-  function piedDuJet(b) {
-    const L = bornesDonnees().jet_px;
-    return { x: b.x + b.dir[0] * L * 0.6, y: b.y - 2 + b.dir[1] * L * 0.6 };
+  //: LE PANACHE : l'eau sort de la bouche laterale (a `BOUCHE` px du sol), monte jusqu'a `haut_px`, s'ouvre
+  //: jusqu'a `large_px` et retombe a `b.portee` px de la borne, au milieu de la chaussee ou plus loin. Tout
+  //: se lit le long de s (0 a la bouche, 1 ou l'eau touche l'asphalte) : `lePanache` rend la geometrie.
+  const BOUCHE = 8;
+  //: Passe cette part du chemin, le jet plein se defait en paquets d'eau.
+  const DEFAIT = 0.72;
+
+  /** La geometrie du panache a s (0..1) : le pas le long de la rue, la hauteur, la demi-largeur. Pure. */
+  function panacheA(b, s) {
+    const d = bornesDonnees(), H = d.haut_px, k = 4 * H - 2 * BOUCHE;
+    return { le: 3 + s * (b.portee - 3), h: BOUCHE * (1 - s) + k * s * (1 - s), lw: 0.5 + d.large_px * 0.5 * Math.pow(Math.max(0, s), 1.3) };
   }
 
-  /** Est-on dans l'eau d'une borne ouverte (se rafraichir, `Interactions.maj`) ? */
+  /** Le pied du jet : ou l'eau retombe, du cote de la rue. */
+  function piedDuJet(b) {
+    return { x: b.x + b.dir[0] * b.portee, y: b.y - 2 + b.dir[1] * b.portee };
+  }
+
+  /** Est-on dans l'eau d'une borne ouverte (se rafraichir, `Interactions.maj`) ? Sous le panache, de la borne
+      jusqu'a la flaque : la distance au segment borne-pied. */
   function dansUnJet(x, y, r) {
     return bornesOuvertes().some(function (b) {
-      const q = piedDuJet(b);
-      return (q.x - x) * (q.x - x) + (q.y - y) * (q.y - y) < r * r || (b.x - x) * (b.x - x) + (b.y - y) * (b.y - y) < r * r;
+      const q = piedDuJet(b), ux = q.x - b.x, uy = q.y - b.y, n2 = ux * ux + uy * uy || 1;
+      const s = Math.max(0, Math.min(1, ((x - b.x) * ux + (y - b.y) * uy) / n2));
+      const px = b.x + ux * s - x, py = b.y + uy * s - y;
+      return px * px + py * py < r * r;
     });
   }
 
-  /** La flaque et le jet d'une borne, au sol puis en l'air ; (x, y) = son pied a l'ecran. */
-  function peindreJet(ctx, b, x, y) {
-    const d = bornesDonnees(), L = d.jet_px, t = B.t || 0, dx = b.dir[0], dy = b.dir[1];
-    // Le jet : une gerbe de gouttes qui part de la bouche (a 8 px du sol), monte et retombe vers la rue.
-    for (let i = 0; i < 16; i++) {
-      const p = ((t * 1.3 + i * 5.3 + hash(b.tx, b.ty, i) % 7) % 40) / 40;
-      const ecart = Math.sin(i * 2.3 + t * 0.21) * 2.2 * p;
-      const haut = 11 * 4 * p * (1 - p) + 8 * (1 - p);
-      const gx = x + dx * (3 + p * L) + (dy ? ecart : 0), gy = y + dy * (p * L) - haut + (dx ? ecart * 0.5 : 0);
-      ctx.fillStyle = i % 3 === 0 ? 'rgba(236,246,255,0.95)' : 'rgba(170,214,240,0.85)';
-      ctx.fillRect(Math.round(gx), Math.round(gy), i % 4 === 0 ? 2 : 1, 2);
+  //: Les couleurs de l'eau, ecrites une fois (pas une chaine neuve par goutte).
+  const EAU = { halo: 'rgba(214,236,252,0.30)', corps: 'rgba(150,202,238,0.7)', vif: 'rgba(255,255,255,0.55)',
+                coeur: 'rgba(248,253,255,0.96)', goutte: 'rgba(200,230,250,0.9)', blanc: 'rgba(255,255,255,0.95)',
+                ombre: 'rgba(12,22,36,0.18)', mouille: 'rgba(16,24,38,0.22)', flaque: 'rgba(104,160,206,0.40)',
+                dessous: 'rgba(104,160,206,0.85)',
+                ciel: 'rgba(206,232,252,0.42)', ecume: 'rgba(246,252,255,0.85)', ecume2: 'rgba(222,240,252,0.6)' };
+
+  /** Le panache d'une borne, de s0 a s1 (le tri avec les gens le coupe en trois) ; (x, y) = la borne a l'ecran.
+      Le jet plein, son coeur qui brille, les vagues qui le parcourent, puis il s'ouvre en gouttes. */
+  function peindreJet(ctx, b, x, y, s0, s1) {
+    if (s0 === undefined) { s0 = 0; s1 = 1.01; }
+    const t = B.t || 0, dx = b.dir[0], dy = b.dir[1], L = b.portee, y0 = y - 2;
+    const N = Math.max(12, Math.round(L / 2)), pas = (L - 3) / N;
+    let n = 0;
+    // Le jet, tranche par tranche : un halo, le corps, son ventre, le coeur ; passe `DEFAIT`, il se defait
+    // en paquets d'eau qui retombent (plus de corps plein : des gouttes qui glissent dans la tranche).
+    for (let i = 0; i < N; i++) {
+      const s = i / N;
+      if (s < s0 || s >= s1) continue;
+      const g = panacheA(b, s), cx = x + dx * g.le, cy = y0 + dy * g.le - g.h, ep = 1.5 + s * 2;
+      const ex = dx ? pas / 2 + 0.6 : g.lw + 1, ey = dx ? ep / 2 + g.lw * 0.55 : pas / 2 + ep / 2;
+      const X = Math.round(cx - ex), Y = Math.round(cy - ey), W = Math.max(1, Math.round(2 * ex)), H = Math.max(1, Math.round(2 * ey));
+      if (s > 0.2) { ctx.fillStyle = EAU.halo; ctx.fillRect(X - 1, Y - 1, W + 2, H + 2); n++; }
+      if (s > DEFAIT) {
+        // Trois paquets par tranche, qui descendent dans l'epaisseur du jet (il tombe en pluie).
+        for (let k = 0; k < 3; k++) {
+          const f = ((t * 0.13 + i * 0.37 + k / 3) % 1), gx = dx ? X + ((i + k) % 2) : X + Math.round(f * (W - 2)), gy = dx ? Y + Math.round(f * (H - 2)) : Y + ((i + k) % 3);
+          ctx.fillStyle = k === 0 ? EAU.coeur : EAU.corps; ctx.fillRect(gx, gy, 2, 2); n++;
+        }
+        continue;
+      }
+      ctx.fillStyle = EAU.corps; ctx.fillRect(X, Y, W, H); n++;
+      // Le ventre du jet, plus sombre : il a du volume.
+      if (dx && s > 0.1) { ctx.fillStyle = EAU.dessous; ctx.fillRect(X, Y + H - 1, W, 1); n++; }
+      // Une vague qui court le long du jet : l'eau pousse.
+      if ((((s * 5 - t * 0.09) % 1) + 1) % 1 < 0.2) { ctx.fillStyle = EAU.vif; ctx.fillRect(X, Y, W, H); n++; }
+      ctx.fillStyle = EAU.coeur;
+      if (dx) ctx.fillRect(X, Y, W, 1); else ctx.fillRect(Math.round(cx - 0.5), Y, s < 0.4 ? 2 : 1, H);
+      n++;
     }
-    // La colonne pleine au sortir de la bouche.
-    ctx.fillStyle = 'rgba(214,236,250,0.9)';
-    if (dx) ctx.fillRect(Math.round(x + (dx > 0 ? 3 : -9)), Math.round(y - 9), 6, 2);
-    else ctx.fillRect(Math.round(x - 1), Math.round(y - 9 + (dy > 0 ? 2 : -6)), 2, 5);
-    // Les eclaboussures au pied du jet.
-    const q = piedDuJet(b), sx = q.x - b.x + x, sy = q.y - b.y + y;
-    for (let i = 0; i < 5; i++) {
-      const a = (t * 0.17 + i * 1.3) % 6.283, r = 2 + ((t + i * 11) % 18) / 3;
-      ctx.fillStyle = 'rgba(226,242,252,0.8)';
-      ctx.fillRect(Math.round(sx + Math.cos(a) * r), Math.round(sy + 2 + Math.sin(a) * r * 0.5 - (r > 6 ? 0 : 2)), 1, 1);
+    // La bouche : l'eau jaillit, un bouillon blanc contre la fonte.
+    if (s0 === 0) { ctx.fillStyle = EAU.blanc; ctx.fillRect(Math.round(x + dx * 3 - 1.5), Math.round(y0 - BOUCHE - 1.5), 3, 3); n++; }
+    // Les gouttes qui se detachent du panache : chacune sa portee, son ecart, son rythme (a l'empreinte).
+    for (let i = 0; i < 30; i++) {
+      const hh = hash(b.tx + i, b.ty, 211), m = 0.72 + (hh % 50) / 100, off = ((hh >>> 6) % 100) / 50 - 1;
+      const p = ((t * 1.7 + i * 7.3 + (hh >>> 12) % 17) % 34) / 34, s = p * m;
+      if (s < s0 || s >= s1 || s < 0.25) continue;
+      const g = panacheA(b, s);
+      if (g.h < 0.5) continue;
+      const lat = off * (g.lw + 2) * 1.2, gx = x + dx * g.le + (dy ? lat : 0), gy = y0 + dy * g.le - g.h + (dx ? lat * 0.7 : 0) + off;
+      ctx.fillStyle = i % 4 === 0 ? EAU.blanc : EAU.goutte;
+      ctx.fillRect(Math.round(gx), Math.round(gy), i % 5 === 0 ? 2 : 1, 2); n++;
     }
-    B.stats.rects += 23;
+    // Les eclats qui brillent sur le dos du jet (le soleil dedans), qui sautent de place.
+    if (s0 === 0) for (let i = 0; i < 3; i++) {
+      const s = 0.1 + (((Math.floor(t / 5) * 7 + i * 13) % 17) / 17) * 0.6, g = panacheA(b, s);
+      const ep = 1.5 + s * 2, gx = x + dx * g.le, gy = y0 + dy * g.le - g.h - (dx ? ep / 2 + g.lw * 0.55 : 0);
+      ctx.fillStyle = EAU.blanc; ctx.fillRect(Math.round(gx), Math.round(gy) - 1, 1, 1); n++;
+    }
+    if (s1 >= 1) {
+      // La couronne ou l'eau frappe l'asphalte : des gouttes qui rebondissent en arc.
+      const q = piedDuJet(b), px = q.x - b.x + x, py = q.y - b.y + y;
+      for (let i = 0; i < 10; i++) {
+        const p = ((t * 1.3 + i * 4.7) % 22) / 22, a = i * 0.63 + Math.floor((t + i * 22) / 22) * 1.7;
+        const r = 2 + p * 11, h = 8 * 4 * p * (1 - p);
+        ctx.fillStyle = i % 3 === 0 ? EAU.blanc : EAU.goutte;
+        ctx.fillRect(Math.round(px + Math.cos(a) * r), Math.round(py + Math.sin(a) * r * 0.6 - h), 1, i % 2 ? 1 : 2); n++;
+      }
+      // La brume qui monte de la chute et derive.
+      for (let i = 0; i < 4; i++) {
+        const p = ((t * 0.5 + i * 10) % 40) / 40, r = 4 + p * 7, al = 0.26 * (1 - p);
+        ctx.fillStyle = 'rgba(232,244,252,' + al.toFixed(2) + ')';
+        ctx.fillRect(Math.round(px - r + (i - 1.5) * 4 + p * 3), Math.round(py - 3 - p * 8 - r * 0.6), Math.round(2 * r), Math.round(1.2 * r)); n++;
+      }
+    }
+    B.stats.rects += n;
   }
 
-  /** La flaque sous la borne ouverte et au pied du jet : peinte sur le sol, SOUS les gens. */
+  /** La gerbe qu'un char souleve en roulant dans la flaque : deux eventails de chaque cote des roues. */
+  function peindreGerbe(ctx, v, b, x, y) {
+    const t = B.t || 0, ax = Math.abs(b.dir[0]), f = Math.min(1, Math.abs(v.vitesse || 0) / 3);
+    for (let i = 0; i < 20; i++) {
+      const p = ((t * 2 + i * 5) % 16) / 16, cote = i % 2 ? 1 : -1, r = 6 + p * 18 * f, h = 12 * f * 4 * p * (1 - p);
+      const e = ((i * 37) % 13) - 6;
+      ctx.fillStyle = i % 3 === 0 ? EAU.blanc : EAU.goutte;
+      ctx.fillRect(Math.round(x + (ax ? cote * r : e)), Math.round(y + (ax ? e * 0.6 : cote * r * 0.6) - h), i % 4 < 2 ? 2 : 1, 2);
+    }
+    B.stats.rects += 20;
+  }
+
+  /** Les rangees d'une ellipse posee le long de la rue (centre, demi-axe le long, demi-axe en travers), qui
+      respire : `u` le long, `w` en travers ; `vague` fait onduler le bord. */
+  function ellipse(ctx, b, cx, cy, ra, rl, vague) {
+    const t = B.t || 0, dx = b.dir[0];
+    let n = 0;
+    for (let w = -rl; w <= rl; w += 2) {
+      const u = Math.round(ra * Math.sqrt(Math.max(0, 1 - (w * w) / (rl * rl))) + (vague ? Math.sin(w * 0.3 + t * 0.035) * 1.5 + Math.sin(w * 0.11 - t * 0.02) * 1.5 : 0));
+      if (u <= 0) continue;
+      if (dx) ctx.fillRect(cx - u, cy + w, 2 * u, 2); else ctx.fillRect(cx + w, cy - u, 2, 2 * u);
+      n++;
+    }
+    return n;
+  }
+
+  /** La flaque de la borne ouverte : l'asphalte mouille, l'eau qui s'etale jusqu'a la chute et coule dans le
+      caniveau, l'ombre du panache, les ronds qui partent de la chute, l'ecume et le ciel dedans. Au sol,
+      SOUS les gens. */
   function dessinerFlaques(ctx, cam) {
     const liste = bornesOuvertes();
     if (!liste.length) return;
+    const d = bornesDonnees(), t = B.t || 0;
+    let n = 0;
     for (const b of liste) {
-      const q = piedDuJet(b), x = Math.round(q.x - cam.x), y = Math.round(q.y - cam.y);
-      if (x < -60 || y < -60 || x > VW + 60 || y > VH + 60) continue;
-      const rx = 16 + Math.abs(b.dir[0]) * 8, ry = 8 + Math.abs(b.dir[1]) * 8;
-      for (let yy = -ry; yy <= ry; yy += 2) {
-        const w = Math.round(rx * Math.sqrt(Math.max(0, 1 - (yy * yy) / (ry * ry))));
-        ctx.fillStyle = 'rgba(60,96,128,0.32)'; ctx.fillRect(x - w, y + yy, 2 * w, 2);
+      const dx = b.dir[0], dy = b.dir[1], L = b.portee, x = Math.round(b.x - cam.x), y = Math.round(b.y - 2 - cam.y);
+      if (x < -L - 60 || y < -L - 60 || x > VW + L + 60 || y > VH + L + 60) continue;
+      const ux = function (u, w) { return x + dx * u + (dy ? w : 0); }, uy = function (u, w) { return y + dy * u + (dx ? w : 0); };
+      const cu = L * 0.58, ra = L * 0.52 + 4, rl = 10 + d.large_px * 0.6;
+      // Le pied de la borne mouille, sur le trottoir.
+      ctx.fillStyle = EAU.mouille; n += ellipse(ctx, b, ux(0, 0), uy(0, 2), 7, 5, false);
+      // L'asphalte mouille, puis l'eau, qui respire — le trottoir d'en face l'arrete (un bord net, la bordure).
+      const u0 = b.bord - 1, u1 = b.chaussee ? b.bord + b.chaussee + 1 : L + 12, lg0 = rl + 34;
+      ctx.save(); ctx.beginPath();
+      if (dx) ctx.rect(dx > 0 ? x + u0 : x - u1, y - lg0, u1 - u0, 2 * lg0); else ctx.rect(x - lg0, dy > 0 ? y + u0 : y - u1, 2 * lg0, u1 - u0);
+      ctx.clip();
+      ctx.fillStyle = EAU.mouille; n += ellipse(ctx, b, ux(cu, 0), uy(cu, 0), ra + 5, rl + 4, true);
+      ctx.fillStyle = EAU.flaque; n += ellipse(ctx, b, ux(cu + 2, 0), uy(cu + 2, 0), ra, rl, true);
+      // Le caniveau : l'eau file le long du trottoir, d'un cote (a l'empreinte de la borne).
+      const sens = hash(b.tx, b.ty, 5) % 2 ? 1 : -1, cg = b.bord + 2, lg = rl + 30;
+      if (dx) ctx.fillRect(Math.round(ux(cg, 0) - 2), Math.round(uy(0, sens > 0 ? 0 : -lg)), 4, lg);
+      else ctx.fillRect(Math.round(ux(0, sens > 0 ? 0 : -lg)), Math.round(uy(cg, 0) - 2), lg, 4);
+      n++;
+      ctx.fillStyle = EAU.ciel;
+      for (let i = 0; i < 3; i++) {
+        const w = sens * (((t * 0.4 + i * 14) % lg));
+        ctx.fillRect(Math.round(ux(cg, w) - (dx ? 1 : 0)), Math.round(uy(cg, w) - (dx ? 0 : 1)), dx ? 2 : 3, dx ? 3 : 2); n++;
       }
-      // Le reflet qui bouge dans la flaque.
-      const k = Math.floor((B.t || 0) / 10) % 4;
-      ctx.fillStyle = 'rgba(210,232,250,0.35)'; ctx.fillRect(x - 6 + k * 2, y - 2, 5, 1); ctx.fillRect(x + 2 - k, y + 3, 4, 1);
-      B.stats.rects += ry + 2;
+      // L'ombre du panache sur l'eau : on voit qu'il est haut.
+      ctx.fillStyle = EAU.ombre;
+      for (let u = 4; u < L - 2; u += 4) {
+        const g = panacheA(b, (u - 3) / (L - 3)), lw = Math.round(g.lw * 0.8 + 1), a = Math.round(u);
+        if (dx) ctx.fillRect(dx > 0 ? x + a : x - a - 4, uy(0, -lw), 4, 2 * lw); else ctx.fillRect(ux(0, -lw), dy > 0 ? y + a : y - a - 4, 2 * lw, 4);
+        n++;
+      }
+      // Le ciel dans la flaque : deux reflets qui glissent lentement.
+      ctx.fillStyle = EAU.ciel;
+      for (let i = 0; i < 3; i++) {
+        const u = cu - ra * 0.6 + ((t * 0.12 + i * 17) % (ra * 1.2)), w = (i - 1) * rl * 0.5;
+        ctx.fillRect(Math.round(ux(u, w) - (dx ? 3 : 0)), Math.round(uy(u, w) - (dx ? 0 : 3)), dx ? 6 : 1, dx ? 1 : 6); n++;
+      }
+      // Les ronds qui partent de la chute.
+      for (let i = 0; i < 3; i++) {
+        const p = ((t * 0.6 + i * 12) % 36) / 36, ra2 = 3 + p * 15, rl2 = 2 + p * 9, al = 0.7 * (1 - p);
+        ctx.fillStyle = 'rgba(222,240,254,' + al.toFixed(2) + ')';
+        for (let k = 0; k < 14; k++) {
+          const a = k * 0.449 + i;
+          ctx.fillRect(Math.round(ux(L + Math.cos(a) * ra2, Math.sin(a) * rl2)), Math.round(uy(L + Math.cos(a) * ra2, Math.sin(a) * rl2)), 2, 1); n++;
+        }
+      }
+      // L'ecume blanche, la ou l'eau frappe : elle bouillonne.
+      for (let i = 0; i < 7; i++) {
+        const h = hash(b.tx + i, b.ty, 17), u = L - 5 + (h % 11), w = ((h >>> 4) % 13) - 6, taille = 2 + ((h >>> 9) + Math.floor(t / 6)) % 2;
+        ctx.fillStyle = (Math.floor(t / 6) + i) % 3 ? EAU.ecume : EAU.ecume2;
+        ctx.fillRect(Math.round(ux(u, w) - taille / 2), Math.round(uy(u, w) - taille / 2), taille + 1, taille); n++;
+      }
+      ctx.restore();
     }
+    B.stats.rects += n;
   }
 
   //: Un char qui roule a moins de ce rayon du jet : les enfants remontent sur le trottoir et attendent.
@@ -469,7 +619,9 @@ const RueDesSaisons = (function () {
   function enfantsDe(b) {
     const d = bornesDonnees(), n = d.enfants, out = [], t = B.t || 0;
     const long = b.dir[1] !== 0;                          // la rue au nord ou au sud : on court d'est en ouest
-    const q = piedDuJet(b), cx = (b.x + q.x) / 2, cy = (b.y + q.y) / 2 + 2;
+    // Sous le panache : ils courent dessous, d'un bout a l'autre, et en travers.
+    const dx = b.dir[0], dy = b.dir[1], cx = b.x + dx * b.portee * 0.4, cy = b.y + dy * b.portee * 0.4 + 2;
+    const ra = b.portee * 0.3, rl = 12;
     const prudents = unCharApproche(b);
     for (let i = 0; i < n; i++) {
       const h = hash(b.tx + i * 17, b.ty, 131);
@@ -481,7 +633,7 @@ const RueDesSaisons = (function () {
         continue;
       }
       const v = 0.028 + (h % 13) / 1000, a = t * v + i * 2.094 + (h % 100) / 30;
-      const rx = long ? 22 : 9, ry = long ? 7 : 20;
+      const rx = long ? rl : ra, ry = long ? ra : rl;
       const x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry;
       const vx = -Math.sin(a) * rx, vy = Math.cos(a) * ry;
       const face = Math.abs(vx) > Math.abs(vy) ? (vx > 0 ? 'droite' : 'gauche') : (vy > 0 ? 'bas' : 'haut');
@@ -513,9 +665,21 @@ const RueDesSaisons = (function () {
     const liste = bornesOuvertes();
     if (!liste.length) return;
     for (const b of liste) {
-      if (b.x < cx - 60 || b.y < cy - 60 || b.x > cx + VW + 60 || b.y > cy + VH + 60) continue;
-      visibles.push({ id: ID_TRI, vivant: true, x: b.x, y: b.y + 0.5,
-                      peindreFoire: function (ctx) { peindreJet(ctx, b, b.x - Math.round(cx), b.y - Math.round(cy)); } });
+      const m = b.portee + 60;
+      if (b.x < cx - m || b.y < cy - m || b.x > cx + VW + m || b.y > cy + VH + m) continue;
+      // Le panache en trois troncons, chacun trie a son pied : un enfant passe devant ou derriere l'eau.
+      for (let k = 0; k < 3; k++) {
+        const s0 = k / 3, s1 = k === 2 ? 1.01 : (k + 1) / 3, le = b.portee * (k + 0.5) / 3;
+        visibles.push({ id: ID_TRI, vivant: true, x: b.x + b.dir[0] * le, y: b.y + 0.5 + b.dir[1] * le,
+                        peindreFoire: function (ctx) { peindreJet(ctx, b, b.x - Math.round(cx), b.y - Math.round(cy), s0, s1); } });
+      }
+      // Un char qui roule dans l'eau : la gerbe de chaque cote, peinte par-dessus lui.
+      for (const v of charsQuiRoulent()) {
+        const ux = v.x - b.x, uy = v.y - b.y, le = ux * b.dir[0] + uy * b.dir[1], tr = Math.abs(ux * b.dir[1] - uy * b.dir[0]);
+        if (le < b.bord - 4 || le > b.portee + 10 || tr > 24) continue;
+        visibles.push({ id: ID_TRI, vivant: true, x: v.x, y: v.y + 1,
+                        peindreFoire: function (ctx) { peindreGerbe(ctx, v, b, v.x - Math.round(cx), v.y - Math.round(cy)); } });
+      }
       for (const k of enfantsDe(b)) {
         visibles.push({ id: ID_TRI, vivant: true, x: k.x, y: k.y,
                         peindreFoire: function (ctx) { peindreEnfant(ctx, k, k.x - Math.round(cx), k.y - Math.round(cy)); } });

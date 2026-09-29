@@ -157,8 +157,12 @@ RUE = {
     #: de `heures[0]` à `heures[1]`, `part` des bornes crachent vers la rue (à l'empreinte de la borne et du
     #: jour) et `enfants` enfants courent dans l'eau autour. Tout est PEINT d'après `B.t` : ni entité, ni
     #: dé. `portee_px` : jusqu'où s'entend la boucle `borne_ete` (un lieu chargé à la demande).
+    #: LE PANACHE (Martin, 30 sept. : « plus gros ») : il traverse la rue — il retombe à `traverse` de la
+    #: chaussée passé le bord du trottoir, entre `jet_min_px` et `jet_px` de la borne ; il monte à `haut_px`
+    #: au-dessus du sol et s'ouvre jusqu'à `large_px` de large où il retombe.
     "bornes": {"froid_max": 0.05, "part_jours": 0.6, "heures": [11, 19.5], "part": 0.15, "enfants": 3,
-               "jet_px": 30, "portee_px": 260, "volume": 0.6,
+               "jet_px": 60, "jet_min_px": 24, "traverse": 0.85, "haut_px": 18, "large_px": 14,
+               "portee_px": 260, "volume": 0.6,
                "chandails": ["#e74c3c", "#f1c40f", "#3498db", "#2ecc71", "#e67e22", "#9b59b6", "#ff6fa8",
                              "#1abc9c"],
                "maillots": ["#1f5f99", "#c0392b", "#2e7d4f", "#f39c12", "#16161c"]},

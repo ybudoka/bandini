@@ -1435,6 +1435,28 @@ glace et le dérapage (lot 6) restent en dernier, à part._
   l'enfant à vélo ne s'habille pas ; un char qui roule SUR le trottoir traverse encore les tables (seuls les
   piétons butent, comme demandé) ; un passant immobile sur une table au changement de palier est poussé,
   mais un personnage « figé » dont le poste tomberait sur une table y reviendrait (aucun ne l'est : jugé).
+- **fix du 30 sept. 2026 — un vrai panache** (Martin : le jet est trop fin, « plus gros ») : le filet de
+  30 px est devenu un panache qui **traverse la rue**. Il sort de la bouche latérale à 8 px du sol, monte
+  à 18 px (`haut_px`), s'ouvre jusqu'à 14 px de large (`large_px`) et retombe à `traverse` = 85 % de la
+  chaussée passé le bord du trottoir, entre 24 et 60 px de la borne (`jet_min_px`, `jet_px`) : 35 px sur une
+  rue à deux voies, 60 sur une à quatre (`RueDesSaisons.panacheDe`, une fois par borne, lu sur les tuiles).
+  Le jet plein a un halo, un ventre plus sombre, un cœur blanc, des vagues qui le parcourent et des éclats
+  qui brillent ; passé 72 % du chemin il se défait en paquets qui retombent, 30 gouttes s'en détachent ; à
+  la chute, une couronne de gouttes qui rebondissent et de la brume. Au sol : l'asphalte mouillé et la
+  flaque qui respire, **arrêtées par la bordure d'en face** (un clip sur la chaussée), le pied de la borne
+  mouillé, l'eau qui file dans le caniveau d'un côté (à l'empreinte de la borne), l'ombre du panache, les
+  ronds qui partent de la chute, l'écume et le ciel dans la flaque. Le panache se trie avec les gens **en
+  trois tronçons** (un enfant passe devant ou derrière l'eau) ; les enfants courent dessous, d'un bout à
+  l'autre ; on se rafraîchit n'importe où sous lui (`dansUnJet` : la distance au segment borne-chute), pas
+  au-delà. **Un char qui roule dans l'eau la fait gicler** de chaque côté (peint, par-dessus lui). Toujours
+  sans entité ni dé, d'après `B.t` ; la ville ne bouge pas (seules les données de la borne changent).
+  **Le rythme** (Chromium, Mac, `test_la_canicule_tient_le_rythme`) : le rendu 1,44–1,48 ms avec la borne à
+  l'écran contre 1,31–1,33 sans (+0,1 à 0,17 ms ; avant : +0,02) ; 2,3–2,4 ms par image un jour de canicule
+  (2,2 au commit d'avant). **Juge** : `test_le_panache_traverse_la_rue` (il retombe dans la chaussée, passé
+  son milieu, peint il monte à `haut_px` et couvre sa portée en l'air, trois tronçons, mouillé dessous et
+  sec au-delà, la gerbe du char) — 6 mutations, 6 rouges. **Captures** : `captures/borne-panache-*.png`
+  (une rue à deux voies et une à quatre, trois images de jour et trois de soir à 19 h 12, un char dans
+  l'eau, la vue à l'échelle du jeu). Le soir de juillet, la borne ferme à 19 h 30 : il fait encore clair.
 
 ### Lot 5 — le son des saisons (livré le 29 sept. 2026)
 

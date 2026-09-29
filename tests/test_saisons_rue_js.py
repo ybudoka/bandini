@@ -379,6 +379,66 @@ def test_la_borne_ouverte_se_peint_avec_ses_enfants_et_rien_n_est_pose(banc):
     assert r["nes"] == 0 and r["des"] == 0, "la borne ouverte a posé une entité ou tiré un dé"
 
 
+def test_le_panache_traverse_la_rue(banc):
+    """Martin, 30 sept. 2026 : le jet était trop fin (« plus gros »). Le panache TRAVERSE la rue : il retombe
+    dans la chaussée, passé son milieu, jamais sur le trottoir d'en face ; peint, il monte à `haut_px` et
+    couvre toute sa portée ; on est mouillé dessous, d'un bout à l'autre, pas au-delà ; sa flaque s'arrête à
+    la bordure. Et un char qui roule dans l'eau la fait gicler."""
+    r = banc("function (L) {" + PEINDRE + CANICULE + """
+        L.Jeu.commencer();
+        const B = L.B, R = L.RueDesSaisons, M = L.Monde, d = B.defs.saisons.rue.bornes, TT = 16;
+        canicule(L);
+        const chaussee = function (x, y) { const tx = Math.floor(x / TT), ty = Math.floor(y / TT); return M.estRoute(tx, ty) && !M.estTrottoir(tx, ty); };
+        const out = [];
+        for (const b of R.bornesDe(M.carte)) {
+            const dx = b.dir[0], dy = b.dir[1], L2 = b.portee;
+            const pied = { x: b.x + dx * L2, y: b.y - 2 + dy * L2 };
+            out.push({ portee: L2, bord: b.bord, rue: b.chaussee, tombeDansLaRue: chaussee(pied.x, pied.y) });
+        }
+        // Le panache peint, a l'ecran : ses deux premiers troncons (le jet en l'air, avant la chute : la brume
+        // et la couronne de la chute n'y comptent pas) — jusqu'ou il monte, jusqu'ou il va.
+        const b = R.bornesOuvertes()[0], cx = b.x - 200, cy = b.y - 120;
+        const vis = []; R.ajouterVisibles(vis, cx, cy);
+        // Trie avec les gens en trois troncons, chacun a son pied le long du panache.
+        const troncons = [0, 1, 2].filter(function (k) {
+            const le = b.portee * (k + 0.5) / 3, x = b.x + b.dir[0] * le, y = b.y + 0.5 + b.dir[1] * le;
+            return vis.some(function (v) { return Math.abs(v.x - x) < 0.01 && Math.abs(v.y - y) < 0.01; });
+        }).length;
+        const ctx = L.Base.nouveauCanvas(8, 8).getContext('2d'); ctx.traces = [];
+        vis.slice(0, 2).forEach(function (v) { v.peindreFoire(ctx); });
+        const jet = ctx.traces, sx = b.x - cx, sy = b.y - cy;
+        const haut = Math.max.apply(null, jet.map(function (r) { return (sy - 2) - r[1]; }));
+        const loin = Math.max.apply(null, jet.map(function (r) { return b.dir[0] ? Math.max(Math.abs(r[0] - sx), Math.abs(r[0] + r[2] - sx)) : Math.max(Math.abs(r[1] - sy), Math.abs(r[1] + r[3] - sy)); }));
+        // Mouille dessous, d'un bout a l'autre ; sec au-dela.
+        const le = function (u) { return [b.x + b.dir[0] * u, b.y - 2 + b.dir[1] * u]; };
+        const dessous = [0.25, 0.5, 0.75, 1].every(function (k) { const p = le(b.portee * k); return R.dansUnJet(p[0], p[1], 6); });
+        const pAuDela = le(b.portee + 30), auDela = R.dansUnJet(pAuDela[0], pAuDela[1], 6);
+        // La gerbe : un char qui roule dans la flaque.
+        const nAvant = vis.length;
+        const v = L.Vehicules.creer('auto', b.x + b.dir[0] * b.portee * 0.5, b.y + 4, -Math.PI / 2, { etat: 'roule', couleur: '#c0392b' });
+        v.vitesse = 3; B.t += 1;
+        const vis2 = []; R.ajouterVisibles(vis2, cx, cy);
+        const gerbe = vis2.filter(function (w) { return Math.abs(w.x - v.x) < 0.5 && Math.abs(w.y - v.y - 1) < 0.5; }).length;
+        L.Entites.retirer(v);
+        return { bornes: out, haut: haut, loin: loin, portee: b.portee, troncons: troncons, dessous: dessous, auDela: auDela,
+                 gerbe: gerbe, nAvant: nAvant, H: d.haut_px, jetMax: d.jet_px };
+    }""")
+    bornes = r["bornes"]
+    assert len(bornes) >= 40
+    deux_voies = [b for b in bornes if b["rue"] >= 32]
+    assert len(deux_voies) >= 20, "le juge ne voit pas les rues"
+    for b in deux_voies:
+        # Passé le milieu de la chaussée (sur un boulevard, aussi loin que `jet_px` le permet).
+        assert b["portee"] - b["bord"] >= min(b["rue"] * 0.6, r["jetMax"] - b["bord"]), f"le panache ne traverse pas la rue : {b}"
+        assert b["tombeDansLaRue"], f"le panache retombe hors de la chaussée : {b}"
+    assert all(24 <= b["portee"] <= r["jetMax"] for b in bornes)
+    assert r["haut"] >= r["H"], f"le panache ne monte qu'à {r['haut']} px"
+    assert r["loin"] >= r["portee"] * 2 / 3 - 2, f"le jet en l'air ne couvre que {r['loin']} px sur {r['portee']}"
+    assert r["troncons"] >= 3, "le panache n'est plus trié en tronçons avec les gens"
+    assert r["dessous"] and not r["auDela"], "on n'est pas mouillé sous le panache, ou on l'est au-delà"
+    assert r["gerbe"] == 1, "un char qui roule dans l'eau ne fait pas gicler"
+
+
 def test_la_borne_ouverte_s_entend_rafraichit_et_se_laisse_couler(banc):
     r = banc("function (L, o) {" + PEINDRE + CANICULE + """
         L.Jeu.commencer();
