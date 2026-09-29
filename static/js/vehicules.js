@@ -1860,11 +1860,15 @@ const Vehicules = (function () {
       // robe rose, et pas un passant tire au hasard qui aurait ses couleurs. Elle
       // dit son identite (`pilote.arch`) ; un pilote sans nom — le trafic ordinaire,
       // le voleur d'une moto — reste un passant de la rue.
-      const arch = v.pilote && v.pilote.arch ? Entites.archetype(v.pilote.arch) : Entites.archetypeDeRue();
-      const victime = Entites.creerPieton(v.x + Math.cos(v.angle + Math.PI / 2) * 14, v.y + Math.sin(v.angle + Math.PI / 2) * 14,
-        v.pilote && v.pilote.swaps ? Object.assign({}, arch, { couleurs: v.pilote.swaps, tenue: v.pilote.tenue || null }) : arch);
+      // ⚠️ LE FUYARD D'UNE MISSION (`v.fuyard`) : c'est elle qui le sort, avec sa caisse
+      // (`faireTomberLeFuyard`, histoire.js) — un passant témoin en plus, et deux hommes sortaient du char.
+      if (!v.fuyard) {
+        const arch = v.pilote && v.pilote.arch ? Entites.archetype(v.pilote.arch) : Entites.archetypeDeRue();
+        const victime = Entites.creerPieton(v.x + Math.cos(v.angle + Math.PI / 2) * 14, v.y + Math.sin(v.angle + Math.PI / 2) * 14,
+          v.pilote && v.pilote.swaps ? Object.assign({}, arch, { couleurs: v.pilote.swaps, tenue: v.pilote.tenue || null }) : arch);
+        victime.etat = 'temoin'; victime.menace = j; victime.minuterie = 600; victime.cri = 120;
+      }
       v.pilote = null;
-      victime.etat = 'temoin'; victime.menace = j; victime.minuterie = 600; victime.cri = 120;
       crime = 'carjacking'; vu = true;
     } else if (v.conducteur === null && !v.vole && !v.aToi) {
       // ⚠️ `aToi` : un char PAYE devant un guichet. Sans lui, racheter le sien

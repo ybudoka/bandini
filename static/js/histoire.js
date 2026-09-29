@@ -2030,7 +2030,11 @@ const Histoire = (function () {
     const v = B.mission.fuyard;
     if (!v || B.mission.fuyardTombe) return;
     B.mission.fuyardTombe = true;
-    v.conducteur = null; v.etat = v.etat === 'epave' ? 'epave' : 'stationne'; v.fuite = false; v.poursuite = false;
+    // ⚠️ ON LUI A PRIS SON CHAR (Martin, 29 sept. 2026 : « j'ai volé le char du pyromane et après
+    // quelques secondes j'ai perdu tout contrôle ») : c'est le JOUEUR qui conduit, on ne lui vide
+    // pas le siège. Le fuyard, tiré dehors par le carjacking, file à pied avec la caisse.
+    if (v.conducteur !== B.joueur) { v.conducteur = null; v.etat = v.etat === 'epave' ? 'epave' : 'stationne'; }
+    v.fuite = false; v.poursuite = false;
     const gang = B.defs.pietons.gangs[0];
     const place = tuileLibre(v.x, v.y, 4) || { x: v.x + 12, y: v.y };
     const e = Entites.creerPieton(place.x, place.y, Entites.archetype(gang.pieton));
@@ -2123,7 +2127,8 @@ const Histoire = (function () {
         if (v && !B.mission.fuyardTombe) {
           const pres = j.dansVehicule ? j.dansVehicule : j;
           const d = Math.hypot(v.x - pres.x, v.y - pres.y);
-          if (v.etat === 'epave' || (d < 40 && Math.abs(v.vitesse) < 0.6) || v.vie < v.vieMax * 0.5) faireTomberLeFuyard();
+          // Au volant de SON char (on le lui a pris en marche), on l'a rattrapé : il est dehors.
+          if (j.dansVehicule === v || v.etat === 'epave' || (d < 40 && Math.abs(v.vitesse) < 0.6) || v.vie < v.vieMax * 0.5) faireTomberLeFuyard();
           return;
         }
         const porteur = B.mission.entites.find(function (e) { return e.porteLaCaisse; });
@@ -2586,6 +2591,8 @@ const Histoire = (function () {
         // Celui qu'on filait repart comme un autre, qu'on l'ait mené au bout ou
         // qu'il nous ait vus : il n'est jamais escamoté sous nos yeux.
         if (e.suivi && B.joueur.dansVehicule !== e) { e.suivi = false; e.attendLeJoueur = false; e.destination = null; e.mission = null; }
+        // Le char du fuyard qu'on lui a volé : un char volé comme un autre, qui reste sous le joueur.
+        else if (e.fuyard && B.joueur.dansVehicule === e) { e.fuyard = false; e.fuite = false; e.poursuite = false; e.mission = null; }
         else if (tout || e.fuyard || e.escorte) { if (B.joueur.dansVehicule === e) Vehicules.descendre(B.joueur, true); Entites.retirer(e); }
         else { e.mission = null; }
       } else if (e.type === 'pieton') {
