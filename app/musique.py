@@ -367,7 +367,7 @@ def duree_s(morceau: Morceau) -> float:
 
 def exporter() -> list[Morceau]:
     return ([dict(m) for m in MORCEAUX] + stations() + ambiances()  # type: ignore[misc]
-            + rues() + commerces() + [orgue(), ritournelle(), violon()])
+            + rues() + commerces() + [orgue(), ritournelle(), violon(), halloween()])
 
 
 #: ⚠️ **LES NOTES QUI RESTENT DANS LE PAQUET** (29 sept. 2026). Les notes de tous les
@@ -677,7 +677,7 @@ def rues() -> list[Morceau]:
 
 
 def rue_par_slug(slug: str) -> Morceau | None:
-    for style in RUE + [ORGUE, RITOURNELLE, VIOLON]:
+    for style in RUE + [ORGUE, RITOURNELLE, VIOLON, HALLOWEEN]:
         if style["slug"] == slug:
             return generer_rue(style)
     return None
@@ -745,6 +745,20 @@ VIOLON: StyleRue = {
 def violon() -> Morceau:
     """Le reel du violoneux, en notes — le filet si le mp3 manque."""
     return generer_rue(VIOLON)
+
+
+#: L'HALLOWEEN (les quatre saisons, lot 3) : dehors, le soir du 31, a la place de la musique du district
+#: (`Son.Chef`). Mineure, sautillante, un theremin qu'on imite au sinus — une fete, pas un film d'horreur.
+HALLOWEEN: StyleRue = {
+    "slug": "halloween", "nom": "Le soir de l'Halloween", "graine": 19311031,
+    "bpm": 100, "tonique": 50, "gamme": MINEURE, "grille": (0, 5, 3, 4), "mesure": 8,
+    "forme_chant": "sine", "forme_gratte": "triangle", "volume": 0.45,
+}
+
+
+def halloween() -> Morceau:
+    """La musique du soir de l'Halloween, en notes — le filet si le mp3 manque."""
+    return generer_rue(HALLOWEEN)
 
 
 #: --- La musique qui dit ou tu es et ce qui t'arrive -------------------------

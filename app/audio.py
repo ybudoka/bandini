@@ -462,6 +462,17 @@ CATALOGUE: list[Echantillon] = [
     _e("tonnerre", "Tonnerre", variantes=2, duree_s=4.0, volume=0.8, influence=0.5,
        prompt="a distant thunder clap rolling and rumbling across the sky over a city, "
               "deep and long, no rain, no music"),
+    # L'HALLOWEEN (les quatre saisons, lot 3) : le rire d'une sorciere qui passe, la porte de la maison
+    # hantee, le souffle du fantome qui s'evanouit. Un « lieu » (`LIEUX["halloween"]`) : le 31 seulement.
+    _e("rire_sorciere", "Rire de sorcière", duree_s=2.5, volume=0.5,
+       prompt="a cartoonish old witch cackling laugh, high pitched and gleeful, short, "
+              "outdoors at night, no music"),
+    _e("porte_grince", "Porte qui grince", duree_s=2.0, volume=0.6,
+       prompt="an old wooden house door creaking slowly open with a long eerie squeak of rusty "
+              "hinges, close, no music"),
+    _e("souffle_fantome", "Souffle de fantôme", duree_s=2.0, volume=0.5,
+       prompt="a ghostly airy whoosh fading away with a faint hollow moan, spooky but soft, "
+              "no music"),
     _e("eclaboussure", "Éclaboussure", duree_s=0.9, volume=0.55,
        prompt="a car tire driving fast through a big puddle, a sharp splash of water "
               "spraying onto a sidewalk, close, no engine, no music"),
@@ -1060,6 +1071,14 @@ MUSIQUES: list[Piece] = [
        "tapping a steady podorythmie beat on a wooden floor, close mic, no guitar, no "
        "other instruments, no vocals, seamless loop",
        duree_s=30, volume=0.46),
+    # L'HALLOWEEN (`musique.HALLOWEEN`, les quatre saisons, lot 3) : dehors, le soir du 31, a la place de la
+    # musique du district. Drole et inquietante a la fois — une fete, pas un film d'horreur.
+    _m("halloween",
+       "playful spooky halloween night music at 100 bpm in D minor, a wobbly theremin melody over "
+       "pizzicato strings and a tinkling celesta, a walking tuba bass, soft organ chords, "
+       "creaky and mischievous like kids in costumes on a foggy street, fun not scary, "
+       "no vocals, seamless loop",
+       duree_s=45, volume=0.4),
     # LE CASINO DU DRAGON D'OR (`musique.COMMERCES`, `com_casino`) : sa musique d'interieur. Elle joue SOUS la
     # rumeur de la salle et le cliquetis des machines : feutree, sans melodie qui accroche.
     _m("com_casino",
@@ -1529,6 +1548,8 @@ LIEUX: dict[str, list[str]] = {
     # La pluie (les saisons, lot 2) : pas un endroit, un TEMPS — ils se chargent a la premiere averse
     # (`Pluie.maj`). Une partie qui ne voit jamais la pluie (l'hiver) ne les telecharge pas.
     "pluie": ["pluie", "tonnerre", "eclaboussure"],
+    # L'Halloween (les saisons, lot 3) : un SOIR — ils se chargent le 31 (`Halloween.maj`).
+    "halloween": ["rire_sorciere", "porte_grince", "souffle_fantome"],
     "casino": ["casino_salle", "bras_machine", "gain_machine", "jackpot",
                "roulette_bille", "cartes_donnees", "jetons", "des_sic_bo", "sabot_brasse", "talkie_securite",
                # Le tripot du sous-sol (vague 4) : on n'y descend que par la grande salle.
@@ -1627,6 +1648,16 @@ def voix_galeries() -> list[dict]:
             for a in galeries.ANNONCES]
 
 
+def voix_halloween() -> list[dict]:
+    """La voix de la maison hantée du 31 octobre (`halloween.MURMURES`) — sa banque à elle (`halloween`),
+    chargée quand on entre (`Halloween`). Sa voix lui est RÉSERVÉE (`VOIX_RESERVEES`)."""
+    from . import halloween
+    return [{"slug": f"halloween-{m['cle']}", "texte": m["texte"], "genre": "homme", "voix": halloween.VOIX,
+             "volume": 0.85, "histoire": True, "qui": "maison_hantee", "mission": "halloween", "partie": "halloween",
+             "telephone": False}
+            for m in halloween.MURMURES]
+
+
 def voix_ouverture() -> list[dict]:
     """Les quatre phrases de l'ouverture, dites par le narrateur du Clairon.
 
@@ -1691,7 +1722,7 @@ def voix_garage() -> list[dict]:
 
 def toutes_les_voix() -> list[dict]:
     return (list(VOIX) + list(VOIX_DE_LA_POLICE) + voix_histoire() + voix_journal() + voix_loto() + voix_ouverture()
-            + voix_repos() + voix_dojo() + voix_galeries() + voix_garage())
+            + voix_repos() + voix_dojo() + voix_galeries() + voix_halloween() + voix_garage())
 
 
 #: LES VOIX QUI NE SE PARTAGENT PAS — la table, ecrite UNE fois : la voix, et le
@@ -1708,6 +1739,8 @@ VOIX_RESERVEES: dict[str, str] = {
     VOIX_AGENT: "police",
     # La voix au haut-parleur des Galeries : générée pour elle, et à elle seule.
     "annonceur centre d'achat 2": "annonceur",
+    # La voix de la maison hantée (l'Halloween, les quatre saisons, lot 3).
+    "Dr. Von Fusion - VF": "maison_hantee",
 }
 
 
@@ -1998,6 +2031,6 @@ def exporter() -> dict:
         # en une ligne — le prefixe, les noms, ce qu'elles ont en commun, et celles dont le mp3 manque.
         # Declarees une par une, elles pesaient 8 870 octets bruts et firent deborder le paquet
         # (`test_le_paquet_reste_leger`, 26 sept. 2026). `Son.Voix.histoire()` les deplie au chargement.
-        "series": [serie_de_voix("narrateur-loto-", voix_loto()), serie_de_voix("galeries-", voix_galeries()),
+        "series": [serie_de_voix("narrateur-loto-", voix_loto()), serie_de_voix("galeries-", voix_galeries()), serie_de_voix("halloween-", voix_halloween()),
                    serie_de_voix("ti_guy-garage-", voix_garage())],
     }

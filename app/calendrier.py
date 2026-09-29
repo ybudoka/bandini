@@ -37,6 +37,7 @@ DATES = {
     "saint_jean": 20,        # le 24 juin, le dernier jour de juin
     "demenagement": 21,      # le 1er juillet
     "noel": 39,
+    "halloween": 33,         # le 31 octobre, le dernier jour d'octobre (les quatre saisons, lot 3)
 }
 
 

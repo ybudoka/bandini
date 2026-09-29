@@ -907,6 +907,25 @@ const Son = (function () {
       for (let k = 0; k < 2; k++) { ton(98, 1.1, 'sawtooth', 0.09 * v, 1, k * 1.5); ton(147, 1.1, 'square', 0.03 * v, 1, k * 1.5); }
       return v;
     },
+    // L'HALLOWEEN (les saisons, lot 3) : le rire d'une sorciere qui passe (la ou elle est), la porte de la
+    // maison hantee, le souffle du fantome. Tant que le groupe « halloween » n'est pas charge, la synthese.
+    rire_sorciere: function (x, y) {
+      const j = B.joueur;
+      if (!j || !pret()) return 0;
+      const p = 420, v = 1 - Math.hypot(x - j.x, y - j.y) / p;
+      if (v <= 0) return 0;
+      if (estCharge('rire_sorciere')) return jouerA('rire_sorciere', x, y, p);
+      for (let k = 0; k < 5; k++) ton(880 - k * 40, 0.09, 'sawtooth', 0.05 * v, 1.2, k * 0.12);
+      return v;
+    },
+    porte_grince: function () {
+      if (!pret()) return;
+      if (!joue('porte_grince')) ton(320, 1.2, 'sawtooth', 0.05, 1.8);
+    },
+    souffle_fantome: function () {
+      if (!pret()) return;
+      if (!joue('souffle_fantome')) bruit(1.4, 0.1, 900, 150);
+    },
     // LA PLUIE (les saisons, lot 2) : le tonnerre qui suit l'eclair, et l'eclaboussure d'un char dans
     // une flaque, la ou elle est. Tant que le groupe « pluie » n'est pas charge, la synthese.
     tonnerre: function () {
@@ -1880,6 +1899,9 @@ const Son = (function () {
       // bagarre (qui se décident plus haut) continuent de couvrir : se cacher
       // sous un comptoir ne rend pas la ville muette à la police.
       if (Monde.dansLaFoire(Math.floor(j.x / TT), Math.floor(j.y / TT))) return null;
+      // ⚠️ LE SOIR DE L'HALLOWEEN, la ville entiere a sa musique (les saisons, lot 3) : elle prend la case
+      // du district — en fondu, comme tout ce que le chef enchaine.
+      if (typeof Halloween !== 'undefined' && Halloween.musiqueDehors()) return { slug: 'halloween', rang: e.ambiance || 4 };
       const amb = Chef.ambianceDuLieu();
       return amb ? { slug: amb, rang: e.ambiance || 4 } : null;
     },

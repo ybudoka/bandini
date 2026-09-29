@@ -241,6 +241,12 @@ const Garderobe = (function () {
     capuche: { bas: { g: ['..kkkkkk..', '.kttttttk.', 'kttttttttk', 'ktt....ttk', 'kt......tk', 'kt......tk', 'kt......tk', '.kt....tk.'], a: 1 },
                haut: { g: ['..kkkkkk..', '.kttttttk.', 'kttttttttk', 'kttttttttk', 'kttttttttk', 'kTTTTTTTTk', '.kTTTTTTk.'], a: 1 },
                cote: { g: ['..kkkkk..', '.kttttttk', 'ktttttttk', 'ktttk....', 'ktttk....', 'ktttk....', '.kttk....'], a: 1, x: -1 } },
+    // ⚠️ LES PIECES DE COSTUME (l'Halloween, les quatre saisons, lot 3) : dessinees ici, JAMAIS dans les
+    // listes du tirage (`app/garderobe.py`) — une piece de plus dans `CHAPEAUX` changerait la tenue de
+    // tout le monde (le tirage lit une position). `Halloween.habillerEn` seul les met.
+    sorciere: { bas: { g: ['....kk....', '...kttk...', '..kttttk..', '..kaaaak..', 'kttttttttk', '.kkkkkkkk.'], a: 3 },
+                haut: { g: ['....kk....', '...kttk...', '..kttttk..', '..kaaaak..', 'kttttttttk', '.kkkkkkkk.'], a: 3 },
+                cote: { g: ['.....kk...', '....kttk..', '..kttttk..', '..kaaaak..', 'kttttttttk', '.kkkkkkkk.'], a: 3, x: -2 } },
   };
 
   function poserChapeau(g, t, vue, nom) {
@@ -371,6 +377,13 @@ const Garderobe = (function () {
     }
     // Le motif, sur ce qui reste du haut.
     const motif = tn.motif;
+    // Les OS du squelette (un costume d'Halloween, jamais tire) : la colonne et les cotes, en blanc.
+    if (motif === 'os') {
+      for (let y = t0; y < g.length && ligneA(g[y], 'c'); y++) for (let x = 0; x < g[y].length; x++) {
+        if (g[y][x] !== 'c') continue;
+        if (x === milieu || x === milieu + 1 || ((y - t0) % 2 === 1 && !bras(x))) g[y][x] = 'W';
+      }
+    }
     if (motif === 'raye' || motif === 'carreaute') {
       for (let y = t0; y < g.length; y++) for (let x = 0; x < g[y].length; x++) {
         if (g[y][x] !== 'c') continue;

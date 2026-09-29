@@ -102,6 +102,7 @@ const Jeu = (function () {
     B.sonnerie = null;                       // un telephone qui sonnait dans la partie d'avant ne sonne pas dans celle-ci
     B.abribusServis = {};                    // les abribus qu'un autobus vient de servir (Autobus)
     Traversier.oublier(); Navette.oublier();                    // rien a bord, la carte neuve n'a pas de pont pose
+    Halloween.oublier();                     // les enfants d'une autre partie
     Fetes.oublier();                         // la tuile du tronc du sapin est rendue
     Neige.oublier();                         // la rue d'une partie rechargee est blanche
     Pluie.oublier();                         // et la pluie d'une autre partie se tait
@@ -1126,6 +1127,7 @@ const Jeu = (function () {
         pas('train', Train.maj);           // le train : une heure — la voie, ses passages, ce qu'il heurte
         pas('navette', Navette.maj);       // la navette de l'ile, pareil
         pas('pont', Pont.maj);             // le pont de glace : il prend, craque au degel, et rend l'eau
+        pas('halloween', Halloween.maj);   // le 31 au soir : les bandes d'enfants
         pas('fetes', Fetes.maj);           // decembre : le tronc du sapin est une tuile pleine
         pas('saintjean', SaintJean.maj);   // la Saint-Jean : le bruit des feux
         pas('cabane', Cabane.maj);         // la cabane a sucre : la caleche, ses gens, la table de tire
@@ -1278,6 +1280,7 @@ const Jeu = (function () {
     // La lueur de l'ecran du cine-parc, pendant le film.
     if (!B.interieur) for (const l of Cineparc.lampes(vue)) lampes.push(l);
     if (!B.interieur) for (const l of Fetes.lampes(vue)) lampes.push(l);
+    if (!B.interieur) for (const l of Halloween.lampes(vue)) lampes.push(l);   // les citrouilles allumees
     // Les fleches d'une course : lumineuses, meme la nuit.
     if (!B.interieur) for (const l of Histoire.lampesDeCourse(vue)) lampes.push(l);
     const projecteur = !B.interieur ? Police.lampeHelico(vue) : null;
@@ -1294,6 +1297,7 @@ const Jeu = (function () {
     // ils s'y eteignaient (vu a la capture : une lueur, pas un eclat) ; leurs lampes eclairent la ville.
     if (!B.interieur) SaintJean.dessinerFeux(Base.ecran(), vue);
     if (!B.interieur) Pluie.dessinerEclair(Base.ecran());   // l'eclair de l'orage fait sa propre lumiere
+    Halloween.dessinerDedans(Base.ecran(), vue);   // la maison hantee du 31 : le noir, le fantome, le sac
     Galeries.dessiner(Base.ecran(), vue);    // le noir qui gagne aux Galeries, la nuit (une piece n'a pas de nuit a elle)
     Enseignes.dessinerPardessus(Base.ecran(), vue);   // la salle du Rialto dans le noir, le film qui brille
     if (!B.interieur) Cineparc.dessinerFaisceau(Base.ecran(), vue);   // le projecteur du cine-parc : sa lumiere, par-dessus la nuit
@@ -1562,7 +1566,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Train: Train, Navette: Navette, Neige: Neige, Pluie: Pluie, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Territoires: Territoires, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Train: Train, Navette: Navette, Neige: Neige, Pluie: Pluie, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Territoires: Territoires, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Galeries: Galeries, Fetes: Fetes, Halloween: Halloween, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,

@@ -44,7 +44,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-from . import (armes, audio, blocs, calendrier, saisons, pluie, carte, demenagement, derby, enseignes, fetes, garage, motoneige, quatre_roues, saint_jean, territoires, devantures, dojo, economie, mantes, garderobe, interactions, journal, magasins,
+from . import (armes, audio, blocs, calendrier, saisons, pluie, halloween, carte, demenagement, derby, enseignes, fetes, garage, motoneige, quatre_roues, saint_jean, territoires, devantures, dojo, economie, mantes, garderobe, interactions, journal, magasins,
                brouillard, loto, machine_a_sous, manettes, tables_de_jeu, missions, nord, nuit, pietons, recherche, techniques, vehicules, verglas, videopoker,
                musique, pont_de_glace, visages)
 from .blocs import galeries as galeries_hantees
@@ -95,6 +95,8 @@ def assembler() -> dict:
         "saisons": saisons.pour_le_navigateur(),
         # La pluie : les averses, les orages, les flaques, la gadoue et les feuilles (`pluie.py`).
         "pluie": pluie.pour_le_navigateur(),
+        # L'Halloween : les citrouilles, les lumières, les déguisés, la maison hantée (`halloween.py`).
+        "halloween": halloween.pour_le_navigateur(),
         # La course des bois de La Pointe, lue sur la ville finie (docs/jalons/la-motoneige.md).
         "motoneige": motoneige.pour_le_navigateur(ville),
         # La course des Friches, en 4 roues, lue sur la ville finie (docs/jalons/les-4-roues.md).

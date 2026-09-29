@@ -712,6 +712,27 @@ def test_l_orage_tient_le_rythme(page, serveur, erreurs):
     assert etat["i"] > 0.9 and etat["orage"], "la sonde ne mesure pas un orage"
     assert etat["ms"] < 40, f"{etat['ms']:.1f} ms par image : l'orage ne tient pas le rythme"
     assert erreurs == []
+
+def test_le_soir_de_l_halloween_tient_le_rythme(page, serveur, erreurs):
+    """La même sonde (les saisons, lot 3) : le soir du 31 dans les Érables — les citrouilles allumées et
+    leurs lueurs, les fenêtres orange et violettes, les déguisés, les bandes d'enfants."""
+    page.goto(serveur)
+    attendre_titre(page)
+    jouer(page)
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.evaluate("""() => {
+        const L = window.BANDINI, B = L.B, j = B.joueur, H = L.Halloween, M = L.Monde;
+        j.intouchable = true;
+        const c = H.citrouilles().find(function (p) { const z = M.zoneA(p.x, p.y); return z && z.district === 'erables'; });
+        j.x = c.x; j.y = c.y + 30; M.centrerCamera(j.x, j.y); L.Entites.indexer();
+        B.partie.jour = 33; B.partie.heure = 19.5 / 24;
+    }""")
+    page.wait_for_timeout(5000)
+    etat = page.evaluate("({ ms: window.BANDINI.B.stats.ms, bandes: window.BANDINI.Halloween.bandes().length, images: window.BANDINI.B.stats.images })")
+    print(f"\n[perf] {etat['ms']:.1f} ms par image, halloween, {etat['bandes']} bandes, {etat['images']} images")
+    assert etat["ms"] < 40, f"{etat['ms']:.1f} ms par image : le soir de l'Halloween ne tient pas le rythme"
+    assert erreurs == []
+
 def test_la_foule_des_saisons_tient_le_rythme(page, serveur, erreurs):
     """La garde-robe des saisons (lot 4a) : une foule de soixante passants sous l'averse — chacun
     habillé pour la saison, un sur deux sous son parapluie — puis la même foule sans l'habit du moment.

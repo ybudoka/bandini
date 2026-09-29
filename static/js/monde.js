@@ -2704,7 +2704,7 @@ const Monde = (function () {
       if (Verglas.lampeAuNoir(l)) continue; // le verglas a fait tomber les fils : le quartier est au noir
       if (l.x < cx - l.r || l.x > cx + VW + l.r || l.y < cy - l.r || l.y > cy + VH + l.r) continue;
       // En decembre, les fenetres et les vitrines prennent les couleurs des guirlandes (`Fetes`).
-      const fete = typeof Fetes !== 'undefined' ? Fetes.couleur(l) : null;
+      const fete = (typeof Fetes !== 'undefined' ? Fetes.couleur(l) : null) || (typeof Halloween !== 'undefined' ? Halloween.couleur(l) : null);
       out.push({ x: l.x - cx, y: l.y - cy, r: l.r, c: fete || l.c });
       if (out.length >= 25) break;
     }

@@ -1226,6 +1226,40 @@ glace et le dérapage (lot 6) restent en dernier, à part._
 - **Pas fait, à dire** : la boucle de pluie n'a pas de synthèse de repli (hors ligne à la première averse, la
   pluie est muette) ; les parapluies (lot 4) ; l'ambiance par saison (lot 5).
 
+### Lot 3 — l'Halloween (livré le 29 sept. 2026)
+
+- **Le décor** (`app/halloween.py`, `static/js/halloween.js`) : tout octobre, une citrouille sur le perron
+  d'un logement sur trois (à l'empreinte du logement, PEINTE et triée avec les gens), allumée la nuit avec
+  sa lueur ; le soir du 31 dès 16 h, les fenêtres et les vitrines en orange et violet ; le Clairon la veille.
+  Le 31 est maintenant une date du calendrier (`calendrier.DATES["halloween"]`, jour 33).
+- **Les déguisés** : dès 16 h le 31, un passant sur trois (à l'empreinte de son numéro, jamais un membre de
+  gang ni un personnage) sort en sorcière (chapeau pointu, une pièce neuve), fantôme (la capuche, la robe et
+  la peau blanches), squelette (le motif « os », neuf) ou citrouille. ⚠️ Les pièces de costume sont
+  dessinées dans `garderobe.js` mais JAMAIS mises dans les listes du tirage (`app/garderobe.py`) : une pièce
+  de plus y changerait la tenue de tout le monde.
+- **Les enfants** : de 17 h à 21 h 30 le 31, dans les Érables, La Pointe et le Faubourg, jusqu'à quatre bandes
+  de deux ou trois enfants déguisés (par leurs couleurs : l'enfant est dessiné à la main) naissent hors de
+  l'écran au pied d'une citrouille, vont de citrouille en citrouille (l'état `cap` du camelot, les autres
+  suivent le chef comme le petit suit sa mère) et disent « DES BONBONS! » ; ils rentrent hors de l'écran après
+  l'heure. Pas de sac orange dessiné.
+- **La maison hantée** : le plus grand logement des Érables (le premier venu faisait six tuiles sur cinq),
+  sa porte marquée d'une grosse citrouille tout octobre. Le 31 de 18 h à minuit : la porte grince, les
+  lumières s'éteignent une à une, un fantôme se montre et s'évanouit quand on l'approche, une voix chuchote
+  (« Dr. Von Fusion - VF », réservée), et le sac de bonbons au fond paie 150 $ une fois par année. L'habitant
+  du logement y reste planté — laissé.
+- **Le son** : la musique d'Halloween (45 s, ElevenLabs, avec son jumeau en notes) dehors dès 18 h le 31, à la
+  place de celle du district ; le rire d'une sorcière qui passe (au plus une fois aux dix secondes), la porte
+  qui grince, le souffle du fantôme (`LIEUX["halloween"]`, chargés le 31) ; cinq murmures.
+- **La relecture** (un agent neuf) a trouvé, et c'est corrigé : les policiers, les vigiles, les commis et
+  les gens d'une mission se déguisaient (un agent en sorcière en pleine poursuite) ; une bande que la ville
+  retirait au loin gardait sa place et plus aucun enfant ne naissait ; l'invite « (ACTION) » du sac était
+  écrasée par le murmure ; la maison restait hantée à l'étage ; une partie qui démarre au chalet perdait la
+  maison ; deux citrouilles à sa porte ; la lueur sur un lot démoli ; la musique dans les blocs ; un rire aux
+  dix secondes (maintenant 25). `B.partie.halloweenAn` est une clé de sauvegarde neuve : « une fois par
+  année » demande de s'en souvenir.
+- **Le rythme** : 2,0 ms par image le soir du 31 dans les Érables (Chromium).
+- **Juges** : `test_halloween.py` (5), `test_halloween_js.py` (18), la sonde `test_le_soir_de_l_halloween_tient_le_rythme`.
+
 ### Lot 4, vague 4a — la garde-robe des saisons et le parapluie (livrée le 29 sept. 2026)
 
 - **L'habit du moment** (`Saisons.vetir`, appelé par `Entites.imageDe`) : la tenue TIRÉE ne change pas
@@ -1252,7 +1286,7 @@ glace et le dérapage (lot 6) restent en dernier, à part._
 - **Captures** (`captures/saisons-habits-*.png`) : la planche des douze mêmes passants en janvier, avril,
   juillet, octobre et novembre ; la rue à midi et le soir, l'averse et ses parapluies.
 - **L'Halloween** (lot 3, une autre session) : son déguisé du 31 passe AVANT la saison dans `imageDe` —
-  une sorcière n'enfile pas de manteau (à brancher par celui des deux qui atterrit en second).
+  une sorcière n'enfile pas de manteau — branché à l'atterrissage du lot 3 (`Entites.imageDe` : le costume d'abord, sinon l'habit du moment).
 - **Pas fait, à dire** : le manteau reprend la couleur du haut (un manteau pastel l'hiver) — lisible,
   mais pas « un manteau d'hiver » ; les mitaines et les bottes d'hiver ne se voient pas à cette taille ;
   les enfants (dessinés à la main, sans garde-robe) ne s'habillent pas ; le joueur non plus.

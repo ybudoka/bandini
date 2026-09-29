@@ -461,6 +461,11 @@ from app.blocs import galeries as _galeries  # noqa: E402
 
 JEU.update({f"galeries-{a['cle']}": a["jeu"] for a in _galeries.ANNONCES})
 
+# LA VOIX DE LA MAISON HANTÉE (`halloween.MURMURES`, les quatre saisons, lot 3) : même règle.
+from app import halloween as _halloween  # noqa: E402
+
+JEU.update({f"halloween-{m['cle']}": m["jeu"] for m in _halloween.MURMURES})
+
 # LE TIRAGE DU 6/49 (`loto.repliques`) : l'annonceur de la loterie. Les boules, d'un ton egal et net
 # — elles s'enchainent, une par une ; l'amorce et l'issue, elles, ont du jeu.
 from app import loto  # noqa: E402
