@@ -1104,5 +1104,5 @@ def test_le_pont_rend_son_eau_apres_un_saut(banc):
   posent l'été ou fin septembre (ils jugent le quartier et l'horloge, pas la saison).
 - **Pas fait, à dire** : la mini-carte et les buissons restent verts l'hiver ; les pavés de l'abord et
   les toits des cabanes ne prennent pas la neige ; l'icône du HUD montre le soleil sous le voile d'un
-  17 h 30 de décembre (elle dit l'heure des règles) ; le verglas garde son option et son jour d'avril
+  17 h 30 de décembre — **voulu, tranché par Martin le 29 sept. 2026 : elle dit l'heure des règles** ; le verglas garde son option et son jour d'avril
   (lot 6).
