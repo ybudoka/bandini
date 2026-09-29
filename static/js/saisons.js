@@ -100,6 +100,122 @@ const Saisons = (function () {
     return [nom, fiche];
   }
 
+  // ------------------------------------------------------------------ l'habit du moment (lot 4a)
+
+  //: LA GARDE-ROBE DES SAISONS (docs/jalons/les-quatre-saisons-realistes.md, vague 4a). La tenue TIREE
+  //: d'un passant (`e.tenue`) ne change jamais : le tirage, ses couleurs, `e.swaps`, la sauvegarde restent
+  //: ceux d'avant. C'est l'IMAGE qui s'habille, par une pure fonction de la tenue, du froid du moment
+  //: (`palette().froid`, qui glisse en paliers) et de la pluie. ⚠️ AUCUN DE : ce qu'un passant a de
+  //: frileux vient de l'EMPREINTE de sa tenue.
+
+  function habitsDonnees() { const d = donnees(); return d && d.habits; }
+
+  /** Une empreinte de la tenue (FNV sur ses champs) : la meme tenue, le meme passant, la meme frilosite. */
+  const empreintes = new WeakMap();
+  function empreinte(tn) {
+    let h = empreintes.get(tn);
+    if (h !== undefined) return h;
+    const s = [tn.squelette, tn.peau, tn.cheveux, tn.coiffure, tn.haut, tn.couleur_haut, tn.bas,
+               tn.couleur_bas, tn.chapeau, tn.accent].join('|');
+    h = 0x811c9dc5;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+    h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d) >>> 0; h ^= h >>> 12;
+    empreintes.set(tn, h >>> 0);
+    return h >>> 0;
+  }
+  function frilosite(tn) { return (empreinte(tn) % 1000) / 1000; }
+
+  function pleut() {
+    const H = habitsDonnees();
+    return !!(H && typeof Pluie !== 'undefined' && !B.interieur && Pluie.intensite() > H.parapluie.seuil);
+  }
+
+  /** L'habit d'une tenue pour un froid SENTI `c` (et la pluie). Pure : rend `tn` lui-meme quand rien
+      ne change (la cuisson de `Garderobe` reste la meme), sinon une copie. */
+  function habiller(tn, arch, c, pluie) {
+    const H = habitsDonnees(), h = empreinte(tn), fr = frilosite(tn);
+    const gr = B.defs.garderobe && B.defs.garderobe.garde_robes && B.defs.garderobe.garde_robes[arch];
+    const o = Object.assign({}, tn);
+    const metier = H.hauts_de_metier.indexOf(tn.haut) >= 0;
+    const uniforme = H.chapeau_d_uniforme.indexOf(arch) >= 0;
+    let acc = tn.accessoires || [];
+    if (c >= H.grand_froid) {
+      // Le grand froid : manteau (de la couleur du haut — le gang et l'uniforme se reconnaissent),
+      // pantalon, bottes, tuque, et le foulard des frileux.
+      if (!metier) { o.haut = 'manteau'; o.motif = 'uni'; }
+      if (o.bas === 'short') o.bas = 'pantalon';
+      o.souliers = 'bottes';
+      if (!uniforme && H.chapeaux_chauds.indexOf(o.chapeau) < 0) o.chapeau = 'tuque';
+      if (!uniforme && fr > 0.4 && acc.indexOf('foulard') < 0 && acc.indexOf('cravate') < 0) acc = acc.concat(['foulard']);
+      acc = acc.filter(function (a) { return a !== 'lunettes_soleil'; });
+    } else if (c >= H.frais) {
+      // La mi-saison fraiche : on couvre les bras et les jambes.
+      if (o.haut === 'tshirt' || o.haut === 'camisole') o.haut = (arch === 'ado' || arch === 'skateux' || (h & 1)) ? 'coton_ouate' : 'chandail';
+      if (o.bas === 'short') o.bas = 'pantalon';
+      if (o.chapeau === 'canotier') o.chapeau = 'aucun';
+      if (!uniforme && fr > 0.85 && o.chapeau === 'aucun') o.chapeau = 'tuque';
+    } else if (c < H.chaud) {
+      // L'ete : le manteau et la tuque restent a la maison ; des shorts pour qui en porte.
+      if (!metier && (o.haut === 'manteau' || o.haut === 'coton_ouate' || (o.haut === 'chandail' && (h & 2)))) {
+        o.haut = (h & 4) ? 'chemise' : 'tshirt';
+      }
+      if (!uniforme && (o.chapeau === 'tuque' || o.chapeau === 'capuche')) o.chapeau = (h & 8) ? 'casquette' : 'aucun';
+      if (o.bas === 'pantalon' && gr && gr.bas.indexOf('short') >= 0 && fr < 0.4) o.bas = 'short';
+      if (o.souliers === 'bottes' && gr && gr.souliers.indexOf('souliers') >= 0) o.souliers = 'souliers';
+      acc = acc.filter(function (a) { return a !== 'foulard'; });
+    }
+    // Sous la pluie, sans parapluie : la capuche des frileux.
+    if (pluie && !aUnParapluie(tn) && !uniforme && fr > 0.5 && H.chapeaux_chauds.indexOf(o.chapeau) < 0) o.chapeau = 'capuche';
+    o.accessoires = acc;
+    const pareil = ['haut', 'motif', 'bas', 'souliers', 'chapeau'].every(function (k) { return o[k] === tn[k]; }) &&
+      acc.join('+') === (tn.accessoires || []).join('+');
+    return pareil ? tn : o;
+  }
+
+  /** Ce passant ouvre-t-il un parapluie quand il pleut ? A l'empreinte de sa tenue, pas au de. */
+  function aUnParapluie(tn) {
+    const H = habitsDonnees();
+    return !!H && ((empreinte(tn) >>> 10) % 1000) / 1000 < H.parapluie.part;
+  }
+
+  //: Le moment des habits : le palier des saisons et la pluie, recalcules une fois par heure de jeu vue.
+  //: ⚠️ Une fois par IMAGE, pas par passant : l'heure avance a chaque image, et c'est tout ce qui change.
+  let momentH = null, momentJ = null, momentDedans = null, moment = null;
+  function momentDesHabits() {
+    const p = B.partie;
+    if (!moment || !p || p.heure !== momentH || p.jour !== momentJ || B.interieur !== momentDedans) {
+      momentH = p ? p.heure : null; momentJ = p ? p.jour : null; momentDedans = B.interieur;
+      const pl = pleut();
+      moment = { cle: cle() + (pl ? '|pluie' : ''), froid: palette().froid || 0, pluie: pl };
+    }
+    return moment;
+  }
+
+  const habits = new WeakMap();
+  /** L'HABIT DU MOMENT d'un passant : `tn` (sa tenue tiree) habillee pour la saison et la pluie. Les
+      personnages et le joueur gardent la leur, et dedans on a enleve son manteau. */
+  function vetir(tn, e) {
+    if (!tn || !habitsDonnees() || B.interieur) return tn;
+    if (e && (e.personnage || e.type === 'joueur')) return tn;
+    const m = momentDesHabits();
+    const deja = habits.get(tn);
+    if (deja && deja.cle === m.cle) return deja.tn;
+    const c = m.froid + (frilosite(tn) - 0.5) * habitsDonnees().ecart;
+    const r = habiller(tn, e ? e.arch : null, c, m.pluie);
+    habits.set(tn, { cle: m.cle, tn: r });
+    return r;
+  }
+
+  //: Ceux qui marchent tranquillement tiennent leur parapluie ; qui court, se bat ou fuit le referme.
+  const AU_PAS = { flane: 1, cap: 1, arret: 1 };
+
+  /** La couleur du parapluie de `e`, ou null : sous la pluie, dehors, un passant habille au pas. */
+  function parapluie(e) {
+    if (!e.tenue || !e.vivant || e.personnage || e.type !== 'pieton' || e.nage || !AU_PAS[e.etat]) return null;
+    if (!momentDesHabits().pluie || !aUnParapluie(e.tenue)) return null;
+    return e.tenue.accent || '#2980b9';
+  }
+
   /** L'heure DE LUMIERE : l'heure de l'horloge fixe (`Monde.TEINTES`) qui a la meme lumiere que
       `heure` ce jour-la. Le jour reel (lever -> coucher, qui suivent l'annee) est etire sur le jour
       de reference (7 h 12 -> 19 h 12), la nuit reelle sur la nuit de reference. Pure et continue :
@@ -120,5 +236,6 @@ const Saisons = (function () {
     return (r % 24) / 24;
   }
 
-  return { paletteA, cleA, palette, cle, enneiger, enHiver, ficheDuMoment, heureDeLumiere };
+  return { paletteA, cleA, palette, cle, enneiger, enHiver, ficheDuMoment, heureDeLumiere,
+           vetir, parapluie, habiller, frilosite, aUnParapluie };
 })();

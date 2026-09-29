@@ -1226,3 +1226,34 @@ glace et le dérapage (lot 6) restent en dernier, à part._
 - **Pas fait, à dire** : la boucle de pluie n'a pas de synthèse de repli (hors ligne à la première averse, la
   pluie est muette) ; les parapluies (lot 4) ; l'ambiance par saison (lot 5).
 
+### Lot 4, vague 4a — la garde-robe des saisons et le parapluie (livrée le 29 sept. 2026)
+
+- **L'habit du moment** (`Saisons.vetir`, appelé par `Entites.imageDe`) : la tenue TIRÉE ne change pas
+  (ni le tirage, ni `e.swaps`, ni la sauvegarde) ; l'image s'habille selon le **froid** de la palette
+  (1 l'hiver, 0,65 en novembre, 0,45 au printemps, 0,4 à l'automne, 0,1 en août, 0 l'été — il glisse en
+  paliers) et la **frilosité** du passant, à l'empreinte de sa tenue. En janvier : **manteau** (de la
+  couleur du haut), pantalon, **bottes**, **tuque** et, pour les frileux, un **foulard** ; en novembre et
+  au printemps, le coton ouaté au lieu du t-shirt, plus de short ; en juillet, **t-shirt**, **short** pour
+  qui en porte, plus de tuque ni de manteau. Le tablier, le sarrau, la veste de travail et la veste de
+  kung-fu restent ; le képi de l'agent, la casquette du garde et du livreur, le bandeau des Mantes aussi
+  (et pas de foulard sur un uniforme). Dedans, on a enlevé son manteau. Les personnages et le joueur ne
+  changent pas.
+- **Sous la pluie** : un passant au pas sur deux environ ouvre un **parapluie** de sa couleur d'accent
+  (cuit une fois par couleur, peint par-dessus sa tête) ; qui court, se bat ou fuit le referme ; les
+  frileux sans parapluie remontent leur **capuche**.
+- **Le rythme** : 2,8 ms par image pour soixante passants sous l'averse (vingt-huit parapluies), 2,8 ms
+  sans l'habit du moment (Chromium, Mac ; `test_la_foule_des_saisons_tient_le_rythme`). L'habit se calcule
+  une fois par tenue et par palier, le moment une fois par image.
+- **Juges** : `test_saisons_habits_js.py` (7 juges : janvier et juillet, l'uniforme et le gang, pure et
+  sans dé, de novembre à l'hiver peu à peu, `imageDe` dessine l'habit, le parapluie, la capuche) ; chacun vu
+  rougir sous sa mutation (14 mutations : l'habit inerte, sans bottes, froid nul, sans uniforme, sans
+  métier, habillé dedans, parapluie en courant, tous aussi frileux, `imageDe` sans saison, parapluie pas
+  peint, personnage habillé, capuche sous le parapluie, jamais de pluie, pas de short).
+- **Captures** (`captures/saisons-habits-*.png`) : la planche des douze mêmes passants en janvier, avril,
+  juillet, octobre et novembre ; la rue à midi et le soir, l'averse et ses parapluies.
+- **L'Halloween** (lot 3, une autre session) : son déguisé du 31 passe AVANT la saison dans `imageDe` —
+  une sorcière n'enfile pas de manteau (à brancher par celui des deux qui atterrit en second).
+- **Pas fait, à dire** : le manteau reprend la couleur du haut (un manteau pastel l'hiver) — lisible,
+  mais pas « un manteau d'hiver » ; les mitaines et les bottes d'hiver ne se voient pas à cette taille ;
+  les enfants (dessinés à la main, sans garde-robe) ne s'habillent pas ; le joueur non plus.
+

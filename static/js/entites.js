@@ -5540,7 +5540,10 @@ const Entites = (function () {
   function imageDe(e) {
     // Une TENUE (`Garderobe`) : un squelette habille, cuit pose par pose. Sinon, le sprite
     // dessine a la main et ses echanges de palette, comme toujours.
-    const habille = e.tenue && typeof Garderobe !== 'undefined' ? Garderobe.cuire(e.tenue) : null;
+    // ⚠️ L'HABIT DU MOMENT (les saisons, vague 4a) : la tenue tiree, habillee pour la saison et la
+    // pluie (`Saisons.vetir` : manteau et tuque l'hiver, t-shirt l'ete) — la tenue elle-meme ne change pas.
+    const tn = e.tenue && typeof Saisons !== 'undefined' ? Saisons.vetir(e.tenue, e) : e.tenue;
+    const habille = tn && typeof Garderobe !== 'undefined' ? Garderobe.cuire(tn) : null;
     // ⚠️ Et la fiche DU MOMENT : l'hiver, la conductrice sort du cabriolet en tuque et en bottes
     // (`fiche.hiver`, `Saisons.ficheDuMoment` ; docs/jalons/les-decapotables-l-hiver.md).
     const moment = typeof Saisons !== 'undefined' ? Saisons.ficheDuMoment(e.sprite, SPRITES[e.sprite]) : [e.sprite, SPRITES[e.sprite]];
@@ -5643,6 +5646,23 @@ const Entites = (function () {
   //: disparaissent (le corps fait treize pixels, les jambes en font trois), pas
   //: assez pour couper le visage — c'est lui qui dit dans quel sens on nage.
   const SOUS_L_EAU = 5;
+
+  //: Le parapluie vu d'en haut : la toile (`a`, `A` ses baleines, `L` son reflet), le bord festonne, le
+  //: manche (`m`). 18 x 10, pose a 21 px au-dessus des pieds : la toile couvre le haut de la tete.
+  const PARAPLUIE = ['......kkkkkk......', '....kkLLaaAaakk...', '..kkLLaaaaAaaaakk.', '.kLLaaaaaaAaaaaaak',
+                     'kLaaaaAaaaAaaaAaak', 'kaaaaAaaaaAaaaaAak', 'kAkkAAkkAAkkAAkkAk', '........mm........',
+                     '........m.........', '........m.........'];
+  function dessinerParapluie(ctx, e, couleur, p, cx, cy) {
+    const c = Atlas.cuirePeintre('parapluie|' + couleur, 18, PARAPLUIE.length, function (g) {
+      const n = parseInt(couleur.slice(1), 16), rgb = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+      const teinte = function (vers, t) { return 'rgb(' + rgb.map(function (v, i) { return Math.round(v + (vers[i] - v) * t); }).join(',') + ')'; };
+      const pal = { k: '#101018', m: '#2a2a2a', a: couleur, A: teinte([0, 0, 0], 0.3), L: teinte([255, 255, 255], 0.35) };
+      PARAPLUIE.forEach(function (l, y) {
+        for (let x = 0; x < l.length; x++) if (l[x] !== '.') { g.fillStyle = pal[l[x]]; g.fillRect(x, y, 1, 1); }
+      });
+    });
+    ctx.drawImage(c, Math.round(e.x - cx + p.dx - 9), Math.round(e.y - e.z - cy + p.dy - 21));
+  }
 
   function dessinerCorps(ctx, e, img, p, cx, cy) {
     const x = e.x - cx + p.dx, y = e.y - e.z - cy + p.dy;
@@ -5893,6 +5913,12 @@ const Entites = (function () {
       dessinerCorps(ctx, e, img, p, cx, cy);
       if (!derriere) dessinerArme(ctx, e, img, p, cx, cy);
       B.stats.images += 2;
+      // LE PARAPLUIE (les saisons, vague 4a) : sous la pluie, un passant au pas sur deux l'ouvre au-dessus
+      // de sa tete — cuit une fois par couleur, pas par passant.
+      if (e.tenue && typeof Saisons !== 'undefined') {
+        const pc = Saisons.parapluie(e);
+        if (pc) { dessinerParapluie(ctx, e, pc, p, cx, cy); B.stats.images++; }
+      }
       // Un mot a dire l'emporte sur la pastille : on ne porte pas deux bulles.
       // ⚠️ Sauf pendant un dialogue : quelqu'un te PARLE, dans la boite en bas
       // de l'ecran — personne ne t'interpelle par-dessus.
@@ -5932,6 +5958,6 @@ const Entites = (function () {
     naitreLaFoire, majForain, majMascotte, placeDansLaFoire, destinationDeFoire,
     bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe, mousse,
     particule, sang, poussiere, decal, majParticules,
-    dessiner, dessinerDecals, dessinerParticules, dessinerCible, imageDe, nomDePose, pose, poseDuDecor,
+    dessiner, dessinerDecals, dessinerParticules, dessinerCible, dessinerParapluie, PARAPLUIE, imageDe, nomDePose, pose, poseDuDecor,
   };
 })();

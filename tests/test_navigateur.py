@@ -712,6 +712,40 @@ def test_l_orage_tient_le_rythme(page, serveur, erreurs):
     assert etat["i"] > 0.9 and etat["orage"], "la sonde ne mesure pas un orage"
     assert etat["ms"] < 40, f"{etat['ms']:.1f} ms par image : l'orage ne tient pas le rythme"
     assert erreurs == []
+def test_la_foule_des_saisons_tient_le_rythme(page, serveur, erreurs):
+    """La garde-robe des saisons (lot 4a) : une foule de soixante passants sous l'averse — chacun
+    habillé pour la saison, un sur deux sous son parapluie — puis la même foule sans l'habit du moment.
+    Les deux chiffres s'impriment : l'habit ne doit pas coûter à la boucle."""
+    page.goto(serveur)
+    attendre_titre(page)
+    jouer(page)
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.evaluate("""() => {
+        const L = window.BANDINI, j = L.B.joueur, P = L.Pluie, p = L.B.partie;
+        j.intouchable = true;
+        let jo = 11; while (!(P.journee(jo) && !P.journee(jo).orage)) jo++;
+        const a = P.journee(jo);
+        p.jour = jo; p.heure = (a.debut + a.fin) / 2 / 24;
+        window.__gens = [];
+        for (let i = 0; i < 60; i++) {
+            const e = L.Entites.creerPieton(j.x - 140 + (i % 12) * 24, j.y - 80 + Math.floor(i / 12) * 32, L.Entites.archetype('passant'));
+            e.etat = 'arret'; e.minuterie = 99999; window.__gens.push(e);
+        }
+        L.Entites.indexer();
+    }""")
+    page.wait_for_timeout(4000)
+    avec = page.evaluate("""() => { const L = window.BANDINI; return { ms: L.B.stats.ms, i: L.Pluie.intensite(),
+        parapluies: window.__gens.filter(function (e) { return L.Saisons.parapluie(e); }).length }; }""")
+    page.evaluate("""() => { const S = window.BANDINI.Saisons; window.__vetir = S.vetir; window.__pp = S.parapluie;
+        S.vetir = function (tn) { return tn; }; S.parapluie = function () { return null; }; }""")
+    page.wait_for_timeout(4000)
+    sans = page.evaluate("window.BANDINI.B.stats.ms")
+    print(f"\n[perf] {avec['ms']:.1f} ms par image avec l'habit du moment ({avec['parapluies']} parapluies), {sans:.1f} ms sans")
+    assert avec["i"] > 0.9 and avec["parapluies"] >= 10, "la sonde ne mesure pas une foule sous l'averse"
+    assert avec["ms"] < 40, f"{avec['ms']:.1f} ms par image : la foule habillée ne tient pas le rythme"
+    assert erreurs == []
+
+
 def test_le_brouillard_tient_le_rythme(page, serveur, erreurs):
     """⚠️ La SONDE que la fiche du brouillard exige avant de l'allumer pour tout le monde (la dette
     « rythme mesuré sur le vrai téléphone ») : le même pire cas que la neige — au volant, recherché —

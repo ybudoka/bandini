@@ -32,9 +32,11 @@ CLES = [
 
 #: Chaque palette : le gazon (`,`), la friche (`;`), l'arbre de rue (trois teintes [cime, clair, sombre],
 #: tirées à l'empreinte de sa tuile ; `feuillage` 0 = nu), `neige` : la part de blanc sur les
-#: trottoirs et les toits, et `mini` : l'herbe sur la mini-carte (l'été, le vert d'avant).
+#: trottoirs et les toits, `mini` : l'herbe sur la mini-carte (l'été, le vert d'avant), et `froid` : ce que
+#: les passants sentent (0 juillet, 1 janvier ; lot 4a, `HABITS`) — il glisse en paliers comme le reste.
 PALETTES = {
     "ete": {
+        "froid": 0,
         "mini": "#3f6b33",
         "gazon": {"fond": "#4f8d3e", "clair": "#5a9c47", "sombre": "#427a33", "brin": "#6aad55",
                   "terre": "#6d5c3e", "fleur": "#cfc95c", "feuille": "#4f8d3e", "feuille2": "#4f8d3e"},
@@ -44,6 +46,7 @@ PALETTES = {
         "neige": 0,
     },
     "printemps": {
+        "froid": 0.45,
         "mini": "#4d7f3a",
         "gazon": {"fond": "#5f9a45", "clair": "#74b057", "sombre": "#4d8438", "brin": "#8cc46a",
                   "terre": "#6a5536", "fleur": "#e8d85a", "feuille": "#5f9a45", "feuille2": "#5f9a45"},
@@ -53,6 +56,7 @@ PALETTES = {
         "neige": 0,
     },
     "fin_ete": {
+        "froid": 0.1,
         "mini": "#61703a",
         "gazon": {"fond": "#7a8c42", "clair": "#8f9c4f", "sombre": "#667838", "brin": "#a3a85c",
                   "terre": "#7a6443", "fleur": "#d9b24a", "feuille": "#7a8c42", "feuille2": "#7a8c42"},
@@ -62,6 +66,7 @@ PALETTES = {
         "neige": 0,
     },
     "automne": {
+        "froid": 0.4,
         "mini": "#8a5a2a",
         "gazon": {"fond": "#6f7a3c", "clair": "#7f8646", "sombre": "#5c6632", "brin": "#8e8a4c",
                   "terre": "#6d5536", "fleur": "#c8622a", "feuille": "#c0392b", "feuille2": "#e67e22"},
@@ -71,6 +76,7 @@ PALETTES = {
         "neige": 0,
     },
     "novembre": {
+        "froid": 0.65,
         "mini": "#56533a",
         "gazon": {"fond": "#6b6a45", "clair": "#77744f", "sombre": "#57553a", "brin": "#83805a",
                   "terre": "#5e4a32", "fleur": "#8a5a34", "feuille": "#8a5a34", "feuille2": "#7a4a2a"},
@@ -80,6 +86,7 @@ PALETTES = {
         "neige": 0,
     },
     "hiver": {
+        "froid": 1,
         "mini": "#d6dde4",
         "gazon": {"fond": "#e8edf2", "clair": "#f6f8fb", "sombre": "#cfd8e2", "brin": "#b9c4cf",
                   "terre": "#8a7f70", "fleur": "#dfe6ee", "feuille": "#e8edf2", "feuille2": "#e8edf2"},
@@ -96,6 +103,25 @@ PALETTES = {
 LUMIERE = {"solstice_ete": 19.7, "coucher": [18.5, 2.25], "lever": [6.25, -1.2], "reference": [7.2, 19.2]}
 
 
+#: L'HABIT DU MOMENT (lot 4a, `Saisons.vetir`) : la tenue TIRÉE ne change pas, c'est l'image qui
+#: s'habille. Le froid qu'un passant sent = `froid` de la palette + (frileux − ½) × `ecart` (frileux : à
+#: l'empreinte de sa tenue, jamais au dé). Au-dessus de `grand_froid` : manteau, bottes, tuque (et le
+#: foulard des plus frileux) ; au-dessus de `frais` : plus de t-shirt ni de short ; sous `chaud` : l'été.
+#: Les personnages et le joueur ne changent pas (on les reconnaît à leur tenue), ni rien dedans.
+HABITS = {
+    "ecart": 0.3, "grand_froid": 0.75, "frais": 0.4, "chaud": 0.2,
+    #: Ce qu'on garde au grand froid : un chapeau qui tient déjà chaud ou qui dit un métier.
+    "chapeaux_chauds": ["tuque", "kepi", "casque_chantier", "feutre", "marin", "capuche"],
+    #: Les archétypes dont le chapeau est un UNIFORME : on ne le change jamais.
+    "chapeau_d_uniforme": ["policier", "garde", "gardien", "livreur", "mante"],
+    #: Les hauts qui restent en toute saison : un métier (le tablier, le sarrau…) ou un gang.
+    "hauts_de_metier": ["tablier", "sarrau", "veste_travail", "veste_kungfu", "salopette"],
+    #: Sous la pluie (`Pluie.intensite()` au-dessus de `seuil`) : `part` des passants ouvrent un
+    #: parapluie ; les autres remontent leur capuche s'ils sont frileux.
+    "parapluie": {"seuil": 0.15, "part": 0.5},
+}
+
+
 def palette_du_jour(jour_de_l_annee: float) -> str:
     """La palette qui TIENT ce jour-là (la clé précédente), sans le glissement — pour les juges."""
     nom = CLES[0][1]
@@ -107,4 +133,4 @@ def palette_du_jour(jour_de_l_annee: float) -> str:
 
 def pour_le_navigateur() -> dict:
     return {"paliers": PALIERS, "cles": [[j, s] for j, s in CLES], "palettes": PALETTES,
-            "lumiere": LUMIERE, "annee": calendrier.ANNEE}
+            "lumiere": LUMIERE, "annee": calendrier.ANNEE, "habits": HABITS}
