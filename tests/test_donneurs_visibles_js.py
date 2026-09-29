@@ -55,7 +55,13 @@ def test_aucun_donneur_n_est_cache_par_du_decor(banc):
           for (const p of persos.filter(function (q) { return q.ou.indexOf('point:') === 0; })) {
             if (L.B.interieur) L.Jeu.quitterLaPiece();
             const piece = L.Histoire.pieceDuPoint(p.ou.slice(6));
-            o.entrer(L.Monde.carte.portes.find(function (q) { return q.lieu === piece.slug; }));
+            // ⚠️ UN ÉTAGE n'a pas de porte en ville (le maire, dans la chambre de l'hôtel) : on entre par la
+            // pièce dont l'escalier y monte, et on monte — comme le saut du debug (`allerChezLeDonneur`).
+            const dessous = L.Histoire.pieceDessous(piece.slug);
+            const porte = L.Monde.carte.portes.find(function (q) { return q.lieu === piece.slug; })
+              || L.Monde.carte.portes.find(function (q) { return q.lieu === dessous; });
+            o.entrer(porte);
+            if (L.B.interieur && L.B.interieur.slug !== piece.slug) { L.Jeu.changerEtage(piece.slug); L.Jeu.finirTransition(); }
             const e = L.Histoire.donneur(p.slug);
             vus.push({ slug: p.slug, dehors: false, present: !!e, cache: e ? partCachee(L, e) : null });
           }
