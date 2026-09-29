@@ -89,7 +89,7 @@ pas quand l'ordre de travail change.
 | Générer les bruitages qui n'ont aucun équivalent payé | ⬜ **à faire** (⚠️ le quota n'est plus l'obstacle — **nouveau forfait le 24 sept. 2026** ; à trancher par Martin, c'est sa dépense) | — | **P4** | ajout | [fiche](jalons/les-bruitages-qui-n-ont-aucun-equivalent-paye.md#fiche) |
 | Des choses à collectionner, et la planque qu'on décore | ⬜ **à faire** (à trancher par Martin : les familles, leur nombre, les meubles) | — | **P4** | ajout | [fiche](jalons/des-choses-a-collectionner-et-la-planque-qu-on-decore.md#fiche) |
 | Des photos pour le Clairon | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/des-photos-pour-le-clairon.md#fiche) |
-| Les territoires des gangs bougent | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/les-territoires-des-gangs-bougent.md#fiche) |
+| Les territoires des gangs bougent | ⬜ **en cours** | 29 sept. 2026 | **P4** | ajout | [fiche](jalons/les-territoires-des-gangs-bougent.md#fiche) |
 | Le marché aux puces du dimanche | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-marche-aux-puces-du-dimanche.md#fiche) |
 | Une amélioration générale des toits | ⬜ **à faire** (à trancher par Martin : la liste, et par où commencer) | — | **P4** | ajout | [fiche](jalons/une-amelioration-generale-des-toits.md#fiche) |
 | Les quatre saisons, réalistes | ⬜ **en cours** (tranché par Martin : six lots, l'Halloween et la pluie compris ; ✅ lot 1 livré : le paysage des quatre saisons, la neige l'hiver seulement, la longueur du jour, la triche « mois suivant » ; lot 2 à faire : la pluie et le sol ; puis l'Halloween) | 29 sept. 2026 | **P4** | ajout | [fiche](jalons/les-quatre-saisons-realistes.md#fiche) · [notes](jalons/les-quatre-saisons-realistes.md#notes) |

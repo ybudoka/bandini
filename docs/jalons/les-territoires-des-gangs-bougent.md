@@ -24,6 +24,13 @@ deux.
 bouge doit rester un **calcul** (la force + le jour), jamais une simulation qui dérive ; et la ligne « La
 réputation et la lecture des passants » touche au même sujet : à trancher ensemble.
 
+**Tranché avec Martin (29 sept. 2026)** :
+- **Un coin par nuit** : chaque nuit, un gang plus fort que son voisin lui prend UN îlot à la frontière.
+- **Coucher ses membres** l'affaiblit (assommé ou tué) ; sa force remonte doucement avec le temps. (Ni les
+  missions ni les commerces volés, pour cette vague.)
+- **Il garde son cœur** : son îlot d'origine (sa cour, son QG) ne se prend jamais par la frontière — pour lui
+  prendre son district, il faut une mission (`libere`, M16).
+
 **Juges** : un gang qu'on affaiblit perd un coin la nuit suivante ; le coin repris change de couleur et de
 piétons ; une zone `libere` ne bouge plus ; tout survit à une sauvegarde.
 
