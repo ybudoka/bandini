@@ -32,3 +32,6 @@ fin de `generer` sans dé ; trois modèles tirés à l'empreinte de la tuile ; n
   numérote à part, et rien de ce qui naît après elles ne glisse d'un cran (juge, vu rouge sans).
 - Les dessins sont des grilles (`PAL_STATUE`, `GRILLE_STATUE_*` dans `sprites.js`), regardés en jeu
   dans Chromium avant de livrer. Solides et `arrete` : on ne traverse pas le bronze, en char non plus.
+- **29 sept. 2026 — la plaque reste plus longtemps** (Martin : « affiche plus longtemps les textes ») :
+  une ligne reste sept secondes à l'écran (`LIRE["duree_images"]`, 200 → 420 images) ; la pression suivante
+  la remplace aussitôt.

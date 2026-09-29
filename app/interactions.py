@@ -144,8 +144,10 @@ LIRE: dict = {
     "decors": statues.TYPES,
     # Le socle est large : on lit de devant, pas le nez sur le granit.
     "portee_px": 26,
-    # Une ligne reste à l'écran un peu plus qu'un « ÇA SENT BON » : le temps de la lire.
-    "duree_images": 200,
+    # Une ligne reste à l'écran le temps de la LIRE, pas de la voir passer : sept secondes (Martin,
+    # 29 sept. 2026 : « affiche plus longtemps les textes » — 200 images, 3,3 s, filaient trop vite). La
+    # pression suivante la remplace aussitôt : on n'attend jamais la fin pour lire la suite.
+    "duree_images": 420,
     "plaques": statues.exporter(),
 }
 

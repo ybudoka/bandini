@@ -51,8 +51,8 @@ def test_on_lit_la_plaque_une_ligne_par_pression_et_on_recommence(banc):
             j.x = d.x; j.y = d.y + 18; j.vx = 0; j.vy = 0; j.roule = 0;
             L.Monde.centrerCamera(j.x, j.y); nettoyer(); o.viser(d);
             L.Missions.majInvite(j);
-            const lu = { invite: L.B.invite, lignes: [] };
-            for (let k = 0; k < 5; k++) { o.tape('KeyE'); lu.lignes.push(L.B.msg); suivant(); }
+            const lu = { invite: L.B.invite, lignes: [], restes: [] };
+            for (let k = 0; k < 5; k++) { o.tape('KeyE'); lu.lignes.push(L.B.msg); lu.restes.push(L.B.msgT); suivant(); }
             res[t] = lu;
         }
         return res;
@@ -63,6 +63,9 @@ def test_on_lit_la_plaque_une_ligne_par_pression_et_on_recommence(banc):
         assert r[t]["invite"] == c["invite"], f"devant {t}, l'invite dit « {r[t]['invite']} »"
         attendu = [plaque[k % len(plaque)] for k in range(5)]
         assert r[t]["lignes"] == attendu, f"{t} : {r[t]['lignes']}"
+        # Le temps de la lire : la durée de la plaque, pas celle d'un toast ordinaire (120 images).
+        assert all(reste >= c["duree_images"] - 5 for reste in r[t]["restes"]), f"{t} : {r[t]['restes']}"
+    assert c["duree_images"] >= 360, "une ligne de plaque se lit en six secondes au moins"
 
 
 def test_chaque_ligne_de_plaque_tient_dans_le_toast(banc):
