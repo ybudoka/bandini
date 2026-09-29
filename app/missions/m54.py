@@ -11,13 +11,17 @@ MISSION = {
     "echec": ["mort", "arrete", "vehicule_detruit", "alarme"],
     "donne": {"message": "LE PORT NE L'A JAMAIS VU PARTIR"},
 
-    # ⚠️ **LE GROS LOT DU FIL.** Le registre du quai note chaque sortie — l'effacer avant de
+    # ⚠️ **LE GROS LOT DU FIL.** Le registre du port note chaque sortie — l'effacer avant de
     # partir (le piratage le plus dur des trois : `longueur` 5, `essais` 2) — puis le
     # porte-conteneurs lui-même, le plus lent et le plus lourd du parc (`vehicules.py`) : une
     # poursuite dessus est un vrai test de pilotage, pas une formalité.
     "objectifs": [
-        {"type": "pirater", "texte": "PIRATE LE REGISTRE DU QUAI, AVANT LE DÉPART",
-         "ou": "mouillage:porte_conteneurs", "rayon": 5, "longueur": 5, "essais": 2},
+        # ⚠️ **Loin du quai** (Martin, 29 sept. 2026 : « éloigne le premier truc à décoder ») : le
+        # registre se piratait sur la jetée, à côté du bateau de Sven. Il dort maintenant au poste
+        # de police (≈ 150 tuiles du quai) — on y va, on efface la sortie sous leur nez, on revient
+        # prendre le bateau ; et c'est le port réveillé qu'on sème ensuite.
+        {"type": "pirater", "texte": "PIRATE LE REGISTRE DU PORT, AU POSTE DE POLICE",
+         "ou": "poste", "rayon": 4, "longueur": 5, "essais": 2},
 
         {"type": "monter", "texte": "PRENDS LE PORTE-CONTENEURS",
          "vehicule": "porte_conteneurs", "ou": "mouillage:porte_conteneurs", "prete": "sven"},
@@ -55,16 +59,16 @@ MISSION = {
                jeu="[Norwegian accent][calm] Sven… une dernière fois. [firmly] Ce soir, mon bateau prend la mer… avec ou sans registre.")
         ],
         "intro": [
-            _l("sven", "Un registre note chaque sortie du quai. Efface la mienne avant que j'appareille.",
-               jeu="[Norwegian accent][matter-of-fact] Un registre note… chaque sortie du quai. [firmly] Efface la mienne… avant que j'appareille."),
+            _l("sven", "Le registre du port dort au poste de police. Efface ma sortie, sous leur nez.",
+               jeu="[Norwegian accent][matter-of-fact] Le registre du port dort… au poste de police. [firmly] Efface ma sortie… sous leur nez."),
             _l("sven", "Ensuite, tu le mènes toi-même. Un porte-conteneurs ne se pilote pas à moitié.",
                jeu="[Norwegian accent][calm] Ensuite, tu le mènes… toi-même. [firmly] Un porte-conteneurs… ne se pilote pas à moitié."),
             _l("sven", "Il y a un hangar sur l'île. Ce qu'il contiendra ne regarde que moi.",
                jeu="[Norwegian accent][quietly] Il y a un hangar… sur l'île. [coldly] Ce qu'il contiendra… ne regarde que moi.")
         ],
         "pendant": [
-            _p("sven", "Le boîtier est sur la jetée. Prends ton temps, mais pas trop.", 0,
-               jeu="[Norwegian accent][calm] Le boîtier est… sur la jetée. [wryly] Prends ton temps… mais pas trop."),
+            _p("sven", "Le boîtier est derrière le poste. Prends ton temps, mais pas trop.", 0,
+               jeu="[Norwegian accent][calm] Le boîtier est… derrière le poste. [wryly] Prends ton temps… mais pas trop."),
             _p("sven", "Le port s'est réveillé! Perds-les dans le brouillard, pas dans un quai.", 2,
                jeu="[Norwegian accent][dramatic] Le port s'est… réveillé! [firmly] Perds-les dans le brouillard… pas dans un quai."),
             _p("sven", "Sur l'île, un hangar sans nom. Son cadenas est plus malin que son gardien.", 3,
@@ -88,6 +92,6 @@ MISSION = {
         ]
     }
 
-    # ⚠️ ELLE N'ÉCRIT AUCUNE SCÈNE : le premier objectif (`pirater`) nomme déjà
-    # `mouillage:porte_conteneurs`, c'est lui que l'intro montre ; la fin referme chez Sven.
+    # ⚠️ ELLE N'ÉCRIT AUCUNE SCÈNE : le premier objectif (`pirater`) nomme le poste de police,
+    # c'est lui que l'intro montre ; la fin referme chez Sven.
 }

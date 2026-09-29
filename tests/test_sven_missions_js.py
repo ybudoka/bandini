@@ -362,7 +362,7 @@ def test_m53_joue_jusqu_au_bout_par_le_clocher(banc):
 
 
 def test_m54_joue_jusqu_au_bout_par_le_hangar(banc):
-    """Le grand soir, huit étapes : le registre, le porte-conteneurs, la police semée, le cadenas
+    """Le grand soir, huit étapes : le registre au poste de police, le porte-conteneurs, la police semée, le cadenas
     du hangar sans nom de l'île (on y mène le porte-conteneurs, on débarque), les trois Morues
     qui ont suivi à la nage, le retour à quai, le registre des retours, Sven."""
     r = banc("function (L, o) {" + OUTILS + """
@@ -373,9 +373,12 @@ def test_m54_joue_jusqu_au_bout_par_le_hangar(banc):
         const argent = paiements(L), bilan = {}, vu = {};
         L.Histoire.commencer('m54'); passer(L, o);
         const m = L.Histoire.courante(), mo = L.Histoire.resoudre('mouillage:porte_conteneurs', m);
-        vu.marcheRegistre = marcher(L, o, mo.mouillage.poste, 24, bilan);
+        const poste = L.Histoire.resoudre('poste', m);
+        vu.registreLoin = Math.hypot(poste.x - mo.x, poste.y - mo.y) / 16;
+        vu.marcheRegistre = marcher(L, o, poste, 3 * 16, bilan);
         vu.pirateRegistre = pirater(L, o);
         vu.monter = etape(L);                                               // 1 : monter
+        vu.retourQuai = marcher(L, o, mo.mouillage.poste, 24, bilan);
         const v = B.mission.vehicule;
         vu.embarque = embarquer(L, o, v) && etape(L);                       // 2 : semer
         vu.semer = L.Histoire.objectif() && L.Histoire.objectif().type;
@@ -405,7 +408,8 @@ def test_m54_joue_jusqu_au_bout_par_le_hangar(banc):
         return { vu: vu, bilan: bilan, fait: !!B.partie.missionsFaites.m54, argent: argent, sansBosse: SANS_BOSSE, msg: B.msg };
     }""")
     vu = r["vu"]
-    assert vu["marcheRegistre"] and vu["pirateRegistre"] and vu["monter"] == 1, r
+    assert vu["registreLoin"] > 120, "le registre est collé au quai : %s tuiles" % vu["registreLoin"]
+    assert vu["marcheRegistre"] and vu["pirateRegistre"] and vu["monter"] == 1 and vu["retourQuai"], r
     assert vu["embarque"] == 2 and vu["etoiles"] == 2 and vu["hangar"] == 3, r
     assert vu["semer"] == "semer", "l'étape 2 de m54 n'est pas une poursuite à semer : %s" % r
     assert vu["hangar"] == 3, "semer à 0 étoile ne fait pas avancer vers le hangar de l'île"

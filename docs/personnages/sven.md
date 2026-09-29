@@ -74,7 +74,7 @@ réveille un matin sans savoir comment elle a perdu.
 - m53 : « Sous pavillon » — un chalutier au nom de sa rivale (« la Belle-Josée » : sous ce nom-là, personne ne le regarde — c'est le pavillon du titre), un relais de Josée à
   faire taire sur la rive nord, de l'autre côté de la baie (premier piratage du jeu ; l'antenne de l'autre quai, vue
   dans m52, « n'était qu'une oreille »), deux Morues qui accourent, et le jumeau du relais au clocher de l'île.
-- m54 : « Le grand soir » — le registre du quai, son propre porte-conteneurs sous la police, le cadenas du
+- m54 : « Le grand soir » — le registre du port, effacé au poste de police « sous leur nez », son propre porte-conteneurs sous la police, le cadenas du
   hangar sans nom de l'île (le sien, désormais), les Morues venues à la nage, et le registre qui note aussi
   les retours.
 
