@@ -1356,6 +1356,13 @@ def lieu_a_montrer(mission: dict) -> str | None:
             if nom in dans_un_bloc:
                 return "bloc:" + dans_un_bloc[nom]
         if ou and ou != "donneur" and not ou.startswith("point:"):
+            # ⚠️ Un `ou` NU qui nomme une porte (`poste`, m54 depuis 967cf129 : le registre au poste
+            # de police) se montre `porte:<ou>`, comme un `lieu` plus bas : `Histoire.resoudre` rend
+            # le même pixel (`lieu(ou)`), mais filmé nu, le juge des scènes le disait « lieu
+            # inconnu ». Seuls les noms que `resoudre` traite à part restent nus (`LIEUX_NOMMES`, et
+            # `quai`, qu'il ne faut pas déguiser en porte).
+            if ":" not in ou and ou not in LIEUX_NOMMES and ou != "quai":
+                return "porte:" + ou
             return ou
         if objectif.get("lieu"):
             # ⚠️ `porte:<lieu>`, pas le nom nu : `Histoire.resoudre` rend le même
