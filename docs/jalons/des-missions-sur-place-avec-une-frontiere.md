@@ -50,6 +50,31 @@ grisent le hors-zone.
 - ⚠️ La doc suit dans le même passage : la table des clés de
   [comment-monter-les-missions.md](../comment-monter-les-missions.md).
 
+## Notes
+
+✅ **Livré** (29 sept. 2026).
+
+- **`static/js/surplace.js`** (`SurPlace`) porte tout ; `histoire.js` ne fait que l'appeler à la fin de
+  l'intro (`poserPuisDireLIntro`) et dans `maj` (même dans une pièce) ; `hud.js` y prend le suffixe de la
+  ligne d'objectif (« — REVIENS ! 7 S ») et le gris des deux cartes. `Blocs.entrerAuNoir` sort du `faire`
+  de `Blocs.sauter` : le saut vers un lieu de bloc tient son propre fondu (celui de la sieste, « LE SOIR
+  VENU »), et le noir attend la carte du bloc.
+- **Pilotes** : `v01` (`bloc:villa`, de nuit au chemin de la villa) et `q13` (`quais`, de nuit devant
+  l'hôtel). Leur premier `aller … nuit` se fait en arrivant.
+- ⚠️ **`gardee` vit dans `B.partie.mission`** (sauvegardée) : `B.mission` se refait vide au
+  rechargement, et une partie reprise en pleine mission perdait sa frontière.
+- ⚠️ **Une pièce et un bloc n'ont pas de zones** : `Monde.zoneA` y rend `null`. La position qui compte
+  est lue sur la carte de la VILLE (`B.exterieur` : la porte ; `B.bloc.ville` : le passage).
+- ⚠️ **`char` reporté** : monter dans un char de mission garé compte comme un vol.
+- ⚠️ **Les juges** (`test_sur_place.py`, 6 ; `test_sur_place_js.py`, 18) ferment chaque réplique à
+  chaque image (`vivre`) : l'intro et les `pendant` figent la ville, et deux juges « rien ne bouge »
+  passaient à vide. La pause se juge par `Jeu.pause()` (c'est son menu qui fige), pas par `B.etat`. Le
+  juge de la pièce est devenu deux juges (une pièce hors frontière compte, une pièce dedans non) : le
+  premier ne mordait pas. Quinze mutations, toutes rouges ; un garde-fou reste vert par nature (v01 finit
+  au bord sans rater).
+- Captures Chromium regardées : la grande carte laisse les Quais en clair et grise le reste ; sur la
+  mini-carte le gris est discret sur l'eau.
+
 ## Plan d'implémentation
 
 > **Pour l'exécutant :** superpowers:subagent-driven-development (recommandé) ou superpowers:executing-plans,

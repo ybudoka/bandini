@@ -58,6 +58,8 @@ test (`erreurs_de_mise_en_scene`), pas seulement un œil humain.
     "echec": ["mort", "arrete"],        # FACULTATIF (défaut ["mort", "arrete"])
     "exige": {"liberes": 3},            # FACULTATIF : condition d'« état » (pas encore lue au nav.)
     "donne": {"arme": "batte", "message": "LE BÂTON"},   # FACULTATIF (défaut {})
+    "sur_place": {"lieu": "hotel", "heure": "nuit"},     # FACULTATIF : le saut après l'intro (voir dessous)
+    "frontiere": "quais",               # FACULTATIF : un district, ou "bloc:<slug>" (voir dessous)
     "objectifs": [ … ],                 # § 4
     "scenes": {"intro": [ … ], "fin": [ … ]},   # FACULTATIF : § 6, le défaut les bâtit
     "dialogue": {                       # § 5
@@ -72,6 +74,26 @@ test (`erreurs_de_mise_en_scene`), pas seulement un œil humain.
     },
 }
 ```
+
+**Sur place, avec une frontière** (29 sept. 2026, `static/js/surplace.js`) — deux clés
+**indépendantes**, pour une mission où le trajet et l'attente n'apportent rien :
+
+- `sur_place = {"lieu": …, "heure": "nuit" | (h0, h1)}` — à la fin de l'intro, fondu au noir,
+  l'horloge **avance** jusqu'à l'heure (`"nuit"` : 20 h 45, le réveil de la sieste ; une fenêtre
+  `(h0, h1)` dans `[0, 1)`, 0 = minuit, qui peut passer minuit comme `(0.9, 0.1)`), jamais en arrière ;
+  passer minuit est un **vrai jour** (`nouveauJour` : dette, revenus). On se relève à pied au `lieu`
+  (un lieu de bloc fait entrer dans le bloc), sans étoile. Un `aller … nuit` sur ce lieu se fait en
+  arrivant. ⚠️ Pas de `char` : monter dans un char de mission garé compte comme un **vol**
+  (`Vehicules.monter`) — à trancher avec la première mission qui en aura besoin.
+- `frontiere = "<district>" | "bloc:<slug>"` — armée dès l'arrivée (dès la fin de l'intro sans
+  `sur_place`), gardée par la sauvegarde. Dehors, « RETOURNE DANS LES QUAIS », la ligne d'objectif dit
+  « — REVIENS ! 7 S », et après **10 s** la mission rate (`hors_zone`). Le compte dort sous une scène, un
+  dialogue, un menu, la pause. Dans une pièce, c'est **la porte** qui compte ; dans un bloc, **son
+  passage** en ville. Les districts : ceux de `carte.DISTRICTS` et du nord, plus `ile` et `aeroport`. Le
+  hors-zone se grise sur la mini-carte et la grande carte (une frontière de district seulement).
+- ⚠️ **Tout lieu nommé** (`sur_place`, un `lieu` ou un `ou` d'objectif) doit être **dans** la frontière
+  (jugé sur la ville, `tests/test_sur_place.py`) : sinon la mission envoie le joueur là où elle le fait
+  rater. Exemples : `v01` (`bloc:villa`), `q13` (`quais`).
 
 **Fichier cible** : un **nouveau fichier** `app/missions/m7.py`, qui déclare
 `MISSION = { … }` :
@@ -538,7 +560,9 @@ ligne de jalon : ⬜ dans `docs/plan.md` tant qu'elle est en cours, puis ✅ dan
 - un `texte` d'objectif pas en MAJUSCULES ou trop long ;
 - un `lieu`/`groupe`/`vehicule`/`arme`/`propriete` inconnu ;
 - un `echec` hors de `ECHECS` (`mort`, `arrete`, `vehicule_detruit`, `chrono`,
-  et depuis M16 `etoile`, `protege_mort`) ;
+  et depuis M16 `etoile`, `protege_mort`, `alarme`, `arme`, et `hors_zone` — la frontière) ;
+- un `sur_place` ou une `frontiere` mal formés (`erreurs_de_sur_place`), ou un lieu nommé hors de
+  sa frontière ;
 - un donneur sans position (`perso["ou"]` vide) ;
 - `intro`/`fin`/`echec` sans répliques, ou pas de « pendant » ;
 - une scène `intro` ou `fin` manquante ou vide ;
