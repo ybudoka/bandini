@@ -319,6 +319,22 @@ PERSONNAGES: list[Personnage] = [
     {"slug": "cindy", "nom": "Cindy Boivin", "genre": "femme", "voix": "Ruby Roo",
      "couleurs": {"c": "#d6336c", "h": "#e0b85a", "s": "#e8c0a0", "p": "#1a1a22"}, "ou": "porte:cantine",
      "heler": "Pst! Toi!", "arrive_apres": "q04", "parti_apres": "q05"},
+    # --- Les Érables (29 sept. 2026, vague 2 des libérations) : Diane Larivière, conseillère municipale, et son
+    # fils Jo Bellemare, le chef des Chevreuils — tous deux devant le dépanneur (`porte:depanneur`, un lieu de
+    # mission depuis e01 : rien ne bouge), et seulement après e01 (`arrive_apres` : les drifts de Ti-Paul les ont
+    # amenés là ; un personnage posé dès l'ouverture décalerait les identifiants de la ville). Jo s'en va après
+    # e04 (il se cache chez les siens : c'est lui, le chef qu'on couche en e10). Voix : Riya Rao (vérifiée
+    # « quebec » en multilingue v2) et Omar J (jeune, un français « standard » d'aperçu) — permises (Martin,
+    # 25 sept. 2026), en v3 à écouter.
+    {"slug": "diane", "nom": "Diane Larivière", "genre": "femme", "voix": "Riya Rao - Clear and Crisp",
+     "couleurs": {"c": "#2c5f7c", "h": "#8a6a4a", "s": "#e8c0a0", "p": "#2a2a33"}, "ou": "porte:depanneur",
+     "heler": "Vous, là!", "arrive_apres": "e01",
+     # ⚠️ Le premier repos ne se dit jamais (elle arrive bien après m5) : court, il pèse moins.
+     "repos": ("Revenez jeudi.",
+               "Le conseil siège jeudi. D'ici là, les Érables dorment en paix.")},
+    {"slug": "jo", "nom": "Jo Bellemare", "genre": "homme", "voix": "Omar J - Energetic,Engaging and Animated",
+     "couleurs": {"c": "#b5651d", "h": "#1a1a1a", "s": "#e8b088", "p": "#3a2f22"}, "ou": "porte:depanneur",
+     "heler": "Hé, le vieux!", "arrive_apres": "e01", "parti_apres": "e04"},
 ]
 
 
@@ -548,6 +564,7 @@ from . import (  # noqa: E402
     e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f10, f11, f12, f13, h01, h02, m1, m2, m3,
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
     s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
+    e04, e06, e07, e10,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -577,6 +594,8 @@ from . import (  # noqa: E402
 # ⚠️ q05, q06, q13 (29 sept. 2026, « le chemin vers les quatre libérations ») : Cindy qui veut sortir de la rue, le
 # Beau Denis couché à mains nues (`calme: morues`), et la nuit des Morues — la première libération de M16
 # (`libere: quais`), après l'un OU l'autre côté du choix de Sven (`exige.une_de`).
+# ⚠️ e04, e06, e07, e10 (29 sept. 2026, vague 2) : Jo et sa course, Diane, le maire suivi jusqu'à l'hôtel, son
+# dossier volé à la villa — et les Chevreuils vidés, leur chef couché : c'était Jo (`libere: erables`).
 # ⚠️ m99 (M13, 25 sept. 2026) — _Sacrer son camp_, la fin qu'on peut jouer — tout au bout : son appel
 # ne sonne qu'avec 15 000 $ en poche (`exige`), et une fin n'a rien à précéder.
 CATALOGUE: list[Mission] = [
@@ -594,6 +613,7 @@ CATALOGUE: list[Mission] = [
     c01.MISSION, c02.MISSION, c03.MISSION, c04.MISSION,
     c05.MISSION, c06.MISSION, c07.MISSION, c08.MISSION,
     q05.MISSION, q06.MISSION, q13.MISSION,
+    e04.MISSION, e06.MISSION, e07.MISSION, e10.MISSION,
     m97.MISSION, m99.MISSION,
 ]
 

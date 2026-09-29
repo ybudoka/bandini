@@ -149,6 +149,11 @@ SPECIALES: list[dict] = [
      "texte": "LES MATELOTS REPARTIS À LA RAME. LES QUAIS DORMENT TRANQUILLES.",
      "lu": "Nuit blanche à l'Hôtel Bandini. Les matelots du cargo norvégien sont repartis à la rame, "
            "et les Quais dorment tranquilles. Les débardeurs, eux, parlent d'une paix qui tiendra."},
+    # Les Érables libérés (e10, 29 sept. 2026) : le Clairon ne nomme pas Jo — il nomme la conseillère.
+    {"slug": "erables_liberes", "titre": "PLUS UN DRIFT DANS LES ÉRABLES",
+     "texte": "LES CHEVREUILS RANGENT LEURS CHARS. LE CONSEIL VOTE LA PAIX.",
+     "lu": "Plus un drift dans les Érables. Les Chevreuils rangent leurs chars, et le conseil vote la paix jeudi. "
+           "La conseillère Larivière n'a pas voulu commenter."},
 ]
 
 

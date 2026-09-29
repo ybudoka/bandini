@@ -189,6 +189,12 @@ VISAGES: dict[str, dict] = {
     # Cindy (q05), la fille de la Brume : une blonde décolorée aux racines foncées, le fard et le rouge de la nuit,
     # deux grandes boucles d'oreilles — et les cernes de qui n'a pas dormi dans un vrai lit depuis longtemps.
     "cindy": _v("fine", "longue", "blouse", signes=("fard", "rouge", "boucles", "cernes")),
+    # Diane Larivière (e06), conseillère municipale : le carré châtain de l'hôtel de ville, le tailleur bleu, des
+    # boucles d'oreilles discrètes et le rouge de qui sourit pour les photos.
+    "diane": _v("fine", "carre", "veston", signes=("boucles", "rouge", "rides")),
+    # Jo Bellemare (e04), le chef des Chevreuils : la casquette à l'envers d'un fils de bonne famille qui joue au dur,
+    # la mèche, la barbe de trois jours qui pousse mal, une cicatrice de drift sur le sourcil.
+    "jo": _v("longue", "meche", "veste", "mal_rase", chapeau="casquette", signes=("cicatrice",)),
     # Victor Tam, le vieux maître de l'ÉCOLE LA MANTE, revenu de Floride : le chapeau de paille du snowbird sur une
     # couronne de cheveux blancs, la chemise fleurie turquoise, le bronzage de trois hivers, les gros sourcils blancs
     # et les rides de quelqu'un qui rit plus qu'il ne crie. ⚠️ Ni lunettes épaisses ni yeux plissés : il CLIGNE

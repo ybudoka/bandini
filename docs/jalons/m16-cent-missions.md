@@ -980,3 +980,29 @@ catalogue.
     et `contre`/`course` qui ne sont lus par personne : `e04` se réécrit) ; `s02`, `s05`, `s06`, `s09`,
     `s10`, `s11` (La Shop — Ti-Loup, Gros-Boulon, Prévost) ; `p02`, `p04`, `p05`, `p09`, `p10`, `p11` (La
     Pointe — Bilodeau, Zed, le Trappeur). _Le Boss_ en demande quatre : Faubourg et Quais, plus deux.
+- **29 sept. 2026 : vague 2 — l'arc E jusqu'à sa libération. Les Érables sont libres.** Quatre missions :
+  `e04` (Jo, _La course des Chevreuils_ : son pilote part devant en sport, on le rattrape, on rapporte ses clés
+  — 300 $, `calme: chevreuils`), `e06` (Diane, _Le maire ne dort pas chez lui_ : filer sa berline jusqu'à
+  l'Hôtel Bandini — 300 $), `e07` (Diane, _La clé de la villa_ : la clé dans la poche du chauffeur, par-derrière,
+  puis la villa du maire comme v02, le dossier du bureau d'en haut, sans une étoile — 400 $, le dossier reste au
+  sac pour e11 et c02), `e10` (Diane, _Diane veut la paix_ : deux coins de Chevreuils, leur chef — c'était Jo —,
+  la police — 600 $, **`libere: erables`**, la manchette _Plus un drift dans les Érables_). Deux personnages
+  neufs, **Diane Larivière** (voix Riya Rao) et **Jo Bellemare** (voix Omar J) — fiches, visages ; tous deux
+  devant le dépanneur, et seulement après e01 (`arrive_apres`) ; Jo s'en va après e04.
+  - ⚠️ **`e04` est réécrite** : la fiche voulait une `course` `contre` trois Chevreuils, et **ni `course` ni
+    `contre` ne sont lus par `histoire.js`** (une `course` avancerait dans la même image). La course se joue avec
+    le fuyard de m2/m50/f03 : le pilote file en sport, on le rattrape ou on le casse. `course`/`contre` restent à
+    brancher — `p04` (la course à pied contre Zed) en aurait besoin aussi.
+  - **Ce que M13 attend, vrai au banc** : trois districts libérés (Faubourg, Quais, Érables) — _Marco te vend_
+    (m97, `exige: liberes 3`) s'ouvre ; le juge le vérifie.
+  - **Juges** (`tests/test_arc_e_js.py`, quatre ; trois mutations, toutes rouges) : e04 de l'appel à la prime
+    (personne devant le dépanneur avant e01, Jo parti après) ; e06, une vraie filature jusqu'à l'hôtel ; e07, la
+    clé du chauffeur puis la villa par le trou de la clôture, le dossier, ressortir sans étoile — le parcours des
+    juges de l'infiltration ; e10 — six Chevreuils sur deux coins loin du dépanneur, leur chef, la police, et les
+    Érables libres dans le monde (« Les Érables » sous la mini-carte, le gang hors jeu, son coin pris à La Shop
+    rendu, la sauvegarde relue, m97 offerte).
+  - ⚠️ **Le paquet passe son plafond** : 285 836 bruts / **64 020 gzip** pour 64 000 avec la vague. Relevé à
+    **290 000 / 66 000**, la mesure écrite dans `test_definitions.py`. Ce qui en libérerait **dix Ko sans
+    risque** : les notes de `musique.py` (`audio.musiques`, 62 089 bruts / 10 302 gzip — le sixième du paquet),
+    qui peuvent venir avec leur district, par la route des mp3 ; c'était déjà écrit le 24 sept., et c'est le
+    moment. Pas fait ici : ce n'est pas le chemin des libérations.

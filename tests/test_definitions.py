@@ -195,8 +195,16 @@ def test_le_paquet_reste_leger(paquets):
     gzip par mission d'en haut), le personnage et son repos (son premier, jamais dit, raccourci), son visage, sa tenue
     et la reprise de l'école (`mantes.REPRISE`). Le gzip, le vrai juge, reste sous ses 64 000 ; le brut, un
     indicateur, passe 280 000 → 285 000.
+
+    ⚠️ **Les définitions : 64 000 → 66 000 gzip, 285 000 → 290 000 bruts, le 29 sept. 2026** — le chemin vers les
+    quatre libérations de M16 (docs/jalons/m16-cent-missions.md). Mesure : 280 579 bruts / 62 857 gzip sur `dev`
+    avant, 282 815 / 63 357 avec l'arc Q (trois missions, Cindy, le matelot, une manchette), **285 836 / 64 020**
+    avec l'arc E (quatre missions, Diane et Jo, leurs visages, une manchette) — les 52,6 octets gzip par mission
+    d'en haut, plus les personnages. Les arcs S et P (douze missions, six personnages) en demandent autant :
+    deux Ko de plus, pas davantage. Ce qui en libérerait dix sans risque : les notes de `musique.py`
+    (`audio.musiques`, 62 089 bruts / 10 302 gzip), qui peuvent venir avec leur district comme les mp3.
     """
-    for nom, brut_max, fil_max in (("definitions", 285_000, 64_000), ("carte", 722_000, 71_000)):
+    for nom, brut_max, fil_max in (("definitions", 290_000, 66_000), ("carte", 722_000, 71_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))

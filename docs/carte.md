@@ -238,6 +238,8 @@ chacun dans [docs/personnages/](personnages/README.md).
 | `irene` | Irène Lam | Meera | point:irene (le bout du bar du Dragon d'or, au Petit-Canton) | — |
 | `pouce` | Réal « le Pouce » Vachon | Callum - Husky Trickster | — (on ne l'entend qu'en se sauvant, c04) | — |
 | `cindy` | Cindy Boivin | Ruby Roo | porte:cantine (la Brume des Quais — partie après q05, `parti_apres`) | — |
+| `diane` | Diane Larivière | Riya Rao | porte:depanneur (après e01, `arrive_apres`) | — |
+| `jo` | Jo Bellemare | Omar J | porte:depanneur (entre e01 et e04) | — |
 | `maitre` | Victor Tam | Luca - Storyteller | point:maitre (sa salle de l'ÉCOLE LA MANTE, au Petit-Canton — une fois revenu de Floride, `arrive_apres: c04`) | — |
 
 ⚠️ **`ou: "foire"` est un lieu neuf** (22 sept. 2026) : le seul personnage posé DANS l'enceinte de la
