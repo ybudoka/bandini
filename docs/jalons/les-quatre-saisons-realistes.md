@@ -1202,6 +1202,23 @@ glace et le dérapage (lot 6) restent en dernier, à part._
 - **Juges** : la bonne ambiance à chaque saison, le fondu sans saut (d'une image à l'autre et d'un palier à
   l'autre), le silence dedans, aucun dé ; les sons au paquet (le poids).
 
+### Lot 4, vague 4c — les restes (tranché par Martin le 29 sept. 2026)
+
+- **Le plafond des sons de lieu à 1,35 Mo** : validé par Martin.
+- **Les personnages et le joueur s'habillent selon la saison, DEHORS seulement** (« il change juste à
+  l'extérieur ») : dans une pièce, leur tenue de tous les jours. Un manteau et une tuque dans LEUR palette
+  (on les reconnaît) ; le visage des dialogues ne change pas. Rien au dé.
+- **Terrasses et Tempo solides** : on ne marche plus sur les tables des terrasses ; les chars ne passent plus
+  sous les abris Tempo (les piétons, oui : c'est un abri). Ils existent selon la saison : leur collision
+  apparaît et disparaît avec eux, sans décaler la ville ni aucun dé ; personne coincé dedans au changement
+  de saison ; aucun donneur ni aucune porte bloqués.
+- **Les enfants habillés** selon la saison.
+- **Des manteaux d'hiver de vraies couleurs** : foncés et variés (marine, noir, bourgogne, forêt, brun…),
+  plus la reprise pastel de la couleur du haut ; à l'empreinte.
+- **Les bornes-fontaines ouvertes l'été** : quelques-unes les jours de chaleur, un jet d'eau dessiné, des
+  enfants qui jouent autour, le son de l'eau (ElevenLabs, un lieu chargé à la demande) ; à l'empreinte,
+  rien de posé.
+
 ## Notes
 
 ### Lot 1 — le paysage des quatre saisons (livré le 29 sept. 2026)
