@@ -146,6 +146,7 @@ const Dojo = (function () {
     Jeu.transiter([10, 10], function () {
       const j = B.joueur;
       j.x = cx - d / 2; j.y = cy; j.vx = 0; j.vy = 0; Entites.regarder(j, 1, 0);
+      if (B.cours) B.cours.marque = { x: j.x, y: j.y };
       k.x = cx + d / 2; k.y = cy; k.vx = 0; k.vy = 0; k.etat = 'fige';
       k.marque = { x: k.x, y: k.y };
       // Kevin fait face a Bandini — sauf pour l'etranglement, ou il lui tourne le dos.
@@ -209,6 +210,14 @@ const Dojo = (function () {
     if (occupe && !c.occupe) c.tente = true;
     c.occupe = occupe;
     const r = regles(), phase = c.t % r.temps_images, temps = Math.floor(c.t / r.temps_images) % 3;
+    // Au debut de chaque « un », Bandini reprend SA marque, face a Kevin — comme Kevin la sienne.
+    // ⚠️ Sans elle, un coup de pied saute parti trop tot le laissait DERRIERE Kevin, dos a lui, et
+    // tous les essais suivants rataient (Martin, 29 sept. : « trop difficile »). Pas en plein geste.
+    if (temps === 0 && phase === 0 && c.marque && !occupe && !c.attend) {
+      j.x = c.marque.x; j.y = c.marque.y; j.vx = 0; j.vy = 0;
+      Entites.regarder(j, 1, 0);
+      Entites.indexer();
+    }
     // Le metronome : deux claquements de bois, puis un fort sur le « et ».
     if (phase === 0 && typeof Son !== 'undefined') Son.SFX.claquement(temps === 2);
     if (c.ditT > 0) c.ditT--;

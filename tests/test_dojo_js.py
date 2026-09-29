@@ -267,8 +267,10 @@ GESTES = {
     "etranglement": "o.touche('KeyU'); o.frame(95); o.relacher('KeyU'); o.frame(1);",
     # Tenue : on charge sur le « et », on relâche avant la fin de la fenêtre.
     "pied_de_cote": "o.touche('KeyX'); o.frame(21); o.relacher('KeyX'); o.frame(1);",
-    # Plus loin : on sprinte vers Kevin et on frappe en course.
-    "pied_saute": ("o.touche('ShiftLeft'); o.touche('ArrowRight'); o.frame(9); o.tape('KeyX', 1);"
+    # Plus loin : on sprinte vers Kevin et on frappe en course, une fois sur lui. ⚠️ 9 images (23 px
+    # sur 70) frappaient de trop loin : ce juge n'etait vert que parce que Bandini ne revenait pas
+    # sur sa marque et restait colle a Kevin apres le premier essai.
+    "pied_saute": ("o.touche('ShiftLeft'); o.touche('ArrowRight'); o.frame(16); o.tape('KeyX', 1);"
                    " o.relacher('ArrowRight'); o.relacher('ShiftLeft'); o.frame(1);"),
     # Kevin attaque : on roule, et on balaie au sortir de la roulade.
     "balayage": "o.tape('ShiftLeft', 1); o.frame(15); o.tape('KeyX', 1);",
@@ -395,3 +397,55 @@ def test_la_carte_parle_l_appareil_qu_on_tient(banc):
     }""")
     assert r["appareil"] == "manette", r
     assert r["clavier"] == "touche" and r["manette"] not in ("touche", None) and not r["manette"].startswith("mot:"), r
+
+
+# --- Bandini revient sur sa marque (docs/jalons/le-dojo-bandini-revient-sur-sa-marque.md) ------
+
+def test_le_coup_de_pied_saute_s_apprend_essai_apres_essai(banc):
+    """Martin, 29 sept. : « trop difficile ». Un premier essai parti trop tôt (on court dès le
+    « deux », on frappe sur le « et ») laissait Bandini DERRIÈRE Kevin, dos à lui : Kevin reprend sa
+    marque là où Bandini se tient, et les deux corps se démêlent de travers. Tous les essais suivants
+    rataient. Joué comme un joueur : ensuite, sur chaque « et », COURIR vers lui et FRAPPE quelques
+    pas plus loin — sans jamais revenir soi-même."""
+    r = banc("""function (L, o) { """ + ENTRER + """
+        auDojo(L, o);
+        L.B.partie.argent = 5000;
+        L.Dojo.acheter('pied_saute');
+        while (L.B.transition) o.frame(1);
+        const j = L.B.joueur;
+        // Le premier essai, parti trop tôt.
+        while (Math.floor(L.B.cours.t / 45) % 3 !== 1) o.frame(1);
+        o.touche('ShiftLeft'); o.touche('ArrowRight');
+        while (!L.B.cours.fenetre) o.frame(1);
+        o.tape('KeyX', 1); o.relacher('ArrowRight'); o.relacher('ShiftLeft');
+        o.frame(20);
+        const depasse = L.B.cours.kevin.x - j.x;
+        let vues = L.B.cours.ouverte;
+        for (let n = 0; n < 1400 && L.B.cours; n++) {
+            const c = L.B.cours;
+            if (c.fenetre && c.ouverte !== vues) {
+                vues = c.ouverte;
+                o.touche('ShiftLeft'); o.touche('ArrowRight'); o.frame(16);
+                o.tape('KeyX', 1); o.relacher('ArrowRight'); o.relacher('ShiftLeft');
+            } else o.frame(1);
+        }
+        return { appris: !!L.B.partie.techniques.pied_saute, vues: vues, depasse: Math.round(depasse) };
+    }""")
+    assert r["depasse"] < 0, r                     # sinon le juge ne juge rien : il l'a bien dépassé
+    assert r["appris"] is True, r
+
+
+def test_bandini_revient_sur_sa_marque_face_a_kevin(banc):
+    r = banc("""function (L, o) { """ + ENTRER + """
+        auDojo(L, o);
+        L.B.partie.argent = 5000;
+        L.Dojo.acheter('pied_saute');
+        while (L.B.transition) o.frame(1);
+        const j = L.B.joueur, x0 = j.x, y0 = j.y;
+        // Il s'en va à l'autre bout du tatami, dos à Kevin.
+        j.x += 90; L.Entites.regarder(j, 1, 0); L.Entites.indexer();
+        while (!(Math.floor(L.B.cours.t / 45) % 3 === 1)) o.frame(1);
+        return { dx: Math.round(j.x - x0), dy: Math.round(j.y - y0), regard: j.regard ? Math.sign(j.regard.x) : null,
+                 kevin: Math.sign(L.B.cours.kevin.x - j.x) };
+    }""")
+    assert r["dx"] == 0 and r["dy"] == 0 and r["kevin"] == 1, r
