@@ -152,3 +152,27 @@ le bus).
   `ville["decor"]` avant le métro et le mobilier (tous les numéros d'entités qui suivent glissent) et les
   arrêts sont renumérotés par position (`combienAttendent`, `B.abribusServis` en dépendent). À poser hors de
   la suite (`enDehorsDeLaSuite`, comme la bande) et avec des identifiants d'arrêt stables.
+
+### Étape 3 (1re partie) — le donneur et sa première mission — **livrée le 29 sept. 2026**, avec [le tripot du casino](le-casino-du-petit-canton.md#vague-4--le-tripot-du-sous-sol--la-barbotte-du-pouce--livrée-le-29-sept-2026-martin--va-y)
+
+⚠️ **Proposé par Claude, à valider par Martin** (la fiche laissait le donneur au brainstorming ; Martin : « va y ») :
+
+- **Le donneur : Irène Lam** (slug `irene`), 68 ans, née au-dessus de la boulangerie de ses parents, rue principale ;
+  trente ans croupière au Dragon d'or, retraitée ; la reine du mah-jong du quartier (les vieux du CLUB MAH-JONG lui
+  ont interdit de miser). Joueuse ET honnête : elle gage sur tout (« je gage cinq piasses que… »), appelle le neveu
+  « mon pigeon », et ne supporte pas qu'on dise « j'ai pas de chance » — « La chance, ça existe pas, y a juste du monde
+  qui sait compter ». ⚠️ Le ton : elle parle le joual du quartier, elle est d'ici depuis soixante-huit ans ; le drôle
+  est dans ce qu'elle dit (les gages, l'œil de croupière), jamais dans sa façon de le dire ni dans son origine. Fiche :
+  [`docs/personnages/irene.md`](../personnages/irene.md).
+- **Sa place : au bout du bar du Dragon d'or** (`point:irene`, dedans) — elle vient chaque soir « surveiller le
+  travail des jeunes ». Dedans, et c'est voulu : un donneur de plus DEHORS naîtrait au démarrage, dans la bulle de
+  naissance du terminus (un numéro d'entité de plus, le hasard du départ rebattu) ; dedans, elle naît quand on entre.
+- **Sa voix : Meera - Friendly and Conversational** (libre ; vérifiée « quebec » en multilingue v2, jamais en v3 — à
+  écouter). Plus aucune Québécoise d'origine n'était libre (Luna, la seule, est jeune et méditative) ; Martin a permis
+  les multilingues (25 sept. 2026).
+- **Le méchant : le Pouce** (Réal Vachon), qui a loué la cave du casino « pour entreposer des chaises » et y fait
+  rouler une **barbotte** aux dés pipés — un escroc d'ailleurs, pas un homme du quartier ; ses rabatteurs sont des
+  **Cravates** qu'il paie, ses gros bras sont à lui. Les Mantes (étape 4) n'y sont pour rien.
+- **Sa mission : c01, _La barbotte du Pouce_** — elle ouvre la porte du tripot. La suite de l'étape 3 (faire tomber
+  le Pouce ? les voisins plumés, le vieux Chan, la boulangère ?) reste à écrire avec Martin.
+- **Les voix** : les dix répliques de c01 et les deux repos d'Irène, générées le 29 sept. 2026 (eleven_v3).

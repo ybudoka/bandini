@@ -33,6 +33,8 @@ from __future__ import annotations
 import math
 from itertools import product
 
+from . import tripot
+
 #: Ce qu'on peut miser à une table, en dollars. Le joueur choisit au menu (MISE).
 MISES = (10, 20, 50)
 
@@ -459,7 +461,9 @@ def pour_le_navigateur() -> dict:
             "roue": list(ROUE), "naturel": NATUREL, "croupier": CROUPIER_RESTE, "plein": NUMERO_PLEIN,
             "dame": DAME, "bonus": BONUS_POKER, "egalite": EGALITE, "six": BANQUE_SIX,
             "sabot": {"paquets": PAQUETS_DU_SABOT, "coupe": COUPE, "mises": list(MISES_BLACKJACK)},
-            "surveillance": SURVEILLANCE}
+            "surveillance": SURVEILLANCE,
+            # Vague 4 : la barbotte du Pouce, au sous-sol (`tripot.py`, `static/js/tripot.js`).
+            "tripot": tripot.pour_le_navigateur()}
 
 
 def jouer_au_sabot(rng, mains: int, miser, tirer=bj_habitue, doubler=bj_habitue_double):

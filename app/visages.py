@@ -180,6 +180,10 @@ VISAGES: dict[str, dict] = {
     # Le concierge de l'Hôtel Bandini (f10) : cheveux gominés, fine moustache, nœud papillon
     # sous le veston — vingt ans de comptoir, et pas une ride de surprise.
     "norbert": _v("longue", "gominee", "veston", "moustache", signes=("noeud_pap", "yeux_plisses")),
+    # Irène Lam, au bout du bar du Dragon d'or (c01) : la permanente argentée, les grosses lunettes de qui a lu
+    # trente ans de cartes sous les néons, le gilet de laine jade, deux boucles d'oreilles de jade — et le coin
+    # des yeux plissé de qui gage sur tout.
+    "irene": _v("ronde", "permanente", "gilet", lunettes="epaisses", signes=("rides", "boucles", "yeux_plisses")),
 }
 
 #: Ceux qui parlent sans être des PERSONNAGES : l'agent qui t'interpelle dans la rue.

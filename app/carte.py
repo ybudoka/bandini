@@ -7375,7 +7375,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
 #: Me Desjardins, ASSIS a la table du fond ou l'on vient lui parler.
 #: ⚠️ Sans eux, une piece meublee reste un musee : c'est le monde qui parle au
 #: comptoir qui fait qu'on a l'impression d'etre entre quelque part.
-QUI_DEDANS = ("commis", "client", "patient", "malade", "soignant", "avocat", "eleve", "croupier")
+#: Au tripot du sous-sol du Dragon d'or (`tripot.py`) : `pouce`, qui tient la barbotte, et ses `gros_bras`, qui
+#: tiennent les portes — le corps du garde, sans sa batte (`Tripot`).
+QUI_DEDANS = ("commis", "client", "patient", "malade", "soignant", "avocat", "eleve", "croupier", "pouce",
+              "gros_bras")
 
 #: ⚠️ Les seuls gens qui naissent DANS un meuble, et chacun dans le sien : le
 #: PATIENT attend assis sur une chaise de la salle d'attente, l'AVOCAT tient la

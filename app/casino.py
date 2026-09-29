@@ -22,7 +22,7 @@ du chantier, où `nord.batir_la_bande` la pose avant de bâtir).
 
 from __future__ import annotations
 
-from . import carte
+from . import carte, tripot
 
 #: La lettre du casino dans le plan du Petit-Canton (`nord.DISTRICTS_NORD`). ⚠️ Pas une lettre de
 #: `SPECIAUX` : c'est un bâtisseur de la bande. Un symbole peu courant, pour qu'aucune autre session ne la
@@ -45,6 +45,8 @@ CASINO: dict = {"slug": "nord_casino", "nom": "Casino du Dragon d'or", "interieu
 #: feutre. Et au sud, deux îlots de cinq machines, loin de la porte. ⚠️ UNE MACHINE SUR DEUX TUILES, et deux
 #: tables jamais collées (deux blocs du même glyphe se peindraient comme un seul) : deux tuiles entre elles.
 #: ⚠️ La salle garde ses 32 × 9 : la grossir ferait glisser la ville (« Grossir un lieu garanti »).
+#: ⚠️ VAGUE 4 : le coin du sud-est est muré d'un pan (`B`) et cache l'ESCALIER du sous-sol (`/`), derrière la
+#: porte que garde un gros bras (`PIECE["barrieres"]`) ; Irène Lam se tient au bout du bar (`point:irene`).
 PIECE = carte._piece("nord_casino", "Casino du Dragon d'or", sol="u", plan="""
 BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 B$h$h$h$h$h$h$h$ ShShShS  ccccc nB
@@ -54,15 +56,22 @@ B !!!!!  !!!!!  !!!  !!!!!  !!!  B
 B !!!!!  !!!!!  !!!  !!!!!  !!!  B
 B                                B
 B                                B
-B  $h$h$h$h$         $h$h$h$h$   B
-Bn                              nB
+B  $h$h$h$h$         $h$h$h$h$ B B
+Bn                             B/B
 BBBBBBBBBBBBBBWWDWWBBBBBBBBBBBBBBB
 """, points=tuple([carte._pt("machine_a_sous", x, 1) for x in range(1, 16, 2)]
                   + [carte._pt("machine_a_sous", x, 8) for x in (3, 5, 7, 9, 11, 21, 23, 25, 27, 29)]
                   + [carte._pt("videopoker", x, 1) for x in (17, 19, 21, 23)]
-                  + [carte._pt(jeu, x, 5) for jeu, x in TABLES]),
+                  + [carte._pt(jeu, x, 5) for jeu, x in TABLES]
+                  # Vague 4 : Irène Lam au bout du bar, et l'escalier du sous-sol, dans son coin.
+                  + [carte._pt("irene", 31, 1), carte._pt("escalier", 32, 9, vers=tripot.PIECE["slug"])]),
     gens=carte._gens(*[("croupier", x, 3) for _, x in TABLES],
-                     ("client", 6, 7), ("client", 20, 2), ("client", 25, 9), ("commis", 28, 2)))
+                     ("client", 6, 7), ("client", 20, 2), ("client", 25, 9), ("commis", 28, 2),
+                     ("gros_bras", 31, 7)))
+
+#: ⚠️ LA PORTE DU SOUS-SOL (vague 4) : une barrière de la pièce (`tripot.PORTE`), sur la tuile qui mène à
+#: l'escalier — fermée tant que la mission d'Irène n'est pas faite. Un gros bras du Pouce la garde.
+PIECE["barrieres"] = [dict(tripot.PORTE)]
 
 
 def batir(ch, x: int, y: int, largeur: int, hauteur: int) -> None:

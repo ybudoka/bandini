@@ -386,6 +386,9 @@ JEU: dict[str, str] = {
     # Norbert vouvoie la ville entière : le repos commun (« reviens me voir ») le ferait tutoyer.
     "norbert-repos-1": "[calm] Monsieur désire? Je crains que la chambre douze ne soit pas libre.",
     "norbert-repos-2": "[knowingly] Monsieur a l'air reposé. L'hôtel aussi, pour une fois.",
+    # Irène Lam, au Petit-Canton : son repos est à elle (« le Faubourg est tranquille » y mentirait).
+    "irene-repos-1": "[amused] La chance, ça existe pas, mon pigeon. [knowingly] Y a juste du monde qui sait compter.",
+    "irene-repos-2": "[wryly] Je surveille les croupiers d'en haut. [quietly] Ceux d'en bas, c'est une autre histoire.",
     "bonimenteur-repos-1": "[cheerful] Reviens me voir… plus tard.",
     "bonimenteur-repos-2": "[playfully] Le Faubourg est tranquille… Merci.",
 

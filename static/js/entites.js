@@ -445,6 +445,11 @@ const Entites = (function () {
       e.face = 'bas';
       // Le commis ne quitte pas sa caisse, la soignante son triage ; le client, lui, magasine.
       if (g.qui === 'commis' || g.qui === 'soignant' || g.qui === 'croupier') e.poste = { x: e.x, y: e.y };
+      // Le tripot du Dragon d'or (`tripot.js`) : le Pouce tient sa barbotte, ses gros bras tiennent les portes.
+      if (g.qui === 'pouce' || g.qui === 'gros_bras') {
+        e.poste = { x: e.x, y: e.y }; e.plante = { x: e.x, y: e.y }; e.etat = 'fige';
+        if (g.qui === 'pouce') e.pouce = true; else e.grosBras = true;
+      }
       // KEVIN, le partenaire des lecons du DOJO DION (`dojo.js`) : sa place est au sac.
       if (g.qui === 'eleve') { e.partenaire = true; e.poste = { x: e.x, y: e.y }; }
       // ⚠️ `fige`, la regle du donneur : il TIENT sa place (on le bouscule, il y
@@ -491,6 +496,19 @@ const Entites = (function () {
                                          couleurs: Object.assign({}, commis.couleurs, { c: '#f4f1e8', p: '#1a1a22' }),
                                          tenue: tire ? Object.assign({}, tire, { haut: 'chemise', couleur_haut: '#f4f1e8', motif: 'uni',
                                                                                  bas: 'pantalon', couleur_bas: '#1a1a22' }) : undefined });
+    }
+    // LE POUCE VACHON, qui tient la barbotte du sous-sol : le corps du commis, un veston moutarde et une
+    // moustache — et SES GROS BRAS, le corps du garde, en cuir noir et sans batte (vague 4 du casino). Pas
+    // d'archetype neuf : le paquet est a son plafond (voir Kevin et le croupier, plus haut).
+    if (g.qui === 'pouce' || g.qui === 'gros_bras') {
+      const pouce = g.qui === 'pouce', base = archetype(pouce ? 'commis' : 'garde');
+      const haut = pouce ? '#9a7a2a' : '#1c1c22', bas = pouce ? '#1a1a22' : '#2a2a2e';
+      const tire = typeof Garderobe !== 'undefined' ? Garderobe.tirer(pouce ? 'commis' : 'garde', hash2(g.x * 131 + g.y, 0x7A1)) : null;
+      return Object.assign({}, base, { slug: g.qui, nom: pouce ? 'Le Pouce' : 'Gros bras', metier: 'tripot', arme: null,
+                                       couleurs: Object.assign({}, base.couleurs, { c: haut, p: bas }),
+                                       tenue: tire ? Object.assign({}, tire, { haut: pouce ? 'veston' : 'veste_travail', couleur_haut: haut, motif: 'uni',
+                                                                               bas: 'pantalon', couleur_bas: bas, chapeau: 'aucun',
+                                                                               accessoires: pouce ? ['moustache'] : [] }) : undefined });
     }
     const hasard = (hash2(g.x * 131 + g.y, 0xD0C) % 1000) / 1000;
     if (g.qui === 'malade') {

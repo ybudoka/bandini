@@ -64,6 +64,8 @@ TYPES_SERVIS = frozenset({
     "machine_a_sous",
     # Les tables du Dragon d'or (`tables_de_jeu.py`, `Tables.menu`).
     "blackjack", "roulette", "poker", "sic_bo", "baccara",
+    # La barbotte du Pouce, au tripot du sous-sol (`tripot.py`, `Tripot.menu`).
+    "barbotte",
 })
 #: ⚠️ Le point d'un PERSONNAGE posé dedans (`ou: "point:<type>"` — le sergent, Josée, Lulu,
 #: Ovila, le Dr Lachance) est servi par `Histoire.personnageDuPoint`, et se lit dans le

@@ -56,6 +56,7 @@ Chaque fiche mêle deux sortes de faits.
 | [Sœur Jeanne](jeanne.md) | `jeanne` | sur le parvis de la chapelle, sur l'Île-aux-Corneilles | Julia | aucune encore (i02 · i05, M16) |
 | [Léo Cyr](leo.md) | `leo` | devant le hangar sans nom, sur l'Île-aux-Corneilles | Alexandre | aucune encore (i04 · i07, M16) |
 | [Norbert](norbert.md) | `norbert` | dans le hall de l'Hôtel Bandini, au bout du comptoir | Martin Dupont Intime | f10 (sa cible) |
+| [Irène Lam](irene.md) | `irene` | au bout du bar du casino du Dragon d'or, au Petit-Canton, dedans | Meera | c01 — ⚠️ proposée par Claude, à valider |
 
 ⚠️ **Deux voix du compte ne se donnent à personne** : celles du scanner de police (Clara Dupont, la
 répartitrice, et Frederic, l'agent — `audio.VOIX_RESERVEES`, jugé). Avant de donner une voix à un
@@ -107,6 +108,7 @@ fait **à sa façon**. Le tableau est l'aide-mémoire ; la fiche dit pourquoi.
 | Le Bonimenteur | « C'est le Bonimenteur, à l'arche de la foire. » | la même, au téléphone | « Approche, jeune! » | qu'il a peur, tout net |
 | Sœur Jeanne | (pas de téléphone : l'île n'a qu'une ligne, au quai) | « Sœur Jeanne. Bienvenue sur l'île, mon enfant. » | « Dieu te garde. » | un sacre ; une menace |
 | Léo Cyr | « Léo, de l'île. » | « Léo Cyr. J'garde le hangar. Non, y a rien dedans. » | « J'ai rien vu. » | un nom — ni Sven, ni Sal |
+| Irène Lam | « Irène Lam, du Dragon d'or. Madame Lam pour toi, tant que tu m'as pas battue au mah-jong. » | la même taquinerie, en personne | « Hé, le pigeon! » | « bonne chance » ; « chanceux » |
 
 ⚠️ **Une fois par mission, pas une fois par coup de fil.** L'échec, la fin et les `pendant` d'une mission
 ne redisent pas le nom : on a entendu la voix à l'appel. La colonne « Au téléphone » est donc celle de

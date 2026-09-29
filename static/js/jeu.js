@@ -1113,6 +1113,7 @@ const Jeu = (function () {
         pas('cabane', Cabane.maj);         // la cabane a sucre : la caleche, ses gens, la table de tire
         pas('cineparc', Cineparc.maj);     // le cine-parc : ses spectateurs, et les phares qui fachent
         pas('galeries', Galeries.maj);     // la nuit aux Galeries : les lumieres, la voix, le gardien
+        pas('tripot', Tripot.maj);         // la porte du sous-sol, ses gros bras, le Pouce qui se méfie
         pas('casino', Casino.maj);         // le portier du Dragon d'or, quand on approche
         pas('quatre_roues', QuatreRoues.maj); // les 4 roues des Friches et du chalet, a l'approche
         pas('enseignes', Enseignes.maj);   // le bingo, le film du Rialto, le lave-auto
@@ -1218,16 +1219,20 @@ const Jeu = (function () {
     // ⚠️ Les battants PAR-DESSUS le sol, jamais dedans : repeindre un
     // morceau de 256 px a chaque image pour une porte tuerait le cache.
     if (!B.interieur) { Autobus.dessinerRails(ctx, vue); Neige.dessinerPanneaux(ctx, vue); Blocs.dessiner(ctx, vue); Cabane.dessinerSol(ctx, vue); Monde.dessinerBattants(ctx, vue); Monde.dessinerPortesDeGarage(ctx, vue); Monde.dessinerBarrieresCoulissantes(ctx, vue); Monde.dessinerBarrieres(ctx, vue); }
+    // La porte d'une PIÈCE (celle du sous-sol du Dragon d'or : `Monde.barrieres` lit la pièce, rien d'autre).
+    if (B.interieur) Monde.dessinerBarrieres(ctx, vue);
     Entites.dessinerDecals(ctx, vue);     // le sang est SOUS les pieds
     if (!B.interieur) Histoire.dessinerCheminCourse(ctx, vue);   // le trace d'une course, sur la chaussee
     if (!B.interieur) { Conduite.dessinerSol(ctx, vue); Rue.dessinerSol(ctx, vue); SaintJean.dessinerDefile(ctx, vue); }   // la case, les lignes, les cones d'une epreuve au volant
     Enseignes.dessinerSol(ctx, vue);                   // la baie du lave-auto ; le film sur la toile du Rialto
     if (B.interieur) Tables.dessinerSalle(ctx, vue);   // la roue, le sabot, la cloche : sur le feutre des tables du Dragon d'or
+    if (B.interieur) Tripot.dessinerSalle(ctx, vue);   // la barbotte du Pouce, ses dés sur le feutre, la lampe qui pend
     Demenagement.dessiner(ctx, vue);                   // le 1er juillet : les meubles sur le trottoir
     if (!B.interieur) Entites.dessinerBetes(ctx, vue);   // un goeland passe sous personne
     Entites.dessiner(ctx, vue);
     Entites.dessinerCible(ctx, vue);
     Entites.dessinerParticules(ctx, vue);
+    if (B.interieur) Tripot.dessinerFumee(ctx, vue);   // le tripot : la fumée qui traîne, le noir des coins — au-dessus des gens
     if (!B.interieur) Frenesies.dessiner(ctx, vue);    // le crâne d'une frénésie, au-dessus de sa ruelle
     // L'ecran du cine-parc, PAR-DESSUS les arbres qui sont derriere lui : il est haut (`Cineparc`).
     if (!B.interieur) Cineparc.dessiner(ctx, vue);
@@ -1529,7 +1534,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, QuatreRoues: QuatreRoues, Tables: Tables, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Galeries: Galeries, Fetes: Fetes, Incendies: Incendies, Frenesies: Frenesies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,

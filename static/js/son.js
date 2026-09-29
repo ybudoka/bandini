@@ -746,6 +746,12 @@ const Son = (function () {
     salle_du_casino: function (volume) {
       tenir('casino_salle', volume, function (v) { if (B.t % 40 === 0) ton(880 + (B.t % 5) * 110, 0.08, 'sine', 0.03 * v, 1.5); });
     },
+    //: Le tripot du sous-sol, tant qu'on y est ; le repli : un verre posé, de temps en temps, et le ronron.
+    tripot_salle: function (volume) {
+      tenir('tripot_salle', volume, function (v) { if (B.t % 90 === 0) ton(1900, 0.05, 'triangle', 0.025 * v, 1.2); if (B.t % 30 === 0) bruit(0.4, 0.012 * v, 300, 120); });
+    },
+    //: Les dés de la barbotte contre la planche.
+    des_barbotte: function () { if (!joue('des_barbotte')) { bruit(0.35, 0.1, 2000, 800); ton(180, 0.06, 'square', 0.18, 0.5, 0.3); } },
     //: Un cheval hennit, là où il est.
     hennissement: function (x, y) {
       if (estCharge('hennissement')) { jouerA('hennissement', x, y, 360); return; }

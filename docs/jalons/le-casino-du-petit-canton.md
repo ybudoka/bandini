@@ -31,7 +31,7 @@ _Demande de Martin (28 sept. 2026) :_ « je veux un grand casino dans le quartie
    gardes repèrent, et on se fait sortir — ou barrer du casino pour une semaine. ✅ _Livrée le 28 sept. 2026 (le
    complice, non : voir les notes)._
 4. **Le tripot du sous-sol** : une porte gardée, une mission pour l'ouvrir (avec le donneur du Petit-Canton,
-   étape 3 du quartier), une salle enfumée où les mises sont plus grosses et où la maison triche aussi.
+   étape 3 du quartier), une salle enfumée où les mises sont plus grosses et où la maison triche aussi. ✅ _Livrée le 29 sept. 2026 (voir les notes)._
 
 ⚠️ **Ce que ça touche** (à relire avant de coder) :
 - **Poser un lieu garanti dans la bande** : les îlots du Petit-Canton sont bâtis avec LEURS dés
@@ -197,3 +197,69 @@ _Demande de Martin (28 sept. 2026) :_ « je veux un grand casino dans le quartie
   lendemain, la semaine ; miser pareil ne chauffe pas ; frapper un garde ; le hasard du jeu intact et le dé prêté
   du garde ; MACHINES SANS LIMITE ; quarante mille mains au hasard du navigateur). Treize mutations, treize rouges.
 - **Reste** : vague 4 (le tripot du sous-sol).
+
+### Vague 4 — le tripot du sous-sol : la barbotte du Pouce — **livrée le 29 sept. 2026** (Martin : « va y »)
+
+- **Le donneur du Petit-Canton, d'abord** (l'étape 3 du quartier commence ici) : **Irène Lam**, trente ans croupière
+  au Dragon d'or, reine du mah-jong, qui vient chaque soir au bout du bar « surveiller le travail des jeunes »
+  (`point:irene`, dedans : elle naît quand on entre, pas un dé en ville). Honnête ET joueuse — tricher aux dés, c'est
+  voler quelqu'un qui te regarde dans les yeux. Sa fiche : [`docs/personnages/irene.md`](../personnages/irene.md).
+  ⚠️ **Proposée par Claude, à valider par Martin** (nom, histoire, voix) : voir la fiche du quartier.
+- **c01, _La barbotte du Pouce_** (`app/missions/c01.py`, après m6, 400 $) : Irène appelle ; au bar, elle raconte le
+  Pouce Vachon, qui a loué la cave « pour entreposer des chaises » et y plume le quartier ; on entre avec un jeton de
+  laiton, et ses rabatteurs (deux Cravates, aux poings) en distribuent au terminus. On les couche, on rapporte le
+  jeton au Dragon d'or (un `aller` de six tuiles sur le lieu garanti de la bande — `test_missions` admet maintenant
+  `casino.CASINO`). À la fin, elle livre le truc du métier : **les pipés sont plus jaunes que les vrais**. Scènes
+  écrites (la coupe en `ensemble` PUIS la réplique : c'est la voix qui retient la scène).
+- **La porte gardée** (`tripot.PORTE`) : une **barrière de la PIÈCE**, au format de `carte.BARRIERES` (comme les
+  serrures de la villa), condition `apres: c01`, pleine, qu'on ne force pas — dans le coin sud-est de la grande salle,
+  muré d'un pan, devant l'escalier. `Monde.entrer` donne maintenant ses `barrieres` à la carte d'une pièce (aucune
+  ailleurs), et `Jeu.rendre` les peint dedans : une porte de laque rouge, ses clous de laiton, son judas (`decor:
+  porte_tripot`). Un gros bras du Pouce la garde : « SUR INVITATION, MON CHAMPION. », puis « LE JETON? ENVOYE,
+  DESCENDS. ». ⚠️ Pas dans `carte.BARRIERES` : ce tuple est résolu en rectangles de la VILLE, et chaque fiche doit y
+  être (`test_barrieres`).
+- **Le tripot** (`tripot.PIECE`, `nord_tripot`, 24 × 9) : sous la grande salle, par l'escalier (`vers`). ⚠️ Plus
+  petit qu'elle : le bâtiment se taille à la plus grande pièce de sa suite (`carte.mesures_de_la_suite`), et un tripot
+  plus grand aurait fait grandir le Dragon d'or — la ville aurait glissé. La table de la **barbotte** au milieu, le
+  **Pouce** derrière (veston moutarde, moustache — le corps du commis), deux **gros bras** (le corps du garde, en cuir
+  noir, sans batte), le bar, deux tables de cartes, des caisses ; la porte `D` du bas est la sortie de secours des
+  descentes de police. `pouce` et `gros_bras` rejoignent `carte.QUI_DEDANS` ; pas d'archétype neuf (le paquet).
+- **Enfumée, mal éclairée** (`Tripot.dessinerFumee`, par-dessus les gens) : un voile qui noircit les coins, une lampe
+  à abat-jour vert qui pend au-dessus de la barbotte et son halo, et neuf nappes de fumée grise qui dérivent et
+  respirent d'après `B.t`, sans un dé. Pas de musique en bas (`MUSIQUES_DE_COMMERCE` n'a pas `nord_tripot` : la toune
+  du casino se tait en descendant) ; la rumeur de la salle (`tripot_salle`, ElevenLabs, en boucle) et les dés contre la
+  planche (`des_barbotte`), chargés avec les sons du casino (`audio.LIEUX["casino"]`), chacun avec son repli.
+- **La barbotte** (le jeu des arrière-boutiques de Montréal) : deux dés ; POUR sur 3-3, 5-5, 6-6, 5-6, CONTRE sur
+  1-1, 2-2, 4-4, 1-2, le reste se relance ; **un sur deux**, et le Pouce vit de sa **piastre**, 5 % de chaque gain :
+  honnête, elle rend **97,5 %** (calculé ; affiché 97). **Mises de 100 à 1 000 $** (dix fois celles d'en haut), vingt
+  coups par jour. Au menu : PARI, MISE, MISER — la main du Pouce passe sur le feutre et pose les dés —, puis LANCER,
+  CHANGER DE CÔTÉ, DÉNONCER LES DÉS. Son hasard est à lui (la graine, le numéro du coup, un sel), jamais `B.rng()`.
+- **LA MAISON TRICHE, ET ÇA SE VOIT** : à partir de 500 $, six fois sur dix, le Pouce pose ses **dés pipés** contre le
+  côté que tu as pris — de la vieille ivoire, **plus jaune** que les vrais (`Tripot.IVOIRE`) ; les deux paires pèsent
+  leurs faces 3-3-2-3-2-2 ou 2-2-3-2-3-3 sur quinze. Qui les voit a trois choix :
+  - **lancer quand même** : le côté du Pouce sort sept fois sur dix — la table rend **60 %** (calculé) ;
+  - **DÉNONCER** : justes, le Pouce rend la mise (« ÇA S'EST GLISSÉ TOUT SEUL, MON AMI. ») et ne pipe plus de la
+    journée — mais +40 de méfiance ; faux (des dés honnêtes), les gros bras te sortent par la porte d'en arrière,
+    la mise perdue, l'escalier refusé jusqu'au lendemain ;
+  - **CHANGER DE CÔTÉ** une fois ses pipés posés : ils jouent pour toi — **135 %** (calculé) ; le Pouce le voit
+    (+25, et +15 si tu gagnes).
+  La **méfiance** (cinq crans en bas du menu, LE POUCE) fond de 30 par jour ; à 100, à la mise suivante, les gros bras
+  te raccompagnent et l'escalier te reste fermé **une semaine** (`refuseLEscalier`). Frapper le Pouce ou un gros bras :
+  une semaine aussi. **Jamais une étoile** : dans un tripot, on n'appelle pas la police.
+- **LA MESURE** (`test_tripot.py`, 4 500 jours de vingt coups, trois graines) : à 200 $ (sous le seuil), **97,3 %** ; le
+  **naïf** à 1 000 $ qui lance quoi qu'il voie, **75,0 %** (−5 000 $ par jour : la leçon est chère) ; qui **dénonce**
+  les pipés, **98,2 %** — mais il finit dehors de temps en temps (345 sorties) ; qui **retourne** les pipés, **117 %**
+  par dollar misé, sorti 645 fois, l'escalier fermé 3 855 jours sur 4 500 : **+133 $ par jour** en moyenne — pas de quoi
+  casser l'économie. Au banc, 20 000 coups du navigateur retombent dessus (≈ 97 % et ≈ 75 %), et deux mille coups
+  retournés rendent ≈ 135 %.
+- **Juges** : `test_tripot.py` (7 : un sur deux et la piastre, les pipés calculés, les faces pondérées, les quatre
+  façons mesurées, le tripot plus petit que le casino, la porte qui garde vraiment l'escalier, la ville finie) et
+  `test_tripot_js.py` (11 : JS = Python sur deux mille suites de tirages ; la porte avant et après c01, au clavier, et
+  l'escalier au bouton ; un coup au bouton et la limite du jour ; les pipés qu'on VOIT, seulement au-dessus du seuil ;
+  dénoncer juste et faux ; retourner jusqu'à la sortie ; 40 000 coups ; le hasard du jeu intact ; frapper les gens du
+  Pouce ; la fumée et la rumeur ; **c01 jouée au bouton**, de l'appel d'Irène à la descente). Voisins ajustés :
+  `test_missions` (le repos d'Irène, le lieu du casino), `test_interieurs` (`barbotte` servi),
+  `test_un_comptoir_reste_ouvert_js` (MISER mène à LANCER), `test_tables_js` (un croupier se juge à son POSTE : lire sa
+  tuile à l'image 120 tenait par la graine, et deux gens de plus dans la salle l'ont rebattue).
+- **Reste** : rien de la fiche. Le complice de la roulette (vague 3) n'est toujours pas fait ; la suite de l'étape 3
+  du quartier (faire tomber le Pouce pour de bon ?) est à écrire avec Martin.

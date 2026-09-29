@@ -16,7 +16,7 @@ from __future__ import annotations
 import copy
 import zlib
 
-from . import carte, casino, devantures
+from . import carte, casino, devantures, tripot
 
 DECALAGE_NORD = 110
 GRAINE_NORD = 20260926
@@ -470,6 +470,9 @@ def batir_la_bande() -> _ChantierNord:
     # ⚠️ LA SALLE DU CASINO AVANT DE BÂTIR : son bâtiment se taille à elle (`_ilot_bati` lit ses mesures dans
     # les pièces du chantier), et une pièce inconnue donnait un casino de trois tuiles sur trois.
     ch.pieces[casino.PIECE["slug"]] = casino.PIECE
+    # Et son sous-sol (vague 4, le tripot du Pouce) : l'escalier de la grande salle y mène. ⚠️ Plus petit qu'elle —
+    # le bâtiment se taille à la plus grande pièce de la suite (`carte.mesures_de_la_suite`).
+    ch.pieces[tripot.PIECE["slug"]] = tripot.PIECE
     for etape in ("eaux", "rues", "croisements", "ilots", "ponts", "lampadaires", "bornes"):
         getattr(ch, etape)()
     ch.pieces["nord_ferrailleur"] = PIECE_FERRAILLEUR

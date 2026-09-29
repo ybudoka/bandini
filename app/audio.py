@@ -571,6 +571,16 @@ CATALOGUE: list[Echantillon] = [
        prompt="slot machine jackpot, a loud alarm bell ringing and fast electronic beeps, then a "
               "long heavy cascade of metal coins pouring into a steel tray, close up, no voices, "
               "no music"),
+    # Le tripot du sous-sol (vague 4) : la salle enfumee, en boucle tant qu'on y est (`Son.SFX.tripot_salle`) — un
+    # plafond bas, une ventilation qui ronronne, des voix d'hommes qui marmonnent, un verre posé ;
+    # et les des de la barbotte contre la planche.
+    _e("tripot_salle", "Le tripot enfumé", duree_s=8.0, volume=0.28, boucle=True, influence=0.45,
+       prompt="smoky basement gambling den ambience, low ceiling, a few men murmuring low around a dice "
+              "table, a glass set down on wood, cigarette smoke, an old ceiling fan and a ventilation hum, "
+              "seamless loop, no music, no clear words"),
+    _e("des_barbotte", "Les dés de la barbotte", duree_s=1.6, volume=0.42, influence=0.6,
+       prompt="two dice thrown hard across a felt table, bouncing off a wooden backboard with a sharp "
+              "knock, tumbling and settling, close up, indoors, no voices, no music"),
     # Le videopoker : les cinq cartes a l'ecran, cinq bips courts.
     _e("videopoker_donne", "Le vidéopoker donne", duree_s=1.0, volume=0.3, influence=0.65,
        prompt="a video poker machine dealing five cards on screen, five quick soft electronic "
@@ -1450,7 +1460,9 @@ QUARTIERS = {
 LIEUX: dict[str, list[str]] = {
     "cabane": ["caleche", "hennissement", "evaporateur"],
     "casino": ["casino_salle", "bras_machine", "gain_machine", "jackpot",
-               "roulette_bille", "cartes_donnees", "jetons", "des_sic_bo", "sabot_brasse", "talkie_securite"],
+               "roulette_bille", "cartes_donnees", "jetons", "des_sic_bo", "sabot_brasse", "talkie_securite",
+               # Le tripot du sous-sol (vague 4) : on n'y descend que par la grande salle.
+               "tripot_salle", "des_barbotte"],
 }
 
 #: Ce qui passe sur les ondes, et ne s'affiche donc jamais dans une bulle.

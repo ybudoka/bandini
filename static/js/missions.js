@@ -1211,6 +1211,8 @@ const Missions = (function () {
     concession: 'ACHETER UN CHAR',
     // Les tables du Dragon d'or (`tables.js`).
     blackjack: 'LE BLACKJACK', roulette: 'LA ROULETTE', poker: 'LE POKER', sic_bo: 'LE SIC BO', baccara: 'LE BACCARA',
+    // La barbotte du Pouce, au sous-sol (`tripot.js`).
+    barbotte: 'LA BARBOTTE',
     // Le metro : monter dans la rame au quai, en descendre dans la rame.
     rame: 'LA RAME',
   };
@@ -1251,7 +1253,8 @@ const Missions = (function () {
     const assis = Histoire.personnageDuPoint(point.type);
     if (assis) return Histoire.parler(assis.slug);
     // L'escalier et les tiroirs : un geste, pas un menu.
-    if (point.type === 'escalier') return Jeu.changerEtage(point.vers);
+    // ⚠️ Celui du sous-sol du Dragon d'or se garde : le Pouce ne veut plus te voir (`Tripot.refuseLEscalier`).
+    if (point.type === 'escalier') return Tripot.refuseLEscalier(point) || Jeu.changerEtage(point.vers);
     if (point.type === 'rame') return Metro.utiliser(j, point);
     if (point.type === 'fouiller') return fouiller(point);
     // ⚠️ UNE ARME EN MAIN AU COMPTOIR : ACTION braque, avant le menu — l'invite l'a promis.
@@ -1442,6 +1445,8 @@ const Missions = (function () {
         return Casino.menu();
       case 'blackjack': case 'roulette': case 'poker': case 'sic_bo': case 'baccara':
         return Tables.menu(point.type);
+      case 'barbotte':
+        return Tripot.menu();
       default:
         return null;
     }

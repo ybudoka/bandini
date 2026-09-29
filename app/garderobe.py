@@ -223,7 +223,8 @@ _CORPS = {"ti_guy": "costaud", "thibodeau": "vieux", "marco": "homme", "bouchard
           "lulu": "femme", "raymonde": "femme", "ovila": "vieux", "mo": "costaud", "fern": "grand",
           "mado": "femme", "gege": "costaud", "xavier": "grand", "lachance": "grand", "gus": "costaud",
           "rosa": "femme", "ginette": "femme", "gilles": "vieux", "bonimenteur": "grand",
-          "sven": "homme", "berube": "vieux", "mireille": "femme", "jeanne": "femme", "leo": "homme"}
+          "sven": "homme", "berube": "vieux", "mireille": "femme", "jeanne": "femme", "leo": "homme",
+          "irene": "vieux"}
 
 #: Du portrait à la rue : ce que `visages.py` dit de sa tête, la rue le porte aussi.
 _COIFFURE_DE = {"courte": "courte", "brosse": "rase", "degarnie": "degarnie", "chauve": "chauve",

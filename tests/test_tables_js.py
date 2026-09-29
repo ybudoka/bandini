@@ -294,10 +294,15 @@ def test_un_croupier_tient_chaque_table(banc):
         dedans(L, o, 'nord_casino', 'poker');
         o.frame(120);
         return B.entites.filter(function (e) { return e.vivant && e.poste && e.tenue && e.tenue.couleur_haut === '#f4f1e8'; })
-                        .map(function (e) { return [Math.floor(e.x / 16), Math.floor(e.y / 16)]; });
+                        .map(function (e) { return [Math.floor(e.poste.x / 16), Math.floor(e.poste.y / 16),
+                                                    Math.round(Math.hypot(e.x - e.poste.x, e.y - e.poste.y))]; });
     }""")
+    # ⚠️ Son POSTE derrière sa table, et lui à moins d'une tuile et demie : un croupier se dégourdit (`flane`) et
+    # revient. Lire sa tuile à l'image 120 tenait par la graine — la vague 4 (Irène, un gros bras de plus dans la
+    # salle) a rebattu les dés de la salle, et le croupier du sic bo était à quinze pixels de son poste.
     attendu = sorted([x, 3] for _, x in casino.TABLES)
-    assert sorted(r) == attendu, r
+    assert sorted([x, y] for x, y, _ in r) == attendu, r
+    assert all(d <= 24 for _, _, d in r), r
 
 
 def test_chaque_geste_a_son_bruit(banc):

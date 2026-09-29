@@ -381,6 +381,9 @@ const Monde = (function () {
       portes: [{ x: inte.sortie.x, y: inte.sortie.y, interieur: null, lieu: 'sortie' }],
       lampes: [], decor: [], zones: [], points_interet: [], intersections: [], arrets: {},
       apparition: { joueur: inte.apparition }, interieurs: {}, ambulants: [],
+      // ⚠️ SES BARRIÈRES (la porte du sous-sol du Dragon d'or, `tripot.PORTE`) : au format de `carte.BARRIERES`,
+      // lues par `barrieres()` dans la carte COURANTE — la pièce. Aucune ailleurs.
+      barrieres: inte.barrieres || [],
     };
     charger(def);
     carte.interieur = inte;
@@ -801,6 +804,21 @@ const Monde = (function () {
             ctx.fillStyle = '#d4af37'; ctx.fillRect(px + 6, py + 7, 4, 4);
             ctx.fillStyle = '#8a6d1a'; ctx.fillRect(px + 7, py + 5, 2, 2); ctx.fillRect(px + 7, py + 9, 2, 1);
             B.stats.rects += 9;
+            continue;
+          }
+          if (b.decor === 'porte_tripot') {
+            // ⚠️ LA PORTE DU SOUS-SOL DU DRAGON D'OR (`tripot.PORTE`) : une porte de laque rouge, ses clous de
+            // laiton, et le JUDAS grillagé à hauteur d'yeux — une porte qu'on ouvre de l'autre côté, à qui on
+            // connaît. Pas de cadenas : ce n'est pas une clé qu'il faut, c'est une invitation.
+            ctx.fillStyle = '#1a0a08'; ctx.fillRect(px, py, TT, TT);
+            ctx.fillStyle = '#7a1a14'; ctx.fillRect(px + 1, py + 1, TT - 2, TT - 1);
+            ctx.fillStyle = '#9a2a1e'; ctx.fillRect(px + 2, py + 2, 5, TT - 3); ctx.fillRect(px + 9, py + 2, 5, TT - 3);
+            ctx.fillStyle = '#d4af37';
+            for (const [cx, cy] of [[3, 3], [12, 3], [3, 13], [12, 13], [3, 8], [12, 8]]) ctx.fillRect(px + cx, py + cy, 1, 1);
+            ctx.fillStyle = '#0b0a12'; ctx.fillRect(px + 6, py + 4, 4, 3);                 // le judas
+            ctx.fillStyle = '#8a6d1a'; ctx.fillRect(px + 7, py + 4, 1, 3); ctx.fillRect(px + 6, py + 5, 4, 1);
+            ctx.fillStyle = '#e8b33c'; ctx.fillRect(px + 11, py + 9, 2, 2);                // la poignée
+            B.stats.rects += 14;
             continue;
           }
           if (b.decor === 'barricade') {
