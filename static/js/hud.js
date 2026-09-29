@@ -3499,6 +3499,7 @@ const Hud = (function () {
     const pos = function (x, y) { return { x: ox + Math.round(x / TT * echelle), y: oy + Math.round(y / TT * echelle) }; };
     dessinerLignes(ctx, pos);
     Metro.dessinerSurLaCarte(ctx, pos);
+    Train.dessinerSurLaCarte(ctx, pos);         // le train : pleine au sol, doublée sur le viaduc, pointillée sous la montagne
     Territoires.dessinerSurLaCarte(ctx, pos);   // les ilots PRIS, aux couleurs de qui les tient
     Traversier.dessinerSurLaCarte(ctx, pos);
     Navette.dessinerSurLaCarte(ctx, pos);

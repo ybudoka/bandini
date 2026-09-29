@@ -2479,7 +2479,9 @@ const Vehicules = (function () {
         v.guetteLigne = true;                        // on relit le feu a chaque image
         if (attendreALaLigne(v, v.sens, ligne.inter)) {
           v.attendFeu = true;
-          return pointDArret(v, ligne.tx, ligne.ty, p);
+          // ⚠️ Jamais sur les rails : une ligne posée sur un passage à niveau recule d'une tuile (`Train`).
+          const l = Train.ligneHorsDeLaVoie(ligne.tx, ligne.ty, p);
+          return pointDArret(v, l[0], l[1], p);
         }
       }
       if (estVeloDuTrafic(v)) {
@@ -2788,7 +2790,8 @@ const Vehicules = (function () {
     // ⚠️ Et le SIGNALEUR d'un chantier, quand sa palette dit ARRÊT : le même
     // freinage que pour un piéton planté sur la voie, à la distance où il est.
     // (Infinity la plupart du temps : aucun chantier ne le fait parler.)
-    const signal = Chantiers.signalDevant(v);
+    // Et le PASSAGE À NIVEAU fermé (le train, `Train.signalDevant`) : le même arrêt, à sa ligne.
+    const signal = Math.min(Chantiers.signalDevant(v), Train.signalDevant(v));
     // Ce qu'on a devant soi, pour `suitUnChar` : le signaleur n'est pas un char.
     v.devant = signal < dMin ? null : eMin;
     return Math.min(dMin, signal);
@@ -2829,6 +2832,8 @@ const Vehicules = (function () {
       110 d'attente de boite faisaient 600, et le chien sautait sur un char
       parfaitement sage.) */
   function attenteLegitime(v) {
+    // Au passage à niveau, barrières baissées : il attend le train, et il a raison.
+    if (Train.signalDevant(v) < Infinity) return true;
     // Le velo au bout de son trottoir, derriere une file arretee au feu (`cibleHorsRue`).
     if (v.horsRue && v.attendVoie) return true;
     if (!v.attendFeu) return false;

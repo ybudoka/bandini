@@ -177,8 +177,14 @@ def test_le_paquet_reste_leger(paquets):
     l'ÉCOLE LA MANTE (sa pièce reprise, son point) et le territoire du gang au bout des zones. Le gzip, le vrai
     juge, reste sous son plafond ; le brut n'est qu'un indicateur. Les définitions : +1 469 bruts / +280 gzip
     (l'archétype, sa garde-robe, `mantes.COMBAT`), 60 665 gzip, sous les 62 000.
+
+    ⚠️ **Le brut des définitions : 275 000 → 280 000, le 29 sept. 2026** — le train (docs/jalons/le-train.md : « je
+    veux un vrai train aérien, terrestre et tunnel »). Mesure : 274 852 bruts / 61 365 gzip sur `dev` (148 octets de
+    marge), 275 321 / 61 442 avec ses trois sons au catalogue (le klaxon, la cloche du passage, le roulement) et leur
+    lieu (`audio.LIEUX["train"]`). Le gzip, le vrai juge, reste sous son plafond ; le brut n'est qu'un indicateur.
+    La carte ne bouge pas de plafond : 720 500 / 70 449 avec la clé `train`.
     """
-    for nom, brut_max, fil_max in (("definitions", 275_000, 62_000), ("carte", 722_000, 71_000)):
+    for nom, brut_max, fil_max in (("definitions", 280_000, 62_000), ("carte", 722_000, 71_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))

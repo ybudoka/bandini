@@ -713,6 +713,29 @@ const Son = (function () {
     etranglement: function () { if (!joue('etranglement')) bruit(0.4, 0.08, 400, 200); },
     // La cloche du tramway : deux coups clairs. Un DE SES effets (voir `Son.depuis`).
     cloche_tram: function () { if (!joue('cloche_tram')) { ton(1320, 0.3, 'triangle', 0.16, 1); ton(1320, 0.3, 'triangle', 0.16, 1, 0.32); } },
+    // --- LE TRAIN (docs/jalons/le-train.md) ---------------------------------------------------------
+    //: Son klaxon : deux tons graves, de loin (1 400 px) ; le repli : un accord de scie et de carré.
+    klaxon_train: function (x, y) {
+      const j = B.joueur;
+      if (!j || !pret()) return 0;
+      const p = 1400, v = 1 - Math.hypot(x - j.x, y - j.y) / p;
+      if (v <= 0) return 0;
+      if (estCharge('klaxon_train')) return jouerA('klaxon_train', x, y, p);
+      ton(311, 1.4, 'sawtooth', 0.07 * v, 1); ton(370, 1.4, 'square', 0.035 * v, 1);
+      return v;
+    },
+    //: La cloche d'un passage fermé, dosée à la distance (`Train`) ; le repli : deux tintements qui alternent.
+    cloche_passage: function (volume) {
+      tenir('cloche_passage', volume, function (v) {
+        if (B.t % 30 === 0) ton(B.t % 60 === 0 ? 900 : 760, 0.12, 'square', 0.05 * v, 0.8);
+      });
+    },
+    //: Le roulement : les roues sur les joints des rails ; le repli, le « ta-dam » des bogies.
+    roulement_train: function (volume) {
+      tenir('roulement_train', volume, function (v) {
+        if (B.t % 20 === 0 || B.t % 20 === 5) bruit(0.08, 0.06 * v, 380, 90);
+      });
+    },
     ramasse: function () { if (!joue('ramasse')) { ton(880, 0.08, 'sine', 0.25); ton(1320, 0.12, 'sine', 0.2, 1, 0.07); } },
     //: LE MAILLET du marteau de force : un coup MAT sur un plateau de bois, pas
     //: un coup de poing. ⚠️ Synthetise, et ce n'est pas une economie de bouts de

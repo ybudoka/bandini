@@ -987,3 +987,39 @@ def test_les_sons_du_train_se_jouent_sans_fichier(banc):
   baissent, et il n'arrête pour personne` ; atterrir par `git merge --ff-only` (ou cherry-pick sur le `dev` qui a
   bougé) — les juges ciblés verts suffisent pour atterrir, la suite complète après
   (atterrir avant la suite complète).
+
+## Notes
+
+✅ **Vague 1 livrée** (29 sept. 2026) — _le train passe_. Une rame bordeaux à bande jaune (une locomotive, trois
+voitures d'acier) traverse la bande nord au **rang 6**, sous le grand boulevard : elle sort de l'ouest hors
+carte, roule au sol dans les Friches, **monte sa rampe** et passe **sur le viaduc** au-dessus du Petit-Canton —
+les chars et les gens circulent dessous, entre les piliers, dans l'ombre du tablier —, redescend à la Gare de
+triage, et **entre dans le portail** de la falaise, à l'est. Une seule voie, un seul train : l'aller, puis le
+retour. Il s'arrête dix secondes à ses trois gares (les Friches, Petit-Canton, Gare centrale — les quais sont
+pour la vague 2). Trois **passages à niveau** (rues 1-4, 353-354, 414-417) : feux qui alternent, bras rayés qui
+s'abaissent, cloche ; le trafic attend au bord de la voie, et le joueur au volant **défonce** la barrière. Ce qui
+reste sur la voie est **poussé** (un char prend feu si le train roule vite) ou **tué** ; il klaxonne, il ne
+freine jamais. La nuit, son phare. La grande carte trace la ligne : pleine au sol, doublée sur le viaduc,
+pointillée sous la montagne.
+
+- ⚠️ **Le train est une heure** (`Train.etat(t)`, `t = Autobus.tempsDeLaPartie()`) : pas un dé (juge par pile
+  d'appels, rouge-avant prouvé), la même place au rechargement ; les barrières se relisent à l'heure — un saut
+  dans le temps n'en laisse aucune coincée. Seul état d'image : une barrière défoncée (jusqu'au train suivant).
+- ⚠️ **Python ne pose rien** (`app/train.py`) : la ville est la même avec et sans la clé `train`, clé par clé
+  (rouge-avant : une tuile écrite par `poser`). Il passe avant les frénésies, qui restent les dernières. La carte :
+  720 500 bruts / 70 449 gzip, sous 722 000 / 71 000 — pas de plafond à monter.
+- ⚠️ **ON N'ATTEND JAMAIS SUR LA VOIE.** Deux passages sont à la bouche d'un carrefour du boulevard : la ligne
+  d'arrêt de ce carrefour (la tuile `S`) tombe **sur les rails**, et un char qui attendait son tour attendait sur
+  la voie — le train l'aurait pris à chaque passage. `Train.ligneHorsDeLaVoie` recule cette ligne d'une tuile
+  (`cibleDeLaVoie`, `vehicules.js`) ; le signal du passage fermé s'arrête au même bord.
+- ⚠️ **Les piliers et les rampes sont solides dans le navigateur** (`Train.maj` → `marquer`, comme le tronc du
+  sapin), jamais dans la carte : une carte rebâtie est remarquée (juge : `Monde.charger`, rouge-avant prouvé).
+- ⚠️ **Les sons du train sont un LIEU** (`audio.LIEUX["train"]`), chargés à 60 tuiles de la ligne : le budget du
+  premier écran (2,5 Mo) n'avait plus que 6 Ko de marge, et le relever est une décision de Martin. Le klaxon, la
+  cloche et le roulement ont leur synthèse en filet.
+- ⚠️ Trois juges du plan **ne mordaient pas** : le char « qui attend » était hors de la bulle (la ville ne vit
+  qu'autour du joueur — `presDe`), le joueur « sous le viaduc » se réveillait à l'hôpital la vie pleine (on guette
+  maintenant les coups portés par le train), et la pièce où l'on entrait n'existait pas (on rebâtit la carte).
+- 17 juges : `test_train.py` (6), `test_train_js.py` (17). Restent : **on monte** (vague 2), **on s'assoit**
+  (vague 3).
+

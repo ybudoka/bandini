@@ -359,6 +359,17 @@ CATALOGUE: list[Echantillon] = [
        prompt="a vintage streetcar foot bell rung twice, ding ding, bright brass "
               "clang with a short ring, outdoors on a city street, no voices, "
               "no music"),
+    # Le train (docs/jalons/le-train.md) : son klaxon quand quelque chose est sur la voie — il ne freine
+    # jamais —, la cloche des passages à niveau, et son roulement, dosé à la distance.
+    _e("klaxon_train", "Klaxon du train", duree_s=2.5, volume=0.7, influence=0.6,
+       prompt="a deep two-tone diesel locomotive air horn, one long blast, North American "
+              "passenger train, outdoors, distant echo, no music, no voices"),
+    _e("cloche_passage", "Cloche du passage à niveau", duree_s=3.0, volume=0.35, boucle=True,
+       prompt="a railroad crossing warning bell ringing steadily, ding ding ding, loopable, "
+              "outdoors, no train, no music, no voices"),
+    _e("roulement_train", "Roulement du train", duree_s=6.0, volume=0.55, boucle=True,
+       prompt="a passenger train rolling past on steel rails, rhythmic wheel clatter over rail "
+              "joints and a low diesel rumble, steady, loopable, no horn, no music, no voices"),
     # --- L'eau ---------------------------------------------------------------
     # ⚠️ Depuis « L'eau n'est plus un mur », on entrait dans la baie sur
     # `choc` — la TOLE FROISSEE, le son d'un accident de char — et on nageait
@@ -1488,6 +1499,9 @@ QUARTIERS = {
 #: un au Brouillard aussi.
 LIEUX: dict[str, list[str]] = {
     "cabane": ["caleche", "hennissement", "evaporateur"],
+    # Le train (29 sept. 2026) : sa ligne longe le haut de la carte ; ses sons se chargent quand on s'en
+    # approche. Le budget du premier écran n'avait plus que 6 Ko de marge — et ils n'y servent à rien.
+    "train": ["klaxon_train", "cloche_passage", "roulement_train"],
     # Les explosifs (29 sept. 2026) : pas un endroit, une POSSESSION — ils se
     # chargent la premiere fois qu'un explosif entre dans le sac ou qu'on en allume
     # un (`combat.js`). Une partie qui n'en touche jamais ne les telecharge pas.
