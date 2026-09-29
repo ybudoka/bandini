@@ -28,6 +28,41 @@ qu'on a appris. Les autres gangs gardent les poings de rue (variés depuis le pr
 **Juges** : un membre de l'école rivale finit par projeter le joueur ; le joueur projeté retombe sur une tuile
 libre ; aucun dé consommé.
 
+### Fiche de la vague 2 — le vieux maître revient de Floride (Martin, 29 sept. 2026 : « les deux »)
+
+Martin a pris les deux pistes, tissées en une seule histoire : **Irène** appelle en Floride, et **le vieux maître**
+revient reprendre ses élèves un par un.
+
+- **Le maître : Victor Tam, « Sifu Tam »** (slug `maitre`) — soixante-quatorze ans, quarante ans à enseigner la mante
+  religieuse au Petit-Canton, retraité depuis trois hivers à Hollywood Beach, en Floride. Il revient bronzé, en
+  chemise fleurie, en bermudas et en chapeau de paille : un snowbird du quartier. Drôle et attachant — il compare tout
+  à la Floride, et il se sent coupable : ses élèves ont mal tourné quand il est parti. ⚠️ Le ton : il est d'ici, il
+  parle le joual du quartier ; le drôle vient du snowbird, jamais de l'accent ni de l'origine (`ecrire-drole.md`).
+  Sa fiche : `docs/personnages/victor-tam.md` ; sa voix ElevenLabs (une voix libre, `--libres`) ; son visage
+  (`visages.py`, il cligne) ; il se tient **dans son école** (`point:maitre`), **une fois revenu** (`arrive_apres`,
+  une clé de donnée : il n'est pas là avant l'arc).
+- **Irène le connaît depuis trente ans** : le seul qui l'ait jamais battue au mah-jong (« Madame Lam pour toi, tant
+  que tu m'as pas battue » — lui l'appelle Irène).
+- **L'arc, quatre missions** (c05 à c08), jamais deux fois la même mécanique :
+  - **c05 (Irène)** — les Mantes veulent un « droit de table » au club de mah-jong ; Irène a appelé Victor, revenu
+    hier soir. On va le voir à l'école (`parler`), et il t'envoie chercher par l'oreille les trois qui rackettent
+    (`tuer`, à mains nues).
+  - **c06 (le maître)** — Kenny, son meilleur élève devenu le caïd des Mantes, part s'acheter un fusil chez Gus : on
+    le file (`suivre`), puis un duel à mains nues à la porte de l'armurerie (`tuer`, un chef).
+  - **c07 (le maître)** — les élèves ont vendu Monsieur Bois, le mannequin de bois de l'école (1976), à la fourrière :
+    on le ramène sans une égratignure (`monter`, `livrer` sans dégâts). En échange, **il t'apprend une technique**
+    (le retournement du poignet, `donne.technique` — la clé est neuve, lue par `Histoire.recompenser`).
+  - **c08 (le maître)** — les portes ouvertes : on escorte le vieux maître dans le quartier jusqu'au Dragon d'or, où
+    Irène pose son affiche (`proteger`), et on repousse les derniers frimeurs (`tuer`).
+- **Ce qui change au quartier, jugé** (`mantes.REPRISE`, `apres: c08`, comme `tripot.REPRISE`) : l'école rouvre ses
+  cours — dans la salle, les élèves font face au maître et ne sont plus du gang ; dans la rue, **moins de Mantes**
+  (une naissance sur deux devient une sur six sur leur territoire) ; et le gang est **calme** (`donne.calme`) : il ne
+  saute plus sur qui tient une arme — ni, une fois [la provocation](les-mantes-provoquent-et-le-petit-canton-a-sa-musique.md#fiche)
+  livrée, sur qui passe à mains nues (elle lira `Entites.gangCalme`, comme la provocation à l'arme). Le Clairon en
+  fait sa une.
+- **Juges** : chaque mission jouée au bouton sur le banc ; le monde d'après (la salle, la rue, le calme) contre le
+  même monde avant ; aucun dé de plus ; `verifier_missions.py --detail` propre ; le poids du paquet.
+
 ## Notes
 
 ### Vague 1 — l'école, le gang, et leur façon de se battre — **livrée le 29 sept. 2026**
