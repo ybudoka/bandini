@@ -611,7 +611,8 @@ def test_m97_marco_te_vend_les_chiens_le_phare_le_taxi_puis_marco_en_personne(ba
     r = banc("function (L, o) {" + OUTILS + """
         L.Jeu.commencer(); L.graine(6);
         const B = L.B, j = B.joueur; j.invincible = 1e6;
-        faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm50', 'f01']);
+        // m97 exige la fin de l'arc F (f12, Martin, 29 sept. 2026).
+        faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm50', 'f01', 'f02', 'f03', 'f06', 'f08', 'f09', 'f10', 'f12']);
         // `exige: {liberes: 3}` : trois districts libérés (la forme de `tenirExige`, test_missions_en_scene_js).
         B.partie.libere = ((L.Monde.carte.def && L.Monde.carte.def.districts) || []).map(function (q) { return q.slug; }).slice(0, 3);
         const argent = paiements(L);

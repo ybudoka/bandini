@@ -165,7 +165,9 @@ def test_e07_la_cle_dans_la_poche_du_chauffeur_puis_le_dossier_du_maire(banc):
 def test_e10_deux_coins_leur_chef_puis_les_erables_sont_libres_et_marco_peut_vendre(banc):
     r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + """
         L.Jeu.commencer(); L.graine(6);
-        faites(L, """ + AVANT_E + """.concat(['e04', 'e06', 'e07']));
+        // ⚠️ m97 exige la fin de l'arc F (f12, Martin, 29 sept. 2026) : elle est faite, pour que « Marco peut
+        // vendre » ne tienne qu'aux districts.
+        faites(L, """ + AVANT_E + """.concat(['e04', 'e06', 'e07', 'f01', 'f02', 'f03', 'f06', 'f08', 'f09', 'f10', 'f12']));
         L.Jeu.retourTitre(); L.Jeu.commencer();
         const B = L.B, p = B.partie, j = B.joueur; j.invincible = 1e6;
         p.libere = ['faubourg', 'quais']; p.faubourgLibere = true;

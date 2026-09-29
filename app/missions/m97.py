@@ -3,7 +3,10 @@
 from ._commun import _l, _p
 
 MISSION = {
-    "slug": "m97", "titre": "Marco te vend", "donneur": "marco", "prerequis": ["m5"],
+    # ⚠️ `f12` (Martin, 29 sept. 2026) : Marco part après m97 (`parti_apres`), et f08, f09 et f12 ont besoin
+    # de lui (les deux siennes, et l'enveloppe au garage) — elles se jouent AVANT sa trahison, pas après.
+    # f12 exige déjà f08, f09 et f10 (et toute la chaîne jusqu'à f01, la première de Marco).
+    "slug": "m97", "titre": "Marco te vend", "donneur": "marco", "prerequis": ["m5", "f12"],
     "recompense": 150, "phase": 1, "echec": ["mort", "arrete"],
     # ⚠️ `exige` : la condition de « dans quel état », distincte du prérequis
     # « après quoi ». Pas encore lue par le navigateur — elle vaut au juge

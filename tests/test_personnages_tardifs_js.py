@@ -57,9 +57,10 @@ def test_marco_disparait_apres_m97(banc):
     (`parti_apres`) : à la fin de m97, sans recharger ; ni dehors ni au garage à la partie suivante ; grisé
     (PARTI) dans le menu « chez un donneur ».
 
-    ⚠️ Mais PAS tant qu'une mission a encore besoin de lui (`Histoire.estParti`) : m97 ne demande que m5 et
-    trois districts, et f08, f09 (les siennes) et f12 (son enveloppe, au garage) peuvent venir après. Là, il
-    reste — et il s'en va à la fin de la dernière."""
+    ⚠️ Mais PAS tant qu'une mission a encore besoin de lui (`Histoire.estParti`). Depuis que m97 exige f12
+    (Martin, 29 sept. 2026 — `test_m97_vient_apres_tout_ce_qui_a_besoin_de_marco`), une partie jouée ne
+    tombe plus dans ce cas : la retenue reste le filet d'une partie mise dans le désordre (le saut du debug,
+    une vieille sauvegarde). Là, il reste — et il s'en va à la fin de la dernière."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const B = L.B, H = L.Histoire; B.joueur.invincible = 1e6;
@@ -108,3 +109,29 @@ def test_marco_disparait_apres_m97(banc):
     assert r["menuRetenu"] != "PARTI", f"le menu le dit parti alors que f08 l'attend : {r}"
     assert r["f08"], f"f08 ne s'est pas finie : {r}"
     assert not r["apresF08"], f"f08 était la dernière à le retenir : il devait s'en aller à sa fin : {r}"
+
+
+def test_m97_vient_apres_tout_ce_qui_a_besoin_de_marco():
+    """Martin, 29 sept. 2026 : f08, f09 et f12 se jouent AVANT la trahison, pas après — m97 les exige (par
+    f12), et Marco part pour de bon à la fin de m97. Toute mission qu'il donne, ou où l'on doit lui parler,
+    est dans la chaîne des prérequis de m97."""
+    from app import missions
+    par_slug = {m["slug"]: m for m in missions.CATALOGUE}
+
+    def chaine(slug, vus=None):
+        vus = set() if vus is None else vus
+        for p in par_slug[slug].get("prerequis", []):
+            if p not in vus:
+                vus.add(p)
+                chaine(p, vus)
+        return vus
+
+    avant = chaine("m97")
+    besoin = {m["slug"] for m in missions.CATALOGUE
+              if m["slug"] != "m97" and (m["donneur"] == "marco"
+                                         or any(o.get("donneur") == "marco" or o.get("personnage") == "marco"
+                                                for o in m["objectifs"]))}
+    besoin.add("f12")          # l'enveloppe de Madame Thibodeau, au garage de Marco
+    assert {"f08", "f09", "f12"} <= avant, sorted(avant)
+    assert besoin <= avant, f"a besoin de Marco mais peut venir après sa trahison : {sorted(besoin - avant)}"
+

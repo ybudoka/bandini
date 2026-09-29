@@ -204,3 +204,10 @@ m98, son générique, la ville qui change de couleur.
   (`vehiculePlanque`) et celui de M3 (`aQui`, jamais vendable) ne dépendent pas de lui ; son repos reste payé (m97 a des
   prérequis). Juge : `test_marco_disparait_apres_m97` (`tests/test_personnages_tardifs_js.py`) — trois mutations
   rouges (sans `parti_apres`, sans la retenue, sans le retrait à la fin de f08).
+- **m97 exige f12** (Martin, 29 sept. 2026, le même soir : « exiger f08, f09, f12 avant m97 »). La retenue ci-dessus
+  gardait Marco au garage APRÈS sa trahison, le temps des trois missions qui avaient besoin de lui ; Martin a préféré
+  que la trahison vienne après elles. `prerequis: ["m5", "f12"]` — f12 exige f08, f09 et f10, donc toute la chaîne de
+  l'arc F. Marco part donc pour de bon à la fin de m97, et le chemin vers _Le Boss_ passe par la fin de l'arc F. La
+  retenue reste le filet d'une partie mise dans le désordre (le saut du debug, une vieille sauvegarde). Juge :
+  `test_m97_vient_apres_tout_ce_qui_a_besoin_de_marco` (toute mission que Marco donne ou où l'on doit lui parler
+  est dans la chaîne des prérequis de m97 ; sans `f12`, il rougit).
