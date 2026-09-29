@@ -3,10 +3,17 @@
 Ils se voient sur la chaussée ; pris à grande vitesse, le volant ne répond plus une fraction de
 seconde (au joueur seulement) ; le camion d'asphalte attend devant la fourrière et naît quand on
 approche ; au klaxon, le boulot de voirie : un nid bouché l'est pour de bon, même après un
-chargement ; et le Clairon du lundi en fait le décompte.
+chargement ; et le Clairon du lundi en fait le décompte. Et d'abord (M12, 1re vague, en fin de fichier) :
+ils sont sur la chaussée, hors croisement et espacés ; un nid secoue et coûte ses points une seule fois ;
+et une porte ne les efface pas.
 """
 
-from app import economie, vehicules
+import itertools
+
+import pytest
+import villes
+
+from app import carte, economie, vehicules
 
 #: Le joueur a 300 px de la place du camion (hors champ), et les images qu'il faut pour qu'il naisse.
 APPROCHE = """
@@ -208,3 +215,119 @@ def test_la_voirie_tient_l_economie():
     assert "voirie" in economie.BOULOTS
     assert vehicules.par_slug("asphalte")["frequence"] == 0, "il ne roule pas dans le trafic"
     assert [p["type"] for p in economie.PALIERS["voirie"]][-1] == "char"
+
+
+# --- Où ils sont, ce qu'ils coûtent, et qu'une porte ne les efface pas (M12, 1re vague) ----------------
+
+
+@pytest.fixture(scope="module")
+def ville():
+    return villes.generer()
+
+
+def test_les_nids_sont_sur_la_chaussee_hors_croisement_et_espaces(ville):
+    """⚠️ **Jamais dans un croisement** — on y freine déjà, on y regarde le
+    feu, et une secousse au milieu d'un virage se lit comme un bogue de
+    collision. Jamais sur une ligne d'arrêt non plus : c'est là qu'on est
+    immobile. Et jamais deux collés : deux nids côte à côte ne font pas un
+    nid-de-poule, ils font une rue défoncée."""
+    fiche = carte.NIDS_DE_POULE
+    nids = ville["nids_de_poule"]
+    lo, hi = fiche["par_ville"]
+    assert lo <= len(nids) <= hi, f"{len(nids)} nids-de-poule"
+    sol = ville["sol"]
+    boites = [(i["x"], i["y"], i["l"], i["h"]) for i in ville["intersections"]]
+    arrets = {tuple(int(n) for n in cle.split(",")) for cle in ville["arrets"]}
+    for n in nids:
+        glyphe = sol[n["y"]][n["x"]]
+        assert carte.LEGENDE[glyphe].get("route"), f"un nid sur « {glyphe} »"
+        assert not carte.LEGENDE[glyphe].get("trottoir"), "un nid sur une traverse"
+        assert (n["x"], n["y"]) not in arrets, f"un nid sur une ligne d'arrêt : {n}"
+        for bx, by, bl, bh in boites:
+            assert not (bx <= n["x"] < bx + bl and by <= n["y"] < by + bh), f"un nid dans un croisement : {n}"
+    for a, b in itertools.combinations(nids, 2):
+        ecart = abs(a["x"] - b["x"]) + abs(a["y"] - b["y"])
+        assert ecart >= fiche["ecart"], f"deux nids collés : {a} et {b}"
+    # Et ils sont répandus : tous dans un coin, c'est une rue défoncée, pas une ville.
+    moitie = ville["largeur"] // 2
+    assert any(n["x"] < moitie for n in nids) and any(n["x"] >= moitie for n in nids)
+
+
+def test_un_nid_secoue_et_coute_deux_points_une_seule_fois(banc, paquet):
+    """⚠️ Un répit après chaque nid : sans lui, un char lent le paie à chaque
+    image de la tuile, et un nid devient un piège au lieu d'un cahot."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, TT = L.TT, ph = L.B.defs.conduite.physique;
+        const nid = L.Monde.carte.def.nids_de_poule[0];
+        j.x = nid.x * TT + 8; j.y = nid.y * TT + 8; L.Monde.centrerCamera(j.x, j.y);
+        const v = o.char('auto', 0, 0, 0);
+        L.Vehicules.monter(j, v);
+        v.x = nid.x * TT + 8; v.y = nid.y * TT + 8; L.Entites.indexer();
+        const out = { indexe: L.Monde.nidDePoule(nid.x, nid.y),
+                      ailleurs: L.Monde.nidDePoule(nid.x + 3, nid.y + 3) };
+        // 1. A L'ARRET : un char immobile ne tombe pas dans un nid.
+        v.vitesse = 0; v.vx = 0; v.vy = 0; v.nidT = 0;
+        const vie0 = v.vie;
+        L.B.cam.secousse = 0;
+        for (let i = 0; i < 10; i++) L.Vehicules.majNidDePoule(v);
+        out.arret = { perdu: vie0 - v.vie, secousse: L.B.cam.secousse };
+        // 2. EN ROULANT : une fois, et une seule, le temps du répit.
+        v.vitesse = 2; v.vx = 2; v.vy = 0; v.nidT = 0;
+        const vie1 = v.vie;
+        for (let i = 0; i < 10; i++) L.Vehicules.majNidDePoule(v);
+        out.roule = { perdu: vie1 - v.vie, secousse: L.B.cam.secousse, repit: v.nidT };
+        // 3. Le répit passé, on le paie de nouveau.
+        v.nidT = 0;
+        const vie2 = v.vie;
+        L.Vehicules.majNidDePoule(v);
+        out.encore = vie2 - v.vie;
+        return out;
+    }""")
+    ph = vehicules.PHYSIQUE
+    assert r["indexe"] is True and r["ailleurs"] is False, "l'index des nids ne dit pas la vérité : %s" % r
+    assert r["arret"]["perdu"] == 0 and r["arret"]["secousse"] == 0, "un char à l'arrêt tombe dans un nid : %s" % r["arret"]
+    assert r["roule"]["perdu"] == ph["nid_degats"], "le nid ne coûte pas ce que la fiche dit : %s" % r["roule"]
+    assert abs(r["roule"]["secousse"] - ph["nid_secousse"]) < 1e-9, r["roule"]
+    assert r["roule"]["repit"] > 0, "aucun répit : le nid se paie à chaque image"
+    assert r["encore"] == ph["nid_degats"], "le répit passé, le nid ne se sent plus : %s" % r
+
+
+def test_un_nid_secoue_encore_apres_une_porte(banc, paquet):
+    """⚠️ Vu le 16 sept. 2026 : après être entré dans n'importe quel bâtiment et
+    ressorti, plus un seul nid ne secouait la ville jusqu'au rechargement. Les
+    nids vivaient dans le MODULE de `monde.js` ; une pièce passe par `charger`,
+    qui les remplaçait par les siens (aucun), et `restaurer` ne rendait que la
+    carte. Le cœur de la ville, pareil : demandé depuis une pièce, il restait au
+    milieu de la pièce. On passe par la vraie porte, fondus compris."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, TT = L.TT, c = L.Monde.carte;
+        const nid = c.def.nids_de_poule[0];
+        const coeur = L.Monde.coeurDeLaVille();
+        const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
+        j.x = porte.x * TT + 8; j.y = (porte.y + 1) * TT + 10;
+        L.Monde.centrerCamera(j.x, j.y);
+        L.Jeu.entrer(porte);
+        o.fondu();
+        const out = { dedans: !!L.B.interieur, coeurDedans: L.Monde.coeurDeLaVille() };
+        L.Jeu.sortir();
+        o.fondu();
+        out.dehors = L.B.interieur === null;
+        out.indexe = L.Monde.nidDePoule(nid.x, nid.y);
+        const apres = L.Monde.coeurDeLaVille();
+        out.memeCoeur = apres.x === coeur.x && apres.y === coeur.y;
+        out.coeurDedansEstLeSien = out.coeurDedans.x === coeur.x && out.coeurDedans.y === coeur.y;
+        // Et un char qui roule dessus le sent.
+        const v = o.char('auto', 0, 0, 0);
+        v.x = nid.x * TT + 8; v.y = nid.y * TT + 8; v.vitesse = 2; v.vx = 2; v.vy = 0; v.nidT = 0;
+        const vie = v.vie;
+        L.Vehicules.majNidDePoule(v);
+        out.perdu = vie - v.vie;
+        return out;
+    }""")
+    assert r["dedans"] and r["dehors"], f"l'aller-retour par la porte n'a pas marché : {r}"
+    assert r["indexe"] is True, "ressorti d'une pièce, la ville n'a plus de nids-de-poule"
+    assert r["perdu"] == vehicules.PHYSIQUE["nid_degats"], f"le nid ne se sent plus : {r}"
+    assert r["memeCoeur"], "le cœur de la ville est resté dans la pièce"
+    assert r["coeurDedansEstLeSien"], "demandé depuis une pièce, le cœur de la ville est celui de la pièce"
