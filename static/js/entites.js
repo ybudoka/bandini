@@ -5277,9 +5277,12 @@ const Entites = (function () {
     // Une TENUE (`Garderobe`) : un squelette habille, cuit pose par pose. Sinon, le sprite
     // dessine a la main et ses echanges de palette, comme toujours.
     const habille = e.tenue && typeof Garderobe !== 'undefined' ? Garderobe.cuire(e.tenue) : null;
-    const def = habille || SPRITES[e.sprite];
+    // ⚠️ Et la fiche DU MOMENT : l'hiver, la conductrice sort du cabriolet en tuque et en bottes
+    // (`fiche.hiver`, `Saisons.ficheDuMoment` ; docs/jalons/les-decapotables-l-hiver.md).
+    const moment = typeof Saisons !== 'undefined' ? Saisons.ficheDuMoment(e.sprite, SPRITES[e.sprite]) : [e.sprite, SPRITES[e.sprite]];
+    const def = habille || moment[1];
     if (!def) return null;
-    const cuit = habille || Atlas.cuire(e.sprite, def, e.swaps);
+    const cuit = habille || Atlas.cuire(moment[0], def, e.swaps);
     const voulu = nomDePose(e);
     // ⚠️ Un sprite dessine a la main n'a pas les poses des techniques : il frappe
     // comme avant (`frappe_<face>`), plutot que de marcher en donnant un coup de pied.

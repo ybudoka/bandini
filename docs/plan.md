@@ -94,7 +94,6 @@ pas quand l'ordre de travail change.
 | Les quatre saisons, réalistes | ⬜ **en cours** (tranché par Martin : six lots, l'Halloween et la pluie compris ; ✅ lot 1 livré : le paysage des quatre saisons, la neige l'hiver seulement, la longueur du jour, la triche « mois suivant » ; ✅ lot 2 livré : la pluie, les orages, les flaques, la gadoue d'avril, les feuilles d'octobre ; lot 3 à faire : l'Halloween) | 29 sept. 2026 | **P4** | ajout | [fiche](jalons/les-quatre-saisons-realistes.md#fiche) · [notes](jalons/les-quatre-saisons-realistes.md#notes) |
 | Les explosifs : grenades, dynamite, C4, roquettes — et le Molotov en mieux | ⬜ **en cours** (✅ vague 1 livrée : l'explosion commune, la grenade et la dynamite ; reste la vague 2, le Molotov en mieux ; puis les murs fissurés et le C4, le char piégé et le lance-roquettes) | 28 sept. 2026 | **P4** | ajout | [fiche](jalons/les-explosifs.md#fiche) · [notes](jalons/les-explosifs.md#notes) |
 | Le train : au sol, sur le viaduc, dans le tunnel | ⬜ **en cours** (fiche écrite avec Martin ; vague 1 : le train passe — la voie, le viaduc au-dessus du Petit-Canton, le tunnel sous les montagnes, les passages à niveau, les collisions ; puis on monte, puis on s'assoit) | 29 sept. 2026 | **P4** | ajout | [fiche](jalons/le-train.md#fiche) |
-| Les décapotables l'hiver | ⬜ **en cours** (tranché par Martin le 29 sept. 2026) | 29 sept. 2026 | **P4** | ajout | [fiche](jalons/les-decapotables-l-hiver.md#fiche) |
 
 ## L'ordre
 

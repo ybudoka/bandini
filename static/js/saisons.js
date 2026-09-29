@@ -84,6 +84,22 @@ const Saisons = (function () {
     return o;
   }
 
+  /** L'hiver, pour ce qui s'habille : tant que la neige tient (`palette().neige`, de decembre au
+      degel de la fin mars). ⚠️ Pas le mois du calendrier : ce qu'on voit au sol et sur les chars
+      doit dire la meme chose — une capote relevee sur une rue sans neige ne se comprend pas. */
+  function enHiver() {
+    return !!(donnees() && palette().neige > 0);
+  }
+
+  /** LA FICHE DU MOMENT (docs/jalons/les-decapotables-l-hiver.md) : une fiche peut porter sa
+      version d'hiver (`fiche.hiver` : la capote relevee de la decapotable, la tuque de la
+      conductrice). Rend [nom, fiche] — le NOM change avec elle, sinon le cache de l'atlas
+      rendrait l'image d'ete sous la cle d'ete. */
+  function ficheDuMoment(nom, fiche) {
+    if (fiche && fiche.hiver && enHiver()) return [nom + '~hiver', fiche.hiver];
+    return [nom, fiche];
+  }
+
   /** L'heure DE LUMIERE : l'heure de l'horloge fixe (`Monde.TEINTES`) qui a la meme lumiere que
       `heure` ce jour-la. Le jour reel (lever -> coucher, qui suivent l'annee) est etire sur le jour
       de reference (7 h 12 -> 19 h 12), la nuit reelle sur la nuit de reference. Pure et continue :
@@ -104,5 +120,5 @@ const Saisons = (function () {
     return (r % 24) / 24;
   }
 
-  return { paletteA, cleA, palette, cle, enneiger, heureDeLumiere };
+  return { paletteA, cleA, palette, cle, enneiger, enHiver, ficheDuMoment, heureDeLumiere };
 })();

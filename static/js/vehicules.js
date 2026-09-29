@@ -4121,8 +4121,18 @@ const Vehicules = (function () {
       deux-roues que son pilote a quitte — le fuyard qui tombe de sa moto, un
       chemin de demain qui oublierait d'effacer `v.pilote` — n'a plus personne
       dessus, et c'est la seule ligne qui le garantit pour tous. */
-  function cavalierDe(v) {
+  /** Le dessin de ce char EN CE MOMENT, [nom de cache, fiche] : l'hiver, la decapotable releve sa
+      capote (`Saisons.ficheDuMoment`, docs/jalons/les-decapotables-l-hiver.md). Les lampes, l'ombre
+      et les collisions restent celles de `v.sprite` : la capote ne change que le dessus. */
+  function ficheDuMoment(v) {
     const def = SPRITES[v.sprite];
+    return typeof Saisons !== 'undefined' ? Saisons.ficheDuMoment(v.sprite, def) : [v.sprite, def];
+  }
+
+  function cavalierDe(v) {
+    const def = ficheDuMoment(v)[1];
+    // ⚠️ La fiche DU MOMENT : l'hiver, la decapotable roule capote relevee (`fiche.hiver`, sans
+    // selle) et on ne voit plus qui la mene — comme dans une berline.
     if (!def || !def.selle || v.etat === 'epave' || v.plie) return null;
     if (v.conducteur === B.joueur) return B.joueur.swaps || null;
     if (v.conducteur !== 'trafic') return null;
@@ -4246,7 +4256,8 @@ const Vehicules = (function () {
     // posee et la ou les cercles de collision sont. Ce qu'on voit tourner est
     // ce qui bloque.
     allumerLesPhares(v, cx, cy);
-    const toit = Atlas.cuireCap(v.sprite, def, swapsDuMoment(v, def), ROTATIONS, capDe(v.angle), centreDuToit(v));
+    const moment = ficheDuMoment(v);
+    const toit = Atlas.cuireCap(moment[0], moment[1], swapsDuMoment(v, def), ROTATIONS, capDe(v.angle), centreDuToit(v));
     const demi = toit.width / 2;
     ctx.drawImage(toit, Math.round(v.x - demi - cx), Math.round(v.y - v.z - demi - cy));
     B.stats.images++;
@@ -4268,7 +4279,7 @@ const Vehicules = (function () {
     pointDArret, approcheDeLaLigne, placeDeLaPanne, placeStationnee, garesVoulus,
     voieDeDepassement, voieLibre, changerDeVoie,
     estVeloDuTrafic, intentionDuVelo, coteDuVelo, aLaBordure, voieDuVelo, roulableHorsRue, boutDeTrottoir, traverseeDuParc, monterSurLeTrottoir,
-    croisementLibre, soupapeOuverte, creerSignalisation, pointeDuMoment, majNidDePoule, majPlaque, majTas, majPanne, majAmarrages, majMouillages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, lampesDesPhares, corpsDesPhares, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, tenueDuCavalier, imageDuCavalier,
+    croisementLibre, soupapeOuverte, creerSignalisation, pointeDuMoment, majNidDePoule, majPlaque, majTas, majPanne, majAmarrages, majMouillages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, lampesDesPhares, corpsDesPhares, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, ficheDuMoment, cavalierDe, tenueDuCavalier, imageDuCavalier,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };
 })();

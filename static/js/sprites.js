@@ -289,6 +289,31 @@ SPRITES.conductrice = {
   },
 };
 
+/* ⚠️ **L'HIVER, ELLE SORT EN TUQUE** (Martin, 29 sept. 2026 ; docs/jalons/les-decapotables-l-hiver.md) :
+   tant que la neige tient (`Saisons.ficheDuMoment`), la dame du cabriolet porte une tuque rose a
+   pompon, un col de fourrure, des manches longues et des bottes blanches. TIREE DE LA ROBE, rangee par
+   rangee — deux dessins d'un meme corps finissent par diverger : la tuque couvre les trois rangees du
+   crane (le pompon `f` dans le contour, `q` la tuque, `Q` son revers), le col (`f`) prend le haut de la
+   robe a l'epaule, les bras nus (`s`, rangees 8 et 9) deviennent des manches (`c`), les jambes (`s`,
+   rangees 13 et 14) des bottes (`b`, le blanc de ses souliers). `couche` reste la sienne : la tuque
+   tombe quand on est par terre. */
+SPRITES.conductrice.hiver = (function (f) {
+  const TUQUE = ['....kffk....', '...kqqqqk...', '..kQQQQQQk..'];
+  const vetir = function (g, vue) {
+    if (vue === 'couche') return g;
+    return g.map(function (r, y) {
+      if (y < TUQUE.length) return TUQUE[y];
+      if (y === 7 && vue !== 'haut') return r.replace(/c/g, 'f');
+      if (y === 8 || y === 9) return r.replace(/s/g, 'c');
+      if (y === 13 || y === 14) return r.replace(/s/g, 'b');
+      return r;
+    });
+  };
+  const poses = {};
+  for (const vue in f.poses) poses[vue] = f.poses[vue].map(function (g) { return vetir(g, vue); });
+  return Object.assign({}, f, { pal: Object.assign({}, f.pal, { q: '#e0457f', Q: '#b8306a', f: '#fbf6f0' }), poses: poses });
+})(SPRITES.conductrice);
+
 /* L'homme-sandwich : 14 x 16, deux pixels plus large que tout le monde, et
    c'est la pancarte qui les prend. Meme lecon que la fille de la Brume : a
    douze pixels de large, une couleur ne distingue personne — un CONTOUR, oui.
@@ -1865,6 +1890,38 @@ const MACHINE_BATEAU = {
 SPRITES.sport = enVolume(MACHINE_SPORT, 26, 44, { k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', i: '#2a2028', u: '#6b4b2c', s: '#8e2b20' });
 // Le rose, les sieges creme : la conductrice y est peinte par-dessus (`assisDedans`), en robe.
 SPRITES.cabriolet = assisDedans(MACHINE_CABRIOLET, 27, 44, 'volant', { k: '#101018', c: '#ff77b7', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', i: '#3a2a3a', u: '#f2ece4', s: '#b04a7a' });
+/* --- L'HIVER, LA CAPOTE (Martin, 29 sept. 2026 : « penses au decapotable l'hiver ») ---------------
+   Tant que la neige tient (`Saisons.ficheDuMoment`, docs/jalons/les-decapotables-l-hiver.md), la
+   sport et le cabriolet roulent et se garent CAPOTE RELEVEE : une toile noire mate (`q`, ses arceaux
+   `Q`) tendue du haut du pare-brise jusque derriere les sieges, qui se pince vers l'arriere, une
+   petite lunette dans la pente et une glace de cote. C'est LA MEME MACHINE plus la toile — les
+   roues, les lampes et le cockpit dessous ne bougent pas (`Vehicules.lampesDeLaMachine` lit la fiche
+   d'ete). ⚠️ **Rangee DANS la fiche** (`fiche.hiver`), pas comme cle de `SPRITES` : ce qui parcourt
+   le parc (concessionnaires, variantes, sauvegardes) ne la voit pas. Et SANS SELLE : sous la
+   capote, on ne voit plus qui conduit (`Vehicules.cavalierDe`). */
+const TOILE = { q: '#1d1d24', Q: '#3a3a46' };
+/** La capote d'une decapotable : `avant` le haut du pare-brise [u, z], `arriere` le bout du
+    cockpit [u, z], `demi` sa demi-largeur au pare-brise. */
+function capote(avant, arriere, demi) {
+  const u0 = avant[0], z0 = avant[1], u1 = arriere[0], z1 = arriere[1], L = u0 - u1;
+  const haut = z0 + 0.3;
+  return [
+    // Le profil : le toit, la pente ou est la lunette, et le bas contre la caisse. ⚠️ La pente
+    // passe AU-DESSUS des dossiers (7 de haut) : plus basse, leur haut percait la toile.
+    ['profil', [[u0, z0], [u0 - L * 0.4, haut], [u0 - L * 0.6, haut - 0.4], [u0 - L * 0.84, z1 + (haut - z1) * 0.7],
+                [u1, z1], [u0, z1]],
+     [[u1, demi - 0.3], [u0 - L * 0.6, demi], [u0, demi]], 'q', 'qqvq.q', 0.1],
+    ['tube', [u0 - L * 0.22, -(demi - 0.1), haut + 0.1], [u0 - L * 0.22, demi - 0.1, haut + 0.1], 'Q', 0.05],   // les arceaux
+    ['tube', [u0 - L * 0.45, -(demi - 0.2), haut + 0.15], [u0 - L * 0.45, demi - 0.2, haut + 0.15], 'Q', 0.05],
+    // La glace de cote, de chaque flanc.
+    ['bloc', [u0 - L * 0.5, u0 - L * 0.08], [demi - 0.05, demi + 0.05], [z1 + 1.2, z0 - 0.4], 'v', 'v', 'v', 0.12],
+    ['bloc', [u0 - L * 0.5, u0 - L * 0.08], [-(demi + 0.05), -(demi - 0.05)], [z1 + 1.2, z0 - 0.4], 'v', 'v', 'v', 0.12],
+  ];
+}
+const MACHINE_SPORT_CAPOTE = Object.assign({}, MACHINE_SPORT, { pieces: MACHINE_SPORT.pieces.concat(capote([2.3, 8.1], [-8.6, 5.2], 5.6)) });
+const MACHINE_CABRIOLET_CAPOTE = Object.assign({}, MACHINE_CABRIOLET, { pieces: MACHINE_CABRIOLET.pieces.concat(capote([0.2, 8.2], [-8.2, 5.1], 5.6)) });
+SPRITES.sport.hiver = enVolume(MACHINE_SPORT_CAPOTE, 26, 44, Object.assign({}, SPRITES.sport.pal, TOILE));
+SPRITES.cabriolet.hiver = enVolume(MACHINE_CABRIOLET_CAPOTE, 27, 44, Object.assign({}, SPRITES.cabriolet.pal, TOILE));
 SPRITES.luxe = enVolume(MACHINE_LUXE, 32, 52, { k: '#101018', c: '#101014', v: '#5f7f99', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', m: '#b9bcc4', s: '#26262e' });
 SPRITES.ambulance = enVolume(MACHINE_AMBULANCE, 32, 64, { k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8', s: '#f39c12', a: '#7a2320', b: '#8e9299' });
 // Rouge et blanc, devant sur la cabine et derriere sur la caisse : ils tournent avec sa sirene.

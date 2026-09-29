@@ -12,6 +12,9 @@ c'est elle — pas un passant tiré au hasard — qui sort de la voiture qu'on l
 # Le décor commun : le joueur sur une ligne droite, et de quoi compter ce qu'on peint.
 DECOR = """
         L.Jeu.commencer();
+        // ⚠️ En JUILLET : une partie commence en janvier, et l'hiver la capote cache la
+        // conductrice (test_decapotable_l_hiver_js.py).
+        L.B.partie.jour = 21;
         const d = o.ligneDroite();
         const j = L.B.joueur; j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
         const ctx = L.Base.ecran(), vrai = ctx.drawImage;
