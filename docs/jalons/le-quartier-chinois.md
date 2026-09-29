@@ -155,7 +155,8 @@ le bus).
 
 ### Étape 3 (1re partie) — le donneur et sa première mission — **livrée le 29 sept. 2026**, avec [le tripot du casino](le-casino-du-petit-canton.md#vague-4--le-tripot-du-sous-sol--la-barbotte-du-pouce--livrée-le-29-sept-2026-martin--va-y)
 
-⚠️ **Proposé par Claude, à valider par Martin** (la fiche laissait le donneur au brainstorming ; Martin : « va y ») :
+Proposé par Claude (la fiche laissait le donneur au brainstorming ; Martin : « va y ») — **validé par Martin le 29 sept.
+2026** (« oui », et : on fait tomber le Pouce pour de bon) :
 
 - **Le donneur : Irène Lam** (slug `irene`), 68 ans, née au-dessus de la boulangerie de ses parents, rue principale ;
   trente ans croupière au Dragon d'or, retraitée ; la reine du mah-jong du quartier (les vieux du CLUB MAH-JONG lui
@@ -176,3 +177,8 @@ le bus).
 - **Sa mission : c01, _La barbotte du Pouce_** — elle ouvre la porte du tripot. La suite de l'étape 3 (faire tomber
   le Pouce ? les voisins plumés, le vieux Chan, la boulangère ?) reste à écrire avec Martin.
 - **Les voix** : les dix répliques de c01 et les deux repos d'Irène, générées le 29 sept. 2026 (eleven_v3).
+
+### Étape 3 (2e partie) — la chute du Pouce — ⬜ **en cours** (29 sept. 2026)
+
+Martin, 29 sept. 2026 : Irène validée, « on fait tomber le Pouce pour de bon ». La suite des missions d'Irène (c02 et
+suivantes) : un petit arc qui prouve la triche, retrouve l'argent des voisins et finit par le tripot qui change de mains.

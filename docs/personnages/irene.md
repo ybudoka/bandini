@@ -4,8 +4,8 @@
 
 > « Irène Lam, du Dragon d'or. Madame Lam pour toi, tant que tu m'as pas battue au mah-jong. » — c01
 
-⚠️ **Proposée par Claude le 29 sept. 2026, à valider par Martin** (la fiche du quartier laissait le donneur au
-brainstorming ; Martin : « va y »). Tout ce qui suit est la bible proposée, sauf ce que c01 a déjà dit.
+Proposée par Claude le 29 sept. 2026 (la fiche du quartier laissait le donneur au brainstorming ; Martin : « va y »),
+**validée par Martin le 29 sept. 2026** (« oui »), avec la suite : faire tomber le Pouce pour de bon.
 
 ## En bref
 
@@ -87,4 +87,4 @@ sergent Bouchard ; et l'étape 4, les Mantes — l'école de kung-fu dont les é
 
 ## À trancher
 
-- **Tout** : le nom, l'âge, l'histoire, la voix (Meera, jamais auditionnée en v3 — à écouter), le surnom du joueur.
+- **La voix** : Meera en v3 reste à écouter par Martin (le reste de la fiche est validé le 29 sept. 2026).
