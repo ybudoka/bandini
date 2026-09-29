@@ -1089,6 +1089,27 @@ def test_le_pont_rend_son_eau_apres_un_saut(banc):
   aucun dé, rien de posé ; une flaque éclabousse ; des feuilles seulement l'automne ; le rythme sous
   l'orage ; des captures sous la pluie.
 
+### Lot 3 — l'Halloween (design approuvé par Martin le 29 sept. 2026)
+
+- **Le décor, tout octobre** (`app/halloween.py`, `static/js/halloween.js`, la recette des Fêtes) : une
+  citrouille sur le perron d'une maison sur trois environ, à l'empreinte de la maison — PEINTE, jamais
+  posée ; la nuit, elle s'allume (sa lueur orange). **Le soir du 31** (jour 33), les fenêtres prennent des
+  lumières orange et violettes. Le Clairon, la veille : « C'EST L'HALLOWEEN DEMAIN SOIR : ATTENTION AUX
+  PETITS MONSTRES. »
+- **Les gens, le 31 dès 16 h** : un passant sur trois est déguisé (sorcière, fantôme, squelette,
+  citrouille — à l'empreinte du passant, des pièces neuves de la garde-robe) ; des bandes de deux ou trois
+  enfants déguisés, un sac orange à la main, vont de porte en porte dans les quartiers de maisons et disent
+  « DES BONBONS! » aux portes qui ont leur citrouille — bornées, pour le rythme.
+- **La maison hantée** (plutôt qu'un défi) : le 31, de 18 h à minuit, un logement des Érables (une maison
+  qu'on visite déjà, choisie une fois pour toutes, sans pièce neuve), sa porte marquée d'une grosse
+  citrouille. Dedans, la recette des Galeries : les lumières s'éteignent une à une, un fantôme apparaît et
+  s'évanouit, une voix chuchote ; au fond, le sac de bonbons vaut une prime, une fois par année.
+- **Le son** : une musique d'Halloween (ElevenLabs) en fondu enchaîné, dehors le soir du 31 ; un rire de
+  sorcière, une porte qui grince, un souffle de fantôme (chargés le 31 seulement) ; les voix de la maison.
+- **Juges** : le décor en octobre seulement, les lumières et les déguisés le 31 seulement ; aucun dé, rien de
+  posé, la ville ne bouge pas ; la maison hantée seulement le 31 au soir, le sac paie une fois ; les enfants
+  bornés ; captures du soir du 31 et la sonde du rythme.
+
 ## Notes` de ce fichier, « Lot 1 livré le … » (ce qui est fait, ce qui ne l'est
   pas, les juges et leurs mutations) ; la cellule du plan : « ✅ lot 1 livré : … ; lot 2 à faire : la
   pluie et le sol » ; `docs/architecture.md` (tâches 1-2). La ligne reste ⬜ **en cours** (cinq lots
