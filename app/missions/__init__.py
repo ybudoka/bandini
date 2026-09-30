@@ -73,6 +73,11 @@ TYPES_OBJECTIFS = (
     # `table` (c02) : l'objet vient d'une table de jeu (`tripot` : les dés pipés du Pouce, `tripot.PREUVE`) —
     # rien ne se pose en ville, `ou` ne dit que où aller.
     "obtenir",     # `objet`, `ou` (le lieu, ou la ronde du garde pour le GPS), `garde`, `table`, `dessin`
+    # --- Des missions en CHAPITRES (Martin, 30 sept. 2026 : « au moins 5 à 10 minutes chacune ») : un
+    # marqueur instantané qui coupe la mission en actes — son `texte` en carton, le point de reprise
+    # (`chapitres.js`), le `donneur` de l'acte ; `sur_place` facultatif (le saut de `surplace.js`).
+    # Voir docs/jalons/des-missions-en-chapitres.md et `erreurs_de_chapitre`.
+    "acte",        # `texte`, `donneur`, `sur_place`
 )
 
 #: Ce qu'un objet de mission a l'air, par terre (`OBJETS` de `static/js/sprites.js`, que `Entites`
@@ -112,7 +117,9 @@ ECHECS = ("mort", "arrete", "vehicule_detruit", "chrono", "etoile", "protege_mor
 #: suivants les nomment (`Histoire.poserLesAllies`, l'état `allie` d'`Entites`) — et `treve` : la police rentre au
 #: poste quand l'objectif commence (Bouchard rappelle ses chiens). Et `etoiles`, qu'avait `semer`, sert aussi
 #: `survivre` : TENIR à ce niveau-là.
-OPTIONS_OBJECTIFS = ("chrono_s", "sans_etoile", "sans_arme", "contre", "remet", "tenue", "allies", "treve")
+#: Et `donne` (30 sept. 2026, les chapitres) : ce que CET objectif accorde quand il est fait — la même forme que
+#: le `donne` d'une mission ; chaque acte d'un chapitre donne ce que sa mission d'origine donnait.
+OPTIONS_OBJECTIFS = ("chrono_s", "sans_etoile", "sans_arme", "contre", "remet", "tenue", "allies", "treve", "donne")
 
 
 class Personnage(TypedDict):
@@ -443,6 +450,8 @@ class Mission(TypedDict):
     # `erreurs_de_sur_place`.
     sur_place: NotRequired[dict]  # le saut : {"lieu": …, "heure": "nuit" | (h0, h1)}, apres l'intro
     frontiere: NotRequired[str]   # un district, ou "bloc:<slug>" : on ne la quitte pas plus de 10 s
+    # --- Des missions en chapitres (30 sept. 2026) — jugée par `erreurs_de_chapitre`.
+    remplace: NotRequired[list[str]]  # les missions qu'un chapitre remplace, une par acte, dans l'ordre
 
 
 #: ⚠️ **CE QU'UNE MISSION RECOIT QUAND SON FICHIER NE LE DIT PAS.** Demande de
@@ -1643,6 +1652,12 @@ def fin_dite_en_personne(mission: dict, scene: list[dict] | None = None) -> bool
     return any(p["type"] in ("sortir", "marcher") and p.get("acteur") in noms for p in scene)
 
 
+def donneur_final(mission: dict) -> str:
+    """Chez qui se joue la fin : le donneur du DERNIER acte d'un chapitre, sinon celui de la mission."""
+    actes = [o for o in mission.get("objectifs") or [] if o.get("type") == "acte"]
+    return actes[-1]["donneur"] if actes else mission["donneur"]
+
+
 def scene_par_defaut(mission: dict, partie: str) -> list[dict]:
     """La scène `intro` ou `fin` d'une mission qui n'en écrit pas.
 
@@ -1653,6 +1668,9 @@ def scene_par_defaut(mission: dict, partie: str) -> list[dict]:
     **Fin, ailleurs** : une coupe chez lui — sans elle, on l'entendrait de nulle
     part.
     """
+    # La fin d'un CHAPITRE se joue chez le donneur de son dernier acte (La Pointe finit chez Josée).
+    if partie == "fin":
+        mission = {**mission, "donneur": donneur_final(mission)}
     t, vers = TEMPS_PAR_DEFAUT, lieu_a_montrer(mission)
     premiere, reste = _en_deux(len(mission["dialogue"].get(partie) or []))
     if partie == "intro":
@@ -1723,6 +1741,36 @@ def _completer(mission: dict) -> dict:
 
 for _fiche in CATALOGUE:
     _completer(_fiche)
+
+
+def erreurs_de_chapitre(mission: dict, catalogue: list[dict] | None = None) -> list[str]:
+    """La forme d'un chapitre (docs/jalons/des-missions-en-chapitres.md). Une mission sans `acte` ni
+    `remplace` n'en a aucune.
+
+    Un chapitre commence par un acte et ne finit pas sur un acte ; il remplace une mission par acte ;
+    chaque acte a un donneur connu ; et une mission remplacée ne reste ni au catalogue ni en prérequis
+    d'une autre — c'est le chapitre qu'on attend, maintenant."""
+    slug, objs = mission["slug"], mission.get("objectifs") or []
+    actes = [o for o in objs if o.get("type") == "acte"]
+    remplace = mission.get("remplace") or []
+    if not actes and not remplace:
+        return []
+    erreurs = []
+    if not objs or objs[0].get("type") != "acte":
+        erreurs.append(f"{slug} : un chapitre commence par un acte")
+    if objs and objs[-1].get("type") == "acte":
+        erreurs.append(f"{slug} : un chapitre ne finit pas sur un acte")
+    if len(remplace) != len(actes):
+        erreurs.append(f"{slug} : remplace nomme {len(remplace)} missions pour {len(actes)} actes")
+    for o in actes:
+        if not personnage(o.get("donneur", "")):
+            erreurs.append(f"{slug} : l'acte « {o.get('texte')} » n'a pas de donneur connu")
+    for autre in CATALOGUE if catalogue is None else catalogue:
+        if autre["slug"] in remplace:
+            erreurs.append(f"{slug} : {autre['slug']} est remplacée, elle ne reste pas au catalogue")
+        for p in sorted(set(autre.get("prerequis") or []) & set(remplace)):
+            erreurs.append(f"{autre['slug']} : son prérequis {p} est remplacé par {slug}")
+    return erreurs
 
 
 def ordre_topologique() -> list[str]:
