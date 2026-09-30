@@ -4934,21 +4934,25 @@ const Entites = (function () {
       // de toi, s'arrete a portee de poing et cogne a la cadence de la rixe. Sans personne a coucher, il
       // te suit a quelques pas. ⚠️ Ses coups ne te touchent jamais, ni un autre allie (`Combat`), et rien
       // ne le retourne contre toi (`alerter`, `blesser`).
-      const f = B.defs.pietons.bagarre, j = B.joueur;
+      const j = B.joueur;
       if (!e.rival || !e.rival.vivant || e.rival.etat === 'assomme' || !e.rival.cible) e.rival = cibleDeLAllie(e);
       vitesse = v.pieton_course * e.allure;
-      const vers = e.rival || j;
-      const dx = vers.x - e.x, dy = vers.y - e.y, norme = Math.hypot(dx, dy) || 1;
-      // Sans cible, chacun garde sa distance (trois rangs, par son numero) : une grappe collee au joueur
-      // le coincerait contre un mur.
-      const arret = e.rival ? f.portee_px : 28 + (e.id % 3) * 10;
-      if (norme > arret) {
-        e.vx = dx / norme * vitesse;
-        e.vy = dy / norme * vitesse;
+      if (e.rival) {
+        // LE CERVEAU DU CONTACT (`rixe.js`), comme les Cravates qu'il couche : ceux-la tournent autour de toi et
+        // reculent apres leur coup — plante au metronome, l'allie frappait la ou son homme n'etait deja plus
+        // (au banc de m98 : 18 coups au lieu de 47).
+        Rixe.maj(e, e.rival, vitesse);
       } else {
-        e.vx = 0; e.vy = 0;
-        regarder(e, dx, dy);
-        if (e.rival && e.t % f.cadence_images === 0) Combat.frapper(e, false);
+        // Sans cible, chacun garde sa distance (trois rangs, par son numero) : une grappe collee au joueur
+        // le coincerait contre un mur.
+        const dx = j.x - e.x, dy = j.y - e.y, norme = Math.hypot(dx, dy) || 1;
+        if (norme > 28 + (e.id % 3) * 10) {
+          e.vx = dx / norme * vitesse;
+          e.vy = dy / norme * vitesse;
+        } else {
+          e.vx = 0; e.vy = 0;
+          regarder(e, dx, dy);
+        }
       }
     } else if (e.etat === 'bagarre') {
       // ⚠️ IL VISE QUELQU'UN D'AUTRE QUE LE JOUEUR, et c'est tout ce qui

@@ -1,7 +1,7 @@
 /* Bandini — le cerveau d'un homme de gang qui se bat (docs/jalons/des-bagarres-de-gangs-vivantes-et-armees.md).
 
    UN SEUL CERVEAU pour la rixe a la frontiere (sa cible : un rival) et pour le gang qui te tombe dessus (sa
-   cible : toi). `entites.js` lui passe la main depuis `bagarre` et `attaque_joueur` ; il ne fait que DECIDER
+   cible : toi). `entites.js` lui passe la main depuis `bagarre`, `attaque_joueur` et `allie` (M13) ; il ne fait que DECIDER
    (`e.vx`, `e.vy`, `Combat.frapper`) — le pas se fait apres, comme pour tout le monde (`majPieton`).
 
    Vague 1, AU CONTACT : chacun prend SA place sur un cercle autour de la cible (son rang parmi ceux qui la
@@ -15,10 +15,10 @@
 const Rixe = (function () {
   'use strict';
 
-  //: Ceux qui se battent, a cette image : les deux etats du cerveau, et le coup lui-meme (`Combat` ecrase l'etat
+  //: Ceux qui se battent, a cette image : les etats du cerveau (l'allie de m98 compris), et le coup lui-meme (`Combat` ecrase l'etat
   //: par 'attaque' le temps des trois temps). ⚠️ Un homme qui est passe a `flane` garde son vieux `e.rixe` :
   //: sans ce filtre, il tiendrait encore une place dans le cercle d'une cible qu'il a quittee.
-  const EN_COMBAT = { bagarre: true, attaque_joueur: true, attaque: true };
+  const EN_COMBAT = { bagarre: true, attaque_joueur: true, allie: true, attaque: true };
 
   function fiche() { return B.defs.rixes.contact; }
 
