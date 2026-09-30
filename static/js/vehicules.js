@@ -1300,6 +1300,19 @@ const Vehicules = (function () {
           // tous les deux, ou ni l'un ni l'autre, on revient aux règles d'au-dessus.
           const surDesRails = function (q) { return q.conducteur === 'trafic' || q.conducteur === 'ligne'; };
           if (surDesRails(v) && surDesRails(autre)) {
+            // ⚠️ UNE RAME NE SE POUSSE PAS (retour de Martin, 30 sept. 2026) : elle est
+            // sur ses rails. Deux rames qui se croisent sur deux voies voisines se touchent
+            // a un tiers de pixel pres (16 px = deux demi-largeurs) ; celle qui roulait,
+            // poussee par celle qui attendait au rouge, glissait, braquait vers sa cible —
+            // donc vers l'autre —, se faisait repousser encore, et finissait de travers,
+            // hors de ses rails, plantee dans la boite 3 000 images. Contre une rame, c'est
+            // l'autre qui encaisse ; entre deux rames, personne.
+            if (v.rails && autre.rails) return;
+            if (v.rails || autre.rails) {
+              if (v.rails) { autre.x += nx * chevauche; autre.y += ny * chevauche; }
+              else { v.x -= nx * chevauche; v.y -= ny * chevauche; }
+              return;
+            }
             const vForce = v.force > 0, autreForce = autre.force > 0;
             const vAttend = attenteLegitime(v) || (autreForce && !vForce), autreAttend = attenteLegitime(autre) || (vForce && !autreForce);
             if (vAttend && !autreAttend) { autre.x += nx * chevauche; autre.y += ny * chevauche; }
@@ -2831,7 +2844,12 @@ const Vehicules = (function () {
       if (e.enBoite === inter) return false;
       // ⚠️ LE TRAFIC CEDE AU TRAMWAY (M12) : on ne s'engage pas dans une boite vers
       // laquelle roule une rame. Elle a ses rails, elle ne se range pas.
-      if (e.rails && !v.rails && !(e.arretT > 0)) {
+      // ⚠️ Mais une rame qui ATTEND — son feu, la boite, ou le char arrete devant elle — ne
+      // roule vers rien : elle la reserve (`enBoite`) le jour ou elle s'engage, comme tout le
+      // monde. Sans ca, une rame arretee au rouge a cote de la boite gelait toute la phase
+      // verte de la rue qui la croise, l'autobus de ligne avec ; et derriere une auto arretee
+      // a la ligne, c'est l'auto qui lui cedait le passage (retour de Martin, 30 sept. 2026).
+      if (e.rails && !v.rails && !(e.arretT > 0) && !e.attendFeu && Math.abs(e.vitesse) > 0.05) {
         const dx = cx - e.x, dy = cy - e.y;
         if (dx * Math.cos(e.angle) + dy * Math.sin(e.angle) > -TT && dx * dx + dy * dy < approche * approche) return false;
         continue;
@@ -2940,9 +2958,10 @@ const Vehicules = (function () {
       // cote, comptait comme un obstacle — et tout le monde s'arretait nez a
       // nez. C'etait l'embouteillage de Martin.
       if (devant < v.def.longueur / 2 - 4 || cote > v.def.largeur / 2 + (e.r || 5) * 0.8) continue;
-      if (e.type === 'vehicule' && Math.abs(e.vitesse) > 0.3) {
+      if (e.type === 'vehicule') {
         const face = Math.cos(e.angle) * cx + Math.sin(e.angle) * cy;
-        if (face < -0.5 && cote > 6) continue;         // il vient en face, dans sa voie : rien a craindre
+        if (face < -0.5 && cote > 6 && Math.abs(e.vitesse) > 0.3) continue;   // il vient en face, dans sa voie : rien a craindre
+        if (face < -0.5 && arreteDansSaVoie(v, e, cx, cy)) continue;           // arrete en face, dans sa voie, et nous hors de son couloir
       }
       if (devant < dMin) { dMin = devant - v.def.longueur / 2; eMin = e; }
     }
@@ -2978,6 +2997,27 @@ const Vehicules = (function () {
   function vitesseDeForce(v) {
     const quart = v.def.vitesse_max * 0.25;
     return aPied(v.devant) ? Math.min(quart, physique().renverse_vitesse_min * 0.9) : quart;
+  }
+
+  /** Arrete en face, mais DANS SA VOIE : la fleche de sa tuile va dans son sens, et a
+      contresens du notre (`cx`, `cy`) — pas dans une boite (`+` n'est pas une fleche) —,
+      et notre centre HORS DE SON COULOIR : on juge l'ecart a son axe a lui, pas au notre,
+      qu'un virage pas fini fait pointer droit sur lui.
+
+      ⚠️ Retour de Martin, 30 sept. 2026 (capture a l'appui : deux rames et un autobus
+      enfonces dans une boite de la ligne T). Celui qui sort d'une boite a encore le nez
+      de biais : une rame ou un autobus de 48 px pointe dans la voie d'en face, ou l'autre
+      attend — immobile, donc un obstacle, puisque seul un char d'en face qui ROULE
+      comptait « dans sa voie ». Il s'arretait devant lui, et l'autre attendait qu'il rende
+      la boite : 3 800 images d'impasse au banc. Un char a contresens dans NOTRE voie, lui,
+      est sur une fleche de notre sens : il reste un obstacle. */
+  function arreteDansSaVoie(v, e, cx, cy) {
+    const ecart = Math.abs(-(v.x - e.x) * Math.sin(e.angle) + (v.y - e.y) * Math.cos(e.angle));
+    if (ecart < (v.def.largeur + e.def.largeur) / 2 - 2) return false;
+    const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT), f = Monde.fleche(tx, ty);
+    const q = PAS_FLECHE[f === 'S' ? Monde.sensArret(tx, ty) : f];     // la ligne d'arret a le sens de sa voie
+    if (!q) return false;
+    return q[0] * Math.cos(e.angle) + q[1] * Math.sin(e.angle) > 0.9 && q[0] * cx + q[1] * cy < -0.5;
   }
 
   /** Il SUIT un char : l'obstacle que `obstacleDevant` vient de voir est un char

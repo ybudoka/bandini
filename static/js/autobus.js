@@ -317,7 +317,14 @@ const Autobus = (function () {
     if (v.charrue) Neige.deneiger(Math.floor(v.x / TT), Math.floor(v.y / TT), L.largeur);
     if (v.arrose) arroser(v, L);
     let cible = centre(L.tuiles[v.etape]);
-    if (dist2(cible.x, cible.y, v.x, v.y) < 36) {
+    // ⚠️ ON PIVOTE AU CENTRE DE LA TUILE, on ne coupe pas le coin (retour de Martin, 30 sept.
+    // 2026 : deux rames et un autobus enfonces dans une boite). On visait la tuile suivante a
+    // 6 px du centre, comme le trafic : une auto de 28 px n'en souffre pas, mais une caisse de
+    // 48 px sortait du virage le nez de biais — dans la voie d'en face, ou l'autre rame
+    // attendait la boite qu'elle tenait (1 400 images d'impasse), ou sur l'auto arretee a la
+    // ligne d'a cote, qui la repoussait d'autant qu'elle avancait. `rouler` pose le vehicule
+    // pile sur sa cible (`pas = min(dist, vitesse)`) : il y arrive.
+    if (dist2(cible.x, cible.y, v.x, v.y) < 0.25) {
       const ici = v.etape;
       // ⚠️ LA BOITE SE REND SUR LA VOIE DE SORTIE, comme le trafic (`cibleDeLaVoie`) — ni sur la
       // ligne d'arret, ni dans la boite. On la rendait des qu'il visait une tuile qui n'etait pas

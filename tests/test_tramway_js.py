@@ -213,3 +213,155 @@ def test_une_rame_ne_tire_aucun_de(banc):
     }""")
     assert r["nee"]
     assert r["des"] == 0, f"{r['des']} dés tirés par la ligne"
+
+
+# --- Les bouchons aux coins de la ligne T (retour de Martin, 30 sept. 2026) ---------------
+#
+# Capture à l'appui : deux rames et un autobus enfoncés les uns dans les autres dans une boîte.
+# Quatre causes, une par juge : le coin coupé, celui d'en face qui attend dans sa voie, la rame
+# arrêtée au rouge qui gelait la boîte, et la rame qu'on poussait hors de ses rails.
+
+COIN = """
+    // Le premier coin de la ligne : une boite ou l'aller entre et sort par deux cotes qui ne
+    // se font pas face. `i` = l'index de l'aller dans la boite.
+    function coin(L) {
+        const T = ligneT(L);
+        for (let i = 1; i < T.aller; i++) {
+            const t = T.tuiles[i], inter = L.Monde.intersectionA(t[0], t[1]);
+            if (!inter || L.Monde.intersectionA(T.tuiles[i - 1][0], T.tuiles[i - 1][1])) continue;
+            let j = i; while (L.Monde.intersectionA(T.tuiles[j + 1][0], T.tuiles[j + 1][1]) === inter) j++;
+            const a = T.tuiles[i - 1], b = T.tuiles[j + 1];
+            if (a[0] !== b[0] && a[1] !== b[1]) return { inter: inter, i: i };
+        }
+        return null;
+    }
+"""
+
+
+def test_deux_rames_qui_se_croisent_au_coin_ne_s_impassent_pas(banc):
+    """Les rames sont espacées d'un tiers de boucle : au premier coin, l'aller et le retour
+    s'y croisent à presque chaque passage. Celle qui tournait coupait le coin et gardait le
+    nez de biais dans la voie d'en face, où l'autre attendait la boîte qu'elle tenait :
+    mille quatre cents images d'impasse, puis tout le monde forçait. Et celle qui roulait,
+    poussée par celle qui attendait, sortait de ses rails."""
+    r = banc("function (L, o) {" + RAME + COIN + """
+        L.Jeu.commencer();
+        const c = coin(L), T = ligneT(L), inter = c.inter;
+        const m = rame(L, o, c.i - 24);
+        const j = L.B.joueur;
+        j.x = (inter.x - 3) * L.TT + 8; j.y = (inter.y - 3) * L.TT + 8; L.Monde.centrerCamera(j.x, j.y);
+        const cx = (inter.x + inter.l / 2) * L.TT, cy = (inter.y + inter.h / 2) * L.TT;
+        let pris = 0, pire = 0, horsRails = 0, croisees = 0;
+        for (let k = 0; k < 4200; k++) {
+            o.frame(1);
+            const rames = L.B.entites.filter(function (e) { return e.rails; });
+            if (rames.filter(function (e) { return Math.hypot(e.x - cx, e.y - cy) < 5 * L.TT; }).length >= 2) croisees++;
+            for (const e of rames) {
+                const a = T.tuiles[(e.etape + T.n - 1) % T.n], b = T.tuiles[e.etape];
+                const ax = a[0] * L.TT + 8, ay = a[1] * L.TT + 8, lx = b[0] * L.TT + 8 - ax, ly = b[1] * L.TT + 8 - ay;
+                const u = Math.max(0, Math.min(1, ((e.x - ax) * lx + (e.y - ay) * ly) / (lx * lx + ly * ly || 1)));
+                horsRails = Math.max(horsRails, Math.hypot(e.x - ax - u * lx, e.y - ay - u * ly));
+            }
+            // Pris : arrete pres de la boite, sans feu, sans arret, sans boite a attendre.
+            const bloque = L.B.entites.some(function (e) {
+                return e.type === 'vehicule' && e.conducteur === 'ligne' && Math.hypot(e.x - cx, e.y - cy) < 6 * L.TT
+                    && Math.abs(e.vitesse) < 0.05 && !(e.arretT > 0) && !e.attendFeu;
+            });
+            pris = bloque ? pris + 1 : 0; pire = Math.max(pire, pris);
+        }
+        return { nee: !!m.v, pire: pire, horsRails: horsRails, croisees: croisees };
+    }""")
+    assert r["nee"]
+    assert r["croisees"] > 0, "les deux rames ne se sont jamais croisées au coin : le juge ne mesure rien"
+    assert r["pire"] < 300, f"une rame ou un autobus reste pris {r['pire']} images au coin"
+    assert r["horsRails"] < 3, f"une rame sort de {r['horsRails']:.1f} px de ses rails"
+
+
+def test_une_rame_arretee_au_rouge_ne_gele_pas_la_boite(banc):
+    """Le trafic cède à une rame qui ROULE vers la boîte ; arrêtée — à son feu, ou derrière
+    un char —, elle ne roule vers rien : elle réservera la boîte le jour où elle s'y engage.
+    Sans ça, toute la phase verte de la rue qui la croise passait à l'attendre."""
+    r = banc("function (L, o) {" + RAME + COIN + """
+        L.Jeu.commencer();
+        const c = coin(L), T = ligneT(L), inter = c.inter;
+        const m = rame(L, o, 0), v = m.v;
+        const t = T.tuiles[c.i - 3], u = T.tuiles[c.i - 2];
+        v.x = t[0] * L.TT + 8; v.y = t[1] * L.TT + 8; v.angle = Math.atan2(u[1] - t[1], u[0] - t[0]); v.arretT = 0;
+        for (const q of L.B.entites.slice()) if (q.type === 'vehicule' && q !== v) L.Entites.retirer(q);
+        const char = L.Vehicules.creer('auto', (inter.x - 6) * L.TT, (inter.y - 6) * L.TT, 0, { etat: 'stationne', couleur: '#3a6fb0' });
+        L.Entites.indexer();
+        v.attendFeu = false; v.vitesse = 1;
+        const roule = L.Vehicules.croisementLibre(inter, char);
+        v.attendFeu = true; v.vitesse = 0;
+        const auRouge = L.Vehicules.croisementLibre(inter, char);
+        // Arretee derriere un char qui attend a la ligne : ni feu, ni boite — elle attend lui.
+        v.attendFeu = false; v.vitesse = 0;
+        const derriere = L.Vehicules.croisementLibre(inter, char);
+        return { roule: roule, auRouge: auRouge, derriere: derriere };
+    }""")
+    assert r["roule"] is False, "un char s'engage devant une rame qui arrive"
+    assert r["auRouge"] is True, "une rame arrêtée à son feu gèle la boîte pour la rue qui la croise"
+    assert r["derriere"] is True, "une rame arrêtée derrière un char gèle la boîte : il lui cède, elle l'attend"
+
+
+def test_celui_d_en_face_qui_attend_dans_sa_voie_n_est_pas_un_obstacle(banc):
+    """Un autobus qui sort d'une boîte a encore le nez de biais ; celui d'en face, arrêté dans
+    SA voie, n'est pas devant lui. À contresens dans NOTRE voie, il l'est."""
+    r = banc("function (L, o) {" + RAME + """
+        L.Jeu.commencer();
+        const T = ligneT(L);
+        // Six tuiles droites de l'aller : notre voie ; la voie d'en face est a sa gauche.
+        let k = 1;
+        for (; k < T.aller - 8; k++) {
+            let droit = true;
+            for (let d = 0; d < 7 && droit; d++) {
+                const a = T.tuiles[k + d], b = T.tuiles[k + d + 1];
+                droit = b[0] - a[0] === T.tuiles[k + 1][0] - T.tuiles[k][0] && b[1] - a[1] === T.tuiles[k + 1][1] - T.tuiles[k][1]
+                    && !L.Monde.intersectionA(a[0], a[1]) && !L.Monde.intersectionA(b[0], b[1]);
+            }
+            if (droit) break;
+        }
+        const t = T.tuiles[k], p = [T.tuiles[k + 1][0] - t[0], T.tuiles[k + 1][1] - t[1]], g = [p[1], -p[0]];
+        for (const q of L.B.entites.slice()) if (q.type === 'vehicule') L.Entites.retirer(q);
+        const cap = Math.atan2(p[1], p[0]);
+        // Le nez de biais vers la voie d'en face, comme au sortir d'un virage.
+        const bus = L.Vehicules.creer('autobus', t[0] * L.TT + 8, t[1] * L.TT + 8, cap - 0.3, { etat: 'roule', conducteur: 'ligne', couleur: '#2980b9', sprite: 'autobus' });
+        const ex = (t[0] + 3 * p[0]) * L.TT + 8, ey = (t[1] + 3 * p[1]) * L.TT + 8;
+        const enFace = L.Vehicules.creer('autobus', ex + g[0] * L.TT, ey + g[1] * L.TT, cap + Math.PI,
+                                         { etat: 'roule', conducteur: 'ligne', couleur: '#2980b9', sprite: 'autobus' });
+        enFace.vitesse = 0;
+        L.Entites.indexer();
+        const dansSaVoie = L.Vehicules.obstacleDevant(bus);
+        // Le meme, a contresens dans notre voie.
+        enFace.x = ex; enFace.y = ey; L.Entites.indexer();
+        bus.angle = cap;
+        const dansLaNotre = L.Vehicules.obstacleDevant(bus);
+        return { dansSaVoie: Math.min(dansSaVoie, 9999), dansLaNotre: Math.min(dansLaNotre, 9999), securite: L.B.defs.conduite.trafic.distance_securite_px };
+    }""")
+    assert r["dansSaVoie"] > r["securite"], f"arrêté dans sa voie, celui d'en face arrête l'autobus ({r['dansSaVoie']:.0f} px)"
+    assert r["dansLaNotre"] < r["securite"], "à contresens dans notre voie, il n'arrête plus personne"
+
+
+def test_une_rame_ne_se_pousse_pas(banc):
+    """Sur ses rails, une rame ne glisse pas : contre un char, c'est lui qui encaisse, même
+    s'il attend son feu ; entre deux rames qui se frôlent sur deux voies voisines, personne."""
+    r = banc("function (L, o) {" + RAME + """
+        L.Jeu.commencer();
+        for (const q of L.B.entites.slice()) if (q.type === 'vehicule') L.Entites.retirer(q);
+        const j = L.B.joueur, x = j.x + 200, y = j.y + 200;
+        function rame(xx, yy, a) { return L.Vehicules.creer('autobus', xx, yy, a, { etat: 'roule', conducteur: 'ligne', ligne: 'T', rails: true, couleur: '#e9e3d0', sprite: 'tramway' }); }
+        const a = rame(x, y, Math.PI / 2), b = rame(x + 15, y + 30, -Math.PI / 2);
+        b.attendFeu = true;
+        L.Entites.indexer();
+        L.Vehicules.heurterVehicules(a);
+        const deuxRames = Math.hypot(a.x - x, a.y - y) + Math.hypot(b.x - x - 15, b.y - y - 30);
+        L.Entites.retirer(b);
+        const char = L.Vehicules.creer('auto', x + 12, y, 0, { etat: 'roule', conducteur: 'trafic', couleur: '#3a6fb0' });
+        char.attendFeu = true;
+        L.Entites.indexer();
+        L.Vehicules.heurterVehicules(a);
+        return { deuxRames: deuxRames, rame: Math.hypot(a.x - x, a.y - y), char: Math.hypot(char.x - x - 12, char.y - y) };
+    }""")
+    assert r["deuxRames"] == 0, f"deux rames se poussent de {r['deuxRames']:.1f} px"
+    assert r["rame"] == 0, f"un char qui attend son feu pousse la rame de {r['rame']:.1f} px"
+    assert r["char"] > 0, "rien n'a séparé la rame et le char : le juge ne mesure rien"
