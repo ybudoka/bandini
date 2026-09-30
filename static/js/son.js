@@ -1284,6 +1284,15 @@ const Son = (function () {
         }
       });
     },
+    // LA RUMEUR DU MARCHÉ AUX PUCES, un dimanche matin (`Puces.majSon`) : dosée à la distance du terrain, et qui GLISSE
+    // (on arrive, midi sonne). La boucle du lieu `puces`, demandée dès qu'on l'entend ; faute d'elle, un murmure
+    // synthétisé — un souffle qui respire, et de loin en loin une voix qui monte d'un ton.
+    rumeur_puces: function (volume) {
+      tenirDuLieu('rumeur_puces', Math.max(0, Math.min(1, volume || 0)), function (v) {
+        if (B.t % 23 === 0) bruit(0.3, 0.035 * v, 1400, 500);
+        if (v > 0.3 && B.t % 97 === 0) ton(260 + (B.t % 5) * 35, 0.12, 'triangle', 0.02 * v, 1.2);
+      });
+    },
     vide: function () { if (!joue('vide')) { ton(1400, 0.03, 'square', 0.15); ton(900, 0.03, 'square', 0.1, 1, 0.04); } },
     casse: function () { if (!joue('casse')) { bruit(0.2, 0.4, 3000, 400); ton(220, 0.08, 'square', 0.2, 0.5); } },
     degainer: function () { if (!joue('degainer')) { bruit(0.08, 0.1, 2500, 900); ton(520, 0.04, 'triangle', 0.1, 1, 0.05); } },
@@ -1522,6 +1531,18 @@ const Son = (function () {
         delete a.series;
       }
       return a.histoire || [];
+    },
+
+    /** Des voix qui voyagent hors des définitions (le marché aux puces, sur `/api/collections`) : leurs SÉRIES
+        (`audio.serie_de_voix`) rejoignent la liste de l'histoire, une fois — dépliées comme celles du paquet. */
+    declarer: function (series) {
+      const a = B.defs && B.defs.audio;
+      if (!a || !series || !series.length) return;
+      const deja = Voix.histoire();
+      const neuves = series.filter(function (s) { return !deja.some(function (v) { return v.slug.indexOf(s.prefixe) === 0; }); });
+      if (!neuves.length) return;
+      a.series = neuves;
+      Voix.histoire();
     },
 
     /** Les repliques d'une mission se telechargent quand on commence a lui parler. */

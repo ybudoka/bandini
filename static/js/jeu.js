@@ -1165,6 +1165,7 @@ const Jeu = (function () {
         pas('suite', Suite.maj);               // la suite du paquet : redemandée si elle a raté
         pas('collections', Collections.maj);   // une carte de hockey par terre, qu'on ramasse en marchant dessus
         pas('decoration', Decoration.maj);     // le juke-box se tait quand on sort de la planque
+        pas('puces', Puces.maj);               // la rumeur du marché aux puces, un dimanche matin
         pas('interactions', Interactions.maj);
         pas('missions', Missions.maj);
         pas('chantiers', Chantiers.maj);

@@ -788,6 +788,16 @@ CATALOGUE: list[Echantillon] = [
               "shack, rolling bubbling, crackling logs in the firebox, soft steam hiss, "
               "seamless loop, no voices, no music"),
     # Le casino : la rumeur de la grande salle, en boucle tant qu'on y est (`Son.SFX.salle_du_casino`).
+    # LA RUMEUR DU MARCHÉ AUX PUCES (la deuxième vague, 30 sept. 2026) : un dimanche matin sur un terrain vague — des
+    # gens qui jasent et marchandent, une radio AM au loin, des tables pliantes. Un son de LIEU (`LIEUX["puces"]`),
+    # chargé en approchant du marché ouvert, dosé à la distance du terrain (`Puces.majSon`). ⚠️ Le plafond des lieux
+    # n'avait plus que 25 Ko de marge (les bêtes écrasées arrivées le même jour) : six secondes, recompressées à
+    # 32 kbit/s (le plancher du mp3 en 44,1 kHz) — et pas de chien : un aboiement toutes les six secondes se remarque.
+    _e("rumeur_puces", "La rumeur du marché aux puces", duree_s=6.0, volume=0.4, boucle=True, influence=0.4,
+       prompt="small outdoor flea market on a quiet Sunday morning in a vacant lot, a few people chatting and "
+              "haggling at a relaxed pace, an old AM radio playing faint country music far away, a folding "
+              "table creaking, cardboard boxes shuffled, a few birds, seamless loop, no traffic, no dog, "
+              "no music in the foreground"),
     _e("casino_salle", "La salle du casino", duree_s=8.0, volume=0.26, boucle=True, influence=0.45,
        prompt="casino gaming floor ambience, many slot machines chiming and jingling softly in "
               "the background, chips clicking on tables, murmuring crowd, seamless loop, "
@@ -1799,6 +1809,9 @@ LIEUX: dict[str, list[str]] = {
     # Les cartes de hockey (des choses à collectionner, vague 1) : chargées quand une carte qui manque est à moins
     # d'un écran (`Collections.maj`). Le premier écran n'avait plus que six Ko de marge.
     "collections": ["carte_hockey", "orgue_arena", "bebelle", "reel_bebelles", "saut_reussi"],
+    # Le marché aux puces du dimanche (la deuxième vague) : la rumeur, chargée en approchant du marché ouvert
+    # (`Puces.majSon`). Elle voyage avec le catalogue des collections, hors des définitions (`LIEUX_A_PART`).
+    "puces": ["rumeur_puces"],
     # L'Halloween (les saisons, lot 3) : un SOIR — ils se chargent le 31 (`Halloween.maj`).
     "halloween": ["rire_sorciere", "porte_grince", "souffle_fantome"],
     "casino": ["casino_salle", "bras_machine", "gain_machine", "jackpot",
@@ -2026,9 +2039,21 @@ def voix_garage() -> list[dict]:
             for r in garage.repliques()]
 
 
+def voix_puces() -> list[dict]:
+    """Ce que disent Ti-Rhéal et Gisèle au marché aux puces (`puces.REPLIQUES`) — leur banque (`puces`), en séries sur
+    `/api/collections` (⚠️ pas dans les définitions), chargée quand on approche du marché ouvert (`Puces.majSon`).
+    Chacun a SA voix (`puces.VOIX`)."""
+    from . import puces
+    return [{"slug": r["slug"], "texte": r["texte"], "genre": puces.VOIX[r["qui"]]["genre"],
+             "voix": puces.VOIX[r["qui"]]["voix"], "volume": 0.9, "histoire": True, "qui": r["qui"],
+             "mission": r["mission"], "partie": r["partie"], "telephone": False}
+            for r in puces.repliques()]
+
+
 def toutes_les_voix() -> list[dict]:
     return (list(VOIX) + list(VOIX_DE_LA_POLICE) + voix_histoire() + voix_journal() + voix_loto() + voix_ouverture()
-            + voix_repos() + voix_dojo() + voix_galeries() + voix_halloween() + voix_garage() + voix_photos())
+            + voix_repos() + voix_dojo() + voix_galeries() + voix_halloween() + voix_garage() + voix_photos()
+            + voix_puces())
 
 
 #: LES VOIX QUI NE SE PARTAGENT PAS — la table, ecrite UNE fois : la voix, et le
@@ -2177,7 +2202,8 @@ def chemin(echantillon: Echantillon, indice: int) -> Path:
 #: partent sur `/api/collections` avec le catalogue (`echantillons_a_part`), et `Son.Lieu.declarer` les remet
 #: au paquet à leur arrivée. ⚠️ Les définitions étaient à 27 octets gzip de leur plafond sans eux : deux bruitages
 #: et leur lieu y pesaient 35 octets. Le CATALOGUE les garde (la génération, les orphelins, les juges).
-LIEUX_A_PART: frozenset[str] = frozenset({"collections"})
+#: ⚠️ **Et le marché aux puces** (la deuxième vague) : sa rumeur part avec son étal (`puces.exporter`).
+LIEUX_A_PART: frozenset[str] = frozenset({"collections", "puces"})
 
 
 def _slugs_a_part() -> set[str]:

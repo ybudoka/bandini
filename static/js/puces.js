@@ -10,7 +10,14 @@
    qui s'empile ni ne décale un numéro. Le catalogue voyage avec les collections (`Collections.catalogue().puces`).
 
    ⚠️ LE MÊME DIMANCHE, LE MÊME ÉTAL POUR TOUT LE MONDE : `stock(semaine)` et `humeur(...)` ne lisent que la semaine
-   et l'article. La partie ne garde que les refus de la semaine (`partie.puces = { semaine, refus }`). */
+   et l'article. La partie ne garde que les refus de la semaine et les marchands déjà rencontrés
+   (`partie.puces = { semaine, refus, connus }`).
+
+   LA DEUXIÈME VAGUE (30 sept. 2026) : les marchands PARLENT (leurs voix voyagent sur `/api/collections`, en séries,
+   et se chargent en approchant du marché ouvert — `majSon`), chacun se nomme la première fois qu'on s'arrête à son
+   étal ; la RUMEUR d'un dimanche matin, dosée à la distance du terrain et qui glisse ; et Gisèle RACHÈTE les meubles
+   livrés à la planque — bas (`rachat`), on peut lui demander plus (`demande`), son humeur décide, jamais un dé. Un
+   meuble vendu quitte la partie : il revient au catalogue et à son étal. */
 
 const Puces = (function () {
   'use strict';
@@ -53,12 +60,61 @@ const Puces = (function () {
   }
   function accepte(sem, slugEtal, article) { return humeur(sem, slugEtal, article) < (regle().humeur || 45); }
 
-  /** Les refus de la semaine : un tableau neuf chaque dimanche. */
-  function refus() {
+  /** Ce que la partie garde du marché : les refus de la SEMAINE (un tableau neuf chaque dimanche) et les marchands
+      déjà rencontrés (`connus`, pour toujours : on ne se présente qu'une fois). */
+  function etat() {
     const p = B.partie, s = semaine(p.jour);
-    if (!p.puces || typeof p.puces !== 'object' || p.puces.semaine !== s) p.puces = { semaine: s, refus: {} };
+    const avant = p.puces && typeof p.puces === 'object' ? p.puces : {};
+    const connus = avant.connus && typeof avant.connus === 'object' && !Array.isArray(avant.connus) ? avant.connus : {};
+    if (avant.semaine !== s) p.puces = { semaine: s, refus: {}, connus: connus };
     if (!p.puces.refus || typeof p.puces.refus !== 'object') p.puces.refus = {};
-    return p.puces.refus;
+    p.puces.connus = connus;
+    return p.puces;
+  }
+  function refus() { return etat().refus; }
+
+  // --- Ce que disent les marchands ------------------------------------------------------------------
+
+  /** Le texte de la réplique `cle` de `qui` (casse naturelle), ou ''. */
+  function texte(qui, cle) { const d = donnees(), r = d && d.repliques && d.repliques[qui]; return (r && r[cle]) || ''; }
+  const derniere = {};          // la dernière chose que chaque marchand a dite, par `qui` : l'aide de son menu
+  let voixPretes = false;
+  /** Les voix et la rumeur rejoignent le son, une fois : elles voyagent avec le catalogue, hors des définitions. */
+  function preparer() {
+    const d = donnees();
+    if (voixPretes || !d) return;
+    voixPretes = true;
+    if (d.sons) Son.Lieu.declarer(d.sons);
+    if (d.voix) Son.Voix.declarer(d.voix);
+    Son.Voix.chargerHistoire('puces');
+  }
+  /** `qui` dit sa réplique `cle` : la voix (si elle est là), et le texte qu'on affiche. Rend le texte. */
+  function dire(qui, cle) {
+    const t = texte(qui, cle);
+    if (!t) return '';
+    preparer();
+    Son.Voix.parler(qui + '-puces-' + cle, {});
+    derniere[qui] = t;
+    return t;
+  }
+  function majuscules(t) { return String(t || '').toUpperCase(); }
+  /** La première phrase d'une réplique : ce que le bandeau du HUD tient (une quarantaine de lettres). */
+  function premierePhrase(t) { return String(t || '').split(/(?<=[.!?])\s+/)[0]; }
+  /** Un menu assez large pour la réplique écrite à son pied (quatre pixels par lettre), sans passer l'écran. */
+  function largeurPour(aide, min) { return Math.min(VW - 20, Math.max(min, aide.length * 4 + 20)); }
+  function aideDe(qui) { return derniere[qui] ? '« ' + majuscules(derniere[qui]) + ' »' : ''; }
+  /** Ce qu'un marchand dit en nous voyant : son nom la PREMIÈRE fois (`salut`), sinon rien à vendre (`rien`) ou sa
+      ligne de la semaine (`accueil-<n>`). Une règle, pas un dé. */
+  function accueil(e) {
+    const qui = e.marchand.qui, st = etat();
+    if (!st.connus[qui]) { st.connus[qui] = B.partie.jour; return 'salut'; }
+    if (!aVendre(e)) return 'rien';
+    return 'accueil-' + (1 + semaine(B.partie.jour) % 3);
+  }
+  /** L'étal a-t-il encore quelque chose que tu n'as pas ? */
+  function aVendre(e) {
+    if (e.vend === 'cartes') return stock(semaine(B.partie.jour)).some(function (n) { return !Collections.trouvee(n); });
+    return meublesAuxPuces().some(function (m) { return !Decoration.commande('planque', m.slug); });
   }
 
   // --- Les achats -----------------------------------------------------------------------------------
@@ -90,14 +146,15 @@ const Puces = (function () {
     const s = semaine(B.partie.jour), cle = slugEtal + ':' + article;
     if (refus()[cle]) return null;
     const offre = Math.round(prix * (regle().offre || 0.7));
+    const e = etal(slugEtal), qui = e && e.marchand.qui;
     if (accepte(s, slugEtal, article)) {
       if (!acheter(offre)) return null;
+      dire(qui, 'accepte');
       Hud.message('MARCHÉ CONCLU : ' + offre + ' $', 150);
       return 'accepte';
     }
     refus()[cle] = true;
-    const e = etal(slugEtal);
-    Hud.message((e ? e.marchand.nom : 'LE MARCHAND') + ' : « ' + offre + ' $ ? T’ES DRÔLE, TOI. »', 170);
+    Hud.message((e ? e.marchand.nom : 'LE MARCHAND') + ' : « ' + offre + ' $ ? ' + majuscules(premierePhrase(dire(qui, 'refuse'))) + ' »', 170);
     Son.SFX.erreur();
     return 'refuse';
   }
@@ -109,7 +166,7 @@ const Puces = (function () {
     const offre = Math.round(prix * (regle().offre || 0.7));
     const items = [
       { libelle: 'ACHETER', detail: prix + ' $', actif: B.partie.argent >= prix,
-        faire: function () { if (acheter(prix)) Hud.ouvrirMenu(retour()); return false; } },
+        faire: function () { if (acheter(prix)) { dire(e.marchand.qui, 'vente'); Hud.ouvrirMenu(retour()); } return false; } },
       { libelle: deja ? 'IL NE BAISSERA PAS' : 'OFFRIR ' + offre + ' $', actif: !deja && B.partie.argent >= offre, article: article,
         faire: function () { marchander(e.slug, article, prix, acheter); Hud.ouvrirMenu(retour()); return false; } },
       { libelle: 'RETOUR', faire: function () { Hud.ouvrirMenu(retour()); return false; } },
@@ -142,9 +199,95 @@ const Puces = (function () {
       }
     }
     if (!items.length) items.push({ libelle: 'RIEN CETTE SEMAINE', actif: false });
-    const dit = e.marchand.dit || [];
-    return { titre: e.nom, sur: p.argent + ' $', largeur: 320, items: items,
-             aide: dit.length ? '« ' + dit[semaine(p.jour) % dit.length] + ' »' : '' };
+    if (e.vend === 'meubles') {
+      const n = aRacheter().length;
+      items.push({ libelle: 'VENDRE UN MEUBLE', detail: n ? n + ' À LA PLANQUE' : 'RIEN À VENDRE', actif: n > 0, vendre: true,
+                   faire: function () { dire(e.marchand.qui, 'rachat'); Hud.ouvrirMenu(menuVente(slug)); return false; } });
+    }
+    const qui = e.marchand.qui, aide = aideDe(qui);
+    return { titre: e.nom, sur: p.argent + ' $', largeur: largeurPour(aide, 320), items: items, aide: aide,
+             // On s'en va : le marchand salue (Échap, B). Le menu se ferme.
+             retour: function () {
+               const t = dire(qui, 'aurevoir');
+               Hud.fermerMenu();
+               if (t) Hud.message(e.marchand.nom + ' : « ' + majuscules(premierePhrase(t)) + ' »', 150);
+             } };
+  }
+
+  // --- La vente à Gisèle ----------------------------------------------------------------------------
+
+  /** Ce que Gisèle rachèterait : chaque meuble du catalogue LIVRÉ dans une planque (celle de Rocco, le chalet) — pas
+      un trophée, pas un meuble commandé d'hier qui n'est pas encore arrivé. `{ piece, meuble }`, dans l'ordre. */
+  function aRacheter() {
+    const p = B.partie, out = [];
+    if (!p || !p.meubles) return out;
+    for (const piece of Object.keys(p.meubles).sort()) {
+      if (!Decoration.places(piece)) continue;
+      for (const m of Decoration.meubles()) if (p.meubles[piece][m.slug] && Decoration.livre(piece, m.slug)) out.push({ piece: piece, meuble: m });
+    }
+    return out;
+  }
+  /** Son prix : `rachat` × celui du catalogue. ⚠️ Bas, exprès : plus qu'on ne l'a payé, jamais (jugé). */
+  function prixRachat(m) { return Math.round(m.prix * (regle().rachat || 0.25)); }
+  function prixDemande(m) { return Math.round(prixRachat(m) * (regle().demande || 1.3)); }
+  /** Gisèle accepte-t-elle de monter pour ce meuble cette semaine ? Son HUMEUR (la même fonction, un autre article). */
+  function accepteDeMonter(sem, slug) { return humeur(sem, 'meubles', 'rachat:' + slug) < (regle().humeur_rachat || 40); }
+
+  /** Le meuble quitte la planque ET la sauvegarde (`partie.meubles`) : l'argent, le carnet. Il revient au catalogue et
+      à l'étal de Gisèle, comme s'il n'avait jamais été à toi. */
+  function vendreMeuble(piece, slug, prix) {
+    const p = B.partie, m = Decoration.meubles().find(function (q) { return q.slug === slug; });
+    if (!m || !p.meubles || !p.meubles[piece] || !Decoration.livre(piece, slug)) return false;
+    delete p.meubles[piece][slug];
+    Missions.encaisser(prix, m.nom);
+    Histoire.noter('VENDU AUX PUCES : ' + m.nom + ' (' + prix + ' $)', false);
+    return true;
+  }
+  /** Le marchandage à l'envers : on demande `demande` × son prix. Elle monte, on vend ; elle refuse, le meuble garde
+      son prix jusqu'au dimanche suivant. Rend 'accepte', 'refuse' ou null. */
+  function demanderPlus(piece, slug) {
+    const s = semaine(B.partie.jour), cle = 'rachat:' + slug, m = Decoration.meubles().find(function (q) { return q.slug === slug; });
+    if (!m || refus()[cle] || !Decoration.livre(piece, slug)) return null;
+    const prix = prixDemande(m);
+    if (accepteDeMonter(s, slug)) {
+      if (!vendreMeuble(piece, slug, prix)) return null;
+      dire('gisele', 'plus-accepte');
+      return 'accepte';
+    }
+    refus()[cle] = true;
+    Hud.message('GISÈLE : « ' + prix + ' $ ? ' + majuscules(premierePhrase(dire('gisele', 'plus-refuse'))) + ' »', 170);
+    Son.SFX.erreur();
+    return 'refuse';
+  }
+
+  /** Ce qu'on peut vendre à Gisèle : un meuble par ligne, son prix à elle. */
+  function menuVente(slugEtal) {
+    const p = B.partie, retour = function () { Hud.ouvrirMenu(menuEtal(slugEtal)); };
+    const items = aRacheter().map(function (a) {
+      const nom = a.meuble.nom + (a.piece === 'planque' ? '' : ' (' + a.piece.toUpperCase() + ')');
+      return { libelle: nom, detail: prixRachat(a.meuble) + ' $', vend: a.meuble.slug, piece: a.piece,
+               faire: function () { Hud.ouvrirMenu(menuRachat(slugEtal, a.piece, a.meuble, nom)); return false; } };
+    });
+    if (!items.length) items.push({ libelle: 'RIEN À VENDRE', actif: false });
+    items.push({ libelle: 'RETOUR', faire: function () { retour(); return false; } });
+    const aide = aideDe('gisele');
+    return { titre: 'VENDRE À GISÈLE', sur: p.argent + ' $', largeur: largeurPour(aide, 320), items: items, aide: aide, retour: retour };
+  }
+
+  /** Un meuble qu'on vend : à son prix, ou demander plus. */
+  function menuRachat(slugEtal, piece, m, nom) {
+    const deja = refus()['rachat:' + m.slug], prix = prixRachat(m), plus = prixDemande(m);
+    const apres = function () { Hud.ouvrirMenu(menuVente(slugEtal)); };
+    const items = [
+      { libelle: 'VENDRE', detail: prix + ' $', faire: function () {
+        if (vendreMeuble(piece, m.slug, prix)) dire('gisele', 'rachat-conclu');
+        apres(); return false; } },
+      { libelle: deja ? 'ELLE NE MONTERA PAS' : 'DEMANDER ' + plus + ' $', actif: !deja, demander: true,
+        faire: function () { demanderPlus(piece, m.slug); apres(); return false; } },
+      { libelle: 'RETOUR', faire: function () { apres(); return false; } },
+    ];
+    return { titre: nom, sur: B.partie.argent + ' $', largeur: 300, items: items, retour: apres,
+             aide: 'LE CATALOGUE LE VEND ' + m.prix + ' $' };
   }
 
   /** L'étal devant soi : à moins d'une tuile et demie de sa table, le marché ouvert. */
@@ -162,9 +305,35 @@ const Puces = (function () {
     const e = sousLaMain(j);
     if (!e) return false;
     j.animT = 10; j.animType = 'ramasse';
+    dire(e.marchand.qui, accueil(e));
     Hud.ouvrirMenu(menuEtal(e.slug));
     return true;
   }
+
+  // --- La rumeur ------------------------------------------------------------------------------------
+
+  let niveau = 0;
+  /** Le volume que la rumeur VISE : plein sur le terrain, nul à `portee_px` de son bord ; nul hors des heures, dans une
+      pièce ou un bloc (`ouvert`). Pure. */
+  function cibleDuSon(j) {
+    const d = donnees();
+    if (!ouvert() || !d || !d.terrain || !j) return 0;
+    const t = d.terrain, x0 = t.x * TT, y0 = t.y * TT, x1 = (t.x + t.l) * TT, y1 = (t.y + t.h) * TT;
+    const dx = Math.max(x0 - j.x, 0, j.x - x1), dy = Math.max(y0 - j.y, 0, j.y - y1);
+    const portee = (d.rumeur && d.rumeur.portee_px) || 320;
+    return Math.max(0, 1 - Math.hypot(dx, dy) / portee);
+  }
+  /** À chaque image : la rumeur GLISSE vers sa cible (on arrive, midi sonne : jamais d'un coup), et la première fois
+      qu'elle se fait entendre, les voix et le son du marché se chargent. */
+  function majSon() {
+    const d = donnees();
+    if (!d || !B.partie) return;
+    const cible = cibleDuSon(B.joueur), pas = 1 / (((d.rumeur && d.rumeur.glisse_s) || 2.5) * 60);
+    niveau = cible > niveau ? Math.min(cible, niveau + pas) : Math.max(cible, niveau - pas);
+    if (niveau > 0.02) preparer();
+    if (niveau > 0 || cible > 0) Son.SFX.rumeur_puces(niveau);
+  }
+  function volumeDuSon() { return niveau; }
 
   // --- Le dessin ------------------------------------------------------------------------------------
 
@@ -238,5 +407,7 @@ const Puces = (function () {
   }
 
   return { donnees, regle, etals, etal, dimanche, semaine, ouvertA, ouvert, stock, meublesAuxPuces, prixCarte, prixMeuble,
-           humeur, accepte, refusDeLaSemaine: refus, acheterCarte, acheterMeuble, marchander, menuEtal, sousLaMain, agir, dessiner, yAller };
+           humeur, accepte, refusDeLaSemaine: refus, acheterCarte, acheterMeuble, marchander, menuEtal, sousLaMain, agir, dessiner, yAller,
+           texte, dire, accueil, aRacheter, prixRachat, prixDemande, accepteDeMonter, vendreMeuble, demanderPlus, menuVente, menuRachat,
+           cibleDuSon, majSon, maj: majSon, volumeDuSon };
 })();

@@ -176,6 +176,8 @@ EGALISATION: dict[str, str] = {
         ",equalizer=f=5000:t=o:w=1.5:g=-4",
     # Mado. (Elle a ete la repartitrice de la police jusqu'au 25 sept. 2026.)
     "Caroline - Soft Quebec accent": PASSE_HAUT_FEMMES,
+    # Gisèle, du marché aux puces : le passe-haut des femmes (à mesurer contre v2 si Martin la trouve étouffée).
+    "Kasandra - Natural Quebecer UGC ad": PASSE_HAUT_FEMMES,
     # La repartitrice de la police : une voix de femme, le passe-haut des femmes.
     # Le scanner la coupe de toute facon sous 300 Hz (`Son.Ondes`).
     "Clara Dupont - Professional and Urgent": PASSE_HAUT_FEMMES,
@@ -475,6 +477,11 @@ JEU.update({f"galeries-{a['cle']}": a["jeu"] for a in _galeries.ANNONCES})
 from app import halloween as _halloween  # noqa: E402
 
 JEU.update({f"halloween-{m['cle']}": m["jeu"] for m in _halloween.MURMURES})
+
+# LES MARCHANDS DU MARCHÉ AUX PUCES (`puces.REPLIQUES`) : même règle — le jeu est collé à la réplique.
+from app import puces as _puces  # noqa: E402
+
+JEU.update({f"{r['qui']}-puces-{r['cle']}": r["jeu"] for r in _puces.REPLIQUES})
 
 # LE TIRAGE DU 6/49 (`loto.repliques`) : l'annonceur de la loterie. Les boules, d'un ton egal et net
 # — elles s'enchainent, une par une ; l'amorce et l'issue, elles, ont du jeu.

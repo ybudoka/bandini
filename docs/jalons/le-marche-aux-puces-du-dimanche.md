@@ -78,3 +78,57 @@ _Tranché par Martin le 30 sept. 2026, après la livraison : trois ajouts._
   carte sans la prime, le meuble le lendemain, ACTION **par le bouton**, le dessin, la triche) ; neuf mutations vues
   rouges — l'écart aux trouvailles ne mordait pas sur la graine livrée (le terrain choisi est déjà loin de tout) :
   un pré synthétique le sépare.
+
+### Deuxième vague — des voix, la rumeur, et on y vend (✅ livrée le 30 sept. 2026)
+
+- **Les voix** (Martin : « des voix aux marchands ») : deux voix québécoises de la bibliothèque ElevenLabs, ajoutées au
+  compte et à personne d'autre (jugé) — **Ti-Rhéal = Christian Page** (grave et lent : un homme de soixante-dix ans),
+  choisi contre Olivier et Marc André ; **Gisèle = Kasandra** (naturelle, spontanée : une vendeuse), choisie contre
+  Caroline (déjà Mado) et Loulou (française). Les auditions sont dans `captures/puces-voix/` (la même première réplique
+  par les trois) : ⚠️ **Martin ne les a pas écoutées** — changer de voix = `puces.VOIX` + `--refaire` des 9 ou 13 slugs.
+  Le nom des deux voix a été remis au compte (`/v1/voices/<id>/edit`) : la bibliothèque les ajoutait sous un nom
+  traduit (« Kasandra – Québécoise naturelle UGC pub ») que le script ne trouvait pas.
+- **Les fiches** : [Ti-Rhéal Bergeron](../personnages/ti-rheal.md), trente ans sur la surfaceuse de l'aréna ;
+  [Gisèle Lachapelle](../personnages/gisele.md), brocanteuse (ni Pelletier — Josée et Lulu —, ni Beaulieu — e03). Hors de
+  `missions.PERSONNAGES` : ni l'un ni l'autre n'a de mission, et rien d'eux n'entre dans les définitions.
+- **Les répliques** (`puces.REPLIQUES`, le jeu collé à chacune, 22 voix) : `salut` (le nom — **une fois pour toutes**,
+  la première fois qu'on s'arrête à l'étal : `partie.puces.connus`), `accueil-1` à `-3` (les trois anciennes lignes
+  écrites, dites maintenant — une par semaine), `vente`, `accepte`, `refuse`, `rien` (tout l'étal est déjà à toi),
+  `aurevoir` (Échap ou B au menu de l'étal) ; chez Gisèle, `rachat`, `rachat-conclu`, `plus-accepte`, `plus-refuse`. Ce
+  qu'il vient de dire s'écrit au pied du menu (élargi à la réplique) ; le bandeau du HUD ne tient qu'une quarantaine
+  de lettres et ne montre que la première phrase (« TI-RHÉAL : « 84 $ ? T'ES DRÔLE, TOI. » »). Le refus de Gisèle a été
+  réécrit pour ça (« Voyons donc! À ce prix-là… ») et refait une fois.
+- **Leur route** : les textes, les séries de voix (`audio.serie_de_voix`) et la rumeur voyagent sur `/api/collections`
+  (`puces.exporter`) ; `Son.Voix.declarer` (neuf) les remet à la liste de l'histoire, `Son.Lieu.declarer` le son. Tout se
+  charge la première fois que la rumeur se fait entendre (`Puces.majSon`), jamais au démarrage (jugé).
+- **La rumeur** (`rumeur_puces`, ElevenLabs, six secondes en boucle : des gens qui jasent et marchandent, une radio AM
+  au loin, une table pliante, des boîtes de carton) : pleine sur le terrain, nulle à 320 px de son bord, le dimanche de
+  6 h à midi seulement, jamais dans une pièce ni un bloc ; elle **glisse** vers ce volume en 2,5 s (on arrive, midi
+  sonne). Un son du lieu `puces` (`audio.LIEUX`, `LIEUX_A_PART`) ; le filet, un murmure synthétisé. ⚠️ **Le plafond des
+  sons de lieu (1,95 Mo) est plein** : une première boucle de dix secondes y tenait (32 kbit/s, le plancher du mp3 en
+  44,1 kHz), puis les bêtes écrasées sont arrivées le même jour (+17 Ko) — refaite à six secondes, **sans le chien**
+  demandé (un aboiement toutes les six secondes se remarque) : 24 364 octets, les lieux à 1 948 987, **1 Ko de marge**.
+  Le chien, une boucle plus longue ou le prochain son de lieu demandent à Martin de relever le plafond.
+- **Vendre à Gisèle** (VENDRE UN MEUBLE, dans son menu) : chaque meuble **livré** d'une planque (celle de Rocco, le
+  chalet) — pas un trophée, pas un meuble d'hier pas encore arrivé. Elle paie **le quart du catalogue** (`rachat` : le
+  juke-box 375 $, l'aquarium 150 $, le sofa 100 $, le téléviseur 88 $, la lampe 38 $, le tapis 23 $), et on peut lui
+  **demander 30 % de plus** : son humeur (`humeur(semaine, 'meubles', 'rachat:<meuble>')`, sous 40) décide, un refus tient
+  jusqu'au dimanche suivant. ⚠️ **Un choix, pas une pompe** : le plus qu'on en tire (32,5 %) reste sous le moins qu'un
+  meuble coûte (42 % : chez Gisèle, à l'offre acceptée) — jugé en Python et au banc. Le meuble vendu quitte
+  `partie.meubles`, donc la planque et la sauvegarde ; il revient au catalogue Beausoleil et à l'étal de Gisèle. Une
+  ligne au carnet (« VENDU AUX PUCES : … »).
+- **Les cartes en double** : il ne peut pas y en avoir — l'album prend chaque numéro une fois, une carte achetée n'est
+  plus par terre, et Ti-Rhéal ne vend pas celles de l'album. Rien à revendre, donc rien de fait.
+- **Captures** (`captures/collections/`) : `puces-gisele-accueil.png`, `puces-vendre.png`, `puces-vendre-sofa.png`,
+  `puces-apres-demande.png` — c'est la capture qui a montré le bandeau coupé et la réplique qui débordait du menu.
+- **Juges** : `tests/test_puces.py` (cinq de plus : toutes les répliques, qui se nomme une fois, une voix chacun, rien
+  dans les définitions, revendre ne paie jamais plus qu'acheter) et `tests/test_puces_js.py` (huit de plus, au bouton
+  ACTION : le nom la première fois puis la ligne de la semaine et l'au revoir, rien à vendre, la vente et le marchandage
+  qui se disent, vendre un meuble retire de la planque et de la sauvegarde, pas avant livraison, demander plus sans un dé
+  et le refus qui tient, acheter pour revendre perd, la rumeur à la distance, aux heures, qui glisse et ne charge rien au
+  démarrage). Quinze mutations vues rouges — dont une qui ne mordait pas au premier passage (les voix
+  chargées dès la première image : le juge regardait avant que la partie tourne ; il fait maintenant tourner la
+  partie loin du marché d'abord).
+- **ElevenLabs** : 4 145 crédits au compteur pendant la vague (64 997 → 60 852 ; le compteur est partagé avec
+  les autres sessions du jour) — auditions (6 × ≈ 100), 23 voix (≈ 1 500), deux rumeurs, et Scribe pour
+  relire chaque voix (les mots y sont tous).
