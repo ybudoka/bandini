@@ -1620,6 +1620,7 @@ const Hud = (function () {
       ['DISTRICTS LIBÉRÉS', String((p.libere || []).length)],
       ['CRIMES', String(s.crimes || 0)],
       ['CHARS VOLÉS', String(s.volees || 0)],
+      ['BATEAUX VOLÉS', String(s.bateauxVoles || 0)],
       ['COURSES DE TAXI', String(s.courses || 0)],
       ['MORTS', String(s.tues || 0)],
       ['HOSPITALISATIONS', String(s.hospitalisations || 0)],

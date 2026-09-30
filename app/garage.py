@@ -27,8 +27,9 @@ PIECES: list[dict] = [
     {"slug": "klaxon", "nom": "Klaxon « Gens du pays »", "prix": 150, "effet": {}},
 ]
 
-#: Les chars qui ne se modifient pas : un vélo n'a pas de moteur à gonfler.
-CLASSES_EXCLUES = ("velo",)
+#: Les chars qui ne se modifient pas : un vélo n'a pas de moteur à gonfler, et une coque
+#: ne passe pas la porte de Ti-Guy (les bateaux ne sont pas des chars).
+CLASSES_EXCLUES = ("velo", "bateau")
 
 #: La part du prix des pièces que la fourrière ajoute au rachat d'un char modifié.
 RACHAT_PART = 0.5

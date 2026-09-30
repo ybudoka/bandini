@@ -150,7 +150,7 @@ const Frenesies = (function () {
   /** `Vehicules.endommager` : un char tombe à zéro, et c'est un joueur qui l'a mis là. */
   function detruit(v) {
     const e = B.frenesie, f = e && fiche(e.slug);
-    if (!f || f.cible !== 'chars' || v.derby || v.compteFrenesie) return;
+    if (!f || f.cible !== 'chars' || v.derby || v.compteFrenesie || (v.def && v.def.eau)) return;   // une coque n'est pas un char
     if (!v.agresseur || v.agresseur.type !== 'joueur' || v.conducteur === v.agresseur) return;
     v.compteFrenesie = true;
     avancer();

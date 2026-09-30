@@ -121,3 +121,21 @@ juge d'octobre existant).
 - ⚠️ Le porte-conteneurs met environ 5 s à s'arrêter depuis sa pointe (0,004/image de machine arrière) : c'est
   voulu, à confirmer par Martin à quai. L'aide des commandes dit encore « FREIN À MAIN » en bateau (`hud.js`) :
   vague 5.
+- **Vague 2 livrée le 30 sept. 2026 — ce qui n'est pas une règle de bateau.** Une coque n'est jamais « mal
+  garée » (`Missions.malGare`) ni saisie (`charSaisissable`). Une coque restée au lot d'une vieille partie est
+  oubliée par `garnirLaFourriere` : elle renaissait dans la cour, sur la terre ferme. La remorqueuse ne
+  l'accroche pas (`aCrocher`). Ti-Guy ne la prend pas : `charDevant` la saute, et `garage.CLASSES_EXCLUES` a
+  maintenant `bateau`. Elle ne compte plus comme auto garée (`compteCommeGare`). Voler une coque compte à part,
+  `stats.bateauxVoles`, avec sa ligne BATEAUX VOLÉS au carnet du poste et au BILAN ; le journal des vols d'autos
+  ne la lit pas. La frénésie « chars » ne la compte pas.
+- **Le traversier et la navette** ne posent plus leur pont sur une coque, comme `Pont.poser`. Tant qu'elle est
+  dessous, `poser` refuse : on ne débarque personne à l'eau et la corne ne sonne pas à chaque image. Ils accostent
+  dès qu'elle s'en va, ou repartent à l'heure sans avoir accosté.
+- **Les juges** : `tests/test_bateaux_regles_js.py`, huit, chacun vu rougir avant sa règle, avec un témoin côté
+  auto qui reste vert.
+- ⚠️ **Un juge qui tenait par sa graine** : `test_ville_vit.py::test_au_clignotant_rouge_le_trafic_s_arrete_puis_repart`
+  a rougi. Une coque ne comptant plus comme char garé, la graine 23 fait naître d'autres chars : deux, arrêtés au
+  même clignotant à l'image finale (arrêt le plus long 121 images, pour un cycle de 960). Sur 40 graines, base
+  contre branche : même pire arrêt (294), et seule la 23 change ; la base a déjà trois graines sans trafic.
+  « Qui roule » se lit maintenant sur le dernier quart de cycle (240 images), plus sur la dernière image.
+

@@ -101,7 +101,10 @@ def test_au_clignotant_rouge_le_trafic_s_arrete_puis_repart(banc, paquet):
         o.frame(900);
         // Qui roule, qui est planté ? On suit chaque char du trafic et on garde
         // sa plus longue immobilité d'affilée.
-        const plantes = new Map();
+        // ⚠️ « Qui roule » se lit sur le dernier quart de cycle, pas sur la derniere image : deux chars
+        // arretes au meme clignotant a l'image finale n'y sont pas plantes (30 sept. 2026, les bateaux
+        // ne comptent plus comme chars gares — la graine 23 a glisse, et le juge tenait par elle).
+        const plantes = new Map(), aRoule = new Set();
         let pire = 0, vus = 0, roulants = 0;
         for (let i = 0; i < 900; i++) {
             o.frame(1);
@@ -110,12 +113,13 @@ def test_au_clignotant_rouge_le_trafic_s_arrete_puis_repart(banc, paquet):
                 const n = Math.abs(e.vitesse) < 0.05 ? (plantes.get(e) || 0) + 1 : 0;
                 plantes.set(e, n);
                 if (n > pire) pire = n;
+                if (i >= 900 - 240 && Math.abs(e.vitesse) > 0.2) aRoule.add(e);
             }
         }
         for (const e of L.B.entites) {
             if (e.type !== 'vehicule' || e.conducteur !== 'trafic') continue;
             vus++;
-            if (Math.abs(e.vitesse) > 0.2) roulants++;
+            if (aRoule.has(e)) roulants++;
         }
         return { pire: pire, vus: vus, roulants: roulants, arret: t.arret_images,
                  cycle: 2 * (t.feu_vert_images + t.feu_orange_images) };

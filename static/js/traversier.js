@@ -129,6 +129,12 @@ function fabriqueDeTraversier(cle, NOM, ID_TRI) {
       descend pas se promener, il resterait a bord sans le savoir. */
   function poser(k) {
     const d = donnees(), q = d.escales[k], c = Monde.carte, sauve = [];
+    // ⚠️ Pas sur une coque (comme `Pont.poser`) : elle resterait prise dans le pont. Le traversier attend.
+    const dedans = function (e) {
+      const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
+      return tx >= q.x && tx < q.x + d.coque.longueur && ty >= q.y && ty < q.y + d.coque.largeur;
+    };
+    if (B.entites.some(function (e) { return e.type === 'vehicule' && e.def && e.def.eau && dedans(e); })) return false;
     for (let r = 0; r < d.coque.largeur; r++) {
       for (let col = 0; col < d.coque.longueur; col++) {
         const i = (q.y + r) * c.w + q.x + col;
@@ -140,6 +146,7 @@ function fabriqueDeTraversier(cle, NOM, ID_TRI) {
       }
     }
     pose = { carte: c, k: k, sauve: sauve };
+    return true;
   }
 
   /** La coque largue les amarres : la carte redevient exactement ce qu'elle etait. */
@@ -275,8 +282,8 @@ function fabriqueDeTraversier(cle, NOM, ID_TRI) {
     if (premiereImage && s.phase === 'traverse') adopter(ici);
     suivre(ici);
     // 3. L'arrivee : le pont redevient une tuile, et plus rien n'est tenu.
-    if (escale !== null && !pose) {
-      poser(escale);
+    // ⚠️ Une coque sous le pont : il attend, a bord, sans debarquer personne a l'eau ni corner a chaque image.
+    if (escale !== null && !pose && poser(escale)) {
       if (bord.length) debarquer(escale);
       if (!premiereImage) corne(d.escales[escale]);
     }

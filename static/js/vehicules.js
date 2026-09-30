@@ -624,6 +624,7 @@ const Vehicules = (function () {
       poste, ni le char d'un lot de concession — c'est leur LOT qui les fait naitre.
       Les compter ferait naitre un char de moins, et les des de toute la ville glissent. */
   function compteCommeGare(v) {
+    if (v.def && v.def.eau) return false;        // une coque mouille : elle ne prend la place d'aucune auto
     if ((v.gareDeService || v.placeDeLot) && v.etat === 'stationne' && !v.laisse) return false;
     return true;
   }
@@ -1667,7 +1668,7 @@ const Vehicules = (function () {
     const ay = v.y - Math.sin(v.angle) * v.def.longueur / 2;
     let meilleur = null, dMin = ph.crochet_portee_px * ph.crochet_portee_px;
     for (const e of Entites.autour(ax, ay, ph.crochet_portee_px + 30, function (q) { return q.type === 'vehicule'; })) {
-      if (e === v || e.remorqueePar || e.remorque || e.conducteur) continue;
+      if (e === v || e.remorqueePar || e.remorque || e.conducteur || (e.def && e.def.eau)) continue;   // pas une coque
       const d = dist2(e.x, e.y, ax, ay);
       if (d < dMin) { dMin = d; meilleur = e; }
     }
@@ -1905,7 +1906,8 @@ const Vehicules = (function () {
     // deja nul — sans ce souvenir, on ne saisirait jamais rien.
     j.dernierVehicule = v; j.dessine = false; j.vx = 0; j.vy = 0;
     j.x = v.x; j.y = v.y;
-    if (crime) { Police.signalerCrime(crime, v.x, v.y, vu); B.partie.stats.volees++; }
+    // Une coque volee se compte a part (BATEAUX VOLES) : le journal des vols d'autos ne la lit pas.
+    if (crime) { Police.signalerCrime(crime, v.x, v.y, vu); const s = B.partie.stats; if (v.def.eau) s.bateauxVoles = (s.bateauxVoles || 0) + 1; else s.volees++; }
     // ⚠️ L'etiquette du bouton tactile suit l'avertisseur : SIRENE, SONNETTE, KLAXON.
     Entree.contexte(v.def.sirene ? 'vehicule_sirene' : v.def.klaxon === 'sonnette' ? 'vehicule_sonnette' : 'vehicule');
     bruitDeMontee(v);

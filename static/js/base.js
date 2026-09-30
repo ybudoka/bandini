@@ -272,7 +272,7 @@ function etatInitial(defs) {
     //: (et le compte, qui monte la partie entiere), et une nouvelle partie
     //: repart sans rien. On lit par `triche(nom)`, jamais a la main.
     triches: { menu: false, invincible: false, vehicules: false, endurance: false, munitions: false, pasArrete: false, machines: false },
-    stats: { crimes: 0, arrestations: 0, volees: 0, tues: 0, secondes: 0 },
+    stats: { crimes: 0, arrestations: 0, volees: 0, bateauxVoles: 0, tues: 0, secondes: 0 },
     x: null, y: null,
   };
 }

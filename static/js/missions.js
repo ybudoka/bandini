@@ -925,6 +925,8 @@ const Missions = (function () {
   function charSaisissable(j) {
     const v = j.dansVehicule || j.dernierVehicule;
     if (!v || !v.def || !v.actif || v.etat === 'epave') return null;
+    // ⚠️ Une coque ne va pas au lot : elle renaissait dans la cour, sur la terre ferme (les bateaux, vague 2).
+    if (v.def.eau) return null;
     if (dist2(v.x, v.y, j.x, j.y) > 220 * 220) return null;
     if (estDeLaPlanque(v)) return null;      // la sauvegarde de Martin, jamais
     return v;
@@ -976,6 +978,7 @@ const Missions = (function () {
       trottoir, et il bloque quand meme le passage. */
   function malGare(v) {
     if (!v || !v.def || v.conducteur || v.etat === 'epave') return false;
+    if (v.def.eau) return false;                                   // une coque mouille, elle ne se gare pas
     if (v.saisi !== null && v.saisi !== undefined) return false;   // deja au lot
     if (estDeLaPlanque(v)) return false;
     const demi = Math.max(v.def.longueur, v.def.largeur) / 2;
@@ -1080,6 +1083,8 @@ const Missions = (function () {
       if (!g) continue;
       g.etat = 'fige'; g.face = 'bas'; g.gardien = true; g.poste = { x: g.x, y: g.y };
     }
+    // ⚠️ Une coque saisie avant la regle (une vieille partie) : le lot l'oublie — la cour est sur la terre.
+    B.partie.fourriere = B.partie.fourriere.filter(function (c) { const d = Vehicules.vehiculeDef(c.slug); return !d || !d.eau; });
     let poses = 0;
     const dejaPoses = B.entites.filter(function (e) { return e.type === 'vehicule' && e.saisi !== null && e.saisi !== undefined; }).length;
     B.partie.fourriere.forEach(function (c, i) {
@@ -1627,6 +1632,7 @@ const Missions = (function () {
       { libelle: 'ARRESTATIONS', detail: '' + p.stats.arrestations, actif: false },
       { libelle: 'CRIMES VUS', detail: '' + p.stats.crimes, actif: false },
       { libelle: 'CHARS VOLÉS', detail: '' + p.stats.volees, actif: false },
+      { libelle: 'BATEAUX VOLÉS', detail: '' + (p.stats.bateauxVoles || 0), actif: false },
       { libelle: 'LA PROCHAINE AMENDE', detail: amende(p.argent, 1, p.casier) + ' $', actif: false },
     ].concat(
       // Ce qui est ferme en ville, et pourquoi : la ville est ouverte, mais
@@ -1763,7 +1769,7 @@ const Missions = (function () {
     if (!ext) return null;
     let meilleur = null, dMin = 90 * 90;
     for (const e of ext.entites) {
-      if (e.type !== 'vehicule' || e.etat === 'epave') continue;
+      if (e.type !== 'vehicule' || e.etat === 'epave' || (e.def && e.def.eau)) continue;   // Ti-Guy ne prend pas une coque
       const d = dist2(e.x, e.y, ext.x, ext.y);
       if (d < dMin) { dMin = d; meilleur = e; }
     }
