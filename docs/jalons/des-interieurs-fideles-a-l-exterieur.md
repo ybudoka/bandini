@@ -86,3 +86,52 @@ glyphe que dehors — et l'hiver venu, les saisons le couvraient de neige, dedan
 - Pour la vague des logements selon le standing : le plâtre et le rideau sont dans `PLATRE` — un plâtre défraîchi
   chez les pauvres, une autre couleur chez les cossus, par un matériau de plus (`'piece_pauvre'`…).
 
+
+**L'inventaire, le 30 sept. 2026** (sur la ville de la graine livrée : chaque porte qui s'ouvre, ce qu'on voit
+dehors — le district, le standing et le genre de SA résidence ou de SA devanture — contre ce qu'on trouve dedans —
+le nom, le plancher, les meubles, les niveaux ; captures dedans et dehors d'un logement par groupe) : **90 portes**,
+49 commerces, 32 logements, 9 lieux faits à la main.
+
+| Logement | District | Standing | Portes |
+|---|---|---|---|
+| maison | Érables | cossu | 4 |
+| villa | Érables | cossu | 1 |
+| plex | Faubourg | cossu / ordinaire | 1 / 3 |
+| plex | Petit-Canton | cossu / ordinaire / pauvre | 2 / 10 / 5 |
+| plex | Gare | pauvre | 2 |
+| plex | Quais, Pointe | ordinaire | 3, 1 |
+
+- **Les 32 logements avaient le MÊME intérieur** : « Un logement », un plancher de bois verni, un plâtre propre,
+  un lit à couverture bleue, la même réserve de meubles — qu'on entre par une façade placardée de la gare, un plex
+  du Canton ou la villa des Érables. C'est l'écart qui se voit à chaque porte (la capture de la gare : dehors les
+  planches aux fenêtres, le grillage et le fer rouillé ; dedans un logement neuf).
+- **Les commerces suivent déjà le standing** (le comptoir, les plantes : la 3e vague des quartiers) ; ils se relisent
+  avec le district et le genre dans une vague à eux.
+- **La villa** : sa pièce a gardé les mesures du cossu d'avant l'élargissement (6 × 5 pour une façade de 7) et un
+  seul niveau pour trois étages dehors — les niveaux sont le jalon « Des étages dedans aussi » (une autre session,
+  en cours) ; la villa s'y ajustera quand il sera livré.
+- **Les lieux faits à la main** (la planque, la chapelle, le hangar, la fourrière…) : à relire un par un, plus tard.
+
+**Vague 2, livrée le 30 sept. 2026 : l'habit du logement.** Le navigateur le lit DEHORS en poussant la porte
+(`Monde.materiauxDuLogement` : le standing final et la villa de la résidence dont c'est la porte — les vitrines
+font monter et descendre des standings après la construction, alors la pièce ne le décide pas) ; les mêmes
+meubles aux mêmes places, un autre habit (`materiaux` : `B`, `W`, `D`, `t`, `l`), et l'étage du haut le garde
+(l'escalier rentre par la même porte). Python ne change pas : rien de la ville ne bouge.
+
+- **Pauvre** : un plâtre jauni, des taches d'humidité, une fissure ; un drap punaisé en guise de rideau, une vitre
+  fêlée ; une porte plane éraflée et sa chaîne de sûreté ; des planches grises et usées, un bout qui manque ; le
+  matelas à même le plancher sous une couverture de laine grise.
+- **Cossu** : un papier peint rayé sous sa cimaise, la plinthe haute ; des tentures bordeaux à embrases d'or ; une
+  porte d'acajou et sa poignée de laiton ; un parquet à chevrons ; le lit d'acajou à couverture bordeaux.
+- **Villa** : des boiseries blanches à panneaux et leur filet d'or ; des tentures d'or ; la porte double blanche ;
+  le marbre en damier, veiné ; le lit d'ivoire à pique d'or.
+- L'ordinaire garde le plâtre de toutes les pièces, et les commerces aussi.
+- Regardé : la gare (pauvre), un plex cossu du Faubourg, la villa. Une capture a figé la villa au noir — `T`
+  manquait à un peintre (une exception dans le dessin fige le jeu) ; corrigée avant de livrer.
+- Juges `tests/test_habit_du_logement_js.py` : chaque logement de la ville porte l'habit de sa façade (la table en
+  toutes lettres), on entre pour de vrai dans son habit et l'étage du haut le garde, chaque habit a ses peintres et
+  ne ressemble pas au plâtre ; cinq mutations, quatre mordent — la cinquième (seule une pièce `maison` s'habille)
+  ne peut pas : aucune porte de commerce ne tombe dans la façade d'un logement.
+- **Reste** : le district (un logement du Petit-Canton, des Quais, de La Shop) et le genre (le bungalow, le plex, la
+  maison de pêcheur) ; la villa à sa taille et à ses niveaux (après « Des étages dedans aussi ») ; les commerces
+  relus au district ; les lieux faits à la main.

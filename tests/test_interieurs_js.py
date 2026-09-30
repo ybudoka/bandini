@@ -1033,7 +1033,8 @@ def test_tous_les_murs_d_une_piece_sont_du_meme_platre(banc):
     """Martin (29 sept. 2026) : « les portes et murs des portes intérieur doivent avoir des murs harmonisés ».
     Le mur `B` d'une pièce se peignait en toit de tôle (neigeux l'hiver), la fenêtre `W` et la porte `D` en
     façade de brique, comme vues de la rue. ⚠️ Dans CHAQUE pièce de la ville qui n'a pas ses propres
-    matériaux : ses trois glyphes de mur vont au même peintre `@piece`, et il existe."""
+    matériaux : ses trois glyphes de mur vont au même peintre, et il existe — le plâtre `@piece`, ou l'habit du
+    logement selon sa façade (`test_habit_du_logement_js.py` : le pauvre, le cossu, la villa)."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const c = L.Monde.carte, vues = {}, fautes = [];
@@ -1046,7 +1047,9 @@ def test_tous_les_murs_d_une_piece_sont_du_meme_platre(banc):
             for (let y = 0; y < k.h; y++) for (let x = 0; x < k.w; x++) {
                 const g = k.sol[y][x];
                 if ('BWD'.indexOf(g) < 0) continue;
-                if (mats[g] !== 'piece' || !L.TUILES[g + '@piece']) fautes.push(porte.interieur + ' ' + g + ' ' + x + ',' + y);
+                if (!mats[g] || mats[g] !== mats.B || mats.B !== mats.W || mats.W !== mats.D || !L.TUILES[g + '@' + mats[g]]) {
+                    fautes.push(porte.interieur + ' ' + g + ' ' + x + ',' + y);
+                }
             }
             o.sortir();
         }

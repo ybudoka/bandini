@@ -3654,15 +3654,107 @@ const TUILES = (function () {
   //: ⚠️ Un rideau de la même couleur à toutes les fenêtres d'une pièce : tiré par tuile, c'était bariolé.
   const PLATRE = { fond: '#d8d0c2', grain: '#cbc2b2', plinthe: '#8f8270', rideau: '#b5584a' };
 
-  function murDePiece(ctx, v, T) {
-    ctx.fillStyle = PLATRE.fond; ctx.fillRect(0, 0, T, T);
-    points(ctx, v >> 4, T, PLATRE.grain, 7, 11);
+  function murDePiece(ctx, v, T, P) {
+    P = P || PLATRE;
+    ctx.fillStyle = P.fond; ctx.fillRect(0, 0, T, T);
+    points(ctx, v >> 4, T, P.grain, 7, 11);
     const cotes = [[1, 0, 0, T, 2], [2, T - 2, 0, 2, T], [4, 0, T - 2, T, 2], [8, 0, 0, 2, T]];
     for (const [bit, x, y, w, h] of cotes) {
       if (!(v & bit)) continue;
-      ctx.fillStyle = PLATRE.plinthe; ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = P.plinthe; ctx.fillRect(x, y, w, h);
     }
   }
+
+  /* --- L'HABIT DU LOGEMENT (docs/jalons/des-interieurs-fideles-a-l-exterieur.md, vague 2) ----------------------
+     Martin (29 sept. 2026) : « des intérieurs toujours représentatifs de l'extérieur ». Le logement se lit à ce
+     qu'on a vu DEHORS (`Monde.materiauxDuLogement` : le standing et la villa de SA résidence) : les mêmes
+     meubles, aux mêmes places — un autre habit. Le PAUVRE : un plâtre jauni, taché d'humidité, fissuré ; un drap
+     punaisé en guise de rideau ; des planches grises, usées, une qui manque ; le matelas à même le plancher sous
+     une couverture de laine grise. Le COSSU : un papier peint rayé sous sa cimaise, des tentures bordeaux à
+     embrases dorées, un parquet à chevrons, le lit d'acajou. La VILLA : des boiseries blanches à panneaux, les
+     tentures d'or, le marbre en damier, le lit d'ivoire. ⚠️ Rien au dé : ce qui varie se lit à la position. */
+  const PLATRE_PAUVRE = { fond: '#c8bb98', grain: '#b6a784', plinthe: '#5e5040', tache: '#a89a70', fissure: '#8a7c5c' };
+  const PLATRE_COSSU = { fond: '#e6d9bf', grain: '#dccfb4', plinthe: '#4a2e1e', raie: '#d8c9a9', cimaise: '#8a5a3a' };
+  const PLATRE_VILLA = { fond: '#eef0e6', grain: '#e3e6da', plinthe: '#b9b4a4', panneau: '#dfe2d6', filet: '#c9c6b8' };
+
+  function murPauvre(ctx, v, T) {
+    murDePiece(ctx, v, T, PLATRE_PAUVRE);
+    const h = v >> 4;
+    if (h % 3 === 0) {                                          // une tache d'humidite, auréolée
+      ctx.fillStyle = PLATRE_PAUVRE.tache; ctx.fillRect(3 + h % 5, 3, 6, 4); ctx.fillRect(4 + h % 5, 7, 4, 2);
+    }
+    if (h % 5 === 1) {                                          // une fissure qui descend
+      ctx.fillStyle = PLATRE_PAUVRE.fissure;
+      for (let k = 0; k < 7; k++) ctx.fillRect(6 + ((k * 3) % 4) - 1, 2 + k * 2, 1, 2);
+    }
+  }
+  function murCossu(ctx, v, T) {
+    murDePiece(ctx, v, T, PLATRE_COSSU);
+    ctx.fillStyle = PLATRE_COSSU.raie; for (let x = 1; x < T; x += 4) ctx.fillRect(x, 0, 2, 9);   // le papier rayé
+    ctx.fillStyle = PLATRE_COSSU.cimaise; ctx.fillRect(0, 9, T, 1);                              // la cimaise
+    ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(0, 10, T, 1);
+    if (v & 4) { ctx.fillStyle = PLATRE_COSSU.plinthe; ctx.fillRect(0, T - 3, T, 3); }          // la plinthe, haute
+  }
+  function murVilla(ctx, v, T) {
+    murDePiece(ctx, v, T, PLATRE_VILLA);
+    ctx.fillStyle = PLATRE_VILLA.filet; ctx.fillRect(0, 7, T, 1);                                // le lambris, à panneaux
+    ctx.fillStyle = PLATRE_VILLA.panneau; ctx.fillRect(2, 9, 12, 5);
+    ctx.fillStyle = PLATRE_VILLA.filet; ctx.fillRect(2, 9, 12, 1); ctx.fillRect(2, 13, 12, 1); ctx.fillRect(2, 9, 1, 5); ctx.fillRect(13, 9, 1, 5);
+    ctx.fillStyle = '#d4b25a'; ctx.fillRect(0, 6, T, 1);                                        // le filet d'or
+  }
+
+  /** Une fenêtre vue de dedans, sur le mur `mur` : son cadre, sa vitre, et ce qui l'habille (`habit`). */
+  function fenetreDeDedans(ctx, v, T, mur, habit) {
+    mur(ctx, v, T);
+    ctx.fillStyle = habit.cadre; ctx.fillRect(2, 2, 12, 11);
+    ctx.fillStyle = '#9cc4e0'; ctx.fillRect(3, 3, 10, 9);
+    ctx.fillStyle = '#c8e2f2'; ctx.fillRect(4, 4, 3, 3);
+    ctx.fillStyle = habit.cadre; ctx.fillRect(7, 3, 2, 9); ctx.fillRect(3, 7, 10, 1);
+    habit.peindre(ctx, v, T);
+  }
+  const HABIT_PAUVRE = { cadre: '#bdb49c', peindre: function (ctx, v) {
+    ctx.fillStyle = '#e4ddcb'; ctx.fillRect(3, 2, 10, 7);                  // un drap punaisé, qui pend
+    ctx.fillStyle = '#cfc6b0'; ctx.fillRect(5, 2, 1, 7); ctx.fillRect(10, 2, 1, 6); ctx.fillRect(3, 8, 10, 1);
+    ctx.fillStyle = '#6a6a70'; ctx.fillRect(3, 2, 1, 1); ctx.fillRect(12, 2, 1, 1);   // les punaises
+    if ((v >> 4) % 2) { ctx.fillStyle = '#7d8c96'; ctx.fillRect(9, 10, 1, 1); ctx.fillRect(10, 11, 1, 1); ctx.fillRect(11, 10, 1, 1); }   // la vitre fêlée
+  } };
+  const HABIT_COSSU = { cadre: '#f2ece0', peindre: function (ctx) {
+    ctx.fillStyle = '#6e1f2a'; ctx.fillRect(1, 1, 3, 14); ctx.fillRect(12, 1, 3, 14);   // les tentures, jusqu'au sol
+    ctx.fillStyle = '#8a2a36'; ctx.fillRect(2, 1, 1, 14); ctx.fillRect(13, 1, 1, 14);
+    ctx.fillStyle = '#d4b25a'; ctx.fillRect(1, 9, 3, 1); ctx.fillRect(12, 9, 3, 1);     // leurs embrases d'or
+    ctx.fillStyle = '#6e1f2a'; ctx.fillRect(1, 1, 14, 2);                               // la cantonnière
+    ctx.fillStyle = '#d4b25a'; ctx.fillRect(1, 3, 14, 1);
+  } };
+  const HABIT_VILLA = { cadre: '#ffffff', peindre: function (ctx, v, T) {
+    ctx.fillStyle = '#c9a24a'; ctx.fillRect(1, 1, 3, 14); ctx.fillRect(12, 1, 3, 14);   // les tentures d'or
+    ctx.fillStyle = '#e0bd62'; ctx.fillRect(2, 1, 1, 14); ctx.fillRect(13, 1, 1, 14);
+    ctx.fillStyle = '#8a6a2a'; ctx.fillRect(1, 10, 3, 1); ctx.fillRect(12, 10, 3, 1);
+    ctx.fillStyle = '#5a4a3a'; ctx.fillRect(0, 0, T, 1);                               // la tringle, de bout en bout
+  } };
+
+  /** Le lit d'un logement, dans son habit (`s`) : le cadre (ou rien : le matelas par terre), la couverture. */
+  function litDuLogement(ctx, v, T, s) {
+    const nord = !(v & 1), est = !(v & 2), sud = !(v & 4), ouest = !(v & 8);
+    const x0 = ouest ? 1 : 0, x1 = est ? T - 1 : T, y0 = nord ? 1 : 0, y1 = sud ? T - 1 : T;
+    if (sud) { ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(x0, T - 1, x1 - x0, 1); }
+    if (s.cadre) { ctx.fillStyle = s.cadre; ctx.fillRect(x0, y0, x1 - x0, y1 - y0); }
+    const b = s.cadre ? 2 : 1, mx0 = ouest ? b : 0, mx1 = est ? T - b : T;
+    const my0 = nord ? (s.cadre ? 3 : 2) : 0, my1 = sud ? T - b : T;
+    ctx.fillStyle = s.matelas; ctx.fillRect(mx0, my0, mx1 - mx0, my1 - my0);
+    if (nord) {
+      const ox0 = ouest ? 3 : 0, ox1 = est ? T - 3 : T;
+      ctx.fillStyle = s.oreiller; ctx.fillRect(ox0, 4, ox1 - ox0, 4);
+      ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(ox0, 7, ox1 - ox0, 1);
+      ctx.fillStyle = s.drap; ctx.fillRect(mx0, 9, mx1 - mx0, 2);
+    }
+    const cy0 = nord ? 11 : 0, cy1 = sud ? T - 3 : T;
+    ctx.fillStyle = s.couverture; ctx.fillRect(mx0, cy0, mx1 - mx0, cy1 - cy0);
+    ctx.fillStyle = s.pique; for (let y = nord ? 14 : 2; y < cy1; y += 4) ctx.fillRect(mx0, y, mx1 - mx0, 1);
+    if (sud) { ctx.fillStyle = s.ourlet; ctx.fillRect(mx0, T - 3, mx1 - mx0, 1); }
+  }
+  const LIT_PAUVRE = { cadre: null, matelas: '#c9bfa4', oreiller: '#d8d0bc', drap: '#cfc7b2', couverture: '#6e6c66', pique: '#5e5c57', ourlet: '#4e4c48' };
+  const LIT_COSSU = { cadre: '#3a2418', matelas: '#efe8da', oreiller: '#fbf7ee', drap: '#fbf7ee', couverture: '#7a2430', pique: '#a8323f', ourlet: '#d4b25a' };
+  const LIT_VILLA = { cadre: '#e8e2d2', matelas: '#fbf7ee', oreiller: '#ffffff', drap: '#ffffff', couverture: '#e8dcc0', pique: '#c9a24a', ourlet: '#c9a24a' };
 
   function mursDePlanches(ctx, v, T) {
     for (let x = 0; x < T; x += 4) {
@@ -4240,6 +4332,63 @@ const TUILES = (function () {
       ctx.fillStyle = '#5e3e24'; ctx.fillRect(4, 9, 8, 1);
       ctx.fillStyle = '#d8b83a'; ctx.fillRect(10, 10, 1, 2);    // la poignée
     },
+    // L'HABIT DU LOGEMENT (des intérieurs fidèles à l'extérieur, vague 2) : `Monde.materiauxDuLogement`.
+    'B@logement_pauvre': function (ctx, v, T) { murPauvre(ctx, v, T); },
+    'W@logement_pauvre': function (ctx, v, T) { fenetreDeDedans(ctx, v, T, murPauvre, HABIT_PAUVRE); },
+    'D@logement_pauvre': function (ctx, v, T) {
+      murPauvre(ctx, v, T);
+      ctx.fillStyle = '#b3a988'; ctx.fillRect(3, 2, 10, 14);    // le chambranle, jamais repeint
+      ctx.fillStyle = '#6b5a48'; ctx.fillRect(4, 3, 8, 13);     // une porte plane, éraflée
+      ctx.fillStyle = '#5a4a3a'; ctx.fillRect(5, 6, 3, 1); ctx.fillRect(7, 11, 4, 1);
+      ctx.fillStyle = '#9a9a9e'; ctx.fillRect(10, 6, 1, 4); ctx.fillRect(9, 9, 2, 1);   // la chaîne de sûreté
+      ctx.fillStyle = '#8a8a8e'; ctx.fillRect(10, 11, 1, 2);
+    },
+    't@logement_pauvre': function (ctx, v, T) {
+      plein(ctx, '#8e8878', T);                                 // des planches grises, usées
+      ctx.fillStyle = '#6e695c'; for (let y = (v % 2) * 4; y < T; y += 8) ctx.fillRect(0, y, T, 1);
+      points(ctx, v, T, '#7e7868', 8, 30);
+      if (v % 13 === 5) { ctx.fillStyle = '#2e2a24'; ctx.fillRect(3, ((v % 2) * 4) + 1, 9, 2); }   // un bout de planche qui manque
+    },
+    'l@logement_pauvre': function (ctx, v, T) { litDuLogement(ctx, v, T, LIT_PAUVRE); },
+    'B@logement_cossu': function (ctx, v, T) { murCossu(ctx, v, T); },
+    'W@logement_cossu': function (ctx, v, T) { fenetreDeDedans(ctx, v, T, murCossu, HABIT_COSSU); },
+    'D@logement_cossu': function (ctx, v, T) {
+      murCossu(ctx, v, T);
+      ctx.fillStyle = '#f2ece0'; ctx.fillRect(3, 1, 10, 15);    // le chambranle mouluré
+      ctx.fillStyle = '#5a3422'; ctx.fillRect(4, 2, 8, 14);     // l'acajou
+      ctx.fillStyle = '#6e4430'; ctx.fillRect(5, 3, 6, 5); ctx.fillRect(5, 9, 6, 6);
+      ctx.fillStyle = '#4a2a1a'; ctx.fillRect(5, 3, 6, 1); ctx.fillRect(5, 9, 6, 1);
+      ctx.fillStyle = '#d4b25a'; ctx.fillRect(10, 9, 1, 2);     // la poignée de laiton
+    },
+    't@logement_cossu': function (ctx, v, T) {
+      plein(ctx, '#8a5a36', T);                                 // le parquet à chevrons
+      for (let y = 0; y < T; y += 4) {
+        for (let x = 0; x < T; x += 8) {
+          ctx.fillStyle = ((x + y) / 4) % 2 ? '#9a6a42' : '#7e5030';
+          ctx.fillRect(x + (y % 8 ? 4 : 0), y, 4, 4);
+        }
+      }
+      ctx.fillStyle = 'rgba(0,0,0,0.18)'; for (let y = 3; y < T; y += 4) ctx.fillRect(0, y, T, 1);
+    },
+    'l@logement_cossu': function (ctx, v, T) { litDuLogement(ctx, v, T, LIT_COSSU); },
+    'B@villa': function (ctx, v, T) { murVilla(ctx, v, T); },
+    'W@villa': function (ctx, v, T) { fenetreDeDedans(ctx, v, T, murVilla, HABIT_VILLA); },
+    'D@villa': function (ctx, v, T) {
+      murVilla(ctx, v, T);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(2, 1, 12, 15);    // la porte double, blanche, à panneaux
+      ctx.fillStyle = '#ece8dc'; ctx.fillRect(3, 2, 4, 13); ctx.fillRect(9, 2, 4, 13);
+      ctx.fillStyle = '#c9c6b8'; ctx.fillRect(8, 2, 1, 14);
+      ctx.fillStyle = '#d4b25a'; ctx.fillRect(7, 9, 1, 2); ctx.fillRect(9, 9, 1, 2);
+    },
+    't@villa': function (ctx, v, T) {
+      plein(ctx, '#f1efe8', T);                                 // le marbre, en damier, veiné
+      ctx.fillStyle = '#2e2e32'; ctx.fillRect(0, 0, 8, 8); ctx.fillRect(8, 8, 8, 8);
+      ctx.fillStyle = '#e0ded6'; ctx.fillRect(9 + (v % 4), 2, 1, 2); ctx.fillRect(10 + (v % 4), 4, 1, 2);   // les veines, fines
+      ctx.fillStyle = '#dcdad2'; ctx.fillRect(2 + (v % 3), 10, 1, 2); ctx.fillRect(3 + (v % 3), 12, 1, 2);
+      ctx.fillStyle = '#3a3a40'; ctx.fillRect(2 + (v % 4), 2, 1, 3); ctx.fillRect(10, 11 + (v % 3), 2, 1);
+      ctx.fillStyle = 'rgba(0,0,0,0.10)'; ctx.fillRect(0, 7, T, 1); ctx.fillRect(7, 0, 1, T);
+    },
+    'l@villa': function (ctx, v, T) { litDuLogement(ctx, v, T, LIT_VILLA); },
     /* --- La cave du tripot, sous le Dragon d'or (29 sept. 2026) ----------------------------
        Martin : un tripot, pas un bureau. Les memes glyphes (`tripot.PIECE`), repeints par les
        `materiaux` de la piece : le mur de fondation en pierre des champs, le plancher de beton,

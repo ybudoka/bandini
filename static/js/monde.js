@@ -393,6 +393,25 @@ const Monde = (function () {
   const MATERIAUX_DE_PIECE = Object.freeze({ B: 'piece', W: 'piece', D: 'piece' });
   const MURS_DE_PIECE = 'BWD';
 
+  //: L'HABIT D'UN LOGEMENT (des intérieurs fidèles à l'extérieur, vague 2) : ses murs, sa fenêtre, sa porte, son
+  //: plancher et son lit, selon ce qu'on a vu DEHORS — le logement ordinaire garde le plâtre de toutes les pièces.
+  function habitDe(m) { return Object.freeze({ B: m, W: m, D: m, t: m, l: m }); }
+  const HABITS_DE_LOGEMENT = Object.freeze({ pauvre: habitDe('logement_pauvre'), cossu: habitDe('logement_cossu'),
+                                             villa: habitDe('villa') });
+
+  /** L'habit du logement derrière cette porte : le standing (et la villa) de la RÉSIDENCE dont elle est la porte —
+      son standing final, lu dehors, jamais tiré. `null` : ce n'est pas un logement, ou il est ordinaire. ⚠️ Un
+      étage (`changerPiece`) rentre par la même porte : il porte le même habit. */
+  function materiauxDuLogement(porte, piece) {
+    if (!piece || piece.porte !== 'maison' || !carte || !carte.def) return null;
+    const r = (carte.def.residences || []).find(function (q) {
+      return q.y === porte.y && porte.x >= q.x && porte.x < q.x + q.l;
+    });
+    if (!r) return null;
+    return r.villa ? HABITS_DE_LOGEMENT.villa : r.standing === '-' ? HABITS_DE_LOGEMENT.pauvre
+      : r.standing === '+' ? HABITS_DE_LOGEMENT.cossu : null;
+  }
+
   /** Entre dans une piece : on garde la ville de cote et on charge la petite
       carte ASCII de l'interieur (meme legende, aucune voie, aucune lampe). */
   function entrer(porte) {
@@ -411,7 +430,7 @@ const Monde = (function () {
       // `charger` les range comme ceux d'une carte de bloc, et le même peintre les lit.
       // ⚠️ Et sinon, LES MURS D'UNE PIÈCE (`MATERIAUX_DE_PIECE`) : un seul mur de plâtre, la porte et les
       // fenêtres peintes dessus, vues de dedans — plus la brique de la façade ni la tôle d'un toit.
-      materiaux: inte.materiaux || MATERIAUX_DE_PIECE,
+      materiaux: inte.materiaux || materiauxDuLogement(porte, commune) || MATERIAUX_DE_PIECE,
       voie: inte.sol.map(function (l) { return '.'.repeat(l.length); }), legende: ville.legende,
       portes: [{ x: inte.sortie.x, y: inte.sortie.y, interieur: null, lieu: 'sortie' }],
       lampes: [], decor: [], zones: [], points_interet: [], intersections: [], arrets: {},
@@ -3221,7 +3240,7 @@ const Monde = (function () {
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
     dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau, sousLeToit, cacheSousLeToit, abrite,
     barrieresCoulissantes, majBarrieresCoulissantes, dessinerBarrieresCoulissantes, COULISSE_GLISSE, COULISSE_TIENT,
-estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, teinteDeToit, teintesDesToits, formeDeToit, formeDuToit, objetsDesToits, lampesDesLucarnes, logementElargi, sousLesEtages, etagesDuCommerce, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
+materiauxDuLogement, estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, teinteDeToit, teintesDesToits, formeDeToit, formeDuToit, objetsDesToits, lampesDesLucarnes, logementElargi, sousLesEtages, etagesDuCommerce, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, ambianceVue, aLAbri, estNuit, estNuitVue, periode, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
     miniCarte, couleurMini, couleurMiniA, masqueDeLaCarte, masquee, hauteurConnue, chemin, demanderChemin, majChemins,
