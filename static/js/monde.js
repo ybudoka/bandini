@@ -326,7 +326,8 @@ const Monde = (function () {
         // monte, voir FACADES.enseigne), le mur, et le trottoir sous lui (la
         // pancarte y pend). Sans la premiere, une enseigne assise sur la
         // premiere rangee d'un morceau perdait sa moitie haute a la couture.
-        return [d.x, d.y - 1, d.l, 3];
+        // ⚠️ Et ses etages montent au-dessus de l'enseigne (`etagesDuCommerce`, `ETAGES_MAX` au plus).
+        return [Math.max(0, d.x - MUR_ETENDU), Math.max(0, d.y - 1 - ETAGES_MAX), d.l + 2 * MUR_ETENDU, 3 + ETAGES_MAX];
       }),
       // Les logements : meme regle, l'escalier de fer descend sur le trottoir. ⚠️ Et leur mur va jusqu'au bout
       // du batiment (`murDuBatiment`, `MUR_ETENDU` tuiles au plus de chaque cote) : la boite en tient compte.
@@ -1850,7 +1851,7 @@ const Monde = (function () {
       rouge de la ville, deux materiaux sur le meme mur. On etend donc son mur, de chaque cote, sur les tuiles de
       MUR NU (`F`) de la meme rangee dont le toit, juste au-dessus, est le MEME batiment (`teintesDesToits`) —
       jamais sur une devanture, ni sur un autre logement. Sans un de, sans une donnee de plus. Rend `{ x, l }`. */
-  function murDuBatiment(r) {
+  function murDuBatiment(r, aussi) {
     if (r.murEtendu) return r.murEtendu;
     const t = teintesDesToits(), w = carte.w, prises = tuilesDeFacade();
     const batiment = function (x) { return x >= 0 && x < w && r.y > 0 ? t.qui[(r.y - 1) * w + x] : -1; };
@@ -1858,7 +1859,8 @@ const Monde = (function () {
     let x0 = r.x, x1 = r.x + r.l - 1;
     const libre = function (x) {
       const g = carte.sol[r.y][x];
-      return lui >= 0 && batiment(x) === lui && (g === 'F' || g === 'W') && !prises.has(x + ',' + r.y);
+      return lui >= 0 && batiment(x) === lui && (g === 'F' || g === 'W') && !prises.has(x + ',' + r.y)
+        && !(aussi && aussi.has(x + ',' + r.y));
     };
     if (r.declin == null) {
       while (x0 > r.x - MUR_ETENDU && libre(x0 - 1)) x0--;
@@ -1903,6 +1905,40 @@ const Monde = (function () {
     return r.elargi;
   }
 
+  /** Les etages d'un COMMERCE (des etages pour vrai, vague 1) : deux ou trois etages en tout (a l'empreinte de sa
+      devanture, sans un de), dont les logements montent au-dessus de la rangee de l'enseigne — et jamais tout le
+      toit : il en reste une rangee, a chaque colonne. Rend le nombre de rangees d'etages (0 : aucune). */
+  function etagesDuCommerce(d) {
+    if (d.hauts !== undefined) return d.hauts;
+    const t = teintesDesToits(), w = carte.w;
+    // Son mur va au bout de son batiment, comme celui d'un logement — sans prendre ce qu'un logement voisin a pris.
+    const m = murDuBatiment({ x: d.x, y: d.y, l: d.l }, murDesLogements());
+    d.murX = m.x; d.murL = m.l;
+    let profondeur = 99;
+    for (let i = 0; i < m.l; i++) {
+      const x = m.x + i, lui = d.y > 0 ? t.qui[(d.y - 1) * w + x] : -1;
+      let p = 0;
+      while (lui >= 0 && d.y - 1 - p >= 0 && t.qui[(d.y - 1 - p) * w + x] === lui) p++;
+      profondeur = Math.min(profondeur, p);
+    }
+    const etages = 2 + (hash2(d.x, d.y) % 2);
+    d.hauts = Math.max(0, Math.min(etages - 1, ETAGES_MAX, profondeur - 2));
+    return d.hauts;
+  }
+
+  /** Les tuiles de facade que les logements ont prises, elargis compris (une fois par carte) : le mur d'un
+      commerce s'arrete devant. */
+  function murDesLogements() {
+    if (carte.murDesLogements) return carte.murDesLogements;
+    const s = new Set();
+    for (const r of ((carte.def && carte.def.residences) || [])) {
+      const e = logementElargi(r);
+      for (let i = 0; i < e.l; i++) s.add((e.x + i) + ',' + r.y);
+    }
+    carte.murDesLogements = s;
+    return s;
+  }
+
   //: Au plus tant d'etages peints au-dessus du rez (la boite de son morceau le sait).
   const ETAGES_MAX = 3;
 
@@ -1914,6 +1950,11 @@ const Monde = (function () {
       for (const r of ((carte.def && carte.def.residences) || [])) {
         const e = logementElargi(r);
         for (let k = 1; k <= e.hauts; k++) for (let i = 0; i < e.l; i++) s.add((e.x + i) + ',' + (r.y - k));
+      }
+      // Et ceux d'un commerce : la rangee de l'enseigne, puis ses etages.
+      for (const d of ((carte.def && carte.def.devantures) || [])) {
+        const h = etagesDuCommerce(d);
+        for (let k = 1; k <= (h ? h + 1 : 0); k++) for (let i = 0; i < d.murL; i++) s.add((d.murX + i) + ',' + (d.y - k));
       }
       carte.sousLesEtages = s;
     }
@@ -2250,6 +2291,9 @@ const Monde = (function () {
     if (devantures && genres.length) {
       devantures.forEach(function (d) {
         const g = genres[d.genre] || genres[0];
+        const hauts = etagesDuCommerce(d);
+        if (hauts) FACADES.etagesDuCommerce(ctx, d, mursDeResidence()[hash2(d.x, d.y + 7) % 3] || mursDeResidence()[0],
+                                            ferDesEscaliers(), (d.murX - ox) * TT, (d.y - oy) * TT, hauts, d.x - d.murX);
         FACADES.devanture(ctx, d, g, (d.x - ox) * TT, (d.y - oy) * TT);
       });
     }
@@ -2947,7 +2991,7 @@ const Monde = (function () {
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
     dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau, sousLeToit, cacheSousLeToit, abrite,
     barrieresCoulissantes, majBarrieresCoulissantes, dessinerBarrieresCoulissantes, COULISSE_GLISSE, COULISSE_TIENT,
-estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, teinteDeToit, teintesDesToits, logementElargi, sousLesEtages, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
+estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, teinteDeToit, teintesDesToits, logementElargi, sousLesEtages, etagesDuCommerce, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, ambianceVue, estNuit, estNuitVue, periode, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
     miniCarte, couleurMini, couleurMiniA, masqueDeLaCarte, masquee, hauteurConnue, chemin, demanderChemin, majChemins,

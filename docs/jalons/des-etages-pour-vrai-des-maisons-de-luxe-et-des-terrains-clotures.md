@@ -62,4 +62,8 @@ Rangées dans `captures/references/` (hors du dépôt) :
 - Ce que le toit porte (une cheminée, une ventilation) ne se peint plus sous un étage (`Monde.sousLesEtages`).
 - Juges `tests/test_facades_js.py` (les étages : quatre mutations, toutes mordent) ; captures regardées (Faubourg,
   Petit-Canton, Quais, Gare).
-- Reste de la vague 1 : **les commerces** (leurs logements au-dessus de la vitrine).
+- **Les commerces** (✅ le même jour) : la rangée au-dessus de la vitrine reste celle de l'enseigne (le mur derrière le
+  panneau), et leurs logements montent à partir de la suivante — deux ou trois étages en tout, à l'empreinte de la
+  devanture (`Monde.etagesDuCommerce`), une rangée de toit toujours visible. Leur mur va au bout de leur bâtiment,
+  comme celui d'un logement, sans prendre ce qu'un logement voisin a pris (`murDesLogements`), et le rez à côté de la
+  vitrine prend le même mur. 129 devantures sur 135 portent des étages.

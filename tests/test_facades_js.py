@@ -188,3 +188,32 @@ def test_les_etages_montent_pour_vrai_et_laissent_un_toit(banc):
     assert r["montes"] >= 100 and r["fenetres"] == r["montes"], r
     assert r.get("hauts", {}).get("2", 0) >= 10, f"presque aucun logement à trois étages visibles : {r['hauts']}"
     assert r["fautes"] == [], r
+
+
+def test_les_commerces_portent_leurs_logements_au_dessus_de_l_enseigne(banc):
+    """Des étages pour vrai (vague 1, les commerces) : au-dessus de la rangée de l'enseigne, les logements du
+    commerce montent sur le toit de SON bâtiment, sur toute la largeur de son mur (sans prendre celui d'un logement
+    voisin), et une rangée de toit reste au-dessus."""
+    r = banc("function (L, o) {" + """
+        const M = L.Monde, c = M.carte, t = M.teintesDesToits(), w = c.w, murs = L.B.defs.devantures.murs;
+        const logements = new Set();
+        for (const q of c.def.residences) { const e = M.logementElargi(q); for (let i = 0; i < e.l; i++) logements.add((e.x + i) + ',' + q.y); }
+        let avec = 0, peints = 0; const fautes = [];
+        for (const d of c.def.devantures) {
+            const h = M.etagesDuCommerce(d);
+            if (!h) continue;
+            avec++;
+            for (let i = 0; i < d.murL; i++) {
+                const x = d.murX + i, lui = t.qui[(d.y - 1) * w + x];
+                for (let k = 1; k <= h + 2; k++) if (t.qui[(d.y - k) * w + x] !== lui) fautes.push(['toit', x, d.y - k]);
+                const dedans = x >= d.x && x < d.x + d.l;
+                if (!dedans && logements.has(x + ',' + d.y)) fautes.push(['logement', x, d.y]);
+            }
+            const ctx = o.doc.createElement('canvas').getContext('2d'); ctx.traces = [];
+            L.FACADES.etagesDuCommerce(ctx, d, murs[0], L.B.defs.devantures.fer, 0, 0, h, d.x - d.murX);
+            if (ctx.traces.some(function (q) { return q[1] < -16 && q[2] === 6 && q[3] === 9; })) peints++;
+        }
+        return { avec: avec, peints: peints, total: c.def.devantures.length, fautes: fautes.slice(0, 5) };
+    }""")
+    assert r["avec"] >= r["total"] * 0.5 and r["peints"] == r["avec"], r
+    assert r["fautes"] == [], r

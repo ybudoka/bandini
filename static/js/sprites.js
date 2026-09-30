@@ -5185,6 +5185,20 @@ const FACADES = (function () {
     }
   }
 
+  /** LES LOGEMENTS AU-DESSUS D'UN COMMERCE (des etages pour vrai, vague 1) : la rangee au-dessus de la vitrine
+      est celle de l'enseigne (le mur derriere le panneau), et les etages montent a partir de la suivante —
+      `hauts` rangees (`Monde.etagesDuCommerce`). Ni porte d'etage ni balcon : on y monte par l'arriere. */
+  function etagesDuCommerce(ctx, d, m, fer, ox, oy, hauts, avant) {
+    // `ox` est le debut de son MUR (`d.murX`, le bout de son batiment) ; la devanture est `avant` tuiles plus loin.
+    const r = { x: d.murX, y: d.y, l: d.murL, porte: -1, escalier: null, standing: d.standing };
+    murDuLogement(ctx, m, ox, oy - T, d.murL * T);
+    // Le rez, a cote de la vitrine : le meme mur (sinon la brique rouge de la tuile y restait, sous des etages jaunes).
+    if (avant) murDuLogement(ctx, m, ox, oy, avant * T);
+    const apres = d.murL - avant - d.l;
+    if (apres > 0) murDuLogement(ctx, m, ox + (avant + d.l) * T, oy, apres * T);
+    for (let k = 1; k <= hauts; k++) etagePlein(ctx, r, m, d.standing === '-' ? FER_ROUILLE : fer, null, ox, oy - (k + 1) * T, k, k === hauts);
+  }
+
   function residence(ctx, r, m, fer, ox, oy, d) {
     const large = r.l * T;
     // ⚠️ Le fer d'un logement pauvre a rouille (3e vague).
@@ -5497,7 +5511,7 @@ const FACADES = (function () {
 
   // Ou la porte d'un logement se peint dans sa tuile (le rez) : le battant qui s'ouvre s'y cale (`Monde.dessinerBattants`).
   const PORTE_DE_LOGEMENT = { y: RDC_Y, h: RDC_H };
-  return { devanture: devanture, residence: residence, PORTE_DE_LOGEMENT: PORTE_DE_LOGEMENT, graffiti: graffiti,
+  return { devanture: devanture, residence: residence, etagesDuCommerce: etagesDuCommerce, PORTE_DE_LOGEMENT: PORTE_DE_LOGEMENT, graffiti: graffiti,
            toiture: toiture, ombreDeMur: ombreDeMur, ombreDeFlanc: ombreDeFlanc, fosseDArbre: fosseDArbre,
            TOITURES: TOITURES, T: T };
 })();
