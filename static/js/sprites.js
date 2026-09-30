@@ -5024,7 +5024,8 @@ const FACADES = (function () {
      et le rez prend le bas de la tuile, la ou le passant marche. */
 
   const CORNICHE_H = 2;
-  const RDC_Y = 11, RDC_H = 5;
+  //: Le rez prend toute sa rangee depuis que les etages montent pour vrai (`etagePlein`) : la porte de 12 px.
+  const RDC_Y = 4, RDC_H = 12;
 
   function fenetre(ctx, m, x, y, l, h) {
     ctx.fillStyle = m.cadre;
@@ -5033,21 +5034,6 @@ const FACADES = (function () {
     ctx.fillRect(x + 1, y + 1, l - 2, h - 2);
     ctx.fillStyle = 'rgba(255,255,255,0.16)';
     ctx.fillRect(x + 1, y + 1, 1, h - 2);
-  }
-
-  /** La rangee de fenetres d'un etage, deux par tuile. ⚠️ Chez les cossus, une seule grande fenetre a battants
-      par tuile, son meneau au milieu (la revue des facades, vague 2). */
-  function etage(ctx, r, m, ox, oy, y, e) {
-    for (let i = 0; i < r.l; i++) {
-      const x = ox + i * T;
-      if (r.standing === '+') {
-        fenetreDuStanding(ctx, r, m, x + 2, y, 12, 3, 2 * i, e || 0);
-        ctx.fillStyle = m.cadre; ctx.fillRect(x + 8, y, 1, 3);                // le meneau
-        continue;
-      }
-      fenetreDuStanding(ctx, r, m, x + 2, y, 5, 3, 2 * i, e || 0);
-      fenetreDuStanding(ctx, r, m, x + 9, y, 5, 3, 2 * i + 1, e || 0);
-    }
   }
 
   //: Les rideaux d'une rue ordinaire : une couleur par logement, tiree a sa place.
@@ -5151,25 +5137,66 @@ const FACADES = (function () {
 
   /** `r` = { x, y, l, etages, motifs, escalier, porte, mur, balcon, declin? } ;
       `d` = son bois a clin (`devantures.DECLINS`), ou rien pour la brique. */
+  /** LES ETAGES POUR VRAI (docs/jalons/des-etages-pour-vrai-des-maisons-de-luxe-et-des-terrains-clotures.md,
+      vague 1). Martin, 30 sept. 2026 : « les maisons et batiments doivent avoir vraiment plusieurs etages,
+      presentement seulement un etage avec une compression de fenetres ». Un etage = UNE RANGEE de tuiles, peinte
+      sur le bas du toit de son batiment (vue de trois quarts, comme les jeux vus de dessus) ; `r.hauts` dit
+      combien (`Monde.logementElargi` : une rangee de toit reste toujours visible). ⚠️ Rien ne bouge : c'est du
+      dessin — les tuiles, les collisions et la ville restent les memes.
+
+      Le triplex d'ici (la reference : un triplex de la Petite-Patrie, captures/references/) : une fenetre haute
+      par travee, son linteau et son appui ; a la travee de la porte, une porte d'etage et son balcon de fer ; un
+      cordon de pierre entre les etages ; la corniche en haut — ornee, et son fronton, chez les cossus. */
+  function etagePlein(ctx, r, m, fer, d, ox, y, k, dernier) {
+    const large = r.l * T;
+    if (d) declin(ctx, d, ox, y, large); else murDuLogement(ctx, m, ox, y, large);
+    ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(ox, y + T - 1, large, 1);          // le cordon, en bas
+    ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(ox, y + T - 2, large, 1);
+    for (let i = 0; i < r.l; i++) {
+      const x = ox + i * T;
+      if (i === r.porte && r.escalier !== null) {                                    // la porte d'etage, son balcon
+        ctx.fillStyle = 'rgba(0,0,0,0.40)'; ctx.fillRect(x + 4, y + 2, 8, 12);
+        ctx.fillStyle = m.porte; ctx.fillRect(x + 5, y + 3, 6, 11);
+        ctx.fillStyle = m.vitre; ctx.fillRect(x + 6, y + 4, 4, 4);
+        balcon(ctx, fer, x + 1, y, T - 2, 10);
+        continue;
+      }
+      ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.fillRect(x + 4, y + 2, 8, 1);      // le linteau
+      if (r.standing === '+') { ctx.fillStyle = m.cadre; ctx.fillRect(x + 7, y + 1, 2, 1); }   // sa cle de voute
+      fenetreDuStanding(ctx, r, m, x + 5, y + 3, 6, 9, i, 20 + k);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(x + 4, y + 12, 8, 1);          // l'appui
+    }
+    if (dernier) corniche(ctx, r, m, ox, y, large, true);
+  }
+
+  /** La corniche : son ombre et son joint ; chez les cossus, la moulure et ses denticules — et, sur le dernier
+      etage d'un logement a etages, le fronton au milieu (la reference : le fronton orne du triplex). */
+  function corniche(ctx, r, m, ox, y, large, fronton) {
+    ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(ox, y, large, CORNICHE_H);
+    ctx.fillStyle = m.joint; ctx.fillRect(ox, y, large, 1);
+    if (r.standing !== '+') return;
+    ctx.fillStyle = m.cadre;
+    ctx.fillRect(ox, y, large, 1);
+    for (let x = 1; x < large; x += 3) ctx.fillRect(ox + x, y + 1, 1, 1);
+    if (fronton && large >= 3 * T) {
+      const cx = ox + Math.floor(large / 2);
+      ctx.fillRect(cx - 5, y + 1, 10, 1); ctx.fillRect(cx - 3, y, 6, 1);
+      ctx.fillStyle = m.joint; ctx.fillRect(cx - 1, y + 1, 2, 1);
+    }
+  }
+
   function residence(ctx, r, m, fer, ox, oy, d) {
     const large = r.l * T;
-    if (d) declin(ctx, d, ox, oy, large);
-    else murDuLogement(ctx, m, ox, oy, large);
-    ctx.fillStyle = 'rgba(0,0,0,0.22)';                   // l'ombre de la corniche
-    ctx.fillRect(ox, oy, large, CORNICHE_H);
-    ctx.fillStyle = m.joint;
-    ctx.fillRect(ox, oy, large, 1);
-    if (r.standing === '+') {                             // la corniche ornee : la moulure, et ses denticules
-      ctx.fillStyle = m.cadre;
-      ctx.fillRect(ox, oy, large, 1);
-      for (let x = 1; x < large; x += 3) ctx.fillRect(ox + x, oy + 1, 1, 1);
-    }
-
     // ⚠️ Le fer d'un logement pauvre a rouille (3e vague).
     const ferDuLogement = r.standing === '-' ? FER_ROUILLE : fer;
-    const hauts = Math.max(0, r.etages - 1);
-    for (let e = 0; e < hauts; e++) etage(ctx, r, m, ox, oy, oy + 2 + e * 4, e);
-    if (r.balcon && hauts) balcon(ctx, ferDuLogement, ox, oy, large, 2 + (hauts - 1) * 4 + 3);
+    // Les etages au-dessus du rez, sur les rangees de toit de son batiment (`r.hauts`, `Monde.logementElargi`).
+    const hauts = r.hauts || 0;
+    for (let k = 1; k <= hauts; k++) etagePlein(ctx, r, m, ferDuLogement, d, ox, oy - k * T, k, k === hauts);
+
+    if (d) declin(ctx, d, ox, oy, large);
+    else murDuLogement(ctx, m, ox, oy, large);
+    if (!hauts) corniche(ctx, r, m, ox, oy, large, false);                 // un logement d'un etage : le toit tout de suite
+    else { ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(ox, oy, large, 1); }
 
     const motifs = r.motifs || '';
     for (let i = 0; i < r.l; i++) {
@@ -5184,7 +5211,9 @@ const FACADES = (function () {
           ctx.fillStyle = '#6a6e78'; ctx.fillRect(x + T - 2, oy + RDC_Y + 1, 2, 1);
         }
       } else {
-        fenetreDuStanding(ctx, r, m, x + 3, oy + RDC_Y + 1, 10, 4, i, 9);
+        ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(x + 2, oy + RDC_Y, 12, 1);   // le linteau
+        fenetreDuStanding(ctx, r, m, x + 3, oy + RDC_Y + 1, 10, 8, i, 9);
+        ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(x + 2, oy + RDC_Y + 9, 12, 1);     // l'appui
         ctx.fillStyle = 'rgba(0,0,0,0.18)';               // le soubassement
         ctx.fillRect(x, oy + T - 1, T, 1);
       }

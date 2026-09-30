@@ -331,7 +331,8 @@ const Monde = (function () {
       // Les logements : meme regle, l'escalier de fer descend sur le trottoir. ⚠️ Et leur mur va jusqu'au bout
       // du batiment (`murDuBatiment`, `MUR_ETENDU` tuiles au plus de chaque cote) : la boite en tient compte.
       residences: indexerParMorceau(def.residences || [], function (r) {
-        return [Math.max(0, r.x - MUR_ETENDU), r.y, r.l + 2 * MUR_ETENDU, 2];
+        // ⚠️ Et ses etages montent sur les rangees de toit au-dessus (`logementElargi`, `ETAGES_MAX` au plus).
+        return [Math.max(0, r.x - MUR_ETENDU), Math.max(0, r.y - ETAGES_MAX), r.l + 2 * MUR_ETENDU, 2 + ETAGES_MAX];
       }),
       // ⚠️ LA FOSSE D'UN ARBRE DE RUE. Demande de Martin : « les arbres qui
       // sont sur un trottoir doivent avoir un petit rond de terre à leur
@@ -1887,8 +1888,36 @@ const Monde = (function () {
       }
       if (g.some(Boolean)) e.galerie = g;
     }
+    // LES ETAGES POUR VRAI : combien de rangees de toit, au-dessus, se peignent en etages. Autant que le logement en
+    // a de plus que le rez, et jamais tout le toit — une rangee de toit reste visible, a chaque colonne de sa facade
+    // (sinon un batiment peu profond n'aurait plus de dessus).
+    let profondeur = 99;
+    for (let i = 0; i < e.l; i++) {
+      const x = e.x + i, lui = x >= 0 && r.y > 0 ? teintesDesToits().qui[(r.y - 1) * carte.w + x] : -1;
+      let p = 0;
+      while (lui >= 0 && r.y - 1 - p >= 0 && teintesDesToits().qui[(r.y - 1 - p) * carte.w + x] === lui) p++;
+      profondeur = Math.min(profondeur, p);
+    }
+    e.hauts = Math.max(0, Math.min(r.etages - 1, ETAGES_MAX, profondeur - 1));
     r.elargi = e;
     return r.elargi;
+  }
+
+  //: Au plus tant d'etages peints au-dessus du rez (la boite de son morceau le sait).
+  const ETAGES_MAX = 3;
+
+  /** Cette tuile de toit est-elle couverte par les etages d'un logement ? (Ce que le toit PORTE — une cheminee,
+      une ventilation — ne s'y peint plus.) Une fois par carte. */
+  function sousLesEtages(tx, ty) {
+    if (!carte.sousLesEtages) {
+      const s = new Set();
+      for (const r of ((carte.def && carte.def.residences) || [])) {
+        const e = logementElargi(r);
+        for (let k = 1; k <= e.hauts; k++) for (let i = 0; i < e.l; i++) s.add((e.x + i) + ',' + (r.y - k));
+      }
+      carte.sousLesEtages = s;
+    }
+    return carte.sousLesEtages.has(tx + ',' + ty);
   }
 
   /** Les tuiles deja couvertes par une devanture ou un logement (une fois par carte). */
@@ -2242,7 +2271,7 @@ const Monde = (function () {
     const toits = carte.toits && carte.toits.get(cle);
     if (toits) {
       toits.forEach(function (t) {
-        if (!Chantiers.efface(t.x, t.y)) FACADES.toiture(ctx, t, (t.x - ox) * TT, (t.y - oy) * TT);
+        if (!Chantiers.efface(t.x, t.y) && !sousLesEtages(t.x, t.y)) FACADES.toiture(ctx, t, (t.x - ox) * TT, (t.y - oy) * TT);
       });
     }
     const tags = carte.graffitis && carte.graffitis.get(cle);
@@ -2918,7 +2947,7 @@ const Monde = (function () {
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
     dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau, sousLeToit, cacheSousLeToit, abrite,
     barrieresCoulissantes, majBarrieresCoulissantes, dessinerBarrieresCoulissantes, COULISSE_GLISSE, COULISSE_TIENT,
-estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, teinteDeToit, teintesDesToits, logementElargi, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
+estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, teinteDeToit, teintesDesToits, logementElargi, sousLesEtages, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, ambianceVue, estNuit, estNuitVue, periode, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
     miniCarte, couleurMini, couleurMiniA, masqueDeLaCarte, masquee, hauteurConnue, chemin, demanderChemin, majChemins,

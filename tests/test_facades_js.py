@@ -6,7 +6,7 @@ PEINDRE = """
   function peindre(L, o, r) {
     const def = L.B.defs, murs = def.devantures.murs, c = o.doc.createElement('canvas').getContext('2d');
     c.traces = [];
-    L.FACADES.residence(c, r, murs[r.mur % murs.length], def.devantures.fer, 0, 0, null);
+    L.FACADES.residence(c, r.hauts !== undefined ? r : L.Monde.logementElargi(r), murs[r.mur % murs.length], def.devantures.fer, 0, 0, null);
     return c.traces;
   }
 """
@@ -19,7 +19,8 @@ def test_le_mur_tire_se_peint_sur_toute_la_facade(banc):
         for (const r of def.carte.residences) {
             if (r.declin != null) continue;
             const m = murs[r.mur % murs.length], t = peindre(L, o, r);
-            const couvre = t.some(function (q) { return q[4] === m.brique && q[0] === 0 && q[2] === r.l * 16 && q[3] === 16; });
+            const e = L.Monde.logementElargi(r);
+            const couvre = t.some(function (q) { return q[4] === m.brique && q[0] === 0 && q[1] === 0 && q[2] === e.l * 16 && q[3] === 16; });
             out[m.slug] = out[m.slug] || { n: 0, peints: 0 };
             out[m.slug].n++; if (couvre) out[m.slug].peints++;
         }
@@ -112,17 +113,19 @@ def test_les_plex_ont_leur_galerie_jamais_sur_la_chaussee(banc):
 
 
 def test_chaque_standing_a_ses_fenetres(banc):
-    """Vague 2 : le cossu a sa grande fenêtre à battants (12 px, son meneau) et sa corniche ornée, l'ordinaire ses
-    rideaux et sa boîte aux lettres ; le pauvre n'a ni rideau ni boîte."""
+    """Vague 2 : le cossu a sa corniche ornée (ses denticules), l'ordinaire ses rideaux et sa boîte aux lettres ; le
+    pauvre n'a ni rideau ni boîte. (La fenêtre à battants de la vague 2 est devenue une vraie fenêtre d'étage, quand
+    les étages sont montés pour vrai.)"""
     r = banc("function (L, o) {" + PEINDRE + """
         const RIDEAUX = ['#c9a35a', '#b85c4a', '#6f8fa8', '#8fa86f', '#d9c9a8', '#9a7fa8'], BOITE = '#2a2d34';
+        const murs = L.B.defs.devantures.murs;
         const out = { '+': { n: 0, battants: 0, boite: 0 }, '=': { n: 0, rideaux: 0, boite: 0 }, '-': { n: 0, rideaux: 0, boite: 0 } };
         for (const r of L.B.defs.carte.residences) {
             if (r.declin != null) continue;
-            const s = r.standing || '=', t = peindre(L, o, r), o2 = out[s];
+            const s = r.standing || '=', t = peindre(L, o, r), o2 = out[s], m = murs[r.mur % murs.length];
             o2.n++;
-            if (s === '+' && r.etages >= 2 && t.some(function (q) { return q[2] === 12 && q[3] === 3; })) o2.battants++;
-            if (s === '+' && r.etages < 2) o2.battants++;
+            // La corniche ornee du cossu : ses denticules (1 x 1, a la couleur des cadres).
+            if (s === '+' && t.some(function (q) { return q[2] === 1 && q[3] === 1 && q[4] === m.cadre; })) o2.battants++;
             if (s !== '+' && t.some(function (q) { return RIDEAUX.indexOf(q[4]) >= 0; })) o2.rideaux++;
             if (t.some(function (q) { return q[4] === BOITE && q[2] === 2; })) o2.boite++;
         }
@@ -155,3 +158,33 @@ def test_le_battant_d_une_porte_de_logement_reste_dans_le_rez(banc):
     }""")
     assert r["logement"] and min(r["logement"]) >= r["rez"]["y"], r
     assert r["devanture"] and min(r["devanture"]) < r["rez"]["y"], "le témoin : la porte d'une devanture prend la tuile"
+
+
+def test_les_etages_montent_pour_vrai_et_laissent_un_toit(banc):
+    """Des étages pour vrai (vague 1) : un logement de deux ou trois étages peint ses étages sur les rangées de toit
+    de SON bâtiment, une fenêtre pleine taille (6 × 9) par travée — jamais sur un autre bâtiment, et une rangée de
+    toit reste toujours au-dessus. Ce que le toit porte (une cheminée) ne se peint plus sous un étage."""
+    r = banc("function (L, o) {" + PEINDRE + """
+        const M = L.Monde, c = M.carte, t = M.teintesDesToits(), w = c.w;
+        const hauts = {}, fautes = [];
+        let fenetres = 0, montes = 0;
+        for (const r of c.def.residences) {
+            if (r.declin != null) continue;
+            const e = M.logementElargi(r);
+            hauts[e.hauts] = (hauts[e.hauts] || 0) + 1;
+            if (e.hauts > r.etages - 1) fautes.push(['trop', r.x, r.y]);
+            for (let i = 0; i < e.l; i++) {
+                const x = e.x + i, lui = t.qui[(r.y - 1) * w + x];
+                for (let k = 1; k <= e.hauts + 1; k++) if (t.qui[(r.y - k) * w + x] !== lui) fautes.push(['toit', x, r.y - k]);
+            }
+            if (e.hauts) {
+                montes++;
+                if (peindre(L, o, r).some(function (q) { return q[1] < 0 && q[2] === 6 && q[3] === 9; })) fenetres++;
+            }
+        }
+        const toitures = (c.def.toits || []).filter(function (q) { return M.sousLesEtages(q.x, q.y); }).length;
+        return { hauts: hauts, montes: montes, fenetres: fenetres, fautes: fautes.slice(0, 5), toitures: toitures };
+    }""")
+    assert r["montes"] >= 100 and r["fenetres"] == r["montes"], r
+    assert r.get("hauts", {}).get("2", 0) >= 10, f"presque aucun logement à trois étages visibles : {r['hauts']}"
+    assert r["fautes"] == [], r

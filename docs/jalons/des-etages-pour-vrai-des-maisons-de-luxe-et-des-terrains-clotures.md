@@ -31,4 +31,35 @@ un autre bâtiment ni sans laisser de toit ; une clôture n'enferme ni un lieu n
 
 ## Notes
 
-_Rien de livré._
+### Les références (Martin : « regarde sur le net pour des images réalistes »)
+
+Rangées dans `captures/references/` (hors du dépôt) :
+
+- **Un triplex de la Petite-Patrie** (6565, rue Saint-Denis — [Images Montréal](https://imtl.org/montreal/template.php?Montreal=Duplex+et+triplex+typiques&TYPE=13)) :
+  trois étages de brique jaune, une fenêtre haute par travée aux cadres blancs, linteau et appui de pierre, une porte
+  par étage et son petit balcon de fer, l'escalier de fer qui longe la façade, un cordon entre les étages, la
+  corniche de brique et son fronton orné ; devant, une clôture basse de fer. C'est le modèle de la vague 1.
+- **Une rangée de maisons en pierre grise** du centre-ville (même source) : fenêtres cintrées, balcons de bois,
+  escaliers de bois, toit mansardé et lucarnes ornées — pour les maisons de luxe (vague 3).
+- **Une maison derrière un muret de pierre et une grille de fer forgé** ([Unsplash](https://unsplash.com/photos/beautiful-house-behind-a-wrought-iron-fence-and-stone-wall-OlUKIjLQmSM)) :
+  le muret, ses piliers de pierre, la grille à pointes — pour les terrains clôturés (vague 2).
+- **Un jeu de tuiles de ville vu de dessus** ([Modern Building Pixel Art Tileset](https://comshadow.itch.io/modern-building-pixel-art-tileset)) :
+  la façon de faire des jeux vus de dessus — un mince bandeau de toit, et toute la hauteur pour la façade, un
+  étage par rangée, des fenêtres pleine taille.
+
+### Vague 1 — les étages pour vrai, les logements (✅ livrée le 30 sept. 2026)
+
+- **Un étage = une rangée de tuiles** (`etagePlein`, `sprites.js`), peinte sur le bas du toit de SON bâtiment
+  (`Monde.logementElargi`, `e.hauts`) : une fenêtre haute par travée (6 × 9 px), son linteau et son appui (la clé de
+  voûte chez les cossus) ; à la travée de la porte, une porte d'étage et son balcon de fer ; un cordon entre les
+  étages ; la corniche en haut — ornée, avec son fronton, chez les cossus. Le rez prend toute sa rangée : une porte
+  de 12 px (le battant qui s'ouvre s'y cale), des fenêtres de 10 × 8. **Les rangées de fenêtres écrasées de 3 px
+  sont parties.**
+- ⚠️ **Une rangée de toit reste toujours visible** au-dessus : un bâtiment peu profond montre moins d'étages qu'il
+  n'en a (mesure du 30 sept. : 121 logements montrent un étage de plus que le rez, 35 en montrent deux, 21 n'en
+  montrent aucun — des bungalows, et des bâtiments sans toit de matière teinte). Grossir les bâtiments ferait glisser
+  la ville (la mémoire « grossir un lieu garanti déplace la ville ») : c'est du dessin seulement.
+- Ce que le toit porte (une cheminée, une ventilation) ne se peint plus sous un étage (`Monde.sousLesEtages`).
+- Juges `tests/test_facades_js.py` (les étages : quatre mutations, toutes mordent) ; captures regardées (Faubourg,
+  Petit-Canton, Quais, Gare).
+- Reste de la vague 1 : **les commerces** (leurs logements au-dessus de la vitrine).
