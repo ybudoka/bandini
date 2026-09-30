@@ -132,3 +132,26 @@ def test_chaque_standing_a_ses_fenetres(banc):
     assert r["="]["rideaux"] == r["="]["n"] > 0, r
     assert r["-"]["rideaux"] == 0 and r["-"]["boite"] == 0 and r["-"]["n"] > 0, r
     assert r["="]["boite"] > r["="]["n"] * 0.8, r
+
+
+def test_le_battant_d_une_porte_de_logement_reste_dans_le_rez(banc):
+    """Martin (30 sept. 2026) : « les portes qui ouvrent passent souvent par-dessus des fenêtres peintes ». Le battant
+    d'un logement ne prend que la porte du rez (les étages ont leurs fenêtres au-dessus) ; celui d'une devanture, dont
+    la porte monte de l'auvent au trottoir, garde toute la tuile — le témoin."""
+    r = banc("function (L, o) {" + """
+        const M = L.Monde, B = L.B, c = M.carte;
+        const logement = c.def.residences.find(function (q) { return q.motifs[q.porte] === 'D'; });
+        const devanture = c.def.portes.find(function (p) { return !c.def.residences.some(function (q) { return q.x + q.porte === p.x && q.y === p.y; }); });
+        function traces(tx, ty) {
+            M.ouvrirPorte(tx, ty);
+            for (let k = 0; k < 20; k++) M.majBattants();
+            const ctx = o.doc.createElement('canvas').getContext('2d');
+            ctx.traces = [];
+            M.dessinerBattants(ctx, { x: tx * 16 - 100, y: ty * 16 - 100 });
+            return ctx.traces.map(function (q) { return q[1] - 100; });   // le haut de chaque trace, dans la tuile
+        }
+        return { logement: traces(logement.x + logement.porte, logement.y), devanture: traces(devanture.x, devanture.y),
+                 rez: L.FACADES.PORTE_DE_LOGEMENT };
+    }""")
+    assert r["logement"] and min(r["logement"]) >= r["rez"]["y"], r
+    assert r["devanture"] and min(r["devanture"]) < r["rez"]["y"], "le témoin : la porte d'une devanture prend la tuile"

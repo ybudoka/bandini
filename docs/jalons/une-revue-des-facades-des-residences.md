@@ -123,6 +123,14 @@ cours dans une autre session ([des intérieurs fidèles](des-interieurs-fideles-
 - Juges `tests/test_facades_js.py` (six mutations, toutes mordent) ; captures regardées (Faubourg, Petit-Canton
   cossu, Gare).
 
+### Le battant d'une porte de logement (30 sept. 2026, retour de Martin)
+
+« Les portes qui ouvrent passent souvent par-dessus des fenêtres peintes » : le battant qui s'ouvre
+(`Monde.dessinerBattants`) prenait toute la hauteur de la tuile (de y+3 au trottoir), la hauteur d'une porte de
+devanture. Or la porte d'un logement n'est que dans le rez (`FACADES.PORTE_DE_LOGEMENT`, y+11, 5 px) : au-dessus, le
+battant noircissait les fenêtres des étages. Il se cale maintenant sur la porte du rez pour un logement ; une devanture
+garde le sien (le témoin du juge `test_le_battant_d_une_porte_de_logement_reste_dans_le_rez`).
+
 ### Ce qui reste, non retenu pour l'instant
 
 Les bungalows des Érables (un revêtement de banlieue, une porte de garage, un perron) et les maisons du

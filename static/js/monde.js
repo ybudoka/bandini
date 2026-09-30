@@ -1049,6 +1049,16 @@ const Monde = (function () {
 
   /** Le battant, par-dessus le sol : un rectangle sombre qui s'efface en
       s'ouvrant, et le noir de l'interieur derriere. */
+  /** Cette tuile est-elle la porte d'un logement (dans la ville) ? Une fois par carte. */
+  function porteDeLogementA(tx, ty) {
+    if (!carte.portesDeLogement) {
+      const s = new Set();
+      for (const r of ((carte.def && carte.def.residences) || [])) s.add((r.x + r.porte) + ',' + r.y);
+      carte.portesDeLogement = s;
+    }
+    return carte.portesDeLogement.has(tx + ',' + ty);
+  }
+
   function dessinerBattants(ctx, cam) {
     if (!carte || !carte.battants.size) return;
     const cx = Math.round(cam.x), cy = Math.round(cam.y);
@@ -1057,12 +1067,18 @@ const Monde = (function () {
       if (x < -TT || x > VW || y < -TT || y > VH) continue;
       const p = battant(b.x, b.y);
       if (p <= 0) continue;
+      // ⚠️ LA PORTE D'UN LOGEMENT N'EST QUE DANS LE REZ (Martin, 30 sept. 2026 : « les portes qui ouvrent passent
+      // souvent par-dessus des fenetres peintes ») : le battant d'une devanture prend la tuile (sa porte monte de
+      // l'auvent au trottoir), celui d'un logement ne prend que la porte du rez — au-dessus, ce sont les fenetres
+      // des etages.
+      const rez = porteDeLogementA(b.x, b.y) ? FACADES.PORTE_DE_LOGEMENT : null;
+      const hy = rez ? rez.y : 3, hh = rez ? rez.h : 13;
       ctx.fillStyle = '#100c0a';                       // le dedans, dans l'ombre
-      ctx.fillRect(x + 4, y + 3, 8, 13);
+      ctx.fillRect(x + 4, y + hy, 8, hh);
       const reste = Math.max(0, Math.round(8 * (1 - p)));
       if (reste > 0) {
         ctx.fillStyle = '#3d2a1c';
-        ctx.fillRect(x + 4, y + 3, reste, 13);
+        ctx.fillRect(x + 4, y + hy, reste, hh);
       }
       B.stats.rects += 2;
     }

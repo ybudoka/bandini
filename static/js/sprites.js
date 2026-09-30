@@ -5466,7 +5466,9 @@ const FACADES = (function () {
     ctx.fillRect(ox, oy + 8, T, 2);
   }
 
-  return { devanture: devanture, residence: residence, graffiti: graffiti,
+  // Ou la porte d'un logement se peint dans sa tuile (le rez) : le battant qui s'ouvre s'y cale (`Monde.dessinerBattants`).
+  const PORTE_DE_LOGEMENT = { y: RDC_Y, h: RDC_H };
+  return { devanture: devanture, residence: residence, PORTE_DE_LOGEMENT: PORTE_DE_LOGEMENT, graffiti: graffiti,
            toiture: toiture, ombreDeMur: ombreDeMur, ombreDeFlanc: ombreDeFlanc, fosseDArbre: fosseDArbre,
            TOITURES: TOITURES, T: T };
 })();
