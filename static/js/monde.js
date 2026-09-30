@@ -1857,10 +1857,21 @@ const Monde = (function () {
   function logementElargi(r) {
     if (r.elargi) return r.elargi;
     const m = murDuBatiment(r), avant = r.x - m.x, apres = m.l - avant - r.l;
-    r.elargi = avant || apres
+    const e = avant || apres
       ? Object.assign({}, r, { x: m.x, l: m.l, porte: r.porte + avant,
                                motifs: 'F'.repeat(avant) + (r.motifs || '') + 'F'.repeat(apres) })
-      : r;
+      : Object.assign({}, r);
+    // LA GALERIE d'un plex (la revue des facades, vague 2) : sur la tuile du devant, tuile par tuile, la ou ce n'est
+    // ni la chaussee, ni l'eau, ni un mur — jamais sur une maison de pecheur.
+    if (r.etages >= 2 && r.declin == null && r.y + 1 < carte.h) {
+      const g = [];
+      for (let i = 0; i < e.l; i++) {
+        const x = e.x + i, y = r.y + 1;
+        g.push(!estRoute(x, y) && !estEau(x, y) && solidite(x, y) === 0);
+      }
+      if (g.some(Boolean)) e.galerie = g;
+    }
+    r.elargi = e;
     return r.elargi;
   }
 

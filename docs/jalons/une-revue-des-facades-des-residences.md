@@ -108,3 +108,22 @@ cours dans une autre session ([des intérieurs fidèles](des-interieurs-fideles-
   porte peinte). Aucune tuile ne change (`d` reste une porte condamnée pour le jeu).
 - Juges `tests/test_facades_js.py` (six mutations, toutes mordent) ; captures regardées (Quais, Petit-Canton,
   Érables).
+
+### Vague 2 — les galeries et les fenêtres (✅ livrée le 30 sept. 2026)
+
+- **La galerie** d'un plex (deux étages et plus), vue d'en haut : un plancher de 5 px sur la tuile du devant, sa
+  rampe et ses poteaux, tuile par tuile là où ce n'est ni la chaussée, ni l'eau, ni un mur (`logementElargi`,
+  `r.galerie`) — peinte en blanc chez les cossus, en bois brun ailleurs, la rampe de fer si le logement a un balcon
+  de fer (rouillée en rue pauvre). L'escalier en descend. Pas de galerie devant un bungalow ni une maison de
+  pêcheur. ⚠️ Dans la ville livrée, aucun logement ne donne sur la chaussée : un logement fictif, devant une rue,
+  tient la règle au juge.
+- **Les fenêtres par standing** : chez les cossus, une grande fenêtre à battants par tuile (son meneau au
+  milieu) et une **corniche ornée** (la moulure et ses denticules) ; l'ordinaire a ses **rideaux** (une couleur
+  par logement) et une **boîte aux lettres** à côté de la porte ; le pauvre garde ses planches et ses draps.
+- Juges `tests/test_facades_js.py` (six mutations, toutes mordent) ; captures regardées (Faubourg, Petit-Canton
+  cossu, Gare).
+
+### Ce qui reste, non retenu pour l'instant
+
+Les bungalows des Érables (un revêtement de banlieue, une porte de garage, un perron) et les maisons du
+Petit-Canton (lanternes, linge, couleurs du quartier) : à reprendre si Martin les veut.

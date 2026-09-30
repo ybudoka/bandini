@@ -5035,14 +5035,23 @@ const FACADES = (function () {
     ctx.fillRect(x + 1, y + 1, 1, h - 2);
   }
 
-  /** La rangee de fenetres d'un etage, deux par tuile. */
+  /** La rangee de fenetres d'un etage, deux par tuile. ⚠️ Chez les cossus, une seule grande fenetre a battants
+      par tuile, son meneau au milieu (la revue des facades, vague 2). */
   function etage(ctx, r, m, ox, oy, y, e) {
     for (let i = 0; i < r.l; i++) {
       const x = ox + i * T;
+      if (r.standing === '+') {
+        fenetreDuStanding(ctx, r, m, x + 2, y, 12, 3, 2 * i, e || 0);
+        ctx.fillStyle = m.cadre; ctx.fillRect(x + 8, y, 1, 3);                // le meneau
+        continue;
+      }
       fenetreDuStanding(ctx, r, m, x + 2, y, 5, 3, 2 * i, e || 0);
       fenetreDuStanding(ctx, r, m, x + 9, y, 5, 3, 2 * i + 1, e || 0);
     }
   }
+
+  //: Les rideaux d'une rue ordinaire : une couleur par logement, tiree a sa place.
+  const RIDEAUX = ['#c9a35a', '#b85c4a', '#6f8fa8', '#8fa86f', '#d9c9a8', '#9a7fa8'];
 
   /** Le garde-corps du balcon : des barreaux et une main courante. */
   function balcon(ctx, fer, ox, oy, large, y) {
@@ -5150,6 +5159,11 @@ const FACADES = (function () {
     ctx.fillRect(ox, oy, large, CORNICHE_H);
     ctx.fillStyle = m.joint;
     ctx.fillRect(ox, oy, large, 1);
+    if (r.standing === '+') {                             // la corniche ornee : la moulure, et ses denticules
+      ctx.fillStyle = m.cadre;
+      ctx.fillRect(ox, oy, large, 1);
+      for (let x = 1; x < large; x += 3) ctx.fillRect(ox + x, oy + 1, 1, 1);
+    }
 
     // ⚠️ Le fer d'un logement pauvre a rouille (3e vague).
     const ferDuLogement = r.standing === '-' ? FER_ROUILLE : fer;
@@ -5165,14 +5179,43 @@ const FACADES = (function () {
       const quoi = motifs[i] === 'd' && r.standing !== '-' ? 'P' : (motifs[i] || 'F');
       if (quoi === 'D' || quoi === 'd' || quoi === 'P' || quoi === 'G') {
         porteDeLogement(ctx, m, ferDuLogement, x, oy + RDC_Y, RDC_H, quoi);
+        if (r.standing !== '-' && quoi !== 'G') {           // la boite aux lettres, a cote de la porte
+          ctx.fillStyle = '#2a2d34'; ctx.fillRect(x + T - 2, oy + RDC_Y + 1, 2, 2);
+          ctx.fillStyle = '#6a6e78'; ctx.fillRect(x + T - 2, oy + RDC_Y + 1, 2, 1);
+        }
       } else {
         fenetreDuStanding(ctx, r, m, x + 3, oy + RDC_Y + 1, 10, 4, i, 9);
         ctx.fillStyle = 'rgba(0,0,0,0.18)';               // le soubassement
         ctx.fillRect(x, oy + T - 1, T, 1);
       }
     }
+    // LA GALERIE (la revue des facades, vague 2) : ce qui fait un plex d'ici, vu d'en haut — un plancher devant la
+    // facade, sa rampe et ses poteaux, sur la tuile du devant (`r.galerie` : `Monde.logementElargi` dit ou ce
+    // n'est pas la chaussee). L'escalier en descend.
+    if (r.galerie) galerie(ctx, r, ferDuLogement, ox, oy + T);
     // ⚠️ `escalier: null` : une maison de pecheur n'a pas d'escalier de fer.
     if (r.etages >= 2 && r.escalier !== null) escalier(ctx, ferDuLogement, ox + r.porte * T, oy + T, r.escalier);
+  }
+
+  //: Le bois des galeries : peint en blanc chez les cossus, brun chez les autres ; la rampe de fer si le logement a
+  //: un balcon de fer (`r.balcon`), rouillee en rue pauvre.
+  const GALERIE_PEINTE = { plancher: '#d9d4c6', joint: '#b8b2a2', rampe: '#f2efe6', poteau: '#e2ddd0' };
+  const GALERIE_BOIS = { plancher: '#8a6a44', joint: '#6e5234', rampe: '#a07c50', poteau: '#7a5a38' };
+
+  /** Le plancher de la galerie (5 px de profond), tuile par tuile ou `r.galerie[i]` le permet ; la rampe au bord,
+      un poteau a chaque bout de tuile. */
+  function galerie(ctx, r, ferDuLogement, ox, y) {
+    const bois = r.standing === '+' ? GALERIE_PEINTE : GALERIE_BOIS;
+    const rampe = r.balcon ? ferDuLogement.arete : bois.rampe, poteau = r.balcon ? ferDuLogement.barreau : bois.poteau;
+    for (let i = 0; i < r.l; i++) {
+      if (!r.galerie[i]) continue;
+      const x = ox + i * T;
+      ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(x, y + 5, T, 1);          // l'ombre sous le plancher
+      ctx.fillStyle = bois.plancher; ctx.fillRect(x, y, T, 5);
+      ctx.fillStyle = bois.joint; for (let k = 3; k < T; k += 4) ctx.fillRect(x + k, y, 1, 5);
+      ctx.fillStyle = rampe; ctx.fillRect(x, y + 4, T, 1);                     // la rampe
+      ctx.fillStyle = poteau; ctx.fillRect(x, y + 3, 1, 3); ctx.fillRect(x + T - 1, y + 3, 1, 3);
+    }
   }
 
   //: Le fer rouille d'un escalier de rue pauvre : le meme dessin, d'autres couleurs.
@@ -5189,6 +5232,11 @@ const FACADES = (function () {
       ctx.fillStyle = '#3f8d38'; ctx.fillRect(x + 1, y + h - 1, l - 2, 1);
       ctx.fillStyle = tirage % 2 ? '#d9486a' : '#f2c14e';
       for (let k = 1; k < l - 1; k += 2) ctx.fillRect(x + k, y + h - 1, 1, 1);
+    } else if (r.standing !== '-') {
+      // L'ordinaire a ses rideaux, tires de chaque cote (la revue des facades, vague 2) : la rue ou l'on habite
+      // sans jardiniere ni planche.
+      ctx.fillStyle = RIDEAUX[hash(r.x, r.y) % RIDEAUX.length];
+      ctx.fillRect(x + 1, y + 1, 1, h - 2); ctx.fillRect(x + l - 2, y + 1, 1, h - 2);
     } else if (r.standing === '-') {
       if (tirage < 5) {                                                    // placardee
         ctx.fillStyle = '#7a6448'; ctx.fillRect(x, y, l, h);

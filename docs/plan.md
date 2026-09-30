@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (290 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (291 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -78,7 +78,6 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
-| Une revue des façades des résidences et des appartements | ⬜ **en cours** (✅ l'inventaire ; ✅ vague 1 : les murs et les portes ; reste la vague 2, les galeries et les fenêtres) | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/une-revue-des-facades-des-residences.md#fiche) |
 | Des intérieurs fidèles à l'extérieur : la revue complète | ⬜ **en cours** (✅ vague 1 livrée : le mur de la porte harmonisé, un seul plâtre dans toutes les pièces ; ensuite la revue, et les logements selon le standing) | 29 sept. 2026 | **P2** | **correctif** | [fiche](jalons/des-interieurs-fideles-a-l-exterieur.md#fiche) |
 | Le décor, les bêtes et les gens répondent — deuxième vague | ⬜ **en cours** (livrés : manger au barbecue, caresser le chat, vider un parcomètre, arracher une affiche ; le buisson est annulé ; restent le caddie et le panneau, à préciser par Martin) | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/le-decor-les-betes-et-les-gens-repondent.md#fiche-de-la-deuxième-vague) |
 | Des blocs de carte en extensions | ⬜ **en cours** (✅ vagues 1 à 3 livrées : à pied, au volant, à deux, la police qui reprend au bord, et le premier vrai bloc — le chalet du rang, la deuxième planque ; reste « un vrai dehors », avec le bloc qui en aura besoin) | 25 sept. 2026 | **P3** | ajout | [fiche](jalons/des-blocs-de-carte-en-extensions.md#fiche) |
@@ -117,7 +116,6 @@ Ce que chaque ligne à faire attend (la table de tri du 13 sept. 2026, réduite 
 
 | P | Genre | Ce qu'il y a à faire | Taille | Pourquoi là, et ce qu'il attend |
 |---|---|---|---|---|
-| **P2** | **correctif** | Une revue des façades des résidences et des appartements | 3 | Martin (29 sept. 2026), avec la revue des intérieurs ; **devant elle** : c'est la façade qui dit ce que l'intérieur doit être (standing, quartier, genre, étages) ; rien au dé, une capture par genre |
 | **P2** | **correctif** | Des intérieurs fidèles à l'extérieur : la revue complète | 4 | Martin (29 sept. 2026) : « des intérieurs toujours représentatifs de l'extérieur » — on pousse des portes à chaque partie ; la taille est déjà tenue, reste le contenu (standing, district, genre du bâtiment) ; rien au dé, un juge par règle sur toutes les portes, et une capture dedans et dehors |
 | **P3** | ajout | Des blocs de carte en extensions | 3 | ⚠️ **porte** la deuxième planque, la cabane à sucre, le centre d'achat hanté et le ciné-parc ; une carte à part derrière un fondu au noir (Martin) — le mécanisme des pièces, en plein air et au volant ; l'île et l'aéroport ne bougent pas |
 | **P4** | ajout | L'Île-aux-Corneilles | 3 | **les zones conditionnelles** d'abord ; l'eau est livrée, le traversier (M12) viendra après et l'île l'attend sans lui |
