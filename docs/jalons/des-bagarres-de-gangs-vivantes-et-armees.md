@@ -112,7 +112,23 @@ Et à chaque vague : une **capture** de la rixe (Chromium), et la jouer au banc.
 
 ## Notes
 
-### Vague 1 — le cerveau et la tactique au contact — **plan** (30 sept. 2026)
+### Vague 1 — le cerveau et la tactique au contact — **livrée le 30 sept. 2026**
+
+**Ce qui a changé en route** (le plan d'en dessous est celui d'avant le code) :
+- **Il frappe DE SA PLACE**, plus « la portée prime » : la portée (20 px) dépassant le cercle (16), tous cognaient
+  dès l'arrivée, du même côté. Il frappe de sa place (`place_px`), ou d'où il est si sa place est dans un mur ; et
+  pour la gagner il **contourne** la cible (`contourne_rad`) au lieu de lui passer à travers.
+- **Huit places, les libres seulement** (`places`) : le joueur de départ est contre la façade du Terminus, et la
+  place du troisième tombait dans le mur. Chacun prend le milieu de sa part : devant un mur, ils s'ouvrent en
+  éventail (la capture du 30 sept.).
+- **L'allié de m98 passe par le cerveau** (la fiche lui laissait sa branche) : planté au métronome, il frappait
+  où les Cravates n'étaient plus — 18 coups au lieu de 47 au banc du siège ; 32 coups et 4 couchés après.
+- **Deux juges lisent mieux** : l'encerclement à la moyenne de l'écart (89° avec, 23° sans ; un pas de côté
+  rapproche deux hommes un instant, c'est voulu), le regard face au rival DU MOMENT (l'ancien couché).
+- **m3 passe à la graine 1** : semer le client de la police tenait par la graine (la 3 et la 4 ratent aussi sur
+  `dev`) ; la dette est au plan.
+
+#### Le plan (30 sept. 2026)
 
 > **Pour qui exécute :** superpowers:subagent-driven-development ou superpowers:executing-plans, tâche par tâche ;
 > les cases (`- [ ]`) suivent l'avancement. Lire la [fiche](#fiche) avant.
