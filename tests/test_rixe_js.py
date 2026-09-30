@@ -1,0 +1,117 @@
+"""Des bagarres de gangs vivantes — le gang contre toi, au banc (docs/jalons/des-bagarres-de-gangs-vivantes-et-armees.md)."""
+
+#: Trois Cravates, nés à la même image du même côté du joueur, lancés contre lui. Le joueur est increvable (sa vie
+#: remise à chaque image) : on juge LEUR façon de se battre, pas sa survie.
+TROIS = """
+    function trois(L, dx) {
+      const j = L.B.joueur, gens = [];
+      for (const dy of [-10, 0, 10]) {
+        const e = L.Entites.creerPieton(j.x + dx, j.y + dy, L.Entites.archetype('cravate'));
+        e.etat = 'attaque_joueur'; e.courage = 1; e.arme = 'batte';
+        gens.push(e);
+      }
+      L.Entites.indexer();
+      return gens;
+    }
+    function tenir(L) { const j = L.B.joueur; j.vie = j.vieMax || 100; j.vivant = true; }
+"""
+
+
+def test_trois_cravates_se_repartissent_autour_du_joueur(banc):
+    """Nés du même côté, ils l'encerclent au lieu de faire la file : l'écart d'angle le plus petit entre deux
+    d'entre eux, vu du joueur, dépasse 60° EN MOYENNE (le cercle parfait en donne 120 ; le joueur de départ est
+    adossé à une façade, et trois hommes sur un demi-cercle en donnent 90).
+
+    ⚠️ En moyenne, pas au pire : un pas de côté (`tourne_rad`) rapproche deux hommes un instant, et c'est voulu.
+    L'ancien combat, en file, donnait 0,6°."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(21);
+        %s
+        const gens = trois(L, 60);
+        let somme = 0, images = 0;
+        for (let i = 0; i < 300; i++) {
+          tenir(L); o.frame(1);
+          if (i < 180) continue;          // le temps d'arriver
+          const j = L.B.joueur;
+          const angles = gens.filter(function (e) { return e.vivant; })
+            .map(function (e) { return Math.atan2(e.y - j.y, e.x - j.x); }).sort(function (a, b) { return a - b; });
+          let pire = Math.PI * 2;
+          for (let k = 0; k < angles.length; k++) {
+            const suivant = k + 1 < angles.length ? angles[k + 1] : angles[0] + Math.PI * 2;
+            pire = Math.min(pire, suivant - angles[k]);
+          }
+          somme += pire; images++;
+        }
+        return { ecart: somme / images * 180 / Math.PI, etats: gens.map(function (e) { return e.etat; }) };
+    }""" % TROIS)
+    assert r["ecart"] > 60, "ils font la file au lieu d'encercler (%s)" % r
+
+
+def test_celui_qui_s_en_va_rend_sa_place(banc):
+    """⚠️ Un homme passé à `flane` garde son vieux `e.rixe` : il ne doit plus compter dans le cercle."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(22);
+        %s
+        const gens = trois(L, 40);
+        for (let i = 0; i < 120; i++) { tenir(L); o.frame(1); }
+        const f = L.B.defs.rixes.contact;
+        const avant = L.Rixe.assaillants(L.B.joueur, f).length;
+        gens[0].etat = 'flane';
+        return { avant: avant, apres: L.Rixe.assaillants(L.B.joueur, f).length };
+    }""" % TROIS)
+    assert r["avant"] == 3 and r["apres"] == 2, r
+
+
+def test_adosse_a_un_mur_il_frappe_quand_meme(banc):
+    """La portée prime sur la place : une place dans le mur ne l'empêche pas de cogner."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(23);
+        %s
+        const j = L.B.joueur, TT = L.TT;
+        // Un trottoir dont la tuile du dessus est un mur : le joueur s'y adosse.
+        let place = null;
+        const c = L.Monde.carte;
+        for (let ty = 5; ty < c.h - 5 && !place; ty++) for (let tx = 5; tx < c.w - 5 && !place; tx++) {
+          if (L.Monde.marchablePieton(tx, ty) && !L.Monde.marchablePieton(tx, ty - 1)
+              && L.Monde.marchablePieton(tx - 2, ty) && L.Monde.marchablePieton(tx + 2, ty)) place = { tx: tx, ty: ty };
+        }
+        j.x = place.tx * TT + 8; j.y = place.ty * TT + 4;
+        L.Monde.centrerCamera(j.x, j.y);
+        const gens = trois(L, 30);
+        let coups = 0;
+        const avant = {};
+        for (let i = 0; i < 400; i++) {
+          tenir(L); o.frame(1);
+          for (const e of gens) { if (e.etat === 'attaque' && avant[e.id] !== 'attaque') coups++; avant[e.id] = e.etat; }
+        }
+        return { coups: coups };
+    }""" % TROIS)
+    assert r["coups"] >= 3, "adossé au mur, personne ne le frappe (%s)" % r
+
+
+def test_il_esquive_parfois_ton_coup(banc):
+    """Le joueur arme son bâton vingt fois à portée : le Cravate en esquive quelques-uns, jamais tous."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(24);
+        %s
+        const j = L.B.joueur;
+        L.Combat.ramasserArme('batte', null);
+        j.arme = 'batte';
+        const e = trois(L, 16)[1];
+        let armes = 0;
+        for (let i = 0; i < 1400 && armes < 20; i++) {
+          tenir(L);
+          if (j.etat !== 'attaque' && i %% 60 === 0) {
+            L.Entites.regarder(j, e.x - j.x, e.y - j.y);
+            if (L.Combat.frapper(j, false)) armes++;
+          }
+          o.frame(1);
+        }
+        return { armes: armes, esquives: e.rixe ? e.rixe.esquives : -1 };
+    }""" % TROIS)
+    assert r["armes"] >= 15, "le joueur n'a pas pu armer (%s)" % r
+    assert 1 <= r["esquives"] < r["armes"], r

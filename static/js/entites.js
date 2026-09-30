@@ -4897,16 +4897,21 @@ const Entites = (function () {
       // Et collé, il boxe sur place : lancé à ta vitesse, il te poussait hors du ring (au banc,
       // un joueur planté au milieu, sorti en deux secondes, « ESQUIVER, PAS FUIR »).
       // Sur place, il se tourne vers toi : sans pas, `regarder` ne suit plus.
-      const colle = e.coupsDictes && norme < 14;
-      e.vx = colle ? 0 : dx / norme * vitesse;
-      e.vy = colle ? 0 : dy / norme * vitesse;
-      if (colle) regarder(e, dx, dy);
       // LES MANTES (`app/mantes.py`) frappent de plus loin et plus souvent — le pied porte plus loin que le
       // poing —, et parent ton coup quand tu l'armes a portee (`Techniques.parer`).
       const mante = e.techniques && B.defs.mantes;
-      if (mante && Techniques.parer(e, B.joueur)) return;
-      const portee = mante ? mante.portee_px : 18, cadence = mante ? mante.cadence_images : 40;
-      if (norme < portee && e.t % cadence === 0 && !e.coupsDictes) Combat.frapper(e);
+      if (e.gang && !mante && !e.coupsDictes) {
+        // LE CERVEAU DU CONTACT (`rixe.js`) : il t'encercle avec les siens, recule, esquive, frappe a son rythme.
+        Rixe.maj(e, B.joueur, vitesse);
+      } else {
+        const colle = e.coupsDictes && norme < 14;
+        e.vx = colle ? 0 : dx / norme * vitesse;
+        e.vy = colle ? 0 : dy / norme * vitesse;
+        if (colle) regarder(e, dx, dy);
+        if (mante && Techniques.parer(e, B.joueur)) return;
+        const portee = mante ? mante.portee_px : 18, cadence = mante ? mante.cadence_images : 40;
+        if (norme < portee && e.t % cadence === 0 && !e.coupsDictes) Combat.frapper(e);
+      }
     } else if (e.etat === 'vole_un_char') {
       // Il marche droit sur le char qu'il a repere, d'un pas presse. ⚠️ Il
       // RENONCE : le char peut partir, exploser, ou quelqu'un monter dedans —

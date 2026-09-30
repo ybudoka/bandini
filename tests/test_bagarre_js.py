@@ -466,9 +466,10 @@ def test_il_recule_apres_son_coup_en_regardant_sa_cible(banc):
             if (s.recule) {
               const d = Math.hypot(s.c.x - e.x, s.c.y - e.y);
               // Il bouge, et se bat encore : son regard se lit. Vers sa cible, ou le dos tourne ? ⚠️ La rixe finie
-              // (`flane`), il s'en va, et c'est normal qu'il tourne le dos.
-              if (e.etat === 'bagarre' && Math.hypot(e.vx, e.vy) > 0.1) {
-                const vers = Math.atan2(s.c.y - e.y, s.c.x - e.x);
+              // (`flane`), il s'en va, et c'est normal qu'il tourne le dos. ⚠️ Et sa cible, c'est son rival DU
+              // MOMENT : celui qu'il vient de frapper a pu tomber, et il fait face au suivant.
+              if (e.etat === 'bagarre' && e.rival && Math.hypot(e.vx, e.vy) > 0.1) {
+                const vers = Math.atan2(e.rival.y - e.y, e.rival.x - e.x);
                 const ecart = Math.abs(Math.atan2(Math.sin(vers - e.angle), Math.cos(vers - e.angle)));
                 if (ecart < Math.PI / 2) face++; else dos++;
               }

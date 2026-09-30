@@ -49,14 +49,43 @@ const Rixe = (function () {
     }).sort(function (a, b) { return a.id - b.id; });
   }
 
-  /** Sa place : sur le cercle, a son rang. L'angle de depart est celui du PREMIER du rang, vu de la cible —
-      le cercle se forme la ou ils sont, il ne les arrache pas de leur cote de la rue. */
+  function surLeCercle(cible, a, f) {
+    return { x: cible.x + Math.cos(a) * f.cercle_px, y: cible.y + Math.sin(a) * f.cercle_px, a: a };
+  }
+
+  /** Sa place : une des `places` du cercle, a son rang. L'angle de depart est celui du PREMIER du rang, vu de
+      la cible — le cercle se forme la ou ils sont, il ne les arrache pas de leur cote de la rue.
+      ⚠️ ON NE COMPTE QUE LES PLACES LIBRES : une cible adossee a une facade n'a pas de place derriere elle, et
+      celui qui y etait envoye cognait d'ou il etait — du meme cote que les autres (au banc, le joueur de depart
+      est justement contre un mur). Les assaillants se repartissent donc sur ce qui reste, chacun au MILIEU de sa
+      part (`rang + 0.5`) : trois devant un mur s'ouvrent en eventail, pas en paquet sur un bord. */
   function place(e, cible, f) {
     const tous = assaillants(cible, f);
     const n = Math.max(1, tous.length), rang = Math.max(0, tous.indexOf(e));
     const tete = tous[0] || e;
-    const a = angleVers(cible.x, cible.y, tete.x, tete.y) + rang * 2 * Math.PI / n + e.rixe.derive;
-    return { x: cible.x + Math.cos(a) * f.cercle_px, y: cible.y + Math.sin(a) * f.cercle_px };
+    const base = angleVers(cible.x, cible.y, tete.x, tete.y);
+    const libres = [];
+    for (let k = 0; k < f.places; k++) {
+      const a = base + k * 2 * Math.PI / f.places;
+      if (!placeMurée(surLeCercle(cible, a, f))) libres.push(a);
+    }
+    if (!libres.length) return surLeCercle(cible, base + e.rixe.derive, f);
+    return surLeCercle(cible, libres[Math.floor((rang + 0.5) * libres.length / n)] + e.rixe.derive, f);
+  }
+
+  /** Ou marcher pour gagner sa place. ⚠️ EN CONTOURNANT : une place de l'autre cote de la cible, prise en ligne
+      droite, passe A TRAVERS elle — on s'y cogne, et on reste du meme cote que les autres. On avance donc sur le
+      cercle, d'au plus `contourne_rad` a la fois. */
+  function etape(e, cible, p, f) {
+    const ici = angleVers(cible.x, cible.y, e.x, e.y);
+    const ecart = Math.atan2(Math.sin(p.a - ici), Math.cos(p.a - ici));
+    if (Math.abs(ecart) <= f.contourne_rad) return p;
+    return surLeCercle(cible, ici + Math.sign(ecart) * f.contourne_rad, f);
+  }
+
+  /** Sa place tombe-t-elle dans un mur (la cible y est adossee) ? Alors il cogne d'ou il est. */
+  function placeMurée(p) {
+    return !Monde.marchablePieton(Math.floor(p.x / TT), Math.floor(p.y / TT));
   }
 
   /** La cible arme un coup, a portee de lui : il se degage — une fois sur `esquive_pct`, et une seule decision
@@ -97,18 +126,21 @@ const Rixe = (function () {
       r.tourneT = tourneDe(e, f, e.t);
     }
     if (r.deriveT > 0 && --r.deriveT === 0) r.derive = 0;
-    // ⚠️ LA PORTEE PRIME SUR LA PLACE : sa place peut tomber dans un mur (la cible y est adossee) — a portee et
-    // pret, il frappe d'ou il est.
-    if (d <= f.portee_px && r.pret <= 0) {
+    const p = place(e, cible, f);
+    const dp = Math.hypot(p.x - e.x, p.y - e.y);
+    // Il frappe DE SA PLACE — sinon, arrive du meme cote que les autres, il cognerait des qu'a portee et n'en
+    // ferait jamais le tour. ⚠️ Sauf une place dans un mur (la cible y est adossee) : a portee, il frappe d'ou il
+    // est.
+    if (d <= f.portee_px && r.pret <= 0 && (dp <= f.place_px || placeMurée(p))) {
       e.vx = 0; e.vy = 0;
       if (Combat.frapper(e, false)) { r.pret = cadenceDe(e, f, e.t); reculer(r, f); return true; }
     }
-    const p = place(e, cible, f);
-    const px = p.x - e.x, py = p.y - e.y, dp = Math.hypot(px, py);
-    if (dp > 2) {
-      const allure = Math.min(1, dp / 12);          // il ralentit en arrivant : pas de va-et-vient sur sa place
-      e.vx = px / dp * vitesse * allure;
-      e.vy = py / dp * vitesse * allure;
+    const vers = etape(e, cible, p, f);
+    const px = vers.x - e.x, py = vers.y - e.y, dv = Math.hypot(px, py);
+    if (dv > 2) {
+      const allure = Math.min(1, dv / 12);          // il ralentit en arrivant : pas de va-et-vient sur sa place
+      e.vx = px / dv * vitesse * allure;
+      e.vy = py / dv * vitesse * allure;
     } else { e.vx = 0; e.vy = 0; }
     return false;
   }
