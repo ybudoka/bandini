@@ -175,3 +175,20 @@ dans une boutique. Un lieu fait à la main (sans devanture) garde son plâtre, e
 - Au passage : la suite complète de la vague 3 avait 24 rouges ; rejoués sur le commit d'avant, les neufs
   (`test_defis_graduels_js`, `test_garages_ou_l_on_entre_js`, `test_mantes_defi_js`, `test_crime_d_autrui`…)
   rougissent pareil sans elle.
+
+**Vague 5, livrée le 30 sept. 2026 : les lieux faits à la main.** Les neuf, dedans et dehors (captures) : quatre
+tombaient sur le plâtre et les rideaux rouges d'un salon, qui est l'habit par défaut d'une pièce. Chacun a maintenant
+le sien, dans sa pièce (`materiaux`, `carte._piece`) — un seul mur, la plinthe du côté du plancher :
+
+- **La chapelle Sainte-Anne** (l'île) : la chaux, les vitraux en arc et leurs plombs, la porte cloutée, les dalles
+  de pierre, les bancs d'église (le dossier et l'assise, d'un banc à l'autre), l'autel nappé, son antependium et
+  ses cierges.
+- **Le hangar sans nom** (l'île) et **le bureau du ferrailleur** (la gare) : la tôle ondulée et sa rouille qui
+  coule, la fenêtre grillagée, la porte de tôle et sa barre ; le béton taché d'huile du hangar.
+- **La fourrière municipale** : un bureau de la ville — le vert à deux tons, les stores vénitiens à demi baissés,
+  la porte de métal à hublot.
+- Les cinq autres se lisent déjà : la planque de Rocco (un logement), le kiosque de Mme Thibodeau, Électronique
+  Turcotte, la pharmacie et la criée des Quais (des commerces sans devanture : le plâtre des boutiques).
+- Juge `test_les_lieux_faits_a_la_main_portent_leur_habit` (la table en toutes lettres ; on entre dans la chapelle
+  et chaque mur lit sa plinthe) ; quatre mutations, toutes mordent.
+- **Reste** au jalon : la villa à sa taille et à ses niveaux, après « Des étages dedans aussi ».

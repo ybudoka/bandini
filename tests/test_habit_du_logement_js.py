@@ -243,3 +243,48 @@ def test_une_boutique_n_a_ni_drap_ni_chaine(banc):
         assert len(q["formes"]) >= 2, f"{d} : {len(q['formes'])} objet(s) de commerce"
     crucifix = r["crucifix"][0][len("faubourg"):]
     assert crucifix not in r["boutiques"]["faubourg"]["formes"], "le crucifix est accroché dans une boutique"
+
+
+#: Vague 5 : les lieux faits à la main et leur habit. ⚠️ En toutes lettres (pas relu dans `ile.py` ni `carte.py`).
+LIEUX = {"chapelle": ("chapelle", "tchW"), "hangar_ile": ("hangar", "uW"), "nord_ferrailleur": ("hangar", "W"),
+         "fourriere": ("bureau", "W")}
+
+
+def test_les_lieux_faits_a_la_main_portent_leur_habit(banc):
+    """La chapelle n'est pas un salon, le hangar pas un bureau, la fourrière pas une chambre : chaque lieu a son
+    habit, un seul mur (B, W, D), ses peintres, et dedans la plinthe se lit du côté du plancher."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer(); if (L.B.menu) L.Hud.fermerMenu(); o.frame(2);
+        const c = L.Monde.carte.def, out = {};
+        function fond(cle) {
+            const k = o.doc.createElement('canvas').getContext('2d'); k.traces = [];
+            L.TUILES[cle](k, 0, 16); return k.traces.length && k.traces[0][4];
+        }
+        for (const slug of %s) {
+            const m = (c.interieurs[slug] || {}).materiaux || {};
+            const peintres = {};
+            for (const g of Object.keys(m)) peintres[g] = L.TUILES[g + '@' + m[g]] ? fond(g + '@' + m[g]) : null;
+            out[slug] = { m: m, peintres: peintres, platre: fond('B@piece') };
+        }
+        const porte = c.portes.find(function (p) { return p.interieur === 'chapelle'; });
+        o.entrer(porte);
+        const k = L.Monde.carte, fautes = [];
+        function mur(x, y) { return x < 0 || y < 0 || x >= k.w || y >= k.h || 'BWD'.indexOf(k.sol[y][x]) >= 0; }
+        for (let y = 0; y < k.h; y++) for (let x = 0; x < k.w; x++) {
+            const g = k.sol[y][x];
+            if ('BWD'.indexOf(g) < 0) continue;
+            const v = L.Monde.varianteDeTuile(g, x, y);
+            const cotes = (mur(x, y - 1) ? 0 : 1) | (mur(x + 1, y) ? 0 : 2) | (mur(x, y + 1) ? 0 : 4) | (mur(x - 1, y) ? 0 : 8);
+            if ((v & 15) !== cotes) fautes.push([g, x, y, v, cotes]);
+        }
+        out.dedans = { slug: L.B.interieur && L.B.interieur.slug, B: (k.materiaux || {}).B, fautes: fautes.slice(0, 3) };
+        return out;
+    }""" % sorted(LIEUX))
+    for slug, (habit, autres) in LIEUX.items():
+        q = r[slug]
+        assert q["m"].get("B") == q["m"].get("W") == q["m"].get("D") == habit, (slug, q)
+        for g in "BD" + autres:
+            if g in q["m"]:
+                assert q["peintres"][g] is not None, f"{slug} : {g}@{q['m'][g]} n'a pas de peintre"
+        assert q["peintres"]["B"] != q["platre"], f"{slug} : le mur ressemble au plâtre d'un salon"
+    assert r["dedans"]["slug"] == "chapelle" and r["dedans"]["B"] == "chapelle" and not r["dedans"]["fautes"], r["dedans"]

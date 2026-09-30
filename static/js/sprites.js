@@ -5353,6 +5353,94 @@ const TUILES = (function () {
       tuiles['D@' + cle] = function (ctx, v, T) { porteDeBoutique(ctx, v, T, murH); };
     }
   }
+  /* --- LES LIEUX FAITS À LA MAIN (des intérieurs fidèles à l'extérieur, vague 5) ------------------------------
+     Leur habit vient de leur pièce (`materiaux`, `carte._piece`) : la CHAPELLE (la chaux, les vitraux, la porte
+     cloutée, les dalles, les bancs d'église, l'autel nappé et ses cierges), le HANGAR (la tôle ondulée, la fenêtre
+     grillagée, la porte de tôle, le béton taché d'huile — le hangar sans nom de l'île, le bureau du ferrailleur), le
+     BUREAU de la ville (le vert à deux tons, les stores vénitiens, la porte de métal à hublot — la fourrière). */
+  const CHAUX = { fond: '#ece8dc', grain: '#e0dccf', plinthe: '#9a948a' };
+  function murChaux(ctx, v, T) { murDePiece(ctx, v, T, CHAUX); }
+  tuiles['B@chapelle'] = murChaux;
+  tuiles['W@chapelle'] = function (ctx, v, T) {                       // le vitrail, en arc, ses plombs
+    murChaux(ctx, v, T);
+    ctx.fillStyle = '#6a6258'; ctx.fillRect(4, 2, 8, 13); ctx.fillRect(5, 1, 6, 1);
+    const verres = ['#c0392b', '#2a4a8a', '#d4b25a', '#3f8d38'];
+    for (let y = 3; y < 14; y += 3) for (let x = 5; x < 11; x += 3) {
+      ctx.fillStyle = verres[(x + y + (v >> 4)) % 4]; ctx.fillRect(x, y, 2, 2);
+    }
+    ctx.fillStyle = '#e8e0c0'; ctx.fillRect(7, 2, 2, 1);
+  };
+  tuiles['D@chapelle'] = function (ctx, v, T) {                       // la porte cloutée, en arc
+    murChaux(ctx, v, T);
+    ctx.fillStyle = '#9a948a'; ctx.fillRect(3, 1, 10, 15);
+    ctx.fillStyle = '#5a3a24'; ctx.fillRect(4, 3, 8, 13); ctx.fillRect(5, 2, 6, 1);
+    ctx.fillStyle = '#2a2a2e'; for (let y = 5; y < 15; y += 4) { ctx.fillRect(5, y, 1, 1); ctx.fillRect(10, y, 1, 1); }
+    ctx.fillStyle = '#4a2e1e'; ctx.fillRect(8, 3, 1, 13);
+  };
+  tuiles['t@chapelle'] = function (ctx, v, T) {                       // les dalles de pierre
+    plein(ctx, '#b8b2a6', T);
+    ctx.fillStyle = '#a09a8e'; ctx.fillRect(0, 7, T, 1); ctx.fillRect((v % 2) ? 5 : 11, 0, 1, 7); ctx.fillRect((v % 2) ? 11 : 4, 8, 1, 8);
+    points(ctx, v, T, '#aca698', 6, 20);
+  };
+  tuiles['h@chapelle'] = function (ctx, v, T) {                       // le banc d'église : le dossier, l'assise
+    ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(0, 13, T, 2);
+    ctx.fillStyle = '#5a3a24'; ctx.fillRect(0, 3, T, 4);
+    ctx.fillStyle = '#6e4a30'; ctx.fillRect(0, 7, T, 5);
+    ctx.fillStyle = '#7e5a3a'; ctx.fillRect(0, 7, T, 1);
+    ctx.fillStyle = '#4a2e1e'; ctx.fillRect(1, 12, 2, 2); ctx.fillRect(T - 3, 12, 2, 2);
+  };
+  tuiles['c@chapelle'] = function (ctx, v, T) {                       // l'autel : la nappe, l'antependium, les cierges
+    ctx.fillStyle = '#6a2a2a'; ctx.fillRect(0, 6, T, 9);
+    ctx.fillStyle = '#d4b25a'; ctx.fillRect(0, 8, T, 1); ctx.fillRect(7, 10, 2, 4);
+    ctx.fillStyle = '#f4f0e6'; ctx.fillRect(0, 3, T, 4);
+    ctx.fillStyle = '#e8e0c0'; ctx.fillRect(4, 0, 1, 3); ctx.fillRect(11, 0, 1, 3);
+    ctx.fillStyle = '#f2c14e'; ctx.fillRect(4, 0, 1, 1); ctx.fillRect(11, 0, 1, 1);
+  };
+  function murDeTole(ctx, v, T) {
+    plein(ctx, '#7a8088', T);
+    ctx.fillStyle = '#8a9098'; for (let x = 0; x < T; x += 4) ctx.fillRect(x, 0, 2, T);
+    ctx.fillStyle = '#5e646c'; for (let x = 3; x < T; x += 4) ctx.fillRect(x, 0, 1, T);
+    if ((v >> 4) % 3 === 0) { ctx.fillStyle = '#8f5a34'; ctx.fillRect(2 + (v >> 4) % 5, 6, 1, 9); ctx.fillRect(3 + (v >> 4) % 5, 9, 1, 5); }   // la rouille qui coule
+    if (v & 4) { ctx.fillStyle = '#4a4e54'; ctx.fillRect(0, T - 2, T, 2); }
+  }
+  tuiles['B@hangar'] = murDeTole;
+  tuiles['W@hangar'] = function (ctx, v, T) {                         // la fenêtre grillagée, sale
+    murDeTole(ctx, v, T);
+    ctx.fillStyle = '#4a4e54'; ctx.fillRect(2, 2, 12, 10);
+    ctx.fillStyle = '#8fa0a8'; ctx.fillRect(3, 3, 10, 8);
+    ctx.fillStyle = '#6a7a80'; for (let k = 3; k < 13; k += 2) { ctx.fillRect(k, 3, 1, 8); ctx.fillRect(3, k - 0, 10, 1); }
+  };
+  tuiles['D@hangar'] = function (ctx, v, T) {                         // la porte de tôle, sa barre
+    murDeTole(ctx, v, T);
+    ctx.fillStyle = '#5e646c'; ctx.fillRect(3, 2, 10, 14);
+    ctx.fillStyle = '#6e747c'; for (let y = 4; y < 16; y += 3) ctx.fillRect(4, y, 8, 1);
+    ctx.fillStyle = '#2a2a2e'; ctx.fillRect(4, 9, 8, 1); ctx.fillRect(11, 8, 1, 3);
+  };
+  tuiles['u@hangar'] = function (ctx, v, T) {                         // le béton, taché d'huile
+    plein(ctx, '#8e8c86', T);
+    points(ctx, v, T, '#84827c', 14, 10);
+    if (v % 5 === 2) { ctx.fillStyle = 'rgba(30,28,24,0.35)'; ctx.fillRect(4, 5, 7, 5); ctx.fillRect(6, 4, 3, 7); }
+  };
+  const VERT = { fond: '#b8c8b0', grain: '#aebea6', plinthe: '#5a6a54' };
+  function murDeBureau(ctx, v, T) {
+    murDePiece(ctx, v, T, VERT);
+    ctx.fillStyle = '#7e9476'; ctx.fillRect(0, 9, T, T - 9);                     // le bas du mur, plus foncé
+    ctx.fillStyle = '#5a6a54'; ctx.fillRect(0, 9, T, 1);
+  }
+  tuiles['B@bureau'] = murDeBureau;
+  tuiles['W@bureau'] = function (ctx, v, T) {                         // le store vénitien, à demi baissé
+    murDeBureau(ctx, v, T);
+    ctx.fillStyle = '#e8e4da'; ctx.fillRect(2, 2, 12, 11);
+    ctx.fillStyle = '#9cc4e0'; ctx.fillRect(3, 9, 10, 3);
+    ctx.fillStyle = '#d6d2c6'; for (let y = 3; y < 9; y += 2) ctx.fillRect(3, y, 10, 1);
+    ctx.fillStyle = '#8a867c'; ctx.fillRect(12, 3, 1, 6);
+  };
+  tuiles['D@bureau'] = function (ctx, v, T) {                         // la porte de métal et son hublot
+    murDeBureau(ctx, v, T);
+    ctx.fillStyle = '#6a6e74'; ctx.fillRect(3, 2, 10, 14);
+    ctx.fillStyle = '#9cc4e0'; ctx.fillRect(6, 4, 4, 4);
+    ctx.fillStyle = '#4a4e54'; ctx.fillRect(10, 10, 2, 1);
+  };
   // LE GENRE : la moquette d'un bungalow — beige, à poils, des traces de pas qu'on ne voit qu'en plissant les yeux.
   tuiles['t@moquette'] = function (ctx, v, T) {
     plein(ctx, '#b8a47e', T);

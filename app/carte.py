@@ -7961,7 +7961,10 @@ B      B
 Bcccc  B
 B      B
 BBWWDWBB
-""", points=(_pt("fourriere", 2, 3),), gens=_gens(("commis", 2, 2),)),
+""", points=(_pt("fourriere", 2, 3),), gens=_gens(("commis", 2, 2),),
+       # Son habit (des intérieurs fidèles à l'extérieur, vague 5) : un bureau de la ville — le vert à deux tons, les
+       # stores vénitiens, la porte de métal à hublot.
+       materiaux={"B": "bureau", "W": "bureau", "D": "bureau"}),
 
     # Le phare : rond, etroit, et il sent le diesel.
     _piece("phare", "Le phare de La Pointe", porte="maison", plan="""

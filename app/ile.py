@@ -192,7 +192,10 @@ Bhhh hhhB
 B       B
 Bhhh hhhB
 BBBBDBBBB
-""", points=(carte._pt("fouiller", 4, 1),)),
+""", points=(carte._pt("fouiller", 4, 1),),
+       # ⚠️ SON HABIT (des intérieurs fidèles à l'extérieur, vague 5) : la chaux, les vitraux, la porte cloutée, les
+       # dalles, les bancs d'église, l'autel nappé — pas le plâtre et les rideaux rouges d'un salon.
+       materiaux={"B": "chapelle", "W": "chapelle", "D": "chapelle", "t": "chapelle", "h": "chapelle", "c": "chapelle"}),
     # Le hangar sans nom : un moteur sur un banc, des étagères, un établi, un
     # classeur. Personne n'y range de filets.
     "hangar_ile": carte._piece("hangar_ile", "Le hangar sans nom", sol="u", porte="maison", plan="""
@@ -202,7 +205,9 @@ Bmm    B
 B  aa kB
 Bn aa  B
 BBBBBDBB
-""", points=(carte._pt("fouiller", 5, 1),)),
+""", points=(carte._pt("fouiller", 5, 1),),
+       # Son habit : la tôle ondulée, la fenêtre grillagée, la porte de tôle, le béton taché d'huile.
+       materiaux={"B": "hangar", "W": "hangar", "D": "hangar", "u": "hangar"}),
 }
 
 

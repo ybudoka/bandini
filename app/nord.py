@@ -104,7 +104,9 @@ B     B
 Bh   zB
 Be    B
 BBBDBBB
-""", points=(carte._pt("fouiller", 4, 1),))
+""", points=(carte._pt("fouiller", 4, 1),),
+    # Son habit (des intérieurs fidèles à l'extérieur, vague 5) : la tôle du hangar, comme la cour à scrap dehors.
+    materiaux={"B": "hangar", "W": "hangar", "D": "hangar"})
 BUREAU = {"slug": "nord_ferrailleur", "nom": "Le bureau du ferrailleur", "interieur": "nord_ferrailleur",
           "famille": "repere", "genre": "industriel"}
 

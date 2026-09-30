@@ -396,7 +396,8 @@ const Monde = (function () {
   //: L'HABIT D'UN LOGEMENT (des intérieurs fidèles à l'extérieur, vague 2) : ses murs, sa fenêtre, sa porte, son
   //: plancher et son lit, selon ce qu'on a vu DEHORS — le logement ordinaire garde le plâtre de toutes les pièces.
   //: Les habits d'un mur de pièce (`varianteDeTuile` : leur plinthe et leurs seize bruits de position).
-  const HABITS_DE_MUR = Object.freeze({ piece: true, logement_pauvre: true, logement_cossu: true, villa: true });
+  const HABITS_DE_MUR = Object.freeze({ piece: true, logement_pauvre: true, logement_cossu: true, villa: true,
+                                       chapelle: true, hangar: true, bureau: true });
   //: Les quartiers dont un logement accroche quelque chose au mur du fond (`sprites.js`, `ORNEMENTS`).
   const QUARTIERS_DU_LOGEMENT = Object.freeze({ canton: true, quais: true, faubourg: true, erables: true, gare: true, pointe: true });
   const habitsFaits = new Map();
