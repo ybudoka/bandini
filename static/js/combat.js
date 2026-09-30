@@ -349,14 +349,24 @@ const Combat = (function () {
     return arme.dispersion + (arme.dispersion_max - arme.dispersion) * part;
   }
 
-  function tirer(e, arme) {
+  /** Tire. `cible` (vague 2 des bagarres de gangs) : un PNJ vise QUELQU'UN — un rival, toi — au lieu de toujours
+      viser le joueur ; sans elle, rien ne change (l'agent de `police.js` tire comme avant).
+      ⚠️ Le tireur de gang (une cible) : il note ce qu'il faisait (`avantLeCoup`), sinon `majAttaque` le rendait a
+      `attaque_joueur` au bout de sa balle ; sa dispersion et son eclair se lisent a L'EMPREINTE (une fusillade de
+      rixe ne deplace pas le hasard de la ville) ; son coup de feu fait fuir la rue et s'entend, sans te preter
+      rien (`Police.entendre(…, autrui)`), et peut valoir une meprise (M12). */
+  function tirer(e, arme, cible) {
     const joueur = e === B.joueur;
+    const deGang = !!cible && !joueur;
+    let tirage = 0;
+    const alea = function () { return deGang ? (hash2(e.id * 7919 + tirage++, e.t) % 10000) / 10000 : B.rng(); };
     if (joueur) {
       const reste = munitions(arme.slug);
       // ⚠️ La gachette a vide CLIQUE : le buzzer des menus faisait croire
       // que le bouton etait casse, pas le chargeur.
       if (!triche('munitions') && reste !== null && reste <= 0) { Son.SFX.vide(); return false; }
     }
+    if (deGang && e.etat !== 'attaque') e.avantLeCoup = e.etat;
     e.etat = 'attaque';
     e.arc = arme;
     e.phase = 'repos';
@@ -371,14 +381,15 @@ const Combat = (function () {
     // pleine de monde, l'assistance détournerait chaque tir vers le passant le
     // mieux aligné — des gens immunisés, des cibles qui restent debout, et une
     // galerie injouable. On vise SA cible, là où on regarde.
-    const angle = joueur ? (arme.foire ? e.angle : viseeAssistee(e, e.angle)) : angleVers(e.x, e.y, B.joueur.x, B.joueur.y);
-    const dispersion = dispersionDe(e, arme);
+    const vise = cible || B.joueur;
+    const angle = joueur ? (arme.foire ? e.angle : viseeAssistee(e, e.angle)) : angleVers(e.x, e.y, vise.x, vise.y);
+    const dispersion = dispersionDe(e, arme) * (deGang ? B.defs.rixes.tir.dispersion_facteur : 1);
     for (let i = 0; i < (arme.plombs || 1); i++) {
-      const devie = angle + (B.rng() - 0.5) * dispersion * 2;
+      const devie = angle + (alea() - 0.5) * dispersion * 2;
       Entites.creer('projectile', e.x + Math.cos(angle) * 8, e.y + Math.sin(angle) * 8 - 6, {
         r: 2, dessine: false, tireur: e, degats: arme.degats, arme: arme.slug,
         saigne: arme.saigne, cloche: !!arme.cloche, feu_s: arme.feu_s || 0,
-        foire: !!arme.foire,
+        foire: !!arme.foire, deGang: deGang && !!e.gang,
         vx: Math.cos(devie) * arme.vitesse_projectile,
         vy: Math.sin(devie) * arme.vitesse_projectile,
         z: 6, vz: arme.cloche ? 1.6 : 0, portee: arme.portee, parcouru: 0,
@@ -387,7 +398,7 @@ const Combat = (function () {
     // L'eclair de bouche : trois etincelles au bout du canon, une fraction de seconde.
     for (let i = 0; i < 3; i++) {
       Entites.particule(e.x + Math.cos(angle) * 12, e.y - 7 + Math.sin(angle) * 9,
-                        Math.cos(angle) * (1 + i * 0.7) + (B.rng() - 0.5) * 0.4, Math.sin(angle) * (1 + i * 0.7) * 0.7,
+                        Math.cos(angle) * (1 + i * 0.7) + (alea() - 0.5) * 0.4, Math.sin(angle) * (1 + i * 0.7) * 0.7,
                         4 + i, i === 0 ? '#ffffff' : '#ffd23a', 2, 0);
     }
     if (joueur) {
@@ -408,9 +419,20 @@ const Combat = (function () {
         if (arme.bruit > 0) Police.entendre(e.x, e.y, arme.bruit * TT);
       }
     }
+    // UN COUP DE FEU DE GANG : la rue detale (la menace, c'est LUI, pas toi), les agents a portee d'oreille
+    // viennent voir — sans deplacer ce qu'ils te pretent —, et un passant peut te prendre pour lui (M12).
+    if (deGang && !arme.foire) {
+      Entites.alerter(e.x, e.y, e, 3);
+      if (arme.bruit > 0) Police.entendre(e.x, e.y, arme.bruit * TT, true);
+      Police.crimeDAutrui('arme_sortie', e.x, e.y, e);
+    }
     // Le coup de feu, la fronde qui claque — sauf la bouteille, qu'on entend
-    // quand elle CASSE (`allumer`), pas quand elle part.
-    if (!arme.feu_s) Son.SFX.arme(arme);
+    // quand elle CASSE (`allumer`), pas quand elle part. Celui d'un tireur de gang s'entend de LA OU il tire :
+    // une fusillade hors champ ne s'entend pas.
+    if (!arme.feu_s) {
+      if (deGang) Son.depuis(e, function () { Son.SFX.arme(arme); });
+      else Son.SFX.arme(arme);
+    }
     return true;
   }
 
@@ -584,7 +606,10 @@ const Combat = (function () {
         // ⚠️ Seule la balle qui aurait touche LE CONDUCTEUR mord la tole : tirer
         // sur le capot d'un char vide ne fait toujours rien.
         if (touche.dansVehicule) Vehicules.endommager(touche.dansVehicule, p.degats, p.tireur);
-        else Entites.blesser(touche, p.degats, p.tireur, {
+        // ⚠️ LA BALLE D'UN GANG TE PREND MOINS (`rixes.TIR.degats_contre_joueur`) : trois tireurs ne te couchent
+        // pas en une seconde.
+        else Entites.blesser(touche, p.deGang && touche.type === 'joueur'
+          ? p.degats * B.defs.rixes.tir.degats_contre_joueur : p.degats, p.tireur, {
           saigne: p.saigne, angle: Math.atan2(p.vy, p.vx),
           assomme: false, renverse: false,
         });

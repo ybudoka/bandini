@@ -48,7 +48,8 @@ const Rixe = (function () {
   /** Ceux qui visent la meme cible, ranges par identifiant : leur rang donne leur place sur le cercle. */
   function assaillants(cible, f) {
     return Entites.pietonsAutour(cible.x, cible.y, f.cercle_px * 8).filter(function (q) {
-      return q.rixe && q.rixe.cible === cible && EN_COMBAT[q.etat];
+      // ⚠️ Le tireur n'est pas sur le cercle (il tient SA distance) : il n'y prend pas de place.
+      return q.rixe && q.rixe.cible === cible && EN_COMBAT[q.etat] && !q.armeDeGang;
     }).sort(function (a, b) { return a.id - b.id; });
   }
 
@@ -120,6 +121,8 @@ const Rixe = (function () {
     // homme qui se degage tournerait le dos a celui qu'il vient de frapper. Deux images : ca s'eteint seul
     // quand le cerveau ne le mene plus.
     e.faceVers = cible; e.faceT = 2;
+    // L'ARME DE SON GANG (vague 2) : il la degaine au premier echange, et se bat en tireur ou en lanceur.
+    if (armer(e)) return majTir(e, cible, vitesse, r);
     const dx = cible.x - e.x, dy = cible.y - e.y, d = Math.hypot(dx, dy) || 1;
     if (r.posture !== 'recul' && esquive(e, cible, d, f)) reculer(r, f);
     if (r.posture === 'recul') {
@@ -160,5 +163,116 @@ const Rixe = (function () {
     return false;
   }
 
-  return { maj: maj, assaillants: assaillants };
+  // --- Vague 2 : l'arsenal et la fusillade ----------------------------------------------------------------
+
+  function tir() { return B.defs.rixes.tir; }
+
+  /** L'ARME DE SON GANG, un sur `part_armee`, a l'empreinte de son identifiant : toujours le meme homme, toujours la
+      meme arme (`armeDeGang`, qui la retient — `null` : il n'en a pas). Jamais un homme de mission (il garde l'arme
+      que sa mission lui donne), un allie, ni un Mante (l'ecole, pas les balles). Rend vrai s'il l'a en main. */
+  function armer(e) {
+    if (e.armeDeGang !== undefined) return !!e.armeDeGang && e.arme === e.armeDeGang;
+    const R = B.defs.rixes, slug = e.gang && R.arsenal[e.gang];
+    const arme = !!slug && !e.cible && !e.personnage && !e.allie && !e.techniques
+      && hash2(e.id, 0xA5E1) % R.part_armee === 0;
+    e.armeDeGang = arme ? slug : null;
+    if (arme) e.arme = slug;
+    return arme;
+  }
+
+  /** Un ABRI : la tuile marchable la plus proche de lui (a `abri_tuiles` au plus) d'ou la cible NE LE VOIT PAS
+      (`Monde.ligneLibre`), dans sa fourchette de distance. `null` s'il n'y en a pas. ⚠️ Parcours dans l'ordre des
+      tuiles, jamais au de. */
+  function abriPour(e, cible) {
+    const T = tir(), f = T.distances[e.arme];
+    if (!f) return null;
+    const tx0 = Math.floor(e.x / TT), ty0 = Math.floor(e.y / TT), n = T.abri_tuiles;
+    let meilleur = null, dMin = Infinity;
+    for (let ty = ty0 - n; ty <= ty0 + n; ty++) {
+      for (let tx = tx0 - n; tx <= tx0 + n; tx++) {
+        if (!Monde.marchablePieton(tx, ty)) continue;
+        const x = tx * TT + 8, y = ty * TT + 8, dc = Math.hypot(cible.x - x, cible.y - y);
+        if (dc < f[0] || dc > f[1] + TT) continue;
+        const d = dist2(x, y, e.x, e.y);
+        if (d >= dMin || Monde.ligneLibre(x, y, cible.x, cible.y)) continue;
+        dMin = d; meilleur = { x: x, y: y };
+      }
+    }
+    return meilleur;
+  }
+
+  function marcher(e, vers, vitesse) {
+    const dx = vers.x - e.x, dy = vers.y - e.y, d = Math.hypot(dx, dy);
+    if (d <= 3) { e.vx = 0; e.vy = 0; return; }
+    e.vx = dx / d * vitesse; e.vy = dy / d * vitesse;
+  }
+
+  /** Il tient sa fourchette : il recule si la cible est trop pres, avance si elle est trop loin — ou s'il ne la
+      voit pas. Rend vrai s'il est en place, la cible en vue. */
+  function tenirSaDistance(e, cible, f, vitesse) {
+    const dx = cible.x - e.x, dy = cible.y - e.y, d = Math.hypot(dx, dy) || 1;
+    const vue = Monde.ligneLibre(e.x, e.y, cible.x, cible.y);
+    if (d < f[0]) { e.vx = -dx / d * vitesse; e.vy = -dy / d * vitesse; return false; }
+    if (d > f[1] || !vue) { e.vx = dx / d * vitesse; e.vy = dy / d * vitesse; return false; }
+    e.vx = 0; e.vy = 0;
+    return true;
+  }
+
+  /** Combien de balles dans cette salve : 2 a 4 a l'empreinte — ou, a la mitraillette, ce que tient la rafale. */
+  function salveDe(e, r, arme) {
+    const T = tir();
+    if (arme.auto) return Math.max(2, Math.floor(T.rafale_images / arme.cadence));
+    return T.salve[0] + hash2(e.id, 0x5A1E + r.salves) % (T.salve[1] - T.salve[0] + 1);
+  }
+
+  /** Une image de fusillade. Le TIREUR : leve l'arme (`lever_images`) avant sa premiere balle ; tient sa distance,
+      la cible en vue ; tire une salve ; rentre a l'abri (ou garde sa distance) le temps `entre_salves_images` ;
+      recharge son chargeur vide. Le LANCEUR (la cloche du Molotov) : se place a sa distance de chute, lance, se
+      sauve `fuite_images` ; ses bouteilles lancees, il finit aux poings. Rend vrai si un coup est parti. */
+  function majTir(e, cible, vitesse, r) {
+    const T = tir(), arme = Combat.armeDef(e.arme), f = T.distances[e.arme];
+    if (r.balles === undefined) {
+      r.balles = arme.chargeur || 1; r.leve = e.t + T.lever_images; r.tir = 'expose';
+      r.salve = 0; r.salves = 0; r.prochain = 0; r.pause = 0; r.recharge = 0; r.abri = null;
+    }
+    if (r.balles <= 0) {
+      // ⚠️ Plus de bouteilles : il finit AUX POINGS, et redevient un homme du cercle.
+      if (arme.cloche) { e.arme = 'poings'; e.armeDeGang = null; e.vx = 0; e.vy = 0; return false; }
+      if (!r.recharge) r.recharge = e.t + T.recharge_images;
+      if (e.t < r.recharge) { seMettreAlAbri(e, cible, f, vitesse, r); return false; }
+      r.balles = arme.chargeur; r.recharge = 0; r.tir = 'expose';
+    }
+    if (r.tir === 'fuite') {
+      const dx = e.x - cible.x, dy = e.y - cible.y, d = Math.hypot(dx, dy) || 1;
+      e.vx = dx / d * vitesse; e.vy = dy / d * vitesse;
+      if (e.t >= r.pause) r.tir = 'expose';
+      return false;
+    }
+    if (r.tir === 'abri') {
+      seMettreAlAbri(e, cible, f, vitesse, r);
+      if (e.t >= r.pause) r.tir = 'expose';
+      return false;
+    }
+    if (!tenirSaDistance(e, cible, f, vitesse) || e.t < r.leve || e.t < r.prochain) return false;
+    if (!Combat.tirer(e, arme, cible)) return false;
+    r.balles--; r.salve++;
+    r.prochain = e.t + arme.cadence;
+    if (arme.cloche) {
+      // ⚠️ Le geste du lanceur est COURT : `tirer` le fige le temps de la cadence (40 images), et il ne se
+      // sauverait qu'une fois la bouteille cassee.
+      e.phaseT = Math.min(e.phaseT, 8);
+      r.tir = 'fuite'; r.pause = e.t + T.fuite_images; r.salve = 0;
+    } else if (r.salve >= salveDe(e, r, arme)) {
+      r.tir = 'abri'; r.pause = e.t + T.entre_salves_images; r.salve = 0; r.salves++;
+      r.abri = abriPour(e, cible);
+    }
+    return true;
+  }
+
+  function seMettreAlAbri(e, cible, f, vitesse, r) {
+    if (r.abri) marcher(e, r.abri, vitesse);
+    else tenirSaDistance(e, cible, f, vitesse);
+  }
+
+  return { maj: maj, assaillants: assaillants, armer: armer, abriPour: abriPour };
 })();

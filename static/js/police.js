@@ -419,14 +419,16 @@ const Police = (function () {
       (le cone n'est pas le seul sens) : la distance achete du temps, pas
       l'impunite. Et si tu es deja recherche, le coup dit ou tu es. Rend le
       nombre d'agents qui l'ont entendu. */
-  function entendre(x, y, rayon) {
+  function entendre(x, y, rayon, autrui) {
     let n = 0;
     for (const a of agents()) {
       if (dist2(a.x, a.y, x, y) > rayon * rayon) continue;
       n++;
       alerterAgent(a, x, y);
     }
-    if (n && B.recherche.etoiles > 0) B.recherche.dernierVu = { x: x, y: y, t: B.t };
+    // ⚠️ `autrui` : le coup de feu d'un AUTRE (une rixe armee) fait venir les agents voir, mais ne deplace pas ce
+    // qu'ils te pretent — tu n'y es pour rien, et tu n'es peut-etre meme pas la.
+    if (n && B.recherche.etoiles > 0 && !autrui) B.recherche.dernierVu = { x: x, y: y, t: B.t };
     return n;
   }
 

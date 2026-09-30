@@ -5792,7 +5792,13 @@ const Entites = (function () {
       // ordinaire reprend, et la gang lui tombe dessus comme chez elle.
       // ⚠️ L'ALLIE (m98) blesse encaisse et continue : il ne fuit pas, et ne se retourne pas contre toi.
       if (e.etat !== 'attaque_joueur' && !(enPleineRixe(e) && source !== B.joueur) && !e.allie) {
-        e.etat = (e.courage > 0 && B.rng() < e.courage) ? 'attaque_joueur' : 'fuit';
+        // ⚠️ TOUCHE PAR UN AUTRE QUE TOI (une balle perdue de rixe, un coup d'une autre gang), on detale : le
+        // courage ne se traduit qu'en `attaque_joueur`, et se jeter sur toi pour le coup d'un autre est un bogue.
+        // Le de du courage est jete quand meme (le hasard de la ville ne bouge pas). Un homme de MISSION (`cible`)
+        // est la pour toi : lui, reste.
+        const ose = e.courage > 0 && B.rng() < e.courage;
+        const parAutrui = !!source && source.type === 'pieton' && !e.cible;
+        e.etat = ose && !parAutrui ? 'attaque_joueur' : 'fuit';
         e.minuterie = B.defs.pietons.reactions.fuite_secondes * 60;
         e.avantLeCoup = null;      // il ne reprendra pas ce qu'il faisait
       }

@@ -483,3 +483,33 @@ def test_il_recule_apres_son_coup_en_regardant_sa_cible(banc):
     assert r["trouve"], "aucune frontière n'a ses deux trottoirs"
     assert r["reculs"] >= 2, "personne ne se dégage après son coup (%s)" % r
     assert r["dos"] == 0, "il recule en tournant le dos à sa cible (%s)" % r
+
+
+def test_une_rixe_armee_ne_se_retourne_pas_contre_le_joueur(banc):
+    """Vague 2 : tous armés de l'arme de leur gang, ils se tirent dessus — et le joueur n'y est toujours pour
+    rien : ni étoile, ni crime à son nom, et personne ne passe en `attaque_joueur`. ⚠️ Rouge avant : `tirer` ne
+    notait pas `avantLeCoup`, et `majAttaque` rendait le tireur à `attaque_joueur` après sa première balle."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.B.defs.recherche.autrui.chance = 0;
+        L.graine(18);
+        %s
+        const trouve = allumer(L);
+        if (!trouve) return { trouve: false };
+        const A = L.B.defs.rixes.arsenal;
+        for (const e of rixeurs(L)) if (A[e.gang]) { e.arme = A[e.gang]; e.armeDeGang = A[e.gang]; }
+        L.B.recherche.etoiles = 0; L.B.crimes.length = 0;
+        let contre = 0, balles = 0;
+        const vrai = L.Combat.tirer;
+        L.Combat.tirer = function (e) { if (e.bagarre) balles++; return vrai.apply(null, arguments); };
+        for (let i = 0; i < 900; i++) {
+          o.frame(1);
+          for (const e of rixeurs(L)) if (e.etat === 'attaque_joueur') contre++;
+        }
+        L.Combat.tirer = vrai;
+        return { trouve: true, contre: contre, balles: balles, etoiles: L.B.recherche.etoiles, crimes: L.B.crimes.length };
+    }""" % ALLUMER)
+    assert r["trouve"], "aucune frontière n'a ses deux trottoirs"
+    assert r["balles"] >= 3, "personne n'a tiré : le juge ne mesure rien (%s)" % r
+    assert r["contre"] == 0, "la rixe armée s'est retournée contre le joueur (%s)" % r
+    assert r["etoiles"] == 0 and r["crimes"] == 0, r
