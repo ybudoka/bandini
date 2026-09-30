@@ -1589,3 +1589,44 @@ def test_la_ligne_du_defi_ne_pousse_ni_jouer_ni_compte_hors_de_l_ecran(page, ser
     for ident in ("bouton-jouer", "bouton-compte", "defi-du-jour"):
         assert page.evaluate(DANS_L_ECRAN, ident), f"{ident} sort de l'écran titre en {nom}"
     assert erreurs == []
+
+
+#: Les morceaux de sol en cache et la mini-carte : combien sont VIDES (pas un pixel opaque).
+MORCEAUX_VIDES = """() => {
+  const L = window.BANDINI, carte = L.Monde.carte;
+  const vide = function (c) {
+    const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+    for (let i = 3; i < d.length; i += 4) if (d[i]) return false;
+    return true;
+  };
+  return { morceaux: carte.morceaux.size, vides: [...carte.morceaux.values()].filter(vide).length,
+           miniVide: vide(L.Monde.miniCarte()), generation: L.Base.generation };
+}"""
+
+
+def test_la_ville_se_repeint_quand_le_gpu_tombe(page, serveur, erreurs):
+    """⚠️ Martin, 30 sept. 2026 : « plus rien ne s'affiche sauf quelques exceptions, j'ai dû relancer
+    le jeu » — la ville vide, la mini-carte noire, les chars réduits à une ombre et deux feux. Le
+    processus GPU de Chrome était tombé : le navigateur rend alors chaque canevas accéléré VIDE, et
+    le jeu collait ses morceaux cuits (vides) à l'écran. Ici on fait tomber le GPU pour vrai
+    (`Browser.crashGpuProcess`) : la perte doit arriver (sinon le juge ne mord pas), puis chaque
+    morceau et la mini-carte se repeignent seuls, sans recharger la page."""
+    page.goto(serveur)
+    attendre_titre(page)
+    jouer(page)
+    page.wait_for_timeout(500)
+    avant = page.evaluate(MORCEAUX_VIDES)
+    assert avant["morceaux"] and not avant["vides"] and not avant["miniVide"], avant
+    page.evaluate("""() => {
+      window.__rendus = 0;
+      for (const m of window.BANDINI.Monde.carte.morceaux.values())
+        m.addEventListener('contextrestored', () => window.__rendus++);
+    }""")
+    page.context.browser.new_browser_cdp_session().send("Browser.crashGpuProcess")
+    page.wait_for_function("window.__rendus > 0", timeout=15000)
+    page.wait_for_timeout(500)
+    apres = page.evaluate(MORCEAUX_VIDES)
+    assert apres["generation"] > avant["generation"], apres
+    assert apres["morceaux"] and apres["vides"] == 0, f"des morceaux de ville restent vides : {apres}"
+    assert not apres["miniVide"], f"la mini-carte reste noire : {apres}"
+    assert erreurs == []

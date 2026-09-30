@@ -508,6 +508,7 @@ const Atlas = (function () {
   function largeurTexte(s, echelle) { return normaliser(s).length * 4 * (echelle || 1) - (echelle || 1); }
 
   function vider() { cache.clear(); }
+  Base.apresPerte(vider);   // le GPU est tombé : ses images cuites sont vides (`Base.apresPerte`)
 
   /** Jette ce qui commence par `prefixe` (`'tuile|'`, `'decor|arbre'`) : la saison change de palier,
       et seuls les dessins qui la lisent se recuisent — pas les chars ni les passants. */

@@ -381,11 +381,31 @@ const Base = (function () {
   const cible = { cv: null, ctx: null };   // rendu 1x, puis un seul drawImage a l'ecran
   let fabrique = null;                      // (w, h) => canvas, injecte par jeu.js ou le banc
 
+  // ⚠️ LE GPU TOMBE, LA VILLE SE VIDE (Martin, 30 sept. 2026 : « plus rien ne s'affiche sauf
+  // quelques exceptions, j'ai dû relancer le jeu »). Quand le processus GPU de Chrome redémarre
+  // (veille du Mac, changement de carte graphique, mémoire vidéo pleine), le navigateur rend
+  // chaque canevas accéléré VIDE : `contextlost`, puis `contextrestored` sur une page blanche.
+  // Le jeu, lui, peint une fois et garde — les morceaux de sol, la mini-carte, l'atlas. Il
+  // collait donc du vide à l'écran : la ville disparaissait, les chars n'étaient plus qu'une
+  // ombre et deux feux, et un morceau visible ne se repeint jamais. Chaque canevas du jeu passe
+  // par `nouveauCanvas` : il y est écouté, et à la première image après la perte, la
+  // `generation` monte et tout ce qui s'est cuit se jette (`apresPerte`) — une carte compare la
+  // sienne (`Monde`). Jugé en vrai Chromium, crash du GPU compris (`test_navigateur`).
+  let generation = 0, perdu = false;
+  const oublis = [];
+  function signalerPerte() { perdu = true; }
+  function ecouterPerte(c) {
+    if (c && typeof c.addEventListener === 'function') c.addEventListener('contextrestored', signalerPerte);
+    return c;
+  }
+  /** `fn` : ce qu'un module jette quand les canevas ont été vidés (son cache d'images cuites). */
+  function apresPerte(fn) { oublis.push(fn); }
+
   function initCanvas(canvas, fabriqueCanvas) {
-    cv = canvas;
+    cv = ecouterPerte(canvas);
     ctx = cv.getContext('2d');
     fabrique = fabriqueCanvas;
-    cible.cv = fabrique(VW, VH);
+    cible.cv = ecouterPerte(fabrique(VW, VH));
     cible.ctx = cible.cv.getContext('2d');
     cible.ctx.imageSmoothingEnabled = false;
   }
@@ -413,6 +433,7 @@ const Base = (function () {
 
   /** Le contexte 1x dans lequel tout le jeu se dessine. */
   function debut() {
+    if (perdu) { perdu = false; generation++; oublis.forEach(function (fn) { fn(); }); }
     const c = cible.ctx;
     c.setTransform(1, 0, 0, 1, 0, 0);
     c.imageSmoothingEnabled = false;
@@ -538,7 +559,7 @@ const Base = (function () {
   /** Le contexte ECRAN (pour le HUD, hors nuit). Echelle deja posee. */
   function ecran() { return ctx; }
 
-  function nouveauCanvas(w, h) { return fabrique(w, h); }
+  function nouveauCanvas(w, h) { return ecouterPerte(fabrique(w, h)); }
 
   /** `n` : l'echelle a tenir quelle que soit la fenetre ; null la rend a la fenetre. */
   function imposerEchelle(n) { echelleImposee = n || null; }
@@ -560,8 +581,8 @@ const Base = (function () {
   }
 
   return {
-    initCanvas, redimensionner, imposerEchelle, debut, fin, ecran, nouveauCanvas, telecharger,
-    get SCALE() { return SCALE; },
+    initCanvas, redimensionner, imposerEchelle, debut, fin, ecran, nouveauCanvas, telecharger, apresPerte, signalerPerte,
+    get SCALE() { return SCALE; }, get generation() { return generation; },
   };
 })();
 

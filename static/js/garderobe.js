@@ -664,6 +664,7 @@ const Garderobe = (function () {
   }
 
   function vider() { cache.clear(); }
+  Base.apresPerte(vider);   // le GPU est tombé : ses images cuites sont vides (`Base.apresPerte`)
 
   return { MARGE_HAUT, MARGE_COTE, CACHE_MAX, CHAPEAUX, squelette, tete, vueDe, grille, palette,
            cuire, tirer, duPersonnage, duJoueur, couleurs, vider, get taille() { return cache.size; } };

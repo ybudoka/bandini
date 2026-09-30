@@ -286,7 +286,7 @@ const Monde = (function () {
       plancher: def.plancher || null,
       solide: solide, route: route, passage: passage, portesFermees: portesFermees,
       devants: devantsDePortes(def, portesVues),
-      morceaux: new Map(), visibles: new Set(),
+      morceaux: new Map(), visibles: new Set(), generation: Base.generation,
       // Les battants qui s'ouvrent : hors du cache de morceaux (voir `ouvrirPorte`).
       battants: new Map(),
       // Les rideaux de garage : meme regle, et ils se souviennent de leur hauteur.
@@ -2539,7 +2539,20 @@ const Monde = (function () {
   //: Le palier de saison des tuiles cuites de l'atlas (voir `dessinerSol`).
   let atlasPalier;
 
+  /** Le GPU est tombé depuis que la carte `k` a cuit ses images (`Base.generation`) : ses morceaux, sa
+      mini-carte et son calque de zonage sont des canevas VIDES. Elle les jette ; ils se recuisent au
+      prochain dessin. Par carte, comme le palier : la ville rangée pendant qu'on est dedans se
+      recuit a son tour, en ressortant. */
+  function cuissonAJour(k) {
+    if (k.generation === Base.generation) return;
+    k.generation = Base.generation;
+    k.morceaux.clear();
+    k.mini = null; k.miniCle = null; k.miniFond = null; k.miniHerbe = null; k.miniFondCle = null;
+    if (k.calque) k.calque = undefined;
+  }
+
   function dessinerSol(ctx, cam) {
+    cuissonAJour(carte);
     const cx = Math.round(cam.x), cy = Math.round(cam.y);
     const m0x = Math.floor(cx / MORCEAU_PX), m0y = Math.floor(cy / MORCEAU_PX);
     const m1x = Math.floor((cx + VW - 1) / MORCEAU_PX), m1y = Math.floor((cy + VH - 1) / MORCEAU_PX);
@@ -2796,6 +2809,7 @@ const Monde = (function () {
       trois operations de canevas, pas 127 000 tuiles toutes les deux minutes. */
   function miniCarte(laquelle) {
     const k = laquelle || carte;                  // la ville, meme quand on est dedans
+    cuissonAJour(k);
     const cleMasque = masqueDeLaCarte(k) ? 'masquee' : 'entiere';
     const herbe = couleurMini(',');
     const cle = cleMasque + '|' + herbe;
@@ -2861,6 +2875,7 @@ const Monde = (function () {
   /** Le calque entier, une tuile = un pixel, cuit une fois comme la mini-carte. */
   function calqueDeZonage(laquelle) {
     const k = laquelle || carte;
+    cuissonAJour(k);
     if (k.calque !== undefined) return k.calque;
     if (!k.quartiers || !k.quartiers.usage) { k.calque = null; return null; }
     const c = Base.nouveauCanvas(k.w, k.h);

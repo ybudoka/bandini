@@ -645,6 +645,7 @@ const Visages = (function () {
   function connait(slug) { return !!fiche(slug); }
 
   function vider() { cache.clear(); }
+  Base.apresPerte(vider);   // le GPU est tombé : ses images cuites sont vides (`Base.apresPerte`)
 
   return { TAILLE, HUMEURS, TETES, grille, cuire, dessiner, etat, connait, fiche, vider, palette };
 })();
