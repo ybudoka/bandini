@@ -36,18 +36,22 @@ def lieux_des_blocs() -> dict[str, str]:
 import copy  # noqa: E402
 
 from .. import carte  # noqa: E402
-from . import cineparc, galeries, rang, villa  # noqa: E402
+from . import cineparc, galeries, rang, souterrain, villa  # noqa: E402
 
 #: ⚠️ LE RANG (26 sept. 2026) : le chalet, la clairière et la cabane à sucre ne font plus qu'UN bloc, et
 #: les trois passages sont au bord OUEST — la bande nord de la ville couvre l'ancien bord nord
 #: (docs/jalons/la-ville-s-agrandit-au-nord.md).
 BLOCS: list[dict] = [rang.BLOC, cineparc.BLOC, galeries.BLOC, villa.BLOC]
 
+#: ⚠️ LES SOUS-SOLS : des blocs SANS passage en ville — on y descend par un rideau (`seuil`), pas en poussant contre
+#: un bord. À part de `BLOCS`, dont les juges exigent un passage (docs/jalons/le-grand-garage-souterrain.md).
+SOUS_SOLS: list[dict] = [souterrain.BLOC]
+
 BORDS = ("nord", "sud", "est", "ouest")
 
 
 def par_slug(slug: str) -> dict | None:
-    return next((b for b in BLOCS if b["slug"] == slug), None)
+    return next((b for b in BLOCS + SOUS_SOLS if b["slug"] == slug), None)
 
 
 def sol_du_bloc(bloc: dict) -> list[str]:
@@ -116,7 +120,11 @@ def carte_du_bloc(bloc: dict) -> dict:
                  "gardes": [dict(g) for g in bloc.get("gardes", ())],
                  "regles_des_gardes": dict(bloc["regles_des_gardes"]) if bloc.get("regles_des_gardes") else None,
                  # La nuit y attend qu'on ressorte (la villa, `Monde.majHeure`).
-                 "nuit_tient": bool(bloc.get("nuit_tient", False))},
+                 "nuit_tient": bool(bloc.get("nuit_tient", False)),
+                 # Sous terre (le garage souterrain) : ni pluie, ni neige, ni nuit (`Monde.aLAbri`).
+                 "abrite": bool(bloc.get("abrite", False)),
+                 # Ses cases et son ascenseur (`Souterrain`) ; null ailleurs.
+                 "souterrain": copy.deepcopy(bloc["souterrain"]) if bloc.get("souterrain") else None},
     }
 
 
@@ -150,7 +158,8 @@ def pour_le_navigateur() -> list[dict]:
     ⚠️ Rien de leur carte : elle voyage à part, à la demande. Seulement leurs PORTES, avec le
     nom de la pièce : la triche ENDROITS CLÉS les liste (le chalet, la cabane à sucre) avant
     qu'aucune carte de bloc ne soit arrivée."""
-    return [{"slug": b["slug"], "nom": b["nom"], "passage": passage_en_ville(b),
+    return [{"slug": b["slug"], "nom": b["nom"],
+             "passage": passage_en_ville(b) if b.get("passage") else None,
              "panneau": b.get("panneau", b["nom"][:5].upper()),
              "portes": [{"x": p["x"], "y": p["y"], "nom": b.get("pieces", {})[p["interieur"]]["nom"]}
                         for p in b.get("portes", [])],
@@ -158,7 +167,9 @@ def pour_le_navigateur() -> list[dict]:
              # fait viser le passage du bloc au GPS — le pixel, lui, n'existe que dans le bloc.
              **({"lieux": sorted(b["lieux"])} if b.get("lieux") else {}),
              # Une planque qui s'achète (le chalet) : la triche TOUTES LES PROPRIÉTÉS la donne sans charger le bloc.
-             **({"planque": True} if b.get("planque") else {})} for b in BLOCS]
+             **({"planque": True} if b.get("planque") else {}),
+             # ⚠️ Un sous-sol : le rideau devant lequel on ressort (`Blocs.retourEnVille`).
+             **({"seuil": b["seuil"]} if b.get("seuil") else {})} for b in BLOCS + SOUS_SOLS]
 
 
 def erreurs(bloc: dict, ville: dict | None = None) -> list[str]:
@@ -172,6 +183,8 @@ def erreurs(bloc: dict, ville: dict | None = None) -> list[str]:
     if inconnus:
         fautes.append(f"{slug} : glyphes inconnus {sorted(inconnus)}")
     for cote in ("passage", "retour"):
+        if cote == "passage" and bloc.get("passage") is None and bloc.get("seuil"):
+            continue   # un sous-sol : pas de bord en ville, un rideau
         if bloc[cote]["bord"] not in BORDS:
             fautes.append(f"{slug} : le {cote} n'est sur aucun bord ({bloc[cote]['bord']!r})")
     sol = sol_du_bloc(bloc)
@@ -243,7 +256,7 @@ def erreurs(bloc: dict, ville: dict | None = None) -> list[str]:
         if cl * carte.TUILE_PX < ECRAN_PX[0] or ch * carte.TUILE_PX < ECRAN_PX[1]:
             fautes.append(f"{slug} : le cadre ({cx}, {cy}, {cl}, {ch}) est plus petit que l'écran")
     # Le passage, dans la ville : sur son bord, et chacune de ses tuiles se marche.
-    if ville is not None:
+    if ville is not None and bloc.get("passage"):
         p = passage_en_ville(bloc) if ville.get("decalage_nord") else bloc["passage"]
         for x, y in _tuiles_du_bord(p, ville["largeur"], ville["hauteur"]):
             g = ville["sol"][y][x] if 0 <= y < ville["hauteur"] and 0 <= x < ville["largeur"] else "B"

@@ -332,7 +332,7 @@ def construire() -> Paquets:
     donnees["missions_empreinte"] = des_missions
     # Les blocs de carte, une carte par bloc — même règle que les missions : signés ici,
     # une empreinte pour tous dans l'adresse (`?e=`).
-    des_cartes = {b["slug"]: _signer(blocs.carte_du_bloc(b)) for b in blocs.BLOCS}
+    des_cartes = {b["slug"]: _signer(blocs.carte_du_bloc(b)) for b in blocs.BLOCS + blocs.SOUS_SOLS}
     des_blocs = empreinte(_json({slug: paquet.etag for slug, paquet in sorted(des_cartes.items())}))
     donnees["blocs_empreinte"] = des_blocs
     return Paquets(definitions=_signer(donnees), carte=carte, a_jouer=a_jouer,
