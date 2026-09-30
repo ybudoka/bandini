@@ -695,3 +695,73 @@ def test_il_esquive_parfois_ton_coup(banc):
 - [ ] **Atterrir** : commits rejoués sur `dev` (`rebase dev`, puis `merge --ff-only` dans l'arbre principal) ;
   la ligne du plan passe à « ✅ vague 1 livrée : … ; vague 2 à faire » ; ces notes prennent « — **livrée le …** ».
 - [ ] La suite complète ensuite, puis `git push`.
+
+### Vague 2 — l'arsenal et la fusillade — **plan** (30 sept. 2026)
+
+> Exécuté comme la vague 1 : sur place, tâche par tâche, juges d'abord, une relecture neuve à la fin.
+
+**But :** un membre de gang sur trois dégaine l'arme de son gang au premier échange et s'en sert en tireur (sa
+distance, son abri, ses salves, sa recharge, la levée d'arme, des balles qui manquent) ou en lanceur (le Molotov
+des Skateux) — dans la rixe comme contre toi.
+
+**Architecture :** la fiche `rixes.TIR` et `rixes.ARSENAL` (au paquet `B.defs.rixes`) ; `rixe.js` gagne deux
+rôles lus sur l'arme en main (`tireur`, `lanceur`) à côté du contact ; `Combat.tirer(e, arme, cible)` vise la
+cible passée et, pour un tireur de gang, disperse à l'empreinte ; `blesser` ne retourne plus contre toi celui
+qu'un AUTRE a touché.
+
+**Ce que l'exploration a trouvé** (et que le plan corrige) :
+- `Combat.tirer` ne note pas `avantLeCoup` : au bout du tir, `majAttaque` rend le PNJ à `'attaque_joueur'` — un
+  tireur de rixe se retournerait contre toi à sa première balle.
+- `Combat.tirer` d'un PNJ vise toujours le joueur, et sa dispersion tire `B.rng()`.
+- `blesser` d'un passant (ou d'un membre de gang hors rixe) par un PIÉTON jette le courage et peut l'envoyer en
+  `attaque_joueur` : une balle perdue de rixe le lancerait sur toi.
+- `Police.entendre` déplace `dernierVu` (la position que la police te prête) au coup de feu, même d'un autre.
+- La bouteille en cloche retombe au bout d'environ 30 images : le Molotov (3,4 px/image) tombe vers 100 px, quelle
+  que soit la cible — le lanceur se place à cette distance.
+
+**Contraintes** (de la fiche) : rien au `B.rng()` pour choisir une arme, un abri ou une salve ; un homme de
+mission (`cible`, `personnage`), un allié et les Mantes ne reçoivent pas d'arme ; aucune étoile au joueur pour une
+rixe armée ; l'agent (`police.js`) tire comme avant (sans `cible`, rien ne change pour lui).
+
+#### Tâche 1 — la fiche du tir, au paquet
+
+`app/rixes.py` : `ARSENAL` (gang → arme : cravates pistolet, morues fusil, chevreuils carabine, boulonneux
+mitraillette, skateux molotov), `PART_ARMEE = 3` (un sur trois, `hash2(e.id, …) % 3 == 0`), et `TIR` :
+distances par arme (pistolet 70–140, fusil 30–70, carabine 140–210, mitraillette 60–120, molotov 85–110),
+`lever_images` 30, `salve` (2, 4), `rafale_images` 24, `entre_salves_images` 70, `recharge_images` 90,
+`dispersion_facteur` 2, `abri_tuiles` 5, `degats_contre_joueur` 0,5, `fuite_images` 60. `exporter()` les porte.
+Juges (`test_rixes.py`) : chaque arme de l'arsenal existe, est de type `tir`, et sa fourchette tient dans sa
+portée ; les Mantes n'ont rien ; la fourchette du Molotov contient sa distance de chute (`vproj` × 30) ; le
+paquet les porte ; `MESURE_DU_PAQUET` relevé.
+
+#### Tâche 2 — `Combat.tirer` vise sa cible, et rien ne se retourne contre toi
+
+- `tirer(e, arme, cible)` : `cible` optionnelle (défaut : le joueur, l'agent ne change pas). Avec une cible : il
+  note `avantLeCoup` (il reprend la rixe après sa balle), vise la cible, disperse `dispersion × facteur` À
+  L'EMPREINTE (`hash2`), fait fuir la rue (`alerter`, menace = lui), s'entend (`Police.entendre(…, autrui)`, qui
+  ne touche pas `dernierVu`) et peut valoir une méprise (`crimeDAutrui('arme_sortie')`).
+- La balle d'un tireur de gang qui te touche fait `degats × degats_contre_joueur`.
+- `blesser` : touché par un piéton (pas par toi), on fuit — le dé du courage est toujours jeté (le hasard ne
+  bouge pas), mais il ne décide plus que pour un coup du joueur.
+Juges (`test_rixe_js.py`) : la balle part vers la cible et pas vers toi ; après sa balle il est de nouveau en
+`bagarre` ; tirer sur une cible ne tire aucun `B.rng()` ; un Cravate hors rixe touché par une Morue fuit ;
+`entendre(…, autrui)` laisse `dernierVu` ; la balle d'un Boulonneux te prend moitié moins.
+
+#### Tâche 3 — le tireur et le lanceur
+
+`rixe.js` : `armer(e)` au premier échange (l'arsenal, un sur trois, jamais un homme de mission, un allié ou un
+Mante) ; le rôle se lit sur l'arme en main. Le TIREUR : lève l'arme (`lever_images`) avant sa première balle ;
+tient sa fourchette de distance ; cherche un ABRI (une tuile marchable à `abri_tuiles` au plus, d'où la cible ne
+le voit pas — `Monde.ligneLibre` —, dans sa fourchette, la plus proche ; recherchée toutes les 60 images) ; sort
+pour une salve (2 à 4 balles à l'empreinte, ou une rafale de `rafale_images` à la mitraillette), rentre ; recharge
+son chargeur (celui de l'arme) en `recharge_images`. Le LANCEUR : se place à sa distance de chute, lance, puis se
+sauve `fuite_images` ; ses trois bouteilles lancées, il finit aux poings.
+Juges (`test_rixe_js.py`) : un sur trois armé, toujours le même homme, jamais un Mante ni un homme de mission ;
+le tireur tient sa fourchette ; il ne tire pas avant la levée ; il recharge (un trou d'au moins `recharge_images`
+entre deux balles après son chargeur) ; l'abri trouvé est caché de la cible ; le Molotov part de sa fourchette
+et laisse un brasier près de la cible ; la rixe armée à la frontière ne te donne ni étoile ni crime, et personne
+ne passe en `attaque_joueur`.
+
+#### Tâche 4 — juger large, regarder, atterrir
+
+Les juges de la vague 1 et la série des missions ; une capture d'une rixe armée ; la ligne du plan et ces notes.
