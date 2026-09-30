@@ -11,8 +11,8 @@ Ce qui a bougé, et pourquoi :
   restent l'appel et l'intro du chapitre ; l'appel et l'intro des cinq autres se disent à l'ouverture de LEUR acte
   (un `pendant` sur le marqueur : le donneur suivant appelle) ; leur fin se dit à l'ouverture de l'acte SUIVANT,
   en personne, juste après le `retourner` ; la fin de p11 reste la fin du chapitre ;
-- chaque acte donne ce que sa mission donnait (`donne` sur l'objectif qui le finit) ; la fronde du Trappeur, le
-  respect des Skateux, la manchette du phare ; la libération de La Pointe reste celle du chapitre ;
+- chaque acte donne ce que sa mission donnait (`donne` sur l'objectif qui le finit), sa PRIME comprise : la fronde
+  du Trappeur, le respect des Skateux, la manchette du phare ; la libération de La Pointe reste celle du chapitre ;
 - ce qui fait durer : des renforts au pont, le phare à TENIR 90 s contre trois vagues, une auto de Skateux qui
   vous colle jusqu'au Brouillard ;
 - l'appel de p10 perd « Yo, c'est Zed » (il est à côté de toi, il vient de courir) ; l'échec est neuf (celui du
@@ -29,7 +29,9 @@ MISSION = {
     # ⚠️ Après p01 : M. Bilodeau n'est devant le phare qu'une fois la lampe réparée (`arrive_apres`).
     "prerequis": ["p01"],
     "remplace": ["p02", "p05", "p04", "p10", "p09", "p11"],
-    "recompense": 1520,      # les six primes d'origine : 150 + 120 + 200 + 250 + 300 + 500
+    # La prime de p11 : chaque acte d'avant paie la sienne en finissant (`donne.prime`) — une vieille partie qui avait
+    # fait p02 ne la touche pas deux fois.
+    "recompense": 500,
     "donne": {"libere": "pointe", "manchette": "pointe_liberee", "message": "LA POINTE EST LIBRE"},
 
     "objectifs": [
@@ -40,7 +42,7 @@ MISSION = {
         {"type": "tuer", "texte": "LEUR GRAND ARRIVE AVEC UN CÔNE — COUCHE-LE",
          "groupe": "skateux", "n": 1, "chef": True, "arme": "cone"},                                           # 2
         {"type": "retourner", "texte": "RETOURNE VOIR M. BILODEAU, AU PHARE",
-         "donne": {"message": "LE PONT DE LA POINTE EST OUVERT"}},                                             # 3
+         "donne": {"prime": 150, "message": "LE PONT DE LA POINTE EST OUVERT"}},                                             # 3
 
         # --- Acte 2 (p05) : les collets du Trappeur, de nuit.
         {"type": "acte", "texte": "ACTE 2 — LES COLLETS DU TRAPPEUR", "donneur": "trappeur",
@@ -51,14 +53,14 @@ MISSION = {
         {"type": "tuer", "texte": "DEUX SKATEUX RELÈVENT SES COLLETS — COUCHE-LES",
          "groupe": "skateux", "n": 2, "ou": "zone:skateux"},                                                   # 6
         {"type": "retourner", "texte": "RETOURNE VOIR LE TRAPPEUR",
-         "donne": {"arme": "fronde", "message": "LA FRONDE DU TRAPPEUR, ET SES BILLES"}},                       # 7
+         "donne": {"prime": 120, "arme": "fronde", "message": "LA FRONDE DU TRAPPEUR, ET SES BILLES"}},                       # 7
 
         # --- Acte 3 (p04) : la course de Zed, à pied, contre son temps.
         {"type": "acte", "texte": "ACTE 3 — ZED VEUT UN DÉFI", "donneur": "zed"},                              # 8
         {"type": "course", "texte": "BATS LE TEMPS DE ZED, À PIED",
          "points": ["zone:skateux", "foire", "pont", "phare"], "a_pied": True, "chrono_s": 80},                # 9
         {"type": "retourner", "texte": "RETOURNE VOIR ZED, DEVANT LE PHARE",
-         "donne": {"calme": "skateux", "message": "LES SKATEUX TE RESPECTENT"}},                               # 10
+         "donne": {"prime": 200, "calme": "skateux", "message": "LES SKATEUX TE RESPECTENT"}},                               # 10
 
         # --- Acte 4 (p10) : le saut, sur la machine de Zed (une motoneige l'hiver).
         {"type": "acte", "texte": "ACTE 4 — LE SAUT DE LA POINTE", "donneur": "zed"},                          # 11
@@ -66,7 +68,7 @@ MISSION = {
         {"type": "sauter", "texte": "SAUTE LA RAMPE DES SKATEUX — 80 PX DE VOL",
          "ou": "rampe:pointe", "vol_px": 80},                                                                  # 13
         {"type": "retourner", "texte": "RAMÈNE SA MACHINE À ZED",
-         "donne": {"message": "LES SKATEUX PARLENT DE TON SAUT"}},                                             # 14
+         "donne": {"prime": 250, "message": "LES SKATEUX PARLENT DE TON SAUT"}},                                             # 14
 
         # --- Acte 5 (p09) : le phare s'éteint — le TENIR, puis rallumer avec Ovila.
         {"type": "acte", "texte": "ACTE 5 — LE PHARE S'ÉTEINT", "donneur": "ovila"},                           # 15
@@ -74,7 +76,7 @@ MISSION = {
          "lieu": "phare", "rayon": 6, "secondes": 90,
          "groupe": "skateux", "n": 3, "renforts": {"vagues": 2, "n": 2}},                                      # 16
         {"type": "parler", "texte": "MONTE RALLUMER LA LAMPE AVEC OVILA", "cible": "ovila",
-         "donne": {"manchette": "phare_a_tenu", "message": "LE PHARE A TENU"}},                                # 17
+         "donne": {"prime": 300, "manchette": "phare_a_tenu", "message": "LE PHARE A TENU"}},                                # 17
 
         # --- Acte 6 (p11) : Zed au Brouillard, une auto de Skateux au pare-chocs ; la paix signée.
         {"type": "acte", "texte": "ACTE 6 — ZED ET LA CHEF", "donneur": "josee"},                              # 18

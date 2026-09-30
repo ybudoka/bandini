@@ -559,7 +559,9 @@ signée). La fiche : `docs/jalons/des-missions-en-chapitres.md`.
 - **Mourir ou se faire pogner** dans un chapitre ouvre, après l'hôpital ou le poste, **REPRENDRE L'ACTE N**
   (l'arme de l'acte est rendue, même confisquée) ou **PLUS TARD** (l'acte reste atteint, le donneur de
   l'acte rappellera). Rien à écrire : c'est le moteur (`static/js/chapitres.js`).
-- **Un `retourner` au milieu d'un chapitre passe à l'acte suivant** ; seul le dernier objectif paie la prime.
+- **Un `retourner` au milieu d'un chapitre passe à l'acte suivant** ; chaque acte paie SA prime par le `donne` de
+  son dernier objectif (`"donne": {"prime": 150, "message": …}`), et `recompense` est celle du dernier acte. Une vieille
+  partie qui avait fait la mission d'un acte le saute : ni rejoué, ni repayé.
 - **Les répliques** : `appel` et `intro` sont celles du premier acte ; ce qui ouvre un acte suivant
   (le donneur qui appelle, puis ce qu'il explique) est un `pendant` **sur l'étape du marqueur** ; la fin
   d'un acte, dite en personne, un `pendant` sur le marqueur de l'acte **suivant** ; `fin` est celle du
@@ -577,7 +579,7 @@ signée). La fiche : `docs/jalons/des-missions-en-chapitres.md`.
 | `renforts: {"vagues": 2, "n": 2}` | `tuer`, `tenir` | quand il ne reste qu'UN debout, la vague suivante arrive de loin |
 | `poursuite: {"groupe": "skateux", "chars": 1}` | `aller`, `livrer`, `retourner`, `proteger` | un char du gang naît hors champ et te colle ; l'objectif fait, il retourne au trafic |
 | `etoiles: 2` | tout objectif | la police à ce niveau au départ |
-| `donne: {…}` | tout objectif | ce que CET objectif accorde quand il est fait (le `message` s'affiche) |
+| `donne: {…}` | tout objectif | ce que CET objectif accorde quand il est fait ; `prime` (la prime de l'acte) se paie au bandeau avec son `message` |
 | `tenir` (type) | — | rester à `lieu` (`rayon`) `secondes` ; en sortir remet à zéro, ou rate (`strict`) ; `groupe`/`n`/`renforts` : ceux qui viennent te déloger |
 | `relais: 1` | `ramasser` + `cible: fuyard` | rattrapé, il saute dans un autre char tout près, N fois |
 

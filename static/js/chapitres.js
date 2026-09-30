@@ -46,9 +46,12 @@ const Chapitres = (function () {
       `missionsFaites` — `arrive_apres`, le carnet), puis le carton et le point de reprise. */
   function ouvrirActe(m, o, etape) {
     const p = B.partie, pm = p.mission, j = B.joueur, k = acteA(m, etape);
-    if (k > 0 && m.remplace && m.remplace[k - 1] && !p.missionsFaites[m.remplace[k - 1]]) {
-      p.missionsFaites[m.remplace[k - 1]] = p.jour;
-      Histoire.arriverApres(m.remplace[k - 1]);         // Zed arrive après p02 : il est là pour l'acte suivant
+    // Tous les actes d'avant sont passés (joués ici, ou faits par une vieille partie et sautés).
+    for (let i = 0; i < k; i++) {
+      const s = m.remplace && m.remplace[i];
+      if (!s || p.missionsFaites[s]) continue;
+      p.missionsFaites[s] = p.jour;
+      Histoire.arriverApres(s);                          // Zed arrive après p02 : il est là pour l'acte suivant
     }
     chapitres()[m.slug] = etape;
     // Le chronomètre : l'acte d'avant se ferme (seulement s'il s'est joué ici — une reprise rouvre l'acte sans
@@ -74,6 +77,18 @@ const Chapitres = (function () {
     let k = 0;
     while (k < a.length - 1 && m.remplace && m.remplace[k] && faites[m.remplace[k]]) k++;
     return Math.max(a[k], chapitres()[m.slug] || 0);
+  }
+
+  /** L'acte qui commence à `etape` a-t-il déjà été fait, comme la mission qu'il remplace (une vieille partie) ? */
+  function dejaFait(m, etape) {
+    const k = actes(m).indexOf(etape);
+    return k >= 0 && !!(m.remplace && m.remplace[k] && B.partie.missionsFaites[m.remplace[k]]);
+  }
+
+  /** L'étape du marqueur qui suit `etape` ; au-delà du dernier, la fin des objectifs. */
+  function marqueurSuivant(m, etape) {
+    const a = actes(m).filter(function (e) { return e > etape; });
+    return a.length ? a[0] : (m.objectifs || []).length;
   }
 
   /** Un chapitre dont toutes les missions remplacées sont faites l'est aussi (une vieille partie). */
@@ -161,6 +176,9 @@ const Chapitres = (function () {
       // La durée des actes d'avant, jouée avant l'échec, revient avec la reprise.
       const pm = B.partie.mission;
       if (pm) { pm.actes = (x.actes || []).slice(); if (pm.reprise) pm.reprise.actes = pm.actes.slice(); }
+      // ⚠️ Et le point de reprise d'AVANT : `ouvrirActe` vient de le refaire à pied, à l'hôpital — mourir deux fois
+      // dans le même acte ne fait pas perdre le char, ni la place.
+      if (pm && pm.reprise) { pm.reprise.char = x.char; pm.reprise.x = x.x; pm.reprise.y = x.y; }
     }, 'ACTE ' + r.acte);
   }
 
@@ -171,5 +189,5 @@ const Chapitres = (function () {
     (m.remplace || []).forEach(function (s) { if (!p.missionsFaites[s]) p.missionsFaites[s] = p.jour; });
   }
 
-  return { actes, acteA, donneurDe, ouvrirActe, reussi, depart, fait, retenir, majReprise, reprendre, compter, noterDuree };
+  return { actes, acteA, donneurDe, ouvrirActe, reussi, depart, fait, dejaFait, marqueurSuivant, retenir, majReprise, reprendre, compter, noterDuree };
 })();

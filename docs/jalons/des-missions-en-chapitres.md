@@ -1273,10 +1273,19 @@ p10, p09 et p11 en six actes, 21 étapes. Les répliques d'origine gardées mot 
 Retirées : les six échecs (un seul échec par mission — le neuf dit « La Pointe va vous attendre ») et l'appel de p10,
 où Zed se renommait à côté de toi (7 mp3). Neuves : l'échec, les renforts du pont, le phare à tenir, l'auto des
 Skateux, le défi du saut sans « c'est Zed » — **5 voix, 93 caractères** (61 095 restants). Ce qui fait durer : deux de
-renfort au pont, le phare à tenir 90 s contre trois vagues, une auto de Skateux jusqu'au Brouillard. La prime est
-celle des six (1 520 $), à la fin. Tombés : la `frontiere` de p05 et les scènes d'intro écrites de p09 et p11 (leurs
+renfort au pont, le phare à tenir 90 s contre trois vagues, une auto de Skateux jusqu'au Brouillard. Chaque acte paie
+la prime de sa mission d'origine en finissant (`donne.prime`, au bandeau de prime avec son message) ; le chapitre paie
+celle de p11. Tombés : la `frontiere` de p05 et les scènes d'intro écrites de p09 et p11 (leurs
 intros se disent à l'ouverture de l'acte, en boîte ordinaire plutôt qu'au combiné).
 
 **Les juges** : `test_chapitres.py` (la forme), `test_chapitres_js.py` (le moteur sur une mission greffée, chaque
 règle vue rouge sans elle), `test_arc_p_js.py` réécrit acte par acte (trop lent à la course : REPRENDRE L'ACTE 3),
 `test_sur_place_js.py`, et le plafond de répliques de `test_missions.py` : 18 **par acte**.
+
+**La relecture finale** (un agent neuf, sur le modèle le plus fort) a trouvé huit défauts, tous corrigés avec un juge
+vu rouge d'abord : une reprise redonnait le `donne` de l'acte d'avant (la fronde confisquée rendue gratis) ; le message
+d'un acte était écrasé dans la même image (d'où la prime au bandeau) ; le GPS d'un chapitre à reprendre menait au premier
+donneur ; une vieille partie qui avait fait p04 et p10 sans p05 rejouait et repayait ces actes (ils se sautent) ; l'auto
+de poursuite ne s'oubliait jamais et ne se volait pas ; le chronomètre ne comptait aucune réplique (≈ 3 minutes de La
+Pointe) ; mourir deux fois dans le même acte faisait perdre le char ; l'intro filmait un pont vide (un marqueur sans saut
+ni réplique s'enchaîne maintenant sous l'intro).

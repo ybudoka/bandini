@@ -67,7 +67,8 @@ def test_acte_1_le_pont_trois_skateux_deux_de_renfort_puis_leur_grand(banc):
         const retour = { etape: etape(L), ligne: L.Histoire.ligneObjectif() };
         versLui(L, 'bilodeau'); jouer(L, o, 20);
         return { avant: avant, dispo: dispo && dispo.slug, pose: pose, vague: vague, grand: grand, retour: retour, dites: dites,
-                 fait: !!p.missionsFaites.p02, apres: etape(L), argent: argent.length, zed: !!L.Histoire.donneur('zed') };
+                 fait: !!p.missionsFaites.p02, apres: etape(L), argent: argent.map(function (a) { return a.montant; }),
+                 zed: !!L.Histoire.donneur('zed') };
     }""")
     assert r["avant"] is False, "M. Bilodeau n'est pas devant le phare avant p01"
     assert r["dispo"] == "la_pointe"
@@ -78,7 +79,7 @@ def test_acte_1_le_pont_trois_skateux_deux_de_renfort_puis_leur_grand(banc):
     for dite in ("pendant:bilodeau:1", "pendant:bilodeau:2", "pendant:bilodeau:3", "pendant:bilodeau:4", "pendant:trappeur:4"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["apres"] >= 4, "l'acte fini marque p02 faite, le chapitre continue"
-    assert r["argent"] == 0, "pas de prime au milieu d'un chapitre"
+    assert r["argent"] == [150], "l'acte paie la prime de sa mission d'origine"
     assert r["zed"] is True, "Zed arrive après p02 : il est devant le phare sans recharger"
 
 
@@ -271,7 +272,7 @@ def test_acte_6_zed_mene_a_la_chef_puis_la_pointe_est_libre_quatre_districts(ban
     assert r["bagarre"]["etape"] == 20 and r["bagarre"]["n"] == 3 and r["bagarre"]["courent"] and r["bagarre"]["loin"] <= 20, r["bagarre"]
     for dite in ("pendant:zed:19", "pendant:zed:20", "pendant:josee:18"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
-    assert r["fait"] is True and r["p11"] is True and r["argent"] == [1520]
+    assert r["fait"] is True and r["p11"] is True and r["argent"] == [500]
     assert r["libere"] == ["faubourg", "quais", "erables", "pointe"] and r["relue"] == r["libere"], r
     assert r["manchette"] == "pointe_liberee" and r["chasse"] and r["horsJeu"], r
     assert r["nom"] == {"nom": "La Pointe", "gang": None}, r["nom"]
@@ -288,3 +289,27 @@ def test_une_vieille_partie_qui_a_tout_fait_a_fait_le_chapitre(banc):
                  faite: L.Histoire.exigeTenu({ une_de: ['la_pointe'] }) };
     }""")
     assert r == {"dispo": False, "faite": True}
+
+
+def test_une_vieille_partie_qui_a_fait_p04_et_p10_sans_p05_saute_les_actes_faits(banc):
+    # Les vieux prérequis : p04 ← p02, p10 ← p04, p09 ← p05. Une partie a pu faire p02, p04 et p10 sans p05 : le
+    # chapitre part à l'acte 2, puis saute les actes 3 et 4 (ni rejoués, ni repayés) jusqu'au phare.
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + RECHARGER + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, p = B.partie;
+        faites(L, """ + repr(AVANT_P + ["p02", "p04", "p10"]) + """);
+        recharger(L);
+        const argent = paiements(L);
+        commencer(L, o, 'la_pointe'); jouer(L, o);
+        jusqua(L, o, 6);
+        const acte2 = etape(L);
+        B.mission.entites.filter(function (e) { return e.cible && e.etape === 6; }).forEach(function (e) { L.Entites.assommer(e); });
+        jouer(L, o);
+        versLui(L, 'trappeur'); jouer(L, o, 20);
+        jusqua(L, o, 16);
+        return { acte2: acte2, apres: etape(L), argent: argent.map(function (a) { return a.montant; }), p05: !!p.missionsFaites.p05,
+                 calmes: p.calmes.slice() };
+    }""")
+    assert r["acte2"] == 6 and r["apres"] == 16, f"les actes 3 et 4 (faits) se sautent : {r}"
+    assert r["argent"] == [120] and r["p05"] is True, r
+    assert r["calmes"] == [], "le donne de p04 n'est pas redonné — la vieille partie l'avait déjà (ou pas)"

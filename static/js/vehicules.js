@@ -1927,7 +1927,9 @@ const Vehicules = (function () {
       cycliste.etat = 'temoin'; cycliste.menace = j; cycliste.minuterie = 600; cycliste.cri = 120;
       cycliste.recul = 14; cycliste.vx = 0; cycliste.vy = 1.5;
       crime = 'vol_vehicule'; vu = true;
-    } else if (v.conducteur === 'trafic' || v.conducteur === 'ligne') {
+    } else if (v.conducteur === 'trafic' || v.conducteur === 'ligne' || v.conducteur === 'poursuivant') {
+      // ⚠️ L'auto d'une `poursuite` (les chapitres) se vole comme une autre : elle n'est plus à la mission.
+      if (v.conducteur === 'poursuivant') { v.mission = null; v.gang = null; v.poursuite = false; v.surRails = false; }
       // Carjacking : le conducteur sort, temoigne, et fuit. Pas besoin de temoin :
       // la victime en est un.
       // ⚠️ Sur une MOTO, on VOIT celui qui est dessus : c'est lui qui descend,

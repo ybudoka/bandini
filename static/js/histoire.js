@@ -496,7 +496,7 @@ const Histoire = (function () {
   /** `ou` d'un objectif ou d'un personnage → un pixel. */
   function resoudre(ou, m) {
     if (!ou) return null;
-    if (ou === 'donneur') return ouTrouver(m.donneur);
+    if (ou === 'donneur') return ouTrouver(Chapitres.donneurDe(m));
     if (ou === 'pont') return lieuPont();
     if (ou === 'quai') return tuileDeQuai();
     if (ou === 'bois') return tuileDeBois();
@@ -1487,6 +1487,7 @@ const Histoire = (function () {
     B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0,
                   vol: 0, boulotsDepart: 0, suit: null, protege: null, suivi: null };
     if (!enSilence) { Hud.message(m.titre.toUpperCase(), 180); Son.SFX.mission(); }
+    B.mission.auDepart = true;
     avancer(enSilence);
     return true;
   }
@@ -1526,12 +1527,26 @@ const Histoire = (function () {
     // ⚠️ `objet` (l'infiltration) : ce que l'objectif FINI met dans le sac — le code que le terminal
     // pirate crache, et qui ouvre la chambre forte (une serrure `objet` du bloc). `obtenir` le met
     // lui-meme, au moment ou on le ramasse.
-    const fait = m.objectifs[p.etape];
+    // ⚠️ Au DÉPART (`commencer`), l'étape d'avant n'a pas été faite ICI : un chapitre repris à l'acte 3 ne
+    // redonne pas le `donne` de l'acte 2 (la fronde qu'une prison a prise, la manchette).
+    const fait = B.mission && B.mission.auDepart ? null : m.objectifs[p.etape];
+    if (B.mission) B.mission.auDepart = false;
     if (fait && fait.objet && fait.type !== 'obtenir') { if (!B.partie.objets) B.partie.objets = {}; B.partie.objets[fait.objet] = 1; }
-    // `donne` sur un objectif (les chapitres) : accordé quand il est fait.
-    if (fait && fait.donne) { accorder(fait.donne); if (fait.donne.message) Hud.message(fait.donne.message, 200); }
+    // `donne` sur un objectif (les chapitres) : accordé quand il est fait. Sa `prime` (celle de la mission que
+    // l'acte remplace) se paie et s'annonce au bandeau, qui porte son message — la bande des messages n'a qu'une
+    // place, et le carton de l'acte suivant l'écrasait dans la même image.
+    if (fait && fait.donne) {
+      accorder(fait.donne);
+      if (fait.donne.prime) {
+        Missions.encaisser(fait.donne.prime, m.titre.toUpperCase(), true);
+        Missions.annoncerPrime(fait.donne.prime, fait.donne.message || m.titre.toUpperCase(), 'ACTE RÉUSSI', 0);
+      } else if (fait.donne.message) Hud.message(fait.donne.message, 200);
+    }
     p.etape++;
-    const o = m.objectifs[p.etape];
+    let o = m.objectifs[p.etape];
+    // ⚠️ Un acte dont la mission remplacée est DÉJÀ faite (une vieille partie qui a fait p04 sans p05) se saute :
+    // on ne le rejoue pas, on ne le repaie pas.
+    while (o && o.type === 'acte' && Chapitres.dejaFait(m, p.etape)) { p.etape = Chapitres.marqueurSuivant(m, p.etape); o = m.objectifs[p.etape]; }
     if (!o || !o.allies) relacherLesAllies();
     relacherLesPoursuivants();
     if (!o) { reussir(); return; }
@@ -1540,7 +1555,13 @@ const Histoire = (function () {
     if (o.type === 'tuer' && dejaTombes(m.slug, p.etape) >= o.n) { avancer(enSilence); return; }
     p.debutT = B.t;
     if (B.mission) { B.mission.vagues = 0; B.mission.relais = 0; }
-    if (o.type === 'acte') Chapitres.ouvrirActe(m, o, p.etape);
+    if (o.type === 'acte') {
+      Chapitres.ouvrirActe(m, o, p.etape);
+      // ⚠️ Sous l'intro (`enSilence`), un marqueur sans saut ni réplique s'enchaîne tout de suite : l'objectif
+      // suivant se POSE avant la scène (les Skateux du pont existent quand la caméra va les voir).
+      const parle = (m.dialogue.pendant || []).some(function (l) { return l.objectif === p.etape; });
+      if (enSilence && !o.sur_place && !parle) { avancer(true); return; }
+    }
     // Un `acheter` dont l'article est DÉJÀ en poche au départ : l'étape le dira (`majObjectif`).
     if (o.type === 'acheter' && B.mission && (B.partie.objets[o.article] || B.partie.armes[o.article])) B.mission.acheterDeja = p.etape;
     poser(enSilence);
@@ -2177,6 +2198,8 @@ const Histoire = (function () {
   function relacherLesPoursuivants() {
     ((B.mission && B.mission.poursuivants) || []).forEach(function (v) {
       if (v.etat !== 'epave' && v.conducteur === 'poursuivant') { v.conducteur = 'trafic'; v.poursuite = false; v.surRails = false; }
+      // Plus à la mission : le trafic l'oublie quand il est loin, le garage le repeint comme un autre.
+      if (v.conducteur !== B.joueur) { v.mission = null; v.gang = null; }
     });
     if (B.mission) B.mission.poursuivants = [];
   }
@@ -3666,7 +3689,7 @@ const Histoire = (function () {
     }
     // Un appel recu : le donneur a aller voir.
     const attendue = disponibles().find(function (q) { return p.appels[q.slug]; }) || disponibles().find(function (q) { return !q.prerequis.length; });
-    if (attendue) { const l = ouTrouver(attendue.donneur); const perso = personnage(attendue.donneur); return l ? { x: l.x, y: l.y, nom: perso.nom, couleur: '#8ad26a' } : null; }
+    if (attendue) { const qui = Chapitres.donneurDe(attendue), l = ouTrouver(qui), perso = personnage(qui); return l ? { x: l.x, y: l.y, nom: perso.nom, couleur: '#8ad26a' } : null; }
     // Un feu de bâtiment (P4) : pas de mission, pas d'appel — le feu est la
     // seule chose à chercher, et il se pointe comme un objectif.
     if (typeof Incendies !== 'undefined') { const fe = Incendies.cible(); if (fe) return fe; }
@@ -3776,6 +3799,9 @@ const Histoire = (function () {
     // l'image. La ville, elle, continue de tourner.
     const reprise = courante();
     if (reprise && !reprise.dialogue) { charger(reprise.slug); return; }
+    // Le chronomètre compte AUSSI les répliques (et un appel reçu au volant) : ni la pause, ni un menu, ni un
+    // fondu n'appellent `maj`.
+    Chapitres.compter();
     majCinema();
     if (B.cinema) return;
     jouerLaFin();
@@ -3788,7 +3814,6 @@ const Histoire = (function () {
     majTelephone();
     majProtege();
     if (B.partie.mission) {
-      Chapitres.compter();
       if (!B.mission) B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0,
                                     vol: 0, boulotsDepart: 0, suit: null, protege: null, suivi: null };  // partie rechargee : on reprend au meme objectif, sans ses figurants
       if (B.mission.pendant !== undefined && B.mission.pendant !== null) {

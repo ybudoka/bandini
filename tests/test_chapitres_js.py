@@ -310,11 +310,11 @@ def test_une_poursuite_nait_hors_champ_colle_et_lache_a_la_fin_de_l_objectif(ban
         commencer(L, o, 'zz'); jouer(L, o);
         const v = B.entites.find(function (e) { return e.type === 'vehicule' && e.conducteur === 'poursuivant'; });
         if (!v) return { v: false };
-        const nait = Math.round(Math.hypot(v.x - j.x, v.y - j.y)), horsChamp = !L.Entites.visibleAEcran(v.x, v.y, 0);
+        const nait = Math.round(Math.hypot(v.x - j.x, v.y - j.y)), horsChamp = !L.Entites.visibleAEcran(v.x, v.y, 0), gang = v.gang;
         for (let k = 0; k < 900; k++) o.frame(1);
         const pres = Math.round(Math.hypot(v.x - j.x, v.y - j.y));
         const ph = L.Histoire.lieu('phare'); j.x = ph.x; j.y = ph.y; L.Entites.indexer(); jouer(L, o);
-        return { v: true, nait: nait, horsChamp: horsChamp, pres: pres, apres: v.conducteur, gang: v.gang };
+        return { v: true, nait: nait, horsChamp: horsChamp, pres: pres, apres: v.conducteur, gang: gang };
     }""")
     assert r["v"], "un char du gang naît quand l'objectif commence"
     assert r["horsChamp"] and r["nait"] >= 300, r
@@ -389,3 +389,110 @@ def test_le_donneur_qui_arrive_apres_un_acte_est_la_pour_l_acte_suivant(banc):
                  message: vus.indexOf('LE PONT DE LA POINTE EST OUVERT') >= 0 };
     }""")
     assert r == {"avant": False, "apres": True, "etape": 4, "message": True}
+
+
+# --- La relecture finale (30 sept. 2026) : ce que les juges d'avant ne voyaient pas ----------------------------------
+
+
+def test_reprendre_un_acte_ne_redonne_pas_le_donne_de_l_acte_d_avant(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + """
+        const p = L.B.partie; ouvrir(L);
+        p.missionsFaites.za = 1;                                   // une vieille partie : l'acte 1 est fait
+        commencer(L, o, 'zz'); jouer(L, o);
+        return { etape: p.mission.etape, calmes: p.calmes.slice() };
+    }""")
+    assert r["etape"] == 4 and "skateux" not in r["calmes"], r
+
+
+def test_la_prime_d_un_acte_se_paie_et_s_affiche_avec_son_message(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + """
+        const m = ouvrir(L), B = L.B;
+        m.objectifs[2].donne = { prime: 150, message: 'LE PONT EST OUVERT' };
+        const argent = paiements(L), bandeaux = [];
+        const vrai = L.Hud.prime; L.Hud.prime = function (b) { bandeaux.push({ montant: b.montant, titre: b.titre, quoi: b.quoi }); return vrai.apply(null, arguments); };
+        commencer(L, o, 'zz'); jouer(L, o);
+        const ph = L.Histoire.lieu('phare'); B.joueur.x = ph.x; B.joueur.y = ph.y; L.Entites.indexer(); jouer(L, o);
+        a(L, 'bilodeau'); jouer(L, o);
+        return { argent: argent.map(function (x) { return x.montant; }), bandeaux: bandeaux, etape: B.partie.mission.etape };
+    }""")
+    assert r["argent"] == [150] and r["etape"] == 4, r
+    assert r["bandeaux"] == [{"montant": 150, "titre": "LE PONT EST OUVERT", "quoi": "ACTE RÉUSSI"}], r
+
+
+def test_le_gps_d_un_chapitre_a_reprendre_mene_au_donneur_de_l_acte(banc):
+    r = banc("function (L, o) {" + OUTILS + ZZ + """
+        ouvrir(L); const p = L.B.partie;
+        p.chapitres = { zz: 3 }; p.appels.zz = true;
+        const g = L.Histoire.cible();
+        return { nom: g && g.nom, trappeur: L.Histoire.personnage('trappeur').nom };
+    }""")
+    assert r["nom"] == r["trappeur"], r
+
+
+def test_l_auto_de_poursuite_se_vole_et_s_oublie(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + """
+        const m = ouvrir(L), B = L.B, j = B.joueur;
+        m.objectifs[1].poursuite = { groupe: 'skateux', chars: 1 };
+        commencer(L, o, 'zz'); jouer(L, o);
+        const v = B.entites.find(function (e) { return e.type === 'vehicule' && e.conducteur === 'poursuivant'; });
+        const w = B.entites.filter(function (e) { return e.type === 'vehicule' && e.conducteur === 'poursuivant'; });
+        j.x = v.x + 12; j.y = v.y; v.vitesse = 0; L.Entites.indexer(); L.Vehicules.monter(j, v); L.Entites.indexer();
+        const vole = { dedans: j.dansVehicule === v, mission: v.mission || null, gang: v.gang || null };
+        return { vole: vole };
+    }""")
+    assert r["vole"] == {"dedans": True, "mission": None, "gang": None}, r
+
+
+def test_relachee_l_auto_de_poursuite_n_est_plus_a_la_mission(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + """
+        const m = ouvrir(L), B = L.B, j = B.joueur;
+        m.objectifs[1].poursuite = { groupe: 'skateux', chars: 1 };
+        commencer(L, o, 'zz'); jouer(L, o);
+        const v = B.entites.find(function (e) { return e.type === 'vehicule' && e.conducteur === 'poursuivant'; });
+        const ph = L.Histoire.lieu('phare'); j.x = ph.x; j.y = ph.y; L.Entites.indexer(); jouer(L, o);
+        return { conducteur: v.conducteur, mission: v.mission || null, gang: v.gang || null, poursuite: !!v.poursuite };
+    }""")
+    assert r == {"conducteur": "trafic", "mission": None, "gang": None, "poursuite": False}
+
+
+def test_le_chronometre_compte_aussi_les_repliques(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + """
+        const m = ouvrir(L), B = L.B, p = B.partie;
+        m.dialogue.pendant = [{ qui: 'bilodeau', texte: 'Les voyez-vous? Trois, sur le pont, avec leurs planches.', objectif: 1 }];
+        commencer(L, o, 'zz');
+        let k = 0; const t0 = p.mission.images || 0;
+        for (; k < 600 && !B.cinema; k++) o.frame(1);
+        const avant = p.mission.images || 0; let n = 0;
+        for (; n < 60 && B.cinema; n++) o.frame(1);
+        return { cinema: n, compte: (p.mission.images || 0) - avant };
+    }""")
+    assert r["cinema"] > 10 and r["compte"] >= r["cinema"] - 1, r
+
+
+def test_mourir_deux_fois_dans_le_meme_acte_garde_le_char(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + REPRENDRE + """
+        ouvrir(L);
+        const B = L.B, p = B.partie, j = B.joueur;
+        const CAP = { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 };
+        const rue = L.Histoire.tuileDeRue(j.x, j.y, 12);
+        const v = L.Vehicules.creer('taxi', rue.x, rue.y, CAP[rue.sens], { etat: 'stationne' });
+        j.x = v.x + 10; j.y = v.y; L.Entites.indexer(); L.Vehicules.monter(j, v); L.Entites.indexer();
+        commencer(L, o, 'zz'); jouer(L, o);
+        L.Missions.hopital('banc'); attendreLeMenu(L, o); choisir(L, o, 'REPRENDRE');
+        const reprise = p.mission.reprise;
+        return { char: reprise.char && reprise.char.slug };
+    }""")
+    assert r["char"] == "taxi", r
+
+
+def test_l_intro_d_un_chapitre_trouve_les_hommes_du_premier_acte_poses(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + """
+        const m = ouvrir(L), B = L.B;
+        m.dialogue.intro = [{ qui: 'bilodeau', texte: "C'est le seul pont, monsieur." }];
+        m.objectifs[1] = { type: 'tuer', texte: 'DÉGAGE LE PHARE', groupe: 'skateux', n: 3, ou: 'phare' };
+        L.Histoire.parler('bilodeau');
+        const pendantLIntro = !!B.cinema || !!B.scene;
+        const eux = B.mission.entites.filter(function (e) { return e.cible && e.etape === 1; }).length;
+        return { intro: pendantLIntro, etape: B.partie.mission.etape, eux: eux };
+    }""")
+    assert r == {"intro": True, "etape": 1, "eux": 3}, r
