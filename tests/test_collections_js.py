@@ -232,3 +232,87 @@ def test_les_sons_des_cartes_se_chargent_a_l_approche(banc):
     assert r["pres"] is True, "à un écran d'une carte, ses sons ne se chargent pas"
     assert r["declares"] == ["carte_hockey", "orgue_arena"], "les sons des cartes n'ont pas rejoint le paquet"
     assert r["orgue"] == ["orgue_arena-1.mp3"], "l'orgue n'est pas déclaré une fois, avec son fichier"
+
+
+PEINDRE = """
+    function peindre(L, a, jour, heure, t) {
+        L.B.partie.jour = jour; L.B.partie.heure = heure; L.B.t = t;
+        const faits = []; let style = null;
+        const ctx = { fillRect: function (x, y, w, h) { faits.push({ x: x, y: y, w: w, h: h, c: style }); },
+                      set fillStyle(v) { style = v; }, get fillStyle() { return style; } };
+        const cam = { x: a.p.x - 240, y: a.p.y - 135 };
+        L.Collections.dessiner(ctx, cam);
+        return { faits: faits, lampes: L.Collections.lampes(cam), hiver: L.Saisons.enHiver(),
+                 nuit: L.Monde.ambianceVue().alpha };
+    }
+"""
+
+
+def _sombre(c):
+    """Une couleur `#rrggbb` qui se lit sur la neige : sa luminance sous le tiers."""
+    if not c or not c.startswith("#"):
+        return False
+    r, g, b = (int(c[i:i + 2], 16) for i in (1, 3, 5))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b < 85
+
+
+def test_l_hiver_la_carte_a_un_contour_et_un_eclat_d_or(banc):
+    """30 sept. 2026, Martin : « la carte blanche se perd sur la neige ». Tant que la neige tient, un cadre
+    SOMBRE déborde d'un pixel tout autour du carton (7 × 9), et l'éclat n'est plus blanc ; l'été, rien de ça."""
+    r = banc("function (L, o) {" + AMENER + PEINDRE + """
+        const a = amener(L, o, 12);
+        a.j.x = a.p.x + 40;
+        const t = (180 - (12 * 37) % 180 + 5) % 180;       // au milieu d'un éclat de la n° 12
+        return { hiver: peindre(L, a, 5, 0.55, t), ete: peindre(L, a, 20, 0.55, t) };
+    }""")
+    h, e = r["hiver"], r["ete"]
+    assert h["hiver"] is True and e["hiver"] is False, "le banc ne met pas la neige au sol le jour 5 seulement"
+
+    def cadre(p):
+        # Le carton : le seul rectangle de 7 × 9 ; un cadre de 9 × 11 posé un pixel en haut à gauche, sombre.
+        carton = next(f for f in p["faits"] if f["w"] == 7 and f["h"] == 9)
+        return [f for f in p["faits"] if f["x"] == carton["x"] - 1 and f["y"] == carton["y"] - 1
+                and f["w"] == 9 and f["h"] == 11 and _sombre(f["c"])]
+
+    assert len(cadre(h)) == 1, "l'hiver, la carte n'a pas son contour sombre"
+    assert cadre(e) == [], "l'été, la carte a un contour d'hiver"
+    # L'éclat : les deux bras d'une croix (1 de large). L'hiver, pas du blanc sur la neige : du bleu bas.
+    # (les deux derniers rectangles : la croix se peint après la carte, une par écran ici)
+    def bras(p):
+        croix = p["faits"][-2:]
+        assert all(min(f["w"], f["h"]) == 1 and max(f["w"], f["h"]) >= 5 for f in croix), croix
+        return [f["c"] for f in croix]
+
+    def bleu(c):
+        return int(c.replace(" ", "").split("(")[1].split(",")[2])
+
+    assert all(bleu(c) < 120 for c in bras(h)), bras(h)
+    assert all(bleu(c) > 180 for c in bras(e)), "l'été, l'éclat a changé de couleur"
+
+
+def test_la_nuit_l_eclat_allume_une_petite_lampe(banc):
+    """La nuit se pose par-dessus la ville : sans lampe, l'éclat s'y éteignait. Une lampe le temps de l'éclat,
+    la nuit seulement — rien le jour, rien entre deux éclats (pas une carte qui luit)."""
+    r = banc("function (L, o) {" + AMENER + PEINDRE + """
+        const a = amener(L, o, 12);
+        a.j.x = a.p.x + 40;
+        const t = (180 - (12 * 37) % 180 + 5) % 180;
+        const n = peindre(L, a, 20, 0.96, t), j = peindre(L, a, 20, 0.55, t), entre = peindre(L, a, 20, 0.96, t + 60);
+        // Et le rendu la donne bien à la nuit (`Base.fin`) : une image rendue, le monde n'avance pas.
+        L.B.partie.heure = 0.96; L.B.t = t; L.Monde.centrerCamera(a.j.x, a.j.y);
+        const vraie = L.Base.fin; let donnees = null;
+        L.Base.fin = function (amb, lampes) { donnees = (lampes || []).slice(); return vraie.apply(this, arguments); };
+        const attendue = L.Collections.lampes(L.B.cam)[0];
+        L.Jeu.rendre();
+        L.Base.fin = vraie;
+        const rendue = !!attendue && (donnees || []).some(function (l) { return l.x === attendue.x && l.y === attendue.y && l.r === attendue.r; });
+        return { rendue: rendue, nuit: n.lampes, alpha: n.nuit, jour: j.lampes, entre: entre.lampes, p: [a.p.x - (a.p.x - 240), a.p.y - (a.p.y - 135)] };
+    }""")
+    assert r["alpha"] > 0.4, r
+    assert len(r["nuit"]) == 1, "la nuit, l'éclat d'une carte n'éclaire rien"
+    lampe = r["nuit"][0]
+    assert abs(lampe["x"] - r["p"][0]) <= 8 and abs(lampe["y"] - r["p"][1]) <= 8, "la lampe n'est pas sur la carte"
+    assert 8 <= lampe["r"] <= 24, "une lampe d'éclat, pas un lampadaire"
+    assert r["jour"] == [], "le jour, l'éclat allume une lampe"
+    assert r["entre"] == [], "entre deux éclats, la carte luit"
+    assert r["rendue"] is True, "le rendu ne donne pas la lampe de la carte à la nuit"

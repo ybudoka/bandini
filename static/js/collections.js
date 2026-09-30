@@ -183,10 +183,26 @@ const Collections = (function () {
     B.stats.rects += 6;
   }
 
+  //: ⚠️ L'HIVER (30 sept. 2026, Martin : « la carte blanche se perd sur la neige ») : un carton crème sur la
+  //: neige, c'est un carton blanc sur du blanc — on ne voyait plus que la photo, un point de couleur. Tant que
+  //: la neige tient (`Saisons.enHiver`, la même règle que les capotes relevées), la carte a un CONTOUR sombre
+  //: (le petit creux qu'elle fait dans la neige) et son éclat passe du blanc à l'OR, qui se lit sur le blanc.
+  const HIVER = { contour: '#3a3442', eclat: 'rgba(255,178,40,1)' };
+  //: ⚠️ LA NUIT (jamais regardée avant le 30 sept.) : la nuit se pose PAR-DESSUS la ville (`Base.fin`), l'éclat
+  //: s'y éteignait avec la carte. Il allume donc, le temps de briller, une petite lampe (`lampes`) — un éclat
+  //: dans le noir toutes les trois secondes, pas une carte qui luit : rien entre deux éclats.
+  const LUEUR = { rayon: 16, alpha: 0.8, nuit: 0.2 };
+
+  function eclatA(c) {
+    const periode = Math.max(60, (regle().scintille_s || 3) * 60);
+    const t = ((B.t || 0) + c.numero * 37) % periode;
+    return t < ECLAT_IMAGES ? (t < ECLAT_IMAGES / 2 ? t : ECLAT_IMAGES - t) : -1;
+  }
+
   function dessiner(ctx, cam) {
     const liste = aTrouver();
     if (!liste.length) return;
-    const periode = Math.max(60, (regle().scintille_s || 3) * 60);
+    const hiver = typeof Saisons !== 'undefined' && Saisons.enHiver();
     for (const c of liste) {
       const q = pixels(c);
       const x = Math.round(q.x - cam.x - 3), y = Math.round(q.y - cam.y - 4);
@@ -194,20 +210,36 @@ const Collections = (function () {
       // Par terre, un peu de biais : l'ombre, puis la carte à l'échelle 1 (une tuile en fait 16).
       ctx.fillStyle = 'rgba(0,0,0,0.28)';
       ctx.fillRect(x + 1, y + 9, 7, 1);
+      if (hiver) { ctx.fillStyle = HIVER.contour; ctx.fillRect(x - 1, y - 1, 9, 11); B.stats.rects++; }
       peindreCarte(ctx, c, x, y, 1);
       // ⚠️ L'ÉCLAT, discret : quelques images toutes les trois secondes, pas deux cartes à la fois (décalé
       // par le numéro). Une croix de lumière au coin, qui grandit puis s'éteint.
-      const t = ((B.t || 0) + c.numero * 37) % periode;
-      if (t < ECLAT_IMAGES) {
-        const k = t < ECLAT_IMAGES / 2 ? t : ECLAT_IMAGES - t;
+      const k = eclatA(c);
+      if (k >= 0) {
         const bras = k > 4 ? 3 : k > 2 ? 2 : 1;
         const ex = x + 6, ey = y;
-        ctx.fillStyle = 'rgba(255,250,210,0.95)';
+        ctx.fillStyle = hiver ? HIVER.eclat : 'rgba(255,250,210,0.95)';
         ctx.fillRect(ex, ey - bras, 1, bras * 2 + 1);
         ctx.fillRect(ex - bras, ey, bras * 2 + 1, 1);
         B.stats.rects += 2;
       }
     }
+  }
+
+  /** La nuit, l'éclat d'une carte allume une petite lampe le temps qu'il dure (`Base.fin` les pose PAR-DESSUS
+      la nuit) ; le jour, rien. En coordonnées d'écran, comme les citrouilles. */
+  function lampes(cam) {
+    if (typeof Monde === 'undefined' || !Monde.ambianceVue || Monde.ambianceVue().alpha <= LUEUR.nuit) return [];
+    const out = [];
+    for (const c of aTrouver()) {
+      const k = eclatA(c);
+      if (k < 0) continue;
+      const q = pixels(c), x = q.x - cam.x + 3, y = q.y - cam.y - 4;
+      if (x < -20 || y < -20 || x > VW + 20 || y > VH + 20) continue;
+      const f = Math.min(1, (k + 1) / (ECLAT_IMAGES / 2));
+      out.push({ x: x, y: y, r: LUEUR.rayon, c: 'rgba(255,236,170,' + (LUEUR.alpha * f).toFixed(2) + ')' });
+    }
+    return out;
   }
 
   // --- Le debug : aller à une carte qui manque -------------------------------------------------------
@@ -233,5 +265,5 @@ const Collections = (function () {
   function oublier() {}
 
   return { charger, reclamer, poser, catalogue, etatDeLaDemande, cartes, regle, equipe, position, fiche, trouvee, nombre, total,
-           parEquipe, aTrouver, pixels, donner, maj, peindreCarte, dessiner, plusProche, toutes, oublier };
+           parEquipe, aTrouver, pixels, donner, maj, peindreCarte, dessiner, lampes, plusProche, toutes, oublier };
 })();

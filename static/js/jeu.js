@@ -1300,6 +1300,7 @@ const Jeu = (function () {
     if (!B.interieur) for (const l of Cineparc.lampes(vue)) lampes.push(l);
     if (!B.interieur) for (const l of Fetes.lampes(vue)) lampes.push(l);
     if (!B.interieur) for (const l of Halloween.lampes(vue)) lampes.push(l);   // les citrouilles allumees
+    if (!B.interieur) for (const l of Collections.lampes(vue)) lampes.push(l);   // l'eclat d'une carte de hockey, la nuit
     // Les fleches d'une course : lumineuses, meme la nuit.
     if (!B.interieur) for (const l of Histoire.lampesDeCourse(vue)) lampes.push(l);
     const projecteur = !B.interieur ? Police.lampeHelico(vue) : null;

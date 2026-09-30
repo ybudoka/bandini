@@ -190,3 +190,20 @@ la carte — tout passe par `/api/collections`.
 - **Juges** : `tests/test_decoration.py` (sept) et `tests/test_decoration_js.py` (sept), mutations vues rouges.
 - **Ce qui reste pour les vagues d'après** : les bebelles (vague 3) se poseront sur une étagère de la planque par
   le même `PLACES` ; le marché aux puces lira `ou: puces`.
+
+### La carte plus visible l'hiver, et la nuit (✅ livrée le 30 sept. 2026)
+
+- **Ce qui se perdait** (capture sur la neige, jour 5) : le carton crème sur la neige, c'est du blanc sur du blanc
+  — on ne voyait plus que la photo, un point de couleur ; et l'éclat blanc disparaissait. **La nuit n'avait jamais
+  été regardée** : la nuit se pose par-dessus la ville (`Base.fin`), la carte et son éclat s'y éteignaient, l'été
+  comme l'hiver.
+- **L'hiver** (`Saisons.enHiver`, tant que la neige tient — la même règle que les capotes relevées) : un cadre
+  sombre d'un pixel autour du carton (le petit creux qu'elle fait dans la neige), et l'éclat passe du blanc à
+  l'or (`HIVER` dans `collections.js`). L'été ne change pas.
+- **La nuit** (`Monde.ambianceVue().alpha` au-dessus de 0,2) : le temps de l'éclat, une petite lampe de 16 px
+  (`Collections.lampes`, donnée à la nuit par `Jeu.rendre` comme les citrouilles) — un éclat dans le noir toutes
+  les trois secondes, rien entre deux : pas une carte qui luit.
+- **Captures** (`captures/collections/`) : `hiver-jour-avant.png` / `hiver-jour.png`, `hiver-jour-eclat.png`,
+  `hiver-nuit-eclat-avant.png` / `hiver-nuit-eclat.png`, `ete-nuit-eclat.png`.
+- **Juges** : deux de plus dans `tests/test_collections_js.py` (le contour et l'éclat d'or l'hiver, pas l'été ; la
+  lampe la nuit, ni le jour ni entre deux éclats, et donnée au rendu) — sept mutations vues rouges.
