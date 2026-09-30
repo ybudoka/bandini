@@ -506,6 +506,9 @@ const Jeu = (function () {
       Entites.creerDecor(def);
       garerLeCharDeLaPlanque(bloc.slug, def);
     }
+    // ⚠️ LE SOUS-SOL SE GARNIT A CHAQUE DESCENTE, souvenir ou pas : ses chars vivent dans la partie, et le bloc
+    // n'en garde jamais un (`quitterLeBloc` → `Souterrain.ranger`).
+    if (Souterrain.est(bloc.slug)) Souterrain.garnir(def);
     const r = def.bloc.retour;
     if (ici) poserLesVoyageurs(gens, ici, j.angle || 0);
     else poserLesVoyageurs(gens, { x: def.bloc.arrivee.x * TT + 8, y: def.bloc.arrivee.y * TT + 8 }, Blocs.capVersLInterieur(r));
@@ -558,7 +561,10 @@ const Jeu = (function () {
     // Ce qui reste dans le bloc s'y garde : tout, sauf ceux qui repartent avec nous (a
     // l'hopital ou en prison, le joueur seul — son char reste devant le chalet).
     const partent = gens || Entites.joueurs();
-    Blocs.garder(bloc.slug, B.entites.filter(function (e) { return partent.indexOf(e) < 0 && !Entites.estJoueur(e); }));
+    let restent = B.entites.filter(function (e) { return partent.indexOf(e) < 0 && !Entites.estJoueur(e); });
+    // Le sous-sol ecrit ses chars dans la partie, et le bloc ne garde que le reste.
+    if (Souterrain.est(bloc.slug)) restent = Souterrain.ranger(restent, bloc.def);
+    Blocs.garder(bloc.slug, restent);
     Monde.restaurer(bloc.ville.carte);
     B.entites = bloc.ville.entites;
     for (const e of Entites.joueurs()) if (B.entites.indexOf(e) < 0) B.entites.push(e);

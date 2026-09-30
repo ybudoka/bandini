@@ -140,6 +140,11 @@ function etatInitial(defs) {
     planques: [],
     charsDesPlanques: {},
     bloc: null,
+    //: LE GARAGE SOUTERRAIN (docs/jalons/le-grand-garage-souterrain.md) : ses niveaux ouverts (le −2 s'achète, vague
+    //: 2) et ses vingt cases, chacune vide ou la fiche du char qui y dort — `{ slug, sprite, couleur, vie, vole, aToi,
+    //: mods }`, comme le char de la planque, SANS position : la case EST la position.
+    souterrain: { niveaux: 1, cases: [null, null, null, null, null, null, null, null, null, null,
+                                      null, null, null, null, null, null, null, null, null, null] },
     //: Les chars saisis, du plus vieux au plus recent. ⚠️ Un TABLEAU, pas un
     //: objet : le lot a un nombre de places, et c'est le plus vieux qui part
     //: quand il deborde — un ordre, donc, pas un sac.
@@ -816,6 +821,14 @@ const Sauvegarde = (function () {
     // partie d'avant la fourriere arriverait avec `undefined`, et le comptoir
     // planterait au premier clic.
     if (!Array.isArray(out.fourriere)) out.fourriere = [];
+    // Le sous-sol : ses niveaux (1 ou 2, rien d'autre) et vingt cases exactement — une fiche de char ou null.
+    // ⚠️ Un objet imbrique ne passe pas par la fusion d'en haut : une partie d'avant lui arriverait sans cases.
+    const sous = partie.souterrain && typeof partie.souterrain === 'object' ? partie.souterrain : {};
+    out.souterrain = { niveaux: sous.niveaux === 2 ? 2 : 1, cases: [] };
+    for (let k = 0; k < 20; k++) {
+      const c = Array.isArray(sous.cases) ? sous.cases[k] : null;
+      out.souterrain.cases.push(c && typeof c === 'object' && typeof c.slug === 'string' ? c : null);
+    }
     // Les collections : un objet de familles, chacune un objet par numéro. ⚠️ Deux niveaux : la fusion
     // d'en haut ne descend pas, et une partie d'avant elles n'a rien — l'album repart vide, pas `undefined`.
     const col = partie.collections && typeof partie.collections === 'object' && !Array.isArray(partie.collections) ? partie.collections : {};

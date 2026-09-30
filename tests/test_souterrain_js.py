@@ -81,3 +81,124 @@ def test_aucune_plaque_ni_passage_en_ville_pour_le_sous_sol(banc):
     }""")
     assert r["liste"] and r["passage"] is None and r["seuil"] == "garage", r
     assert r["bloc"] is False and r["gps"] is None, r
+
+
+GARER = """
+  // Garer le char sur la case k (0 = P1), nez au mur, et en descendre.
+  function garerSur(L, v, k) {
+    const q = L.B.bloc.def.bloc.souterrain.cases[k], j = L.B.joueur;
+    if (j.dansVehicule !== v) { j.x = v.x; j.y = v.y; L.Vehicules.monter(j, v); }
+    v.x = (q.x + q.l / 2) * TT; v.y = (q.y + q.h / 2) * TT; v.angle = -Math.PI / 2; v.vitesse = 0; v.vx = 0; v.vy = 0;
+    L.Vehicules.descendre(j, true);
+    j.x = 15 * TT + 8; j.y = 8 * TT + 8;
+    L.Entites.indexer();
+  }
+"""
+
+
+def test_un_char_gare_sur_une_case_y_est_encore_au_retour_avec_sa_couleur_ses_pieces_et_ses_bosses(banc):
+    r = banc("async function (L, o) {" + OUTILS + GARER + """
+        L.Jeu.commencer(); proprio(L);
+        const B = L.B, j = B.joueur, a = auVolantDevant(L, 'auto', { couleur: '#2e86de' });
+        L.Garage.poser(a.v, { moteur: true }); a.v.vie = 40; a.v.vole = true;
+        L.Blocs.sauter('souterrain', null, null); await attendreLeBloc(L, o, 'souterrain');
+        garerSur(L, a.v, 2);
+        // On remonte à pied par la rampe, on redescend.
+        L.Jeu.sortirDuBloc(); await attendreLaVille(L, o);
+        const ecrit = B.partie.souterrain.cases[2];
+        const enVille = B.entites.indexOf(a.v) >= 0;
+        L.Blocs.sauter('souterrain', null, null); await attendreLeBloc(L, o, 'souterrain');
+        const q = B.bloc.def.bloc.souterrain.cases[2];
+        const revenu = B.entites.filter(function (e) { return e.type === 'vehicule'; });
+        const v = revenu[0];
+        return { ecrit: ecrit, enVille: enVille, n: revenu.length,
+                 v: v && { slug: v.slug, couleur: v.couleur, mods: v.mods, vie: v.vie, vole: v.vole, aToi: v.aToi,
+                           x: v.x, y: v.y, cx: (q.x + q.l / 2) * TT, cy: (q.y + q.h / 2) * TT } };
+    }""")
+    assert r["ecrit"] and r["ecrit"]["couleur"] == "#2e86de" and r["ecrit"]["mods"] == {"moteur": True}, r
+    assert r["enVille"] is False, "le char rangé ne remonte pas en ville"
+    assert r["n"] == 1, f"un seul char, pas un double de mémoire : {r['n']}"
+    v = r["v"]
+    assert (v["slug"], v["couleur"], v["mods"], v["vie"], v["vole"], v["aToi"]) == ("auto", "#2e86de", {"moteur": True}, 40, True, True), v
+    assert abs(v["x"] - v["cx"]) < 1 and abs(v["y"] - v["cy"]) < 1, "il revient sur SA case"
+
+
+def test_un_char_laisse_dans_l_allee_ti_guy_le_gare_sur_la_premiere_case_libre(banc):
+    r = banc("async function (L, o) {" + OUTILS + GARER + """
+        L.Jeu.commencer(); proprio(L);
+        const B = L.B, j = B.joueur, a = auVolantDevant(L);
+        B.partie.souterrain.cases[0] = { slug: 'auto', sprite: undefined, couleur: '#f1c40f', vie: 100, vole: false, aToi: true };
+        L.Blocs.sauter('souterrain', null, null); await attendreLeBloc(L, o, 'souterrain');
+        // En plein milieu de l'allée, et on remonte à pied.
+        a.v.x = 20 * TT; a.v.y = 9 * TT; L.Vehicules.descendre(j, true); j.x = 15 * TT + 8; j.y = 6 * TT;
+        L.Jeu.sortirDuBloc(); await attendreLaVille(L, o);
+        return B.partie.souterrain.cases.slice(0, 3).map(function (c) { return c && c.couleur; });
+    }""")
+    assert r == ["#f1c40f", "#c0392b", None], f"le jaune garde P1, le rouge de l'allée prend P2 : {r}"
+
+
+def test_le_char_qu_on_remonte_quitte_le_sous_sol_et_un_vole_reste_vole(banc):
+    r = banc("async function (L, o) {" + OUTILS + GARER + """
+        L.Jeu.commencer(); proprio(L);
+        const B = L.B, j = B.joueur;
+        viderLaBaie(L);
+        B.partie.souterrain.cases[4] = { slug: 'auto', couleur: '#8e44ad', vie: 90, vole: true, aToi: false };
+        L.Blocs.sauter('souterrain', null, null); await attendreLeBloc(L, o, 'souterrain');
+        const v = B.entites.find(function (e) { return e.type === 'vehicule'; });
+        j.x = v.x; j.y = v.y; L.Vehicules.monter(j, v);
+        await remonterLaRampe(L, o, v);
+        return { case4: B.partie.souterrain.cases[4], enVille: B.entites.indexOf(v) >= 0, vole: v.vole, auVolant: j.dansVehicule === v };
+    }""")
+    assert r["case4"] is None, "la case se libère quand on remonte avec son char"
+    assert r["enVille"] and r["auVolant"], r
+    assert r["vole"] is True, "le sous-sol cache, il ne lave pas"
+
+
+def test_sauvegardee_au_sous_sol_la_partie_s_y_rouvre_avec_ses_chars_et_celui_qu_on_conduisait(banc):
+    r = banc("async function (L, o) {" + OUTILS + GARER + """
+        L.Jeu.commencer(); proprio(L);
+        const B = L.B, a = auVolantDevant(L, 'auto', { couleur: '#16a085' });
+        B.partie.souterrain.cases[7] = { slug: 'camion', couleur: '#d35400', vie: 120, vole: false, aToi: true };
+        L.Blocs.sauter('souterrain', null, null); await attendreLeBloc(L, o, 'souterrain');
+        // Toujours au volant, au milieu de l'allée : on sauvegarde.
+        a.v.x = 12 * TT; a.v.y = 9 * TT; B.joueur.x = a.v.x; B.joueur.y = a.v.y;
+        L.Missions.sauvegarderPartie();
+        B.partie = L.Sauvegarde.completer(JSON.parse(o.store['bandini-partie-v1']), B.defs);
+        L.Jeu.commencer();
+        await attendreLeBloc(L, o, 'souterrain');
+        const chars = B.entites.filter(function (e) { return e.type === 'vehicule'; })
+          .map(function (e) { return e.couleur; }).sort();
+        return { bloc: B.bloc && B.bloc.slug, chars: chars, cases: B.partie.souterrain.cases.filter(Boolean).length };
+    }""")
+    assert r["bloc"] == "souterrain", "on se réveille au sous-sol"
+    assert r["chars"] == ["#16a085", "#d35400"], f"le camion rangé ET le char qu'on conduisait : {r}"
+    assert r["cases"] == 2, r
+
+
+def test_garnir_ne_tire_aucun_de(banc):
+    """⚠️ Un char né sans couleur tire un dé et fait glisser tout le hasard de la partie : même graine, même tirage
+    suivant, qu'on ait garni le sous-sol ou pas."""
+    r = banc("async function (L, o) {" + OUTILS + """
+        L.Jeu.commencer(); proprio(L);
+        const B = L.B;
+        B.partie.souterrain.cases[0] = { slug: 'auto', couleur: '#c0392b', vie: 100, vole: false, aToi: true };
+        B.partie.souterrain.cases[1] = { slug: 'moto', couleur: '#2c3e50', vie: 60, vole: false, aToi: true };
+        L.Blocs.sauter('souterrain', null, null); await attendreLeBloc(L, o, 'souterrain');
+        const def = B.bloc.def;
+        B.entites = B.entites.filter(function (e) { return e.type !== 'vehicule'; });
+        L.graine(7); L.Souterrain.garnir(def); const avec = B.rng();
+        L.graine(7); const sans = B.rng();
+        return { avec: avec, sans: sans };
+    }""")
+    assert r["avec"] == r["sans"], r
+
+
+def test_une_vieille_partie_sans_sous_sol_se_complete(banc):
+    r = banc("function (L, o) {" + OUTILS + """
+        const p = L.Sauvegarde.completer({ argent: 5 }, L.B.defs);
+        const q = L.Sauvegarde.completer({ souterrain: { niveaux: 9, cases: [{ slug: 'auto', couleur: '#fff' }, 'x'] } }, L.B.defs);
+        return { p: p.souterrain, q: q.souterrain };
+    }""")
+    assert r["p"] == {"niveaux": 1, "cases": [None] * 20}, r
+    assert r["q"]["niveaux"] == 1 and len(r["q"]["cases"]) == 20, r
+    assert r["q"]["cases"][0]["slug"] == "auto" and r["q"]["cases"][1] is None, r

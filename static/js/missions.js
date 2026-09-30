@@ -3966,6 +3966,8 @@ const Missions = (function () {
           }
         }
       }
+      // Au sous-sol, ses chars tels qu'ils sont — celui qu'on conduit compris, que Ti-Guy garera au reveil.
+      if (Souterrain.ici()) Souterrain.ranger(B.entites, B.bloc.def);
       garderLesCharsDesPlanques(p);
     }
     p.empreinte = B.defs.empreinte;
