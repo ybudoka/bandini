@@ -43,11 +43,13 @@ AMBULANTS: list[dict] = [
      "districts": None, "reclame": "POUTINE MOITIÉ PRIX"},
     # La cabane a fruits de mer : une guedille au homard sur un lit de glace,
     # aux Quais et a La Pointe seulement — c'est le port qu'on mange.
+    # ⚠️ ET ELLE FERME L'HIVER (`froid_max`, docs/jalons/la-foire-fermee-l-hiver.md, vague 2) : une cabane
+    # de port est saisonniere ; au grand froid, personne au comptoir, « FERMÉ POUR L'HIVER ».
     {"slug": "fruits_de_mer", "nom": "Cabane à fruits de mer", "sprite": "cabane_fruits_de_mer",
      "service": "manger", "tarif": "guedille", "gain_pv": "guedille_pv",
      "gain_souffle": "guedille_souffle", "effet": None,
      "nombre": 3, "sur": "trottoir", "heures": [0.3, 0.85], "phase": 1,
-     "districts": ("quais", "pointe"), "reclame": "GUÉDILLE MOITIÉ PRIX"},
+     "districts": ("quais", "pointe"), "reclame": "GUÉDILLE MOITIÉ PRIX", "froid_max": 0.75},
     # La cale du Norvegien : la contrebande de Sven, aux Quais seulement. Pas
     # une bouchee — un COMPTOIR (`service: "contrebande"`, ses prix dans
     # `economie.CONTREBANDE`) : les caisses vont dans le coffre du char gare a

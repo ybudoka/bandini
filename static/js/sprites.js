@@ -4089,8 +4089,11 @@ const TUILES = (function () {
     // ⚠️ Et une piscine n'est pas la baie : une eau plus CLAIRE, une margelle
     // pale. Le meme bleu que la baie, et le joueur se demanderait s'il peut s'y
     // noyer — la reponse est non, et l'image doit le dire avant lui.
+    // ⚠️ L'HIVER, LA BACHE (docs/jalons/la-foire-fermee-l-hiver.md, vague 2) : une piscine hors terre ne passe
+    // pas l'hiver pleine d'eau bleue sous la neige de la cour. Sa bache d'hivernage, grise, creuse d'un coussin
+    // de neige au milieu, et le rebord qui depasse — la meme idee que la piscine creusee des villas (`?`).
     'o': function (ctx, v, T) {
-      const G = gazonDuMoment();
+      const G = gazonDuMoment(), hiver = typeof Saisons !== 'undefined' && Saisons.enHiver();
       plein(ctx, G.fond, T); points(ctx, v, T, G.sombre, 8, 60);     // le gazon dessous
       const cx = (v & 2) ? T : 0, cy = (v & 4) ? T : 0;                  // est / sud
       const bord = T - 0.5, eau = T - 2.5;
@@ -4098,7 +4101,8 @@ const TUILES = (function () {
         for (let x = 0; x < T; x++) {
           const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
           if (d > bord) continue;
-          ctx.fillStyle = d > eau ? '#e8e2cf' : (((x + y + (v >> 4)) % 7) ? '#3fa7c4' : '#5cc3dc');
+          if (hiver) ctx.fillStyle = d > eau ? '#c9c3b0' : d > eau - 3 ? '#5f6f78' : (((x * 3 + y + (v >> 4)) % 9) ? '#e6ecf1' : '#cfd9e0');
+          else ctx.fillStyle = d > eau ? '#e8e2cf' : (((x + y + (v >> 4)) % 7) ? '#3fa7c4' : '#5cc3dc');
           ctx.fillRect(x, y, 1, 1);
         }
       }
@@ -8246,7 +8250,16 @@ const DECORS = {
     ctx.fillStyle = '#e8e2cf'; ctx.fillRect(4, 4, 3, 5); ctx.fillRect(12, 4, 4, 6);
     ctx.fillStyle = '#7fb3d8'; ctx.fillRect(8, 4, 3, 4);
   } },
-  bbq: { casse: 0.85, pv: 30, w: 14, h: 14, ancre: [7, 13], r: 5, sol: [6, 3], solide: true, peindre: function (ctx, w, h) {
+  // ⚠️ L'HIVER, SOUS SA HOUSSE (`ferme`, docs/jalons/la-foire-fermee-l-hiver.md, vague 2) : la toile verte
+  // tiree jusqu'aux pattes, sanglee — personne ne grille dehors en janvier.
+  bbq: { casse: 0.85, pv: 30, w: 14, h: 14, ancre: [7, 13], r: 5, sol: [6, 3], solide: true, peindre: function (ctx, w, h, v, ferme) {
+    if (ferme) {
+      ctx.fillStyle = '#3a3d44'; ctx.fillRect(4, 12, 2, 2); ctx.fillRect(8, 12, 2, 2);          // le bout des pattes
+      ctx.fillStyle = '#34503f'; ctx.fillRect(1, 2, 12, 10); ctx.fillRect(2, 1, 10, 1);
+      ctx.fillStyle = '#45674f'; ctx.fillRect(2, 2, 9, 8);
+      ctx.fillStyle = '#2a4033'; ctx.fillRect(1, 8, 12, 1);                                   // la sangle
+      return;
+    }
     ctx.fillStyle = '#3a3d44'; ctx.fillRect(4, 9, 2, 5); ctx.fillRect(8, 9, 2, 5);
     ctx.fillStyle = '#2c2c30'; ctx.fillRect(1, 4, 12, 6);
     ctx.fillStyle = '#4a4d54'; ctx.fillRect(2, 2, 10, 3); ctx.fillRect(1, 1, 12, 2);
@@ -8382,25 +8395,28 @@ const DECORS = {
     ctx.fillStyle = '#35402f'; ctx.fillRect(9, 11, 5, 5); ctx.fillRect(10, 10, 3, 1); // le sac vert au pied
     ctx.fillStyle = '#c9c3ae'; ctx.fillRect(8, 15, 2, 1); ctx.fillRect(11, 9, 1, 1);  // ce qui en sort
   } },
-  fontaine: { arrete: 9, w: 34, h: 30, ancre: [17, 27], r: 13, sol: [15, 6], solide: true, peindre: function (ctx, w, h) {
+  // ⚠️ L'HIVER, A SEC (`ferme`, docs/jalons/la-foire-fermee-l-hiver.md, vague 2) : la Ville coupe l'eau des
+  // fontaines a l'automne. Plus de jet, et au fond du bassin vide, de la neige.
+  fontaine: { arrete: 9, w: 34, h: 30, ancre: [17, 27], r: 13, sol: [15, 6], solide: true, peindre: function (ctx, w, h, v, ferme) {
     ctx.fillStyle = '#8b877b'; ctx.fillRect(2, 10, 30, 17); ctx.fillRect(6, 7, 22, 21);
     ctx.fillStyle = '#a5a194'; ctx.fillRect(4, 12, 26, 3);
-    ctx.fillStyle = '#2c5f8a'; ctx.fillRect(6, 14, 22, 11);
-    ctx.fillStyle = '#3b73a3'; ctx.fillRect(9, 16, 7, 2); ctx.fillRect(19, 20, 6, 2);
+    ctx.fillStyle = ferme ? '#dfe6ec' : '#2c5f8a'; ctx.fillRect(6, 14, 22, 11);
+    ctx.fillStyle = ferme ? '#c3ccd4' : '#3b73a3'; ctx.fillRect(9, 16, 7, 2); ctx.fillRect(19, 20, 6, 2);
     ctx.fillStyle = '#9a9689'; ctx.fillRect(15, 2, 4, 14);
-    ctx.fillStyle = '#cfe6f5'; ctx.fillRect(14, 0, 6, 3); ctx.fillRect(13, 3, 2, 4); ctx.fillRect(19, 3, 2, 4);
+    if (!ferme) { ctx.fillStyle = '#cfe6f5'; ctx.fillRect(14, 0, 6, 3); ctx.fillRect(13, 3, 2, 4); ctx.fillRect(19, 3, 2, 4); }
   } },
   // LE JARDIN D'UNE VILLA (`villas.py`) : poses sur la ville finie, ils prennent leur numero d'entite A PART
   // (`horsSuite`) comme les statues. La fontaine : deux vasques de pierre sur leur bassin, l'eau qui retombe.
-  fontaine_villa: { arrete: 9, horsSuite: true, w: 22, h: 24, ancre: [11, 21], r: 7, sol: [9, 4], solide: true, peindre: function (ctx) {
+  fontaine_villa: { arrete: 9, horsSuite: true, w: 22, h: 24, ancre: [11, 21], r: 7, sol: [9, 4], solide: true, peindre: function (ctx, w, h, v, ferme) {
     ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(1, 19, 21, 3);
     ctx.fillStyle = '#b3afa4'; ctx.fillRect(0, 13, 22, 8);                   // le bassin
     ctx.fillStyle = '#e3dfd3'; ctx.fillRect(0, 13, 22, 2); ctx.fillRect(0, 13, 2, 8); ctx.fillRect(20, 13, 2, 8);
-    ctx.fillStyle = '#37b3cf'; ctx.fillRect(2, 15, 18, 5);
-    ctx.fillStyle = '#9be3f0'; ctx.fillRect(4, 16, 4, 1); ctx.fillRect(13, 18, 5, 1);
+    ctx.fillStyle = ferme ? '#dfe6ec' : '#37b3cf'; ctx.fillRect(2, 15, 18, 5);   // a sec l'hiver, la neige au fond
+    ctx.fillStyle = ferme ? '#c3ccd4' : '#9be3f0'; ctx.fillRect(4, 16, 4, 1); ctx.fillRect(13, 18, 5, 1);
     ctx.fillStyle = '#b3afa4'; ctx.fillRect(10, 6, 2, 10);                   // le fut
     ctx.fillStyle = '#e3dfd3'; ctx.fillRect(5, 8, 12, 2); ctx.fillRect(7, 3, 8, 2);   // les deux vasques
     ctx.fillStyle = '#8e8a80'; ctx.fillRect(6, 10, 10, 1); ctx.fillRect(8, 5, 6, 1);
+    if (ferme) return;
     ctx.fillStyle = '#cfe6f5'; ctx.fillRect(10, 0, 2, 3);                    // le jet, et l'eau qui retombe
     ctx.fillRect(5, 10, 1, 4); ctx.fillRect(16, 10, 1, 4); ctx.fillRect(7, 5, 1, 3); ctx.fillRect(14, 5, 1, 3);
   } },
@@ -8721,6 +8737,8 @@ const DECORS_DE_FOIRE = ['barbe_a_papa', 'hot_dogs', 'pop_corn', 'limonade', 'po
   'ballons', 'peluches', 'lance_anneaux', 'galerie_tir', 'marteau_force', 'peche_canards',
   'carrousel', 'tasses', 'chaises_volantes', 'grande_roue', 'portique_foire'];
 DECORS_DE_FOIRE.forEach(function (n) { DECORS[n].fermeLHiver = true; });
+//: Et ce qui dort aussi l'hiver hors de la foire (vague 2) : la fontaine a sec, le barbecue sous sa housse.
+['fontaine', 'fontaine_villa', 'bbq'].forEach(function (n) { DECORS[n].fermeLHiver = true; });
 
 /* Decalques au sol : sang, gouttes, impacts. Cuits une fois par variante. */
 const DECALS = {

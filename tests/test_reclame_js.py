@@ -13,7 +13,7 @@ def test_l_homme_sandwich_nait_a_son_poste_le_jour_et_pas_la_nuit(banc, paquet):
     postes = paquet["carte"]["reclames"]
     heures = next(p for p in paquet["pietons"]["catalogue"] if p["slug"] == "homme_sandwich")["heures"]
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.B.partie.jour = 22; L.Jeu.commencer();   // ⚠️ EN JUILLET, DES LE DEPART (les marchands se postent a `commencer`) : l'hiver, la cabane de fruits de mer est fermée (docs/jalons/la-foire-fermee-l-hiver.md)
         const j = L.B.joueur;
         const poste = L.Monde.carte.def.reclames[0];
         // On se met a une bulle du poste, hors ecran : il doit naitre a la prochaine ronde.
@@ -61,7 +61,7 @@ def test_l_homme_sandwich_vient_vers_toi_et_te_tient_le_crachoir(banc, paquet):
     se tait et te laisse la paix."""
     r = paquet["reclame"]
     res = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.B.partie.jour = 22; L.Jeu.commencer();   // ⚠️ EN JUILLET, DES LE DEPART (les marchands se postent a `commencer`) : l'hiver, la cabane de fruits de mer est fermée (docs/jalons/la-foire-fermee-l-hiver.md)
         L.graine(12);
         const j = L.B.joueur;
         // Un bout de trottoir droit, sans personne : on juge le solliciteur,
@@ -113,7 +113,7 @@ def test_le_coupon_rabat_le_prix_du_kiosque_une_fois(banc, paquet):
     r = paquet["reclame"]
     tarifs = paquet["economie"]["tarifs"]
     res = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.B.partie.jour = 22; L.Jeu.commencer();   // ⚠️ EN JUILLET, DES LE DEPART (les marchands se postent a `commencer`) : l'hiver, la cabane de fruits de mer est fermée (docs/jalons/la-foire-fermee-l-hiver.md)
         const j = L.B.joueur;
         // ⚠️ **UN SEUL ÉTAL SOUS LA MAIN.** L'invite ACTION nomme le plus proche,
         // et la ville pose ses ambulants où elle veut : le 17 sept. 2026, la trame
@@ -173,7 +173,7 @@ def test_la_cabane_sert_une_guedille(banc, paquet):
     l'argent, un marchand derriere, et l'enseigne dessinee."""
     tarifs = paquet["economie"]["tarifs"]
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.B.partie.jour = 22; L.Jeu.commencer();   // ⚠️ EN JUILLET, DES LE DEPART (les marchands se postent a `commencer`) : l'hiver, la cabane de fruits de mer est fermée (docs/jalons/la-foire-fermee-l-hiver.md)
         const j = L.B.joueur;
         const etal = L.B.entites.filter(function (e) { return e.type === 'ambulant' && e.slug === 'fruits_de_mer'; })[0];
         if (!etal) return { etal: false };
@@ -206,7 +206,7 @@ def test_le_casse_croute_et_les_comptoirs_ont_de_quoi_manger(banc, paquet):
     casse-croute garanti sert plus qu'un hot-dog, et le comptoir du bar plus
     qu'une biere."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.B.partie.jour = 22; L.Jeu.commencer();   // ⚠️ EN JUILLET, DES LE DEPART (les marchands se postent a `commencer`) : l'hiver, la cabane de fruits de mer est fermée (docs/jalons/la-foire-fermee-l-hiver.md)
         L.B.interieur = { slug: 'casse_croute', nom: 'Casse-croûte' };
         const menu = L.Missions.menuDuPoint({ type: 'hotdog' });
         const bar = L.Missions.menuComptoir({ type: 'emplettes', genre: 'nuit' }, []);

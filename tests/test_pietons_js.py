@@ -661,7 +661,7 @@ def test_le_marchand_reste_derriere_son_comptoir(banc):
     marchand tient son poste comme un personnage d'histoire : il attend.
     """
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.B.partie.jour = 22; L.Jeu.commencer();   // ⚠️ EN JUILLET, DES LE DEPART (les marchands se postent a `commencer`) : l'hiver, la cabane de fruits de mer est fermée (docs/jalons/la-foire-fermee-l-hiver.md)
         const compter = function () {
             return { comptoirs: L.B.entites.filter(function (e) { return e.type === 'ambulant'; }).length,
                      marchands: L.B.entites.filter(function (e) { return e.commerce; }).length };

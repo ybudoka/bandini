@@ -161,6 +161,10 @@ const Interactions = (function () {
 
   function fontaineSeche(f) { return (fontaines[tuile(f)] || 0) > B.t; }
 
+  /** L'hiver, la neige qui tient (`Saisons.enHiver`) : la fontaine est a sec, le barbecue sous sa housse
+      (docs/jalons/la-foire-fermee-l-hiver.md, vague 2). */
+  function enHiver() { return typeof Saisons !== 'undefined' && Saisons.enHiver(); }
+
   /** Un barbecue déjà vidé aujourd'hui : la MÊME case que les bacs fouillés
       (`partie.fouilles`), préfixée `bbq:` pour ne jamais collider avec la
       tuile d'une poubelle voisine. */
@@ -187,13 +191,13 @@ const Interactions = (function () {
       refus: function (j, d) { return fouilleDuJour(d) ? cfg().fouiller.deja : null; },
       invite: function (c) { return c.fouiller.invite; }, faire: fouiller },
     { geste: 'boire', table: function (c) { return c.boire.decors; }, portee: function (c) { return c.boire.portee_px; },
-      refus: function (j, d) { return fontaineSeche(d) ? cfg().boire.encore : null; },
+      refus: function (j, d) { return enHiver() ? cfg().boire.hiver : fontaineSeche(d) ? cfg().boire.encore : null; },
       invite: function (c) { return c.boire.invite; }, faire: boire },
     { geste: 'lire', table: function (c) { return c.lire.decors; }, portee: function (c) { return c.lire.portee_px; },
       refus: function () { return null; },
       invite: function (c) { return c.lire.invite; }, faire: lire },
     { geste: 'barbecue', table: function (c) { return c.barbecue.decors; }, portee: function (c) { return c.barbecue.portee_px; },
-      refus: function (j, d) { return mangeDuJour(d) ? cfg().barbecue.deja : null; },
+      refus: function (j, d) { return enHiver() ? cfg().barbecue.hiver : mangeDuJour(d) ? cfg().barbecue.deja : null; },
       invite: function (c) { return c.barbecue.invite; }, faire: manger },
     { geste: 'parcometre', table: function (c) { return c.parcometre.decors; }, portee: function (c) { return c.parcometre.portee_px; },
       refus: function (j, d) { return videDuJour(d) ? cfg().parcometre.deja : null; },

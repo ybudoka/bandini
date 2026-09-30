@@ -269,6 +269,7 @@ def test_fouiller_par_le_bouton_marque_le_bac_et_se_sauvegarde_avec_la_partie(ba
 def test_on_boit_a_la_fontaine_puis_on_n_a_plus_soif(banc):
     c = interactions.BOIRE
     r = jouer(banc, """
+        L.B.partie.jour = 22;   // ⚠️ EN JUILLET : l'hiver, la fontaine est à sec (test_le_tour_de_l_hiver_js.py)
         const d = devant('fontaine', 20);
         if (!d) return { pasDeFontaine: true };
         j.endurance = 10;
@@ -297,7 +298,8 @@ def _barbecue(banc):
     return jouer(banc, """
         let d = devant('bbq');
         if (!d) return { pasDeBbq: true };
-        p.jour = 4; p.fouilles = {};
+        p.jour = 22; p.fouilles = {};   // ⚠️ EN JUILLET : l'hiver, le barbecue dort sous sa housse
+        p.dette = 0;   // ⚠️ et sans dette : l'ete, les hommes de Sal passent collecter chaque jour (`envoyerLesCollecteurs`)
         j.vie = 10; j.endurance = 5;
         const inviteAvant = invite();
         o.tape('KeyE');
@@ -308,12 +310,12 @@ def _barbecue(banc):
         o.tape('KeyE');
         const deuxieme = { vie: j.vie, msg: L.B.msg };
         // Le lendemain, le barbecue est de nouveau bon.
-        p.jour = 5; const inviteLendemain = invite();
-        // Le second juge : a pleine vie, un barbecue tout neuf (jour 4, fouilles vides).
+        p.jour = 23; const inviteLendemain = invite();
+        // Le second juge : a pleine vie, un barbecue tout neuf (jour 22, fouilles vides).
         suivant();
         d = devant('bbq');
         if (!d) return { pasDeBbq: true };
-        p.jour = 4; p.fouilles = {};
+        p.jour = 22; p.fouilles = {};
         j.vie = j.vieMax;
         o.tape('KeyE');
         const plein = { vie: j.vie, vieMax: j.vieMax };

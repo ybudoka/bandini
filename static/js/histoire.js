@@ -3198,6 +3198,12 @@ const Histoire = (function () {
       Hud.message('ÇA SE JOUE L\'HIVER, DANS LA NEIGE', 150); Son.SFX.erreur();
       return;
     }
+    // ⚠️ PAS L'HIVER (`hors_hiver`, le derby de demolition a cote de la foire cadenassee) : ca se dit, rien ne part.
+    if (d.hors_hiver && typeof Saisons !== 'undefined' && Saisons.enHiver()) {
+      B.defi = null;
+      Hud.message('ÇA REPREND AU PRINTEMPS, QUAND LA FOIRE ROUVRE', 150); Son.SFX.erreur();
+      return;
+    }
     // ⚠️ ET L'INVERSE : un defi a moto (Le Grand Saut) ne se joue pas l'hiver — la moto est remisee
     // (`Vehicules.remise`, docs/jalons/pas-de-moto-ni-de-velo-l-hiver-pas-de-moto-sous-la-pluie.md).
     if (d.vehicule && Vehicules.remise(d.vehicule) === 'hiver') {

@@ -45,6 +45,11 @@ class Pieton(TypedDict):
     froid_max: NotRequired[float]
 
 
+#: Le froid au-delà duquel un artiste de rue ne joue plus dehors (`Saisons.palette().froid` : 0 en juillet, 1 en
+#: janvier) — celui de l'homme au manteau : ils prennent congé quand la ville sort ses manteaux.
+ARTISTES_FROID_MAX = 0.75
+
+
 def _p(slug, nom, chandail, cheveux, peau, pantalon, *, sprite="joueur", vitesse=1.0,
        courage=0.0, temoin=0.3, vie=60, argent=(2, 20), arme=None, gang=None,
        intouchable=False, accompagne=None, metier=None, heures=None, districts=None,
@@ -290,10 +295,13 @@ CATALOGUE: list[Pieton] = [
     # personne. Le Faubourg est le centre-ville ouvrier (`devantures.py` le dit
     # deja en toutes lettres) et le district le plus peuple de la ville. Un
     # amuseur joue la ou il y a du monde ; ailleurs, il joue pour les goelands.
+    # ⚠️ **ET PERSONNE NE JOUE DEHORS L'HIVER** (Martin, 30 sept. 2026 ; docs/jalons/la-foire-fermee-l-hiver.md,
+    # vague 2) : au grand froid, les quatre artistes rentrent hors de l'écran et ne ressortent qu'au printemps
+    # (`froid_max`, le seuil de l'homme au manteau). L'hiver a ses numéros à lui (vague 3).
     _p("musicien", "Musicien de rue", "#6b4b8a", "#3a2a1a", "#e8b088", "#2a2a3a",
        sprite="musicien", vitesse=0.0, courage=0.2, temoin=0.6, vie=70,
        argent=(15, 60), metier="musicien", frequence=0.0,
-       districts=("faubourg",)),
+       districts=("faubourg",), froid_max=ARTISTES_FROID_MAX),
     # ⚠️ L'amuseur attire un ATTROUPEMENT, et un attroupement est une foule de
     # temoins : faire un coup devant lui, c'est dix temoins d'un seul geste.
     # Ce n'est pas du decor, c'est l'endroit de la rue ou il ne faut pas
@@ -301,7 +309,7 @@ CATALOGUE: list[Pieton] = [
     _p("amuseur", "Amuseur public", "#efe6d0", "#2a2a2a", "#e8b088", "#1a1a22",
        sprite="amuseur", vitesse=0.0, courage=0.3, temoin=0.8, vie=70,
        argent=(10, 45), metier="amuseur", frequence=0.0,
-       districts=("faubourg",)),
+       districts=("faubourg",), froid_max=ARTISTES_FROID_MAX),
     # --- Deux amuseurs de plus (demande de Martin) -------------------------
     # ⚠️ « Ils ne font rien et sont ennuyants » : le mime etait le SEUL genre
     # d'amuseur, et il tenait l'image zero de son sprite du debut a la fin de
@@ -315,7 +323,7 @@ CATALOGUE: list[Pieton] = [
     _p("jongleur", "Jongleur", "#d4442e", "#3a2a1a", "#e8b088", "#f2c94c",
        sprite="jongleur", vitesse=0.0, courage=0.3, temoin=0.8, vie=70,
        argent=(10, 50), metier="jongleur", frequence=0.0,
-       districts=("faubourg",)),
+       districts=("faubourg",), froid_max=ARTISTES_FROID_MAX),
     # ⚠️ ET LUI DEPASSE LA FOULE. Son corps fait 26 pixels de haut au lieu de
     # 13 : c'est la seule sorte de la ville qu'on voit PAR-DESSUS son propre
     # attroupement, et c'est exactement pour ca qu'il existe. Un echassier a
@@ -323,7 +331,7 @@ CATALOGUE: list[Pieton] = [
     _p("echassier", "Échassier", "#2f7f6f", "#5a3a1a", "#e8b088", "#c94f3a",
        sprite="echassier", vitesse=0.0, courage=0.3, temoin=0.9, vie=70,
        argent=(10, 50), metier="echassier", frequence=0.0,
-       districts=("faubourg",)),
+       districts=("faubourg",), froid_max=ARTISTES_FROID_MAX),
     # ⚠️ Et lui, LA POLICE L'ARRETE. C'est la seule fois ou elle s'occupe de
     # quelqu'un d'autre que le joueur — et c'est ce gag qui la rend credible :
     # elle n'existe pas que pour toi.

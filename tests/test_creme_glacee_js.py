@@ -35,7 +35,7 @@ def camion_puis_tournee(banc):
     La 2e trouvait, dans son banc, le même camion né et garé par le même `approcher` — on y monte
     directement, au lieu d'approcher une seconde fois."""
     return banc("function (L, o) {" + APPROCHE + """
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 22;   // ⚠️ EN JUILLET : l'hiver, le camion de crème glacée est remisé (docs/jalons/la-foire-fermee-l-hiver.md)
         const B = L.B, M = L.Missions;
         const auDemarrage = B.entites.filter(function (e) { return e.type === 'vehicule' && e.slug === 'creme_glacee'; }).length;
         const camions = approcher(L, o);
@@ -101,7 +101,7 @@ def test_il_attend_hors_de_la_chaussee_sans_toucher_le_decor(camion_puis_tournee
 def sortie_du_camion(banc):
     """UN banc : on approche, on monte, et on écrase l'accélérateur (le bouton, pas `vitesse`)."""
     return banc("function (L, o) {" + APPROCHE + """
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 22;   // ⚠️ EN JUILLET : l'hiver, le camion de crème glacée est remisé (docs/jalons/la-foire-fermee-l-hiver.md)
         const Mo = L.Monde, c = auVolant(L, o), x0 = c.x, y0 = c.y;
         let rue = -1;
         o.touche('KeyW');
@@ -138,7 +138,7 @@ def enfants_puis_police(banc):
     le faisait ; on remet aussi les étoiles et les crimes, que 400 images de tournée auraient pu
     laisser. Le camion est le même : on n'approche pas une seconde fois."""
     return banc("function (L, o) {" + APPROCHE + """
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 22;   // ⚠️ EN JUILLET : l'hiver, le camion de crème glacée est remisé (docs/jalons/la-foire-fermee-l-hiver.md)
         const B = L.B, M = L.Missions, Mo = L.Monde, P = L.Police;
         const c = auVolant(L, o);
         // La tournee se juge DANS LA RUE du depanneur, qu'il longe dans le sens de sa voie : garé sur l'allée d'a cote, pousse

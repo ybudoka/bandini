@@ -70,3 +70,32 @@ En trois vagues, sans un dé et sans rien déplacer (ce qui se pose, en dernier)
   trafic. Le juge mesure une distance, pas le trafic : le joueur y est invincible.
 - **Pas fait** : les allées de la foire (`g`, « poussière de pierre ») restent sans neige. C'est le glyphe de
   tous les sentiers de parc de la ville : une décision à part.
+
+### Vague 2 — le tour (30 sept. 2026)
+
+- **Les artistes de rue** (`pietons.ARTISTES_FROID_MAX` = 0,75, le seuil de l'homme au manteau) : le
+  musicien, le mime, le jongleur et l'échassier ne naissent plus au grand froid et rentrent hors de l'écran
+  (`enSaison`, le mécanisme livré par la plage).
+- **La cabane de fruits de mer** (`froid_max` sur son ambulant) : `Missions.ouvert` et `majKiosques` lisent
+  la saison ; personne au comptoir, « FERMÉ POUR L'HIVER » (`fermeDuKiosque`), et son homme-sandwich ne
+  crie plus la guédille. Le hot-dog, le café et le camion-restaurant restent ouverts.
+- **Le camion de crème glacée** (`majCremeGlacee`) : il ne vient plus se garer, et celui qui attend à sa place
+  repart hors de l'écran — jamais celui qu'on conduit ou qu'on a laissé ailleurs.
+- **Le derby de démolition** (`hors_hiver` sur le défi, le miroir de `hiver`) : ÇA REPREND AU PRINTEMPS.
+- **La piscine hors terre** (`o`) : une bâche grise dans son rebord, un coussin de neige dessus.
+- **La fontaine à sec, le barbecue sous sa housse** : `fermeLHiver` sur `fontaine`, `fontaine_villa` et
+  `bbq` (même mécanisme que la foire : `dortLHiver` lit maintenant la saison) — plus de jet, de la neige au
+  fond du bassin, la housse verte sanglée. ACTION : À SEC POUR L'HIVER, SOUS SA HOUSSE POUR L'HIVER.
+- **Pas fait ici** : les chaloupes sorties de l'eau — c'est la vague 5 de « Les bateaux ne sont pas des
+  chars » (les chaloupes de plaisance sur des bers à quai), déjà tranchée avec eux.
+- **Juges** : `tests/test_le_tour_de_l_hiver_js.py` (sept juges, janvier ET juillet, mutés d'un coup : six rougissent).
+- ⚠️ **Les juges de l'été se posent en été, et parfois AVANT `commencer`** : un marchand se poste pendant
+  `commencer` (`creerAmbulants`), donc `jour = 22` posé après arrive trop tard (`test_kiosque_ferme_js`,
+  `test_reclame_js`, `test_commerces_js`, `test_pietons_js`). Le 22, pas le 21 (le 21 déménage le joueur), et
+  sans dette quand le juge joue au barbecue : l'été, les hommes de Sal passent collecter chaque jour. Les juges
+  des amuseurs retirent seulement la saison des artistes (`delete froid_max`) : ils tiennent à la rue exacte
+  de janvier (la graine 64 du jongleur).
+- ⚠️ **Un dé de moins, un défaut de plus au grand jour** : les trois marchands de fruits de mer qui ne se
+  postent plus en janvier décalent le hasard de la ville, et `test_demeler_ne_pousse_pas_un_passant_sur_la_chaussee`
+  est tombé de 0,01 px. Sur la base, 2 graines sur 12 le faisaient déjà tomber : `demeler` tolérait 0,01 px
+  d'enfoncement PAR IMAGE. Resserré à un millionième (`TOLERANCE_BORDURE`) : 12 graines sur 12.

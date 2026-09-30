@@ -132,6 +132,8 @@ BOIRE: dict = {
     "souffle": 40,
     # On ne rebuvait pas dix fois de suite : dix secondes avant d'avoir soif.
     "repit_images": 600,
+    # ⚠️ L'hiver, la Ville coupe l'eau (docs/jalons/la-foire-fermee-l-hiver.md, vague 2) : ACTION le dit.
+    "hiver": "À SEC POUR L’HIVER",
 }
 
 # --- Lire la plaque d'une statue -------------------------------------------------
@@ -168,6 +170,8 @@ BARBECUE: dict = {
     "portee_px": PORTEE_PX,
     "pv": 8,
     "souffle": 15,
+    # ⚠️ L'hiver, il dort sous sa housse (docs/jalons/la-foire-fermee-l-hiver.md, vague 2).
+    "hiver": "SOUS SA HOUSSE POUR L’HIVER",
 }
 
 # --- Vider un parcomètre -----------------------------------------------------------

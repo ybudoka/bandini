@@ -88,12 +88,19 @@ const Missions = (function () {
     return (B.defs.ambulants || []).find(function (c) { return c.slug === slug; }) || null;
   }
 
-  /** Un kiosque a ses heures : un marchand de journaux ferme la nuit. */
+  /** Un kiosque a ses heures : un marchand de journaux ferme la nuit. Et sa saison (`froid_max` : la
+      cabane a fruits de mer ferme l'hiver). */
   function ouvert(commerce) {
+    if (commerce && !Entites.enSaison(commerce.froid_max)) return false;
     if (!commerce || !commerce.heures) return true;
     const h = B.partie.heure;
     const debut = commerce.heures[0], fin = commerce.heures[1];
     return debut < fin ? (h >= debut && h < fin) : (h >= debut || h < fin);
+  }
+
+  /** Le mot d'un kiosque ferme : « FERMÉ POUR L'HIVER » hors de sa saison, « FERMÉ » hors de ses heures. */
+  function fermeDuKiosque(commerce) {
+    return commerce && !Entites.enSaison(commerce.froid_max) ? 'FERMÉ POUR L\'HIVER' : 'FERMÉ';
   }
 
   function soigner(j, pv) {
@@ -134,7 +141,7 @@ const Missions = (function () {
   function acheterAmbulant(j, etal) {
     const commerce = commerceDe(etal.slug);
     if (!commerce) return false;
-    if (!ouvert(commerce)) { Hud.message('FERMÉ'); Son.SFX.erreur(); return true; }
+    if (!ouvert(commerce)) { Hud.message(fermeDuKiosque(commerce)); Son.SFX.erreur(); return true; }
     // La cale n'est pas une bouchee : c'est un comptoir, et les caisses vont
     // dans le char d'a cote.
     if (commerce.service === 'contrebande') { Hud.ouvrirMenu(menuContrebande(j, etal)); return true; }
@@ -2944,6 +2951,16 @@ const Missions = (function () {
   function majCremeGlacee() {
     const j = B.joueur;
     if (!j || B.interieur || B.bloc || B.t % 60 !== 0) return;
+    // ⚠️ L'HIVER, LE CAMION EST REMISÉ (docs/jalons/la-foire-fermee-l-hiver.md, vague 2) : il ne vient pas
+    // se garer, et celui qui attend à sa place repart hors de l'écran — personne ne vend de cornet sous la
+    // neige. Celui qu'on conduit, ou qu'on a laissé ailleurs, n'est plus le sien : on n'y touche pas.
+    if (typeof Saisons !== 'undefined' && Saisons.enHiver()) {
+      for (const e of B.entites.slice()) {
+        if (e.type !== 'vehicule' || e.slug !== 'creme_glacee' || !e.resteGare || e.conducteur || e.aToi || e.vole || e.etat !== 'stationne') continue;
+        if (!Entites.visibleAEcran(e.x, e.y, 40)) Entites.retirer(e);
+      }
+      return;
+    }
     if (B.entites.some(function (e) { return e.type === 'vehicule' && e.slug === 'creme_glacee' && e.etat !== 'epave'; })) return;
     const place = placeDuCamion();
     if (!place || dist2(place.x, place.y, j.x, j.y) > 500 * 500 || Entites.visibleAEcran(place.x, place.y, 40)) return;
@@ -3861,7 +3878,7 @@ const Missions = (function () {
         return;
       }
       // ⚠️ Fermé, on ne promet pas de prix : ACTION ne vendra rien.
-      if (c && !ouvert(c)) { B.invite = c.nom.toUpperCase() + ' — FERMÉ'; return; }
+      if (c && !ouvert(c)) { B.invite = c.nom.toUpperCase() + ' — ' + fermeDuKiosque(c); return; }
       B.invite = c ? c.nom.toUpperCase() + ' — ' + prixAmbulant(j, c) + ' $' + (coupon(j, c.slug) < 1 ? ' (COUPON)' : '') : 'ACHETER';
       return;
     }

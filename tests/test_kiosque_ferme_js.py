@@ -20,7 +20,7 @@ def test_charge_la_nuit_les_kiosques_fermes_sont_vides(banc, paquet):
     heures = _heures(paquet)
     r = banc("""function (L, o) {
         L.B.partie.heure = 0.97;
-        L.Jeu.commencer();
+        L.B.partie.jour = 22; L.Jeu.commencer();   // ⚠️ EN JUILLET, DES LE DEPART (les marchands se postent a `commencer`) : l'hiver, la cabane de fruits de mer est fermée (docs/jalons/la-foire-fermee-l-hiver.md)
         return L.B.entites.filter(function (e) { return e.type === 'ambulant'; }).map(function (etal) {
             const derriere = L.B.entites.filter(function (q) {
                 return q.type === 'pieton' && q.metier === 'ambulant'
@@ -44,7 +44,7 @@ def test_hors_champ_il_s_efface_a_la_fermeture_et_revient_a_l_ouverture(banc, pa
     debut, fin = _heures(paquet)["fruits_de_mer"]
     r = banc("""function (L, o) {
         L.B.partie.heure = %(ouvert)s;
-        L.Jeu.commencer();
+        L.B.partie.jour = 22; L.Jeu.commencer();   // ⚠️ EN JUILLET, DES LE DEPART (les marchands se postent a `commencer`) : l'hiver, la cabane de fruits de mer est fermée (docs/jalons/la-foire-fermee-l-hiver.md)
         const j = L.B.joueur;
         const etal = L.B.entites.filter(function (e) { return e.type === 'ambulant' && e.slug === 'fruits_de_mer'; })[0];
         const avant = etal.vendeur;
@@ -90,7 +90,7 @@ def test_sous_nos_yeux_il_s_en_va_a_pied_et_ne_nait_pas(banc, paquet):
     debut, fin = _heures(paquet)["fruits_de_mer"]
     r = banc("""function (L, o) {
         L.B.partie.heure = %(ouvert)s;
-        L.Jeu.commencer();
+        L.B.partie.jour = 22; L.Jeu.commencer();   // ⚠️ EN JUILLET, DES LE DEPART (les marchands se postent a `commencer`) : l'hiver, la cabane de fruits de mer est fermée (docs/jalons/la-foire-fermee-l-hiver.md)
         L.graine(7);
         const j = L.B.joueur;
         const etal = L.B.entites.filter(function (e) { return e.type === 'ambulant' && e.slug === 'fruits_de_mer'; })[0];

@@ -44,6 +44,9 @@ def test_les_quatre_amuseurs_naissent_au_centre_ville(banc, paquet):
         assert arch["districts"] == ["faubourg"], f"{slug} : {arch['districts']}"
     r = banc("""function (L, o) {
         L.Jeu.commencer();
+        // ⚠️ SANS LA SAISON DES ARTISTES (30 sept. 2026) : l'hiver, ils rentrent (`froid_max`,
+        // test_le_tour_de_l_hiver_js.py) ; ces juges mesurent le numero, pas la saison — janvier garde le reste.
+        L.B.defs.pietons.catalogue.forEach(function (p) { if (L.Entites.SPECTACLES.indexOf(p.metier) >= 0) delete p.froid_max; });
         L.graine(31);
         const vus = {}, quartiers = {};
         // On promène le joueur dans toute la ville : personne ne doit en
@@ -94,6 +97,9 @@ def centre_ville(banc):
     invariant — un amuseur est sur une scène à chaque image où il existe.)"""
     return banc("""function (L, o) {
         L.Jeu.commencer();
+        // ⚠️ SANS LA SAISON DES ARTISTES (30 sept. 2026) : l'hiver, ils rentrent (`froid_max`,
+        // test_le_tour_de_l_hiver_js.py) ; ces juges mesurent le numero, pas la saison — janvier garde le reste.
+        L.B.defs.pietons.catalogue.forEach(function (p) { if (L.Entites.SPECTACLES.indexOf(p.metier) >= 0) delete p.froid_max; });
         L.graine(12);
         // ⚠️ **AU CENTRE DU FAUBOURG, pas au terminus.** Un amuseur naît sur une
         // scène HORS CHAMP mais dans la bulle (`sceneLibre`) : au départ de la
@@ -170,6 +176,9 @@ def test_quand_on_le_voit_il_a_entre_trois_et_cinq_personnes_autour(banc, specta
     de rixe."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
+        // ⚠️ SANS LA SAISON DES ARTISTES (30 sept. 2026) : l'hiver, ils rentrent (`froid_max`,
+        // test_le_tour_de_l_hiver_js.py) ; ces juges mesurent le numero, pas la saison — janvier garde le reste.
+        L.B.defs.pietons.catalogue.forEach(function (p) { if (L.Entites.SPECTACLES.indexOf(p.metier) >= 0) delete p.froid_max; });
         L.graine(77);
         // ⚠️ **AU CENTRE DU FAUBOURG, pas au terminus.** Un amuseur naît sur une
         // scène HORS CHAMP mais dans la bulle (`sceneLibre`) : au départ de la
@@ -263,6 +272,9 @@ def numeros(banc):
     `SPRITES`, qui ne change pas d'un banc à l'autre)."""
     return banc("""function (L, o) {
         L.Jeu.commencer();
+        // ⚠️ SANS LA SAISON DES ARTISTES (30 sept. 2026) : l'hiver, ils rentrent (`froid_max`,
+        // test_le_tour_de_l_hiver_js.py) ; ces juges mesurent le numero, pas la saison — janvier garde le reste.
+        L.B.defs.pietons.catalogue.forEach(function (p) { if (L.Entites.SPECTACLES.indexOf(p.metier) >= 0) delete p.froid_max; });
         L.graine(5);
         const out = {};
         for (const slug of %s) {
@@ -351,6 +363,9 @@ def test_le_musicien_joue_vraiment_et_plus_fort_de_pres(banc, paquet):
         o.brancherAudio(true);
         L.Son.reveiller();
         L.Jeu.commencer();
+        // ⚠️ SANS LA SAISON DES ARTISTES (30 sept. 2026) : l'hiver, ils rentrent (`froid_max`,
+        // test_le_tour_de_l_hiver_js.py) ; ces juges mesurent le numero, pas la saison — janvier garde le reste.
+        L.B.defs.pietons.catalogue.forEach(function (p) { if (L.Entites.SPECTACLES.indexOf(p.metier) >= 0) delete p.froid_max; });
         L.graine(88);
         const j = L.B.joueur;
         // ⚠️ ON NE COMPTE QUE LES NOTES DU MUSICIEN. `joues` recueille TOUT ce
@@ -467,6 +482,9 @@ def test_le_public_applaudit_paie_et_se_renouvelle(banc, paquet):
     son travail, et c'est la graine 64 que le juge joue."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
+        // ⚠️ SANS LA SAISON DES ARTISTES (30 sept. 2026) : l'hiver, ils rentrent (`froid_max`,
+        // test_le_tour_de_l_hiver_js.py) ; ces juges mesurent le numero, pas la saison — janvier garde le reste.
+        L.B.defs.pietons.catalogue.forEach(function (p) { if (L.Entites.SPECTACLES.indexOf(p.metier) >= 0) delete p.froid_max; });
         // ⚠️ SANS LA REMISE (29 sept. 2026) : ce juge tient a l'etat exact de la rue de janvier, et l'hiver
         // motos et velos sont remises — des berlines a leur place (test_motos_velos_remises_js.py). Il
         // mesure autre chose que la saison : sans la cle, la rue est celle d'avant.

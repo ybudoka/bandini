@@ -17,7 +17,7 @@ def etals(banc):
     la caféine à zéro (le premier n'en donne pas, mais on ne le suppose pas), la vie et
     le souffle pleins, l'argent de la partie neuve ; le reste, il le pose lui-même."""
     return banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.B.partie.jour = 22; L.Jeu.commencer();   // ⚠️ EN JUILLET, DES LE DEPART (les marchands se postent a `commencer`) : l'hiver, la cabane de fruits de mer est fermée (docs/jalons/la-foire-fermee-l-hiver.md)
         const neuf = { vie: L.B.joueur.vie, endurance: L.B.joueur.endurance, cafeine: L.B.joueur.cafeine,
                        argent: L.B.partie.argent, heure: L.B.partie.heure };
         const out = {};

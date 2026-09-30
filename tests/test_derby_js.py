@@ -27,7 +27,7 @@ DERBY = """
 
 def test_le_soir_seulement_et_le_bazou_est_prete(banc):
     r = banc("function (L, o) {" + DERBY + """
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 22;   // ⚠️ EN JUILLET : l'hiver, le derby ne se court pas (docs/jalons/la-foire-fermee-l-hiver.md)
         const B = L.B, j = B.joueur;
         const midi = derby(L, 12);
         const aMidi = { defi: !!B.defi, conduite: !!B.conduite };
@@ -47,7 +47,7 @@ def test_un_derby_se_termine_toujours_et_les_bazous_restent_dans_l_arene(banc):
     et personne ne meurt (aux points : le verdict suit la carrosserie qui reste). Les trois finissent avant le chrono du défi, et à chaque image
     tous les bazous sont dans l'arène."""
     r = banc("function (L, o) {" + DERBY + """
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 22;   // ⚠️ EN JUILLET : l'hiver, le derby ne se court pas (docs/jalons/la-foire-fermee-l-hiver.md)
         const B = L.B;
         function un(dur, increvables) {
             const x = derby(L, 21, dur), e = x.e;
@@ -98,7 +98,7 @@ def test_deux_bazous_se_cognent_pour_vrai_mais_pas_a_chaque_image(banc):
     """Deux bazous qui se rentrent dedans perdent de la carrosserie ; collés, pas une seconde fois
     pendant le répit. Deux autos du trafic, elles, se poussent sans dégâts."""
     r = banc("function (L, o) {" + DERBY + """
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 22;   // ⚠️ EN JUILLET : l'hiver, le derby ne se court pas (docs/jalons/la-foire-fermee-l-hiver.md)
         const B = L.B, V = L.Vehicules;
         const x = derby(L, 21, true), e = x.e;
         const a = e.bazous[1], b = e.bazous[2];
@@ -132,7 +132,7 @@ def test_deux_bazous_se_cognent_pour_vrai_mais_pas_a_chaque_image(banc):
 
 def test_le_panneau_se_plante_au_bord_de_l_arene_quand_il_s_ouvre(banc):
     r = banc("function (L, o) {" + DERBY + """
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 22;   // ⚠️ EN JUILLET : l'hiver, le derby ne se court pas (docs/jalons/la-foire-fermee-l-hiver.md)
         const B = L.B, H = L.Histoire;
         const avant = B.entites.filter(function (e) { return e.type === 'panneau' && e.defi === 'derby'; }).length;
         H.ouvrirDefi(B.defs.defis.find(function (q) { return q.slug === 'derby'; }), true);
@@ -147,7 +147,7 @@ def test_le_panneau_se_plante_au_bord_de_l_arene_quand_il_s_ouvre(banc):
 
 def test_au_bout_du_temps_la_carrosserie_decide(banc):
     r = banc("function (L, o) {" + DERBY + """
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 22;   // ⚠️ EN JUILLET : l'hiver, le derby ne se court pas (docs/jalons/la-foire-fermee-l-hiver.md)
         const B = L.B, x = derby(L, 21, false), e = x.e, r = x.d.regles, ep = L.Conduite.EPREUVES.derby;
         function aux(moi, autres) {
             e.moi.vie = Math.round(e.moi.vieMax * moi);

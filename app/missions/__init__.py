@@ -1030,7 +1030,9 @@ DEFIS: list[dict] = [
     # tombent avec lui (`Conduite`).
     # ⚠️ LE SOIR SEULEMENT (`soir`) ; et il s'ouvre quand on a gagné à la galerie de tir.
     # ⚠️ La prime reste sous un boulot à l'heure (`test_derby`) : on vient pour le spectacle.
-    {"slug": "derby", "titre": "Le derby de démolition", "ou": "derby", "conduite": "derby", "soir": True,
+    # ⚠️ `hors_hiver` (docs/jalons/la-foire-fermee-l-hiver.md, vague 2) : l'arène est à côté de la foire, et
+    # un derby se court sur le gazon d'un soir d'été — pas sous la neige, la foire cadenassée.
+    {"slug": "derby", "titre": "Le derby de démolition", "ou": "derby", "conduite": "derby", "soir": True, "hors_hiver": True,
      "chrono_s": 123, "prime": 120, "debloque": {"apres": ["tir"]},
      "regles": {"bazous": 4, "temps_s": 120, "attente_s": 3, "vie": 0.6, "fougue": 0.8, "colle_s": 0.8,
                 "recul_s": 0.7, "repit_s": 0.5, "garde_s": 4, "vise_joueur": 0.7},

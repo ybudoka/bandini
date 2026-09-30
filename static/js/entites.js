@@ -3539,6 +3539,7 @@ const Entites = (function () {
       if (B.entites.some(function (q) { return q.type === 'pieton' && q.reclame === poste && q.vivant; })) continue;
       if (!placeLibre(x, y)) continue;
       const commerce = (B.defs.ambulants || []).find(function (c) { return c.slug === poste.commerce; });
+      if (commerce && !enSaison(commerce.froid_max)) continue;    // on ne crie pas pour un kiosque ferme l'hiver
       const e = creerPieton(x, y, arch);
       e.reclame = poste;
       e.kiosque = poste.commerce;
@@ -3897,7 +3898,7 @@ const Entites = (function () {
         solide: true, dessine: true, vendeur: null,
       });
       ajouterA(grilleFixe, etal);
-      if (enService(commerce.heures)) posterLeVendeur(etal);
+      if (enService(commerce.heures) && enSaison(commerce.froid_max)) posterLeVendeur(etal);
     });
   }
 
@@ -3930,7 +3931,8 @@ const Entites = (function () {
       const etal = B.entites[i];
       if (etal.type !== 'ambulant') continue;
       const commerce = (B.defs.ambulants || []).find(function (c) { return c.slug === etal.slug; });
-      const ouvert = enService(commerce && commerce.heures);
+      // ⚠️ Et sa saison (`froid_max` : la cabane a fruits de mer ferme l'hiver).
+      const ouvert = enService(commerce && commerce.heures) && enSaison(commerce && commerce.froid_max);
       const v = etal.vendeur;
       if (!ouvert && v) {
         etal.vendeur = null;
@@ -4153,8 +4155,13 @@ const Entites = (function () {
   }
 
   /** Pousse de (dx, dy), ce passant irait-il plus avant sur la chaussee ? */
+  //: ⚠️ Ce qu'on tolere d'enfoncement de plus sur la chaussee, a chaque pas de `demeler` : le bruit des
+  //: flottants, pas un centieme. A 0,01, un passant cale a la bordure y descendait d'un centieme PAR IMAGE
+  //: (`test_demeler_ne_pousse_pas_un_passant_sur_la_chaussee`, 2 graines sur 12 le 30 sept. 2026).
+  const TOLERANCE_BORDURE = 1e-6;
+
   function buteSurLaChaussee(e, dx, dy) {
-    return resteAuTrottoir(e) && enfoncement(e.x + dx, e.y + dy, e.r) > enfoncement(e.x, e.y, e.r) + 0.01;
+    return resteAuTrottoir(e) && enfoncement(e.x + dx, e.y + dy, e.r) > enfoncement(e.x, e.y, e.r) + TOLERANCE_BORDURE;
   }
 
   /** Ce passant ne peut pas s'ecarter de l'autre vers la chaussee : il s'en ecarte
@@ -4244,7 +4251,7 @@ const Entites = (function () {
       // ⚠️ Et la regle dure : un passant qui ne traverse pas n'est jamais pose plus
       // avant sur la chaussee. Il GLISSE le long du trottoir (un axe seul, celui qui
       // l'emmene le plus loin sans y descendre), ou il reste ou il est.
-      if (auTrottoir && enfoncement(e.x, e.y, e.r) > avant + 0.01) {
+      if (auTrottoir && enfoncement(e.x, e.y, e.r) > avant + TOLERANCE_BORDURE) {
         let mieux = null;
         for (const axe of [[gx, 0], [0, gy]]) {
           e.x = x0; e.y = y0;
@@ -4252,7 +4259,7 @@ const Entites = (function () {
           deplacerCercle(e, axe[0], axe[1], Monde.MASQUE_PIETON);
           dansLaCarte(e);
           const loin = Math.hypot(e.x - x0, e.y - y0);
-          if (enfoncement(e.x, e.y, e.r) <= avant + 0.01 && (!mieux || loin > mieux.loin)) mieux = { x: e.x, y: e.y, loin: loin };
+          if (enfoncement(e.x, e.y, e.r) <= avant + TOLERANCE_BORDURE && (!mieux || loin > mieux.loin)) mieux = { x: e.x, y: e.y, loin: loin };
         }
         e.x = mieux ? mieux.x : x0; e.y = mieux ? mieux.y : y0;
       }
@@ -6116,10 +6123,11 @@ const Entites = (function () {
     return Math.floor((t === undefined ? B.t : t) / d.anime) % d.variantes;
   }
 
-  /** Ce decor dort-il sous la neige ? Un decor de la foire (`fermeLHiver`, `DECORS_DE_FOIRE`) tant
-      que la foire est fermee pour l'hiver (`Foire.fermee`). */
+  /** Ce decor dort-il sous la neige ? Un decor marque `fermeLHiver` — la foire (`DECORS_DE_FOIRE`), la
+      fontaine a sec, le barbecue sous sa housse — tant que la neige tient (`Saisons.enHiver`, la question
+      meme de `Foire.fermee`). */
   function dortLHiver(d) {
-    return !!(d && d.fermeLHiver && typeof Foire !== 'undefined' && Foire.fermee());
+    return !!(d && d.fermeLHiver && typeof Saisons !== 'undefined' && Saisons.enHiver());
   }
 
   /** L'anneau de la cible verrouillee (`Combat.majCible`) : un repere carre qui
