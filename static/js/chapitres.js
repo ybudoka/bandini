@@ -73,6 +73,59 @@ const Chapitres = (function () {
     return !!(m && m.remplace && m.remplace.length && m.remplace.every(function (s) { return B.partie.missionsFaites[s]; }));
   }
 
+  // --- La reprise ------------------------------------------------------------------------------------
+
+  const FONDU = [32, 40, 32];
+  const CAP = { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 };
+
+  /** Ratée : un chapitre qui a un point de reprise attend que l'hôpital ou le poste aient fini, puis demande. */
+  function retenir(m) {
+    const pm = B.partie.mission;
+    if (!pm || !pm.reprise || !actes(m).length) return;
+    B.repriseEnAttente = { slug: m.slug, reprise: pm.reprise, acte: acteA(m, pm.reprise.etape) + 1 };
+  }
+
+  /** Le menu, quand plus rien ne se passe : ni fondu, ni réplique, ni menu, ni lit d'urgence en train de se
+      faire, ni menottes. Rend true s'il vient de s'ouvrir (`Histoire.maj` s'arrête là). */
+  function majReprise() {
+    const r = B.repriseEnAttente, j = B.joueur;
+    if (!r || B.transition || B.cinema || B.menu || B.partie.mission || !j || j.hospitalise || j.arrete) return false;
+    B.repriseEnAttente = null;
+    const m = Histoire.mission(r.slug);
+    if (!m) return false;
+    Hud.ouvrirMenu({ titre: 'MISSION RATÉE', sur: m.titre.toUpperCase(), obligatoire: true, items: [
+      { libelle: "REPRENDRE L'ACTE " + r.acte, faire: function () { reprendre(r); return true; } },
+      // PLUS TARD : l'acte reste atteint (`chapitres[slug]`), et le téléphone rappellera — c'est le donneur de
+      // CET acte qui attend (`donneurDe`), et l'appel se dit en rappel (`majTelephone`).
+      { libelle: 'PLUS TARD', detail: 'ON TE RAPPELLERA',
+        faire: function () { delete B.partie.appels[r.slug]; B.partie.appelT = null; return true; } },
+    ] });
+    return true;
+  }
+
+  /** Au point de l'acte : hors du lit et de la pièce, la police à zéro, l'arme de l'acte RENDUE (même si la
+      prison l'avait prise), un char neuf du même modèle sur la rue d'à côté ; puis la mission repart au
+      marqueur, qui refait son saut s'il en a un. */
+  function reprendre(r) {
+    const j = B.joueur, p = B.partie, x = r.reprise;
+    Jeu.transiter(FONDU, function () {
+      if (j.alite) Entites.seLever(j, 0, 0);
+      if (j.dansVehicule) Vehicules.descendre(j, true);
+      Jeu.revenirEnVille();
+      Police.remiseAZero();
+      const place = Histoire.tuileLibre(x.x, x.y, 6) || x;
+      j.x = place.x; j.y = place.y; j.vx = 0; j.vy = 0;
+      if (x.arme && x.arme !== 'poings') { p.armes[x.arme] = { mun: x.mun }; Combat.degainer(j, x.arme); }
+      if (x.char) {
+        const rue = Histoire.tuileDeRue(j.x, j.y, 8);
+        if (rue) Vehicules.creer(x.char.slug, rue.x, rue.y, CAP[rue.sens], { etat: 'stationne', couleur: x.char.couleur || undefined });
+      }
+      Entites.indexer(); Monde.centrerCamera(j.x, j.y);
+      chapitres()[r.slug] = x.etape;
+      Histoire.commencer(r.slug, false);
+    }, 'ACTE ' + r.acte);
+  }
+
   /** La mission réussie : le chapitre n'a plus d'acte en attente, et ses missions remplacées sont faites. */
   function reussi(m) {
     const p = B.partie;
@@ -80,5 +133,5 @@ const Chapitres = (function () {
     (m.remplace || []).forEach(function (s) { if (!p.missionsFaites[s]) p.missionsFaites[s] = p.jour; });
   }
 
-  return { actes, acteA, donneurDe, ouvrirActe, reussi, depart, fait };
+  return { actes, acteA, donneurDe, ouvrirActe, reussi, depart, fait, retenir, majReprise, reprendre };
 })();

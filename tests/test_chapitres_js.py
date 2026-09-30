@@ -119,3 +119,97 @@ def test_plus_tard_puis_recharger_repart_a_l_acte_atteint_sans_rejouer_l_intro(b
         return { dispo: dispo && dispo.slug, etape: B.partie.mission && B.partie.mission.etape, intro: intro };
     }""")
     assert r["dispo"] == "zz" and r["etape"] == 4 and r["intro"] is False, r
+
+
+#: Mourir (ou se faire pogner) et attendre le menu de la reprise ; choisir une ligne comme ACTION la choisit.
+REPRENDRE = """
+  function attendreLeMenu(L, o) {
+    for (let k = 0; k < 900 && (L.B.transition || L.B.cinema || !L.B.menu); k++) { o.frame(1); ecouter(L); }
+    return L.B.menu ? L.B.menu.items.map(function (i) { return i.libelle; }) : null;
+  }
+  function choisir(L, o, libelle) {
+    const m = L.B.menu, item = m.items.find(function (x) { return x.libelle.indexOf(libelle) === 0; });
+    if (item.faire(item) !== false && L.B.menu === m) L.Hud.fermerMenu();
+    o.fondu();
+    for (let k = 0; k < 400 && L.B.transition; k++) o.frame(1);
+    jouer(L, o);
+  }
+"""
+
+
+def test_mort_a_l_acte_2_reprendre_rend_l_etape_le_char_et_l_arme(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + REPRENDRE + """
+        ouvrir(L);
+        const B = L.B, p = B.partie, j = B.joueur;
+        p.armes.fronde = { mun: 12 }; L.Combat.degainer(j, 'fronde');
+        const CAP = { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 };
+        const rue = L.Histoire.tuileDeRue(j.x, j.y, 12);
+        const v = L.Vehicules.creer('taxi', rue.x, rue.y, CAP[rue.sens], { etat: 'stationne' });
+        j.x = v.x + 10; j.y = v.y; L.Entites.indexer(); L.Vehicules.monter(j, v); L.Entites.indexer();
+        commencer(L, o, 'zz'); jouer(L, o);
+        const monte = !!j.dansVehicule;
+        p.mission.etape = 2; L.Histoire.avancer(); jouer(L, o);   // le marqueur de l'acte 2
+        const reprise = { x: p.mission.reprise.x, y: p.mission.reprise.y };
+        L.Missions.hopital('banc');
+        const menu = attendreLeMenu(L, o);
+        choisir(L, o, 'REPRENDRE');
+        const pres = Math.round(Math.hypot(j.x - reprise.x, j.y - reprise.y) / 16);
+        const moto = B.entites.find(function (e) { return e.type === 'vehicule' && e.def.slug === 'taxi' && e !== v; });
+        return { menu: menu, etape: p.mission && p.mission.etape, pres: pres, arme: j.arme, moto: !!moto, dedans: !!B.interieur, monte: monte };
+    }""")
+    assert r["menu"][:2] == ["REPRENDRE L'ACTE 2", "PLUS TARD"], r
+    assert r["etape"] == 4 and r["pres"] <= 6 and r["arme"] == "fronde", r
+    assert r["monte"], "le juge part bien en taxi (la moto est remisée en janvier)"
+    assert r["moto"], "un char neuf du même modèle attend sur la rue d'à côté"
+    assert not r["dedans"], "on reprend en ville, pas dans la chambre de l'hôpital"
+
+
+def test_arrete_la_prison_prend_l_arme_la_reprise_la_rend(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + REPRENDRE + """
+        ouvrir(L);
+        const B = L.B, p = B.partie, j = B.joueur;
+        p.armes.pistolet = { mun: 30 }; L.Combat.degainer(j, 'pistolet');
+        commencer(L, o, 'zz'); jouer(L, o);
+        B.recherche.etoiles = 1; L.Missions.prison(null);
+        attendreLeMenu(L, o);
+        const sans = !p.armes.pistolet;
+        choisir(L, o, 'REPRENDRE');
+        return { sans: sans, arme: j.arme, mun: p.armes.pistolet && p.armes.pistolet.mun };
+    }""")
+    assert r == {"sans": True, "arme": "pistolet", "mun": 30}
+
+
+def test_mourir_puis_se_faire_arreter_dans_le_fondu_ne_fait_qu_un_menu(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + REPRENDRE + """
+        ouvrir(L);
+        const B = L.B; commencer(L, o, 'zz'); jouer(L, o);
+        L.Missions.hopital('banc'); B.recherche.etoiles = 1; L.Missions.prison(null);
+        let menus = 0, avant = null;
+        for (let k = 0; k < 1200; k++) { o.frame(1); ecouter(L); if (B.menu && B.menu !== avant) { menus++; avant = B.menu; } }
+        return { menus: menus, titre: B.menu && B.menu.titre };
+    }""")
+    assert r == {"menus": 1, "titre": "MISSION RATÉE"}
+
+
+def test_plus_tard_garde_l_acte_et_le_telephone_rappellera(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + REPRENDRE + """
+        ouvrir(L);
+        const B = L.B, p = B.partie; commencer(L, o, 'zz'); jouer(L, o);
+        p.appels.zz = true;
+        p.mission.etape = 2; L.Histoire.avancer(); jouer(L, o);
+        L.Missions.hopital('banc'); attendreLeMenu(L, o); choisir(L, o, 'PLUS TARD');
+        return { mission: p.mission, chapitre: p.chapitres.zz, appel: !!p.appels.zz };
+    }""")
+    assert r == {"mission": None, "chapitre": 3, "appel": False}
+
+
+def test_une_mission_ordinaire_ratee_n_ouvre_aucun_menu(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + REPRENDRE + """
+        const m = ouvrir(L);
+        m.objectifs = m.objectifs.filter(function (x) { return x.type !== 'acte'; }); delete m.remplace;
+        commencer(L, o, 'zz'); jouer(L, o);
+        L.Missions.hopital('banc');
+        for (let k = 0; k < 900; k++) { o.frame(1); ecouter(L); }
+        return { menu: !!L.B.menu, mission: L.B.partie.mission };
+    }""")
+    assert r == {"menu": False, "mission": None}

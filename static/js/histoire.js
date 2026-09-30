@@ -2478,6 +2478,8 @@ const Histoire = (function () {
   function echouer(raison) {
     const m = courante();
     if (!m) return;
+    // Un CHAPITRE : le menu REPRENDRE L'ACTE attendra la fin de l'hôpital ou du poste (`Chapitres.majReprise`).
+    Chapitres.retenir(m);
     retenirLesTombes(m);
     nettoyer(true);
     // ⚠️ Ce que ses objectifs avaient mis dans le sac (le dossier, le code de la chambre forte) retombe :
@@ -3659,6 +3661,7 @@ const Histoire = (function () {
     jouerLaFin();
     if (B.cinema) return;
     jouerLeGenerique();
+    if (Chapitres.majReprise()) return;
     majBulles();
     majRetours();
     majSaisonniers();
