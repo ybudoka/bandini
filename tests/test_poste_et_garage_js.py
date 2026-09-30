@@ -277,7 +277,8 @@ def test_deux_pressions_d_action_devant_le_rideau_ne_vendent_pas_le_char(banc):
         a.v.y = a.baie.y + 3 * L.TT; o.frame(3);
         a.v.y = a.baie.y; o.frame(3);
         const rouvert = !!L.B.menu;
-        o.tape('ArrowDown', 2);
+        // BAS jusqu'a VENDRE (DESCENDRE AU SOUS-SOL est en deuxieme depuis le garage souterrain), au bouton.
+        for (let k = 0; k < 6 && L.B.menu && !/^VENDRE/.test(L.B.menu.items[L.B.menu.curseur].libelle); k++) o.tape('ArrowDown', 2);
         const ligne = L.B.menu && L.B.menu.items[L.B.menu.curseur].libelle;
         o.tape('KeyE', 2);
         return { ouvert: ouvert, apresUne: apresUne, apresDeux: apresDeux, revient: revient, rouvert: rouvert, ligne: ligne,

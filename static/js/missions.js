@@ -1959,7 +1959,7 @@ const Missions = (function () {
       if (pg.ouverture > 0) return;
       pg.t = 0;
       if (pg.genre === 'cachette') { pg.phase = 'cache'; pg.relache = false; Hud.message('CACHÉ — RECULE POUR SORTIR', 180); return; }
-      if (pg.genre !== 'carrosserie') { pg.phase = 'menu'; Hud.ouvrirMenu(menuDuRideau(v)); return; }
+      if (pg.genre !== 'carrosserie') { pg.phase = 'menu'; Hud.ouvrirMenu(menuDuRideau(v, pg)); return; }
       // ⚠️ Le prix est celui de l'ENTREE : une etoile gagnee en route ne se paie
       // pas deux fois, et l'argent se recompte ici — on a pu en depenser depuis.
       if (B.partie.argent < pg.prix) { Hud.message('PEINTURE : ' + pg.prix + ' $ — T’AS PAS ÇA', 150); Son.SFX.erreur(); pg.phase = 'leve'; }
@@ -2051,7 +2051,7 @@ const Missions = (function () {
       if (B.cinema || B.menu || B.transition || v.mission || v.etat === 'epave') continue;
       pg.servi = v;
       v.vitesse = 0; v.vx = 0; v.vy = 0;
-      Hud.ouvrirMenu(menuDuRideau(v));
+      Hud.ouvrirMenu(menuDuRideau(v, pg));
     }
   }
 
@@ -2059,10 +2059,15 @@ const Missions = (function () {
       curseur : le menu s'ouvre tout seul au moment ou l'on freine, donc au
       moment ou la main appuie sur ACTION pour descendre — deux pressions
       auraient VENDU le char qu'on voulait seulement garer. */
-  function menuDuRideau(v) {
+  function menuDuRideau(v, pg) {
     const items = [{ libelle: 'REPARTIR', faire: function () { return true; } }];
+    // LE GARAGE SOUTERRAIN (docs/jalons/le-grand-garage-souterrain.md) : en deuxieme, jamais en tete — le menu
+    // s'ouvre au moment ou l'on freine, et deux pressions d'ACTION ne doivent que REPARTIR.
+    const non = Souterrain.refus(v);
+    items.push({ libelle: 'DESCENDRE AU SOUS-SOL', detail: non || (Souterrain.occupees() + '/' + Souterrain.ouvertes()),
+                 actif: !non, faire: function () { return Souterrain.descendre(v, pg || Monde.porteDeGarage('garage')); } });
     const menu = menuGarage(items, v);
-    menu.refaire = function () { return menuDuRideau(v); };
+    menu.refaire = function () { return menuDuRideau(v, pg); };
     return menu;
   }
 

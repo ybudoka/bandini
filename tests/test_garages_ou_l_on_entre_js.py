@@ -259,7 +259,9 @@ def test_sous_le_toit_on_ne_descend_pas_et_vendu_on_ressort_dans_la_baie(banc):
         o.frame(2);
         entrer(L, o, a);
         for (let k = 0; k < 200 && !L.B.menu; k++) o.frame(1);
-        const ligne = L.B.menu && (o.tape('ArrowDown', 2), L.B.menu.items[L.B.menu.curseur].libelle);
+        // BAS jusqu'a VENDRE (DESCENDRE AU SOUS-SOL est en deuxieme depuis le garage souterrain), au bouton.
+        for (let k = 0; k < 6 && L.B.menu && !/^VENDRE/.test(L.B.menu.items[L.B.menu.curseur].libelle); k++) o.tape('ArrowDown', 2);
+        const ligne = L.B.menu && L.B.menu.items[L.B.menu.curseur].libelle;
         o.tape('KeyE', 1);
         const j = L.B.joueur;
         const pose = { dx: Math.abs(j.x - a.baie.x), dy: Math.abs(j.y - a.baie.y) };

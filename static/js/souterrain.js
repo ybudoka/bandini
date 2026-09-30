@@ -86,5 +86,28 @@ const Souterrain = (function () {
     });
   }
 
-  return { SLUG, PAR_NIVEAU, CASES_MAX, est, ici, ouvertes, occupees, plein, fiche, ranger, garnir };
+  /** Pourquoi ce char ne descend pas — la raison, telle qu'elle s'ecrit a la ligne du menu — ou null. */
+  function refus(v) {
+    if (!Missions.possede(Missions.proprieteDe('garage'))) return 'ACHÈTE LE GARAGE D’ABORD';
+    if (B.recherche.etoiles > 0) return 'SÈME LA POLICE D’ABORD';
+    if (v.mission || v.aQui) return 'CE CHAR-LÀ N’EST PAS À TOI';
+    if (v.def && v.def.eau) return 'UN BATEAU ? DANS UN GARAGE ?';
+    if (v.remorque) return 'DÉCROCHE CE QUE TU TIRES D’ABORD';
+    if (plein()) return 'SOUS-SOL PLEIN — ' + occupees() + '/' + ouvertes();
+    return null;
+  }
+
+  /** DESCENDRE AU SOUS-SOL, du menu du rideau : l'atelier se defait (s'il tenait le char sous le toit), le char est
+      « servi » (le menu ne le rattrape pas en remontant), et le bloc se charge au noir. ⚠️ Pendant le fondu, le
+      jeu est fige (`Jeu.maj`) : le rideau n'a rien a garder. */
+  function descendre(v, pg) {
+    const r = refus(v);
+    if (r) { Hud.message(r, 150); Son.SFX.erreur(); return false; }
+    if (pg && pg.dedans === v) { pg.dedans = null; pg.phase = null; pg.admis = null; }
+    v.atelier = null;
+    if (pg) pg.servi = v;
+    return Blocs.sauter(SLUG, null, null);
+  }
+
+  return { SLUG, PAR_NIVEAU, CASES_MAX, est, ici, ouvertes, occupees, plein, fiche, ranger, garnir, refus, descendre };
 })();

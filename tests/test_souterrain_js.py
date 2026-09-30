@@ -2,6 +2,8 @@
 remonte la rampe et on ressort devant le rideau de Ti-Guy ; les chars rangés y sont encore au retour et au
 rechargement ; le rideau et l'ascenseur, au bouton. Voir `static/js/souterrain.js`."""
 
+import pytest
+
 OUTILS = """
   const TT = 16;
   function proprio(L) { L.B.partie.proprietes.garage = { jour: L.B.partie.jour, caisse: 0 }; }
@@ -202,3 +204,63 @@ def test_une_vieille_partie_sans_sous_sol_se_complete(banc):
     assert r["p"] == {"niveaux": 1, "cases": [None] * 20}, r
     assert r["q"]["niveaux"] == 1 and len(r["q"]["cases"]) == 20, r
     assert r["q"]["cases"][0]["slug"] == "auto" and r["q"]["cases"][1] is None, r
+
+
+RIDEAU = """
+  // Garé nez au rideau, on attend le menu de Ti-Guy, et on choisit la ligne au bouton.
+  function menuDuRideau(L, o) { for (let k = 0; k < 240 && !L.B.menu; k++) o.frame(1); return L.B.menu; }
+  function choisir(L, o, libelle) {
+    const k = L.B.menu.items.findIndex(function (i) { return i.libelle === libelle; });
+    if (k < 0) return false;
+    L.B.menu.curseur = k; o.tape('KeyE', 2);
+    return true;
+  }
+"""
+
+
+def test_au_rideau_descendre_au_sous_sol_au_bouton_et_le_rideau_ne_remonte_pas_pendant_le_fondu(banc):
+    r = banc("async function (L, o) {" + OUTILS + RIDEAU + """
+        L.Jeu.commencer(); proprio(L);
+        const B = L.B, a = auVolantDevant(L);
+        const menu = menuDuRideau(L, o);
+        const libelles = menu ? menu.items.map(function (i) { return i.libelle; }) : [];
+        choisir(L, o, 'DESCENDRE AU SOUS-SOL');
+        // Le fondu : le menu ne revient pas.
+        let menuPendant = false;
+        for (let i = 0; i < 400 && !(B.bloc && !B.transition); i++) {
+          o.frame(1); if (i % 10 === 0) await o.attendre();
+          if (!B.bloc) menuPendant = menuPendant || !!B.menu;
+        }
+        return { libelles: libelles, bloc: B.bloc && B.bloc.slug, auVolant: B.joueur.dansVehicule === a.v,
+                 menuPendant: menuPendant };
+    }""")
+    assert r["libelles"][:2] == ["REPARTIR", "DESCENDRE AU SOUS-SOL"], f"REPARTIR reste en tête : {r['libelles']}"
+    assert r["bloc"] == "souterrain" and r["auVolant"], r
+    assert r["menuPendant"] is False, "le menu de Ti-Guy s'est rouvert pendant la descente"
+
+
+@pytest.mark.parametrize("cas", ["pas_proprio", "etoiles", "mission", "plein"])
+def test_le_sous_sol_refuse_et_le_dit(banc, cas):
+    r = banc("async function (L, o) {" + OUTILS + RIDEAU + """
+        L.Jeu.commencer();
+        const B = L.B, cas = '""" + cas + """';
+        if (cas !== 'pas_proprio') proprio(L);
+        const a = auVolantDevant(L);
+        if (cas === 'etoiles') { B.recherche.etoiles = 1; B.recherche.chaleur = 20; }
+        if (cas === 'mission') a.v.mission = true;
+        if (cas === 'plein') for (let k = 0; k < 10; k++) B.partie.souterrain.cases[k] = { slug: 'auto', couleur: '#fff', vie: 100 };
+        const menu = menuDuRideau(L, o);
+        const ligne = menu && menu.items.find(function (i) { return i.libelle === 'DESCENDRE AU SOUS-SOL'; });
+        if (ligne) choisir(L, o, 'DESCENDRE AU SOUS-SOL');
+        for (let i = 0; i < 60; i++) o.frame(1);
+        return { ligne: ligne ? { actif: ligne.actif !== false, detail: ligne.detail } : null,
+                 bloc: !!B.bloc, transition: !!B.transition };
+    }""")
+    if cas == "mission":
+        # Le char d'une mission se livre DEVANT le rideau : le menu ne s'ouvre pas du tout.
+        assert r["ligne"] is None and not r["bloc"], r
+        return
+    assert r["ligne"] and r["ligne"]["actif"] is False, r
+    attendu = {"pas_proprio": "GARAGE", "etoiles": "POLICE", "plein": "10/10"}[cas]
+    assert attendu in r["ligne"]["detail"], r
+    assert not r["bloc"] and not r["transition"], r
