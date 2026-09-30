@@ -679,7 +679,7 @@ from . import (  # noqa: E402
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
     s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
     e04, e06, e07, e10, la_pointe, s02, s05, s06, s09, s10, s11,
-    d01, d02, d03, d04, d05, d06, d07, d08, h03, h04, h05, h06, h07, l01, l02, l03, l04, l05, l06, r02, r03, r04, r05, r06, r07, r08, s07, s12, s14, e13, q12, q09, q07, m98,
+    d01, d02, d03, d04, d05, d06, d07, d08, h03, h04, h05, h06, h07, l01, l02, l03, l04, l05, l06, r02, r03, r04, r05, r06, r07, r08, s07, s12, s14, e13, q12, q09, q08, i01, i02, i03, i05, q07, m98,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -727,6 +727,10 @@ from . import (  # noqa: E402
 # ⚠️ d05 à d08 (30 sept. 2026, vague 8) : la fin de l'arc D — l'acte du garage pour l'avocat du Brouillard (d05,
 # Josée), les Ciseaux de Sal au garage (d06, Gus), puis le CHOIX : vider la berline de Sal (d07, Josée) ou, la dette
 # payée, sa dernière coupe et la bague de Rocco (d08, `exige.dette: 0`). Chacune ferme l'autre.
+# ⚠️ q08, i01, i02, i03, i05 (30 sept. 2026, vague 13) : l'Île-aux-Corneilles — le moteur de la chaloupe de Bérubé,
+# la première traversée jusqu'au hangar de Léo, la cloche de Sœur Jeanne rachetée chez Ti-Loup, les caisses de Sven
+# au hangar sans nom, la conserverie qui brûle. L'île ne se rejoint pas à pied : on livre la chaloupe à un
+# `amarrage:` et on marche.
 # ⚠️ s07, s12, s14, e13, q12, q09 (30 sept. 2026, vague 12) : ce qui restait des districts, avec des donneurs qui
 # existent — le camion de Prévost au quai, la retraite de Gilles, trois autos-patrouilles en cubes pour Ti-Loup, la
 # berline de Diane reprise au lot, la mère de Josée à l'urgence, la course des débardeurs.
@@ -768,6 +772,7 @@ CATALOGUE: list[Mission] = [
     l01.MISSION, l02.MISSION, l03.MISSION, l04.MISSION, l05.MISSION, l06.MISSION,
     r02.MISSION, r03.MISSION, r04.MISSION, r05.MISSION, r06.MISSION, r07.MISSION, r08.MISSION,
     s07.MISSION, s12.MISSION, s14.MISSION, e13.MISSION, q12.MISSION, q09.MISSION,
+    q08.MISSION, i01.MISSION, i02.MISSION, i03.MISSION, i05.MISSION,
     m97.MISSION, m98.MISSION, m99.MISSION,
 ]
 
@@ -1324,19 +1329,16 @@ def cles_des_serrures(blocs: list[dict]) -> dict[str, list[str]]:
 def pour_le_navigateur() -> list[dict]:
     """Le catalogue tel que le téléphone le reçoit : les missions SANS ce qu'elles
     disent ni ce qu'elles montrent (voir `HORS_DU_PAQUET`)."""
-    return [_sans_le_message({cle: copy.deepcopy(valeur) for cle, valeur in mission.items()
-                              if cle not in HORS_DU_PAQUET
-                              and not (cle in PAR_DEFAUT_AU_NAVIGATEUR and valeur == DEFAUTS_DE_MISSION[cle])})
+    return [{cle: copy.deepcopy(valeur) for cle, valeur in mission.items()
+             if cle not in HORS_DU_PAQUET and cle != "donne"
+             and not (cle in PAR_DEFAUT_AU_NAVIGATEUR and valeur == DEFAUTS_DE_MISSION[cle])}
             for mission in CATALOGUE]
 
 
-def _sans_le_message(mission: dict) -> dict:
-    """⚠️ LE MESSAGE DE LA FIN VOYAGE AVEC LA MISSION (M16, le reste, 30 sept. 2026) : `donne.message` ne se lit qu'à
-    la fin (`Histoire.jouerLaFin`), donc après `/api/mission/<slug>` — comme les objectifs. Il pesait ≈ 45 octets
-    bruts par mission au paquet, et le plafond brut des définitions n'en tenait plus une vague."""
-    if (mission.get("donne") or {}).get("message"):
-        mission["donne"] = {cle: v for cle, v in mission["donne"].items() if cle != "message"}
-    return mission
+#: ⚠️ CE QU'ELLE DONNE VOYAGE AVEC LA MISSION (M16, le reste, 30 sept. 2026) : `donne` ne se lit qu'en la
+#: réussissant (`Histoire.recompenser`) et à la fin (`jouerLaFin`, son message), donc après `/api/mission/<slug>` —
+#: comme les objectifs. Son message d'abord (vague 9), puis tout (vague 13) : le plafond brut des définitions n'en
+#: tenait plus une vague, et ce que le carnet et le téléphone lisent (titre, donneur, prérequis, prime) reste.
 
 
 #: ⚠️ CE QUE LE NAVIGATEUR SAIT DÉJÀ (M16, 30 sept. 2026 — le reste des arcs) : une clé qui vaut son défaut ne
@@ -1370,8 +1372,8 @@ def pour_jouer(slug: str) -> dict | None:
             # cent vingt mp3 annonces pour en jouer sept. Meme regle, meme route, meme
             # instant : ce qu'une mission dit, montre, et avec quelle voix.
             "voix": audio.voix_de_mission(slug),
-            # Le message de la fin (`donne.message`) : sorti du catalogue (`_sans_le_message`), lu à la fin.
-            **({"message": mission["donne"]["message"]} if (mission.get("donne") or {}).get("message") else {}),
+            # Ce qu'elle donne (`donne`) : sorti du catalogue (`pour_le_navigateur`), lu en la réussissant.
+            **({"donne": copy.deepcopy(mission["donne"])} if mission.get("donne") else {}),
             # Le saut et la frontiere (`surplace.js`) : lus a la fin de l'intro, donc apres ce texte.
             **{cle: copy.deepcopy(mission[cle]) for cle in ("sur_place", "frontiere") if cle in mission}}
 

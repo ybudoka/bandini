@@ -31,7 +31,7 @@ Chaque fiche mêle deux sortes de faits.
 | [Madame Thibodeau](madame-thibodeau.md) | `thibodeau` | devant son kiosque | Julia | m2 · m51 · f12 |
 | [Marco « le Cousin »](marco.md) | `marco` | devant le garage | Québec Tremblay | m3 · m50 · f01 · m97 |
 | [Le sergent Réjean Bouchard](sergent-bouchard.md) | `bouchard` | au casse-croûte, dedans | Khaivan | m4 · m51 · v02 |
-| [Josée « la Chef » Pelletier](josee.md) | `josee` | au bar Le Brouillard, dedans | Jeanne Mance | m5 · m6 · q04 · q11 · v01 · d05 · d07 · q12 |
+| [Josée « la Chef » Pelletier](josee.md) | `josee` | au bar Le Brouillard, dedans | Jeanne Mance | m5 · m6 · q04 · q11 · v01 · d05 · d07 · q12 · i03 |
 | [Ti-Paul Gagnon](ti-paul.md) | `tipaul` | devant son dépanneur | Québec Tremblay | m6 · e01 · m51 |
 | [Lucienne « Lulu » Pelletier](lulu.md) | `lulu` | à la cantine des Quais, dedans | Claudia | m6 · m50 · q02 · m51 · q01 |
 | [Raymonde Fortin](raymonde.md) | `raymonde` | devant l'usine Prévost | Nadine | m6 · s03 |
@@ -51,10 +51,10 @@ Chaque fiche mêle deux sortes de faits.
 | [Ginette](ginette.md) | `ginette` | à l'hôpital | Jeanne Mance | h02 · h05 |
 | [Gilles Thériault](gilles.md) | `gilles` | à la guérite de la fourrière | Patrick | s01 · s08 · s12 |
 | [Le Bonimenteur](le-bonimenteur.md) | `bonimenteur` | à l'arche de la foire | Léo | p13 · p14 |
-| [Le capitaine Aurèle Bérubé](berube.md) | `berube` | au bout du quai du traversier, aux Quais | Paul K — Deep French Narrator | m99 |
+| [Le capitaine Aurèle Bérubé](berube.md) | `berube` | au bout du quai du traversier, aux Quais | Paul K — Deep French Narrator | m99 · q08 · i01 |
 | [Mireille Dion](mireille.md) | `mireille` | au comptoir du DOJO DION, au Faubourg, dedans | Marie Line - Energetic and Clear | ses cours (le dojo) |
-| [Sœur Jeanne](jeanne.md) | `jeanne` | sur le parvis de la chapelle, sur l'Île-aux-Corneilles | Julia | aucune encore (i02 · i05, M16) |
-| [Léo Cyr](leo.md) | `leo` | devant le hangar sans nom, sur l'Île-aux-Corneilles | Alexandre | aucune encore (i04 · i07, M16) |
+| [Sœur Jeanne](jeanne.md) | `jeanne` | sur le parvis de la chapelle, sur l'Île-aux-Corneilles | Julia | aucune encore (i02 · i05, M16) · i02 · i05 |
+| [Léo Cyr](leo.md) | `leo` | devant le hangar sans nom, sur l'Île-aux-Corneilles | Alexandre | aucune encore (i04 · i07, M16) · i01 (sa poignée de main) |
 | [Norbert](norbert.md) | `norbert` | dans le hall de l'Hôtel Bandini, au bout du comptoir | Martin Dupont Intime | f10 (sa cible) · c03 · l03 (la source de Louise) |
 | [Irène Lam](irene.md) | `irene` | au bout du bar du casino du Dragon d'or, au Petit-Canton, dedans | Meera | c01 · c02 · c03 · c04 · c05 |
 | [Réal « le Pouce » Vachon](le-pouce.md) | `pouce` | nulle part : au tripot, puis parti pour Sorel | Callum - Husky Trickster | c04 (une réplique, en se sauvant) |

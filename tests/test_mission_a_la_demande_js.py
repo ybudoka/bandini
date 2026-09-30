@@ -227,10 +227,10 @@ def test_sans_ses_objectifs_une_mission_reprise_attend_sans_rien_casser(banc):
     assert r["carnet"] > 0, "le carnet ne s'ouvre plus"
 
 
-def test_le_message_de_la_fin_arrive_avec_la_mission(banc):
-    """M16, le reste (30 sept. 2026) : `donne.message` ne voyage plus au paquet (`missions._sans_le_message`) ; il
-    arrive avec `/api/mission/<slug>`, avant la fin qui le lit (`jouerLaFin`). Le reste de `donne` reste au catalogue
-    (la dette de d05 se lit sans rien demander)."""
+def test_ce_qu_elle_donne_arrive_avec_la_mission(banc):
+    """M16, le reste (30 sept. 2026) : `donne` ne voyage plus au paquet (`missions.pour_le_navigateur`) ; il arrive
+    avec `/api/mission/<slug>`, avant `recompenser` et la fin qui le lisent. Une mission qu'on n'a pas demandée ne
+    le porte pas (d05)."""
     r = banc("""async function (L, o) {
         L.Jeu.commencer();
         const m = L.Histoire.mission('h03');
@@ -238,8 +238,8 @@ def test_le_message_de_la_fin_arrive_avec_la_mission(banc):
         L.Histoire.charger('h03');
         for (let i = 0; i < 4; i++) await o.attendre();
         return { avant: avant, apres: (m.donne || {}).message || null,
-                 casier: (L.Histoire.mission('d05').donne || {}).casier };
+                 casier: (L.Histoire.mission('d05').donne || {}).casier || null };
     }""", poser_les_missions=False)
     assert r["avant"] == {"message": None}, "le message voyage encore au paquet"
     assert r["apres"] == "LA MOITIÉ DE LA DETTE DU DOCTEUR EST PAYÉE", r
-    assert r["casier"] == -2, "le reste de `donne` reste au catalogue"
+    assert r["casier"] is None, "`donne` n'arrive qu'avec sa mission"

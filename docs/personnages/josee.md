@@ -14,7 +14,7 @@
 | Voix | **Jeanne Mance — Charming, Clear and Young**, québécoise |
 | Bulle | « Approche, toi. » |
 | Couleurs | chandail rouge, cheveux noirs, pantalon noir |
-| Missions | donne **m5**, **m6**, **q04**, **q11** (les camions de Sven — le choix contre **q10**), **v01** (la clé du maire, la première infiltration de la villa), **d05** (l'acte du garage pour Me Desjardins), **d07** (la berline de Sal — le choix contre **d08**) ; ouvre le marché noir après m5 (au lieu de dire son repos) ; donne aussi **q12** (sa mère à l'urgence) |
+| Missions | donne **m5**, **m6**, **q04**, **q11** (les camions de Sven — le choix contre **q10**), **v01** (la clé du maire, la première infiltration de la villa), **d05** (l'acte du garage pour Me Desjardins), **d07** (la berline de Sal — le choix contre **d08**) ; ouvre le marché noir après m5 (au lieu de dire son repos) ; donne aussi **q12** (sa mère à l'urgence) ; donne aussi **i03** (le hangar sans nom) |
 
 ## Son histoire
 

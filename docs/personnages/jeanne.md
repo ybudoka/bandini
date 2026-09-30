@@ -14,7 +14,7 @@
 | Voix | **Julia**, partagée avec Madame Thibodeau (qui ne met jamais les pieds sur l'île) |
 | Bulle | « Dieu te garde. » |
 | Couleurs | l'habit et le voile noirs, une mèche grise |
-| Missions | aucune encore : posée par la 2e vague de l'île (27 sept. 2026), avant l'arc I de M16 — elle y donnera **i02** et **i05** |
+| Missions | aucune encore : posée par la 2e vague de l'île (27 sept. 2026), avant l'arc I de M16 — elle y donnera **i02** et **i05** ; donne **i02** (sa cloche) et **i05** (la conserverie) |
 
 ## Son histoire
 

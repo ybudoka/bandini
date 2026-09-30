@@ -26,8 +26,9 @@ MESURE_DU_PAQUET: dict[str, tuple[int, int]] = {
     # Clairon de Louise (l01-l06) : 4 523 — au-dessus du budget. Le message de la fin (`donne.message`) voyage
     # désormais avec la mission (`missions._sans_le_message`, `/api/mission/<slug>`) : 2 779. Budget recalculé par la
     # règle de départ (mesure + 10 % + 100) : ≈ 30 octets par mission, une dizaine de vagues. Vagues 10 à 12 (Roy,
-    # la fin de l'arc R, ce qui restait des districts : 13 missions) : 3 073.
-    "missions": (3_073, 3_150),
+    # la fin de l'arc R, ce qui restait des districts : 13 missions) : 3 073 ; vague 13, l'île, et tout `donne`
+    # voyage avec la mission (`pour_jouer`) : 2 631.
+    "missions": (2_631, 3_150),
     "garderobe": (3_460, 3_950),
     "personnages": (2_728, 3_150),
     "vehicules": (1_973, 2_300),

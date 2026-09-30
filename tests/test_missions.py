@@ -1,6 +1,6 @@
 import re
 
-from app import armes, audio, blocs, carte, casino, economie, mantes, missions, pietons, tripot
+from app import armes, audio, blocs, carte, casino, economie, ile, mantes, missions, pietons, tripot
 
 
 def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
@@ -85,6 +85,10 @@ def test_les_cinq_missions_se_suivent():
     assert len(missions.defis_de_foire()) == 3
 
 
+#: Les bâtiments de l'île qu'on peut nommer (une porte à lieu) : on y accoste, on n'y marche pas depuis la ville.
+LIEUX_DE_L_ILE = {f["slug"] for f in ile.BATIMENTS.values() if f.get("porte") in ("lieu", "visite")}
+
+
 def _mot_d_enseigne(mot: str) -> bool:
     """Un mot que `Histoire.boutiquex` trouve : un genre de devanture, ou un mot peint sur une enseigne."""
     from villes import exporter
@@ -122,7 +126,9 @@ def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
                 # ⚠️ Livrer une COQUE, c'est la ramener à son mouillage (`navires.py`) :
                 # il n'y a pas de baie de garage sur l'eau, `carte.SPECIAUX` n'en sait rien.
                 # Ou l'amarrer ailleurs, au pied d'un lieu connu (`amarrage:<lieu>`, m53).
-                amarre = o["lieu"].startswith("amarrage:") and o["lieu"].split(":", 1)[1] in lieux
+                # ⚠️ Et l'île (arc I) : on y accoste sous un de ses bâtiments (`amarrage:hangar_ile`), jamais on n'y
+                # marche depuis la ville — ses lieux ne sont que des amarrages (`ile.BATIMENTS`).
+                amarre = o["lieu"].startswith("amarrage:") and o["lieu"].split(":", 1)[1] in (lieux | LIEUX_DE_L_ILE)
                 assert o["lieu"] in lieux or amarre or o["lieu"].startswith(("mouillage:", "traversier:")), \
                     f"{m['slug']} : lieu inconnu {o['lieu']}"
             # `course` (p04) : ses points, des lieux que `Histoire.resoudre` connaît. ⚠️ Et `boutique:<mot>` (h06, les
@@ -363,6 +369,6 @@ def test_le_paquet_ne_porte_pas_l_echec_ni_la_phase_qui_valent_leur_defaut():
     assert missions.par_slug("d05")["echec"] == ["mort", "arrete"]
     assert "echec" not in d05 and "phase" not in d05, d05
     assert paquet["m3"]["echec"] == ["arrete", "vehicule_detruit"]
-    # Et le message de la fin voyage avec la mission (`pour_jouer`), le reste de `donne` au catalogue.
-    assert "message" not in d05["donne"] and d05["donne"]["casier"] == -2, d05
-    assert missions.pour_jouer("d05")["message"] == missions.par_slug("d05")["donne"]["message"]
+    # Et ce qu'elle donne voyage avec la mission (`pour_jouer`) : il ne se lit qu'en la réussissant.
+    assert "donne" not in d05, d05
+    assert missions.pour_jouer("d05")["donne"] == missions.par_slug("d05")["donne"]

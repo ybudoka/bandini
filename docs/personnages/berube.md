@@ -14,7 +14,7 @@
 | Voix | **Paul K — Deep French Narrator** (France, grave et posé ; une voix non québécoise, permise par Martin le 25 sept. 2026) |
 | Bulle | « Un passage? » |
 | Couleurs | uniforme bleu nuit, cheveux et barbe blancs, pantalon sombre |
-| Missions | donne **m99** « Le dernier traversier », puis quitte la ville (`parti_apres`) |
+| Missions | donne **m99** « Le dernier traversier », puis quitte la ville (`parti_apres`) ; donne aussi **q08** (le moteur de sa chaloupe) et **i01** (la première traversée) |
 
 ## Son histoire
 

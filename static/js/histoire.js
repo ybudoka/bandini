@@ -74,8 +74,8 @@ const Histoire = (function () {
         // Le saut et la frontiere (`SurPlace`), sortis du paquet comme les objectifs (30 sept. 2026).
         m.sur_place = d.sur_place || null;
         m.frontiere = d.frontiere || null;
-        // Le message de la fin (`donne.message`), sorti du catalogue (30 sept. 2026) : lu par `jouerLaFin`.
-        if (d.message) m.donne = Object.assign({}, m.donne || {}, { message: d.message });
+        // Ce qu'elle donne (`donne`), sorti du catalogue (30 sept. 2026) : lu par `recompenser` et `jouerLaFin`.
+        if (d.donne) m.donne = d.donne;
         // ⚠️ SES VOIX SE DECLARENT ICI AUSSI. `Son.Voix.histoire()` lit la liste du
         // paquet, et celles d'une mission n'y sont plus : sans cette ligne, le texte
         // s'afficherait et personne ne parlerait. `chargerHistoire` va chercher les

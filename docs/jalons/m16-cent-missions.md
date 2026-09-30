@@ -1251,3 +1251,26 @@ catalogue.
   - **Juges** (`tests/test_districts_suite_js.py`, sept) : chaque mission de l'appel à la prime, prise au bouton ; les
     trois tours de s14 aux étapes 1, 4, 7, chacun semé caché dedans ; la remorqueuse de Gilles à la planque ; la mère
     de Josée trop lente, c'est raté ; les trois points de Gégé dans l'ordre.
+- **30 sept. 2026 : vague 13 — l'arc I, l'Île-aux-Corneilles (première moitié).** Cinq missions : `q08` (Bérubé, _Le
+  moteur du capitaine_ : deux jeunes filent avec le Johnson de cinquante-huit dans un pick-up — 200 $), `i01` (Bérubé,
+  _Le moteur tourne_ : sa chaloupe, la baie traversée jusqu'au hangar, et Léo à pied — « j'ai rien vu pis rien reçu »
+  — 120 $), `i02` (Sœur Jeanne, _La cloche de Sœur Jeanne_ : volée l'hiver passé, rachetée deux cents piastres à
+  Ti-Loup, ramenée par l'eau — 150 $), `i03` (Josée, _Le hangar sans nom_ : de nuit, sans une étoile, deux caisses de
+  Sven derrière le hangar, ramenées au Brouillard par l'eau — 400 $), `i05` (Sœur Jeanne, _L'usine à poisson_ : la
+  conserverie brûle près du hangar, l'extincteur de la chapelle, trois matelots de Sven — 200 $). Aucun personnage
+  neuf : Bérubé, Sœur Jeanne et Léo attendaient leur arc.
+  - ⚠️ **L'île ne se rejoint pas à pied** (`test_barrieres.py`) : aucun `lieu` sur l'île ; la chaloupe se prend et se
+    livre à un `amarrage:<lieu>` (le patron de m52, m53), et l'on marche jusqu'à Léo ou la sœur. Au banc, la chaloupe
+    est menée d'un amarrage à l'autre (la traversée elle-même a ses juges, m52 et m53).
+  - ⚠️ **Écarts à la fiche** : `i02` ne laisse pas « la reprendre » à la place de payer (aucun objectif facultatif),
+    et « on dort à la chapelle » (une deuxième sauvegarde) n'est pas écrit ; `i02` attend aussi `s02` (Ti-Loup n'est
+    au lot qu'après s01) ; Sœur Jeanne appelle « du téléphone du quai de l'île » (sa fiche dit qu'elle n'a pas le
+    téléphone : l'île n'a qu'une ligne, au quai). **Restent de l'arc** : `i04` (laisser refroidir un char chaud sur
+    l'île — aucun char n'y va : pas de pont, et le traversier ne la dessert pas), `i06` (le bateau de Sven détruit),
+    `i07` (la course en bateau — `course` ne connaît pas encore un `amarrage:` en point), `i08` (la cache de Rocco),
+    et `h08`, `d09`, `p12` qui passent par l'île.
+  - **Le paquet** : tout ce que `donne` accorde voyage maintenant avec la mission (`/api/mission/<slug>`, lu en la
+    réussissant) — `missions` 3 073 → 2 631 gzip, le brut 239 833 → 237 693.
+  - **Juges** (`tests/test_arc_i_js.py`, cinq ; une mutation, rouge) : chaque mission de l'appel à la prime, prise au
+    bouton — la chaloupe née sur l'eau, accostée sous le hangar et la chapelle, la poignée de main de Léo et de
+    Ti-Loup, deux cents piastres payées, les caisses posées devant le hangar, le feu près du hangar et trois matelots.
