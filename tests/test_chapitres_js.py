@@ -368,3 +368,24 @@ def test_le_fuyard_saute_dans_un_autre_char_avant_de_tomber(banc):
     assert r["tombe2"], "le dernier relais fait, il tombe"
     assert r["pres"] is not None and r["pres"] <= 12, "il saute dans un char tout près du premier"
     assert r["premierGare"], r
+
+
+def test_le_donneur_qui_arrive_apres_un_acte_est_la_pour_l_acte_suivant(banc):
+    # Zed n'arrive qu'après p02 (`arrive_apres`) : l'acte 1 qui la remplace fini, il est devant le phare — sans
+    # recharger la partie. Et le `message` du `donne` de l'objectif s'affiche.
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + """
+        L.Jeu.commencer(); L.graine(6);
+        ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'p01'].forEach(function (s) { L.B.partie.missionsFaites[s] = 1; });
+        L.Jeu.retourTitre(); L.Jeu.commencer(); L.B.joueur.invincible = 1e6;
+        const m = greffer(L), B = L.B;
+        m.remplace = ['p02', 'zb']; m.objectifs[3].donneur = 'zed';
+        m.objectifs[2].donne = { message: 'LE PONT DE LA POINTE EST OUVERT' };
+        const avant = !!L.Histoire.donneur('zed');
+        const vus = []; const vrai = L.Hud.message; L.Hud.message = function (t) { vus.push(t); return vrai.apply(null, arguments); };
+        commencer(L, o, 'zz'); jouer(L, o);
+        const ph = L.Histoire.lieu('phare'); B.joueur.x = ph.x; B.joueur.y = ph.y; L.Entites.indexer(); jouer(L, o);
+        a(L, 'bilodeau'); jouer(L, o);
+        return { avant: avant, apres: !!L.Histoire.donneur('zed'), etape: B.partie.mission.etape,
+                 message: vus.indexOf('LE PONT DE LA POINTE EST OUVERT') >= 0 };
+    }""")
+    assert r == {"avant": False, "apres": True, "etape": 4, "message": True}

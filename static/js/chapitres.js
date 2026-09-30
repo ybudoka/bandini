@@ -46,7 +46,10 @@ const Chapitres = (function () {
       `missionsFaites` — `arrive_apres`, le carnet), puis le carton et le point de reprise. */
   function ouvrirActe(m, o, etape) {
     const p = B.partie, pm = p.mission, j = B.joueur, k = acteA(m, etape);
-    if (k > 0 && m.remplace && m.remplace[k - 1] && !p.missionsFaites[m.remplace[k - 1]]) p.missionsFaites[m.remplace[k - 1]] = p.jour;
+    if (k > 0 && m.remplace && m.remplace[k - 1] && !p.missionsFaites[m.remplace[k - 1]]) {
+      p.missionsFaites[m.remplace[k - 1]] = p.jour;
+      Histoire.arriverApres(m.remplace[k - 1]);         // Zed arrive après p02 : il est là pour l'acte suivant
+    }
     chapitres()[m.slug] = etape;
     // Le chronomètre : l'acte d'avant se ferme (seulement s'il s'est joué ici — une reprise rouvre l'acte sans
     // fermer celui d'avant, dont la durée revient de la reprise).

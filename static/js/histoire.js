@@ -188,7 +188,7 @@ const Histoire = (function () {
   function disponibles() {
     if (B.partie.mission) return [];
     return defs().filter(function (m) {
-      return !faite(m.slug) && !estFermee(m.slug) && m.prerequis.every(faite) && exigeTenu(m.exige) && !absentLHiver(personnage(m.donneur));
+      return !faite(m.slug) && !estFermee(m.slug) && m.prerequis.every(faite) && exigeTenu(m.exige) && !absentLHiver(personnage(Chapitres.donneurDe(m)));
     });
   }
 
@@ -1400,18 +1400,27 @@ const Histoire = (function () {
       // de leur piece (`creerDonneursDedans`).
       // ⚠️ DANS LA VILLE, meme si la fin se joue dedans (`dansLaVille`) ; dans un bloc de carte (le
       // chalet), le chargement suivant les posera.
-      if (!B.bloc) dansLaVille(function () {
-        for (const p of personnages()) {
-          if (p.arrive_apres !== m.slug || donneur(p.slug)) continue;
-          if (estParti(p) || absentLHiver(p)) continue;
-          poserDehors(p);
-        }
-      });
+      // Un CHAPITRE : ceux qui arrivent après ses missions remplacées aussi (`arriverApres`).
+      [m.slug].concat(m.remplace || []).forEach(arriverApres);
       // ⚠️ UNE FIN DE PARTIE (M13) : le générique attend que la scène de fin soit finie
       // (`jouerLeGenerique`) — on est encore dans son dernier appel.
       if (d.generique) B.generiqueEnAttente = m.slug;
       Missions.sauvegarderPartie();
     }, { vehicule: f.vehicule });
+  }
+
+  /** Ceux qui ARRIVENT après la mission `slug` (`arrive_apres`) se posent en ville, sans attendre le chargement
+      suivant — à la fin d'une mission (`jouerLaFin`) et à la fin d'un acte de chapitre (`Chapitres.ouvrirActe` :
+      Zed, qui arrive après p02, doit être devant le phare pour l'acte suivant). */
+  function arriverApres(slug) {
+    if (B.bloc) return;
+    dansLaVille(function () {
+      for (const p of personnages()) {
+        if (p.arrive_apres !== slug || donneur(p.slug)) continue;
+        if (estParti(p) || absentLHiver(p)) continue;
+        poserDehors(p);
+      }
+    });
   }
 
   /** Les chiffres que le générique écrit (`VALEURS_DE_TITRE`, `missions.py`). */
@@ -1520,7 +1529,7 @@ const Histoire = (function () {
     const fait = m.objectifs[p.etape];
     if (fait && fait.objet && fait.type !== 'obtenir') { if (!B.partie.objets) B.partie.objets = {}; B.partie.objets[fait.objet] = 1; }
     // `donne` sur un objectif (les chapitres) : accordé quand il est fait.
-    if (fait && fait.donne) accorder(fait.donne);
+    if (fait && fait.donne) { accorder(fait.donne); if (fait.donne.message) Hud.message(fait.donne.message, 200); }
     p.etape++;
     const o = m.objectifs[p.etape];
     if (!o || !o.allies) relacherLesAllies();
@@ -3802,7 +3811,7 @@ const Histoire = (function () {
   return { texteDObjectif, exigeTenu, disponibles, disponibleDe, estParti, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
            donneur, creerDonneurs, majSaisonniers, absentLHiver, poserDonneur, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
            parler, dire, suivante, finir, commencer, demarrer, avancer, objectif, courante, reussir, echouer, evenement,
-           mission, accorder, ouEstLeJoueurEnVille, commandesDuPoursuivant,
+           mission, accorder, ouEstLeJoueurEnVille, commandesDuPoursuivant, arriverApres,
            ouverture, passerOuverture, fichiersDeLOuverture, direLignes, majCinema, resoudre,
            lieuDuPersonnage, pieceDessous, ouTrouver, present, calme, jouerOuDire,
            reinitialiser, noter, rencontrer, CARNET_MAX, init, charger,
