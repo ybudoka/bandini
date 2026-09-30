@@ -78,6 +78,7 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
+| La plage l'hiver | ⬜ **en cours** | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/la-plage-l-hiver.md#fiche) |
 | La radio dit le temps qu'il fait | ⬜ **en cours** | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/la-radio-dit-le-temps-qu-il-fait.md#fiche) |
 | Un char qui coule pour vrai | ⬜ **en cours** (tranché par Martin : s'enfoncer peu à peu, le nez en premier, les ronds et le glouglou, la tache d'huile) | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/un-char-qui-coule-pour-vrai.md#fiche) |
 | Des chocs qui sonnent ce qu'ils frappent, et des pas qui sonnent le sol | ⬜ **en cours** | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/des-chocs-qui-sonnent-ce-qu-ils-frappent-et-des-pas-qui-sonnent-le-sol.md#fiche) |
