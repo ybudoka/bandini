@@ -1272,7 +1272,7 @@ que Martin a joué le pilote (son chronomètre au carnet dira si on tient 5 à 1
 p10, p09 et p11 en six actes, 21 étapes. Les répliques d'origine gardées mot pour mot : **47 voix payées renommées**.
 Retirées : les six échecs (un seul échec par mission — le neuf dit « La Pointe va vous attendre ») et l'appel de p10,
 où Zed se renommait à côté de toi (7 mp3). Neuves : l'échec, les renforts du pont, le phare à tenir, l'auto des
-Skateux, le défi du saut sans « c'est Zed » — **5 voix, 508 caractères** avec deux refaites pour leurs balises (60 680 restants). Ce qui fait durer : deux de
+Skateux, le défi du saut sans « c'est Zed » — **5 voix, 638 caractères** avec deux refaites pour leurs balises et deux pour la voix neuve de M. Bilodeau, Santa (60 550 restants). Ce qui fait durer : deux de
 renfort au pont, le phare à tenir 90 s contre trois vagues, une auto de Skateux jusqu'au Brouillard. Chaque acte paie
 la prime de sa mission d'origine en finissant (`donne.prime`, au bandeau de prime avec son message) ; le chapitre paie
 celle de p11. Tombés : la `frontiere` de p05 et les scènes d'intro écrites de p09 et p11 (leurs

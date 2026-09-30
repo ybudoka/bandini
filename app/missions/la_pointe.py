@@ -100,8 +100,8 @@ MISSION = {
         "intro": [
             _l("bilodeau", "C'est le seul pont. Ma femme a son rendez-vous chez le docteur jeudi.",
                jeu="[worried] C'est le seul pont. [softly] Ma femme a son rendez-vous chez le docteur jeudi."),
-            _l("bilodeau", "Ils demandent deux piastres pour passer. Deux piastres! Pour un pont municipal!",
-               jeu="[angry] Ils demandent deux piastres pour passer. [shouting] Deux piastres! [gruffly] Pour un pont municipal!"),
+            _l("bilodeau", "Ils demandent cinquante piastres pour passer. Cinquante piastres! Pour un pont municipal!",
+               jeu="[angry] Ils demandent cinquante piastres pour passer. [shouting] Cinquante piastres! [gruffly] Pour un pont municipal!"),
             _l("bilodeau", "Pardon. Je m'emporte. Allez leur parler, vous, vous avez l'âge.",
                jeu="[sighs] Pardon. Je m'emporte. [warmly] Allez leur parler, vous… vous avez l'âge."),
         ],
