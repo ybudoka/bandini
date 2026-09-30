@@ -51,6 +51,10 @@ COTES = (("nord", 0, -1), ("sud", 0, 1), ("ouest", -1, 0), ("est", 1, 0))
 #: Au plus deux portes dans les bandes.
 PORTES_MAX = 2
 
+#: Le guichet des patins : la fenêtre du kiosque de Madame Thibodeau qui donne sur la glace, s'il est à moins
+#: de `PORTEE_DU_KIOSQUE` tuiles ; sinon, la première porte des bandes.
+PORTEE_DU_KIOSQUE = 8
+
 
 def _parc(chantier) -> tuple[int, int, int, int] | None:
     for x, y, largeur, hauteur, district in chantier.parcs_de_ville:
@@ -130,6 +134,11 @@ def _deplacer(chantier, ville: dict, parc, zone: set, pris: set) -> int | None:
 
     px, py, pl, ph = parc
     solides = {(d["x"], d["y"]) for d in ville["decor"] if d["type"] in carte.DECOR_SOLIDE}
+    # ⚠️ Ni devant une porte au sens LARGE de `devants.py` (le devant d'un lieu de mission : le kiosque de
+    # Madame Thibodeau en est un) — `_place_libre` ne connaît que le pas de porte, et sur d'autres graines un
+    # arbre retombait devant le kiosque.
+    larges, pas = devants.devants(ville)
+    interdites = larges | pas
     occupe, pris_avant, faits = set(chantier.occupe), set(pris), []
     deplaces = 0
     for d in sorted((d for d in ville["decor"] if (d["x"], d["y"]) in zone), key=lambda d: (d["y"], d["x"])):
@@ -139,7 +148,7 @@ def _deplacer(chantier, ville: dict, parc, zone: set, pris: set) -> int | None:
         cible = next(((x, y) for x, y in devants._anneaux(x0, y0, PORTEE)
                       if px <= x < px + pl and py <= y < py + ph
                       and ville["sol"][y][x] == ","
-                      and (x, y) not in zone and (x, y) not in pris
+                      and (x, y) not in zone and (x, y) not in pris and (x, y) not in interdites
                       and mobilier._place_libre(chantier, x, y, solides)), None)
         if cible is None:
             for fait in faits:
@@ -159,6 +168,27 @@ def _deplacer(chantier, ville: dict, parc, zone: set, pris: set) -> int | None:
     return deplaces
 
 
+def _guichet(ville: dict, x: int, y: int, largeur: int, hauteur: int, portes: list[dict]) -> dict:
+    """La tuile de bord de la glace la plus proche de la porte du kiosque (celui du parc), et le côté de la bande
+    qu'elle touche ; sans kiosque à portée, la première porte des bandes. Sans un dé."""
+    kiosques = [p for p in ville["portes"] if p.get("lieu") == "kiosque"]
+    bord = [(i, j) for j in range(y, y + hauteur) for i in range(x, x + largeur)
+            if i in (x, x + largeur - 1) or j in (y, y + hauteur - 1)]
+    mieux = None
+    for k in kiosques:
+        for i, j in bord:
+            # ⚠️ La distance VRAIE, pas le max des écarts : à égalité de max, le coin de la glace l'emportait (la
+            # rangée la plus haute), et la bande nord y repoussait le joueur hors de la glace.
+            d = (i - k["x"]) ** 2 + (j - k["y"]) ** 2
+            if d <= PORTEE_DU_KIOSQUE ** 2 and (mieux is None or (d, j, i) < mieux[0]):
+                mieux = ((d, j, i), i, j)
+    if mieux is None:
+        return {"x": portes[0]["x"], "y": portes[0]["y"], "cote": portes[0]["cote"]}
+    _, i, j = mieux
+    cote = "est" if i == x + largeur - 1 else "ouest" if i == x else "sud" if j == y + hauteur - 1 else "nord"
+    return {"x": i, "y": j, "cote": cote}
+
+
 def poser(chantier, ville: dict) -> dict | None:
     """La clairière de la patinoire au parc du Faubourg, et ses portes ; rend sa fiche, ou None (une
     ville sans ce parc). Sur la ville finie, sans un dé : seul le décor de la clairière bouge."""
@@ -175,8 +205,9 @@ def poser(chantier, ville: dict) -> dict | None:
                     for i in range(max(px, x - 1), min(px + pl, x + largeur + 1))}
             deplaces = _deplacer(chantier, ville, parc, zone, pris)
             if deplaces is not None:
-                return {"x": x, "y": y, "l": largeur, "h": hauteur,
-                        "portes": _portes(ville, x, y, largeur, hauteur), "deplaces": deplaces}
+                portes = _portes(ville, x, y, largeur, hauteur)
+                return {"x": x, "y": y, "l": largeur, "h": hauteur, "portes": portes, "deplaces": deplaces,
+                        "guichet": _guichet(ville, x, y, largeur, hauteur, portes)}
     return None
 
 
@@ -200,6 +231,39 @@ FICHE: dict = {
     "chute": {"images_de_course": 50, "virage_deg": 110, "vitesse_de_virage": 1.1, "images_au_sol": 50},
     # Les lampadaires des quatre coins, le soir : leur lueur (rgb), sa force et son rayon en px.
     "lampes": {"lueur": [255, 236, 190], "force": 0.55, "rayon": 58},
+    # LES PATINEURS (vague 2) : de vrais passants, qui naissent sur la glace pendant qu'elle est HORS DE L'ÉCRAN
+    # et que le joueur est à moins de `portee_px` — on arrive, elle est pleine ; personne n'apparaît sous nos
+    # yeux. `nombre` : [de h, à h, combien] ; personne avant la première heure ni après la dernière.
+    # `un_enfant_sur` : le rang d'arrivée le dit (le 2e, le 5e…), jamais un dé. Ils tournent à contre-sens des aiguilles d'une
+    # montre, chacun sur son couloir (`couloirs_px` : l'écart entre deux couloirs), le cap `avance_rad` devant
+    # eux. Un enfant tombe parfois : une chance sur `chute_une_sur` à chaque seconde, à l'empreinte.
+    "patineurs": {
+        "nombre": [[9, 12, 3], [12, 17, 7], [17, 22, 9]],
+        "un_enfant_sur": 3, "portee_px": 480, "marge_px": 12, "couloirs_px": 6, "couloirs": 3,
+        "avance_rad": 0.6, "chute_une_sur": 25, "images_de_chute": 50, "lame": "#d9dde2",
+    },
+    # LES PATINS À LOUER (vague 3) : au guichet du kiosque, qui ouvre sur la glace. On les chausse pour `prix` $,
+    # on les rend en quittant la glace. En patins on va plus vite (`vitesse`, sur la vitesse de marche) MAIS on
+    # glisse toujours (Martin : « patin, mais on doit glisser aussi ») — un élan plus franc, un arrêt encore
+    # plus long ; et on ne tombe plus en courant, seulement en virant sec lancé.
+    "patins": {
+        "prix": 2, "portee_px": 20, "vitesse": 1.6,
+        "glisse": {"elan": 0.08, "freinage": 0.01},
+        "invite": "LOUER DES PATINS", "enseigne": "PATINS 2 $",
+        # Madame Thibodeau (docs/personnages/madame-thibodeau.md) : « mon p'tit », une demande qui finit en
+        # question, jamais un sacre — et pas son nom : elle est chez elle, derrière son comptoir.
+        "mots": ("TIENS, MON P'TIT. TU ME LES RAMÈNES EN UN MORCEAU, VEUX-TU?",
+                 "DEUX PIASTRES. PIS TU LACES SERRÉ, HEIN?",
+                 "BONNE PATINE! TU FAIS ATTENTION AUX PETITS, VEUX-TU?"),
+        "deja": "T'AS DÉJÀ TES PATINS AUX PIEDS, MON P'TIT.",
+        "fauche": "DEUX PIASTRES, MON P'TIT… T'AS PAS ÇA SUR TOI?",
+        "rendus": "TU RENDS TES PATINS.",
+        "couleurs": {"guichet": "#6b4a2b", "enseigne": "#f2e6c4", "texte": "#8a2a1e"},
+    },
+    # LE SON (vague 3) : la rumeur de la glace (`audio`, le lieu `patinoire`) tant qu'on y patine, et la valse du
+    # haut-parleur le soir (`musique.VALSE`), dosées à la distance du centre de la glace : pleines à `plein_px`,
+    # muettes à `portee_px`.
+    "son": {"plein_px": 120, "portee_px": 420, "rumeur": 0.35, "valse": 0.55, "valse_des_h": 17, "valse_jusqu_h": 22},
 }
 
 

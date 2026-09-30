@@ -16,7 +16,7 @@ from app import definitions
 #: (`definitions.DANS_LA_SUITE`, `/api/mission/<slug>`, un bloc, ou un champ qu'aucun script ne lit).
 #: Budget de départ : la mesure + 10 % + 100, arrondi au 50.
 MESURE_DU_PAQUET: dict[str, tuple[int, int]] = {
-    "audio": (6_879, 7_700),
+    "audio": (6_879, 7_800),     # +100 le 30 sept. 2026 : la patinoire du parc (sa rumeur de glace, sa valse du soir)
     "pietons": (5_227, 5_850),
     "defis": (4_088, 4_600),
     "economie": (3_943, 4_450),

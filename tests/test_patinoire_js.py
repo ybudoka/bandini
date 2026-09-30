@@ -138,3 +138,176 @@ def test_rien_n_est_tire_au_de():
     """La patinoire ne tire aucun dé : un `B.rng()` de plus décalerait tout ce que la ville tire ensuite."""
     source = (RACINE / "static" / "js" / "patinoire.js").read_text(encoding="utf-8")
     assert "rng(" not in source and "Math.random" not in source
+
+
+# --- Vague 2 : les patineurs -------------------------------------------------------------------------------
+
+#: Le joueur à 300 px sous la patinoire : assez près pour qu'elle se peuple, et elle hors de l'écran.
+APPROCHER = """
+  function approcher(L, o, jour, heure) {
+    const B = L.B, g = L.Patinoire.geo();
+    saison(L, jour); B.partie.heure = heure;
+    poser(L, (g.x0 + g.x1) / 2, g.y1 + 300);
+    o.frame(30);
+    return g;
+  }
+"""
+
+
+def test_ils_naissent_hors_de_l_ecran_a_l_heure_de_patiner(banc):
+    """L'après-midi d'hiver, en approchant : la glace se peuple, hors de l'écran, sur la glace. L'été, et à trois
+    heures du matin, personne."""
+    r = banc("function (L, o) {" + OUTILS + APPROCHER + """
+        L.Jeu.commencer();
+        const P = L.Patinoire, B = L.B;
+        const compte = function () {
+            const e = P.enCours();
+            return { n: e.length, glace: e.filter(function (q) { return P.surLaGlace(q.x, q.y); }).length,
+                     vrais: e.filter(function (q) { return B.entites.indexOf(q) >= 0 && q.type === 'pieton'; }).length,
+                     enfants: e.filter(function (q) { return q.arch === 'enfant'; }).length };
+        };
+        const g = approcher(L, o, """ + str(JANVIER) + """, 14 / 24);
+        const apresMidi = compte(), voulu = P.voulus(14 / 24), aLEcran = L.Entites.visibleAEcran((g.x0 + g.x1) / 2, (g.y0 + g.y1) / 2, 0);
+        approcher(L, o, """ + str(JANVIER) + """, 3 / 24); const nuit = compte();
+        approcher(L, o, """ + str(JANVIER) + """, 14 / 24);
+        approcher(L, o, """ + str(JUILLET) + """, 14 / 24); const ete = compte();
+        return { apresMidi: apresMidi, voulu: voulu, aLEcran: aLEcran, nuit: nuit, ete: ete };
+    }""")
+    a = r["apresMidi"]
+    assert not r["aLEcran"], "le juge regarde la patinoire : personne ne doit y naître sous ses yeux"
+    assert r["voulu"] >= 6 and a["n"] == r["voulu"] and a["glace"] == a["n"] and a["vrais"] == a["n"], r
+    assert r["nuit"]["n"] == 0, f"on patine à trois heures du matin : {r['nuit']}"
+    assert r["ete"]["n"] == 0, f"on patine en juillet : {r['ete']}"
+
+
+def test_ils_tournent_a_contre_sens_des_aiguilles_sur_la_glace(banc):
+    """Pendant dix secondes, chacun tourne à contre-sens des aiguilles d'une montre (à l'écran, l'angle autour
+    du centre DÉCROÎT) et aucun ne quitte la glace."""
+    r = banc("function (L, o) {" + OUTILS + APPROCHER + """
+        L.Jeu.commencer();
+        const P = L.Patinoire;
+        const g = approcher(L, o, """ + str(JANVIER) + """, 14 / 24);
+        const cx = (g.x0 + g.x1) / 2, cy = (g.y0 + g.y1) / 2, rx = (g.x1 - g.x0) / 2, ry = (g.y1 - g.y0) / 2;
+        const angle = function (e) { return Math.atan2((e.y - cy) / ry, (e.x - cx) / rx); };
+        const suivis = P.enCours().slice(), tour = suivis.map(function () { return 0; }), avant = suivis.map(angle);
+        let dehors = 0;
+        for (let k = 0; k < 600; k++) {
+            o.frame(1);
+            suivis.forEach(function (e, i) {
+                if (e.face === 'couche') return;
+                let d = angle(e) - avant[i];
+                if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI;
+                tour[i] += d; avant[i] = angle(e);
+                if (!P.surLaGlace(e.x, e.y)) dehors++;
+            });
+        }
+        return { tour: tour, dehors: dehors, restent: P.enCours().length, n: suivis.length };
+    }""")
+    assert r["n"] >= 6 and r["restent"] == r["n"], r
+    assert r["dehors"] == 0, f"des patineurs sortent de la glace : {r['dehors']} images"
+    assert all(t < -1.0 for t in r["tour"]), f"des patineurs ne tournent pas (ou à l'envers) : {r['tour']}"
+
+
+def test_un_patineur_bouscule_n_est_plus_mene(banc):
+    """Qu'il fuie : la patinoire le lâche — c'est un passant comme un autre, et il glisse en se sauvant."""
+    r = banc("function (L, o) {" + OUTILS + APPROCHER + """
+        L.Jeu.commencer();
+        const P = L.Patinoire;
+        approcher(L, o, """ + str(JANVIER) + """, 14 / 24);
+        const e = P.enCours().find(function (q) { return q.arch !== 'enfant'; });
+        e.etat = 'fuit'; e.minuterie = 600;
+        o.frame(20);
+        return { mene: P.enCours().indexOf(e) >= 0, patineur: e.patineur, etat: e.etat };
+    }""")
+    assert not r["mene"] and r["patineur"] is False, r
+
+
+def test_un_enfant_tombe_parfois(banc):
+    """Sur deux minutes d'après-midi, un enfant finit par tomber (couché), et se relève."""
+    r = banc("function (L, o) {" + OUTILS + APPROCHER + """
+        L.Jeu.commencer();
+        const P = L.Patinoire;
+        approcher(L, o, """ + str(JANVIER) + """, 14 / 24);
+        const enfants = P.enCours().filter(function (q) { return q.arch === 'enfant'; });
+        let tombe = null, releve = false;
+        for (let k = 0; k < 7200 && !releve; k++) {
+            o.frame(1);
+            for (const e of enfants) {
+                if (!tombe && e.face === 'couche') tombe = e;
+            }
+            if (tombe && tombe.face !== 'couche') releve = true;
+        }
+        return { enfants: enfants.length, tombe: !!tombe, releve: releve };
+    }""")
+    assert r["enfants"] >= 1, "aucun enfant sur la glace"
+    assert r["tombe"] and r["releve"], r
+
+
+# --- Vague 3 : les patins à louer --------------------------------------------------------------------------
+
+#: Le joueur sur la glace, au guichet, face à lui.
+AU_GUICHET = """
+  function auGuichet(L) {
+    const P = L.Patinoire, q = P.guichet(), g = P.geo();
+    const dx = { est: -10, ouest: 10, nord: 0, sud: 0 }[q.cote], dy = { nord: 10, sud: -10, est: 0, ouest: 0 }[q.cote];
+    poser(L, q.x + dx, q.y + dy);
+    L.Entites.regarder(L.B.joueur, -dx, -dy);
+    return q;
+  }
+"""
+
+
+def test_au_guichet_deux_piastres_et_on_chausse(banc):
+    """ACTION au guichet, sur la glace : l'invite le dit, deux piastres partent, on a ses patins. Sans le sou,
+    on ne paie pas et on reste en bottes."""
+    r = banc("function (L, o) {" + OUTILS + AU_GUICHET + """
+        L.Jeu.commencer();
+        const B = L.B, P = L.Patinoire, j = B.joueur;
+        saison(L, """ + str(JANVIER) + """);
+        auGuichet(L); B.partie.argent = 50; o.frame(2);
+        const invite = B.invite;
+        o.tape('KeyE', 2);
+        const loue = { argent: B.partie.argent, patins: !!j.patins };
+        j.patins = false; auGuichet(L); B.partie.argent = 1; o.frame(2);
+        o.tape('KeyE', 2);
+        const fauche = { argent: B.partie.argent, patins: !!j.patins };
+        return { invite: invite, loue: loue, fauche: fauche };
+    }""")
+    assert r["invite"] and "PATINS" in r["invite"] and "2 $" in r["invite"], r
+    assert r["loue"] == {"argent": 48, "patins": True}, r
+    assert r["fauche"] == {"argent": 1, "patins": False}, r
+
+
+def test_en_patins_plus_vite_mais_on_glisse_encore(banc):
+    """En patins, une seconde de poussée mène plus loin qu'en bottes sur la même glace — et en lâchant, on file
+    encore sur son élan : on glisse toujours (Martin)."""
+    r = banc("function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const P = L.Patinoire, g = P.geo(), j = L.B.joueur;
+        saison(L, """ + str(JANVIER) + """);
+        const essai = function (patins) {
+            poser(L, g.x0 + 24, (g.y0 + g.y1) / 2); j.patins = patins;
+            const x0 = j.x;
+            o.touche('KeyD'); o.frame(60); o.relacher('KeyD');
+            const pousse = j.x - x0, x1 = j.x;
+            o.frame(30);
+            return { pousse: pousse, erre: j.x - x1, patins: !!j.patins };
+        };
+        return { bottes: essai(false), patins: essai(true) };
+    }""")
+    b, p = r["bottes"], r["patins"]
+    assert p["pousse"] > b["pousse"] * 1.2, f"en patins on ne va pas plus vite : {r}"
+    assert p["erre"] > 15, f"en patins on ne glisse plus : {r}"
+
+
+def test_on_rend_ses_patins_en_quittant_la_glace(banc):
+    r = banc("function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const P = L.Patinoire, g = P.geo(), j = L.B.joueur;
+        const porte = g.portes.find(function (q) { return q.cote === 'nord'; }) || g.portes[0];
+        saison(L, """ + str(JANVIER) + """);
+        poser(L, porte.x * 16 + 8, porte.y * 16 + 14); j.patins = true;
+        o.touche('KeyW'); o.frame(90); o.relacher('KeyW'); o.frame(2);
+        return { dehors: !P.surLaGlace(j.x, j.y), patins: !!j.patins };
+    }""")
+    assert r["dehors"] and not r["patins"], r

@@ -12,7 +12,12 @@
    ⚠️ LA GLISSE : sur la glace, la vitesse que veulent les commandes (ou la tete d'un passant) ne se prend
    pas d'un coup — elle se rejoint peu a peu (`glisser`, appele par `Entites` une fois la vitesse voulue
    calculee). D'ou l'elan, le virage large, l'arret qui prend du temps. Et le joueur qui court sans patins,
-   ou qui vire sec lance, TOMBE (`auSol`) — sans un de. */
+   ou qui vire sec lance, TOMBE (`auSol`) — sans un de.
+
+   LES PATINS A LOUER (vague 3) : au guichet du kiosque de Madame Thibodeau, qui ouvre sur la glace
+   (`p.guichet`). ACTION, deux piastres, on les chausse (`j.patins`) ; on va plus vite, MAIS on glisse toujours
+   — un elan plus franc, un arret plus long (Martin : « patin, mais on doit glisser aussi »). On les rend en
+   quittant la glace. */
 
 const Patinoire = (function () {
   'use strict';
@@ -117,15 +122,22 @@ const Patinoire = (function () {
     const f = fiche();
     const suite = e.gt === B.t - 1;
     e.gt = B.t;
-    if (!f || !surLaGlace(e.x, e.y)) { e.gx = e.vx; e.gy = e.vy; e.courseSurGlace = 0; return false; }
-    const g = f.glisse[e.type === 'joueur' ? 'joueur' : 'pieton'];
+    if (!f || !surLaGlace(e.x, e.y)) {
+      e.gx = e.vx; e.gy = e.vy; e.courseSurGlace = 0;
+      if (e.patins) rendre(e);
+      return false;
+    }
+    // En patins, la vitesse voulue grandit, et la glisse est la leur.
+    const patins = e.type === 'joueur' && e.patins && f.patins;
+    const g = patins ? f.patins.glisse : f.glisse[e.type === 'joueur' ? 'joueur' : 'pieton'];
+    if (patins) { e.vx *= f.patins.vitesse; e.vy *= f.patins.vitesse; }
     // ⚠️ Une suite rompue (la premiere image, un retour anticipe d'`Entites` qui a remis la vitesse a zero) repart
     // de l'ARRET, jamais de la vitesse voulue : sinon on demarre sur la glace aussi vite qu'au sec.
     const avx = suite ? (e.gx || 0) : 0, avy = suite ? (e.gy || 0) : 0;
     const pousse = Math.abs(e.vx) + Math.abs(e.vy) > 0.01;
     if (e.type === 'joueur') {
       const c = f.chute, va = Math.hypot(avx, avy), vv = Math.hypot(e.vx, e.vy);
-      e.courseSurGlace = court ? (e.courseSurGlace || 0) + 1 : 0;
+      e.courseSurGlace = court && !patins ? (e.courseSurGlace || 0) + 1 : 0;
       let virage = 0;
       if (pousse && va > 0.01 && vv > 0.01) {
         const cos = (avx * e.vx + avy * e.vy) / (va * vv);
@@ -183,6 +195,16 @@ const Patinoire = (function () {
       if (b.cote === 'nord' || b.cote === 'sud') ctx.fillRect(bx, by, bl, 1); else ctx.fillRect(bx + (b.cote === 'ouest' ? 0 : bl - 1), by, 1, bh);
       n += 3;
     }
+    // Le guichet des patins : un volet de bois sur la bande, et l'enseigne au-dessus.
+    const q = guichet(), pc = fiche().patins && fiche().patins.couleurs;
+    if (q && pc) {
+      const horiz = q.cote === 'nord' || q.cote === 'sud';
+      const gx = X(q.x) - (horiz ? 6 : 2), gy = Y(q.y) - (horiz ? 2 : 6);
+      ctx.fillStyle = pc.guichet; ctx.fillRect(gx, gy, horiz ? 12 : 4, horiz ? 4 : 12);
+      ctx.fillStyle = pc.enseigne; ctx.fillRect(X(q.x) - 5, Y(q.y) - 12, 10, 5);
+      ctx.fillStyle = pc.texte; ctx.fillRect(X(q.x) - 4, Y(q.y) - 10, 3, 1); ctx.fillRect(X(q.x) + 1, Y(q.y) - 10, 3, 1);
+      n += 4;
+    }
     // Les lampadaires des quatre coins.
     for (const q of coins(g)) {
       ctx.fillStyle = c.lampe; ctx.fillRect(X(q[0]) - 1, Y(q[1]) - 9, 2, 10); ctx.fillRect(X(q[0]) - 2, Y(q[1]) - 10, 4, 2);
@@ -205,5 +227,177 @@ const Patinoire = (function () {
     return out;
   }
 
-  return { geo, ouverte, surLaGlace, bloquer, bloqueChar, glisser, dessinerSol, lampes };
+  // ------------------------------------------------------------------ les patineurs (vague 2)
+
+  //: Les patineurs en cours : de vrais passants (`Entites.creerPieton`), marques `patineur`.
+  let patineurs = [];
+
+  /** Combien de patineurs a cette heure (0 a 1 de la journee) : 0 hors des heures d'ouverture. */
+  function voulus(heure) {
+    const f = fiche(), h = heure * 24;
+    if (!f || !f.patineurs) return 0;
+    for (const n of f.patineurs.nombre) if (h >= n[0] && h < n[1]) return n[2];
+    return 0;
+  }
+
+  /** La patinoire (et ses lampadaires) touche-t-elle l'ecran, a `marge` pres ? */
+  function aLEcran(g, marge) {
+    const m = marge || 0;
+    return g.x1 > B.cam.x - m && g.x0 < B.cam.x + VW + m && g.y1 > B.cam.y - m && g.y0 < B.cam.y + VH + m;
+  }
+
+  /** L'anneau d'un patineur : le centre de la glace, et ses deux rayons, rentres de son couloir. */
+  function anneau(g, e) {
+    const d = fiche().patineurs, couloir = (hash2(e.id, 0x9a71) >>> 0) % d.couloirs;
+    const rentre = d.marge_px + BANDE + couloir * d.couloirs_px;
+    return { cx: (g.x0 + g.x1) / 2, cy: (g.y0 + g.y1) / 2,
+             rx: Math.max(8, (g.x1 - g.x0) / 2 - rentre), ry: Math.max(6, (g.y1 - g.y0) / 2 - rentre) };
+  }
+
+  /** Le cap d'un patineur : un peu plus loin sur son anneau, a contre-sens des aiguilles d'une montre (l'angle
+      DECROIT : y descend a l'ecran). */
+  function viser(g, e) {
+    const a = anneau(g, e), d = fiche().patineurs;
+    const t = Math.atan2((e.y - a.cy) / a.ry, (e.x - a.cx) / a.rx) - d.avance_rad;
+    e.etat = 'cap'; e.cap = { x: a.cx + Math.cos(t) * a.rx, y: a.cy + Math.sin(t) * a.ry }; e.capT = 0; e.capVite = false;
+  }
+
+  /** Qu'ils naissent sur la glace, repartis sur leurs anneaux ; un enfant sur `un_enfant_sur`, par le rang. ⚠️ Pas
+      un seuil sur `hash2` : ses petites entrees consecutives se repartissent mal (aucune sous 0,35 de 0 a 9). */
+  function faireNaitre(g, n) {
+    const d = fiche().patineurs, enfant = Entites.archetype('enfant');
+    for (let k = 0; k < n; k++) {
+      const rang = patineurs.length, t = rang * 2.39996;               // l'angle d'or : un anneau bien reparti
+      const petit = rang % d.un_enfant_sur === 1;
+      const cx = (g.x0 + g.x1) / 2, cy = (g.y0 + g.y1) / 2;
+      const rx = (g.x1 - g.x0) / 2 - d.marge_px - BANDE, ry = (g.y1 - g.y0) / 2 - d.marge_px - BANDE;
+      const e = Entites.creerPieton(cx + Math.cos(t) * rx * 0.8, cy + Math.sin(t) * ry * 0.8, petit ? enfant : undefined);
+      e.patineur = true;
+      patineurs.push(e);
+      viser(g, e);
+    }
+    Entites.indexer();
+  }
+
+  /** Toutes les 15 images : ils tournent ; ils naissent quand la glace est hors de l'ecran et que le joueur
+      approche ; ils repartent, HORS DE L'ECRAN, a la fermeture ou quand le joueur s'eloigne. Un patineur
+      qu'on a bouscule (il fuit, il est assomme) n'est plus mene : c'est un passant comme un autre. */
+  function maj() {
+    const f = fiche();
+    if (!f || !f.patineurs || !B.partie || !B.joueur) return;
+    patineurs = patineurs.filter(function (e) { return e.vivant && B.entites.indexOf(e) >= 0 && e.patineur; });
+    if (B.t % 15 !== 0 || B.interieur || B.bloc || !Monde.carte || !Monde.carte.laVille) return;
+    const g = geo();
+    if (!g) return;
+    const d = f.patineurs, j = B.joueur, ouvert = ouverte();
+    const proche = Math.hypot(j.x - (g.x0 + g.x1) / 2, j.y - (g.y0 + g.y1) / 2) <= d.portee_px;
+    const voulu = ouvert && proche ? voulus(B.partie.heure) : 0;
+    const chute = B.t % 60 === 0;
+    for (const e of patineurs) {
+      if (e.etat !== 'cap' && e.etat !== 'flane' && e.etat !== 'arret') { e.patineur = false; continue; }
+      if (!surLaGlace(e.x, e.y)) { if (e.etat !== 'arret') viser(g, e); continue; }
+      if (e.etat === 'arret') continue;                // il se releve (`Entites` le remet a flaner)
+      // Un enfant tombe parfois, lance : a l'empreinte de la seconde, jamais un de.
+      if (chute && e.arch === 'enfant' && Math.hypot(e.vx, e.vy) > 0.3
+          && (hash2(e.id, Math.floor(B.t / 60)) >>> 0) % d.chute_une_sur === 0) {
+        e.etat = 'arret'; e.minuterie = d.images_de_chute; e.face = 'couche'; e.vx = 0; e.vy = 0; e.gx = 0; e.gy = 0;
+        continue;
+      }
+      viser(g, e);
+    }
+    patineurs = patineurs.filter(function (e) { return e.patineur; });
+    const vue = aLEcran(g, 40);
+    if (patineurs.length > voulu && !vue) {
+      for (const e of patineurs.splice(voulu)) Entites.retirer(e);
+    }
+    if (patineurs.length < voulu && !vue) faireNaitre(g, voulu - patineurs.length);
+  }
+
+  /** Les lames sous les pieds des patineurs : un trait clair, sous le corps. */
+  function dessinerLames(ctx, vue) {
+    const j = B.joueur, lui = j && j.patins && !j.dansVehicule ? [j] : [];
+    if ((!patineurs.length && !lui.length) || !ouverte()) return;
+    ctx.fillStyle = fiche().patineurs.lame;
+    for (const e of patineurs.concat(lui)) {
+      if (e.face === 'couche' || !e.vivant) continue;
+      const x = Math.round(e.x - vue.x), y = Math.round(e.y - vue.y);
+      if (x < -8 || y < -8 || x > VW + 8 || y > VH + 8) continue;
+      ctx.fillRect(x - 3, y + 1, 3, 1); ctx.fillRect(x + 1, y + 1, 3, 1);
+      B.stats.rects += 2;
+    }
+  }
+
+  // ------------------------------------------------------------------ les patins a louer (vague 3)
+
+  /** Le guichet, en px : au milieu du cote de sa tuile qui touche la bande (le mur du kiosque). */
+  function guichet() {
+    const g = geo(), q = g && g.p.guichet;
+    if (!q) return null;
+    const o = { est: [T / 2 - RETRAIT, 0], ouest: [-T / 2 + RETRAIT, 0], nord: [0, -T / 2 + RETRAIT], sud: [0, T / 2 - RETRAIT] }[q.cote] || [0, 0];
+    return { x: q.x * T + T / 2 + o[0], y: q.y * T + T / 2 + o[1], cote: q.cote };
+  }
+
+  /** Le joueur, a pied sur la glace, au guichet, sans patins aux pieds. */
+  function sousLaMain(j) {
+    const f = fiche(), q = guichet();
+    if (!f || !f.patins || !q || !j || j.dansVehicule || j.patins || !surLaGlace(j.x, j.y)) return false;
+    return dist2(j.x, j.y, q.x, q.y) <= f.patins.portee_px * f.patins.portee_px;
+  }
+
+  function invite(j) {
+    if (!sousLaMain(j)) return null;
+    const p = fiche().patins;
+    return p.invite + ' — ' + p.prix + ' $';
+  }
+
+  /** ACTION au guichet : deux piastres, et on chausse. Le mot de Madame Thibodeau suit le jour, pas un de. */
+  function agir(j) {
+    const p = fiche().patins;
+    if (!Missions.payer(p.prix, 'PATINS')) { Hud.message(p.fauche); Son.SFX.erreur(); return true; }
+    j.patins = true;
+    Hud.message(p.mots[(B.partie.jour || 0) % p.mots.length]);
+    Son.SFX.ramasse();
+    return true;
+  }
+
+  /** On rend ses patins (on quitte la glace, ou elle fond). */
+  function rendre(j) {
+    j.patins = false;
+    if (j.type === 'joueur' && fiche() && fiche().patins) Hud.message(fiche().patins.rendus);
+  }
+
+  // ------------------------------------------------------------------ le son (vague 3)
+
+  //: La rumeur qu'on entend, glissee image par image ; quand on a demande son lieu.
+  let rumeur = 0, rumeurDemandee = -Infinity;
+
+  /** A chaque image : les lames et les enfants tant qu'on patine (en fondu, jamais coupe net), et la valse du
+      haut-parleur le soir — plus fort en approchant, muets dedans. */
+  function majSon() {
+    const f = fiche(), j = B.joueur;
+    if (typeof Son === 'undefined' || !f || !f.son || !B.partie) return;
+    const s = f.son, g = geo();
+    let pres = 0;
+    if (j && g && ouverte() && voulus(B.partie.heure) > 0) {
+      const d = Math.hypot(j.x - (g.x0 + g.x1) / 2, j.y - (g.y0 + g.y1) / 2);
+      if (d < s.portee_px) pres = d <= s.plein_px ? 1 : 1 - (d - s.plein_px) / (s.portee_px - s.plein_px);
+    }
+    const voulu = s.rumeur * Math.pow(pres, 1.5);
+    rumeur += (voulu - rumeur) * 0.05;
+    if (Math.abs(voulu - rumeur) < 0.004) rumeur = voulu;
+    const t = B.t || 0;
+    if (voulu > 0 && Son.Lieu && t - rumeurDemandee >= 300) { rumeurDemandee = t; Son.Lieu.charger('patinoire'); }
+    if (rumeur > 0.004) {
+      if (!Son.boucleActive('patinoire')) Son.boucle('patinoire', true, rumeur, 0.5);
+      else Son.reglerBoucle('patinoire', rumeur);
+    } else if (Son.boucleActive('patinoire')) Son.boucle('patinoire', false, 0, 0.5);
+    const h = B.partie.heure * 24;
+    if (pres > 0 && h >= s.valse_des_h && h < s.valse_jusqu_h && Son.Rue) Son.Rue.demander('patinoire_valse', pres * s.valse);
+  }
+
+  function enCours() { return patineurs; }
+  function oublier() { patineurs = []; }
+
+  return { geo, ouverte, surLaGlace, bloquer, bloqueChar, glisser, dessinerSol, dessinerLames, lampes,
+           maj, voulus, enCours, oublier, guichet, sousLaMain, invite, agir, majSon };
 })();

@@ -8,9 +8,9 @@ une allée, la ville d'à côté inchangée) : un juge qui relirait `patinoire.p
 import json
 
 import pytest
+import villes
 
 from app import carte, patinoire
-from tests import villes
 
 #: Les couches qui prennent une tuile, et que la glace ne doit pas couvrir.
 COUCHES = ("decor", "paquets", "scenes", "ambulants", "reclames", "points_interet")
@@ -108,3 +108,18 @@ def test_la_fiche_du_navigateur():
         g = f["glisse"][sorte]
         assert 0 < g["freinage"] < g["elan"] < 0.2, f"la glisse du {sorte} ne glisse pas : {g}"
     assert f["chute"]["images_au_sol"] > 0
+
+
+def test_le_guichet_des_patins_est_contre_le_kiosque(avant_apres):
+    """Le guichet est une tuile du bord de la glace, collée au kiosque de Madame Thibodeau : on loue ses patins
+    par sa fenêtre, sur la glace."""
+    ville, _ = avant_apres
+    p, q = ville["patinoire"], ville["patinoire"]["guichet"]
+    assert p["x"] <= q["x"] < p["x"] + p["l"] and p["y"] <= q["y"] < p["y"] + p["h"]
+    assert q["x"] in (p["x"], p["x"] + p["l"] - 1) or q["y"] in (p["y"], p["y"] + p["h"] - 1), "le guichet n'est pas au bord"
+    kiosque = [k for k in ville["portes"] if k.get("lieu") == "kiosque"]
+    assert kiosque and min(max(abs(k["x"] - q["x"]), abs(k["y"] - q["y"])) for k in kiosque) <= patinoire.PORTEE_DU_KIOSQUE
+    coins = {(p["x"], p["y"]), (p["x"] + p["l"] - 1, p["y"]), (p["x"], p["y"] + p["h"] - 1), (p["x"] + p["l"] - 1, p["y"] + p["h"] - 1)}
+    assert (q["x"], q["y"]) not in coins, "le guichet est dans un coin : la bande d'à côté repousse le joueur hors de la glace"
+    pas = {"nord": (0, -1), "sud": (0, 1), "ouest": (-1, 0), "est": (1, 0)}[q["cote"]]
+    assert ville["sol"][q["y"] + pas[1]][q["x"] + pas[0]] not in (",", "g", "."), "le guichet ne donne pas sur un mur"

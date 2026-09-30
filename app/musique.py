@@ -367,7 +367,7 @@ def duree_s(morceau: Morceau) -> float:
 
 def exporter() -> list[Morceau]:
     return ([dict(m) for m in MORCEAUX] + stations() + ambiances()  # type: ignore[misc]
-            + rues() + commerces() + [orgue(), ritournelle(), violon(), halloween()])
+            + rues() + commerces() + [orgue(), ritournelle(), violon(), halloween(), valse()])
 
 
 #: ⚠️ **LES NOTES QUI RESTENT DANS LE PAQUET** (29 sept. 2026). Les notes de tous les
@@ -677,7 +677,7 @@ def rues() -> list[Morceau]:
 
 
 def rue_par_slug(slug: str) -> Morceau | None:
-    for style in RUE + [ORGUE, RITOURNELLE, VIOLON, HALLOWEEN]:
+    for style in RUE + [ORGUE, RITOURNELLE, VIOLON, HALLOWEEN, VALSE]:
         if style["slug"] == slug:
             return generer_rue(style)
     return None
@@ -728,6 +728,22 @@ RITOURNELLE: StyleRue = {
 def ritournelle() -> Morceau:
     """La ritournelle du camion, en notes — le filet si le mp3 manque."""
     return generer_rue(RITOURNELLE)
+
+
+#: LA VALSE DE LA PATINOIRE (docs/jalons/la-patinoire-du-parc.md, vague 3) : le soir d'hiver, le haut-parleur du
+#: kiosque joue une valse pour les patineurs — une musique qui sort d'un endroit FIXE, comme l'orgue de la foire
+#: (`Son.Rue.demander`, dosée à la distance). Trois temps (`mesure: 6`), majeure, plus lente et plus douce que
+#: l'orgue : on tourne en rond sur la glace, on ne court pas au manège.
+VALSE: StyleRue = {
+    "slug": "patinoire_valse", "nom": "La valse des patineurs", "graine": 19580112,
+    "bpm": 132, "tonique": 65, "gamme": MAJEURE, "grille": (0, 4, 4, 0, 3, 0, 4, 0),
+    "mesure": 6, "forme_chant": "sine", "forme_gratte": "triangle", "volume": 0.5,
+}
+
+
+def valse() -> Morceau:
+    """La valse des patineurs, en notes — le filet si le mp3 manque."""
+    return generer_rue(VALSE)
 
 
 #: LE VIOLONEUX DE LA CABANE A SUCRE (docs/jalons/la-cabane-et-le-casino-s-entendent.md) : le musicien a la

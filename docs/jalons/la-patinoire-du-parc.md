@@ -53,3 +53,42 @@ rendus hors de la glace ; une capture Chromium avant de livrer.
   tombe (`auSol`, comme projeté) — sans un dé. Un premier jet repartait de la vitesse voulue quand la suite des
   images se rompait : on démarrait sur la glace aussi vite qu'au sec ; le juge de l'élan l'a pris.
 - **Pas encore** : les chars ne dérapent pas sur la glace — ils n'y entrent jamais, les bandes les arrêtent.
+
+### ✅ Vague 2 — les patineurs (30 sept. 2026)
+
+- **De vrais passants** (`Entites.creerPieton`, marqués `patineur`) : ils naissent SUR la glace pendant qu'elle
+  est hors de l'écran et que le joueur est à moins de 480 px — on arrive, elle est pleine ; personne n'apparaît
+  sous nos yeux. Trois le matin (9 h), sept l'après-midi, neuf le soir, personne après 22 h ni l'été. Ils
+  repartent hors de l'écran à la fermeture ou quand on s'éloigne.
+- **Ils tournent** à contre-sens des aiguilles d'une montre, chacun sur son couloir (trois anneaux), par `cap`,
+  avec l'élan de la glace ; des lames claires sous leurs pieds.
+- **Un enfant sur trois** (par le rang d'arrivée) ; un enfant lancé tombe parfois (une chance sur 25 à chaque
+  seconde, à l'empreinte de son numéro et de la seconde), couché le temps de se relever.
+- **Bousculé, il n'est plus mené** : un patineur qui fuit, assommé ou témoin, redevient un passant comme un autre
+  — et il glisse en se sauvant.
+- ⚠️ **`hash2` répartit mal ses petites entrées** : un seuil « 35 % d'enfants » sur `hash2(rang, sel)` n'en
+  donnait AUCUN de 0 à 9. Le rang décide (`un_enfant_sur`).
+
+### ✅ Vague 3 — les patins à louer, et le son (30 sept. 2026)
+
+- **Au guichet du kiosque de Madame Thibodeau**, et pas une cabane de plus : son kiosque touche la bande est, le
+  guichet est la tuile de glace collée à son mur (`p.guichet`, la plus proche de sa porte). ⚠️ On ne loue pas en
+  lui parlant : ACTION près d'elle, c'est sa conversation de mission, qui passe avant tout le reste. ⚠️ La
+  tuile se départage à la distance VRAIE : au max des écarts, le coin nord-est l'emportait, et la bande nord y
+  repoussait le joueur hors de la glace (vu sur la capture, pas par les juges — ils le disent maintenant).
+  ⚠️ La porte d'un lieu se nomme par `lieu`, pas `slug` : sans ça, le guichet retombait sans bruit sur une porte
+  des bandes.
+- **ACTION, deux piastres** : on chausse (`j.patins`), elle dit un mot à elle (« Tiens, mon p'tit… »). Sans le
+  sou, on reste en bottes. On les rend en quittant la glace.
+- **En patins, plus vite MAIS on glisse toujours** (Martin : « patin, mais on doit glisser aussi ») : ×1,6 sur la
+  vitesse voulue, un élan plus franc, un arrêt encore plus long ; on ne tombe plus en courant, seulement en
+  virant sec lancé.
+- **Le son** (ElevenLabs) : la rumeur de la glace (`patinoire-1.mp3`, 6 s en boucle : les lames, une rondelle
+  contre la bande, des enfants) tant qu'on y patine, et la valse du haut-parleur le soir de 17 h à 22 h
+  (`musique-patinoire_valse.mp3`, 30 s, par `Son.Rue` comme l'orgue de la foire ; son filet en notes :
+  `musique.VALSE`) — dosées à la distance du centre de la glace, en fondu. ⚠️ Le plafond des sons de lieu
+  (1,95 Mo, `test_audio`) n'avait plus que 25 Ko : la rumeur est une boucle de 6 s (pas 10 : une boucle ne se
+  coupe pas), mono 44,1 kHz à 32 kbit/s, 24 Ko — on compresse avant de relever ; la version à 64 kbit/s attend
+  une décision de Martin.
+- **Pas encore** : les chars ne dérapent pas sur la glace (les bandes les arrêtent) ; les mots de location ne
+  sont pas dits à voix haute.

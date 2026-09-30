@@ -617,6 +617,13 @@ CATALOGUE: list[Echantillon] = [
     # LA BORNE-FONTAINE OUVERTE DE LA CANICULE (les saisons, vague 4c, 29 sept. 2026) : une BOUCLE, l'eau qui
     # crache sur l'asphalte et les enfants qui crient de joie autour ; son volume suit la distance à la borne
     # ouverte la plus proche (`RueDesSaisons.majSon`). Un lieu chargé à la demande (`LIEUX["borne_ete"]`).
+    # LA PATINOIRE DU PARC (docs/jalons/la-patinoire-du-parc.md, vague 3) : une BOUCLE, les lames qui raclent et
+    # tranchent la glace, une rondelle contre la bande, des enfants qui rient — dehors, l'hiver, étouffé par la
+    # neige. Son volume suit la distance à la glace (`Patinoire.majSon`). Un lieu (`LIEUX["patinoire"]`).
+    _e("patinoire", "La patinoire du parc", duree_s=6.0, volume=0.35, boucle=True, influence=0.45,
+       prompt="an outdoor ice rink in a snowy city park on a winter afternoon, many ice skate blades scraping, "
+              "carving and gliding on the ice, a hockey puck clacking against wooden boards in the distance, "
+              "children laughing and calling out, muffled snowy ambience, seamless loop, no music, no words"),
     _e("borne_ete", "La borne ouverte", duree_s=8.0, volume=0.35, boucle=True, influence=0.45,
        prompt="an open fire hydrant gushing a powerful stream of water onto hot asphalt on a summer day in a "
               "city street, water splashing and spraying, children laughing, shrieking with joy and running "
@@ -1279,6 +1286,14 @@ MUSIQUES: list[Piece] = [
        "heard from a small loudspeaker on a summer street, cheerful and a little nostalgic, "
        "no vocals, seamless loop",
        duree_s=30, volume=0.42),
+    # LA VALSE DE LA PATINOIRE (`musique.VALSE`) : le haut-parleur du kiosque, le soir d'hiver — une valse de
+    # patineurs d'autrefois, trois temps, fa majeur, un peu grésillante : elle sort d'un vieux haut-parleur dehors.
+    _m("patinoire_valse",
+       "a gentle old-fashioned skaters' waltz in three four time at 132 bpm in F major, "
+       "strings and a soft accordion carrying a graceful sweeping melody over oom-pah-pah chords, "
+       "heard through an old outdoor loudspeaker at a neighbourhood ice rink on a winter evening, "
+       "slightly tinny and nostalgic, no vocals, seamless loop",
+       duree_s=30, volume=0.4),
     _m("foire_orgue",
        "a mechanical fairground barrel organ playing a bright cheerful waltz in "
        "three four time at 150 bpm in D major, oom-pah-pah bass and chords under "
@@ -1821,6 +1836,7 @@ LIEUX: dict[str, list[str]] = {
     "saison_ete": ["saison_ete"], "saison_automne": ["saison_automne"],
     # La borne ouverte de la canicule (vague 4c) : chargée quand on en approche une (`RueDesSaisons.majSon`).
     "borne_ete": ["borne_ete"],
+    "patinoire": ["patinoire"],
     # LES BRUITAGES QUI N'AVAIENT AUCUN ÉQUIVALENT PAYÉ (30 sept. 2026) : chargés au premier geste qui les joue
     # (`Son.jouerDuLieu`) — ce geste-là garde sa synthèse.
     "foire": ["cloche", "sifflet_train"],

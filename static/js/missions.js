@@ -308,6 +308,8 @@ const Missions = (function () {
     if (Puces.sousLaMain(j)) return Puces.agir(j);
     // L'hiver, la roulotte de chocolat chaud d'une place (`Foyers`) : un commerce comme ceux du trottoir.
     if (Foyers.sousLaMain(j)) return acheterAmbulant(j, { slug: 'chocolat' });
+    // L'hiver, le guichet des patins du kiosque, sur la glace (`Patinoire`).
+    if (typeof Patinoire !== 'undefined' && Patinoire.sousLaMain(j)) return Patinoire.agir(j);
     const etal = etalSousLaMain(j);
     if (etal) return acheterAmbulant(j, etal);
     // ⚠️ LES HOMMES DE SAL AVANT TOUT LE MONDE : quand ils sont sur toi, il
@@ -3887,6 +3889,9 @@ const Missions = (function () {
     const cabane = Cabane.invite(j);
     if (cabane) { B.invite = cabane; return; }
     if (Foyers.sousLaMain(j)) { const c = commerceDe('chocolat'); B.invite = c.nom.toUpperCase() + ' — ' + prixAmbulant(j, c) + ' $'; return; }
+    // ⚠️ Même place que dans `interagir` : le guichet des patins, après la cabane et les puces.
+    const patins = typeof Patinoire !== 'undefined' ? Patinoire.invite(j) : null;
+    if (patins) { B.invite = patins; return; }
     const etal = etalSousLaMain(j);
     if (etal) {
       const c = commerceDe(etal.slug);

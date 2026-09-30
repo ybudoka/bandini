@@ -103,6 +103,7 @@ const Jeu = (function () {
     B.abribusServis = {};                    // les abribus qu'un autobus vient de servir (Autobus)
     Traversier.oublier(); Navette.oublier(); Vedette.oublier();                    // rien a bord, la carte neuve n'a pas de pont pose
     Halloween.oublier();                     // les enfants d'une autre partie
+    Patinoire.oublier();                     // les patineurs d'une autre partie
     Fetes.oublier();                         // la tuile du tronc du sapin est rendue
     Neige.oublier();                         // la rue d'une partie rechargee est blanche
     Pluie.oublier();                         // et la pluie d'une autre partie se tait
@@ -1155,6 +1156,8 @@ const Jeu = (function () {
         pas('navette', Navette.maj);       // la navette de l'ile, pareil
         pas('pont', Pont.maj);             // le pont de glace : il prend, craque au degel, et rend l'eau
         pas('halloween', Halloween.maj);   // le 31 au soir : les bandes d'enfants
+        pas('patinoire', Patinoire.maj);   // l'hiver : les patineurs du parc du Faubourg
+        pas('patinoire_son', Patinoire.majSon);   // les lames, les enfants, et la valse du soir
         pas('fetes', Fetes.maj);           // decembre : le tronc du sapin est une tuile pleine
         pas('saintjean', SaintJean.maj);   // la Saint-Jean : le bruit des feux
         pas('cabane', Cabane.maj);         // la cabane a sucre : la caleche, ses gens, la table de tire
@@ -1294,6 +1297,7 @@ const Jeu = (function () {
     if (!B.interieur) Collections.dessiner(ctx, vue);  // une carte de hockey par terre, et son éclat : sous les pieds
     if (!B.interieur) Puces.dessiner(ctx, vue);        // le marché aux puces du dimanche matin : ses étals et ses marchands
     if (!B.interieur) Entites.dessinerBetes(ctx, vue);   // un goeland passe sous personne
+    if (!B.interieur) Patinoire.dessinerLames(ctx, vue);  // les lames des patineurs, sous leurs pieds
     Entites.dessiner(ctx, vue);
     Entites.dessinerCible(ctx, vue);
     Entites.dessinerParticules(ctx, vue);

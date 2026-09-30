@@ -17,7 +17,7 @@ from unittest import mock
 import pytest
 import villes
 
-from app import autobus, carte, chantiers, clotures, devants, missions
+from app import autobus, carte, chantiers, clotures, devants, missions, patinoire
 
 GRAINES = [carte.GRAINE, 1, 2, 7]
 
@@ -41,6 +41,16 @@ def _temoin(graine: int) -> bytes:
     verrait pas. Garde ici en octets, pour que chaque juge recoive SA copie."""
     with mock.patch.object(devants, "deplacer", lambda chantier, ville: None):
         return pickle.dumps(carte.generer(graine=graine), protocol=pickle.HIGHEST_PROTOCOL)
+
+
+@lru_cache(maxsize=None)
+def _sans_patinoire(graine: int) -> tuple[bytes, bytes]:
+    """(le témoin, la ville) de cette graine, toutes deux sans la patinoire du parc."""
+    with mock.patch.object(patinoire, "poser", lambda chantier, ville: None):
+        with mock.patch.object(devants, "deplacer", lambda chantier, ville: None):
+            sans = pickle.dumps(carte.generer(graine=graine), protocol=pickle.HIGHEST_PROTOCOL)
+        avec = pickle.dumps(carte.generer(graine=graine), protocol=pickle.HIGHEST_PROTOCOL)
+    return sans, avec
 
 
 def _bouche(ville: dict) -> list[str]:
@@ -90,8 +100,10 @@ def test_le_temoin_a_bien_des_obstacles_devant_les_portes(graine):
 def test_la_ville_ne_bouge_que_ce_qui_bouchait(graine):
     """⚠️ La regle qui a coute vingt-six juges le jour ou une rangee de la trame a bouge : on
     ne re-tire pas la ville. Ici tout ce qui n'est pas un obstacle devant une porte est
-    IDENTIQUE au temoin, et chaque objet qui a bouge est reparti a quelques tuiles de la."""
-    sans, avec = _ville(graine, deplace=False), _ville(graine)
+    IDENTIQUE au temoin, et chaque objet qui a bouge est reparti a quelques tuiles de la.
+    ⚠️ Les deux villes SANS LA PATINOIRE du parc (`patinoire.poser`) : elle se taille sur la ville finie, après
+    ce module, et déplace d'autres arbres selon ce qu'il a déplacé — ses propres juges la tiennent."""
+    sans, avec = (pickle.loads(v) for v in _sans_patinoire(graine))
     for cle in INTACT:
         if cle != "sol":
             assert sans[cle] == avec[cle], f"« {cle} » a change : le deplacement touche a la ville"
