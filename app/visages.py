@@ -224,6 +224,9 @@ VISAGES: dict[str, dict] = {
     # Sal Ferraro, le barbier du terminus (d01) : la tête longue, les cheveux argent gominés au peigne fin, la
     # moustache taillée au millimètre, le sarrau blanc du barbier, et les yeux plissés de qui compte en souriant.
     "sal": _v("longue", "gominee", "sarrau", "moustache", signes=("rides", "yeux_plisses")),
+    # L'inspectrice Roy (r02) : la tête longue, le chignon serré, le veston marine, l'insigne, et les cernes de qui
+    # mange seule dans son char.
+    "roy": _v("longue", "chignon", "veston", signes=("insigne", "cernes")),
     "maitre": _v("ronde", "degarnie", "blouse", chapeau="canotier", signes=("rides", "sourcils_epais"),
                  t="#e6d49a"),
 }

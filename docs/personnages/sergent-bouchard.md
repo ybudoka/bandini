@@ -14,7 +14,7 @@
 | Voix | **Khaivan — Quebec accent**, un accent bien dialectal |
 | Bulle | « Ici, le jeune! » |
 | Couleurs | chemise bleu police, cheveux gris, pantalon marine |
-| Missions | donne **m4**, **m51**, **v02** (le dossier que le maire garde sur lui, dans le bureau d'en haut de la villa) ; souffle **m97** à Marco sans y parler |
+| Missions | donne **m4**, **m51**, **v02** (le dossier que le maire garde sur lui, dans le bureau d'en haut de la villa), **r04** (l'auto de Roy au lot — le choix contre **r03**), **r05** (le camion des pièces à conviction) ; souffle **m97** à Marco sans y parler |
 
 ## Son histoire
 
@@ -84,6 +84,10 @@ quand il parle d'ailleurs (la fin de m4). Il ne se lève pas pour toi : c'est to
 - m51 : la cotisation de la Fraternité ; Thibodeau, Lulu, Ti-Paul ; « je sais combien y en a » ; les
   orphelins.
 - m97 (dit par Marco) : il a montré ton dossier à Marco, et il paie pour te voir tomber.
+
+- r04 : l'auto de l'inspectrice au lot, sous un faux nom — « L'inspectrice va faire ses rondes en autobus pendant
+  un mois. » ; r05 : les armes du Faubourg n'arriveront jamais à Québec — « Pis les tests, ça raconte des histoires à
+  des juges. »
 
 ## Ce qui l'attend (M16)
 

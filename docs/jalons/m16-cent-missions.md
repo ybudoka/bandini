@@ -1200,3 +1200,24 @@ catalogue.
     (des gardiens loués) ; l'extincteur que Louise met dans les mains et le feu près de l'enseigne ; l'entrevue fermée
     avec deux districts ; et les trois manchettes du lendemain. Plus : le message de la fin arrive avec la mission
     (`test_mission_a_la_demande_js.py`), le paquet ne le porte plus (`test_missions.py`).
+- **30 sept. 2026 : vague 10 — l'arc R, Roy contre Bouchard (première moitié).** Un personnage neuf, **l'inspectrice
+  Claudine Roy** (sa fiche, son visage ; dedans, au milieu du poste — `point:roy`, un point de plus dans la pièce,
+  aucune tuile ne bouge —, après r01 ; voix **Kasandra**, québécoise, partagée avec Gisèle des puces qui ne parle dans
+  aucune mission — auditionnée contre Marie Line et Luna : `captures/audition-roy-*.mp3`, à écouter). Quatre
+  missions : `r02` (Roy, _Roy te convoque_ : son carnet au coffre de l'hôtel, Norbert l'ouvre, et le marché — 150 $),
+  puis le **choix** : `r03` (Roy, _Le stool, c'est toi_ : Mado paie le sergent chaque midi ; on file son char jusqu'à
+  l'hôtel — l'argent va au maire — 500 $, `casier: -5`, **ferme `r04`**) ou `r04` (Bouchard, _Le sergent
+  contre-attaque_ : l'auto-patrouille de Roy volée dans la ruelle du poste, semée, laissée au lot sous un faux nom —
+  500 $, `sergent_ami`, **ferme `r03`**) ; et `r05` (Bouchard, _La salle des pièces_ : le camion des pièces à conviction
+  qui part pour Québec, volé, semé, mené au garage de l'oncle — 250 $).
+  - ⚠️ **Écarts à la fiche** : r03 ne demande pas « midi » (`exige.heure` n'est lu qu'au téléphone, et l'objectif ne
+    sait pas attendre une heure) — on fait jaser Mado, puis on file ; « le sergent n'est plus ton ami » n'a aucune clé
+    de `donne` qui le défasse (`sergent_ami` ne sait que monter) ; r05 vole le camion au lieu de « ramasser trois armes
+    dedans » (un objectif ne se joue pas dans une pièce), et aucune clé ne rend des armes confisquées ; r04 livre au
+    lot (l'eau n'avale pas encore un char de mission).
+  - **Juges** (`tests/test_arc_r_js.py`, quatre) : Roy absente avant r01 ; r02, la poignée de main de Norbert, le choix
+    qui s'ouvre ; r03, une vraie filature jusqu'à l'hôtel, cinq pages de moins, r04 fermée ; r04 et r05, le char volé,
+    semé caché dedans, livré — r03 fermée par r04.
+  - ⚠️ **Au passage** : le point de Sal (arc D) touchait le comptoir des emplettes du terminus (`test_deux_points_ne_se_marchent_pas_dessus`, rouge sur `dev`) — il passe entre les deux rangées de bancs, `(5, 4)`. Le même juge reste rouge pour le garage (`reparer` et `ascenseur`, le garage souterrain d'une autre session).
+  - **Ce qui reste de l'arc R** : `r06` (les affiches, avec Roy), `r07` (l'auto banalisée, avec Bouchard), `r08` (la
+    patrouille de Roy, le boulot `patrouille`).

@@ -14,7 +14,7 @@
 | Voix | **Caroline — Soft Quebec accent** |
 | Bulle | « T'as faim, toi? » |
 | Couleurs | chandail rose fané, cheveux auburn, pantalon ardoise |
-| Missions | donne **f11** et **f13** ; une enveloppe de **f12** |
+| Missions | donne **f11** et **f13** ; une enveloppe de **f12** ; paie le sergent chaque midi, et le dit à la poignée de main de **r03** |
 
 ## Son histoire
 

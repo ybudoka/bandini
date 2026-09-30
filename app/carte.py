@@ -7698,8 +7698,9 @@ B hhh hhh B
 BBBWWDWWBBB
 """, points=(_pt("emplettes", 4, 2, genre="service"), _pt("distributrice", 9, 1, sorte="liqueur"),
              # Sal Ferraro (arc D, 30 sept. 2026), sa chaise de barbier au milieu du terminus : un point dans la
-             # pièce, rien dans la ville (comme Prévost à l'usine).
-             _pt("sal", 5, 3)),
+             # pièce, rien dans la ville (comme Prévost à l'usine). ⚠️ Entre les deux rangées de bancs, pas collé au
+             # comptoir des emplettes (4, 2) : deux points qui se touchent, l'un est injoignable.
+             _pt("sal", 5, 4)),
      gens=_gens(("commis", 3, 1), ("client", 2, 3), ("client", 8, 5))),
 
     # La planque de Rocco : un lit, un coffre, une garde-robe, et de quoi se
@@ -7771,7 +7772,9 @@ B          B
 B hhhh     B
 Bn        nB
 BBBBWWDWWBBB
-""", points=(_pt("casier", 3, 4), _pt("distributrice", 10, 4, sorte="cafe")),
+""", points=(_pt("casier", 3, 4), _pt("distributrice", 10, 4, sorte="cafe"),
+             # L'inspectrice Roy (arc R, 30 sept. 2026), au milieu du poste : un point dans la pièce, rien dans la ville.
+             _pt("roy", 6, 5)),
      gens=_gens(("commis", 3, 3), ("client", 7, 6))),
 
     # L'hopital, en bas : l'URGENCE. Le triage et ses classeurs, un lit

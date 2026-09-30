@@ -435,6 +435,14 @@ PERSONNAGES: list[Personnage] = [
      "couleurs": {"c": "#dfe3e0", "h": "#9a9a9a", "s": "#d9a07a", "p": "#2a2a33"}, "ou": "point:sal",
      "heler": "Assis-toi.", "arrive_apres": "m6",
      "repos": ("La chaise est libre.", "La chaise est libre, le neveu. Pis la dette, elle, attend pas.")},
+    # --- L'arc R (30 sept. 2026, M16 vague 10) : l'inspectrice Claudine Roy, arrivée de Québec pour faire tomber
+    # Bouchard. DEDANS, à son bureau du poste (`point:roy`, un point de plus dans la pièce — aucune tuile de la ville
+    # ne bouge), et seulement après r01 (`arrive_apres`). Voix : Kasandra, québécoise, partagée avec Gisèle des
+    # puces (qui ne parle dans aucune mission) — auditionnée contre Marie Line et Luna, à écouter.
+    {"slug": "roy", "nom": "Inspectrice Claudine Roy", "genre": "femme", "voix": "Kasandra - Natural Quebecer UGC ad",
+     "couleurs": {"c": "#2f3a52", "h": "#5a3a22", "s": "#e0b08a", "p": "#2a2a33"}, "ou": "point:roy",
+     "heler": "Toi, approche.", "arrive_apres": "r01",
+     "repos": ("Pas maintenant.", "Pas maintenant. J'ai une ville à nettoyer.")},
 ]
 
 
@@ -671,7 +679,7 @@ from . import (  # noqa: E402
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
     s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
     e04, e06, e07, e10, la_pointe, s02, s05, s06, s09, s10, s11,
-    d01, d02, d03, d04, d05, d06, d07, d08, h03, h04, h05, h06, h07, l01, l02, l03, l04, l05, l06, q07, m98,
+    d01, d02, d03, d04, d05, d06, d07, d08, h03, h04, h05, h06, h07, l01, l02, l03, l04, l05, l06, r02, r03, r04, r05, q07, m98,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -719,6 +727,8 @@ from . import (  # noqa: E402
 # ⚠️ d05 à d08 (30 sept. 2026, vague 8) : la fin de l'arc D — l'acte du garage pour l'avocat du Brouillard (d05,
 # Josée), les Ciseaux de Sal au garage (d06, Gus), puis le CHOIX : vider la berline de Sal (d07, Josée) ou, la dette
 # payée, sa dernière coupe et la bague de Rocco (d08, `exige.dette: 0`). Chacune ferme l'autre.
+# ⚠️ r02 à r05 (30 sept. 2026, vague 10) : Roy contre Bouchard — l'inspectrice reprend son carnet (r02), puis le
+# CHOIX : son stool (r03) ou le sergent qui lui vole son char (r04) ; et le camion des pièces à conviction (r05).
 # ⚠️ l01 à l06 (30 sept. 2026, vague 9) : l'arc C de la fiche, le Clairon — `l` pour Louise, les slugs `c` sont pris
 # (Irène, le vieux maître). Une série de photos, la une sur toi, sa source (Norbert), le scoop du maire, la rédaction
 # qui brûle, et l'entrevue au phare.
@@ -751,6 +761,7 @@ CATALOGUE: list[Mission] = [
     d01.MISSION, d02.MISSION, d03.MISSION, d04.MISSION, d05.MISSION, d06.MISSION, d07.MISSION, d08.MISSION,
     h03.MISSION, h04.MISSION, h05.MISSION, h06.MISSION, h07.MISSION,
     l01.MISSION, l02.MISSION, l03.MISSION, l04.MISSION, l05.MISSION, l06.MISSION,
+    r02.MISSION, r03.MISSION, r04.MISSION, r05.MISSION,
     m97.MISSION, m98.MISSION, m99.MISSION,
 ]
 
