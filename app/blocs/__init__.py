@@ -11,8 +11,10 @@ de `/api/carte` — quel que soit le nombre de blocs. On y passe comme on entre 
 pièce (`Jeu.entrer`) : la ville mise de côté, la carte chargée au noir, et au retour la
 ville telle qu'on l'a laissée. Mais dehors, et (vague 2) au volant.
 
-⚠️ **Un bloc = un fichier** de ce dossier qui déclare `BLOC = {…}`, ajouté à `BLOCS`.
-Comme une mission : rien d'autre à toucher.
+⚠️ **Un bloc = un fichier** de ce dossier qui déclare `BLOC = {…}`, ajouté à `BLOCS` — et,
+en ville, **la rue qui mène à son passage** : si aucune ne traverse jusqu'au bord, son ouverture
+s'ajoute à `carte.OUVERTURES_DE_RUE`. Le juge des blocs la réclame (`sortie_sans_rue`, Martin,
+30 sept. 2026 : chaque sortie de la ville a sa rue).
 """
 
 from __future__ import annotations
@@ -238,7 +240,56 @@ def erreurs(bloc: dict, ville: dict | None = None) -> list[str]:
             g = ville["sol"][y][x] if 0 <= y < ville["hauteur"] and 0 <= x < ville["largeur"] else "B"
             if not marchable(g):
                 fautes.append(f"{slug} : la tuile ({x}, {y}) du passage en ville ne se marche pas ({g!r})")
+        fautes.extend(sortie_sans_rue(slug, p, ville))
     return fautes
+
+
+#: ⚠️ CHAQUE SORTIE DE LA VILLE A SA RUE (Martin, 30 sept. 2026 : « valide que toutes les sorties de la ville
+#: aient bien une rue ou une voie qui permette de sortir — dans le futur aussi »). La villa est arrivée sans
+#: la sienne : sa rue s'arrêtait sur la rue de l'ouest, et le juge, qui ne demandait qu'une tuile qui se
+#: marche, laissait passer le trottoir de ceinture. Il faut maintenant, sur le bord du passage, au moins
+#: LARGEUR_DE_SORTIE tuiles de chaussée côte à côte (un char y passe)…
+LARGEUR_DE_SORTIE = 2
+#: … et que cette chaussée rejoigne LES rues de la ville, pas un bout d'asphalte isolé : au moins cette part
+#: de toute la chaussée, sans passer une rue barrée, une barrière (même celles qui s'ouvrent) ni un décor solide.
+PART_DU_RESEAU = 0.5
+
+
+def sortie_sans_rue(slug: str, passage: dict, ville: dict) -> list[str]:
+    """Ce qui manque à la sortie de la ville d'un bloc pour qu'on la prenne au volant (voir LARGEUR_DE_SORTIE)."""
+    sol, largeur, hauteur = ville["sol"], ville["largeur"], ville["hauteur"]
+    bouchees: set[tuple[int, int]] = set()
+    for r in list(ville.get("fermetures", ())) + list(ville.get("barrieres", ())):
+        bouchees |= {(r["x"] + i, r["y"] + j) for i in range(r.get("l", 1)) for j in range(r.get("h", 1))}
+    solides = set(ville.get("decor_solide", ()))
+    bouchees |= {(d["x"], d["y"]) for d in ville.get("decor", ()) if d["type"] in solides}
+
+    def chaussee(x: int, y: int) -> bool:
+        return (0 <= x < largeur and 0 <= y < hauteur and (x, y) not in bouchees
+                and bool(carte.LEGENDE.get(sol[y][x], {}).get("route")))
+
+    bord = _tuiles_du_bord(passage, largeur, hauteur)
+    suite = plus_large = 0
+    for x, y in bord:
+        suite = suite + 1 if chaussee(x, y) else 0
+        plus_large = max(plus_large, suite)
+    if plus_large < LARGEUR_DE_SORTIE:
+        return [f"{slug} : la sortie de la ville n'a pas de rue — {plus_large} tuile(s) de chaussée côte à côte "
+                f"sur le bord {passage['bord']} ({passage['de']} à {passage['de'] + passage['l'] - 1}), "
+                f"il en faut {LARGEUR_DE_SORTIE} (`carte.OUVERTURES_DE_RUE`)"]
+    vues = {(x, y) for x, y in bord if chaussee(x, y)}
+    pile = list(vues)
+    while pile:
+        x, y = pile.pop()
+        for voisine in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if voisine not in vues and chaussee(*voisine):
+                vues.add(voisine)
+                pile.append(voisine)
+    toute = sum(chaussee(x, y) for y in range(hauteur) for x in range(largeur))
+    if len(vues) < PART_DU_RESEAU * toute:
+        return [f"{slug} : la rue de la sortie ne rejoint pas les rues de la ville "
+                f"({len(vues)} tuiles de chaussée sur {toute})"]
+    return []
 
 
 #: L'écran du jeu, en pixels (`VW`, `VH` de `base.js`) : un cadre de caméra plus petit laisserait voir à côté.

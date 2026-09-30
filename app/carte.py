@@ -7055,10 +7055,16 @@ class _Chantier:
 #: endroits ») : aucune rue n'y traverse, alors le trottoir de ceinture s'ouvre au milieu de leur passage — trois
 #: tuiles d'asphalte qui partent de la rue de l'ouest, un bout de trottoir de chaque côté
 #: (docs/jalons/les-galeries-et-le-cine-parc-s-ouvrent-sur-un-chemin.md).
+#: ⚠️ LA VILLA (Martin, 30 sept. 2026 : « toutes les sorties de la ville [doivent avoir] une rue ou une voie qui
+#: permette de sortir ») : arrivée après les autres, sans la sienne — sa rue à quatre voies (y 36-39) s'arrêtait
+#: sur la rue de l'ouest. Elle traverse maintenant jusqu'au bord, ses lignes comprises. Le juge des blocs
+#: (`blocs.sortie_sans_rue`) exige une rue à la sortie de CHAQUE bloc : un bloc neuf ajoute son ouverture ici
+#: (docs/jalons/chaque-sortie-de-la-ville-a-sa-rue.md).
 OUVERTURES_DE_RUE: tuple[dict, ...] = (
     {"x": 0, "y": 172, "g": "#"}, {"x": 0, "y": 173, "g": "+"},
     {"x": 0, "y": 61, "g": "#"}, {"x": 0, "y": 62, "g": "#"}, {"x": 0, "y": 63, "g": "#"},
     {"x": 0, "y": 95, "g": "#"}, {"x": 0, "y": 96, "g": "#"}, {"x": 0, "y": 97, "g": "#"},
+    {"x": 0, "y": 36, "g": "#"}, {"x": 0, "y": 37, "g": "-"}, {"x": 0, "y": 38, "g": "+"}, {"x": 0, "y": 39, "g": "-"},
 )
 
 
@@ -7322,7 +7328,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
     # bouge d'une tuile.
     from . import relief as relief_mod
     ville["relief"] = relief_mod.poser(chantier, ville)
-    # LES OUVERTURES DE RUE (le rang, les Galeries, le ciné-parc), après le relief (il recopie le sol du
+    # LES OUVERTURES DE RUE (le rang, les Galeries, le ciné-parc, la villa), après le relief (il recopie le sol du
     # chantier) : sur la ville finie et sans un dé, des tuiles de trottoir deviennent chaussée.
     if plan == PLAN:
         ouvrir_les_rues(ville)

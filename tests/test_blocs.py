@@ -11,7 +11,8 @@ from app import blocs, definitions, hors_ligne
 @pytest.mark.parametrize("bloc", blocs.BLOCS, ids=lambda b: b["slug"])
 def test_chaque_bloc_tient_debout(bloc, paquet):
     """Son plan, ses glyphes, son retour qui se marche et qu'on rejoint à pied depuis
-    l'arrivée — et son passage, dans la VILLE, sur une tuile qui se marche."""
+    l'arrivée — et son passage, dans la VILLE, sur une tuile qui se marche, au bout d'une rue qui rejoint
+    celles de la ville (`blocs.sortie_sans_rue`)."""
     assert blocs.erreurs(bloc, paquet["carte"]) == []
 
 
@@ -22,6 +23,22 @@ def test_un_bloc_mal_fait_se_voit():
     fautes = blocs.erreurs(mauvais, ville)
     assert any("retour ne se marche pas" in f for f in fautes), fautes
     assert any("passage en ville ne se marche pas" in f for f in fautes), fautes
+
+
+def test_une_sortie_de_la_ville_sans_rue_se_voit():
+    """Martin (30 sept. 2026) : « toutes les sorties de la ville [doivent avoir] une rue ou une voie qui permette
+    de sortir ». Le juge mord : un trottoir au bord, une seule tuile de chaussée, une rue qui ne mène à rien, et
+    une rue barrée entre la sortie et la ville (docs/jalons/chaque-sortie-de-la-ville-a-sa-rue.md)."""
+    passage = {"bord": "ouest", "de": 0, "l": 4}
+    trottoir = {"largeur": 6, "hauteur": 4, "sol": [".#####"] * 4}
+    assert "n'a pas de rue" in " ".join(blocs.sortie_sans_rue("x", passage, trottoir))
+    une_tuile = {"largeur": 6, "hauteur": 4, "sol": [".#####", "######", ".#####", ".#####"]}
+    assert "n'a pas de rue" in " ".join(blocs.sortie_sans_rue("x", passage, une_tuile))
+    isolee = {"largeur": 7, "hauteur": 4, "sol": ["##.####", "##.####", "..,####", "..,####"]}
+    assert "ne rejoint pas" in " ".join(blocs.sortie_sans_rue("x", passage, isolee))
+    barree = {"largeur": 6, "hauteur": 4, "sol": ["######"] * 4, "fermetures": [{"x": 1, "y": 0, "l": 1, "h": 4}]}
+    assert "ne rejoint pas" in " ".join(blocs.sortie_sans_rue("x", passage, barree))
+    assert blocs.sortie_sans_rue("x", passage, dict(barree, fermetures=[])) == []
 
 
 def test_un_bloc_ne_change_pas_un_octet_de_la_ville(monkeypatch, paquets):
