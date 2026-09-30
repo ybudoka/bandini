@@ -168,6 +168,7 @@ est un oubli avec du style.
 
 | Dette | Pourquoi pas fait | Déclencheur |
 |---|---|---|
+| **Semer le client de la police de m3 tient par la graine** (`test_tronc_plus_long_js`, 30 sept. 2026) : sur huit graines, la 3 et la 4 ratent sur `dev` même — le char roule toute la route et l'étoile ne tombe jamais | Hors du jalon des bagarres, qui ne faisait que déplacer le dé ; le juge est passé de la graine 6 à la 1 | Martin se plaint de ne pas pouvoir semer une étoile en char, ou un autre juge de `semer` flanche d'une graine à l'autre |
 | Le **rythme mesuré sur le vrai téléphone** de Martin (reporté de M7) | Les chiffres du banc (0,29 ms/image de nuit à 5★) sont ceux d'une machine de développement | Avant M12 : la neige touche à la physique **et** au rendu, c'est là que le budget casse |
 | Les **districts chargés autour du joueur** (⚠️ `/api/carte` et son ETag sont **livrés** le 16 sept. 2026 : la carte voyage à part, mais entière ; ⚠️ **en cours** depuis le 30 sept. 2026 : [fiche](jalons/charger-les-districts-autour-du-joueur.md#fiche) ; la carte voyage pliée, 52 Ko gzip) | 43 Ko gzip aujourd'hui (370 Ko bruts ; plafond brut relevé à 600 le 13 sept. 2026, parce qu'il n'est qu'un indicateur : le fil et `JSON.parse` sont les vraies bornes) : le découper maintenant coûterait de la complexité pour rien | Écrit d'avance depuis M8 : **plus de 2 s entre « Jouer » et la ville** sur le téléphone de Martin |
 

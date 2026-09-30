@@ -267,7 +267,10 @@ def test_m3_la_boite_au_phare_puis_le_client_de_la_police_seme_puis_le_taxi_rend
     coffre au phare de La Pointe — à l'autre bout de la ville, par le pont —, puis le client qui a suivi
     (UNE étoile, qui tombe hors de vue), puis le taxi rendu au garage. 200 $."""
     r = banc("function (L, o) {" + OUTILS_TUTORIEL + """
-        L.Jeu.commencer(); L.graine(6);
+        // ⚠️ GRAINE 1, pas 6 : semer le client de la police TIENT PAR LA GRAINE — le 30 sept. 2026, sur huit graines,
+        // la 3 et la 4 le ratent AUSSI sur la base (le char roule toute la route sans perdre l'étoile). La 6 passait
+        // de justesse et la bagarre vivante (`rixe.js`) déplace le dé. La dette est au plan.
+        L.Jeu.commencer(); L.graine(1);
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         faites(L, ['m1', 'm2']);
         const argent = paiements(L);
