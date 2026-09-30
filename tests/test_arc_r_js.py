@@ -171,3 +171,98 @@ def test_r05_le_camion_des_pieces_a_conviction_au_garage(banc):
     for dite in ("pendant:bouchard:1", "pendant:bouchard:2", "pendant:bouchard:3"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [250], r
+
+
+# --- La fin de l'arc R (vague 11, 30 sept. 2026) : les affiches et la patrouille avec Roy, l'auto banalisée avec
+# Bouchard.
+
+def test_r06_cinq_affiches_dans_l_ordre_puis_roy(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + RECHARGER + DEDANS + CHEZ_ROY + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, p = B.partie;
+        faites(L, """ + _avant("r02", "r03") + """);
+        const j = recharger(L);
+        p.casier = 6;
+        const argent = paiements(L);
+        const chez = chezRoy(L, o);
+        const pts = B.mission.course ? B.mission.course.points : [];
+        const ordre = [];
+        // Le terminus d'abord : hors d'ordre, rien ne compte.
+        j.x = pts[4].x; j.y = pts[4].y; L.Entites.indexer(); jouer(L, o, 4);
+        const horsOrdre = B.mission.course.i;
+        for (let i = 0; i < pts.length; i++) {
+            j.x = pts[i].x; j.y = pts[i].y; L.Entites.indexer(); jouer(L, o, 4);
+            ordre.push(B.mission.course ? B.mission.course.i : null);
+        }
+        const apres = etape(L);
+        dedans(L, o, 'poste'); serrer(L, o, 'roy'); finir(L, o);
+        return { chez: chez, n: pts.length, horsOrdre: horsOrdre, ordre: ordre, apres: apres, dites: dites,
+                 casier: p.casier, fait: !!p.missionsFaites.r06, argent: argent.map(function (a) { return a.montant; }) };
+    }""")
+    assert r["chez"]["mission"] == "r06", r["chez"]
+    assert r["n"] == 5 and r["horsOrdre"] == 0, r
+    assert r["ordre"][:4] == [1, 2, 3, 4] and r["apres"] == 1, r
+    for dite in ("pendant:roy:0", "pendant:roy:1"):
+        assert dite in r["dites"], f"{dite} manque : {r['dites']}"
+    assert r["fait"] is True and r["argent"] == [100] and r["casier"] == 3, r
+
+
+def test_r07_l_auto_banalisee_trois_ciseaux_puis_le_poste(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + RECHARGER + DEDANS + CHEZ_ROY + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, p = B.partie;
+        faites(L, """ + _avant("r02", "r04", "r05") + """);
+        const j = recharger(L);
+        const argent = paiements(L);
+        const mission = chezBouchard(L, o);
+        const v = B.mission.vehicule, po = L.Histoire.lieu('poste');
+        const auto = { slug: v && v.slug, poste: v ? Math.round(Math.hypot(v.x - po.x, v.y - po.y) / 16) : null };
+        j.x = v.x + 12; j.y = v.y; L.Entites.indexer(); L.Vehicules.monter(j, v); L.Entites.indexer(); jouer(L, o);
+        const eux = B.mission.entites.filter(function (e) { return e.cible && e.etape === 1; });
+        const t = L.Histoire.lieu('terminus');
+        const ciseaux = { etape: etape(L), n: eux.length,
+                          terminus: Math.max.apply(null, eux.map(function (e) { return Math.round(Math.hypot(e.x - t.x, e.y - t.y) / 16); })) };
+        const place = L.Histoire.tuileDeRue(t.x, t.y, 12) || t;
+        v.x = place.x; v.y = place.y; v.vitesse = 0; j.x = v.x; j.y = v.y; L.Entites.indexer();
+        eux.forEach(function (e) { L.Entites.assommer(e); }); jouer(L, o, 10);
+        const retour = etape(L);
+        const baie = L.Histoire.lieuDeLivraison('poste');
+        v.x = baie.x; v.y = baie.y; v.vitesse = 0; j.x = v.x; j.y = v.y; L.Entites.indexer();
+        finir(L, o);
+        return { mission: mission, auto: auto, ciseaux: ciseaux, retour: retour, dites: dites,
+                 fait: !!p.missionsFaites.r07, argent: argent.map(function (a) { return a.montant; }) };
+    }""")
+    assert r["mission"] == "r07", r
+    assert r["auto"]["slug"] == "police" and r["auto"]["poste"] <= 8, r["auto"]
+    assert r["ciseaux"]["etape"] == 1 and r["ciseaux"]["n"] == 3 and r["ciseaux"]["terminus"] <= 8, r["ciseaux"]
+    assert r["retour"] == 2, r
+    for dite in ("pendant:bouchard:0", "pendant:bouchard:1", "pendant:bouchard:2"):
+        assert dite in r["dites"], f"{dite} manque : {r['dites']}"
+    assert r["fait"] is True and r["argent"] == [400], r
+
+
+def test_r08_trois_suspects_en_auto_patrouille(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + RECHARGER + DEDANS + CHEZ_ROY + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, p = B.partie;
+        faites(L, """ + _avant("r02", "r03", "r06") + """);
+        const j = recharger(L);
+        p.casier = 4;
+        const argent = paiements(L);
+        const chez = chezRoy(L, o);
+        const v = B.mission.vehicule;
+        j.x = v.x + 12; j.y = v.y; L.Entites.indexer(); L.Vehicules.monter(j, v); L.Entites.indexer(); jouer(L, o);
+        const b = L.Missions.boulot;
+        const patrouille = { etape: etape(L), ligne: L.Histoire.ligneObjectif() };
+        b.faits.patrouille = B.mission.boulotsDepart + 3; jouer(L, o);
+        const cles = etape(L);
+        dedans(L, o, 'poste'); serrer(L, o, 'roy'); finir(L, o);
+        return { chez: chez, slug: v && v.slug, patrouille: patrouille, cles: cles, dites: dites, casier: p.casier,
+                 fait: !!p.missionsFaites.r08, argent: argent.map(function (a) { return a.montant; }) };
+    }""")
+    assert r["chez"]["mission"] == "r08", r["chez"]
+    assert r["slug"] == "police" and r["patrouille"]["etape"] == 1 and r["patrouille"]["ligne"].endswith("0/3"), r
+    assert r["cles"] == 2, r
+    for dite in ("pendant:roy:0", "pendant:roy:1", "pendant:roy:2"):
+        assert dite in r["dites"], f"{dite} manque : {r['dites']}"
+    assert r["fait"] is True and r["argent"] == [250] and r["casier"] == 2, r

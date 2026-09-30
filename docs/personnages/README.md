@@ -71,7 +71,7 @@ Chaque fiche mêle deux sortes de faits.
 | [Le maire Réal Tanguay](maire.md) | `maire` | dans la chambre de l'Hôtel Bandini, dedans, entre m97 et m98 | Eric - Smooth, Trustworthy | m98 (la poignée de main, et il cède) |
 | [Victor Tam, « Sifu Tam »](victor-tam.md) | `maitre` | dans sa salle de l'ÉCOLE LA MANTE, dedans — une fois revenu de Floride (après c04) | Luca - Storyteller | c05 (sa poignée de main) · c06 · c07 · c08 |
 | [Salvatore « Sal » Ferraro](sal.md) | `sal` | à sa chaise de barbier, au milieu du terminus, dedans, après m6 | Pascal — Voix québécoise chaleureuse | d01 · d02 · d03 · d04 · d08 |
-| [Inspectrice Claudine Roy](roy.md) | `roy` | à son bureau du poste, dedans, après r01 | Kasandra (partagée avec Gisèle) | r02 · r03 |
+| [Inspectrice Claudine Roy](roy.md) | `roy` | à son bureau du poste, dedans, après r01 | Kasandra (partagée avec Gisèle) | r02 · r03 · r06 · r08 |
 | [Ti-Rhéal Bergeron](ti-rheal.md) | `ti_rheal` | derrière sa table du marché aux puces, le dimanche matin | Christian Page - Narrative and Deep | aucune : son étal (hors de `PERSONNAGES`) |
 | [Gisèle Lachapelle](gisele.md) | `gisele` | derrière sa table du marché aux puces, le dimanche matin | Kasandra - Natural Quebecer UGC ad | aucune : son étal (hors de `PERSONNAGES`) |
 

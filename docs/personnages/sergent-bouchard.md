@@ -14,7 +14,7 @@
 | Voix | **Khaivan — Quebec accent**, un accent bien dialectal |
 | Bulle | « Ici, le jeune! » |
 | Couleurs | chemise bleu police, cheveux gris, pantalon marine |
-| Missions | donne **m4**, **m51**, **v02** (le dossier que le maire garde sur lui, dans le bureau d'en haut de la villa), **r04** (l'auto de Roy au lot — le choix contre **r03**), **r05** (le camion des pièces à conviction) ; souffle **m97** à Marco sans y parler |
+| Missions | donne **m4**, **m51**, **v02** (le dossier que le maire garde sur lui, dans le bureau d'en haut de la villa), **r04** (l'auto de Roy au lot — le choix contre **r03**), **r05** (le camion des pièces à conviction), **r07** (l'auto banalisée) ; souffle **m97** à Marco sans y parler |
 
 ## Son histoire
 

@@ -14,7 +14,7 @@
 | Voix | **Kasandra - Natural Quebecer UGC ad** (québécoise d'origine, mûre, assurée) — partagée avec Gisèle, la brocanteuse du marché aux puces, qui ne parle dans aucune mission ; auditionnée le 30 sept. 2026 contre Marie Line et Luna (`captures/audition-roy-*.mp3`) : **à écouter** |
 | Bulle | « Toi, approche. » |
 | Couleurs | veston marine, cheveux châtains en chignon, pantalon anthracite, l'insigne à la ceinture |
-| Missions | donne **r02**, **r03** (le choix contre **r04**) |
+| Missions | donne **r02**, **r03** (le choix contre **r04**), **r06** (les affiches), **r08** (sa patrouille) |
 
 ## Son histoire
 
@@ -64,9 +64,12 @@ forteresse.
   manger dans la main. Pas les deux. »
 - r03 : « Le sergent paie le maire avec l'argent de Mado. Ça, c'est une enquête. »
 
+- r06 : « J'ai gardé une affiche pour mon bureau, elle est drôle. » ; r08 : « l'école de police prend les vieux
+  aussi ».
+
 ## Ce qui l'attend (M16)
 
-`r06` « Une affiche de moins » et `r08` « La patrouille de Roy », si l'on a choisi son bord.
+L'arc R est au complet (30 sept. 2026).
 
 ## À trancher
 

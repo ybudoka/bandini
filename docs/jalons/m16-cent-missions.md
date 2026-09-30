@@ -1221,3 +1221,16 @@ catalogue.
   - ⚠️ **Au passage** : le point de Sal (arc D) touchait le comptoir des emplettes du terminus (`test_deux_points_ne_se_marchent_pas_dessus`, rouge sur `dev`) — il passe entre les deux rangées de bancs, `(5, 4)`. Le même juge reste rouge pour le garage (`reparer` et `ascenseur`, le garage souterrain d'une autre session).
   - **Ce qui reste de l'arc R** : `r06` (les affiches, avec Roy), `r07` (l'auto banalisée, avec Bouchard), `r08` (la
     patrouille de Roy, le boulot `patrouille`).
+- **30 sept. 2026 : vague 11 — la fin de l'arc R.** Trois missions, une de chaque bord du choix et une de plus du côté
+  de Roy : `r06` (Roy, _Une affiche de moins_ : Bouchard a fait coller ta face — RECHERCHÉ — sur cinq portes du
+  Faubourg ; trois minutes, dans l'ordre — 100 $, `casier: -3`), `r07` (Bouchard, _L'auto banalisée_ : « policier en
+  civil » dans son auto grise, trois Ciseaux de Sal, l'auto ramenée au poste — 400 $), `r08` (Roy, _La patrouille de
+  Roy_ : une auto-patrouille prêtée, trois suspects au klaxon — le boulot `patrouille` —, les clés rendues — 250 $,
+  `casier: -2`). L'arc R de la fiche est au complet.
+  - ⚠️ **Écarts à la fiche** : les affiches de r06 s'arrachent en passant à chaque porte (`course`) — celles de la rue
+    sont du décor tiré au hasard, qu'une mission ne sait pas poser ; r07 ne suspend pas les étoiles « tant que tu es
+    au volant » (aucune option ne le dit) ; r08 compte trois suspects en une mission, pas cinq « en une semaine »
+    (`boulots` ne compte que pendant la mission).
+  - **Juges** (`tests/test_arc_r_js.py`, trois de plus) : les cinq portes dans l'ordre (hors d'ordre, rien ne compte),
+    trois pages de moins ; l'auto grise devant le poste, trois Ciseaux, l'auto ramenée ; trois suspects en
+    auto-patrouille, deux pages de moins.
