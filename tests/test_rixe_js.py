@@ -94,7 +94,9 @@ def test_adosse_a_un_mur_il_frappe_quand_meme(banc):
 
 
 def test_il_esquive_parfois_ton_coup(banc):
-    """Le joueur arme son bâton vingt fois à portée : le Cravate en esquive quelques-uns, jamais tous."""
+    """Le joueur arme son bâton vingt fois à portée : le Cravate en esquive quelques-uns, jamais tous. ⚠️ Le
+    Cravate est increvable lui aussi : cinq coups de bâton le couchent, et un mort n'esquive plus rien (le juge
+    ne tenait que par une esquive tombée avant.)"""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(24);
@@ -105,7 +107,7 @@ def test_il_esquive_parfois_ton_coup(banc):
         const e = trois(L, 16)[1];
         let armes = 0;
         for (let i = 0; i < 1400 && armes < 20; i++) {
-          tenir(L);
+          tenir(L); e.vie = e.vieMax;
           if (j.etat !== 'attaque' && i %% 60 === 0) {
             L.Entites.regarder(j, e.x - j.x, e.y - j.y);
             if (L.Combat.frapper(j, false)) armes++;
