@@ -14,10 +14,13 @@ OUTILS = """
 """
 
 
-def test_les_quatre_artistes_ont_leur_saison():
+def test_trois_artistes_ont_leur_saison_et_le_jongleur_jongle_avec_le_feu():
+    """Le musicien, le mime et l'échassier prennent congé l'hiver ; le jongleur reste, avec ses torches
+    (vague 3, `test_foyers_de_l_hiver_js.py`)."""
     artistes = {p["slug"]: p for p in pietons.CATALOGUE if p.get("metier") in ("musicien", "amuseur", "jongleur", "echassier")}
     assert len(artistes) == 4
-    assert all(p.get("froid_max") == pietons.ARTISTES_FROID_MAX for p in artistes.values()), artistes
+    assert all(p.get("froid_max") == pietons.ARTISTES_FROID_MAX for s, p in artistes.items() if s != "jongleur"), artistes
+    assert artistes["jongleur"].get("froid_max") is None
 
 
 def test_l_hiver_aucun_artiste_ne_joue_au_faubourg(banc):
@@ -25,7 +28,8 @@ def test_l_hiver_aucun_artiste_ne_joue_au_faubourg(banc):
         L.Jeu.commencer();
         const B = L.B, j = B.joueur, TT = L.TT;
         j.invincible = 1e9;
-        const SPECTACLES = ['musicien', 'amuseur', 'jongleur', 'echassier'];
+        // ⚠️ Pas le jongleur : l'hiver, il jongle avec le feu (vague 3).
+        const SPECTACLES = ['musicien', 'amuseur', 'echassier'];
         // Au coeur du Faubourg (ou ils jouent), le midi.
         function artistes() { return B.entites.filter(function (e) { return e.vivant && SPECTACLES.indexOf(e.metier) >= 0; }).length; }
         function tenir(jour, n) {

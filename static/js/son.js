@@ -1353,6 +1353,14 @@ const Son = (function () {
         if (v > 0.3 && B.t % 97 === 0) ton(260 + (B.t % 5) * 35, 0.12, 'triangle', 0.02 * v, 1.2);
       });
     },
+    // Le brasero d'une place, l'hiver (`Foyers.maj`, la foire fermee l'hiver, vague 3) : la BOUCLE du lieu
+    // `foyers`, dosee a la distance ; faute d'elle, un crepitement leger — une buche, pas un batiment.
+    foyer_feu: function (force) {
+      tenirDuLieu('foyer_feu', Math.max(0, Math.min(1, force || 0)), function (v) {
+        if (B.t % 17 === 0) bruit(0.08, 0.035 * v, 1800, 500);
+        if (v > 0.3 && B.t % 43 === 0) ton(620, 0.03, 'square', 0.015 * v, 1.8);
+      });
+    },
     vide: function () { if (!joue('vide')) { ton(1400, 0.03, 'square', 0.15); ton(900, 0.03, 'square', 0.1, 1, 0.04); } },
     casse: function () { if (!joue('casse')) { bruit(0.2, 0.4, 3000, 400); ton(220, 0.08, 'square', 0.2, 0.5); } },
     degainer: function () { if (!joue('degainer')) { bruit(0.08, 0.1, 2500, 900); ton(520, 0.04, 'triangle', 0.1, 1, 0.05); } },

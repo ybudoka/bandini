@@ -481,6 +481,10 @@ def test_le_public_applaudit_paie_et_se_renouvelle(banc, paquet):
     jongleur à l'image 1500, avant le premier départ du cercle — le jeu fait
     son travail, et c'est la graine 64 que le juge joue."""
     r = banc("""function (L, o) {
+        // ⚠️ SANS LA SAISON DES KIOSQUES, DES LE DEPART (30 sept. 2026) : l'hiver, la cabane de fruits de mer ne poste
+        // pas ses marchands a `commencer` (test_le_tour_de_l_hiver_js.py) — trois numeros de moins, et la rue de
+        // janvier que ce juge tient n'est plus la meme.
+        L.B.defs.ambulants.forEach(function (a) { delete a.froid_max; });
         L.Jeu.commencer();
         // ⚠️ SANS LA SAISON DES ARTISTES (30 sept. 2026) : l'hiver, ils rentrent (`froid_max`,
         // test_le_tour_de_l_hiver_js.py) ; ces juges mesurent le numero, pas la saison — janvier garde le reste.
@@ -489,6 +493,9 @@ def test_le_public_applaudit_paie_et_se_renouvelle(banc, paquet):
         // motos et velos sont remises — des berlines a leur place (test_motos_velos_remises_js.py). Il
         // mesure autre chose que la saison : sans la cle, la rue est celle d'avant.
         L.B.defs.vehicules.forEach(function (v) { delete v.remise; });
+        // ⚠️ ET SANS LES FOYERS DE L'HIVER (30 sept. 2026) : le brasero de la place d'a cote appelle ses
+        // passants a se chauffer, et le cercle du jongleur se renouvelait moins — ce juge mesure le numero.
+        delete L.B.defs.foyers;
         L.graine(64);
         const a = L.Entites.archetype('jongleur');
         const j = L.B.joueur;

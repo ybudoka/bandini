@@ -58,7 +58,7 @@ from dataclasses import dataclass
 from . import (armes, audio, blocs, calendrier, saisons, pluie, halloween, carte, demenagement, derby, enseignes, fetes, garage, motoneige, photos, quatre_roues, saint_jean, territoires, devantures, dojo, economie, mantes, garderobe, interactions, journal, magasins,
                brouillard, loto, machine_a_sous, manettes, tables_de_jeu, missions, nord, nuit, pietons, recherche, rixes, techniques, vehicules, verglas, videopoker,
                musique, pont_de_glace, visages)
-from . import collectionner, decoration, pliage
+from . import collectionner, decoration, foyers, pliage
 from .blocs import galeries as galeries_hantees
 from .version import VERSION
 
@@ -211,6 +211,7 @@ def assembler() -> dict:
         "marche_noir": magasins.MARCHE_NOIR,
         "magasins": magasins.CATALOGUE,
         "ambulants": magasins.AMBULANTS,
+        "foyers": foyers.FOYERS,
         "reclame": magasins.RECLAME,
         "comptoirs": magasins.COMPTOIRS,
         "distributrices": magasins.DISTRIBUTRICES,

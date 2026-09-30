@@ -2710,6 +2710,54 @@ const Entites = (function () {
     return nes;
   }
 
+  /** SE CHAUFFER LES MAINS (docs/jalons/la-foire-fermee-l-hiver.md, vague 3) : l'hiver, un passant qui
+      flane pres d'un brasero des places (`Foyers`) y va, s'arrete face au feu un moment, et repart. Un
+      passant sur `part` — a l'EMPREINTE de son numero et du jour, jamais au de —, une fois par jour, au plus
+      `par_feu` autour d'un meme feu. Qui s'y rend garde sa place au cercle (`versLeFoyer`), comme le badaud
+      d'un numero. Toutes les demi-secondes. */
+  function majLesFoyers() {
+    if (typeof Foyers === 'undefined' || !Foyers.allumes() || !B.joueur || !B.partie) return;
+    const r = Foyers.regles(), jour = B.partie.jour;
+    for (const q of B.entites) {
+      if (q.type !== 'pieton') continue;
+      if (q.versLeFoyer) {
+        // Arrive au cercle : on s'arrete, face au feu. Parti ailleurs (une peur, un coup) : on oublie.
+        if (!q.vivant || q.etat !== 'cap') { q.versLeFoyer = null; q.placeAuFeu = null; continue; }
+        if (dist2(q.x, q.y, q.cap.x, q.cap.y) <= 12 * 12 || q.capT > 400) {
+          const f = q.versLeFoyer, pat = r.patience_images;
+          q.versLeFoyer = null; q.auFoyer = f; q.cap = null; q.vx = 0; q.vy = 0;
+          q.etat = 'arret';
+          q.minuterie = pat[0] + hash2(q.id * 2654435761 + jour, 0xF0E1) % Math.max(1, pat[1] - pat[0]);
+          regarder(q, f.x - q.x, f.y - q.y);
+        }
+      } else if (q.auFoyer && q.etat !== 'arret') { q.auFoyer = null; q.placeAuFeu = null; }
+    }
+    for (const f of Foyers.braserosPres(B.joueur.x, B.joueur.y, BULLE_OUBLI)) {
+      let autour = B.entites.filter(function (q) { return q.type === 'pieton' && (q.auFoyer === f || q.versLeFoyer === f); }).length;
+      if (autour >= r.par_feu) continue;
+      for (const q of pietonsAutour(f.x, f.y, r.appel_px)) {
+        if (autour >= r.par_feu) break;
+        if (!recrutable(q, null) || q.etat !== 'flane' || q.chauffeJour === jour || q.enfant) continue;
+        if (hash2(q.id * 40503 + jour, 0xF0E2) % r.part !== 0) continue;
+        // Sa place au cercle : la premiere LIBRE des `par_feu` places au sud du feu (on voit ses mains a la
+        // flamme), a 60 degres l'une de l'autre — 15 px entre deux corps. ⚠️ Pas un angle a l'empreinte : deux
+        // passants tiraient la meme place, marchaient l'un dans l'autre et creusaient leur chevauchement
+        // (`test_la_foule_ne_se_traverse_plus`).
+        const prises = B.entites.filter(function (o) { return o.type === 'pieton' && (o.auFoyer === f || o.versLeFoyer === f); })
+          .map(function (o) { return o.placeAuFeu; });
+        let k = 0;
+        while (k < r.par_feu && prises.indexOf(k) >= 0) k++;
+        if (k >= r.par_feu) break;
+        const a = Math.PI / 2 + (k - (r.par_feu - 1) / 2) * Math.PI / 3;
+        q.chauffeJour = jour;
+        q.versLeFoyer = f;
+        q.placeAuFeu = k;
+        allerA(q, { x: f.x + Math.cos(a) * r.cercle_px, y: f.y + Math.sin(a) * r.cercle_px });
+        autour++;
+      }
+    }
+  }
+
   /** Arrive a destination : on s'arrete, et on regarde ce qu'on est venu voir. */
   function arriveALaFoire(e, f) {
     if (e.etat !== 'cap' || !e.cap) return false;
@@ -3698,6 +3746,7 @@ const Entites = (function () {
     if (B.t % 60 === 0) rangerLaGreve();
     if (B.t % 60 === 30) naitreLesEnfantsAVelo();
     if (B.t % 30 === 0) naitreLaFoire();
+    if (B.t % 30 === 15) majLesFoyers();
     if (B.t % 40 === 0) naitreLesBetes();
     if (B.t % 30 === 0) majVolDeChar();
     if (B.t % 30 === 0) majBagarre();
@@ -4045,6 +4094,8 @@ const Entites = (function () {
     if (typeof Cabane !== 'undefined') Cabane.bloquer(e);
     // Ni les tables des terrasses de l'ete (les saisons, vague 4c : peintes au sol, solides en leur saison).
     if (typeof RueDesSaisons !== 'undefined') RueDesSaisons.bloquer(e);
+    // Ni les braseros et les roulottes des places, l'hiver (peints, solides tant que la neige tient).
+    if (typeof Foyers !== 'undefined') Foyers.bloquer(e);
   }
 
   // --- La foule ne se traverse pas -------------------------------------------------
@@ -6181,7 +6232,7 @@ const Entites = (function () {
     // wagon passe devant un passant ou derriere, selon sa rangee — mais ils ne
     // sont PAS dans `B.entites` (la lecon des betes). `Foire` ajoute ce qui est
     // a l'ecran, et chacun porte son peintre.
-    if (!B.interieur) { Foire.ajouterVisibles(visibles, cx, cy); Traversier.ajouterVisibles(visibles, cx, cy); Navette.ajouterVisibles(visibles, cx, cy); Fetes.ajouterVisibles(visibles, cx, cy); Halloween.ajouterVisibles(visibles, cx, cy); RueDesSaisons.ajouterVisibles(visibles, cx, cy); Cabane.ajouterVisibles(visibles, cx, cy); Train.ajouterVisibles(visibles, cx, cy); FileDeFoire.ajouterVisibles(visibles, cx, cy); }
+    if (!B.interieur) { Foire.ajouterVisibles(visibles, cx, cy); Traversier.ajouterVisibles(visibles, cx, cy); Navette.ajouterVisibles(visibles, cx, cy); Fetes.ajouterVisibles(visibles, cx, cy); Halloween.ajouterVisibles(visibles, cx, cy); RueDesSaisons.ajouterVisibles(visibles, cx, cy); Foyers.ajouterVisibles(visibles, cx, cy); Cabane.ajouterVisibles(visibles, cx, cy); Train.ajouterVisibles(visibles, cx, cy); FileDeFoire.ajouterVisibles(visibles, cx, cy); }
     const profond = function (e) { return e.remorqueePar ? e.remorqueePar.y + 0.5 : e.y; };
     visibles.sort(function (a, b) {
       return (a.vivant ? 1 : 0) - (b.vivant ? 1 : 0) || profond(a) - profond(b) || a.id - b.id;
@@ -6341,7 +6392,7 @@ const Entites = (function () {
     naitreLesSortes, majSortes, SORTES, SPECTACLES, badauds, artistes, ouvrirLeSpectacle,
     naitreLesHommesSandwichs, enService, solliciter,
     semerDesArmesDeFortune, visibleAEcran,
-    plageEn, litLibre, coinDePlage, plageEnSaison, enSaison,
+    plageEn, litLibre, coinDePlage, plageEnSaison, enSaison, majLesFoyers,
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele, mouiller,
     enjamber, majEnjambe, clotureDevant, reglesCloture,
     blesser, assommer, tuer, alerter, klaxonne, tasser, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers, naitreLEquipe, pousserDecor, boiteTouche, majVolDeChar, emporterLeChar,

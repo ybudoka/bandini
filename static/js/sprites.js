@@ -1225,6 +1225,33 @@ SPRITES.jongleur = {
     ],
   },
 };
+// LE JONGLEUR DE FEU (docs/jalons/la-foire-fermee-l-hiver.md, vague 3) : l'hiver, le meme numero au meme
+// coin de rue, mais ses trois balles sont des TORCHES — Martin : « a la place, jongleur de feu ». ⚠️ La meme
+// sorte, pas une sorte de plus : une sorte neuve dans les amuseurs, c'etait un tirage de plus a chaque
+// melange (`ordreDesSortes`) et tout le hasard de la ville qui glissait, ete compris. C'est l'IMAGE qui
+// change (`fiche.hiver`, `Saisons.ficheDuMoment`) : chaque balle de 2 x 2 devient une flamme — un coeur
+// jaune en haut, l'orange dessous. Les lueurs le soir : `Foyers.lampes`.
+SPRITES.jongleur.hiver = (function (f) {
+  const BALLES = 'jvr';
+  function flamber(img) {
+    return img.map(function (rang, y) {
+      let out = '';
+      for (let x = 0; x < rang.length; x++) {
+        const c = rang[x];
+        if (BALLES.indexOf(c) < 0) { out += c; continue; }
+        out += (y > 0 && img[y - 1][x] === c) ? 'f' : 'y';     // le haut de la balle : le coeur ; le bas : l'orange
+      }
+      return out;
+    });
+  }
+  const poses = {};
+  for (const nom in f.poses) poses[nom] = nom === 'couche' ? f.poses[nom] : f.poses[nom].map(flamber);
+  return Object.assign({}, f, {
+    pal: Object.assign({}, f.pal, { y: '#ffe36a', f: '#ff7a1f' }),
+    poses: poses,
+  });
+})(SPRITES.jongleur);
+
 // L'ECHASSIER — ⚠️ LE SEUL CORPS DE LA VILLE A DEPASSER LA FOULE : 26 pixels
 // de haut au lieu de 13. C'est exactement pour ca qu'il existe — on le voit
 // PAR-DESSUS son propre attroupement, de l'autre bout de la rue, et c'est la

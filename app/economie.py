@@ -575,6 +575,11 @@ TARIFS = {
     "guedille": 16,
     "guedille_pv": 40,
     "guedille_souffle": 60,
+    # Le chocolat CHAUD de la roulotte des places, l'hiver (`foyers.FOYERS`) — pas la tablette des
+    # distributrices (`chocolat`, plus bas) : 19 points pour 3 $, la regle du trottoir tenue (6,3 au dollar).
+    "chocolat_chaud": 3,
+    "chocolat_chaud_pv": 4,
+    "chocolat_chaud_souffle": 15,
     "crevettes": 12,
     "crevettes_pv": 30,
     "crevettes_souffle": 45,

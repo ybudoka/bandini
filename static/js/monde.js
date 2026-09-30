@@ -3203,6 +3203,8 @@ const Monde = (function () {
       out.push({ x: l.x - cx, y: l.y - cy, r: l.r, c: fete || l.c });
       if (out.length >= 25) break;
     }
+    // L'hiver, les braseros des places et les jongleurs de feu (`Foyers`) : sous le meme plafond.
+    if (typeof Foyers !== 'undefined') for (const l of Foyers.lampes(cx, cy)) { if (out.length >= 25) break; out.push(l); }
     return out;
   }
 

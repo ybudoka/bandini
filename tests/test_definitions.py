@@ -48,6 +48,9 @@ MESURE_DU_PAQUET: dict[str, tuple[int, int]] = {
     "tenues": (872, 1_050),
     "distributrices": (530, 700),
     "ambulants": (523, 700),
+    # Les foyers de l'hiver (la foire fermée l'hiver, vague 3, 30 sept. 2026) : les places des braseros et de la
+    # roulotte, la chaleur, le chocolat — lus en jeu, au premier hiver venu (il commence en janvier).
+    "foyers": (277, 450),
     "demenagement": (455, 650),
     "pluie": (426, 600),
     "mantes": (421, 600),

@@ -636,6 +636,12 @@ CATALOGUE: list[Echantillon] = [
     _e("rumeur_incendie", "Feu de bâtiment", duree_s=8.0, volume=0.4, boucle=True, influence=0.45,
        prompt="a large building fire burning, deep roaring flames crackling and popping, wooden beams "
               "snapping, windows cracking in the heat, seamless loop, no sirens, no voices, no music"),
+    # Le brasero des places, l'hiver (docs/jalons/la-foire-fermee-l-hiver.md, vague 3) : un PETIT feu de bois,
+    # pas un bâtiment qui brûle — tenu tant qu'on en est près (une BOUCLE), dosé à la distance (`Foyers.maj`).
+    _e("foyer_feu", "Brasero des places", duree_s=8.0, volume=0.35, boucle=True, influence=0.4,
+       prompt="a small wood fire burning in a steel brazier outdoors on a quiet snowy town square at night, "
+              "gentle crackling and popping of logs, soft flickering flames, close, calm, seamless loop, "
+              "no wind, no voices, no music"),
     _e("eau", "Eau sur la braise", duree_s=1.0, volume=0.5, influence=0.6,
        prompt="a stream of water hitting hot glowing embers, a sharp hissing sizzle of steam rising, "
               "short, close, no voices, no music"),
@@ -1819,6 +1825,8 @@ LIEUX: dict[str, list[str]] = {
     # (`Son.jouerDuLieu`) — ce geste-là garde sa synthèse.
     "foire": ["cloche", "sifflet_train"],
     "incendie": ["rumeur_incendie", "eau"],
+    # Les braseros des places, l'hiver (vague 3) : chargé quand on en approche un (`Foyers.maj`).
+    "foyers": ["foyer_feu"],
     "borne": ["borne_cassee", "borne_jet"],
     "garage": ["rideau_garage"],
     "klaxons": ["corne_a_air", "whoop_police"],

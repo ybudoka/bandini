@@ -297,7 +297,8 @@ CATALOGUE: list[Pieton] = [
     # amuseur joue la ou il y a du monde ; ailleurs, il joue pour les goelands.
     # ⚠️ **ET PERSONNE NE JOUE DEHORS L'HIVER** (Martin, 30 sept. 2026 ; docs/jalons/la-foire-fermee-l-hiver.md,
     # vague 2) : au grand froid, les quatre artistes rentrent hors de l'écran et ne ressortent qu'au printemps
-    # (`froid_max`, le seuil de l'homme au manteau). L'hiver a ses numéros à lui (vague 3).
+    # (`froid_max`, le seuil de l'homme au manteau). SAUF LE JONGLEUR : l'hiver, il jongle avec le feu (vague 3,
+    # `SPRITES.jongleur.hiver`) — et ses torches éclairent la rue le soir (`Foyers.lampes`).
     _p("musicien", "Musicien de rue", "#6b4b8a", "#3a2a1a", "#e8b088", "#2a2a3a",
        sprite="musicien", vitesse=0.0, courage=0.2, temoin=0.6, vie=70,
        argent=(15, 60), metier="musicien", frequence=0.0,
@@ -323,7 +324,7 @@ CATALOGUE: list[Pieton] = [
     _p("jongleur", "Jongleur", "#d4442e", "#3a2a1a", "#e8b088", "#f2c94c",
        sprite="jongleur", vitesse=0.0, courage=0.3, temoin=0.8, vie=70,
        argent=(10, 50), metier="jongleur", frequence=0.0,
-       districts=("faubourg",), froid_max=ARTISTES_FROID_MAX),
+       districts=("faubourg",)),
     # ⚠️ ET LUI DEPASSE LA FOULE. Son corps fait 26 pixels de haut au lieu de
     # 13 : c'est la seule sorte de la ville qu'on voit PAR-DESSUS son propre
     # attroupement, et c'est exactement pour ca qu'il existe. Un echassier a

@@ -26,6 +26,9 @@ Tranché par Martin :
   fontaine de la place à sec, le BBQ remisé ; les chaloupes sorties de l'eau (le traversier continue).
 - **Et à la place**, l'hiver amène : un **jongleur de feu**, des **foyers** au milieu des places, des
   **vendeurs de chocolat chaud**.
+  Tranché ensuite (vague 3) : un brasero de part et d'autre de la fontaine à sec de chaque place, où des
+  passants se chauffent les mains et où le joueur reprend son souffle plus vite ; une roulotte de chocolat
+  chaud près des foyers ; et le jongleur du Faubourg qui jongle avec le feu à la place du jongleur d'été.
 
 En trois vagues, sans un dé et sans rien déplacer (ce qui se pose, en dernier) :
 
@@ -99,3 +102,35 @@ En trois vagues, sans un dé et sans rien déplacer (ce qui se pose, en dernier)
   postent plus en janvier décalent le hasard de la ville, et `test_demeler_ne_pousse_pas_un_passant_sur_la_chaussee`
   est tombé de 0,01 px. Sur la base, 2 graines sur 12 le faisaient déjà tomber : `demeler` tolérait 0,01 px
   d'enfoncement PAR IMAGE. Resserré à un millionième (`TOLERANCE_BORDURE`) : 12 graines sur 12.
+
+### Vague 3 — ce que l'hiver amène (30 sept. 2026)
+
+- **Les foyers des places** (`static/js/foyers.js`, `app/foyers.py`) : sur chaque place publique (la ville en a
+  deux, la fontaine au centre de `_place`), un brasero de part et d'autre de la fontaine à sec et une roulotte
+  de chocolat chaud, chacun sur la première tuile libre d'une liste écrite à la main — du pavé, hors de la rue
+  et du pas d'une porte, à distance de tout décor posé **sur toute la hauteur du dessin** (la roulotte, posée
+  d'abord sous un banc, le couvrait : c'est la capture qui l'a montré). ⚠️ RIEN NE NAÎT : ils se peignent,
+  triés avec les gens, arrêtent le pas, éclairent le soir (les lampes du plafond commun) — sans un dé, sans une
+  entité, pas un numéro décalé (jugé : `B.rng` n'est jamais appelé).
+- **Se chauffer** (`Entites.majLesFoyers`) : un passant qui flâne près d'un feu y va, un sur trois à
+  l'empreinte de son numéro et du jour, une fois par jour, trois au plus par feu, chacun à SA place (trois
+  places à 60° au sud du feu). ⚠️ Un angle à l'empreinte donnait parfois la même place à deux passants : ils
+  marchaient l'un dans l'autre (`test_la_foule_ne_se_traverse_plus`). Le joueur debout près d'un feu reprend
+  son souffle plus vite (`chaleur_souffle`), « ÇA RÉCHAUFFE ».
+- **Le chocolat chaud** : un commerce du trottoir (`Missions.acheterAmbulant`, `commerceDe('chocolat')`), 3 $
+  pour 4 PV et 15 de souffle. ⚠️ Ses tarifs s'appellent `chocolat_chaud` : la clé `chocolat` existait déjà (la
+  tablette des distributrices) et, doublée, elle écrasait le chocolat chaud — le juge lisait la même clé
+  écrasée et restait vert ; c'est ruff (F601) qui l'a vu.
+- **Le jongleur de feu** : la MÊME sorte, pas une de plus — une sorte neuve dans les amuseurs, c'était un
+  tirage de plus à chaque mélange (`ordreDesSortes`), été compris. L'hiver, `SPRITES.jongleur.hiver` change ses
+  trois balles en flammes (cœur jaune, bord orangé), et ses torches éclairent la rue le soir
+  (`Foyers.lampes`). Le jongleur perd donc son `froid_max` de la vague 2.
+- **Le crépitement** (`foyer_feu`, ElevenLabs, 8 s en boucle, lieu `foyers`) : tenu tant qu'on est près d'un feu,
+  dosé à la distance ; faute de fichier, un crépitement synthétisé.
+- **Juges** : `tests/test_foyers_de_l_hiver_js.py` (huit juges ; `allumes()` muté : les cinq de comportement
+  rougissent). Le juge du public du jongleur (la graine 64) éteint les foyers et la saison des kiosques
+  avant `commencer` : il tient à la rue exacte de janvier.
+- ⚠️ **Hors sujet, trouvé en passant** : `test_la_foule_ne_se_traverse_plus` tombe pour 3 graines sur 10 sur
+  dev, même sans ces vagues — deux passants coincés dans le goulot d'une tuile entre la façade et l'abribus
+  du terminus (128, 125) creusent leur chevauchement. Avec le jongleur revenu en janvier, la graine du juge
+  tombe dessus.

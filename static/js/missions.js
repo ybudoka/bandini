@@ -85,6 +85,8 @@ const Missions = (function () {
   // --- Les commerces de trottoir ---------------------------------------------------
 
   function commerceDe(slug) {
+    const f = B.defs.foyers && B.defs.foyers.chocolat;
+    if (f && f.slug === slug) return f;             // la roulotte de chocolat chaud des places, l'hiver (`Foyers`)
     return (B.defs.ambulants || []).find(function (c) { return c.slug === slug; }) || null;
   }
 
@@ -304,6 +306,8 @@ const Missions = (function () {
     if (Souterrain.sousLaMain(j)) return Souterrain.agir(j);
     // Le marché aux puces du dimanche : l'étal de Ti-Rhéal ou celui de Gisèle (`Puces`).
     if (Puces.sousLaMain(j)) return Puces.agir(j);
+    // L'hiver, la roulotte de chocolat chaud d'une place (`Foyers`) : un commerce comme ceux du trottoir.
+    if (Foyers.sousLaMain(j)) return acheterAmbulant(j, { slug: 'chocolat' });
     const etal = etalSousLaMain(j);
     if (etal) return acheterAmbulant(j, etal);
     // ⚠️ LES HOMMES DE SAL AVANT TOUT LE MONDE : quand ils sont sur toi, il
@@ -3882,6 +3886,7 @@ const Missions = (function () {
     if (ascenseur) { B.invite = ascenseur; return; }
     const cabane = Cabane.invite(j);
     if (cabane) { B.invite = cabane; return; }
+    if (Foyers.sousLaMain(j)) { const c = commerceDe('chocolat'); B.invite = c.nom.toUpperCase() + ' — ' + prixAmbulant(j, c) + ' $'; return; }
     const etal = etalSousLaMain(j);
     if (etal) {
       const c = commerceDe(etal.slug);
