@@ -74,9 +74,12 @@ from .version import VERSION
 #:   ne parle qu'au lever du jour ou quand on achète le journal ou vend une photo — et si le jour se lève
 #:   avant l'arrivée de la suite, la manchette l'ATTEND au lieu de se perdre (`Missions.nouveauJour`) ;
 #: - les **Galeries hantées** (`galeries`) : on n'y entre que par leur bloc, la nuit, et `Galeries.maj`
-#:   se tait sans elles.
+#:   se tait sans elles ;
+#: - leurs **voix** (`voix_de_la_suite`, `audio.series_de_la_suite`) : le journal, le 6/49, Louise et les
+#:   Galeries ne disent que ces textes-là. `Son.Voix.histoire()` les déplie à l'arrivée, et une banque encore
+#:   vide ne se marque pas chargée tant que la suite n'est pas là (`Son.Voix.chargerHistoire`).
 DANS_LA_SUITE: tuple[str, ...] = ("journal", "journal_speciales", "journal_lecons", "journal_matins",
-                                  "photos", "galeries")
+                                  "photos", "galeries", "voix_de_la_suite")
 
 #: Ce qu'une fiche de personnage porte et qu'aucun script ne lit : sa voix ElevenLabs (le nom de la voix,
 #: `audio.voix_*` la lit en Python pour générer ses mp3). 1 698 octets bruts / 658 gzip sur le paquet.
@@ -99,6 +102,8 @@ def assembler() -> dict:
         "version": VERSION,
         "tuile_px": carte.TUILE_PX,
         "audio": audio.exporter(),
+        # Les voix du Clairon et des Galeries, en séries, avec leurs textes dans la suite (`DANS_LA_SUITE`).
+        "voix_de_la_suite": audio.series_de_la_suite(),
         "vehicules": vehicules.CATALOGUE,
         "conduite": vehicules.exporter_conduite(),
         "armes": armes.CATALOGUE,

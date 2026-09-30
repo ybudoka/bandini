@@ -8,7 +8,8 @@ chercher. Ce qu'ils tiennent, chacun la preuve d'une clé :
 - la suite est demandée au démarrage, UNE fois, et ses clés reviennent sous leur nom ;
 - un jour qui se lève avant elle ne perd pas sa une : la manchette ATTEND, puis s'affiche et se dit ;
 - une demande ratée se refait, sans marteler (une fois par `REESSAI_IMAGES`) ;
-- sans elle, rien ne lève : le déclic de la photo, Louise, les Galeries la nuit, le bulletin de la radio.
+- sans elle, rien ne lève : le déclic de la photo, Louise, les Galeries la nuit, le bulletin de la radio ;
+- les voix du Clairon et des Galeries (`voix_de_la_suite`) arrivent avec elle, et leur banque se charge alors.
 """
 
 from app import definitions
@@ -74,6 +75,33 @@ def test_la_manchette_attend_la_suite_puis_s_affiche_et_se_dit(banc):
     assert r["qui"] == "LE CLAIRON DE LA BAIE" and r["titre"] == "UN MORT DANS LA RUE", r
     assert r["lue"] == "narrateur-journal-un_mort", "la une s'affiche, mais le narrateur ne la dit plus"
     assert r["manchette"] == "un_mort" and r["attentes"] == 0
+
+
+def test_les_voix_du_clairon_arrivent_avec_la_suite(banc, suite_du_paquet):
+    """`voix_de_la_suite` (30 sept. 2026) : le journal, le 6/49, Louise et les Galeries voyagent avec leurs textes.
+    ⚠️ Le piège : `chargerHistoire('journal')` appelé AVANT la suite marquait la banque chargée — vide — et elle ne
+    se serait plus jamais chargée. Une banque vide ne se marque pas ; la suite arrivée, elle se déplie et se charge."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const V = L.Son.Voix;
+        const compter = function (m) { return V.histoire().filter(function (v) { return v.mission === m; }).length; };
+        V.chargerHistoire('journal');
+        const avant = { journal: compter('journal'), galeries: compter('galeries'), marquee: V.missionsChargees.has('journal') };
+        for (let i = 0; i < L.Suite.REESSAI_IMAGES + 5 && !L.Suite.arrivee(); i++) { o.frame(1); }
+        return o.attendre().then(function () {
+          V.chargerHistoire('journal');
+          return { avant: avant, arrivee: L.Suite.arrivee(), journal: compter('journal'), galeries: compter('galeries'), clairon: compter('clairon'),
+                   marquee: V.missionsChargees.has('journal'),
+                   braquage: V.histoire().some(function (v) { return v.slug === 'narrateur-journal-un_braquage'; }) };
+        });
+    }""", poser_la_suite=False, suite_panne=1)
+    series = {s["prefixe"]: s for s in suite_du_paquet["voix_de_la_suite"]}
+    assert r["avant"] == {"journal": 0, "galeries": 0, "marquee": False}, \
+        "sans la suite, une banque vide s'est marquée chargée : elle ne se chargera plus jamais"
+    assert r["arrivee"] is True
+    assert r["journal"] == len(series["narrateur-journal-"]["noms"]) + len(series["narrateur-loto-"]["noms"])
+    assert r["galeries"] == len(series["galeries-"]["noms"]) and r["clairon"] == len(series["louise-clairon-"]["noms"])
+    assert r["marquee"] is True and r["braquage"] is True
 
 
 def test_la_une_d_un_matin_passe_ne_parait_pas_le_lendemain(banc):

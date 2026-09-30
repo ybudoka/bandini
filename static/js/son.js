@@ -1520,16 +1520,12 @@ const Son = (function () {
       if (!a) return [];
       // ⚠️ LES SERIES (`audio.exporter()["series"]`, les 55 voix du 6/49) se deplient ICI, une fois, DANS
       // la liste du paquet : c'est elle que tout le monde lit, et qu'une mission complete a son tour.
-      if (a.series) {
-        a.histoire = a.histoire || [];
-        for (const s of a.series) {
-          for (const nom of s.noms) {
-            a.histoire.push({ slug: s.prefixe + nom, qui: s.qui, mission: s.mission, partie: s.partie, telephone: s.telephone,
-                              volume: s.volume, fichier: s.sans_fichier.indexOf(nom) >= 0 ? null : 'histoire-' + s.prefixe + nom + '.mp3' });
-          }
-        }
-        delete a.series;
-      }
+      if (a.series) { Voix.deplier(a, a.series); delete a.series; }
+      // ⚠️ ET CELLES DE LA SUITE DU PAQUET (`voix_de_la_suite`, 30 sept. 2026) : le Clairon, le 6/49, Louise et les
+      // Galeries voyagent avec leurs textes (`Suite`). Dépliées UNE fois, à la première lecture après leur arrivée
+      // — `a.suiteDepliee` retient laquelle, pour qu'un paquet rechargé les redéplie.
+      const suite = B.defs.voix_de_la_suite;
+      if (suite && a.suiteDepliee !== suite) { Voix.deplier(a, suite); a.suiteDepliee = suite; }
       return a.histoire || [];
     },
 
@@ -1545,9 +1541,23 @@ const Son = (function () {
       Voix.histoire();
     },
 
+    /** Ajoute chaque voix des `series` a la liste du paquet (`a.histoire`). */
+    deplier: function (a, series) {
+      a.histoire = a.histoire || [];
+      for (const s of series) {
+        for (const nom of s.noms) {
+          a.histoire.push({ slug: s.prefixe + nom, qui: s.qui, mission: s.mission, partie: s.partie, telephone: s.telephone,
+                            volume: s.volume, fichier: s.sans_fichier.indexOf(nom) >= 0 ? null : 'histoire-' + s.prefixe + nom + '.mp3' });
+        }
+      }
+    },
+
     /** Les repliques d'une mission se telechargent quand on commence a lui parler. */
     chargerHistoire: function (mission) {
       if (Voix.missionsChargees.has(mission)) return;
+      // ⚠️ Une banque encore VIDE ne se marque pas chargée : ses voix sont peut-être dans la suite du paquet
+      // (`voix_de_la_suite`), pas encore arrivée — marquée, elle ne se chargerait plus jamais.
+      if (!Voix.histoire().some(function (v) { return v.mission === mission; })) return;
       Voix.missionsChargees.add(mission);
       if (!ctx || !fenetre || !fenetre.fetch) return;
       Voix.histoire().filter(function (v) { return v.mission === mission && v.fichier; }).forEach(function (v) {

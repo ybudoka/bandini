@@ -26,12 +26,24 @@ REGLES: list[Regle] = [
     {"slug": "un_mort", "cle": "tues", "min": 1, "titre": "UN MORT DANS LA RUE",
      "texte": "UN PASSANT RETROUVÉ SANS VIE. TÉMOINS RECHERCHÉS.",
      "lu": "Un mort dans la rue. Un passant retrouvé sans vie ; témoins recherchés."},
+    # ⚠️ Trois manchettes du 30 sept. 2026 (« le Clairon a plus à dire ») sur des statistiques déjà comptées et
+    # jamais lues : `braquages`, `arrestations`, `bateauxVoles`. Elles sont gardées dans l'instantané de la veille
+    # (`p.journal`, `Missions.manchetteDuJour`) — sans lui, le total depuis le début passerait tous les matins.
+    {"slug": "un_braquage", "cle": "braquages", "min": 1, "titre": "UN COMMERCE BRAQUÉ",
+     "texte": "LE COMMIS A LEVÉ LES MAINS. LA CAISSE EST PARTIE AVEC LE VOLEUR.",
+     "lu": "Un commerce braqué. Le commis a levé les mains, et la caisse est partie avec le voleur. « Il avait l'air poli », dit-il."},
     {"slug": "un_blesse", "cle": "hospitalisations", "min": 1, "titre": "UN BLESSÉ À L'HÔPITAL",
      "texte": "LE DR LACHANCE PARLE D'UNE NUIT AGITÉE AUX URGENCES.",
      "lu": "Un blessé à l'hôpital. Le docteur Lachance parle d'une nuit agitée aux urgences."},
+    {"slug": "une_arrestation", "cle": "arrestations", "min": 1, "titre": "UN SUSPECT AU POSTE",
+     "texte": "LE SERGENT PARLE D'UN VISAGE CONNU ET D'UNE AMENDE SALÉE.",
+     "lu": "Un suspect au poste. Le sergent parle d'un visage connu, et d'une amende salée. Il est ressorti au matin, les poches plus légères."},
     {"slug": "vague_de_vols", "cle": "volees", "min": 3, "titre": "VAGUE DE VOLS D'AUTOS",
      "texte": "TROIS VÉHICULES DISPARUS. « ON A NOS SOUPÇONS », DIT LE SERGENT.",
      "lu": "Vague de vols d'autos. Trois véhicules disparus. « On a nos soupçons », dit le sergent."},
+    {"slug": "un_bateau_vole", "cle": "bateauxVoles", "min": 1, "titre": "UN BATEAU DISPARU AU QUAI",
+     "texte": "SON PROPRIÉTAIRE CHERCHE ENCORE SES AMARRES.",
+     "lu": "Un bateau disparu au quai. Son propriétaire cherche encore ses amarres. « Il reviendra quand il aura faim », dit un pêcheur."},
     {"slug": "un_char_vole", "cle": "volees", "min": 1, "titre": "UN CHAR VOLÉ AU FAUBOURG",
      "texte": "ON L'A VU DISPARAÎTRE EN PLEINE RUE. IL EST REPARTI EN PLEIN VOL.",
      "lu": "Un char volé au Faubourg. On l'a vu disparaître en pleine rue. Il est reparti en plein vol."},
@@ -49,7 +61,7 @@ REGLES: list[Regle] = [
 #: LES MATINS CALMES — ce que le Clairon lit quand il ne s'est RIEN passé.
 #:
 #: ⚠️ « Brume sur le bassin » (le repli, ci-dessus) était le SEUL matin normal :
-#: chaque matin où la ville dormait se lisait mot pour mot pareil. Ces sept-là
+#: chaque matin où la ville dormait se lisait mot pour mot pareil. Ces dix-sept-là
 #: s'ajoutent au bassin : le narrateur en tire un, sans jamais redire le
 #: précédent (même règle que les répliques de la rue), et le repli reste le
 #: filet — il n'y a rien de plus grave à dire.
@@ -82,6 +94,37 @@ MATINS: list[Regle] = [
     {"slug": "matin_silence", "cle": "crimes", "min": 0, "titre": "UN MATIN TRANQUILLE",
      "texte": "RIEN À SIGNALER À BAIE-DES-BRUMES. LE MEILLEUR GENRE DE MATIN.",
      "lu": "Un matin tranquille. Rien à signaler à Baie-des-Brumes, le meilleur genre de matin."},
+    # Dix matins de plus (30 sept. 2026) : sans saison — une partie commence en janvier —, et chacun avec sa chute.
+    {"slug": "matin_traversier", "cle": "crimes", "min": 0, "titre": "LE TRAVERSIER PART À L'HEURE",
+     "texte": "UNE PREMIÈRE DEPUIS DES MOIS. LE CAPITAINE N'EN REVIENT PAS.",
+     "lu": "Le traversier part à l'heure. Une première depuis des mois ; le capitaine Bérubé n'en revient pas."},
+    {"slug": "matin_bingo", "cle": "crimes", "min": 0, "titre": "LE BINGO FAIT SALLE COMBLE",
+     "texte": "UNE PAROISSIENNE A CRIÉ BINGO DEUX FOIS. ON VÉRIFIE SES CARTES.",
+     "lu": "Le bingo fait salle comble. Une paroissienne a crié bingo deux fois ; le curé vérifie ses cartes."},
+    {"slug": "matin_chat", "cle": "crimes", "min": 0, "titre": "LE CHAT DU DÉPANNEUR EST REVENU",
+     "texte": "PLUS GRAS QU'AVANT. PERSONNE NE POSE DE QUESTIONS.",
+     "lu": "Le chat du dépanneur est revenu de sa fugue. Plus gras qu'avant ; personne ne pose de questions."},
+    {"slug": "matin_horloge", "cle": "crimes", "min": 0, "titre": "L'HORLOGE DE LA VILLE RETARDE",
+     "texte": "DE SEPT MINUTES. LE CONSEIL EN DÉBATTRA JEUDI.",
+     "lu": "L'horloge de l'hôtel de ville retarde de sept minutes. Le conseil en débattra jeudi, si tout le monde arrive à l'heure."},
+    {"slug": "matin_autre_rive", "cle": "crimes", "min": 0, "titre": "ON VOIT L'AUTRE RIVE",
+     "texte": "LA BRUME S'EST LEVÉE SUR LA BAIE. CERTAINS AURAIENT PRÉFÉRÉ PAS.",
+     "lu": "On voit l'autre rive. La brume s'est levée sur la baie, pour une fois ; certains auraient préféré pas."},
+    {"slug": "matin_casse_croute", "cle": "crimes", "min": 0, "titre": "UNE FILE AU CASSE-CROÛTE",
+     "texte": "SIX HEURES DU MATIN, ET DÉJÀ DES FRITES. ON NE JUGE PERSONNE.",
+     "lu": "Une file au casse-croûte. Six heures du matin, et déjà des frites ; on ne juge personne."},
+    {"slug": "matin_cloches", "cle": "crimes", "min": 0, "titre": "LES CLOCHES SONNENT SEPT HEURES",
+     "texte": "TOUTE LA VILLE LES ENTEND. PERSONNE NE SE LÈVE.",
+     "lu": "Les cloches sonnent sept heures. Toute la ville les entend ; personne ne se lève."},
+    {"slug": "matin_mots_croises", "cle": "crimes", "min": 0, "titre": "LES MOTS CROISÉS EN PAGE HUIT",
+     "texte": "LE DOUZE HORIZONTAL, C'EST « BRUME ». COMME D'HABITUDE.",
+     "lu": "Les mots croisés sont en page huit. Le douze horizontal, c'est « brume », comme d'habitude."},
+    {"slug": "matin_facteur", "cle": "crimes", "min": 0, "titre": "LE FACTEUR A FINI AVANT MIDI",
+     "texte": "ON SOUPÇONNE UN RACCOURCI PAR LES COURS ARRIÈRE.",
+     "lu": "Le facteur a fini sa tournée avant midi. On soupçonne un raccourci par les cours arrière."},
+    {"slug": "matin_toune", "cle": "crimes", "min": 0, "titre": "LA RADIO JOUE LA MÊME TOUNE",
+     "texte": "POUR LA TROISIÈME FOIS CE MATIN. TOUT LE MONDE FREDONNE.",
+     "lu": "La radio joue la même toune, pour la troisième fois ce matin. Personne n'appelle pour se plaindre ; tout le monde fredonne."},
 ]
 
 #: CE QUE LE JEU T'APPREND, un matin a la fois.
@@ -118,6 +161,29 @@ LECONS: list[dict] = [
     {"slug": "lecon_cloture", "cle": "clotures", "titre": "LES RACCOURCIS DU FAUBOURG",
      "texte": "UNE CLÔTURE S'ENJAMBE. LA POLICE AUSSI, MAIS ELLE Y PERD LE MÊME TEMPS.",
      "lu": "Les raccourcis du Faubourg. Une clôture se franchit à pied — la police aussi, mais elle y perd le même temps que vous."},
+    # Six leçons de plus (30 sept. 2026), chacune vérifiée dans le code avant d'être écrite : le lit de la planque
+    # (sauvegarde, toute la vie), la coupe de couleur (12 $, la recherche à zéro), le 6/49 (2 $ chez Ti-Paul), le
+    # camion d'asphalte (devant la fourrière, au klaxon), Me Desjardins (au Brouillard, une page par jour), et les
+    # photos de Louise — la dernière : Louise n'arrive qu'avec l'histoire. ⚠️ Leur `cle` n'est comptée nulle part,
+    # comme celles d'avant sauf `courses` : chaque leçon se lit une fois, et c'est tout.
+    {"slug": "lecon_dormir", "cle": "nuits", "titre": "UNE BONNE NUIT À LA PLANQUE",
+     "texte": "ON SE RÉVEILLE EN PLEINE FORME, ET LA JOURNÉE EST MISE DE CÔTÉ.",
+     "lu": "Une bonne nuit à la planque. Un lit, et on se réveille en pleine forme ; la journée, elle, est mise de côté."},
+    {"slug": "lecon_barbier", "cle": "coupes", "titre": "RECHERCHÉ? PASSEZ CHEZ LE BARBIER",
+     "texte": "UNE COUPE DE COULEUR, ET LA POLICE NE VOUS RECONNAÎT PLUS.",
+     "lu": "Recherché? Passez chez le barbier. Une coupe de couleur, douze piastres, et la police ne vous reconnaît plus. Le stool non plus."},
+    {"slug": "lecon_loto", "cle": "billets", "titre": "LE 6/49 DU DÉPANNEUR",
+     "texte": "DEUX PIASTRES LE BILLET CHEZ TI-PAUL. LE TIRAGE, C'EST LA NUIT.",
+     "lu": "Le six-quarante-neuf du dépanneur. Deux piastres le billet, chez Ti-Paul ; le tirage se fait la nuit, et les numéros sont dans le journal du matin. On peut gagner. Ça arrive."},
+    {"slug": "lecon_nids", "cle": "nids", "titre": "LES NIDS-DE-POULE SE BOUCHENT",
+     "texte": "LE CAMION D'ASPHALTE, DEVANT LA FOURRIÈRE, ATTEND UN CHAUFFEUR.",
+     "lu": "Les nids-de-poule se bouchent. Le camion d'asphalte, garé devant la fourrière, attend un chauffeur ; un coup de klaxon, et la ville vous paie chaque trou."},
+    {"slug": "lecon_avocat", "cle": "avocat", "titre": "UN CASIER TROP ÉPAIS?",
+     "texte": "ME DESJARDINS, AU BROUILLARD, EN EFFACE UNE PAGE PAR JOUR.",
+     "lu": "Un casier trop épais? Maître Desjardins, au Brouillard, en efface une page par jour. Ce n'est pas donné ; la prison non plus."},
+    {"slug": "lecon_photos", "cle": "photos", "titre": "LE CLAIRON ACHÈTE VOS PHOTOS",
+     "texte": "LOUISE PAIE BIEN UNE BELLE POURSUITE. UNE PAR JOUR.",
+     "lu": "Le Clairon achète vos photos. Louise paie bien une belle poursuite, une par jour. Conseil d'ami : évitez d'être dessus."},
 ]
 
 

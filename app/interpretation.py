@@ -450,6 +450,27 @@ JEU: dict[str, str] = {
     "narrateur-journal-lecon_garage": "[knowingly] Le garage de Rocco. On y répare, on y repeint… et une peinture neuve fait oublier un char que la police cherche.",
     "narrateur-journal-lecon_proprietes": "[confident] Devenir propriétaire. Certains commerces de la ville se vendent… et ils rapportent tous les jours, que vous y soyez ou non.",
     "narrateur-journal-lecon_cloture": "[amused] Les raccourcis du Faubourg. Une clôture se franchit à pied — la police aussi… mais elle y perd le même temps que vous.",
+    # --- Le Clairon a plus à dire (30 sept. 2026) : trois manchettes et dix matins calmes. La chute est
+    # toujours sèche : il a tout vu, rien ne le surprend.
+    "narrateur-journal-un_braquage": "[serious] Un commerce braqué. Le commis a levé les mains… et la caisse est partie avec le voleur. [wryly] « Il avait l'air poli », dit-il.",
+    "narrateur-journal-une_arrestation": "[matter-of-fact] Un suspect au poste. Le sergent parle d'un visage connu… et d'une amende salée. [wryly] Il est ressorti au matin, les poches plus légères.",
+    "narrateur-journal-un_bateau_vole": "[serious] Un bateau disparu au quai. Son propriétaire cherche encore ses amarres. [deadpan] « Il reviendra quand il aura faim », dit un pêcheur.",
+    "narrateur-journal-matin_traversier": "[surprised] Le traversier part à l'heure! Une première depuis des mois… [amused] le capitaine Bérubé n'en revient pas.",
+    "narrateur-journal-matin_bingo": "[cheerful] Le bingo fait salle comble. Une paroissienne a crié bingo deux fois… [wryly] le curé vérifie ses cartes.",
+    "narrateur-journal-matin_chat": "[calm] Le chat du dépanneur est revenu de sa fugue. Plus gras qu'avant… [knowingly] personne ne pose de questions.",
+    "narrateur-journal-matin_horloge": "[matter-of-fact] L'horloge de l'hôtel de ville retarde de sept minutes. Le conseil en débattra jeudi… [wryly] si tout le monde arrive à l'heure.",
+    "narrateur-journal-matin_autre_rive": "[calm] On voit l'autre rive. La brume s'est levée sur la baie, pour une fois… [wryly] certains auraient préféré pas.",
+    "narrateur-journal-matin_casse_croute": "[amused] Une file au casse-croûte. Six heures du matin, et déjà des frites… [warmly] on ne juge personne.",
+    "narrateur-journal-matin_cloches": "[calm] Les cloches sonnent sept heures. Toute la ville les entend… [sighs] personne ne se lève.",
+    "narrateur-journal-matin_mots_croises": "[casually] Les mots croisés sont en page huit. Le douze horizontal, c'est « brume »… [wryly] comme d'habitude.",
+    "narrateur-journal-matin_facteur": "[amused] Le facteur a fini sa tournée avant midi. [knowingly] On soupçonne un raccourci… par les cours arrière.",
+    "narrateur-journal-matin_toune": "[amused] La radio joue la même toune, pour la troisième fois ce matin. Personne n'appelle pour se plaindre… [warmly] tout le monde fredonne.",
+    "narrateur-journal-lecon_dormir": "[warmly] Une bonne nuit à la planque. Un lit, et on se réveille en pleine forme… [knowingly] la journée, elle, est mise de côté.",
+    "narrateur-journal-lecon_barbier": "[knowingly] Recherché? Passez chez le barbier. Une coupe de couleur, douze piastres… et la police ne vous reconnaît plus. [wryly] Le stool non plus.",
+    "narrateur-journal-lecon_loto": "[cheerful] Le six-quarante-neuf du dépanneur. Deux piastres le billet, chez Ti-Paul… le tirage se fait la nuit, et les numéros sont dans le journal du matin. [wryly] On peut gagner. Ça arrive.",
+    "narrateur-journal-lecon_nids": "[matter-of-fact] Les nids-de-poule se bouchent. Le camion d'asphalte, garé devant la fourrière, attend un chauffeur… [amused] un coup de klaxon, et la ville vous paie chaque trou.",
+    "narrateur-journal-lecon_avocat": "[serious] Un casier trop épais? Maître Desjardins, au Brouillard, en efface une page par jour. [wryly] Ce n'est pas donné… la prison non plus.",
+    "narrateur-journal-lecon_photos": "[cheerful] Le Clairon achète vos photos. Louise paie bien une belle poursuite, une par jour. [wryly] Conseil d'ami… évitez d'être dessus.",
 
     # --- L'ouverture. ⚠️ UNE pause par phrase, pas plus : la musique fait trente
     # secondes et reboucle, et la premiere minute de quelqu'un n'est pas a lui.

@@ -957,3 +957,34 @@ def test_les_matins_calmes_ne_se_redisent_pas_deux_fois_de_suite(banc, paquet):
         assert a != b, f"deux matins calmes identiques de suite : {titres}"
     # Et le bassin est assez large pour qu'on en voie plus d'un sur huit jours.
     assert len(set(titres)) >= 2, f"les matins ne varient pas : {titres}"
+
+
+def test_un_braquage_une_arrestation_un_bateau_font_la_une_sans_ressortir_le_passe(banc):
+    """Le Clairon a plus à dire (30 sept. 2026) : trois statistiques déjà comptées et jamais lues font la une le
+    lendemain — `braquages`, `arrestations`, `bateauxVoles`. ⚠️ Deux pièges : l'instantané de la veille doit les
+    garder (sinon le total depuis le début passe tous les matins), et une partie commencée AVANT elles (son
+    instantané ne les connaît pas) ne fait pas la une de tout son passé d'un coup."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const p = L.B.partie, s = p.stats;
+        const une = function () { L.Missions.nouveauJour(); const m = p.derniereManchette; L.B.dialogue = null; return m ? m.slug : null; };
+        une();
+        const dites = {};
+        for (const k of ['braquages', 'arrestations', 'bateauxVoles']) {
+            s[k] = (s[k] || 0) + 1;
+            dites[k] = [une(), une()];
+        }
+        // Une partie d'avant : son instantané n'a que les cinq clés d'origine, et elle a déjà braqué.
+        s.braquages = 7; s.arrestations = 4; s.bateauxVoles = 2;
+        p.journal = { crimes: s.crimes, tues: s.tues, volees: s.volees, courses: s.courses || 0,
+                      hospitalisations: s.hospitalisations || 0 };
+        const vieille = une();
+        return { dites: dites, vieille: vieille };
+    }""")
+    attendu = {"braquages": "un_braquage", "arrestations": "une_arrestation", "bateauxVoles": "un_bateau_vole"}
+    for cle, slug in attendu.items():
+        lendemain, surlendemain = r["dites"][cle]
+        assert lendemain == slug, f"{cle} + 1 : la une est {lendemain}, pas {slug}"
+        assert surlendemain != slug, f"{slug} repasse le surlendemain : l'instantané de la veille ne garde pas {cle}"
+    assert r["vieille"] not in attendu.values(), \
+        f"une partie d'avant fait la une de tout son passé : {r['vieille']}"

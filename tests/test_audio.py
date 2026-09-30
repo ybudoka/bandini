@@ -370,7 +370,9 @@ def test_les_voix_de_l_histoire_sont_declarees_par_mission(paquet, a_jouer):
     from app import missions
     # ⚠️ Le journal et les repos voyagent en SÉRIES depuis le 30 sept. 2026 (la deuxième cure du paquet), comme
     # le tirage du 6/49 et la voix des Galeries : on juge ce que le navigateur TIENT, séries dépliées.
-    histoire = [v for v in audio.deplier_les_series(paquet["audio"]) if v["mission"] in ("journal", "ouverture", "repos")]
+    # ⚠️ Et celles du Clairon voyagent dans la SUITE du paquet depuis le 30 sept. 2026 (`voix_de_la_suite`).
+    histoire = [v for v in audio.deplier_les_series(paquet["audio"], paquet["voix_de_la_suite"])
+                if v["mission"] in ("journal", "ouverture", "repos")]
     assert len(histoire) >= 30
     assert {v["mission"] for v in paquet["audio"]["histoire"]} == {"ouverture"}, \
         "le journal et les repos voyagent en séries : un par un, ils repesaient 8 Ko sur le paquet"

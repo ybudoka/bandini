@@ -2133,7 +2133,11 @@ const Missions = (function () {
 
   function manchetteDuJour() {
     const p = B.partie, hier = p.journal || {}, s = p.stats;
-    const delta = function (k) { return (s[k] || 0) - (hier[k] || 0); };
+    // ⚠️ Une cle que l'instantane d'hier ne connait pas (une partie commencee avant que sa manchette existe :
+    // les braquages, les arrestations et les bateaux voles du 30 sept. 2026) ne compte pas ce matin — sinon
+    // tout ce qu'on a fait depuis le debut ferait la une d'un coup. Le premier matin d'une partie neuve
+    // (`p.journal` absent) compte tout : ses statistiques partent de zero.
+    const delta = function (k) { return p.journal && !(k in hier) ? 0 : (s[k] || 0) - (hier[k] || 0); };
     const regles = B.defs.journal || [];
     let choisie = null;
     // L'histoire a fait la une : la manchette est imposee, une fois.
@@ -2177,6 +2181,7 @@ const Missions = (function () {
     // « brume » reste la quand rien d'autre ne passe.
     const estUnMatinCalme = choisie && (B.defs.journal_matins || []).some(function (m) { return m.slug === choisie.slug; });
     p.journal = { crimes: s.crimes, tues: s.tues, volees: s.volees, courses: s.courses || 0, hospitalisations: s.hospitalisations || 0,
+                  braquages: s.braquages || 0, arrestations: s.arrestations || 0, bateauxVoles: s.bateauxVoles || 0,
                   matin: estUnMatinCalme ? choisie.slug : null };
     return choisie || regles[regles.length - 1] || null;
   }

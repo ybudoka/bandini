@@ -161,7 +161,9 @@ def test_le_paquet_ne_porte_plus_ce_qui_sert_a_jouer(client):
     # Les voix de l'histoire qui restent sont celles qui n'appartiennent a AUCUNE mission.
     # (Le journal et les repos, en séries depuis le 30 sept. 2026 : on les déplie comme `Son.Voix`.)
     from app import audio
-    restent = {v["mission"] for v in audio.deplier_les_series(paquet["audio"])}
+    # (Et celles du Clairon dans la suite du paquet depuis le 30 sept. 2026 : `/api/suite`, `voix_de_la_suite`.)
+    suite = client.get("/api/suite").get_json()["voix_de_la_suite"]
+    restent = {v["mission"] for v in audio.deplier_les_series(paquet["audio"], suite)}
     assert {"journal", "ouverture", "repos"} <= restent
     assert not restent & {m["slug"] for m in missions.CATALOGUE}, "une voix de mission est revenue au paquet"
 

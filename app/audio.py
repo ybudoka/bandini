@@ -1984,11 +1984,20 @@ def voix_repos() -> list[dict]:
     return sortie
 
 
-def deplier_les_series(audio_du_paquet: dict) -> list[dict]:
+def series_de_la_suite() -> list[dict]:
+    """Les séries qui voyagent dans la suite du paquet (`definitions.DANS_LA_SUITE`, clé `voix_de_la_suite`),
+    avec les textes qu'elles disent : le Clairon (ses manchettes, le tirage du 6/49, Louise) et les Galeries
+    hantées. Rien ne les joue avant que ces textes soient là — `Son.Voix.histoire()` les déplie à l'arrivée."""
+    return [serie_de_voix("narrateur-journal-", voix_journal()), serie_de_voix("narrateur-loto-", voix_loto()),
+            serie_de_voix("louise-clairon-", voix_photos()), serie_de_voix("galeries-", voix_galeries())]
+
+
+def deplier_les_series(audio_du_paquet: dict, suite: list[dict] | None = None) -> list[dict]:
     """Les voix de l'histoire telles que le navigateur les TIENT : `histoire`, plus chaque série dépliée —
-    le jumeau de `Son.Voix.histoire()`, pour les juges qui lisent le paquet."""
+    le jumeau de `Son.Voix.histoire()`, pour les juges qui lisent le paquet. `suite` : les séries de la suite
+    du paquet (`voix_de_la_suite`), une fois arrivée."""
     voix = list(audio_du_paquet.get("histoire", []))
-    for s in audio_du_paquet.get("series", []):
+    for s in [*audio_du_paquet.get("series", []), *(suite or [])]:
         for nom in s["noms"]:
             voix.append({"slug": s["prefixe"] + nom, "qui": s["qui"], "mission": s["mission"], "partie": s["partie"],
                          "telephone": s["telephone"], "volume": s["volume"],
@@ -2400,7 +2409,10 @@ def exporter() -> dict:
         # le narrateur lit et le mot de repos de chaque personnage n'étaient qu'un nom qui change sous un
         # préfixe commun — 8 830 octets bruts déclarés un par un. Une série pour le journal, une par personnage
         # pour les repos (`series_des_repos`) ; `histoire` ne garde que l'ouverture.
-        "series": [serie_de_voix("narrateur-loto-", voix_loto()), serie_de_voix("galeries-", voix_galeries()), serie_de_voix("halloween-", voix_halloween()),
-                   serie_de_voix("ti_guy-garage-", voix_garage()), serie_de_voix("louise-clairon-", voix_photos()),
-                   serie_de_voix("narrateur-journal-", voix_journal()), *series_des_repos()],
+        #
+        # ⚠️ **ET CELLES DU CLAIRON ET DES GALERIES S'EN VONT DANS LA SUITE, LE 30 SEPT. 2026** (« le Clairon a plus
+        # à dire ») : le journal, le 6/49, Louise et la voix des Galeries ne servent qu'avec leurs textes, qui
+        # voyagent déjà dans la suite (`definitions.DANS_LA_SUITE`) — `series_de_la_suite`.
+        "series": [serie_de_voix("halloween-", voix_halloween()), serie_de_voix("ti_guy-garage-", voix_garage()),
+                   *series_des_repos()],
     }

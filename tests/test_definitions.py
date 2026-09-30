@@ -441,9 +441,17 @@ def test_le_paquet_reste_leger(paquets):
     Le paquet était à 239 864 ; les bêtes qu'on écrase y ajoutent 233 octets (deux cris déclarés au lieu `betes`,
     `ecrasable` et `ecrase_rayon_px` dans la fiche). Regardé avant : fondre les deux cris en un seul rentrait sous le
     plafond, mais le chat et le raton auraient crié pareil — Martin a préféré relever. Le plafond gzip ne bouge pas.
+
+    ⚠️ **LES VOIX DU CLAIRON PASSENT DANS LA SUITE, LE 30 SEPT. 2026 — SON PLAFOND MONTE : 13 000 → 19 500 bruts,
+    6 000 → 8 500 gzip** (docs/jalons/le-clairon-a-plus-a-dire-des-manchettes-des-matins-et-des-lecons-de-plus.md).
+    `dev` débordait déjà (240 119 bruts) et dix-neuf manchettes de plus le poussaient à 240 169 : les séries du
+    journal, du 6/49, de Louise et des Galeries (`voix_de_la_suite`) suivent leurs textes, qui voyagent déjà dans
+    la suite. Mesure : définitions 240 119 → **238 387** bruts, 54 290 → **53 744** gzip ; suite 10 562 → **17 635**
+    bruts, 4 884 → **7 455** gzip. La suite arrive APRÈS l'écran titre, en arrière-plan : c'est là que le poids
+    ne se sent pas.
     """
     for nom, brut_max, fil_max in (("definitions", 241_000, 57_500), ("carte", 560_000, 55_000),
-                                   ("musiques", 50_000, 10_000), ("suite", 13_000, 6_000)):
+                                   ("musiques", 50_000, 10_000), ("suite", 19_500, 8_500)):
         paquet = getattr(paquets, nom)
         mesures = {"definitions": MESURE_DU_PAQUET, "carte": MESURE_DE_LA_CARTE}
         qui = f" — qui a grossi : {_qui_a_grossi(paquet.corps, mesure=mesures[nom])}" if nom in mesures else ""
