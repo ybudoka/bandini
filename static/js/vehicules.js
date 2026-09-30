@@ -1514,6 +1514,7 @@ const Vehicules = (function () {
       Hud.message('LE ' + v.def.nom.toUpperCase() + ' A COULÉ', 240);
     }
     Entites.remous(v.x, v.y, 18);
+    Naufrage.poser(v);                 // la grosse bulle, les cercles, la tache d'huile
     // ⚠️ AU FOND, C'EST UNE EPAVE (Martin, 25 sept. 2026 : « si on le fout dans
     // l'eau ca devrait le detruire, meme hors mission »). On le retirait en
     // gardant son etat de char vivant : tout ce qui guette une epave (`detruire`
@@ -4325,6 +4326,9 @@ const Vehicules = (function () {
       B.stats.rects += 4;
     }
     const ombre = ombreDe(v);
+    // Un char qui coule (`Naufrage`) : son ombre s'efface sur l'eau, vite.
+    const naufrage = Naufrage.etat(v);
+    if (ombre && naufrage) ombre.part *= naufrage.ombre;
     if (ombre) {
       // Meme rectangle que l'ombre, garde pour decouper les faisceaux DES
       // AUTRES chars (v exclut le sien, cf. Base.fin) : le seul endroit ou
@@ -4358,12 +4362,18 @@ const Vehicules = (function () {
     const moment = ficheDuMoment(v);
     const toit = Atlas.cuireCap(moment[0], moment[1], swapsDuMoment(v, def), ROTATIONS, capDe(v.angle), centreDuToit(v));
     const demi = toit.width / 2;
+    const swaps = cavalierDe(v);
+    const cavalier = swaps ? imageDuCavalier(def, v, swaps, tenueDuCavalier(v)) : null;
+    // Il coule : le nez sous l'eau d'abord, et son cavalier palit avec lui (`Naufrage`).
+    if (naufrage) {
+      Naufrage.dessinerChar(ctx, v, naufrage, toit, v.x - cx, v.y - v.z - cy,
+                            cavalier ? { canvas: cavalier.canvas, x: cavalier.x - cx, y: cavalier.y - v.z - cy } : null);
+      return;
+    }
     ctx.drawImage(toit, Math.round(v.x - demi - cx), Math.round(v.y - v.z - demi - cy));
     B.stats.images++;
     // ⚠️ Et le cavalier PAR-DESSUS, toujours : vu d'en haut, celui qui est
     // assis sur la machine est au-dessus d'elle, quel que soit son cap.
-    const swaps = cavalierDe(v);
-    const cavalier = swaps ? imageDuCavalier(def, v, swaps, tenueDuCavalier(v)) : null;
     if (cavalier) {
       ctx.drawImage(cavalier.canvas, Math.round(cavalier.x - cx), Math.round(cavalier.y - v.z - cy));
       B.stats.images++;
