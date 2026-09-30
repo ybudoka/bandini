@@ -33,3 +33,5 @@ un sinus bref au lieu du carré.
   (6 627 o) : rien ne bouge au paquet.
 - Le filet synthétisé (`Son.SFX.menu`, joué tant que le mp3 n'est pas là) passe d'un carré à
   660 Hz à un sinus à 523 Hz.
+- `test_les_bruitages_ont_de_l_aigu` jugeait l'encodeur sur six sons qui doivent briller, dont le
+  clic : il en sort (sourd par choix, comme `couler`). Les cinq autres suffisent.

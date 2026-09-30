@@ -541,8 +541,13 @@ def test_les_bruitages_ont_de_l_aigu():
     aigu est un bruit sourd. Mesure : -10 dB, quatre de marge. `couler`, lui,
     reste dehors et doit le rester : une tete qui passe sous l'eau est SOURDE
     par definition (-47 dB), et c'est le signe que le son est le bon.
+
+    ⚠️ Le CLIC DE MENU est sorti de la liste le 30 sept. 2026, et il doit y
+    rester : Martin l'a trouve « agressant » — il part a chaque cran du
+    curseur — et sa recette est maintenant un tok de marimba feutre a 323 Hz,
+    sourd par choix. Les cinq autres suffisent a juger l'encodeur.
     """
-    for slug in ("argent", "ramasse", "choc", "porte_commerce", "menu", "plongeon"):
+    for slug in ("argent", "ramasse", "choc", "porte_commerce", "plongeon"):
         echantillon = audio.par_slug(slug)
         chemin = audio.chemin(echantillon, 1)
         if not chemin.is_file():
