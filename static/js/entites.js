@@ -987,6 +987,29 @@ const Entites = (function () {
     });
   }
 
+  /** La place de naissance de qui tient un poste, hors du devant d'une porte : elle-meme si elle
+      y est deja, sinon la tuile la plus proche qui ne l'est pas (en spirale, l'ordre de lecture a
+      distance egale), marchable, hors de la rue, hors de l'ecran et libre — ou null.
+      ⚠️ SANS DE : `placeDeNaissance` a deja tire les siens, et un tirage de plus ici ferait
+      basculer le hasard de toute la ville a chaque crieur ne. */
+  function horsDuDevant(place) {
+    if (!place) return null;
+    const tx = Math.floor(place.x / TT), ty = Math.floor(place.y / TT);
+    if (!Monde.devantDUnePorte(tx, ty)) return place;
+    for (let r = 1; r <= 3; r++) {
+      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const x = tx + dx, y = ty + dy;
+        if (!Monde.marchablePieton(x, y) || Monde.solidite(x, y) !== 0 || Monde.estRoute(x, y)) continue;
+        if (Monde.devantDUnePorte(x, y)) continue;
+        const px = x * TT + 8, py = y * TT + 8;
+        if (visibleAEcran(px, py, 24) || !placeLibre(px, py)) continue;
+        return { x: px, y: py };
+      }
+    }
+    return null;
+  }
+
   /** Elles naissent aux coins de rue, pas dans la foule : `frequence` vaut
       zero au catalogue, exactement comme l'homme-sandwich. */
   function naitreLesSortes() {
@@ -1026,7 +1049,12 @@ const Entites = (function () {
       // ne venait le voir. `carte.scenes` donne les endroits ou le monde PASSE
       // ET S'ARRETE : la place publique, les parcs, le terminus d'autobus, le
       // trottoir devant les commerces.
-      const place = spectacle ? sceneLibre(zone) : placeDeNaissance();
+      // ⚠️ QUI TIENT UN POSTE NE NAIT PAS DEVANT UNE PORTE (Martin, 30 sept. 2026 : « des personnes qui
+      // bloquent les portes et qui ne bougent pas »). `placeDeNaissance` pose un passant sur le pas d'une
+      // porte une fois sur trois : celui qui marche s'en va, le crieur plante sa place la ou il nait — il
+      // tenait la porte du Garage Bandini toute la matinee. Il glisse a cote (`horsDuDevant`, sans de).
+      const brute = spectacle ? sceneLibre(zone) : placeDeNaissance();
+      const place = arch.vitesse > 0 ? brute : horsDuDevant(brute);
       if (!place || visibleAEcran(place.x, place.y, 24)) continue;
       // ⚠️ ET SON STANDING, a l'endroit ou elle se pose (4e vague des quartiers) :
       // un touriste ne flane pas au pied des plex du port, un ivrogne ne dort pas

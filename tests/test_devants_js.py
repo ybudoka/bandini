@@ -209,3 +209,43 @@ def test_un_panneau_de_defi_ne_se_plante_ni_sur_un_meuble_ni_entre_deux(lecture)
     for p in r:
         assert not p["dessous"], f"le panneau {p['defi']} est planté sur {p['dessous']} en {p['tuile']}"
         assert len(p["autour"]) <= 1, f"le panneau {p['defi']} est coincé entre {p['autour']} en {p['tuile']}"
+
+
+def test_qui_tient_un_poste_ne_nait_pas_devant_une_porte(banc):
+    """⚠️ Retour de Martin (30 sept. 2026, capture du Garage Bandini) : « il y a encore des personnes qui
+    bloquent les portes et qui ne bougent pas ». Le crieur de journaux, `vitesse: 0`, naissait par
+    `placeDeNaissance` — qui pose un passant SUR le pas d'une porte une fois sur trois : celui qui marche
+    s'en va, le crieur plante sa place la ou il nait (`fige`) et tenait la porte du garage toute la
+    matinee. Le juge fait naitre les sortes du matin autour des portes du Faubourg et de La Shop (les
+    quartiers du crieur) : chaque sorte qui tient un poste est comptee, aucune sur un devant."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        if (L.B.menu) L.Hud.fermerMenu();
+        L.graine(3);
+        const TT = L.TT, def = L.Monde.carte.def;
+        const portes = def.portes.filter(function (p) {
+          const z = L.Monde.zoneA(p.x * TT + 8, (p.y + 1) * TT + 8);
+          return z && (z.district === 'faubourg' || z.district === 'shop') && L.Monde.marchablePieton(p.x, p.y + 1);
+        });
+        const nes = [], devant = [];
+        for (let i = 0; i < portes.length; i++) {
+          const p = portes[i];
+          L.B.joueur.x = p.x * TT + 8; L.B.joueur.y = (p.y + 1) * TT + 8;
+          L.B.partie.heure = 0.35;
+          L.B.entites.filter(function (e) { return e.type === 'pieton' && e.arch && L.Entites.SORTES.indexOf(e.arch) >= 0; })
+            .forEach(L.Entites.retirer);
+          L.Entites.indexer();
+          for (let k = 0; k < 4; k++) L.Entites.naitreLesSortes();
+          for (const e of L.B.entites) {
+            if (e.type !== 'pieton' || !e.vivant || e.etat !== 'fige' || L.Entites.SORTES.indexOf(e.arch) < 0) continue;
+            const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
+            nes.push(e.arch);
+            if (L.Monde.devantDUnePorte(tx, ty)) devant.push([e.arch, tx, ty]);
+          }
+        }
+        return { portes: portes.length, nes: nes.length, crieurs: nes.filter(function (a) { return a === 'crieur'; }).length,
+                 devant: devant };
+    }""")
+    assert r["portes"] >= 20, "le juge ne voit pas assez de portes du Faubourg et de La Shop"
+    assert r["crieurs"] >= 20, f"seulement {r['crieurs']} crieurs nés : le juge ne dit rien"
+    assert r["devant"] == [], f"{len(r['devant'])} sortes plantées devant une porte sur {r['nes']} : {r['devant'][:5]}"
