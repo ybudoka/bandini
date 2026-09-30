@@ -1530,7 +1530,7 @@ const Histoire = (function () {
     // On ne repose pas des morts pour les recoucher.
     if (o.type === 'tuer' && dejaTombes(m.slug, p.etape) >= o.n) { avancer(enSilence); return; }
     p.debutT = B.t;
-    if (B.mission) B.mission.vagues = 0;
+    if (B.mission) { B.mission.vagues = 0; B.mission.relais = 0; }
     if (o.type === 'acte') Chapitres.ouvrirActe(m, o, p.etape);
     // Un `acheter` dont l'article est DÉJÀ en poche au départ : l'étape le dira (`majObjectif`).
     if (o.type === 'acheter' && B.mission && (B.partie.objets[o.article] || B.partie.armes[o.article])) B.mission.acheterDeja = p.etape;
@@ -1972,10 +1972,11 @@ const Histoire = (function () {
     return pourquoi === 'pluie' ? 'auto' : slug;
   }
 
-  function poserLeFuyard(m, o) {
+  function poserLeFuyard(m, o, depuis) {
     // ⚠️ Le fuyard naît dans la ville, près de la porte quand on est dedans (m50 : Lulu le
     // voit filer depuis la cantine), et pas dans le char qu'on a garé devant elle.
-    const ici = ouEstLeJoueurEnVille();
+    // `depuis` (un `relais`) : près du char qu'il vient de lâcher.
+    const ici = depuis || ouEstLeJoueurEnVille();
     const rue = tuileDeRue(ici.x, ici.y, 10, sansChar) || tuileDeRue(ici.x, ici.y, 10);
     if (!rue) return;
     const angle = { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 }[rue.sens];
@@ -2283,7 +2284,16 @@ const Histoire = (function () {
           const pres = j.dansVehicule ? j.dansVehicule : j;
           const d = Math.hypot(v.x - pres.x, v.y - pres.y);
           // Au volant de SON char (on le lui a pris en marche), on l'a rattrapé : il est dehors.
-          if (j.dansVehicule === v || v.etat === 'epave' || (d < 40 && Math.abs(v.vitesse) < 0.6) || v.vie < v.vieMax * 0.5) faireTomberLeFuyard();
+          if (j.dansVehicule === v || v.etat === 'epave' || (d < 40 && Math.abs(v.vitesse) < 0.6) || v.vie < v.vieMax * 0.5) {
+            // `relais` (les chapitres) : rattrapé, il saute dans un autre char tout près — N fois avant de tomber.
+            if ((B.mission.relais || 0) < (o.relais || 0)) {
+              B.mission.relais = (B.mission.relais || 0) + 1;
+              if (v.conducteur !== j) { v.conducteur = null; v.etat = v.etat === 'epave' ? 'epave' : 'stationne'; }
+              v.fuite = false; v.poursuite = false;
+              Hud.message('IL SAUTE DANS UN AUTRE CHAR !', 150);
+              dansLaVille(function () { poserLeFuyard(m, o, { x: v.x, y: v.y }); });
+            } else faireTomberLeFuyard();
+          }
           return;
         }
         const porteur = B.mission.entites.find(function (e) { return e.porteLaCaisse; });

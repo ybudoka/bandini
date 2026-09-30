@@ -350,3 +350,21 @@ def test_tenir_sortir_remet_le_compte_a_zero(banc):
 
 def test_tenir_strict_sortir_fait_rater(banc):
     assert _tenir(banc, sortir=True, strict=True)["etape"] is None
+
+
+def test_le_fuyard_saute_dans_un_autre_char_avant_de_tomber(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + """
+        const m = ouvrir(L), B = L.B;
+        m.objectifs[1] = { type: 'ramasser', texte: 'RATTRAPE LE VOLEUR', cible: 'fuyard', vehicule: 'auto', relais: 1 };
+        commencer(L, o, 'zz'); jouer(L, o);
+        const premier = B.mission.fuyard; premier.vie = 1; jouer(L, o);
+        const second = B.mission.fuyard, tombe1 = !!B.mission.fuyardTombe;
+        const pres = second ? Math.round(Math.hypot(second.x - premier.x, second.y - premier.y) / 16) : null;
+        if (second) { second.vie = 1; jouer(L, o); }
+        return { autre: !!second && second !== premier, tombe1: tombe1, tombe2: !!B.mission.fuyardTombe, pres: pres,
+                 premierGare: premier.conducteur === null && !premier.fuite };
+    }""")
+    assert r["autre"] and not r["tombe1"], r
+    assert r["tombe2"], "le dernier relais fait, il tombe"
+    assert r["pres"] is not None and r["pres"] <= 12, "il saute dans un char tout près du premier"
+    assert r["premierGare"], r
