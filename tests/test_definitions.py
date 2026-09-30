@@ -472,13 +472,17 @@ def test_le_paquet_reste_leger(paquets):
     plus que s'il diffère du slug ; couper encore 852 octets, c'était retirer un klaxon ou les textes. Le plafond
     gzip (8 500) ne bouge pas.
 
+    ⚠️ **241 000 → 242 000 BRUTS, LE 30 SEPT. 2026 AU SOIR, TRANCHÉ PAR MARTIN** (docs/jalons/la-patinoire-du-parc-deuxieme-vague.md).
+    Les foyers de l'hiver avaient mené `dev` à 241 290 ; la patinoire y ajoute 278 octets (sa rumeur, sa valse et son
+    lieu dans le catalogue audio) : 241 568. Proposé à Martin : relever, ou faire maigrir — il a relevé.
+
     ⚠️ **LA PATINOIRE DU PARC, LE MÊME JOUR — 21 000 → 23 000 bruts, 8 500 → 9 500 gzip**
     (docs/jalons/la-patinoire-du-parc.md). Sa fiche (couleurs, glisse, patineurs, patins et les mots de Madame
     Thibodeau, le son : 1 257 bruts, 726 gzip seule) n'est lue qu'en ville, l'hiver. Regardé avant : les
     définitions sont pleines (les klaxons en sont sortis pour ça), la carte a son plafond à elle. Mesure avec
     elle : suite 21 622 bruts, 8 998 gzip.
     """
-    for nom, brut_max, fil_max in (("definitions", 241_000, 57_500), ("carte", 560_000, 55_000),
+    for nom, brut_max, fil_max in (("definitions", 242_000, 57_500), ("carte", 560_000, 55_000),
                                    ("musiques", 50_000, 10_000), ("suite", 23_000, 9_500)):
         paquet = getattr(paquets, nom)
         mesures = {"definitions": MESURE_DU_PAQUET, "carte": MESURE_DE_LA_CARTE}

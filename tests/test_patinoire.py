@@ -60,13 +60,20 @@ def test_ses_portes_ouvrent_sur_une_allee(avant_apres):
     trottoir — jamais dans un buisson."""
     ville, _ = avant_apres
     p = ville["patinoire"]
-    assert 1 <= len(p["portes"]) <= 2
+    pietons = [q for q in p["portes"] if not q.get("service")]
+    assert 1 <= len(pietons) <= 2
     pas = {"nord": (0, -1), "sud": (0, 1), "ouest": (-1, 0), "est": (1, 0)}
     for porte in p["portes"]:
         dx, dy = pas[porte["cote"]]
         assert ville["sol"][porte["y"] + dy][porte["x"] + dx] in ("g", "."), porte
-    assert any(ville["sol"][q["y"] + pas[q["cote"]][1]][q["x"] + pas[q["cote"]][0]] == "g" for q in p["portes"]), \
+    assert any(ville["sol"][q["y"] + pas[q["cote"]][1]][q["x"] + pas[q["cote"]][0]] == "g" for q in pietons), \
         "aucune porte sur une allée du parc"
+    # La porte de service (la surfaceuse, et les chars) : deux tuiles côte à côte, qui donnent sur le trottoir.
+    service = [q for q in p["portes"] if q.get("service")]
+    assert len(service) == 2 and service[0]["cote"] == service[1]["cote"], service
+    assert abs(service[0]["x"] - service[1]["x"]) + abs(service[0]["y"] - service[1]["y"]) == 1
+    for q in service:
+        assert ville["sol"][q["y"] + pas[q["cote"]][1]][q["x"] + pas[q["cote"]][0]] == ".", q
 
 
 def test_la_ville_est_la_meme_hors_de_la_clairiere(avant_apres):

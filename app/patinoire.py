@@ -126,6 +126,21 @@ def _portes(ville: dict, x: int, y: int, largeur: int, hauteur: int) -> list[dic
     return portes or [{"x": x + largeur // 2, "y": y + hauteur - 1, "cote": "sud"}]
 
 
+def _service(ville: dict, x: int, y: int, largeur: int, hauteur: int) -> list[dict]:
+    """LA PORTE DE SERVICE (la deuxième vague, 30 sept. 2026) : celle de la surfaceuse, deux tuiles au milieu du côté
+    qui donne sur le TROTTOIR — un char y entre, et glisse. Aucune si la glace ne touche pas de trottoir."""
+    for cote, dx, dy in COTES:
+        if dx == 0:
+            bord = [(i, y if dy < 0 else y + hauteur - 1) for i in range(x + 1, x + largeur - 1)]
+        else:
+            bord = [(x if dx < 0 else x + largeur - 1, j) for j in range(y + 1, y + hauteur - 1)]
+        dehors = [(i, j) for i, j in bord if ville["sol"][j + dy][i + dx] == "."]
+        if len(dehors) >= 4 and len(dehors) == len(bord):
+            m = len(bord) // 2
+            return [{"x": i, "y": j, "cote": cote, "service": True} for i, j in bord[m - 1:m + 1]]
+    return []
+
+
 def _deplacer(chantier, ville: dict, parc, zone: set, pris: set) -> int | None:
     """Le décor de la zone, sur la pelouse la plus proche du parc, à sa place dans la liste. Rend le
     nombre de décors déplacés — ou None si l'un d'eux ne trouve pas sa place : alors RIEN n'a bougé
@@ -206,9 +221,37 @@ def poser(chantier, ville: dict) -> dict | None:
             deplaces = _deplacer(chantier, ville, parc, zone, pris)
             if deplaces is not None:
                 portes = _portes(ville, x, y, largeur, hauteur)
-                return {"x": x, "y": y, "l": largeur, "h": hauteur, "portes": portes, "deplaces": deplaces,
+                return {"x": x, "y": y, "l": largeur, "h": hauteur,
+                        "portes": portes + _service(ville, x, y, largeur, hauteur), "deplaces": deplaces,
                         "guichet": _guichet(ville, x, y, largeur, hauteur, portes)}
     return None
+
+
+#: CE QUE DIT MADAME THIBODEAU AU GUICHET DES PATINS, à voix haute (Martin, 30 sept. 2026 : la deuxième vague). Le slug
+#: de la voix : `thibodeau-patins-<cle>` ; le texte en casse naturelle (le HUD l'écrit en capitales) ; `jeu`, collé à
+#: la réplique (docs/jeu-d-acteur.md) — ⚠️ il ne part jamais au navigateur. Elle ne se nomme pas : elle est chez
+#: elle, derrière son comptoir (docs/personnages/madame-thibodeau.md). ⚠️ Une réplique neuve s'ajoute AU BOUT de sa
+#: clé (`mot-4`) : les mp3 payés portent le slug.
+REPLIQUES: tuple[dict, ...] = (
+    {"qui": "thibodeau", "cle": "mot-1", "texte": "Tiens, mon p'tit. Tu me les ramènes en un morceau, veux-tu?",
+     "jeu": "[warmly] Tiens, mon p'tit. Tu me les ramènes en un morceau, veux-tu?"},
+    {"qui": "thibodeau", "cle": "mot-2", "texte": "Deux piastres. Pis tu laces serré, hein?",
+     "jeu": "[warmly] Deux piastres. [laughs] Pis tu laces serré, hein?"},
+    {"qui": "thibodeau", "cle": "mot-3", "texte": "Bonne patine! Tu fais attention aux petits, veux-tu?",
+     "jeu": "[cheerful] Bonne patine! [softly] Tu fais attention aux petits, veux-tu?"},
+    {"qui": "thibodeau", "cle": "fauche", "texte": "Deux piastres, mon p'tit… T'as pas ça sur toi?",
+     "jeu": "[concerned] Deux piastres, mon p'tit… T'as pas ça sur toi?"},
+)
+
+
+def repliques() -> list[dict]:
+    """Les répliques du guichet, comme `audio` les lit : une banque (`mission: "patinoire"`), une série."""
+    return [{"slug": f"{r['qui']}-patins-{r['cle']}", "qui": r["qui"], "cle": r["cle"], "texte": r["texte"],
+             "mission": "patinoire", "partie": "patinoire", "telephone": False} for r in REPLIQUES]
+
+
+def _dit(cle: str) -> str:
+    return next(r["texte"] for r in REPLIQUES if r["cle"] == cle).upper()
 
 
 #: Ce que le navigateur en fait (`static/js/patinoire.js`) : les couleurs, la glisse, la chute.
@@ -252,14 +295,16 @@ FICHE: dict = {
         "invite": "LOUER DES PATINS", "enseigne": "PATINS 2 $",
         # Madame Thibodeau (docs/personnages/madame-thibodeau.md) : « mon p'tit », une demande qui finit en
         # question, jamais un sacre — et pas son nom : elle est chez elle, derrière son comptoir.
-        "mots": ("TIENS, MON P'TIT. TU ME LES RAMÈNES EN UN MORCEAU, VEUX-TU?",
-                 "DEUX PIASTRES. PIS TU LACES SERRÉ, HEIN?",
-                 "BONNE PATINE! TU FAIS ATTENTION AUX PETITS, VEUX-TU?"),
+        # Le texte vient des répliques (`REPLIQUES`) : ce qu'on lit est ce qu'on entend.
+        "mots": tuple(_dit(f"mot-{n}") for n in (1, 2, 3)),
         "deja": "T'AS DÉJÀ TES PATINS AUX PIEDS, MON P'TIT.",
-        "fauche": "DEUX PIASTRES, MON P'TIT… T'AS PAS ÇA SUR TOI?",
+        "fauche": _dit("fauche"),
         "rendus": "TU RENDS TES PATINS.",
         "couleurs": {"guichet": "#6b4a2b", "enseigne": "#f2e6c4", "texte": "#8a2a1e"},
     },
+    # LES CHARS SUR LA GLACE (la deuxième vague) : ils n'entrent que par la porte de service, et y glissent — ce
+    # que la glace laisse de l'adhérence et du frein (le modèle du dérapage des saisons, lot 6a, fait le reste).
+    "chars": {"adherence": 0.15, "frein": 0.2},
     # LE SON (vague 3) : la rumeur de la glace (`audio`, le lieu `patinoire`) tant qu'on y patine, et la valse du
     # haut-parleur le soir (`musique.VALSE`), dosées à la distance du centre de la glace : pleines à `plein_px`,
     # muettes à `portee_px`.
@@ -268,4 +313,6 @@ FICHE: dict = {
 
 
 def pour_le_navigateur() -> dict:
-    return FICHE
+    """La fiche, et la série des voix du guichet (⚠️ hors des définitions : la fiche voyage dans la suite)."""
+    from . import audio
+    return {**FICHE, "voix": audio.serie_de_voix("thibodeau-patins-", audio.voix_patinoire())}

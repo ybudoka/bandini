@@ -511,6 +511,11 @@ from app import puces as _puces  # noqa: E402
 
 JEU.update({f"{r['qui']}-puces-{r['cle']}": r["jeu"] for r in _puces.REPLIQUES})
 
+# MADAME THIBODEAU AU GUICHET DES PATINS (`patinoire.REPLIQUES`) : même règle — le jeu est collé à la réplique.
+from app import patinoire as _patinoire  # noqa: E402
+
+JEU.update({f"{r['qui']}-patins-{r['cle']}": r["jeu"] for r in _patinoire.REPLIQUES})
+
 # LE TIRAGE DU 6/49 (`loto.repliques`) : l'annonceur de la loterie. Les boules, d'un ton egal et net
 # — elles s'enchainent, une par une ; l'amorce et l'issue, elles, ont du jeu.
 from app import loto  # noqa: E402

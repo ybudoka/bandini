@@ -96,14 +96,45 @@ const Patinoire = (function () {
     }
   }
 
-  /** Un char `v` peut-il entrer sur la tuile (tx, ty) ? Non, l'hiver, si elle est dans la patinoire — sauf
-      pour le char qui s'y trouve deja (il en sort librement). Appele par `Monde.barriereBloque`. */
+  /** Les tuiles de la porte de service (`service`), et celles juste dehors : la seule entree des chars. */
+  let services = null, servicesDe = null;
+  function serviceDe(p) {
+    if (services && servicesDe === p) return services;
+    const pas = { nord: [0, -1], sud: [0, 1], ouest: [-1, 0], est: [1, 0] };
+    const dedans = new Set(), dehors = new Set();
+    (p.portes || []).forEach(function (q) {
+      if (!q.service) return;
+      const o = pas[q.cote];
+      dedans.add(q.x + ',' + q.y); dehors.add((q.x + o[0]) + ',' + (q.y + o[1]));
+    });
+    servicesDe = p;
+    return (services = { dedans: dedans, dehors: dehors });
+  }
+
+  /** Un char `v` peut-il entrer sur la tuile (tx, ty) ? L'hiver, les bandes l'arretent : il n'entre sur la glace
+      que par la porte de service (la surfaceuse, deuxieme vague), et n'en ressort que par elle. Appele par
+      `Monde.barriereBloque`. */
   function bloqueChar(v, tx, ty) {
     if (!v || v.type !== 'vehicule') return false;
     const p = lieu();
-    if (!p || tx < p.x || tx >= p.x + p.l || ty < p.y || ty >= p.y + p.h || !ouverte()) return false;
-    const vx = Math.floor(v.x / T), vy = Math.floor(v.y / T);
-    return !(vx >= p.x && vx < p.x + p.l && vy >= p.y && vy < p.y + p.h);
+    if (!p || !ouverte()) return false;
+    const dans = function (x, y) { return x >= p.x && x < p.x + p.l && y >= p.y && y < p.y + p.h; };
+    const vx = Math.floor(v.x / T), vy = Math.floor(v.y / T), cible = dans(tx, ty), lui = dans(vx, vy);
+    if (cible === lui) return false;
+    const s = serviceDe(p);
+    // Il entre : seulement sur la porte de service. Il sort : seulement par elle (sa tuile, ou celle d'en face).
+    if (cible) return !s.dedans.has(tx + ',' + ty);
+    return !(s.dehors.has(tx + ',' + ty) || s.dedans.has(vx + ',' + vy));
+  }
+
+  /** Ce que la glace laisse d'adherence a un char (et de frein) : lu par `Vehicules`, comme la neige et le verglas. */
+  function adherence(v) {
+    const f = fiche();
+    return f && f.chars && v && surLaGlace(v.x, v.y) ? f.chars.adherence : 1;
+  }
+  function frein(v) {
+    const f = fiche();
+    return f && f.chars && v && surLaGlace(v.x, v.y) ? f.chars.frein : 1;
   }
 
   // ------------------------------------------------------------------ la glisse, et la chute
@@ -350,12 +381,29 @@ const Patinoire = (function () {
     return p.invite + ' — ' + p.prix + ' $';
   }
 
+  //: Les voix du guichet (`fiche().voix`, une serie) : declarees et chargees une fois, en approchant de la glace.
+  let voixPretes = false;
+  function preparerVoix() {
+    const f = fiche();
+    if (voixPretes || !f || !f.voix || typeof Son === 'undefined' || !Son.Voix) return;
+    voixPretes = true;
+    Son.Voix.declarer([f.voix]);
+    Son.Voix.chargerHistoire('patinoire');
+  }
+  /** Madame Thibodeau dit sa replique `cle` : sa voix (si elle est la), et le texte au HUD. */
+  function dire(cle, texte) {
+    preparerVoix();
+    if (Son.Voix) Son.Voix.parler('thibodeau-patins-' + cle, {});
+    Hud.message(texte);
+  }
+
   /** ACTION au guichet : deux piastres, et on chausse. Le mot de Madame Thibodeau suit le jour, pas un de. */
   function agir(j) {
     const p = fiche().patins;
-    if (!Missions.payer(p.prix, 'PATINS')) { Hud.message(p.fauche); Son.SFX.erreur(); return true; }
+    if (!Missions.payer(p.prix, 'PATINS')) { dire('fauche', p.fauche); Son.SFX.erreur(); return true; }
     j.patins = true;
-    Hud.message(p.mots[(B.partie.jour || 0) % p.mots.length]);
+    const n = (B.partie.jour || 0) % p.mots.length;
+    dire('mot-' + (n + 1), p.mots[n]);
     Son.SFX.ramasse();
     return true;
   }
@@ -391,6 +439,7 @@ const Patinoire = (function () {
       if (!Son.boucleActive('patinoire')) Son.boucle('patinoire', true, rumeur, 0.5);
       else Son.reglerBoucle('patinoire', rumeur);
     } else if (Son.boucleActive('patinoire')) Son.boucle('patinoire', false, 0, 0.5);
+    if (pres > 0) preparerVoix();                    // les mots du guichet : prets avant le premier patin
     const h = B.partie.heure * 24;
     if (pres > 0 && h >= s.valse_des_h && h < s.valse_jusqu_h && Son.Rue) Son.Rue.demander('patinoire_valse', pres * s.valse);
   }
@@ -399,5 +448,5 @@ const Patinoire = (function () {
   function oublier() { patineurs = []; }
 
   return { geo, ouverte, surLaGlace, bloquer, bloqueChar, glisser, dessinerSol, dessinerLames, lampes,
-           maj, voulus, enCours, oublier, guichet, sousLaMain, invite, agir, majSon };
+           maj, voulus, enCours, oublier, guichet, sousLaMain, invite, agir, majSon, adherence, frein };
 })();

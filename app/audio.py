@@ -2100,6 +2100,17 @@ def voix_garage() -> list[dict]:
             for r in garage.repliques()]
 
 
+def voix_patinoire() -> list[dict]:
+    """Ce que dit Madame Thibodeau au guichet des patins (`patinoire.REPLIQUES`) — une banque (`patinoire`), une série
+    dans la fiche de la patinoire (la suite du paquet), chargée au premier patin loué. Sa voix : celle de son
+    personnage (Julia, séchée à l'isolateur comme ailleurs)."""
+    from . import missions, patinoire
+    perso = missions.personnage("thibodeau")
+    return [{"slug": r["slug"], "texte": r["texte"], "genre": perso["genre"], "voix": perso["voix"], "volume": 0.9,
+             "histoire": True, "qui": r["qui"], "mission": r["mission"], "partie": r["partie"], "telephone": False}
+            for r in patinoire.repliques()]
+
+
 def voix_puces() -> list[dict]:
     """Ce que disent Ti-Rhéal et Gisèle au marché aux puces (`puces.REPLIQUES`) — leur banque (`puces`), en séries sur
     `/api/collections` (⚠️ pas dans les définitions), chargée quand on approche du marché ouvert (`Puces.majSon`).
@@ -2145,7 +2156,7 @@ def voix_de_la_file() -> list[dict]:
 def toutes_les_voix() -> list[dict]:
     return (list(VOIX) + list(VOIX_DE_LA_POLICE) + list(VOIX_DE_LA_FILE) + voix_histoire() + voix_journal()
             + voix_loto() + voix_ouverture() + voix_repos() + voix_dojo() + voix_galeries() + voix_halloween()
-            + voix_garage() + voix_photos() + voix_puces())
+            + voix_garage() + voix_photos() + voix_puces() + voix_patinoire())
 
 
 #: LES VOIX QUI NE SE PARTAGENT PAS — la table, ecrite UNE fois : la voix, et le

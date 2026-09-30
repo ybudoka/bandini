@@ -48,8 +48,11 @@ def test_les_bandes_arretent_le_passant_et_la_porte_le_laisse_entrer(banc):
         const pousser = function (touche, n) { o.touche(touche); o.frame(n); o.relacher(touche); o.frame(1); };
         saison(L, """ + str(JANVIER) + """);
         poser(L, mx + 5, g.y1 + 10); pousser('KeyW', 90); const sud = { y: j.y, dedans: P.surLaGlace(j.x, j.y) };
-        poser(L, porte.x * 16 + 8, porte.y * 16 - 12); pousser('KeyS', 150);
-        const parLaPorte = { y: j.y, dedans: P.surLaGlace(j.x, j.y) };
+        // ⚠️ On regarde PENDANT la marche : la porte de service d'en face (deuxième vague) laisse ressortir.
+        poser(L, porte.x * 16 + 8, porte.y * 16 - 12);
+        let entre = false;
+        o.touche('KeyS'); for (let k = 0; k < 150 && !entre; k++) { o.frame(1); entre = P.surLaGlace(j.x, j.y); } o.relacher('KeyS'); o.frame(1);
+        const parLaPorte = { y: j.y, dedans: entre };
         saison(L, """ + str(JUILLET) + """);
         poser(L, mx + 5, g.y1 + 10); pousser('KeyW', 60); const ete = { y: j.y };
         return { sud: sud, porte: parLaPorte, ete: ete, y1: g.y1, cote: porte.cote };
@@ -311,3 +314,66 @@ def test_on_rend_ses_patins_en_quittant_la_glace(banc):
         return { dehors: !P.surLaGlace(j.x, j.y), patins: !!j.patins };
     }""")
     assert r["dehors"] and not r["patins"], r
+
+
+# --- Deuxième vague : les chars par la porte de service -----------------------------------------------------
+
+def test_un_char_entre_par_la_porte_de_service_et_pas_ailleurs(banc):
+    """L'hiver, un char entre sur la glace par la porte de service (la surfaceuse) — et nulle part ailleurs ; sur la
+    glace, il ne ressort pas par une bande, seulement par elle."""
+    r = banc("function (L) {" + OUTILS + """
+        L.Jeu.commencer();
+        const P = L.Patinoire, g = P.geo(), p = g.p, M = L.Monde;
+        const s = p.portes.filter(function (q) { return q.service; });
+        const pas = { nord: [0, -1], sud: [0, 1], ouest: [-1, 0], est: [1, 0] }[s[0].cote];
+        const px = function (tx) { return tx * 16 + 8; };
+        saison(L, """ + str(JANVIER) + """);
+        const dehors = { type: 'vehicule', x: px(s[0].x + pas[0]), y: px(s[0].y + pas[1]) };
+        const entre = M.barriereBloque(dehors, s[0].x, s[0].y);
+        const aCote = M.barriereBloque(dehors, s[0].x - 3 * Math.abs(pas[1]), s[0].y - 3 * Math.abs(pas[0]));
+        const dedans = { type: 'vehicule', x: px(p.x + 3), y: px(p.y + 2) };
+        const parLaBande = M.barriereBloque(dedans, p.x - 1, p.y + 2);
+        const surLaPorte = { type: 'vehicule', x: px(s[0].x), y: px(s[0].y) };
+        const sort = M.barriereBloque(surLaPorte, s[0].x + pas[0], s[0].y + pas[1]);
+        return { n: s.length, entre: entre, aCote: aCote, parLaBande: parLaBande, sort: sort };
+    }""")
+    assert r["n"] == 2, r
+    assert r["entre"] is False and r["sort"] is False, f"la porte de service ne laisse pas passer : {r}"
+    assert r["aCote"] is True and r["parLaBande"] is True, f"un char passe à travers une bande : {r}"
+
+
+#: Un char piloté par script sur la glace (l'hiver) ou au même endroit l'été — la neige, la pluie et la rue mouillée
+#: bouchées : seule la glace de la patinoire fait la différence.
+CHAR = """
+  function conduire(L, jour, script, n) {
+    const P = L.Patinoire, g = P.geo(), V = L.Vehicules, N = L.Neige, Pl = L.Pluie, M = L.Monde;
+    saison(L, jour);
+    const garde = [N.adherence, N.frein, Pl.adherence, Pl.frein, M.adherenceMouillee, M.freinMouille];
+    N.adherence = N.frein = Pl.adherence = Pl.frein = M.adherenceMouillee = M.freinMouille = function () { return 1; };
+    const v = V.creer('auto', g.x0 + 40, (g.y0 + g.y1) / 2, 0, { etat: 'stationne', couleur: '#3a6fb0' });
+    v.conducteur = L.B.joueur; v.vitesse = 2.4; v.vx = 2.4; v.vy = 0;
+    let tourne = 0, prec = v.angle;
+    for (let k = 0; k < n; k++) {
+      V.majPhysique(v, Object.assign({ gaz: 0, frein: 0, direction: 0, freinMain: false }, script(k)));
+      tourne += Math.atan2(Math.sin(v.angle - prec), Math.cos(v.angle - prec)); prec = v.angle;
+    }
+    const out = { vitesse: Math.hypot(v.vx, v.vy), tourne: Math.abs(tourne), glace: P.adherence(v) };
+    [N.adherence, N.frein, Pl.adherence, Pl.frein, M.adherenceMouillee, M.freinMouille] = garde;
+    L.Entites.retirer(v);
+    return out;
+  }
+"""
+
+
+def test_sur_la_glace_un_char_glisse(banc):
+    """Freiner une demi-seconde : sur la glace, le char file encore ; l'été, au même endroit, il s'arrête. Braquer :
+    sur la glace, il tourne moins (il sous-vire)."""
+    r = banc("function (L) {" + OUTILS + CHAR + """
+        L.Jeu.commencer();
+        const freine = function () { return { frein: 1 }; }, braque = function () { return { gaz: 0.5, direction: 1 }; };
+        return { hiver: conduire(L, """ + str(JANVIER) + """, freine, 30), ete: conduire(L, """ + str(JUILLET) + """, freine, 30),
+                 virageHiver: conduire(L, """ + str(JANVIER) + """, braque, 30), virageEte: conduire(L, """ + str(JUILLET) + """, braque, 30) };
+    }""")
+    assert r["hiver"]["glace"] < 1 and r["ete"]["glace"] == 1, r
+    assert r["hiver"]["vitesse"] > r["ete"]["vitesse"] + 0.5, f"sur la glace le char freine comme au sec : {r}"
+    assert r["virageHiver"]["tourne"] < r["virageEte"]["tourne"] * 0.8, f"sur la glace le char tourne comme au sec : {r}"

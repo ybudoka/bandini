@@ -1139,7 +1139,7 @@ const Vehicules = (function () {
     if (eau) {
       if (cmd.frein > 0) v.vitesse -= d.acceleration * ph.machine_arriere * cmd.frein;
     } else if (cmd.frein > 0) {
-      if (v.vitesse > 0.15) v.vitesse -= d.frein * cmd.frein * Garage.hiver(v, Neige.frein(v) * Verglas.frein()) * Monde.freinMouille(v) * Pluie.frein(v);
+      if (v.vitesse > 0.15) v.vitesse -= d.frein * cmd.frein * Garage.hiver(v, Neige.frein(v) * Verglas.frein() * (typeof Patinoire !== 'undefined' ? Patinoire.frein(v) : 1)) * Monde.freinMouille(v) * Pluie.frein(v);
       else v.vitesse -= d.acceleration * 0.7 * cmd.frein;      // marche arriere
     }
     const freinMain = cmd.freinMain && !eau;
@@ -1152,7 +1152,8 @@ const Vehicules = (function () {
     // ⚠️ CE QUE LE SOL TIENT : la neige et la glace (que les PNEUS D'HIVER de Ti-Guy rendent en partie),
     // la rue mouillee, la pluie. Au sec, 1 — et le DERAPAGE (`Derapage`, les saisons, lot 6) ne
     // s'eveille que sous 1 : au sec, la conduite ne change pas d'un pixel.
-    const g = eau ? 1 : Garage.hiver(v, Neige.adherence(v) * Verglas.adherence()) * Monde.adherenceMouillee(v) * Pluie.adherence(v);
+    // ⚠️ La glace de la patinoire (`Patinoire.adherence`) : un char entre par la porte de service, et glisse.
+    const g = eau ? 1 : Garage.hiver(v, Neige.adherence(v) * Verglas.adherence() * (typeof Patinoire !== 'undefined' ? Patinoire.adherence(v) : 1)) * Monde.adherenceMouillee(v) * Pluie.adherence(v);
     const perte = 1 - Math.min(1, g);
     // ⚠️ LE VOLANT SE TOURNE, il ne se claque pas : il prend vers la consigne
     // et se recentre quand on lache. Au clavier, sans ca, chaque appui etait
