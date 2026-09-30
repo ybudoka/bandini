@@ -156,3 +156,22 @@ meubles aux mêmes places, un autre habit (`materiaux` : `B`, `W`, `D`, `t`, `l`
 - Juges `test_habit_du_logement_js.py` : le quartier et le genre de chaque logement de la ville (tables en toutes
   lettres), chaque quartier accroche au moins deux objets, jamais sur un mur de côté ; la variante exacte de chaque
   mur d'une vraie pièce habillée ; cinq mutations, toutes mordent.
+
+**Vague 4, livrée le 30 sept. 2026 : les commerces au quartier.** Un commerce derrière une devanture prend l'habit
+du standing de SA devanture (`Monde.materiauxDuCommerce` : le plâtre jauni et fissuré d'une boutique pauvre, le
+papier rayé d'une boutique cossue) et, au mur du fond, un objet de COMMERCE de son quartier — jamais ce qu'on
+accroche chez soi : au Petit-Canton la lanterne, le chat porte-bonheur à la patte levée, l'autel ; aux Quais la
+bouée de sauvetage, le tableau des marées ; au Faubourg le calendrier, le fanion de hockey du quartier ; aux Érables
+l'horloge, l'affiche jaune des spéciaux ; à La Shop le panneau de sécurité, l'horloge pointeuse ; à la Gare et aux
+Friches le panneau de sécurité, le calendrier graisseux ; à La Pointe l'affiche de la foire, la planche à roulettes.
+La fenêtre reste une VITRINE nue et la porte une porte de bois à vitre — pas de drap punaisé ni de chaîne de sûreté
+dans une boutique. Un lieu fait à la main (sans devanture) garde son plâtre, et une pièce qui n'est pas un commerce
+(le phare derrière sa devanture) n'en prend jamais l'habit.
+
+- Regardé : la pharmacie pauvre des Quais, une boutique du Petit-Canton, le Rialto de La Shop.
+- Juges `test_habit_du_logement_js.py` : chaque commerce de la ville porte l'habit de sa devanture et l'objet de son
+  quartier (tables en toutes lettres), une boutique n'a ni drap ni chaîne, le crucifix n'y est jamais ; cinq
+  mutations, toutes mordent.
+- Au passage : la suite complète de la vague 3 avait 24 rouges ; rejoués sur le commit d'avant, les neufs
+  (`test_defis_graduels_js`, `test_garages_ou_l_on_entre_js`, `test_mantes_defi_js`, `test_crime_d_autrui`…)
+  rougissent pareil sans elle.

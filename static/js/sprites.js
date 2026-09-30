@@ -5284,6 +5284,75 @@ const TUILES = (function () {
       tuiles['D@' + habit + '~' + d] = tuiles['D@' + habit];
     }
   }
+  /* --- LE QUARTIER DU COMMERCE (des intérieurs fidèles à l'extérieur, vague 4) ---------------------------------
+     Un commerce prend l'habit du standing de SA devanture (le plâtre jauni d'une boutique pauvre, le papier rayé
+     d'une boutique cossue) et, au mur du fond, un objet de commerce de son quartier — jamais ce qu'on accroche chez
+     soi (le crucifix, la photo de famille). La fenêtre reste une vitrine nue, la porte une porte de bois : pas de
+     drap punaisé ni de chaîne de sûreté dans une boutique. `Monde.materiauxDuCommerce`. */
+  function panneauDeSecurite(ctx) {
+    ctx.fillStyle = '#2a2a2e'; ctx.fillRect(4, 2, 8, 8);
+    ctx.fillStyle = '#f2c14e'; ctx.fillRect(5, 3, 6, 6);
+    ctx.fillStyle = '#2a2a2e'; for (let k = 0; k < 6; k += 2) ctx.fillRect(5 + k, 3 + k, 2, 2);
+  }
+  function horlogePointeuse(ctx) {
+    ctx.fillStyle = '#6a6e74'; ctx.fillRect(4, 1, 8, 10);
+    ctx.fillStyle = '#f4f0e6'; ctx.fillRect(5, 2, 6, 4);
+    ctx.fillStyle = '#2a2a2e'; ctx.fillRect(8, 3, 1, 2); ctx.fillRect(8, 4, 2, 1);
+    ctx.fillStyle = '#c9b88a'; for (let k = 0; k < 3; k++) ctx.fillRect(5 + k * 2, 7, 1, 3);   // les cartes de pointage
+  }
+  const ORNEMENTS_DE_COMMERCE = {
+    canton: [ORNEMENTS.canton[0], function (ctx) {                       // le chat porte-bonheur, la patte levée
+      ctx.fillStyle = '#5a3a28'; ctx.fillRect(3, 9, 10, 2);
+      ctx.fillStyle = '#f4f0e6'; ctx.fillRect(5, 4, 6, 5); ctx.fillRect(5, 2, 6, 3);
+      ctx.fillStyle = '#f4f0e6'; ctx.fillRect(11, 1, 2, 4);
+      ctx.fillStyle = '#c0392b'; ctx.fillRect(5, 5, 6, 1); ctx.fillStyle = '#d4b25a'; ctx.fillRect(7, 6, 2, 2);
+      ctx.fillStyle = '#2a2a2e'; ctx.fillRect(6, 3, 1, 1); ctx.fillRect(9, 3, 1, 1);
+    }, ORNEMENTS.canton[2]],
+    quais: [function (ctx) {                                              // la bouée de sauvetage
+      ctx.fillStyle = '#e0503c'; ctx.fillRect(4, 2, 8, 8); ctx.fillStyle = '#f4f0e6'; ctx.fillRect(4, 5, 8, 2); ctx.fillRect(7, 2, 2, 8);
+      ctx.fillStyle = PLATRE.fond; ctx.fillRect(6, 4, 4, 4);
+    }, function (ctx) {                                                   // le tableau des marées
+      ctx.fillStyle = '#f4f0e6'; ctx.fillRect(3, 1, 10, 10);
+      ctx.fillStyle = '#2a4a8a'; ctx.fillRect(3, 1, 10, 2);
+      ctx.fillStyle = '#6fa3c4'; for (let x = 4; x < 12; x++) ctx.fillRect(x, 7 + Math.round(Math.sin(x) * 2), 1, 1);
+    }],
+    faubourg: [ORNEMENTS.faubourg[1], function (ctx) {                    // le fanion de hockey du quartier
+      ctx.fillStyle = '#5a3a28'; ctx.fillRect(3, 2, 1, 8);
+      ctx.fillStyle = '#c0392b'; ctx.fillRect(4, 2, 8, 2); ctx.fillRect(4, 4, 6, 2); ctx.fillRect(4, 6, 4, 2);
+      ctx.fillStyle = '#f4f0e6'; ctx.fillRect(5, 3, 3, 1); ctx.fillStyle = '#2a4a8a'; ctx.fillRect(4, 8, 2, 1);
+    }],
+    erables: [ORNEMENTS.erables[1], function (ctx) {                      // l'affiche jaune : SPÉCIAL
+      ctx.fillStyle = '#f2c14e'; ctx.fillRect(3, 2, 10, 8);
+      ctx.fillStyle = '#c0392b'; ctx.fillRect(4, 4, 8, 1); ctx.fillRect(4, 6, 6, 1);
+      ctx.fillStyle = '#2a2a2e'; ctx.fillRect(10, 7, 2, 2);
+    }],
+    shop: [panneauDeSecurite, horlogePointeuse],
+    gare: [panneauDeSecurite, ORNEMENTS.gare[0]],
+    friches: [panneauDeSecurite, ORNEMENTS.gare[0]],
+    pointe: [ORNEMENTS.pointe[0], ORNEMENTS.pointe[1]],
+  };
+  const VITRINE = { cadre: '#efeae0', peindre: function () {} };
+  function porteDeBoutique(ctx, v, T, mur) {
+    mur(ctx, v, T);
+    ctx.fillStyle = '#efeae0'; ctx.fillRect(3, 2, 10, 14);
+    ctx.fillStyle = '#7a5434'; ctx.fillRect(4, 3, 8, 13);
+    ctx.fillStyle = '#9cc4e0'; ctx.fillRect(5, 4, 6, 5);                 // sa vitre, pour voir qui entre
+    ctx.fillStyle = '#d8b83a'; ctx.fillRect(10, 10, 1, 2);
+  }
+  const MURS_D_HABIT = { piece: function (ctx, v, T) { murDePiece(ctx, v, T); }, logement_pauvre: murPauvre, logement_cossu: murCossu };
+  for (const habit of Object.keys(MURS_D_HABIT)) {
+    const murH = MURS_D_HABIT[habit];
+    for (const d of Object.keys(ORNEMENTS_DE_COMMERCE)) {
+      const cle = habit + '~' + d + '_commerce', choix = ORNEMENTS_DE_COMMERCE[d];
+      tuiles['B@' + cle] = function (ctx, v, T) {
+        murH(ctx, v, T);
+        if (!(v & 4) || (v & 5) === 5 || (v >> 4) % 3 !== 1) return;
+        choix[((v >> 4) >> 2) % choix.length](ctx);
+      };
+      tuiles['W@' + cle] = function (ctx, v, T) { fenetreDeDedans(ctx, v, T, murH, VITRINE); };
+      tuiles['D@' + cle] = function (ctx, v, T) { porteDeBoutique(ctx, v, T, murH); };
+    }
+  }
   // LE GENRE : la moquette d'un bungalow — beige, à poils, des traces de pas qu'on ne voit qu'en plissant les yeux.
   tuiles['t@moquette'] = function (ctx, v, T) {
     plein(ctx, '#b8a47e', T);

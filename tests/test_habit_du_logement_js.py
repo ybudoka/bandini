@@ -51,7 +51,7 @@ def test_le_quartier_s_accroche_au_mur_et_le_genre_se_lit_au_plancher(banc):
 
 def test_on_entre_dans_son_habit_et_l_etage_le_garde(banc):
     """Pour de vrai, par la porte : la pièce chargée porte l'habit ; l'étage du haut (par l'escalier : la même
-    porte) aussi ; et un commerce garde le plâtre des pièces."""
+    porte) aussi ; et un commerce prend celui de sa devanture (vague 4)."""
     r = banc("""function (L, o) {
         L.Jeu.commencer(); if (L.B.menu) L.Hud.fermerMenu(); o.frame(2);
         const c = L.Monde.carte.def, out = {};
@@ -108,7 +108,7 @@ def test_on_entre_dans_son_habit_et_l_etage_le_garde(banc):
     assert r["variantes"]["fond"] >= r["variantes"]["largeur"] - 3 and r["variantes"]["bruits"] > 4, r["variantes"]
     assert r["villa"]["B"].split("~")[0] == r["villa"]["t"] == "villa", r
     assert r["ordinaire"]["B"].split("~")[0] == "piece", r
-    assert r["commerce"]["B"] == "piece", r
+    assert r["commerce"]["B"].endswith("_commerce"), f"un commerce entre dans l'habit de sa devanture : {r}"
 
 
 def test_chaque_habit_a_ses_peintres_et_ne_ressemble_pas_au_platre(banc):
@@ -162,3 +162,84 @@ def test_chaque_quartier_accroche_son_objet_au_mur_du_fond(banc):
         assert q["fond"] >= 3 and q["cote"] == 0, (d, q)
         assert q["formes"] >= 2, f"{d} n'accroche qu'une seule chose : {q}"
         assert q["fenetre"], f"{d} : la fenêtre change de peintre"
+
+
+#: Vague 4 : les quartiers dont un COMMERCE accroche un objet de commerce au mur du fond.
+QUARTIERS_DU_COMMERCE = {"canton", "quais", "faubourg", "erables", "shop", "gare", "friches", "pointe"}
+
+
+def test_chaque_commerce_porte_l_habit_de_sa_devanture_et_son_quartier(banc):
+    """Le commerce derrière une devanture : les murs du standing de la devanture, l'objet de commerce de son
+    quartier ; un lieu fait à la main (sans devanture) garde son plâtre."""
+    r = banc("""function (L, o) {
+        const c = L.Monde.carte.def, out = [];
+        for (const p of c.portes) {
+            const piece = p.interieur && c.interieurs[p.interieur];
+            if (!piece || piece.materiaux) continue;
+            if (piece.porte !== 'commerce') {
+                // Une pièce qui n'est pas un commerce (le phare derrière sa devanture : un logement) n'en prend
+                // jamais l'habit.
+                if (L.Monde.materiauxDuCommerce(p, piece)) out.push({ slug: p.interieur, faute: 'pas un commerce' });
+                continue;
+            }
+            const d = c.devantures.find(function (q) { return q.y === p.y && p.x >= q.x && p.x < q.x + q.l; });
+            const z = c.zones.find(function (q) { return q.district && p.x >= q.x && p.x < q.x + q.l && p.y >= q.y && p.y < q.y + q.h; });
+            const m = L.Monde.materiauxDuCommerce(p, piece) || {};
+            out.push({ slug: p.interieur, devanture: !!d, standing: d ? (d.standing || '=') : null, district: z && z.district,
+                       B: m.B || null, W: m.W || null, D: m.D || null, t: m.t || null });
+        }
+        return out;
+    }""")
+    assert not [q for q in r if q.get("faute")], [q for q in r if q.get("faute")]
+    r = [q for q in r if not q.get("faute")]
+    avec = [q for q in r if q["devanture"]]
+    assert len(avec) >= 40, len(avec)
+    for q in r:
+        if not q["devanture"]:
+            assert q["B"] is None, f"un lieu fait à la main a pris un habit : {q}"
+            continue
+        habit = ATTENDU[q["standing"]]
+        attendu = (habit + "~" + q["district"] + "_commerce" if q["district"] in QUARTIERS_DU_COMMERCE
+                   else None if habit == "piece" else habit)
+        assert q["B"] == q["W"] == q["D"] == attendu and q["t"] is None, q
+    assert {q["standing"] for q in avec} >= {"-", "=", "+"}, "le témoin n'a pas tous les standings"
+
+
+def test_une_boutique_n_a_ni_drap_ni_chaine(banc):
+    """La vitrine d'une boutique pauvre est une vitrine nue, sa porte une porte de bois ; le mur du fond porte un
+    objet de commerce, jamais le crucifix ni la photo de famille."""
+    r = banc("""function (L, o) {
+        function dessin(cle, v) {
+            const c = o.doc.createElement('canvas').getContext('2d'); c.traces = [];
+            L.TUILES[cle](c, v, 16);
+            return c.traces;
+        }
+        const drap = dessin('W@logement_pauvre', 0).some(function (q) { return q[4] === '#e4ddcb'; });
+        const out = { drapChezSoi: drap, boutiques: {} };
+        for (const d of %s) {
+            const cle = 'logement_pauvre~' + d + '_commerce';
+            const w = dessin('W@' + cle, 0), porte = dessin('D@' + cle, 0);
+            const formes = new Set();
+            for (let h = 0; h < 16; h++) {
+                const t = dessin('B@' + cle, 4 | (h << 4)), n = dessin('B@logement_pauvre', 4 | (h << 4)).length;
+                if (t.length > n) formes.add(JSON.stringify(t.slice(n)));
+            }
+            out.boutiques[d] = { drap: w.some(function (q) { return q[4] === '#e4ddcb'; }),
+                                 chaine: porte.some(function (q) { return q[4] === '#9a9a9e'; }), formes: Array.from(formes) };
+        }
+        const chezSoi = new Set();
+        for (const d of ['canton', 'quais', 'faubourg', 'erables', 'gare', 'pointe']) {
+            for (let h = 0; h < 16; h++) {
+                const t = dessin('B@piece~' + d, 4 | (h << 4)), n = dessin('B@piece', 4 | (h << 4)).length;
+                if (t.length > n) chezSoi.add(d + JSON.stringify(t.slice(n)));
+            }
+        }
+        out.crucifix = Array.from(chezSoi).filter(function (f) { return f.indexOf('faubourg') === 0 && f.indexOf('#4a2e1e') >= 0; });
+        return out;
+    }""" % sorted(QUARTIERS_DU_COMMERCE))
+    assert r["drapChezSoi"], "le juge ne voit plus le drap du logement pauvre : il ne mord plus"
+    for d, q in r["boutiques"].items():
+        assert not q["drap"] and not q["chaine"], (d, q)
+        assert len(q["formes"]) >= 2, f"{d} : {len(q['formes'])} objet(s) de commerce"
+    crucifix = r["crucifix"][0][len("faubourg"):]
+    assert crucifix not in r["boutiques"]["faubourg"]["formes"], "le crucifix est accroché dans une boutique"

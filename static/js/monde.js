@@ -404,6 +404,37 @@ const Monde = (function () {
   /** L'habit du logement derrière cette porte : le standing (et la villa) de la RÉSIDENCE dont elle est la porte —
       son standing final, lu dehors, jamais tiré. `null` : ce n'est pas un logement, ou il est ordinaire. ⚠️ Un
       étage (`changerPiece`) rentre par la même porte : il porte le même habit. */
+  //: Les quartiers dont un commerce accroche quelque chose au mur du fond (`sprites.js`, `ORNEMENTS_DE_COMMERCE`).
+  const QUARTIERS_DU_COMMERCE = Object.freeze({ canton: true, quais: true, faubourg: true, erables: true, shop: true,
+                                                gare: true, friches: true, pointe: true });
+
+  /** L'habit d'un COMMERCE (des intérieurs fidèles à l'extérieur, vague 4) : le standing de SA devanture pour les
+      murs, un objet de commerce de son quartier au mur du fond, la vitrine nue et la porte de bois (`sprites.js`).
+      `null` : ce n'est pas un commerce derrière une devanture (un lieu fait à la main garde son plâtre). */
+  function materiauxDuCommerce(porte, piece) {
+    if (!piece || piece.porte !== 'commerce' || !carte || !carte.def) return null;
+    const d = (carte.def.devantures || []).find(function (q) {
+      return q.y === porte.y && porte.x >= q.x && porte.x < q.x + q.l;
+    });
+    if (!d) return null;
+    const habit = d.standing === '-' ? 'logement_pauvre' : d.standing === '+' ? 'logement_cossu' : 'piece';
+    const z = (carte.def.zones || []).find(function (q) {
+      return q.district && porte.x >= q.x && porte.x < q.x + q.l && porte.y >= q.y && porte.y < q.y + q.h;
+    });
+    if (!z || !QUARTIERS_DU_COMMERCE[z.district]) return habit === 'piece' ? null : habitFait(habit, null, null);
+    return habitFait(habit + '~' + z.district + '_commerce', null, null);
+  }
+  function habitFait(mur, sol, lit) {
+    const cle = mur + '|' + sol + '|' + lit;
+    if (!habitsFaits.has(cle)) {
+      const m = { B: mur, W: mur, D: mur };
+      if (sol) m.t = sol;
+      if (lit) m.l = lit;
+      habitsFaits.set(cle, Object.freeze(m));
+    }
+    return habitsFaits.get(cle);
+  }
+
   function materiauxDuLogement(porte, piece) {
     if (!piece || piece.porte !== 'maison' || !carte || !carte.def) return null;
     const r = (carte.def.residences || []).find(function (q) {
@@ -420,14 +451,7 @@ const Monde = (function () {
     // LE GENRE (vague 3) : la villa a son marbre ; le bungalow (un seul étage), sa moquette ; le plex, le plancher
     // de son habit.
     const sol = r.villa ? 'villa' : (r.etages || 1) < 2 ? 'moquette' : habit !== 'piece' ? habit : null;
-    const cle = mur + '|' + sol + '|' + habit;
-    if (!habitsFaits.has(cle)) {
-      const m = { B: mur, W: mur, D: mur };
-      if (sol) m.t = sol;
-      if (habit !== 'piece') m.l = habit;
-      habitsFaits.set(cle, Object.freeze(m));
-    }
-    return habitsFaits.get(cle);
+    return habitFait(mur, sol, habit !== 'piece' ? habit : null);
   }
 
   /** Entre dans une piece : on garde la ville de cote et on charge la petite
@@ -448,7 +472,7 @@ const Monde = (function () {
       // `charger` les range comme ceux d'une carte de bloc, et le même peintre les lit.
       // ⚠️ Et sinon, LES MURS D'UNE PIÈCE (`MATERIAUX_DE_PIECE`) : un seul mur de plâtre, la porte et les
       // fenêtres peintes dessus, vues de dedans — plus la brique de la façade ni la tôle d'un toit.
-      materiaux: inte.materiaux || materiauxDuLogement(porte, commune) || MATERIAUX_DE_PIECE,
+      materiaux: inte.materiaux || materiauxDuLogement(porte, commune) || materiauxDuCommerce(porte, commune) || MATERIAUX_DE_PIECE,
       voie: inte.sol.map(function (l) { return '.'.repeat(l.length); }), legende: ville.legende,
       portes: [{ x: inte.sortie.x, y: inte.sortie.y, interieur: null, lieu: 'sortie' }],
       lampes: [], decor: [], zones: [], points_interet: [], intersections: [], arrets: {},
@@ -3260,7 +3284,7 @@ const Monde = (function () {
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
     dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau, sousLeToit, cacheSousLeToit, abrite,
     barrieresCoulissantes, majBarrieresCoulissantes, dessinerBarrieresCoulissantes, COULISSE_GLISSE, COULISSE_TIENT,
-materiauxDuLogement, estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, teinteDeToit, teintesDesToits, formeDeToit, formeDuToit, objetsDesToits, lampesDesLucarnes, logementElargi, sousLesEtages, etagesDuCommerce, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
+materiauxDuLogement, materiauxDuCommerce, estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, teinteDeToit, teintesDesToits, formeDeToit, formeDuToit, objetsDesToits, lampesDesLucarnes, logementElargi, sousLesEtages, etagesDuCommerce, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, ambianceVue, aLAbri, estNuit, estNuitVue, periode, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
     miniCarte, couleurMini, couleurMiniA, masqueDeLaCarte, masquee, hauteurConnue, chemin, demanderChemin, majChemins,
