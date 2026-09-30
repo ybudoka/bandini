@@ -84,7 +84,7 @@ def test_les_paquets_se_demandent_par_leur_empreinte(client):
     page = client.get("/").get_data(as_text=True)
     coquille = config_du_travailleur(client)["coquille"]
     for nom, route in (("definitions", "/api/definitions"), ("carte", "/api/carte"), ("musiques", "/api/musiques"),
-                       ("collections", "/api/collections")):
+                       ("collections", "/api/collections"), ("suite", "/api/suite")):
         adresse = re.search(rf'data-url-{nom}="([^"]+)"', page).group(1)
         etag = client.get(route).headers["ETag"].strip('"')
         assert adresse == f"{route}?e={etag}", adresse
@@ -267,6 +267,9 @@ def test_la_ville_s_ouvre_quand_le_reseau_se_tait(browser, ville):
     # Et les collections (`/api/collections`, 30 sept. 2026) : l'album des cartes de hockey, de la coquille aussi.
     page.wait_for_function("BANDINI.Collections.etatDeLaDemande() === 'arrive'", timeout=10000)
     assert page.evaluate("BANDINI.Collections.total()") == 40, "hors ligne, l'album des cartes n'est pas là"
+    # Et la suite du paquet (`/api/suite`, 30 sept. 2026) : le Clairon — un texte n'a pas de repli.
+    page.wait_for_function("BANDINI.Suite.arrivee()", timeout=10000)
+    assert page.evaluate("BANDINI.B.defs.journal_matins.length") > 0, "hors ligne, le Clairon n'a plus de matins"
     assert ville.requetes == avant, "hors ligne, rien n'a du toucher le serveur"
     assert page.erreurs == []
     contexte.close()

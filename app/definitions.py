@@ -31,6 +31,15 @@ DECRIT un morceau (slug, nom, fichier, tempo — `Mus.def`, le jukebox et la rad
 tout de suite), et les notes du theme du menu (`musique.NOTES_DANS_LE_PAQUET`), qui joue
 avant tout autre reseau. Comme la carte, `assembler()` rend le tout, notes comprises.
 
+⚠️ **LA SUITE DU PAQUET** (30 sept. 2026, la deuxieme cure) — sept octets de marge sous le plafond,
+un jour apres la premiere. Le Clairon (manchettes, lecons, matins, la photo de Louise) et la hantise
+des Galeries partent sur `/api/suite` (`DANS_LA_SUITE`), qui arrive comme les notes : juste apres,
+en arriere-plan, garde hors ligne. Et trois choses que le navigateur ne lisait pas s'en vont pour de
+bon : le vocabulaire des scenes et des objectifs (`types_plans`, `types_objectifs`), et la voix
+ElevenLabs de chaque personnage (`CHAMPS_HORS_DU_PAQUET`). Les voix du journal et des repos
+voyagent en series (`audio.series_des_repos`). Mesure : 255 021 → 233 247 octets bruts, 58 992 →
+53 017 gzip. ⚠️ Et `test_chaque_cle_du_paquet_tient_son_budget` nomme QUI grossit, cle par cle.
+
 ⚠️ **Les definitions portent l'empreinte de la carte** (`carte_empreinte`), et
 c'est ce qui garde la sauvegarde honnete : elle oublie une position quand
 `empreinte` change, et `empreinte` change donc des que la CARTE change — meme
@@ -50,6 +59,26 @@ from . import (armes, audio, blocs, calendrier, saisons, pluie, halloween, carte
 from . import collectionner, decoration
 from .blocs import galeries as galeries_hantees
 from .version import VERSION
+
+#: ⚠️ **LA SUITE DU PAQUET** (30 sept. 2026, la deuxième cure) : ce que le navigateur ne lit jamais
+#: avant d'avoir quitté l'écran titre voyage sur `/api/suite`, demandé juste APRÈS les définitions, en
+#: arrière-plan, et gardé par la coquille du travailleur (hors ligne, il est là) — le même chemin que les
+#: notes de la musique. Il revient dans `B.defs` à son arrivée (`Suite.poser`), sous les mêmes clés :
+#: aucun lecteur ne sait d'où il vient. Ce qui s'en sert attend qu'il soit là (`Suite.quand`) ou se
+#: tait sans lui (`B.defs.x || …`) — jamais une exception dans `maj()`.
+#:
+#: Une clé n'entre ici qu'avec sa preuve (`tests/test_suite_js.py`) :
+#: - le **Clairon** (`journal*`, les manchettes, les leçons, les matins calmes, et la photo de Louise) : il
+#:   ne parle qu'au lever du jour ou quand on achète le journal ou vend une photo — et si le jour se lève
+#:   avant l'arrivée de la suite, la manchette l'ATTEND au lieu de se perdre (`Missions.nouveauJour`) ;
+#: - les **Galeries hantées** (`galeries`) : on n'y entre que par leur bloc, la nuit, et `Galeries.maj`
+#:   se tait sans elles.
+DANS_LA_SUITE: tuple[str, ...] = ("journal", "journal_speciales", "journal_lecons", "journal_matins",
+                                  "photos", "galeries")
+
+#: Ce qu'une fiche de personnage porte et qu'aucun script ne lit : sa voix ElevenLabs (le nom de la voix,
+#: `audio.voix_*` la lit en Python pour générer ses mp3). 1 698 octets bruts / 658 gzip sur le paquet.
+CHAMPS_HORS_DU_PAQUET: frozenset[str] = frozenset({"voix"})
 
 
 def assembler() -> dict:
@@ -143,7 +172,8 @@ def assembler() -> dict:
         # écrite avant descend avec elle (`Sauvegarde.completer`).
         "decalage_nord": nord.DECALAGE_NORD,
         "defis": missions.DEFIS,
-        "personnages": missions.PERSONNAGES,
+        # ⚠️ Sans la VOIX ElevenLabs de chacun (`CHAMPS_HORS_DU_PAQUET`) : elle ne sert qu'à générer ses mp3.
+        "personnages": [{k: v for k, v in p.items() if k not in CHAMPS_HORS_DU_PAQUET} for p in missions.PERSONNAGES],
         # Le portrait de qui parle, à gauche de la boîte de dialogue (`visages.js`).
         "visages": visages.pour_le_navigateur(),
         # Les squelettes qu'on habille : les garde-robes des passants, la tenue des personnages.
@@ -152,11 +182,11 @@ def assembler() -> dict:
         # navigateur les lit, il ne refait pas la regle du slug.
         "ouverture": missions.repliques_ouverture(),
         # Les scènes, en plans (voir `missions.TYPES_PLANS`) : `scenes.js` les joue
-        # sans en connaître aucune par son nom.
+        # sans en connaître aucune par son nom. ⚠️ Le vocabulaire lui-même (`TYPES_PLANS`,
+        # `TYPES_OBJECTIFS`) n'y voyage plus depuis le 30 sept. 2026 : aucun script ne le lisait,
+        # et `test_mise_en_scene` juge l'accord des deux bouts sur le code de `scenes.js`.
         "scenes": {"ouverture": missions.SCENE_OUVERTURE},
         "repos": missions.REPOS,
-        "types_plans": {genre: list(cles) for genre, cles in missions.TYPES_PLANS.items()},
-        "types_objectifs": list(missions.TYPES_OBJECTIFS),
         "journal": journal.REGLES,
         "journal_speciales": journal.SPECIALES,
         "journal_lecons": journal.LECONS,
@@ -214,6 +244,9 @@ class Paquets:
     #: (`collectionner`). ⚠️ Hors des définitions ET de la carte : les deux sont au ras de leur plafond. Les
     #: définitions nomment son empreinte (`collections_empreinte`), comme celle des notes.
     collections: Paquet
+    #: La suite du paquet (`/api/suite`) : les clés de `DANS_LA_SUITE`, que le navigateur remet dans `B.defs`.
+    #: Les définitions nomment son empreinte (`suite_empreinte`), comme celle des notes.
+    suite: Paquet
 
 
 def _json(donnees: dict) -> bytes:
@@ -257,6 +290,8 @@ def construire() -> Paquets:
     donnees["carte_empreinte"] = carte.etag
     musiques = _signer(sortir_les_notes(donnees["audio"]))
     donnees["musiques_empreinte"] = musiques.etag
+    suite = _signer({cle: donnees.pop(cle) for cle in DANS_LA_SUITE})
+    donnees["suite_empreinte"] = suite.etag
     # Un paquet par mission, signe comme les autres.
     a_jouer = {m["slug"]: _signer(missions.pour_jouer(m["slug"])) for m in missions.CATALOGUE}
     # ⚠️ UNE empreinte pour les trente-six, posee dans l'adresse (`?e=`) comme celles
@@ -274,4 +309,4 @@ def construire() -> Paquets:
     donnees["blocs_empreinte"] = des_blocs
     return Paquets(definitions=_signer(donnees), carte=carte, a_jouer=a_jouer,
                    missions_empreinte=des_missions, blocs=des_cartes, blocs_empreinte=des_blocs,
-                   musiques=musiques, collections=collections)
+                   musiques=musiques, collections=collections, suite=suite)

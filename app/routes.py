@@ -50,6 +50,7 @@ def _page_d_accueil() -> str:
                            empreinte_carte=current_app.extensions["carte"].etag,
                            empreinte_musiques=current_app.extensions["musiques"].etag,
                            empreinte_collections=current_app.extensions["collections"].etag,
+                           empreinte_suite=current_app.extensions["suite"].etag,
                            empreinte_missions=current_app.extensions["missions_empreinte"],
                            empreinte_blocs=current_app.extensions["blocs_empreinte"],
                            url_compte=comptes.CHEMIN_COOKIE + "/")
@@ -104,6 +105,18 @@ def api_musiques():
     que les autres ; les definitions nomment son empreinte (`musiques_empreinte`).
     """
     return _revalide(current_app.extensions["musiques"])
+
+
+@bp.route("/api/suite")
+def api_suite():
+    """La suite du paquet : ce que le navigateur ne lit jamais avant d'avoir quitte l'ecran titre — le
+    Clairon, les Galeries hantees (`definitions.DANS_LA_SUITE`, 30 sept. 2026).
+
+    ⚠️ Demandee juste APRES les definitions, en arriere-plan, et gardee par le travailleur (la coquille),
+    comme les notes : un texte n'a pas de repli, il doit etre la hors ligne. Meme revalidation que les
+    autres ; les definitions nomment son empreinte (`suite_empreinte`).
+    """
+    return _revalide(current_app.extensions["suite"])
 
 
 @bp.route("/api/collections")

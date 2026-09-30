@@ -79,7 +79,19 @@ def paquet(paquets):
     for morceau in donnees["audio"]["musiques"]:
         if morceau["slug"] in notes:
             morceau["voix"] = notes[morceau["slug"]]
+    # ⚠️ Et la SUITE du paquet (`/api/suite`, 30 sept. 2026 : le Clairon, les Galeries hantées), remise dans les
+    # définitions à son arrivée (`Suite.poser`), sous les mêmes clés. Un juge qui veut le paquet NU (la suite pas
+    # encore là) passe `banc(..., poser_la_suite=False)`.
+    for cle, valeur in json.loads(paquets.suite.corps.decode("utf-8")).items():
+        if cle != "empreinte":
+            donnees[cle] = valeur
     return donnees
+
+
+@pytest.fixture(scope="session")
+def suite_du_paquet(paquets):
+    """La suite du paquet — un `/api/suite`, hors des définitions depuis le 30 sept. 2026."""
+    return json.loads(paquets.suite.corps.decode("utf-8"))
 
 
 @pytest.fixture(scope="session")
@@ -130,7 +142,7 @@ def serveur(tmp_path_factory, paquets):
 
 
 @pytest.fixture(scope="session")
-def banc(paquet, a_jouer, cartes_des_blocs, notes_de_la_musique, collections_du_paquet):
+def banc(paquet, a_jouer, cartes_des_blocs, notes_de_la_musique, collections_du_paquet, suite_du_paquet):
     """Fait tourner `corps` (une fonction JS `(L, o) => resultat`) dans le banc Node."""
     if OBLIGATOIRE and shutil.which("node") is None:
         pytest.fail("node est obligatoire (BANDINI_TESTS_OBLIGATOIRES=1) et il manque")
@@ -139,7 +151,8 @@ def banc(paquet, a_jouer, cartes_des_blocs, notes_de_la_musique, collections_du_
     def executer(corps: str, graine: int = 0x1A2B3C4D, stockage: dict | None = None, session: dict | None = None,
                  reseau: dict | None = None, defi: dict | None = None, poser_les_missions: bool = True,
                  missions_panne: int = 0, blocs_panne: int = 0, poser_les_notes: bool = True,
-                 notes_panne: int = 0, collections_panne: int = 0):
+                 notes_panne: int = 0, collections_panne: int = 0, poser_la_suite: bool = True,
+                 suite_panne: int = 0):
         # `stockage` / `session` : ce que le navigateur gardait AVANT le chargement.
         # `reseau` : ce que /api/compte/ repond (M14) — l'ouverture part des que la
         # ville est batie, donc ses reponses se posent avant, jamais pendant.
@@ -155,7 +168,10 @@ def banc(paquet, a_jouer, cartes_des_blocs, notes_de_la_musique, collections_du_
                   "notes": notes_de_la_musique, "poser_les_notes": poser_les_notes, "notes_panne": notes_panne,
                   # Les collections (`/api/collections`) : servies comme le serveur ; `collections_panne` fait
                   # tomber les premières demandes.
-                  "collections": collections_du_paquet, "collections_panne": collections_panne}
+                  "collections": collections_du_paquet, "collections_panne": collections_panne,
+                  # La suite du paquet (`/api/suite`) : servie comme le serveur. `poser_la_suite=False` retire
+                  # ses clés des définitions avant le démarrage, et `suite_panne` fait tomber les premières demandes.
+                  "suite": suite_du_paquet, "poser_la_suite": poser_la_suite, "suite_panne": suite_panne}
         if stockage is not None:
             entree["stockage"] = stockage
         if session is not None:

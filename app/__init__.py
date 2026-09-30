@@ -51,6 +51,8 @@ def create_app(config_object: type[Config] = Config) -> Flask:
     app.extensions["musiques"] = paquets.musiques
     # Les collections (le catalogue des cartes de hockey et leurs places), hors du paquet ET de la carte.
     app.extensions["collections"] = paquets.collections
+    # La suite du paquet (le Clairon, les Galeries hantées), hors des définitions depuis le 30 sept. 2026.
+    app.extensions["suite"] = paquets.suite
     # Tout ce qu'une mission demande pour se jouer : ce qu'elle dit, ce qu'elle montre,
     # avec quelles voix, et ce qu'elle demande de faire. Hors du paquet depuis le
     # 24 sept. 2026 — voir `definitions.py`.

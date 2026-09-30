@@ -69,7 +69,8 @@ après deux sorties. Les plafonds de `test_le_paquet_reste_leger` **descendent**
   plus, après les définitions au lieu de dedans. Ce que ça achète : un `JSON.parse` plus petit avant le
   menu, des notes qui revalident en 304 quand un catalogue change, et dix Ko gzip de marge rendus au paquet.
 
-**Les prochaines sorties possibles** (mesurées, pas faites) :
+**Les prochaines sorties possibles** (mesurées le 29 sept., pas faites ce jour-là — le journal et
+`types_*` sont sortis avec la deuxième cure, plus bas) :
 
 - `journal`, `journal_speciales`, `journal_lecons`, `journal_matins` (≈ 4,4 Ko gzip) : ils ne servent qu'au
   journal du matin (sa manchette et sa voix). ⚠️ Un texte n'a pas de repli : il faudrait les demander au démarrage comme les notes
@@ -78,4 +79,46 @@ après deux sorties. Les plafonds de `test_le_paquet_reste_leger` **descendent**
   contrat (`test_le_paquet_porte_les_scenes`, `test_le_paquet_contient_tout`) — à trancher.
 - `defis` (4 Ko gzip), `personnages` et `visages` (4,8 Ko), `garderobe` (3,4 Ko) : lus au démarrage ou
   à chaque image ; ils ne sortiraient qu'avec la dette des districts chargés autour du joueur.
+
+**Deuxième cure, livrée le 30 sept. 2026.** Mesure sur `dev` : **255 021 octets bruts / 58 992 gzip** — sept
+octets sous le plafond, un jour après la première. **Qui avait remangé la marge** (mesuré commit par commit
+depuis `a185aaed`, +8 640 bruts / +2 644 gzip) : les quatre saisons **+1 275 gzip** (l'Halloween +570 avec sa
+clé neuve, les vagues 4a/4b/4c +541, le son des saisons +148), les photos du Clairon **+697** (clé neuve),
+Le Boss **+542** (une manchette, des personnages, la dernière nuit), le reste en miettes. Après :
+**233 247 / 53 017** (−21 774 / −5 975). Les plafonds de `test_le_paquet_reste_leger` descendent :
+256 000 → **240 000** bruts, 59 000 → **57 500** gzip (**4 483 octets de marge**).
+
+- **La suite du paquet** (`/api/suite`, `definitions.DANS_LA_SUITE`, `static/js/suite.js`) : le Clairon
+  (`journal*` et `photos`) et la hantise des Galeries (`galeries`) — −4 444 gzip. Ce que le navigateur ne lit
+  jamais avant d'avoir quitté l'écran titre, demandé juste après les définitions en arrière-plan, gardé dans
+  la coquille du travailleur (le juge Chromium, réseau coupé, le voit arriver), et remis dans `B.defs` sous
+  les mêmes clés (`Suite.poser`) : aucun lecteur ne sait d'où il vient. ⚠️ **Un texte n'a pas de repli** :
+  un jour qui se lève avant la suite ne perd pas sa une — le Clairon l'ATTEND (`Suite.quand`, dans
+  `Missions.nouveauJour`), puis s'affiche et se dit ; si un autre matin s'est levé entre-temps, seule la une
+  du dernier paraît. Ce qui lit une de ces clés se tait sans elle (le déclic de la photo, Louise, les Galeries
+  la nuit, le bulletin de la radio) — jamais une exception dans `maj()`. Une demande ratée se refait une fois
+  par dix secondes. La suite a son plafond (10 562 bruts / 4 884 gzip ; 13 000 / 6 000).
+- **Ce qu'aucun script ne lisait** — −971 gzip : `types_plans` et `types_objectifs` (leurs deux juges jugent
+  ailleurs ce qu'ils tenaient : l'ouverture ne joue que des plans que `scenes.js` connaît, clés comprises ;
+  chaque objectif de chaque `/api/mission/<slug>` est d'un type de `TYPES_OBJECTIFS`), et la voix ElevenLabs
+  de chaque personnage (`CHAMPS_HORS_DU_PAQUET` : elle ne sert qu'à générer ses mp3, en Python).
+- **Les voix du journal et des repos en séries** (`audio.series_des_repos`, comme le 6/49) — −542 gzip :
+  `histoire` ne garde que l'ouverture ; `audio.deplier_les_series` est le jumeau Python de `Son.Voix.histoire`
+  pour les juges.
+- ⚠️ **La garde** (`MESURE_DU_PAQUET`, `tests/test_definitions.py`) : chaque clé des définitions, son poids
+  gzip seul à la mesure du 30 sept., et son **budget** (mesure + 10 % + 100). Une clé qui dépasse le sien
+  rougit **en se nommant** (`test_chaque_cle_du_paquet_tient_son_budget`) ; une **clé neuve** doit s'y écrire
+  avec son poids (hier, `photos` et `halloween` sont arrivées sans un mot) ; et le plafond global, s'il cède,
+  **nomme les trois clés qui ont le plus grossi** depuis la mesure. Le prochain qui déborde sait où couper
+  avant de relever quoi que ce soit.
+
+**Les prochaines sorties possibles** (mesurées le 30 sept., gain dans le paquet, pas faites) :
+
+- les **textes des défis** (`texte`, `regles`, `consigne` : ≈ 2,5 Ko gzip) : lus quand on en prend un ou
+  qu'on ouvre le carnet — la carte et les panneaux ne lisent que le titre et le lieu ;
+- les **comptoirs** (≈ 1,4 Ko) : leurs menus ne s'ouvrent qu'à un comptoir ; `menuComptoir` rend `null`
+  sans eux (ACTION ne ferait rien, sans un mot) — il lui faudrait un message ou `Suite.quand` ;
+- les **jeux du casino** (`tables_de_jeu`, `machine_a_sous`, `videopoker` : ≈ 1,2 Ko) : ⚠️ `Casino.maj` →
+  `majSecurite` → `dossier()` lit `tables_de_jeu.surveillance` sans garde, dans la boucle d'images ;
+- `economie.paliers` (≈ 880) et le **repos** des personnages (≈ 690) : à regarder, lecteur par lecteur.
 

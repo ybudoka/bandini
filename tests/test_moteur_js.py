@@ -41,7 +41,10 @@ def test_le_moteur_charge_et_expose_son_api(banc, paquet):
     assert r["defi"] == 1
     # ⚠️ Plus UNE pour les notes de la musique (29 sept. 2026) : `GET /api/musiques`, le filet
     # du sequenceur, sorti du paquet et demande juste apres lui (`Son.Notes`).
-    assert r["fetchs"] == 5 + r["ouverture"]
+    # ⚠️ Plus UNE pour les collections (30 sept. 2026, `/api/collections`), et UNE pour la suite du paquet
+    # (30 sept. 2026, `/api/suite` : le Clairon, les Galeries hantees) — sorties du paquet, demandees juste
+    # apres lui, comme les notes.
+    assert r["fetchs"] == 7 + r["ouverture"]
     assert r["ouverture"] <= 6, "l'ouverture se prechauffe ; la ville, non"
 
 
@@ -197,7 +200,7 @@ def test_le_cache_de_morceaux_ne_gonfle_pas_quand_on_traverse_la_ville(banc):
     assert r["fin"] > 0 and r["images"] > 0
 
 
-def test_le_son_survit_a_l_absence_d_audio(banc, paquet):
+def test_le_son_survit_a_l_absence_d_audio(banc, paquet, collections_du_paquet):
     """Sous Node il n'y a pas d'AudioContext : le jeu doit jouer quand meme."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
@@ -213,5 +216,8 @@ def test_le_son_survit_a_l_absence_d_audio(banc, paquet):
     assert r["contexte"] is None and r["pret"] is False
     assert r["charges"] == 0, "rien ne doit se charger sans AudioContext"
     assert r["avance"] is True, "la boucle s'est arretee sur un son"
-    assert r["sons"] == len(paquet["audio"]["echantillons"])
+    # ⚠️ Plus les sons des collections, qui voyagent avec leur catalogue (`audio.LIEUX_A_PART`) et rejoignent
+    # le paquet a son arrivee (`Son.Lieu.declarer`).
+    a_part = len(((collections_du_paquet or {}).get("sons") or {}).get("echantillons") or [])
+    assert r["sons"] == len(paquet["audio"]["echantillons"]) + a_part
     assert r["sansFichier"] == [], f"sons declares sans fichier : {r['sansFichier']}"

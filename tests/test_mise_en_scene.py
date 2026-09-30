@@ -56,8 +56,16 @@ def test_le_juge_des_scenes_refuse_ce_qui_ne_se_joue_pas():
 
 
 def test_le_paquet_porte_les_scenes(paquet):
+    """⚠️ Le paquet porte les SCÈNES, pas le vocabulaire : `types_plans` voyageait avec elles et aucun script
+    ne le lisait (sorti le 30 sept. 2026, la deuxième cure). Ce que ce juge tenait — le navigateur et Python
+    parlent la même langue de plans — se juge sur le code de `scenes.js` (juge du dessus), et chaque plan de
+    l'ouverture est un plan que `scenes.js` sait jouer, clés comprises."""
     assert paquet["scenes"]["ouverture"] == missions.SCENE_OUVERTURE
-    assert set(paquet["types_plans"]) == set(missions.TYPES_PLANS)
+    assert "types_plans" not in paquet, "le vocabulaire des plans est revenu au paquet, et personne ne le lit"
+    joues = _types_du_navigateur()
+    for plan in paquet["scenes"]["ouverture"]:
+        assert plan["type"] in joues, f"l'ouverture joue un plan « {plan['type']} » que scenes.js ne connaît pas"
+        assert not set(plan) - set(missions.TYPES_PLANS[plan["type"]]) - set(missions.CLES_DE_TOUS_LES_PLANS), plan
 
 
 def test_le_metteur_en_scene_ne_connait_aucune_scene_par_son_nom():

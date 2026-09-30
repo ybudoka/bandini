@@ -58,6 +58,8 @@ const Photos = (function () {
 
   /** Le declic : le cadre juge, la meilleure photo du jour gardee. Rend le sujet (ou null). */
   function declic(vue) {
+    // ⚠️ Le Clairon voyage dans la suite du paquet (`Suite`) : sans lui, le cadre ne se juge pas.
+    if (!donnees()) return null;
     const p = B.partie, s = juger(vue);
     if (!B.photo) return s;
     if (!s) { B.photo.dit = 'RIEN QUI VAILLE UNE UNE'; p.photoVide = p.jour; return null; }
@@ -80,6 +82,7 @@ const Photos = (function () {
   /** On parle a Louise : la premiere fois elle se presente ; ensuite, elle regarde ta photo. */
   function accueillir(premiere) {
     const p = B.partie, d = donnees();
+    if (!d) return;                       // la suite du paquet n'est pas encore là (`Suite`)
     if (premiere) { dire('salut'); return; }
     if (p.uneVendue === p.jour) { dire('deja'); return; }
     const ph = p.photo;

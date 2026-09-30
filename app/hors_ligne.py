@@ -39,13 +39,14 @@ SOURCE = Path(__file__).resolve().parent.parent / "static" / "js" / "travailleur
 
 #: Tout ce que la page demande par un attribut : ses scripts, sa feuille, ses
 #: images, son manifeste — et les paquets que `jeu.js` va chercher : les definitions, la
-#: carte, les notes de la musique (le filet du sequenceur : hors ligne, il doit tenir) et les
-#: collections (le catalogue des cartes de hockey et leurs places).
+#: carte, les notes de la musique (le filet du sequenceur : hors ligne, il doit tenir), les
+#: collections (le catalogue des cartes de hockey et leurs places) et la suite du paquet (le
+#: Clairon : un texte n'a pas de repli).
 #:
 #: ⚠️ `data-url-mission` n'y est PAS, et c'est voulu : ce n'est pas une adresse mais
 #: un GABARIT (`…/SLUG?e=…`), et les missions se gardent a l'usage, jamais dans la
 #: coquille. Les leurs arrivent par `travailleur(missions=…)`.
-_ADRESSES = re.compile(r'\s(?:src|href|data-url-definitions|data-url-carte|data-url-musiques|data-url-collections)="([^"]+)"')
+_ADRESSES = re.compile(r'\s(?:src|href|data-url-definitions|data-url-carte|data-url-musiques|data-url-collections|data-url-suite)="([^"]+)"')
 
 
 def coquille(page: str, accueil: str) -> list[str]:

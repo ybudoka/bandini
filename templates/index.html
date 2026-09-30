@@ -6,6 +6,7 @@
       data-url-carte="{{ url_for('jeu.api_carte', e=empreinte_carte) }}"
       data-url-musiques="{{ url_for('jeu.api_musiques', e=empreinte_musiques) }}"
       data-url-collections="{{ url_for('jeu.api_collections', e=empreinte_collections) }}"
+      data-url-suite="{{ url_for('jeu.api_suite', e=empreinte_suite) }}"
       data-url-travailleur="{{ url_for('jeu.travailleur') }}"
       {# ⚠️ La base des routes de compte EST le chemin du cookie de session : le
          jeton d'appareil ne part qu'avec ces appels-la, ni avec la page, ni avec
@@ -189,6 +190,7 @@
 <script src="{{ url_for('static', filename='js/chargement.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/hors-ligne.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/base.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/suite.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/calendrier.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/saisons.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/compte.js') }}?v={{ version }}"></script>

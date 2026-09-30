@@ -1748,6 +1748,27 @@ def voix_repos() -> list[dict]:
     return sortie
 
 
+def deplier_les_series(audio_du_paquet: dict) -> list[dict]:
+    """Les voix de l'histoire telles que le navigateur les TIENT : `histoire`, plus chaque série dépliée —
+    le jumeau de `Son.Voix.histoire()`, pour les juges qui lisent le paquet."""
+    voix = list(audio_du_paquet.get("histoire", []))
+    for s in audio_du_paquet.get("series", []):
+        for nom in s["noms"]:
+            voix.append({"slug": s["prefixe"] + nom, "qui": s["qui"], "mission": s["mission"], "partie": s["partie"],
+                         "telephone": s["telephone"], "volume": s["volume"],
+                         "fichier": None if nom in s["sans_fichier"] else f"histoire-{s['prefixe']}{nom}.mp3"})
+    return voix
+
+
+def series_des_repos() -> list[dict]:
+    """Les voix de repos en séries, une par personnage (`<slug>-repos-`) : elles ne diffèrent que par leur
+    numéro, et chaque personnage a sa voix (`qui`) — c'est ce qu'une série met en commun."""
+    par_qui: dict[str, list[dict]] = {}
+    for v in voix_repos():
+        par_qui.setdefault(v["qui"], []).append(v)
+    return [serie_de_voix(f"{qui}-repos-", voix) for qui, voix in par_qui.items()]
+
+
 def voix_dojo() -> list[dict]:
     """Ce que Mireille dit au DOJO DION (`app/dojo.py`) : l'annonce des cours, le compte, les
     « oui » et les « rate ». Meme mecanique que `voix_repos()` ; un mp3 qui manque laisse la
@@ -2104,12 +2125,18 @@ def exporter() -> dict:
             {"slug": v["slug"], "qui": v["qui"], "mission": v["mission"], "partie": v["partie"],
              "telephone": v["telephone"], "volume": v["volume"],
              "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None}
-            for v in voix_journal() + voix_ouverture() + voix_repos()
+            for v in voix_ouverture()
         ],
         # ⚠️ LES SERIES : des voix qui ne different que par leur NOM (les 55 du tirage du 6/49) voyagent
         # en une ligne — le prefixe, les noms, ce qu'elles ont en commun, et celles dont le mp3 manque.
         # Declarees une par une, elles pesaient 8 870 octets bruts et firent deborder le paquet
         # (`test_le_paquet_reste_leger`, 26 sept. 2026). `Son.Voix.histoire()` les deplie au chargement.
+        #
+        # ⚠️ **ET LE JOURNAL ET LES REPOS, LE 30 SEPT. 2026** (la deuxième cure du paquet) : les manchettes que
+        # le narrateur lit et le mot de repos de chaque personnage n'étaient qu'un nom qui change sous un
+        # préfixe commun — 8 830 octets bruts déclarés un par un. Une série pour le journal, une par personnage
+        # pour les repos (`series_des_repos`) ; `histoire` ne garde que l'ouverture.
         "series": [serie_de_voix("narrateur-loto-", voix_loto()), serie_de_voix("galeries-", voix_galeries()), serie_de_voix("halloween-", voix_halloween()),
-                   serie_de_voix("ti_guy-garage-", voix_garage()), serie_de_voix("louise-clairon-", voix_photos())],
+                   serie_de_voix("ti_guy-garage-", voix_garage()), serie_de_voix("louise-clairon-", voix_photos()),
+                   serie_de_voix("narrateur-journal-", voix_journal()), *series_des_repos()],
     }

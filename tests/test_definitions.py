@@ -4,6 +4,101 @@ import json
 from app import definitions
 
 
+#: ⚠️ **LA GARDE DE LA DEUXIÈME CURE** (30 sept. 2026) : chaque clé des définitions, son poids gzip SEUL (octets,
+#: niveau 6, le JSON du paquet) à la mesure du 30 sept. 2026, et son BUDGET. Le plafond d'en bas avait été relevé
+#: presque chaque jour sans que rien ne dise qui mangeait la marge : en un jour après la première cure, les
+#: saisons (+711), les photos (+660, clé neuve), l'Halloween (+625, clé neuve) et Le Boss (+542) l'avaient
+#: remangée à sept octets près. Maintenant :
+#: - une clé qui dépasse SON budget rougit en se nommant (`test_chaque_cle_du_paquet_tient_son_budget`) ;
+#: - une clé neuve s'écrit ICI, avec son poids, ou elle rougit ;
+#: - le plafond global, s'il cède, nomme les trois clés qui ont le plus grossi depuis cette mesure.
+#: Relever un budget, c'est écrire ICI pourquoi, à la ligne de la clé ; mais d'abord regarder si elle peut sortir
+#: (`definitions.DANS_LA_SUITE`, `/api/mission/<slug>`, un bloc, ou un champ qu'aucun script ne lit).
+#: Budget de départ : la mesure + 10 % + 100, arrondi au 50.
+MESURE_DU_PAQUET: dict[str, tuple[int, int]] = {
+    "audio": (6_879, 7_700),
+    "pietons": (5_227, 5_850),
+    "defis": (4_088, 4_600),
+    "economie": (3_943, 4_450),
+    "missions": (3_918, 4_450),
+    "garderobe": (3_460, 3_950),
+    "personnages": (2_728, 3_150),
+    "vehicules": (1_973, 2_300),
+    "interactions": (1_839, 2_150),
+    "visages": (1_695, 2_000),
+    "saisons": (1_695, 2_000),
+    "comptoirs": (1_547, 1_850),
+    "recherche": (1_361, 1_600),
+    "manettes": (1_265, 1_500),
+    "armes": (1_126, 1_350),
+    "techniques": (1_094, 1_350),
+    "conduite": (1_000, 1_200),
+    "nuit": (835, 1_050),
+    "magasins": (795, 1_000),
+    "tables_de_jeu": (790, 1_000),
+    "halloween": (625, 800),
+    "devantures": (616, 800),
+    "garage": (561, 750),
+    "tenues": (542, 700),
+    "distributrices": (530, 700),
+    "ambulants": (523, 700),
+    "demenagement": (455, 650),
+    "pluie": (426, 600),
+    "mantes": (421, 600),
+    "verglas": (380, 550),
+    "scenes": (363, 500),
+    "saint_jean": (348, 500),
+    "blocs": (348, 500),
+    "machine_a_sous": (344, 500),
+    "pont": (343, 500),
+    "ouverture": (339, 500),
+    "dojo": (308, 450),
+    "videopoker": (304, 450),
+    "fetes": (263, 400),
+    "enseignes": (260, 400),
+    "calendrier": (252, 400),
+    "brouillard": (252, 400),
+    "armes_regles": (153, 300),
+    "coiffures": (152, 300),
+    "loto": (144, 300),
+    "marche_noir": (141, 300),
+    "quatre_roues": (140, 300),
+    "motoneige": (135, 250),
+    "ordre_armes": (134, 250),
+    "derby": (122, 250),
+    "reclame": (121, 250),
+    "repos": (107, 250),
+    "cles_des_serrures": (64, 200),
+    "suite_empreinte": (38, 150),
+    "musiques_empreinte": (38, 150),
+    "missions_empreinte": (38, 150),
+    "empreinte": (38, 150),
+    "collections_empreinte": (38, 150),
+    "carte_empreinte": (38, 150),
+    "blocs_empreinte": (38, 150),
+    "version": (29, 150),
+    "decalage_nord": (23, 150),
+    "tuile_px": (22, 150),
+}
+
+
+def _gzip_par_cle(corps: bytes) -> dict[str, int]:
+    """Le poids gzip de chaque clé des définitions, seule — comme `MESURE_DU_PAQUET` l'écrit."""
+    return {cle: len(gzip.compress(json.dumps(valeur, ensure_ascii=False, separators=(",", ":"),
+                                              sort_keys=True).encode("utf-8"), 6))
+            for cle, valeur in json.loads(corps).items()}
+
+
+def _qui_a_grossi(corps: bytes, combien: int = 3) -> str:
+    """Les clés qui ont le plus grossi depuis `MESURE_DU_PAQUET` (et les clés neuves), en une ligne."""
+    ecarts = sorted(((poids - MESURE_DU_PAQUET.get(cle, (0, 0))[0], cle) for cle, poids in _gzip_par_cle(corps).items()),
+                    reverse=True)[:combien]
+    ecarts = [(ecart, cle) for ecart, cle in ecarts if ecart > 0]
+    if not ecarts:
+        return "aucune clé n'a grossi depuis MESURE_DU_PAQUET : elle est à réécrire"
+    return ", ".join(f"{cle} +{ecart}" + ("" if cle in MESURE_DU_PAQUET else " (clé neuve)") for ecart, cle in ecarts)
+
+
 def test_le_paquet_est_deterministe():
     # ⚠️ Deux constructions POUR DE VRAI : la fixture `paquets` n'en ferait qu'une.
     a, b = definitions.construire(), definitions.construire()
@@ -223,13 +318,60 @@ def test_le_paquet_reste_leger(paquets):
     catalogue change, et DIX Ko de marge rendus aux missions. Les notes ont leur plafond à elles
     (43 775 bruts / 8 382 gzip à la mesure). Deux Ko et demi de marge gzip, pas plus : le prochain qui
     relève ce plafond regarde d'abord ce qui peut encore sortir (la fiche en nomme).
+
+    ⚠️ **DEUXIÈME CURE, LE 30 SEPT. 2026 — LES PLAFONDS DESCENDENT ENCORE : 256 000 → 240 000 bruts,
+    59 000 → 57 500 gzip** (docs/jalons/le-paquet-des-definitions-maigrit.md, « Fiche de la deuxième cure »).
+    Un jour avait suffi à remanger la marge : **255 021 bruts / 58 992 gzip** sur `dev` (sept octets sous le
+    plafond) — les saisons +1 275 gzip (lots 3 à 6), les photos du Clairon +697, Le Boss +542. Mesure après :
+    **233 247 bruts / 53 017 gzip** (−21 774 / −5 975) :
+    - LA SUITE DU PAQUET (`/api/suite`, `definitions.DANS_LA_SUITE`) : le Clairon (`journal*` et `photos`) et
+      la hantise des Galeries, demandés juste après les définitions et gardés dans la coquille, comme les
+      notes ; la manchette d'un jour qui se lève avant eux ATTEND (`Suite.quand`) : −4 444 gzip ;
+    - ce qu'aucun script ne lisait : `types_plans`, `types_objectifs`, et la voix ElevenLabs de chaque
+      personnage (`definitions.CHAMPS_HORS_DU_PAQUET`) : −971 ;
+    - les voix du journal et des repos en SÉRIES (`audio.series_des_repos`), comme le 6/49 : −542.
+    La suite a son plafond (10 562 bruts / 4 884 gzip à la mesure). 4 483 octets gzip de marge ; et le
+    plafond qui cède NOMME maintenant les trois clés qui ont le plus grossi depuis `MESURE_DU_PAQUET` — le
+    prochain qui déborde sait où couper, avant de relever quoi que ce soit.
     """
-    for nom, brut_max, fil_max in (("definitions", 256_000, 59_000), ("carte", 722_000, 71_000),
-                                   ("musiques", 50_000, 10_000)):
+    for nom, brut_max, fil_max in (("definitions", 240_000, 57_500), ("carte", 722_000, 71_000),
+                                   ("musiques", 50_000, 10_000), ("suite", 13_000, 6_000)):
         paquet = getattr(paquets, nom)
-        assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
+        qui = f" — qui a grossi : {_qui_a_grossi(paquet.corps)}" if nom == "definitions" else ""
+        assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle{qui}"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))
-        assert sur_le_fil < fil_max, f"{nom} : {sur_le_fil} octets gzip, le telephone va sentir passer"
+        assert sur_le_fil < fil_max, f"{nom} : {sur_le_fil} octets gzip, le telephone va sentir passer{qui}"
+
+
+def test_chaque_cle_du_paquet_tient_son_budget(paquets):
+    """⚠️ La garde de la deuxième cure : QUI fait grossir le paquet se voit, clé par clé (`MESURE_DU_PAQUET`).
+    Une clé qui dépasse son budget rougit en se nommant ; une clé neuve doit s'y écrire avec son poids. Relever
+    un budget s'écrit à la ligne de la clé, avec pourquoi — après avoir regardé si elle peut sortir."""
+    poids = _gzip_par_cle(paquets.definitions.corps)
+    neuves = sorted(set(poids) - set(MESURE_DU_PAQUET))
+    assert not neuves, ("clés neuves au paquet, sans poids écrit dans MESURE_DU_PAQUET : "
+                        + ", ".join(f"{c} ({poids[c]} octets gzip)" for c in neuves)
+                        + " — est-ce que le navigateur la lit avant l'écran titre ? Sinon, `DANS_LA_SUITE`")
+    parties = sorted(set(MESURE_DU_PAQUET) - set(poids))
+    assert not parties, f"clés sorties du paquet : {parties} — retire leur ligne de MESURE_DU_PAQUET"
+    depassees = [f"{cle} : {poids[cle]} octets gzip pour un budget de {budget} (mesure {mesure}, +{poids[cle] - mesure})"
+                 for cle, (mesure, budget) in MESURE_DU_PAQUET.items() if poids[cle] > budget]
+    assert not depassees, ("des clés dépassent leur budget : " + " ; ".join(depassees)
+                           + ". Avant de relever : ce qui peut sortir (voir MESURE_DU_PAQUET)")
+
+
+def test_la_suite_du_paquet_voyage_a_part(paquets):
+    """Les clés de `DANS_LA_SUITE` ne sont plus dans les définitions ; elles sont dans la suite, entières, et les
+    définitions nomment son empreinte — comme celle de la carte et des notes."""
+    defs = json.loads(paquets.definitions.corps)
+    suite = json.loads(paquets.suite.corps)
+    complet = definitions.assembler()
+    assert defs["suite_empreinte"] == suite["empreinte"] == paquets.suite.etag
+    for cle in definitions.DANS_LA_SUITE:
+        assert cle not in defs, f"« {cle} » voyage encore dans le paquet"
+        assert suite[cle] == json.loads(json.dumps(complet[cle])), f"« {cle} » n'est pas arrivée entière"
+    assert set(suite) == set(definitions.DANS_LA_SUITE) | {"empreinte"}, "la suite porte une clé qu'on n'a pas déclarée"
+    assert all("voix" not in p for p in defs["personnages"]), "la voix ElevenLabs d'un personnage est revenue au paquet"
 
 
 def test_l_empreinte_change_avec_le_contenu(monkeypatch):
@@ -259,10 +401,26 @@ def test_l_empreinte_des_definitions_suit_la_carte(monkeypatch):
 
 
 def test_le_paquet_contient_tout(paquet):
+    """⚠️ `types_objectifs` n'y est plus (30 sept. 2026, la deuxième cure) : aucun script ne le lisait. Le
+    contrat qu'il tenait — chaque objectif d'une mission est un type que le moteur connaît — se juge côté
+    Python (`test_missions`), sur ce qui voyage vraiment : les objectifs de `/api/mission/<slug>`."""
     for cle in ("version", "empreinte", "tuile_px", "vehicules", "armes", "ordre_armes", "economie",
-                "recherche", "carte", "missions", "defis", "types_objectifs", "magasins", "tenues"):
+                "recherche", "carte", "missions", "defis", "magasins", "tenues"):
         assert cle in paquet, cle
+    assert "types_objectifs" not in paquet and "types_plans" not in paquet
     assert json.dumps(paquet)  # serialisable
+
+
+def test_les_objectifs_qui_voyagent_sont_des_types_connus(a_jouer):
+    """Ce que `types_objectifs` promettait dans le paquet, jugé là où les objectifs voyagent : chaque objectif
+    de chaque `/api/mission/<slug>` est d'un type de `missions.TYPES_OBJECTIFS`."""
+    from app import missions
+    vus = 0
+    for slug, donnees in a_jouer.items():
+        for o in donnees.get("objectifs") or []:
+            assert o["type"] in missions.TYPES_OBJECTIFS, f"{slug} : objectif « {o['type']} » inconnu"
+            vus += 1
+    assert vus > 100, "le juge ne voit presque aucun objectif : il ne mesure rien"
 
 
 def test_la_carte_voyage_a_part_et_se_reconnait(paquets):

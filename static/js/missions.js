@@ -2247,9 +2247,23 @@ const Missions = (function () {
     const brume = typeof Brouillard !== 'undefined' ? Brouillard.annonceDeDemain() : null;
     // Les territoires des gangs : un coin par nuit (`Territoires.nuit`), et le Clairon le dit.
     const gangs = Territoires.ligneDuClairon(Territoires.nuit());
+    // ⚠️ LE CLAIRON VOYAGE DANS LA SUITE DU PAQUET (30 sept. 2026, `definitions.DANS_LA_SUITE`) : ses
+    // manchettes, ses leçons, ses matins et la photo de Louise arrivent juste après les définitions. Un jour
+    // qui se lève avant elles (une partie reprise à 23 h 59, un réseau lent) ne perd pas sa une : elle
+    // ATTEND la suite (`Suite.quand`) et paraît à son arrivée — sauf si un autre matin s'est levé entre-temps.
+    // Ce qui précède (le tirage, le brouillard, les territoires) s'est joué CETTE nuit, sans attendre.
+    const partie = B.partie, jour = partie.jour;
+    Suite.quand(function () {
+      if (B.partie !== partie || partie.jour !== jour) return;
+      leClaironDuMatin([loto, brume, gangs]);
+    });
+  }
+
+  /** Le Clairon du matin : la une, et `nuit` (le tirage, le brouillard, les territoires) dessous. */
+  function leClaironDuMatin(nuit) {
     // La une de la photo vendue a Louise hier, EN TETE (et ta face en une : la police t'a vu).
     Photos.matin();
-    const dessous = [Photos.ligneDuClairon(), loto, brume, gangs, Verglas.ligneDuClairon(), Pont.ligneDuClairon(), SaintJean.ligneDuClairon(), Demenagement.ligneDuClairon(), Fetes.ligneDuClairon(), Halloween.ligneDuClairon(), decompteDesNids()].filter(Boolean);
+    const dessous = [Photos.ligneDuClairon()].concat(nuit, [Verglas.ligneDuClairon(), Pont.ligneDuClairon(), SaintJean.ligneDuClairon(), Demenagement.ligneDuClairon(), Fetes.ligneDuClairon(), Halloween.ligneDuClairon(), decompteDesNids()]).filter(Boolean);
     const m = manchetteDuJour();
     if (m) { B.partie.derniereManchette = m; direLaManchette(m, dessous); }
     else { Hud.message(dessous[0] || 'JOUR ' + B.partie.jour); direLeLoto(); }

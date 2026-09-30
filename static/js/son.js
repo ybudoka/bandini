@@ -1562,7 +1562,10 @@ const Son = (function () {
       const r = Ondes.reglages();
       const m = B.partie && B.partie.derniereManchette;
       if (!m || !m.slug) return null;
-      const lecons = (B.defs && B.defs.journal_lecons) || [];
+      // ⚠️ Les leçons voyagent dans la suite du paquet (`Suite`) : sans elles, on ne sait pas si la une en est
+      // une — la station joue sa musique.
+      const lecons = B.defs && B.defs.journal_lecons;
+      if (!lecons) return null;
       if (lecons.some(function (l) { return l.slug === m.slug; })) return null;
       const lue = Ondes.bulletins[m.slug];
       if (lue !== undefined && B.t - lue < (r.bulletin_repos_s || 600) * 60) return null;
