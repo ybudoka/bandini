@@ -35,3 +35,13 @@ Au téléphone : « Roméo Bilodeau, du bout de La Pointe. » — le nom et l'ad
 ## À trancher
 
 - Rien pour l'instant.
+
+## Notes
+
+- **30 sept. 2026 — Santa introuvable au compte, puis retrouvée.** `--libres` disait « le jeu nomme des voix que le
+  compte n'a pas : Santa - Gentle and Heartwarming ». La voix n'était ni retirée ni absente : ajoutée depuis la
+  bibliothèque (`s6w9aeDifUqNIV5QeIBE`), elle était arrivée au compte sous le nom **d'origine** de son autrice,
+  « Santa Claus – Gentle & Heartwarming Christmas (Multilingual) » — la bibliothèque, elle, l'affiche « Santa - Gentle
+  and Heartwarming » (le nom que l'audition a lu), et `POST /v1/voices/add` ignore `new_name`. Renommée au compte
+  (`POST /v1/voices/<id>/edit`, `name=Santa - Gentle and Heartwarming`) : `--libres` et la recherche par nom d'une
+  régénération la retrouvent. Rien de refait : les 11 mp3 restent ceux du 30 sept.
