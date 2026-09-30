@@ -667,7 +667,7 @@ from . import (  # noqa: E402
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
     s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
     e04, e06, e07, e10, la_pointe, s02, s05, s06, s09, s10, s11,
-    d01, d02, d03, d04, q07, m98,
+    d01, d02, d03, d04, h03, h04, h05, h06, h07, q07, m98,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -712,6 +712,9 @@ from . import (  # noqa: E402
 # terminus. On lui montre sa garantie (le garage), on lui ramène l'enveloppe de Momo le taxi, on couche les faux
 # Ciseaux qui collectent en son nom aux Quais, et on fait sa collecte chez Ti-Paul, Lulu et Ovila : chaque job
 # efface un bout de la dette (`donne.dette`).
+# ⚠️ h03 à h07 (30 sept. 2026, vague 7) : l'hôpital — le Dr Lachance joue aux cartes chez Sal (h03, h06 : sa
+# dette payée en fausses ordonnances), un cœur par l'autobus de nuit (h04), le patient de Ginette qui file en
+# ambulance (h05), et la nuit des urgences quand un quartier change de mains (h07, `exige.liberes`).
 # ⚠️ m98 (M13, 29 sept. 2026) — _Le Boss_, la fin qu'on gagne : après m97, quatre districts libérés et quatre
 # propriétés (`exige`). Le siège du Brouillard, le maire dans la chambre de l'hôtel, et la ville qui change de couleur.
 # ⚠️ m99 (M13, 25 sept. 2026) — _Sacrer son camp_, la fin qu'on peut jouer — tout au bout : son appel
@@ -736,6 +739,7 @@ CATALOGUE: list[Mission] = [
     s02.MISSION, s06.MISSION, s05.MISSION, s09.MISSION, s10.MISSION, s11.MISSION,
     q07.MISSION,
     d01.MISSION, d02.MISSION, d03.MISSION, d04.MISSION,
+    h03.MISSION, h04.MISSION, h05.MISSION, h06.MISSION, h07.MISSION,
     m97.MISSION, m98.MISSION, m99.MISSION,
 ]
 

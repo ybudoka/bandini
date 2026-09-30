@@ -45,10 +45,10 @@ Chaque fiche mêle deux sortes de faits.
 | [Mado](mado.md) | `mado` | devant le casse-croûte du Faubourg | Caroline | f11 · f13 · f12 (une enveloppe) |
 | [Gérard « Gégé » Morin](gege.md) | `gege` | devant la cantine des Quais | Alexandre Boutin | q03 |
 | [Xavier](xavier.md) | `xavier` | devant le dépanneur | Premium Male teacher (Adam) | e12 |
-| [Dr Lachance](dr-lachance.md) | `lachance` | à l'hôpital, dedans | Patrick | h01 |
+| [Dr Lachance](dr-lachance.md) | `lachance` | à l'hôpital, dedans | Patrick | h01 · h03 · h04 · h06 · h07 |
 | [Gus Lévesque](gus.md) | `gus` | à l'armurerie | Khaivan | f02 · f12 (une enveloppe) |
 | [Rosa Di Meo](rosa.md) | `rosa` | à la Boutique Rosa | Amélie | f03 · f10 · f12 (une enveloppe) |
-| [Ginette](ginette.md) | `ginette` | à l'hôpital | Jeanne Mance | h02 |
+| [Ginette](ginette.md) | `ginette` | à l'hôpital | Jeanne Mance | h02 · h05 |
 | [Gilles Thériault](gilles.md) | `gilles` | à la guérite de la fourrière | Patrick | s01 · s08 |
 | [Le Bonimenteur](le-bonimenteur.md) | `bonimenteur` | à l'arche de la foire | Léo | p13 · p14 |
 | [Le capitaine Aurèle Bérubé](berube.md) | `berube` | au bout du quai du traversier, aux Quais | Paul K — Deep French Narrator | m99 |

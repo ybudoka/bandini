@@ -85,6 +85,19 @@ def test_les_cinq_missions_se_suivent():
     assert len(missions.defis_de_foire()) == 3
 
 
+def _mot_d_enseigne(mot: str) -> bool:
+    """Un mot que `Histoire.boutiquex` trouve : un genre de devanture, ou un mot peint sur une enseigne."""
+    from villes import exporter
+
+    import unicodedata
+
+    def nu(t: str) -> str:
+        return "".join(c for c in unicodedata.normalize("NFD", t.upper()) if unicodedata.category(c) != "Mn")
+
+    devs = exporter()["devantures"]
+    return any(nu(mot) in nu(d.get("texte") or "") for d in devs)
+
+
 def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
     # ⚠️ Et les lieux des BLOCS (la villa, l'infiltration) : un lieu de mission peut être derrière un
     # passage — `blocs.erreurs` juge qu'on l'y rejoint à pied.
@@ -112,10 +125,13 @@ def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
                 amarre = o["lieu"].startswith("amarrage:") and o["lieu"].split(":", 1)[1] in lieux
                 assert o["lieu"] in lieux or amarre or o["lieu"].startswith(("mouillage:", "traversier:")), \
                     f"{m['slug']} : lieu inconnu {o['lieu']}"
-            # `course` (p04) : ses points, des lieux que `Histoire.resoudre` connaît.
+            # `course` (p04) : ses points, des lieux que `Histoire.resoudre` connaît. ⚠️ Et `boutique:<mot>` (h06, les
+            # trois comptoirs des ordonnances) : un mot d'ENSEIGNE (`Histoire.boutiquex`), jamais une porte qui
+            # deviendrait lieu de mission — la ville ne glisse pas ; le mot doit être peint quelque part.
             for point in o.get("points", []):
-                assert point in lieux or point in ("pont", "bois", "foire") or point.startswith(("zone:", "rampe:")), \
-                    f"{m['slug']} : point de course inconnu {point}"
+                enseigne = point.startswith("boutique:") and _mot_d_enseigne(point.split(":", 1)[1])
+                assert (point in lieux or point in ("pont", "bois", "foire") or enseigne
+                        or point.startswith(("zone:", "rampe:"))), f"{m['slug']} : point de course inconnu {point}"
             for etape in o.get("par", []):
                 assert etape in lieux, f"{m['slug']} : lieu du détour inconnu {etape}"
             if o.get("ou", "").startswith("zone:"):

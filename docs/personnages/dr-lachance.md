@@ -14,7 +14,7 @@
 | Voix | **Patrick — Clear, Natural and Polished** |
 | Bulle | « Viens, vite! » |
 | Couleurs | sarrau blanc, cheveux gris, pantalon ardoise |
-| Missions | donne **h01** |
+| Missions | donne **h01**, **h03**, **h04**, **h06**, **h07** |
 
 ## Son histoire
 
@@ -59,11 +59,17 @@ son bureau : l'hôpital ne se quitte pas en pleine nuit de garde.
 ## Ce qu'il a dit (le canon)
 
 - h01 : trois transports en ambulance, de nuit ; « On fera avec ce qu'on a. »
+- h03 : **son secret** — il joue aux cartes la nuit, à la table de Sal, et il perd (deux mille piasses) ; « Mauvais
+  diagnostic. » Au téléphone : « Lachance, de l'hôpital. »
+- h04 : un cœur à greffer arrive par l'autobus de nuit ; « Il bat. Dans quelqu'un d'autre, mais il bat. »
+- h06 : il paie le reste à Sal en fausses ordonnances de calmants, signées de sa main — « Vingt ans de médecine, pis
+  c'est un barbier qui me fait signer n'importe quoi. » Au téléphone : « Lachance, à l'appareil. »
+- h07 : la nuit des urgences, quand un quartier change de mains ; « Merci. Je le dis pas souvent. »
 
 ## Ce qui l'attend (M16)
 
-`h02` « Les pilules », `h03` « Le docteur a une dette », `h04` « Le cœur », `h06` « Les ordonnances »,
-`h07` « La nuit des urgences ».
+Les missions de la fiche sont livrées (30 sept. 2026, h03 à h07). Reste `h08` « La traverse de l'urgence »,
+qui attend l'île.
 
 ## À trancher
 

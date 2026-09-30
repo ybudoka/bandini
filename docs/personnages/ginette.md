@@ -14,7 +14,7 @@
 | Voix | **Jeanne Mance — Charming, Clear and Young** (partagée avec Josée : jamais dans le même dialogue) |
 | Bulle | « Toi, viens voir. » |
 | Couleurs | uniforme pâle, cheveux châtains, pantalon bleu de garde |
-| Missions | donne **h02** ; soigne le neveu dans **m2** (sa poignée de main : la première fois qu'on l'entend) |
+| Missions | donne **h02**, **h05** ; rend les clés au matin de **h07** ; soigne le neveu dans **m2** (sa poignée de main : la première fois qu'on l'entend) |
 
 ## Son histoire
 
@@ -65,10 +65,13 @@ Reste à son comptoir, droite, les bras croisés en attendant une réponse.
 - h01 : en personne, quand on lui rend les clés de l'ambulance : « Moi, c'est Ginette,
   l'infirmière-chef. » — elle se nomme là ; h02 la renomme au combiné (une fois par mission).
 - h02 : « C'est Ginette, de l'hôpital. » ; les pilules volées, reprises au commis véreux.
+- h05 : le chef des Cravates de m5, recousu, file avec l'ambulance ET la trousse de morphine ; elle ne dit pas son
+  nom (le secret professionnel) — « Lui, il se recoudra tout seul. »
+- h07 : au petit matin, les clés : « Assis-toi deux minutes, c'est un ordre. » — presque tendre.
 
 ## Ce qui l'attend (M16)
 
-Rien de prévu au-delà de h02 pour l'instant.
+Rien de prévu au-delà de h05 pour l'instant.
 
 ## À trancher
 

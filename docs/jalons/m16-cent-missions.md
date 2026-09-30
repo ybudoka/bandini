@@ -1129,3 +1129,27 @@ catalogue.
     reprise) n'est pas livré. Ces vagues s'écrivent en missions de quatre à six étapes, chacune un acte tout
     prêt : le jour où l'arc passe en chapitre, `remplace` les reprend, et une partie qui les a faites garde ses
     actes.
+- **30 sept. 2026 : vague 7 — l'arc H, l'hôpital.** Cinq missions : `h03` (Lachance, _Le docteur a une dette_ : son
+  secret — il joue aux cartes la nuit chez Sal ; on l'escorte au terminus avec mille piasses dans son sarrau, deux
+  Cravates veulent l'enveloppe, il paie, il nous attend à la porte — 250 $), `h04` (Lachance, _Le cœur_ : l'ambulance,
+  une glacière de pêcheur posée devant le terminus par l'autobus de nuit, l'urgence en 90 s — 400 $), `h05` (Ginette,
+  _Le patient qui s'est sauvé_ : le chef des Cravates de m5, recousu, file avec l'ambulance et la trousse de morphine,
+  ses deux gars viennent le chercher — 200 $), `h06` (Lachance, _Les ordonnances_ : le reste de sa dette, Sal le veut
+  en pilules — trois fausses ordonnances à trois comptoirs, sans une étoile, les sacs à Sal, puis le docteur, qui n'est
+  pas fier — 350 $), `h07` (Lachance, _La nuit des urgences_ : deux districts libérés, et ceux qui les ont perdus se
+  vengent dans les ruelles ; cinq blessés en ambulance, trois Cravates à la porte de l'urgence, les clés à Ginette au
+  petit matin — 500 $). Aucun personnage neuf, aucune pièce neuve.
+  - ⚠️ **Écarts à la fiche** : les prérequis s'enchaînent (h03 après h02 et d01, puis h04, h05, h06, h07) pour que le
+    téléphone n'appelle pas cinq fois ; `h05` — un fuyard ne court jamais à pied (`poserLeFuyard` pose toujours un
+    char) : le patient vole l'ambulance ; `h06` — les « trois pharmacies » sont trois ENSEIGNES (la pharmacie Tang, la
+    Mission du port, le dentiste) : une `course` sur `boutique:<mot>`, que `Histoire.resoudre` connaissait et que le
+    juge des points de course n'acceptait pas (il l'apprend, et vérifie que le mot est peint quelque part) — aucune
+    porte ne devient lieu de mission, la ville ne glisse pas ; `h07` demande **deux** districts libérés (le Faubourg de
+    m5 en fait déjà un, `liberes: 1` serait toujours vrai) ; « un séjour à l'hôpital gratuit » n'a aucune clé de `donne`
+    qui le lise (la facture ne passe pas par `rabais`) : la prime seule.
+  - **Juges** (`tests/test_arc_h_js.py`, sept) : chaque mission de l'appel à la prime, prise au bouton chez son donneur
+    (dedans pour Lachance) ; le docteur qui nous suit encore au retour ; la glacière qu'on ne ramasse pas au volant, et
+    le cœur perdu au chrono ; le patient parti de devant l'hôpital ; les trois enseignes dans l'ordre, et une étoile qui
+    fait tout rater ; la nuit des urgences fermée avec un seul district.
+  - ⚠️ **Le paquet** : `missions` 4 028 → 4 240 octets gzip (42 par mission) ; mais le BRUT des définitions est à
+    239 890 pour un plafond de 241 000 — ≈ 200 octets bruts par mission : cinq de plus et il cède.

@@ -14,7 +14,7 @@
 | Voix | **Pascal — Voix québécoise chaleureuse** (québécoise, mûre, « radio ») ; en v3 **à écouter** |
 | Bulle | « Assis-toi. » |
 | Couleurs | sarrau blanc de barbier, cheveux argent gominés, peau olive |
-| Missions | donne **d01**, **d02**, **d03**, **d04** (la vague 6 de M16) ; ses hommes, les Ciseaux, sont les collecteurs de la dette (`missions.js`, `envoyerLesCollecteurs`) |
+| Missions | donne **d01**, **d02**, **d03**, **d04** (la vague 6 de M16) ; reçoit l'argent du Dr Lachance, son client de poker (**h03**, **h06**) ; ses hommes, les Ciseaux, sont les collecteurs de la dette (`missions.js`, `envoyerLesCollecteurs`) |
 
 ## Son histoire
 
