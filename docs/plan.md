@@ -79,6 +79,7 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
+| Des corps qui tombent pour vrai, et les bêtes qu'on écrase | ⬜ **en cours** (tranché par Martin : les 14 passants qui restent debout morts reçoivent leur pose couchée, le corps commun retouché ; le chat et le raton s'écrasent sous un char lancé — un cri, une tache, le corps aplati, aucune étoile, la fuite ne change pas) | 30 sept. 2026 | **P1** | **correctif** | [fiche](jalons/des-corps-qui-tombent-pour-vrai.md#fiche) |
 | La foire fermée l'hiver, et le tour de ce qui ferme | ⬜ **en cours** (tranché par Martin : fermée tant que la neige tient, cadenassée, les missions du Bonimenteur attendent ; le tour — derby, crème glacée, fruits de mer, amuseurs, piscines, fontaine, BBQ, chaloupes ; et l'hiver amène le jongleur de feu, les foyers, le chocolat chaud ; trois vagues) | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/la-foire-fermee-l-hiver.md#fiche) |
 | La plage l'hiver | ⬜ **en cours** | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/la-plage-l-hiver.md#fiche) |
 | Des chocs qui sonnent ce qu'ils frappent, et des pas qui sonnent le sol | ⬜ **en cours** | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/des-chocs-qui-sonnent-ce-qu-ils-frappent-et-des-pas-qui-sonnent-le-sol.md#fiche) |
