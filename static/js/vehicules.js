@@ -1784,7 +1784,12 @@ const Vehicules = (function () {
     if (v.remorqueePar) decrocher(v.remorqueePar);
     v.vie = 0;
     v.vitesse = 0; v.vx = 0; v.vy = 0;
-    v.swaps = Object.assign(nuances('#2a2a2a'), { v: '#1a1a1e', l: '#2a2a2a', t: '#2a2a2a', x: '#2a2a2a', y: '#2a2a2a', G: '#1a1a1e', B: '#2a2a2a', M: '#2a2a2a' });
+    // ⚠️ La rampe (`a`, `b`) brule avec le reste, et la sirene se tait (Martin,
+    // 30 sept. 2026 : « un vehicule de police qui explose ne doit plus avoir de
+    // gyrophares en fonction ») : la carcasse battait rouge et bleu, et meme
+    // eteints ses boitiers gardaient leurs couleurs sur un char tout charbon.
+    v.swaps = Object.assign(nuances('#2a2a2a'), { v: '#1a1a1e', l: '#2a2a2a', t: '#2a2a2a', x: '#2a2a2a', y: '#2a2a2a', G: '#1a1a1e', B: '#2a2a2a', M: '#2a2a2a', a: '#2a2a2a', b: '#2a2a2a' });
+    v.sirene = false;
     v.epaveT = ph.epave_secondes * 60;
     v.alarme = 0;
     v.sauteBientot = false;
@@ -4288,7 +4293,8 @@ const Vehicules = (function () {
       `JSON.stringify` pour rien — le canevas, lui, est deja cuit. */
   function swapsDuMoment(v, def) {
     const g = def.gyrophares;
-    if (!g) return v.swaps;
+    // Une epave — sautee, pliee ou coulee — ne fait plus rien tourner.
+    if (!g || v.etat === 'epave') return v.swaps;
     const tourne = g.quand === 'sirene' ? !!v.sirene : g.quand === 'remorque' ? !!v.remorque : false;
     if (!tourne) return v.swaps;
     if (!v.gyro || v.gyro.base !== v.swaps) {

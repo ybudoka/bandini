@@ -1345,6 +1345,59 @@ def test_les_gyrophares_ne_battent_que_quand_ils_servent(banc):
             assert (a == allumes[0]) != (b == allumes[1]), f"{slug} : ses deux lampes ne s'alternent pas ({a}, {b})"
 
 
+def test_une_police_explosee_n_a_plus_de_gyrophares(banc):
+    """Martin (30 sept. 2026) : « un véhicule de police qui explose ne doit plus
+    avoir de gyrophares en fonction ». ⚠️ **Mesuré avant** : `exploser` laissait
+    `v.sirene` allumée et `swapsDuMoment` ne regardait pas l'épave — la carcasse
+    calcinée battait rouge et bleu (le SON de la sirène, lui, sautait déjà les
+    épaves). Et même éteints, les boîtiers gardaient leur rouge et leur bleu
+    sur un char tout charbon.
+
+    On fait sauter une auto-patrouille sirène hurlante, en pleine chasse (la
+    boucle remet `v.sirene` à chaque image tant qu'il y a des étoiles), puis
+    une ambulance en course, et on lit ce que `dessinerUn` passe à l'atlas."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const d = o.ligneDroite();
+        const j = L.B.joueur; j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
+        L.B.recherche.etoiles = 3;
+        const ctx = L.Base.ecran(), vrai = L.Atlas.cuireCap;
+        let passees = null;
+        L.Atlas.cuireCap = function (nom, def, swaps) { passees = swaps; return vrai.apply(null, arguments); };
+        const lire = function (v) {
+            const vus = [];
+            for (let t = 0; t < 60; t += 7) {
+                L.B.t = t;
+                L.Vehicules.dessinerUn(ctx, v, 0, 0);
+                vus.push([passees && passees.a || null, passees && passees.b || null]);
+            }
+            return vus;
+        };
+        const out = {};
+        ['police', 'ambulance'].forEach(function (slug) {
+            const v = o.char(slug, d.x + 200, d.y, 0);
+            v.sirene = true;
+            if (slug === 'police') v.conducteur = 'police';
+            const avant = lire(v);
+            L.Vehicules.exploser(v);
+            L.Vehicules.maj();
+            out[slug] = { avant: avant, apres: lire(v), sirene: !!v.sirene, etat: v.etat,
+                          charbon: v.swaps.c };
+        });
+        L.Atlas.cuireCap = vrai;
+        return out;
+    }""")
+    for slug in ("police", "ambulance"):
+        m = r[slug]
+        assert len({tuple(p) for p in m["avant"]}) == 2, f"{slug} : la rampe ne battait pas avant l'explosion ({m['avant'][:2]})"
+        assert m["etat"] == "epave", f"{slug} n'a pas sauté : {m['etat']}"
+        assert not m["sirene"], f"{slug} : la sirène d'une épave est restée allumée"
+        vus = {tuple(p) for p in m["apres"]}
+        assert len(vus) == 1, f"{slug} : l'épave fait encore battre ses gyrophares ({sorted(vus)})"
+        # Calcinés comme le reste de la caisse : ni rouge ni bleu, pas même éteint.
+        assert vus == {(m["charbon"], m["charbon"])}, f"{slug} : les boîtiers de l'épave ne sont pas calcinés ({vus}, caisse {m['charbon']})"
+
+
 def test_la_berline_est_arrondie(machines):
     """Retour de Martin : « arrondit un peu (léger) les véhicules ». ⚠️ La
     berline en volume était une boîte : de face et de dos un rectangle à angles
