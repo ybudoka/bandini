@@ -75,7 +75,9 @@ def _partie(banc):
         const cravate = B.mission.entites.find(function (e) { return e.cible && e.vivant && e.etat !== 'assomme'; });
         if (a0) {
           L.Entites.alerter(a0.x, a0.y, j, 2);
-          const apresAlerte = a0.etat;
+          // ⚠️ Pris en plein geste contre un Cravate (les allies frappent a leur echeance, plus au metronome) : on
+          // lit l'etat d'avant le coup, comme pour `blesse` — un allie retourne contre toi lirait `attaque_joueur`.
+          const apresAlerte = a0.etat === 'attaque' ? a0.avantLeCoup : a0.etat;
           if (cravate) L.Entites.blesser(a0, 1, cravate);
           out.fideles = { alerte: apresAlerte, blesse: a0.etat === 'attaque' ? a0.avantLeCoup : a0.etat };
         }
