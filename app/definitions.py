@@ -79,7 +79,8 @@ from .version import VERSION
 #:   Galeries ne disent que ces textes-là. `Son.Voix.histoire()` les déplie à l'arrivée, et une banque encore
 #:   vide ne se marque pas chargée tant que la suite n'est pas là (`Son.Voix.chargerHistoire`).
 DANS_LA_SUITE: tuple[str, ...] = ("journal", "journal_speciales", "journal_lecons", "journal_matins",
-                                  "photos", "galeries", "voix_de_la_suite")
+                                  "photos", "galeries", "voix_de_la_suite",
+                                  "repliques_de_la_file")
 
 #: Ce qu'une fiche de personnage porte et qu'aucun script ne lit : sa voix ElevenLabs (le nom de la voix,
 #: `audio.voix_*` la lit en Python pour générer ses mp3). 1 698 octets bruts / 658 gzip sur le paquet.
@@ -146,6 +147,9 @@ def assembler() -> dict:
         "fetes": fetes.pour_le_navigateur(ville),
         # La nuit aux Galeries de la Baie : la hantise et ce que dit le haut-parleur (docs/jalons/le-centre-d-achat-hante.md).
         "galeries": galeries_hantees.pour_le_navigateur(),
+        # Ce que chiale la file de la foire quand on lui passe devant (docs/jalons/une-file-pour-entrer-a-la-foire.md) :
+        # dans la SUITE, le paquet est a son plafond.
+        "repliques_de_la_file": audio.voix_de_la_file(),
         # Le bingo, le Rialto, les quilles et le lave-auto (docs/jalons/les-enseignes-qui-ouvrent-pour-vrai.md).
         "enseignes": enseignes.pour_le_navigateur(ville),
         # Le 1er juillet : les camions et les meubles du trottoir (docs/jalons/le-1er-juillet-jour-du-demenagement.md).

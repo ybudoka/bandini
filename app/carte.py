@@ -377,6 +377,12 @@ LEGENDE: dict[str, dict] = {
     # barbelées ») : les planches de la palissade, et trois rangs de barbelé par-dessus — elle ne s'enjambe plus
     # (solidité 5, comme le barbelé). `'` : un des derniers glyphes libres.
     "'": {"nom": "palissade barbelée", "solide": 5, "cloture": "barbele"},
+    # LE GRILLAGE DE LA FOIRE (Martin, 30 sept. 2026 : « je veux que la clôture soit infranchissable ») : le même
+    # grillage à voir, mais il ne s'enjambe plus (solidité 5, comme le barbelé). On entre par l'arche, billet payé
+    # ou arche forcée (une étoile). `¦` (un poteau) : l'ASCII libre est epuise — le `?` est parti a la piscine de la
+    # villa le meme jour, et un CHIFFRE ment au navigateur : une cle d'objet qui ressemble a un entier passe devant
+    # les autres en JS, et la legende depliee ne ressort plus dans l'ordre de Python (`test_pliage`).
+    "¦": {"nom": "grillage de la foire", "solide": 5, "cloture": "grillage"},
     # LA HAIE DE CÈDRES du jardin de la villa (Martin, 30 sept. 2026 : « vois si des endroits pour se cacher
     # sont requis » — ils l'étaient : dehors, rien ne coupait la vue d'un garde). Solidité 1, comme un mur : elle
     # ne se traverse pas et elle CACHE (`Monde.ligneLibre` ne s'arrête qu'aux murs). ⚠️ Pas un décor : un arbre
@@ -478,6 +484,9 @@ PORTES_DE_FACADE = frozenset("DdG")
 #: sont en grillage industriel n'a pas l'air d'une banlieue.
 GRILLAGE, BOIS, BARBELE = "f", "w", "X"
 CLOTURES = frozenset({GRILLAGE, BOIS, BARBELE})
+#: Le grillage de la foire : il se voit comme `GRILLAGE`, et ne s'enjambe pas. ⚠️ PAS dans `CLOTURES` : il ne se
+#: pose qu'autour de la foire (`_foire`), jamais par `clore`.
+GRILLAGE_DE_FOIRE = "¦"
 #: La barriere coulissante : du barbele qui s'ouvre pour qui a la cle. ⚠️ PAS dans
 #: `CLOTURES` : elle ne se pose qu'a la sortie du lot du poste, jamais par `clore`.
 COULISSANTE = "Z"
@@ -1135,6 +1144,32 @@ FOIRE: dict = {
         "vitesse_max": 6.0,
         "gare_images": 240,     # quatre secondes en gare
     },
+    # ⚠️ **LA FILE POUR ENTRER** (Martin, 30 sept. 2026 : « une file de personnes qui attendent pour entrer a
+    # la foire quand c'est ouvert », « mets aussi des câbles de gestion de file ») — docs/jalons/une-file-pour-
+    # entrer-a-la-foire.md. Un serpentin de `couloirs` allees nord-sud sur l'abord et le trottoir, sous la
+    # colonne EST de l'arche : les deux autres colonnes restent libres, c'est par la que le joueur passe (et
+    # coupe la file). Python pose le rectangle (`_Chantier.file_de_foire`) ; le navigateur trace le chemin,
+    # tend les cables, et fait avancer les gens. ⚠️ Rien au de : l'empreinte (`hash2`) decide.
+    "file": {
+        # ⚠️ IMPAIR : la tete sort vers le NORD (l'arche) au bout du premier couloir, et le serpentin alterne ;
+        # avec un nombre impair de couloirs, l'entree tombe au SUD du dernier, sur le trottoir — la ou l'on
+        # arrive en marchant.
+        "couloirs": 5,
+        "rangees": 2,           # l'abord et le trottoir : au-dela, c'est la rue
+        # ⚠️ 15 et non 12 : `demeler` separe deux corps sous 10 px (memoire « deux corps jamais sous 10 px »),
+        # et le serpentin tourne a ANGLE DROIT. A 12 px le long du chemin, deux voisins de part et d'autre d'un
+        # coin se retrouvaient a 8,5 px a vol d'oiseau (le juge l'a vu) ; a 15, au pire 10,6. Le serpentin en
+        # tient encore douze : la file de pointe.
+        "ecart_px": 15,
+        "pas_px": 0.45,         # le pas de qui avance d'une place : un pieton qui flane
+        "entree_images": (150, 270),   # tous les tant, le premier paie et entre
+        "arrivee_images": 70,          # tous les tant, un de plus arrive au bout (s'il en manque)
+        "rayon_px": 620,               # a cette distance du bord de la foire, la file existe (`naitreLaFoire`)
+        # Combien attendent, heure par heure (0 h a 23 h). ⚠️ Plafonne par ce que le serpentin tient.
+        "par_heure": (1, 0, 0, 0, 0, 0, 0, 1, 2, 2, 3, 4, 5, 6, 6, 7, 10, 12, 12, 12, 11, 9, 6, 3),
+        "bulle_images": 150,           # le temps qu'on lit « Heille ! Y'a une file, la ! »
+        "chiale_images": 600,          # pas deux fois en dix secondes
+    },
 }
 
 def voie_de_montagne_russe(tx0: int, ty0: int, fiche: dict | None = None) -> dict:
@@ -1569,8 +1604,9 @@ BARRIERES: tuple[dict, ...] = (
     # ⚠️ **L'ARCHE DE LA FOIRE** — Martin : « une entree avec une arche, et ca
     # doit couter quelque chose d'entrer ». Le billet vaut pour la JOURNEE
     # (`B.partie.billets`), et on ressort librement (`dedans` : le cote nord de
-    # l'ouverture est la foire). Resquiller par la palissade coute l'etoile de
-    # `forcer` a la retombee — la palissade s'enjambe comme les autres clotures.
+    # l'ouverture est la foire). Resquiller, c'est FORCER l'arche : l'etoile de
+    # `forcer`. ⚠️ Le grillage, lui, ne s'enjambe plus (Martin, 30 sept. 2026 :
+    # « je veux que la clôture soit infranchissable » ; `GRILLAGE_DE_FOIRE`).
     {"slug": "foire", "nom": "L'arche de la foire", "ou": {"foire": "entree"},
      "arrete": ("pieton", "vehicule"), "condition": {"payer": "foire"},
      "forcer": {"etoiles": economie.FOIRE["etoiles_resquille"]},
@@ -5687,8 +5723,10 @@ class _Chantier:
         # (le defaut des terrains de banlieue, « le U de `_jardin` se posait
         # pendant que `poser_cloture` en refusait en silence ») — ici, un refus
         # silencieux est une entree gratuite.
+        # ⚠️ Et il NE S'ENJAMBE PAS (Martin, 30 sept. 2026 : « je veux que la clôture soit infranchissable ») :
+        # `GRILLAGE_DE_FOIRE`, le grillage qui a la solidite du barbele.
         for tx, ty in pourtour:
-            self.sol[ty][tx] = "f"
+            self.sol[ty][tx] = GRILLAGE_DE_FOIRE
         self.foire_entree = (gx - 1, bas_arche, 3, 1)
         # L'arche, a cheval sur l'ouverture ; elle ne bloque rien.
         self.poser_decor("portique_foire", gx, bas_arche)
@@ -5705,7 +5743,7 @@ class _Chantier:
         for ty in range(ey, ey + eh):
             debut = None
             for tx in range(ex, ex + el + 1):
-                libre = tx < ex + el and dedans(tx, ty) and self.sol[ty][tx] != "f"
+                libre = tx < ex + el and dedans(tx, ty) and self.sol[ty][tx] != GRILLAGE_DE_FOIRE
                 if libre and debut is None:
                     debut = tx
                 elif not libre and debut is not None:
@@ -6140,6 +6178,31 @@ class _Chantier:
                     raise ValueError(f"support inconnu : {sur!r}")
                 places.append((x, y))
         return places
+
+    def file_de_foire(self) -> dict | None:
+        """Le serpentin de la file qui attend devant l'arche (`FOIRE["file"]`) : `couloirs` colonnes a partir de
+        la colonne EST de l'arche, `rangees` rangees juste au sud. Rend le rectangle en tuiles, ou None (pas de
+        foire, ou pas la place).
+
+        ⚠️ Rien ne se pose ni ne se tire : le rectangle se LIT sur la ville finie (le navigateur le rend solide
+        et y tend ses cables). Sur de l'herbe ou du trottoir libres seulement — une borne ou un lampadaire au
+        milieu d'une allee, et la file marcherait au travers.
+        """
+        if not self.foire_entree:
+            return None
+        ax, ay, al, _ah = self.foire_entree
+        fiche = FOIRE["file"]
+        x0, y0 = ax + al - 1, ay + 1
+        occupees = {(d["x"], d["y"]) for d in self.decor}
+        # La colonne d'apres le dernier couloir aussi : c'est la qu'on arrive pour prendre la file.
+        for ty in range(y0, y0 + fiche["rangees"]):
+            for tx in range(x0, x0 + fiche["couloirs"] + 1):
+                g = self.sol[ty][tx]
+                if solidite(g) != 0 or routier(g) or not marchable(g) or (tx, ty) in occupees:
+                    return None
+        return {"x": x0, "y": y0, "l": fiche["couloirs"], "h": fiche["rangees"],
+                **{k: (list(v) if isinstance(v, tuple) else v) for k, v in fiche.items()
+                   if k not in ("couloirs", "rangees")}}
 
     def guichets(self) -> int:
         """Les guichets automatiques : SOUS UNE VITRINE, sur l'abord, servis
@@ -7232,8 +7295,11 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
         "jeux_de_foire": chantier.jeux,
         "kiosques_de_foire": chantier.kiosques,
         # ⚠️ L'INTERIEUR de la palissade, en bandes par rangee [y, x0, x1] : la
-        # foule y nait et y reste, et resquiller se juge a la retombee DEDANS.
+        # foule y nait et y reste.
         "foire_enclos": chantier.foire_enclos,
+        # La file devant l'arche : son rectangle (en tuiles) et sa fiche (`FOIRE["file"]`). ⚠️ LUE sur la ville
+        # finie, rien de pose — elle ne deplace rien.
+        "file_de_foire": chantier.file_de_foire(),
         # Le petit train et la montagne russe : la GEOMETRIE vient du chantier,
         # la CONDUITE de la fiche — le navigateur n'invente ni l'une ni l'autre.
         "train_de_foire": chantier.train_de_foire and {**chantier.train_de_foire, **FOIRE["train"]},

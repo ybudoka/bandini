@@ -278,6 +278,13 @@ JEU: dict[str, str] = {
     "du_feu_b": "[playfully] T'as du feu… mon chou?",
     "tout_seul_b": "[softly] Reste pas tout seul… à soir, là.",
     "ca_te_tente_b": "[teasing] Ça te tente-tu… un peu de compagnie?",
+    # --- La file de la foire : on attend depuis longtemps, et quelqu'un passe devant. Outres, pas mechants.
+    "file_heille_h": "[annoyed] [shouting] Heille! Y'a une file, là!",
+    "file_gene_h": "[sarcastic] Gêne-toé pas… surtout!",
+    "file_en_arriere_h": "[annoyed] Le bout de la file… c'est en arrière!",
+    "file_demi_heure_f": "[angry] [sighs] Ça fait une demi-heure qu'on attend!",
+    "file_pas_gene_f": "[sarcastic] Ben voyons donc! Pas gêné, lui!",
+    "file_icitte_f": "[firmly] Monsieur! On fait la file… icitte!",
     # --- La Brume a la radio : une animatrice de nuit, posee.
     "brume_nuit_r": "[calm] Vous écoutez La Brume, cent trois virgule sept. Il est minuit passé… sur le port.",
     "brume_pluie_r": "[softly] La pluie rentre par la baie. Restez au chaud… on continue.",

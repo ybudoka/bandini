@@ -4108,6 +4108,9 @@ const Entites = (function () {
     // ⚠️ Couche dans son lit, le joueur ne se fait pas sortir du lit a coups
     // d'epaule : c'est lui qui se leve, et seulement quand il pousse le stick.
     if ((e.alite || e.assis) && e.type === 'joueur') return false;
+    // ⚠️ Qui fait la file ne se tasse pas : c'est la file qui le pose (`FileDeFoire`), et c'est l'autre qui
+    // se degage — sinon un passant qui frole le serpentin y ferait une bosse a chaque image.
+    if (e.enFile) return false;
     if (e.etat !== 'fige') return true;
     if (!e.plante) return true;
     return dist2(e.x, e.y, e.plante.x, e.plante.y) < ECART_PLANTE * ECART_PLANTE;
@@ -4291,9 +4294,6 @@ const Entites = (function () {
     // colles ne s'enjambent pas d'un coup — on en franchit un, puis l'autre.
     const ax = tx + sx, ay = ty + sy;
     if (Monde.bloque(ax, ay, Monde.MASQUE_PIETON)) return null;
-    // ⚠️ RESQUILLER : enjamber la palissade de la foire sans billet coute ce que
-    // coute de forcer l'arche, a la retombee (`majEnjambe`).
-    if (!barriere && e === B.joueur && Monde.resquille) barriere = Monde.resquille(tx, ty, ax, ay);
     return { sx: sx, sy: sy, tx: tx, ty: ty, ax: ax, ay: ay, barriere: barriere };
   }
 
@@ -4977,6 +4977,8 @@ const Entites = (function () {
     // Tenu par le joueur (une prise), ou en l'air (une projection) : `techniques.js`
     // le mene, rien d'autre ne bouge.
     if (e.vol || e.tenu) { e.vx = 0; e.vy = 0; return; }
+    // Il fait la file de la foire : c'est elle qui le pose, image par image (`FileDeFoire`).
+    if (e.enFile) { e.vx = 0; e.vy = 0; return; }
     if (e.partenaire) { majKevin(e); return; }
     // ⚠️ Lu sous les pieds a chaque image, pour tout le monde : c'est ce qui
     // decide du masque, du dessin, et de la vitesse d'un agent a la nage.
@@ -5814,11 +5816,13 @@ const Entites = (function () {
       if (e.metier || e.intouchable || e.etat === 'assomme' || e.etat === 'fuit' || e.etat === 'temoin' || e.aParle) continue;
       e.aParle = true;
       if (B.rng() > (chance === undefined ? 0.35 : chance)) break;
-      const femme = /passante|dame|mere|racoleuse|conductrice/.test(e.arch);
-      Son.Voix.dire(femme ? 'femme' : 'homme', e.x, e.y);
+      Son.Voix.dire(estFemme(e) ? 'femme' : 'homme', e.x, e.y);
       break;
     }
   }
+
+  /** Une passante, une dame, une mere… : qui parle avec une voix de femme (`audio.VOIX_PAR_GENRE`). */
+  function estFemme(e) { return !!(e && /passante|dame|mere|racoleuse|conductrice/.test(e.arch)); }
 
   // --- Boucle ---------------------------------------------------------------------------
 
@@ -6166,7 +6170,7 @@ const Entites = (function () {
     // wagon passe devant un passant ou derriere, selon sa rangee — mais ils ne
     // sont PAS dans `B.entites` (la lecon des betes). `Foire` ajoute ce qui est
     // a l'ecran, et chacun porte son peintre.
-    if (!B.interieur) { Foire.ajouterVisibles(visibles, cx, cy); Traversier.ajouterVisibles(visibles, cx, cy); Navette.ajouterVisibles(visibles, cx, cy); Fetes.ajouterVisibles(visibles, cx, cy); Halloween.ajouterVisibles(visibles, cx, cy); RueDesSaisons.ajouterVisibles(visibles, cx, cy); Cabane.ajouterVisibles(visibles, cx, cy); Train.ajouterVisibles(visibles, cx, cy); }
+    if (!B.interieur) { Foire.ajouterVisibles(visibles, cx, cy); Traversier.ajouterVisibles(visibles, cx, cy); Navette.ajouterVisibles(visibles, cx, cy); Fetes.ajouterVisibles(visibles, cx, cy); Halloween.ajouterVisibles(visibles, cx, cy); RueDesSaisons.ajouterVisibles(visibles, cx, cy); Cabane.ajouterVisibles(visibles, cx, cy); Train.ajouterVisibles(visibles, cx, cy); FileDeFoire.ajouterVisibles(visibles, cx, cy); }
     const profond = function (e) { return e.remorqueePar ? e.remorqueePar.y + 0.5 : e.y; };
     visibles.sort(function (a, b) {
       return (a.vivant ? 1 : 0) - (b.vivant ? 1 : 0) || profond(a) - profond(b) || a.id - b.id;
@@ -6335,7 +6339,7 @@ const Entites = (function () {
     poserLeJournal, rentrerLesJournaux, fairePartirUnRaton, bordDeLEau, chateauLePlusProche, majBallonVol, lancerLeBallon,
     naitreLesEnfantsAVelo, placeDEnfantAVelo, roulableEnfant, resterSurLeTrottoir,
     naitreLesBetes, betesVivantes, ecraserBete, majBete, majLesBetes, chezElle, placeDeBete, betes, dessinerBetes, poseDeBete, directionDeBete, sEnvoler,
-    naitreLaFoire, majForain, majMascotte, placeDansLaFoire, destinationDeFoire,
+    naitreLaFoire, majForain, majMascotte, placeDansLaFoire, destinationDeFoire, estFemme,
     bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe, mousse,
     particule, sang, poussiere, decal, majParticules,
     dessiner, dessinerDecals, dessinerParticules, dessinerCible, dessinerParapluie, PARAPLUIE, imageDe, nomDePose, pose, poseDuDecor,

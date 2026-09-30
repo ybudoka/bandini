@@ -280,8 +280,19 @@ const Monde = (function () {
         for (let x = inter.x - bord; x < inter.x + inter.l + bord; x++) croisements.set(x + ',' + y, inter);
       }
     });
+    // ⚠️ LE SERPENTIN DE LA FILE DE LA FOIRE (`FileDeFoire`) : ses tuiles arretent tout le monde — a pied comme
+    // en char, et le A* le contourne. Ceux de la file ne marchent pas, c'est elle qui les pose : ils n'y butent
+    // pas. Du BARBELE pour les masques, mais pas une cloture a peindre (`estCloture`) : ce sont les cables qui
+    // le dessinent. Le sol, lui, reste l'herbe et le trottoir.
+    const serpentin = new Set();
+    const file = def.file_de_foire;
+    if (file) {
+      for (let y = file.y; y < file.y + file.h; y++) {
+        for (let x = file.x; x < file.x + file.l; x++) { solide[y * w + x] = 5; serpentin.add(y * w + x); }
+      }
+    }
     carte = {
-      def: def, w: w, h: h, sol: def.sol, voie: def.voie, legende: def.legende,
+      def: def, w: w, h: h, sol: def.sol, voie: def.voie, legende: def.legende, serpentin: serpentin,
       // Le plancher d'une piece : ce qu'on peint SOUS les meubles (null dehors).
       plancher: def.plancher || null,
       solide: solide, route: route, passage: passage, portesFermees: portesFermees,
@@ -732,17 +743,6 @@ const Monde = (function () {
     const bandes = (carte && carte.def && carte.def.foire_enclos) || [];
     for (const b of bandes) if (b[0] === ty && tx >= b[1] && tx <= b[2]) return true;
     return false;
-  }
-
-  /** ⚠️ RESQUILLER. La palissade de la foire s'enjambe comme toutes les clotures
-      du jeu — on ne l'a pas rendue infranchissable, ce serait un mur qui ment.
-      Mais la retombee DANS la foire sans billet coute ce que coute de forcer
-      l'arche : c'est le prix de ne pas payer le prix. Rend la barriere de la
-      foire, ou null (on a son billet, ou on retombe dehors). */
-  function resquille(tx, ty, ax, ay) {
-    if (!dansLaFoire(ax, ay) || dansLaFoire(tx, ty)) return null;
-    const b = barrieres().find(function (q) { return q.condition && q.condition.payer === 'foire'; });
-    return b && barriereFermee(b) ? b : null;
   }
 
   function dansLeRect(b, tx, ty) { return tx >= b.x && tx < b.x + b.l && ty >= b.y && ty < b.y + b.h; }
@@ -2211,6 +2211,7 @@ const Monde = (function () {
     // ⚠️ Une barriere coulissante OUVERTE reste une cloture pour le dessin : sinon le
     // poteau d'a cote, recuit pendant qu'elle est ouverte, perdrait son bras.
     const p = carte.legende[glyphe(tx, ty)];
+    if (s === 5 && carte.serpentin && carte.serpentin.has(ty * carte.w + tx)) return false;   // la file : des cables
     return s === 4 || s === 5 || !!(p && p.coulissante);
   }
 
@@ -3204,7 +3205,7 @@ const Monde = (function () {
     MASQUE_A_PIED, MORCEAUX_MAX, estEau, eauBasse, eauLaPlusProche, majSonDuBord,
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
     barrieres, barriereFermee, fermeeLHiver, raisonDe, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
-    brisDAqueduc, dansLaFoire, resquille,
+    brisDAqueduc, dansLaFoire,
     feuxClignotent, arterePasse, nidDePoule, dessinerNids, plaqueDAcier, standingA, usageA, couleurDeZonage, calqueDeZonage, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, dessinerFoyers, foyersDeLaPiece, majFeuDeFoyer, FEU_SON,
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,

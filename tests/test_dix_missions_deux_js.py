@@ -148,18 +148,27 @@ ESCORTE = """
       for (let y = Math.floor((e.y - r) / TT); y <= Math.floor((e.y + r) / TT); y++)
         for (let x = Math.floor((e.x - r) / TT); x <= Math.floor((e.x + r) / TT); x++) plein.add(y * W + x);
     }
-    const prev = new Int32Array(W * H).fill(-1), q = [sy * W + sx];
-    prev[sy * W + sx] = sy * W + sx;
+    // ⚠️ SUR LE TROTTOIR D'ABORD (30 sept. 2026, la file de la foire) : la chaussée coûte trois pas. Le serpentin
+    // de câbles prend le trottoir devant l'arche ; au plus court, le chemin y descendait sur la rue et n'en
+    // remontait plus jusqu'au poste — l'escorté, sur la chaussée, prenait peur du premier char. Un joueur, lui,
+    // remonte sur le trottoir. (Des seaux par coût : un Dijkstra de poche, les coûts sont 1 ou 3.)
+    const prev = new Int32Array(W * H).fill(-1), cout = new Int32Array(W * H).fill(0x7fffffff), seaux = [[sy * W + sx]];
+    prev[sy * W + sx] = sy * W + sx; cout[sy * W + sx] = 0;
     let bout = -1, meilleur = 1e9;
-    for (let i = 0; i < q.length; i++) {
-      const k = q[i], x = k % W, y = (k / W) | 0, d = Math.abs(x - gx) + Math.abs(y - gy);
-      if (d < meilleur) { meilleur = d; bout = k; }
-      if (d === 0) break;
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        const nx = x + dx, ny = y + dy, n = ny * W + nx;
-        if (nx < 0 || ny < 0 || nx >= W || ny >= H || prev[n] >= 0) continue;
-        if (M.bloque(nx, ny, M.MASQUE_PIETON) || (plein.has(n) && !(nx === gx && ny === gy))) continue;
-        prev[n] = k; q.push(n);
+    fouille: for (let c = 0; c < seaux.length; c++) {
+      for (const k of seaux[c] || []) {
+        if (cout[k] !== c) continue;
+        const x = k % W, y = (k / W) | 0, d = Math.abs(x - gx) + Math.abs(y - gy);
+        if (d < meilleur) { meilleur = d; bout = k; }
+        if (d === 0) break fouille;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = x + dx, ny = y + dy, n = ny * W + nx;
+          if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+          if (M.bloque(nx, ny, M.MASQUE_PIETON) || (plein.has(n) && !(nx === gx && ny === gy))) continue;
+          const nc = c + (M.estRoute(nx, ny) ? 3 : 1);
+          if (nc >= cout[n]) continue;
+          cout[n] = nc; prev[n] = k; (seaux[nc] || (seaux[nc] = [])).push(n);
+        }
       }
     }
     const pts = [];

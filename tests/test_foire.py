@@ -37,7 +37,7 @@ def fuite_de_la_foire(ville, sol):
             if (nx, ny) in vus or (nx, ny) in arche:
                 continue
             glyphe = sol[ny][nx]
-            if glyphe == "f" or carte.LEGENDE[glyphe].get("solide") in (1, 3):
+            if glyphe == carte.GRILLAGE_DE_FOIRE or carte.LEGENDE[glyphe].get("solide") in (1, 3):
                 continue
             if (nx, ny) not in enclos:
                 return (nx, ny)
@@ -141,7 +141,7 @@ def test_la_cloture_n_est_pas_un_carre(ville):
     f = ville["foire"]
     sol = ville["sol"]
     palissade = [(x, y) for y in range(f["y"], f["y"] + f["h"])
-                 for x in range(f["x"], f["x"] + f["l"]) if sol[y][x] == "f"]
+                 for x in range(f["x"], f["x"] + f["l"]) if sol[y][x] == carte.GRILLAGE_DE_FOIRE]
     assert len(palissade) > 100, "la foire n'est pas clôturée"
     # Le nord : la première rangée de palissade n'est pas la même partout.
     nord = {min(y for x2, y in palissade if x2 == x) for x in {x for x, _ in palissade}}
@@ -160,9 +160,9 @@ def test_l_arche_est_a_l_ouverture_et_elle_se_paie(ville):
     assert b["dedans"] == "N"
     sol = ville["sol"]
     for x in range(b["x"], b["x"] + b["l"]):
-        assert sol[b["y"]][x] != "f", "l'ouverture de l'arche est bouchée"
+        assert sol[b["y"]][x] != carte.GRILLAGE_DE_FOIRE, "l'ouverture de l'arche est bouchée"
     # De part et d'autre de l'ouverture : la clôture.
-    assert sol[b["y"]][b["x"] - 1] == "f" and sol[b["y"]][b["x"] + b["l"]] == "f"
+    assert sol[b["y"]][b["x"] - 1] == carte.GRILLAGE_DE_FOIRE and sol[b["y"]][b["x"] + b["l"]] == carte.GRILLAGE_DE_FOIRE
     arche = [d for d in ville["decor"] if d["type"] == "portique_foire"]
     assert len(arche) == 1
     assert (arche[0]["x"], arche[0]["y"]) == (b["x"] + 1, b["y"]), "l'arche n'est pas à l'ouverture"
@@ -190,7 +190,7 @@ def test_le_juge_de_la_cloture_voit_un_trou_quand_il_y_en_a_un(ville):
     b = next(x for x in ville["barrieres"] if x["slug"] == "foire")
     sol = [list(ligne) for ligne in ville["sol"]]
     x = b["x"] + b["l"] + 4
-    y = next(yy for yy in range(b["y"] - 3, b["y"] + 1) if sol[yy][x] == "f")
+    y = next(yy for yy in range(b["y"] - 3, b["y"] + 1) if sol[yy][x] == carte.GRILLAGE_DE_FOIRE)
     sol[y][x] = ","
     assert fuite_de_la_foire(ville, ["".join(r) for r in sol]) is not None, (
         "le juge ne voit pas un trou percé dans la clôture")
@@ -252,49 +252,45 @@ def test_on_paie_a_l_arche_une_fois_par_jour_et_on_ressort_librement(banc, paque
     assert r["fauche"] is True, "on entre sans argent"
 
 
-def test_resquiller_par_la_cloture_coute_une_etoile(banc, paquet):
-    """⚠️ La clôture s'enjambe comme toutes celles du jeu — un mur qui
-    ment serait pire. Mais la retombée DANS la foire sans billet coûte l'étoile
-    de l'arche : c'est le prix de ne pas payer le prix. Avec son billet, rien."""
+def test_le_grillage_ne_s_enjambe_plus_mais_l_arche_se_force(banc, paquet):
+    """⚠️ Martin (30 sept. 2026) : « je veux que la clôture soit infranchissable ». Le grillage de la foire
+    (`GRILLAGE_DE_FOIRE`) a la solidité du barbelé : on a beau pousser contre, on n'y monte pas. L'arche, elle,
+    se force encore (tranché : une étoile) — sans le sou, on pousse une seconde et on entre, recherché."""
     r = banc("""function (L, o) {
         L.Jeu.commencer(); L.B.partie.jour = 21; L.Foire.demarrer();   // ⚠️ EN JUILLET : l'hiver, la foire est fermée et son train garé (test_foire_l_hiver_js.py)
         %s
         const b = arche(L), TT = L.TT, j = L.B.joueur, p = L.B.partie;
-        // Une tuile de palissade du sud, loin de l'arche, avec la foire derrière.
+        p.jour = 22; p.dette = 0; j.invincible = 1e9;
+        // Une tuile de grillage du sud, loin de l'arche, avec la foire derrière.
         let cloture = null;
-        for (let dx = 2; dx < 24 && !cloture; dx++) {
+        for (let dx = 6; dx < 24 && !cloture; dx++) {
           for (const x of [b.x + b.l + dx, b.x - 1 - dx]) {
             for (let y = b.y - 3; y <= b.y + 3; y++) {
-              if (L.Monde.glyphe(x, y) === 'f' && L.Monde.dansLaFoire(x, y - 1)
+              if (L.Monde.glyphe(x, y) === '¦' && L.Monde.dansLaFoire(x, y - 1)
                   && !L.Monde.dansLaFoire(x, y + 1) && L.Monde.marchablePieton(x, y + 1)) { cloture = { x: x, y: y }; break; }
             }
             if (cloture) break;
           }
         }
         if (!cloture) return { cloture: false };
-        function sauter() {
-          L.B.recherche.etoiles = 0;
-          j.enjambe = null; j.z = 0;
-          // ⚠️ CONTRE la palissade, pas au milieu de la tuile d'en dessous : la
-          // cloture se cherche a `r + 2` pixels devant soi, et depuis le centre
-          // d'une tuile de seize ces sept pixels retombent dans la tuile ou l'on
-          // est deja — le juge croyait sauter une cloture qu'il ne touchait pas.
-          j.x = cloture.x * TT + 8; j.y = (cloture.y + 1) * TT + j.r + 0.5;
-          L.Entites.indexer();
-          const parti = L.Entites.enjamber(j, 0, -1);
-          for (let i = 0; i < 80 && j.enjambe; i++) L.Entites.majEnjambe(j);
-          return { parti: parti, etoiles: L.B.recherche.etoiles, dedans: L.Monde.dansLaFoire(Math.floor(j.x / TT), Math.floor(j.y / TT)) };
-        }
-        p.billets = {};
-        const sansBillet = sauter();
-        p.billets = { foire: p.jour };
-        const avecBillet = sauter();
-        return { cloture: true, sans: sansBillet, avec: avecBillet };
+        // ⚠️ CONTRE le grillage (la cloture se cherche a `r + 2` pixels devant soi).
+        p.billets = {}; p.argent = 0;
+        j.x = cloture.x * TT + 8; j.y = (cloture.y + 1) * TT + j.r + 0.5;
+        L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer();
+        const enjambe = L.Entites.enjamber(j, 0, -1);
+        o.touche('KeyW'); o.frame(150); o.relacher('KeyW');
+        const grillage = { enjambe: enjambe, dedans: L.Monde.dansLaFoire(Math.floor(j.x / TT), Math.floor(j.y / TT)) };
+        // L'arche, par une colonne libre (la colonne est est celle de la file) : on pousse, on entre, l'étoile.
+        L.B.recherche.etoiles = 0; L.B.recherche.chaleur = 0;
+        j.x = b.x * TT + 8; j.y = (b.y + 1) * TT + 8; j.buteT = 0; j.forceT = 0;
+        L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer();
+        o.touche('KeyW'); o.frame(150); o.relacher('KeyW');
+        return { cloture: true, grillage: grillage,
+                 arche: { dedans: j.y < b.y * TT, etoiles: L.B.recherche.etoiles } };
     }""" % ARCHE)
-    assert r["cloture"], "aucune tuile de palissade à enjamber"
-    assert r["sans"]["parti"] and r["sans"]["dedans"], "on n'a pas franchi la palissade"
-    assert r["sans"]["etoiles"] >= 1, "resquiller n'a rien coûté"
-    assert r["avec"]["etoiles"] == 0, "on paie une étoile avec son billet en poche"
+    assert r["cloture"], "aucune tuile de grillage à essayer"
+    assert r["grillage"]["enjambe"] is False and r["grillage"]["dedans"] is False, r
+    assert r["arche"]["dedans"] and r["arche"]["etoiles"] >= economie.FOIRE["etoiles_resquille"], r
 
 
 def test_la_galerie_prete_sa_carabine_a_bouchon_et_la_reprend(banc):

@@ -809,9 +809,10 @@ def gain_boulot(boulot: Boulot, tuiles: float = TUILES_TYPE, parfait: bool = Tru
 #: **LE BILLET DE LA FOIRE** — Martin : « ca doit couter quelque chose entrer ».
 #: ⚠️ Un billet par JOUR, pas par passage : on paie a l'arche, on ressort, on
 #: revient — une foire qui te refacture chaque fois que tu vas acheter un hot-dog
-#: dehors n'est pas une foire, c'est un peage. Et ⚠️ on peut RESQUILLER : la
-#: palissade s'enjambe comme toutes les clotures du jeu, mais la retombee dans la
-#: foire coute l'etoile de la barriere — c'est le prix de ne pas payer le prix.
+#: dehors n'est pas une foire, c'est un peage. Et ⚠️ on peut RESQUILLER : en
+#: forcant l'arche (on pousse une seconde), pour l'etoile de la barriere — c'est
+#: le prix de ne pas payer le prix. Le grillage, lui, ne s'enjambe plus (30 sept.
+#: 2026, `carte.GRILLAGE_DE_FOIRE`).
 FOIRE = {
     "entree": 15,
     "etoiles_resquille": 1,

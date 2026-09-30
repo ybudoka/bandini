@@ -2076,10 +2076,41 @@ def voix_puces() -> list[dict]:
             for r in puces.repliques()]
 
 
+#: LA FILE DE LA FOIRE (Martin, 30 sept. 2026 : « il passe devant, ça chiale ») : ce que disent ceux qui
+#: attendent devant l'arche quand le joueur leur passe devant (`FileDeFoire`). Un genre par voix, comme la rue :
+#: c'est QUI chiale qui choisit.
+#:
+#: ⚠️ **PAS DANS `VOIX`, NI DANS LE PAQUET** : le paquet des definitions est a son plafond (les six, 777 octets
+#: bruts, le faisaient deborder). Elles voyagent dans la SUITE (`definitions.DANS_LA_SUITE`,
+#: `repliques_de_la_file`), qui arrive juste apres — bien avant qu'on marche jusqu'a la foire — et se chargent
+#: a l'approche (`Son.Voix.chargerLieu`), jamais au premier ecran.
+VOIX_DE_LA_FILE: list[Voix] = [
+    {"slug": "file_heille_h", "texte": "Heille! Y'a une file, là!", "genre": "file_h", "lieu": "foire",
+     "voix": VOIX_PAR_GENRE["homme"], "volume": 0.8},
+    {"slug": "file_gene_h", "texte": "Gêne-toé pas, surtout!", "genre": "file_h", "lieu": "foire",
+     "voix": VOIX_PAR_GENRE["homme"], "volume": 0.8},
+    {"slug": "file_en_arriere_h", "texte": "Le bout de la file, c'est en arrière!", "genre": "file_h",
+     "lieu": "foire", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.8},
+    {"slug": "file_demi_heure_f", "texte": "Ça fait une demi-heure qu'on attend!", "genre": "file_f",
+     "lieu": "foire", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.8},
+    {"slug": "file_pas_gene_f", "texte": "Ben voyons donc! Pas gêné, lui!", "genre": "file_f", "lieu": "foire",
+     "voix": VOIX_PAR_GENRE["femme"], "volume": 0.8},
+    {"slug": "file_icitte_f", "texte": "Monsieur! On fait la file, icitte!", "genre": "file_f", "lieu": "foire",
+     "voix": VOIX_PAR_GENRE["femme"], "volume": 0.8},
+]
+
+
+def voix_de_la_file() -> list[dict]:
+    """Ce que le navigateur lit des repliques de la file (`FileDeFoire`, `Son.Voix.liste`) : comme une replique
+    de passant du paquet, texte compris — il s'affiche en bulle."""
+    return [{"slug": v["slug"], "genre": v["genre"], "volume": v["volume"], "texte": v["texte"], "lieu": v["lieu"],
+             "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None} for v in VOIX_DE_LA_FILE]
+
+
 def toutes_les_voix() -> list[dict]:
-    return (list(VOIX) + list(VOIX_DE_LA_POLICE) + voix_histoire() + voix_journal() + voix_loto() + voix_ouverture()
-            + voix_repos() + voix_dojo() + voix_galeries() + voix_halloween() + voix_garage() + voix_photos()
-            + voix_puces())
+    return (list(VOIX) + list(VOIX_DE_LA_POLICE) + list(VOIX_DE_LA_FILE) + voix_histoire() + voix_journal()
+            + voix_loto() + voix_ouverture() + voix_repos() + voix_dojo() + voix_galeries() + voix_halloween()
+            + voix_garage() + voix_photos() + voix_puces())
 
 
 #: LES VOIX QUI NE SE PARTAGENT PAS — la table, ecrite UNE fois : la voix, et le

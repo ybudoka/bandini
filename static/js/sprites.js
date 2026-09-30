@@ -4494,6 +4494,8 @@ const TUILES = (function () {
       facade(ctx, v, T); ctx.fillStyle = '#2e2118'; ctx.fillRect(4, 4, 8, 12); ctx.fillStyle = '#3a2a1e'; ctx.fillRect(5, 5, 6, 10); ctx.fillStyle = '#6b5a48'; ctx.fillRect(4, 8, 8, 1); },
     'G': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#7a7d82'; ctx.fillRect(1, 3, 14, 13); ctx.fillStyle = '#5f6267'; for (let y = 5; y < 16; y += 3) ctx.fillRect(1, y, 14, 1); },
     'f': function (ctx, v, T) { clotureTuile(ctx, v, T, CLOTURE_GRILLAGE); },
+    // Le grillage de la foire : le meme a voir — c'est sa solidite qui change (il ne s'enjambe pas).
+    '¦': function (ctx, v, T) { clotureTuile(ctx, v, T, CLOTURE_GRILLAGE); },
     'w': function (ctx, v, T) { clotureTuile(ctx, v, T, CLOTURE_BOIS); },
     "'": function (ctx, v, T) { clotureTuile(ctx, v, T, CLOTURE_BOIS_BARBELEE); },
     '`': function (ctx, v, T) { haieDeCedres(ctx, v, T); },
@@ -6101,7 +6103,7 @@ const PAL_STATUE = {
   b: '#c79a45', B: '#7a5a22',
   k: '#1e2b27', d: '#3a6b5e', g: '#57977f', G: '#8cc7ae',
   n: '#3b2a18', m: '#6e4c26', M: '#a8783c', L: '#d6a760',
-  w: '#e4e4e8', W: '#8e8e98', f: '#ecebe2',
+  w: '#e4e4e8', W: '#8e8e98', f: '#ecebe2', '¦': '#ecebe2',
 };
 const GRILLE_STATUE_FONDATEUR = [
   '..........WW..........',

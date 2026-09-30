@@ -1365,7 +1365,12 @@ const Son = (function () {
     //: drapeau : elles arrivent UN CONTEXTE A LA FOIS, et un contexte ne se
     //: redemande pas a chaque rencontre.
     contextesCharges: new Set(),
-    liste: function () { return (B.defs && B.defs.audio && B.defs.audio.voix) || []; },
+    //: ⚠️ Et les repliques de la file de la foire, qui voyagent dans la SUITE du paquet (`repliques_de_la_file`,
+    //: `definitions.DANS_LA_SUITE`) : le paquet est a son plafond. Elles ont un `lieu` — jamais au premier ecran.
+    liste: function () {
+      const d = B.defs || {}, voix = (d.audio && d.audio.voix) || [];
+      return d.repliques_de_la_file ? voix.concat(d.repliques_de_la_file) : voix;
+    },
     reglages: function () { return (B.defs && B.defs.audio && B.defs.audio.parole) || {}; },
     depart: function () { return Voix.reglages().contexte_de_depart || 'normal'; },
 
@@ -1404,7 +1409,7 @@ const Son = (function () {
       Voix.contextesCharges.add(depart);
       const stations = Voix.genresDesStations();
       Voix._charger(Voix.liste().filter(function (v) {
-        return !v.meteo && !stations.has(v.genre) && (!v.quand || v.quand === depart);
+        return !v.meteo && !v.lieu && !stations.has(v.genre) && (!v.quand || v.quand === depart);
       }));
     },
 
@@ -1449,6 +1454,17 @@ const Son = (function () {
         if (h < v.heures[0] || h >= v.heures[1]) return false;
       }
       return true;
+    },
+
+    /** Les repliques d'UN lieu (`lieu` : la file de la foire), la premiere fois qu'on s'en approche
+        (`FileDeFoire.maj`). Meme geste que `chargerContexte`. */
+    chargerLieu: function (lieu) {
+      const cle = 'lieu:' + lieu;
+      if (Voix.contextesCharges.has(cle) || !ctx || !fenetre || !fenetre.fetch) return;
+      const ici = Voix.liste().filter(function (v) { return v.lieu === lieu; });
+      if (!ici.length) return;                   // la suite du paquet n'est pas encore la : on redemandera
+      Voix.contextesCharges.add(cle);
+      Voix._charger(ici);
     },
 
     /** Les repliques d'UN ciel (`audio.METEOS`), la premiere fois qu'il arrive

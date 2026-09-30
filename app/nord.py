@@ -669,7 +669,7 @@ DECALAGES = {
     "aqueducs": _y, "arrets": None, "autobus": _autobus, "barrieres": _y, "chantiers": _chantiers,
     "chemins_des_bois": _paires, "collections": _y, "concessionnaires": _y, "decalage_nord": _rien, "decor": _y, "decor_solide": _rien,
     "devant": _rien, "devantures": _y, "districts": _rien, "eboueurs": _eboueurs, "entrave": _rien,
-    "entraves": _y, "fermeture": _rien, "fermetures": _y, "feux_pietons": _y, "flottants": _rien, "foire": _y,
+    "entraves": _y, "fermeture": _rien, "fermetures": _y, "feux_pietons": _y, "file_de_foire": _y, "flottants": _rien, "foire": _y,
     "foire_enclos": _foire_enclos, "fourriere": _y, "frenesies": _y, "frenesies_regle": _rien, "graffitis": _y, "graine": _rien, "grille": None,
     "grille_nord": _rien, "hauteur": None, "ile": _y, "incendies": _y, "interieurs": _rien,
     "intersections": _y, "jeux_de_foire": _jeux_de_foire, "kiosques_de_foire": _y, "lampes": _y, "lave_auto": _y, "largeur": _rien,

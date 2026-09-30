@@ -145,6 +145,9 @@ MESURE_DE_LA_CARTE: dict[str, tuple[int, int]] = {
     "navette": (178, 300),
     "rampes": (176, 300),
     "paquets": (172, 300),
+    # La file devant l'arche (30 sept. 2026, docs/jalons/une-file-pour-entrer-a-la-foire.md) : `Monde.charger` la
+    # lit avant JOUER — son serpentin est solide dès la première image.
+    "file_de_foire": (161, 300),
     "jeux_de_foire": (147, 300),
     "stationnement_du_poste": (144, 300),
     "foire_enclos": (140, 300),
