@@ -26,7 +26,8 @@ def test_dix_cases_peintes_qui_ne_se_chevauchent_pas_et_se_rejoignent():
     a_pied = blocs.a_pied_depuis_l_arrivee(souterrain.BLOC)
     for c in cases:
         tuiles = {(c["x"] + i, c["y"] + j) for i in range(c["l"]) for j in range(c["h"])}
-        assert all(plan[y][x] == "^" for x, y in tuiles), f"la case P{c['n']} n'est pas peinte"
+        glyphe = "^" if c["cap"] < 0 else "v"
+        assert all(plan[y][x] == glyphe for x, y in tuiles), f"la case P{c['n']} n'est pas peinte"
         assert not tuiles & vues, f"la case P{c['n']} en chevauche une autre"
         assert tuiles <= a_pied, f"on ne rejoint pas la case P{c['n']}"
         vues |= tuiles
@@ -77,3 +78,19 @@ def test_la_piece_du_garage_a_son_ascenseur_sur_le_plancher():
     sol = piece["sol"]
     assert carte.LEGENDE[sol[pt["y"]][pt["x"]]].get("solide", 0) == 0, "l'ascenseur s'attend debout, sur le plancher"
     assert sol[pt["y"] - 1][pt["x"]] == "B", "ses portes se peignent sur le mur, juste au nord"
+
+
+def test_deux_rangees_face_a_face_autour_d_une_allee():
+    """Martin, 30 sept. 2026 : « le stationnement me semble beaucoup trop grand. on pourrait mettre 2 rangées face à
+    face ». Cinq cases au nord le nez au mur nord, cinq au sud le nez au mur sud, une allée de cinq tuiles entre les
+    deux ; le tout plus petit que l'écran (centré, du noir autour, comme une pièce)."""
+    cases, plan = souterrain.CASES, souterrain.PLAN
+    nord = [c for c in cases if c["cap"] < 0]
+    sud = [c for c in cases if c["cap"] > 0]
+    assert [c["n"] for c in nord] == [1, 2, 3, 4, 5] and [c["n"] for c in sud] == [6, 7, 8, 9, 10]
+    assert [c["x"] for c in nord] == [c["x"] for c in sud], "les deux rangées se font face, case pour case"
+    bas_du_nord, haut_du_sud = nord[0]["y"] + nord[0]["h"], sud[0]["y"]
+    assert haut_du_sud - bas_du_nord == 5, "une allée de cinq tuiles"
+    for y in range(bas_du_nord, haut_du_sud):
+        assert all(plan[y][x] == "#" for x in range(1, len(plan[0]) - 1)), f"l'allée est libre à la rangée {y}"
+    assert len(plan[0]) * carte.TUILE_PX <= blocs.ECRAN_PX[0] and len(plan) * carte.TUILE_PX <= blocs.ECRAN_PX[1]

@@ -165,7 +165,9 @@ const Souterrain = (function () {
     if (ici()) {
       const s = B.bloc.def.bloc.souterrain;
       s.cases.forEach(function (q) {
-        const x = Math.round((q.x + q.l / 2) * TT - cam.x) - 6, y = Math.round((q.y + q.h) * TT - cam.y) - 12;
+        // Le numero du cote de l'allee : au pied des cases du nord, en tete de celles du sud.
+        const x = Math.round((q.x + q.l / 2) * TT - cam.x) - 6;
+        const y = Math.round((q.cap < 0 ? (q.y + q.h) * TT - 12 : q.y * TT + 5) - cam.y);
         if (x < -20 || x > VW + 20 || y < -20 || y > VH + 20) return;
         Atlas.texte(ctx, 'P' + q.n, x, y, '#f4e4c1', 1);
       });

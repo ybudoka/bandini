@@ -1592,5 +1592,13 @@ Laissé pour plus tard (mineurs de la relecture) : un char de trop au sous-sol (
 apparaître un) disparaît sans un mot ; la triche ENDROITS CLÉS y mène sans posséder le garage ; aucun juge ne joue la
 descente depuis l'atelier rideau baissé (le chemin est lu correct).
 
+**Deux rangées face à face (30 sept. 2026, retour de Martin sur la vague 1 : « le stationnement me semble beaucoup
+trop grand. on pourrait mettre 2 rangées face à face »)** : le −1 passe de 32 × 18 à 17 × 14 — P1 à P5 au nord, le
+nez au mur, P6 à P10 en face au sud, le nez au mur sud, une allée de cinq tuiles ; la rampe au nord-est, l'ascenseur
+au sud-est. Plus petit que l'écran, il se centre avec du noir autour, comme une pièce (`Monde.limitesCamera`).
+⚠️ Pour la vague 2 : le −2 ne peut plus être un deuxième CADRE de la même carte (le juge des blocs veut chaque cadre
+plus grand que l'écran, sinon on voit l'étage d'à côté) — un deuxième sous-sol à part, ou des cadres séparés par du
+noir, à trancher alors.
+
 Reste la **vague 2** : le −2 (P11 à P20, 10 000 $, AGRANDIR LE SOUS-SOL, la grille), la rampe intérieure au volant, et
 les sons (l'ascenseur, l'écho des pneus, les néons).

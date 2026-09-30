@@ -92,7 +92,7 @@ GARER = """
     if (j.dansVehicule !== v) { j.x = v.x; j.y = v.y; L.Vehicules.monter(j, v); }
     v.x = (q.x + q.l / 2) * TT; v.y = (q.y + q.h / 2) * TT; v.angle = -Math.PI / 2; v.vitesse = 0; v.vx = 0; v.vy = 0;
     L.Vehicules.descendre(j, true);
-    j.x = 15 * TT + 8; j.y = 8 * TT + 8;
+    j.x = 14 * TT; j.y = 7 * TT + 8;
     L.Entites.indexer();
   }
 """
@@ -132,7 +132,7 @@ def test_un_char_laisse_dans_l_allee_ti_guy_le_gare_sur_la_premiere_case_libre(b
         B.partie.souterrain.cases[0] = { slug: 'auto', sprite: undefined, couleur: '#f1c40f', vie: 100, vole: false, aToi: true };
         L.Blocs.sauter('souterrain', null, null); await attendreLeBloc(L, o, 'souterrain');
         // En plein milieu de l'allée, et on remonte à pied.
-        a.v.x = 20 * TT; a.v.y = 9 * TT; L.Vehicules.descendre(j, true); j.x = 15 * TT + 8; j.y = 6 * TT;
+        a.v.x = 6 * TT; a.v.y = 7 * TT; L.Vehicules.descendre(j, true); j.x = 14 * TT; j.y = 6 * TT;
         L.Jeu.sortirDuBloc(); await attendreLaVille(L, o);
         return B.partie.souterrain.cases.slice(0, 3).map(function (c) { return c && c.couleur; });
     }""")
@@ -355,7 +355,7 @@ def test_la_fourriere_ne_descend_pas_au_sous_sol(banc):
         L.Jeu.commencer(); proprio(L);
         const B = L.B, j = B.joueur, a = auVolantDevant(L);
         L.Blocs.sauter('souterrain', null, null); await attendreLeBloc(L, o, 'souterrain');
-        a.v.x = 20 * TT; a.v.y = 9 * TT; L.Vehicules.descendre(j, true); j.x = 15 * TT + 8; j.y = 14 * TT;
+        a.v.x = 6 * TT; a.v.y = 7 * TT; L.Vehicules.descendre(j, true); j.x = 14 * TT; j.y = 8 * TT;
         let malGare = false;
         for (let i = 0; i < 50 * 60; i++) { o.frame(1); if (/MAL GAR/.test(B.msg || '')) malGare = true; }
         const encore = B.entites.indexOf(a.v) >= 0, saisis = B.partie.fourriere.length;
@@ -388,7 +388,7 @@ def test_au_sous_sol_la_meteo_ne_mord_pas_ni_route_ni_pas_ni_froid(banc):
         const enVille = meteo();
         L.Entites.retirer(v);
         L.Blocs.sauter('souterrain', null, null); await attendreLeBloc(L, o, 'souterrain');
-        j.x = 20 * TT; j.y = 9 * TT;
+        j.x = 6 * TT; j.y = 7 * TT;
         return { enVille: enVille, enBas: meteo() };
     }""")
     v, b = r["enVille"], r["enBas"]

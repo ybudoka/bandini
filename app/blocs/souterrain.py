@@ -18,37 +18,37 @@ import math
 PAR_NIVEAU = 10
 CASES_MAX = 20
 
-#: Le −1 : la rampe au nord (14 à 16), dix cases contre le mur nord (le nez au mur), l'allée, deux piliers, et
-#: l'ascenseur au milieu du mur sud (ses portes, les deux `D`). `B` : du béton peint (`materiaux`, comme les murs
-#: d'une pièce). 32 × 18 : plus grand que l'écran (30 × 17), la caméra n'y voit jamais le vide.
+#: Le −1, en deux rangées face à face (Martin, 30 sept. 2026 : « le stationnement me semble beaucoup trop grand. on
+#: pourrait mettre 2 rangées face à face ») : cinq cases au nord, le nez au mur nord (`^`), cinq au sud, le nez au mur
+#: sud (`v`), une allée de cinq tuiles entre les deux — assez pour qu'un camion recule d'une case. La rampe au
+#: nord-est (12 à 14), l'ascenseur au mur sud-est (ses portes, les deux `D`). `B` : du béton peint (`materiaux`, comme
+#: les murs d'une pièce). 17 × 14 : plus petit que l'écran, centré avec du noir autour, comme une pièce.
 PLAN: tuple[str, ...] = (
-    "BBBBBBBBBBBBBB###BBBBBBBBBBBBBBB",
-    "BBBBBBBBBBBBBB###BBBBBBBBBBBBBBB",
-    "B#^^^^^^^^^^######^^^^^^^^^^###B",
-    "B#^^^^^^^^^^######^^^^^^^^^^###B",
-    "B#^^^^^^^^^^######^^^^^^^^^^###B",
-    "B##############################B",
-    "B##############################B",
-    "B##############################B",
-    "B##############################B",
-    "B##############################B",
-    "B######B################B######B",
-    "B##############################B",
-    "B##############################B",
-    "B##############################B",
-    "B##############################B",
-    "B##############################B",
-    "B##############################B",
-    "BBBBBBBBBBBBBBBDDBBBBBBBBBBBBBBB",
+    "BBBBBBBBBBBB###BB",
+    "BBBBBBBBBBBB###BB",
+    "B^^^^^^^^^^#####B",
+    "B^^^^^^^^^^#####B",
+    "B^^^^^^^^^^#####B",
+    "B###############B",
+    "B###############B",
+    "B###############B",
+    "B###############B",
+    "B###############B",
+    "Bvvvvvvvvvv#####B",
+    "Bvvvvvvvvvv#####B",
+    "Bvvvvvvvvvv#####B",
+    "BBBBBBBBBBBBBDDBB",
 )
 
-#: Les dix cases, de gauche à droite : deux tuiles de large, trois de creux, le nez au mur nord.
-CASES: tuple[dict, ...] = tuple({"n": k + 1, "x": x, "y": 2, "l": 2, "h": 3, "cap": -math.pi / 2}
-                                for k, x in enumerate((2, 4, 6, 8, 10, 18, 20, 22, 24, 26)))
+#: Les dix cases : deux tuiles de large, trois de creux. P1 à P5 au nord (le nez au mur nord), P6 à P10 en face, au
+#: sud (le nez au mur sud), case pour case.
+CASES: tuple[dict, ...] = (
+    tuple({"n": k + 1, "x": x, "y": 2, "l": 2, "h": 3, "cap": -math.pi / 2} for k, x in enumerate((1, 3, 5, 7, 9)))
+    + tuple({"n": k + 6, "x": x, "y": 10, "l": 2, "h": 3, "cap": math.pi / 2} for k, x in enumerate((1, 3, 5, 7, 9))))
 
 #: La rangée où l'on attend l'ascenseur (ses portes juste au sud) : ACTION y remonte à la pièce du garage, et on y
 #: arrive en descendant.
-ASCENSEUR = {"x": 15, "y": 16, "l": 2}
+ASCENSEUR = {"x": 13, "y": 12, "l": 2}
 
 BLOC = {
     "slug": "souterrain",
@@ -60,8 +60,8 @@ BLOC = {
     "passage": None,
     "seuil": "garage",
     # La rampe, au nord : on la monte au volant (ou à pied), et on est devant le rideau.
-    "retour": {"bord": "nord", "de": 14, "l": 3},
-    "arrivee": {"x": 15, "y": 4},
+    "retour": {"bord": "nord", "de": 12, "l": 3},
+    "arrivee": {"x": 13, "y": 3},
     "gens": False,
     # Sous terre : ni pluie, ni neige, ni nuit (`Monde.aLAbri`).
     "abrite": True,
