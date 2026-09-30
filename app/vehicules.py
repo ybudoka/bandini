@@ -521,6 +521,7 @@ PHYSIQUE = {
     "choc_rebond": 0.35,
     "renverse_vitesse_min": 1.2,  # sous ca, un pieton est bouscule, pas renverse
     "renverse_degats_par_px": 28,
+    "pnj_tue_une_fois_sur": 10,   # un char de PNJ renverse ; il ne tue qu'une fois sur ca (a l'empreinte)
     "fumee_sous": 0.5,            # fraction des PV
     "feu_sous": 0.2,
     "feu_degats_par_seconde": 4,

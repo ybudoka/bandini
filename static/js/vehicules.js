@@ -1341,6 +1341,10 @@ const Vehicules = (function () {
     }
   }
 
+  //: La vitesse (px/image) a laquelle un passant epargne par un char de PNJ roule sur le cote, hors du
+  //: couloir : amortie par le recul (x 0,82 par image), environ quatorze pixels.
+  const PROJECTION_DE_COTE = 2.5;
+
   /** Les gens : bouscules a basse vitesse, renverses au-dela. Les enfants,
       eux, ne sont que bouscules — c'est la regle. */
   function heurterPietons(v) {
@@ -1365,13 +1369,32 @@ const Vehicules = (function () {
         // au flanc d'une auto qui repart, une autre patrouille le frole.
         if (v.conducteur === 'police' && p.agent) continue;
         if (vitesse >= ph.renverse_vitesse_min && !p.intouchable && p.etat !== 'assomme') {
-          const degats = Math.round(vitesse * ph.renverse_degats_par_px);
           const avant = p.vivant;
+          // ⚠️ UN CHAR DE PNJ N'ECRASE QU'EXCEPTIONNELLEMENT (Martin, 30 sept. 2026) : la sonde comptait
+          // un passant tue par minute, tous sous un autobus ou un char du trafic. Il renverse, le passant
+          // se releve et detale ; il ne tue qu'une fois sur `pnj_tue_une_fois_sur`, a l'empreinte du char
+          // et du passant — un de decalerait tout le hasard de la ville. Le joueur au volant (les deux) et
+          // le char vide qui roule tout seul tuent comme avant.
+          const pnj = p.type === 'pieton' && !!v.conducteur && v.conducteur.type !== 'joueur';
+          const epargne = pnj && hash2(v.id * 7919 + 13, p.id) % ph.pnj_tue_une_fois_sur !== 0;
+          const plein = Math.round(vitesse * ph.renverse_degats_par_px);
+          const degats = epargne ? Math.max(0, Math.min(plein, p.vie - 1)) : plein;
+          // ⚠️ L'EPARGNE NE SAIGNE PAS : le saignement mord au bout d'une seconde, et laisse a 1 PV il
+          // mourait quand meme — un char de moins au compteur, autant de corps sur le trottoir.
           Entites.blesser(p, degats, v.conducteur === B.joueur ? B.joueur : v, {
-            renverse: true, angle: Math.atan2(v.vy, v.vx), saigne: 60,
+            renverse: true, angle: Math.atan2(v.vy, v.vx), saigne: epargne ? 0 : 60, sansRiposte: pnj,
           });
           p.vx = v.vx * 1.2; p.vy = v.vy * 1.2;
           v.vitesse *= 0.85;
+          // ⚠️ L'EPARGNE SORT DU COULOIR AVANT DE DETALER : projete DEVANT le char, puis fuyant droit
+          // devant lui, il se refaisait frapper, encore et encore (la sonde : 9 coups sur des fuyards,
+          // puis 49 ; projete devant et tasse ensuite, 51 coups sur des tasses). Il roule donc sur le
+          // COTE, du cote ou il se tasse, et le chauffeur freine.
+          if (epargne && p.vivant && Entites.tasser(p, v)) {
+            const pousse = PROJECTION_DE_COTE * p.tasseCote;
+            p.vx = -Math.sin(v.angle) * pousse + v.vx * 0.3; p.vy = Math.cos(v.angle) * pousse + v.vy * 0.3;
+            v.vitesse *= 0.4;
+          }
           // Le coup sourd du corps sur le capot : il etait MUET, on ne savait pas qu'on l'avait touche.
           Son.depuis(p, function () { Son.SFX.choc('choc_corps'); });
           // Le suspect de la patrouille, percute et vivant, reste AU SOL : c'est l'arrestation
@@ -1987,6 +2010,8 @@ const Vehicules = (function () {
       (`Son.depuis`) : muet hors champ, plus doux de loin. Le sien, au volant,
       reste plein volume. */
   function avertir(v) {
+    // Ceux qui sont devant se tassent, quel que soit l'air (Martin, 30 sept. 2026 : `Entites.klaxonne`).
+    Entites.klaxonne(v);
     // Le klaxon « Gens du pays » (le garage de Ti-Guy) : au volant du joueur seulement.
     if (Garage.klaxonne(v)) { Son.SFX.gensDuPays(); return; }
     const effet = Son.SFX[v.def.klaxon] || Son.SFX.klaxon;
@@ -2929,6 +2954,30 @@ const Vehicules = (function () {
     return Math.min(dMin, signal);
   }
 
+  //: Le repit entre deux coups de klaxon a un passant dans son couloir (images) : un coup, pas une rafale.
+  const REPIT_KLAXON_PASSANT = 180;
+
+  /** Quelqu'un a pied, vivant, dans la rue. */
+  function aPied(e) { return !!e && (e.type === 'pieton' || e.type === 'joueur') && e.vivant && !e.dansVehicule; }
+
+  /** ⚠️ UN PASSANT DANS SON COULOIR : on klaxonne TOUT DE SUITE (Martin, 30 sept. 2026), il se tasse
+      (`Entites.klaxonne`). Avant, on attendait `patience_images` (3,3 s) — puis on forcait. Pas au feu
+      rouge : celui qui traverse au blanc est dans son droit. `obstacle` : ce que `obstacleDevant` vient
+      de rendre (il pose `v.devant`). */
+  function klaxonnerLePassant(v, obstacle) {
+    if (obstacle >= trafic().distance_securite_px * 2 || v.attendFeu || !aPied(v.devant)) return;
+    if ((v.klaxonPassantT || 0) > B.t) return;
+    v.klaxonT = 30; v.klaxonPassantT = B.t + REPIT_KLAXON_PASSANT;
+  }
+
+  /** La vitesse ou l'on force le passage : le quart de sa vitesse max — mais devant quelqu'un a pied,
+      sous la vitesse qui renverse. ⚠️ Le coupe sport, le cabriolet et la moto forcaient a 1,2-1,3 px/image :
+      exactement de quoi faucher le passant plante qu'ils voulaient seulement pousser. */
+  function vitesseDeForce(v) {
+    const quart = v.def.vitesse_max * 0.25;
+    return aPied(v.devant) ? Math.min(quart, physique().renverse_vitesse_min * 0.9) : quart;
+  }
+
   /** Il SUIT un char : l'obstacle que `obstacleDevant` vient de voir est un char
       CONDUIT qui va dans son sens. On ne force jamais dedans.
 
@@ -3091,6 +3140,7 @@ const Vehicules = (function () {
     // ⚠️ On decide de se tasser DE LOIN (deux fois la distance de securite),
     // pas au dernier moment : a une tuile du pieton, le deport serait un coup
     // de volant a 45 degres. De loin, la diagonale se voit venir.
+    klaxonnerLePassant(v, obstacle);
     const deport = obstacle < t.distance_securite_px * 2 && changerDeVoie(v);
     if (proche && !deport) {
       vitesseVoulue = 0;
@@ -3112,7 +3162,7 @@ const Vehicules = (function () {
       if (deport && proche) vitesseVoulue = Math.min(vitesseVoulue, physique().renverse_vitesse_min * 0.9);
       v.patience = 0;
     }
-    if (v.force > 0) { v.force--; if (!(proche && suitUnChar(v))) vitesseVoulue = Math.max(vitesseVoulue, v.def.vitesse_max * 0.25); }
+    if (v.force > 0) { v.force--; if (!(proche && suitUnChar(v))) vitesseVoulue = Math.max(vitesseVoulue, vitesseDeForce(v)); }
     void ecart;
     rouler(v, vitesseVoulue);
   }
@@ -4425,9 +4475,9 @@ const Vehicules = (function () {
 
   return {
     ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, majGaresDeService, majLotsDeConcession, compteCommeGare, typeDeRue, remise, remisee, rentrerLesRemises, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, pousserLeDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
-    majPhysique, allureDuSol, avancer, heurterVehicules, heurterBetes, endommager, exploser, declencherAlarme,
+    majPhysique, allureDuSol, avancer, heurterVehicules, heurterPietons, heurterBetes, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
-    prochaineCible, peutSortir, obstacleDevant, suitUnChar, majConducteur, commandesJoueur, rouler,
+    prochaineCible, peutSortir, obstacleDevant, suitUnChar, klaxonnerLePassant, vitesseDeForce, majConducteur, commandesJoueur, rouler,
     pointDArret, approcheDeLaLigne, placeDeLaPanne, placeStationnee, garesVoulus,
     voieDeDepassement, voieLibre, changerDeVoie,
     estVeloDuTrafic, intentionDuVelo, coteDuVelo, aLaBordure, voieDuVelo, roulableHorsRue, boutDeTrottoir, traverseeDuParc, monterSurLeTrottoir,

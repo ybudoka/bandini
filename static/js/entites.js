@@ -4862,6 +4862,110 @@ const Entites = (function () {
     return (e.nage || e.agent || e.barbote || e.type === 'joueur') ? Monde.MASQUE_NAGEUR : Monde.MASQUE_PIETON;
   }
 
+  // --- Se tasser au klaxon -----------------------------------------------------------
+  //
+  // Martin, 30 sept. 2026 : « si un piéton se fait klaxonner, il se déplace et laisse le
+  // véhicule passer et poursuit sa route ». Klaxonné, un passant qui est DEVANT le char, dans
+  // son couloir, fait un pas de côté ; il attend que le char soit passé, puis reprend ce qu'il
+  // faisait — son état, son cap, sa direction, le temps qu'il lui restait.
+
+  //: Jusqu'où devant le nez un klaxon porte (tuiles).
+  const TASSE_PORTEE_TUILES = 5;
+  //: Ce qu'on laisse entre le flanc du char et soi, une fois tassé (px).
+  const TASSE_MARGE_PX = 6;
+  //: On n'attend pas un char qui ne passe jamais (garé, arrêté au feu) : 4 s, et on reprend.
+  const TASSE_MAX_IMAGES = 240;
+  //: Coince (il ne gagne plus un pixel de cote) plus longtemps que ca : il renonce et reprend (images).
+  const TASSE_COINCE_IMAGES = 20;
+  //: Ce qu'on quitte pour se tasser. ⚠️ Pas qui se bat, qui tient son poste (`fige`), qui est
+  //: assommé, qui vole un char ou qui boniment : ceux-là ont mieux à faire qu'un char.
+  const SE_TASSE = ['flane', 'cap', 'arret', 'fuit', 'temoin', 'tasse'];
+
+  /** Le klaxon de `v` : chaque passant devant son nez, dans son couloir, se tasse. */
+  function klaxonne(v) {
+    if (!v || !v.def || v.def.eau) return;
+    const c = Math.cos(v.angle), s = Math.sin(v.angle);
+    const portee = TASSE_PORTEE_TUILES * TT + v.def.longueur / 2;
+    for (const e of pietonsAutour(v.x + c * portee / 2, v.y + s * portee / 2, portee / 2 + 16)) {
+      const dx = e.x - v.x, dy = e.y - v.y;
+      const devant = dx * c + dy * s, cote = -dx * s + dy * c;
+      if (devant < 0 || devant > portee) continue;
+      if (Math.abs(cote) > v.def.largeur / 2 + e.r + TASSE_MARGE_PX) continue;
+      tasser(e, v);
+    }
+  }
+
+  /** `e` se tasse devant `v`. Rend faux s'il a mieux à faire. */
+  function tasser(e, v) {
+    if (e.type !== 'pieton' || !e.vivant || e.dansVehicule || e.vol || e.tenu || e.partenaire || e.agent || e.suit) return false;
+    if (SE_TASSE.indexOf(e.etat) < 0 || e.metier === 'cycliste' || e.nage) return false;
+    // ⚠️ ON GARDE CE QU'IL FAISAIT, porte comprise : `majPorte` passe avant tout état, et
+    // celui qui marchait vers sa porte en travers de la rue n'aurait pas levé la tête.
+    if (e.etat !== 'tasse') {
+      e.avantTasse = { etat: e.etat, minuterie: e.minuterie, cap: e.cap, capT: e.capT, capVite: e.capVite,
+                       butT: e.butT, dir: e.dir, porteBut: e.porteBut, menace: e.menace };
+      e.porteBut = null;
+    }
+    e.etat = 'tasse'; e.tasseDe = v; e.tasseT = TASSE_MAX_IMAGES; e.tasseManque = undefined; e.tasseCoince = 0;
+    e.tasseCote = coteDuTasse(e, v);
+    return true;
+  }
+
+  /** De quel côté du couloir se tasser : celui où l'on est déjà, sauf si l'autre mène au
+      trottoir et le sien à la chaussée (ou dans un mur). */
+  function coteDuTasse(e, v) {
+    const c = Math.cos(v.angle), s = Math.sin(v.angle);
+    const cote = -(e.x - v.x) * s + (e.y - v.y) * c;
+    const loin = v.def.largeur / 2 + e.r + TASSE_MARGE_PX;
+    const note = function (sg) {
+      const x = v.x + c * ((e.x - v.x) * c + (e.y - v.y) * s) - s * sg * loin;
+      const y = v.y + s * ((e.x - v.x) * c + (e.y - v.y) * s) + c * sg * loin;
+      const tx = Math.floor(x / TT), ty = Math.floor(y / TT);
+      if (Monde.bloque(tx, ty, masqueDe(e))) return -1;
+      return Monde.estChaussee(tx, ty) ? 0 : 1;
+    };
+    const sien = cote >= 0 ? 1 : -1;
+    return note(-sien) > note(sien) ? -sien : sien;
+  }
+
+  /** Il reprend ce qu'il faisait avant le klaxon. */
+  function reprendre(e) {
+    const a = e.avantTasse || { etat: 'flane' };
+    e.etat = a.etat; e.minuterie = a.minuterie; e.cap = a.cap; e.capT = a.capT; e.capVite = a.capVite;
+    e.butT = a.butT; e.dir = a.dir; e.porteBut = a.porteBut;
+    if (a.menace) e.menace = a.menace;
+    e.avantTasse = null; e.tasseDe = null; e.vx = 0; e.vy = 0;
+  }
+
+  /** Une image de tassé : le pas de côté, puis on attend que le char passe. Rend vrai s'il
+      marche (le pas se fait avec les autres, plus bas dans `majPieton`). */
+  function majTasse(e, vitesse) {
+    const v = e.tasseDe;
+    if (!v || !v.actif || --e.tasseT <= 0) { reprendre(e); return false; }
+    const c = Math.cos(v.angle), s = Math.sin(v.angle);
+    const dx = e.x - v.x, dy = e.y - v.y;
+    const devant = dx * c + dy * s, cote = -dx * s + dy * c;
+    const loin = v.def.largeur / 2 + e.r + TASSE_MARGE_PX;
+    // Passé (l'arrière du char a dépassé), ou parti ailleurs (il a tourné) : on reprend.
+    if (devant < -(v.def.longueur / 2 + e.r) || Math.abs(cote) > loin + 2 * TT) { reprendre(e); return false; }
+    const manque = loin - cote * e.tasseCote;
+    if (manque > 0.5) {
+      // ⚠️ COINCE (un trottoir d'une tuile, un mur, un banc), il ne s'ecarte pas : le char attend
+      // qu'il s'ote, lui que le char passe — et personne ne bouge. Vingt images sans gagner un
+      // pixel de cote, il laisse tomber et reprend sa route, comme avant le klaxon.
+      if (e.tasseManque !== undefined && e.tasseManque - manque < 0.05) {
+        if (++e.tasseCoince > TASSE_COINCE_IMAGES) { reprendre(e); return false; }
+      } else e.tasseCoince = 0;
+      e.tasseManque = manque;
+      const pas = Math.min(vitesse, manque);
+      e.vx = -s * e.tasseCote * pas; e.vy = c * e.tasseCote * pas;
+      return true;
+    }
+    e.vx = 0; e.vy = 0;
+    regarder(e, v.x - e.x, v.y - e.y);
+    return false;
+  }
+
   function majPieton(e) {
     const v = B.defs.recherche.vitesses;
     const reactions = B.defs.pietons.reactions;
@@ -5156,6 +5260,9 @@ const Entites = (function () {
       // se declenche quand meme, a la prochaine image de `majSortes`.
       else if (norme <= 12) { e.vx = 0; e.vy = 0; }
       else { e.vx = dx / norme * pas; e.vy = dy / norme * pas; }
+    } else if (e.etat === 'tasse') {
+      // Klaxonne : il se tasse, laisse passer, et reprend sa route (`majTasse`).
+      if (!majTasse(e, v.pieton_course * e.allure)) return;
     } else if (e.etat === 'arret') {
       // On s'arrete : on regarde une vitrine, on attend quelqu'un, on respire.
       e.vx = 0; e.vy = 0;
@@ -5546,6 +5653,12 @@ const Entites = (function () {
       else tuer(e, source);
     } else if (e.type === 'pieton') {
       if (opts.silencieuse) return true;
+      // ⚠️ RENVERSE PAR UN CHAR DE PNJ (`Vehicules.heurterPietons`) : il se releve et detale,
+      // c'est tout. Le joueur n'y est pour rien — ni riposte, ni gang alertee contre lui, ni de.
+      if (opts.sansRiposte) {
+        e.etat = 'fuit'; e.minuterie = B.defs.pietons.reactions.fuite_secondes * 60; e.avantLeCoup = null;
+        return true;
+      }
       alerter(e.x, e.y, source, 2);
       // ⚠️ CELUI QUI SE BAT DEJA NE SE RETOURNE PAS CONTRE LE JOUEUR : le
       // premier coup d'une rixe envoyait les deux camps sur lui, et il n'avait
@@ -6216,7 +6329,7 @@ const Entites = (function () {
     plageEn, litLibre, coinDePlage, plageEnSaison, enSaison,
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele, mouiller,
     enjamber, majEnjambe, clotureDevant, reglesCloture,
-    blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers, naitreLEquipe, pousserDecor, boiteTouche, majVolDeChar, emporterLeChar,
+    blesser, assommer, tuer, alerter, klaxonne, tasser, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers, naitreLEquipe, pousserDecor, boiteTouche, majVolDeChar, emporterLeChar,
     majBagarre, allumerLaBagarre, frontiereProche, rivalDe, enPleineRixe, majAqueduc, JET_EAU_IMAGES,
     naitreLesEnfantsDeLaPlage, majPlage, plierBagage, naitreLeLastCall, chicaner, majCamelot, prochainPerron,
     poserLeJournal, rentrerLesJournaux, fairePartirUnRaton, bordDeLEau, chateauLePlusProche, majBallonVol, lancerLeBallon,

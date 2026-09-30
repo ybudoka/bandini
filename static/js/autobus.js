@@ -384,6 +384,8 @@ const Autobus = (function () {
     if (Math.abs(ecartAngle(v.angle, angleVers(v.x, v.y, cible.x, cible.y))) > 0.5) voulue = Math.min(voulue, 0.8);
     const obstacle = Vehicules.obstacleDevant(v);
     if (v.rails) sonnerDevant(v);
+    // Un passant dans son couloir : un coup de klaxon tout de suite, il se tasse (`Vehicules.klaxonnerLePassant`).
+    else Vehicules.klaxonnerLePassant(v, obstacle);
     if (obstacle < t.distance_securite_px) {
       voulue = 0;
       // ⚠️ Deux fois la patience du trafic : un autobus ne force pas le passage
@@ -396,7 +398,7 @@ const Autobus = (function () {
     }
     if (v.force > 0) {
       v.force--;
-      if (!(obstacle < t.distance_securite_px && Vehicules.suitUnChar(v))) voulue = Math.max(voulue, v.def.vitesse_max * 0.25);
+      if (!(obstacle < t.distance_securite_px && Vehicules.suitUnChar(v))) voulue = Math.max(voulue, Vehicules.vitesseDeForce(v));
     }
     Vehicules.rouler(v, voulue);
     // Le chien de garde : pris sans raison, hors de vue et sans personne a bord,

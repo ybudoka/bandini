@@ -191,7 +191,7 @@ def test_un_velo_traverse_le_parc_par_ses_allees_et_redescend(banc):
     redescend dans une voie ou le trottoir est a sa droite — sans que la trace du
     trafic ne crie au hors-voie."""
     r = _parc(banc, """
-        const foules = [], allees = new Set();
+        const foules = [], ou = [], allees = new Set();
         let parti = false, revenu = null;
         for (let i = 0; i < 2400 && !revenu; i++) {
             o.frame(1);
@@ -199,14 +199,20 @@ def test_un_velo_traverse_le_parc_par_ses_allees_et_redescend(banc):
                 parti = true;
                 const tx = Math.floor(v.x / T), ty = Math.floor(v.y / T), g = M.glyphe(tx, ty);
                 foules.push(g);
+                ou.push(tx + ',' + ty);
                 if (g === 'g') allees.add(tx + ',' + ty);
             } else if (parti && PAS[M.fleche(Math.floor(v.x / T), Math.floor(v.y / T))]) {
                 revenu = { sens: v.sens, fleche: M.fleche(Math.floor(v.x / T), Math.floor(v.y / T)) };
             }
         }
         const pelouse = foules.filter(function (g) { return g === ','; }).length;
-        // Ce qu'il a roule de trottoir APRES la derniere allee, avant de redescendre.
-        const apres = foules.slice(foules.lastIndexOf('g') + 1).filter(function (g) { return g === '.'; }).length;
+        // Les TUILES de trottoir qu'il a roulees APRES la derniere allee, avant de redescendre.
+        // ⚠️ Des tuiles, pas des images : au bout du trottoir, il ATTEND que la voie ou il redescend
+        // se libere (`cibleHorsRue`, `attente_images`). Compter les images comptait cette attente
+        // comme du trottoir roule — et le juge rougissait des que la rue avait du monde (30 sept.
+        // 2026 : les passants qui se tassent font rouler le trafic, 98 images sur UNE tuile).
+        const derniere = foules.lastIndexOf('g');
+        const apres = new Set(ou.slice(derniere + 1).filter(function (k, i) { return foules[derniere + 1 + i] === '.'; })).size;
         return { parti: parti, allees: allees.size, pelouse: pelouse, foules: foules.length, revenu: revenu, apres: apres,
                  min: f.parc_allees_min, conducteur: v.conducteur,
                  anomalies: L.B.trace.anomalies.map(function (a) { return a.quoi; }) };
@@ -217,7 +223,7 @@ def test_un_velo_traverse_le_parc_par_ses_allees_et_redescend(banc):
     assert r["pelouse"] <= r["foules"] * 0.05, f"{r['pelouse']} releves sur la pelouse (sur {r['foules']})"
     assert r["revenu"] and r["revenu"]["sens"] == r["revenu"]["fleche"], f"il n'est pas redescendu dans une voie : {r}"
     # ⚠️ Il redescend A LA SORTIE de l'allee : pas cinq tuiles de trottoir a rebours.
-    assert r["apres"] <= 40, f"{r['apres']} images sur le trottoir entre la sortie du parc et la voie"
+    assert r["apres"] <= 3, f"{r['apres']} tuiles de trottoir entre la sortie du parc et la voie"
     assert r["conducteur"] == "trafic"
     assert r["anomalies"] == [], f"la trace a crie : {r['anomalies']}"
 

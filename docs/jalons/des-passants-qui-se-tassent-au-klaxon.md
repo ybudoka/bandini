@@ -29,3 +29,29 @@ le joueur.
   passant. Le train garde sa règle (il n'arrête pour personne), et le joueur au volant ne change
   pas.
 - ⚠️ Rien ne tire un dé : `B.rng` décalerait tout le hasard de la ville.
+
+## Notes
+
+Livré le 30 sept. 2026.
+
+- **Le tassement** vit dans `entites.js` : `Entites.klaxonne(v)` (appelé par `Vehicules.avertir`, donc
+  par tout avertisseur — klaxon, sonnette, « Gens du pays ») cherche les passants devant le nez, à
+  5 tuiles, dans le couloir du char ; `tasser` garde ce qu'ils faisaient (`avantTasse` : état, cap,
+  direction, minuterie, porte) ; `majTasse` fait le pas de côté — vers le trottoir si l'autre côté
+  est la chaussée — et `reprendre` rend tout quand l'arrière du char est passé, au bout de 4 s, ou
+  après 20 images coincé (un trottoir d'une tuile, un mur).
+- **Le trafic klaxonne tôt** (`Vehicules.klaxonnerLePassant`, trafic et autobus) : un coup, puis
+  3 s de répit ; jamais au feu rouge, celui qui traverse au blanc est dans son droit.
+- **Le forçage** (`Vehicules.vitesseDeForce`) : devant quelqu'un à pied, sous `renverse_vitesse_min`.
+  Le coupé sport, le cabriolet et la moto forçaient à 1,2–1,3 px/image — de quoi faucher le passant.
+- **La règle du PNJ** (`heurterPietons`, `physique.pnj_tue_une_fois_sur` = 10) : `hash2` du char et
+  du passant. L'épargné garde 1 PV, **ne saigne pas** (le saignement mord au bout d'une seconde : il
+  mourait quand même), roule sur le côté hors du couloir (`PROJECTION_DE_COTE`), se tasse puis
+  détale ; `blesser(…, { sansRiposte })` : ni riposte contre le joueur, ni gang alertée, ni dé.
+- ⚠️ Deux pièges trouvés par la sonde, pas par les juges : l'épargné saignait à mort, puis,
+  projeté devant le char et fuyant droit devant, il se refaisait frapper (51 coups en 10 minutes).
+- `test_velos_js` (le vélo du parc) comptait des **images** de trottoir après l'allée ; le trafic
+  plus fluide le faisait attendre 98 images sur UNE tuile au bord de la voie. Il compte maintenant
+  les tuiles (≤ 3), et rougit toujours quand on lui fait longer quatre tuiles.
+- Rouges déjà sur dev, rejoués sur la base : `test_f05…`, `test_e12…` (`test_dix_missions_js`) et
+  `test_la_sirene_lance_la_patrouille…` (`test_patrouille_js`).
