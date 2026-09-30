@@ -241,6 +241,26 @@ const Garderobe = (function () {
     capuche: { bas: { g: ['..kkkkkk..', '.kttttttk.', 'kttttttttk', 'ktt....ttk', 'kt......tk', 'kt......tk', 'kt......tk', '.kt....tk.'], a: 1 },
                haut: { g: ['..kkkkkk..', '.kttttttk.', 'kttttttttk', 'kttttttttk', 'kttttttttk', 'kTTTTTTTTk', '.kTTTTTTk.'], a: 1 },
                cote: { g: ['..kkkkk..', '.kttttttk', 'ktttttttk', 'ktttk....', 'ktttk....', 'ktttk....', '.kttk....'], a: 1, x: -1 } },
+    // LES TUQUES DE ROSA (`rosa-habille-l-hiver.md`) : elles ne sont dans aucune garde-robe tiree. Des
+    // couleurs FIXES pour leurs rayures (`W` la laine blanche, `F` le rouge, `G` le vert, `y` le jaune) :
+    // `a`, l'accent du joueur, teint deja sa cravate.
+    tuque_pompon: { bas: { g: ['..kkkk..', '.kWWWWk.', '..kWWk..', '.kttttk.', 'kttttttk', 'kTtTtTtk'], a: 4 },
+                    haut: { g: ['..kkkk..', '.kWWWWk.', '..kWWk..', '.kttttk.', 'kttttttk', 'kTtTtTtk'], a: 4 },
+                    cote: { g: ['.kkkk...', 'kWWWWk..', '.kWWk...', '.kttttk.', 'kttttttk', 'kTtTtTtk'], a: 4, x: 0 } },
+    tuque_rayee: { bas: { g: ['...kk...', '..kFFk..', '.kttttk.', 'kWWWWWWk', 'kFFFFFFk', 'kTtTtTtk'], a: 4 },
+                   haut: { g: ['...kk...', '..kFFk..', '.kttttk.', 'kWWWWWWk', 'kFFFFFFk', 'kTtTtTtk'], a: 4 },
+                   cote: { g: ['..kk....', '.kFFk...', '.kttttk.', 'kWWWWWWk', 'kFFFFFFk', 'kTtTtTtk'], a: 4, x: 0 } },
+    tuque_chantier: { bas: { g: ['..kkkk..', '.kttttk.', 'kttttttk', 'kTTTTTTk', 'kTTTTTTk'], a: 3 },
+                      haut: { g: ['..kkkk..', '.kttttk.', 'kttttttk', 'kTTTTTTk', 'kTTTTTTk'], a: 3 },
+                      cote: { g: ['.kkkk...', 'kttttk..', 'kttttttk', 'kTTTTTTk', 'kTTTTTTk'], a: 3, x: 0 } },
+    tuque_phentex: { bas: { g: ['...kk...', '..kyyk..', '.kttttk.', 'kGGGGGGk', 'kyyyyyyk', 'kTtTtTtk'], a: 4 },
+                     haut: { g: ['...kk...', '..kyyk..', '.kttttk.', 'kGGGGGGk', 'kyyyyyyk', 'kTtTtTtk'], a: 4 },
+                     cote: { g: ['..kk....', '.kyyk...', '.kttttk.', 'kGGGGGGk', 'kyyyyyyk', 'kTtTtTtk'], a: 4, x: 0 } },
+    // Les oreilles pendent sur les joues, de face et de dos ; de profil, sur l'oreille.
+    // ⚠️ Elles pendent HORS du visage (une colonne de plus de chaque cote) : sur la tete, elles cachaient un oeil.
+    tuque_oreilles: { bas: { g: ['....kk....', '...kaak...', '..kttttk..', '.kttttttk.', 'kTtWtWtWTk', 'kTk....kTk', 'kTk....kTk', '.a......a.'], a: 3 },
+                      haut: { g: ['....kk....', '...kaak...', '..kttttk..', '.kttttttk.', 'kTtWtWtWTk', 'kTk....kTk', 'kTk....kTk', '.a......a.'], a: 3 },
+                      cote: { g: ['..kk.....', '.kaak....', '.kttttk..', 'kttttttk.', 'kTtWtWtWk', 'kTk......', 'kTk......', '.a.......'], a: 3, x: -1 } },
     // ⚠️ LES PIECES DE COSTUME (l'Halloween, les quatre saisons, lot 3) : dessinees ici, JAMAIS dans les
     // listes du tirage (`app/garderobe.py`) — une piece de plus dans `CHAPEAUX` changerait la tenue de
     // tout le monde (le tirage lit une position). `Halloween.habillerEn` seul les met.
@@ -411,8 +431,38 @@ const Garderobe = (function () {
         if (face || dos) g[jambes[0]] = elargir(g[jambes[0]]);
       }
     }
-    if (tn.souliers === 'bottes' && derniere !== undefined) {
+    if ((tn.souliers === 'bottes' || tn.souliers === 'bottes_hiver' || tn.souliers === 'loup_marin') && derniere !== undefined) {
       for (let x = 0; x < g[derniere].length; x++) if ('ps'.indexOf(g[derniere][x]) >= 0) g[derniere][x] = 'b';
+    }
+    // Les bottes de Rosa montent d'une rangee : la botte d'hiver a son rebord de fourrure (`W`), celle de
+    // loup marin est tachetee (`B`) jusqu'en haut. ⚠️ Pas sur une robe ni une jupe, qui couvrent le genou.
+    const dessus = jambes[jambes.length - 2];
+    if ((tn.souliers === 'bottes_hiver' || tn.souliers === 'loup_marin') && dessus !== undefined) {
+      for (let x = 0; x < g[dessus].length; x++) {
+        if ('ps'.indexOf(g[dessus][x]) < 0) continue;
+        g[dessus][x] = tn.souliers === 'bottes_hiver' ? 'W' : ((x + dessus) % 2 ? 'B' : 'b');
+      }
+      if (tn.souliers === 'loup_marin') {
+        for (let x = 0; x < g[derniere].length; x++) if (g[derniere][x] === 'b' && (x + derniere) % 3 === 0) g[derniere][x] = 'B';
+      }
+    }
+    // LA CEINTURE (`taille`) : la derniere rangee du torse, par-dessus le linge — le manteau compris. Le
+    // cuir (`v`) et sa boucle (`y`) ; la flechee, ses fleches rouges, bleues et jaunes, et ses franges qui
+    // pendent sur la hanche.
+    const acc = tn.accessoires || [];
+    const ceinture = acc.indexOf('ceinture_flechee') >= 0 ? 'flechee' : (acc.indexOf('ceinture') >= 0 ? 'cuir' : null);
+    const taille = jambes[0] - 1;
+    if (ceinture && jambes.length && taille > t0) {
+      for (let x = xa; x <= xb; x++) {
+        if ('cCQwWy'.indexOf(lit(g, x, taille)) < 0) continue;
+        if (ceinture === 'cuir') g[taille][x] = (face && (x === milieu || x === milieu + 1)) ? 'y' : 'v';
+        else g[taille][x] = 'FGy'[(x - xa) % 3];
+      }
+      if (ceinture === 'flechee' && vue !== 'haut') {
+        const fx = vue === 'cote' ? xa : xa + 1;
+        if ('psc'.indexOf(lit(g, fx, jambes[0])) >= 0) pose(g, fx, jambes[0], 'F');
+        if (jambes[1] !== undefined && 'psc'.indexOf(lit(g, fx, jambes[1])) >= 0) pose(g, fx, jambes[1], 'G');
+      }
     }
   }
 
@@ -506,6 +556,8 @@ const Garderobe = (function () {
       p: p, b: tn.couleur_souliers || '#1a1a1a',
       t: t, T: melange(t, '#000000', 0.3), L: melange(t, '#ffffff', 0.4),
       a: a, A: melange(a, '#000000', 0.3),
+      // Les couleurs fixes des pieces de Rosa : la tuque rayee, le Phentex, la ceinture flechee, le loup marin.
+      F: '#b8322a', G: '#2e7d4f', B: melange(tn.couleur_souliers || '#1a1a1a', '#ffffff', 0.45),
     };
   }
 
@@ -647,13 +699,17 @@ const Garderobe = (function () {
     let corps = trouve(partie.tenue), tete = trouve(partie.chapeau);
     if (corps && corps.emplacement === 'tete') { if (!tete) tete = corps; corps = trouve('chandail'); }
     if (tete && tete.emplacement !== 'tete') tete = null;
+    // Les places de Rosa (`rosa-habille-l-hiver.md`) : chacune ne lit que SA place.
+    const place = function (champ, emplacement) { const t = trouve(partie[champ]); return t && t.emplacement === emplacement ? t : null; };
+    const pieds = place('pieds', 'pieds'), taille = place('taille', 'taille');
     const piece = (corps && corps.piece) || {};
     return {
       squelette: 'homme', peau: pal.s, cheveux: partie.cheveux || pal.h, coiffure: 'courte',
       haut: piece.haut || 'chandail', couleur_haut: corps ? corps.couleur : pal.c, motif: piece.motif || 'uni',
-      bas: 'pantalon', couleur_bas: pal.p, souliers: 'souliers', couleur_souliers: pal.b,
+      bas: 'pantalon', couleur_bas: pal.p,
+      souliers: pieds ? pieds.piece.souliers : 'souliers', couleur_souliers: pieds ? pieds.couleur : pal.b,
       chapeau: tete && tete.piece ? tete.piece.chapeau : 'aucun', couleur_chapeau: tete ? tete.couleur : '#1a1a22',
-      accessoires: (piece.accessoires || []).slice(), accent: '#c0392b',
+      accessoires: (piece.accessoires || []).concat(taille ? taille.piece.accessoires : []), accent: '#c0392b',
     };
   }
 

@@ -32,7 +32,9 @@ COIFFURES = ("courte", "rase", "chauve", "degarnie", "longue", "queue", "chignon
 #: Ce qu'on a sur la tête. Chacun a son dessin de face, de dos et de profil (`visages.js` a les
 #: siens, en grand).
 CHAPEAUX = ("aucun", "casquette", "casquette_arriere", "tuque", "feutre", "casque_chantier",
-            "kepi", "canotier", "beret", "bandana", "cowboy", "marin", "capuche")
+            "kepi", "canotier", "beret", "bandana", "cowboy", "marin", "capuche",
+            # Les tuques de Rosa (`magasins.TENUES`) : jamais dans une garde-robe tirée.
+            "tuque_pompon", "tuque_rayee", "tuque_chantier", "tuque_phentex", "tuque_oreilles")
 
 #: `veste_kungfu` : la veste à col montant et à boutons de corde (les brandebourgs) des Mantes (`mantes.py`).
 HAUTS = ("chandail", "tshirt", "chemise", "veston", "manteau", "coton_ouate", "camisole",
@@ -42,10 +44,13 @@ MOTIFS = ("uni", "raye", "carreaute")
 
 BAS = ("pantalon", "short", "jupe")
 
-SOULIERS = ("souliers", "bottes")
+#: `bottes_hiver` (le rebord de fourrure) et `loup_marin` (hautes, tachetées) : les bottes de Rosa.
+SOULIERS = ("souliers", "bottes", "bottes_hiver", "loup_marin")
 
+#: ⚠️ On n'en ajoute qu'AU BOUT : `garderobe.js` les parcourt dans l'ordre, et une garde-robe qui
+#: en nomme un tire un dé pour lui. `ceinture` et `ceinture_flechee` : la taille, chez Rosa.
 ACCESSOIRES = ("lunettes", "lunettes_soleil", "barbe", "moustache", "sac_a_dos", "cravate",
-               "foulard")
+               "foulard", "ceinture", "ceinture_flechee")
 
 #: Les peaux et les cheveux que la ville connaît déjà (`pietons.CATALOGUE`), et quelques-uns de
 #: plus : la garde-robe les mélange.

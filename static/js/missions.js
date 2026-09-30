@@ -1702,9 +1702,12 @@ const Missions = (function () {
   function porterTenue(slug) {
     const tenue = (B.defs.tenues || []).find(function (t) { return t.slug === slug; });
     if (!tenue) return false;
-    // Un CHAPEAU se met par-dessus le linge — et celui qu'on porte deja s'enleve.
-    if (tenue.emplacement === 'tete') B.partie.chapeau = B.partie.chapeau === slug ? null : slug;
-    else B.partie.tenue = slug;
+    // Un CHAPEAU se met par-dessus le linge — et celui qu'on porte deja s'enleve. De meme les bottes, la
+    // ceinture et le parapluie (`PLACES_DE_TENUE`) ; le linge, lui, ne s'enleve pas : on en change.
+    const champ = champDeTenue(tenue);
+    if (champ === 'tenue') B.partie.tenue = slug;
+    else B.partie[champ] = B.partie[champ] === slug ? null : slug;
+    if (typeof Combat !== 'undefined' && Combat.suivreLaMain) Combat.suivreLaMain();
     // ⚠️ `apparenceDuJoueur` et pas `{ c: ... }` : ecraser les swaps effacait la
     // teinture du barbier des qu'on changeait de linge.
     B.joueur.swaps = apparenceDuJoueur(B.partie, B.defs);
@@ -1718,7 +1721,7 @@ const Missions = (function () {
   function menuGardeRobe() {
     const p = B.partie;
     const items = parEmplacement((B.defs.tenues || []).filter(function (t) { return p.tenues.indexOf(t.slug) >= 0; }), function (t) {
-      return { libelle: t.nom.toUpperCase(), detail: portee(t) ? (t.emplacement === 'tete' ? 'SUR TA TÊTE' : 'PORTÉE') : '', faire: function () { porterTenue(t.slug); return false; } };
+      return { libelle: t.nom.toUpperCase(), detail: portee(t) ? surToi(t) : '', faire: function () { porterTenue(t.slug); return false; } };
     });
     return { titre: 'GARDE-ROBE', items: items, aide: 'CHANGER DE LINGE FAIT OUBLIER TA TÊTE' };
   }
@@ -2079,16 +2082,23 @@ const Missions = (function () {
     return { titre: 'CHEZ GUS', items: items, sur: p.argent + ' $' };
   }
 
-  /** Porte-t-on cette piece ? Le linge (`partie.tenue`) ou le chapeau (`partie.chapeau`). */
+  /** Porte-t-on cette piece ? Le champ de sa place (`partie.tenue`, `partie.chapeau`, `partie.pieds`...). */
   function portee(t) {
-    const p = B.partie;
-    return t.emplacement === 'tete' ? p.chapeau === t.slug : p.tenue === t.slug;
+    return B.partie[champDeTenue(t)] === t.slug;
   }
 
-  /** Le linge, puis les chapeaux, chacun sous son titre de section (`entete`). */
+  //: Ce qu'on lit a cote d'une piece qu'on porte, selon sa place.
+  const SUR_TOI = { tete: 'SUR TA TÊTE', pieds: 'AUX PIEDS', taille: 'À LA TAILLE', main: 'À LA MAIN' };
+  function surToi(t) { return SUR_TOI[t.emplacement] || 'PORTÉE'; }
+
+  //: Les sections, dans l'ordre de `PLACES_DE_TENUE` (`magasins.PLACES`).
+  const SECTIONS_DE_TENUE = [['corps', 'LE LINGE'], ['tete', 'LES CHAPEAUX'], ['pieds', 'LES BOTTES'],
+                             ['taille', 'LES CEINTURES'], ['main', 'LE PARAPLUIE']];
+
+  /** Le linge, les chapeaux, les bottes, les ceintures, le parapluie : chacun sous son titre (`entete`). */
   function parEmplacement(tenues, item) {
     const out = [];
-    [['corps', 'LE LINGE'], ['tete', 'LES CHAPEAUX']].forEach(function (e) {
+    SECTIONS_DE_TENUE.forEach(function (e) {
       const siennes = tenues.filter(function (t) { return (t.emplacement || 'corps') === e[0]; });
       if (!siennes.length) return;
       out.push({ entete: e[1], libelle: '', actif: false });
@@ -2107,7 +2117,7 @@ const Missions = (function () {
       return !t.prime || p.tenues.indexOf(t.slug) >= 0;
     }), function (t) {
       const deja = p.tenues.indexOf(t.slug) >= 0, prix = auRabais(t.prix, 'vetements');
-      return { libelle: t.nom.toUpperCase(), detail: deja ? (portee(t) ? (t.emplacement === 'tete' ? 'SUR TA TÊTE' : 'PORTÉE') : 'À TOI') : prix + ' $',
+      return { libelle: t.nom.toUpperCase(), detail: deja ? (portee(t) ? surToi(t) : 'À TOI') : prix + ' $',
                actif: deja || p.argent >= prix, faire: function () {
                  if (!deja) { payer(prix, t.nom.toUpperCase()); p.tenues.push(t.slug); }
                  porterTenue(t.slug);

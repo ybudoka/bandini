@@ -387,7 +387,37 @@ TENUES = [
     # s'y range comme les autres : c'est la qu'on vient la remettre.
     {"slug": "casquette_foire", "nom": "Casquette de la foire", "prix": None,
      "couleur": "#e8a33a", "prime": "foire", "emplacement": "tete", "piece": {"chapeau": "casquette"}},
+    # L'hiver chez Rosa (`docs/jalons/rosa-habille-l-hiver.md`) : cinq tuques de plus, et trois
+    # places neuves où tout se cumule — `pieds` (des `souliers` du squelette), `taille` (un
+    # accessoire) et `main` (un `objet`). ⚠️ La vieille tuque de Rocco ne se vend pas (`prime`) :
+    # une partie commence le 1er janvier, et c'est lui qui te la donne.
+    {"slug": "tuque_rocco", "nom": "Vieille tuque de Rocco", "prix": None, "couleur": "#6a5a4a",
+     "prime": "rocco", "emplacement": "tete", "piece": {"chapeau": "tuque_chantier"}},
+    {"slug": "tuque_pompon", "nom": "Tuque à pompon", "prix": 35, "couleur": "#2c3e50",
+     "emplacement": "tete", "piece": {"chapeau": "tuque_pompon"}},
+    {"slug": "tuque_bbr", "nom": "Tuque bleu-blanc-rouge", "prix": 45, "couleur": "#1f4e9c",
+     "emplacement": "tete", "piece": {"chapeau": "tuque_rayee"}},
+    {"slug": "tuque_chantier", "nom": "Tuque de chantier", "prix": 25, "couleur": "#8a8a8a",
+     "emplacement": "tete", "piece": {"chapeau": "tuque_chantier"}},
+    {"slug": "tuque_phentex", "nom": "Tuque en Phentex de matante", "prix": 20, "couleur": "#e67e22",
+     "emplacement": "tete", "piece": {"chapeau": "tuque_phentex"}},
+    {"slug": "tuque_oreilles", "nom": "Tuque à oreilles", "prix": 50, "couleur": "#7d3c98",
+     "emplacement": "tete", "piece": {"chapeau": "tuque_oreilles"}},
+    {"slug": "bottes_hiver", "nom": "Bottes d'hiver", "prix": 90, "couleur": "#4a3222",
+     "emplacement": "pieds", "piece": {"souliers": "bottes_hiver"}},
+    {"slug": "loup_marin", "nom": "Bottes de loup marin", "prix": 350, "couleur": "#8a8f94",
+     "emplacement": "pieds", "piece": {"souliers": "loup_marin"}},
+    {"slug": "ceinture", "nom": "Ceinture de cuir", "prix": 25, "couleur": "#3a2616",
+     "emplacement": "taille", "piece": {"accessoires": ["ceinture"]}},
+    {"slug": "ceinture_flechee", "nom": "Ceinture fléchée", "prix": 120, "couleur": "#b8322a",
+     "emplacement": "taille", "piece": {"accessoires": ["ceinture_flechee"]}},
+    {"slug": "parapluie", "nom": "Parapluie", "prix": 35, "couleur": "#1a1a22",
+     "emplacement": "main", "piece": {"objet": "parapluie"}},
 ]
+
+#: Où se porte une tenue, et le champ de la partie qui dit laquelle on porte (`B.partie[champ]`).
+#: On porte une pièce de chaque place à la fois ; ⚠️ l'ordre est celui des sections chez Rosa.
+PLACES = {"corps": "tenue", "tete": "chapeau", "pieds": "pieds", "taille": "taille", "main": "main"}
 
 #: Chez le barbier (`boutique_service`) : la coupe change la COULEUR des cheveux
 #: du sprite (`h`). ⚠️ Ce n'est pas de la coquetterie — changer de tete remet la
@@ -405,8 +435,10 @@ CATALOGUE: list[Magasin] = [
     {"slug": "armurerie", "nom": "Chez Gus", "type": "armurerie", "lieu": "armurerie",
      "articles": ["poing_americain", "fronde", "batte", "couteau", "extincteur", "pistolet", "fusil"],
      "munitions": ["fronde", "pistolet", "fusil"], "tenues": [], "services": [], "phase": 1},
+    # ⚠️ Les tenues de Rosa voyagent UNE fois, sous `tenues` (`definitions.py`) : cette copie-ci, que
+    # rien ne lisait, doublait leur poids au paquet — l'hiver chez Rosa l'aurait fait deborder.
     {"slug": "vetements", "nom": "Boutique Rosa", "type": "vetements", "lieu": "vetements",
-     "articles": [], "munitions": [], "tenues": TENUES, "services": [], "phase": 1},
+     "articles": [], "munitions": [], "tenues": [], "services": [], "phase": 1},
     {"slug": "garage", "nom": "Garage Rocco Bandini", "type": "garage", "lieu": "garage",
      "articles": ["moto", "auto", "taxi"], "munitions": [], "tenues": [],
      "services": ["vendre", "reparer", "repeindre"], "phase": 1},

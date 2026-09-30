@@ -64,10 +64,16 @@ def test_le_paquet_porte_la_garde_robe(paquet):
 def test_chaque_tenue_de_rosa_est_une_piece_qu_on_enfile():
     from app import magasins
     for t in magasins.TENUES:
-        assert t["emplacement"] in ("corps", "tete"), t["slug"]
+        assert t["emplacement"] in magasins.PLACES, t["slug"]
         piece = t["piece"]
         if t["emplacement"] == "tete":
             assert set(piece) == {"chapeau"} and piece["chapeau"] in garderobe.CHAPEAUX[1:], t["slug"]
+        elif t["emplacement"] == "pieds":
+            assert set(piece) == {"souliers"} and piece["souliers"] in garderobe.SOULIERS[1:], t["slug"]
+        elif t["emplacement"] == "taille":
+            assert set(piece) == {"accessoires"} and set(piece["accessoires"]) <= set(garderobe.ACCESSOIRES), t["slug"]
+        elif t["emplacement"] == "main":
+            assert piece == {"objet": "parapluie"}, t["slug"]
         else:
             assert piece["haut"] in garderobe.HAUTS, t["slug"]
             assert piece.get("motif", "uni") in garderobe.MOTIFS
@@ -83,3 +89,20 @@ def test_l_agent_et_le_garde_gardent_leur_uniforme():
     assert robes["policier"]["haut_fixe"] == archs["policier"]["couleurs"]["c"]
     assert robes["garde"]["haut_fixe"] == archs["garde"]["couleurs"]["c"]
     assert robes["policier"]["chapeaux"] == ["kepi"] and robes["policier"]["chapeau_chance"] == 1.0
+
+
+def test_rosa_habille_l_hiver():
+    """Martin (30 sept. 2026) : des bottes d'hiver et de loup marin, cinq tuques de plus, des ceintures, la
+    fléchée, un parapluie — chacun à SA place, et la vieille tuque de Rocco qui ne se vend pas."""
+    from app import magasins
+    par = {}
+    for t in magasins.TENUES:
+        if t["prix"]:
+            par.setdefault(t["emplacement"], []).append(t["slug"])
+    assert {"bottes_hiver", "loup_marin"} <= set(par["pieds"])
+    assert {"ceinture", "ceinture_flechee"} <= set(par["taille"]) and par["main"] == ["parapluie"]
+    tuques = [t for t in magasins.TENUES if t["emplacement"] == "tete" and t["piece"]["chapeau"].startswith("tuque")]
+    assert sum(1 for t in tuques if t["prix"]) == 6, "la rouge, et cinq de plus"
+    rocco = next(t for t in magasins.TENUES if t["slug"] == "tuque_rocco")
+    assert rocco["prix"] is None and rocco.get("prime"), "la tuque de Rocco se donne, elle ne se vend pas"
+    assert list(magasins.PLACES) == ["corps", "tete", "pieds", "taille", "main"]

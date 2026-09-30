@@ -113,7 +113,8 @@ LUMIERE = {"solstice_ete": 19.7, "coucher": [18.5, 2.25], "lever": [6.25, -1.2],
 HABITS = {
     "ecart": 0.3, "grand_froid": 0.75, "frais": 0.4, "chaud": 0.2,
     #: Ce qu'on garde au grand froid : un chapeau qui tient déjà chaud ou qui dit un métier.
-    "chapeaux_chauds": ["tuque", "kepi", "casque_chantier", "feutre", "marin", "capuche"],
+    "chapeaux_chauds": ["tuque", "kepi", "casque_chantier", "feutre", "marin", "capuche",
+                        "tuque_pompon", "tuque_rayee", "tuque_chantier", "tuque_phentex", "tuque_oreilles"],
     #: Les archétypes dont le chapeau est un UNIFORME : on ne le change jamais.
     "chapeau_d_uniforme": ["policier", "garde", "gardien", "livreur", "mante"],
     #: Les hauts qui restent en toute saison : un métier (le tablier, le sarrau…) ou un gang.

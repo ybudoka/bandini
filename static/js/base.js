@@ -110,8 +110,12 @@ function etatInitial(defs) {
     chantiers: { debut: 1 },
     vie: 100,
     tenue: 'chandail',
-    tenues: ['chandail'],
-    chapeau: null,        // le chapeau porte (`magasins.TENUES`, `emplacement: 'tete'`), ou rien
+    // ⚠️ Rocco te donne sa vieille tuque : une partie commence le 1er janvier (`rosa-habille-l-hiver.md`).
+    tenues: ['chandail', 'tuque_rocco'],
+    chapeau: 'tuque_rocco', // le chapeau porte (`magasins.TENUES`, `emplacement: 'tete'`), ou rien
+    pieds: null,          // les bottes (`emplacement: 'pieds'`), ou les souliers de toujours
+    taille: null,         // la ceinture (`emplacement: 'taille'`), ou rien
+    main: null,           // le parapluie (`emplacement: 'main'`), ou rien
     cheveux: null,        // la couleur donnee par le barbier (`magasins.COIFFURES`)
     fouilles: {},         // les logements deja fouilles, par porte et par etage
     armes: { poings: { mun: null } },
@@ -283,6 +287,13 @@ function triche(nom) {
   const p = B.partie;
   return !!(p && p.triches && p.triches[nom]);
 }
+
+/** Ou se porte une tenue (`emplacement`), et le champ de la partie qui dit laquelle on porte :
+    `magasins.PLACES`, dans l'ordre des sections chez Rosa. Une piece de chaque place a la fois. */
+const PLACES_DE_TENUE = { corps: 'tenue', tete: 'chapeau', pieds: 'pieds', taille: 'taille', main: 'main' };
+
+/** Le champ de `B.partie` qui porte la tenue `t` (`tenue`, `chapeau`, `pieds`...). */
+function champDeTenue(t) { return PLACES_DE_TENUE[(t && t.emplacement) || 'corps'] || 'tenue'; }
 
 /** Les couleurs du joueur : son linge, et sa coupe s'il est passe chez le barbier.
 
@@ -799,6 +810,8 @@ const Sauvegarde = (function () {
       out[k] = Object.assign({}, base[k], (partie[k] && typeof partie[k] === 'object') ? partie[k] : {});
     }
     if (!Array.isArray(out.tenues) || out.tenues.indexOf('chandail') < 0) out.tenues = ['chandail'].concat(Array.isArray(out.tenues) ? out.tenues : []);
+    // Une partie d'avant l'hiver chez Rosa trouve la vieille tuque de Rocco dans sa garde-robe — sans la porter.
+    if (out.tenues.indexOf('tuque_rocco') < 0) out.tenues.push('tuque_rocco');
     // ⚠️ Un tableau ne passe pas par la fusion des objets ci-dessus : une
     // partie d'avant la fourriere arriverait avec `undefined`, et le comptoir
     // planterait au premier clic.

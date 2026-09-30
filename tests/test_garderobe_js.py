@@ -177,8 +177,8 @@ def test_le_joueur_achete_un_chapeau_le_porte_par_dessus_son_linge_et_l_enleve(b
         L.Police.onNeTeReconnaitPlus = vrai;
         return { titres: titres, avant: avant, coiffe: coiffe, retire: retire, oublis: oublis };
     }""")
-    assert r["titres"] == ["LE LINGE", "LES CHAPEAUX"]
-    assert r["avant"] == "aucun"
+    assert r["titres"] == ["LE LINGE", "LES CHAPEAUX", "LES BOTTES", "LES CEINTURES", "LE PARAPLUIE"]
+    assert r["avant"] == "tuque_chantier", "une partie commence en janvier, la vieille tuque de Rocco sur la tête"
     c = r["coiffe"]
     assert c["chapeau"] == "feutre" and c["sur"] == "feutre" and c["linge"] == "complet"
     assert c["haut"] == "veston" and c["cravate"], "le complet est un veston et une cravate"
@@ -221,3 +221,51 @@ def test_le_cavalier_se_dessine_habille_et_les_agents_portent_le_kepi(banc):
     gardes = [a for a in r["agents"] if a["garde"]]
     assert flics and all(a["chapeau"] == "kepi" and a["haut"] == "#1f3a6e" for a in flics), flics
     assert gardes and all(a["haut"] == "#5a5f47" for a in gardes), gardes
+
+
+def test_les_bottes_la_ceinture_et_le_parapluie_ont_chacun_leur_place(banc):
+    """Rosa habille l'hiver (Martin, 30 sept. 2026) : des bottes aux pieds, une ceinture à la taille, un
+    parapluie à la main — chacun à sa place, sans rien enlever aux autres ; le rechoisir l'enlève ; chaque
+    changement fait oublier ta tête ; et le parapluie s'ouvre tout seul sous la pluie, dehors."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B, p = B.partie, j = B.joueur, M = L.Missions;
+        p.argent = 1000;
+        let oublis = 0; const vrai = L.Police.onNeTeReconnaitPlus;
+        L.Police.onNeTeReconnaitPlus = function () { oublis++; return vrai.apply(null, arguments); };
+        const achat = function (slug) {
+            const t = B.defs.tenues.find(function (x) { return x.slug === slug; });
+            const it = M.menuVetements().items.find(function (i) { return i.libelle === t.nom.toUpperCase(); });
+            it.faire();
+        };
+        const photo = function () {
+            return { linge: p.tenue, chapeau: p.chapeau, pieds: p.pieds, taille: p.taille, main: p.main,
+                     souliers: j.tenue.souliers, acc: j.tenue.accessoires.slice(), dessin: L.Garderobe.grille(j.tenue, 'bas', 0).join('') };
+        };
+        const nu = photo();
+        achat('loup_marin'); achat('ceinture_flechee'); achat('parapluie');
+        const habille = photo();
+        const oublisHabille = oublis;
+        // Sous la pluie, dehors : le parapluie s'ouvre ; au sec, non.
+        const pluie = L.Pluie.intensite;
+        L.Pluie.intensite = function () { return 1; }; p.heure += 0.0001;
+        j.etat = 'marche';
+        const ouvert = L.Saisons.parapluie(j);
+        L.Pluie.intensite = function () { return 0; }; p.heure += 0.0001;
+        const sec = L.Saisons.parapluie(j);
+        L.Pluie.intensite = pluie;
+        achat('ceinture_flechee');
+        const sansCeinture = photo();
+        return { nu: nu, habille: habille, sansCeinture: sansCeinture, oublisHabille: oublisHabille, oublis: oublis,
+                 argent: p.argent, ouvert: ouvert, sec: sec };
+    }""")
+    nu, h, s = r["nu"], r["habille"], r["sansCeinture"]
+    assert (nu["pieds"], nu["taille"], nu["main"]) == (None, None, None)
+    assert h["linge"] == nu["linge"] and h["chapeau"] == nu["chapeau"] == "tuque_rocco", "les places neuves n'enlèvent rien"
+    assert (h["pieds"], h["taille"], h["main"]) == ("loup_marin", "ceinture_flechee", "parapluie")
+    assert h["souliers"] == "loup_marin" and "ceinture_flechee" in h["acc"] and h["dessin"] != nu["dessin"]
+    assert r["argent"] == 1000 - 350 - 120 - 35
+    assert r["oublisHabille"] == 3, "chaque pièce neuve fait oublier ta tête"
+    assert s["taille"] is None and "ceinture_flechee" not in s["acc"] and s["pieds"] == "loup_marin", "rechoisir l'enlève"
+    assert r["oublis"] == 4
+    assert r["ouvert"] and not r["sec"], "le parapluie s'ouvre sous la pluie, et seulement sous la pluie"

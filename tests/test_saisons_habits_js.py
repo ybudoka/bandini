@@ -126,7 +126,8 @@ def test_les_personnages_et_le_joueur_s_habillent_dehors_dans_leur_palette(banc)
                      const tn = gens[i].tn;
                      return { slug: gens[i].slug, haut: t.haut, metier: H.hauts_de_metier.indexOf(tn.haut) >= 0,
                               c: [tn.couleur_haut, t.couleur_haut], chapeau: [tn.chapeau, t.chapeau], chaud: H.chapeaux_chauds.indexOf(t.chapeau) >= 0,
-                              tuque: t.couleur_chapeau, bas: tn.couleur_bas, bottes: t.souliers === 'bottes' };
+                              tuque: t.couleur_chapeau, bas: tn.couleur_bas, bottes: t.souliers === 'bottes',
+                              souliers: [tn.souliers, t.souliers] };
                  }),
                  dedans: dedans.every(function (t, i) { return t === gens[i].tn; }),
                  juil: juil.filter(function (t, i) { return t !== gens[i].tn; }).map(function (t) { return t.haut; }) };
@@ -136,6 +137,11 @@ def test_les_personnages_et_le_joueur_s_habillent_dehors_dans_leur_palette(banc)
     for t in r["jan"]:
         assert t["metier"] or t["haut"] == "manteau", f"{t['slug']} gèle en {t['haut']} en janvier"
         assert t["c"][0] == t["c"][1], f"{t['slug']} n'a plus sa couleur (un manteau foncé de passant)"
+        if t["slug"] == "joueur":
+            # Rosa habille l'hiver (30 sept. 2026) : le joueur n'a aux pieds et sur la tête que ce qu'il a acheté
+            # — ses bottes et sa tuque le gardent du froid, l'image ne le botte pas pour rien.
+            assert t["chapeau"][0] == t["chapeau"][1] and t["souliers"][0] == t["souliers"][1], t
+            continue
         assert t["chaud"] and t["bottes"], f"{t['slug']} nu-tête ou en souliers en janvier : {t['chapeau']}"
         if t["chapeau"][0] != "tuque" and t["chapeau"][1] == "tuque":
             assert t["tuque"] == t["bas"], f"la tuque de {t['slug']} n'est pas dans sa palette"

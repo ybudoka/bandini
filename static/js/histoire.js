@@ -1196,7 +1196,7 @@ const Histoire = (function () {
   function tenueManque(o) {
     if (!o || !o.tenue) return false;
     const p = B.partie;
-    return p.tenue !== o.tenue && p.chapeau !== o.tenue;
+    return !Object.keys(PLACES_DE_TENUE).some(function (e) { return p[PLACES_DE_TENUE[e]] === o.tenue; });
   }
 
   /** La demi-journée de la partie : deux par jour, minuit-midi puis midi-minuit. */

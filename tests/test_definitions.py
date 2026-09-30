@@ -34,12 +34,14 @@ MESURE_DU_PAQUET: dict[str, tuple[int, int]] = {
     "techniques": (1_094, 1_350),
     "conduite": (1_000, 1_200),
     "nuit": (835, 1_050),
-    "magasins": (795, 1_000),
+    # Rosa habille l'hiver (30 sept. 2026) : la copie des tenues sort de `magasins` (rien ne la lisait) —
+    # 795 → 310 —, et `tenues` grossit de douze pieces (542 → 872) : le paquet y gagne 71 octets bruts.
+    "magasins": (310, 450),
     "tables_de_jeu": (790, 1_000),
     "halloween": (625, 800),
     "devantures": (616, 800),
     "garage": (561, 750),
-    "tenues": (542, 700),
+    "tenues": (872, 1_050),
     "distributrices": (530, 700),
     "ambulants": (523, 700),
     "demenagement": (455, 650),

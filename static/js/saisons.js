@@ -170,7 +170,7 @@ const Saisons = (function () {
 
   /** L'habit d'une tenue pour un froid SENTI `c` (et la pluie). Pure : rend `tn` lui-meme quand rien
       ne change (la cuisson de `Garderobe` reste la meme), sinon une copie. */
-  function habiller(tn, arch, c, pluie, perso) {
+  function habiller(tn, arch, c, pluie, perso, joueur) {
     const H = habitsDonnees(), h = empreinte(tn), fr = frilosite(tn);
     const gr = arch && B.defs.garderobe && B.defs.garderobe.garde_robes && B.defs.garderobe.garde_robes[arch];
     const o = Object.assign({}, tn);
@@ -188,8 +188,10 @@ const Saisons = (function () {
         o.couleur_haut = M.couleurs[(h >>> 7) % M.couleurs.length];
       }
       if (o.bas === 'short') o.bas = 'pantalon';
-      o.souliers = 'bottes';
-      if (!uniforme && H.chapeaux_chauds.indexOf(o.chapeau) < 0) {
+      // ⚠️ LE JOUEUR N'A QUE CE QU'IL A ACHETE aux pieds et sur la tete (`rosa-habille-l-hiver.md`) : ses
+      // bottes et sa tuque le gardent du froid — l'image ne peut pas le montrer botte s'il ne l'est pas.
+      if (!joueur) o.souliers = 'bottes';
+      if (!joueur && !uniforme && H.chapeaux_chauds.indexOf(o.chapeau) < 0) {
         o.chapeau = 'tuque';
         // La tuque d'un personnage (ou du joueur) est dans SA palette : la couleur de son bas.
         if (perso) o.couleur_chapeau = tn.couleur_bas || tn.couleur_chapeau;
@@ -213,7 +215,7 @@ const Saisons = (function () {
       acc = acc.filter(function (a) { return a !== 'foulard'; });
     }
     // Sous la pluie, sans parapluie : la capuche des frileux.
-    if (pluie && !aUnParapluie(tn) && !uniforme && fr > 0.5 && H.chapeaux_chauds.indexOf(o.chapeau) < 0) o.chapeau = 'capuche';
+    if (pluie && !joueur && !aUnParapluie(tn) && !uniforme && fr > 0.5 && H.chapeaux_chauds.indexOf(o.chapeau) < 0) o.chapeau = 'capuche';
     o.accessoires = acc;
     const pareil = ['haut', 'motif', 'bas', 'souliers', 'chapeau', 'couleur_haut', 'couleur_chapeau'].every(function (k) { return o[k] === tn[k]; }) &&
       acc.join('+') === (tn.accessoires || []).join('+');
@@ -252,7 +254,7 @@ const Saisons = (function () {
     const deja = habits.get(tn);
     if (deja && deja.cle === cle) return deja.tn;
     const c = m.froid + (frilosite(tn) - 0.5) * habitsDonnees().ecart;
-    const r = habiller(tn, perso ? null : (e ? e.arch : null), c, m.pluie, perso);
+    const r = habiller(tn, perso ? null : (e ? e.arch : null), c, m.pluie, perso, !!(e && e.type === 'joueur'));
     habits.set(tn, { cle: cle, tn: r });
     return r;
   }
@@ -260,11 +262,22 @@ const Saisons = (function () {
   //: Ceux qui marchent tranquillement tiennent leur parapluie ; qui court, se bat ou fuit le referme.
   const AU_PAS = { flane: 1, cap: 1, arret: 1 };
 
-  /** La couleur du parapluie de `e`, ou null : sous la pluie, dehors, un passant habille au pas. */
+  /** La couleur du parapluie de `e`, ou null : sous la pluie, dehors, un passant habille au pas. Le
+      JOUEUR a le sien s'il l'a a la main (`partie.main`, chez Rosa) : il l'ouvre tout seul, meme en
+      courant — jamais en frappant ni a l'eau. */
   function parapluie(e) {
+    if (e.type === 'joueur') return parapluieDuJoueur(e);
     if (!e.tenue || !e.vivant || e.personnage || e.type !== 'pieton' || e.nage || !AU_PAS[e.etat]) return null;
     if (!momentDesHabits().pluie || !aUnParapluie(e.tenue)) return null;
     return e.tenue.accent || '#2980b9';
+  }
+
+  function parapluieDuJoueur(e) {
+    const p = B.partie;
+    if (!p || p.main !== 'parapluie' || !e.tenue || !e.vivant || e.nage || e.etat === 'attaque' || e.dansVehicule) return null;
+    if (!momentDesHabits().pluie) return null;
+    const t = (B.defs.tenues || []).find(function (x) { return x.slug === 'parapluie'; });
+    return t ? t.couleur : '#1a1a22';
   }
 
   // ------------------------------------------------------------------ le son des saisons (lot 5)
