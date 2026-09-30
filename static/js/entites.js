@@ -3530,6 +3530,7 @@ const Entites = (function () {
     let meilleur = null, dMin = Infinity;
     for (const q of pietonsAutour(j.x, j.y, f.rival_px * 2)) {
       if (!q.cible || !q.vivant || q.etat === 'assomme' || q.personnage || q.allie) continue;
+      if (e.injoignable === q && e.injoignableT > e.t) continue;   // pas de chemin jusqu'a lui (`pasDeLAllie`)
       // ⚠️ CELUI QUI SE SAUVE PASSE APRES : les Cravates bougent et fuient (`rixe.js`), et un allie qui courait
       // apres un fuyard aussi rapide que lui y passait le siege (au banc de m98 : 460 images sans le rattraper)
       // pendant que les autres te tapaient dessus. On le prend s'il ne reste que lui.
@@ -3537,6 +3538,40 @@ const Entites = (function () {
       if (d < dMin) { dMin = d; meilleur = q; }
     }
     return meilleur;
+  }
+
+  //: Tant d'images sans avancer, en courant, et l'allie cherche un chemin ; et tant d'images il laisse de
+  //: cote une cible qu'aucun chemin ne rejoint.
+  const COINCE_ALLIE_IMAGES = 20, INJOIGNABLE_IMAGES = 600;
+
+  /** Ou l'allie pose le pied : tout droit sur `vers` — ou, s'il n'avance plus, le chemin qui contourne.
+
+      ⚠️ Au siege du Brouillard (m98), les Cravates ont fui derriere un batiment, et les six allies qui
+      couraient tout droit sont restes colles au mur jusqu'a la fin : un KO au lieu de quatre (30 sept.
+      2026, le jour ou le trafic a cesse de s'impasser et que la bagarre s'est deplacee). Colle a un
+      mur, il demande son chemin (`Monde.demanderChemin`, l'A* que la police suit deja) et le suit ; si
+      aucun chemin ne rejoint sa cible, il la laisse de cote un moment (`cibleDeLAllie`). */
+  function pasDeLAllie(e, vers) {
+    const bouge = e.allieX === undefined ? 1 : Math.hypot(e.x - e.allieX, e.y - e.allieY);
+    e.allieX = e.x; e.allieY = e.y;
+    e.coinceAllieT = bouge < 0.3 ? (e.coinceAllieT || 0) + 1 : 0;
+    if (e.cheminAllie && e.cheminVers !== vers) e.cheminAllie = null;
+    if (e.coinceAllieT > COINCE_ALLIE_IMAGES && !e.cheminDemande) {
+      e.coinceAllieT = 0; e.cheminDemande = true;
+      Monde.demanderChemin(e.x, e.y, vers.x, vers.y, Monde.MASQUE_PIETON, function (c) {
+        e.cheminDemande = false;
+        if (c && c.length) { e.cheminAllie = c; e.cheminVers = vers; return; }
+        if (c) return;                              // deja sur sa tuile : c'est un voisin qui le pousse
+        e.cheminAllie = null;
+        if (e.rival === vers) { e.injoignable = vers; e.injoignableT = e.t + INJOIGNABLE_IMAGES; e.rival = null; }
+      });
+    }
+    if (e.cheminAllie) {
+      while (e.cheminAllie.length && dist2(e.x, e.y, e.cheminAllie[0].x, e.cheminAllie[0].y) < 36) e.cheminAllie.shift();
+      if (e.cheminAllie.length) return e.cheminAllie[0];
+      e.cheminAllie = null;
+    }
+    return vers;
   }
 
   /** Il n'y a plus personne en face, ou le temps est fait : on s'en va. */
@@ -5223,6 +5258,7 @@ const Entites = (function () {
       }
       vitesse = v.pieton_course * e.allure;
       const vers = e.rival || j;
+      const pas = pasDeLAllie(e, vers);
       const dx = vers.x - e.x, dy = vers.y - e.y, norme = Math.hypot(dx, dy) || 1;
       // Sans cible, chacun garde sa distance (trois rangs, par son numero) : une grappe collee au joueur
       // le coincerait contre un mur.
@@ -5232,10 +5268,11 @@ const Entites = (function () {
       // et l'image exacte du metronome tombait presque toujours hors de portee — au banc du siege de m98, 18 coups
       // au lieu de 47. Une echeance et pas un compte a rebours : celui-ci s'arretait pendant le geste.
       if (norme > arret) {
-        e.vx = dx / norme * vitesse;
-        e.vy = dy / norme * vitesse;
+        const px = pas.x - e.x, py = pas.y - e.y, n = Math.hypot(px, py) || 1;
+        e.vx = px / n * vitesse;
+        e.vy = py / n * vitesse;
       } else {
-        e.vx = 0; e.vy = 0;
+        e.vx = 0; e.vy = 0; e.allieX = undefined;
         regarder(e, dx, dy);
         if (e.rival && !(e.t < e.pretAllie) && Combat.frapper(e, false)) e.pretAllie = e.t + f.cadence_images;
       }

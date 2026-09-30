@@ -83,6 +83,11 @@ def _partie(banc):
         }
         coucher(L, o); jouer(L, o, 5);
         // --- 2 : la police du maire, à cinq étoiles — les alliés restent.
+        // ⚠️ INTOUCHABLE le temps de tenir : `invincible` protège des coups, pas des menottes. Six cents
+        // images à cinq étoiles sur le trottoir, et un agent qui passe t'arrête — « ARRÊTÉ ! » fige la
+        // partie, et l'étape 3 ne vient jamais. Le juge ne tenait que par où roulait le trafic : le jour
+        // où les rames ont cessé de s'impasser aux coins (30 sept. 2026), la police est arrivée.
+        j.intouchable = true;
         out.police = { etape: etape(L), etoiles: B.recherche.etoiles, allies: (B.mission.allies || []).length };
         for (let q = 0; q < 600; q++) { o.frame(1); ecouter(L); }
         out.police.tient = { etape: etape(L), etoiles: B.recherche.etoiles };
@@ -90,6 +95,7 @@ def _partie(banc):
         // --- 3 : Bouchard rappelle ses chiens ; les alliés rentrent chez eux.
         out.treve = { etape: etape(L), etoiles: B.recherche.etoiles, allies: B.mission.allies || null,
                       rentres: allies.filter(function (e) { return !e.allie && !e.mission; }).length };
+        j.intouchable = false;
         const h = L.Histoire.lieu('hotel');
         j.x = h.x; j.y = h.y + 10; L.Entites.indexer(); jouer(L, o, 10);
         // --- 4 : la garde du maire devant ta porte.
@@ -296,3 +302,50 @@ def test_la_sauvegarde_garde_le_boss_et_la_partie_continue(_partie):
     assert s["relue"] == {"jour": 1} and s["abimee"] is None, s
     assert s["recharge"] == {"jour": 1}, s
     assert s["bouge"] > 10, "après le générique, le joueur ne bouge plus"
+
+
+def test_un_allie_contourne_le_mur_derriere_lequel_sa_cravate_a_fui(banc):
+    """Au siège, les Cravates fuient ; derrière un bâtiment, l'allié qui courait tout droit restait collé
+    au mur jusqu'à la fin (30 sept. 2026 : un KO au lieu de quatre). Il demande son chemin et contourne."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B, TT = L.TT, M = L.Monde, j = B.joueur, P = M.MASQUE_PIETON;
+        j.intouchable = true; j.invincible = 1e6;
+        // Un mur plein entre deux tuiles de trottoir sur la meme rangee, et un detour court qui les relie.
+        const x0 = Math.floor(j.x / TT), y0 = Math.floor(j.y / TT);
+        let p = null, q = null, detour = 0;
+        for (let r = 4; r < 80 && !p; r++) {
+            for (let dy = -r; dy <= r && !p; dy++) for (let dx = -r; dx <= r && !p; dx++) {
+                if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+                const ax = x0 + dx, ay = y0 + dy;
+                if (M.bloque(ax, ay, P) || M.estRoute(ax, ay)) continue;
+                for (let k = 5; k <= 8 && !p; k++) {
+                    if (M.bloque(ax + k, ay, P) || M.estRoute(ax + k, ay)) continue;
+                    let murs = 0;
+                    for (let t = 1; t < k; t++) if (M.bloque(ax + t, ay, P)) murs++;
+                    if (murs < 3) continue;
+                    const c = M.chemin(ax * TT + 8, ay * TT + 8, (ax + k) * TT + 8, ay * TT + 8, P);
+                    if (c && c.length > k + 4 && c.length < 30) { p = [ax, ay]; q = [ax + k, ay]; detour = c.length; }
+                }
+            }
+        }
+        if (!p) return { trouve: false };
+        for (const e of B.entites.slice()) if (e.type === 'pieton' && Math.hypot(e.x - p[0] * TT, e.y - p[1] * TT) < 400) L.Entites.retirer(e);
+        j.x = p[0] * TT + 8; j.y = p[1] * TT + 8 + 20;
+        const gang = B.defs.pietons.gangs[0], arch = L.Entites.archetype(gang.pieton);
+        const a = L.Entites.creerPieton(p[0] * TT + 8, p[1] * TT + 8, arch);
+        a.gang = gang.slug; a.allie = true; a.metier = 'allie'; a.etat = 'allie'; a.courage = 1;
+        const c = L.Entites.creerPieton(q[0] * TT + 8, q[1] * TT + 8, arch);
+        c.cible = true; c.etat = 'fige'; c.vx = 0; c.vy = 0;
+        L.Entites.indexer();
+        let plusPres = Infinity, k = 0;
+        for (; k < 900; k++) {
+            o.frame(1);
+            c.x = q[0] * TT + 8; c.y = q[1] * TT + 8; c.etat = 'fige';
+            plusPres = Math.min(plusPres, Math.hypot(a.x - c.x, a.y - c.y));
+            if (plusPres < 24) break;
+        }
+        return { trouve: true, detour: detour, plusPres: plusPres, images: k, portee: B.defs.pietons.bagarre.portee_px };
+    }""")
+    assert r["trouve"], "aucun mur avec un détour court près du départ : le juge ne mesure rien"
+    assert r["plusPres"] < 24, f"l'allié reste collé au mur, à {r['plusPres']:.0f} px de sa cible (détour de {r['detour']} tuiles)"
