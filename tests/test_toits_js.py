@@ -32,7 +32,7 @@ def test_chaque_toit_a_sa_teinte_la_meme_d_une_partie_a_l_autre(banc):
                 if (n < 0) continue;
                 vues++;
                 const v = M.varianteDeTuile(g, tx, ty);
-                const teinte = 'BEO'.indexOf(g) >= 0 ? v >> 7 : v >> 9;
+                const teinte = 'BEO'.indexOf(g) >= 0 ? v >> 7 : v >> 10;
                 if (teinte !== b.t.teintes[n]) mal++;
             }
         }
@@ -144,7 +144,7 @@ def test_un_toit_en_pente_a_ses_gouttieres_et_ses_rives(banc):
     r = banc("function (L, o) {" + PEINDRE + """
         const metal = '#8d9297';
         const g = function (v) { return peindre(L, 'P', v).filter(function (q) { return q[4] === metal; }).map(function (q) { return q.slice(0, 4); }); };
-        const sombre = function (v) { return peindre(L, 'P', v + 512).filter(function (q) { return q[2] === 3 && q[3] === 16; }).map(function (q) { return q[0]; }); };
+        const sombre = function (v) { return peindre(L, 'P', v + 1024).filter(function (q) { return q[2] === 3 && q[3] === 16; }).map(function (q) { return q[0]; }); };
         return { sud: g(4 + 32), nord: g(1), milieu: g(16), est: sombre(2), ouest: sombre(8), rien: sombre(0) };
     }""")
     assert r["sud"] == [[0, 13, 16, 3]] and r["nord"] == [[0, 0, 16, 2]] and r["milieu"] == [], r
@@ -273,3 +273,96 @@ def test_les_egouts_suivent_la_forme_et_la_faite_passe_au_bord(banc):
     }""")
     assert r["pignonSud"] is False and r["pignonOuest"] is True and r["quatreSud"] is True, r
     assert r["couleurFaite"] and r["faite"] >= 1 and r["sansFaite"] == 0, r
+
+
+# --- Vague 4 : l'usure et des objets neufs -----------------------------------------------------------------------
+
+
+def test_les_objets_neufs_sont_sur_leurs_toits_et_se_voient(banc):
+    """Lucarnes, panneaux solaires, puits de lumière, cordes à linge, nids : chaque sorte dans la ville, tout entier
+    sur UN toit (sur un toit en pente — les lucarnes, les panneaux d'une maison cossue —, un versant en long ; sur un
+    toit plat, le milieu, loin de son bord), jamais sous les étages d'une façade, jamais sur un objet de Python ni collé à un autre ; les mêmes
+    d'un compte à l'autre, sans un dé."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const M = L.Monde, c = M.carte;
+        let tirages = 0;
+        const vrai = L.B.rng;
+        L.B.rng = function () { tirages++; return vrai.apply(this, arguments); };
+        c.objetsDeToit = null;
+        const a = M.objetsDesToits().liste;
+        c.objetsDeToit = null;
+        const b = M.objetsDesToits().liste;
+        L.B.rng = vrai;
+        const t = M.teintesDesToits(), w = c.w, compte = {}, mal = [];
+        const python = new Set();
+        Array.from(c.toits.values()).forEach(function (l) { l.forEach(function (q) { python.add(q.x + ',' + q.y); }); });
+        const cases = {};
+        a.forEach(function (q) {
+            compte[q.type] = (compte[q.type] || 0) + 1;
+            const n = t.qui[q.y * w + q.x];
+            for (let k = 0; k < q.l; k++) {
+                const x = q.x + k, g = M.glyphe(x, q.y);
+                if (n < 0 || t.qui[q.y * w + x] !== n) mal.push(['pas sur un seul toit', q]);
+                else if (M.sousLesEtages(x, q.y)) mal.push(['sous les étages', q]);
+                else if ((q.type === 'lucarne' && g !== 'P') || (['puits', 'corde', 'nid'].indexOf(q.type) >= 0 && g === 'P')) mal.push(['mauvais toit', g, q]);
+                else if (g === 'P' && [0, 2, 11, 12].indexOf((M.varianteDePente('P', x, q.y) >> 4) & 15) < 0) mal.push(['pas un versant en long', q]);
+                else if (g !== 'P' && (M.varianteDeToit(g, x, q.y) & 15)) mal.push(['au bord', q]);
+                for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+                    if (python.has((x + dx) + ',' + (q.y + dy))) mal.push(['contre un objet de Python', q]);
+                    const autre = cases[(x + dx) + ',' + (q.y + dy)];
+                    if (autre && autre !== q) mal.push(['collé à un autre', q, autre]);
+                }
+                cases[x + ',' + q.y] = q;
+            }
+        });
+        return { compte: compte, mal: mal.slice(0, 4), nmal: mal.length, memes: JSON.stringify(a) === JSON.stringify(b),
+                 tirages: tirages };
+    }""")
+    assert r["memes"] and r["tirages"] == 0, r
+    assert r["nmal"] == 0, r
+    assert all(r["compte"].get(k, 0) >= 5 for k in ("lucarne", "solaire", "puits", "corde", "nid")), r
+
+
+def test_une_lucarne_sur_trois_s_allume_le_soir(banc):
+    """Les lampes des lucarnes : une sur trois, à l'empreinte de sa tuile, une fenêtre comme celles des façades
+    (ses heures) — au bout des lampes de la carte, celles du paquet gardant leur rang."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const M = L.Monde, c = M.carte;
+        const lucarnes = M.objetsDesToits().liste.filter(function (q) { return q.type === 'lucarne'; });
+        const lampes = c.lampes.filter(function (l) { return l.lucarne; });
+        const debut = c.lampes.length - lampes.length;
+        return { lucarnes: lucarnes.length, lampes: lampes.length,
+                 auBout: c.lampes.slice(debut).every(function (l) { return l.lucarne; }),
+                 paquet: debut === L.B.defs.carte.lampes.length,
+                 fenetres: lampes.every(function (l) { return l.sorte === 'fenetre' && l.coucher !== undefined && l.lever !== undefined; }),
+                 surUne: lampes.every(function (l) { return lucarnes.some(function (q) { return q.x === l.tx && q.y === l.ty; }); }) };
+    }""")
+    assert r["lampes"] >= 3 and r["lampes"] <= r["lucarnes"] // 2, r
+    assert r["auBout"] and r["paquet"] and r["fenetres"] and r["surUne"], r
+
+
+def test_l_usure_de_chaque_matiere(banc):
+    """Des bardeaux manquants (une tuile sur quatre chez les pauvres, jamais chez les cossus), la rouille sur la
+    tôle, la mousse sur l'ardoise au nord seulement."""
+    r = banc("function (L, o) {" + PEINDRE + """
+        L.Jeu.commencer();
+        const M = L.Monde, c = M.carte, parSt = {};
+        for (let ty = 0; ty < c.h; ty++) for (let tx = 0; tx < c.w; tx++) {
+            if (M.glyphe(tx, ty) !== 'P') continue;
+            const st = M.standingA(tx, ty) || 'ordinaire', q = parSt[st] || (parSt[st] = { n: 0, uses: 0 });
+            q.n++; q.uses += (M.varianteDePente('P', tx, ty) >> 9) & 1;
+        }
+        const a = function (t, couleur) { return t.filter(function (q) { return q[4] === couleur; }).length; };
+        return { parSt: parSt,
+                 manque: a(peindre(L, 'P', 2 * 16 + 512), '#1e1a18'), entier: a(peindre(L, 'P', 2 * 16), '#1e1a18'),
+                 rouille: a(peindre(L, 'B', 3 * 16), 'rgba(143,74,34,0.60)'), sansRouille: a(peindre(L, 'B', 1 * 16), 'rgba(143,74,34,0.60)'),
+                 mousseNord: a(peindre(L, 'E', 1), '#56663a'), mousseSud: a(peindre(L, 'E', 4), '#56663a') };
+    }""")
+    p = r["parSt"]
+    assert p.get("cossu", {"uses": 0})["uses"] == 0, r
+    assert p["pauvre"]["n"] >= 20 and 0.1 <= p["pauvre"]["uses"] / p["pauvre"]["n"] <= 0.45, r
+    assert r["manque"] >= 1 and r["entier"] == 0, r
+    assert r["rouille"] >= 1 and r["sansRouille"] == 0, r
+    assert r["mousseNord"] >= 1 and r["mousseSud"] == 0, r

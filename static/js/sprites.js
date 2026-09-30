@@ -3644,17 +3644,39 @@ const TUILES = (function () {
 
   //: La variante d'un toit plat : le bord (bits 0 a 3), le grain (4 a 6), la TEINTE (7 et au-dessus).
   function toitPlat(ctx, v, T, famille) {
-    let style = famille[(v >> 7) % famille.length];
+    const teinte = (v >> 7) % famille.length;
+    let style = famille[teinte];
     if (typeof Saisons !== 'undefined') style = Saisons.enneiger(style);   // la neige qui tient (lot 1)
     const grain = (v >> 4) & 7;
     champDeToit(ctx, grain + 1, T, style);
     usureDeToit(ctx, grain, T, style);
+    usureDeMatiere(ctx, v, grain, teinte, T, style);
     bordDeToit(ctx, v & 15, T, style);
+  }
+
+  //: L'USURE PROPRE A CHAQUE MATIERE (les toits, vague 4). La rouille de la tole : des taches, plus souvent sur une
+  //: tole deja delavee (les deux dernieres teintes). La mousse de l'ardoise : AU NORD, au pied de son parapet, la
+  //: ou le soleil ne vient jamais — une tuile de bord nord sur deux.
+  const ROUILLE = ['rgba(143,74,34,0.60)', 'rgba(170,96,44,0.50)'];
+  const MOUSSE = ['#56663a', '#6f8046', '#4a5a30'];
+  function usureDeMatiere(ctx, v, grain, teinte, T, style) {
+    if (style.tole && (grain === 3 || (teinte >= 4 && grain % 3 === 1))) {
+      const x = 3 + (grain * 5 + teinte) % 6, y = 4 + (grain * 3) % 6;
+      ctx.fillStyle = ROUILLE[0]; ctx.fillRect(x, y, 4, 3); ctx.fillRect(x + 1, y - 1, 2, 5);
+      ctx.fillStyle = ROUILLE[1]; ctx.fillRect(x + 6, y + 4, 2, 2);
+    }
+    if (style.rangs && (v & 1) && grain % 2 === 0) {
+      for (let i = 0; i < 5; i++) {
+        const x = (grain * 3 + i * 5) % (T - 3) + 1, y = 5 + ((grain + i) * 7) % 3;
+        ctx.fillStyle = MOUSSE[i % MOUSSE.length]; ctx.fillRect(x, y, 3, 2); ctx.fillRect(x + 1, y + 2, 1, 1);
+      }
+    }
   }
 
   /** LE TOIT EN PENTE, SOUS TOUTES SES FORMES (les toits, vague 3) : deux versants en long, a pignon sur rue, a
       quatre versants, en L. `Monde.varianteDePente` dit le VERSANT de la tuile (bits 4 a 7, `VERSANTS`), si le toit
-      a quatre versants (bit 8 : ses gouttieres font le tour) et sa teinte (bits 9 et au-dessus).
+      a quatre versants (bit 8 : ses gouttieres font le tour), s'il lui manque des bardeaux (bit 9) et sa teinte
+      (bits 10 et au-dessus).
 
       ⚠️ Chaque pixel a une HAUTEUR et une FACE (`pente`) : les rangs de bardeaux sont des lignes de meme hauteur,
       la faite et les aretiers sont la ou deux faces se rencontrent. C'est ce qui fait qu'un aretier en diagonale
@@ -3700,9 +3722,9 @@ const TUILES = (function () {
     return false;
   }
   function toitEnPente(ctx, v, T, famille) {
-    let style = famille[(v >> 9) % famille.length];
+    let style = famille[(v >> 10) % famille.length];
     if (typeof Saisons !== 'undefined') style = Saisons.enneiger(style);   // la neige qui tient (lot 1)
-    const versantLu = (v >> 4) & 15, quatre = (v >> 8) & 1;
+    const versantLu = (v >> 4) & 15, quatre = (v >> 8) & 1, use = (v >> 9) & 1;
     const versant = FACE_DE[versantLu] !== undefined ? FACE_DE[versantLu] : versantLu;
     const clair = [style.sombre, style.fond, style.grain], ombre = [style.sombre, style.sombre, style.fond];
     for (let y = 0; y < T; y++) {
@@ -3726,6 +3748,14 @@ const TUILES = (function () {
           courante = c; x0 = x;
         }
       }
+    }
+    // DES BARDEAUX MANQUANTS (vague 4 : bit 9, les maisons pauvres surtout) : le papier goudronne noir dessous, et
+    // un bardeau neuf, plus clair, qu'on a remplace a cote — jamais contre le bord de la tuile.
+    if (use) {
+      const x = 3 + (versantLu * 5 + (v & 15)) % 8, y = 3 + (versantLu * 3) % 6;
+      ctx.fillStyle = '#1e1a18'; ctx.fillRect(x, y, 4, 2); ctx.fillRect(x + 1, y + 2, 3, 2);
+      ctx.fillStyle = '#2e2824'; ctx.fillRect(x + 5, y + 5, 3, 2);
+      ctx.fillStyle = style.grain; ctx.fillRect((x + 7) % (T - 5) + 1, y + 8 > T - 4 ? y - 2 : y + 7, 4, 2);
     }
     // La faite au bord de la tuile (le versant d'en face commence a la voisine).
     ctx.fillStyle = style.faite;
@@ -5522,13 +5552,65 @@ const FACADES = (function () {
       ctx.fillStyle = '#6a6660'; ctx.fillRect(x + 6, y + 11, 3, 2);
       if (h % 3 === 0) { ctx.fillStyle = '#c4362f'; ctx.fillRect(x + 7, y + 1, 1, 1); }
     },
+    // --- LES OBJETS NEUFS (les toits, vague 4 : `Monde.objetsDesToits`, poses dans le navigateur) -------------
+    // Le puits de lumiere : un verre arme bleute dans son cadre, et le ciel dedans.
+    puits: function (ctx, x, y, h) {
+      ctx.fillStyle = 'rgba(11,10,18,0.35)'; ctx.fillRect(x + 4, y + 5, 11, 9);
+      ctx.fillStyle = '#b8b4ac'; ctx.fillRect(x + 2, y + 3, 11, 9);
+      ctx.fillStyle = '#5d7c93'; ctx.fillRect(x + 3, y + 4, 9, 7);
+      ctx.fillStyle = '#8fb2c8'; ctx.fillRect(x + 3, y + 4, 4, 3);
+      ctx.fillStyle = '#b8b4ac'; ctx.fillRect(x + 7, y + 4, 1, 7); ctx.fillRect(x + 3, y + 7, 9, 1);  // l'armature
+    },
+    // Les panneaux solaires : une rangee de cellules bleu nuit, leur quadrillage, le reflet — sur `t.l` tuiles.
+    solaire: function (ctx, x, y, h, t) {
+      const l = (t && t.l || 1) * 16 - 4;
+      ctx.fillStyle = 'rgba(11,10,18,0.35)'; ctx.fillRect(x + 3, y + 5, l, 9);
+      ctx.fillStyle = '#9aa0a6'; ctx.fillRect(x + 1, y + 3, l, 9);
+      ctx.fillStyle = '#1f2f58'; ctx.fillRect(x + 2, y + 4, l - 2, 7);
+      ctx.fillStyle = '#3a5288';
+      for (let i = 5; i < l - 1; i += 4) ctx.fillRect(x + 1 + i, y + 4, 1, 7);
+      ctx.fillRect(x + 2, y + 7, l - 2, 1);
+      ctx.fillStyle = 'rgba(200,220,255,0.35)'; ctx.fillRect(x + 3, y + 5, 3, 1);
+    },
+    // La corde a linge : deux poteaux, la corde, et ce qui seche — un drap, une chemise, des bas (`t.l` tuiles).
+    corde: function (ctx, x, y, h, t) {
+      const l = (t && t.l || 1) * 16 - 4;
+      ctx.fillStyle = 'rgba(11,10,18,0.3)'; ctx.fillRect(x + 3, y + 12, l, 2);
+      ctx.fillStyle = '#6a6660'; ctx.fillRect(x + 2, y + 3, 1, 9); ctx.fillRect(x + 1 + l, y + 3, 1, 9);
+      ctx.fillStyle = '#c8c4bc'; ctx.fillRect(x + 2, y + 4, l, 1);
+      const linge = ['#e8e4dc', '#c0392b', '#3a7fd3', '#e0c341', '#f2f2f2', '#6a8a4a'];
+      for (let i = 0, k = h; i + 6 < l; i += 7, k = (k * 7 + 3) >>> 0) {
+        ctx.fillStyle = linge[k % linge.length];
+        const haut = 3 + (k % 3);
+        ctx.fillRect(x + 4 + i, y + 5, 5, haut);
+      }
+    },
+    // Le nid de goeland : des brindilles en rond, et deux oeufs tachetes.
+    nid: function (ctx, x, y, h) {
+      ctx.fillStyle = 'rgba(11,10,18,0.3)'; ctx.fillRect(x + 5, y + 8, 9, 5);
+      ctx.fillStyle = '#7a6448'; ctx.fillRect(x + 4, y + 6, 9, 5); ctx.fillRect(x + 5, y + 5, 7, 7);
+      ctx.fillStyle = '#5a4630'; ctx.fillRect(x + 6, y + 7, 5, 3);
+      ctx.fillStyle = '#d8d2b8'; ctx.fillRect(x + 6, y + 7, 2, 2); if (h % 2) ctx.fillRect(x + 9, y + 8, 2, 2);
+      ctx.fillStyle = '#6a5a3a'; ctx.fillRect(x + 7, y + 7, 1, 1);
+    },
+    // La lucarne : une petite boite a pignon qui sort du versant sud, sa fenetre (allumee la nuit par sa lampe,
+    // `Monde` : une sur trois).
+    lucarne: function (ctx, x, y, h) {
+      ctx.fillStyle = 'rgba(11,10,18,0.35)'; ctx.fillRect(x + 5, y + 4, 9, 11);
+      ctx.fillStyle = '#6b5a4a'; ctx.fillRect(x + 3, y + 1, 10, 4);                  // son petit toit
+      ctx.fillStyle = '#8e7862'; ctx.fillRect(x + 3, y + 1, 5, 4);
+      ctx.fillStyle = '#e8e2d4'; ctx.fillRect(x + 4, y + 5, 8, 8);                   // le cadre
+      ctx.fillStyle = '#2c3440'; ctx.fillRect(x + 5, y + 6, 6, 6);                   // la vitre
+      ctx.fillStyle = '#e8e2d4'; ctx.fillRect(x + 7, y + 6, 1, 6); ctx.fillRect(x + 5, y + 8, 6, 1);
+      ctx.fillStyle = 'rgba(160,190,220,0.3)'; ctx.fillRect(x + 5, y + 6, 2, 2);
+    },
   };
 
   /** Ce qu'un toit porte, a sa tuile. `t` = { x, y, type }. */
   function toiture(ctx, t, ox, oy) {
     const peintre = TOITURES[t.type];
     if (!peintre) return;
-    peintre(ctx, ox, oy, hash(t.x, t.y));
+    peintre(ctx, ox, oy, hash(t.x, t.y), t);
   }
 
   /* --- La fosse d'un arbre de rue ---------------------------------------

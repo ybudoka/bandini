@@ -368,6 +368,9 @@ const Monde = (function () {
       // Ce qu'un toit porte : une tuile chacun, meme regle d'index.
       toits: indexerParMorceau(def.toits || [], function () { return [0, 0, 1, 1]; }),
     };
+    // ⚠️ Les lucarnes allumees (les toits, vague 4) : leurs lampes au BOUT de la liste, une fois la carte en place —
+    // celles du paquet gardent leur rang.
+    carte.lampes = carte.lampes.concat(lampesDesLucarnes());
     B.carte = carte;
     return carte;
   }
@@ -1803,7 +1806,7 @@ const Monde = (function () {
   function teintesDesToits() {
     if (carte.teintes) return carte.teintes;
     const w = carte.w, h = carte.h, qui = new Int32Array(w * h).fill(-1), pile = new Int32Array(w * h);
-    const glyphes = [], teintes = [], formes = [];
+    const glyphes = [], teintes = [], formes = [], boites = [];
     // ⚠️ Les quatre matieres, pas la tole des cabanes (`{`) : chaque plaque y a deja sa couleur.
     const estUnToit = function (g) {
       return MATIERES_TEINTES.indexOf(g) >= 0 && !(carte.materiaux && carte.materiaux[g]);
@@ -1850,8 +1853,9 @@ const Monde = (function () {
       glyphes.push(g);
       teintes.push(t);
       formes.push(g === 'P' ? formeDuToit(tx, ty, x1 - x0 + 1, y1 - y0 + 1, compte) : 'long');
+      boites.push([x0, y0, x1, y1, compte, tx, ty]);
     }
-    carte.teintes = { qui: qui, teintes: teintes, glyphes: glyphes, formes: formes };
+    carte.teintes = { qui: qui, teintes: teintes, glyphes: glyphes, formes: formes, boites: boites };
     return carte.teintes;
   }
   const VOISINES = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -2009,6 +2013,100 @@ const Monde = (function () {
     return n >= 0 ? t.formes[n] : 'long';
   }
 
+  /* --- CE QUE LES TOITS PORTENT DE NEUF (vague 4) ----------------------------------------------------------------
+
+     Le puits de lumiere d'un commerce ou d'une usine, les panneaux solaires des cossus, la corde a linge des toits
+     plats des Quais (et d'un quartier residentiel pas cossu), le nid de goeland des Quais, les lucarnes des
+     maisons (sur un versant en long, la ou le toit se voit).
+     ⚠️ POSES DANS LE NAVIGATEUR, pas dans le paquet : la carte est a son plafond, et Python y range deja 242
+     objets de toit (`carte.toits`, son de a lui). Ceux-ci se tirent a l'EMPREINTE du batiment et de la tuile,
+     sans un de, sur les toits deja comptes (`teintesDesToits`) ; jamais sur un objet de Python ni a cote, jamais
+     deux colles. Une lucarne sur trois a sa LAMPE de fenetre : elle s'allume le soir comme les fenetres des
+     facades (`heuresDeLaFenetre`). */
+  const OBJETS_NEUFS = ['lucarne', 'solaire', 'puits', 'corde', 'nid'];
+  function objetsDesToits() {
+    if (carte.objetsDeToit) return carte.objetsDeToit;
+    const t = teintesDesToits(), w = carte.w, liste = [], pris = new Set();
+    const marquer = function (x, y, l) {
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= l; dx++) pris.add((x + dx) + ',' + (y + dy));
+    };
+    (carte.toits ? Array.from(carte.toits.values()) : []).forEach(function (l) {
+      l.forEach(function (o) { marquer(o.x, o.y, 1); });
+    });
+    const de = function (x, y, n) { return x >= 0 && y >= 0 && x < w && y < carte.h && t.qui[y * w + x] === n; };
+    for (let n = 0; n < t.teintes.length; n++) {
+      const g = t.glyphes[n], [x0, y0, x1, y1, compte, rx, ry] = t.boites[n];
+      const usage = usageA(rx, ry), st = standingA(rx, ry) || 'ordinaire', h = hash2(rx * 29 + 3, ry * 31 + 7);
+      const zone = zoneA(rx * TT + 8, ry * TT + 8), quais = !!zone && (zone.district || zone.slug) === 'quais';
+      const largeur = x1 - x0 + 1, voulus = [];
+      if (g === 'P') {
+        if (h % 3 !== 0 && largeur >= 4) voulus.push(['lucarne', 1, largeur >= 6 ? 2 : 1]);
+        else if (st === 'cossu') voulus.push(['solaire', 2, 1]);
+      } else {
+        if (compte >= 30 && (usage === 'commercial' || usage === 'industriel') && h % 3 === 0) {
+          voulus.push(['puits', 1, compte >= 80 ? 2 : 1]);
+        }
+        if (compte >= 12 && (st === 'cossu' || (st === 'ordinaire' && h % 5 === 0))) {
+          voulus.push(['solaire', compte >= 40 ? 3 : 2, 1]);
+        }
+        // Les cordes a linge : les toits plats des QUAIS (la fiche), et ceux d'un quartier residentiel pas cossu.
+        if (compte >= 9 && ((quais && h % 2 === 0) || (usage === 'residentiel' && st !== 'cossu' && h % 3 === 1))) {
+          voulus.push(['corde', 3, 1]);
+        }
+        if (compte >= 6 && quais && h % 3 !== 1) voulus.push(['nid', 1, 1]);
+      }
+      for (const [type, l, nombre] of voulus) {
+        const candidats = [];
+        for (let y = y0; y <= y1; y++) {
+          for (let x = x0; x + l - 1 <= x1; x++) {
+            let ok = true;
+            for (let k = 0; k < l && ok; k++) {
+              const xx = x + k;
+              // ⚠️ Jamais SOUS LES ETAGES : une facade a deux etages recouvre le bas de son toit, et un objet pose la
+              // ne se voyait pas (vu a la capture : la lucarne, les panneaux de la patisserie).
+              if (!de(xx, y, n) || pris.has(xx + ',' + y) || sousLesEtages(xx, y)) { ok = false; break; }
+              if (g === 'P') {
+                // Sur un versant en long (nord ou sud : sous les etages, il ne reste souvent que le nord), jamais
+                // contre un pignon.
+                const v = (varianteDePente(g, xx, y) >> 4) & 15;
+                ok = (v === 0 || v === 2 || v === 11 || v === 12) && de(xx - 1, y, n) && de(xx + 1, y, n);
+              } else {
+                ok = de(xx - 1, y, n) && de(xx + 1, y, n) && de(xx, y - 1, n) && de(xx, y + 1, n);
+              }
+            }
+            if (ok) candidats.push({ x: x, y: y, h: hash2(x * 7 + OBJETS_NEUFS.indexOf(type), y * 11 + 5) });
+          }
+        }
+        candidats.sort(function (a, b) { return a.h - b.h || a.y - b.y || a.x - b.x; });
+        let poses = 0;
+        for (const c of candidats) {
+          if (poses >= nombre) break;
+          let libre = true;
+          for (let k = 0; k < l; k++) if (pris.has((c.x + k) + ',' + c.y)) libre = false;
+          if (!libre) continue;
+          liste.push({ x: c.x, y: c.y, type: type, l: l });
+          marquer(c.x, c.y, l);
+          poses++;
+        }
+      }
+    }
+    carte.objetsDeToit = { liste: liste,
+                           index: indexerParMorceau(liste, function (o) { return [o.x, o.y, o.l, 1]; }) };
+    return carte.objetsDeToit;
+  }
+
+  /** Les lampes des lucarnes : une sur trois, a l'empreinte de sa tuile — une fenetre comme les autres. */
+  function lampesDesLucarnes() {
+    const sorte = SORTES_DE_LAMPE.fenetre;
+    return objetsDesToits().liste.filter(function (o) { return o.type === 'lucarne' && hash2(o.x, o.y) % 3 === 0; })
+      .map(function (o) {
+        const lampe = { x: o.x * TT + 8, y: o.y * TT + sorte.dy, r: 14, c: sorte.c, panne: false, gresille: false,
+                        tx: o.x, ty: o.y, sorte: 'fenetre', lucarne: true };
+        heuresDeLaFenetre(lampe);
+        return lampe;
+      });
+  }
+
   /** La teinte du toit a cette tuile (0 a 5), ou 0 hors d'un toit teint. */
   function teinteDeToit(tx, ty) {
     if (tx < 0 || ty < 0 || tx >= carte.w || ty >= carte.h) return 0;
@@ -2031,7 +2129,7 @@ const Monde = (function () {
 
   /** La variante d'un toit en pente : le bord (bits 0 a 3), le VERSANT (4 a 7 — 0 nord, 1 la faite est-ouest,
       2 sud, 3 ouest, 4 la faite nord-sud, 5 est, 6 a 9 les aretiers nord-ouest, nord-est, sud-ouest, sud-est,
-      10 la pointe, 11 a 14 les faces nord, sud, ouest, est dont la faite passe au bord ; `sprites.js`, `VERSANTS`), quatre versants (bit 8), la teinte (9 et au-dessus).
+      10 la pointe, 11 a 14 les faces nord, sud, ouest, est dont la faite passe au bord ; `sprites.js`, `VERSANTS`), quatre versants (bit 8), des bardeaux manquants (bit 9), la teinte (10 et au-dessus).
 
       ⚠️ Le versant se COMPTE dans les voisines : combien de tuiles du meme toit
       au nord, au sud, a l'ouest, a l'est. C'est ce qui fait apparaitre la faite toute seule
@@ -2073,7 +2171,17 @@ const Monde = (function () {
       } else versant = enLong();
     } else if (forme === 'pignon' || nord + sud > ouest + est) versant = enTravers();     // plus profond que large
     else versant = enLong();
-    return bord + 16 * versant + 256 * (forme === 'quatre' ? 1 : 0) + 512 * teinteDeToit(tx, ty);
+    return bord + 16 * versant + 256 * (forme === 'quatre' ? 1 : 0) + 512 * bardeauxManquants(g, tx, ty)
+      + 1024 * teinteDeToit(tx, ty);
+  }
+
+  //: DES BARDEAUX MANQUANTS (vague 4) : une tuile sur quatre dans un quartier pauvre, une sur douze dans un
+  //: ordinaire, jamais chez les cossus — a l'empreinte de la tuile. Pas sur un toit peint par une matiere de bloc.
+  const USURE_DE_BARDEAU = { pauvre: 4, ordinaire: 12 };
+  function bardeauxManquants(g, tx, ty) {
+    if (carte.materiaux && carte.materiaux[g]) return 0;
+    const une = USURE_DE_BARDEAU[standingA(tx, ty) || 'ordinaire'];
+    return une && hash2(tx * 13 + 7, ty * 5 + 1) % une === 0 ? 1 : 0;
   }
 
   /** Un toit a cette tuile ? (les quatre couvertures) */
@@ -2383,6 +2491,13 @@ const Monde = (function () {
     const toits = carte.toits && carte.toits.get(cle);
     if (toits) {
       toits.forEach(function (t) {
+        if (!Chantiers.efface(t.x, t.y) && !sousLesEtages(t.x, t.y)) FACADES.toiture(ctx, t, (t.x - ox) * TT, (t.y - oy) * TT);
+      });
+    }
+    // Les objets neufs des toits (vague 4) : meme regle — ni sous un chantier, ni sous les etages d'un batiment.
+    const neufs = objetsDesToits().index.get(cle);
+    if (neufs) {
+      neufs.forEach(function (t) {
         if (!Chantiers.efface(t.x, t.y) && !sousLesEtages(t.x, t.y)) FACADES.toiture(ctx, t, (t.x - ox) * TT, (t.y - oy) * TT);
       });
     }
@@ -3059,7 +3174,7 @@ const Monde = (function () {
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
     dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau, sousLeToit, cacheSousLeToit, abrite,
     barrieresCoulissantes, majBarrieresCoulissantes, dessinerBarrieresCoulissantes, COULISSE_GLISSE, COULISSE_TIENT,
-estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, teinteDeToit, teintesDesToits, formeDeToit, formeDuToit, logementElargi, sousLesEtages, etagesDuCommerce, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
+estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, teinteDeToit, teintesDesToits, formeDeToit, formeDuToit, objetsDesToits, lampesDesLucarnes, logementElargi, sousLesEtages, etagesDuCommerce, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, ambianceVue, estNuit, estNuitVue, periode, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
     miniCarte, couleurMini, couleurMiniA, masqueDeLaCarte, masquee, hauteurConnue, chemin, demanderChemin, majChemins,

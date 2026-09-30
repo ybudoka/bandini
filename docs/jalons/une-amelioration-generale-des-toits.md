@@ -135,3 +135,33 @@ d'abord)._
   égouts et la faîte au bord). Six mutations rouges — une n'avait pas mordu : aucun toit de la ville ne l'exerçait.
   Le juge des versants de `test_monde_js.py` ne regarde plus que les toits en long.
 - **Reste** : vague 4, l'usure et des objets neufs.
+
+### Vague 4 — l'usure et des objets neufs — **livrée le 30 sept. 2026** (le jalon est livré)
+
+- **L'usure de chaque matière**, dans la tuile (même cuisson) :
+  - des **bardeaux manquants** (`Monde.bardeauxManquants`, bit 9 de la variante d'une pente — la teinte monte au
+    bit 10) : une tuile sur quatre dans un quartier pauvre, une sur douze dans un ordinaire, jamais chez les
+    cossus ; le papier goudronné noir dessous, et un bardeau neuf plus clair remplacé à côté ;
+  - la **rouille sur la tôle** (`usureDeMatiere`) : des taches, plus souvent sur une tôle déjà délavée ;
+  - la **mousse sur l'ardoise, au nord** : au pied du parapet nord, là où le soleil ne vient jamais.
+- **Des objets neufs** (`Monde.objetsDesToits`, peints avec le morceau par les mêmes peintres que ceux de Python,
+  `FACADES.toiture`) : le **puits de lumière** d'un grand commerce ou d'une usine, les **panneaux solaires** des
+  cossus (sur un toit plat, ou sur le versant d'une maison), la **corde à linge** des toits plats des Quais (et
+  d'un quartier résidentiel pas cossu), le **nid de goéland** des Quais, les **lucarnes** des maisons.
+- ⚠️ **Posés dans le navigateur, pas dans le paquet** : la carte est à son plafond, et Python y range déjà ses 242
+  objets de toit (son dé à lui). Ceux-ci se tirent à l'empreinte du bâtiment et de la tuile, sur les toits déjà
+  comptés : jamais sur un objet de Python ni à côté, jamais deux collés, au milieu d'un toit plat, sur un versant
+  en long d'un toit en pente.
+- ⚠️ **Jamais sous les étages** : une façade à deux étages recouvre le bas de son toit (`sousLesEtages`) — la
+  lucarne et les panneaux posés là ne se voyaient pas (vu à la capture). Et sous les étages, il ne reste souvent
+  que le versant nord : les lucarnes y vont aussi.
+- **Les lucarnes allumées la nuit** : une sur trois a sa LAMPE de fenêtre (`lampesDesLucarnes`, au bout de
+  `carte.lampes` — celles du paquet gardent leur rang), avec les heures des fenêtres des façades
+  (`heuresDeLaFenetre`).
+- Mesure : 36 lucarnes (5 allumées), 39 panneaux solaires, 44 puits de lumière, 18 cordes à linge, 25 nids.
+- **Juges** : trois de plus dans `test_toits_js.py` (chaque objet sur son toit, visible, loin des autres et des
+  objets de Python, les mêmes d'un compte à l'autre, sans dé ; une lucarne sur trois allumée, ses lampes au bout ;
+  l'usure de chaque matière et sa part par quartier). Huit mutations rouges.
+- **Pas fait** : les flaques sur le gravier après la pluie (les morceaux sont cuits une fois ; la pluie a déjà son
+  asphalte mouillé, `Monde.dessinerMouille`, à suivre), et la neige qui reste sur les toits — c'est aux quatre
+  saisons (lot 1 : la neige qui tient blanchit déjà chaque teinte).
