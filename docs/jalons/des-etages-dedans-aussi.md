@@ -92,13 +92,17 @@ est déjà le cache du JS (`d.hauts`, `e.hauts`) et le raccourci du banc (`r.hau
 
 ```python
 """Des étages dedans aussi (docs/jalons/des-etages-dedans-aussi.md)."""
-from app import etages
+import json
+import re
+
+from app import carte, etages
 from tests import villes
 
 
 def test_hash2_est_celui_du_navigateur(banc):
     paires = [(0, 0), (3, 4), (120, 57), (411, 389), (-1, 7), (65535, 2)]
-    attendu = banc("function (L) { return %s.map(function (p) { return L.hash2(p[0], p[1]); }); }" % paires)
+    attendu = banc("function (L) { return %s.map(function (p) { return L.hash2(p[0], p[1]); }); }"
+                   % json.dumps([list(p) for p in paires]))
     assert [etages.hash2(x, y) for x, y in paires] == attendu
 
 
@@ -306,14 +310,9 @@ et l'appel de `monter` à la fin de `generer`), `static/js/histoire.js` (`pieceD
 `etages.suite(pieces, slug) -> list[str]`, `etages.ajouter_un_escalier(piece, vers, *, descend=False) -> bool`,
 `etages.retirer_l_escalier(piece, vers) -> None`, `etages.monter(ville) -> None`.
 
-- [ ] Juges d'abord (`tests/test_etages.py`, à la suite) :
+- [ ] Juges d'abord (`tests/test_etages.py`, à la suite ; ses imports sont déjà en tête depuis la tâche 1) :
 
 ```python
-import math
-import re
-
-from app import carte
-
 GENEREE = re.compile(r"^(?:nord_)?[a-z_]+?_\d+$")
 
 
