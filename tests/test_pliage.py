@@ -141,13 +141,16 @@ def test_le_jeu_recoit_la_carte_pliee_et_tient_la_ville_depliee(banc, paquet, ca
     r = banc("""function (L, o) {
         const servie = o.fetchs.find(function (f) { return String(f.url).indexOf('/api/carte') === 0; });
         const c = L.B.defs.carte, cles = {};
-        // ⚠️ `Monde.charger` annote chaque croisement en place (son rang, son décalage de feux, son stop) :
-        // on juge ce qui est ARRIVÉ, sans ce que le jeu y a écrit depuis.
-        const annotes = ['i', 'decalage', 'feux', 'stop'];
+        // ⚠️ `Monde.charger` annote chaque croisement en place (son rang, son décalage de feux, son stop), et les
+        // étages pour vrai chaque logement et chaque devanture (son mur jusqu'au bout du bâtiment, ses étages —
+        // `Monde.sousLesEtages`, dès que les toits cherchent où poser leurs lucarnes) : on juge ce qui est ARRIVÉ,
+        // sans ce que le jeu y a écrit depuis.
+        const annotes = { intersections: ['i', 'decalage', 'feux', 'stop'], residences: ['elargi', 'murEtendu'],
+                          devantures: ['murX', 'murL', 'hauts'] };
         Object.keys(c).forEach(function (k) {
-            cles[k] = JSON.stringify(k !== 'intersections' ? c[k] : c[k].map(function (inter) {
+            cles[k] = JSON.stringify(!annotes[k] ? c[k] : c[k].map(function (objet) {
                 const o = {};
-                Object.keys(inter).forEach(function (q) { if (annotes.indexOf(q) < 0) o[q] = inter[q]; });
+                Object.keys(objet).forEach(function (q) { if (annotes[k].indexOf(q) < 0) o[q] = objet[q]; });
                 return o;
             }));
         });

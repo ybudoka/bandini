@@ -266,6 +266,15 @@ def test_deux_chantiers_ne_se_voisinent_pas(livree):
             assert ecart >= chantiers.ECART_MIN, (a, b, ecart)
 
 
+def _sans_les_terrains(monkeypatch):
+    """⚠️ Les VILLAS et les TERRAINS CLÔTURÉS (`villas.poser`, `clotures.poser`) se posent sur la ville FINIE et
+    s'écartent des chantiers et de leurs annexes (un bâtiment en chantier ne devient pas une villa, une haie ne
+    passe pas sur la benne) : on les retire des deux villes."""
+    from app import clotures, villas
+    monkeypatch.setattr(villas, "poser", lambda ville: [])
+    monkeypatch.setattr(clotures, "poser", lambda ville: [])
+
+
 def test_la_ville_avec_ou_sans_chantiers_est_la_meme(monkeypatch):
     """⚠️ Les chantiers tirent dans LEUR dé, après toute la ville : sans eux, pas
     un arbre, pas un paquet, pas une enseigne n'a bougé.
@@ -278,6 +287,7 @@ def test_la_ville_avec_ou_sans_chantiers_est_la_meme(monkeypatch):
     monkeypatch.setattr(salete, "deplacer", lambda chantier, ville, graine: {})
     # Et les lampadaires du mobilier (`eclairer`), qui évitent les enceintes.
     monkeypatch.setattr(mobilier, "eclairer", lambda chantier, bords, solides: {})
+    _sans_les_terrains(monkeypatch)
     avec = carte.generer()
     monkeypatch.setattr(chantiers, "tirer", lambda ville, batiments, graine: [])
     sans = carte.generer()
@@ -955,8 +965,9 @@ def test_les_trois_premiers_chantiers_n_ont_pas_bouge(monkeypatch):
 
 def test_les_dormants_ne_touchent_a_rien_de_la_ville_du_premier_matin(monkeypatch):
     """La ville avec ou sans chantiers reste la même : les dormants aussi se tirent dans leur dé."""
-    avec = villes.generer()
     # ⚠️ Sous le patch, `carte.generer` direct : le cache de `villes` rendrait la ville d'avant.
+    _sans_les_terrains(monkeypatch)
+    avec = carte.generer()
     monkeypatch.setattr(chantiers, "tirer", lambda ville, batiments, graine: [])
     sans = carte.generer()
     for cle in ("sol", "voie", "decor", "portes", "lampes", "devantures", "residences", "points_interet"):

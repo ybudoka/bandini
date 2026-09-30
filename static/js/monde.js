@@ -1807,6 +1807,7 @@ const Monde = (function () {
     if (carte.teintes) return carte.teintes;
     const w = carte.w, h = carte.h, qui = new Int32Array(w * h).fill(-1), pile = new Int32Array(w * h);
     const glyphes = [], teintes = [], formes = [], boites = [];
+    const villas = ((carte.def && carte.def.residences) || []).filter(function (r) { return r.villa; });
     // ⚠️ Les quatre matieres, pas la tole des cabanes (`{`) : chaque plaque y a deja sa couleur.
     const estUnToit = function (g) {
       return MATIERES_TEINTES.indexOf(g) >= 0 && !(carte.materiaux && carte.materiaux[g]);
@@ -1852,7 +1853,10 @@ const Monde = (function () {
       }
       glyphes.push(g);
       teintes.push(t);
-      formes.push(g === 'P' ? formeDuToit(tx, ty, x1 - x0 + 1, y1 - y0 + 1, compte) : 'long');
+      // ⚠️ Le toit d'une VILLA (des maisons de luxe, vague 3) : a quatre versants, toujours — le toit noble.
+      const surUneVilla = villas.some(function (r) { return r.y === y1 + 1 && r.x >= x0 && r.x + r.l - 1 <= x1; });
+      formes.push(g !== 'P' ? 'long' : surUneVilla && compte === (x1 - x0 + 1) * (y1 - y0 + 1) ? 'quatre'
+        : formeDuToit(tx, ty, x1 - x0 + 1, y1 - y0 + 1, compte));
       boites.push([x0, y0, x1, y1, compte, tx, ty]);
     }
     carte.teintes = { qui: qui, teintes: teintes, glyphes: glyphes, formes: formes, boites: boites };
@@ -1899,7 +1903,8 @@ const Monde = (function () {
       : Object.assign({}, r);
     // LA GALERIE d'un plex (la revue des facades, vague 2) : sur la tuile du devant, tuile par tuile, la ou ce n'est
     // ni la chaussee, ni l'eau, ni un mur — jamais sur une maison de pecheur.
-    if (r.etages >= 2 && r.declin == null && r.y + 1 < carte.h) {
+    // ⚠️ Une villa n'a pas de galerie : son portique (`FACADES.villa`).
+    if (r.etages >= 2 && r.declin == null && !r.villa && r.y + 1 < carte.h) {
       const g = [];
       for (let i = 0; i < e.l; i++) {
         const x = e.x + i, y = r.y + 1;

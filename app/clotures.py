@@ -15,6 +15,8 @@ le tient).
 
 from __future__ import annotations
 
+from . import chantiers as chantiers_mod
+
 #: Ce qui fait une cour (l'herbe, la friche) — jamais une allée, un trottoir ou une ruelle.
 COUR = frozenset(",;")
 
@@ -38,11 +40,37 @@ COTE_MAX = 4
 FACADE = frozenset("FWDdPG")
 
 
+def chantiers(ville: dict) -> tuple[set[tuple[int, int]], set[tuple[int, int]]]:
+    """Les tuiles des chantiers (leur enceinte) et de leurs annexes (l'équipe à ses postes, les machines, la
+    tranchée, le signaleur, la benne) : posées AVANT, elles lisent la ville finie (`chantiers.completer`) — une
+    villa ne pousse ni sur un bâtiment en chantier ni sur un poste de l'équipe."""
+    enceintes: set[tuple[int, int]] = set()
+    annexes: set[tuple[int, int]] = set()
+    for c in ville.get("chantiers") or []:
+        enceintes |= {(c["x"] + i, c["y"] + j) for i in range(c["l"]) for j in range(c["h"])}
+        for ph in c.get("phases") or []:
+            annexes |= {(x, y) for x, y in ph.get("equipe") or []}
+            for m in ph.get("machines") or []:
+                annexes.add((m["x"], m["y"]))
+                if m.get("frappe"):
+                    annexes.add(tuple(m["frappe"]))
+        annexes |= {(x, y) for x, y in c.get("tranchee") or []}
+        if c.get("signaleur"):
+            annexes.add(tuple(c["signaleur"]))
+        if c.get("conteneur"):                            # la benne, et tout son bloc
+            bx, by = c["conteneur"]
+            demi = chantiers_mod.CONTENEUR_LARGEUR // 2
+            annexes |= {(bx + i, by + j) for i in range(-demi, demi + 1) for j in range(chantiers_mod.CONTENEUR_PROFONDEUR)}
+    return enceintes, annexes
+
+
 def _occupees(ville: dict) -> set[tuple[int, int]]:
+    """Ce qu'on ne couvre jamais : le décor, les paquets, les ambulants, les scènes, les réclames — et les annexes
+    des chantiers (`chantiers`)."""
     occ = {(d["x"], d["y"]) for d in ville.get("decor") or []}
     for cle in ("paquets", "ambulants", "scenes", "reclames"):
         occ |= {(q["x"], q["y"]) for q in ville.get(cle) or [] if "x" in q and "y" in q}
-    return occ
+    return occ | chantiers(ville)[1]
 
 
 def _district(ville: dict):

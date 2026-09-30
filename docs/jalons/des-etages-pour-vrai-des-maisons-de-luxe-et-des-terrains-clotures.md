@@ -90,3 +90,35 @@ Rangées dans `captures/references/` (hors du dépôt) :
   retombe à chaque image, comme le trafic s'en va), la filature de Marco (le char téléporté derrière le Cravate
   s'usait contre le décor jusqu'à brûler, et Marco se sauvait de NOTRE char : il reste entier), et le camion qui fonce
   (`test_conduite_js` : il faut trois colonnes libres devant lui).
+
+### Vague 3 — les villas (✅ livrée le 30 sept. 2026)
+
+- **Une villa, c'est un cossu des Érables qui a de la place** (`app/villas.py`) : sous un toit de deux rangées au
+  moins, la maison s'ÉLARGIT sur la pelouse libre de ses côtés — le toit et la façade avancent, une colonne de
+  pelouse reste en marge, trois tuiles par côté au plus — et devient villa si elle atteint 6 tuiles (8 au plus).
+  Mesure du 30 sept. : **7 villas** de 6 et 7 tuiles, là où les cossus faisaient 3 ou 4. Sa cour avant se ferme
+  d'une **haie de cèdres** taillée (le glyphe `` ` `` de la villa du maire, posé par une autre session le même
+  jour) : sur la dernière rangée d'herbe, des retours jusqu'à la façade, ouverte au sentier et à l'entrée de
+  voiture — 61 tuiles de haie.
+- **La façade se peint** (`FACADES.villa`) : la pierre grise de Montréal en assises (la référence du Mille carré,
+  captures/references/), une fenêtre **cintrée** par travée à clé de voûte, meneau et traverse, un **portique** à
+  deux colonnes sous son fronton devant une porte double à imposte, deux lanternes, un balcon à balustrade par étage
+  au-dessus du portique, et la **balustrade de pierre** au bord du toit. Trois étages, rez compris (le navigateur n'en
+  peint jamais plus que le toit n'en porte), ni galerie ni escalier de fer. Son **toit est à quatre versants**,
+  toujours (`Monde.teintesDesToits`) — les lucarnes de l'autre session s'y posent.
+- ⚠️ **Posées juste AVANT les clôtures, sans un dé** : seule l'herbe change, jamais sur un décor, un paquet, une
+  scène, une réclame, ni sur un bâtiment en chantier ou une annexe de chantier (l'équipe à ses postes, les
+  machines, la tranchée, la benne et son bloc : `clotures.chantiers`, que les clôtures lisent aussi — elles étaient
+  tombées sur le bloc d'une benne). Les juges « avec ou sans chantiers » et « les commerces montent » retirent les
+  villas et les clôtures des deux villes.
+- Juges `tests/test_villas.py` (seule l'herbe devient villa ou haie ; un cossu des Érables élargi sous son toit, sa
+  porte à la même tuile, une colonne de marge ; la haie ni devant une porte ni sur un chemin ; rien ne s'enferme
+  derrière une haie) et `test_facades_js.py` (la pierre, les fenêtres cintrées, le portique, pas de galerie, le toit
+  à quatre versants) ; huit mutations, six mordent — les deux autres ne peuvent pas : les Érables n'ont qu'un
+  logement non cossu, et aucune villa du témoin ne longe la porte d'un voisin mitoyen. Captures regardées.
+- `test_pliage` : le jeu annote les logements et les devantures en place (`elargi`, `murX`…), comme les croisements
+  — dès que les toits cherchent où poser leurs lucarnes (`Monde.sousLesEtages`), ce que les villas font arriver au
+  chargement. Le juge les écarte comme il écarte les annotations des croisements.
+- **Reste** (la fiche le promettait) : le jardin de la villa — la fontaine, la piscine creusée, le portail de fer
+  forgé. À trancher par Martin : une fontaine est un décor, et un décor posé au démarrage décale les identifiants
+  de toute la ville.

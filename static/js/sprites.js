@@ -5362,7 +5362,111 @@ const FACADES = (function () {
     for (let k = 1; k <= hauts; k++) etagePlein(ctx, r, m, d.standing === '-' ? FER_ROUILLE : fer, null, ox, oy - (k + 1) * T, k, k === hauts);
   }
 
+  /* --- LES VILLAS (des maisons vraiment de luxe, vague 3) ----------------------------------------------------
+
+     Martin, 30 sept. 2026 : « des maisons vraiment de luxe ». Les references (captures/references/) : la pierre
+     grise de Montreal en assises regulieres, des fenetres CINTREES a cle de voute, et, pour la villa, un portique
+     a deux colonnes sous son fronton, une porte double sous une imposte en demi-lune, des lanternes, une
+     balustrade de pierre au bord du toit. `r.villa` (`app/villas.py`) : un cossu des Erables qui s'est elargi sur
+     sa pelouse. ⚠️ Rien de tire au de : ce qui varie se lit a la position (`hash`). */
+
+  const PIERRE = { fond: '#b3afa4', joint: '#8e8a80', clair: 'rgba(255,255,255,0.14)', taille: '#e3dfd3',
+                   ombre: 'rgba(0,0,0,0.28)', porte: '#4a2e1c', lanterne: '#f2c14e' };
+
+  /** Le mur de pierre grise : des assises de 4 px, les blocs en quinconce, une arete claire sur chacun. */
+  function murDePierre(ctx, ox, oy, large) {
+    ctx.fillStyle = PIERRE.fond; ctx.fillRect(ox, oy, large, T);
+    for (let y = 0; y < T; y += 4) {
+      ctx.fillStyle = PIERRE.clair; ctx.fillRect(ox, oy + y, large, 1);
+      ctx.fillStyle = PIERRE.joint; ctx.fillRect(ox, oy + y + 3, large, 1);
+      for (let x = (y / 4) % 2 ? 3 : 7; x < large; x += 10) ctx.fillRect(ox + x, oy + y, 1, 3);
+    }
+  }
+
+  /** Une fenetre CINTREE : son encadrement de pierre taillee, l'arc (les coins du haut rabattus), la cle de voute,
+      un meneau et une traverse. `l` pair. */
+  function fenetreCintree(ctx, m, x, y, l, h) {
+    ctx.fillStyle = PIERRE.taille;
+    ctx.fillRect(x - 1, y + 1, l + 2, h);
+    ctx.fillRect(x, y, l, 1);
+    ctx.fillStyle = m.vitre;
+    ctx.fillRect(x, y + 2, l, h - 2);
+    ctx.fillRect(x + 1, y + 1, l - 2, 1);
+    ctx.fillStyle = 'rgba(255,255,255,0.18)'; ctx.fillRect(x, y + 2, 1, h - 2);
+    ctx.fillStyle = PIERRE.taille;
+    ctx.fillRect(x + (l >> 1) - 1, y - 1, 2, 2);                          // la cle de voute
+    ctx.fillRect(x + (l >> 1), y + 2, 1, h - 2);                          // le meneau
+    ctx.fillRect(x, y + 4, l, 1);                                         // la traverse
+    ctx.fillStyle = PIERRE.ombre; ctx.fillRect(x - 1, y + h + 1, l + 2, 1);   // l'appui
+  }
+
+  /** La balustrade de pierre : une main courante, des balustres, sa tablette. */
+  function balustrade(ctx, x, y, large) {
+    ctx.fillStyle = PIERRE.ombre; ctx.fillRect(x, y + 4, large, 1);
+    ctx.fillStyle = PIERRE.taille;
+    ctx.fillRect(x, y, large, 1);
+    for (let k = 1; k < large - 1; k += 2) ctx.fillRect(x + k, y + 1, 1, 3);
+    ctx.fillRect(x, y + 3, large, 1);
+  }
+
+  /** Un etage de villa : la pierre, une fenetre cintree par travee ; a la travee de la porte, la porte-fenetre sur
+      le balcon a balustrade qui coiffe le portique. */
+  function etageDeVilla(ctx, r, m, ox, y) {
+    murDePierre(ctx, ox, y, r.l * T);
+    ctx.fillStyle = PIERRE.taille; ctx.fillRect(ox, y + T - 1, r.l * T, 1);     // le cordon de pierre
+    for (let i = 0; i < r.l; i++) {
+      const x = ox + i * T;
+      if (i === r.porte) {
+        fenetreCintree(ctx, m, x + 4, y + 2, 8, 11);
+        balustrade(ctx, x, y + 10, T);
+      } else fenetreCintree(ctx, m, x + 4, y + 3, 8, 9);
+    }
+  }
+
+  /** La villa : ses etages (`r.hauts`), la balustrade et le fronton au sommet, le rez de pierre, ses fenetres
+      cintrees, et le portique de la porte. */
+  function villa(ctx, r, m, ox, oy) {
+    const large = r.l * T, hauts = r.hauts || 0;
+    for (let k = 1; k <= hauts; k++) etageDeVilla(ctx, r, m, ox, oy - k * T);
+    // Au sommet : la corniche, sa balustrade, et le fronton au-dessus de la porte.
+    const haut = oy - hauts * T;
+    ctx.fillStyle = PIERRE.ombre; ctx.fillRect(ox, haut + 5, large, 1);
+    balustrade(ctx, ox, haut, large);
+    murDePierre(ctx, ox, oy, large);
+    ctx.fillStyle = PIERRE.taille; ctx.fillRect(ox, oy + T - 2, large, 2);      // le soubassement
+    ctx.fillStyle = PIERRE.ombre; ctx.fillRect(ox, oy + T - 1, large, 1);
+    const motifs = r.motifs || '';
+    for (let i = 0; i < r.l; i++) {
+      const x = ox + i * T, quoi = motifs[i] || 'F';
+      if (quoi === 'G') { porteDeLogement(ctx, m, FER_ROUILLE, x, oy + RDC_Y, RDC_H, 'G'); continue; }
+      if (i !== r.porte && quoi !== 'D' && quoi !== 'd' && quoi !== 'P') { fenetreCintree(ctx, m, x + 3, oy + 3, 10, 9); continue; }
+      // LA PORTE DOUBLE sous son imposte en demi-lune.
+      ctx.fillStyle = PIERRE.taille; ctx.fillRect(x + 3, oy + 2, 10, 12);
+      ctx.fillStyle = quoi === 'D' ? m.allumee : m.vitre; ctx.fillRect(x + 5, oy + 3, 6, 2); ctx.fillRect(x + 4, oy + 4, 8, 1);
+      ctx.fillStyle = PIERRE.porte; ctx.fillRect(x + 4, oy + 5, 8, 9);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(x + 8, oy + 5, 1, 9);   // les deux battants
+      ctx.fillStyle = '#d8b83a'; ctx.fillRect(x + 7, oy + 9, 1, 1); ctx.fillRect(x + 9, oy + 9, 1, 1);
+      if (i !== r.porte) continue;
+      // LE PORTIQUE : deux colonnes, leur chapiteau et leur base, et le fronton qui les coiffe.
+      ctx.fillStyle = PIERRE.ombre; ctx.fillRect(x + 3, oy + 1, 1, 14); ctx.fillRect(x + 14, oy + 1, 1, 14);
+      ctx.fillStyle = '#f2efe6'; ctx.fillRect(x + 1, oy + 1, 2, 14); ctx.fillRect(x + 13, oy + 1, 2, 14);
+      ctx.fillStyle = PIERRE.taille; ctx.fillRect(x, oy + 1, 4, 1); ctx.fillRect(x + 12, oy + 1, 4, 1);
+      ctx.fillRect(x, oy + 14, 4, 1); ctx.fillRect(x + 12, oy + 14, 4, 1);
+      ctx.fillStyle = '#f2efe6';
+      ctx.fillRect(x - 1, oy - 1, T + 2, 2);                                   // l'entablement
+      for (let k = 1; k <= 3; k++) ctx.fillRect(x + 1 + 2 * k, oy - 1 - k, T - 2 - 4 * k, 1);   // le fronton
+      ctx.fillStyle = PIERRE.ombre; ctx.fillRect(x - 1, oy + 1, T + 2, 1);
+      // Les deux lanternes, de chaque cote du portique.
+      // ⚠️ Dans le pilier entre deux travees (une colonne de large), jamais sur l'encadrement d'une fenetre voisine.
+      for (const lx of [x - 1, x + T]) {
+        ctx.fillStyle = '#2a2d34'; ctx.fillRect(lx, oy + 4, 1, 4);
+        ctx.fillStyle = PIERRE.lanterne; ctx.fillRect(lx, oy + 5, 1, 2);
+      }
+    }
+  }
+
   function residence(ctx, r, m, fer, ox, oy, d) {
+    if (r.villa) { villa(ctx, r, m, ox, oy); return; }
     const large = r.l * T;
     // ⚠️ Le fer d'un logement pauvre a rouille (3e vague).
     const ferDuLogement = r.standing === '-' ? FER_ROUILLE : fer;
@@ -5726,7 +5830,7 @@ const FACADES = (function () {
 
   // Ou la porte d'un logement se peint dans sa tuile (le rez) : le battant qui s'ouvre s'y cale (`Monde.dessinerBattants`).
   const PORTE_DE_LOGEMENT = { y: RDC_Y, h: RDC_H };
-  return { devanture: devanture, residence: residence, etagesDuCommerce: etagesDuCommerce, PORTE_DE_LOGEMENT: PORTE_DE_LOGEMENT, graffiti: graffiti,
+  return { devanture: devanture, residence: residence, villa: villa, etagesDuCommerce: etagesDuCommerce, PORTE_DE_LOGEMENT: PORTE_DE_LOGEMENT, graffiti: graffiti,
            toiture: toiture, ombreDeMur: ombreDeMur, ombreDeFlanc: ombreDeFlanc, fosseDArbre: fosseDArbre,
            TOITURES: TOITURES, T: T };
 })();

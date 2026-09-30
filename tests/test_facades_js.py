@@ -17,7 +17,7 @@ def test_le_mur_tire_se_peint_sur_toute_la_facade(banc):
     r = banc("function (L, o) {" + PEINDRE + """
         const def = L.B.defs, murs = def.devantures.murs, out = {};
         for (const r of def.carte.residences) {
-            if (r.declin != null) continue;
+            if (r.declin != null || r.villa) continue;   // une villa a sa pierre (`test_les_villas…`)
             const m = murs[r.mur % murs.length], t = peindre(L, o, r);
             const e = L.Monde.logementElargi(r);
             const couvre = t.some(function (q) { return q[4] === m.brique && q[0] === 0 && q[1] === 0 && q[2] === e.l * 16 && q[3] === 16; });
@@ -35,7 +35,7 @@ def test_la_porte_condamnee_n_a_ses_planches_qu_en_rue_pauvre(banc):
     r = banc("function (L, o) {" + PEINDRE + """
         const PLANCHE = '#6b5a48', out = { '+': [0, 0], '=': [0, 0], '-': [0, 0] };
         for (const r of L.B.defs.carte.residences) {
-            if (r.declin != null || (r.motifs || '')[r.porte] !== 'd') continue;
+            if (r.declin != null || r.villa || (r.motifs || '')[r.porte] !== 'd') continue;
             const s = r.standing || '=', planches = peindre(L, o, r).some(function (q) { return q[4] === PLANCHE; });
             out[s][0]++; if (planches) out[s][1]++;
         }
@@ -81,6 +81,7 @@ def test_les_plex_ont_leur_galerie_jamais_sur_la_chaussee(banc):
         const M = L.Monde, c = M.carte, PLANCHERS = ['#d9d4c6', '#8a6a44'];
         let avec = 0, peintes = 0, coupees = 0, fautes = [];
         for (const r of c.def.residences) {
+            if (r.villa) continue;                  // une villa a son portique, pas de galerie
             const e = M.logementElargi(r);
             if (!e.galerie) {
                 if (r.etages >= 2 && r.declin == null) {
@@ -121,7 +122,7 @@ def test_chaque_standing_a_ses_fenetres(banc):
         const murs = L.B.defs.devantures.murs;
         const out = { '+': { n: 0, battants: 0, boite: 0 }, '=': { n: 0, rideaux: 0, boite: 0 }, '-': { n: 0, rideaux: 0, boite: 0 } };
         for (const r of L.B.defs.carte.residences) {
-            if (r.declin != null) continue;
+            if (r.declin != null || r.villa) continue;   // une villa a sa pierre (`test_les_villas…`)
             const s = r.standing || '=', t = peindre(L, o, r), o2 = out[s], m = murs[r.mur % murs.length];
             o2.n++;
             // La corniche ornee du cossu : ses denticules (1 x 1, a la couleur des cadres).
@@ -169,7 +170,7 @@ def test_les_etages_montent_pour_vrai_et_laissent_un_toit(banc):
         const hauts = {}, fautes = [];
         let fenetres = 0, montes = 0;
         for (const r of c.def.residences) {
-            if (r.declin != null) continue;
+            if (r.declin != null || r.villa) continue;   // une villa a sa pierre (`test_les_villas…`)
             const e = M.logementElargi(r);
             hauts[e.hauts] = (hauts[e.hauts] || 0) + 1;
             if (e.hauts > r.etages - 1) fautes.push(['trop', r.x, r.y]);
@@ -217,3 +218,32 @@ def test_les_commerces_portent_leurs_logements_au_dessus_de_l_enseigne(banc):
     }""")
     assert r["avec"] >= r["total"] * 0.5 and r["peints"] == r["avec"], r
     assert r["fautes"] == [], r
+
+
+def test_les_villas_se_peignent_en_pierre_sous_un_toit_a_quatre_versants(banc):
+    """Des maisons vraiment de luxe (vague 3) : une villa (`app/villas.py`) se peint en pierre grise sur toute sa
+    façade, jamais en brique ; une fenêtre cintrée par travée du rez (hors la porte et le garage) ; le portique à
+    deux colonnes à sa porte ; pas de galerie ; et son toit est à quatre versants."""
+    r = banc("function (L, o) {" + PEINDRE + """
+        const M = L.Monde, murs = L.B.defs.devantures.murs, PIERRE = '#b3afa4', TAILLE = '#e3dfd3', COLONNE = '#f2efe6';
+        const out = [];
+        for (const r of M.carte.def.residences) {
+            if (!r.villa) continue;
+            const e = M.logementElargi(r), t = peindre(L, o, r), m = murs[r.mur % murs.length];
+            const baies = (r.motifs || '').split('').filter(function (g, i) { return i !== r.porte && 'DdPG'.indexOf(g) < 0; }).length;
+            out.push({ x: r.x, y: r.y, l: r.l, hauts: e.hauts, galerie: !!e.galerie, forme: M.formeDeToit(r.x, r.y - 1),
+                pierre: t.some(function (q) { return q[4] === PIERRE && q[0] === 0 && q[1] === 0 && q[2] === r.l * 16 && q[3] === 16; }),
+                brique: t.some(function (q) { return q[4] === m.brique; }),
+                cintrees: t.filter(function (q) { return q[4] === TAILLE && q[1] === 4 && q[2] === 12 && q[3] === 9; }).length, baies: baies,
+                colonnes: t.filter(function (q) { return q[4] === COLONNE && q[2] === 2 && q[3] === 14 && q[1] === 1
+                                                 && (q[0] === r.porte * 16 + 1 || q[0] === r.porte * 16 + 13); }).length });
+        }
+        return out;
+    }""")
+    assert len(r) >= 4, f"le témoin : {len(r)} villa(s)"
+    for v in r:
+        assert v["pierre"] and not v["brique"], v
+        assert v["cintrees"] == v["baies"] > 0, v
+        assert v["colonnes"] == 2 and not v["galerie"], v
+        assert v["forme"] == "quatre", v
+    assert sum(1 for v in r if v["hauts"] >= 1) >= len(r) // 2, r

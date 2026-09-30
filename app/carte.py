@@ -7405,6 +7405,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
     # après la bande nord, AVANT les frénésies et les cartes de hockey (elles choisissent leurs recoins sur la ville
     # clôturée) : la cour avant des logements se ferme (le fer, le bois, le grillage), sans un dé — la ville d'avant
     # est la même à la tuile près, hors des clôtures.
+    # ⚠️ LES MAISONS DE LUXE (la même fiche, vague 3), juste AVANT les clôtures : un cossu des Érables qui a de la
+    # place s'élargit sur sa pelouse libre et ferme sa cour d'une haie de cèdres — sans un dé.
+    from . import villas as villas_mod
+    villas_mod.poser(ville)
     from . import clotures as clotures_mod
     clotures_mod.poser(ville)
     # ⚠️ LES FRÉNÉSIES (P4, docs/jalons/quatre-activites-que-le-jeu-n-a-pas.md), APRÈS ABSOLUMENT TOUT, bande
