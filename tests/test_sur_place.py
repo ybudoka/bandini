@@ -63,9 +63,12 @@ def _district_du_lieu(ville, lieu):
 
 
 def _lieux_nommes(m):
-    """Les lieux que la mission nomme en clair (`lieu`, `ou` sans forme) — ceux qu'on sait situer."""
+    """Les lieux que la mission nomme en clair (`lieu`, `ou` sans forme) — ceux qu'on sait situer —
+    jusqu'au premier `retourner` : la frontière tombe là (le butin se rapporte ailleurs)."""
     noms = [m["sur_place"]["lieu"]] if m.get("sur_place") else []
     for o in m["objectifs"]:
+        if o["type"] == "retourner":
+            break
         for cle in ("lieu", "ou"):
             v = o.get(cle)
             if isinstance(v, str) and ":" not in v and v != "donneur":
@@ -86,3 +89,16 @@ def test_chaque_lieu_nomme_est_dans_la_frontiere():
                 assert par_bloc.get(lieu) == f[5:], (m["slug"], lieu)
             elif lieu not in par_bloc:
                 assert _district_du_lieu(ville, lieu) == f, (m["slug"], lieu, _district_du_lieu(ville, lieu))
+
+
+def test_les_cles_arrivent_avec_la_mission_pas_dans_le_paquet(client):
+    """⚠️ Le paquet a un plafond (`test_le_paquet_reste_leger`) : six clés l'ont passé de 18 octets gzip
+    (30 sept. 2026). Elles servent à JOUER la mission — elles arrivent avec son texte, par
+    `/api/mission/<slug>`, comme ses objectifs (M16)."""
+    paquet = {m["slug"]: m for m in client.get("/api/definitions").get_json()["missions"]}
+    for m in missions.CATALOGUE:
+        if not (m.get("sur_place") or m.get("frontiere")):
+            continue
+        assert "sur_place" not in paquet[m["slug"]] and "frontiere" not in paquet[m["slug"]], m["slug"]
+        jouer = client.get(f"/api/mission/{m['slug']}").get_json()
+        assert jouer.get("sur_place") == m.get("sur_place") and jouer.get("frontiere") == m.get("frontiere"), m["slug"]

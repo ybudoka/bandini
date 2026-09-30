@@ -7,6 +7,10 @@ MISSION = {
     "titre": "Les collets du Trappeur",
     "donneur": "trappeur",
     "prerequis": ["p01"],
+    # Sur place, de nuit, au phare (30 sept. 2026) : le Trappeur, ses collets et les Skateux sont tous à
+    # la Pointe — on ne va pas se promener en ville.
+    "sur_place": {"lieu": "phare", "heure": "nuit"},
+    "frontiere": "pointe",
     "recompense": 120,
     # La fronde du Trappeur (`armes.CATALOGUE`), ses billes comprises : un chargeur plein au sac.
     "donne": {"arme": "fronde", "message": "LA FRONDE DU TRAPPEUR, ET SES BILLES"},

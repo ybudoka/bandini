@@ -112,6 +112,8 @@ function banc(corps) {
       m.dialogue = d.dialogue;
       m.scenes = d.scenes;
       m.objectifs = d.objectifs;
+      m.sur_place = d.sur_place || null;   // le saut et la frontiere (`SurPlace`), comme `charger`
+      m.frontiere = d.frontiere || null;
       (d.voix || []).forEach(function (v) { defs.audio.histoire.push(v); });
     });
   }

@@ -103,9 +103,18 @@ const SurPlace = (function () {
 
   /** Chaque image de mission, meme dans une piece (`Histoire.maj`). Figee sous une scene, un menu, la
       pause : la boucle n'appelle pas `Histoire.maj`. Le compte vit dans `B.mission.hors`, en images. */
+  /** La frontiere tient-elle a cette etape ? Armee, et pas encore au premier `retourner` — rapporter
+      le butin au donneur se fait ailleurs (tranche par Martin, 30 sept. 2026 : v03). */
+  function tient(m) {
+    const pm = B.partie && B.partie.mission;
+    if (!m || !m.frontiere || !pm || !pm.gardee) return false;
+    const retour = (m.objectifs || []).findIndex(function (o) { return !!o && o.type === 'retourner'; });
+    return retour < 0 || pm.etape < retour;
+  }
+
   function maj(m) {
-    const pm = B.partie.mission;
-    if (!m || !m.frontiere || !pm || !pm.gardee || !B.mission) return;
+    if (!B.mission) return;
+    if (!tient(m)) { B.mission.hors = 0; return; }
     if (dedans(m.frontiere)) { B.mission.hors = 0; return; }
     if (!B.mission.hors) Hud.message('RETOURNE DANS ' + nom(m.frontiere), 120);
     B.mission.hors = (B.mission.hors || 0) + 1;
@@ -128,8 +137,8 @@ const SurPlace = (function () {
   /** Les districts (en tuiles) autres que la frontiere d'une mission gardee. Vide sans elle, pour
       une frontiere de bloc (le bloc est toute sa carte), et dans un bloc (sa carte n'a pas la ville). */
   function zonesHors(carte) {
-    const m = Histoire.courante(), pm = B.partie && B.partie.mission;
-    if (!m || !m.frontiere || !pm || !pm.gardee || m.frontiere.indexOf('bloc:') === 0 || B.bloc) return [];
+    const m = Histoire.courante();
+    if (!tient(m) || m.frontiere.indexOf('bloc:') === 0 || B.bloc) return [];
     return ((carte && carte.zones) || []).filter(function (z) { return z.district === z.slug && z.slug !== m.frontiere; });
   }
 

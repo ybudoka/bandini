@@ -1212,7 +1212,9 @@ def repliques() -> list[dict]:
 #: missions pesent 150 778 octets bruts en tout — 4,2 Ko chacune, la plus grosse 6 Ko : une
 #: requete qu'un telephone avale sans s'en apercevoir, sur la route que
 #: `Son.Voix.chargerHistoire` prend deja pour ses mp3.
-HORS_DU_PAQUET = ("dialogue", "scenes", "objectifs")
+# `sur_place` et `frontiere` (30 sept. 2026) : elles servent a JOUER la mission, pas a la trouver — et six
+# cles dans le catalogue avaient passe le plafond du paquet de 18 octets gzip.
+HORS_DU_PAQUET = ("dialogue", "scenes", "objectifs", "sur_place", "frontiere")
 
 
 def _sans_le_jeu(dialogue: dict) -> dict:
@@ -1276,7 +1278,9 @@ def pour_jouer(slug: str) -> dict | None:
             # (`Son.Voix.chargerHistoire`), mais se DECLARAIENT au demarrage — quatre
             # cent vingt mp3 annonces pour en jouer sept. Meme regle, meme route, meme
             # instant : ce qu'une mission dit, montre, et avec quelle voix.
-            "voix": audio.voix_de_mission(slug)}
+            "voix": audio.voix_de_mission(slug),
+            # Le saut et la frontiere (`surplace.js`) : lus a la fin de l'intro, donc apres ce texte.
+            **{cle: copy.deepcopy(mission[cle]) for cle in ("sur_place", "frontiere") if cle in mission}}
 
 
 def repliques_ouverture() -> list[dict]:

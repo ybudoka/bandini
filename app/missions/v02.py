@@ -13,6 +13,9 @@ MISSION = {
     "titre": "Le dossier du sergent",
     "donneur": "bouchard",
     "prerequis": ["v01"],
+    # Sur place, de nuit, au chemin de la villa (30 sept. 2026), et gardée dans la villa.
+    "sur_place": {"lieu": "villa_chemin", "heure": "nuit"},
+    "frontiere": "bloc:villa",
     "recompense": 700,
     "echec": ["mort", "arrete", "etoile"],
     # ⚠️ `casier: -2` : Bouchard efface deux pages de ton casier — c'est ce qu'un sergent paie en
@@ -33,8 +36,10 @@ MISSION = {
          "objet": "dossier_bouchard", "nom": "LE DOSSIER DU SERGENT", "dessin": "dossier",
          "ou": "villa_bureau", "sans_etoile": True},
 
+        # ⚠️ Rayon 6, pas 3 (comme v01) : la bande d'herbe à l'est de la palissade mène à la sortie sans
+        # passer à trois tuiles du chemin, et sous la `frontiere` la mission ratait le butin en poche.
         {"type": "aller", "texte": "RESSORS PAR LE CHEMIN, SANS TE FAIRE VOIR",
-         "lieu": "villa_chemin", "rayon": 3, "sans_etoile": True},
+         "lieu": "villa_chemin", "rayon": 6, "sans_etoile": True},
     ],
 
     # Le jeu de chaque réplique (`jeu=`) — Bouchard : un homme qui a peur et qui commande pour ne pas

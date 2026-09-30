@@ -91,9 +91,16 @@ test (`erreurs_de_mise_en_scene`), pas seulement un œil humain.
   dialogue, un menu, la pause. Dans une pièce, c'est **la porte** qui compte ; dans un bloc, **son
   passage** en ville. Les districts : ceux de `carte.DISTRICTS` et du nord, plus `ile` et `aeroport`. Le
   hors-zone se grise sur la mini-carte et la grande carte (une frontière de district seulement).
+  ⚠️ **La frontière tombe au premier `retourner`** (tranché par Martin le 30 sept. 2026) : rapporter le
+  butin au donneur se fait ailleurs — `v03` est gardée dans la villa jusqu'à « RAPPORTE LE GRAND LIVRE ».
+  Une mission dont les objectifs commencent HORS de la frontière (e07 : le vol de clé en ville, avant
+  la villa) ne la prend pas.
 - ⚠️ **Tout lieu nommé** (`sur_place`, un `lieu` ou un `ou` d'objectif) doit être **dans** la frontière
   (jugé sur la ville, `tests/test_sur_place.py`) : sinon la mission envoie le joueur là où elle le fait
-  rater. Exemples : `v01` (`bloc:villa`), `q13` (`quais`).
+  rater — jusqu'au premier `retourner`. Exemples : `v01`, `v02`, `v03` (`bloc:villa`), `q13` (`quais`),
+  `p05` (`pointe`). ⚠️ Un chemin de sortie de bloc sous une frontière veut un rayon qui couvre toute la
+  sortie (6 au chemin de la villa) : sinon on ressort sans l'avoir « fait », et la mission rate.
+  `test_chaque_mission_sur_place_se_joue_sur_place` juge d'office toute mission qu'on y branche.
 
 **Fichier cible** : un **nouveau fichier** `app/missions/m7.py`, qui déclare
 `MISSION = { … }` :

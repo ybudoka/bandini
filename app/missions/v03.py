@@ -14,6 +14,10 @@ MISSION = {
     "titre": "La chambre forte",
     "donneur": "sven",
     "prerequis": ["v02"],
+    # Sur place, de nuit, au chemin de la villa (30 sept. 2026) ; gardée dans la villa jusqu'au retour chez
+    # Sven — la frontière tombe au premier `retourner`.
+    "sur_place": {"lieu": "villa_chemin", "heure": "nuit"},
+    "frontiere": "bloc:villa",
     "recompense": 1200,
     "echec": ["mort", "arrete", "etoile", "alarme"],
     "donne": {"message": "LE GRAND LIVRE DU MAIRE, CHEZ SVEN"},
@@ -32,8 +36,10 @@ MISSION = {
          "objet": "grand_livre", "nom": "LE GRAND LIVRE DU MAIRE", "dessin": "registre",
          "ou": "villa_voute", "sans_etoile": True},
 
+        # ⚠️ Rayon 6, pas 3 (comme v01) : la bande d'herbe à l'est de la palissade mène à la sortie sans
+        # passer à trois tuiles du chemin, et sous la `frontiere` la mission ratait le butin en poche.
         {"type": "aller", "texte": "RESSORS PAR LE CHEMIN, SANS TE FAIRE VOIR",
-         "lieu": "villa_chemin", "rayon": 3, "sans_etoile": True},
+         "lieu": "villa_chemin", "rayon": 6, "sans_etoile": True},
 
         {"type": "retourner", "texte": "RAPPORTE LE GRAND LIVRE À SVEN"},
     ],

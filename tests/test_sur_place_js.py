@@ -3,6 +3,9 @@
 Le saut : fondu au noir, l'horloge avance (jamais en arrière), on se relève au lieu, sans étoile.
 """
 
+import pytest
+
+from app import missions
 from tests.outils_missions import OUTILS, PLUS_LONGUES
 
 MISSION = """
@@ -295,36 +298,105 @@ def test_v01_finit_au_bord_sans_rater(banc):
     assert r == {"depart": 2, "faite": True, "echecs": 0}
 
 
-def test_v01_sortir_en_longeant_la_palissade_finit_la_mission(banc):
+def _sortie(slug):
+    """L'étape « RESSORS PAR LE CHEMIN » d'une mission de la villa."""
+    m = next(m for m in missions.CATALOGUE if m["slug"] == slug)
+    return next(i for i, o in enumerate(m["objectifs"]) if o["texte"].startswith("RESSORS"))
+
+
+@pytest.mark.parametrize("slug", ["v01", "v02", "v03"])
+def test_sortir_de_la_villa_en_longeant_la_palissade_passe_l_etape(banc, slug):
     """⚠️ Revue finale : la bande d'herbe à l'est mène à la sortie sans passer à trois tuiles du chemin.
-    On ressort par le nord-est, comme Josée le dit — la mission doit être gagnée avant la ville, sinon la
-    frontière la fait rater, la clé en poche."""
+    On ressort par le nord-est, comme Josée le dit — l'étape doit être passée avant la ville, sinon la
+    frontière fait rater la mission, le butin en poche."""
+    sortie = _sortie(slug)
     r = banc("async function (L, o) {" + OUTILS + PLUS_LONGUES + """
+        const SLUG = '""" + slug + """', SORTIE = """ + str(sortie) + """;
         L.Jeu.commencer(); L.graine(6);
         const B = L.B, p = B.partie, j = B.joueur, T = L.TT; j.invincible = 1e6;
-        faites(L, ['q04']); p.heure = 0.90;
-        commencer(L, o, 'v01'); p.mission.gardee = true;
+        p.heure = 0.90;
+        commencer(L, o, SLUG); L.Histoire.courante().frontiere = 'bloc:villa'; p.mission.gardee = true;
         L.Blocs.sauter('villa'); for (let k = 0; k < 400 && B.transition; k++) { o.frame(1); await o.attendre(); }
         // Le départ de la bande est AVANT l'étape : l'arrivée du bloc est à trois tuiles du chemin, et
         // l'objectif s'y ferait sur-le-champ.
         j.x = 70 * T + 8; j.y = 16 * T + 8; L.Entites.indexer();
-        p.mission.etape = 1; L.Histoire.avancer(true);   // avancer passe a la SUIVANTE : la 2, « RESSORS »
+        p.mission.etape = SORTIE - 1; L.Histoire.avancer(true);   // avancer passe a la SUIVANTE
         const depart = p.mission && p.mission.etape;
+        const passee = function () { return !!p.missionsFaites[SLUG] || (!!p.mission && p.mission.etape > SORTIE); };
         const chemin = [[70, 16], [70, 18], [70, 19], [71, 20], [72, 20]];
         const echecs = p.stats.echecs || 0;
-        for (let i = 0; i + 1 < chemin.length && B.bloc && !p.missionsFaites.v01; i++) {
+        for (let i = 0; i + 1 < chemin.length && B.bloc && !passee(); i++) {
           const a = chemin[i], b = chemin[i + 1], n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) * T / 4);
-          for (let k = 0; k <= n && B.bloc && !p.missionsFaites.v01; k++) {
+          for (let k = 0; k <= n && B.bloc && !passee(); k++) {
             j.x = (a[0] + (b[0] - a[0]) * k / n) * T + 8; j.y = (a[1] + (b[1] - a[1]) * k / n) * T + 8;
             L.Entites.indexer(); o.frame(1); ecouter(L);
           }
         }
-        const auBord = { depart: depart, bloc: !!B.bloc, faite: !!p.missionsFaites.v01, hors: B.mission ? B.mission.hors || 0 : null };
         for (let k = 0; k < 900; k++) { o.frame(1); ecouter(L); if (B.transition) o.fondu(); }
-        return { faite: !!p.missionsFaites.v01, echecs: (p.stats.echecs || 0) - echecs, auBord: auBord };
+        return { depart: depart, passee: passee(), echecs: (p.stats.echecs || 0) - echecs };
     }""")
-    assert r["auBord"]["depart"] == 2
-    assert {k: r[k] for k in ("faite", "echecs")} == {"faite": True, "echecs": 0}
+    assert r == {"depart": sortie, "passee": True, "echecs": 0}
+
+
+def test_les_missions_branchees_sur_place():
+    """Qui se joue sur place aujourd'hui — e07 non : son vol de clé se joue en ville, avant la villa."""
+    assert {m["slug"] for m in missions.CATALOGUE if m.get("sur_place")} == {"v01", "v02", "v03", "q13", "p05"}
+
+
+@pytest.mark.parametrize("slug", [m["slug"] for m in missions.CATALOGUE if m.get("sur_place")])
+def test_chaque_mission_sur_place_se_joue_sur_place(banc, slug):
+    """Le juge de toute mission branchée, la prochaine comprise : prise de jour chez son donneur, elle
+    commence à l'heure, au lieu, dedans sa frontière — par le vrai chemin de l'intro (`demarrer`), et le
+    vrai téléchargement de son texte (`poser_les_missions=False` : les deux clés viennent de `/api/mission`)."""
+    r = banc("async function (L, o) {" + OUTILS + PLUS_LONGUES + """
+        const SLUG = '""" + slug + """';
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, p = B.partie, j = B.joueur; j.invincible = 1e6;
+        const m = B.defs.missions.find(function (q) { return q.slug === SLUG; });
+        faites(L, m.prerequis || []); p.heure = 0.40;
+        L.Histoire.demarrer(SLUG);
+        for (let k = 0; k < 600 && !(p.mission && p.mission.gardee); k++) { ecouter(L); o.frame(1); await o.attendre(); }
+        for (let k = 0; k < 400 && B.transition; k++) { o.frame(1); await o.attendre(); }
+        // Le saut et la frontière arrivent avec le texte de la mission (`/api/mission`), pas dans le paquet.
+        const jouee = L.Histoire.courante() || {}, sp = jouee.sur_place || {};
+        const l = sp.lieu ? L.Histoire.lieu(sp.lieu) : null;
+        return { gardee: !!(p.mission && p.mission.gardee), heure: p.heure, nuit: L.Monde.estNuit(p.heure),
+                 loin: l ? Math.hypot(j.x - l.x, j.y - l.y) : -1,
+                 dedans: jouee.frontiere ? L.SurPlace.dedans(jouee.frontiere) : true, lue: !!jouee.sur_place };
+    }""", poser_les_missions=False)
+    m = next(m for m in missions.CATALOGUE if m["slug"] == slug)
+    h = m["sur_place"]["heure"]
+    assert r["gardee"] and r["lue"], r
+    if h == "nuit":
+        assert r["nuit"], r
+    else:
+        h0, h1 = h
+        assert (h0 <= r["heure"] <= h1) if h0 <= h1 else (r["heure"] >= h0 or r["heure"] <= h1), r
+    assert 0 <= r["loin"] < 6 * 16, r
+    assert r["dedans"], r
+
+
+def test_la_frontiere_tombe_au_premier_retourner(banc):
+    """Tranché par Martin (30 sept. 2026) : rapporter le butin au donneur se fait ailleurs — v03 est gardée
+    dans la villa jusqu'à « RAPPORTE LE GRAND LIVRE À SVEN », pas après."""
+    r = banc("async function (L, o) {" + OUTILS + FRONTIERE + """
+        L.Jeu.commencer(); L.graine(6); L.B.joueur.invincible = 1e6;
+        const B = L.B, p = B.partie;
+        garder(L, o, 'v03', 'bloc:villa');
+        const objs = L.Histoire.courante().objectifs;
+        const retour = objs.findIndex(function (q) { return q.type === 'retourner'; });
+        p.mission.etape = retour - 2; L.Histoire.avancer(true);            // l'étape d'avant : gardée
+        a(L, 'bar'); vivre(L, o, 60);
+        const avant = { etape: p.mission.etape, hors: B.mission.hors || 0 };
+        p.mission.etape = retour - 1; L.Histoire.avancer(true);            // le retour : levée
+        a(L, 'bar'); vivre(L, o, L.SurPlace.HORS_IMAGES + 60);
+        return { retour: retour, avant: avant, etape: p.mission ? p.mission.etape : null,
+                 hors: B.mission ? B.mission.hors || 0 : null, gris: L.SurPlace.zonesHors(L.Monde.carte).length,
+                 ligne: L.SurPlace.ligne('X') };
+    }""")
+    assert r["avant"]["etape"] == r["retour"] - 1 and r["avant"]["hors"] > 0
+    assert r["etape"] == r["retour"] and r["hors"] == 0
+    assert r["gris"] == 0 and r["ligne"] == "X"
 
 
 def test_dans_une_piece_le_compte_se_lit(banc):

@@ -71,6 +71,9 @@ const Histoire = (function () {
         // ⚠️ Les OBJECTIFS aussi (ils pesaient les deux tiers du catalogue) : ils ne
         // servent qu'a partir de `commencer()`, donc apres l'intro, donc apres tout ceci.
         m.objectifs = d.objectifs || [];
+        // Le saut et la frontiere (`SurPlace`), sortis du paquet comme les objectifs (30 sept. 2026).
+        m.sur_place = d.sur_place || null;
+        m.frontiere = d.frontiere || null;
         // ⚠️ SES VOIX SE DECLARENT ICI AUSSI. `Son.Voix.histoire()` lit la liste du
         // paquet, et celles d'une mission n'y sont plus : sans cette ligne, le texte
         // s'afficherait et personne ne parlerait. `chargerHistoire` va chercher les
