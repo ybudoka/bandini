@@ -1,7 +1,7 @@
 /* Bandini — le cerveau d'un homme de gang qui se bat (docs/jalons/des-bagarres-de-gangs-vivantes-et-armees.md).
 
    UN SEUL CERVEAU pour la rixe a la frontiere (sa cible : un rival) et pour le gang qui te tombe dessus (sa
-   cible : toi). `entites.js` lui passe la main depuis `bagarre`, `attaque_joueur` et `allie` (M13) ; il ne fait que DECIDER
+   cible : toi). `entites.js` lui passe la main depuis `bagarre` et `attaque_joueur` ; il ne fait que DECIDER
    (`e.vx`, `e.vy`, `Combat.frapper`) — le pas se fait apres, comme pour tout le monde (`majPieton`).
 
    Vague 1, AU CONTACT : chacun prend SA place sur un cercle autour de la cible (son rang parmi ceux qui la
@@ -15,10 +15,10 @@
 const Rixe = (function () {
   'use strict';
 
-  //: Ceux qui se battent, a cette image : les etats du cerveau (l'allie de m98 compris), et le coup lui-meme (`Combat` ecrase l'etat
+  //: Ceux qui se battent, a cette image : les deux etats du cerveau, et le coup lui-meme (`Combat` ecrase l'etat
   //: par 'attaque' le temps des trois temps). ⚠️ Un homme qui est passe a `flane` garde son vieux `e.rixe` :
   //: sans ce filtre, il tiendrait encore une place dans le cercle d'une cible qu'il a quittee.
-  const EN_COMBAT = { bagarre: true, attaque_joueur: true, allie: true, attaque: true };
+  const EN_COMBAT = { bagarre: true, attaque_joueur: true, attaque: true };
 
   function fiche() { return B.defs.rixes.contact; }
 
@@ -37,7 +37,7 @@ const Rixe = (function () {
   function etat(e, f) {
     if (!e.rixe) {
       e.rixe = { cible: null, posture: 'approche', minuterie: 0, pret: hash2(e.id, 0x51C0) % f.cadence_images,
-                 derive: 0, deriveT: 0, tourneT: tourneDe(e, f, 0), esquives: 0, vuArmer: false };
+                 derive: 0, deriveT: 0, tourneT: tourneDe(e, f, 0), esquives: 0, vuArmer: false, coince: 0 };
     }
     return e.rixe;
   }
@@ -57,8 +57,8 @@ const Rixe = (function () {
       la cible — le cercle se forme la ou ils sont, il ne les arrache pas de leur cote de la rue.
       ⚠️ ON NE COMPTE QUE LES PLACES LIBRES : une cible adossee a une facade n'a pas de place derriere elle, et
       celui qui y etait envoye cognait d'ou il etait — du meme cote que les autres (au banc, le joueur de depart
-      est justement contre un mur). Les assaillants se repartissent donc sur ce qui reste, chacun au MILIEU de sa
-      part (`rang + 0.5`) : trois devant un mur s'ouvrent en eventail, pas en paquet sur un bord. */
+      est justement contre un mur). Les assaillants se repartissent donc sur ce qui reste, d'un bout a l'autre de
+      l'arc : trois devant un mur s'ouvrent en eventail, pas en paquet sur un bord. */
   function place(e, cible, f) {
     const tous = assaillants(cible, f);
     const n = Math.max(1, tous.length), rang = Math.max(0, tous.indexOf(e));
@@ -70,7 +70,11 @@ const Rixe = (function () {
       if (!placeMurée(surLeCercle(cible, a, f))) libres.push(a);
     }
     if (!libres.length) return surLeCercle(cible, base + e.rixe.derive, f);
-    return surLeCercle(cible, libres[Math.floor((rang + 0.5) * libres.length / n)] + e.rixe.derive, f);
+    // Le PREMIER garde la place d'ou il arrive (sinon, seul, il ferait le tour de sa cible pour rien) ; les
+    // autres s'etalent a partir de lui — sur le tour entier s'il est libre, sur l'arc qui reste s'il y a un mur.
+    const L = libres.length;
+    const k = L === f.places ? Math.round(rang * L / n) : (n > 1 ? Math.round(rang * (L - 1) / (n - 1)) : 0);
+    return surLeCercle(cible, libres[Math.min(L - 1, k)] + e.rixe.derive, f);
   }
 
   /** Ou marcher pour gagner sa place. ⚠️ EN CONTOURNANT : une place de l'autre cote de la cible, prise en ligne
@@ -131,11 +135,16 @@ const Rixe = (function () {
     if (r.deriveT > 0 && --r.deriveT === 0) r.derive = 0;
     const p = place(e, cible, f);
     const dp = Math.hypot(p.x - e.x, p.y - e.y);
+    // COINCE : a portee, loin de sa place, et il n'en approche plus (des corps la tiennent — le demelage ne
+    // laisse jamais deux corps sous 10 px). Au siege de m98, six allies et six Cravates autour de toi : les
+    // Cravates attendaient une place qui ne se liberait jamais, et ne frappaient presque plus.
+    r.coince = d <= f.portee_px && dp > f.place_px && r.dpAvant !== undefined && dp > r.dpAvant - 0.3 ? r.coince + 1 : 0;
+    r.dpAvant = dp;
     // Il frappe DE SA PLACE — sinon, arrive du meme cote que les autres, il cognerait des qu'a portee et n'en
     // ferait jamais le tour. ⚠️ Sauf une place dans un mur (la cible y est adossee), ou une cible qui BOUGE : sa
     // place bouge avec elle, il ne l'atteignait presque jamais (au siege de m98, les allies tombaient de 47
     // coups a 18) — a portee, il frappe d'ou il est.
-    if (d <= f.portee_px && r.pret <= 0 && (dp <= f.place_px || bouge || placeMurée(p))) {
+    if (d <= f.portee_px && r.pret <= 0 && (dp <= f.place_px || bouge || r.coince >= f.coince_images || placeMurée(p))) {
       e.vx = 0; e.vy = 0;
       if (Combat.frapper(e, false)) { r.pret = cadenceDe(e, f, e.t); reculer(r, f); return true; }
     }

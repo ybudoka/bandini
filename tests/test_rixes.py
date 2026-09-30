@@ -21,6 +21,7 @@ def test_la_fiche_du_contact_se_tient():
     assert 0 < f["pas_images"] < f["tourne_min"], "un pas de côté plus long que l'attente entre deux"
     assert 0 <= f["esquive_pct"] <= 100
     assert 0 < f["bouge_px"] < 1, "une cible qui marche doit compter comme une cible qui bouge"
+    assert 0 < f["coince_images"] < f["cadence_images"], "coincé plus longtemps qu'un coup : il ne frapperait plus"
     assert f["places"] >= 4, "trois assaillants doivent pouvoir s'étaler"
     assert 0 < f["place_px"] < f["cercle_px"], "« à sa place » plus large que le cercle : il frapperait de partout"
     assert 0 < f["contourne_rad"] < 3.14159, "contourner d'un demi-tour, c'est traverser"

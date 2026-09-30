@@ -17,6 +17,7 @@ TROIS = """
 """
 
 
+
 def test_trois_cravates_se_repartissent_autour_du_joueur(banc):
     """Nés du même côté, ils l'encerclent au lieu de faire la file : l'écart d'angle le plus petit entre deux
     d'entre eux, vu du joueur, dépasse 60° EN MOYENNE (le cercle parfait en donne 120 ; le joueur de départ est
@@ -151,3 +152,29 @@ def test_il_touche_une_cible_qui_bouge(banc):
     }""")
     assert r["elans"] >= 16, "il ne s'élance pas sur une cible qui bouge (%s)" % r
     assert r["touches"] / r["elans"] >= 0.6, "il frappe dans le vide (%s)" % r
+
+
+def test_coince_loin_de_sa_place_il_frappe_d_ou_il_est(banc):
+    """À portée de sa cible, sa place de l'autre côté, et des corps qui l'empêchent d'en approcher (on le remet
+    au même endroit à chaque image, comme le démêlage) : il frappe d'où il est. ⚠️ Au siège de m98, six alliés
+    plantés sur le cercle autour de toi : les Cravates attendaient une place qui ne se libérait jamais et n'ont
+    passé que 36 images en plein geste de tout le siège (450 avec cette règle)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(26);
+        const j = L.B.joueur;
+        const c = L.Entites.creerPieton(j.x + 18, j.y, L.Entites.archetype('cravate'));
+        c.etat = 'attaque_joueur';
+        let coups = 0;
+        const vrai = L.Combat.frapper;
+        L.Combat.frapper = function (e) { if (e === c) coups++; return false; };
+        for (let i = 0; i < 90; i++) {
+          c.x = j.x + 18; c.y = j.y;
+          L.Rixe.maj(c, j, 1.5);
+          // Sa place, de l'autre côté de la cible, et qui y reste (ni pas de côté, ni rang qui change).
+          c.rixe.derive = Math.PI; c.rixe.deriveT = 0; c.rixe.tourneT = 9999;
+        }
+        L.Combat.frapper = vrai;
+        return { coups: coups };
+    }""")
+    assert r["coups"] >= 1, "coincé à portée, loin de sa place, il ne frappe jamais (%s)" % r
