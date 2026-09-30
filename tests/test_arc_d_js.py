@@ -171,3 +171,170 @@ def test_d04_la_collecte_chez_ti_paul_lulu_et_ovila(banc):
     for dite in ("accueil:tipaul:0", "accueil:lulu:1", "accueil:ovila:2", "pendant:sal:3"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [400] and r["dette"] == 14200, r
+
+
+# --- La fin de l'arc D (vague 8, 30 sept. 2026) : l'avocat, les Ciseaux au garage, puis le CHOIX — le coffre de Sal
+# (d07, avec Josée) ou la dernière coupe (d08, la dette payée). Chacune ferme l'autre.
+
+AVANT_D5 = AVANT_D[:-1] + ", 'd01', 'd02', 'd03', 'd04']"
+
+CHEZ_JOSEE = """
+  function chezJosee(L, o) {
+    const piece = dedans(L, o, 'bar');
+    const la = !!L.B.entites.find(function (e) { return e.personnage === 'josee'; });
+    if (la) serrer(L, o, 'josee');
+    const mission = L.B.partie.mission ? L.B.partie.mission.slug : null;
+    passer(L, o); ecouter(L);
+    sortir(L, o);
+    return { piece: piece, la: la, mission: mission };
+  }
+"""
+
+
+def test_d05_l_acte_du_garage_pour_l_avocat_du_brouillard(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + RECHARGER + DEDANS + CHEZ_JOSEE + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, p = B.partie;
+        faites(L, """ + AVANT_D5 + """);
+        const j = recharger(L);
+        p.casier = 5;
+        const argent = paiements(L);
+        const chez = chezJosee(L, o);
+        const g = L.Histoire.lieu('garage');
+        const acte = B.entites.find(function (e) { return e.objetDeMission === 'papiers_de_rocco'; });
+        const pose = acte ? Math.round(Math.hypot(acte.x - g.x, acte.y - g.y) / 16) : null;
+        aPied(L); j.x = acte.x; j.y = acte.y; L.Entites.indexer(); jouer(L, o, 4);
+        const eux = B.mission.entites.filter(function (e) { return e.cible && e.etape === 1; });
+        const ciseaux = { etape: etape(L), n: eux.length, bagues: eux.every(function (e) { return e.arme === 'poing_americain'; }) };
+        eux.forEach(function (e) { L.Entites.assommer(e); }); jouer(L, o, 10);
+        const bar = { etape: etape(L), ligne: L.Histoire.ligneObjectif() };
+        dedans(L, o, 'bar'); serrer(L, o, 'josee'); finir(L, o);
+        return { chez: chez, pose: pose, ciseaux: ciseaux, bar: bar, dites: dites, casier: p.casier,
+                 fait: !!p.missionsFaites.d05, argent: argent.map(function (a) { return a.montant; }) };
+    }""")
+    assert r["chez"] == {"piece": "bar", "la": True, "mission": "d05"}, r["chez"]
+    assert r["pose"] is not None and r["pose"] <= 3, r
+    assert r["ciseaux"] == {"etape": 1, "n": 2, "bagues": True}, r["ciseaux"]
+    assert r["bar"]["etape"] == 2 and r["bar"]["ligne"].startswith("LES PAPIERS AU BROUILLARD"), r["bar"]
+    for dite in ("pendant:josee:0", "pendant:josee:1", "pendant:josee:2"):
+        assert dite in r["dites"], f"{dite} manque : {r['dites']}"
+    assert r["fait"] is True and r["argent"] == [150] and r["casier"] == 3, r
+
+
+def test_d06_les_ciseaux_de_sal_au_garage_puis_gus(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + RECHARGER + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, p = B.partie;
+        faites(L, """ + AVANT_D5[:-1] + """, 'd05']);
+        const j = recharger(L);
+        const argent = paiements(L);
+        const dispo = (L.Histoire.disponibleDe('gus') || {}).slug || null;
+        serrer(L, o, 'gus'); passer(L, o); ecouter(L);
+        const mission = p.mission ? p.mission.slug : null;
+        const g = L.Histoire.lieu('garage');
+        j.x = g.x; j.y = g.y; L.Entites.indexer();
+        laNuit(L, o); jouer(L, o);
+        const eux = B.mission.entites.filter(function (e) { return e.cible && e.etape === 1; });
+        const vague = { etape: etape(L), n: eux.length,
+                        garage: Math.max.apply(null, eux.map(function (e) { return Math.round(Math.hypot(e.x - g.x, e.y - g.y) / 16); })) };
+        eux.forEach(function (e) { L.Entites.assommer(e); }); jouer(L, o, 10);
+        const c = B.mission.entites.find(function (e) { return e.cible && e.etape === 2; });
+        const chef = { etape: etape(L), chef: !!(c && c.chef), arme: c && c.arme };
+        j.x += 300; L.Entites.indexer();
+        L.Entites.assommer(c); jouer(L, o, 10);
+        const retour = { etape: etape(L), ligne: L.Histoire.ligneObjectif() };
+        versLui(L, 'gus'); finir(L, o);
+        return { dispo: dispo, mission: mission, vague: vague, chef: chef, retour: retour, dites: dites,
+                 fait: !!p.missionsFaites.d06, argent: argent.map(function (a) { return a.montant; }) };
+    }""")
+    assert r["dispo"] == "d06" and r["mission"] == "d06", r
+    assert r["vague"]["etape"] == 1 and r["vague"]["n"] == 3, r["vague"]
+    assert r["chef"] == {"etape": 2, "chef": True, "arme": "couteau"}, r["chef"]
+    assert r["retour"]["etape"] == 3 and r["retour"]["ligne"].startswith("DIS À GUS"), r["retour"]
+    for dite in ("pendant:gus:0", "pendant:gus:1", "pendant:gus:2", "pendant:gus:3"):
+        assert dite in r["dites"], f"{dite} manque : {r['dites']}"
+    assert r["fait"] is True and r["argent"] == [250], r
+
+
+def test_d07_le_coffre_de_sal_ferme_la_derniere_coupe(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + RECHARGER + DEDANS + CHEZ_JOSEE + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, p = B.partie;
+        faites(L, """ + AVANT_D5[:-1] + """, 'd05', 'd06']);
+        const j = recharger(L);
+        p.dette = 0;
+        const argent = paiements(L);
+        const les_deux = ['d07', 'd08'].map(function (s) { return L.Histoire.disponibles().some(function (m) { return m.slug === s; }); });
+        const chez = chezJosee(L, o);
+        const t = L.Histoire.lieu('terminus');
+        j.x = t.x; j.y = t.y; L.Entites.indexer();
+        laNuit(L, o); jouer(L, o);
+        const v = B.mission.vehicule;
+        const berline = { etape: etape(L), slug: v && v.slug, terminus: v ? Math.round(Math.hypot(v.x - t.x, v.y - t.y) / 16) : null };
+        j.x = v.x + 12; j.y = v.y; L.Entites.indexer(); L.Vehicules.monter(j, v); L.Entites.indexer(); jouer(L, o);
+        const semer = { etape: etape(L), etoiles: B.recherche.etoiles };
+        const cache = seCacher(L, o);
+        j.x = v.x + 12; j.y = v.y; L.Entites.indexer(); L.Vehicules.monter(j, v); L.Entites.indexer(); jouer(L, o);
+        const baie = L.Histoire.lieuDeLivraison('bar');
+        v.x = baie.x; v.y = baie.y; v.vitesse = 0; j.x = v.x; j.y = v.y; L.Entites.indexer(); jouer(L, o, 10);
+        const livre = etape(L);
+        dedans(L, o, 'bar'); serrer(L, o, 'josee'); finir(L, o);
+        return { les_deux: les_deux, chez: chez, berline: berline, semer: semer, cache: cache, livre: livre, dites: dites,
+                 fermees: p.fermees, d08: (L.Histoire.disponibleDe('sal') || {}).slug || null,
+                 fait: !!p.missionsFaites.d07, argent: argent.map(function (a) { return a.montant; }) };
+    }""")
+    assert r["les_deux"] == [True, True], "la dette payée, les deux côtés du choix sont offerts"
+    assert r["chez"]["mission"] == "d07", r["chez"]
+    assert r["berline"]["etape"] == 1 and r["berline"]["slug"] == "luxe" and r["berline"]["terminus"] <= 16, r["berline"]
+    assert r["semer"]["etape"] == 2 and r["semer"]["etoiles"] >= 2 and r["cache"]["apres"] == 0, r
+    assert r["livre"] == 4, r
+    for dite in ("pendant:josee:1", "pendant:josee:2", "pendant:josee:3", "pendant:josee:4"):
+        assert dite in r["dites"], f"{dite} manque : {r['dites']}"
+    assert r["fait"] is True and r["argent"] == [2000], r
+    assert "d08" in r["fermees"] and r["d08"] is None, "le coffre volé, plus jamais de dernière coupe"
+
+
+def test_d08_la_derniere_coupe_attend_la_dette_payee(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + RECHARGER + DEDANS + ESCORTE + CHEZ_SAL + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, p = B.partie;
+        faites(L, """ + AVANT_D5[:-1] + """, 'd05', 'd06']);
+        const j = recharger(L);
+        p.dette = 12800;
+        const endettee = (L.Histoire.disponibleDe('sal') || {}).slug || null;
+        p.dette = 0;
+        const argent = paiements(L);
+        const chez = chezSal(L, o);
+        sortir(L, o);
+        const c = B.mission.protege;
+        const suit = rejoindre(L, o, c);
+        arriverAvec(L, o, c, 'planque');
+        const planque = etape(L);
+        arriverAvec(L, o, c, 'bar');
+        finir(L, o);
+        return { endettee: endettee, chez: chez, personnage: c && c.personnage, suit: suit, planque: planque, dites: dites,
+                 fermees: p.fermees, fait: !!p.missionsFaites.d08, argent: argent.map(function (a) { return a.montant; }) };
+    }""")
+    assert r["endettee"] is None, "tant que la dette court, pas de dernière coupe"
+    assert r["chez"]["mission"] == "d08", r["chez"]
+    assert r["personnage"] == "sal" and r["suit"] is True and r["planque"] == 1, r
+    for dite in ("pendant:sal:0", "pendant:sal:1"):
+        assert dite in r["dites"], f"{dite} manque : {r['dites']}"
+    assert r["fait"] is True and "d07" in r["fermees"], r
+
+
+def test_d05_mourir_la_fait_rater_meme_sans_echec_au_paquet(banc):
+    """Le paquet ne porte plus l'échec par défaut (`missions.PAR_DEFAUT_AU_NAVIGATEUR`) : mort, la mission rate quand
+    même (`Histoire.echecsDe`)."""
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + RECHARGER + DEDANS + CHEZ_JOSEE + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, p = B.partie;
+        faites(L, """ + AVANT_D5 + """);
+        recharger(L);
+        const defs = L.Histoire.mission('d05');
+        const chez = chezJosee(L, o);
+        L.Histoire.evenement('mort'); jouer(L, o, 4);
+        return { paquet: defs && defs.echec === undefined, chez: chez.mission, rate: !p.mission, echecs: p.stats.echecs || 0 };
+    }""")
+    assert r["paquet"] is True and r["chez"] == "d05", r
+    assert r["rate"] is True and r["echecs"] == 1, r

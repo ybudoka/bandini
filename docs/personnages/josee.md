@@ -14,7 +14,7 @@
 | Voix | **Jeanne Mance — Charming, Clear and Young**, québécoise |
 | Bulle | « Approche, toi. » |
 | Couleurs | chandail rouge, cheveux noirs, pantalon noir |
-| Missions | donne **m5**, **m6**, **q04**, **q11** (les camions de Sven — le choix contre **q10**), **v01** (la clé du maire, la première infiltration de la villa) ; ouvre le marché noir après m5 (au lieu de dire son repos) |
+| Missions | donne **m5**, **m6**, **q04**, **q11** (les camions de Sven — le choix contre **q10**), **v01** (la clé du maire, la première infiltration de la villa), **d05** (l'acte du garage pour Me Desjardins), **d07** (la berline de Sal — le choix contre **d08**) ; ouvre le marché noir après m5 (au lieu de dire son repos) |
 
 ## Son histoire
 
@@ -89,6 +89,10 @@ portes de m6) : c'est elle qui décide où l'on regarde.
 - m6 : Ti-Paul au dépanneur, « ma sœur Lulu » à la cantine, Raymonde au syndicat, Ovila au phare ; « Dans
   cette ville, tout commence par là » (une poignée de main).
 - m6 : « L'auto sans phares? Je sais. Elle est à moi. »
+- d05 : « Un huissier, c'est un voleur avec un papier. » ; Me Desjardins a sa table au fond du Brouillard, « il
+  coûte cher, pis il perd jamais ».
+- d07 : Sal a touché au garage, « chez nous, on répond » ; la recette de Sal dans la valise de sa berline — et
+  « Sal oublie jamais un visage ».
 - m98 (_Le Boss_, la fin) : le maire « a compris qui tient la ville » ; ses Cravates et la police de Bouchard sur le
   Brouillard ; les Morues, les Skateux et les Boulonneux avec toi ; « Y avait plus grand que le Faubourg. Bienvenue chez
   toi, Boss. » — son `[warmly]` de la mission est le dernier mot du jeu.

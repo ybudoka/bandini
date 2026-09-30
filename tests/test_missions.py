@@ -352,3 +352,14 @@ def test_ce_qu_on_vient_obtenir_se_trouve():
                 assert gardes[o["garde"]].get("porte") == o["objet"], \
                     f"{m['slug']} : le garde {o['garde']} n'a pas {o['objet']} dans la poche"
     assert vus, "aucune mission n'obtient rien : le juge est à vide"
+
+
+def test_le_paquet_ne_porte_pas_l_echec_ni_la_phase_qui_valent_leur_defaut():
+    """M16, le reste (30 sept. 2026) : `"echec":["mort","arrete"]` et `"phase":1` se répétaient dans chaque mission
+    du paquet ; le navigateur remet l'échec par défaut (`Histoire.echecsDe`) et ne lit pas la phase d'une mission.
+    Ce qui ne vaut PAS son défaut voyage : m3 rate si le taxi de Marco est détruit."""
+    paquet = {m["slug"]: m for m in missions.pour_le_navigateur()}
+    d05 = paquet["d05"]
+    assert missions.par_slug("d05")["echec"] == ["mort", "arrete"]
+    assert "echec" not in d05 and "phase" not in d05, d05
+    assert paquet["m3"]["echec"] == ["arrete", "vehicule_detruit"]

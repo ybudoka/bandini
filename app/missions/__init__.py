@@ -671,7 +671,7 @@ from . import (  # noqa: E402
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
     s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
     e04, e06, e07, e10, la_pointe, s02, s05, s06, s09, s10, s11,
-    d01, d02, d03, d04, h03, h04, h05, h06, h07, q07, m98,
+    d01, d02, d03, d04, d05, d06, d07, d08, h03, h04, h05, h06, h07, q07, m98,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -716,6 +716,9 @@ from . import (  # noqa: E402
 # terminus. On lui montre sa garantie (le garage), on lui ramène l'enveloppe de Momo le taxi, on couche les faux
 # Ciseaux qui collectent en son nom aux Quais, et on fait sa collecte chez Ti-Paul, Lulu et Ovila : chaque job
 # efface un bout de la dette (`donne.dette`).
+# ⚠️ d05 à d08 (30 sept. 2026, vague 8) : la fin de l'arc D — l'acte du garage pour l'avocat du Brouillard (d05,
+# Josée), les Ciseaux de Sal au garage (d06, Gus), puis le CHOIX : vider la berline de Sal (d07, Josée) ou, la dette
+# payée, sa dernière coupe et la bague de Rocco (d08, `exige.dette: 0`). Chacune ferme l'autre.
 # ⚠️ h03 à h07 (30 sept. 2026, vague 7) : l'hôpital — le Dr Lachance joue aux cartes chez Sal (h03, h06 : sa
 # dette payée en fausses ordonnances), un cœur par l'autobus de nuit (h04), le patient de Ginette qui file en
 # ambulance (h05), et la nuit des urgences quand un quartier change de mains (h07, `exige.liberes`).
@@ -742,7 +745,7 @@ CATALOGUE: list[Mission] = [
     la_pointe.MISSION,
     s02.MISSION, s06.MISSION, s05.MISSION, s09.MISSION, s10.MISSION, s11.MISSION,
     q07.MISSION,
-    d01.MISSION, d02.MISSION, d03.MISSION, d04.MISSION,
+    d01.MISSION, d02.MISSION, d03.MISSION, d04.MISSION, d05.MISSION, d06.MISSION, d07.MISSION, d08.MISSION,
     h03.MISSION, h04.MISSION, h05.MISSION, h06.MISSION, h07.MISSION,
     m97.MISSION, m98.MISSION, m99.MISSION,
 ]
@@ -1301,8 +1304,15 @@ def pour_le_navigateur() -> list[dict]:
     """Le catalogue tel que le téléphone le reçoit : les missions SANS ce qu'elles
     disent ni ce qu'elles montrent (voir `HORS_DU_PAQUET`)."""
     return [{cle: copy.deepcopy(valeur) for cle, valeur in mission.items()
-             if cle not in HORS_DU_PAQUET}
+             if cle not in HORS_DU_PAQUET and not (cle in PAR_DEFAUT_AU_NAVIGATEUR and valeur == DEFAUTS_DE_MISSION[cle])}
             for mission in CATALOGUE]
+
+
+#: ⚠️ CE QUE LE NAVIGATEUR SAIT DÉJÀ (M16, 30 sept. 2026 — le reste des arcs) : une clé qui vaut son défaut ne
+#: voyage pas, `Histoire.echecsDe` le remet. `"echec":["mort","arrete"]` se répétait dans presque chaque mission du
+#: paquet (26 octets bruts × 80) ; le plafond brut des définitions n'avait plus que quelques missions de marge.
+#: `"phase":1` aussi : le navigateur ne lit la phase d'aucune mission (seulement celle des propriétés).
+PAR_DEFAUT_AU_NAVIGATEUR = ("echec", "phase")
 
 
 def pour_jouer(slug: str) -> dict | None:

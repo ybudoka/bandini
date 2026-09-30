@@ -14,7 +14,7 @@
 | Voix | **Khaivan — Quebec accent** (partagée avec le sergent Bouchard : jamais dans le même dialogue) |
 | Bulle | « Quoi, jeune? » |
 | Couleurs | chandail olive délavé, cheveux gris, pantalon foncé |
-| Missions | donne **f02** ; une des cinq enveloppes de **f12** |
+| Missions | donne **f02**, **d06** (les Ciseaux de Sal au garage) ; une des cinq enveloppes de **f12** |
 
 ## Son histoire
 
@@ -60,10 +60,12 @@ Reste derrière son comptoir, les bras croisés en attendant une réponse ; ne b
 ## Ce qu'il a dit (le canon)
 
 - f02 : « Gus, de l'armurerie. » ; le camion de munitions, repris à la fourrière.
+- d06 : les Ciseaux de Sal viennent casser le garage ; « Je paie pour la tranquillité, c'est rare, profites-en » ; son
+  seul merci : « Dis-le à personne, j'ai une réputation. »
 
 ## Ce qui l'attend (M16)
 
-Rien de prévu au-delà de f02 pour l'instant.
+Rien de prévu au-delà de d06 pour l'instant.
 
 ## À trancher
 

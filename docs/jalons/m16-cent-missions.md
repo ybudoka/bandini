@@ -1153,3 +1153,26 @@ catalogue.
     fait tout rater ; la nuit des urgences fermée avec un seul district.
   - ⚠️ **Le paquet** : `missions` 4 028 → 4 240 octets gzip (42 par mission) ; mais le BRUT des définitions est à
     239 890 pour un plafond de 241 000 — ≈ 200 octets bruts par mission : cinq de plus et il cède.
+- **30 sept. 2026 : vague 8 — la fin de l'arc D, et son choix.** Quatre missions : `d05` (Josée, _L'avocat du Carré_ :
+  Sal a mis un huissier sur le garage ; l'acte de Rocco, caché dans une boîte à outils devant la baie, deux Ciseaux à
+  bagues, et Me Desjardins au fond du Brouillard — 150 $, `casier: -2`), `d06` (Gus, _Sal perd patience_ : les Ciseaux
+  viennent casser le garage à la nuit, trois puis leur contremaître aux vrais ciseaux — 250 $), puis le **choix** :
+  `d07` (Josée, _Le coffre de Sal_ : la recette de la semaine dans la valise de sa berline, dans la ruelle du terminus,
+  deux étoiles, livrée au Brouillard — 2 000 $, **ferme `d08`**) ou `d08` (Sal, _La dernière coupe_ : la dette payée
+  jusqu'au dernier vingt, `exige.dette: 0` ; une coupe gratis, la planque de Rocco, un verre au Brouillard, et la bague
+  de Rocco gardée en gage dix ans — **ferme `d07`**). Aucun personnage neuf.
+  - ⚠️ **Écarts à la fiche** : `d05` ne se donne pas par Me Desjardins (un piéton à menu, pas un personnage — un
+    `parler` ne vise qu'un personnage) mais par Josée, dans le bar où il tient sa table ; `d06` par Gus et non Ti-Guy
+    (parti après m1) ni Marco (parti après m97, qu'on peut jouer avant l'arc D) ; `d07` vole la berline et non « le
+    salon » (un objectif ne se joue pas dans une pièce) ; « Sal ennemi — des Ciseaux toutes les nuits » n'a aucune clé
+    de `donne` qui le lise : après `d07`, Sal reste à sa chaise et ne dit que son repos (à trancher). `d09` attend l'île.
+  - **Le paquet** : le brut des définitions passait son plafond (241 433 pour 241 000) — `"echec":["mort","arrete"]`
+    et `"phase":1` se répétaient dans chaque mission. Ils ne voyagent plus quand ils valent leur défaut
+    (`missions.PAR_DEFAUT_AU_NAVIGATEUR`, `Histoire.echecsDe`) : **239 189** bruts, 54 549 gzip. ⚠️ La marge brute ne
+    tient plus qu'une vague : après, relever le plafond brut (qui n'est qu'un indicateur, le fil est le gzip) est la
+    décision de Martin.
+  - **Juges** (`tests/test_arc_d_js.py`, cinq de plus ; une mutation, rouge) : chaque mission de l'appel à la prime (le
+    casier qui perd deux pages, les bagues des Ciseaux, le contremaître au couteau, la berline semée puis livrée) ; les
+    deux côtés du choix offerts la dette payée, et chacun ferme l'autre ; la dernière coupe fermée tant que la dette
+    court ; mourir fait rater une mission dont le paquet ne porte plus l'échec. Et `test_missions.py` : le paquet ne
+    porte ni l'échec ni la phase qui valent leur défaut, et garde ceux qui n'en sont pas (m3).

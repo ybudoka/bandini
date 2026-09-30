@@ -14,7 +14,7 @@
 | Voix | **Pascal — Voix québécoise chaleureuse** (québécoise, mûre, « radio ») ; en v3 **à écouter** |
 | Bulle | « Assis-toi. » |
 | Couleurs | sarrau blanc de barbier, cheveux argent gominés, peau olive |
-| Missions | donne **d01**, **d02**, **d03**, **d04** (la vague 6 de M16) ; reçoit l'argent du Dr Lachance, son client de poker (**h03**, **h06**) ; ses hommes, les Ciseaux, sont les collecteurs de la dette (`missions.js`, `envoyerLesCollecteurs`) |
+| Missions | donne **d01**, **d02**, **d03**, **d04** (la vague 6 de M16), **d08** (la dernière coupe, la dette payée) ; volé par **d07** (le choix) ; reçoit l'argent du Dr Lachance, son client de poker (**h03**, **h06**) ; ses hommes, les Ciseaux, sont les collecteurs de la dette (`missions.js`, `envoyerLesCollecteurs`) |
 
 ## Son histoire
 
@@ -47,10 +47,16 @@ amis — Ti-Paul, Lulu et Ovila lui doivent aussi, et c'est le neveu qu'il envoi
 
 Au téléphone, le nom et le métier, de moins en moins à mesure qu'on le connaît : « Sal Ferraro, le barbier du
 terminus » (d01), « C'est Sal, au terminus » (d02), « Sal, le barbier » (d03), « Ici Sal » (d04). En personne :
-« Assis-toi. »
+« Assis-toi. » Et, la dette payée : « Ici Sal. Ton livre est fermé, le neveu. » (d08)
+
+## Ce qu'il a dit (le canon)
+
+- h03, h06 : le Dr Lachance est son client de poker ; « Neuf cent quatre-vingt-quinze, pis cinq de pourboire. »
+- d08 : Rocco venait se faire couper les cheveux tous les samedis, « il payait jamais, pis il parlait tout le
+  long » ; la bague de Rocco, gardée en gage dix ans, retourne à la famille.
 
 ## À trancher
 
 - La voix (en v3) : à écouter.
-- La suite de l'arc (d05 à d08) : l'avocat du Carré, Sal qui perd patience au garage, puis le choix — vider son
-  coffre avec Josée (d07) ou payer jusqu'au bout et recevoir la bague de Rocco (d08).
+- Après d07 (sa recette volée), Sal reste à sa chaise et ne dit que son repos : la fiche voulait « des Ciseaux
+  toutes les nuits, pour de bon » (`donne.ennemi`), qu'aucune clé ne lit encore.

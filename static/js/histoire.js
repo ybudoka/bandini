@@ -2292,7 +2292,7 @@ const Histoire = (function () {
     // mission continuait sans char jusqu'a la livraison. Le fuyard de M2 n'en
     // est pas un (on le casse expres), ni un char deja livre (`mission: null`).
     const mv = B.mission.vehicule;
-    if (mv && mv.etat === 'epave' && mv.mission === m.slug && !mv.fuyard && m.echec.indexOf('vehicule_detruit') >= 0) {
+    if (mv && mv.etat === 'epave' && mv.mission === m.slug && !mv.fuyard && echecsDe(m).indexOf('vehicule_detruit') >= 0) {
       echouer('vehicule_detruit');
       return;
     }
@@ -2893,11 +2893,15 @@ const Histoire = (function () {
     arrete: 'Arrêté par la police',
   };
 
+  /** Les échecs d'une mission. ⚠️ Le paquet ne porte pas celui qui vaut le défaut (`missions.DEFAUTS_DE_MISSION`,
+      `PAR_DEFAUT_AU_NAVIGATEUR`) : mort ou arrêté, comme en m1. */
+  function echecsDe(m) { return (m && m.echec) || ['mort', 'arrete']; }
+
   function evenement(nom) {
     if (AU_CARNET[nom]) noter(AU_CARNET[nom], false);
     const m = courante();
     if (!m) return;
-    if (m.echec.indexOf(nom) >= 0) echouer(nom);
+    if (echecsDe(m).indexOf(nom) >= 0) echouer(nom);
   }
 
   // --- Les defis -------------------------------------------------------------------------------

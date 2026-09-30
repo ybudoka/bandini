@@ -21,8 +21,9 @@ MESURE_DU_PAQUET: dict[str, tuple[int, int]] = {
     "defis": (4_088, 4_600),
     "economie": (3_943, 4_450),
     # M16, le reste (30 sept. 2026) : 42 octets gzip par mission au catalogue (titre, donneur, prérequis, prime,
-    # `donne`) — vague 7, l'hôpital (h03-h07) : 4 028 → 4 240. Le budget tient encore une dizaine de missions.
-    "missions": (4_240, 4_450),
+    # `donne`) — vague 7, l'hôpital (h03-h07) : 4 028 → 4 240 ; vague 8, la fin de la dette (d05-d08), et l'échec et
+    # la phase qui valent leur défaut ne voyagent plus (`missions.PAR_DEFAUT_AU_NAVIGATEUR`) : 4 274.
+    "missions": (4_274, 4_450),
     "garderobe": (3_460, 3_950),
     "personnages": (2_728, 3_150),
     "vehicules": (1_973, 2_300),
