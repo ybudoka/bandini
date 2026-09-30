@@ -59,6 +59,7 @@ MESURE_DU_PAQUET: dict[str, tuple[int, int]] = {
     "calendrier": (252, 400),
     "brouillard": (252, 400),
     "armes_regles": (153, 300),
+    "rixes": (153, 250),
     "coiffures": (152, 300),
     "loto": (144, 300),
     "marche_noir": (141, 300),
