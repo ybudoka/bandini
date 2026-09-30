@@ -78,6 +78,7 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
+| La foire fermée l'hiver, et le tour de ce qui ferme | ⬜ **en cours** (tranché par Martin : fermée tant que la neige tient, cadenassée, les missions du Bonimenteur attendent ; le tour — derby, crème glacée, fruits de mer, amuseurs, piscines, fontaine, BBQ, chaloupes ; et l'hiver amène le jongleur de feu, les foyers, le chocolat chaud ; trois vagues) | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/la-foire-fermee-l-hiver.md#fiche) |
 | La plage l'hiver | ⬜ **en cours** | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/la-plage-l-hiver.md#fiche) |
 | Un char qui coule pour vrai | ⬜ **en cours** (tranché par Martin : s'enfoncer peu à peu, le nez en premier, les ronds et le glouglou, la tache d'huile) | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/un-char-qui-coule-pour-vrai.md#fiche) |
 | Des chocs qui sonnent ce qu'ils frappent, et des pas qui sonnent le sol | ⬜ **en cours** | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/des-chocs-qui-sonnent-ce-qu-ils-frappent-et-des-pas-qui-sonnent-le-sol.md#fiche) |
