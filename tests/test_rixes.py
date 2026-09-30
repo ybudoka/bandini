@@ -25,3 +25,9 @@ def test_la_fiche_du_contact_se_tient():
 def test_le_paquet_porte_la_fiche_des_rixes():
     """⚠️ « Une fiche que le navigateur ne lisait pas » — le dépôt a payé ce défaut huit fois."""
     assert villes.assembler()["rixes"] == rixes.exporter()
+
+
+def test_le_cerveau_ne_tire_aucun_de_du_jeu():
+    """⚠️ Un dé tiré ici décalerait tout le hasard de la ville : tout se lit à l'empreinte."""
+    source = RIXE_JS.read_text(encoding="utf-8")
+    assert "B.rng" not in source and "Math.random" not in source

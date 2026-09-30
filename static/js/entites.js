@@ -3489,6 +3489,7 @@ const Entites = (function () {
   function finirLaBagarre(e) {
     e.etat = 'flane';
     e.rival = null;
+    e.rixe = null;
     e.vx = 0; e.vy = 0;
   }
 
@@ -4961,21 +4962,26 @@ const Entites = (function () {
       }
       if (!e.rival) { finirLaBagarre(e); return; }
       vitesse = v.pieton_course * e.allure;
-      const dx = e.rival.x - e.x, dy = e.rival.y - e.y, norme = Math.hypot(dx, dy) || 1;
       // LES MANTES (`app/mantes.py`) se battent AUTREMENT dans une rixe aussi : ils viennent au contact (la
       // prise), frappent plus souvent, et retournent le poignet de celui qui arme sa batte.
       const mante = e.techniques && B.defs.mantes;
-      if (mante && Techniques.parer(e, e.rival)) return;
-      if (norme > (mante ? mante.saisie_px - 2 : f.portee_px)) {
-        e.vx = dx / norme * vitesse;
-        e.vy = dy / norme * vitesse;
+      if (!mante) {
+        // LE CERVEAU DU CONTACT (`rixe.js`) : sa place autour du rival, son rythme, le recul, l'esquive.
+        // ⚠️ Tu passais par la : un passant te prend pour un des leurs (M12).
+        if (Rixe.maj(e, e.rival, vitesse)) Police.crimeDAutrui('coup_pieton', e.x, e.y, e);
       } else {
-        e.vx = 0; e.vy = 0;
-        regarder(e, dx, dy);
-        if (e.t % (mante ? mante.cadence_images : f.cadence_images) === 0) {
-          Combat.frapper(e, false);
-          // ⚠️ Tu passais par la : un passant te prend pour un des leurs (M12).
-          Police.crimeDAutrui('coup_pieton', e.x, e.y, e);
+        const dx = e.rival.x - e.x, dy = e.rival.y - e.y, norme = Math.hypot(dx, dy) || 1;
+        if (Techniques.parer(e, e.rival)) return;
+        if (norme > mante.saisie_px - 2) {
+          e.vx = dx / norme * vitesse;
+          e.vy = dy / norme * vitesse;
+        } else {
+          e.vx = 0; e.vy = 0;
+          regarder(e, dx, dy);
+          if (e.t % mante.cadence_images === 0) {
+            Combat.frapper(e, false);
+            Police.crimeDAutrui('coup_pieton', e.x, e.y, e);
+          }
         }
       }
     } else if (e.etat === 'attaque') {
@@ -5175,7 +5181,9 @@ const Entites = (function () {
     if (!cycliste) Son.pasDePassant(e, bouge);            // ses pas, tout pres du joueur seulement
     if (bouge < 0.2 && e.etat === 'flane') e.butT = 0;      // bloque : on change d'idee
     else if (bouge < 0.2) { e.dir = Math.floor(B.rng() * 4); e.vx = 0; e.vy = 0; }
-    regarder(e, e.vx, e.vy);
+    // ⚠️ Au combat, on regarde SA CIBLE, meme en reculant (`Rixe`, `faceVers`) ; sinon, le sens du pas.
+    if (e.faceT > 0 && e.faceVers) { e.faceT--; regarder(e, e.faceVers.x - e.x, e.faceVers.y - e.y); }
+    else regarder(e, e.vx, e.vy);
     if (e.cri > 0) e.cri--;
   }
 

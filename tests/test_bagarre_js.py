@@ -412,3 +412,73 @@ def test_une_rixe_qu_on_ne_voit_pas_ne_s_entend_pas(banc):
     assert entendus and all(a["sources"] > 0 for a in entendus), (
         "à côté de la rixe, on n'entend rien : %s" % vue[:3])
     assert all(a["vu"] for a in entendus), "on a entendu quelqu'un qu'on ne voyait pas"
+
+
+def test_ils_ne_frappent_pas_au_metronome(banc):
+    """Six hommes nés à la même image frappaient à la même image (`e.t % 38`) : une chorégraphie, pas une
+    rixe. Chacun a maintenant son rythme (la cadence de la fiche, décalée à l'empreinte)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(16);
+        %s
+        const trouve = allumer(L);
+        if (!trouve) return { trouve: false };
+        let departs = 0, ensemble = 0;
+        const avant = {};
+        for (let i = 0; i < 900; i++) {
+          o.frame(1);
+          const ceTour = {};
+          for (const e of rixeurs(L)) {
+            const frappe = e.etat === 'attaque' && avant[e.id] !== 'attaque';
+            avant[e.id] = e.etat;
+            if (!frappe) continue;
+            departs++;
+            ceTour[e.gang] = (ceTour[e.gang] || 0) + 1;
+          }
+          for (const g in ceTour) if (ceTour[g] > 1) ensemble += ceTour[g];
+        }
+        return { trouve: true, departs: departs, ensemble: ensemble };
+    }""" % ALLUMER)
+    assert r["trouve"], "aucune frontière n'a ses deux trottoirs"
+    assert r["departs"] >= 6, "trop peu de coups pour juger (%s)" % r
+    assert r["ensemble"] / r["departs"] < 0.3, "ils frappent encore en choeur (%s)" % r
+
+
+def test_il_recule_apres_son_coup_en_regardant_sa_cible(banc):
+    """Après son coup il se dégage — et il recule FACE à sa cible, pas le dos tourné (`faceVers`)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(17);
+        %s
+        const trouve = allumer(L);
+        if (!trouve) return { trouve: false };
+        let reculs = 0, face = 0, dos = 0;
+        const suivi = {};
+        for (let i = 0; i < 900; i++) {
+          o.frame(1);
+          for (const e of rixeurs(L)) {
+            if (!e.vivant) continue;
+            const c = e.rival;
+            const s = suivi[e.id] = suivi[e.id] || { etat: e.etat, recule: false };
+            if (c && s.etat === 'attaque' && e.etat !== 'attaque') {
+              s.recule = true; s.depart = Math.hypot(c.x - e.x, c.y - e.y); s.n = 0; s.c = c;
+            }
+            if (s.recule) {
+              const d = Math.hypot(s.c.x - e.x, s.c.y - e.y);
+              // Il bouge, et se bat encore : son regard se lit. Vers sa cible, ou le dos tourne ? ⚠️ La rixe finie
+              // (`flane`), il s'en va, et c'est normal qu'il tourne le dos.
+              if (e.etat === 'bagarre' && Math.hypot(e.vx, e.vy) > 0.1) {
+                const vers = Math.atan2(s.c.y - e.y, s.c.x - e.x);
+                const ecart = Math.abs(Math.atan2(Math.sin(vers - e.angle), Math.cos(vers - e.angle)));
+                if (ecart < Math.PI / 2) face++; else dos++;
+              }
+              if (++s.n === 18) { if (d > s.depart + 4) reculs++; s.recule = false; }
+            }
+            s.etat = e.etat;
+          }
+        }
+        return { trouve: true, reculs: reculs, face: face, dos: dos };
+    }""" % ALLUMER)
+    assert r["trouve"], "aucune frontière n'a ses deux trottoirs"
+    assert r["reculs"] >= 2, "personne ne se dégage après son coup (%s)" % r
+    assert r["dos"] == 0, "il recule en tournant le dos à sa cible (%s)" % r
