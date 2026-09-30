@@ -644,6 +644,10 @@ def test_f09_proteger_marco_jusqu_au_kiosque_filer_le_troisieme_puis_le_garage(b
             if (!c.attendLeJoueur) {
                 mien.x = c.x - Math.cos(c.angle) * 96; mien.y = c.y - Math.sin(c.angle) * 96;
                 mien.vitesse = 0; mien.vx = 0; mien.vy = 0; j.x = mien.x; j.y = mien.y;
+                // ⚠️ ET LE CHAR RESTE ENTIER (30 sept. 2026) : posé à 96 px derrière, dans un virage, il tombe hors
+                // de la rue et s'y use à chaque image jusqu'à brûler — Marco se sauvait de NOTRE char (le jour où les
+                // cours se sont clôturées, les passants ont changé de trottoir et la filature a duré autrement).
+                mien.vie = mien.vieMax;
             }
             o.frame(1); fermer(L);
         }

@@ -616,6 +616,9 @@ def test_les_commerces_montent_sans_rien_deplacer(villes, monkeypatch):
     # porte déjà son nom — un nom que `monter_et_descendre` donne.
     from app import enseignes
     monkeypatch.setattr(enseignes, "poser", lambda chantier, ville_: [])
+    # ⚠️ LES TERRAINS CLÔTURÉS de même (`clotures.poser`) : la clôture d'une cour se lit au standing du logement.
+    from app import clotures
+    monkeypatch.setattr(clotures, "poser", lambda ville_: [])
     ville = carte.generer(nord=False)
     monkeypatch.setattr(vitrines, "monter_et_descendre", lambda chantier, ville: {})
     sans = carte.generer(nord=False)

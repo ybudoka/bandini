@@ -67,3 +67,26 @@ Rangées dans `captures/references/` (hors du dépôt) :
   devanture (`Monde.etagesDuCommerce`), une rangée de toit toujours visible. Leur mur va au bout de leur bâtiment,
   comme celui d'un logement, sans prendre ce qu'un logement voisin a pris (`murDesLogements`), et le rez à côté de la
   vitrine prend le même mur. 129 devantures sur 135 portent des étages.
+
+### Vague 2 — les terrains clôturés (✅ livrée le 30 sept. 2026)
+
+- **La cour avant d'un logement se ferme** (`app/clotures.py`, `poser`) : une clôture le long du trottoir sur la
+  dernière rangée d'herbe, un portail ouvert devant la porte, et des retours sur les côtés jusqu'à la façade — là où
+  il n'y a pas de voisin mitoyen. Le terrain s'étend de chaque côté jusqu'à mi-chemin du voisin (4 tuiles au plus).
+  Une cour se ferme si elle a la même profondeur partout, deux rangées d'herbe au moins. Mesure du 30 sept. (graine
+  de la ville) : **97 terrains, 660 tuiles** — 65 en fer forgé, 32 en grillage.
+- **La matière suit le standing** : le fer forgé chez les cossus et à l'ordinaire en ville (le triplex de la
+  référence), le grillage chez les pauvres, la palissade de bois à l'ordinaire des Érables seulement (la règle de
+  Martin : le bois est une image de banlieue — aucune cour des Érables ne s'y prête encore).
+- ⚠️ **Posées après la bande nord, sans un dé, AVANT les frénésies et les cartes de hockey** (elles choisissent leurs
+  recoins sur la ville clôturée) ; jamais sur un décor, un paquet, un ambulant, une scène ou une réclame, jamais
+  devant une porte. Les deux règles des clôtures de Martin tiennent après coup (`_elaguer`) : une course sans coin
+  part, et jamais un carré de 2 × 2.
+- Juges `tests/test_clotures.py` (seule l'herbe devient clôture, rien d'autre ne bouge, la matière au standing et
+  au district, aucune porte nouvellement enfermée) ; les juges « ce module ne déplace rien » les neutralisent
+  (bungalows, commerces qui montent) ou comparent le sol hors d'elles (`test_devants`).
+- **Trois juges de conduite tenaient par la graine** et sont tombés quand les passants ont changé de trottoir : le
+  démarrage au feu (le banc monte dans un char en pleine rue — un vol — et un agent à pied le voyait : la chaleur
+  retombe à chaque image, comme le trafic s'en va), la filature de Marco (le char téléporté derrière le Cravate
+  s'usait contre le décor jusqu'à brûler, et Marco se sauvait de NOTRE char : il reste entier), et le camion qui fonce
+  (`test_conduite_js` : il faut trois colonnes libres devant lui).

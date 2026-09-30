@@ -7392,6 +7392,12 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
         # lue sur la carte finie, sans une tuile ni un dé : le navigateur roule.
         from . import train as train_mod
         ville["train"] = train_mod.poser(ville)
+    # ⚠️ DES TERRAINS VRAIMENT CLÔTURÉS (docs/jalons/des-etages-pour-vrai-des-maisons-de-luxe-et-des-terrains-clotures.md),
+    # après la bande nord, AVANT les frénésies et les cartes de hockey (elles choisissent leurs recoins sur la ville
+    # clôturée) : la cour avant des logements se ferme (le fer, le bois, le grillage), sans un dé — la ville d'avant
+    # est la même à la tuile près, hors des clôtures.
+    from . import clotures as clotures_mod
+    clotures_mod.poser(ville)
     # ⚠️ LES FRÉNÉSIES (P4, docs/jalons/quatre-activites-que-le-jeu-n-a-pas.md), APRÈS ABSOLUMENT TOUT, bande
     # nord comprise : une icône par district, dans une ruelle libre choisie par une règle — sans un dé, et rien
     # de posé dans une liste que la ville lit. La ville d'avant est la même à la tuile près.

@@ -17,7 +17,7 @@ from unittest import mock
 import pytest
 import villes
 
-from app import autobus, carte, chantiers, devants, missions
+from app import autobus, carte, chantiers, clotures, devants, missions
 
 GRAINES = [carte.GRAINE, 1, 2, 7]
 
@@ -93,7 +93,18 @@ def test_la_ville_ne_bouge_que_ce_qui_bouchait(graine):
     IDENTIQUE au temoin, et chaque objet qui a bouge est reparti a quelques tuiles de la."""
     sans, avec = _ville(graine, deplace=False), _ville(graine)
     for cle in INTACT:
-        assert sans[cle] == avec[cle], f"« {cle} » a change : le deplacement touche a la ville"
+        if cle != "sol":
+            assert sans[cle] == avec[cle], f"« {cle} » a change : le deplacement touche a la ville"
+    # ⚠️ Le sol, hors des TERRAINS CLÔTURÉS (`clotures.poser`) : posés après, ils ferment les cours sur la ville
+    # finie, et un banc qui part de devant une porte laisse une tuile de cour à la clôture. Une clôture contre de
+    # l'herbe, seulement : ce module-ci ne peint ni l'une ni l'autre.
+    poses = set(clotures.CLOTURE.values()) | set(clotures.CLOTURE_EN_VILLE.values())
+    assert len(sans["sol"]) == len(avec["sol"])
+    for y, (a, b) in enumerate(zip(sans["sol"], avec["sol"])):
+        assert len(a) == len(b), f"la rangee {y} a change de longueur"
+        for x, (ga, gb) in enumerate(zip(a, b)):
+            assert ga == gb or {ga, gb} <= poses | clotures.COUR and ({ga, gb} & poses), \
+                f"la tuile {x, y} a change ({ga} -> {gb}) : le deplacement touche a la ville"
     # ⚠️ Les chantiers, sans leurs annexes : elles LISENT la ville finie (`chantiers.completer`).
     assert chantiers.sans_annexes(sans["chantiers"]) == chantiers.sans_annexes(avec["chantiers"]), \
         "les chantiers ont change : le deplacement touche a la ville"

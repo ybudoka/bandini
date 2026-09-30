@@ -140,7 +140,9 @@ def test_un_lourd_defonce_ce_qui_est_bas_et_jamais_une_facade(banc, paquet):
                     if (L.Monde.solidite(tx, ty) !== solide) continue;
                     if (L.Monde.estMeuble(tx, ty)) continue;
                     let libre = true;
-                    for (let d = 1; d <= 3; d++) if (L.Monde.solidite(tx, ty - d) !== 0) libre = false;
+                    // ⚠️ Libre sur TOUTE la largeur du char (une tuile de chaque cote) : le retour d'une clôture de cour
+                    // colle a une maison, et le camion s'y cognait avant de toucher la clôture (des terrains clôturés).
+                    for (let d = 1; d <= 3; d++) for (let e = -1; e <= 1; e++) if (L.Monde.solidite(tx + e, ty - d) !== 0) libre = false;
                     if (!libre) continue;
                     L.B.entites = L.B.entites.filter(function (e) { return e.type === 'joueur'; });
                     L.Entites.reindexerDecor(); L.Entites.indexer();
