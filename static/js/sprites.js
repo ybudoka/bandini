@@ -4070,7 +4070,7 @@ const TUILES = (function () {
     if (usure >= (rang === 2 ? 13 : 15)) souillure(ctx, usure + 1, T, '#393a3f');
   }
 
-  return {
+  const tuiles = {
     ',': herbe,
     ';': friche,
     '.': trottoir,
@@ -5192,6 +5192,105 @@ const TUILES = (function () {
       ctx.fillStyle = '#6b1f2a'; ctx.fillRect(0, T - 1, T, 1);          // le bas du rideau rouge
     },
   };
+
+  /* --- LE QUARTIER DU LOGEMENT (des intérieurs fidèles à l'extérieur, vague 3) --------------------------------
+     Ce qu'on accroche au mur du fond, selon le district de la porte (`Monde.materiauxDuLogement`) : une tuile de
+     mur sur trois qui a le plancher au sud, lue à la position — jamais au dé. Chaque habit (`piece`, le pauvre, le
+     cossu, la villa) × chaque quartier a son peintre composé `B@<habit>~<district>` ; la fenêtre et la porte
+     gardent celui de l'habit (le même mur : `test_tous_les_murs_d_une_piece_sont_du_meme_platre`). */
+  const ORNEMENTS = {
+    // Le Petit-Canton : la lanterne de papier rouge, le rouleau de calligraphie, le petit autel aux oranges.
+    canton: [function (ctx) {
+      ctx.fillStyle = '#5a3a28'; ctx.fillRect(7, 0, 1, 3);
+      ctx.fillStyle = '#c0392b'; ctx.fillRect(5, 3, 6, 6); ctx.fillRect(4, 4, 8, 4);
+      ctx.fillStyle = '#e0503c'; ctx.fillRect(6, 4, 1, 4);
+      ctx.fillStyle = '#d4b25a'; ctx.fillRect(5, 3, 6, 1); ctx.fillRect(5, 8, 6, 1); ctx.fillRect(7, 9, 1, 3);
+    }, function (ctx) {
+      ctx.fillStyle = '#6b4a2a'; ctx.fillRect(4, 1, 8, 1); ctx.fillRect(4, 11, 8, 1);
+      ctx.fillStyle = '#f2ece0'; ctx.fillRect(5, 2, 6, 9);
+      ctx.fillStyle = '#2a2a2e'; ctx.fillRect(7, 3, 2, 1); ctx.fillRect(8, 4, 1, 2); ctx.fillRect(6, 6, 3, 1); ctx.fillRect(7, 8, 1, 2);
+      ctx.fillStyle = '#c0392b'; ctx.fillRect(9, 9, 1, 1);
+    }, function (ctx) {
+      ctx.fillStyle = '#8a2a2a'; ctx.fillRect(3, 2, 10, 6);
+      ctx.fillStyle = '#d4b25a'; ctx.fillRect(6, 3, 4, 3);
+      ctx.fillStyle = '#5a3a28'; ctx.fillRect(2, 8, 12, 2);
+      ctx.fillStyle = '#e8902a'; ctx.fillRect(4, 6, 2, 2); ctx.fillRect(10, 6, 2, 2);
+      ctx.fillStyle = '#b8a888'; ctx.fillRect(8, 5, 1, 3);
+    }],
+    // Les Quais : le filet de pêche et son flotteur, le hublot.
+    quais: [function (ctx) {
+      ctx.fillStyle = '#8a7a5a'; for (let k = 0; k < 4; k++) { ctx.fillRect(3 + k * 3, 1, 1, 10); ctx.fillRect(2, 2 + k * 3, 12, 1); }
+      ctx.fillStyle = '#e8902a'; ctx.fillRect(10, 8, 3, 3);
+    }, function (ctx) {
+      ctx.fillStyle = '#b08a3a'; ctx.fillRect(4, 1, 8, 10); ctx.fillRect(3, 2, 10, 8);
+      ctx.fillStyle = '#6fa3c4'; ctx.fillRect(5, 3, 6, 6);
+      ctx.fillStyle = '#9cc4e0'; ctx.fillRect(6, 4, 2, 2);
+    }],
+    // Le Faubourg : le crucifix de bois, le calendrier du dépanneur.
+    faubourg: [function (ctx) {
+      ctx.fillStyle = '#4a2e1e'; ctx.fillRect(7, 1, 2, 10); ctx.fillRect(4, 3, 8, 2);
+      ctx.fillStyle = '#d4b25a'; ctx.fillRect(7, 4, 2, 2);
+    }, function (ctx) {
+      ctx.fillStyle = '#f4f0e6'; ctx.fillRect(4, 1, 8, 10);
+      ctx.fillStyle = '#c0392b'; ctx.fillRect(4, 1, 8, 3);
+      ctx.fillStyle = '#9a9690'; for (let y = 5; y < 11; y += 2) for (let x = 5; x < 12; x += 2) ctx.fillRect(x, y, 1, 1);
+    }],
+    // Les Érables : la photo de famille dans son cadre doré, l'horloge.
+    erables: [function (ctx) {
+      ctx.fillStyle = '#c9a24a'; ctx.fillRect(3, 2, 10, 8);
+      ctx.fillStyle = '#9cc4a0'; ctx.fillRect(4, 3, 8, 6);
+      ctx.fillStyle = '#e8c0a0'; ctx.fillRect(5, 5, 2, 2); ctx.fillRect(9, 5, 2, 2);
+      ctx.fillStyle = '#3a5a8a'; ctx.fillRect(5, 7, 2, 2); ctx.fillRect(9, 7, 2, 2);
+    }, function (ctx) {
+      ctx.fillStyle = '#4a2e1e'; ctx.fillRect(5, 1, 6, 8); ctx.fillRect(4, 2, 8, 6);
+      ctx.fillStyle = '#f4f0e6'; ctx.fillRect(5, 2, 6, 6);
+      ctx.fillStyle = '#2a2a2e'; ctx.fillRect(8, 3, 1, 3); ctx.fillRect(8, 5, 2, 1);
+    }],
+    // La Gare : le calendrier de la cour à scrap, graisseux ; le manteau pendu au clou.
+    gare: [function (ctx) {
+      ctx.fillStyle = '#d8d0b8'; ctx.fillRect(4, 1, 8, 10);
+      ctx.fillStyle = '#5a5a5e'; ctx.fillRect(4, 1, 8, 3);
+      ctx.fillStyle = '#8a7a5a'; ctx.fillRect(9, 7, 2, 2); ctx.fillRect(5, 9, 1, 1);
+    }, function (ctx) {
+      ctx.fillStyle = '#6a6a6e'; ctx.fillRect(7, 0, 2, 2);
+      ctx.fillStyle = '#4a5a3a'; ctx.fillRect(4, 2, 8, 9); ctx.fillRect(3, 3, 10, 4);
+      ctx.fillStyle = '#3a4a2e'; ctx.fillRect(7, 2, 2, 9);
+    }],
+    // La Pointe : l'affiche de la foire, la planche à roulettes accrochée.
+    pointe: [function (ctx) {
+      ctx.fillStyle = '#2a4a8a'; ctx.fillRect(4, 1, 8, 10);
+      ctx.fillStyle = '#f2c14e'; ctx.fillRect(5, 2, 6, 3);
+      ctx.fillStyle = '#e0503c'; ctx.fillRect(6, 6, 4, 4); ctx.fillStyle = '#f4f0e6'; ctx.fillRect(7, 7, 2, 2);
+    }, function (ctx) {
+      ctx.fillStyle = '#2a2a2e'; ctx.fillRect(3, 4, 10, 3);
+      ctx.fillStyle = '#e0503c'; ctx.fillRect(4, 4, 8, 1);
+      ctx.fillStyle = '#d8d0b8'; ctx.fillRect(4, 7, 2, 2); ctx.fillRect(10, 7, 2, 2);
+    }],
+  };
+  /** L'objet du quartier sur cette tuile de mur, s'il y en a un : le mur du FOND (le plancher au sud), une tuile
+      sur trois, lu à la position. */
+  function ornement(ctx, v, d) {
+    const choix = ORNEMENTS[d];
+    if (!choix || !(v & 4) || (v & 5) === 5) return;
+    const h = v >> 4;
+    if (h % 3 !== 1) return;
+    choix[(h >> 2) % choix.length](ctx);
+  }
+  for (const habit of ['piece', 'logement_pauvre', 'logement_cossu', 'villa']) {
+    for (const d of Object.keys(ORNEMENTS)) {
+      const mur = tuiles['B@' + habit];
+      tuiles['B@' + habit + '~' + d] = function (ctx, v, T) { mur(ctx, v, T); ornement(ctx, v, d); };
+      tuiles['W@' + habit + '~' + d] = tuiles['W@' + habit];
+      tuiles['D@' + habit + '~' + d] = tuiles['D@' + habit];
+    }
+  }
+  // LE GENRE : la moquette d'un bungalow — beige, à poils, des traces de pas qu'on ne voit qu'en plissant les yeux.
+  tuiles['t@moquette'] = function (ctx, v, T) {
+    plein(ctx, '#b8a47e', T);
+    points(ctx, v, T, '#a8946e', 18, 0);
+    points(ctx, v, T, '#c4b08a', 12, 40);
+  };
+  return tuiles;
 })();
 
 /* Les devantures et les graffitis : une COUCHE peinte par-dessus les tuiles.

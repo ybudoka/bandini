@@ -395,9 +395,11 @@ const Monde = (function () {
 
   //: L'HABIT D'UN LOGEMENT (des intérieurs fidèles à l'extérieur, vague 2) : ses murs, sa fenêtre, sa porte, son
   //: plancher et son lit, selon ce qu'on a vu DEHORS — le logement ordinaire garde le plâtre de toutes les pièces.
-  function habitDe(m) { return Object.freeze({ B: m, W: m, D: m, t: m, l: m }); }
-  const HABITS_DE_LOGEMENT = Object.freeze({ pauvre: habitDe('logement_pauvre'), cossu: habitDe('logement_cossu'),
-                                             villa: habitDe('villa') });
+  //: Les habits d'un mur de pièce (`varianteDeTuile` : leur plinthe et leurs seize bruits de position).
+  const HABITS_DE_MUR = Object.freeze({ piece: true, logement_pauvre: true, logement_cossu: true, villa: true });
+  //: Les quartiers dont un logement accroche quelque chose au mur du fond (`sprites.js`, `ORNEMENTS`).
+  const QUARTIERS_DU_LOGEMENT = Object.freeze({ canton: true, quais: true, faubourg: true, erables: true, gare: true, pointe: true });
+  const habitsFaits = new Map();
 
   /** L'habit du logement derrière cette porte : le standing (et la villa) de la RÉSIDENCE dont elle est la porte —
       son standing final, lu dehors, jamais tiré. `null` : ce n'est pas un logement, ou il est ordinaire. ⚠️ Un
@@ -408,8 +410,24 @@ const Monde = (function () {
       return q.y === porte.y && porte.x >= q.x && porte.x < q.x + q.l;
     });
     if (!r) return null;
-    return r.villa ? HABITS_DE_LOGEMENT.villa : r.standing === '-' ? HABITS_DE_LOGEMENT.pauvre
-      : r.standing === '+' ? HABITS_DE_LOGEMENT.cossu : null;
+    // L'HABIT : le standing (et la villa) de la façade.
+    const habit = r.villa ? 'villa' : r.standing === '-' ? 'logement_pauvre' : r.standing === '+' ? 'logement_cossu' : 'piece';
+    // LE QUARTIER (vague 3) : le district de la porte — la première zone qui en porte un.
+    const z = (carte.def.zones || []).find(function (q) {
+      return q.district && porte.x >= q.x && porte.x < q.x + q.l && porte.y >= q.y && porte.y < q.y + q.h;
+    });
+    const mur = z && QUARTIERS_DU_LOGEMENT[z.district] ? habit + '~' + z.district : habit;
+    // LE GENRE (vague 3) : la villa a son marbre ; le bungalow (un seul étage), sa moquette ; le plex, le plancher
+    // de son habit.
+    const sol = r.villa ? 'villa' : (r.etages || 1) < 2 ? 'moquette' : habit !== 'piece' ? habit : null;
+    const cle = mur + '|' + sol + '|' + habit;
+    if (!habitsFaits.has(cle)) {
+      const m = { B: mur, W: mur, D: mur };
+      if (sol) m.t = sol;
+      if (habit !== 'piece') m.l = habit;
+      habitsFaits.set(cle, Object.freeze(m));
+    }
+    return habitsFaits.get(cle);
   }
 
   /** Entre dans une piece : on garde la ville de cote et on charge la petite
@@ -2356,11 +2374,13 @@ const Monde = (function () {
     if (SOLS_D_ILOT[g]) return varianteDeSol(g, tx, ty);
     if (g === '_') return varianteDAbord(tx, ty);
     if (g === 'R' || g === 'J') return varianteDeRampe(g, tx, ty);
-    // Un mur de pièce : sa plinthe du côté du plancher, pas un bord de toit entre le mur et sa fenêtre.
-    if (carte.materiaux && carte.materiaux[g] === 'piece') {
+    // Un mur de pièce : sa plinthe du côté du plancher, pas un bord de toit entre le mur et sa fenêtre. ⚠️ Le
+    // plâtre de toutes les pièces ET l'habit d'un logement (`piece`, `logement_pauvre~canton`…) : seize bruits de
+    // position (les taches, la fissure, l'objet du quartier se lisent à la place, jamais au dé).
+    if (carte.materiaux && MURS_DE_PIECE.indexOf(g) >= 0 && HABITS_DE_MUR[String(carte.materiaux[g]).split('~')[0]]) {
       const mur = function (x, y) { return MURS_DE_PIECE.indexOf(glyphe(x, y)) >= 0; };
       return (mur(tx, ty - 1) ? 0 : 1) | (mur(tx + 1, ty) ? 0 : 2) | (mur(tx, ty + 1) ? 0 : 4)
-        | (mur(tx - 1, ty) ? 0 : 8) | ((hash2(tx, ty) % 4) << 4);
+        | (mur(tx - 1, ty) ? 0 : 8) | ((hash2(tx, ty) % 16) << 4);
     }
     // Les cabanes du bidonville (`nord._cabane`) : chaque planche du mur a son bois, et la porte d'un
     // logement posée dans un mur de planches se peint en planches (1), pas dans la brique (0).

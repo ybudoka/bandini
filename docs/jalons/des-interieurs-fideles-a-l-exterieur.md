@@ -135,3 +135,24 @@ meubles aux mêmes places, un autre habit (`materiaux` : `B`, `W`, `D`, `t`, `l`
 - **Reste** : le district (un logement du Petit-Canton, des Quais, de La Shop) et le genre (le bungalow, le plex, la
   maison de pêcheur) ; la villa à sa taille et à ses niveaux (après « Des étages dedans aussi ») ; les commerces
   relus au district ; les lieux faits à la main.
+
+**Vague 3, livrée le 30 sept. 2026 : le quartier et le genre du logement** (tranché par Martin). Toujours lu dehors
+(`Monde.materiauxDuLogement`), toujours sans un dé :
+
+- **Le quartier s'accroche au mur du fond** (une tuile sur trois qui a le plancher au sud, lue à la position) :
+  au Petit-Canton la lanterne de papier rouge, le rouleau de calligraphie, le petit autel aux oranges ; aux Quais
+  le filet de pêche et son flotteur, le hublot ; au Faubourg le crucifix, le calendrier du dépanneur ; aux Érables
+  la photo de famille dans son cadre doré, l'horloge ; à la Gare le calendrier graisseux de la cour à scrap, le
+  manteau pendu au clou ; à La Pointe l'affiche de la foire, la planche à roulettes. Chaque habit × chaque quartier
+  a son peintre composé (`B@logement_pauvre~gare`…) ; la fenêtre et la porte gardent celui de l'habit — un seul
+  mur.
+- **Le genre se lit au plancher** : la villa, son marbre ; le bungalow (un seul étage — les maisons des Érables),
+  sa moquette beige ; le plex, le plancher de son habit.
+- Corrigé en passant (la vague 2 l'avait manqué) : la plinthe du côté du plancher ne venait qu'au plâtre `piece` ;
+  tout mur habillé la lit maintenant (`varianteDeTuile`), avec seize bruits de position au lieu de quatre (de quoi
+  varier l'objet du quartier, les taches et la fissure).
+- Regardé : un plex ordinaire du Petit-Canton (les rouleaux), une maison des Érables (les horloges, la moquette),
+  la gare (les manteaux au clou), les Quais.
+- Juges `test_habit_du_logement_js.py` : le quartier et le genre de chaque logement de la ville (tables en toutes
+  lettres), chaque quartier accroche au moins deux objets, jamais sur un mur de côté ; la variante exacte de chaque
+  mur d'une vraie pièce habillée ; cinq mutations, toutes mordent.
