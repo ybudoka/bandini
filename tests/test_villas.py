@@ -12,6 +12,7 @@ from app import carte, clotures, villas
 #: La table d'ici, pas celle du module : un juge qui relit la table qu'il juge ne rougit jamais.
 FACADE = set("FWDdPG")
 TOLERES = {"frenesies", "collections"}
+JARDIN = {"fontaine_villa", "pilier_portail_o", "pilier_portail_e"}
 
 
 @pytest.fixture(scope="module")
@@ -39,13 +40,16 @@ def test_le_temoin_a_ses_villas(deux_villes):
 def test_seule_l_herbe_devient_villa_ou_haie(deux_villes):
     sans, avec, _ = deux_villes
     for cle in avec:
-        if cle not in {"sol", "residences"} | TOLERES:
+        if cle not in {"sol", "residences", "decor"} | TOLERES:
             assert avec[cle] == sans[cle], f"« {cle} » a changé : les villas déplacent la ville"
+    # Le décor : celui d'avant, dans le même ordre, et le jardin des villas AU BOUT (ses numéros à part).
+    assert avec["decor"][:len(sans["decor"])] == sans["decor"]
+    assert {d["type"] for d in avec["decor"][len(sans["decor"]):]} <= JARDIN
     annexes = clotures.chantiers(avec)[1]
     for y, (a, b) in enumerate(zip(sans["sol"], avec["sol"])):
         for x, (ga, gb) in enumerate(zip(a, b)):
             if ga != gb:
-                assert ga == "," and gb in "PF`", f"la tuile {x, y} : {ga} -> {gb}"
+                assert ga == "," and gb in "PF`?", f"la tuile {x, y} : {ga} -> {gb}"
                 assert (x, y) not in annexes, f"une villa sur l'annexe d'un chantier en {x, y}"
     assert len(sans["residences"]) == len(avec["residences"])
     for a, b in zip(sans["residences"], avec["residences"]):
@@ -106,3 +110,36 @@ def test_rien_ne_s_enferme_derriere_une_haie(deux_villes):
     perdues = {(x, y) for x, y in _atteintes(sans["sol"]) - _atteintes(avec["sol"])
                if not carte.LEGENDE.get(avec["sol"][y][x], {}).get("solide")}
     assert not perdues, sorted(perdues)[:10]
+
+
+def test_le_jardin_de_la_villa(deux_villes):
+    """Le jardin (vague 4) : une fontaine par villa, jamais dans la colonne du sentier ; le portail — ses deux
+    piliers de part et d'autre du sentier, dans la haie ; la piscine creusée, deux rangées contre la haie, un
+    rectangle d'herbe changée en eau. Le témoin : toutes les fontaines, des portails et des piscines."""
+    sans, avec, posees = deux_villes
+    sol = avec["sol"]
+    fontaines = portails = piscines = 0
+    for v in posees:
+        r = next(q for q in avec["residences"] if q.get("villa") and (q["x"], q["y"]) == (v["x"], v["y"]))
+        porte = r["x"] + r["porte"]
+        jardin = v.get("jardin") or []
+        f = [d for d in jardin if d["type"] == "fontaine_villa"]
+        assert len(f) == 1, (v["x"], v["y"], jardin)
+        assert abs(f[0]["x"] - porte) >= 2 and r["x"] <= f[0]["x"] < r["x"] + r["l"] and f[0]["y"] > r["y"]
+        assert sans["sol"][f[0]["y"]][f[0]["x"]] == ","
+        fontaines += 1
+        piliers = sorted((d["x"], d["y"], d["type"]) for d in jardin if d["type"].startswith("pilier"))
+        if piliers:
+            (xo, yo, to), (xe, ye, te) = piliers
+            assert (to, te) == ("pilier_portail_o", "pilier_portail_e") and yo == ye
+            assert (xo, xe) == (porte - 1, porte + 1) and sol[yo][porte] == ".", piliers
+            assert sol[yo][xo - 1] == "`" or sol[yo][xe + 1] == "`", "un portail dans la haie"
+            portails += 1
+        eau = {(d["x"], d["y"]) for d in jardin if d["type"] == "?"}
+        if eau:
+            xs, ys = {x for x, _ in eau}, {y for _, y in eau}
+            assert len(ys) == 2 and len(eau) == len(xs) * 2 and max(xs) - min(xs) == len(xs) - 1, eau
+            assert porte not in xs and all(sol[y][x] == "?" and sans["sol"][y][x] == "," for x, y in eau)
+            assert sol[max(ys) + 1][min(xs)] == "`", "la piscine contre la haie"
+            piscines += 1
+    assert fontaines == len(posees) and portails >= 3 and piscines >= 3, (fontaines, portails, piscines)

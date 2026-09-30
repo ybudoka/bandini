@@ -120,5 +120,24 @@ Rangées dans `captures/references/` (hors du dépôt) :
   — dès que les toits cherchent où poser leurs lucarnes (`Monde.sousLesEtages`), ce que les villas font arriver au
   chargement. Le juge les écarte comme il écarte les annotations des croisements.
 - **Reste** (la fiche le promettait) : le jardin de la villa — la fontaine, la piscine creusée, le portail de fer
-  forgé. À trancher par Martin : une fontaine est un décor, et un décor posé au démarrage décale les identifiants
-  de toute la ville.
+  forgé. Tranché par Martin : on le fait (la vague 4).
+
+### Vague 4 — le jardin de la villa (✅ livrée le 30 sept. 2026)
+
+- **Le portail** : là où le sentier traverse la haie, deux piliers de pierre de taille — leur chapeau, leur boule,
+  leur lanterne — et chacun son battant de fer forgé ouvert, à pointes dorées. **La fontaine** : deux vasques de
+  pierre sur leur bassin, l'eau qui retombe, au milieu de la pelouse, du côté de la porte qui a le moins de place
+  (jamais dans la colonne du sentier : elle se collait au pilier). **La piscine creusée** (le glyphe `?`, un des
+  derniers libres) : un rectangle turquoise à carreaux dans sa margelle de pierre, l'échelle au coin nord-est, sur
+  les deux rangées contre la haie, du côté large — quand la cour a trois rangées. L'hiver, sa bâche sanglée. On y
+  barbote comme dans la piscine hors terre (solidité 3).
+- Mesure du 30 sept. : **7 fontaines, 5 portails, 4 piscines** (22 tuiles d'eau), sur les 7 villas.
+- ⚠️ **Le jardin ne décale rien** : la fontaine et les piliers sont des décors posés AU BOUT de la liste, avec
+  `horsSuite` (la leçon des statues) — ils prennent leur numéro d'entité à part, et tout ce qui naît après eux
+  garde le sien. La piscine est de l'herbe changée en eau, sur la ville finie.
+- Juges `test_villas.py` (le jardin : une fontaine par villa hors de la colonne du sentier, les piliers de part et
+  d'autre du sentier dans la haie, la piscine en rectangle de deux rangées contre la haie ; le décor d'avant intact,
+  le jardin au bout) et `test_villas_js.py` (le jardin se peint, arrête et prend son numéro à part ; la margelle au
+  bord seulement, l'échelle au coin, la bâche l'hiver) ; six mutations, cinq mordent — la sixième (des piliers
+  seulement si le sentier a de la haie des deux côtés) ne peut pas : dans la ville du témoin, c'est toujours le
+  cas. Captures regardées.

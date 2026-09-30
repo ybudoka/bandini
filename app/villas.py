@@ -31,6 +31,14 @@ LARGE_MAX = 8
 #: Une villa a un toit d'au moins tant de rangées (le toit qui porte ses étages).
 TOIT_MIN = 2
 
+#: Le jardin (vague 4) : la piscine creusée (`carte.LEGENDE`), la fontaine et les deux piliers du portail (des décors
+#: posés sur la ville finie : ils prennent leurs numéros d'entité À PART, `horsSuite` dans `sprites.js`).
+PISCINE = "?"
+FONTAINE = "fontaine_villa"
+PILIER_OUEST, PILIER_EST = "pilier_portail_o", "pilier_portail_e"
+#: Une piscine se creuse si la cour avant a tant de rangées (elle en prend deux, contre la haie).
+PISCINE_RANGEES_MIN = 3
+
 #: Ses étages, rez compris (le navigateur n'en peint jamais plus que son toit n'en porte).
 ETAGES = 3
 
@@ -43,6 +51,44 @@ def _toit(sol: list[list[str]], r: dict) -> int:
     return n
 
 
+def _jardin(sol: list[list[str]], r: dict, x0: int, x1: int, fond: int, herbe) -> list[dict]:
+    """LE JARDIN DE LA VILLA (vague 4) : le PORTAIL — deux piliers de pierre, leur battant de fer ouvert, de part
+    et d'autre du sentier, dans la haie ; la PISCINE CREUSÉE, sur les deux rangées contre la haie, du côté de la
+    porte qui a le plus de place (quand la cour en a trois) ; la FONTAINE au milieu de l'autre côté. Change `sol`
+    (la piscine, et l'herbe sous les piliers) ; rend ce qui s'est posé (`type`, `x`, `y` ; la piscine : une entrée
+    par tuile)."""
+    poses: list[dict] = []
+    porte = r["x"] + r["porte"]
+    # Le portail : là où le sentier traverse la haie.
+    if sol[fond][porte] == "." and sol[fond][porte - 1] == HAIE and sol[fond][porte + 1] == HAIE:
+        for x, type_ in ((porte - 1, PILIER_OUEST), (porte + 1, PILIER_EST)):
+            sol[fond][x] = ","
+            poses.append({"type": type_, "x": x, "y": fond})
+    rangees = list(range(r["y"] + 1, fond))
+    cotes = sorted(([x for x in range(x0, porte)], [x for x in range(porte + 1, x1 + 1)]), key=lambda c: -len(c))
+    # La piscine : du côté le plus large, au bout (loin du sentier), sur les deux rangées du fond de la cour.
+    large, etroit = cotes
+    piscine = False
+    if len(rangees) >= PISCINE_RANGEES_MIN and len(large) >= 3:
+        largeur = 3 if len(large) >= 4 else 2
+        xs = large[-largeur:] if large[0] > porte else large[:largeur]
+        tuiles = [(x, y) for x in xs for y in rangees[-2:]]
+        if all(herbe(x, y) for x, y in tuiles):
+            piscine = True
+            for x, y in tuiles:
+                sol[y][x] = PISCINE
+                poses.append({"type": PISCINE, "x": x, "y": y})
+    # La fontaine : au milieu de l'autre côté (ou du plus large, s'il n'a pas de piscine), sur la rangée du milieu —
+    # jamais dans la colonne qui longe le sentier (elle se collait au pilier du portail).
+    fy = rangees[len(rangees) // 2]
+    for cote in (etroit, [] if piscine else large):
+        cote = [x for x in cote if abs(x - porte) >= 2]
+        if cote and herbe(cote[len(cote) // 2], fy):
+            poses.append({"type": FONTAINE, "x": cote[len(cote) // 2], "y": fy})
+            break
+    return poses
+
+
 def poser(ville: dict) -> list[dict]:
     """Élargit les villas et ferme leur cour d'une haie. Rend la liste des villas (`x`, `y`, `l`, `avant`). Change
     `ville["sol"]` et, pour chaque villa, sa résidence (`x`, `l`, `motifs`, `porte`, `etages`, `villa`)."""
@@ -53,6 +99,7 @@ def poser(ville: dict) -> list[dict]:
     district = clotures._district(ville)
     portes = {(x, y) for y, r in enumerate(sol) for x, g in enumerate(r) if g in "DdG"}
     posees: list[dict] = []
+    decor = ville.setdefault("decor", [])
 
     def herbe(x: int, y: int) -> bool:
         return 0 <= y < h and 0 <= x < len(sol[y]) and sol[y][x] == "," and (x, y) not in occ
@@ -114,6 +161,10 @@ def poser(ville: dict) -> list[dict]:
         for x, y in haie:
             if herbe(x, y) and (x, y - 1) not in portes:
                 sol[y][x] = HAIE
-        posees.append({"x": r["x"], "y": r["y"], "l": r["l"], "avant": avant})
+        jardin = _jardin(sol, r, x0, x1, fond, herbe)
+        for d in jardin:
+            occ.add((d["x"], d["y"]))
+        decor.extend(d for d in jardin if d["type"] != PISCINE)
+        posees.append({"x": r["x"], "y": r["y"], "l": r["l"], "avant": avant, "jardin": jardin})
     ville["sol"] = ["".join(r) for r in sol]
     return posees

@@ -4103,6 +4103,30 @@ const TUILES = (function () {
         }
       }
     },
+    // LA PISCINE CREUSEE d'une villa (des maisons de luxe, le jardin : `villas.py`) : un rectangle, pas un rond —
+    // l'eau turquoise et ses carreaux, la margelle de pierre au BORD seulement (`bloc` : bits 1/2/4/8 = les voisines
+    // nord/est/sud/ouest), l'echelle de chrome au coin nord-est. L'hiver, la bache d'hivernage, tendue et sanglee.
+    '?': function (ctx, v, T) {
+      const N = v & 1, E = v & 2, S = v & 4, O = v & 8, hiver = typeof Saisons !== 'undefined' && Saisons.enHiver();
+      plein(ctx, hiver ? '#2f4f5a' : '#37b3cf', T);
+      if (hiver) {
+        ctx.fillStyle = '#243f48'; for (let k = 3; k < T; k += 6) ctx.fillRect(0, k, T, 1);           // les sangles
+        ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(2, 2, 5, 1);
+      } else {
+        ctx.fillStyle = '#4cc4dd'; for (let k = 3; k < T; k += 4) { ctx.fillRect(0, k, T, 1); ctx.fillRect(k, 0, 1, T); }
+        ctx.fillStyle = '#9be3f0'; ctx.fillRect(3 + ((v >> 4) % 6), 5, 4, 1); ctx.fillRect(9 - ((v >> 4) % 5), 11, 3, 1);
+      }
+      ctx.fillStyle = '#e3dfd3';                                                // la margelle, au bord
+      if (!N) ctx.fillRect(0, 0, T, 2); if (!S) ctx.fillRect(0, T - 2, T, 2);
+      if (!O) ctx.fillRect(0, 0, 2, T); if (!E) ctx.fillRect(T - 2, 0, 2, T);
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';                                       // l'ombre de la margelle sur l'eau
+      if (!N) ctx.fillRect(O ? 0 : 2, 2, T - (O ? 0 : 2) - (E ? 0 : 2), 1);
+      if (!O) ctx.fillRect(2, N ? 0 : 2, 1, T - (N ? 0 : 2) - (S ? 0 : 2));
+      if (!N && !E && !hiver) {                                                 // l'echelle
+        ctx.fillStyle = '#c9d2d8'; ctx.fillRect(T - 7, 1, 1, 5); ctx.fillRect(T - 4, 1, 1, 5);
+        ctx.fillRect(T - 7, 3, 4, 1); ctx.fillRect(T - 7, 5, 4, 1);
+      }
+    },
     '~': function (ctx, v, T) { plein(ctx, '#2c5f8a', T); ctx.fillStyle = '#3b73a3'; ctx.fillRect(2 + (v % 5), 4, 6, 1); ctx.fillRect(7 - (v % 4), 11, 5, 1); },
     /* --- Le relief : infranchissable, et ca se voit -----------------------
 
@@ -5919,6 +5943,23 @@ const FACADES = (function () {
 
 /* Un decor dessine en grille, comme un personnage, quand des fillRect ne
    suffisent plus a le lire : une lettre par pixel, `.` = transparent. */
+/** Un pilier de portail de villa : son fut de pierre de taille, son chapeau et sa boule, sa lanterne, et le battant
+    de fer forge ouvert (`sens` : 1, le battant part vers l'est — vers le sentier — puis se rabat au nord). */
+function pilierDePortail(ctx, sens) {
+  ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(4, 21, 10, 3);
+  ctx.fillStyle = '#b3afa4'; ctx.fillRect(4, 7, 8, 16);
+  ctx.fillStyle = '#8e8a80'; for (let y = 10; y < 22; y += 4) ctx.fillRect(4, y, 8, 1);
+  ctx.fillStyle = '#e3dfd3'; ctx.fillRect(3, 6, 10, 2); ctx.fillRect(6, 2, 4, 4); ctx.fillRect(7, 1, 2, 1);
+  ctx.fillStyle = '#2a2d34'; ctx.fillRect(sens > 0 ? 12 : 3, 11, 1, 4);
+  ctx.fillStyle = '#f2c14e'; ctx.fillRect(sens > 0 ? 12 : 3, 12, 1, 2);
+  // Le battant ouvert : un cadre de fer vu de biais, ses barreaux et leurs pointes dorees.
+  ctx.fillStyle = '#1f1f24';
+  const x0 = sens > 0 ? 12 : 0;
+  ctx.fillRect(x0, 9, 4, 1); ctx.fillRect(x0, 20, 4, 1);
+  for (let k = 0; k < 4; k += 2) ctx.fillRect(x0 + k + (sens > 0 ? 1 : 0), 9, 1, 12);
+  ctx.fillStyle = '#d9b44a'; for (let k = 0; k < 4; k += 2) ctx.fillRect(x0 + k + (sens > 0 ? 1 : 0), 8, 1, 1);
+}
+
 function peindreGrilleDecor(ctx, pal, grille) {
   for (let y = 0; y < grille.length; y++) {
     const ligne = grille[y];
@@ -8346,6 +8387,28 @@ const DECORS = {
     ctx.fillStyle = '#3b73a3'; ctx.fillRect(9, 16, 7, 2); ctx.fillRect(19, 20, 6, 2);
     ctx.fillStyle = '#9a9689'; ctx.fillRect(15, 2, 4, 14);
     ctx.fillStyle = '#cfe6f5'; ctx.fillRect(14, 0, 6, 3); ctx.fillRect(13, 3, 2, 4); ctx.fillRect(19, 3, 2, 4);
+  } },
+  // LE JARDIN D'UNE VILLA (`villas.py`) : poses sur la ville finie, ils prennent leur numero d'entite A PART
+  // (`horsSuite`) comme les statues. La fontaine : deux vasques de pierre sur leur bassin, l'eau qui retombe.
+  fontaine_villa: { arrete: 9, horsSuite: true, w: 22, h: 24, ancre: [11, 21], r: 7, sol: [9, 4], solide: true, peindre: function (ctx) {
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(1, 19, 21, 3);
+    ctx.fillStyle = '#b3afa4'; ctx.fillRect(0, 13, 22, 8);                   // le bassin
+    ctx.fillStyle = '#e3dfd3'; ctx.fillRect(0, 13, 22, 2); ctx.fillRect(0, 13, 2, 8); ctx.fillRect(20, 13, 2, 8);
+    ctx.fillStyle = '#37b3cf'; ctx.fillRect(2, 15, 18, 5);
+    ctx.fillStyle = '#9be3f0'; ctx.fillRect(4, 16, 4, 1); ctx.fillRect(13, 18, 5, 1);
+    ctx.fillStyle = '#b3afa4'; ctx.fillRect(10, 6, 2, 10);                   // le fut
+    ctx.fillStyle = '#e3dfd3'; ctx.fillRect(5, 8, 12, 2); ctx.fillRect(7, 3, 8, 2);   // les deux vasques
+    ctx.fillStyle = '#8e8a80'; ctx.fillRect(6, 10, 10, 1); ctx.fillRect(8, 5, 6, 1);
+    ctx.fillStyle = '#cfe6f5'; ctx.fillRect(10, 0, 2, 3);                    // le jet, et l'eau qui retombe
+    ctx.fillRect(5, 10, 1, 4); ctx.fillRect(16, 10, 1, 4); ctx.fillRect(7, 5, 1, 3); ctx.fillRect(14, 5, 1, 3);
+  } },
+  // Les piliers du portail : de la pierre de taille, sa boule, sa lanterne — et le battant de fer forge OUVERT,
+  // rabattu vers la maison contre la haie (a l'ouest pour le pilier ouest, a l'est pour l'autre).
+  pilier_portail_o: { arrete: 9, horsSuite: true, w: 16, h: 26, ancre: [8, 23], r: 5, sol: [7, 3], solide: true, peindre: function (ctx) {
+    pilierDePortail(ctx, 1);
+  } },
+  pilier_portail_e: { arrete: 9, horsSuite: true, w: 16, h: 26, ancre: [8, 23], r: 5, sol: [7, 3], solide: true, peindre: function (ctx) {
+    pilierDePortail(ctx, -1);
   } },
   // Les statues des parcs (`statues.py`) : elles ARRETENT comme la fontaine, et prennent leur numero
   // d'entite A PART (`horsSuite`, `Entites.creerDecor`) — posees sur la ville finie, elles ne doivent

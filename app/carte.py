@@ -292,6 +292,10 @@ LEGENDE: dict[str, dict] = {
     # piscine elle porte. Sans ca, quatre tuiles font quatre carres avec quatre
     # margelles — ce que Martin a vu tout de suite — au lieu d'un seul rond.
     "o": {"nom": "piscine hors terre", "solide": 3, "piscine": True, "bloc": True},
+    # LA PISCINE CREUSÉE d'une villa (des maisons de luxe, le jardin : `villas.py`) : un rectangle d'eau turquoise
+    # dans sa margelle de pierre, l'échelle au coin. Comme la piscine hors terre, on y barbote (solidité 3, `bloc` :
+    # chaque tuile lit ses voisines pour ne peindre la margelle qu'au bord). `?` : un des derniers glyphes libres.
+    "?": {"nom": "piscine creusée", "solide": 3, "piscine": True, "bloc": True},
     "#": {"nom": "asphalte", "route": True},
     "-": {"nom": "ligne de voie est-ouest", "route": True},
     "|": {"nom": "ligne de voie nord-sud", "route": True},
@@ -1437,6 +1441,8 @@ DECOR_SOLIDE = frozenset({
     # Les statues des parcs (`statues.py`) : du bronze sur du granit, ça arrête tout.
     "statue_fondateur", "statue_cavalier", "statue_hockeyeur",
     "buste_mairesse", "buste_cure", "buste_inventeur",
+    # Le jardin d'une villa (`villas.py`) : sa fontaine de pierre, et les deux piliers de son portail.
+    "fontaine_villa", "pilier_portail_o", "pilier_portail_e",
     "arbre", "banc", "baril", "bbq", "belvedere", "borne_fontaine", "cabanon",
     "caisse", "carrousel", "chaise_sauveteur", "chaises_volantes", "distributrice_cafe",
     "distributrice_grignotines", "distributrice_liqueur", "fontaine", "galerie_tir",

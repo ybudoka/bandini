@@ -244,10 +244,11 @@ def test_une_entree_asphaltee_du_rideau_a_la_rue(ville):
 def test_les_bungalows_ne_deplacent_rien_d_autre_et_ne_lisent_pas_les_carrosseries(ville, monkeypatch):
     # ⚠️ `carte.generer` direct, pas `villes` : les trois villes naissent sous un patch.
     monkeypatch.setattr(devants, "deplacer", lambda chantier, ville_: {})
-    # ⚠️ Les TERRAINS CLÔTURÉS (`clotures.poser`) de même, des trois côtés : ils ferment les cours sur la ville FINIE,
-    # et un bungalow qui gagne son garage change la cour de son voisin.
-    from app import clotures
+    # ⚠️ Les TERRAINS CLÔTURÉS et LES VILLAS (`clotures.poser`, `villas.poser`) de même, des trois côtés : ils se
+    # posent sur la ville FINIE, et un bungalow qui gagne son garage change la cour (et le jardin) de son voisin.
+    from app import clotures, villas
     monkeypatch.setattr(clotures, "poser", lambda ville_: [])
+    monkeypatch.setattr(villas, "poser", lambda ville_: [])
     avec = carte.generer(graine=ville["graine"], nord=False)
     monkeypatch.setattr(carte._Chantier, "poser_les_carrosseries", lambda self, ville_: [])
     sans_carrosseries = carte.generer(graine=ville["graine"], nord=False)
