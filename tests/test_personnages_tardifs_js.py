@@ -20,8 +20,10 @@ def _tardifs(banc):
         for (const p of tardifs) avant[p.slug] = !!H.donneur(p.slug);
         for (const p of tardifs) {
             if (B.partie.missionsFaites[p.arrive_apres]) { out[p.slug] = { mission: p.arrive_apres, avant: avant[p.slug], apres: !!H.donneur(p.slug), faite: true }; continue; }
-            // La mission d'arrivee, jouee jusqu'au bout — sans recharger la partie.
-            H.commencer(p.arrive_apres);
+            // La mission d'arrivee, jouee jusqu'au bout — sans recharger la partie. ⚠️ Remplacee par un CHAPITRE
+            // (Zed arrive apres p02, devenue l'acte 1 de La Pointe) : c'est le chapitre qu'on joue.
+            const chapitre = (B.defs.missions || []).find(function (m) { return (m.remplace || []).indexOf(p.arrive_apres) >= 0; });
+            H.commencer(H.mission(p.arrive_apres) ? p.arrive_apres : chapitre.slug);
             for (let k = 0; k < 4000 && (B.scene || B.cinema); k++) { if (B.cinema) H.suivante(); else o.frame(1); }
             H.reussir();
             for (let k = 0; k < 4000 && (B.scene || B.cinema || B.finEnAttente); k++) { if (B.cinema) H.suivante(); else o.frame(1); }
