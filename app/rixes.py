@@ -38,6 +38,39 @@ CONTACT: dict = {
 }
 
 
+#: VAGUE 2 — L'ARSENAL (Martin, 30 sept. 2026 : « un arsenal par gang, un membre sur trois »). Chaque gang se
+#: reconnaît à son arme ; les Mantes n'en ont pas, elles ont l'école (`mantes.COMBAT`).
+ARSENAL: dict = {
+    "cravates": "pistolet",       # propres, précis, à mi-distance
+    "morues": "fusil",            # elles foncent et tirent de près
+    "chevreuils": "carabine",     # ils restent loin, lents et justes
+    "boulonneux": "mitraillette",  # des rafales qui s'ouvrent : les plus dangereux
+    "skateux": "molotov",         # ils lancent et se sauvent
+}
+#: Un sur combien la porte : `hash2(e.id, …) % PART_ARMEE == 0`, à l'empreinte — toujours le même homme.
+PART_ARMEE = 3
+
+#: VAGUE 2 — LA FUSILLADE. Le tireur tient SA distance, cherche un abri d'où la cible ne le voit pas, en sort pour
+#: une salve, y rentre, et recharge ; il lève l'arme avant sa première balle (le geste qu'on voit venir, comme
+#: l'anticipation d'un coup), et il manque plus que toi. ⚠️ Images (60 par seconde) et pixels.
+TIR: dict = {
+    # La fourchette où il se tient, par arme. ⚠️ Le Molotov part EN CLOCHE et retombe vers 100 px quoi qu'on
+    # vise : sa fourchette est sa distance de chute (un juge la calcule).
+    "distances": {"pistolet": (70, 140), "fusil": (30, 70), "carabine": (140, 210),
+                  "mitraillette": (60, 120), "molotov": (85, 110)},
+    "lever_images": 30,           # il lève l'arme avant sa PREMIÈRE balle : le temps de rouler
+    "salve": (2, 4),              # balles par salve, à l'empreinte
+    "rafale_images": 24,          # la mitraillette, elle, tient la gâchette ce temps-là
+    "entre_salves_images": 70,    # à l'abri entre deux salves
+    "recharge_images": 90,        # le chargeur vide (celui de l'arme), il recharge
+    "dispersion_facteur": 2.0,    # sa dispersion, par rapport à la tienne
+    "abri_tuiles": 5,             # jusqu'où il cherche un abri
+    "degats_contre_joueur": 0.5,  # sa balle te prend moitié moins : trois tireurs ne te couchent pas en une seconde
+    "fuite_images": 60,           # le lanceur, sa bouteille partie, se sauve ce temps-là
+}
+
+
 def exporter() -> dict:
     """Ce que le navigateur reçoit sous `B.defs.rixes`."""
-    return {"contact": dict(CONTACT)}
+    tir = dict(TIR, distances={k: list(v) for k, v in TIR["distances"].items()}, salve=list(TIR["salve"]))
+    return {"contact": dict(CONTACT), "arsenal": dict(ARSENAL), "part_armee": PART_ARMEE, "tir": tir}
