@@ -455,7 +455,7 @@ function banc(corps) {
       this.suspend = function () { ctx.state = 'suspended'; return Promise.resolve(); };
       this.createGain = function () { return noeud({ gain: param(1) }); };
       this.createOscillator = function () {
-        const n = noeud({ type: 'square', frequency: param(440), stop: function () {} });
+        const n = noeud({ type: 'square', frequency: param(440), detune: param(0), stop: function () {} });
         sources.push(n);
         n.start = function (t) { n.__demarree = true; joues.push({ quoi: 'ton', t: t, hz: n.frequency.value, forme: n.type }); };
         return n;
@@ -471,6 +471,7 @@ function banc(corps) {
       };
       this.createBiquadFilter = function () { return noeud({ type: 'lowpass', frequency: param(800), Q: param(1) }); };
       this.createStereoPanner = function () { return noeud({ pan: param(0) }); };
+      this.createWaveShaper = function () { return noeud({ curve: null, oversample: 'none' }); };
       this.createBuffer = function (canaux, longueur) {
         return { length: longueur, numberOfChannels: canaux,
                  getChannelData: function () { return new Float32Array(longueur); } };

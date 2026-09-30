@@ -119,6 +119,10 @@ DELITS: dict[str, dict] = {
     # Braquer un commerce (`economie.BRAQUAGE`). ⚠️ BRUYANT : l'alarme sonne au comptoir, le commis
     # appelle — il n'y a pas de temoin a convaincre.
     "braquage": {"etoiles": 2, "temoin": False},
+    # Le faux whoop-whoop de police (le klaxon de Ti-Guy, docs/jalons/les-klaxons-de-ti-guy.md). ⚠️ BRUYANT,
+    # mais il n'est signale QUE si un vrai policier l'a entendu (`garage.KLAXONS`, `oreille_tuiles`) : le
+    # passant ne fait pas la difference. `repit_s` : dix coups devant le meme agent chauffent une fois.
+    "fausse_sirene": {"etoiles": 1, "temoin": False, "repit_s": 20},
 }
 
 #: Cones de vision : demi-angle en degres et portee en tuiles, jour / nuit.

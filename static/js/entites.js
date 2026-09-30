@@ -2429,7 +2429,9 @@ const Entites = (function () {
     }
     const m = o.orignal, v = j.dansVehicule;
     // Le klaxon, a portee : il fuit (`Vehicules`, `klaxonT` a 30 au coup, 29 l'image d'apres).
-    if (v && v.klaxonT === 29 && dist2(o.x, o.y, v.x, v.y) < f.klaxon_px * f.klaxon_px) faireFuirLOrignal(o, v);
+    // La corne de 18 roues de Ti-Guy porte plus loin (`portee`).
+    const k = v && v.klaxonT === 29 && Garage.klaxonDe(v), porte = f.klaxon_px * ((k && k.portee) || 1);
+    if (v && v.klaxonT === 29 && dist2(o.x, o.y, v.x, v.y) < porte * porte) faireFuirLOrignal(o, v);
     if (m.etat === 'marche') {
       // FIGE DANS LES PHARES : un char qui roule VERS lui, tout pres, la nuit.
       if (v && Monde.estNuit() && dist2(o.x, o.y, v.x, v.y) < f.phares_px * f.phares_px) {
@@ -4888,11 +4890,12 @@ const Entites = (function () {
   //: assommé, qui vole un char ou qui boniment : ceux-là ont mieux à faire qu'un char.
   const SE_TASSE = ['flane', 'cap', 'arret', 'fuit', 'temoin', 'tasse'];
 
-  /** Le klaxon de `v` : chaque passant devant son nez, dans son couloir, se tasse. */
-  function klaxonne(v) {
+  /** Le klaxon de `v` : chaque passant devant son nez, dans son couloir, se tasse. `fois` : ce que le
+      klaxon multiplie a la portee (la corne de 18 roues de Ti-Guy, `garage.KLAXONS`). */
+  function klaxonne(v, fois) {
     if (!v || !v.def || v.def.eau) return;
     const c = Math.cos(v.angle), s = Math.sin(v.angle);
-    const portee = TASSE_PORTEE_TUILES * TT + v.def.longueur / 2;
+    const portee = TASSE_PORTEE_TUILES * TT * (fois || 1) + v.def.longueur / 2;
     for (const e of pietonsAutour(v.x + c * portee / 2, v.y + s * portee / 2, portee / 2 + 16)) {
       const dx = e.x - v.x, dy = e.y - v.y;
       const devant = dx * c + dy * s, cote = -dx * s + dy * c;

@@ -98,7 +98,6 @@ pas quand l'ordre de travail change.
 | Les explosifs : grenades, dynamite, C4, roquettes — et le Molotov en mieux | ⬜ **en cours** (✅ vague 1 livrée : l'explosion commune, la grenade et la dynamite ; reste la vague 2, le Molotov en mieux ; puis les murs fissurés et le C4, le char piégé et le lance-roquettes) | 28 sept. 2026 | **P4** | ajout | [fiche](jalons/les-explosifs.md#fiche) · [notes](jalons/les-explosifs.md#notes) |
 | Le train : au sol, sur le viaduc, dans le tunnel | ⬜ **en cours** (✅ vague 1 livrée : le train passe — au sol dans les Friches, sur son viaduc au-dessus du Petit-Canton, à la gare centrale, dans son tunnel ; les passages à niveau, il écrase et il klaxonne ; restent : on monte (vague 2), on s'assoit (vague 3)) | 29 sept. 2026 | **P4** | ajout | [fiche](jalons/le-train.md#fiche) · [notes](jalons/le-train.md#notes) |
 | La patinoire du parc | ⬜ **en cours** | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/la-patinoire-du-parc.md#fiche) |
-| Les klaxons de Ti-Guy | ⬜ **en cours** | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/les-klaxons-de-ti-guy.md#fiche) |
 
 ## L'ordre
 

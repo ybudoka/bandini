@@ -1,8 +1,9 @@
 /* Bandini — le garage qui modifie les chars (docs/jalons/le-garage-qui-modifie-les-chars.md).
 
-   Chez Ti-Guy (`Missions.menuGarage`), cinq pieces se posent sur le char gare devant le rideau :
-   le moteur, le blindage, les pneus d'hiver, la nitro, le klaxon « Gens du pays ». Le catalogue
-   est Python (`app/garage.py`, `B.defs.garage`) ; ici, ce qu'elles font.
+   Chez Ti-Guy (`Missions.menuGarage`), quatre pieces et un klaxon au choix se posent sur le char gare
+   devant le rideau : le moteur, le blindage, les pneus d'hiver, la nitro — et UN klaxon parmi six
+   (docs/jalons/les-klaxons-de-ti-guy.md). Le catalogue est Python (`app/garage.py`, `B.defs.garage`) ;
+   ici, ce qu'ils font.
 
    ⚠️ UN CHAR MODIFIE A SA PROPRE FICHE (`v.def`, une copie de celle du catalogue) : le moteur gonfle
    la vitesse de pointe ET l'acceleration du meme facteur — la pointe est un equilibre entre
@@ -17,6 +18,15 @@ const Garage = (function () {
   function donnees() { return B.defs && B.defs.garage; }
   function piece(slug) { const d = donnees(); return d ? d.pieces.find(function (p) { return p.slug === slug; }) : null; }
   function effet(slug) { const p = piece(slug); return p ? p.effet : {}; }
+  /** Le klaxon de ce slug. ⚠️ Un vieux `true` (les sauvegardes d'avant le 30 sept. 2026) : « Gens du pays ». */
+  function klaxonParSlug(slug) {
+    if (!slug) return null;
+    const s = slug === true ? 'gens_du_pays' : slug;
+    return klaxons().find(function (k) { return k.slug === s; }) || null;
+  }
+  /** Les klaxons. ⚠️ Ils voyagent dans la SUITE du paquet (`definitions.DANS_LA_SUITE`) : tant qu'elle n'est pas
+      arrivee, aucun — le klaxon ordinaire joue, et le menu n'en montre pas. */
+  function klaxons() { return (B.defs && B.defs.klaxons) || []; }
 
   /** Ce char prend-il des pieces ? (pas un velo) */
   function accepte(v) {
@@ -37,23 +47,46 @@ const Garage = (function () {
     v.vieMax = Math.round(base.vie * (v.mods.blindage ? effet('blindage').vie : 1));
     v.vie = Math.max(1, Math.round(v.vieMax * part));
     v.def = d;
+    preparerLeKlaxon(v);
     return v;
+  }
+
+  /** Ce que le klaxon posé fait entendre, demandé d'avance : ses sons (le lieu `klaxons`) ou les voix de Ti-Guy.
+      Sans ça, le premier coup jouerait le filet. */
+  function preparerLeKlaxon(v) {
+    const k = klaxonParSlug(v.mods && v.mods.klaxon);
+    if (!k) return;
+    if (k.son) Son.Lieu.charger('klaxons');
+    if (k.voix) Son.Voix.chargerHistoire('garage');
   }
 
   /** Ce qui se sauvegarde des pieces d'un char (ou rien). */
   function fiche(v) { return v && v.mods ? Object.assign({}, v.mods) : undefined; }
 
-  /** Le prix des pieces posees. */
+  /** Le prix des pieces posees, son klaxon compris. */
   function valeur(mods) {
     const d = donnees();
     if (!d || !mods) return 0;
-    return d.pieces.reduce(function (t, p) { return t + (mods[p.slug] ? p.prix : 0); }, 0);
+    const k = klaxonParSlug(mods.klaxon);
+    return d.pieces.reduce(function (t, p) { return t + (mods[p.slug] ? p.prix : 0); }, 0) + (k ? k.prix : 0);
   }
 
-  /** Les lignes du menu de Ti-Guy : une par piece, posee ou a poser. */
+  /** Les lignes du menu de Ti-Guy : une par piece, posee ou a poser, puis une par klaxon — en poser un
+      remplace l'autre. */
   function items(v, payer) {
     if (!accepte(v)) return [];
-    const p = B.partie;
+    const p = B.partie, pose = klaxonParSlug(v.mods && v.mods.klaxon);
+    const lignes = klaxons().map(function (k) {
+      const celui = !!pose && pose.slug === k.slug;
+      return { libelle: 'POSER : ' + k.nom.toUpperCase(), detail: celui ? 'POSÉ' : k.prix + ' $',
+               actif: !celui && p.argent >= k.prix,
+               faire: function () {
+                 if (!payer(k.prix, k.nom.toUpperCase())) return false;
+                 poser(v, { klaxon: k.slug });
+                 commenter(k.replique || k.slug, k.texte);
+                 return false;
+               } };
+    });
     return donnees().pieces.map(function (q) {
       const pose = !!(v.mods && v.mods[q.slug]);
       return { libelle: 'POSER : ' + q.nom.toUpperCase(), detail: pose ? 'POSÉ' : q.prix + ' $',
@@ -65,12 +98,13 @@ const Garage = (function () {
                  commenter(q.slug);
                  return false;
                } };
-    });
+    }).concat(lignes);
   }
 
   /** Ti-Guy commente la piece posee : sa voix, et la ligne a l'ecran. */
-  function commenter(slug) {
-    const texte = donnees().repliques[slug];
+  /** `dit` : son texte, quand il ne vient pas des pieces (un klaxon porte le sien). */
+  function commenter(slug, dit) {
+    const texte = dit || donnees().repliques[slug];
     Son.Voix.chargerHistoire('garage');
     Son.Voix.parler('ti_guy-garage-' + slug, {});
     if (texte) Hud.message('TI-GUY : « ' + texte.toUpperCase() + ' »', 300);
@@ -101,8 +135,44 @@ const Garage = (function () {
     Son.SFX.nitro();
   }
 
-  /** Le klaxon « Gens du pays » : l'air de la fiche, note par note. */
-  function klaxonne(v) { return !!(v && v.mods && v.mods.klaxon && v.conducteur === B.joueur); }
+  // --- Les klaxons (docs/jalons/les-klaxons-de-ti-guy.md) ---------------------------------
 
-  return { accepte, poser, fiche, valeur, items, hiver, pointe, maj, klaxonne, commenter };
+  /** Le klaxon de Ti-Guy de ce char, au volant du joueur seulement — ou null (le klaxon de sa fiche). */
+  function klaxonDe(v) {
+    return v && v.mods && v.mods.klaxon && v.conducteur === B.joueur ? klaxonParSlug(v.mods.klaxon) : null;
+  }
+
+  /** Le klaxon `k` sonne sur `v` : son air, son son ou la voix de Ti-Guy, et ce qu'il fait au trafic et a
+      la police. Rend faux s'il n'a rien pu jouer (la voix pas encore arrivee) : le klaxon ordinaire joue. */
+  function klaxonner(v, k) {
+    if (k.air) Son.SFX.claironner(k.air);
+    else if (k.son) Son.SFX[k.son]();
+    else if (k.voix && !crier(v, k)) return false;
+    if (k.cede) Vehicules.cederLaVoie(v);
+    if (k.delit && unVraiPolicierEntend(v, k.oreille_tuiles * TT)) {
+      Police.signalerCrime(k.delit, v.x, v.y, true);
+      Hud.message('UN VRAI POLICIER A ENTENDU TA FAUSSE SIRÈNE', 150);
+    }
+    return true;
+  }
+
+  /** Une engueulade de Ti-Guy, tiree a l'empreinte de l'image — jamais celle du coup d'avant. */
+  function crier(v, k) {
+    const n = k.voix.length, avant = v.derniereEngueulade;
+    let i = (B.t * 7 + 3) % n;
+    if (i === avant) i = (i + 1 + (B.t % (n - 1))) % n;
+    if (!Son.Voix.crier(k.voix[i])) return false;
+    v.derniereEngueulade = i;
+    return true;
+  }
+
+  /** Un vrai policier a portee d'oreille : un agent a pied (pas un vigile) ou une auto-patrouille. */
+  function unVraiPolicierEntend(v, rayon) {
+    const r2 = rayon * rayon;
+    function pres(e) { const dx = e.x - v.x, dy = e.y - v.y; return dx * dx + dy * dy < r2; }
+    return Police.agents().some(function (a) { return (!a.genreVision || a.genreVision === 'policier') && pres(a); })
+      || Police.autos().some(pres);
+  }
+
+  return { accepte, poser, fiche, valeur, items, hiver, pointe, maj, klaxonDe, klaxonner, klaxonParSlug, commenter };
 })();

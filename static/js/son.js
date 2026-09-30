@@ -166,6 +166,50 @@ const Son = (function () {
     osc.stop(t0 + duree + 0.02);
   }
 
+  //: LA CORNE (les klaxons de Ti-Guy, docs/jalons/les-klaxons-de-ti-guy.md ; Martin, 30 sept. 2026 : « je
+  //: veux qu'il soit plus gras et plus fort »). « Gens du pays » sortait de DEUX dents de scie a 0,18, qui
+  //: s'eteignaient des la premiere milliseconde : un kazoo, deux fois plus faible que le klaxon ordinaire.
+  //: Une corne a air, c'est trois trompettes un peu faussees l'une contre l'autre (`desaccord`, en cents),
+  //: une sous-octave carree pour le ventre, une saturation douce qui les soude, un passe-bas qui garde le
+  //: cuivre et retire le crin — et une note TENUE, qui ne meurt qu'a la fin (`attaque`, `relache`). Chaque
+  //: note part un peu sous sa hauteur et y monte (`scoop`) : le compresseur qui prend son souffle.
+  //: `volume` : mesure au rendu contre le klaxon ordinaire (tests/test_klaxons_de_ti_guy_js.py).
+  const CORNE = { desaccord: [-9, 0, 8], sous: 0.55, entree: 0.32, coude: 2600, attaque: 0.012, relache: 0.045,
+                  scoop: 0.93, scoopS: 0.035, volume: 0.62 };
+  let courbeCorne = null;
+  function saturationDeCorne() {
+    if (!courbeCorne) {
+      const n = 1024;
+      courbeCorne = new Float32Array(n);
+      for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; courbeCorne[i] = Math.tanh(2.2 * x) / Math.tanh(2.2); }
+    }
+    return courbeCorne;
+  }
+  /** Une note de corne, posee a `t0` sur l'horloge audio. */
+  function corneA(t0, freq, duree, volume) {
+    const pre = ctx.createGain(), sat = ctx.createWaveShaper(), filtre = ctx.createBiquadFilter(), env = ctx.createGain();
+    pre.gain.value = CORNE.entree;
+    sat.curve = saturationDeCorne();
+    filtre.type = 'lowpass'; filtre.frequency.value = CORNE.coude; filtre.Q.value = 0.9;
+    pre.connect(sat); sat.connect(filtre); filtre.connect(env); env.connect(maitre);
+    const fin = t0 + duree;
+    env.gain.setValueAtTime(0.0001, t0);
+    env.gain.exponentialRampToValueAtTime(volume, t0 + CORNE.attaque);
+    env.gain.setValueAtTime(volume, Math.max(t0 + CORNE.attaque, fin - CORNE.relache));
+    env.gain.exponentialRampToValueAtTime(0.0001, fin);
+    function voix(forme, f, cents, part) {
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.type = forme; osc.detune.value = cents;
+      osc.frequency.setValueAtTime(f * CORNE.scoop, t0);
+      osc.frequency.exponentialRampToValueAtTime(f, t0 + CORNE.scoopS);
+      g.gain.value = part;
+      osc.connect(g); g.connect(pre);
+      osc.start(t0); osc.stop(fin + 0.02);
+    }
+    CORNE.desaccord.forEach(function (c) { voix('sawtooth', freq, c, 1); });
+    voix('square', freq / 2, 0, CORNE.sous);
+  }
+
   /** Un souffle de bruit blanc filtre. */
   function bruit(duree, volume, freqDebut, freqFin) {
     if (!pret()) return;
@@ -952,12 +996,25 @@ const Son = (function () {
     // LE GARAGE DE TI-GUY : la bonbonne de nitro qui souffle, et le klaxon qui joue son air (les notes
     // sont une donnee, `garage.KLAXON_AIR`).
     nitro: function () { bruit(1.2, 0.3, 4000, 400); ton(110, 0.9, 'sawtooth', 0.12, 1.8); },
-    gensDuPays: function () {
-      let t = 0;
-      ((B.defs && B.defs.garage && B.defs.garage.klaxon_air) || []).forEach(function (n) {
-        ton(n[0], n[1] * 0.95, 'sawtooth', 0.18, 1, t); ton(n[0] * 1.5, n[1] * 0.95, 'sawtooth', 0.09, 1, t);   // la quinte : reste en fa majeur
-        t += n[1];
-      });
+    // LES KLAXONS DE TI-GUY (docs/jalons/les-klaxons-de-ti-guy.md) : un air (`garage.KLAXONS`, `air`),
+    // note par note, a la corne (`corneA`) — « Gens du pays », « Le Parrain », « La Cucaracha ». ⚠️ Un
+    // souffle entre deux notes (`0,88`) : sans lui, trois do de suite n'en font qu'un.
+    claironner: function (notes) {
+      if (!pret() || !notes) return;
+      const v = CORNE.volume * (ici ? ici.volume : 1);
+      let t = ctx.currentTime;
+      notes.forEach(function (n) { corneA(t, n[0], n[1] * 0.88, v); t += n[1]; });
+    },
+    // La corne d'un 18 roues, et son filet : un accord grave de deux cornes, tenu une seconde.
+    corne_a_air: function () {
+      if (jouerDuLieu('corne_a_air') || !pret()) return;
+      const v = CORNE.volume * (ici ? ici.volume : 1);
+      corneA(ctx.currentTime, 185, 1.1, v); corneA(ctx.currentTime, 233.08, 1.1, v * 0.8);
+    },
+    // Le faux whoop-whoop de police, et son filet : deux balayages qui montent.
+    whoop_police: function () {
+      if (jouerDuLieu('whoop_police')) return;
+      ton(520, 0.26, 'square', 0.22, 2.6); ton(520, 0.26, 'square', 0.22, 2.6, 0.32);
     },
     brosses: function () { bruit(1.4, 0.18, 1100, 300); bruit(1.4, 0.08, 5000, 2200); },
     // --- L'eau ---------------------------------------------------------------
@@ -1636,6 +1693,22 @@ const Son = (function () {
       source.start(ctx.currentTime);
       Voix.enCours = { source: source, gain: gain, slug: slug };
       return Voix.enCours;
+    },
+
+    /** La voix de Ti-Guy dans le klaxon (`garage.KLAXONS`, `voix`) : ⚠️ PAS `parler` — elle couperait la
+        replique d'une mission, et la radio baisserait pour un coup de klaxon. Elle sort du porte-voix
+        (une bande de haut-parleur, renforcee : un klaxon doit percer). Rend faux si elle n'est pas
+        encore arrivee — elle se demande, et le klaxon ordinaire joue a sa place. */
+    crier: function (slug) {
+      const liste = tampons.get('histoire-' + slug);
+      if (!pret() || !liste || !liste.length) { Voix.chargerHistoire('garage'); return false; }
+      const source = ctx.createBufferSource(), gain = ctx.createGain();
+      source.buffer = liste[0];
+      gain.gain.value = 1;
+      source.connect(gain);
+      bande(gain, 380, 4200, 1.6).connect(maitre);
+      source.start(ctx.currentTime);
+      return true;
     },
 
     couper: function () {

@@ -389,6 +389,15 @@ CATALOGUE: list[Echantillon] = [
     _e("klaxon", "Klaxon", variantes=2, duree_s=0.8, volume=0.79, influence=0.75,
        prompt="one short car horn honk from an old sedan, slightly flat "
               "two-tone blare, city street, no music"),
+    # LES KLAXONS DE TI-GUY (docs/jalons/les-klaxons-de-ti-guy.md) : ceux qui ne sont pas un air
+    # (`garage.KLAXONS`, `son`). Un lieu (`LIEUX["klaxons"]`) : chargés quand le klaxon est posé sur un char.
+    # ⚠️ La corne est PLUS FORTE que le klaxon ordinaire (0,79) : c'est ce qu'on achète.
+    _e("corne_a_air", "Corne à air de 18 roues", duree_s=1.4, volume=0.95, influence=0.75,
+       prompt="one long deafening semi truck air horn blast, deep two-tone chord, loud and brassy, "
+              "close, city street, no engine, no music"),
+    _e("whoop_police", "Whoop-whoop de police", duree_s=1.0, volume=0.7, influence=0.8,
+       prompt="a police car siren yelp, two quick electronic whoop whoop sweeps, loud, close, "
+              "no engine, no music"),
     _e("sirene", "Sirène de police", duree_s=4.0, volume=0.61, boucle=True,
        influence=0.75,
        prompt="a police car siren wailing up and down steadily, close, "
@@ -1812,6 +1821,7 @@ LIEUX: dict[str, list[str]] = {
     "incendie": ["rumeur_incendie", "eau"],
     "borne": ["borne_cassee", "borne_jet"],
     "garage": ["rideau_garage"],
+    "klaxons": ["corne_a_air", "whoop_police"],
     "distributrice": ["distributrice", "machine_brassee", "monnaie"],
     "chaussee": ["nid_de_poule", "conteneur", "tas", "plaque"],
     # Le derapage (les saisons, lot 6) : il se charge la premiere fois que le joueur conduit (`Derapage`).

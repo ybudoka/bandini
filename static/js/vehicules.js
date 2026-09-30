@@ -2025,10 +2025,12 @@ const Vehicules = (function () {
       (`Son.depuis`) : muet hors champ, plus doux de loin. Le sien, au volant,
       reste plein volume. */
   function avertir(v) {
-    // Ceux qui sont devant se tassent, quel que soit l'air (Martin, 30 sept. 2026 : `Entites.klaxonne`).
-    Entites.klaxonne(v);
-    // Le klaxon « Gens du pays » (le garage de Ti-Guy) : au volant du joueur seulement.
-    if (Garage.klaxonne(v)) { Son.SFX.gensDuPays(); return; }
+    // Le klaxon de Ti-Guy (docs/jalons/les-klaxons-de-ti-guy.md) : au volant du joueur seulement.
+    const k = Garage.klaxonDe(v);
+    // Ceux qui sont devant se tassent, quel que soit l'air (Martin, 30 sept. 2026 : `Entites.klaxonne`) — de
+    // plus loin devant une corne de 18 roues (`portee`).
+    Entites.klaxonne(v, k && k.portee);
+    if (k && Garage.klaxonner(v, k)) return;
     const effet = Son.SFX[v.def.klaxon] || Son.SFX.klaxon;
     Son.depuis(v.conducteur === B.joueur ? B.joueur : v, effet);
   }
@@ -2932,6 +2934,27 @@ const Vehicules = (function () {
     v.deportT = trafic().depassement_images;
     v.deports = (v.deports || 0) + 1;
     return true;
+  }
+
+  //: LE FAUX WHOOP-WHOOP (le klaxon de Ti-Guy, docs/jalons/les-klaxons-de-ti-guy.md) : jusqu'ou devant
+  //: (tuiles), et jusqu'ou de cote (px), le trafic s'ecarte comme devant une auto-patrouille.
+  const CEDE_DEVANT_TUILES = 8, CEDE_COTE_PX = 12;
+
+  /** Le trafic devant `v`, dans son couloir et dans son sens, change de voie pour le laisser passer. ⚠️ Par
+      `changerDeVoie`, le deport qui existe deja : sur une rue a une voie, il n'a nulle part ou aller, et il
+      reste. Le froid d'un deport recent ne compte pas : une sirene, ca se respecte. Rend combien. */
+  function cederLaVoie(v) {
+    const c = Math.cos(v.angle), s = Math.sin(v.angle), portee = CEDE_DEVANT_TUILES * TT;
+    let n = 0;
+    for (const q of B.entites) {
+      if (q === v || q.type !== 'vehicule' || q.conducteur !== 'trafic' || q.rails || (q.def && q.def.eau)) continue;
+      const dx = q.x - v.x, dy = q.y - v.y, devant = dx * c + dy * s, cote = -dx * s + dy * c;
+      if (devant <= 0 || devant > portee || Math.abs(cote) > CEDE_COTE_PX) continue;
+      if (Math.cos(q.angle) * c + Math.sin(q.angle) * s < 0.7) continue;      // pas dans notre sens
+      q.deportFroid = 0;
+      if (changerDeVoie(q)) n++;
+    }
+    return n;
   }
 
   /** Quelque chose devant ? Rend la distance, ou Infinity. */
@@ -4518,7 +4541,7 @@ const Vehicules = (function () {
   }
 
   return {
-    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, majGaresDeService, majLotsDeConcession, compteCommeGare, typeDeRue, remise, remisee, rentrerLesRemises, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, pousserLeDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
+    ROTATIONS, courbeBraquage, vehiculeDef, cederLaVoie, creer, peupler, majGaresDeService, majLotsDeConcession, compteCommeGare, typeDeRue, remise, remisee, rentrerLesRemises, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, pousserLeDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
     majPhysique, allureDuSol, avancer, heurterVehicules, heurterPietons, heurterBetes, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, suitUnChar, klaxonnerLePassant, vitesseDeForce, majConducteur, commandesJoueur, rouler,

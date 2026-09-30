@@ -152,26 +152,7 @@ def test_les_pieces_survivent_a_la_sauvegarde_et_a_la_fourriere(banc):
     assert r["prixMod"] - r["prixNu"] == round((PRIX["moteur"] + PRIX["blindage"]) * garage.RACHAT_PART), r
 
 
-def test_le_klaxon_joue_son_air_et_seulement_le_sien(banc):
-    r = banc("function (L, o) {" + OUTILS + """
-        L.Jeu.commencer();
-        const B = L.B, j = B.joueur, V = L.Vehicules, S = L.Son.SFX;
-        const joues = [];
-        const air = S.gensDuPays, klaxon = S.klaxon;
-        S.gensDuPays = function () { joues.push('air'); }; S.klaxon = function () { joues.push('klaxon'); };
-        function klaxonner(mods) {
-            vider(L);
-            const v = char(L, j.x + 30, j.y, mods);
-            V.monter(j, v); L.Entites.indexer();
-            o.tape('Space', 1); for (let k = 0; k < 3; k++) o.frame(1);
-            V.descendre(j, true);
-        }
-        klaxonner(null); klaxonner({ klaxon: true });
-        S.gensDuPays = air; S.klaxon = klaxon;
-        return { joues: joues, notes: B.defs.garage.klaxon_air.length };
-    }""")
-    assert r["joues"] == ["klaxon", "air"], r
-    assert r["notes"] == len(garage.KLAXON_AIR) >= 5
+# Le klaxon au bouton — chacun joue le sien, « Gens du pays » compris : tests/test_klaxons_de_ti_guy_js.py.
 
 
 # --- Le klaxon, côté catalogue : la partition -------------------------------------------------------

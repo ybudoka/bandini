@@ -562,6 +562,18 @@ JEU.update({
     "ti_guy-garage-pneus": "[amused] Des bons pneus d'hiver. Tu vas coller à la glace comme ta langue sur un poteau.",
     "ti_guy-garage-nitro": "[knowingly] La bonbonne est branchée. [laughs] Appuie pas là-dessus dans un stationnement.",
     "ti_guy-garage-klaxon": "[mischievously] Klaxonne pour voir. Si ça te donne pas des frissons, t'es pas d'icitte.",
+    # Les klaxons au choix (docs/jalons/les-klaxons-de-ti-guy.md) : un commentaire par klaxon posé…
+    "ti_guy-garage-parrain": "[menacingly] Le Parrain. [smugly] Tu klaxonnes, pis le monde reçoit une offre qu'y peut pas refuser : se tasser.",
+    "ti_guy-garage-cucaracha": "[wryly] La Cucaracha. Mon beau-frère avait ça sur sa Camaro. [deadpan] Y s'est jamais remarié.",
+    "ti_guy-garage-corne_a_air": "[enthusiastic] Une corne de dix-huit roues. [laughs] Klaxonne pas en arrière d'une matante, a va perdre son dentier.",
+    "ti_guy-garage-ti_guy": "[smugly] J'ai enregistré ma voix là-dedans. Même quand chus pas là, j'engueule le monde pour toi.",
+    "ti_guy-garage-police": "[mischievously] Un whoop-whoop de police. Les chars se tassent… [gravely] mais si un vrai bœuf l'entend, t'es dans marde.",
+    # … et les engueulades qu'il a enregistrées dedans (`garage.ENGUEULADES`) : il GUEULE, au volant d'un autre.
+    "ti_guy-garage-crie-1": "[angry] [shouting] Tasse-toé!",
+    "ti_guy-garage-crie-2": "[annoyed] [shouting] Enweye, avance!",
+    "ti_guy-garage-crie-3": "[angry] [shouting] Heille, le cave! [sarcastic] T'as-tu eu ton permis dans une boîte de Cracker Jack?",
+    "ti_guy-garage-crie-4": "[gruffly] [shouting] Bouge de d'là!",
+    "ti_guy-garage-crie-5": "[annoyed] [shouting] C'est vert! Ça virera pas plus vert que ça!",
 })
 
 # LOUISE TREMBLAY-DION, DU CLAIRON (`photos.REPLIQUES`) : la journaliste qui veut la une — vive, pince-sans-rire,

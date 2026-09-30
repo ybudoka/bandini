@@ -458,9 +458,17 @@ def test_le_paquet_reste_leger(paquets):
     la suite. Mesure : définitions 240 119 → **238 387** bruts, 54 290 → **53 744** gzip ; suite 10 562 → **17 635**
     bruts, 4 884 → **7 455** gzip. La suite arrive APRÈS l'écran titre, en arrière-plan : c'est là que le poids
     ne se sent pas.
+
+    ⚠️ **LES KLAXONS DE TI-GUY PASSENT DANS LA SUITE, LE 30 SEPT. 2026 — SON PLAFOND BRUT MONTE : 19 500 → 21 000**
+    (docs/jalons/les-klaxons-de-ti-guy.md). Dans les définitions, ils poussaient le paquet à 242 075 bruts (le
+    plafond de Martin est 241 000) : ils sont partis dans la suite (`klaxons`, 1 777 octets bruts : six klaxons,
+    trois airs de 532 octets, le texte de chaque commentaire de Ti-Guy). Le même jour, la file de la foire y a
+    posé ses répliques (`repliques_de_la_file`) : la suite passait à 20 352. Regardé avant : `replique` ne s'écrit
+    plus que s'il diffère du slug ; couper encore 852 octets, c'était retirer un klaxon ou les textes. Le plafond
+    gzip (8 500) ne bouge pas.
     """
     for nom, brut_max, fil_max in (("definitions", 241_000, 57_500), ("carte", 560_000, 55_000),
-                                   ("musiques", 50_000, 10_000), ("suite", 19_500, 8_500)):
+                                   ("musiques", 50_000, 10_000), ("suite", 21_000, 8_500)):
         paquet = getattr(paquets, nom)
         mesures = {"definitions": MESURE_DU_PAQUET, "carte": MESURE_DE_LA_CARTE}
         qui = f" — qui a grossi : {_qui_a_grossi(paquet.corps, mesure=mesures[nom])}" if nom in mesures else ""

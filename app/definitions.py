@@ -80,7 +80,7 @@ from .version import VERSION
 #:   vide ne se marque pas chargée tant que la suite n'est pas là (`Son.Voix.chargerHistoire`).
 DANS_LA_SUITE: tuple[str, ...] = ("journal", "journal_speciales", "journal_lecons", "journal_matins",
                                   "photos", "galeries", "voix_de_la_suite",
-                                  "repliques_de_la_file")
+                                  "repliques_de_la_file", "klaxons")
 
 #: Ce qu'une fiche de personnage porte et qu'aucun script ne lit : sa voix ElevenLabs (le nom de la voix,
 #: `audio.voix_*` la lit en Python pour générer ses mp3). 1 698 octets bruts / 658 gzip sur le paquet.
@@ -105,6 +105,8 @@ def assembler() -> dict:
         "audio": audio.exporter(),
         # Les voix du Clairon et des Galeries, en séries, avec leurs textes dans la suite (`DANS_LA_SUITE`).
         "voix_de_la_suite": audio.series_de_la_suite(),
+        # Les klaxons de Ti-Guy (docs/jalons/les-klaxons-de-ti-guy.md), dans la suite (`DANS_LA_SUITE`).
+        "klaxons": garage.exporter_klaxons(),
         "vehicules": vehicules.CATALOGUE,
         "conduite": vehicules.exporter_conduite(),
         "armes": armes.CATALOGUE,
