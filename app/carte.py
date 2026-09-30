@@ -369,6 +369,15 @@ LEGENDE: dict[str, dict] = {
     # et clôturé ») : noir à pointes dorées, bas — on voit les chars à travers. Il s'enjambe à pied (solidité 4,
     # comme le grillage) et arrête les chars. Son PORTAIL coulisse comme la barrière du poste, avec sa règle à
     # lui : ouvert aux heures d'ouverture, sinon devant un char à toi (`Monde.majBarrieresCoulissantes`).
+    # LA PALISSADE BARBELÉE de la villa du maire (Martin, 30 sept. 2026 : « la villa devrait avoir des clôtures
+    # barbelées ») : les planches de la palissade, et trois rangs de barbelé par-dessus — elle ne s'enjambe plus
+    # (solidité 5, comme le barbelé). `'` : un des derniers glyphes libres.
+    "'": {"nom": "palissade barbelée", "solide": 5, "cloture": "barbele"},
+    # LA HAIE DE CÈDRES du jardin de la villa (Martin, 30 sept. 2026 : « vois si des endroits pour se cacher
+    # sont requis » — ils l'étaient : dehors, rien ne coupait la vue d'un garde). Solidité 1, comme un mur : elle
+    # ne se traverse pas et elle CACHE (`Monde.ligneLibre` ne s'arrête qu'aux murs). ⚠️ Pas un décor : un arbre
+    # ne cache rien.
+    "`": {"nom": "haie de cèdres", "solide": 1},
     "(": {"nom": "clôture de fer forgé", "solide": 4, "cloture": "fer"},
     ")": {"nom": "portail de fer forgé", "solide": 5, "cloture": "fer", "coulissante": True},
     # --- Dedans : les planchers et les meubles ------------------------------
