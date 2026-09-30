@@ -65,7 +65,9 @@ def ce_qui_est_recu(banc):
         L.B.defs.carte.decor.forEach(function (m) { types[m.type] = true; });
         return { sprites: problemes,
                  ville: { w: c.w, h: c.h, portes: c.portes.length, points: c.points.length,
-                          decor: L.B.defs.carte.decor.length, lampes: c.lampes.length,
+                          decor: L.B.defs.carte.decor.length,
+                          // Les lampes DU PAQUET : les lucarnes allumees s'y ajoutent au bout (les toits, vague 4).
+                          lampes: c.lampes.filter(function (l) { return !l.lucarne; }).length,
                           zones: c.zones.length, sansPeintre: Object.keys(d.legende).filter(function (g) { return !L.TUILES[g]; }),
                           decorSansPeintre: Object.keys(types).filter(function (t) { return !L.DECORS[t]; }),
                           typesDecor: Object.keys(types).sort() } };
