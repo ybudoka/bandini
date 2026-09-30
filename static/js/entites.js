@@ -4255,7 +4255,7 @@ const Entites = (function () {
   function demeler() {
     const gens = [];
     for (const e of B.entites) if (deboutDansLaFoule(e)) gens.push(e);
-    for (const e of gens) { e.pousseX = 0; e.pousseY = 0; }
+    for (const e of gens) { e.pousseX = 0; e.pousseY = 0; e.pousseParJoueurX = 0; e.pousseParJoueurY = 0; e.coinceParAutre = false; }
     for (const e of gens) {
       for (const autre of autour(e.x, e.y, e.r + RAYON_FOULE, deboutDansLaFoule)) {
         // ⚠️ Une paire, une fois — mais le tour de TOUT LE MONDE, fige compris :
@@ -4265,7 +4265,11 @@ const Entites = (function () {
         const min = e.r + autre.r;
         let dx = e.x - autre.x, dy = e.y - autre.y;
         let d = Math.hypot(dx, dy);
-        if (d >= min) continue;
+        if (d >= min) {
+          // Colles sans se chevaucher (a un pixel pres) : deja coinces l'un contre l'autre, pour le joueur qui pousse.
+          if (d < min + 1 && e.type !== 'joueur' && autre.type !== 'joueur') { e.coinceParAutre = true; autre.coinceParAutre = true; }
+          continue;
+        }
         if (d < 0.001) {
           // Pile l'un sur l'autre : il faut choisir un sens, et toujours le
           // meme — le banc est un juge, il ne tire pas a pile ou face.
@@ -4286,10 +4290,27 @@ const Entites = (function () {
         else if (autreBute && !eBute && cede(e)) pourE = chevauche;
         const ge = eBute ? glissade(e, dx, dy, min, pourE / chevauche) : null;
         const ga = autreBute ? glissade(autre, -dx, -dy, min, pourAutre / chevauche) : null;
-        if (ge) { e.pousseX += ge[0]; e.pousseY += ge[1]; }
-        else { e.pousseX += dx / d * pourE; e.pousseY += dy / d * pourE; }
-        if (ga) { autre.pousseX += ga[0]; autre.pousseY += ga[1]; }
-        else { autre.pousseX -= dx / d * pourAutre; autre.pousseY -= dy / d * pourAutre; }
+        const pe = ge || [dx / d * pourE, dy / d * pourE], pa = ga || [-dx / d * pourAutre, -dy / d * pourAutre];
+        e.pousseX += pe[0]; e.pousseY += pe[1];
+        autre.pousseX += pa[0]; autre.pousseY += pa[1];
+        // Ce que le JOUEUR fait a un passant, et qui est deja colle a quelqu'un d'autre (voir plus bas).
+        if (e.type === 'joueur' && autre.type !== 'joueur') { autre.pousseParJoueurX += pa[0]; autre.pousseParJoueurY += pa[1]; }
+        else if (autre.type === 'joueur' && e.type !== 'joueur') { e.pousseParJoueurX += pe[0]; e.pousseParJoueurY += pe[1]; }
+        else if (e.type !== 'joueur' && autre.type !== 'joueur') { e.coinceParAutre = true; autre.coinceParAutre = true; }
+      }
+    }
+    // ⚠️ ON N'ECRASE PAS UN PASSANT CONTRE UN AUTRE (le goulot du terminus, 30 sept. 2026) : coince entre le
+    // joueur et un troisieme corps — un passant, Momo plante a son poste —, il recevait deux poussees qui
+    // s'annulaient, et le joueur qui avancait encore l'enfoncait dans l'autre deux images de suite
+    // (`test_la_foule_ne_se_traverse_plus`, 3 graines sur 10). Le passant qui touche deja quelqu'un ne recule
+    // plus devant le joueur : c'est le JOUEUR qui reprend sa part, et il se bute, comme contre un mur
+    // (`test_courir_ne_permet_pas_de_traverser_les_gens` : on n'entre pas dans qui n'a pas de quoi s'ecarter).
+    const joueur = gens.find(function (q) { return q.type === 'joueur'; });
+    if (joueur && cede(joueur)) {
+      for (const e of gens) {
+        if (!e.coinceParAutre || (e.pousseParJoueurX === 0 && e.pousseParJoueurY === 0)) continue;
+        e.pousseX -= e.pousseParJoueurX; e.pousseY -= e.pousseParJoueurY;
+        joueur.pousseX -= e.pousseParJoueurX; joueur.pousseY -= e.pousseParJoueurY;
       }
     }
     const pas = pasDeDemele();
