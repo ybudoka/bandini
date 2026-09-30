@@ -252,3 +252,33 @@ def test_l_hiver_les_jeux_de_la_foire_ne_se_jouent_pas(banc):
     }""")
     assert r["ete"], "en juillet, aucun comptoir sous la main : le juge ne voit rien"
     assert r["hiver"] is None, "en janvier, on joue à la foire"
+
+
+def test_l_hiver_aucun_passant_ne_nait_dans_l_enceinte(banc):
+    """La foule de la rue naît partout où l'on marche, l'enceinte comprise : la capture de janvier y
+    montrait deux passants, dans une foire cadenassée où l'arche ne laisse entrer personne."""
+    r = banc("function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const B = L.B, TT = L.TT, f = L.Monde.carte.def.foire, j = B.joueur;
+        j.invincible = 1e9;
+        function nes(jour) {
+          moment(L, jour);
+          B.entites.filter(function (e) { return e.type === 'pieton' && !e.metier && !e.personnage; }).forEach(function (e) { L.Entites.retirer(e); });
+          const vus = new Set();
+          let dedans = 0;
+          for (let i = 0; i < 1200; i++) {
+            // Au bord de la foire, pour que la couronne de naissance (hors ecran) tombe dans l'enceinte.
+            j.x = (f.x + f.l / 2) * TT; j.y = (f.y + f.h / 2) * TT; L.Monde.centrerCamera(j.x, j.y);
+            o.frame(1);
+            for (const e of B.entites) {
+              if (e.type !== 'pieton' || e.metier || e.personnage || vus.has(e)) continue;
+              vus.add(e);
+              if (L.Monde.dansLaFoire(Math.floor(e.x / TT), Math.floor(e.y / TT))) dedans++;
+            }
+          }
+          return dedans;
+        }
+        return { ete: nes(21), hiver: nes(2) };
+    }""")
+    assert r["ete"] > 0, "en juillet, aucun passant ne naît dans la foire : le juge ne voit rien"
+    assert r["hiver"] == 0, f"en janvier, {r['hiver']} passants nés dans la foire fermée"

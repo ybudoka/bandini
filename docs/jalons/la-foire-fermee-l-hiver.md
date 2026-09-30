@@ -57,6 +57,8 @@ En trois vagues, sans un dé et sans rien déplacer (ce qui se pose, en dernier)
   caisse ne vend rien, on lit LA FOIRE EST FERMÉE POUR L'HIVER (`Monde.raisonDe`), on ressort librement, et
   resquiller coûte pareil.
 - **La foule** : `naitreLaFoire` ne fait naître personne ; forains et mascottes rentrent hors de l'écran.
+  Et la foule de la rue ne naît plus dans l'enceinte (`dansLaFoireFermee`, dans `placeDeNaissance` et
+  `peuplerDabord`) : la capture de janvier montrait deux passants dans la foire cadenassée.
 - **Le Bonimenteur** (`absent_l_hiver`) : pas posé l'hiver, ses missions ne sont pas `disponibles` ;
   `Histoire.majSaisonniers` (toutes les cinq secondes) le retire hors de l'écran à la neige et le repose au
   dégel, jamais pendant une mission qui a besoin de lui.

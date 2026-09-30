@@ -835,6 +835,12 @@ const Entites = (function () {
     return !Monde.estNuit();
   }
 
+  /** Dans l'enceinte d'une foire fermee pour l'hiver : personne n'y nait (on n'y entre pas par l'arche,
+      docs/jalons/la-foire-fermee-l-hiver.md). */
+  function dansLaFoireFermee(tx, ty) {
+    return typeof Foire !== 'undefined' && Foire.fermee() && Monde.dansLaFoire(tx, ty);
+  }
+
   function placeDeNaissance() {
     const carte = Monde.carte;
     // ⚠️ On naissait deja sur un pas de porte une fois sur trois — mais
@@ -861,6 +867,7 @@ const Entites = (function () {
       const tx = Math.floor(x / TT), ty = Math.floor(y / TT);
       if (tx < 1 || ty < 1 || tx >= carte.w - 1 || ty >= carte.h - 1) continue;
       if (Monde.solidite(tx, ty) !== 0 || Monde.estRoute(tx, ty)) continue;
+      if (dansLaFoireFermee(tx, ty)) continue;
       if (visibleAEcran(x, y, 24)) continue;
       if (!placeLibre(tx * TT + 8, ty * TT + 8)) continue;
       return { x: tx * TT + 8, y: ty * TT + 8 };
@@ -938,7 +945,7 @@ const Entites = (function () {
     for (let essai = 0; essai < 80 && B.entites.filter(function (e) { return e.type === 'pieton' && !e.metier; }).length < voulu; essai++) {
       const a = B.rng() * Math.PI * 2, d = 40 + B.rng() * 260;
       const tx = Math.floor((B.joueur.x + Math.cos(a) * d) / TT), ty = Math.floor((B.joueur.y + Math.sin(a) * d) / TT);
-      if (!Monde.marchablePieton(tx, ty) || Monde.estPassage(tx, ty)) continue;
+      if (!Monde.marchablePieton(tx, ty) || Monde.estPassage(tx, ty) || dansLaFoireFermee(tx, ty)) continue;
       if (!placeLibre(tx * TT + 8, ty * TT + 8)) continue;
       ajouterA(grille, creerPieton(tx * TT + 8, ty * TT + 8, null));
     }
