@@ -1650,6 +1650,10 @@ const Histoire = (function () {
         const pts = (o.points || []).map(function (s) { return resoudre(s, m); }).filter(Boolean)
           .map(function (q) { return { x: q.x, y: q.y }; });
         B.mission.course = { i: 0, points: pts };
+      } else if (o.type === 'tenir') {
+        // `tenir` (les chapitres, « défendre le phare ») : le compte part de zéro ; les hommes arrivent de loin.
+        B.mission.tenu = 0;
+        if (o.groupe) poserLesCravates(m, Object.assign({}, o, { loin: o.loin || 14 }), enSilence);
       } else if (o.type === 'suivre') {
         poserLeSuivi(m, o);
       } else if (o.type === 'pickpocket') {
@@ -2209,6 +2213,21 @@ const Histoire = (function () {
           B.mission.sautEnCours = true;
           SurPlace.sauter({ sur_place: o.sur_place }, function () { if (B.mission) B.mission.sautEnCours = false; avancer(); });
         } else if (!o.sur_place) avancer();
+        return;
+      }
+      case 'tenir': {
+        const l = resoudre(o.lieu, m), dedans = l && dist2(j.x, j.y, l.x, l.y) < (o.rayon * TT) * (o.rayon * TT);
+        if (!dedans) {
+          if (o.strict && B.mission.tenu > 0) { echouer('hors_zone'); return; }
+          B.mission.tenu = 0; B.mission.attend = 'REVIENS — ' + texteDObjectif(o);
+          return;
+        }
+        B.mission.attend = null;
+        if (o.groupe) {
+          const cibles = B.mission.entites.filter(function (e) { return e.type === 'pieton' && e.cible && e.etape === p.etape; });
+          majRenforts(m, o, p, cibles, cibles.filter(function (e) { return !e.vivant || e.etat === 'assomme'; }).length);
+        }
+        if (++B.mission.tenu >= (o.secondes || 60) * 60) avancer();
         return;
       }
       case 'aller': {
@@ -3606,6 +3625,7 @@ const Histoire = (function () {
       // `detruire`). `payer` et `boulots` n'ont pas de pixel à pointer : on
       // parle à qui est là, ou on roule au klaxon.
       else if (o.type === 'suivre') l = B.mission ? B.mission.suivi : null;
+      else if (o.type === 'tenir') l = resoudre(o.lieu, m);
       else if (o.type === 'course') l = B.mission && B.mission.course ? B.mission.course.points[B.mission.course.i] || null : null;
       else if (o.type === 'proteger') {
         // Lui d'abord, tant qu'on ne l'a pas rejoint ; puis où on l'emmène.
@@ -3688,6 +3708,7 @@ const Histoire = (function () {
     if (o.type === 'sauter') compte = ' VOL ' + Math.round(B.mission ? B.mission.vol : 0) + '/' + o.vol_px;
     if (o.type === 'course' && B.mission && B.mission.course) compte = ' ' + B.mission.course.i + '/' + B.mission.course.points.length;
     if (o.type === 'suivre' && B.mission && B.mission.suivi) compte = filature(B.mission);
+    if (o.type === 'tenir' && B.mission) compte = ' ' + Math.max(0, Math.ceil(((o.secondes || 60) * 60 - (B.mission.tenu || 0)) / 60)) + ' S';
     if (o.type === 'parler' && tenueManque(o) && tenueDef(o.tenue)) compte = ' — ENFILE : ' + tenueDef(o.tenue).nom.toUpperCase();
     // `sans_arme` : tant qu'on tient une arme, la ligne le dit AVANT qu'on entre chez eux.
     if (o.sans_arme && armeAuPoing(B.joueur)) compte += ' — RANGE TON ARME';

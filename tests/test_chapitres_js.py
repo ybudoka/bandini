@@ -320,3 +320,33 @@ def test_une_poursuite_nait_hors_champ_colle_et_lache_a_la_fin_de_l_objectif(ban
     assert r["horsChamp"] and r["nait"] >= 300, r
     assert r["pres"] < r["nait"] - 100, f"il s'approche : {r}"
     assert r["gang"] == "skateux" and r["apres"] == "trafic", r
+
+
+def _tenir(banc, sortir, strict=False):
+    return banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + """
+        const m = ouvrir(L), B = L.B, p = B.partie, j = B.joueur;
+        m.objectifs[1] = { type: 'tenir', texte: 'TIENS LE PHARE', lieu: 'phare', rayon: 6, secondes: 10, strict: """
+                + ("true" if strict else "false") + """ };
+        commencer(L, o, 'zz'); jouer(L, o);
+        const ph = L.Histoire.lieu('phare'); j.x = ph.x; j.y = ph.y; L.Entites.indexer();
+        for (let k = 0; k < 360; k++) o.frame(1);
+        const ligne = L.Histoire.ligneObjectif();
+        if (""" + ("true" if sortir else "false") + """) { j.x = ph.x + 16 * 12; L.Entites.indexer(); o.frame(2); j.x = ph.x; L.Entites.indexer(); }
+        for (let k = 0; k < 360; k++) o.frame(1);
+        return { etape: p.mission ? p.mission.etape : null, ligne: ligne, gps: !!L.Histoire.cible() };
+    }""")
+
+
+def test_tenir_dix_secondes_sans_sortir_avance(banc):
+    r = _tenir(banc, sortir=False)
+    assert r["etape"] == 2, r
+    assert "TIENS LE PHARE" in r["ligne"] and " S" in r["ligne"], "la ligne d'objectif compte à rebours"
+
+
+def test_tenir_sortir_remet_le_compte_a_zero(banc):
+    r = _tenir(banc, sortir=True)
+    assert r["etape"] == 1 and r["gps"], r
+
+
+def test_tenir_strict_sortir_fait_rater(banc):
+    assert _tenir(banc, sortir=True, strict=True)["etape"] is None

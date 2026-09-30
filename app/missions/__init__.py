@@ -78,6 +78,9 @@ TYPES_OBJECTIFS = (
     # (`chapitres.js`), le `donneur` de l'acte ; `sur_place` facultatif (le saut de `surplace.js`).
     # Voir docs/jalons/des-missions-en-chapitres.md et `erreurs_de_chapitre`.
     "acte",        # `texte`, `donneur`, `sur_place`
+    # Rester à `lieu` (à `rayon` tuiles) pendant `secondes` ; en sortir remet le compte à zéro, ou fait rater
+    # (`strict`, échec `hors_zone`). `groupe`/`n` : des hommes arrivent de loin, `renforts` en ramène.
+    "tenir",       # `lieu`, `rayon`, `secondes`, `strict`, `groupe`, `n`, `renforts`
 )
 
 #: Ce qu'un objet de mission a l'air, par terre (`OBJETS` de `static/js/sprites.js`, que `Entites`
