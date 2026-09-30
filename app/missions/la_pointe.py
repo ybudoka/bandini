@@ -122,7 +122,7 @@ MISSION = {
                jeu="[nervously] Les voyez-vous? [annoyed] Trois, sur le pont, avec leurs planches à roulettes."),
             # Neuf : les renforts du pont.
             _p("bilodeau", "Il en arrive d'autres par le chemin! Combien sont-ils, cette jeunesse-là?", 1,
-               jeu="[worried] Il en arrive d'autres par le chemin! [exasperated] Combien sont-ils, cette jeunesse-là?"),
+               jeu="[worried] Il en arrive d'autres par le chemin! [annoyed] Combien sont-ils, cette jeunesse-là?"),
             _p("bilodeau", "Le grand arrive! Il a un cône, monsieur, faites attention!", 2,
                jeu="[worried] Le grand arrive! [shouting] Il a un cône, monsieur, faites attention!"),
             _p("bilodeau", "Revenez au phare. J'ai du café, pis des biscuits de ma femme.", 3,
@@ -193,7 +193,7 @@ MISSION = {
                jeu="[worried] Ils sont encore autour du phare. [gravely] Je vous en prie… dépêchez-vous."),
             # Neuf : le phare à tenir, pendant qu'il remonte à la lampe.
             _p("ovila", "Tenez la porte, je remonte à la lampe. Qu'ils ne repassent pas!", 16,
-               jeu="[urgently] Tenez la porte, je remonte à la lampe. [firmly] Qu'ils ne repassent pas!"),
+               jeu="[worried] Tenez la porte, je remonte à la lampe. [firmly] Qu'ils ne repassent pas!"),
             # Acte 6 : la fin de p09, en personne ; puis Josée appelle.
             _p("ovila", "Il est passé. Il ne saura jamais qu'il a failli ne pas passer.", 18,
                jeu="[relieved] Il est passé. [softly] Il ne saura jamais… qu'il a failli ne pas passer."),
