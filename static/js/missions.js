@@ -461,6 +461,8 @@ const Missions = (function () {
     p.casier = Math.min(B.defs.economie.casier_max, p.casier + 1);
     p.stats.arrestations++;
     p.armes = { poings: { mun: null } }; p.arme = 'poings'; j.arme = 'poings';
+    Combat.suivreLaMain();   // le parapluie de Rosa est du linge : la police le rend avec
+
     // ⚠️ Le char part au lot AVANT la remise a zero : apres, la police lache
     // le morceau et on n'a plus de raison de savoir ce qu'on conduisait.
     const saisi = charSaisissable(j);

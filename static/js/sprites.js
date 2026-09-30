@@ -8780,6 +8780,12 @@ const OBJETS = {
   pelle: function (ctx) { ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 5, 9, 2); ctx.fillStyle = '#9aa0a8'; ctx.fillRect(11, 3, 4, 6); },
   cone: function (ctx) { ctx.fillStyle = '#d98324'; ctx.fillRect(6, 2, 4, 7); ctx.fillRect(4, 8, 8, 2); ctx.fillStyle = '#efe6d0'; ctx.fillRect(6, 5, 4, 1); },
   bouteille: function (ctx) { ctx.fillStyle = '#2f6b2a'; ctx.fillRect(5, 3, 4, 6); ctx.fillRect(6, 1, 2, 2); },
+  // Le parapluie de Rosa, ferme : le manche en crosse, la toile roulee noire, la pointe.
+  parapluie: function (ctx) {
+    ctx.fillStyle = '#6b4b2c'; ctx.fillRect(1, 6, 1, 3); ctx.fillRect(2, 8, 2, 1); ctx.fillRect(2, 5, 3, 1);
+    ctx.fillStyle = '#1a1a22'; ctx.fillRect(5, 4, 8, 3); ctx.fillStyle = '#3a3a48'; ctx.fillRect(6, 4, 6, 1);
+    ctx.fillStyle = '#9aa0a8'; ctx.fillRect(13, 5, 2, 1);
+  },
   // Les trois du marche noir. A seize pixels, ce qui les nomme : le chargeur
   // qui pend sous la mitraillette, la crosse de bois et le long canon de la
   // carabine, le chiffon allume au goulot du Molotov.
@@ -8883,6 +8889,14 @@ const PORTRAITS = {
     peindrePortrait(ctx, [[6, 7, 25, 11, '#2f6b2a'], [31, 8, 4, 9, '#2f6b2a'], [35, 10, 7, 5, '#2f6b2a'], [42, 9, 2, 7, '#3f8d38']], [
       [8, 8, 22, 1, '#6fb865'], [36, 10, 5, 1, '#6fb865'], [12, 9, 11, 7, '#d9c28a'], [13, 11, 9, 1, '#8a7446'],
       [13, 13, 6, 1, '#8a7446'], [6, 16, 25, 1, '#1d4a1a'],
+    ]);
+  },
+  // Le parapluie : la crosse de bois, la toile noire roulee et sa sangle, la pointe d'acier.
+  parapluie: function (ctx) {
+    peindrePortrait(ctx, [[4, 7, 12, 3, '#6b4b2c'], [4, 7, 3, 12, '#6b4b2c'], [4, 16, 8, 3, '#6b4b2c'],
+                          [10, 13, 3, 6, '#6b4b2c'], [16, 5, 24, 8, '#1a1a22'], [40, 8, 6, 2, '#9aa0a8']], [
+      [5, 7, 10, 1, '#8a6a3f'], [17, 6, 22, 1, '#3a3a48'], [26, 5, 3, 8, '#8a1f1f'], [16, 12, 24, 1, '#0c0c10'],
+      [40, 8, 6, 1, '#d9dcdf'],
     ]);
   },
   pelle: function (ctx) {

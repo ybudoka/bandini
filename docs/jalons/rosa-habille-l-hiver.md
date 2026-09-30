@@ -45,3 +45,33 @@ ni en char, jamais en juillet ; loup marin seul protège ; ralenti mesuré dans 
 sur le déneigé ; le parapluie frappe, s'use, et disparaît de la garde-robe revirée ; la
 ceinture fléchée fait sourire un vieux, pas un jeune, une seule fois. Le poids du paquet
 relu ; une capture Chromium du joueur habillé avant de livrer.
+
+## Notes
+
+**Vague 1 — la boutique et le linge (30 sept. 2026).** `magasins.PLACES` (et `PLACES_DE_TENUE`,
+`champDeTenue` dans `base.js`) : `corps` → `partie.tenue`, `tete` → `chapeau`, `pieds`, `taille`, `main`.
+`porterTenue` enfile par la place ; tout sauf le linge s'enlève en le rechoisissant. Les pièces :
+`pieds` porte `{souliers}` (`bottes_hiver`, `loup_marin`, deux valeurs neuves de `garderobe.SOULIERS`),
+`taille` `{accessoires}` (`ceinture`, `ceinture_flechee`, au BOUT de `garderobe.ACCESSOIRES`), `main`
+`{objet: "parapluie"}`. Les cinq tuques sont des chapeaux neufs de `garderobe.CHAPEAUX`, jamais dans une
+garde-robe tirée ; leurs rayures prennent des couleurs FIXES (`W`, `F`, `G`, `y`) parce que `a`,
+l'accent du joueur, teint déjà sa cravate. ⚠️ La vieille tuque de Rocco (`tuque_rocco`, `prime: "rocco"`)
+se porte au départ et arrive dans la garde-robe d'une vieille partie sans être mise. ⚠️ La saison ne
+chausse ni ne coiffe plus le joueur (`Saisons.habiller`, `joueur`) : elle lui met encore son manteau et
+son foulard au grand froid, pas les bottes ni la tuque — celles-là le gardent du froid. ⚠️ La copie des
+tenues dans `magasins.CATALOGUE` (que rien ne lisait) est sortie du paquet : `magasins` 795 → 310 gzip,
+`tenues` 542 → 872. Capture Chromium : la tuque à oreilles, brune, se lisait comme des cheveux et
+cachait un œil — elle est violette, les oreilles pendent à côté du visage.
+
+**Vague 2 — les effets (30 sept. 2026).** Les réglages : `saisons.JOUEUR` (au paquet sous
+`saisons.joueur`). Le froid : `Entites.majFroid`, à chaque image au début de `majJoueur` (même en char,
+pour s'y réchauffer) ; `j.froid` compte les secondes à geler, la vie ne descend jamais sous le plancher,
+la tempête mord deux fois plus vite ; la caféine réchauffe. Il grelotte en bulle (pas de souffle
+dessiné). La neige : `Entites.hiverAPied` lit `Son.solDuPas` (`pas_neige`, déneigé compris) ; le verglas
+(l'option d'essai) fait garder l'élan d'un sprint en souliers. Le parapluie : une arme `armes.py` à prix
+0, `usures` 10 ; `Combat.suivreLaMain` le met au sac quand il est à la main (au départ, à chaque change,
+à la sortie de prison : la police rend le linge) ; au dernier coup, `revirer` l'enlève de la main, du
+sac et de la garde-robe. ⚠️ `semerDesArmesDeFortune` l'exclut par son nom. Ouvert sous la pluie, il n'est
+plus dessiné roulé dans la main. Deux sons ElevenLabs au lieu `parapluie` (le coup, le revirement).
+La ceinture fléchée : `Entites.majFlechee`, la recette de `majSaluts`, un vieux (`squelette: 'vieux'`)
+sur 0,6 à l'empreinte de son numéro.

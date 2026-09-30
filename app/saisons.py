@@ -110,6 +110,28 @@ LUMIERE = {"solstice_ete": 19.7, "coucher": [18.5, 2.25], "lever": [6.25, -1.2],
 #: Les personnages et le joueur (vague 4c, Martin : « il change juste à l'extérieur ») s'habillent aussi,
 #: DEHORS seulement et du côté du froid seulement : manteau et tuque dans LEUR palette (leur haut, leur
 #: bas) — leur tenue de tous les jours est leur tenue d'été. Dedans, rien ne change pour personne.
+#: LE JOUEUR L'HIVER (`docs/jalons/rosa-habille-l-hiver.md`, vague 2, tranché par Martin) : ce qu'il
+#: porte le garde du froid et de la neige. `chaleur` : ce que vaut chaque pièce (un chapeau de
+#: `HABITS.chapeaux_chauds` vaut `tuque`) ; il en faut `assez` — une tuque ET des bottes d'hiver, ou les
+#: bottes de loup marin seules. Dehors, à pied, au `grand_froid` de la palette, sans assez : après
+#: `delai_s` secondes il perd `degats` de vie toutes les `mord_s` (deux fois plus vite en tempête), et
+#: jamais sous `plancher` de sa vie — le froid n'a jamais tué personne à Baie-des-Brumes, il fait juste
+#: rager. Dedans, en char ou au café (la caféine), on se réchauffe `rechauffe` fois plus vite qu'on gèle.
+#: `grelotte_s` : il le dit (une bulle) ; `neige` : sans bottes, sur la neige, la vitesse à pied.
+#: `verglas` : en souliers, un sprint sur le verglas garde cette part de l'élan d'avant (il glisse).
+JOUEUR = {
+    "chaleur": {"tuque": 1, "bottes_hiver": 1, "loup_marin": 2}, "assez": 2,
+    "delai_s": 60, "mord_s": 2, "degats": 1, "plancher": 0.25, "rechauffe": 4, "grelotte_s": 40,
+    "neige": 0.8, "verglas": 0.88,
+    "mots": ["BRRR!", "Y FAIT FRETTE...", "MES OREILLES!", "J'SENS PUS MES ORTEILS."],
+    "conseil": "T'AS FRETTE : UNE TUQUE PIS DES BOTTES, ÇA SE VEND CHEZ ROSA.",
+    #: LA CEINTURE FLÉCHÉE : un vieux (squelette `vieux`) qui passe à `px` sourit et te le dit, une
+    #: fois chacun, `part` d'entre eux (à l'empreinte de son numéro), au plus une fois par `images`.
+    "flechee": {"px": 56, "part": 0.6, "images": 240, "duree": 150,
+                "mots": ["BELLE CEINTURE FLÉCHÉE!", "ÇA, C'EST DU BEAU MONDE.", "COMME DANS L'TEMPS!",
+                         "MON PÈRE EN PORTAIT UNE!", "VIVE LE CARNAVAL!"]},
+}
+
 HABITS = {
     "ecart": 0.3, "grand_froid": 0.75, "frais": 0.4, "chaud": 0.2,
     #: Ce qu'on garde au grand froid : un chapeau qui tient déjà chaud ou qui dit un métier.
@@ -191,4 +213,5 @@ def palette_du_jour(jour_de_l_annee: float) -> str:
 
 def pour_le_navigateur() -> dict:
     return {"paliers": PALIERS, "cles": [[j, s] for j, s in CLES], "palettes": PALETTES,
-            "lumiere": LUMIERE, "annee": calendrier.ANNEE, "habits": HABITS, "rue": RUE, "son": SON}
+            "lumiere": LUMIERE, "annee": calendrier.ANNEE, "habits": HABITS, "rue": RUE, "son": SON,
+            "joueur": JOUEUR}

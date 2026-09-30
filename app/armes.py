@@ -152,6 +152,9 @@ CATALOGUE: list[Arme] = [
        saigne=45),
     _a("pelle", "Pelle", "melee", 22, 20, 30, 0, anticipation=10, actif=5, renverse=True,
        usures=5),
+    # Le parapluie de Rosa (`magasins.TENUES`, `main`) : une arme TANT QU'ON L'A A LA MAIN
+    # (`Combat.suivreLaMain`), jamais chez Gus (prix 0). Un coup faible ; au dixieme, il se revire.
+    _a("parapluie", "Parapluie", "melee", 8, 16, 20, 0, anticipation=5, actif=4, usures=10),
     # ⚠️ La seule arme qui tire EN CLOCHE : la bille passe par-dessus une
     # cloture et retombe. Le navigateur lui donne un `z` et une gravite.
     _a("fronde", "Fronde", "tir", 10, 140, 30, 30, chargeur=30, munitions_max=90,

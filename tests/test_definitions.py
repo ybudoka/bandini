@@ -26,7 +26,9 @@ MESURE_DU_PAQUET: dict[str, tuple[int, int]] = {
     "vehicules": (1_973, 2_300),
     "interactions": (1_839, 2_150),
     "visages": (1_695, 2_000),
-    "saisons": (1_695, 2_000),
+    # Rosa habille l'hiver, vague 2 (30 sept. 2026) : `saisons.joueur` — le froid, la neige, le verglas et
+    # la ceinture fléchée, avec leurs répliques (1 695 → 2 117).
+    "saisons": (2_117, 2_400),
     "comptoirs": (1_547, 1_850),
     "recherche": (1_361, 1_600),
     "manettes": (1_265, 1_500),

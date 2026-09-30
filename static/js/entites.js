@@ -186,6 +186,7 @@ const Entites = (function () {
 
   function creerJoueur(x, y) {
     const p = B.partie;
+    if (typeof Combat !== 'undefined' && Combat.suivreLaMain) Combat.suivreLaMain();   // le parapluie a la main est au sac
     const j = creer('joueur', x, y, {
       r: 5, sprite: 'joueur', swaps: apparenceDuJoueur(p, B.defs),
       // Habille (`Garderobe`) : son linge, sa coupe ET son chapeau.
@@ -3698,6 +3699,7 @@ const Entites = (function () {
     if (B.t % 30 === 0) majVolDeChar();
     if (B.t % 30 === 0) majBagarre();
     if (B.t % 10 === 0) majSaluts();
+    if (B.t % 10 === 5) majFlechee();
     if (B.t % 30 === 0) majAqueduc();
     if (B.t % 90 === 0) naitreLesSortes();
     if (B.t % 30 === 0) naitreLeLastCall();
@@ -3953,7 +3955,8 @@ const Entites = (function () {
     let trainent = 0;
     for (const e of B.entites) if (e.type === 'ramassage' && e.fortune) trainent++;
     if (trainent >= 3) return;
-    const fortunes = B.defs.armes.filter(function (a) { return a.usures > 0 && a.prix === 0; });
+    // ⚠️ Le parapluie de Rosa n'en est pas une : il ne traine pas dans la rue, il s'achete.
+    const fortunes = B.defs.armes.filter(function (a) { return a.usures > 0 && a.prix === 0 && a.slug !== 'parapluie'; });
     if (!fortunes.length) return;
     const place = placeDeNaissance();
     if (!place) return;
@@ -4447,6 +4450,7 @@ const Entites = (function () {
     // les pietons le faisaient, et le joueur restait penche de 0,22 rad a vie
     // (retour de Martin : « mon personnage est croche »).
     if (j.recul > 0) j.recul--;
+    if (j === B.joueur) majFroid(j);
     if (j.dansVehicule) return;
     // ⚠️ LE DEUXIEME JOUEUR TOMBE K.-O., IL NE VA PAS A L'HOPITAL (`blesser`) :
     // l'urgence CHANGE DE SCENE, et une scene appartient au joueur 1. Il reste
@@ -4573,14 +4577,23 @@ const Entites = (function () {
       // difference entre une barre qui se remplit seule et une avance achetee.
       j.endurance = Math.min(v.endurance, j.endurance + v.endurance_par_image * 0.6);
     }
+    // L'HIVER A PIED (`rosa-habille-l-hiver.md`) : sans bottes, la neige au sol ralentit.
+    const hiver = j === B.joueur && !j.nage ? hiverAPied(j) : null;
+    if (hiver && hiver.neige) vitesse *= hiver.neige;
     if (j.etat === 'attaque' && !j.nage) vitesse *= 0.45;    // on frappe en marchant, pas en courant
     // ⚠️ On ne court pas avec quelqu'un dans les bras. Sans ca, le bouclier
     // humain devenait la meilleure facon de traverser la ville : plus vite que
     // la police et a l'abri de ses balles.
     if (j.otage) vitesse *= B.defs.recherche.bouclier.vitesse;
     const mag = axe.source === 'clavier' ? axe.mag : Math.min(1, axe.mag * 1.15);
+    const vxAvant = j.vx || 0, vyAvant = j.vy || 0;
     j.vx = axe.x * vitesse * mag;
     j.vy = axe.y * vitesse * mag;
+    // En souliers, un sprint sur le verglas glisse : il garde une part de l'elan d'avant.
+    if (hiver && hiver.verglas && vitesse >= v.joueur_sprint) {
+      j.vx = vxAvant * hiver.verglas + j.vx * (1 - hiver.verglas);
+      j.vy = vyAvant * hiver.verglas + j.vy * (1 - hiver.verglas);
+    }
     if (axe.mag > 0) regarder(j, axe.x, axe.y);
     // ⚠️ LE COURANT DU LARGE REFUSÉ (`auLarge`) : le temps qu'il nous ramène, on nage
     // où il veut, le dos tourné à l'île — c'est le « tourner de bord » du nageur.
@@ -4609,6 +4622,81 @@ const Entites = (function () {
     if (j.invincible > 0) j.invincible--;
     if (j.flagrant > 0) j.flagrant--;
     if (j.saigne > 0) saigner(j);
+  }
+
+  // --- L'hiver du joueur (`rosa-habille-l-hiver.md`, vague 2) -------------------------
+
+  /** Ce que valent contre le froid ce qu'il porte : sa tuque (tout chapeau chaud) et ses bottes. */
+  function chaleurDuJoueur(j) {
+    const R = B.defs.saisons.joueur, H = B.defs.saisons.habits, tn = j.tenue || {};
+    let c = H.chapeaux_chauds.indexOf(tn.chapeau) >= 0 ? R.chaleur.tuque : 0;
+    c += R.chaleur[tn.souliers] || 0;
+    return c;
+  }
+
+  /** Dehors a pied, l'hiver : la neige ralentit (sans bottes), le verglas fait glisser (en souliers). Null
+      quand rien n'y change — l'ete, dedans, dans l'eau. */
+  function hiverAPied(j) {
+    const R = B.defs.saisons && B.defs.saisons.joueur;
+    if (!R || B.interieur || !j.tenue) return null;
+    const bottes = R.chaleur[j.tenue.souliers] > 0;
+    if (bottes) return null;
+    const neige = typeof Son !== 'undefined' && Son.solDuPas(j.x, j.y) === 'pas_neige';
+    const verglas = typeof Verglas !== 'undefined' && Verglas.intensite() > 0;
+    if (!neige && !verglas) return null;
+    return { neige: neige ? R.neige : 0, verglas: verglas ? R.verglas : 0 };
+  }
+
+  /** LE FROID : dehors, a pied, au grand froid, sans une tuque ET des bottes (ou le loup marin), il
+      grelotte, puis perd un peu de vie — jamais sous le plancher : le froid fait rager, il ne tue pas.
+      Dedans, en char ou au cafe, on se rechauffe. `j.froid` : les secondes passees a geler. Aucun de. */
+  function majFroid(j) {
+    const R = B.defs.saisons && B.defs.saisons.joueur, H = B.defs.saisons && B.defs.saisons.habits;
+    if (!R || !B.partie || !j.vivant) return;
+    const gele = !B.interieur && !j.dansVehicule && !j.nage && !(j.cafeine > 0) && !B.cinema
+      && typeof Saisons !== 'undefined' && (Saisons.palette().froid || 0) >= H.grand_froid
+      && chaleurDuJoueur(j) < R.assez;
+    if (!gele) { j.froid = Math.max(0, (j.froid || 0) - R.rechauffe / 60); return; }
+    j.froid = (j.froid || 0) + 1 / 60;
+    const tempete = typeof Neige !== 'undefined' && Neige.intensite() > 0.5;
+    const t = Math.round(j.froid * 60);
+    if (j.froid >= R.grelotte_s && t % 480 === 0 && !j.bulle) {
+      bulle(j, R.mots[(t / 480) % R.mots.length], { duree: 110 });
+    }
+    if (j.froid < R.delai_s) return;
+    const mord = Math.max(1, Math.round(R.mord_s * 60 / (tempete ? 2 : 1)));
+    if (t % mord !== 0) return;
+    const plancher = Math.ceil(j.vieMax * R.plancher);
+    if (j.vie <= plancher) return;
+    j.vie = Math.max(plancher, j.vie - R.degats);
+    B.partie.vie = j.vie;
+    if (!B.partie.froidDit) { B.partie.froidDit = true; Hud.message(R.conseil, 300); }
+  }
+
+  /** LA CEINTURE FLECHEE : un vieux qui te croise sourit et te le dit — une fois chacun, `part` d'entre
+      eux, a l'empreinte de son numero (la recette des saluts du boss, `majSaluts`). */
+  function majFlechee() {
+    const R = B.defs.saisons && B.defs.saisons.joueur, j = B.joueur;
+    if (!R || !j || !j.vivant || j.dansVehicule || B.interieur || B.cinema || B.scene) return null;
+    if (!j.tenue || (j.tenue.accessoires || []).indexOf('ceinture_flechee') < 0) return null;
+    const f = R.flechee;
+    if (B.t < (B.flecheeT || 0)) return null;
+    let meilleur = null, dMin = f.px * f.px;
+    for (const e of pietonsAutour(j.x, j.y, f.px)) {
+      if (e.flechee || !e.tenue || e.tenue.squelette !== 'vieux') continue;
+      if (e.personnage || e.agent || e.cible || e.allie || e.intouchable || e.bulle) continue;
+      if (e.etat !== 'flane' && e.etat !== 'arret' && e.etat !== 'cap') continue;
+      const d = dist2(e.x, e.y, j.x, j.y);
+      if (d < dMin) { dMin = d; meilleur = e; }
+    }
+    if (!meilleur) return null;
+    meilleur.flechee = true;
+    const h = hash2(meilleur.id * 11 + 5, 0xF1EC) >>> 0;
+    if ((h % 1000) / 1000 >= f.part) return null;
+    bulle(meilleur, f.mots[(h >> 10) % f.mots.length], { duree: f.duree });
+    regarder(meilleur, j.x - meilleur.x, j.y - meilleur.y);
+    B.flecheeT = B.t + f.images;
+    return meilleur;
   }
 
   //: Combien d'images le courant ramène le nageur que la ligne a arrêté.
@@ -5779,6 +5867,8 @@ const Entites = (function () {
   /** L'arme dans la main de la pose : `img.main` = [x, y, angle] dans la grille. */
   function dessinerArme(ctx, e, img, p, cx, cy) {
     if (!p.arme || !img.main) return;
+    // Le parapluie OUVERT au-dessus de la tete (`Saisons.parapluie`) n'est plus roule dans la main.
+    if (p.arme.slug === 'parapluie' && typeof Saisons !== 'undefined' && Saisons.parapluie(e)) return;
     // ⚠️ `EN_MAIN` d'abord : le poing americain se ramasse en arme et se tient
     // en bout de poing. Sa propre cle au cache — jamais celle du sol.
     const sprite = p.arme.sprite;
@@ -6113,7 +6203,7 @@ const Entites = (function () {
   }
 
   return {
-    orignalDeLaNuit, majOrignal, faireFuirLOrignal, gangChasse, gangCalme, aTesCouleurs, auxCouleursDuBoss, majSaluts, defier, ecoleRouverte, partDehors,
+    orignalDeLaNuit, majOrignal, faireFuirLOrignal, gangChasse, gangCalme, aTesCouleurs, auxCouleursDuBoss, majSaluts, majFlechee, majFroid, chaleurDuJoueur, hiverAPied, defier, ecoleRouverte, partDehors,
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES, PORTEE_DECOR,
     creer, enDehorsDeLaSuite, sauterDesNumeros, dansLaBande, retirer, vider, creerJoueur, creerJoueur2, joueurs, estJoueur, creerDecor, creerAmbulants, majKiosques, creerPaquets, creerPieton, reindexerDecor,
     briser, endommagerDecor, reparerLeDecor, releverDecor, DEBRIS_MAX,

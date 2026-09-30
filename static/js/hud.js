@@ -4190,6 +4190,7 @@ const Hud = (function () {
     poing_americain: "Celui des hommes de Sal. Un peu plus fort que tes poings, et ça couche encore sans tuer.",
     cone: "Pris sur un chantier. Ça cogne plus que ça en a l'air, mais ça plie après quatre coups.",
     bouteille: "Elle coupe en cassant et fait saigner. Trois coups, puis c'est du verre par terre.",
+    parapluie: "Celui de chez Rosa. Il pique plus qu'il cogne, et au dixième coup il se revire à l'envers.",
     pelle: "Lente à lever, mais elle jette par terre ce qu'elle frappe. Le manche finit par lâcher.",
     fronde: "Une bille qui passe par-dessus les clôtures. Pas un bruit : personne ne sait d'où ça vient.",
     batte: "Du bois franc. Un grand coup qui renverse, et il ne casse jamais.",

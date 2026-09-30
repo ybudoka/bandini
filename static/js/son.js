@@ -1250,6 +1250,9 @@ const Son = (function () {
     pelle: function () { if (!joue('pelle')) { bruit(0.08, 0.2, 800, 200); ton(1900, 0.3, 'triangle', 0.22, 0.9, 0.04); ton(2600, 0.2, 'sine', 0.12, 1, 0.04); } },
     cone: function () { if (!joue('cone')) { bruit(0.05, 0.2, 900, 300); ton(320, 0.08, 'triangle', 0.25, 0.6, 0.03); } },
     bouteille: function () { if (!joue('bouteille')) { bruit(0.12, 0.3, 7000, 2500); ton(2700, 0.09, 'sine', 0.18, 1, 0.02); } },
+    // Le parapluie de Rosa : le coup (du nylon et des baleines), et le jour ou il se revire.
+    parapluie: function () { if (!joue('parapluie')) { bruit(0.08, 0.18, 2200, 600); ton(900, 0.05, 'triangle', 0.12, 0.7, 0.02); } },
+    parapluie_revire: function () { if (!joue('parapluie_revire')) { bruit(0.25, 0.3, 1800, 300); ton(1400, 0.12, 'square', 0.08, 0.5, 0.03); } },
     fronde: function () { if (!joue('fronde')) { ton(380, 0.06, 'sine', 0.2, 2.5); bruit(0.08, 0.15, 3500, 800); } },
     pistolet: function () { if (!joue('pistolet')) { bruit(0.15, 0.7, 3000, 200); ton(90, 0.12, 'square', 0.4, 0.4); } },
     fusil: function () { if (!joue('fusil')) { bruit(0.3, 0.9, 2000, 100); ton(60, 0.25, 'sine', 0.5, 0.5); ton(1500, 0.04, 'square', 0.1, 1, 0.35); } },

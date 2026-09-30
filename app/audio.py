@@ -155,6 +155,15 @@ CATALOGUE: list[Echantillon] = [
        prompt="a glass beer bottle swung and smashing against a body, a short "
               "whoosh then a sharp glass clink and crack, dry close-up, "
               "no voices, no music"),
+    # Le parapluie de Rosa (`rosa-habille-l-hiver.md`) : le coup, et le jour ou il se revire a l'envers.
+    _e("parapluie", "Coup de parapluie", duree_s=0.7, volume=0.26,
+       prompt="a closed nylon umbrella swung hard and whacking a person, a swishy flap "
+              "of folded fabric then a light dull thwack with the thin metal ribs "
+              "rattling, dry close-up, no reverb, no voices, no music"),
+    _e("parapluie_revire", "Parapluie revire", duree_s=1.0, volume=0.28,
+       prompt="an umbrella blown inside out: a sudden loud whoomp of nylon fabric "
+              "snapping taut and several thin metal ribs cracking and bending, dry "
+              "close-up, no reverb, no voices, no music"),
     _e("fronde", "Tir de fronde", duree_s=0.6, volume=0.22, influence=0.7,
        prompt="a slingshot fired: a rubber band stretched and released with a "
               "sharp elastic snap and a short whip of air, dry close-up, "
@@ -1777,6 +1786,8 @@ LIEUX: dict[str, list[str]] = {
     # chargent la premiere fois qu'un explosif entre dans le sac ou qu'on en allume
     # un (`combat.js`). Une partie qui n'en touche jamais ne les telecharge pas.
     "explosifs": ["meche", "goupille", "rebond"],
+    # Le parapluie de Rosa : une POSSESSION, comme les explosifs — chargés quand il entre au sac.
+    "parapluie": ["parapluie", "parapluie_revire"],
     # Les bêtes écrasées : pas un endroit, une RUELLE — chargés à la première bête qui naît
     # (`Entites.naitreLesBetes`). Une partie qui n'écrase rien les charge quand même, mais tard.
     "betes": ["chat_ecrase", "raton_ecrase"],

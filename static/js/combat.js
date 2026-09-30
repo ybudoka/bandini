@@ -245,7 +245,37 @@ const Combat = (function () {
     const sac = B.partie.armes[arme.slug];
     if (!sac) return;
     sac.usure = (sac.usure || 0) + 1;
-    if (sac.usure >= arme.usures) perdreArme(B.joueur, arme.slug);   // un seul sac : celui de la partie
+    if (sac.usure < arme.usures) return;
+    if (arme.slug === 'parapluie') return revirer();
+    perdreArme(B.joueur, arme.slug);   // un seul sac : celui de la partie
+  }
+
+  // --- Le parapluie de Rosa -------------------------------------------------------
+
+  /** LA MAIN SUIT LE SAC (`rosa-habille-l-hiver.md`) : le parapluie porte a la main (`partie.main`) est
+      une arme au sac ; enleve, il en sort. Appele a chaque changement de tenue, au depart et a la sortie
+      de prison (la police rend le linge : c'en est). ⚠️ Son usure reste au sac tant qu'il est a la main. */
+  function suivreLaMain() {
+    const p = B.partie;
+    if (!p || !p.armes) return;
+    if (p.main === 'parapluie') {
+      if (!p.armes.parapluie) { p.armes.parapluie = { mun: null, usure: 0 }; Son.Lieu.charger('parapluie'); }
+    } else if (p.armes.parapluie) {
+      delete p.armes.parapluie;
+      if (p.arme === 'parapluie') p.arme = 'poings';
+      if (B.joueur && B.joueur.arme === 'parapluie') B.joueur.arme = 'poings';
+    }
+  }
+
+  /** Au dixieme coup, il se revire a l'envers : il quitte la main, le sac ET la garde-robe — on en rachete un. */
+  function revirer() {
+    const p = B.partie, j = B.joueur;
+    p.main = null;
+    p.tenues = p.tenues.filter(function (s) { return s !== 'parapluie'; });
+    suivreLaMain();
+    if (j && typeof Garderobe !== 'undefined') j.tenue = Garderobe.duJoueur(p, B.defs);
+    Hud.message('TON PARAPLUIE S\'EST REVIRÉ À L\'ENVERS', 180);
+    Son.SFX.parapluie_revire();
   }
 
   // --- Verrouillage -----------------------------------------------------------------
@@ -1310,7 +1340,7 @@ const Combat = (function () {
   return {
     CHARGE_MIN, ROULADE_IMAGES, TENIR_IMAGES, RALENTI, armeDef, armeCourante, armeDe, munitions, possede, regles,
     armesDuSac, aSec, degainer, retourRapide, ouvrirRoue, fermerRoue, creneauVise, majRoue, tempsQuiPasse,
-    frapper, tirer, cycler, roulade, pickpocket, pochesAPrendre, victimeDesPoches, ramasserArme, objetSousLaMain,
+    frapper, tirer, cycler, roulade, pickpocket, pochesAPrendre, victimeDesPoches, ramasserArme, objetSousLaMain, suivreLaMain, userArme: user,
     viseeAssistee, dispersionDe, allumer, majBrasiers, majAttaque, arcDeMelee, majProjectiles, maj,
     allumerMeche, lacherMeche, lancer, majEnMain, majLances, dessinerLance, ramasser, oublierLances,
     majCible, ciblesVerrouillables, VERROU_PORTEE,
