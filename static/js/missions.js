@@ -2822,8 +2822,8 @@ const Missions = (function () {
   }
 
   // --- Le camion de creme glacee ------------------------------------------------------------
-  //: docs/jalons/le-camion-de-creme-glacee.md. Le camion attend, gare, dans la rue du depanneur des
-  //: Erables ; au klaxon, sa tournee (`SORTES.creme_glacee`). Pendant qu'il ROULE sa tournee, sa
+  //: docs/jalons/le-camion-de-creme-glacee.md. Le camion attend, gare HORS de la rue, a cote du
+  //: depanneur des Erables (l'allee du terrain voisin) ; au klaxon, sa tournee (`SORTES.creme_glacee`). Pendant qu'il ROULE sa tournee, sa
   //: ritournelle sort de lui (`Son.Rue.demander`, redemandee a chaque image : arrete, elle se tait en
   //: fondu), et les enfants a velo du coin le suivent — par leur `poste`, qui les garde sur le trottoir.
 
@@ -2847,10 +2847,67 @@ const Missions = (function () {
     }
   }
 
-  /** La place du camion : la rue devant le depanneur des Erables. */
+  //: Jusqu'ou (en tuiles) on cherche sa place autour de la porte du depanneur, a combien de tuiles
+  //: d'une porte il ne se gare jamais, et jusqu'ou son nez doit trouver une rue.
+  const CAMION_RAYON = 12, CAMION_LOIN_DES_PORTES = 3, CAMION_NEZ = 6;
+  //: Ce qui ne bouge pas et qu'il ne doit pas toucher : le decor et le mobilier de la rue.
+  const CAMION_FIXES = { decor: 1, panneau: 1, feu: 1, stop: 1 };
+
+  /** Une tuile ou le camion se gare sans bloquer personne : 0 une allee (la poussiere de pierre),
+      1 l'herbe, 2 le trottoir ou l'abord — et `null` pour la chaussee, un mur, une porte, l'eau. */
+  function solDuCamion(tx, ty) {
+    const leg = Monde.carte.legende[Monde.glyphe(tx, ty)] || {};
+    if (Monde.estRoute(tx, ty) || leg.solide || leg.porte) return null;
+    if (Monde.estTerre(tx, ty)) return leg.herbe ? 1 : 0;
+    return Monde.estTrottoir(tx, ty) || Monde.estAbord(tx, ty) ? 2 : null;
+  }
+
+  /** La place du camion : HORS de la chaussee, a cote du depanneur des Erables — l'allee du terrain
+      voisin d'abord, sinon l'herbe, sinon le trottoir ; son emprise entiere (trois tuiles de long)
+      loin des portes et sans toucher un decor, le nez vers une rue qu'il rejoint tout droit.
+      ⚠️ Il naissait sur `Histoire.tuileDeRue` : garé EN PLEINE VOIE devant chez Ti-Paul, il arretait
+      le trafic derriere lui (Martin, 30 sept. 2026). Le trottoir devant Ti-Paul, lui, est deja plein
+      (guichet, edicule, abribus, banc, et les donneurs juste au-dessus) : c'est le terrain qui le prend.
+      Sans de, et la carte ne change pas : seul son point de naissance a bouge. */
   function placeDuCamion() {
-    const l = Histoire.lieu('depanneur');
-    return l ? Histoire.tuileDeRue(l.x, l.y, 10) : null;
+    const c = Monde.carte, def = c && c.def;
+    const porte = def && (def.portes || []).find(function (q) { return q.lieu === 'depanneur'; });
+    if (!porte) return null;
+    const R = CAMION_RAYON + CAMION_LOIN_DES_PORTES;
+    const portes = def.portes.filter(function (q) { return Math.abs(q.x - porte.x) <= R && Math.abs(q.y - porte.y) <= R; });
+    const fixes = B.entites.filter(function (e) {
+      return CAMION_FIXES[e.type] && Math.abs(e.x / TT - porte.x) <= R && Math.abs(e.y / TT - porte.y) <= R;
+    });
+    let mieux = null, score = Infinity;
+    for (let ty = porte.y - CAMION_RAYON; ty <= porte.y + CAMION_RAYON; ty++) {
+      for (let tx = porte.x - CAMION_RAYON; tx <= porte.x + CAMION_RAYON; tx++) {
+        for (const [ax, ay] of [[1, 0], [0, 1]]) {
+          // Son emprise : la tuile et ses deux voisines dans l'axe.
+          let sol = 0;
+          for (let k = -1; k <= 1 && sol !== null; k++) {
+            const s = solDuCamion(tx + k * ax, ty + k * ay);
+            sol = s === null ? null : Math.max(sol, s);
+          }
+          if (sol === null) continue;
+          if (portes.some(function (q) { return Math.max(Math.abs(q.x - tx) - ax, Math.abs(q.y - ty) - ay) < CAMION_LOIN_DES_PORTES; })) continue;
+          const x = tx * TT + 8, y = ty * TT + 8, demiL = ax ? 16 : 8, demiH = ay ? 16 : 8;
+          if (fixes.some(function (e) { return Math.abs(e.x - x) < demiL + (e.r || 4) && Math.abs(e.y - y) < demiH + (e.r || 4); })) continue;
+          // Le nez : le cote d'ou il rejoint une rue le plus vite, tout droit, sans mur.
+          let sens = null, pas = Infinity;
+          for (const signe of [1, -1]) {
+            for (let n = 2; n <= CAMION_NEZ && n < pas; n++) {
+              const nx = tx + signe * n * ax, ny = ty + signe * n * ay;
+              if (Monde.estRoute(nx, ny)) { pas = n; sens = ax ? (signe > 0 ? '>' : '<') : (signe > 0 ? 'v' : '^'); break; }
+              if (solDuCamion(nx, ny) === null) break;
+            }
+          }
+          if (!sens) continue;
+          const s = sol * 1000 + (tx - porte.x) * (tx - porte.x) + (ty - porte.y) * (ty - porte.y);
+          if (s < score) { score = s; mieux = { x: x, y: y, sens: sens }; }
+        }
+      }
+    }
+    return mieux;
   }
 
   /** Il NAIT GARE, et paresseusement : quand le joueur approche de sa place, hors du champ, s'il n'y

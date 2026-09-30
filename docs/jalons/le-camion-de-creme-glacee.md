@@ -46,8 +46,8 @@ vite dedans ; aucun enfant n'est renversé par la tournée (le camion freine).
   se voit de loin — et, sur chaque flanc, **un vrai cornet complet, pointu** (Martin : « je veux un vrai
   cornet complet sur le côté », « pointu ») : le biscuit qui s'effile jusqu'à une pointe d'un pixel, le
   rebord roulé, une boule rose qui coule, une boule menthe, la cerise (`cornetDeFlanc`). ⚠️ Pas de
-  quadrillage gaufré : à cette taille, deux diagonales lui faisaient un visage. `freq` 0 : il ne roule pas dans le trafic ; il attend **garé** dans la rue du dépanneur
-  des Érables, et n'y naît qu'à l'approche du joueur, hors champ (jamais au démarrage).
+  quadrillage gaufré : à cette taille, deux diagonales lui faisaient un visage. `freq` 0 : il ne roule pas dans le trafic ; il attend **garé** à côté du dépanneur
+  des Érables (hors de la rue depuis le 30 sept. : [le camion hors de la voie](le-camion-de-creme-glacee-hors-de-la-voie.md)), et n'y naît qu'à l'approche du joueur, hors champ (jamais au démarrage).
 - **La tournée** (`boulot: "creme_glacee"`, au klaxon) : trois arrêts là où le monde s'arrête (les scènes
   de la ville — parcs, place publique), une vente à chacun ; ses paliers : la ritournelle du quartier (+30 %),
   les kiosques à −25 %, et le camion à toi à cinquante tournées.

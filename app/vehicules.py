@@ -232,7 +232,7 @@ CATALOGUE: list[Vehicule] = [
     # LE CAMION DE CREME GLACEE (docs/jalons/le-camion-de-creme-glacee.md) : une tournee des parcs, sa
     # ritournelle, les enfants a velo qui la suivent — et le camion le moins soupconne de la ville
     # (`discret`). ⚠️ `freq` 0 : il ne roule pas dans le trafic (sa naissance decalerait tous les des de
-    # la ville) ; il attend, gare, dans la rue du depanneur des Erables (`Vehicules.majCremeGlacee`).
+    # la ville) ; il attend, gare hors de la rue, a cote du depanneur des Erables (`Missions.placeDuCamion`).
     _v("creme_glacee", "Camion de crème glacée", "auto", 30, 15, 3.2, 0.05, 25, 140, 2, 1100, 0.0,
        ["#fff6ea"], "creme_glacee", masse=1.3, boulot="creme_glacee", discret=0.5),
     # LA MOTONEIGE (docs/jalons/la-motoneige.md) : le vehicule de l'hiver. Rapide dans la neige et sur la

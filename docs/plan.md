@@ -78,7 +78,6 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
-| Le camion de crème glacée hors de la voie | ⬜ **en cours** | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/le-camion-de-creme-glacee-hors-de-la-voie.md#fiche) |
 | On ne marche plus sur les meubles | ⬜ **en cours** | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/on-ne-marche-plus-sur-les-meubles.md#fiche) |
 | Les bateaux ne sont pas des chars | ⬜ **en cours** (tranché par Martin : tout, en cinq vagues — la conduite, les règles de char, le plongeon et la police de terre, la vedette de police, l'habillage et l'hiver ; ✅ vague 1 livrée : la conduite — la poupe chasse, la machine arrière au lieu du frein, la météo reste sur la rue ; Martin l'essaie avant la vague 2) | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/les-bateaux-ne-sont-pas-des-chars.md#fiche) · [notes](jalons/les-bateaux-ne-sont-pas-des-chars.md#notes) |
 | La villa barbelée et mieux gardée | ⬜ **en cours** | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/la-villa-barbelee-et-mieux-gardee.md#fiche) |

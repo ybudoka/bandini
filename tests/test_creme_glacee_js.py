@@ -1,6 +1,6 @@
 """Le camion de crème glacée, au banc (docs/jalons/le-camion-de-creme-glacee.md).
 
-Il attend garé dans la rue du dépanneur des Érables, et naît quand on approche ; au klaxon, sa
+Il attend garé hors de la rue, à côté du dépanneur des Érables, et naît quand on approche ; au klaxon, sa
 tournée ; sa ritournelle joue quand il roule et se tait quand il s'arrête ; les enfants à vélo le
 suivent sans jamais toucher la rue ; et la police le soupçonne moins, tant qu'on n'y tire pas.
 """
@@ -42,8 +42,21 @@ def camion_puis_tournee(banc):
         for (let k = 0; k < 130; k++) o.frame(1);
         const encore = B.entites.filter(function (e) { return e.type === 'vehicule' && e.slug === 'creme_glacee'; }).length;
         const c = camions[0], place = M.placeDuCamion();
+        // Son emprise : les quatre coins et le milieu de ses flancs, sur la carte et contre le decor.
+        const L2 = 15, l2 = 7.5, ca = Math.cos(c.angle), sa = Math.sin(c.angle), surLaRue = [], touche = [];
+        for (const [u, w] of [[L2, l2], [L2, -l2], [-L2, l2], [-L2, -l2], [0, l2], [0, -l2], [0, 0]]) {
+            const x = c.x + u * ca - w * sa, y = c.y + u * sa + w * ca;
+            if (L.Monde.estRoute(Math.floor(x / 16), Math.floor(y / 16))) surLaRue.push([Math.round(x), Math.round(y)]);
+        }
+        for (const e of B.entites) {
+            if (e === c || !{ decor: 1, panneau: 1, feu: 1, stop: 1 }[e.type]) continue;
+            const u = (e.x - c.x) * ca + (e.y - c.y) * sa, w = -(e.x - c.x) * sa + (e.y - c.y) * ca;
+            if (Math.abs(u) < L2 + (e.r || 4) && Math.abs(w) < l2 + (e.r || 4)) touche.push(e.decor || e.type);
+        }
         const nait = { auDemarrage: auDemarrage, n: camions.length, encore: encore, gare: c && c.etat,
-                       pres: c ? Math.round(Math.hypot(c.x - place.x, c.y - place.y)) : null };
+                       pres: c ? Math.round(Math.hypot(c.x - place.x, c.y - place.y)) : null,
+                       surLaRue: surLaRue, touche: touche,
+                       porte: Math.round(Math.hypot(c.x - (L.Histoire.lieu('depanneur') || {}).x, c.y - (L.Histoire.lieu('depanneur') || {}).y)) };
         // --- La tournee, au volant du meme camion.
         const demandes = [];
         const vrai = L.Son.Rue.demander;
@@ -75,6 +88,39 @@ def test_il_attend_gare_pres_du_depanneur_et_nait_quand_on_approche(camion_puis_
     assert r["gare"] == "stationne" and r["pres"] < 16, r
 
 
+def test_il_attend_hors_de_la_chaussee_sans_toucher_le_decor(camion_puis_tournee):
+    """Martin (30 sept. 2026) : garé dans la voie devant Ti-Paul, il bloquait le trafic. Aucun coin de
+    son emprise sur la chaussée, aucun décor sous lui — et il reste à côté du dépanneur."""
+    r = camion_puis_tournee["nait"]
+    assert not r["surLaRue"], f"le camion attend sur la chaussée : {r['surLaRue']}"
+    assert not r["touche"], f"le camion attend dans le décor : {r['touche']}"
+    assert r["porte"] < 12 * 16, f"le camion attend à {r['porte']} px du dépanneur"
+
+
+@pytest.fixture(scope="module")
+def sortie_du_camion(banc):
+    """UN banc : on approche, on monte, et on écrase l'accélérateur (le bouton, pas `vitesse`)."""
+    return banc("function (L, o) {" + APPROCHE + """
+        L.Jeu.commencer();
+        const Mo = L.Monde, c = auVolant(L, o), x0 = c.x, y0 = c.y;
+        let rue = -1;
+        o.touche('KeyW');
+        for (let k = 0; k < 90 && rue < 0; k++) {
+            o.frame(1);
+            if (Mo.estRoute(Math.floor(c.x / 16), Math.floor(c.y / 16))) rue = k;
+        }
+        o.relacher('KeyW');
+        return { rue: rue, parcouru: Math.round(Math.hypot(c.x - x0, c.y - y0)), vie: c.vie, vieMax: c.vieMax };
+    }""")
+
+
+def test_il_rejoint_la_rue_tout_droit(sortie_du_camion):
+    """Garé hors de la chaussée, il doit en sortir d'un coup d'accélérateur, le nez devant."""
+    r = sortie_du_camion
+    assert r["rue"] >= 0, f"à l'accélérateur, le camion n'atteint pas la rue : {r}"
+    assert r["vie"] == r["vieMax"], f"le camion a cogné quelque chose en sortant : {r}"
+
+
 def test_au_klaxon_la_tournee_et_la_ritournelle_quand_il_roule(camion_puis_tournee):
     r = camion_puis_tournee["tournee"]
     assert r["tournee"]["slug"] == "creme_glacee" and r["tournee"]["etape"] == "route" and r["tournee"]["dest"], r
@@ -95,6 +141,10 @@ def enfants_puis_police(banc):
         L.Jeu.commencer();
         const B = L.B, M = L.Missions, Mo = L.Monde, P = L.Police;
         const c = auVolant(L, o);
+        // La tournee se juge DANS LA RUE du depanneur, qu'il longe dans le sens de sa voie : garé sur l'allée d'a cote, pousse
+        // tout droit, il traverserait les terrains et l'enfant, sur son trottoir, le perdrait.
+        const lieu = L.Histoire.lieu('depanneur'), rue = L.Histoire.tuileDeRue(lieu.x, lieu.y, 10);
+        c.x = rue.x; c.y = rue.y; c.angle = { '>': 0, 'v': Math.PI / 2, '<': Math.PI, '^': -Math.PI / 2 }[rue.sens]; L.Entites.indexer();
         o.tape('KeyJ', 2);
         // Un enfant a velo sur un trottoir, a 150 px.
         let place = null;
