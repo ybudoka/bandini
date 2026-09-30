@@ -78,6 +78,7 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
+| On ne marche plus sur les meubles | ⬜ **en cours** | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/on-ne-marche-plus-sur-les-meubles.md#fiche) |
 | Les bateaux ne sont pas des chars | ⬜ **en cours** (tranché par Martin : tout, en cinq vagues — la conduite, les règles de char, le plongeon et la police de terre, la vedette de police, l'habillage et l'hiver) | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/les-bateaux-ne-sont-pas-des-chars.md#fiche) |
 | La villa barbelée et mieux gardée | ⬜ **en cours** | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/la-villa-barbelee-et-mieux-gardee.md#fiche) |
 | Des intérieurs fidèles à l'extérieur : la revue complète | ⬜ **en cours** (✅ vague 1 livrée : le mur de la porte harmonisé, un seul plâtre dans toutes les pièces ; ensuite la revue, et les logements selon le standing) | 29 sept. 2026 | **P2** | **correctif** | [fiche](jalons/des-interieurs-fideles-a-l-exterieur.md#fiche) |
