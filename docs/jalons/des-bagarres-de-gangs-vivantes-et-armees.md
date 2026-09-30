@@ -696,7 +696,27 @@ def test_il_esquive_parfois_ton_coup(banc):
   la ligne du plan passe à « ✅ vague 1 livrée : … ; vague 2 à faire » ; ces notes prennent « — **livrée le …** ».
 - [ ] La suite complète ensuite, puis `git push`.
 
-### Vague 2 — l'arsenal et la fusillade — **plan** (30 sept. 2026)
+### Vague 2 — l'arsenal et la fusillade — **livrée le 30 sept. 2026**
+
+**Ce qui a changé en route** (le plan d'en dessous est celui d'avant le code) :
+- **Il dégaine au premier échange** (`Rixe.armer`, à l'empreinte de l'identifiant), pas à la naissance : aucun des
+  trois endroits où naissent les membres de gang n'est touché, et la fiche disait « la sort dès que le combat
+  commence ».
+- **Quatre trous trouvés en explorant**, corrigés : `tirer` ne notait pas `avantLeCoup` (le tireur se retournait
+  contre toi à sa première balle), visait toujours le joueur, tirait sa dispersion au dé ; `blesser` lançait sur
+  toi celui qu'un autre avait touché ; `Police.entendre` te prêtait le coup de feu d'un autre.
+- **La relecture** : le coup de feu d'un tireur faisait fuir ses propres coéquipiers qui t'attaquaient (`alerter`
+  épargne maintenant celui qui se bat contre toi quand la menace est de SON gang — un autre gang garde la réaction
+  d'avant, le siège de m98 en dépend) ; collé à lui, le tireur ne faisait plus rien (il tire à bout portant) ; un
+  gang qui te visait pouvait te valoir une méprise ; la levée était muette — il CRIE une réplique en levant l'arme
+  (`lever_mots`) et la relève en revenant au combat (`retour_images`).
+- **Ce qui reste au dé, sciemment** : la rue qui réagit à un coup de feu (fuir ou témoigner, comme au poing) et
+  les flammes d'une bouteille qui casse (déjà vrai pour tes Molotov).
+- **Reporté** (mineurs de la relecture) : l'arme lâchée par un membre couché part chargeur plein (la vague 3, le
+  moral, s'en occupe) ; la mitraillette d'un PNJ ne « s'ouvre » pas en rafale ; l'abri n'est cherché qu'en fin de
+  salve ; la bouteille qui casse s'entend même hors champ.
+
+#### Le plan (30 sept. 2026)
 
 > Exécuté comme la vague 1 : sur place, tâche par tâche, juges d'abord, une relecture neuve à la fin.
 
