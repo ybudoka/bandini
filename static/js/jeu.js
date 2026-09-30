@@ -1066,12 +1066,14 @@ const Jeu = (function () {
     // avec l'ouverture doit etre EXACTEMENT celle qu'on aurait jouee sans —
     // c'est ce qu'un juge du banc verifie, tuile par tuile.
     //
-    // ⚠️ PASSER (le bouton FRAPPE, ou PAUSE) saute TOUT, a la manette et au
-    // doigt comme au clavier. ACTION, lui, passe une replique : c'est
-    // `majCinema` qui s'en occupe, et les etiquettes tactiles le disent deja
-    // (« PASSER » et « SUIVANT », contexte `dialogue`).
+    // ⚠️ PASSER (PAUSE, le ❚❚ au doigt) saute TOUT, a la manette et au doigt
+    // comme au clavier. ACTION, lui, passe une replique : c'est `majCinema`
+    // qui s'en occupe (« SUIVANT », contexte `dialogue`).
+    // ⚠️ FRAPPE NE PASSE RIEN (Martin, 30 sept. 2026) : on martele FRAPPE
+    // pour finir le dernier ennemi, la mission se gagne sous le coup, et la
+    // scene de fin partait avec les coups suivants — on ne l'entendait jamais.
     if (B.etat === 'jeu' && B.scene) {
-      if (Entree.neuf('pause') || Entree.neuf('attaque')) { Scenes.passer(); Entree.videPresse(); return; }
+      if (Entree.neuf('pause')) { Scenes.passer(); Entree.videPresse(); return; }
       Scenes.maj();
       Entree.videPresse();
       return;

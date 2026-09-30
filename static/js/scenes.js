@@ -14,7 +14,8 @@
      joue en les passant : même tuile, même monde, même prochain dé. Les couleurs
      se donnent en clair, les bouffées de fumée ont des angles fixes.
    - LA VILLE EST FIGÉE pendant qu'elle joue (`Jeu.maj` ne fait tourner qu'elle).
-   - ON LA PASSE (PAUSE ou FRAPPE) et l'on tombe exactement où elle nous aurait
+   - ON LA PASSE (PAUSE — jamais FRAPPE, qu'on martèle encore quand la mission
+     se gagne) et l'on tombe exactement où elle nous aurait
      laissés : il n'y a qu'UNE façon de finir (`finir`), et elle achève ce que les
      plans pas encore joués auraient laissé derrière eux.
    - ELLE SE TERMINE TOUJOURS : un plan dont le lieu ou l'acteur ne se trouve pas

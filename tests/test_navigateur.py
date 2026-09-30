@@ -264,7 +264,7 @@ def test_l_ouverture_joue_au_premier_jouer_et_se_passe(page, serveur, erreurs):
     # PASSER, au clavier : on tombe dans la ville, et on marche.
     x0 = page.evaluate("window.BANDINI.B.joueur.x")
     y0 = page.evaluate("window.BANDINI.B.joueur.y")
-    page.keyboard.press("Space")
+    page.keyboard.press("Escape")
     page.wait_for_function("!window.BANDINI.B.ouverture")
     assert page.evaluate("window.BANDINI.B.joueur.dessine") is True
     assert page.evaluate("window.BANDINI.B.entites.filter(e => e.slug === 'autobus' && e.conducteur !== 'ligne').length") == 0

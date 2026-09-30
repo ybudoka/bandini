@@ -1046,8 +1046,8 @@ const Histoire = (function () {
     B.dialogue = null;
     Son.Voix.couper();
     // ⚠️ Pendant une scene, la derniere replique ne rend PAS les commandes :
-    // la scene tourne encore (le car repart, le titre s'inscrit) et PASSER doit
-    // rester PASSER jusqu'au bout.
+    // la scene tourne encore (le car repart, le titre s'inscrit) et PAUSE doit
+    // la passer jusqu'au bout.
     Entree.contexte(B.scene ? 'dialogue' : B.joueur && B.joueur.dansVehicule ? 'vehicule' : 'pied');
     if (c && c.fin) c.fin();
   }
@@ -1093,7 +1093,9 @@ const Histoire = (function () {
     // replique de chaque intro — les cinq donneurs, clavier et manette, et la
     // voix demandee puis coupee aussitot. `c.t` compte les images de la ligne ;
     // `B.t` ne servirait pas, il s'arrete pendant une scene.
-    const bouton = c.t > 1 && (Entree.neuf('action') || Entree.neuf('attaque'));
+    // ⚠️ ET PAS FRAPPE : les coups qu'on martele encore au moment ou la
+    // mission se gagne sautaient les repliques de fin (Martin, 30 sept. 2026).
+    const bouton = c.t > 1 && Entree.neuf('action');
     if (bouton || (c.t > c.duree && !parle)) suivante();
   }
 

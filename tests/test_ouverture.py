@@ -168,7 +168,9 @@ def test_l_ouverture_se_termine_toute_seule_et_rend_la_ville(banc):
 
 def test_on_passe_l_ouverture_et_on_tombe_au_meme_endroit(banc):
     """⚠️ Une ouverture qu'on ne peut pas passer devient une punition a la
-    deuxieme partie. FRAPPE (« PASSER ») et PAUSE la sautent toutes les deux."""
+    deuxieme partie. PAUSE la saute ; FRAPPE, non (Martin, 30 sept. 2026) : on
+    la martele encore quand la mission se gagne, et la scene de fin partait sous
+    les coups. ACTION, lui, ne passe qu'une replique."""
     r = banc("""function (L, o) {
         function neuve() {
             L.Jeu.retourTitre();
@@ -177,14 +179,16 @@ def test_on_passe_l_ouverture_et_on_tombe_au_meme_endroit(banc):
         }
         neuve();
         o.frame(30);
-        o.tape('Space', 2);                       // FRAPPE = PASSER
+        const ligne0 = L.B.cinema && L.B.cinema.i;
+        o.tape('Space', 2);                       // FRAPPE, martelee : rien
+        o.frame(1);
+        o.tape('Space', 2);
         const apresFrappe = { ouverture: !!L.B.ouverture, cinema: !!L.B.cinema,
-                              x: L.B.joueur.x, y: L.B.joueur.y, dessine: L.B.joueur.dessine,
-                              cars: L.B.entites.filter(function (e) { return e.slug === 'autobus' && e.conducteur !== 'ligne'; }).length };
-        neuve();
-        o.frame(30);
-        o.tape('Escape', 2);                      // PAUSE aussi
-        const apresPause = { ouverture: !!L.B.ouverture, etat: L.B.etat, x: L.B.joueur.x, y: L.B.joueur.y };
+                              ligne: L.B.cinema && L.B.cinema.i, ligne0: ligne0 };
+        o.tape('Escape', 2);                      // PAUSE passe
+        const apresPause = { ouverture: !!L.B.ouverture, etat: L.B.etat, x: L.B.joueur.x, y: L.B.joueur.y,
+                             dessine: L.B.joueur.dessine,
+                             cars: L.B.entites.filter(function (e) { return e.slug === 'autobus' && e.conducteur !== 'ligne'; }).length };
         // ⚠️ Les COMMANDES s'ouvrent au bout de l'ouverture, passee ou non
         // (`test_commandes_js.py`) : ACTION les ferme, comme le dit leur pied.
         const aide = L.B.menu && L.B.menu.titre;
@@ -204,12 +208,10 @@ def test_on_passe_l_ouverture_et_on_tombe_au_meme_endroit(banc):
         });
         return { frappe: apresFrappe, pause: apresPause, bouge: bouge, aide: aide };
     }""")
-    assert r["frappe"]["ouverture"] is False and r["frappe"]["cinema"] is False
-    assert r["frappe"]["dessine"] is True and r["frappe"]["cars"] == 0
+    assert r["frappe"]["ouverture"] is True and r["frappe"]["cinema"] is True, "FRAPPE ne passe pas la scene"
+    assert r["frappe"]["ligne"] == r["frappe"]["ligne0"], "ni meme une replique"
     assert r["pause"]["ouverture"] is False and r["pause"]["etat"] == "jeu", "PAUSE saute la scene, elle n'ouvre pas le menu"
-    assert abs(r["frappe"]["x"] - r["pause"]["x"]) < 1 and abs(r["frappe"]["y"] - r["pause"]["y"]) < 1, (
-        "les deux facons de passer laissent au meme endroit"
-    )
+    assert r["pause"]["dessine"] is True and r["pause"]["cars"] == 0
     assert r["aide"] == "COMMANDES", "passer la scene mene aux commandes, comme la voir jusqu'au bout"
     assert r["bouge"] >= 1, "et on joue des qu'on les ferme : les commandes sont rendues"
 

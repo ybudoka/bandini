@@ -914,7 +914,8 @@ const Entree = (function () {
       : nom === 'menu'
         ? { attaque: 'RETOUR', action: 'CHOISIR', esquive: 'BAS', arme: 'HAUT', saisir: '·' }
         : nom === 'dialogue'
-          ? { attaque: 'PASSER', action: 'SUIVANT', esquive: '·', arme: '·', saisir: '·' }
+          // FRAPPE ne passe rien : la scene se passe au ❚❚ (PAUSE).
+          ? { attaque: '·', action: 'SUIVANT', esquive: '·', arme: '·', saisir: '·' }
           // ⚠️ Le piratage se joue au STICK (une direction a la fois, comme la
           // roue d'armes) : FRAPPE est le seul bouton qui compte encore, et il
           // change de sens — abandonner, pas frapper.
