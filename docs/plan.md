@@ -24,6 +24,7 @@ Les sections que ce plan avait avant d'être fragmenté (20 sept. 2026), et où 
 
 | Section d'avant | Maintenant |
 |---|---|
+| Les répliques disent le bon moment | ⬜ **en cours** | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/les-repliques-disent-le-bon-moment.md#fiche) |
 | « État des jalons » | ⬜ dans « À faire », ci-dessous ; ✅ dans [jalons/README.md](jalons/README.md) |
 | « Notes des jalons » | sous « Notes » dans le fichier de chaque jalon, [jalons/](jalons/README.md) |
 | « La suite » | l'ordre : « L'ordre », ci-dessous ; les fiches : sous « Fiche » dans le fichier de chaque jalon |
