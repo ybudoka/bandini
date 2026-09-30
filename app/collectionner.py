@@ -655,7 +655,14 @@ def poser(ville: dict) -> dict:
     bebelles = poser_bebelles(ville, places)
     # Les sauts, APRÈS les bebelles : les cartes et les bebelles ne bougent pas d'une tuile.
     trouvailles = [(p["x"], p["y"]) for p in places + bebelles]
-    return {"cartes": places, "bebelles": bebelles, "sauts": poser_sauts(ville, trouvailles)}
+    sauts = poser_sauts(ville, trouvailles)
+    # Le marché aux puces du dimanche (`puces.py`), EN DERNIER : loin des trouvailles ET des pistes des sauts.
+    from . import puces
+    pistes = [(s["x"] + s["dx"] * k, s["y"] + s["dy"] * k) for s in sauts
+              for k in range(-carte.ELAN_RAMPE, carte.RECEPTION_RAMPE + 2)]
+    planque = next(p for p in ville["points_interet"] if p["slug"] == "planque")
+    marche = puces.poser(ville, _depuis(ville, [(planque["x"], planque["y"])]), trouvailles + pistes)
+    return {"cartes": places, "bebelles": bebelles, "sauts": sauts, "puces": marche}
 
 
 def exporter(places: dict | None, sons: dict | None = None) -> dict:
@@ -673,6 +680,7 @@ def exporter(places: dict | None, sons: dict | None = None) -> dict:
                        "liste": cartes},
             "regle": {**REGLE, "paliers": dict(REGLE["paliers"])},
             "bebelles": _exporter_bebelles((places or {}).get("bebelles", [])),
+            "puces": _puces().exporter((places or {}).get("puces")),
             "sauts": {"titre": "SAUTS", "liste": [dict(p) for p in (places or {}).get("sauts", [])],
                       "regle": {**REGLE_SAUTS, "paliers": dict(REGLE_SAUTS["paliers"])}},
             # Les sons des cartes (`audio.echantillons_a_part`) : hors des définitions, remis au paquet à l'arrivée.
@@ -691,3 +699,8 @@ def _exporter_bebelles(places: list[dict]) -> dict:
         liste.append(fiche)
     return {"titre": "BEBELLES", "liste": liste,
             "regle": {**REGLE_BEBELLES, "paliers": dict(REGLE_BEBELLES["paliers"])}}
+
+
+def _puces():
+    from . import puces
+    return puces

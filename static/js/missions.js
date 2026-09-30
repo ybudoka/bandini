@@ -293,6 +293,8 @@ const Missions = (function () {
     if (jeu) return Histoire.proposerDefi(jeu.slug);
     // La cabane a sucre : la table de tire (le defi), la caleche a son arret (`Cabane`).
     if (Cabane.sousLaMain(j)) return Cabane.agir(j);
+    // Le marché aux puces du dimanche : l'étal de Ti-Rhéal ou celui de Gisèle (`Puces`).
+    if (Puces.sousLaMain(j)) return Puces.agir(j);
     const etal = etalSousLaMain(j);
     if (etal) return acheterAmbulant(j, etal);
     // ⚠️ LES HOMMES DE SAL AVANT TOUT LE MONDE : quand ils sont sur toi, il

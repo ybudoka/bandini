@@ -174,7 +174,7 @@ def test_les_triches_vont_voir_une_carte_sans_la_ramasser_et_remplissent_l_album
     }""")
     assert r["titre"] == "COLLECTIONS" and r["premiere"] == "LA PLUS PROCHE"
     # La plus proche, les quarante cartes, l'en-tête des BEBELLES et les douze, celui des SAUTS et les vingt, le retour.
-    assert r["lignes"] == 1 + 40 + 1 + 12 + 1 + 20 + 1, r
+    assert r["lignes"] == 1 + 40 + 1 + 12 + 2 + 1 + 20 + 1, r   # (+ l'en-tête du marché aux puces et sa ligne)
     assert r["rendu"] is True and 2 <= r["tuiles"] <= 5, r
     assert r["apres"] is False, "le saut de debug ramasse la carte"
     assert r["nombre"] == 40 and r["gain"] == 0, "TOUTES LES CARTES paie (ou n'en donne pas toutes)"

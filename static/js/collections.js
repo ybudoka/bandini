@@ -325,7 +325,8 @@ const Collections = (function () {
     album()[c.numero] = { jour: p.jour, source: source || 'rue' };
     if (silence) return true;
     const r = regle(), n = nombre(), N = total();
-    if (r.prime) Missions.encaisser(r.prime, 'CARTE DE HOCKEY', true);
+    // La prime d'une carte TROUVÉE : celle qu'on achète aux puces (`Puces`), on l'a payée — les paliers, eux, suivent.
+    if (r.prime && source !== 'puces') Missions.encaisser(r.prime, 'CARTE DE HOCKEY', true);
     Son.SFX.carte_hockey();
     Hud.message('CARTE ' + n + '/' + N + ' — ' + c.nom + (r.prime ? ' (+' + r.prime + ' $)' : ''), 220);
     Histoire.noter('CARTE DE HOCKEY N° ' + c.numero + ' : ' + c.nom, false);

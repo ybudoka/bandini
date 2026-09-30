@@ -2595,6 +2595,17 @@ const Hud = (function () {
     for (const b of manquent) {
       items.push({ libelle: b.nom, detail: b.indice || '', bebelle: b.slug, faire: function () { return allerALaBebelle(b); } });
     }
+    // Le marché aux puces : on y va le dimanche matin (le jour avance jusqu'au prochain dimanche).
+    if (Puces.donnees() && Puces.etals().length) {
+      items.push(entete('LE MARCHÉ AUX PUCES'));
+      items.push({ libelle: 'AU MARCHÉ, DIMANCHE 8 H', puces: true, faire: function () {
+        if (!aPiedEnVille()) return false;
+        const ok = Puces.yAller();
+        if (B.etat === 'pause') Jeu.reprendre();
+        fermerMenu();
+        message(ok ? 'LE MARCHÉ AUX PUCES — JOUR ' + B.partie.jour : 'LE MARCHÉ N’EST PAS ENCORE ARRIVÉ');
+        return ok; } });
+    }
     if (aSauter.length) items.push(entete('SAUTS'));
     for (const q of aSauter) {
       items.push({ libelle: q.nom, detail: q.rampe ? 'RAMPE' : 'TREMPLIN', saut: q.slug,

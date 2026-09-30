@@ -177,8 +177,9 @@ def test_elles_voyagent_a_part_hors_de_la_carte_et_des_definitions(paquets, clie
     # avec le catalogue de la planque qu'on décore (vague 2) ; 14 354 / 5 429 avec les douze bebelles, leurs dessins et
     # leurs places (vague 3). Relevé à 18 000 / 7 000 pour les sauts (vague 4) : ce paquet-ci arrive en arrière-plan,
     # après les définitions, et n'attend personne — c'est le plafond du dépôt, pas celui du premier écran.
-    assert paquets.collections.taille < 18_000
-    assert len(gzip.compress(paquets.collections.corps, 6)) < 7_000
+    # Puis 16 987 / 5 964 avec les sauts (vague 4), et 17 872 / 6 348 avec le marché aux puces : relevé à 22 000 / 8 000.
+    assert paquets.collections.taille < 22_000
+    assert len(gzip.compress(paquets.collections.corps, 6)) < 8_000
 
 
 def test_leurs_sons_voyagent_avec_elles_pas_dans_les_definitions(paquets):
