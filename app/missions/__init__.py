@@ -666,7 +666,7 @@ from . import (  # noqa: E402
     e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f10, f11, f12, f13, h01, h02, m1, m2, m3,
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
     s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
-    e04, e06, e07, e10, p02, p04, p05, p09, p10, p11, s02, s05, s06, s09, s10, s11,
+    e04, e06, e07, e10, la_pointe, s02, s05, s06, s09, s10, s11,
     d01, d02, d03, d04, q07, m98,
 )
 
@@ -699,7 +699,8 @@ from . import (  # noqa: E402
 # (`libere: quais`), après l'un OU l'autre côté du choix de Sven (`exige.une_de`).
 # ⚠️ e04, e06, e07, e10 (29 sept. 2026, vague 2) : Jo et sa course, Diane, le maire suivi jusqu'à l'hôtel, son
 # dossier volé à la villa — et les Chevreuils vidés, leur chef couché : c'était Jo (`libere: erables`).
-# ⚠️ p02, p05, p04, p09, p10, p11 (29 sept. 2026, vague 3) : La Pointe — le pont de M. Bilodeau, les collets du
+# ⚠️ `la_pointe` (30 sept. 2026, le premier CHAPITRE : docs/jalons/des-missions-en-chapitres.md) remplace ces six
+# missions, devenues ses six actes. Avant : p02, p05, p04, p09, p10, p11 (29 sept. 2026, vague 3) : La Pointe — le pont de M. Bilodeau, les collets du
 # Trappeur, la course de Zed (la première `course` d'une mission), le phare qui s'éteint, le saut, et Zed mené à la
 # Chef (`libere: pointe`).
 # ⚠️ s02, s06, s05, s09, s10, s11 (29 sept. 2026, vague 4) : La Shop — Ti-Loup et sa remorqueuse, Bob Sauvé filé
@@ -731,7 +732,7 @@ CATALOGUE: list[Mission] = [
     c05.MISSION, c06.MISSION, c07.MISSION, c08.MISSION,
     q05.MISSION, q06.MISSION, q13.MISSION,
     e04.MISSION, e06.MISSION, e07.MISSION, e10.MISSION,
-    p02.MISSION, p05.MISSION, p04.MISSION, p09.MISSION, p10.MISSION, p11.MISSION,
+    la_pointe.MISSION,
     s02.MISSION, s06.MISSION, s05.MISSION, s09.MISSION, s10.MISSION, s11.MISSION,
     q07.MISSION,
     d01.MISSION, d02.MISSION, d03.MISSION, d04.MISSION,
@@ -1384,11 +1385,18 @@ def _vient_apres(slug: str, avant: str) -> bool:
         s = a_voir.pop()
         if s == avant:
             return True
-        if s in vues or not par_slug(s):
+        # ⚠️ Une mission REMPLACÉE par un chapitre (Zed arrive après p02) se lit comme son chapitre.
+        m = par_slug(s) or remplacee_par(s)
+        if s in vues or not m:
             continue
         vues.add(s)
-        a_voir.extend(par_slug(s)["prerequis"])
+        a_voir.extend(m["prerequis"])
     return False
+
+
+def remplacee_par(slug: str) -> Mission | None:
+    """Le chapitre qui remplace la mission `slug` (`remplace`), ou None."""
+    return next((m for m in CATALOGUE if slug in (m.get("remplace") or [])), None)
 
 
 #: Les acteurs qu'une scène de mission peut nommer, en plus des personnages : ce que
@@ -1531,10 +1539,10 @@ def erreurs_de_mise_en_scene(mission: dict) -> list[str]:
     # ⚠️ UNE FIN QUI SE JOUE LOIN DU DONNEUR le fait venir (`sortir`, `marcher`) ou
     # va le voir chez lui (`coupe`) — sinon on entend quelqu'un qui n'est pas là.
     if scenes.get("fin") and not fin_dite_en_personne(mission, scenes["fin"]):
-        chez_lui = {"chez:" + mission["donneur"], "donneur"}
+        chez_lui = {"chez:" + donneur_final(mission), "donneur"}
         va_chez_lui = any(p["type"] == "coupe" and chez_lui & set(_lieux_du_plan(p)) for p in scenes["fin"])
         if not va_chez_lui:
-            erreurs.append(f"{slug} : la fin se joue loin de {mission['donneur']} et personne ne va le voir")
+            erreurs.append(f"{slug} : la fin se joue loin de {donneur_final(mission)} et personne ne va le voir")
     # ⚠️ ON SE PRÉSENTE UNE FOIS PAR MISSION (Martin, 21 sept. 2026). L'appel est la première chose
     # qu'on entend d'une mission, et il se dit TOUJOURS au téléphone (`histoire.js`, `lignesDe`) : sa
     # première réplique dit qui appelle — « Cousin, j'ai une faveur » ne le disait pas. Ensuite, plus
@@ -1638,7 +1646,8 @@ def fin_chez_le_donneur(mission: dict) -> bool:
     """La mission se termine-t-elle là où se tient son donneur ? C'est ce qui
     décide si sa fin se joue devant lui ou par une coupe chez lui — la règle
     « on n'entend jamais quelqu'un qui n'est pas là »."""
-    donneur = personnage(mission["donneur"])
+    # Un CHAPITRE finit chez le donneur de son dernier acte (`donneur_final`).
+    donneur = personnage(donneur_final(mission))
     dernier = mission["objectifs"][-1] if mission["objectifs"] else {}
     if dernier.get("type") == "retourner":
         return True
@@ -1659,7 +1668,7 @@ def fin_dite_en_personne(mission: dict, scene: list[dict] | None = None) -> bool
         return True
     if scene is None:
         scene = (mission.get("scenes") or {}).get("fin") or []
-    noms = {"donneur", mission["donneur"]}
+    noms = {"donneur", donneur_final(mission)}
     return any(p["type"] in ("sortir", "marcher") and p.get("acteur") in noms for p in scene)
 
 

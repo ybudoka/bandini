@@ -339,8 +339,11 @@ def test_sortir_de_la_villa_en_longeant_la_palissade_passe_l_etape(banc, slug):
 
 
 def test_les_missions_branchees_sur_place():
-    """Qui se joue sur place aujourd'hui — e07 non : son vol de clé se joue en ville, avant la villa."""
-    assert {m["slug"] for m in missions.CATALOGUE if m.get("sur_place")} == {"v01", "v02", "v03", "q13", "p05"}
+    """Qui se joue sur place aujourd'hui — e07 non : son vol de clé se joue en ville, avant la villa. Et p05 est
+    devenue l'acte 2 de La Pointe (30 sept. 2026, un chapitre) : son saut à la nuit est sur le MARQUEUR de l'acte."""
+    assert {m["slug"] for m in missions.CATALOGUE if m.get("sur_place")} == {"v01", "v02", "v03", "q13"}
+    pointe = missions.par_slug("la_pointe")
+    assert [o.get("sur_place") for o in pointe["objectifs"] if o["type"] == "acte"][1] == {"lieu": "phare", "heure": "nuit"}
 
 
 @pytest.mark.parametrize("slug", [m["slug"] for m in missions.CATALOGUE if m.get("sur_place")])

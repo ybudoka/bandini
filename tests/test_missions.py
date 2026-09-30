@@ -183,6 +183,12 @@ def test_chaque_replique_a_une_voix_et_tient_en_deux_phrases():
     par_mission: dict[str, int] = {}
     for r in missions.repliques():
         par_mission[r["mission"]] = par_mission.get(r["mission"], 0) + 1
+    # ⚠️ Un CHAPITRE (30 sept. 2026, docs/jalons/des-missions-en-chapitres.md) a le plafond d'une mission PAR ACTE :
+    # La Pointe, six missions devenues six actes, garde leurs répliques.
+    for m in missions.CATALOGUE:
+        actes = sum(1 for o in m["objectifs"] if o["type"] == "acte")
+        if actes:
+            PLAFONDS[m["slug"]] = REPLIQUES_PAR_MISSION * actes
     for slug, n in par_mission.items():
         assert n <= PLAFONDS.get(slug, REPLIQUES_PAR_MISSION), (
             f"{slug} : {n} répliques pour un plafond de {PLAFONDS.get(slug, REPLIQUES_PAR_MISSION)} "
