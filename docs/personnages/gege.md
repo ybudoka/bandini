@@ -14,7 +14,7 @@
 | Voix | **Alexandre Boutin — Professional** (partagée avec Le Grand Mo : jamais dans le même dialogue) |
 | Bulle | « Viens icitte! » |
 | Couleurs | chandail gris, cheveux noirs, pantalon marine |
-| Missions | donne **q03** |
+| Missions | donne **q03** ; donne aussi **q09** (la course des débardeurs) |
 
 ## Son histoire
 

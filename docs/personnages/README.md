@@ -31,7 +31,7 @@ Chaque fiche mêle deux sortes de faits.
 | [Madame Thibodeau](madame-thibodeau.md) | `thibodeau` | devant son kiosque | Julia | m2 · m51 · f12 |
 | [Marco « le Cousin »](marco.md) | `marco` | devant le garage | Québec Tremblay | m3 · m50 · f01 · m97 |
 | [Le sergent Réjean Bouchard](sergent-bouchard.md) | `bouchard` | au casse-croûte, dedans | Khaivan | m4 · m51 · v02 |
-| [Josée « la Chef » Pelletier](josee.md) | `josee` | au bar Le Brouillard, dedans | Jeanne Mance | m5 · m6 · q04 · q11 · v01 · d05 · d07 |
+| [Josée « la Chef » Pelletier](josee.md) | `josee` | au bar Le Brouillard, dedans | Jeanne Mance | m5 · m6 · q04 · q11 · v01 · d05 · d07 · q12 |
 | [Ti-Paul Gagnon](ti-paul.md) | `tipaul` | devant son dépanneur | Québec Tremblay | m6 · e01 · m51 |
 | [Lucienne « Lulu » Pelletier](lulu.md) | `lulu` | à la cantine des Quais, dedans | Claudia | m6 · m50 · q02 · m51 · q01 |
 | [Raymonde Fortin](raymonde.md) | `raymonde` | devant l'usine Prévost | Nadine | m6 · s03 |
@@ -43,13 +43,13 @@ Chaque fiche mêle deux sortes de faits.
 | [Le Grand Mo](le-grand-mo.md) | `mo` | le banc du terminus | Alexandre Boutin | f04 |
 | [Fern Côté](fern.md) | `fern` | le quai d'autobus du terminus | Premium Male teacher (Adam) | f05 · f12 (une enveloppe) |
 | [Mado](mado.md) | `mado` | devant le casse-croûte du Faubourg | Caroline | f11 · f13 · f12 (une enveloppe) |
-| [Gérard « Gégé » Morin](gege.md) | `gege` | devant la cantine des Quais | Alexandre Boutin | q03 |
+| [Gérard « Gégé » Morin](gege.md) | `gege` | devant la cantine des Quais | Alexandre Boutin | q03 · q09 |
 | [Xavier](xavier.md) | `xavier` | devant le dépanneur | Premium Male teacher (Adam) | e12 |
 | [Dr Lachance](dr-lachance.md) | `lachance` | à l'hôpital, dedans | Patrick | h01 · h03 · h04 · h06 · h07 |
 | [Gus Lévesque](gus.md) | `gus` | à l'armurerie | Khaivan | f02 · d06 · f12 (une enveloppe) |
 | [Rosa Di Meo](rosa.md) | `rosa` | à la Boutique Rosa | Amélie | f03 · f10 · f12 (une enveloppe) |
 | [Ginette](ginette.md) | `ginette` | à l'hôpital | Jeanne Mance | h02 · h05 |
-| [Gilles Thériault](gilles.md) | `gilles` | à la guérite de la fourrière | Patrick | s01 · s08 |
+| [Gilles Thériault](gilles.md) | `gilles` | à la guérite de la fourrière | Patrick | s01 · s08 · s12 |
 | [Le Bonimenteur](le-bonimenteur.md) | `bonimenteur` | à l'arche de la foire | Léo | p13 · p14 |
 | [Le capitaine Aurèle Bérubé](berube.md) | `berube` | au bout du quai du traversier, aux Quais | Paul K — Deep French Narrator | m99 |
 | [Mireille Dion](mireille.md) | `mireille` | au comptoir du DOJO DION, au Faubourg, dedans | Marie Line - Energetic and Clear | ses cours (le dojo) |
@@ -59,15 +59,15 @@ Chaque fiche mêle deux sortes de faits.
 | [Irène Lam](irene.md) | `irene` | au bout du bar du casino du Dragon d'or, au Petit-Canton, dedans | Meera | c01 · c02 · c03 · c04 · c05 |
 | [Réal « le Pouce » Vachon](le-pouce.md) | `pouce` | nulle part : au tripot, puis parti pour Sorel | Callum - Husky Trickster | c04 (une réplique, en se sauvant) |
 | [Cindy Boivin](cindy.md) | `cindy` | devant la cantine des Quais, dans la Brume — jusqu'à q05 (Norbert l'engage à la réception) | Ruby Roo | q05 |
-| [Diane Larivière](diane.md) | `diane` | devant le dépanneur des Érables, après e01 | Riya Rao | e06 · e07 · e10 |
+| [Diane Larivière](diane.md) | `diane` | devant le dépanneur des Érables, après e01 | Riya Rao | e06 · e07 · e10 · e13 |
 | [Louise Tremblay-Dion](louise.md) | `louise` | devant le kiosque de Mme Thibodeau, après m2 | Ana Rita | ses photos (une par jour, pour la une) · l01 · l02 · l03 · l04 · l05 · l06 |
 | [Jo Bellemare](jo.md) | `jo` | devant le dépanneur, entre e01 et e04 — puis chez les Chevreuils | Omar J | e04 · le chef de e10 |
 | [Roméo Bilodeau](bilodeau.md) | `bilodeau` | devant le phare, après p01 | Santa | La Pointe (le chapitre ; acte 1) |
 | [Zacharie « Zed » Lemieux](zed.md) | `zed` | devant le phare, après p02 | Lutz | La Pointe, actes 3 · 4 · 6 (mené à la Chef) |
 | [Armand, le Trappeur](trappeur.md) | `trappeur` | devant le phare, après p01 | George | La Pointe, acte 2 |
-| [Ti-Loup Ferraille](tiloup.md) | `tiloup` | devant la fourrière, après s01 | Chris | s02 · s05 (son compacteur) |
+| [Ti-Loup Ferraille](tiloup.md) | `tiloup` | devant la fourrière, après s01 | Chris | s02 · s05 (son compacteur) · s14 |
 | [Marcel « Gros-Boulon » Boulanger](boulon.md) | `boulon` | devant la fourrière, après s02 | Roger | s05 · s09 · s11 (l'accord) |
-| [Réjean Prévost](prevost.md) | `prevost` | à son bureau de l'usine, dedans, après s10 | Roland Lescalde | s11 |
+| [Réjean Prévost](prevost.md) | `prevost` | à son bureau de l'usine, dedans, après s10 | Roland Lescalde | s11 · s07 |
 | [Le maire Réal Tanguay](maire.md) | `maire` | dans la chambre de l'Hôtel Bandini, dedans, entre m97 et m98 | Eric - Smooth, Trustworthy | m98 (la poignée de main, et il cède) |
 | [Victor Tam, « Sifu Tam »](victor-tam.md) | `maitre` | dans sa salle de l'ÉCOLE LA MANTE, dedans — une fois revenu de Floride (après c04) | Luca - Storyteller | c05 (sa poignée de main) · c06 · c07 · c08 |
 | [Salvatore « Sal » Ferraro](sal.md) | `sal` | à sa chaise de barbier, au milieu du terminus, dedans, après m6 | Pascal — Voix québécoise chaleureuse | d01 · d02 · d03 · d04 · d08 |

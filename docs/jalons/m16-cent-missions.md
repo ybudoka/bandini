@@ -1234,3 +1234,20 @@ catalogue.
   - **Juges** (`tests/test_arc_r_js.py`, trois de plus) : les cinq portes dans l'ordre (hors d'ordre, rien ne compte),
     trois pages de moins ; l'auto grise devant le poste, trois Ciseaux, l'auto ramenée ; trois suspects en
     auto-patrouille, deux pages de moins.
+- **30 sept. 2026 : vague 12 — ce qui restait des districts, avec des donneurs qui existent.** Six missions : `s07`
+  (Prévost, _Le camion de Prévost_ : La Shop libre, un contrat avec Rimouski, le camion de pièces au quai en 150 s —
+  « vous avez travaillé contre moi, vous travaillez pour moi » — 350 $), `s12` (Gilles, _Le dernier char du lot_ : sa
+  retraite, cinq remorquages « comme dans le temps », et sa vieille remorqueuse garée à la planque, `donne.vehicule` —
+  150 $), `s14` (Ti-Loup, _La casse à Ti-Loup_ : trois autos-patrouilles devant le poste, la même nuit, trois fois
+  voler-semer-livrer au compacteur — 450 $), `e13` (Diane, _Le char de Diane_ : remorquée par les hommes du maire, sa
+  berline reprise au lot sans payer, semée, garée devant le dépanneur — 300 $), `q12` (Josée, _La Chef a un cœur_ :
+  sa mère fait une crise aux Érables ; l'ambulance, le dépanneur, l'urgence en deux minutes — 300 $), `q09` (Gégé, _La
+  course des débardeurs_ : le perdant paie la bière ; trois points autour des Quais en camion, 2 min 30 — 300 $).
+  - ⚠️ **Écarts à la fiche** : `s07` vient après `s11` (La Shop libérée : Prévost rembauche) et non après `s04` (Bob
+    Sauvé n'est pas un personnage) ; il livre devant la cantine, au bord du quai, sans « sans bosse » (la prime
+    `sans_degats` ne vaut que pour `livrer` d'un char prêté) ; `q09` se court contre la montre, `contre` n'étant lu
+    par personne ; `q12` ne donne pas « Josée amie, le bar à +10 % » (aucune clé de `donne` ne le lit) ; `s13`
+    (le prototype livré « à l'usine ») attend — l'usine n'est jamais un lieu de mission (barrière d'heure).
+  - **Juges** (`tests/test_districts_suite_js.py`, sept) : chaque mission de l'appel à la prime, prise au bouton ; les
+    trois tours de s14 aux étapes 1, 4, 7, chacun semé caché dedans ; la remorqueuse de Gilles à la planque ; la mère
+    de Josée trop lente, c'est raté ; les trois points de Gégé dans l'ordre.

@@ -14,7 +14,7 @@
 | Voix | **Chris — Charming, Down-to-Earth** (un français « standard » vérifié en multilingue v2) |
 | Bulle | « Hé, le jeune. » |
 | Couleurs | veste de travail brune, cheveux bruns en brosse, pantalon noir |
-| Missions | donne **s02** ; son compacteur reçoit la berline de Prévost (**s05**) |
+| Missions | donne **s02** ; son compacteur reçoit la berline de Prévost (**s05**) ; donne aussi **s14** (trois autos-patrouilles en cubes) |
 
 ## Son histoire
 

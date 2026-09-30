@@ -679,7 +679,7 @@ from . import (  # noqa: E402
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
     s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
     e04, e06, e07, e10, la_pointe, s02, s05, s06, s09, s10, s11,
-    d01, d02, d03, d04, d05, d06, d07, d08, h03, h04, h05, h06, h07, l01, l02, l03, l04, l05, l06, r02, r03, r04, r05, r06, r07, r08, q07, m98,
+    d01, d02, d03, d04, d05, d06, d07, d08, h03, h04, h05, h06, h07, l01, l02, l03, l04, l05, l06, r02, r03, r04, r05, r06, r07, r08, s07, s12, s14, e13, q12, q09, q07, m98,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -727,6 +727,9 @@ from . import (  # noqa: E402
 # ⚠️ d05 à d08 (30 sept. 2026, vague 8) : la fin de l'arc D — l'acte du garage pour l'avocat du Brouillard (d05,
 # Josée), les Ciseaux de Sal au garage (d06, Gus), puis le CHOIX : vider la berline de Sal (d07, Josée) ou, la dette
 # payée, sa dernière coupe et la bague de Rocco (d08, `exige.dette: 0`). Chacune ferme l'autre.
+# ⚠️ s07, s12, s14, e13, q12, q09 (30 sept. 2026, vague 12) : ce qui restait des districts, avec des donneurs qui
+# existent — le camion de Prévost au quai, la retraite de Gilles, trois autos-patrouilles en cubes pour Ti-Loup, la
+# berline de Diane reprise au lot, la mère de Josée à l'urgence, la course des débardeurs.
 # ⚠️ r02 à r05 (30 sept. 2026, vague 10) : Roy contre Bouchard — l'inspectrice reprend son carnet (r02), puis le
 # CHOIX : son stool (r03) ou le sergent qui lui vole son char (r04) ; et le camion des pièces à conviction (r05).
 # r06 à r08 (vague 11) : de chaque bord, ce que le choix ouvre — les affiches et la patrouille avec Roy, l'auto
@@ -764,6 +767,7 @@ CATALOGUE: list[Mission] = [
     h03.MISSION, h04.MISSION, h05.MISSION, h06.MISSION, h07.MISSION,
     l01.MISSION, l02.MISSION, l03.MISSION, l04.MISSION, l05.MISSION, l06.MISSION,
     r02.MISSION, r03.MISSION, r04.MISSION, r05.MISSION, r06.MISSION, r07.MISSION, r08.MISSION,
+    s07.MISSION, s12.MISSION, s14.MISSION, e13.MISSION, q12.MISSION, q09.MISSION,
     m97.MISSION, m98.MISSION, m99.MISSION,
 ]
 
