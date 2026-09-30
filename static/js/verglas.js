@@ -38,7 +38,8 @@ const Verglas = (function () {
   /** La glace, maintenant : 0 sans l'option, ou par beau temps. ⚠️ Pas de garde « dedans » : c'est
       la ville qui glisse, et une piece n'a ni chars ni lampes de rue. */
   function intensite() {
-    if (!B.options || !B.options.verglas || !B.partie) return 0;
+    // ⚠️ Au sous-sol du garage (`Monde.aLAbri`), le beton reste sec : ni chars de rue, ni ciel.
+    if (!B.options || !B.options.verglas || !B.partie || Monde.aLAbri()) return 0;
     return intensiteA(B.partie.jour, B.partie.heure);
   }
 

@@ -1015,7 +1015,8 @@ const Missions = (function () {
 
   /** La remorqueuse municipale, une fois par seconde. */
   function majMalGares() {
-    if (B.interieur || B.t % 60 !== 0) return;
+    // ⚠️ Ni au sous-sol du garage : son allee est de l'asphalte, et c'est Ti-Guy qui y gare ce qu'on laisse (`Souterrain`).
+    if (B.interieur || Souterrain.ici() || B.t % 60 !== 0) return;
     const delai = B.defs.economie.fourriere.remorquage_s;
     for (const v of B.entites) {
       if (v.type !== 'vehicule' || !v.laisse) continue;

@@ -4645,7 +4645,7 @@ const Entites = (function () {
       quand rien n'y change — l'ete, dedans, dans l'eau. */
   function hiverAPied(j) {
     const R = B.defs.saisons && B.defs.saisons.joueur;
-    if (!R || B.interieur || !j.tenue) return null;
+    if (!R || Monde.aLAbri() || !j.tenue) return null;
     const bottes = R.chaleur[j.tenue.souliers] > 0;
     if (bottes) return null;
     const neige = typeof Son !== 'undefined' && Son.solDuPas(j.x, j.y) === 'pas_neige';
@@ -4660,7 +4660,7 @@ const Entites = (function () {
   function majFroid(j) {
     const R = B.defs.saisons && B.defs.saisons.joueur, H = B.defs.saisons && B.defs.saisons.habits;
     if (!R || !B.partie || !j.vivant) return;
-    const gele = !B.interieur && !j.dansVehicule && !j.nage && !(j.cafeine > 0) && !B.cinema
+    const gele = !Monde.aLAbri() && !j.dansVehicule && !j.nage && !(j.cafeine > 0) && !B.cinema
       && typeof Saisons !== 'undefined' && (Saisons.palette().froid || 0) >= H.grand_froid
       && chaleurDuJoueur(j) < R.assez;
     if (!gele) { j.froid = Math.max(0, (j.froid || 0) - R.rechauffe / 60); return; }

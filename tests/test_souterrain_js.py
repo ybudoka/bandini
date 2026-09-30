@@ -346,3 +346,67 @@ def test_au_sous_sol_ni_pluie_ni_neige_ni_nuit(banc):
     assert b["abri"] is True, b
     assert b["neige"] == 0 and b["pluie"] == 0, b
     assert b["nuit"] < 0.1, f"pas de nuit au sous-sol : {b}"
+
+
+def test_la_fourriere_ne_descend_pas_au_sous_sol(banc):
+    """Relecture finale : `#` est de l'asphalte, et la remorqueuse saisissait le char laissé dans l'allée au bout
+    de 45 s — celui que Ti-Guy doit garer. Cinquante secondes dans l'allée, puis on remonte : il est sur une case."""
+    r = banc("async function (L, o) {" + OUTILS + """
+        L.Jeu.commencer(); proprio(L);
+        const B = L.B, j = B.joueur, a = auVolantDevant(L);
+        L.Blocs.sauter('souterrain', null, null); await attendreLeBloc(L, o, 'souterrain');
+        a.v.x = 20 * TT; a.v.y = 9 * TT; L.Vehicules.descendre(j, true); j.x = 15 * TT + 8; j.y = 14 * TT;
+        let malGare = false;
+        for (let i = 0; i < 50 * 60; i++) { o.frame(1); if (/MAL GAR/.test(B.msg || '')) malGare = true; }
+        const encore = B.entites.indexOf(a.v) >= 0, saisis = B.partie.fourriere.length;
+        L.Jeu.sortirDuBloc(); await attendreLaVille(L, o);
+        return { malGare: malGare, encore: encore, saisis: saisis,
+                 range: B.partie.souterrain.cases.filter(Boolean).map(function (c) { return c.couleur; }) };
+    }""")
+    assert r["malGare"] is False and r["encore"] and r["saisis"] == 0, r
+    assert r["range"] == ["#c0392b"], r
+
+
+def test_au_sous_sol_la_meteo_ne_mord_pas_ni_route_ni_pas_ni_froid(banc):
+    """Relecture finale : à l'écran, ni pluie ni neige — mais la route glissait, les pas crissaient dans la neige et
+    le froid mordait. Un témoin en ville, les mêmes heures ; au sous-sol, rien."""
+    r = banc("async function (L, o) {" + OUTILS + """
+        L.Jeu.commencer(); proprio(L);
+        const B = L.B, p = B.partie, j = B.joueur;
+        j.invincible = 99999;
+        const v = L.Vehicules.creer('auto', j.x, j.y, 0, { etat: 'stationne', couleur: '#fff' });
+        function meteo() {
+            p.jour = 14; p.heure = 14 / 24;
+            const pluie = { adherence: L.Pluie.adherence(v), frein: L.Pluie.frein(v) };
+            p.jour = 2; p.heure = 20 / 24;
+            j.froid = 0;
+            for (let i = 0; i < 240; i++) o.frame(1);
+            return { adherence: pluie.adherence, frein: pluie.frein, couverture: L.Neige.couverture(),
+                     pas: L.Son.solDuPas(j.x, j.y), froid: j.froid || 0 };
+        }
+        viderLaBaie(L);
+        const enVille = meteo();
+        L.Entites.retirer(v);
+        L.Blocs.sauter('souterrain', null, null); await attendreLeBloc(L, o, 'souterrain');
+        j.x = 20 * TT; j.y = 9 * TT;
+        return { enVille: enVille, enBas: meteo() };
+    }""")
+    v, b = r["enVille"], r["enBas"]
+    assert v["adherence"] < 1 and v["frein"] < 1 and v["couverture"] > 0 and v["froid"] > 0, f"le témoin ne voit pas l'hiver : {v}"
+    assert b["adherence"] == 1 and b["frein"] == 1, b
+    assert b["couverture"] == 0 and b["pas"] != "pas_neige", b
+    assert b["froid"] == 0, f"on grelotte au sous-sol : {b}"
+
+
+def test_l_ascenseur_ne_descend_pas_avec_la_police_aux_trousses(banc):
+    r = banc("async function (L, o) {" + OUTILS + ASCENSEUR + """
+        L.Jeu.commencer(); proprio(L);
+        await dansLaPieceDuGarage(L, o);
+        L.B.recherche.etoiles = 2; L.B.recherche.chaleur = 40;
+        devantLAscenseurDeLaPiece(L); o.frame(2);
+        o.tape('KeyE', 2);
+        for (let i = 0; i < 80; i++) { o.frame(1); if (i % 10 === 0) await o.attendre(); }
+        return { piece: L.B.interieur && L.B.interieur.slug, bloc: !!L.B.bloc, msg: L.B.msg };
+    }""")
+    assert r["piece"] == "garage" and r["bloc"] is False, r
+    assert "POLICE" in r["msg"], r

@@ -1563,3 +1563,34 @@ cd /Users/martingagne/dev/bandini && git merge --ff-only claude/garage-souterrai
 ```
 
   Puis la suite complète, détachée, après l'atterrissage (mémoire « Atterrir avant la suite complète »).
+
+## Notes
+
+**Vague 1 livrée (30 sept. 2026) : le −1.** Au rideau du Garage Rocco Bandini, DESCENDRE AU SOUS-SOL (en deuxième
+ligne, REPARTIR reste en tête) ; l'ascenseur de la pièce du garage, dans les deux sens ; dix cases P1 à P10 ; les
+chars rangés vivent dans `partie.souterrain.cases` et reviennent avec leur couleur, leurs pièces, leurs bosses et
+leur marque de vol, recharge comprise ; Ti-Guy gare ce qu'on laisse dans l'allée ; ni pluie, ni neige, ni nuit, ni
+froid en bas. Juges : `tests/test_souterrain.py` (9), `tests/test_souterrain_js.py` (19), chacun vu rougir.
+
+Ce qui a changé en route (le registre d'exécution les appelle des « rulings ») :
+
+- **Un sous-sol n'est pas un bloc de bord de ville** : `blocs.SOUS_SOLS`, `passage: None`, un `seuil` (le rideau
+  devant lequel on ressort, `Blocs.retourEnVille`). Tout ce qui lisait `b.passage` d'un bloc du paquet est gardé
+  (`Blocs.maj`, `ouvertures`, `entrerAuNoir`, `Histoire.passageDuBloc`, `Jeu.sortirDuBloc`).
+- **Pas de garde du rideau pendant la descente** : le jeu est figé pendant un fondu (`Jeu.maj`), la garde prévue ne
+  se voyait pas — retirée ; le juge reste, sentinelle du gel.
+- **« À l'abri » est une règle, pas un dessin** : `Monde.aLAbri()` (une pièce, ou un bloc `abrite`) garde la pluie,
+  la neige, le verglas, l'adhérence et le freinage, le pas dans la neige, le froid de Rosa (`majFroid`,
+  `hiverAPied`) et la lumière (`ambiance()` sans heure y rend le jour, comme dans une pièce — `estNuit()` y est donc
+  faux). La relecture finale a vu la route glisser au sous-sol alors que l'écran n'y montrait aucune neige.
+- **La fourrière ne descend pas** : l'allée est de l'asphalte, et la remorqueuse saisissait en 45 s le char que Ti-Guy
+  devait garer (relecture finale ; `majMalGares` se tait au sous-sol).
+- **L'ascenseur refuse les étoiles**, comme le rideau : sinon la poursuite suivait au bord du bloc (relecture finale).
+- Deux juges du rideau descendaient d'UNE ligne vers VENDRE ; ils descendent maintenant au bouton jusqu'à VENDRE.
+
+Laissé pour plus tard (mineurs de la relecture) : un char de trop au sous-sol (seulement par la triche qui en fait
+apparaître un) disparaît sans un mot ; la triche ENDROITS CLÉS y mène sans posséder le garage ; aucun juge ne joue la
+descente depuis l'atelier rideau baissé (le chemin est lu correct).
+
+Reste la **vague 2** : le −2 (P11 à P20, 10 000 $, AGRANDIR LE SOUS-SOL, la grille), la rampe intérieure au volant, et
+les sons (l'ascenseur, l'écho des pneus, les néons).

@@ -744,7 +744,7 @@ const Son = (function () {
     if (!a || !a.sols_des_pas || typeof Monde === 'undefined') return 'pas';
     const tx = Math.floor(x / TT), ty = Math.floor(y / TT);
     const sol = a.sols_des_pas[Monde.glyphe(tx, ty)] || 'pas';
-    if (B.interieur) return sol;
+    if (Monde.aLAbri()) return sol;   // dedans, et au sous-sol du garage : ni neige ni hiver sous le pied
     const neige = typeof Neige !== 'undefined' && Neige.couverture() > 0 && !Neige.deneigee(tx, ty);
     const hiver = typeof Saisons !== 'undefined' && Saisons.enHiver()
       && (sol === 'pas_herbe' || sol === 'pas_gravier' || sol === 'pas_sable');

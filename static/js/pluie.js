@@ -59,7 +59,7 @@ const Pluie = (function () {
 
   /** Maintenant, pour ce joueur : 0 dans une piece (on n'y voit pas la pluie) ou sans partie. */
   function intensite() { return !B.partie || Monde.aLAbri() ? 0 : intensiteA(B.partie.jour, B.partie.heure); }
-  function mouillee() { return !B.partie || B.interieur ? 0 : mouilleeA(B.partie.jour, B.partie.heure); }
+  function mouillee() { return !B.partie || Monde.aLAbri() ? 0 : mouilleeA(B.partie.jour, B.partie.heure); }
   function orage() { const a = B.partie && journee(B.partie.jour); return !!(a && a.orage) && intensite() > 0; }
 
   /** La fonte d'avril (0 a 1) : de la gadoue du debut a la fin de `gadoue.jours`, qui monte et fond
@@ -71,7 +71,7 @@ const Pluie = (function () {
     if (x < g.jours[0] || x >= g.jours[1]) return 0;
     return Math.min(1, (x - g.jours[0]) / (l / 4), (g.jours[1] - x) / (l / 4));
   }
-  function gadoue() { return !B.partie || B.interieur ? 0 : gadoueA(B.partie.jour, B.partie.heure); }
+  function gadoue() { return !B.partie || Monde.aLAbri() ? 0 : gadoueA(B.partie.jour, B.partie.heure); }
 
   /** Cette tuile a-t-elle sa gadoue (en avril) ? Un trottoir, ou le bord d'une rue qui touche le
       trottoir — a l'empreinte de la tuile. */
@@ -98,7 +98,7 @@ const Pluie = (function () {
       mouillees l'automne), et la gadoue d'avril sous ses roues. Au sec : 1. */
   function adherence(v) {
     const d = donnees();
-    if (!d || !B.partie || B.interieur) return 1;
+    if (!d || !B.partie || Monde.aLAbri()) return 1;
     const e = d.effets, m = mouillee();
     const base = feuillesAuSol() ? e.feuilles_adherence : e.adherence;
     let a = m ? melange(base, m) : 1;
@@ -128,7 +128,7 @@ const Pluie = (function () {
   /** Les flaques durent plus longtemps que la rue mouillee (0 a 1 : leur taille). */
   function flaques() {
     const d = donnees();
-    return !d || !B.partie || B.interieur ? 0 : mouilleeA(B.partie.jour, B.partie.heure, d.effets.flaques_h);
+    return !d || !B.partie || Monde.aLAbri() ? 0 : mouilleeA(B.partie.jour, B.partie.heure, d.effets.flaques_h);
   }
 
   /** L'eclair de l'orage, maintenant (0 a 1 : l'eclat qui reste), ou 0. Un eclair par tranche de
@@ -216,7 +216,7 @@ const Pluie = (function () {
   function majChar(v) {
     const d = donnees();
     // Une coque ne souleve ni feuilles ni flaques : la rue est sur la terre (les bateaux, vague 1).
-    if (!d || !B.partie || B.interieur || (v.def && v.def.eau)) return;
+    if (!d || !B.partie || Monde.aLAbri() || (v.def && v.def.eau)) return;
     const e = d.effets;
     if (v.flaqueT > 0) v.flaqueT--;
     // ⚠️ CHAQUE CHAR, CHAQUE IMAGE, gares compris : on sort avant tout calcul pour ce qui est au pas.

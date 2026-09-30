@@ -119,6 +119,8 @@ const Souterrain = (function () {
       Hud.message('LE SOUS-SOL EST AU PROPRIO — ACHÈTE LE GARAGE', 150); Son.SFX.erreur();
       return true;
     }
+    // Comme au rideau : pas de police au sous-sol, on ne l'y amene pas (`Blocs.poursuiteAuBord` la ferait suivre).
+    if (B.recherche.etoiles > 0) { Hud.message('SÈME LA POLICE D’ABORD', 150); Son.SFX.erreur(); return true; }
     Blocs.charger(SLUG);
     Jeu.transiter([1, 0, 24], function () {
       const def = Blocs.cartes[SLUG];

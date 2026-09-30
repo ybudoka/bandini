@@ -88,7 +88,7 @@ const Neige = (function () {
   }
 
   function couverture() {
-    if (!B.partie || B.interieur) return 0;
+    if (!B.partie || Monde.aLAbri()) return 0;
     return couvertureA(B.partie.jour, B.partie.heure);
   }
 
@@ -163,7 +163,7 @@ const Neige = (function () {
       ne voit pas la remorqueuse l'emmener : on le retrouve au lot le lendemain. */
   function majDeneigement() {
     const o = operation();
-    if (!o || !o.enCours || B.interieur || B.t % 60 !== 0) return;
+    if (!o || !o.enCours || Monde.aLAbri() || B.t % 60 !== 0) return;
     for (const v of B.entites.slice()) {
       if (v.type !== 'vehicule' || !v.laisse || v.conducteur || v.etat === 'epave') continue;
       if (v.saisi !== null && v.saisi !== undefined) continue;
@@ -184,7 +184,7 @@ const Neige = (function () {
   /** Les panneaux du secteur annonce, le feu orange qui clignote. */
   function dessinerPanneaux(ctx, cam) {
     const o = operation();
-    if (!o || B.interieur) return;
+    if (!o || Monde.aLAbri()) return;
     const allume = ((B.image || B.t) % 40) < 20;
     let n = 0;
     for (const p of panneauxDuSecteur(o)) {
@@ -202,7 +202,7 @@ const Neige = (function () {
   /** Pres d'un panneau allume, la ligne du bas dit ce qu'il annonce. */
   function texteDInfo(j) {
     const o = operation();
-    if (!o || !j || B.interieur) return null;
+    if (!o || !j || Monde.aLAbri()) return null;
     const pres = panneauxDuSecteur(o).some(function (p) { return Math.abs(p[0] * TT + 8 - j.x) + Math.abs(p[1] * TT + 8 - j.y) <= 3 * TT; });
     if (!pres) return null;
     const debut = donnees().deneigement.debut_h;
