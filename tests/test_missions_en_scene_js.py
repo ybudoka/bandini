@@ -152,7 +152,8 @@ OUTILS = ('  const ORDRE = ' + json.dumps(missions.ordre_topologique()) + ';' + 
     // pareil, au combiné.
     if (o.lieu) {
       const bloc = L.Histoire.blocDuLieu(o.lieu);
-      const l = L.Histoire.lieu(o.lieu) || (bloc && L.Histoire.passageDuBloc(bloc));
+      // ⚠️ Et un AMARRAGE (h08 : la chaloupe ramenée sous l'urgence) : `lieu` ne le connaît pas, `resoudre` oui.
+      const l = L.Histoire.lieu(o.lieu) || L.Histoire.resoudre(o.lieu, m) || (bloc && L.Histoire.passageDuBloc(bloc));
       j.x = l.x; j.y = l.y;
     }
     else if (o.type === 'retourner') {

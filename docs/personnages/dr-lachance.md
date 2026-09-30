@@ -14,7 +14,7 @@
 | Voix | **Patrick — Clear, Natural and Polished** |
 | Bulle | « Viens, vite! » |
 | Couleurs | sarrau blanc, cheveux gris, pantalon ardoise |
-| Missions | donne **h01**, **h03**, **h04**, **h06**, **h07** |
+| Missions | donne **h01**, **h03**, **h04**, **h06**, **h07** ; donne aussi **h08** (la traverse de l'urgence) |
 
 ## Son histoire
 
@@ -68,8 +68,7 @@ son bureau : l'hôpital ne se quitte pas en pleine nuit de garde.
 
 ## Ce qui l'attend (M16)
 
-Les missions de la fiche sont livrées (30 sept. 2026, h03 à h07). Reste `h08` « La traverse de l'urgence »,
-qui attend l'île.
+Les missions de la fiche sont livrées (30 sept. 2026, h03 à h08).
 
 ## À trancher
 

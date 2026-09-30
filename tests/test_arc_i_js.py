@@ -186,3 +186,104 @@ def test_i05_la_conserverie_brule_pres_du_hangar(banc):
     for dite in ("pendant:jeanne:0", "pendant:jeanne:1", "pendant:jeanne:2"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [200], r
+
+
+# --- L'île, deuxième moitié (vague 14, 30 sept. 2026) : le chalutier de Sven coulé, la cache de Rocco, la traverse de
+# l'urgence.
+
+def test_i06_le_chalutier_de_sven_coule_a_quai(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + RECHARGER + DEDANS + EAU + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, p = B.partie;
+        faites(L, """ + _faites("e01", "q02", "q04", "q08", "i01", "v01", "q11", "i03") + """);
+        const j = recharger(L);
+        const argent = paiements(L);
+        dedans(L, o, 'bar'); serrer(L, o, 'josee'); passer(L, o); ecouter(L);
+        const mission = p.mission ? p.mission.slug : null;
+        sortir(L, o);
+        const v = B.mission.vehicule;
+        embarquer(L, o, v); jouer(L, o, 6);
+        const c = B.mission.entites.find(function (e) { return e.type === 'vehicule' && e.slug === 'chalutier'; });
+        const cible = { etape: etape(L), chalutier: !!c, eau: c ? L.Monde.estEau(Math.floor(c.x / 16), Math.floor(c.y / 16)) : null,
+                        arme: j.arme };
+        L.Vehicules.endommager(c, 99999, j); jouer(L, o, 10);
+        const semer = { etape: etape(L), etoiles: B.recherche.etoiles };
+        const cache = seCacher(L, o);
+        dedans(L, o, 'bar'); serrer(L, o, 'josee'); finir(L, o);
+        return { mission: mission, cible: cible, semer: semer, cache: cache, dites: dites, fait: !!p.missionsFaites.i06,
+                 argent: argent.map(function (a) { return a.montant; }) };
+    }""")
+    assert r["mission"] == "i06", r
+    assert r["cible"] == {"etape": 1, "chalutier": True, "eau": True, "arme": "pistolet"}, r["cible"]
+    assert r["semer"]["etape"] == 2 and r["semer"]["etoiles"] >= 3 and r["cache"]["apres"] == 0, r
+    for dite in ("pendant:josee:1", "pendant:josee:2", "pendant:josee:3"):
+        assert dite in r["dites"], f"{dite} manque : {r['dites']}"
+    assert r["fait"] is True and r["argent"] == [500], r
+
+
+def test_i08_la_cache_de_rocco_sous_la_chapelle(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + RECHARGER + DEDANS + EAU + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, p = B.partie;
+        faites(L, """ + _faites("e01", "q02", "q04", "q08", "i01", "v01", "q11", "i03", "i06", "d01", "d02", "d03", "d04", "d05") + """);
+        const j = recharger(L);
+        const argent = paiements(L);
+        dedans(L, o, 'bar'); serrer(L, o, 'josee'); passer(L, o); ecouter(L);
+        const mission = p.mission ? p.mission.slug : null;
+        sortir(L, o);
+        const v = B.mission.vehicule;
+        embarquer(L, o, v);
+        accoster(L, o, v, 'amarrage:chapelle');
+        const ile = etape(L);
+        aTerre(L, o);
+        const cache = B.entites.find(function (e) { return e.objetDeMission === 'cache_de_rocco'; });
+        const c = L.Histoire.lieu('chapelle');
+        const posee = cache ? Math.round(Math.hypot(cache.x - c.x, cache.y - c.y) / 16) : null;
+        j.x = cache.x; j.y = cache.y; L.Entites.indexer(); jouer(L, o, 4);
+        const eux = B.mission.entites.filter(function (e) { return e.cible && e.etape === 3; });
+        const matelots = { etape: etape(L), n: eux.length };
+        eux.forEach(function (e) { L.Entites.assommer(e); }); jouer(L, o, 10);
+        embarquer(L, o, v);
+        accoster(L, o, v, 'amarrage:bar');
+        const retour = etape(L);
+        aTerre(L, o);
+        dedans(L, o, 'bar'); serrer(L, o, 'josee'); finir(L, o);
+        return { mission: mission, ile: ile, posee: posee, matelots: matelots, retour: retour, dites: dites,
+                 fait: !!p.missionsFaites.i08, argent: argent.map(function (a) { return a.montant; }) };
+    }""")
+    assert r["mission"] == "i08", r
+    assert r["ile"] == 2 and r["posee"] is not None and r["posee"] <= 3, r
+    assert r["matelots"] == {"etape": 3, "n": 2} and r["retour"] == 5, r
+    for dite in ("pendant:josee:2", "pendant:josee:3", "pendant:josee:4", "pendant:josee:5"):
+        assert dite in r["dites"], f"{dite} manque : {r['dites']}"
+    assert r["fait"] is True and r["argent"] == [1200], r
+
+
+def test_h08_la_traverse_de_l_urgence(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + RECHARGER + DEDANS + EAU + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, p = B.partie;
+        faites(L, """ + _faites("h01", "h02", "d01", "h03", "h04", "h05", "h06", "q08", "i01") + """);
+        const j = recharger(L);
+        const argent = paiements(L);
+        dedans(L, o, 'hopital'); serrer(L, o, 'lachance'); passer(L, o); ecouter(L);
+        const mission = p.mission ? p.mission.slug : null;
+        sortir(L, o);
+        const v = B.mission.vehicule;
+        embarquer(L, o, v);
+        accoster(L, o, v, 'amarrage:chapelle');
+        const ile = etape(L);
+        aTerre(L, o);
+        const accueil = serrer(L, o, 'jeanne');
+        const confie = etape(L);
+        embarquer(L, o, v);
+        accoster(L, o, v, 'amarrage:hopital');
+        finir(L, o);
+        return { mission: mission, slug: v.slug, ile: ile, accueil: accueil, confie: confie, dites: dites,
+                 fait: !!p.missionsFaites.h08, argent: argent.map(function (a) { return a.montant; }) };
+    }""")
+    assert r["mission"] == "h08" and r["slug"] == "bateau", r
+    assert r["ile"] == 2 and r["accueil"] == "accueil" and r["confie"] == 3, r
+    for dite in ("pendant:lachance:0", "pendant:lachance:1", "accueil:jeanne:2", "pendant:lachance:3"):
+        assert dite in r["dites"], f"{dite} manque : {r['dites']}"
+    assert r["fait"] is True and r["argent"] == [250], r

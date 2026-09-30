@@ -1274,3 +1274,38 @@ catalogue.
   - **Juges** (`tests/test_arc_i_js.py`, cinq ; une mutation, rouge) : chaque mission de l'appel à la prime, prise au
     bouton — la chaloupe née sur l'eau, accostée sous le hangar et la chapelle, la poignée de main de Léo et de
     Ti-Loup, deux cents piastres payées, les caisses posées devant le hangar, le feu près du hangar et trois matelots.
+- **30 sept. 2026 : vague 14 — l'île, deuxième moitié.** Trois missions : `i06` (Josée, _Le dernier bateau du
+  Norvégien_ : le chalutier de Sven coulé à quai au pistolet qu'elle met dans les mains, trois étoiles sur l'eau —
+  500 $), `i08` (Josée, _La cache de Rocco_ : « sous le troisième banc de la chapelle » — les papiers de l'oncle (d05)
+  parlaient d'une île ; deux matelots la cherchaient aussi ; mille deux cents piastres et une photo de Rocco jeune —
+  1 200 $), `h08` (Lachance, _La traverse de l'urgence_ : un pêcheur de l'île, la jambe ouverte ; la chaloupe de
+  l'hôpital, Sœur Jeanne qui le confie, l'urgence en deux cents secondes — 250 $).
+  - ⚠️ **Écarts à la fiche** : `i08` se donne par Josée (Ti-Guy est parti après m1) ; `h08` se fait en chaloupe — le
+    traversier ne dessert pas l'île ; `i06` coule le bateau au pistolet (`remet`), pas « 3★ sur l'eau » au départ : les
+    étoiles viennent du coup de feu, et `semer` les pose à trois.
+  - ⚠️ **Le banc des fins** (`test_missions_en_scene_js.py`, `versLaFin`) posait le joueur au `lieu` du dernier objectif par `Histoire.lieu`, qui ne connaît pas un `amarrage:` — h08 finit sous l'urgence : il le cherche aussi par `resoudre`.
+  - **Ce qui reste de l'arc I** : `i04` (aucun char ne va sur l'île) et `i07` (la course en bateau : `course` ne prend
+    pas encore un `amarrage:` en point) ; et `d09`, `p12` qui passent par l'île.
+  - **Juges** (`tests/test_arc_i_js.py`, trois de plus) : le chalutier posé sur l'eau, coulé, trois étoiles semées ;
+    la cache posée devant la chapelle, deux matelots, le retour par l'eau ; la traverse, la poignée de main de Sœur
+    Jeanne, le retour à l'urgence.
+- **30 sept. 2026 : ce qui reste de M16, après les vagues 7 à 14** (36 missions livrées ce jour-là ; 111 au catalogue, La Pointe comptée pour un chapitre) :
+  - **Le casse (arc X, `x01`–`x04`)** : la caisse populaire serait un **lieu neuf** (la fiche le dit : « un cinquième
+    lieu spécial, qui se paie ») — une porte neuve élargit son devant et la ville glisse ; et « ce qu'on a préparé change
+    le coup » demande au moteur un objectif qui lit les préparatifs (moins d'étoiles avec la tenue, un char qui tient la
+    poursuite). **À trancher avec Martin** : un lieu neuf posé en dernier, ou une façade peinte (`boutique:`).
+  - **Les petites jobs (arc T, `t01`–`t15`)** : leur donneur est un **passant** (`pieton:<slug>@district:<slug>`, un
+    par jour, avec la bulle « Hé! ») — le moteur ne sait pas encore faire donner une mission par un archétype.
+  - **L'île** : `i04` (aucun char ne va sur l'île), `i07` (une `course` dont les points seraient des amarrages).
+  - **Les districts** : `e03` (Mme Beaulieu et Biscuit, le chien — personnage et bête neufs), `e05` et `e14` (la piscine
+    de la villa, dans un bloc), `e08` (Jo est parti après e04), `e09` (des poutines en vélo — remisé l'hiver), `e11` (le
+    maire n'est en ville qu'entre m97 et m98), `s04` (Bob Sauvé n'est pas un personnage), `s13` (livré « à l'usine », qui
+    n'est jamais un lieu), `q14` (la liste du quai, une activité), `p03` (Maude, personnage neuf), `p06`–`p08`, `p12`
+    (La Pointe est devenue un chapitre : ses missions s'y ajouteraient en actes), `d09` (un choix dans un dialogue).
+  - **Des chapitres** : [Des missions en chapitres](des-missions-en-chapitres.md) veut que les arcs s'écrivent en
+    chapitres une fois le pilote joué par Martin ; les vagues 7 à 14 sont des missions de trois à dix étapes, chacune un
+    acte tout prêt (`remplace`).
+  - ⚠️ **Le paquet** : ce qui servait à jouer une mission voyage maintenant avec elle — l'échec et la phase qui valent
+    leur défaut, puis tout `donne` (message compris) : le catalogue pèse **≈ 25 octets gzip par mission** ; le brut des
+    définitions est à 239 439 pour un plafond de 241 000 (les autres sessions y ajoutent aussi) : une dizaine de missions
+    de marge. Relever le plafond brut reste la décision de Martin.

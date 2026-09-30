@@ -31,7 +31,7 @@ Chaque fiche mêle deux sortes de faits.
 | [Madame Thibodeau](madame-thibodeau.md) | `thibodeau` | devant son kiosque | Julia | m2 · m51 · f12 |
 | [Marco « le Cousin »](marco.md) | `marco` | devant le garage | Québec Tremblay | m3 · m50 · f01 · m97 |
 | [Le sergent Réjean Bouchard](sergent-bouchard.md) | `bouchard` | au casse-croûte, dedans | Khaivan | m4 · m51 · v02 |
-| [Josée « la Chef » Pelletier](josee.md) | `josee` | au bar Le Brouillard, dedans | Jeanne Mance | m5 · m6 · q04 · q11 · v01 · d05 · d07 · q12 · i03 |
+| [Josée « la Chef » Pelletier](josee.md) | `josee` | au bar Le Brouillard, dedans | Jeanne Mance | m5 · m6 · q04 · q11 · v01 · d05 · d07 · q12 · i03 · i06 · i08 |
 | [Ti-Paul Gagnon](ti-paul.md) | `tipaul` | devant son dépanneur | Québec Tremblay | m6 · e01 · m51 |
 | [Lucienne « Lulu » Pelletier](lulu.md) | `lulu` | à la cantine des Quais, dedans | Claudia | m6 · m50 · q02 · m51 · q01 |
 | [Raymonde Fortin](raymonde.md) | `raymonde` | devant l'usine Prévost | Nadine | m6 · s03 |
@@ -45,7 +45,7 @@ Chaque fiche mêle deux sortes de faits.
 | [Mado](mado.md) | `mado` | devant le casse-croûte du Faubourg | Caroline | f11 · f13 · f12 (une enveloppe) |
 | [Gérard « Gégé » Morin](gege.md) | `gege` | devant la cantine des Quais | Alexandre Boutin | q03 · q09 |
 | [Xavier](xavier.md) | `xavier` | devant le dépanneur | Premium Male teacher (Adam) | e12 |
-| [Dr Lachance](dr-lachance.md) | `lachance` | à l'hôpital, dedans | Patrick | h01 · h03 · h04 · h06 · h07 |
+| [Dr Lachance](dr-lachance.md) | `lachance` | à l'hôpital, dedans | Patrick | h01 · h03 · h04 · h06 · h07 · h08 |
 | [Gus Lévesque](gus.md) | `gus` | à l'armurerie | Khaivan | f02 · d06 · f12 (une enveloppe) |
 | [Rosa Di Meo](rosa.md) | `rosa` | à la Boutique Rosa | Amélie | f03 · f10 · f12 (une enveloppe) |
 | [Ginette](ginette.md) | `ginette` | à l'hôpital | Jeanne Mance | h02 · h05 |

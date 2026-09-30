@@ -679,7 +679,7 @@ from . import (  # noqa: E402
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
     s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
     e04, e06, e07, e10, la_pointe, s02, s05, s06, s09, s10, s11,
-    d01, d02, d03, d04, d05, d06, d07, d08, h03, h04, h05, h06, h07, l01, l02, l03, l04, l05, l06, r02, r03, r04, r05, r06, r07, r08, s07, s12, s14, e13, q12, q09, q08, i01, i02, i03, i05, q07, m98,
+    d01, d02, d03, d04, d05, d06, d07, d08, h03, h04, h05, h06, h07, l01, l02, l03, l04, l05, l06, r02, r03, r04, r05, r06, r07, r08, s07, s12, s14, e13, q12, q09, q08, i01, i02, i03, i05, i06, i08, h08, q07, m98,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -729,7 +729,8 @@ from . import (  # noqa: E402
 # payée, sa dernière coupe et la bague de Rocco (d08, `exige.dette: 0`). Chacune ferme l'autre.
 # ⚠️ q08, i01, i02, i03, i05 (30 sept. 2026, vague 13) : l'Île-aux-Corneilles — le moteur de la chaloupe de Bérubé,
 # la première traversée jusqu'au hangar de Léo, la cloche de Sœur Jeanne rachetée chez Ti-Loup, les caisses de Sven
-# au hangar sans nom, la conserverie qui brûle. L'île ne se rejoint pas à pied : on livre la chaloupe à un
+# au hangar sans nom, la conserverie qui brûle ; i06, i08, h08 (vague 14) : le chalutier de Sven coulé, la cache de
+# Rocco sous la chapelle, la traverse de l'urgence. L'île ne se rejoint pas à pied : on livre la chaloupe à un
 # `amarrage:` et on marche.
 # ⚠️ s07, s12, s14, e13, q12, q09 (30 sept. 2026, vague 12) : ce qui restait des districts, avec des donneurs qui
 # existent — le camion de Prévost au quai, la retraite de Gilles, trois autos-patrouilles en cubes pour Ti-Loup, la
@@ -772,7 +773,7 @@ CATALOGUE: list[Mission] = [
     l01.MISSION, l02.MISSION, l03.MISSION, l04.MISSION, l05.MISSION, l06.MISSION,
     r02.MISSION, r03.MISSION, r04.MISSION, r05.MISSION, r06.MISSION, r07.MISSION, r08.MISSION,
     s07.MISSION, s12.MISSION, s14.MISSION, e13.MISSION, q12.MISSION, q09.MISSION,
-    q08.MISSION, i01.MISSION, i02.MISSION, i03.MISSION, i05.MISSION,
+    q08.MISSION, i01.MISSION, i02.MISSION, i03.MISSION, i05.MISSION, i06.MISSION, i08.MISSION, h08.MISSION,
     m97.MISSION, m98.MISSION, m99.MISSION,
 ]
 
