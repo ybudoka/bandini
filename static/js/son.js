@@ -316,6 +316,26 @@ const Son = (function () {
 
   function joue(slug) { return echantillon(slug, ici) !== null; }
 
+  //: LES SONS D'UN LIEU QU'ON NE VOIT PAS VENIR (les bruitages qui n'avaient aucun equivalent paye, 30 sept.
+  //: 2026) : la cloche, la borne, la distributrice, le nid-de-poule… n'ont pas d'endroit dont on approche. Le
+  //: PREMIER geste demande son lieu (`audio.LIEUX`) et joue son filet ; les suivants ont le fichier.
+  function lieuDe(slug) {
+    const lieux = (B.defs && B.defs.audio && B.defs.audio.lieux) || {};
+    for (const l in lieux) if (lieux[l].indexOf(slug) >= 0) return l;
+    return null;
+  }
+  function jouerDuLieu(slug) {
+    if (joue(slug)) return true;
+    const l = lieuDe(slug);
+    if (l) Lieu.charger(l);
+    return false;
+  }
+  /** `tenir`, pour un son d'un lieu : le demande des qu'il se fait entendre. */
+  function tenirDuLieu(slug, volume, repli) {
+    if (volume > 0.02 && !estCharge(slug)) { const l = lieuDe(slug); if (l) Lieu.charger(l); }
+    tenir(slug, volume, repli);
+  }
+
   /** `joue`, mais COUPE au bout de `duree` secondes, en fondu : un geste bref
       qui emprunte un echantillon plus long que lui (la passe du pistolet a
       peinture dans le souffle de l'extincteur). `part` dose le volume (1 =
@@ -754,6 +774,7 @@ const Son = (function () {
     //: seul son du jeu qui dise « tu as gagne » avant que le HUD l'ecrive — deux
     //: coups en feraient un tramway (`cloche_tram`), qui, lui, passe.
     cloche: function () {
+      if (jouerDuLieu('cloche')) return;
       ton(1760, 0.9, 'sine', 0.22, 1.6);
       ton(2640, 0.6, 'triangle', 0.09, 1.9, 0.01);
       ton(880, 1.1, 'sine', 0.10, 1.3, 0.02);
@@ -857,14 +878,11 @@ const Son = (function () {
     //: image (`Vehicules.heurterDecor`). Le bruit de l'impact appartient a ce
     //: qui a defonce ; la borne, elle, n'a que son bouchon et son eau.
     //:
-    //: ⚠️ Elle n'a pas son propre echantillon, et c'est un choix de budget :
-    //: le seau des bruitages est a 14 Ko de son plafond (voir le plan). Ces
-    //: deux-la sont donc ENTIEREMENT synthetises — et ils ne reclament rien au
-    //: catalogue : le navigateur ne demande un echantillon que pour un slug
-    //: que Python declare, et un juge le tient. Le jour d'une seance
-    //: ElevenLabs, la fiche gagnera ses deux entrees et ces fonctions leur
-    //: repli, ensemble.
+    //: ⚠️ Son echantillon et celui du jet sont venus le 30 sept. 2026 (les bruitages qui n'avaient aucun
+    //: equivalent paye) : un LIEU (`borne`), demande au premier bris (`jouerDuLieu`). La synthese reste le
+    //: filet — et c'est elle qu'on entend au tout premier.
     borne_cassee: function () {
+      if (jouerDuLieu('borne_cassee')) return;
       ton(760, 0.05, 'square', 0.14, 2.6);        // le bouchon qui saute
       bruit(0.12, 0.28, 5200, 1400);              // la tole qui cede
       bruit(0.55, 0.40, 2400, 800);               // l'eau qui s'ouvre d'un coup
@@ -880,7 +898,7 @@ const Son = (function () {
         0,1 s, donc jamais de trou. */
     borne_jet: function (force) {
       const f = Math.max(0, Math.min(1, force || 0));
-      if (f > 0 && B.t % 6 === 0) bruit(0.2, 0.1 * f, 2000, 700);
+      tenirDuLieu('borne_jet', f, function (v) { if (B.t % 6 === 0) bruit(0.2, 0.1 * v, 2000, 700); });
     },
     /** Un son de CHANTIER pose en (x, y) : l'echantillon s'il est charge, son
         filet sinon — au meme volume, qui dit la distance. Rend ce volume (0 =
@@ -888,10 +906,13 @@ const Son = (function () {
         au geste qu'on voit, sur son horloge, et jamais la nuit. */
     chantier: function (slug, x, y, portee) {
       const j = B.joueur;
-      if (!j || !pret()) return 0;
+      if (!j) return 0;
       const p = portee || 320;
       const v = 1 - Math.hypot(x - j.x, y - j.y) / p;
       if (v <= 0) return 0;
+      // Un son de la chaussee (la benne, le tas, la plaque) : son lieu se demande au premier coup entendu.
+      if (!estCharge(slug)) { const l = lieuDe(slug); if (l) Lieu.charger(l); }
+      if (!pret()) return 0;
       if (estCharge(slug)) return jouerA(slug, x, y, p);
       (REPLI_CHANTIER[slug] || REPLI_CHANTIER.marteau)(v);
       return v;
@@ -1003,31 +1024,34 @@ const Son = (function () {
       reglerBoucle('vagues', v);
     },
     //: Le nid-de-poule : le COUP SEC de la suspension qui talonne, puis la
-    //: tole qui resonne une demi-seconde. Synthetise, comme la borne : le seau
-    //: des bruitages est plein, et un cahot n'a pas besoin d'un fichier.
+    //: tole qui resonne une demi-seconde. Son fichier (30 sept. 2026) est dans le lieu `chaussee`, demande
+    //: au premier cahot ; la synthese reste le filet.
     nid_de_poule: function () {
+      if (jouerDuLieu('nid_de_poule')) return;
       ton(90, 0.07, 'square', 0.22, 0.45);          // le talonnage
       bruit(0.1, 0.16, 1100, 300);                  // le gravier
       ton(320, 0.14, 'triangle', 0.07, 0.7, 0.04);  // la tole qui resonne
     },
-    //: La machine distributrice. ⚠️ Synthetisee, comme la borne et le nid-de-
-    //: poule, pour la meme raison : le seau des bruitages est plein, et trois
-    //: coups de tole n'ont pas besoin de trois fichiers.
+    //: La machine distributrice : ses trois sons (lieu `distributrice`, 30 sept. 2026) viennent au premier
+    //: geste ; la synthese reste le filet.
     //: Ce qu'on achete TOMBE : le moteur de la spirale, puis la canette qui
     //: dégringole dans la trappe.
     distributrice: function () {
+      if (jouerDuLieu('distributrice')) return;
       ton(180, 0.16, 'sawtooth', 0.05, 0.9);          // la spirale qui tourne
       ton(140, 0.06, 'square', 0.18, 0.5, 0.18);      // le coup sourd dans la trappe
       bruit(0.08, 0.14, 1800, 500);
     },
     // On la BRASSE : l'epaule dans la tole, et tout ce qu'il y a dedans qui cogne.
     machine_brassee: function () {
+      if (jouerDuLieu('machine_brassee')) return;
       ton(70, 0.12, 'square', 0.24, 0.6);
       bruit(0.18, 0.22, 900, 200);
       ton(240, 0.1, 'triangle', 0.06, 0.8, 0.08);
     },
     // Defoncee : la monnaie qui s'eparpille, trois tintements qui descendent.
     monnaie: function () {
+      if (jouerDuLieu('monnaie')) return;
       for (let i = 0; i < 3; i++) ton(2200 - i * 260, 0.08, 'sine', 0.12, 0.9, i * 0.07);
       bruit(0.2, 0.18, 3200, 900);
     },
@@ -1046,15 +1070,13 @@ const Son = (function () {
     porte_vehicule: function () { if (!joue('porte_vehicule')) { bruit(0.05, 0.3, 1500, 200); ton(95, 0.09, 'square', 0.14, 0.5, 0.01); } },
     porte: function (genre) { (SFX['porte_' + genre] || SFX.porte_maison)(); },
     // Le petit train de la foire, arrete devant quelqu'un : deux coups de
-    // sifflet aigus, un court et un long. ⚠️ Synthetise seulement, comme la
-    // distributrice : le son de la foire (orgue, cris, sifflet) est une piste
-    // ElevenLabs a part dans le plan, et un `joue` sans fichier au catalogue
-    // reclamerait un mp3 qui n'existe pas.
-    sifflet_train: function () { ton(1320, 0.12, 'triangle', 0.16); ton(1175, 0.32, 'triangle', 0.16, 1, 0.16); },
+    // sifflet aigus, un court et un long — le filet ; le fichier (lieu `foire`, 30 sept. 2026) vient au
+    // premier coup de sifflet.
+    sifflet_train: function () { if (!jouerDuLieu('sifflet_train')) { ton(1320, 0.12, 'triangle', 0.16); ton(1175, 0.32, 'triangle', 0.16, 1, 0.16); } },
     // Le rideau du garage qui monte ou descend : un roulement grave et les lames
-    // qui claquent une a une. ⚠️ Synthetise seulement, pour la meme raison que le
-    // sifflet : un `joue` sans fichier au catalogue reclamerait un mp3 absent.
+    // qui claquent une a une — le filet ; le fichier (lieu `garage`, 30 sept. 2026) vient au premier rideau.
     rideau_garage: function () {
+      if (jouerDuLieu('rideau_garage')) return;
       bruit(0.5, 0.12, 700, 180);
       for (let i = 0; i < 6; i++) ton(150 + (i % 2) * 35, 0.04, 'square', 0.05, 0.8, i * 0.08);
     },
@@ -1146,19 +1168,19 @@ const Son = (function () {
     molotov: function () { if (!joue('molotov')) { bruit(0.1, 0.4, 7000, 2500); bruit(0.5, 0.5, 900, 150); ton(55, 0.4, 'sine', 0.3, 0.6, 0.08); } },
     // Un souffle de poudre, seul ; le jet en continu, c'est `jet()` qui le tient.
     extincteur: function () { if (!joue('extincteur')) bruit(0.25, 0.18, 5000, 2500); },
-    // L'eau sur la braise : un sifflement court, quand le feu s'éteint. ⚠️
-    // Synthétisé, comme la borne : le seau des bruitages est plein, et ce
-    // « tss » ne réclame pas un fichier.
-    eau: function () { bruit(0.4, 0.22, 3200, 900); },
+    // L'eau sur la braise : un sifflement court, quand le feu s'éteint. Son fichier et celui du feu (lieu
+    // `incendie`, 30 sept. 2026) viennent au premier feu entendu.
+    eau: function () { if (!jouerDuLieu('eau')) bruit(0.4, 0.22, 3200, 900); },
     // Le feu de bâtiment, tenu tant qu'on en est près : un crépitement sourd,
-    // dosé à la distance (`force`, 0 = on se tait). ⚠️ Sans fichier au
-    // catalogue — comme la rumeur d'un chantier quand son mp3 manque.
+    // dosé à la distance (`force`, 0 = on se tait) : la BOUCLE du lieu `incendie`, demandée dès qu'on
+    // l'entend ; faute d'elle, le crépitement synthétisé.
     rumeur_incendie: function (force) {
-      const v = Math.max(0, Math.min(1, force || 0));
-      if (v > 0.02 && B.t % 13 === 0) {
-        bruit(0.16, 0.06 * v, 900, 220);
-        if (v > 0.4 && B.t % 37 === 0) ton(380, 0.05, 'square', 0.03 * v, 1.6);
-      }
+      tenirDuLieu('rumeur_incendie', Math.max(0, Math.min(1, force || 0)), function (v) {
+        if (B.t % 13 === 0) {
+          bruit(0.16, 0.06 * v, 900, 220);
+          if (v > 0.4 && B.t % 37 === 0) ton(380, 0.05, 'square', 0.03 * v, 1.6);
+        }
+      });
     },
     vide: function () { if (!joue('vide')) { ton(1400, 0.03, 'square', 0.15); ton(900, 0.03, 'square', 0.1, 1, 0.04); } },
     casse: function () { if (!joue('casse')) { bruit(0.2, 0.4, 3000, 400); ton(220, 0.08, 'square', 0.2, 0.5); } },

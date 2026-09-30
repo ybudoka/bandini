@@ -76,7 +76,11 @@ def test_le_poids_audio_reste_raisonnable():
     # avaient déjà mené les lieux à 0,94 Mo. Un seul se charge à la fois (la saison qu'on entend). **Validé
     # par Martin le 29 sept. 2026.** La borne ouverte de l'été (vague 4c, 65 Ko) y tient : 1,31 Mo. La
     # prochaine fois, on compresse avant de relever.
-    assert sum(f.stat().st_size for f in lieux) < 1_350_000
+    # ⚠️ **Relevé de 1,35 à 1,8 Mo le 30 sept. 2026, sur décision de Martin** (« relever à 1,8 Mo ») : les
+    # quatorze bruitages qui n'avaient aucun équivalent payé (284 Ko : la cloche, la borne, la distributrice,
+    # la chaussée, l'incendie…) — chargés au premier geste, jamais au premier écran. La marge restante est pour
+    # les chocs et les pas (l'autre jalon qui range ses sons dans un lieu).
+    assert sum(f.stat().st_size for f in lieux) < 1_800_000
     bruitages = [f for f in fichiers
                  if not f.name.startswith(("radio-", "histoire-", "musique-"))
                  and f.stem.rsplit("-", 1)[0] not in slugs_de_quartier

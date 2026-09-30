@@ -532,6 +532,61 @@ CATALOGUE: list[Echantillon] = [
        prompt="an open fire hydrant gushing a powerful stream of water onto hot asphalt on a summer day in a "
               "city street, water splashing and spraying, children laughing, shrieking with joy and running "
               "through the spray, playful and lively, seamless loop, no music, no words"),
+    # --- LES BRUITAGES QUI N'AVAIENT AUCUN ÉQUIVALENT PAYÉ (30 sept. 2026, Martin : « on les génère ») --------
+    # Quatorze sons que `son.js` synthétisait faute de fichier. Chacun est rangé dans un LIEU (`LIEUX`) chargé
+    # au PREMIER geste qui le joue (`Son.jouerDuLieu`) : ce geste-là garde sa synthèse, les suivants ont le
+    # fichier. Le premier écran est plein ; ceux-ci ne coûtent qu'au dépôt.
+    # La foire : la cloche du marteau de force (et des clochettes d'adresse), le sifflet du petit train.
+    _e("cloche", "Cloche du marteau de force", duree_s=2.0, volume=0.5, influence=0.6,
+       prompt="a carnival high striker strongman game, the puck hitting the top bell: one loud bright "
+              "metallic bell ding ringing out and fading, fairground, no voices, no music"),
+    _e("sifflet_train", "Sifflet du petit train", duree_s=1.6, volume=0.4, influence=0.6,
+       prompt="a small kiddie amusement park train steam whistle blowing two short cheerful toots, "
+              "fairground, outdoors, no voices, no music"),
+    # L'incendie : le feu d'un bâtiment, TENU tant qu'on en est près (une BOUCLE), et l'eau sur la braise.
+    _e("rumeur_incendie", "Feu de bâtiment", duree_s=8.0, volume=0.4, boucle=True, influence=0.45,
+       prompt="a large building fire burning, deep roaring flames crackling and popping, wooden beams "
+              "snapping, windows cracking in the heat, seamless loop, no sirens, no voices, no music"),
+    _e("eau", "Eau sur la braise", duree_s=1.0, volume=0.5, influence=0.6,
+       prompt="a stream of water hitting hot glowing embers, a sharp hissing sizzle of steam rising, "
+              "short, close, no voices, no music"),
+    # La borne-fontaine cassée : le choc qui la fait sauter, puis le jet TENU (une BOUCLE, à distance). ⚠️ Pas
+    # la boucle de la canicule (`borne_ete`) : deux gestes qui tiendraient la même boucle à deux volumes se la
+    # voleraient d'une image à l'autre.
+    _e("borne_cassee", "Borne-fontaine qui saute", duree_s=1.8, volume=0.55, influence=0.6,
+       prompt="a car smashing into a fire hydrant, the metal cap bursting off with a loud clang and a "
+              "sudden powerful gush of high pressure water erupting, outdoors, no voices, no music"),
+    _e("borne_jet", "Jet de la borne cassée", duree_s=6.0, volume=0.35, boucle=True, influence=0.45,
+       prompt="a broken fire hydrant spraying a powerful jet of water high into the air, water "
+              "splashing down hard on the street and sidewalk, steady, seamless loop, no voices, "
+              "no people, no music"),
+    # Le rideau d'une porte de garage qui monte.
+    _e("rideau_garage", "Rideau de garage", duree_s=3.0, volume=0.45, influence=0.6,
+       prompt="a metal roll-up garage door opening, electric motor whirring, the corrugated steel "
+              "shutter rattling as it rolls up, ending with a clunk, no voices, no music"),
+    # Les distributrices : la canette qui tombe, la machine qu'on secoue, la monnaie qui en sort.
+    _e("distributrice", "Distributrice", duree_s=1.6, volume=0.5, influence=0.6,
+       prompt="a vending machine dispensing a soda can: a short mechanical whir and clunk, the can "
+              "tumbling down and landing in the metal tray, close, no voices, no music"),
+    _e("machine_brassee", "Distributrice secouée", duree_s=1.6, volume=0.55, influence=0.6,
+       prompt="a person shaking and banging on a heavy stuck vending machine, the metal cabinet "
+              "rattling, thumping and rocking, close, no voices, no music"),
+    _e("monnaie", "Monnaie qui tombe", duree_s=1.0, volume=0.5, influence=0.6,
+       prompt="a handful of coins falling and jingling out of a machine coin return into a metal "
+              "tray, close, no voices, no music"),
+    # La chaussée : le nid-de-poule, la benne poussée, le tas de terre, la plaque d'acier d'une tranchée.
+    _e("nid_de_poule", "Nid-de-poule", duree_s=0.8, volume=0.45, influence=0.6,
+       prompt="a car tire slamming into a deep pothole, a hard thump and the suspension clunking, "
+              "close, no engine, no voices, no music"),
+    _e("conteneur", "Benne poussée", duree_s=1.3, volume=0.5, influence=0.6,
+       prompt="a large empty metal dumpster being shoved by a car, scraping along asphalt with a "
+              "hollow metallic boom, no voices, no music"),
+    _e("tas", "Tas de terre", duree_s=1.0, volume=0.45, influence=0.6,
+       prompt="a car driving over a mound of dirt, tires crunching into soil and gravel with a dull "
+              "thud, close, no engine, no voices, no music"),
+    _e("plaque", "Plaque d'acier", duree_s=1.0, volume=0.5, influence=0.6,
+       prompt="a car driving over a steel road plate covering a trench: two loud metallic clanks, "
+              "front wheels then rear wheels, close, no engine, no voices, no music"),
     # Le feu du foyer (le chalet du rang, 26 sept. 2026) : une BOUCLE dont le volume suit la
     # distance au foyer de la pièce (`Monde.majFeuDeFoyer`) — plus fort quand on s'y chauffe.
     _e("foyer", "Feu de foyer", duree_s=8.0, volume=0.4, boucle=True, influence=0.45,
@@ -1650,6 +1705,14 @@ LIEUX: dict[str, list[str]] = {
     "saison_ete": ["saison_ete"], "saison_automne": ["saison_automne"],
     # La borne ouverte de la canicule (vague 4c) : chargée quand on en approche une (`RueDesSaisons.majSon`).
     "borne_ete": ["borne_ete"],
+    # LES BRUITAGES QUI N'AVAIENT AUCUN ÉQUIVALENT PAYÉ (30 sept. 2026) : chargés au premier geste qui les joue
+    # (`Son.jouerDuLieu`) — ce geste-là garde sa synthèse.
+    "foire": ["cloche", "sifflet_train"],
+    "incendie": ["rumeur_incendie", "eau"],
+    "borne": ["borne_cassee", "borne_jet"],
+    "garage": ["rideau_garage"],
+    "distributrice": ["distributrice", "machine_brassee", "monnaie"],
+    "chaussee": ["nid_de_poule", "conteneur", "tas", "plaque"],
     # Le derapage (les saisons, lot 6) : il se charge la premiere fois que le joueur conduit (`Derapage`).
     "derapage": ["crissement"],
     # Les cartes de hockey (des choses à collectionner, vague 1) : chargées quand une carte qui manque est à moins
