@@ -102,6 +102,19 @@ ne commande pas.
 faire) ; aucun n'est posé au dé ; la ville ne bouge pas d'une tuile quand on les ajoute ; une collection
 complète pose son objet dans la planque, et il survit à une sauvegarde.
 
+### La suite (30 sept. 2026 — Martin choisit l'ordre)
+
+1. **La carte plus visible l'hiver** (petit, d'abord) : la carte blanche se perd sur la neige — un contour,
+   une couleur ou un éclat d'hiver, regardé en capture sur la neige, le jour ET la nuit.
+2. **Les bebelles** (vague 3) : douze curiosités québécoises cachées, posées sur une étagère de la planque
+   une fois trouvées ; même règle de pose que les cartes, sans dé.
+3. **Les sauts** (vague 4) : vingt rampes au volant à découvrir ; un saut réussi se compte (vitesse,
+   distance, atterrissage), une prime et un compte au carnet.
+4. **Le marché aux puces du dimanche** ([sa fiche](le-marche-aux-puces-du-dimanche.md#fiche)).
+
+⚠️ Le paquet des définitions n'a plus de marge (7 octets gzip au 30 sept.) : rien de neuf n'y entre, ni dans
+la carte — tout passe par `/api/collections`.
+
 ## Notes
 
 ### Vague 1 — les cartes de hockey (✅ livrée le 30 sept. 2026)
