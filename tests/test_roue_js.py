@@ -269,3 +269,135 @@ def test_avec_une_seule_arme_la_roue_ne_s_ouvre_pas(banc):
     }""")
     assert r["roue"] is False and r["arme"] == "poings"
     assert not r["compte"], "un bouton qui ne peut rien faire ne doit rien jouer"
+
+
+# --- Le panneau de la roue (30 sept. 2026) ----------------------------------------
+#: Martin : « avec la roue de sélection des armes, je veux une image en plus gros
+#: des armes et des statistiques de l'arme, avec un petit descriptif ». Tranché sur
+#: trois maquettes : un panneau à droite de la roue — le portrait, trois barres
+#: chiffrées, les munitions et le bruit, des étiquettes, le descriptif ; ni le prix
+#: ni les étoiles.
+
+
+def test_chaque_arme_a_son_portrait_et_son_descriptif(banc):
+    """Une arme neuve au catalogue sans portrait ni descriptif ouvrirait un
+    panneau vide — ou l'icone de seize pixels agrandie, deux briques. Et chaque
+    portrait est un dessin À LUI, tenu dans ses 48 x 24 : deux armes qui se
+    peignent pareil ne se distinguent plus d'un coup d'oeil."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const manque = [], longs = [], debordent = [], signatures = {};
+        for (const def of L.B.defs.armes) {
+            const f = L.Hud.ficheDArme(def.slug);
+            if (!f.descriptif.length) manque.push('descriptif ' + def.slug);
+            if (f.descriptif.length > 3) longs.push(def.slug + ' : ' + f.descriptif.join(' / '));
+            // ⚠️ La police pixel n'a pas tout : un « ; » s'y peignait en « ? ».
+            for (const ch of L.Atlas.normaliser(f.descriptif.join(' ')))
+                if (ch !== ' ' && !L.Atlas.connait(ch)) manque.push('« ' + ch + ' » dans ' + def.slug);
+            const peintre = L.PORTRAITS[def.slug];
+            if (!peintre) { manque.push('portrait ' + def.slug); continue; }
+            const ctx = o.doc.createElement('canvas').getContext('2d');
+            ctx.traces = [];
+            peintre(ctx);
+            for (const t of ctx.traces) {
+                if (t[0] < 0 || t[1] < 0 || t[0] + t[2] > 48 || t[1] + t[3] > 24) debordent.push(def.slug + ' ' + t.join(','));
+            }
+            signatures[def.slug] = ctx.traces.length > 12 ? JSON.stringify(ctx.traces) : null;
+        }
+        return { manque: manque, longs: longs, debordent: debordent, signatures: signatures };
+    }""")
+    assert r["manque"] == [], "des armes sans portrait ou sans descriptif, ou une lettre que la police ne sait pas écrire"
+    assert r["longs"] == [], "un descriptif dépasse trois lignes"
+    assert r["debordent"] == [], "un portrait sort de son cadre de 48 x 24"
+    vus = {}
+    for slug, sig in r["signatures"].items():
+        assert sig, f"le portrait de {slug} n'est qu'une poignée de rectangles"
+        assert sig not in vus, f"{slug} se peint comme {vus.get(sig)}"
+        vus[sig] = slug
+
+
+def test_le_panneau_dit_les_chiffres_de_l_arme(banc):
+    """Les barres portent leur chiffre, et les chiffres sont ceux du jeu : la
+    portée et le bruit en mètres (une tuile, comme la distance du HUD), la
+    cadence en coups par seconde, les dégâts d'un coup (plombs compris)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.B.partie.armes.carabine = { mun: 5, usure: 0 };
+        L.B.partie.armes.pelle = { mun: null, usure: 2 };
+        const f = function (s) { return L.Hud.ficheDArme(s); };
+        const val = function (s) { const x = {}; f(s).barres.forEach(function (b) { x[b.libelle] = b.valeur; }); return x; };
+        const part = function (s, l) { return f(s).barres.find(function (b) { return b.libelle === l; }).part; };
+        return {
+            carabine: val('carabine'), fusil: val('fusil'), mitraillette: val('mitraillette'),
+            lignes: { carabine: f('carabine').lignes, poings: f('poings').lignes, pelle: f('pelle').lignes },
+            etiquettes: { grenade: f('grenade').etiquettes, mitraillette: f('mitraillette').etiquettes,
+                          fusil: f('fusil').etiquettes, poings: f('poings').etiquettes, molotov: f('molotov').etiquettes },
+            parts: { cadenceMit: part('mitraillette', 'CADENCE'), porteeCar: part('carabine', 'PORTÉE'),
+                     degatsPoings: part('poings', 'DÉGÂTS'), degatsPistolet: part('pistolet', 'DÉGÂTS') },
+        };
+    }""")
+    assert r["carabine"] == {"DÉGÂTS": "60", "PORTÉE": "14 M", "CADENCE": "1,1/S"}
+    assert r["fusil"]["DÉGÂTS"] == "12×6", "le fusil tire six plombs"
+    assert r["mitraillette"]["CADENCE"] == "12/S"
+    assert r["lignes"]["carabine"] == ["MUNITIONS 5 / 25", "BRUIT 22 M"]
+    assert r["lignes"]["poings"] == ["MUNITIONS À VOLONTÉ", "SANS BRUIT"]
+    assert r["lignes"]["pelle"][0] == "SE CASSE DANS 3 COUPS", "l'usure se lit sur l'arme qu'on a, pas sur la neuve"
+    assert "EXPLOSE" in r["etiquettes"]["grenade"] and "REBONDIT" in r["etiquettes"]["grenade"]
+    assert "AUTOMATIQUE" in r["etiquettes"]["mitraillette"]
+    assert "6 PLOMBS" in r["etiquettes"]["fusil"]
+    assert "ASSOMME" in r["etiquettes"]["poings"] and "BRÛLE" in r["etiquettes"]["molotov"]
+    p = r["parts"]
+    assert p["cadenceMit"] == 1 and p["porteeCar"] == 1, "la meilleure du catalogue remplit sa barre"
+    assert 0 < p["degatsPoings"] < p["degatsPistolet"] < 1
+
+
+#: Au téléphone en paysage (844 x 390, le juge des commandes tactiles), SPRINT,
+#: ACTION et SAISIR commencent à x 415 en pixels du jeu : le panneau finit avant.
+_POUCES_X = 412
+
+
+def test_le_panneau_tient_a_droite_de_la_roue(banc):
+    """À droite de la roue, sans la mordre, et dans l'écran — pour chaque arme,
+    la plus bavarde comprise, et pour la roue la plus large (tout le catalogue).
+    AU DOIGT, la roue glisse à gauche et le panneau finit avant les pastilles :
+    elles mangeaient ses chiffres et son descriptif (vu à la capture)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const n = L.B.defs.armes.length;
+        const fautes = [], droites = [];
+        for (const doigt of [false, true]) {
+            const bord = L.Hud.centreDeLaRoue(doigt).x + L.Hud.rayonDeLaRoue(n) + 11;
+            if (L.Hud.centreDeLaRoue(doigt).x - L.Hud.rayonDeLaRoue(n) - 11 < 0) fautes.push('la roue sort à gauche');
+            for (const def of L.B.defs.armes) {
+                const p = L.Hud.panneauDeLaRoue(def.slug, doigt);
+                if (p.x < bord || p.y < 0 || p.x + p.l > L.VW || p.y + p.h > L.VH) fautes.push(def.slug + ' ' + JSON.stringify(p));
+                if (doigt) droites.push(p.x + p.l);
+            }
+        }
+        return { fautes: fautes, droite: Math.max.apply(null, droites) };
+    }""")
+    assert r["fautes"] == [], "le panneau sort de l'écran ou mord la roue"
+    assert r["droite"] <= _POUCES_X, "au doigt, le panneau passe sous SPRINT, ACTION ou SAISIR"
+
+
+def test_le_portrait_se_dessine_en_grand_et_palit_a_sec(banc):
+    """Le portrait est dessiné au double (96 x 48) pour l'arme SOUS LE POUCE ;
+    à sec, il pâlit comme l'icône de son créneau."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        """ + _QUATRE + """
+        L.Combat.degainer(j, 'couteau');
+        o.touche('Tab');
+        o.frame(20);
+        const vus = [];
+        const ctx = o.doc.createElement('canvas').getContext('2d');
+        ctx.drawImage = function (img, x, y, w, h) { if (w === 96 && h === 48) vus.push(ctx.globalAlpha); };
+        const roue = L.B.roue;
+        roue.choix = roue.armes.indexOf('carabine');
+        L.Hud.dessinerRoue(ctx);
+        L.B.partie.armes.carabine.mun = 0;
+        L.Hud.dessinerRoue(ctx);
+        return vus;
+    }""")
+    assert r == [1, 0.35], "le grand portrait n'est pas dessiné, ou ne pâlit pas à sec"

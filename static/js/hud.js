@@ -3885,11 +3885,221 @@ const Hud = (function () {
     const sprite = def && OBJETS[def.sprite] ? def.sprite : 'defaut';
     return Atlas.cuirePeintre('objet|' + sprite, 16, 10, function (g, w, h) { OBJETS[sprite](g, w, h); });
   }
+  // --- Le panneau de la roue : l'arme sous le pouce, en grand -----------------------
+  //: 30 sept. 2026, Martin : « avec la roue de selection des armes, je veux une
+  //: image en plus gros des armes et des statistiques de l'arme, avec un petit
+  //: descriptif ». Tranche sur trois maquettes : A DROITE de la roue, le portrait
+  //: (`PORTRAITS`, 48 x 24 au double), trois barres CHIFFREES, les munitions et le
+  //: bruit, des etiquettes, le descriptif — ni le prix ni les etoiles.
+  //: ⚠️ Les descriptifs vivent ICI, pas dans `app/armes.py` : Python ne les lit
+  //: jamais, et le paquet des definitions n'a plus de marge (une centaine
+  //: d'octets gzip ce jour-la). Une arme neuve au catalogue sans son descriptif
+  //: ni son portrait fait rougir `test_roue_js`.
+  const PANNEAU_L = 156, PANNEAU_MARGE = 6, PORTRAIT_ECHELLE = 2;
+  const PANNEAU_DEDANS = PANNEAU_L - 12;
+  //: ⚠️ AU DOIGT, la roue glisse a gauche et le panneau la suit. Les pastilles
+  //: SAISIR, ACTION et SPRINT couvrent le bord droit du canevas (au telephone en
+  //: paysage, 844 x 390 : des x 415 en pixels du jeu, sous y 119) et elles
+  //: mangeaient les chiffres et le descriptif — vu a la capture. Au pouce, seule
+  //: la DIRECTION choisit : ou la roue se dessine ne change rien au choix.
+  const BANDE_DES_POUCES = 70, ROUE_DECALAGE_AU_DOIGT = 70;
+
+  /** Le centre de la roue : au milieu de l'ecran, ou decale a gauche au doigt. */
+  function centreDeLaRoue(auDoigt) {
+    const doigt = auDoigt === undefined ? Entree.estTactile : auDoigt;
+    return { x: Math.round(VW / 2) - (doigt ? ROUE_DECALAGE_AU_DOIGT : 0), y: Math.round(VH / 2) };
+  }
+  const DESCRIPTIFS_ARMES = {
+    poings: "Ce qui reste quand la prison t'a tout pris. Ça assomme sans tuer : un témoin qui dort ne parle pas.",
+    poing_americain: "Celui des hommes de Sal. Un peu plus fort que tes poings, et ça couche encore sans tuer.",
+    cone: "Pris sur un chantier. Ça cogne plus que ça en a l'air, mais ça plie après quatre coups.",
+    bouteille: "Elle coupe en cassant et fait saigner. Trois coups, puis c'est du verre par terre.",
+    pelle: "Lente à lever, mais elle jette par terre ce qu'elle frappe. Le manche finit par lâcher.",
+    fronde: "Une bille qui passe par-dessus les clôtures. Pas un bruit : personne ne sait d'où ça vient.",
+    batte: "Du bois franc. Un grand coup qui renverse, et il ne casse jamais.",
+    couteau: "Rapide, et de près. Il fait saigner : ce qui s'en va en boitant ne va pas loin.",
+    extincteur: "Éteint un feu, un char qui flambe, un gars qui brûle. En pleine face, ça ne fait pas grand mal.",
+    pistolet: "L'arme de tous les jours : précise, vite sortie. Tiré devant un agent, c'est une étoile.",
+    fusil: "Six plombs qui s'écartent. De près, rien ne se relève. De loin, ça chatouille.",
+    dynamite: "Allume, lance, recule. Elle tombe, roule un peu et saute au bout de sa mèche. Le souffle est large.",
+    molotov: "Pour un groupe. Elle part en cloche et laisse une flaque de feu là où elle casse.",
+    grenade: "Pour ceux qui sont au coin. Elle rebondit sur les murs. Tenue trop longtemps, elle cuit dans ta main.",
+    mitraillette: "Pour quand ils sont trois. Tiens le bouton : ça crache et ça s'écarte. Le chargeur part en trois secondes.",
+    carabine: "Pour celui qui est loin. Lente, sans écart, un passant d'une balle. On l'entend au bout de la rue.",
+    carabine_foire: "Celle du forain, prêtée le temps de la galerie. Un bouchon : il ne fait tomber que les cibles.",
+  };
+  //: Ce que les chiffres ne disent pas. Dans l'ordre ou elles s'affichent ;
+  //: rouge = ca blesse autrement, bleu = ca epargne.
+  const ROUGE_ETIQUETTE = '#e0736a', BLEU_ETIQUETTE = '#7fb3d8', OR_ETIQUETTE = '#d9b44a';
+  const ETIQUETTES_ARMES = [
+    [function (d) { return d.auto; }, function () { return 'AUTOMATIQUE'; }, OR_ETIQUETTE],
+    [function (d) { return d.plombs > 1; }, function (d) { return d.plombs + ' PLOMBS'; }, OR_ETIQUETTE],
+    [function (d) { return d.cloche && d.type === 'tir'; }, function () { return 'EN CLOCHE'; }, OR_ETIQUETTE],
+    [function (d) { return d.souffle > 0; }, function () { return 'EXPLOSE'; }, ROUGE_ETIQUETTE],
+    [function (d) { return d.rebond; }, function () { return 'REBONDIT'; }, OR_ETIQUETTE],
+    [function (d) { return d.feu_s > 0; }, function () { return 'BRÛLE'; }, ROUGE_ETIQUETTE],
+    [function (d) { return d.saigne > 0; }, function () { return 'FAIT SAIGNER'; }, ROUGE_ETIQUETTE],
+    [function (d) { return d.renverse; }, function () { return 'RENVERSE'; }, OR_ETIQUETTE],
+    [function (d) { return d.assomme; }, function () { return 'ASSOMME'; }, BLEU_ETIQUETTE],
+    [function (d) { return d.type === 'jet'; }, function () { return 'ÉTEINT LE FEU'; }, BLEU_ETIQUETTE],
+    [function (d) { return d.foire; }, function () { return 'INOFFENSIVE'; }, BLEU_ETIQUETTE],
+  ];
+
+  /** Le meilleur du catalogue, ce qui remplit une barre. ⚠️ Sans la carabine a
+      bouchon (999 coups, elle ne compte pas) ni l'extincteur pour la cadence :
+      un jet a chaque image ferait de toutes les armes des barres vides. */
+  let maxima = null, maximaDe = null;
+  function maximaDesArmes() {
+    const armes = B.defs.armes || [];
+    if (maximaDe === armes && maxima) return maxima;
+    maxima = { degats: 1, portee: 1, coups: 1 };
+    for (const a of armes) {
+      if (a.foire) continue;
+      maxima.degats = Math.max(maxima.degats, a.degats * a.plombs);
+      maxima.portee = Math.max(maxima.portee, a.portee);
+      if (a.type !== 'jet') maxima.coups = Math.max(maxima.coups, 60 / a.cadence);
+    }
+    maximaDe = armes;
+    return maxima;
+  }
+
+  function uneDecimale(x) {
+    const r = Math.round(x * 10) / 10;
+    return Number.isInteger(r) ? String(r) : String(r).replace('.', ',');
+  }
+
+  /** Coupe `s` en lignes qui tiennent dans `largeur` pixels, au mot pres. */
+  function couperAuMot(s, largeur) {
+    const lignes = [];
+    let ligne = '';
+    for (const mot of String(s).split(' ')) {
+      const essai = ligne ? ligne + ' ' + mot : mot;
+      if (ligne && Atlas.largeurTexte(essai, 1) > largeur) { lignes.push(ligne); ligne = mot; } else ligne = essai;
+    }
+    if (ligne) lignes.push(ligne);
+    return lignes;
+  }
+
+  /** Tout ce que dit le panneau pour cette arme — les chiffres DU JEU, lus dans
+      sa definition et dans le sac. La portee et le bruit en metres (une tuile,
+      comme la distance d'une course), la cadence en coups par seconde, les
+      degats d'un coup (plombs compris ; la barre en racine, sans quoi la
+      grenade ecrase toutes les armes de poing a un trait). */
+  function ficheDArme(slug) {
+    const d = Combat.armeDef(slug);
+    if (!d) return null;
+    const m = maximaDesArmes();
+    const coups = 60 / d.cadence;
+    const barres = [
+      { libelle: 'DÉGÂTS', part: Math.min(1, Math.sqrt(d.degats * d.plombs / m.degats)),
+        valeur: d.plombs > 1 ? d.degats + '×' + d.plombs : String(d.degats) },
+      { libelle: 'PORTÉE', part: Math.min(1, d.portee / m.portee), valeur: Math.max(1, Math.round(d.portee / TT)) + ' M' },
+      { libelle: 'CADENCE', part: Math.min(1, coups / m.coups), valeur: d.type === 'jet' ? 'JET' : uneDecimale(coups) + '/S' },
+    ];
+    const sac = (B.partie && B.partie.armes && B.partie.armes[slug]) || null;
+    let munitions;
+    if (d.chargeur !== null) munitions = 'MUNITIONS ' + (Combat.munitions(slug) || 0) + ' / ' + d.munitions_max;
+    else if (d.usures > 0) {
+      const reste = Math.max(1, d.usures - (sac ? sac.usure || 0 : 0));
+      munitions = 'SE CASSE DANS ' + reste + (reste > 1 ? ' COUPS' : ' COUP');
+    } else munitions = 'MUNITIONS À VOLONTÉ';
+    const regles = B.defs.armes_regles || {};
+    const metres = d.type === 'lance' ? (regles.explosion ? regles.explosion.bruit_tuiles : 0) : d.bruit;
+    const bruit = metres > 0 ? 'BRUIT ' + metres + ' M' : 'SANS BRUIT';
+    const etiquettes = [], couleurs = [];
+    for (const e of ETIQUETTES_ARMES) if (e[0](d)) { etiquettes.push(e[1](d)); couleurs.push(e[2]); }
+    return { slug: slug, nom: d.nom.toUpperCase(), barres: barres, lignes: [munitions, bruit],
+             etiquettes: etiquettes, couleurs: couleurs,
+             descriptif: DESCRIPTIFS_ARMES[slug] ? couperAuMot(DESCRIPTIFS_ARMES[slug], PANNEAU_DEDANS) : [] };
+  }
+
+  /** Les etiquettes rangees en lignes : [[{ texte, couleur, x, l }]], x relatif. */
+  function rangerEtiquettes(f) {
+    const rangs = [];
+    let rang = [], x = 0;
+    f.etiquettes.forEach(function (t, i) {
+      const l = Atlas.largeurTexte(t, 1) + 4;
+      if (rang.length && x + l > PANNEAU_DEDANS) { rangs.push(rang); rang = []; x = 0; }
+      rang.push({ texte: t, couleur: f.couleurs[i], x: x, l: l });
+      x += l + 3;
+    });
+    if (rang.length) rangs.push(rang);
+    return rangs;
+  }
+
+  /** La boite du panneau pour cette arme : a droite de l'ecran, centree en
+      hauteur, aussi haute que ce qu'elle a a dire. */
+  function panneauDeLaRoue(slug, auDoigt) {
+    const doigt = auDoigt === undefined ? Entree.estTactile : auDoigt;
+    const f = ficheDArme(slug);
+    if (!f) return null;
+    const rangs = rangerEtiquettes(f);
+    const h = 6 + 14 + (24 * PORTRAIT_ECHELLE + 8) + 6 + f.barres.length * 9 + 3 + f.lignes.length * 8 + 3
+            + rangs.length * 12 + (rangs.length ? 2 : 0) + f.descriptif.length * 8 + 4;
+    return { x: VW - (doigt ? BANDE_DES_POUCES : PANNEAU_MARGE) - PANNEAU_L, y: Math.round((VH - h) / 2),
+             l: PANNEAU_L, h: h, fiche: f, rangs: rangs };
+  }
+
+  function portraitDArme(slug) {
+    if (typeof PORTRAITS === 'undefined' || !PORTRAITS[slug]) return null;
+    return Atlas.cuirePeintre('portrait|' + slug, 48, 24, function (g) { PORTRAITS[slug](g); });
+  }
+
+  function dessinerPanneau(ctx, slug, vide) {
+    const p = panneauDeLaRoue(slug);
+    if (!p) return;
+    const f = p.fiche, x = p.x + 6, larg = PANNEAU_DEDANS;
+    ctx.fillStyle = '#3a3a48'; ctx.fillRect(p.x, p.y, p.l, p.h);
+    ctx.fillStyle = '#14131d'; ctx.fillRect(p.x + 1, p.y + 1, p.l - 2, p.h - 2);
+    B.stats.rects += 2;
+    let y = p.y + 6;
+    // Le nom en grand ; « CARABINE A BOUCHON » tient juste, un nom plus long
+    // redescend a l'echelle 1 plutot que de deborder.
+    const grand = Atlas.largeurTexte(f.nom, 2) <= larg;
+    texte(ctx, f.nom, x, grand ? y : y + 3, '#efe6d0', grand ? 2 : 1);
+    y += 14;
+    const ph = 24 * PORTRAIT_ECHELLE + 8;
+    ctx.fillStyle = '#1d1c28'; ctx.fillRect(x, y, larg, ph);
+    B.stats.rects++;
+    // ⚠️ A sec, le portrait PALIT comme l'icone de son creneau : c'est la meme
+    // nouvelle, dite en grand.
+    if (vide) ctx.globalAlpha = 0.35;
+    const img = portraitDArme(slug);
+    if (img) ctx.drawImage(img, x + ((larg - 48 * PORTRAIT_ECHELLE) >> 1), y + 4, 48 * PORTRAIT_ECHELLE, 24 * PORTRAIT_ECHELLE);
+    else ctx.drawImage(iconeDArme(Combat.armeDef(slug)), x + ((larg - 64) >> 1), y + 8, 64, 40);
+    ctx.globalAlpha = 1;
+    B.stats.images++;
+    y += ph + 6;
+    for (const b of f.barres) {
+      texte(ctx, b.libelle, x, y, '#8a8698', 1);
+      const bx = x + 36, bl = larg - 36 - 26;
+      ctx.fillStyle = '#0b0a12'; ctx.fillRect(bx, y, bl, 5);
+      ctx.fillStyle = '#e8b33c'; ctx.fillRect(bx, y, Math.max(1, Math.round(bl * b.part)), 5);
+      B.stats.rects += 2;
+      texte(ctx, b.valeur, x + larg - Atlas.largeurTexte(b.valeur, 1), y, '#cdc6e6', 1);
+      y += 9;
+    }
+    y += 3;
+    for (const l of f.lignes) { texte(ctx, l, x, y, vide && l.indexOf('MUNITIONS') === 0 ? '#ff5a4e' : '#cdc6e6', 1); y += 8; }
+    y += 3;
+    for (const rang of p.rangs) {
+      for (const e of rang) {
+        ctx.fillStyle = e.couleur; ctx.fillRect(x + e.x, y, e.l, 9);
+        B.stats.rects++;
+        Atlas.texte(ctx, e.texte, x + e.x + 2, y + 2, '#14131d', 1);
+      }
+      y += 12;
+    }
+    if (p.rangs.length) y += 2;
+    for (const l of f.descriptif) { texte(ctx, l, x, y, '#b8b2c8', 1); y += 8; }
+    noter('roue', p.x, p.y, p.l, p.h);
+  }
+
 
   function dessinerRoue(ctx) {
     const r = B.roue;
     if (!r || !r.armes.length) return;
-    const cx = Math.round(VW / 2), cy = Math.round(VH / 2), n = r.armes.length;
+    const centre = centreDeLaRoue(), cx = centre.x, cy = centre.y, n = r.armes.length;
     // ⚠️ Un voile LEGER, pas celui des menus (0,6) : la ville continue derriere
     // — au quart de vitesse, mais elle continue — et il faut VOIR ce qui arrive
     // sur soi pendant qu'on choisit. Une roue qui cache la rue ferait du
@@ -3921,6 +4131,9 @@ const Hud = (function () {
         texte(ctx, mun, p.x + 9 - Atlas.largeurTexte(mun, 1), p.y + 3, vide ? '#ff5a4e' : '#cdc6e6', 1);
       }
     }
+    // A droite, l'arme sous le pouce en grand : son portrait, ses chiffres, ce
+    // qu'elle fait (le panneau, 30 sept. 2026).
+    dessinerPanneau(ctx, r.armes[r.choix], Combat.aSec(r.armes[r.choix]));
     // Au centre, ce qu'on tient sous le pouce : son nom, et ce qu'il reste
     // dedans. Sans ca, treize icones de seize pixels ne se nomment pas.
     const def = Combat.armeDef(r.armes[r.choix]);
@@ -4199,7 +4412,7 @@ const Hud = (function () {
     marqueurs: function () { return marqueurs; },
     get voileCourant() { return voileCourant; },
            majAvisSon,
-           dessiner, dessinerRoue, rayonDeLaRoue, LOGO_ECHELLE, LOGO_Y, posteDeLaRoue, miniCarte, MINI,
+           dessiner, dessinerRoue, rayonDeLaRoue, ficheDArme, panneauDeLaRoue, centreDeLaRoue, LOGO_ECHELLE, LOGO_Y, posteDeLaRoue, miniCarte, MINI,
            montrerCompte, majCompte, envoyerCompte, menuVersions, deverrouillerNip, envoyerEffacer, majDefiDuJour,
            ancres: function () { return ancres; } };
 })();

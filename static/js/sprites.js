@@ -8352,6 +8352,195 @@ const OBJETS = {
   },
 };
 
+/* Les PORTRAITS d'armes : le grand dessin du panneau de la roue (30 sept. 2026,
+   Martin : « une image en plus gros des armes »). 48x24, affiches au double.
+   ⚠️ Pas l'icone de `OBJETS` agrandie : a seize pixels, le pistolet et le
+   couteau sont deux rectangles, et quatre fois deux rectangles restent deux
+   briques. Chaque portrait est donc un dessin a lui.
+
+   Un portrait = des FORMES (la silhouette, cernee de noir d'un pixel pour se
+   detacher du panneau sombre) puis des DETAILS (reflets, bois, trous) poses
+   dessus sans cerne. Chaque morceau : [x, y, l, h, couleur]. La cle est le
+   SLUG de l'arme, pas son `sprite` : la carabine a bouchon a le sien. */
+const PORTRAIT_CERNE = '#15161b';
+
+function peindrePortrait(ctx, formes, details) {
+  ctx.fillStyle = PORTRAIT_CERNE;
+  for (const f of formes) ctx.fillRect(f[0] - 1, f[1] - 1, f[2] + 2, f[3] + 2);
+  for (const f of formes.concat(details || [])) { ctx.fillStyle = f[4]; ctx.fillRect(f[0], f[1], f[2], f[3]); }
+}
+
+/** Une piece qui s'amincit d'un bout a l'autre, en marches d'un pixel. */
+function portraitBiseau(liste, x0, x1, yHaut, hDebut, hFin, couleur) {
+  for (let x = x0; x < x1; x++) {
+    const h = Math.round(hDebut + (hFin - hDebut) * (x - x0) / Math.max(1, x1 - x0 - 1));
+    liste.push([x, yHaut + Math.floor((hDebut - h) / 2), 1, h, couleur]);
+  }
+}
+
+const PORTRAITS = {
+  // La main du joueur, fermee, vue de face : quatre jointures, le pouce en
+  // travers, la manche de sa chemise.
+  poings: function (ctx) {
+    const S = '#e8b088', O = '#c48a64', C = '#f4c9a4';
+    peindrePortrait(ctx, [[17, 19, 15, 4, '#c0392b'], [14, 5, 21, 14, S]], [
+      [17, 19, 15, 1, '#e05a4a'],
+      [15, 5, 4, 2, C], [20, 5, 4, 2, C], [25, 5, 4, 2, C], [30, 5, 4, 2, C],
+      [19, 5, 1, 7, O], [24, 5, 1, 7, O], [29, 5, 1, 7, O], [14, 11, 21, 1, O],
+      [15, 12, 16, 3, '#f0bd96'], [28, 12, 3, 2, '#f7d7bd'], [15, 15, 16, 1, O], [33, 12, 2, 7, O],
+    ]);
+  },
+  poing_americain: function (ctx) {
+    const formes = [], details = [];
+    for (let i = 0; i < 4; i++) {
+      const x = 9 + i * 8;
+      formes.push([x, 4, 8, 9, '#9aa0a8']);
+      details.push([x, 4, 8, 1, '#d9dcdf'], [x + 2, 6, 4, 5, PORTRAIT_CERNE], [x + 7, 5, 1, 8, '#6b7079']);
+    }
+    formes.push([10, 13, 28, 3, '#9aa0a8'], [12, 16, 24, 3, '#6b7079']);
+    details.push([10, 13, 28, 1, '#d9dcdf'], [12, 18, 24, 1, '#3a3d44']);
+    peindrePortrait(ctx, formes, details);
+  },
+  // Le cone de chantier : il s'evase vers le bas, deux bandes reflechissantes.
+  cone: function (ctx) {
+    const formes = [[9, 19, 30, 3, '#8a4a14']], details = [];
+    for (let y = 3; y < 19; y++) {
+      const l = 6 + Math.round((y - 3) * 14 / 15);
+      formes.push([24 - (l >> 1), y, l, 1, '#d98324']);
+      details.push([24 + (l >> 1) - 3, y, 3, 1, '#b0601a']);
+      if (y === 8 || y === 9 || y === 13 || y === 14) details.push([24 - (l >> 1), y, l, 1, '#efe6d0']);
+    }
+    details.push([9, 19, 30, 1, '#b0601a']);
+    peindrePortrait(ctx, formes, details);
+  },
+  bouteille: function (ctx) {
+    peindrePortrait(ctx, [[6, 7, 25, 11, '#2f6b2a'], [31, 8, 4, 9, '#2f6b2a'], [35, 10, 7, 5, '#2f6b2a'], [42, 9, 2, 7, '#3f8d38']], [
+      [8, 8, 22, 1, '#6fb865'], [36, 10, 5, 1, '#6fb865'], [12, 9, 11, 7, '#d9c28a'], [13, 11, 9, 1, '#8a7446'],
+      [13, 13, 6, 1, '#8a7446'], [6, 16, 25, 1, '#1d4a1a'],
+    ]);
+  },
+  pelle: function (ctx) {
+    const formes = [[2, 8, 6, 8, '#6b4b2c'], [8, 11, 23, 3, '#8a6a3f'], [31, 10, 3, 5, '#6b7079']], details = [];
+    portraitBiseau(formes, 34, 46, 4, 16, 6, '#9aa0a8');
+    details.push([4, 10, 2, 4, PORTRAIT_CERNE], [8, 11, 23, 1, '#b08a58'], [31, 10, 3, 1, '#9aa0a8'],
+                 [34, 6, 9, 1, '#d9dcdf'], [35, 17, 8, 1, '#6b7079']);
+    peindrePortrait(ctx, formes, details);
+  },
+  // La fronde : un Y de bois, l'elastique rouge et sa pochette tendus.
+  fronde: function (ctx) {
+    const formes = [[21, 13, 6, 10, '#6b4b2c']], details = [];
+    for (let i = 0; i < 9; i++) {
+      formes.push([21 - i, 12 - i, 3, 2, '#6b4b2c'], [24 + i, 12 - i, 3, 2, '#6b4b2c']);
+    }
+    // ⚠️ L'elastique part des POINTES et pend plus a plat que les bras : a la
+    // pente des bras, il s'y confondait et la fronde n'etait plus qu'un Y.
+    for (let i = 0; i < 9; i++) {
+      details.push([13 + i, 3 + Math.round(i * 4 / 9), 1, 1, '#c0392b'], [34 - i, 3 + Math.round(i * 4 / 9), 1, 1, '#c0392b']);
+    }
+    details.push([22, 6, 4, 3, '#5a3d22'], [22, 14, 1, 8, '#8a6a3f'], [21, 18, 6, 1, '#3d2a1c'], [21, 20, 6, 1, '#3d2a1c']);
+    peindrePortrait(ctx, formes, details);
+  },
+  // Le baton de bois franc : il grossit vers le bout, le manche est entoure.
+  batte: function (ctx) {
+    const formes = [], details = [];
+    portraitBiseau(formes, 3, 45, 9, 4, 8, '#a47c4a');
+    details.push([3, 9, 11, 4, '#3d2a1c'], [5, 9, 1, 4, '#5a3d22'], [8, 9, 1, 4, '#5a3d22'], [11, 9, 1, 4, '#5a3d22'],
+                 [14, 9, 30, 1, '#c89c63'], [20, 12, 24, 1, '#7a5a33']);
+    peindrePortrait(ctx, formes, details);
+  },
+  couteau: function (ctx) {
+    const formes = [[4, 10, 13, 6, '#3d2a1c'], [17, 7, 3, 11, '#6b7079']], details = [];
+    portraitBiseau(formes, 20, 46, 9, 7, 1, '#c9cdd4');
+    details.push([4, 10, 13, 1, '#5a3d22'], [7, 12, 2, 2, '#9aa0a8'], [13, 12, 2, 2, '#9aa0a8'],
+                 [20, 9, 20, 1, '#eef0f3'], [20, 14, 18, 1, '#9aa0a8']);
+    peindrePortrait(ctx, formes, details);
+  },
+  extincteur: function (ctx) {
+    peindrePortrait(ctx, [[18, 6, 12, 17, '#c0392b'], [21, 2, 6, 4, '#3a3d44'], [25, 1, 9, 2, '#3a3d44'],
+                          [31, 5, 2, 12, '#24262c'], [30, 16, 5, 3, '#3a3d44']], [
+      [19, 7, 2, 15, '#e05a4a'], [27, 7, 2, 15, '#8e231d'], [19, 12, 10, 5, '#efe6d0'], [21, 14, 6, 1, '#c0392b'],
+      [21, 2, 6, 1, '#6b7079'], [18, 21, 12, 2, '#8e231d'],
+    ]);
+  },
+  pistolet: function (ctx) {
+    const formes = [[6, 4, 38, 6, '#3a3d44'], [14, 10, 27, 2, '#2c2e35'], [40, 2, 2, 2, '#3a3d44'], [8, 2, 3, 2, '#3a3d44']];
+    for (let i = 0; i < 11; i++) formes.push([8 - Math.floor(i / 4), 10 + i, 10, 1, '#6b4b2c']);
+    formes.push([20, 12, 9, 4, '#2c2e35']);
+    const details = [[6, 4, 38, 1, '#8a9099'], [6, 9, 38, 1, '#24262c'], [41, 5, 3, 2, PORTRAIT_CERNE],
+                     [28, 6, 6, 2, '#24262c'], [14, 10, 27, 1, '#50545d'], [21, 12, 7, 3, PORTRAIT_CERNE], [23, 12, 2, 3, '#9aa0a8']];
+    for (let x = 9; x < 17; x += 2) details.push([x, 5, 1, 3, '#24262c']);
+    for (let i = 0; i < 11; i++) details.push([9 - Math.floor(i / 4), 10 + i, 2, 1, '#8a6a3f']);
+    for (let i = 1; i < 10; i += 2) details.push([11 - Math.floor(i / 4), 10 + i, 5, 1, '#5a3d22']);
+    details.push([4, 20, 10, 1, '#24262c']);
+    peindrePortrait(ctx, formes, details);
+  },
+  // Le fusil a pompe : la crosse, la culasse, le long canon et son tube, la pompe de bois.
+  fusil: function (ctx) {
+    const formes = [[14, 7, 11, 6, '#3a3d44'], [25, 7, 21, 3, '#3a3d44'], [25, 10, 18, 2, '#2c2e35'],
+                    [29, 10, 10, 4, '#8a6a3f'], [16, 13, 6, 3, '#2c2e35']];
+    for (let x = 2; x < 14; x++) formes.push([x, 8 + Math.round((14 - x) * 0.2), 1, 7 - Math.round((14 - x) * 0.1), '#6b4b2c']);
+    const details = [[14, 7, 32, 1, '#6b7079'], [17, 13, 4, 2, PORTRAIT_CERNE], [18, 13, 1, 2, '#9aa0a8'],
+                     [29, 10, 10, 1, '#b08a58'], [30, 12, 1, 1, '#5a3d22'], [33, 12, 1, 1, '#5a3d22'], [36, 12, 1, 1, '#5a3d22'],
+                     [2, 10, 11, 1, '#8a6a3f'], [2, 14, 3, 2, '#3d2a1c'], [44, 7, 2, 1, PORTRAIT_CERNE]];
+    peindrePortrait(ctx, formes, details);
+  },
+  // Trois batons ficeles, et la meche qui gresille.
+  dynamite: function (ctx) {
+    const formes = [[8, 4, 28, 5, '#b8322a'], [8, 9, 28, 5, '#b8322a'], [8, 14, 28, 5, '#b8322a']], details = [];
+    for (const y of [4, 9, 14]) {
+      details.push([8, y, 28, 1, '#d8524a'], [8, y + 4, 28, 1, '#8e231d'], [35, y + 1, 1, 3, '#e8dcc0']);
+    }
+    details.push([13, 4, 3, 15, '#3a3d44'], [27, 4, 3, 15, '#3a3d44'], [13, 4, 3, 1, '#6b7079'], [27, 4, 3, 1, '#6b7079']);
+    for (let i = 0; i < 8; i++) details.push([36 + i, 11 - Math.round(Math.sin(i / 7 * Math.PI) * 3) - Math.floor(i / 2), 1, 1, '#efe6d0']);
+    details.push([44, 3, 2, 2, '#ffe07a'], [43, 2, 1, 1, '#ff8c1a'], [46, 2, 1, 1, '#ff8c1a'], [45, 5, 1, 1, '#ff8c1a']);
+    peindrePortrait(ctx, formes, details);
+  },
+  // La bouteille d'essence, son chiffon au goulot, allume.
+  molotov: function (ctx) {
+    peindrePortrait(ctx, [[5, 8, 25, 11, '#2f6b2a'], [30, 9, 4, 9, '#2f6b2a'], [34, 11, 6, 5, '#2f6b2a'], [40, 10, 4, 7, '#efe6d0']], [
+      [5, 14, 25, 4, '#c79a12'], [30, 14, 4, 3, '#c79a12'], [7, 9, 21, 1, '#6fb865'], [5, 18, 25, 1, '#1d4a1a'],
+      [41, 12, 2, 1, '#b9b2a2'], [42, 15, 2, 2, '#b9b2a2'],
+      [44, 9, 2, 5, '#ff8c1a'], [45, 5, 2, 5, '#ff8c1a'], [44, 10, 1, 2, '#ffe07a'], [46, 3, 1, 3, '#ffe07a'], [43, 7, 1, 2, '#c0392b'],
+    ]);
+  },
+  // La grenade a fragmentation : son quadrille, la cuillere le long du flanc, l'anneau.
+  grenade: function (ctx) {
+    const formes = [[19, 9, 16, 11, '#4b5a2a'], [21, 7, 12, 15, '#4b5a2a'], [24, 3, 6, 4, '#8a8d92'], [31, 4, 3, 12, '#8a8d92']];
+    const details = [[22, 8, 4, 3, '#6b7d3a'], [20, 10, 2, 5, '#6b7d3a']];
+    for (const x of [23, 27, 31]) details.push([x, 7, 1, 15, '#35401d']);
+    for (const y of [11, 15, 19]) details.push([19, y, 16, 1, '#35401d']);
+    details.push([24, 3, 6, 1, '#c9ccd2'], [31, 4, 1, 12, '#c9ccd2'],
+                 [17, 2, 5, 1, '#b0b4b8'], [16, 3, 1, 3, '#b0b4b8'], [22, 3, 1, 3, '#b0b4b8'], [17, 6, 5, 1, '#b0b4b8']);
+    peindrePortrait(ctx, formes, details);
+  },
+  // La mitraillette : le chargeur qui pend, la crosse repliee en fil d'acier.
+  mitraillette: function (ctx) {
+    const formes = [[9, 7, 26, 6, '#3a3d44'], [35, 8, 9, 2, '#3a3d44'], [13, 13, 5, 7, '#6b4b2c'], [2, 8, 7, 2, '#2c2e35'], [2, 10, 2, 5, '#2c2e35']];
+    for (let i = 0; i < 10; i++) formes.push([22 + Math.floor(i / 3), 13 + i, 4, 1, '#2c2e35']);
+    const details = [[9, 7, 26, 1, '#6b7079'], [28, 9, 5, 2, '#24262c'], [42, 8, 2, 2, PORTRAIT_CERNE],
+                     [14, 13, 1, 7, '#8a6a3f'], [18, 13, 3, 3, PORTRAIT_CERNE], [19, 13, 1, 2, '#9aa0a8'], [22, 13, 4, 1, '#50545d']];
+    peindrePortrait(ctx, formes, details);
+  },
+  // La carabine : la crosse de bois, la lunette et sa lentille, le long canon.
+  carabine: function (ctx) {
+    const formes = [[16, 9, 9, 4, '#3a3d44'], [25, 9, 22, 2, '#3a3d44'], [22, 11, 14, 2, '#6b4b2c'], [18, 4, 15, 3, '#24262c']];
+    for (let x = 1; x < 16; x++) formes.push([x, 9 + Math.round((16 - x) * 0.15), 1, 5 - Math.round((16 - x) * 0.05), '#6b4b2c']);
+    const details = [[16, 9, 31, 1, '#6b7079'], [18, 4, 15, 1, '#50545d'], [32, 4, 1, 3, '#7fb3d8'], [18, 5, 1, 1, '#7fb3d8'],
+                     [21, 7, 2, 2, '#3a3d44'], [29, 7, 2, 2, '#3a3d44'], [24, 13, 2, 2, '#9aa0a8'],
+                     [1, 11, 14, 1, '#8a6a3f'], [22, 11, 14, 1, '#8a6a3f'], [19, 13, 3, 2, PORTRAIT_CERNE]];
+    peindrePortrait(ctx, formes, details);
+  },
+  // Celle du forain : bois verni clair, canon peint, et le bouchon au bout de sa ficelle.
+  carabine_foire: function (ctx) {
+    const formes = [[16, 9, 9, 4, '#2e6fb0'], [25, 9, 18, 2, '#2e6fb0'], [22, 11, 14, 2, '#c48a3f'], [43, 8, 4, 4, '#d9b98a']];
+    for (let x = 2; x < 16; x++) formes.push([x, 9 + Math.round((16 - x) * 0.15), 1, 5 - Math.round((16 - x) * 0.05), '#c48a3f']);
+    const details = [[16, 9, 27, 1, '#6fa6e0'], [2, 11, 13, 1, '#e0b070'], [22, 11, 14, 1, '#e0b070'], [19, 13, 3, 2, PORTRAIT_CERNE],
+                     [44, 9, 2, 1, '#efe0c0'], [43, 12, 1, 3, '#efe6d0'], [40, 14, 3, 1, '#efe6d0'], [36, 15, 4, 1, '#efe6d0'],
+                     [5, 11, 2, 2, '#c0392b'], [9, 11, 2, 2, '#f1c40f']];
+    peindrePortrait(ctx, formes, details);
+  },
+};
+
 /* Ce qu'on voit DANS LA MAIN quand ce n'est pas l'objet du sol. Meme toile
    16 x 10 et meme prise que `OBJETS` : le pixel (2, 5) tombe sur la main de la
    pose (`SPRITES.joueur.mains`), et l'arme pointe vers +x. Une arme absente
@@ -8395,6 +8584,8 @@ const POLICE_PIXEL = {
   '°': '010101010000000',
   '>': '100010001010100', '<': '001010100010001', '·': '000000010000000', '=': '000111000111000',
   '|': '010010010010010', '_': '000000000000111', '[': '110100100100110', ']': '011001001001011',
+  // Le « fois » des plombs du fusil (« 12×6 », le panneau de la roue d'armes).
+  '×': '000101010101000',
 };
 
 /* Les accents de la police pixel : deux rangs de 3 (6 bits, ligne par ligne),
