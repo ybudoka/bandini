@@ -482,3 +482,91 @@ def test_le_molotov_part_de_sa_distance_et_brule_pres_de_la_cible(banc):
     assert r["f"][0] - 10 <= r["depuis"] <= r["f"][1] + 10, "il lance de trop près ou trop loin (%s)" % r
     assert r["brasier"] is not None and r["brasier"] <= 40, "la bouteille ne brûle pas près de la cible (%s)" % r
     assert r["apres"] > r["depuis"] + 10, "sa bouteille partie, il ne se sauve pas (%s)" % r
+
+
+# --- Vague 2 : ce que la relecture a trouvé ------------------------------------------------------------------
+
+def test_la_balle_du_tireur_ne_fait_pas_fuir_ses_coequipiers(banc):
+    """⚠️ Le coup de feu fait fuir la rue (`alerter`, la menace c'est lui) — et `alerter` n'épargnait que la rixe :
+    les deux Cravates qui t'attaquaient avec le tireur détalaient à sa première balle (la relecture, au banc :
+    `['attaque/attaque_joueur', 'fuit', 'fuit']`)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(40);
+        %s
+        const gens = trois(L, 100);
+        const t = gens[1], autres = [gens[0], gens[2]];
+        t.arme = 'pistolet'; t.armeDeGang = 'pistolet';
+        let tir = -1, fuites = 0;
+        for (let i = 0; i < 400; i++) {
+          tenir(L); o.frame(1);
+          if (tir < 0 && L.B.entites.some(function (p) { return p.type === 'projectile' && p.tireur === t; })) tir = i;
+          if (tir >= 0) for (const e of autres) if (e.etat === 'fuit' || e.etat === 'temoin') fuites++;
+        }
+        return { tir: tir, fuites: fuites };
+    }""" % TROIS)
+    assert r["tir"] >= 0, "le tireur n'a pas tiré : le juge ne mesure rien (%s)" % r
+    assert r["fuites"] == 0, "ses coéquipiers ont détalé à sa balle (%s)" % r
+
+
+def test_colle_a_lui_le_tireur_tire_quand_meme(banc):
+    """Tenu à 30 px (sous sa fourchette), il reculait sans jamais tirer : collé contre un mur, il restait planté
+    là. À bout portant, il tire."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(41);
+        %s
+        const gens = trois(L, 30), t = gens[1], j = L.B.joueur;
+        for (const e of [gens[0], gens[2]]) L.Entites.retirer(e);
+        t.arme = 'pistolet'; t.armeDeGang = 'pistolet';
+        let balles = 0;
+        const vrai = L.Combat.tirer;
+        L.Combat.tirer = function (e) { if (e === t) balles++; return vrai.apply(null, arguments); };
+        for (let i = 0; i < 600; i++) { tenir(L); t.x = j.x + 30; t.y = j.y; o.frame(1); }
+        L.Combat.tirer = vrai;
+        return { balles: balles };
+    }""" % TROIS)
+    assert r["balles"] >= 3, "collé à lui, il ne tire plus (%s)" % r
+
+
+def test_un_gang_qui_te_tire_dessus_ne_te_vaut_pas_de_meprise(banc):
+    """La méprise (M12) : un passant te prend pour le coupable d'une rixe. Mais quand c'est TOI qu'on vise, il n'y
+    a pas de méprise possible — tu es la victime. ⚠️ Au banc, une Morue au fusil te valait un crime."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(42);
+        const j = L.B.joueur, A = L.B.defs.recherche.autrui;
+        A.chance = 1; A.repos_s = 0;
+        for (let i = 0; i < 90; i++) o.frame(1);
+        const m = L.Entites.creerPieton(j.x + 40, j.y, L.Entites.archetype('morue'));
+        m.etat = 'fige'; m.arme = 'fusil';
+        L.Entites.indexer();
+        L.B.crimes.length = 0; L.B.recherche.etoiles = 0;
+        for (let k = 0; k < 5; k++) { L.Combat.tirer(m, L.Combat.armeDef('fusil'), j); m.etat = 'fige'; o.frame(2); }
+        return { crimes: L.B.crimes.length, etoiles: L.B.recherche.etoiles };
+    }""")
+    assert r["crimes"] == 0 and r["etoiles"] == 0, r
+
+
+def test_il_crie_quand_il_leve_l_arme(banc):
+    """La levée se VOIT : le tireur crie une réplique (une bulle) au moment où il lève l'arme — le signal pour
+    rouler. Et revenu au combat après avoir lâché prise, il la relève."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(43);
+        %s
+        const gens = trois(L, 100), t = gens[1];
+        for (const e of [gens[0], gens[2]]) L.Entites.retirer(e);
+        t.arme = 'pistolet'; t.armeDeGang = 'pistolet';
+        o.frame(2);
+        const cri = t.bulle && t.bulle.texte;
+        for (let i = 0; i < 200; i++) { tenir(L); o.frame(1); }
+        // Il lâche prise (trop loin : `flane`) plus longtemps que `retour_images`, puis revient.
+        t.etat = 'flane'; t.x += 400;
+        for (let i = 0; i < L.B.defs.rixes.tir.retour_images + 20; i++) { t.etat = 'flane'; o.frame(1); }
+        t.x -= 400; t.etat = 'attaque_joueur'; t.bulle = null;
+        o.frame(2);
+        return { cri: cri, releve: !!(t.bulle && t.bulle.texte), mots: L.B.defs.rixes.tir.lever_mots };
+    }""" % TROIS)
+    assert r["cri"] and r["cri"] in r["mots"], "il lève l'arme sans un mot (%s)" % r
+    assert r["releve"], "revenu au combat, il ne relève pas l'arme (%s)" % r

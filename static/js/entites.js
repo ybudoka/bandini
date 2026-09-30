@@ -5645,6 +5645,11 @@ const Entites = (function () {
       // gang est « attaquer le joueur » : sans cette ligne, six hommes qui se
       // tapaient dessus se retournaient tous contre lui au premier poing.
       if (enPleineRixe(e)) continue;
+      // ⚠️ CELUI QUI SE BAT DEJA CONTRE TOI NE DETALE PAS AU COUP DE FEU DE SON COEQUIPIER (la menace, c'est le
+      // tireur de SON gang) : les deux autres Cravates fuyaient a la premiere balle (la relecture de la vague 2).
+      // Le coup d'un AUTRE gang (un allie de m98, un rival) garde sa reaction : le siege de m98 en depend.
+      if (menace && menace !== B.joueur && menace.gang && menace.gang === e.gang
+          && (e.etat === 'attaque_joueur' || (e.etat === 'attaque' && e.avantLeCoup === 'attaque_joueur'))) continue;
       // ⚠️ L'ALLIE (m98) est dans le coup : un coup que TU portes a un homme du maire ne le retourne pas
       // contre toi (`e.gang` et `contreLeJoueur`, plus bas, l'y enverraient).
       if (e.allie) continue;

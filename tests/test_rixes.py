@@ -48,6 +48,7 @@ def test_l_arsenal_se_tient():
     for gang, slug in rixes.ARSENAL.items():
         a = par_slug[slug]
         assert a["type"] == "tir", f"{gang} : {slug} ne tire pas"
+        assert a["chargeur"], f"{slug} n'a pas de chargeur : le tireur ne rechargerait jamais"
         dmin, dmax = rixes.TIR["distances"][slug]
         assert 0 < dmin < dmax <= a["portee"], f"{slug} : {dmin}-{dmax} hors de sa portée {a['portee']}"
     assert rixes.PART_ARMEE >= 2, "un sur un, ce n'est plus un arsenal, c'est une armée"

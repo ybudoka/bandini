@@ -424,7 +424,9 @@ const Combat = (function () {
     if (deGang && !arme.foire) {
       Entites.alerter(e.x, e.y, e, 3);
       if (arme.bruit > 0) Police.entendre(e.x, e.y, arme.bruit * TT, true);
-      Police.crimeDAutrui('arme_sortie', e.x, e.y, e);
+      // ⚠️ PAS DE MEPRISE QUAND C'EST TOI QU'ON VISE : tu es la victime, pas le coupable (au banc, une Morue au
+      // fusil te valait un crime a ton nom).
+      if (cible.type !== 'joueur') Police.crimeDAutrui('arme_sortie', e.x, e.y, e);
     }
     // Le coup de feu, la fronde qui claque — sauf la bouteille, qu'on entend
     // quand elle CASSE (`allumer`), pas quand elle part. Celui d'un tireur de gang s'entend de LA OU il tire :

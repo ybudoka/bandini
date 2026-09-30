@@ -59,6 +59,9 @@ TIR: dict = {
     "distances": {"pistolet": (70, 140), "fusil": (30, 70), "carabine": (140, 210),
                   "mitraillette": (60, 120), "molotov": (85, 110)},
     "lever_images": 30,           # il lève l'arme avant sa PREMIÈRE balle : le temps de rouler
+    # … et ça se voit : il crie une de ces répliques en la levant (la relecture : une levée muette ne prévient pas).
+    "lever_mots": ["BOUGE PAS!", "T'ES CUIT!", "À TERRE, LÀ!", "T'AS PAS D'AFFAIRE ICITTE!"],
+    "retour_images": 120,         # absent du combat plus longtemps que ça, il relève l'arme en revenant
     "salve": (2, 4),              # balles par salve, à l'empreinte
     "rafale_images": 24,          # la mitraillette, elle, tient la gâchette ce temps-là
     "entre_salves_images": 70,    # à l'abri entre deux salves
@@ -72,5 +75,6 @@ TIR: dict = {
 
 def exporter() -> dict:
     """Ce que le navigateur reçoit sous `B.defs.rixes`."""
-    tir = dict(TIR, distances={k: list(v) for k, v in TIR["distances"].items()}, salve=list(TIR["salve"]))
+    tir = dict(TIR, distances={k: list(v) for k, v in TIR["distances"].items()}, salve=list(TIR["salve"]),
+               lever_mots=list(TIR["lever_mots"]))
     return {"contact": dict(CONTACT), "arsenal": dict(ARSENAL), "part_armee": PART_ARMEE, "tir": tir}

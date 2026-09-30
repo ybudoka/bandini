@@ -232,9 +232,14 @@ const Rixe = (function () {
   function majTir(e, cible, vitesse, r) {
     const T = tir(), arme = Combat.armeDef(e.arme), f = T.distances[e.arme];
     if (r.balles === undefined) {
-      r.balles = arme.chargeur || 1; r.leve = e.t + T.lever_images; r.tir = 'expose';
+      r.balles = arme.chargeur || 1; r.tir = 'expose';
       r.salve = 0; r.salves = 0; r.prochain = 0; r.pause = 0; r.recharge = 0; r.abri = null;
+      lever(e, r);
+    } else if (e.t - r.derniere > T.retour_images) {
+      // Revenu au combat apres l'avoir lache (trop loin, en fuite) : il RELEVE l'arme, il ne tire pas d'emblee.
+      lever(e, r);
     }
+    r.derniere = e.t;
     if (r.balles <= 0) {
       // ⚠️ Plus de bouteilles : il finit AUX POINGS, et redevient un homme du cercle.
       if (arme.cloche) { e.arme = 'poings'; e.armeDeGang = null; e.vx = 0; e.vy = 0; return false; }
@@ -253,7 +258,12 @@ const Rixe = (function () {
       if (e.t >= r.pause) r.tir = 'expose';
       return false;
     }
-    if (!tenirSaDistance(e, cible, f, vitesse) || e.t < r.leve || e.t < r.prochain) return false;
+    // ⚠️ COLLE A LUI (sous sa fourchette) : il recule en tirant a bout portant, sans attendre sa levee — sinon,
+    // coince contre un mur, il restait plante sans rien faire. Pas le lanceur : il se brulerait.
+    const colle = !arme.cloche && Math.hypot(cible.x - e.x, cible.y - e.y) < f[0]
+      && Monde.ligneLibre(e.x, e.y, cible.x, cible.y);
+    const enPlace = tenirSaDistance(e, cible, f, vitesse);
+    if (!(enPlace || colle) || (e.t < r.leve && !colle) || e.t < r.prochain) return false;
     if (!Combat.tirer(e, arme, cible)) return false;
     r.balles--; r.salve++;
     r.prochain = e.t + arme.cadence;
@@ -267,6 +277,13 @@ const Rixe = (function () {
       r.abri = abriPour(e, cible);
     }
     return true;
+  }
+
+  /** Il LEVE L'ARME, et ca se voit : une replique criee (le signal pour rouler), le temps de la levee. */
+  function lever(e, r) {
+    const T = tir(), mots = T.lever_mots;
+    r.leve = e.t + T.lever_images;
+    if (mots && mots.length) Entites.bulle(e, mots[hash2(e.id, e.t) % mots.length], { duree: T.lever_images + 20 });
   }
 
   function seMettreAlAbri(e, cible, f, vitesse, r) {
