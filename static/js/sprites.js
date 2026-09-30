@@ -5115,11 +5115,37 @@ const FACADES = (function () {
     ctx.fillRect(ox + large - 2, oy, 2, T);
   }
 
+  /** LE MUR DU LOGEMENT, de SON materiau (la revue des facades, 30 sept. 2026). ⚠️ Avant, `m.brique` n'etait
+      jamais peint : la facade etait la tuile de mur de la ville (`facade`), en brique rouge partout — deux maisons
+      sur trois avaient tire la brique jaune ou le bardeau gris, et n'en montraient que les cadres. La brique :
+      le meme appareil que `facade` (des rangs de 4 px, les joints en quinconce), de sa couleur. Le bardeau :
+      des planches couchees qui se chevauchent, leur ombre dessous, un joint debout de loin en loin. */
+  function murDuLogement(ctx, m, ox, oy, large) {
+    ctx.fillStyle = m.brique;
+    ctx.fillRect(ox, oy, large, T);
+    if (m.slug === 'bardeau_gris') {
+      for (let y = 0; y < T; y += 3) {
+        ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(ox, oy + y + 2, large, 1);
+        ctx.fillStyle = 'rgba(255,255,255,0.10)'; ctx.fillRect(ox, oy + y, large, 1);
+        ctx.fillStyle = 'rgba(0,0,0,0.12)';
+        for (let x = (y * 5) % 11; x < large; x += 11) ctx.fillRect(ox + x, oy + y, 1, 2);
+      }
+      return;
+    }
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    for (let y = 0; y < T; y += 4) {
+      ctx.fillRect(ox, oy + y + 3, large, 1);
+      const dx = (y / 4) % 2 ? 4 : 0;
+      for (let x = dx; x < large; x += 8) ctx.fillRect(ox + x, oy + y, 1, 3);
+    }
+  }
+
   /** `r` = { x, y, l, etages, motifs, escalier, porte, mur, balcon, declin? } ;
       `d` = son bois a clin (`devantures.DECLINS`), ou rien pour la brique. */
   function residence(ctx, r, m, fer, ox, oy, d) {
     const large = r.l * T;
     if (d) declin(ctx, d, ox, oy, large);
+    else murDuLogement(ctx, m, ox, oy, large);
     ctx.fillStyle = 'rgba(0,0,0,0.22)';                   // l'ombre de la corniche
     ctx.fillRect(ox, oy, large, CORNICHE_H);
     ctx.fillStyle = m.joint;
@@ -5134,7 +5160,9 @@ const FACADES = (function () {
     const motifs = r.motifs || '';
     for (let i = 0; i < r.l; i++) {
       const x = ox + i * T;
-      const quoi = motifs[i] || 'F';
+      // ⚠️ LA PORTE CONDAMNEE (`d`) N'A SES PLANCHES QU'EN RUE PAUVRE : une porte sur deux l'etait, dont 33 maisons
+      // cossues sur 52 — une rue riche se lisait abandonnee. Ailleurs, c'est une porte fermee (la meme que `P`).
+      const quoi = motifs[i] === 'd' && r.standing !== '-' ? 'P' : (motifs[i] || 'F');
       if (quoi === 'D' || quoi === 'd' || quoi === 'P' || quoi === 'G') {
         porteDeLogement(ctx, m, ferDuLogement, x, oy + RDC_Y, RDC_H, quoi);
       } else {

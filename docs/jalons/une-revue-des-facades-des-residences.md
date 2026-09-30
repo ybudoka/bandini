@@ -90,4 +90,21 @@ placardée, une sur cinq tendue d'un drap ; ordinaire : rien).
 cours dans une autre session ([des intérieurs fidèles](des-interieurs-fideles-a-l-exterieur.md#fiche)) ; les
 32 logements visitables (`D`) y passent.
 
-**Rien n'est corrigé** : la liste attend le mot de Martin sur l'ordre des vagues.
+**L'ordre de Martin (30 sept. 2026)** : les murs et les portes (vague 1), puis les galeries et les fenêtres
+(vague 2). Les bungalows et le Petit-Canton ne sont pas retenus pour l'instant.
+
+### Vague 1 — les murs et les portes (✅ livrée le 30 sept. 2026)
+
+- **Le mur tiré se peint** (`murDuLogement`, `sprites.js`) : la brique de sa couleur, dans l'appareil de la tuile
+  de mur (des rangs de 4 px, les joints en quinconce), ou le bardeau gris (des planches couchées qui se
+  chevauchent). Deux maisons sur trois changent de couleur.
+- **Jusqu'au bout du bâtiment** (`Monde.murDuBatiment`, `logementElargi`) : un logement fait quatre tuiles au
+  plus, son bâtiment souvent davantage — le reste gardait la brique rouge, deux matériaux sur un mur. Le mur
+  s'étend (huit tuiles au plus de chaque côté) sur les tuiles de mur nu (`F`, `W`) de la même rangée dont le
+  toit, juste au-dessus, est le même bâtiment (`teintesDesToits`) ; jamais sur une devanture ni un autre
+  logement. Les tuiles de plus se peignent comme celles du logement : une fenêtre de rez, les étages et le
+  balcon au-dessus. Sans un dé, sans une donnée de plus.
+- **La porte condamnée n'a ses planches qu'en rue pauvre** : ailleurs, c'est une porte fermée (la même que la
+  porte peinte). Aucune tuile ne change (`d` reste une porte condamnée pour le jeu).
+- Juges `tests/test_facades_js.py` (six mutations, toutes mordent) ; captures regardées (Quais, Petit-Canton,
+  Érables).

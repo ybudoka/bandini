@@ -328,9 +328,10 @@ const Monde = (function () {
         // premiere rangee d'un morceau perdait sa moitie haute a la couture.
         return [d.x, d.y - 1, d.l, 3];
       }),
-      // Les logements : meme regle, l'escalier de fer descend sur le trottoir.
+      // Les logements : meme regle, l'escalier de fer descend sur le trottoir. ⚠️ Et leur mur va jusqu'au bout
+      // du batiment (`murDuBatiment`, `MUR_ETENDU` tuiles au plus de chaque cote) : la boite en tient compte.
       residences: indexerParMorceau(def.residences || [], function (r) {
-        return [r.x, r.y, r.l, 2];
+        return [Math.max(0, r.x - MUR_ETENDU), r.y, r.l + 2 * MUR_ETENDU, 2];
       }),
       // ⚠️ LA FOSSE D'UN ARBRE DE RUE. Demande de Martin : « les arbres qui
       // sont sur un trottoir doivent avoir un petit rond de terre à leur
@@ -1824,6 +1825,54 @@ const Monde = (function () {
   }
   const VOISINES = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
+  //: Jusqu'ou le mur d'un logement s'etend, de chaque cote (la boite de son morceau le sait).
+  const MUR_ETENDU = 8;
+
+  /** LE MUR D'UN LOGEMENT VA JUSQU'AU BOUT DE SON BATIMENT (la revue des facades, 30 sept. 2026) : un logement
+      fait quatre tuiles au plus, et son batiment en fait souvent plus — le reste de la facade gardait la brique
+      rouge de la ville, deux materiaux sur le meme mur. On etend donc son mur, de chaque cote, sur les tuiles de
+      MUR NU (`F`) de la meme rangee dont le toit, juste au-dessus, est le MEME batiment (`teintesDesToits`) —
+      jamais sur une devanture, ni sur un autre logement. Sans un de, sans une donnee de plus. Rend `{ x, l }`. */
+  function murDuBatiment(r) {
+    if (r.murEtendu) return r.murEtendu;
+    const t = teintesDesToits(), w = carte.w, prises = tuilesDeFacade();
+    const batiment = function (x) { return x >= 0 && x < w && r.y > 0 ? t.qui[(r.y - 1) * w + x] : -1; };
+    const lui = batiment(r.x);
+    let x0 = r.x, x1 = r.x + r.l - 1;
+    const libre = function (x) {
+      const g = carte.sol[r.y][x];
+      return lui >= 0 && batiment(x) === lui && (g === 'F' || g === 'W') && !prises.has(x + ',' + r.y);
+    };
+    if (r.declin == null) {
+      while (x0 > r.x - MUR_ETENDU && libre(x0 - 1)) x0--;
+      while (x1 < r.x + r.l - 1 + MUR_ETENDU && libre(x1 + 1)) x1++;
+    }
+    r.murEtendu = { x: x0, l: x1 - x0 + 1 };
+    return r.murEtendu;
+  }
+
+  /** Le logement tel qu'il se peint : elargi a son mur (`murDuBatiment`). Les tuiles de plus sont des tuiles de
+      mur, peintes comme celles du logement (une fenetre de rez, les etages au-dessus) ; la porte et l'escalier
+      restent a leur place. */
+  function logementElargi(r) {
+    if (r.elargi) return r.elargi;
+    const m = murDuBatiment(r), avant = r.x - m.x, apres = m.l - avant - r.l;
+    r.elargi = avant || apres
+      ? Object.assign({}, r, { x: m.x, l: m.l, porte: r.porte + avant,
+                               motifs: 'F'.repeat(avant) + (r.motifs || '') + 'F'.repeat(apres) })
+      : r;
+    return r.elargi;
+  }
+
+  /** Les tuiles deja couvertes par une devanture ou un logement (une fois par carte). */
+  function tuilesDeFacade() {
+    if (carte.tuilesDeFacade) return carte.tuilesDeFacade;
+    const s = new Set(), d = carte.def || {};
+    for (const q of (d.devantures || []).concat(d.residences || [])) for (let i = 0; i < q.l; i++) s.add((q.x + i) + ',' + q.y);
+    carte.tuilesDeFacade = s;
+    return s;
+  }
+
   /** La teinte du toit a cette tuile (0 a 5), ou 0 hors d'un toit teint. */
   function teinteDeToit(tx, ty) {
     if (tx < 0 || ty < 0 || tx >= carte.w || ty >= carte.h) return 0;
@@ -2159,7 +2208,8 @@ const Monde = (function () {
         // tombee avec les murs (voir `Chantiers.efface`).
         if (Chantiers.efface(r.x, r.y)) return;
         const bois = r.declin != null ? declins[r.declin % declins.length] : null;
-        FACADES.residence(ctx, r, murs[r.mur % murs.length], fer, (r.x - ox) * TT, (r.y - oy) * TT, bois);
+        const large = logementElargi(r);
+        FACADES.residence(ctx, large, murs[r.mur % murs.length], fer, (large.x - ox) * TT, (large.y - oy) * TT, bois);
       });
     }
     const toits = carte.toits && carte.toits.get(cle);
@@ -2841,7 +2891,7 @@ const Monde = (function () {
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
     dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau, sousLeToit, cacheSousLeToit, abrite,
     barrieresCoulissantes, majBarrieresCoulissantes, dessinerBarrieresCoulissantes, COULISSE_GLISSE, COULISSE_TIENT,
-estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, teinteDeToit, teintesDesToits, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
+estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, teinteDeToit, teintesDesToits, logementElargi, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, ambianceVue, estNuit, estNuitVue, periode, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
     miniCarte, couleurMini, couleurMiniA, masqueDeLaCarte, masquee, hauteurConnue, chemin, demanderChemin, majChemins,
