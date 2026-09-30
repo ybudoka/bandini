@@ -168,8 +168,8 @@ un paiement.
 **Les serrures des blocs** (l'infiltration, 28 sept. 2026) : un bloc de carte peut avoir ses propres
 barrières (`serrures` dans sa fiche, `app/blocs/villa.py`), exportées au même format et lues par le même
 `Monde.barriereFermee` — condition `objet`, pleines, elles ne se forcent pas. La villa du maire en a deux :
-la **porte de service** (`cle_villa`, la clé volée au garde du jardin, v01) et la **chambre forte** du
-sous-sol (`code_voute`, le code du terminal piraté, v03).
+la **porte de service** (`cle_villa`, la clé volée au garde du jardin, v01) et la **chambre forte** de la
+cave (`code_voute`, le code du terminal piraté, v03).
 
 ---
 

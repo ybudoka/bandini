@@ -1251,13 +1251,17 @@ const Son = (function () {
         160 Ko de marge (mesure du 24 sept. 2026). Elles arrivent quand leur monde
         arrive — voir `chargerContexte`. Ce qui n'a pas de `quand` (le crieur, la
         fille de la Brume, les ondes) part avec le reste : ces banques-la ne
-        dependent d'aucun contexte. */
+        dependent d'aucun contexte.
+
+        ⚠️ **NI CELLES D'UN CIEL** (30 sept. 2026) : une replique de radio qui dit
+        la neige ne sert qu'un soir de tempete, et le premier ecran n'avait plus
+        6 Ko de marge. Elles arrivent avec leur ciel — voir `chargerMeteo`. */
     charger: function () {
       if (Voix.chargees || !ctx || !fenetre || !fenetre.fetch) return;
       Voix.chargees = true;
       const depart = Voix.depart();
       Voix.contextesCharges.add(depart);
-      Voix._charger(Voix.liste().filter(function (v) { return !v.quand || v.quand === depart; }));
+      Voix._charger(Voix.liste().filter(function (v) { return !v.meteo && (!v.quand || v.quand === depart); }));
     },
 
     /** Les repliques d'UN contexte, la premiere fois qu'on y entre — exactement
@@ -1267,6 +1271,15 @@ const Son = (function () {
       if (!quand || Voix.contextesCharges.has(quand) || !ctx || !fenetre || !fenetre.fetch) return;
       Voix.contextesCharges.add(quand);
       Voix._charger(Voix.liste().filter(function (v) { return v.quand === quand; }));
+    },
+
+    /** Les repliques d'UN ciel (`audio.METEOS`), la premiere fois qu'il arrive
+        pendant qu'une station joue. Meme geste que `chargerContexte`. */
+    chargerMeteo: function (meteo) {
+      const cle = 'meteo:' + meteo;
+      if (Voix.contextesCharges.has(cle) || !ctx || !fenetre || !fenetre.fetch) return;
+      Voix.contextesCharges.add(cle);
+      Voix._charger(Voix.liste().filter(function (v) { return v.meteo === meteo; }));
     },
 
     /** DANS QUEL MONDE la ville te parle — le `quand` d'une replique
@@ -1509,6 +1522,8 @@ const Son = (function () {
     (`docs/ecrire-drole.md`, regle 8). Chaque liste se lit dans l'ordre.
 
     `dites` garde ce qui est passe, fichier ou pas : le banc n'a pas d'oreille. */
+  //: Les ciels que les ondes savent lire (`audio.METEOS`), dans l'ordre de `Ondes.ciel`.
+  const METEOS_DES_ONDES = ['beau', 'pluie', 'neige', 'brouillard', 'verglas'];
   const Ondes = {
     enCours: null,           // { source, slug, radio } : ce qui passe en ce moment
     dites: [],               // { slug, t, bande } — ce qui est passe, dans l'ordre
@@ -1530,6 +1545,31 @@ const Son = (function () {
       Ondes.tours[cle] = n + 1;
       return liste[n % liste.length];
     },
+
+    /** LE TEMPS QU'IL FAIT, tel qu'une station le dirait : { beau, pluie, neige,
+        brouillard, verglas } (`audio.METEOS`). Lu dans les fonctions pures du jour et
+        de l'heure, jamais dans ce que voit le joueur : le juke-box de la planque
+        entend la meme radio que l'autoradio, et il pleut dehors meme quand on est
+        dedans. ⚠️ Le brouillard et le verglas vivent derriere leur option : eteinte,
+        ils n'arrivent pas — et la radio ne les annonce pas. */
+    ciel: function () {
+      const p = B.partie, o = B.options || {};
+      const c = { pluie: false, neige: false, brouillard: false, verglas: false };
+      if (p) {
+        const j = p.jour, h = p.heure;
+        c.pluie = typeof Pluie !== 'undefined' && Pluie.intensiteA(j, h) > 0;
+        c.neige = typeof Neige !== 'undefined' && Neige.intensiteA(j, h) > 0;
+        c.brouillard = !!o.brouillard && typeof Brouillard !== 'undefined' && Brouillard.intensiteA(j, h) > 0;
+        c.verglas = !!o.verglas && typeof Verglas !== 'undefined' && Verglas.intensiteA(j, h) > 0;
+      }
+      c.beau = !(c.pluie || c.neige || c.brouillard || c.verglas);
+      return c;
+    },
+
+    /** ⚠️ **UNE REPLIQUE QUI PARLE DU TEMPS NE MENT PAS SUR LE TEMPS** (Martin, 30 sept.
+        2026) : Taxi-Radio criait « y fait beau! » en pleine tempete. Celle qui porte
+        une `meteo` ne passe que sous ce ciel-la ; sans `meteo`, elle est neutre. */
+    convient: function (v, ciel) { return !v.meteo || !!ciel[v.meteo]; },
 
     /** La pub suivante. ⚠️ Celle d'un commerce qu'on POSSEDE est sa jumelle « a
         toi » : entendre son propre bar annonce a la radio, dans un char qu'on
@@ -1595,7 +1635,17 @@ const Son = (function () {
         Ondes.prochaineT = B.t + (r.premiere_s || 20) * 60;
       }
       const genres = station && r.stations ? r.stations[station] : null;
-      if (!genres || !genres.length || B.t < Ondes.prochaineT) return;
+      if (!genres || !genres.length) return;
+      // ⚠️ Les repliques d'un ciel ne partent pas au demarrage (`Voix.charger`) :
+      // on les demande dix secondes avant que l'animateur reprenne le micro, le
+      // temps qu'elles arrivent. Une fois par ciel et par partie.
+      if (B.t < Ondes.prochaineT) {
+        if (Ondes.prochaineT - B.t <= 600) {
+          const c = Ondes.ciel();
+          METEOS_DES_ONDES.forEach(function (m) { if (c[m]) Voix.chargerMeteo(m); });
+        }
+        return;
+      }
       if (Voix.enCours || Ondes.enCours) { Ondes.prochaineT = B.t + (r.attente_s || 2) * 60; return; }
       // ⚠️ ON PREND LE PREMIER GENRE QUI A QUELQUE CHOSE A DIRE, a partir de celui
       // dont c'est le tour. Le bulletin n'a rien tant que le jour n'a pas livre sa
@@ -1603,11 +1653,13 @@ const Son = (function () {
       // minutes pour autant. Le compteur avance jusqu'au genre retenu : le tour de
       // role reste un tour de role, et le bulletin muet est simplement sauté.
       let v = null, k = 0;
+      const ciel = Ondes.ciel();
+      METEOS_DES_ONDES.forEach(function (m) { if (ciel[m]) Voix.chargerMeteo(m); });
       for (; k < genres.length; k++) {
         const genre = genres[(Ondes.n + k) % genres.length];
         v = genre === 'pub' ? Ondes.pub()
           : genre === 'bulletin' ? Ondes.bulletin()
-          : Ondes.aTourDeRole(genre, Voix.liste().filter(function (x) { return x.genre === genre; }));
+          : Ondes.aTourDeRole(genre, Voix.liste().filter(function (x) { return x.genre === genre && Ondes.convient(x, ciel); }));
         if (v) break;
       }
       Ondes.n += (v ? k : 0) + 1;

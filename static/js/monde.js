@@ -2980,11 +2980,6 @@ const Monde = (function () {
   function majHeure() {
     const p = B.partie;
     if (!p || !B.defs) return;
-    // ⚠️ LA NUIT TIENT DANS LA VILLA (Martin, 30 sept. 2026) : dix-sept gardes, et une infiltration prudente
-    // durait plus qu'une nuit — l'aube tombait en pleine mission, et de jour un garde voit plus loin. Dans un
-    // bloc `nuit_tient`, l'horloge s'arrete tant qu'il fait nuit : elle repart quand on ressort.
-    const bloc = B.bloc && B.bloc.def && B.bloc.def.bloc;
-    if (bloc && bloc.nuit_tient && estNuit(p.heure)) return;
     const parImage = 1 / (B.defs.economie.jour_secondes * 60);
     p.heure += parImage;
     if (p.heure >= 1) { p.heure -= 1; p.jour += 1; if (typeof Missions !== 'undefined' && Missions.nouveauJour) Missions.nouveauJour(); }

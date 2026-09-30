@@ -114,9 +114,7 @@ def carte_du_bloc(bloc: dict) -> dict:
                  "noms_des_cadres": list(bloc.get("noms_des_cadres", ())),
                  "prive": [list(c) for c in bloc.get("prive", ())],
                  "gardes": [dict(g) for g in bloc.get("gardes", ())],
-                 "regles_des_gardes": dict(bloc["regles_des_gardes"]) if bloc.get("regles_des_gardes") else None,
-                 # La nuit y attend qu'on ressorte (la villa, `Monde.majHeure`).
-                 "nuit_tient": bool(bloc.get("nuit_tient", False))},
+                 "regles_des_gardes": dict(bloc["regles_des_gardes"]) if bloc.get("regles_des_gardes") else None},
     }
 
 
@@ -230,11 +228,6 @@ def erreurs(bloc: dict, ville: dict | None = None) -> list[str]:
             if a_pied is not None and (point[0], point[1]) not in a_pied:
                 fautes.append(f"{slug} : la ronde du garde {garde['slug']} passe par ({point[0]}, {point[1]}), "
                               "qu'on ne rejoint pas")
-        # ⚠️ Et entre ses points, rien ne l'arrête : depuis qu'un meuble arrête un garde (30 sept. 2026), le
-        # garde de la cave restait pris sur les deux machines que sa ronde traversait.
-        for x, y in _tuiles_de_la_ronde(garde["ronde"]):
-            if 0 <= y < hauteur and 0 <= x < largeur and not marchable(sol[y][x]):
-                fautes.append(f"{slug} : la ronde du garde {garde['slug']} traverse ({x}, {y}) ({sol[y][x]!r})")
     if bloc.get("noms_des_cadres") and len(bloc["noms_des_cadres"]) != len(bloc.get("cadres", ())):
         fautes.append(f"{slug} : {len(bloc['noms_des_cadres'])} noms pour {len(bloc.get('cadres', ()))} cadres")
     for cx, cy, cl, ch in bloc.get("cadres", ()):
@@ -328,16 +321,6 @@ def a_pied_depuis_l_arrivee(bloc: dict) -> set[tuple[int, int]]:
                 vues.add((nx, ny))
                 pile.append((nx, ny))
     return vues
-
-
-def _tuiles_de_la_ronde(ronde: list) -> list[tuple[int, int]]:
-    """Les tuiles qu'un garde foule en ligne droite d'un point de sa ronde au suivant (et du dernier au premier)."""
-    tuiles = []
-    for k, a in enumerate(ronde):
-        b = ronde[(k + 1) % len(ronde)]
-        n = max(abs(b[0] - a[0]), abs(b[1] - a[1]), 1)
-        tuiles += [(round(a[0] + (b[0] - a[0]) * q / n), round(a[1] + (b[1] - a[1]) * q / n)) for q in range(n + 1)]
-    return tuiles
 
 
 def _tuiles_du_bord(ouverture: dict, largeur: int, hauteur: int) -> list[tuple[int, int]]:

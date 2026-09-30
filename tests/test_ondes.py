@@ -6,6 +6,8 @@ et aucune ligne du jeu ne les jouait. Les juges d'ici regardent donc ce qui PASS
 (`Son.Ondes.dites`), pas ce qui est déclaré.
 """
 
+import re
+
 import pytest
 
 from app import audio, economie, journal, missions
@@ -121,6 +123,8 @@ def test_le_paquet_porte_ce_que_les_ondes_lisent():
     exporte = {v["slug"]: v for v in audio.exporter()["voix"]}
     for v in audio.VOIX_DE_LA_POLICE:
         assert exporte[v["slug"]]["evenement"] == v["evenement"]
+    for v in audio.VOIX:
+        assert exporte[v["slug"]].get("meteo") == v.get("meteo"), v["slug"]
     for v in _voix("pub"):
         assert exporte[v["slug"]].get("propriete") == v.get("propriete")
         assert bool(exporte[v["slug"]].get("a_toi")) == bool(v.get("a_toi"))
@@ -131,6 +135,51 @@ def test_le_paquet_porte_ce_que_les_ondes_lisent():
         assert ("texte" in exporte[v["slug"]]) is (v["genre"] not in audio.GENRES_DES_ONDES), v["slug"]
 
 
+#: Les animateurs : ce qu'une station dit d'elle-meme, hors pubs et bulletin.
+_ANIMATEURS = sorted({g for genres in audio.ONDES["stations"].values() for g in genres
+                      if g.startswith("radio_")})
+
+#: Les mots du temps qu'il fait. ⚠️ « La Brume » est le nom d'une station, pas un ciel :
+#: il n'y est pas.
+_MOTS_DU_TEMPS = re.compile(
+    r"\b(pluie|pleut|mouille|averse|orage|neige|neigeux|tempête|poudrerie|charrue|verglas|glacé|glace"
+    r"|brouillard|fait beau|beau temps|soleil|canicule|chaleur|frette)\b", re.IGNORECASE)
+
+
+def test_une_replique_qui_parle_du_temps_porte_sa_meteo():
+    """⚠️ Taxi-Radio criait « y fait beau à Baie-des-Brumes! » en pleine tempête de neige,
+    et La Brume annonçait la pluie un soir de janvier sec (Martin, 30 sept. 2026). Une
+    réplique d'animateur qui nomme le temps porte sa `meteo`, sans quoi elle passerait
+    par tous les ciels ; une `meteo` est un ciel que les ondes savent lire."""
+    for genre in _ANIMATEURS:
+        for v in _voix(genre):
+            if "meteo" in v:
+                assert v["meteo"] in audio.METEOS, f"{v['slug']} : « {v['meteo']} » n'est pas un ciel"
+            else:
+                assert not _MOTS_DU_TEMPS.search(v["texte"]), \
+                    f"{v['slug']} parle du temps sans dire lequel : « {v['texte']} »"
+
+
+def test_une_replique_d_un_ciel_ne_part_pas_au_demarrage():
+    """⚠️ Le premier écran n'avait plus que 6 Ko de marge (`test_le_poids_audio_reste_raisonnable`) :
+    une réplique qui dit la tempête ne sert qu'un soir de tempête, elle arrive avec son ciel
+    (`Son.Voix.chargerMeteo`), comme une réplique de contexte arrive avec son contexte."""
+    a_la_volee = {v["slug"] for v in audio.voix_a_la_volee()}
+    marquees = [v["slug"] for v in audio.VOIX if v.get("meteo")]
+    assert marquees
+    assert set(marquees) <= a_la_volee, set(marquees) - a_la_volee
+
+
+def test_par_tous_les_temps_l_animateur_a_de_quoi_dire():
+    """Sous chaque ciel, chaque animateur garde au moins deux répliques : une réplique
+    marquée qui se tait ne doit pas laisser un disque rayé derrière elle."""
+    for genre in _ANIMATEURS:
+        for ciel in audio.METEOS:
+            dites = [v["slug"] for v in _voix(genre) if v.get("meteo") in (None, ciel)]
+            assert len(dites) >= 2, f"{genre} sous « {ciel} » : {dites}"
+
+
+# --- Au banc -------------------------------------------------------------------------
 # --- Au banc -------------------------------------------------------------------------
 
 #: Allume une station et fait tourner les ondes `secondes` secondes, image par
@@ -323,7 +372,8 @@ def test_une_replique_de_mission_coupe_les_ondes(banc):
         L.Jeu.commencer();
         L.Son.Voix.charger();
         for (let i = 0; i < 6; i++) await o.attendre();
-        const clip = L.Son.Voix.liste().find(function (v) { return v.genre === 'radio_taxi' && v.fichier; });
+        // ⚠️ Une réplique NEUTRE : celle d'un ciel n'est pas chargée au démarrage (`chargerMeteo`).
+        const clip = L.Son.Voix.liste().find(function (v) { return v.genre === 'radio_taxi' && !v.meteo && v.fichier; });
         if (!clip) return { clip: null };
         const passe = L.Son.Ondes.dire(clip, 'radio');
         const ctx = L.Son.contexte;
@@ -435,3 +485,77 @@ def test_le_bulletin_s_entend_vraiment(banc):
     assert r["slug"] == f"narrateur-journal-{journal.REGLES[0]['slug']}", r
     assert r["banque"] == "histoire", "le bulletin cherche son clip chez les ondes : %s" % r
     assert r["sortie"] is True, "le bulletin « passe » et on n'entend rien : %s" % r
+
+
+def test_la_radio_dit_le_temps_qu_il_fait(banc):
+    """⚠️ **CE QUE L'ANIMATEUR DIT DU TEMPS, LE CIEL LE CONFIRME** (Martin, 30 sept. 2026).
+    Les deux stations tournent vingt minutes sous chacun des cinq ciels, trouvés dans les
+    fonctions pures du jour et de l'heure : rien de ce qui passe ne contredit le ciel, et
+    la réplique de ce ciel-là passe au moins une fois — la radio le dit, elle ne fait pas
+    que se taire. Sans un dé : le tour de rôle reste un tour de rôle."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        %s
+        const O = L.Son.Ondes, B = L.B;
+        const CLES = ['enCours', 'dites', 'tours', 'station', 'prochaineT', 'n', 'policeT', 'derniers', 'bulletins'];
+        const copie = function (x) { return x === undefined ? undefined : JSON.parse(JSON.stringify(x)); };
+        const zero = {};
+        CLES.forEach(function (k) { zero[k] = copie(O[k]); });
+        const P = L.Pluie, N = L.Neige, Br = L.Brouillard, V = L.Verglas;
+        const force = {
+            pluie: function (j, h) { return P.intensiteA(j, h); }, neige: function (j, h) { return N.intensiteA(j, h); },
+            brouillard: function (j, h) { return Br.intensiteA(j, h); }, verglas: function (j, h) { return V.intensiteA(j, h); },
+        };
+        // Un moment ou ce ciel-la est plein et les autres absents (« beau » : aucun).
+        function trouver(ciel) {
+            for (let j = 1; j < 800; j++) for (let q = 0; q < 48; q++) {
+                const h = q / 48;
+                const ok = Object.keys(force).every(function (k) {
+                    return k === ciel ? force[k](j, h) > 0.9 : force[k](j, h) === 0;
+                });
+                if (ok) return { jour: j, heure: h };
+            }
+            return null;
+        }
+        const res = {};
+        ['beau', 'pluie', 'neige', 'brouillard', 'verglas'].forEach(function (ciel) {
+            const m = trouver(ciel);
+            if (!m) { res[ciel] = null; return; }
+            B.options.brouillard = ciel === 'brouillard';
+            B.options.verglas = ciel === 'verglas';
+            B.partie.jour = m.jour; B.partie.heure = m.heure;
+            res[ciel] = { moment: m, lu: O.ciel(), stations: {} };
+            ['la_brume', 'taxi_radio'].forEach(function (station) {
+                CLES.forEach(function (k) { O[k] = copie(zero[k]); });
+                L.Son.Voix.enCours = null;
+                B.partie.derniereManchette = null;
+                // Qui demande quel ciel, et quand : avant la premiere voix, pas apres.
+                const demandes = [], vraie = L.Son.Voix.chargerMeteo;
+                L.Son.Voix.chargerMeteo = function (x) { demandes.push({ meteo: x, n: O.dites.length, avance: O.prochaineT - B.t }); };
+                res[ciel].stations[station] = ecouter(L, station, 1200);
+                L.Son.Voix.chargerMeteo = vraie;
+                res[ciel].stations[station].demandes = demandes;
+            });
+        });
+        return res;
+    }""" % _ECOUTER)
+    meteo = {v["slug"]: v.get("meteo") for v in audio.VOIX}
+    for ciel in audio.METEOS:
+        assert r[ciel], f"aucun moment de « {ciel} » en 800 jours"
+        lu = r[ciel]["lu"]
+        assert [k for k in audio.METEOS if lu[k]] == [ciel], f"{ciel} : les ondes lisent {lu} ({r[ciel]['moment']})"
+        for station, ecoute in r[ciel]["stations"].items():
+            assert ecoute["des"] == 0, "les ondes tirent des dés : tout le hasard du jeu se décale"
+            dites = [d["slug"] for d in ecoute["dites"]]
+            menteuses = [s for s in dites if meteo.get(s) not in (None, ciel)]
+            assert not menteuses, f"{station} sous « {ciel} » dit {menteuses}"
+            a_dire = {v["slug"] for v in audio.VOIX if v.get("meteo") == ciel
+                      and v["genre"] in audio.ONDES["stations"][station]}
+            if a_dire:
+                assert a_dire & set(dites), f"{station} sous « {ciel} » ne le dit jamais : {dites}"
+            # ⚠️ Les répliques d'un ciel ne partent pas au démarrage : la station les
+            # demande AVANT la première voix, sinon la première passerait muette.
+            avant = [d for d in ecoute["demandes"] if d["n"] == 0]
+            assert {d["meteo"] for d in avant} == {ciel}, f"{station} sous « {ciel} » demande {avant[:3]}"
+            assert max(d["avance"] for d in avant) >= 5 * 60, \
+                f"{station} sous « {ciel} » demande son ciel au moment de parler : trop tard pour l'entendre"

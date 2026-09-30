@@ -16,13 +16,8 @@ import json
 
 from outils_missions import outils
 
-from app.blocs import villa
-
-OUTILS = outils("fermer", "passer", "etape") + (
-    "  const LIEUX_VILLA = " + json.dumps(villa.LIEUX) + ", SERRURES_VILLA = " + json.dumps(villa.SERRURES) + ";\n"
-) + """
+OUTILS = outils("fermer", "passer", "etape") + """
   const TT = 16;
-  const CACHETTES = [];   // où le banc s'est caché (les sondes le lisent)
   async function laisserArriver(L, o) { for (let i = 0; i < 6; i++) { o.frame(1); await o.attendre(); } }
   function nuit(L) { L.B.partie.heure = 23 / 24; }
   function commencer(L, o, slug) { L.Histoire.commencer(slug); L.B.cinema = null; L.B.scene = null; o.frame(2); fermer(L); }
@@ -140,103 +135,22 @@ OUTILS = outils("fermer", "passer", "etape") + (
     return true;
   }
 
-  /** Une tuile qu'un garde regarderait en se retournant : à moins de 7 tuiles de lui, sans mur entre. */
-  function exposee(L, x, y) {
-    return L.Infiltration.gardes().some(function (g) {
-      return g.vivant && g.etat !== 'assomme' && Math.hypot(g.x - x, g.y - y) < 7 * TT && L.Monde.ligneLibre(g.x, g.y, x, y);
-    });
-  }
-
-  /** Une tuile SURVEILLÉE : un point de la ronde d'un garde (tous les points, tuile par tuile, le long de
-      chaque segment) la voit à moins de `SURVEILLANCE` tuiles, sans mur entre. Ce qui ne l'est pas est une
-      vraie cachette : aucun garde n'y regarde jamais, où qu'il soit dans sa ronde. */
-  const SURVEILLANCE = 6;
-  let surveillees = null;
-  function surveillee(L, tx, ty) {
-    if (!surveillees) {
-      surveillees = [];
-      for (const g of fiche(L).gardes) {
-        const r = g.ronde, pts = [];
-        for (let k = 0; k < r.length; k++) {
-          const a = r[k], b = r[(k + 1) % r.length], n = Math.max(1, Math.abs(b[0] - a[0]) + Math.abs(b[1] - a[1]));
-          for (let q = 0; q <= n; q++) pts.push([(a[0] + (b[0] - a[0]) * q / n) * TT + 8, (a[1] + (b[1] - a[1]) * q / n) * TT + 8]);
-        }
-        surveillees.push(pts);
-      }
-    }
-    const x = tx * TT + 8, y = ty * TT + 8;
-    return surveillees.some(function (pts) {
-      return pts.some(function (p) { return Math.hypot(p[0] - x, p[1] - y) < SURVEILLANCE * TT && L.Monde.ligneLibre(p[0], p[1], x, y); });
-    });
-  }
-
-  /** ⚠️ SE CACHER (la villa barbelée, 30 sept. 2026) : quand un garde tient le passage — le corridor du 2e,
-      qu'il parcourt d'un bout à l'autre —, attendre ou reculer ne suffit plus : il revient. Un joueur se glisse
-      dans la pièce d'à côté et le laisse passer. La cachette : une tuile à `rayon` pas au plus, qu'on rejoint
-      sans entrer dans un cône, qu'aucune ronde ne surveille (`surveillee`) et d'où aucun garde ne nous voit —
-      la plus près du but. */
-  function cachette(L, de, vers, rayon) {
-    const M = L.Monde, c = M.carte, cle = function (t) { return t.x + ',' + t.y; };
-    const vues = new Map([[cle(de), 0]]), file = [de];
-    let mieux = null, score = Infinity;
-    while (file.length) {
-      const t = file.shift(), n = vues.get(cle(t));
-      if (!exposee(L, t.x * TT + 8, t.y * TT + 8) && !surveillee(L, t.x, t.y)) {
-        const s = Math.abs(t.x - vers.x) + Math.abs(t.y - vers.y) + n * 0.5;
-        if (s < score) { score = s; mieux = t; }
-      }
-      if (n >= rayon) continue;
-      for (const v of [{ x: t.x + 1, y: t.y }, { x: t.x - 1, y: t.y }, { x: t.x, y: t.y + 1 }, { x: t.x, y: t.y - 1 }]) {
-        if (vues.has(cle(v)) || v.x < 0 || v.y < 0 || v.x >= c.w || v.y >= c.h) continue;
-        if (M.bloque(v.x, v.y, M.MASQUE_PIETON) || M.barriereA(v.x, v.y, 'pieton') || saut(L, v.x, v.y)) continue;
-        if (danger(L, v.x * TT + 8, v.y * TT + 8)) continue;
-        vues.set(cle(v), n + 1); file.push(v);
-      }
-    }
-    return mieux;
-  }
-
   /** Marcher jusqu'à la tuile `vers`, au pas, en se cachant. Rend vrai une fois arrivé (ou `fini()`). */
   function aller(L, o, vers, max, fini) {
     const B = L.B, j = B.joueur;
-    let ch = chemin(L, tuileDe(j), vers), i = 0, attente = 0, cache = null;
+    let ch = chemin(L, tuileDe(j), vers), i = 0;
     if (!ch) return 'pas de chemin';
     for (let n = 0; n < (max || 20000); n++) {
       fermer(L);
       if (fini && fini()) return true;
       if (B.transition || B.piratage) { o.frame(1); continue; }
       const ici = tuileDe(j);
-      if (cache && (danger(L, j.x, j.y) || exposee(L, cache.x * TT + 8, cache.y * TT + 8) && danger(L, cache.x * TT + 8, cache.y * TT + 8))) {
-        // Un garde vient vers la cachette : en chercher une autre, d'ici.
-        cache = cachette(L, ici, vers, 16);
-        if (cache && cache.x === ici.x && cache.y === ici.y && danger(L, j.x, j.y)) cache = null;
-      }
-      if (cache) {
-        // En route vers la cachette, ou dedans : on en sort quand le chemin d'ici est libre.
-        const ch2 = chemin(L, ici, vers);
-        if (ch2 && ch2.length && !danger(L, ch2[0].x * TT + 8, ch2[0].y * TT + 8)
-            && (ici.x === cache.x && ici.y === cache.y) && !danger(L, ch2[Math.min(2, ch2.length - 1)].x * TT + 8, ch2[Math.min(2, ch2.length - 1)].y * TT + 8)) {
-          cache = null; ch = ch2; i = 0; attente = 0; continue;
-        }
-        if (ici.x !== cache.x || ici.y !== cache.y) {
-          const vc = chemin(L, ici, cache);
-          const t = vc && vc.length ? vc[0] : cache, dx = t.x * TT + 8 - j.x, dy = t.y * TT + 8 - j.y, d = Math.hypot(dx, dy) || 1;
-          j.x += dx / d * Math.min(d, 1.2); j.y += dy / d * Math.min(d, 1.2); j.vx = 0; j.vy = 0;
-          L.Entites.regarder(j, dx, dy);
-        } else { j.vx = 0; j.vy = 0; }
-        o.frame(1); continue;
-      }
       for (let k = i; k < Math.min(ch.length, i + 3); k++) if (ch[k].x === ici.x && ch[k].y === ici.y && k > i) { i = k; break; }
       if (i >= ch.length) return true;
       const t = ch[i], cx = t.x * TT + 8, cy = t.y * TT + 8, dx = cx - j.x, dy = cy - j.y, d = Math.hypot(dx, dy);
       if (d < 2.5) { i++; if (i >= ch.length) return true; continue; }
       if (d > 3 * TT) { ch = chemin(L, ici, vers); i = 0; if (!ch) return 'perdu'; continue; }
       if (danger(L, cx, cy)) {
-        if (++attente > 180) {
-          const c = cachette(L, ici, vers, 16);
-          attente = 0;
-          if (c && (c.x !== ici.x || c.y !== ici.y)) { cache = c; CACHETTES.push({ de: ici, a: c, t: B.t }); continue; }
-        }
         if (danger(L, j.x, j.y)) {
           // On recule d'un pas vers la tuile d'avant ; au début du chemin, on s'éloigne du garde.
           const r = i >= 2 ? ch[i - 2] : null;
@@ -250,7 +164,6 @@ OUTILS = outils("fermer", "passer", "etape") + (
         }
         j.vx = 0; j.vy = 0; o.frame(1); continue;
       }
-      attente = 0;
       const pas = Math.min(d, 1.2);
       j.x += dx / d * pas; j.y += dy / d * pas; j.vx = 0; j.vy = 0;
       L.Entites.regarder(j, dx, dy);
@@ -325,11 +238,6 @@ OUTILS = outils("fermer", "passer", "etape") + (
     }
     return fini() ? true : 'pas fini';
   }
-
-  /** Un lieu de la villa, en tuiles (`villa.LIEUX`). */
-  function lieu(L, slug) { const l = LIEUX_VILLA[slug]; return { x: l.x, y: l.y }; }
-  /** La serrure d'un lieu de la villa : la tuile de sa porte (`villa.SERRURES`). */
-  function serrure(L, slug) { return SERRURES_VILLA.find(function (s) { return s.slug === slug; }); }
 
   function etat(L) {
     const B = L.B;
@@ -452,63 +360,6 @@ def test_on_n_est_jamais_vu_en_arrivant_par_un_escalier(banc):
         return vus;
     }""")
     assert r == [], f"un garde voit l'arrivée d'un escalier : {r}"
-
-
-def test_la_palissade_est_barbelee_et_n_a_que_deux_entrees():
-    """Martin (30 sept. 2026) : « la villa devrait avoir des clôtures barbelées ». Tout le tour du terrain privé
-    est de la palissade barbelée (`'`, solidité 5 : elle ne s'enjambe plus), sauf deux passages — le trou où
-    manque une planche, au nord, et la grille, qui a son garde."""
-    from app import carte
-    x0, y0, larg, haut = villa.PRIVE[0]
-    tour = {(x, y0) for x in range(x0, x0 + larg)} | {(x, y0 + haut - 1) for x in range(x0, x0 + larg)}
-    tour |= {(x0, y) for y in range(y0, y0 + haut)} | {(x0 + larg - 1, y) for y in range(y0, y0 + haut)}
-    ouvertes = {(x, y) for x, y in tour if carte.LEGENDE[villa.PLAN[y][x]].get("solide", 0) == 0}
-    assert ouvertes == {(20, 4), (59, 20), (59, 21), (59, 22), (59, 23)}, sorted(ouvertes)
-    fermees = {villa.PLAN[y][x] for x, y in tour - ouvertes}
-    assert fermees == {"'"}, f"le tour n'est pas tout en palissade barbelée : {fermees}"
-    assert carte.LEGENDE["'"]["solide"] == 5 and "'" not in carte.ENJAMBABLES
-
-
-def test_une_haie_de_cedres_cache_et_ne_se_traverse_pas(banc):
-    """Les cachettes du jardin (Martin, 30 sept. 2026 : « vois si des endroits pour se cacher sont requis » —
-    dehors, rien ne coupait la vue d'un garde). Une haie coupe la vue comme un mur (`Monde.ligneLibre`), et on
-    ne passe pas au travers. La poche du trou : deux bouts de haie de chaque côté de (20, 5)."""
-    r = banc("async function (L, o) {" + OUTILS + """
-        L.Jeu.commencer(); nuit(L);
-        await entrerALaVilla(L, o);
-        const M = L.Monde, c = function (t) { return t * TT + 8; };
-        return { aTravers: M.ligneLibre(c(16), c(5), c(20), c(5)), aCote: M.ligneLibre(c(16), c(6), c(20), c(6)),
-                 bloque: M.bloque(18, 5, M.MASQUE_PIETON) };
-    }""")
-    assert r["aTravers"] is False, "la haie ne cache pas"
-    assert r["aCote"] is True, "le juge ne mord pas : la vue est coupée même sans haie"
-    assert r["bloque"], "on traverse la haie"
-
-
-def test_la_nuit_tient_dans_la_villa(banc):
-    """Martin (30 sept. 2026) : dix-sept gardes, et une infiltration prudente durait plus qu'une nuit — l'aube
-    tombait en pleine mission (de jour, un garde voit plus loin). Dans la villa, de nuit, l'heure ne bouge
-    plus ; de jour, elle avance ; et dehors, la nuit repart."""
-    r = banc("async function (L, o) {" + OUTILS + """
-        L.Jeu.commencer(); nuit(L);
-        const B = L.B;
-        await entrerALaVilla(L, o);
-        B.joueur.x = 66 * TT + 8; B.joueur.y = 21 * TT + 8; L.Entites.indexer();   // sur le chemin, loin des gardes
-        const h0 = B.partie.heure;
-        for (let k = 0; k < 1200; k++) { o.frame(1); fermer(L); }
-        const nuitDedans = B.partie.heure - h0;
-        B.partie.heure = 13 / 24;
-        for (let k = 0; k < 1200; k++) { o.frame(1); fermer(L); }
-        const jourDedans = B.partie.heure - 13 / 24;
-        B.partie.heure = 22 / 24;   // pas 23 h : une heure plus tard, on passerait minuit
-        const sorti = sortirDeLaVilla(L, o);
-        const h1 = B.partie.heure;
-        for (let k = 0; k < 1200; k++) { o.frame(1); fermer(L); }
-        return { nuitDedans: nuitDedans, jourDedans: jourDedans, sorti: sorti, nuitDehors: B.partie.heure - h1 };
-    }""")
-    assert r["nuitDedans"] == 0, f"la nuit ne tient pas dans la villa : {r}"
-    assert r["jourDedans"] > 0, f"le jour s'arrête aussi dans la villa : {r}"
-    assert r["sorti"] and r["nuitDehors"] > 0, f"dehors, la nuit ne repart pas : {r}"
 
 
 def test_la_porte_de_service_ne_s_ouvre_qu_avec_la_cle(banc):
@@ -634,7 +485,7 @@ def test_v02_le_dossier_du_bureau_d_en_haut(banc):
         t.trou = entrerParLeTrou(L, o);
         t.service = aller(L, o, { x: 20, y: 32 }, 20000, function () { return etape(L) >= 2; });
         t.apresService = etat(L);
-        t.dossier = aller(L, o, lieu(L, 'villa_bureau'), 60000, function () { return etape(L) >= 3; });
+        t.dossier = aller(L, o, { x: 30, y: 52 }, 40000, function () { return etape(L) >= 3; });
         t.apresDossier = etat(L);
         t.sortie = ressortir(L, o, function () { return !B.partie.mission; });
         t.fin = etat(L);
@@ -660,10 +511,9 @@ def test_v03_la_chambre_forte_au_piratage(banc):
         B.partie.missionsFaites.v01 = 1; B.partie.missionsFaites.v02 = 1; B.partie.objets.cle_villa = 1;
         commencer(L, o, 'v03');
         const t = { entre: await entrerALaVilla(L, o) };
-        const porte = serrure(L, 'villa_voute');
-        t.fermeeAvant = !!L.Monde.barriereA(porte.x, porte.y, 'pieton');
+        t.fermeeAvant = !!L.Monde.barriereA(65, 55, 'pieton');
         t.trou = entrerParLeTrou(L, o);
-        t.terminal = aller(L, o, lieu(L, 'villa_terminal'), 60000);
+        t.terminal = aller(L, o, { x: 63, y: 57 }, 40000);
         // Pirater quand personne ne regarde.
         for (let k = 0; k < 3000 && danger(L, j.x, j.y); k++) { o.frame(1); fermer(L); }
         o.tape('KeyE', 2);
@@ -671,8 +521,8 @@ def test_v03_la_chambre_forte_au_piratage(banc):
         if (B.piratage) piloter(L, o);
         fermer(L);
         t.apresPiratage = etat(L);
-        t.fermeeApres = !!L.Monde.barriereA(porte.x, porte.y, 'pieton');
-        t.livre = aller(L, o, lieu(L, 'villa_voute'), 20000, function () { return etape(L) >= 3; });
+        t.fermeeApres = !!L.Monde.barriereA(65, 55, 'pieton');
+        t.livre = aller(L, o, { x: 65, y: 51 }, 20000, function () { return etape(L) >= 3; });
         t.apresLivre = etat(L);
         t.sortie = ressortir(L, o, function () { return etape(L) >= 4; });
         t.dehors = sortirDeLaVilla(L, o);
@@ -712,8 +562,7 @@ def test_une_mission_ratee_fait_retomber_ce_qu_elle_avait_fait_prendre(banc):
 
 def test_la_carte_ne_montre_que_l_etage_ou_l_on_est(banc):
     """Martin (30 sept. 2026) : « je ne veux pas voir tous les étages d'un coup ». La grande carte (N) et
-    la mini-carte ne montrent que le CADRE du joueur — le rez-de-chaussée, l'étage, la cave, le 2e étage ou le
-    sous-sol — avec les
+    la mini-carte ne montrent que le CADRE du joueur — le rez-de-chaussée, l'étage ou la cave — avec les
     lieux de cet étage-là seulement, et le titre le nomme. Ni le train ni rien de la ville par-dessus."""
     from app.blocs import villa
     r = banc("async function (L, o) {" + OUTILS + """
@@ -734,13 +583,12 @@ def test_la_carte_ne_montre_que_l_etage_ou_l_on_est(banc):
           o.tape('KeyN'); o.frame(2); fermer(L);
           return { mini: mini, carte: carte, ouverte: ouverte };
         };
-        const out = { rez: regarder(66, 21), etage: regarder(18, 66), cave: regarder(40, 67),
-                      second: regarder(3, 90), sousSol: regarder(39, 74) };
+        const out = { rez: regarder(66, 21), etage: regarder(18, 66), cave: regarder(40, 67) };
         out.train = trainSurLaCarte;
         return out;
     }""")
-    attendus = {"rez": (0, ["villa_chemin", "villa_service"]), "etage": (1, []), "cave": (2, []),
-                "second": (3, ["villa_bureau"]), "sousSol": (4, ["villa_terminal", "villa_voute"])}
+    attendus = {"rez": (0, ["villa_chemin", "villa_service"]), "etage": (1, ["villa_bureau"]),
+                "cave": (2, ["villa_terminal", "villa_voute"])}
     for nom, (i, lieux) in attendus.items():
         v = r[nom]
         cx, cy, cl, ch = villa.CADRES[i]
@@ -774,23 +622,17 @@ def test_un_objectif_a_un_autre_etage_se_vise_par_son_escalier(banc):
         };
         const out = {};
         out.dossierDuRez = vise(2, 42, 17);        // le dossier est à l'étage : le grand escalier du hall
-        out.dossierDeLEtage = vise(2, 18, 60);     // à l'étage : l'escalier de la bibliothèque, qui monte au 2e
-        out.dossierDuSecond = vise(2, 3, 90);      // au 2e : le bureau
+        out.dossierDeLEtage = vise(2, 18, 60);     // à l'étage : le bureau
         out.dossierDeLaCave = vise(2, 45, 64);     // de la cave : remonter à la cuisine d'abord
         out.sortieDeLEtage = vise(3, 30, 52);      // ressortir : redescendre
-        out.sortieDuSecond = vise(3, 20, 80);      // du 2e : redescendre à l'étage
         return out;
     }""")
     hall, etage = villa.ESCALIERS[0]["a"], villa.ESCALIERS[0]["b"]
     cave = villa.ESCALIERS[1]["b"]
-    bibliotheque, palier = villa.ESCALIERS[2]["a"], villa.ESCALIERS[2]["b"]
     assert (r["dossierDuRez"]["x"], r["dossierDuRez"]["y"]) in {tuple(t) for t in hall["tuiles"]}, r
     assert "ÉTAGE" in r["dossierDuRez"]["nom"], r
     bx, by = villa.LIEUX["villa_bureau"]["x"], villa.LIEUX["villa_bureau"]["y"]
-    assert (r["dossierDeLEtage"]["x"], r["dossierDeLEtage"]["y"]) in {tuple(t) for t in bibliotheque["tuiles"]}, r
-    assert "2E ÉTAGE" in r["dossierDeLEtage"]["nom"], r
-    assert (r["dossierDuSecond"]["x"], r["dossierDuSecond"]["y"]) == (bx, by), r
-    assert (r["sortieDuSecond"]["x"], r["sortieDuSecond"]["y"]) in {tuple(t) for t in palier["tuiles"]}, r
+    assert (r["dossierDeLEtage"]["x"], r["dossierDeLEtage"]["y"]) == (bx, by), r
     assert (r["dossierDeLaCave"]["x"], r["dossierDeLaCave"]["y"]) in {tuple(t) for t in cave["tuiles"]}, r
     assert (r["sortieDeLEtage"]["x"], r["sortieDeLEtage"]["y"]) in {tuple(t) for t in etage["tuiles"]}, r
 

@@ -141,7 +141,7 @@ def test_e07_la_cle_dans_la_poche_du_chauffeur_puis_le_dossier_du_maire(banc):
         for (let k = 0; k < 6; k++) { o.frame(1); fermer(L); }
         t.trou = entrerParLeTrou(L, o);
         t.service = aller(L, o, { x: 20, y: 32 }, 20000, function () { return etape(L) >= 3; });
-        t.dossier = aller(L, o, lieu(L, 'villa_bureau'), 60000, function () { return etape(L) >= 4; });
+        t.dossier = aller(L, o, { x: 30, y: 52 }, 40000, function () { return etape(L) >= 4; });
         t.apresDossier = etat(L);
         t.sortie = ressortir(L, o, function () { return etape(L) >= 5; });
         t.dehors = sortirDeLaVilla(L, o);

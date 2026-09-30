@@ -280,10 +280,17 @@ JEU: dict[str, str] = {
     "brume_nuit_r": "[calm] Vous écoutez La Brume, cent trois virgule sept. Il est minuit passé… sur le port.",
     "brume_pluie_r": "[softly] La pluie rentre par la baie. Restez au chaud… on continue.",
     "brume_demandes_r": "[warmly] Une petite dernière avant les nouvelles… pour ceux qui travaillent de nuit.",
+    "brume_neige_r": "[softly] Il neige sur le port. Les chars dorment sous la neige… [warmly] nous autres, on veille.",
+    "brume_brouillard_r": "[calm] Brouillard sur la baie à matin. [wryly] La Brume porte bien son nom. [softly] Roulez doucement.",
+    "brume_verglas_r": "[calm] Tout est glacé dehors. [deadpan] Si vous avez pas besoin de sortir, sortez pas.",
     # --- Taxi-Radio : le matin, la bonne humeur a pleine voix.
     "taxi_bonjour_r": "[excited] Taxi-Radio, votre station! On est en ondes… pis y fait beau à Baie-des-Brumes!",
     "taxi_trafic_r": "[sighs] Ça bouchonne su'l pont, mes amis. [cheerful] Prenez donc la rue des Érables.",
     "taxi_merci_r": "[enthusiastic] Un gros merci à nos commanditaires… pis on remet ça!",
+    "taxi_pluie_r": "[excited] Y mouille à siaux, mes amis! [cheerful] Essuie-glaces au boutte, pis on garde le moral!",
+    "taxi_neige_r": "[excited] Tempête de neige su'a ville! [playfully] Laissez passer la charrue : elle, a' travaille.",
+    "taxi_brouillard_r": "[excited] Brouillard à couper au couteau! [cheerful] Allumez vos phares, pis klaxonnez aux coins.",
+    "taxi_verglas_r": "[excited] Verglas partout, mes amis! [wryly] Freinez d'avance, pis priez un peu.",
     # --- Les pubs, et les jumelles « a toi » des commerces qui s'achetent. ⚠️ Pas
     # de « … » devant la chute (les potins, la memoire, la cle a molette) : elle
     # tombe nette, ou elle ne tombe pas (`docs/ecrire-drole.md`, regle 4).

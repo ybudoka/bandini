@@ -2,9 +2,8 @@
 
 La deuxième infiltration de la villa du maire (`app/blocs/villa.py`) : avec la clé de v01, on entre
 par la porte de service (une serrure du bloc, condition `objet`), on traverse le rez-de-chaussée,
-on monte le grand escalier du hall, on traverse l'étage jusqu'à l'escalier de la bibliothèque, et on
-trouve au 2e étage le dossier que le maire garde sur le sergent, dans son bureau — des gardes à chaque
-étage (`villa.GARDES`).
+on monte le grand escalier du hall, et on trouve le dossier que le maire garde sur le sergent,
+dans son bureau d'en haut — deux gardes à l'étage, un au hall, un au corridor.
 """
 
 from ._commun import _l, _p

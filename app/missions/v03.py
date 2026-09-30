@@ -1,8 +1,7 @@
 """La mission v03 — voir app/missions/__init__.py pour le moteur.
 
-La troisième infiltration de la villa du maire (`app/blocs/villa.py`) : sous la cave. Par la porte de
-service et l'escalier de la cuisine, un dédale de caves, l'escalier de l'antichambre, le sous-sol et ses
-gardes, et la chambre forte au fond — sa porte
+La troisième infiltration de la villa du maire (`app/blocs/villa.py`) : la cave. Par la porte de
+service et l'escalier de la cuisine, un dédale de caves, deux gardes, et la chambre forte — sa porte
 ne s'ouvre qu'au code, et le code est dans un terminal qu'on pirate (le labyrinthe électrifié). Le
 piratage réussi met le code dans le sac (`objet` sur `pirater`) : la serrure de la chambre forte
 s'ouvre. Dedans, le grand livre du maire.
@@ -29,7 +28,7 @@ MISSION = {
         {"type": "aller", "texte": "VA À LA VILLA DU MAIRE, DE NUIT",
          "lieu": "villa_chemin", "rayon": 6, "nuit": True},
 
-        {"type": "pirater", "texte": "PIRATE LE TERMINAL DE LA CHAMBRE FORTE, AU SOUS-SOL",
+        {"type": "pirater", "texte": "PIRATE LE TERMINAL DE LA CHAMBRE FORTE, À LA CAVE",
          "ou": "villa_terminal", "rayon": 2, "longueur": 5, "essais": 3,
          "objet": "code_voute", "sans_etoile": True},
 

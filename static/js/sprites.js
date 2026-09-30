@@ -3316,7 +3316,7 @@ const TUILES = (function () {
       for (let u = u0; u < u1; u += 3) {
         // ⚠️ La hauteur se tire sur `u` SEUL : le meme brin tourne doit donner
         // le meme dessin tourne — c'est ce que le juge compare, trait par trait.
-        const h = (style.planchesH || 9) + (hash2(u, 7) % 3);
+        const h = 9 + (hash2(u, 7) % 3);
         bloc(ctx, sens, u, 13 - h, 2, h);
       }
     } else if (style.barreaux) {
@@ -3339,23 +3339,11 @@ const TUILES = (function () {
     if (style.fils) {
       // Les trois fils du barbele, et leurs epines : au-dessus de tout.
       ctx.fillStyle = style.fils;
-      if (style.filsW) {
-        // Deux brins minces au-dessus des planches, et leurs epines en petits x espaces : serrees comme celles
-        // du barbele, elles faisaient une bande blanche pleine — une lisse, pas un fil.
-        for (const w of style.filsW) {
-          trait(ctx, sens, u0, u1, w, 1);
-          for (let u = u0 + 2; u < u1 - 1; u += 6) {
-            bloc(ctx, sens, u - 1, w - 1, 1, 1); bloc(ctx, sens, u + 1, w - 1, 1, 1);
-            bloc(ctx, sens, u - 1, w + 1, 1, 1); bloc(ctx, sens, u + 1, w + 1, 1, 1);
-          }
-        }
-      } else {
-        for (const w of [1, 3, 5]) trait(ctx, sens, u0, u1, w, 1);
-        for (let u = u0 + 1; u < u1; u += 5) {
-          bloc(ctx, sens, u, 0, 1, 6);
-          bloc(ctx, sens, u - 1, 2, 3, 1);
-          bloc(ctx, sens, u - 1, 4, 3, 1);
-        }
+      for (const w of [1, 3, 5]) trait(ctx, sens, u0, u1, w, 1);
+      for (let u = u0 + 1; u < u1; u += 5) {
+        bloc(ctx, sens, u, 0, 1, 6);
+        bloc(ctx, sens, u - 1, 2, 3, 1);
+        bloc(ctx, sens, u - 1, 4, 3, 1);
       }
     }
     ctx.fillStyle = style.poteau;
@@ -3397,28 +3385,6 @@ const TUILES = (function () {
                  rails: [3, 11], poteau0: 2, epaisseur: 3 };
   const CLOTURE_BARBELE = { ombre: '#3a6c2d', lisse: '#5d5852', maille: '#6b655c', poteau: '#7d766a',
                     fils: '#d8d2c4', rails: [6, 11], poteau0: 0, epaisseur: 2 };
-  //: La palissade barbelee (la villa du maire, 30 sept. 2026) : les planches du bois, plus basses, et les fils du
-  //: barbele AU-DESSUS d'elles (`filsW`) — de loin, c'est une palissade ; de pres, elle ne s'enjambe pas.
-  const CLOTURE_BOIS_BARBELEE = { ombre: '#3f7331', lisse: '#6d5232', planches: '#8a6a42', poteau: '#a3814f',
-                                  fils: '#d8d2c4', filsW: [1, 4], planchesH: 7, rails: [6, 11], poteau0: 0, epaisseur: 3 };
-  //: La haie de cedres (le jardin de la villa, 30 sept. 2026) : le dessus taille, au soleil, et le front dans
-  //: l'ombre — elle a de la hauteur, c'est tout son role : on se cache derriere. L'hiver, la neige tient sur le
-  //: dessus (`Saisons.enneiger`) ; le front reste vert, un cedre ne perd pas ses aiguilles.
-  const HAIE = { dessus: '#2f6b3a', pousse: '#43874c', front: '#1f4a2a', pied: '#15331d' };
-  function haieDeCedres(ctx, v, T) {
-    plein(ctx, gazonDuMoment().fond, T);
-    const dessus = typeof Saisons !== 'undefined' ? Saisons.enneiger(HAIE) : HAIE;
-    ctx.fillStyle = HAIE.front; ctx.fillRect(0, 8, T, 7);
-    ctx.fillStyle = HAIE.pied; ctx.fillRect(0, 14, T, 2);
-    ctx.fillStyle = dessus.dessus; ctx.fillRect(0, 1, T, 8);
-    // Les pousses du dessus, et les touffes qui depassent du front : sans elles, c'est un bloc de beton vert.
-    ctx.fillStyle = dessus.pousse;
-    for (let i = 0; i < 7; i++) ctx.fillRect((i * 5 + v * 3) % (T - 2), 2 + (i * 3 + v) % 6, 2, 1);
-    ctx.fillStyle = HAIE.dessus;
-    for (let i = 0; i < 4; i++) ctx.fillRect((i * 4 + 1 + v) % (T - 1), 10 + (i * 2) % 4, 1, 2);
-    ctx.fillStyle = dessus.dessus;
-    for (let x = 0; x < T; x += 4) ctx.fillRect(x + 1, 0, 2, 1);          // le dessus, pas tout a fait droit
-  }
   const CLOTURE_FER = { ombre: '#3f7331', lisse: '#1f1f24', barreaux: '#2b2b31', pointes: '#d9b44a', poteau: '#15151a',
                         rails: [5, 11], poteau0: 2, epaisseur: 2 };
 
@@ -4384,8 +4350,6 @@ const TUILES = (function () {
     'G': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#7a7d82'; ctx.fillRect(1, 3, 14, 13); ctx.fillStyle = '#5f6267'; for (let y = 5; y < 16; y += 3) ctx.fillRect(1, y, 14, 1); },
     'f': function (ctx, v, T) { clotureTuile(ctx, v, T, CLOTURE_GRILLAGE); },
     'w': function (ctx, v, T) { clotureTuile(ctx, v, T, CLOTURE_BOIS); },
-    "'": function (ctx, v, T) { clotureTuile(ctx, v, T, CLOTURE_BOIS_BARBELEE); },
-    '`': function (ctx, v, T) { haieDeCedres(ctx, v, T); },
     'X': function (ctx, v, T) { clotureTuile(ctx, v, T, CLOTURE_BARBELE); },
     // ⚠️ Le sol seulement (voir `railDeCoulissante`) ; `TUILES.Z.panneau` est ce
     // que `Monde` peint par-dessus, au pixel ou le panneau a glisse.

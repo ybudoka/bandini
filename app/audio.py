@@ -1197,6 +1197,10 @@ class Voix(TypedDict, total=False):
     a_toi: bool
     #: Une replique de la police : l'evenement qui la fait dire (`ONDES`).
     evenement: str
+    #: Une replique de radio qui PARLE DU TEMPS : le ciel qui lui donne raison
+    #: (`METEOS`). Les ondes ne la disent que sous ce ciel-la ; absente, la
+    #: replique est neutre et passe par tous les temps.
+    meteo: str
 
 
 #: ⚠️ Deux voix nommees du compte ElevenLabs ; si l'une disparait,
@@ -1382,15 +1386,36 @@ VOIX: list[Voix] = [
     # chose qu'aucun clip ne dirait.
     {"slug": "brume_nuit_r", "texte": "Vous écoutez La Brume, cent trois virgule sept. Il est minuit passé sur le port.",
      "genre": "radio_brume", "voix": VOIX_BRUME, "volume": 0.62, "style": 0.35, "stabilite": 0.6},
-    {"slug": "brume_pluie_r", "texte": "La pluie rentre par la baie. Restez au chaud, on continue.",
+    #
+    # ⚠️ **CE QUI PARLE DU TEMPS PORTE SA `meteo`** (30 sept. 2026, Martin : « les
+    # commentaires radio doivent etre conformes a la meteo, ou neutres »). Taxi-Radio
+    # criait « y fait beau! » en pleine tempete, La Brume annoncait la pluie un soir
+    # de janvier sec. `Son.Ondes.ciel` dit le temps qu'il fait ; une replique marquee
+    # ne passe que sous son ciel, une replique sans marque passe toujours. Un juge
+    # refuse une replique de radio qui nomme le temps sans le marquer.
+    {"slug": "brume_pluie_r", "meteo": "pluie", "texte": "La pluie rentre par la baie. Restez au chaud, on continue.",
+     "genre": "radio_brume", "voix": VOIX_BRUME, "volume": 0.62, "style": 0.35, "stabilite": 0.6},
+    {"slug": "brume_neige_r", "meteo": "neige", "texte": "Il neige sur le port. Les chars dorment sous la neige, nous autres, on veille.",
+     "genre": "radio_brume", "voix": VOIX_BRUME, "volume": 0.62, "style": 0.35, "stabilite": 0.6},
+    {"slug": "brume_brouillard_r", "meteo": "brouillard", "texte": "Brouillard sur la baie à matin. La Brume porte bien son nom. Roulez doucement.",
+     "genre": "radio_brume", "voix": VOIX_BRUME, "volume": 0.62, "style": 0.35, "stabilite": 0.6},
+    {"slug": "brume_verglas_r", "meteo": "verglas", "texte": "Tout est glacé dehors. Si vous avez pas besoin de sortir, sortez pas.",
      "genre": "radio_brume", "voix": VOIX_BRUME, "volume": 0.62, "style": 0.35, "stabilite": 0.6},
     {"slug": "brume_demandes_r", "texte": "Une petite dernière avant les nouvelles, pour ceux qui travaillent de nuit.",
      "genre": "radio_brume", "voix": VOIX_BRUME, "volume": 0.62, "style": 0.35, "stabilite": 0.6},
-    {"slug": "taxi_bonjour_r", "texte": "Taxi-Radio, votre station! On est en ondes, pis y fait beau à Baie-des-Brumes!",
+    {"slug": "taxi_bonjour_r", "meteo": "beau", "texte": "Taxi-Radio, votre station! On est en ondes, pis y fait beau à Baie-des-Brumes!",
      "genre": "radio_taxi", "voix": VOIX_CRIEUR, "volume": 0.66, "style": 0.65, "stabilite": 0.35},
     {"slug": "taxi_trafic_r", "texte": "Ça bouchonne su'l pont, mes amis. Prenez donc la rue des Érables.",
      "genre": "radio_taxi", "voix": VOIX_CRIEUR, "volume": 0.66, "style": 0.65, "stabilite": 0.35},
     {"slug": "taxi_merci_r", "texte": "Un gros merci à nos commanditaires, pis on remet ça!",
+     "genre": "radio_taxi", "voix": VOIX_CRIEUR, "volume": 0.66, "style": 0.65, "stabilite": 0.35},
+    {"slug": "taxi_pluie_r", "meteo": "pluie", "texte": "Y mouille à siaux, mes amis! Essuie-glaces au boutte, pis on garde le moral!",
+     "genre": "radio_taxi", "voix": VOIX_CRIEUR, "volume": 0.66, "style": 0.65, "stabilite": 0.35},
+    {"slug": "taxi_neige_r", "meteo": "neige", "texte": "Tempête de neige su'a ville! Laissez passer la charrue : elle, a' travaille.",
+     "genre": "radio_taxi", "voix": VOIX_CRIEUR, "volume": 0.66, "style": 0.65, "stabilite": 0.35},
+    {"slug": "taxi_brouillard_r", "meteo": "brouillard", "texte": "Brouillard à couper au couteau! Allumez vos phares, pis klaxonnez aux coins.",
+     "genre": "radio_taxi", "voix": VOIX_CRIEUR, "volume": 0.66, "style": 0.65, "stabilite": 0.35},
+    {"slug": "taxi_verglas_r", "meteo": "verglas", "texte": "Verglas partout, mes amis! Freinez d'avance, pis priez un peu.",
      "genre": "radio_taxi", "voix": VOIX_CRIEUR, "volume": 0.66, "style": 0.65, "stabilite": 0.35},
     # --- Les pubs. ⚠️ **ELLES CHANGENT QUAND TU ACHETES LE COMMERCE**, et c'est
     # cette ligne-la qui fait que ca vaut la peine, pas une autre : entendre son
@@ -1531,6 +1556,12 @@ ONDES = {
 #: (« la radio ne parlait pas »), prise par l'autre bout. Quand Martin aura ses
 #: credits, ces deux clips-la se brancheront ici.
 GENRES_SANS_CLIP = frozenset({"bulletin"})
+
+#: LES CIELS qu'une replique de radio peut nommer (`Voix.meteo`), tels que
+#: `Son.Ondes.ciel` les lit : la pluie, la tempete de neige, le brouillard du
+#: matin, le verglas — et `beau` quand il n'y a rien de tout ca. ⚠️ Le brouillard
+#: et le verglas vivent derriere leur option : eteinte, leur ciel n'arrive jamais.
+METEOS = ("beau", "pluie", "neige", "brouillard", "verglas")
 
 #: LE SOUFFLE DU JOUEUR (M15, 2e vague) : la barre d'endurance, lisible sans la
 #: regarder. Tout est une part de `recherche.VITESSES["endurance"]`.
@@ -1892,8 +1923,13 @@ def voix_a_la_volee() -> list[Voix]:
     pesait 2,34 Mo sur un plafond de 2,5, et vingt-quatre repliques de plus
     l'auraient fait sauter. Le plafond protege la 3G du premier ecran ; le juge du
     poids les met donc a part, comme les bruits de quartier.
+
+    ⚠️ **ET CELLES D'UN CIEL** (`meteo`, 30 sept. 2026) : une replique de radio
+    qui dit la tempete ne sert qu'un soir de tempete. Elle arrive avec son ciel
+    (`Son.Voix.chargerMeteo`) ; les sept du 30 sept. auraient fait deborder le
+    premier ecran de 220 Ko, sur 6 Ko de marge.
     """
-    return [v for v in VOIX if v.get("quand", CONTEXTE_DE_DEPART) != CONTEXTE_DE_DEPART]
+    return [v for v in VOIX if v.get("quand", CONTEXTE_DE_DEPART) != CONTEXTE_DE_DEPART or v.get("meteo")]
 
 
 #: Le format des radios : 44 kHz a 64 kbit/s. Plus bas, un cuivre devient une
@@ -2117,7 +2153,7 @@ def exporter() -> dict:
         "voix": [
             {"slug": v["slug"], "genre": v["genre"], "volume": v["volume"],
              **({} if v["genre"] in GENRES_DES_ONDES else {"texte": v["texte"]}),
-             **{cle: v[cle] for cle in ("quand", "propriete", "a_toi", "evenement") if cle in v},
+             **{cle: v[cle] for cle in ("quand", "propriete", "a_toi", "evenement", "meteo") if cle in v},
              "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None}
             for v in VOIX + VOIX_DE_LA_POLICE
         ],
