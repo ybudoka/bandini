@@ -470,9 +470,15 @@ def test_le_paquet_reste_leger(paquets):
     posé ses répliques (`repliques_de_la_file`) : la suite passait à 20 352. Regardé avant : `replique` ne s'écrit
     plus que s'il diffère du slug ; couper encore 852 octets, c'était retirer un klaxon ou les textes. Le plafond
     gzip (8 500) ne bouge pas.
+
+    ⚠️ **LA PATINOIRE DU PARC, LE MÊME JOUR — 21 000 → 23 000 bruts, 8 500 → 9 500 gzip**
+    (docs/jalons/la-patinoire-du-parc.md). Sa fiche (couleurs, glisse, patineurs, patins et les mots de Madame
+    Thibodeau, le son : 1 257 bruts, 726 gzip seule) n'est lue qu'en ville, l'hiver. Regardé avant : les
+    définitions sont pleines (les klaxons en sont sortis pour ça), la carte a son plafond à elle. Mesure avec
+    elle : suite 21 622 bruts, 8 998 gzip.
     """
     for nom, brut_max, fil_max in (("definitions", 241_000, 57_500), ("carte", 560_000, 55_000),
-                                   ("musiques", 50_000, 10_000), ("suite", 21_000, 8_500)):
+                                   ("musiques", 50_000, 10_000), ("suite", 23_000, 9_500)):
         paquet = getattr(paquets, nom)
         mesures = {"definitions": MESURE_DU_PAQUET, "carte": MESURE_DE_LA_CARTE}
         qui = f" — qui a grossi : {_qui_a_grossi(paquet.corps, mesure=mesures[nom])}" if nom in mesures else ""
