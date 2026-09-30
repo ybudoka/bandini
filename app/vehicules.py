@@ -607,6 +607,13 @@ PHYSIQUE = {
     # d'une fraction de la longueur : le nez balaie, le train arriere suit.
     # ⚠️ Et jamais dans un mur : le decalage n'est pris que s'il est libre.
     "pivot_arriere": 0.28,
+    # ⚠️ **UNE COQUE N'EST PAS UN CHAR** (Martin, 30 sept. 2026) : elle pivote au
+    # tiers avant — un sixieme de sa longueur DEVANT le centre (negatif) —, et
+    # c'est la poupe qui chasse, pas le nez qui balaie. Elle n'a pas de frein :
+    # l'arriere met la machine en arriere, qui pousse a `machine_arriere` fois
+    # l'acceleration, a toute vitesse, sans le frein sec d'un char.
+    "pivot_eau": -0.17,
+    "machine_arriere": 0.8,
     # ⚠️ Ce qu'un lourd defonce : les obstacles BAS (cloture, borne-fontaine,
     # poubelle, caisse) et eux seuls. Jamais une facade : la ville tient par
     # ses murs — les juges de connexite, les interieurs et les devantures en

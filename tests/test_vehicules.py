@@ -89,6 +89,10 @@ def test_le_trafic_et_la_physique_sont_bornes():
     # moins aussi vite qu'il prend — sinon on reste braqué après avoir lâché.
     assert 0 < ph["volant_prise"] <= ph["volant_retour"] <= 1
     assert 0 <= ph["pivot_arriere"] < 0.5, "le pivot est DERRIERE le centre, pas derriere le char"
+    # Les bateaux ne sont pas des chars : une coque pivote DEVANT son centre (la poupe chasse), et
+    # l'arriere met la machine en arriere — une poussee, jamais plus que l'acceleration.
+    assert -0.5 < ph["pivot_eau"] < 0, "la coque pivote devant son centre, pas derriere ni hors de la coque"
+    assert 0 < ph["machine_arriere"] <= 1, "la machine arriere pousse, sans freiner plus sec qu'elle accelere"
 
 
 def test_aucune_fiche_ne_promet_une_pointe_que_la_physique_refuse():

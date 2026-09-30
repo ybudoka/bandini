@@ -53,3 +53,71 @@ l'eau.
 - ⚠️ **L'épave qui coule** : une cible de mission détruite reste comptée détruite (m52 à m54) — s'effacer ne doit
   pas la faire revenir « debout ».
 - ⚠️ Chaque règle neuve a son juge, et chaque juge est vu rougir, règle retirée.
+
+## Plan de la vague 1
+
+> Écrit avec superpowers:writing-plans (30 sept. 2026) ; exécuté dans la session, test d'abord.
+
+**But** : une coque se pilote comme une coque — la poupe chasse, pas de frein sec, l'erre, et la météo de la rue ne
+touche pas l'eau. **Architecture** : une branche `eau` dans `Vehicules.majPhysique` (`static/js/vehicules.js`), deux
+nombres neufs dans `PHYSIQUE` (`app/vehicules.py`) — `pivot_eau` et `machine_arriere` —, un garde dans
+`Pluie.majChar`. Aucune fiche de bateau ne change, aucune tuile, aucun dé : la ville ne bouge pas.
+
+**Ce qui mord le plus probablement, et son juge** : (1) une coque qui chasse de la poupe contre un quai — le pivot
+reste refusé dans un mur (`bloqueParLesTuiles`), comme celui des chars ; (2) le virage automatique du large
+(`virerDeBord`) garde son pivot au centre — `tests/test_aeroport_js.py` rejoué ; (3) la vedette de la vague 4
+héritera de la branche — elle passe par `majPhysique` comme la police ; (4) les chars ne changent pas d'un pixel —
+`tests/test_derapage_js.py` et `tests/test_conduite_js.py` rejoués ; (5) le frein à main ne fait rien sur l'eau.
+
+**Tâche 1 — les deux nombres.** `app/vehicules.py`, `PHYSIQUE`, sous `pivot_arriere` :
+`"pivot_eau": -0.17` (la coque pivote au tiers avant : un sixième de la longueur DEVANT le centre, la poupe
+chasse) et `"machine_arriere": 0.8` (l'arrière pousse à 0,8 × l'accélération, à toute vitesse : pas de frein).
+Juge dans `tests/test_vehicules.py`, à côté de celui de `pivot_arriere` :
+`assert -0.5 < ph["pivot_eau"] < 0` et `assert 0 < ph["machine_arriere"] <= 1`.
+
+**Tâche 2 — la poupe chasse.** `pivoterSurLArriere(v, ancien)` devient `pivoter(v, ancien, fraction)` (la
+fraction de longueur DERRIÈRE le centre ; négative, devant) ; `majPhysique` passe `ph.pivot_eau` pour une coque,
+`ph.pivot_arriere` sinon. Juge `test_la_poupe_chasse_le_nez_tient` (`tests/test_bateaux_conduite_js.py`) : une
+chaloupe au plein large, lancée à 2 px/image, le même état joué dix images droit puis dix images barre à fond
+(`v.volant = 1`) ; on mesure de combien l'étrave et la poupe s'écartent entre les deux. Coque : la poupe s'écarte
+plus que l'étrave ; auto (même mesure sur une chaussée) : l'inverse.
+
+**Tâche 3 — la machine arrière, pas de frein à main.** Dans `majPhysique`, pour une coque : `cmd.frein` retire
+`d.acceleration * ph.machine_arriere * cmd.frein` à chaque image, à toute vitesse (pas de seuil de 0,15, pas de
+`d.frein`), et `cmd.freinMain` ne fait rien (ni 0,965, ni 1,35 au volant, ni `adherence_frein`). Juge
+`test_la_machine_arriere_ralentit_sans_frein_sec` : une chaloupe à 3 px/image, arrière à fond — plus de 100
+images pour passer sous 0 (le frein de char le faisait en 64), la vitesse descend à chaque image sans saut, puis
+recule jusqu'à `-vitesse_recul` ; et `test_sur_l_eau_le_frein_a_main_ne_fait_rien` : la même trajectoire au pixel
+avec et sans `freinMain`.
+
+**Tâche 4 — la météo reste sur la rue.** Pour une coque, `g = 1` (ni `Neige`, ni `Verglas`, ni `Pluie`, ni
+`Monde.adherenceMouillee`, ni `Garage.hiver`) et le frein n'existe plus (tâche 3). Juge
+`test_la_neige_et_la_pluie_ne_touchent_pas_l_eau` : les cinq coefficients bouchés à 0,3 et des pneus d'hiver ;
+la trajectoire d'une chaloupe (gaz, barre, arrière) est la même au pixel qu'au sec — et celle d'une auto change
+(sinon le bouchon ne mord pas).
+
+**Tâche 5 — pas de feuilles sous une coque.** `Pluie.majChar` : `if (v.def && v.def.eau) return;` en tête.
+Juge `test_en_octobre_une_coque_ne_souleve_pas_de_feuilles` : jour 32, une chaloupe lancée au plein large sous la
+caméra, quarante images de `majChar` — aucune particule ; une auto sur la rue, le même jour, en soulève (le
+juge d'octobre existant).
+
+**Atterrir** : juges ciblés (`test_bateaux_conduite_js`, `test_vehicules`, `test_bateau`, `test_derapage_js`,
+`test_conduite_js`, `test_aeroport_js`, `test_pluie_js`, `test_navires_js`, `test_monde_js`, `test_definitions`)
++ `uv run ruff check .`, chaque juge neuf vu rougir règle retirée ; commit `fix:`, cherry-pick sur `dev`,
+`merge --ff-only`. La ligne du plan dit « ✅ vague 1 livrée ». Martin essaie avant la vague 2.
+
+## Notes
+
+- **Vague 1 livrée le 30 sept. 2026 — la conduite.** Deux nombres dans `PHYSIQUE` (`app/vehicules.py`) :
+  `pivot_eau` −0,17 (le pivot un sixième de la longueur DEVANT le centre) et `machine_arriere` 0,8 (l'arrière pousse
+  à 0,8 × l'accélération, à toute vitesse). `pivoterSurLArriere` devient `pivoter(v, ancien, fraction)`, toujours
+  refusé dans un mur. Pour une coque, `majPhysique` n'a ni frein sec ni frein à main, et `g = 1` : ni neige, ni
+  verglas, ni pluie, ni rue mouillée, ni pneus d'hiver. `Pluie.majChar` ne fait rien pour une coque. Les chars ne
+  changent pas d'un pixel (leur branche est la même, relue).
+- Mesuré : la chaloupe à 3 px/image, arrière à fond, s'arrête en plus de 100 images (68 avec le frein de char) ;
+  barre à fond, la poupe s'écarte plus de 1,5 fois plus que l'étrave (l'inverse avant : 2,5 contre 8,7 px).
+- **Les juges** : `tests/test_bateaux_conduite_js.py` (cinq, chacun vu rougir avant la règle) et les deux bornes
+  dans `test_vehicules.py::test_le_trafic_et_la_physique_sont_bornes`.
+- ⚠️ Le porte-conteneurs met environ 5 s à s'arrêter depuis sa pointe (0,004/image de machine arrière) : c'est
+  voulu, à confirmer par Martin à quai. L'aide des commandes dit encore « FREIN À MAIN » en bateau (`hud.js`) :
+  vague 5.

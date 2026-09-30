@@ -215,7 +215,8 @@ const Pluie = (function () {
       du jeu, 300 au plus ; une flaque par char toutes les `repit_images`). */
   function majChar(v) {
     const d = donnees();
-    if (!d || !B.partie || B.interieur) return;
+    // Une coque ne souleve ni feuilles ni flaques : la rue est sur la terre (les bateaux, vague 1).
+    if (!d || !B.partie || B.interieur || (v.def && v.def.eau)) return;
     const e = d.effets;
     if (v.flaqueT > 0) v.flaqueT--;
     // ⚠️ CHAQUE CHAR, CHAQUE IMAGE, gares compris : on sort avant tout calcul pour ce qui est au pas.

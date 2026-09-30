@@ -2494,7 +2494,7 @@ const Monde = (function () {
       entré dans le large refusé — de moins que la lisière —, il ressort par le bord le
       plus proche, sur un seul axe : comme contre un mur, on glisse le long. Rend la
       direction de sortie ({ x, y }) quand la ligne a mordu, sinon null. ⚠️ Sans
-      mémoire du pas d'avant : un char qui pivote sur son arrière (`pivoterSurLArriere`)
+      mémoire du pas d'avant : un char qui pivote (`pivoter`, sur son arrière ou au tiers avant d'une coque)
       ou qu'un autre pousse y entre aussi, sans passer par `avancer`. */
   function retenirAuLarge(e) {
     const z = largeRefuse();

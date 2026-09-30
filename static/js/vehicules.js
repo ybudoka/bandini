@@ -43,9 +43,12 @@ const Vehicules = (function () {
 
   /** Le char pivote sur son ARRIERE, pas sur son nombril : le nez balaie, le
       train arriere suit. Le centre se deplace donc quand le cap tourne — et
-      seulement si la place est libre, sinon on tournerait dans un mur. */
-  function pivoterSurLArriere(v, ancien) {
-    const a = v.def.longueur * physique().pivot_arriere;
+      seulement si la place est libre, sinon on tournerait dans un mur.
+      `fraction` : ou est le pivot, en part de la longueur DERRIERE le centre
+      (`pivot_arriere`) ; negative, il est devant — une coque (`pivot_eau`) : la
+      poupe chasse. */
+  function pivoter(v, ancien, fraction) {
+    const a = v.def.longueur * fraction;
     const x = v.x + (Math.cos(v.angle) - Math.cos(ancien)) * a;
     const y = v.y + (Math.sin(v.angle) - Math.sin(ancien)) * a;
     if (bloqueParLesTuiles(v, x, y)) return;
@@ -1123,15 +1126,21 @@ const Vehicules = (function () {
   }
 
   function majPhysique(v, cmd) {
-    const d = v.def, sol = allureDuSol(v);
+    const d = v.def, sol = allureDuSol(v), ph = physique();
+    // ⚠️ UNE COQUE N'EST PAS UN CHAR (les bateaux, vague 1) : pas de frein ni de frein a main — l'arriere
+    // met la machine en arriere —, la meteo de la rue ne touche pas l'eau, et elle pivote au tiers avant.
+    const eau = !!d.eau;
     // ⚠️ La nitro pousse l'acceleration du meme facteur que la pointe : la pointe est un equilibre avec
     // la friction, et une pointe relevee sans acceleration ne s'atteint jamais.
     if (cmd.gaz > 0) v.vitesse += d.acceleration * sol * cmd.gaz * Garage.pointe(v);
-    if (cmd.frein > 0) {
+    if (eau) {
+      if (cmd.frein > 0) v.vitesse -= d.acceleration * ph.machine_arriere * cmd.frein;
+    } else if (cmd.frein > 0) {
       if (v.vitesse > 0.15) v.vitesse -= d.frein * cmd.frein * Garage.hiver(v, Neige.frein(v) * Verglas.frein()) * Monde.freinMouille(v) * Pluie.frein(v);
       else v.vitesse -= d.acceleration * 0.7 * cmd.frein;      // marche arriere
     }
-    if (cmd.freinMain) v.vitesse *= 0.965;
+    const freinMain = cmd.freinMain && !eau;
+    if (freinMain) v.vitesse *= 0.965;
     v.vitesse *= d.friction;
     // La NITRO (le garage de Ti-Guy) pousse la pointe le temps de sa bonbonne (`Garage.pointe`).
     v.vitesse = borner(v.vitesse, -d.vitesse_recul, d.vitesse_max * sol * Garage.pointe(v));
@@ -1140,12 +1149,11 @@ const Vehicules = (function () {
     // ⚠️ CE QUE LE SOL TIENT : la neige et la glace (que les PNEUS D'HIVER de Ti-Guy rendent en partie),
     // la rue mouillee, la pluie. Au sec, 1 — et le DERAPAGE (`Derapage`, les saisons, lot 6) ne
     // s'eveille que sous 1 : au sec, la conduite ne change pas d'un pixel.
-    const g = Garage.hiver(v, Neige.adherence(v) * Verglas.adherence()) * Monde.adherenceMouillee(v) * Pluie.adherence(v);
+    const g = eau ? 1 : Garage.hiver(v, Neige.adherence(v) * Verglas.adherence()) * Monde.adherenceMouillee(v) * Pluie.adherence(v);
     const perte = 1 - Math.min(1, g);
     // ⚠️ LE VOLANT SE TOURNE, il ne se claque pas : il prend vers la consigne
     // et se recentre quand on lache. Au clavier, sans ca, chaque appui etait
     // un coup de butee a butee.
-    const ph = physique();
     const consigne = borner(cmd.direction || 0, -1, 1);
     v.volant = (v.volant || 0) + (consigne - (v.volant || 0)) * (consigne ? ph.volant_prise : ph.volant_retour);
     if (Math.abs(v.volant) < 0.01) v.volant = 0;
@@ -1158,17 +1166,17 @@ const Vehicules = (function () {
       // est lisse, et une consigne retournee au passage a vitesse nulle le
       // faisait traverser de butee a butee — le char tournait du mauvais cote
       // au debut de chaque recul.
-      const omega = Math.abs(v.vitesse) / d.rayon_braquage * courbeBraquage(t) * (cmd.freinMain ? 1.35 : 1)
+      const omega = Math.abs(v.vitesse) / d.rayon_braquage * courbeBraquage(t) * (freinMain ? 1.35 : 1)
         * Derapage.volant(v, cmd, perte, t);        // le sous-virage, les roues bloquees (1 au sec)
       const ancien = v.angle;
       v.angle += v.volant * omega * (v.vitesse < 0 && !cmd.reculCommeEnAvant ? -1 : 1);
-      pivoterSurLArriere(v, ancien);
+      pivoter(v, ancien, eau ? ph.pivot_eau : ph.pivot_arriere);
     }
     Derapage.majLacet(v, cmd, perte, g, t);         // le survirage, le tete-a-queue, le contre-braquage
     // Adherence : la vitesse reelle glisse vers le cap. Frein a main : elle traine.
     // ⚠️ LA NEIGE DIVISE L'ADHERENCE (M12) — la police glisse comme tout le monde.
     // Les PNEUS D'HIVER (le garage de Ti-Guy) rendent une part de ce que la neige et la glace prennent.
-    const adh = (cmd.freinMain ? d.adherence_frein : d.adherence) * g;
+    const adh = (freinMain ? d.adherence_frein : d.adherence) * g;
     v.vx += (Math.cos(v.angle) * v.vitesse - v.vx) * adh;
     v.vy += (Math.sin(v.angle) * v.vitesse - v.vy) * adh;
     Derapage.majSol(v, perte);                      // les traces, les sillons, le crissement
@@ -3128,7 +3136,7 @@ const Vehicules = (function () {
     }
     const w = v.virage;
     const ecart = ecartAngle(v.angle, w.cap);
-    // ⚠️ Autour du CENTRE, pas de l'arriere (`pivoterSurLArriere`) : pivoter sur la
+    // ⚠️ Autour du CENTRE, pas de l'arriere (`pivoter`) : pivoter sur la
     // poupe d'un porte-conteneurs deplacerait son centre de plusieurs tuiles.
     v.angle += borner(ecart, -VIRAGE_RAD, VIRAGE_RAD);
     v.volant = 0;
