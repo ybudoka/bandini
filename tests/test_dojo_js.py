@@ -438,12 +438,14 @@ def test_on_ne_ramene_personne_en_pleine_course(banc):
         auDojo(L, o);
         const m = dansLeVide(L, o), j = L.B.joueur;
         // Un bond de plus de 4 px d'une image à l'autre : téléporté.
+        // ⚠️ Vers le BAS, sur le tatami : au-dessus, c'est la rangee de classeurs du mur du fond,
+        // et on ne marche plus sur les meubles (30 sept. 2026) — le juge n'aurait plus rien mesure.
         let bond = 0, px = j.x, py = j.y;
-        o.touche('ArrowUp');
+        o.touche('ArrowDown');
         for (let n = 0; n < L.B.defs.dojo.remise_images * 3; n++) {
             o.frame(1); bond = Math.max(bond, Math.hypot(j.x - px, j.y - py)); px = j.x; py = j.y;
         }
-        o.relacher('ArrowUp');
+        o.relacher('ArrowDown');
         return { bond: Math.round(bond), bouge: Math.round(Math.hypot(j.x - m.x0 - 40, j.y - m.y0)) };
     }""")
     assert r["bouge"] > 10, r                      # sinon le juge ne juge rien : il a marché

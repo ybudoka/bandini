@@ -3875,7 +3875,17 @@ const Entites = (function () {
   /** Deplace un cercle (approche par boite) contre les tuiles, axe par axe. */
   /** Une tuile qui arrete CETTE entite : le sol, ou une barriere fermee
       qu'elle aborde de l'exterieur (`Monde.barriereBloque`). */
-  function bloquePour(e, tx, ty, masque) { return Monde.bloque(tx, ty, masque) || Monde.barriereBloque(e, tx, ty); }
+  // ⚠️ LE MEUBLE OU L'ON EST ASSIS ne nous arrete pas : on ne marche plus sur les meubles
+  // (30 sept. 2026), mais l'avocat nait DANS sa chaise, le malade dans son lit — et la
+  // moindre poussee de la foule lui faisait voir le bord de sa propre tuile comme un mur :
+  // `deplacerCercle` le recrachait hors de la chaise, 13 px plus loin. On sort toujours
+  // du meuble ou l'on est ; on n'entre jamais dans un autre (le bord qui avance y bute
+  // bien avant que le centre y soit).
+  function bloquePour(e, tx, ty, masque) {
+    if (tx === Math.floor(e.x / TT) && ty === Math.floor(e.y / TT) && Monde.estMeuble(tx, ty)
+        && !Monde.bloque(tx, ty, masque & ~Monde.MEUBLE)) return Monde.barriereBloque(e, tx, ty);
+    return Monde.bloque(tx, ty, masque) || Monde.barriereBloque(e, tx, ty);
+  }
 
   function deplacerCercle(e, dx, dy, masque) {
     const r = e.r;
