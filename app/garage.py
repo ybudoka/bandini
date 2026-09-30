@@ -69,6 +69,30 @@ AIR_CUCARACHA: list[list[float]] = (
          [note("A4"), 4 * CROCHE]]
     + [[note(n), CROCHE] for n in ("F4", "F4", "E4", "E4", "D4", "D4")] + [[note("C4"), 4 * CROCHE]])
 
+
+
+def _air(unite: float, notes: str) -> list[list[float]]:
+    """Un air écrit en notes et en temps (« G4:1 E4:2 », `unite` secondes le temps) → (Hz, secondes)."""
+    return [[note(n), round(unite * float(t), 3)] for n, t in (x.split(":") for x in notes.split())]
+
+
+# LA DEUXIÈME VAGUE (docs/jalons/les-klaxons-de-ti-guy-deuxieme-vague.md) : le reste de la liste, à la corne.
+
+#: « Dixie », ce que la General Lee des Dukes of Hazzard claironne : « I wish I was in the land of cotton ».
+AIR_DIXIE = _air(0.13, "G4:1 E4:1 C4:2 C4:2 C4:1 D4:1 E4:1 F4:1 G4:2 G4:2 G4:2 E4:4")
+#: « Charge! », l'orgue des estrades : quatre notes qui montent, et la réponse tenue.
+AIR_CHARGE = _air(0.12, "G4:1 C5:1 E5:1 G5:2 E5:1 G5:4")
+#: « Alouette, gentille alouette » : do ré mi mi, ré do ré mi do sol — deux fois, la seconde qui se pose.
+AIR_ALOUETTE = _air(0.15, "C4:1 D4:1 E4:2 E4:2 D4:1 C4:1 D4:1 E4:1 C4:2 G3:2 "
+                          "C4:1 D4:1 E4:2 E4:2 D4:1 C4:1 D4:1 E4:1 C4:4")
+#: La ritournelle du camion de crème glacée, en do majeur et tout en haut, comme la boîte à musique du
+#: camion (`musique.RITOURNELLE`, tonique do 5) — qui, elle, s'improvise : celle-ci s'écrit.
+AIR_CREME_GLACEE = _air(0.13, "C5:1 E5:1 G5:1 C6:2 A5:1 G5:1 E5:1 G5:2 F5:1 D5:1 B4:1 D5:2 C5:4")
+#: La marche nuptiale (le chœur de Wagner) : « Here comes the bride », do fa-fa fa, do sol-mi fa.
+AIR_NUPTIALE = _air(0.1, "C4:3 F4:2 F4:1 F4:6 C4:3 G4:2 E4:1 F4:6")
+#: « Bip-bip », le Road Runner : deux coups aigus, le second un peu plus long.
+AIR_BIP_BIP = _air(0.07, "A5:2 A5:3")
+
 #: Ce que Ti-Guy a enregistré dans le klaxon « La voix de Ti-Guy » : une engueulade par coup, tirée à
 #: l'empreinte, jamais deux fois la même de suite (`Garage.klaxonner`). Slug : `ti_guy-garage-crie-<n>`.
 ENGUEULADES: list[str] = [
@@ -99,6 +123,18 @@ KLAXONS: list[dict] = [
      "voix": [f"ti_guy-garage-crie-{i}" for i in range(1, len(ENGUEULADES) + 1)]},
     {"slug": "police", "nom": "Whoop-whoop de police", "prix": 400, "son": "whoop_police", "cede": True,
      "delit": "fausse_sirene", "oreille_tuiles": 12},
+    # La deuxième vague. `enfants` : les enfants à vélo du coin accourent (`Missions.attirerLesEnfants`) ;
+    # `canettes` : des canettes traînent derrière le char (`Vehicules.dessinerUn`).
+    {"slug": "dixie", "nom": "Klaxon « Dixie »", "prix": 200, "air": AIR_DIXIE},
+    {"slug": "charge", "nom": "Klaxon « Charge! »", "prix": 150, "air": AIR_CHARGE},
+    {"slug": "alouette", "nom": "Klaxon « Alouette »", "prix": 150, "air": AIR_ALOUETTE},
+    {"slug": "creme_glacee", "nom": "Klaxon de crème glacée", "prix": 200, "air": AIR_CREME_GLACEE, "enfants": True},
+    {"slug": "nuptiale", "nom": "Marche nuptiale et canettes", "prix": 250, "air": AIR_NUPTIALE, "canettes": True},
+    {"slug": "bip_bip", "nom": "Klaxon « Bip-bip »", "prix": 100, "air": AIR_BIP_BIP},
+    {"slug": "aouga", "nom": "A-ou-ga de Ford T", "prix": 150, "son": "klaxon_aouga"},
+    {"slug": "vache", "nom": "Klaxon qui meugle", "prix": 150, "son": "klaxon_vache"},
+    {"slug": "pouet", "nom": "Pouet de clown", "prix": 100, "son": "klaxon_pouet"},
+    {"slug": "enroue", "nom": "Klaxon enroué", "prix": 50, "son": "klaxon_enroue"},
 ]
 
 
@@ -124,6 +160,16 @@ REPLIQUES: list[dict] = [
     {"cle": "corne_a_air", "texte": "Une corne de dix-huit roues. Klaxonne pas en arrière d'une matante, a va perdre son dentier."},
     {"cle": "ti_guy", "texte": "J'ai enregistré ma voix là-dedans. Même quand chus pas là, j'engueule le monde pour toi."},
     {"cle": "police", "texte": "Un whoop-whoop de police. Les chars se tassent… mais si un vrai bœuf l'entend, t'es dans marde."},
+    {"cle": "dixie", "texte": "Dixie, comme dans Dukes of Hazzard. Saute pas de pont avec, par exemple."},
+    {"cle": "charge", "texte": "Charge! Comme au Forum. Y manque juste l'orgue pis la bière à huit piastres."},
+    {"cle": "alouette", "texte": "Alouette, gentille alouette. Klaxonne ça devant un Français, y va pleurer."},
+    {"cle": "creme_glacee", "texte": "La toune du camion de crème glacée. Fais attention, les p'tits vont te courir après."},
+    {"cle": "nuptiale", "texte": "La marche nuptiale, pis les canettes en arrière. Just married, mon homme!"},
+    {"cle": "bip_bip", "texte": "Bip-bip, comme le Road Runner. Le coyote, lui, y a jamais eu de klaxon."},
+    {"cle": "aouga", "texte": "Un a-ou-ga de Ford T. Ça, c'est de la classe."},
+    {"cle": "vache", "texte": "Une vache. Pour les gars de La Pointe qui s'ennuient de leur troupeau."},
+    {"cle": "pouet", "texte": "Un pouet de clown. Personne va te prendre au sérieux, mais tout le monde va se tasser."},
+    {"cle": "enroue", "texte": "Celui-là tousse. Cinquante piastres, c'est le prix d'un klaxon qui a la grippe."},
 ]
 
 
@@ -157,5 +203,14 @@ def exporter_klaxons() -> list[dict]:
     (`definitions.DANS_LA_SUITE`, 30 sept. 2026) : leurs airs ne tenaient pas sous le plafond, et personne ne
     klaxonne à l'écran titre. Tant qu'ils ne sont pas là, le klaxon ordinaire joue et le menu n'en montre aucun."""
     textes = {r["cle"]: r["texte"] for r in REPLIQUES}
-    return [dict(k, texte=textes[k.get("replique", k["slug"])], **({"air": [list(n) for n in k["air"]]} if "air" in k else {}))
+    return [dict(k, texte=textes[k.get("replique", k["slug"])], **(air_serre(k["air"]) if "air" in k else {}))
             for k in KLAXONS]
+
+
+def air_serre(air: list[list[float]]) -> dict:
+    """Un air pour le paquet, ÉCRIT SERRÉ (la suite est à l'étroit) : `unite` (la plus courte note, en
+    secondes) et `air`, « Hz:temps » séparés d'une espace — « 440:1 392:1 523:3 ». Le Hz s'arrondit à
+    l'entier : au pire deux cents d'écart, rien qu'un klaxon puisse faire entendre. `Garage.notesDe` le
+    déplie."""
+    unite = min(d for _, d in air)
+    return {"unite": unite, "air": " ".join(f"{round(hz)}:{round(d / unite, 2):g}" for hz, d in air)}

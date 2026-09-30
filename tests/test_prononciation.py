@@ -41,6 +41,9 @@ def test_le_lexique_est_un_pls_qu_elevenlabs_lit():
 #: l'IPA est `ɡ` (U+0261), et le R d'ici est `ʁ` — une touche du clavier glissée dans un
 #: phonème est une faute de frappe, pas un son.
 IPA = set("abdefhijklmnopstuvwyzøŋœɑɔəɛɡɪʁʃʊʒɲɥʏ") | {"\u0303", "ː", "ˈ", "ˌ", ".", " "}
+#: ⚠️ ET CELLE DES MOTS ANGLAIS (30 sept. 2026, les klaxons de Ti-Guy : « Cracker Jack », « Road Runner ») :
+#: Martin veut l'accent anglais sur les mots anglais — le R anglais, le A de « cat », le U de « run », le -er.
+IPA |= set("ɹæʌɚ")
 
 
 def _lexemes_bruts():

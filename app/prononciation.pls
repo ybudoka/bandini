@@ -60,6 +60,19 @@
        « Anvoueille » gagne, devant « Envoueille » et les IPA ɑ̃vwɛːj, ɑ̃ˈvwɛj. -->
   <lexeme><grapheme>Envoye</grapheme><alias>Anvoueille</alias></lexeme> <!-- dit : Anvoueille -->
 
+  <!-- LES MOTS ANGLAIS DE TI-GUY (les klaxons, docs/jalons/les-klaxons-de-ti-guy-deuxieme-vague.md).
+       Écouté le 30 sept. 2026 SANS (Ti-Guy, « une boîte de Cracker Jack ») : Martin veut que la voix
+       « utilise plus l'accent anglais pour les mots en anglais » ; v3 les lisait à la française. Des
+       phonèmes ANGLAIS (ɹ, æ, ʌ, ɚ) pour ces mots seulement : une balise d'accent colorerait toute la
+       réplique. AVEC : à confirmer à l'écoute. -->
+  <lexeme><grapheme>Cracker Jack</grapheme><phoneme>ˈkɹækɚ ˈdʒæk</phoneme></lexeme> <!-- dit : Crak-eur Djak, à l'anglaise -->
+  <lexeme><grapheme>whoop-whoop</grapheme><phoneme>ˈwʊp ˈwʊp</phoneme></lexeme> <!-- dit : woup-woup, à l'anglaise -->
+  <lexeme><grapheme>Camaro</grapheme><phoneme>kəˈmɛɹoʊ</phoneme></lexeme> <!-- dit : Ka-mé-ro, à l'anglaise -->
+  <lexeme><grapheme>Dukes of Hazzard</grapheme><phoneme>ˈduks əv ˈhæzɚd</phoneme></lexeme> <!-- dit : Doukss ov Hazeurd, à l'anglaise -->
+  <lexeme><grapheme>Dixie</grapheme><phoneme>ˈdɪksi</phoneme></lexeme> <!-- dit : Dik-si, à l'anglaise -->
+  <lexeme><grapheme>Road Runner</grapheme><phoneme>ˈɹoʊd ˈɹʌnɚ</phoneme></lexeme> <!-- dit : Rôde Reuneur, à l'anglaise -->
+  <lexeme><grapheme>Just married</grapheme><phoneme>ˈdʒʌst ˈmæɹid</phoneme></lexeme> <!-- dit : Djeust Maride, à l'anglaise -->
+
   <!-- =================================================================== -->
   <!-- ===== EN RÉSERVE : les autres formes des mots écoutés ============= -->
   <!-- =================================================================== -->

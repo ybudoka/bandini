@@ -578,6 +578,17 @@ JEU.update({
     "ti_guy-garage-corne_a_air": "[enthusiastic] Une corne de dix-huit roues. [laughs] Klaxonne pas en arrière d'une matante, a va perdre son dentier.",
     "ti_guy-garage-ti_guy": "[smugly] J'ai enregistré ma voix là-dedans. Même quand chus pas là, j'engueule le monde pour toi.",
     "ti_guy-garage-police": "[mischievously] Un whoop-whoop de police. Les chars se tassent… [gravely] mais si un vrai bœuf l'entend, t'es dans marde.",
+    # La deuxième vague (docs/jalons/les-klaxons-de-ti-guy-deuxieme-vague.md).
+    "ti_guy-garage-dixie": "[excited] Dixie, comme dans Dukes of Hazzard. [teasing] Saute pas de pont avec, par exemple.",
+    "ti_guy-garage-charge": "[enthusiastic] Charge! Comme au Forum. [wryly] Y manque juste l'orgue pis la bière à huit piastres.",
+    "ti_guy-garage-alouette": "[playfully] Alouette, gentille alouette. [laughs] Klaxonne ça devant un Français, y va pleurer.",
+    "ti_guy-garage-creme_glacee": "[amused] La toune du camion de crème glacée. [teasing] Fais attention, les p'tits vont te courir après.",
+    "ti_guy-garage-nuptiale": "[warmly] La marche nuptiale, pis les canettes en arrière. [laughs] Just married, mon homme!",
+    "ti_guy-garage-bip_bip": "[playfully] Bip-bip, comme le Road Runner. [deadpan] Le coyote, lui, y a jamais eu de klaxon.",
+    "ti_guy-garage-aouga": "[smugly] Un a-ou-ga de Ford T. Ça, c'est de la classe.",
+    "ti_guy-garage-vache": "[deadpan] Une vache. [amused] Pour les gars de La Pointe qui s'ennuient de leur troupeau.",
+    "ti_guy-garage-pouet": "[amused] Un pouet de clown. Personne va te prendre au sérieux, [laughs] mais tout le monde va se tasser.",
+    "ti_guy-garage-enroue": "[sarcastic] Celui-là tousse. Cinquante piastres, c'est le prix d'un klaxon qui a la grippe.",
     # … et les engueulades qu'il a enregistrées dedans (`garage.ENGUEULADES`) : il GUEULE, au volant d'un autre.
     "ti_guy-garage-crie-1": "[angry] [shouting] Tasse-toé!",
     "ti_guy-garage-crie-2": "[annoyed] [shouting] Enweye, avance!",

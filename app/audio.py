@@ -398,6 +398,18 @@ CATALOGUE: list[Echantillon] = [
     _e("whoop_police", "Whoop-whoop de police", duree_s=1.0, volume=0.7, influence=0.8,
        prompt="a police car siren yelp, two quick electronic whoop whoop sweeps, loud, close, "
               "no engine, no music"),
+    # La deuxième vague (docs/jalons/les-klaxons-de-ti-guy-deuxieme-vague.md) : au niveau du klaxon ordinaire.
+    _e("klaxon_aouga", "A-ou-ga de Ford T", duree_s=1.2, volume=0.75, influence=0.8,
+       prompt="an antique Model T Ford klaxon horn, one loud mechanical ahooga honk, close, "
+              "no engine, no music"),
+    _e("klaxon_vache", "Klaxon qui meugle", duree_s=1.5, volume=0.6, influence=0.7,
+       prompt="a novelty car horn that plays a loud cow moo, one long comic moo through a horn "
+              "speaker, close, no music"),
+    _e("klaxon_pouet", "Pouet de clown", duree_s=0.8, volume=0.75, influence=0.8,
+       prompt="a clown rubber bulb horn squeezed twice quickly, honk honk, close, no music"),
+    _e("klaxon_enroue", "Klaxon enroué", duree_s=1.5, volume=0.75, influence=0.7,
+       prompt="a broken weak car horn that sputters, wheezes, coughs and dies out, comic, close, "
+              "no engine, no music"),
     _e("sirene", "Sirène de police", duree_s=4.0, volume=0.61, boucle=True,
        influence=0.75,
        prompt="a police car siren wailing up and down steadily, close, "
@@ -1845,7 +1857,7 @@ LIEUX: dict[str, list[str]] = {
     "foyers": ["foyer_feu"],
     "borne": ["borne_cassee", "borne_jet"],
     "garage": ["rideau_garage"],
-    "klaxons": ["corne_a_air", "whoop_police"],
+    "klaxons": ["corne_a_air", "whoop_police", "klaxon_aouga", "klaxon_vache", "klaxon_pouet", "klaxon_enroue"],
     "distributrice": ["distributrice", "machine_brassee", "monnaie"],
     "chaussee": ["nid_de_poule", "conteneur", "tas", "plaque"],
     # Le derapage (les saisons, lot 6) : il se charge la premiere fois que le joueur conduit (`Derapage`).

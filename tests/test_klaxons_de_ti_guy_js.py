@@ -24,12 +24,17 @@ OUTILS = """
   const joues = [];
   let voixArrivee = true;
   const vrais = { claironner: S.claironner, corne_a_air: S.corne_a_air, whoop_police: S.whoop_police, klaxon: S.klaxon, crier: Vx.crier };
-  S.claironner = function (notes) { joues.push('air:' + notes.length + ':' + notes[0][0]); };
+  S.claironner = function (notes) {
+    const duree = notes.reduce(function (t, n) { return t + n[1]; }, 0);
+    joues.push('air:' + notes.length + ':' + notes[0][0] + ':' + duree.toFixed(2));
+  };
   S.corne_a_air = function () { joues.push('corne_a_air'); };
   S.whoop_police = function () { joues.push('whoop_police'); };
+  const SONS = B.defs.klaxons.filter(function (k) { return k.son; }).map(function (k) { return k.son; });
+  SONS.forEach(function (s) { vrais[s] = S[s]; S[s] = function () { joues.push(s); }; });
   S.klaxon = function () { joues.push('klaxon'); };
   Vx.crier = function (slug) { if (!voixArrivee) return false; joues.push('voix:' + slug); return true; };
-  function rendre() { Object.assign(S, { claironner: vrais.claironner, corne_a_air: vrais.corne_a_air, whoop_police: vrais.whoop_police, klaxon: vrais.klaxon }); Vx.crier = vrais.crier; }
+  function rendre() { Object.keys(vrais).forEach(function (k) { if (k !== 'crier') S[k] = vrais[k]; }); Vx.crier = vrais.crier; }
   /** Monte dans un char neuf posé en (x, y), cap à l'est. */
   function auVolant(x, y, mods) {
     const v = V.creer('auto', x, y, 0, { etat: 'stationne', couleur: '#c0392b' });
@@ -49,8 +54,8 @@ def klaxons(banc):
 
         // --- Chacun joue le sien -------------------------------------------------------------------------
         out.joue = {};
-        for (const m of [null, { klaxon: true }, { klaxon: 'gens_du_pays' }, { klaxon: 'parrain' }, { klaxon: 'cucaracha' },
-                         { klaxon: 'corne_a_air' }, { klaxon: 'ti_guy' }, { klaxon: 'police' }]) {
+        const tous = [null, { klaxon: true }].concat(B.defs.klaxons.map(function (k) { return { klaxon: k.slug }; }));
+        for (const m of tous) {
             vider();
             const v = auVolant(j.x + 30, j.y, m);
             joues.length = 0;
@@ -96,9 +101,37 @@ def klaxons(banc):
         const parrain = ligne('KLAXON « LE PARRAIN »'), corne = ligne('CORNE À AIR DE 18 ROUES');
         out.corne = { paye: avant - p.argent, mods: Object.assign({}, c.mods), valeur: L.Garage.valeur(c.mods),
                       parrain: { detail: parrain.detail, actif: parrain.actif }, corne: { detail: corne.detail, actif: corne.actif },
-                      lignes: menu().filter(function (i) { return /^POSER : (KLAXON|CORNE|LA VOIX|WHOOP)/.test(i.libelle); }).length };
+                      lignes: menu().filter(function (i) { return B.defs.klaxons.some(function (k) { return i.libelle === 'POSER : ' + k.nom.toUpperCase(); }); }).length };
         out.vieux = { valeur: L.Garage.valeur({ klaxon: true }), slug: L.Garage.klaxonParSlug(true).slug };
         L.Entites.retirer(c);
+
+        // --- La crème glacée : les enfants à vélo du coin accourent ----------------------------------------
+        function enfants(mods) {
+            vider();
+            const v = auVolant(j.x, j.y, mods);
+            const e = L.Entites.creerPieton(j.x + 150, j.y + 60, L.Entites.archetype('enfant_velo'));
+            L.Entites.indexer();
+            o.tape('Space', 1); o.frame(3);
+            const r = { arch: e.arch, poste: e.poste ? { x: Math.round(e.poste.x), y: Math.round(e.poste.y) } : null, v: { x: Math.round(v.x), y: Math.round(v.y) } };
+            V.descendre(j, true); L.Entites.retirer(v); L.Entites.retirer(e); L.Entites.indexer();
+            return r;
+        }
+        out.enfants = { ordinaire: enfants(null), creme: enfants({ klaxon: 'creme_glacee' }) };
+
+        // --- La marche nuptiale : des canettes derrière le char, quel que soit son conducteur ----------------
+        function traits(mods) {
+            vider();
+            const v = V.creer('auto', j.x + 80, j.y, 0, { etat: 'stationne', couleur: '#c0392b' });
+            L.Garage.poser(v, mods);
+            const lignes = [], ctx = {
+                save: function () {}, restore: function () {}, translate: function () {}, scale: function () {}, rotate: function () {},
+                fillRect: function () {}, drawImage: function () {}, beginPath: function () {}, stroke: function () {},
+                moveTo: function (x, y) { lignes.push([x, y]); }, lineTo: function () {} };
+            try { V.dessinerUn(ctx, v, 0, 0); } catch (err) { lignes.push(String(err)); }
+            L.Entites.retirer(v);
+            return { n: lignes.length, canettes: L.Garage.canettes(v) };
+        }
+        out.canettes = { sans: traits({ klaxon: 'parrain' }), avec: traits({ klaxon: 'nuptiale' }) };
 
         // --- La corne de 18 roues tasse de plus loin ------------------------------------------------------
         const b = o.boulevard(false);
@@ -155,8 +188,9 @@ def klaxons(banc):
 
 
 def air(notes: list) -> str:
-    """Ce que le greffier écrit d'un air : son nombre de notes et sa première, comme `String()` en JS."""
-    return f"air:{len(notes)}:{notes[0][0]:g}"
+    """Ce que le greffier écrit d'un air : son nombre de notes, sa première — le Hz arrondi à l'entier, comme
+    il voyage (`garage.air_serre`) — et sa durée."""
+    return f"air:{len(notes)}:{round(notes[0][0])}:{sum(d for _, d in notes):.2f}"
 
 
 def test_chaque_klaxon_joue_le_sien_et_seulement_le_sien(klaxons):
@@ -170,6 +204,25 @@ def test_chaque_klaxon_joue_le_sien_et_seulement_le_sien(klaxons):
     assert j["corne_a_air"] == ["corne_a_air"], j
     assert j["police"] == ["whoop_police"], j
     assert len(j["ti_guy"]) == 1 and j["ti_guy"][0] in [f"voix:{s}" for s in KLAXONS["ti_guy"]["voix"]], j
+    # Tous les autres, chacun le sien : l'air qu'il porte, ou son échantillon.
+    for slug, k in KLAXONS.items():
+        if "air" in k:
+            assert j[slug] == [air(k["air"])], (slug, j[slug])
+        elif "son" in k:
+            assert j[slug] == [k["son"]], (slug, j[slug])
+
+
+def test_le_klaxon_de_creme_glacee_fait_accourir_les_enfants(klaxons):
+    e = klaxons["enfants"]
+    assert e["creme"]["arch"] == "enfant_velo", e
+    assert e["ordinaire"]["poste"] is None, f"le klaxon ordinaire attire déjà les enfants : le juge ne mord pas ({e})"
+    assert e["creme"]["poste"] == e["creme"]["v"], f"l'enfant n'accourt pas vers le char : {e}"
+
+
+def test_la_marche_nuptiale_traine_des_canettes(klaxons):
+    c = klaxons["canettes"]
+    assert not c["sans"]["canettes"] and c["avec"]["canettes"], c
+    assert c["avec"]["n"] - c["sans"]["n"] == 3, f"trois ficelles de plus derrière le char de noces : {c}"
 
 
 def test_la_voix_de_ti_guy_absente_joue_le_klaxon_et_ne_se_repete_jamais(klaxons):

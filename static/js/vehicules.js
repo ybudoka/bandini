@@ -4469,6 +4469,32 @@ const Vehicules = (function () {
     return v.gyro.phases[Math.floor(B.t / GYROPHARE_IMAGES) % 2];
   }
 
+  //: LES CANETTES DE LA MARCHE NUPTIALE (docs/jalons/les-klaxons-de-ti-guy-deuxieme-vague.md) : trois, au bout
+  //: de trois ficelles attachees au pare-chocs arriere. `[cote, longueur]` en px : l'ecart au milieu du
+  //: pare-chocs, et la ficelle. En roulant, elles sautillent (une par image paire ou impaire, a l'empreinte).
+  const CANETTES = [[-4, 12], [1, 17], [5, 10]];
+  //: ⚠️ LE SOL SE VOIT DE BIAIS : comme l'ombre, l'attache s'ecrase sur l'axe nord-sud (`conduite.ombre.profondeur`)
+  //: — sans ca, vers le nord, les ficelles partaient trois pixels sous le pare-chocs.
+  function dessinerCanettes(ctx, v, cx, cy) {
+    const ca = Math.cos(v.angle), sa = Math.sin(v.angle), arriere = v.def.longueur / 2;
+    const f = B.defs.conduite && B.defs.conduite.ombre, prof = f ? f.profondeur : 1;
+    const roule = Math.abs(v.vitesse) > 0.3;
+    // Un point du char : `avant` le long de son axe, `cote` en travers.
+    function point(avant, cote) { return [v.x + ca * avant - sa * cote, v.y + (sa * avant + ca * cote) * prof]; }
+    CANETTES.forEach(function (c, i) {
+      const saut = roule && (Math.floor(B.t / 3) + i) % 2 ? 1 : 0;
+      // La ficelle, elle, garde sa longueur : ecrasee vers le nord, les canettes passaient sous la caisse.
+      const a = point(-arriere, c[0]), b = [a[0] - ca * c[1] - sa * saut, a[1] - sa * c[1] + ca * saut];
+      const ax = a[0], ay = a[1], bx = b[0], by = b[1];
+      ctx.strokeStyle = '#d8d2c0'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(Math.round(ax - cx) + 0.5, Math.round(ay - cy) + 0.5);
+      ctx.lineTo(Math.round(bx - cx) + 0.5, Math.round(by - cy) + 0.5); ctx.stroke();
+      ctx.fillStyle = '#b9bec4'; ctx.fillRect(Math.round(bx - cx) - 2, Math.round(by - cy) - 1, 4, 3);
+      ctx.fillStyle = '#6b7178'; ctx.fillRect(Math.round(bx - cx) - 2, Math.round(by - cy) - 1, 1, 3);
+    });
+    B.stats.rects += CANETTES.length * 2;
+  }
+
   function dessinerUn(ctx, v, cx, cy) {
     const def = SPRITES[v.sprite];
     if (!def) return;
@@ -4486,6 +4512,8 @@ const Vehicules = (function () {
       }
       B.stats.rects += 4;
     }
+    // Les canettes de la marche nuptiale (le klaxon de Ti-Guy) : sous le char, elles trainent sur l'asphalte.
+    if (!v.z && Garage.canettes(v)) dessinerCanettes(ctx, v, cx, cy);
     const ombre = ombreDe(v);
     // Un char qui coule (`Naufrage`) : son ombre s'efface sur l'eau, vite.
     const naufrage = Naufrage.etat(v);

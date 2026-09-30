@@ -485,9 +485,17 @@ def test_le_paquet_reste_leger(paquets):
     Thibodeau, le son : 1 257 bruts, 726 gzip seule) n'est lue qu'en ville, l'hiver. Regardé avant : les
     définitions sont pleines (les klaxons en sont sortis pour ça), la carte a son plafond à elle. Mesure avec
     elle : suite 21 622 bruts, 8 998 gzip.
+
+    ⚠️ **LES KLAXONS DE TI-GUY, DEUXIÈME VAGUE, LE MÊME JOUR — 23 000 → 25 000 bruts, 9 500 → 10 500 gzip, TRANCHÉ PAR
+    MARTIN**
+    (docs/jalons/les-klaxons-de-ti-guy-deuxieme-vague.md). Dix klaxons de plus (six airs, quatre bruitages) et
+    le mot de Ti-Guy sur chacun : la clé `klaxons` passe de 1 777 à 3 541 octets bruts, la suite à 24 529 bruts et
+    10 024 gzip.
+    Regardé avant : les airs voyagent déjà serrés (« 440:1 392:1 », `garage.air_serre`) ; proposé à Martin —
+    relever, retirer le texte des commentaires (la voix seule), ou charger les klaxons au garage : il a relevé.
     """
     for nom, brut_max, fil_max in (("definitions", 242_000, 57_500), ("carte", 560_000, 55_000),
-                                   ("musiques", 50_000, 10_000), ("suite", 23_000, 9_500)):
+                                   ("musiques", 50_000, 10_000), ("suite", 25_000, 10_500)):
         paquet = getattr(paquets, nom)
         mesures = {"definitions": MESURE_DU_PAQUET, "carte": MESURE_DE_LA_CARTE}
         qui = f" — qui a grossi : {_qui_a_grossi(paquet.corps, mesure=mesures[nom])}" if nom in mesures else ""

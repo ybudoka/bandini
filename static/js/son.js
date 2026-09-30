@@ -1011,6 +1011,19 @@ const Son = (function () {
       const v = CORNE.volume * (ici ? ici.volume : 1);
       corneA(ctx.currentTime, 185, 1.1, v); corneA(ctx.currentTime, 233.08, 1.1, v * 0.8);
     },
+    // La deuxieme vague (docs/jalons/les-klaxons-de-ti-guy-deuxieme-vague.md), et leurs filets : l'a-ou-ga
+    // (une note qui plonge puis remonte), la vache (un sol grave qui descend), le pouet (deux coups nasillards),
+    // le klaxon enroue (une note qui s'etrangle).
+    klaxon_aouga: function () {
+      if (jouerDuLieu('klaxon_aouga')) return;
+      ton(300, 0.35, 'sawtooth', 0.25, 0.6); ton(200, 0.4, 'sawtooth', 0.25, 1.6, 0.35);
+    },
+    klaxon_vache: function () { if (!jouerDuLieu('klaxon_vache')) ton(196, 1.1, 'sawtooth', 0.25, 0.75); },
+    klaxon_pouet: function () {
+      if (jouerDuLieu('klaxon_pouet')) return;
+      ton(420, 0.12, 'square', 0.2, 0.9); ton(420, 0.12, 'square', 0.2, 0.9, 0.18);
+    },
+    klaxon_enroue: function () { if (!jouerDuLieu('klaxon_enroue')) ton(330, 0.9, 'sawtooth', 0.12, 0.45); },
     // Le faux whoop-whoop de police, et son filet : deux balayages qui montent.
     whoop_police: function () {
       if (jouerDuLieu('whoop_police')) return;

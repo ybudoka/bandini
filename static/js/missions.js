@@ -2885,7 +2885,13 @@ const Missions = (function () {
   function ritournelleDuCamion(v) {
     if (Math.abs(v.vitesse) <= 0.3) return;
     Son.Rue.demander('creme_glacee', 0.8);
-    if (B.t % 30 !== 0) return;
+    if (B.t % 30 === 0) attirerLesEnfants(v);
+  }
+
+  /** Les enfants a velo qui entendent la ritournelle accourent vers `v` — le camion, ou le klaxon de creme
+      glacee de Ti-Guy (docs/jalons/les-klaxons-de-ti-guy-deuxieme-vague.md). Ils l'oublient d'eux-memes
+      (`oublierLaRitournelle`). */
+  function attirerLesEnfants(v) {
     for (const e of Entites.pietonsAutour(v.x, v.y, RITOURNELLE_PX)) {
       if (e.arch !== 'enfant_velo' || !e.vivant || e.etat === 'fuit') continue;
       e.poste = { x: v.x, y: v.y }; e.posteRayon = 40; e.suitLeCamion = B.t; e.butT = 0;
@@ -4045,7 +4051,7 @@ const Missions = (function () {
     if (B.t % 60 === 0) B.partie.stats.secondes++;
   }
 
-  return { majBerlineDeLivreur, hiverDeMotoneige, placeDesMotoneiges, majMotoneiges, sequenceDuLoto, direLeLoto, boucherLeNid, rendreLesNidsBouches, placeDeLAsphalte, majAsphalte, decompteDesNids,
+  return { majBerlineDeLivreur, attirerLesEnfants, hiverDeMotoneige, placeDesMotoneiges, majMotoneiges, sequenceDuLoto, direLeLoto, boucherLeNid, rendreLesNidsBouches, placeDeLAsphalte, majAsphalte, decompteDesNids,
     majCremeGlacee, placeDuCamion, ritournelleDuCamion,
     listeDuQuai, etatDuQuai, posteDuQuai, prixAuQuai, texteDuQuai, majQuai,
     braquable, braquer, rancuneIci,

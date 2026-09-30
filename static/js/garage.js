@@ -145,15 +145,33 @@ const Garage = (function () {
   /** Le klaxon `k` sonne sur `v` : son air, son son ou la voix de Ti-Guy, et ce qu'il fait au trafic et a
       la police. Rend faux s'il n'a rien pu jouer (la voix pas encore arrivee) : le klaxon ordinaire joue. */
   function klaxonner(v, k) {
-    if (k.air) Son.SFX.claironner(k.air);
+    if (k.air) Son.SFX.claironner(notesDe(k));
     else if (k.son) Son.SFX[k.son]();
     else if (k.voix && !crier(v, k)) return false;
     if (k.cede) Vehicules.cederLaVoie(v);
+    if (k.enfants) Missions.attirerLesEnfants(v);
     if (k.delit && unVraiPolicierEntend(v, k.oreille_tuiles * TT)) {
       Police.signalerCrime(k.delit, v.x, v.y, true);
       Hud.message('UN VRAI POLICIER A ENTENDU TA FAUSSE SIRÈNE', 150);
     }
     return true;
+  }
+
+  /** L'air d'un klaxon, deplie : il voyage SERRE (`garage.air_serre` : « 440:1 392:1 523:3 » et `unite`,
+      la note la plus courte en secondes). Deplie une fois, garde sur la fiche. */
+  function notesDe(k) {
+    if (!k.notes) {
+      k.notes = k.air.split(' ').map(function (n) { const q = n.split(':'); return [+q[0], +q[1] * k.unite]; });
+    }
+    return k.notes;
+  }
+
+  /** Des canettes traînent derriere ce char ? (la marche nuptiale, `canettes`) — quel que soit son conducteur :
+      elles sont attachees au pare-chocs, pas au klaxon. */
+  function canettes(v) {
+    if (!v.mods || !v.mods.klaxon) return false;
+    const k = klaxonParSlug(v.mods.klaxon);
+    return !!(k && k.canettes);
   }
 
   /** Une engueulade de Ti-Guy, tiree a l'empreinte de l'image — jamais celle du coup d'avant. */
@@ -174,5 +192,5 @@ const Garage = (function () {
       || Police.autos().some(pres);
   }
 
-  return { accepte, poser, fiche, valeur, items, hiver, pointe, maj, klaxonDe, klaxonner, klaxonParSlug, commenter };
+  return { accepte, poser, fiche, valeur, items, hiver, pointe, maj, klaxonDe, klaxonner, klaxonParSlug, notesDe, canettes, commenter };
 })();
