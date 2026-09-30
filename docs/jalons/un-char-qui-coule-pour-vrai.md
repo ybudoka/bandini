@@ -20,3 +20,19 @@ char entier et en pleines couleurs pendant `coule_s` (3 s), avec quelques remous
 change pas (même durée, même perte, même éjection) ; rien ne se dessine dans une pièce ni
 sur un bloc. Juges : l'état du naufrage en fonction pure, la trace posée au fond qui
 expire, les tirages de `B.rng` identiques ; capture Chromium avant de livrer.
+
+## Notes
+
+Livré le 30 sept. 2026. `static/js/naufrage.js` (ses réglages dans le fichier, hors du paquet) ;
+`Vehicules.dessinerUn` lui passe le toit d'un char qui coule, `majNoyade` pose la trace au fond, `Jeu.rendre`
+dessine les traces sur l'eau, sous les gens (oubliées à chaque partie et à chaque passage de bloc).
+
+- **La ligne court sur l'IMAGE, pas sur la caisse** : le sprite déborde la longueur du char (pare-chocs,
+  hauteur vue de biais), et un coin de l'arrière restait net et sombre quand le reste avait coulé — c'est la
+  capture qui l'a montré, pas les juges. Une fois la ligne passée, tout est dessiné sous l'eau.
+- **L'écume en points, pas en trait** : un trait blanc continu se lisait comme une rayure sur la tôle.
+- **Aucun dé** : tout se tire à l'empreinte (`v.id`, l'âge de la trace). `test_couler_ne_tire_aucun_de_de_plus`
+  compare deux bancs neufs, module coupé ou non (dans le même banc, la deuxième partie ne part pas du même
+  état : 178 contre 180 images, pour rien) ; il rougit si la tache tire un seul `B.rng()`.
+- Juges : `tests/test_naufrage_js.py` (le nez avant l'arrière, la trace au fond qui s'efface, rien dedans ni
+  dans une partie neuve, les dés).
