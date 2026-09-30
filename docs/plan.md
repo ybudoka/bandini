@@ -101,6 +101,7 @@ pas quand l'ordre de travail change.
 | Les explosifs : grenades, dynamite, C4, roquettes — et le Molotov en mieux | ⬜ **en cours** (✅ vague 1 livrée : l'explosion commune, la grenade et la dynamite ; reste la vague 2, le Molotov en mieux ; puis les murs fissurés et le C4, le char piégé et le lance-roquettes) | 28 sept. 2026 | **P4** | ajout | [fiche](jalons/les-explosifs.md#fiche) · [notes](jalons/les-explosifs.md#notes) |
 | Le train : au sol, sur le viaduc, dans le tunnel | ⬜ **en cours** (✅ vague 1 livrée : le train passe — au sol dans les Friches, sur son viaduc au-dessus du Petit-Canton, à la gare centrale, dans son tunnel ; les passages à niveau, il écrase et il klaxonne ; restent : on monte (vague 2), on s'assoit (vague 3)) | 29 sept. 2026 | **P4** | ajout | [fiche](jalons/le-train.md#fiche) · [notes](jalons/le-train.md#notes) |
 | Le Clairon a plus à dire : des manchettes, des matins et des leçons de plus | ⬜ **en cours** | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/le-clairon-a-plus-a-dire-des-manchettes-des-matins-et-des-lecons-de-plus.md#fiche) |
+| Le marché aux puces a de la voix, et on y vend | ⬜ **en cours** (tranché par Martin : Ti-Rhéal et Gisèle parlent à voix haute, la rumeur du dimanche matin, et Gisèle rachète les meubles de la planque à bas prix) | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/le-marche-aux-puces-du-dimanche.md#fiche-de-la-deuxième-vague) · [notes](jalons/le-marche-aux-puces-du-dimanche.md#notes) |
 
 ## L'ordre
 

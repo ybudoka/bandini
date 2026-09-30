@@ -23,6 +23,25 @@ s'empiler dans le stationnement (le juge du trafic), et rien ne se pose au dé.
 **Juges** : le même dimanche, le même étal pour tout le monde ; il change la semaine suivante ; marchander ne
 tire aucun `B.rng()` ; un meuble acheté va à la planque.
 
+## Fiche de la deuxième vague
+
+_Tranché par Martin le 30 sept. 2026, après la livraison : trois ajouts._
+
+- **Des voix aux marchands** : Ti-Rhéal et Gisèle parlent à voix haute — une fiche chacun dans
+  `docs/personnages/`, une voix ElevenLabs québécoise de la bibliothèque (auditionnée à trois), et leurs répliques :
+  l'accueil, le marchandage accepté ou refusé, la vente, rien à vendre cette semaine, au revoir. Chacun se nomme une
+  fois. Le jeu d'acteur collé à chaque réplique ; les voix se chargent avec le marché, jamais au démarrage.
+- **Une ambiance** : la rumeur d'un marché du dimanche matin (des gens qui jasent, une radio AM au loin, un chien, des
+  tables pliantes), dosée à la distance du terrain, le dimanche aux heures d'ouverture seulement — un son de lieu
+  (`audio.LIEUX`), chargé en approchant.
+- **Y vendre** : revendre à Gisèle un meuble de la planque, à un prix bas (un choix, pas une pompe à argent) ; le
+  meuble vendu quitte la planque et la sauvegarde, et peut revenir au catalogue. Le marchandage à l'envers (demander
+  plus), avec l'humeur calculée, jamais tirée au dé. Les cartes en double : seulement s'il peut y en avoir.
+
+⚠️ **Rien de neuf dans les définitions ni dans la carte** : voix, textes et sons voyagent sur `/api/collections`.
+
+**Juges** : qui mordent (mutations), au banc par le bouton ACTION ; une capture du menu de vente.
+
 ## Notes
 
 ### Livré le 30 sept. 2026 (Martin : « le marché aux puces du dimanche », après les collections)
