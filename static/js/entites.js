@@ -4272,9 +4272,9 @@ const Entites = (function () {
 
   /** Se lever : les pieds A COTE du lit, du cote ou l'on pousse (dx, dy).
 
-      ⚠️ Un meuble n'arrete personne (`Monde.estMeuble` : on PASSE dessus). Sans
-      ce pas de cote, on se levait debout sur l'oreiller et on quittait le lit en
-      marchant sur la couverture. On prend donc, autour des tuiles du lit, la
+      ⚠️ Un meuble arrete le pieton (`Monde.MEUBLE`), mais le lit est une tuile de
+      meuble dont on part : sans ce pas de cote, on se levait debout sur l'oreiller,
+      et l'on n'en sortait plus que par le bord qui touche le plancher. On prend donc, autour des tuiles du lit, la
       tuile de plancher la plus avancee dans le sens de la poussee — a egalite,
       la premiere, pour que le banc ne tire pas a pile ou face.
 
@@ -4289,10 +4289,15 @@ const Entites = (function () {
     let pied = lit.y;
     while (Monde.estMeuble(lit.x, pied + 1) && Monde.glyphe(lit.x, pied + 1) === glyphe) pied++;
     const cx = (lit.x + 0.5) * TT, cy = (lit.y + pied + 1) / 2 * TT;
+    // ⚠️ Et d'ou l'on peut CONTINUER dans ce sens : au pied du lit de l'urgence
+    // il y a une chaise de la salle d'attente, et depuis qu'on ne marche plus sur
+    // les meubles, se lever la, c'etait se lever contre elle — pousser vers le bas
+    // ne faisait plus rien. Une place qui avance passe devant, sinon la meilleure.
     let place = null, meilleur = -Infinity;
     function essayer(tx, ty) {
       if (Monde.bloque(tx, ty, Monde.MASQUE_PIETON) || Monde.estMeuble(tx, ty)) return;
-      const s = ((tx + 0.5) * TT - cx) * dx + ((ty + 0.5) * TT - cy) * dy;
+      const suite = Monde.bloque(tx + Math.sign(dx), ty + Math.sign(dy), Monde.MASQUE_PIETON) ? 0 : 1e6;
+      const s = suite + ((tx + 0.5) * TT - cx) * dx + ((ty + 0.5) * TT - cy) * dy;
       if (s > meilleur) { meilleur = s; place = { x: tx, y: ty }; }
     }
     for (let ty = lit.y; ty <= pied; ty++) { essayer(lit.x - 1, ty); essayer(lit.x + 1, ty); }

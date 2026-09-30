@@ -124,8 +124,8 @@ def test_on_se_reveille_couche_dans_un_lit_de_l_hopital(banc):
         o.frame(120);
         const reste = { bouge: Math.hypot(j.x - x0, j.y - y0), alite: !!j.alite, gestes: gestes,
                         pose: L.Entites.imageDe(j).pose, piece: L.B.interieur && L.B.interieur.slug };
-        // Un passant qui passe PAR le lit (un meuble ne l'arrete pas) se cogne
-        // au dormeur : c'est lui qui s'ecarte.
+        // Un passant pose tout contre le dormeur se cogne a lui : c'est lui qui
+        // s'ecarte (et il ne passe plus par le lit : on ne marche pas sur les meubles).
         const intrus = o.poser('flaneur', 3, 0);
         intrus.etat = 'flane';
         o.frame(30);
@@ -155,8 +155,10 @@ def test_on_se_reveille_couche_dans_un_lit_de_l_hopital(banc):
 def test_la_premiere_poussee_leve_a_cote_du_lit_et_on_ressort_devant_l_hopital(banc):
     """« Des le premier deplacement on se leve et on peut partir. »
 
-    ⚠️ Un meuble n'arrete personne : se lever sur place, c'etait se tenir DEBOUT
-    SUR L'OREILLER et quitter le lit en marchant sur la couverture. La poussee
+    ⚠️ Se lever sur place, c'etait se tenir DEBOUT SUR L'OREILLER et quitter le
+    lit en marchant sur la couverture — et depuis qu'on ne marche plus sur les
+    meubles (30 sept. 2026), on n'en sortait plus que par le bord qui touche le
+    plancher. La poussee
     choisit son cote — vers le bas, le pied du lit ; a gauche, le flanc gauche ;
     a droite, le droit — et on marche dans la meme image. Puis ACTION a la porte
     d'en bas : on est dans la rue, devant l'hopital."""
@@ -187,9 +189,10 @@ def test_la_premiere_poussee_leve_a_cote_du_lit_et_on_ressort_devant_l_hopital(b
                  loin: Math.hypot(j.x - devant[0], j.y - devant[1]) };
     }""")
     c = r["cotes"]
-    # Du cote ou l'on pousse, colle au lit : au flanc (une colonne a cote) ou au
-    # pied (la meme colonne, plus bas que la tete).
-    cote = {"bas": lambda dx, dy: dx == 0 and dy > 0,
+    # Du cote ou l'on pousse, colle au lit : au flanc (une colonne a cote) ou,
+    # vers le bas, plus bas que la tete — au pied, ou au bas d'un flanc quand
+    # une chaise barre le pied (on ne marche plus sur les meubles).
+    cote = {"bas": lambda dx, dy: dy > 0,
             "gauche": lambda dx, dy: dx == -1, "droite": lambda dx, dy: dx == 1}
     for sens, bon in cote.items():
         v = c[sens]

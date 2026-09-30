@@ -85,7 +85,7 @@ PLAN: tuple[str, ...] = (
     "ByyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyBBueuueuueuueuueuuBuuuuuuuuuuuuuuuuuB",
     "ByyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyBBueuueuueuueuueuuBuuuuuuuuuuuuuuuuuB",
     "BBBBBtBBBBBBBtBBByyBBtBBBBBBBtBBBBBBBueuueuueuueuueuuBuuuuuuuuuuuuuuuuuB",
-    "BttttttttttBttttByyBttttBeeeeeeeeeeBBueuueuueuueuueuuBummuuuuuuuuuuukuuB",
+    "BttttttttttBttttByyBttttBeeeeteeeeeBBueuueuueuueuueuuBummuuuuuuuuuuukuuB",
     "BtlltttttttBttttByyBttttBttttttttttBBueuueuueuueuueuuBummuuuuuuuuuuuuuuB",
     "BtlltttttttBttttByyBttttBttttttttttBBuuuuuuuuuuuuuuuuBuuuuuuuuuuuuuuuuuB",
     "BttttttttntBttttByyBttttBttaatthhttBBBBBBBBBBuBBBBBBBBBBBBBBBBuBBBBBBBBB",

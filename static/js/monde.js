@@ -15,17 +15,22 @@ const Monde = (function () {
   // repeindre a chaque pas de cote.
   const MORCEAUX_MAX = 24;
   // Masques de collision, un bit par sorte d'obstacle (voir `solidite`).
-  const MUR = 1, EAU = 2, BASSE = 4, GRILLAGE = 8, BARBELE = 16;
+  const MUR = 1, EAU = 2, BASSE = 4, GRILLAGE = 8, BARBELE = 16, MEUBLE = 32;
+  // ⚠️ ON NE MARCHE PAS SUR LES MEUBLES (Martin, 30 sept. 2026). Un meuble reste
+  // `solide 3` dans le paquet — un obstacle BAS, qu'un char ne passe pas — mais il
+  // porte en plus le bit `MEUBLE`, que tous les masques a pied voient : avant, on
+  // traversait le comptoir, le lit et la table comme un tapis. L'escalier (`/`) est
+  // le seul meuble qu'on foule : on y marche pour monter (`MARCHE_DESSUS`).
   // ⚠️ Le CORPS d'un pieton ne franchit aucune cloture : il s'arrete dessus.
   // Avant, `f` etait solide 3 (BASSE) et ce masque ne la voyait pas — une
   // cloture n'arretait que les chars, et a pied on la traversait sans meme
   // ralentir. C'est ce qui la rendait muette.
-  const MASQUE_PIETON = MUR | EAU | GRILLAGE | BARBELE;
+  const MASQUE_PIETON = MUR | EAU | GRILLAGE | BARBELE | MEUBLE;
   // ⚠️ LE NAGEUR NE VOIT PAS L'EAU. C'est le masque du joueur et des agents —
   // eux seuls entrent dans la baie. Les passants gardent `MASQUE_PIETON` : un
   // flaneur qui part se baigner parce que son errance l'y a mene, c'est le
   // genre de chose qu'on ne voit qu'en jeu, et il n'y a rien a y gagner.
-  const MASQUE_NAGEUR = MUR | GRILLAGE | BARBELE;
+  const MASQUE_NAGEUR = MUR | GRILLAGE | BARBELE | MEUBLE;
   // ⚠️ Un char NE FLOTTE PAS : il entre dans l'eau, et il coule (voir
   // `vehicules.js`). Le masque le laisse donc passer — c'est le fond de la
   // baie qui l'arrete, pas une facade invisible au bord de l'eau.
@@ -39,7 +44,8 @@ const Monde = (function () {
   // devient l'exploit anti-police le plus simple du jeu — deux pas dans la baie
   // et on est intouchable. Elle se PAIE, comme le grillage (`coutEau`) : la
   // traversee d'un chenal reste un detour cher, la baie reste impensable.
-  const MASQUE_A_PIED = MUR | BARBELE;
+  const MASQUE_A_PIED = MUR | BARBELE | MEUBLE;
+  const MARCHE_DESSUS = '/';
 
   const SORTES_DE_LAMPE = {
     poteau: { dy: 2, c: 'rgba(255,214,130,0.55)' },
@@ -440,7 +446,7 @@ const Monde = (function () {
     const s = solidite(tx, ty);
     if (s === 1) return (masque & MUR) !== 0;
     if (s === 2) return (masque & EAU) !== 0;
-    if (s === 3) return (masque & BASSE) !== 0;
+    if (s === 3) return (masque & BASSE) !== 0 || ((masque & MEUBLE) !== 0 && meubleQuiBarre(tx, ty));
     if (s === 4) return (masque & GRILLAGE) !== 0;
     if (s === 5) return (masque & BARBELE) !== 0;
     return false;
@@ -984,6 +990,10 @@ const Monde = (function () {
   /** Un meuble (table, comptoir, lit...) : un pieton PASSE dessus — la legende
       ne l'arrete pas — mais personne n'a a s'y tenir debout. */
   function estMeuble(tx, ty) { return !!((carte && carte.legende[glyphe(tx, ty)] || {}).meuble); }
+  /** Un meuble qui arrete un corps a pied : tous, sauf l'escalier (voir `MEUBLE`). Lu
+      au glyphe et pas dans un tableau : un chantier, une fete ou un bloc qui change
+      une tuile n'a rien a tenir a jour. */
+  function meubleQuiBarre(tx, ty) { return glyphe(tx, ty) !== MARCHE_DESSUS && estMeuble(tx, ty); }
 
   /** Ligne de vue entre deux points (pixels) : rien de MUR entre les deux. */
   function ligneLibre(x0, y0, x1, y1) {
@@ -2981,7 +2991,7 @@ const Monde = (function () {
   }
 
   return {
-    MUR, EAU, BASSE, GRILLAGE, BARBELE, MASQUE_PIETON, MASQUE_NAGEUR, MASQUE_VEHICULE,
+    MUR, EAU, BASSE, GRILLAGE, BARBELE, MEUBLE, MASQUE_PIETON, MASQUE_NAGEUR, MASQUE_VEHICULE,
     MASQUE_A_PIED, MORCEAUX_MAX, estEau, eauBasse, eauLaPlusProche, majSonDuBord,
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
     barrieres, barriereFermee, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,

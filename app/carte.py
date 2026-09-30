@@ -372,12 +372,13 @@ LEGENDE: dict[str, dict] = {
     "(": {"nom": "clôture de fer forgé", "solide": 4, "cloture": "fer"},
     ")": {"nom": "portail de fer forgé", "solide": 5, "cloture": "fer", "coulissante": True},
     # --- Dedans : les planchers et les meubles ------------------------------
-    # ⚠️ Un MEUBLE est solide 3, comme la borne-fontaine et la cloture : il
-    # arrete un char, pas un piéton. C'est ce qui permet d'en poser partout
-    # sans jamais murer un coin de piece — `composantes_marchables` compte le
-    # 3 comme marchable, et le juge d'habitabilite reste vrai par
-    # construction. Un meuble qui bloquerait le joueur serait un piege a
-    # sauvegarde : on entre, on se coince, et la partie est finie.
+    # ⚠️ Un MEUBLE est solide 3, comme la borne-fontaine — il arrete un char —
+    # et, depuis le 30 sept. 2026, il arrete AUSSI le pieton (Martin : « on ne
+    # doit pas pouvoir marcher sur les meubles ») : `marchable` ne le compte
+    # plus, et le navigateur lui donne le bit `MEUBLE` (monde.js). L'escalier
+    # (`/`) est le seul qu'on foule — on y marche pour monter (`MARCHE_DESSUS`).
+    # Le piege a sauvegarde (on entre, on se coince) est juge au chargement :
+    # `_verifier_piece` mesure l'atteignable SANS passer sur un meuble.
     "t": {"nom": "plancher de bois", "dedans": True},
     "u": {"nom": "carrelage", "dedans": True},
     # ⚠️ `bloc` : un meuble qui vient en BLOCS de tuiles (un lit de 2 × 2, un
@@ -485,14 +486,23 @@ def solidite(glyphe: str) -> int:
     return int(LEGENDE.get(glyphe, {}).get("solide", 0))
 
 
+#: Le seul meuble qu'on foule : l'escalier, sur lequel on marche pour monter.
+MARCHE_DESSUS = "/"
+
+
 def marchable(glyphe: str) -> bool:
     """Ce qu'un pieton peut FOULER : du sol libre, ou un obstacle bas qu'il
-    contourne d'un pas (borne-fontaine, meuble).
+    contourne d'un pas (la borne-fontaine, la piscine hors terre).
+
+    ⚠️ Pas un meuble (sauf l'escalier) : on fait le tour du comptoir, on ne
+    monte pas dessus (voir « Dedans : les planchers et les meubles »).
 
     ⚠️ Pas une cloture : on ne se tient pas SUR une cloture. On l'enjambe
     (grillage, solidite 4) ou on ne passe pas du tout (barbele, 5) — c'est
     `franchissable` qui le dit.
     """
+    if glyphe != MARCHE_DESSUS and LEGENDE.get(glyphe, {}).get("meuble"):
+        return False
     return solidite(glyphe) in (0, 3)
 
 
@@ -507,7 +517,11 @@ def franchissable(glyphe: str) -> bool:
 
     ⚠️ La barriere coulissante (`coulissante`) est du barbele qui s'OUVRE : le
     lot qu'elle ferme a une sortie, et il fait partie de la ville.
+
+    ⚠️ Un meuble ne s'enjambe pas (voir `marchable`) : ce n'est pas un pont.
     """
+    if glyphe != MARCHE_DESSUS and LEGENDE.get(glyphe, {}).get("meuble"):
+        return False
     return solidite(glyphe) in (0, 3, 4) or bool(LEGENDE.get(glyphe, {}).get("coulissante"))
 
 
@@ -7429,6 +7443,11 @@ QUI_DEDANS = ("commis", "client", "patient", "malade", "soignant", "avocat", "el
 #: on le juge ici, au chargement.
 ASSIS_OU_COUCHE = {"patient": "h", "avocat": "h", "malade": "r"}
 
+#: Ceux qui se tiennent DERRIERE le comptoir, dans un morceau de plancher que
+#: le joueur ne rejoint pas (on ne marche pas sur les meubles) : on les sert
+#: par-dessus, jamais on ne va les chercher.
+COULISSES = frozenset({"commis", "soignant", "croupier"})
+
 
 def _gens(*gens: tuple[str, int, int]) -> tuple[dict, ...]:
     return tuple({"qui": qui, "x": x, "y": y} for qui, x, y in gens)
@@ -7510,22 +7529,25 @@ RAYON_POINT = 1.6
 
 
 def _verifier_piece(piece: dict) -> None:
-    groupes = composantes_marchables(piece)
-    if len(groupes) != 1:
-        raise ValueError(f"{piece['slug']} : {len(groupes)} morceaux de plancher separes")
-    atteignable = groupes[0]
+    # ⚠️ L'ATTEIGNABLE part de la porte, et il ne passe sur aucun meuble (on
+    # ne marche plus dessus, voir `marchable`). Un autre morceau de plancher
+    # est permis — c'est l'arriere du comptoir —, mais seul le personnel s'y
+    # tient (`COULISSES`) : un point ou un client qu'on ne rejoint pas serait
+    # une porte qu'on ouvre pour rien.
+    apparition = (piece["apparition"]["x"], piece["apparition"]["y"])
+    atteignable = next((g for g in composantes_marchables(piece) if apparition in g), None)
+    if atteignable is None:
+        raise ValueError(f"{piece['slug']} : on entre dans un meuble")
     sol = piece["sol"]
     for point in piece["points"]:
         x, y = point["x"], point["y"]
         if not (0 < x < piece["largeur"] - 1 and 0 < y < piece["hauteur"] - 1):
             raise ValueError(f"{piece['slug']} : le point {point['type']} est dans le mur")
-        if (x, y) not in atteignable:
-            raise ValueError(f"{piece['slug']} : le point {point['type']} n'est pas atteignable")
-        # ⚠️ Un point POSE SUR un meuble (le lit, l'escalier) est bon ; encore
+        # ⚠️ Un point POSE SUR un meuble (le lit, le comptoir) est bon ; encore
         # faut-il pouvoir se planter a cote pour l'utiliser.
-        if not any(solidite(sol[y + dy][x + dx]) == 0
-                   for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
-            raise ValueError(f"{piece['slug']} : le point {point['type']} est inaccessible")
+        if (x, y) not in atteignable and not any(
+                (x + dx, y + dy) in atteignable for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+            raise ValueError(f"{piece['slug']} : le point {point['type']} n'est pas atteignable")
         # ⚠️ Et il ne vole pas la porte : voir RAYON_POINT.
         sortie = piece["apparition"]
         ecart = math.hypot(x - sortie["x"], y - sortie["y"])
@@ -7549,6 +7571,9 @@ def _verifier_piece(piece: dict) -> None:
                                  "est couche au pied du lit")
         elif solidite(glyphe) != 0:
             raise ValueError(f"{piece['slug']} : quelqu'un est ne dans un meuble")
+        elif (gens["x"], gens["y"]) not in atteignable and gens["qui"] not in COULISSES:
+            raise ValueError(f"{piece['slug']} : le {gens['qui']} en {gens['x']},{gens['y']} "
+                             "est enferme derriere les meubles")
 
 
 #: Les pieces des lieux garantis (`SPECIAUX`) et des donneurs de mission.
@@ -7591,7 +7616,7 @@ BBBWWWWBBB
 Bee   mm B
 B  aaa   B
 B  aaa   B
-Bccccc   B
+B  cccc  B
 Bn      nB
 BBBBWWDWBB
 """, points=(_pt("vendre", 3, 4), _pt("reparer", 7, 1), _pt("repeindre", 3, 2)),
@@ -7716,7 +7741,7 @@ BBWWDWWBB
     # Le kiosque de Madame Thibodeau : trois pas de large, tout est a portee.
     _piece("kiosque", "Kiosque de Mme Thibodeau", plan="""
 BBBBBB
-Be enB
+Be e B
 Bccc B
 B    B
 BBWDWB
@@ -7808,7 +7833,7 @@ Bm  k  m  B
 B         B
 BBBBB BBBBB
 B         B
-Beee   eeeB
+Beee    eeB
 B ccccc  nB
 Bn        B
 BBBWWDWWBBB
@@ -8030,6 +8055,34 @@ def _libre(grille: list[list[str]], x: int, y: int) -> bool:
     return grille[y][x] == " "
 
 
+def _atteint(grille: list[list[str]], porte: int) -> set[tuple[int, int]]:
+    """Les tuiles qu'on rejoint A PIED depuis l'entree, sans passer sur un meuble.
+
+    ⚠️ Depuis qu'on ne marche plus sur les meubles (30 sept. 2026), « une tuile
+    libre a cote » ne dit plus qu'on peut s'y rendre : un coin de lit, une
+    etagere et le mur suffisent a murer un bout de plancher. Le meubleur d'une
+    piece posee demande donc ICI, et plus a ses voisines, ce qui se rejoint.
+    """
+    largeur, hauteur = len(grille[0]), len(grille)
+    depart = (porte - 1, hauteur - 1)
+    vues, pile = {depart}, [depart]
+    while pile:
+        x, y = pile.pop()
+        for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if (0 <= nx < largeur and 0 <= ny < hauteur and (nx, ny) not in vues
+                    and marchable(grille[ny][nx].replace(" ", "t"))):
+                vues.add((nx, ny))
+                pile.append((nx, ny))
+    return vues
+
+
+def _mure(grille: list[list[str]], porte: int) -> bool:
+    """Vrai si un bout de plancher ne se rejoint plus depuis l'entree (`_atteint`)."""
+    atteint = _atteint(grille, porte)
+    return any((x, y) not in atteint and marchable(g.replace(" ", "t"))
+               for y, rangee in enumerate(grille) for x, g in enumerate(rangee))
+
+
 def _poser_le_point(grille: list[list[str]], type_: str, genre: str | None,
                     porte: int, prefere: list[tuple[int, int]],
                     garder: tuple = (), **extra) -> dict:
@@ -8058,7 +8111,10 @@ def _poser_le_point(grille: list[list[str]], type_: str, genre: str | None,
             continue
         voisines = [(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
                     if 0 <= x + dx < largeur and 0 <= y + dy < hauteur]
-        if not any(_libre(grille, *v) for v in voisines):
+        # ⚠️ ATTEINTE, pas seulement libre : on ne marche plus sur les meubles,
+        # et un plancher mure derriere le lit ne sert a rien (`_atteint`).
+        atteint = _atteint(grille, porte)
+        if not any(v in atteint for v in voisines):
             # ⚠️ On DEGAGE une voisine plutot que de reculer — reculer d'un
             # meuble donnerait un point plus pres de la porte, et c'est l'autre
             # regle qu'on casserait. Mais jamais la tuile d'un BLOC : un lit a
@@ -8066,8 +8122,13 @@ def _poser_le_point(grille: list[list[str]], type_: str, genre: str | None,
             # ⚠️ Ni un BLOC, ni une tuile qui porte deja un point : degager
             # l'escalier pour atteindre un tiroir, c'est effacer l'escalier —
             # il restait un point `escalier` sur une tuile de plancher nu.
+            # ⚠️ Et la voisine degagee doit toucher l'atteint, sinon on vide un
+            # tiroir pour ouvrir sur un autre plancher mure.
             degageables = [v for v in voisines
-                           if not LEGENDE[grille[v[1]][v[0]]].get("bloc") and v not in garder]
+                           if not _libre(grille, *v)
+                           and not LEGENDE[grille[v[1]][v[0]]].get("bloc") and v not in garder
+                           and any((v[0] + dx, v[1] + dy) in atteint
+                                   for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))]
             if not degageables:
                 continue
             vx, vy = max(degageables, key=lambda v: math.hypot(v[0] - sortie[0],
@@ -8098,19 +8159,24 @@ def _completer_les_meubles(grille: list[list[str]], porte: int, petits: str,
     libres = sorted(((x, y) for y in range(hauteur) for x in range(largeur)
                      if _libre(grille, x, y) and (x, y) != (porte - 1, hauteur - 1)),
                     key=lambda t: -math.hypot(t[0] - (porte - 1), t[1] - (hauteur - 1)))
-    #: ⚠️ Ce qui ne doit JAMAIS se retrouver mure : les tuiles qui portent un
-    #: point d'action. Un point sans une tuile de plancher a cote est
-    #: injoignable — `_verifier_piece` le refuse, et il a raison : on verrait le
-    #: comptoir sans pouvoir le toucher.
+    #: ⚠️ Ce qui ne doit JAMAIS se retrouver mure : le plancher qu'on rejoignait
+    #: (on ne marche plus sur les meubles) et les tuiles qui portent un point
+    #: d'action. Un point sans une tuile atteinte a cote est injoignable —
+    #: `_verifier_piece` le refuse, et il a raison : on verrait le comptoir sans
+    #: pouvoir le toucher. On pose, on regarde ce qui se rejoint encore, et on
+    #: reprend le meuble s'il a coupe quoi que ce soit.
     def enferme(x: int, y: int) -> bool:
-        for mx, my in proteges:
-            if abs(mx - x) + abs(my - y) != 1:
-                continue
-            autour = [(mx + dx, my + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
-                      if 0 <= mx + dx < largeur and 0 <= my + dy < hauteur]
-            if sum(1 for v in autour if _libre(grille, *v)) <= 1:
-                return True
-        return False
+        avant = _atteint(grille, porte)
+        garde = grille[y][x]
+        grille[y][x] = "e"
+        apres = _atteint(grille, porte)
+        grille[y][x] = garde
+        if avant - apres - {(x, y)}:
+            return True
+        cote = ((1, 0), (-1, 0), (0, 1), (0, -1))
+        return any(any((mx + dx, my + dy) in avant for dx, dy in cote)
+                   and not any((mx + dx, my + dy) in apres for dx, dy in cote)
+                   for mx, my in proteges)
 
     poses = 0
     for x, y in libres:
@@ -8126,10 +8192,16 @@ def _completer_les_meubles(grille: list[list[str]], porte: int, petits: str,
 def _quelqu_un(grille: list[list[str]], qui: str, autour: tuple[int, int],
                porte: int, pris: set[tuple[int, int]]) -> tuple | None:
     """Une tuile de PLANCHER libre pres d'un endroit — personne ne nait dans un
-    meuble, ni sur le pas de la porte."""
+    meuble, ni sur le pas de la porte.
+
+    ⚠️ Et un client nait la ou l'on peut le rejoindre : on ne marche plus sur
+    les meubles, et seul le personnel (`COULISSES`) se tient derriere le
+    comptoir, dans un bout de plancher que le joueur ne rejoint pas."""
     largeur, hauteur = len(grille[0]), len(grille)
+    atteint = None if qui in COULISSES else _atteint(grille, porte)
     places = sorted(((x, y) for y in range(hauteur) for x in range(largeur)
                      if _libre(grille, x, y) and (x, y) not in pris
+                     and (atteint is None or (x, y) in atteint)
                      and (x, y) != (porte - 1, hauteur - 1)),
                     key=lambda p: math.hypot(p[0] - autour[0], p[1] - autour[1]))
     if not places:
@@ -8233,7 +8305,8 @@ COINS_DE_LOGEMENT = ("lit", "table", "cuisine", "tapis", "rangement")
 COIN_L, COIN_H = 5, 3
 
 
-def _meubler_le_coin(grille: list[list[str]], x0: int, y0: int, quoi: str) -> None:
+def _meubler_le_coin(grille: list[list[str]], x0: int, y0: int, quoi: str,
+                     chaises: bool = True) -> None:
     """Un coin de logement dans son carre de deux sur deux."""
     largeur, hauteur = len(grille[0]), len(grille)
     place = [(x, y) for y in range(y0, min(y0 + 2, hauteur - 1))
@@ -8244,7 +8317,7 @@ def _meubler_le_coin(grille: list[list[str]], x0: int, y0: int, quoi: str) -> No
         glyphe = {"lit": "l", "table": "a", "tapis": "y"}[quoi]
         for x, y in place:
             grille[y][x] = glyphe
-        if quoi == "table":
+        if quoi == "table" and chaises:
             for _, y in place:
                 cx = x0 + 2
                 if cx < largeur and _libre(grille, cx, y):
@@ -8283,10 +8356,24 @@ def piece_de_logement(slug: str, largeur: int, hauteur: int, porte: int,
         if haut:
             # En haut, on dort : un lit un coin sur deux.
             rang = "lit" if k % 2 == 0 else COINS_DE_LOGEMENT[(k // 2 + 1) % len(COINS_DE_LOGEMENT)]
-        _meubler_le_coin(grille, x0, y0, rang)
+        # ⚠️ UN COIN NE MURE RIEN : on ne marche plus sur les meubles (30 sept. 2026),
+        # et dans un logement de trois de large la table et sa chaise ferment toute
+        # la largeur — le lit et l'escalier restaient derriere. Le coin qui coupe la
+        # piece se reprend : sans ses chaises d'abord, sinon il reste vide.
+        avant = [rangee[:] for rangee in grille]
+        for chaises in (True, False):
+            grille[:] = [rangee[:] for rangee in avant]
+            _meubler_le_coin(grille, x0, y0, rang, chaises=chaises)
+            if not _mure(grille, porte):
+                break
+        else:
+            grille[:] = avant
     for x in (largeur - 1, 0):
         if _libre(grille, x, hauteur - 1) and abs(x + 1 - porte) >= 2:
             grille[hauteur - 1][x] = "n"
+            if _mure(grille, porte):
+                grille[hauteur - 1][x] = " "
+                continue
             break
     points = []
     if etage:

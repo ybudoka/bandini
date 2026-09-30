@@ -408,11 +408,21 @@ def test_un_interieur_est_une_piece_habitable(CARTE, slug):
     assert "".join(piece["sol"]).count("D") == 1
     depart = piece["apparition"]
     assert carte.marchable(piece["sol"][depart["y"]][depart["x"]])
-    groupes = carte.composantes_marchables(piece)
-    assert len(groupes) == 1, f"{slug} : un coin de la piece est mure"
+    # ⚠️ On ne marche plus sur les meubles (30 sept. 2026) : un autre morceau de
+    # plancher est permis — l'arriere du comptoir —, mais seul le personnel s'y
+    # tient, et tout point se touche depuis la porte.
+    atteignable = next((g for g in carte.composantes_marchables(piece)
+                        if (depart["x"], depart["y"]) in g), set())
+    assert atteignable, f"{slug} : on entre dans un meuble"
+    for gens in piece["gens"]:
+        if gens["qui"] not in carte.ASSIS_OU_COUCHE and (gens["x"], gens["y"]) not in atteignable:
+            assert gens["qui"] in carte.COULISSES, f"{slug} : le {gens['qui']} est mure derriere les meubles"
     for point in piece["points"]:
         assert 0 < point["x"] < piece["largeur"] - 1
         assert 0 < point["y"] < piece["hauteur"] - 1
+        assert any((point["x"] + dx, point["y"] + dy) in atteignable
+                   for dx, dy in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1))), (
+            f"{slug} : le point {point['type']} ne se touche pas depuis la porte")
 
 
 def test_aucun_gabarit_ne_deborde_sur_une_rue_qui_existe(VILLE_D_AVANT):
