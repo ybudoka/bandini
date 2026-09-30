@@ -363,7 +363,8 @@ function banc(corps) {
       }
       if (String(url).indexOf('definitions') >= 0) return Promise.resolve({ ok: true, json: function () { return Promise.resolve(defs); } });
       // ⚠️ La carte a sa requete depuis qu'elle est sortie du paquet : le banc
-      // la sert comme le serveur, a part, et le jeu la remet dans `defs.carte`.
+      // la sert comme le serveur, a part — PLIEE depuis le 30 sept. 2026 (`conftest.carte_pliee`) —,
+      // et le jeu la deplie dans `defs.carte`.
       if (String(url).indexOf('/api/carte') >= 0) return Promise.resolve({ ok: true, json: function () { return Promise.resolve(defs.carte); } });
       // Les sons : de quoi suivre TOUT le chemin d'un echantillon, du
       // telechargement au branchement sur la sortie.

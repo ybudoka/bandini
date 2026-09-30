@@ -82,6 +82,96 @@ MESURE_DU_PAQUET: dict[str, tuple[int, int]] = {
 }
 
 
+#: ⚠️ **LA MÊME GARDE POUR LA CARTE** (30 sept. 2026, docs/jalons/charger-les-districts-autour-du-joueur.md) : la
+#: carte voyage PLIÉE (`app/pliage.py`), et chacune de ses clés a son poids gzip seul — tel qu'elle voyage, pliée —
+#: et son budget, même règle qu'au-dessus (la mesure + 10 % + 100, arrondi au 50). Son plafond avait été relevé
+#: onze fois en quinze jours sans que rien ne dise qui le mangeait. Une clé neuve de la carte s'écrit ICI (comme
+#: dans `nord.DECALAGES`) ; relever un budget s'écrit à sa ligne, avec pourquoi.
+MESURE_DE_LA_CARTE: dict[str, tuple[int, int]] = {
+    "sol": (9_556, 10_650),
+    "decor": (7_054, 7_900),
+    "interieurs": (6_456, 7_250),
+    "voie": (2_760, 3_150),
+    "montagne_russe": (1_988, 2_300),
+    "devantures": (1_937, 2_250),
+    "portes": (1_600, 1_900),
+    "lampes": (1_484, 1_750),
+    "autobus": (1_278, 1_550),
+    "residences": (1_194, 1_450),
+    "chantiers": (1_145, 1_400),
+    "legende": (1_121, 1_350),
+    "arrets": (969, 1_200),
+    "toits": (958, 1_200),
+    "points_interet": (902, 1_100),
+    "zones": (808, 1_000),
+    "eboueurs": (620, 800),
+    "barrieres": (585, 750),
+    "aeroport": (577, 750),
+    "graffitis": (539, 700),
+    "concessionnaires": (524, 700),
+    "neige": (522, 700),
+    "intersections": (516, 700),
+    "frenesies": (500, 650),
+    "decor_solide": (419, 600),
+    "entraves": (408, 550),
+    "feux_pietons": (389, 550),
+    "tramway": (387, 550),
+    "scenes": (353, 500),
+    "nids_de_poule": (299, 450),
+    "ile": (295, 450),
+    "canton": (283, 450),
+    "grille": (276, 450),
+    "train": (260, 400),
+    "kiosques_de_foire": (258, 400),
+    "districts": (255, 400),
+    "metro": (248, 400),
+    "portes_garage": (245, 400),
+    "familles": (245, 400),
+    "zonage": (222, 350),
+    "traversier": (221, 350),
+    "incendies": (218, 350),
+    "grille_nord": (211, 350),
+    "ambulants": (210, 350),
+    "train_de_foire": (203, 350),
+    "aqueducs": (200, 350),
+    "chemins_des_bois": (189, 350),
+    "fourriere": (188, 350),
+    "reclames": (181, 300),
+    "navette": (178, 300),
+    "rampes": (176, 300),
+    "paquets": (172, 300),
+    "jeux_de_foire": (147, 300),
+    "stationnement_du_poste": (144, 300),
+    "foire_enclos": (140, 300),
+    "fermetures": (139, 300),
+    "mouillages": (135, 250),
+    "amarrages": (132, 250),
+    "foire": (122, 250),
+    "aqueduc": (102, 250),
+    "plages": (99, 250),
+    "frenesies_regle": (84, 200),
+    "entrave": (72, 200),
+    "fermeture": (68, 200),
+    "relief": (60, 200),
+    "ponts": (60, 200),
+    "quatre_roues": (55, 200),
+    "lave_auto": (45, 150),
+    "devant": (45, 150),
+    "apparition": (45, 150),
+    "empreinte": (38, 150),
+    "slug": (37, 150),
+    "roue": (37, 150),
+    "nom": (37, 150),
+    "flottants": (29, 150),
+    "graine": (28, 150),
+    "largeur": (23, 150),
+    "hauteur": (23, 150),
+    "decalage_nord": (23, 150),
+    "tuile_px": (22, 150),
+    "tuiles_bouchees": (21, 150),
+}
+
+
 def _gzip_par_cle(corps: bytes) -> dict[str, int]:
     """Le poids gzip de chaque clé des définitions, seule — comme `MESURE_DU_PAQUET` l'écrit."""
     return {cle: len(gzip.compress(json.dumps(valeur, ensure_ascii=False, separators=(",", ":"),
@@ -89,14 +179,15 @@ def _gzip_par_cle(corps: bytes) -> dict[str, int]:
             for cle, valeur in json.loads(corps).items()}
 
 
-def _qui_a_grossi(corps: bytes, combien: int = 3) -> str:
-    """Les clés qui ont le plus grossi depuis `MESURE_DU_PAQUET` (et les clés neuves), en une ligne."""
-    ecarts = sorted(((poids - MESURE_DU_PAQUET.get(cle, (0, 0))[0], cle) for cle, poids in _gzip_par_cle(corps).items()),
+def _qui_a_grossi(corps: bytes, combien: int = 3, mesure: dict[str, tuple[int, int]] | None = None) -> str:
+    """Les clés qui ont le plus grossi depuis `MESURE_DU_PAQUET` (ou `mesure`) et les clés neuves, en une ligne."""
+    mesure = MESURE_DU_PAQUET if mesure is None else mesure
+    ecarts = sorted(((poids - mesure.get(cle, (0, 0))[0], cle) for cle, poids in _gzip_par_cle(corps).items()),
                     reverse=True)[:combien]
     ecarts = [(ecart, cle) for ecart, cle in ecarts if ecart > 0]
     if not ecarts:
-        return "aucune clé n'a grossi depuis MESURE_DU_PAQUET : elle est à réécrire"
-    return ", ".join(f"{cle} +{ecart}" + ("" if cle in MESURE_DU_PAQUET else " (clé neuve)") for ecart, cle in ecarts)
+        return "aucune clé n'a grossi depuis la mesure : elle est à réécrire"
+    return ", ".join(f"{cle} +{ecart}" + ("" if cle in mesure else " (clé neuve)") for ecart, cle in ecarts)
 
 
 def test_le_paquet_est_deterministe():
@@ -333,11 +424,23 @@ def test_le_paquet_reste_leger(paquets):
     La suite a son plafond (10 562 bruts / 4 884 gzip à la mesure). 4 483 octets gzip de marge ; et le
     plafond qui cède NOMME maintenant les trois clés qui ont le plus grossi depuis `MESURE_DU_PAQUET` — le
     prochain qui déborde sait où couper, avant de relever quoi que ce soit.
+
+    ⚠️ **LA CARTE PLIÉE, LE 30 SEPT. 2026 — SES PLAFONDS DESCENDENT : 722 000 → 560 000 bruts, 71 000 → 55 000
+    gzip** (docs/jalons/charger-les-districts-autour-du-joueur.md, vague 1). Mesure : **720 915 bruts / 70 538
+    gzip** sur `dev` (462 octets de marge, le plafond relevé onze fois en quinze jours), **539 632 / 52 129**
+    une fois pliée (−181 283 / −18 409). Rien n'est sorti de la ville : ses longues listes d'objets de même forme
+    (le décor, les lampes, les feux piétons, les toits…) voyagent EN COLONNES (`app/pliage.py`), et le navigateur
+    la déplie en arrivant (`Pliage.deplier`, dans `Jeu.chargerDefinitions`), avant que quoi que ce soit la lise —
+    la ville dépliée est celle d'avant à l'octet près (`test_pliage`). Le décor à lui seul : 13 871 → 7 054. Et
+    la carte a maintenant SA garde par clé (`MESURE_DE_LA_CARTE`, `test_chaque_cle_de_la_carte_tient_son_budget`)
+    : le plafond qui cède nomme les trois clés qui ont le plus grossi. Le vrai remède reste celui de la fiche —
+    le squelette et les morceaux par district —, et son déclencheur est écrit dans « Dettes ».
     """
-    for nom, brut_max, fil_max in (("definitions", 240_000, 57_500), ("carte", 722_000, 71_000),
+    for nom, brut_max, fil_max in (("definitions", 240_000, 57_500), ("carte", 560_000, 55_000),
                                    ("musiques", 50_000, 10_000), ("suite", 13_000, 6_000)):
         paquet = getattr(paquets, nom)
-        qui = f" — qui a grossi : {_qui_a_grossi(paquet.corps)}" if nom == "definitions" else ""
+        mesures = {"definitions": MESURE_DU_PAQUET, "carte": MESURE_DE_LA_CARTE}
+        qui = f" — qui a grossi : {_qui_a_grossi(paquet.corps, mesure=mesures[nom])}" if nom in mesures else ""
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle{qui}"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))
         assert sur_le_fil < fil_max, f"{nom} : {sur_le_fil} octets gzip, le telephone va sentir passer{qui}"
@@ -358,6 +461,21 @@ def test_chaque_cle_du_paquet_tient_son_budget(paquets):
                  for cle, (mesure, budget) in MESURE_DU_PAQUET.items() if poids[cle] > budget]
     assert not depassees, ("des clés dépassent leur budget : " + " ; ".join(depassees)
                            + ". Avant de relever : ce qui peut sortir (voir MESURE_DU_PAQUET)")
+
+
+def test_chaque_cle_de_la_carte_tient_son_budget(paquets):
+    """La garde de la carte pliée (30 sept. 2026) : QUI fait grossir `/api/carte` se voit, clé par clé
+    (`MESURE_DE_LA_CARTE`), comme pour les définitions. Une clé neuve de la carte doit s'y écrire avec son poids."""
+    poids = _gzip_par_cle(paquets.carte.corps)
+    neuves = sorted(set(poids) - set(MESURE_DE_LA_CARTE))
+    assert not neuves, ("clés neuves à la carte, sans poids écrit dans MESURE_DE_LA_CARTE : "
+                        + ", ".join(f"{c} ({poids[c]} octets gzip)" for c in neuves)
+                        + " — un navigateur la lit-il avant JOUER ? Sinon, elle peut voyager à part")
+    parties = sorted(set(MESURE_DE_LA_CARTE) - set(poids))
+    assert not parties, f"clés sorties de la carte : {parties} — retire leur ligne de MESURE_DE_LA_CARTE"
+    depassees = [f"{cle} : {poids[cle]} octets gzip pour un budget de {budget} (mesure {mesure}, +{poids[cle] - mesure})"
+                 for cle, (mesure, budget) in MESURE_DE_LA_CARTE.items() if poids[cle] > budget]
+    assert not depassees, "des clés de la carte dépassent leur budget : " + " ; ".join(depassees)
 
 
 def test_la_suite_du_paquet_voyage_a_part(paquets):

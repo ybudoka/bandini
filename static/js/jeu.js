@@ -1411,8 +1411,8 @@ const Jeu = (function () {
   function chargerDefinitions(racine) {
     // ⚠️ La barre reprend ou `chargement.js` l'a laissee (les scripts), et garde
     // ses cinq derniers pour la ville qui se batit. Entre les deux, les deux
-    // requetes a la mesure de leur poids sur le fil : la carte 42 Ko gzip, les
-    // definitions 33 (mesure du 17 sept. 2026).
+    // requetes a la mesure de leur poids sur le fil : la carte 52 Ko gzip une fois
+    // pliee, les definitions 53 (mesure du 30 sept. 2026).
     const depart = Hud.partDesScripts(), arrivee = 95;
     const parts = { definitions: 0, carte: 0 };
     function suivre(quoi, poids) {
@@ -1422,14 +1422,16 @@ const Jeu = (function () {
       };
     }
     return Promise.all([
-      chargerJson(racine.dataset.urlDefinitions, 'definitions', suivre('definitions', 0.45)),
-      chargerJson(racine.dataset.urlCarte, 'carte', suivre('carte', 0.55)),
+      chargerJson(racine.dataset.urlDefinitions, 'definitions', suivre('definitions', 0.5)),
+      chargerJson(racine.dataset.urlCarte, 'carte', suivre('carte', 0.5)),
     ]).then(function (reponses) {
       const defs = reponses[0], carte = reponses[1];
       if (carte.empreinte !== defs.carte_empreinte) {
         throw new Error('carte ' + carte.empreinte + ' au lieu de ' + defs.carte_empreinte);
       }
-      defs.carte = carte;
+      // ⚠️ LA CARTE VOYAGE PLIÉE (30 sept. 2026, `app/pliage.py`) : en colonnes, pour le fil. On la déplie
+      // ICI, avant que quoi que ce soit la lise — aucun lecteur ne sait qu'elle l'a été.
+      defs.carte = Pliage.deplier(carte);
       return defs;
     });
   }

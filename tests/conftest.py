@@ -13,7 +13,7 @@ RACINE = Path(__file__).resolve().parent.parent
 if str(RACINE) not in sys.path:
     sys.path.insert(0, str(RACINE))
 
-from app import create_app  # noqa: E402
+from app import create_app, pliage  # noqa: E402
 from app.definitions import construire  # noqa: E402
 from config import Config  # noqa: E402
 
@@ -71,7 +71,9 @@ def paquet(paquets):
     # dedans a son arrivee (`Jeu.chargerDefinitions`). Elle voyage a part depuis
     # le 16 sept. 2026, mais aucun lecteur ne la cherche ailleurs.
     donnees = json.loads(paquets.definitions.corps.decode("utf-8"))
-    donnees["carte"] = json.loads(paquets.carte.corps.decode("utf-8"))
+    # ⚠️ Et DÉPLIÉE (30 sept. 2026) : elle voyage en colonnes (`app/pliage.py`), et le navigateur la déplie en
+    # arrivant. Le banc, lui, la sert PLIÉE, comme le serveur (`carte_pliee`, plus bas).
+    donnees["carte"] = pliage.deplier(json.loads(paquets.carte.corps.decode("utf-8")))
     # ⚠️ Et les NOTES de la musique remises a leur morceau (`Son.Notes`) : elles voyagent a
     # part depuis le 29 sept. 2026, et arrivent juste apres les definitions. Un juge qui
     # veut le paquet NU (les notes pas encore la) passe `banc(..., poser_les_notes=False)`.
@@ -86,6 +88,12 @@ def paquet(paquets):
         if cle != "empreinte":
             donnees[cle] = valeur
     return donnees
+
+
+@pytest.fixture(scope="session")
+def carte_pliee(paquets):
+    """La carte telle qu'elle voyage sur `/api/carte` : pliée en colonnes (`app/pliage.py`, 30 sept. 2026)."""
+    return json.loads(paquets.carte.corps.decode("utf-8"))
 
 
 @pytest.fixture(scope="session")
@@ -142,7 +150,7 @@ def serveur(tmp_path_factory, paquets):
 
 
 @pytest.fixture(scope="session")
-def banc(paquet, a_jouer, cartes_des_blocs, notes_de_la_musique, collections_du_paquet, suite_du_paquet):
+def banc(paquet, a_jouer, cartes_des_blocs, notes_de_la_musique, collections_du_paquet, suite_du_paquet, carte_pliee):
     """Fait tourner `corps` (une fonction JS `(L, o) => resultat`) dans le banc Node."""
     if OBLIGATOIRE and shutil.which("node") is None:
         pytest.fail("node est obligatoire (BANDINI_TESTS_OBLIGATOIRES=1) et il manque")
@@ -159,7 +167,9 @@ def banc(paquet, a_jouer, cartes_des_blocs, notes_de_la_musique, collections_du_
         script = prelude + "\nrapporter(banc(" + corps + "));\n"
         # ⚠️ `poser_les_missions=False` : le catalogue part NU, et le jeu doit aller
         # chercher chaque mission — c'est ainsi qu'on juge la porte elle-meme.
-        entree = {"racine": str(RACINE), "defs": paquet, "graine": graine,
+        # ⚠️ LA CARTE PLIÉE, comme le serveur la sert (30 sept. 2026) : le jeu la déplie en arrivant
+        # (`Pliage.deplier`), et TOUS les juges du banc jouent donc sur la ville dépliée par le navigateur.
+        entree = {"racine": str(RACINE), "defs": {**paquet, "carte": carte_pliee}, "graine": graine,
                   "missions": a_jouer, "poser_les_missions": poser_les_missions,
                   "missions_panne": missions_panne, "blocs": cartes_des_blocs, "blocs_panne": blocs_panne,
                   # Les notes de la musique (`/api/musiques`) : le banc les sert comme le serveur.

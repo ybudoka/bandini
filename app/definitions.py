@@ -56,7 +56,7 @@ from dataclasses import dataclass
 from . import (armes, audio, blocs, calendrier, saisons, pluie, halloween, carte, demenagement, derby, enseignes, fetes, garage, motoneige, photos, quatre_roues, saint_jean, territoires, devantures, dojo, economie, mantes, garderobe, interactions, journal, magasins,
                brouillard, loto, machine_a_sous, manettes, tables_de_jeu, missions, nord, nuit, pietons, recherche, techniques, vehicules, verglas, videopoker,
                musique, pont_de_glace, visages)
-from . import collectionner, decoration
+from . import collectionner, decoration, pliage
 from .blocs import galeries as galeries_hantees
 from .version import VERSION
 
@@ -286,7 +286,9 @@ def construire() -> Paquets:
     a_part["planque"] = decoration.exporter()
     collections = _signer(a_part)
     donnees["collections_empreinte"] = collections.etag
-    carte = _signer(ville)
+    # ⚠️ LA CARTE VOYAGE PLIÉE (30 sept. 2026, `pliage`) : la même ville, en colonnes — 70 538 → 52 130 octets
+    # gzip. Le navigateur la déplie en arrivant (`Pliage.deplier`), avant que quoi que ce soit la lise.
+    carte = _signer(pliage.plier(ville))
     donnees["carte_empreinte"] = carte.etag
     musiques = _signer(sortir_les_notes(donnees["audio"]))
     donnees["musiques_empreinte"] = musiques.etag

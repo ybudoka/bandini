@@ -83,12 +83,62 @@ et c'est lui qui craquera le prochain. Le plafond a été relevé onze fois en q
   (Chromium réseau coupé) ; une **garde par clé** sur la carte (`MESURE_DE_LA_CARTE`, comme
   `MESURE_DU_PAQUET`) ; le plafond redescend à la nouvelle mesure plus une marge. Sonde de performance
   avant et après.
-- **Vague 2 — les pièces voyagent à part** (option 2), si la marge rendue par la vague 1 ne suffit pas ou
-  que le premier chargement sur le téléphone le demande. Preuve au banc : une porte passée avant l'arrivée
-  des pièces attend dans son fondu, jamais un trou.
-- **Vague 3 — le squelette et les morceaux par district** (option 3). ⚠️ C'est le vrai remède, et le plus
+- **Vague 2 — le fil compressé une fois, au plus fort** (trouvé en mesurant la vague 1). ⚠️ Les juges comptent
+  le gzip au niveau 6, mais **nginx compresse au niveau 1** (`deploy/nginx`, aucun `gzip_comp_level`) : sur
+  le vrai fil, la carte pesait **98 091** octets (71 755 une fois pliée) et les définitions 62 773. Compressés
+  UNE fois par l'application, au niveau 9, à la construction des paquets (`Content-Encoding: gzip` quand le
+  navigateur l'accepte — nginx et Caddy ne recompressent pas une réponse déjà encodée) : **50 069** pour la
+  carte, **52 610** pour les définitions, sans rien changer au jeu. À vérifier en ligne par Martin (le `curl`
+  de `deploy/README.md`).
+- **Vague 3 — les pièces voyagent à part** (option 2). ⚠️ **Elle n'achète presque rien au démarrage tant que
+  les définitions pèsent autant que la carte** : les deux requêtes partent ENSEMBLE, et c'est la plus lourde
+  qui fait attendre le titre — après la vague 1, la carte (52 129) et les définitions (52 993) sont à égalité.
+  Les lecteurs sont nombreux (`Jeu.entrer` refuse une porte sans sa pièce, `Histoire` pose dans les pièces,
+  le métro, l'Halloween, une partie sauvée dedans), et chacun devrait attendre. À prendre quand les
+  définitions auront maigri, ou si le plafond de la carte cède avant. Preuve au banc : une porte passée avant
+  l'arrivée des pièces attend dans son fondu, jamais un trou.
+- **Vague 4 — le squelette et les morceaux par district** (option 3). ⚠️ C'est le vrai remède, et le plus
   cher : son **déclencheur** reste celui de la dette (« plus de 2 s entre JOUER et la ville sur le téléphone
   de Martin »), ou le plafond de la carte pliée qui cède à son tour. Preuve au banc obligatoire : conduire
   vite d'un bout à l'autre de la ville et se téléporter par le debug sans jamais voir un morceau vide ; les
   numéros d'entités identiques à ceux d'avant (le premier numéro libre après `commencer()`).
-- **Vague 4** (option 4) : pas prévue ; écrite pour qu'on ne la reprenne pas sans raison.
+- **Vague 5** (option 4) : pas prévue ; écrite pour qu'on ne la reprenne pas sans raison.
+
+## Notes
+
+**Vague 1 — la carte voyage pliée (30 sept. 2026).** `app/pliage.py` plie la ville à la signature de
+`/api/carte` (`definitions.construire`) ; `static/js/pliage.js` la déplie dans `Jeu.chargerDefinitions`, avant
+`defs.carte`. Aucun lecteur n'a changé, la génération non plus (`carte.generer` n'est pas touché).
+
+- **Le poids** : **720 915 → 539 632 octets bruts, 70 538 → 52 129 gzip** (niveau 6, celui des juges) ; au
+  niveau 1 de nginx, le vrai fil : 98 091 → 71 755. Le décor seul : 13 871 → 7 054 ; les arrêts 2 948 → 969 ;
+  les feux piétons 1 298 → 383 ; les sentiers de La Pointe 999 → 189. Le sol (9 556) et les voies (2 760)
+  n'ont pas bougé : rien ne les plie mieux que gzip.
+- **Les plafonds de la carte descendent** : 722 000 → **560 000** bruts, 71 000 → **55 000** gzip (2 871 octets
+  de marge, six fois celle d'avant) ; et **une garde par clé** (`MESURE_DE_LA_CARTE`,
+  `test_chaque_cle_de_la_carte_tient_son_budget`) : une clé neuve de la carte s'y écrit avec son poids, une clé
+  qui dépasse son budget rougit en se nommant, et le plafond qui cède nomme les trois clés qui ont grossi.
+- ⚠️ **Deux pièges vus en chemin, que les juges tiennent** : (1) les arrêts (`"x,y"` → sens) se pliaient dans
+  l'ordre d'INSERTION du dictionnaire Python, alors que le JSON d'avant les triait — le navigateur les
+  rebâtissait dans un autre ordre, et `Object.keys(arrets)` aussi ; seul le juge « à l'octet près » sous Node
+  l'a vu. (2) La légende a une clé `~` (l'eau) : une marque de pli est une clé ENTIÈRE (`~t`, `~p`, `~xy`),
+  jamais un préfixe, et `plier` refuse une carte qui en porterait une.
+- **Le banc sert la carte PLIÉE**, comme le serveur (`conftest.carte_pliee`) : tous les juges JS jouent sur la
+  ville dépliée par le navigateur (et l'entrée de chaque banc a maigri de 180 Ko).
+- **La performance** (sonde Chromium, processeur ×4, `service_workers: block`, base et vague 1 en alternance ;
+  la machine était chargée — d'autres sessions — alors seuls les écarts comptent) : écran titre 1 761 / 1 730 ms
+  (base) contre 1 779 / 1 735 ms ; bâtir la ville après la dernière réponse 499 / 473 contre 471 / 475 ;
+  `JSON.parse` de la carte 16,4 / 17,3 contre 14,1 / 13,6 ms ; JOUER → la ville et le temps d'une image,
+  pareils (bruit). Sous Node : `JSON.parse` de la carte entière 2,21 ms, de la carte pliée 1,34, pliée et
+  dépliée 3,04 — le dépliage coûte moins d'une milliseconde. ⚠️ **Le gain est sur le fil**, pas dans le
+  processeur : c'est ce que le téléphone de Martin doit dire (la dette « plus de 2 s entre JOUER et la ville »).
+- **Juges** : `test_pliage.py` (huit : chaque pli et chaque refus de plier, sans rien toucher en place, la
+  marque refusée, la ville qui voyage dépliée à l'octet près contre `assembler()`, le poids, le déplieur du
+  navigateur sur chaque cas et sur la ville entière — `JSON.stringify` à l'octet près, l'ordre des clés compris —,
+  et le jeu au banc qui reçoit la carte pliée et tient la ville dépliée). Ils MORDENT : les arrêts pliés dans
+  l'ordre d'insertion → deux rouges ; les écarts non cumulés dans le déplieur → trois rouges. Verts à côté :
+  `test_definitions`, `test_moteur_js`, `test_carte`, `test_reproductible`, `test_nord`, `test_nord_js`,
+  `test_canton`, `test_debug_js`, `test_hors_ligne` (le jeu réseau coupé compris), `test_navigateur` (dix
+  rouges sous la charge de la machine, tous verts rejoués seuls), `test_routes`, `test_collections`,
+  `test_collections_js`, `test_blocs`, `test_blocs_js`, `test_suite_js`, `test_comptes`, `test_chargement_js`,
+  `test_monde_js`, `test_table_des_jalons`.
