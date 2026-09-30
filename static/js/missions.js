@@ -1269,24 +1269,27 @@ const Missions = (function () {
     if (point.type === 'rame') return Metro.utiliser(j, point);
     if (point.type === 'fouiller') return fouiller(point);
     if (point.type === 'jukebox') return Decoration.jukebox();
-    // ⚠️ UNE ARME EN MAIN AU COMPTOIR : ACTION braque, avant le menu — l'invite l'a promis.
-    if (braquable(j, point)) { braquer(point); return true; }
-    // Et le commerce braque ne te sert plus, tant qu'il s'en souvient.
+    // Le commerce braque ne te sert plus, tant qu'il s'en souvient. Une arme en main, il reste
+    // le choix de le rebraquer — jamais d'office (`menuRancune`).
     if (reglesDuBraquage() && rancuneIci() && reglesDuBraquage().points.indexOf(point.type) >= 0) {
       const commis = B.entites.find(function (e) { return e.type === 'pieton' && e.vivant && e.poste; });
       if (commis) Entites.bulle(commis, reglesDuBraquage().refus, { duree: 120 });
       Hud.message('ON NE TE SERT PLUS ICI'); Son.SFX.erreur();
+      if (braquable(j, point)) Hud.ouvrirMenu(menuRancune(point));
       return true;
     }
     // ⚠️ La machine AVANT le menu : si quelque chose y est reste pris, ACTION la
     // brasse — l'invite l'a promis.
     if (point.type === 'distributrice') return utiliserDistributrice(j, machineDuPoint(point));
-    const menu = menuDuPoint(point);
+    // ⚠️ UNE ARME EN MAIN AU COMPTOIR : le menu s'ouvre comme d'habitude, BRAQUER en derniere
+    // ligne (`avecBraquage`). Retour de Martin (30 sept.) : ACTION braquait d'office, meme pour
+    // acheter des balles a l'armurerie — « je veux avoir le choix de braquer ou non ».
+    const menu = avecBraquage(menuDuPoint(point), point);
     if (!menu) { Hud.message('PLUS TARD'); Son.SFX.erreur(); return true; }
     // Un comptoir qui reste ouvert se refait apres chaque achat : l'arme passe
     // a « DEJA A TOI », le magot en haut a droite fond, les munitions de ce
     // qu'on vient d'acheter apparaissent. Sans ca, on paie deux fois.
-    menu.refaire = function () { return menuDuPoint(point); };
+    menu.refaire = function () { return avecBraquage(menuDuPoint(point), point); };
     Hud.ouvrirMenu(menu);
     return true;
   }
@@ -3113,6 +3116,30 @@ const Missions = (function () {
     return true;
   }
 
+  /** La ligne BRAQUER d'un comptoir : elle ferme le menu, le commis leve les mains. */
+  function itemBraquer(point) {
+    return { libelle: 'BRAQUER', detail: 'LA CAISSE · ' + B.defs.recherche.delits.braquage.etoiles + ' ÉTOILES',
+             faire: function () { braquer(point); return true; } };
+  }
+
+  /** Le menu `menu` du comptoir `point`, BRAQUER ajoute EN DERNIER si l'arme est en main.
+      ⚠️ EN DERNIER : le curseur s'ouvre sur la premiere ligne qui se choisit — deux pressions
+      d'ACTION pour acheter ne doivent jamais braquer. Un comptoir ferme (pas de menu) s'ouvre
+      quand meme, arme en main : PARTIR, puis BRAQUER. */
+  function avecBraquage(menu, point) {
+    if (!braquable(B.joueur, point)) return menu;
+    if (!menu) return menuRancune(point);
+    menu.items.push(itemBraquer(point));
+    return menu;
+  }
+
+  /** Le commerce ne te sert pas (rancune, ou ferme), mais l'arme est en main : PARTIR d'abord,
+      BRAQUER ensuite — le curseur ne s'ouvre jamais sur le crime. */
+  function menuRancune(point) {
+    return { titre: B.interieur.nom.toUpperCase(), sur: B.partie.argent + ' $',
+             items: [{ libelle: 'PARTIR', faire: function () { return true; } }, itemBraquer(point)] };
+  }
+
   /** BRAQUER : le commis leve les mains et vide sa caisse ; l'alarme sonne ; la police le sait, a
       l'adresse de la porte (`B.exterieur` : dedans, les coordonnees sont celles de la piece). */
   function braquer(point) {
@@ -3788,7 +3815,6 @@ const Missions = (function () {
         const assis = Histoire.personnageDuPoint(point.type);
         const vente = point.type === 'caisse' && aVendre(B.interieur.slug);
         B.invite = assis ? 'PARLER À ' + assis.nom.toUpperCase()
-          : braquable(j, point) ? 'BRAQUER'
           : vente ? 'ACHETER ' + vente.nom.toUpperCase()
           : (point.type === 'distributrice' ? inviteDistributrice(machineDuPoint(point))
             : point.type === 'escalier' && point.descend ? 'DESCENDRE'

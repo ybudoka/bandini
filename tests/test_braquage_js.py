@@ -1,7 +1,7 @@
 """Braquer un commerce, au banc (docs/jalons/braquer-un-commerce.md).
 
-Une arme en main devant le comptoir d'un commis : l'invite dit BRAQUER, ACTION vide la caisse et
-fait monter la chaleur ; le commerce s'en souvient (il ne te sert plus, et sa caisse est presque vide
+Une arme en main devant le comptoir d'un commis : le menu du comptoir s'ouvre comme d'habitude,
+BRAQUER en dernière ligne, qui vide la caisse et fait monter la chaleur ; le commerce s'en souvient (il ne te sert plus, et sa caisse est presque vide
 le lendemain) ; on ne braque pas sa propre propriété, ni à mains nues.
 """
 
@@ -25,29 +25,75 @@ DEVANT = """
 """
 
 
-def test_arme_en_main_le_comptoir_se_braque_et_la_chaleur_monte(banc):
-    """Au dépanneur, un pistolet en main : BRAQUER ; ACTION rend la caisse, l'alarme sonne, la
-    chaleur monte de deux étoiles, et le commis le dit."""
+def test_arme_en_main_braquer_est_un_choix_du_comptoir(banc):
+    """Au dépanneur, un pistolet en main : l'invite reste celle du comptoir, ACTION ouvre le menu
+    habituel et ne prend rien ; BRAQUER est la DERNIÈRE ligne. Deux pressions d'ACTION ne braquent
+    pas (retour de Martin, 30 sept. : « je veux avoir le choix de braquer ou non »)."""
     r = banc("function (L, o) {" + DEVANT + """
         L.Jeu.commencer();
         const B = L.B;
         B.partie.armes = B.partie.armes || {}; B.partie.armes.pistolet = { munitions: 12 };
         devant(L, o, 'depanneur', 'emplettes', 'pistolet');
-        const invite = B.invite, argent = B.partie.argent, chaleur = B.recherche.chaleur;
+        const invite = B.invite, argent = B.partie.argent;
+        o.tape('KeyE', 2);
+        const libelles = B.menu ? B.menu.items.map(function (i) { return i.libelle; }) : null;
+        const curseur = B.menu ? B.menu.items[B.menu.curseur].libelle : null;
+        o.tape('KeyE', 2);
+        const deuxFois = { braque: !!(B.partie.braquages && B.partie.braquages.depanneur), crimes: B.crimes.length };
+        return { invite: invite, libelles: libelles, curseur: curseur, gagneALOuverture: B.partie.argent - argent,
+                 deuxFois: deuxFois };
+    }""")
+    assert r["invite"] != "BRAQUER", r
+    assert r["libelles"] and r["libelles"][-1] == "BRAQUER", r
+    assert r["curseur"] != "BRAQUER", "le curseur s'ouvre sur le crime"
+    assert r["gagneALOuverture"] <= 0, r
+    assert not r["deuxFois"]["braque"], "deux pressions d'ACTION ont braqué"
+
+
+def test_la_ligne_braquer_vide_la_caisse_et_la_chaleur_monte(banc):
+    """La ligne BRAQUER choisie : la caisse, l'alarme, deux étoiles, le commis le dit, et le menu
+    se ferme."""
+    r = banc("function (L, o) {" + DEVANT + """
+        L.Jeu.commencer();
+        const B = L.B;
+        B.partie.armes = B.partie.armes || {}; B.partie.armes.pistolet = { munitions: 12 };
+        devant(L, o, 'depanneur', 'emplettes', 'pistolet');
+        o.tape('KeyE', 2);
+        const argent = B.partie.argent, chaleur = B.recherche.chaleur;
+        B.menu.curseur = B.menu.items.length - 1;
         o.tape('KeyE', 2);
         const commis = B.entites.find(function (e) { return e.type === 'pieton' && e.poste; });
         const crime = B.crimes[B.crimes.length - 1];
-        return { invite: invite, gagne: B.partie.argent - argent, chaleur: B.recherche.chaleur - chaleur,
+        return { gagne: B.partie.argent - argent, chaleur: B.recherche.chaleur - chaleur,
                  crime: crime ? { type: crime.type, gravite: crime.gravite, rapporte: crime.rapporte } : null, bulle: commis && commis.bulle ? commis.bulle.texte : null,
                  menu: B.menu ? B.menu.titre : null, braque: B.partie.braquages && B.partie.braquages.depanneur };
     }""")
-    assert r["invite"] == "BRAQUER", r
     assert r["gagne"] == economie.BRAQUAGE["caisses"]["depanneur"], r
     assert r["chaleur"] > 0, r
     assert r["crime"] == {"type": "braquage", "gravite": 2, "rapporte": True}, r
     assert r["bulle"] == economie.BRAQUAGE["dit"], r
-    assert r["menu"] is None, "ACTION a ouvert le comptoir au lieu de braquer"
+    assert r["menu"] is None, "le menu est resté ouvert après le braquage"
     assert r["braque"], r
+
+
+def test_a_l_armurerie_on_achete_des_balles_arme_en_main(banc):
+    """L'armurerie de Gus, un pistolet en main : son menu s'ouvre (ses armes), BRAQUER au bout,
+    et y rester ne braque pas."""
+    r = banc("function (L, o) {" + DEVANT + """
+        L.Jeu.commencer();
+        const B = L.B;
+        B.partie.armes = B.partie.armes || {}; B.partie.armes.pistolet = { munitions: 12 };
+        devant(L, o, 'armurerie', 'acheter', 'pistolet');
+        o.tape('KeyE', 2);
+        const n = B.menu ? B.menu.items.length : 0;
+        // Un achat (le menu se refait) : BRAQUER reste au bout, une seule fois.
+        L.Hud.rafraichirMenu && L.Hud.rafraichirMenu();
+        const apres = B.menu ? B.menu.items.map(function (i) { return i.libelle; }) : null;
+        return { n: n, apres: apres, braque: !!(B.partie.braquages && B.partie.braquages.armurerie) };
+    }""")
+    assert r["n"] > 2, r
+    assert r["apres"][-1] == "BRAQUER" and r["apres"].count("BRAQUER") == 1, r
+    assert not r["braque"], r
 
 
 def test_le_commerce_s_en_souvient(banc):
@@ -58,6 +104,9 @@ def test_le_commerce_s_en_souvient(banc):
         const B = L.B, p = B.partie, M = L.Missions;
         devant(L, o, 'depanneur', 'emplettes', 'pistolet');
         o.tape('KeyE', 2);
+        B.menu.curseur = B.menu.items.length - 1;
+        o.tape('KeyE', 2);
+        const braque = !!(p.braquages && p.braquages.depanneur);
         p.jour += 1;
         // Sans arme : le commis refuse.
         B.joueur.arme = 'poings'; p.arme = 'poings';
@@ -65,8 +114,14 @@ def test_le_commerce_s_en_souvient(banc):
         const inviteSansArme = B.invite;
         o.tape('KeyE', 2);
         const refus = { menu: B.menu ? B.menu.titre : null, msg: B.msg };
-        // Arme en main : la caisse est presque vide.
-        B.joueur.arme = 'pistolet';
+        // Arme en main : PARTIR d'abord, BRAQUER ensuite — jamais d'office.
+        B.joueur.arme = 'pistolet'; p.arme = 'pistolet';
+        o.frame(2);
+        o.tape('KeyE', 2);
+        const arme = { libelles: B.menu ? B.menu.items.map(function (i) { return i.libelle; }) : null,
+                       curseur: B.menu ? B.menu.items[B.menu.curseur].libelle : null };
+        L.Hud.fermerMenu();
+        // Rebraque : la caisse est presque vide.
         let argent = p.argent;
         M.braquer(B.interieur.points.find(function (q) { return q.type === 'emplettes'; }));
         const rebraque = p.argent - argent;
@@ -74,10 +129,12 @@ def test_le_commerce_s_en_souvient(banc):
         p.jour += B.defs.economie.braquage.rancune_jours;
         argent = p.argent;
         M.braquer(B.interieur.points.find(function (q) { return q.type === 'emplettes'; }));
-        return { inviteSansArme: inviteSansArme, refus: refus, rebraque: rebraque, plein: p.argent - argent };
+        return { braque: braque, inviteSansArme: inviteSansArme, refus: refus, arme: arme, rebraque: rebraque, plein: p.argent - argent };
     }""")
     caisse = economie.BRAQUAGE["caisses"]["depanneur"]
+    assert r["braque"], r
     assert r["refus"]["menu"] is None, "le commerce braqué t'a servi"
+    assert r["arme"] == {"libelles": ["PARTIR", "BRAQUER"], "curseur": "PARTIR"}, r
     assert r["rebraque"] == round(caisse * economie.BRAQUAGE["apres"]), r
     assert r["plein"] == caisse, r
 

@@ -30,7 +30,7 @@ _Rien de livré._
 **Livré le 26 sept. 2026.**
 
 - **Le geste** : une arme en main devant le comptoir d'un commis (`emplettes`, `acheter`, `hotdog`),
-  l'invite dit **BRAQUER** ; ACTION — le commis lève les mains (« OK, OK! PRENDS TOUT! ») et vide sa
+  la ligne **BRAQUER** du menu (depuis le 30 sept. ; avant, l'invite disait BRAQUER et ACTION suffisait) — le commis lève les mains (« OK, OK! PRENDS TOUT! ») et vide sa
   caisse, une **alarme** synthétisée sonne, et la police le sait à l'adresse de la porte (`braquage` :
   deux étoiles, bruyant — pas de témoin à convaincre).
 - **Les caisses** (`economie.BRAQUAGE`) : 60 $ au terminus, 90 au dépanneur, 240 chez Gus, 120 pour un
@@ -41,4 +41,12 @@ _Rien de livré._
   poste, la planque ou le garage de Rocco.
 - **Juges** (`tests/test_braquage_js.py`) : au bouton, la caisse, la chaleur et le crime rapporté ; la
   rancune ; ni à mains nues ni chez soi ; l'économie. Trois mutations les font rougir.
+
+**Le choix, le 30 sept. 2026** (retour de Martin : « je veux avoir le choix de braquer ou non ») :
+ACTION braquait d'office dès qu'une arme était en main — même pour acheter des balles chez Gus. Arme
+en main, le comptoir ouvre maintenant **son menu habituel**, l'invite garde son nom, et **BRAQUER** est
+la **dernière ligne** (le curseur s'ouvre sur la première : deux pressions d'ACTION n'achètent pas un
+crime). Un commerce rancunier (ou fermé) qu'on aborde arme en main n'offre que PARTIR, puis BRAQUER.
+Juges : le curseur n'est jamais sur BRAQUER, deux ACTION ne braquent pas, l'armurerie garde BRAQUER au
+bout après un achat ; mettre BRAQUER en tête en fait rougir quatre.
 
