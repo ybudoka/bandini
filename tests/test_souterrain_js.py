@@ -322,3 +322,27 @@ def test_sans_le_garage_l_ascenseur_ne_descend_pas(banc):
     }""")
     assert r["piece"] == "garage" and r["bloc"] is False, r
     assert "GARAGE" in r["msg"], r
+
+
+def test_au_sous_sol_ni_pluie_ni_neige_ni_nuit(banc):
+    """Le jour 2 à 20 h, une tempête de neige en pleine nuit ; le jour 14 à 14 h, la pluie. En ville, le témoin
+    les voit ; au sous-sol, rien."""
+    r = banc("async function (L, o) {" + OUTILS + """
+        L.Jeu.commencer(); proprio(L);
+        const B = L.B, p = B.partie;
+        function ciel() {
+            p.jour = 2; p.heure = 20 / 24;
+            const neige = L.Neige.intensite(), nuit = L.Monde.ambianceVue().alpha;
+            p.jour = 14; p.heure = 14 / 24;
+            return { abri: L.Monde.aLAbri ? L.Monde.aLAbri() : null, neige: neige, nuit: nuit, pluie: L.Pluie.intensite() };
+        }
+        viderLaBaie(L);
+        const enVille = ciel();
+        L.Blocs.sauter('souterrain', null, null); await attendreLeBloc(L, o, 'souterrain');
+        return { enVille: enVille, enBas: ciel() };
+    }""")
+    v, b = r["enVille"], r["enBas"]
+    assert v["neige"] > 0.5 and v["pluie"] > 0.5 and v["nuit"] > 0.4, f"le témoin ne voit pas le ciel : {v}"
+    assert b["abri"] is True, b
+    assert b["neige"] == 0 and b["pluie"] == 0, b
+    assert b["nuit"] < 0.1, f"pas de nuit au sous-sol : {b}"

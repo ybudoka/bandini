@@ -58,7 +58,7 @@ const Pluie = (function () {
   }
 
   /** Maintenant, pour ce joueur : 0 dans une piece (on n'y voit pas la pluie) ou sans partie. */
-  function intensite() { return !B.partie || B.interieur ? 0 : intensiteA(B.partie.jour, B.partie.heure); }
+  function intensite() { return !B.partie || Monde.aLAbri() ? 0 : intensiteA(B.partie.jour, B.partie.heure); }
   function mouillee() { return !B.partie || B.interieur ? 0 : mouilleeA(B.partie.jour, B.partie.heure); }
   function orage() { const a = B.partie && journee(B.partie.jour); return !!(a && a.orage) && intensite() > 0; }
 

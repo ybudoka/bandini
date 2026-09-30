@@ -1267,10 +1267,10 @@ const Jeu = (function () {
     if (!B.interieur) Monde.dessinerNids(ctx, vue);    // les nids-de-poule, dans la chaussee
     if (!B.interieur) Pont.dessiner(ctx, vue);        // le pont de glace et ses sapins, sous la neige
     if (!B.interieur) Verglas.dessinerSol(ctx, vue);   // la glace : le reflet, les eclats, les branches cassees
-    if (!B.interieur) Neige.dessinerSol(ctx, vue);     // la neige au sol, SOUS les rails et les gens
+    if (!Monde.aLAbri()) Neige.dessinerSol(ctx, vue);     // la neige au sol, SOUS les rails et les gens
     if (!B.interieur) Monde.dessinerMouille(ctx, vue); // derriere l'arroseuse (la nuit a ses habitudes)
     if (!B.interieur) Derapage.dessinerSol(ctx, vue);  // les traces de pneus, les sillons (les saisons, lot 6)
-    if (!B.interieur) Pluie.dessinerSol(ctx, vue);     // la rue mouillee, les flaques, la gadoue d'avril (les saisons, lot 2)
+    if (!Monde.aLAbri()) Pluie.dessinerSol(ctx, vue);     // la rue mouillee, les flaques, la gadoue d'avril (les saisons, lot 2)
     if (!B.interieur) RueDesSaisons.dessinerFlaques(ctx, vue);   // l'eau des bornes ouvertes de la canicule (vague 4c)
     if (!B.interieur) Naufrage.dessinerSol(ctx, vue);  // la ou un char a coule : les cercles, la tache d'huile
     // Le tunnel, la rame et ses fenetres : peints par-dessus le sol de la piece,
@@ -1281,6 +1281,7 @@ const Jeu = (function () {
     if (!B.interieur) { Autobus.dessinerRails(ctx, vue); Train.dessinerVoie(ctx, vue); Neige.dessinerPanneaux(ctx, vue); Blocs.dessiner(ctx, vue); Cabane.dessinerSol(ctx, vue); Monde.dessinerBattants(ctx, vue); Monde.dessinerPortesDeGarage(ctx, vue); Monde.dessinerBarrieresCoulissantes(ctx, vue); Monde.dessinerBarrieres(ctx, vue); }
     // La porte d'une PIÈCE (celle du sous-sol du Dragon d'or : `Monde.barrieres` lit la pièce, rien d'autre).
     if (B.interieur) Monde.dessinerBarrieres(ctx, vue);
+    Souterrain.dessiner(ctx, vue);   // les numeros des cases, et les portes de l'ascenseur (en bas et dans la piece du garage)
     Entites.dessinerDecals(ctx, vue);     // le sang est SOUS les pieds
     if (!B.interieur) Histoire.dessinerCheminCourse(ctx, vue);   // le trace d'une course, sur la chaussee
     if (!B.interieur) { Conduite.dessinerSol(ctx, vue); Rue.dessinerSol(ctx, vue); SaintJean.dessinerDefile(ctx, vue); }   // la case, les lignes, les cones d'une epreuve au volant
@@ -1301,8 +1302,8 @@ const Jeu = (function () {
     if (!B.interieur) Cineparc.dessiner(ctx, vue);
     if (B.options.trace && !B.interieur) Vehicules.dessinerTrace(ctx, vue);
     if (!B.interieur) Police.dessinerHelico(ctx, vue);
-    if (!B.interieur) Neige.dessinerTempete(ctx);
-    if (!B.interieur) Pluie.dessiner(ctx);             // la pluie qui tombe, et l'eclair de l'orage
+    if (!Monde.aLAbri()) Neige.dessinerTempete(ctx);
+    if (!Monde.aLAbri()) Pluie.dessiner(ctx);             // la pluie qui tombe, et l'eclair de l'orage
     if (!B.interieur) Blocs.dessinerFumees(ctx, vue);
     if (!B.interieur) RueDesSaisons.dessinerFumees(ctx, vue);   // la fumee des cheminees de la ville, l'hiver (les saisons, lot 4b)
     if (!B.interieur) Canton.dessiner(ctx, vue);

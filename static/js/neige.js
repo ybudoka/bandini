@@ -44,7 +44,7 @@ const Neige = (function () {
 
   /** La tempete, maintenant, pour ce joueur : 0 dedans, hors de l'hiver ou par beau temps. */
   function intensite() {
-    if (!B.partie || B.interieur) return 0;
+    if (!B.partie || Monde.aLAbri()) return 0;
     return intensiteA(B.partie.jour, B.partie.heure);
   }
 

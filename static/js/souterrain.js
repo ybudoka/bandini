@@ -156,6 +156,36 @@ const Souterrain = (function () {
   function invite(j) { return sousLaMain(j) ? 'L’ASCENSEUR' : null; }
   function agir(j) { return sousLaMain(j) ? monterAPied() : false; }
 
+  /** Les numeros des cases (P1…), et les portes de l'ascenseur : en bas, sur le mur sud (les `D` du plan sont
+      deja des portes de platre, on y ajoute l'acier et le bouton) ; en haut, sur le mur nord de la piece du garage,
+      au-dessus du point `ascenseur`. Rien ailleurs. */
+  function dessiner(ctx, cam) {
+    if (ici()) {
+      const s = B.bloc.def.bloc.souterrain;
+      s.cases.forEach(function (q) {
+        const x = Math.round((q.x + q.l / 2) * TT - cam.x) - 6, y = Math.round((q.y + q.h) * TT - cam.y) - 12;
+        if (x < -20 || x > VW + 20 || y < -20 || y > VH + 20) return;
+        Atlas.texte(ctx, 'P' + q.n, x, y, '#f4e4c1', 1);
+      });
+      const a = s.ascenseur;
+      portes(ctx, Math.round(a.x * TT - cam.x), Math.round((a.y + 1) * TT - cam.y), a.l * TT);
+      return;
+    }
+    if (B.interieur && B.interieur.slug === 'garage') {
+      const pt = (B.interieur.points || []).find(function (p) { return p.type === 'ascenseur'; });
+      if (pt) portes(ctx, Math.round(pt.x * TT - cam.x), Math.round((pt.y - 1) * TT - cam.y), TT);
+    }
+  }
+
+  /** Deux battants d'acier brosse, leur joint, et le bouton allume. */
+  function portes(ctx, x, y, l) {
+    ctx.fillStyle = '#5d6168'; ctx.fillRect(x + 1, y + 1, l - 2, TT - 2);
+    ctx.fillStyle = '#8a9099'; ctx.fillRect(x + 2, y + 2, l / 2 - 3, TT - 4); ctx.fillRect(x + l / 2 + 1, y + 2, l / 2 - 3, TT - 4);
+    ctx.fillStyle = '#2b2e33'; ctx.fillRect(x + l / 2 - 1, y + 2, 2, TT - 4);
+    ctx.fillStyle = '#f5c542'; ctx.fillRect(x + l - 3, y + TT / 2 - 1, 2, 2);
+    B.stats.rects += 5;
+  }
+
   return { SLUG, PAR_NIVEAU, CASES_MAX, est, ici, ouvertes, occupees, plein, fiche, ranger, garnir, refus, descendre,
-           descendreAPied, monterAPied, sousLaMain, invite, agir };
+           descendreAPied, monterAPied, sousLaMain, invite, agir, dessiner };
 })();

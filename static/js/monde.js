@@ -368,6 +368,8 @@ const Monde = (function () {
       // reste le meme (la porte s'ouvre et se franchit comme toutes les autres) ; seul le
       // peintre change (`TUILES['F@bois_rond']`).
       materiaux: def.materiaux || null,
+      // Sous terre (le garage souterrain, `app/blocs/souterrain.py`) : ni pluie, ni neige, ni nuit (`aLAbri`).
+      abrite: !!(def.bloc && def.bloc.abrite),
       fosses: indexerParMorceau((def.decor || []).filter(function (d) {
         if (d.type !== 'arbre') return false;
         return !(def.legende[def.sol[d.y][d.x]] || {}).terre;
@@ -3022,7 +3024,8 @@ const Monde = (function () {
   }
 
   function ambiance(heure) {
-    if (carte && carte.interieur && heure === undefined) return { teinte: 'rgb(255,255,255)', alpha: 0 };
+    // Dedans, et sous terre (le garage souterrain, `abrite`) : les neons, pas le ciel.
+    if (carte && (carte.interieur || carte.abrite) && heure === undefined) return { teinte: 'rgb(255,255,255)', alpha: 0 };
     const h = heure === undefined ? (B.partie ? B.partie.heure : 0.5) : heure;
     let a = TEINTES[0], b = TEINTES[TEINTES.length - 1];
     for (let i = 0; i < TEINTES.length - 1; i++) {
@@ -3042,10 +3045,13 @@ const Monde = (function () {
       les phares. ⚠️ Pour les yeux seulement — les regles lisent `ambiance()` / `estNuit()`, a
       l'horloge fixe : une mission ne change pas d'heure selon le mois. */
   function ambianceVue() {
-    if ((carte && carte.interieur) || !B.partie || typeof Saisons === 'undefined') return ambiance();
+    if ((carte && (carte.interieur || carte.abrite)) || !B.partie || typeof Saisons === 'undefined') return ambiance();
     return ambiance(Saisons.heureDeLumiere(B.partie.jour, B.partie.heure));
   }
   function estNuitVue() { return ambianceVue().alpha > 0.4; }
+
+  /** A l'abri du ciel : dans une piece, ou dans un bloc sous terre (`abrite`). */
+  function aLAbri() { return !!B.interieur || !!(carte && carte.abrite); }
 
   /** Le moment de la journee, pour l'icone du HUD : 'nuit', 'aube', 'jour' ou
       'crepuscule'. ⚠️ Lu sur la teinte du ciel, pas sur des heures a part : la
@@ -3213,7 +3219,7 @@ const Monde = (function () {
     barrieresCoulissantes, majBarrieresCoulissantes, dessinerBarrieresCoulissantes, COULISSE_GLISSE, COULISSE_TIENT,
 estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, teinteDeToit, teintesDesToits, formeDeToit, formeDuToit, objetsDesToits, lampesDesLucarnes, logementElargi, sousLesEtages, etagesDuCommerce, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
-    dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, ambianceVue, estNuit, estNuitVue, periode, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
+    dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, ambianceVue, aLAbri, estNuit, estNuitVue, periode, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
     miniCarte, couleurMini, couleurMiniA, masqueDeLaCarte, masquee, hauteurConnue, chemin, demanderChemin, majChemins,
     largeRefuse, sortieDuLarge, retenirAuLarge, avertirDuLarge, vueSurLeMasque, AVANCE_CAMERA,
     cheminRoute, routeLaPlusProche,
