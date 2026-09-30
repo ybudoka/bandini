@@ -224,9 +224,16 @@ CATALOGUE: list[Echantillon] = [
        prompt="an old mechanical cash register drawer springing open, a bell "
               "ping and coins tumbling onto the metal tray, bright and close, "
               "no music"),
-    _e("menu", "Clic de menu", duree_s=0.5, volume=0.38, influence=0.75,
-       prompt="a single short retro user interface blip, dry electronic click "
-              "with a tiny pitched tail, no reverb, no music"),
+    # ⚠️ Le son qu'on entend le PLUS souvent de tout le jeu : il part a chaque
+    # cran du curseur. Le « blip retro » d'avant vivait a 4,4 kHz (99 % de son
+    # energie au-dessus de 3 kHz, attaque en 0,1 ms), la ou l'oreille est la
+    # plus sensible — retour de Martin, 30 sept. 2026 : « agressant ». Un tok
+    # rond dans le medium, feutre, meme famille que le refus ci-dessous.
+    _e("menu", "Clic de menu", duree_s=0.5, volume=0.3, influence=0.75,
+       prompt="a single soft muted wooden tap, like a gentle felt mallet on a "
+              "small marimba bar, warm and rounded, mid pitched, very short, "
+              "dry, no high frequencies, no electronic beep, no click, "
+              "no reverb, no music"),
     # ⚠️ Un REFUS, pas une alarme. Ce son part a chaque « PAS ASSEZ », chaque
     # commerce ferme, chaque menu qu'on annule : c'est le bruitage d'interface
     # qu'on entend le plus souvent apres le clic. Le buzzer electronique le

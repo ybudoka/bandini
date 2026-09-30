@@ -17,3 +17,19 @@ feutré, dans le médium, une attaque adoucie, court ; un peu moins fort. Le fil
 un sinus bref au lieu du carré.
 
 ## Notes
+
+✅ **Livré le 30 sept. 2026.** Écouté et approuvé par Martin, l'ancien et le neuf joués à la suite.
+
+| | avant | après |
+|---|---|---|
+| fondamentale | 4 402 Hz | 323 Hz |
+| centroïde | 7 149 Hz | 324 Hz |
+| énergie au-dessus de 3 kHz | 99,4 % | 0,0 % |
+| durée du son | 479 ms | 317 ms |
+| `volume` | 0,38 | 0,30 |
+
+- Recette neuve dans `app/audio.py` (un maillet feutré sur une petite lame de marimba), régénérée
+  par `scripts/audio_elevenlabs.py --refaire menu`. Le fichier garde son nom et son poids
+  (6 627 o) : rien ne bouge au paquet.
+- Le filet synthétisé (`Son.SFX.menu`, joué tant que le mp3 n'est pas là) passe d'un carré à
+  660 Hz à un sinus à 523 Hz.
