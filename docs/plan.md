@@ -99,6 +99,7 @@ pas quand l'ordre de travail change.
 | Le train : au sol, sur le viaduc, dans le tunnel | ⬜ **en cours** (✅ vague 1 livrée : le train passe — au sol dans les Friches, sur son viaduc au-dessus du Petit-Canton, à la gare centrale, dans son tunnel ; les passages à niveau, il écrase et il klaxonne ; restent : on monte (vague 2), on s'assoit (vague 3)) | 29 sept. 2026 | **P4** | ajout | [fiche](jalons/le-train.md#fiche) · [notes](jalons/le-train.md#notes) |
 | Une file pour entrer à la foire | ⬜ **en cours** (tranché par Martin : quand la foire est ouverte, une file devant l'arche, longue selon l'heure — deux ou trois le matin, une douzaine en fin d'après-midi et en soirée, presque personne la nuit ; elle avance, le premier paie et entre, un nouveau arrive au bout ; un zigzag de câbles à sangle sur le trottoir, les passants contournent par la rue ; le joueur peut couper, ceux de la file chialent à voix haute, sans étoile ; le grillage de la foire ne s'enjambe plus, l'arche se force encore pour une étoile) | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/une-file-pour-entrer-a-la-foire.md#fiche) |
 | La patinoire du parc | ⬜ **en cours** | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/la-patinoire-du-parc.md#fiche) |
+| Les klaxons de Ti-Guy | ⬜ **en cours** | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/les-klaxons-de-ti-guy.md#fiche) |
 
 ## L'ordre
 
