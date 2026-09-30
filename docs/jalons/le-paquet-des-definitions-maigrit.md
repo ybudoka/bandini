@@ -30,6 +30,23 @@ jamais ou ce qui ne sert qu'à un endroit.
 par son empreinte ; au banc, un morceau sans mp3 dont les notes arrivent après le démarrage joue quand
 même ; un réseau qui tombe une fois ne tue pas le filet ; les plafonds baissés à la nouvelle mesure.
 
+## Fiche de la deuxième cure
+
+_Demandé le 30 sept. 2026 (Martin : « Cure 2 maintenant »)._ En un jour, d'autres ajouts ont remangé la marge
+rendue par la première cure : **7 octets** sous le plafond de 59 000 gzip.
+
+- **Mesurer le paquet clé par clé** (brut et gzip), et comparer à la mesure de la première cure : ce qui a
+  grossi, et qui.
+- **Sortir le journal du matin** (`journal*`, ≈ 4,4 Ko gzip). ⚠️ Un texte n'a pas de repli : il se demande au
+  démarrage, en arrière-plan, et la coquille du travailleur le garde hors ligne, comme `/api/musiques`.
+- **`types_plans` / `types_objectifs`** sortent si aucun script ne les lit ; les deux juges qui en font un
+  contrat jugent la même chose ailleurs (côté Python).
+- **D'autres sorties sûres** : ce que le navigateur ne lit jamais, ou ce qui ne sert qu'à un endroit ou à un
+  moment — chacune prouvée (pas lue au démarrage, ou arrivée avant qu'on en ait besoin).
+- **Une garde** qui rend visible QUI fait grossir le paquet : la prochaine session qui déborde sait où
+  couper, au lieu de relever le plafond.
+- **Les plafonds redescendent** à la nouvelle mesure, avec au moins 4 Ko gzip de marge.
+
 ## Notes
 
 **Livré le 29 sept. 2026.** Mesure : **296 109 octets bruts / 66 090 gzip** sur `dev`, **246 381 / 56 345**
