@@ -1106,3 +1106,26 @@ catalogue.
     `d06` (Sal perd patience : ses Ciseaux au garage), puis le choix — `d07` (le coffre de Sal, avec Josée ; `ferme
     d08`) ou `d08` (la dernière coupe, `exige: dette 0` ; `ferme d07`). ⚠️ Vider « le salon » ne peut pas se jouer
     dans la pièce du terminus (`majObjectif` dort dedans) : le coffre sort par la ruelle, ou dort dans son char.
+- **30 sept. 2026 : le reste de M16 — le point, et l'ordre** (Martin : « le reste de M16 »). 81 missions au
+  catalogue (dont 77 d'histoire). Ce qui reste de la fiche, arc par arc, avec qui donne :
+
+  | Arc | Reste | Donneurs | Ce qui manque au monde |
+  |---|---|---|---|
+  | H — l'hôpital | `h03`–`h07` ; `h08` (l'île) | Dr Lachance, Ginette — **existent** | rien : `boulots` ambulance, `proteger`, `obtenir` suffisent |
+  | D — la dette | `d05`–`d08` ; `d09` (l'île) | Sal, Marco, Josée — **existent** | Me Desjardins est un piéton à menu, pas un donneur ; le coffre de Sal sort par la rue |
+  | C — le Clairon | `c01`–`c06` de la fiche | Louise — **existe** (`porte:kiosque`) | ⚠️ les slugs `c01`–`c08` sont pris (Irène, le vieux maître) : l'arc s'écrit **`l01`–`l06`** (Louise) ; son bureau, c'est la façade peinte « LE CLAIRON » (`boutique:clairon`), aucune porte neuve |
+  | R — Roy contre Bouchard | `r02`–`r08` | Bouchard existe ; **Roy est à créer** (un point de plus dans le poste : aucune tuile ne bouge) | le choix `r03`/`r04` (`ferme`) |
+  | I — l'île | `i01`–`i08` | Bérubé, Sœur Jeanne, Léo — **existent** | `q08` d'abord (le moteur de la chaloupe) |
+  | X — le casse | `x01`–`x04` | Josée, Rosa — **existent** | ⚠️ la caisse populaire serait un lieu neuf (la ville glisse) : à poser sur une façade existante |
+  | T — les petites jobs | `t01`–`t15` | des **archétypes**, pas des personnages | le moteur ne sait pas encore faire donner une mission par un passant : un type de donneur neuf |
+  | Q, E, S, P (hors libérations) | `q08`, `q09`, `q12`, `q14` ; `e03`, `e05`, `e08`, `e09`, `e11`, `e13`, `e14` ; `s04`, `s07`, `s12`, `s13`, `s14` ; `p03`, `p06`, `p07`, `p08`, `p12` | presque tous existent (Maude et Mme Beaulieu, non ; Jo est parti après `e04`) | Biscuit, le chien de `e03` |
+
+  **L'ordre** : d'abord les arcs dont les donneurs existent et qui ferment quelque chose — **H** (vague 7),
+  puis la fin de **D** (vague 8, le choix `d07`/`d08` : payer Sal ou le vider), puis **C** (vague 9, Louise et
+  ses manchettes), puis **R** (vague 10, Roy, le choix de sa police), puis l'île et le casse. Chaque vague
+  atterrit seule, verte, avec ses voix et un juge de banc qui JOUE chaque mission au bouton.
+  - ⚠️ **En missions, pas en chapitres.** [Des missions en chapitres](des-missions-en-chapitres.md) (tranché le
+    30 sept.) veut que les arcs qui restent s'écrivent directement en chapitres, mais son moteur (`acte`, la
+    reprise) n'est pas livré. Ces vagues s'écrivent en missions de quatre à six étapes, chacune un acte tout
+    prêt : le jour où l'arc passe en chapitre, `remplace` les reprend, et une partie qui les a faites garde ses
+    actes.
