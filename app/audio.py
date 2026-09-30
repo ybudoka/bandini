@@ -1206,6 +1206,11 @@ class Voix(TypedDict, total=False):
     #: (`METEOS`). Les ondes ne la disent que sous ce ciel-la ; absente, la
     #: replique est neutre et passe par tous les temps.
     meteo: str
+    #: ⚠️ Une replique qui dit le FROID (« Fait frette, hein? ») : seulement quand les
+    #: passants ont au moins une veste (`saisons.HABITS["frais"]`). Jamais en juillet.
+    froid: bool
+    #: Une replique qui dit L'HEURE : [de, a) en heures du jour, seulement entre les deux.
+    heures: list
 
 
 #: ⚠️ Deux voix nommees du compte ElevenLabs ; si l'une disparait,
@@ -1290,7 +1295,7 @@ PAROLE = {
 }
 
 
-def _pa(slug: str, texte: str, genre: str, quand: str, *, volume: float = 0.7) -> Voix:
+def _pa(slug: str, texte: str, genre: str, quand: str, *, volume: float = 0.7, froid: bool = False) -> Voix:
     """Une replique de passant. Son `genre` dit QUI parle, son `quand` dit dans
     QUEL monde : les deux ensemble font la banque ou l'on tire.
 
@@ -1299,7 +1304,7 @@ def _pa(slug: str, texte: str, genre: str, quand: str, *, volume: float = 0.7) -
     appliquee a la rue.
     """
     return {"slug": slug, "texte": texte, "genre": genre, "quand": quand,
-            "voix": VOIX_PAR_GENRE[genre], "volume": volume}
+            "voix": VOIX_PAR_GENRE[genre], "volume": volume, **({"froid": True} if froid else {})}
 
 
 #: Ce que disent les gens quand on les frole. Court, quebecois, jamais deux
@@ -1317,7 +1322,7 @@ def _pa(slug: str, texte: str, genre: str, quand: str, *, volume: float = 0.7) -
 #: peur — c'est son metier. Un genre sans contexte tire dans tout ce qu'il a.
 VOIX: list[Voix] = [
     _pa("salut_h", "Salut!", "homme", "normal"),
-    _pa("frette_h", "Fait frette, hein?", "homme", "normal"),
+    _pa("frette_h", "Fait frette, hein?", "homme", "normal", froid=True),
     _pa("tasse_toi_h", "Heille ! Tâsse-toi don !", "homme", "normal", volume=0.75),
     _pa("bonne_journee_h", "Bonne journée, là.", "homme", "normal"),
     _pa("salut_f", "Salut!", "femme", "normal"),
@@ -1371,7 +1376,7 @@ VOIX: list[Voix] = [
     # passe pres de son coin — jamais deux fois de suite la meme.
     {"slug": "compagnie_b", "texte": "Tu cherches de la compagnie, mon beau?", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
     {"slug": "beau_bonhomme_b", "texte": "Heille, beau bonhomme! Viens icitte.", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
-    {"slug": "frette_b", "texte": "Fait frette, hein? Viens te réchauffer.", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
+    {"slug": "frette_b", "froid": True, "texte": "Fait frette, hein? Viens te réchauffer.", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
     {"slug": "du_feu_b", "texte": "T'as du feu, mon chou?", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
     {"slug": "tout_seul_b", "texte": "Reste pas tout seul à soir, là.", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
     {"slug": "ca_te_tente_b", "texte": "Ça te tente-tu, un peu de compagnie?", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
@@ -1389,7 +1394,7 @@ VOIX: list[Voix] = [
     # ⚠️ **Personne au Choc** : juste sa musique. C'est le PROPOS de la station,
     # et une station qui se tait au milieu de quatre qui parlent dit quelque
     # chose qu'aucun clip ne dirait.
-    {"slug": "brume_nuit_r", "texte": "Vous écoutez La Brume, cent trois virgule sept. Il est minuit passé sur le port.",
+    {"slug": "brume_nuit_r", "heures": [0, 5], "texte": "Vous écoutez La Brume, cent trois virgule sept. Il est minuit passé sur le port.",
      "genre": "radio_brume", "voix": VOIX_BRUME, "volume": 0.62, "style": 0.35, "stabilite": 0.6},
     #
     # ⚠️ **CE QUI PARLE DU TEMPS PORTE SA `meteo`** (30 sept. 2026, Martin : « les
@@ -1405,6 +1410,10 @@ VOIX: list[Voix] = [
     {"slug": "brume_brouillard_r", "meteo": "brouillard", "texte": "Brouillard sur la baie à matin. La Brume porte bien son nom. Roulez doucement.",
      "genre": "radio_brume", "voix": VOIX_BRUME, "volume": 0.62, "style": 0.35, "stabilite": 0.6},
     {"slug": "brume_verglas_r", "meteo": "verglas", "texte": "Tout est glacé dehors. Si vous avez pas besoin de sortir, sortez pas.",
+     "genre": "radio_brume", "voix": VOIX_BRUME, "volume": 0.62, "style": 0.35, "stabilite": 0.6},
+    # Neutre, et c'est son role : sans elle, La Brume n'aurait qu'une replique a
+    # dire un midi de beau temps (« minuit passe » a ses heures, les ciels les leurs).
+    {"slug": "brume_port_r", "texte": "La Brume, cent trois virgule sept. De la musique douce, pis personne qui crie dans le micro.",
      "genre": "radio_brume", "voix": VOIX_BRUME, "volume": 0.62, "style": 0.35, "stabilite": 0.6},
     {"slug": "brume_demandes_r", "texte": "Une petite dernière avant les nouvelles, pour ceux qui travaillent de nuit.",
      "genre": "radio_brume", "voix": VOIX_BRUME, "volume": 0.62, "style": 0.35, "stabilite": 0.6},
@@ -1933,8 +1942,15 @@ def voix_a_la_volee() -> list[Voix]:
     qui dit la tempete ne sert qu'un soir de tempete. Elle arrive avec son ciel
     (`Son.Voix.chargerMeteo`) ; les sept du 30 sept. auraient fait deborder le
     premier ecran de 220 Ko, sur 6 Ko de marge.
+
+    ⚠️ **ET CELLES DES STATIONS** (animateurs et pubs, 30 sept. 2026) : elles ne
+    servent qu'une station allumee. Elles arrivent avec la radio
+    (`Son.Voix.chargerOndes`), vingt secondes avant la premiere voix. La police,
+    elle, reste au demarrage : elle parle sans prevenir.
     """
-    return [v for v in VOIX if v.get("quand", CONTEXTE_DE_DEPART) != CONTEXTE_DE_DEPART or v.get("meteo")]
+    stations = {g for genres in ONDES["stations"].values() for g in genres}
+    return [v for v in VOIX if v.get("quand", CONTEXTE_DE_DEPART) != CONTEXTE_DE_DEPART
+            or v.get("meteo") or v["genre"] in stations]
 
 
 #: Le format des radios : 44 kHz a 64 kbit/s. Plus bas, un cuivre devient une
@@ -2158,7 +2174,8 @@ def exporter() -> dict:
         "voix": [
             {"slug": v["slug"], "genre": v["genre"], "volume": v["volume"],
              **({} if v["genre"] in GENRES_DES_ONDES else {"texte": v["texte"]}),
-             **{cle: v[cle] for cle in ("quand", "propriete", "a_toi", "evenement", "meteo") if cle in v},
+             **{cle: v[cle] for cle in ("quand", "propriete", "a_toi", "evenement", "meteo", "froid", "heures")
+                if cle in v},
              "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None}
             for v in VOIX + VOIX_DE_LA_POLICE
         ],

@@ -1257,13 +1257,36 @@ const Son = (function () {
 
         ⚠️ **NI CELLES D'UN CIEL** (30 sept. 2026) : une replique de radio qui dit
         la neige ne sert qu'un soir de tempete, et le premier ecran n'avait plus
-        6 Ko de marge. Elles arrivent avec leur ciel — voir `chargerMeteo`. */
+        6 Ko de marge. Elles arrivent avec leur ciel — voir `chargerMeteo`.
+
+        ⚠️ **NI CELLES DES STATIONS** (animateurs et pubs, meme jour) : elles ne
+        servent qu'une radio allumee — voir `chargerOndes`. */
     charger: function () {
       if (Voix.chargees || !ctx || !fenetre || !fenetre.fetch) return;
       Voix.chargees = true;
       const depart = Voix.depart();
       Voix.contextesCharges.add(depart);
-      Voix._charger(Voix.liste().filter(function (v) { return !v.meteo && (!v.quand || v.quand === depart); }));
+      const stations = Voix.genresDesStations();
+      Voix._charger(Voix.liste().filter(function (v) {
+        return !v.meteo && !stations.has(v.genre) && (!v.quand || v.quand === depart);
+      }));
+    },
+
+    /** Les genres que disent les stations (`audio.ONDES["stations"]`) : animateurs, pubs. */
+    genresDesStations: function () {
+      const st = B.defs && B.defs.audio && B.defs.audio.ondes && B.defs.audio.ondes.stations;
+      const g = new Set();
+      if (st) Object.keys(st).forEach(function (k) { st[k].forEach(function (x) { g.add(x); }); });
+      return g;
+    },
+
+    /** Les voix des stations, la premiere fois qu'une station qui parle s'allume
+        (`Ondes.maj`) — sauf celles d'un ciel, qui attendent le leur. */
+    chargerOndes: function () {
+      if (Voix.contextesCharges.has('ondes') || !ctx || !fenetre || !fenetre.fetch) return;
+      Voix.contextesCharges.add('ondes');
+      const stations = Voix.genresDesStations();
+      Voix._charger(Voix.liste().filter(function (v) { return stations.has(v.genre) && !v.meteo; }));
     },
 
     /** Les repliques d'UN contexte, la premiere fois qu'on y entre — exactement
@@ -1273,6 +1296,23 @@ const Son = (function () {
       if (!quand || Voix.contextesCharges.has(quand) || !ctx || !fenetre || !fenetre.fetch) return;
       Voix.contextesCharges.add(quand);
       Voix._charger(Voix.liste().filter(function (v) { return v.quand === quand; }));
+    },
+
+    /** ⚠️ **UNE REPLIQUE NE MENT PAS SUR LE MOMENT** (Martin, 30 sept. 2026) : « Fait
+        frette, hein? » en pleine canicule, « Il est minuit passe » a midi. `froid` ne se
+        dit que quand les passants ont au moins une veste (`Saisons`, `habits.frais`) ;
+        `heures` [de, a) seulement entre ces heures-la. Sans l'un ni l'autre : toujours.
+        ⚠️ Un filtre, pas un de : qui tire tire une fois, quelle que soit la liste. */
+    deSaison: function (v) {
+      if (v.froid) {
+        const H = B.defs && B.defs.saisons && B.defs.saisons.habits;
+        if (!H || typeof Saisons === 'undefined' || Saisons.palette().froid < H.frais) return false;
+      }
+      if (v.heures) {
+        const h = (B.partie ? B.partie.heure : 0.5) * 24;
+        if (h < v.heures[0] || h >= v.heures[1]) return false;
+      }
+      return true;
     },
 
     /** Les repliques d'UN ciel (`audio.METEOS`), la premiere fois qu'il arrive
@@ -1450,7 +1490,7 @@ const Son = (function () {
         s'ajoute. `sauf` : la derniere dite, pour ne pas la redire tout de
         suite. Tire dans le de du jeu : la bulle est un etat visible. */
     choisir: function (genre, sauf) {
-      const toutes = Voix.liste().filter(function (v) { return v.genre === genre; });
+      const toutes = Voix.liste().filter(function (v) { return v.genre === genre && Voix.deSaison(v); });
       const choix = toutes.length > 1 ? toutes.filter(function (v) { return v.slug !== sauf; }) : toutes;
       if (!choix.length) return null;
       return choix[Math.floor(B.rng() * choix.length)];
@@ -1497,7 +1537,7 @@ const Son = (function () {
       // La premiere fois qu'on entre dans ce monde-la, ses repliques se demandent.
       Voix.chargerContexte(quand);
       const tous = Voix.liste().filter(function (v) {
-        return v.genre === genre && (!slug || v.slug === slug) && tampons.has('voix-' + v.slug);
+        return v.genre === genre && (slug ? v.slug === slug : Voix.deSaison(v)) && tampons.has('voix-' + v.slug);
       });
       const v = Voix.tirer(Voix.banque(tous, quand));
       if (!v) return null;
@@ -1571,7 +1611,7 @@ const Son = (function () {
     /** ⚠️ **UNE REPLIQUE QUI PARLE DU TEMPS NE MENT PAS SUR LE TEMPS** (Martin, 30 sept.
         2026) : Taxi-Radio criait « y fait beau! » en pleine tempete. Celle qui porte
         une `meteo` ne passe que sous ce ciel-la ; sans `meteo`, elle est neutre. */
-    convient: function (v, ciel) { return !v.meteo || !!ciel[v.meteo]; },
+    convient: function (v, ciel) { return (!v.meteo || !!ciel[v.meteo]) && Voix.deSaison(v); },
 
     /** La pub suivante. ⚠️ Celle d'un commerce qu'on POSSEDE est sa jumelle « a
         toi » : entendre son propre bar annonce a la radio, dans un char qu'on
@@ -1638,6 +1678,7 @@ const Son = (function () {
       }
       const genres = station && r.stations ? r.stations[station] : null;
       if (!genres || !genres.length) return;
+      Voix.chargerOndes();                // la premiere station qui parle : ses voix arrivent
       // ⚠️ Les repliques d'un ciel ne partent pas au demarrage (`Voix.charger`) :
       // on les demande dix secondes avant que l'animateur reprenne le micro, le
       // temps qu'elles arrivent. Une fois par ciel et par partie.

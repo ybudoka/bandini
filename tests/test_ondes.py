@@ -371,6 +371,7 @@ def test_une_replique_de_mission_coupe_les_ondes(banc):
         await o.attendre(); await o.attendre(); await o.attendre();
         L.Jeu.commencer();
         L.Son.Voix.charger();
+        L.Son.Voix.chargerOndes();               // ⚠️ les voix des stations arrivent avec la radio
         for (let i = 0; i < 6; i++) await o.attendre();
         // ⚠️ Une réplique NEUTRE : celle d'un ciel n'est pas chargée au démarrage (`chargerMeteo`).
         const clip = L.Son.Voix.liste().find(function (v) { return v.genre === 'radio_taxi' && !v.meteo && v.fichier; });
@@ -559,3 +560,47 @@ def test_la_radio_dit_le_temps_qu_il_fait(banc):
             assert {d["meteo"] for d in avant} == {ciel}, f"{station} sous « {ciel} » demande {avant[:3]}"
             assert max(d["avance"] for d in avant) >= 5 * 60, \
                 f"{station} sous « {ciel} » demande son ciel au moment de parler : trop tard pour l'entendre"
+
+
+def test_les_voix_des_stations_arrivent_avec_la_radio(banc):
+    """⚠️ Le premier écran n'avait plus que 6 Ko de marge (30 sept. 2026) : les animateurs et les
+    pubs ne servent qu'une station allumée, ils arrivent avec elle — et celles d'un ciel attendent
+    le leur. On compte les VRAIES requêtes (`o.fetchs`), comme le juge des contextes."""
+    stations = {g for genres in audio.ONDES["stations"].values() for g in genres}
+    neutres = sorted(v["slug"] for v in audio.VOIX if v["genre"] in stations and not v.get("meteo")
+                     and audio.chemin_voix(v).is_file())
+    meteo = sorted(v["slug"] for v in audio.VOIX if v.get("meteo") and audio.chemin_voix(v).is_file())
+    r = banc("""async function (L, o) {
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre(); await o.attendre();
+        L.Jeu.commencer();
+        const V = L.Son.Voix;
+        const urls = function (depuis) { return o.fetchs.slice(depuis).map(function (f) { return String(f.url || f); }); };
+        V.chargees = false;
+        V.contextesCharges.clear();
+        const a = o.fetchs.length;
+        V.charger();
+        const demarrage = urls(a);
+        const b = o.fetchs.length;
+        L.Son.Radio.jouer('taxi_radio');
+        L.Son.Ondes.station = null;
+        L.Son.Ondes.maj();
+        const radio = urls(b);
+        const c = o.fetchs.length;
+        L.Son.Radio.jouer('la_brume');
+        L.Son.Ondes.maj();
+        return { demarrage: demarrage, radio: radio,
+                 encore: urls(c).filter(function (u) { return /voix-/.test(u); }) };
+    }""")
+    def nom(slug):
+        return f"voix-{slug}.mp3"
+
+    assert r["demarrage"], "le démarrage ne télécharge aucune voix : le juge ne mesure rien"
+    parties = [s for s in neutres + meteo if any(u.endswith(nom(s)) for u in r["demarrage"])]
+    assert parties == [], f"des voix de station partent au premier écran : {parties}"
+    manquent = [s for s in neutres if not any(u.endswith(nom(s)) for u in r["radio"])]
+    assert manquent == [], f"la radio s'allume et ses voix ne viennent pas : {manquent}"
+    trop = [s for s in meteo if any(u.endswith(nom(s)) for u in r["radio"])]
+    assert trop == [], f"les voix d'un ciel arrivent sans leur ciel : {trop}"
+    assert r["encore"] == [], f"changer de station retélécharge les voix des ondes : {r['encore']}"

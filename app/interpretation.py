@@ -279,6 +279,7 @@ JEU: dict[str, str] = {
     # --- La Brume a la radio : une animatrice de nuit, posee.
     "brume_nuit_r": "[calm] Vous écoutez La Brume, cent trois virgule sept. Il est minuit passé… sur le port.",
     "brume_pluie_r": "[softly] La pluie rentre par la baie. Restez au chaud… on continue.",
+    "brume_port_r": "[calm] La Brume, cent trois virgule sept. De la musique douce… [wryly] pis personne qui crie dans le micro.",
     "brume_demandes_r": "[warmly] Une petite dernière avant les nouvelles… pour ceux qui travaillent de nuit.",
     "brume_neige_r": "[softly] Il neige sur le port. Les chars dorment sous la neige… [warmly] nous autres, on veille.",
     "brume_brouillard_r": "[calm] Brouillard sur la baie à matin. [wryly] La Brume porte bien son nom. [softly] Roulez doucement.",

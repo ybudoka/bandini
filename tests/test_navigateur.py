@@ -617,6 +617,7 @@ def test_l_ambiance_et_les_voix_se_decodent(page, serveur, erreurs):
         // demande quand leur temps arrive.
         new Set(window.BANDINI.B.defs.audio.voix.map(v => v.meteo).filter(Boolean))
             .forEach(m => S.Voix.chargerMeteo(m));
+        S.Voix.chargerOndes();                  // et celles des stations, avec la radio
     }""")
     attendues = page.evaluate("window.BANDINI.B.defs.audio.voix.filter(v => v.fichier).length")
     attendre_ou_nommer(
