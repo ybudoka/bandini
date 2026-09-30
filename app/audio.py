@@ -1859,10 +1859,11 @@ LIEUX: dict[str, list[str]] = {
 #: slug de son pas — le juge exige qu'un glyphe neuf y soit rangé, sinon il sonnerait le béton sans
 #: que personne l'ait décidé. Le béton et l'asphalte sonnent pareil sous un soulier (`pas`) ; la
 #: ruelle aussi. La voie du petit train est du ballast (`pas_gravier`), l'escalier et le quai du
-#: bois, le tatami et la peau d'ours un tapis. La piscine hors terre : on y nage, le pas ne part pas.
+#: bois, le tatami et la peau d'ours un tapis. La piscine hors terre, et la creusée d'une villa (`?`) : on y nage,
+#: le pas ne part pas.
 #: ⚠️ La neige n'y est PAS : ce n'est pas une tuile (`Son.solDuPas` la lit sur la tempête).
 SOLS_DES_PAS: dict[str, str] = {
-    **dict.fromkeys("._xo#-|+*=:p^v<>IRJ", "pas"),
+    **dict.fromkeys("._xo?#-|+*=:p^v<>IRJ", "pas"),
     ",": "pas_herbe",
     ";": "pas_gravier", "g": "pas_gravier", "T": "pas_gravier",
     "s": "pas_sable",

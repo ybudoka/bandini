@@ -21,7 +21,7 @@ import json
 import pytest
 import villes as villes_gardees  # ⚠️ la fixture d'ici s'appelle déjà `villes`
 
-from app import carte, chantiers, devantures, mobilier, pietons, salete, statues, vitrines
+from app import carte, chantiers, devantures, mobilier, pietons, salete, statues, villas, vitrines
 
 #: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : ces juges jugent la construction de la ville — ils la comparent à
 #: elle-même sans un module, ou lisent ses quartiers par un `_Chantier` neuf, dans SON repère. La carte du jeu
@@ -300,7 +300,7 @@ def test_les_nids_deplaces_restent_des_nids(villes):
 def test_une_rue_cossue_est_plantee_une_rue_pauvre_ne_l_est_pas(villes, chantier):
     """Les arbres et les bacs à fleurs du bord des rues (`mobilier.semer`)."""
     ville, _avant, apres = villes
-    ajoutes = statues.sans_statues(ville["decor"])[len(statues.sans_statues(apres["decor"])):]
+    ajoutes = villas.sans_jardin(statues.sans_statues(ville["decor"]))[len(villas.sans_jardin(statues.sans_statues(apres["decor"]))):]
     abords: dict[str | None, int] = {}
     for y, ligne in enumerate(ville["sol"]):
         for x, glyphe in enumerate(ligne):
@@ -425,7 +425,7 @@ USAGE_DU_MEUBLE = {"parcometre": "commercial", "boite_aux_lettres": "residentiel
 
 def test_le_mobilier_dit_l_usage(villes, chantier):
     ville, _avant, apres = villes
-    ajoutes = statues.sans_statues(ville["decor"])[len(statues.sans_statues(apres["decor"])):]
+    ajoutes = villas.sans_jardin(statues.sans_statues(ville["decor"]))[len(villas.sans_jardin(statues.sans_statues(apres["decor"]))):]
     compte: dict[str, int] = {}
     for d in ajoutes:
         if d["type"] in USAGE_DU_MEUBLE:

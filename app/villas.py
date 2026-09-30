@@ -43,6 +43,18 @@ PISCINE_RANGEES_MIN = 3
 ETAGES = 3
 
 
+#: Les types de décor du jardin.
+JARDIN = frozenset({FONTAINE, PILIER_OUEST, PILIER_EST})
+
+
+def sans_jardin(decor: list[dict]) -> list[dict]:
+    """Le décor sans le jardin des villas. ⚠️ Pour les juges « ce module ne déplace rien » qui lisent ce qu'un
+    module AJOUTE au bout du décor (`avec[len(sans):]`) : le jardin se pose sur la ville finie, après la bande nord,
+    et tomberait dans la tranche d'un autre — comme les statues (`statues.sans_statues`). Il lit la ville finie
+    (l'herbe libre), donc il peut changer avec le module : on le retire des deux."""
+    return [d for d in decor if d["type"] not in JARDIN]
+
+
 def _toit(sol: list[list[str]], r: dict) -> int:
     """Combien de rangées de toit à deux versants, au-dessus de TOUTE la façade."""
     n = 0

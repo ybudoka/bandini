@@ -422,7 +422,8 @@ def test_les_blocs_sont_le_lit_la_table_le_tapis_et_la_machine():
     # que les cotes ou le tatami s'arrete, comme le galon du tapis.
     # ⚠️ L'ALLEE DE QUILLES (« [ ») de meme : les quilles au bout nord, les dalots sur ses bords.
     # ⚠️ La TABLE DE JEU du Dragon d'or (« ! ») : la bordure de bois seulement la ou le feutre s'arrete.
-    assert BLOCS == {"l", "a", "y", "m", "o", "r", "Y", "U", "A", "[", "!"}
+    # ⚠️ La PISCINE CREUSEE d'une villa (« ? ») : la margelle seulement au bord (`villas.py`, le jardin).
+    assert BLOCS == {"l", "a", "y", "m", "o", "r", "Y", "U", "A", "[", "!", "?"}
 
 
 @pytest.mark.parametrize("slug", sorted(PIECES))

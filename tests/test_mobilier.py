@@ -11,7 +11,7 @@ terrain vague n'a rien à voir ici.
 import pytest
 import villes as villes_gardees  # ⚠️ la fixture d'ici s'appelle déjà `villes`
 
-from app import autobus, carte, mobilier, statues
+from app import autobus, carte, mobilier, statues, villas
 
 #: ⚠️ LA VILLE D'AVANT (27 sept. 2026) : ces juges jugent la construction de la ville — ils la comparent à
 #: elle-même sans un module, ou lisent ses quartiers par un `_Chantier` neuf, dans SON repère. La carte du jeu
@@ -27,8 +27,8 @@ def villes():
         sans = carte.generer(nord=False)  # ⚠️ sous le patch : pas `villes`
     finally:
         mobilier.semer = original
-    # ⚠️ Les statues des parcs se posent APRÈS le mobilier, au bout du décor (`statues.sans_statues`).
-    ajoutes = statues.sans_statues(avec["decor"])[len(statues.sans_statues(sans["decor"])):]
+    # ⚠️ Les statues des parcs se posent APRÈS le mobilier, au bout du décor (`statues.sans_statues`), et le jardin des villas (`villas.sans_jardin`).
+    ajoutes = villas.sans_jardin(statues.sans_statues(avec["decor"]))[len(villas.sans_jardin(statues.sans_statues(sans["decor"]))):]
     return avec, sans, ajoutes
 
 
@@ -112,8 +112,10 @@ def test_rien_au_bout_d_une_sortie_de_char(villes):
 
 def test_un_meuble_ne_colle_a_aucun_autre(villes):
     avec, _sans, ajoutes = villes
+    # ⚠️ Sans le jardin des villas : posé après, son pilier de portail se tient DANS la haie, contre le sentier, par
+    # sa propre règle (`test_villas.py`) — l'arbre de rue qui borde le trottoir y était avant lui.
     for d in ajoutes:
-        voisins = [e for e in avec["decor"] if e is not d
+        voisins = [e for e in villas.sans_jardin(avec["decor"]) if e is not d
                    and abs(e["x"] - d["x"]) <= 1 and abs(e["y"] - d["y"]) <= 1]
         assert not voisins, f"{d['type']} en {(d['x'], d['y'])} collé à {voisins[0]['type']}"
 

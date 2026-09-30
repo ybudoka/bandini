@@ -8,7 +8,7 @@ from unittest import mock
 
 import pytest
 
-from app import autobus, bus_du_canton, carte, nord
+from app import autobus, bus_du_canton, carte, nord, villas
 
 
 @pytest.fixture(scope="module")
@@ -45,8 +45,10 @@ def test_elle_ne_change_rien_aux_trois_lignes_d_avant(ville):
     assert avec["autobus"]["lignes"][:-1] == sans["autobus"]["lignes"]
     neufs = sorted({i for i, _k in avec["autobus"]["lignes"][-1]["arrets"] if i >= n})
     assert neufs == list(range(n, len(avec["autobus"]["arrets"]))), neufs
-    assert avec["decor"][:len(sans["decor"])] == sans["decor"], "le décor d'avant a bougé"
-    ajoutes = avec["decor"][len(sans["decor"]):]
+    # ⚠️ Le jardin des villas se pose après la bande nord, sur la ville finie : on le retire des deux.
+    avec_d, sans_d = villas.sans_jardin(avec["decor"]), villas.sans_jardin(sans["decor"])
+    assert avec_d[:len(sans_d)] == sans_d, "le décor d'avant a bougé"
+    ajoutes = avec_d[len(sans_d):]
     assert ajoutes and all(d["y"] < nord.DECALAGE_NORD and d["type"].startswith(("abribus", "banc")) for d in ajoutes)
 
 
