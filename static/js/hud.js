@@ -2721,6 +2721,198 @@ const Hud = (function () {
     return false;
   }
 
+  /** TOUTES LES PROPRIÉTÉS (TRICHES > LE JOUEUR) : les commerces du catalogue (`economie.proprietes`, la phase 2
+      comprise) et les planques des blocs de carte (le chalet), a soi d'un coup, caisse vide. C'est le CATALOGUE
+      qui fait la liste : une propriete ajoutee tombe dans cette triche sans qu'on y touche. */
+  function toutesLesProprietes() {
+    const p = B.partie;
+    if (!p) { message('PAS DE PARTIE'); return false; }
+    let n = 0;
+    for (const prop of (B.defs.economie.proprietes || [])) {
+      if (p.proprietes[prop.slug]) continue;
+      p.proprietes[prop.slug] = { jour: p.jour, caisse: 0 };
+      n++;
+    }
+    for (const b of (B.defs.blocs || [])) {
+      if (!b.planque || p.planques.indexOf(b.slug) >= 0) continue;
+      p.planques.push(b.slug);
+      n++;
+    }
+    Son.SFX.argent();
+    message('TOUTES LES PROPRIÉTÉS (+' + n + ')');
+    return false;
+  }
+
+  /** TOUS LES MEUBLES (TRICHES > LE JOUEUR) : chaque meuble du catalogue, dans chaque piece de planque qui a sa
+      place, deja LIVRE — commande hier (`jour - 1`), donc la livraison du matin ne l'annonce pas. On le voit en
+      rentrant dans la piece : elle se meuble a la porte (`Decoration.meubler`). */
+  function tousLesMeubles() {
+    const p = B.partie, d = Decoration.donnees();
+    if (!p) { message('PAS DE PARTIE'); return false; }
+    if (!d || !d.places) { message('LE CATALOGUE N’EST PAS ENCORE ARRIVÉ'); return false; }
+    if (!p.meubles || typeof p.meubles !== 'object') p.meubles = {};
+    let n = 0;
+    for (const piece of Object.keys(d.places)) {
+      const ici = d.places[piece];
+      for (const m of Decoration.meubles()) {
+        if (!ici[m.slug]) continue;
+        p.meubles[piece] = p.meubles[piece] || {};
+        const c = p.meubles[piece][m.slug];
+        if (c && c.jour < p.jour) continue;
+        p.meubles[piece][m.slug] = { jour: p.jour - 1 };
+        n++;
+      }
+    }
+    Son.SFX.argent();
+    message('TOUS LES MEUBLES (+' + n + ') — EN RENTRANT');
+    return false;
+  }
+
+  /** EFFACER LA DETTE : par le remboursement lui-meme (`Missions.rembourser`), pas un zero ecrit a la main — les
+      hommes de Sal rentrent chez eux et l'histoire apprend que la dette est reglee, comme si on l'avait payee. */
+  function effacerLaDette() {
+    const p = B.partie;
+    if (!p) { message('PAS DE PARTIE'); return false; }
+    if (p.dette <= 0) { message('LA DETTE EST DÉJÀ RÉGLÉE'); return false; }
+    Missions.rembourser(p.dette, 'TRICHE');
+    return false;
+  }
+
+  /** Le char a reparer ou a remplacer : celui qu'on conduit, sinon le plus proche a moins de deux tuiles. */
+  function charSousLaMain() {
+    const j = B.joueur;
+    if (!j) return null;
+    if (j.dansVehicule) return j.dansVehicule;
+    let meilleur = null, d2 = 40 * 40;
+    for (const e of B.entites) {
+      if (e.type !== 'vehicule' || !e.vivant) continue;
+      const d = dist2(j.x, j.y, e.x, e.y);
+      if (d < d2) { d2 = d; meilleur = e; }
+    }
+    return meilleur;
+  }
+
+  /** RÉPARER LE CHAR : la vie pleine, comme au comptoir de Ti-Guy, sans payer. ⚠️ Une epave reste une epave :
+      le garage non plus ne la releve pas. */
+  function reparerLeChar() {
+    const v = charSousLaMain();
+    if (!v) { message('AUCUN CHAR ICI'); return false; }
+    if (v.etat === 'epave' || v.plie) { message('C’EST UNE ÉPAVE'); return false; }
+    v.vie = v.vieMax;
+    Son.SFX.argent();
+    message(v.def.nom.toUpperCase() + ' RÉPARÉ');
+    return false;
+  }
+
+  /** Une place sur la chaussee a quelques tuiles de `j`, libre de chars et de gens, et son cap le long de la
+      rue ; ou null. On tourne en anneaux, du plus proche au plus loin. */
+  function placeDeChar(j) {
+    const tx = Math.floor(j.x / TT), ty = Math.floor(j.y / TT);
+    const libre = function (x, y) {
+      return Monde.estRoute(x, y) && !Monde.bloque(x, y, Monde.MASQUE_VEHICULE | Monde.EAU);
+    };
+    for (let r = 1; r <= 8; r++) {
+      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const x = tx + dx, y = ty + dy;
+        if (!libre(x, y)) continue;
+        const px = x * TT + 8, py = y * TT + 8;
+        const encombre = B.entites.some(function (e) {
+          if (e === j || !e.vivant) return false;
+          const marge = e.type === 'vehicule' ? 28 : 12;
+          return dist2(px, py, e.x, e.y) < marge * marge;
+        });
+        if (encombre) continue;
+        const long = libre(x - 1, y) && libre(x + 1, y);
+        return { x: px, y: py, angle: long ? 0 : Math.PI / 2 };
+      }
+    }
+    return null;
+  }
+
+  /** Fait apparaitre un char du catalogue a cote du joueur, A SOI (`aToi` : y monter n'est pas un vol, et le
+      trafic ne le rentre pas), a la premiere couleur de sa fiche. ⚠️ La couleur est DONNEE : un char ne sans
+      couleur tire un de, et tout le hasard qui suit glisse. Refuse dans une piece : un char n'y entre pas. */
+  function faireApparaitre(def) {
+    const j = B.joueur;
+    if (!j || B.cinema || B.scene) { message('UNE SCÈNE JOUE'); return false; }
+    if (B.interieur) { message('SORS D\'ABORD'); return false; }
+    if (j.dansVehicule) Vehicules.descendre(j, true);
+    const place = placeDeChar(j);
+    if (!place) { message('PAS DE RUE ICI'); return false; }
+    const v = Vehicules.creer(def.slug, place.x, place.y, place.angle, { etat: 'stationne', couleur: def.couleurs[0] });
+    if (!v) { message('INTROUVABLE'); return false; }
+    v.aToi = true;
+    Entites.indexer();
+    if (B.etat === 'pause') Jeu.reprendre();
+    fermerMenu();
+    message(def.nom.toUpperCase() + ' — À TOI');
+    return true;
+  }
+
+  /** FAIRE APPARAÎTRE UN CHAR : les chars de la rue du catalogue (`B.defs.vehicules`), rien d'ecrit ici — un char
+      ajoute au jeu tombe dans cette page sans qu'on y touche. Les bateaux n'y sont pas : ils naissent a l'eau. */
+  function menuFaireApparaitre() {
+    const items = (B.defs.vehicules || []).filter(function (d) { return !d.eau; }).map(function (d) {
+      return { libelle: d.nom.toUpperCase(), vehicule: d.slug, faire: function () { return faireApparaitre(d); } };
+    });
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuDebug()); return false; } });
+    return { titre: 'FAIRE APPARAÎTRE UN CHAR', largeur: 320, hauteur: VH - 30, items: items,
+             retour: function () { ouvrirMenu(menuDebug()); } };
+  }
+
+  /** Va a une frenesie et la lance : on se pose SUR son icone, et elle part tout de suite — sans attendre que
+      `Frenesies.maj` nous y voie (une frenesie qu'on vient de rater attend qu'on s'eloigne, et on ne s'est pas
+      eloigne : on a saute). Refuse pendant une mission ou un defi, comme l'icone. */
+  function lancerLaFrenesie(f) {
+    if (Frenesies.enCours()) { message('UNE FRÉNÉSIE COURT DÉJÀ'); return false; }
+    if (B.mission || (B.partie && B.partie.mission) || B.defi) { message('PAS PENDANT UNE MISSION'); return false; }
+    if (!aPiedEnVille()) return false;
+    const j = B.joueur, p = Frenesies.position(f);
+    j.x = p.x; j.y = p.y; j.vx = 0; j.vy = 0;
+    Entites.indexer();
+    Monde.centrerCamera(j.x, j.y);
+    if (B.etat === 'pause') Jeu.reprendre();
+    fermerMenu();
+    Frenesies.commencer(f);
+    return true;
+  }
+
+  /** LANCER UNE FRÉNÉSIE : les icones de la ville (`carte.frenesies`), une par district. ⚠️ Une reussie reste
+      eteinte, comme son icone : relancee, `Frenesies.finir` la repaierait. */
+  function menuFrenesies() {
+    const items = Frenesies.toutes().map(function (f) {
+      const faite = Frenesies.reussie(f.slug);
+      return { libelle: f.titre.toUpperCase(), detail: faite ? 'RÉUSSIE' : '', actif: !faite,
+               frenesie: f.slug, faire: function () { return lancerLaFrenesie(f); } };
+    });
+    if (!items.length) items.push(ligne('AUCUNE FRÉNÉSIE'));
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuDebug()); return false; } });
+    return { titre: 'LANCER UNE FRÉNÉSIE', largeur: 320, hauteur: VH - 30, items: items,
+             retour: function () { ouvrirMenu(menuDebug()); } };
+  }
+
+  /** RENDRE LES COINS : la carte des gangs comme au premier jour — chaque ilot a son district, chaque gang a sa
+      force pleine, les reprises du jour oubliees. Les districts LIBERES (M16) le restent : c'est l'histoire. */
+  function rendreLesCoins() {
+    const p = B.partie;
+    if (!p) { message('PAS DE PARTIE'); return false; }
+    const n = Object.keys(p.territoires || {}).length;
+    p.territoires = {}; p.forcesDesGangs = {}; p.reprises = {};
+    message(n > 1 ? n + ' COINS RENDUS' : n ? 'UN COIN RENDU' : 'PERSONNE N’AVAIT RIEN PRIS');
+    return false;
+  }
+
+  /** UNE NUIT DES GANGS : la nuit des territoires, tout de suite (`Territoires.nuit`) — un coin pris par gang
+      assez fort, sans attendre qu'on dorme. */
+  function uneNuitDesGangs() {
+    if (!B.partie) { message('PAS DE PARTIE'); return false; }
+    const prises = Territoires.nuit() || [];
+    const n = prises.length;
+    message(n > 1 ? n + ' COINS PRIS CETTE NUIT' : n ? 'UN COIN PRIS CETTE NUIT' : 'AUCUN GANG N’A BOUGÉ');
+    return false;
+  }
+
   /** L'onglet TRICHES, en sections PAR INTENTION (Martin, 27 sept. 2026 : « classe bien
       le menu de triche, il commence a y avoir beaucoup de menus ») : LE JOUEUR (ce qu'on
       se donne), TOUJOURS (les bascules OUI/NON), ALLER (on y va, rien ne se lance),
@@ -2744,6 +2936,16 @@ const Hud = (function () {
       { libelle: 'TOUTES LES CARTES', faire: function () { toutesLesCartes(); return false; } },
       { libelle: 'TOUTES LES BEBELLES', faire: function () { toutesLesBebelles(); return false; } },
       { libelle: 'TOUS LES SAUTS', faire: function () { tousLesSauts(); return false; } },
+      { libelle: 'TOUTES LES PROPRIÉTÉS', faire: function () { toutesLesProprietes(); return false; } },
+      { libelle: 'TOUS LES MEUBLES', faire: function () { tousLesMeubles(); return false; } },
+      { libelle: 'EFFACER LA DETTE', faire: function () { effacerLaDette(); return false; } },
+      { libelle: 'VIDER LE CASIER', faire: function () {
+        B.partie.casier = 0; Missions.sauvegarderPartie(); message('CASIER VIDÉ'); return false;
+      } },
+      // Un char a soi, et le sien remis a neuf.
+      entete('LES CHARS'),
+      page('FAIRE APPARAÎTRE UN CHAR', menuFaireApparaitre),
+      { libelle: 'RÉPARER LE CHAR', faire: function () { reparerLeChar(); return false; } },
       // Les bascules : elles tiennent jusqu'a ce qu'on les eteigne, et se sauvent avec la partie.
       entete('TOUJOURS'),
       bascule('invincible', 'INVINCIBLE'),
@@ -2762,9 +2964,27 @@ const Hud = (function () {
       entete('JOUER'),
       page('LANCER UNE MISSION', menuSautMissions),
       page('LANCER UN DÉFI', menuSautDefis),
+      page('LANCER UNE FRÉNÉSIE', menuFrenesies),
       { libelle: 'OBJECTIF SUIVANT', actif: !!m, faire: function () { Histoire.avancer(); return true; } },
       { libelle: 'TERMINER LA MISSION', actif: !!m, faire: function () { Histoire.reussir(); return true; } },
-      entete('DIVERS'),
+      // Ce que la ville fait sans nous : la police, l'heure, les gangs.
+      entete('LA VILLE'),
+      { libelle: 'LA POLICE OUBLIE', faire: function () { Police.remiseAZero(); message('PLUS PERSONNE NE TE CHERCHE'); return false; } },
+      // ⚠️ `etoilesAuMoins` refuse au refuge (l'ile) : personne n'y appelle la police, meme en trichant.
+      { libelle: 'ÉTOILES AU MAXIMUM', faire: function () {
+        if (!Police.etoilesAuMoins(B.defs.recherche.etoiles_max)) { message(Police.auRefuge() ? 'PERSONNE N\'APPELLE ICI' : 'DÉJÀ AU MAXIMUM'); return false; }
+        return true;
+      } },
+      // La pluie, le brouillard et les tempetes se lisent du jour et de l'heure : trois heures plus tard,
+      // on les voit. Minuit passe, c'est un vrai jour (UN `nouveauJour`), comme la nuit en prison.
+      { libelle: 'HEURE +3 H', detail: Monde.heureTexte(), faire: function (item) {
+        const p = B.partie;
+        p.heure += 3 / 24;
+        while (p.heure >= 1) { p.heure -= 1; p.jour += 1; Missions.nouveauJour(); }
+        Missions.sauvegarderPartie();
+        item.detail = Monde.heureTexte();
+        return false;
+      } },
       // Les saisons se voient sans jouer vingt-six jours (les quatre saisons, lot 1). Un seul
       // `nouveauJour` : la manchette et les effets d'UNE nuit, pas d'un mois.
       { libelle: 'MOIS SUIVANT', detail: Calendrier.moisEcrit(B.partie.jour), faire: function (item) {
@@ -2773,6 +2993,9 @@ const Hud = (function () {
         item.detail = Calendrier.moisEcrit(B.partie.jour);
         return false;
       } },
+      { libelle: 'RENDRE LES COINS DES GANGS', faire: function () { rendreLesCoins(); return false; } },
+      { libelle: 'UNE NUIT DES GANGS', faire: function () { uneNuitDesGangs(); return false; } },
+      entete('DIVERS'),
       // ⚠️ Coop locale (M14, essai) : PAS une triche de `B.partie.triches` — elle
       // n'est jamais sauvegardee (on la rallume a chaque essai) et bascule une
       // VRAIE entite dans le monde, pas juste un drapeau.

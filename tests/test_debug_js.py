@@ -1198,12 +1198,17 @@ def test_l_onglet_triches_est_classe_par_intention(banc):
         });
         return { entetes: Object.keys(sections), sections: sections, pages: pages };
     }""")
-    assert r["entetes"] == ["LE JOUEUR", "TOUJOURS", "ALLER", "JOUER", "DIVERS"]
+    assert r["entetes"] == ["LE JOUEUR", "LES CHARS", "TOUJOURS", "ALLER", "JOUER", "LA VILLE", "DIVERS"]
+    assert r["sections"]["LES CHARS"] == ["FAIRE APPARAÎTRE UN CHAR", "RÉPARER LE CHAR"]
     assert r["sections"]["ALLER"] == ["À L'OBJECTIF", "CHEZ UN DONNEUR", "ENDROITS CLÉS", "COLLECTIONS"]
-    assert r["sections"]["JOUER"] == ["LANCER UNE MISSION", "LANCER UN DÉFI", "OBJECTIF SUIVANT", "TERMINER LA MISSION"]
+    assert r["sections"]["JOUER"] == ["LANCER UNE MISSION", "LANCER UN DÉFI", "LANCER UNE FRÉNÉSIE", "OBJECTIF SUIVANT",
+                                      "TERMINER LA MISSION"]
+    assert r["sections"]["LA VILLE"] == ["LA POLICE OUBLIE", "ÉTOILES AU MAXIMUM", "HEURE +3 H", "MOIS SUIVANT",
+                                         "RENDRE LES COINS DES GANGS", "UNE NUIT DES GANGS"]
     assert len(r["sections"]["TOUJOURS"]) == len(NOMS_DES_BASCULES)
     assert {p["libelle"] for p in r["pages"]} == {"CHEZ UN DONNEUR", "ENDROITS CLÉS", "COLLECTIONS", "LANCER UNE MISSION",
-                                                   "LANCER UN DÉFI", "JUKEBOX"}
+                                                   "LANCER UN DÉFI", "LANCER UNE FRÉNÉSIE", "FAIRE APPARAÎTRE UN CHAR",
+                                                   "JUKEBOX"}
     for p in r["pages"]:
         assert p["rendu"] is False and p["titre"] == p["libelle"], p
 

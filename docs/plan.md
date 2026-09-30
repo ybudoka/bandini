@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (297 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (298 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -82,7 +82,6 @@ pas quand l'ordre de travail change.
 | La foire fermée l'hiver, et le tour de ce qui ferme | ⬜ **en cours** (tranché par Martin : fermée tant que la neige tient, cadenassée, les missions du Bonimenteur attendent ; le tour — derby, crème glacée, fruits de mer, amuseurs, piscines, fontaine, BBQ, chaloupes ; et l'hiver amène le jongleur de feu, les foyers, le chocolat chaud ; trois vagues) | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/la-foire-fermee-l-hiver.md#fiche) |
 | La plage l'hiver | ⬜ **en cours** | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/la-plage-l-hiver.md#fiche) |
 | Des chocs qui sonnent ce qu'ils frappent, et des pas qui sonnent le sol | ⬜ **en cours** | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/des-chocs-qui-sonnent-ce-qu-ils-frappent-et-des-pas-qui-sonnent-le-sol.md#fiche) |
-| Les triches qui manquaient | ⬜ **en cours** (tranché par Martin : les quatre paquets) | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/les-triches-qui-manquaient.md#fiche) |
 | Les bateaux ne sont pas des chars | ⬜ **en cours** (tranché par Martin : tout, en cinq vagues — la conduite, les règles de char, le plongeon et la police de terre, la vedette de police, l'habillage et l'hiver ; ✅ vague 1 livrée : la conduite — la poupe chasse, la machine arrière au lieu du frein, la météo reste sur la rue ; ✅ vague 2 livrée : ni fourrière, ni remorqueuse, ni garage, ni place de stationnement pour une coque, BATEAUX VOLÉS au carnet, et le traversier n'accoste plus sur une coque ; ensuite la vague 3, le plongeon et la police de terre) | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/les-bateaux-ne-sont-pas-des-chars.md#fiche) · [notes](jalons/les-bateaux-ne-sont-pas-des-chars.md#notes) |
 | Une route en lacets vers le chalet | ⬜ **en cours** (tranché par Martin le 30 sept. 2026 : la première route courbe, dans le rang — des lacets dans le bois, le chalet au bout du chemin, du gravier qui ralentit, un tracé lisse sur la grille) | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/une-route-en-lacets-vers-le-chalet.md#fiche) |
 | Des bagarres de gangs vivantes, et armées | ⬜ **en cours** (tranché par Martin le 30 sept. 2026 : un seul cerveau pour la rixe et le gang contre toi, un arsenal par gang porté par un membre sur trois, quatre vagues — le contact, la fusillade, le moral, les renforts) | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/des-bagarres-de-gangs-vivantes-et-armees.md#fiche) |

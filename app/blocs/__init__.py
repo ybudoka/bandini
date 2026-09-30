@@ -156,7 +156,9 @@ def pour_le_navigateur() -> list[dict]:
                         for p in b.get("portes", [])],
              # ⚠️ Les NOMS de ses lieux, seulement (la villa) : en ville, une mission qui en nomme un
              # fait viser le passage du bloc au GPS — le pixel, lui, n'existe que dans le bloc.
-             **({"lieux": sorted(b["lieux"])} if b.get("lieux") else {})} for b in BLOCS]
+             **({"lieux": sorted(b["lieux"])} if b.get("lieux") else {}),
+             # Une planque qui s'achète (le chalet) : la triche TOUTES LES PROPRIÉTÉS la donne sans charger le bloc.
+             **({"planque": True} if b.get("planque") else {})} for b in BLOCS]
 
 
 def erreurs(bloc: dict, ville: dict | None = None) -> list[str]:
