@@ -102,6 +102,7 @@ pas quand l'ordre de travail change.
 | Le Clairon a plus à dire : des manchettes, des matins et des leçons de plus | ⬜ **en cours** | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/le-clairon-a-plus-a-dire-des-manchettes-des-matins-et-des-lecons-de-plus.md#fiche) |
 | Le marché aux puces a de la voix, et on y vend | ⬜ **en cours** (tranché par Martin : Ti-Rhéal et Gisèle parlent à voix haute, la rumeur du dimanche matin, et Gisèle rachète les meubles de la planque à bas prix) | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/le-marche-aux-puces-du-dimanche.md#fiche-de-la-deuxième-vague) · [notes](jalons/le-marche-aux-puces-du-dimanche.md#notes) |
 | Une file pour entrer à la foire | ⬜ **en cours** (tranché par Martin : quand la foire est ouverte, une file devant l'arche, longue selon l'heure — deux ou trois le matin, une douzaine en fin d'après-midi et en soirée, presque personne la nuit ; elle avance, le premier paie et entre, un nouveau arrive au bout ; un zigzag de câbles à sangle sur le trottoir, les passants contournent par la rue ; le joueur peut couper, ceux de la file chialent à voix haute, sans étoile ; le grillage de la foire ne s'enjambe plus, l'arche se force encore pour une étoile) | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/une-file-pour-entrer-a-la-foire.md#fiche) |
+| La patinoire du parc | ⬜ **en cours** | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/la-patinoire-du-parc.md#fiche) |
 
 ## L'ordre
 
