@@ -78,6 +78,7 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
+| Le quai du cargo sans sa chaîne | ⬜ **en cours** | 30 sept. 2026 | **P1** | **correctif** | [fiche](jalons/le-quai-du-cargo-sans-sa-chaine.md#fiche) |
 | Des intérieurs fidèles à l'extérieur : la revue complète | ⬜ **en cours** (✅ vague 1 livrée : le mur de la porte harmonisé, un seul plâtre dans toutes les pièces ; ensuite la revue, et les logements selon le standing) | 29 sept. 2026 | **P2** | **correctif** | [fiche](jalons/des-interieurs-fideles-a-l-exterieur.md#fiche) |
 | Le décor, les bêtes et les gens répondent — deuxième vague | ⬜ **en cours** (livrés : manger au barbecue, caresser le chat, vider un parcomètre, arracher une affiche ; le buisson est annulé ; restent le caddie et le panneau, à préciser par Martin) | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/le-decor-les-betes-et-les-gens-repondent.md#fiche-de-la-deuxième-vague) |
 | Des blocs de carte en extensions | ⬜ **en cours** (✅ vagues 1 à 3 livrées : à pied, au volant, à deux, la police qui reprend au bord, et le premier vrai bloc — le chalet du rang, la deuxième planque ; reste « un vrai dehors », avec le bloc qui en aura besoin) | 25 sept. 2026 | **P3** | ajout | [fiche](jalons/des-blocs-de-carte-en-extensions.md#fiche) |
@@ -115,6 +116,7 @@ Ce que chaque ligne à faire attend (la table de tri du 13 sept. 2026, réduite 
 
 | P | Genre | Ce qu'il y a à faire | Taille | Pourquoi là, et ce qu'il attend |
 |---|---|---|---|---|
+| **P1** | **correctif** | Le quai du cargo sans sa chaîne | 1 | le jeu ment : Sven dit « viens en char » derrière une chaîne qu'aucun char ne passe ; rien ne l'attend |
 | **P2** | **correctif** | Des intérieurs fidèles à l'extérieur : la revue complète | 4 | Martin (29 sept. 2026) : « des intérieurs toujours représentatifs de l'extérieur » — on pousse des portes à chaque partie ; la taille est déjà tenue, reste le contenu (standing, district, genre du bâtiment) ; rien au dé, un juge par règle sur toutes les portes, et une capture dedans et dehors |
 | **P3** | ajout | Des blocs de carte en extensions | 3 | ⚠️ **porte** la deuxième planque, la cabane à sucre, le centre d'achat hanté et le ciné-parc ; une carte à part derrière un fondu au noir (Martin) — le mécanisme des pièces, en plein air et au volant ; l'île et l'aéroport ne bougent pas |
 | **P4** | ajout | L'Île-aux-Corneilles | 3 | **les zones conditionnelles** d'abord ; l'eau est livrée, le traversier (M12) viendra après et l'île l'attend sans lui |
