@@ -78,6 +78,7 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
+| Chaque sortie de la ville a sa rue | ⬜ **en cours** (la villa n'a pas d'ouverture de rue ; le juge des blocs l'exigera de chaque passage) | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/chaque-sortie-de-la-ville-a-sa-rue.md#fiche) |
 | Une revue des façades des résidences et des appartements | ⬜ **en cours** (✅ l'inventaire livré, six écarts — voir les notes ; les corrections attendent l'ordre de Martin) | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/une-revue-des-facades-des-residences.md#fiche) |
 | Des intérieurs fidèles à l'extérieur : la revue complète | ⬜ **en cours** (✅ vague 1 livrée : le mur de la porte harmonisé, un seul plâtre dans toutes les pièces ; ensuite la revue, et les logements selon le standing) | 29 sept. 2026 | **P2** | **correctif** | [fiche](jalons/des-interieurs-fideles-a-l-exterieur.md#fiche) |
 | Le paquet des définitions maigrit — la deuxième cure | ⬜ **en cours** (7 octets de marge sous le plafond : mesurer clé par clé, sortir le journal du matin et ce que le navigateur ne lit pas, une garde qui nomme qui grossit, les plafonds qui redescendent) | 30 sept. 2026 | **P3** | **correctif** | [fiche](jalons/le-paquet-des-definitions-maigrit.md#fiche-de-la-deuxième-cure) · [notes](jalons/le-paquet-des-definitions-maigrit.md#notes) |
