@@ -78,6 +78,32 @@ CATALOGUE: list[Echantillon] = [
        prompt="a single footstep, hard leather sole on damp concrete sidewalk, "
               "sharp heel tap then a small scuff of grit, dry close-up, "
               "no reverb, no music"),
+    # --- LES PAS SELON LE SOL (30 sept. 2026, « des pas sur les différentes surfaces ») ---------
+    # ⚠️ `pas` reste le béton et l'asphalte, ET le filet : tant que ceux-ci ne sont pas chargés
+    # (`LIEUX["pas"]`, au premier pas), c'est lui qui joue. Le sol se lit sous le pied
+    # (`SOLS_DES_PAS`, `Monde.solDuPas`) ; la neige, elle, n'est pas une tuile : c'est la
+    # couverture de la tempête (`Neige.couverture`). Quatre variantes chacun, comme `pas`.
+    _e("pas_herbe", "Pas dans l'herbe", variantes=4, duree_s=0.5, volume=0.11,
+       prompt="a single footstep on short lawn grass, soft shoe sole pressing blades of grass, "
+              "a faint swish and a dull earthy thud, dry close-up, no reverb, no music"),
+    _e("pas_gravier", "Pas sur le gravier", variantes=4, duree_s=0.5, volume=0.11,
+       prompt="a single footstep on loose gravel path, small stones crunching and shifting under "
+              "a leather boot, dry close-up, no reverb, no music"),
+    _e("pas_sable", "Pas dans le sable", variantes=4, duree_s=0.5, volume=0.11,
+       prompt="a single footstep in dry beach sand, the foot sinking in with a soft muffled "
+              "shuffle and grains sliding, dry close-up, no waves, no reverb, no music"),
+    _e("pas_bois", "Pas sur le bois", variantes=4, duree_s=0.5, volume=0.11,
+       prompt="a single footstep on old wooden planks, a hollow knock of a boot heel on a "
+              "wooden dock board with a faint creak, dry close-up, no reverb, no music"),
+    _e("pas_carrelage", "Pas sur le carrelage", variantes=4, duree_s=0.5, volume=0.11,
+       prompt="a single footstep on a ceramic tile floor indoors, a crisp hard heel click, "
+              "dry close-up, small room, no reverb, no music"),
+    _e("pas_tapis", "Pas sur le tapis", variantes=4, duree_s=0.5, volume=0.09,
+       prompt="a single footstep on a thick carpet indoors, a very soft muffled padded thump, "
+              "dry close-up, no reverb, no music"),
+    _e("pas_neige", "Pas dans la neige", variantes=4, duree_s=0.5, volume=0.13,
+       prompt="a single footstep in fresh cold snow, a winter boot pressing down with a squeaky "
+              "crunch, dry close-up, outdoors, no wind, no reverb, no music"),
     _e("coup", "Coup de poing", variantes=3, duree_s=0.8, volume=0.22,
        prompt="a single bare-knuckle punch landing hard on a leather jacket, "
               "sharp meaty slap with a dull low body thud underneath, dry and "
@@ -285,6 +311,36 @@ CATALOGUE: list[Echantillon] = [
        prompt="two cars colliding at city speed, one hard metal crunch, sheet "
               "metal buckling, headlight glass shattering onto the road, "
               "close, no music"),
+    # --- LES CHOCS SELON CE QU'ON FRAPPE (30 sept. 2026) ------------------------------------
+    # ⚠️ Huit gestes jouaient tous `choc`, la TOLE FROISSEE : l'orignal, la clôture, le mur, la
+    # barrière du stationnement, la remorque qu'on accroche — et le passant renversé ne faisait
+    # AUCUN bruit. Chacun a maintenant sa matière (`SFX.choc(genre)`, `son.js`), et `choc` reste
+    # le carambolage et le filet. Un « lieu » (`LIEUX["chocs"]`) : ils se chargent la première
+    # fois qu'on conduit, comme le crissement.
+    _e("choc_leger", "Accrochage", variantes=3, duree_s=0.8, volume=0.6, influence=0.45,
+       prompt="a low speed car fender bender, a short dull bump of two plastic bumpers and a "
+              "small metal scrape, no glass breaking, close, no music"),
+    _e("choc_mur", "Char dans un mur", variantes=2, duree_s=1.2, volume=0.9, influence=0.45,
+       prompt="a car slamming into a brick wall, a deep heavy thud of the front end hitting "
+              "concrete, crumpling hood, a few bits of brick falling, close, no music"),
+    _e("choc_bois", "Char dans une clôture", variantes=2, duree_s=1.2, volume=0.75, influence=0.45,
+       prompt="a car smashing through a wooden fence and a wooden post, planks cracking and "
+              "splintering, pieces thrown on the ground, close, no engine, no music"),
+    _e("choc_barriere", "Barrière forcée", duree_s=1.0, volume=0.7, influence=0.45,
+       prompt="a car bumper breaking through a thin metal parking gate arm, a hollow metal "
+              "clang then the bar bending and scraping away, close, no music"),
+    _e("choc_corps", "Passant renversé", variantes=3, duree_s=0.6, volume=0.55, influence=0.45,
+       prompt="a car bumper hitting a body, a single heavy dull muffled thump on a hood, "
+              "no voice, no scream, no glass, close, no music"),
+    _e("choc_orignal", "Char contre un orignal", duree_s=1.5, volume=0.9, influence=0.45,
+       prompt="a car hitting a huge moose on a country road, a massive heavy meaty thud, the "
+              "hood crumpling, a windshield cracking, close, no animal cry, no music"),
+    _e("atterrissage", "Char qui retombe", variantes=2, duree_s=0.8, volume=0.55, influence=0.45,
+       prompt="a car landing hard after a jump, suspension bottoming out with a heavy thump, "
+              "springs creaking, tires slapping on asphalt, close, no crash, no music"),
+    _e("crochet", "Crochet de remorque", duree_s=1.0, volume=0.55, influence=0.45,
+       prompt="a heavy steel tow hook latching onto a car frame, a chain rattling and pulling "
+              "taut with a solid metallic clunk, close, no engine, no music"),
     _e("explosion", "Explosion", duree_s=2.5, volume=1.0, influence=0.45,
        prompt="a car exploding, a sharp cracking blast then a deep "
               "body-shaking boom, metal debris and glass raining down onto "
@@ -1715,6 +1771,13 @@ LIEUX: dict[str, list[str]] = {
     "chaussee": ["nid_de_poule", "conteneur", "tas", "plaque"],
     # Le derapage (les saisons, lot 6) : il se charge la premiere fois que le joueur conduit (`Derapage`).
     "derapage": ["crissement"],
+    # Les pas selon le sol (30 sept. 2026) : chargés au premier pas (`Monde.solDuPas`) — `pas`, le béton,
+    # reste au premier écran et joue d'ici là, pour le joueur comme pour les passants.
+    "pas": ["pas_herbe", "pas_gravier", "pas_sable", "pas_bois", "pas_carrelage", "pas_tapis", "pas_neige"],
+    # Les chocs selon ce qu'on frappe (30 sept. 2026) : chargés la première fois qu'on conduit, avec le
+    # crissement. `choc`, la tôle froissée, reste au premier écran et joue d'ici là.
+    "chocs": ["choc_leger", "choc_mur", "choc_bois", "choc_barriere", "choc_corps", "choc_orignal",
+              "atterrissage", "crochet"],
     # Les cartes de hockey (des choses à collectionner, vague 1) : chargées quand une carte qui manque est à moins
     # d'un écran (`Collections.maj`). Le premier écran n'avait plus que six Ko de marge.
     "collections": ["carte_hockey", "orgue_arena", "bebelle", "reel_bebelles", "saut_reussi"],
@@ -1725,6 +1788,29 @@ LIEUX: dict[str, list[str]] = {
                # Le tripot du sous-sol (vague 4) : on n'y descend que par la grande salle.
                "tripot_salle", "des_barbotte"],
 }
+
+#: LE PAS DE CHAQUE SOL (30 sept. 2026) : pour CHAQUE glyphe où l'on marche (`carte.marchable`), le
+#: slug de son pas — le juge exige qu'un glyphe neuf y soit rangé, sinon il sonnerait le béton sans
+#: que personne l'ait décidé. Le béton et l'asphalte sonnent pareil sous un soulier (`pas`) ; la
+#: ruelle aussi. La voie du petit train est du ballast (`pas_gravier`), l'escalier et le quai du
+#: bois, le tatami et la peau d'ours un tapis. La piscine hors terre : on y nage, le pas ne part pas.
+#: ⚠️ La neige n'y est PAS : ce n'est pas une tuile (`Son.solDuPas` la lit sur la tempête).
+SOLS_DES_PAS: dict[str, str] = {
+    **dict.fromkeys("._xo#-|+*=:p^v<>IRJ", "pas"),
+    ",": "pas_herbe",
+    ";": "pas_gravier", "g": "pas_gravier", "T": "pas_gravier",
+    "s": "pas_sable",
+    "Q": "pas_bois", "t": "pas_bois", "/": "pas_bois",
+    "u": "pas_carrelage",
+    "y": "pas_tapis", "U": "pas_tapis", "A": "pas_tapis",
+}
+
+#: LES PAS DES PASSANTS (30 sept. 2026, « Go + pas des passants », Martin) : ceux qui marchent TOUT
+#: PRÈS du joueur, pas la foule. `pas_px` : un pas tous les tant de pixels (le joueur : 14, à la
+#: course) ; `portee_px` : au-delà, rien ; `volume` : la part du volume du catalogue, tout contre
+#: soi ; `par_image` : au plus tant de pas de passants par image — à la sortie du métro, dix
+#: passants à portée feraient une grêle.
+PAS_DES_PASSANTS = {"pas_px": 16, "portee_px": 150, "volume": 0.6, "par_image": 1}
 
 #: Ce qui passe sur les ondes, et ne s'affiche donc jamais dans une bulle.
 GENRES_DES_ONDES = (frozenset({g for genres in ONDES["stations"].values() for g in genres})
@@ -2179,6 +2265,8 @@ def exporter() -> dict:
                       "sons": {d: [dict(e) for e in sons] for d, sons in QUARTIERS["sons"].items()}},
         "coups_des_autres": dict(COUPS_DES_AUTRES),
         "lieux": {lieu: list(slugs) for lieu, slugs in LIEUX.items() if lieu not in LIEUX_A_PART},
+        "sols_des_pas": {g: slug for g, slug in SOLS_DES_PAS.items() if slug != "pas"},
+        "pas_des_passants": dict(PAS_DES_PASSANTS),
         # LA MUSIQUE. Chaque morceau part de `app/musique.py` (les notes, le
         # filet) et recoit ici le mp3 genere quand il est sur le disque — plus
         # le volume qui va AVEC ce fichier, qui n'est pas celui des notes.

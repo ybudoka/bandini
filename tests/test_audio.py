@@ -48,7 +48,8 @@ def test_le_poids_audio_reste_raisonnable():
     """Un telephone en 3G telecharge les BRUITAGES au demarrage : on se tient
     loin du megaoctet. Les radios, elles, n'arrivent qu'au tour de cle.
 
-    Le plafond des sons de LIEU (1,35 Mo, les quatre saisons) : validé par Martin (29 sept. 2026)."""
+    Le plafond des sons de LIEU (1,35 Mo, les quatre saisons) : validé par Martin (29 sept. 2026) ;
+    1,95 Mo avec les bruitages sans équivalent payé, les pas et les chocs, choisi par Martin (30 sept. 2026)."""
     dossier = audio.RACINE_STATIQUE / audio.DOSSIER
     fichiers = list(dossier.glob("*.mp3")) if dossier.is_dir() else []
     # ⚠️ LES BRUITS DE QUARTIER (M15, 2e vague) SORTENT DU BUDGET DE DEMARRAGE,
@@ -80,7 +81,10 @@ def test_le_poids_audio_reste_raisonnable():
     # quatorze bruitages qui n'avaient aucun équivalent payé (284 Ko : la cloche, la borne, la distributrice,
     # la chaussée, l'incendie…) — chargés au premier geste, jamais au premier écran. La marge restante est pour
     # les chocs et les pas (l'autre jalon qui range ses sons dans un lieu).
-    assert sum(f.stat().st_size for f in lieux) < 1_800_000
+    # ⚠️ **Relevé de 1,8 à 1,95 Mo le 30 sept. 2026, sur décision de Martin** : la marge ne suffisait pas aux
+    # chocs et aux pas (44 fichiers, 297 Ko, à 96 kbit/s comme tout bruitage bref — 1,91 Mo en tout). Seul le
+    # lot du geste se charge : `pas` au premier pas hors béton, `chocs` à la première conduite.
+    assert sum(f.stat().st_size for f in lieux) < 1_950_000
     bruitages = [f for f in fichiers
                  if not f.name.startswith(("radio-", "histoire-", "musique-"))
                  and f.stem.rsplit("-", 1)[0] not in slugs_de_quartier

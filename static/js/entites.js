@@ -4550,7 +4550,8 @@ const Entites = (function () {
     // Un pas sur le trottoir, une BRASSEE dans l'eau — et la brassee est plus
     // longue : a 1 px par image, une toutes les 14 px sonnerait comme une
     // machine a laver. A 34, il en part une et demie par seconde.
-    if (j.pasDist > (j.nage ? 34 : 14)) { j.pasDist = 0; if (j.nage) Son.SFX.nage(); else Son.SFX.pas(); }
+    // Et le pas sonne son sol (`Son.solDuPas`) : l'herbe, le sable, le quai, la neige.
+    if (j.pasDist > (j.nage ? 34 : 14)) { j.pasDist = 0; if (j.nage) Son.SFX.nage(); else Son.SFX.pas(Son.solDuPas(j.x, j.y)); }
     if (j.invincible > 0) j.invincible--;
     if (j.flagrant > 0) j.flagrant--;
     if (j.saigne > 0) saigner(j);
@@ -4775,6 +4776,7 @@ const Entites = (function () {
       deplacerCercle(e, e.vx, e.vy, masqueDe(e));
       dansLaCarte(e);
       e.anim.dist += Math.abs(e.vx) + Math.abs(e.vy);
+      Son.pasDePassant(e, Math.hypot(e.vx, e.vy));
       regarder(e, e.vx, e.vy);
       return;
     }
@@ -5120,6 +5122,7 @@ const Entites = (function () {
     if (surLeTrottoir && !roulableEnfant(Math.floor(e.x / TT), Math.floor(e.y / TT))) { e.x = avant.x; e.y = avant.y; }
     const bouge = Math.hypot(e.x - avant.x, e.y - avant.y);
     e.anim.dist += bouge;
+    if (!cycliste) Son.pasDePassant(e, bouge);            // ses pas, tout pres du joueur seulement
     if (bouge < 0.2 && e.etat === 'flane') e.butT = 0;      // bloque : on change d'idee
     else if (bouge < 0.2) { e.dir = Math.floor(B.rng() * 4); e.vx = 0; e.vy = 0; }
     regarder(e, e.vx, e.vy);

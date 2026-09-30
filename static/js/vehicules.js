@@ -847,12 +847,14 @@ const Vehicules = (function () {
       // vie (`degats`), la bete repart dans le bois, fachee — et si c'est toi, le Clairon en fera sa
       // une demain (s'il n'a pas deja une histoire a raconter). Une fois par bete.
       const o = rencontre.d.orignal;
+      let sonne = false;                                // l'orignal a son choc a lui : pas deux fois
       if (o && !o.choc) {
         const f = B.defs.pietons.betes.orignal;
         o.choc = true;
         endommager(v, Math.round(v.vieMax * f.degats), null);
         Entites.faireFuirLOrignal(rencontre.d, v);
-        Son.SFX.choc();
+        Son.SFX.choc('choc_orignal');
+        sonne = true;
         if (v.conducteur === B.joueur) {
           B.cam.secousse = Math.max(B.cam.secousse, 0.9);
           Entree.vibrer(160);
@@ -864,15 +866,15 @@ const Vehicules = (function () {
       // les tuiles, c'est fait axe par axe. Sans ca, le char s'ecrase sur
       // l'arbre en gardant sa vitesse reelle et le traverse quand meme.
       const ph = physique();
-      heurterMur(v, Math.hypot(v.vx, v.vy));
+      heurterMur(v, Math.hypot(v.vx, v.vy), sonne ? 'deja' : Son.chocDuDecor(rencontre.d.decor));
       v.vx = -v.vx * ph.choc_rebond; v.vy = -v.vy * ph.choc_rebond;
       return false;
     }
     v.vitesse *= rencontre.garde;
     v.vx *= rencontre.garde; v.vy *= rencontre.garde;
     endommager(v, physique().defonce_degats, v.agresseur);
+    Son.SFX.choc(Son.chocDuDecor(rencontre.d.decor));
     Entites.briser(rencontre.d);
-    Son.SFX.choc();
     if (v.conducteur === B.joueur) {
       B.cam.secousse = Math.max(B.cam.secousse, 0.45);
       Entree.vibrer(90);
@@ -916,7 +918,7 @@ const Vehicules = (function () {
     if (barriere.forcer.degats) endommager(v, barriere.forcer.degats, null);
     if (barriere.forcer.etoiles) Police.etoilesAuMoins(barriere.forcer.etoiles);
     Hud.message(barriere.raison + ' — FORCÉ', 150);
-    Son.SFX.choc();
+    Son.SFX.choc('choc_barriere');
     B.cam.secousse = Math.max(B.cam.secousse, 0.3);
     return true;
   }
@@ -943,7 +945,7 @@ const Vehicules = (function () {
     v.vx *= v.def.defonce; v.vy *= v.def.defonce;
     endommager(v, ph.defonce_degats, v.agresseur);
     Entites.poussiere(x, y, 10);
-    Son.SFX.choc();
+    Son.SFX.choc('choc_bois');                        // une clôture, une haie : du bois qui éclate
     if (v.conducteur === B.joueur) { B.cam.secousse = Math.max(B.cam.secousse, 0.5); Entree.vibrer(120); }
     return true;
   }
@@ -1184,7 +1186,11 @@ const Vehicules = (function () {
     // En l'air (rampe) : on retombe.
     if (v.z > 0 || v.vz !== 0) {
       v.z += v.vz; v.vz -= physique().gravite;
-      if (v.z <= 0) { v.z = 0; v.vz = 0; }
+      if (v.z <= 0) {
+        // Il retombe : la suspension talonne — de pres, comme tout ce qu'un char fait (`Son.depuis`).
+        if (-v.vz >= physique().atterrissage_vz_min) Son.depuis(v, function () { Son.SFX.choc('atterrissage'); });
+        v.z = 0; v.vz = 0;
+      }
     }
   }
 
@@ -1238,7 +1244,9 @@ const Vehicules = (function () {
     }
   }
 
-  function heurterMur(v, force) {
+  /** `genre` : ce qu'on frappe (`Son.chocDuDecor`) ; sans lui, un mur — ou un accrochage, doucement.
+      `'deja'` : l'appelant a deja joue son choc (l'orignal). */
+  function heurterMur(v, force, genre) {
     const ph = physique();
     v.vitesse *= -ph.choc_rebond;
     v.chocs++;
@@ -1251,7 +1259,7 @@ const Vehicules = (function () {
       const seuil = typeof v.def.ejecte === 'number' ? v.def.ejecte : ph.ejection_vitesse_min;
       if (v.def.ejecte && force >= seuil) ejecter(B.joueur, v);
     }
-    Son.SFX.choc();
+    if (genre !== 'deja') Son.SFX.choc(force < ph.choc_leger_vitesse ? 'choc_leger' : genre || 'choc_mur');
   }
 
   function heurterVehicules(v) {
@@ -1317,7 +1325,8 @@ const Vehicules = (function () {
             v.vx -= nx * relatif * 0.6; v.vy -= ny * relatif * 0.6;
             autre.vx += nx * relatif * 0.6 * (m1 / m2); autre.vy += ny * relatif * 0.6 * (m1 / m2);
             v.vitesse *= 0.5; autre.vitesse *= 0.7;
-            Son.SFX.choc();
+            // Un accrochage n'est pas un carambolage : la tole froissee, au-dessus de `choc_leger_vitesse`.
+            Son.SFX.choc(Math.abs(relatif) < ph.choc_leger_vitesse ? 'choc_leger' : null);
             if (v.conducteur === B.joueur) {
               B.cam.secousse = 0.7;
               if (autre.alarme === 0 && autre.def.alarme && !autre.conducteur) declencherAlarme(autre);
@@ -1362,6 +1371,8 @@ const Vehicules = (function () {
           });
           p.vx = v.vx * 1.2; p.vy = v.vy * 1.2;
           v.vitesse *= 0.85;
+          // Le coup sourd du corps sur le capot : il etait MUET, on ne savait pas qu'on l'avait touche.
+          Son.depuis(p, function () { Son.SFX.choc('choc_corps'); });
           // Le suspect de la patrouille, percute et vivant, reste AU SOL : c'est l'arrestation
           // (un passant renverse qui survit se releve et detale ; lui, on l'a plaque).
           if (p.suspect && p.vivant) Entites.assommer(p);
@@ -1689,7 +1700,7 @@ const Vehicules = (function () {
     v.remorque = cible;
     cible.remorqueePar = v;
     cible.alarme = 0;
-    Son.SFX.choc();
+    Son.SFX.choc('crochet');
     Hud.message(cible.def.nom.toUpperCase() + ' ACCROCHÉ');
     return true;
   }

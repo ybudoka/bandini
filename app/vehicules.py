@@ -511,6 +511,12 @@ PHYSIQUE = {
     "sous_pas_px": 3.0,           # au-dessus, on decoupe le deplacement
     "cercles": 3,                 # la chaine de cercles qui represente un char
     "choc_vitesse_min": 1.0,      # sous ca, un contact n'est pas un choc
+    # Sous ca, un choc est un ACCROCHAGE (`choc_leger`) et pas la tole froissee : un pare-chocs
+    # qui en touche un autre au feu rouge ne sonne pas comme un carambolage (30 sept. 2026).
+    "choc_leger_vitesse": 2.5,
+    # Un char qui retombe plus vite que ca talonne (`atterrissage`) : la bosse d'un nid-de-poule,
+    # elle, ne fait pas claquer la suspension. En px/image vers le bas, au contact du sol.
+    "atterrissage_vz_min": 1.2,
     "choc_degats_par_px": 7,
     "choc_rebond": 0.35,
     "renverse_vitesse_min": 1.2,  # sous ca, un pieton est bouscule, pas renverse

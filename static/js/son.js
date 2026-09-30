@@ -727,8 +727,84 @@ const Son = (function () {
     });
   }
 
+  // --- Les pas selon le sol, les chocs selon ce qu'on frappe (30 sept. 2026) ------------------
+  /** Le béton : le `pas` d'avant, et le filet de tous les sols. */
+  function pasDuBeton() { if (!joue('pas')) bruit(0.05, 0.12 * (ici ? ici.volume : 1), 900, 300); }
+  /** La tôle froissée : le `choc` d'avant, et le filet des chocs de tôle. */
+  function tole() { if (!joue('choc')) bruit(0.4, 0.5 * (ici ? ici.volume : 1), 1200, 100); }
+  /** Un coup sourd synthétisé : le filet d'un corps, et d'une suspension qui talonne. */
+  function coupSourd() { bruit(0.12, 0.35 * (ici ? ici.volume : 1), 320, 60); }
+
+  /** LE SOL SOUS LE PIED en (x, y) : le slug de son pas (`audio.sols_des_pas`, un par glyphe
+      marchable). ⚠️ La neige n'est pas une tuile : dehors, la tempête et ce qu'elle laisse
+      (`Neige.couverture`) couvrent tout ce que la charrue n'a pas dégagé ; et tout l'hiver, la
+      terre (l'herbe, le gravier, le sable) reste sous la neige même quand la rue est nette. */
+  function solDuPas(x, y) {
+    const a = B.defs && B.defs.audio;
+    if (!a || !a.sols_des_pas || typeof Monde === 'undefined') return 'pas';
+    const tx = Math.floor(x / TT), ty = Math.floor(y / TT);
+    const sol = a.sols_des_pas[Monde.glyphe(tx, ty)] || 'pas';
+    if (B.interieur) return sol;
+    const neige = typeof Neige !== 'undefined' && Neige.couverture() > 0 && !Neige.deneigee(tx, ty);
+    const hiver = typeof Saisons !== 'undefined' && Saisons.enHiver()
+      && (sol === 'pas_herbe' || sol === 'pas_gravier' || sol === 'pas_sable');
+    return neige || hiver ? 'pas_neige' : sol;
+  }
+
+  /** LES PAS DES PASSANTS : `d` px de plus pour `e`, et un pas quand il en a fait assez — sur son
+      sol, plus faible de loin, a gauche s'il est a gauche. ⚠️ Seulement tout pres
+      (`audio.pas_des_passants`), et `par_image` au plus : une foule qui sonne tous ses pas, c'est
+      une grêle. Et SEULEMENT s'il est à l'écran (`presence`), comme les coups des autres. */
+  let pasImage = -1, pasDansLImage = 0;
+  function pasDePassant(e, d) {
+    const r = B.defs && B.defs.audio && B.defs.audio.pas_des_passants;
+    const j = B.joueur;
+    if (!r || !j || e.nage) return;
+    e.pasDist = (e.pasDist || 0) + d;
+    if (e.pasDist < r.pas_px) return;
+    e.pasDist = 0;
+    const loin = Math.hypot(e.x - j.x, e.y - j.y);
+    if (loin >= r.portee_px || !pret() || presence(e.x, e.y) <= 0) return;
+    if (pasImage !== B.t) { pasImage = B.t; pasDansLImage = 0; }
+    if (pasDansLImage >= r.par_image) return;
+    pasDansLImage++;
+    ici = { volume: r.volume * (1 - loin / r.portee_px), pan: (e.x - j.x) / r.portee_px };
+    try { SFX.pas(solDuPas(e.x, e.y)); } finally { ici = null; }
+  }
+
+  //: CE QU'ON FRAPPE, par décor : le bois (les arbres, les érables, la corde de bois, les bancs), le
+  //: métal mince (le lampadaire, la borne, la distributrice — `choc_barriere`), la tôle d'une carcasse
+  //: ou d'une benne (`choc`, la tôle froissée), et tout le reste — le kiosque de la foire, la cale, le
+  //: pilier — un mur. Le bris par matière (`MATIERE_DU_BRIS`) dit le reste.
+  const CHOC_DU_DECOR = {
+    arbre: 'choc_bois', erable_seau: 'choc_bois', erable_tube: 'choc_bois', corde_bois: 'choc_bois',
+    belvedere: 'choc_bois', table_tire: 'choc_bois', tas_de_pneus: 'choc_leger',
+    carcasse: 'choc', pile_de_carcasses: 'choc', cubes_de_ferraille: 'choc', benne: 'choc', grue_aimant: 'choc',
+    lampadaire: 'choc_barriere', borne_fontaine: 'choc_barriere', guichet: 'choc_barriere',
+    distributrice_liqueur: 'choc_barriere', distributrice_grignotines: 'choc_barriere', distributrice_cafe: 'choc_barriere',
+  };
+  function chocDuDecor(decor) {
+    if (CHOC_DU_DECOR[decor]) return CHOC_DU_DECOR[decor];
+    const m = MATIERE_DU_BRIS[decor];
+    return m === 'casse' ? 'choc_bois' : m === 'pelle' ? 'choc_barriere' : m === 'bouteille' ? 'choc_leger' : 'choc_mur';
+  }
+
   const SFX = {
-    pas: function () { if (!joue('pas')) bruit(0.05, 0.12, 900, 300); },
+    /** Un pas, sur `sol` (`solDuPas` : `pas_herbe`, `pas_neige`…). Sans sol, ou tant que les sols ne
+        sont pas chargés (`LIEUX["pas"]`, demandés au premier pas qui en nomme un), c'est le béton.
+        ⚠️ Le filet suit `ici` (le volume d'un passant, `pasDePassant`) : un pas d'à côté ne sort pas
+        de la synthèse au plein volume. */
+    pas: function (sol) {
+      if (sol && sol !== 'pas') Lieu.charger('pas');
+      if (sol === 'pas_herbe') { if (!joue('pas_herbe')) pasDuBeton(); }
+      else if (sol === 'pas_gravier') { if (!joue('pas_gravier')) pasDuBeton(); }
+      else if (sol === 'pas_sable') { if (!joue('pas_sable')) pasDuBeton(); }
+      else if (sol === 'pas_bois') { if (!joue('pas_bois')) pasDuBeton(); }
+      else if (sol === 'pas_carrelage') { if (!joue('pas_carrelage')) pasDuBeton(); }
+      else if (sol === 'pas_tapis') { if (!joue('pas_tapis')) pasDuBeton(); }
+      else if (sol === 'pas_neige') { if (!joue('pas_neige')) pasDuBeton(); }
+      else pasDuBeton();
+    },
     coup: function () { if (!joue('coup')) { ton(140, 0.08, 'square', 0.3, 0.5); bruit(0.08, 0.3, 800, 200); } },
     touche: function () { if (!joue('touche')) ton(220, 0.12, 'sawtooth', 0.25, 0.4); },
     // Les techniques d'arts martiaux (`techniques.js`) : le pied qui fend l'air, le
@@ -831,7 +907,23 @@ const Son = (function () {
     //: bip de recul : un ton electronique a trous ne se genere pas (le modele ne fait pas de silence).
     alarme_commerce: function () { for (let k = 0; k < 6; k++) ton(k % 2 ? 660 : 880, 0.17, 'square', 0.09, 1, k * 0.2); },
     klaxon: function () { if (!joue('klaxon')) { ton(330, 0.25, 'sawtooth', 0.3); ton(415, 0.25, 'sawtooth', 0.3); } },
-    choc: function () { if (!joue('choc')) bruit(0.4, 0.5, 1200, 100); },
+    /** Un choc de char, par ce qu'il frappe (`genre` : `choc_mur`, `choc_corps`… — voir
+        `chocDuDecor`). Sans genre, ou tant que les chocs ne sont pas chargés (`LIEUX["chocs"]`,
+        demandés à la première conduite), c'est la tôle froissée d'avant. ⚠️ Sauf le passant
+        renversé et le char qui retombe : ils étaient MUETS, et la tôle froissée sur un corps
+        dirait un carambolage — leur filet est un coup sourd. */
+    choc: function (genre) {
+      if (genre) Lieu.charger('chocs');
+      if (genre === 'choc_leger') { if (!joue('choc_leger')) tole(); }
+      else if (genre === 'choc_mur') { if (!joue('choc_mur')) tole(); }
+      else if (genre === 'choc_bois') { if (!joue('choc_bois')) tole(); }
+      else if (genre === 'choc_barriere') { if (!joue('choc_barriere')) tole(); }
+      else if (genre === 'choc_orignal') { if (!joue('choc_orignal')) tole(); }
+      else if (genre === 'crochet') { if (!joue('crochet')) tole(); }
+      else if (genre === 'choc_corps') { if (!joue('choc_corps')) coupSourd(); }
+      else if (genre === 'atterrissage') { if (!joue('atterrissage')) coupSourd(); }
+      else tole();
+    },
     explosion: function () { if (!joue('explosion')) { bruit(0.9, 0.8, 600, 40); ton(60, 0.6, 'sine', 0.5, 0.5); } },
     // Une lumiere qui s'eteint (les Galeries, la nuit) : le clac sec d'un gros interrupteur.
     interrupteur: function () { bruit(0.04, 0.3, 2400, 700); ton(90, 0.08, 'square', 0.12, 0.6); },
@@ -2760,7 +2852,7 @@ const Son = (function () {
 
   return {
     init, reveiller, sonder, etatSon, enAttente, surEtat, pret, suspendre, fermer, majVolume, prechauffer, ton, bruit, SFX, Mus, Chef, Rue,
-    chargerEchantillons, echantillon, joue, estCharge, jouerA, presence, depuis, boucle, boucleActive, reglerBoucle, volumeBoucle, etouffer, coupureBoucle,
+    chargerEchantillons, echantillon, joue, estCharge, jouerA, presence, depuis, solDuPas, pasDePassant, chocDuDecor, boucle, boucleActive, reglerBoucle, volumeBoucle, etouffer, coupureBoucle,
     Radio, Ambiance, Rumeur, Voix, Ondes, Souffle, Quartier, Lieu, Notes,
     get contexte() { return ctx; },
     // ⚠️ Les bruitages seuls : les voix, l'ambiance et les radios ont leurs

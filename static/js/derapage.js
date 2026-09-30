@@ -101,10 +101,10 @@ const Derapage = (function () {
     const d = donnees();
     if (!d || typeof Entites === 'undefined') return;
     if (v.crisseT > 0) v.crisseT--;
-    // Le son du crissement se charge quand le JOUEUR conduit (redemande toutes les 300 images : un echec,
+    // Le son du crissement — et les chocs selon ce qu'on frappe (`LIEUX["chocs"]`) — se chargent quand le JOUEUR conduit (redemande toutes les 300 images : un echec,
     // hors ligne, ne le perd pas pour la session).
     const t0 = B.t || 0;
-    if (v.conducteur === B.joueur && t0 - sonDemande >= 300 && typeof Son !== 'undefined' && Son.Lieu) { sonDemande = t0; Son.Lieu.charger('derapage'); }
+    if (v.conducteur === B.joueur && t0 - sonDemande >= 300 && typeof Son !== 'undefined' && Son.Lieu) { sonDemande = t0; Son.Lieu.charger('derapage'); Son.Lieu.charger('chocs'); }
     if (exempt(v) || v.z > 0) return;                  // une coque ne marque pas l'eau ; en plein saut, rien au sol
     const tr = d.traces, vit = Math.hypot(v.vx || 0, v.vy || 0);
     if (vit < tr.vitesse) return;
