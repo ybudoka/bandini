@@ -131,6 +131,17 @@ const Blocs = (function () {
     return { nord: Math.PI / 2, sud: -Math.PI / 2, ouest: 0, est: Math.PI }[o.bord];
   }
 
+  /** Ou l'on reviendra en ville en sortant de ce bloc : juste en deca de son passage (`recul`) — ou, pour un
+      SOUS-SOL (pas de passage, un `seuil`), devant son rideau, a quatre tuiles de la facade (la chaussee), le nez
+      vers la rue (`cap`). Null si le rideau n'est pas dans la carte courante. */
+  function retourEnVille(b, e) {
+    if (b.passage) return recul(b.passage, Monde.carte, e);
+    const pg = b.seuil && Monde.porteDeGarage(b.seuil);
+    if (!pg) return null;
+    const baie = Monde.baieDeLaPorteDeGarage(pg);
+    return { x: baie.x, y: baie.y + 2 * TT + 8, cap: Math.PI / 2 };
+  }
+
   /** Le centre d'une ouverture, en pixels — ce que le GPS vise pour ressortir. */
   function centre(o, carte) {
     const b = bornes(o, carte.w, carte.h);
@@ -154,7 +165,7 @@ const Blocs = (function () {
       return;
     }
     for (const b of liste()) {
-      if (!pres(b.passage, Monde.carte, j)) continue;
+      if (!b.passage || !pres(b.passage, Monde.carte, j)) continue;
       charger(b.slug);
       if (cartes[b.slug] && contreLeBord(b.passage, Monde.carte, e)) {
         Jeu.entrerDansLeBloc(b, cartes[b.slug], recul(b.passage, Monde.carte, j));
@@ -385,7 +396,9 @@ const Blocs = (function () {
   function entrerAuNoir(slug, ici) {
     const b = liste().find(function (q) { return q.slug === slug; }), def = cartes[slug];
     if (!b || !def || B.bloc) return false;
-    Jeu.passerDansLeBloc(b, def, recul(b.passage, Monde.carte, B.joueur), ici || null);
+    const retour = retourEnVille(b, B.joueur);
+    if (!retour) return false;
+    Jeu.passerDansLeBloc(b, def, retour, ici || null);
     return true;
   }
 
@@ -396,7 +409,7 @@ const Blocs = (function () {
     return { x: c.x, y: c.y, nom: 'Vers la ville', couleur: '#7fc4ff' };
   }
 
-  return { dessinerFumees, cheminees, fume, FUMEE, VAPEUR, init, maj, charger, liste, sauter, entrerAuNoir, contreLeBord, recul, marge, porteur, capVersLInterieur, poursuiteAuBord,
+  return { dessinerFumees, cheminees, fume, FUMEE, VAPEUR, init, maj, charger, liste, sauter, entrerAuNoir, contreLeBord, recul, retourEnVille, marge, porteur, capVersLInterieur, poursuiteAuBord,
            garder, souvenir, enMemoire, oublier, reprendre,
            cibleDeSortie, dessiner, texteDInfo, DELAI_POURSUIVANTS,
            get cartes() { return cartes; }, BORD_PX, PRES, RELANCE };

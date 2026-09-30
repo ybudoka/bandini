@@ -527,7 +527,7 @@ const Histoire = (function () {
   function passageDuBloc(slug) {
     if (B.bloc || !Monde.carte || Monde.carte.interieur) return null;
     const b = ((B.defs && B.defs.blocs) || []).find(function (q) { return q.slug === slug; });
-    if (!b) return null;
+    if (!b || !b.passage) return null;   // un sous-sol n'a pas de passage : on y descend par un rideau
     const o = b.passage, w = Monde.carte.w, h = Monde.carte.h, milieu = (o.de + o.l / 2) * TT;
     const place = o.bord === 'nord' ? { x: milieu, y: TT } : o.bord === 'sud' ? { x: milieu, y: (h - 1) * TT }
       : o.bord === 'ouest' ? { x: TT, y: milieu } : { x: (w - 1) * TT, y: milieu };

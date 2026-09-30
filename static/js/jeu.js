@@ -483,9 +483,13 @@ const Jeu = (function () {
     Naufrage.oublier();                      // ni ses taches d'huile
     const gens = voyageurs(), ville = B.entites;
     for (const e of gens) { const i = ville.indexOf(e); if (i >= 0) ville.splice(i, 1); }
-    const passage = bloc.passage;
+    const passage = bloc.passage || null;
     B.bloc = { slug: bloc.slug, def: def, ville: { carte: Monde.carte, entites: ville, x: retour.x, y: retour.y,
-                                                   passage: passage, leLong: passage.bord === 'nord' || passage.bord === 'sud' ? j.x : j.y } };
+                                                   passage: passage,
+                                                   leLong: !passage ? 0 : passage.bord === 'nord' || passage.bord === 'sud' ? j.x : j.y,
+                                                   // ⚠️ UN SOUS-SOL (le garage souterrain) n'a pas de passage : on
+                                                   // ressort devant son rideau, le nez vers la rue (`Blocs.retourEnVille`).
+                                                   sortie: passage ? null : { x: retour.x, y: retour.y, cap: retour.cap } } };
     Monde.charger(def);
     const souvenir = Blocs.souvenir(bloc.slug);
     // ⚠️ UNE COPIE : `creerDecor` ajoute les arbres du bloc a `B.entites`, et `gens` doit
@@ -536,9 +540,10 @@ const Jeu = (function () {
       quitterLeBloc(gens);
       for (const e of gens) if (B.entites.indexOf(e) < 0) B.entites.push(e);
       // Au meme endroit le long du bord, et assez loin pour qu'un char n'y reparte pas.
-      const point = Blocs.recul(ville.passage, Monde.carte, Blocs.porteur(j), ville.leLong);
-      poserLesVoyageurs(gens, point, Blocs.capVersLInterieur(ville.passage));
-      Blocs.poursuiteAuBord(ville.passage, Monde.carte);
+      const point = ville.sortie ? { x: ville.sortie.x, y: ville.sortie.y }
+        : Blocs.recul(ville.passage, Monde.carte, Blocs.porteur(j), ville.leLong);
+      poserLesVoyageurs(gens, point, ville.sortie ? ville.sortie.cap : Blocs.capVersLInterieur(ville.passage));
+      if (ville.passage) Blocs.poursuiteAuBord(ville.passage, Monde.carte);
       Monde.centrerCamera(j.x, j.y);
     });
     return true;
@@ -1604,7 +1609,7 @@ const Jeu = (function () {
 if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
-    Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques, Rixe: Rixe, Dojo: Dojo,
+    Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Souterrain: Souterrain, Entites: Entites, Combat: Combat, Techniques: Techniques, Rixe: Rixe, Dojo: Dojo,
     Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Train: Train, Navette: Navette, Neige: Neige, Pluie: Pluie, Derapage: Derapage, Naufrage: Naufrage, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, RueDesSaisons: RueDesSaisons, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Territoires: Territoires, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Galeries: Galeries, Fetes: Fetes, Halloween: Halloween, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Collections: Collections, Suite: Suite, Decoration: Decoration, Puces: Puces, Interactions: Interactions, Police: Police, Vedette: Vedette, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, FileDeFoire: FileDeFoire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Photos: Photos, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, SurPlace: SurPlace, Chapitres: Chapitres, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, PORTRAITS: PORTRAITS, FACADES: FACADES,
