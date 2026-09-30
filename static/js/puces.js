@@ -332,8 +332,29 @@ const Puces = (function () {
     niveau = cible > niveau ? Math.min(cible, niveau + pas) : Math.max(cible, niveau - pas);
     if (niveau > 0.02) preparer();
     if (niveau > 0 || cible > 0) Son.SFX.rumeur_puces(niveau);
+    majChien(d);
   }
   function volumeDuSon() { return niveau; }
+
+  // LE CHIEN DU MARCHÉ (30 sept. 2026) : UN aboiement, au loin, de l'autre côté du terrain — pas dans la boucle, où il
+  // reviendrait à chaque tour. À l'HORLOGE (`B.t`), jamais au dé : le premier `chien_s[0]` secondes après qu'on entend le
+  // marché, les suivants à un écart qui change sans tirage (comme les bruits de quartier). Il se tait quand la rumeur
+  // se tait ; son fichier vient avec elle (`LIEUX["puces"]`), et sans lui on n'entend rien — pas de filet.
+  let prochainChien = null, nChiens = 0;
+  const chiens = [];
+  function majChien(d) {
+    const iv = (d.rumeur && d.rumeur.chien_s) || [35, 70], t = d.terrain;
+    if (niveau < 0.25 || !t || !B.joueur) { prochainChien = null; return; }
+    if (prochainChien === null) { prochainChien = B.t + iv[0] * 60; return; }
+    if (B.t < prochainChien) return;
+    nChiens++;
+    prochainChien = B.t + (iv[0] + (nChiens * 17) % Math.max(1, iv[1] - iv[0])) * 60;
+    const angle = nChiens * 2.39996, loin = (d.rumeur && d.rumeur.chien_px) || 224;
+    const x = (t.x + t.l / 2) * TT + Math.cos(angle) * loin, y = (t.y + t.h / 2) * TT + Math.sin(angle) * loin;
+    chiens.push({ t: B.t, x: x, y: y });
+    if (chiens.length > 20) chiens.shift();
+    Son.jouerA('chien_puces', x, y, (d.rumeur && d.rumeur.portee_px || 320) + 100);
+  }
 
   // --- Le dessin ------------------------------------------------------------------------------------
 
@@ -409,5 +430,5 @@ const Puces = (function () {
   return { donnees, regle, etals, etal, dimanche, semaine, ouvertA, ouvert, stock, meublesAuxPuces, prixCarte, prixMeuble,
            humeur, accepte, refusDeLaSemaine: refus, acheterCarte, acheterMeuble, marchander, menuEtal, sousLaMain, agir, dessiner, yAller,
            texte, dire, accueil, aRacheter, prixRachat, prixDemande, accepteDeMonter, vendreMeuble, demanderPlus, menuVente, menuRachat,
-           cibleDuSon, majSon, maj: majSon, volumeDuSon };
+           cibleDuSon, majSon, maj: majSon, volumeDuSon, chiens };
 })();

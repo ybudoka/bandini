@@ -109,6 +109,17 @@ _Tranché par Martin le 30 sept. 2026, après la livraison : trois ajouts._
   44,1 kHz), puis les bêtes écrasées sont arrivées le même jour (+17 Ko) — refaite à six secondes, **sans le chien**
   demandé (un aboiement toutes les six secondes se remarque) : 24 364 octets, les lieux à 1 948 987, **1 Ko de marge**.
   Le chien, une boucle plus longue ou le prochain son de lieu demandent à Martin de relever le plafond.
+  - **30 sept. 2026, le chien revient** (Martin relève le plafond des lieux à **3 Mo** : « ils ne se téléchargent qu'à
+    la demande, jamais au démarrage »). La rumeur refaite en **douze secondes à 64 kbit/s** (le débit des boucles) :
+    96 592 octets — toujours **sans chien dans la boucle** (Scribe n'y entend que « [background noise] »). Le chien est
+    un son **à part** (`chien_puces`, 0,58 s, un seul aboiement au loin, 7 881 octets, même lieu `puces`) : un
+    aboiement dans une boucle de douze secondes reviendrait encore à chaque tour, alors que posé à part il vient de
+    loin en loin et d'un côté différent chaque fois. `Puces.majChien` : tant qu'on entend le marché (volume ≥ 0,25),
+    le premier 35 s après qu'on l'entend, puis tous les 35 à 70 s (`RUMEUR["chien_s"]`, un écart qui change par
+    `n × 17`, comme les bruits de quartier) — **à l'horloge, jamais au dé** ; posé à 224 px du milieu du terrain dans
+    une direction qui tourne (`Son.jouerA`, portée 420 px : il s'entend au loin). Pas de filet synthétisé. Le plafond
+    par fichier des lieux passe de 80 à 100 Ko pour la boucle. Les lieux : **2 029 096** octets sur 3 Mo. Juge :
+    `test_le_chien_aboie_au_loin_a_l_horloge_et_pas_au_de`. ElevenLabs : 153 crédits au compteur (60 174 → 60 327 : la boucle, l’aboiement, deux relectures Scribe ; compteur partagé).
 - **Vendre à Gisèle** (VENDRE UN MEUBLE, dans son menu) : chaque meuble **livré** d'une planque (celle de Rocco, le
   chalet) — pas un trophée, pas un meuble d'hier pas encore arrivé. Elle paie **le quart du catalogue** (`rachat` : le
   juke-box 375 $, l'aquarium 150 $, le sofa 100 $, le téléviseur 88 $, la lampe 38 $, le tapis 23 $), et on peut lui

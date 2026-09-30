@@ -385,4 +385,40 @@ def test_la_rumeur_suit_la_distance_et_les_heures_et_glisse(banc):
     assert 0 < r["uneImage"] < 0.05 and r["plein"] == 1, "la rumeur saute d'un coup au lieu de glisser"
     assert 0.9 < r["apresMidi"] < 1 and r["eteinte"] == 0, r
     assert r["avant"] is False, "les voix du marché se chargent au démarrage"
-    assert r["apres"] and r["lieu"] == ["rumeur_puces"] and r["noms"] == 22 and r["gisele"], r
+    assert r["apres"] and r["lieu"] == ["rumeur_puces", "chien_puces"] and r["noms"] == 22 and r["gisele"], r
+
+
+def test_le_chien_aboie_au_loin_a_l_horloge_et_pas_au_de(banc):
+    """Le chien du marché (30 sept. 2026, Martin : « le chien revient ») : pas dans la boucle, où il aboierait à chaque
+    tour, mais UN aboiement de loin en loin, posé de l'autre côté du terrain — à l'horloge (`B.t`), sans un dé ; il se
+    tait loin du marché et après midi."""
+    r = banc("function (L, o) {" + DEVANT + """
+        const d = devant(L, o, 'cartes'), P = L.Puces, j = d.j, t = P.donnees().terrain, iv = P.donnees().rumeur.chien_s;
+        let des = 0; const vrai = L.B.rng; L.B.rng = function () { des++; return vrai(); };
+        const joues = [], vraiA = L.Son.jouerA;
+        L.Son.jouerA = function (slug, x, y, p) { if (slug === 'chien_puces') joues.push({ t: L.B.t, x: x, y: y, p: p }); return 0; };
+        const t0 = L.B.t;
+        for (let k = 0; k < 60 * 200; k++) { L.B.t++; P.majSon(); }
+        const surPlace = joues.slice();
+        // Loin du marché, puis après midi : plus un aboiement.
+        joues.length = 0;
+        j.y = (t.y + t.h) * 16 + 480;
+        for (let k = 0; k < 60 * 100; k++) { L.B.t++; P.majSon(); }
+        const loin = joues.length;
+        j.y = (t.y + 1) * 16; L.B.partie.heure = 12.5 / 24;
+        for (let k = 0; k < 60 * 100; k++) { L.B.t++; P.majSon(); }
+        L.Son.jouerA = vraiA; L.B.rng = vrai;
+        const cx = (t.x + t.l / 2) * 16, cy = (t.y + t.h / 2) * 16;
+        return { t0: t0, iv: iv, sur: surPlace, loin: loin, midi: joues.length, des: des,
+                 distances: surPlace.map(function (c) { return Math.hypot(c.x - cx, c.y - cy); }),
+                 duJoueur: surPlace.map(function (c) { return Math.hypot(c.x - j.x, c.y - (t.y + 1) * 16); }) };
+    }""")
+    ecarts = [b["t"] - a["t"] for a, b in zip(r["sur"], r["sur"][1:])]
+    assert 3 <= len(r["sur"]) <= 6, r
+    assert r["sur"][0]["t"] - r["t0"] >= r["iv"][0] * 60, "le chien aboie dès qu'on arrive"
+    assert all(r["iv"][0] * 60 <= e < r["iv"][1] * 60 for e in ecarts), ecarts
+    assert len(set(ecarts)) > 1, "le chien aboie comme un métronome"
+    assert all(200 < x < 250 for x in r["distances"]), "le chien n'est pas au loin, de l'autre côté du terrain"
+    assert all(x < c["p"] for x, c in zip(r["duJoueur"], r["sur"])), "le chien aboie hors de portée d'oreille"
+    assert r["loin"] == 0 and r["midi"] == 0, r
+    assert r["des"] == 0, "le chien tire un dé"

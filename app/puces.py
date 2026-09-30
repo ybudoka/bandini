@@ -107,7 +107,9 @@ REGLE: dict = {"ouvre_h": 6, "ferme_h": 12, "cartes_par_semaine": 4, "prix_carte
 
 #: LA RUMEUR DU MARCHÉ (`audio.LIEUX["puces"]`, chargée en approchant, un dimanche matin) : pleine sur le terrain,
 #: elle s'éteint à `portee_px` de son bord ; elle glisse vers ce volume en `glisse_s` secondes (on arrive, midi sonne).
-RUMEUR: dict = {"portee_px": 320, "glisse_s": 2.5}
+#: LE CHIEN (30 sept. 2026) : un aboiement à `chien_px` du milieu du terrain, entre `chien_s[0]` et `chien_s[1]` secondes
+#: d'écart — à l'horloge, jamais au dé — tant qu'on entend le marché.
+RUMEUR: dict = {"portee_px": 320, "glisse_s": 2.5, "chien_s": [35, 70], "chien_px": 224}
 
 #: Le terrain : tant de tuiles de large et de haut, tout d'herbe ou de friche, libre.
 LARGEUR, HAUTEUR = 8, 4

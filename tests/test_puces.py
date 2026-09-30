@@ -113,10 +113,11 @@ def test_chaque_marchand_a_sa_voix_a_lui():
 def test_les_voix_et_la_rumeur_voyagent_avec_le_marche_pas_dans_les_definitions(paquets):
     from app import audio
     defs = paquets.definitions.corps.decode("utf-8")
-    assert "puces-" not in defs and "rumeur_puces" not in defs, "le marché a mis un octet de plus dans les définitions"
-    assert "puces" in audio.LIEUX_A_PART and audio.LIEUX["puces"] == ["rumeur_puces"]
+    assert "puces-" not in defs and "rumeur_puces" not in defs and "chien_puces" not in defs, \
+        "le marché a mis un octet de plus dans les définitions"
+    assert "puces" in audio.LIEUX_A_PART and audio.LIEUX["puces"] == ["rumeur_puces", "chien_puces"]
     p = json.loads(paquets.collections.corps)["puces"]
-    assert p["sons"]["lieu"] == "puces" and [e["slug"] for e in p["sons"]["echantillons"]] == ["rumeur_puces"]
+    assert p["sons"]["lieu"] == "puces" and [e["slug"] for e in p["sons"]["echantillons"]] == ["rumeur_puces", "chien_puces"]
     series = {s["prefixe"]: s for s in p["voix"]}
     assert set(series) == {"ti_rheal-puces-", "gisele-puces-"}
     for qui, s in (("ti_rheal", series["ti_rheal-puces-"]), ("gisele", series["gisele-puces-"])):
