@@ -7610,7 +7610,10 @@ B hhh hhh B
 B         B
 B hhh hhh B
 BBBWWDWWBBB
-""", points=(_pt("emplettes", 4, 2, genre="service"), _pt("distributrice", 9, 1, sorte="liqueur")),
+""", points=(_pt("emplettes", 4, 2, genre="service"), _pt("distributrice", 9, 1, sorte="liqueur"),
+             # Sal Ferraro (arc D, 30 sept. 2026), sa chaise de barbier au milieu du terminus : un point dans la
+             # pièce, rien dans la ville (comme Prévost à l'usine).
+             _pt("sal", 5, 3)),
      gens=_gens(("commis", 3, 1), ("client", 2, 3), ("client", 8, 5))),
 
     # La planque de Rocco : un lit, un coffre, une garde-robe, et de quoi se

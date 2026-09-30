@@ -221,6 +221,9 @@ VISAGES: dict[str, dict] = {
     # (`test_visages_js`), et un maître qui te regarde, ça se voit aux yeux.
     # Louise Tremblay-Dion, du Clairon : le carré brun, l'imper, le crayon derrière l'oreille, des taches de rousseur.
     "louise": _v("fine", "carre", "veste", signes=("crayon", "rousseur")),
+    # Sal Ferraro, le barbier du terminus (d01) : la tête longue, les cheveux argent gominés au peigne fin, la
+    # moustache taillée au millimètre, le sarrau blanc du barbier, et les yeux plissés de qui compte en souriant.
+    "sal": _v("longue", "gominee", "sarrau", "moustache", signes=("rides", "yeux_plisses")),
     "maitre": _v("ronde", "degarnie", "blouse", chapeau="canotier", signes=("rides", "sourcils_epais"),
                  t="#e6d49a"),
 }

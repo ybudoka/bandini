@@ -401,6 +401,15 @@ PERSONNAGES: list[Personnage] = [
     {"slug": "louise", "nom": "Louise Tremblay-Dion", "genre": "femme", "voix": "Ana Rita - Smooth, Expressive and Bright",
      "couleurs": {"c": "#c8a86a", "h": "#6b3e1e", "s": "#e8b890", "p": "#2a2a33"}, "ou": "porte:kiosque",
      "heler": "Une photo?", "arrive_apres": "m2"},
+    # --- L'arc D (30 sept. 2026, M16 vague 6) : Sal Ferraro, « Sal le Barbier », à qui Rocco devait quinze mille
+    # (`economie.DETTE`). Il coupe les cheveux des chauffeurs au milieu du terminus depuis que les autobus existent,
+    # et il prête aux joueurs de cartes : DEDANS (`point:sal`, un point de plus dans la pièce du terminus — aucune tuile
+    # de la ville ne bouge), et seulement après m6 (`arrive_apres`). Voix : Pascal, québécoise, mûre, libre.
+    {"slug": "sal", "nom": "Salvatore « Sal » Ferraro", "genre": "homme",
+     "voix": "Pascal — Voix québécoise chaleureuse",
+     "couleurs": {"c": "#dfe3e0", "h": "#9a9a9a", "s": "#d9a07a", "p": "#2a2a33"}, "ou": "point:sal",
+     "heler": "Assis-toi.", "arrive_apres": "m6",
+     "repos": ("La chaise est libre.", "La chaise est libre, le neveu. Pis la dette, elle, attend pas.")},
 ]
 
 
@@ -634,7 +643,8 @@ from . import (  # noqa: E402
     e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f10, f11, f12, f13, h01, h02, m1, m2, m3,
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
     s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
-    e04, e06, e07, e10, p02, p04, p05, p09, p10, p11, s02, s05, s06, s09, s10, s11, q07, m98,
+    e04, e06, e07, e10, p02, p04, p05, p09, p10, p11, s02, s05, s06, s09, s10, s11,
+    d01, d02, d03, d04, q07, m98,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -674,6 +684,10 @@ from . import (  # noqa: E402
 # l'accord porté sans arme à Gros-Boulon (`libere: shop`).
 # ⚠️ q07 (29 sept. 2026, vague 5) : Norbert et la chambre 12 — elle met l'hôtel EN VENTE (`donne.a_vendre`), la
 # quatrième propriété que _Le Boss_ (M13) demande.
+# ⚠️ d01, d02, d03, d04 (30 sept. 2026, vague 6) : la dette de Rocco a un visage — Sal Ferraro, le barbier du
+# terminus. On lui montre sa garantie (le garage), on lui ramène l'enveloppe de Momo le taxi, on couche les faux
+# Ciseaux qui collectent en son nom aux Quais, et on fait sa collecte chez Ti-Paul, Lulu et Ovila : chaque job
+# efface un bout de la dette (`donne.dette`).
 # ⚠️ m98 (M13, 29 sept. 2026) — _Le Boss_, la fin qu'on gagne : après m97, quatre districts libérés et quatre
 # propriétés (`exige`). Le siège du Brouillard, le maire dans la chambre de l'hôtel, et la ville qui change de couleur.
 # ⚠️ m99 (M13, 25 sept. 2026) — _Sacrer son camp_, la fin qu'on peut jouer — tout au bout : son appel
@@ -697,6 +711,7 @@ CATALOGUE: list[Mission] = [
     p02.MISSION, p05.MISSION, p04.MISSION, p09.MISSION, p10.MISSION, p11.MISSION,
     s02.MISSION, s06.MISSION, s05.MISSION, s09.MISSION, s10.MISSION, s11.MISSION,
     q07.MISSION,
+    d01.MISSION, d02.MISSION, d03.MISSION, d04.MISSION,
     m97.MISSION, m98.MISSION, m99.MISSION,
 ]
 

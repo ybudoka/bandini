@@ -248,6 +248,7 @@ chacun dans [docs/personnages/](personnages/README.md).
 | `prevost` | Réjean Prévost | Roland Lescalde | point:prevost (son bureau, dans l'usine — après s10) | — |
 | `maire` | Le maire Réal Tanguay | Eric - Smooth, Trustworthy | point:maire (la chambre de l'Hôtel Bandini, à l'étage — entre m97 et m98) | — |
 | `maitre` | Victor Tam | Luca - Storyteller | point:maitre (sa salle de l'ÉCOLE LA MANTE, au Petit-Canton — une fois revenu de Floride, `arrive_apres: c04`) | — |
+| `sal` | Salvatore « Sal » Ferraro | Pascal — Voix québécoise chaleureuse | point:sal (sa chaise de barbier, au milieu du terminus — après m6) | — |
 
 ⚠️ **`ou: "foire"` est un lieu neuf** (22 sept. 2026) : le seul personnage posé DANS l'enceinte de la
 foire, vivant à l'arche — `histoire.js::lieuFoire`/`poserDonneurFoire` trouvent sa position dans la

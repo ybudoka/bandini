@@ -70,6 +70,7 @@ Chaque fiche mêle deux sortes de faits.
 | [Réjean Prévost](prevost.md) | `prevost` | à son bureau de l'usine, dedans, après s10 | Roland Lescalde | s11 |
 | [Le maire Réal Tanguay](maire.md) | `maire` | dans la chambre de l'Hôtel Bandini, dedans, entre m97 et m98 | Eric - Smooth, Trustworthy | m98 (la poignée de main, et il cède) |
 | [Victor Tam, « Sifu Tam »](victor-tam.md) | `maitre` | dans sa salle de l'ÉCOLE LA MANTE, dedans — une fois revenu de Floride (après c04) | Luca - Storyteller | c05 (sa poignée de main) · c06 · c07 · c08 |
+| [Salvatore « Sal » Ferraro](sal.md) | `sal` | à sa chaise de barbier, au milieu du terminus, dedans, après m6 | Pascal — Voix québécoise chaleureuse | d01 · d02 · d03 · d04 |
 
 ⚠️ **Deux voix du compte ne se donnent à personne** : celles du scanner de police (Clara Dupont, la
 répartitrice, et Frederic, l'agent — `audio.VOIX_RESERVEES`, jugé). Avant de donner une voix à un
@@ -124,6 +125,7 @@ fait **à sa façon**. Le tableau est l'aide-mémoire ; la fiche dit pourquoi.
 | Irène Lam | « Irène Lam, du Dragon d'or. Madame Lam pour toi, tant que tu m'as pas battue au mah-jong. » | la même taquinerie, en personne | « Hé, le pigeon! » | « bonne chance » ; « chanceux » |
 | Victor Tam | « Sifu Tam, petit scarabée. » (c06) | « Victor Tam. Sifu, pour mes élèves, pis pour toi aussi, tant qu'à faire. » (c05) | « Approche, élève! » | du mal d'un élève devant quelqu'un ; « vengeance » ; un proverbe de biscuit chinois |
 | Louise Tremblay-Dion | (pas de téléphone : elle achète, elle n'appelle pas) | « Louise Tremblay-Dion, du Clairon. Tu traînes où ça brasse : rapporte-moi une photo, je paie. » | « Une photo? » | « pas de commentaire » |
+| Sal Ferraro | « Sal Ferraro, le barbier du terminus. » (d01), puis « C'est Sal, au terminus. », « Ici Sal. » | « Assis-toi. Une coupe, c'est gratis pour la famille. » | « Assis-toi. » | un sacre ; une menace en toutes lettres ; un chiffre arrondi |
 
 ⚠️ **Une fois par mission, pas une fois par coup de fil.** L'échec, la fin et les `pendant` d'une mission
 ne redisent pas le nom : on a entendu la voix à l'appel. La colonne « Au téléphone » est donc celle de

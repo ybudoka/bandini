@@ -1077,3 +1077,32 @@ catalogue.
     `voices_write` donné à la clé par Martin le 30 sept.). Les voix de bibliothèque ne prennent pas de place.
   - « Deux piastres » devient **« Cinquante piastres »** (texte et `jeu=`) ; les 11 voix de Bilodeau refaites
     (`bilodeau-p02-1…10`, `bilodeau-repos-2`, ≈ 970 crédits), le dictionnaire (`piastres`) les étiquette.
+- **30 sept. 2026 : vague 6a — l'arc D, la dette de Rocco a un visage.** Quatre missions : `d01` (Sal, _Le barbier_ :
+  il te fait asseoir au terminus, puis veut voir sa garantie — on le mène au garage, `proteger` — 100 $), `d02` (Sal,
+  _Le premier versement_ : Momo le taxi lui doit cinq cents, on le rattrape — le fuyard en taxi, parti de devant le
+  terminus —, on sème la police, on rapporte l'enveloppe — 100 $, **`dette: -500`**), `d03` (Sal, _Les Ciseaux_ :
+  trois faux Ciseaux et leur chef collectent en son nom devant l'Hôtel Bandini, on les couche, on sème deux étoiles —
+  300 $, `dette: -300`), `d04` (Sal, _La collecte du barbier_ : Ti-Paul, Lulu et Ovila lui doivent aussi — chacun paie
+  à sa façon à la poignée de main, et Ovila avec la montre de son père — 400 $, `dette: -800`). Un personnage neuf,
+  **Salvatore « Sal » Ferraro** (voix Pascal — Voix québécoise chaleureuse, libre ; fiche, visage), **dedans**, à sa
+  chaise au milieu du terminus (`point:sal` : un point de plus dans la pièce, aucune tuile de la ville ne bouge), et
+  seulement après m6 (`arrive_apres`). 44 voix (≈ 4 500 caractères).
+  - ⚠️ **Écarts à la fiche, et pourquoi.** Le « Salon Ferraro » n'existe pas comme lieu : un lieu neuf élargirait le
+    devant d'une porte et la ville glisserait (la mémoire « reprendre une porte de commerce ») — Sal tient sa chaise au
+    terminus, un endroit où l'on coupe les cheveux des chauffeurs. `acheter` n'accepte que des armes : la coupe de d01
+    se dit dans l'intro, et la mission devient la visite du garage (ce qui prépare `d05`, Sal qui veut le saisir).
+    Momo passe de d03 à d02 (l'enveloppe de Momo **est** le premier versement : un `payer` de 500 $ tout de suite ne se
+    jouait pas) ; d03 devient les faux Ciseaux ; la collecte (d04) ne propose pas de payer pour les trois — un
+    objectif facultatif n'existe pas.
+  - Sal est **dedans** (`point:`) : pas de `retourner` (il ne se règle qu'avec un donneur dans la rue) — d02 à d04
+    finissent par un `parler` à Sal, au terminus. Chaque job **efface** un bout de la dette (`donne.dette`) : 1 600 $
+    pour la vague, et le carnet le montre.
+  - **Juges** (`tests/test_arc_d_js.py`, six) : Sal absent du terminus avant m6, là après, et il donne d01 ; d01 de la
+    poignée de main au garage, et Sal couché en chemin qui fait rater ; d02 (Momo né à moins de 40 tuiles du terminus —
+    le piège de m50 —, la police semée, la dette à 14 500) ; d03 (les faux Ciseaux et leur chef devant l'hôtel, la
+    dette à 14 700) ; d04 (les trois poignées de main dites, la dette à 14 200).
+  - **Ce qui reste de l'arc (vague 6b)** : `d05` (l'avocat du Carré — Sal veut saisir le garage ; ⚠️ Me Desjardins est
+    un piéton du Brouillard avec son menu, pas un PERSONNAGE : un donneur `point:avocat` doublerait l'homme à la table),
+    `d06` (Sal perd patience : ses Ciseaux au garage), puis le choix — `d07` (le coffre de Sal, avec Josée ; `ferme
+    d08`) ou `d08` (la dernière coupe, `exige: dette 0` ; `ferme d07`). ⚠️ Vider « le salon » ne peut pas se jouer
+    dans la pièce du terminus (`majObjectif` dort dedans) : le coffre sort par la ruelle, ou dort dans son char.

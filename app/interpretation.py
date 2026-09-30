@@ -432,6 +432,8 @@ JEU: dict[str, str] = {
     "boulon-repos-2": "[calm] Dans La Shop, personne te touche. [firmly] Je l'ai dit.",
     "maire-repos-2": "[cheerful] Réal Tanguay, maire. [smugly] La chambre douze est louée à l'année, mon garçon.",
     "prevost-repos-2": "[coldly] Mon usine ne se visite pas. [wryly] Même rouverte.",
+    # Sal le barbier (arc D) : doux, lent, la dette jamais loin.
+    "sal-repos-2": "[warmly] La chaise est libre, le neveu. [softly] Pis la dette, elle… attend pas.",
     "narrateur-journal-quais_liberes": "[dramatic] Nuit blanche à l'Hôtel Bandini. [amused] Les matelots du cargo norvégien sont repartis à la rame, et les Quais dorment tranquilles. [warmly] Les débardeurs, eux, parlent d'une paix qui tiendra.",
     "narrateur-journal-erables_liberes": "[amused] Plus un drift dans les Érables. [calm] Les Chevreuils rangent leurs chars, et le conseil vote la paix jeudi. [wryly] La conseillère Larivière n'a pas voulu commenter.",
     "narrateur-journal-phare_a_tenu": "[dramatic] Le phare a tenu. [serious] Un chalutier a évité les récifs de justesse, cette nuit ; [warmly] le gardien Saint-Onge remercie un inconnu, et ne veut pas en dire plus.",

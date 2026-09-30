@@ -234,7 +234,7 @@ _CORPS = {"ti_guy": "costaud", "thibodeau": "vieux", "marco": "homme", "bouchard
           "mado": "femme", "gege": "costaud", "xavier": "grand", "lachance": "grand", "gus": "costaud",
           "rosa": "femme", "ginette": "femme", "gilles": "vieux", "bonimenteur": "grand",
           "sven": "homme", "berube": "vieux", "mireille": "femme", "jeanne": "femme", "leo": "homme",
-          "irene": "vieux", "pouce": "costaud", "maitre": "vieux", "louise": "femme"}
+          "irene": "vieux", "pouce": "costaud", "maitre": "vieux", "louise": "femme", "sal": "vieux"}
 
 #: Ce qu'un personnage porte en bas quand ce n'est pas un pantalon : les bermudas du vieux maître revenu de Floride.
 _BAS_DU = {"maitre": "short"}
