@@ -73,6 +73,9 @@ ligne.
 curl -s -A navigateur --resolve bandini.gestiondojo.ca:443:103.98.215.181 https://bandini.gestiondojo.ca/sante
 curl -sI -A navigateur -H 'Accept-Encoding: gzip' https://bandini.gestiondojo.ca/api/definitions | grep -iE 'content-encoding|etag'
 curl -sI -A navigateur -H 'Accept-Encoding: gzip' https://bandini.gestiondojo.ca/api/carte | grep -iE 'content-encoding|etag'
+# La carte sur le fil : ≈ 50 000 octets (compressee au niveau 9 par l'application, `Paquet.fil`) ;
+# ≈ 72 000 voudrait dire que nginx ou Caddy l'a decompressee puis recompressee a son niveau.
+curl -s -A navigateur -H 'Accept-Encoding: gzip' https://bandini.gestiondojo.ca/api/carte | wc -c
 # Le travailleur hors ligne : no-cache, un ETag, et toujours pas de Content-Security-Policy qui le bloquerait.
 curl -sI -A navigateur https://bandini.gestiondojo.ca/travailleur.js | grep -iE 'cache-control|etag|content-security'
 sudo journalctl -u bandini-gestiondojo -n 50

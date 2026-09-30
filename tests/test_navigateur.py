@@ -168,6 +168,36 @@ def test_la_barre_de_chargement_avance_puis_s_efface(page, serveur, erreurs):
     assert erreurs == []
 
 
+def test_les_paquets_arrivent_compresses_par_le_serveur(page, serveur, erreurs, paquets):
+    """La vague 2 des districts (docs/jalons/charger-les-districts-autour-du-joueur.md) : le serveur envoie les
+    paquets déjà compressés au niveau 9 (`Paquet.fil`) — nginx, au niveau 1, en faisait 98 Ko de carte. Un vrai
+    navigateur les décode tout seul, la barre compte les octets décompressés (`X-Octets`), et la ville s'ouvre."""
+    entetes = {}
+
+    def noter(r):
+        chemin = r.url.replace(serveur, "").split("?")[0]
+        if chemin in ("/api/definitions", "/api/carte"):
+            entetes[chemin] = r.headers
+
+    page.on("response", noter)
+    page.goto(serveur)
+    attendre_titre(page)
+    tailles = page.evaluate("""() => Object.fromEntries(performance.getEntriesByType('resource')
+        .filter(e => e.name.indexOf('/api/definitions?') >= 0 || e.name.indexOf('/api/carte?') >= 0)
+        .map(e => [e.name.indexOf('/api/carte') >= 0 ? 'carte' : 'definitions', [e.encodedBodySize, e.decodedBodySize]]))""")
+    for nom in ("definitions", "carte"):
+        h = entetes[f"/api/{nom}"]
+        assert h.get("content-encoding") == "gzip", f"{nom} arrive sans être compressé : {h}"
+        compresse, decompresse = tailles[nom]
+        assert decompresse == int(h["x-octets"]), nom
+        # ⚠️ Les octets EXACTS du niveau 9 (`Paquet.fil`) : un intermédiaire qui décompresse et recompresse à son
+        # niveau se verrait ici.
+        assert compresse == len(getattr(paquets, nom).fil), f"{nom} : {compresse} octets sur le fil"
+    print(f"\n[fil] carte {tailles['carte'][0]} octets pour {tailles['carte'][1]}, "
+          f"définitions {tailles['definitions'][0]} pour {tailles['definitions'][1]}")
+    assert erreurs == []
+
+
 def test_une_carte_d_une_autre_construction_est_refusee(page, serveur):
     """⚠️ La carte voyage a part depuis le 16 sept. 2026 (`/api/carte`), et les
     deux reponses doivent etre de la MEME construction : un deploiement tombe

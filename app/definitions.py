@@ -49,6 +49,8 @@ deux reponses vont ensemble.
 
 from __future__ import annotations
 
+import functools
+import gzip
 import hashlib
 import json
 from dataclasses import dataclass
@@ -216,6 +218,19 @@ class Paquet:
     @property
     def taille(self) -> int:
         return len(self.corps)
+
+    @functools.cached_property
+    def fil(self) -> bytes:
+        """Le corps compressé UNE fois, au plus fort (gzip 9), tel qu'il part sur le fil (`routes._revalide`).
+
+        ⚠️ **NGINX COMPRESSE AU NIVEAU 1** (30 sept. 2026, docs/jalons/charger-les-districts-autour-du-joueur.md,
+        vague 2) : `deploy/nginx` ne dit aucun `gzip_comp_level`, et son défaut est 1. Les juges de poids
+        comptaient le niveau 6 ; le téléphone recevait la carte à 98 Ko quand ils en voyaient 70. Un paquet ne
+        change pas sous un processus lancé : on le compresse au plus fort, une fois, à la première demande — et
+        nginx comme Caddy laissent passer une réponse déjà encodée. `mtime=0` : les mêmes octets à chaque
+        construction.
+        ⚠️ `cached_property` sur une classe gelée : elle écrit dans `__dict__` sans passer par `__setattr__`."""
+        return gzip.compress(self.corps, 9, mtime=0)
 
 
 @dataclass(frozen=True)

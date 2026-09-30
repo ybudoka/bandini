@@ -65,6 +65,13 @@ def _revalide(paquet) -> Response:
     # production — tout en marchant parfaitement en local.
     if request.if_none_match.contains_weak(paquet.etag):
         reponse = Response(status=304)
+    elif request.accept_encodings.quality("gzip") > 0:
+        # ⚠️ DÉJÀ COMPRESSÉ, au plus fort (`Paquet.fil`, 30 sept. 2026) : nginx compresse au niveau 1 et
+        # envoyait la carte à 98 Ko ; compressée une fois au niveau 9, elle en fait 50. nginx (`gzip on`) et
+        # Caddy (`encode`) ne recompressent pas une réponse qui porte déjà son `Content-Encoding`.
+        reponse = Response(paquet.fil, mimetype="application/json")
+        reponse.headers["Content-Encoding"] = "gzip"
+        reponse.headers["X-Octets"] = str(paquet.taille)
     else:
         reponse = Response(paquet.corps, mimetype="application/json")
         # ⚠️ LA TAILLE DECOMPRESSEE, pour la barre de chargement : nginx compresse
@@ -74,6 +81,8 @@ def _revalide(paquet) -> Response:
         reponse.headers["X-Octets"] = str(paquet.taille)
     reponse.headers["ETag"] = etag
     reponse.headers["Cache-Control"] = "no-cache"
+    # La même adresse rend deux corps selon ce que le navigateur accepte : un cache entre les deux doit le savoir.
+    reponse.headers["Vary"] = "Accept-Encoding"
     return reponse
 
 

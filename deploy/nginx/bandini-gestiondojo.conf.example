@@ -27,6 +27,10 @@ server {
 
     # ⚠️ `gzip_proxied any` est obligatoire : ce vhost ne recoit QUE des
     # requetes venues de Caddy, et la valeur par defaut (`off`) les exclut.
+    # ⚠️ Sans `gzip_comp_level`, nginx compresse au niveau 1. Les paquets de `/api/*`
+    # (definitions, carte, missions...) arrivent donc DEJA compresses au niveau 9 par
+    # l'application (`Paquet.fil`, 30 sept. 2026) : nginx laisse passer une reponse
+    # qui porte son `Content-Encoding`. Reste ici : la page, les scripts, la feuille.
     gzip on;
     gzip_vary on;
     gzip_proxied any;

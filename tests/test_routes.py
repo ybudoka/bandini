@@ -30,6 +30,41 @@ def test_la_taille_decompressee_voyage_avec_les_paquets(client):
         assert int(reponse.headers["X-Octets"]) == len(reponse.get_data()), url
 
 
+#: Toutes les routes qui passent par `routes._revalide` (un paquet signé et son ETag).
+ROUTES_DES_PAQUETS = ("/api/definitions", "/api/carte", "/api/musiques", "/api/suite", "/api/collections",
+                      "/api/mission/m1", "/api/carte/bloc/rang")
+
+
+def test_les_paquets_partent_compresses_au_plus_fort(client, paquets):
+    """⚠️ La vague 2 des districts (docs/jalons/charger-les-districts-autour-du-joueur.md) : nginx compresse au
+    niveau 1 (98 Ko de carte sur le fil quand les juges en comptaient 70). Le serveur envoie donc lui-même le
+    corps compressé UNE fois au niveau 9 (`Paquet.fil`) à tout navigateur qui accepte gzip : le même JSON, à
+    l'octet près, la même empreinte, la taille décompressée pour la barre, et `Vary` pour les caches."""
+    import gzip
+
+    for url in ROUTES_DES_PAQUETS:
+        r = client.get(url, headers={"Accept-Encoding": "gzip, deflate, br"})
+        assert r.status_code == 200, url
+        assert r.headers.get("Content-Encoding") == "gzip", f"{url} part sans être compressé"
+        assert "Accept-Encoding" in r.headers.get("Vary", ""), url
+        corps = gzip.decompress(r.get_data())
+        assert corps == client.get(url).get_data(), url
+        assert int(r.headers["X-Octets"]) == len(corps), url
+        assert client.get(url, headers={"Accept-Encoding": "gzip", "If-None-Match": r.headers["ETag"]}).status_code == 304
+    carte = paquets.carte
+    assert gzip.decompress(carte.fil) == carte.corps
+    assert len(carte.fil) <= len(gzip.compress(carte.corps, 6)), "le fil doit être au plus fort"
+    assert carte.fil == gzip.compress(carte.corps, 9, mtime=0), "les mêmes octets à chaque construction (mtime=0)"
+
+
+def test_un_client_qui_ne_decompresse_pas_recoit_le_json(client):
+    """Sans `Accept-Encoding` (ou `gzip;q=0`), le corps part tel quel : jamais d'octets qu'il ne saurait lire."""
+    for entetes in ({}, {"Accept-Encoding": "identity"}, {"Accept-Encoding": "gzip;q=0, br"}):
+        r = client.get("/api/carte", headers=entetes)
+        assert "Content-Encoding" not in r.headers, entetes
+        assert r.get_json()["largeur"] > 0, entetes
+
+
 def test_sante(client):
     donnees = client.get("/sante").get_json()
     assert donnees["ok"] is True

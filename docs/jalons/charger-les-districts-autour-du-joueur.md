@@ -142,3 +142,38 @@ et c'est lui qui craquera le prochain. Le plafond a été relevé onze fois en q
   rouges sous la charge de la machine, tous verts rejoués seuls), `test_routes`, `test_collections`,
   `test_collections_js`, `test_blocs`, `test_blocs_js`, `test_suite_js`, `test_comptes`, `test_chargement_js`,
   `test_monde_js`, `test_table_des_jalons`.
+
+**Vague 2 — le fil compressé une fois, au plus fort (30 sept. 2026).** `Paquet.fil` : le corps compressé au
+niveau 9 (`mtime=0`, les mêmes octets à chaque construction), une fois, à la première demande ;
+`routes._revalide` l'envoie avec `Content-Encoding: gzip` à tout navigateur qui accepte gzip (`Vary:
+Accept-Encoding`, `X-Octets` toujours la taille décompressée pour la barre), et le JSON tel quel aux autres.
+Toutes les routes des paquets en profitent : définitions, carte, notes, suite, collections, missions, blocs.
+
+- **Sur le fil** (mesuré dans Chromium : `encodedBodySize`) : la carte **50 041** octets, les définitions
+  **52 614**. Avant, derrière nginx au niveau 1 : la carte 98 091 (avant la vague 1), 71 755 (après), les
+  définitions 62 773. Les deux requêtes partent ensemble : **160 864 → 102 655 octets** avant l'écran titre
+  (−36 %). À la main, pour un réseau « 3G rapide » (1,6 Mbit/s) : ≈ 0,80 s → 0,51 s de téléchargement.
+  (Calcul, pas une mesure : le banc local n'a pas de nginx.)
+- ⚠️ **À vérifier en ligne par Martin, après la mise en ligne** : `curl -s -A navigateur -H 'Accept-Encoding:
+  gzip' https://bandini.gestiondojo.ca/api/carte | wc -c` doit dire ≈ 50 000 (`deploy/README.md`). nginx (`gzip
+  on`) et Caddy (`encode`) ne recompressent pas une réponse qui porte son `Content-Encoding` — c'est leur
+  comportement documenté, mais la chaîne de production n'a pas pu être essayée d'ici. L'ETag reste fort
+  (nginx ne le touche plus) ; `contains_weak` revalide les deux.
+- **La performance** (même sonde, machine toujours chargée) : titre 1 692 ms, bâtir la ville 473 ms,
+  `JSON.parse` de la carte 13,3 ms, image 16,3 ms — le bruit de la vague 1 ; le processeur ne paie rien de plus
+  (le navigateur décompressait déjà ce que nginx compressait).
+- **Juges** : `test_routes` (les sept routes de paquets partent compressées, le même JSON à l'octet près, 304
+  intact, `Vary`, la taille décompressée ; un client sans gzip — ou `gzip;q=0` — reçoit le JSON ; le fil est le
+  niveau 9, déterministe), `test_navigateur::test_les_paquets_arrivent_compresses_par_le_serveur` (un vrai
+  navigateur les reçoit compressés, les octets EXACTS de `Paquet.fil` — un intermédiaire qui recompresse se
+  verrait —, la barre, et la ville s'ouvre). Ils MORDENT : la branche gzip coupée → deux rouges ; le niveau 6 au
+  lieu de 9 → rouge. Verts à côté : `test_hors_ligne` (le jeu réseau coupé compris), `test_navigateur` (46),
+  `test_comptes`, `test_blocs`, `test_collections`, `test_definitions`, `test_pliage`. ⚠️ Vérifié en passant :
+  la carte truquée de `test_une_carte_d_une_autre_construction_est_refusee` est refusée pour la bonne raison
+  (« carte 0000… au lieu de … »), pas pour un corps mal décodé.
+
+**Ce qui reste.** La vague 3 (les pièces à part) n'achète presque rien tant que les définitions pèsent autant
+que la carte sur le fil (50 et 52 Ko, les deux en même temps). La vague 4 (le squelette et les morceaux par
+district) garde son déclencheur : « plus de 2 s entre JOUER et la ville sur le téléphone de Martin », ou le
+plafond de la carte pliée (55 000) qui cède. ⚠️ Le téléphone de Martin est le seul juge qui manque : la sonde
+ralentit le processeur ×4, elle ne sait rien de son réseau.
