@@ -55,12 +55,12 @@ Chaque fiche mêle deux sortes de faits.
 | [Mireille Dion](mireille.md) | `mireille` | au comptoir du DOJO DION, au Faubourg, dedans | Marie Line - Energetic and Clear | ses cours (le dojo) |
 | [Sœur Jeanne](jeanne.md) | `jeanne` | sur le parvis de la chapelle, sur l'Île-aux-Corneilles | Julia | aucune encore (i02 · i05, M16) |
 | [Léo Cyr](leo.md) | `leo` | devant le hangar sans nom, sur l'Île-aux-Corneilles | Alexandre | aucune encore (i04 · i07, M16) |
-| [Norbert](norbert.md) | `norbert` | dans le hall de l'Hôtel Bandini, au bout du comptoir | Martin Dupont Intime | f10 (sa cible) · c03 |
+| [Norbert](norbert.md) | `norbert` | dans le hall de l'Hôtel Bandini, au bout du comptoir | Martin Dupont Intime | f10 (sa cible) · c03 · l03 (la source de Louise) |
 | [Irène Lam](irene.md) | `irene` | au bout du bar du casino du Dragon d'or, au Petit-Canton, dedans | Meera | c01 · c02 · c03 · c04 · c05 |
 | [Réal « le Pouce » Vachon](le-pouce.md) | `pouce` | nulle part : au tripot, puis parti pour Sorel | Callum - Husky Trickster | c04 (une réplique, en se sauvant) |
 | [Cindy Boivin](cindy.md) | `cindy` | devant la cantine des Quais, dans la Brume — jusqu'à q05 (Norbert l'engage à la réception) | Ruby Roo | q05 |
 | [Diane Larivière](diane.md) | `diane` | devant le dépanneur des Érables, après e01 | Riya Rao | e06 · e07 · e10 |
-| [Louise Tremblay-Dion](louise.md) | `louise` | devant le kiosque de Mme Thibodeau, après m2 | Ana Rita | ses photos (une par jour, pour la une) |
+| [Louise Tremblay-Dion](louise.md) | `louise` | devant le kiosque de Mme Thibodeau, après m2 | Ana Rita | ses photos (une par jour, pour la une) · l01 · l02 · l03 · l04 · l05 · l06 |
 | [Jo Bellemare](jo.md) | `jo` | devant le dépanneur, entre e01 et e04 — puis chez les Chevreuils | Omar J | e04 · le chef de e10 |
 | [Roméo Bilodeau](bilodeau.md) | `bilodeau` | devant le phare, après p01 | Santa | La Pointe (le chapitre ; acte 1) |
 | [Zacharie « Zed » Lemieux](zed.md) | `zed` | devant le phare, après p02 | Lutz | La Pointe, actes 3 · 4 · 6 (mené à la Chef) |

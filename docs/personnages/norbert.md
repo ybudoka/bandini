@@ -14,7 +14,7 @@
 | Voix | **Martin Dupont Intime** — une voix de France, permise (Martin, 25 sept. 2026) et voulue : il est le seul à vouvoyer la ville |
 | Bulle | « Monsieur? » |
 | Couleurs | veston bordeaux, cheveux noirs gominés, pantalon noir |
-| Missions | la cible de **f10** ; un contact au téléphone après elle ; il jase de la suite royale dans **c03** |
+| Missions | la cible de **f10** ; un contact au téléphone après elle ; il jase de la suite royale dans **c03** ; la source de Louise, escortée de nuit dans **l03** |
 
 ## Son histoire
 
@@ -64,6 +64,9 @@ Ne quitte pas le bout du comptoir ; les mains derrière le dos. `prendre` une le
 
 - f10 : « Norbert, concierge. » ; la lettre dans la chemise hawaïenne, et deux Cravates qui attendaient le
   vrai client.
+
+- l03 : la source de Louise — il a les reçus de la chambre du maire, payée par la ville ; escorté de nuit de
+  l'hôtel au kiosque : « Si Monsieur veut bien marcher du côté de la rue, je préfère le mur. »
 
 ## Ce qui l'attend (M16)
 

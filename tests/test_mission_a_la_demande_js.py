@@ -225,3 +225,21 @@ def test_sans_ses_objectifs_une_mission_reprise_attend_sans_rien_casser(banc):
     assert r["faite"] is False and r["paye"] == 0, "la mission s'est réussie toute seule : %s" % r
     assert r["objectif"] is None and r["cible"] is None and r["ligne"] is None, r
     assert r["carnet"] > 0, "le carnet ne s'ouvre plus"
+
+
+def test_le_message_de_la_fin_arrive_avec_la_mission(banc):
+    """M16, le reste (30 sept. 2026) : `donne.message` ne voyage plus au paquet (`missions._sans_le_message`) ; il
+    arrive avec `/api/mission/<slug>`, avant la fin qui le lit (`jouerLaFin`). Le reste de `donne` reste au catalogue
+    (la dette de d05 se lit sans rien demander)."""
+    r = banc("""async function (L, o) {
+        L.Jeu.commencer();
+        const m = L.Histoire.mission('h03');
+        const avant = { message: (m.donne || {}).message || null };
+        L.Histoire.charger('h03');
+        for (let i = 0; i < 4; i++) await o.attendre();
+        return { avant: avant, apres: (m.donne || {}).message || null,
+                 casier: (L.Histoire.mission('d05').donne || {}).casier };
+    }""", poser_les_missions=False)
+    assert r["avant"] == {"message": None}, "le message voyage encore au paquet"
+    assert r["apres"] == "LA MOITIÉ DE LA DETTE DU DOCTEUR EST PAYÉE", r
+    assert r["casier"] == -2, "le reste de `donne` reste au catalogue"

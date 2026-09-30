@@ -18,7 +18,7 @@ suit est une proposition.
 | Voix | **Ana Rita - Smooth, Expressive and Bright** — libre, vérifiée « quebec » en multilingue v2 ; en v3, à écouter |
 | Bulle | « Une photo? » |
 | Couleurs | imper beige, carré brun, taches de rousseur, pantalon anthracite, le crayon derrière l'oreille |
-| Missions | aucune encore (l'arc C de M16 : ⚠️ ses slugs c01 à c06 sont pris par le Petit-Canton — à renuméroter) ; son menu de photos |
+| Missions | donne **l01** à **l06** (l'arc C de M16, renuméroté `l` : les slugs `c` sont pris par le Petit-Canton) ; son menu de photos |
 
 ## Son histoire
 
@@ -54,9 +54,16 @@ traînent où ça brasse.
 
 - Le Clairon paie une photo par jour ; une photo d'avant-hier, c'est du réchauffé.
 - Une photo de toi en pleine poursuite, elle la prend — « la police va l'aimer aussi ».
+- l01 : « Baie-des-Brumes, une journée » — Bouchard devant son poste, « la bedaine au soleil ».
+- l02 : _Bandini l'insaisissable_ — trois étoiles semées en quatre-vingt-dix secondes font la une.
+- l03 : sa source, c'est Norbert — « Il voit tout, pis il vend poliment. »
+- l04 : le maire lui a tué une histoire il y a trois ans ; le dossier de la villa (e07) fait la une, _Le maire dort
+  à l'hôtel_.
+- l05 : un bidon d'essence contre la rédaction ; « Cent douze ans de Clairon » sauvés à l'extincteur.
+- l06 : l'entrevue au pied du phare, trois questions ; _Le neveu parle_.
 
 ## À trancher
 
 - **Toute la fiche** (proposée par Claude) — et la voix, Ana Rita en v3, à écouter.
-- **L'arc C de M16** : six missions prévues (c01 à c06, « Une photo pour la une », « Le scoop du maire »…), dont les
-  slugs sont pris par le Petit-Canton.
+- **Au téléphone**, elle se nomme court (« Louise, du Clairon. », « C'est Louise. ») : le nom complet reste celui
+  de la première rencontre, au kiosque.

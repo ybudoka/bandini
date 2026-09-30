@@ -114,6 +114,7 @@ function banc(corps) {
       m.objectifs = d.objectifs;
       m.sur_place = d.sur_place || null;   // le saut et la frontiere (`SurPlace`), comme `charger`
       m.frontiere = d.frontiere || null;
+      if (d.message) m.donne = Object.assign({}, m.donne || {}, { message: d.message });   // comme `charger`
       (d.voix || []).forEach(function (v) { defs.audio.histoire.push(v); });
     });
   }

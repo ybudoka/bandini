@@ -1176,3 +1176,27 @@ catalogue.
     deux côtés du choix offerts la dette payée, et chacun ferme l'autre ; la dernière coupe fermée tant que la dette
     court ; mourir fait rater une mission dont le paquet ne porte plus l'échec. Et `test_missions.py` : le paquet ne
     porte ni l'échec ni la phase qui valent leur défaut, et garde ceux qui n'en sont pas (m3).
+- **30 sept. 2026 : vague 9 — l'arc C, le Clairon de Louise.** Six missions, en `l` (les slugs `c01`–`c08` sont pris
+  par Irène et le vieux maître) : `l01` (_Une photo pour la une_ : Louise sans chauffeur, Bouchard « la bedaine au
+  soleil » devant son poste, ses agents à semer, la lumière du soir au port — 150 $), `l02` (_La manchette sur toi_ :
+  trois étoiles devant le poste, semées en 90 s — 200 $, la une _Bandini l'insaisissable_), `l03` (_La source_ : sa
+  source, c'est Norbert ; de nuit, de l'hôtel au kiosque, deux hommes le suivaient — 300 $), `l04` (_Le scoop du
+  maire_ : le dossier de la villa (e07) à la rédaction, les hommes du maire — 800 $, la une _Le maire dort à
+  l'hôtel_), `l05` (_Le Clairon brûle_ : un bidon d'essence contre la rédaction, l'extincteur de Louise, les
+  incendiaires — 400 $), `l06` (_L'entrevue_ : trois districts libérés ; Louise au pied du phare, trois questions —
+  100 $, la une _Le neveu parle_). Aucun personnage neuf ; trois manchettes au Clairon (`journal.SPECIALES`), lues
+  par le narrateur.
+  - ⚠️ **Écarts à la fiche** : la rédaction du Clairon n'a pas de porte (la façade « LE CLAIRON » est peinte) — une
+    `course` d'un point sur son enseigne (`boutique:clairon`) et un feu sur la façade la plus proche : aucune porte ne
+    devient lieu de mission ; « survivre à l'intérieur » (c05) devient éteindre la façade, un objectif ne se jouant pas
+    dans une pièce ; la source (c03) est Norbert, pas un commis du poste ; le scoop (c02) vient après e07 — e11 (vendre
+    le dossier au maire) n'existe pas, le maire ne se tient en ville qu'entre m97 et m98 ; l'entrevue (c06) n'a pas de
+    réponses au choix (aucun choix dans un dialogue) ; `l06` demande trois districts libérés, comme la fiche.
+  - **Le paquet** : le catalogue passait son budget (4 523 gzip pour 4 450) et le brut son plafond. Le message de la
+    fin (`donne.message`) voyage maintenant avec la mission (`/api/mission/<slug>`, `missions._sans_le_message`) —
+    il ne se lit qu'à la fin : `missions` 4 523 → **2 779** gzip, le brut 241 302 → **237 378**. Budget recalculé.
+  - **Juges** (`tests/test_arc_c_js.py`, sept ; une mutation, rouge) : chaque mission de l'appel à la prime, prise au
+    bouton chez Louise ; les trois étoiles trop lentes, c'est raté ; Norbert qui parle en chemin ; les hommes du maire
+    (des gardiens loués) ; l'extincteur que Louise met dans les mains et le feu près de l'enseigne ; l'entrevue fermée
+    avec deux districts ; et les trois manchettes du lendemain. Plus : le message de la fin arrive avec la mission
+    (`test_mission_a_la_demande_js.py`), le paquet ne le porte plus (`test_missions.py`).

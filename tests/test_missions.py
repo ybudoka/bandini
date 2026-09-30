@@ -363,3 +363,6 @@ def test_le_paquet_ne_porte_pas_l_echec_ni_la_phase_qui_valent_leur_defaut():
     assert missions.par_slug("d05")["echec"] == ["mort", "arrete"]
     assert "echec" not in d05 and "phase" not in d05, d05
     assert paquet["m3"]["echec"] == ["arrete", "vehicule_detruit"]
+    # Et le message de la fin voyage avec la mission (`pour_jouer`), le reste de `donne` au catalogue.
+    assert "message" not in d05["donne"] and d05["donne"]["casier"] == -2, d05
+    assert missions.pour_jouer("d05")["message"] == missions.par_slug("d05")["donne"]["message"]

@@ -240,6 +240,16 @@ SPECIALES: list[dict] = [
      "texte": "LE NEVEU DE ROCCO BANDINI TIENT LA VILLE. PAS UN COIN DE RUE NE LUI ÉCHAPPE.",
      "lu": "Le maire Tanguay démissionne, en robe de chambre, à l'Hôtel Bandini. Le neveu de Rocco tient la ville, "
            "et pas un coin de rue ne lui échappe. Ceux qui le connaissent disent qu'il salue tout le monde."},
+    # L'arc C, le Clairon de Louise (l02, l04, l06 — 30 sept. 2026) : la une du lendemain, par le Clairon lui-même.
+    {"slug": "insaisissable", "titre": "BANDINI L'INSAISISSABLE",
+     "texte": "TROIS ÉTOILES DEVANT LE POSTE, PUIS PLUS RIEN. LA POLICE CHERCHE ENCORE.",
+     "lu": "Bandini l'insaisissable. Trois étoiles devant le poste de police, puis plus rien ; le sergent Bouchard dit que l'enquête se poursuit."},
+    {"slug": "maire_hotel", "titre": "LE MAIRE DORT À L'HÔTEL",
+     "texte": "UNE CHAMBRE À L'ANNÉE, PAYÉE PAR LA VILLE. LE CLAIRON A LES REÇUS.",
+     "lu": "Le maire dort à l'hôtel. Une chambre à l'année, payée par la ville depuis trois ans ; le Clairon a les reçus, et le maire n'a pas voulu commenter."},
+    {"slug": "le_neveu_parle", "titre": "LE NEVEU PARLE",
+     "texte": "« LA VILLE ÉTAIT À PERSONNE. » ENTREVUE EXCLUSIVE AU PIED DU PHARE.",
+     "lu": "Le neveu parle. « La ville était à personne », dit le neveu de Rocco Bandini, dans une entrevue exclusive au pied du phare. Page trois."},
 ]
 
 
