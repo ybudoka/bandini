@@ -256,3 +256,48 @@ def test_une_reprise_garde_la_duree_des_actes_d_avant(banc):
         return p.mission.actes;
     }""")
     assert len(r) == 1 and r[0] >= 20, r
+
+
+#: Coucher ceux de l'étape encore DEBOUT (un K.-O. reste `vivant` : l'aide commune de `outils_missions` les
+#: recompterait à chaque vague).
+DEBOUT = """
+  function coucherDebout(L, o) {
+    const e0 = L.B.partie.mission.etape;
+    const eux = L.B.mission.entites.filter(function (e) { return e.cible && e.etape === e0 && e.vivant && e.etat !== 'assomme'; });
+    eux.forEach(function (e) { L.Entites.assommer(e); });
+    for (let k = 0; k < 30; k++) { o.frame(1); ecouter(L); }
+    return eux.length;
+  }
+"""
+
+
+def test_renforts_deux_vagues_avant_que_l_objectif_tombe(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + DEBOUT + """
+        const m = ouvrir(L), p = L.B.partie;
+        m.objectifs[1] = { type: 'tuer', texte: 'DÉGAGE LE PHARE', groupe: 'skateux', n: 3, ou: 'phare',
+                           renforts: { vagues: 2, n: 2 } };
+        commencer(L, o, 'zz'); jouer(L, o);
+        const vagues = [];
+        for (let k = 0; k < 5 && p.mission.etape === 1; k++) vagues.push(coucherDebout(L, o));
+        return { vagues: vagues, etape: p.mission.etape };
+    }""")
+    assert r["vagues"] == [3, 2, 2] and r["etape"] == 2, r
+
+
+def test_sans_renforts_un_tuer_tombe_d_un_coup(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + DEBOUT + """
+        const m = ouvrir(L), p = L.B.partie;
+        m.objectifs[1] = { type: 'tuer', texte: 'DÉGAGE LE PHARE', groupe: 'skateux', n: 3, ou: 'phare' };
+        commencer(L, o, 'zz'); jouer(L, o);
+        return { n: coucherDebout(L, o), etape: p.mission.etape };
+    }""")
+    assert r == {"n": 3, "etape": 2}
+
+
+def test_etoiles_sur_un_aller(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + """
+        const m = ouvrir(L); m.objectifs[1].etoiles = 2;
+        commencer(L, o, 'zz'); jouer(L, o);
+        return L.B.recherche.etoiles;
+    }""")
+    assert r == 2

@@ -119,7 +119,11 @@ ECHECS = ("mort", "arrete", "vehicule_detruit", "chrono", "etoile", "protege_mor
 #: `survivre` : TENIR à ce niveau-là.
 #: Et `donne` (30 sept. 2026, les chapitres) : ce que CET objectif accorde quand il est fait — la même forme que
 #: le `donne` d'une mission ; chaque acte d'un chapitre donne ce que sa mission d'origine donnait.
-OPTIONS_OBJECTIFS = ("chrono_s", "sans_etoile", "sans_arme", "contre", "remet", "tenue", "allies", "treve", "donne")
+#: Et deux de plus pour FAIRE DURER (les chapitres) : `etoiles` sur n'importe quel objectif (ce que `semer` et
+#: `survivre` faisaient déjà : la police à ce niveau au départ), et `renforts: {"vagues", "n"}` — quand il ne
+#: reste qu'un debout, la vague suivante arrive de loin (`tuer`, `tenir`).
+OPTIONS_OBJECTIFS = ("chrono_s", "sans_etoile", "sans_arme", "contre", "remet", "tenue", "allies", "treve", "donne",
+                     "etoiles", "renforts")
 
 
 class Personnage(TypedDict):

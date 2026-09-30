@@ -1529,6 +1529,7 @@ const Histoire = (function () {
     // On ne repose pas des morts pour les recoucher.
     if (o.type === 'tuer' && dejaTombes(m.slug, p.etape) >= o.n) { avancer(enSilence); return; }
     p.debutT = B.t;
+    if (B.mission) B.mission.vagues = 0;
     if (o.type === 'acte') Chapitres.ouvrirActe(m, o, p.etape);
     // Un `acheter` dont l'article est DÉJÀ en poche au départ : l'étape le dira (`majObjectif`).
     if (o.type === 'acheter' && B.mission && (B.partie.objets[o.article] || B.partie.armes[o.article])) B.mission.acheterDeja = p.etape;
@@ -1574,6 +1575,11 @@ const Histoire = (function () {
     // ⚠️ `treve` (M13, m98 : Bouchard rappelle ses chiens) : la police rentre au poste quand l'objectif
     // commence — les etoiles tombent a zero, comme au garage (`Police.remiseAZero`).
     if (o.treve) Police.remiseAZero();
+    // `etoiles` sur n'importe quel objectif (les chapitres) : la police à ce niveau-là au départ — ce que `semer` et
+    // `survivre` font déjà plus bas, pour eux.
+    if (o.etoiles && o.type !== 'semer' && o.type !== 'survivre' && Police.etoilesAuMoins(o.etoiles)) {
+      B.recherche.dernierVu = { x: j.x, y: j.y, t: B.t };
+    }
     dansLaVille(function () {
       // ⚠️ `allies` (M13, m98 : « les Morues, les Skateux et les Boulonneux a tes cotes ») : ils arrivent
       // quand l'objectif commence, et restent tant que les objectifs suivants les nomment (`avancer`).
@@ -1898,10 +1904,11 @@ const Histoire = (function () {
     const arch = Entites.archetype(o.pieton || gang.pieton);
     const coins = o.coins || 1;
     const etape = B.partie.mission.etape, parCoin = tombesDe(m.slug, etape);
-    const reste = o.n - dejaTombes(m.slug, etape);
+    // Une VAGUE de renforts (`majRenforts`) : ses hommes à elle, rien de ce qu'un essai raté aurait couché.
+    const reste = o.vague ? o.n : o.n - dejaTombes(m.slug, etape);
     B.mission.kos = o.n - reste;
     if (reste <= 0) return;
-    const arrivee = o.loin ? B.mission.arrivee || placeDArrivee(o.loin) : null;
+    const arrivee = o.loin ? (o.vague ? placeDArrivee(o.loin) : B.mission.arrivee || placeDArrivee(o.loin)) : null;
     if (arrivee && enSilence) { B.mission.arrivee = arrivee; return; }
     // Le chef vient à toi (m5) — sauf si la fiche dit où il attend (`ou` : Kenny à la porte de chez Gus, c06).
     const centre = arrivee || (o.chef && !o.ou ? { x: B.joueur.x, y: B.joueur.y } : resoudre(o.ou, m) || { x: B.joueur.x, y: B.joueur.y });
@@ -2101,6 +2108,16 @@ const Histoire = (function () {
     B.mission.entites.push(c);
   }
 
+  /** `renforts` (les chapitres) : quand il ne reste qu'UN debout, la vague suivante arrive de loin. Rend true s'il en
+      a posé une — l'objectif ne se juge pas dans la même image. */
+  function majRenforts(m, o, p, cibles, tombes) {
+    const r = o.renforts;
+    if (!r || (B.mission.vagues || 0) >= r.vagues || !cibles.length || cibles.length - tombes > 1) return false;
+    B.mission.vagues = (B.mission.vagues || 0) + 1;
+    dansLaVille(function () { poserLesCravates(m, Object.assign({}, o, { n: r.n, chef: false, loin: o.loin || 14, vague: true }), false); });
+    return true;
+  }
+
   /** Le chef sort quand ses gars sont tombes : `tuer` avec `chef` se pose au moment venu. */
   function majObjectif() {
     const m = courante(), p = B.partie.mission, j = B.joueur;
@@ -2173,8 +2190,10 @@ const Histoire = (function () {
         const cibles = B.mission.entites.filter(function (e) { return e.type === 'pieton' && e.cible && !e.porteLaCaisse && e.etape === p.etape; });
         const tombes = cibles.filter(function (e) { return !e.vivant || e.etat === 'assomme'; }).length;
         const avant = dejaTombes(m.slug, p.etape);
-        B.mission.kos = Math.min(o.n, avant + tombes);
-        if (cibles.length && tombes >= Math.min(o.n - avant, cibles.length)) {
+        if (majRenforts(m, o, p, cibles, tombes)) return;
+        const total = o.n + (B.mission.vagues || 0) * (o.renforts ? o.renforts.n : 0);
+        B.mission.kos = Math.min(total, avant + tombes);
+        if (cibles.length && tombes >= Math.min(total - avant, cibles.length)) {
           if (o.chef && B.recherche.etoiles < 3 && m.objectifs[p.etape + 1] && m.objectifs[p.etape + 1].type === 'semer') Hud.message('UN TÉMOIN A APPELÉ LA POLICE !', 150);
           avancer();
         }
