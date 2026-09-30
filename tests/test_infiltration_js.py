@@ -12,6 +12,8 @@ piratage au clavier (le pilote de `test_piratage_js.py`), l'entrée et la sortie
 le bord.
 """
 
+import json
+
 from outils_missions import outils
 
 OUTILS = outils("fermer", "passer", "etape") + """
@@ -326,6 +328,38 @@ def test_un_garde_qui_te_voit_hesite_puis_donne_l_alerte(banc):
     assert r["dos"] == 0, "un garde voit dans son dos"
     assert r["soupconAvant"] >= 0 and r["soupconAvant"] < r["alerte"] - 10, f"pas de « ? » avant l'alerte : {r}"
     assert r["etoiles"] >= 1 and r["etat"] == "poursuit", f"le garde n'a pas donné l'alerte : {r}"
+
+
+def test_on_n_est_jamais_vu_en_arrivant_par_un_escalier(banc):
+    """On monte à l'aveugle : l'étage d'en haut ne se voit pas d'en bas (les cadres de la caméra). Arriver
+    en haut d'un escalier doit donc être un REFUGE — on y regarde où sont les gardes avant de bouger.
+    Le garde de l'étage descendait le couloir au tapis jusqu'à deux tuiles de l'arrivée, en la regardant :
+    un quart de sa ronde, on débouchait dans sa lampe, et l'alerte partait 25 images après le fondu (la
+    partie de Martin, v02 ratée deux fois, jour 552). Planté à chaque arrivée, deux rondes complètes de
+    chaque garde : personne ne le soupçonne même."""
+    from app.blocs import villa
+    arrivees = [b["arrivee"] for e in villa.ESCALIERS for b in (e["a"], e["b"])]
+    r = banc("async function (L, o) {" + OUTILS + """
+        L.Jeu.commencer(); nuit(L);
+        const B = L.B, j = B.joueur; j.invincible = 1e6;
+        await entrerALaVilla(L, o);
+        const vus = [];
+        for (const a of """ + json.dumps(arrivees) + """) {
+          B.recherche.etoiles = 0; B.recherche.vu = 0;
+          L.Infiltration.releve();
+          j.x = a[0] * TT + 8; j.y = a[1] * TT + 8; j.vx = 0; j.vy = 0; L.Entites.indexer();
+          for (let k = 0; k < 12000; k++) {
+            o.frame(1); fermer(L);
+            const g = L.Infiltration.gardes().find(function (q) { return q.soupcon > 0 || q.etat === 'poursuit'; });
+            if (g || B.recherche.etoiles) {
+              vus.push({ arrivee: a, garde: g ? g.gardeSlug : null, image: k, a: tuileDe(g || j) });
+              break;
+            }
+          }
+        }
+        return vus;
+    }""")
+    assert r == [], f"un garde voit l'arrivée d'un escalier : {r}"
 
 
 def test_la_porte_de_service_ne_s_ouvre_qu_avec_la_cle(banc):

@@ -125,12 +125,15 @@ SERRURES: tuple[dict, ...] = (
 
 #: Les escaliers : deux bouts, chacun ses tuiles (on y pose le pied) et son arrivée (où l'on se
 #: retrouve en montant ou en descendant par l'autre bout) — à deux tuiles des marches, pour ne pas
-#: repartir aussitôt.
+#: repartir aussitôt. ⚠️ **L'ARRIVÉE EST UN REFUGE** : on monte à l'aveugle (l'autre étage est un autre cadre),
+#: alors aucun garde ne doit la voir, jamais — ni par une porte, ni au bout de sa ronde. La cuisine (16, 29) se
+#: voyait du corridor par sa porte, la cave (40, 67) par l'ouverture de son couloir, l'étage (18, 66) du bout
+#: de la ronde du tapis (Martin, v02 ratée deux fois, 30 sept.) ; un juge plante le joueur à chaque arrivée.
 ESCALIERS: tuple[dict, ...] = (
     {"a": {"tuiles": [[41, 11], [42, 11]], "arrivee": [42, 13], "nom": "LE REZ-DE-CHAUSSÉE"},
      "b": {"tuiles": [[17, 68], [18, 68]], "arrivee": [18, 66], "nom": "L'ÉTAGE"}},
-    {"a": {"tuiles": [[14, 28]], "arrivee": [16, 29], "nom": "LA CUISINE"},
-     "b": {"tuiles": [[38, 67], [38, 68]], "arrivee": [40, 67], "nom": "LA CAVE"}},
+    {"a": {"tuiles": [[14, 28]], "arrivee": [14, 30], "nom": "LA CUISINE"},
+     "b": {"tuiles": [[38, 67], [38, 68]], "arrivee": [40, 68], "nom": "LA CAVE"}},
 )
 
 #: Les cadres de la caméra, en tuiles (x, y, largeur, hauteur) : le terrain, l'étage, la cave. ⚠️ Chacun
@@ -153,7 +156,9 @@ GARDES: tuple[dict, ...] = (
      "porte": "cle_villa"},
     {"slug": "hall", "ronde": [[44, 17, 0]], "pause_s": 5},
     {"slug": "corridor", "ronde": [[13, 24, 180], [46, 25, 0]], "pause_s": 3},
-    {"slug": "etage_nord_sud", "ronde": [[17, 49, 90], [18, 64, 270]], "pause_s": 2},
+    # ⚠️ Il tourne à la rangée 60 : six tuiles de l'arrivée du grand escalier, sa lampe en porte cinq. Il
+    # descendait à 64, deux tuiles devant elle, en la regardant.
+    {"slug": "etage_nord_sud", "ronde": [[17, 49, 90], [18, 60, 270]], "pause_s": 2},
     {"slug": "etage_coursive", "ronde": [[2, 57, 0], [33, 58, 180]], "pause_s": 2},
     {"slug": "cave_couloir", "ronde": [[37, 64, 0], [70, 65, 180]], "pause_s": 2},
     {"slug": "cave_voute", "ronde": [[55, 57, 0], [69, 57, 90], [69, 62, 180], [55, 62, 270]], "pause_s": 1},
