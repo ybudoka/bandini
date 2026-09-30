@@ -300,6 +300,8 @@ const Missions = (function () {
     if (jeu) return Histoire.proposerDefi(jeu.slug);
     // La cabane a sucre : la table de tire (le defi), la caleche a son arret (`Cabane`).
     if (Cabane.sousLaMain(j)) return Cabane.agir(j);
+    // L'ascenseur du garage souterrain, en bas : il remonte a la piece du garage (`Souterrain`).
+    if (Souterrain.sousLaMain(j)) return Souterrain.agir(j);
     // Le marché aux puces du dimanche : l'étal de Ti-Rhéal ou celui de Gisèle (`Puces`).
     if (Puces.sousLaMain(j)) return Puces.agir(j);
     const etal = etalSousLaMain(j);
@@ -1237,6 +1239,8 @@ const Missions = (function () {
     rame: 'LA RAME',
     // La planque qu'on décore (`decoration.js`) : le catalogue sur la table, le juke-box une fois livré.
     catalogue: 'LE CATALOGUE', jukebox: 'LE JUKE-BOX',
+    // Le garage souterrain : l'ascenseur de la piece du garage (`Souterrain`).
+    ascenseur: 'L’ASCENSEUR',
   };
 
   /** Le libelle d'invite d'un type de point — et la preuve qu'il est servi. */
@@ -1280,6 +1284,7 @@ const Missions = (function () {
     if (point.type === 'rame') return Metro.utiliser(j, point);
     if (point.type === 'fouiller') return fouiller(point);
     if (point.type === 'jukebox') return Decoration.jukebox();
+    if (point.type === 'ascenseur') return Souterrain.descendreAPied();
     // Le commerce braque ne te sert plus, tant qu'il s'en souvient. Une arme en main, il reste
     // le choix de le rebraquer — jamais d'office (`menuRancune`).
     if (reglesDuBraquage() && rancuneIci() && reglesDuBraquage().points.indexOf(point.type) >= 0) {
@@ -3872,6 +3877,8 @@ const Missions = (function () {
     if (perso) { const d = Histoire.personnage(perso.personnage); B.invite = 'PARLER À ' + (d ? d.nom.toUpperCase() : '?'); return; }
     const panneau = Histoire.panneauSousLaMain(j);
     if (panneau) { B.invite = 'DÉFI'; return; }
+    const ascenseur = Souterrain.invite(j);
+    if (ascenseur) { B.invite = ascenseur; return; }
     const cabane = Cabane.invite(j);
     if (cabane) { B.invite = cabane; return; }
     const etal = etalSousLaMain(j);

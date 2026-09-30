@@ -264,3 +264,61 @@ def test_le_sous_sol_refuse_et_le_dit(banc, cas):
     attendu = {"pas_proprio": "GARAGE", "etoiles": "POLICE", "plein": "10/10"}[cas]
     assert attendu in r["ligne"]["detail"], r
     assert not r["bloc"] and not r["transition"], r
+
+
+ASCENSEUR = """
+  async function dansLaPieceDuGarage(L, o) {
+    const porte = L.Monde.carte.def.portes.find(function (q) { return q.lieu === 'garage' && q.interieur; });
+    const j = L.B.joueur;
+    j.x = porte.x * TT + 8; j.y = (porte.y + 1) * TT + 10; L.Entites.indexer();
+    L.Jeu.entrer(porte);
+    for (let i = 0; i < 120 && (L.B.transition || !L.B.interieur); i++) o.frame(1);
+  }
+  function devantLAscenseurDeLaPiece(L) {
+    const pt = L.B.interieur.points.find(function (p) { return p.type === 'ascenseur'; }), j = L.B.joueur;
+    j.x = pt.x * TT + 8; j.y = (pt.y + 1) * TT + 8; L.Entites.regarder(j, 0, -1); L.Entites.indexer();
+  }
+"""
+
+
+def test_l_ascenseur_descend_a_pied_et_remonte_a_la_piece_du_garage(banc):
+    r = banc("async function (L, o) {" + OUTILS + ASCENSEUR + """
+        L.Jeu.commencer(); proprio(L);
+        const B = L.B, j = B.joueur;
+        B.partie.souterrain.cases[3] = { slug: 'auto', couleur: '#27ae60', vie: 100, vole: false, aToi: true };
+        await dansLaPieceDuGarage(L, o);
+        devantLAscenseurDeLaPiece(L); o.frame(2);
+        const inviteHaut = B.invite;
+        o.tape('KeyE', 2);
+        await attendreLeBloc(L, o, 'souterrain');
+        const s = B.bloc.def.bloc.souterrain.ascenseur;
+        const enBas = { bloc: B.bloc && B.bloc.slug, x: j.x, y: j.y, ax: (s.x + s.l / 2) * TT, ay: s.y * TT + 8,
+                        chars: B.entites.filter(function (e) { return e.type === 'vehicule'; }).length };
+        // Face aux portes, en bas : ACTION remonte.
+        L.Entites.regarder(j, 0, 1); o.frame(2);
+        const inviteBas = B.invite;
+        o.tape('KeyE', 2);
+        for (let i = 0; i < 200 && (B.transition || !B.interieur); i++) { o.frame(1); if (i % 10 === 0) await o.attendre(); }
+        return { inviteHaut: inviteHaut, enBas: enBas, inviteBas: inviteBas,
+                 enHaut: { piece: B.interieur && B.interieur.slug, bloc: !!B.bloc }, garde: B.partie.souterrain.cases[3] };
+    }""")
+    assert "ASCENSEUR" in (r["inviteHaut"] or ""), r
+    b = r["enBas"]
+    assert b["bloc"] == "souterrain" and abs(b["x"] - b["ax"]) < 2 and abs(b["y"] - b["ay"]) < 2, b
+    assert b["chars"] == 1, "le char rangé attend sur sa case"
+    assert "ASCENSEUR" in (r["inviteBas"] or ""), r
+    assert r["enHaut"] == {"piece": "garage", "bloc": False}, r
+    assert r["garde"] and r["garde"]["couleur"] == "#27ae60", "remonter par l'ascenseur ne perd pas le char"
+
+
+def test_sans_le_garage_l_ascenseur_ne_descend_pas(banc):
+    r = banc("async function (L, o) {" + OUTILS + ASCENSEUR + """
+        L.Jeu.commencer();
+        await dansLaPieceDuGarage(L, o);
+        devantLAscenseurDeLaPiece(L); o.frame(2);
+        o.tape('KeyE', 2);
+        for (let i = 0; i < 60; i++) o.frame(1);
+        return { piece: L.B.interieur && L.B.interieur.slug, bloc: !!L.B.bloc, msg: L.B.msg };
+    }""")
+    assert r["piece"] == "garage" and r["bloc"] is False, r
+    assert "GARAGE" in r["msg"], r

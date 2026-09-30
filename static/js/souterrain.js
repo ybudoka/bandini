@@ -109,5 +109,53 @@ const Souterrain = (function () {
     return Blocs.sauter(SLUG, null, null);
   }
 
-  return { SLUG, PAR_NIVEAU, CASES_MAX, est, ici, ouvertes, occupees, plein, fiche, ranger, garnir, refus, descendre };
+  //: Le fondu de l'ascenseur : celui d'un etage (`Jeu`, FONDU_ETAGE).
+  const FONDU_ASCENSEUR = [20, 16];
+
+  /** De la piece du garage, a pied : au noir, la piece se quitte et le sous-sol se charge, et l'on sort de
+      l'ascenseur du −1. Le noir tient le temps que la carte arrive (`attente`). */
+  function descendreAPied() {
+    if (!Missions.possede(Missions.proprieteDe('garage'))) {
+      Hud.message('LE SOUS-SOL EST AU PROPRIO — ACHÈTE LE GARAGE', 150); Son.SFX.erreur();
+      return true;
+    }
+    Blocs.charger(SLUG);
+    Jeu.transiter([1, 0, 24], function () {
+      const def = Blocs.cartes[SLUG];
+      if (!def) return;
+      Jeu.quitterLaPiece();
+      const s = def.bloc.souterrain.ascenseur;
+      if (Blocs.entrerAuNoir(SLUG, { x: (s.x + s.l / 2) * TT, y: s.y * TT + 8 })) Entites.regarder(B.joueur, 0, -1);
+    }, null, function () { return !Blocs.cartes[SLUG]; });
+    return true;
+  }
+
+  /** Du sous-sol, a pied : au noir, on range ses chars (`Jeu.revenirEnVille` → `quitterLeBloc`), et l'on sort de
+      l'ascenseur de la piece du garage. */
+  function monterAPied() {
+    Jeu.transiter(FONDU_ASCENSEUR, function () {
+      Jeu.revenirEnVille();
+      const porte = (Monde.carte.def.portes || []).find(function (q) { return q.lieu === 'garage' && q.interieur; });
+      const piece = porte && Jeu.chargerPiece(porte);
+      if (!piece) return;
+      const j = B.joueur, pt = (piece.interieur.points || []).find(function (p) { return p.type === 'ascenseur'; });
+      if (pt) { j.x = pt.x * TT + 8; j.y = (pt.y + 1) * TT + 8; }
+      Entites.regarder(j, 0, 1);
+      Monde.centrerCamera(j.x, j.y);
+      Hud.message(piece.interieur.nom.toUpperCase(), 120);
+    });
+    return true;
+  }
+
+  /** Au sous-sol, a pied, dans la rangee devant les portes de l'ascenseur ? */
+  function sousLaMain(j) {
+    if (!ici() || !j || j.dansVehicule) return false;
+    const s = B.bloc.def.bloc.souterrain.ascenseur, tx = Math.floor(j.x / TT), ty = Math.floor(j.y / TT);
+    return ty === s.y && tx >= s.x && tx < s.x + s.l;
+  }
+  function invite(j) { return sousLaMain(j) ? 'L’ASCENSEUR' : null; }
+  function agir(j) { return sousLaMain(j) ? monterAPied() : false; }
+
+  return { SLUG, PAR_NIVEAU, CASES_MAX, est, ici, ouvertes, occupees, plein, fiche, ranger, garnir, refus, descendre,
+           descendreAPied, monterAPied, sousLaMain, invite, agir };
 })();

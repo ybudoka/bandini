@@ -15,7 +15,8 @@ from app import missions
 #: Les points qui ne passent PAS par un menu : ils agissent tout de suite. ⚠️ Le point d'un
 #: PERSONNAGE posé dedans (`ou: "point:<type>"`) en est un, et se lit dans le catalogue :
 #: la liste écrite à la main avait oublié le Dr Lachance.
-SANS_MENU = ("escalier", "fouiller", "rame") + tuple(
+#: Des gestes, pas des menus. L'ascenseur du garage souterrain descend au −1 (`Souterrain.descendreAPied`).
+SANS_MENU = ("escalier", "fouiller", "rame", "ascenseur") + tuple(
     p["ou"][len("point:"):] for p in missions.PERSONNAGES if p["ou"].startswith("point:"))
 
 #: ⚠️ Les comptoirs encore en chantier, et le jalon qui les doit. La liste est
