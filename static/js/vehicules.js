@@ -1228,6 +1228,7 @@ const Vehicules = (function () {
     Entites.dansLaCarte(v);
     heurterVehicules(v);
     heurterPietons(v);
+    heurterBetes(v);
     // ⚠️ La ligne du large refuse ne retient que le joueur : c'est lui que la camera suit.
     if (v.conducteur === B.joueur) retenirAuLarge(v);
     // La rampe : on decolle a la sortie.
@@ -1386,6 +1387,23 @@ const Vehicules = (function () {
         } else if (p.type === 'pieton' && vitesse > 0.3 && p.etat === 'flane') {
           p.etat = 'fuit'; p.menace = v; p.minuterie = 90; p.cri = 60;
         }
+      }
+    }
+  }
+
+  /** Les betes : un chat ou un raton sous un char LANCE s'ecrase (`Entites.ecraserBete`) ; au pas,
+      il n'y a rien a ecraser — il est deja parti. ⚠️ Elles vivent hors de `B.entites` (`Entites.betes`),
+      c'est donc ici qu'on les regarde, pas dans l'index des gens. Un char en l'air (une rampe) passe
+      par-dessus. Le goeland n'a pas `ecrasable` : il s'envole. Aucun de, aucun crime. */
+  function heurterBetes(v) {
+    const liste = B.betes, f = B.defs.pietons.betes;
+    if (!liste || !liste.length || v.z > 0) return;
+    if (Math.hypot(v.vx, v.vy) < physique().renverse_vitesse_min) return;
+    for (const c of cercles(v)) {
+      const r = c.r + f.ecrase_rayon_px;
+      for (const e of liste) {
+        if (e.ecrasee || !f[e.espece] || !f[e.espece].ecrasable) continue;
+        if (dist2(e.x, e.y, c.x, c.y) < r * r) Entites.ecraserBete(e, v);
       }
     }
   }
@@ -3315,6 +3333,7 @@ const Vehicules = (function () {
         v.x += v.vx; v.y += v.vy;
         heurterVehicules(v);
         heurterPietons(v);
+        heurterBetes(v);
         if (B.options.trace) majTrace(v);
       } else if (Math.abs(v.vx) + Math.abs(v.vy) > 0.01 || v.z > 0) avancer(v);
       else { heurterPietons(v); degager(v); }             // a l'arret, mais quelqu'un a pu le pousser
@@ -4406,7 +4425,7 @@ const Vehicules = (function () {
 
   return {
     ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, majGaresDeService, majLotsDeConcession, compteCommeGare, typeDeRue, remise, remisee, rentrerLesRemises, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, pousserLeDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
-    majPhysique, allureDuSol, avancer, heurterVehicules, endommager, exploser, declencherAlarme,
+    majPhysique, allureDuSol, avancer, heurterVehicules, heurterBetes, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, suitUnChar, majConducteur, commandesJoueur, rouler,
     pointDArret, approcheDeLaLigne, placeDeLaPanne, placeStationnee, garesVoulus,

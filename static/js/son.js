@@ -924,6 +924,13 @@ const Son = (function () {
       else if (genre === 'atterrissage') { if (!joue('atterrissage')) coupSourd(); }
       else tole();
     },
+    // LA BETE ECRASEE (`Entites.ecraserBete`) : le cri etrangle, puis le bruit mou sous la roue. Les
+    // echantillons sont du lieu `betes` (charges a la premiere bete qui nait, `Entites.naitreLesBetes`) ;
+    // sinon le cri qui glisse vers le bas — plus aigu pour le chat, plus rauque pour le raton.
+    beteEcrasee: function (espece) {
+      if (espece === 'raton') { if (!joue('raton_ecrase')) { ton(820, 0.2, 'sawtooth', 0.11, 0.55); coupSourd(); } }
+      else if (!joue('chat_ecrase')) { ton(1250, 0.2, 'sawtooth', 0.11, 0.55); coupSourd(); }
+    },
     explosion: function () { if (!joue('explosion')) { bruit(0.9, 0.8, 600, 40); ton(60, 0.6, 'sine', 0.5, 0.5); } },
     // Une lumiere qui s'eteint (les Galeries, la nuit) : le clac sec d'un gros interrupteur.
     interrupteur: function () { bruit(0.04, 0.3, 2400, 700); ton(90, 0.08, 'square', 0.12, 0.6); },

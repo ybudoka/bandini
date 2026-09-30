@@ -1,6 +1,6 @@
 # Des corps qui tombent pour vrai, et les bêtes qu'on écrase
 
-← [le plan](../plan.md)
+← [les jalons livrés](README.md) · [le plan](../plan.md)
 
 ## Fiche
 
@@ -27,3 +27,34 @@ comme en jeu, debout, de profil et renversés :
   coincer. Le goéland, lui, s'envole — on ne l'atteint pas.
 - ⚠️ Rien ne tire un dé : l'écrasement se lit à l'empreinte ; les bêtes restent hors de
   `B.entites`.
+
+## Notes
+
+✅ **Livré** (30 sept. 2026).
+
+- **La planche d'abord** : tous les passants du catalogue peints par `Entites.dessiner`, debout, de
+  profil et renversés (un script Playwright du scratchpad). C'est elle qui a trouvé les 14 morts
+  debout — aucun juge ne regardait la pose d'un mort.
+- **Le gabarit** (`SPRITES.joueur.poses.couche`, donc tout ce que la garde-robe habille) : sur le
+  dos, la tête à droite, les bras en croix, une tête de cinq rangées où les cheveux entourent le
+  visage et où les yeux sont fermés. Quatre variantes comparées à ×9 ; le profil tourné de 90° a
+  été essayé et jeté (13 à 26 px de long, les objets pointaient en l'air).
+- **Les 14, et les 4 qui avaient déjà l'ancien boudin** (racoleuse, conductrice, avocat,
+  homme-sandwich) tirent leur pose du gabarit, avec ce qui les nomme : les balles du jongleur qui
+  ont roulé, les échasses tombées à côté, la raclette et le seau du laveur, les feuilles du crieur,
+  les lettres et la sacoche du facteur, la bouteille de l'ivrogne, le chapeau du touriste, la
+  casquette de la contractuelle, le fard du mime, le capuchon du pickpocket, la pancarte de
+  l'homme-sandwich. La mascotte garde la sienne.
+- **Les bêtes** : `Vehicules.heurterBetes` (après `heurterPietons`, dans `avancer` et sur les
+  rails) regarde `B.betes` — elles restent hors de `B.entites` — et écrase celles dont la fiche dit
+  `ecrasable` (le chat, le raton ; pas le goéland) sous un char lancé au-delà de
+  `renverse_vitesse_min`, jamais en l'air. `Entites.ecraserBete` : le dessin `chat_ecrase` /
+  `raton_ecrase` (à plat sur le flanc, les pattes écartées, la langue, la tête à droite ou à gauche
+  à l'empreinte), une tache (`decal`, selon l'option du sang), des poils qui volent, le cri. Le
+  corps reste jusqu'à l'oubli ; il ne compte plus dans la naissance (`betesVivantes`) et ne se
+  caresse pas. **Aucun dé, aucune étoile.**
+- **Le cri** : `chat_ecrase` et `raton_ecrase`, générés par ElevenLabs (lieu `betes`, chargé à la
+  première bête qui naît, hors du budget du premier écran) ; la synthèse reste le filet. À écouter.
+- **Juges** : `test_corps_qui_tombent_js.py` (9). **Onze mutations, toutes rouges** — dont une qui
+  a fait durcir un juge : il comptait les bêtes vivantes sans jamais les faire naître.
+- ⚠️ Le train n'écrase pas encore les bêtes (`Train.heurter` ne regarde que l'index des gens).

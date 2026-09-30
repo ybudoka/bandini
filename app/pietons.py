@@ -723,6 +723,10 @@ BETES: dict = {
         "sursaut_images": 7,
         "elan_images": 14,
         "foulee_px": {"fuit": 28, "marche": 12},
+        # ⚠️ ÉCRASÉ SOUS UN CHAR LANCÉ (Martin, 30 sept. 2026) : un cri, une tache, le corps
+        # aplati qui reste là (`Entites.ecraserBete`). Aucune étoile : les bêtes restent hors
+        # du crime. Sa fuite ne change pas — il faut foncer dessus ou le coincer.
+        "ecrasable": True,
     },
     # ⚠️ LA NUIT A SES HABITUDES : LE RATON LAVEUR. Il ne sort que la nuit
     # (`heures`), dans les ruelles comme le chat, et c'est lui qui sort de la
@@ -743,8 +747,12 @@ BETES: dict = {
         "sursaut_images": 10,
         "elan_images": 20,
         "foulee_px": {"fuit": 20, "marche": 10},
+        "ecrasable": True,
     },
     "goeland_dort": True,
+    # Le rayon d'une bête sous une roue : un chat fait huit pixels de large, vu d'en haut.
+    # ⚠️ Le goéland n'a pas `ecrasable` : il s'envole, on ne l'atteint pas.
+    "ecrase_rayon_px": 4,
     # ⚠️ La bulle des betes est plus PETITE que celle des gens (520) : une bete
     # ne sert a rien qu'on ne la voie pas, et elle ne doit surtout pas peser sur
     # le budget d'images de la rue.
@@ -1039,6 +1047,7 @@ def exporter() -> dict:
                             "marche_images": list(BETES["raton"]["marche_images"]),
                             "heures": list(BETES["raton"]["heures"])},
                   "goeland_dort": BETES["goeland_dort"],
+                  "ecrase_rayon_px": BETES["ecrase_rayon_px"],
                   "orignal": {**ORIGNAL, "heures": list(ORIGNAL["heures"])}},
         "enfants_a_velo": {**ENFANTS_A_VELO,
                            "casques": list(ENFANTS_A_VELO["casques"]),

@@ -435,8 +435,13 @@ def test_le_paquet_reste_leger(paquets):
     la carte a maintenant SA garde par clé (`MESURE_DE_LA_CARTE`, `test_chaque_cle_de_la_carte_tient_son_budget`)
     : le plafond qui cède nomme les trois clés qui ont le plus grossi. Le vrai remède reste celui de la fiche —
     le squelette et les morceaux par district —, et son déclencheur est écrit dans « Dettes ».
+
+    ⚠️ **240 000 → 241 000 BRUTS, LE MÊME JOUR, TRANCHÉ PAR MARTIN** (docs/jalons/des-corps-qui-tombent-pour-vrai.md).
+    Le paquet était à 239 864 ; les bêtes qu'on écrase y ajoutent 233 octets (deux cris déclarés au lieu `betes`,
+    `ecrasable` et `ecrase_rayon_px` dans la fiche). Regardé avant : fondre les deux cris en un seul rentrait sous le
+    plafond, mais le chat et le raton auraient crié pareil — Martin a préféré relever. Le plafond gzip ne bouge pas.
     """
-    for nom, brut_max, fil_max in (("definitions", 240_000, 57_500), ("carte", 560_000, 55_000),
+    for nom, brut_max, fil_max in (("definitions", 241_000, 57_500), ("carte", 560_000, 55_000),
                                    ("musiques", 50_000, 10_000), ("suite", 13_000, 6_000)):
         paquet = getattr(paquets, nom)
         mesures = {"definitions": MESURE_DU_PAQUET, "carte": MESURE_DE_LA_CARTE}

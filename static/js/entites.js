@@ -2207,9 +2207,13 @@ const Entites = (function () {
   //: qui s'envole est un decor qui a peur de vous.
   //:
   //: ⚠️ Et elles partent AVANT qu'on les touche : leur distance de fuite est
-  //: plus grande que la portee de tout ce qui pourrait les atteindre. C'est ce
-  //: qui evite d'avoir a repondre a « que se passe-t-il si je lui roule dessus » :
-  //: on n'y arrive pas.
+  //: plus grande que la portee de tout ce qui pourrait les atteindre.
+  //:
+  //: ⚠️ SAUF SOUS UNE ROUE (Martin, 30 sept. 2026 : « il faut que les chats et
+  //: ratons puissent aussi se faire ecraser »). Un char LANCE qui rattrape un chat
+  //: ou un raton en fuite l'ecrase (`ecraserBete`, appele par `Vehicules.heurterBetes`) :
+  //: un cri, une tache, le corps aplati qui reste la. Et ca ne change rien au reste :
+  //: aucune etoile, aucun temoin, aucun de — la bete ecrasee reste hors du crime.
 
   //: ⚠️ **ELLES NE SONT PAS DANS `B.entites`, et c'est la seule facon de tenir
   //: la promesse de la fiche.** Les sortir de l'index des gens ne suffisait pas :
@@ -2251,10 +2255,12 @@ const Entites = (function () {
       if (!fiche) continue;
       if (fiche.heures && !enService(fiche.heures)) continue;
       if (espece === 'goeland' && nuit && f.goeland_dort) continue;
-      const deja = betes().filter(function (q) { return q.espece === espece; }).length;
+      // ⚠️ Un corps ecrase ne tient pas la place d'une bete vivante : la ruelle a encore ses chats.
+      const deja = betesVivantes(espece).length;
       if (deja >= fiche.combien) continue;
       const place = placeDeBete(espece, f.rayon_px);
       if (!place) continue;
+      Son.Lieu.charger('betes');                 // le cri d'une bete ecrasee, une fois, a la premiere qui nait
       betes().push({
         type: 'bete', espece: espece, decor: espece, x: place.x, y: place.y,
         r: 0, solide: false, id: ++idDeBete, t: 0,
@@ -2291,9 +2297,41 @@ const Entites = (function () {
       type: 'bete', espece: 'raton', decor: 'raton', x: x, y: y, r: 0, solide: false,
       id: ++idDeBete, t: 0, v: 0, humeur: 'pose', minuterie: 1, vx: 0, vy: 0, altitude: 0, fuite: 0, libre: true,
     };
+    Son.Lieu.charger('betes');
     betes().push(e);
     sEnvoler(e, fiche, B.joueur);
     return e;
+  }
+
+  /** Les betes de cette espece qui vivent encore (pas les corps ecrases). */
+  function betesVivantes(espece) {
+    return betes().filter(function (q) { return q.espece === espece && !q.ecrasee; });
+  }
+
+  /** ⚠️ ECRASEE sous le char `v` (`Vehicules.heurterBetes`) : elle ne court plus, ne se
+      caresse plus, et son corps aplati reste la ou il est tombe jusqu'a ce qu'on l'oublie de
+      loin, comme le reste (`majBete`). Le dessin (la tete a droite ou a gauche) et les poils qui
+      volent sont a l'EMPREINTE de la bete : un decor ne tire pas de de. La tache suit l'option
+      du sang (`decal`). Et AUCUN crime : les betes restent hors de tout ce qui fait une etoile. */
+  function ecraserBete(e, v) {
+    if (e.ecrasee) return;
+    e.ecrasee = true;
+    e.humeur = 'ecrasee'; e.fuite = 0; e.sursaut = 0; e.elan = 0; e.confiance = false;
+    e.vx = 0; e.vy = 0; e.altitude = 0;
+    e.decor = e.espece + '_ecrase';
+    e.v = hash2(e.id, 0xEC4A5E) & 1;
+    if (B.options.sang) {
+      if (B.decals.length >= MAX_DECALS) B.decals.shift();
+      B.decals.push({ x: e.x, y: e.y + 2, type: 'sang', v: hash2(e.id, 0x7AC4E) % 4 });
+    }
+    const teinte = e.espece === 'raton' ? '#77716c' : '#6b5c4d';
+    for (let k = 0; k < 5; k++) {
+      const h = hash2(e.id * 17 + k, 0xB0115);
+      particule(e.x, e.y, (v ? v.vx * 0.2 : 0) + ((h % 21) - 10) / 20, ((h >>> 8) % 21 - 10) / 30,
+                14 + (h >>> 16) % 10, teinte, 1, 0.08);
+    }
+    Son.depuis(e, function () { Son.SFX.beteEcrasee(e.espece); });
+    if (v && v.conducteur === B.joueur && B.cam) B.cam.secousse = Math.max(B.cam.secousse || 0, 0.3);
   }
 
   function oublier(e) {
@@ -2420,6 +2458,7 @@ const Entites = (function () {
     // Oubliee de loin, comme tout le reste — mais plus tot : une bete qu'on ne
     // voit pas ne sert a rien, et elle ne doit pas peser sur le budget d'images.
     if (dist2(e.x, e.y, j.x, j.y) > f.oubli_px * f.oubli_px) { oublier(e); return; }
+    if (e.ecrasee) return;                    // le corps reste la ou il est tombe
     if (e.fuite > 0) { majFuite(e, fiche); return; }
     // ⚠️ ELLE PART AVANT QU'ON LA TOUCHE. Un char qui fonce compte double : ce
     // qui arrive vite se voit venir de plus loin.
@@ -6046,7 +6085,7 @@ const Entites = (function () {
     naitreLesEnfantsDeLaPlage, majPlage, plierBagage, naitreLeLastCall, chicaner, majCamelot, prochainPerron,
     poserLeJournal, rentrerLesJournaux, fairePartirUnRaton, bordDeLEau, chateauLePlusProche, majBallonVol, lancerLeBallon,
     naitreLesEnfantsAVelo, placeDEnfantAVelo, roulableEnfant, resterSurLeTrottoir,
-    naitreLesBetes, majBete, majLesBetes, chezElle, placeDeBete, betes, dessinerBetes, poseDeBete, directionDeBete, sEnvoler,
+    naitreLesBetes, betesVivantes, ecraserBete, majBete, majLesBetes, chezElle, placeDeBete, betes, dessinerBetes, poseDeBete, directionDeBete, sEnvoler,
     naitreLaFoire, majForain, majMascotte, placeDansLaFoire, destinationDeFoire,
     bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe, mousse,
     particule, sang, poussiere, decal, majParticules,

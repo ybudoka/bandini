@@ -81,7 +81,7 @@ const Interactions = (function () {
   function chatSousLaMain(j) {
     const c = cfg().caresser;
     return Entites.betes().find(function (e) {
-      return e.espece === c.espece && e.confiance && !e.fuite && dist2(j.x, j.y, e.x, e.y) < c.portee_px * c.portee_px;
+      return e.espece === c.espece && e.confiance && !e.fuite && !e.ecrasee && dist2(j.x, j.y, e.x, e.y) < c.portee_px * c.portee_px;
     }) || null;
   }
 

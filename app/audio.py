@@ -359,6 +359,14 @@ CATALOGUE: list[Echantillon] = [
        prompt="a hand grenade pin pulled out with a metallic ring click, then the "
               "safety lever springing off with a sharp ping, close-up, no explosion, "
               "no music"),
+    # LA BÊTE ÉCRASÉE (docs/jalons/des-corps-qui-tombent-pour-vrai.md) : un chat ou un raton sous
+    # une roue (`Son.SFX.beteEcrasee`). Du lieu `betes` : chargés à la première bête qui naît.
+    _e("chat_ecrase", "Chat écrasé", duree_s=0.8, volume=0.6,
+       prompt="a cat letting out one short strangled screech that cuts off abruptly, "
+              "with a soft dull thump under a car tire, close, no music, no voice"),
+    _e("raton_ecrase", "Raton écrasé", duree_s=0.8, volume=0.6,
+       prompt="a raccoon giving one short raspy squeal cut off abruptly, with a soft "
+              "dull thump under a car tire, close, no music, no voice"),
     _e("rebond", "Grenade qui rebondit", variantes=2, duree_s=0.5, volume=0.5,
        prompt="a small heavy metal object bouncing once on asphalt, a single "
               "dull clank, close, no music"),
@@ -1752,6 +1760,9 @@ LIEUX: dict[str, list[str]] = {
     # chargent la premiere fois qu'un explosif entre dans le sac ou qu'on en allume
     # un (`combat.js`). Une partie qui n'en touche jamais ne les telecharge pas.
     "explosifs": ["meche", "goupille", "rebond"],
+    # Les bêtes écrasées : pas un endroit, une RUELLE — chargés à la première bête qui naît
+    # (`Entites.naitreLesBetes`). Une partie qui n'écrase rien les charge quand même, mais tard.
+    "betes": ["chat_ecrase", "raton_ecrase"],
     # La pluie (les saisons, lot 2) : pas un endroit, un TEMPS — ils se chargent a la premiere averse
     # (`Pluie.maj`). Une partie qui ne voit jamais la pluie (l'hiver) ne les telecharge pas.
     "pluie": ["pluie", "tonnerre", "eclaboussure"],

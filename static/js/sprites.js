@@ -73,9 +73,15 @@ const SPRITES = {
       tech_saisie_haut: [['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcccccck..', '.kkcccccckk.', '.kcccccccck.', '..kcccccck..', '..kppppppk..', '..kpppkpppk.', '..kppk.kppk.', '..kbbk.kbbk.', '..kkkk.kkkk.']],
       // ⚠️ Une seule image, et l'entite pose `face = 'couche'` : c'est ainsi
       // qu'un KO et un mort se dessinent sans faire tourner un canevas.
+      // ⚠️ LE GABARIT DE TOUS LES CORPS A TERRE (docs/jalons/des-corps-qui-tombent-pour-vrai.md) :
+      // sur le dos, la tete a droite, les bras en croix — une vraie tete, les cheveux autour et
+      // les yeux fermes (`k`). L'ancien etait un boudin : un pixel de peau au bout, sans bras.
+      // Chaque dessin a la main en tire le sien, avec ce qui le nomme (les balles du jongleur,
+      // les echasses, la raclette...). Un dessin SANS `couche` mourait DEBOUT (`imageDe` retombe
+      // sur `bas`) : le juge `test_corps_qui_tombent_js.py` le refuse.
       couche: [
-        ['............', '............', '............', '............', '............', '............', '............',
-         '..kkkkkk....', '.kpppppkkkk.', 'kppppppccccs', 'kppppppcccck', '.kpppppkccsk', '..kbbkk.kkk.', '..kkk.......', '............', '............'],
+        ['............', '............', '............', '............', '............', '............', '.....k......', '....ksk.kkk.',
+         '.kkkkcckhhhk', 'kbppccckskhk', 'kkppcccssshk', 'kbppccckskhk', '.kkkcckkhhhk', '...ksk..kkk.', '....k.......', '............'],
       ],
       cote: [
         ['....kkkk....', '...khhhhk...', '...khhhhhk..', '...khssosk..', '...khssssk..', '...khsssk...', '....kssk....', '...kcccck...',
@@ -265,8 +271,8 @@ SPRITES.racoleuse = {
        '...kcccck...', '...kcckck...', '...kccksk...', '..kppppppk..', '.kpppppppk..', '....kssk....', '....kbbk....', '....kkkk....'],
     ],
     couche: [
-      ['............', '............', '............', '............', '............', '............', '............',
-       '..kkkkkk....', '.kpppppkkkk.', 'kppppppccccs', 'kppppppcccck', '.kpppppkccsk', '..kbbkk.kkk.', '..kkk.......', '............', '............'],
+      ['............', '............', '............', '............', '............', '............', '.....k.hhh..', '....ksk.kkkh',
+       '.kkkkcckhhhk', 'kbspccckskhk', 'kkspcccssshk', 'kbspccckskhk', '.kkkcckkhhhk', '...ksk..kkkh', '....k..hhh..', '............'],
     ],
   },
 };
@@ -311,8 +317,8 @@ SPRITES.conductrice = {
        '..khhcccsk..', '...kcdddk...', '...kppppk...', '..kppppppk..', '.kppdppdppk.', '....kssk....', '....kbbk....', '....kkkk....'],
     ],
     couche: [
-      ['............', '............', '............', '............', '............', '............', '............',
-       '..kkkkkk....', '.kpppppkkkk.', 'kpppdppccchk', 'kppppppcccsh', '.kppdppkccsk', '..kbbkk.kkk.', '..kkk.......', '............', '............'],
+      ['............', '............', '............', '............', '............', '............', '.....k.hhh..', '....ksk.kkkh',
+       '.kkkkcckhhhk', 'kbspdcckskhk', 'kkspdccssshk', 'kbspdcckskhk', '.kkkcckkhhhk', '...ksk..kkkh', '....k..hhh..', '............'],
     ],
   },
 };
@@ -411,8 +417,8 @@ SPRITES.homme_sandwich = {
        '..krkcccckrk..', '..kckcckckck..', '..kckcckskck..', '..kckppppkck..', '..kkkkkkkkkk..', '.....kppk.....', '.....kbbk.....', '.....kkkk.....'],
     ],
     couche: [
-      ['..............', '..............', '..............', '..............', '..............', '..............', '..............',
-       '...kkkkkk.....', '..kpppppkkkk..', '.kppppppccccs.', '.kppppppcccck.', '..kpppppkccsk.', '...kbbkk.kkk..', '...kkk........', '..............', '..............'],
+      ['..............', '..............', '..............', '......k.......', '.....ksk.kkk..', '..kkkkcckhhhk.', '.kbppccckskhk.', '.kkppcccssshk.',
+       '.kbppccckskhk.', '..kkkcckkhhhk.', '....ksk..kkk..', '.kkkkkkkkkkk..', '.krrrrrrrrrk..', '.kcdcddcdcdk..', '.kkkkkkkkkkk..', '..............'],
     ],
   },
 };
@@ -1048,8 +1054,8 @@ SPRITES.avocat = {
        '...kssssk...', '..kccotock..', '.kckcotockc.', '.kskcctcksk.', '..kppppppk..', '..kppkkppk..', '..kbbk.kbbk.', '..kkkk.kkkk.'],
     ],
     couche: [
-      ['............', '............', '............', '............', '............', '............', '............',
-       '..kkkkkk....', '.kpppppkkkk.', 'kppppppctcos', 'kppppppcccck', '.kpppppkccsk', '..kbbkk.kkk.', '..kkk.......', '............', '............'],
+      ['............', '............', '............', '............', '............', '............', '.....k......', '....ksk.kkk.',
+       '.kkkkcckhhhk', 'kbppccokskhk', 'kkppcttssshk', 'kbppccokskhk', '.kkkcckkhhhk', '...ksk..kkk.', '....k.......', '............'],
     ],
   },
 };
@@ -1092,6 +1098,10 @@ SPRITES.musicien = {
       ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '..kcgggggk..', '..kcgssggk..', '...kcgggk...', '....kppppk..', '...kpp.ppk..', '...kk...kk..'],
       ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '..kcgggggk..', '..kcgggggk..', '...kssggk...', '....kppppk..', '...kpp.ppk..', '...kk...kk..'],
     ],
+    couche: [
+      ['............', '............', '............', '.....k......', '....ksk.kkk.', '.kkkkcckhhhk', 'kbppkgckskhk', 'kkppgggssshk',
+       'kbppkgckskhk', '.kkkcckkhhhk', '...ksk..kkk.', '....k.......', '............'],
+    ],
   },
 };
 // Le mime : chapeau melon, visage blanc, chandail raye. Trois formes
@@ -1129,6 +1139,10 @@ SPRITES.amuseur = {
       ['...kkkkkk...', '..kkkkkkkk..', '...koooook.s', '...kokkook.s', '...kooook..k', '....kok....k', '..kcccccck..', '..kddddddk..', '..kcccccck..', '..kddddddk..', '...kppppk...', '..kpp.ppk...', '..kk...kk...'],
       ['............', '...kkkkkk...', '..kkkkkkkk..', '...koooook..', '...kokkook..', '...kooook...', '..kcccccck..', '..kddddddk..', 'sskcccccck..', '..kddddddk..', '...kppppk...', '..kpp.ppk...', '..kk...kk...'],
     ],
+    couche: [
+      ['............', '............', '............', '.....k..kkk.', '....ksk.kkk.', '.kkkkdckhhhk', 'kbppcdckokhk', 'kkppcdcooohk',
+       'kbppcdckokhk', '.kkkcdkkhhhk', '...ksk..kkk.', '....k.......', '............'],
+    ],
   },
 };
 // ⚠️ DEUX images qui ne sont pas une marche : manteau ferme, manteau
@@ -1150,6 +1164,10 @@ SPRITES.exhibitionniste = {
     cote: [
       ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '...kccccck..', '...kccccck..', '...kccccck..', '...kccccck..', '....kbbbk...', '....kk.k....'],
       ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '...kccccck..', '...kccccck..', '...kccccck..', '...kccccck..', '....kbbbk...', '....k.kk....'],
+    ],
+    couche: [
+      ['............', '............', '............', '.....k......', '....ksk.kkk.', '.kkkkcckhhhk', 'kbcccccckskh', 'kkcccccssshk',
+       'kbccccckskhk', '.kkkcckkhhhk', '...ksk..kkk.', '....k.......', '............'],
     ],
   },
 };
@@ -1200,6 +1218,11 @@ SPRITES.jongleur = {
       ['.......jj.....', '.......jj.....', '..........vv..', '..........vv..', '..rr..........', '..rr..........', '....kkkkkk....', '....khhhhhk...', '....khsssok...', '....khssssk...', '....khsssk....', '.....kssk.....', '...skcccccks..', '..sskcdddcks..', '....kcdddck...', '....kccccck...', '.....kppppk...', '....kppk.kk...', '....kkk.......'],
       ['..............', '..............', '....rr....jj..', '....rr....jj..', '..vv..........', '..vv..........', '....kkkkkk....', '....khhhhhk...', '....khsssok...', '....khssssk...', '....khsssk....', '.....kssk.....', '...skcccccks..', '..sskcdddcks..', '....kcdddck...', '....kccccck...', '.....kppppk...', '....kppk.kk...', '....kkk.......'],
     ],
+    couche: [
+      ['..............', '..............', '..............', '..............', '..............', '..............', '..............', '..............',
+       '..............', 'j.....k.......', '.....ksk.kkk..', '..kkkkcckhhhk.', '.kbppccckskhk.', '.kkppcccssshk.', '.kbppccckskhk.', '..kkkcckkhhhk.',
+       '....ksk..kkk.v', '.....k......r.', '..............'],
+    ],
   },
 };
 // L'ECHASSIER — ⚠️ LE SEUL CORPS DE LA VILLE A DEPASSER LA FOULE : 26 pixels
@@ -1230,6 +1253,12 @@ SPRITES.echassier = {
       ['...kkkkkk...', '...kccccck..', '...kccccck..', '..kkkkkkkk..', '...ksssssk..', '...kssssok..', '....ksssk...', '...kccccck..', '..kcccccck..', '..kcccccck..', '...kccccck..', '...kppppk...', '...kppppk...', '..kppkkppk..', '..kppkkppk..', '..kkkkkkkk..', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '..kkkkkkkk..'],
       ['..kkkkkk....', '..kccccck...', '..kccccck...', '.kkkkkkkk...', '..ksssssk...', '..kssssok...', '...ksssk....', '..kccccck...', '.kcccccck...', '.kcccccck...', '..kccccck...', '..kppppk....', '..kppppk....', '.kppkkppk...', '.kppkkppk...', '.kkkkkkkk...', '..ee..ee....', '..ee..ee....', '..ee..ee....', '..ee..ee....', '..ee..ee....', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '..kkkkkkkk..'],
       ['....kkkkkk..', '....kccccck.', '....kccccck.', '...kkkkkkkk.', '....ksssssk.', '....kssssok.', '.....ksssk..', '....kccccck.', '...kcccccck.', '...kcccccck.', '....kccccck.', '....kppppk..', '....kppppk..', '...kppkkppk.', '...kppkkppk.', '...kkkkkkkk.', '....ee..ee..', '....ee..ee..', '....ee..ee..', '....ee..ee..', '....ee..ee..', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '..kkkkkkkk..'],
+    ],
+    couche: [
+      ['............', '............', '............', '............', '............', '............', '............', '............',
+       '............', '............', '............', '............', '............', '............', '.....k..kck.', '....ksk.kck.',
+       '.kkkkcckhhhk', 'kbppccckskhk', 'kkppcccssshk', 'kbppccckskhk', '.kkkcckkhhhk', '...ksk..kkk.', 'kkeeeeeeeee.', '............',
+       '.keeeeeeeeek', '............'],
     ],
   },
 };
@@ -1264,6 +1293,10 @@ SPRITES.contractuelle = {
       ['...kccccck..', '..kvvvvvvk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '...kcoock...', '...kcoock...', '...kccccck..', '....kppppk..', '...kppk.kk..', '...kkk......'],
       ['...kccccck..', '..kvvvvvvk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '...kcoock...', '...kcoock...', '...kccccck..', '....kppppk..', '....kpk.kk..', '....kk......'],
     ],
+    couche: [
+      ['............', '............', '............', '.....k..kvk.', '....ksk.kck.', '.kkkkcckhhhk', 'kbppcockskhk', 'kkppcoossshk',
+       'kbppccckskhk', '.kkkcckkhhhk', '...ksk..kkk.', '....k.......', '............'],
+    ],
   },
 };
 // Le chapeau LARGE (il deborde des deux cotes, personne d'autre n'en a),
@@ -1284,6 +1317,10 @@ SPRITES.touriste = {
     cote: [
       ['...kaaaak...', '.kaaaaaaaak.', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '..kbcccck...', '..kbcolck...', '..kbcccck...', '...kccccck..', '....kppppk..', '...kppk.kk..', '...kkk......'],
       ['...kaaaak...', '.kaaaaaaaak.', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '..kbcccck...', '..kbcolck...', '..kbcccck...', '...kccccck..', '....kppppk..', '....kpk.kk..', '....kk......'],
+    ],
+    couche: [
+      ['............', '............', '............', '.....k.kaaak', '....ksk.kaak', '.kkkkcckhhhk', 'kbppclckskhk', 'kkppcolssshk',
+       'kbppccckskhk', '.kkkcckkhhhk', '...ksk..kkk.', '....k.......', '............'],
     ],
   },
 };
@@ -1306,6 +1343,10 @@ SPRITES.ivrogne = {
       ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khhsssk..', '...khhhhk...', '....khhk....', '...kccccck..', '..gkccccck..', '..gkccccck..', '...kccccck..', '....kppppk..', '...kppk.kk..', '...kkk......'],
       ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khhsssk..', '...khhhhk...', '....khhk....', '...kccccck..', '..gkccccck..', '..gkccccck..', '...kccccck..', '....kppppk..', '....kpk.kk..', '....kk......'],
     ],
+    couche: [
+      ['............', '............', '............', '.....k......', '....ksk.kkk.', '.kkkkcckhhhk', 'kbppccckhkhk', 'kkppccchhshk',
+       'kbppccckhkhk', '.kkkcckkhhhk', '.gksk..kkk..', '.g..k.......', '............'],
+    ],
   },
 };
 // Le BANDEAU blanc et les JAMBES NUES : le seul de la ville a ne pas porter
@@ -1327,6 +1368,10 @@ SPRITES.jogger = {
       ['...kkkkkk...', '...kbbbbbk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '..skccccck..', '..skccccck..', '...kccccck..', '....kpppk...', '....kssssk..', '...kssk.kk..', '...kkk......'],
       ['...kkkkkk...', '...kbbbbbk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '..skccccck..', '..skccccck..', '...kccccck..', '....kpppk...', '....kssssk..', '....ksk.kk..', '....kk......'],
     ],
+    couche: [
+      ['............', '............', '............', '.....k......', '....ksk.kkk.', '.kkkkcckhhbk', 'kbsspcckskbk', 'kksspccssskk',
+       'kbsspcckskbk', '.kkkcckkhhbk', '...ksk..kkk.', '....k.......', '............'],
+    ],
   },
 };
 // La sacoche EN BANDOULIERE (une diagonale du haut de l'epaule a la hanche)
@@ -1347,6 +1392,10 @@ SPRITES.facteur = {
     cote: [
       ['...kccccck..', '..kvvvvvvk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kbcccck..', '...kcbcock..', '...kccbbck..', '...kccccck..', '....kppppk..', '...kppk.kk..', '...kkk......'],
       ['...kccccck..', '..kvvvvvvk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kbcccck..', '...kcbcock..', '...kccbbck..', '...kccccck..', '....kppppk..', '....kpk.kk..', '....kk......'],
+    ],
+    couche: [
+      ['............', '............', '............', '.o...k..kvk.', '....ksk.kck.', '.kkkkbckhhhk', 'kbppcbckskhk', 'kkppccbssshk',
+       'kbppcccbskhk', '.kkkcckkhhhk', '...ksk..kkk.', '....k...o...', '............'],
     ],
   },
 };
@@ -1380,6 +1429,10 @@ SPRITES.crieur = {
       ['...kvvvvk...', '..kcccccck..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '..okccccck..', '.ookccccck..', '..okccccck..', '...kccccck..', '....kppppk..', '...kppk.kk..', '...kkk......'],
       ['...kvvvvk...', '..kcccccck..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '..okccccck..', '.ookccccck..', '..okccccck..', '...kccccck..', '....kppppk..', '....kpk.kk..', '....kk......'],
     ],
+    couche: [
+      ['............', '............', '............', 'o....k..kvk.', '....ksk.kck.', '.kkkkcckhhhk', 'kbppccckskhk', 'kkppcccssshk',
+       'kbppccckskhk', '.kkkcckkhhhk', '...ksk..kkk.', '.oo.k....o..', '............'],
+    ],
   },
 };
 // ⚠️ LA RACLETTE EN TRAVERS, plus large que lui, et le SEAU jaune au
@@ -1402,6 +1455,10 @@ SPRITES.laveur = {
       ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '..lllllll...', '...kccccck..', '...kccccck..', '...kppppk...', '..gkppk.kk..', '..gkkk......'],
       ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '..lllllll...', '...kccccck..', '...kccccck..', '...kppppk...', '..gkppk.kk..', '..gkkk......'],
     ],
+    couche: [
+      ['............', '............', '............', '.....k......', '....ksk.kkk.', '.kkkkcckhhhk', 'kbppccckskhk', 'kkppcccssshk',
+       'kbppccckskhk', '.kkkcckkhhhk', 'gg.ksk..kkk.', 'gglllllll...', '............'],
+    ],
   },
 };
 // Le capuchon qui mange le visage et les mains DANS les poches : une
@@ -1422,6 +1479,10 @@ SPRITES.pickpocket = {
     cote: [
       ['...kkkkkk...', '...khhhhhk..', '...khhssok..', '...khsssk...', '...khssk....', '....kssk....', '...kccccck..', '...kcoock...', '...kccccck..', '...kccccck..', '....kppppk..', '...kppk.kk..', '...kkk......'],
       ['...kkkkkk...', '...khhhhhk..', '...khhssok..', '...khsssk...', '...khssk....', '....kssk....', '...kccccck..', '...kcoock...', '...kccccck..', '...kccccck..', '....kppppk..', '....kpk.kk..', '....kk......'],
+    ],
+    couche: [
+      ['............', '............', '............', '............', '.........kk.', '.kkkkkkkkhhk', 'kbppcccckshk', 'kkppcoccsshk',
+       'kbppcccckshk', '.kkkkkkkkhhk', '.........kk.', '............', '............'],
     ],
   },
 };
@@ -6643,6 +6704,44 @@ function peindreBeteEnMouvement(ctx, espece, cle) {
   }
 }
 
+/* ⚠️ LA BÊTE ÉCRASÉE (docs/jalons/des-corps-qui-tombent-pour-vrai.md ; Martin, 30 sept. 2026 :
+   « il faut que les chats et ratons puissent aussi se faire écraser »). À plat sur le flanc, vue
+   d'en haut : le corps aplati, les quatre pattes écartées (celles du côté loin vers le haut, plus
+   sombres), la queue tendue, l'œil fermé et le bout de langue. Les teintes sont celles de la bête
+   qui court (`BETES_EN_MOUVEMENT`) : c'est le même animal. `v` : 0 la tête à droite, 1 à gauche
+   (le miroir) — tiré à l'empreinte de la bête, pas au dé. La tache, elle, est un `decal` : elle
+   suit l'option du sang. */
+function peindreBeteEcrasee(ctx, espece, v) {
+  const f = BETES_EN_MOUVEMENT[espece], T = f.teintes, raton = espece === 'raton';
+  if (v === 1) { ctx.translate(22, 0); ctx.scale(-1, 1); }
+  ctx.fillStyle = 'rgba(20,18,26,0.26)'; ctx.fillRect(4, 8, 15, 1);          // l'ombre, collée : il est à plat
+  ctx.fillStyle = T.loin;                                                   // les pattes du côté loin, écartées en l'air
+  ctx.fillRect(7, 2, 1, 1); ctx.fillRect(6, 1, 1, 1); ctx.fillRect(14, 2, 1, 1); ctx.fillRect(15, 1, 1, 1);
+  ctx.fillStyle = T.ventre; ctx.fillRect(5, 3, 11, 5);                      // le corps, aplati et élargi
+  ctx.fillStyle = T.dos; ctx.fillRect(5, 3, 11, 2);                         // le dos, éclairé du nord-ouest
+  ctx.fillStyle = T.flanc; ctx.fillRect(6, 5, 9, 1);
+  if (!raton) {                                                             // les rayures du chat
+    ctx.fillStyle = T.rayure; ctx.fillRect(8, 3, 1, 2); ctx.fillRect(10, 3, 1, 2); ctx.fillRect(12, 3, 1, 2);
+  }
+  ctx.fillStyle = T.patte;                                                  // les pattes du côté proche, écartées
+  ctx.fillRect(7, 8, 1, 1); ctx.fillRect(6, 9, 1, 1); ctx.fillRect(9, 8, 1, 1);
+  ctx.fillRect(12, 8, 1, 1); ctx.fillRect(14, 8, 1, 1); ctx.fillRect(15, 9, 1, 1);
+  // La queue, tendue derrière : annelée pour le raton, en anneaux de deux.
+  if (raton) {
+    for (let x = 0; x < 5; x += 2) { ctx.fillStyle = (x >> 1) % 2 ? T.queue : T.anneau; ctx.fillRect(x, 4, 2, 2); }
+  } else { ctx.fillStyle = T.queue; ctx.fillRect(0, 5, 5, 1); ctx.fillRect(0, 4, 1, 1); }
+  // La tête, sur le côté, l'oreille qui dépasse.
+  ctx.fillStyle = T.tete; ctx.fillRect(16, 3, 4, 4);
+  ctx.fillStyle = raton ? T.ventre : T.queue; ctx.fillRect(17, 2, 2, 1);
+  if (!raton) ctx.fillRect(18, 1, 1, 1);                                    // l'oreille pointue du chat
+  if (raton) {
+    ctx.fillStyle = T.masque; ctx.fillRect(16, 4, 4, 1);                    // LE MASQUE
+    ctx.fillStyle = T.museau; ctx.fillRect(20, 4, 1, 2);
+  }
+  ctx.fillStyle = raton ? T.oeil : '#2a241f'; ctx.fillRect(18, 4, 1, 1);    // l'œil fermé (le raton : le reflet sous le masque)
+  ctx.fillStyle = '#e07a8a'; ctx.fillRect(20, 6, 1, 1);                     // le bout de langue
+}
+
 /** L'orignal de profil, tourne vers l'est, dans une boite de 32 × 26 (voir `DECORS.orignal`). */
 function peindreOrignal(ctx) {
   ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(4, 24, 24, 2);          // l'ombre
@@ -7620,6 +7719,13 @@ const DECORS = {
   } },
   raton_bouge: { solide: false, r: 0, variantes: 1, w: 28, h: 18, ancre: [14, 15], peindre: function (ctx, w, h, v) {
     peindreBeteEnMouvement(ctx, 'raton', v || 'fuit|droite|0');
+  } },
+  // La bete ECRASEE sous un char (`Entites.ecraserBete`) : a plat, deux variantes (la tete a droite ou a gauche).
+  chat_ecrase: { solide: false, r: 0, variantes: 2, w: 22, h: 10, ancre: [11, 7], peindre: function (ctx, w, h, v) {
+    peindreBeteEcrasee(ctx, 'chat', v);
+  } },
+  raton_ecrase: { solide: false, r: 0, variantes: 2, w: 22, h: 10, ancre: [11, 7], peindre: function (ctx, w, h, v) {
+    peindreBeteEcrasee(ctx, 'raton', v);
   } },
 
   // LE BALLON DE PLAGE. ⚠️ Il ne bloque rien et n'entre dans aucun index : il
