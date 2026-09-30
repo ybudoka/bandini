@@ -1736,6 +1736,11 @@ def _completer(mission: dict) -> dict:
     for cle, valeur in DEFAUTS_DE_MISSION.items():
         mission.setdefault(cle, copy.deepcopy(valeur))
     mission["scenes"] = scenes_de(mission)
+    # CHAPITRES : l'étape et le donneur de chaque acte, DANS LE CATALOGUE — les objectifs n'arrivent qu'avec
+    # `/api/mission/<slug>`, et le téléphone, les bulles et le carnet doivent savoir qui attend avant.
+    actes = [[i, o["donneur"]] for i, o in enumerate(mission["objectifs"]) if o.get("type") == "acte"]
+    if actes:
+        mission["actes"] = actes
     return mission
 
 

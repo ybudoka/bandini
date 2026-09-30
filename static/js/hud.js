@@ -1896,8 +1896,8 @@ const Hud = (function () {
       if (gps) items.push(ligne('ON T’ATTEND :', (gps.nom || '').toUpperCase()));
       else items.push(ligne('PERSONNE NE T’ATTEND'));
     } else {
-      const perso = Histoire.personnage(m.donneur);
-      items.push(ligne('DONNÉE PAR', perso ? perso.nom.toUpperCase() : m.donneur.toUpperCase()));
+      const qui = Chapitres.donneurDe(m), perso = Histoire.personnage(qui);
+      items.push(ligne('DONNÉE PAR', perso ? perso.nom.toUpperCase() : qui.toUpperCase()));
       items.push(ligne('RÉCOMPENSE', m.recompense + ' $'));
       items.push(ligne(''));
       // ⚠️ Les objectifs arrivent avec le reste de la mission (`Histoire.charger`) : une

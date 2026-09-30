@@ -134,7 +134,8 @@ const Histoire = (function () {
   function personnages() { return B.defs.personnages || []; }
   function personnage(slug) { return personnages().find(function (p) { return p.slug === slug; }) || null; }
   function mission(slug) { return defs().find(function (m) { return m.slug === slug; }) || null; }
-  function faite(slug) { return !!B.partie.missionsFaites[slug]; }
+  // ⚠️ Un CHAPITRE dont toutes les missions remplacées sont faites l'est aussi (une vieille partie).
+  function faite(slug) { return !!B.partie.missionsFaites[slug] || Chapitres.fait(mission(slug)); }
   function courante() { return B.partie.mission ? mission(B.partie.mission.slug) : null; }
 
   /** `exige` de M16 tenu ? — ce qu'il faut AVOIR en plus des pre-requis
@@ -216,7 +217,7 @@ const Histoire = (function () {
   }
 
   function disponibleDe(donneur) {
-    return disponibles().find(function (m) { return m.donneur === donneur; }) || null;
+    return disponibles().find(function (m) { return Chapitres.donneurDe(m) === donneur; }) || null;
   }
 
   // --- Les lieux -------------------------------------------------------------------------
@@ -1153,7 +1154,9 @@ const Histoire = (function () {
       if (!m || p.appels[m.slug] || !disponibles().some(function (x) { return x.slug === m.slug; })) return;
       p.appels[m.slug] = true;
       p.dernierAppel = demiJournee();
-      dire(m, 'appel', function () { Hud.message('VA VOIR ' + personnage(m.donneur).nom.toUpperCase(), 180); });
+      // Un chapitre à reprendre : pas l'appel de son premier donneur, un rappel.
+      if (Chapitres.depart(m) > 0) { Hud.message('RAPPEL : ' + m.titre.toUpperCase() + ' — VA VOIR ' + personnage(Chapitres.donneurDe(m)).nom.toUpperCase(), 220); return; }
+      dire(m, 'appel', function () { Hud.message('VA VOIR ' + personnage(Chapitres.donneurDe(m)).nom.toUpperCase(), 180); });
       return;
     }
     // ⚠️ `m.prerequis.length` SEUL dit « celle-la s'annonce au telephone ». On y lisait
@@ -1210,7 +1213,7 @@ const Histoire = (function () {
     const j = B.joueur;
     let meilleure = null, dMin = Infinity;
     for (const m of liste) {
-      const l = lieuDuPersonnage(m.donneur);
+      const l = lieuDuPersonnage(Chapitres.donneurDe(m));
       const d = l && j ? dist2(l.x, l.y, j.x, j.y) : Infinity;
       if (!meilleure || d < dMin) { meilleure = m; dMin = d; }
     }
@@ -1250,9 +1253,11 @@ const Histoire = (function () {
       const etape = B.partie.mission.etape;
       if (dire(enCours, 'renvoi', null, function (l) { return l.qui === slug && l.objectif === etape; })) return true;
     }
-    if (enCours && enCours.donneur === slug) {
+    // ⚠️ Le donneur de l'ACTE (un chapitre en a plusieurs), et `avancer` plutôt que `reussir` : un `retourner`
+    // au milieu d'un chapitre passe à l'acte suivant ; le dernier réussit (`avancer` n'a plus d'objectif).
+    if (enCours && Chapitres.donneurDe(enCours) === slug) {
       const o = objectif();
-      if (o && o.type === 'retourner') { reussir(); return true; }
+      if (o && o.type === 'retourner') { avancer(); return true; }
       Hud.message(objectif() ? objectif().texte : '', 150);
       return true;
     }
@@ -1305,6 +1310,9 @@ const Histoire = (function () {
       return;
     }
     porteEnAttente = null;
+    // ⚠️ UN CHAPITRE QU'ON REPREND ne redit pas l'intro de son premier donneur : le marqueur de l'acte a ses
+    // propres répliques (`pendant` à son étape), et `annoncer` les arme.
+    if (Chapitres.depart(m) > 0) { commencer(m.slug, true); annoncer(m); return; }
     commencer(m.slug, true);
     // La fin de l'intro passe par `SurPlace` : le saut a l'heure et au lieu (`sur_place`), et la
     // frontiere qui s'arme (`gardee`) — une mission sans ces cles annonce tout de suite.
@@ -1464,7 +1472,8 @@ const Histoire = (function () {
     // ⚠️ `avant` : ce qu'on avait dans le sac en commençant — une mission ratée ne fait retomber que ce
     // qu'ELLE a fait prendre (`Infiltration.rendre`), jamais la clé d'une mission d'avant.
     const objets = B.partie.objets || {};
-    B.partie.mission = { slug: slug, etape: -1, t: B.t, chocs: 0,
+    // Un chapitre commence à l'acte où la partie en est (`Chapitres.depart`) ; toute autre mission, au début.
+    B.partie.mission = { slug: slug, etape: Chapitres.depart(m) - 1, t: B.t, chocs: 0,
                          avant: Object.keys(objets).filter(function (k) { return objets[k] > 0; }) };
     B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0,
                   vol: 0, boulotsDepart: 0, suit: null, protege: null, suivi: null };
@@ -1510,6 +1519,8 @@ const Histoire = (function () {
     // lui-meme, au moment ou on le ramasse.
     const fait = m.objectifs[p.etape];
     if (fait && fait.objet && fait.type !== 'obtenir') { if (!B.partie.objets) B.partie.objets = {}; B.partie.objets[fait.objet] = 1; }
+    // `donne` sur un objectif (les chapitres) : accordé quand il est fait.
+    if (fait && fait.donne) accorder(fait.donne);
     p.etape++;
     const o = m.objectifs[p.etape];
     if (!o || !o.allies) relacherLesAllies();
@@ -1518,6 +1529,7 @@ const Histoire = (function () {
     // On ne repose pas des morts pour les recoucher.
     if (o.type === 'tuer' && dejaTombes(m.slug, p.etape) >= o.n) { avancer(enSilence); return; }
     p.debutT = B.t;
+    if (o.type === 'acte') Chapitres.ouvrirActe(m, o, p.etape);
     // Un `acheter` dont l'article est DÉJÀ en poche au départ : l'étape le dira (`majObjectif`).
     if (o.type === 'acheter' && B.mission && (B.partie.objets[o.article] || B.partie.armes[o.article])) B.mission.acheterDeja = p.etape;
     poser(enSilence);
@@ -2115,6 +2127,14 @@ const Histoire = (function () {
     // d'objectif le dit (`ligneObjectif`).
     if (o.sans_arme && armeAuPoing(j) && Territoires.gangA(j.x, j.y)) { echouer('arme'); return; }
     switch (o.type) {
+      case 'acte': {
+        // Instantané — sauf un acte `sur_place` (la nuit du Trappeur) : le saut, puis l'objectif suivant.
+        if (o.sur_place && !B.mission.sautEnCours) {
+          B.mission.sautEnCours = true;
+          SurPlace.sauter({ sur_place: o.sur_place }, function () { if (B.mission) B.mission.sautEnCours = false; avancer(); });
+        } else if (!o.sur_place) avancer();
+        return;
+      }
       case 'aller': {
         if (o.nuit && !Monde.estNuit()) { B.mission.attend = 'ATTENDS LA NUIT'; return; }
         B.mission.attend = null;
@@ -2193,8 +2213,8 @@ const Histoire = (function () {
         return;
       }
       case 'retourner': {
-        const d = donneur(m.donneur);
-        if (d && dist2(j.x, j.y, d.x, d.y) < RAYON_PARLER * RAYON_PARLER) reussir();
+        const d = donneur(Chapitres.donneurDe(m));
+        if (d && dist2(j.x, j.y, d.x, d.y) < RAYON_PARLER * RAYON_PARLER) avancer();
         return;
       }
       case 'survivre':
@@ -2370,19 +2390,11 @@ const Histoire = (function () {
     return !!(j && !j.dansVehicule && j.arme && j.arme !== 'poings' && j.arme !== 'poing_americain');
   }
 
-  function reussir() {
-    const m = courante();
-    if (!m) return;
-    const p = B.partie, d = m.donne || {};
-    const vehicule = B.mission ? B.mission.vehicule : null;
-    nettoyer(false);
-    if (p.tombes) delete p.tombes[m.slug];
-    p.missionsFaites[m.slug] = p.jour;
-    p.mission = null;
-    p.appelT = null;
-    const bonus = B.mission && B.mission.sansBosse ? Math.round(m.recompense * 0.5) : 0;
-    const prime = m.recompense + bonus;
-    Missions.encaisser(prime, m.titre.toUpperCase(), true);
+  /** Ce qu'une fin accorde, en plus de l'argent : le `donne` d'une mission — ou, depuis les CHAPITRES
+      (30 sept. 2026), celui d'un objectif, accordé quand il est fait (chaque acte donne ce que sa mission
+      d'origine donnait). */
+  function accorder(d) {
+    const p = B.partie;
     if (d.arme && !p.armes[d.arme]) { const a = Combat.armeDef(d.arme); p.armes[d.arme] = { mun: a && a.chargeur ? a.chargeur : null }; }
     if (d.rabais) Object.keys(d.rabais).forEach(function (k) { p.rabais[k] = d.rabais[k]; });
     if (d.sergent_ami) p.sergentAmi = true;
@@ -2403,11 +2415,6 @@ const Histoire = (function () {
     // dire « la fin t'enleve ce poids ». Bornees a zero, jamais sous.
     if (typeof d.dette === 'number') p.dette = Math.max(0, p.dette + d.dette);
     if (typeof d.casier === 'number') p.casier = Math.max(0, p.casier + d.casier);
-    // ⚠️ `ferme` (M16) : une mission qui en FERME une autre. Un choix est un
-    // choix parce qu'il coute : on ecrit la fermeture ICI, au moment de la
-    // recompense, et la mission fermee disparait de partout des la prochaine
-    // fois qu'on regarde le telephone ou le carnet.
-    if (m.ferme && p.fermees.indexOf(m.ferme) < 0) p.fermees.push(m.ferme);
     // ⚠️ `contacts` : des numeros au telephone (m6, Josée qui présente la ville).
     (d.contacts || []).forEach(function (slug) { p.contacts[slug] = true; });
     // ⚠️ `vehicule` : un char garé devant la planque, posé au prochain chargement
@@ -2433,6 +2440,28 @@ const Histoire = (function () {
     // saluent, les passants aussi, plus de rixes aux frontieres, la carte a l'or des Bandini (`Entites`,
     // `Hud`, `B.defs.boss`). Une fois boss, on le reste : la sauvegarde le garde.
     if (d.boss && !p.boss) p.boss = { jour: p.jour };
+  }
+
+  function reussir() {
+    const m = courante();
+    if (!m) return;
+    const p = B.partie, d = m.donne || {};
+    const vehicule = B.mission ? B.mission.vehicule : null;
+    nettoyer(false);
+    if (p.tombes) delete p.tombes[m.slug];
+    p.missionsFaites[m.slug] = p.jour;
+    Chapitres.reussi(m);
+    p.mission = null;
+    p.appelT = null;
+    const bonus = B.mission && B.mission.sansBosse ? Math.round(m.recompense * 0.5) : 0;
+    const prime = m.recompense + bonus;
+    Missions.encaisser(prime, m.titre.toUpperCase(), true);
+    accorder(d);
+    // ⚠️ `ferme` (M16) : une mission qui en FERME une autre. Un choix est un
+    // choix parce qu'il coute : on ecrit la fermeture ICI, au moment de la
+    // recompense, et la mission fermee disparait de partout des la prochaine
+    // fois qu'on regarde le telephone ou le carnet.
+    if (m.ferme && p.fermees.indexOf(m.ferme) < 0) p.fermees.push(m.ferme);
     p.stats.missions = (p.stats.missions || 0) + 1;
     noter('MISSION : ' + m.titre + ' — ' + prime + ' $', true);
     B.mission = null;
@@ -3475,7 +3504,7 @@ const Histoire = (function () {
       else if (o.type === 'embarquer') l = quaiDuTraversier(o.escale);
       else if (o.type === 'livrer') l = lieuDeLivraison(o.lieu);
       else if (o.type === 'monter') l = B.mission && B.mission.vehicule ? B.mission.vehicule : null;
-      else if (o.type === 'retourner') l = ouTrouver(m.donneur);
+      else if (o.type === 'retourner') l = ouTrouver(Chapitres.donneurDe(m));
       else if (o.type === 'ramasser') l = B.mission && (B.mission.entites.find(function (e) { return e.objet === 'caisse'; }) || B.mission.entites.find(function (e) { return e.porteLaCaisse && e.vivant && e.etat !== 'assomme'; }) || (!B.mission.fuyardTombe ? B.mission.fuyard : null));
       else if (o.type === 'tuer') { const restants = B.mission ? B.mission.entites.filter(function (e) { return e.cible && e.vivant && e.etat !== 'assomme'; }) : []; l = restants[0] || null; }
       // ⚠️ `parler` : la cible est un PERSONNAGE, pas un lieu. On pointe sa
@@ -3610,7 +3639,7 @@ const Histoire = (function () {
       // ⚠️ SA BULLE S'ALLUME, SON TEXTE SE DEMANDE. Il est visible a plusieurs secondes
       // de marche : c'est la marge qu'il faut pour que la porte n'attende jamais.
       if (dispo && !dispo.dialogue) charger(dispo.slug);
-      const attend = (m && m.donneur === e.personnage && o && o.type === 'retourner') || !!dispo;
+      const attend = (m && Chapitres.donneurDe(m) === e.personnage && o && o.type === 'retourner') || !!dispo;
       const p = attend ? personnage(e.personnage) : null;
       const compte = !p && cours && personnage(e.personnage).ou === 'point:' + r.point;
       Entites.bulle(e, p ? p.heler : (compte ? r.bulle : ''));
@@ -3658,6 +3687,7 @@ const Histoire = (function () {
   return { texteDObjectif, exigeTenu, disponibles, disponibleDe, estParti, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
            donneur, creerDonneurs, majSaisonniers, absentLHiver, poserDonneur, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
            parler, dire, suivante, finir, commencer, demarrer, avancer, objectif, courante, reussir, echouer, evenement,
+           mission, accorder, ouEstLeJoueurEnVille,
            ouverture, passerOuverture, fichiersDeLOuverture, direLignes, majCinema, resoudre,
            lieuDuPersonnage, pieceDessous, ouTrouver, present, calme, jouerOuDire,
            reinitialiser, noter, rencontrer, CARNET_MAX, init, charger,

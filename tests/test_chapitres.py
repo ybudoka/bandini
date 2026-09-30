@@ -68,3 +68,10 @@ def test_le_catalogue_n_a_aucune_erreur_de_chapitre():
 def test_la_fin_d_un_chapitre_se_joue_chez_le_donneur_du_dernier_acte():
     assert missions.donneur_final(_chapitre()) == "trappeur"
     assert missions.donneur_final({"donneur": "zed", "objectifs": []}) == "zed"
+
+
+def test_le_catalogue_porte_le_donneur_de_chaque_acte():
+    m = missions._completer(_chapitre())
+    assert m["actes"] == [[0, "bilodeau"], [2, "trappeur"]]
+    assert "actes" not in missions._completer({"slug": "zo", "titre": "Zo", "donneur": "zed", "recompense": 1,
+                                                "objectifs": [{"type": "aller"}], "dialogue": {}})

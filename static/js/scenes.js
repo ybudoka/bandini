@@ -57,7 +57,7 @@ const Scenes = (function () {
     if (!nom) return null;
     if (nom === 'joueur') return B.joueur || null;
     if (s.acteurs[nom]) return s.acteurs[nom];
-    if (nom === 'donneur') return s.mission ? Histoire.donneur(s.mission.donneur) : null;
+    if (nom === 'donneur') return s.mission ? Histoire.donneur(Chapitres.donneurDe(s.mission)) : null;
     return Histoire.donneur(nom);
   }
 
