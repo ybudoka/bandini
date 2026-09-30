@@ -48,13 +48,14 @@ def test_deux_bateaux_de_plus_et_ce_sont_des_bateaux():
 
 def test_la_ville_a_son_cargo_et_ses_chalutiers(ville):
     """Un porte-conteneurs, deux chalutiers — et le cargo mouille au quai du cargo :
-    le quai avait sa chaîne et sa cale, il lui manquait le bateau."""
+    le quai avait sa cale, il lui manquait le bateau. ⚠️ Mesuré depuis la CALE de Sven :
+    la chaîne qui entourait l'enclos est retirée (30 sept. 2026), l'enclos reste le repère."""
     mouillages = ville["mouillages"]
     assert [m["slug"] for m in mouillages] == ["porte_conteneurs", "chalutier", "chalutier"], mouillages
-    cargo = next(b for b in ville["barrieres"] if b["slug"] == "cargo")
+    cale = next(a for a in ville["ambulants"] if a["slug"] == "contrebande")
     x0, y0, x1, y1 = _rect(mouillages[0])
-    ecart = max(cargo["x"] - x1, x0 - (cargo["x"] + cargo["l"]), 0) + max(cargo["y"] - y1, y0 - (cargo["y"] + cargo["h"]), 0)
-    assert ecart <= 6, f"le porte-conteneurs mouille à {ecart} tuiles de la chaîne du cargo"
+    ecart = max(cale["x"] - x1, x0 - cale["x"], 0) + max(cale["y"] - y1, y0 - cale["y"], 0)
+    assert ecart <= 6, f"le porte-conteneurs mouille à {ecart} tuiles de la cale du cargo"
 
 
 def test_chaque_coque_est_a_quai_sur_l_eau_et_repart_en_avant(ville):

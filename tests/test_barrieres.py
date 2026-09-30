@@ -84,8 +84,17 @@ def test_chaque_barriere_est_un_rectangle_de_la_ville(ville):
         for x in range(usine["x"], usine["x"] + usine["l"]):
             if couronne(usine, x, y):
                 assert not carte.LEGENDE[ville["sol"][y][x]].get("route"), (x, y)
+
+
+def test_la_cale_du_norvegien_n_est_derriere_aucune_barriere(ville):
+    """Martin (30 sept. 2026) : « on n'a pas vraiment besoin de l'enclos ». La chaîne du quai du cargo
+    fermait la cale le jour, et Sven disait « VIENS EN CHAR » derrière une chaîne qu'aucun char ne passait.
+    Elle est retirée : aucune barrière n'entoure la cale, et on y vient en char à toute heure."""
+    assert "cargo" not in {b["slug"] for b in carte.BARRIERES}
     cale = next(a for a in ville["ambulants"] if a["slug"] == "contrebande")
-    assert dedans(barrieres["cargo"], cale["x"], cale["y"]) and not couronne(barrieres["cargo"], cale["x"], cale["y"])
+    autour = [b["slug"] for b in ville["barrieres"]
+              if b["x"] - 2 <= cale["x"] < b["x"] + b["l"] + 2 and b["y"] - 2 <= cale["y"] < b["y"] + b["h"] + 2]
+    assert not autour, f"la cale de Sven est encore derrière {autour}"
 
 
 def lieux_de_mission():

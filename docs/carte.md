@@ -161,7 +161,6 @@ un paiement.
 | Le pont de La Pointe | `pont` | véhicule | après **m2** |
 | La guérite de la fourrière | `fourriere` | véhicule | payer (`fourriere`) |
 | La cour de l'usine Prévost | `usine` | piéton + véhicule | **de jour** |
-| Le quai du cargo | `cargo` | piéton + véhicule | **de nuit** |
 | L'arche de la foire | `foire` | piéton + véhicule | payer le billet (à la journée) |
 | Le pont de l'aéroport | `pont_aeroport` | piéton + véhicule | après **a01** (pas encore écrite) — la barricade se défonce et s'enjambe, sans étoile, mais le tablier s'arrête au-dessus de l'eau : trente-deux tuiles de chantier et six piles |
 | La guérite de l'aéroport | `aeroport` | piéton + véhicule | après **a02** (pas encore écrite) — ne se force pas |

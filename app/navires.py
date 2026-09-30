@@ -17,9 +17,10 @@ l'eau libre au large et un CHENAL devant l'étrave pour repartir. Il se tient lo
 chaloupes, des ponts, de l'île et de la route du traversier — un traversier qui frôle
 une coque la coule.
 
-**Qui va où** : le porte-conteneurs au plus près de la chaîne du quai du cargo
-(`BARRIERES`, « le quai du cargo ») — le quai avait sa chaîne, son contrebandier et
-sa cale, il lui manquait le cargo ; les chalutiers au plus près de lui ensuite,
+**Qui va où** : le porte-conteneurs au plus près de l'enclos du quai du cargo
+(`carte._Chantier.enclos_du_cargo`, l'enclos où l'on décharge, autour de la cale de
+Sven — la chaîne qui le fermait est retirée depuis le 30 sept. 2026) — le quai avait son
+contrebandier et sa cale, il lui manquait le cargo ; les chalutiers au plus près de lui ensuite,
 espacés, et sans jamais boucher un chenal. Entre deux places aussi proches, la plus
 au nord, puis la plus à l'ouest.
 """
@@ -233,11 +234,14 @@ def amarrer(chantier, ville: dict) -> list[dict]:
     `y`) et son cap (`angle`, en radians, 0 à l'est), plus le `poste` — la tuile de
     quai d'où l'on monte à bord, en pixels elle aussi. Vide s'il n'y a pas de quai
     du cargo — un porte-conteneurs n'a rien à faire ailleurs."""
-    cargo = next((b for b in ville.get("barrieres", []) if b["slug"] == "cargo"), None)
-    if not cargo:
+    # ⚠️ L'ENCLOS, PAS LA CHAÎNE : la chaîne du quai du cargo est retirée (30 sept. 2026), et le
+    # porte-conteneurs mouille toujours devant l'enclos où l'on décharge, autour de la cale de Sven.
+    enclos = chantier.enclos_du_cargo(ville.get("ambulants", []))
+    if not enclos:
         return []
     port = _Port(chantier, ville)
-    repere = (cargo["x"] + cargo["l"] / 2, cargo["y"] + cargo["h"] / 2)
+    ex, ey, el, eh = enclos
+    repere = (ex + el / 2, ey + eh / 2)
     pris: list[dict] = []
     sortie: list[dict] = []
     tuile = carte_mod.TUILE_PX

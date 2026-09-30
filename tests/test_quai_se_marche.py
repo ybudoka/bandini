@@ -9,6 +9,9 @@ pied ». Les deux étaient vrais, et le second avait TROIS causes empilées :
    de quai du contrebandier — et depuis que le quai a avalé la baie, cette
    région faisait **61 × 26 tuiles, eau comprise**. C'est la « clôture » de la
    capture : une chaîne le long du trottoir et en travers du quai.
+   ⚠️ **Depuis le 30 sept. 2026, plus de chaîne du tout** (Martin : « on n'a
+   pas vraiment besoin de l'enclos ») : ses deux juges sont partis avec elle, et
+   `test_barrieres` juge qu'aucune barrière n'entoure plus la cale de Sven.
 2. **Deux semis posaient des bornes d'amarrage sur la même lèvre** — le quai
    (écart 6) et la grève (écart 3) — soit une borne ou un pneu tous les trois
    pas. Une borne ARRÊTE un piéton.
@@ -82,53 +85,6 @@ def test_aucun_quai_ni_terrain_vague_ne_se_referme(ville):
         assert libres, f"plus une tuile de {nom} dans la ville"
         assert not enfermees, (
             f"{len(enfermees)} tuiles de {nom} enfermées par du décor : {enfermees[:6]}")
-
-
-def test_la_barriere_du_cargo_ferme_un_mouillage_pas_un_quai(ville):
-    """Une zone conditionnelle ferme un ENDROIT — l'enclos où l'on décharge —
-    pas tout le port. Et jamais l'apron : on longe le quai par le bord de
-    l'eau, cargo ou pas."""
-    sol = ville["sol"]
-    b = next(b for b in ville["barrieres"] if b["slug"] == "cargo")
-    for y in range(b["y"], b["y"] + b["h"]):
-        for x in range(b["x"], b["x"] + b["l"]):
-            assert sol[y][x] == "Q", (
-                f"la chaîne du cargo passe sur « {carte.LEGENDE[sol[y][x]]['nom']} » en {(x, y)}")
-    assert b["l"] * b["h"] <= 200, f"le mouillage fait {b['l']} x {b['h']} : c'est un quai entier"
-    # Sous la barrière, il reste une rangée de quai qui longe l'eau.
-    dessous = [(x, b["y"] + b["h"]) for x in range(b["x"], b["x"] + b["l"])]
-    assert all(sol[y][x] == "Q" for x, y in dessous), (
-        "la barrière du cargo descend jusqu'au bord : on ne longe plus le quai")
-
-
-def test_le_quai_se_traverse_meme_barriere_fermee(ville):
-    """La barrière ARRÊTE un piéton quand elle est fermée : on la traite comme
-    un mur, et le quai qui la porte doit rester d'un seul tenant — tout ce qu'on
-    atteignait sur ses planches sans elle, on l'atteint encore avec elle."""
-    sol, L, H = ville["sol"], ville["largeur"], ville["hauteur"]
-    b = next(b for b in ville["barrieres"] if b["slug"] == "cargo")
-    ferme = {(x, y) for y in range(b["y"], b["y"] + b["h"]) for x in range(b["x"], b["x"] + b["l"])}
-    solide = {(d["x"], d["y"]) for d in ville["decor"] if d["type"] in carte.DECOR_SOLIDE}
-
-    def planches(depart, bloque):
-        vus, pile = {depart}, [depart]
-        while pile:
-            x, y = pile.pop()
-            for n in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
-                if (0 <= n[0] < L and 0 <= n[1] < H and n not in vus
-                        and sol[n[1]][n[0]] == "Q" and n not in bloque):
-                    vus.add(n)
-                    pile.append(n)
-        return vus
-
-    # Une planche libre juste sous la barrière : on part de là.
-    depart = next((x, b["y"] + b["h"]) for x in range(b["x"], b["x"] + b["l"])
-                  if (x, b["y"] + b["h"]) not in solide)
-    sans = planches(depart, solide) - ferme
-    avec = planches(depart, solide | ferme)
-    coupees = sorted(sans - avec)
-    assert len(sans) > 100, f"le juge ne part pas d'un quai : {len(sans)} planches"
-    assert not coupees, f"la barrière du cargo coupe le quai en deux : {coupees[:6]}"
 
 
 def test_une_seule_main_amarre_le_quai(ville):

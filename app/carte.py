@@ -204,8 +204,13 @@ QUAI_FOND = 3
 #: Une tuile de fond sur combien porte quelque chose.
 PART_CARGAISON = 7
 
-#: Le MOUILLAGE du cargo : la part du quai que ferme sa barriere (`BARRIERES`,
-#: « le quai du cargo »), en demi-largeur et en profondeur depuis la rue.
+#: Le MOUILLAGE du cargo : l'enclos du quai ou l'on decharge, autour de la cale
+#: du contrebandier, en demi-largeur et en profondeur depuis la rue. ⚠️ **PLUS DE
+#: CHAINE AUTOUR** (Martin, 30 sept. 2026 : « on n'a pas vraiment besoin de
+#: l'enclos ») : le jour, elle fermait la cale, et Sven disait « VIENS EN CHAR »
+#: derriere une chaine qu'aucun char ne passait. Le rectangle ne sert plus que de
+#: REPERE au porte-conteneurs (`navires.amarrer`), qui mouille la ou il mouillait.
+#: Ce qui suit raconte la chaine d'avant ; la regle de l'apron reste.
 #: ⚠️ **UN MOUILLAGE, PAS UN QUAI.** La barriere prenait toute la region de quai
 #: ou se tient le contrebandier — et depuis que le quai a avale la baie, cette
 #: region faisait 61 x 26 tuiles, eau comprise. De jour, tout le quai ouest etait
@@ -1480,8 +1485,7 @@ NIDS_DE_POULE: dict = {
 #:
 #:   `ou`        un rectangle de tuiles, resolu par le chantier : le tablier
 #:               d'un `pont`, la `grille` d'un lot, le batiment d'un `lieu`
-#:               garanti (plus `marge` tuiles de cour), le `quai` qui porte un
-#:               ambulant ;
+#:               garanti (plus `marge` tuiles de cour), l'entree de la `foire` ;
 #:   `arrete`    ce qu'elle arrete — `pieton`, `vehicule`, ou les deux. ⚠️ C'est
 #:               la cle qui evite la moitie des pieges : un pont ferme aux
 #:               CHARS mais pas aux JAMBES bloque sans jamais enfermer ;
@@ -1530,9 +1534,9 @@ BARRIERES: tuple[dict, ...] = (
     {"slug": "usine", "nom": "La cour de l'usine Prévost", "ou": {"lieu": "usine", "marge": 2},
      "arrete": ("pieton", "vehicule"), "condition": {"heure": "jour"},
      "forcer": {"etoiles": 1}, "raison": "L’USINE EST FERMÉE LA NUIT", "decor": "chaine"},
-    {"slug": "cargo", "nom": "Le quai du cargo", "ou": {"quai": "contrebande"},
-     "arrete": ("pieton", "vehicule"), "condition": {"heure": "nuit"},
-     "forcer": {"etoiles": 1}, "raison": "LE QUAI DÉCHARGE LA NUIT", "decor": "chaine"},
+    # ⚠️ Le quai du cargo n'a plus sa chaine (Martin, 30 sept. 2026) : la cale de
+    # Sven s'y tenait derriere, et on ne pouvait pas y venir en char le jour
+    # (`MOUILLAGE`, `_Chantier.enclos_du_cargo`).
     # ⚠️ **L'ARCHE DE LA FOIRE** — Martin : « une entree avec une arche, et ca
     # doit couter quelque chose d'entrer ». Le billet vaut pour la JOURNEE
     # (`B.partie.billets`), et on ressort librement (`dedans` : le cote nord de
@@ -6635,6 +6639,33 @@ class _Chantier:
             poses.append((x, y))
         return [{"x": x, "y": y} for x, y in sorted(poses)]
 
+    def enclos_du_cargo(self, ambulants: list[dict]) -> tuple[int, int, int, int] | None:
+        """L'enclos ou l'on decharge le cargo, autour de la cale du contrebandier :
+        (x, y, largeur, hauteur) en tuiles, ou None sans cale. ⚠️ Une chaine le
+        fermait (la barriere `cargo`, retiree le 30 sept. 2026) ; il ne sert plus
+        que de repere au porte-conteneurs (`navires.amarrer`), et c'est pour ca
+        qu'il se calcule toujours de la meme facon."""
+        a = next((a for a in ambulants if a["slug"] == "contrebande"), None)
+        if a is None:
+            return None
+        g, rx, ry, rl, rh = next((g, rx, ry, rl, rh) for g, rx, ry, rl, rh in self.regions()
+                                 if g in QUAIS and rx <= a["x"] < rx + rl
+                                 and ry <= a["y"] < ry + rh)
+        # ⚠️ Le tablier seulement : un quai sur l'eau porte la baie sous
+        # lui, et une chaine tendue dans la baie ne ferme rien.
+        tablier = QUAI_TABLIER if g == "j" else rh
+        # ⚠️ **LA CHAINE ENTOURE LA CALE, elle ne la coupe pas.** La
+        # profondeur ordinaire suffisait tant que la cale se posait a
+        # quatre tuiles du bord ; le 17 sept. 2026 elle s'est posee a
+        # cinq, pile sur la derniere rangee de l'enceinte — la cale
+        # etait SUR la chaine, et `test_barrieres` l'a dit. L'enceinte
+        # descend donc avec elle, jusqu'a ce que le tablier permet.
+        fond = max(MOUILLAGE["profondeur"], a["y"] - ry + 2)
+        profondeur = min(fond, tablier - QUAI_APRON - 1)
+        x0 = max(rx, a["x"] - MOUILLAGE["demi_largeur"])
+        x1 = min(rx + rl, a["x"] + MOUILLAGE["demi_largeur"] + 1)
+        return (x0, ry, x1 - x0, profondeur)
+
     def barrieres(self, ambulants: list[dict], ponts: list[dict]) -> list[dict]:
         """Chaque barriere de `BARRIERES`, resolue en rectangle de tuiles."""
         sortie = []
@@ -6658,25 +6689,6 @@ class _Chantier:
                 if not self.foire_entree:
                     continue
                 rect = self.foire_entree
-            elif "quai" in ou:
-                a = next(a for a in ambulants if a["slug"] == ou["quai"])
-                g, rx, ry, rl, rh = next((g, rx, ry, rl, rh) for g, rx, ry, rl, rh in self.regions()
-                                         if g in QUAIS and rx <= a["x"] < rx + rl
-                                         and ry <= a["y"] < ry + rh)
-                # ⚠️ Le tablier seulement : un quai sur l'eau porte la baie sous
-                # lui, et une chaine tendue dans la baie ne ferme rien.
-                tablier = QUAI_TABLIER if g == "j" else rh
-                # ⚠️ **LA CHAINE ENTOURE LA CALE, elle ne la coupe pas.** La
-                # profondeur ordinaire suffisait tant que la cale se posait a
-                # quatre tuiles du bord ; le 17 sept. 2026 elle s'est posee a
-                # cinq, pile sur la derniere rangee de l'enceinte — la cale
-                # etait SUR la chaine, et `test_barrieres` l'a dit. L'enceinte
-                # descend donc avec elle, jusqu'a ce que le tablier permet.
-                fond = max(MOUILLAGE["profondeur"], a["y"] - ry + 2)
-                profondeur = min(fond, tablier - QUAI_APRON - 1)
-                x0 = max(rx, a["x"] - MOUILLAGE["demi_largeur"])
-                x1 = min(rx + rl, a["x"] + MOUILLAGE["demi_largeur"] + 1)
-                rect = (x0, ry, x1 - x0, profondeur)
             else:  # pragma: no cover - garde-fou de relecture de la fiche
                 raise ValueError(f"barriere sans lieu : {fiche['slug']}")
             x, y, largeur, hauteur = rect
