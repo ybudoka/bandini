@@ -523,8 +523,9 @@ const Police = (function () {
         a.vx = 0; a.vy = 0; Entites.regarder(a, j.x - a.x, j.y - a.y);
         // Un char arrete ne protege de rien : il t'en sort. ⚠️ Sauf SOUS LE TOIT d'un
         // garage : le rideau est entre vous deux, et il ne passe pas la main au travers.
+        // ⚠️ Ni D'UNE COQUE : a la nage, on ne sort personne d'un bateau — c'est la vedette qui l'arraisonne.
         if (!triche('pasArrete') && d < 30 && Math.abs(j.dansVehicule.vitesse) < 0.5 && !j.intouchable && !B.menu
-            && !Monde.rideauDe(j.dansVehicule)) { Vehicules.descendre(j, true); Hud.message('SORS DU CHAR !'); }
+            && !Monde.rideauDe(j.dansVehicule) && !j.dansVehicule.def.eau) { Vehicules.descendre(j, true); Hud.message('SORS DU CHAR !'); }
         return true;
       }
       suivre(a, but, v.policier);
@@ -833,6 +834,16 @@ const Police = (function () {
     return true;
   }
 
+  /** Y a-t-il de l'eau sur la ligne de (x0, y0) a (x1, y1) ? Un pas de 8 px. */
+  function eauEntre(x0, y0, x1, y1) {
+    const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 8));
+    for (let i = 0; i <= n; i++) {
+      const x = x0 + (x1 - x0) * i / n, y = y0 + (y1 - y0) * i / n;
+      if (Monde.estEau(Math.floor(x / TT), Math.floor(y / TT))) return true;
+    }
+    return false;
+  }
+
   /** Les commandes d'une auto de patrouille. Elle suit les RAILS de la ville
       vers toi (feux et stops brules, sortie choisie vers toi a chaque
       croisement) et ne quitte les rails pour te FONCER dessus que quand elle
@@ -861,7 +872,8 @@ const Police = (function () {
     if (eq.abord <= 0) { v.surRails = false; rappeler(v, p); return garee(v); }
     if (eq.dehors && attendUnEquipier(v, p)) { v.surRails = false; return garee(v); }
     // De pres et a vue : on quitte les rails et on fonce. Coince (un mur) : on y retourne.
-    const direct = d < 140 && Monde.ligneLibre(v.x, v.y, cible.x, cible.y);
+    // ⚠️ Ni a travers l'eau : `ligneLibre` voit par-dessus la baie, et l'auto fonçait s'y noyer (les bateaux, vague 3).
+    const direct = d < 140 && Monde.ligneLibre(v.x, v.y, cible.x, cible.y) && !eauEntre(v.x, v.y, cible.x, cible.y);
     const coince = !v.surRails && (v.immobileT || 0) > 45;
     if (!direct || coince) {
       if (!v.surRails) { v.cible = null; v.sortie = null; v.immobileT = 0; }
@@ -1030,6 +1042,7 @@ const Police = (function () {
       return;
     }
     if (B.t % BARRAGE_TOUTES_LES !== 0 || !v || Math.abs(v.vitesse) < 1) return;
+    if (v.def.eau) return;                  // une coque : pas de barrage de rue, c'est la vedette qui la prend
     if (existants.some(function (b) { return dist2(b.x, b.y, j.x, j.y) < 500 * 500; })) return;
     poserBarrage(v);
   }
@@ -1196,5 +1209,6 @@ const Police = (function () {
            estStool, leStool, prixDuStool, majStools, appelDuStool, acheterLeStool, onNeTeReconnaitPlus,
            creerAgent, agents, autos, gere, garder, seuilDeReperage, commandes, peuplerAgents, peuplerAutos, equipageDe: equipage, abandonnee,
            agentsVoulus, standingIci,
+           paletteAgent: function () { return Object.assign({}, PALETTE_AGENT); },
            helico, majHelico, majBruitHelico, taireHelico, bruitHelico, dessinerHelico, lampeHelico, barrages, poserBarrage, maj };
 })();

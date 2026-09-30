@@ -106,6 +106,39 @@ juge d'octobre existant).
 + `uv run ruff check .`, chaque juge neuf vu rougir règle retirée ; commit `fix:`, cherry-pick sur `dev`,
 `merge --ff-only`. La ligne du plan dit « ✅ vague 1 livrée ». Martin essaie avant la vague 2.
 
+## Plan des vagues 3 et 4
+
+> Martin, 30 sept. 2026 : les deux d'un coup, pour que la police ne perde jamais son moyen de t'arrêter sur l'eau.
+
+**Vague 3.** (1) `Vehicules.descendre` : d'une coque, pas de seuil de vitesse (on saute) ; aucun côté au sec —
+**plongeon** : le joueur à l'eau par le travers, un remous, la coque garde son erre et n'est pas « laissée ».
+Juge : chaloupe à 2 px/image au plein large → descendre rend vrai, le joueur est sur l'eau, la coque file encore
+(> 1,5 px/image) et `laisse` est faux. (2) `Police.gere`, branche « dans un char » : jamais « SORS DU CHAR ! »
+d'une coque. Juge : un agent en poursuite collé à la chaloupe arrêtée, 60 images → le joueur est encore à bord.
+(3) `Police.commandes` : ne fonce pas quand la ligne jusqu'à la cible passe sur l'eau (`eauEntre`, un pas de
+8 px) — elle garde les rails. Juge : une auto-patrouille sur une rue du quai, le joueur en chaloupe à moins de
+140 px et à vue → `'rails'`. (4) `Police.majBarrages` : aucun barrage tant que le joueur est dans une coque.
+Juge : trois étoiles, chaloupe lancée, `majBarrages` à l'heure → aucun barrage.
+
+**Vague 4 — la vedette.** (1) Une fiche `vedette` (`app/vehicules.py`) : coque de police, sirène, 30 × 12 comme
+la chaloupe, plus vive (3,6 ; 0,03), `frequence: 0`. Son sprite : la chaloupe à console, coque bleu nuit, bande
+blanche, rampe de gyrophares rouge et bleu (`gyrophares`, comme l'auto-patrouille), un agent à la console
+(`cavalierDe`). (2) `static/js/vedette.js`, le module `Vedette` : `voulues()` (0 hors d'une coque, 1 dès une
+étoile, 2 dès trois), `maj()` (naître hors champ sur l'eau jointe au joueur, s'effacer hors champ quand on n'en
+veut plus, arraisonner), `commandes(v)` (le pilote), `champ()` (les distances sur l'eau depuis le joueur, un
+parcours en largeur borné à 60 tuiles, refait chaque demi-seconde). Le pilote suit la pente du champ ; à vue et
+sur l'eau jusqu'au joueur, il vise la coque ; de près, la machine arrière pour se mettre bord à bord. Conduit par
+`conducteur: 'vedette'` — pas `'police'`, que `Police.autos` compte et que `commandes` mène sur les rails.
+(3) **Arraisonner** : vedette bord à bord (écart ≤ demi-largeurs + 18 px), coque du joueur sous 0,5 px/image,
+recherché, ni triche ni intouchable ni menu → « ARRAISONNÉ ! », le joueur descend (à l'eau), `arrestation`.
+Juges : pas de vedette à pied ni sans étoile ; une étoile en chaloupe → une vedette naît hors champ sur l'eau
+jointe ; trois → deux ; elle rejoint une chaloupe arrêtée à 25 tuiles par l'eau en moins de 20 s sans jamais
+toucher la terre ; bord à bord et arrêté → arrêté ; en fuite (vitesse) → pas arrêté ; plus d'étoile → elle
+s'efface hors champ. Le sprite : les juges du parc (`test_poses_vehicules`, `test_vehicules`) le mesurent.
+
+**Atterrir** : juges neufs + police, conduite, bateaux, vague 1-2, trafic, poses, définitions, ville_vit ;
+`ruff` ; la ligne du plan « ✅ vagues 3 et 4 livrées ».
+
 ## Notes
 
 - **Vague 1 livrée le 30 sept. 2026 — la conduite.** Deux nombres dans `PHYSIQUE` (`app/vehicules.py`) :
@@ -138,4 +171,31 @@ juge d'octobre existant).
   même clignotant à l'image finale (arrêt le plus long 121 images, pour un cycle de 960). Sur 40 graines, base
   contre branche : même pire arrêt (294), et seule la 23 change ; la base a déjà trois graines sans trafic.
   « Qui roule » se lit maintenant sur le dernier quart de cycle (240 images), plus sur la dernière image.
+- **Vagues 3 et 4 livrées ensemble le 30 sept. 2026** (Martin : pour que la police ne perde jamais son moyen de
+  t'arrêter sur l'eau). **Le plongeon** : `Vehicules.descendre` d'une coque n'a plus de seuil de vitesse ; sans
+  côté au sec, le joueur tombe à l'eau par le travers (la nage fait le remous et le bruit), la coque file sur son
+  erre et n'est pas « laissée ». **La police de terre** : un agent à la nage ne sort plus personne d'une coque ;
+  l'auto-patrouille ne fonce plus quand la ligne jusqu'à toi passe sur l'eau (`eauEntre`, un pas de 8 px) et garde
+  ses rails ; pas de barrage de rue pour une coque.
+- **La vedette** : la fiche `vedette` (30 × 12, 3,7 ; 0,03, sirène, police, `frequence: 0`) ; le sprite, la
+  chaloupe à console en bleu nuit avec sa bande blanche, un moteur intérieur (le hors-bord débordait de
+  l'empreinte, une tolérance réservée à la chaloupe), un agent à la console, la rampe rouge et bleue sur un arceau
+  AU-DESSUS de lui (plus bas, sa tête la cachait — vu à la capture). Le module `static/js/vedette.js` : une dès
+  une étoile, deux dès trois ; le champ des distances par l'eau (parcours en largeur, 60 tuiles, chaque demi-
+  seconde) ; la naissance hors champ entre 20 et 34 pas d'eau ; le pilote (pente du champ, visée directe à vue,
+  machine arrière bord à bord, recul si coincée) ; l'arraisonnement (« ARRAISONNÉ ! », le joueur descend,
+  `Missions.arrestation(null)`) ; l'effacement hors champ. `conducteur: 'vedette'`, pas `'police'`.
+- **Les juges** : `tests/test_bateaux_police_js.py`, neuf. Les quatre de la vague 3, vus rougir avant leur règle
+  (celui des barrages avec une auto témoin). Ceux de la vedette mordent aussi par mutation : sans le garde de
+  vitesse, « arraisonné en pleine fuite » ; un pilote immobile, « pas arraisonné en 20 s ». Le parc complet
+  (`test_vehicules`) compte la vedette ; le juge de l'empreinte la mesure sans tolérance.
+- ⚠️ `docs/architecture.md` n'avait pas les juges des vagues 1 et 2 : `test_carte_du_depot` rougissait sur `dev`.
+  Ajoutés (la session des meubles avait déjà posé `test_bateaux_conduite_js.py`).
+- **La relecture** (un relecteur neuf) a trouvé deux trous, corrigés test d'abord : la vedette chassait et
+  arraisonnait jusqu'au refuge de l'île (`Police.auRefuge`, comme toute la police) ; et on la volait sans crime, son
+  agent évaporé — voler la vedette est maintenant un carjacking, et son agent tombe à l'eau et te court après.
+- ⚠️ **Laissés pour plus tard (mineurs)** : le plongeon suit toujours le travers tribord, même quand c'est un mur
+  (dans un canal bâti ; l'ancien repli avait le même défaut) ; une vedette sortie du champ (au-delà de 60 tuiles)
+  file plein est au lieu de garder son cap ; une vedette dont on ne veut plus garde sa sirène jusqu'à s'effacer ;
+  le parcours du champ alloue ses quatre directions à chaque tuile.
 

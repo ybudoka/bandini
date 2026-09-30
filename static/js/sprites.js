@@ -2297,6 +2297,25 @@ SPRITES.luxe_vus = enVolume(MACHINE_LUXE_VUS, 32, 56, SPRITES.luxe.pal);
 SPRITES.luxe.variantes = { luxe: 3, luxe_vus: 2 };
 SPRITES.bateau_console = assisDedans(MACHINE_BATEAU_CONSOLE, 30, 48, 'volant', SPRITES.bateau.pal);
 SPRITES.bateau.variantes = { bateau: 3, bateau_console: 2 };
+// ⚠️ LA VEDETTE DE POLICE (les bateaux ne sont pas des chars, vague 4) : la chaloupe a console, coque bleu
+// nuit, une bande blanche au plat-bord, et sur le pare-brise une rampe rouge et bleue qui tourne avec la
+// sirene (`gyrophares`, comme l'auto-patrouille). Un agent a la console (`Vehicules.cavalierDe`).
+// ⚠️ Un moteur INTERIEUR, sous un capot de poupe : le hors-bord de la chaloupe depasse de sa coque (un debord
+// tolere pour elle seule, `DEBORDS_TOLERES`), celui-ci reste dans son empreinte.
+const MACHINE_VEDETTE = Object.assign({}, MACHINE_BATEAU_CONSOLE, {
+  pieces: MACHINE_BATEAU_CONSOLE.pieces.filter(function (p) { return !(p[1][0] < -15 && (p[5] === 'k' || p[3] === 'M')); }).concat([
+    ['bloc', [-14.2, -10.6], [-2.6, 2.6], [3.4, 5.4], 'k', 'D', 'D', 0.2],                   // le capot du moteur
+    ['tube', [-13.6, 5.3, 4.7], [-2.0, 5.9, 4.7], 'w', 0.6], ['tube', [-2.0, 5.9, 4.7], [8.0, 5.4, 4.7], 'w', 0.6],
+    ['tube', [-13.6, -5.3, 4.7], [-2.0, -5.9, 4.7], 'w', 0.6], ['tube', [-2.0, -5.9, 4.7], [8.0, -5.4, 4.7], 'w', 0.6],
+    // L'arceau monte AU-DESSUS de l'agent : plus bas, sa tete cachait la rampe.
+    ['tube', [-2.6, -3.0, 5.4], [-4.4, -3.0, 13.4], 'D', 0.4], ['tube', [-2.6, 3.0, 5.4], [-4.4, 3.0, 13.4], 'D', 0.4],
+    ['bloc', [-5.6, -3.2], [-3.4, -0.1], [13.4, 14.8], 'a', 'a', 'a', 0.2],                  // la rampe : rouge,
+    ['bloc', [-5.6, -3.2], [0.1, 3.4], [13.4, 14.8], 'b', 'b', 'b', 0.2],                    // et bleu
+  ]),
+});
+SPRITES.vedette = assisDedans(MACHINE_VEDETTE, 30, 48, 'volant', Object.assign({}, SPRITES.bateau.pal,
+  { c: '#1b2a4a', r: '#10182c', w: '#ecf0f1', u: '#3a4250', a: '#7a2320', b: '#233f7a' }));
+SPRITES.vedette.gyrophares = { quand: 'sirene', a: ['#ff4a3d', '#7a2320'], b: ['#4a9bff', '#233f7a'] };
 
 /* --- DEUX BATEAUX DE PLUS : le chalutier et le porte-conteneurs ------------------
 

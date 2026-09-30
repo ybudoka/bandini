@@ -352,6 +352,13 @@ CATALOGUE: list[Vehicule] = [
     _v("porte_conteneurs", "Porte-conteneurs", "bateau", 160, 40, 1.9, 0.005, 96, 1500, 2, 5000, 0.0,
        ["#1f3a5f", "#7a1f1f", "#2b2b30", "#1d5c4a"], "porte_conteneurs", eau=True, masse=12.0,
        cercles=5, klaxon="corne"),
+    # --- La vedette de police (les bateaux ne sont pas des chars, vague 4) -------
+    # ⚠️ Sur l'eau, la police ne nage pas apres toi et ne fonce pas d'un quai : elle
+    # sort sa VEDETTE (`static/js/vedette.js`). La coque de la chaloupe, plus vive
+    # qu'elle (sinon on la seme au premier coup de gaz), sa sirene, et `frequence: 0`
+    # comme toute coque — c'est la poursuite qui la fait naitre, pas la rue.
+    _v("vedette", "Vedette de police", "bateau", 30, 12, 3.7, 0.03, 40, 260, 2, 2500, 0.0,
+       ["#1b2a4a"], "vedette", eau=True, police=True, sirene=True, masse=1.5, cercles=3),
 ]
 
 CLASSES = ("auto", "moto", "velo", "camion", "bateau")

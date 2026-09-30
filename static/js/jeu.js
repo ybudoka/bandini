@@ -101,7 +101,7 @@ const Jeu = (function () {
     B.mission = null; B.defi = null; B.epreuve = null; B.conduite = null; B.rue = null; B.cinema = null; B.ouverture = null; B.scene = null; B.finEnAttente = null; B.generiqueEnAttente = null; B.videopoker = null; B.machineASous = null; B.tables = null; B.orignal = null;
     B.sonnerie = null;                       // un telephone qui sonnait dans la partie d'avant ne sonne pas dans celle-ci
     B.abribusServis = {};                    // les abribus qu'un autobus vient de servir (Autobus)
-    Traversier.oublier(); Navette.oublier();                    // rien a bord, la carte neuve n'a pas de pont pose
+    Traversier.oublier(); Navette.oublier(); Vedette.oublier();                    // rien a bord, la carte neuve n'a pas de pont pose
     Halloween.oublier();                     // les enfants d'une autre partie
     Fetes.oublier();                         // la tuile du tronc du sapin est rendue
     Neige.oublier();                         // la rue d'une partie rechargee est blanche
@@ -1159,6 +1159,7 @@ const Jeu = (function () {
         pas('bornes', RueDesSaisons.majSon);   // l'eau des bornes ouvertes et les enfants qui crient (vague 4c)
         pas('brouillard', Brouillard.maj);
         pas('police', Police.maj);
+        pas('vedette', Vedette.maj);       // sur l'eau, la vedette de police (les bateaux, vague 4)
         pas('incendies', Incendies.maj);
         pas('frenesies', Frenesies.maj);   // l'icône qu'on prend exprès, le chrono, le compte
         pas('suite', Suite.maj);               // la suite du paquet : redemandée si elle a raté
@@ -1599,7 +1600,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Entites: Entites, Combat: Combat, Techniques: Techniques, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Train: Train, Navette: Navette, Neige: Neige, Pluie: Pluie, Derapage: Derapage, Naufrage: Naufrage, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, RueDesSaisons: RueDesSaisons, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Territoires: Territoires, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Galeries: Galeries, Fetes: Fetes, Halloween: Halloween, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Collections: Collections, Suite: Suite, Decoration: Decoration, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Photos: Photos, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, SurPlace: SurPlace, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Train: Train, Navette: Navette, Neige: Neige, Pluie: Pluie, Derapage: Derapage, Naufrage: Naufrage, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, RueDesSaisons: RueDesSaisons, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Territoires: Territoires, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Galeries: Galeries, Fetes: Fetes, Halloween: Halloween, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Collections: Collections, Suite: Suite, Decoration: Decoration, Interactions: Interactions, Police: Police, Vedette: Vedette, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Photos: Photos, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, SurPlace: SurPlace, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, PORTRAITS: PORTRAITS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,

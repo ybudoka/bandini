@@ -1896,6 +1896,12 @@ const Vehicules = (function () {
       }
       v.pilote = null;
       crime = 'carjacking'; vu = true;
+    } else if (v.conducteur === 'vedette') {
+      // ⚠️ LA VEDETTE DE POLICE (les bateaux, vague 4) : son agent tombe a l'eau et te court apres a la nage —
+      // il ne s'evapore pas —, et voler la police, c'est un carjacking.
+      Police.creerAgent(v.x + Math.cos(v.angle + Math.PI / 2) * 14, v.y + Math.sin(v.angle + Math.PI / 2) * 14, 'poursuit');
+      v.pilote = null;
+      crime = 'carjacking'; vu = true;
     } else if (v.conducteur === null && !v.vole && !v.aToi) {
       // ⚠️ `aToi` : un char PAYE devant un guichet. Sans lui, racheter le sien
       // a la fourriere puis monter dedans etait un `vol_vehicule` — et le
@@ -1965,7 +1971,9 @@ const Vehicules = (function () {
     if (j && j.passager) return Autobus.descendre(j, force);
     const v = j.dansVehicule;
     if (!v) return false;
-    if (!force && Math.abs(v.vitesse) > 1.2) { v.vitesse *= 0.8; return false; }
+    // ⚠️ D'UNE COQUE, ON SAUTE (les bateaux, vague 3) : pas de seuil de vitesse — la coque garde son erre.
+    const coque = !!v.def.eau;
+    if (!force && !coque && Math.abs(v.vitesse) > 1.2) { v.vitesse *= 0.8; return false; }
     // ⚠️ SOUS LE TOIT D'UN GARAGE, les portieres donnent sur des murs : on ne descend
     // pas (on recule d'abord), et si on y est force — vendu chez Ti-Guy, une epave —
     // on ressort a pied par-dessous le rideau, dans la baie.
@@ -1978,7 +1986,11 @@ const Vehicules = (function () {
       const x = v.x + Math.cos(a) * (v.def.largeur / 2 + 8), y = v.y + Math.sin(a) * (v.def.largeur / 2 + 8);
       if (!Monde.bloque(Math.floor(x / TT), Math.floor(y / TT), Monde.MASQUE_PIETON)) { j.x = x; j.y = y; pose = true; break; }
     }
-    if (!pose) { j.x = v.x; j.y = v.y + v.def.largeur; }
+    // ⚠️ AU LARGE, ON PLONGE : aucun cote au sec, le joueur tombe a l'eau par le travers, loin de la coque
+    // (la nage fait le remous et le bruit). La coque file sur son erre ; personne ne l'a « garee ».
+    const plonge = !pose && coque;
+    if (plonge) { j.x = v.x + Math.cos(cotes[0]) * (v.def.largeur / 2 + 10); j.y = v.y + Math.sin(cotes[0]) * (v.def.largeur / 2 + 10); }
+    else if (!pose) { j.x = v.x; j.y = v.y + v.def.largeur; }
     v.conducteur = null;
     // ⚠️ UNE EPAVE RESTE UNE EPAVE. `exploser` et `plier` posent l'epave PUIS
     // font descendre celui qui etait au volant : ecrire `stationne` ici rendait
@@ -1990,7 +2002,7 @@ const Vehicules = (function () {
       // que ceux-la — remorquer le trafic viderait les rues sans que personne
       // comprenne pourquoi, et le juge du trafic le verrait avant le joueur.
       // Une epave, elle, n'est garee par personne.
-      v.laisse = true;
+      v.laisse = !plonge;
     }
     j.dansVehicule = null; j.dessine = true;
     // ⚠️ Le meme appui ne doit pas nous faire REMONTER dans la meme image :
@@ -3276,6 +3288,7 @@ const Vehicules = (function () {
       const x0 = v.x, y0 = v.y;
       if (v.conducteur === j) majJoueur(j);
       else if (v.conducteur === 'trafic') majConducteur(v);
+      else if (v.conducteur === 'vedette') majPhysique(v, Vedette.commandes(v));   // la vedette de police, sur l'eau
       else if (v.conducteur === 'ligne') Autobus.conduire(v);
       else if (v.conducteur === 'police') { const c = Police.commandes(v); if (c === 'rails') majConducteur(v); else majPhysique(v, c); }
       else if (v.conducteur === 'derby') majPhysique(v, Conduite.commandesDerby(v));   // un bazou du derby
@@ -4234,7 +4247,7 @@ const Vehicules = (function () {
     // selle) et on ne voit plus qui la mene — comme dans une berline.
     if (!def || !def.selle || v.etat === 'epave' || v.plie) return null;
     if (v.conducteur === B.joueur) return B.joueur.swaps || null;
-    if (v.conducteur !== 'trafic') return null;
+    if (v.conducteur !== 'trafic' && v.conducteur !== 'vedette') return null;    // la vedette : son agent a la console
     return (v.pilote && v.pilote.swaps) || null;
   }
 

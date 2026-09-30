@@ -197,6 +197,7 @@ sous-sol (`code_voute`, le code du terminal piraté, v03).
 | `bateau` | Chaloupe | bateau | 4 | Hors trafic : amarrée contre une rive bâtie (`carte.amarrages`). Deux silhouettes, la barre et la console. |
 | `chalutier` | Chalutier | bateau | 3 | Hors trafic : deux à quai autour du cargo (`navires.py`). Plus lent et plus lourd que la chaloupe ; la corne. |
 | `porte_conteneurs` | Porte-conteneurs | bateau | 2 | Hors trafic : un seul, au quai du cargo (`navires.py`). Dix tuiles, le plus lourd du parc (la pelleteuse du chantier, hors trafic elle aussi, la bat en lenteur) ; la corne. |
+| `vedette` | Vedette de police | bateau | 2 | Hors trafic : la poursuite la fait naître, hors champ sur l'eau, quand on est recherché dans une coque (`vedette.js`). La coque de la chaloupe, plus vive qu'elle, bleu nuit, la rampe rouge et bleue sur son arceau ; elle arraisonne bord à bord. |
 
 ---
 
