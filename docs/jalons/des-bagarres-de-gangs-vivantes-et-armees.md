@@ -121,8 +121,17 @@ Et à chaque vague : une **capture** de la rixe (Chromium), et la jouer au banc.
 - **Huit places, les libres seulement** (`places`) : le joueur de départ est contre la façade du Terminus, et la
   place du troisième tombait dans le mur. Chacun prend le milieu de sa part : devant un mur, ils s'ouvrent en
   éventail (la capture du 30 sept.).
-- **L'allié de m98 passe par le cerveau** (la fiche lui laissait sa branche) : planté au métronome, il frappait
-  où les Cravates n'étaient plus — 18 coups au lieu de 47 au banc du siège ; 32 coups et 4 couchés après.
+- **Coincé, il frappe d'où il est** (`coince_images`) : à portée, loin de sa place, et plus moyen d'en approcher
+  (des corps la tiennent). Au siège de m98, six alliés plantés sur le cercle autour de toi : les Cravates n'ont
+  passé que 36 images en plein geste de tout le siège (450 avec la règle). Et **une cible qui bouge** se frappe à
+  portée (`bouge_px`) : sa place bouge avec elle.
+- **Seul, il garde son côté** : le premier du rang garde la place d'où il arrive, les autres s'étalent à partir
+  de lui (réparti au milieu des places libres, un homme seul recevait le côté opposé).
+- **L'allié de m98 garde sa branche** (essayé par le cerveau, puis défait : il restait coincé derrière toi), mais
+  frappe à **son délai à lui** au lieu du métronome `e.t % 38` (l'instant exact tombait hors de portée d'un
+  Cravate qui bouge), et **laisse filer les fuyards** (`cibleDeLAllie` : celui qui se bat d'abord ; au banc, un
+  allié courait 460 images après un fuyard aussi rapide que lui). Le siège : 42 coups et 5 couchés (47 et 5 sur
+  `dev`, 18 et 2 au pire du chemin).
 - **Deux juges lisent mieux** : l'encerclement à la moyenne de l'écart (89° avec, 23° sans ; un pas de côté
   rapproche deux hommes un instant, c'est voulu), le regard face au rival DU MOMENT (l'ancien couché).
 - **m3 passe à la graine 1** : semer le client de la police tenait par la graine (la 3 et la 4 ratent aussi sur
