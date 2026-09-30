@@ -154,6 +154,10 @@ class Personnage(TypedDict):
     # ABSENT L'HIVER : il n'est pas à sa place tant que la neige tient, et ses missions attendent (le
     # Bonimenteur et sa foire, fermée pour l'hiver — docs/jalons/la-foire-fermee-l-hiver.md).
     absent_l_hiver: NotRequired[bool]
+    # DANS LA COUR clôturée sur laquelle donne sa porte, pas sur le trottoir d'en face (la fourrière : sa
+    # guérite donne sur le lot, derrière le grillage — Gilles, le gardien, et Ti-Loup, qui y achète les épaves).
+    # Retour de Martin (30 sept. 2026) : ils se tenaient dehors, collés à Gros-Boulon (`histoire.js::placeDansLaCour`).
+    dans_la_cour: NotRequired[bool]
     # Son repos à lui, au lieu de `REPOS` : `(avant, après)`, avant et après `REPOS["apres"]`.
     # ⚠️ Pour qui vit LOIN du Faubourg — « le Faubourg est tranquille », dit sur l'île, ment.
     repos: NotRequired[tuple[str, str]]
@@ -256,7 +260,7 @@ PERSONNAGES: list[Personnage] = [
      "heler": "Toi, viens voir."},
     {"slug": "gilles", "nom": "Gilles Thériault", "genre": "homme", "voix": "Patrick - Clear, Natural and Polished",
      "couleurs": {"c": "#5a6a4a", "h": "#c8c8c8", "s": "#c98d66", "p": "#2a2a2a"}, "ou": "porte:fourriere",
-     "heler": "Hé, le jeune!"},
+     "heler": "Hé, le jeune!", "dans_la_cour": True},
     {"slug": "bonimenteur", "nom": "Marcel « Le Bonimenteur » Dumouchel", "genre": "homme",
      "voix": "Léo - Français québécois ",
      "couleurs": {"c": "#d4a017", "h": "#1a1a1a", "s": "#e8b088", "p": "#1a1a3a"}, "ou": "foire",
@@ -392,7 +396,7 @@ PERSONNAGES: list[Personnage] = [
     # permises (Martin, 25 sept. 2026), en v3 à écouter.
     {"slug": "tiloup", "nom": "Ti-Loup Ferraille", "genre": "homme", "voix": "Chris - Charming, Down-to-Earth",
      "couleurs": {"c": "#6a5a3a", "h": "#3a2a1a", "s": "#c98d66", "p": "#2a2a2a"}, "ou": "porte:fourriere",
-     "heler": "Hé, le jeune.", "arrive_apres": "s01",
+     "heler": "Hé, le jeune.", "arrive_apres": "s01", "dans_la_cour": True,
      "repos": ("Pas de ferraille?", "T'as une épave? Je paie comptant, pis j'oublie vite.")},
     {"slug": "boulon", "nom": "Marcel « Gros-Boulon » Boulanger", "genre": "homme", "voix": "Roger - Laid-Back, Casual, Resonant",
      "couleurs": {"c": "#3a4a5a", "h": "#2a2a2a", "s": "#d9a07a", "p": "#2a3a4a"}, "ou": "porte:fourriere",

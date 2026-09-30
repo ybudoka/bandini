@@ -11,7 +11,7 @@
 |---|---|
 | Slug | `gilles` |
 | Rôle | le gardien du lot ; prend sa retraite bientôt |
-| Où | à la guérite (`porte:fourriere`) |
+| Où | à la guérite (`porte:fourriere`), DANS la cour, le long de la guérite (`dans_la_cour`) |
 | Voix | **Patrick — Clear, Natural and Polished** (partagée avec le Dr Lachance : jamais dans le même dialogue) |
 | Bulle | « Hé, le jeune! » |
 | Couleurs | uniforme olive, cheveux gris, pantalon foncé |

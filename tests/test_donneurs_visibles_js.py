@@ -119,7 +119,12 @@ def test_deux_donneurs_ne_se_tiennent_jamais_sur_la_meme_tuile(banc):
     Ti-Paul ». Ti-Paul et Xavier attendent à la même porte, et `placeVisible` les posait sur le MÊME
     pixel : deux bulles l'une sur l'autre, un seul bonhomme. Ti-Guy, Mo et Fern étaient trois sur la
     même tuile du terminus. Ici, à la naissance de la partie, et encore après le départ de Ti-Guy
-    (m1 faite : Mo et Fern se partagent le terminus sans lui)."""
+    (m1 faite : Mo et Fern se partagent le terminus sans lui).
+
+    ⚠️ Et une fois TOUT LE MONDE ARRIVÉ (30 sept. 2026, capture de la fourrière) : le juge ne regardait
+    que la naissance, et Ti-Loup et Gros-Boulon n'arrivent qu'après s01 et s02 (`arrive_apres`). Gros-
+    Boulon, troisième à la porte de la fourrière, avait épuisé ses essais (la cour est de l'asphalte,
+    pas du trottoir) et retombait sur la première place — celle de Gilles, au pixel près."""
     r = banc("""function (L, o) {
         function places() {
           return L.B.defs.personnages.filter(function (q) { return q.ou.indexOf('porte:') === 0; })
@@ -131,7 +136,11 @@ def test_deux_donneurs_ne_se_tiennent_jamais_sur_la_meme_tuile(banc):
         L.B.entites.filter(function (e) { return e.type === 'pieton' && e.personnage; }).forEach(L.Entites.retirer);
         L.B.partie.missionsFaites.m1 = true;
         L.Histoire.creerDonneurs();
-        return { depart: depart, apres_m1: places() };
+        const apres_m1 = places();
+        // Leurs missions d'arrivée faites, la partie rechargée : c'est au chargement qu'ils se posent.
+        L.B.defs.personnages.forEach(function (p) { if (p.arrive_apres) L.B.partie.missionsFaites[p.arrive_apres] = 1; });
+        L.Jeu.retourTitre(); L.Jeu.commencer();
+        return { depart: depart, apres_m1: apres_m1, tous_arrives: places() };
     }""")
     for moment, places in r.items():
         assert len(places) >= 10, f"{moment} : le juge ne voit que {len(places)} donneurs"
@@ -142,6 +151,53 @@ def test_deux_donneurs_ne_se_tiennent_jamais_sur_la_meme_tuile(banc):
     assert "ti_guy" not in {p[0] for p in r["apres_m1"]}, "Ti-Guy n'est pas parti après m1"
     partages = [p for p in r["depart"] if p[1] in ("porte:depanneur", "porte:terminus")]
     assert len(partages) >= 5, partages
+    assert {"tiloup", "boulon"} <= {p[0] for p in r["tous_arrives"]}, r["tous_arrives"]
+
+
+def test_le_gardien_et_le_ferrailleur_se_tiennent_dans_la_cour_de_la_fourriere(banc):
+    """Retour de Martin (30 sept. 2026, capture) : « ils sont trop collés, et certains devraient être
+    dans les clôtures de la fourrière ». La porte de la guérite donne SUR LA COUR, derrière le
+    grillage : Gilles (le gardien du lot) et Ti-Loup (le ferrailleur, qui y achète les épaves) s'y
+    tiennent, près de la guérite. Gros-Boulon, le chef de la gang qui a volé la remorqueuse, reste
+    dehors, contre la clôture. Aucun ne se tient sur une case du lot : un char saisi y est garé."""
+    r = banc("""function (L, o) {
+        L.B.defs.personnages.forEach(function (p) { if (p.arrive_apres) L.B.partie.missionsFaites[p.arrive_apres] = 1; });
+        L.Jeu.commencer();
+        const lot = L.Monde.carte.fourriere, gens = {};
+        ['gilles', 'tiloup', 'boulon'].forEach(function (slug) {
+          const e = L.Histoire.donneur(slug);
+          if (!e) return;
+          const tx = Math.floor(e.x / 16), ty = Math.floor(e.y / 16);
+          gens[slug] = { tx: tx, ty: ty, mur: L.Monde.bloque(tx, ty, L.Monde.MASQUE_PIETON) };
+        });
+        return { lot: { x: lot.x, y: lot.y, l: lot.largeur, h: lot.hauteur, porte: lot.porte,
+                        places: lot.places.map(function (p) { return [p.x, p.y, p.sens]; }) }, gens: gens };
+    }""")
+    lot, gens = r["lot"], r["gens"]
+    assert set(gens) == {"gilles", "tiloup", "boulon"}, gens
+
+    def dans_la_cour(g):
+        # En dedans du grillage : la clôture est le tour du rectangle.
+        return lot["x"] < g["tx"] < lot["x"] + lot["l"] - 1 and lot["y"] < g["ty"] < lot["y"] + lot["h"] - 1
+
+    # Une case : son fond (le pare-chocs) et les deux tuiles derrière, à reculons de son sens.
+    recul = {"N": (0, 1), "S": (0, -1), "O": (1, 0), "E": (-1, 0)}
+    cases = {(p[0] + recul[p[2]][0] * k, p[1] + recul[p[2]][1] * k) for p in lot["places"] for k in range(3)}
+    for slug in ("gilles", "tiloup"):
+        g = gens[slug]
+        assert dans_la_cour(g), f"{slug} n'est pas dans la cour de la fourrière : {g}, lot {lot}"
+        assert not g["mur"], f"{slug} se tient dans un mur : {g}"
+        assert (g["tx"], g["ty"]) not in cases, f"{slug} se tient sur une case du lot : {g}"
+        porte = lot["porte"]
+        assert max(abs(g["tx"] - porte["x"]), abs(g["ty"] - porte["y"])) <= 8, f"{slug} est loin de la guérite : {g}"
+        # Le long de la guérite, face aux chars : pas au fond, contre le grillage.
+        assert g["ty"] == porte["y"], f"{slug} ne se tient pas le long de la guérite : {g}, porte {porte}"
+    assert not dans_la_cour(gens["boulon"]), f"Gros-Boulon est entré dans la cour : {gens['boulon']}"
+    # « Trop collés » : trois tuiles au moins entre deux d'entre eux (écrit ici, pas relu dans le jeu).
+    trio = list(gens.items())
+    colles = [(a, b) for i, (a, ga) in enumerate(trio) for b, gb in trio[i + 1:]
+              if max(abs(ga["tx"] - gb["tx"]), abs(ga["ty"] - gb["ty"])) < 3]
+    assert not colles, f"collés : {colles} — {gens}"
 
 
 def test_le_second_donneur_d_une_porte_ne_se_glisse_pas_entre_deux_meubles(banc):

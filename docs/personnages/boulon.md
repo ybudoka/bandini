@@ -10,7 +10,7 @@
 |---|---|
 | Slug | `boulon` |
 | Rôle | le chef des Boulonneux — les deux cents gars que Prévost a mis dehors |
-| Où | devant la fourrière (`porte:fourriere`), après s02 (`arrive_apres`) — à deux pas du coin des Boulonneux |
+| Où | devant la fourrière, DEHORS, contre la clôture (`porte:fourriere`), après s02 (`arrive_apres`) — à deux pas du coin des Boulonneux |
 | Voix | **Roger — Laid-Back, Casual, Resonant** (un français « standard » vérifié en multilingue v2) |
 | Bulle | « Toi. Approche. » |
 | Couleurs | chandail marine, crâne rasé, barbe pleine |

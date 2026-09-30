@@ -10,7 +10,7 @@
 |---|---|
 | Slug | `tiloup` |
 | Rôle | le ferrailleur de La Shop ; achète les épaves, ne pose pas de questions |
-| Où | devant la fourrière (`porte:fourriere`), après s01 (`arrive_apres`) |
+| Où | dans la cour de la fourrière (`porte:fourriere`, `dans_la_cour`), à trois pas de Gilles, après s01 (`arrive_apres`) |
 | Voix | **Chris — Charming, Down-to-Earth** (un français « standard » vérifié en multilingue v2) |
 | Bulle | « Hé, le jeune. » |
 | Couleurs | veste de travail brune, cheveux bruns en brosse, pantalon noir |

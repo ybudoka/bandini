@@ -265,7 +265,7 @@ const Histoire = (function () {
       pas d'un commerce est un obstacle qu'on contourne pour entrer. On prend la premiere
       tuile qui n'y est pas, dans le rayon ; a defaut, la premiere venue — mieux vaut un
       donneur devant une porte que pas de donneur. */
-  function tuileLibre(x, y, rayonMax) {
+  function tuileLibre(x, y, rayonMax, accepte) {
     const tx = Math.floor(x / TT), ty = Math.floor(y / TT);
     let repli = null;
     for (let r = 0; r <= (rayonMax || 4); r++) {
@@ -273,6 +273,7 @@ const Histoire = (function () {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
         if (!Monde.marchablePieton(tx + dx, ty + dy) || Monde.estChaussee(tx + dx, ty + dy)) continue;
         const place = { x: (tx + dx) * TT + 8, y: (ty + dy) * TT + 8 };
+        if (accepte && !accepte(place)) continue;
         if (!Monde.devantDUnePorte(tx + dx, ty + dy)) return place;
         if (!repli) repli = place;
       }
@@ -800,8 +801,67 @@ const Histoire = (function () {
         const place = tuileDeTrottoir(tx0 + dx, ty0 + dy);
         if (place && !placeTenue(place)) return place;
       }
+      // ⚠️ Et JAMAIS `premiere` quand un autre la tient : Gros-Boulon, troisieme a la porte de la
+      // fourriere (30 sept. 2026), n'avait que de l'asphalte et du grillage autour de la guerite —
+      // aucun essai ne tombait sur un trottoir, et il se posait sur Gilles au pixel pres. La tuile
+      // libre la plus proche de cette premiere place, que personne ne tient.
+      const autour = tuileLibre(premiere.x, premiere.y, 6, function (q) { return !placeTenue(q); });
+      if (autour) return autour;
     }
     return collee || meilleure || repli || premiere;
+  }
+
+  //: Dans une cour, deux personnages se tiennent a au moins tant de tuiles l'un de l'autre : ils ont
+  //: la place, et « trop colles » (Martin, 30 sept. 2026) se voit de plus loin qu'au trottoir.
+  const ECART_COUR = 3;
+
+  /** La cour CLOTUREE sur laquelle donne une porte (la guerite de la fourriere donne sur son lot,
+      derriere le grillage) — ou null. En dedans du grillage : la cloture est le tour du rectangle. */
+  function courDe(l) {
+    const lot = Monde.carte.fourriere;
+    if (!lot) return null;
+    const tx = Math.floor(l.x / TT), ty = Math.floor(l.y / TT);
+    return tx > lot.x && tx < lot.x + lot.largeur - 1 && ty > lot.y && ty < lot.y + lot.hauteur - 1 ? lot : null;
+  }
+
+  /** Ou se tient, DANS LA COUR, qui y travaille (`dans_la_cour` : Gilles, le gardien du lot ; Ti-Loup,
+      qui y achete les epaves). ⚠️ La cour est de l'asphalte : `placeVisible` n'y voit aucun trottoir et
+      les posait DEHORS, de l'autre cote du grillage, colles aux autres (Martin, 30 sept. 2026).
+
+      Pas sur une case du lot (un char saisi y est gare : trois tuiles depuis son fond), ni devant la
+      porte, ni dans un mur, ni a moins de `ECART_COUR` d'un autre personnage. SANS DE : la plus proche
+      de la porte, en comptant double l'ecart en hauteur — on se tient le long de la guerite, face aux
+      chars, pas au fond contre le grillage. */
+  function placeDansLaCour(l, lot) {
+    const px = Math.floor(l.x / TT), py = Math.floor(l.y / TT);
+    // Le fond d'une case porte le pare-chocs : le char s'etend de la sur trois tuiles, A RECULONS
+    // (une case « N » descend vers le sud) — pas des deux cotes, sinon la bande le long de la guerite
+    // tombe avec.
+    const RECUL = { N: [0, 1], S: [0, -1], O: [1, 0], E: [-1, 0] };
+    const surUneCase = function (tx, ty) {
+      return lot.places.some(function (c) {
+        const r = RECUL[c.sens] || [0, 0];
+        for (let k = 0; k < 3; k++) if (c.x + r[0] * k === tx && c.y + r[1] * k === ty) return true;
+        return false;
+      });
+    };
+    const loin = function (place) {
+      return !B.entites.some(function (e) {
+        return e.type === 'pieton' && e.vivant && e.personnage
+          && Math.max(Math.abs(e.x - place.x), Math.abs(e.y - place.y)) < ECART_COUR * TT;
+      });
+    };
+    let meilleure = null, score = Infinity;
+    for (let ty = lot.y + 1; ty < lot.y + lot.hauteur - 1; ty++) {
+      for (let tx = lot.x + 1; tx < lot.x + lot.largeur - 1; tx++) {
+        if (Monde.bloque(tx, ty, Monde.MASQUE_PIETON) || Monde.devantDUnePorte(tx, ty) || surUneCase(tx, ty)) continue;
+        const place = { x: tx * TT + 8, y: ty * TT + 8 };
+        if (!loin(place) || partCachee(place.x, place.y) >= CACHE_MAX) continue;
+        const d = Math.abs(tx - px) + 2 * Math.abs(ty - py);
+        if (d < score) { score = d; meilleure = place; }
+      }
+    }
+    return meilleure;
   }
 
   /** UN personnage du dehors, pose devant sa porte — ou null quand la porte ou la
@@ -811,10 +871,12 @@ const Histoire = (function () {
   function poserDonneur(p) {
     const l = lieu(p.ou.slice(6));
     if (!l) return null;
+    // Qui travaille dans la cour clôturée de sa porte s'y tient (la fourrière : Gilles et Ti-Loup).
+    const cour = p.dans_la_cour ? courDe(l) : null;
     // A deux tuiles de la porte : assez pres pour le voir, assez loin pour
     // qu'ACTION au pas de la porte serve encore a autre chose — et JAMAIS derriere
     // un abribus : `placeVisible` ecarte la tuile ou du decor le cache.
-    const place = placeVisible(l);
+    const place = (cour && placeDansLaCour(l, cour)) || placeVisible(l);
     return place ? creerPersonnage(p, place.x, place.y) : null;
   }
 
