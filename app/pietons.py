@@ -40,13 +40,16 @@ class Pieton(TypedDict):
     frequence: float
     phase: int
     techniques: NotRequired[list[str]]
+    #: Au-dessus de ce froid (`froid` de la palette des saisons, 0 juillet, 1 janvier), la sorte ne
+    #: naît plus et rentre hors champ, comme passé ses `heures`. Absent : toute l'année.
+    froid_max: NotRequired[float]
 
 
 def _p(slug, nom, chandail, cheveux, peau, pantalon, *, sprite="joueur", vitesse=1.0,
        courage=0.0, temoin=0.3, vie=60, argent=(2, 20), arme=None, gang=None,
        intouchable=False, accompagne=None, metier=None, heures=None, districts=None,
-       standings=None, frequence=1.0, phase=1) -> Pieton:
-    return Pieton(
+       standings=None, frequence=1.0, phase=1, froid_max=None) -> Pieton:
+    p = Pieton(
         slug=slug, nom=nom, sprite=sprite,
         couleurs={"c": chandail, "h": cheveux, "s": peau, "p": pantalon},
         vitesse=vitesse, courage=courage, temoin=temoin, vie=vie, argent=argent,
@@ -54,6 +57,10 @@ def _p(slug, nom, chandail, cheveux, peau, pantalon, *, sprite="joueur", vitesse
         metier=metier, heures=heures, districts=districts, standings=standings,
         frequence=frequence, phase=phase,
     )
+    # ⚠️ Seulement quand il y en a un : une clé nulle sur chaque archétype pèse dans le paquet.
+    if froid_max is not None:
+        p["froid_max"] = froid_max
+    return p
 
 
 #: ⚠️ `frequence` est un POIDS, pas une probabilite : le navigateur tire
@@ -320,9 +327,12 @@ CATALOGUE: list[Pieton] = [
     # ⚠️ Et lui, LA POLICE L'ARRETE. C'est la seule fois ou elle s'occupe de
     # quelqu'un d'autre que le joueur — et c'est ce gag qui la rend credible :
     # elle n'existe pas que pour toi.
+    # ⚠️ ET IL PREND CONGÉ L'HIVER (Martin, 30 sept. 2026 : « les exhibitionnistes prennent une
+    # pause ») : au grand froid (`HABITS.grand_froid`, quand la ville sort ses manteaux), ouvrir le
+    # sien n'a plus rien d'un numéro.
     _p("exhibitionniste", "L'homme au manteau", "#7a5a3a", "#4a3320", "#e8b088", "#2a2a3a",
        sprite="exhibitionniste", vitesse=0.85, courage=0.1, temoin=0.1, vie=60,
-       argent=(2, 15), metier="exhibitionniste", frequence=0.0),
+       argent=(2, 15), metier="exhibitionniste", frequence=0.0, froid_max=0.75),
     # --- Les cinq qui viennent avec ---------------------------------------
     # ⚠️ MEME REGLE, et ce n'est pas du remplissage : chacune sert une fiche
     # DEJA LIVREE. Une sorte qui n'est qu'une silhouette de plus dans la rue
@@ -613,6 +623,12 @@ PLAGE: dict = {
     # deux heures tombent DANS le jour (`Monde.estNuit` : 6 h 24 → 19 h 53) :
     # on ferme au coucher du soleil, pas une fois la nuit tombee.
     "heures": (0.30, 0.80),
+    # ⚠️ **ET SA SAISON** (Martin, 30 sept. 2026 : « la plage devrait aussi etre en hiver »). Au-dessus
+    # de ce froid (`froid` de la palette : 0 en juillet, 0,1 en aout, 0,4 en octobre, 1 en janvier),
+    # personne ne s'y baigne — on plie bagage comme a la fermeture du soir — et la greve est RANGEE :
+    # parasols, serviettes, chaises longues, chateaux et kayaks (`ete` dans leur fiche de decor) ne se
+    # peignent plus. De la fin de juin a la fin d'aout, a peu pres : la saison des plages d'ici.
+    "froid_max": 0.2,
 }
 
 #: **LES ENFANTS A VELO** — combien, et de quelles couleurs.

@@ -49,6 +49,8 @@ GREVE = """
     function surLaGreve(L, heure) {
       L.Jeu.commencer();
       L.graine(31);
+      // ⚠️ Le 22, en juillet (le 21 est le déménagement, qui déplace le joueur) : une partie commence en janvier, et la plage n'a pas de baigneurs l'hiver.
+      L.B.partie.jour = 22;
       L.B.partie.heure = heure;
       const g = greve(L);
       if (!g) return null;

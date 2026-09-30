@@ -252,8 +252,12 @@ const Entites = (function () {
     });
   }
 
+  //: La saison de la greve quand l'index fixe a ete bati (`rangerLaGreve`).
+  let greveIndexee = null;
+
   function creerDecor(def) {
     grilleFixe.clear();
+    greveIndexee = plageEnSaison();
     const n = def.decalage_nord || 0;
     (def.decor || []).forEach(function (d) {
       const fiche = DECORS[d.type] || {};
@@ -274,6 +278,8 @@ const Entites = (function () {
         v: fiche.variantes ? hash2(d.x * 7919 + d.y, 0x5A11) % fiche.variantes : 0,
       });
       if (aPart) horsSuite--;
+      // Un meuble de la belle saison (`fiche.ete` : le parasol, la serviette...) : range hors saison.
+      if (fiche.ete) e.ete = true;
       // ⚠️ `estIndexable`, PAS `e.solide` : c'etait le second exemplaire de la
       // regle, et il a survecu au premier correctif. Un buisson restait hors
       // de l'index a la construction de la ville — donc invisible au char
@@ -728,11 +734,15 @@ const Entites = (function () {
   function estIndexable(e) {
     if (e.type !== 'decor' && e.type !== 'ambulant') return false;
     if (e.solide) return true;
+    // ⚠️ Un meuble d'ete RANGE ne se casse pas : un char qui defoncait un chateau de sable invisible
+    // en janvier laissait des debris sur la neige.
+    if (e.ete && !plageEnSaison()) return false;
     return !e.brise && !!(DECORS[e.decor] || {}).casse;
   }
 
   function reindexerDecor() {
     grilleFixe.clear();
+    greveIndexee = plageEnSaison();
     for (const e of B.entites) if (estIndexable(e)) ajouterA(grilleFixe, e);
   }
 
@@ -945,6 +955,22 @@ const Entites = (function () {
     return heures[0] < heures[1] ? (h >= heures[0] && h < heures[1]) : (h >= heures[0] || h < heures[1]);
   }
 
+  /** Est-on dans sa saison ? `froidMax` : au-dessus de ce froid (`froid` de la palette des saisons,
+      0 en juillet, 1 en janvier), non. Absent : toute l'annee. Le pendant d'`enService` pour l'annee :
+      une pure fonction du jour, sans de. */
+  function enSaison(froidMax) {
+    if (froidMax === undefined || froidMax === null) return true;
+    if (typeof Saisons === 'undefined' || !B.defs || !B.defs.saisons) return true;
+    return (Saisons.palette().froid || 0) <= froidMax;
+  }
+
+  /** La saison des plages (`PLAGE.froid_max`) : hors d'elle, personne ne s'y baigne et la greve est
+      rangee (les decors `ete`). */
+  function plageEnSaison() {
+    const f = B.defs && B.defs.pietons && B.defs.pietons.plage;
+    return !f || enSaison(f.froid_max);
+  }
+
   // --- Trois sortes de gens, et ce qu'elles FONT ----------------------------------
 
   /*: ⚠️ UNE SORTE = UN CORPS + UNE ROUTINE. Le corps est dans `sprites.js`, le
@@ -1028,6 +1054,8 @@ const Entites = (function () {
       // matin (`heures`) — et il naissait quand meme a deux heures du matin, pour
       // hurler la manchette a une rue vide. `enService` est celui de l'homme-sandwich.
       if (!enService(arch.heures)) continue;
+      // ⚠️ ET SA SAISON : l'homme au manteau prend conge l'hiver (`froid_max`).
+      if (!enSaison(arch.froid_max)) continue;
       // ⚠️ DEUX pour celles qui tiennent un poste, UNE pour celles qui
       // marchent. Un spectacle est plante quelque part : il en faut deux pour
       // avoir une chance d'en croiser un. Une sorte qui marche, elle, traverse
@@ -1521,6 +1549,8 @@ const Entites = (function () {
       // ⚠️ Les heures se lisent sur l'ARCHETYPE : une sorte ne les porte pas sur elle.
       const sorte = SORTES.indexOf(e.arch) >= 0 ? archetype(e.arch) : null;
       if (sorte && sorte.heures && !enService(sorte.heures)) { rentrerHorsChamp(e); continue; }
+      // Passe sa saison aussi (`froid_max`) : l'homme au manteau rentre quand le grand froid arrive.
+      if (sorte && !enSaison(sorte.froid_max)) { rentrerHorsChamp(e); continue; }
       // ⚠️ On aiguille sur le METIER, pas sur le slug : c'est le metier qui
       // est le crochet declare dans `pietons.py`, et c'est lui qui dit ce que
       // la sorte FAIT. Un slug ne dit que comment on l'appelle.
@@ -2727,10 +2757,18 @@ const Entites = (function () {
       beaucoup de place ». Un plafond commun laissait les premiers nes prendre
       toutes les places, et la plage n'avait qu'un seul age. On fait naitre celui
       des deux groupes qui est le plus loin de son compte. */
+  /** La greve se range et se remet a la saison : les chateaux de sable sortent de l'index fixe
+      (`estIndexable`) ou y reviennent. Une reindexation AU CHANGEMENT, jamais par image. */
+  function rangerLaGreve() {
+    const s = plageEnSaison();
+    if (s === greveIndexee) return;
+    reindexerDecor();
+  }
+
   function naitreLesEnfantsDeLaPlage() {
     const f = B.defs.pietons && B.defs.pietons.plage;
-    // La nuit, personne ne se baigne : la plage a ses heures (`PLAGE.heures`).
-    if (!f || !B.joueur || B.interieur || !enService(f.heures)) return 0;
+    // La nuit, personne ne se baigne : la plage a ses heures (`PLAGE.heures`) — et sa saison.
+    if (!f || !B.joueur || B.interieur || !enService(f.heures) || !enSaison(f.froid_max)) return 0;
     const baigneurs = B.entites.filter(function (q) { return q.metier === 'baigneur' && q.vivant; });
     const petits = baigneurs.filter(function (q) { return q.sprite === 'enfant'; }).length;
     const grands = baigneurs.length - petits;
@@ -3018,7 +3056,7 @@ const Entites = (function () {
   /** La routine : trois jeux, et on en change. */
   function majPlage(e) {
     const f = B.defs.pietons.plage;
-    if (!enService(f.heures)) { plierBagage(e); return; }
+    if (!enService(f.heures) || !enSaison(f.froid_max)) { plierBagage(e); return; }
     if (e.etat !== 'flane' && e.etat !== 'arret' && e.etat !== 'cap' && e.etat !== 'fige') {
       // Il a peur, il temoigne, il fuit : le jeu s'arrete, il reste un enfant.
       quitterLeJeu(e);
@@ -3599,6 +3637,7 @@ const Entites = (function () {
     if (B.t % 30 === 0) majKiosques();
     if (B.t % 45 === 0) naitreLesOuvriers();
     if (B.t % 60 === 0) naitreLesEnfantsDeLaPlage();
+    if (B.t % 60 === 0) rangerLaGreve();
     if (B.t % 60 === 30) naitreLesEnfantsAVelo();
     if (B.t % 30 === 0) naitreLaFoire();
     if (B.t % 40 === 0) naitreLesBetes();
@@ -5815,8 +5854,10 @@ const Entites = (function () {
     const cx = Math.round(cam.x), cy = Math.round(cam.y);
     const visibles = [];
     const nuit = Monde.estNuit();
+    const greve = plageEnSaison();
     for (const e of B.entites) {
       if (!e.dessine) continue;
+      if (e.ete && !greve) continue;             // la greve rangee l'hiver (`PLAGE.froid_max`)
       // ⚠️ UN DECOR SORT DE LA LISTE PAR SON DESSIN, pas par son pied. La marge
       // fixe (40 px, 48 au nord et au sud) coupait la grue a tour — 112 px de
       // large, 90 au-dessus de sa tuile — alors que sa fleche etait encore a
@@ -5994,7 +6035,7 @@ const Entites = (function () {
     naitreLesSortes, majSortes, SORTES, SPECTACLES, badauds, artistes, ouvrirLeSpectacle,
     naitreLesHommesSandwichs, enService, solliciter,
     semerDesArmesDeFortune, visibleAEcran,
-    plageEn, litLibre, coinDePlage,
+    plageEn, litLibre, coinDePlage, plageEnSaison, enSaison,
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele, mouiller,
     enjamber, majEnjambe, clotureDevant, reglesCloture,
     blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers, naitreLEquipe, pousserDecor, boiteTouche, majVolDeChar, emporterLeChar,

@@ -6,6 +6,9 @@ de la Brume : une sorte sans routine est un déguisement.
 """
 
 #: Pose le joueur sur une grève et y fait naître les enfants.
+#: ⚠️ Chaque banc se joue le 22 (juillet) : une partie commence en janvier, et la plage n'a
+#: ni baigneurs ni serviettes hors de sa saison (`PLAGE.froid_max`). Pas le 21 : c'est le
+#: déménagement, qui déplace le joueur.
 POSER = """
     function greve(L) {
       const c = L.Monde.carte, TT = L.TT;
@@ -43,6 +46,7 @@ def test_des_enfants_naissent_sur_la_greve_et_jouent(banc, paquet):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(31);
+        L.B.partie.jour = 22;
         %s
         const g = greve(L);
         if (!g) return { greve: false };
@@ -93,6 +97,7 @@ def test_un_enfant_ne_depasse_jamais_la_premiere_tuile_d_eau(banc, paquet):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(32);
+        L.B.partie.jour = 22;
         %s
         const g = greve(L);
         if (!g) return { greve: false };
@@ -150,6 +155,7 @@ def test_un_enfant_ne_joue_pas_au_chateau_sans_chateau(banc, paquet):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(33);
+        L.B.partie.jour = 22;
         %s
         const g = greve(L);
         if (!g) return { greve: false };
@@ -185,6 +191,7 @@ def test_le_ballon_va_d_un_enfant_a_l_autre_et_ne_reste_pas_seul(banc, paquet):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(34);
+        L.B.partie.jour = 22;
         %s
         const g = greve(L);
         if (!g) return { greve: false };
@@ -283,6 +290,7 @@ def test_les_baigneurs_ne_naissent_que_sur_une_plage_declaree(banc, paquet):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(35);
+        L.B.partie.jour = 22;
         %s
         const c = L.Monde.carte, TT = L.TT, plages = c.def.plages;
         const baigneurs = function () {
@@ -349,6 +357,7 @@ def test_un_grand_se_fait_bronzer_sur_une_serviette_libre(banc, paquet):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(36);
+        L.B.partie.jour = 22;
         %s
         const g = greve(L);
         if (!g) return { greve: false };

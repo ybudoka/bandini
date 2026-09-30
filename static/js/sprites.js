@@ -2855,6 +2855,8 @@ const TUILES = (function () {
   //: glyphe ne change pas.
   const BETON_CHIC = { fond: '#a9a598', joint: '#968f82', arete: '#b8b4a7', grain: '#a09c90',
                        fissure: '#8a8679', rapiece: '#948f84', tache: '#9c988b', mousse: '#7a8a66' };
+  //: Le sable de la greve (`s`) : ses couleurs d'ete, que la neige qui tient blanchit.
+  const SABLE = { fond: '#d8c48a', grain: '#c9b576', clair: '#e3d29d', galet: '#b2a06a' };
   const BETON_USINE = { fond: '#7d7b75', joint: '#6b6963', arete: '#8a8881', grain: '#72706a',
                         fissure: '#5f5d58', rapiece: '#6d6b65', tache: '#45434a', mousse: '#5f6752' };
 
@@ -3946,11 +3948,14 @@ const TUILES = (function () {
     'R': rampe,
     'J': rampe,
     'Q': function (ctx, v, T) { plein(ctx, '#8a6a3f', T); ctx.fillStyle = '#6e5330'; for (let y = 0; y < T; y += 4) ctx.fillRect(0, y, T, 1); },
+    // ⚠️ L'HIVER, LA GREVE EST SOUS LA NEIGE (Martin, 30 sept. 2026 : « la plage devrait aussi etre en
+    // hiver ») : le sable passe par `Saisons.enneiger` comme le trottoir, et les galets percent.
     's': function (ctx, v, T) {
-      plein(ctx, '#d8c48a', T);
-      points(ctx, v + 1, T, '#c9b576', 10, 4);
-      points(ctx, v + 1, T, '#e3d29d', 6, 47);
-      if (v === 15) points(ctx, v + 1, T, '#b2a06a', 7, 88);        // des galets
+      const S = typeof Saisons !== 'undefined' ? Saisons.enneiger(SABLE) : SABLE;
+      plein(ctx, S.fond, T);
+      points(ctx, v + 1, T, S.grain, 10, 4);
+      points(ctx, v + 1, T, S.clair, 6, 47);
+      if (v === 15) points(ctx, v + 1, T, SABLE.galet, 7, 88);        // des galets
     },
     // L'allee de parc : de la poussiere de pierre, plus grise et plus grenue
     // que le sable de la greve — on doit pouvoir dire d'un coup d'oeil si l'on
@@ -7648,11 +7653,14 @@ const DECORS = {
     ctx.fillStyle = '#4a3320'; ctx.fillRect(4, 4, 2, 8); ctx.fillRect(16, 4, 2, 8);     // les deux pietements
   } },
 
+  // ⚠️ `ete: true` (le parasol, la serviette, le chateau, la chaise longue, le kayak) : la greve se
+  // RANGE hors de la saison des plages (`PLAGE.froid_max`, `Entites.plageEnSaison`) — ils ne se
+  // peignent plus et le chateau ne se casse plus. Aucun n'est solide : pas de mur invisible l'hiver.
   // LE PARASOL. ⚠️ La seule chose du lot qui se lise **de loin**, et la seule
   // qu'on ne heurte pas : `solide: false`, on passe DESSOUS. Vu d'en haut c'est
   // un disque a quartiers alternes — ce sont les quartiers qui le nomment, la
   // couleur ne fait que dire lequel. Elle se tire par tuile (`variantes`).
-  parasol: { solide: false, r: 0, variantes: 4, w: 24, h: 24, ancre: [12, 14], peindre: function (ctx, w, h, v) {
+  parasol: { ete: true, solide: false, r: 0, variantes: 4, w: 24, h: 24, ancre: [12, 14], peindre: function (ctx, w, h, v) {
     const toile = ['#c0392b', '#2f6fb5', '#d98324', '#2f8d6a'][v % 4];
     const ombre = ['#8e1f16', '#1f4d80', '#9a5a12', '#1d6149'][v % 4];
     const cx = 11.5, cy = 11.5, R = 11;
@@ -7684,7 +7692,7 @@ const DECORS = {
   // impacts — une serviette posee a la construction de la ville en serait
   // chassee par la premiere fusillade. Rien ne l'arrete, rien ne la casse,
   // et `estIndexable` la garde hors du chemin de qui marche.
-  serviette: { solide: false, r: 0, variantes: 3, w: 20, h: 14, ancre: [10, 10], peindre: function (ctx, w, h, v) {
+  serviette: { ete: true, solide: false, r: 0, variantes: 3, w: 20, h: 14, ancre: [10, 10], peindre: function (ctx, w, h, v) {
     const drap = ['#e0574f', '#4fa3d1', '#efd06a'][v % 3];
     const raie = ['#f2ded9', '#eaf3f8', '#f6efd8'][v % 3];
     ctx.fillStyle = 'rgba(20,18,26,0.14)'; ctx.fillRect(2, 3, 14, 10);       // son ombre au sol
@@ -7703,7 +7711,7 @@ const DECORS = {
   // un char qui roule sur la greve le rase — et il **revient au matin** avec
   // tout le reste (`reparerLeDecor`). Un enfant qui recommence son chateau tous
   // les jours, c'est une blague que la ville raconte sans qu'on l'ecrive.
-  chateau_sable: { casse: 1.0, pv: 5, w: 16, h: 16, ancre: [8, 14], r: 4, solide: false, peindre: function (ctx, w, h) {
+  chateau_sable: { ete: true, casse: 1.0, pv: 5, w: 16, h: 16, ancre: [8, 14], r: 4, solide: false, peindre: function (ctx, w, h) {
     // ⚠️ LA SILHOUETTE AVANT LA COULEUR — premiere version jetee : tout etait du
     // meme beige, tours et courtine confondues, et ce qu'on lisait a douze
     // pixels etait une MOTTE avec un drapeau dessus. Deux tours DETACHEES, une
@@ -7731,7 +7739,7 @@ const DECORS = {
   // pour la journee ». Une toile rayee entre deux longerons, et le dossier releve
   // qui prend le jour — c'est la cassure de lumiere qui la distingue d'une
   // serviette. On passe par-dessus (`solide: false`), comme la serviette.
-  chaise_longue: { solide: false, r: 0, variantes: 3, w: 12, h: 20, ancre: [6, 15], peindre: function (ctx, w, h, v) {
+  chaise_longue: { ete: true, solide: false, r: 0, variantes: 3, w: 12, h: 20, ancre: [6, 15], peindre: function (ctx, w, h, v) {
     const toile = ['#2f6fb5', '#e0574f', '#2f8d6a'][v % 3];
     const raie = ['#eaf3f8', '#f2ded9', '#e6f2ea'][v % 3];
     ctx.fillStyle = 'rgba(20,18,26,0.18)'; ctx.fillRect(3, 7, 8, 12);        // son ombre, au sud-est
@@ -7748,7 +7756,7 @@ const DECORS = {
   // de couleur couche sur la plage se lit comme une serviette de plus. Ce sont
   // les deux pointes et le trou d'homme au milieu qui le nomment, et la pagaie
   // couchee a cote le confirme.
-  kayak: { solide: false, r: 0, variantes: 3, w: 30, h: 12, ancre: [15, 7], peindre: function (ctx, w, h, v) {
+  kayak: { ete: true, solide: false, r: 0, variantes: 3, w: 30, h: 12, ancre: [15, 7], peindre: function (ctx, w, h, v) {
     const coque = ['#efc02a', '#e8742a', '#c0392b'][v % 3];
     const flanc = ['#b88a12', '#a94f16', '#8e1f16'][v % 3];
     ctx.fillStyle = 'rgba(20,18,26,0.18)'; ctx.fillRect(4, 7, 24, 2);        // son ombre sur le sable

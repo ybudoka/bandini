@@ -144,6 +144,9 @@ def test_une_sorte_de_gens_est_un_corps_et_une_routine(banc, paquet):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(101);
+        // ⚠️ En juillet : l'homme au manteau prend congé l'hiver (`froid_max`), et une partie
+        // commence en janvier.
+        L.B.partie.jour = 22;
         const j = L.B.joueur;
         const out = {};
 
