@@ -220,7 +220,7 @@ def test_on_paie_a_l_arche_une_fois_par_jour_et_on_ressort_librement(banc, paque
     aller-retour au hot-dog d'en face est un péage. Et on RESSORT sans payer —
     une barrière qui se paie ne doit pas enfermer."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Foire.demarrer();   // ⚠️ EN JUILLET : l'hiver, la foire est fermée et son train garé (test_foire_l_hiver_js.py)
         %s
         const b = arche(L), TT = L.TT, j = L.B.joueur, p = L.B.partie;
         p.argent = 100;
@@ -257,7 +257,7 @@ def test_resquiller_par_la_cloture_coute_une_etoile(banc, paquet):
     ment serait pire. Mais la retombée DANS la foire sans billet coûte l'étoile
     de l'arche : c'est le prix de ne pas payer le prix. Avec son billet, rien."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Foire.demarrer();   // ⚠️ EN JUILLET : l'hiver, la foire est fermée et son train garé (test_foire_l_hiver_js.py)
         %s
         const b = arche(L), TT = L.TT, j = L.B.joueur, p = L.B.partie;
         // Une tuile de palissade du sud, loin de l'arche, avec la foire derrière.
@@ -307,7 +307,7 @@ def test_la_galerie_prete_sa_carabine_a_bouchon_et_la_reprend(banc):
     défi : inoffensive (aucun crime, personne ne fuit, aucun blessé), elle ne casse
     QUE les cibles, et il la reprend à la fin — on revient à son arme d'avant."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Foire.demarrer();   // ⚠️ EN JUILLET : l'hiver, la foire est fermée et son train garé (test_foire_l_hiver_js.py)
         const j = L.B.joueur;
         const g = L.Foire.jeux().find(function (q) { return q.slug === 'galerie_tir'; });
         j.x = g.x * L.TT + 8; j.y = (g.y + 2) * L.TT + 8;
@@ -359,7 +359,7 @@ def test_la_peche_aux_canards_se_joue_au_bouton_et_paie(banc):
     (Ex-`test_zz_smoke.py::test_canards` : il jouait la même partie et ne
     faisait que l'imprimer ; une pêche qui ne payait rien passait.)"""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Foire.demarrer();   // ⚠️ EN JUILLET : l'hiver, la foire est fermée et son train garé (test_foire_l_hiver_js.py)
         const g = L.Foire.jeux().find(function (q) { return q.slug === 'peche_canards'; });
         const d = L.B.defs.defis.find(function (q) { return q.slug === 'canards'; });
         const f = L.DECORS.peche_canards;
@@ -416,7 +416,7 @@ def la_foire_et_son_monde(banc):
           const d = L.DECORS[k.slug];
           kiosques[k.slug] = d ? { variantes: d.variantes || 0, peint: typeof d.peindre } : null;
         }
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Foire.demarrer();   // ⚠️ EN JUILLET : l'hiver, la foire est fermée et son train garé (test_foire_l_hiver_js.py)
         const B = L.B, TT = L.TT, f = L.Monde.carte.def.foire, k = L.Monde.carte.def.kiosques_de_foire;
         B.joueur.x = (f.x + 20) * TT + 8; B.joueur.y = (k[0].y + 1) * TT + 8;
         B.joueur.invincible = 999999;
@@ -646,7 +646,7 @@ def deux_tours_du_petit_train(banc):
     reste de la ville n'a pas bougé d'un pixel : c'est le monde que le second juge voyait seul.
     Le sifflet espionné de la première mesure est rendu."""
     return banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Foire.demarrer();   // ⚠️ EN JUILLET : l'hiver, la foire est fermée et son train garé (test_foire_l_hiver_js.py)
         const F = L.Foire, t = F.train, d = t.def, TT = L.TT, j = L.B.joueur;
         const cles = ['s', 'v', 'sifflet', 'bloque', 'bloquePar', 'attente', 'tours', 'passager'];
         const depart = {};
@@ -713,7 +713,7 @@ def test_le_train_s_arrete_devant_quelqu_un_et_siffle(banc, paquet):
     locomotive, on la voit s'arrêter avant de nous toucher, siffler, et repartir
     quand on s'écarte. On n'a pas bougé d'un pixel et pas perdu un point de vie."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Foire.demarrer();   // ⚠️ EN JUILLET : l'hiver, la foire est fermée et son train garé (test_foire_l_hiver_js.py)
         const F = L.Foire, t = F.train, j = L.B.joueur, f = L.Monde.carte.def.foire, TT = L.TT;
         let sifflets = 0;
         const vrai = L.Son.SFX.sifflet_train;
@@ -748,7 +748,7 @@ def test_on_ne_passe_pas_a_travers_un_wagon(banc, paquet):
     """On marche droit sur le flanc d'un wagon arrêté : on s'y bute, on ne le
     traverse pas."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Foire.demarrer();   // ⚠️ EN JUILLET : l'hiver, la foire est fermée et son train garé (test_foire_l_hiver_js.py)
         const F = L.Foire, t = F.train, d = t.def, j = L.B.joueur, TT = L.TT;
         const k = L.Monde.carte.def.kiosques_de_foire[0];
         // Le train arrêté, le 2e wagon sur la voie ouest, à la hauteur de l'allée.
@@ -780,7 +780,7 @@ def test_la_montagne_russe_monte_au_pas_et_plonge(banc, paquet):
     vitesse plancher (⚠️ c'est la gravité qui le passe, pas la ceinture), et
     quatre secondes en gare à chaque tour."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Foire.demarrer();   // ⚠️ EN JUILLET : l'hiver, la foire est fermée et son train garé (test_foire_l_hiver_js.py)
         const F = L.Foire, m = F.montagne, d = m.def;
         const dans = function (tr, i) { return i >= tr[0] && i <= tr[1]; };
         let chaine = [], vMax = 0, boucleMin = 1e9, enGare = 0, gares = [], images = 0;
@@ -811,7 +811,7 @@ def test_la_foire_qui_roule_ne_tire_aucun_de(banc, paquet):
     """⚠️ Chaque dé consommé décale tous ceux qui suivent : le train, les
     chariots, leur dessin et leurs collisions n'en tirent aucun."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Foire.demarrer();   // ⚠️ EN JUILLET : l'hiver, la foire est fermée et son train garé (test_foire_l_hiver_js.py)
         const F = L.Foire, B = L.B, j = B.joueur;
         let tires = 0;
         const vrai = B.rng;
@@ -834,7 +834,7 @@ def test_on_voit_la_montagne_russe_meme_quand_son_pied_est_hors_champ(banc, paqu
     entités (40 px de marge sous l'écran) l'aurait effacée dès que son pied
     sortait par le bas, sommet à l'écran. Et on la dessine pour de vrai."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Foire.demarrer();   // ⚠️ EN JUILLET : l'hiver, la foire est fermée et son train garé (test_foire_l_hiver_js.py)
         const F = L.Foire, m = F.montagne, VH = L.VH;
         const cy = m.ySud - VH - 40, cx = m.ox + 40;
         const vus = [];
@@ -938,7 +938,7 @@ def test_on_fait_un_tour_de_petit_train(banc, paquet):
     (c'est le wagon qui nous peint) et le train ne nous attend pas comme quelqu'un
     planté sur la voie. Un tour complet, et on descend sur le quai, debout, entier."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Foire.demarrer();   // ⚠️ EN JUILLET : l'hiver, la foire est fermée et son train garé (test_foire_l_hiver_js.py)
         """ + EN_GARE + """
         const F = L.Foire, t = F.train, j = L.B.joueur, TT = L.TT;
         L.B.partie.billets = { foire: L.B.partie.jour };
@@ -982,7 +982,7 @@ def test_assis_dans_le_train_on_ne_fait_rien_d_autre(banc, paquet):
     ne nous fait ni descendre en marche ni monter dans un char, et l'invite se
     tait. Et recherché, le machiniste ne nous attend pas."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Foire.demarrer();   // ⚠️ EN JUILLET : l'hiver, la foire est fermée et son train garé (test_foire_l_hiver_js.py)
         """ + EN_GARE + """
         const F = L.Foire, t = F.train, j = L.B.joueur;
         L.B.recherche.etoiles = 1;
@@ -1013,7 +1013,7 @@ def test_le_train_est_en_volume_et_nous_y_assoit(banc, paquet):
     un dessin par cap —, et chacun porte ceux qui y sont assis, le joueur à sa place
     dans le sien, avec ses couleurs."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Foire.demarrer();   // ⚠️ EN JUILLET : l'hiver, la foire est fermée et son train garé (test_foire_l_hiver_js.py)
         """ + EN_GARE + """
         const F = L.Foire, t = F.train, j = L.B.joueur, A = L.Atlas, V = L.Vehicules;
         j.swaps = { c: '#123456', h: '#654321' };
@@ -1068,7 +1068,7 @@ def test_on_fait_un_tour_de_montagne_russe(banc, paquet):
     regarde le chariot, pas le sol sous lui. De retour en gare, on descend sur ses
     planches."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Foire.demarrer();   // ⚠️ EN JUILLET : l'hiver, la foire est fermée et son train garé (test_foire_l_hiver_js.py)
         const F = L.Foire, m = F.montagne, d = m.def, j = L.B.joueur, B = L.B, VH = L.VH;
         B.partie.billets = { foire: B.partie.jour };
         m.s = m.sGare; m.v = 0; m.attente = d.gare_images;
@@ -1114,7 +1114,7 @@ def test_le_chariot_penche_et_passe_le_looping_la_tete_en_bas(banc, paquet):
     à l'envers — ses passagers aussi, puisqu'ils sont dans la machine. Et le joueur
     est assis dans le sien, à ses couleurs."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Foire.demarrer();   // ⚠️ EN JUILLET : l'hiver, la foire est fermée et son train garé (test_foire_l_hiver_js.py)
         const F = L.Foire, m = F.montagne, d = m.def, A = L.Atlas, V = L.Vehicules, j = L.B.joueur, n = V.ROTATIONS;
         j.swaps = { c: '#123456', h: '#654321' };
         m.s = m.sGare; m.v = 0; m.attente = d.gare_images;
@@ -1161,7 +1161,7 @@ def test_on_fait_un_tour_de_grande_roue(banc, paquet):
     s'arrête pas pour nous, elle tourne au pas. Un tour complet, jusqu'en haut, et
     on descend devant le portique quand notre nacelle est revenue en bas."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Foire.demarrer();   // ⚠️ EN JUILLET : l'hiver, la foire est fermée et son train garé (test_foire_l_hiver_js.py)
         const F = L.Foire, R = F.roue, j = L.B.joueur, B = L.B, VH = L.VH;
         j.x = R.x; j.y = R.y + R.devant; j.invincible = 999999;
         L.Monde.centrerCamera(j.x, j.y);
@@ -1204,7 +1204,7 @@ def test_les_nacelles_sont_en_volume_au_bout_de_leurs_rayons(banc, paquet):
     roue peint à chaque cran est exactement là où la nacelle pend. Douze nacelles,
     le joueur dans la sienne à ses couleurs."""
     r = banc("""function (L, o) {
-        L.Jeu.commencer();
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Foire.demarrer();   // ⚠️ EN JUILLET : l'hiver, la foire est fermée et son train garé (test_foire_l_hiver_js.py)
         const F = L.Foire, R = F.roue, A = L.Atlas, j = L.B.joueur, B = L.B, f = R.f;
         j.swaps = { c: '#123456', h: '#654321' };
         j.x = R.x; j.y = R.y + R.devant;

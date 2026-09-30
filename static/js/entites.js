@@ -2666,6 +2666,7 @@ const Entites = (function () {
     const r = def && def.foire;
     const j = B.joueur;
     if (!f || !r || !j || B.interieur) return 0;
+    if (typeof Foire !== 'undefined' && Foire.fermee()) return 0;   // fermee pour l'hiver : personne
     // La distance du joueur au BORD de la foire, pas a son centre : elle fait
     // quatre-vingts tuiles de long, et on doit la trouver pleine en y arrivant.
     const bx = Math.max(r.x * TT, Math.min(j.x, (r.x + r.l) * TT));
@@ -2755,6 +2756,8 @@ const Entites = (function () {
   function majForain(e) {
     const f = B.defs.pietons.foule_de_foire;
     if (!Monde.carte.def.foire) return;
+    // ⚠️ La foire ferme pour l'hiver : on rentre, hors de l'ecran — comme qui a fini sa journee.
+    if (Foire.fermee()) { rentrerHorsChamp(e); return; }
     if (arriveALaFoire(e, f)) return;
     if (e.etat !== 'flane') return;          // il regarde, il a peur, il temoigne
     const t = hash2(e.id * 2654435761 + B.t, 0xF0A1C);
@@ -2767,6 +2770,7 @@ const Entites = (function () {
   function majMascotte(e) {
     const f = B.defs.pietons.foule_de_foire;
     if (!Monde.carte.def.foire) return;
+    if (Foire.fermee()) { e.poseFixe = null; rentrerHorsChamp(e); return; }
     if (e.etat === 'arret') {
       e.face = 'bas';
       e.poseFixe = 3 + (Math.floor(e.t / f.salut_images) % 2);
@@ -4323,7 +4327,7 @@ const Entites = (function () {
         e.forceT = 30; e.buteT = 0;
         if (e === B.joueur) {
           if (en.barriere.forcer && en.barriere.forcer.etoiles) Police.etoilesAuMoins(en.barriere.forcer.etoiles);
-          Hud.message(en.barriere.raison + ' — FRANCHI', 150);
+          Hud.message(Monde.raisonDe(en.barriere) + ' — FRANCHI', 150);
         }
       }
     }
@@ -5872,7 +5876,14 @@ const Entites = (function () {
   function poseDuDecor(d, t, nuit) {
     if (!d.anime) return 0;
     if (d.travaille === 'jour' && (nuit === undefined ? Monde.estNuit() : nuit)) return 0;
+    if (dortLHiver(d)) return 0;                   // la foire fermee : rien ne tourne
     return Math.floor((t === undefined ? B.t : t) / d.anime) % d.variantes;
+  }
+
+  /** Ce decor dort-il sous la neige ? Un decor de la foire (`fermeLHiver`, `DECORS_DE_FOIRE`) tant
+      que la foire est fermee pour l'hiver (`Foire.fermee`). */
+  function dortLHiver(d) {
+    return !!(d && d.fermeLHiver && typeof Foire !== 'undefined' && Foire.fermee());
   }
 
   /** L'anneau de la cible verrouillee (`Combat.majCible`) : un repere carre qui
@@ -5961,7 +5972,13 @@ const Entites = (function () {
         // ⚠️ `poseManuelle` : la grue qu'un joueur pilote (`Chantiers.piloter`) ne tourne plus toute
         // seule, elle prend la pose qu'on lui donne — jour ou nuit.
         const pose = e.poseManuelle !== undefined ? e.poseManuelle : d.anime ? poseDuDecor(d, B.t, nuit) : e.v;
-        const c = d.variantes
+        // ⚠️ LA FOIRE FERMEE L'HIVER : le meme decor, `ferme` passe a son peintre (volets baisses, ampoules
+        // eteintes, sieges vides), et coiffe de neige — une cuisson a part, sous sa propre cle.
+        const dort = dortLHiver(d);
+        const c = dort
+          ? Atlas.cuirePeintre('decor|' + e.decor + '|' + (d.variantes ? pose : '') + '|hiver', d.w, d.h,
+                               Saisons.coiffer(function (g, w, h) { d.peindre(g, w, h, pose, true); }, d.w, d.h, 2))
+          : d.variantes
           ? Atlas.cuirePeintre('decor|' + e.decor + '|' + pose, d.w, d.h,
                                function (g, w, h) { d.peindre(g, w, h, pose); })
           : Atlas.cuirePeintre('decor|' + e.decor, d.w, d.h, d.peindre);

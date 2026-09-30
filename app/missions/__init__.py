@@ -133,6 +133,9 @@ class Personnage(TypedDict):
     # avant, sa salle n'a que ses élèves). ⚠️ Dans les données, comme `parti_apres` : `histoire.js` ne le pose
     # qu'une fois cette mission faite, et il n'y écrit aucun slug.
     arrive_apres: NotRequired[str]
+    # ABSENT L'HIVER : il n'est pas à sa place tant que la neige tient, et ses missions attendent (le
+    # Bonimenteur et sa foire, fermée pour l'hiver — docs/jalons/la-foire-fermee-l-hiver.md).
+    absent_l_hiver: NotRequired[bool]
     # Son repos à lui, au lieu de `REPOS` : `(avant, après)`, avant et après `REPOS["apres"]`.
     # ⚠️ Pour qui vit LOIN du Faubourg — « le Faubourg est tranquille », dit sur l'île, ment.
     repos: NotRequired[tuple[str, str]]
@@ -239,7 +242,7 @@ PERSONNAGES: list[Personnage] = [
     {"slug": "bonimenteur", "nom": "Marcel « Le Bonimenteur » Dumouchel", "genre": "homme",
      "voix": "Léo - Français québécois ",
      "couleurs": {"c": "#d4a017", "h": "#1a1a1a", "s": "#e8b088", "p": "#1a1a3a"}, "ou": "foire",
-     "heler": "Approche, jeune!"},
+     "heler": "Approche, jeune!", "absent_l_hiver": True},
 
     # --- Sven « le Norvégien » (21 sept. 2026, « Sven et le piratage ») : deja
     # prevu dans le plan M16 (« le contrebandier qui veut Les Quais »), jamais

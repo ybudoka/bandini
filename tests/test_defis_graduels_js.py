@@ -420,6 +420,7 @@ def test_un_kiosque_dont_le_defi_est_cache_reste_un_kiosque(banc):
     """Par le BOUTON, devant le lance-anneaux : caché, ACTION ne propose rien ; ouvert, il
     propose le défi — la baraque sert de panneau, comme les trois jeux de la v1."""
     r = banc(_jeu("""
+        L.B.partie.jour = 21;   // ⚠️ EN JUILLET : l'hiver, la foire est fermée et ses comptoirs aussi (test_foire_l_hiver_js.py)
         aller(L, o, 'anneaux');
         L.Histoire.abandonnerDefi(); L.Hud.fermerMenu();
         delete L.B.partie.defisOuverts.anneaux;
@@ -865,6 +866,9 @@ def test_la_filature_se_gagne_a_bonne_distance(banc, ecart, gagne, raison):
     r = banc(_jeu(MARCHER + """
         aller(L, o, 'filature');
         const j = L.B.joueur, e = L.B.rue, p = e.piste;
+        // ⚠️ Le juge mesure la distance, pas le trafic : 7 200 images a traverser des rues, et une auto
+        // du trafic renversait le joueur (À L'HÔPITAL) des que le hasard de la ville glissait d'un de.
+        j.invincible = 1e9;
         for (let n = 0; n < 7200 && L.B.defi; n++) {
             const cible = L.Conduite.point(p, e.s - %d * L.TT, e.lat);
             marcherVers(o, j, cible.x, cible.y, 6);

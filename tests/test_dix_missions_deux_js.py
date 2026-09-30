@@ -20,7 +20,7 @@ def test_p13_le_bonimenteur_existe_pickpocket_le_complice_les_cravates_puis_reto
     Cravate en descend avec la caisse, on la couche, on ramasse ; ses chums arrivent
     (`tuer`, `loin`) ; puis on rapporte le tout à l'arche."""
     r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + """
-        L.Jeu.commencer(); L.graine(6);
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Histoire.majSaisonniers(true); L.graine(6);   // ⚠️ EN JUILLET : l'hiver, le Bonimenteur n'est pas à sa foire
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6']);
         const argent = paiements(L);
@@ -96,7 +96,7 @@ def test_p14_chasser_les_skateux_escorter_repousser_puis_leur_chef(banc):
     arrivent d'abord à la foire, sur le joueur (`loin`) ; et après l'embuscade, leur chef
     (`chef` : bâton, 160 de vie) sort à côté du joueur."""
     r = banc("function (L, o) {" + OUTILS + CHASSER + """
-        L.Jeu.commencer(); L.graine(6);
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Histoire.majSaisonniers(true); L.graine(6);   // ⚠️ EN JUILLET : l'hiver, le Bonimenteur n'est pas à sa foire
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'p13']);
         const argent = paiements(L);
@@ -194,7 +194,7 @@ def test_p14_un_seul_bonimenteur_qui_attend_puis_court_sur_nos_pas_jusqu_au_post
     téléporte — le joueur court de l'arche au poste (215 tuiles à vol d'oiseau), et le
     VRAI donneur l'attend, puis le suit sur ses pas."""
     r = banc("function (L, o) {" + OUTILS + ESCORTE + CHASSER + """
-        L.Jeu.commencer(); L.graine(6);
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Histoire.majSaisonniers(true); L.graine(6);   // ⚠️ EN JUILLET : l'hiver, le Bonimenteur n'est pas à sa foire
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'p13']);
         const avant = bonimenteurs(L).length;
@@ -241,7 +241,7 @@ def test_p14_il_monte_dans_le_char_descend_au_poste_puis_rentre_a_l_arche(banc):
     Mission finie, il lâche le joueur et rentre à l'arche, remis à neuf dès que ni lui
     ni l'arche ne sont à l'écran — le même (un neuf tirerait des dés), un seul, toujours."""
     r = banc("function (L, o) {" + OUTILS + ESCORTE + CHASSER + """
-        L.Jeu.commencer(); L.graine(6);
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Histoire.majSaisonniers(true); L.graine(6);   // ⚠️ EN JUILLET : l'hiver, le Bonimenteur n'est pas à sa foire
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'p13']);
         const argent = paiements(L);
@@ -308,7 +308,7 @@ def test_p14_distance_il_nous_retrouve_sur_nos_pas(banc):
     nous et y restait ; sur nos pas, il contourne ce qu'on a contourné, et il nous
     rejoint."""
     r = banc("function (L, o) {" + OUTILS + ESCORTE + CHASSER + """
-        L.Jeu.commencer(); L.graine(6);
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Histoire.majSaisonniers(true); L.graine(6);   // ⚠️ EN JUILLET : l'hiver, le Bonimenteur n'est pas à sa foire
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'p13']);
         commencer(L, o, 'p14');
@@ -338,7 +338,7 @@ def test_p14_protege_assomme_la_mission_echoue_et_il_rentre_a_l_arche(banc):
     l'autre bout de la ville ni ne s'en va en passant — il est reposé à l'arche, debout,
     prêt à redonner la mission."""
     r = banc("function (L, o) {" + OUTILS + ESCORTE + CHASSER + """
-        L.Jeu.commencer(); L.graine(6);
+        L.Jeu.commencer(); L.B.partie.jour = 21; L.Histoire.majSaisonniers(true); L.graine(6);   // ⚠️ EN JUILLET : l'hiver, le Bonimenteur n'est pas à sa foire
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'p13']);
         commencer(L, o, 'p14');

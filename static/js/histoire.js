@@ -186,7 +186,33 @@ const Histoire = (function () {
       aucune en cours, `exige` tenu, et pas fermees. */
   function disponibles() {
     if (B.partie.mission) return [];
-    return defs().filter(function (m) { return !faite(m.slug) && !estFermee(m.slug) && m.prerequis.every(faite) && exigeTenu(m.exige); });
+    return defs().filter(function (m) {
+      return !faite(m.slug) && !estFermee(m.slug) && m.prerequis.every(faite) && exigeTenu(m.exige) && !absentLHiver(personnage(m.donneur));
+    });
+  }
+
+  /** ABSENT L'HIVER (`absent_l_hiver` : le Bonimenteur, dont la foire est fermee tant que la neige tient,
+      docs/jalons/la-foire-fermee-l-hiver.md) : il n'est pas en ville, et ses missions attendent qu'il revienne. */
+  function absentLHiver(p) {
+    return !!(p && p.absent_l_hiver && typeof Saisons !== 'undefined' && Saisons.enHiver());
+  }
+
+  /** Qui part pour l'hiver s'en va HORS DE L'ECRAN, et revient au degel — sans recharger la partie
+      (`creerDonneurs` ne pose qu'au chargement). ⚠️ Jamais pendant une mission : on ne retire pas la
+      mission de sous les pieds de celui qui la joue ; il part apres. Une fois toutes les cinq secondes
+      (`maintenant` : tout de suite — un juge qui vient de poser l'ete). */
+  function majSaisonniers(maintenant) {
+    if ((!maintenant && B.t % 300 !== 0) || B.interieur || B.bloc || B.cinema) return;
+    const enJeu = courante();
+    for (const p of personnages()) {
+      if (!p.absent_l_hiver) continue;
+      const e = donneur(p.slug);
+      if (absentLHiver(p)) {
+        if (e && !(enJeu && aBesoinDe(enJeu, p.slug)) && !Entites.visibleAEcran(e.x, e.y, 40)) Entites.retirer(e);
+      } else if (!e && !estParti(p) && !(p.arrive_apres && !faite(p.arrive_apres))) {
+        poserDehors(p);
+      }
+    }
   }
 
   function disponibleDe(donneur) {
@@ -603,6 +629,7 @@ const Histoire = (function () {
       if (estParti(p)) continue;
       // Pas encore arrive (`arrive_apres` : le vieux maitre des Mantes, en Floride jusqu'a la chute du Pouce).
       if (p.arrive_apres && !faite(p.arrive_apres)) continue;
+      if (absentLHiver(p)) continue;              // parti pour l'hiver (`majSaisonniers` le ramene)
       poserDehors(p);
     }
   }
@@ -1368,7 +1395,7 @@ const Histoire = (function () {
       if (!B.bloc) dansLaVille(function () {
         for (const p of personnages()) {
           if (p.arrive_apres !== m.slug || donneur(p.slug)) continue;
-          if (estParti(p)) continue;
+          if (estParti(p) || absentLHiver(p)) continue;
           poserDehors(p);
         }
       });
@@ -3605,6 +3632,7 @@ const Histoire = (function () {
     jouerLeGenerique();
     majBulles();
     majRetours();
+    majSaisonniers();
     majTelephone();
     majProtege();
     if (B.partie.mission) {
@@ -3628,7 +3656,7 @@ const Histoire = (function () {
   }
 
   return { texteDObjectif, exigeTenu, disponibles, disponibleDe, estParti, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
-           donneur, creerDonneurs, poserDonneur, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
+           donneur, creerDonneurs, majSaisonniers, absentLHiver, poserDonneur, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
            parler, dire, suivante, finir, commencer, demarrer, avancer, objectif, courante, reussir, echouer, evenement,
            ouverture, passerOuverture, fichiersDeLOuverture, direLignes, majCinema, resoudre,
            lieuDuPersonnage, pieceDessous, ouTrouver, present, calme, jouerOuDire,

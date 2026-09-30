@@ -34,3 +34,37 @@ En trois vagues, sans un dé et sans rien déplacer (ce qui se pose, en dernier)
 3. **Ce que l'hiver amène** — le jongleur de feu, les foyers des places, le chocolat chaud.
 
 ## Notes
+
+### Vague 1 — la foire cadenassée (30 sept. 2026)
+
+- **Une seule question** : `Foire.fermee()` = `Saisons.enHiver()` (la neige qui tient). Tout le reste la lit
+  là où il vit, sans un dé et sans rien sauvegarder.
+- **Les machines** (`foire.js`) : une machine en gare y reste (son attente ne tombe jamais à zéro, pas de
+  sifflet) ; en route, elle finit son tour. Une partie qui s'ouvre en janvier trouve le train en gare. La
+  roue s'arrête à son cran 0, celui de son décor. On ne monte à rien, on ne joue à rien
+  (`sousLaMain`, `jeuSousLaMain`), l'orgue et les cris se taisent, et les sièges sont vides (ni machiniste,
+  ni voyageurs, nacelles vides, `chariot_vide`).
+- **Le décor** (`sprites.js`, `DECORS_DE_FOIRE` → `fermeLHiver`) : `Entites.poseDuDecor` rend 0 (rien ne
+  tourne), et le peintre reçoit `ferme` : volets de tôle baissés et cadenassés sur les comptoirs, plus de
+  vendeur, les ampoules éteintes, les tasses et les chaises volantes vides (les chaînes pendent droit), le
+  bassin des canards gelé, et une chaîne avec sa pancarte FERMÉ sous l'arche.
+- **La neige qui coiffe** (`Saisons.coiffer`) : deux rangs de blanc sur le dessus de ce qui a au moins trois
+  pixels de haut, par composition, sans lire un pixel. ⚠️ La première version blanchissait tout pixel au ciel
+  ouvert : la jante et les rayons de la grande roue, et la chaîne de l'arche, disparaissaient sous la neige.
+  C'est la capture qui l'a montré, pas les juges.
+- **Les guirlandes** (`Monde.lampesVisibles`) : les lampes `foire_*` s'éteignent.
+- **L'arche** (`carte.BARRIERES`, `hiver`) : `Monde.barriereFermee` la ferme même avec un billet du jour, la
+  caisse ne vend rien, on lit LA FOIRE EST FERMÉE POUR L'HIVER (`Monde.raisonDe`), on ressort librement, et
+  resquiller coûte pareil.
+- **La foule** : `naitreLaFoire` ne fait naître personne ; forains et mascottes rentrent hors de l'écran.
+- **Le Bonimenteur** (`absent_l_hiver`) : pas posé l'hiver, ses missions ne sont pas `disponibles` ;
+  `Histoire.majSaisonniers` (toutes les cinq secondes) le retire hors de l'écran à la neige et le repose au
+  dégel, jamais pendant une mission qui a besoin de lui.
+- **Juges** : `tests/test_foire_l_hiver_js.py` (dix juges, chacun janvier ET juillet, mutés un à un). Les juges
+  de la foire ouverte se posent en juillet (`jour = 21`, puis `Foire.demarrer()` : le train garé en janvier
+  comptait un arrêt de trop), comme ceux de p13/p14 (`Histoire.majSaisonniers(true)`).
+- ⚠️ **Un dé de moins déplace tout** : le Bonimenteur qui ne naît plus en janvier est un `creerPieton` de
+  moins, et la filature des défis gradués (7 200 images à traverser des rues) finissait sous une auto du
+  trafic. Le juge mesure une distance, pas le trafic : le joueur y est invincible.
+- **Pas fait** : les allées de la foire (`g`, « poussière de pierre ») restent sans neige. C'est le glyphe de
+  tous les sentiers de parc de la ville : une décision à part.

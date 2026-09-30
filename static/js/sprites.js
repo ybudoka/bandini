@@ -2581,7 +2581,7 @@ const MACHINE_WAGON_FOIRE = {
    dessine debout resterait debout. Buste, tete et cheveux en blocs, chacun sa
    lettre (`a` `b` `g` a gauche, `d` `e` `f` a droite) : `Foire` y met les couleurs
    de qui est assis, le joueur compris. `bras` : les bras leves, quand ca plonge. */
-function chariotDeMontagne(bras) {
+function chariotDeMontagne(bras, vide) {
   const pieces = [
     // Les roues, sur le rail. ⚠️ Gris et étroites : noires et de toute la largeur, la
     // tête en bas au looping on ne voyait plus qu'elles.
@@ -2593,7 +2593,8 @@ function chariotDeMontagne(bras) {
     ['tube', [1.0, -3.8, 7.4], [1.0, 3.8, 7.4], 'M', 0.3],                                   // la barre
     ['bloc', [6.2, 7.4], [-0.8, 0.8], [3.2, 4.2], 'l', 'l', 'l', 0.3],                       // le fanal du nez
   ];
-  [[-2.1, 'a', 'b', 'g'], [2.1, 'd', 'e', 'f']].forEach(function (p) {
+  // `vide` : le chariot garé en gare, la foire fermée pour l'hiver — personne dedans.
+  if (!vide) [[-2.1, 'a', 'b', 'g'], [2.1, 'd', 'e', 'f']].forEach(function (p) {
     const w = p[0];
     pieces.push(['bloc', [-3.6, -1.4], [w - 1.3, w + 1.3], [5.0, 8.0], p[1], p[1], p[1], 0.05]);   // le buste
     pieces.push(['bloc', [-3.2, -1.2], [w - 1.0, w + 1.0], [8.0, 10.0], p[3], p[3], p[3], 0.06]);  // la tete
@@ -2646,6 +2647,7 @@ const FOIRE_EN_VOLUME = {
   // ⚠️ Une toile de 36 : le chariot pivote sur son rail dans tous les sens, bras leves compris.
   chariot: enVolume(chariotDeMontagne(false), 14, 36, PALETTE_CHARIOT),
   chariot_bras: enVolume(chariotDeMontagne(true), 14, 36, PALETTE_CHARIOT),
+  chariot_vide: enVolume(chariotDeMontagne(false, true), 14, 36, PALETTE_CHARIOT),
   // ⚠️ Une toile de 28 : l'attache au milieu, le baquet dix pixels plus bas.
   nacelle: enVolume(nacelleDeRoue(false), 6, 28, PALETTE_CHARIOT),
   nacelle_vide: enVolume(nacelleDeRoue(true), 6, 28, PALETTE_CHARIOT),
@@ -6332,16 +6334,19 @@ const VENDEURS = {
   cheveux: ['#3a2a1a', '#1a1a1a', '#8a5a2b', '#d9b36a'],
   chandail: ['#efe6d0', '#c0392b', '#2f6fb5', '#2f8d6a'],
 };
-function peindreKiosque(ctx, v, auvent, auvent2, produit) {
+function peindreKiosque(ctx, v, ferme, auvent, auvent2, produit) {
   const peau = VENDEURS.peau[v % 4], cheveux = VENDEURS.cheveux[(v >> 2) % 4];
   const chandail = VENDEURS.chandail[(v * 3 + 1) % 4];
   ctx.fillStyle = 'rgba(20,18,26,0.26)'; ctx.fillRect(2, 26, 25, 4);        // l'ombre
-  // Le vendeur, DERRIERE le comptoir : on le peint avant la boite.
+  // Le vendeur, DERRIERE le comptoir : on le peint avant la boite. ⚠️ Pas l'hiver (`ferme`) : le
+  // comptoir a ses volets baisses, et personne derriere.
+  if (!ferme) {
   ctx.fillStyle = chandail; ctx.fillRect(10, 13, 9, 5);
   ctx.fillStyle = peau; ctx.fillRect(11, 8, 6, 5);                           // la tete
   ctx.fillStyle = cheveux; ctx.fillRect(11, 7, 6, 2); ctx.fillRect(11, 9, 1, 2);
   ctx.fillStyle = '#1b1b1f'; ctx.fillRect(12, 10, 1, 1); ctx.fillRect(15, 10, 1, 1);
   ctx.fillStyle = peau; ctx.fillRect(8, 14, 2, 3); ctx.fillRect(19, 14, 2, 3);   // les bras sur le comptoir
+  }
   // La boite du comptoir, aux couleurs de l'auvent.
   ctx.fillStyle = auvent; ctx.fillRect(2, 17, 25, 10);
   ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(2, 23, 25, 4);
@@ -6358,6 +6363,19 @@ function peindreKiosque(ctx, v, auvent, auvent2, produit) {
   }
   ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0, 5, 29, 1);
   if (produit) produit(ctx);
+  if (ferme) voletDeFoire(ctx, 4, 7, 21, 9);
+}
+
+/** LE VOLET BAISSE d'un comptoir de foire fermee pour l'hiver (docs/jalons/la-foire-fermee-l-hiver.md) :
+    une tole grise a lattes, et son cadenas. ⚠️ Par-dessus le produit : ce qui s'etalait au comptoir est
+    rentre ; l'enseigne, au-dessus de l'auvent, reste. */
+function voletDeFoire(ctx, x, y, l, h) {
+  ctx.fillStyle = '#80868d'; ctx.fillRect(x, y, l, h);
+  ctx.fillStyle = '#676c73';
+  for (let k = 1; k < h; k += 2) ctx.fillRect(x, y + k, l, 1);                  // les lattes
+  ctx.fillStyle = '#9aa0a8'; ctx.fillRect(x, y, l, 1);
+  ctx.fillStyle = '#3a3d44'; ctx.fillRect(x + (l >> 1) - 1, y + h - 3, 3, 3);    // le cadenas
+  ctx.fillStyle = '#c8a040'; ctx.fillRect(x + (l >> 1), y + h - 2, 1, 1);
 }
 
 /* ⚠️ Un peintre MIROIR : le même dessin, retourné gauche-droite. Pas de
@@ -7145,8 +7163,8 @@ const DECORS = {
   //: betes).
 
   // --- LES NEUF KIOSQUES DE LA FOIRE (voir `peindreKiosque`) ---------------
-  barbe_a_papa: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v) {
-    peindreKiosque(ctx, v, '#e87aa8', '#fbe3ee', function (c) {
+  barbe_a_papa: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v, ferme) {
+    peindreKiosque(ctx, v, ferme, '#e87aa8', '#fbe3ee', function (c) {
       for (const [x, y] of [[4, 11], [22, 10], [7, 12]]) {                     // les nuages roses sur leur baton
         c.fillStyle = '#f7a8cc'; c.fillRect(x - 2, y - 2, 5, 4); c.fillRect(x - 1, y - 3, 3, 1);
         c.fillStyle = '#fcd2e4'; c.fillRect(x - 1, y - 2, 2, 2);
@@ -7154,8 +7172,8 @@ const DECORS = {
       }
     });
   } },
-  hot_dogs: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v) {
-    peindreKiosque(ctx, v, '#c0392b', '#efd06a', function (c) {
+  hot_dogs: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v, ferme) {
+    peindreKiosque(ctx, v, ferme, '#c0392b', '#efd06a', function (c) {
       c.fillStyle = '#d9a35a'; c.fillRect(9, 0, 11, 3);                         // l'enseigne : un pain...
       c.fillStyle = '#b8452e'; c.fillRect(8, 1, 13, 1);                         // ...et sa saucisse
       c.fillStyle = '#efd06a'; c.fillRect(11, 1, 7, 1);                         // la moutarde
@@ -7163,8 +7181,8 @@ const DECORS = {
       c.fillStyle = '#b8452e'; c.fillRect(3, 14, 5, 1); c.fillRect(21, 14, 5, 1);
     });
   } },
-  pop_corn: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v) {
-    peindreKiosque(ctx, v, '#c0392b', '#ffffff', function (c) {
+  pop_corn: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v, ferme) {
+    peindreKiosque(ctx, v, ferme, '#c0392b', '#ffffff', function (c) {
       for (const x of [3, 21]) {                                               // les boites rayees
         c.fillStyle = '#ffffff'; c.fillRect(x, 11, 5, 5);
         c.fillStyle = '#c0392b'; c.fillRect(x + 1, 11, 1, 5); c.fillRect(x + 3, 11, 1, 5);
@@ -7173,8 +7191,8 @@ const DECORS = {
       }
     });
   } },
-  limonade: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v) {
-    peindreKiosque(ctx, v, '#efd06a', '#ffffff', function (c) {
+  limonade: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v, ferme) {
+    peindreKiosque(ctx, v, ferme, '#efd06a', '#ffffff', function (c) {
       c.fillStyle = '#cfe6f5'; c.fillRect(3, 9, 5, 7);                          // le pichet
       c.fillStyle = '#f6e27a'; c.fillRect(3, 11, 5, 5);
       c.fillStyle = '#cfe6f5'; c.fillRect(8, 11, 1, 3);
@@ -7184,9 +7202,9 @@ const DECORS = {
       }
     });
   } },
-  poutine: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v) {
+  poutine: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v, ferme) {
     // ⚠️ Bleu et blanc : c'est une foire au Quebec, et la poutine est son drapeau.
-    peindreKiosque(ctx, v, '#2f6fb5', '#ffffff', function (c) {
+    peindreKiosque(ctx, v, ferme, '#2f6fb5', '#ffffff', function (c) {
       for (const x of [3, 21]) {
         c.fillStyle = '#efe6d0'; c.fillRect(x, 13, 6, 3);                       // le casseau
         c.fillStyle = '#e8c56a'; c.fillRect(x, 11, 6, 2);                       // les frites
@@ -7197,8 +7215,8 @@ const DECORS = {
       c.fillStyle = '#2f6fb5'; c.fillRect(14, 0, 1, 2);
     });
   } },
-  queues_de_castor: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v) {
-    peindreKiosque(ctx, v, '#8a5a2b', '#efe6d0', function (c) {
+  queues_de_castor: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v, ferme) {
+    peindreKiosque(ctx, v, ferme, '#8a5a2b', '#efe6d0', function (c) {
       for (const x of [2, 21]) {                                               // la pate aplatie, sucree
         c.fillStyle = '#b87a3a'; c.fillRect(x, 12, 7, 4); c.fillRect(x + 1, 11, 5, 1);
         c.fillStyle = '#d9a35a'; c.fillRect(x + 1, 12, 5, 2);
@@ -7206,8 +7224,8 @@ const DECORS = {
       }
     });
   } },
-  ballons: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v) {
-    peindreKiosque(ctx, v, '#9b59b6', '#efd06a', function (c) {
+  ballons: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v, ferme) {
+    peindreKiosque(ctx, v, ferme, '#9b59b6', '#efd06a', function (c) {
       // Les ballons flottent PAR-DESSUS l'auvent : c'est eux qu'on voit de loin.
       const couleurs = ['#e0574f', '#4fa3d1', '#efd06a', '#5fb87a', '#e87aa8', '#f39c12'];
       [[2, 0], [7, 1], [21, 0], [25, 2], [11, 0], [17, 1]].forEach(function (p, i) {
@@ -7217,8 +7235,8 @@ const DECORS = {
       });
     });
   } },
-  peluches: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v) {
-    peindreKiosque(ctx, v, '#8e44ad', '#f1c40f', function (c) {
+  peluches: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v, ferme) {
+    peindreKiosque(ctx, v, ferme, '#8e44ad', '#f1c40f', function (c) {
       // Les toutous accroches sous l'auvent : les prix qu'on ne gagne jamais.
       [[2, '#e87aa8'], [6, '#4fa3d1'], [21, '#5fb87a'], [25, '#f39c12']].forEach(function (p) {
         c.fillStyle = p[1]; c.fillRect(p[0], 8, 3, 3); c.fillRect(p[0] - 1, 7, 1, 1); c.fillRect(p[0] + 3, 7, 1, 1);
@@ -7227,8 +7245,8 @@ const DECORS = {
       });
     });
   } },
-  lance_anneaux: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v) {
-    peindreKiosque(ctx, v, '#2f8d6a', '#ffffff', function (c) {
+  lance_anneaux: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v, ferme) {
+    peindreKiosque(ctx, v, ferme, '#2f8d6a', '#ffffff', function (c) {
       for (let i = 0; i < 6; i++) {                                            // les bouteilles
         const x = i < 3 ? 2 + i * 2 : 20 + (i - 3) * 2;
         c.fillStyle = '#2f6b2a'; c.fillRect(x, 11, 1, 5); c.fillRect(x, 10, 1, 1);
@@ -7242,7 +7260,7 @@ const DECORS = {
   // tuiles de cloture de part et d'autre, et l'arc passe au-dessus de l'allee
   // d'entree. Pas solide : c'est la barriere de l'arche (`carte.BARRIERES`,
   // `payer`) qui arrete — et laisse passer qui a son billet.
-  portique_foire: { solide: false, r: 0, variantes: 2, anime: 18, w: 72, h: 66, ancre: [36, 62], peindre: function (ctx, w, h, v) {
+  portique_foire: { solide: false, r: 0, variantes: 2, anime: 18, w: 72, h: 66, ancre: [36, 62], peindre: function (ctx, w, h, v, ferme) {
     ctx.fillStyle = 'rgba(20,18,26,0.24)'; ctx.fillRect(2, 60, 20, 5); ctx.fillRect(50, 60, 20, 5);
     // Les deux piliers, rayes rouge et blanc, coiffes d'or.
     for (const px of [4, 56]) {
@@ -7265,7 +7283,7 @@ const DECORS = {
     for (let a = 0; a <= 180; a += 12) {
       const t = Math.PI + a / 180 * Math.PI;
       const px = Math.round(cx + Math.cos(t) * (R + 1)), py = Math.round(cy + Math.sin(t) * (R + 1));
-      ctx.fillStyle = ((a / 12 + v) % 2) ? '#ffe58a' : '#b8862a';
+      ctx.fillStyle = !ferme && ((a / 12 + v) % 2) ? '#ffe58a' : '#b8862a';
       ctx.fillRect(px - 1, py - 1, 3, 3);
     }
     // L'enseigne dans la cle de voute : « FOIRE » en lettres doublees.
@@ -7291,6 +7309,17 @@ const DECORS = {
       ctx.fillStyle = ['#efd06a', '#5fb87a', '#e87aa8', '#4fa3d1'][(x / 5) % 4];
       ctx.fillRect(x, 24, 3, 2); ctx.fillRect(x + 1, 26, 1, 1);
     }
+    // ⚠️ FERMEE L'HIVER : une chaine tendue d'un pilier a l'autre, et la pancarte qui y pend. C'est
+    // elle qui dit, de loin, pourquoi l'arche ne vend plus de billet (`Monde.barriereFermee`).
+    if (ferme) {
+      for (let x = 16; x < 56; x++) {
+        const y = 46 + Math.round(Math.sin((x - 16) / 40 * Math.PI) * 3);
+        ctx.fillStyle = (x % 3) ? '#8a8e96' : '#5e626a'; ctx.fillRect(x, y, 1, 1);
+      }
+      ctx.fillStyle = '#efe6d0'; ctx.fillRect(23, 45, 26, 10);
+      ctx.fillStyle = '#c0392b'; ctx.fillRect(24, 46, 24, 8);
+      if (typeof Atlas !== 'undefined') Atlas.texte(ctx, 'FERMÉ', 36 - (Atlas.largeurTexte('FERMÉ') >> 1), 48, '#efe6d0');
+    }
   } },
 
   // LA GRANDE ROUE. ⚠️ **Ce n'est pas un manège, c'est un BELVEDERE QUI TOURNE**,
@@ -7305,7 +7334,7 @@ const DECORS = {
   // `Foire` peint par-dessus, à l'angle même de ces rayons (`moyeu`, `rayon`,
   // `nacelles`, et la pose qui avance d'un sixième d'intervalle) — c'est ce qui
   // permet de s'asseoir dans l'une d'elles et de faire le tour avec elle.
-  grande_roue: { anime: 22, arrete: 14, w: 84, h: 92, ancre: [42, 88], r: 16, sol: [16, 8], solide: true, variantes: 6, moyeu: [42, 40], rayon: 36, nacelles: 12, peindre: function (ctx, w, h, v) {
+  grande_roue: { anime: 22, arrete: 14, w: 84, h: 92, ancre: [42, 88], r: 16, sol: [16, 8], solide: true, variantes: 6, moyeu: [42, 40], rayon: 36, nacelles: 12, peindre: function (ctx, w, h, v, ferme) {
     const f = DECORS.grande_roue, cx = f.moyeu[0], cy = f.moyeu[1], R = f.rayon, N = f.nacelles;
     ctx.fillStyle = 'rgba(20,18,26,0.26)'; ctx.fillRect(12, 84, 60, 7);      // son ombre
     // Le portique : deux jambes en A de chaque cote du moyeu.
@@ -7325,12 +7354,12 @@ const DECORS = {
     for (let a = 0; a < 120; a++) {
       const t = a / 120 * Math.PI * 2;
       const px = Math.round(cx + Math.cos(t) * R), py = Math.round(cy + Math.sin(t) * R);
-      ctx.fillStyle = (a % 6 === (v % 2) * 3) ? '#ffe58a' : ((a % 12 < 6) ? '#c0392b' : '#efe6d0');
+      ctx.fillStyle = (!ferme && a % 6 === (v % 2) * 3) ? '#ffe58a' : ((a % 12 < 6) ? '#c0392b' : '#efe6d0');
       ctx.fillRect(px, py, 2, 2);
     }
     ctx.fillStyle = '#5e626a'; ctx.fillRect(cx - 5, cy - 5, 10, 10);         // le moyeu
     ctx.fillStyle = '#a6aab0'; ctx.fillRect(cx - 3, cy - 4, 6, 6);
-    ctx.fillStyle = '#ffe58a'; ctx.fillRect(cx - 1, cy - 2, 2, 2);
+    ctx.fillStyle = ferme ? '#8a8e96' : '#ffe58a'; ctx.fillRect(cx - 1, cy - 2, 2, 2);
     // ⚠️ Les attaches des nacelles, au bout des rayons : les nacelles elles-memes
     // pendent de la, peintes par `Foire` (voir plus haut).
     ctx.fillStyle = '#5e626a';
@@ -7378,7 +7407,7 @@ const DECORS = {
   // LE CARROUSEL : un toit conique raye, et les chevaux dessous qui tournent.
   // ⚠️ Huit chevaux de DEUX robes, et la pose avance d'un quart de tour en six
   // images : deux chevaux, une robe entiere — la boucle ne saute pas.
-  carrousel: { anime: 12, arrete: 14, w: 60, h: 58, ancre: [30, 46], r: 14, sol: [26, 8], solide: true, variantes: 6, peindre: function (ctx, w, h, v) {
+  carrousel: { anime: 12, arrete: 14, w: 60, h: 58, ancre: [30, 46], r: 14, sol: [26, 8], solide: true, variantes: 6, peindre: function (ctx, w, h, v, ferme) {
     ctx.fillStyle = 'rgba(20,18,26,0.22)'; ovaleDeManege(ctx, 30, 50, 29, 6);   // son ombre
     ctx.fillStyle = '#8e2d23'; ovaleDeManege(ctx, 30, 47, 27, 8);               // la jupe du plancher
     ctx.fillStyle = '#e8a33a'; ovaleDeManege(ctx, 30, 46, 27, 8);
@@ -7426,7 +7455,7 @@ const DECORS = {
       ctx.fillRect(x, 23, 1, feston > 0 && feston < 5 ? 3 : 2);
     }
     for (let x = 4; x < 58; x += 6) {
-      ctx.fillStyle = ((x / 6) | 0) % 2 === v % 2 ? '#ffe58a' : '#efe6d0';
+      ctx.fillStyle = !ferme && ((x / 6) | 0) % 2 === v % 2 ? '#ffe58a' : '#efe6d0';
       ctx.fillRect(x, 23, 1, 1);
     }
     ctx.fillStyle = '#e8a33a'; ctx.fillRect(29, 1, 3, 3);                       // l'epi
@@ -7436,7 +7465,7 @@ const DECORS = {
   // LES TASSES : six tasses sur un grand plateau qui tourne, et du monde dedans.
   // ⚠️ Trois couleurs et six tasses : un demi-tour en huit poses remet
   // chaque couleur a la place de la meme couleur — la boucle ne saute pas.
-  tasses: { anime: 10, arrete: 12, w: 58, h: 40, ancre: [29, 28], r: 14, sol: [25, 9], solide: true, variantes: 8, peindre: function (ctx, w, h, v) {
+  tasses: { anime: 10, arrete: 12, w: 58, h: 40, ancre: [29, 28], r: 14, sol: [25, 9], solide: true, variantes: 8, peindre: function (ctx, w, h, v, ferme) {
     ctx.fillStyle = 'rgba(20,18,26,0.22)'; ovaleDeManege(ctx, 29, 30, 28, 9);   // son ombre
     ctx.fillStyle = '#3f3748'; ovaleDeManege(ctx, 29, 27, 26, 10);              // le bord du plateau
     ctx.fillStyle = '#7a6d88'; ovaleDeManege(ctx, 29, 25, 26, 10);              // le plateau
@@ -7456,7 +7485,8 @@ const DECORS = {
       ctx.fillRect(x + 6, y - 3, 2, 1); ctx.fillRect(x + 7, y - 3, 1, 3);       // l'anse
       ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(x - 5, y - 4, 11, 1);
       ctx.fillStyle = '#2a2a2e'; ctx.fillRect(x - 4, y - 3, 9, 1);              // le creux
-      // Deux tetes qui depassent — une tasse vide ne tourne pour personne.
+      // Deux tetes qui depassent — une tasse vide ne tourne pour personne. (Fermee l'hiver, elle ne tourne pas.)
+      if (ferme) return;
       ctx.fillStyle = '#e8b088'; ctx.fillRect(x - 3, y - 6, 2, 2); ctx.fillRect(x + 1, y - 6, 2, 2);
       ctx.fillStyle = ['#3a2a1a', '#c98d66', '#1b1b1f'][c.k % 3];
       ctx.fillRect(x - 3, y - 7, 2, 1); ctx.fillRect(x + 1, y - 7, 2, 1);
@@ -7468,7 +7498,7 @@ const DECORS = {
     ctx.fillStyle = '#c0392b'; ovaleDeManege(ctx, 29, 14, 6, 3);
     ctx.fillStyle = '#e0574f'; ctx.fillRect(26, 12, 4, 1);
     ctx.fillStyle = '#e8a33a'; ctx.fillRect(28, 9, 3, 3);                       // le bouton
-    ctx.fillStyle = v % 2 ? '#ffe58a' : '#e8a33a'; ctx.fillRect(29, 9, 1, 1);
+    ctx.fillStyle = !ferme && v % 2 ? '#ffe58a' : '#e8a33a'; ctx.fillRect(29, 9, 1, 1);
     tasses.filter(function (c) { return c.devant; }).forEach(tasse);
   } },
 
@@ -7476,11 +7506,12 @@ const DECORS = {
   // chaines — ⚠️ elles s'ECARTENT quand ca tourne, et c'est ce qui se lit.
   // ⚠️ Comme la roue, elles tournent EN L'AIR : la boite au sol est l'enclos
   // qu'elles balaient, pas leur dessin.
-  chaises_volantes: { anime: 13, arrete: 14, w: 72, h: 70, ancre: [36, 64], r: 14, sol: [24, 8], solide: true, variantes: 4, peindre: function (ctx, w, h, v) {
+  chaises_volantes: { anime: 13, arrete: 14, w: 72, h: 70, ancre: [36, 64], r: 14, sol: [24, 8], solide: true, variantes: 4, peindre: function (ctx, w, h, v, ferme) {
     ctx.fillStyle = 'rgba(20,18,26,0.20)'; ovaleDeManege(ctx, 36, 65, 30, 5);   // son ombre
     ctx.fillStyle = '#3a3d44'; ovaleDeManege(ctx, 36, 63, 13, 4);               // le socle
     ctx.fillStyle = '#5e626a'; ovaleDeManege(ctx, 36, 62, 13, 4);
-    const ecart = 26 + (v % 2) * 2;
+    // ⚠️ A l'arret (fermee l'hiver), les chaines pendent droit sous le parasol, et les chaises sont vides.
+    const ecart = ferme ? 18 : 26 + (v % 2) * 2;
     const chaises = [];
     for (let k = 0; k < 12; k++) {
       const t = (k / 12 + v / 24) * Math.PI * 2;
@@ -7493,11 +7524,11 @@ const DECORS = {
       for (let i = 0; i <= 16; i++) {
         ctx.fillRect(Math.round(c.hx + (c.x - c.hx) * i / 16), Math.round(c.hy + (c.y - 2 - c.hy) * i / 16), 1, 1);
       }
-      ctx.fillStyle = '#e8b088'; ctx.fillRect(c.x - 1, c.y - 3, 2, 2);          // qui est assis
+      if (!ferme) { ctx.fillStyle = '#e8b088'; ctx.fillRect(c.x - 1, c.y - 3, 2, 2); }   // qui est assis
       ctx.fillStyle = c.k % 2 ? '#2f6fb5' : '#d98324';
       ctx.fillRect(c.x - 2, c.y - 1, 5, 3);                                     // la nacelle
       ctx.fillStyle = 'rgba(20,18,26,0.25)'; ctx.fillRect(c.x - 2, c.y + 1, 5, 1);
-      ctx.fillStyle = '#3a3d44'; ctx.fillRect(c.x - 1, c.y + 2, 1, 2); ctx.fillRect(c.x + 1, c.y + 2, 1, 2);   // les jambes
+      if (!ferme) { ctx.fillStyle = '#3a3d44'; ctx.fillRect(c.x - 1, c.y + 2, 1, 2); ctx.fillRect(c.x + 1, c.y + 2, 1, 2); }   // les jambes
     }
     chaises.filter(function (c) { return !c.devant; }).forEach(chaise);
     ctx.fillStyle = '#4a4d55'; ctx.fillRect(33, 16, 6, 47);                     // le mat
@@ -7519,7 +7550,7 @@ const DECORS = {
       ctx.fillRect(x, 18, 1, feston > 0 && feston < 4 ? 3 : 2);
     }
     for (let x = 16; x <= 56; x += 5) {
-      ctx.fillStyle = ((x / 5) | 0) % 2 === v % 2 ? '#ffe58a' : '#efe6d0';
+      ctx.fillStyle = !ferme && ((x / 5) | 0) % 2 === v % 2 ? '#ffe58a' : '#efe6d0';
       ctx.fillRect(x, 18, 1, 1);
     }
     ctx.fillStyle = '#9aa0a8'; ctx.fillRect(35, 1, 2, 5);                       // la hampe
@@ -7528,7 +7559,7 @@ const DECORS = {
 
   // --- Les trois kiosques de jeu. ⚠️ Un jeu d'adresse est un DEFI, pas un
   // moteur : ce qui suit n'est que le comptoir ou l'on s'arrete.
-  galerie_tir: { arrete: 8, w: 28, h: 22, ancre: [14, 19], r: 11, sol: [12, 8], solide: true, peindre: function (ctx, w, h) {
+  galerie_tir: { arrete: 8, w: 28, h: 22, ancre: [14, 19], r: 11, sol: [12, 8], solide: true, peindre: function (ctx, w, h, v, ferme) {
     ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(3, 17, 22, 4);
     ctx.fillStyle = '#5a3f26'; ctx.fillRect(2, 6, 24, 12);                   // la baraque
     ctx.fillStyle = '#7a5836'; ctx.fillRect(2, 6, 23, 10);
@@ -7543,16 +7574,17 @@ const DECORS = {
     ctx.fillStyle = '#efe6d0';
     for (let dx = 1; dx < 27; dx += 6) ctx.fillRect(dx, 3, 3, 4);
     ctx.fillStyle = '#3a2f26'; ctx.fillRect(2, 17, 24, 1);
+    if (ferme) voletDeFoire(ctx, 3, 8, 22, 8);
   } },
 
-  marteau_force: { anime: 40, arrete: 7, w: 20, h: 40, ancre: [10, 37], r: 8, sol: [8, 7], solide: true, variantes: 3, peindre: function (ctx, w, h, v) {
+  marteau_force: { anime: 40, arrete: 7, w: 20, h: 40, ancre: [10, 37], r: 8, sol: [8, 7], solide: true, variantes: 3, peindre: function (ctx, w, h, v, ferme) {
     ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(3, 34, 14, 4);
     ctx.fillStyle = '#4a4d55'; ctx.fillRect(7, 6, 6, 30);                    // la colonne
     ctx.fillStyle = '#5e626a'; ctx.fillRect(7, 6, 4, 30);
     ctx.fillStyle = '#3a3d44'; ctx.fillRect(4, 34, 12, 3);                   // le socle
     // L'echelle des ampoules : `v` dit jusqu'ou la derniere frappe est montee.
     for (let k = 0; k < 9; k++) {
-      const allumee = k >= 8 - v * 3;
+      const allumee = !ferme && k >= 8 - v * 3;
       ctx.fillStyle = allumee ? (k > 6 ? '#ff4b3e' : k > 3 ? '#e8a33a' : '#5fb87a') : '#2a2a2e';
       ctx.fillRect(5, 9 + k * 3, 2, 2); ctx.fillRect(13, 9 + k * 3, 2, 2);
     }
@@ -7571,10 +7603,18 @@ const DECORS = {
   // toujours l'un des leurs sous le crochet, une pose sur deux. UN canard qui
   // TRAVERSE, deux qui flottent plus bas (hors de portee du fil, pour que le
   // bassin ne soit pas vide), et la fenetre devient un instant qu'on guette.
-  peche_canards: { anime: 20, arrete: 8, w: 26, h: 22, ancre: [13, 19], r: 10, sol: [11, 8], solide: true, variantes: 5, peindre: function (ctx, w, h, v) {
+  peche_canards: { anime: 20, arrete: 8, w: 26, h: 22, ancre: [13, 19], r: 10, sol: [11, 8], solide: true, variantes: 5, peindre: function (ctx, w, h, v, ferme) {
     const pris = v === PECHE_POSE;                                           // le canard est sous le fil
     ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(3, 17, 20, 4);
     ctx.fillStyle = '#3f6f8a'; ctx.fillRect(2, 7, 22, 11);                   // le bassin
+    // ⚠️ Fermee l'hiver : les canards sont rentres, et ce qui reste au fond a gele — une glace grise.
+    if (ferme) {
+      ctx.fillStyle = '#b9ccd6'; ctx.fillRect(3, 8, 20, 9);
+      ctx.fillStyle = '#dde9ef'; ctx.fillRect(5, 10, 7, 1); ctx.fillRect(14, 13, 6, 1);
+      ctx.fillStyle = '#5a3f26'; ctx.fillRect(1, 4, 24, 3);                  // le rebord
+      ctx.fillStyle = '#7a5836'; ctx.fillRect(1, 4, 24, 2);
+      return;
+    }
     ctx.fillStyle = '#5a93ad'; ctx.fillRect(3, 8, 20, 9);
     ctx.fillStyle = '#7fb6d9'; ctx.fillRect(3, 9 + (v % 3), 20, 1);          // la ride qui tourne
     for (const dx of [5, 16]) {                                              // les deux qui flottent au fond
@@ -8608,6 +8648,14 @@ const DECORS = {
     if (devant) fleche();
   } },
 };
+
+//: ⚠️ **LA FOIRE FERMÉE L'HIVER** (docs/jalons/la-foire-fermee-l-hiver.md) : ce qui dort sous la neige
+//: tant que `Foire.fermee()`. `Entites` les peint a la pose 0 (rien ne tourne), avec `ferme` passe au
+//: peintre (volets baisses, ampoules eteintes, sieges vides) et la neige qui les coiffe (`Saisons.coiffer`).
+const DECORS_DE_FOIRE = ['barbe_a_papa', 'hot_dogs', 'pop_corn', 'limonade', 'poutine', 'queues_de_castor',
+  'ballons', 'peluches', 'lance_anneaux', 'galerie_tir', 'marteau_force', 'peche_canards',
+  'carrousel', 'tasses', 'chaises_volantes', 'grande_roue', 'portique_foire'];
+DECORS_DE_FOIRE.forEach(function (n) { DECORS[n].fermeLHiver = true; });
 
 /* Decalques au sol : sang, gouttes, impacts. Cuits une fois par variante. */
 const DECALS = {

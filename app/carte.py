@@ -1569,6 +1569,9 @@ BARRIERES: tuple[dict, ...] = (
      "arrete": ("pieton", "vehicule"), "condition": {"payer": "foire"},
      "forcer": {"etoiles": economie.FOIRE["etoiles_resquille"]},
      "raison": f"LA FOIRE : {economie.FOIRE['entree']} $ L'ENTRÉE",
+     # ⚠️ **FERMÉE L'HIVER** (docs/jalons/la-foire-fermee-l-hiver.md) : tant que la neige tient, l'arche
+     # ne vend plus de billet et c'est ceci qu'on lit (`Monde.fermeeLHiver`) ; resquiller coûte pareil.
+     "hiver": "LA FOIRE EST FERMÉE POUR L'HIVER",
      "decor": None, "prix": economie.FOIRE["entree"], "dedans": "N"},
     # ⚠️ **L'AÉROPORT, FERMÉ POUR LES MISSIONS À VENIR** (demande de Martin,
     # 21 sept. 2026 : « bloqué par un pont en construction et d'autres
@@ -6721,6 +6724,8 @@ class _Chantier:
                            "raison": fiche["raison"], "decor": fiche.get("decor"),
                            "existant": bool(fiche.get("existant")),
                            "prix": fiche.get("prix"), "dedans": fiche.get("dedans")})
+            if fiche.get("hiver"):
+                sortie[-1]["hiver"] = fiche["hiver"]      # fermee l'hiver (l'arche de la foire)
         return sortie
 
     def reclames(self, ambulants: list[dict]) -> list[dict]:

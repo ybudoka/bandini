@@ -694,9 +694,19 @@ const Monde = (function () {
     return fixes.concat(jour ? [jour] : []).concat(bris ? [bris] : []);
   }
 
+  /** ⚠️ FERMEE POUR L'HIVER (`hiver` : la raison qu'on lit a la place de la sienne ; l'arche de la foire,
+      docs/jalons/la-foire-fermee-l-hiver.md). Ni billet ni passage tant que la foire l'est (`Foire.fermee`). */
+  function fermeeLHiver(b) {
+    return !!(b && b.hiver && typeof Foire !== 'undefined' && Foire.fermee());
+  }
+
+  /** Ce qu'on lit en se butant : la raison de l'hiver, s'il la ferme, sinon la sienne. */
+  function raisonDe(b) { return fermeeLHiver(b) ? b.hiver : b.raison; }
+
   /** Fermee MAINTENANT ? La condition se lit dans la partie, jamais ici. */
   function barriereFermee(b) {
     if (b.existant) return false;                     // jouee ailleurs (la guerite : `majFourriere`)
+    if (fermeeLHiver(b)) return true;                 // la foire, cadenassee tant que la neige tient
     const c = b.condition || {}, p = B.partie;
     // L'entrave du jour est, par definition, celle d'aujourd'hui : elle est fermee.
     if (c.toujours) return true;
@@ -770,8 +780,8 @@ const Monde = (function () {
       const ligne = Math.floor(e.y / TT);
       if ((b.dedans === 'N' && ligne < b.y) || (b.dedans === 'S' && ligne >= b.y + b.h)) return false;
       // Le JOUEUR a pied paie en passant : pas de menu, pas d'arret — on se bute
-      // a l'arche et le billet se prend, comme a un tourniquet.
-      if (e === B.joueur && typeof Missions !== 'undefined' && Missions.payer(b.prix || 0, 'BILLET DE FOIRE')) {
+      // a l'arche et le billet se prend, comme a un tourniquet. (Pas l'hiver : la caisse est fermee.)
+      if (e === B.joueur && !fermeeLHiver(b) && typeof Missions !== 'undefined' && Missions.payer(b.prix || 0, 'BILLET DE FOIRE')) {
         B.partie.billets = B.partie.billets || {};
         B.partie.billets[b.condition.payer] = B.partie.jour;
         return false;
@@ -781,7 +791,7 @@ const Monde = (function () {
     if (e.buteImage !== B.t) { e.buteImage = B.t; e.buteT = (e.buteT || 0) + 1; }
     if ((e === B.joueur || e.conducteur === B.joueur) && typeof Hud !== 'undefined' && B.t - (B.buteMsgT || -999) >= 90) {
       B.buteMsgT = B.t;
-      Hud.message(b.raison, 90);
+      Hud.message(raisonDe(b), 90);
       if (typeof Son !== 'undefined') Son.SFX.erreur();
     }
     return true;
@@ -3179,6 +3189,7 @@ const Monde = (function () {
       if (fenetreEteinte(l)) continue;     // on est couche, chez nous (la nuit a ses habitudes)
       if (gresilleEteint(l)) continue;     // l'ampoule hoquette
       if (Verglas.lampeAuNoir(l)) continue; // le verglas a fait tomber les fils : le quartier est au noir
+      if (l.sorte && l.sorte.indexOf('foire_') === 0 && typeof Foire !== 'undefined' && Foire.fermee()) continue;   // fermee l'hiver
       if (l.x < cx - l.r || l.x > cx + VW + l.r || l.y < cy - l.r || l.y > cy + VH + l.r) continue;
       // En decembre, les fenetres et les vitrines prennent les couleurs des guirlandes (`Fetes`).
       const fete = (typeof Fetes !== 'undefined' ? Fetes.couleur(l) : null) || (typeof Halloween !== 'undefined' ? Halloween.couleur(l) : null);
@@ -3192,7 +3203,7 @@ const Monde = (function () {
     MUR, EAU, BASSE, GRILLAGE, BARBELE, MEUBLE, MASQUE_PIETON, MASQUE_NAGEUR, MASQUE_VEHICULE,
     MASQUE_A_PIED, MORCEAUX_MAX, estEau, eauBasse, eauLaPlusProche, majSonDuBord,
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
-    barrieres, barriereFermee, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
+    barrieres, barriereFermee, fermeeLHiver, raisonDe, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
     brisDAqueduc, dansLaFoire, resquille,
     feuxClignotent, arterePasse, nidDePoule, dessinerNids, plaqueDAcier, standingA, usageA, couleurDeZonage, calqueDeZonage, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, dessinerFoyers, foyersDeLaPiece, majFeuDeFoyer, FEU_SON,

@@ -30,7 +30,15 @@
    conduit rien, la police ne le sort de rien — il est À PIED ET PORTÉ, comme à
    bord du traversier (`j.aBord`), et c'est `Foire` qui le pose à chaque image
    là où est son siège. On ne monte pas recherché : un manège où la police ne
-   peut pas te suivre serait la meilleure cachette du jeu. */
+   peut pas te suivre serait la meilleure cachette du jeu.
+
+   ⚠️ **FERMÉE L'HIVER** (Martin, 30 sept. 2026 ; docs/jalons/la-foire-fermee-l-hiver.md) : tant
+   que la neige tient (`Saisons.enHiver`), la foire est cadenassée. Le petit train et le Colosse
+   finissent leur tour et restent en gare, la grande roue s'arrête, les sièges sont vides, on ne
+   monte à rien, on ne joue à rien, et rien ne s'entend. Le reste de la fermeture lit `fermee()`
+   là où il vit : les manèges peints (`Entites.poseDuDecor`, `DECORS_DE_FOIRE`), les guirlandes
+   (`Monde.lampesVisibles`), l'arche (`Monde.barriereFermee`), la foule (`naitreLaFoire`) et le
+   Bonimenteur (`Histoire`). Pas un dé, rien à sauvegarder : une pure fonction de la saison. */
 
 const Foire = (function () {
   'use strict';
@@ -63,6 +71,10 @@ const Foire = (function () {
   let train = null;
   let mr = null;
   let roue = null;
+
+  /** La foire est-elle fermée pour l'hiver ? Tant que la neige tient — ce qu'on voit au sol et sur
+      les manèges dit la même chose (`Saisons.enHiver`, pas le mois du calendrier). */
+  function fermee() { return typeof Saisons !== 'undefined' && Saisons.enHiver(); }
 
   // --- Le petit train -----------------------------------------------------------------
 
@@ -246,7 +258,10 @@ const Foire = (function () {
     return { quoi: 'roue', k: meilleur };
   }
 
-  function sousLaMain(j) { return trainSousLaMain(j) || montagneSousLaMain(j) || roueSousLaMain(j); }
+  function sousLaMain(j) {
+    if (fermee()) return null;                  // fermée pour l'hiver : on ne monte à rien
+    return trainSousLaMain(j) || montagneSousLaMain(j) || roueSousLaMain(j);
+  }
 
   // --- Les trois jeux d'adresse ---------------------------------------------------------
   //
@@ -296,7 +311,7 @@ const Foire = (function () {
   /** Le comptoir de jeu sous la main du joueur : son slug, ou null. ⚠️ Le plus
       proche, et à pied seulement — au volant, ACTION fait descendre. */
   function jeuSousLaMain(j) {
-    if (!j || j.dansVehicule || j.manege || B.interieur) return null;
+    if (!j || j.dansVehicule || j.manege || B.interieur || fermee()) return null;
     let meilleur = null, dMin = PORTEE_JEU;
     for (const q of comptoirs()) {
       const d = Math.hypot(q.x * TT + 8 - j.x, q.y * TT + 15 - j.y);
@@ -363,7 +378,8 @@ const Foire = (function () {
     if (!j.vivant || B.interieur || !machine) { descendre(j, true); return; }
     const s = siege(m);
     j.x = s.x; j.y = s.y; m.z = s.z; j.vx = 0; j.vy = 0;
-    if (m.quoi === 'roue') { if (cranDeRoue() - m.cran >= roue.n * roue.variantes) descendre(j, false); return; }
+    // ⚠️ La roue s'arrête net à la fermeture (elle n'a pas de gare) : on descend là.
+    if (m.quoi === 'roue') { if (fermee() || cranDeRoue() - m.cran >= roue.n * roue.variantes) descendre(j, false); return; }
     if (machine.attente > 0 && machine.tours > m.tours) descendre(j, false);
   }
 
@@ -382,7 +398,9 @@ const Foire = (function () {
   //: `t` : l'image (par défaut, celle-ci). ⚠️ `Foire.maj` tourne AVANT que l'image
   //: n'avance (`B.t++`, à la fin de `Jeu.maj`) : un juge qui mesure après doit
   //: demander l'image d'avant.
-  function cranDeRoue(t) { return roue ? Math.floor((t === undefined ? B.t : t) / roue.f.anime) : 0; }
+  //: ⚠️ Fermée, la roue est à son cran 0 — celui de son décor (`Entites.poseDuDecor`) : les nacelles
+  //: pendent au bout des rayons peints.
+  function cranDeRoue(t) { return roue && !fermee() ? Math.floor((t === undefined ? B.t : t) / roue.f.anime) : 0; }
 
   function angleDeNacelle(k, t) {
     return (k / roue.n + cranDeRoue(t) / (roue.n * roue.variantes)) * Math.PI * 2;
@@ -416,10 +434,10 @@ const Foire = (function () {
 
   function peindreNacelles(ctx, cx, cy) {
     const j = B.joueur, fiche = FOIRE_EN_VOLUME.nacelle, vide = FOIRE_EN_VOLUME.nacelle_vide;
-    const cap = Vehicules.capDe(Math.PI / 2);
+    const cap = Vehicules.capDe(Math.PI / 2), ferme = fermee();
     for (let k = 0; k < roue.n; k++) {
       const a = attache(k), lui = j && j.manege && j.manege.quoi === 'roue' && j.manege.k === k;
-      const rang = lui ? 0 : OCCUPEES[k % OCCUPEES.length];
+      const rang = lui ? 0 : ferme ? null : OCCUPEES[k % OCCUPEES.length];
       const couleurs = couleursDeNacelle(k, rang, lui);
       const nom = rang === null ? 'foire_nacelle_vide' : 'foire_nacelle';
       const image = Atlas.cuireCap(nom, rang === null ? vide : fiche, couleurs, Vehicules.ROTATIONS, cap, [0, 0]);
@@ -522,11 +540,17 @@ const Foire = (function () {
     train = def && def.train_de_foire ? construireTrain(def.train_de_foire) : null;
     mr = def && def.montagne_russe ? construireMontagne(def.montagne_russe) : null;
     roue = def && def.roue && typeof DECORS !== 'undefined' && DECORS.grande_roue ? construireRoue(def.roue) : null;
+    // Une partie qui s'ouvre en janvier trouve le petit train EN GARE, pas en route vers elle.
+    if (train && fermee() && train.sGare !== null) { train.s = train.sGare; train.v = 0; train.attente = 2; }
   }
 
   function maj() {
-    if (train) majTrain();
-    if (mr) majMontagne();
+    // ⚠️ FERMÉE : une machine qui est en gare y reste (son compte d'attente ne descend jamais à
+    // zéro, elle ne siffle pas) ; une machine en route finit son tour — on ne la fige pas au
+    // milieu de la voie, et qui y est assis descend en gare, comme d'habitude.
+    const ferme = fermee();
+    if (train) { if (ferme && train.attente > 0) train.attente = Math.max(train.attente, 2); majTrain(); }
+    if (mr) { if (ferme && mr.attente > 0) mr.attente = Math.max(mr.attente, 2); majMontagne(); }
     // ⚠️ APRÈS les machines : le joueur assis prend la place de son banc de CETTE
     // image, et la caméra (`Monde.majCamera`, plus loin dans la boucle) le suit.
     majPassager();
@@ -560,8 +584,8 @@ const Foire = (function () {
   function laFoireSEntend() {
     const c = centre(), j = B.joueur;
     if (!c || !j || typeof Son === 'undefined') return;
-    // ⚠️ Dedans, on n'entend pas la foire : une porte, c'est une porte.
-    if (B.interieur) { Son.SFX.rumeur_foire(0); return; }
+    // ⚠️ Dedans, on n'entend pas la foire : une porte, c'est une porte. Fermée, il n'y a rien à entendre.
+    if (B.interieur || fermee()) { Son.SFX.rumeur_foire(0); return; }
     const d = Math.hypot(j.x - c.x, j.y - c.y);
     const plein = c.f.orgue_plein_px || 150, portee = c.f.orgue_portee_px || 460;
     if (d < portee) {
@@ -612,10 +636,12 @@ const Foire = (function () {
     const ordre = bancs.map(function (b, i) { return i; }).sort(function (a, b) {
       return (bancs[a].u - bancs[b].u) * Math.sin(p.a);
     });
+    const ferme = fermee();
     for (const i of ordre) {
       let tenue;
-      if (loco) tenue = MACHINISTE;
-      else if (lui && i === 0) tenue = j.swaps || {};
+      if (lui && i === 0 && !loco) tenue = j.swaps || {};
+      else if (ferme) continue;                  // fermée : ni machiniste, ni voyageurs
+      else if (loco) tenue = MACHINISTE;
       else if (PLACES[(k - 1) % PLACES.length][i] !== null) tenue = VOYAGEURS[PLACES[(k - 1) % PLACES.length][i]];
       else continue;
       const assis = Vehicules.imageDuCavalier(bancs[i].def, faux, tenue);
@@ -763,12 +789,14 @@ const Foire = (function () {
       // Les bras se lèvent quand ça PLONGE, et tout le long du looping.
       const av = pointDeMontagne(s + 2), ar = pointDeMontagne(s - 2);
       const bras = (av.z - ar.z) < -1.2 || dans(d.boucle, p.i);
-      const fiche = bras ? FOIRE_EN_VOLUME.chariot_bras : FOIRE_EN_VOLUME.chariot;
+      // Fermée, un chariot en gare est vide (le joueur ne peut plus y être : il n'y monte pas).
+      const vide = fermee() && !(B.joueur && B.joueur.manege && B.joueur.manege.quoi === 'montagne');
+      const fiche = vide ? FOIRE_EN_VOLUME.chariot_vide : bras ? FOIRE_EN_VOLUME.chariot_bras : FOIRE_EN_VOLUME.chariot;
       if (p.z > 8) {
         ctx.fillStyle = 'rgba(20,18,26,0.22)';
         ctx.fillRect(Math.round(p.x - 6 - cx), Math.round(p.y + 1 - cy), 12, 3);
       }
-      const image = Atlas.cuireCap(bras ? 'foire_chariot_bras' : 'foire_chariot', fiche, couleursDuChariot(k),
+      const image = Atlas.cuireCap(vide ? 'foire_chariot_vide' : bras ? 'foire_chariot_bras' : 'foire_chariot', fiche, couleursDuChariot(k),
                                    Vehicules.ROTATIONS, Vehicules.capDe(al.cap), [0, 0], cranDeTangage(al.tangage));
       ctx.drawImage(image, Math.round(p.x - image.width / 2 - cx), Math.round(p.y - p.z - image.height / 2 - cy));
       B.stats.images++;
@@ -818,7 +846,7 @@ const Foire = (function () {
   }
 
   return {
-    demarrer, maj, bloquer, ajouterVisibles, wagons, pointDuTrain, pointDeMontagne,
+    demarrer, maj, fermee, bloquer, ajouterVisibles, wagons, pointDuTrain, pointDeMontagne,
     sousLaMain, inviteMonter, monter, descendre,
     jeux, comptoirs, jeuSousLaMain, kiosqueDuJeu, cibles, centre, PORTEE_JEU,
     MACHINES: FOIRE_EN_VOLUME,

@@ -91,6 +91,37 @@ const Saisons = (function () {
     return !!(donnees() && palette().neige > 0);
   }
 
+  /** LA NEIGE QUI COIFFE un decor laisse dehors pour l'hiver (la foire fermee, docs/jalons/la-foire-fermee-l-hiver.md) :
+      rend un peintre qui peint `peintre`, puis pose `epaisseur` rangs de blanc sur ce qui regarde le ciel.
+      ⚠️ SUR UNE SURFACE SEULEMENT : le dessus d'un plein d'au moins trois pixels de haut. La premiere version
+      blanchissait tout pixel au ciel ouvert, et la jante, les rayons et la chaine (un ou deux pixels) de la
+      grande roue et de l'arche disparaissaient sous la neige — la neige ne tient pas sur un fil.
+      ⚠️ SANS LIRE UN PIXEL (`getImageData` coute cher et ne sert nulle part ailleurs) : des passes de
+      composition. Le dessus = le decor, moins sa copie descendue d'un pixel (`destination-out`), garde la ou
+      le decor est plein deux pixels plus bas (`destination-in`, sa copie remontee) ; on l'epaissit vers le bas
+      sans sortir du dessin, on le blanchit (`source-atop`), on le pose par-dessus. Cuit une fois. */
+  function coiffer(peintre, w, h, epaisseur) {
+    return function (g) {
+      const src = Base.nouveauCanvas(w, h);
+      peintre(src.getContext('2d'), w, h);
+      const dessus = Base.nouveauCanvas(w, h), k = dessus.getContext('2d');
+      k.drawImage(src, 0, 0);
+      k.globalCompositeOperation = 'destination-out';
+      k.drawImage(src, 0, 1);
+      k.globalCompositeOperation = 'destination-in';
+      k.drawImage(src, 0, -2);
+      const neige = Base.nouveauCanvas(w, h), n = neige.getContext('2d');
+      for (let e = 0; e < (epaisseur || 2); e++) n.drawImage(dessus, 0, e);
+      n.globalCompositeOperation = 'destination-in';
+      n.drawImage(src, 0, 0);
+      n.globalCompositeOperation = 'source-atop';
+      n.fillStyle = hex(BLANC);
+      n.fillRect(0, 0, w, h);
+      g.drawImage(src, 0, 0);
+      g.drawImage(neige, 0, 0);
+    };
+  }
+
   /** LA FICHE DU MOMENT (docs/jalons/les-decapotables-l-hiver.md) : une fiche peut porter sa
       version d'hiver (`fiche.hiver` : la capote relevee de la decapotable, la tuque de la
       conductrice). Rend [nom, fiche] — le NOM change avec elle, sinon le cache de l'atlas
@@ -311,6 +342,6 @@ const Saisons = (function () {
     return (r % 24) / 24;
   }
 
-  return { paletteA, cleA, palette, cle, enneiger, enHiver, ficheDuMoment, heureDeLumiere,
+  return { paletteA, cleA, palette, cle, enneiger, enHiver, coiffer, ficheDuMoment, heureDeLumiere,
            vetir, parapluie, habiller, frilosite, aUnParapluie, sonA, majSon, oublierSon, get sonJoue() { return sonJoue; } };
 })();
