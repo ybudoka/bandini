@@ -3573,21 +3573,39 @@ const TUILES = (function () {
   /** Les bords d'un toit en pente : au bas des versants (1 nord, 4 sud), la GOUTTIERE — un tube de metal avec son
       reflet, et l'ombre qu'il jette sur le bardeau ; aux pignons (2 est, 8 ouest), la RIVE — la planche de bout,
       plus sombre que le bardeau, liseree de la couleur de la faite. */
-  function bordDePente(ctx, v, T, style) {
-    if (v & 4) {
+  function bordDePente(ctx, v, T, style, egouts) {
+    if (egouts === undefined) egouts = 5;
+    if (v & 4 & egouts) {
       ctx.fillStyle = GOUTTIERE.ombre; ctx.fillRect(0, T - 4, T, 1);
       ctx.fillStyle = GOUTTIERE.metal; ctx.fillRect(0, T - 3, T, 3);
       ctx.fillStyle = GOUTTIERE.reflet; ctx.fillRect(0, T - 3, T, 1);
     }
-    if (v & 1) {
+    if (v & 1 & egouts) {
       ctx.fillStyle = GOUTTIERE.metal; ctx.fillRect(0, 0, T, 2);
       ctx.fillStyle = GOUTTIERE.reflet; ctx.fillRect(0, 0, T, 1);
       ctx.fillStyle = GOUTTIERE.ombre; ctx.fillRect(0, 2, T, 1);
     }
+    // Les gouttieres de cote (un toit a pignon sur rue, a quatre versants) : debout, le reflet a l'ouest.
+    if (v & 2 & egouts) {
+      ctx.fillStyle = GOUTTIERE.ombre; ctx.fillRect(T - 4, 0, 1, T);
+      ctx.fillStyle = GOUTTIERE.metal; ctx.fillRect(T - 3, 0, 3, T);
+      ctx.fillStyle = GOUTTIERE.reflet; ctx.fillRect(T - 3, 0, 1, T);
+    }
+    if (v & 8 & egouts) {
+      ctx.fillStyle = GOUTTIERE.metal; ctx.fillRect(0, 0, 2, T);
+      ctx.fillStyle = GOUTTIERE.reflet; ctx.fillRect(0, 0, 1, T);
+      ctx.fillStyle = GOUTTIERE.ombre; ctx.fillRect(2, 0, 1, T);
+    }
+    // Les rives : aux pignons (ou le toit ne descend pas).
     for (const [bit, x] of [[2, T - 3], [8, 0]]) {
-      if (!(v & bit)) continue;
+      if (!(v & bit) || (egouts & bit)) continue;
       ctx.fillStyle = style.sombre; ctx.fillRect(x, 0, 3, T);
       ctx.fillStyle = style.faite; ctx.fillRect(bit === 8 ? 0 : T - 1, 0, 1, T);
+    }
+    for (const [bit, y] of [[4, T - 3], [1, 0]]) {
+      if (!(v & bit) || (egouts & bit)) continue;
+      ctx.fillStyle = style.sombre; ctx.fillRect(0, y, T, 3);
+      ctx.fillStyle = style.faite; ctx.fillRect(0, bit === 1 ? 0 : T - 1, T, 1);
     }
   }
 
@@ -3634,30 +3652,90 @@ const TUILES = (function () {
     bordDeToit(ctx, v & 15, T, style);
   }
 
-  /** Le toit a deux versants : le bardeau, et une pente qui s'eclaircit vers la
-      LIGNE DE FAITE. ⚠️ Le versant vient du voisinage (`varianteDePente`
-      compte les tuiles de toit au nord et au sud) : c'est ce qui permet a la
-      faite d'apparaitre toute seule la ou les deux pentes se rencontrent, sans
-      qu'une tuile ait besoin de savoir qu'elle est au milieu. */
-  //: La variante d'un toit en pente : le bord (bits 0 a 3), le versant (4 et 5), la TEINTE (6 et au-dessus).
-  function toitEnPente(ctx, v, T, famille) {
-    let style = famille[(v >> 6) % famille.length];
-    if (typeof Saisons !== 'undefined') style = Saisons.enneiger(style);   // la neige qui tient (lot 1)
-    const versant = (v >> 4) & 3;           // 0 nord, 1 faite, 2 sud
-    plein(ctx, style.fond, T);
-    for (let y = 0; y < T; y++) {
-      // Vers la faite, la pente prend la lumiere ; vers le bas, elle la perd.
-      const part = versant === 0 ? y / (T - 1) : versant === 2 ? 1 - y / (T - 1) : 1 - Math.abs(y - T / 2) / (T / 2);
-      const dose = Math.round(part * 3);
-      if (dose >= 2) { ctx.fillStyle = style.grain; ctx.fillRect(0, y, T, 1); }
-      else if (dose === 0) { ctx.fillStyle = style.sombre; ctx.fillRect(0, y, T, 1); }
+  /** LE TOIT EN PENTE, SOUS TOUTES SES FORMES (les toits, vague 3) : deux versants en long, a pignon sur rue, a
+      quatre versants, en L. `Monde.varianteDePente` dit le VERSANT de la tuile (bits 4 a 7, `VERSANTS`), si le toit
+      a quatre versants (bit 8 : ses gouttieres font le tour) et sa teinte (bits 9 et au-dessus).
+
+      ⚠️ Chaque pixel a une HAUTEUR et une FACE (`pente`) : les rangs de bardeaux sont des lignes de meme hauteur,
+      la faite et les aretiers sont la ou deux faces se rencontrent. C'est ce qui fait qu'un aretier en diagonale
+      et une faite droite se peignent avec le meme code, et que les rangs tournent le coin comme sur un vrai toit.
+      ⚠️ Le SOLEIL DU NORD-OUEST : les faces nord et ouest le prennent, les faces sud et est sont d'un cran plus
+      sombres — sans ca, un toit a quatre versants vu de haut est un carre plat. */
+  //: `N_F`, `S_F`, `O_F`, `E_F` : une face dont la FAITE passe a son bord (le versant d'en face commence a la tuile
+  //: voisine) — elle y peint la ligne de faite. Sans elles, un toit d'un nombre pair de tuiles n'avait pas de faite.
+  const VERSANTS = { N: 0, FAITE: 1, S: 2, O: 3, FAITE_V: 4, E: 5, NO: 6, NE: 7, SO: 8, SE: 9, SOMMET: 10,
+                     N_F: 11, S_F: 12, O_F: 13, E_F: 14 };
+  const FACE_DE = { 11: 0, 12: 2, 13: 3, 14: 5 };
+  function pente(versant, x, y, T) {
+    if (FACE_DE[versant] !== undefined) versant = FACE_DE[versant];
+    const n = y, s = T - 1 - y, o = x, e = T - 1 - x;
+    const choix = function (d) {                       // la face la plus proche de son egout, et la hauteur
+      let face = null, h = Infinity;
+      for (const k in d) if (d[k] < h) { h = d[k]; face = k; }
+      return [h, face];
+    };
+    switch (versant) {
+      case VERSANTS.N: return [n, 'N'];
+      case VERSANTS.S: return [s, 'S'];
+      case VERSANTS.O: return [o, 'O'];
+      case VERSANTS.E: return [e, 'E'];
+      case VERSANTS.FAITE: return choix({ N: n, S: s });
+      case VERSANTS.FAITE_V: return choix({ O: o, E: e });
+      case VERSANTS.NO: return choix({ N: n, O: o });
+      case VERSANTS.NE: return choix({ N: n, E: e });
+      case VERSANTS.SO: return choix({ S: s, O: o });
+      case VERSANTS.SE: return choix({ S: s, E: e });
+      default: return choix({ N: n, O: o, S: s, E: e });
     }
-    ctx.fillStyle = style.sombre;
-    for (let y = 2; y < T; y += 4) ctx.fillRect(0, y, T, 1);        // les rangs de bardeaux
-    if (versant === 1) { ctx.fillStyle = style.faite; ctx.fillRect(0, T / 2 - 1, T, 2); }
-    else if (versant === 0) { ctx.fillStyle = style.faite; ctx.fillRect(0, T - 1, T, 1); }
-    else { ctx.fillStyle = style.faite; ctx.fillRect(0, 0, T, 1); }
-    bordDePente(ctx, v & 15, T, style);
+  }
+  //: La face qui touche la ligne ou deux faces se rencontrent (faite, aretier) : a un pixel pres.
+  function surLArete(versant, x, y, T, face) {
+    const [h] = pente(versant, x, y, T);
+    for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
+      const xx = x + dx, yy = y + dy;
+      if (xx < 0 || yy < 0 || xx >= T || yy >= T) continue;
+      const [h2, f2] = pente(versant, xx, yy, T);
+      if (f2 !== face && h2 >= h - 1) return true;
+    }
+    return false;
+  }
+  function toitEnPente(ctx, v, T, famille) {
+    let style = famille[(v >> 9) % famille.length];
+    if (typeof Saisons !== 'undefined') style = Saisons.enneiger(style);   // la neige qui tient (lot 1)
+    const versantLu = (v >> 4) & 15, quatre = (v >> 8) & 1;
+    const versant = FACE_DE[versantLu] !== undefined ? FACE_DE[versantLu] : versantLu;
+    const clair = [style.sombre, style.fond, style.grain], ombre = [style.sombre, style.sombre, style.fond];
+    for (let y = 0; y < T; y++) {
+      let x0 = 0, courante = null;
+      for (let x = 0; x <= T; x++) {
+        let c = null;
+        if (x < T) {
+          const [h, face] = pente(versant, x, y, T);
+          // Vers la faite, la pente prend la lumiere ; vers l'egout, elle la perd — d'un cran de moins au sud et
+          // a l'est, a l'ombre du soleil du nord-ouest.
+          const dose = Math.round(h / (T - 1) * 3 * (versant === VERSANTS.N || versant === VERSANTS.S
+            || versant === VERSANTS.O || versant === VERSANTS.E ? 1 : 2));
+          const niveau = Math.min(2, dose >= 2 ? 2 : dose === 0 ? 0 : 1);
+          c = (face === 'S' || face === 'E' ? ombre : clair)[niveau];
+          if (h % 4 === 2) c = style.sombre;                              // les rangs de bardeaux
+          if (versant !== VERSANTS.N && versant !== VERSANTS.S && versant !== VERSANTS.O && versant !== VERSANTS.E
+              && surLArete(versant, x, y, T, face)) c = style.faite;      // la faite, les aretiers
+        }
+        if (c !== courante) {
+          if (courante) { ctx.fillStyle = courante; ctx.fillRect(x0, y, x - x0, 1); }
+          courante = c; x0 = x;
+        }
+      }
+    }
+    // La faite au bord de la tuile (le versant d'en face commence a la voisine).
+    ctx.fillStyle = style.faite;
+    if (versantLu === VERSANTS.N_F) ctx.fillRect(0, T - 1, T, 1);
+    else if (versantLu === VERSANTS.S_F) ctx.fillRect(0, 0, T, 1);
+    else if (versantLu === VERSANTS.O_F) ctx.fillRect(T - 1, 0, 1, T);
+    else if (versantLu === VERSANTS.E_F) ctx.fillRect(0, 0, 1, T);
+    // Les egouts : ou le toit DESCEND. En long : du cote de ses versants ; a quatre versants : tout le tour.
+    const long = versant <= VERSANTS.S ? 5 : versant <= VERSANTS.E ? 10 : 15;
+    bordDePente(ctx, v & 15, T, style, quatre ? 15 : long);
   }
 
   /* --- L'abord ----------------------------------------------------------------

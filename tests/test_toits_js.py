@@ -32,7 +32,7 @@ def test_chaque_toit_a_sa_teinte_la_meme_d_une_partie_a_l_autre(banc):
                 if (n < 0) continue;
                 vues++;
                 const v = M.varianteDeTuile(g, tx, ty);
-                const teinte = 'BEO'.indexOf(g) >= 0 ? v >> 7 : v >> 6;
+                const teinte = 'BEO'.indexOf(g) >= 0 ? v >> 7 : v >> 9;
                 if (teinte !== b.t.teintes[n]) mal++;
             }
         }
@@ -144,7 +144,7 @@ def test_un_toit_en_pente_a_ses_gouttieres_et_ses_rives(banc):
     r = banc("function (L, o) {" + PEINDRE + """
         const metal = '#8d9297';
         const g = function (v) { return peindre(L, 'P', v).filter(function (q) { return q[4] === metal; }).map(function (q) { return q.slice(0, 4); }); };
-        const sombre = function (v) { return peindre(L, 'P', v + 128).filter(function (q) { return q[2] === 3 && q[3] === 16; }).map(function (q) { return q[0]; }); };
+        const sombre = function (v) { return peindre(L, 'P', v + 512).filter(function (q) { return q[2] === 3 && q[3] === 16; }).map(function (q) { return q[0]; }); };
         return { sud: g(4 + 32), nord: g(1), milieu: g(16), est: sombre(2), ouest: sombre(8), rien: sombre(0) };
     }""")
     assert r["sud"] == [[0, 13, 16, 3]] and r["nord"] == [[0, 0, 16, 2]] and r["milieu"] == [], r
@@ -186,3 +186,90 @@ def test_un_batiment_jette_son_ombre_sur_le_sol_a_son_est(banc):
     }""")
     assert r["flanc"] and r["auFlanc"] == 1 and r["coin"] and r["auCoin"] == 1, r
     assert r["aLibre"] == 0 and r["dedans"] == 0, r
+
+
+# --- Vague 3 : des formes de toit ---------------------------------------------------------------------------------
+
+FORMES = """
+    function toitsEnPente(L) {
+        const M = L.Monde, c = M.carte;
+        c.teintes = null;
+        const t = M.teintesDesToits(), w = c.w, par = {};
+        for (let i = 0; i < t.qui.length; i++) {
+            const n = t.qui[i];
+            if (n < 0 || t.glyphes[n] !== 'P') continue;
+            const x = i % w, y = (i / w) | 0;
+            const b = par[n] || (par[n] = { n: n, x0: x, x1: x, y0: y, y1: y, c: 0, forme: t.formes[n] });
+            b.c++; b.x0 = Math.min(b.x0, x); b.x1 = Math.max(b.x1, x); b.y0 = Math.min(b.y0, y); b.y1 = Math.max(b.y1, y);
+        }
+        return Object.keys(par).map(function (n) { return par[n]; });
+    }
+    function versant(L, x, y) { return (L.Monde.varianteDePente('P', x, y) >> 4) & 15; }
+"""
+
+
+def test_les_toits_en_pente_ont_quatre_formes_tirees_a_l_empreinte(banc):
+    """Deux versants en long, à pignon sur rue, à quatre versants, en L : chaque forme se trouve dans la ville, la
+    même d'un compte à l'autre ; un bâtiment qui n'est pas un rectangle garde la forme en long."""
+    r = banc("function (L, o) {" + FORMES + """
+        L.Jeu.commencer();
+        const a = toitsEnPente(L), b = toitsEnPente(L), compte = {};
+        a.forEach(function (q) { const f = q.forme.slice(0, 1) === 'L' ? 'L' : q.forme; compte[f] = (compte[f] || 0) + 1; });
+        const pasRect = a.filter(function (q) { return q.c !== (q.x1 - q.x0 + 1) * (q.y1 - q.y0 + 1) && q.forme !== 'long'; });
+        // ⚠️ La ville n'a AUCUN toit en pente qui ne soit pas un rectangle (mesure du 30 sept. 2026) : la règle se
+        // juge aussi à la main — un L de cinq sur quatre (douze tuiles) sur cent empreintes.
+        let formesDuL = new Set();
+        for (let k = 0; k < 100; k++) formesDuL.add(L.Monde.formeDuToit(k * 7, k * 3, 5, 4, 12));
+        return { compte: compte, memes: JSON.stringify(a) === JSON.stringify(b), pasRect: pasRect.length,
+                 formesDuL: Array.from(formesDuL) };
+    }""")
+    assert r["memes"] and r["pasRect"] == 0 and r["formesDuL"] == ["long"], r
+    assert all(r["compte"].get(f, 0) >= 3 for f in ("long", "pignon", "quatre", "L")), r
+
+
+def test_chaque_forme_a_ses_versants(banc):
+    """Quatre versants : un arêtier à chaque coin (nord-ouest, nord-est, sud-ouest, sud-est) et le bit des quatre
+    égouts. Pignon sur rue : que des faces ouest et est (la faîte du nord au sud). En L : l'aile à pignon, le reste
+    en long."""
+    r = banc("function (L, o) {" + FORMES + """
+        L.Jeu.commencer();
+        const toits = toitsEnPente(L), out = {};
+        const q = toits.find(function (t) { return t.forme === 'quatre'; });
+        out.coins = [versant(L, q.x0, q.y0), versant(L, q.x1, q.y0), versant(L, q.x0, q.y1), versant(L, q.x1, q.y1)];
+        out.quatre = (L.Monde.varianteDePente('P', q.x0, q.y0) >> 8) & 1;
+        const p = toits.find(function (t) { return t.forme === 'pignon'; }), vp = new Set();
+        for (let y = p.y0; y <= p.y1; y++) for (let x = p.x0; x <= p.x1; x++) vp.add(versant(L, x, y));
+        out.pignon = Array.from(vp).sort(function (a, b) { return a - b; });
+        const l = toits.find(function (t) { return t.forme === 'L_O'; }), aile = new Set(), reste = new Set();
+        const large = l.x1 - l.x0 + 1, ailes = large <= 5 ? 2 : 3;
+        for (let y = l.y0; y <= l.y1; y++) for (let x = l.x0; x <= l.x1; x++) (x - l.x0 < ailes ? aile : reste).add(versant(L, x, y));
+        out.aile = Array.from(aile); out.reste = Array.from(reste);
+        return out;
+    }""")
+    assert r["coins"] == [6, 7, 8, 9] and r["quatre"] == 1, r
+    assert set(r["pignon"]) <= {3, 4, 5, 13, 14}, r
+    assert set(r["aile"]) <= {3, 4, 5, 13, 14} and set(r["reste"]) <= {0, 1, 2, 11, 12}, r
+
+
+def test_les_egouts_suivent_la_forme_et_la_faite_passe_au_bord(banc):
+    """Un pignon sur rue : au sud, la rive (le pignon), pas de gouttière ; ses gouttières sont sur les côtés. Un toit
+    à quatre versants : la gouttière aussi au pignon. Une face dont la faîte passe à son bord y peint la ligne."""
+    r = banc("function (L, o) {" + PEINDRE + """
+        const metal = '#8d9297';
+        const rects = function (v) { return peindre(L, 'P', v).map(function (q) { return q.slice(0, 4).concat([q[4]]); }); };
+        const aMetal = function (v, x, y, w, h) { return rects(v).some(function (q) { return q[0] === x && q[1] === y && q[2] === w && q[3] === h && q[4] === metal; }); };
+        // Pignon (face ouest, versant 3) : bord sud (4) et bord ouest (8).
+        const pignonSud = aMetal(4 + 3 * 16, 0, 13, 16, 3), pignonOuest = aMetal(8 + 3 * 16, 0, 0, 2, 16);
+        // Quatre versants (bit 8), face ouest au sud : la gouttière y est.
+        const quatreSud = aMetal(4 + 3 * 16 + 256, 0, 13, 16, 3);
+        // La couleur de la faîte : celle de la première teinte du bardeau (la ligne de faîte d'un toit à faîte au milieu).
+        const couleurFaite = rects(1 * 16).filter(function (q) { return q[1] === 7 && q[2] === 16 && q[3] === 1; })
+            .map(function (q) { return q[4]; })[0];
+        const aLaFaite = function (v) { return rects(v).filter(function (q) { return q[0] === 0 && q[1] === 15 && q[2] === 16
+            && q[3] === 1 && q[4] === couleurFaite; }).length; };
+        const faite = aLaFaite(11 * 16), sansFaite = aLaFaite(0);
+        return { pignonSud: pignonSud, pignonOuest: pignonOuest, quatreSud: quatreSud, faite: faite, sansFaite: sansFaite,
+                 couleurFaite: couleurFaite };
+    }""")
+    assert r["pignonSud"] is False and r["pignonOuest"] is True and r["quatreSud"] is True, r
+    assert r["couleurFaite"] and r["faite"] >= 1 and r["sansFaite"] == 0, r

@@ -285,14 +285,21 @@ def test_un_toit_porte_son_bord_et_ses_versants(banc):
         let pente = null;
         for (let ty = 2; ty < c.h - 2 && !pente; ty++) {
             for (let tx = 2; tx < c.w - 2 && !pente; tx++) {
-                if (L.Monde.glyphe(tx, ty) !== 'P') continue;
+                // ⚠️ Un toit a deux versants EN LONG (la faite est-ouest) : depuis les formes de toit (les
+                // toits, vague 3), un pignon sur rue ou quatre versants se lisent autrement.
+                if (L.Monde.glyphe(tx, ty) !== 'P' || L.Monde.formeDeToit(tx, ty) !== 'long') continue;
                 let haut = ty;
                 while (L.Monde.glyphe(tx, haut - 1) === 'P') haut--;
                 let bas = ty;
                 while (L.Monde.glyphe(tx, bas + 1) === 'P') bas++;
                 if (bas - haut < 1) continue;
                 const versants = [];
-                for (let y = haut; y <= bas; y++) versants.push((L.Monde.varianteDePente('P', tx, y) >> 4) & 3);
+                // (11 et 12 : la face nord et la face sud dont la faite passe au bord de la tuile.)
+                for (let y = haut; y <= bas; y++) {
+                    const v = (L.Monde.varianteDePente('P', tx, y) >> 4) & 15;
+                    versants.push(v === 11 ? 0 : v === 12 ? 2 : v);
+                }
+                if (versants.some(function (v) { return v > 2; })) continue;
                 pente = { versants: versants, hauteur: bas - haut + 1 };
             }
         }

@@ -106,3 +106,32 @@ d'abord)._
   sans bâtiment à l'ouest, et une pièce). Six mutations rouges — une n'avait pas mordu tant que le juge confondait
   la bande du flanc et la pointe du coin (même couleur) : il les distingue par leur hauteur.
 - **Reste** : vague 3, des formes de toit ; vague 4, l'usure et des objets neufs.
+
+### Vague 3 — des formes de toit — **livrée le 30 sept. 2026**
+
+- ⚠️ **Mesuré avant de coder** : les 116 toits en pente de la ville (`P`) sont TOUS des rectangles, des maisons de
+  3 à 5 tuiles sur 2 pour la plupart ; aucun bâtiment en L. Le L est donc celui du cottage, dessiné dans le toit.
+- **Quatre formes**, tirées à l'empreinte du bâtiment (`Monde.formeDuToit`, gardée avec sa teinte dans
+  `teintesDesToits`), sans dé ni donnée de plus :
+  - **en long** : deux versants, la faîte dans le sens long du bâtiment (celui d'avant, mais plus toujours d'est
+    en ouest : une maison plus profonde que large a sa faîte du nord au sud) — et tuile par tuile, dans le sens
+    long de son aile : un bâtiment qui n'est pas un rectangle garde cette forme ;
+  - **à pignon sur rue** : la faîte du nord au sud, le pignon vers la rue — les petites maisons (5 tuiles au plus) ;
+  - **à quatre versants** : les arêtiers en diagonale aux coins, la faîte au milieu, ou une pointe ;
+  - **en L** : une aile à pignon sur rue à l'ouest ou à l'est (deux tuiles, trois passé cinq de large), le reste
+    en long.
+- **Le versant de chaque tuile** (`varianteDePente`, bits 4 à 7) se compte dans ses voisines, comme avant, mais
+  dans les quatre directions : nord, sud, ouest, est, les deux faîtes, les quatre arêtiers, la pointe, et les
+  faces dont la faîte passe à leur BORD (sans elles, un toit d'un nombre pair de tuiles n'avait pas de faîte).
+  Le bit 8 dit « quatre versants » ; la teinte monte au bit 9.
+- **Le peintre** (`toitEnPente`) donne à chaque pixel une hauteur et une face (`pente`) : les rangs de bardeaux
+  sont des lignes de même hauteur — ils tournent le coin d'un arêtier comme sur un vrai toit —, la faîte et les
+  arêtiers sont là où deux faces se touchent. Au soleil du nord-ouest, les faces sud et est sont d'un cran plus
+  sombres.
+- **Les égouts suivent la forme** (`bordDePente`) : la gouttière là où le toit descend (au nord et au sud en long,
+  à l'ouest et à l'est à pignon, tout le tour à quatre versants), la rive au pignon.
+- **Juges** : trois de plus dans `test_toits_js.py` (chaque forme dans la ville, la même d'un compte à l'autre, et
+  un non-rectangle toujours en long — jugé à la main, la ville n'en a pas ; les versants de chaque forme ; les
+  égouts et la faîte au bord). Six mutations rouges — une n'avait pas mordu : aucun toit de la ville ne l'exerçait.
+  Le juge des versants de `test_monde_js.py` ne regarde plus que les toits en long.
+- **Reste** : vague 4, l'usure et des objets neufs.

@@ -1803,7 +1803,7 @@ const Monde = (function () {
   function teintesDesToits() {
     if (carte.teintes) return carte.teintes;
     const w = carte.w, h = carte.h, qui = new Int32Array(w * h).fill(-1), pile = new Int32Array(w * h);
-    const glyphes = [], teintes = [];
+    const glyphes = [], teintes = [], formes = [];
     // ⚠️ Les quatre matieres, pas la tole des cabanes (`{`) : chaque plaque y a deja sa couleur.
     const estUnToit = function (g) {
       return MATIERES_TEINTES.indexOf(g) >= 0 && !(carte.materiaux && carte.materiaux[g]);
@@ -1813,10 +1813,12 @@ const Monde = (function () {
       const ty = (i / w) | 0, tx = i - ty * w, g = carte.sol[ty][tx];
       if (!estUnToit(g)) continue;
       const n = teintes.length, bords = [];
-      let haut = 0;
+      let haut = 0, compte = 0, x0 = tx, x1 = tx, y0 = ty, y1 = ty;
       pile[haut++] = i; qui[i] = n;
       while (haut) {
         const k = pile[--haut], y = (k / w) | 0, x = k - y * w;
+        compte++;
+        if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
         let bord = false;
         for (const [dx, dy] of VOISINES) {
           const xx = x + dx, yy = y + dy;
@@ -1847,8 +1849,9 @@ const Monde = (function () {
       }
       glyphes.push(g);
       teintes.push(t);
+      formes.push(g === 'P' ? formeDuToit(tx, ty, x1 - x0 + 1, y1 - y0 + 1, compte) : 'long');
     }
-    carte.teintes = { qui: qui, teintes: teintes, glyphes: glyphes };
+    carte.teintes = { qui: qui, teintes: teintes, glyphes: glyphes, formes: formes };
     return carte.teintes;
   }
   const VOISINES = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -1980,6 +1983,32 @@ const Monde = (function () {
     return s;
   }
 
+  /* --- DES FORMES DE TOIT (vague 3) ----------------------------------------------------------------------------
+
+     Un toit en pente (`P`) n'avait qu'une forme : deux versants, la faite d'est en ouest. Il en a quatre, tirees a
+     l'EMPREINTE du batiment (sans un de, et sans une donnee de plus) :
+     - `long` : deux versants, la faite dans le sens LONG du batiment (tuile par tuile, dans le sens long de son
+       aile : un batiment qui n'est pas un rectangle garde cette forme-la) ;
+     - `pignon` : la faite du nord au sud, le pignon tourne vers la rue — une petite maison ;
+     - `quatre` : quatre versants, les aretiers en diagonale aux coins, la faite au milieu (ou une pointe) ;
+     - `L_O`, `L_E` : EN L — une aile a pignon sur rue a l'ouest (ou a l'est), le reste en long. ⚠️ Mesure du 30
+       sept. 2026 : les 116 toits en pente de la ville sont TOUS des rectangles (des maisons de 3 a 5 tuiles sur
+       2, surtout) ; le L est donc celui du cottage, dessine dans le toit, pas dans le plan du batiment. */
+  function formeDuToit(tx, ty, largeur, profondeur, compte) {
+    if (compte !== largeur * profondeur || profondeur < 2 || largeur < 3) return 'long';
+    const d = hash2(tx * 11 + 1, ty * 17 + 9) % 10;
+    if (d < 2 && largeur <= 5) return 'pignon';
+    if (d >= 2 && d < 5 && largeur >= 4) return d % 2 ? 'L_O' : 'L_E';
+    if (d >= 7) return 'quatre';
+    return 'long';
+  }
+  /** La forme du toit a cette tuile ('long', 'pignon', 'quatre', 'L_O', 'L_E'). */
+  function formeDeToit(tx, ty) {
+    if (tx < 0 || ty < 0 || tx >= carte.w || ty >= carte.h) return 'long';
+    const t = teintesDesToits(), n = t.qui[ty * carte.w + tx];
+    return n >= 0 ? t.formes[n] : 'long';
+  }
+
   /** La teinte du toit a cette tuile (0 a 5), ou 0 hors d'un toit teint. */
   function teinteDeToit(tx, ty) {
     if (tx < 0 || ty < 0 || tx >= carte.w || ty >= carte.h) return 0;
@@ -2000,22 +2029,51 @@ const Monde = (function () {
     return bord + 16 * (hash2(tx, ty) % GRAINS_DE_TOIT) + 128 * teinteDeToit(tx, ty);
   }
 
-  /** La variante d'un toit a deux versants : le bord, et le VERSANT — 0 nord,
-      1 la ligne de faite, 2 sud.
+  /** La variante d'un toit en pente : le bord (bits 0 a 3), le VERSANT (4 a 7 — 0 nord, 1 la faite est-ouest,
+      2 sud, 3 ouest, 4 la faite nord-sud, 5 est, 6 a 9 les aretiers nord-ouest, nord-est, sud-ouest, sud-est,
+      10 la pointe, 11 a 14 les faces nord, sud, ouest, est dont la faite passe au bord ; `sprites.js`, `VERSANTS`), quatre versants (bit 8), la teinte (9 et au-dessus).
 
       ⚠️ Le versant se COMPTE dans les voisines : combien de tuiles du meme toit
-      au nord, combien au sud. C'est ce qui fait apparaitre la faite toute seule
+      au nord, au sud, a l'ouest, a l'est. C'est ce qui fait apparaitre la faite toute seule
       la ou les deux pentes se rencontrent, sans qu'une tuile ait besoin de
       savoir qu'elle est au milieu — et sans une seule donnee de plus dans le
       paquet. La course est bornee : un toit plus haut que ca n'existe pas. */
   function varianteDePente(g, tx, ty) {
     const bord = (glyphe(tx, ty - 1) !== g ? 1 : 0) | (glyphe(tx + 1, ty) !== g ? 2 : 0)
       | (glyphe(tx, ty + 1) !== g ? 4 : 0) | (glyphe(tx - 1, ty) !== g ? 8 : 0);
-    let nord = 0, sud = 0;
-    while (nord < 12 && glyphe(tx, ty - 1 - nord) === g) nord++;
-    while (sud < 12 && glyphe(tx, ty + 1 + sud) === g) sud++;
-    const versant = nord === sud ? 1 : (nord < sud ? 0 : 2);
-    return bord + 16 * versant + 64 * teinteDeToit(tx, ty);
+    const course = function (dx, dy) {
+      let n = 0;
+      while (n < 12 && glyphe(tx + dx * (n + 1), ty + dy * (n + 1)) === g) n++;
+      return n;
+    };
+    const nord = course(0, -1), sud = course(0, 1), ouest = course(-1, 0), est = course(1, 0);
+    const forme = carte.materiaux && carte.materiaux[g] ? 'long' : formeDeToit(tx, ty);
+    // ⚠️ La face dont la faite passe a son BORD (`N_F`… : 11 a 14) : le versant d'en face commence a la voisine.
+    const enLong = function () {                                                              // faite est-ouest
+      return nord === sud ? 1 : nord < sud ? (sud === nord + 1 ? 11 : 0) : (nord === sud + 1 ? 12 : 2);
+    };
+    const enTravers = function () {                                                           // faite nord-sud
+      return ouest === est ? 4 : ouest < est ? (est === ouest + 1 ? 13 : 3) : (ouest === est + 1 ? 14 : 5);
+    };
+    let versant;
+    if (forme === 'quatre') {
+      const dv = Math.min(nord, sud), dh = Math.min(ouest, est);
+      if (dv < dh) versant = enLong();
+      else if (dh < dv) versant = enTravers();
+      else if (nord === sud && ouest === est) versant = 10;                                  // la pointe
+      else if (nord === sud) versant = 1;
+      else if (ouest === est) versant = 4;
+      else versant = nord < sud ? (ouest < est ? 6 : 7) : (ouest < est ? 8 : 9);             // les aretiers
+    } else if (forme === 'L_O' || forme === 'L_E') {
+      // L'aile a pignon sur rue : deux tuiles (trois passe cinq de large), sa faite du nord au sud.
+      const aile = ouest + est + 1 <= 5 ? 2 : 3, cote = forme === 'L_O' ? ouest : est;
+      if (cote < aile) {
+        const o = forme === 'L_O' ? ouest : aile - 1 - est, e = aile - 1 - o;
+        versant = o === e ? 4 : o < e ? (e === o + 1 ? 13 : 3) : (o === e + 1 ? 14 : 5);
+      } else versant = enLong();
+    } else if (forme === 'pignon' || nord + sud > ouest + est) versant = enTravers();     // plus profond que large
+    else versant = enLong();
+    return bord + 16 * versant + 256 * (forme === 'quatre' ? 1 : 0) + 512 * teinteDeToit(tx, ty);
   }
 
   /** Un toit a cette tuile ? (les quatre couvertures) */
@@ -3001,7 +3059,7 @@ const Monde = (function () {
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
     dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau, sousLeToit, cacheSousLeToit, abrite,
     barrieresCoulissantes, majBarrieresCoulissantes, dessinerBarrieresCoulissantes, COULISSE_GLISSE, COULISSE_TIENT,
-estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, teinteDeToit, teintesDesToits, logementElargi, sousLesEtages, etagesDuCommerce, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
+estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, teinteDeToit, teintesDesToits, formeDeToit, formeDuToit, logementElargi, sousLesEtages, etagesDuCommerce, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, ambianceVue, estNuit, estNuitVue, periode, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
     miniCarte, couleurMini, couleurMiniA, masqueDeLaCarte, masquee, hauteurConnue, chemin, demanderChemin, majChemins,
