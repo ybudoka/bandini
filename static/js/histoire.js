@@ -2449,6 +2449,7 @@ const Histoire = (function () {
     const vehicule = B.mission ? B.mission.vehicule : null;
     nettoyer(false);
     if (p.tombes) delete p.tombes[m.slug];
+    Chapitres.noterDuree(m);
     p.missionsFaites[m.slug] = p.jour;
     Chapitres.reussi(m);
     p.mission = null;
@@ -3668,6 +3669,7 @@ const Histoire = (function () {
     majTelephone();
     majProtege();
     if (B.partie.mission) {
+      Chapitres.compter();
       if (!B.mission) B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0,
                                     vol: 0, boulotsDepart: 0, suit: null, protege: null, suivi: null };  // partie rechargee : on reprend au meme objectif, sans ses figurants
       if (B.mission.pendant !== undefined && B.mission.pendant !== null) {

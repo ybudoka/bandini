@@ -2056,7 +2056,10 @@ const Hud = (function () {
     // Les missions qu'il a données, et ce qu'on en a fait.
     const siennes = (B.defs.missions || []).filter(function (m) { return m.donneur === slug; });
     siennes.forEach(function (m) {
-      items.push(ligne('\u00B7 ' + m.titre.toUpperCase(), p.missionsFaites[m.slug] ? 'FAITE' : ''));
+      // Le chronomètre des chapitres (30 sept. 2026) : le dernier temps, à côté de FAITE.
+      const d = p.durees && p.durees[m.slug];
+      const temps = d ? ' · ' + Math.floor(d.dernier / 60) + ':' + String(d.dernier % 60).padStart(2, '0') : '';
+      items.push(ligne('\u00B7 ' + m.titre.toUpperCase(), p.missionsFaites[m.slug] ? 'FAITE' + temps : ''));
     });
     items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnetRepertoire(slug)); return false; } });
     return { titre: q ? q.nom.toUpperCase() : slug.toUpperCase(), largeur: 320, colonne: 250,

@@ -48,11 +48,16 @@ const Chapitres = (function () {
     const p = B.partie, pm = p.mission, j = B.joueur, k = acteA(m, etape);
     if (k > 0 && m.remplace && m.remplace[k - 1] && !p.missionsFaites[m.remplace[k - 1]]) p.missionsFaites[m.remplace[k - 1]] = p.jour;
     chapitres()[m.slug] = etape;
+    // Le chronomètre : l'acte d'avant se ferme (seulement s'il s'est joué ici — une reprise rouvre l'acte sans
+    // fermer celui d'avant, dont la durée revient de la reprise).
+    if (pm.acteOuvert === k - 1) fermerActe(pm);
+    pm.acteOuvert = k;
     const ici = Histoire.ouEstLeJoueurEnVille();
     const v = j.dansVehicule;
     pm.reprise = { etape: etape, x: ici.x, y: ici.y,
                    char: v && v.def ? { slug: v.def.slug, couleur: v.couleur || null } : null,
-                   arme: j.arme || 'poings', mun: p.armes[j.arme] ? p.armes[j.arme].mun : null };
+                   arme: j.arme || 'poings', mun: p.armes[j.arme] ? p.armes[j.arme].mun : null,
+                   actes: (pm.actes || []).slice() };
     Hud.message(o.texte, 200);
     Missions.sauvegarderPartie();
   }
@@ -71,6 +76,33 @@ const Chapitres = (function () {
   /** Un chapitre dont toutes les missions remplacées sont faites l'est aussi (une vieille partie). */
   function fait(m) {
     return !!(m && m.remplace && m.remplace.length && m.remplace.every(function (s) { return B.partie.missionsFaites[s]; }));
+  }
+
+  // --- Le chronomètre (docs/jalons/des-missions-en-chapitres.md : c'est lui qui dit si on tient 5 à 10 minutes) ---
+
+  /** Une image de mission jouée : `Histoire.maj` ne tourne ni sous un menu, ni en pause, ni dans un fondu. */
+  function compter() {
+    const pm = B.partie.mission;
+    if (!pm) return;
+    pm.images = (pm.images || 0) + 1;
+    pm.imagesActe = (pm.imagesActe || 0) + 1;
+  }
+
+  /** L'acte fini : sa durée, en secondes, rejoint celles d'avant. */
+  function fermerActe(pm) {
+    pm.actes = (pm.actes || []).concat([Math.round((pm.imagesActe || 0) / 60)]);
+    pm.imagesActe = 0;
+  }
+
+  /** La mission réussie : sa durée (et celle de chaque acte) dans `partie.durees`, le dernier temps et le meilleur. */
+  function noterDuree(m) {
+    const p = B.partie, pm = p.mission, d = p.durees || (p.durees = {});
+    if (!pm) return;
+    let actesFaits;
+    if (actes(m).length) { fermerActe(pm); actesFaits = pm.actes; } else actesFaits = [Math.round((pm.images || 0) / 60)];
+    const total = actesFaits.reduce(function (a, b) { return a + b; }, 0);
+    const avant = d[m.slug];
+    d[m.slug] = { dernier: total, meilleur: avant ? Math.min(avant.meilleur, total) : total, actes: actesFaits };
   }
 
   // --- La reprise ------------------------------------------------------------------------------------
@@ -123,6 +155,9 @@ const Chapitres = (function () {
       Entites.indexer(); Monde.centrerCamera(j.x, j.y);
       chapitres()[r.slug] = x.etape;
       Histoire.commencer(r.slug, false);
+      // La durée des actes d'avant, jouée avant l'échec, revient avec la reprise.
+      const pm = B.partie.mission;
+      if (pm) { pm.actes = (x.actes || []).slice(); if (pm.reprise) pm.reprise.actes = pm.actes.slice(); }
     }, 'ACTE ' + r.acte);
   }
 
@@ -133,5 +168,5 @@ const Chapitres = (function () {
     (m.remplace || []).forEach(function (s) { if (!p.missionsFaites[s]) p.missionsFaites[s] = p.jour; });
   }
 
-  return { actes, acteA, donneurDe, ouvrirActe, reussi, depart, fait, retenir, majReprise, reprendre };
+  return { actes, acteA, donneurDe, ouvrirActe, reussi, depart, fait, retenir, majReprise, reprendre, compter, noterDuree };
 })();

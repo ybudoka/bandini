@@ -213,3 +213,46 @@ def test_une_mission_ordinaire_ratee_n_ouvre_aucun_menu(banc):
         return { menu: !!L.B.menu, mission: L.B.partie.mission };
     }""")
     assert r == {"menu": False, "mission": None}
+
+
+def test_le_chronometre_compte_le_jeu_pas_la_pause_ni_les_menus(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + """
+        ouvrir(L);
+        const B = L.B, p = B.partie; commencer(L, o, 'zz'); jouer(L, o);
+        const t0 = p.mission.images || 0;
+        for (let k = 0; k < 600; k++) o.frame(1);                   // 10 s de jeu
+        L.Jeu.pause(); for (let k = 0; k < 600; k++) o.frame(1); L.Jeu.reprendre();
+        L.Hud.ouvrirMenu({ titre: 'X', items: [{ libelle: 'OK', faire: function () { return true; } }] });
+        for (let k = 0; k < 600; k++) o.frame(1); L.Hud.fermerMenu();
+        return { s: Math.round(((p.mission.images || 0) - t0) / 60) };
+    }""")
+    assert r["s"] == 10
+
+
+def test_la_duree_s_ecrit_a_la_reussite_par_acte_et_au_carnet(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + """
+        ouvrir(L);
+        const B = L.B, p = B.partie; commencer(L, o, 'zz'); jouer(L, o);
+        for (let k = 0; k < 1200; k++) o.frame(1);
+        p.mission.etape = 2; L.Histoire.avancer(); jouer(L, o);
+        for (let k = 0; k < 600; k++) o.frame(1);
+        p.mission.etape = 5; L.Histoire.avancer(); finir(L, o);
+        const fiche = L.Hud.menuCarnetFiche('bilodeau').items.find(function (i) { return i.libelle.indexOf('ZZ') >= 0; });
+        return { d: p.durees.zz, carnet: fiche && fiche.detail };
+    }""")
+    d = r["d"]
+    assert d["actes"][0] >= 20 and d["actes"][1] >= 10, d
+    assert d["dernier"] == sum(d["actes"]) and d["meilleur"] == d["dernier"], d
+    assert r["carnet"] == f"FAITE · {d['dernier'] // 60}:{d['dernier'] % 60:02d}", r
+
+
+def test_une_reprise_garde_la_duree_des_actes_d_avant(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + REPRENDRE + """
+        ouvrir(L);
+        const B = L.B, p = B.partie; commencer(L, o, 'zz'); jouer(L, o);
+        for (let k = 0; k < 1200; k++) o.frame(1);
+        p.mission.etape = 2; L.Histoire.avancer(); jouer(L, o);
+        L.Missions.hopital('banc'); attendreLeMenu(L, o); choisir(L, o, 'REPRENDRE');
+        return p.mission.actes;
+    }""")
+    assert len(r) == 1 and r[0] >= 20, r
