@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (292 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (293 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -78,7 +78,6 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
-| On ne marche plus sur les meubles | ⬜ **en cours** | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/on-ne-marche-plus-sur-les-meubles.md#fiche) |
 | Les bateaux ne sont pas des chars | ⬜ **en cours** (tranché par Martin : tout, en cinq vagues — la conduite, les règles de char, le plongeon et la police de terre, la vedette de police, l'habillage et l'hiver ; ✅ vague 1 livrée : la conduite — la poupe chasse, la machine arrière au lieu du frein, la météo reste sur la rue ; Martin l'essaie avant la vague 2) | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/les-bateaux-ne-sont-pas-des-chars.md#fiche) · [notes](jalons/les-bateaux-ne-sont-pas-des-chars.md#notes) |
 | La villa barbelée et mieux gardée | ⬜ **en cours** | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/la-villa-barbelee-et-mieux-gardee.md#fiche) |
 | Des bagarres de gangs vivantes, et armées | ⬜ **en cours** (tranché par Martin le 30 sept. 2026 : un seul cerveau pour la rixe et le gang contre toi, un arsenal par gang porté par un membre sur trois, quatre vagues — le contact, la fusillade, le moral, les renforts) | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/des-bagarres-de-gangs-vivantes-et-armees.md#fiche) |
