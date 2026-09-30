@@ -108,6 +108,11 @@ def _prises(ville: dict) -> set[tuple[int, int]]:
         for dy in (1, 2):
             for dx in (-1, 0, 1):
                 out.add((p["x"] + dx, p["y"] + dy))
+    # ⚠️ LA PATINOIRE DU PARC (`patinoire.py`) et le tour de ses bandes : sa clairière était pleine d'arbres, donc
+    # prise ; libérée, le marché aux puces s'y installait — sur la glace.
+    r = ville.get("patinoire")
+    if r:
+        out |= {(x, y) for y in range(r["y"] - 1, r["y"] + r["h"] + 1) for x in range(r["x"] - 1, r["x"] + r["l"] + 1)}
     return out
 
 

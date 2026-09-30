@@ -55,7 +55,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-from . import (armes, audio, blocs, calendrier, saisons, pluie, halloween, carte, demenagement, derby, enseignes, fetes, garage, motoneige, photos, quatre_roues, saint_jean, territoires, devantures, dojo, economie, mantes, garderobe, interactions, journal, magasins,
+from . import (armes, audio, patinoire, blocs, calendrier, saisons, pluie, halloween, carte, demenagement, derby, enseignes, fetes, garage, motoneige, photos, quatre_roues, saint_jean, territoires, devantures, dojo, economie, mantes, garderobe, interactions, journal, magasins,
                brouillard, loto, machine_a_sous, manettes, tables_de_jeu, missions, nord, nuit, pietons, recherche, rixes, techniques, vehicules, verglas, videopoker,
                musique, pont_de_glace, visages)
 from . import collectionner, decoration, foyers, pliage
@@ -80,7 +80,7 @@ from .version import VERSION
 #:   vide ne se marque pas chargée tant que la suite n'est pas là (`Son.Voix.chargerHistoire`).
 DANS_LA_SUITE: tuple[str, ...] = ("journal", "journal_speciales", "journal_lecons", "journal_matins",
                                   "photos", "galeries", "voix_de_la_suite",
-                                  "repliques_de_la_file", "klaxons")
+                                  "repliques_de_la_file", "klaxons", "patinoire")
 
 #: Ce qu'une fiche de personnage porte et qu'aucun script ne lit : sa voix ElevenLabs (le nom de la voix,
 #: `audio.voix_*` la lit en Python pour générer ses mp3). 1 698 octets bruts / 658 gzip sur le paquet.
@@ -139,6 +139,8 @@ def assembler() -> dict:
         "pluie": pluie.pour_le_navigateur(),
         # L'Halloween : les citrouilles, les lumières, les déguisés, la maison hantée (`halloween.py`).
         "halloween": halloween.pour_le_navigateur(),
+        # La patinoire du parc : ses couleurs, la glisse et la chute (`patinoire.py`) ; sa place est dans la carte.
+        "patinoire": patinoire.pour_le_navigateur(),
         # La course des bois de La Pointe, lue sur la ville finie (docs/jalons/la-motoneige.md).
         "motoneige": motoneige.pour_le_navigateur(ville),
         # La course des Friches, en 4 roues, lue sur la ville finie (docs/jalons/les-4-roues.md).

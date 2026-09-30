@@ -4096,6 +4096,7 @@ const Entites = (function () {
     if (typeof RueDesSaisons !== 'undefined') RueDesSaisons.bloquer(e);
     // Ni les braseros et les roulottes des places, l'hiver (peints, solides tant que la neige tient).
     if (typeof Foyers !== 'undefined') Foyers.bloquer(e);
+    if (typeof Patinoire !== 'undefined') Patinoire.bloquer(e);   // les bandes de la patinoire, l'hiver
   }
 
   // --- La foule ne se traverse pas -------------------------------------------------
@@ -4662,6 +4663,9 @@ const Entites = (function () {
       j.vx = j.courant.x * vitesse; j.vy = j.courant.y * vitesse;
       regarder(j, j.courant.x, j.courant.y);
     }
+    // LA GLACE DE LA PATINOIRE (`Patinoire.glisser`) : la vitesse voulue se rejoint peu a peu — l'elan, le
+    // virage large, l'arret long ; courir dessus sans patins, ou virer sec lance, et on tombe.
+    if (typeof Patinoire !== 'undefined' && !j.nage && Patinoire.glisser(j, veutSprinter && axe.mag > 0)) return;
     // Pousser contre un grillage, c'est vouloir l'enjamber : une seconde en
     // haut, sans frapper, sans tirer, sans courir — et une cible immobile.
     if (axe.mag > 0 && !j.nage && enjamber(j, j.vx, j.vy)) { return; }
@@ -5442,6 +5446,7 @@ const Entites = (function () {
     const cycliste = e.metier === 'cycliste';
     const surLeTrottoir = cycliste && roulableEnfant(Math.floor(e.x / TT), Math.floor(e.y / TT));
     if (cycliste) resterSurLeTrottoir(e);
+    if (typeof Patinoire !== 'undefined') Patinoire.glisser(e, false);   // sur la glace, la vitesse se prend peu a peu
     deplacerCercle(e, e.vx, e.vy, masqueDe(e));
     dansLaCarte(e);
     // ⚠️ La regle dure de l'enfant a velo : un pas qui le mettrait sur la rue ne

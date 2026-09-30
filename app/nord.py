@@ -674,7 +674,7 @@ DECALAGES = {
     "grille_nord": _rien, "hauteur": None, "ile": _y, "incendies": _y, "interieurs": _rien,
     "intersections": _y, "jeux_de_foire": _jeux_de_foire, "kiosques_de_foire": _y, "lampes": _y, "lave_auto": _y, "largeur": _rien,
     "metro": _y, "montagne_russe": _montagne_russe, "mouillages": _mouillages, "neige": _neige,
-    "nids_de_poule": _y, "nom": _rien, "paquets": _y, "plages": _y, "points_interet": _y, "ponts": _y,
+    "nids_de_poule": _y, "nom": _rien, "paquets": _y, "patinoire": _y, "plages": _y, "points_interet": _y, "ponts": _y,
     "portes": _y, "portes_garage": _y, "rampes": _y, "reclames": _y, "relief": _relief, "residences": _y,
     "roue": _y, "scenes": _y, "slug": _rien, "sol": None, "stationnement_du_poste": _y, "toits": _y,
     "train_de_foire": _train, "tramway": _tramway, "traversier": _traversier, "tuile_px": _rien,

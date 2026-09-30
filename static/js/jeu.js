@@ -1273,6 +1273,7 @@ const Jeu = (function () {
     if (!B.interieur) Derapage.dessinerSol(ctx, vue);  // les traces de pneus, les sillons (les saisons, lot 6)
     if (!Monde.aLAbri()) Pluie.dessinerSol(ctx, vue);     // la rue mouillee, les flaques, la gadoue d'avril (les saisons, lot 2)
     if (!B.interieur) RueDesSaisons.dessinerFlaques(ctx, vue);   // l'eau des bornes ouvertes de la canicule (vague 4c)
+    if (!B.interieur) Patinoire.dessinerSol(ctx, vue); // l'hiver, la patinoire du parc : sa glace et ses bandes, sous les patineurs
     if (!B.interieur) Naufrage.dessinerSol(ctx, vue);  // la ou un char a coule : les cercles, la tache d'huile
     // Le tunnel, la rame et ses fenetres : peints par-dessus le sol de la piece,
     // sous les gens du quai.
@@ -1324,6 +1325,7 @@ const Jeu = (function () {
     if (!B.interieur) for (const l of Cineparc.lampes(vue)) lampes.push(l);
     if (!B.interieur) for (const l of Fetes.lampes(vue)) lampes.push(l);
     if (!B.interieur) for (const l of Halloween.lampes(vue)) lampes.push(l);   // les citrouilles allumees
+    if (!B.interieur) for (const l of Patinoire.lampes(vue)) lampes.push(l);   // les lampadaires de la patinoire, le soir
     if (!B.interieur) for (const l of Collections.lampes(vue)) lampes.push(l);   // l'eclat d'une carte de hockey, la nuit
     // Les fleches d'une course : lumineuses, meme la nuit.
     if (!B.interieur) for (const l of Histoire.lampesDeCourse(vue)) lampes.push(l);
@@ -1618,7 +1620,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Souterrain: Souterrain, Entites: Entites, Combat: Combat, Techniques: Techniques, Rixe: Rixe, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Train: Train, Navette: Navette, Neige: Neige, Pluie: Pluie, Derapage: Derapage, Naufrage: Naufrage, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, RueDesSaisons: RueDesSaisons, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Territoires: Territoires, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Galeries: Galeries, Fetes: Fetes, Halloween: Halloween, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Collections: Collections, Suite: Suite, Decoration: Decoration, Puces: Puces, Interactions: Interactions, Police: Police, Vedette: Vedette, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Foyers: Foyers, FileDeFoire: FileDeFoire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Photos: Photos, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, SurPlace: SurPlace, Chapitres: Chapitres, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Train: Train, Navette: Navette, Neige: Neige, Pluie: Pluie, Derapage: Derapage, Naufrage: Naufrage, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, RueDesSaisons: RueDesSaisons, Patinoire: Patinoire, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Territoires: Territoires, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Galeries: Galeries, Fetes: Fetes, Halloween: Halloween, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Collections: Collections, Suite: Suite, Decoration: Decoration, Puces: Puces, Interactions: Interactions, Police: Police, Vedette: Vedette, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Foyers: Foyers, FileDeFoire: FileDeFoire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Photos: Photos, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, SurPlace: SurPlace, Chapitres: Chapitres, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, PORTRAITS: PORTRAITS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,

@@ -161,6 +161,7 @@ MESURE_DE_LA_CARTE: dict[str, tuple[int, int]] = {
     "amarrages": (132, 250),
     "foire": (122, 250),
     "aqueduc": (102, 250),
+    "patinoire": (101, 250),     # la patinoire du parc (30 sept. 2026) : sa place et ses deux portes
     "plages": (99, 250),
     "frenesies_regle": (84, 200),
     "entrave": (72, 200),

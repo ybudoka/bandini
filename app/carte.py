@@ -2083,6 +2083,9 @@ class _Chantier:
         #: Le coeur de la place de chaque parc de VILLE, dans l'ordre de construction : c'est la
         #: qu'une statue se pose, a la toute fin (`statues.poser`). ⚠️ Note, jamais tiree.
         self.places_de_parc: list[tuple[int, int]] = []
+        #: Le rectangle de chaque parc de VILLE (x, y, largeur, hauteur) et son district, dans le meme
+        #: ordre : la patinoire y taille sa clairiere a la fin (`patinoire.poser`). ⚠️ Note, jamais tiree.
+        self.parcs_de_ville: list[tuple[int, int, int, int, str]] = []
         #: Le milieu du sentier de chaque parc de QUARTIER, ses deux bords et sa surface : un buste s'y
         #: pose a la fin (`statues.poser`), sur le plus grand. ⚠️ Note, jamais tiree non plus.
         self.sentiers_de_parc: list[tuple[tuple[int, int], tuple, int]] = []
@@ -5334,6 +5337,7 @@ class _Chantier:
         self.rect(centre[0] - 2, centre[1] - 2, 5, 5, pave)
         if not sauvage:
             self.places_de_parc.append(centre)
+            self.parcs_de_ville.append((x, y, largeur, hauteur, self.district_en(x, y)))
         # Un etang, toujours a plus de trois tuiles du bord : il ne doit
         # enfermer aucun coin de pelouse.
         if largeur >= 16 and hauteur >= 12:
@@ -7449,6 +7453,11 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
     # nord, qui les fait descendre avec le reste.
     from . import statues as statues_mod
     statues_mod.poser(chantier, ville)
+    # LA PATINOIRE DU PARC (docs/jalons/la-patinoire-du-parc.md) : sa clairiere au parc du Faubourg, taillee
+    # APRES les statues (elle ne bouche pas une place) et sans un de ; le decor dessus se DEPLACE, a sa place
+    # dans la liste. Avant la bande nord, qui la fait descendre avec la ville d'avant.
+    from . import patinoire as patinoire_mod
+    ville["patinoire"] = patinoire_mod.poser(chantier, ville)
     # LES CONCESSIONNAIRES (docs/jalons/les-concessionnaires-le-neuf-aux-erables-l-usage-dans-les-friches.md) :
     # Prestige Automobiles, bâti sur le stationnement cossu des Érables — sur la ville finie et sans un dé, AVANT
     # la bande nord (il descend avec la ville d'avant). Chez Ti-Pout, dans les Friches, se pose après elle.
