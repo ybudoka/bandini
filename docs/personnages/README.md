@@ -62,9 +62,9 @@ Chaque fiche mêle deux sortes de faits.
 | [Diane Larivière](diane.md) | `diane` | devant le dépanneur des Érables, après e01 | Riya Rao | e06 · e07 · e10 |
 | [Louise Tremblay-Dion](louise.md) | `louise` | devant le kiosque de Mme Thibodeau, après m2 | Ana Rita | ses photos (une par jour, pour la une) |
 | [Jo Bellemare](jo.md) | `jo` | devant le dépanneur, entre e01 et e04 — puis chez les Chevreuils | Omar J | e04 · le chef de e10 |
-| [Roméo Bilodeau](bilodeau.md) | `bilodeau` | devant le phare, après p01 | Santa | p02 |
-| [Zacharie « Zed » Lemieux](zed.md) | `zed` | devant le phare, après p02 | Lutz | p04 · p10 · p11 (mené à la Chef) |
-| [Armand, le Trappeur](trappeur.md) | `trappeur` | devant le phare, après p01 | George | p05 |
+| [Roméo Bilodeau](bilodeau.md) | `bilodeau` | devant le phare, après p01 | Santa | La Pointe (le chapitre ; acte 1) |
+| [Zacharie « Zed » Lemieux](zed.md) | `zed` | devant le phare, après p02 | Lutz | La Pointe, actes 3 · 4 · 6 (mené à la Chef) |
+| [Armand, le Trappeur](trappeur.md) | `trappeur` | devant le phare, après p01 | George | La Pointe, acte 2 |
 | [Ti-Loup Ferraille](tiloup.md) | `tiloup` | devant la fourrière, après s01 | Chris | s02 · s05 (son compacteur) |
 | [Marcel « Gros-Boulon » Boulanger](boulon.md) | `boulon` | devant la fourrière, après s02 | Roger | s05 · s09 · s11 (l'accord) |
 | [Réjean Prévost](prevost.md) | `prevost` | à son bureau de l'usine, dedans, après s10 | Roland Lescalde | s11 |

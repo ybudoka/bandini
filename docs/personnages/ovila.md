@@ -40,7 +40,7 @@ personne d'autre ne l'écoute.
 - **Lent, poli, un peu solennel.** Il **vouvoie** — le seul du jeu. « Pour vous servir. »
 - **Des phrases qui ont l'air de dire autre chose** : les lumières, ce qui entre, ce qui accoste.
 - **Balises de base** : `[calm]`, `[softly]`, `[mysteriously]` ; jamais `[excited]` ni `[shouting]` — même
-  quand le phare s'éteint (`p09`), il parle bas.
+  quand le phare s'éteint (La Pointe, acte 5 — c'était `p09`), il parle bas.
 - **Ce qu'il ne dit jamais** : « tu » à quelqu'un qu'il vient de rencontrer ; une phrase pressée ; « je suis
   aveugle ».
 
@@ -77,7 +77,7 @@ tutoie le joueur (« Bonne chance, le jeune »), Ovila **vouvoie** et prend son 
 
 ## Ce qui l'attend (M16)
 
-`p01` « La lampe du phare », `p06` « Ovila voit des lumières », `p09` « Le phare s'éteint », `d04` « La
+`p01` « La lampe du phare », `p06` « Ovila voit des lumières », `la_pointe` acte 5 « Le phare s'éteint » (c'était `p09`), `d04` « La
 collecte du barbier ».
 
 ## À trancher

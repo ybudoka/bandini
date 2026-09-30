@@ -16,6 +16,8 @@ ville) : il raconte la **recette**, pas le pourquoi. Pour que la mission soit
 > juges — vit dans `app/missions/__init__.py`. **Ajouter une mission = créer son
 > fichier et l'ajouter aux deux listes de `__init__.py`, rien d'autre.**
 >
+> **Une mission courte se fait en chapitre** (§ 7 bis) : 5 à 10 minutes, coupée en actes qu'on reprend.
+>
 > On ne touche jamais à `static/js/histoire.js` ou `scenes.js` pour *ajouter*
 > une mission — on ne les touche que pour ajouter un **type** de plan (voir § 6),
 > et alors on le fait pour tout le monde.
@@ -530,6 +532,57 @@ et c'est la seule mission qui le peut. Exemples : `m99.py` (on part), `m98.py` (
 `generique_boss`, et un carton écrit en toutes lettres, « DÉCHIRÉE »).
 
 ---
+
+## 7 bis. Un chapitre : une mission de 5 à 10 minutes
+
+Martin, 30 sept. 2026 : « les missions doivent durer au moins 5 à 10 minutes chacune ». Une mission qui
+raconte plusieurs choses s'écrit en **chapitre** : un fichier comme les autres, dont les objectifs sont
+coupés par des **actes**. Le premier : `app/missions/la_pointe.py` (six actes, du pont bloqué à la paix
+signée). La fiche : `docs/jalons/des-missions-en-chapitres.md`.
+
+```python
+"remplace": ["p02", "p05"],          # s'il reprend des missions existantes : une par acte, dans l'ordre
+"objectifs": [
+    {"type": "acte", "texte": "ACTE 1 — LE PONT EST BLOQUÉ", "donneur": "bilodeau"},
+    {"type": "tuer", …, "renforts": {"vagues": 1, "n": 2}},
+    {"type": "retourner", "texte": "RETOURNE VOIR M. BILODEAU", "donne": {"message": "LE PONT EST OUVERT"}},
+    {"type": "acte", "texte": "ACTE 2 — LES COLLETS", "donneur": "trappeur",
+     "sur_place": {"lieu": "phare", "heure": "nuit"}},
+    …
+],
+```
+
+- **Le marqueur `acte`** est instantané : son `texte` en carton, le **point de reprise** (la place en ville,
+  le char, l'arme), le `donneur` de l'acte — c'est lui qui a la bulle, que le `retourner` vise et que le
+  téléphone rappelle. `sur_place` (facultatif) fait le saut à l'heure et au lieu, comme § 2. Un chapitre
+  **commence** par un acte et ne **finit** pas sur un acte (`erreurs_de_chapitre`, jugé).
+- **Mourir ou se faire pogner** dans un chapitre ouvre, après l'hôpital ou le poste, **REPRENDRE L'ACTE N**
+  (l'arme de l'acte est rendue, même confisquée) ou **PLUS TARD** (l'acte reste atteint, le donneur de
+  l'acte rappellera). Rien à écrire : c'est le moteur (`static/js/chapitres.js`).
+- **Un `retourner` au milieu d'un chapitre passe à l'acte suivant** ; seul le dernier objectif paie la prime.
+- **Les répliques** : `appel` et `intro` sont celles du premier acte ; ce qui ouvre un acte suivant
+  (le donneur qui appelle, puis ce qu'il explique) est un `pendant` **sur l'étape du marqueur** ; la fin
+  d'un acte, dite en personne, un `pendant` sur le marqueur de l'acte **suivant** ; `fin` est celle du
+  dernier acte, **chez le donneur du dernier acte** (`donneur_final`). « Qui parle se nomme » : une fois par
+  personne dans le chapitre. Plafond de répliques : 18 **par acte**.
+- **`remplace`** : une partie qui avait fait ces missions reprend au premier acte pas fait ; toutes faites,
+  le chapitre l'est aussi. Une mission remplacée sort du catalogue, et aucun `prerequis` ne la nomme plus.
+- **Le chronomètre** : le temps de chaque acte s'écrit dans la partie (`durees`), et le carnet l'affiche à côté
+  de FAITE. C'est lui qui dit si on tient 5 à 10 minutes.
+
+**Ce qui fait durer** — des options, jamais automatiques, à mettre là où l'histoire les justifie :
+
+| Option ou type | Sur | Ce que ça fait |
+|---|---|---|
+| `renforts: {"vagues": 2, "n": 2}` | `tuer`, `tenir` | quand il ne reste qu'UN debout, la vague suivante arrive de loin |
+| `poursuite: {"groupe": "skateux", "chars": 1}` | `aller`, `livrer`, `retourner`, `proteger` | un char du gang naît hors champ et te colle ; l'objectif fait, il retourne au trafic |
+| `etoiles: 2` | tout objectif | la police à ce niveau au départ |
+| `donne: {…}` | tout objectif | ce que CET objectif accorde quand il est fait (le `message` s'affiche) |
+| `tenir` (type) | — | rester à `lieu` (`rayon`) `secondes` ; en sortir remet à zéro, ou rate (`strict`) ; `groupe`/`n`/`renforts` : ceux qui viennent te déloger |
+| `relais: 1` | `ramasser` + `cible: fuyard` | rattrapé, il saute dans un autre char tout près, N fois |
+
+La tournée (N arrêts dans l'ordre) n'est pas un type : c'est une `course` sans `chrono_s`.
+
 
 ## 8. La checklist de fin (ce que les tests vérifient)
 

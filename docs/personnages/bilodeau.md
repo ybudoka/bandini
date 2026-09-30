@@ -2,7 +2,7 @@
 
 ← [les personnages](README.md) · [le jeu d'acteur](../jeu-d-acteur.md)
 
-> « Roméo Bilodeau, du bout de La Pointe. Les jeunes ont fermé le pont, monsieur. Avec des cônes! » — p02
+> « Roméo Bilodeau, du bout de La Pointe. Les jeunes ont fermé le pont, monsieur. Avec des cônes! » — La Pointe, acte 1 (p02)
 
 ## En bref
 
@@ -14,7 +14,7 @@
 | Voix | **Santa — Gentle and Heartwarming** (bibliothèque, « old », accent québécois) ; choisie à l'audition contre Pascal et Mathieu (Martin, 30 sept. 2026) — Bill, l'américain d'avant, sonnait faux |
 | Bulle | « Monsieur! » |
 | Couleurs | gilet brun, cheveux blancs, pantalon marine |
-| Missions | donne **p02** (et, plus tard, p07 : le déménagement) |
+| Missions | donne **La Pointe** (le chapitre, 30 sept. 2026 ; son acte 1, le pont, était p02 ; et, plus tard, p07 : le déménagement) |
 
 ## Son histoire
 

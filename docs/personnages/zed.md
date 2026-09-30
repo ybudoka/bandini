@@ -2,7 +2,7 @@
 
 ← [les personnages](README.md) · [le jeu d'acteur](../jeu-d-acteur.md)
 
-> « Yo, c'est Zed, des Skateux. Paraît que t'as nettoyé le pont. » — p04
+> « Yo, c'est Zed, des Skateux. Paraît que t'as nettoyé le pont. » — La Pointe, acte 3 (p04)
 
 ## En bref
 
@@ -14,7 +14,7 @@
 | Voix | **Lutz — Chuckling, Giggly and Cheerful** (jeune, un français « standard » vérifié en multilingue v2) ; permise (Martin, 25 sept. 2026), en v3 **à écouter** |
 | Bulle | « Yo! Toi! » |
 | Couleurs | coton ouaté rose, mèche jaune, jeans |
-| Missions | donne **p04**, **p10** ; mené à la Chef dans **p11** (La Pointe libérée) |
+| Missions | les actes 3 et 4 de **La Pointe** (la course, le saut ; c'étaient p04 et p10) ; mené à la Chef à l'acte 6 (c'était p11 : La Pointe libérée) |
 
 ## Son histoire
 
@@ -22,7 +22,7 @@ Dix-huit ans, une planche à roulettes et un record que personne n'a battu. Les 
 
 ## Sa personnalité
 
-Le rieur. Il perd bien, et c'est ce qui en fait un chef. Il n'a jamais passé le pont à pied avant p11.
+Le rieur. Il perd bien, et c'est ce qui en fait un chef. Il n'a jamais passé le pont à pied avant l'acte 6 de La Pointe.
 
 ## Comment il parle
 

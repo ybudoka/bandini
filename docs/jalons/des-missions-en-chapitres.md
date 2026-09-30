@@ -1247,3 +1247,36 @@ json.dump(v, open('$SCRATCH/voix_pointe_avant.json','w'), ensure_ascii=False, in
   si Martin le confirme.
 - [ ] Atterrir selon `base-du-worktree-dev-local` : `checkout --detach dev`, `cherry-pick` des commits, conflits de
   version seulement, `merge --ff-only` dans l'arbre principal ; la suite complète APRÈS l'atterrissage.
+
+## Notes
+
+**Tranche 1 livrée le 30 sept. 2026 : le moteur et La Pointe.** Ce qui reste : les autres arcs, un à la fois, après
+que Martin a joué le pilote (son chronomètre au carnet dira si on tient 5 à 10 minutes).
+
+**Le moteur** (`static/js/chapitres.js`, et `histoire.js` qui l'appelle) :
+- le type `acte` et `remplace` (`erreurs_de_chapitre`, `donneur_final`, `remplacee_par`) ; le catalogue porte
+  `actes: [[étape, donneur]]` — les objectifs ne sont pas au paquet, et le téléphone, les bulles et le carnet
+  doivent savoir quel donneur attend ;
+- l'acte se joue : son carton, son donneur (`donneurDe` : l'acte en cours, celui où l'on reprendra, ou le dernier
+  une fois la mission faite), le point de reprise ; un `retourner` au milieu passe à l'acte suivant ;
+- ⚠️ **qui arrive après une mission remplacée arrive entre deux actes** (`Histoire.arriverApres`, sorti de
+  `jouerLaFin`) : Zed n'était posé qu'au chargement, et l'acte 3 n'aurait trouvé personne ;
+- une vieille partie commence au premier acte pas fait ; toutes faites, le chapitre l'est ;
+- REPRENDRE L'ACTE N / PLUS TARD après l'hôpital ou le poste ; la reprise rend la place en ville, un char du même
+  modèle et l'arme de l'acte, même confisquée ; PLUS TARD garde l'acte, et le téléphone dit « RAPPEL » ;
+- le chronomètre (`partie.durees`, par acte, sans pause ni menu), au carnet à côté de FAITE ;
+- `donne`, `etoiles`, `renforts`, `poursuite`, `relais` sur un objectif, et le type `tenir`. La tournée n'est pas un
+  type : une `course` sans chrono.
+
+**La Pointe** (`app/missions/la_pointe.py` — pas `pointe`, le nom du district, que le code nomme) : p02, p05, p04,
+p10, p09 et p11 en six actes, 21 étapes. Les répliques d'origine gardées mot pour mot : **47 voix payées renommées**.
+Retirées : les six échecs (un seul échec par mission — le neuf dit « La Pointe va vous attendre ») et l'appel de p10,
+où Zed se renommait à côté de toi (7 mp3). Neuves : l'échec, les renforts du pont, le phare à tenir, l'auto des
+Skateux, le défi du saut sans « c'est Zed » — **5 voix, 93 caractères** (61 095 restants). Ce qui fait durer : deux de
+renfort au pont, le phare à tenir 90 s contre trois vagues, une auto de Skateux jusqu'au Brouillard. La prime est
+celle des six (1 520 $), à la fin. Tombés : la `frontiere` de p05 et les scènes d'intro écrites de p09 et p11 (leurs
+intros se disent à l'ouverture de l'acte, en boîte ordinaire plutôt qu'au combiné).
+
+**Les juges** : `test_chapitres.py` (la forme), `test_chapitres_js.py` (le moteur sur une mission greffée, chaque
+règle vue rouge sans elle), `test_arc_p_js.py` réécrit acte par acte (trop lent à la course : REPRENDRE L'ACTE 3),
+`test_sur_place_js.py`, et le plafond de répliques de `test_missions.py` : 18 **par acte**.

@@ -2,7 +2,7 @@
 
 ← [les personnages](README.md) · [le jeu d'acteur](../jeu-d-acteur.md)
 
-> « C'est Armand. Le Trappeur, qu'ils disent en ville. Quelqu'un vole mes collets. » — p05
+> « C'est Armand. Le Trappeur, qu'ils disent en ville. Quelqu'un vole mes collets. » — La Pointe, acte 2 (p05)
 
 ## En bref
 
@@ -14,7 +14,7 @@
 | Voix | **George — Warm, Captivating Storyteller** (un français « standard » vérifié en multilingue v2) ; permise (Martin, 25 sept. 2026), en v3 **à écouter** |
 | Bulle | « Psst. Viens. » |
 | Couleurs | veste de chasse brune, tuque rouge, pantalon kaki |
-| Missions | donne **p05** (la fronde) |
+| Missions | l'acte 2 de **La Pointe** (le chapitre ; c'était p05) : la fronde |
 
 ## Son histoire
 
