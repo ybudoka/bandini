@@ -272,6 +272,222 @@ def choisir(candidats: list[tuple[int, int, int]], n: int, deja: list[tuple[int,
     return choisis
 
 
+# --- Vague 3 : les bebelles ------------------------------------------------------------------------------------
+
+#: ⚠️ LES BEBELLES (vague 3) : douze curiosités québécoises cachées dans les endroits durs — le bout de l'île, le
+#: fond de l'aéroport, le fond du rang, le fond du ciné-parc, et le coin le plus loin de chaque district. Trouvée,
+#: une bebelle se pose ELLE-MÊME sur l'étagère de la planque (`decoration.TROPHEES`, `etagere_bebelles`) : l'objet
+#: est le trophée. Le SLUG est le nom (la sauvegarde garde `partie.collections.bebelles[slug]`), jamais un index —
+#: mais l'ORDRE du catalogue est la place sur l'étagère : une bebelle de plus s'ajoute au bout.
+#:
+#: `ou` : une zone de la ville (`zone`) ou un bloc (`bloc`). `lignes` : ce qu'en dit le carnet — le ton de
+#: docs/ecrire-drole.md, on frappe en haut (le proprio, le zonage, l'équipe qui déménage), jamais le petit monde.
+#: `grille` : le dessin, 6 × 7 pixels (`.` : rien), et sa `palette` — peint par terre, sur l'étagère et au carnet.
+def _b(slug: str, nom: str, ou: dict, lignes: tuple[str, str], grille: str, palette: dict) -> dict:
+    return {"slug": slug, "nom": nom, "ou": ou, "lignes": list(lignes), "grille": grille.split(), "palette": palette}
+
+
+BEBELLES: tuple[dict, ...] = (
+    _b("bouteille", "LA BOUTEILLE À LA MER", {"zone": "ile"},
+       ("LE MESSAGE : « RAPPORTEZ LA BOUTEILLE.", "DIX CENNES DE CONSIGNE. MERCI. »"),
+       "..kk.. ..gg.. .gGgg. .gpgg. .gpGg. .gppg. .gggg.",
+       {"k": "#8a5a2a", "g": "#3a7a4a", "G": "#8ac89a", "p": "#f0e6c8"}),
+    # ⚠️ `enclos` : DANS la clôture de l'aéroport (`X`), pas dans l'herbe qui l'entoure — on y entre par la guérite,
+    # que le laissez-passer ouvre (a02), après avoir sauté le trou du pont.
+    _b("cendrier_expo", "LE CENDRIER DE L’EXPO 67", {"zone": "aeroport", "enclos": True},
+       ("PRIS AU PAVILLON DE L’URSS, EN 1967.", "L’URSS N’A PAS PORTÉ PLAINTE. PLUS LE TEMPS."),
+       "...... ...... .wwww. wbwwbw wwbbww swwwws .ssss.",
+       {"w": "#e8e8ec", "b": "#2a5aa8", "s": "#8a909a"}),
+    _b("raquette", "LA RAQUETTE EN BABICHE", {"bloc": "rang"},
+       ("UNE SEULE. L’AUTRE EST PARTIE EN 1971", "AVEC LE BEAU-FRÈRE. LUI, ON L’ATTEND PAS."),
+       ".bbbb. bllllb blbblb bllllb .bllb. ..bb.. ..bb..",
+       {"b": "#7a4a22", "l": "#d8c090"}),
+    _b("lunettes_3d", "LES LUNETTES 3D EN CARTON", {"bloc": "cineparc"},
+       ("LE FILM ÉTAIT EN DEUX DIMENSIONS.", "LE PROPRIO LES VENDAIT QUAND MÊME. 2 $."),
+       "...... ...... wwwwww rrwwcc rrwwcc w....w ......",
+       {"w": "#f0ece0", "r": "#e03030", "c": "#30c8d8"}),
+    _b("bonhomme", "LE BONHOMME EN PLASTIQUE", {"zone": "friches"},
+       ("SA CEINTURE FLÉCHÉE EST PEINTE À LA MAIN.", "IL A LE REGARD DE CELUI QUI A TOUT VU."),
+       "..rr.. .rrrr. .wkwk. .wwww. fyfrfy .wwww. .wwww.",
+       {"r": "#d02a2a", "w": "#f4f4f8", "k": "#1c1a22", "f": "#2a5aa8", "y": "#e8c040"}),
+    _b("calendrier", "LE CALENDRIER DU GARAGE, 1982", {"zone": "shop"},
+       ("RESTÉ SUR FÉVRIER DEPUIS 1982.", "LE GARAGE AUSSI. LA FACTURE AUSSI."),
+       ".rrrr. .rrrr. .wwww. .wgwg. .wwww. .gwgw. .wwww.",
+       {"r": "#c83a2a", "w": "#f0ead8", "g": "#7a7a84"}),
+    _b("lanterne", "LA LANTERNE DU SERRE-FREIN", {"zone": "gare"},
+       ("ENCORE DE L’HUILE DEDANS.", "ELLE ATTEND LE TRAIN DE 19 H 12. NOUS AUSSI."),
+       "..kk.. .k..k. .kkkk. .rRrr. .rrrr. .kkkk. .kkkk.",
+       {"k": "#3a3a42", "r": "#c82a22", "R": "#ff8a5a"}),
+    _b("chat_salue", "LE CHAT QUI SALUE", {"zone": "canton"},
+       ("IL SALUE LES CLIENTS DEPUIS 1968.", "AUCUN NE LUI A RÉPONDU. IL CONTINUE."),
+       ".w.w.w .wwwww .kwkw. .wwww. .rrrr. .wyyw. .wwww.",
+       {"w": "#f4f0e8", "k": "#1c1a22", "r": "#d02a2a", "y": "#e8c040"}),
+    _b("boite_biscuits", "LA BOÎTE DE BISCUITS DANOIS", {"zone": "faubourg"},
+       ("DES BISCUITS, IL N’Y EN A JAMAIS EU.", "DES BOUTONS À COUDRE, DEPUIS 1953."),
+       "...... .bbbb. bBBBBb bbbbbb bybyyb bbbbbb .bbbb.",
+       {"b": "#2a4a9a", "B": "#6a8ad0", "y": "#e8c040"}),
+    _b("flamant", "LE FLAMANT ROSE DE PARTERRE", {"zone": "erables"},
+       ("INTERDIT PAR LE ZONAGE DES ÉRABLES.", "ARTICLE 12, ALINÉA « VOYONS DONC »."),
+       ".pp... .pko.. ..p... ..ppp. .pppp. ...l.. ...l..",
+       {"p": "#f07aa8", "k": "#1c1a22", "o": "#f0a040", "l": "#3a3a42"}),
+    _b("tuque_marsouins", "LA TUQUE DES MARSOUINS", {"zone": "quais"},
+       ("L’ÉQUIPE EST PARTIE À HARTFORD EN 1979.", "LA TUQUE EST RESTÉE. ELLE, ELLE EST FIDÈLE."),
+       "..ww.. .tttt. tttttt wwwwww tttttt wwwwww ......",
+       {"t": "#1a7a8a", "w": "#f0f0f0"}),
+    _b("chien_tableau", "LE CHIEN DU TABLEAU DE BORD", {"zone": "pointe"},
+       ("IL DIT OUI À TOUT DEPUIS 1977.", "ON L’A NOMMÉ AU CONSEIL MUNICIPAL."),
+       ".bb... bbkb.. .bbb.. ..bbbb ..bbbb ..b..b ......",
+       {"b": "#8a5a30", "k": "#1c1a22"}),
+)
+
+#: Ce que paie une bebelle (elles sont DURES à trouver : quatre fois une carte), et les primes aux paliers — la
+#: dernière, l'étagère pleine.
+REGLE_BEBELLES: dict = {"prime": 100, "paliers": {"6": 500, "12": 2500}}
+
+#: Le sol d'une cachette de bebelle : les recoins des cartes, plus l'allée de pierre du rang et le sable.
+SOLS_BEBELLE = RECOINS + ("g", "s")
+#: ⚠️ Jamais collée au bord de la carte (`BORD_BEBELLE` tuiles ; trois en haut, sous les barres du HUD), ni dans
+#: son coin nord-ouest (`COIN_BEBELLE` × `COIN_BEBELLE`) : la caméra s'y arrête et la mini-carte le couvre (vu à la
+#: capture : le bonhomme au coin des Friches, la raquette au coin du rang, sous la mini-carte).
+BORD_BEBELLE = 2
+COIN_BEBELLE = 9
+#: ⚠️ Ni sur la voie du train (posée APRÈS, sans une tuile : ses rails se peignent sur l'herbe) — tant de rangées
+#: de part et d'autre de son rang (le bonhomme dormait entre les rails, vu à la capture).
+VOIE_DU_TRAIN = 3
+
+
+def _depuis(ville: dict, departs: list[tuple[int, int]]) -> dict[tuple[int, int], int]:
+    """La distance À PIED (en pas de tuile) de chaque tuile atteinte depuis `departs`, les barrières piétonnes
+    fermées — sauf celles qu'une MISSION ouvre (`condition.apres` : le pont et la guérite de l'aéroport) : une
+    bebelle est dans un endroit DUR, elle peut attendre un laissez-passer ; jamais une heure ni un prix."""
+    sol = ville["sol"]
+    murs: set[tuple[int, int]] = set()
+    for b in ville.get("barrieres") or []:
+        if "pieton" not in b.get("arrete", []) or b.get("existant") or "apres" in (b.get("condition") or {}):
+            continue
+        for yy in range(b["y"], b["y"] + b["h"]):
+            for xx in range(b["x"], b["x"] + b["l"]):
+                if xx in (b["x"], b["x"] + b["l"] - 1) or yy in (b["y"], b["y"] + b["h"] - 1):
+                    murs.add((xx, yy))
+    dist = {d: 0 for d in departs}
+    file = deque(departs)
+    while file:
+        x, y = file.popleft()
+        for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if (nx, ny) in dist or (nx, ny) in murs or not (0 <= ny < len(sol) and 0 <= nx < len(sol[ny])):
+                continue
+            if not carte.marchable(sol[ny][nx]):
+                continue
+            dist[(nx, ny)] = dist[(x, y)] + 1
+            file.append((nx, ny))
+    return dist
+
+
+def _au_bout(sol: list[str], rect: dict | None, dist: dict, loin_de: list[tuple[int, int]], ecart: int,
+             interdit=None) -> tuple[int, int] | None:
+    """⚠️ Une RÈGLE, pas un tirage : dans `rect` (toute la carte si None), la tuile de cachette la plus LOIN à pied
+    (`dist`), jamais sur le pas d'une porte ni à moins de `ecart` de `loin_de` ; l'égalité va au plus encaissé,
+    puis à l'ordre de lecture."""
+    meilleur, cle = None, None
+    for (x, y), d in dist.items():
+        if rect and not (rect["x"] <= x < rect["x"] + rect["l"] and rect["y"] <= y < rect["y"] + rect["h"]):
+            continue
+        if not (BORD_BEBELLE + 1 <= y < len(sol) - BORD_BEBELLE and BORD_BEBELLE <= x < len(sol[y]) - BORD_BEBELLE) \
+                or (x < COIN_BEBELLE and y < COIN_BEBELLE):
+            continue
+        if sol[y][x] not in SOLS_BEBELLE or (interdit and interdit(x, y)):
+            continue
+        if any(0 <= y - k and 0 <= x + dx < len(sol[y - k]) and sol[y - k][x + dx] in PORTES
+               for k in (1, 2) for dx in (-1, 0, 1)):
+            continue
+        if any(max(abs(cx - x), abs(cy - y)) < ecart for cx, cy in loin_de):
+            continue
+        k = (d, _encaissement(sol, x, y), -y, -x)
+        if cle is None or k > cle:
+            meilleur, cle = (x, y), k
+    return meilleur
+
+
+def poser_bebelles(ville: dict, cartes: list[dict]) -> list[dict]:
+    """Les bebelles de la VILLE (celles d'une zone), sur la ville finie, sans un dé : dans leur zone, la cachette
+    la plus loin à pied — de la planque, d'un amarrage pour l'île (on y arrive en chaloupe), du bout du pont pour
+    l'aéroport (on y arrive en sautant le trou). Loin des paquets,
+    des frénésies, des cartes et des autres bebelles ; jamais dans une cour de gang ni autour d'un chantier."""
+    zones = ville.get("zones") or []
+    planque = next(p for p in ville["points_interet"] if p["slug"] == "planque")
+    departs = [(planque["x"], planque["y"])]
+    ile = ville.get("ile")
+    if ile:
+        departs += [(a["x"], a["y"]) for a in ile.get("amarrages", [])]
+    # L'aéroport : son pont s'arrête au-dessus de l'eau (`aeroport.PONT`, le trou). On y arrive en sautant le trou
+    # au volant — ou en chaloupe : la bebelle se cherche depuis le bout du pont, côté aéroport.
+    pont = (ville.get("aeroport") or {}).get("pont")
+    if pont:
+        departs.append((pont["x"] + 1, pont["y"] + pont["nord"] + pont["trou"]))
+    dist = _depuis(ville, departs)
+    cours = [z for z in zones if z.get("gang")]
+    chantiers = ville.get("chantiers") or []
+    prises = frenesies._prises(ville)
+    rang_du_train = (ville.get("train") or {}).get("rang")
+
+    def interdit(x, y):
+        if (x, y) in prises or (rang_du_train is not None and abs(y - rang_du_train) <= VOIE_DU_TRAIN):
+            return True
+        return any(frenesies._dans(c, x, y) for c in cours) or any(frenesies._dans(c, x, y, 2) for c in chantiers)
+
+    loin = _cachettes(ville) + [(c["x"], c["y"]) for c in cartes]
+    places: list[dict] = []
+    for b in BEBELLES:
+        z = b["ou"].get("zone")
+        rect = next((q for q in zones if q.get("slug") == z and not q.get("gang")), None) if z else None
+        if not rect:
+            continue
+        if b["ou"].get("enclos"):
+            rect = _enclos(ville["sol"], rect) or rect
+        ici = _au_bout(ville["sol"], rect, dist, loin + [(p["x"], p["y"]) for p in places], LOIN_D_UNE_CACHETTE, interdit)
+        if ici:
+            places.append({"slug": b["slug"], "x": ici[0], "y": ici[1], "indice": _indice(rect["nom"])})
+    return places
+
+
+def _indice(nom: str) -> str:
+    """Le lieu, tel que le carnet le dit d'une bebelle qui manque (« LE RANG ») : l'indice, et rien de plus."""
+    return nom.replace("'", "’").upper()
+
+
+def _enclos(sol: list[str], z: dict) -> dict | None:
+    """Le dedans de la clôture (`X`) d'une zone : le rectangle qu'elle borde, sans elle."""
+    xs = [(x, y) for y in range(z["y"], min(z["y"] + z["h"], len(sol)))
+          for x in range(z["x"], min(z["x"] + z["l"], len(sol[y]))) if sol[y][x] == "X"]
+    if not xs:
+        return None
+    x0, x1 = min(x for x, _ in xs), max(x for x, _ in xs)
+    y0, y1 = min(y for _, y in xs), max(y for _, y in xs)
+    return {"x": x0 + 1, "y": y0 + 1, "l": x1 - x0 - 1, "h": y1 - y0 - 1, "nom": z["nom"]}
+
+
+def places_des_blocs() -> list[dict]:
+    """Les bebelles des BLOCS (le rang, le ciné-parc) : la cachette la plus loin à pied de l'arrivée du bloc, sur
+    son plan écrit. ⚠️ En tuiles DU BLOC, jamais dans la ville (la bande nord les décalerait)."""
+    from . import blocs  # ⚠️ ici : `blocs` importe `carte`, qui importe ce module
+    places = []
+    for b in BEBELLES:
+        slug = b["ou"].get("bloc")
+        bloc = slug and blocs.par_slug(slug)
+        if not bloc:
+            continue
+        # ⚠️ Un arbre, un buisson du bloc est un DÉCOR posé sur son sol : on ne passe pas au travers — ses tuiles
+        # comptent comme des murs pour le chemin (sinon « la plus loin » se cachait derrière une rangée d'arbres).
+        decors = {(d["x"], d["y"]) for d in blocs.decor_du_bloc(bloc)}
+        sol = ["".join("B" if (x, y) in decors else g for x, g in enumerate(ligne))
+               for y, ligne in enumerate(blocs.sol_du_bloc(bloc))]
+        dist = _depuis({"sol": sol}, [(bloc["arrivee"]["x"], bloc["arrivee"]["y"])])
+        ici = _au_bout(sol, None, dist, [], 0)
+        if ici:
+            places.append({"slug": b["slug"], "bloc": slug, "x": ici[0], "y": ici[1], "indice": _indice(bloc["nom"])})
+    return places
+
+
 def poser(ville: dict) -> dict:
     """Les places des cartes de hockey, sur la ville FINIE. ⚠️ Aucun dé, rien de posé dans une autre liste :
     la ville reste la même, et une carte dont le district manque (la ville d'avant la bande nord) ne se pose
@@ -290,7 +506,8 @@ def poser(ville: dict) -> dict:
         for c, (x, y) in zip(siennes, choisies):
             places.append({"numero": c["numero"], "x": x, "y": y})
             deja.append((x, y))
-    return {"cartes": places}
+    # Les bebelles de la ville, APRÈS les cartes (elles s'en tiennent loin) : les cartes ne bougent pas d'une tuile.
+    return {"cartes": places, "bebelles": poser_bebelles(ville, places)}
 
 
 def exporter(places: dict | None, sons: dict | None = None) -> dict:
@@ -307,5 +524,20 @@ def exporter(places: dict | None, sons: dict | None = None) -> dict:
     return {"cartes": {"titre": "CARTES DE HOCKEY", "equipes": {d: {**e, "couleurs": list(e["couleurs"])} for d, e in EQUIPES.items()}, "positions": dict(POSITIONS),
                        "liste": cartes},
             "regle": {**REGLE, "paliers": dict(REGLE["paliers"])},
+            "bebelles": _exporter_bebelles((places or {}).get("bebelles", [])),
             # Les sons des cartes (`audio.echantillons_a_part`) : hors des définitions, remis au paquet à l'arrivée.
             "sons": sons or {"lieu": "collections", "echantillons": []}}
+
+
+def _exporter_bebelles(places: list[dict]) -> dict:
+    """Le catalogue des bebelles, chacune avec sa place : celles de la ville (`poser`), celles des blocs
+    (`places_des_blocs`, qui portent `bloc`). Une bebelle sans place reste au catalogue, sans place."""
+    ou = {p["slug"]: p for p in list(places) + places_des_blocs()}
+    liste = []
+    for b in BEBELLES:
+        fiche = {k: b[k] for k in ("slug", "nom", "lignes", "grille", "palette")}
+        if b["slug"] in ou:
+            fiche.update({k: v for k, v in ou[b["slug"]].items() if k != "slug"})
+        liste.append(fiche)
+    return {"titre": "BEBELLES", "liste": liste,
+            "regle": {**REGLE_BEBELLES, "paliers": dict(REGLE_BEBELLES["paliers"])}}

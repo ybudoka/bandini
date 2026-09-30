@@ -1613,6 +1613,7 @@ const Hud = (function () {
       ['FRÉNÉSIES', Frenesies.reussies() + ' / ' + Frenesies.toutes().length],
       // Les collections (`Collections`) : l'album de la Ligue. « ? » tant que son catalogue n'est pas arrivé.
       ['CARTES DE HOCKEY', Collections.nombre() + ' / ' + (Collections.total() || '?')],
+      ['BEBELLES', Collections.nombreBebelles() + ' / ' + (Collections.totalBebelles() || '?')],
       // M13 : ce que dit le générique, et ce qu'il reste à faire après lui — la partie continue.
       ['MISSIONS', Object.keys(p.missionsFaites || {}).length + ' / ' + (B.defs.missions || []).filter(function (m) { return m.phase !== 2; }).length],
       ['DETTE DE ROCCO', p.dette > 0 ? Math.round(p.dette) + ' $' : 'RÉGLÉE'],
@@ -1833,6 +1834,9 @@ const Hud = (function () {
       // LES COLLECTIONS : l'album des cartes de hockey. Le compte PAR ÉQUIPE est l'indice : il dit où chercher.
       { libelle: 'COLLECTIONS', cle: 'collections', detail: 'CARTES ' + Collections.nombre() + ' / ' + (Collections.total() || '?'),
         faire: function () { ouvrirMenu(menuCarnetCollections()); return false; } },
+      // LES BEBELLES (vague 3) : l'étagère, bebelle par bebelle — le LIEU de celles qui manquent est l'indice.
+      { libelle: 'BEBELLES', cle: 'bebelles', detail: Collections.nombreBebelles() + ' / ' + (Collections.totalBebelles() || '?'),
+        faire: function () { ouvrirMenu(menuCarnetBebelles()); return false; } },
       // ⚠️ LA DETTE SE LIT ICI, sinon on l'oublie entre deux appels. C'est la
       // même règle que le carnet du poste : une pression qu'on subit sans
       // jamais pouvoir la regarder n'est pas une pression, c'est une
@@ -1953,6 +1957,32 @@ const Hud = (function () {
     items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet('collections')); return false; } });
     return surLaLigne(depuis, { titre: 'CARTES DE HOCKEY', sur: Collections.nombre() + ' / ' + (Collections.total() || '?'),
              largeur: 320, hauteur: VH - 30, items: items, retour: function () { ouvrirMenu(menuCarnet('collections')); } });
+  }
+
+  /** BEBELLES : les douze, dans l'ordre de l'étagère — celles qu'on a par leur nom, les autres « ??? » et le LIEU où
+      elles dorment (le bout de l'île, le fond du rang…) : c'est l'indice, et c'est tout. */
+  function menuCarnetBebelles(depuis) {
+    const items = [];
+    if (!Collections.totalBebelles()) items.push(ligne('L’ÉTAGÈRE N’EST PAS ENCORE ARRIVÉE'));
+    for (const b of Collections.bebelles()) {
+      if (!Collections.bebelleTrouvee(b.slug)) { items.push(ligne('???', b.indice || '')); continue; }
+      items.push({ libelle: b.nom, cle: 'bebelle_' + b.slug,
+                   faire: function () { ouvrirMenu(menuCarnetBebelle(b.slug)); return false; } });
+    }
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet('bebelles')); return false; } });
+    return surLaLigne(depuis, { titre: 'BEBELLES', sur: Collections.nombreBebelles() + ' / ' + (Collections.totalBebelles() || '?'),
+             largeur: 320, hauteur: VH - 30, items: items, retour: function () { ouvrirMenu(menuCarnet('bebelles')); } });
+  }
+
+  /** Une bebelle : ce qu'en dit le carnet, où et quand on l'a trouvée — et elle, en grand. */
+  function menuCarnetBebelle(slug) {
+    const b = Collections.bebelle(slug), a = b && Collections.famille('bebelles')[slug];
+    const retour = function () { ouvrirMenu(menuCarnetBebelles('bebelle_' + slug)); };
+    const items = b ? b.lignes.map(function (l) { return ligne(l); })
+      .concat([ligne('TROUVÉE', (a ? 'JOUR ' + a.jour : '') + (b.indice ? ' · ' + b.indice : ''))]) : [];
+    items.push({ libelle: 'RETOUR', faire: function () { retour(); return false; } });
+    return { titre: b ? b.nom : slug, largeur: 320, colonne: 250, curseur: items.length - 1, items: items, retour: retour,
+             dessiner: function (ctx, x, y, l) { if (b) Collections.peindreBebelle(ctx, b, x + l - 10 - 30, y + 22, 5); } };
   }
 
   /** Une carte, recto verso : son joueur, son équipe, sa position, son dos — et la carte elle-même, en grand. */
@@ -2531,13 +2561,28 @@ const Hud = (function () {
                    faire: function () { return allerALaCarte(c); } });
     }
     if (!items.length) items.push(ligne(Collections.total() ? 'TOUTES TROUVÉES' : 'L’ALBUM N’EST PAS ENCORE ARRIVÉ'));
+    // Les bebelles qui manquent : celles d'un bloc (le rang, le ciné-parc) passent d'abord le fondu du bloc.
+    const manquent = Collections.bebelles().filter(function (b) { return typeof b.x === 'number' && !Collections.bebelleTrouvee(b.slug); });
+    if (manquent.length) items.push(entete('BEBELLES'));
+    for (const b of manquent) {
+      items.push({ libelle: b.nom, detail: b.indice || '', bebelle: b.slug, faire: function () { return allerALaBebelle(b); } });
+    }
     items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuDebug()); return false; } });
     return { titre: 'COLLECTIONS', largeur: 320, hauteur: VH - 30, items: items, retour: function () { ouvrirMenu(menuDebug()); } };
   }
 
-  /** À pied, à deux ou trois tuiles d'une carte, sur une tuile qu'on marche. */
-  function allerALaCarte(c) {
+  /** À deux ou trois tuiles d'une bebelle : en ville, comme une carte ; dans un bloc, par son fondu d'abord. */
+  function allerALaBebelle(b) {
+    if (!b.bloc) return allerALaCarte(b, 'BEBELLE : ' + b.nom);
     if (!aPiedEnVille()) return false;
+    fermerMenu();
+    if (B.etat === 'pause') Jeu.reprendre();
+    return Blocs.sauter(b.bloc, null, function () { allerALaCarte(b, 'BEBELLE : ' + b.nom, true); });
+  }
+
+  /** À pied, à deux ou trois tuiles d'une carte, sur une tuile qu'on marche. `dansLeBloc` : on y est déjà. */
+  function allerALaCarte(c, texte, dansLeBloc) {
+    if (!dansLeBloc && !aPiedEnVille()) return false;
     const j = B.joueur;
     let place = null;
     for (let r = 2; r <= 5 && !place; r++) {
@@ -2554,7 +2599,7 @@ const Hud = (function () {
     Monde.centrerCamera(j.x, j.y);
     if (B.etat === 'pause') Jeu.reprendre();
     fermerMenu();
-    message('CARTE N° ' + c.numero + ' — TOUT PRÈS');
+    message((texte || 'CARTE N° ' + c.numero) + ' — TOUT PRÈS');
     return true;
   }
 
@@ -2564,6 +2609,15 @@ const Hud = (function () {
     const n = Collections.toutes();
     Son.SFX.argent();
     message(Collections.total() ? 'TOUTES LES CARTES (+' + n + ')' : 'L’ALBUM N’EST PAS ENCORE ARRIVÉ');
+    return false;
+  }
+
+  /** TOUTES LES BEBELLES (TRICHES > LE JOUEUR) : l'étagère pleine, en silence. */
+  function toutesLesBebelles() {
+    if (!B.partie) { message('PAS DE PARTIE'); return false; }
+    const n = Collections.toutesLesBebelles();
+    Son.SFX.argent();
+    message(Collections.totalBebelles() ? 'TOUTES LES BEBELLES (+' + n + ')' : 'L’ÉTAGÈRE N’EST PAS ENCORE ARRIVÉE');
     return false;
   }
 
@@ -2646,6 +2700,7 @@ const Hud = (function () {
       { libelle: 'TOUS LES ITEMS', faire: function () { tousLesItems(); return false; } },
       { libelle: 'TOUTES LES TECHNIQUES', faire: function () { toutesLesTechniques(); return false; } },
       { libelle: 'TOUTES LES CARTES', faire: function () { toutesLesCartes(); return false; } },
+      { libelle: 'TOUTES LES BEBELLES', faire: function () { toutesLesBebelles(); return false; } },
       // Les bascules : elles tiennent jusqu'a ce qu'on les eteigne, et se sauvent avec la partie.
       entete('TOUJOURS'),
       bascule('invincible', 'INVINCIBLE'),
@@ -4134,7 +4189,7 @@ const Hud = (function () {
   return {
     nomIci, dessinerLaVilleDuBoss, init, voile, etat, progression, partDesScripts, finirChargement, message, prime, majPrime, montantDeLaPrime, PRIME, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, toutesLesTechniques, glyphesDOnglets, menuSautMissions, menuSautDefis, menuChezUnDonneur, menuEndroitsCles, menuJukebox, pointDuDefi, menuCarnet,
     ouvrirOnglet, toucherMenu, onglets: function () { return ongletsVisibles().map(function (o) { return o.slug; }); },
-    ciblesDuMenu: function () { return cibles.slice(); }, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuCarnetCollections, menuCarnetCarte, menuDebugCollections, menuOptions, menuManette, menuManetteBoutons, menuBilan,
+    ciblesDuMenu: function () { return cibles.slice(); }, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuCarnetCollections, menuCarnetCarte, menuCarnetBebelles, menuCarnetBebelle, menuDebugCollections, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     menuCommandes, ouvrirCommandes, majAideDuTitre, lignesDAide, glypheDAction, dessinerGlyphe, largeurGlyphe,
     menuParties, menuEffacer, menuCopier, tempsDeJeu, quand,
     legendeDeLaCarte, legendeDuZonage, lieuxSurLaCarte, couleurDeLieu, cibleDuBoulot, PULSE_JOUEUR, BATTEMENT_CIBLE, CALQUE_ALPHA,

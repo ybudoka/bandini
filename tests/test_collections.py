@@ -174,9 +174,11 @@ def test_elles_voyagent_a_part_hors_de_la_carte_et_des_definitions(paquets, clie
     assert r.status_code == 200 and r.headers["ETag"].strip('"') == paquets.collections.etag
     assert client.get("/api/collections", headers={"If-None-Match": r.headers["ETag"]}).status_code == 304
     # Leur plafond à elles : 8 249 bruts / 3 218 gzip à la mesure, sons compris (30 sept. 2026) ; puis 10 050 / 3 822
-    # avec le catalogue de la planque qu'on décore (vague 2). Les bebelles (vague 3) y viendront : 14 000 / 6 000.
-    assert paquets.collections.taille < 14_000
-    assert len(gzip.compress(paquets.collections.corps, 6)) < 6_000
+    # avec le catalogue de la planque qu'on décore (vague 2) ; 14 354 / 5 429 avec les douze bebelles, leurs dessins et
+    # leurs places (vague 3). Relevé à 18 000 / 7 000 pour les sauts (vague 4) : ce paquet-ci arrive en arrière-plan,
+    # après les définitions, et n'attend personne — c'est le plafond du dépôt, pas celui du premier écran.
+    assert paquets.collections.taille < 18_000
+    assert len(gzip.compress(paquets.collections.corps, 6)) < 7_000
 
 
 def test_leurs_sons_voyagent_avec_elles_pas_dans_les_definitions(paquets):
@@ -185,7 +187,7 @@ def test_leurs_sons_voyagent_avec_elles_pas_dans_les_definitions(paquets):
     defs = json.loads(paquets.definitions.corps)
     col = json.loads(paquets.collections.corps)
     slugs = {e["slug"] for e in defs["audio"]["echantillons"]}
-    assert not slugs & {"carte_hockey", "orgue_arena"} and "collections" not in defs["audio"]["lieux"]
+    assert not slugs & {"carte_hockey", "orgue_arena", "bebelle", "reel_bebelles"} and "collections" not in defs["audio"]["lieux"]
     assert col["sons"]["lieu"] == "collections"
-    assert [e["slug"] for e in col["sons"]["echantillons"]] == ["carte_hockey", "orgue_arena"]
+    assert [e["slug"] for e in col["sons"]["echantillons"]] == ["carte_hockey", "orgue_arena", "bebelle", "reel_bebelles"]
     assert all(e["fichiers"] for e in col["sons"]["echantillons"]), "un son des cartes sans son fichier"

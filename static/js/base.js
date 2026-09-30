@@ -247,7 +247,7 @@ function etatInitial(defs) {
     frenesies: {},
     //: LES COLLECTIONS (`Collections`) : par famille, ce qu'on a trouvé, par NUMÉRO — `cartes[12] = { jour,
     //: source }` (`rue`, `puces`, `debug`). ⚠️ Jamais un index : le catalogue peut grandir sans rien décaler.
-    collections: { cartes: {} },
+    collections: { cartes: {}, bebelles: {} },
     //: LA PLANQUE QU'ON DÉCORE (`Decoration`) : les meubles commandés, par PIÈCE de planque puis par meuble —
     //: `meubles.planque.jukebox = { jour }`, le jour de la commande (livré le lendemain).
     meubles: {},
@@ -786,7 +786,9 @@ const Sauvegarde = (function () {
     // d'en haut ne descend pas, et une partie d'avant elles n'a rien — l'album repart vide, pas `undefined`.
     const col = partie.collections && typeof partie.collections === 'object' && !Array.isArray(partie.collections) ? partie.collections : {};
     out.collections = Object.assign({}, base.collections, col);
-    if (!out.collections.cartes || typeof out.collections.cartes !== 'object' || Array.isArray(out.collections.cartes)) out.collections.cartes = {};
+    for (const f of ['cartes', 'bebelles']) {
+      if (!out.collections[f] || typeof out.collections[f] !== 'object' || Array.isArray(out.collections[f])) out.collections[f] = {};
+    }
     // Les meubles : un objet par pièce, chacun un objet par meuble ; ce qui n'en a pas la forme repart vide.
     const meubles = {};
     if (partie.meubles && typeof partie.meubles === 'object' && !Array.isArray(partie.meubles)) {

@@ -1179,6 +1179,10 @@ const Son = (function () {
     carte_hockey: function () { if (!joue('carte_hockey')) { bruit(0.05, 0.18, 3200, 1400); ton(1319, 0.08, 'triangle', 0.16, 1, 0.05); ton(1760, 0.18, 'triangle', 0.14, 1, 0.12); } },
     // La charge : sol, do, mi, sol… mi, SOL — l'orgue de l'aréna, en carré et en triangle.
     orgue_arena: function () { if (!joue('orgue_arena')) charge(); },
+    // LES BEBELLES (vague 3) : un tintement de verre et trois notes de boîte à musique qui montent ; puis le reel
+    // des paliers, en filet : cinq notes de violon, vite, et le pied qui frappe.
+    bebelle: function () { if (!joue('bebelle')) { bruit(0.04, 0.12, 4200, 2200); ton(1568, 0.12, 'triangle', 0.12, 1, 0.06); ton(1976, 0.12, 'triangle', 0.12, 1, 0.2); ton(2349, 0.25, 'triangle', 0.12, 1, 0.34); } },
+    reel_bebelles: function () { if (!joue('reel_bebelles')) { [587, 740, 880, 740, 988, 1175].forEach(function (f, i) { ton(f, 0.1, 'sawtooth', 0.1, 1, i * 0.09); }); bruit(0.05, 0.25, 300, 90); } },
     mission: function () { ton(523, 0.1, 'square', 0.2); ton(659, 0.1, 'square', 0.2, 1, 0.1); ton(784, 0.25, 'square', 0.22, 1, 0.2); },
     // LES FRÉNÉSIES (`frenesies.js`) : le coup de gong grave qui lance le chrono, et la fanfare
     // courte qui le ferme. Synthèse en filet, comme partout : sans échantillon, ça sonne quand même.

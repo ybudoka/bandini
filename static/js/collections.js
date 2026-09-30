@@ -75,13 +75,15 @@ const Collections = (function () {
   function position(abrev) { return (paquet && paquet.cartes && paquet.cartes.positions[abrev]) || abrev; }
   function fiche(numero) { return cartes().find(function (c) { return c.numero === Number(numero); }) || null; }
 
-  function album() {
+  /** Ce qu'on a trouvé d'une famille (`cartes`, `bebelles`) : un objet par numéro ou par slug. */
+  function famille(nom) {
     const p = B.partie;
     if (!p) return {};
-    if (!p.collections || typeof p.collections !== 'object') p.collections = { cartes: {} };
-    if (!p.collections.cartes || typeof p.collections.cartes !== 'object') p.collections.cartes = {};
-    return p.collections.cartes;
+    if (!p.collections || typeof p.collections !== 'object') p.collections = { cartes: {}, bebelles: {} };
+    if (!p.collections[nom] || typeof p.collections[nom] !== 'object') p.collections[nom] = {};
+    return p.collections[nom];
   }
+  function album() { return famille('cartes'); }
   function trouvee(numero) { return !!album()[numero]; }
   /** Combien on en a, parmi celles du catalogue (une carte retirée ne compte plus). */
   function nombre() { return cartes().filter(function (c) { return trouvee(c.numero); }).length; }
@@ -110,6 +112,73 @@ const Collections = (function () {
     return cartes().filter(function (c) { return typeof c.x === 'number' && !trouvee(c.numero); });
   }
   function pixels(c) { return { x: c.x * TT + 8, y: c.y * TT + 10 }; }
+
+  // --- Les bebelles (vague 3) ------------------------------------------------------------------------
+
+  //: Douze curiosités cachées dans les endroits durs (`app/collectionner.py`, `BEBELLES`) : le bout de l'île, le
+  //: fond de l'aéroport (on y saute), le fond du rang et du ciné-parc (des BLOCS), le coin le plus loin de chaque
+  //: district. ⚠️ Le SLUG est le nom — `partie.collections.bebelles[slug]` —, et l'ORDRE du catalogue est la place
+  //: sur l'étagère de la planque (`Decoration`).
+  function bebelles() { return (paquet && paquet.bebelles && paquet.bebelles.liste) || []; }
+  function regleBebelles() { return (paquet && paquet.bebelles && paquet.bebelles.regle) || {}; }
+  function bebelle(slug) { return bebelles().find(function (b) { return b.slug === slug; }) || null; }
+  function rangBebelle(slug) { return bebelles().findIndex(function (b) { return b.slug === slug; }); }
+  function bebelleTrouvee(slug) { return !!famille('bebelles')[slug]; }
+  function nombreBebelles() { return bebelles().filter(function (b) { return bebelleTrouvee(b.slug); }).length; }
+  function totalBebelles() { return bebelles().length; }
+  /** L'étagère : un bit par bebelle trouvée, dans l'ordre du catalogue (la pose du dessin de l'étagère). */
+  function masqueBebelles() {
+    let m = 0;
+    bebelles().forEach(function (b, i) { if (bebelleTrouvee(b.slug)) m |= 1 << i; });
+    return m;
+  }
+
+  /** Celles qu'on voit et qu'on ramasse ICI : dans la ville, celles de la ville ; dans un bloc, celles de CE bloc
+      (leur place est en tuiles du bloc) ; jamais dans une pièce. */
+  function bebellesATrouver() {
+    if (B.interieur) return [];
+    const ici = B.bloc ? B.bloc.slug : null;
+    return bebelles().filter(function (b) { return typeof b.x === 'number' && (b.bloc || null) === ici && !bebelleTrouvee(b.slug); });
+  }
+
+  /** Le dessin d'une bebelle : sa grille (6 × 7) et sa palette, `ech` pixels par case. `ombre` : toute la
+      silhouette dans cette couleur (le contour d'hiver). */
+  function peindreBebelle(ctx, b, x, y, ech, ombre) {
+    const g = b.grille || [];
+    for (let iy = 0; iy < g.length; iy++) {
+      const r = g[iy];
+      for (let ix = 0; ix < r.length; ix++) {
+        const c = r[ix];
+        if (c === '.') continue;
+        ctx.fillStyle = ombre || b.palette[c] || '#ff00ff';
+        ctx.fillRect(x + ix * ech, y + iy * ech, ech, ech);
+      }
+    }
+    B.stats.rects += 8;
+  }
+
+  /** `slug` entre sur l'étagère. `source` : `rue`, `puces`, `debug`. La prime, le son, le carnet, les paliers. */
+  function donnerBebelle(slug, source, silence) {
+    const b = bebelle(slug), p = B.partie;
+    if (!b || !p || bebelleTrouvee(b.slug)) return false;
+    famille('bebelles')[b.slug] = { jour: p.jour, source: source || 'rue' };
+    if (silence) return true;
+    const r = regleBebelles(), n = nombreBebelles(), N = totalBebelles();
+    if (r.prime) Missions.encaisser(r.prime, 'BEBELLE', true);
+    Son.SFX.bebelle();
+    Hud.message('BEBELLE ' + n + '/' + N + ' — ' + b.nom + (r.prime ? ' (+' + r.prime + ' $)' : ''), 240);
+    Histoire.noter('BEBELLE : ' + b.nom + ' — SUR L’ÉTAGÈRE DE LA PLANQUE', false);
+    const palier = (r.paliers || {})[String(n)];
+    if (palier) {
+      Missions.encaisser(palier, 'COLLECTION', true);
+      const complet = n === N;
+      const titre = complet ? 'L’ÉTAGÈRE EST PLEINE' : n + ' BEBELLES';
+      Son.SFX.reel_bebelles();
+      Hud.prime({ montant: palier, titre: titre, quoi: 'COLLECTION', bonus: 0, palier: Missions.palierDePrime(palier) });
+      Histoire.noter((complet ? 'LES DOUZE BEBELLES SONT SUR L’ÉTAGÈRE' : n + ' BEBELLES') + ' — ' + palier + ' $', true);
+    }
+    return true;
+  }
 
   // --- Donner une carte : la rue, le debug, et un jour le marché aux puces ---------------------------
 
@@ -145,7 +214,7 @@ const Collections = (function () {
 
   function majSons(j) {
     if ((B.t || 0) % 30 !== 0 || !j) return;
-    if (aTrouver().some(function (c) { const q = pixels(c); return Math.abs(q.x - j.x) < SONS_A_PX && Math.abs(q.y - j.y) < SONS_A_PX; })) {
+    if (aTrouver().concat(bebellesATrouver()).some(function (c) { const q = pixels(c); return Math.abs(q.x - j.x) < SONS_A_PX && Math.abs(q.y - j.y) < SONS_A_PX; })) {
       Son.Lieu.charger('collections');
     }
   }
@@ -163,6 +232,13 @@ const Collections = (function () {
       j.animT = 12; j.animType = 'ramasse';
       donner(c.numero, 'rue');
       return;                       // une par image : deux messages ne s'écrasent pas
+    }
+    for (const b of bebellesATrouver()) {
+      const q = pixels(b);
+      if (dist2(j.x, j.y, q.x, q.y) > r * r) continue;
+      j.animT = 12; j.animType = 'ramasse';
+      donnerBebelle(b.slug, 'rue');
+      return;
     }
   }
 
@@ -193,15 +269,27 @@ const Collections = (function () {
   //: dans le noir toutes les trois secondes, pas une carte qui luit : rien entre deux éclats.
   const LUEUR = { rayon: 16, alpha: 0.8, nuit: 0.2 };
 
+  //: Le décalage de l'éclat : une carte par son numéro, une bebelle par son rang (jamais deux ensemble).
+  function decalage(c) { return c.numero ? c.numero * 37 : 17 + (rangBebelle(c.slug) + 1) * 53; }
+
   function eclatA(c) {
     const periode = Math.max(60, (regle().scintille_s || 3) * 60);
-    const t = ((B.t || 0) + c.numero * 37) % periode;
+    const t = ((B.t || 0) + decalage(c)) % periode;
     return t < ECLAT_IMAGES ? (t < ECLAT_IMAGES / 2 ? t : ECLAT_IMAGES - t) : -1;
+  }
+
+  /** L'éclat : une croix de lumière au coin (`ex`, `ey`), qui grandit puis s'éteint. */
+  function peindreEclat(ctx, k, ex, ey, hiver) {
+    const bras = k > 4 ? 3 : k > 2 ? 2 : 1;
+    ctx.fillStyle = hiver ? HIVER.eclat : 'rgba(255,250,210,0.95)';
+    ctx.fillRect(ex, ey - bras, 1, bras * 2 + 1);
+    ctx.fillRect(ex - bras, ey, bras * 2 + 1, 1);
+    B.stats.rects += 2;
   }
 
   function dessiner(ctx, cam) {
     const liste = aTrouver();
-    if (!liste.length) return;
+    if (!liste.length && !bebellesATrouver().length) return;
     const hiver = typeof Saisons !== 'undefined' && Saisons.enHiver();
     for (const c of liste) {
       const q = pixels(c);
@@ -215,14 +303,22 @@ const Collections = (function () {
       // ⚠️ L'ÉCLAT, discret : quelques images toutes les trois secondes, pas deux cartes à la fois (décalé
       // par le numéro). Une croix de lumière au coin, qui grandit puis s'éteint.
       const k = eclatA(c);
-      if (k >= 0) {
-        const bras = k > 4 ? 3 : k > 2 ? 2 : 1;
-        const ex = x + 6, ey = y;
-        ctx.fillStyle = hiver ? HIVER.eclat : 'rgba(255,250,210,0.95)';
-        ctx.fillRect(ex, ey - bras, 1, bras * 2 + 1);
-        ctx.fillRect(ex - bras, ey, bras * 2 + 1, 1);
-        B.stats.rects += 2;
+      if (k >= 0) peindreEclat(ctx, k, x + 6, y, hiver);
+    }
+    // LES BEBELLES : debout par terre, leur ombre ; l'hiver, leur silhouette cernée de sombre (le bonhomme blanc,
+    // le chat blanc et le cendrier se perdaient sur la neige comme la carte).
+    for (const b of bebellesATrouver()) {
+      const q = pixels(b);
+      const x = Math.round(q.x - cam.x - 3), y = Math.round(q.y - cam.y - 6);
+      if (x < -12 || y < -12 || x > VW + 12 || y > VH + 12) continue;
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.fillRect(x, y + 7, 6, 1);
+      if (hiver) {
+        for (const d of [[-1, 0], [1, 0], [0, -1], [0, 1]]) peindreBebelle(ctx, b, x + d[0], y + d[1], 1, HIVER.contour);
       }
+      peindreBebelle(ctx, b, x, y, 1);
+      const k = eclatA(b);
+      if (k >= 0) peindreEclat(ctx, k, x + 5, y, hiver);
     }
   }
 
@@ -231,7 +327,7 @@ const Collections = (function () {
   function lampes(cam) {
     if (typeof Monde === 'undefined' || !Monde.ambianceVue || Monde.ambianceVue().alpha <= LUEUR.nuit) return [];
     const out = [];
-    for (const c of aTrouver()) {
+    for (const c of aTrouver().concat(bebellesATrouver())) {
       const k = eclatA(c);
       if (k < 0) continue;
       const q = pixels(c), x = q.x - cam.x + 3, y = q.y - cam.y - 4;
@@ -262,8 +358,17 @@ const Collections = (function () {
     return n;
   }
 
+  /** Toutes les bebelles, d'un coup, en silence (TRICHES) : l'étagère pleine, sans prime. */
+  function toutesLesBebelles() {
+    let n = 0;
+    for (const b of bebelles()) if (donnerBebelle(b.slug, 'debug', true)) n++;
+    return n;
+  }
+
   function oublier() {}
 
   return { charger, reclamer, poser, catalogue, etatDeLaDemande, cartes, regle, equipe, position, fiche, trouvee, nombre, total,
-           parEquipe, aTrouver, pixels, donner, maj, peindreCarte, dessiner, lampes, plusProche, toutes, oublier };
+           parEquipe, aTrouver, pixels, donner, maj, peindreCarte, dessiner, lampes, plusProche, toutes, oublier,
+           famille, bebelles, regleBebelles, bebelle, rangBebelle, bebelleTrouvee, nombreBebelles, totalBebelles, masqueBebelles,
+           bebellesATrouver, peindreBebelle, donnerBebelle, toutesLesBebelles };
 })();

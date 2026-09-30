@@ -28,8 +28,8 @@ def test_chaque_objet_est_pose_sur_le_bon_genre_de_tuile(slug):
     tout = {t["slug"] for t in decoration.TROPHEES} | {m["slug"] for m in decoration.MEUBLES}
     assert set(places) == tout, f"{slug} : il manque une place à {tout - set(places)}"
     vus = set()
-    for objet, o in places.items():
-        x, y = o["x"], o["y"]
+    # ⚠️ Un objet large (`l`, l'étagère des bebelles : deux tuiles) : CHAQUE tuile qu'il couvre suit la règle.
+    for objet, o, x, y in ((s, o, o["x"] + i, o["y"]) for s, o in places.items() for i in range(o.get("l", 1))):
         assert 0 < x < piece["largeur"] - 1 and 0 < y < piece["hauteur"] - 1, (slug, objet)
         assert (x, y) not in vus, f"{slug} : deux objets sur ({x},{y})"
         vus.add((x, y))
@@ -50,9 +50,10 @@ def test_chaque_objet_est_pose_sur_le_bon_genre_de_tuile(slug):
 @pytest.mark.parametrize("slug", sorted(PIECES))
 def test_toute_la_planque_pleine_on_rejoint_encore_chaque_point(slug):
     """Tout posé d'un coup — les trois trophées et les six meubles : de la porte, chaque point de la pièce (le
-    lit, le coffre, la garde-robe, le catalogue) reste à portée de main, et chaque meuble debout aussi."""
+    lit, le coffre, la garde-robe, le catalogue) reste à portée de main, et chaque meuble debout aussi. (Et
+    l'étagère des bebelles ferme ses DEUX tuiles.)"""
     piece, places = PIECES[slug], decoration.PLACES[slug]
-    fermes = {(o["x"], o["y"]) for s, o in places.items() if s in decoration.SOLIDES}
+    fermes = {(o["x"] + i, o["y"]) for s, o in places.items() if s in decoration.SOLIDES for i in range(o.get("l", 1))}
     depart = (piece["apparition"]["x"], piece["apparition"]["y"])
     vus, file = {depart}, deque([depart])
     while file:
@@ -82,9 +83,11 @@ def test_le_catalogue_se_lit_et_se_vend():
     for m in decoration.MEUBLES:
         assert m["prix"] > 0 and set(m["ou"]) <= {"catalogue", "puces"} and m["ou"], m
         assert len(m["texte"]) <= 44 and m["texte"] == m["texte"].upper(), m["texte"]
-    # Les trophées suivent les paliers de l'album : pas un de plus, pas un de moins.
+    # Les trophées des cartes suivent les paliers de l'album : pas un de plus, pas un de moins. Les bebelles ont
+    # UN trophée, dès la première : l'étagère où elles se posent.
     paliers = {int(k) for k in collectionner.REGLE["paliers"]}
-    assert {t["palier"] for t in decoration.TROPHEES} == paliers
+    assert {t["palier"] for t in decoration.TROPHEES if t["famille"] == "cartes"} == paliers
+    assert [t["palier"] for t in decoration.TROPHEES if t["famille"] == "bebelles"] == [1]
 
 
 def test_le_catalogue_voyage_avec_les_collections(paquets):

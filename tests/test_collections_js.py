@@ -122,8 +122,9 @@ def test_l_album_survit_a_la_sauvegarde_et_une_vieille_partie_repart_vide(banc):
         return { relue: relue.collections, vieille: vieille.collections, abimee: abimee.collections, texte: texte.collections };
     }""")
     assert r["relue"]["cartes"]["7"]["source"] == "rue", r["relue"]
-    assert r["vieille"] == {"cartes": {}}
-    assert r["abimee"] == {"cartes": {}} and r["texte"] == {"cartes": {}}
+    # Deux familles depuis la vague 3 : les cartes et les bebelles — vides, jamais `undefined`.
+    assert r["vieille"] == {"cartes": {}, "bebelles": {}}
+    assert r["abimee"] == {"cartes": {}, "bebelles": {}} and r["texte"] == {"cartes": {}, "bebelles": {}}
 
 
 def test_le_carnet_range_l_album_par_equipe(banc):
@@ -171,7 +172,8 @@ def test_les_triches_vont_voir_une_carte_sans_la_ramasser_et_remplissent_l_album
                  menu: !!L.B.menu && L.B.menu.titre, apres: apres, nombre: L.Collections.nombre(), gain: L.B.partie.argent - argent };
     }""")
     assert r["titre"] == "COLLECTIONS" and r["premiere"] == "LA PLUS PROCHE"
-    assert r["lignes"] == 1 + 40 + 1, r
+    # La plus proche, les quarante cartes, l'en-tête des BEBELLES et les douze, le retour.
+    assert r["lignes"] == 1 + 40 + 1 + 12 + 1, r
     assert r["rendu"] is True and 2 <= r["tuiles"] <= 5, r
     assert r["apres"] is False, "le saut de debug ramasse la carte"
     assert r["nombre"] == 40 and r["gain"] == 0, "TOUTES LES CARTES paie (ou n'en donne pas toutes)"
@@ -230,7 +232,7 @@ def test_les_sons_des_cartes_se_chargent_a_l_approche(banc):
     }""")
     assert r["loin"] is False, "les sons des cartes se chargent loin de toute carte"
     assert r["pres"] is True, "à un écran d'une carte, ses sons ne se chargent pas"
-    assert r["declares"] == ["carte_hockey", "orgue_arena"], "les sons des cartes n'ont pas rejoint le paquet"
+    assert r["declares"] == ["carte_hockey", "orgue_arena", "bebelle", "reel_bebelles"], "les sons des cartes n'ont pas rejoint le paquet"
     assert r["orgue"] == ["orgue_arena-1.mp3"], "l'orgue n'est pas déclaré une fois, avec son fichier"
 
 

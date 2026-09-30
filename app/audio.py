@@ -230,6 +230,17 @@ CATALOGUE: list[Echantillon] = [
        prompt="a hockey arena pipe organ playing a short bright rising charge fanfare, six punchy notes ending "
               "on a long held chord, big reverberant ice rink, a short burst of crowd cheering at the end, "
               "the organ alone with no music underneath, no speech, no singing"),
+    # LES BEBELLES (vague 3) : la curiosité qu'on déterre — un objet de verre et de tôle qu'on soulève, et une
+    # petite boîte à musique qui s'étonne ; puis le reel des paliers (six, l'étagère pleine), violon et
+    # podorythmie, la fête de cuisine qui dure deux secondes.
+    _e("bebelle", "Bebelle trouvée", duree_s=1.4, volume=0.5, influence=0.6,
+       prompt="a small old trinket being lifted from the ground, a light clink of glass and tin, followed by "
+              "three delicate curious music box notes rising, short, close, dry, whimsical, "
+              "the music box alone with no music underneath, no voices"),
+    _e("reel_bebelles", "Reel des bebelles", duree_s=3.0, volume=0.55, influence=0.55,
+       prompt="a lively Quebec folk reel flourish: a fiddle playing a fast bright run with foot tapping "
+              "podorythmie and a few spoons, ending on a strong final note, kitchen party, the fiddle alone with no music "
+              "underneath, no singing, no speech"),
     _e("etoile", "Niveau de recherche", duree_s=1.2, volume=0.79, influence=0.75,
        prompt="a police radio alert chirp followed by a burst of squelch "
               "static, tense and short, no voices, no music"),
@@ -1598,7 +1609,7 @@ LIEUX: dict[str, list[str]] = {
     "derapage": ["crissement"],
     # Les cartes de hockey (des choses à collectionner, vague 1) : chargées quand une carte qui manque est à moins
     # d'un écran (`Collections.maj`). Le premier écran n'avait plus que six Ko de marge.
-    "collections": ["carte_hockey", "orgue_arena"],
+    "collections": ["carte_hockey", "orgue_arena", "bebelle", "reel_bebelles"],
     # L'Halloween (les saisons, lot 3) : un SOIR — ils se chargent le 31 (`Halloween.maj`).
     "halloween": ["rire_sorciere", "porte_grince", "souffle_fantome"],
     "casino": ["casino_salle", "bras_machine", "gain_machine", "jackpot",

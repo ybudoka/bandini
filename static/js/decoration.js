@@ -125,6 +125,21 @@ const Decoration = (function () {
       }
     } },
   };
+  // L'ÉTAGÈRE DES BEBELLES (vague 3) : trois tablettes de quatre, en pin foncé, contre le mur du bas — deux tuiles.
+  // ⚠️ Sa POSE est l'étagère elle-même : un bit par bebelle trouvée, dans l'ordre du catalogue
+  // (`Collections.masqueBebelles`) — chaque étagère différente se cuit une fois, comme une pose de manège.
+  DESSINS.etagere_bebelles = { w: 32, h: 30, ancre: [16, 26], r: 8, sol: [15, 4], solide: true, variantes: 4096,
+    peindre: function (ctx, w, h, v) {
+      px(ctx, '#3e2616', 0, 0, 32, 30); px(ctx, '#6a4424', 0, 0, 32, 2);          // le bâti, le dessus
+      px(ctx, '#2a1a10', 2, 2, 28, 27);                                             // le fond
+      for (let i = 0; i < 3; i++) px(ctx, '#8a5a30', 2, 2 + i * 9 + 8, 28, 1);    // les tablettes
+      px(ctx, '#2a1a10', 0, 29, 32, 1);
+      const liste = typeof Collections !== 'undefined' ? Collections.bebelles() : [];
+      for (let i = 0; i < liste.length && i < 12; i++) {
+        if (!((v || 0) & (1 << i))) continue;
+        Collections.peindreBebelle(ctx, liste[i], 3 + (i % 4) * 7, 2 + Math.floor(i / 4) * 9 + 1, 1);
+      }
+    } };
   //: Posés dans le catalogue commun des décors : le moteur les peint comme les autres (`Entites.dessiner`).
   if (typeof DECORS !== 'undefined') for (const nom in DESSINS) DECORS[nom] = DESSINS[nom];
 
@@ -154,7 +169,8 @@ const Decoration = (function () {
     if (!ici) return [];
     const out = [];
     for (const t of trophees()) {
-      if (t.famille === 'cartes' && Collections.nombre() >= t.palier && ici[t.slug]) out.push(t.slug);
+      const n = t.famille === 'bebelles' ? Collections.nombreBebelles() : t.famille === 'cartes' ? Collections.nombre() : 0;
+      if (n >= t.palier && ici[t.slug]) out.push(t.slug);
     }
     for (const m of meubles()) if (livre(piece, m.slug) && ici[m.slug]) out.push(m.slug);
     return out;
@@ -177,8 +193,10 @@ const Decoration = (function () {
       for (const slug of presents(piece.slug)) {
         const d = DESSINS[slug], o = ici[slug];
         if (!d || !o) continue;
-        posees.push(Entites.creer('decor', o.x * TT + 8, yDeLaPose(pose(slug), o.y), {
-          decor: slug, r: d.r || 0, solide: !!d.solide, dessine: true, v: 0, deLaPlanque: true,
+        // Un objet de `l` tuiles se pose au milieu de ses tuiles ; l'étagère porte ce qu'on a trouvé (sa pose).
+        posees.push(Entites.creer('decor', o.x * TT + (o.l || 1) * 8, yDeLaPose(pose(slug), o.y), {
+          decor: slug, r: d.r || 0, solide: !!d.solide, dessine: true, deLaPlanque: true,
+          v: slug === 'etagere_bebelles' ? Collections.masqueBebelles() : 0,
         }));
       }
     });

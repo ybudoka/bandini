@@ -207,3 +207,54 @@ la carte — tout passe par `/api/collections`.
   `hiver-nuit-eclat-avant.png` / `hiver-nuit-eclat.png`, `ete-nuit-eclat.png`.
 - **Juges** : deux de plus dans `tests/test_collections_js.py` (le contour et l'éclat d'or l'hiver, pas l'été ; la
   lampe la nuit, ni le jour ni entre deux éclats, et donnée au rendu) — sept mutations vues rouges.
+
+### Vague 3 — les bebelles (✅ livrée le 30 sept. 2026)
+
+- **Le catalogue** : `collectionner.BEBELLES` — douze curiosités, chacune un SLUG stable (le nom qu'en garde la
+  sauvegarde, `partie.collections.bebelles[slug]`), deux lignes de carnet, un dessin 6 × 7 et sa palette (le même peint
+  par terre, sur l'étagère et en grand au carnet), et `ou` elle dort. L'**ordre** du catalogue est sa place sur
+  l'étagère : une treizième s'ajouterait au bout. Le ton de [écrire drôle](../ecrire-drole.md) — on frappe le proprio
+  du ciné-parc, le zonage des Érables, l'équipe partie à Hartford, jamais le petit monde :
+  la bouteille à la mer (« dix cennes de consigne »), le cendrier de l'Expo 67 (« pris au pavillon de l'URSS »), la
+  raquette en babiche (« l'autre est partie en 1971 avec le beau-frère »), les lunettes 3D en carton (« le film était
+  en deux dimensions »), le Bonhomme en plastique, le calendrier du garage resté sur février 1982, la lanterne du
+  serre-frein (« elle attend le train de 19 h 12 »), le chat qui salue, la boîte de biscuits danois pleine de
+  boutons, le flamant rose de parterre (« article 12, alinéa "voyons donc" »), la tuque des Marsouins, le chien du
+  tableau de bord (« on l'a nommé au conseil municipal »).
+- **Les places, sans un dé** : dans sa zone, la cachette (ruelle, friche, herbe, quai, allée de pierre, sable) **la
+  plus loin à pied** — de la planque, d'un amarrage pour l'île (on y va en chaloupe), du bout du pont pour l'aéroport
+  (on saute le trou du pont, puis la guérite du laissez-passer, a02 : le cendrier est DANS la clôture). Les barrières
+  qu'une mission ouvre comptent ouvertes ; celles d'une heure ou d'un prix, fermées. Jamais au bord de la carte, dans
+  son coin nord-ouest (la mini-carte le couvre quand la caméra s'y arrête) ni à trois rangées de la voie du train
+  (ses rails se peignent sur l'herbe) — deux défauts vus **à la capture**, pas par un juge. Loin des paquets, des
+  frénésies, des cartes et des autres bebelles. Les deux des **blocs** (le fond du rang, derrière l'écran du
+  ciné-parc) : la plus loin de l'arrivée du bloc, ses arbres comptés comme des murs, en tuiles du bloc (jamais dans
+  la ville : la bande nord les décalerait). Posées après les cartes : les cartes n'ont pas bougé d'une tuile.
+- **En jeu** (`collections.js`) : peintes par terre (aucune entité), leur éclat (décalé par leur rang), l'hiver leur
+  silhouette cernée de sombre (le Bonhomme blanc sur la neige), la nuit la lampe de l'éclat ; ramassées à pied :
+  100 $, le son `bebelle`, « BEBELLE 3/12 — LE CHAT QUI SALUE », une ligne au carnet ; aux paliers (six, douze) :
+  500 $ et 2 500 $, le reel (`reel_bebelles`) et le bandeau. Celles d'un bloc ne se voient que dans leur bloc.
+- **L'étagère** (`decoration.py`, `etagere_bebelles`) : le trophée de la PREMIÈRE bebelle, deux tuiles (`l: 2`) en pin
+  foncé, trois tablettes de quatre — contre le mur du bas entre le poêle et la porte dans la planque de Rocco, derrière
+  le sofa au chalet (la table de pin ferme le coin de gauche). Sa **pose** est l'ensemble des bebelles trouvées, un bit
+  chacune (`Collections.masqueBebelles`) : chaque étagère différente se cuit une fois, comme une pose de manège.
+- **Le carnet** : LE CARNET > BEBELLES (« n / 12 ») — celles qu'on a par leur nom (leur fiche : leurs deux lignes, le
+  jour, le lieu, et elle en grand), les autres « ??? » et **le lieu où elles dorment** (« L'ÎLE-AUX-CORNEILLES », « LE
+  RANG ») : l'indice, et c'est tout. Le BILAN compte « BEBELLES n / 12 ».
+- **Les triches** : TRICHES > ALLER > COLLECTIONS a une section BEBELLES (celles d'un bloc passent son fondu d'abord),
+  LE JOUEUR > TOUTES LES BEBELLES.
+- **Les sons** (ElevenLabs, 150 crédits environ) : `bebelle` (un tintement de verre et de tôle, trois notes de boîte à
+  musique, 1,4 s) et `reel_bebelles` (un violon et la podorythmie, 2,8 s) — ⚠️ **à écouter par Martin**. Sons du lieu
+  `collections` (chargés à un écran d'une trouvaille). ⚠️ **Le plafond des sons de lieu (1,35 Mo) n'avait que 4,7 Ko
+  de marge** : les deux sont à 64 kbit/s, ET `jackpot` et `roulette_bille` (le casino, à ~97 kbit/s) ont été
+  **recompressés à 64 kbit/s** pour leur faire de la place (60 858 → 40 586 et 55 529 → 37 033 octets) : les lieux à
+  1 341 306. Martin : si le casino sonne moins bien, c'est ça.
+- **Le poids** : rien dans les définitions ni la carte ; `/api/collections` passe à 14 354 bruts / 5 429 gzip, son
+  plafond relevé à 18 000 / 7 000 (c'est le paquet qui arrive après, en arrière-plan) pour les sauts.
+- **Captures** (`captures/collections/`) : `bebelles-planque.png` (l'étagère pleine), `bebelles-planque-cinq.png`,
+  `bebelles-chalet.png`, `bebelle-bonhomme-hiver.png`, `bebelle-chat-hiver.png`, `bebelle-cendrier.png`,
+  `bebelle-raquette-rang.png`, `bebelle-lanterne-nuit.png`, `carnet-bebelles.png`, `carnet-bebelle.png`.
+- **Juges** : `tests/test_bebelles.py` (onze) et `tests/test_bebelles_js.py` (neuf) ; dix-sept mutations vues rouges
+  — dont trois qui ne mordaient pas au premier passage (le coin de la mini-carte, couvert sur la graine livrée par la
+  voie du train ; les arbres du bloc ; la guérite de l'aéroport) : un pré synthétique, un faux rang coupé par une
+  rangée de sapins, et le cendrier jugé DANS la clôture les séparent.
