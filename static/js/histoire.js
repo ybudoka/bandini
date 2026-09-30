@@ -1966,6 +1966,11 @@ const Histoire = (function () {
         // la tête. `alerter` ne le ferait qu'autour de `centre`, et ne réveille que ceux
         // qui ont une ligne libre jusqu'à lui — ici, on le sait déjà.
         if (arrivee) { e.etat = 'attaque_joueur'; e.cri = 90; }
+        // ⚠️ POSÉS À UN ENDROIT (`ou`), ILS Y TIENNENT (Martin, 30 sept. 2026 : « les skateux s'en vont et ne
+        // bloquent pas le pont »). Ils naissaient en flânant, sans poste : les trois de p02, posés au pont
+        // pendant qu'on était au phare, à 254 tuiles, avaient fait 30 tuiles en 40 s. Un poste les ramène à
+        // leur place (`POSTE_RAYON`, comme la Brume à son lampadaire), et la bagarre finie, ils y retournent.
+        else if (o.ou) e.poste = { x: place.x, y: place.y };
         // ⚠️ CE QUE PORTE UN HOMME DE MISSION VIENT DE LA FICHE, pas de
         // l'archetype. `arme` et `vie` sont facultatives (`missions.py`) et ne
         // valent que pour CES hommes-la : la Cravate de rue reste ce qu'elle

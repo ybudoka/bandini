@@ -83,6 +83,30 @@ def test_acte_1_le_pont_trois_skateux_deux_de_renfort_puis_leur_grand(banc):
     assert r["zed"] is True, "Zed arrive après p02 : il est devant le phare sans recharger"
 
 
+def test_acte_1_les_skateux_tiennent_le_pont_pendant_qu_on_y_va(banc):
+    """Martin, 30 sept. 2026 : « les skateux s'en vont et ne bloquent pas le pont ». On attend 90 s au phare, le
+    temps d'y marcher : pas une seconde ils ne s'éloignent du pont."""
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + RECHARGER + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B;
+        faites(L, """ + _avant(1) + """);
+        const j = recharger(L);
+        commencer(L, o, 'la_pointe'); jouer(L, o);
+        const pont = L.Histoire.resoudre('pont', null);
+        const eux = B.mission.entites.filter(function (e) { return e.cible && e.etape === 1; });
+        const loin = function () { return eux.map(function (e) { return Math.round(Math.hypot(e.x - pont.x, e.y - pont.y) / 16); }); };
+        const au_depart = loin();
+        const joueur = Math.round(Math.hypot(j.x - pont.x, j.y - pont.y) / 16);
+        let pire = au_depart.slice();
+        for (let s = 0; s < 90; s++) { jouer(L, o, 60); pire = loin().map(function (d, i) { return Math.max(d, pire[i]); }); }
+        return { etape: etape(L), au_depart: au_depart, pire: pire, joueur: joueur, etats: eux.map(function (e) { return e.etat; }) };
+    }""")
+    assert r["etape"] == 1 and len(r["au_depart"]) == 3, r
+    assert r["joueur"] > 12, f"le juge veut un joueur loin du pont : {r}"
+    assert max(r["au_depart"]) <= 10, r
+    assert max(r["pire"]) <= 6, f"les Skateux ont quitté le pont : {r}"
+
+
 def test_acte_2_la_nuit_au_phare_deux_skateux_puis_la_fronde(banc):
     r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + RECHARGER + """
         L.Jeu.commencer(); L.graine(6);
