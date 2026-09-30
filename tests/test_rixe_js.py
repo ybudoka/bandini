@@ -171,7 +171,7 @@ def test_coince_loin_de_sa_place_il_frappe_d_ou_il_est(banc):
         const vrai = L.Combat.frapper;
         L.Combat.frapper = function (e) { if (e === c) coups++; return false; };
         for (let i = 0; i < 90; i++) {
-          c.x = j.x + 18; c.y = j.y;
+          c.x = j.x + 18; c.y = j.y; c.t++;          // son horloge avance, comme a chaque image
           L.Rixe.maj(c, j, 1.5);
           // Sa place, de l'autre côté de la cible, et qui y reste (ni pas de côté, ni rang qui change).
           c.rixe.derive = Math.PI; c.rixe.deriveT = 0; c.rixe.tourneT = 9999;
@@ -180,3 +180,30 @@ def test_coince_loin_de_sa_place_il_frappe_d_ou_il_est(banc):
         return { coups: coups };
     }""")
     assert r["coups"] >= 1, "coincé à portée, loin de sa place, il ne frappe jamais (%s)" % r
+
+
+def test_il_frappe_a_sa_cadence(banc):
+    """Un Cravate seul contre le joueur planté : entre deux élans, sa cadence (la fiche) plus son recul — pas la
+    cadence PLUS le geste. ⚠️ Le délai ne s'écoulait que dans `Rixe.maj`, et le geste (26 images au bâton) rend
+    la main sans l'appeler : 70 images entre deux élans au lieu de 40 (l'ancien `e.t % 40`) — le gang frappait
+    40 % moins souvent sans que personne l'ait voulu (la relecture du 30 sept. 2026)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(28);
+        const j = L.B.joueur, f = L.B.defs.rixes.contact;
+        const c = L.Entites.creerPieton(j.x + 16, j.y, L.Entites.archetype('cravate'));
+        c.etat = 'attaque_joueur'; c.courage = 1; c.arme = 'batte';
+        L.Entites.indexer();
+        const departs = [];
+        let avant = c.etat;
+        for (let i = 0; i < 1200; i++) {
+          j.vie = j.vieMax || 100; j.x = j.x; o.frame(1);
+          if (c.etat === 'attaque' && avant !== 'attaque') departs.push(i);
+          avant = c.etat;
+        }
+        const ecarts = departs.slice(1).map(function (t, k) { return t - departs[k]; });
+        return { n: departs.length, moyenne: ecarts.reduce(function (s, x) { return s + x; }, 0) / Math.max(1, ecarts.length),
+                 plafond: f.cadence_images + f.recul_images };
+    }""")
+    assert r["n"] >= 10, r
+    assert r["moyenne"] <= r["plafond"], "il frappe moins souvent que sa cadence (%s)" % r

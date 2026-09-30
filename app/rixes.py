@@ -22,10 +22,13 @@ CONTACT: dict = {
     "bouge_px": 0.3,          # une cible qui bouge de plus que ça par image : il frappe à portée, sans attendre sa place
     "coince_images": 20,      # à portée, sa place prise par des corps et plus moyen d'en approcher : il frappe d'où il est
     "contourne_rad": 0.8,     # pour gagner sa place, il tourne autour de la cible d'au plus ça à la fois
-    "cadence_images": 40,     # un coup toutes les deux tiers de seconde, en moyenne…
+    "cadence_images": 40,     # un coup toutes les deux tiers de seconde au plus (geste compris), en moyenne…
     "cadence_ecart": 12,      # … plus ou moins ça, à l'empreinte : jamais au métronome commun
-    "recul_images": 18,       # après son coup (ou une esquive), il recule ce temps-là
-    "recul_allure": 0.6,      # à reculons, moins vite qu'en avançant
+    # ⚠️ UN PAS EN ARRIÈRE, PAS UNE RETRAITE : le geste dure déjà 26 images au bâton, et 18 images de recul
+    # plus le retour faisaient un coup par seconde — le gang frappait un tiers moins souvent qu'avant (la
+    # relecture du 30 sept. 2026).
+    "recul_images": 10,       # après son coup (ou une esquive), il recule ce temps-là
+    "recul_allure": 0.8,      # à reculons, un peu moins vite qu'en avançant
     "tourne_min": 50,         # entre deux pas de côté, en images (à l'empreinte)
     "tourne_max": 110,
     "tourne_rad": 0.7,        # l'ampleur du pas de côté, en tournant autour de la cible

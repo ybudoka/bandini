@@ -32,11 +32,14 @@ const Rixe = (function () {
     return f.tourne_min + hash2(e.id, 0x7042 + n) % (f.tourne_max - f.tourne_min + 1);
   }
 
-  /** L'etat du combattant, cree au premier appel. ⚠️ `pret` part DECALE a l'empreinte : six hommes nes a la
-      meme image ont la meme horloge, et sans ce decalage ils frappent a la meme image. */
+  /** L'etat du combattant, cree au premier appel. `pret` est une ECHEANCE sur son horloge (`e.t`), pas un compte
+      a rebours : `e.t` avance meme en plein geste, alors que le cerveau, lui, n'est pas appele pendant le coup —
+      un compte a rebours ajoutait le geste a la cadence (70 images entre deux elans au lieu de 40).
+      ⚠️ Elle part DECALEE a l'empreinte : six hommes nes a la meme image ont la meme horloge, et sans ce decalage
+      ils frappent a la meme image. */
   function etat(e, f) {
     if (!e.rixe) {
-      e.rixe = { cible: null, posture: 'approche', minuterie: 0, pret: hash2(e.id, 0x51C0) % f.cadence_images,
+      e.rixe = { cible: null, posture: 'approche', minuterie: 0, pret: e.t + hash2(e.id, 0x51C0) % f.cadence_images,
                  derive: 0, deriveT: 0, tourneT: tourneDe(e, f, 0), esquives: 0, vuArmer: false, coince: 0 };
     }
     return e.rixe;
@@ -67,7 +70,7 @@ const Rixe = (function () {
     const libres = [];
     for (let k = 0; k < f.places; k++) {
       const a = base + k * 2 * Math.PI / f.places;
-      if (!placeMurée(surLeCercle(cible, a, f))) libres.push(a);
+      if (!placeMuree(surLeCercle(cible, a, f))) libres.push(a);
     }
     if (!libres.length) return surLeCercle(cible, base + e.rixe.derive, f);
     // Le PREMIER garde la place d'ou il arrive (sinon, seul, il ferait le tour de sa cible pour rien) ; les
@@ -88,7 +91,7 @@ const Rixe = (function () {
   }
 
   /** Sa place tombe-t-elle dans un mur (la cible y est adossee) ? Alors il cogne d'ou il est. */
-  function placeMurée(p) {
+  function placeMuree(p) {
     return !Monde.marchablePieton(Math.floor(p.x / TT), Math.floor(p.y / TT));
   }
 
@@ -118,7 +121,6 @@ const Rixe = (function () {
     // quand le cerveau ne le mene plus.
     e.faceVers = cible; e.faceT = 2;
     const dx = cible.x - e.x, dy = cible.y - e.y, d = Math.hypot(dx, dy) || 1;
-    if (r.pret > 0) r.pret--;
     if (r.posture !== 'recul' && esquive(e, cible, d, f)) reculer(r, f);
     if (r.posture === 'recul') {
       if (--r.minuterie <= 0) r.posture = 'approche';
@@ -144,9 +146,9 @@ const Rixe = (function () {
     // ferait jamais le tour. ⚠️ Sauf une place dans un mur (la cible y est adossee), ou une cible qui BOUGE : sa
     // place bouge avec elle, il ne l'atteignait presque jamais (au siege de m98, les allies tombaient de 47
     // coups a 18) — a portee, il frappe d'ou il est.
-    if (d <= f.portee_px && r.pret <= 0 && (dp <= f.place_px || bouge || r.coince >= f.coince_images || placeMurée(p))) {
+    if (d <= f.portee_px && e.t >= r.pret && (dp <= f.place_px || bouge || r.coince >= f.coince_images || placeMuree(p))) {
       e.vx = 0; e.vy = 0;
-      if (Combat.frapper(e, false)) { r.pret = cadenceDe(e, f, e.t); reculer(r, f); return true; }
+      if (Combat.frapper(e, false)) { r.pret = e.t + cadenceDe(e, f, e.t); reculer(r, f); return true; }
     }
     const vers = etape(e, cible, p, f);
     const px = vers.x - e.x, py = vers.y - e.y, dv = Math.hypot(px, py);

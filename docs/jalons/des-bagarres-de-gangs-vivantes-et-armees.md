@@ -132,6 +132,10 @@ Et à chaque vague : une **capture** de la rixe (Chromium), et la jouer au banc.
   Cravate qui bouge), et **laisse filer les fuyards** (`cibleDeLAllie` : celui qui se bat d'abord ; au banc, un
   allié courait 460 images après un fuyard aussi rapide que lui). Le siège : 42 coups et 5 couchés (47 et 5 sur
   `dev`, 18 et 2 au pire du chemin).
+- **Le rythme est une échéance** (la relecture) : le délai avant le prochain coup ne s'écoulait que dans le
+  cerveau, qui n'est pas appelé pendant le geste — 70 images entre deux élans au lieu de 40, le gang frappait un
+  tiers moins souvent. Une échéance sur l'horloge de l'homme (`e.t`), pour lui comme pour l'allié, et un recul
+  qui est un pas en arrière (10 images) et non une retraite.
 - **Deux juges lisent mieux** : l'encerclement à la moyenne de l'écart (89° avec, 23° sans ; un pas de côté
   rapproche deux hommes un instant, c'est voulu), le regard face au rival DU MOMENT (l'ancien couché).
 - **m3 passe à la graine 1** : semer le client de la police tenait par la graine (la 3 et la 4 ratent aussi sur

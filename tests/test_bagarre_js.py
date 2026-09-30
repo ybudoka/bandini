@@ -473,7 +473,7 @@ def test_il_recule_apres_son_coup_en_regardant_sa_cible(banc):
                 const ecart = Math.abs(Math.atan2(Math.sin(vers - e.angle), Math.cos(vers - e.angle)));
                 if (ecart < Math.PI / 2) face++; else dos++;
               }
-              if (++s.n === 18) { if (d > s.depart + 4) reculs++; s.recule = false; }
+              if (++s.n === L.B.defs.rixes.contact.recul_images) { if (d > s.depart + 4) reculs++; s.recule = false; }
             }
             s.etat = e.etat;
           }

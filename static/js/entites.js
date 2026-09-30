@@ -5139,17 +5139,17 @@ const Entites = (function () {
       // Sans cible, chacun garde sa distance (trois rangs, par son numero) : une grappe collee au joueur
       // le coincerait contre un mur.
       const arret = e.rival ? f.portee_px : 28 + (e.id % 3) * 10;
-      // ⚠️ SON DELAI A LUI, pas le metronome `e.t % cadence` : les Cravates d'en face bougent maintenant
-      // (`rixe.js` : ils tournent autour de toi, reculent apres leur coup), et l'image exacte du metronome
-      // tombait presque toujours hors de portee — au banc du siege de m98, 18 coups au lieu de 47.
-      if (e.pretAllie > 0) e.pretAllie--;
+      // ⚠️ SON ECHEANCE A LUI (`pretAllie`, sur son horloge `e.t`), pas le metronome `e.t % cadence` : les
+      // Cravates d'en face bougent maintenant (`rixe.js` : ils tournent autour de toi, reculent apres leur coup),
+      // et l'image exacte du metronome tombait presque toujours hors de portee — au banc du siege de m98, 18 coups
+      // au lieu de 47. Une echeance et pas un compte a rebours : celui-ci s'arretait pendant le geste.
       if (norme > arret) {
         e.vx = dx / norme * vitesse;
         e.vy = dy / norme * vitesse;
       } else {
         e.vx = 0; e.vy = 0;
         regarder(e, dx, dy);
-        if (e.rival && !(e.pretAllie > 0) && Combat.frapper(e, false)) e.pretAllie = f.cadence_images;
+        if (e.rival && !(e.t < e.pretAllie) && Combat.frapper(e, false)) e.pretAllie = e.t + f.cadence_images;
       }
     } else if (e.etat === 'bagarre') {
       // ⚠️ IL VISE QUELQU'UN D'AUTRE QUE LE JOUEUR, et c'est tout ce qui
