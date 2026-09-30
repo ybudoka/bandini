@@ -25,6 +25,10 @@ const Demenagement = (function () {
   //: A cette distance du joueur, un camion nait ; plus loin que `OUBLI_PX`, il s'en va.
   const NAISSANCE_PX = 520, OUBLI_PX = 900;
 
+  //: Les places dont on a pris le camion, et la partie et le jour qu'on les a prises : elles restent vides jusqu'au
+  //: lendemain (oublier `demenageur` sur le camion vole faisait naitre un camion neuf a sa place).
+  let prises = { partie: null, jour: null, places: new Set() };
+
   function camions() { return B.entites.filter(function (e) { return e.type === 'vehicule' && e.demenageur !== undefined; }); }
 
   function maj() {
@@ -32,15 +36,16 @@ const Demenagement = (function () {
     const d = donnees(), j = B.joueur;
     if (!d || !j) return;
     const ici = aujourdhui(), les = camions();
+    if (prises.partie !== B.partie || prises.jour !== B.partie.jour) prises = { partie: B.partie, jour: B.partie.jour, places: new Set() };
     for (const v of les) {
-      if (v.conducteur === j) { delete v.demenageur; continue; }        // on l'a pris : il est a nous
+      if (v.conducteur === j) { prises.places.add(v.demenageur); delete v.demenageur; continue; }   // on l'a pris : il est a nous
       if (!ici || Math.hypot(v.x - j.x, v.y - j.y) > OUBLI_PX) Entites.retirer(v);
     }
     if (!ici) return;
     let neufs = 0;
     d.camions.forEach(function (c, k) {
       const x = c[0] * TT + 8, y = c[1] * TT + 8;
-      if (Math.hypot(x - j.x, y - j.y) > NAISSANCE_PX) return;
+      if (prises.places.has(k) || Math.hypot(x - j.x, y - j.y) > NAISSANCE_PX) return;
       if (les.some(function (v) { return v.demenageur === k && B.entites.indexOf(v) >= 0; })) return;
       const v = Vehicules.creer('camion', x, y, 0, { etat: 'stationne', couleur: COULEUR });
       if (!v) return;

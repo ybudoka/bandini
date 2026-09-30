@@ -61,3 +61,33 @@ def test_le_camion_prend_le_boulot_de_demenageur_le_1er_juillet(banc):
         return { juillet: klaxon(d.jour), lendemain: klaxon(d.jour + 1) };
     }""")
     assert r == {"juillet": "demenagement", "lendemain": None}, r
+
+
+def test_le_camion_vole_ne_repousse_pas_a_sa_place(banc):
+    """Martin (30 sept.) : on prenait un camion de déménageur, un autre naissait à sa place ; on
+    descendait, remontait : un de plus chaque fois. La place prise reste vide jusqu'au lendemain."""
+    r = banc("function (L, o) {" + OUTILS + """
+        L.Jeu.commencer();
+        const B = L.B, D = L.Demenagement, d = B.defs.demenagement, c = d.camions[0], j = B.joueur;
+        if (B.menu) L.Hud.fermerMenu();
+        jour(L, d.jour); pres(L, o, c);
+        function tour() { B.t = Math.ceil((B.t + 1) / 20) * 20; D.maj(); }
+        function blancsIci() {
+            const x = c[0] * TT + 8, y = c[1] * TT + 8;
+            return B.entites.filter(function (e) { return e.type === 'vehicule' && e.couleur === '#ecf0f1' && Math.hypot(e.x - x, e.y - y) < 48; }).length;
+        }
+        tour();
+        const le = D.camions().find(function (v) { return v.demenageur === 0; });
+        const avant = blancsIci();
+        L.Vehicules.monter(j, le);
+        tour(); tour();
+        const aBord = blancsIci();
+        L.Vehicules.descendre(j); tour(); tour();
+        const aPied = blancsIci();
+        L.Vehicules.monter(j, le); tour(); L.Vehicules.descendre(j); tour();
+        const remonte = blancsIci();
+        return { trouve: !!le, avant: avant, aBord: aBord, aPied: aPied, remonte: remonte,
+                 total: B.entites.filter(function (e) { return e.type === 'vehicule' && e.couleur === '#ecf0f1'; }).length };
+    }""")
+    assert r["trouve"] and r["avant"] == 1, r
+    assert r["aBord"] == 1 and r["aPied"] == 1 and r["remonte"] == 1, f"un camion a repoussé à la place prise : {r}"
