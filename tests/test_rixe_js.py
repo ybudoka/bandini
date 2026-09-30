@@ -115,3 +115,39 @@ def test_il_esquive_parfois_ton_coup(banc):
     }""" % TROIS)
     assert r["armes"] >= 15, "le joueur n'a pas pu armer (%s)" % r
     assert 1 <= r["esquives"] < r["armes"], r
+
+
+def test_il_touche_une_cible_qui_bouge(banc):
+    """Une cible qui bouge (un Cravate qui tourne autour de toi, qui recule après son coup) se frappe quand
+    même À SA CADENCE : l'homme frappe à portée sans attendre sa place — une place sur le cercle d'une cible qui
+    bouge bouge avec elle, et il ne l'atteignait presque jamais (11 élans en 20 s, pour une cadence de 40
+    images). ⚠️ Au banc du siège de m98, les alliés portaient 47 coups sur des Cravates plantés ; sur des
+    Cravates qui bougent, ils tombaient à 18."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(25);
+        const j = L.B.joueur;
+        // Loin du joueur, dans la rue : un Cravate en rixe contre une Morue qui va et vient devant lui.
+        const x0 = j.x, y0 = j.y + 40;
+        const c = L.Entites.creerPieton(x0 - 20, y0, L.Entites.archetype('cravate'));
+        const m = L.Entites.creerPieton(x0, y0, L.Entites.archetype('morue'));
+        for (const e of [c, m]) { e.bagarre = true; e.metier = 'bagarre'; e.bagarreT = 99999; }
+        c.etat = 'bagarre'; c.arme = 'batte'; c.rival = m;
+        m.etat = 'fige'; m.vie = m.vieMax = 1e9;
+        L.Entites.indexer();
+        let elans = 0, touches = 0, avant = c.etat;
+        const vrai = L.Entites.blesser;
+        L.Entites.blesser = function (e, d, s) { if (s === c && e === m) touches++; return vrai.apply(null, arguments); };
+        for (let i = 0; i < 1200; i++) {
+          // Elle va et vient, à un petit pas de course, sur 40 px.
+          m.x = x0 + Math.sin(i / 25) * 20; m.y = y0 + Math.cos(i / 40) * 10;
+          m.vx = Math.cos(i / 25) * 0.8; m.vy = 0; m.etat = 'fige';
+          o.frame(1);
+          if (c.etat === 'attaque' && avant !== 'attaque') elans++;
+          avant = c.etat;
+        }
+        L.Entites.blesser = vrai;
+        return { elans: elans, touches: touches };
+    }""")
+    assert r["elans"] >= 16, "il ne s'élance pas sur une cible qui bouge (%s)" % r
+    assert r["touches"] / r["elans"] >= 0.6, "il frappe dans le vide (%s)" % r

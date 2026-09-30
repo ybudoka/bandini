@@ -19,6 +19,7 @@ CONTACT: dict = {
     "cercle_px": 16,          # le rayon de sa place autour de la cible : en deçà de la portée
     "places": 8,              # combien de places sur le cercle (on n'en garde que les libres, hors des murs)
     "place_px": 8,            # « à sa place » : il ne frappe que de là (ou d'où il est, si sa place est un mur)
+    "bouge_px": 0.3,          # une cible qui bouge de plus que ça par image : il frappe à portée, sans attendre sa place
     "contourne_rad": 0.8,     # pour gagner sa place, il tourne autour de la cible d'au plus ça à la fois
     "cadence_images": 40,     # un coup toutes les deux tiers de seconde, en moyenne…
     "cadence_ecart": 12,      # … plus ou moins ça, à l'empreinte : jamais au métronome commun

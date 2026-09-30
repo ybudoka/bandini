@@ -105,7 +105,10 @@ const Rixe = (function () {
   /** Une image de combat contre `cible`, a `vitesse` (celle de sa course). Rend vrai si un coup est parti. */
   function maj(e, cible, vitesse) {
     const f = fiche(), r = etat(e, f);
-    r.cible = cible;
+    // Sa cible bouge-t-elle ? Lu a SA POSITION d'une image a l'autre, pas a son `vx` (le joueur, un agent et
+    // un passant ne l'ecrivent pas tous au meme moment).
+    const bouge = r.cible === cible && Math.hypot(cible.x - r.cx, cible.y - r.cy) > f.bouge_px;
+    r.cible = cible; r.cx = cible.x; r.cy = cible.y;
     // ⚠️ Il regarde SA CIBLE, meme en reculant : `majPieton` le tourne sinon dans le sens de son pas, et un
     // homme qui se degage tournerait le dos a celui qu'il vient de frapper. Deux images : ca s'eteint seul
     // quand le cerveau ne le mene plus.
@@ -129,9 +132,10 @@ const Rixe = (function () {
     const p = place(e, cible, f);
     const dp = Math.hypot(p.x - e.x, p.y - e.y);
     // Il frappe DE SA PLACE — sinon, arrive du meme cote que les autres, il cognerait des qu'a portee et n'en
-    // ferait jamais le tour. ⚠️ Sauf une place dans un mur (la cible y est adossee) : a portee, il frappe d'ou il
-    // est.
-    if (d <= f.portee_px && r.pret <= 0 && (dp <= f.place_px || placeMurée(p))) {
+    // ferait jamais le tour. ⚠️ Sauf une place dans un mur (la cible y est adossee), ou une cible qui BOUGE : sa
+    // place bouge avec elle, il ne l'atteignait presque jamais (au siege de m98, les allies tombaient de 47
+    // coups a 18) — a portee, il frappe d'ou il est.
+    if (d <= f.portee_px && r.pret <= 0 && (dp <= f.place_px || bouge || placeMurée(p))) {
       e.vx = 0; e.vy = 0;
       if (Combat.frapper(e, false)) { r.pret = cadenceDe(e, f, e.t); reculer(r, f); return true; }
     }
