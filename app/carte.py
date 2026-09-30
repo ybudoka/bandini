@@ -7718,7 +7718,10 @@ B  aaa   B
 B  cccc  B
 Bn      nB
 BBBBWWDWBB
-""", points=(_pt("vendre", 3, 4), _pt("reparer", 7, 1), _pt("repeindre", 3, 2)),
+""", points=(_pt("vendre", 3, 4), _pt("reparer", 7, 1), _pt("repeindre", 3, 2),
+             # L'ascenseur du garage souterrain (docs/jalons/le-grand-garage-souterrain.md) : on l'attend au
+             # pied du mur nord, ses portes peintes sur le mur (`Souterrain.dessiner`).
+             _pt("ascenseur", 8, 1)),
      gens=_gens(("commis", 2, 5),)),
 
     # Chez Gus : pas une fenetre, des rateliers pleins, une cible au fond.

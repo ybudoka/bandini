@@ -68,3 +68,12 @@ def test_la_sortie_devant_le_rideau_tombe_sur_la_chaussee():
     assert carte.LEGENDE[ville["sol"][y][x]].get("route"), ville["sol"][y][x]
     for dy in (-1, 0, 1):
         assert carte.LEGENDE[ville["sol"][y + dy][x]].get("solide", 0) == 0
+
+
+def test_la_piece_du_garage_a_son_ascenseur_sur_le_plancher():
+    ville = villes.exporter()
+    piece = ville["interieurs"]["garage"]
+    pt = next(p for p in piece["points"] if p["type"] == "ascenseur")
+    sol = piece["sol"]
+    assert carte.LEGENDE[sol[pt["y"]][pt["x"]]].get("solide", 0) == 0, "l'ascenseur s'attend debout, sur le plancher"
+    assert sol[pt["y"] - 1][pt["x"]] == "B", "ses portes se peignent sur le mur, juste au nord"

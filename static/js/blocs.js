@@ -195,7 +195,9 @@ const Blocs = (function () {
       const def = B.bloc.def.bloc;
       return [{ o: def.retour, mot: def.panneau || 'VILLE', nom: 'Vers la ville' }];
     }
-    return liste().map(function (b) { return { o: b.passage, mot: b.panneau || 'CHEMIN', nom: b.nom }; });
+    // ⚠️ Un sous-sol (le garage souterrain) n'a pas de passage : aucune plaque en ville.
+    return liste().filter(function (b) { return b.passage; })
+      .map(function (b) { return { o: b.passage, mot: b.panneau || 'CHEMIN', nom: b.nom }; });
   }
 
   /** Le centre de la plaque d'une ouverture : A PLAT, dans la tuile du bord, au milieu de

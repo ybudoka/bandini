@@ -46,6 +46,8 @@ TYPES_SERVIS = frozenset({
     "fourriere", "emplettes", "salon", "escalier", "fouiller",
     # Les concessionnaires : le comptoir qui vend les chars du lot.
     "concession",
+    # L'ascenseur du garage souterrain (`Souterrain.descendreAPied`, docs/jalons/le-grand-garage-souterrain.md).
+    "ascenseur",
     # La planque qu'on décore : le catalogue Beausoleil, sur la table (`Decoration.menuCatalogue`).
     "catalogue",
     # M11, 2e vague — les deux moities du meme choix : effacer une page, sur,
