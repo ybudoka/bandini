@@ -58,6 +58,47 @@ def test_l01_une_photo_de_bouchard_puis_le_port(banc):
     assert r["fait"] is True and r["argent"] == [150], r
 
 
+
+def test_l01_louise_dans_l_auto_ne_se_fait_pas_renverser(banc):
+    """⚠️ LE PASSAGER N'EST PAS RENVERSÉ PAR SON CHAR (Martin, 30 sept. 2026) : dès que Louise montait, ça cognait
+    sans arrêt, avec du bruit, et la police montait à cinq étoiles, même après la peinture. Assise, elle est
+    collée au centre du char à chaque image, et `heurterPietons` ne sautait que le JOUEUR assis : lancé, le char
+    la « renversait » à chaque image — `blesser` refusait le coup, mais le coup sourd, la secousse, le char freiné
+    et le crime `renversement` passaient."""
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + RECHARGER + ESCORTE + CHEZ_LOUISE + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B;
+        faites(L, """ + _avant() + """);
+        const j = recharger(L);
+        chezLouise(L, o);
+        const c = B.mission.protege;
+        const suit = rejoindre(L, o, c);
+        const a = L.Histoire.tuileDeRue(j.x, j.y, 10);
+        const v = L.Vehicules.creer('auto', a.x, a.y, 0, { etat: 'stationne' });
+        j.x = v.x + 10; j.y = v.y; L.Entites.indexer(); L.Vehicules.monter(j, v);
+        c.x = v.x + 14; c.y = v.y + 14; c.piste = []; L.Entites.indexer();
+        for (let k = 0; k < 30 && c.dansVehicule !== v; k++) { v.vitesse = 0; o.frame(1); ecouter(L); }
+        const monte = c.dansVehicule === v;
+        // Seul le passager au bord : aucun autre passant à renverser.
+        B.entites.filter(function (e) { return e.type === 'pieton' && e !== c; }).forEach(function (e) { L.Entites.retirer(e); });
+        B.recherche.etoiles = 0;
+        let crimes = 0, coups = 0, vmax = 0;
+        const signaler = L.Police.signalerCrime, blesser = L.Entites.blesser;
+        // ⚠️ Le renversement seul : lancé à fond, le banc conduit aussi dangereusement (`conduite_dangereuse`).
+        L.Police.signalerCrime = function (t) { if (/^renversement/.test(t)) crimes++; return signaler.apply(this, arguments); };
+        L.Entites.blesser = function (e) { if (e === c) coups++; return blesser.apply(this, arguments); };
+        o.touche('KeyW');
+        for (let k = 0; k < 180; k++) { v.vie = v.vieMax; o.frame(1); ecouter(L); vmax = Math.max(vmax, Math.hypot(v.vx, v.vy)); }
+        o.relacher('KeyW');
+        L.Police.signalerCrime = signaler; L.Entites.blesser = blesser;
+        return { suit: suit, monte: monte, vmax: vmax, coups: coups, crimes: crimes, etoiles: B.recherche.etoiles,
+                 toujours: c.dansVehicule === v, vivant: c.vivant };
+    }""")
+    assert r["suit"] and r["monte"], r
+    assert r["vmax"] > 1.2, f"le char roule plus vite que le seuil de renverse : {r}"
+    assert r["coups"] == 0 and r["crimes"] == 0 and r["etoiles"] == 0, f"le char a cogné sa passagère : {r}"
+    assert r["toujours"] and r["vivant"], r
+
 def _l02(banc, lent=False):
     return banc("function (L, o) {" + OUTILS + PLUS_LONGUES + RECHARGER + CHEZ_LOUISE + """
         L.Jeu.commencer(); L.graine(6);

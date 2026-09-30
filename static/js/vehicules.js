@@ -1365,8 +1365,11 @@ const Vehicules = (function () {
     const ph = physique();
     const vitesse = Math.hypot(v.vx, v.vy);
     for (const c of cercles(v)) {
+      // ⚠️ CEUX QUI MARCHENT, le passager aussi (Martin, 30 sept. 2026) : Louise assise dans notre char (l01),
+      // collée à son centre à chaque image, s'y faisait « renverser » à chaque image — `blesser` refusait le coup,
+      // mais le coup sourd, la secousse, le char freiné et un crime `renversement` passaient : cinq étoiles.
       for (const p of Entites.autour(c.x, c.y, c.r + 8, function (e) {
-        return (e.type === 'pieton' || (e.type === 'joueur' && !e.dansVehicule)) && e.vivant;
+        return (e.type === 'pieton' || e.type === 'joueur') && !e.dansVehicule && e.vivant;
       })) {
         const dx = p.x - c.x, dy = p.y - c.y;
         const d = Math.hypot(dx, dy) || 1, min = c.r + p.r;

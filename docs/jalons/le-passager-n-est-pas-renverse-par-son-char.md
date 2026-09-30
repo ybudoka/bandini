@@ -16,3 +16,15 @@ freiné, et un crime `renversement` signalé à chaque image — les étoiles re
 
 - ⚠️ Le char ne heurte que ceux qui marchent : un piéton assis dans un char (le passager d'une
   escorte, Marco de f09, Louise de l01, Zed de p11) est hors du choc, comme le joueur.
+
+## Notes
+
+- `Vehicules.heurterPietons` ne regarde plus que ceux qui marchent : `!e.dansVehicule` vaut pour le
+  piéton comme pour le joueur. La règle de `blesser` (« rien n'atteint qui est assis dans un char »)
+  tenait déjà ; c'est le choc autour d'elle qui passait.
+- Mesuré au banc (l01, graine 6, trois secondes à fond, Louise assise) : **42 coups et 42 crimes
+  `renversement`** avant, le char freiné à 1,23 px/image — juste au-dessus du seuil de renverse
+  (1,2) : c'était le « ça donne des coups » ; **0 et 0** après, le char monte à 3,5. Juge dédié :
+  `test_l01_louise_dans_l_auto_ne_se_fait_pas_renverser`.
+- Le même trou valait pour tout passager d'une escorte (`proteger` : Marco de f09, Zed de p11) : les
+  juges d'avant téléportaient le char (vitesse nulle), sous le seuil — ils ne le voyaient pas.
