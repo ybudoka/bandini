@@ -1067,3 +1067,13 @@ catalogue.
     Gilles — c'est aussi là que Ti-Loup compacte (s02).
   - **Ce que M13 attend** : les **quatre districts** (vagues 1 à 4) et les **quatre propriétés** (celle-ci) se
     gagnent en jouant. Reste à écrire _Le Boss_ lui-même — m98, son générique, la ville qui change de couleur.
+- **30 sept. 2026 : M. Bilodeau change de voix, et le pont coûte cinquante piastres** (Martin : « les voix de Roméo
+  Bilodeau sont pas bonnes, et 2 $ pour passer sur le pont, c'est vraiment pas assez cher »). Bill est une voix
+  **américaine** (`verified_languages` : « standard » en multilingue v2 seulement) ; en v3 il sonnait anglais.
+  Audition de la même réplique (l'appel de p02) par trois Québécois de la bibliothèque — **Santa** (le seul « old »
+  / `quebec`), Pascal (ex-animateur radio), Mathieu — et Martin a pris **Santa - Gentle and Heartwarming**.
+  - ⚠️ Une voix de bibliothèque se dit **par son identifiant** sans être au compte, mais le script la cherche **par
+    son nom dans le compte** : l'ajouter d'abord (`POST /v1/voices/add/<public_owner_id>/<voice_id>`, droit
+    `voices_write` donné à la clé par Martin le 30 sept.). Les voix de bibliothèque ne prennent pas de place.
+  - « Deux piastres » devient **« Cinquante piastres »** (texte et `jeu=`) ; les 11 voix de Bilodeau refaites
+    (`bilodeau-p02-1…10`, `bilodeau-repos-2`, ≈ 970 crédits), le dictionnaire (`piastres`) les étiquette.

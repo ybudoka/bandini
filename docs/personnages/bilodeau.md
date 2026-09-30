@@ -11,7 +11,7 @@
 | Slug | `bilodeau` |
 | Rôle | retraité du bout de La Pointe ; ne passe plus le pont qu'avec sa femme, le jeudi, pour le docteur |
 | Où | devant le phare (`porte:phare`), après p01 (`arrive_apres`) |
-| Voix | **Bill — Wise, Mature, Balanced** (un français « standard » vérifié en multilingue v2) ; permise (Martin, 25 sept. 2026), en v3 **à écouter** |
+| Voix | **Santa — Gentle and Heartwarming** (bibliothèque, « old », accent québécois) ; choisie à l'audition contre Pascal et Mathieu (Martin, 30 sept. 2026) — Bill, l'américain d'avant, sonnait faux |
 | Bulle | « Monsieur! » |
 | Couleurs | gilet brun, cheveux blancs, pantalon marine |
 | Missions | donne **p02** (et, plus tard, p07 : le déménagement) |
@@ -34,4 +34,4 @@ Au téléphone : « Roméo Bilodeau, du bout de La Pointe. » — le nom et l'ad
 
 ## À trancher
 
-- La voix (en v3) : à écouter.
+- Rien pour l'instant.

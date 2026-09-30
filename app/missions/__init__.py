@@ -349,8 +349,9 @@ PERSONNAGES: list[Personnage] = [
     # une mission (`arrive_apres` : un personnage posé dès l'ouverture décale les identifiants de la ville). Roméo
     # Bilodeau, le retraité qui ne passe plus le pont ; Zed, le chef des Skateux ; Armand, le Trappeur des bois.
     # Voix de France ou multilingues du compte, vérifiées en français (`verified_languages`) — permises (Martin,
-    # 25 sept. 2026), en v3 à écouter.
-    {"slug": "bilodeau", "nom": "Roméo Bilodeau", "genre": "homme", "voix": "Bill - Wise, Mature, Balanced",
+    # 25 sept. 2026), en v3 à écouter. ⚠️ Sauf Bilodeau : Bill (américain) sonnait faux ; Santa, le seul « vieux »
+    # québécois de la bibliothèque, a gagné l'audition contre Pascal et Mathieu (Martin, 30 sept. 2026).
+    {"slug": "bilodeau", "nom": "Roméo Bilodeau", "genre": "homme", "voix": "Santa - Gentle and Heartwarming",
      "couleurs": {"c": "#7a6a4a", "h": "#e0e0e0", "s": "#e8b088", "p": "#3a3a4a"}, "ou": "porte:phare",
      "heler": "Monsieur!", "arrive_apres": "p01",
      "repos": ("Revenez donc.", "Le pont est ouvert. Ma femme va pouvoir aller à la messe.")},
