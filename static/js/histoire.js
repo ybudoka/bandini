@@ -1524,6 +1524,7 @@ const Histoire = (function () {
     p.etape++;
     const o = m.objectifs[p.etape];
     if (!o || !o.allies) relacherLesAllies();
+    relacherLesPoursuivants();
     if (!o) { reussir(); return; }
     // ⚠️ Tout le monde est deja tombe a un essai rate : l'objectif est FAIT.
     // On ne repose pas des morts pour les recoucher.
@@ -1584,6 +1585,7 @@ const Histoire = (function () {
       // ⚠️ `allies` (M13, m98 : « les Morues, les Skateux et les Boulonneux a tes cotes ») : ils arrivent
       // quand l'objectif commence, et restent tant que les objectifs suivants les nomment (`avancer`).
       if (o.allies) poserLesAllies(m, o);
+      if (o.poursuite) poserLaPoursuite(m, o);
       if (o.type === 'monter') {
         const v = poserLeChar(m, o, p.etape);
         if (v) B.mission.vehicule = v;
@@ -2106,6 +2108,63 @@ const Histoire = (function () {
     e.porteLaCaisse = false;
     const c = Entites.creer('ramassage', e.x + 6, e.y + 4, { r: 4, objet: 'caisse', t: 0, solide: false, mission: B.partie.mission.slug });
     B.mission.entites.push(c);
+  }
+
+  /** Une voie hors champ à 320-520 px du joueur, dans le sens de la voie (le patron de `Police.peuplerAutos`). */
+  function rueHorsChamp() {
+    const j = B.joueur, c = Monde.carte;
+    for (let essai = 0; essai < 20; essai++) {
+      const a = B.rng() * Math.PI * 2, d = 320 + B.rng() * 200;
+      const tx = Math.floor((j.x + Math.cos(a) * d) / TT), ty = Math.floor((j.y + Math.sin(a) * d) / TT);
+      if (tx < 1 || ty < 1 || tx >= c.w - 1 || ty >= c.h - 1) continue;
+      const f = Monde.fleche(tx, ty);
+      if (!CAP_DE_FLECHE[f] && CAP_DE_FLECHE[f] !== 0) continue;
+      if (Entites.visibleAEcran(tx * TT + 8, ty * TT + 8, 40)) continue;
+      return { x: tx * TT + 8, y: ty * TT + 8, sens: f };
+    }
+    return null;
+  }
+
+  /** `poursuite` (les chapitres) : des chars du gang, nés hors champ, qui te collent tant que l'objectif dure. */
+  function poserLaPoursuite(m, o) {
+    const pr = o.poursuite;
+    B.mission.poursuivants = [];
+    for (let k = 0; k < (pr.chars || 1); k++) {
+      const rue = rueHorsChamp();
+      if (!rue) continue;
+      const v = Vehicules.creer(pr.vehicule || 'auto', rue.x, rue.y, CAP_DE_FLECHE[rue.sens],
+                                { conducteur: 'poursuivant', etat: 'roule', surRails: true, poursuite: true, sens: rue.sens });
+      if (!v) continue;
+      v.gang = pr.groupe; v.mission = m.slug; v.vitesse = 2;
+      B.mission.poursuivants.push(v);
+    }
+  }
+
+  /** Le pilote d'un poursuivant : sur les rails de loin, droit sur toi de près (`Police.commandes`, sans équipage). */
+  function commandesDuPoursuivant(v) {
+    const j = B.joueur, cible = j.dansVehicule || j;
+    const d = Math.hypot(cible.x - v.x, cible.y - v.y);
+    const direct = d < 140 && Monde.ligneLibre(v.x, v.y, cible.x, cible.y);
+    const coince = !v.surRails && (v.immobileT || 0) > 45;
+    if (!direct || coince) {
+      if (!v.surRails) { v.cible = null; v.sortie = null; v.immobileT = 0; }
+      v.surRails = true;
+      return 'rails';
+    }
+    v.surRails = false;
+    let ecart = Math.atan2(cible.y - v.y, cible.x - v.x) - v.angle;
+    while (ecart > Math.PI) ecart -= 2 * Math.PI;
+    while (ecart < -Math.PI) ecart += 2 * Math.PI;
+    return { gaz: Math.abs(ecart) > 1.6 ? 0 : 1, frein: Math.abs(ecart) > 1.6 && v.vitesse > 1 ? 1 : 0,
+             direction: Math.max(-1, Math.min(1, ecart * 2)), freinMain: Math.abs(ecart) > 1.2 && v.vitesse > 2 };
+  }
+
+  /** L'objectif fait (ou la mission finie) : les poursuivants retournent au trafic. */
+  function relacherLesPoursuivants() {
+    ((B.mission && B.mission.poursuivants) || []).forEach(function (v) {
+      if (v.etat !== 'epave' && v.conducteur === 'poursuivant') { v.conducteur = 'trafic'; v.poursuite = false; v.surRails = false; }
+    });
+    if (B.mission) B.mission.poursuivants = [];
   }
 
   /** `renforts` (les chapitres) : quand il ne reste qu'UN debout, la vague suivante arrive de loin. Rend true s'il en
@@ -2673,6 +2732,7 @@ const Histoire = (function () {
     if (!B.mission) return;
     lacherLeProtege();
     relacherLesAllies();
+    relacherLesPoursuivants();
     // Le feu d'une mission s'en va avec elle — éteint ou non, il n'est plus le sien.
     if (B.mission.feu) { Incendies.oublierLeFeuDeMission(); B.mission.feu = null; }
     for (const e of B.mission.entites) {
@@ -3711,7 +3771,7 @@ const Histoire = (function () {
   return { texteDObjectif, exigeTenu, disponibles, disponibleDe, estParti, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
            donneur, creerDonneurs, majSaisonniers, absentLHiver, poserDonneur, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
            parler, dire, suivante, finir, commencer, demarrer, avancer, objectif, courante, reussir, echouer, evenement,
-           mission, accorder, ouEstLeJoueurEnVille,
+           mission, accorder, ouEstLeJoueurEnVille, commandesDuPoursuivant,
            ouverture, passerOuverture, fichiersDeLOuverture, direLignes, majCinema, resoudre,
            lieuDuPersonnage, pieceDessous, ouTrouver, present, calme, jouerOuDire,
            reinitialiser, noter, rencontrer, CARNET_MAX, init, charger,

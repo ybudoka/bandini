@@ -123,7 +123,9 @@ ECHECS = ("mort", "arrete", "vehicule_detruit", "chrono", "etoile", "protege_mor
 #: `survivre` faisaient déjà : la police à ce niveau au départ), et `renforts: {"vagues", "n"}` — quand il ne
 #: reste qu'un debout, la vague suivante arrive de loin (`tuer`, `tenir`).
 OPTIONS_OBJECTIFS = ("chrono_s", "sans_etoile", "sans_arme", "contre", "remet", "tenue", "allies", "treve", "donne",
-                     "etoiles", "renforts")
+                     "etoiles", "renforts", "poursuite")
+#: `poursuite: {"groupe", "chars", "vehicule"}` (les chapitres) : des chars du gang, nés hors champ, qui te collent
+#: tant que l'objectif dure (`aller`, `livrer`, `retourner`, `proteger`) ; l'objectif fait, ils retournent au trafic.
 
 
 class Personnage(TypedDict):

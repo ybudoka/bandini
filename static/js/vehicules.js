@@ -3370,6 +3370,8 @@ const Vehicules = (function () {
       else if (v.conducteur === 'vedette') majPhysique(v, Vedette.commandes(v));   // la vedette de police, sur l'eau
       else if (v.conducteur === 'ligne') Autobus.conduire(v);
       else if (v.conducteur === 'police') { const c = Police.commandes(v); if (c === 'rails') majConducteur(v); else majPhysique(v, c); }
+      // Un char de gang lancé à tes trousses par une mission (`poursuite`, les chapitres).
+      else if (v.conducteur === 'poursuivant') { const c = Histoire.commandesDuPoursuivant(v); if (c === 'rails') majConducteur(v); else majPhysique(v, c); }
       else if (v.conducteur === 'derby') majPhysique(v, Conduite.commandesDerby(v));   // un bazou du derby
       else majPhysique(v, { gaz: 0, frein: 0, direction: 0 });
       // La chasse finie, la sirene de l'auto-patrouille se tait.
@@ -3379,7 +3381,7 @@ const Vehicules = (function () {
       // l'arrete sur ce trajet tant qu'il n'y a pas rejoint une tuile de la voirie —
       // c'etait le vol de char qui traversait un batiment entre sa place et la rue.
       const surRails = v.conducteur === 'trafic' && !v.horsReseau;
-      if (surRails || v.conducteur === 'ligne' || (v.conducteur === 'police' && v.surRails)) {
+      if (surRails || v.conducteur === 'ligne' || (v.conducteur === 'police' && v.surRails) || (v.conducteur === 'poursuivant' && v.surRails)) {
         v.x += v.vx; v.y += v.vy;
         heurterVehicules(v);
         heurterPietons(v);

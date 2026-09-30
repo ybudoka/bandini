@@ -301,3 +301,22 @@ def test_etoiles_sur_un_aller(banc):
         return L.B.recherche.etoiles;
     }""")
     assert r == 2
+
+
+def test_une_poursuite_nait_hors_champ_colle_et_lache_a_la_fin_de_l_objectif(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + """
+        const m = ouvrir(L), B = L.B, j = B.joueur;
+        m.objectifs[1].poursuite = { groupe: 'skateux', chars: 1 };
+        commencer(L, o, 'zz'); jouer(L, o);
+        const v = B.entites.find(function (e) { return e.type === 'vehicule' && e.conducteur === 'poursuivant'; });
+        if (!v) return { v: false };
+        const nait = Math.round(Math.hypot(v.x - j.x, v.y - j.y)), horsChamp = !L.Entites.visibleAEcran(v.x, v.y, 0);
+        for (let k = 0; k < 900; k++) o.frame(1);
+        const pres = Math.round(Math.hypot(v.x - j.x, v.y - j.y));
+        const ph = L.Histoire.lieu('phare'); j.x = ph.x; j.y = ph.y; L.Entites.indexer(); jouer(L, o);
+        return { v: true, nait: nait, horsChamp: horsChamp, pres: pres, apres: v.conducteur, gang: v.gang };
+    }""")
+    assert r["v"], "un char du gang naît quand l'objectif commence"
+    assert r["horsChamp"] and r["nait"] >= 300, r
+    assert r["pres"] < r["nait"] - 100, f"il s'approche : {r}"
+    assert r["gang"] == "skateux" and r["apres"] == "trafic", r
