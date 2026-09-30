@@ -180,6 +180,141 @@ const Collections = (function () {
     return true;
   }
 
+  // --- Les sauts de Rocco (vague 4) -----------------------------------------------------------------
+
+  //: Vingt sauts au volant (`app/collectionner.py`, `SAUTS_PAR_DISTRICT`) : les huit rampes de la ville et DOUZE
+  //: TREMPLINS neufs en contreplaqué (`rampe: false`) — ceux-là ne sont pas dans la carte : ils se peignent ici et font
+  //: décoller par `estTremplin`, que `Vehicules` lit à côté de `Monde.estRampe`. ⚠️ Le SLUG est le nom :
+  //: `partie.collections.sauts[slug] = { jour, px, kmh }` — le premier saut réussi, puis le record.
+  function sauts() { return (paquet && paquet.sauts && paquet.sauts.liste) || []; }
+  function regleSauts() { return (paquet && paquet.sauts && paquet.sauts.regle) || {}; }
+  function saut(slug) { return sauts().find(function (q) { return q.slug === slug; }) || null; }
+  function sautReussi(slug) { return !!famille('sauts')[slug]; }
+  function nombreSauts() { return sauts().filter(function (q) { return sautReussi(q.slug); }).length; }
+  function totalSauts() { return sauts().length; }
+
+  //: Les tuiles des tremplins neufs (le pied et la lèvre), en clé numérique : refaites quand le catalogue change.
+  let tremplins = null, tremplinsDe = null;
+  function indexTremplins() {
+    if (tremplinsDe === paquet && tremplins) return tremplins;
+    tremplins = new Set(); tremplinsDe = paquet;
+    for (const q of sauts()) {
+      if (q.rampe) continue;
+      tremplins.add(q.y * 100000 + q.x);
+      tremplins.add((q.y + q.dy) * 100000 + q.x + q.dx);
+    }
+    return tremplins;
+  }
+  /** Un tremplin neuf sous (tx, ty) ? En ville seulement : un bloc et une pièce ont leurs propres tuiles. */
+  function estTremplin(tx, ty) {
+    if (B.interieur || B.bloc || !paquet) return false;
+    return indexTremplins().has(ty * 100000 + tx);
+  }
+
+  /** Le saut d'où part ce char : sa lèvre (ou son pied) à moins de deux tuiles et demie. */
+  function sautSous(v) {
+    let meilleur = null, d = 40 * 40;
+    for (const q of sauts()) {
+      const lx = (q.x + q.dx) * TT + 8, ly = (q.y + q.dy) * TT + 8;
+      const dd = Math.min(dist2(v.x, v.y, lx, ly), dist2(v.x, v.y, q.x * TT + 8, q.y * TT + 8));
+      if (dd < d) { d = dd; meilleur = q; }
+    }
+    return meilleur;
+  }
+
+  //: Le saut en cours : `{ v, s, px, kmh, chocs, sol }` — `sol` compte les images depuis qu'on a touché (-1 en l'air).
+  let vol = null;
+
+  function kmh(v) { return Math.round(Math.abs(v.vitesse) / ((v.def && v.def.vitesse_max) || 1) * 120); }
+
+  /** Le décollage, le vol, l'atterrissage : un saut se juge `propre_images` images APRÈS le premier contact — pas un
+      mur, pas l'eau, le char entier et le joueur toujours dedans. */
+  function majSauts(j) {
+    const v = j && j.dansVehicule;
+    if (!v || B.interieur || B.bloc || !sauts().length) { vol = null; return; }
+    if (vol && vol.v !== v) vol = null;
+    const r = regleSauts();
+    if (!vol) {
+      if (v.z > 0 && v.vz > 0) {
+        const q = sautSous(v);
+        if (q) vol = { v: v, s: q, px: Math.hypot(v.vx, v.vy), kmh: kmh(v), chocs: v.chocs, sol: -1 };
+      }
+      return;
+    }
+    if (vol.sol < 0) {
+      if (v.z > 0) { vol.px += Math.hypot(v.vx, v.vy); return; }
+      vol.sol = 0;
+    }
+    vol.sol++;
+    // Un mur en l'air ou en retombant : le compteur de chocs du char a bougé depuis le décollage.
+    if (v.chocs !== vol.chocs) vol.rate = 'mur';
+    if (!v.vivant || v.vie <= 0 || v.coule > 0) vol.rate = 'epave';
+    if (vol.rate || vol.sol >= (r.propre_images || 30)) { conclure(vol); vol = null; }
+  }
+
+  /** Ce que vaut un saut qui vient de finir : réussi (le premier, un record), ou raté — et on le dit. */
+  function conclure(f) {
+    const q = f.s, r = regleSauts(), px = Math.round(f.px), deja = famille('sauts')[q.slug];
+    if (f.rate || px < (r.vol_min_px || 48)) {
+      if (!deja) Hud.message(q.nom + ' : ' + (f.rate ? 'ATTERRISSAGE RATÉ' : px + ' PX — TROP COURT (' + (r.vol_min_px || 48) + ')'), 170);
+      return false;
+    }
+    if (deja) {
+      if (px > (deja.px || 0)) {
+        deja.px = px; deja.kmh = f.kmh;
+        Hud.message('RECORD — ' + q.nom + ' : ' + px + ' PX', 170);
+      }
+      return false;
+    }
+    return donnerSaut(q.slug, 'rue', false, px, f.kmh);
+  }
+
+  /** `slug` entre au carnet des sauts. La prime, le son, le carnet et les paliers suivent. */
+  function donnerSaut(slug, source, silence, px, vitesse) {
+    const q = saut(slug), p = B.partie;
+    if (!q || !p || sautReussi(q.slug)) return false;
+    famille('sauts')[q.slug] = { jour: p.jour, source: source || 'rue', px: px || 0, kmh: vitesse || 0 };
+    if (silence) return true;
+    const r = regleSauts(), n = nombreSauts(), N = totalSauts();
+    if (r.prime) Missions.encaisser(r.prime, 'SAUT', true);
+    Son.SFX.saut_reussi();
+    Hud.message('SAUT ' + n + '/' + N + ' — ' + q.nom + ' : ' + (px || 0) + ' PX · ' + (vitesse || 0) + ' KM/H', 240);
+    Histoire.noter('SAUT : ' + q.nom + ' — ' + (px || 0) + ' PX À ' + (vitesse || 0) + ' KM/H', false);
+    const palier = (r.paliers || {})[String(n)];
+    if (palier) {
+      Missions.encaisser(palier, 'COLLECTION', true);
+      const complet = n === N;
+      Son.SFX.orgue_arena();
+      Hud.prime({ montant: palier, titre: complet ? 'TOUS LES SAUTS DE ROCCO' : n + ' SAUTS', quoi: 'COLLECTION', bonus: 0,
+                  palier: Missions.palierDePrime(palier) });
+      Histoire.noter((complet ? 'LES VINGT SAUTS DE ROCCO' : n + ' SAUTS') + ' — ' + palier + ' $', true);
+    }
+    return true;
+  }
+
+  /** Un tremplin de Rocco, en contreplaqué : deux tuiles du pied à la lèvre, les chevrons peints à la main en rouge.
+      Tourné dans le sens du saut (`dx`, `dy`). */
+  function peindreTremplin(ctx, q, cam) {
+    const x0 = Math.min(q.x, q.x + q.dx) * TT - cam.x, y0 = Math.min(q.y, q.y + q.dy) * TT - cam.y;
+    const l = q.dx ? 2 * TT : TT, h = q.dy ? 2 * TT : TT;
+    if (x0 < -40 || y0 < -40 || x0 > VW + 40 || y0 > VH + 40) return;
+    const X = Math.round(x0), Y = Math.round(y0);
+    ctx.save();
+    ctx.translate(X + l / 2, Y + h / 2);
+    ctx.rotate(Math.atan2(q.dy, q.dx));
+    // Dans le repère du saut : de -16 (le pied) à +16 (la lèvre), sur 14 de large.
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(-16, -7, 33, 15);                 // l'ombre de la caisse
+    const planches = ['#b89868', '#c4a474', '#d0b080', '#dcbc8c', '#e4c898', '#ecd4a4', '#f2dcb0', '#f6e4bc'];
+    for (let i = 0; i < 8; i++) { ctx.fillStyle = planches[i]; ctx.fillRect(-16 + i * 4, -7, 4, 14); }
+    ctx.fillStyle = '#8a6a44'; ctx.fillRect(-16, -7, 32, 1); ctx.fillRect(-16, 6, 32, 1);   // les joues
+    ctx.fillStyle = '#c83a2a';                                                            // les chevrons, à la main
+    for (const x of [-12, -2, 8]) for (let k = 0; k < 3; k++) { ctx.fillRect(x + k, -4 + k, 1, 2); ctx.fillRect(x + k, 2 - k, 1, 2); }
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(13, -7, 1, 14);                       // l'arête, et son ombre
+    ctx.fillStyle = '#fff3c0'; ctx.fillRect(14, -7, 2, 14);
+    ctx.restore();
+    B.stats.rects += 14;
+  }
+
   // --- Donner une carte : la rue, le debug, et un jour le marché aux puces ---------------------------
 
   /** `numero` entre dans l'album. `source` : `rue` (on l'a ramassée), `puces` (achetée), `debug`. Rend
@@ -223,6 +358,7 @@ const Collections = (function () {
     reclamer();
     const j = B.joueur;
     majSons(j);
+    if (B.partie && j && !B.cinema && !B.scene) majSauts(j);
     if (!B.partie || !j || j.dansVehicule || j.hospitalise || B.menu || B.cinema || B.scene) return;
     const r = regle().rayon_px || 12;
     for (const c of aTrouver()) {
@@ -288,6 +424,8 @@ const Collections = (function () {
   }
 
   function dessiner(ctx, cam) {
+    // Les tremplins de Rocco, d'abord : ils sont SOUS les cartes et les bebelles (des caisses posées sur le sol).
+    if (!B.interieur && !B.bloc) for (const q of sauts()) if (!q.rampe) peindreTremplin(ctx, q, cam);
     const liste = aTrouver();
     if (!liste.length && !bebellesATrouver().length) return;
     const hiver = typeof Saisons !== 'undefined' && Saisons.enHiver();
@@ -365,10 +503,19 @@ const Collections = (function () {
     return n;
   }
 
-  function oublier() {}
+  /** Tous les sauts, d'un coup, en silence (TRICHES) : le carnet plein, sans prime. */
+  function tousLesSauts() {
+    let n = 0;
+    for (const q of sauts()) if (donnerSaut(q.slug, 'debug', true)) n++;
+    return n;
+  }
+
+  function oublier() { vol = null; }
 
   return { charger, reclamer, poser, catalogue, etatDeLaDemande, cartes, regle, equipe, position, fiche, trouvee, nombre, total,
            parEquipe, aTrouver, pixels, donner, maj, peindreCarte, dessiner, lampes, plusProche, toutes, oublier,
            famille, bebelles, regleBebelles, bebelle, rangBebelle, bebelleTrouvee, nombreBebelles, totalBebelles, masqueBebelles,
-           bebellesATrouver, peindreBebelle, donnerBebelle, toutesLesBebelles };
+           bebellesATrouver, peindreBebelle, donnerBebelle, toutesLesBebelles,
+           sauts, regleSauts, saut, sautReussi, nombreSauts, totalSauts, estTremplin, sautSous, majSauts, donnerSaut, tousLesSauts,
+           get vol() { return vol; } };
 })();

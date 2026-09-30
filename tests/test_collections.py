@@ -187,7 +187,7 @@ def test_leurs_sons_voyagent_avec_elles_pas_dans_les_definitions(paquets):
     defs = json.loads(paquets.definitions.corps)
     col = json.loads(paquets.collections.corps)
     slugs = {e["slug"] for e in defs["audio"]["echantillons"]}
-    assert not slugs & {"carte_hockey", "orgue_arena", "bebelle", "reel_bebelles"} and "collections" not in defs["audio"]["lieux"]
+    assert not slugs & {"carte_hockey", "orgue_arena", "bebelle", "reel_bebelles", "saut_reussi"} and "collections" not in defs["audio"]["lieux"]
     assert col["sons"]["lieu"] == "collections"
-    assert [e["slug"] for e in col["sons"]["echantillons"]] == ["carte_hockey", "orgue_arena", "bebelle", "reel_bebelles"]
+    assert [e["slug"] for e in col["sons"]["echantillons"]] == ["carte_hockey", "orgue_arena", "bebelle", "reel_bebelles", "saut_reussi"]
     assert all(e["fichiers"] for e in col["sons"]["echantillons"]), "un son des cartes sans son fichier"

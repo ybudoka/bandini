@@ -187,7 +187,8 @@ def test_l_hiver_la_bebelle_est_cernee(banc):
         function peindre(jour) {
             L.B.partie.jour = jour; L.B.partie.heure = 0.55; L.B.t = 100;
             const vus = []; let style = null;
-            const ctx = { fillRect: function () { vus.push(style); }, set fillStyle(v) { style = v; } };
+            const ctx = { fillRect: function () { vus.push(style); }, set fillStyle(v) { style = v; },
+                          save: function () {}, restore: function () {}, translate: function () {}, rotate: function () {} };
             L.Collections.dessiner(ctx, { x: a.p.x - 240, y: a.p.y - 135 });
             return vus.filter(function (c) { return c === '#3a3442'; }).length;
         }

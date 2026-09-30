@@ -488,6 +488,151 @@ def places_des_blocs() -> list[dict]:
     return places
 
 
+# --- Vague 4 : les sauts de Rocco ------------------------------------------------------------------------------
+
+#: ⚠️ LES SAUTS (vague 4) : vingt sauts au volant, à découvrir — les huit rampes que la ville a déjà (`ville["rampes"]`,
+#: celles du Grand Saut et des missions) et DOUZE TREMPLINS de plus, en contreplaqué, que Rocco a cloués lui-même.
+#: ⚠️ Les tremplins NE SONT PAS DANS LA CARTE (elle n'a plus de marge, et une tuile de plus déplacerait la ville) :
+#: ils voyagent sur `/api/collections`, se PEIGNENT par-dessus le sol (`Collections.dessiner`) et font décoller
+#: comme une rampe (`Collections.estTremplin`, lu par `Vehicules` à côté de `Monde.estRampe`).
+#:
+#: Par district, ses sauts dans l'ordre (le SLUG est le nom : `partie.collections.sauts[slug]`) : les rampes du
+#: district d'abord (en ordre de lecture), puis ses tremplins neufs. Un district a toujours son compte.
+SAUTS_PAR_DISTRICT: dict[str, tuple[str, ...]] = {
+    "faubourg": ("LE SAUT DU DÉPANNEUR", "LE SAUT DE LA RUELLE DU CURÉ", "LE SAUT DES CORDES À LINGE"),
+    "erables": ("LE SAUT DU TERRAIN DE GOLF", "LE SAUT DU NOTAIRE", "LE SAUT DE LA PISCINE CREUSÉE"),
+    "shop": ("LE SAUT DU QUART DE NUIT", "LE SAUT DE LA COUR À SCRAP", "LE SAUT DU CONTREMAÎTRE"),
+    "quais": ("LE SAUT DU HOMARD", "LE SAUT DE LA BOËTTE", "LE SAUT DES GOÉLANDS"),
+    "pointe": ("LE SAUT DU SKATEPARK", "LE SAUT DU PHARE", "LE SAUT DES PHOQUES"),
+    "friches": ("LE SAUT DE LA SCRAP", "LE SAUT DU CHARDON"),
+    "canton": ("LE SAUT DU DRAGON",),
+    "gare": ("LE SAUT DU 19 H 12", "LE SAUT DE L’AIGUILLEUR"),
+}
+
+#: Un saut RÉUSSI : `vol_min_px` de vol au moins (la distance parcourue en l'air — mesuré au banc : une auto lancée
+#: sur les sept tuiles d'élan garanties vole 45 px, une moto ou un 4 roues bien plus), et un
+#: atterrissage PROPRE — pas un mur, pas l'eau, le char entier, `propre_images` images après avoir touché le sol.
+#: `prime` : le premier saut réussi de chaque tremplin ; `paliers` : dix, et les vingt.
+REGLE_SAUTS: dict = {"vol_min_px": 40, "propre_images": 30, "prime": 150, "paliers": {"10": 750, "20": 2500}}
+
+#: Un tremplin neuf : jamais à moins de tant de tuiles d'une rampe ou d'un autre tremplin (deux découvertes).
+ECART_TREMPLINS = 20
+
+
+def _tremplins_candidats(ville: dict, pris: set, repli: int = 0) -> list[tuple[int, int, int, int, int]]:
+    """Où un tremplin tiendrait : `(course, x, y, dx, dy)` — le pied et la lèvre sur un sol où l'on roule (hors
+    d'une voie de circulation et d'un trottoir), l'élan derrière et la réception devant qui roulent aussi
+    (`carte.ELAN_RAMPE`, `carte.RECEPTION_RAMPE`), rien de solide ni de posé sur la piste, loin des chantiers."""
+    sol, voie = ville["sol"], ville["voie"]
+    H = len(sol)
+    decor = {(d["x"], d["y"]) for d in ville.get("decor") or []}
+    decor |= {(q["x"], q["y"]) for q in ville.get("lampes") or [] if isinstance(q, dict) and "x" in q}
+    chantiers = ville.get("chantiers") or []
+    rang_du_train = (ville.get("train") or {}).get("rang")
+    # ⚠️ Ni l'ABORD (la bande de brique entre le trottoir et le lot) ni les planches d'un PONT : un élan le long d'un
+    # trottoir « n'est pas de l'élan, c'est un couloir » (Martin, les rampes d'avant) — vu à la capture, deux fois.
+    ponts = {(p["x"] + i, p["y"] + k) for p in ville.get("ponts") or [] for i in range(p["l"]) for k in range(p["h"])}
+
+    def roule(x, y):
+        # ⚠️ Ni sur la voie du train (ses rails se peignent sur l'herbe, et le train passe), ni au bord de la carte ni
+        # dans son coin nord-ouest (la mini-carte) : les mêmes règles que les bebelles.
+        if rang_du_train is not None and abs(y - rang_du_train) <= VOIE_DU_TRAIN:
+            return False
+        if not (BORD_BEBELLE + 1 <= y < H - BORD_BEBELLE and BORD_BEBELLE <= x < len(sol[y]) - BORD_BEBELLE) \
+                or (x < COIN_BEBELLE and y < COIN_BEBELLE):
+            return False
+        return carte.solidite(sol[y][x]) == 0 and (x, y) not in decor and not carte.LEGENDE.get(sol[y][x], {}).get("rampe")
+
+    def vite(x, y):
+        # ⚠️ Le pied, la lèvre et l'ÉLAN sur un sol où l'on prend de la vitesse : l'asphalte, le stationnement, le
+        # quai. Pas la terre (l'herbe, la friche, le sable, l'allée de pierre : un char y perd son allure —
+        # mesuré au banc, une auto plafonne à 2,2 px/image, sous les 2,7 qu'il faut pour décoller), ni la ruelle (ses
+        # poubelles naissent au démarrage : trois tremplins sur douze y butaient).
+        f = carte.LEGENDE.get(sol[y][x], {}) if roule(x, y) else {}
+        # `repli` 1 : les ruelles aussi ; 2 : la terre aussi — un saut qui se prend en 4 ROUES (plein régime sur la
+        # terre, `vehicules.quatre_roues` ; les Friches en ont trois).
+        if not f:
+            return False
+        if (x, y) in ponts:
+            return False
+        return bool(f.get("route") or sol[y][x] == "Q" or (repli >= 1 and f.get("ruelle"))
+                    or (repli >= 2 and f.get("terre")))
+
+    def cote(x, y):
+        # Le bord de la piste : ni un décor ni un mur (une allée d'une tuile entre deux toits arrêtait le char).
+        return 0 <= y < H and 0 <= x < len(sol[y]) and (x, y) not in decor and carte.solidite(sol[y][x]) == 0
+
+    def pose(x, y):
+        return (vite(x, y) and voie[y][x] == "." and not carte.LEGENDE[sol[y][x]].get("trottoir")
+                and (x, y) not in pris and not any(frenesies._dans(c, x, y, 2) for c in chantiers))
+
+    out = []
+    for y in range(H):
+        for x in range(len(sol[y])):
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                if not (pose(x, y) and pose(x + dx, y + dy)):
+                    continue
+                # ⚠️ Et une piste LARGE : un char fait une tuile de large, le décor de la rangée d'à côté (une poubelle, un
+                # lampadaire, une caisse du quai) ou un toit d'à côté l'arrêtait net — six tremplins sur douze, vu au banc.
+                if any(not cote(x + dx * k + dy * c, y + dy * k + dx * c)
+                       for k in range(-carte.ELAN_RAMPE, carte.RECEPTION_RAMPE + 2) for c in (-1, 1)):
+                    continue
+                elan = next((k for k in range(1, carte.ELAN_RAMPE + 1) if not vite(x - dx * k, y - dy * k)), None)
+                if elan is not None:
+                    continue
+                rec = next((k for k in range(2, carte.RECEPTION_RAMPE + 3) if not roule(x + dx * k, y + dy * k)), None)
+                if rec is not None:
+                    continue
+                if any(any(frenesies._dans(c, x + dx * k, y + dy * k, 1) for c in chantiers)
+                       for k in range(-carte.ELAN_RAMPE, carte.RECEPTION_RAMPE + 2)):
+                    continue
+                out.append((0, x, y, dx, dy))
+    return out
+
+
+def poser_sauts(ville: dict, trouvailles: list[tuple[int, int]]) -> list[dict]:
+    """Les vingt sauts, sur la ville finie, sans un dé : dans chaque district, ses rampes (ordre de lecture), puis
+    ses tremplins neufs — chacun le plus loin possible des rampes et des tremplins déjà là (jamais à moins de
+    `ECART_TREMPLINS`), l'égalité en ordre de lecture. Loin des trouvailles (`trouvailles`) : rien sur une carte.
+    Un district sans asphalte libre prend ses ruelles, puis sa terre (les Friches : un saut en 4 roues), EN DERNIER."""
+    zones = ville.get("zones") or []
+    pris = frenesies._prises(ville) | {(x + dx, y + dy) for x, y in trouvailles for dx in range(-3, 4) for dy in range(-3, 4)}
+    candidats = {0: _tremplins_candidats(ville, pris)}
+    rampes = sorted(ville.get("rampes") or [], key=lambda r: (r["y"], r["x"]))
+    posees = [(r["x"], r["y"]) for r in rampes]
+    out: list[dict] = []
+    for district, noms in SAUTS_PAR_DISTRICT.items():
+        d = next((z for z in zones if z.get("slug") == district and not z.get("gang")), None)
+        if not d:
+            continue
+        ici = [r for r in rampes if frenesies._dans(d, r["x"], r["y"])][:len(noms)]
+        places = [{"x": r["x"], "y": r["y"], "dx": r["dx"], "dy": r["dy"], "rampe": True} for r in ici]
+        for repli in (0, 1, 2):
+            if len(places) >= len(noms):
+                break
+            if repli not in candidats:
+                candidats[repli] = _tremplins_candidats(ville, pris, repli)
+            dans = [c for c in candidats[repli]
+                    if frenesies._dans(d, c[1], c[2]) and frenesies._dans(d, c[1] + c[3], c[2] + c[4])]
+            while len(places) < len(noms):
+                meilleur, cle = None, None
+                for _, x, y, dx, dy in dans:
+                    loin = min((max(abs(x - a), abs(y - b)) for a, b in posees), default=999)
+                    if loin < ECART_TREMPLINS:
+                        continue
+                    k = (min(loin, 60), -y, -x)
+                    if cle is None or k > cle:
+                        meilleur, cle = (x, y, dx, dy), k
+                if meilleur is None:
+                    break
+                x, y, dx, dy = meilleur
+                places.append({"x": x, "y": y, "dx": dx, "dy": dy, "rampe": False, **({"quatre_roues": True} if repli == 2 else {})})
+                posees.append((x, y))
+        for i, (nom, p) in enumerate(zip(noms, places)):
+            out.append({"slug": f"{district}_{i + 1}", "nom": nom, "district": district, **p})
+    return out
+
+
 def poser(ville: dict) -> dict:
     """Les places des cartes de hockey, sur la ville FINIE. ⚠️ Aucun dé, rien de posé dans une autre liste :
     la ville reste la même, et une carte dont le district manque (la ville d'avant la bande nord) ne se pose
@@ -507,7 +652,10 @@ def poser(ville: dict) -> dict:
             places.append({"numero": c["numero"], "x": x, "y": y})
             deja.append((x, y))
     # Les bebelles de la ville, APRÈS les cartes (elles s'en tiennent loin) : les cartes ne bougent pas d'une tuile.
-    return {"cartes": places, "bebelles": poser_bebelles(ville, places)}
+    bebelles = poser_bebelles(ville, places)
+    # Les sauts, APRÈS les bebelles : les cartes et les bebelles ne bougent pas d'une tuile.
+    trouvailles = [(p["x"], p["y"]) for p in places + bebelles]
+    return {"cartes": places, "bebelles": bebelles, "sauts": poser_sauts(ville, trouvailles)}
 
 
 def exporter(places: dict | None, sons: dict | None = None) -> dict:
@@ -525,6 +673,8 @@ def exporter(places: dict | None, sons: dict | None = None) -> dict:
                        "liste": cartes},
             "regle": {**REGLE, "paliers": dict(REGLE["paliers"])},
             "bebelles": _exporter_bebelles((places or {}).get("bebelles", [])),
+            "sauts": {"titre": "SAUTS", "liste": [dict(p) for p in (places or {}).get("sauts", [])],
+                      "regle": {**REGLE_SAUTS, "paliers": dict(REGLE_SAUTS["paliers"])}},
             # Les sons des cartes (`audio.echantillons_a_part`) : hors des définitions, remis au paquet à l'arrivée.
             "sons": sons or {"lieu": "collections", "echantillons": []}}
 

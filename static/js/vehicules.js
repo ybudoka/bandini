@@ -1230,7 +1230,10 @@ const Vehicules = (function () {
     // deduit de la hauteur minimale visible. L'ancien 1,5 etait ecrit ici a la
     // main : un velo a 2 px/image le passait et « sautait » de deux pixels —
     // moins que l'epaisseur de son ombre.
-    if (v.z === 0 && Math.abs(v.vitesse) >= B.defs.conduite.saut_vitesse_min && Monde.estRampe(tx, ty)) {
+    // ⚠️ LES TREMPLINS DE ROCCO (des choses à collectionner, vague 4) ne sont pas dans la carte : `Collections` les
+    // connaît (ils voyagent sur `/api/collections`), et ils font décoller comme une rampe.
+    if (v.z === 0 && Math.abs(v.vitesse) >= B.defs.conduite.saut_vitesse_min
+        && (Monde.estRampe(tx, ty) || (typeof Collections !== 'undefined' && Collections.estTremplin(tx, ty)))) {
       v.vz = Math.abs(v.vitesse) * ph.rampe_impulsion;
     }
   }

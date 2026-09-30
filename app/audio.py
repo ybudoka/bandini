@@ -241,6 +241,11 @@ CATALOGUE: list[Echantillon] = [
        prompt="a lively Quebec folk reel flourish: a fiddle playing a fast bright run with foot tapping "
               "podorythmie and a few spoons, ending on a strong final note, kitchen party, the fiddle alone with no music "
               "underneath, no singing, no speech"),
+    # LES SAUTS DE ROCCO (vague 4) : un saut réussi — la bande de chums sur le bord du terrain qui fait « ohhh ! » et
+    # applaudit, deux secondes. Pas de mots : des cris.
+    _e("saut_reussi", "Saut réussi", duree_s=2.0, volume=0.5, influence=0.55,
+       prompt="a small group of young friends outdoors watching a car jump, a rising impressed ohhh then short "
+              "whoops, whistles and clapping, close, dry, no words, no music"),
     _e("etoile", "Niveau de recherche", duree_s=1.2, volume=0.79, influence=0.75,
        prompt="a police radio alert chirp followed by a burst of squelch "
               "static, tense and short, no voices, no music"),
@@ -1640,7 +1645,7 @@ LIEUX: dict[str, list[str]] = {
     "derapage": ["crissement"],
     # Les cartes de hockey (des choses à collectionner, vague 1) : chargées quand une carte qui manque est à moins
     # d'un écran (`Collections.maj`). Le premier écran n'avait plus que six Ko de marge.
-    "collections": ["carte_hockey", "orgue_arena", "bebelle", "reel_bebelles"],
+    "collections": ["carte_hockey", "orgue_arena", "bebelle", "reel_bebelles", "saut_reussi"],
     # L'Halloween (les saisons, lot 3) : un SOIR — ils se chargent le 31 (`Halloween.maj`).
     "halloween": ["rire_sorciere", "porte_grince", "souffle_fantome"],
     "casino": ["casino_salle", "bras_machine", "gain_machine", "jackpot",

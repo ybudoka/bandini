@@ -243,7 +243,7 @@ la carte — tout passe par `/api/collections`.
   RANG ») : l'indice, et c'est tout. Le BILAN compte « BEBELLES n / 12 ».
 - **Les triches** : TRICHES > ALLER > COLLECTIONS a une section BEBELLES (celles d'un bloc passent son fondu d'abord),
   LE JOUEUR > TOUTES LES BEBELLES.
-- **Les sons** (ElevenLabs, 150 crédits environ) : `bebelle` (un tintement de verre et de tôle, trois notes de boîte à
+- **Les sons** (ElevenLabs, une cinquantaine de crédits) : `bebelle` (un tintement de verre et de tôle, trois notes de boîte à
   musique, 1,4 s) et `reel_bebelles` (un violon et la podorythmie, 2,8 s) — ⚠️ **à écouter par Martin**. Sons du lieu
   `collections` (chargés à un écran d'une trouvaille). ⚠️ **Le plafond des sons de lieu (1,35 Mo) n'avait que 4,7 Ko
   de marge** : les deux sont à 64 kbit/s, ET `jackpot` et `roulette_bille` (le casino, à ~97 kbit/s) ont été
@@ -258,3 +258,51 @@ la carte — tout passe par `/api/collections`.
   — dont trois qui ne mordaient pas au premier passage (le coin de la mini-carte, couvert sur la graine livrée par la
   voie du train ; les arbres du bloc ; la guérite de l'aéroport) : un pré synthétique, un faux rang coupé par une
   rangée de sapins, et le cendrier jugé DANS la clôture les séparent.
+
+### Vague 4 — les sauts de Rocco (✅ livrée le 30 sept. 2026)
+
+- **Vingt sauts** (`collectionner.SAUTS_PAR_DISTRICT`, `poser_sauts`) : les **huit rampes** de la ville (celles du Grand
+  Saut et des missions) et **douze tremplins neufs** en contreplaqué, aux chevrons rouges peints à la main. Par
+  district, son compte (trois au Faubourg, aux Érables, à la Shop, aux Quais et à La Pointe, deux aux Friches et à la
+  Gare, un au Petit-Canton), ses rampes d'abord, puis ses tremplins ; un SLUG par saut (`erables_2`), un nom (« LE SAUT
+  DU NOTAIRE », « LE SAUT DU 19 H 12 »…). Le numéro du saut dans son district est son nom : `partie.collections.sauts`.
+- ⚠️ **Les tremplins ne sont PAS dans la carte** : ils voyagent sur `/api/collections`, se **peignent** par-dessus le
+  sol (`Collections.dessiner`, aucune entité) et font **décoller comme une rampe** — `Collections.estTremplin`, lu par
+  `Vehicules.avancer` à côté de `Monde.estRampe` (en ville seulement).
+- **Où, sans un dé** : un pied et une lèvre hors d'une voie de circulation et d'un trottoir, **sept tuiles d'élan**
+  derrière et **dix de réception** devant (`carte.ELAN_RAMPE`, `carte.RECEPTION_RAMPE`), une piste **large** (ni décor ni
+  mur sur ses deux bords), jamais sur la voie du train, au bord de la carte ni dans son coin nord-ouest ; le plus loin
+  possible des rampes et des autres tremplins, jamais à moins de vingt tuiles. L'élan sur un sol **rapide** :
+  l'asphalte, le stationnement, le quai — pas l'abord ni les planches d'un pont (« un couloir, pas un élan », la
+  leçon des rampes d'avant), pas la terre (mesuré au banc : une auto plafonne à 2,2 px/image sur l'herbe, sous les
+  2,7 qu'il faut pour décoller). Un district qui n'en a pas prend ses ruelles, puis sa terre : **un saut en 4 roues**
+  (plein régime sur la terre ; les Friches en ont trois) — le carnet le dit (« EN 4 ROUES »). Sur la graine livrée :
+  **sept tremplins sur douze se prennent en 4 roues** (les deux des Friches, de La Pointe, de la Gare, un des Érables).
+  ⚠️ À Martin de dire si c'est trop.
+- **Un saut réussi** (`Collections.majSauts`) : le char du joueur décolle d'une rampe ou d'un tremplin, vole au moins
+  **40 px** (la distance parcourue en l'air — une auto lancée sur ses sept tuiles d'élan vole 45 px, une moto ou un 4 roues
+  bien plus), et **atterrit propre** : trente images après avoir touché le sol, pas un choc, pas l'eau, le char entier.
+  Le premier : **150 $**, le son `saut_reussi` (la bande de chums qui fait « ohhh ! » et applaudit), « SAUT 3/20 — LE SAUT
+  DU PHARE : 84 PX · 97 KM/H », une ligne au carnet ; aux paliers (dix, vingt) : 750 $ et 2 500 $, l'orgue et le
+  bandeau. Ensuite, un **record** se note sans repayer. Raté, ça se dit : « TROP COURT (40) », « ATTERRISSAGE RATÉ ».
+- **Le carnet** : LE CARNET > SAUTS (« n / 20 »), par district — ceux qu'on a réussis avec leur record (vol et vitesse
+  au décollage), les autres « ??? ». Le BILAN compte « SAUTS n / 20 ». **Triches** : ALLER > COLLECTIONS a une section
+  SAUTS (on se pose au bout de l'élan) ; LE JOUEUR > TOUS LES SAUTS.
+- **Le son** (ElevenLabs ; les trois bruitages des vagues 3 et 4 ont coûté **70 crédits** en tout, 69 190 restants) : `saut_reussi`, 2 s, à 64 kbit/s — ⚠️ à écouter par Martin. ⚠️ **Les sons de
+  lieu** : pour lui faire de la place, `tonnerre-1` et `tonnerre-2` (la pluie, ~98 kbit/s) sont recompressés à 64 kbit/s
+  (40 482 → 27 002 et 42 363 → 28 256) : les lieux à 1 326 510 sur 1 350 000.
+- **Le poids** : `/api/collections` à 16 987 bruts / 5 964 gzip (plafond 18 000 / 7 000) ; rien dans les définitions ni
+  la carte (le juge le vérifie : aucun tremplin n'est une rampe de la carte).
+- **Captures** (`captures/collections/`) : `saut-tremplin-quai.png`, `saut-tremplin-hiver.png`,
+  `saut-tremplin-4-roues.png` (un 4 roues en l'air à côté), `saut-tremplin-ruelle.png`, `carnet-sauts.png`.
+- **Juges** : `tests/test_sauts.py` (sept) et `tests/test_sauts_js.py` (huit, dont **chacun des vingt se prend** depuis
+  son élan, au banc — c'est ce juge qui a trouvé les six premiers tremplins injouables : un toit d'à côté, une poubelle,
+  une caisse du quai) ; vingt mutations vues rouges, dont cinq qui ne mordaient pas au premier passage (deux
+  règles doublées retirées du code, un terrain synthétique pour l'écart, une sauvegarde abîmée, un don en double).
+
+### Ce qui reste
+
+- **Les enseignes qu'on dévisse la nuit** (la troisième famille de la fiche d'origine) : à trancher par Martin — elles
+  doublent l'affiche arrachée du décor qui répond.
+- **Le marché aux puces du dimanche** ([sa fiche](le-marche-aux-puces-du-dimanche.md#fiche)) : il vendra les cartes qui
+  manquent par `Collections.donner(numero, 'puces')` et les meubles `ou: puces`.

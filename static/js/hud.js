@@ -1614,6 +1614,7 @@ const Hud = (function () {
       // Les collections (`Collections`) : l'album de la Ligue. « ? » tant que son catalogue n'est pas arrivé.
       ['CARTES DE HOCKEY', Collections.nombre() + ' / ' + (Collections.total() || '?')],
       ['BEBELLES', Collections.nombreBebelles() + ' / ' + (Collections.totalBebelles() || '?')],
+      ['SAUTS', Collections.nombreSauts() + ' / ' + (Collections.totalSauts() || '?')],
       // M13 : ce que dit le générique, et ce qu'il reste à faire après lui — la partie continue.
       ['MISSIONS', Object.keys(p.missionsFaites || {}).length + ' / ' + (B.defs.missions || []).filter(function (m) { return m.phase !== 2; }).length],
       ['DETTE DE ROCCO', p.dette > 0 ? Math.round(p.dette) + ' $' : 'RÉGLÉE'],
@@ -1838,6 +1839,9 @@ const Hud = (function () {
       // LES BEBELLES (vague 3) : l'étagère, bebelle par bebelle — le LIEU de celles qui manquent est l'indice.
       { libelle: 'BEBELLES', cle: 'bebelles', detail: Collections.nombreBebelles() + ' / ' + (Collections.totalBebelles() || '?'),
         faire: function () { ouvrirMenu(menuCarnetBebelles()); return false; } },
+      // LES SAUTS (vague 4) : les vingt, leur record ; le district de ceux qui manquent.
+      { libelle: 'SAUTS', cle: 'sauts', detail: Collections.nombreSauts() + ' / ' + (Collections.totalSauts() || '?'),
+        faire: function () { ouvrirMenu(menuCarnetSauts()); return false; } },
       // ⚠️ LA DETTE SE LIT ICI, sinon on l'oublie entre deux appels. C'est la
       // même règle que le carnet du poste : une pression qu'on subit sans
       // jamais pouvoir la regarder n'est pas une pression, c'est une
@@ -1973,6 +1977,27 @@ const Hud = (function () {
     items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet('bebelles')); return false; } });
     return surLaLigne(depuis, { titre: 'BEBELLES', sur: Collections.nombreBebelles() + ' / ' + (Collections.totalBebelles() || '?'),
              largeur: 320, hauteur: VH - 30, items: items, retour: function () { ouvrirMenu(menuCarnet('bebelles')); } });
+  }
+
+  /** SAUTS : les vingt, district par district — ceux qu'on a réussis par leur nom et leur record (le vol, la vitesse
+      au décollage), les autres « ??? » et leur district : c'est l'indice. */
+  function menuCarnetSauts(depuis) {
+    const items = [];
+    if (!Collections.totalSauts()) items.push(ligne('LE CARNET DES SAUTS N’EST PAS ENCORE ARRIVÉ'));
+    let district = null;
+    for (const q of Collections.sauts()) {
+      if (q.district !== district) {
+        district = q.district;
+        const z = (Monde.carte.ville || Monde.carte).def.zones.find(function (w) { return w.slug === district && !w.gang; });
+        items.push(entete(z ? z.nom.toUpperCase().replace("'", '’') : district.toUpperCase()));
+      }
+      const a = Collections.famille('sauts')[q.slug];
+      // Un tremplin dans la terre se prend en 4 roues (une auto n'y prend pas sa vitesse) : le carnet le dit.
+      items.push(a ? ligne(q.nom, a.px + ' PX · ' + a.kmh + ' KM/H') : ligne('???', q.quatre_roues ? 'EN 4 ROUES' : ''));
+    }
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet('sauts')); return false; } });
+    return surLaLigne(depuis, { titre: 'LES SAUTS DE ROCCO', sur: Collections.nombreSauts() + ' / ' + (Collections.totalSauts() || '?'),
+             largeur: 320, hauteur: VH - 30, items: items, retour: function () { ouvrirMenu(menuCarnet('sauts')); } });
   }
 
   /** Une bebelle : ce qu'en dit le carnet, où et quand on l'a trouvée — et elle, en grand. */
@@ -2563,10 +2588,17 @@ const Hud = (function () {
     }
     if (!items.length) items.push(ligne(Collections.total() ? 'TOUTES TROUVÉES' : 'L’ALBUM N’EST PAS ENCORE ARRIVÉ'));
     // Les bebelles qui manquent : celles d'un bloc (le rang, le ciné-parc) passent d'abord le fondu du bloc.
+    // Les sauts qui manquent : on se pose au bout de l'élan, face au tremplin (à pied — le char, on le trouve).
+    const aSauter = Collections.sauts().filter(function (q) { return !Collections.sautReussi(q.slug); });
     const manquent = Collections.bebelles().filter(function (b) { return typeof b.x === 'number' && !Collections.bebelleTrouvee(b.slug); });
     if (manquent.length) items.push(entete('BEBELLES'));
     for (const b of manquent) {
       items.push({ libelle: b.nom, detail: b.indice || '', bebelle: b.slug, faire: function () { return allerALaBebelle(b); } });
+    }
+    if (aSauter.length) items.push(entete('SAUTS'));
+    for (const q of aSauter) {
+      items.push({ libelle: q.nom, detail: q.rampe ? 'RAMPE' : 'TREMPLIN', saut: q.slug,
+                   faire: function () { return allerALaCarte({ x: q.x - q.dx * 5, y: q.y - q.dy * 5 }, q.nom); } });
     }
     items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuDebug()); return false; } });
     return { titre: 'COLLECTIONS', largeur: 320, hauteur: VH - 30, items: items, retour: function () { ouvrirMenu(menuDebug()); } };
@@ -2619,6 +2651,15 @@ const Hud = (function () {
     const n = Collections.toutesLesBebelles();
     Son.SFX.argent();
     message(Collections.totalBebelles() ? 'TOUTES LES BEBELLES (+' + n + ')' : 'L’ÉTAGÈRE N’EST PAS ENCORE ARRIVÉE');
+    return false;
+  }
+
+  /** TOUS LES SAUTS (TRICHES > LE JOUEUR) : le carnet des sauts plein, en silence. */
+  function tousLesSauts() {
+    if (!B.partie) { message('PAS DE PARTIE'); return false; }
+    const n = Collections.tousLesSauts();
+    Son.SFX.argent();
+    message(Collections.totalSauts() ? 'TOUS LES SAUTS (+' + n + ')' : 'LE CARNET DES SAUTS N’EST PAS ENCORE ARRIVÉ');
     return false;
   }
 
@@ -2702,6 +2743,7 @@ const Hud = (function () {
       { libelle: 'TOUTES LES TECHNIQUES', faire: function () { toutesLesTechniques(); return false; } },
       { libelle: 'TOUTES LES CARTES', faire: function () { toutesLesCartes(); return false; } },
       { libelle: 'TOUTES LES BEBELLES', faire: function () { toutesLesBebelles(); return false; } },
+      { libelle: 'TOUS LES SAUTS', faire: function () { tousLesSauts(); return false; } },
       // Les bascules : elles tiennent jusqu'a ce qu'on les eteigne, et se sauvent avec la partie.
       entete('TOUJOURS'),
       bascule('invincible', 'INVINCIBLE'),
@@ -4403,7 +4445,7 @@ const Hud = (function () {
   return {
     nomIci, dessinerLaVilleDuBoss, init, voile, etat, progression, partDesScripts, finirChargement, message, prime, majPrime, montantDeLaPrime, PRIME, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, toutesLesTechniques, glyphesDOnglets, menuSautMissions, menuSautDefis, menuChezUnDonneur, menuEndroitsCles, menuJukebox, pointDuDefi, menuCarnet,
     ouvrirOnglet, toucherMenu, onglets: function () { return ongletsVisibles().map(function (o) { return o.slug; }); },
-    ciblesDuMenu: function () { return cibles.slice(); }, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuCarnetCollections, menuCarnetCarte, menuCarnetBebelles, menuCarnetBebelle, menuDebugCollections, menuOptions, menuManette, menuManetteBoutons, menuBilan,
+    ciblesDuMenu: function () { return cibles.slice(); }, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuCarnetCollections, menuCarnetCarte, menuCarnetBebelles, menuCarnetBebelle, menuCarnetSauts, menuDebugCollections, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     menuCommandes, ouvrirCommandes, majAideDuTitre, lignesDAide, glypheDAction, dessinerGlyphe, largeurGlyphe,
     menuParties, menuEffacer, menuCopier, tempsDeJeu, quand,
     legendeDeLaCarte, legendeDuZonage, lieuxSurLaCarte, couleurDeLieu, cibleDuBoulot, PULSE_JOUEUR, BATTEMENT_CIBLE, CALQUE_ALPHA,
