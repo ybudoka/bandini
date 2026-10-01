@@ -1715,7 +1715,7 @@ const Histoire = (function () {
                          avant: Object.keys(objets).filter(function (k) { return objets[k] > 0; }) };
     B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0,
                   vol: 0, boulotsDepart: 0, suit: null, protege: null, suivi: null };
-    if (!enSilence) { Hud.message(m.titre.toUpperCase(), 180); Son.SFX.mission(); }
+    if (!enSilence) { Hud.message(m.titre.toUpperCase(), 180); armerLeCuivre(); }
     B.mission.auDepart = true;
     avancer(enSilence);
     return true;
@@ -1726,7 +1726,7 @@ const Histoire = (function () {
     const o = objectif();
     if (!B.partie.mission || B.partie.mission.slug !== m.slug) return;
     Hud.message(m.titre.toUpperCase(), 180);
-    Son.SFX.mission();
+    armerLeCuivre();
     if (o) Hud.message(texteDObjectif(o), 200);
     // ⚠️ La réplique PENDANT du premier objectif : `avancer(true)` ne l'arme pas (il
     // se tait sous l'intro) — elle attendait ici, et ne se disait jamais (m6, m54, e02…).
@@ -1734,6 +1734,30 @@ const Histoire = (function () {
       B.mission.pendant = B.partie.mission.etape;
     }
     faireArriver(m, o);
+  }
+
+  //: LE CUIVRE DU DÉPART (`Son.SFX.mission`) ATTEND QUE PLUS PERSONNE NE PARLE (Martin, 1er oct. 2026 : « le son
+  //: soit à la fin de tous les audios »). Il tombait à la fin de l'intro, et la réplique `pendant` du premier
+  //: objectif — dite à l'image suivante — ou la voix de la dernière réplique passaient PAR-DESSUS. Armé ici, il
+  //: sonne dans `maj` (`majCuivre`) quand il n'y a plus ni scène, ni réplique à l'écran ou en attente, ni voix.
+  //: ⚠️ `CUIVRE_MAX_IMAGES` : une voix qui ne finit jamais (l'audio suspendu) ne le retient pas pour toujours.
+  const CUIVRE_MAX_IMAGES = 900;
+
+  function armerLeCuivre() { if (B.mission) B.mission.cuivre = B.t + 1; }
+
+  /** Sonne le cuivre armé, si tout le monde s'est tu. ⚠️ Appelé dans `maj` APRÈS la réplique `pendant` en attente :
+      d'ici, ni scène (le jeu ne passe pas dans `maj`), ni réplique à l'écran (`majCinema` en sort), ni `pendant`
+      (dite juste au-dessus) — il ne reste que la voix à attendre. */
+  function majCuivre() {
+    const bm = B.mission;
+    if (!bm || !bm.cuivre) return;
+    // Une voix qui joue, ou qui se charge encore — si elle a un mp3 (`Voix.histoire`) : une réplique sans fichier
+    // reste « attendue » pour toujours, et ne doit pas retenir le cuivre.
+    const v = Son.Voix, a = v && v.attendue;
+    const parle = v && (v.enCours || (a && v.histoire().some(function (h) { return h.slug === a.slug; })));
+    if (parle && B.t + 1 - bm.cuivre < CUIVRE_MAX_IMAGES) return;
+    bm.cuivre = 0;
+    Son.SFX.mission();
   }
 
   /** Ce que l'intro a fait attendre : les hommes d'un `tuer` qui `arrivent`
@@ -4350,6 +4374,7 @@ const Histoire = (function () {
         dire(courante(), 'pendant', null, function (l) { return l.objectif === etape; });
         return;
       }
+      majCuivre();                               // le cuivre du départ, quand tout le monde s'est tu
       // La frontiere (`frontiere`) se compte meme dans une piece : c'est sa porte qui compte.
       SurPlace.maj(courante());
       if (!B.partie.mission) return;             // la frontiere vient de la faire rater
@@ -4363,7 +4388,7 @@ const Histoire = (function () {
 
   return { texteDObjectif, poserLaCachette, exigeTenu, tenu, porteLaTenue, faite, disponibles, disponibleDe, estParti, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
            donneur, creerDonneurs, majSaisonniers, absentLHiver, poserDonneur, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
-           parler, dire, suivante, finir, commencer, demarrer, avancer, objectif, courante, reussir, echouer, evenement,
+           parler, dire, suivante, finir, commencer, demarrer, majCuivre, avancer, objectif, courante, reussir, echouer, evenement,
            mission, accorder, ouEstLeJoueurEnVille, commandesDuPoursuivant, arriverApres,
            ouverture, passerOuverture, fichiersDeLOuverture, direLignes, majCinema, resoudre,
            lieuDuPersonnage, pieceDessous, ouTrouver, present, calme, jouerOuDire,
