@@ -90,5 +90,6 @@ def test_la_fiche_du_moral_se_tient():
     assert 0 < m["blesse_part"] < m["deroute_part"] <= 1
     assert 0 < m["boite_allure"] < 1, "il boite : plus lent qu'un fuyard sain"
     assert m["camp_px"] >= 120
+    assert m["camp_images"] >= 120, "un camp qu'on oublie avant qu'il ait perdu quelqu'un"
     assert m["blesse_mots"] and m["deroute_mots"]
     assert villes.assembler()["rixes"]["moral"]["deroute_mots"] == list(m["deroute_mots"])

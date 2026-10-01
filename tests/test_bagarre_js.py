@@ -518,7 +518,7 @@ def test_une_rixe_armee_ne_se_retourne_pas_contre_le_joueur(banc):
 
 
 def test_dans_une_rixe_le_camp_decime_se_sauve(banc):
-    """Vague 3 : deux des trois hommes d'un camp à terre, le troisième se sauve — et la rixe ne le reprend pas."""
+    """Vague 3 : deux des trois hommes d'un camp à terre, le troisième se sauve — et personne ne lui court après."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(19);
@@ -533,15 +533,18 @@ def test_dans_une_rixe_le_camp_decime_se_sauve(banc):
         L.Entites.blesser(camp[1], 9999, autre, { assomme: true });
         const dernier = camp[2];
         dernier.vie = dernier.vieMax;
-        let fuite = -1, repris = 0;
-        for (let i = 0; i < 120; i++) {
+        dernier.vie = dernier.vieMax = 1000;      // il ne boite pas : on mesure la poursuite, pas la course
+        let fuite = -1, poursuivi = 0;
+        for (let i = 0; i < 300; i++) {
           o.frame(1);
           if (fuite < 0 && dernier.etat === 'fuit') fuite = i;
-          if (fuite >= 0 && dernier.etat === 'bagarre') repris++;
+          if (fuite >= 0 && rixeurs(L).some(function (e) { return e.vivant && e.rival === dernier; })) poursuivi++;
         }
-        return { trouve: true, fuite: fuite, repris: repris, n: camp.length };
+        return { trouve: true, fuite: fuite, poursuivi: poursuivi, n: camp.length, vivant: dernier.vivant };
     }""" % ALLUMER)
     assert r["trouve"], "aucune frontière n'a ses deux trottoirs"
     assert r["n"] == 3, r
     assert r["fuite"] >= 0, "son camp décimé, il se bat encore (%s)" % r
-    assert r["repris"] == 0, "il est retourné à la rixe (%s)" % r
+    # ⚠️ Le vainqueur gardait le fuyard pour rival : il le pourchassait 888 images sur 900, et un blessé qui boite
+    # était rattrapé et tué (la relecture de la vague 3). La rixe FINIT.
+    assert r["poursuivi"] <= 2, "on pourchasse celui qui s'est sauvé (%s)" % r

@@ -675,9 +675,33 @@ def test_l_arme_lachee_garde_ce_qui_reste_dans_le_chargeur(banc):
         %s
         const d = fusillade(L, 'boulonneux', 'mitraillette', 90);
         for (let i = 0; i < 80; i++) { tenirLaCible(d); o.frame(1); }
-        d.t.rixe.balles = 5;
+        d.t.rixe.balles = 5; d.t.ballesDeGang = 5;
         L.Entites.blesser(d.t, 9999, d.m, {});
         const r = L.B.entites.find(function (q) { return q.type === 'ramassage' && q.arme === 'mitraillette'; });
         return { munitions: r ? r.munitions : null };
     }""" % FUSILLADE)
     assert r["munitions"] == 5, r
+
+
+def test_un_vieux_cadavre_ne_met_pas_en_deroute(banc):
+    """⚠️ Un mort garde son `e.rixe` et reste dans la grille : compté dans le camp, il mettait en déroute le premier
+    Cravate frais venu t'attaquer à côté (la relecture de la vague 3 : il fuyait à l'image 0). Seuls comptent ceux
+    du combat EN COURS."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(55);
+        %s
+        const gens = trois(L, 40), j = L.B.joueur;
+        for (let i = 0; i < 30; i++) { tenir(L); o.frame(1); }
+        L.Entites.blesser(gens[0], 9999, j, {});            // il tombe, dans le combat
+        for (let i = 0; i < 60; i++) { tenir(L); o.frame(1); }
+        // Le combat d'il y a longtemps : celui-la n'est plus « vu » depuis bien plus que `camp_images`.
+        gens[0].rixe.vu = L.B.t - L.B.defs.rixes.moral.camp_images - 60;
+        L.Entites.retirer(gens[2]);
+        const c = gens[1];
+        c.rixe = null; c.etat = 'attaque_joueur';
+        let fuit = 0;
+        for (let i = 0; i < 60; i++) { tenir(L); o.frame(1); if (c.etat === 'fuit') fuit++; }
+        return { fuit: fuit };
+    }""" % TROIS)
+    assert r["fuit"] == 0, "un vieux cadavre l'a mis en déroute (%s)" % r

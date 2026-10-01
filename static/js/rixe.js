@@ -113,6 +113,7 @@ const Rixe = (function () {
   /** Une image de combat contre `cible`, a `vitesse` (celle de sa course). Rend vrai si un coup est parti. */
   function maj(e, cible, vitesse) {
     const f = fiche(), r = etat(e, f);
+    r.vu = B.t;          // il est du combat en cours (`enDeroute` : un cadavre, lui, ne l'est plus)
     // Sa cible bouge-t-elle ? Lu a SA POSITION d'une image a l'autre, pas a son `vx` (le joueur, un agent et
     // un passant ne l'ecrivent pas tous au meme moment).
     const bouge = r.cible === cible && Math.hypot(cible.x - r.cx, cible.y - r.cy) > f.bouge_px;
@@ -180,12 +181,14 @@ const Rixe = (function () {
   function tenace(e) { return !!(e.cible || e.allie || e.personnage || e.techniques); }
 
   /** SON CAMP a-t-il perdu `deroute_part` des siens ? Les membres de son gang qui se sont battus (`e.rixe`), a
-      `camp_px` — debout ou a terre, morts compris (`Entites.autour` les garde, pas `pietonsAutour`). */
+      `camp_px` — debout ou a terre, morts compris (`Entites.autour` les garde, pas `pietonsAutour`) — mais du
+      combat EN COURS (`rixe.vu`, a `camp_images`) : un mort garde son `e.rixe` et reste dans la grille, et il
+      mettait en deroute le premier Cravate frais venu t'attaquer a cote. */
   function enDeroute(e) {
     const M = moral();
     let total = 0, aTerre = 0;
     for (const q of Entites.autour(e.x, e.y, M.camp_px, function (c) { return c.type === 'pieton'; })) {
-      if (q.gang !== e.gang || !q.rixe) continue;
+      if (q.gang !== e.gang || !q.rixe || !(B.t - q.rixe.vu <= M.camp_images)) continue;
       total++;
       if (!q.vivant || q.etat === 'assomme') aTerre++;
     }
@@ -314,6 +317,7 @@ const Rixe = (function () {
     if (!(enPlace || colle) || (e.t < r.leve && !colle) || e.t < r.prochain) return false;
     if (!Combat.tirer(e, arme, cible)) return false;
     r.balles--; r.salve++;
+    e.ballesDeGang = r.balles;     // l'arme lachee les garde, meme apres la rixe (`finirLaBagarre` vide `e.rixe`)
     r.prochain = e.t + arme.cadence;
     if (arme.cloche) {
       // ⚠️ Le geste du lanceur est COURT : `tirer` le fige le temps de la cadence (40 images), et il ne se

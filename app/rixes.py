@@ -80,7 +80,9 @@ MORAL: dict = {
     "blesse_part": 0.35,          # sous cette part de sa vie, il est blessé
     "boite_allure": 0.6,          # blessé, il fuit à cette allure-là : il boite
     "deroute_part": 0.5,          # cette part de son camp à terre, les autres se sauvent
-    "camp_px": 240,               # son camp : les membres de son gang qui se sont battus, à cette distance
+    "camp_px": 240,               # son camp : les membres de son gang qui se sont battus, à cette distance…
+    "camp_images": 600,           # … dans le combat EN COURS : vus au combat il y a moins que ça (un vieux cadavre
+                                  #   garde son `e.rixe` et mettait en déroute le premier venu — la relecture)
     "blesse_mots": ["AYOYE!", "J'SAIGNE!", "C'EST ASSEZ!"],
     "deroute_mots": ["ON DÉCRISSE!", "SAUVE QUI PEUT!", "ON S'EN VA, LES GARS!"],
 }

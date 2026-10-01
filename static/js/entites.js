@@ -5289,7 +5289,9 @@ const Entites = (function () {
       // fin des temps ne sont pas une bagarre : c'est un decor qui grince.
       const f = B.defs.pietons.bagarre;
       if (--e.bagarreT <= 0) { finirLaBagarre(e); return; }
-      if (!e.rival || !e.rival.vivant || e.rival.etat === 'assomme'
+      // ⚠️ Un rival qui a QUITTE la rixe (en deroute, il s'est sauve : `bagarre` faux) n'en est plus un : on le
+      // pourchassait 888 images sur 900, et un blesse qui boite etait rattrape et tue (la relecture de la vague 3).
+      if (!e.rival || !e.rival.vivant || e.rival.etat === 'assomme' || !e.rival.bagarre
           || dist2(e.x, e.y, e.rival.x, e.rival.y) > f.rival_px * f.rival_px) {
         e.rival = rivalDe(e, f);
       }
@@ -5855,10 +5857,10 @@ const Entites = (function () {
     // ⚠️ L'ARME DE SON GANG (`Rixe`, vague 2) tombe avec ce qui RESTE dans le chargeur (au moins une balle) — chargeur
     // plein, la mitraillette du marche noir devenait gratuite — et a sa place a l'empreinte : un tirage de plus
     // aurait deplace le hasard de la ville. Les autres armes tombent comme avant.
-    const deGang = e.armeDeGang && e.armeDeGang === e.arme && e.rixe && e.rixe.balles !== undefined;
+    const deGang = e.armeDeGang && e.armeDeGang === e.arme && e.ballesDeGang !== undefined;
     const ecart = deGang ? (hash2(e.id, 0xD20B) % 1000) / 1000 - 0.5 : B.rng() - 0.5;
     creer('ramassage', e.x + ecart * 8, e.y + 4, {
-      r: 4, objet: 'arme', arme: e.arme, munitions: deGang ? Math.max(1, e.rixe.balles) : def.chargeur, t: 0, solide: false,
+      r: 4, objet: 'arme', arme: e.arme, munitions: deGang ? Math.max(1, e.ballesDeGang) : def.chargeur, t: 0, solide: false,
     });
     e.arme = null;
   }
