@@ -112,7 +112,9 @@ OUTILS_TUTORIEL = outils("passer", "etape", "fermer", "faites") + """
     return boite(L);
   }
   // Semer, pour de vrai : on ROULE vers `cible` (un agent qui enquête retrouve un char arrêté et ne le
-  // lâche plus — un joueur, lui, s'en va), jusqu'à ce que les étoiles tombent hors de vue.
+  // lâche plus — un joueur, lui, s'en va), jusqu'à ce que les étoiles tombent hors de vue. ⚠️ `vitesse` 0,6 : le
+  // char avance de 2,5 px à l'image, il ROULE — sous 0,5, un agent à 30 px le croit arrêté et t'en sort (SORS DU
+  // CHAR, puis ARRÊTÉ !) ; la graine 6 le faisait depuis la foire fermée (253f58e3), 1 graine sur 8.
   function semer(L, o, cible) {
     const j = L.B.joueur, v = j.dansVehicule, e0 = L.B.recherche.etoiles;
     const pts = v && cible ? chemin(L, v, cible, true).pts : [];
@@ -122,7 +124,7 @@ OUTILS_TUTORIEL = outils("passer", "etape", "fermer", "faites") + """
         const p = pts[i], d = Math.hypot(p.x - v.x, p.y - v.y);
         if (d < 2) i++;
         else { const s = Math.min(2.5, d); v.x += (p.x - v.x) / d * s; v.y += (p.y - v.y) / d * s;
-               v.angle = Math.atan2(p.y - v.y, p.x - v.x) || v.angle; v.vitesse = 0.3; j.x = v.x; j.y = v.y; }
+               v.angle = Math.atan2(p.y - v.y, p.x - v.x) || v.angle; v.vitesse = 0.6; j.x = v.x; j.y = v.y; }
       }
       o.frame(1); n++; if (L.B.cinema) fermer(L);
     }
