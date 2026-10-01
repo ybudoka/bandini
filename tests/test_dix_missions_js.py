@@ -95,7 +95,7 @@ def test_f05_boulots_autobus_compte_jusqu_a_quatre_puis_la_run_du_phare(banc):
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6']);
         const argent = paiements(L);
         commencer(L, o, 'f05');
-        const v = B.mission.vehicule;
+        const v = B.mission.vehicule, garage = { x: v.x, y: v.y };
         j.x = v.x + 20; j.y = v.y; L.Entites.indexer();
         L.Vehicules.monter(j, v); L.Entites.indexer();
         o.frame(2); fermer(L);
@@ -117,7 +117,10 @@ def test_f05_boulots_autobus_compte_jusqu_a_quatre_puis_la_run_du_phare(banc):
         B.partie.boulots.autobus = 4;
         o.frame(2); fermer(L);
         const etapeBoulots = etape(L), ligne = L.Histoire.ligneObjectif();
-        // La run du phare, à la vitesse d'un autobus (2,4 px par image, sous ses 2,6).
+        // La run du phare, à la vitesse d'un autobus (2,4 px par image, sous ses 2,6), depuis le terminus où on l'a pris.
+        // ⚠️ Pas depuis l'arrêt où le cycle l'a laissé : il se tire au hasard de la ville, et la plage rangée l'hiver
+        // (42ebc02d) l'a posé assez près de La Pointe pour une run de 28 s — le juge mesurait le hasard, pas le phare.
+        v.x = garage.x; v.y = garage.y; v.vitesse = 0; j.x = v.x; j.y = v.y; L.Entites.indexer();
         const phare = L.Histoire.lieu('phare');
         const run = rouler(L, o, v, phare.x, phare.y, 2.4, function () { fermer(L); }, function () { return etape(L) !== 2; });
         const apresRun = etape(L), ligneAttente = L.Histoire.ligneObjectif();
