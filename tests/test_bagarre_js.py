@@ -562,10 +562,16 @@ def test_dans_une_rixe_les_renforts_se_battent_contre_l_autre_gang(banc):
         for (let i = 0; i < 60; i++) o.frame(1);
         const e = rixeurs(L).find(function (q) { return q.vivant && q.etat !== 'assomme'; });
         e.vie = Math.floor(e.vieMax * 0.3);
-        let contre = 0;
-        const renforts = {};
+        let contre = 0, effaces = 0;
+        const renforts = {}, nes = [];
+        // ⚠️ Chaque renfort NE est-il encore la apres son image ? Places a 300-460 px de celui qui appelle — et une
+        // rixe s'allume a 300-500 px du joueur —, ils naissaient hors de la bulle d'oubli et s'effacaient aussitot
+        // (la relecture de la vague 4 : 6 sur 8).
+        const creer = L.Entites.creerPieton;
+        L.Entites.creerPieton = function () { const q = creer.apply(null, arguments); if (q) nes.push(q); return q; };
         for (let i = 0; i < 240; i++) {
           o.frame(1);
+          for (const q of nes.splice(0)) if (q.renfort && L.B.entites.indexOf(q) < 0) effaces++;
           for (const q of L.B.entites) if (q.type === 'pieton' && q.renfort) {
             // Note a la NAISSANCE : un renfort peut ensuite fuir (le moral) et quitter la rixe.
             if (!renforts[q.id]) renforts[q.id] = { bagarre: !!q.bagarre, gang: q.gang };
@@ -575,9 +581,39 @@ def test_dans_une_rixe_les_renforts_se_battent_contre_l_autre_gang(banc):
         const liste = Object.keys(renforts).map(function (k) { return renforts[k]; });
         // Les deux camps peuvent appeler : chacun pour SA rixe.
         const camps = [trouve.ligne.a, trouve.ligne.b];
-        return { trouve: true, n: liste.length, contre: contre,
+        L.Entites.creerPieton = creer;
+        return { trouve: true, n: liste.length, contre: contre, effaces: effaces,
                  tous: liste.every(function (x) { return x.bagarre && camps.indexOf(x.gang) >= 0; }) };
     }""" % ALLUMER)
     assert r["trouve"], "aucune frontière n'a ses deux trottoirs"
     assert r["n"] >= 1, "personne n'est venu (%s)" % r
     assert r["tous"] and r["contre"] == 0, r
+    assert r["effaces"] == 0, "des renforts nés hors de la bulle, effacés aussitôt (%s)" % r
+
+
+
+def test_un_ancien_rixeur_qui_t_attaque_appelle_des_renforts_contre_toi(banc):
+    """⚠️ « Est-ce une rixe ? » se lisait sur `e.bagarre`, qui reste vrai après la rixe : un ancien rixeur qui
+    t'attaquait appelait des renforts qui partaient frapper une Morue qui flânait (la relecture de la vague 4)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(21);
+        %s
+        const trouve = allumer(L);
+        if (!trouve) return { trouve: false };
+        for (let i = 0; i < 30; i++) o.frame(1);
+        for (const e of rixeurs(L)) e.bagarreT = 1;          // la rixe finit
+        o.frame(3);
+        const e = rixeurs(L).find(function (q) { return q.vivant && q.etat !== 'assomme'; });
+        const j = L.B.joueur;
+        e.x = j.x + 40; e.y = j.y; e.etat = 'attaque_joueur'; e.vie = Math.floor(e.vieMax * 0.3);
+        const etats = {};
+        for (let i = 0; i < 120; i++) {
+          j.vie = j.vieMax || 100; o.frame(1);
+          for (const q of L.B.entites) if (q.type === 'pieton' && q.renfort && !etats[q.id]) etats[q.id] = q.etat + (q.bagarre ? '/bagarre' : '');
+        }
+        return { trouve: true, etats: Object.keys(etats).map(function (k) { return etats[k]; }) };
+    }""" % ALLUMER)
+    assert r["trouve"], "aucune frontière n'a ses deux trottoirs"
+    assert r["etats"], "personne n'est venu (%s)" % r
+    assert all(x == "attaque_joueur" for x in r["etats"]), r

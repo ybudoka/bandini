@@ -92,7 +92,9 @@ MORAL: dict = {
 #: HORS DE L'ÉCRAN et accourent. Une fois sur `en_char_sur`, un char aux couleurs du gang est garé à côté d'eux :
 #: ils en descendent. Une rixe où l'on s'attarde peut donc grossir — jusqu'au plafond.
 RENFORTS: dict = {
-    "distance_px": (300, 460),    # hors de l'écran (480 × 270 : à plus de 276 px), dans la bulle d'oubli (520)
+    "distance_px": (300, 460),    # de celui qui appelle : hors de l'écran (480 × 270 : à plus de 276 px)…
+    "joueur_max_px": 460,         # … et du JOUEUR, à moins que ça : la bulle d'oubli est à 520 (une rixe s'allume
+                                  #   à 300-500 px de lui, et ses renforts naissaient hors de la bulle — effacés)
     "max_par_appel": 2,
     "max_par_combat": 4,          # les renforts vivants de son gang à `zone_px`
     "zone_px": 600,

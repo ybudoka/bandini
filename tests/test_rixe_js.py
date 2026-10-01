@@ -783,9 +783,21 @@ def test_ni_un_homme_de_mission_ni_la_paix_du_boss_n_appellent(banc):
         const b = trois(L, 40);
         for (const e of b) e.vie = Math.floor(e.vieMax * 0.3);
         const boss = suivreLesRenforts(L, o, 120, function () { tenir(L); }).length;
-        return { mission: mission, boss: boss };
+        for (const e of b) L.Entites.retirer(e);
+        L.B.partie.boss = null;
+        // ⚠️ PENDANT UNE MISSION (un homme de mission debout, `B.mission.entites`), un membre ORDINAIRE n'appelle pas
+        // non plus : ses renforts changeaient la difficulte des missions reglee au banc (la relecture).
+        const chef = L.Entites.creerPieton(L.B.joueur.x - 200, L.B.joueur.y, L.Entites.archetype('cravate'));
+        chef.cible = true; chef.etat = 'fige';
+        const avant = L.B.mission;
+        L.B.mission = { entites: [chef] };               // une mission en cours : un homme de mission debout
+        const c = trois(L, 40);
+        for (const e of c) e.vie = Math.floor(e.vieMax * 0.3);
+        const pendant = suivreLesRenforts(L, o, 120, function () { tenir(L); }).length;
+        L.B.mission = avant;
+        return { mission: mission, boss: boss, pendant: pendant };
     }""" % (TROIS, APPEL))
-    assert r == {"mission": 0, "boss": 0}, r
+    assert r == {"mission": 0, "boss": 0, "pendant": 0}, r
 
 
 def test_une_fois_sur_trois_ils_arrivent_en_char(banc):

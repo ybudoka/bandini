@@ -197,15 +197,18 @@ const Rixe = (function () {
     return n;
   }
 
-  /** Une place pour les renforts : marchable, HORS DE L'ECRAN, a `distance_px` de lui — cherchee dans l'ordre (seize
-      directions a partir d'un angle a l'empreinte, trois distances), jamais au de. */
+  /** Une place pour les renforts : marchable, HORS DE L'ECRAN, a `distance_px` de lui, et a moins de
+      `joueur_max_px` du JOUEUR (la bulle d'oubli : une rixe s'allume a 300-500 px de lui, et ses renforts naissaient
+      au-dela — effaces a l'image meme). Cherchee dans l'ordre, jamais au de : d'abord la direction du joueur, puis de
+      part et d'autre (seize directions, trois distances). */
   function placeDesRenforts(e) {
-    const R = renforts(), d = R.distance_px;
-    const a0 = (hash2(e.id, 0xA9) % 360) * Math.PI / 180;
+    const R = renforts(), d = R.distance_px, j = B.joueur, jmax2 = R.joueur_max_px * R.joueur_max_px;
+    const a0 = j ? angleVers(e.x, e.y, j.x, j.y) : 0;
     for (let k = 0; k < 16; k++) {
-      const a = a0 + k * Math.PI / 8;
+      const a = a0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * Math.PI / 8;
       for (const r of [d[0], (d[0] + d[1]) / 2, d[1]]) {
         const x = e.x + Math.cos(a) * r, y = e.y + Math.sin(a) * r;
+        if (j && dist2(x, y, j.x, j.y) > jmax2) continue;
         if (Monde.marchablePieton(Math.floor(x / TT), Math.floor(y / TT)) && !Entites.visibleAEcran(x, y, 24)) {
           return { x: Math.floor(x / TT) * TT + 8, y: Math.floor(y / TT) * TT + 8 };
         }
@@ -221,7 +224,12 @@ const Rixe = (function () {
       un allie, un Mante ; jamais dedans, ni pendant la paix du Boss. Rend le nombre de renforts. */
   function appeler(e, cible) {
     const R = renforts();
-    if (e.appele || e.renfort || tenace(e) || B.interieur || (B.partie && B.partie.boss) || !e.gang) return 0;
+    if (e.appele || e.renfort || tenace(e) || e.mission || B.interieur || B.bloc || (B.partie && B.partie.boss) || !e.gang) return 0;
+    // ⚠️ PENDANT UNE MISSION (un homme de mission debout), un membre ordinaire n'appelle pas non plus : ses renforts
+    // changeaient la difficulte des missions reglee au banc (la relecture de la vague 4).
+    if (B.mission && B.mission.entites && B.mission.entites.some(function (q) {
+      return q.cible && q.vivant && q.etat !== 'assomme';
+    })) return 0;
     if (!blesse(e) && !aTerreDansSonCamp(e)) return 0;
     e.appele = true;
     e.appelT = e.t;
@@ -244,7 +252,9 @@ const Rixe = (function () {
         if (v) v.renforts = true;
       }
     }
-    const rixe = !!e.bagarre;
+    // ⚠️ Une RIXE, c'est une cible qui n'est pas le joueur — pas `e.bagarre`, qui reste vrai apres la rixe : un
+    // ancien rixeur qui t'attaquait appelait des renforts qui partaient frapper un passant de l'autre gang.
+    const rixe = cible !== B.joueur;
     for (let i = 0; i < n; i++) {
       const q = Entites.creerPieton(lieu.x + (i - (n - 1) / 2) * 14, lieu.y, arch);
       if (!q) continue;

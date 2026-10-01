@@ -246,8 +246,9 @@ RIXE = """function (L, o) {
         for (const e of gens) {
             if (e.technique) techs[e.technique] = true;
             const now = e.vivant ? e.etat : 'mort';
-            if ((now === 'assomme' || now === 'mort') && etat.get(e) !== now) kos[e.gang] = (kos[e.gang] || 0) + 1;
-            etat.set(e, now);
+            // ⚠️ Des HOMMES au sol, pas des passages : depuis les renforts (vague 4 des bagarres de gangs), la rixe dure,
+            // et un Cravate assomme se releve et retombe — compte deux fois.
+            if ((now === 'assomme' || now === 'mort') && !etat.get(e)) { kos[e.gang] = (kos[e.gang] || 0) + 1; etat.set(e, true); }
         }
     }
     return { ligne: ligne, nes: nes, kos: kos, techs: Object.keys(techs).sort(),

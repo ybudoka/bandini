@@ -101,6 +101,7 @@ def test_la_fiche_des_renforts_se_tient():
     r = rixes.RENFORTS
     dmin, dmax = r["distance_px"]
     assert 276 < dmin < dmax < 520
+    assert dmin < r["joueur_max_px"] < 520, "un renfort né hors de la bulle d'oubli s'efface aussitôt"
     assert 1 <= r["max_par_appel"] <= r["max_par_combat"]
     assert r["en_char_sur"] >= 1 and r["cris"]
     assert villes.assembler()["rixes"]["renforts"]["cris"] == list(r["cris"])
