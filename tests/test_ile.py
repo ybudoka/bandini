@@ -268,7 +268,9 @@ def test_l_ile_ne_deplace_rien_de_la_ville(monkeypatch):
                    # ⚠️ Les COLLECTIONS LISENT la ville finie (30 sept. 2026, vague 4 : les tremplins des sauts évitent le décor, et les
                    # cartes et les bebelles évitent les tremplins) : elles suivent le décor d'une ville à l'autre, sans y rien poser
                    # (`test_collections::test_les_cartes_ne_deplacent_rien`). Comme les éboueurs, on ne les compare pas.
-                   "collections"):
+                   "collections",
+                   # La régate (i07) fait le tour de l'île : sans île, pas de bouées.
+                   "regate"):
             continue
         assert avec[cle] == sans[cle], f"« {cle} » a bouge"
 

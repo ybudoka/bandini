@@ -142,7 +142,8 @@ def test_les_frenesies_ne_deplacent_rien(monkeypatch):
     touchees = sorted(k for k in set(avant) | set(apres) if avant.get(k) != apres.get(k))
     assert not touchees, f"poser les frénésies a touché la ville : {touchees}"
     # ⚠️ Les cartes de hockey (`collectionner`) se posent APRÈS elles, et lisent leurs icônes : hors de la comparaison.
-    sans = {k: val for k, val in v.items() if k not in ("frenesies", "frenesies_regle", "collections")}
+    # Et la régate (i07), posée en tout dernier : sa propre clé, rien d'autre (`test_regate`).
+    sans = {k: val for k, val in v.items() if k not in ("frenesies", "frenesies_regle", "collections", "regate")}
     derniere = json.dumps(sans, sort_keys=True) == vu["avant"]
     assert derniere, "les frénésies ne se posent pas en dernier"
 

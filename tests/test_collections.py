@@ -146,7 +146,9 @@ def test_les_cartes_ne_deplacent_rien(monkeypatch):
     avant, apres = json.loads(vu["avant"]), json.loads(vu["apres"])
     touchees = sorted(k for k in set(avant) | set(apres) if avant.get(k) != apres.get(k))
     assert not touchees, f"poser les cartes a touché la ville : {touchees}"
-    sans = {k: val for k, val in v.items() if k != "collections"}
+    # ⚠️ Sauf la RÉGATE (i07, 1er oct. 2026), posée après elles : ses bouées sur l'eau autour de l'île, sa propre clé, et
+    # rien d'autre ne change (`test_regate::test_la_ville_d_avant_est_la_meme_cle_par_cle`).
+    sans = {k: val for k, val in v.items() if k not in ("collections", "regate")}
     derniere = json.dumps(sans, sort_keys=True) == vu["avant"]
     assert derniere, "les cartes ne se posent pas en dernier"
 
