@@ -1314,3 +1314,8 @@ catalogue.
   récompense) ; gardé par la sauvegarde ; déclaré dans le fichier de la mission. Puis `d09`. Le passant donneur :
   un passant ordinaire interpelle le joueur et propose une courte job (né à l'empreinte, sans dé ni identifiant
   qui décale la ville), une à la fois, jamais pendant une mission ; puis le plus possible de `t01`–`t15`.
+- **1er oct. 2026 : en cours — le casse, un char sur l'île, une course sur l'eau** (Martin). Trois vagues, chacune
+  atterrie seule : (15) une **caisse populaire** neuve — la CAISSE POP d'origine est devenue l'ÉCOLE LA MANTE —, posée
+  en dernier sur la ville finie, sans un dé, la ville d'avant identique (comparée en JSON), son intérieur (comptoir,
+  coffre, bureau du gérant), puis `x01`–`x04` ; (16) un char qui embarque sur le traversier jusqu'à l'île et y roule,
+  puis `i04` ; (17) des bouées sur la baie que `course` sait lire en bateau, puis `i07`.
