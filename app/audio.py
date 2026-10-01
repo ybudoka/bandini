@@ -1893,7 +1893,7 @@ LIEUX: dict[str, list[str]] = {
 SOLS_DES_PAS: dict[str, str] = {
     **dict.fromkeys("._xo?#-|+*=:p^v<>IRJ", "pas"),
     ",": "pas_herbe",
-    ";": "pas_gravier", "g": "pas_gravier", "T": "pas_gravier",
+    ";": "pas_gravier", "g": "pas_gravier", "T": "pas_gravier", "§": "pas_gravier",  # le § : la route en lacets du rang
     "s": "pas_sable",
     "Q": "pas_bois", "t": "pas_bois", "/": "pas_bois",
     "u": "pas_carrelage",
