@@ -832,7 +832,25 @@ sain) ; le tireur blessé tire encore, de plus loin ; la moitié d'un camp couch
 rixe comme contre toi ; un homme de mission ne lâche jamais ; l'arme lâchée garde ce qui reste dans le chargeur,
 sans dé du jeu.
 
-### Vague 4 — les renforts — **plan** (1er oct. 2026)
+### Vague 4 — les renforts — **livrée le 1er oct. 2026**
+
+**Ce qui a changé en route** :
+- **Un renfort vient de loin** : la branche « gang contre toi » lâche à 260 px, et il naît à 300 px au moins — il
+  ne lâche qu'au bout de la bulle d'oubli (520 px).
+- **La relecture** : dans une rixe, ses renforts naissaient au-delà de la bulle d'oubli du JOUEUR et s'effaçaient à
+  l'image même (6 sur 8) — leur place est aussi à moins de `joueur_max_px` de lui, cherchée d'abord vers lui ;
+  « est-ce une rixe ? » se lisait sur `e.bagarre`, qui reste vrai après la rixe — c'est une cible qui n'est pas le
+  joueur ; pendant une mission (un homme de mission debout), personne n'appelle — la difficulté des missions est
+  réglée au banc ; ni dans un bloc (le chalet).
+- **Trois juges anciens ajustés** : le blessé peut crier « À MOI » plutôt que « AYOYE » ; la déroute se juge sans
+  renforts (arrivés, ils grossissent le camp) ; la rixe des Mantes compte des HOMMES au sol, pas des passages (la
+  rixe dure, un Cravate se relève et retombe).
+- **Reporté** (mineurs de la relecture) : le char des renforts est garé sans vérifier la place (il peut chevaucher
+  un char ou couper une voie) et ne roule pas jusqu'à la bagarre ; un renfort peut naître derrière un bâtiment et
+  buter contre le mur (pas de chemin) ; les hommes de Sal (mission sans `cible`) n'appellent pas, exclus par
+  `mission`.
+
+#### Le plan (1er oct. 2026)
 
 **La fiche** `rixes.RENFORTS` : `distance_px` (300, 460) — hors de l'écran (la vue fait 480 × 270), dans la bulle
 d'oubli (520) ; `max_par_appel` 2 ; `max_par_combat` 4 (les renforts vivants de son gang à `zone_px` 600) ;
