@@ -90,19 +90,93 @@ et c'est lui qui craquera le prochain. Le plafond a été relevé onze fois en q
   navigateur l'accepte — nginx et Caddy ne recompressent pas une réponse déjà encodée) : **50 069** pour la
   carte, **52 610** pour les définitions, sans rien changer au jeu. À vérifier en ligne par Martin (le `curl`
   de `deploy/README.md`).
-- **Vague 3 — les pièces voyagent à part** (option 2). ⚠️ **Elle n'achète presque rien au démarrage tant que
+Les vagues 3 à 5 de ce premier découpage sont **révisées** le 1er oct. 2026 : voir plus bas.
+
+### La remesure (1er oct. 2026) : ce sont les scripts
+
+_Avant de prendre la vague 4 (Martin l'avait choisie), la mesure qu'elle demandait : le démarrage sous Chromium
+comme sur un téléphone, et pas seulement le poids de la carte._ La sonde : Chromium derrière un faux « Caddy +
+nginx » local (HTTP/2 sur TLS comme la prod, gzip au niveau 1 comme nginx sans `gzip_comp_level`, `expires 7d`
+sur `/static/`), processeur ralenti ×4, réseau « 3G rapide » de DevTools (562,5 ms d'aller-retour, 180 Ko/s),
+travailleur hors ligne bloqué, médiane de trois, à `bd8f4b96` (0.393.0). La machine était très chargée (load
+30, d'autres sessions) : le ralentissement simulé domine, les passages ne s'écartent que de 1 %.
+
+| Visite | Écran titre | Dont les scripts | Octets sur le fil | JOUER → la ville |
+|---|---|---|---|---|
+| **Première visite** (cache vide) | **12 625 ms** | arrivés à 10 137 ms, exécutés à 11 238 | 1 679 321, dont **1 561 400 de scripts** | 309 ms |
+| **Après une mise en ligne** (la version change) | **12 042 ms** | retéléchargés TOUS : 1 561 400 octets | 1 571 088 | 305 ms |
+| Deuxième visite, même version | 2 630 ms | du cache (0 octet), exécutés à 1 855 | 600 (deux 304) | 302 ms |
+
+- **Les scripts font 93 % de ce qui voyage avant l'écran titre.** 87 fichiers, 4 043 789 octets bruts, très
+  commentés : **1 535 300 sur le fil** au niveau 1 de nginx (mesuré en ligne à 0.391.23 : 1 532 944), 1 297 114
+  au niveau 9, 1 137 433 en brotli. La carte (53 121) et les définitions (55 712) font ensemble 108 Ko.
+- **Une mise en ligne coûte autant qu'une première visite** : chaque script porte `?v=<version>`, la version monte
+  à chaque `feat:`/`fix:`, et les 87 adresses changent — même celles des fichiers qui n'ont pas bougé d'un octet.
+  C'est le cas de tous les jours sur le téléphone de Martin (il met en ligne plusieurs fois par jour).
+- **Les définitions et la carte attendent les scripts** : elles ne partent qu'une fois les 87 exécutés
+  (`Jeu.demarrer`, au `DOMContentLoaded`) — un aller-retour (0,56 s) et 108 Ko (0,6 s) APRÈS les scripts : de
+  11 252 à 12 437 ms à froid, et deux 304 de 590 ms à chaud.
+- **JOUER → la ville : 0,3 s** (`commencer()` 184 ms, la première image 125 ms de plus), à froid comme à chaud.
+  Le déclencheur écrit depuis M8 (« plus de 2 s entre JOUER et la ville ») n'est pas là : **l'attente est avant
+  l'écran titre**, pas après JOUER.
+- **Ce que la carte pèse encore**, clé par clé (gzip 9 de chaque clé seule, la carte pliée : 561 155 bruts,
+  52 821 gzip) : `sol` 9 318, `interieurs` 7 609, `decor` 7 098, `devantures` 2 015, `montagne_russe` 1 982,
+  `voie` 1 944, `portes` 1 600, `lampes` 1 479, `residences` 1 349, `autobus` 1 278 ; les 74 autres, moins de
+  1 220 chacune. **Les définitions** (247 350 bruts, 55 412 gzip, 66 clés) : `audio` 7 478, `pietons` 5 211,
+  `defis` 4 078, `economie` 4 006, `garderobe` 3 553, `missions` 3 225, `personnages` 3 105, `saisons` 2 116,
+  `vehicules` 1 990 ; les 57 autres, moins de 1 900 chacune.
+- **Ce que les vagues 3 et 4 d'avant auraient acheté** : les pièces à part, 7,6 Ko gzip (≈ 40 ms en 3G rapide) ;
+  le décor, les lampes, les toits et les façades par district, ≈ 10 Ko (≈ 55 ms) — sur douze secondes. Les
+  scripts sans leurs commentaires ni leur indentation (ligne pour ligne, essayé sur les 87 : `node --check` et
+  esbuild les tiennent pour le même code) : **627 492 octets au niveau 9, 749 512 au niveau 1** — 785 Ko de
+  moins sur le fil que la carte et les définitions ensemble, onze fois.
+
+### Le découpage révisé (1er oct. 2026)
+
+D'abord ce qui achète le plus de secondes au démarrage pour le moins de risque. Les vagues 1 et 2 restent
+livrées ; les vagues 3 et 4 d'avant passent derrière (6 et 7), en attente : elles achètent moins de 0,1 s.
+
+- **Vague 3 — les scripts à l'empreinte de leur contenu.** Chaque adresse statique porte `?v=<empreinte de SON
+  fichier>` au lieu de la version du site (`app/statiques.py`) : après une mise en ligne, seuls les scripts qui
+  ont changé repartent, et le cache du navigateur (nginx les garde sept jours) rend les autres sans rien
+  demander. Gain : une mise en ligne coûte ce qu'elle a changé au lieu de 1,56 Mo. Risque faible : la liste
+  reste lue dans le gabarit (`filename='js/…'`) par le banc, la barre et la coquille hors ligne ; l'empreinte se
+  relit quand un fichier change sous le serveur de dev. Juges : chaque adresse porte l'empreinte de son fichier ;
+  deux versions du site, les mêmes adresses ; un fichier changé ne change que la sienne. A/B : la visite après
+  une mise en ligne.
+- **Vague 4 — les scripts maigrissent.** Servis sans commentaires ni indentation, **ligne pour ligne** (une erreur
+  nomme toujours la bonne ligne du source) : 1 535 → 750 Ko sur le fil au niveau 1 de nginx, 627 Ko si Martin
+  pose `gzip_static on` (le déploiement écrit le `.gz` au niveau 9 à côté). Un seul maigrisseur (Python) sert
+  partout : `deploy.sh` l'applique à la release, le serveur de dev sert les mêmes octets, et **le banc d'essai joue
+  les scripts maigres** — tous les juges JS et Chromium jugent ce que le téléphone reçoit. Risque : un
+  maigrisseur qui changerait le sens (une expression régulière prise pour une division, un gabarit `` ` `` sur
+  plusieurs lignes) — juges : chaque script maigre se compile (`node --check`), garde son nombre de lignes, ne
+  garde aucun commentaire, et les cas pièges un par un ; et le banc entier qui joue sur eux. Gain attendu ≈ 4 s
+  à froid et après une mise en ligne.
+- **Vague 5 — les paquets partent avec les scripts.** Les définitions et la carte se préchargent dès le haut de
+  la page (`<link rel="preload" as="fetch">`), pendant que les scripts arrivent et s'exécutent ; `Jeu.demarrer`
+  reprend la même réponse, et sans préchargement (un vieux navigateur, le banc) il la demande comme avant. Gain
+  attendu ≈ 1 s à froid (l'aller-retour et les 108 Ko qui suivaient les scripts), ≈ 0,6 s à chaque visite (les
+  deux 304 pendant l'exécution des scripts). Juges : la page précharge exactement les deux adresses que le jeu
+  demande (sinon le navigateur les télécharge deux fois) ; Chromium : une seule requête par paquet, la ville
+  s'ouvre, hors ligne compris.
+- **Vague 6 — les pièces voyagent à part** (l'ancienne vague 3, option 2) : en attente. 7,6 Ko gzip, ≈ 40 ms en
+  3G rapide, et beaucoup de lecteurs à faire attendre ; à reprendre si le plafond de la carte cède. Le texte
+  d'avant, pour le jour où on la reprend :
+  « ⚠️ **Elle n'achète presque rien au démarrage tant que
   les définitions pèsent autant que la carte** : les deux requêtes partent ENSEMBLE, et c'est la plus lourde
   qui fait attendre le titre — après la vague 1, la carte (52 129) et les définitions (52 993) sont à égalité.
   Les lecteurs sont nombreux (`Jeu.entrer` refuse une porte sans sa pièce, `Histoire` pose dans les pièces,
   le métro, l'Halloween, une partie sauvée dedans), et chacun devrait attendre. À prendre quand les
   définitions auront maigri, ou si le plafond de la carte cède avant. Preuve au banc : une porte passée avant
-  l'arrivée des pièces attend dans son fondu, jamais un trou.
-- **Vague 4 — le squelette et les morceaux par district** (option 3). ⚠️ C'est le vrai remède, et le plus
-  cher : son **déclencheur** reste celui de la dette (« plus de 2 s entre JOUER et la ville sur le téléphone
-  de Martin »), ou le plafond de la carte pliée qui cède à son tour. Preuve au banc obligatoire : conduire
-  vite d'un bout à l'autre de la ville et se téléporter par le debug sans jamais voir un morceau vide ; les
-  numéros d'entités identiques à ceux d'avant (le premier numéro libre après `commencer()`).
-- **Vague 5** (option 4) : pas prévue ; écrite pour qu'on ne la reprenne pas sans raison.
+  l'arrivée des pièces attend dans son fondu, jamais un trou. »
+- **Vague 7 — le squelette et les morceaux par district** (l'ancienne vague 4, option 3) : ⚠️ **en attente d'une
+  décision de Martin.** Elle achète ≈ 10 Ko (≈ 55 ms en 3G rapide) pour le plus gros risque du jalon (les
+  numéros d'entités, la pose relative, les blips, le hors ligne, des centaines de juges). Son déclencheur
+  révisé : le plafond de la carte pliée (55 000) qui cède, ou une ville qui double. Preuve au banc obligatoire le
+  jour venu : conduire vite d'un bout à l'autre de la ville et se téléporter par le debug sans jamais voir un
+  morceau vide ; les numéros d'entités identiques à ceux d'avant (le premier numéro libre après `commencer()`).
+- **Vague 8** (option 4) : pas prévue ; écrite pour qu'on ne la reprenne pas sans raison.
 
 ## Notes
 
