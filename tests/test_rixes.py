@@ -93,3 +93,14 @@ def test_la_fiche_du_moral_se_tient():
     assert m["camp_images"] >= 120, "un camp qu'on oublie avant qu'il ait perdu quelqu'un"
     assert m["blesse_mots"] and m["deroute_mots"]
     assert villes.assembler()["rixes"]["moral"]["deroute_mots"] == list(m["deroute_mots"])
+
+
+def test_la_fiche_des_renforts_se_tient():
+    """Vague 4 : ils naissent hors de l'écran (la vue fait 480 × 270 : à plus de 276 px, on est dehors) et dans la
+    bulle d'oubli (520 px), sinon ils s'effacent à l'image suivante."""
+    r = rixes.RENFORTS
+    dmin, dmax = r["distance_px"]
+    assert 276 < dmin < dmax < 520
+    assert 1 <= r["max_par_appel"] <= r["max_par_combat"]
+    assert r["en_char_sur"] >= 1 and r["cris"]
+    assert villes.assembler()["rixes"]["renforts"]["cris"] == list(r["cris"])

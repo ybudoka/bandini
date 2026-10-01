@@ -575,7 +575,8 @@ def test_il_crie_quand_il_leve_l_arme(banc):
 # --- Vague 3 : le moral et les blessés -----------------------------------------------------------------------
 
 def test_le_blesse_au_contact_fuit_en_boitant(banc):
-    """Sous le tiers de sa vie, l'homme au bâton détale en criant — et il BOITE : plus lent qu'un fuyard sain."""
+    """Sous le tiers de sa vie, l'homme au bâton détale en criant — « AYOYE! », ou il appelle les siens (vague 4) —
+    et il BOITE : plus lent qu'un fuyard sain."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(50);
@@ -593,7 +594,7 @@ def test_le_blesse_au_contact_fuit_en_boitant(banc):
         for (let i = 0; i < 60; i++) { tenir(L); o.frame(1); }
         const blesse = Math.hypot(c.x - a0.x, c.y - a0.y), valide = Math.hypot(sain.x - b0.x, sain.y - b0.y);
         return { fuite: fuite, boite: !!c.boite, ratio: blesse / Math.max(1, valide), cri: cri,
-                 mots: L.B.defs.rixes.moral.blesse_mots, etat: c.etat };
+                 mots: L.B.defs.rixes.moral.blesse_mots.concat(L.B.defs.rixes.renforts.cris), etat: c.etat };
     }""" % TROIS)
     assert r["fuite"] >= 0, "blessé, il se bat encore au contact (%s)" % r
     assert r["boite"] and r["ratio"] < 0.8, "il fuit sans boiter (%s)" % r
@@ -631,6 +632,8 @@ def test_la_moitie_couchee_les_autres_decrissent(banc):
         L.Jeu.commencer();
         L.graine(52);
         %s
+        // ⚠️ Sans renforts (vague 4) : arrives, ils grossissent le camp, et la moitie a terre n'est plus la moitie.
+        L.B.defs.rixes.renforts.max_par_appel = 0;
         const gens = trois(L, 40), j = L.B.joueur;
         for (let i = 0; i < 90; i++) { tenir(L); o.frame(1); }
         L.Entites.blesser(gens[0], 9999, j, { assomme: true });
@@ -705,3 +708,106 @@ def test_un_vieux_cadavre_ne_met_pas_en_deroute(banc):
         return { fuit: fuit };
     }""" % TROIS)
     assert r["fuit"] == 0, "un vieux cadavre l'a mis en déroute (%s)" % r
+
+
+# --- Vague 4 : les renforts ----------------------------------------------------------------------------------
+
+#: Lance un combat, rend un homme blessé, et note les renforts qui naissent : vus à l'écran à leur naissance ?
+APPEL = """
+    function suivreLesRenforts(L, o, images, avant) {
+      const vus = {}, nes = [];
+      for (let i = 0; i < images; i++) {
+        if (avant) avant(i);
+        o.frame(1);
+        for (const q of L.B.entites) {
+          if (q.type !== 'pieton' || !q.renfort || vus[q.id]) continue;
+          vus[q.id] = true;
+          nes.push({ q: q, aLEcran: L.Entites.visibleAEcran(q.x, q.y, 0), d0: Math.hypot(q.x - L.B.joueur.x, q.y - L.B.joueur.y) });
+        }
+      }
+      return nes;
+    }
+"""
+
+
+def test_un_blesse_appelle_les_siens_qui_accourent(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(60);
+        %s
+        %s
+        const gens = trois(L, 40), j = L.B.joueur, R = L.B.defs.rixes.renforts;
+        for (let i = 0; i < 30; i++) { tenir(L); o.frame(1); }
+        gens[1].vie = Math.floor(gens[1].vieMax * 0.3);
+        const nes = suivreLesRenforts(L, o, 300, function () { tenir(L); });
+        return { n: nes.length, max: R.max_par_appel, aLEcran: nes.filter(function (x) { return x.aLEcran; }).length,
+                 gang: nes.every(function (x) { return x.q.gang === 'cravates'; }),
+                 approchent: nes.filter(function (x) { return Math.hypot(x.q.x - j.x, x.q.y - j.y) < x.d0 - 60; }).length,
+                 etats: nes.map(function (x) { return x.q.etat; }) };
+    }""" % (TROIS, APPEL))
+    assert 1 <= r["n"] <= r["max"], "personne n'est venu, ou trop (%s)" % r
+    assert r["aLEcran"] == 0, "un renfort est apparu sous les yeux du joueur (%s)" % r
+    assert r["gang"], r
+    assert r["approchent"] == r["n"], "les renforts n'accourent pas (%s)" % r
+
+
+def test_jamais_plus_de_renforts_que_le_plafond(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(61);
+        %s
+        %s
+        const R = L.B.defs.rixes.renforts;
+        for (let k = 0; k < 4; k++) {
+          const gens = trois(L, 40);
+          for (const e of gens) e.vie = Math.floor(e.vieMax * 0.3);
+          suivreLesRenforts(L, o, 60, function () { tenir(L); });
+        }
+        const total = L.B.entites.filter(function (q) { return q.type === 'pieton' && q.renfort; }).length;
+        return { total: total, max: R.max_par_combat };
+    }""" % (TROIS, APPEL))
+    assert 1 <= r["total"] <= r["max"], r
+
+
+def test_ni_un_homme_de_mission_ni_la_paix_du_boss_n_appellent(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(62);
+        %s
+        %s
+        const a = trois(L, 40);
+        for (const e of a) { e.cible = true; e.vie = Math.floor(e.vieMax * 0.3); }
+        const mission = suivreLesRenforts(L, o, 120, function () { tenir(L); }).length;
+        for (const e of a) L.Entites.retirer(e);
+        L.B.partie.boss = { jour: 1 };
+        const b = trois(L, 40);
+        for (const e of b) e.vie = Math.floor(e.vieMax * 0.3);
+        const boss = suivreLesRenforts(L, o, 120, function () { tenir(L); }).length;
+        return { mission: mission, boss: boss };
+    }""" % (TROIS, APPEL))
+    assert r == {"mission": 0, "boss": 0}, r
+
+
+def test_une_fois_sur_trois_ils_arrivent_en_char(banc):
+    """Un char garé aux couleurs du gang, sur la voie la plus proche, à côté de là où ils naissent."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(63);
+        %s
+        %s
+        L.B.defs.rixes.renforts.en_char_sur = 1;           // a coup sur
+        const avant = L.B.entites.filter(function (q) { return q.type === 'vehicule'; }).length;
+        const gens = trois(L, 40);
+        for (let i = 0; i < 30; i++) { tenir(L); o.frame(1); }
+        gens[1].vie = Math.floor(gens[1].vieMax * 0.3);
+        let chars = [];
+        const nes = suivreLesRenforts(L, o, 10, function () { tenir(L); });
+        chars = L.B.entites.filter(function (q) { return q.type === 'vehicule' && q.renforts; });
+        const c = chars[0];
+        return { n: nes.length, chars: chars.length,
+                 pres: c && nes.length ? Math.min.apply(null, nes.map(function (x) { return Math.hypot(x.q.x - c.x, x.q.y - c.y); })) : null,
+                 couleur: c && c.couleur, attendue: L.Territoires.couleurDe('cravates'), vitesse: c && c.vitesse };
+    }""" % (TROIS, APPEL))
+    assert r["n"] >= 1 and r["chars"] == 1, r
+    assert r["pres"] is not None and r["pres"] <= 64, "ils ne descendent pas du char (%s)" % r
+    assert r["couleur"] == r["attendue"] and r["vitesse"] == 0, r

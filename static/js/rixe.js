@@ -122,7 +122,9 @@ const Rixe = (function () {
     // homme qui se degage tournerait le dos a celui qu'il vient de frapper. Deux images : ca s'eteint seul
     // quand le cerveau ne le mene plus.
     e.faceVers = cible; e.faceT = 2;
-    // LE MORAL (vague 3) : blesse au contact, ou son camp a moitie a terre, il se sauve.
+    // LES RENFORTS (vague 4) : s'il perd, il crie, et des siens accourent ; LE MORAL (vague 3) : blesse au contact,
+    // ou son camp a moitie a terre, il se sauve.
+    appeler(e, cible);
     if (lache(e, cible)) return false;
     // L'ARME DE SON GANG (vague 2) : il la degaine au premier echange, et se bat en tireur ou en lanceur.
     if (armer(e)) return majTir(e, cible, vitesse, r);
@@ -180,6 +182,80 @@ const Rixe = (function () {
   /** Ne lache jamais : il est la pour ca (un homme de mission, un allie), ou c'est l'ecole (un Mante). */
   function tenace(e) { return !!(e.cible || e.allie || e.personnage || e.techniques); }
 
+  // --- Vague 4 : les renforts -------------------------------------------------------------------------------
+
+  function renforts() { return B.defs.rixes.renforts; }
+
+  /** Combien des siens sont a terre dans le combat en cours (le compte de `enDeroute`). */
+  function aTerreDansSonCamp(e) {
+    const M = moral();
+    let n = 0;
+    for (const q of Entites.autour(e.x, e.y, M.camp_px, function (c) { return c.type === 'pieton'; })) {
+      if (q === e || q.gang !== e.gang || !q.rixe || !(B.t - q.rixe.vu <= M.camp_images)) continue;
+      if (!q.vivant || q.etat === 'assomme') n++;
+    }
+    return n;
+  }
+
+  /** Une place pour les renforts : marchable, HORS DE L'ECRAN, a `distance_px` de lui — cherchee dans l'ordre (seize
+      directions a partir d'un angle a l'empreinte, trois distances), jamais au de. */
+  function placeDesRenforts(e) {
+    const R = renforts(), d = R.distance_px;
+    const a0 = (hash2(e.id, 0xA9) % 360) * Math.PI / 180;
+    for (let k = 0; k < 16; k++) {
+      const a = a0 + k * Math.PI / 8;
+      for (const r of [d[0], (d[0] + d[1]) / 2, d[1]]) {
+        const x = e.x + Math.cos(a) * r, y = e.y + Math.sin(a) * r;
+        if (Monde.marchablePieton(Math.floor(x / TT), Math.floor(y / TT)) && !Entites.visibleAEcran(x, y, 24)) {
+          return { x: Math.floor(x / TT) * TT + 8, y: Math.floor(y / TT) * TT + 8 };
+        }
+      }
+    }
+    return null;
+  }
+
+  /** IL APPELLE LES SIENS, une fois (`e.appele`) : quand il perd — blesse, ou un des siens a terre. Jusqu'a
+      `max_par_appel` des siens naissent hors de l'ecran (le plafond : `max_par_combat` renforts vivants de son gang
+      a `zone_px`) et accourent — contre toi, ou dans la rixe, contre son rival. Une fois sur `en_char_sur`, un char
+      aux couleurs du gang est gare sur la voie la plus proche : ils en descendent. ⚠️ Jamais un homme de mission,
+      un allie, un Mante ; jamais dedans, ni pendant la paix du Boss. Rend le nombre de renforts. */
+  function appeler(e, cible) {
+    const R = renforts();
+    if (e.appele || e.renfort || tenace(e) || B.interieur || (B.partie && B.partie.boss) || !e.gang) return 0;
+    if (!blesse(e) && !aTerreDansSonCamp(e)) return 0;
+    e.appele = true;
+    e.appelT = e.t;
+    Entites.bulle(e, R.cris[hash2(e.id, e.t) % R.cris.length], { duree: 90 });
+    // ⚠️ La grille est refaite a la fin de chaque appel (`Entites.indexer`) : un deuxieme appel a la meme image
+    // compte les renforts du premier.
+    const deja = Entites.autour(e.x, e.y, R.zone_px, function (q) {
+      return q.type === 'pieton' && q.renfort && q.gang === e.gang && q.vivant;
+    }).length;
+    const n = Math.min(R.max_par_appel, R.max_par_combat - deja);
+    const bande = ((B.defs.pietons && B.defs.pietons.gangs) || []).find(function (g) { return g.slug === e.gang; });
+    const arch = bande && Entites.archetype(bande.pieton);
+    let lieu = n > 0 && arch ? placeDesRenforts(e) : null;
+    if (!lieu) return 0;
+    if (hash2(e.id, 0xCA2) % R.en_char_sur === 0) {
+      const rue = Monde.routeLaPlusProche(lieu.x, lieu.y, 4);
+      if (rue && !Entites.visibleAEcran(rue.x, rue.y, 24)) {
+        const v = Vehicules.creer('auto', rue.x, rue.y, angleVers(rue.x, rue.y, e.x, e.y),
+                                  { etat: 'stationne', couleur: Territoires.couleurDe(e.gang) });
+        if (v) v.renforts = true;
+      }
+    }
+    const rixe = !!e.bagarre;
+    for (let i = 0; i < n; i++) {
+      const q = Entites.creerPieton(lieu.x + (i - (n - 1) / 2) * 14, lieu.y, arch);
+      if (!q) continue;
+      q.renfort = true; q.metier = 'bagarre'; q.cri = 90;
+      if (rixe) { q.bagarre = true; q.etat = 'bagarre'; q.bagarreT = e.bagarreT || 900; q.rival = cible; }
+      else q.etat = 'attaque_joueur';
+    }
+    Entites.indexer();
+    return n;
+  }
+
   /** SON CAMP a-t-il perdu `deroute_part` des siens ? Les membres de son gang qui se sont battus (`e.rixe`), a
       `camp_px` — debout ou a terre, morts compris (`Entites.autour` les garde, pas `pietonsAutour`) — mais du
       combat EN COURS (`rixe.vu`, a `camp_images`) : un mort garde son `e.rixe` et reste dans la grille, et il
@@ -200,7 +276,8 @@ const Rixe = (function () {
     e.etat = 'fuit'; e.menace = cible; e.minuterie = B.defs.pietons.reactions.fuite_secondes * 60; e.cri = 120;
     e.bagarre = false; e.rival = null; e.avantLeCoup = null;
     if (boite) e.boite = true;
-    Entites.bulle(e, mots[hash2(e.id, e.t) % mots.length], { duree: 90 });
+    // Il vient d'appeler les siens (`appeler`) : c'est ce cri-la qu'on lit, pas celui de sa fuite.
+    if (e.appelT !== e.t) Entites.bulle(e, mots[hash2(e.id, e.t) % mots.length], { duree: 90 });
   }
 
   /** LE MORAL. Rend vrai s'il lache le combat (il fuit, et le cerveau n'a plus rien a decider). Le tireur blesse,

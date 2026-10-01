@@ -5229,7 +5229,9 @@ const Entites = (function () {
       vitesse = v.pieton_course * e.allure;
       const dx = B.joueur.x - e.x, dy = B.joueur.y - e.y;
       const norme = Math.hypot(dx, dy) || 1;
-      if (norme > 260) { e.etat = 'flane'; e.salut = 0; }
+      // ⚠️ Un RENFORT (`Rixe`, vague 4) nait hors de l'ecran, a plus de 300 px : il vient de loin, et ne lache qu'au
+      // bout de la bulle d'oubli.
+      if (norme > (e.renfort ? 520 : 260)) { e.etat = 'flane'; e.salut = 0; }
       // LE SALUT d'un Mante qui te defie (`defier`) : il reste la, tourne vers toi, le temps de sa replique.
       // Tu frappes le premier : il laisse tomber la pose et se bat.
       if (e.salut > 0 && B.joueur.etat === 'attaque') e.salut = 0;

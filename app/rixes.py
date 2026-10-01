@@ -88,9 +88,24 @@ MORAL: dict = {
 }
 
 
+#: VAGUE 4 — LES RENFORTS. Un membre qui PERD (blessé, ou un des siens à terre) crie une fois ; des siens naissent
+#: HORS DE L'ÉCRAN et accourent. Une fois sur `en_char_sur`, un char aux couleurs du gang est garé à côté d'eux :
+#: ils en descendent. Une rixe où l'on s'attarde peut donc grossir — jusqu'au plafond.
+RENFORTS: dict = {
+    "distance_px": (300, 460),    # hors de l'écran (480 × 270 : à plus de 276 px), dans la bulle d'oubli (520)
+    "max_par_appel": 2,
+    "max_par_combat": 4,          # les renforts vivants de son gang à `zone_px`
+    "zone_px": 600,
+    "en_char_sur": 3,             # une fois sur trois (à l'empreinte de celui qui appelle)
+    "cris": ["À MOI LES GARS!", "Y'EN A UN QUI FAIT LE FRAIS!", "AMENEZ-VOUS!"],
+}
+
+
 def exporter() -> dict:
     """Ce que le navigateur reçoit sous `B.defs.rixes`."""
     tir = dict(TIR, distances={k: list(v) for k, v in TIR["distances"].items()}, salve=list(TIR["salve"]),
                lever_mots=list(TIR["lever_mots"]))
     moral = dict(MORAL, blesse_mots=list(MORAL["blesse_mots"]), deroute_mots=list(MORAL["deroute_mots"]))
-    return {"contact": dict(CONTACT), "arsenal": dict(ARSENAL), "part_armee": PART_ARMEE, "tir": tir, "moral": moral}
+    renforts = dict(RENFORTS, distance_px=list(RENFORTS["distance_px"]), cris=list(RENFORTS["cris"]))
+    return {"contact": dict(CONTACT), "arsenal": dict(ARSENAL), "part_armee": PART_ARMEE, "tir": tir, "moral": moral,
+            "renforts": renforts}

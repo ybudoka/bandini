@@ -548,3 +548,36 @@ def test_dans_une_rixe_le_camp_decime_se_sauve(banc):
     # ⚠️ Le vainqueur gardait le fuyard pour rival : il le pourchassait 888 images sur 900, et un blessé qui boite
     # était rattrapé et tué (la relecture de la vague 3). La rixe FINIT.
     assert r["poursuivi"] <= 2, "on pourchasse celui qui s'est sauvé (%s)" % r
+
+
+def test_dans_une_rixe_les_renforts_se_battent_contre_l_autre_gang(banc):
+    """Vague 4 : un rixeur blessé appelle les siens ; ils viennent pour la RIXE, pas pour le joueur (l'autre camp peut
+    appeler les siens aussi)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(20);
+        %s
+        const trouve = allumer(L);
+        if (!trouve) return { trouve: false };
+        for (let i = 0; i < 60; i++) o.frame(1);
+        const e = rixeurs(L).find(function (q) { return q.vivant && q.etat !== 'assomme'; });
+        e.vie = Math.floor(e.vieMax * 0.3);
+        let contre = 0;
+        const renforts = {};
+        for (let i = 0; i < 240; i++) {
+          o.frame(1);
+          for (const q of L.B.entites) if (q.type === 'pieton' && q.renfort) {
+            // Note a la NAISSANCE : un renfort peut ensuite fuir (le moral) et quitter la rixe.
+            if (!renforts[q.id]) renforts[q.id] = { bagarre: !!q.bagarre, gang: q.gang };
+            if (q.etat === 'attaque_joueur') contre++;
+          }
+        }
+        const liste = Object.keys(renforts).map(function (k) { return renforts[k]; });
+        // Les deux camps peuvent appeler : chacun pour SA rixe.
+        const camps = [trouve.ligne.a, trouve.ligne.b];
+        return { trouve: true, n: liste.length, contre: contre,
+                 tous: liste.every(function (x) { return x.bagarre && camps.indexOf(x.gang) >= 0; }) };
+    }""" % ALLUMER)
+    assert r["trouve"], "aucune frontière n'a ses deux trottoirs"
+    assert r["n"] >= 1, "personne n'est venu (%s)" % r
+    assert r["tous"] and r["contre"] == 0, r
