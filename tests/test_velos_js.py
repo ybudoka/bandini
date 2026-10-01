@@ -55,7 +55,10 @@ def test_le_velo_roule_a_la_bordure_et_l_auto_au_milieu(banc):
         const b = o.boulevard(false);
         poserJoueur(b.x, b.y - 3 * T);
         viderLaRue();
-        const v = velo(b.tx, b.ty, '>');
+        // ⚠️ SUR LA CHAUSSÉE TOUT DU LONG (`horsRueFroid`) : il monte faire un bout de trottoir à l'EMPREINTE de son
+        // numéro (`trottoir_chance`), et la foire fermée l'hiver (068ee261) a décalé les numéros — le vélo de ce
+        // juge partait sur le trottoir dès la deuxième tuile, et la bordure n'avait plus rien à mesurer.
+        const v = velo(b.tx, b.ty, '>', { horsRueFroid: 1e9 });
         const a = V.creer('auto', b.x, b.y + 0.01, 0, { conducteur: 'trafic', etat: 'roule', sens: '>' });
         a.x -= 3 * T;
         L.Entites.indexer();

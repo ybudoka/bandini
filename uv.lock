@@ -4,7 +4,7 @@ requires-python = ">=3.11"
 
 [[package]]
 name = "bandini"
-version = "0.391.15"
+version = "0.391.16"
 source = { virtual = "." }
 dependencies = [
     { name = "flask" },
