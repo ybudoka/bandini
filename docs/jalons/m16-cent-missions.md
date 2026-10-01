@@ -481,6 +481,7 @@ que Bandini n'utilisait pas encore :
 |---|---|---|---|---|---|
 | f13 | Les volontaires | Mado | f11 | trois feux dans la nuit, aux quatre coins du Faubourg : _eteindre_ chacun avant qu'il gagne la façade | 200 ; **le boulot pompier volontaire** |
 | q14 | La liste du Norvégien | Sven (ou Ti-Loup si q11) | q10 ou q11 | quatre modèles sur l'ardoise du quai, à livrer sans bosse, un par jour | 250 ; **la liste du quai** (l'activité) |
+| q15 | La liste de Ti-Loup | Ti-Loup | q11, s02 | la variante de q14 (1er oct. 2026) : un taxi et un cabriolet en pièces, au lot de la fourrière, sans bosse | 250 ; **l'ardoise du quai passe à Ti-Loup** |
 | e14 | C'était un accident | Diane | e07 | la berline du maire doit finir dans sa propre piscine, et personne ne doit t'avoir vu (`sans_etoile`) | 300 ; Louise a sa photo |
 | s14 | La casse à Ti-Loup | Ti-Loup | s02 | trois **autos-patrouilles** au compacteur dans la même nuit — chacune coûte au moins 1★, et il faut semer entre les deux | 450 |
 | p12 | Le radeau de Zed | Zed | p04, i01 | les Skateux veulent l'île : leur amener un bateau au quai de La Pointe, sans le couler | 150 |
@@ -1689,3 +1690,27 @@ catalogue.
   sauf **la variante de `q14` chez Ti-Loup** (après `q11` : sa cale de chars pour la ferraille) et **« la liste du quai »**
   comme activité (des modèles qui changent chaque jour sur l'ardoise de Sven). M16 reste ⬜ tant que Martin ne les a ni
   faites écrire ni écartées.
+- **1er oct. 2026 : les deux restes (Martin : « à écrire ») — M16 est livrée.**
+  - **`q15`, _La liste de Ti-Loup_** (Ti-Loup — 250 $, 375 sans une bosse) : la variante de `q14` pour qui a choisi Josée
+    (`q11`, après `s02`). Les camions de Sven ont sauté, mais ses clients de Bergen ont encore faim, et c'est Ti-Loup
+    qu'ils appellent — pour des pièces. Un taxi derrière le terminus, au lot de la fourrière sans une bosse ; il le
+    démonte, on revient une demi-journée plus tard ; le cabriolet rose d'un dentiste derrière le dépanneur (son alarme
+    crie), au lot ; Ti-Loup paie dans sa cour. Sa fin annonce l'ardoise : « c'est moi qui la tiens, astheure ».
+  - **« La liste du quai » comme activité : elle existait** (les « Quatre activités », 26 sept. 2026 :
+    `economie.LISTE_DU_QUAI`, `Missions.majQuai` — quatre modèles, un par jour, sans bosse, renouvelée tous les quatre
+    jours). La note de la vague 23 la disait « pas écrite » : c'était faux. Pas de doublon, donc ; ce que la fiche
+    demandait vraiment et qui manquait, c'est **« Sven — ou Ti-Loup si on l'a brûlé »** : l'ardoise suit maintenant le
+    choix (`LISTE_DU_QUAI["brule"]`, `Missions.donneurDuQuai`) — Sven tant qu'on ne l'a pas brûlé ; après `q11`, personne
+    (il ne te connaît plus) ; après `q15`, Ti-Loup, à son lot. Les mêmes modèles, la même règle, son nom sur la ligne du bas.
+  - ⚠️ **Décision prise sans Martin, à trancher s'il veut** : la liste de Sven reste ouverte dès le début de la partie
+    (comme livrée le 26 sept.), pas seulement après `q14` — la fiche donnait « la liste du quai » en récompense de `q14`.
+    La fermer jusque-là retirerait une activité livrée à qui ne fait pas l'arc Q.
+  - ⚠️ Écart à la fiche, comme pour `q14` : deux modèles, une demi-journée entre les deux.
+  - **Juges** : `tests/test_liste_de_ti_loup_js.py` (trois : q15 au bouton — le taxi, le lot, une heure ne suffit pas et
+    douze oui, le cabriolet, la prime, et Sven n'offre pas `q14` ; une bosse sur le cabriolet coûte la prime ; l'ardoise :
+    Sven, personne, puis Ti-Loup, et Sven plus jamais après `q11`) ; mutations : l'ardoise qui ignore `q11`, Ti-Loup sans
+    `q15`, le lot pris pour la jetée — rouges.
+  - **Voix** : 13 (≈ 1 210 caractères, 453 crédits), générées, pas écoutées. Scribe : Chris (la voix de Ti-Loup) dit
+    « puis » pour « pis », comme dans `s14` — `pis` n'est pas au dictionnaire de prononciation, à trancher par Martin.
+  - **Le jappement de Biscuit** : voir la vague 25 (trois variantes, `LIEUX["biscuit"]`, avec sa bulle « WOUF! »).
+  - **Le plafond des voix à 90 Mo** : validé par Martin (`tests/test_audio.py`).

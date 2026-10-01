@@ -3112,10 +3112,24 @@ const Missions = (function () {
     return p.quai;
   }
 
-  /** Le poste de Sven (sa jetee), ou null s'il n'est plus la. */
+  /** QUI TIENT L'ARDOISE (la fiche : « Sven, ou Ti-Loup si on l'a brule ») : Sven ; apres q11 (ses camions sautes pour
+      Josee), personne — il ne te connait plus ; puis Ti-Loup, quand il l'a reprise (q15). `null` : pas de liste. */
+  function donneurDuQuai() {
+    const r = reglesDuQuai(), b = r && r.brule;
+    if (!r) return null;
+    if (!b || !Histoire.faite(b.par)) return r.donneur;
+    return Histoire.faite(b.apres) ? b.relais : null;
+  }
+
+  /** Son nom sur la ligne du bas et dans les messages. */
+  function nomDuQuai() { const qui = donneurDuQuai(), r = reglesDuQuai(); return qui ? ((r.noms || {})[qui] || qui.toUpperCase()) : ''; }
+
+  /** Ou l'on livre : la jetee de Sven, ou le lot de la fourriere de Ti-Loup (`brule.lieu`) ; null sans liste. */
   function posteDuQuai() {
-    const r = reglesDuQuai();
-    return r ? Histoire.lieuDuPersonnage(r.donneur) : null;
+    const r = reglesDuQuai(), qui = donneurDuQuai();
+    if (!qui) return null;
+    if (qui === r.donneur) return Histoire.lieuDuPersonnage(qui);
+    return Histoire.lieuDeLivraison(r.brule.lieu);
   }
 
   function prixAuQuai(slug) {
@@ -3132,7 +3146,7 @@ const Missions = (function () {
       const def = Vehicules.vehiculeDef(slug);
       return (def ? def.nom.toUpperCase() : slug.toUpperCase()) + (e.livres.indexOf(slug) >= 0 ? ' (LIVRÉ)' : '');
     });
-    return 'LA LISTE DE SVEN : ' + noms.join(' · ') + (e.jour === B.partie.jour ? ' — DEMAIN' : '');
+    return 'LA LISTE DE ' + nomDuQuai() + ' : ' + noms.join(' · ') + (e.jour === B.partie.jour ? ' — DEMAIN' : '');
   }
 
   /** La livraison : au volant d'un modele de la liste, a l'arret au bout de la jetee. */
@@ -3144,14 +3158,15 @@ const Missions = (function () {
     if (!poste || dist2(v.x, v.y, poste.x, poste.y) > Math.pow(r.rayon_tuiles * TT, 2)) { v.quaiDit = false; return; }
     const e = etatDuQuai(), p = B.partie;
     if (listeDuQuai(p.jour).indexOf(v.slug) < 0 || e.livres.indexOf(v.slug) >= 0) return;
-    if (e.jour === p.jour) { if (!v.quaiDit) { v.quaiDit = true; Hud.message('SVEN : UN PAR JOUR. REVIENS DEMAIN.'); } return; }
-    if (v.vie < v.vieMax * r.sans_bosse) { if (!v.quaiDit) { v.quaiDit = true; Hud.message('SVEN N’EN VEUT PAS : TROP DE BOSSES'); Son.SFX.erreur(); } return; }
+    const nom = nomDuQuai();
+    if (e.jour === p.jour) { if (!v.quaiDit) { v.quaiDit = true; Hud.message(nom + ' : UN PAR JOUR. REVIENS DEMAIN.'); } return; }
+    if (v.vie < v.vieMax * r.sans_bosse) { if (!v.quaiDit) { v.quaiDit = true; Hud.message(nom + ' N’EN VEUT PAS : TROP DE BOSSES'); Son.SFX.erreur(); } return; }
     const prix = prixAuQuai(v.slug);
     e.livres.push(v.slug);
     e.jour = p.jour;
     Vehicules.descendre(j, true);
     Entites.retirer(v);
-    encaisser(prix, 'SVEN — ' + v.def.nom.toUpperCase());
+    encaisser(prix, nom + ' — ' + v.def.nom.toUpperCase());
   }
 
   // --- Braquer un commerce ------------------------------------------------------------------
@@ -4061,7 +4076,7 @@ const Missions = (function () {
 
   return { majBerlineDeLivreur, attirerLesEnfants, hiverDeMotoneige, placeDesMotoneiges, majMotoneiges, sequenceDuLoto, direLeLoto, boucherLeNid, rendreLesNidsBouches, placeDeLAsphalte, majAsphalte, decompteDesNids,
     majCremeGlacee, placeDuCamion, ritournelleDuCamion,
-    listeDuQuai, etatDuQuai, posteDuQuai, prixAuQuai, texteDuQuai, majQuai,
+    listeDuQuai, etatDuQuai, donneurDuQuai, posteDuQuai, prixAuQuai, texteDuQuai, majQuai,
     braquable, braquer, rancuneIci,
     tirageDuLoto, numerosDuBillet, acheterUnBillet, nuitDuLoto, ligneDuLoto, itemLoto,
     evaluerMain, gainDuVideopoker, paquetDuVideopoker, donnerAuVideopoker, tirerAuVideopoker, menuVideopoker,

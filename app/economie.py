@@ -929,6 +929,11 @@ FOUILLE_PAR_STANDING: dict[str, float] = {"cossu": 2.2, "ordinaire": 1.0, "pauvr
 #: ⚠️ Les modeles viennent de `modeles` — ce que la ville fait rouler ou garer (pas de sirene, pas de
 #: bateau, pas de char de chantier) — et un juge les tient au catalogue. Sven paie `fraction` du prix
 #: neuf : mieux que le garage (`VENTE_FRACTION`), jamais le neuf.
+#:
+#: ⚠️ L'ARDOISE SUIT LE CHOIX (M16, 1er oct. 2026 — la fiche : « Sven, ou Ti-Loup si on l'a brûlé ») : qui a fait sauter
+#: les camions de Sven pour Josée (`brule["par"]`, q11) ne livre plus à sa jetée — il ne te connaît plus. L'ardoise
+#: reste vide jusqu'à ce que Ti-Loup la reprenne (`brule["apres"]`, q15 : sa liste à lui, la variante de q14) ; on livre
+#: alors au lot de la fourrière (`brule["lieu"]`), où il démonte. Les mêmes modèles, la même règle.
 LISTE_DU_QUAI = {
     "donneur": "sven",
     "nombre": 4,
@@ -939,6 +944,8 @@ LISTE_DU_QUAI = {
     "sans_bosse": 0.9,           # la part de sa vie que le char doit garder
     "rayon_tuiles": 4,           # a tant du poste de Sven, a l'arret, la livraison se fait
     "info_tuiles": 7,            # a tant, la ligne du bas dit la liste
+    "noms": {"sven": "SVEN", "tiloup": "TI-LOUP"},
+    "brule": {"par": "q11", "relais": "tiloup", "lieu": "fourriere", "apres": "q15"},
 }
 
 #: BRAQUER UN COMMERCE (docs/jalons/braquer-un-commerce.md) : une arme en main devant un comptoir,
@@ -968,7 +975,8 @@ BRAQUAGE = {
 
 def exporter() -> dict:
     return {
-        "liste_du_quai": {**LISTE_DU_QUAI, "modeles": list(LISTE_DU_QUAI["modeles"])},
+        "liste_du_quai": {**LISTE_DU_QUAI, "modeles": list(LISTE_DU_QUAI["modeles"]),
+                          "noms": dict(LISTE_DU_QUAI["noms"]), "brule": dict(LISTE_DU_QUAI["brule"])},
         "braquage": {**BRAQUAGE, "caisses": dict(BRAQUAGE["caisses"]), "points": list(BRAQUAGE["points"]),
                      "jamais": list(BRAQUAGE["jamais"])},
         "argent_depart": ARGENT_DEPART,

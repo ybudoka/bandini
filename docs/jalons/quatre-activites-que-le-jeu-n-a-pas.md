@@ -91,6 +91,13 @@ jour**, et **sans bosse** (90 % de sa vie, sinon « TROP DE BOSSES »). Juges : 
 qui change ; la même pour deux graines) ; trois mutations les font rougir. Restent **les frénésies**, à
 trancher par Martin.
 
+**1er oct. 2026 : l'ardoise suit le choix** (M16, les deux restes — la fiche : « Sven, ou Ti-Loup si on l'a
+brûlé »). Qui a fait sauter les camions de Sven pour Josée (`q11`) ne livre plus à sa jetée : l'ardoise reste vide
+jusqu'à ce que Ti-Loup la reprenne (`q15`, _La liste de Ti-Loup_, la variante de `q14`) — les mêmes modèles, la même
+règle, livrés à son lot de la fourrière (« LA LISTE DE TI-LOUP », « TI-LOUP — … »). La règle est à Python
+(`economie.LISTE_DU_QUAI["brule"]`), `Missions.donneurDuQuai` la lit. Juge :
+`tests/test_liste_de_ti_loup_js.py` (Sven, personne, puis Ti-Loup — et Sven plus jamais après q11).
+
 **Les frénésies — livrées le 28 sept. 2026** (4e et dernière des 4 activités ; Martin : « la frénésie on
 y va ») : huit crânes rouges, **un par district de terre**, cachés dans une ruelle (`app/frenesies.py` : la
 friche aux Friches et l'herbe à la Gare de triage, qui n'en ont pas) — la plus proche de la cour de la gang

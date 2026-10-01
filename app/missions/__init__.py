@@ -761,6 +761,7 @@ from . import (  # noqa: E402
     e03,
     e05, e14,
     p03,
+    q15,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -881,6 +882,9 @@ CATALOGUE: list[Mission] = [
     # ⚠️ q14 (1er oct. 2026, vague 23) : la liste du Norvégien — deux modèles pour la cale de Sven, une demi-journée entre
     # les deux (`attendre`), sans une bosse ; seulement si l'on a choisi Sven (q10).
     q14.MISSION,
+    # ⚠️ q15 (1er oct. 2026, les deux restes de M16) : la liste de Ti-Loup — la variante de q14 pour qui a choisi Josée
+    # (q11) : un taxi et un cabriolet en pièces, sans une bosse ; après elle, l'ardoise du quai est à lui.
+    q15.MISSION,
     # ⚠️ t08, t10 (1er oct. 2026, la toute fin de M16) : deux petites jobs À L'USINE — trois boîtes à porter, un
     # machiniste qui pointe à l'heure ; elles ne s'offrent qu'aux heures où la cour est ouverte (`barriere_d_heure`).
     t08.MISSION, t10.MISSION,
