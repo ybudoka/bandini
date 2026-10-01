@@ -899,6 +899,13 @@ Quatre morceaux, livrés l'un après l'autre :
   les coups de feu (`alerterAgent` le faisait basculer en `enquete`) ; la riposte ne réveille que celui qui est
   encore dans la rixe ; une rixe décompte aussi pendant le geste (un tireur se battait seul, la rixe finie) et un
   renfort finit avec celui qui l'a appelé.
+- **La relecture** : un agent contre un gang ne tirait qu'UNE balle (son propre coup de feu le faisait enquêter) et
+  lâchait le combat à la première balle reçue (il fuyait, puis flânait) — une marque durable (`contreGang`) le
+  ramène au combat ; il y va par un chemin (`Police.suivre`) ; la patrouille naît dans ta bulle, de ton côté ; la
+  poursuite en char ne naît pendant AUCUNE mission (une livraison sans dégâts) ni en bateau.
+- **Martin : « abîmer sans exploser »** — les balles et les briques qui ne sont pas les tiennes abîment un char sans
+  le descendre jusqu'au feu (il fumerait, puis sauterait) : pas d'épaves en chaîne autour d'une rixe. Tes coups le
+  font toujours sauter — et LE CHAR OÙ TU ES saute sous les balles des autres, qui te visent.
 - **Reporté** : la police contre les gangs ne vise que les ARMÉS (les bagarreurs au bâton l'ignorent) ; l'auto-
   patrouille est garée, elle ne roule pas jusqu'à la fusillade ; les agents restent, puis flânent (pas de retour à
   l'auto).
