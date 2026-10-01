@@ -53,8 +53,10 @@ def test_le_train_ne_deplace_rien(monkeypatch):
     monkeypatch.setattr(train, "poser", lambda ville: None)
     sans = carte.generer()
     assert sans["train"] is None
+    # ⚠️ Ni les COLLECTIONS : les bebelles évitent exprès la voie du train (`collectionner.poser_bebelles`), et elles
+    # lisent toute la ville finie — elles en dépendent sans y rien poser (`test_collections`).
     for cle in avec:
-        if cle != "train":
+        if cle not in ("train", "collections"):
             assert json.dumps(avec[cle], sort_keys=True) == json.dumps(sans[cle], sort_keys=True), cle
 
 
