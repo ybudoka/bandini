@@ -130,7 +130,13 @@ VISION = {
     "policier": {"angle": 45, "jour": 9, "nuit": 6},
     "auto_police": {"angle": 30, "jour": 14, "nuit": 12},
     "pieton": {"angle": 60, "jour": 6, "nuit": 4},
-    "helico": {"angle": 180, "jour": 25, "nuit": 20},
+    # ⚠️ L'HELICO VOIT CE QUE SON PROJECTEUR ECLAIRE, pas la ville entiere (Martin,
+    # 1er oct. 2026 : « avec plusieurs etoiles, on se deplace et elle sait deja ou
+    # on est »). A 25 tuiles, il couvrait tout l'ecran et plus : tant qu'il etait
+    # la, rien ne retombait, ou que l'on aille. A 11 tuiles, il faut qu'il soit
+    # au-dessus de toi pour te voir — et il ne survole plus que ta derniere
+    # position CONNUE (`police.piste_fraiche_s`).
+    "helico": {"angle": 180, "jour": 11, "nuit": 8},
     # ⚠️ LE VIGILE PRIVE (infiltration) : le meme cone qu'un policier, en plus
     # court et en plus large — un garde tient un couloir, il ne patrouille pas
     # un pate de maisons. Pas d'auto, pas d'helico : ses renforts, ce sont les
@@ -426,6 +432,18 @@ POLICE = {
     # ⚠️ Deuxieme passe (22 sept. 2026) : 12 s ne se sentaient pas — une etoile
     # tombe en 15 s hors de vue, et les renforts doivent arriver APRES ca.
     "renfort_s": 20,
+    # ⚠️ LA POLICE NE SAIT PAS OU TU ES : ELLE SAIT OU ON T'A VU (Martin, 1er oct.
+    # 2026 : « avec plusieurs etoiles, on se deplace et elle sait deja ou on est.
+    # C'est impossible de s'echapper »). Les autos-patrouilles choisissaient a
+    # chaque croisement la sortie qui les rapprochait de ta position REELLE, et
+    # naissaient autour d'elle ; l'helico la survolait ; les barrages se posaient
+    # devant ton char sans que personne t'ait vu. Tant qu'un agent, une auto ou
+    # l'helico t'a vu il y a moins de `piste_fraiche_s`, la radio dit ou tu es ;
+    # au-dela, tout le monde chasse `dernierVu` — et arrive la, ne te voyant pas,
+    # RATISSE le secteur (`ratisse_px` autour) au lieu d'y foncer. ⚠️ Les
+    # temoins et les coups de feu, eux, deplacent toujours la piste.
+    "piste_fraiche_s": 2,
+    "ratisse_px": 96,
 }
 
 

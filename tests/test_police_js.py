@@ -1336,3 +1336,44 @@ def test_le_a_etoile_contourne_un_batiment_et_ne_gele_pas(banc):
     assert r["ms"] < 50
     assert r["apresUneImage"] == 2 and r["enAttente"] == 1 and r["servies"] == 3
     assert r["impossible"] is None
+
+
+def test_la_police_chasse_ou_on_t_a_vu_pas_ou_tu_es(banc, paquet):
+    """⚠️ Martin, 1er oct. 2026 : « avec plusieurs étoiles, on se déplace et elle sait déjà
+    où on est. C'est impossible de s'échapper. » Les autos-patrouilles choisissaient leurs
+    sorties vers ta position RÉELLE et naissaient autour d'elle ; l'hélico la survolait.
+    Piste froide (personne ne t'a vu depuis `piste_fraiche_s`), tout le monde chasse
+    `dernierVu` : posée loin du joueur, ni l'hélico ni les autos ne viennent à lui, et
+    rien ne le revoit — les étoiles peuvent retomber."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, r = L.B.recherche, c = L.Monde.carte;
+        j.intouchable = true;
+        for (const q of L.B.entites.slice()) {
+            if (q.agent || (q.type === 'vehicule' && q.conducteur === 'police')) L.Entites.retirer(q);
+        }
+        L.B.defs.recherche.police.patrouille_par_zone_max = 0;
+        L.B.defs.recherche.police.renfort_s = 0;
+        L.Police.ajouterChaleur(15);                // cinq etoiles : autos et helico
+        // On t'a vu a 900 px d'ici, vers le centre de la ville, et plus depuis.
+        const cx = c.w * L.TT / 2, cy = c.h * L.TT / 2, n = Math.hypot(cx - j.x, cy - j.y) || 1;
+        r.dernierVu = { x: j.x + (cx - j.x) / n * 900, y: j.y + (cy - j.y) / n * 900, t: L.B.t };
+        r.vu = 10 * 60;
+        const piste = L.Police.piste(), vise = { x: r.dernierVu.x, y: r.dernierVu.y };
+        let revuA = -1, hMin = Infinity, aMin = Infinity, hLa = 0, autos = 0, revu = false, vuAvant = r.vu;
+        for (let i = 0; i < 900; i++) {
+            o.frame(1);
+            if (r.vu < vuAvant && !revu) { revu = true; revuA = i; }
+            vuAvant = r.vu;
+            const h = L.Police.helico();
+            if (h) { hLa++; hMin = Math.min(hMin, Math.hypot(h.x - j.x, h.y - j.y)); }
+            for (const v of L.Police.autos()) { autos++; aMin = Math.min(aMin, Math.hypot(v.x - j.x, v.y - j.y)); }
+        }
+        return { piste: piste.x === vise.x && piste.y === vise.y, revuA: revuA,
+                 hMin: hMin, aMin: aMin, hLa: hLa, autos: autos, revu: revu, etoiles: r.etoiles };
+    }""")
+    assert r["piste"], "piste froide, la police doit chasser la ou on t'a vu : %s" % r
+    assert r["hLa"] > 0 and r["autos"] > 0, "l'helico et les autos ne sont jamais venus : le juge ne mesure rien (%s)" % r
+    assert r["hMin"] > 250, "l'helico est venu survoler le joueur qu'on n'a pas revu : %s" % r
+    assert r["aMin"] > 160, "une auto-patrouille a trouve le joueur sans piste : %s" % r
+    assert not r["revu"], "personne n'aurait du revoir le joueur : %s" % r

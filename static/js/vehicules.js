@@ -2732,10 +2732,12 @@ const Vehicules = (function () {
             longueurs[choix] = c ? c.length : 1e6 + Math.sqrt(dist2(x, y, but.x, but.y));
           });
           ordre = ['droit', 'droite', 'gauche'].sort(function (a, b) { return longueurs[a] - longueurs[b]; });
-        } else if (v.poursuite && B.joueur) {
+        } else if (v.poursuite && B.joueur && !(v.conducteur === 'police' && Police.ratisse(v))) {
           // En poursuite : la sortie qui rapproche le plus du joueur, d'abord.
           // En fuite (le fuyard de M2) : celle qui en eloigne le plus.
-          const j = B.joueur, signe = v.fuite ? -1 : 1;
+          // ⚠️ La POLICE ne va pas ou tu es : elle va ou on t'a vu (`Police.piste`). Arrivee la
+          // sans te voir, elle ratisse : ses sorties se tirent comme celles du trafic.
+          const j = v.conducteur === 'police' ? Police.piste() : B.joueur, signe = v.fuite ? -1 : 1;
           ordre = ['droit', 'droite', 'gauche'].sort(function (a, b) {
             const qa = PAS_FLECHE[vers[a]], qb = PAS_FLECHE[vers[b]];
             return signe * (dist2((tx + qa[0] * 4) * TT, (ty + qa[1] * 4) * TT, j.x, j.y) - dist2((tx + qb[0] * 4) * TT, (ty + qb[1] * 4) * TT, j.x, j.y));
