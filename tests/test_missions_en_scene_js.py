@@ -69,7 +69,14 @@ OUTILS = ('  const ORDRE = ' + json.dumps(missions.ordre_topologique()) + ';' + 
   const BANC = o;
   function mission(L, slug) { return L.B.defs.missions.find(function (m) { return m.slug === slug; }); }
   function faites(L, slug) {
-    for (const s of ORDRE) { if (s === slug) break; L.B.partie.missionsFaites[s] = 1; }
+    for (const s of ORDRE) {
+      if (s === slug) break;
+      L.B.partie.missionsFaites[s] = 1;
+      // ⚠️ Un CHAPITRE fait a fait les missions qu'il remplace (`Chapitres`, à sa réussite) : Zed n'arrive qu'après
+      // p02 (`arrive_apres`), l'acte 1 de La Pointe — sans elle, p08 et p12 (1er oct. 2026) n'avaient pas de donneur.
+      const m = mission(L, s);
+      ((m && m.remplace) || []).forEach(function (r) { L.B.partie.missionsFaites[r] = 1; });
+    }
     // ⚠️ Un donneur donne la PREMIERE mission disponible de sa liste (`disponibleDe`, l'ordre du catalogue) :
     // chez Marco, f01 se donne avant m97, et parler a Marco posait f01 quand le juge attendait m97. Celles du
     // meme donneur qui viennent AVANT la mission jugee sont donc faites aussi — sans les nommer.

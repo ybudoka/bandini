@@ -14,7 +14,7 @@
 | Voix | **Lutz — Chuckling, Giggly and Cheerful** (jeune, un français « standard » vérifié en multilingue v2) ; permise (Martin, 25 sept. 2026), en v3 **à écouter** |
 | Bulle | « Yo! Toi! » |
 | Couleurs | coton ouaté rose, mèche jaune, jeans |
-| Missions | les actes 3 et 4 de **La Pointe** (la course, le saut ; c'étaient p04 et p10) ; mené à la Chef à l'acte 6 (c'était p11 : La Pointe libérée) |
+| Missions | les actes 3 et 4 de **La Pointe** (la course, le saut ; c'étaient p04 et p10) ; mené à la Chef à l'acte 6 (c'était p11 : La Pointe libérée) ; donne **p08** (_Le party du stationnement_) et **p12** (_La flotte de Zed_ : il ne sait pas nager) |
 
 ## Son histoire
 

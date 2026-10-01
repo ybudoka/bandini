@@ -706,6 +706,7 @@ from . import (  # noqa: E402
     e04, e06, e07, e10, la_pointe, s02, s05, s06, s09, s10, s11,
     d01, d02, d03, d04, d05, d06, d07, d08, h03, h04, h05, h06, h07, l01, l02, l03, l04, l05, l06, r02, r03, r04, r05, r06, r07, r08, s07, s12, s14, e13, q12, q09, q08, i01, i02, i03, i05, i06, i08, h08, d09, t01, t02, t03, t04, t05, t06, t09, t11, t12, t13, t14, t15, q07, m98,
     x01, x02, x03, x04, i04, i07,
+    p06, p07, p08, p12,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -815,6 +816,9 @@ CATALOGUE: list[Mission] = [
     # du Clairon, le feu de camp, la gageure, la pelle du vieux, les mariés, l'autobus manqué.
     t01.MISSION, t02.MISSION, t03.MISSION, t04.MISSION, t05.MISSION, t06.MISSION, t09.MISSION, t11.MISSION, t12.MISSION,
     t13.MISSION, t14.MISSION, t15.MISSION,
+    # ⚠️ p06, p07, p08, p12 (1er oct. 2026, vague 20) : La Pointe après sa paix — les lumières d'Ovila (une caisse de
+    # Sven filée jusqu'à la cantine), le souper dansant de M. Bilodeau en autobus, le party des Skateux et leur flotte.
+    p06.MISSION, p07.MISSION, p08.MISSION, p12.MISSION,
     m97.MISSION, m98.MISSION, m99.MISSION,
 ]
 

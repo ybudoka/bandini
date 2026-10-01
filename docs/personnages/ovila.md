@@ -14,7 +14,7 @@
 | Voix | **annonceur centre d'achat 1** — une voix générée, un vieil homme (partagée avec le narrateur : jamais dans le même dialogue) |
 | Bulle | « Les lumières... » |
 | Couleurs | chandail vert, cheveux gris, pantalon marine |
-| Missions | rencontré à **m6** ; appelle du phare à **m97** (le taxi de Marco) ; l'arc P de M16 est le sien |
+| Missions | rencontré à **m6** ; appelle du phare à **m97** (le taxi de Marco) ; l'arc P de M16 est le sien ; donne **p06** (_Ovila voit des lumières_ : une chaloupe sous sa lampe, la caisse des matelots filée jusqu'à la cantine) |
 
 ## Son histoire
 

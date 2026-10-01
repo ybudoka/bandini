@@ -14,7 +14,7 @@
 | Voix | **Santa — Gentle and Heartwarming** (bibliothèque, « old », accent québécois) ; choisie à l'audition contre Pascal et Mathieu (Martin, 30 sept. 2026) — Bill, l'américain d'avant, sonnait faux |
 | Bulle | « Monsieur! » |
 | Couleurs | gilet brun, cheveux blancs, pantalon marine |
-| Missions | donne **La Pointe** (le chapitre, 30 sept. 2026 ; son acte 1, le pont, était p02 ; et, plus tard, p07 : le déménagement) |
+| Missions | donne **La Pointe** (le chapitre, 30 sept. 2026 ; son acte 1, le pont, était p02 ; et, plus tard, **p07** : _Le souper dansant_ — l'autobus du club de l'âge d'or jusqu'à l'Hôtel Bandini) |
 
 ## Son histoire
 

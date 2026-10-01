@@ -1482,3 +1482,29 @@ catalogue.
     pixels — `present` ne cherchait que le piéton resté devant le hangar. Le rival d'une course (`contre.qui`) est
     aussi lui : à portée de voix, il parle en personne. Juge : `test_i07_le_tour_de_l_ile_on_bat_leo` lit le combiné
     réplique par réplique (muté, rouge).
+- **1er oct. 2026 : vague 20 — La Pointe après sa paix** (Martin : « continuer M16 »). Quatre missions, des donneurs
+  qui existent, aucune tuile ni porte neuve :
+  - `p06` (Ovila, _Ovila voit des lumières_ — 300 $) : la nuit au phare, une chaloupe sans feux, deux matelots de Sven
+    et une caisse dans un camion ; on le file (`suivre`) jusqu'à la cantine des Quais, on couche les deux matelots,
+    on prend la caisse à pied (`obtenir`) et on la porte à Josée (`parler`) — des moteurs hors-bord à l'étampe de Sven.
+  - `p07` (M. Bilodeau, _Le souper dansant_ — 250 $, 375 sans un choc) : l'autobus du club de l'âge d'or devant le
+    phare, les voisins du bout aux Souvenirs, aux Planches et au pied du pont (`course`), l'Hôtel Bandini sans les
+    brasser (`livrer`, `sans_degats`).
+  - `p08` (Zed, _Le party du stationnement_ — 200 $, 300 sans une bosse) : le camion de Lulu, deux caisses de bière au
+    stationnement du phare, la police à semer, le party.
+  - `p12` (Zed, _La flotte de Zed_ — 150 $) : la vieille chaloupe de Lulu menée par la baie au quai de La Pointe
+    (`amarrage:phare`), et Zed qui avoue qu'il ne sait pas nager.
+  - ⚠️ **Écarts à la fiche** : `p06` — la « cabane » des matelots est la ruelle de la cantine, et ils roulent (on ne
+    file pas un piéton) ; `p07` — un souper dansant plutôt qu'un déménagement, trois arrêts (La Pointe n'a que deux
+    enseignes et un pont), à huit tuiles (les enseignes sont à six et sept tuiles de la rue ; l'autobus ne monte pas
+    sur le trottoir, le banc l'a vu) ; `p12` — le quai de La Pointe est l'amarrage le plus proche du phare, au nord du
+    district.
+  - ⚠️ **Le banc des scènes ne savait pas qu'un chapitre fait a fait ses actes** : `faites()` de
+    `test_missions_en_scene_js.py` marquait `la_pointe` sans `p02` — or Zed n'arrive qu'après `p02` (`arrive_apres`),
+    et `Chapitres` marque les missions remplacées à la réussite. Les scènes de `p08` et `p12` tombaient sur un donneur
+    absent (14 rouges) ; `faites()` marque maintenant ce qu'un chapitre remplace.
+  - **Juges** : `tests/test_pointe_apres_js.py` (sept, au bouton de la poignée de main à la prime : chaque mission ;
+    `p06` collé au camion, qui nous voit ; `p07` un choc, pas de prime ; `p12` la chaloupe en épave) ; mutations : le
+    rayon des arrêts de `p07` remis à trois (rouge), `sans_degats` retiré (rouge).
+  - **Voix** : 43 (≈ 3 900 caractères), générées et mesurées, pas écoutées.
+
