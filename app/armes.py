@@ -122,7 +122,15 @@ REGLES: dict = {
                  # `contagion_px`), pour `contagion_garde` de son temps a lui — le feu s'use d'un corps a l'autre —,
                  # et jamais plus de `max` personnes a la fois. L'eau et l'extincteur l'eteignent.
                  "gens": {"duree_s": 4, "degats_par_seconde": 15, "contagion_px": 12, "contagion_garde": 0.7,
-                          "max": 6}},
+                          "max": 6},
+                 # ⚠️ LE FEU SE PROPAGE (vague 2, lot 2c), BORNE : toutes les `cadence_images`, une flaque gagne une
+                 # place voisine (a `pas_px`) qui brule — l'herbe (pas l'hiver), la haie, la palissade de bois
+                 # (`tuiles`), ou un decor de bois ou de vegetal (`DECORS_QUI_BRULENT`, combat.js : une propriete du
+                 # dessin, comme `solide` — le paquet ne la porte pas) ; la fille vit `garde` du temps de sa mere,
+                 # `generations` au plus, et jamais plus de `max` flaques a la fois. Un parc ne brule pas jusqu'au
+                 # matin, et le telephone ne rame pas. Les arbres n'y sont pas : pas de foret en feu.
+                 "propagation": {"cadence_images": 40, "pas_px": 26, "garde": 0.6, "generations": 3, "max": 24,
+                                 "tuiles": ",`w"}},
     # Ce qui se lance (`lance`) et ce qui saute. `bruit_tuiles` : le rayon dans
     # lequel un agent ENTEND l'explosion — plus loin qu'une carabine (22) : une
     # detonation de chantier s'entend a l'autre bout du quartier. Le reste est

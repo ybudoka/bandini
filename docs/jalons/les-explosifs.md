@@ -802,3 +802,23 @@ propage.
   lanceur ; il allume son voisin mais jamais toute la foule ; le joueur brûle aussi et l'eau l'éteint ; l'extincteur
   éteint les gens et la flaque) ; sept mutations, toutes mordent (la fuite est écrite deux fois — à l'allumage et à
   chaque image — et mord quand on retire les deux). Regardé : la flaque haute et sa fumée, la lueur la nuit.
+
+### Vague 2, lot 2c (✅ livré le 1er oct. 2026) : le feu se propage, borné — la vague 2 est livrée
+
+- **La flaque gagne une place voisine** toutes les 40 images (`Combat.propager`, `REGLES["incendie"]["propagation"]`) :
+  l'herbe (pas l'hiver, sous la neige), la haie de cèdres, la palissade de bois, ou un décor de bois ou de végétal —
+  les bancs, les palettes, les caisses, les tables de pique-nique, les cabanons, les buissons, les cordes à linge, les
+  chaises longues, les ordures, les débris (`DECORS_QUI_BRULENT`, côté navigateur : une propriété du dessin, comme
+  `solide` — le budget de `armes_regles` au paquet ne la portait pas, 325 octets gzip pour 300). Les arbres n'y sont
+  pas : pas de forêt en feu. L'asphalte ne propage rien, ni l'eau.
+- ⚠️ **Borné** : la fille vit 60 % du temps de sa mère, trois générations au plus, jamais deux flaques au même endroit,
+  et jamais plus de 24 à la fois — un parc ne brûle pas jusqu'au matin, et le téléphone ne rame pas.
+- Juges `tests/test_molotov_js.py` (sur l'herbe d'été le feu gagne puis s'éteint ; l'hiver l'herbe ne brûle pas et
+  l'asphalte jamais ; la haie et le banc prennent feu ; vingt bouteilles sur une pelouse de 13 × 13 touchent la borne
+  sans la dépasser) ; huit mutations, toutes mordent (le plafond ne mordait pas sur une petite pelouse — l'espace s'y
+  sature avant : le pire cas est un grand parc). Le juge de `test_armes_js` (« un brasier, jamais deux ») reste vrai
+  dans sa rue. Regardé : un feu de pelouse en plusieurs foyers.
+
+**La vague 2 est livrée** : il s'allume d'abord, on voit la bouteille voler, plus gros (2a) ; les gens prennent feu
+(2b) ; le feu se propage, borné (2c). Restent la vague 3 (les murs fissurés et le C4) et la vague 4 (le char piégé et
+le lance-roquettes).

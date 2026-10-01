@@ -465,7 +465,8 @@ const Combat = (function () {
       Entites.particule(x, y, Math.cos(a) * v, Math.sin(a) * v * 0.6, 14 + B.rng() * 8, i % 3 ? '#ff8c1a' : '#ffd23a', 2, 0.04);
     }
     return Entites.creer('brasier', x, y, {
-      r: inc.rayon_px, dessine: false, solide: false, auteur: p.tireur, reste: p.feu_s * 60,
+      r: inc.rayon_px, dessine: false, solide: false, auteur: p.tireur, reste: p.feu_s * 60, resteDe: p.feu_s * 60,
+      generation: 0,
     });
   }
 
@@ -513,8 +514,45 @@ const Combat = (function () {
           Entites.endommagerDecor(d, degats);
         }
       }
-      if (f.reste <= 0) { Entites.decal(f.x, f.y, 'impact'); Entites.retirer(f); }
+      if (f.reste <= 0) { Entites.decal(f.x, f.y, 'impact'); Entites.retirer(f); continue; }
+      if (B.t % inc.propagation.cadence_images === 0) propager(f, inc);
     }
+  }
+
+  /** LE FEU SE PROPAGE (les explosifs, vague 2, lot 2c) : la flaque gagne UNE place voisine qui brule — l'herbe
+      (pas l'hiver, sous la neige), la haie, la palissade de bois, un decor de bois ou de vegetal. ⚠️ BORNE : la fille
+      vit `garde` du temps de sa mere, `generations` au plus, jamais plus de `max` flaques a la fois, et jamais sur
+      l'eau ni sur une place qui brule deja. L'asphalte ne propage rien. */
+  //: Le decor qui brule (le feu se propage, lot 2c) : le bois et le vegetal. ⚠️ Une propriete du DESSIN, comme
+  //: `solide` dans les fiches de decor : le paquet ne la porte pas. Les arbres n'y sont pas — pas de foret en feu.
+  const DECORS_QUI_BRULENT = Object.freeze({ banc: 1, banc_nord: 1, banc_est: 1, banc_ouest: 1, palettes: 1, caisse: 1,
+    table_pique_nique: 1, cabanon: 1, buisson: 1, corde_a_linge: 1, chaise_longue: 1, ordures: 1, debris: 1 });
+
+  function propager(f, inc) {
+    const p = inc.propagation, gen = f.generation || 0;
+    if (gen >= p.generations || f.reste < 60) return null;
+    let n = 0;
+    for (const q of B.entites) if (q.type === 'brasier') n++;
+    if (n >= p.max) return null;
+    const hiver = typeof Saisons !== 'undefined' && Saisons.enHiver && Saisons.enHiver();
+    const places = [];
+    for (let k = 0; k < 8; k++) {
+      const a = k * Math.PI / 4, x = f.x + Math.cos(a) * p.pas_px, y = f.y + Math.sin(a) * p.pas_px * 0.8;
+      const tx = Math.floor(x / TT), ty = Math.floor(y / TT);
+      if (Monde.estEau && Monde.estEau(tx, ty)) continue;
+      if (Entites.autour(x, y, f.r * 0.8, function (q) { return q.type === 'brasier'; }).length) continue;
+      const g = Monde.glyphe(tx, ty);
+      const herbe = g === ',' && !hiver, bois = g !== ',' && p.tuiles.indexOf(g) >= 0;
+      const decor = Entites.decorAutour(x, y, 10).find(function (d) { return !d.brise && DECORS_QUI_BRULENT[d.decor]; });
+      if (herbe || bois || decor) places.push({ x: decor ? decor.x : x, y: decor ? decor.y : y });
+    }
+    if (!places.length) return null;
+    const ici = places[Math.floor(B.rng() * places.length)];
+    return Entites.creer('brasier', ici.x, ici.y, {
+      r: Math.max(12, Math.round(f.r * 0.85)), dessine: false, solide: false, auteur: f.auteur,
+      reste: Math.round((f.resteDe || f.reste) * p.garde), resteDe: Math.round((f.resteDe || f.reste) * p.garde),
+      generation: gen + 1,
+    });
   }
 
   // --- Les gens prennent feu (les explosifs, vague 2, lot 2b) -------------------------
@@ -1592,7 +1630,7 @@ const Combat = (function () {
     frapper, tirer, lancerObjet, cycler, roulade, pickpocket, pochesAPrendre, victimeDesPoches, ramasserArme, objetSousLaMain, suivreLaMain, userArme: user,
     viseeAssistee, dispersionDe, allumer, majBrasiers, majAttaque, arcDeMelee, majProjectiles, maj,
     allumerMeche, lacherMeche, lancer, majEnMain, majLances, dessinerLance, ramasser, oublierLances,
-    allumerChiffon, majChiffon, lampes, enflammer, eteindre, majGensEnFeu, majJet,
+    allumerChiffon, majChiffon, lampes, enflammer, eteindre, majGensEnFeu, majJet, propager,
     majCible, ciblesVerrouillables, VERROU_PORTEE,
     otageSousLaMain, viserOtage, prendreEnOtage, lacherOtage, majOtage, majSaisie,
   };

@@ -236,7 +236,7 @@ def test_un_coup_de_feu_s_entend_sans_etre_vu(banc):
 
 def test_le_molotov_laisse_une_flaque_qui_brule_puis_s_eteint(banc):
     """La bouteille part en cloche et, la ou elle casse, le feu mord `feu_s`
-    secondes puis S'ETEINT — un seul brasier, jamais deux. Un passant qui y
+    secondes puis S'ETEINT — un seul brasier, jamais deux, dans une rue (l'asphalte ne propage rien). Un passant qui y
     reste meurt, et c'est une mort DU JOUEUR : `mort_pieton` est signale,
     sinon on tue sans etoiles. Et la bouteille s'entend quand elle CASSE,
     pas quand elle part."""
@@ -276,7 +276,7 @@ def test_le_molotov_laisse_une_flaque_qui_brule_puis_s_eteint(banc):
     assert 10 < r["allumeA"] < 60, f"la bouteille doit retomber en moins d'une seconde ({r['allumeA']})"
     assert r["distance"] < 30, "elle casse sur la cible, ou a ses pieds"
     assert r["son"] == 1, "le verre casse une fois, a l'arrivee"
-    assert r["max"] == 1, "un brasier, jamais deux : le feu ne se propage pas"
+    assert r["max"] == 1, "un brasier, jamais deux : sur l'asphalte, le feu ne se propage pas (test_molotov_js : l'herbe, la haie)"
     assert 0 < r["mortA"] < r["feu_s"] * 60, "rester dans le feu tue avant qu'il s'eteigne"
     assert "mort_pieton" in r["crimes"], "une mort dans le feu est une mort du joueur"
     assert r["fin"] == 0, "le feu s'eteint"

@@ -184,3 +184,100 @@ def test_l_extincteur_eteint_les_gens_et_la_flaque(banc):
     }""")
     assert r["passant"] is False, "l'extincteur n'éteint pas le passant"
     assert r["flaque"] >= 60, f"l'extincteur n'entame pas la flaque : {r}"
+
+
+#: Lot 2c : le feu se propage, borné.
+PROPAGE = """
+    const c = L.Monde.carte, P = L.B.defs.armes_regles.incendie.propagation;
+    function trouver(test) {
+        for (let y = 3; y < c.h - 3; y++) for (let x = 3; x < c.w - 3; x++) if (test(x, y)) return [x, y];
+        return null;
+    }
+    function pelouse(x, y) {
+        for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (c.sol[y + dy][x + dx] !== ',') return false;
+        return true;
+    }
+    function feu(x, y) { return L.Combat.allumer(x, y, { arme: 'molotov', tireur: j, feu_s: L.Combat.armeDef('molotov').feu_s }); }
+    function brasiers() { return L.B.entites.filter(function (e) { return e.type === 'brasier'; }); }
+    function vider() { for (const e of L.B.entites.slice()) if (e.type === 'pieton' || e.type === 'vehicule') L.Entites.retirer(e); }
+    function laisser(n, suivre) {
+        let max = 0;
+        for (let i = 0; i < n; i++) { L.B.t++; L.Entites.indexer(); L.Combat.majBrasiers(); max = Math.max(max, brasiers().length); if (suivre) suivre(); }
+        return max;
+    }
+"""
+
+
+def test_sur_l_herbe_d_ete_le_feu_gagne_puis_s_eteint_dans_sa_borne(banc):
+    r = banc("""function (L, o) {""" + PRELUDE + PROPAGE + """
+        L.B.partie.jour = 22;
+        const ici = trouver(pelouse);
+        vider();
+        feu(ici[0] * 16 + 8, ici[1] * 16 + 8);
+        const max = laisser(1500);
+        return { ici: !!ici, max: max, plafond: P.max, fin: brasiers().length };
+    }""")
+    assert r["ici"], "pas de pelouse dans la ville du témoin"
+    assert r["max"] >= 3, f"le feu ne gagne pas l'herbe : {r}"
+    assert r["max"] <= r["plafond"] and r["fin"] == 0, f"le feu ne s'arrête pas : {r}"
+
+
+def test_l_hiver_l_herbe_ne_brule_pas_et_l_asphalte_jamais(banc):
+    r = banc("""function (L, o) {""" + PRELUDE + PROPAGE + """
+        const ici = trouver(pelouse);
+        vider();
+        const hiver = L.Saisons.enHiver; L.Saisons.enHiver = function () { return true; };
+        feu(ici[0] * 16 + 8, ici[1] * 16 + 8);
+        const neige = laisser(300);
+        L.Saisons.enHiver = hiver;
+        for (const f of brasiers()) L.Entites.retirer(f);
+        const route = trouver(function (x, y) { return L.Monde.estRoute(x, y) && L.Monde.estRoute(x + 2, y) && L.Monde.estRoute(x - 2, y) && L.Monde.estRoute(x, y + 2) && L.Monde.estRoute(x, y - 2); });
+        feu(route[0] * 16 + 8, route[1] * 16 + 8);
+        return { neige: neige, asphalte: laisser(300) };
+    }""")
+    assert r == {"neige": 1, "asphalte": 1}, r
+
+
+def test_la_haie_et_le_banc_prennent_feu(banc):
+    """La flaque gagne la haie de cèdres d'à côté, et un banc de bois ; l'hiver, pour que l'herbe ne compte pas."""
+    r = banc("""function (L, o) {""" + PRELUDE + PROPAGE + """
+        vider();
+        const hiver = L.Saisons.enHiver; L.Saisons.enHiver = function () { return true; };
+        const haie = trouver(function (x, y) { return c.sol[y][x] === '`' && !L.Monde.estRoute(x - 2, y); });
+        const f = feu(haie[0] * 16 + 8 - P.pas_px, haie[1] * 16 + 8);
+        laisser(P.cadence_images + 1);
+        const surLaHaie = brasiers().some(function (b) { return b !== f && L.Monde.glyphe(Math.floor(b.x / 16), Math.floor(b.y / 16)) === '`'; });
+        for (const b of brasiers()) L.Entites.retirer(b);
+        const banc = L.B.entites.find(function (d) {
+            if (d.type !== 'decor' || d.decor !== 'banc') return false;
+            const tx = Math.floor(d.x / 16), ty = Math.floor(d.y / 16);
+            return L.Monde.estRoute(tx, ty + 2) || L.Monde.estTrottoir(tx - 2, ty);
+        });
+        const g = feu(banc.x - P.pas_px, banc.y);
+        laisser(P.cadence_images + 1);
+        const surLeBanc = brasiers().some(function (b) { return b !== g && Math.hypot(b.x - banc.x, b.y - banc.y) < 2; });
+        L.Saisons.enHiver = hiver;
+        return { haie: !!haie, surLaHaie: surLaHaie, surLeBanc: surLeBanc };
+    }""")
+    assert r == {"haie": True, "surLaHaie": True, "surLeBanc": True}, r
+
+
+def test_vingt_bouteilles_sur_un_grand_parc_restent_dans_la_borne(banc):
+    """Le pire cas : vingt flaques sur une pelouse de 13 × 13. Jamais plus de `max` flaques à la fois (le compte y
+    arrive : sans la borne, il la dépasse), jamais plus de `generations` générations, et tout s'éteint."""
+    r = banc("""function (L, o) {""" + PRELUDE + PROPAGE + """
+        L.B.partie.jour = 22;
+        function grande(x, y) {
+            for (let dy = -6; dy <= 6; dy++) for (let dx = -6; dx <= 6; dx++) { const g = c.sol[y + dy] && c.sol[y + dy][x + dx]; if (g !== ',') return false; }
+            return true;
+        }
+        const ici = trouver(grande);
+        vider();
+        for (let k = 0; k < 20; k++) feu(ici[0] * 16 + 8 + (k % 5 - 2) * 30, ici[1] * 16 + 8 + (Math.floor(k / 5) - 1.5) * 30);
+        let gen = 0;
+        const max = laisser(2000, function () { for (const b of brasiers()) gen = Math.max(gen, b.generation || 0); });
+        return { max: max, gen: gen, plafond: P.max, generations: P.generations, fin: brasiers().length };
+    }""")
+    assert r["max"] <= r["plafond"], f"plus de flaques que la borne : {r}"
+    assert r["gen"] <= r["generations"], f"plus de générations que la borne : {r}"
+    assert r["max"] == r["plafond"] and r["gen"] >= 2 and r["fin"] == 0, f"le témoin n'atteint pas la borne : {r}"
