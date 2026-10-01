@@ -1434,6 +1434,7 @@ const Hud = (function () {
   const PLAN_TACTILE = { l: 184, h: 104,
     croix: { x: 24, y: 80, r: 15 },
     arme: { x: 164, y: 52, r: 7 }, action: { x: 136, y: 64, r: 8 }, saisir: { x: 136, y: 44, r: 6 },
+    lire: { x: 164, y: 37, r: 6 },     // LIRE, au-dessus d'ARME (`styles.css`)
     attaque: { x: 164, y: 80, r: 9 }, esquive: { x: 134, y: 94, r: 7 },
     pause: { x: 170, y: 10, r: 5 } };
 
@@ -1452,6 +1453,8 @@ const Hud = (function () {
     // boutons couvrent le coin en bas a droite de l'ecran — centre, le plan
     // poussait FRAPPE et SPRINT dessous (vu a la capture, 844 x 390).
     const ox = x + 92, oy = y + 36;
+    // ⚠️ Un bouton du doigt sans sa place au plan (LIRE, 1er oct. 2026) jetait une erreur A CHAQUE IMAGE : l'ecran
+    // COMMANDES restait vide au telephone. Chaque bouton de `#boutons` a sa place ici (`test_commandes_js.py`).
     const gauche = [], droite = [];
     for (const li of lignes) {
       const c = P[li.cible], aGauche = c.x < P.l / 2;
@@ -1466,7 +1469,7 @@ const Hud = (function () {
     ctx.fillStyle = '#8a8698'; ctx.fillRect(ox - 2, oy - 2, P.l + 4, P.h + 4);
     ctx.fillStyle = '#15141c'; ctx.fillRect(ox, oy, P.l, P.h);
     B.stats.rects += 2;
-    for (const nom of ['croix', 'attaque', 'action', 'esquive', 'arme', 'saisir']) {
+    for (const nom of ['croix', 'attaque', 'action', 'esquive', 'arme', 'saisir', 'lire']) {
       const c = P[nom];
       const tenu = nom === 'croix' ? poucePose() : Entree.basTactile(nom);
       disque(ctx, ox + c.x, oy + c.y, c.r, tenu ? '#e8b33c' : '#3a3450');

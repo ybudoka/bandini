@@ -241,6 +241,40 @@ def test_chaque_ligne_a_son_bouton_sur_chaque_appareil(banc):
         assert lignes == attendu, (cle, lignes)
 
 
+def test_chaque_page_se_dessine_sur_chaque_appareil(banc):
+    """Le 1er oct. 2026, LIRE (la lecture des passants) a rejoint la page « à pied » sans sa place au plan du
+    téléphone (`PLAN_TACTILE`) : `dessinerCommandesTactile` jetait une erreur à chaque image, et l'écran COMMANDES
+    restait vide au doigt — seul le juge Chromium du tactile l'a vu. Ici, au banc : chaque page, chaque appareil,
+    dessinée pour de bon, sans erreur, et une ancre par ligne montrée."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const pages = L.B.defs.manettes.pages, vu = {};
+        [['manette', function () { o.pad([0, 0], [0, 1]); o.frame(2); o.pad([0, 0], [0, 0]); o.frame(2); }],
+         ['clavier', function () { o.tape('KeyW', 2); }],
+         ['tactile', function () { o.bouton('esquive', 'pointerdown'); o.frame(2); o.bouton('esquive', 'pointerup'); o.frame(2); }]
+        ].forEach(function (a) {
+            a[1]();
+            pages.forEach(function (page, k) {
+                if (L.B.etat !== 'pause') L.Jeu.pause();
+                L.Hud.ouvrirOnglet('commandes');
+                L.B.menu.page = k;
+                let erreur = null;
+                try { L.Jeu.rendre(); } catch (e) { erreur = String(e && e.stack || e); }
+                vu[a[0] + '/' + page.slug] = { appareil: L.Entree.appareil, erreur: erreur,
+                    lignes: L.Hud.lignesDAide(page, a[0]).filter(function (li) { return li.glyphes.length; }).length,
+                    ancres: L.Hud.ancres().filter(function (x) { return x.nom === 'commandes'; }).length };
+            });
+        });
+        o.pad(null); o.frame(2);
+        return vu;
+    }""")
+    for cle, v in r.items():
+        appareil = cle.split("/")[0]
+        assert v["appareil"] == appareil, (cle, v)
+        assert v["erreur"] is None, (cle, v["erreur"])
+        assert v["ancres"] >= v["lignes"] > 0, (cle, v)
+
+
 def test_pause_commandes_et_retour(banc):
     """COMMANDES est un ONGLET du classeur de la PAUSE : Effacer et ECHAP
     reprennent la partie, comme depuis tout onglet. HAUT et BAS y tournent la
