@@ -127,6 +127,23 @@ const Police = (function () {
     else if (avant > 0 && r.etoiles === 0) Son.Ondes.police('perdu');
   }
 
+  /** ⚠️ CE QUE LA POLICE SAIT DE TA POSITION (Martin, 1er oct. 2026 : « on se deplace et elle
+      sait deja ou on est »). Vu il y a moins de `piste_fraiche_s` par un agent, une auto ou
+      l'helico : la radio dit ou tu es. Sinon : la ou on t'a vu pour la derniere fois. */
+  function pisteFraiche() {
+    const r = B.recherche;
+    return !r.dernierVu || r.vu < reglages().piste_fraiche_s * 60;
+  }
+  function piste() {
+    const j = B.joueur;
+    return pisteFraiche() ? (j.dansVehicule || j) : B.recherche.dernierVu;
+  }
+  /** La piste est froide et l'auto est arrivee la ou on t'a vu : elle ratisse le secteur. */
+  function ratisse(v) {
+    const r = B.recherche, rp = reglages().ratisse_px;
+    return !pisteFraiche() && dist2(v.x, v.y, r.dernierVu.x, r.dernierVu.y) < rp * rp;
+  }
+
   function ajouterChaleur(gravite) {
     // ⚠️ SUR L'ILE, RIEN NE FAIT MONTER LES ETOILES : ni un crime vu, ni un
     // temoin qui appelle. C'est la seule regle de l'ile, et elle vaut tout le
@@ -687,10 +704,11 @@ const Police = (function () {
     const presentes = autos().filter(function (a) { return !abandonnee(a); });
     if (presentes.length >= voulu) return;
     // Naissance sur une voie, hors ecran, dans le sens de la voie.
-    const c = Monde.carte;
+    // ⚠️ Autour de la ou on t'a vu, pas de la ou tu es (`piste`) : le poste ne sait que ca.
+    const c = Monde.carte, ou = piste();
     for (let essai = 0; essai < 20; essai++) {
       const a = B.rng() * Math.PI * 2, d = 320 + B.rng() * 200;
-      const tx = Math.floor((j.x + Math.cos(a) * d) / TT), ty = Math.floor((j.y + Math.sin(a) * d) / TT);
+      const tx = Math.floor((ou.x + Math.cos(a) * d) / TT), ty = Math.floor((ou.y + Math.sin(a) * d) / TT);
       if (tx < 1 || ty < 1 || tx >= c.w - 1 || ty >= c.h - 1) continue;
       const f = Monde.fleche(tx, ty);
       const pas = { '>': [1, 0], '<': [-1, 0], '^': [0, -1], 'v': [0, 1] }[f];
@@ -897,7 +915,7 @@ const Police = (function () {
   // debarrasse en rentrant quelque part, ou en tenant 90 s... il ne lache
   // rien. Son ombre court au sol, son projecteur te suit la nuit.
 
-  const HELICO_VITESSE = 3.4, HELICO_ALTITUDE = 40, HELICO_RAYON_VOL = 56;
+  const HELICO_VITESSE = 3.4, HELICO_ALTITUDE = 40, HELICO_RAYON_VOL = 56, HELICO_RAYON_RATISSE = 220;
   //: On l'entend jusqu'a 700 px ; reparti, il disparait la. Dedans, il s'entend
   //: moins fort ET sourd (`Son.etouffer`) ; il entre et sort de l'oreille en fondu.
   const HELICO_PORTEE_SON = 700, HELICO_VOLUME_DEDANS = 0.45, HELICO_FONDU_S = 0.6;
@@ -923,8 +941,9 @@ const Police = (function () {
   function peuplerHelico() {
     const j = B.joueur;
     if (helico() || B.t % 60 !== 0) return;
-    const a = B.rng() * Math.PI * 2;
-    Entites.creer('helico', j.x + Math.cos(a) * 520, j.y + Math.sin(a) * 520, {
+    // ⚠️ Il arrive du côté de la ou on t'a vu (`piste`), pas de la ou tu es.
+    const a = B.rng() * Math.PI * 2, ou = piste();
+    Entites.creer('helico', ou.x + Math.cos(a) * 520, ou.y + Math.sin(a) * 520, {
       r: 0, z: HELICO_ALTITUDE, solide: false, vivant: true, dessine: false, orbite: a, rotor: 0, part: false,
     });
     Hud.message('UN HÉLICO !', 150);
@@ -937,8 +956,13 @@ const Police = (function () {
     h.rotor += 0.9;
     if (r.etoiles <= 0 || !palier().helico) h.part = true;
     let bx, by;
+    // ⚠️ Il survole la ou on t'a vu (`piste`), pas la ou tu es. Piste froide, il y tourne en
+    // elargissant son cercle : il RATISSE, et on lui echappe en sortant de son projecteur.
+    // Dedans, il tourne au-dessus de la porte (`ceQuIlSurvole`).
+    const ou = B.interieur ? cible : piste();
+    h.rayon = pisteFraiche() ? HELICO_RAYON_VOL : Math.min(HELICO_RAYON_RATISSE, (h.rayon || HELICO_RAYON_VOL) + 0.3);
     if (h.part) { bx = h.x + (h.x - cible.x) * 2 + 400; by = h.y - 400; }
-    else { h.orbite += 0.008; bx = cible.x + Math.cos(h.orbite) * HELICO_RAYON_VOL; by = cible.y + Math.sin(h.orbite) * HELICO_RAYON_VOL; }
+    else { h.orbite += 0.008; bx = ou.x + Math.cos(h.orbite) * h.rayon; by = ou.y + Math.sin(h.orbite) * h.rayon; }
     const dx = bx - h.x, dy = by - h.y, d = Math.hypot(dx, dy) || 1;
     const pas = Math.min(HELICO_VITESSE, d * 0.06 + 0.4);
     h.vx = h.vx * 0.9 + dx / d * pas * 0.1; h.vy = h.vy * 0.9 + dy / d * pas * 0.1;
@@ -1044,6 +1068,8 @@ const Police = (function () {
       return;
     }
     if (B.t % BARRAGE_TOUTES_LES !== 0 || !v || Math.abs(v.vitesse) < 1) return;
+    // ⚠️ Un barrage devant ton char, c'est que quelqu'un vient de te voir passer : piste froide, pas de barrage.
+    if (!pisteFraiche()) return;
     if (v.def.eau) return;                  // une coque : pas de barrage de rue, c'est la vedette qui la prend
     if (existants.some(function (b) { return dist2(b.x, b.y, j.x, j.y) < 500 * 500; })) return;
     poserBarrage(v);
@@ -1207,7 +1233,7 @@ const Police = (function () {
     }
   }
 
-  return { dansLeCone, voit, porteeDuCasier, quelqu_un_voit, auRefuge, ajouterChaleur, etoilesAuMoins, signalerCrime, crimeDAutrui, rapporter, acheterLeSilence, remiseAZero, unCranDeMoins, entendre, palierDesRenforts,
+  return { dansLeCone, voit, piste, pisteFraiche, ratisse, porteeDuCasier, quelqu_un_voit, auRefuge, ajouterChaleur, etoilesAuMoins, signalerCrime, crimeDAutrui, rapporter, acheterLeSilence, remiseAZero, unCranDeMoins, entendre, palierDesRenforts,
            estStool, leStool, prixDuStool, majStools, appelDuStool, acheterLeStool, onNeTeReconnaitPlus,
            creerAgent, agents, autos, gere, garder, seuilDeReperage, commandes, peuplerAgents, peuplerAutos, equipageDe: equipage, abandonnee,
            agentsVoulus, standingIci,
