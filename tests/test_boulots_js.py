@@ -102,9 +102,12 @@ def test_la_pizza_se_livre_trois_fois_et_refroidit(banc, paquet):
     trajet."""
     f = paquet["economie"]["boulots"]["pizza"]
     r = banc("""function (L, o) {
-        L.Jeu.commencer(); L.B.partie.jour = 21;  // ⚠️ EN JUILLET : l'hiver, motos et vélos sont remisés (test_motos_velos_remises_js.py)
+        L.Jeu.commencer(); L.B.partie.jour = 22;  // ⚠️ EN JUILLET : l'hiver, motos et vélos sont remisés (test_motos_velos_remises_js.py)
         L.graine(51);
         const j = L.B.joueur, d = o.ligneDroite();
+        // ⚠️ La dette de Rocco réglée : en juillet, les hommes de Sal viennent la collecter, et pendant les 50 s de
+        // la tournée froide leur char emboutit la moto garée (une épave : BOULOT ABANDONNÉ). Ce juge tient la pizza.
+        L.B.partie.dette = 0;
         j.x = d.x; j.y = d.y;
         const v = o.char('moto', 0, 0, 0);
         L.Vehicules.monter(j, v);
