@@ -3115,13 +3115,14 @@ const Missions = (function () {
     return p.quai;
   }
 
-  /** QUI TIENT L'ARDOISE (la fiche : « Sven, ou Ti-Loup si on l'a brule ») : Sven ; apres q11 (ses camions sautes pour
-      Josee), personne — il ne te connait plus ; puis Ti-Loup, quand il l'a reprise (q15). `null` : pas de liste. */
+  /** QUI TIENT L'ARDOISE (la fiche : « Sven, ou Ti-Loup si on l'a brule ») : Sven, une fois q14 faite (`ouvre` : sa
+      liste en recompense) ; apres q11 (ses camions sautes pour Josee), personne — il ne te connait plus ; puis Ti-Loup,
+      quand il l'a reprise (q15). `null` : pas de liste. */
   function donneurDuQuai() {
     const r = reglesDuQuai(), b = r && r.brule;
     if (!r) return null;
-    if (!b || !Histoire.faite(b.par)) return r.donneur;
-    return Histoire.faite(b.apres) ? b.relais : null;
+    if (b && Histoire.faite(b.par)) return Histoire.faite(b.apres) ? b.relais : null;
+    return !r.ouvre || Histoire.faite(r.ouvre) ? r.donneur : null;
   }
 
   /** Son nom sur la ligne du bas et dans les messages. */

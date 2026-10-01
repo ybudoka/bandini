@@ -930,12 +930,17 @@ FOUILLE_PAR_STANDING: dict[str, float] = {"cossu": 2.2, "ordinaire": 1.0, "pauvr
 #: bateau, pas de char de chantier) — et un juge les tient au catalogue. Sven paie `fraction` du prix
 #: neuf : mieux que le garage (`VENTE_FRACTION`), jamais le neuf.
 #:
+#: ⚠️ ELLE S'OUVRE APRES q14 (`ouvre`, Martin, 1er oct. 2026 — la fiche la donnait en recompense de _La liste du
+#: Norvegien_) : avant, Sven n'a pas d'ardoise pour toi, et la ligne du bas se tait. Livree le 26 sept., elle etait
+#: ouverte des le debut de la partie.
+#:
 #: ⚠️ L'ARDOISE SUIT LE CHOIX (M16, 1er oct. 2026 — la fiche : « Sven, ou Ti-Loup si on l'a brûlé ») : qui a fait sauter
 #: les camions de Sven pour Josée (`brule["par"]`, q11) ne livre plus à sa jetée — il ne te connaît plus. L'ardoise
 #: reste vide jusqu'à ce que Ti-Loup la reprenne (`brule["apres"]`, q15 : sa liste à lui, la variante de q14) ; on livre
 #: alors au lot de la fourrière (`brule["lieu"]`), où il démonte. Les mêmes modèles, la même règle.
 LISTE_DU_QUAI = {
     "donneur": "sven",
+    "ouvre": "q14",
     "nombre": 4,
     "renouvelle_jours": 4,
     "sel": 0x5E7E,

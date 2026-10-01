@@ -3,7 +3,7 @@ JOUÉE au bouton : le taxi derrière le terminus, le lot de la fourrière sans u
 Ti-Loup le démonte, le cabriolet rose derrière le dépanneur, le lot, sa cour.
 
 Et l'ardoise du quai qui suit le choix (la fiche : « Sven — ou Ti-Loup si on l'a brûlé — affiche quatre modèles ») :
-après q11, Sven ne prend plus rien à sa jetée ; après q15, Ti-Loup prend la liste à son lot."""
+Sven ne la tient qu'après q14 ; après q11, il ne prend plus rien à sa jetée ; après q15, Ti-Loup prend la liste à son lot."""
 
 import json
 
@@ -71,7 +71,8 @@ def test_q15_une_bosse_sur_le_cabriolet_coute_la_prime(banc):
 
 
 def test_l_ardoise_du_quai_suit_le_choix_sven_personne_puis_ti_loup(banc):
-    """Sans q11 : Sven, à sa jetée (la liste du quai, telle que livrée le 26 sept.). Après q11 : personne — Sven ne prend
+    """Sans q11 : Sven, à sa jetée — une fois q14 faite (sans elle, personne : sa liste est la récompense de q14,
+    Martin, 1er oct. 2026). Après q11 : personne — Sven ne prend
     rien, la ligne du bas se tait. Après q15 : Ti-Loup, à son lot ; Sven, toujours rien."""
     brule = economie.LISTE_DU_QUAI["brule"]
     assert (brule["par"], brule["relais"], brule["apres"]) == ("q11", "tiloup", "q15")
@@ -102,12 +103,17 @@ def test_l_ardoise_du_quai_suit_le_choix_sven_personne_puis_ti_loup(banc):
                                            if m["slug"] not in ("q11", "q15", "m97", "m98", "m99")]) + ");" + """
         recharger(L); B.partie.mission = null; B.mission = null; B.partie.jour = 21; B.partie.quai = null;
         const sven = { qui: M.donneurDuQuai(), jetee: livrerA(jetee), lot: livrerA(lot) };
+        // Le côté de Sven, mais sans q14 : sa liste ne s'ouvre qu'en récompense (`ouvre`).
+        delete B.partie.missionsFaites.q14; B.partie.jour = 21; B.partie.quai = null;
+        const sansQ14 = { qui: M.donneurDuQuai(), jetee: livrerA(jetee), lot: livrerA(lot) };
         // Le côté de Josée : q11, sans q15, puis avec.
         const brule = etat([]);
         const tiloup = etat(['q15']);
-        return { sven: sven, brule: brule, tiloup: tiloup };
+        return { sven: sven, sansQ14: sansQ14, brule: brule, tiloup: tiloup };
     }""")
-    s, b, t = r["sven"], r["brule"], r["tiloup"]
+    s, b, t, n = r["sven"], r["brule"], r["tiloup"], r["sansQ14"]
+    assert n["qui"] is None and n["jetee"]["paye"] == 0 and n["jetee"]["info"] is None, f"Sven prend avant q14 : {n}"
+    assert n["lot"]["paye"] == 0, n
     assert s["qui"] == "sven" and s["jetee"]["paye"] > 0 and s["jetee"]["info"].startswith("LA LISTE DE SVEN"), s
     assert s["lot"]["paye"] == 0, f"Ti-Loup prend la liste du côté de Sven : {s}"
     assert b["qui"] is None and b["jetee"]["paye"] == 0 and b["jetee"]["info"] is None, f"Sven prend encore : {b}"

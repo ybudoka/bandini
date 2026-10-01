@@ -1702,9 +1702,12 @@ catalogue.
     demandait vraiment et qui manquait, c'est **« Sven — ou Ti-Loup si on l'a brûlé »** : l'ardoise suit maintenant le
     choix (`LISTE_DU_QUAI["brule"]`, `Missions.donneurDuQuai`) — Sven tant qu'on ne l'a pas brûlé ; après `q11`, personne
     (il ne te connaît plus) ; après `q15`, Ti-Loup, à son lot. Les mêmes modèles, la même règle, son nom sur la ligne du bas.
-  - ⚠️ **Décision prise sans Martin, à trancher s'il veut** : la liste de Sven reste ouverte dès le début de la partie
-    (comme livrée le 26 sept.), pas seulement après `q14` — la fiche donnait « la liste du quai » en récompense de `q14`.
-    La fermer jusque-là retirerait une activité livrée à qui ne fait pas l'arc Q.
+  - ~~Décision prise sans Martin : la liste de Sven reste ouverte dès le début de la partie.~~ **Tranchée par Martin le
+    1er oct. 2026 : comme la fiche, elle s'ouvre après `q14`** (`LISTE_DU_QUAI["ouvre"]`, `Missions.donneurDuQuai`) —
+    avant, Sven ne prend rien et la ligne du bas se tait ; `q14` finit sur « SVEN T'OUVRE L'ARDOISE DU QUAI ». Le côté
+    de Josée ne bouge pas (personne après `q11`, Ti-Loup après `q15`). Juges : `test_la_liste_s_ouvre_apres_q14`
+    (`tests/test_liste_du_quai_js.py`) et le cas « côté de Sven sans `q14` » de
+    `test_l_ardoise_du_quai_suit_le_choix_sven_personne_puis_ti_loup` ; mutation : `ouvre` ignoré — rouges.
   - ⚠️ Écart à la fiche, comme pour `q14` : deux modèles, une demi-journée entre les deux.
   - **Juges** : `tests/test_liste_de_ti_loup_js.py` (trois : q15 au bouton — le taxi, le lot, une heure ne suffit pas et
     douze oui, le cabriolet, la prime, et Sven n'offre pas `q14` ; une bosse sur le cabriolet coûte la prime ; l'ardoise :
@@ -1712,5 +1715,8 @@ catalogue.
     `q15`, le lot pris pour la jetée — rouges.
   - **Voix** : 13 (≈ 1 210 caractères, 453 crédits), générées, pas écoutées. Scribe : Chris (la voix de Ti-Loup) dit
     « puis » pour « pis », comme dans `s14` — `pis` n'est pas au dictionnaire de prononciation, à trancher par Martin.
+    **Tranché le 1er oct. 2026** : `pis`/`Pis` → alias « pi » au dictionnaire (`app/prononciation.pls`), et les neuf voix
+    de Ti-Loup qui disent « pis » ou « astheure » refaites avec lui (`s02-2`, `s02-5`, `s14-2`, `s14-6`, `q15-2`, `q15-3`,
+    `q15-6`, `q15-7`, `repos-2`). Voir docs/voix-de-l-histoire.md, « Le dictionnaire ».
   - **Le jappement de Biscuit** : voir la vague 25 (trois variantes, `LIEUX["biscuit"]`, avec sa bulle « WOUF! »).
   - **Le plafond des voix à 90 Mo** : validé par Martin (`tests/test_audio.py`).

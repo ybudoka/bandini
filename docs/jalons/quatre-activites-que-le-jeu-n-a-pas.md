@@ -98,6 +98,13 @@ règle, livrés à son lot de la fourrière (« LA LISTE DE TI-LOUP », « TI-LO
 (`economie.LISTE_DU_QUAI["brule"]`), `Missions.donneurDuQuai` la lit. Juge :
 `tests/test_liste_de_ti_loup_js.py` (Sven, personne, puis Ti-Loup — et Sven plus jamais après q11).
 
+**1er oct. 2026 : la liste s'ouvre après `q14`** (Martin : « comme le disait la fiche » — _La liste du Norvégien_
+la donne en récompense). Livrée le 26 sept., elle était ouverte dès le début de la partie ; maintenant Sven n'a pas
+d'ardoise pour toi avant `q14` (`economie.LISTE_DU_QUAI["ouvre"]`) : il ne prend rien, la ligne du bas se tait, et
+`q14` finit sur « SVEN T'OUVRE L'ARDOISE DU QUAI ». Le côté de Josée ne change pas (`q11`, puis Ti-Loup après `q15`).
+Juges : `test_la_liste_s_ouvre_apres_q14` (`tests/test_liste_du_quai_js.py`, le reste du banc joue avec `q14`
+faite) et le cas « Sven sans `q14` » de `tests/test_liste_de_ti_loup_js.py`.
+
 **Les frénésies — livrées le 28 sept. 2026** (4e et dernière des 4 activités ; Martin : « la frénésie on
 y va ») : huit crânes rouges, **un par district de terre**, cachés dans une ruelle (`app/frenesies.py` : la
 friche aux Friches et l'herbe à la Gare de triage, qui n'en ont pas) — la plus proche de la cour de la gang

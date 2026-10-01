@@ -6,9 +6,11 @@ livrée au quai sans une bosse (`livrer`, `sans_degats`) ; Sven la charge, on re
 heures de jeu) ; puis un coupé sport derrière le casse-croûte de Mado, au quai lui aussi ; et Sven paie à sa
 passerelle (`retourner`).
 
-⚠️ Écarts à la fiche : deux modèles, pas quatre, et une demi-journée entre les deux plutôt qu'un par jour ; « la liste du
-quai » (l'activité, des modèles qui changent chaque jour) n'existe pas — c'est cette mission seule ; et seulement si
-on a choisi Sven (q10) : la variante de Ti-Loup (après q11) reste à écrire.
+⚠️ Écarts à la fiche : deux modèles, pas quatre, et une demi-journée entre les deux plutôt qu'un par jour ; et
+seulement si on a choisi Sven (q10) : la variante de Ti-Loup (après q11) est q15.
+
+Sa récompense, c'est « la liste du quai » (l'activité, `economie.LISTE_DU_QUAI["ouvre"]`, Martin, 1er oct. 2026) :
+quatre modèles qui changent tous les quatre jours, un par jour à la jetée de Sven — fermée avant elle.
 """
 
 from ._commun import _l, _p
@@ -20,7 +22,7 @@ MISSION = {
     "prerequis": ["q10", "v03"],
     "recompense": 250,
     "echec": ["mort", "arrete", "vehicule_detruit"],
-    "donne": {"message": "LA CALE DE SVEN EST PLEINE"},
+    "donne": {"message": "SVEN T'OUVRE L'ARDOISE DU QUAI"},
 
     "objectifs": [
         {"type": "monter", "texte": "LE PREMIER MODÈLE : UNE BERLINE, DERRIÈRE L'HÔTEL", "vehicule": "luxe",
