@@ -1141,6 +1141,36 @@ modèle ne s'éveille que sous une adhérence de 1 (neige, glace, pluie, gadoue,
   pluie et le sol » ; `docs/architecture.md` (tâches 1-2). La ligne reste ⬜ **en cours** (cinq lots
   restent).
 
+### Lot 6, vague 6c — les bancs de neige qui enlisent (design du 1er oct. 2026)
+
+_Demandé par Martin le 1er oct. 2026 : un char qui fonce dans un banc de neige ralentit fort, peut rester pris (les
+roues patinent, la neige gicle), et s'en sort en marche arrière, en berçant, ou avec un 4 roues ; la motoneige y
+passe ; les bancs grossissent avec les tempêtes et fondent au dégel ; la police et le trafic ne s'y jettent pas
+exprès ; le dessin des bancs (4b) cohérent avec leur physique._
+
+- **Le banc chevauche la bordure** : peint en 4b DANS la rue (3 à 6 px), il mangeait la voie — une voie a 16 px, un
+  char 14, ses roues passent à 3 px de la bordure. Il se peint maintenant à cheval sur la bordure : une lèvre dans la
+  rue (au plus 3 px : les roues d'un char au milieu de sa voie ne la touchent jamais) et le gros sur le bord du
+  trottoir. La physique lit le MÊME profil (une fonction pure, partagée par le dessin et la conduite) : là où il est
+  peint, il tient ; là où il ne l'est pas, rien.
+- **Ce qu'il fait aux roues** (les quatre roues du char, pas sa carrosserie qui le surplombe) : effleuré de côté, il
+  freine un peu et la neige gicle ; abordé lentement, il retient (on le monte au pas, jamais on ne reste bloqué
+  devant un trottoir) ; abordé vite (la vitesse VERS le banc, pas le long), le char s'y plante — **pris** : les roues
+  patinent, la neige gicle, le moteur s'emballe. On s'en sort en **marche arrière** (lentement), en **berçant**
+  (avancer, reculer, avancer : chaque aller-retour en rythme compte plus), ou on ne s'y prend pas du tout en **4 roues**
+  (et en camion lourd : ils poussent la neige, plus lents). La **motoneige** et les coques n'en savent rien.
+- **Le calendrier** (pure fonction du jour et de l'heure, aucun dé) : la grosseur suit la neige qui tient (4b) et
+  **grossit à chaque tempête** de l'hiver (la charrue repousse la neige au bord), jusqu'à un plafond ; au **dégel**,
+  elle fond avec la palette. Les morceaux se repeignent quand la grosseur change de palier, pas à chaque image.
+- **La ville** : le trafic est sur ses rails, au milieu de sa voie — il ne touche jamais un banc. L'IA hors des rails
+  (la police, les poursuivants) y perd de la vitesse mais n'y reste jamais prise : elle ne s'y jette pas exprès, et
+  elle en ressort.
+- **Juges** : le profil du dessin et celui de la conduite sont le même ; au milieu de sa voie, rien ; foncer y
+  plante le char (plusieurs graines de départ, plusieurs bancs) ; la marche arrière en sort, le bercement plus vite ;
+  le 4 roues et la motoneige passent ; l'IA n'y reste pas ; les bancs grossissent aux tempêtes et fondent au dégel ;
+  aucun dé, rien de posé ; au sec et l'été, la conduite au pixel. Mesure A/B appariée ; captures (pris de jour, de
+  nuit, la neige qui gicle).
+
 ### Lot 4 — les gens et la rue (découpé le 29 sept. 2026, en deux vagues)
 
 _Le lot 3 (l'Halloween) avance dans une autre session ; le lot 4 ne touche pas à ses fichiers
