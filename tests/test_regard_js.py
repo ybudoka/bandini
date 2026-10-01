@@ -319,6 +319,9 @@ def test_les_maneges_et_les_comptoirs_de_la_foire_demandent_de_regarder(banc):
     donnerait un manege qu'on sert dos tourne."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
+        // ⚠️ EN JUILLET : une partie commence en janvier, et l'hiver la foire est cadenassée — le train et le
+        // Colosse restent en gare, on ne monte à rien et on ne joue à rien (test_foire_l_hiver_js.py).
+        L.B.partie.jour = 22;
         const F = L.Foire, j = L.B.joueur, TT = L.TT;
         j.invincible = 999999;
         const poses = {};
