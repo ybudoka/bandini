@@ -75,7 +75,9 @@ def test_la_ville_d_avant_ne_bouge_pas(ville, sans):
     for cle in ajouts:
         assert ville[cle][:len(sans[cle])] == sans[cle], f"« {cle} » a bougé avant l'aéroport"
     for cle in sans:
-        if cle in ("sol", "voie", "hauteur", "interieurs", "aeroport", "relief") + ajouts:
+        # ⚠️ Ni les COLLECTIONS : elles LISENT la ville finie (les tremplins des sauts évitent le décor, les cartes les
+        # tremplins) et suivent le décor d'une ville à l'autre, sans y rien poser (`test_collections`).
+        if cle in ("sol", "voie", "hauteur", "interieurs", "aeroport", "relief", "collections") + ajouts:
             continue
         assert ville[cle] == sans[cle], f"« {cle} » a bougé"
     assert {k: v for k, v in ville["interieurs"].items() if k not in aeroport.PIECES} == sans["interieurs"]
