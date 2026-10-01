@@ -508,8 +508,14 @@ def test_le_paquet_reste_leger(paquets):
     `interieurs` +19 389, `residences` +470, `devantures` +361 — : 560 921 / 52 614. Sur le fil, +1 569 gzip
     seulement : le plafond gzip (55 000) ne bouge pas. Proposé à Martin : relever, ou plier d'abord les pièces
     d'étages — il a relevé.
+
+    ⚠️ **LES DÉFINITIONS : 242 000 → 255 000 BRUTS, LE 1er OCT. 2026, TRANCHÉ PAR MARTIN.** Mesure : 241 947
+    bruts après le casse et les petites jobs (M16, vagues 15 à 19). Le brut n'est qu'un indicateur ; ce qui pèse
+    sur le réseau, c'est le gzip, et lui garde son plafond (57 500) et sa garde par clé (`MESURE_DU_PAQUET`).
+    Proposé à Martin : une cure 3 (plier les missions en colonnes, sortir les défis et les comptoirs) ou relever
+    le brut — il a relevé.
     """
-    for nom, brut_max, fil_max in (("definitions", 242_000, 57_500), ("carte", 562_000, 55_000),
+    for nom, brut_max, fil_max in (("definitions", 255_000, 57_500), ("carte", 562_000, 55_000),
                                    ("musiques", 50_000, 10_000), ("suite", 25_000, 10_500)):
         paquet = getattr(paquets, nom)
         mesures = {"definitions": MESURE_DU_PAQUET, "carte": MESURE_DE_LA_CARTE}

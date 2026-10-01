@@ -2846,11 +2846,14 @@ const Histoire = (function () {
     if (typeof Infiltration !== 'undefined') Infiltration.rendre(m);
     B.partie.mission = null;
     B.mission = null;
-    Hud.message('MISSION RATÉE — ' + m.titre.toUpperCase(), 200);
-    noter('MISSION RATÉE : ' + m.titre, true);
+    // ⚠️ UNE PETITE JOB (`Jobs`) : le passant n'a pas ton numéro. Il ne te dit l'échec que s'il est LÀ ; loin,
+    // un simple « JOB RATÉE » au HUD (Martin, 1er oct. 2026).
+    const job = !!m.passant;
+    Hud.message((job ? 'JOB RATÉE — ' : 'MISSION RATÉE — ') + m.titre.toUpperCase(), 200);
+    noter((job ? 'JOB RATÉE : ' : 'MISSION RATÉE : ') + m.titre, true);
     Son.SFX.erreur();
     B.partie.stats.echecs = (B.partie.stats.echecs || 0) + 1;
-    dire(m, 'echec', null);
+    if (!job || present(m.donneur)) dire(m, 'echec', null);
     void raison;
   }
 

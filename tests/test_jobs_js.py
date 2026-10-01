@@ -201,6 +201,32 @@ def test_t02_trop_lent_le_debardeur_te_le_dit_en_personne(banc):
     assert r["rate"] and "TÉLÉPHONE" not in r["rate"][0] and r["rate"][0].startswith("Le débardeur"), r
 
 
+def test_t02_trop_lent_et_loin_un_simple_job_ratee(banc):
+    """Martin, 1er oct. 2026 : loin du passant, l'échec ne se dit pas — un simple « JOB RATÉE » au HUD ; sa voix
+    seulement s'il est là (le juge d'avant)."""
+    r = banc("function (L, o) {" + AIDES + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, p = B.partie;
+        faites(L, """ + BASE + """);
+        recharger(L);
+        poserA(L, 'cantine', 40);
+        L.Jobs.offrir('t02', true);
+        luiParler(L, o);
+        poserA(L, 'cantine'); jouer(L, o, 10);
+        // Le lunch refroidit : on est parti loin, au phare.
+        const msgs = [];
+        let n = 0;
+        for (; n < 7000 && p.mission; n++) { o.frame(1); poserA(L, 'phare'); if (typeof B.msg === 'string') msgs.push(B.msg); }
+        const rate = textes.filter(function (t) { return t.indexOf('bottes') >= 0; });
+        return { rate: rate, mission: p.mission, fait: !!p.missionsFaites.t02,
+                 jobRatee: msgs.some(function (t) { return t.indexOf('JOB RATÉE') === 0; }),
+                 missionRatee: msgs.some(function (t) { return t.indexOf('MISSION RATÉE') === 0; }) };
+    }""")
+    assert r["mission"] is None and r["fait"] is False, r
+    assert r["jobRatee"] and not r["missionRatee"], r
+    assert not r["rate"], f"le débardeur est loin : il ne te le dit pas : {r}"
+
+
 def test_t03_un_lift_au_terminus(banc):
     r = banc("function (L, o) {" + AIDES + """
         L.Jeu.commencer(); L.graine(6);
