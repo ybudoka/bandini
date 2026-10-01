@@ -599,7 +599,7 @@ const Entites = (function () {
 
   //: Ce qui se ramasse par terre et se dessine par son NOM d'objet, pas par une
   //: arme : la liasse d'un guichet, et ce qu'une distributrice defoncee crache.
-  const OBJETS_PAR_TERRE = { billets: true, monnaie: true, canette: true, sac: true, cle: true, dossier: true, registre: true };
+  const OBJETS_PAR_TERRE = { billets: true, monnaie: true, canette: true, sac: true, cle: true, dossier: true, registre: true, boite: true };
 
   /** Une ARME mord le decor : la balle, l'explosion, le feu. Rend vrai s'il
       est tombe de ce coup-ci.

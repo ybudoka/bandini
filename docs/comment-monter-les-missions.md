@@ -241,10 +241,18 @@ Contraintes **jugées** (voir `test_missions.py`) :
 - `texte` en **MAJUSCULES**, une ligne (≤ 60 caractères) : c'est ce qui
   s'affiche en objectif.
 - `lieu` doit exister dans `carte.SPECIAUX` (ou `kiosque`/`planque`).
-- ⚠️ **`lieu` ne peut pas être enfermé par une barrière d'heure** (`test_barrieres.py`) : une mission qui s'y
-  termine ne se finirait pas de nuit sans défoncer la chaîne. Aujourd'hui, **`usine`** (la cour ferme la
-  nuit) ne peut être le `lieu` d'aucun objectif — `parler` à quelqu'un qui s'y tient reste permis, mais
-  on n'y `aller`/`livrer` pas. Le juge ne tourne pas au banc de la mission : il rougit à la suite complète.
+- ⚠️ **`lieu` derrière une barrière d'heure : seulement pour une petite job** (la règle de l'usine, 1er oct. 2026 —
+  `missions.barriere_d_heure`, `test_barrieres.py`). La porte de l'usine (`usine`) est dans la cour, que sa chaîne
+  ferme la nuit. Une mission qui y va ne s'offre qu'aux heures où la barrière est **ouverte** (`Jobs.aLHeure` : un
+  passant ne te la propose que le jour), et prise, elle **tient la barrière ouverte** jusqu'à sa fin
+  (`Monde.barriereFermee` : la chaîne attend la job) — elle ne peut pas finir porte fermée. Seule une petite job
+  (`passant`) sait s'offrir à l'heure : une mission du téléphone ou du carnet, un défi, s'y font refuser
+  (`erreurs_de_passant`). La barrière se trouve toute seule (celle dont `ou.lieu` est un `lieu` de la mission) et
+  voyage avec la job (un septième champ, pour elles seules). Exemples : `t08`, `t10`. `parler` à quelqu'un qui s'y
+  tient reste permis à tous. Le juge ne tourne pas au banc de la mission : lancer `tests/test_barrieres.py`.
+- **`aller` à pied, en portant** (t08) : `a_pied` — au volant, l'objectif attend (« À PIED, DESCENDS ») ; `depose` —
+  arrivé, l'objet que l'`obtenir` d'avant a mis dans le sac en sort (la boîte suivante peut se ramasser). Le dessin
+  `boite` (une boîte de carton) s'ajoute à `cle`, `dossier`, `registre`, `sac`.
 - `obtenir` pose son objet à **toute forme de lieu** (`rampe:pointe`, `zone:<x>`, `boutique:<mot>` — 1er oct. 2026,
   e08) : un nom nu reste un lieu de porte.
 - ⚠️ **`ou: "quai"` et `ou: "bois"` ne posent rien** : `Histoire.tuileDeQuai` cherche les glyphes `q`/`j`

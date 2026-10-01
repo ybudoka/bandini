@@ -155,6 +155,13 @@ def test_aucune_barriere_n_enferme_la_planque_ni_un_lieu_de_mission(ville):
     vus = atteignables(ville, pietons)
     for slug in sorted(lieux_de_mission()):
         p = points[slug]
+        # ⚠️ Sauf un lieu que SA barriere d'heure tient pour ses jobs (la regle de l'usine, plus bas) : elle est ouverte
+        # quand la job s'offre, et le reste tant qu'elle tourne — on l'atteint toutes les AUTRES barrieres fermees.
+        tenante = next((b for b in pietons if dedans(b, p["x"], p["y"]) and tenues_a_l_heure(slug, b["slug"])), None)
+        if tenante:
+            assert (p["x"], p["y"]) in atteignables(ville, [b for b in pietons if b is not tenante]), \
+                f"{slug} : sa chaine ouverte, il reste enferme par une autre"
+            continue
         assert (p["x"], p["y"]) in vus, f"{slug} n'est plus atteignable a pied, toutes barrieres fermees"
     # Et ce qui ne rouvre jamais tout seul (`apres`) n'enferme AUCUN lieu.
     fixes = [b for b in pietons if "apres" in b["condition"]]
@@ -168,9 +175,43 @@ def test_aucune_barriere_n_enferme_la_planque_ni_un_lieu_de_mission(ville):
             continue
         assert (p["x"], p["y"]) in vus, f"{slug} attend une mission pour etre atteignable a pied"
     # Un lieu enferme par une barriere d'heure rouvre le jour ou la nuit : on
-    # le tolere, sauf pour un lieu de mission.
+    # le tolere — et pour un lieu de mission, seulement si chaque mission qui le
+    # nomme est tenue a l'heure de CETTE barriere (la regle de l'usine, ci-dessous).
     for b in pietons:
         for slug, p in points.items():
             if dedans(b, p["x"], p["y"]):
                 assert "heure" in b["condition"], f"{b['slug']} enferme {slug} pour de bon"
-                assert slug not in lieux_de_mission(), f"{b['slug']} enferme le lieu de mission {slug}"
+                if slug in lieux_de_mission():
+                    assert tenues_a_l_heure(slug, b["slug"]), f"{b['slug']} enferme le lieu de mission {slug}"
+
+
+def nommant(slug):
+    """Les missions et les defis dont un objectif a `slug` pour `lieu`."""
+    return ([m for m in missions.CATALOGUE if any(o.get("lieu") == slug for o in m["objectifs"])]
+            + [d for d in missions.DEFIS if d.get("lieu") == slug])
+
+
+def tenues_a_l_heure(slug, barriere):
+    """⚠️ LA REGLE DE L'USINE (1er oct. 2026, t08 et t10) : un lieu derriere une barriere d'heure peut etre un lieu de
+    mission si CHAQUE mission qui le nomme est une petite job que cette barriere tient a l'heure
+    (`missions.barriere_d_heure`) — elle ne s'offre que barriere ouverte (`Jobs.aLHeure`), et prise, la barriere ne se
+    ferme pas sur elle (`Monde.barriereFermee`) : elle ne peut pas finir porte fermee. Un defi, une mission du
+    telephone ou du carnet ne regardent pas l'horloge : jamais."""
+    qui = nommant(slug)
+    return bool(qui) and all("objectifs" in m and m.get("passant") and missions.barriere_d_heure(m) == barriere
+                             for m in qui)
+
+
+def test_la_regle_de_l_usine_se_tient_et_refuse_ce_qu_elle_doit_refuser():
+    """t08 et t10 vont a la porte de l'usine : la barriere qui les tient est la cour, la job voyage avec son nom (le
+    septieme champ, et seulement pour elles), et une mission qui n'est pas une petite job s'y fait refuser."""
+    import copy
+    assert {m["slug"] for m in nommant("usine")} == {"t08", "t10"}
+    assert tenues_a_l_heure("usine", "usine")
+    pliees = {j[0]: j for j in missions.jobs_pour_le_navigateur()}
+    assert pliees["t08"][6:] == ["usine"] and pliees["t10"][6:] == ["usine"]
+    assert all(len(j) == len(missions.CHAMPS_D_UNE_JOB) for s, j in pliees.items() if s not in ("t08", "t10"))
+    # Une mission du telephone qui irait a l'usine : refusee par la forme.
+    m = copy.deepcopy(missions.par_slug("s03"))
+    m["objectifs"][-1]["lieu"] = "usine"
+    assert any("seule une petite job" in e for e in missions.erreurs_de_passant(m))

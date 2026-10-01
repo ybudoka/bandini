@@ -9342,6 +9342,12 @@ const OBJETS = {
     ctx.fillStyle = '#8a7446'; ctx.fillRect(3, 3, 11, 7); ctx.fillStyle = '#d9c28a'; ctx.fillRect(3, 3, 10, 6);
     ctx.fillStyle = '#c4a96a'; ctx.fillRect(3, 2, 4, 1); ctx.fillStyle = '#c0392b'; ctx.fillRect(8, 3, 1, 6);
   },
+  // La BOÎTE de carton (t08, une job de bras à l'usine) : le carton brun, son ruban adhésif en croix, l'ombre du
+  // rabat — à seize pixels, c'est le ruban qui la nomme.
+  boite: function (ctx) {
+    ctx.fillStyle = '#5e4124'; ctx.fillRect(3, 1, 11, 9); ctx.fillStyle = '#b07d48'; ctx.fillRect(3, 1, 10, 8);
+    ctx.fillStyle = '#c99760'; ctx.fillRect(3, 1, 10, 3); ctx.fillStyle = '#e3d6a8'; ctx.fillRect(8, 1, 1, 8); ctx.fillRect(3, 4, 10, 1);
+  },
   registre: function (ctx) {
     ctx.fillStyle = '#1d3b24'; ctx.fillRect(3, 2, 10, 8); ctx.fillStyle = '#2f6b3f'; ctx.fillRect(3, 2, 9, 7);
     ctx.fillStyle = '#efe6d0'; ctx.fillRect(12, 3, 1, 6); ctx.fillStyle = '#d4af37'; ctx.fillRect(5, 4, 5, 1); ctx.fillRect(5, 6, 5, 1);

@@ -96,7 +96,7 @@ TYPES_OBJECTIFS = (
 
 #: Ce qu'un objet de mission a l'air, par terre (`OBJETS` de `static/js/sprites.js`, que `Entites`
 #: sait peindre au sol). ⚠️ Un dessin inconnu se peindrait en sac : le juge le refuse.
-DESSINS_D_OBJET = ("cle", "dossier", "registre", "sac")
+DESSINS_D_OBJET = ("cle", "dossier", "registre", "sac", "boite")
 
 #: ⚠️ **CE QUE PORTE UN HOMME DE MISSION SE DECLARE ICI.** Un objectif `tuer`
 #: pose des membres d'un `groupe` : ils sortent de l'archetype (`pietons.py`),
@@ -138,7 +138,10 @@ ECHECS = ("mort", "arrete", "vehicule_detruit", "chrono", "etoile", "protege_mor
 #: `survivre` faisaient déjà : la police à ce niveau au départ), et `renforts: {"vagues", "n"}` — quand il ne
 #: reste qu'un debout, la vague suivante arrive de loin (`tuer`, `tenir`).
 OPTIONS_OBJECTIFS = ("chrono_s", "sans_etoile", "sans_arme", "contre", "remet", "tenue", "allies", "treve", "donne",
-                     "etoiles", "renforts", "poursuite", "relais", "si", "sauf", "branche")
+                     "etoiles", "renforts", "poursuite", "relais", "si", "sauf", "branche", "a_pied", "depose")
+#: `a_pied` (déjà lu par `course`) et `depose` (1er oct. 2026, t08 : « trois boîtes à porter, lourdes, on marche ») sur
+#: un `aller` : au volant, l'objectif attend (« À PIED, DESCENDS ») ; arrivé, ce qu'on portait (`depose`, le slug d'un
+#: objet que `obtenir` a mis dans le sac) quitte le sac — la boîte suivante peut se ramasser.
 #: `si: <mission>` / `sauf: <mission>` (le casse, 1er oct. 2026) : l'objectif ne se joue que si cette mission est faite
 #: / ne l'est pas — sinon il se SAUTE (`Histoire.tenu`). Ce qu'on a préparé change la suite (x04 : le coupé du x02
 #: attend dans la ruelle). Les mêmes clés sur une réplique `pendant` (`_p(…, si=…)`) : dite ou tue.
@@ -714,6 +717,7 @@ from . import (  # noqa: E402
     p06, p07, p08, p12,
     e08, e09, e11, s04, s13,
     t07, q14,
+    t08, t10,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -834,6 +838,9 @@ CATALOGUE: list[Mission] = [
     # ⚠️ q14 (1er oct. 2026, vague 23) : la liste du Norvégien — deux modèles pour la cale de Sven, une demi-journée entre
     # les deux (`attendre`), sans une bosse ; seulement si l'on a choisi Sven (q10).
     q14.MISSION,
+    # ⚠️ t08, t10 (1er oct. 2026, la toute fin de M16) : deux petites jobs À L'USINE — trois boîtes à porter, un
+    # machiniste qui pointe à l'heure ; elles ne s'offrent qu'aux heures où la cour est ouverte (`barriere_d_heure`).
+    t08.MISSION, t10.MISSION,
     m97.MISSION,
     # ⚠️ e11 (vague 21) : le maire, dans sa chambre entre m97 et m98, rachète son dossier — un CHOIX : vendu, ou à Louise.
     e11.MISSION,
@@ -1407,6 +1414,21 @@ def pour_le_navigateur() -> list[dict]:
 CHAMPS_D_UNE_JOB = ("slug", "titre", "donneur", "recompense", "passant", "prerequis")
 
 
+def barriere_d_heure(mission: dict) -> str | None:
+    """⚠️ LA RÈGLE DE L'USINE (1er oct. 2026, t08 et t10) : la barrière d'heure (`carte.BARRIERES`, `condition.heure`)
+    qui enferme un `lieu` de la mission — celle dont `ou.lieu` le nomme —, ou None. Une mission qui en a une ne s'offre
+    qu'aux heures où elle est OUVERTE (`Jobs.offertes`), et la barrière ne se ferme pas sur elle tant qu'elle tourne
+    (`Monde.barriereFermee` : la chaîne attend la job) : elle ne peut pas finir porte fermée. Seule une petite job sait
+    s'offrir à l'heure (`erreurs_de_passant`) ; le téléphone et le carnet ne regardent pas l'horloge."""
+    from .. import carte
+
+    lieux = {o["lieu"] for o in mission["objectifs"] if isinstance(o.get("lieu"), str)}
+    for b in carte.BARRIERES:
+        if b["condition"].get("heure") and (b["ou"] or {}).get("lieu") in lieux:
+            return b["slug"]
+    return None
+
+
 def jobs_pour_le_navigateur() -> list[list]:
     """⚠️ LES PETITES JOBS, PLIÉES (1er oct. 2026) : une liste par job, dans l'ordre de `CHAMPS_D_UNE_JOB` — sans les
     noms des clés, et le passant en « archétype@district » (`_au_catalogue`). Le casse (x01-x04) et douze petites
@@ -1417,8 +1439,13 @@ def jobs_pour_le_navigateur() -> list[list]:
     for mission in CATALOGUE:
         if mission.get("passant"):
             assert not mission.get("exige") and not mission.get("ferme"), f"{mission['slug']} : une petite job pliée"
-            sortie.append([_au_catalogue(c, mission[c]) if c == "passant" else copy.deepcopy(mission[c])
-                           for c in CHAMPS_D_UNE_JOB])
+            job = [_au_catalogue(c, mission[c]) if c == "passant" else copy.deepcopy(mission[c])
+                   for c in CHAMPS_D_UNE_JOB]
+            # ⚠️ La barrière qui la tient à l'heure (`barriere_d_heure`, t08/t10) : un septième champ, et seulement
+            # pour elles — les douze autres ne paient pas un octet de plus.
+            if barriere_d_heure(mission):
+                job.append(barriere_d_heure(mission))
+            sortie.append(job)
     return sortie
 
 
@@ -1753,6 +1780,9 @@ def erreurs_de_passant(mission: dict) -> list[str]:
             erreurs.append(f"{slug} : un passant donneur veut sa clé `passant`")
         if hele:
             erreurs.append(f"{slug} : seul un passant qui donne une job hèle (`hele`)")
+        if barriere_d_heure(mission):
+            erreurs.append(f"{slug} : un lieu derrière la barrière « {barriere_d_heure(mission)} » (une heure) — seule "
+                           "une petite job sait ne s'offrir qu'aux heures où elle est ouverte")
         return erreurs
     erreurs = []
     if mission["donneur"] not in DONNEURS_PASSANTS:

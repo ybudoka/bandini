@@ -2522,11 +2522,15 @@ const Histoire = (function () {
       }
       case 'aller': {
         if (o.nuit && !Monde.estNuit()) { B.mission.attend = 'ATTENDS LA NUIT'; return; }
+        // `a_pied` (t08, des boîtes lourdes) : au volant, rien ne compte — la ligne le dit.
+        if (o.a_pied && j.dansVehicule) { B.mission.attend = texteDObjectif(o) + ' — À PIED, DESCENDS'; return; }
         B.mission.attend = null;
         const l = lieu(o.lieu);
         if (l && dist2(j.x, j.y, l.x, l.y) < (o.rayon * TT) * (o.rayon * TT)) {
           // `tenue` (f10) : arrivé, mais pas dans le bon linge — la ligne dit quoi enfiler.
           if (tenueManque(o)) { B.mission.attend = 'ENFILE : ' + tenueDef(o.tenue).nom.toUpperCase(); return; }
+          // `depose` (t08) : ce qu'on portait quitte le sac en arrivant — la boîte suivante peut se ramasser.
+          if (o.depose && B.partie.objets) delete B.partie.objets[o.depose];
           avancer();
         }
         return;

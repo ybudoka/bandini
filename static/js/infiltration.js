@@ -29,7 +29,7 @@ const Infiltration = (function () {
   const FONDU_ESCALIER = [16, 6, 14];
   //: Le dessin d'un objet de mission, par terre (`OBJETS` de `sprites.js`) : la cle, le dossier, le
   //: registre. Un objet que la fiche ne nomme pas se peint en sac.
-  const DESSINS = { cle: true, dossier: true, registre: true, sac: true };
+  const DESSINS = { cle: true, dossier: true, registre: true, sac: true, boite: true };
 
   //: Le bloc ou l'on etait a l'image d'avant : la releve se fait en ENTRANT.
   let blocVu = null;

@@ -778,6 +778,12 @@ const Monde = (function () {
   /** Ce qu'on lit en se butant : la raison de l'hiver, s'il la ferme, sinon la sienne. */
   function raisonDe(b) { return fermeeLHiver(b) ? b.hiver : b.raison; }
 
+  /** La mission `slug` est-elle tenue à l'heure de la barrière `barriere` (`m.barriere`, posé par `Jobs.deplier`) ? */
+  function missionTenue(barriere, slug) {
+    const m = (B.defs.missions || []).find(function (x) { return x.slug === slug; });
+    return !!(m && m.barriere === barriere);
+  }
+
   /** Fermee MAINTENANT ? La condition se lit dans la partie, jamais ici. */
   function barriereFermee(b) {
     if (b.existant) return false;                     // jouee ailleurs (la guerite : `majFourriere`)
@@ -786,6 +792,10 @@ const Monde = (function () {
     // L'entrave du jour est, par definition, celle d'aujourd'hui : elle est fermee.
     if (c.toujours) return true;
     if (c.apres) return !(p && p.missionsFaites && p.missionsFaites[c.apres]);
+    // ⚠️ LA CHAÎNE ATTEND LA JOB (1er oct. 2026, t08 et t10 — `missions.barriere_d_heure`) : une mission que cette
+    // barrière tient à l'heure ne s'offre que barrière ouverte (`Jobs.aLHeure`), et tant qu'elle tourne, la barrière
+    // ne se ferme pas sur elle — le gardien attend qu'on ait fini. Une job ne peut pas finir porte fermée.
+    if (c.heure && p && p.mission && B.defs && missionTenue(b.slug, p.mission.slug)) return false;
     if (c.heure === 'jour') return estNuit();
     if (c.heure === 'nuit') return !estNuit();
     if (c.jour_tire) return (hash2(p ? p.jour : 0, c.jour_tire.sel || 7) % 100) < (c.jour_tire.chance || 0) * 100;

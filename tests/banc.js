@@ -110,7 +110,9 @@ function banc(corps) {
   // autres — le jeu, ensuite, ne les déplie pas deux fois (`jobsDepliees`).
   if (Array.isArray(defs.jobs) && !defs.jobsDepliees) {
     defs.jobs.forEach(function (j) {
-      defs.missions.push({ slug: j[0], titre: j[1], donneur: j[2], recompense: j[3], passant: j[4], prerequis: j[5] || [] });
+      const m = { slug: j[0], titre: j[1], donneur: j[2], recompense: j[3], passant: j[4], prerequis: j[5] || [] };
+      if (j[6]) m.barriere = j[6];   // la barrière qui la tient à l'heure (`missions.barriere_d_heure`), comme `Jobs.deplier`
+      defs.missions.push(m);
     });
     defs.jobsDepliees = true;
   }

@@ -38,13 +38,24 @@ const Jobs = (function () {
   function demiJournee() { return B.partie.jour * 2 + (B.partie.heure >= 0.5 ? 1 : 0); }
   function mission(slug) { return (B.defs.missions || []).find(function (m) { return m.slug === slug; }) || null; }
 
-  /** Les jobs qu'un passant peut offrir maintenant : prérequis faits, pas faites, pas fermées, `exige` tenu. */
+  /** Les jobs qu'un passant peut offrir maintenant : prérequis faits, pas faites, pas fermées, `exige` tenu — et sa
+      barrière ouverte, si elle en a une. */
   function offertes() {
     const q = p();
     return (B.defs.missions || []).filter(function (m) {
       return m.passant && !q.missionsFaites[m.slug] && (q.fermees || []).indexOf(m.slug) < 0 &&
-        m.prerequis.every(function (s) { return !!q.missionsFaites[s]; }) && Histoire.exigeTenu(m.exige);
+        m.prerequis.every(function (s) { return !!q.missionsFaites[s]; }) && Histoire.exigeTenu(m.exige) && aLHeure(m);
     });
+  }
+
+  /** ⚠️ LA RÈGLE DE L'USINE (1er oct. 2026, t08 et t10 ; `missions.barriere_d_heure`) : une job dont un lieu est derrière
+      une barrière d'heure (`m.barriere`, la cour de l'usine qui ferme la nuit) ne s'offre qu'aux heures où cette
+      barrière est OUVERTE. L'autre moitié de la règle est dans `Monde.barriereFermee` : prise, la job tient la chaîne
+      ouverte jusqu'à sa fin — elle ne peut pas finir porte fermée. */
+  function aLHeure(m) {
+    if (!m.barriere) return true;
+    const b = Monde.barrieres().find(function (x) { return x.slug === m.barriere; });
+    return !b || !Monde.barriereFermee(b);
   }
 
   /** `fn` jouée avec un dé PRÊTÉ (le motif d'`Autobus` et d'`Entites`) : la file du jeu ne bouge pas d'un tirage. */
@@ -60,7 +71,10 @@ const Jobs = (function () {
     missions.forEach(function (m) { deja[m.slug] = true; });
     defs.jobs.forEach(function (j) {
       if (!Array.isArray(j) || deja[j[0]]) return;
-      missions.push({ slug: j[0], titre: j[1], donneur: j[2], recompense: j[3], passant: j[4], prerequis: j[5] || [] });
+      // ⚠️ Un septième champ, pour les seules jobs qu'une barrière d'heure tient (`missions.barriere_d_heure`).
+      const m = { slug: j[0], titre: j[1], donneur: j[2], recompense: j[3], passant: j[4], prerequis: j[5] || [] };
+      if (j[6]) m.barriere = j[6];
+      missions.push(m);
     });
     defs.jobsDepliees = true;
     return defs;
@@ -264,5 +278,5 @@ const Jobs = (function () {
   /** Une nouvelle partie, un rechargement : personne ne t'attend. */
   function oublier() { B.job = null; B.jobRepos = null; }
 
-  return { maj, deplier, fiche, offertes, choisir, offreDe, bulle, offrir, oublier, demiJournee, PAS_AVANT, LOIN_MIN, LOIN_MAX, PRES_PX };
+  return { maj, deplier, fiche, offertes, aLHeure, choisir, offreDe, bulle, offrir, oublier, demiJournee, PAS_AVANT, LOIN_MIN, LOIN_MAX, PRES_PX };
 })();

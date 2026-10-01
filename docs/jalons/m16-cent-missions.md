@@ -1580,3 +1580,27 @@ catalogue.
     petite job ne sait ni attendre une heure ni ne s'offrir que de jour. À trancher : une job qui ne s'offre qu'aux
     heures où son lieu est ouvert, et le juge des barrières qui l'accepte.
   - Et la variante de `q14` chez Ti-Loup (après `q11`), « la liste du quai » comme activité.
+- **1er oct. 2026 : vague 24 — deux petites jobs à l'usine, et la règle de l'usine.** La porte de l'usine est dans la
+  cour, que sa chaîne ferme la nuit (`carte.BARRIERES`) : jusqu'ici, jamais un lieu de mission. La règle (Martin : « une
+  mission dont le lieu est derrière une barrière d'heure ne s'offre qu'aux heures où la barrière est ouverte, et ne
+  peut pas finir porte fermée ») : la barrière qui enferme un `lieu` d'une mission se trouve toute seule
+  (`missions.barriere_d_heure` : celle dont `ou.lieu` le nomme) ; la job ne s'offre que barrière OUVERTE
+  (`Jobs.aLHeure`) ; prise, elle tient la barrière ouverte jusqu'à sa fin (`Monde.barriereFermee` : la chaîne attend
+  la job), puis la chaîne se referme. Seule une petite job sait s'offrir à l'heure : une mission du téléphone, du
+  carnet ou un défi qui irait à l'usine se fait refuser (`erreurs_de_passant`). La barrière voyage avec la job (un
+  septième champ du pliage, pour elles seules : rien de plus pour les autres). Recette : `comment-monter-les-missions.md`
+  § 4.
+  - `t08` (l'ouvrier, La Shop, _Une job de bras_ — 45 $) : trois boîtes de pièces débarquées au coin de la ruelle de
+    l'usine, à porter à sa porte, à pied (`a_pied` sur un `aller` : au volant, rien ne compte) ; chaque boîte posée
+    quitte le sac (`depose`). Le dessin `boite` (un carton, son ruban en croix) — ⚠️ invisible par terre à la première
+    capture (absent d'`OBJETS_PAR_TERRE`) : jugé maintenant pour chaque dessin d'objet.
+  - `t10` (le machiniste, La Shop, _Le quart commence_ — 40 $) : il te suit ou monte, jusqu'à l'usine, avant son quart.
+    ⚠️ Écart à la fiche : 75 s, pas 45 — il se présente n'importe où dans La Shop, et du coin le plus loin il y a 228
+    tuiles à pied jusqu'à l'usine (33 s à l'allure de l'étalon des courses, plus un char à trouver).
+  - **Juges** : `tests/test_jobs_a_l_usine_js.py` (cinq : les deux jobs s'offrent le jour et jamais la nuit, ni au
+    carnet ; t08 au bouton — trois boîtes, au volant rien ne compte, la nuit tombée la chaîne attend, finie elle se
+    referme ; t10 au bouton, et trop lent ; chaque dessin d'objet se peint par terre) ; `tests/test_barrieres.py` (la
+    règle : un lieu derrière une barrière d'heure n'est permis que si chaque mission qui le nomme est une job que
+    cette barrière tient) ; mutations : l'offre à toute heure, la chaîne qui n'attend pas, `depose` et `a_pied`
+    ignorés, la barrière muette, l'erreur hors job retirée, le septième champ retiré — rouges.
+  - **Voix** : 15 (≈ 1 340 caractères), générées, pas écoutées.
