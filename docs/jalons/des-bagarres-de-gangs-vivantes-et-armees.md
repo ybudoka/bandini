@@ -867,3 +867,23 @@ voit garé en arrivant). Jamais un homme de mission, un allié, un Mante ; jamai
 **Juges** : un blessé appelle, deux des siens naissent hors champ et accourent ; jamais plus que le plafond ; un
 homme de mission ou la paix du Boss n'appelle personne ; une fois sur trois, un char garé aux couleurs du gang à
 côté d'eux ; dans une rixe, les renforts se battent contre l'autre gang, pas contre toi.
+
+### Vague 5 — plus de réalisme
+
+_Demandé par Martin le 1er oct. 2026 (« Continue les vagues », puis « plus de réalisme »)._ Tranché avec lui :
+- **Les balles s'arrêtent sur les chars**, et les abîment — les tiennes comme celles d'un gang : un char criblé finit
+  en épave, peut sauter, et se cacher derrière un char protège pour de vrai. (Avant : une balle traversait la tôle ;
+  seule celle qui aurait touché le conducteur mordait la carrosserie.)
+- **La police se bat contre les gangs** : sur une grosse fusillade, une auto-patrouille arrive, les agents
+  descendent et tirent sur les armés, qui ripostent.
+
+Quatre morceaux, livrés l'un après l'autre :
+- **5a — les balles et les chars** : la balle s'arrête au premier char qu'elle traverse (le segment de son pas
+  contre le rectangle du char, `Vehicules.coupeLaLigne`) et l'abîme ; jamais le char du tireur. Les gangs
+  s'abritent derrière un char garé (`abriPour` : caché par un mur OU par un char).
+- **5b — ils lancent des choses** : un homme sans arme à feu, à distance, lance une brique ou une bouteille avant
+  d'arriver au contact.
+- **5c — la poursuite en char** : tu fuis une bagarre en char, un char du gang te prend en chasse (le conducteur
+  `poursuivant` des missions).
+- **5d — la police contre les gangs** : une grosse fusillade (assez de coups de feu, assez près, assez vite) fait
+  venir une auto-patrouille ; ses agents tirent sur les gangs armés, et les gangs les prennent pour cible.
