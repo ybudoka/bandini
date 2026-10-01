@@ -821,7 +821,11 @@ def test_e12_le_phare_la_rampe_de_la_pointe_la_police_puis_le_depanneur(banc):
         const xav = L.Histoire.donneur('xavier');
         j.x = xav.x - 16; j.y = xav.y; L.Entites.indexer();
         finir(L, o);
-        t.fait = !!B.partie.missionsFaites.e12; t.argent = argent.map(function (a) { return a.montant; });
+        // ⚠️ Le saut de la Pointe est aussi un des sauts de Rocco (les collections, vague 4 — 7dde3ca3) : 150 $ de plus,
+        // payés EN L'AIR, avant la mission. Ici, ce que paie e12 seulement.
+        t.argent = argent.filter(function (a) { return a.raison !== 'SAUT' && a.raison !== 'COLLECTION'; })
+                         .map(function (a) { return a.montant; });
+        t.fait = !!B.partie.missionsFaites.e12;
         return t;
     }""")
     assert r["slug"] == "sport" and r["monte"] == 1
