@@ -713,7 +713,7 @@ from . import (  # noqa: E402
     x01, x02, x03, x04, i04, i07,
     p06, p07, p08, p12,
     e08, e09, e11, s04, s13,
-    t07,
+    t07, q14,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -831,6 +831,9 @@ CATALOGUE: list[Mission] = [
     # ⚠️ e08, e09, s04, s13 (1er oct. 2026, vague 21) : les Érables et La Shop — la cachette de Jo (sa mère), le barbecue
     # de janvier de Ti-Paul, la paie du quart de nuit, le prototype de Prévost.
     e08.MISSION, e09.MISSION, s04.MISSION, s13.MISSION,
+    # ⚠️ q14 (1er oct. 2026, vague 23) : la liste du Norvégien — deux modèles pour la cale de Sven, une demi-journée entre
+    # les deux (`attendre`), sans une bosse ; seulement si l'on a choisi Sven (q10).
+    q14.MISSION,
     m97.MISSION,
     # ⚠️ e11 (vague 21) : le maire, dans sa chambre entre m97 et m98, rachète son dossier — un CHOIX : vendu, ou à Louise.
     e11.MISSION,

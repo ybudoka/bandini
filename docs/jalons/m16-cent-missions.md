@@ -1559,3 +1559,13 @@ catalogue.
     ni l'eau ni la chaussée, FROID → BRÛLANT, trouvé à pied, il suit, sans lui le retour attend, avec lui la mère
     paie ; il se cache sans un dé de la ville ni un de ses numéros, au même endroit la même journée) ; mutations : la
     règle « pas sans lui » retirée (rouge), le dé prêté retiré (rouge). `test_missions.py` : `qui` est un archétype.
+- **1er oct. 2026 : vague 23 — la liste du Norvégien (`q14`, Sven — 250 $, 375 sans une bosse).** Sven a gagné les
+  Quais (q10) ; son cargo repart pour Bergen avec une cale de chars d'ici. Une berline derrière l'hôtel, livrée au quai
+  derrière la cantine sans une bosse ; Sven la charge, on revient le soir (`attendre`, douze heures de jeu) ; un coupé
+  sport derrière chez Mado, au quai lui aussi ; et Sven paie à sa passerelle.
+  - ⚠️ **Écarts à la fiche** : deux modèles, pas quatre, et une demi-journée entre les deux plutôt qu'un par jour ;
+    « la liste du quai » (l'activité, des modèles qui changent chaque jour) n'est pas écrite — c'est cette mission
+    seule ; et seulement si l'on a choisi Sven (q10) : la variante de Ti-Loup (après q11) reste à écrire.
+  - **Juges** : `tests/test_liste_du_norvegien_js.py` (deux, au bouton : les deux modèles, une heure qui ne suffit pas et
+    une journée qui suffit, la prime ; une bosse sur le coupé, pas de prime) ; mutation : l'attente à une heure (rouge).
+  - **Voix** : 13 (≈ 1 150 caractères), générées et mesurées, pas écoutées.
