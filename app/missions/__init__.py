@@ -87,6 +87,11 @@ TYPES_OBJECTIFS = (
     # --- Un char sur l'île (1er oct. 2026, i04 « laisse-le refroidir ») : `heures` de JEU depuis le début de l'étape —
     # vivre ou dormir les fait passer ; le départ est gardé dans la partie (une partie rouverte attend toujours).
     "attendre",    # `heures`
+    # --- Le p'tit perdu (1er oct. 2026, t07) : quelqu'un SE CACHE à `rayon` tuiles de `ou` (le donneur par défaut), à une
+    # place tirée de l'empreinte (le jour, la mission) — sans un dé ni un numéro de la ville ; on le cherche à pied, la
+    # ligne d'objectif dit FROID, TIÈDE, CHAUD, BRÛLANT ; trouvé, il nous suit, et un `retourner` ne se fait pas sans
+    # lui. Voir `Histoire.poserLaCachette`.
+    "chercher",    # `qui` (un archétype), `ou`, `rayon` (def. 10), `nom`
 )
 
 #: Ce qu'un objet de mission a l'air, par terre (`OBJETS` de `static/js/sprites.js`, que `Entites`
@@ -708,6 +713,7 @@ from . import (  # noqa: E402
     x01, x02, x03, x04, i04, i07,
     p06, p07, p08, p12,
     e08, e09, e11, s04, s13,
+    t07,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -817,6 +823,8 @@ CATALOGUE: list[Mission] = [
     # du Clairon, le feu de camp, la gageure, la pelle du vieux, les mariés, l'autobus manqué.
     t01.MISSION, t02.MISSION, t03.MISSION, t04.MISSION, t05.MISSION, t06.MISSION, t09.MISSION, t11.MISSION, t12.MISSION,
     t13.MISSION, t14.MISSION, t15.MISSION,
+    # ⚠️ t07 (1er oct. 2026, vague 22) : le p'tit perdu — un enfant qui SE CACHE (`chercher`), qu'on ramène à sa mère.
+    t07.MISSION,
     # ⚠️ p06, p07, p08, p12 (1er oct. 2026, vague 20) : La Pointe après sa paix — les lumières d'Ovila (une caisse de
     # Sven filée jusqu'à la cantine), le souper dansant de M. Bilodeau en autobus, le party des Skateux et leur flotte.
     p06.MISSION, p07.MISSION, p08.MISSION, p12.MISSION,

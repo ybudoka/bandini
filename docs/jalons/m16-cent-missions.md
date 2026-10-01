@@ -1540,3 +1540,22 @@ catalogue.
     mutations : `obtenir` qui ne lit que les noms de porte (rouge), la prime de `s13` retirée (rouge).
   - **Voix** : 58 (≈ 6 000 caractères, six refaites pour leurs balises, trois pour la question déplacée), générées et
     mesurées, pas écoutées.
+- **1er oct. 2026 : vague 22 — le p'tit perdu : quelqu'un qui se cache, et `t07`.** Le type neuf `chercher` (Martin :
+  « construis la mécanique manquante si elle est simple et sûre ») : quelqu'un (`qui`, un archétype) se cache à quatre
+  à `rayon` tuiles de `ou` (le donneur, par défaut) — un trottoir collé à un mur ou à un décor, jamais la chaussée,
+  l'eau ni le pas d'une porte. Sa place vient de l'empreinte (le jour, la mission), parmi celles d'une spirale ; il naît
+  avec un dé PRÊTÉ et hors de la suite des numéros (`Histoire.poserLaCachette`, le patron du passant de `jobs.js`) : la
+  ville ne glisse pas. Caché, on ne le voit pas ; la flèche mène au coin, puis se tait ; la ligne d'objectif dit FROID,
+  TIÈDE, CHAUD, BRÛLANT. Trouvé (à pied, à deux pas), il te suit comme un escorté (`majProtege`) ; le `retourner` qui
+  suit ne se fait pas sans lui (« IL EST PAS AVEC TOI »). Recette : `docs/comment-monter-les-missions.md` § 4.
+  - `t07` (la mère inquiète, de partout, _Le p'tit est perdu_ — 60 $) : son p'tit joue à la cachette depuis vingt
+    minutes ; on le trouve, il nous suit, elle le chicane comme du monde.
+  - **Restent `t08` et `t10`** : tous deux finissent DANS l'usine (trois boîtes à porter, le machiniste avant son
+    quart), qui n'est jamais un lieu de mission — sa cour ferme la nuit (`carte.BARRIERES`), et une petite job ne sait
+    ni attendre une heure ni s'offrir seulement de jour (ni `exige`, ni barrière ouverte). La mécanique manquante :
+    une job qui ne s'offre qu'aux heures où son lieu est ouvert, et le juge des barrières qui l'accepte — à trancher
+    avec Martin. `e03` (Biscuit) veut un chien (aucun sprite d'animal) et Mme Beaulieu (personnage, voix, fiche).
+  - **Juges** : `tests/test_cachette_js.py` (deux : t07 jouée au bouton — caché et invisible, à quatre à onze tuiles,
+    ni l'eau ni la chaussée, FROID → BRÛLANT, trouvé à pied, il suit, sans lui le retour attend, avec lui la mère
+    paie ; il se cache sans un dé de la ville ni un de ses numéros, au même endroit la même journée) ; mutations : la
+    règle « pas sans lui » retirée (rouge), le dé prêté retiré (rouge). `test_missions.py` : `qui` est un archétype.

@@ -157,6 +157,9 @@ def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
             if o.get("pieton"):
                 arch = next((p for p in pietons.CATALOGUE if p["slug"] == o["pieton"]), None)
                 assert o["type"] == "tuer" and arch and arch["frequence"] == 0.0, f"{m['slug']} : pieton {o['pieton']}"
+            # `chercher` (t07) : celui qui se cache est un archétype de la rue (`qui`).
+            if o["type"] == "chercher":
+                assert any(p["slug"] == o.get("qui") for p in pietons.CATALOGUE), f"{m['slug']} : qui se cache? {o.get('qui')}"
             if o.get("vehicule"):
                 assert o["vehicule"] in {v["slug"] for v in __import__("app.vehicules", fromlist=["CATALOGUE"]).CATALOGUE}
         donne = m["donne"]

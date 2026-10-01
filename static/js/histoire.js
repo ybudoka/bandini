@@ -1901,6 +1901,9 @@ const Histoire = (function () {
           B.mission.protege = e;
         }
         Entites.indexer();
+      } else if (o.type === 'chercher') {
+        // `chercher` (t07, le p'tit perdu — 1er oct. 2026) : quelqu'un SE CACHE près de `ou`, et on le cherche à pied.
+        poserLaCachette(m, o);
       } else if (o.type === 'eteindre') {
         // ⚠️ LE FEU DE LA MISSION, pas celui de l'heure (28 sept. 2026) : il prend sur
         // la façade la plus proche de `ou` (`Incendies.allumerPourMission`), une spirale
@@ -2613,7 +2616,22 @@ const Histoire = (function () {
       }
       case 'retourner': {
         const d = donneur(Chapitres.donneurDe(m));
+        // Celui qu'on a TROUVÉ (`chercher`) revient avec nous : on ne rentre pas sans lui.
+        const t = B.mission.protege && B.mission.protege.trouve ? B.mission.protege : null;
+        if (t && t.vivant && dist2(t.x, t.y, j.x, j.y) > RAYON_REJOINDRE * RAYON_REJOINDRE * 4) {
+          B.mission.attend = texteDObjectif(o) + ' — ' + (t.nomDeMission || 'IL') + ' EST PAS AVEC TOI';
+          return;
+        }
+        if (t) B.mission.attend = null;
         if (d && dist2(j.x, j.y, d.x, d.y) < RAYON_PARLER * RAYON_PARLER) avancer();
+        return;
+      }
+      case 'chercher': {
+        const c = B.mission.cachette;
+        if (!c || !c.e) { avancer(); return; }          // une partie rouverte : personne à chercher, l'étape passe
+        const e = c.e, d = Math.hypot(e.x - j.x, e.y - j.y);
+        if (!j.dansVehicule && d < CACHETTE_TROUVE_PX) { trouver(c, o); avancer(); return; }
+        B.mission.attend = texteDObjectif(o) + ' — ' + (d < 3 * TT ? 'BRÛLANT' : d < 6 * TT ? 'CHAUD' : d < 10 * TT ? 'TIÈDE' : 'FROID');
         return;
       }
       case 'survivre':
@@ -2980,6 +2998,63 @@ const Histoire = (function () {
   }
 
   /** Ce que la mission avait pose : on l'enleve (ou on le laisse vivre sa vie). */
+  // --- Celui qui se cache (`chercher`) -----------------------------------------------------
+
+  //: Plus près que ça, à pied, on l'a trouvé.
+  const CACHETTE_TROUVE_PX = 22;
+
+  /** Un dé PRÊTÉ (comme le passant d'une petite job, `Jobs`) : `creerPieton` en tire deux, et la ville n'en saura rien. */
+  function sansLeDe(graine, fn) {
+    const de = B.rng;
+    let s = graine >>> 0;
+    B.rng = function () { s = hash2(s + 1, 0x5EED); return (s % 100000) / 100000; };
+    try { return fn(); } finally { B.rng = de; }
+  }
+
+  /** `chercher` (t07, le p'tit perdu — 1er oct. 2026) : quelqu'un (`qui`, un archétype) SE CACHE à `rayon` tuiles au
+      plus de `ou` (le donneur, par défaut) — sur un trottoir collé à un mur ou à un décor, jamais la chaussée, l'eau ni
+      le pas d'une porte. Sa place vient de l'empreinte (le jour, la mission), parmi celles d'une spirale : SANS UN DÉ
+      et hors de la suite des numéros (`Entites.enDehorsDeLaSuite`), la ville ne glisse pas. Caché, on ne le voit pas
+      (`dessine`) ; la ligne d'objectif dit FROID, TIÈDE, CHAUD, BRÛLANT. Trouvé, il nous suit (`majProtege`). */
+  function poserLaCachette(m, o) {
+    const p = B.partie, j = B.joueur;
+    const c = resoudre(o.ou || 'donneur', m) || { x: j.x, y: j.y };
+    const r = o.rayon || 10, tx0 = Math.floor(c.x / TT), ty0 = Math.floor(c.y / TT), places = [];
+    for (let k = 4; k <= r; k++) {
+      for (let dy = -k; dy <= k; dy++) for (let dx = -k; dx <= k; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== k) continue;
+        const tx = tx0 + dx, ty = ty0 + dy;
+        if (!Monde.marchablePieton(tx, ty) || Monde.estChaussee(tx, ty) || Monde.estEau(tx, ty) || Monde.devantDUnePorte(tx, ty)) continue;
+        let murs = 0;
+        for (const v of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (Monde.bloque(tx + v[0], ty + v[1], Monde.MASQUE_PIETON)) murs++;
+        if (murs) places.push({ x: tx * TT + 8, y: ty * TT + 8 });
+      }
+    }
+    if (!places.length) return null;
+    const graine = hash2((p.jour || 0) + 1, hash2(m.slug.length, m.slug.charCodeAt(0) * 31 + m.slug.charCodeAt(m.slug.length - 1)));
+    const l = places[graine % places.length];
+    const base = Entites.archetype(o.qui);
+    const arch = Object.assign({}, base, { accompagne: null, argent: [0, 0], intouchable: true });
+    const e = Entites.enDehorsDeLaSuite(function () {
+      return sansLeDe(graine, function () { return Entites.creerPieton(l.x, l.y, arch); });
+    });
+    e.etat = 'fige'; e.intouchable = true; e.dessine = false; e.cache = true; e.mission = m.slug;
+    e.nomDeMission = o.nom || null; e.plante = null; e.courage = 0;
+    B.mission.entites.push(e);
+    B.mission.cachette = { e: e, x: c.x, y: c.y, r: r * TT };
+    Entites.indexer();
+    return e;
+  }
+
+  /** Trouvé : il sort de sa cachette, et il nous suit comme un escorté (`majProtege`). */
+  function trouver(c, o) {
+    const e = c.e, j = B.joueur;
+    e.dessine = true; e.cache = false; e.trouve = true; e.suit = j;
+    e.vitesseSuite = B.defs.recherche.vitesses.joueur_sprint;
+    B.mission.protege = e; B.mission.attend = null;
+    Hud.message('TROUVÉ' + (o.nom ? ' : ' + o.nom : '') + ' — IL TE SUIT', 150);
+  }
+
   // --- Celui qu'on escorte (`proteger`) ---------------------------------------------------
 
   //: A cette distance de lui, on l'a rejoint : il se met a nous suivre.
@@ -3951,6 +4026,11 @@ const Histoire = (function () {
       else if (o.type === 'livrer') l = lieuDeLivraison(o.lieu);
       else if (o.type === 'monter') l = B.mission && B.mission.vehicule ? B.mission.vehicule : null;
       else if (o.type === 'retourner') l = ouTrouver(Chapitres.donneurDe(m));
+      // `chercher` : la flèche mène au coin où il se cache — pas à LUI ; arrivé dans le coin, elle se tait (on cherche).
+      else if (o.type === 'chercher') {
+        const c = B.mission && B.mission.cachette;
+        l = c && Math.hypot(c.x - j.x, c.y - j.y) > c.r ? { x: c.x, y: c.y, nom: o.nom || texteDObjectif(o) } : null;
+      }
       else if (o.type === 'ramasser') l = B.mission && (B.mission.entites.find(function (e) { return e.objet === 'caisse'; }) || B.mission.entites.find(function (e) { return e.porteLaCaisse && e.vivant && e.etat !== 'assomme'; }) || (!B.mission.fuyardTombe ? B.mission.fuyard : null));
       else if (o.type === 'tuer') { const restants = B.mission ? B.mission.entites.filter(function (e) { return e.cible && e.vivant && e.etat !== 'assomme'; }) : []; l = restants[0] || null; }
       // ⚠️ `parler` : la cible est un PERSONNAGE, pas un lieu. On pointe sa
@@ -4138,7 +4218,7 @@ const Histoire = (function () {
     majDeblocages(false);
   }
 
-  return { texteDObjectif, exigeTenu, tenu, porteLaTenue, faite, disponibles, disponibleDe, estParti, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
+  return { texteDObjectif, poserLaCachette, exigeTenu, tenu, porteLaTenue, faite, disponibles, disponibleDe, estParti, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
            donneur, creerDonneurs, majSaisonniers, absentLHiver, poserDonneur, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
            parler, dire, suivante, finir, commencer, demarrer, avancer, objectif, courante, reussir, echouer, evenement,
            mission, accorder, ouEstLeJoueurEnVille, commandesDuPoursuivant, arriverApres,
