@@ -45,6 +45,16 @@ objectif `lire` pousserait à du `if (slug === '…')`, et la règle de M16 l'in
 quartier, rédigées et auditées comme les répliques de M15 — sans elles, la lecture est un
 menu vide. C'est à Martin de dire si la ville en veut, et dans quelle vague.
 
+**Tranché par Martin le 1er oct. 2026** :
+
+- **Les deux**, en deux vagues : **vague 1, la lecture** (une ligne par passant), **vague 2, la réputation** (par
+  quartier ; elle ne change que la délation).
+- **On lit au bouton tenu** (comme Watch Dogs) : tenir un bouton en regardant un passant affiche sa ligne au-dessus de
+  lui ; rien ne s'affiche sans qu'on le veuille.
+- **La réputation est chiffrée** : une jauge par quartier, au carnet et sur la carte.
+- **Une soixantaine de lignes** de passant, huit à dix par quartier, dans le ton de `docs/ecrire-drole.md`, relues
+  avant de livrer.
+
 **Juges** : une ligne de passant ne pèse sur aucune mission (grep : aucun slug ne la lit) ;
 un enfant n'a jamais de profil ; la réputation ne change rien d'autre que la délation, et elle
 survit à une sauvegarde ; lire n'est jamais un objectif du catalogue.
