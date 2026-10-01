@@ -20,3 +20,5 @@ _Martin, 1er oct. 2026 : la partition de « Hockey Night in Canada » (Dolores C
 Ti-Guy ; `garage.note` lit « Bb3 » et « F#4 », `_air` lit « R », `Son.SFX.claironner` se tait sur 0 Hz ; le juge
 `test_le_klaxon_joue_la_soiree_du_hockey` tient l'air contre la partition, note à note. Rendu : −12,0 LUFS, comme
 les autres airs. La voix de Ti-Guy (« … toute la rue va sortir en bedaine ») : générée, ⚠️ pas écoutée.
+- **Un peu moins vite** (Martin, 1er oct. 2026, à l'écoute) : la croche passe de 0,11 à 0,14 s (la noire à 0,28) ;
+  l'air dure 4,5 s.
