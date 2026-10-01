@@ -868,7 +868,7 @@ voit garé en arrivant). Jamais un homme de mission, un allié, un Mante ; jamai
 homme de mission ou la paix du Boss n'appelle personne ; une fois sur trois, un char garé aux couleurs du gang à
 côté d'eux ; dans une rixe, les renforts se battent contre l'autre gang, pas contre toi.
 
-### Vague 5 — plus de réalisme
+### Vague 5 — plus de réalisme — **livrée le 1er oct. 2026**
 
 _Demandé par Martin le 1er oct. 2026 (« Continue les vagues », puis « plus de réalisme »)._ Tranché avec lui :
 - **Les balles s'arrêtent sur les chars**, et les abîment — les tiennes comme celles d'un gang : un char criblé finit
@@ -887,3 +887,18 @@ Quatre morceaux, livrés l'un après l'autre :
   `poursuivant` des missions).
 - **5d — la police contre les gangs** : une grosse fusillade (assez de coups de feu, assez près, assez vite) fait
   venir une auto-patrouille ; ses agents tirent sur les gangs armés, et les gangs les prennent pour cible.
+
+**Ce qui a changé en route** :
+- **5a** : la balle naît au CANON (8 px devant, 6 px plus haut) — un agent qui tirait appuyé sur son auto la
+  criblait : une balle ignore le char qu'enjambe le tireur (le sien, ou celui contre lequel il tire). Les agents ne
+  tirent plus à travers un char, sauf celui où tu es.
+- **5b** : la brique et la bouteille sont des `lance` INERTES (le vol, le dessin et le choc des chars des grenades,
+  sans mèche) ; à mi-vol elles passent au-dessus de tout le monde (z > 14), ne touchent qu'en descendant.
+- **5c** : le conducteur `poursuivant` des missions, né à l'empreinte (la `rueHorsChamp` des missions tire au dé).
+- **5d** : un agent contre un gang mène son PAS (la police arrête `majPieton` quand elle mène) ; il n'enquête pas sur
+  les coups de feu (`alerterAgent` le faisait basculer en `enquete`) ; la riposte ne réveille que celui qui est
+  encore dans la rixe ; une rixe décompte aussi pendant le geste (un tireur se battait seul, la rixe finie) et un
+  renfort finit avec celui qui l'a appelé.
+- **Reporté** : la police contre les gangs ne vise que les ARMÉS (les bagarreurs au bâton l'ignorent) ; l'auto-
+  patrouille est garée, elle ne roule pas jusqu'à la fusillade ; les agents restent, puis flânent (pas de retour à
+  l'auto).
