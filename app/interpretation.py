@@ -444,6 +444,7 @@ JEU: dict[str, str] = {
     # Sal le barbier (arc D) : doux, lent, la dette jamais loin.
     # L'inspectrice Roy (arc R) : froide, exacte, jamais méchante.
     "roy-repos-2": "[matter-of-fact] Pas maintenant. [coldly] J'ai une ville à nettoyer.",
+    "maude-repos-2": "[calm] Le mur sèche. [excited] Reviens quand le soleil va le frapper.",
     "beaulieu-repos-2": "[warmly] Biscuit dort sur le divan. [amused] Moi, je surveille les écureuils.",
     "sal-repos-2": "[warmly] La chaise est libre, le neveu. [softly] Pis la dette, elle… attend pas.",
     "narrateur-journal-quais_liberes": "[dramatic] Nuit blanche à l'Hôtel Bandini. [amused] Les matelots du cargo norvégien sont repartis à la rame, et les Quais dorment tranquilles. [warmly] Les débardeurs, eux, parlent d'une paix qui tiendra.",

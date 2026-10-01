@@ -1663,3 +1663,23 @@ catalogue.
     `piscine:<lieu>` a sa piscine, celle du maire n'est pas celle de Diane) ; mutations : pas de treuil, le treuil qui ne
     sort pas, on y monte, la physique qui l'en sort, plonger au volant, pas de chute, livré sans être accroché — rouges.
   - **Voix** : 19 (≈ 2 090 caractères, la manchette comprise), générées, pas écoutées.
+- **1er oct. 2026 : vague 27 — la murale de Maude (`p03`, Maude — 150 $).** Maude, la muraliste de La Pointe
+  (fiche `docs/personnages/maude.md`, visage — queue de cheval sarcelle, blouson moutarde, taches de rousseur — qui
+  cligne) : devant le phare après m6, **de passage** (l'abribus du phare ne bouge pas). Voix : **Luna**, québécoise de la
+  bibliothèque, libre — choisie à l'audition contre Claudia (Scribe : « le mur du fort ») et Marie Line — **à valider
+  par Martin** : `captures/audition-maude-*.mp3`. Sa moto (sa motoneige l'hiver, la réplique aussi), trois bombes de
+  peinture devant l'atelier « PEINTURE AUTO » de La Shop (`boutique:peinture`, le dessin `bombes` : rouge, bleu, jaune),
+  ramassées à pied, rapportées au phare.
+  - ⚠️ **Un objet posé à une enseigne tombait sur un meuble de la façade** : le joueur, repoussé, ne marchait jamais
+    dessus. `obtenir` à un `boutique:<mot>` pose maintenant l'objet sur la tuile libre la plus proche
+    (`Histoire.tuileLibre`, sans dé).
+  - ⚠️ Écart à la fiche : le chrono (120 s, « l'apprêt sèche ») court au RETOUR seulement — Maude étend son apprêt dès
+    qu'on a les bombes (elle le dit au téléphone) ; de l'atelier au phare, moins d'une minute à l'allure de l'étalon.
+  - **Juges** : `tests/test_murale_de_maude_js.py` (deux, au bouton : la moto, les bombes devant l'atelier à pied, le
+    chrono du retour, la prime ; trop lent, l'apprêt sèche et elle le dit) ; mutations : l'objet sur le meuble de
+    l'enseigne, pas de chrono au retour — rouges. Captures : `captures/visage-maude.png`, `maude-phare.png`.
+  - **Voix** : 11 (≈ 1 080 caractères) + 3 auditions (348), générées, pas écoutées.
+- **1er oct. 2026 : ce qui reste de M16, après les vagues 24 à 27** — toutes les missions de la fiche sont écrites,
+  sauf **la variante de `q14` chez Ti-Loup** (après `q11` : sa cale de chars pour la ferraille) et **« la liste du quai »**
+  comme activité (des modèles qui changent chaque jour sur l'ardoise de Sven). M16 reste ⬜ tant que Martin ne les a ni
+  faites écrire ni écartées.

@@ -114,7 +114,7 @@ BETES_DE_MISSION = ("chien",)
 
 #: Ce qu'un objet de mission a l'air, par terre (`OBJETS` de `static/js/sprites.js`, que `Entites`
 #: sait peindre au sol). ⚠️ Un dessin inconnu se peindrait en sac : le juge le refuse.
-DESSINS_D_OBJET = ("cle", "dossier", "registre", "sac", "boite")
+DESSINS_D_OBJET = ("cle", "dossier", "registre", "sac", "boite", "bombes")
 
 #: ⚠️ **CE QUE PORTE UN HOMME DE MISSION SE DECLARE ICI.** Un objectif `tuer`
 #: pose des membres d'un `groupe` : ils sortent de l'archetype (`pietons.py`),
@@ -500,6 +500,13 @@ PERSONNAGES: list[Personnage] = [
      "couleurs": {"c": "#7a4a6a", "h": "#d8d4d0", "s": "#f0c8a8", "p": "#4a4a5a"}, "ou": "porte:depanneur",
      "heler": "Ouhou! Vous!", "arrive_apres": "m6", "chien": "e03", "de_passage": True,
      "repos": ("Biscuit dort.", "Biscuit dort sur le divan. Moi, je surveille les écureuils.")},
+    # --- Maude (1er oct. 2026, p03) : la muraliste de La Pointe — elle peint le mur au pied du phare. Devant le phare (le
+    # seul lieu de mission de La Pointe : aucune tuile ne bouge), après m6 (`arrive_apres`). Voix : Luna, québécoise
+    # de la bibliothèque, libre — choisie à l'audition contre Claudia (Lulu) et Marie Line (Mireille).
+    {"slug": "maude", "nom": "Maude", "genre": "femme", "voix": "Luna - Calm, Meditative and Young",
+     "couleurs": {"c": "#d8a020", "h": "#2a9a9a", "s": "#f0c8a0", "p": "#3a3a4a"}, "ou": "porte:phare",
+     "heler": "Toi! Viens!", "arrive_apres": "m6", "de_passage": True,
+     "repos": ("Le mur sèche.", "Le mur sèche. Reviens quand le soleil va le frapper.")},
     {"slug": "passant", "nom": "Un passant", "genre": "homme", "voix": "Felix Tabarnak - Confident and Witty",
      "couleurs": {"c": "#7a6a52", "h": "#3a2a1a", "s": "#e8b088", "p": "#2a2a3a"}, "ou": "", "heler": "Hé! Toi!"},
     {"slug": "passante", "nom": "Une passante", "genre": "femme", "voix": "Amélie - Young, Confident and Friendly",
@@ -753,6 +760,7 @@ from . import (  # noqa: E402
     t08, t10,
     e03,
     e05, e14,
+    p03,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -882,6 +890,9 @@ CATALOGUE: list[Mission] = [
     # ⚠️ e05, e14 (1er oct. 2026, la toute fin de M16) : un char dans la piscine — sorti au treuil de la remorqueuse
     # (`remorquer`), puis la berline du maire qu'on y laisse rouler (`plonger`) ; `static/js/piscine.js`.
     e05.MISSION, e14.MISSION,
+    # ⚠️ p03 (1er oct. 2026, la toute fin de M16) : la murale de Maude — trois bombes de peinture à l'atelier de La Shop,
+    # rapportées à moto avant que l'apprêt sèche ; Maude, la muraliste de La Pointe, personnage neuf.
+    p03.MISSION,
     m97.MISSION,
     # ⚠️ e11 (vague 21) : le maire, dans sa chambre entre m97 et m98, rachète son dossier — un CHOIX : vendu, ou à Louise.
     e11.MISSION,

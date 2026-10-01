@@ -252,6 +252,7 @@ chacun dans [docs/personnages/](personnages/README.md).
 | `cindy` | Cindy Boivin | Ruby Roo | porte:cantine (la Brume des Quais — partie après q05, `parti_apres`) | — |
 | `diane` | Diane Larivière | Riya Rao | porte:depanneur (après e01, `arrive_apres`) | — |
 | `beaulieu` | Mme Thérèse Beaulieu | Caroline | porte:depanneur (après m6, `arrive_apres` ; Biscuit, son chien, à ses pieds après e03) | — |
+| `maude` | Maude | Luna | porte:phare (après m6, `arrive_apres`, de passage) | — |
 | `jo` | Jo Bellemare | Omar J | porte:depanneur (entre e01 et e04) | — |
 | `bilodeau` | Roméo Bilodeau | Santa | porte:phare (après p01) | — |
 | `zed` | Zacharie « Zed » Lemieux | Lutz | porte:phare (après p02) | — |

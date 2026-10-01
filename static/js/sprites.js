@@ -9425,6 +9425,16 @@ const OBJETS = {
   },
   // La BOÎTE de carton (t08, une job de bras à l'usine) : le carton brun, son ruban adhésif en croix, l'ombre du
   // rabat — à seize pixels, c'est le ruban qui la nomme.
+  // LES BOMBES DE PEINTURE (p03, Maude) : trois canettes debout, rouge pompier, bleu de la baie, jaune qui crie — leur
+  // bouchon blanc, et le reflet d'alu ; à seize pixels, ce sont les trois couleurs qui les nomment.
+  bombes: function (ctx) {
+    [['#c0392b', 3], ['#2a6ad0', 7], ['#f1c40f', 11]].forEach(function (b) {
+      ctx.fillStyle = '#2a2a30'; ctx.fillRect(b[1] - 1, 3, 4, 7);
+      ctx.fillStyle = b[0]; ctx.fillRect(b[1], 3, 3, 6);
+      ctx.fillStyle = '#e8e6de'; ctx.fillRect(b[1], 1, 3, 2);
+      ctx.fillStyle = '#c9ccd2'; ctx.fillRect(b[1], 4, 1, 4);
+    });
+  },
   boite: function (ctx) {
     ctx.fillStyle = '#5e4124'; ctx.fillRect(3, 1, 11, 9); ctx.fillStyle = '#b07d48'; ctx.fillRect(3, 1, 10, 8);
     ctx.fillStyle = '#c99760'; ctx.fillRect(3, 1, 10, 3); ctx.fillStyle = '#e3d6a8'; ctx.fillRect(8, 1, 1, 8); ctx.fillRect(3, 4, 10, 1);

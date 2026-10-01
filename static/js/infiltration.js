@@ -29,7 +29,7 @@ const Infiltration = (function () {
   const FONDU_ESCALIER = [16, 6, 14];
   //: Le dessin d'un objet de mission, par terre (`OBJETS` de `sprites.js`) : la cle, le dossier, le
   //: registre. Un objet que la fiche ne nomme pas se peint en sac.
-  const DESSINS = { cle: true, dossier: true, registre: true, sac: true, boite: true };
+  const DESSINS = { cle: true, dossier: true, registre: true, sac: true, boite: true, bombes: true };
 
   //: Le bloc ou l'on etait a l'image d'avant : la releve se fait en ENTRANT.
   let blocVu = null;
@@ -187,7 +187,14 @@ const Infiltration = (function () {
       // ⚠️ Toute forme de lieu (1er oct. 2026, e08 : `rampe:pointe`) : `lieu` ne lisait qu'un nom de porte — un objet
       // « au pied de la rampe » ne se posait jamais, et l'objectif attendait pour toujours. Un nom nu reste un `lieu`.
       const l = o.ou.indexOf(':') > 0 ? Histoire.resoudre(o.ou, null) : Histoire.lieu(o.ou);
-      if (l && !B.interieur) poserObjet(o, l.x, l.y);
+      // ⚠️ UNE ENSEIGNE (`boutique:<mot>`, p03) se résout devant sa façade, parfois sur un banc ou un bac à fleurs :
+      // l'objet y tombait, et le joueur, repoussé par le meuble, ne marchait jamais dessus. La tuile libre la plus
+      // proche, où l'on pose le pied (`Histoire.tuileLibre`, sans dé).
+      const libre = l && o.ou.indexOf('boutique:') === 0 ? Histoire.tuileLibre(l.x, l.y, 4, function (q) {
+        return !Monde.bloque(Math.floor(q.x / TT), Math.floor(q.y / TT), Monde.MASQUE_PIETON);
+      }) : null;
+      const ici = libre || l;
+      if (ici && !B.interieur) poserObjet(o, ici.x, ici.y);
     }
     if (!j || j.dansVehicule) return;
     for (const e of B.entites) {

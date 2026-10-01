@@ -234,6 +234,9 @@ VISAGES: dict[str, dict] = {
     # Mme Thérèse Beaulieu (e03), la promeneuse des Érables : la permanente blanche, les lunettes rondes au bout d'une
     # chaînette, le gilet mauve tricoté par sa sœur, les joues roses du grand air — et les rides de quarante ans de
     # promenades de chien.
+    # Maude (p03), la muraliste de La Pointe : la queue de cheval sarcelle, le blouson moutarde taché de peinture, des
+    # taches de rousseur et deux anneaux à l'oreille — vingt-quatre ans, et la ville comme toile.
+    "maude": _v("fine", "queue", "veste", signes=("rousseur", "boucles")),
     "beaulieu": _v("ronde", "permanente", "gilet", lunettes="rondes", signes=("rides", "fard", "boucles")),
     "maitre": _v("ronde", "degarnie", "blouse", chapeau="canotier", signes=("rides", "sourcils_epais"),
                  t="#e6d49a"),
