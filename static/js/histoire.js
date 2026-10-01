@@ -138,6 +138,10 @@ const Histoire = (function () {
   function mission(slug) { return defs().find(function (m) { return m.slug === slug; }) || null; }
   // ⚠️ Un CHAPITRE dont toutes les missions remplacées sont faites l'est aussi (une vieille partie).
   function faite(slug) { return !!B.partie.missionsFaites[slug] || Chapitres.fait(mission(slug)); }
+  /** CE QU'ON A PRÉPARÉ CHANGE LA SUITE (le casse, x04 — 1er oct. 2026) : `si` (cette mission est faite) et `sauf` (elle ne
+      l'est pas), sur un objectif — tenu, il se joue ; sinon il se SAUTE — ou sur une réplique `pendant` — tenue, elle
+      se dit. Le coupé du x02 qui attend dans la ruelle, Josée qui dit ce qui manque. ⚠️ En données, jamais un slug ici. */
+  function tenu(o) { return !o || ((!o.si || faite(o.si)) && (!o.sauf || !faite(o.sauf))); }
   function courante() { return B.partie.mission ? mission(B.partie.mission.slug) : null; }
 
   /** `exige` de M16 tenu ? — ce qu'il faut AVOIR en plus des pre-requis
@@ -981,8 +985,8 @@ const Histoire = (function () {
     return ((m && m.dialogue && m.dialogue[partie]) || []).map(function (l, i) {
       const h = hiver && l.hiver;
       return { qui: l.qui, texte: h ? l.hiver : l.texte, telephone: toujours, auto: auto, objectif: l.objectif,
-               slug: slugDeVoix(m, partie, i) + (h ? '-hiver' : ''), humeur: l.humeur };
-    }).filter(function (l) { return !filtre || filtre(l); });
+               slug: slugDeVoix(m, partie, i) + (h ? '-hiver' : ''), humeur: l.humeur, dite: tenu(l) };
+    }).filter(function (l) { return l.dite && (!filtre || filtre(l)); });
   }
 
   function dire(m, partie, fin, filtre) {
@@ -1271,6 +1275,9 @@ const Histoire = (function () {
 
   /** L'option `tenue` d'un objectif (M16, f10 — « en la portant ») : vrai tant qu'on ne
       porte PAS cette tenue-là (le linge, ou le chapeau pour une tenue de tête). */
+  /** Porte-t-on la tenue `slug` (le linge, ou le chapeau d'une tenue de tête) ? Le casse le demande au garde. */
+  function porteLaTenue(slug) { return !tenueManque({ tenue: slug }); }
+
   function tenueManque(o) {
     if (!o || !o.tenue) return false;
     const p = B.partie;
@@ -1622,6 +1629,8 @@ const Histoire = (function () {
     // ⚠️ Un acte dont la mission remplacée est DÉJÀ faite (une vieille partie qui a fait p04 sans p05) se saute :
     // on ne le rejoue pas, on ne le repaie pas.
     while (o && o.type === 'acte' && Chapitres.dejaFait(m, p.etape)) { p.etape = Chapitres.marqueurSuivant(m, p.etape); o = m.objectifs[p.etape]; }
+    // ⚠️ Un objectif `si`/`sauf` qui ne tient pas (`tenu`) se saute : rien ne se pose, rien ne se dit.
+    while (o && !tenu(o)) { p.etape++; o = m.objectifs[p.etape]; }
     if (!o || !o.allies) relacherLesAllies();
     relacherLesPoursuivants();
     if (!o) { reussir(); return; }
@@ -1786,7 +1795,7 @@ const Histoire = (function () {
       // saute fait rater), et un char qu'on n'a pas encore eu a chercher n'est
       // pas encore le char de la mission.
       for (let i = p.etape + 1; i < m.objectifs.length; i++) {
-        if (m.objectifs[i].type === 'monter') poserLeChar(m, m.objectifs[i], i);
+        if (m.objectifs[i].type === 'monter' && tenu(m.objectifs[i])) poserLeChar(m, m.objectifs[i], i);
       }
     });
   }
@@ -2364,6 +2373,10 @@ const Histoire = (function () {
       case 'livrer': {
         const v = B.mission.vehicule || j.dansVehicule;
         if (!v || v.etat === 'epave') { echouer('vehicule_detruit'); return; }
+        // `repeint` (x02, le casse) : le char ne se livre qu'une fois REPEINT (`Missions.repeindre` le marque) — la ligne
+        // d'objectif le dit tant qu'il ne l'est pas.
+        if (o.repeint && !v.repeint) { B.mission.attend = 'FAIS-LE REPEINDRE — ' + texteDObjectif(o); return; }
+        if (o.repeint) B.mission.attend = null;
         const l = lieuDeLivraison(o.lieu);
         if (j.dansVehicule === v && l && dist2(v.x, v.y, l.x, l.y) < (o.rayon * TT) * (o.rayon * TT) && Math.abs(v.vitesse) < 0.4) {
           B.mission.sansBosse = o.sans_degats && v.chocs === p.chocs && v.vie === v.vieMax;
@@ -2681,7 +2694,8 @@ const Histoire = (function () {
     // choix parce qu'il coute : on ecrit la fermeture ICI, au moment de la
     // recompense, et la mission fermee disparait de partout des la prochaine
     // fois qu'on regarde le telephone ou le carnet.
-    if (m.ferme && p.fermees.indexOf(m.ferme) < 0) p.fermees.push(m.ferme);
+    // Une liste aussi (x04 ferme la dernière coupe de Sal ET les préparatifs qu'on n'a plus à faire).
+    [].concat(m.ferme || []).forEach(function (f) { if (p.fermees.indexOf(f) < 0) p.fermees.push(f); });
     p.stats.missions = (p.stats.missions || 0) + 1;
     noter('MISSION : ' + m.titre + ' — ' + prime + ' $', true);
     B.mission = null;
@@ -3924,7 +3938,7 @@ const Histoire = (function () {
     majDeblocages(false);
   }
 
-  return { texteDObjectif, exigeTenu, disponibles, disponibleDe, estParti, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
+  return { texteDObjectif, exigeTenu, tenu, porteLaTenue, faite, disponibles, disponibleDe, estParti, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
            donneur, creerDonneurs, majSaisonniers, absentLHiver, poserDonneur, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
            parler, dire, suivante, finir, commencer, demarrer, avancer, objectif, courante, reussir, echouer, evenement,
            mission, accorder, ouEstLeJoueurEnVille, commandesDuPoursuivant, arriverApres,

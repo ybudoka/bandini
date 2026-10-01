@@ -415,6 +415,11 @@ TENUES = [
      "emplacement": "taille", "piece": {"accessoires": ["ceinture_flechee"]}},
     {"slug": "parapluie", "nom": "Parapluie", "prix": 35, "couleur": "#1a1a22",
      "emplacement": "main", "piece": {"objet": "parapluie"}},
+    # L'UNIFORME DE LIVREUR (le casse, x03) : la chemise brune des Livraisons Express, oubliée chez Rosa. Il ne se vend
+    # pas (`prime`) : Rosa te le met dans les mains, et le vigile de la caisse populaire ne regarde plus qui le porte
+    # (`caisse.js`).
+    {"slug": "livreur", "nom": "Uniforme de livreur", "prix": None, "couleur": "#7a5230", "prime": "rosa",
+     "emplacement": "corps", "piece": {"haut": "chemise"}},
 ]
 
 #: Où se porte une tenue, et le champ de la partie qui dit laquelle on porte (`B.partie[champ]`).

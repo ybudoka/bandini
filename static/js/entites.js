@@ -467,6 +467,12 @@ const Entites = (function () {
       if (g.qui === 'eleve') { e.partenaire = true; e.poste = { x: e.x, y: e.y }; }
       // Les eleves de l'ECOLE LA MANTE s'entrainent a leur place ; frappe-les, et c'est un Mante qui repond.
       if (g.qui === 'mante') e.poste = { x: e.x, y: e.y };
+      // La caisse populaire (`caisse.js`) : le gerant tient son bureau, le vigile sa porte — `fige`, comme un donneur ;
+      // c'est le casse qui les reveille.
+      if (g.qui === 'gerant' || g.qui === 'vigile') {
+        e.poste = { x: e.x, y: e.y }; e.plante = { x: e.x, y: e.y }; e.etat = 'fige';
+        if (g.qui === 'gerant') e.gerant = true; else e.vigile = true;
+      }
       // ⚠️ L'ECOLE ROUVERTE (`mantes.REPRISE`, apres l'arc du vieux maitre) : le cours a repris. Ils ne sont plus du
       // gang, ils tiennent leur place (`fige`, comme le donneur) et font face au maitre — la ou il se tient, qu'il
       // soit la ou non. Aucun de : un corps plante ne flane pas.
@@ -523,6 +529,22 @@ const Entites = (function () {
     // LE POUCE VACHON, qui tient la barbotte du sous-sol : le corps du commis, un veston moutarde et une
     // moustache — et SES GROS BRAS, le corps du garde, en cuir noir et sans batte (vague 4 du casino). Pas
     // d'archetype neuf : le paquet est a son plafond (voir Kevin et le croupier, plus haut).
+    // LA CAISSE POPULAIRE (`caisse.py`, `caisse.js`) : MONSIEUR LEMIRE, le gérant — le corps du commis, le veston brun,
+    // la cravate, les lunettes, les cheveux gris ; et FERNAND, le vigile de la porte — le corps du garde, gris, sa
+    // matraque à la ceinture. ⚠️ Pas d'archetype neuf : le paquet est a son plafond (voir Kevin, plus haut). Leur tete
+    // a l'empreinte de leur place, jamais un de.
+    if (g.qui === 'gerant' || g.qui === 'vigile') {
+      const gerant = g.qui === 'gerant', base = archetype(gerant ? 'commis' : 'garde');
+      const haut = gerant ? '#6a4a2a' : '#5a6066', bas = gerant ? '#3a2e24' : '#2a2e34';
+      const tire = typeof Garderobe !== 'undefined' ? Garderobe.tirer(gerant ? 'commis' : 'garde', hash2(g.x * 131 + g.y, 0xCA15)) : null;
+      return Object.assign({}, base, { slug: g.qui, nom: gerant ? 'M. Lemire' : 'Fernand', metier: 'caisse', courage: gerant ? 0 : 1,
+                                       arme: gerant ? null : 'batte', temoin: 0,
+                                       couleurs: Object.assign({}, base.couleurs, { c: haut, p: bas }),
+                                       tenue: tire ? Object.assign({}, tire, { haut: gerant ? 'veston' : 'chemise', couleur_haut: haut, motif: 'uni',
+                                                                               bas: 'pantalon', couleur_bas: bas, chapeau: gerant ? 'aucun' : tire.chapeau,
+                                                                               accessoires: gerant ? ['cravate', 'lunettes'] : (tire.accessoires || []) },
+                                                                    gerant ? { coiffure: 'degarnie', cheveux: '#b8b8bc' } : {}) : undefined });
+    }
     if (g.qui === 'pouce' || g.qui === 'gros_bras') {
       // ⚠️ LE TRIPOT A CHANGE DE MAINS (c04, `tripot.REPRISE`) : le Pouce et ses gros bras sont partis — ni au
       // sous-sol, ni a la porte d'en haut —, et le vieux Chan tient la barbotte pour Irene. Le corps du commis,

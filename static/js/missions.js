@@ -1235,7 +1235,7 @@ const Missions = (function () {
     lulu: 'PARLER', ovila: 'PARLER',
     emplettes: 'ACHETER', salon: 'SE FAIRE COIFFER', escalier: 'MONTER', fouiller: 'FOUILLER',
     fourriere: 'LE LOT', avocat: 'PARLER À L’AVOCAT', hacker: 'LE COMPTOIR DU FOND',
-    distributrice: 'LA MACHINE', videopoker: 'LE VIDÉOPOKER', machine_a_sous: 'LA MACHINE À SOUS', cours: 'LES COURS',
+    distributrice: 'LA MACHINE', voute: 'LA VOÛTE', videopoker: 'LE VIDÉOPOKER', machine_a_sous: 'LA MACHINE À SOUS', cours: 'LES COURS',
     // Les concessionnaires : le comptoir qui vend les chars du lot.
     concession: 'ACHETER UN CHAR',
     // Les tables du Dragon d'or (`tables.js`).
@@ -1278,6 +1278,8 @@ const Missions = (function () {
     // c'est la personne qu'on vise, pas la tuile.
     const perso = Histoire.personnageSousLaMain(j);
     if (perso) { j.animT = 10; j.animType = 'ramasse'; return Histoire.parler(perso.personnage); }
+    // Le gerant de la caisse populaire, quand on lui livre un colis (x03, `caisse.js`).
+    if (Caisse.gerantSousLaMain(j)) { j.animT = 10; j.animType = 'ramasse'; return Caisse.livrer(j); }
     const point = pointSousLaMain(j);
     if (!point) return false;
     j.animT = 10; j.animType = 'ramasse';           // un geste vers le comptoir
@@ -1285,6 +1287,8 @@ const Missions = (function () {
     // comptoirs. Leur point reste le filet, si on l'aborde par l'autre bord.
     const assis = Histoire.personnageDuPoint(point.type);
     if (assis) return Histoire.parler(assis.slug);
+    // La voute de la caisse populaire (`caisse.js`) : le casse, ou une porte d'acier.
+    if (point.type === 'voute') return Caisse.agir(j, point);
     // L'escalier et les tiroirs : un geste, pas un menu.
     // ⚠️ Celui du sous-sol du Dragon d'or se garde : le Pouce ne veut plus te voir (`Tripot.refuseLEscalier`).
     if (point.type === 'escalier') return Tripot.refuseLEscalier(point) || Jeu.changerEtage(point.vers);
@@ -1889,6 +1893,8 @@ const Missions = (function () {
     const autres = v.def.couleurs.filter(function (c) { return c !== v.couleur; });
     v.couleur = autres.length ? autres[Math.floor(B.rng() * autres.length)] : v.couleur;
     v.swaps = nuances(v.couleur); v.vole = false; v.alarme = 0;
+    // Le casse (x02) : une mission qui veut un char REPEINT (`livrer`, `repeint`) le lit ici.
+    v.repeint = (v.repeint || 0) + 1;
     Police.remiseAZero();
   }
 
@@ -3869,6 +3875,8 @@ const Missions = (function () {
       // ACTION parle au sergent.
       const dedans = Histoire.personnageSousLaMain(j);
       if (dedans) { const d = Histoire.personnage(dedans.personnage); B.invite = 'PARLER À ' + (d ? d.nom.toUpperCase() : '?'); return; }
+      const caisse = Caisse.invite(j);
+      if (caisse) { B.invite = caisse; return; }
       const point = pointSousLaMain(j);
       if (point) {
         const assis = Histoire.personnageDuPoint(point.type);

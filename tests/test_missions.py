@@ -1,6 +1,6 @@
 import re
 
-from app import armes, audio, blocs, carte, casino, economie, ile, mantes, missions, pietons, tripot
+from app import armes, audio, blocs, caisse, carte, casino, economie, ile, mantes, missions, pietons, tripot
 
 
 def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
@@ -108,8 +108,9 @@ def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
     # ⚠️ Et le Dragon d'or : un lieu garanti de la BANDE du nord (`casino.CASINO`), pas de `carte.SPECIAUX` — c01
     # y ramène le jeton. Et l'ÉCOLE LA MANTE (`mantes.SLUG`), posée par `mantes.poser` sur la bande : c07 y livre
     # Monsieur Bois.
+    # Et la CAISSE POPULAIRE (`caisse.SLUG`, posée par `caisse.poser` sur la ville finie) : le casse, x01–x04.
     lieux = ({p["slug"] for p in carte.SPECIAUX.values()} | {"kiosque", "planque"} | set(blocs.lieux_des_blocs())
-             | {casino.CASINO["slug"], mantes.SLUG})
+             | {casino.CASINO["slug"], mantes.SLUG, caisse.SLUG})
     # Les zones qu'un `ou: zone:<x>` peut nommer : celle de chaque gang (`pietons.GANGS`, que
     # `Histoire.resoudre` trouve dans `carte.zones`), plus le port et le Faubourg. ⚠️ Lue, pas
     # recopiée : la liste à la main n'avait appris `boulonneux` qu'avec s01, et q01 (les Morues,
@@ -347,9 +348,10 @@ def test_ce_qu_on_vient_obtenir_se_trouve():
             assert o.get("dessin", "sac") in missions.DESSINS_D_OBJET, (m["slug"], o.get("dessin"))
             # ⚠️ Un objet qui vient d'une TABLE de jeu (c02 : les dés du Pouce, glissés au sous-sol) : la table doit
             # le donner — sinon rien ne le mettrait jamais dans le sac, et rien ne le pose en ville non plus.
+            # La CAISSE POPULAIRE (le casse, x01–x04) donne aussi : chaque objet de `caisse.OBJETS` (`caisse.js`).
             if o.get("table"):
-                assert o["table"] == "tripot" and o["objet"] == tripot.PREUVE["objet"], \
-                    f"{m['slug']} : la table {o['table']!r} ne donne pas {o['objet']!r}"
+                donne = {"tripot": {tripot.PREUVE["objet"]}, "caisse": set(caisse.OBJETS)}.get(o["table"], set())
+                assert o["objet"] in donne, f"{m['slug']} : la table {o['table']!r} ne donne pas {o['objet']!r}"
                 assert not o.get("garde"), f"{m['slug']} : un objet de table n'est dans aucune poche"
             if o.get("garde"):
                 bloc = blocs.par_slug(lieux[o["ou"]])
@@ -372,3 +374,35 @@ def test_le_paquet_ne_porte_pas_l_echec_ni_la_phase_qui_valent_leur_defaut():
     # Et ce qu'elle donne voyage avec la mission (`pour_jouer`) : il ne se lit qu'en la réussissant.
     assert "donne" not in d05, d05
     assert missions.pour_jouer("d05")["donne"] == missions.par_slug("d05")["donne"]
+
+
+def test_si_et_sauf_nomment_une_mission_et_ne_touchent_ni_le_depart_ni_les_scenes():
+    """`si`/`sauf` (le casse, 1er oct. 2026) : ce qu'on a préparé change la suite. Ils nomment une mission du catalogue ;
+    jamais sur le PREMIER objectif (la mission doit commencer quelque part) ; sur une réplique, seulement `pendant` — les
+    scènes d'intro et de fin choisissent leurs répliques par leur rang, et une réplique tue le décalerait."""
+    slugs = {m["slug"] for m in missions.CATALOGUE}
+    vus = 0
+    for m in missions.CATALOGUE:
+        for k, o in enumerate(m["objectifs"]):
+            for cle in ("si", "sauf"):
+                if o.get(cle):
+                    vus += 1
+                    assert o[cle] in slugs and o[cle] != m["slug"], (m["slug"], cle, o[cle])
+                    assert k > 0, f"{m['slug']} : le premier objectif ne se saute pas"
+        for partie, lignes in m["dialogue"].items():
+            for ligne in lignes:
+                for cle in ("si", "sauf"):
+                    if ligne.get(cle):
+                        vus += 1
+                        assert partie == "pendant", f"{m['slug']} : `{cle}` sur une réplique {partie}"
+                        assert ligne[cle] in slugs, (m["slug"], ligne[cle])
+    assert vus, "aucune mission ne prépare rien : le juge est à vide"
+
+
+def test_deux_missions_n_ont_jamais_le_meme_titre():
+    """Le saut de mission (le menu des triches) et le carnet choisissent une mission par son TITRE : x01 s'appelait
+    « Le repérage », comme m52, et le saut lançait m52."""
+    from collections import Counter
+    doubles = [t for t, n in Counter(m["titre"].upper() for m in missions.CATALOGUE).items() if n > 1]
+    assert not doubles, doubles
+

@@ -74,6 +74,10 @@ def test_les_enseignes_ne_deplacent_rien_d_autre(VILLE, monkeypatch):
     # ⚠️ Les CONCESSIONNAIRES se posent après et ajoutent leur point au bout : neutralisés des DEUX côtés.
     from app import concessionnaires
     monkeypatch.setattr(concessionnaires, "poser_le_salon", lambda chantier, ville: None)
+    # ⚠️ LA CAISSE POPULAIRE de même (`caisse.poser`, en dernier) : elle prend la plus grande pièce de commerce
+    # qui reste — sans les enseignes, le bingo ou la salle de quilles.
+    from app import caisse
+    monkeypatch.setattr(caisse, "poser", lambda ville: None)
     avec = carte.generer(graine=VILLE["graine"], nord=False)
     monkeypatch.setattr(enseignes, "poser", lambda chantier, ville: [])
     sans = carte.generer(graine=VILLE["graine"], nord=False)  # ⚠️ sous le patch : pas `villes`

@@ -5446,6 +5446,71 @@ const TUILES = (function () {
     ctx.fillStyle = '#9cc4e0'; ctx.fillRect(6, 4, 4, 4);
     ctx.fillStyle = '#4a4e54'; ctx.fillRect(10, 10, 2, 1);
   };
+  /* --- LA CAISSE POPULAIRE (`app/caisse.py`, le casse de l'arc X) -----------------------------------------------
+     Une caisse de quartier ouvrier des années soixante-dix : la BOISERIE brune à mi-mur sous un plâtre crème, les
+     stores à lattes, la porte vitrée à poignée de laiton ; le PRÉLART beige en carreaux ; les GUICHETS (le comptoir de
+     chêne, sa vitre épaisse et son passe-monnaie) ; la VOÛTE d'acier — un bloc de deux sur deux, sa porte ronde, ses
+     boulons et sa roue ; le BUREAU de chêne du gérant, son buvard vert. ⚠️ Rien au dé : ce qui varie se lit à la
+     position (`v >> 4`). */
+  const CREME = { fond: '#e8dcc0', grain: '#ddd0b2', plinthe: '#4a301c' };
+  function murDeCaisse(ctx, v, T) {
+    murDePiece(ctx, v, T, CREME);
+    ctx.fillStyle = '#7a5232'; ctx.fillRect(0, 9, T, T - 9);                   // la boiserie, à mi-mur
+    ctx.fillStyle = '#6a4428'; for (let x = 3; x < T; x += 5) ctx.fillRect(x, 10, 1, T - 10);   // ses lattes
+    ctx.fillStyle = '#9a6e44'; ctx.fillRect(0, 9, T, 1);                       // la cimaise
+  }
+  tuiles['B@caisse'] = murDeCaisse;
+  tuiles['W@caisse'] = function (ctx, v, T) {                         // le store à lattes, la lumière de la rue
+    murDeCaisse(ctx, v, T);
+    ctx.fillStyle = '#e4e0d4'; ctx.fillRect(2, 1, 12, 12);
+    ctx.fillStyle = '#c8d8e0'; ctx.fillRect(3, 2, 10, 10);
+    ctx.fillStyle = '#b8b2a2'; for (let y = 3; y < 12; y += 2) ctx.fillRect(3, y, 10, 1);
+  };
+  tuiles['D@caisse'] = function (ctx, v, T) {                         // la porte vitrée, son cadre d'alu, le laiton
+    murDeCaisse(ctx, v, T);
+    ctx.fillStyle = '#a8aaa6'; ctx.fillRect(3, 1, 10, 15);
+    ctx.fillStyle = '#b8d0dc'; ctx.fillRect(4, 2, 8, 12);
+    ctx.fillStyle = '#d8e8ee'; ctx.fillRect(5, 3, 2, 6);
+    ctx.fillStyle = '#c9a24a'; ctx.fillRect(10, 8, 2, 1);
+  };
+  tuiles['u@caisse'] = function (ctx, v, T) {                         // le prélart beige, ses carreaux imprimés
+    plein(ctx, '#cbbf9e', T);
+    ctx.fillStyle = '#bcae8a'; ctx.fillRect(0, 0, T, 1); ctx.fillRect(0, 0, 1, T);
+    ctx.fillStyle = '#d6cbad'; ctx.fillRect(5, 5, 6, 6);
+    points(ctx, v, T, '#c2b592', 5, 3);
+  };
+  tuiles['c@caisse'] = function (ctx, v, T) {                         // le guichet : le chêne, la vitre, le passe-monnaie
+    plein(ctx, '#6a4a2c', T);
+    ctx.fillStyle = '#8a6440'; ctx.fillRect(0, 7, T, 4);                     // la tablette du client
+    ctx.fillStyle = '#a07a50'; ctx.fillRect(0, 7, T, 1);
+    ctx.fillStyle = '#4e3420'; ctx.fillRect(0, 11, T, 5);                    // la joue de chêne
+    ctx.fillStyle = 'rgba(190,220,232,0.75)'; ctx.fillRect(0, 0, T, 6);      // la vitre épaisse
+    ctx.fillStyle = '#e6f2f6'; ctx.fillRect(2 + (v >> 4) % 3, 1, 2, 4);      // un reflet
+    ctx.fillStyle = '#8a8c88'; ctx.fillRect(0, 0, T, 1); ctx.fillRect(0, 6, T, 1);
+    ctx.fillStyle = '#3a3a3a'; ctx.fillRect(6, 5, 4, 2);                     // le passe-monnaie
+  };
+  tuiles['a@caisse'] = function (ctx, v, T) { table(ctx, v, T, '#4a301c', '#8a5e34', '#a8764a');   // le chêne du gérant
+    if (!(v & 1) && !(v & 8)) { ctx.fillStyle = '#3f6a48'; ctx.fillRect(4, 4, 8, 5); ctx.fillStyle = '#e8e0c8'; ctx.fillRect(5, 5, 4, 3); }  // le buvard, une feuille
+  };
+  //: LA VOÛTE : un bloc de deux sur deux (`v & 15`, le masque des voisines de `varianteDeBloc`). Chaque tuile peint son
+  //: QUART de la grande porte ronde — le centre est au coin commun des quatre.
+  tuiles['m@caisse'] = function (ctx, v, T) {
+    const est = !!(v & 2), sud = !!(v & 4);                                   // où la voûte CONTINUE
+    const cx = est ? T : 0, cy = sud ? T : 0;                                 // le centre de la porte
+    plein(ctx, '#5e6268', T);                                                 // le cadre d'acier
+    ctx.fillStyle = '#4a4e54'; ctx.fillRect(est ? 0 : T - 2, 0, 2, T); ctx.fillRect(0, sud ? 0 : T - 2, T, 2);
+    for (let y = 0; y < T; y++) for (let x = 0; x < T; x++) {
+      const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
+      if (d < 13) { ctx.fillStyle = d > 11.5 ? '#2e3236' : d > 9 ? '#9aa0a6' : d > 4 ? '#b8bec4' : '#8a9096'; ctx.fillRect(x, y, 1, 1); }
+    }
+    ctx.fillStyle = '#e8ecee';                                                // les boulons de la couronne
+    for (let k = 0; k < 3; k++) {
+      const a = (k + 0.5) * Math.PI / 6 + (est ? (sud ? Math.PI : Math.PI / 2 * 3) : (sud ? Math.PI / 2 : 0));
+      ctx.fillRect(Math.round(cx + Math.cos(a) * 10.3) - 1, Math.round(cy + Math.sin(a) * 10.3) - 1, 2, 2);
+    }
+    ctx.fillStyle = '#3a3e42';                                                // la roue, ses rayons
+    ctx.fillRect(est ? T - 6 : 0, sud ? T - 1 : 0, 6, 1); ctx.fillRect(est ? T - 1 : 0, sud ? T - 6 : 0, 1, 6);
+  };
   // LE GENRE : la moquette d'un bungalow — beige, à poils, des traces de pas qu'on ne voit qu'en plissant les yeux.
   tuiles['t@moquette'] = function (ctx, v, T) {
     plein(ctx, '#b8a47e', T);

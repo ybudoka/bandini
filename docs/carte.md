@@ -116,6 +116,16 @@ un plancher de bois nu, deux mannequins de bois (`%`), le sac (`@`), les casiers
 `fouiller`, **gardé** : les Mantes présents te tombent dessus), un banc de chaises, et trois élèves
 (`mante`). Point `ecole_mante`, famille `service`. Autour, le territoire des Mantes (zone `mantes`).
 
+**LA CAISSE POPULAIRE** (le casse de l'arc X, 1er oct. 2026, `app/caisse.py`) : la caisse des ouvriers de **La
+Shop**, où le fourgon dépose la paie de l'usine Prévost — la pièce d'un commerce ordinaire (LIQUIDATION, à la vraie
+graine), reprise **en dernier** sur la ville finie, sans un dé : la plus grande pièce d'une famille qui garde une
+autre porte, dont l'enseigne tient « CAISSE POP » et qu'aucune mission ne lit par son nom. La ville d'avant est la
+même, clé par clé (`test_caisse.py`). Dedans (`piece_de_caisse`, son habit `caisse` : la boiserie brune, le plâtre
+crème, le prélart beige) : le **comptoir des guichets** d'un mur à l'autre et sa porte battante, la **voûte** d'acier
+au fond (un bloc de deux sur deux, point `voute`), le **bureau du gérant** derrière une cloison (monsieur Lemire,
+`gerant`), la salle d'attente ; deux caissières, Fernand le vigile (`vigile`), des clients. Point `caisse_pop`,
+famille `service`. Pas d'étages : une pièce faite main n'en monte pas.
+
 **Les concessionnaires** (28 sept. 2026, `app/concessionnaires.py`) : **Prestige Automobiles**, bâti sur
 la moitié sud du plus grand stationnement cossu des Érables (un salon de toit d'ardoise, façade vitrée) ;
 la moitié nord, ses cases `^` telles quelles, est le lot — huit chars neufs (sport, luxe, VUS de luxe,
@@ -330,6 +340,8 @@ La foule anonyme, les sortes posées, et les gens d'intérieur. `frequence`
 | `malade` | Malade | lits de l'hôpital |
 | `avocat` | Me Desjardins | table du fond, Le Brouillard |
 | `mante` | Une Mante | l'ÉCOLE LA MANTE : trois élèves qui s'entraînent (l'archétype du gang, `pietons.py`) |
+| `gerant` | M. Lemire | le gérant de la CAISSE POPULAIRE, à son bureau de chêne (le corps du commis, veston brun, cravate et lunettes, `entites.archetypeDedans`) |
+| `vigile` | Fernand | le vigile de la CAISSE POPULAIRE, près de la porte (le corps du garde, sa matraque) — il salue un livreur, il reconnaît les autres le jour du coup |
 | `eleve` | Kevin | le DOJO DION : au sac, et sur le tatami pendant une leçon (le corps du commis en kimono blanc, `entites.archetypeDedans` — pas un archétype de `pietons.py`) |
 | `policier` | Agent | patrouille (posé par `police.js`) |
 | `garde` | Garde de sécurité | vigile privé de l'infiltration, posé à la main par une mission (`Police.creerAgent(x, y, etat, 'garde')`) |

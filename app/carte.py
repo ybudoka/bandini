@@ -7503,6 +7503,11 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
     villas_mod.poser(ville)
     from . import clotures as clotures_mod
     clotures_mod.poser(ville)
+    # ⚠️ LA CAISSE POPULAIRE (le casse de l'arc X, `caisse.py`), EN DERNIER sur la ville finie et sans un dé — la pièce
+    # d'un commerce reprise, son enseigne repeinte, un point d'intérêt au bout : la ville d'avant est la même, clé par clé.
+    # Après les devants (son devant de mission est déjà dégagé), avant les étages (une pièce faite main n'en a pas).
+    from . import caisse as caisse_mod
+    caisse_mod.poser(ville)
     # ⚠️ DES ÉTAGES DEDANS AUSSI (docs/jalons/des-etages-dedans-aussi.md), sur la ville FINIE (toutes ses tuiles,
     # toutes ses portes) : combien d'étages chaque façade peint, sans un dé et sans une tuile. ⚠️ AVANT les
     # frénésies et les cartes de hockey, qui se posent en tout dernier (leurs juges « ne déplacent rien » le
@@ -7552,8 +7557,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
 #: Au tripot du sous-sol du Dragon d'or (`tripot.py`) : `pouce`, qui tient la barbotte, et ses `gros_bras`, qui
 #: tiennent les portes — le corps du garde, sans sa batte (`Tripot`).
 #: À l'ÉCOLE LA MANTE (`mantes.py`) : `mante`, un élève qui s'entraîne — un Mante, qui se bat comme dehors.
+#: À la CAISSE POPULAIRE (`caisse.py`) : `gerant`, monsieur Lemire derrière son bureau de chêne (le corps du commis,
+#: en veston brun) ; `vigile`, le garde de la porte (le corps du garde, sa lampe et sa matraque).
 QUI_DEDANS = ("commis", "client", "patient", "malade", "soignant", "avocat", "eleve", "croupier", "pouce",
-              "gros_bras", "mante")
+              "gros_bras", "mante", "gerant", "vigile")
 
 #: ⚠️ Les seuls gens qui naissent DANS un meuble, et chacun dans le sien : le
 #: PATIENT attend assis sur une chaise de la salle d'attente, l'AVOCAT tient la

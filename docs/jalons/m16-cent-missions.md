@@ -1319,3 +1319,46 @@ catalogue.
   en dernier sur la ville finie, sans un dé, la ville d'avant identique (comparée en JSON), son intérieur (comptoir,
   coffre, bureau du gérant), puis `x01`–`x04` ; (16) un char qui embarque sur le traversier jusqu'à l'île et y roule,
   puis `i04` ; (17) des bouées sur la baie que `course` sait lire en bateau, puis `i07`.
+- **1er oct. 2026 : vague 15 — le casse de la caisse populaire (arc X, `x01`–`x04`).** Un lieu neuf, **la caisse
+  populaire de La Shop** (`app/caisse.py`) — la caisse des ouvriers, où le fourgon dépose la paie de l'usine Prévost :
+  la pièce d'un commerce ordinaire (LIQUIDATION, à la vraie graine) reprise **en dernier** sur la ville finie, sans un
+  dé — après les devants (son devant de mission est déjà dégagé, sur quatre graines), avant les étages (une pièce
+  faite main n'en monte pas). **La ville d'avant est la même, clé par clé** (`test_caisse.py` : une porte renommée,
+  une enseigne repeinte, la pièce redessinée, un point d'intérêt au bout — rien d'autre). Dedans, son habit `caisse`
+  (boiserie brune, plâtre crème, prélart) : le comptoir des guichets d'un mur à l'autre et sa porte battante, la
+  **voûte** d'acier au fond (un bloc de deux sur deux, sa porte ronde à minuterie), le **bureau du gérant** derrière
+  une cloison (monsieur Lemire), la salle d'attente ; deux caissières, **Fernand** le vigile, des clients ; la porte
+  d'en arrière, peinte sur le mur. Quatre missions : `x01` (Josée, _Repérer la caisse_ : la voûte regardée de près, le
+  fourgon filé jusqu'au casse-croûte de Mado, où ses gars dînent avec Bouchard — 100 $), `x02` (Gus, _Le char qui
+  part vite_ : le coupé d'un touriste de l'hôtel, refusé à la planque tant qu'il n'est pas **repeint** — 150 $),
+  `x03` (Rosa, _Le linge propre_ : l'uniforme de livreur oublié chez elle, un colis de carnets de chèques signé par
+  Lemire, et Fernand qui salue — 100 $), `x04` (Josée, _Le coup_ : la minuterie de la voûte, l'alarme, une minute à
+  tenir pendant que trois vagues de gardes du fourgon entrent par l'arrière, les sacs de la paie, quatre étoiles à
+  semer, le Brouillard — 2 500 $, **ferme `d08`**, et les préparatifs qu'on n'a plus à faire).
+  - **Ce qu'on a préparé change le coup** — sans un type neuf : deux clés de données, `si` / `sauf` (une mission
+    faite / pas faite), sur un objectif (il se SAUTE) ou une réplique `pendant` (dite ou tue) — `Histoire.tenu`. Le
+    coupé du x02 attend dans la ruelle (`monter`, `si: x02`) ; Josée dit ce qui est prêt et ce qui manque au premier
+    objectif. Sans l'uniforme, Fernand te reconnaît en entrant (deux étoiles, et il te saute dessus) ; sans arme à
+    feu, la minute se fait aux poings. Le juge joue les deux combinaisons extrêmes, de la porte du bar à Josée.
+  - **Dans une pièce, `majObjectif` dort** : le casse se joue DEDANS par `static/js/caisse.js` — un objectif
+    `obtenir` dont la `table` est la caisse, et l'OBJET dit quoi faire (`caisse.OBJETS` : le repérage, la livraison,
+    le coup) ; l'objet entre au sac dedans, l'objectif avance à la sortie. L'alarme sonne tant qu'on est dans la caisse
+    (les étoiles ne tombent pas, comme elles tomberaient dans une pièce). Un piéton ne cherche pas son chemin : qui
+    doit changer de côté du comptoir passe par la porte battante (vu en capture : Fernand et les gardes restaient
+    collés au comptoir, la minute ne coûtait rien). Les gardes naissent à l'empreinte de leur vague, jamais `B.rng()`.
+  - **Deux clés de plus au moteur** : `livrer` + `repeint` (le char ne se livre qu'une fois repeint — `Missions.repeindre`
+    le marque), et `ferme` accepte une liste. Un uniforme de plus (`magasins.TENUES`, `livreur`, qui ne se vend pas) ;
+    deux gens de pièce (`gerant`, `vigile` : le corps du commis et celui du garde, aucun archétype neuf).
+  - ⚠️ **Écarts à la fiche** : la caisse est à **La Shop**, pas au Faubourg (il n'y reste aucune porte de commerce) ;
+    `x02` se donne par **Gus**, pas Josée (un donneur donne la PREMIÈRE mission disponible de sa liste : Josée aurait
+    offert le coupé avant le coup, à tout jamais, et le coup ne se serait jamais joué sans lui) ; `x01` ne demande pas
+    « trois heures différentes » (un objectif ne sait pas attendre une heure : on regarde la voûte, on file le fourgon) ;
+    les préparatifs paient un peu (le juge des missions veut une prime) ; et « chaque préparatif manquant se dit à
+    l'intro » se dit au premier objectif, juste après elle (les scènes d'intro choisissent leurs répliques par leur rang).
+  - ⚠️ « Le repérage » était déjà le titre de m52 : le saut de mission (triches) choisit par le titre, et lançait m52.
+    `x01` s'appelle _Repérer la caisse_, et `test_missions.py` refuse deux titres pareils.
+  - **Juges** : `test_caisse.py` (neuf : la ville d'avant clé par clé et sa mutation, La Shop, la mesure et le filtre
+    des noms que les missions lisent — mutés, rouges —, la pièce à la mesure de son bâtiment, toutes les mesures, le
+    devant sur quatre graines, la liste des objets) ; `test_casse_js.py` (six : x01, x02, x03 jouées au bouton, x04 tout
+    préparé et rien de préparé, et la porte battante — mutée, rouge) ; `test_missions.py` (la table `caisse`, `si`/`sauf`
+    jamais au départ ni hors `pendant`).

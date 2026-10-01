@@ -30,10 +30,14 @@ def _l(qui: str, texte: str, jeu: str | None = None, hiver: tuple[str, str] | No
     return _ligne(qui, texte, jeu, hiver)
 
 
-def _p(qui: str, texte: str, objectif: int, jeu: str | None = None, hiver: tuple[str, str] | None = None) -> dict:
+def _p(qui: str, texte: str, objectif: int, jeu: str | None = None, hiver: tuple[str, str] | None = None,
+       si: str | None = None, sauf: str | None = None) -> dict:
     """Une réplique PENDANT : dite quand l'objectif `objectif` (compté à partir de 0)
-    commence — au combiné si celui qui la dit n'est pas là."""
-    return _ligne(qui, texte, jeu, hiver, objectif=objectif)
+    commence — au combiné si celui qui la dit n'est pas là. `si` / `sauf` (le casse, x04) : dite
+    seulement si cette mission est faite / ne l'est pas — ce qu'on a préparé, et ce qui manque
+    (`Histoire.tenu`)."""
+    cles = {k: v for k, v in (("si", si), ("sauf", sauf)) if v}
+    return _ligne(qui, texte, jeu, hiver, objectif=objectif, **cles)
 
 
 def _r(qui: str, texte: str, objectif: int, jeu: str | None = None) -> dict:

@@ -126,7 +126,10 @@ ECHECS = ("mort", "arrete", "vehicule_detruit", "chrono", "etoile", "protege_mor
 #: `survivre` faisaient déjà : la police à ce niveau au départ), et `renforts: {"vagues", "n"}` — quand il ne
 #: reste qu'un debout, la vague suivante arrive de loin (`tuer`, `tenir`).
 OPTIONS_OBJECTIFS = ("chrono_s", "sans_etoile", "sans_arme", "contre", "remet", "tenue", "allies", "treve", "donne",
-                     "etoiles", "renforts", "poursuite", "relais")
+                     "etoiles", "renforts", "poursuite", "relais", "si", "sauf")
+#: `si: <mission>` / `sauf: <mission>` (le casse, 1er oct. 2026) : l'objectif ne se joue que si cette mission est faite
+#: / ne l'est pas — sinon il se SAUTE (`Histoire.tenu`). Ce qu'on a préparé change la suite (x04 : le coupé du x02
+#: attend dans la ruelle). Les mêmes clés sur une réplique `pendant` (`_p(…, si=…)`) : dite ou tue.
 #: `relais: N` sur le fuyard (`ramasser`, `cible: fuyard`) : rattrapé, il saute dans un autre char tout près, N fois,
 #: avant de tomber pour de bon.
 #: `poursuite: {"groupe", "chars", "vehicule"}` (les chapitres) : des chars du gang, nés hors champ, qui te collent
@@ -680,6 +683,7 @@ from . import (  # noqa: E402
     s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
     e04, e06, e07, e10, la_pointe, s02, s05, s06, s09, s10, s11,
     d01, d02, d03, d04, d05, d06, d07, d08, h03, h04, h05, h06, h07, l01, l02, l03, l04, l05, l06, r02, r03, r04, r05, r06, r07, r08, s07, s12, s14, e13, q12, q09, q08, i01, i02, i03, i05, i06, i08, h08, q07, m98,
+    x01, x02, x03, x04,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -745,6 +749,9 @@ from . import (  # noqa: E402
 # ⚠️ h03 à h07 (30 sept. 2026, vague 7) : l'hôpital — le Dr Lachance joue aux cartes chez Sal (h03, h06 : sa
 # dette payée en fausses ordonnances), un cœur par l'autobus de nuit (h04), le patient de Ginette qui file en
 # ambulance (h05), et la nuit des urgences quand un quartier change de mains (h07, `exige.liberes`).
+# ⚠️ x01 à x04 (1er oct. 2026, vague 15) : le casse de la caisse populaire de La Shop (`caisse.py`) — le repérage
+# (Josée), puis deux préparatifs, le coupé repeint (Josée) et l'uniforme de livreur (Rosa), et le coup lui-même, qui
+# se joue avec ou sans eux (`si`/`sauf`, `Histoire.tenu`) et ferme la dernière coupe de Sal (d08).
 # ⚠️ m98 (M13, 29 sept. 2026) — _Le Boss_, la fin qu'on gagne : après m97, quatre districts libérés et quatre
 # propriétés (`exige`). Le siège du Brouillard, le maire dans la chambre de l'hôtel, et la ville qui change de couleur.
 # ⚠️ m99 (M13, 25 sept. 2026) — _Sacrer son camp_, la fin qu'on peut jouer — tout au bout : son appel
@@ -774,6 +781,7 @@ CATALOGUE: list[Mission] = [
     r02.MISSION, r03.MISSION, r04.MISSION, r05.MISSION, r06.MISSION, r07.MISSION, r08.MISSION,
     s07.MISSION, s12.MISSION, s14.MISSION, e13.MISSION, q12.MISSION, q09.MISSION,
     q08.MISSION, i01.MISSION, i02.MISSION, i03.MISSION, i05.MISSION, i06.MISSION, i08.MISSION, h08.MISSION,
+    x01.MISSION, x02.MISSION, x03.MISSION, x04.MISSION,
     m97.MISSION, m98.MISSION, m99.MISSION,
 ]
 

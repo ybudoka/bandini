@@ -48,6 +48,8 @@ TYPES_SERVIS = frozenset({
     "concession",
     # L'ascenseur du garage souterrain (`Souterrain.descendreAPied`, docs/jalons/le-grand-garage-souterrain.md).
     "ascenseur",
+    # La voûte de la caisse populaire (`Caisse.agir`) : le casse, ou une porte d'acier qui le dit.
+    "voute",
     # La planque qu'on décore : le catalogue Beausoleil, sur la table (`Decoration.menuCatalogue`).
     "catalogue",
     # M11, 2e vague — les deux moities du meme choix : effacer une page, sur,
