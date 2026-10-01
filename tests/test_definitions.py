@@ -106,7 +106,8 @@ MESURE_DU_PAQUET: dict[str, tuple[int, int]] = {
 MESURE_DE_LA_CARTE: dict[str, tuple[int, int]] = {
     "sol": (9_556, 10_650),
     "decor": (7_054, 7_900),
-    "interieurs": (6_456, 7_250),
+    # Des étages dedans aussi (30 sept. 2026) : +1 298 — les étages des triplex et le logement du commerçant.
+    "interieurs": (7_754, 8_650),
     "voie": (2_760, 3_150),
     "montagne_russe": (1_988, 2_300),
     "devantures": (1_937, 2_250),
@@ -494,8 +495,15 @@ def test_le_paquet_reste_leger(paquets):
     10 024 gzip.
     Regardé avant : les airs voyagent déjà serrés (« 440:1 392:1 », `garage.air_serre`) ; proposé à Martin —
     relever, retirer le texte des commentaires (la voix seule), ou charger les klaxons au garage : il a relevé.
+
+    ⚠️ **DES ÉTAGES DEDANS AUSSI, LE 1er OCT. 2026 — LA CARTE : 560 000 → 562 000 BRUTS, TRANCHÉ PAR MARTIN**
+    (docs/jalons/des-etages-dedans-aussi.md). `dev` était à 540 701 bruts / 51 045 gzip ; les pièces des étages
+    (le logement au-dessus de 25 commerces, le troisième niveau de 8 triplex) y ajoutent 20 220 bruts —
+    `interieurs` +19 389, `residences` +470, `devantures` +361 — : 560 921 / 52 614. Sur le fil, +1 569 gzip
+    seulement : le plafond gzip (55 000) ne bouge pas. Proposé à Martin : relever, ou plier d'abord les pièces
+    d'étages — il a relevé.
     """
-    for nom, brut_max, fil_max in (("definitions", 242_000, 57_500), ("carte", 560_000, 55_000),
+    for nom, brut_max, fil_max in (("definitions", 242_000, 57_500), ("carte", 562_000, 55_000),
                                    ("musiques", 50_000, 10_000), ("suite", 25_000, 10_500)):
         paquet = getattr(paquets, nom)
         mesures = {"definitions": MESURE_DU_PAQUET, "carte": MESURE_DE_LA_CARTE}

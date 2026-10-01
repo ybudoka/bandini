@@ -599,10 +599,17 @@ const Histoire = (function () {
   function pieceDessous(slug) {
     const ville = Monde.carte.ville || Monde.carte;
     const pieces = (ville.def && ville.def.interieurs) || {};
+    // ⚠️ Un etage du milieu (des etages dedans aussi) : l'escalier de l'etage du DESSUS y descend aussi. La piece
+    // du dessous est celle dont l'escalier MONTE ; a defaut (le tripot : on y descend du casino), n'importe laquelle.
+    let aDefaut = null;
     for (const s in pieces) {
-      if ((pieces[s].points || []).some(function (q) { return q.type === 'escalier' && q.vers === slug; })) return s;
+      for (const q of (pieces[s].points || [])) {
+        if (q.type !== 'escalier' || q.vers !== slug) continue;
+        if (!q.descend) return s;
+        aDefaut = aDefaut || s;
+      }
     }
-    return null;
+    return aDefaut;
   }
 
   // --- Les donneurs, en chair et en os ---------------------------------------------------

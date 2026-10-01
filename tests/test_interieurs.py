@@ -137,12 +137,17 @@ def test_une_piece_dit_quel_plancher_elle_a(slug):
 
 def test_deux_points_ne_se_marchent_pas_dessus():
     """⚠️ `pointSousLaMain` prend le plus proche dans un rayon d'une tuile et
-    demie : deux points colles, et l'un des deux est injoignable a jamais."""
+    demie : deux points colles, et l'un des deux est injoignable a jamais.
+
+    ⚠️ Sauf DEUX ESCALIERS (des etages dedans aussi) : on se tient DESSUS une marche, et c'est elle que
+    `pointSousLaMain` prend (`faceA` : dessus) — l'etage du milieu d'une petite piece n'a pas d'autre place
+    (`test_etages_js.py` monte et redescend au bouton, depuis chaque marche)."""
     for slug, piece in PIECES.items():
         for i, a in enumerate(piece["points"]):
             for b in piece["points"][i + 1:]:
                 ecart = max(abs(a["x"] - b["x"]), abs(a["y"] - b["y"]))
-                assert ecart >= 2, f"{slug} : {a['type']} et {b['type']} se touchent"
+                assez = 1 if a["type"] == b["type"] == "escalier" else 2
+                assert ecart >= assez, f"{slug} : {a['type']} et {b['type']} se touchent"
 
 
 def test_l_escalier_monte_et_redescend():

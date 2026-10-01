@@ -7509,6 +7509,12 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
     # `definitions.construire` la sort et la sert sur `/api/collections`, avec le catalogue.
     from . import collectionner as collectionner_mod
     ville["collections"] = collectionner_mod.poser(ville)
+    # ⚠️ DES ÉTAGES DEDANS AUSSI (docs/jalons/des-etages-dedans-aussi.md), APRÈS ABSOLUMENT TOUT : combien
+    # d'étages chaque façade peint, compté sur la ville finie, sans un dé et sans une tuile.
+    from . import etages as etages_mod
+    etages_mod.compter(ville)
+    # Et derrière chaque porte posée par la ville, autant de niveaux que sa façade en peint.
+    etages_mod.monter(ville)
     return ville
 
 # --- Les interieurs ---------------------------------------------------------
@@ -8447,7 +8453,7 @@ def _meubler_le_coin(grille: list[list[str]], x0: int, y0: int, quoi: str,
 
 def piece_de_logement(slug: str, largeur: int, hauteur: int, porte: int,
                       *, etage: str | None = None, haut: bool = False,
-                      variante: int = 0) -> dict:
+                      variante: int = 0, nom: str | None = None) -> dict:
     """Un logement POSE : des coins meubles, et de quoi fouiller.
 
     ⚠️ L'ETAGE est la nuance des plex : un batiment de N etages contient N
@@ -8522,7 +8528,8 @@ def piece_de_logement(slug: str, largeur: int, hauteur: int, porte: int,
     gens = []
     if not haut and largeur * hauteur >= 24:
         gens.append(_quelqu_un(grille, "client", (largeur // 2, 1), porte, set()))
-    nom = "Un logement, en haut" if haut else "Un logement"
+    # Au-dessus d'un commerce, le logement du commerçant (`etages.monter`) : il porte son propre nom.
+    nom = nom or ("Un logement, en haut" if haut else "Un logement")
     return _piece(slug, nom, _plan_de(grille, porte), sol="t", porte="maison",
                   points=tuple(points), gens=_gens(*[g for g in gens if g]))
 

@@ -1988,39 +1988,24 @@ const Monde = (function () {
       }
       if (g.some(Boolean)) e.galerie = g;
     }
-    // LES ETAGES POUR VRAI : combien de rangees de toit, au-dessus, se peignent en etages. Autant que le logement en
-    // a de plus que le rez, et jamais tout le toit — une rangee de toit reste visible, a chaque colonne de sa facade
-    // (sinon un batiment peu profond n'aurait plus de dessus).
-    let profondeur = 99;
-    for (let i = 0; i < e.l; i++) {
-      const x = e.x + i, lui = x >= 0 && r.y > 0 ? teintesDesToits().qui[(r.y - 1) * carte.w + x] : -1;
-      let p = 0;
-      while (lui >= 0 && r.y - 1 - p >= 0 && teintesDesToits().qui[(r.y - 1 - p) * carte.w + x] === lui) p++;
-      profondeur = Math.min(profondeur, p);
-    }
-    e.hauts = Math.max(0, Math.min(r.etages - 1, ETAGES_MAX, profondeur - 1));
+    // LES ETAGES POUR VRAI : combien de rangees de toit, au-dessus, se peignent en etages — COMPTE PAR PYTHON
+    // (`app/etages.py`, `au_dessus` : autant que le logement en a de plus que le rez, et jamais tout le toit), qui en
+    // fait autant de pieces derriere la porte. ⚠️ Ne pas le recompter ici : le dehors et le dedans divergeraient.
+    e.hauts = r.au_dessus || 0;
     r.elargi = e;
     return r.elargi;
   }
 
-  /** Les etages d'un COMMERCE (des etages pour vrai, vague 1) : deux ou trois etages en tout (a l'empreinte de sa
-      devanture, sans un de), dont les logements montent au-dessus de la rangee de l'enseigne — et jamais tout le
-      toit : il en reste une rangee, a chaque colonne. Rend le nombre de rangees d'etages (0 : aucune). */
+  /** Les etages d'un COMMERCE (des etages pour vrai, vague 1) : deux ou trois etages en tout, dont les logements
+      montent au-dessus de la rangee de l'enseigne — et jamais tout le toit. COMPTES PAR PYTHON (`app/etages.py`,
+      `au_dessus`), qui en fait autant de pieces : le logement du commercant. Rend le nombre de rangees d'etages
+      (0 : aucune). */
   function etagesDuCommerce(d) {
     if (d.hauts !== undefined) return d.hauts;
-    const t = teintesDesToits(), w = carte.w;
     // Son mur va au bout de son batiment, comme celui d'un logement — sans prendre ce qu'un logement voisin a pris.
     const m = murDuBatiment({ x: d.x, y: d.y, l: d.l }, murDesLogements());
     d.murX = m.x; d.murL = m.l;
-    let profondeur = 99;
-    for (let i = 0; i < m.l; i++) {
-      const x = m.x + i, lui = d.y > 0 ? t.qui[(d.y - 1) * w + x] : -1;
-      let p = 0;
-      while (lui >= 0 && d.y - 1 - p >= 0 && t.qui[(d.y - 1 - p) * w + x] === lui) p++;
-      profondeur = Math.min(profondeur, p);
-    }
-    const etages = 2 + (hash2(d.x, d.y) % 2);
-    d.hauts = Math.max(0, Math.min(etages - 1, ETAGES_MAX, profondeur - 2));
+    d.hauts = d.au_dessus || 0;
     return d.hauts;
   }
 

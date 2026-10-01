@@ -53,6 +53,28 @@ Ce qu'on voit de la rue fait foi.
 
 ## Notes
 
+### Livré le 30 sept. 2026
+
+- **Le compte** (`app/etages.py`, `compter`) : le portage du calcul du navigateur, `hash2` au bit près (sa deuxième
+  multiplication est un flottant en JS). La sonde a comparé l'ancien calcul JS et le compte Python sur les 318
+  façades : **zéro écart** (et 13 écarts une fois la règle faussée : la sonde mordait). Le navigateur peint
+  maintenant `au_dessus` sans le recompter (`Monde.logementElargi`, `Monde.etagesDuCommerce`).
+- **Les pièces** (`monter`) : derrière les portes posées par la ville, **25 commerces sur 26** ont le logement du
+  commerçant au-dessus de la boutique (16 sur deux niveaux, 9 sur trois) ; chez les logements, **8 triplex ont leurs
+  trois niveaux**, 19 en ont deux, 5 sont de plain-pied comme leur façade (avant : 27 à deux niveaux, 5 à un).
+  ⚠️ Aucune porte de la ville d'aujourd'hui ne perd d'étage, et aucun meuble ne cède sa place : ces deux chemins
+  (le retrait, le meuble qui cède, le `fouiller` qui s'en va) ont chacun leur juge sur une pièce d'essai, qui
+  rougit quand on les vide.
+- **Deux escaliers se touchent en dernier recours seulement** : une seule pièce, l'étage du milieu de
+  `nord_logement_1001` (3 × 4 dedans). Debout sur une marche, c'est elle que `pointSousLaMain` prend (`faceA` :
+  dessus) ; `test_interieurs.py::test_deux_points_ne_se_marchent_pas_dessus` admet ce cas-là, et le banc monte et
+  redescend au bouton depuis chaque marche.
+- **`Histoire.pieceDessous`** préfère la pièce dont l'escalier MONTE : un étage du milieu a aussi l'escalier du
+  dessus qui y descend (le juge inverse l'ordre des clés — l'ancien code ne tombait juste que par cet ordre).
+- Le budget des `interieurs` de la carte : 6 456 → 7 754 octets gzip (+1 298).
+- Juges : `test_etages.py` (7), `test_etages_js.py` (2) ; mutations (`voulu = 1`, sans l'écart aux points,
+  `nom=None`) : toutes rouges.
+
 ### Le plan d'implémentation (30 sept. 2026)
 
 > Pour un agent : exécuter tâche par tâche (superpowers:subagent-driven-development ou executing-plans), cases à
