@@ -376,6 +376,19 @@ const Police = (function () {
 
   function remiseAZero() { const r = B.recherche; r.etoiles = 0; r.chaleur = 0; r.vu = 0; }
 
+  /** LE CHAR REPEINT, LA PISTE PERDUE (`Missions.repeindre`) : ceux qui te couraient apres ou fouillaient l'endroit
+      ou on t'a vu la derniere fois retournent flaner — ils cherchent un AUTRE char. ⚠️ Sans ca, a la carrosserie,
+      deux agents en `enquete` marchaient jusqu'au rideau (`dernierVu`) pendant le pistolet ; on ressortait en
+      reculant dans leurs jambes, la chaleur remontait et le premier te sortait du char repeint (rejoue au banc,
+      1er oct. 2026). Rien ne se tire au de. */
+  function perdreLaPiste() {
+    B.recherche.dernierVu = null;
+    agents().forEach(function (a) {
+      if (a.etat !== 'poursuit' && a.etat !== 'enquete') return;
+      a.etat = 'flane'; a.but = null; a.chemin = null; a.vx = 0; a.vy = 0;
+    });
+  }
+
   /** UN CRAN DE MOINS (le lave-auto) : une etoile tombe, et la chaleur qui montait vers la suivante
       avec elle. Moins fort que repeindre au garage (`remiseAZero`), et moins cher. */
   function unCranDeMoins() { const r = B.recherche; r.etoiles = Math.max(0, r.etoiles - 1); r.chaleur = 0; r.vu = 0; }
@@ -1244,7 +1257,7 @@ const Police = (function () {
     }
   }
 
-  return { dansLeCone, voit, piste, pisteFraiche, ratisse, porteeDuCasier, quelqu_un_voit, auRefuge, ajouterChaleur, etoilesAuMoins, signalerCrime, crimeDAutrui, rapporter, acheterLeSilence, remiseAZero, unCranDeMoins, entendre, palierDesRenforts,
+  return { perdreLaPiste, dansLeCone, voit, piste, pisteFraiche, ratisse, porteeDuCasier, quelqu_un_voit, auRefuge, ajouterChaleur, etoilesAuMoins, signalerCrime, crimeDAutrui, rapporter, acheterLeSilence, remiseAZero, unCranDeMoins, entendre, palierDesRenforts,
            estStool, leStool, prixDuStool, majStools, appelDuStool, acheterLeStool, onNeTeReconnaitPlus,
            creerAgent, agents, autos, gere, suivre, garder, seuilDeReperage, commandes, peuplerAgents, peuplerAutos, equipageDe: equipage, abandonnee,
            agentsVoulus, standingIci,

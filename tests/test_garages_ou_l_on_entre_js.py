@@ -75,7 +75,8 @@ def test_a_la_carrosserie_on_entre_le_rideau_tombe_et_le_char_ressort_repeint(ba
         }
         o.relacher('KeyW');
         const apres = { couleur: v.couleur, vole: v.vole, etoiles: L.B.recherche.etoiles, chaleur: L.B.recherche.chaleur,
-                        argent: L.B.partie.argent, ouverture: pg.ouverture, phase: pg.phase, msg: L.B.msg };
+                        argent: L.B.partie.argent, ouverture: pg.ouverture, phase: pg.phase, msg: L.B.msg,
+                        agents: L.B.entites.filter(function (e) { return e.agent && e.vivant; }).map(function (e) { return e.etat; }) };
         // On recule jusqu'a la baie : l'atelier se referme derriere.
         o.touche('KeyS');
         for (let k = 0; k < 240 && v.y < a.baie.y + 2 * TT; k++) o.frame(1);
@@ -105,6 +106,11 @@ def test_a_la_carrosserie_on_entre_le_rideau_tombe_et_le_char_ressort_repeint(ba
     assert "PEINTURE" in apres["msg"], apres["msg"]
     assert apres["ouverture"] == 1 and apres["phase"] == "sortie", apres
     assert r["sorti"]["y"] > 0 and not r["sorti"]["dedans"] and r["sorti"]["auVolant"], r["sorti"]
+    # ⚠️ ILS CHERCHENT UN AUTRE CHAR (1er oct. 2026) : les trois étoiles ont fait venir des agents, qui fouillaient
+    # le rideau où on les a semés (`enquete`, vers `dernierVu`). Le pistolet passé, aucun ne fouille ni ne poursuit
+    # plus : sinon on ressortait en reculant dans leurs jambes et le premier te sortait du char repeint.
+    assert apres["agents"], "aucun agent n'est venu : le juge ne voit plus la piste qu'on perd"
+    assert not {"enquete", "poursuit"} & set(apres["agents"]), apres["agents"]
 
 
 def test_sans_l_argent_le_rideau_reste_baisse_et_le_char_bute(banc):

@@ -1899,6 +1899,7 @@ const Missions = (function () {
     // Le casse (x02) : une mission qui veut un char REPEINT (`livrer`, `repeint`) le lit ici.
     v.repeint = (v.repeint || 0) + 1;
     Police.remiseAZero();
+    Police.perdreLaPiste();          // ils cherchent un AUTRE char : ceux qui fouillaient le rideau s'en vont
   }
 
   // --- La porte de garage : on se gare devant, le rideau monte, Ti-Guy sort ---------------
