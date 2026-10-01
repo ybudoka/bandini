@@ -441,8 +441,9 @@ def test_un_kiosque_dont_le_defi_est_cache_reste_un_kiosque(banc):
 def test_chaque_epreuve_du_catalogue_a_son_jeu(banc, paquet):
     r = banc("function (L, o) { return Object.keys(L.Adresse.EPREUVES).sort(); }")
     catalogue = sorted(d["epreuve"] for d in paquet["defis"] if d.get("epreuve"))
-    # ⚠️ Le BINGO est une épreuve hors catalogue : c'est `Enseignes` qui la mène, pas un défi.
-    assert catalogue == sorted(EPREUVES) and sorted(catalogue + ["bingo"]) == r
+    # ⚠️ Deux épreuves hors catalogue : le BINGO, que mène `Enseignes`, et le TOURNEVIS des enseignes qu'on
+    # dévisse, que mène `Devisser` (`Adresse.EPREUVES.tournevis`) — ni l'une ni l'autre n'est un défi.
+    assert catalogue == sorted(EPREUVES) and sorted(catalogue + ["bingo", "tournevis"]) == r
 
 
 # --- La 2e vague : au volant ------------------------------------------------------------------
