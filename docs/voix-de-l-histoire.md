@@ -118,3 +118,19 @@ qu'aucune voix ne peut dire « puis ». Un « puis » de Scribe ne prouve donc p
 « puis » ; seule la paire à graine fixe compare. Pour « astheure » (`astœʁ`), Scribe écrit
 « à cette heure » ou « à c't'heure » : c'est le bon mot.
 
+
+**Refaites avec « pis » le 1er oct. 2026** (Martin : « refaire les plus entendues maintenant ») :
+**186 voix**, les plus entendues d'abord — Marco 17, Josée 45, Ti-Guy 7, le narrateur 6, Bouchard 18,
+Gus 8, Irène 23, Mado 7 ; le reste de la trame (Thibodeau m2, le civil de m3, Ti-Paul m6 et m51, Zed
+m98, Bérubé m99) ; les dix radios et pubs (la Brume, Taxi-Radio, Ti-Paul, le kiosque, le bar, le
+garage) ; puis les repos (Jeanne, Léo, Zed, Sal), Ti-Paul, Madame Thibodeau et Lulu en entier.
+Rocco ne dit jamais « pis ». ≈ 10 500 crédits (v3 ≈ 0,47 crédit le caractère, isolateur du narrateur
+et de Julia compris), arrêté à 11 300 restants pour garder la réserve de 10 000. Chaque voix refaite
+porte `dictionnaire=pis=pi` dans son mp3. Scribe, sur douze paires avant/après, n'a rien tranché :
+une est passée de « puis » à « pis », une de « pis » à « puis », dix n'ont pas bougé (voir plus haut).
+
+**Reste à refaire après la remise du 23 oct.** : 193 voix, ≈ 18 800 caractères (≈ 9 000 crédits) —
+Louise 21, Sal 20, Lachance 15, Léo 13, les passants et passantes des petits services (t01-t14) 13 et 7, Rosa 9,
+le maître 9, Raymonde 8, Ginette 7, Gilles 7, et une trentaine de donneurs à une ou deux missions.
+L'inspectrice Roy, refaite le même jour avec sa nouvelle voix (efaf5758), dit déjà « pi ».
+`--dictionnaire` en donne la liste exacte et la commande `--refaire`.
