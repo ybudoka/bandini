@@ -4832,6 +4832,10 @@ const Entites = (function () {
       bulle(j, R.mots[(t / 480) % R.mots.length], { duree: 110 });
     }
     if (j.froid < R.delai_s) return;
+    // ⚠️ PAS PENDANT UNE ÉPREUVE : on la joue cloué sur place, et ce qui ôte de la vie l'arrête (« ON T'A
+    // DÉRANGÉ », `Histoire.majDefiDeFoire`) — en janvier, le froid ratait les anneaux, le cadenas et les
+    // quilles avant la fin du chrono. Il grelotte quand même, et le froid mord après.
+    if (B.epreuve) return;
     const mord = Math.max(1, Math.round(R.mord_s * 60 / (tempete ? 2 : 1)));
     if (t % mord !== 0) return;
     const plancher = Math.ceil(j.vieMax * R.plancher);

@@ -68,6 +68,13 @@ def test_jamais_dedans_ni_en_char_ni_en_juillet_ni_au_cafe(banc):
         assert r["vie"] == r["max"], reglage
 
 
+def test_le_froid_ne_rate_pas_une_epreuve(banc):
+    """Une épreuve se joue cloué sur place, et ce qui ôte de la vie l'arrête (« ON T'A DÉRANGÉ ») : le froid
+    n'est pas un coup. Il grelotte (`froid` compte), mais ne mord pas tant que l'épreuve dure."""
+    r = _geler(banc, "p.chapeau = null; B.epreuve = { sorte: 'anneaux' };")
+    assert r["vie"] == r["max"], r
+
+
 def test_sans_bottes_la_neige_ralentit_pas_le_deneige(banc):
     r = banc("""function (L, o) {
         """ + PARTIE + """
