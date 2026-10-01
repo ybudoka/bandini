@@ -32,7 +32,9 @@ def test_chaque_crime_d_autrui_a_son_temoin_et_ne_coute_qu_une_etoile():
     acheter le silence. Une méprise bruyante (sans témoin) serait une étoile sans recours."""
     source = (RACINE / "static" / "js" / "entites.js").read_text(encoding="utf-8")
     types = re.findall(r"Police\.crimeDAutrui\('([a-z_]+)'", source)
-    assert sorted(types) == ["coup_pieton", "pickpocket", "vol_vehicule"], types
+    # ⚠️ Des TYPES, pas des appels : la rixe décompte aussi pendant le geste (la rixe au contact, 30 sept. 2026) — deux appels
+    # de `coup_pieton`, le même délit.
+    assert sorted(set(types)) == ["coup_pieton", "pickpocket", "vol_vehicule"], types
     for t in types:
         delit = recherche.DELITS[t]
         assert delit["etoiles"] == 1 and delit["temoin"] is True, (t, delit)
