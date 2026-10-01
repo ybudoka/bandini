@@ -190,8 +190,9 @@ PARCOMETRE: dict = {
     "portee_px": PORTEE_PX,
     # Plus qu'une poubelle (au pire 4 $, `FOUILLER["trouvailles"]["canettes"]`) — une journée
     # de quartiers qui paient pour se garer — mais loin d'une distributrice défoncée (4-22 $) :
-    # c'est de la monnaie, pas un coffre.
-    "argent": (4, 9),
+    # c'est de la monnaie, pas un coffre. ⚠️ 8 $ au plus (9 jusqu'au 1er oct. 2026) : au dixième de la plus petite
+    # prime d'une mission (`test_interactions`), et e03 paie 80 $ — Mme Beaulieu le dit à voix haute.
+    "argent": (4, 8),
 }
 
 # --- Caresser le chat -------------------------------------------------------------

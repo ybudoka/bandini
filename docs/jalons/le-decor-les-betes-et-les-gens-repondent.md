@@ -59,7 +59,7 @@ sans fin tant que les étoiles durent — il faut d'abord un plafond par affiche
   défoncée — une étoile, `temoin: True`) : `Police.signalerCrime`/`quelqu_un_voit`, le même
   appel que pour une distributrice. Quelques dollars de monnaie, ça se raconte, ça n'alarme pas.
 - **Le geste** (`interactions.PARCOMETRE`, `Interactions.forcerLeParcometre`) : la même route
-  que `manger`/`fouiller` — 4 à 9 $, une fois par jour et par parcomètre (encore la même case
+  que `manger`/`fouiller` — 4 à 8 $ (9 jusqu’au 1er oct. 2026, sous le dixième des 80 $ d’e03), une fois par jour et par parcomètre (encore la même case
   `partie.fouilles`, préfixée `parc:`). Calibré entre les deux voisins : au moins autant que le
   meilleur tirage d'une poubelle (4 $), toujours sous une distributrice défoncée (22 $) et sous
   le dixième de la plus petite prime de mission.

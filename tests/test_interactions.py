@@ -63,12 +63,17 @@ def test_les_bancs_sont_les_quatre_de_la_ville_et_regardent_du_bon_cote():
 def test_rien_ici_ne_remplace_une_mission_un_repas_ou_l_hopital():
     # ⚠️ Une FIN DE PARTIE paie 0 $ (m99, M13) : on part avec un générique, pas une prime. La
     # plus petite prime est celle d'une mission qui en paie une.
+    # ⚠️ Et une PETITE JOB (`passant`, 1er oct. 2026) paie de la monnaie elle aussi (20 $ pour t13) : on mesure les
+    # missions au dixième, et la plus petite job, elle, doit seulement valoir plus que le plus gros bac.
     plus_petite_prime = min(m["recompense"] for m in missions.CATALOGUE
-                            if "recompense" in m and not (m.get("donne") or {}).get("generique"))
+                            if "recompense" in m and not (m.get("donne") or {}).get("generique") and not m.get("passant"))
+    plus_petite_job = min(m["recompense"] for m in missions.CATALOGUE if m.get("passant"))
     f = interactions.FOUILLER
     plus_gros_butin = max(t["argent"][1] for t in f["trouvailles"].values() if "argent" in t)
     assert plus_gros_butin * 10 <= plus_petite_prime, \
         "le plus gros butin d'un bac (%s $) doit rester sous le dixieme de la plus petite prime (%s $)" % (plus_gros_butin, plus_petite_prime)
+    assert plus_gros_butin * 2 <= plus_petite_job, \
+        "le plus gros butin d'un bac (%s $) vaut presque une petite job (%s $)" % (plus_gros_butin, plus_petite_job)
     # L'esperance d'une fouille, table par table : de la monnaie, pas un salaire.
     for nom, table in f["tables"].items():
         total = sum(p for p, _ in table)
