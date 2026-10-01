@@ -49,9 +49,13 @@ KLAXON_AIR: list[list[float]] = [
 _DEMI_TONS = {"C": -9, "D": -7, "E": -5, "F": -4, "G": -2, "A": 0, "B": 2}
 
 
+_ALTERATIONS = {"": 0, "b": -1, "#": 1}
+
+
 def note(nom: str) -> float:
-    """La fréquence d'une note (« E4 »), au tempérament égal, la 440 — arrondie au centième."""
-    return round(440.0 * 2 ** ((_DEMI_TONS[nom[0]] + 12 * (int(nom[1]) - 4)) / 12), 2)
+    """La fréquence d'une note (« E4 », « Bb3 », « F#4 »), au tempérament égal, la 440 — arrondie au centième."""
+    demi = _DEMI_TONS[nom[0]] + _ALTERATIONS[nom[1:-1]] + 12 * (int(nom[-1]) - 4)
+    return round(440.0 * 2 ** (demi / 12), 2)
 
 
 #: « Le Parrain » (le thème d'amour de Nino Rota, en la mineur) : mi la do si la do, la si la fa sol mi —
@@ -72,8 +76,9 @@ AIR_CUCARACHA: list[list[float]] = (
 
 
 def _air(unite: float, notes: str) -> list[list[float]]:
-    """Un air écrit en notes et en temps (« G4:1 E4:2 », `unite` secondes le temps) → (Hz, secondes)."""
-    return [[note(n), round(unite * float(t), 3)] for n, t in (x.split(":") for x in notes.split())]
+    """Un air écrit en notes et en temps (« G4:1 E4:2 », `unite` secondes le temps) → (Hz, secondes). « R » est un
+    silence (0 Hz) : la corne se tait le temps qu'il dure."""
+    return [[0.0 if n == "R" else note(n), round(unite * float(t), 3)] for n, t in (x.split(":") for x in notes.split())]
 
 
 # LA DEUXIÈME VAGUE (docs/jalons/les-klaxons-de-ti-guy-deuxieme-vague.md) : le reste de la liste, à la corne.
@@ -90,6 +95,16 @@ AIR_ALOUETTE = _air(0.15, "C4:1 D4:1 E4:2 E4:2 D4:1 C4:1 D4:1 E4:1 C4:2 G3:2 "
 AIR_CREME_GLACEE = _air(0.13, "C5:1 E5:1 G5:1 C6:2 A5:1 G5:1 E5:1 G5:2 F5:1 D5:1 B4:1 D5:2 C5:4")
 #: La marche nuptiale (le chœur de Wagner) : « Here comes the bride », do fa-fa fa, do sol-mi fa.
 AIR_NUPTIALE = _air(0.1, "C4:3 F4:2 F4:1 F4:6 C4:3 G4:2 E4:1 F4:6")
+#: « La Soirée du hockey » (« Hockey Night in Canada », Dolores Claman) : la partition que Martin a fournie le
+#: 1er oct. 2026 (version facile, noire à 128), la main droite : l'intro, mesures 2 à 4 — sol sol do~do do si♭,
+#: la même une octave plus haut, sol sol sol sol do —, puis la cadence de la fin, mesures 11 et 12 — sol, (demi-
+#: soupir), sol si♭~si♭ si♭ si♮, DO. Ce qui est entre les deux (la ronde de la mesure 5, le pont) tombe : un klaxon
+#: dure trois secondes et demie, pas douze mesures. Les liaisons fondent leurs notes ; le soupir du bout de la
+#: mesure 4 tombe, le demi-soupir de la mesure 11 reste (« R ») : c'est le rythme. Le temps (une croche) à
+#: 0,11 s : la noire à 0,22, comme « Gens du pays » — pas 128, un klaxon claironne.
+AIR_HOCKEY = _air(0.11, "G3:2 G3:1 C4:2 C4:1 Bb3:2 G4:2 G4:1 C5:2 C5:1 Bb4:2 "
+                        "G4:1 G3:1 G3:1 G3:1 C4:2 "
+                        "G4:1 R:1 G4:1 Bb4:2 Bb4:1 B4:2 C5:2")
 #: « Bip-bip », le Road Runner : deux coups aigus, le second un peu plus long.
 AIR_BIP_BIP = _air(0.07, "A5:2 A5:3")
 
@@ -131,6 +146,7 @@ KLAXONS: list[dict] = [
     {"slug": "creme_glacee", "nom": "Klaxon de crème glacée", "prix": 200, "air": AIR_CREME_GLACEE, "enfants": True},
     {"slug": "nuptiale", "nom": "Marche nuptiale et canettes", "prix": 250, "air": AIR_NUPTIALE, "canettes": True},
     {"slug": "bip_bip", "nom": "Klaxon « Bip-bip »", "prix": 100, "air": AIR_BIP_BIP},
+    {"slug": "hockey", "nom": "Klaxon « La Soirée du hockey »", "prix": 200, "air": AIR_HOCKEY},
     {"slug": "aouga", "nom": "A-ou-ga de Ford T", "prix": 150, "son": "klaxon_aouga"},
     {"slug": "vache", "nom": "Klaxon qui meugle", "prix": 150, "son": "klaxon_vache"},
     {"slug": "pouet", "nom": "Pouet de clown", "prix": 100, "son": "klaxon_pouet"},
@@ -166,6 +182,7 @@ REPLIQUES: list[dict] = [
     {"cle": "creme_glacee", "texte": "La toune du camion de crème glacée. Fais attention, les p'tits vont te courir après."},
     {"cle": "nuptiale", "texte": "La marche nuptiale, pis les canettes en arrière. Just married, mon homme!"},
     {"cle": "bip_bip", "texte": "Bip-bip, comme le Road Runner. Le coyote, lui, y a jamais eu de klaxon."},
+    {"cle": "hockey", "texte": "La Soirée du hockey. Klaxonne ça un samedi soir, pis toute la rue va sortir en bedaine."},
     {"cle": "aouga", "texte": "Un a-ou-ga de Ford T. Ça, c'est de la classe."},
     {"cle": "vache", "texte": "Une vache. Pour les gars de La Pointe qui s'ennuient de leur troupeau."},
     {"cle": "pouet", "texte": "Un pouet de clown. Personne va te prendre au sérieux, mais tout le monde va se tasser."},
@@ -213,4 +230,4 @@ def air_serre(air: list[list[float]]) -> dict:
     l'entier : au pire deux cents d'écart, rien qu'un klaxon puisse faire entendre. `Garage.notesDe` le
     déplie."""
     unite = min(d for _, d in air)
-    return {"unite": unite, "air": " ".join(f"{round(hz)}:{round(d / unite, 2):g}" for hz, d in air)}
+    return {"unite": unite, "air": " ".join(f"{round(hz)}:{round(d / unite, 2):g}" for hz, d in air)}   # 0 : un silence

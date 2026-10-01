@@ -595,6 +595,7 @@ JEU.update({
     "ti_guy-garage-creme_glacee": "[amused] La toune du camion de crème glacée. [teasing] Fais attention, les p'tits vont te courir après.",
     "ti_guy-garage-nuptiale": "[warmly] La marche nuptiale, pis les canettes en arrière. [laughs] Just married, mon homme!",
     "ti_guy-garage-bip_bip": "[playfully] Bip-bip, comme le Road Runner. [deadpan] Le coyote, lui, y a jamais eu de klaxon.",
+    "ti_guy-garage-hockey": "[excited] La Soirée du hockey. [laughs] Klaxonne ça un samedi soir, pis toute la rue va sortir en bedaine.",
     "ti_guy-garage-aouga": "[smugly] Un a-ou-ga de Ford T. Ça, c'est de la classe.",
     "ti_guy-garage-vache": "[deadpan] Une vache. [amused] Pour les gars de La Pointe qui s'ennuient de leur troupeau.",
     "ti_guy-garage-pouet": "[amused] Un pouet de clown. Personne va te prendre au sérieux, [laughs] mais tout le monde va se tasser.",

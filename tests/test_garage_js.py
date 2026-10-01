@@ -173,3 +173,26 @@ def test_le_klaxon_joue_gens_du_pays():
     for (hz, duree), (nom, temps) in zip(garage.KLAXON_AIR, REFRAIN, strict=True):
         assert abs(hz - frequence(nom)) < 0.05, (hz, nom)
         assert abs(duree - temps * garage.NOIRE) < 1e-9, (duree, nom)
+
+
+#: « La Soirée du hockey » : la partition que Martin a fournie le 1er oct. 2026 (« Hockey Night in Canada », Dolores
+#: Claman, version facile), main droite, en croches : l'intro (mesures 2 à 4) puis la cadence (mesures 11 et 12).
+#: Les liaisons fondent (do~do : trois croches) ; le soupir du bout de la mesure 4 tombe ; le demi-soupir de la
+#: mesure 11 reste (« R »).
+HOCKEY = [("G3", 2), ("G3", 1), ("C4", 2), ("C4", 1), ("Bb3", 2),       # mesure 2
+          ("G4", 2), ("G4", 1), ("C5", 2), ("C5", 1), ("Bb4", 2),       # mesure 3 : la même, une octave plus haut
+          ("G4", 1), ("G3", 1), ("G3", 1), ("G3", 1), ("C4", 2),        # mesure 4
+          ("G4", 1), ("R", 1), ("G4", 1), ("Bb4", 2), ("Bb4", 1), ("B4", 2),   # mesure 11
+          ("C5", 2)]                                                    # mesure 12 : la tonique
+
+BEMOLS = {"Bb3": 233.08, "Bb4": 466.16}
+
+
+def test_le_klaxon_joue_la_soiree_du_hockey():
+    air = garage.AIR_HOCKEY
+    assert len(air) == len(HOCKEY)
+    for (hz, duree), (nom, croches) in zip(air, HOCKEY, strict=True):
+        attendu = 0.0 if nom == "R" else BEMOLS.get(nom) or frequence(nom)
+        assert abs(hz - attendu) < 0.05, (hz, nom)
+        assert abs(duree - croches * 0.11) < 1e-9, (duree, nom)
+

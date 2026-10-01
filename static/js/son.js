@@ -1021,7 +1021,8 @@ const Son = (function () {
       if (!pret() || !notes) return;
       const v = CORNE.volume * (ici ? ici.volume : 1);
       let t = ctx.currentTime;
-      notes.forEach(function (n) { corneA(t, n[0], n[1] * 0.88, v); t += n[1]; });
+      // ⚠️ Une note a 0 Hz est un SILENCE (« R » dans `garage._air`) : on avance l'horloge sans souffler.
+      notes.forEach(function (n) { if (n[0] > 0) corneA(t, n[0], n[1] * 0.88, v); t += n[1]; });
     },
     // La corne d'un 18 roues, et son filet : un accord grave de deux cornes, tenu une seconde.
     corne_a_air: function () {

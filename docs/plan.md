@@ -88,7 +88,6 @@ pas quand l'ordre de travail change.
 | Générer les bruitages qui n'ont aucun équivalent payé | ⬜ **en cours** (Martin, 30 sept. 2026 : on les génère ; ✅ vague 1 livrée : les quatorze sons synthétisés ont leur fichier, chacun dans un lieu chargé au premier geste ; reste : les gestes muets) | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/les-bruitages-qui-n-ont-aucun-equivalent-paye.md#fiche) |
 | Les territoires des gangs bougent | ⬜ **en cours** (✅ vague 1 livrée : la force de chaque gang, un coin par nuit à la frontière, jamais le cœur, l'îlot pris qui se peuple de son nouveau gang, le Clairon et la carte ; ✅ vague 2 livrée : reprendre un coin, le nom sous la mini-carte, la légende ; ✅ vague 3 livrée : les graffitis suivent la frontière — les tags de qui tient le coin, ceux du perdant barrés ; reste : les Mantes) | 29 sept. 2026 | **P4** | ajout | [fiche](jalons/les-territoires-des-gangs-bougent.md#fiche) |
 | Le train : au sol, sur le viaduc, dans le tunnel | ⬜ **en cours** (✅ vague 1 livrée : le train passe — au sol dans les Friches, sur son viaduc au-dessus du Petit-Canton, à la gare centrale, dans son tunnel ; les passages à niveau, il écrase et il klaxonne ; restent : on monte (vague 2), on s'assoit (vague 3)) | 29 sept. 2026 | **P4** | ajout | [fiche](jalons/le-train.md#fiche) · [notes](jalons/le-train.md#notes) |
-| Le klaxon de la Soirée du hockey | ⬜ **en cours** | 1 oct. 2026 | **P4** | ajout | [fiche](jalons/le-klaxon-de-la-soiree-du-hockey.md#fiche) |
 
 ## L'ordre
 
