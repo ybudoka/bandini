@@ -123,9 +123,10 @@ def test_les_cravates_n_ont_pas_change(banc, arme):
         const a = flaneur(o, 'cravate', 10 * 16, -16), b = flaneur(o, 'cravate', 20 * 16, 16);
         // ⚠️ DEUX FLÂNEURS QUI FLÂNENT (1er oct. 2026) : la rue vidée, ce sont les deux seuls qu'on peut tirer pour
         // rentrer souper (`quelquUnRentre`) ou s'arrêter devant une vitrine — et en route vers sa porte, ou arrêté, un
-        // Cravate ne prend plus l'arme au poing pour une provocation. Le témoin tombait sur 2 graines sur 13 le 30 sept.
+        // Cravate ne prenait pas l'arme au poing pour une provocation. Le témoin tombait sur 2 graines sur 13 le 30 sept.
         // (d34eff4b), sur 5 le 1er oct. — la graine par défaut comprise depuis les braseros de l'hiver (253f58e3).
-        // Il ne juge que la provocation : 13 sur 13 des deux côtés.
+        // Il ne juge que la provocation : 13 sur 13 des deux côtés. Le guet à l'arrêt et en route vers une porte a
+        // depuis son juge (`test_le_guet_des_gangs_js.py`, `Entites.guetter`).
         a.butT = b.butT = 1e9;
         const out = marcher(L, o, [a, b], 420, function () { a.porteBut = null; b.porteBut = null; });
         out.gang = a.gang;

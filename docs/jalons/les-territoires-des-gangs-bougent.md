@@ -107,3 +107,20 @@ piétons ; une zone `libere` ne bouge plus ; tout survit à une sauvegarde.
   `test_territoires.py` (la place de chaque mot). Sept mutations rouges — deux n'avaient pas mordu tant que le juge
   ne regardait qu'un îlot : il juge maintenant toute la ville prise.
 - **Reste** : les Mantes du Petit-Canton dans le jeu des territoires (la bande nord a sa propre trame).
+
+### Correctif — le guet à l'arrêt et en route vers une porte — **1er oct. 2026**
+
+- **Trouvé par la passe de qualité** : l'hostilité à l'arme au poing n'était lue qu'à la FLÂNERIE. Un membre de gang
+  arrêté (une vitrine, un poste, un brasero, un spectacle) sortait par l'`arret`, et celui qui rentrait souper par
+  `majPorte`, tous deux AVANT la règle : un Cravate devant une vitrine laissait passer la batte à un pas, chez lui.
+  Les Mantes avaient été corrigées à l'arrêt pour leur défi seulement (f1e7a44f) ; le témoin des Cravates de
+  `test_mantes_defi_js.py` contournait le trou (9602f5d6).
+- **Un seul endroit pour la règle** : `Entites.guetter(e)`, lu à la flânerie, à l'arrêt et en route vers une porte
+  (il laisse tomber sa porte pour attaquer). La règle ne change pas : chez lui (`Territoires.gangA`), à moins de six
+  tuiles, sans mur entre eux, un tour de regard toutes les 15 images, jamais un gang calme ou chassé, jamais un
+  joueur en char, aucun dé ; à mains nues, seul un Mante chez lui défie (`defier`), et il défie maintenant aussi en
+  route vers sa porte.
+- **Juges** : `test_le_guet_des_gangs_js.py` — le Cravate devant sa vitrine attaque la batte au poing et laisse
+  passer les mains nues ; en route vers sa porte, pareil (il lâche sa porte) ; hors de chez lui, gang calme, joueur
+  en char : rien, et pas un dé. Quatre mutations rouges (le guet retiré à l'arrêt, à la porte ; le territoire et le
+  gang calme retirés de `guetter`).

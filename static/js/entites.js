@@ -1814,6 +1814,27 @@ const Entites = (function () {
     e.etat = 'attaque_joueur'; e.cri = 90; e.salut = d.salut_images;
     return true;
   }
+  /** **LE GUET D'UN MEMBRE DE GANG** : un tour de regard tous les 15 images (`e.t % 15`), qu'il flane, qu'il soit
+      arrete (une vitrine, un poste, un brasero, un spectacle) ou en route vers sa porte. Chez lui (`Territoires.gangA`),
+      le joueur ARME AU POING a moins de six tuiles, sans mur entre eux, c'est une provocation : il attaque. Mains nues,
+      seul un Mante chez lui vient te defier (`defier`). Rend vrai s'il passe a l'attaque.
+
+      ⚠️ Un seul endroit pour la regle (1er oct. 2026, la passe de qualite) : elle n'etait lue qu'a la flanerie, et
+      l'`arret` comme la marche vers une porte sortent AVANT — un Cravate devant une vitrine laissait passer la batte a
+      un pas. Les Mantes avaient deja ete corrigees a l'arret, pour le defi seulement (f1e7a44f). La regle, elle, ne
+      change pas : aucun de, un gang calme ou chasse ne prend plus l'arme pour une provocation. */
+  function guetter(e) {
+    if (!e.gang || e.cible || gangCalme(e.gang) || e.t % 15 !== 0) return false;
+    const j = B.joueur;
+    if (j.arme !== 'poings' && !j.dansVehicule) {
+      if (dist2(e.x, e.y, j.x, j.y) >= (6 * TT) * (6 * TT) || !Monde.ligneLibre(e.x, e.y, j.x, j.y)) return false;
+      if (Territoires.gangA(e.x, e.y) !== e.gang) return false;
+      e.etat = 'attaque_joueur'; e.cri = 90;
+      return true;
+    }
+    return !!e.techniques && defier(e);
+  }
+
   /** Aucune mission, ou une mission qui NOMME ce gang (`groupe` d'un de ses objectifs) : alors on peut le defier. */
   function missionDesMantes(gang) {
     if (!B.partie || !B.partie.mission) return true;
@@ -4998,6 +5019,10 @@ const Entites = (function () {
     const cible = { x: p.x * TT + 8, y: (p.y + 1) * TT + 8 };
     const d = Math.hypot(cible.x - e.x, cible.y - e.y);
     if (d > 260 || ++e.porteT > 900) { e.porteBut = null; return false; }   // il a change d'idee
+    // En route vers sa porte, un membre de gang regarde encore autour (`guetter`) : l'arme au poing chez lui, il
+    // laisse tomber le souper et te saute dessus. ⚠️ Cette image-ci, il s'arrete (comme a la flanerie, ou `guetter`
+    // passe APRES la branche de l'attaque) : relache dans `majPieton`, le salut d'un Mante y perdait deja une image.
+    if (guetter(e)) { e.porteBut = null; e.vx = 0; e.vy = 0; return true; }
     if (d > 6) {
       const vitesse = B.defs.recherche.vitesses.pieton * e.allure;
       e.vx = (cible.x - e.x) / d * vitesse; e.vy = (cible.y - e.y) / d * vitesse;
@@ -5456,24 +5481,18 @@ const Entites = (function () {
       // On s'arrete : on regarde une vitrine, on attend quelqu'un, on respire.
       e.vx = 0; e.vy = 0;
       if (--e.minuterie <= 0) e.etat = 'flane';
-      // Arrete devant une vitrine, un Mante te voit passer quand meme (`defier`) — sinon, un sur trois regardait
-      // ailleurs au moment ou l'on passait.
-      if (e.techniques && e.gang && !e.cible && !gangCalme(e.gang) && e.t % 15 === 0) defier(e);
+      // Arrete devant une vitrine, un membre de gang te voit passer quand meme (`guetter`) : l'arme au poing chez
+      // lui, ou le defi d'un Mante — sinon, un sur trois regardait ailleurs au moment ou l'on passait.
+      guetter(e);
       return;
     } else if (e.etat === 'entre') {
       // Il rentre chez lui : un pas vers la porte, et il n'est plus la.
       e.vx = 0; e.vy = -vitesse;
       if (--e.minuterie <= 0) { retirer(e); return; }
     } else {
-      // Un Cravate sur son territoire : le joueur arme au poing, c'est une provocation.
-      // ⚠️ Un gang CALME (`donne.calme`, M16) ne prend plus l'arme au poing pour une provocation.
-      if (e.gang && !e.cible && !gangCalme(e.gang) && B.joueur.arme !== 'poings' && !B.joueur.dansVehicule && e.t % 15 === 0
-          && dist2(e.x, e.y, B.joueur.x, B.joueur.y) < (6 * TT) * (6 * TT) && Monde.ligneLibre(e.x, e.y, B.joueur.x, B.joueur.y)) {
-        // Chez lui : sa cour, ou un ilot que son gang a pris (`Territoires.gangA`).
-        if (Territoires.gangA(e.x, e.y) === e.gang) { e.etat = 'attaque_joueur'; e.cri = 90; }
-      }
-      // LES MANTES, chez elles, n'attendent pas l'arme : elles te defient a mains nues (`defier`).
-      else if (e.techniques && e.gang && !e.cible && !gangCalme(e.gang) && e.t % 15 === 0) defier(e);
+      // Un Cravate sur son territoire : le joueur arme au poing, c'est une provocation ; un Mante chez lui
+      // n'attend pas l'arme (`guetter`). ⚠️ Un gang CALME (`donne.calme`, M16) ne prend plus l'arme pour une provocation.
+      guetter(e);
       // Flaner : on suit une direction jusqu'a ce qu'elle ne mene plus nulle part.
       const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
       if (Monde.estChaussee(tx, ty)) {
@@ -6540,7 +6559,7 @@ const Entites = (function () {
   }
 
   return {
-    orignalDeLaNuit, majOrignal, faireFuirLOrignal, gangChasse, gangCalme, aTesCouleurs, auxCouleursDuBoss, majSaluts, majFlechee, majFroid, chaleurDuJoueur, hiverAPied, defier, ecoleRouverte, partDehors,
+    orignalDeLaNuit, majOrignal, faireFuirLOrignal, gangChasse, gangCalme, aTesCouleurs, auxCouleursDuBoss, majSaluts, majFlechee, majFroid, chaleurDuJoueur, hiverAPied, defier, guetter, ecoleRouverte, partDehors,
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES, PORTEE_DECOR,
     creer, enDehorsDeLaSuite, sauterDesNumeros, dansLaBande, retirer, vider, creerJoueur, creerJoueur2, joueurs, estJoueur, creerDecor, creerAmbulants, majKiosques, creerPaquets, creerPieton, reindexerDecor,
     briser, endommagerDecor, reparerLeDecor, releverDecor, DEBRIS_MAX,
