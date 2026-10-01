@@ -790,19 +790,32 @@ const Combat = (function () {
     if (sur) {
       const ca = Math.cos(-sur.angle), sa = Math.sin(-sur.angle), dx = x - sur.x, dy = y - sur.y;
       c.lx = dx * ca - dy * sa; c.ly = dx * sa + dy * ca;
+      // LE CHAR PIEGE (les explosifs, vague 4a) : posee sur un char GARE ET VIDE, la charge est un piege — il saute
+      // quand quelqu'un le demarre (`majCharges`). Sur un char qui roule deja, c'est une charge comme une autre.
+      if (!quelqu_unAuVolant(sur)) { c.piege = true; Hud.message('CHAR PIÉGÉ', 90); }
     }
     Son.SFX.arme(arme);
     if (Entites.estJoueur(j)) Police.signalerCrime('arme_sortie', j.x, j.y, Police.quelqu_un_voit(j.x, j.y, j));
     return c;
   }
 
-  /** Les charges posees : celle d'un char le suit (son decalage tourne avec lui). */
+  /** Quelqu'un tient-il le volant de ce char ? `v.conducteur` : le trafic, la police, un voleur — ou le joueur lui-meme
+      (`Vehicules.monter` y met son entite). */
+  function quelqu_unAuVolant(v) { return !!v.conducteur; }
+
+  /** Les charges posees : celle d'un char le suit (son decalage tourne avec lui). Et le CHAR PIEGE saute des que
+      quelqu'un le demarre — un passant qui le vole, le trafic, un agent, un joueur (toi aussi) : l'explosion commune,
+      le poseur pour coupable. */
   function majCharges() {
-    for (const c of B.entites) {
+    for (const c of B.entites.slice()) {
       if (c.type !== 'charge' || !c.sur) continue;
       if (B.entites.indexOf(c.sur) < 0) { c.sur = null; continue; }
       const ca = Math.cos(c.sur.angle), sa = Math.sin(c.sur.angle);
       c.x = c.sur.x + c.lx * ca - c.ly * sa; c.y = c.sur.y + c.lx * sa + c.ly * ca;
+      if (c.piege && c.sur.etat !== 'epave' && quelqu_unAuVolant(c.sur)) {
+        Entites.retirer(c);
+        exploserLa(c.x, c.y, armeDef(c.arme), c.poseur);
+      }
     }
   }
 

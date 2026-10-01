@@ -90,3 +90,51 @@ def test_la_charge_se_dessine_et_clignote(banc):
         return { peinte: peinte };
     }""")
     assert r["peinte"] == 1
+
+
+def test_le_char_piege_saute_quand_un_voleur_le_demarre(banc):
+    """Lot 4a : posé sur un char garé et vide, le C4 est un piège ; un passant le vole (il prend le volant) — boum,
+    et le coupable est le poseur."""
+    r = banc("""function (L, o) {""" + PRELUDE + """
+        donner(3);
+        const v = o.char('auto', 22, 0); v.conducteur = null; v.etat = 'stationne';
+        o.frame(2);
+        poser();
+        const c = charges()[0];
+        const piege = !!(c && c.piege);
+        j.x -= 120; o.frame(2);
+        L.Combat.majCharges(); const avant = booms.length;
+        v.conducteur = 'trafic';                     // un voleur ouvre la portiere et demarre
+        L.Combat.majCharges();
+        return { piege: piege, avant: avant, booms: booms.length, coupable: booms.length > 0 && booms[0].coupable,
+                 restantes: charges().length };
+    }""")
+    assert r["piege"] and r["avant"] == 0, r
+    assert r["booms"] >= 1 and r["coupable"] and r["restantes"] == 0, r
+
+
+def test_le_joueur_qui_monte_dans_son_char_piege_saute_aussi(banc):
+    r = banc("""function (L, o) {""" + PRELUDE + """
+        donner(3);
+        const v = o.char('auto', 22, 0); v.conducteur = null; v.etat = 'stationne';
+        o.frame(2); poser();
+        const vie = j.vie; j.intouchable = false; j.invincible = 0;
+        L.Vehicules.monter(j, v);
+        L.Combat.majCharges();
+        o.frame(5);                                  // le char saute a son tour, a l'image suivante (la chaine)
+        return { booms: booms.length, blesse: j.vie < vie || !j.vivant, epave: v.etat === 'epave' };
+    }""")
+    assert r["booms"] >= 1 and r["epave"] and r["blesse"], r
+
+
+def test_sur_un_char_qui_roule_ce_n_est_pas_un_piege(banc):
+    """Un char du trafic qui a son conducteur : la charge s'y colle et le suit, mais ne saute qu'au bouton."""
+    r = banc("""function (L, o) {""" + PRELUDE + """
+        donner(3);
+        const v = o.char('auto', 22, 0); v.conducteur = 'trafic';
+        o.frame(1); poser();
+        const c = charges()[0];
+        L.Combat.majCharges(); L.Combat.majCharges();
+        return { colle: !!(c && c.sur === v), piege: !!(c && c.piege), booms: booms.length };
+    }""")
+    assert r == {"colle": True, "piege": False, "booms": 0}, r

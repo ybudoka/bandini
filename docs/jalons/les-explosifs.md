@@ -860,3 +860,16 @@ le lance-roquettes).
 
 **La vague 3 est livrée** : le C4 (3a), les murs fissurés (3b). Reste la vague 4 : le char piégé et le
 lance-roquettes.
+
+### Vague 4, lot 4a (✅ livré le 1er oct. 2026) : le char piégé
+
+- **Du C4 posé sur un char garé et vide** est un piège (`c.piege`, « CHAR PIÉGÉ » au HUD) : il saute dès que quelqu'un
+  prend le volant (`v.conducteur`) — un passant qui le vole (`emporterLeChar`), le trafic, un agent, ou un joueur (toi
+  aussi : `Vehicules.monter` y met ton entité). L'explosion commune, le poseur pour coupable ; le char saute à son
+  tour à l'image suivante (la chaîne), et blesse qui est au volant.
+- **La télécommande**, c'est le bouton tenu du C4 : tout saute, le char piégé compris. Pas de garage à bombes.
+- Sur un char qui roule déjà (le trafic au volant), la charge s'y colle et le suit, mais ce n'est pas un piège : elle ne
+  saute qu'au bouton.
+- Juges `tests/test_c4_js.py` (un voleur démarre le char piégé : boum, le poseur coupable ; le joueur qui monte dans
+  son char piégé saute aussi ; sur un char qui roule, ce n'est pas un piège) ; quatre mutations — trois mordent, la
+  quatrième montrait une règle morte (le joueur au volant est déjà un `conducteur`), retirée.
