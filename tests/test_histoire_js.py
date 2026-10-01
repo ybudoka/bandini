@@ -1154,8 +1154,15 @@ def test_la_premiere_bagarre_se_gagne_aux_poings(banc, a_jouer):
     ⚠️ **Les secondes se comptent depuis le premier contact** (20 sept. 2026) : les deux
     hommes naissent hors de l'écran, après l'intro, et courent sur le joueur. Leur course
     n'est pas de la bagarre — la mesurer rendait le juge rouge à 7,1 s pour 4,6 de coups.
+
+    ⚠️ **Chaque bagarre dans SON banc** (1er oct. 2026) : les deux se jouaient l'une après l'autre dans le même
+    monde, et la seconde (celui qui encaisse) héritait de la première — l'horloge, les numéros, les passants
+    couchés. Sur 24 graines, elle tombait sous les quatre secondes pour 3 à 4 d'entre elles avant comme après le
+    goulot du terminus (`68644e9c`, qui n'a fait que déplacer la graine 6 du mauvais côté : 4,52 → 3,87 s) ;
+    seule dans son banc, elle tient 4,4 à 5,5 s sur les 24.
     """
-    r = banc("""function (L, o) {
+    def jouer(riposte):
+        return banc("""function (L, o) {
         function bagarre(riposte) {
             L.Jeu.commencer();
             L.graine(6);
@@ -1189,12 +1196,14 @@ def test_la_premiere_bagarre_se_gagne_aux_poings(banc, a_jouer):
             }
             return { fiches: fiches, s: (i - Math.max(contact, 0)) / 60, mort: mort, restant: mort ? 0 : creux };
         }
-        const bat = bagarre(true), subit = bagarre(false);
+        const r = bagarre(RIPOSTE);
         // L'archetype, lui, n'a pas bouge : une Cravate de rue garde son baton.
         const arch = L.Entites.archetype('cravate');
-        return { fiches: bat.fiches, gagne: bat, subit: subit,
-                 arch: { vie: arch.vie, arme: arch.arme } };
-    }""")
+        r.arch = { vie: arch.vie, arme: arch.arme };
+        return r;
+    }""".replace("RIPOSTE", "true" if riposte else "false"))
+    bat, subit = jouer(True), jouer(False)
+    r = {"fiches": bat["fiches"], "gagne": bat, "subit": subit, "arch": bat["arch"]}
     objectif = a_jouer["m2"]["objectifs"][0]
     assert objectif["arme"] == "" and objectif["vie"] == 55, "la fiche des deux hommes vit dans missions.py"
     assert r["fiches"] == [{"vie": 55, "arme": None}] * 2, "ils arrivent les mains vides, avec la vie de la fiche"
