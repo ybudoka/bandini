@@ -786,7 +786,26 @@ ne passe en `attaque_joueur`.
 
 Les juges de la vague 1 et la série des missions ; une capture d'une rixe armée ; la ligne du plan et ces notes.
 
-### Vague 3 — le moral et les blessés — **plan** (1er oct. 2026)
+### Vague 3 — le moral et les blessés — **livrée le 1er oct. 2026**
+
+**Ce qui a changé en route** :
+- **Un tireur ne touche pas les siens** : blessés par sa balle, ses coéquipiers fuyaient, et chaque gang armé qui
+  t'attaquait s'effondrait tout seul.
+- **Blessé, le tireur ne tire plus « à bout portant » à 75 px** : sa fourchette de blessé commence plus loin, et
+  la règle du collé (vague 2) se déclenchait à tort — elle garde le seuil d'origine. Et son abri se cherche dans
+  la fourchette du moment.
+- **La relecture** : un vieux cadavre (qui garde son `e.rixe`) mettait en déroute le premier Cravate frais venu
+  — seul compte le combat EN COURS (`camp_images`) ; le vainqueur pourchassait le fuyard et l'achevait — un
+  rival qui a quitté la rixe n'en est plus un ; l'arme lâchée après une rixe finie repartait chargeur plein —
+  les balles restent sur l'homme (`ballesDeGang`).
+- **Trois juges anciens ajustés** : le duel des Mantes (l'adversaire « tient jusqu'au bout », `cible` — sinon un
+  Cravate blessé fuyait au lieu de tomber, et un sur trois dégainait) ; « le joueur ne paie pas la bagarre » (6
+  de vie sur 6, pas sur 90 : blessés d'avance, ils fuyaient) ; les coéquipiers du tireur (voir plus haut).
+- **Reporté** : la boiterie ne se voit qu'à l'allure (pas d'animation) ; un blessé le reste (un PNJ ne guérit
+  pas) et repart parfois crier « AYOYE! » chez lui si tu y es armé ; les flammes d'un Molotov brûlent encore les
+  siens.
+
+#### Le plan (1er oct. 2026)
 
 > Exécuté comme les vagues 1 et 2 : sur place, juges d'abord, une relecture neuve à la fin.
 
