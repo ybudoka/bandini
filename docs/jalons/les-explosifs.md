@@ -822,3 +822,22 @@ propage.
 **La vague 2 est livrée** : il s'allume d'abord, on voit la bouteille voler, plus gros (2a) ; les gens prennent feu
 (2b) ; le feu se propage, borné (2c). Restent la vague 3 (les murs fissurés et le C4) et la vague 4 (le char piégé et
 le lance-roquettes).
+
+### Vague 3, lot 3a (✅ livré le 1er oct. 2026) : le C4
+
+- **Au marché noir**, le plus cher du catalogue (1 400 $, la charge à 250 $) : le slug est `plastic` (les slugs du dépôt
+  n'ont pas de chiffre — le juge des dessins et celui des sons le supposent), le nom affiché « C4 ». Un type neuf,
+  `pose` (`armes.TYPES`), et ses règles `REGLES["c4"]`.
+- **On le pose** (`Combat.poserC4`) : un appui court pose une charge devant soi — collée au char qui est là (elle le
+  suit quand il roule : son décalage tourne avec lui, `majCharges`), contre le mur (sur sa face — la vague 3b fera
+  céder le mur fissuré), ou au sol. Trois au plus par poseur ; c'est la charge posée qui sort du sac.
+- **On tient le bouton** (une demi-seconde, `tenir_images`) : tout saute d'un coup, par l'explosion commune, le poseur
+  pour coupable (`detonerC4`). Sur un char, la charge le fait sauter avec elle.
+- **Au noir d'une porte**, les charges restent hors champ et ne sautent plus — comme ce qui vole.
+- Le dessin : le pain de plastic, son ruban, le détonateur et sa diode qui clignote ; l'icône (`OBJETS.plastic`),
+  le portrait (`PORTRAITS.plastic`), le descriptif de la roue. Le son : `detonateur` (le ruban, deux bips — ElevenLabs,
+  0,53 s, à écouter : personne d'autre ne peut juger un son), avec ses deux bips synthétisés en repli.
+- Juges `tests/test_c4_js.py` (un appui pose, tenir fait tout sauter, le poseur est le coupable ; trois au plus, et
+  sans C4 rien ; posé sur un char il le suit ; au noir d'une porte les charges ne sautent plus ; la charge se
+  dessine) et `test_armes.py` (le type, le prix, le marché noir, les règles, le son) ; cinq mutations, toutes
+  mordent. Regardé : une charge au sol, une sur une auto.

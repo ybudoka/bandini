@@ -1356,6 +1356,8 @@ const Son = (function () {
     // La meche qu'on allume (la grenade, la dynamite) : l'allumette, puis le
     // gresillement. Et la grenade qui rebondit : un clac sourd de metal.
     meche: function () { if (!joue('meche')) { bruit(0.05, 0.3, 5000, 2000); bruit(0.9, 0.12, 7000, 3500, 0.06); } },
+    // Le C4 qu'on pose (les explosifs, vague 3) : le scotch, puis deux bips du detonateur.
+    detonateur: function () { if (!joue('detonateur')) { ton(2600, 0.06, 'square', 0.08, 1); ton(2600, 0.06, 'square', 0.08, 1, 0.14); } },
     goupille: function () { if (!joue('goupille')) { ton(2400, 0.05, 'square', 0.1, 0.9); ton(3200, 0.12, 'triangle', 0.12, 1, 0.08); } },
     rebond: function () { if (!joue('rebond')) { ton(420, 0.08, 'square', 0.12, 0.3); bruit(0.06, 0.2, 1800, 400); } },
     molotov: function () { if (!joue('molotov')) { bruit(0.1, 0.4, 7000, 2500); bruit(0.5, 0.5, 900, 150); ton(55, 0.4, 'sine', 0.3, 0.6, 0.08); } },

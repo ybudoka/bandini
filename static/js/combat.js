@@ -767,6 +767,61 @@ const Combat = (function () {
     }
   }
 
+  // --- Le C4 (les explosifs, vague 3) ----------------------------------------------
+
+  function chargesDe(j) { return B.entites.filter(function (e) { return e.type === 'charge' && e.poseur === j; }); }
+
+  /** POSER une charge devant soi : sur le char qui est la (elle s'y colle et le suit), contre le mur (sur sa face),
+      ou au sol. Trois au plus par poseur (`REGLES.c4.max`) ; c'est la charge posee qui sort du sac. */
+  function poserC4(j, arme) {
+    const r = regles().c4;
+    const reste = munitions(arme.slug);
+    if ((!triche('munitions') && reste !== null && reste <= 0) || chargesDe(j).length >= r.max) { Son.SFX.vide(); return null; }
+    const sac = B.partie.armes[arme.slug];
+    if (!triche('munitions') && sac) sac.mun--;
+    Son.Lieu.charger('explosifs');
+    const ax = j.x + Math.cos(j.angle) * 10, ay = j.y + Math.sin(j.angle) * 10;
+    const sur = Entites.autour(ax, ay, r.colle_px, function (q) { return q.type === 'vehicule' && q !== j.dansVehicule; })
+      .sort(function (a, b) { return Math.hypot(a.x - ax, a.y - ay) - Math.hypot(b.x - ax, b.y - ay); })[0] || null;
+    let x = ax, y = ay, mur = null;
+    const tx = Math.floor(ax / TT), ty = Math.floor(ay / TT);
+    if (!sur && Monde.solidite(tx, ty) === 1) { mur = [tx, ty]; x = j.x + Math.cos(j.angle) * 6; y = j.y + Math.sin(j.angle) * 6; }
+    const c = Entites.creer('charge', x, y, { r: 3, dessine: true, solide: false, poseur: j, arme: arme.slug, sur: sur, mur: mur });
+    if (sur) {
+      const ca = Math.cos(-sur.angle), sa = Math.sin(-sur.angle), dx = x - sur.x, dy = y - sur.y;
+      c.lx = dx * ca - dy * sa; c.ly = dx * sa + dy * ca;
+    }
+    Son.SFX.arme(arme);
+    if (Entites.estJoueur(j)) Police.signalerCrime('arme_sortie', j.x, j.y, Police.quelqu_un_voit(j.x, j.y, j));
+    return c;
+  }
+
+  /** Les charges posees : celle d'un char le suit (son decalage tourne avec lui). */
+  function majCharges() {
+    for (const c of B.entites) {
+      if (c.type !== 'charge' || !c.sur) continue;
+      if (B.entites.indexOf(c.sur) < 0) { c.sur = null; continue; }
+      const ca = Math.cos(c.sur.angle), sa = Math.sin(c.sur.angle);
+      c.x = c.sur.x + c.lx * ca - c.ly * sa; c.y = c.sur.y + c.lx * sa + c.ly * ca;
+    }
+  }
+
+  /** TOUT SAUTE : chaque charge de ce poseur, d'un coup — l'explosion commune, avec le poseur pour coupable. */
+  function detonerC4(j) {
+    const cs = chargesDe(j);
+    for (const c of cs) { Entites.retirer(c); exploserLa(c.x, c.y, armeDef(c.arme), j); }
+    return cs.length;
+  }
+
+  /** La charge : le pain de plastic, et sa diode qui clignote. Sur un char, elle est sur le capot. */
+  function dessinerCharge(ctx, c, cx, cy) {
+    const img = Atlas.cuirePeintre('objet|plastic', 16, 10, function (k, lw, lh) { OBJETS.plastic(k, lw, lh); });
+    const haut = c.sur ? 8 : 2;
+    ctx.drawImage(img, Math.round(c.x - 8 - cx), Math.round(c.y - 5 - haut - cy));
+    if (B.t % 40 < 20) { ctx.fillStyle = '#ff3a2a'; ctx.fillRect(Math.round(c.x + 4 - cx), Math.round(c.y - 4 - haut - cy), 1, 1); }
+    B.stats.images++;
+  }
+
   // --- Le chiffon du Molotov (les explosifs, vague 2) -------------------------------
 
   /** IL S'ALLUME D'ABORD : un premier appui met le feu au chiffon — on le voit flamber dans la main, il eclaire la
@@ -834,6 +889,8 @@ const Combat = (function () {
     for (let i = B.entites.length - 1; i >= 0; i--) if (B.entites[i].type === 'lance') Entites.retirer(B.entites[i]);
     // Et le chiffon d'un Molotov : on ne passe pas une porte une flamme a la main.
     for (const j of Entites.joueurs()) j.chiffon = null;
+    // Et les charges de C4 : elles restent hors champ, et ne sautent plus (« sans nous », comme ce qui vole).
+    for (let i = B.entites.length - 1; i >= 0; i--) if (B.entites[i].type === 'charge') Entites.retirer(B.entites[i]);
   }
 
   /** Lache la meche : `force` 1 la lance devant soi, 0 la laisse tomber aux pieds. */
@@ -1452,6 +1509,7 @@ const Combat = (function () {
     majBrasiers();
     majGensEnFeu();
     majLances();
+    majCharges();
     Techniques.majVols();
     // ⚠️ Une prise ne survit pas a un char, a la mort ni a une porte : sans ca, la
     // cible restait figee `tenu` dans la rue qu'on venait de quitter.
@@ -1533,6 +1591,13 @@ const Combat = (function () {
         j.rafale = (j.rafale || 0) + 1;
       } else {
         j.rafale = 0;
+      }
+    } else if (arme.type === 'pose') {
+      // LE C4 : APPUYER puis RELACHER pose une charge ; TENIR fait tout sauter (`REGLES.c4.tenir_images`).
+      if (ent.neuf('attaque')) j.poseT = 0;
+      if (j.poseT >= 0) {
+        if (ent.bas('attaque')) { if (++j.poseT >= regles().c4.tenir_images) { detonerC4(j); j.poseT = -1; } }
+        else { poserC4(j, arme); j.poseT = -1; }
       }
     } else if (arme.type === 'lance') {
       // APPUYER allume, RELACHER lance. Entre les deux, la meche brule dans la
@@ -1631,6 +1696,7 @@ const Combat = (function () {
     viseeAssistee, dispersionDe, allumer, majBrasiers, majAttaque, arcDeMelee, majProjectiles, maj,
     allumerMeche, lacherMeche, lancer, majEnMain, majLances, dessinerLance, ramasser, oublierLances,
     allumerChiffon, majChiffon, lampes, enflammer, eteindre, majGensEnFeu, majJet, propager,
+    poserC4, majCharges, detonerC4, dessinerCharge, chargesDe,
     majCible, ciblesVerrouillables, VERROU_PORTEE,
     otageSousLaMain, viserOtage, prendreEnOtage, lacherOtage, majOtage, majSaisie,
   };

@@ -44,7 +44,7 @@ from __future__ import annotations
 
 from typing import TypedDict
 
-TYPES = ("melee", "tir", "jet", "lance")
+TYPES = ("melee", "tir", "jet", "lance", "pose")
 
 
 class Arme(TypedDict):
@@ -116,6 +116,9 @@ REGLES: dict = {
     # ⚠️ LE MOLOTOV EN MIEUX (docs/jalons/les-explosifs.md, vague 2, Martin : « plus gros et plus visible ») : la
     # flaque passe de 20 a 30 px et de 5 a 8 s (`feu_s`), et la nuit elle eclaire le sol jusqu'a `lueur_px` — comme
     # le chiffon allume dans la main.
+    # Le C4 (vague 3) : `max` charges posees a la fois par poseur ; tenir le bouton `tenir_images` fait tout sauter
+    # (un appui plus court en pose une) ; a `colle_px` d'un char devant soi, la charge s'y colle et le suit.
+    "c4": {"max": 3, "tenir_images": 30, "colle_px": 20},
     "incendie": {"rayon_px": 30, "degats_par_seconde": 12, "lueur_px": 64,
                  # ⚠️ LES GENS PRENNENT FEU (vague 2, lot 2b) : touche par la flaque, un passant (ou le joueur) brule
                  # `duree_s` secondes, court en hurlant et perd `degats_par_seconde` ; il allume qui il frole (a
@@ -224,6 +227,12 @@ CATALOGUE: list[Arme] = [
     # demi-vue fait 240). C'est aussi celle qu'on entend de plus loin.
     _a("carabine", "Carabine", "tir", 60, 230, 55, 1200, chargeur=5, munitions_max=25,
        vproj=10.0, prix_munitions=50, etoiles=1, bruit=22),
+    # « Il va passer par la. » LE C4 (les explosifs, vague 3) : on le POSE (`pose`) — au sol, contre un mur, sur un
+    # char, qu'il suit s'il roule —, trois charges au plus (`REGLES["c4"]["max"]`), et on TIENT le bouton pour tout
+    # faire sauter d'un coup. Pas de meche : c'est le poseur qui decide quand. `portee` : la main qui le pose.
+    # Le plus cher du marche noir (le lance-roquettes, a venir, le sera plus).
+    _a("plastic", "C4", "pose", 200, 14, 30, 1400, chargeur=3, munitions_max=6,
+       prix_munitions=250, etoiles=1, son="detonateur", souffle=60),
     # ⚠️ **LA CARABINE À BOUCHON de la galerie de tir** — jamais achetée, jamais
     # dans le sac : le forain la PRÊTE le temps du défi (`Histoire.commencerDefi`),
     # puis la reprend. `foire` est la défense qui la rend inoffensive dans

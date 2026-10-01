@@ -389,6 +389,11 @@ CATALOGUE: list[Echantillon] = [
     _e("raton_ecrase", "Raton écrasé", duree_s=0.8, volume=0.6,
        prompt="a raccoon giving one short raspy squeal cut off abruptly, with a soft "
               "dull thump under a car tire, close, no music, no voice"),
+    # Le C4 qu'on pose et qui s'arme (`armes.py`, `son="detonateur"`) : le scotch qu'on tire, puis deux bips
+    # electroniques. Du lieu `explosifs`.
+    _e("detonateur", "C4 armé", duree_s=0.9, volume=0.5,
+       prompt="a strip of duct tape pulled and pressed, then two short high electronic beeps of a "
+              "detonator arming, close-up, no explosion, no music"),
     _e("rebond", "Grenade qui rebondit", variantes=2, duree_s=0.5, volume=0.5,
        prompt="a small heavy metal object bouncing once on asphalt, a single "
               "dull clank, close, no music"),
@@ -1845,7 +1850,7 @@ LIEUX: dict[str, list[str]] = {
     # Les explosifs (29 sept. 2026) : pas un endroit, une POSSESSION — ils se
     # chargent la premiere fois qu'un explosif entre dans le sac ou qu'on en allume
     # un (`combat.js`). Une partie qui n'en touche jamais ne les telecharge pas.
-    "explosifs": ["meche", "goupille", "rebond"],
+    "explosifs": ["meche", "goupille", "rebond", "detonateur"],
     # Le parapluie de Rosa : une POSSESSION, comme les explosifs — chargés quand il entre au sac.
     "parapluie": ["parapluie", "parapluie_revire"],
     # Les bêtes écrasées : pas un endroit, une RUELLE — chargés à la première bête qui naît

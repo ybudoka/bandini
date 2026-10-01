@@ -9398,6 +9398,8 @@ const OBJETS = {
   mitraillette: function (ctx) { ctx.fillStyle = '#3a3d44'; ctx.fillRect(2, 4, 11, 2); ctx.fillRect(6, 6, 2, 4); ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 6, 2, 2); },
   carabine: function (ctx) { ctx.fillStyle = '#6b4b2c'; ctx.fillRect(1, 5, 6, 2); ctx.fillRect(2, 7, 2, 2); ctx.fillStyle = '#3a3d44'; ctx.fillRect(6, 4, 10, 2); ctx.fillStyle = '#9aa0a8'; ctx.fillRect(8, 2, 3, 1); },
   // La grenade : un ovale vert olive quadrille, sa cuillere et son anneau.
+  // Le C4 : le pain de plastic blanc cassé, son ruban, le détonateur et sa diode.
+  plastic: function (ctx) { ctx.fillStyle = '#d8d2c0'; ctx.fillRect(3, 3, 10, 6); ctx.fillStyle = '#b8b2a0'; ctx.fillRect(3, 8, 10, 1); ctx.fillStyle = '#5a5e66'; ctx.fillRect(3, 5, 10, 1); ctx.fillRect(7, 3, 1, 6); ctx.fillStyle = '#2a2d34'; ctx.fillRect(9, 1, 4, 3); ctx.fillStyle = '#e0402a'; ctx.fillRect(12, 1, 1, 1); ctx.fillStyle = '#c0392b'; ctx.fillRect(10, 4, 1, 2); ctx.fillStyle = '#2a4a8a'; ctx.fillRect(11, 4, 1, 2); },
   grenade: function (ctx) { ctx.fillStyle = '#4b5a2a'; ctx.fillRect(5, 3, 5, 6); ctx.fillRect(4, 4, 7, 4); ctx.fillStyle = '#35401d'; ctx.fillRect(5, 5, 5, 1); ctx.fillRect(7, 3, 1, 6); ctx.fillStyle = '#8a8d92'; ctx.fillRect(6, 1, 3, 2); ctx.fillRect(9, 2, 1, 3); ctx.fillStyle = '#c9ccd1'; ctx.fillRect(4, 1, 2, 1); ctx.fillRect(3, 2, 1, 1); },
   // Le baton de dynamite : rouge, ses deux bagues de papier, et sa meche blanche.
   dynamite: function (ctx) { ctx.fillStyle = '#b8322a'; ctx.fillRect(3, 4, 9, 4); ctx.fillStyle = '#8e231d'; ctx.fillRect(3, 7, 9, 1); ctx.fillStyle = '#e8dcc0'; ctx.fillRect(5, 4, 1, 4); ctx.fillRect(9, 4, 1, 4); ctx.fillStyle = '#efe6d0'; ctx.fillRect(12, 5, 1, 1); ctx.fillRect(13, 4, 1, 1); ctx.fillStyle = '#ffd23a'; ctx.fillRect(14, 3, 1, 1); },
@@ -9603,6 +9605,14 @@ const PORTRAITS = {
       [5, 14, 25, 4, '#c79a12'], [30, 14, 4, 3, '#c79a12'], [7, 9, 21, 1, '#6fb865'], [5, 18, 25, 1, '#1d4a1a'],
       [41, 12, 2, 1, '#b9b2a2'], [42, 15, 2, 2, '#b9b2a2'],
       [44, 9, 2, 5, '#ff8c1a'], [45, 5, 2, 5, '#ff8c1a'], [44, 10, 1, 2, '#ffe07a'], [46, 3, 1, 3, '#ffe07a'], [43, 7, 1, 2, '#c0392b'],
+    ]);
+  },
+  // Le C4 : deux pains de plastic bandés de ruban gris, le détonateur, ses fils rouge et bleu, la diode.
+  plastic: function (ctx) {
+    peindrePortrait(ctx, [[10, 9, 26, 12, '#d8d2c0'], [36, 6, 9, 8, '#2a2d34']], [
+      [10, 15, 26, 1, '#b8b2a0'], [10, 20, 26, 1, '#a8a290'], [16, 9, 3, 12, '#6a6e76'], [28, 9, 3, 12, '#6a6e76'],
+      [10, 12, 26, 1, '#6a6e76'], [37, 7, 2, 2, '#e0402a'], [40, 10, 4, 2, '#4a4e56'],
+      [33, 13, 1, 4, '#c0392b'], [34, 14, 3, 1, '#c0392b'], [35, 15, 1, 4, '#2a4a8a'], [36, 17, 3, 1, '#2a4a8a'],
     ]);
   },
   // La grenade a fragmentation : son quadrille, la cuillere le long du flanc, l'anneau.

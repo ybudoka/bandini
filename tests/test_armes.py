@@ -107,10 +107,10 @@ def test_trois_armes_a_feu_qui_repondent_a_trois_questions():
     assert mit["cadence"] < pis["cadence"] and mit["degats"] < pis["degats"]
     tirs = [a for a in armes.CATALOGUE if a["type"] == "tir"]
     assert car["portee"] == max(a["portee"] for a in tirs) and car["dispersion"] == 0
-    # ⚠️ Ce qui SAUTE (`lance`) n'entre pas dans la comparaison : ses degats sont
+    # ⚠️ Ce qui SAUTE (`lance`, `pose`) n'entre pas dans la comparaison : ses degats sont
     # ceux du centre d'une explosion qui baisse avec la distance, pas une balle.
     assert car["degats"] >= max(a["degats"] for a in armes.CATALOGUE
-                                if a["slug"] != "carabine" and a["type"] != "lance")
+                                if a["slug"] != "carabine" and a["type"] not in ("lance", "pose"))
     assert mol["cloche"] is True and mol["feu_s"] > 0
     assert [a["slug"] for a in armes.CATALOGUE if a["feu_s"]] == ["molotov"]
     for a in armes.CATALOGUE:
@@ -177,7 +177,7 @@ def test_ce_qui_se_lance_a_sa_meche_et_son_souffle():
     assert g["rebond"] is True and d["rebond"] is False
     assert d["prix"] < g["prix"] and d["souffle"] > g["souffle"] and d["meche"] > g["meche"]
     for a in armes.CATALOGUE:
-        if a["type"] != "lance":
+        if a["type"] not in ("lance", "pose"):
             assert a["meche"] == 0 and a["souffle"] == 0 and a["rebond"] is False, a["slug"]
     assert armes.REGLES["explosion"]["bruit_tuiles"] > armes.par_slug("carabine")["bruit"]
 
@@ -199,4 +199,18 @@ def test_les_sons_des_explosifs_ne_pesent_pas_sur_le_premier_ecran():
 
     assert armes.par_slug("grenade")["son"] == "goupille"
     assert armes.par_slug("dynamite")["son"] == "meche"
-    assert set(audio.LIEUX["explosifs"]) == {"goupille", "meche", "rebond"}
+    assert armes.par_slug("plastic")["son"] == "detonateur"
+    assert set(audio.LIEUX["explosifs"]) == {"goupille", "meche", "rebond", "detonateur"}
+
+
+def test_le_c4_se_pose_et_saute_quand_on_veut():
+    """Le C4 (les explosifs, vague 3) : on le pose, sans mèche ni cloche, il a un souffle ; trois charges au plus ;
+    le marché noir le vend, et c'est (pour l'instant) le plus cher de tout le catalogue."""
+    from app import magasins
+
+    c4 = armes.par_slug("plastic")
+    assert c4["type"] == "pose" and c4["meche"] == 0 and c4["cloche"] is False and c4["souffle"] > 0
+    assert c4["prix"] == max(a["prix"] for a in armes.achetables())
+    assert "plastic" in magasins.MARCHE_NOIR["articles"] and "plastic" in magasins.MARCHE_NOIR["munitions"]
+    r = armes.REGLES["c4"]
+    assert r["max"] == 3 and 0 < r["tenir_images"] <= 60 and r["colle_px"] > 0
