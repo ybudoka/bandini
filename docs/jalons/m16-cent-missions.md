@@ -1569,3 +1569,14 @@ catalogue.
   - **Juges** : `tests/test_liste_du_norvegien_js.py` (deux, au bouton : les deux modèles, une heure qui ne suffit pas et
     une journée qui suffit, la prime ; une bosse sur le coupé, pas de prime) ; mutation : l'attente à une heure (rouge).
   - **Voix** : 13 (≈ 1 150 caractères), générées et mesurées, pas écoutées.
+- **1er oct. 2026 : ce qui reste de M16, après les vagues 20 à 23** (quinze missions livrées ce jour-là, et le type
+  `chercher`) — six missions de la fiche, chacune bloquée par quelque chose qui manque au monde :
+  - `e03` (Biscuit s'est sauvé) : aucun animal n'existe (ni sprite ni archétype) ; et Mme Beaulieu est un personnage
+    neuf (voix, fiche, place). `chercher` sait déjà cacher qui on cherche.
+  - `e05` et `e14` (une auto dans la piscine) : une piscine de villa est un bloc (solidité 3) où aucun char n'entre ;
+    rien ne montre un char qui coule dans une piscine, ni ne l'en sort à la remorqueuse.
+  - `p03` (la murale de Maude) : Maude est un personnage neuf — une voix québécoise à auditionner avec Martin.
+  - `t08` et `t10` : tous deux finissent dans l'usine, qui n'est jamais un lieu de mission (sa cour ferme la nuit) ; une
+    petite job ne sait ni attendre une heure ni ne s'offrir que de jour. À trancher : une job qui ne s'offre qu'aux
+    heures où son lieu est ouvert, et le juge des barrières qui l'accepte.
+  - Et la variante de `q14` chez Ti-Loup (après `q11`), « la liste du quai » comme activité.
