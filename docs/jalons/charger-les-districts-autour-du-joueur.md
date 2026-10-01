@@ -246,8 +246,26 @@ Toutes les routes des paquets en profitent : définitions, carte, notes, suite, 
   la carte truquée de `test_une_carte_d_une_autre_construction_est_refusee` est refusée pour la bonne raison
   (« carte 0000… au lieu de … »), pas pour un corps mal décodé.
 
-**Ce qui reste.** La vague 3 (les pièces à part) n'achète presque rien tant que les définitions pèsent autant
-que la carte sur le fil (50 et 52 Ko, les deux en même temps). La vague 4 (le squelette et les morceaux par
-district) garde son déclencheur : « plus de 2 s entre JOUER et la ville sur le téléphone de Martin », ou le
-plafond de la carte pliée (55 000) qui cède. ⚠️ Le téléphone de Martin est le seul juge qui manque : la sonde
-ralentit le processeur ×4, elle ne sait rien de son réseau.
+**Vague 3 — les scripts à l'empreinte de leur contenu (1er oct. 2026).** `app/statiques.py` (`Empreintes`) : chaque
+adresse statique de la page (les 87 scripts, la feuille, les icônes, le logo) porte `?v=<sha256 court de SON
+fichier>` au lieu de `?v=<version du site>` ; le gabarit l'écrit `statique(filename='js/…')`, et garde ainsi le
+texte que le banc, la barre (`routes._scripts_du_jeu`) et la coquille hors ligne lisent. L'empreinte se relit
+quand le fichier change sous le serveur (date et taille) : le serveur de dev change maintenant le `?v=` d'un
+script qu'on édite.
+
+- **La mesure** (la sonde de la remesure, A/B apparié base `bd8f4b96` contre la vague 3, en alternance, deux
+  passages chacun, « une mise en ligne » = le serveur relancé sous une autre version, les mêmes fichiers) :
+  écran titre **12 007 → 2 634 ms**, scripts sur le fil **1 561 400 → 0 octet** ; JOUER → la ville, pareil
+  (312 / 303 ms). Une mise en ligne qui touche des scripts fait repartir ceux-là seulement : entre 0.391.23 (en
+  ligne) et `dev` aujourd'hui, 7 scripts sur 87 ont changé — mais ce sont les plus gros (`sprites`, `entites`,
+  `hud`, `monde`, `son`, `combat`, `explosions`) : 617 654 octets au lieu de 1 535 300. D'où la vague 4.
+- **Juges** (`test_routes.py`) : chaque adresse statique de la page porte l'empreinte de son fichier, et la
+  version n'y paraît plus ; deux versions du site rendent les mêmes adresses, à l'octet près ; un fichier changé
+  sous le serveur change SON empreinte, pas celle de l'autre. Ils MORDENT : la version remise à la place de
+  l'empreinte → deux rouges. Verts à côté : `test_hors_ligne` (le jeu réseau coupé compris), `test_navigateur`,
+  `test_carte_du_depot`, `test_table_des_jalons`, `test_version`, `test_chargement_js`, `test_comptes` ; ruff.
+
+**Ce qui reste.** Le découpage révisé du 1er oct. 2026 (la fiche) : la vague 4 (les scripts maigrissent), la vague 5
+(les paquets partent avec les scripts) ; les pièces à part et le squelette par district attendent (vagues 6 et 7),
+le second une décision de Martin. ⚠️ Le téléphone de Martin est le seul juge qui manque : la sonde simule un réseau
+et un processeur, pas les siens.

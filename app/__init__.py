@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from datetime import date
 
-from flask import Flask
+from flask import Flask, url_for
 
 from config import CLES_DE_DEVELOPPEMENT, Config
 
 from . import bd
 from .definitions import construire
+from .statiques import Empreintes
 from .version import VERSION
 
 
@@ -67,6 +68,15 @@ def create_app(config_object: type[Config] = Config) -> Flask:
     app.register_blueprint(bp)
     app.teardown_appcontext(bd.fermer)
 
+    # Les fichiers statiques à l'empreinte de LEUR contenu (`app/statiques.py`) : une mise en ligne ne fait
+    # repartir que les scripts qui ont changé, pas les 87.
+    empreintes = Empreintes(app.static_folder)
+
+    def statique(filename: str) -> str:
+        return url_for("static", filename=filename, v=empreintes(filename))
+
+    app.extensions["empreintes"] = empreintes
+
     @app.context_processor
     def variables_globales() -> dict:
         return {
@@ -74,6 +84,7 @@ def create_app(config_object: type[Config] = Config) -> Flask:
             "SITE_TAGLINE": app.config["SITE_TAGLINE"],
             "SITE_AUTEUR": app.config["SITE_AUTEUR"],
             "version": VERSION,
+            "statique": statique,
             "annee": date.today().year,
         }
 

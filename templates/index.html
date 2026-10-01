@@ -32,7 +32,7 @@
 
     {# Voiles DOM : seulement la ou il faut un champ texte ou une liste. #}
     <section class="voile" id="voile-titre">
-      <h1 class="titre titre--logo"><img class="logo" src="{{ url_for('static', filename='img/logo.svg') }}?v={{ version }}" alt="Bandini" width="71" height="15"></h1>
+      <h1 class="titre titre--logo"><img class="logo" src="{{ statique(filename='img/logo.svg') }}" alt="Bandini" width="71" height="15"></h1>
       <p class="sous-titre">{{ SITE_TAGLINE }}</p>
       <div class="boutons">
         <button class="bouton bouton--principal" id="bouton-jouer" type="button">Jouer</button>
@@ -187,91 +187,91 @@
 {% block scripts %}
 {# ⚠️ L'ORDRE EST LA DEPENDANCE, et cette liste est la source unique : le banc
    d'essai (tests/banc.js) la lit pour charger les memes fichiers. #}
-<script src="{{ url_for('static', filename='js/chargement.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/hors-ligne.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/base.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/suite.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/pliage.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/calendrier.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/saisons.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/compte.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/defi.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/atlas.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/sprites.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/visages.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/garderobe.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/entree.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/son.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/monde.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/entites.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/combat.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/explosions.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/techniques.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/rixe.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/vehicules.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/autobus.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/metro.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/traversier.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/train.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/neige.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/pluie.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/derapage.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/naufrage.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/piscine.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/rue_des_saisons.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/patinoire.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/brouillard.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/verglas.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/glace.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/pont.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/saintjean.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/cineparc.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/cabane.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/galeries.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/fetes.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/halloween.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/incendies.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/frenesies.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/collections.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/decoration.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/puces.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/police.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/vedette.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/chantiers.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/aeroport.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/foire.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/file_de_foire.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/foyers.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/interactions.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/missions.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/scenes.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/adresse.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/devisser.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/enseignes.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/garage.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/demenagement.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/photos.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/dojo.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/conduite.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/rue.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/circuit.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/infiltration.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/surplace.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/chapitres.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/jobs.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/biscuit.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/histoire.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/hud.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/casque.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/blocs.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/souterrain.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/canton.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/casino.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/territoires.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/quatreroues.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/tables.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/tripot.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/caisse.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/regate.js') }}?v={{ version }}"></script>
-<script src="{{ url_for('static', filename='js/jeu.js') }}?v={{ version }}"></script>
+<script src="{{ statique(filename='js/chargement.js') }}"></script>
+<script src="{{ statique(filename='js/hors-ligne.js') }}"></script>
+<script src="{{ statique(filename='js/base.js') }}"></script>
+<script src="{{ statique(filename='js/suite.js') }}"></script>
+<script src="{{ statique(filename='js/pliage.js') }}"></script>
+<script src="{{ statique(filename='js/calendrier.js') }}"></script>
+<script src="{{ statique(filename='js/saisons.js') }}"></script>
+<script src="{{ statique(filename='js/compte.js') }}"></script>
+<script src="{{ statique(filename='js/defi.js') }}"></script>
+<script src="{{ statique(filename='js/atlas.js') }}"></script>
+<script src="{{ statique(filename='js/sprites.js') }}"></script>
+<script src="{{ statique(filename='js/visages.js') }}"></script>
+<script src="{{ statique(filename='js/garderobe.js') }}"></script>
+<script src="{{ statique(filename='js/entree.js') }}"></script>
+<script src="{{ statique(filename='js/son.js') }}"></script>
+<script src="{{ statique(filename='js/monde.js') }}"></script>
+<script src="{{ statique(filename='js/entites.js') }}"></script>
+<script src="{{ statique(filename='js/combat.js') }}"></script>
+<script src="{{ statique(filename='js/explosions.js') }}"></script>
+<script src="{{ statique(filename='js/techniques.js') }}"></script>
+<script src="{{ statique(filename='js/rixe.js') }}"></script>
+<script src="{{ statique(filename='js/vehicules.js') }}"></script>
+<script src="{{ statique(filename='js/autobus.js') }}"></script>
+<script src="{{ statique(filename='js/metro.js') }}"></script>
+<script src="{{ statique(filename='js/traversier.js') }}"></script>
+<script src="{{ statique(filename='js/train.js') }}"></script>
+<script src="{{ statique(filename='js/neige.js') }}"></script>
+<script src="{{ statique(filename='js/pluie.js') }}"></script>
+<script src="{{ statique(filename='js/derapage.js') }}"></script>
+<script src="{{ statique(filename='js/naufrage.js') }}"></script>
+<script src="{{ statique(filename='js/piscine.js') }}"></script>
+<script src="{{ statique(filename='js/rue_des_saisons.js') }}"></script>
+<script src="{{ statique(filename='js/patinoire.js') }}"></script>
+<script src="{{ statique(filename='js/brouillard.js') }}"></script>
+<script src="{{ statique(filename='js/verglas.js') }}"></script>
+<script src="{{ statique(filename='js/glace.js') }}"></script>
+<script src="{{ statique(filename='js/pont.js') }}"></script>
+<script src="{{ statique(filename='js/saintjean.js') }}"></script>
+<script src="{{ statique(filename='js/cineparc.js') }}"></script>
+<script src="{{ statique(filename='js/cabane.js') }}"></script>
+<script src="{{ statique(filename='js/galeries.js') }}"></script>
+<script src="{{ statique(filename='js/fetes.js') }}"></script>
+<script src="{{ statique(filename='js/halloween.js') }}"></script>
+<script src="{{ statique(filename='js/incendies.js') }}"></script>
+<script src="{{ statique(filename='js/frenesies.js') }}"></script>
+<script src="{{ statique(filename='js/collections.js') }}"></script>
+<script src="{{ statique(filename='js/decoration.js') }}"></script>
+<script src="{{ statique(filename='js/puces.js') }}"></script>
+<script src="{{ statique(filename='js/police.js') }}"></script>
+<script src="{{ statique(filename='js/vedette.js') }}"></script>
+<script src="{{ statique(filename='js/chantiers.js') }}"></script>
+<script src="{{ statique(filename='js/aeroport.js') }}"></script>
+<script src="{{ statique(filename='js/foire.js') }}"></script>
+<script src="{{ statique(filename='js/file_de_foire.js') }}"></script>
+<script src="{{ statique(filename='js/foyers.js') }}"></script>
+<script src="{{ statique(filename='js/interactions.js') }}"></script>
+<script src="{{ statique(filename='js/missions.js') }}"></script>
+<script src="{{ statique(filename='js/scenes.js') }}"></script>
+<script src="{{ statique(filename='js/adresse.js') }}"></script>
+<script src="{{ statique(filename='js/devisser.js') }}"></script>
+<script src="{{ statique(filename='js/enseignes.js') }}"></script>
+<script src="{{ statique(filename='js/garage.js') }}"></script>
+<script src="{{ statique(filename='js/demenagement.js') }}"></script>
+<script src="{{ statique(filename='js/photos.js') }}"></script>
+<script src="{{ statique(filename='js/dojo.js') }}"></script>
+<script src="{{ statique(filename='js/conduite.js') }}"></script>
+<script src="{{ statique(filename='js/rue.js') }}"></script>
+<script src="{{ statique(filename='js/circuit.js') }}"></script>
+<script src="{{ statique(filename='js/infiltration.js') }}"></script>
+<script src="{{ statique(filename='js/surplace.js') }}"></script>
+<script src="{{ statique(filename='js/chapitres.js') }}"></script>
+<script src="{{ statique(filename='js/jobs.js') }}"></script>
+<script src="{{ statique(filename='js/biscuit.js') }}"></script>
+<script src="{{ statique(filename='js/histoire.js') }}"></script>
+<script src="{{ statique(filename='js/hud.js') }}"></script>
+<script src="{{ statique(filename='js/casque.js') }}"></script>
+<script src="{{ statique(filename='js/blocs.js') }}"></script>
+<script src="{{ statique(filename='js/souterrain.js') }}"></script>
+<script src="{{ statique(filename='js/canton.js') }}"></script>
+<script src="{{ statique(filename='js/casino.js') }}"></script>
+<script src="{{ statique(filename='js/territoires.js') }}"></script>
+<script src="{{ statique(filename='js/quatreroues.js') }}"></script>
+<script src="{{ statique(filename='js/tables.js') }}"></script>
+<script src="{{ statique(filename='js/tripot.js') }}"></script>
+<script src="{{ statique(filename='js/caisse.js') }}"></script>
+<script src="{{ statique(filename='js/regate.js') }}"></script>
+<script src="{{ statique(filename='js/jeu.js') }}"></script>
 {% endblock %}

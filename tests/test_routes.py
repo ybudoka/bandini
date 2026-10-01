@@ -205,3 +205,60 @@ def test_statiques(client, racine):
         assert (racine / "static" / "js" / nom).exists()
     assert client.get("/static/css/styles.css").status_code == 200
     assert client.get("/static/img/favicon.svg").status_code == 200
+
+
+def test_chaque_statique_porte_l_empreinte_de_son_contenu(client, racine):
+    """⚠️ La vague 3 des districts (docs/jalons/charger-les-districts-autour-du-joueur.md) : les scripts font 93 %
+    de ce qui voyage avant l'écran titre, et ils portaient tous `?v=<version>` — chaque mise en ligne les faisait
+    TOUS repartir (1,56 Mo, dix secondes en « 3G rapide »). Chaque adresse porte maintenant l'empreinte de SON
+    fichier, et la version n'y paraît plus."""
+    import hashlib
+    import re
+
+    from app.version import VERSION
+
+    html = client.get("/").get_data(as_text=True)
+    adresses = re.findall(r'(?:src|href)="(/static/[^"?]+)\?v=([^"&]+)"', html)
+    assert len([a for a in adresses if a[0].startswith("/static/js/")]) == int(re.search(r'data-scripts="(\d+)"', html).group(1))
+    assert any(a[0].endswith("/styles.css") for a in adresses)
+    for chemin, v in adresses:
+        attendue = hashlib.sha256((racine / chemin.lstrip("/")).read_bytes()).hexdigest()[:12]
+        assert v == attendue, chemin
+    assert f"?v={VERSION}" not in html
+
+
+def test_une_mise_en_ligne_ne_change_pas_l_adresse_d_un_script_qui_n_a_pas_change(client, monkeypatch):
+    """Deux constructions de versions différentes, les mêmes fichiers : les mêmes adresses, à l'octet près — le
+    cache du navigateur rend tout sans rien redemander."""
+    import re
+
+    import app as paquet_app
+
+    def adresses():
+        return re.findall(r'(?:src|href)="(/static/[^"]+)"', client.get("/").get_data(as_text=True))
+
+    avant = adresses()
+    monkeypatch.setattr(paquet_app, "VERSION", "999.0.0")
+    apres = adresses()
+    assert "999.0.0" in client.get("/").get_data(as_text=True), "la version du pied de page a bien changé"
+    assert avant == apres and len(avant) > 80
+
+
+def test_l_empreinte_d_un_fichier_suit_son_contenu_et_lui_seul(tmp_path):
+    """Un fichier qui change sous le serveur (le serveur de dev ne redémarre pas pour un script) change SON
+    empreinte, et pas celle des autres."""
+    import os
+
+    from app.statiques import Empreintes
+
+    (tmp_path / "js").mkdir()
+    a, b = tmp_path / "js" / "a.js", tmp_path / "js" / "b.js"
+    a.write_text("const A = 1;\n")
+    b.write_text("const B = 2;\n")
+    empreintes = Empreintes(tmp_path)
+    ea, eb = empreintes("js/a.js"), empreintes("js/b.js")
+    assert ea != eb and len(ea) == 12
+    a.write_text("const A = 3;\n")
+    os.utime(a, ns=(a.stat().st_atime_ns, a.stat().st_mtime_ns + 1_000_000))
+    assert empreintes("js/a.js") != ea
+    assert empreintes("js/b.js") == eb

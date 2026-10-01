@@ -14,11 +14,12 @@
    quand le reseau se tait, ou quand le serveur est en panne (un 502 derriere
    Caddy est une ville qu'on ne peut pas ouvrir, pas une ville qui n'existe pas).
 
-   ⚠️ Pourquoi pas « le cache d'abord », qui est plus vite hors ligne : le serveur
-   de dev ne change pas le `?v=` quand on edite un script. Un travailleur qui
-   repond du cache servirait l'ancien fichier, et il faudrait recharger deux fois
-   pour voir sa propre modification — le piege qui fait desinstaller un
-   travailleur. En ligne, le cache HTTP rend le reseau d'abord gratuit.
+   ⚠️ Pourquoi pas « le cache d'abord », qui est plus vite hors ligne : un
+   travailleur qui repond du cache sert le fichier d'hier tant qu'il ne s'est pas
+   mis a jour, et il faut recharger deux fois pour voir une modification — le
+   piege qui fait desinstaller un travailleur. En ligne, le cache HTTP rend le
+   reseau d'abord gratuit : chaque script porte l'empreinte de SON contenu
+   (`app/statiques.py`, 1er oct. 2026), et nginx le garde sept jours.
 
    ⚠️ Les mp3 ne portent pas de `?v=` : un bruitage regenere garde son nom. C'est
    la meme regle qui le purge — le reseau d'abord le remplace des qu'on le joue
