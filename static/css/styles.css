@@ -360,6 +360,8 @@ body.tactile .aide { display: none; }
 /* SAISIR (les projections) : au-dessus d'ACTION, 8 px d'air — la meme regle que
    COURS sous ACTION ; et 12 px a gauche d'ARME. */
 #boutons b[data-a="saisir"] { right: 90px; bottom: 146px; width: 56px; height: 56px; font-size: 10px; }
+/* LIRE (la lecture des passants) : on le TIENT, au-dessus d'ARME, 8 px d'air ; 20 px a droite de SAISIR. */
+#boutons b[data-a="lire"] { right: 20px; bottom: 168px; width: 50px; height: 50px; font-size: 10px; }
 
 #haut {
   position: absolute;

@@ -31,6 +31,10 @@ const Entree = (function () {
     // U, a cote de J (FRAPPE) et K (ESQUIVE). ⚠️ Ni G ni R, I, O, L : c'est la
     // suite secrete RIGOLO, voir juste au-dessus.
     saisir: ['KeyU'],
+    // LIRE un passant (docs/jalons/la-reputation-et-la-lecture-des-passants.md) : TENU, il montre sa
+    // ligne (`Lecture`). Y, au-dessus de H (VISER). A la manette, la GACHETTE DE GAUCHE a pied
+    // (`gachetteLit`), le pendant de VISER a droite ; au doigt, le bouton LIRE.
+    lire: ['KeyY'],
   };
   //: La disposition d'une manette RECONNUE par le navigateur (`mapping:
   //: "standard"`, W3C) : 0 le bouton du bas, 1 celui de droite, 2 celui de
@@ -63,6 +67,9 @@ const Entree = (function () {
       reapprises comprises. Au volant, `Combat` ne lit pas le verrou : elle
       reste le gaz, et rien d'autre. */
   function gachetteVise(etat, g) { if (g > GESTE) etat.verrouiller = true; }
+  /** La gachette de GAUCHE lit (LIRE) : la pedale de FREIN, a pied. Au volant, `Lecture` ne lit rien :
+      elle reste le frein. */
+  function gachetteLit(etat, f) { if (f > GESTE) etat.lire = true; }
   const ZONE_MORTE = 0.2, ZONE_PLEINE = 0.95;
   //: De combien un bouton ou un axe doit bouger pour qu'on dise « c'est
   //: celui-la » pendant un apprentissage.
@@ -628,6 +635,7 @@ const Entree = (function () {
       if (apprentissage) ecouterApprentissage(p);
     }
     gachetteVise(etat, g);
+    gachetteLit(etat, f);
     if (!branchee && !manetteVue) return;
     manetteVue = branchee;
     // ⚠️ SUR UN GESTE NEUF, pas sur un etat : un stick qui derive au repos, ou
@@ -691,6 +699,7 @@ const Entree = (function () {
       }
       s = zoneMorte(p.axes[AXES_DEFAUT[0]] || 0, p.axes[AXES_DEFAUT[1]] || 0);
       gachetteVise(etat, lirePedale(p, PEDALES_DEFAUT.gaz));
+      gachetteLit(etat, lirePedale(p, PEDALES_DEFAUT.frein));
     }
     for (const a in MAP_TOUCHES) poser(vCasque, a, etat[a]);
     // Les Touch se lisent toujours a la disposition par defaut (voir plus haut).
@@ -896,9 +905,16 @@ const Entree = (function () {
     lireSuitesActions();
   }
 
-  /** Ce qu'on lit sur les cinq boutons tactiles dans ce contexte-la. L'ecran
-      COMMANDES les montre tels quels : au doigt, le nom du bouton EST son geste. */
+  /** Ce qu'on lit sur les boutons tactiles dans ce contexte-la. L'ecran
+      COMMANDES les montre tels quels : au doigt, le nom du bouton EST son geste.
+      LIRE (la lecture des passants) ne sert qu'a pied : partout ailleurs, il s'eteint. */
   function etiquettes(nom) {
+    const e = etiquettesDesCinq(nom);
+    e.lire = e.saisir === 'SAISIR' ? 'LIRE' : '·';
+    return e;
+  }
+
+  function etiquettesDesCinq(nom) {
     // La NITRO (le garage de Ti-Guy) prend le bouton libre du volant, sur le char qui en a une.
     const v = typeof B !== 'undefined' && B.joueur && B.joueur.dansVehicule;
     const nitro = v && v.mods && v.mods.nitro ? 'NITRO' : '·';

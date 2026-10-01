@@ -117,6 +117,7 @@ const Jeu = (function () {
     Incendies.oublier();
     Explosions.oublier();                    // ni une chaine de chars en cours                     // une nouvelle partie n'hérite pas des feux éteints
     Frenesies.oublier();                     // ni d'une frénésie en cours
+    Lecture.oublier();                       // ni du passant qu'on lisait
     Decoration.oublier();                    // ni du juke-box d'une autre planque
     Devisser.oublier();                      // ni d'un tournevis à moitié tourné
     Interactions.oublier();                  // ni de la soif des fontaines
@@ -1186,6 +1187,7 @@ const Jeu = (function () {
         pas('vedette', Vedette.maj);       // sur l'eau, la vedette de police (les bateaux, vague 4)
         pas('incendies', Incendies.maj);
         pas('frenesies', Frenesies.maj);   // l'icône qu'on prend exprès, le chrono, le compte
+        pas('lecture', Lecture.maj);       // LIRE tenu : la ligne du passant qu'on regarde
         pas('suite', Suite.maj);               // la suite du paquet : redemandée si elle a raté
         pas('collections', Collections.maj);   // une carte de hockey par terre, qu'on ramasse en marchant dessus
         pas('devisser', Devisser.maj);         // le tournevis en cours, sous une enseigne, la nuit
@@ -1314,6 +1316,7 @@ const Jeu = (function () {
     Entites.dessiner(ctx, vue);
     Entites.dessinerCible(ctx, vue);
     Entites.dessinerParticules(ctx, vue);
+    Lecture.dessiner(ctx, vue);                        // LIRE tenu : la fiche du passant, au-dessus de tout le monde
     if (!B.interieur) Train.dessinerHaut(ctx, vue);    // le viaduc et ce qui y roule, le portail du tunnel : au-dessus des gens et des chars
     if (B.interieur) Tripot.dessinerFumee(ctx, vue);   // le tripot : la fumée qui traîne, le noir des coins — au-dessus des gens
     if (!B.interieur) Frenesies.dessiner(ctx, vue);    // le crâne d'une frénésie, au-dessus de sa ruelle
@@ -1647,7 +1650,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Souterrain: Souterrain, Entites: Entites, Combat: Combat, Techniques: Techniques, Rixe: Rixe, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Train: Train, Navette: Navette, Neige: Neige, Pluie: Pluie, Derapage: Derapage, Glace: Glace, Naufrage: Naufrage, Piscine: Piscine, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, RueDesSaisons: RueDesSaisons, Patinoire: Patinoire, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Territoires: Territoires, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Caisse: Caisse, Regate: Regate, Galeries: Galeries, Fetes: Fetes, Halloween: Halloween, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Collections: Collections, Suite: Suite, Decoration: Decoration, Puces: Puces, Interactions: Interactions, Police: Police, Vedette: Vedette, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Foyers: Foyers, FileDeFoire: FileDeFoire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Devisser: Devisser, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Photos: Photos, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, SurPlace: SurPlace, Chapitres: Chapitres, Jobs: Jobs, Biscuit: Biscuit, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Train: Train, Navette: Navette, Neige: Neige, Pluie: Pluie, Derapage: Derapage, Glace: Glace, Naufrage: Naufrage, Piscine: Piscine, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, RueDesSaisons: RueDesSaisons, Patinoire: Patinoire, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Territoires: Territoires, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Caisse: Caisse, Regate: Regate, Galeries: Galeries, Fetes: Fetes, Halloween: Halloween, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Lecture: Lecture, Collections: Collections, Suite: Suite, Decoration: Decoration, Puces: Puces, Interactions: Interactions, Police: Police, Vedette: Vedette, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Foyers: Foyers, FileDeFoire: FileDeFoire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Devisser: Devisser, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Photos: Photos, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, SurPlace: SurPlace, Chapitres: Chapitres, Jobs: Jobs, Biscuit: Biscuit, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, PORTRAITS: PORTRAITS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,

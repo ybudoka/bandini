@@ -130,6 +130,7 @@ le suivre, pas le précéder.
 | Type | Où ça vit | Forme | Notes d'écriture |
 |---|---|---|---|
 | **Répliques de rue** | `audio.py` (VOIX, quatre banques : `normal`, `peur`, `celebre`, `nuit`) + `interpretation.py` (JEU) | 2-3 mots (40 caractères au plus), une émotion, rarement une pause | Les passants qu'on frôle : une seule émotion, vite dite. ⚠️ Le champ `quand` dit **dans quel monde** on la dit — la rue a peur, on t'a vu dans le Clairon, il fait nuit. Quatre par genre et par banque, et on écrit dans celle qui manque : une réplique de plus est **une ligne** de plus (`_pa`). |
+| **Lignes de passant** | `app/lectures.py` (`LIGNES`, un lot par quartier) | un fait, puis la chute, deux rangées de 30 caractères au plus | Ce qu'on lit au-dessus d'un passant en tenant LIRE (le profilage de Watch Dogs). Muettes : écrites pour l'œil. De la **couleur**, jamais un fil à tirer (aucune mission ne les lit) ; une ligne de quartier nomme ce qui est à lui (Sal au Faubourg, Lulu aux Quais, Sifu Tam au Canton). Jamais sur un enfant. |
 | **Le crieur** | `audio.py` (`approchez_c`…) | 3 phrases courtes, pleine voix, « icitte » | Il vend, ne murmure jamais. |
 | **La fille de la Brume** | `audio.py` (`compagnie_b`…) + JEU | accroche douce, invitation | Elle accoste ; la pause est dans l'invitation, jamais dans le prix. |
 | **Radio La Brume** | `audio.py` (genre `radio_brume`) | animatrice de nuit, posée | « Il est minuit passé… sur le port. » |

@@ -58,7 +58,7 @@ from dataclasses import dataclass
 from . import (armes, audio, patinoire, blocs, calendrier, saisons, pluie, halloween, carte, demenagement, derby, enseignes, fetes, garage, motoneige, photos, quatre_roues, saint_jean, territoires, devantures, dojo, economie, mantes, garderobe, interactions, journal, magasins,
                brouillard, loto, machine_a_sous, manettes, tables_de_jeu, missions, nord, nuit, pietons, recherche, rixes, techniques, vehicules, verglas, videopoker,
                musique, pont_de_glace, visages)
-from . import collectionner, decoration, foyers, pliage
+from . import collectionner, decoration, foyers, lectures, pliage
 from .blocs import galeries as galeries_hantees
 from .version import VERSION
 
@@ -77,10 +77,12 @@ from .version import VERSION
 #:   se tait sans elles ;
 #: - leurs **voix** (`voix_de_la_suite`, `audio.series_de_la_suite`) : le journal, le 6/49, Louise et les
 #:   Galeries ne disent que ces textes-là. `Son.Voix.histoire()` les déplie à l'arrivée, et une banque encore
-#:   vide ne se marque pas chargée tant que la suite n'est pas là (`Son.Voix.chargerHistoire`).
+#:   vide ne se marque pas chargée tant que la suite n'est pas là (`Son.Voix.chargerHistoire`) ;
+#: - la **lecture des passants** (`lectures`) : on ne lit qu'en jeu, un bouton tenu, et `Lecture` se tait
+#:   sans elle (`test_lectures_js`).
 DANS_LA_SUITE: tuple[str, ...] = ("journal", "journal_speciales", "journal_lecons", "journal_matins",
                                   "photos", "galeries", "voix_de_la_suite",
-                                  "repliques_de_la_file", "klaxons", "patinoire")
+                                  "repliques_de_la_file", "klaxons", "patinoire", "lectures")
 
 #: Ce qu'une fiche de personnage porte et qu'aucun script ne lit : sa voix ElevenLabs (le nom de la voix,
 #: `audio.voix_*` la lit en Python pour générer ses mp3). 1 698 octets bruts / 658 gzip sur le paquet.
@@ -211,6 +213,8 @@ def assembler() -> dict:
         "scenes": {"ouverture": missions.SCENE_OUVERTURE},
         "repos": missions.REPOS,
         "journal": journal.REGLES,
+        # La lecture des passants (`lectures.py`) : une ligne par passant, au bouton tenu, dans la suite.
+        "lectures": lectures.exporter(),
         "journal_speciales": journal.SPECIALES,
         "journal_lecons": journal.LECONS,
         # Les matins calmes : les replis qui VARIENT quand rien n'est passe. Le

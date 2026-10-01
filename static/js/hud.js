@@ -1116,8 +1116,9 @@ const Hud = (function () {
       if (c === 'tourner') return { glyphes: [icone('stick', stickPousse)], pieces: ['stick'] };
       // ⚠️ VISER est la gachette du gaz, a pied (`Entree`, `gachetteVise`) : pas
       // un bouton du profil, la meme piece que GAZ sur la page du volant.
-      if (c === 'gaz' || c === 'frein' || c === 'verrouiller') {
-        const nom = c === 'frein' ? 'gachette_g' : 'gachette_d';
+      // LIRE, son pendant, est la gachette du frein (`gachetteLit`).
+      if (c === 'gaz' || c === 'frein' || c === 'verrouiller' || c === 'lire') {
+        const nom = c === 'frein' || c === 'lire' ? 'gachette_g' : 'gachette_d';
         return { glyphes: [glypheDePiece(nom, fam, undefined, etat)], pieces: [nom] };
       }
       const indices = Entree.profilManette().boutons[c] || [];

@@ -58,3 +58,32 @@ menu vide. C'est à Martin de dire si la ville en veut, et dans quelle vague.
 **Juges** : une ligne de passant ne pèse sur aucune mission (grep : aucun slug ne la lit) ;
 un enfant n'a jamais de profil ; la réputation ne change rien d'autre que la délation, et elle
 survit à une sauvegarde ; lire n'est jamais un objectif du catalogue.
+
+## Notes
+
+### Vague 1 — la lecture, livrée le 1er oct. 2026
+
+- **Le geste** : on **tient** LIRE — Y au clavier (au-dessus de H, VISER), la **gâchette de gauche** à pied à la
+  manette (`Entree.gachetteLit`, le pendant de VISER à droite ; au volant elle reste le frein), le bouton **LIRE** au
+  doigt (au-dessus d'ARME ; il s'éteint hors de la marche). L'écran COMMANDES le montre à la page À PIED (« LIRE UN
+  PASSANT »). On lâche, la fiche s'en va.
+- **Qui on lit** (`static/js/lecture.js`) : celui qu'on vise s'il est lisible, sinon le plus proche dans le regard
+  (40° de chaque côté, 120 px, une ligne de vue). Tant qu'on tient, la fiche **ne saute pas** d'une tête à l'autre
+  (elle garde sa cible jusqu'à 160 px). Jamais **un enfant** — ni un intouchable, ni un corps d'enfant, ni un ado :
+  les lignes sont écrites pour des grandes personnes —, ni un personnage, une bête, un figurant de mission. Au volant,
+  rien.
+- **Sa ligne** : le lot de son **quartier** (la zone de la ville sous ses pieds ; dans une pièce, celle de la porte
+  passée ; un bloc ou la baie n'ont rien à dire), **à l'empreinte** de son identifiant (`hash2`, jamais `B.rng`), et
+  il la **garde** (`e.lecture`) : il ne change pas d'histoire en traversant une rue.
+- **66 lignes** (`app/lectures.py`) : neuf au Faubourg, huit aux Érables, à la Shop, aux Quais, à La Pointe, au
+  Petit-Canton et à la Gare, trois aux Friches, sur l'île et à l'aéroport. Un fait, puis la chute ; on frappe en
+  haut (Sal, Prévost, les gangs). Muettes : écrites pour l'œil, pas de voix.
+- **Rien ne se gagne** : `Lecture` ne touche ni la partie ni le passant (il ne s'arrête pas, ne se retourne pas), et
+  aucune mission ni aucun objectif ne la lit (juge par grep).
+- **Le poids** : les lignes voyagent dans la **suite** du paquet (`DANS_LA_SUITE`, après l'écran titre) — 3 641 bruts,
+  1 914 gzip. La suite passe à 28 533 / 11 844 ; plafond relevé de 25 000 → 29 000 bruts et 10 500 → 12 500 gzip,
+  **tranché par Martin** le 1er oct. 2026. Sans la suite, tenir LIRE ne fait rien et ne lève rien.
+- **Juges** : `test_lectures.py` (7) et `test_lectures_js.py` (11, au clavier, à la manette, au doigt) ; douze
+  mutations, toutes mordues (le cône, la garde de la cible, les enfants, le dé, la ligne gardée, le volant, le
+  relâchement, la peinture, la gâchette, un passant qu'on dérange, la suite absente, la touche). Le bouton tactile
+  est mesuré avec les autres (`test_navigateur`, aucun chevauchement).

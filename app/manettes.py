@@ -233,6 +233,7 @@ PAGES_COMMANDES = [
         {"c": "esquive", "texte": "SPRINT"},
         {"c": "arme", "texte": "ARME · TENU : ROUE"},
         {"c": "verrouiller", "texte": "VISER UNE CIBLE"},
+        {"c": "lire", "texte": "LIRE UN PASSANT"},
         {"c": "carte", "texte": "CARTE"},
         {"c": "pause", "texte": "PAUSE"},
         {"c": "muet", "texte": "SON"},

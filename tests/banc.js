@@ -175,7 +175,7 @@ function banc(corps) {
                       urlCompte: '/api/compte/', urlDefi: '/api/defi' };
   elements.bandini = bandini;
   const tactile = faireElement('div', 'tactile');
-  const boutonsTactiles = ['attaque', 'action', 'esquive', 'arme', 'pause', 'plein'].map(function (a) {
+  const boutonsTactiles = ['attaque', 'action', 'esquive', 'arme', 'pause', 'plein', 'lire'].map(function (a) {
     const b = faireElement('b'); b.dataset.a = a; return b;
   });
   tactile.querySelectorAll = function (sel) { return sel.indexOf('data-a') >= 0 ? boutonsTactiles : []; };

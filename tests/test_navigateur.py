@@ -491,8 +491,9 @@ def test_les_commandes_tactiles_sont_grandes_et_visibles(browser, serveur):
     assert page.evaluate("window.BANDINI.Hud.ancres().filter(a => a.nom === 'commandes').length") >= 6
     assert page.evaluate("document.body.classList.contains('tactile')")
     # SAISIR (les projections, 25 sept. 2026) : un peu plus petit, c'est un geste de moins souvent.
+    # LIRE (la lecture des passants, 1er oct. 2026) : on le tient, il n'a pas besoin d'être gros.
     for action, minimum in (("attaque", 64), ("action", 64), ("esquive", 64), ("arme", 64), ("saisir", 56),
-                            ("pause", 44)):
+                            ("lire", 48), ("pause", 44)):
         boite = page.locator(f'#tactile b[data-a="{action}"]').bounding_box()
         assert boite, action
         assert boite["width"] >= minimum and boite["height"] >= minimum, (action, boite)
@@ -505,7 +506,7 @@ def test_les_commandes_tactiles_sont_grandes_et_visibles(browser, serveur):
     # qui frappe quand il voulait courir. Le defaut s'etait glisse entre
     # ACTION et COURS sans que rien ne le dise.
     boites = {a: page.locator(f'#tactile b[data-a="{a}"]').bounding_box()
-              for a in ("attaque", "action", "esquive", "arme", "saisir", "pause", "plein")}
+              for a in ("attaque", "action", "esquive", "arme", "saisir", "lire", "pause", "plein")}
     boites["croix"] = croix
     noms = sorted(boites)
     for i, un in enumerate(noms):

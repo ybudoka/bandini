@@ -519,9 +519,15 @@ def test_le_paquet_reste_leger(paquets):
     sur le réseau, c'est le gzip, et lui garde son plafond (57 500) et sa garde par clé (`MESURE_DU_PAQUET`).
     Proposé à Martin : une cure 3 (plier les missions en colonnes, sortir les défis et les comptoirs) ou relever
     le brut — il a relevé.
+
+    ⚠️ **LA LECTURE DES PASSANTS, LE 1er OCT. 2026 — LA SUITE : 25 000 → 29 000 BRUTS, 10 500 → 12 500 GZIP, TRANCHÉ
+    PAR MARTIN** (docs/jalons/la-reputation-et-la-lecture-des-passants.md). Les 66 lignes de passants (`lectures`,
+    3 641 bruts, 1 914 gzip seules) mènent la suite à 28 533 bruts et 11 844 gzip. Elle part après l'écran titre, en
+    arrière-plan : le démarrage ne bouge pas. Proposé à Martin : relever, une requête à part, ou moins de lignes — il
+    a relevé.
     """
     for nom, brut_max, fil_max in (("definitions", 255_000, 57_500), ("carte", 562_000, 55_000),
-                                   ("musiques", 50_000, 10_000), ("suite", 25_000, 10_500)):
+                                   ("musiques", 50_000, 10_000), ("suite", 29_000, 12_500)):
         paquet = getattr(paquets, nom)
         mesures = {"definitions": MESURE_DU_PAQUET, "carte": MESURE_DE_LA_CARTE}
         qui = f" — qui a grossi : {_qui_a_grossi(paquet.corps, mesure=mesures[nom])}" if nom in mesures else ""
