@@ -1880,8 +1880,8 @@ const Son = (function () {
         brouillard, verglas } (`audio.METEOS`). Lu dans les fonctions pures du jour et
         de l'heure, jamais dans ce que voit le joueur : le juke-box de la planque
         entend la meme radio que l'autoradio, et il pleut dehors meme quand on est
-        dedans. ⚠️ Le brouillard et le verglas vivent derriere leur option : eteinte,
-        ils n'arrivent pas — et la radio ne les annonce pas. */
+        dedans. ⚠️ Le brouillard vit derriere son option : eteinte, il n'arrive pas — et la
+        radio ne l'annonce pas. Le verglas tombe pour tout le monde (les saisons, lot 6). */
     ciel: function () {
       const p = B.partie, o = B.options || {};
       const c = { pluie: false, neige: false, brouillard: false, verglas: false };
@@ -1890,7 +1890,7 @@ const Son = (function () {
         c.pluie = typeof Pluie !== 'undefined' && Pluie.intensiteA(j, h) > 0;
         c.neige = typeof Neige !== 'undefined' && Neige.intensiteA(j, h) > 0;
         c.brouillard = !!o.brouillard && typeof Brouillard !== 'undefined' && Brouillard.intensiteA(j, h) > 0;
-        c.verglas = !!o.verglas && typeof Verglas !== 'undefined' && Verglas.intensiteA(j, h) > 0;
+        c.verglas = typeof Verglas !== 'undefined' && Verglas.intensiteA(j, h) > 0;
       }
       c.beau = !(c.pluie || c.neige || c.brouillard || c.verglas);
       return c;

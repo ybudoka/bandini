@@ -8,18 +8,20 @@ brouillard (`brouillard.py`). Tout est une fonction du JOUR et de l'HEURE (`Verg
 `Verglas.quartiersNoirsA`) : rien à simuler, aucun dé, et deux joueurs ont la même tempête le même
 jour. Les quartiers au noir se tirent à l'EMPREINTE de la tempête et du jour, pas au tirage.
 
-⚠️ **DERRIÈRE UNE OPTION**, NON par défaut (« VERGLAS (ESSAI) »), comme la neige et le brouillard :
-sans elle, l'intensité vaut 0, et 0 ne change rien — l'adhérence est multipliée par 1, la police voit
-comme avant, les lampes brillent, rien ne se peint.
+⚠️ **POUR TOUT LE MONDE, LES DERNIERS JOURS DE MARS** (les quatre saisons, lot 6, vague 6b — Martin,
+29 sept. 2026) : l'option « VERGLAS (ESSAI) » a disparu, comme celle de la neige. Hors de ses jours,
+l'intensité vaut 0, et 0 ne change rien — l'adhérence est multipliée par 1, la police voit comme avant,
+les lampes brillent, rien ne se peint. Ces soirs-là, la pluie verglaçante prend la place de la tempête de
+neige (`Neige.intensiteA`).
 """
 
 from __future__ import annotations
 
-#: Quand. ⚠️ Trois jours de suite au jour `premier`, puis tous les `tous_les` jours : une partie
-#: ordinaire la vit une fois, une longue partie la revoit. La pluie verglaçante prend dans la nuit du
+#: Quand. ⚠️ Trois jours de suite au jour `premier`, puis tous les `tous_les` jours : les trois derniers
+#: jours de mars (8, 9 et 10 de l'année, `calendrier.MOIS`), chaque année du jeu. La pluie verglaçante prend dans la nuit du
 #: premier jour (pleine à `arrive_h`) ; la glace fond le soir du dernier (de `fond_h` à minuit).
 TEMPETE = {
-    "premier": 9,
+    "premier": 8,
     "jours": 3,
     "tous_les": 40,
     "arrive_h": 3.0,

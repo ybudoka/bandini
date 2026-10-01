@@ -10,7 +10,7 @@ année pour tout le monde. Le jour 1 d'une partie est le premier janvier.
 
 ⚠️ **SEULS LES JALONS QUI LA LISENT EN DÉPENDENT** : la neige ne tombe que l'hiver (depuis le
 29 sept. 2026, pour tout le monde), la ville change de couleur avec elle (`saisons.py`) ; le verglas
-garde ses jours (9 à 11) et son option.
+tombe les trois derniers jours de mars (8 à 10), pour tout le monde (les saisons, lot 6, vague 6b).
 """
 
 from __future__ import annotations

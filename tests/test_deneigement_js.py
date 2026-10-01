@@ -62,7 +62,9 @@ def test_elle_s_annonce_ou_elle_n_arrive_pas(banc):
         L.Jeu.commencer();
         const N = L.Neige, t = N.donnees().tempete;
         let annonceDepuis = null, pire = Infinity, nuits = 0, avant = null;
-        for (let jour = 1; jour < t.premier + 3 * t.tous_les + 3; jour++) {
+        // ⚠️ Tout un hiver et le debut du suivant : depuis la glace (lot 6, vague 6b), le soir du 8 est au verglas,
+        // pas a la neige — janvier n'a plus que deux tempetes, et les autres sont en decembre.
+        for (let jour = 1; jour < 46; jour++) {
             for (let m = 0; m < 24 * 60; m += 5) {
                 const op = N.operationA(jour, m / 60 / 24), temps = jour * 24 + m / 60;
                 if (op && !op.enCours && annonceDepuis === null) annonceDepuis = temps;

@@ -4697,6 +4697,7 @@ const Entites = (function () {
     const veutSprinter = ent.bas('esquive');
     const marche = axe.source !== 'clavier' && axe.mag < 0.6;
     let vitesse = marche ? v.joueur_marche : v.joueur_course;
+    let sprinte = false;   // il court vraiment (ESQUIVE tenue, du souffle) : la glace noire le fait glisser
     // ⚠️ Le cafe allonge le sprint, il ne l'accelere PAS : `joueur_sprint`
     // reste ce qu'il est, seule la DEPENSE baisse. La minuterie, elle,
     // s'ecoule dans `Missions.maj` — meme au volant.
@@ -4726,7 +4727,7 @@ const Entites = (function () {
       j.endurance = Math.max(0, j.endurance - (cout - surSurplus));
       if (j.endurance <= 0 && (j.surplus || 0) <= 0) { noyade(j); return; }
     } else if (veutSprinter && !j.nage && axe.mag > 0 && (j.endurance > 0 || j.surplus > 0)) {
-      vitesse = v.joueur_sprint;
+      vitesse = v.joueur_sprint; sprinte = true;
       // ⚠️ Le SURPLUS part en premier : c'est la seule part de cette barre
       // qu'on ne peut pas reprendre en s'arretant, donc la seule qui vaille ce
       // qu'on l'a payee au comptoir. La base, elle, remonte toute seule.
@@ -4767,6 +4768,8 @@ const Entites = (function () {
     // LA GLACE DE LA PATINOIRE (`Patinoire.glisser`) : la vitesse voulue se rejoint peu a peu — l'elan, le
     // virage large, l'arret long ; courir dessus sans patins, ou virer sec lance, et on tombe.
     if (typeof Patinoire !== 'undefined' && !j.nage && Patinoire.glisser(j, veutSprinter && axe.mag > 0)) return;
+    // LA GLACE NOIRE de l'hiver (`Glace`, vague 6b) : courir sur une plaque fait glisser, puis tomber. On y marche.
+    if (typeof Glace !== 'undefined' && !j.nage && !j.otage && Glace.glisserAPied(j, sprinte, vxAvant, vyAvant)) return;
     // Pousser contre un grillage, c'est vouloir l'enjamber : une seconde en
     // haut, sans frapper, sans tirer, sans courir — et une cible immobile.
     if (axe.mag > 0 && !j.nage && enjamber(j, j.vx, j.vy)) { return; }
@@ -5146,6 +5149,8 @@ const Entites = (function () {
     // Il fait la file de la foire : c'est elle qui le pose, image par image (`FileDeFoire`).
     if (e.enFile) { e.vx = 0; e.vy = 0; return; }
     if (e.partenaire) { majKevin(e); return; }
+    // Tombe sur la glace noire (`Glace.faitTomber`) : il reste couche un moment, puis reprend ce qu'il faisait.
+    if (typeof Glace !== 'undefined' && Glace.aTerre(e)) return;
     // ⚠️ Lu sous les pieds a chaque image, pour tout le monde : c'est ce qui
     // decide du masque, du dessin, et de la vitesse d'un agent a la nage.
     mouiller(e);
@@ -5560,6 +5565,8 @@ const Entites = (function () {
     const surLeTrottoir = cycliste && roulableEnfant(Math.floor(e.x / TT), Math.floor(e.y / TT));
     if (cycliste) resterSurLeTrottoir(e);
     if (typeof Patinoire !== 'undefined') Patinoire.glisser(e, false);   // sur la glace, la vitesse se prend peu a peu
+    // Il se sauve en courant sur une plaque de glace noire : il tombe (`Glace.faitTomber`, a l'empreinte, sans un de).
+    if (typeof Glace !== 'undefined' && Glace.faitTomber(e)) return;
     deplacerCercle(e, e.vx, e.vy, masqueDe(e));
     dansLaCarte(e);
     // ⚠️ La regle dure de l'enfant a velo : un pas qui le mettrait sur la rue ne

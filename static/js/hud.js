@@ -745,7 +745,6 @@ const Hud = (function () {
       bascule('daltonien', 'PALETTE DALTONIENNE'),
       bascule('trace', 'TRACE DES VÉHICULES'),
       bascule('brouillard', 'BROUILLARD (ESSAI)'),
-      bascule('verglas', 'VERGLAS (ESSAI)'),
       // ⚠️ Retour de Martin : vue de dessus, on n'est pas assis dans l'auto. Le
       // volant d'une vraie auto (l'arriere part du cote ou l'on tourne) ne colle
       // a l'ecran que nez en haut ; COMME EN AVANT, droite tourne toujours dans

@@ -4,7 +4,7 @@
    ⚠️ UNE PURE FONCTION DU JOUR : le jour 1 d'une partie est le premier janvier, et la meme annee
    revient tous les quarante jours, pour tout le monde. Rien a sauvegarder, aucun de. Ce sont les
    jalons qui la LISENT (le pont de glace, la motoneige, la Saint-Jean, le cine-parc…) qui en
-   dependent — la neige et le verglas gardent leurs jours. */
+   dependent — la neige tombe l'hiver, et le verglas les trois derniers jours de mars. */
 
 const Calendrier = (function () {
   'use strict';

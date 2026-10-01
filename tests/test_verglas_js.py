@@ -2,18 +2,22 @@
 
 Trois jours, les mêmes pour tout le monde ; des quartiers au noir (plus une lampe allumée) qui se
 rallument quand ça fond ; les chars glissent ; la police voit moins loin et tarde ; des génératrices à
-livrer, en camion, pendant la tempête seulement ; le Clairon l'annonce. Derrière son option : éteinte,
-elle n'existe pas.
+livrer, en camion, pendant la tempête seulement ; le Clairon l'annonce. Depuis les quatre saisons (lot 6,
+vague 6b), plus d'option : il tombe les trois derniers jours de mars, pour tout le monde — hors de ses
+jours, il n'existe pas.
 """
 
 from app import verglas
 
-#: Un jour de tempete (le deuxieme, le plein), la nuit, l'option allumee ou non.
+#: Un jour de tempete (le deuxieme, le plein), la nuit — ou, `allumee` faux, un jour de decembre sans neige ni
+#: verglas (l'option n'existe plus : hors de ses jours, il n'y a pas de verglas ; et l'avant-veille, le 6, garde la
+#: neige de la tempete du 5). ⚠️ La glace noire de l'hiver (`Glace`, vague 6b) est coupee : on juge le verglas,
+#: pas les plaques qui pourraient se trouver sous le char ou le passant.
 TEMPETE = """
   function tempete(L, allumee, jour, heure) {
     const B = L.B;
-    B.options.verglas = allumee;
-    B.partie.jour = jour === undefined ? B.defs.verglas.tempete.premier + 1 : jour;
+    L.Glace.couper(true);
+    B.partie.jour = jour === undefined ? (allumee ? B.defs.verglas.tempete.premier + 1 : 37) : jour;
     B.partie.heure = heure === undefined ? 23 / 24 : heure;
     L.Verglas.oublier();
   }
@@ -42,19 +46,19 @@ def test_les_memes_trois_jours_pour_tout_le_monde_puis_ca_fond(banc):
     assert r["noirs"][0] == r["noirs"][1] and len(r["noirs"][0]) == verglas.PANNES["par_jour"][1], r["noirs"]
 
 
-def test_eteint_il_n_existe_pas(banc):
+def test_hors_de_ses_jours_il_n_existe_pas(banc):
     r = banc("function (L, o) {" + TEMPETE + """
         L.Jeu.commencer();
         tempete(L, false);
         const V = L.Verglas;
-        return { option: L.B.options.verglas, i: V.intensite(), adh: V.adherence(), vision: V.vision(),
+        return { option: 'verglas' in L.B.options, i: V.intensite(), adh: V.adherence(), vision: V.vision(),
                  retard: V.retardPolice(), noirs: V.quartiersNoirs().size, clairon: V.ligneDuClairon() };
     }""")
     assert r == {"option": False, "i": 0, "adh": 1, "vision": 1, "retard": 1, "noirs": 0, "clairon": None}, r
 
 
 def test_un_quartier_au_noir_n_a_plus_une_lampe_et_tout_se_rallume_apres(banc):
-    """La nuit, la caméra sur une lampe d'un quartier au noir : sans l'option, des lampes de ce
+    """La nuit, la caméra sur une lampe d'un quartier au noir : un soir sans verglas, des lampes de ce
     quartier brillent ; pendant la tempête, plus une ; le lendemain de la fonte, elles reviennent. Et
     la nuit y est plus noire — pas ailleurs."""
     r = banc("function (L, o) {" + TEMPETE + """

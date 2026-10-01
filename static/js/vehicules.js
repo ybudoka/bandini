@@ -1133,13 +1133,22 @@ const Vehicules = (function () {
     // ⚠️ UNE COQUE N'EST PAS UN CHAR (les bateaux, vague 1) : pas de frein ni de frein a main — l'arriere
     // met la machine en arriere —, la meteo de la rue ne touche pas l'eau, et elle pivote au tiers avant.
     const eau = !!d.eau;
+    // ⚠️ CE QUE LE SOL TIENT : la neige et la glace (que les PNEUS D'HIVER de Ti-Guy rendent en partie),
+    // la rue mouillee, la pluie. Au sec, 1 — et le DERAPAGE (`Derapage`, les saisons, lot 6) ne
+    // s'eveille que sous 1 : au sec, la conduite ne change pas d'un pixel.
+    // ⚠️ La glace de la patinoire (`Patinoire.adherence`) : un char entre par la porte de service, et glisse.
+    // ⚠️ La GLACE NOIRE de l'hiver (`Glace`, vague 6b) : le MINIMUM avec la neige et le verglas, comme le frein.
+    const g = eau ? 1 : Garage.hiver(v, Math.min(Neige.adherence(v) * Verglas.adherence() * (typeof Patinoire !== 'undefined' ? Patinoire.adherence(v) : 1), Glace.adherence(v))) * Monde.adherenceMouillee(v) * Pluie.adherence(v);
+    const perte = 1 - Math.min(1, g);
     // ⚠️ La nitro pousse l'acceleration du meme facteur que la pointe : la pointe est un equilibre avec
     // la friction, et une pointe relevee sans acceleration ne s'atteint jamais.
     if (cmd.gaz > 0) v.vitesse += d.acceleration * sol * cmd.gaz * Garage.pointe(v);
     if (eau) {
       if (cmd.frein > 0) v.vitesse -= d.acceleration * ph.machine_arriere * cmd.frein;
     } else if (cmd.frein > 0) {
-      if (v.vitesse > 0.15) v.vitesse -= d.frein * cmd.frein * Garage.hiver(v, Neige.frein(v) * Verglas.frein() * (typeof Patinoire !== 'undefined' ? Patinoire.frein(v) : 1)) * Monde.freinMouille(v) * Pluie.frein(v);
+      // ⚠️ La GLACE NOIRE (`Glace`, vague 6b) est un frein, pas un facteur : le MINIMUM avec la neige et le verglas
+      // (une plaque sous la tempete ne glisse pas deux fois). Hors d'une plaque, `Glace.frein` vaut 1 : rien ne change.
+      if (v.vitesse > 0.15) v.vitesse -= d.frein * cmd.frein * Garage.hiver(v, Math.min(Neige.frein(v) * Verglas.frein() * (typeof Patinoire !== 'undefined' ? Patinoire.frein(v) : 1), Glace.frein(v))) * Monde.freinMouille(v) * Pluie.frein(v);
       else v.vitesse -= d.acceleration * 0.7 * cmd.frein;      // marche arriere
     }
     const freinMain = cmd.freinMain && !eau;
@@ -1149,12 +1158,6 @@ const Vehicules = (function () {
     v.vitesse = borner(v.vitesse, -d.vitesse_recul, d.vitesse_max * sol * Garage.pointe(v));
     if (Math.abs(v.vitesse) < 0.02 && !cmd.gaz && !cmd.frein) v.vitesse = 0;
     const t = v.vitesse / d.vitesse_max;
-    // ⚠️ CE QUE LE SOL TIENT : la neige et la glace (que les PNEUS D'HIVER de Ti-Guy rendent en partie),
-    // la rue mouillee, la pluie. Au sec, 1 — et le DERAPAGE (`Derapage`, les saisons, lot 6) ne
-    // s'eveille que sous 1 : au sec, la conduite ne change pas d'un pixel.
-    // ⚠️ La glace de la patinoire (`Patinoire.adherence`) : un char entre par la porte de service, et glisse.
-    const g = eau ? 1 : Garage.hiver(v, Neige.adherence(v) * Verglas.adherence() * (typeof Patinoire !== 'undefined' ? Patinoire.adherence(v) : 1)) * Monde.adherenceMouillee(v) * Pluie.adherence(v);
-    const perte = 1 - Math.min(1, g);
     // ⚠️ LE VOLANT SE TOURNE, il ne se claque pas : il prend vers la consigne
     // et se recentre quand on lache. Au clavier, sans ca, chaque appui etait
     // un coup de butee a butee.
@@ -3314,14 +3317,27 @@ const Vehicules = (function () {
       face. Ici il tourne AU centre de la tuile, comme un tramway. */
   function rouler(v, vitesseVoulue) {
     const d = v.def;
-    if (v.vitesse < vitesseVoulue) v.vitesse = Math.min(vitesseVoulue, v.vitesse + d.acceleration * 1.5);
-    else v.vitesse = Math.max(vitesseVoulue, v.vitesse - d.frein * 1.5);
+    // ⚠️ SUR LA GLACE NOIRE (`Glace.surRails`, vague 6b), il patine au depart et freine long — mais il reste sur
+    // ses rails : `pas` ne depasse jamais la cible, donc ni la ligne d'arret ni sa voie. La police en poursuite
+    // n'y glisse pas (`surRails` rend null). Hors de la glace : null, et rien ne change.
+    // ⚠️ Devant un PIETON (le passant, le joueur a pied), le frein reste plein : sur la glace, l'auto arrivait sur
+    // lui au-dessus de la vitesse qui renverse (la relecture : 1,26 px/image pour 1,2) — on ne fauche pas les gens.
+    const glace = aPied(v.devant) ? null : Glace.surRails(v);
+    let freine = false;
+    if (v.vitesse < vitesseVoulue) v.vitesse = Math.min(vitesseVoulue, v.vitesse + d.acceleration * 1.5 * (glace ? glace.accel : 1));
+    else {
+      v.vitesse = Math.max(vitesseVoulue, v.vitesse - d.frein * 1.5 * (glace ? glace.frein : 1));
+      freine = !!glace && v.vitesse > vitesseVoulue + 0.2;
+    }
     if (!v.cible) { v.vx = 0; v.vy = 0; return; }
     const dx = v.cible.x - v.x, dy = v.cible.y - v.y;
     const dist = Math.hypot(dx, dy);
     if (dist < 0.01 || v.vitesse <= 0) { v.vx = 0; v.vy = 0; return; }
     const pas = Math.min(dist, v.vitesse);
     v.vx = dx / dist * pas; v.vy = dy / dist * pas;
+    // La caisse qui chasse un peu, sur la glace, quand il freine — et seulement tant qu'il AVANCE : le cap la reprend
+    // juste en dessous, et une auto arretee a la ligne ne reste pas de travers (la relecture).
+    if (freine) v.angle += Glace.roulis(v, glace.g) * Math.max(0, Math.min(1, pas - 0.6));
     // Le cap suit la route, en douceur : on VOIT le char tourner.
     const voulu = Math.atan2(dy, dx);
     v.angle += ecartAngle(v.angle, voulu) * 0.3;

@@ -184,6 +184,9 @@ def test_en_courant_on_ne_seme_pas_un_agent_mais_en_sprintant_on_gagne_du_terrai
     r = banc(AGENT + """
         L.Jeu.commencer();
         const j = L.B.joueur;
+        // ⚠️ La glace noire de janvier (les saisons, lot 6, vague 6b) : un sprint qui croise une plaque glisse et
+        // tombe. Ce juge mesure l'endurance, pas l'hiver — la glace se juge dans `test_glace_js.py`.
+        L.Glace.couper(true);
         // Une ligne droite degagee : on fuit vers l'est sans buter sur la ville.
         function fuir(sprint) {
             const d = o.ligneDroite();

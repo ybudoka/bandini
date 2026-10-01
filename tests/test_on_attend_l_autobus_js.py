@@ -90,6 +90,10 @@ def test_l_autobus_s_arrete_pour_eux_ils_montent_et_descendent_plus_loin(banc, g
     Le seul vrai défaut était dans le jeu : un voyageur bousculé ne montait plus et
     gardait sa marque (`Autobus.renoncerALAttente`)."""
     reglage = "" if graine is None else "L.graine(%d);" % graine
+    # ⚠️ La glace noire de janvier (les saisons, lot 6, vague 6b) : le trafic y démarre en patinant, l'autobus suit
+    # derrière, et le voyageur de la graine 2 n'arrivait plus dans les 12 000 images (comme celui de la graine 5 avec
+    # la neige). Ce juge mesure l'abribus, pas l'hiver : la glace est coupée (`Glace.couper`), la neige reste.
+    reglage += "L.Glace.couper(true);"
     r = banc("function (L, o) {" + PREPARER.replace("L.Jeu.commencer();", "L.Jeu.commencer();" + reglage) + """
         const p = preparer(L, o);
         for (let i = 0; i < 40; i++) { o.frame(1); tenir(L, p); }

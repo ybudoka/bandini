@@ -246,6 +246,10 @@ def test_deux_rames_qui_se_croisent_au_coin_ne_s_impassent_pas(banc):
     poussée par celle qui attendait, sortait de ses rails."""
     r = banc("function (L, o) {" + RAME + COIN + """
         L.Jeu.commencer();
+        // ⚠️ La glace noire de janvier (les saisons, lot 6, vague 6b) ralentit le trafic devant les rames : ce juge
+        // tient deja par la graine sur la base (douze graines : 2 impasses de 387 images, 2 fois aucune croisee), et en
+        // janvier les rames ne se croisaient plus au coin dans les 4 200 images. Il juge le coin, pas l'hiver.
+        L.Glace.couper(true);
         const c = coin(L), T = ligneT(L), inter = c.inter;
         const m = rame(L, o, c.i - 24);
         const j = L.B.joueur;

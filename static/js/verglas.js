@@ -7,7 +7,8 @@
    au noir sont des fonctions du jour et de l'heure (`intensiteA`, `quartiersNoirsA`) : rien a
    simuler, aucun de, rien a sauvegarder — et « tout se rallume apres » n'a rien a defaire.
 
-   ⚠️ DERRIERE UNE OPTION (`B.options.verglas`, NON par defaut). Sans elle, `intensite()` rend 0, et
+   ⚠️ POUR TOUT LE MONDE, LES DERNIERS JOURS DE MARS (les quatre saisons, lot 6, vague 6b : l'option
+   « VERGLAS (ESSAI) » a disparu, comme celle de la neige). Hors de ses jours, `intensite()` rend 0, et
    0 ne change rien : chaque coefficient vaut 1, aucune lampe ne s'eteint, rien ne se peint. */
 
 const Verglas = (function () {
@@ -35,11 +36,11 @@ const Verglas = (function () {
     return 1;
   }
 
-  /** La glace, maintenant : 0 sans l'option, ou par beau temps. ⚠️ Pas de garde « dedans » : c'est
-      la ville qui glisse, et une piece n'a ni chars ni lampes de rue. */
+  /** La glace, maintenant : 0 hors de ses jours. ⚠️ Pas de garde « dedans » : c'est la ville qui
+      glisse, et une piece n'a ni chars ni lampes de rue. */
   function intensite() {
     // ⚠️ Au sous-sol du garage (`Monde.aLAbri`), le beton reste sec : ni chars de rue, ni ciel.
-    if (!B.options || !B.options.verglas || !B.partie || Monde.aLAbri()) return 0;
+    if (!B.partie || Monde.aLAbri()) return 0;
     return intensiteA(B.partie.jour, B.partie.heure);
   }
 
@@ -177,7 +178,7 @@ const Verglas = (function () {
   /** Ce que le Clairon ecrit ce matin : l'annonce la veille, les quartiers au noir pendant. */
   function ligneDuClairon() {
     const d = donnees(), p = B.partie;
-    if (!d || !B.options || !B.options.verglas || !p) return null;
+    if (!d || !p) return null;
     const r = rangA(p.jour);
     if (!r) return rangA(p.jour + 1) && rangA(p.jour + 1).k === 0 ? d.clairon.veille : null;
     const noms = quartiersNoirsA(p.jour).map(function (s) {

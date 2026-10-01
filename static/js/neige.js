@@ -31,11 +31,16 @@ const Neige = (function () {
 
   function donnees() { return B.defs && B.defs.carte && B.defs.carte.neige; }
 
+  /** Un jour de VERGLAS (les derniers jours de mars, pour tout le monde depuis les saisons, lot 6) : ces
+      soirs-la, la pluie verglacante prend la place de la tempete de neige. Pure. */
+  function verglasCeJourLa(jour) { return typeof Verglas !== 'undefined' && !!Verglas.rangA(jour); }
+
   /** La tempete ce jour-la, a cette heure (0 a 1 de la journee) : 0 rien, 1 pleine. Pure. */
   function intensiteA(jour, heure) {
     const d = donnees();
     if (!d) return 0;
     if (Calendrier.saison(jour) !== 'hiver') return 0;          // la saison, pas une option (29 sept. 2026)
+    if (verglasCeJourLa(jour)) return 0;                         // la pluie verglacante tombe a sa place
     const t = d.tempete, h = heure * 24;
     if (jour < t.premier || (jour - t.premier) % t.tous_les !== 0) return 0;
     if (h < t.debut_h || h >= t.fin_h) return 0;
@@ -52,6 +57,7 @@ const Neige = (function () {
   function rangDeTempete(jour) {
     const t = donnees().tempete;
     if (Calendrier.saison(jour) !== 'hiver') return -1;       // pas de tempete : rien a deblayer
+    if (verglasCeJourLa(jour)) return -1;                     // le verglas, pas la neige : rien a deblayer
     if (jour < t.premier || (jour - t.premier) % t.tous_les !== 0) return -1;
     return (jour - t.premier) / t.tous_les;
   }

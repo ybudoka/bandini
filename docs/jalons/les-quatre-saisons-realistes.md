@@ -1127,8 +1127,8 @@ modèle ne s'éveille que sous une adhérence de 1 (neige, glace, pluie, gadoue,
   court sur la glace glisse et tombe, le joueur compris. **Le verglas** : son option disparaît, comme celle de
   la neige, et il tombe les derniers jours de mars, pour tout le monde (Martin, 29 sept. 2026).
 - **Vague 6c — la ville glisse aussi** : un char du trafic qui freine sur la glace glisse un peu et finit
-  ARRÊTÉ, jamais perdu hors de sa voie (pas de glissade pour la police en pleine poursuite) ; les bancs de
-  neige (lot 4) enlisent — les roues patinent, on recule, on repart.
+  ARRÊTÉ, jamais perdu hors de sa voie (pas de glissade pour la police en pleine poursuite) — _fait avec la 6b, le
+  1er oct. 2026 (sur ses rails)_ ; les bancs de neige (lot 4) enlisent — les roues patinent, on recule, on repart.
 - **Les courses et les défis chronométrés** d'un jour d'hiver deviennent plus durs : gardé (Martin) ; les
   records déjà battus restent.
 - **Juges** : au sec, la même trajectoire au pixel que l'ancien modèle ; sur la glace, un char lancé en courbe
@@ -1515,3 +1515,92 @@ glace et le dérapage (lot 6) restent en dernier, à part._
   sentir et rattraper ; les réglages sont en tête de `static/js/derapage.js` (`REGLAGES`). Sous la pluie, une rue mouillée ne crisse
   ni ne marque (voulu : le crissement est le son du sec).
 
+
+### Lot 6, vague 6b — la glace (livrée le 1er oct. 2026)
+
+- **Où** (`static/js/glace.js`, ses réglages en tête du fichier, hors du paquet comme ceux du dérapage) : une plaque
+  au plus par cellule de 6 × 6 tuiles, une cellule sur quatre — 527 plaques dans la ville, à l'empreinte de leur
+  cellule : sur la chaussée (une sur deux, quand la cellule en a une, sur la **ligne d'arrêt**, là où les chars
+  polissent la neige — 67 en tout), sur les **trottoirs** (une sur trois), et huit sur le **tablier du pont de La
+  Pointe**, qui gèle avant tout. Une plaque est une ellipse au bord irrégulier, de 16 à 34 px de long dans le sens
+  de la rue, qui ne déborde jamais de sa surface (l'asphalte, ou le trottoir). Trois à six à l'écran. **Rien n'est
+  posé, rien n'est tiré** : aucune tuile, aucune entité, aucun identifiant, aucun dé (jugé) — la ville ne glisse pas.
+- **Quand** (`intensiteA`, une pure fonction du jour et de l'heure) : **tout l'hiver** (décembre à mars), tout le
+  jour ; en **avril** et en **novembre**, le gel et le dégel — pleine la nuit et jusqu'à 8 h, fondue à midi, elle
+  regèle dès 20 h si le lendemain gèle encore (pas le dernier soir d'avril, ni avant le premier matin de novembre) ;
+  jamais de saut, ni à minuit ni d'une saison à l'autre (jugé au quart d'heure sur deux ans). Novembre est un ajout :
+  les premiers gels, la transition vers l'hiver.
+- **Ce qu'on voit** : sur l'asphalte, de la **glace noire** — une tache sombre et lustrée, plus foncée au cœur, deux
+  ou trois traits de reflet ; sur le trottoir, une glace bleutée ; un éclat de soleil qui saute d'une plaque à
+  l'autre. Peinte SOUS la neige (une tempête la cache), en fondu quand elle fond. **La nuit**, une plaque à moins de
+  70 px d'un lampadaire, ou dans le faisceau d'un phare, **renvoie la lumière** : une lueur froide dans la liste des
+  lampes, et ses reflets et un éclat repeints PAR-DESSUS le voile (`dessinerReflets`) — on la voit venir dans ses
+  phares. Captures regardées : le jour (l'arrêt, le trottoir, le pont), la nuit (le lampadaire, les phares), un
+  matin d'avril à demi fondu, juillet sans rien.
+- **Au volant** : sur une plaque, le sol ne tient plus que **0,3** (le frein 0,45) — le **minimum** avec la neige et
+  le verglas, pas un produit (une plaque sous la tempête ne glisse pas deux fois). Le **dérapage de la vague 6a**
+  s'éveille : le char lancé sous-vire, le frein tenu bloque les roues, le frein à main fait partir l'arrière ; les
+  **pneus d'hiver** de Ti-Guy en rendent une part. Hors d'une plaque, rien ne change (jugé au pixel). La motoneige
+  et les coques n'en ont pas (comme le dérapage).
+- **Le trafic, sur ses rails** (`Glace.surRails`, lu par `rouler`) : sur une plaque, il **patine au départ** (au
+  plus 35 % de son élan) et **freine long** (le frein à 45 %), la caisse **chasse un peu** quand il freine et avance
+  encore (un roulis à l'empreinte, que le cap reprend ; arrêté à la ligne, il est droit) — mais il ne quitte jamais
+  son rail : `rouler` n'avance jamais plus loin que sa cible, ni la ligne d'arrêt ni sa voie ; à une ligne d'arrêt
+  glacée, il y arrive plus vite et s'y arrête pile. **Devant quelqu'un à pied**, le frein reste plein (sans ça, un
+  passant qui surgit à 38 px était fauché à 1,3 px/image). La **police en poursuite** n'y glisse pas. La police hors des rails (et les
+  poursuivants) prend le dérapage de 6a, qu'elle rattrape d'elle-même. Les **autobus et les rames** (`ligne`)
+  tiennent leur horaire : la glace ne les touche pas (une rame roule sur l'acier ; au banc, un autobus lent à
+  démarrer gardait ses passagers, une rame restait prise au coin). La police hors des rails : sur le verglas, elle
+  arrive plus tard, mais elle arrive, sans tourner en rond (jugé sur cinq départs). Une « prudence » de l'IA (lever le pied en courbe) a été
+  essayée et retirée : mesurée, elle ne faisait que la ralentir — la police ne tournait pas en rond sans elle.
+- **À pied** : le joueur qui **court** (ESQUIVE, du souffle) sur une plaque garde 85 % de son élan (il glisse), et
+  **tombe** au bout de 14 images de course sur la glace (24 en bottes d'hiver), 45 images au sol ; en marchant, jamais.
+  Un **passant qui s'y sauve** en courant tombe au bout de 8 à 15 images (à l'empreinte de son numéro), reste 70 images
+  à terre, se relève et reprend sa fuite. Jamais un passant de mission, un agent, un figurant qui tient son poste, un
+  enfant qui suit sa mère ni un cycliste. ⚠️ Les agents à pied ne glissent pas (la police les mène, `Police.gere`).
+- **Le verglas** (Martin, 29 sept. 2026) : l'option « VERGLAS (ESSAI) » disparaît (une vieille sauvegarde la perd) ;
+  il tombe les **trois derniers jours de mars** (8, 9 et 10 de l'année, chaque année), pour tout le monde — la radio
+  l'annonce, le Clairon, les génératrices. Ces soirs-là, la **pluie verglaçante prend la place de la tempête de
+  neige** (le soir du 8 n'a plus de neige, ni de déneigement le lendemain). Pendant le verglas, les plaques comptent
+  encore (le minimum : 0,3 sous 0,4).
+- **La mesure** (Chromium, Mac ; A/B apparié : la glace coupée et allumée en alternance, 40 blocs de 30 images, dans
+  la même page, deux passes par scène) : la simulation 2,2 ms contre 2,2 (le jour, trois plaques), 1,9 contre 1,9 (le
+  pont, six plaques), 1,9 contre 2,0 (la nuit dans les phares) ; le rendu 1,00 contre 1,00 ms le jour, 0,88 contre
+  0,90 sur le pont, 1,23 contre 1,31 la nuit — au plus **0,1 ms par image** (la nuit, où elle cherche les lampes et
+  repasse ses reflets), rien le jour. Une plaque se peint une fois (un canevas gardé, 96 au plus). Sous la charge de
+  quatre bancs, la même mesure donnait les mêmes écarts.
+- **Juges** : `tests/test_glace_js.py` (14) — le calendrier sans saut ; les plaques à l'empreinte, sur leur
+  surface, à l'arrêt, au trottoir, au pont ; aucun dé ni entité ; elle se voit le jour et luit la nuit sous un
+  lampadaire ou dans un phare ; sur six plaques, le char sous-vire, freine long et les pneus d'hiver aident ; la
+  police arrive sans tourner en rond (cinq départs, au sec, au verglas, sur la glace) ; sur six plaques, le trafic
+  freine long, chasse un peu, reste sur son rail, repart en patinant ; quatre graines de 2 000 images en janvier sans
+  qu'un char tourne en rond ni sorte de sa voie ; sur quatre plaques, le joueur qui court tombe (pas en marchant, pas
+  l'été, plus tard en bottes) ; sur quatre plaques, le passant qui se sauve tombe et se relève (pas l'été, pas celui
+  d'une mission) ; assommé pendant sa chute, il reste couché ; le trafic sur une plaque ne fauche pas un passant qui
+  surgit ; le verglas pour tout le monde fin mars ; plus d'option au menu. **37 mutations, 35 rouges** — les deux
+  vertes, notées : retirer le contre-braquage de l'IA, ou la laisser accélérer quand elle ne fait pas face, ne fait pas
+  tourner la police en rond en terrain ouvert (c'est sa loi de pilotage entière qui la garde : un pilote qui ne lève
+  jamais le pied et braque mollement fait deux tours et demi autour du joueur sur la glace, et là le juge rougit).
+- **La relecture** (un agent neuf) a trouvé, et c'est corrigé : un passant assommé pendant sa chute se redessinait
+  debout ; le roulis tournait une auto arrêtée à la ligne, sans retour ; sur une plaque, le trafic pouvait faucher un
+  passant qui surgit ; les feux de circulation et les feux arrière faisaient luire la glace ; le juge du trafic ne
+  voyait pas la ligne d'arrêt (refait sur six lignes glacées). Les plaques de la ligne d'arrêt suivent le sens de la
+  voie (`Monde.sensArret`).
+- **Réécrits** : `test_verglas_js.py` (sans option : « hors de ses jours, il n'existe pas », le soir sans verglas
+  est un soir de décembre, et la glace noire coupée — on y juge le verglas) ; `test_deneigement_js.py` (tout un
+  hiver : le soir du 8 est au verglas) ; `test_police_js.py::test_en_courant_on_ne_seme_pas_un_agent…` coupe la glace
+  (un sprint qui croise une plaque tombe : ce juge mesure l'endurance) ; `test_tramway_js.py::test_deux_rames_qui_se_croisent…`
+  et `test_on_attend_l_autobus_js.py::test_l_autobus_s_arrete_pour_eux…` coupent la glace (le trafic qui patine
+  retarde les rames et l'autobus au-delà de leur budget d'images ; le juge du tramway tenait déjà par la graine sur
+  la base : sur douze graines, deux impasses de 387 images et deux fois aucune croisée).
+- **La ville roule l'hiver** : sur 40 graines × 2 000 images de janvier, la trace du trafic ne crie ni au chien de
+  garde, ni au hors-voie, ni au char qui tourne en rond — avec la glace comme sans (40 contre 40).
+- **Les rouges d'avant** (rejoués sur la base `b523c126`, sans la glace, mêmes rouges) : `test_motoneige_js::test_la_course_des_bois…`,
+  `test_boulots_js::…pizza…`, `test_chantiers::…avec_ou_sans_chantiers…`, `test_defis_graduels_js` (neuf épreuves au
+  bouton), `test_dix_missions_js` (e12, f05), `test_garages_ou_l_on_entre_js::…carrosserie…`, `test_histoire_js::…premiere_bagarre…`,
+  `test_les_deux_fins_js` (m99 ×2), `test_la_nuit_js::…sort_de_l_eau…`, `test_missions_en_scene_js` (p13, p14 : douze),
+  `test_orignal_js::…sentier_du_bois…`, `test_velos_js::…bordure…`, `test_carte_du_depot` (foyers, rixes).
+- **Pas fait, à dire** : la vague **6c** reste — les **bancs de neige qui enlisent** (les roues patinent, on recule,
+  on repart). La glissade du trafic sur la glace, prévue en 6c, est faite ici (sur ses rails). La glace ne se juge
+  qu'au volant et au pied : à la manette de Martin, la plaque doit se voir venir, et le contre-braquage rattraper. Les
+  agents à pied ne tombent pas. Rien ne fond sous les pneus ni ne se sale (la glace est une fonction du calendrier).
