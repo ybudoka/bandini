@@ -1636,3 +1636,30 @@ catalogue.
     fugue, épuisé d'emblée, il fuit le char, né du dé de la ville, il suit en char, présent avant e03, peint en chat —
     rouges.
   - **Voix** : 8 (≈ 810 caractères) + 3 auditions (384), générées, pas écoutées.
+- **1er oct. 2026 : vague 26 — un char dans la piscine (`e05`, `e14`, Diane).** Une piscine creusée de villa (`?`) est un
+  bloc où aucun char n'entre en roulant ; `static/js/piscine.js` l'y met et l'en sort, sans toucher ni à l'eau de la
+  baie ni à la physique des chars (il ne lit que `v.piscine`, qu'il pose lui-même ; le verglas n'est pas touché).
+  - **La piscine** : `piscine:<lieu>` — la piscine de villa la plus proche d'un lieu (ou du passage d'un bloc,
+    `piscine:bloc:villa`), trouvée sans dé (`Piscine.presDe` ; `villas.piscine_pres` pour les juges). Aucun lieu neuf,
+    la ville ne bouge pas.
+  - **Pris dedans** : un char y TOMBE (quarante images, du bord au milieu, les gouttes à l'arrivée) et y RESTE — il ne
+    roule plus, la physique ne le dégage pas, on n'y monte pas (« IL EST DANS LA PISCINE — UNE REMORQUEUSE »), sans ombre ;
+    dessiné découpé au bassin, l'eau bleue autour, seul le TOIT dépasse, l'écume tout autour, des ronds, une bulle.
+    Captures : `captures/piscine-ete.png`, `piscine-hiver.png`, `piscine-treuil.png`.
+  - **Le treuil** : à la remorqueuse, le klaxon accroche un char pris dans une piscine jusqu'à sept tuiles, par-dessus la
+    haie (`Vehicules.aCrocher`) — il remonte, dégoulinant, sur la fourche.
+  - Deux types neufs : **`remorquer`** (le char posé pris dans la piscine `ou`, sorti au treuil, amené accroché à
+    `lieu`) et **`plonger`** (le char de la mission, arrêté au bord, on descend : il roule dedans).
+  - `e05` (_Le char dans la piscine_ — 200 $) : les Chevreuils ont poussé une auto dans la piscine de Diane ; la
+    remorqueuse de Gilles au lot, le treuil, le lot, Diane.
+  - `e14` (_C'était un accident_ — 300 $) : la berline du maire derrière l'hôtel, sans être vu, au bord de sa piscine au
+    bout de son chemin privé ; on descend, elle plonge ; Louise a sa photo — la manchette `maire_a_la_piscine`.
+  - ⚠️ Écarts à la fiche : « ⏳ terrains de banlieue » — les villas existent ; l'auto se livre au lot de Gilles (la
+    fourrière), pas « au lot » d'un concessionnaire ; « sa propre piscine » est celle de la villa au bout de son chemin
+    privé (le domaine est un bloc sans piscine) ; le treuil hisse le char d'un coup (pas d'animation de levage).
+  - **Juges** : `tests/test_piscine_js.py` (trois, au bouton : e05 — pris, immobile, on n'y monte pas, la rue la plus
+    proche à portée du treuil, accroché dégoulinant, livré au lot, la prime ; e14 — au volant rien, on descend, il tombe
+    puis reste pris, la manchette, la prime ; un char ordinaire au bord n'y tombe pas) ; `test_interieurs` (chaque
+    `piscine:<lieu>` a sa piscine, celle du maire n'est pas celle de Diane) ; mutations : pas de treuil, le treuil qui ne
+    sort pas, on y monte, la physique qui l'en sort, plonger au volant, pas de chute, livré sans être accroché — rouges.
+  - **Voix** : 19 (≈ 2 090 caractères, la manchette comprise), générées, pas écoutées.

@@ -206,3 +206,35 @@ def poser(ville: dict) -> list[dict]:
         posees.append({"x": r["x"], "y": r["y"], "l": r["l"], "avant": avant, "jardin": jardin})
     ville["sol"] = ["".join(r) for r in sol]
     return posees
+
+
+#: `piscine:<lieu>` (e05, e14 — `static/js/piscine.js`) : la piscine de villa la plus proche, à tant de tuiles au plus.
+PRES_TUILES = 70
+
+
+def piscines(ville: dict) -> list[dict]:
+    """Les piscines creusées de la ville finie : chaque bloc de tuiles `PISCINE`, son centre en tuiles (`x`, `y`) et
+    ses tuiles. Le même calcul que `Piscine.piscines` dans le navigateur."""
+    sol = ville["sol"]
+    vus: set[tuple[int, int]] = set()
+    out = []
+    for y, rangee in enumerate(sol):
+        for x, g in enumerate(rangee):
+            if g != PISCINE or (x, y) in vus:
+                continue
+            tuiles = [(x, y)]
+            vus.add((x, y))
+            for tx, ty in tuiles:
+                for q in ((tx + 1, ty), (tx - 1, ty), (tx, ty + 1), (tx, ty - 1)):
+                    if 0 <= q[1] < len(sol) and 0 <= q[0] < len(sol[q[1]]) and q not in vus and sol[q[1]][q[0]] == PISCINE:
+                        vus.add(q)
+                        tuiles.append(q)
+            out.append({"x": sum(t[0] for t in tuiles) / len(tuiles), "y": sum(t[1] for t in tuiles) / len(tuiles),
+                        "tuiles": tuiles})
+    return out
+
+
+def piscine_pres(ville: dict, x: float, y: float) -> dict | None:
+    """La piscine la plus proche de la tuile (x, y), à `PRES_TUILES` au plus — ou None."""
+    proches = [p for p in piscines(ville) if (p["x"] - x) ** 2 + (p["y"] - y) ** 2 <= PRES_TUILES ** 2]
+    return min(proches, key=lambda p: (p["x"] - x) ** 2 + (p["y"] - y) ** 2) if proches else None

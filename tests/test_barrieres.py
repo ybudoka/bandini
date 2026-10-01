@@ -109,7 +109,9 @@ def lieux_de_mission():
             # une autre carte — `blocs.erreurs` juge qu'on l'y rejoint à pied.
             # ⚠️ Ni le quai de la NAVETTE (`navette:<escale>`), ni un lieu de l'ÎLE (`ile:<lieu>`, i04) : on y arrive par
             # l'eau, jamais à pied depuis la planque — `test_ile_en_char_js.py` juge qu'un char y roule.
-            if (o.get("lieu") and not o["lieu"].startswith(("mouillage:", "traversier:", "amarrage:", "navette:", "ile:"))
+            # ⚠️ Ni une PISCINE de villa (`piscine:<lieu>`, e14) : on n'y marche pas, on y laisse rouler un char.
+            if (o.get("lieu") and not o["lieu"].startswith(("mouillage:", "traversier:", "amarrage:", "navette:", "ile:",
+                                                            "piscine:"))
                     and o["lieu"] not in blocs.lieux_des_blocs()):
                 lieux.add(o["lieu"])
     for d in missions.DEFIS:

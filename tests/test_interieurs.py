@@ -320,6 +320,11 @@ def test_les_lieux_des_missions_existent():
             if slug.startswith("ile:"):
                 assert slug[len("ile:"):] in lieux, f"{mission['slug']} : « {slug} » introuvable"
                 continue
+            # `piscine:<lieu>` (e05, e14) : la piscine de villa la plus proche d'un lieu connu, ou du passage d'un bloc
+            # (`bloc:<slug>`) — il doit y en avoir une (`villas.piscine_pres`).
+            if slug.startswith("piscine:"):
+                assert _piscine_de(slug), f"{mission['slug']} : « {slug} » — aucune piscine de villa près de là"
+                continue
             if slug.startswith("navette:"):
                 assert slug[len("navette:"):] in {q["district"] for q in VILLE["navette"]["escales"]}, \
                     f"{mission['slug']} : « {slug} » introuvable"
@@ -328,6 +333,34 @@ def test_les_lieux_des_missions_existent():
     for defi in missions.DEFIS:
         for lieu in defi.get("points", []) + ([defi["lieu"]] if defi.get("lieu") else []):
             assert lieu in lieux, f"{defi['slug']} : « {lieu} » introuvable"
+
+
+def _piscine_de(slug):
+    """La piscine d'un `piscine:<lieu>` dans la ville des juges, ou None."""
+    from app import blocs, villas
+    ref = slug.split(":", 1)[1]
+    if ref.startswith("bloc:"):
+        b = blocs.par_slug(ref.split(":", 1)[1])
+        if not b or not b.get("passage"):
+            return None
+        o = blocs.passage_en_ville(b)
+        milieu = o["de"] + o["l"] / 2
+        x, y = {"nord": (milieu, 1), "sud": (milieu, VILLE["hauteur"] - 1), "ouest": (1, milieu),
+                "est": (VILLE["largeur"] - 1, milieu)}[o["bord"]]
+    else:
+        p = next((q for q in VILLE["points_interet"] if q["slug"] == ref), None) \
+            or next((q for q in VILLE["portes"] if q["lieu"] == ref), None)
+        if not p:
+            return None
+        x, y = p["x"], p["y"]
+    return villas.piscine_pres(VILLE, x, y)
+
+
+def test_un_char_dans_la_piscine_a_sa_piscine():
+    """e05 (la piscine de Diane, la plus proche du dépanneur) et e14 (celle du maire, au bout de son chemin) : deux
+    piscines DIFFÉRENTES, chacune à moins de `villas.PRES_TUILES` tuiles de ce qu'elle nomme."""
+    a, b = _piscine_de("piscine:depanneur"), _piscine_de("piscine:bloc:villa")
+    assert a and b and (a["x"], a["y"]) != (b["x"], b["y"]), (a, b)
 
 
 def test_le_casse_croute_et_le_bar_ont_de_quoi_asseoir_leur_donneur():

@@ -174,7 +174,10 @@ def test_le_poids_audio_reste_raisonnable():
     # chacune (la plus lourde 900 Ko) — pas « quelques dizaines de Ko ». Les 134 de M16
     # feraient donc ~70 Mo : 80 dit encore « on est loin », mais avec le vrai chiffre.
     # Rien de plus ne voyage : une mission à la fois, jamais au démarrage.
-    assert sum(f.stat().st_size for f in histoire) < 80_000_000
+    # ⚠️ Relevé de 80 à 90 Mo le 1er oct. 2026 (la toute fin de M16, vague 26 — À VALIDER PAR MARTIN) : 78,2 Mo sur
+    # `dev` avant les vagues 24 à 27, 80,8 Mo après (t08, t10, e03, e05, e14, p03 : 54 voix et une manchette). Même
+    # raison qu'avant : une mission à la fois, jamais au démarrage ; le plafond borne le dépôt.
+    assert sum(f.stat().st_size for f in histoire) < 90_000_000
     # LA MUSIQUE (14 sept. 2026). ⚠️ Elle sort du budget des bruitages, et pas
     # pour lui faire de la place : elle ne se telecharge JAMAIS au demarrage,
     # exactement comme les radios. Une ambiance de district arrive quand on

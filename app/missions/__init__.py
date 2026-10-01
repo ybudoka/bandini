@@ -97,6 +97,17 @@ TYPES_OBJECTIFS = (
     # puis elle s'épuise et se laisse prendre ; elle nous suit ensuite comme un escorté (`Histoire.majFugue`).
 )
 
+#: ⚠️ UN CHAR DANS LA PISCINE (1er oct. 2026, e05 et e14 — `static/js/piscine.js`). Une piscine de villa (`?`) est un
+#: bloc où aucun char n'entre en roulant ; ces deux types l'y mettent, et l'en sortent. `piscine:<lieu>` : la piscine de
+#: villa la plus proche de ce lieu (`Histoire.resoudre` → `Piscine.presDe`) — `<lieu>` est un lieu connu, ou
+#: `bloc:<slug>` (le passage d'un bloc en ville : la villa du maire).
+TYPES_OBJECTIFS = TYPES_OBJECTIFS + (
+    "remorquer",   # `vehicule` posé PRIS dans la piscine `ou` (`piscine:<lieu>`) ; la remorqueuse l'en sort au treuil
+                   # (klaxon, à quelques mètres, par-dessus la haie) et l'amène accroché à `lieu` (`rayon`)
+    "plonger",     # le char de la mission (le `monter` d'avant) finit dans la piscine `lieu` : arrêté au bord, on
+                   # descend, il roule dedans et reste pris
+)
+
 #: Les bêtes qu'une mission fait chercher (`chercher`, `bete`) : un piéton peint en bête (`Entites.poseDePietonBete`) —
 #: le chien de Mme Beaulieu (e03). Chacune a ses peintres dans `sprites.js` : `<bete>` (assis) et `<bete>_bouge`.
 BETES_DE_MISSION = ("chien",)
@@ -741,6 +752,7 @@ from . import (  # noqa: E402
     t07, q14,
     t08, t10,
     e03,
+    e05, e14,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -867,6 +879,9 @@ CATALOGUE: list[Mission] = [
     # ⚠️ e03 (1er oct. 2026, la toute fin de M16) : Biscuit s'est sauvé — le premier chien du jeu, qui se sauve trois
     # fois avant de se laisser prendre (`chercher`, `bete`), et Mme Beaulieu, la promeneuse des Érables.
     e03.MISSION,
+    # ⚠️ e05, e14 (1er oct. 2026, la toute fin de M16) : un char dans la piscine — sorti au treuil de la remorqueuse
+    # (`remorquer`), puis la berline du maire qu'on y laisse rouler (`plonger`) ; `static/js/piscine.js`.
+    e05.MISSION, e14.MISSION,
     m97.MISSION,
     # ⚠️ e11 (vague 21) : le maire, dans sa chambre entre m97 et m98, rachète son dossier — un CHOIX : vendu, ou à Louise.
     e11.MISSION,

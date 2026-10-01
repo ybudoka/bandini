@@ -220,6 +220,11 @@ SPECIALES: list[dict] = [
      "texte": "LES CHEVREUILS RANGENT LEURS CHARS. LE CONSEIL VOTE LA PAIX.",
      "lu": "Plus un drift dans les Érables. Les Chevreuils rangent leurs chars, et le conseil vote la paix jeudi. "
            "La conseillère Larivière n'a pas voulu commenter."},
+    # La berline du maire au fond de sa piscine (e14, 1er oct. 2026) : la photo de Louise, pour Diane.
+    {"slug": "maire_a_la_piscine", "titre": "LA BERLINE DU MAIRE À L'EAU",
+     "texte": "LE MAIRE TANGUAY REPÊCHE SA LIMOUSINE. UNE PHOTO DE NOTRE LOUISE.",
+     "lu": "La berline du maire à l'eau. Notre photographe l'a croquée au petit matin, au fond de la piscine de Son "
+           "Honneur. Le maire parle d'un accident. La piscine, elle, ne parle pas."},
     # Le phare a tenu (p09) et La Pointe libérée (p11), 29 sept. 2026.
     {"slug": "phare_a_tenu", "titre": "LE PHARE A TENU",
      "texte": "UN CHALUTIER ÉVITE LES RÉCIFS DE JUSTESSE. LE GARDIEN REMERCIE UN INCONNU.",

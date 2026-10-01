@@ -447,6 +447,7 @@ JEU: dict[str, str] = {
     "beaulieu-repos-2": "[warmly] Biscuit dort sur le divan. [amused] Moi, je surveille les écureuils.",
     "sal-repos-2": "[warmly] La chaise est libre, le neveu. [softly] Pis la dette, elle… attend pas.",
     "narrateur-journal-quais_liberes": "[dramatic] Nuit blanche à l'Hôtel Bandini. [amused] Les matelots du cargo norvégien sont repartis à la rame, et les Quais dorment tranquilles. [warmly] Les débardeurs, eux, parlent d'une paix qui tiendra.",
+    "narrateur-journal-maire_a_la_piscine": "[amused] La berline du maire à l'eau. [knowingly] Notre photographe l'a croquée au petit matin, au fond de la piscine de Son Honneur. [deadpan] Le maire parle d'un accident. La piscine, elle, ne parle pas.",
     "narrateur-journal-erables_liberes": "[amused] Plus un drift dans les Érables. [calm] Les Chevreuils rangent leurs chars, et le conseil vote la paix jeudi. [wryly] La conseillère Larivière n'a pas voulu commenter.",
     "narrateur-journal-insaisissable": "[amused] Bandini l'insaisissable. [dramatic] Trois étoiles devant le poste de police, puis plus rien ; [wryly] le sergent Bouchard dit que l'enquête se poursuit.",
     "narrateur-journal-maire_hotel": "[dramatic] Le maire dort à l'hôtel. [serious] Une chambre à l'année, payée par la ville depuis trois ans ; [wryly] le Clairon a les reçus, et le maire n'a pas voulu commenter.",

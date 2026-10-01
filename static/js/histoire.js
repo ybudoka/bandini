@@ -540,6 +540,8 @@ const Histoire = (function () {
     const deux = ou.split(':');
     if (deux[0] === 'porte') return lieu(deux[1]);
     if (deux[0] === 'amarrage') return amarragePres(deux[1]);
+    // `piscine:<lieu>` (e05, e14) : la piscine de villa la plus proche de ce lieu (`Piscine.presDe`).
+    if (deux[0] === 'piscine') return Piscine.presDe(resoudre(deux.slice(1).join(':'), m));
     if (deux[0] === 'ruelle') return ruellePres(deux[1], Number(deux[2]) || 0);   // `ruelle:garage:24`
     if (deux[0] === 'zone') { const z = Monde.carte.zones.find(function (q) { return q.slug === deux[1]; }); return z ? { x: (z.x + z.l / 2) * TT, y: (z.y + z.h / 2) * TT, zone: z } : null; }
     if (deux[0] === 'point') return null;                 // dedans : pas de pixel en ville
@@ -1869,6 +1871,9 @@ const Histoire = (function () {
         // la mission, pas ceux d'avant. `sorte` nomme le compteur (`taxi`,
         // `pizza`, `ambulance`, `remorquage`).
         B.mission.boulotsDepart = Missions.boulot.faits[o.sorte] || 0;
+      } else if (o.type === 'remorquer') {
+        // `remorquer` (e05) : le char à sortir de la piscine y est déjà — les Chevreuils l'y ont poussé cette nuit.
+        poserDansLaPiscine(m, o, p.etape);
       } else if (o.type === 'detruire') {
         // Un char posé exprès à détruire : réutilise `poserLeChar` (le même
         // char, la même `ou`), mais c'est dans `chars` qu'`majObjectif` le
@@ -2010,6 +2015,21 @@ const Histoire = (function () {
       // bateau par-dessus des qu'on s'eloigne.
       if (surEau) v.amarrage = cleAmarrage;
     }
+    chars[etape] = v;
+    B.mission.entites.push(v);
+    return v;
+  }
+
+  /** Le char d'un `remorquer` (e05), DANS la piscine de `ou` (`piscine:<lieu>`) : né au milieu de l'eau, pris. */
+  function poserDansLaPiscine(m, o, etape) {
+    const chars = B.mission.chars || (B.mission.chars = {});
+    const deja = chars[etape];
+    if (deja && deja.etat !== 'epave' && B.entites.indexOf(deja) >= 0) return deja;
+    const pi = resoudre(o.ou, m);
+    if (!pi) return null;
+    const v = Vehicules.creer(o.vehicule, pi.x, pi.y, 0, { etat: 'stationne', mission: m.slug });
+    if (!v) return null;
+    Piscine.plonger(v, pi, true);
     chars[etape] = v;
     B.mission.entites.push(v);
     return v;
@@ -2694,6 +2714,41 @@ const Histoire = (function () {
       case 'boulots': {
         const depart = B.mission.boulotsDepart, faits = Missions.boulot.faits[o.sorte] || 0;
         if (faits - depart >= o.n) avancer();
+        return;
+      }
+      case 'remorquer': {
+        // Le char de la piscine (`poserDansLaPiscine`) : le treuil de la remorqueuse l'en sort (`Vehicules.aCrocher`),
+        // et on l'amène, accroché, à `lieu`.
+        const c = B.mission.chars && B.mission.chars[p.etape];
+        if (!c) { avancer(); return; }
+        if (c.etat === 'epave') { echouer('vehicule_detruit'); return; }
+        const v = j.dansVehicule;
+        if (c.piscine) {
+          B.mission.attend = !v || v.slug !== 'remorqueuse' ? texteDObjectif(o) + ' — PRENDS UNE REMORQUEUSE'
+            : texteDObjectif(o) + ' — APPROCHE, KLAXON : LE TREUIL';
+          return;
+        }
+        if (!v || c.remorqueePar !== v) { B.mission.attend = texteDObjectif(o) + ' — RACCROCHE-LE'; return; }
+        B.mission.attend = null;
+        const l = lieuDeLivraison(o.lieu);
+        if (l && dist2(v.x, v.y, l.x, l.y) < (o.rayon * TT) * (o.rayon * TT) && Math.abs(v.vitesse) < 0.4) {
+          Vehicules.decrocher(v);
+          c.mission = null; c.etat = 'stationne'; c.conducteur = null;
+          B.mission.entites = B.mission.entites.filter(function (e) { return e !== c; });
+          avancer();
+        }
+        return;
+      }
+      case 'plonger': {
+        // `plonger` (e14) : le char de la mission au bord de la piscine, on descend — il roule dedans (`Piscine`).
+        const v = B.mission.vehicule;
+        if (!v || v.etat === 'epave') { echouer('vehicule_detruit'); return; }
+        if (Piscine.dedans(v)) { B.mission.attend = null; avancer(); return; }
+        if (v.piscine) return;                                   // il tombe
+        const pi = resoudre(o.lieu, m);
+        if (!pi || dist2(v.x, v.y, pi.x, pi.y) > (Piscine.BORD_TUILES * TT) * (Piscine.BORD_TUILES * TT)) { B.mission.attend = null; return; }
+        if (j.dansVehicule === v) { B.mission.attend = texteDObjectif(o) + ' — ARRÊTE-TOI, DESCENDS'; return; }
+        Piscine.plonger(v, pi);                                  // personne au volant : il roule dedans
         return;
       }
       case 'detruire': {
@@ -4138,6 +4193,12 @@ const Histoire = (function () {
       }
       else if (o.type === 'pickpocket') l = B.mission ? B.mission.entites.find(function (e) { return e.pickpocket && e.vivant; }) : null;
       else if (o.type === 'detruire') l = B.mission && B.mission.chars ? B.mission.chars[p.mission.etape] : null;
+      // `remorquer` : le char tant qu'il est dans la piscine (ou décroché) ; accroché, là où on l'amène.
+      else if (o.type === 'remorquer') {
+        const c = B.mission && B.mission.chars ? B.mission.chars[p.mission.etape] : null;
+        l = c && !c.piscine && j.dansVehicule && c.remorqueePar === j.dansVehicule ? lieuDeLivraison(o.lieu) : c;
+      }
+      else if (o.type === 'plonger') l = resoudre(o.lieu, m);
       else if (o.type === 'sauter') l = resoudre(o.ou, m);
       else if (o.type === 'acheter') l = resoudre(o.ou, m);
       else if (o.type === 'eteindre') { const fe = B.mission && B.mission.feu; l = fe && !fe.eteint ? Incendies.position(fe) : null; }

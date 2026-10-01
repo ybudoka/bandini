@@ -135,7 +135,11 @@ def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
                 # Et en char (i04, la navette) : un lieu de l'île par son préfixe (`ile:<lieu>`), le quai de la navette.
                 surlile = o["lieu"].startswith("ile:") and o["lieu"][4:] in LIEUX_DE_L_ILE
                 navette = o["lieu"] in ("navette:quais", "navette:ile")
-                assert o["lieu"] in lieux or amarre or surlile or navette or o["lieu"].startswith(("mouillage:", "traversier:")), \
+                # Et une PISCINE de villa (e14, `piscine:<lieu>`) : un lieu connu, ou le passage d'un bloc.
+                piscine = o["lieu"].startswith("piscine:") and (o["lieu"].split(":", 1)[1] in lieux
+                                                                or o["lieu"].startswith("piscine:bloc:"))
+                assert o["lieu"] in lieux or amarre or surlile or navette or piscine \
+                    or o["lieu"].startswith(("mouillage:", "traversier:")), \
                     f"{m['slug']} : lieu inconnu {o['lieu']}"
             # `course` (p04) : ses points, des lieux que `Histoire.resoudre` connaît. ⚠️ Et `boutique:<mot>` (h06, les
             # trois comptoirs des ordonnances) : un mot d'ENSEIGNE (`Histoire.boutiquex`), jamais une porte qui

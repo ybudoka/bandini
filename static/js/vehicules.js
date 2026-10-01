@@ -1800,6 +1800,15 @@ const Vehicules = (function () {
       const d = dist2(e.x, e.y, ax, ay);
       if (d < dMin) { dMin = d; meilleur = e; }
     }
+    // ⚠️ LE TREUIL (e05) : un char pris dans une PISCINE se prend de plus loin, par-dessus la haie — le câble va le
+    // chercher (`Piscine.TREUIL_PX`), où qu'il soit autour de la remorqueuse.
+    if (!meilleur && v.slug === 'remorqueuse') {
+      let dP = Piscine.TREUIL_PX * Piscine.TREUIL_PX;
+      for (const e of Entites.autour(v.x, v.y, Piscine.TREUIL_PX + 30, function (q) { return q.type === 'vehicule' && Piscine.dedans(q); })) {
+        const d = dist2(e.x, e.y, v.x, v.y);
+        if (d < dP) { dP = d; meilleur = e; }
+      }
+    }
     return meilleur;
   }
 
@@ -1810,6 +1819,7 @@ const Vehicules = (function () {
     if (v.remorque) { decrocher(v); return false; }
     const cible = aCrocher(v);
     if (!cible) { Hud.message('RIEN À ACCROCHER DERRIÈRE'); Son.SFX.erreur(); return false; }
+    if (cible.piscine) Piscine.sortir(cible);    // le treuil le hisse hors de l'eau, par-dessus la haie
     v.remorque = cible;
     cible.remorqueePar = v;
     cible.alarme = 0;
@@ -1984,6 +1994,8 @@ const Vehicules = (function () {
     // deux volontes, un seul lien rigide. Et le refus SE DIT — une porte qui ne
     // s'ouvre pas sans un mot se lit comme un bogue.
     if (v.remorqueePar) { Hud.message('IL EST SUR LA FOURCHE'); Son.SFX.erreur(); return false; }
+    // ⚠️ NI DANS UN CHAR PRIS DANS UNE PISCINE (`piscine.js`) : il faut d'abord l'en sortir.
+    if (v.piscine) { Hud.message('IL EST DANS LA PISCINE — UNE REMORQUEUSE'); Son.SFX.erreur(); return false; }
     // ⚠️ ET PAS SUR UN DEUX-ROUES REMISE (l'hiver, sous sa bache) : ca se dit aussi.
     if (remisee(v)) { Hud.message('REMISÉE POUR L\'HIVER — REVIENS AU PRINTEMPS'); Son.SFX.erreur(); return false; }
     let crime = null, vu = false;
@@ -3489,7 +3501,11 @@ const Vehicules = (function () {
       // exactement le jeu qu'on venait d'enlever. C'est la remorqueuse qui
       // refuse de passer la ou sa charge ne passe pas (`chargeBloquee`), pas la
       // charge qui se debat.
+      if (v.degoutte > 0) Piscine.majDegoutte(v);       // sorti d'une piscine : il dégoutte
       if (v.remorqueePar) continue;
+      // ⚠️ PRIS DANS UNE PISCINE (e05, e14 — `piscine.js`) : il ne roule plus, il ne se dégage pas des tuiles ; seul
+      // le treuil d'une remorqueuse l'en sort.
+      if (v.piscine) { Piscine.majChar(v); continue; }
       const x0 = v.x, y0 = v.y;
       if (v.conducteur === j) majJoueur(j);
       else if (v.conducteur === 'trafic') majConducteur(v);
@@ -4576,7 +4592,8 @@ const Vehicules = (function () {
     }
     // Les canettes de la marche nuptiale (le klaxon de Ti-Guy) : sous le char, elles trainent sur l'asphalte.
     if (!v.z && Garage.canettes(v)) dessinerCanettes(ctx, v, cx, cy);
-    const ombre = ombreDe(v);
+    // Dans une piscine (`piscine.js`), pas d'ombre au sol : il est sous l'eau.
+    const ombre = v.piscine ? null : ombreDe(v);
     // Un char qui coule (`Naufrage`) : son ombre s'efface sur l'eau, vite.
     const naufrage = Naufrage.etat(v);
     if (ombre && naufrage) ombre.part *= naufrage.ombre;
@@ -4615,6 +4632,8 @@ const Vehicules = (function () {
     const demi = toit.width / 2;
     const swaps = cavalierDe(v);
     const cavalier = swaps ? imageDuCavalier(def, v, swaps, tenueDuCavalier(v)) : null;
+    // Pris dans une piscine : le toit sous l'eau claire (`Piscine.dessinerChar`).
+    if (v.piscine) { Piscine.dessinerChar(ctx, v, toit, v.x - cx, v.y - v.z - cy); return; }
     // Il coule : le nez sous l'eau d'abord, et son cavalier palit avec lui (`Naufrage`).
     if (naufrage) {
       Naufrage.dessinerChar(ctx, v, naufrage, toit, v.x - cx, v.y - v.z - cy,
