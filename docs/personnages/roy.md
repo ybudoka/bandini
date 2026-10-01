@@ -11,7 +11,7 @@
 | Slug | `roy` |
 | Rôle | l'inspectrice arrivée de Québec ; la police honnête, qui enquête sur le sergent Bouchard |
 | Où | dedans, à son bureau du poste de police (`point:roy`), après r01 (`arrive_apres`) |
-| Voix | **Kasandra - Natural Quebecer UGC ad** (québécoise d'origine, mûre, assurée) — partagée avec Gisèle, la brocanteuse du marché aux puces, qui ne parle dans aucune mission ; auditionnée le 30 sept. 2026 contre Marie Line et Luna (`captures/audition-roy-*.mp3`) : **à écouter** |
+| Voix | **Évangéline - Warm Acadian Conversational** (1er oct. 2026 : acadienne de la bibliothèque, « French Canadian », vérifiée « acadian ») — Kasandra, qu'elle partageait, revient à Gisèle seule (`test_chaque_marchand_a_sa_voix_a_lui`) ; plus une Québécoise d'origine libre au compte ni à la bibliothèque, Évangéline choisie à l'audition contre My Stephanie (canadienne anglaise, « fr-quebec » en turbo) et Loulou (française) (`captures/audition-roy2-*.mp3`, la première réplique de r02) : **à écouter** ; l'ancienne audition, Kasandra contre Marie Line et Luna : `captures/audition-roy-*.mp3` |
 | Bulle | « Toi, approche. » |
 | Couleurs | veston marine, cheveux châtains en chignon, pantalon anthracite, l'insigne à la ceinture |
 | Missions | donne **r02**, **r03** (le choix contre **r04**), **r06** (les affiches), **r08** (sa patrouille) |
@@ -73,5 +73,5 @@ L'arc R est au complet (30 sept. 2026).
 
 ## À trancher
 
-- **Toute la fiche** (proposée par Claude le 30 sept. 2026) — et la voix : Kasandra en v3, à écouter contre les
-  deux autres auditions.
+- **Toute la fiche** (proposée par Claude le 30 sept. 2026) — et la voix : Évangéline en v3 (1er oct. 2026, ses 40
+  répliques refaites), à écouter contre les deux autres auditions (`captures/audition-roy2-*.mp3`).

@@ -482,9 +482,10 @@ PERSONNAGES: list[Personnage] = [
      "repos": ("La chaise est libre.", "La chaise est libre, le neveu. Pis la dette, elle, attend pas.")},
     # --- L'arc R (30 sept. 2026, M16 vague 10) : l'inspectrice Claudine Roy, arrivée de Québec pour faire tomber
     # Bouchard. DEDANS, à son bureau du poste (`point:roy`, un point de plus dans la pièce — aucune tuile de la ville
-    # ne bouge), et seulement après r01 (`arrive_apres`). Voix : Kasandra, québécoise, partagée avec Gisèle des
-    # puces (qui ne parle dans aucune mission) — auditionnée contre Marie Line et Luna, à écouter.
-    {"slug": "roy", "nom": "Inspectrice Claudine Roy", "genre": "femme", "voix": "Kasandra - Natural Quebecer UGC ad",
+    # ne bouge), et seulement après r01 (`arrive_apres`). Voix (1er oct. 2026) : Évangéline, acadienne de
+    # la bibliothèque — Kasandra, qu'elle partageait avec Gisèle des puces, est à Gisèle seule ; plus une Québécoise
+    # d'origine de libre, Évangéline auditionnée contre My Stephanie (canadienne anglaise) et Loulou (française).
+    {"slug": "roy", "nom": "Inspectrice Claudine Roy", "genre": "femme", "voix": "Évangéline - Warm Acadian Conversational",
      "couleurs": {"c": "#2f3a52", "h": "#5a3a22", "s": "#e0b08a", "p": "#2a2a33"}, "ou": "point:roy",
      "heler": "Toi, approche.", "arrive_apres": "r01",
      "repos": ("Pas maintenant.", "Pas maintenant. J'ai une ville à nettoyer.")},

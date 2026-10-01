@@ -178,6 +178,8 @@ EGALISATION: dict[str, str] = {
     "Caroline - Soft Quebec accent": PASSE_HAUT_FEMMES,
     # Gisèle, du marché aux puces : le passe-haut des femmes (à mesurer contre v2 si Martin la trouve étouffée).
     "Kasandra - Natural Quebecer UGC ad": PASSE_HAUT_FEMMES,
+    # L'inspectrice Roy (1er oct. 2026) : le passe-haut des femmes, à mesurer contre v2 si Martin la trouve étouffée.
+    "Évangéline - Warm Acadian Conversational": PASSE_HAUT_FEMMES,
     # La repartitrice de la police : une voix de femme, le passe-haut des femmes.
     # Le scanner la coupe de toute facon sous 300 Hz (`Son.Ondes`).
     "Clara Dupont - Professional and Urgent": PASSE_HAUT_FEMMES,
