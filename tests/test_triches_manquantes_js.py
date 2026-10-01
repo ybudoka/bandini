@@ -266,3 +266,79 @@ def test_une_nuit_des_gangs_prend_un_coin_et_rendre_les_coins_l_efface(banc):
     assert "PRIS CETTE NUIT" in r["msgNuit"]
     assert r["apres"] == 0 and r["forces"] == 0
     assert r["msg"] == (f"{r['pris']} COINS RENDUS" if r["pris"] > 1 else "UN COIN RENDU")
+
+
+# --- La foire fermée l'hiver (docs/jalons/les-sauts-de-triche-retrouvent-la-foire-l-hiver.md) ---------
+
+
+def test_sauter_a_un_defi_de_la_foire_l_hiver_l_ouvre_et_la_bascule_la_recadenasse(banc):
+    """Une partie commence en janvier, la foire est cadenassée : LANCER UN DÉFI vers le tir l'ouvre
+    (la bascule FOIRE OUVERTE L'HIVER passe à OUI), et l'éteindre la recadenasse."""
+    r = jouer(banc, """
+        const avant = { hiver: L.Saisons.enHiver(), fermee: L.Foire.fermee() };
+        L.Hud.ouvrirMenu(L.Hud.menuDebug()); presser(L, 'LANCER UN DÉFI', true);
+        const tir = L.B.defs.defis.find(function (d) { return d.slug === 'tir'; });
+        const rendu = presser(L, tir.titre.toUpperCase(), true);
+        const ouverte = { rendu: rendu, triche: L.B.partie.triches.foire, fermee: L.Foire.fermee() };
+        L.Hud.ouvrirMenu(L.Hud.menuDebug());
+        const ligne = L.B.menu.items.find(function (i) { return i.libelle === 'FOIRE OUVERTE L\\'HIVER'; });
+        const detail = ligne.detail;
+        ligne.faire(ligne);
+        return { avant: avant, ouverte: ouverte, detail: detail, apres: L.Foire.fermee(), eteinte: ligne.detail };
+    """)
+    assert r["avant"] == {"hiver": True, "fermee": True}, "le juge n'a jamais vu la foire cadenassée"
+    assert r["ouverte"] == {"rendu": True, "triche": True, "fermee": False}
+    assert r["detail"] == "OUI"
+    assert r["apres"] is True and r["eteinte"] == "NON"
+
+
+def test_le_bonimenteur_revient_quand_on_saute_chez_lui_l_hiver(banc):
+    r = jouer(banc, """
+        const avant = !!L.Histoire.donneur('bonimenteur');
+        L.Hud.ouvrirMenu(L.Hud.menuDebug()); presser(L, 'CHEZ UN DONNEUR', true);
+        const ligne = L.B.menu.items.find(function (i) { return i.personnage === 'bonimenteur'; });
+        const rendu = ligne.faire(ligne);
+        const e = L.Histoire.donneur('bonimenteur'), j = L.B.joueur;
+        return { avant: avant, rendu: rendu, la: !!e, loin: e && Math.hypot(e.x - j.x, e.y - j.y),
+                 triche: L.B.partie.triches.foire, absent: L.Histoire.absentLHiver(L.Histoire.personnage('bonimenteur')) };
+    """)
+    assert r["avant"] is False, "le Bonimenteur était déjà là : le juge ne voit pas l'hiver"
+    assert r["rendu"] is True and r["la"] and r["loin"] <= 2.5 * 16
+    assert r["triche"] is True and r["absent"] is False
+
+
+def test_l_ete_un_saut_vers_la_foire_n_allume_rien(banc):
+    r = jouer(banc, """
+        L.B.partie.jour = 22;   // l'été (le 21 déménage le joueur)
+        L.Hud.ouvrirMenu(L.Hud.menuDebug()); presser(L, 'LANCER UN DÉFI', true);
+        const tir = L.B.defs.defis.find(function (d) { return d.slug === 'tir'; });
+        presser(L, tir.titre.toUpperCase(), true);
+        return { hiver: L.Saisons.enHiver(), triche: L.B.partie.triches.foire, fermee: L.Foire.fermee() };
+    """)
+    assert r == {"hiver": False, "triche": False, "fermee": False}
+
+
+def test_le_saut_trouve_gilles_dans_la_cour_d_asphalte(banc):
+    """Gilles se tient DANS le lot de la fourrière (de l'asphalte) : le saut se pose à côté de lui
+    quand même, jamais sous un char saisi."""
+    r = jouer(banc, """
+        function sauter() {
+            L.Hud.ouvrirMenu(L.Hud.menuDebug()); presser(L, 'CHEZ UN DONNEUR', true);
+            const ligne = L.B.menu.items.find(function (i) { return i.personnage === 'gilles'; });
+            return ligne.faire(ligne);
+        }
+        const j = L.B.joueur;
+        sauter();
+        // Un char saisi garé sur la place du premier saut : le second ne s'y pose pas.
+        L.Vehicules.creer('auto', j.x, j.y, 0, { etat: 'stationne', couleur: '#333333' });
+        j.x += 400;
+        const rendu = sauter();
+        const e = L.Histoire.donneur('gilles');
+        const tx = Math.floor(j.x / 16), ty = Math.floor(j.y / 16);
+        return { rendu: rendu, msg: L.B.msg, loin: Math.hypot(e.x - j.x, e.y - j.y), chaussee: L.Monde.estChaussee(tx, ty),
+                 sousUnChar: L.B.entites.some(function (v) { return v.type === 'vehicule' && v.vivant && Math.hypot(v.x - j.x, v.y - j.y) < 16; }) };
+    """)
+    assert r["rendu"] is True, r
+    assert 0.75 * 16 <= r["loin"] <= 2.5 * 16
+    assert r["chaussee"] is True, "Gilles n'est plus dans sa cour d'asphalte : ce juge ne garde plus rien"
+    assert r["sousUnChar"] is False

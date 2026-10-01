@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (302 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (303 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -78,7 +78,6 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
-| Les sauts de triche retrouvent la foire l'hiver | ⬜ **en cours** (tranché par Martin : la triche ouvre la foire) | 1 oct. 2026 | **P2** | **correctif** | [fiche](jalons/les-sauts-de-triche-retrouvent-la-foire-l-hiver.md#fiche) |
 | Le lave-auto qu'on traverse, en vitre | ⬜ **en cours** (tranché par Martin : de la rue à la ruelle, sous un toit de verre, un convoyeur qui tire le char, la police voit sans entrer, l'étoile tombe à la sortie) | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/le-lave-auto-qu-on-traverse.md#fiche) |
 | Les bateaux ne sont pas des chars | ⬜ **en cours** (tranché par Martin : tout, en cinq vagues — la conduite, les règles de char, le plongeon et la police de terre, la vedette de police, l'habillage et l'hiver ; ✅ vague 1 livrée : la conduite — la poupe chasse, la machine arrière au lieu du frein, la météo reste sur la rue ; ✅ vague 2 livrée : ni fourrière, ni remorqueuse, ni garage, ni place de stationnement pour une coque, BATEAUX VOLÉS au carnet, et le traversier n'accoste plus sur une coque ; ✅ vagues 3 et 4 livrées ensemble : le plongeon au large, la police de terre qui ne se noie plus, et la vedette de police qui te rejoint par l'eau et t'arraisonne ; reste la vague 5, l'habillage et l'hiver) | 30 sept. 2026 | **P2** | **correctif** | [fiche](jalons/les-bateaux-ne-sont-pas-des-chars.md#fiche) · [notes](jalons/les-bateaux-ne-sont-pas-des-chars.md#notes) |
 | Des bagarres de gangs vivantes, et armées | ⬜ **en cours** (tranché par Martin le 30 sept. 2026 : un seul cerveau pour la rixe et le gang contre toi, un arsenal par gang porté par un membre sur trois, quatre vagues — le contact, la fusillade, le moral, les renforts ; ✅ vague 1 livrée : le contact — ils t'encerclent sur les places libres, frappent chacun à son rythme, reculent en te faisant face et esquivent parfois, et dans la cohue ils frappent d'où ils sont ; l'allié de m98 laisse filer les fuyards ; ✅ vague 2 livrée : l'arsenal et la fusillade — un sur trois dégaine l'arme de son gang, lève l'arme en criant, tient sa distance, tire par salves depuis un abri, recharge ; le Skateux lance son Molotov et se sauve ; une rixe armée ne te coûte rien ; ⬜ vague 3 en cours, le moral et les blessés) | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/des-bagarres-de-gangs-vivantes-et-armees.md#fiche) |

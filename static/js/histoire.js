@@ -195,8 +195,10 @@ const Histoire = (function () {
   }
 
   /** ABSENT L'HIVER (`absent_l_hiver` : le Bonimenteur, dont la foire est fermee tant que la neige tient,
-      docs/jalons/la-foire-fermee-l-hiver.md) : il n'est pas en ville, et ses missions attendent qu'il revienne. */
+      docs/jalons/la-foire-fermee-l-hiver.md) : il n'est pas en ville, et ses missions attendent qu'il revienne.
+      ⚠️ Celui de la foire revient quand la TRICHE l'ouvre (`triche('foire')`) : sa foire est ouverte, il y est. */
   function absentLHiver(p) {
+    if (p && p.ou === 'foire' && triche('foire')) return false;
     return !!(p && p.absent_l_hiver && typeof Saisons !== 'undefined' && Saisons.enHiver());
   }
 
@@ -3281,7 +3283,8 @@ const Histoire = (function () {
       return;
     }
     // ⚠️ PAS L'HIVER (`hors_hiver`, le derby de demolition a cote de la foire cadenassee) : ca se dit, rien ne part.
-    if (d.hors_hiver && typeof Saisons !== 'undefined' && Saisons.enHiver()) {
+    // La triche qui ouvre la foire (`triche('foire')`) ouvre aussi son derby.
+    if (d.hors_hiver && typeof Saisons !== 'undefined' && Saisons.enHiver() && !triche('foire')) {
       B.defi = null;
       Hud.message('ÇA REPREND AU PRINTEMPS, QUAND LA FOIRE ROUVRE', 150); Son.SFX.erreur();
       return;

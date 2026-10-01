@@ -273,11 +273,11 @@ def test_retour_ferme_le_menu_debug_par_le_clavier(banc):
 # --- Les triches se sauvent avec la partie ----------------------------------------------
 
 NOMS_DES_BASCULES = ["INVINCIBLE", "VÉHICULES INVINCIBLES", "ÉNERGIE INFINIE", "MUNITIONS INFINIES",
-                     "LA POLICE NE T'ARRÊTE PAS", "MACHINES SANS LIMITE"]
+                     "LA POLICE NE T'ARRÊTE PAS", "MACHINES SANS LIMITE", "FOIRE OUVERTE L'HIVER"]
 TOUT_ETEINT = {"menu": False, "invincible": False, "vehicules": False, "endurance": False,
-               "munitions": False, "pasArrete": False, "machines": False}
+               "munitions": False, "pasArrete": False, "machines": False, "foire": False}
 TOUT_ALLUME = {**TOUT_ETEINT, "invincible": True, "vehicules": True, "endurance": True,
-               "munitions": True, "pasArrete": True, "machines": True}
+               "munitions": True, "pasArrete": True, "machines": True, "foire": True}
 
 
 def test_les_triches_se_sauvent_avec_la_partie_et_reviennent(banc):

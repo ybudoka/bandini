@@ -73,8 +73,10 @@ const Foire = (function () {
   let roue = null;
 
   /** La foire est-elle fermée pour l'hiver ? Tant que la neige tient — ce qu'on voit au sol et sur
-      les manèges dit la même chose (`Saisons.enHiver`, pas le mois du calendrier). */
-  function fermee() { return typeof Saisons !== 'undefined' && Saisons.enHiver(); }
+      les manèges dit la même chose (`Saisons.enHiver`, pas le mois du calendrier). ⚠️ Sauf la TRICHE
+      (`triche('foire')`, docs/jalons/les-sauts-de-triche-retrouvent-la-foire-l-hiver.md) : sauter à un défi
+      ou au Bonimenteur de la foire l'ouvre pour la partie — tout ce qui lit `fermee()` la voit ouverte. */
+  function fermee() { return typeof Saisons !== 'undefined' && Saisons.enHiver() && !triche('foire'); }
 
   // --- Le petit train -----------------------------------------------------------------
 

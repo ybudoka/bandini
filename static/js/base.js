@@ -280,7 +280,7 @@ function etatInitial(defs) {
     //: TRICHES. ⚠️ Tout vit DANS LA PARTIE, pas sur `B` : ca suit son emplacement
     //: (et le compte, qui monte la partie entiere), et une nouvelle partie
     //: repart sans rien. On lit par `triche(nom)`, jamais a la main.
-    triches: { menu: false, invincible: false, vehicules: false, endurance: false, munitions: false, pasArrete: false, machines: false },
+    triches: { menu: false, invincible: false, vehicules: false, endurance: false, munitions: false, pasArrete: false, machines: false, foire: false },
     stats: { crimes: 0, arrestations: 0, volees: 0, bateauxVoles: 0, tues: 0, secondes: 0 },
     x: null, y: null,
   };

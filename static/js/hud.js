@@ -2170,6 +2170,17 @@ const Hud = (function () {
     Missions.sauvegarderPartie();
   }
 
+  /** L'hiver, la foire est cadenassee (`Foire.fermee`) : un saut de triche vers elle — un de ses defis, son
+      derby, le Bonimenteur — l'OUVRE pour la partie (`triche('foire')`, la bascule FOIRE OUVERTE L'HIVER de
+      TOUJOURS), sinon il menerait devant un comptoir a volets baisses. Tranche par Martin, 1er oct. 2026 :
+      la triche ouvre la foire. L'ete, rien a ouvrir : la bascule ne s'allume pas pour rien. */
+  function ouvrirLaFoire() {
+    const p = B.partie;
+    if (!p || triche('foire') || typeof Saisons === 'undefined' || !Saisons.enHiver()) return;
+    p.triches.foire = true;
+    Missions.sauvegarderPartie();
+  }
+
   /** Saute le joueur au point que le HUD pointe deja (la fleche/losange de
       `Histoire.cible`) — rien de plus qu'un raccourci sur une position deja
       calculee. Refuse dans une piece ou au volant : `Jeu.sortir` orchestre sa
@@ -2187,15 +2198,22 @@ const Hud = (function () {
   }
 
   /** Une tuile a pied a un pas de `e` — hors chaussee, hors meuble, sans
-      personne dessus —, ou null. */
+      personne dessus —, ou null.
+      ⚠️ A DEFAUT, L'ASPHALTE : qui se tient dans une cour d'asphalte (Gilles, dans le lot de la fourriere
+      depuis le 30 sept. 2026) n'a pas une tuile hors chaussee a un pas, et le saut disait INTROUVABLE.
+      Le repli prend la chaussee, mais jamais sous un char (un char saisi est gare dans la cour). */
   function placeAupres(e) {
     const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
     const pas = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1], [2, 0], [-2, 0], [0, 2], [0, -2]];
-    for (const p of pas) {
-      const x = tx + p[0], y = ty + p[1];
-      if (!Monde.marchablePieton(x, y) || Monde.estMeuble(x, y)) continue;
-      if (Entites.pietonsAutour(x * TT + 8, y * TT + 8, 10).length) continue;
-      return { x: x * TT + 8, y: y * TT + 8 };
+    for (const surLAsphalte of [false, true]) {
+      for (const p of pas) {
+        const x = tx + p[0], y = ty + p[1], px = x * TT + 8, py = y * TT + 8;
+        const aPied = surLAsphalte ? !Monde.bloque(x, y, Monde.MASQUE_PIETON) : Monde.marchablePieton(x, y);
+        if (!aPied || Monde.estMeuble(x, y)) continue;
+        if (Entites.pietonsAutour(px, py, 10).length) continue;
+        if (surLAsphalte && B.entites.some(function (v) { return v.type === 'vehicule' && v.vivant && dist2(px, py, v.x, v.y) < 16 * 16; })) continue;
+        return { x: px, y: py };
+      }
     }
     return null;
   }
@@ -2221,6 +2239,8 @@ const Hud = (function () {
     if (perso.arrive_apres && B.partie && !B.partie.missionsFaites[perso.arrive_apres]) {
       B.partie.missionsFaites[perso.arrive_apres] = true;
     }
+    // Le Bonimenteur part pour l'hiver avec sa foire : y sauter la rouvre, et il y est.
+    if (perso.ou === 'foire') ouvrirLaFoire();
     Jeu.finirTransition();
     if (j.dansVehicule) Vehicules.descendre(j, true);
     // ⚠️ Dehors D'ABORD, toujours : `quitterLaPiece` ne pose pas le joueur, et un
@@ -2242,6 +2262,8 @@ const Hud = (function () {
         e = Histoire.donneur(slug);
       }
     } else {
+      // Le Bonimenteur parti pour l'hiver revient comme au degel (`majSaisonniers`) : sa foire vient d'ouvrir.
+      if (!Histoire.donneur(slug) && perso.absent_l_hiver) Histoire.majSaisonniers(true);
       e = Histoire.donneur(slug) || Histoire.poserDonneur(perso);
     }
     if (!e) return false;
@@ -2349,6 +2371,8 @@ const Hud = (function () {
     if (ext) { j.x = ext.x; j.y = ext.y; }
     // ⚠️ C'est une triche : un défi encore caché s'ouvre, et son panneau se plante.
     if (Histoire.ouvrirDefi(d, true)) Histoire.planterLesPanneauxOuverts();
+    // Et la foire cadenassée l'hiver s'ouvre aussi, pour ses jeux et pour son derby.
+    if ((d.ou && d.ou.indexOf('foire:') === 0) || d.hors_hiver) ouvrirLaFoire();
     const c = pointDuDefi(d);
     // ⚠️ UNE EPREUVE DEBOUT SANS POINT EN VILLE (la tire, au comptoir de la cabane a sucre — un bloc de
     // carte) : on la propose ici meme, elle se joue la ou on la commence.
@@ -2967,7 +2991,8 @@ const Hud = (function () {
       bascule('endurance', 'ÉNERGIE INFINIE'),
       bascule('munitions', 'MUNITIONS INFINIES'),
       bascule('pasArrete', 'LA POLICE NE T\'ARRÊTE PAS'),
-      bascule('machines', 'MACHINES SANS LIMITE'),        // le videopoker, la machine a sous et les tables oublient leur plafond du jour
+      bascule('machines', 'MACHINES SANS LIMITE'),
+      bascule('foire', 'FOIRE OUVERTE L\'HIVER'),        // un saut vers la foire l'allume ; l'eteindre la recadenasse        // le videopoker, la machine a sous et les tables oublient leur plafond du jour
       // On y va, et rien ne se lance.
       entete('ALLER'),
       { libelle: 'À L\'OBJECTIF', actif: !!Histoire.cible(), faire: function () { teleporterVersObjectif(); return true; } },

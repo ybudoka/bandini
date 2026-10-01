@@ -138,7 +138,7 @@ def test_les_titres_de_section_se_sautent(banc):
         const libelle = function () { return m.items[m.curseur].libelle; };
         const entetes = m.items.filter(function (i) { return i.entete; }).map(function (i) { return i.entete; });
         const depart = libelle();
-        m.curseur = m.items.findIndex(function (i) { return i.libelle === 'MACHINES SANS LIMITE'; });   // la derniere bascule
+        m.curseur = m.items.findIndex(function (i) { return i.libelle === 'FOIRE OUVERTE L\\'HIVER'; });   // la derniere bascule
         o.tape('ArrowDown', 2); const apresBascules = libelle();
         o.tape('ArrowUp', 2); const retourBascules = libelle();
         const poses = [];
@@ -151,7 +151,7 @@ def test_les_titres_de_section_se_sautent(banc):
     assert r["entetes"] == ["LE JOUEUR", "LES CHARS", "TOUJOURS", "ALLER", "JOUER", "LA VILLE", "DIVERS"]
     assert r["depart"] == "ARGENT +1 000 $"
     assert r["apresBascules"] == "À L'OBJECTIF", "le titre ALLER se saute"
-    assert r["retourBascules"] == "MACHINES SANS LIMITE"
+    assert r["retourBascules"] == "FOIRE OUVERTE L'HIVER"
     assert r["surUnTitre"] is False
     assert r["tour"] == "JUKEBOX", "en haut, un appui neuf fait le tour sans se poser sur LE JOUEUR"
 
