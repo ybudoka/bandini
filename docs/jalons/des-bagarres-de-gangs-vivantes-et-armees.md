@@ -831,3 +831,21 @@ arme de gang (le tirage `B.rng()` reste pour les autres, le hasard d'avant ne bo
 sain) ; le tireur blessé tire encore, de plus loin ; la moitié d'un camp couchée, les autres fuient — dans une
 rixe comme contre toi ; un homme de mission ne lâche jamais ; l'arme lâchée garde ce qui reste dans le chargeur,
 sans dé du jeu.
+
+### Vague 4 — les renforts — **plan** (1er oct. 2026)
+
+**La fiche** `rixes.RENFORTS` : `distance_px` (300, 460) — hors de l'écran (la vue fait 480 × 270), dans la bulle
+d'oubli (520) ; `max_par_appel` 2 ; `max_par_combat` 4 (les renforts vivants de son gang à `zone_px` 600) ;
+`en_char_sur` 3 (une fois sur trois, à l'empreinte) ; les cris (`cris`).
+
+**Le cerveau** (`rixe.js`, `appeler`, en tête de `Rixe.maj`, avant le moral) : un membre qui PERD — blessé, ou un
+des siens à terre dans le combat en cours — crie une fois (`e.appele`) ; jusqu'à `max_par_appel` des siens naissent
+HORS DE L'ÉCRAN à `distance_px` (une place cherchée dans l'ordre, à l'empreinte), marqués `renfort`, et accourent :
+contre toi (`attaque_joueur`) ou dans la rixe (`bagarre`, son rival). Une fois sur `en_char_sur`, un char aux
+couleurs du gang est GARÉ sur la voie la plus proche de leur place, d'où ils descendent (⚠️ pas un char qui roule
+jusqu'à la bagarre : la conduite du trafic n'a pas de but à donner, et la toucher est un autre jalon — Martin le
+voit garé en arrivant). Jamais un homme de mission, un allié, un Mante ; jamais dedans, ni pendant la paix du Boss.
+
+**Juges** : un blessé appelle, deux des siens naissent hors champ et accourent ; jamais plus que le plafond ; un
+homme de mission ou la paix du Boss n'appelle personne ; une fois sur trois, un char garé aux couleurs du gang à
+côté d'eux ; dans une rixe, les renforts se battent contre l'autre gang, pas contre toi.
