@@ -198,6 +198,36 @@ def test_les_paquets_arrivent_compresses_par_le_serveur(page, serveur, erreurs, 
     assert erreurs == []
 
 
+def test_les_paquets_partent_avec_les_scripts_et_une_seule_fois(page, serveur, erreurs):
+    """La vague 5 des districts (docs/jalons/charger-les-districts-autour-du-joueur.md) : les définitions et la
+    carte sont demandées AVANT que les scripts aient fini (préchargées par la page), une seule fois chacune — le
+    `fetch()` du jeu reprend la réponse préchargée —, sans avertissement de préchargement perdu, et la ville
+    s'ouvre. Avant, elles partaient au `DOMContentLoaded`, une fois les 87 scripts exécutés."""
+    demandes = []
+    avertissements = []
+
+    def noter(r):
+        chemin = r.url.replace(serveur, "").split("?")[0]
+        if chemin in ("/api/definitions", "/api/carte"):
+            demandes.append(chemin)
+
+    page.on("request", noter)
+    page.on("console", lambda m: avertissements.append(m.text) if m.type == "warning" else None)
+    page.goto(serveur)
+    attendre_titre(page)
+    page.wait_for_timeout(3500)   # Chromium avertit d'un préchargement inutilisé après « quelques secondes »
+    assert sorted(demandes) == ["/api/carte", "/api/definitions"], demandes
+    temps = page.evaluate("""() => {
+      const nav = performance.getEntriesByType('navigation')[0];
+      const r = (bout) => performance.getEntriesByType('resource').find((e) => e.name.indexOf(bout) >= 0);
+      return { dcl: nav.domContentLoadedEventStart, definitions: r('/api/definitions?').startTime,
+               carte: r('/api/carte?').startTime };
+    }""")
+    assert temps["definitions"] < temps["dcl"] and temps["carte"] < temps["dcl"], temps
+    assert not [a for a in avertissements if "preload" in a.lower()], avertissements
+    assert erreurs == []
+
+
 def test_une_carte_d_une_autre_construction_est_refusee(page, serveur):
     """⚠️ La carte voyage a part depuis le 16 sept. 2026 (`/api/carte`), et les
     deux reponses doivent etre de la MEME construction : un deploiement tombe

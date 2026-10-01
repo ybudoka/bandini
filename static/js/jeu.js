@@ -1453,7 +1453,11 @@ const Jeu = (function () {
       definitions nomment l'empreinte de leur carte. Un deploiement tombe entre
       les deux requetes donnerait une carte d'une autre ville — des portes et
       des missions qui ne se parlent plus. On refuse, et la page dit de
-      recharger. */
+      recharger.
+      ⚠️ Les deux sont PRECHARGEES par la page (`<link rel="preload">`, 1er oct.
+      2026) : elles voyagent pendant que les scripts arrivent, et ces `fetch`
+      reprennent la reponse deja la. Sans prechargement (un vieux navigateur, le
+      banc d'essai), ils la demandent comme avant. */
   function chargerDefinitions(racine) {
     // ⚠️ La barre reprend ou `chargement.js` l'a laissee (les scripts), et garde
     // ses cinq derniers pour la ville qui se batit. Entre les deux, les deux

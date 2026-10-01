@@ -1,5 +1,17 @@
 {% extends "base.html" %}
 
+{% block tete %}
+{# LES PAQUETS PARTENT AVEC LES SCRIPTS (vague 5 des districts, 1er oct. 2026 — docs/jalons/charger-les-districts-autour-du-joueur.md) :
+   les definitions et la carte se demandent DES LE HAUT DE LA PAGE, pendant que les 87 scripts arrivent et
+   s'executent ; `Jeu.chargerDefinitions` reprend la meme reponse. Avant, elles ne partaient qu'une fois tous les
+   scripts executes : un aller-retour et 108 Ko de plus apres eux.
+   ⚠️ Les MEMES adresses que `data-url-definitions` / `data-url-carte` (l'empreinte `?e=` comprise), `as="fetch"`
+   et `crossorigin` : c'est a ces trois conditions que le navigateur rend le prechargement au `fetch()` du jeu —
+   sinon il telecharge tout deux fois. #}
+  <link rel="preload" href="{{ url_for('jeu.api_definitions', e=empreinte_definitions) }}" as="fetch" crossorigin>
+  <link rel="preload" href="{{ url_for('jeu.api_carte', e=empreinte_carte) }}" as="fetch" crossorigin>
+{% endblock %}
+
 {% block corps %}
 <main id="bandini" class="jeu" data-etat="chargement" data-scripts="{{ scripts_du_jeu }}"
       data-url-definitions="{{ url_for('jeu.api_definitions', e=empreinte_definitions) }}"

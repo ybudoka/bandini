@@ -262,3 +262,19 @@ def test_l_empreinte_d_un_fichier_suit_son_contenu_et_lui_seul(tmp_path):
     os.utime(a, ns=(a.stat().st_atime_ns, a.stat().st_mtime_ns + 1_000_000))
     assert empreintes("js/a.js") != ea
     assert empreintes("js/b.js") == eb
+
+
+def test_la_page_precharge_les_deux_paquets_que_le_jeu_demande(client):
+    """⚠️ La vague 5 des districts : les définitions et la carte se préchargent dès le haut de la page, pendant que
+    les scripts arrivent. Le navigateur ne rend le préchargement au `fetch()` du jeu que pour la MÊME adresse
+    (l'empreinte `?e=` comprise), `as="fetch"` et `crossorigin` — sinon il télécharge tout deux fois."""
+    import html as h
+    import re
+
+    page = client.get("/").get_data(as_text=True)
+    tete = page[:page.index("</head>")]
+    prechargees = [h.unescape(u) for u in re.findall(r'<link rel="preload" href="([^"]+)" as="fetch" crossorigin>', tete)]
+    demandees = [h.unescape(re.search(rf'data-url-{quoi}="([^"]+)"', page).group(1)) for quoi in ("definitions", "carte")]
+    assert prechargees == demandees, (prechargees, demandees)
+    assert all("?e=" in u for u in prechargees)
+    assert tete.count('rel="preload"') == 2, "rien d'autre ne se précharge : chaque octet de plus retarde les scripts"

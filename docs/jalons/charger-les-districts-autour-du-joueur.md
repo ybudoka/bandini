@@ -305,9 +305,48 @@ refusé (`ScriptIllisible`), jamais changé. Un seul maigrisseur, servi partout 
   sources, le gabarit pris pour du code, l'en-tête du `if` oublié, un commentaire de bloc qui mange ses lignes,
   `return` suivi d'une division, `deploy.sh` sans l'étape, le `.gz` oublié.
 
-**Ce qui reste.** Le découpage révisé du 1er oct. 2026 (la fiche) : la vague 5 (les paquets partent avec les
-scripts) ; les pièces à part et le squelette par district attendent (vagues 6 et 7), le second une décision de
-Martin. ⚠️ **À poser sur le serveur par Martin** (facultatif, 0,6 s de plus en 3G rapide) : `gzip_static on;`
-dans le `location /static/` du vhost nginx (`deploy/nginx/bandini-gestiondojo.conf.example`), puis `sudo nginx -t
-&& sudo systemctl reload nginx`. ⚠️ Le téléphone de Martin est le seul juge qui manque : la sonde simule un réseau
-et un processeur, pas les siens.
+**Vague 5 — les paquets partent avec les scripts (1er oct. 2026).** La page précharge les définitions et la carte
+dès son `<head>` (`<link rel="preload" as="fetch" crossorigin>`, `{% block tete %}` de `base.html`) : elles
+voyagent pendant que les 87 scripts arrivent et s'exécutent, et le `fetch()` de `Jeu.chargerDefinitions` reprend
+la réponse déjà là — aucune ligne du jeu n'a changé. Sans préchargement (un vieux navigateur, le banc d'essai), il
+la demande comme avant. ⚠️ Les trois conditions pour que le navigateur rende le préchargement au `fetch()` : la
+MÊME adresse (l'empreinte `?e=` comprise), `as="fetch"`, et `crossorigin` — sans ce dernier, Chromium télécharge
+tout deux fois (vu en mutation).
+
+- **La mesure** (A/B apparié vague 4 contre vague 5, trois passages chacun) : première visite, écran titre
+  **8 234 → 7 672 ms** (les deux paquets demandés à 595 ms au lieu de 6 864 ; les scripts finissent un peu plus
+  tard, 6 386 contre 5 772 ms, la bande passante est partagée, mais il ne reste après eux que 212 ms pour bâtir la
+  ville) ; deuxième visite, **2 636 → 2 052 ms** (les deux 304 pendant l'exécution des scripts au lieu d'après).
+  Une seule requête par paquet, les mêmes octets.
+- **Juges** : `test_routes.py` — la page précharge exactement les deux adresses que le jeu demande (`data-url-…`),
+  dans le `<head>`, `as="fetch" crossorigin`, et rien d'autre ; `test_navigateur.py` — sous Chromium, les deux
+  paquets sont demandés AVANT le `DOMContentLoaded`, une seule fois chacun, sans avertissement de préchargement
+  perdu, et la ville s'ouvre. Ils MORDENT : sans `crossorigin` → deux requêtes par paquet, rouge ; sans
+  préchargement → demandés après le `DOMContentLoaded` (1 004 ms contre 767), deux rouges. Verts à côté :
+  `test_hors_ligne` (la coquille garde les mêmes adresses, le jeu réseau coupé compris), `test_routes`.
+
+**Le démarrage, avant et après les vagues 3 à 5** (la sonde de la remesure, A/B apparié `bd8f4b96` contre la
+vague 5, en alternance, trois passages — deux pour la mise en ligne, où le serveur est relancé sous une autre
+version, les mêmes fichiers) :
+
+| Visite | `bd8f4b96` (avant) | après la vague 5 | Scripts sur le fil |
+|---|---|---|---|
+| Première visite | 12 612 ms | **7 658 ms** | 1 561 400 → 776 814 octets (654 636 avec `gzip_static`) |
+| Après une mise en ligne qui ne touche aucun script | 11 983 ms | **2 023 ms** | 1 561 400 → 0 octet |
+| Deuxième visite | 2 621 ms | **2 015 ms** | 0 |
+| JOUER → la ville | 310 ms | 302 ms | — |
+
+Une vraie mise en ligne fait repartir les scripts qu'elle a touchés, maigres : entre 0.391.23 (en ligne
+aujourd'hui) et `dev`, sept scripts, les plus gros — 281 690 octets au lieu de 1 535 300 (≈ 1,6 s en 3G rapide au
+lieu de ≈ 8,5).
+
+**Ce qui reste.** Les vagues 3 à 5 du découpage révisé sont livrées. Les pièces à part (vague 6, ≈ 40 ms) et le
+squelette par district (vague 7, ≈ 55 ms, le plus gros risque du jalon) attendent : **le second, une décision de
+Martin** — après les vagues 3 à 5, la carte et les définitions font 108 Ko sur 885 à la première visite, et
+plus rien après une mise en ligne qui ne les change pas. Ce qui pèserait encore, s'il faut aller plus loin : les
+scripts eux-mêmes (777 Ko maigres ; brotli en ferait ≈ 520, mais ni nginx ni Python ne l'ont sans paquet en plus),
+et leur exécution (≈ 1,1 s de processeur ×4 à chaque visite, que rien ici n'a touché). ⚠️ **À poser sur le
+serveur par Martin** (facultatif, 0,6 s de plus en 3G rapide à la première visite) : `gzip_static on;` dans le
+`location /static/` du vhost nginx (`deploy/nginx/bandini-gestiondojo.conf.example`), puis `sudo nginx -t && sudo
+systemctl reload nginx`. ⚠️ Le téléphone de Martin est le seul juge qui manque : la sonde simule un réseau et un
+processeur, pas les siens.
