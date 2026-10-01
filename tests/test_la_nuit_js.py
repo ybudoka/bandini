@@ -51,6 +51,10 @@ GREVE = """
       L.graine(31);
       // ⚠️ Le 22, en juillet (le 21 est le déménagement, qui déplace le joueur) : une partie commence en janvier, et la plage n'a pas de baigneurs l'hiver.
       L.B.partie.jour = 22;
+      // ⚠️ ET LE JOUEUR INVINCIBLE (1er oct. 2026) : on le plante à cinq tuiles de la grève, et l'été les hommes de
+      // Sal se servent au contact — sur 7 graines sur 13 (25 à 40), il finissait à l’hôpital à la brunante, la rue rangée
+      // d'un coup : les baigneurs « s'évaporaient » sous nos yeux sans que la plage y soit pour rien.
+      L.B.partie.triches.invincible = true;
       L.B.partie.heure = heure;
       const g = greve(L);
       if (!g) return null;
