@@ -570,3 +570,114 @@ def test_il_crie_quand_il_leve_l_arme(banc):
     }""" % TROIS)
     assert r["cri"] and r["cri"] in r["mots"], "il lève l'arme sans un mot (%s)" % r
     assert r["releve"], "revenu au combat, il ne relève pas l'arme (%s)" % r
+
+
+# --- Vague 3 : le moral et les blessés -----------------------------------------------------------------------
+
+def test_le_blesse_au_contact_fuit_en_boitant(banc):
+    """Sous le tiers de sa vie, l'homme au bâton détale en criant — et il BOITE : plus lent qu'un fuyard sain."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(50);
+        %s
+        const gens = trois(L, 40), c = gens[1], sain = gens[2], j = L.B.joueur;
+        L.Entites.retirer(gens[0]);
+        c.vie = Math.floor(c.vieMax * 0.3);
+        let fuite = -1;
+        for (let i = 0; i < 90 && fuite < 0; i++) { tenir(L); o.frame(1); if (c.etat === 'fuit') fuite = i; }
+        const cri = c.bulle && c.bulle.texte;
+        // Un fuyard sain, au meme endroit, pour comparer les pas.
+        sain.x = c.x; sain.y = c.y + 12; sain.etat = 'fuit'; sain.menace = j; sain.minuterie = 600; sain.boite = false;
+        c.minuterie = 600;
+        const a0 = { x: c.x, y: c.y }, b0 = { x: sain.x, y: sain.y };
+        for (let i = 0; i < 60; i++) { tenir(L); o.frame(1); }
+        const blesse = Math.hypot(c.x - a0.x, c.y - a0.y), valide = Math.hypot(sain.x - b0.x, sain.y - b0.y);
+        return { fuite: fuite, boite: !!c.boite, ratio: blesse / Math.max(1, valide), cri: cri,
+                 mots: L.B.defs.rixes.moral.blesse_mots, etat: c.etat };
+    }""" % TROIS)
+    assert r["fuite"] >= 0, "blessé, il se bat encore au contact (%s)" % r
+    assert r["boite"] and r["ratio"] < 0.8, "il fuit sans boiter (%s)" % r
+    assert r["cri"] in r["mots"], "il fuit sans un mot (%s)" % r
+
+
+def test_le_tireur_blesse_tire_encore_de_plus_loin(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(51);
+        %s
+        const d = fusillade(L, 'cravate', 'pistolet', 75);     // au bas de sa fourchette
+        d.t.vie = Math.floor(d.t.vieMax * 0.3);
+        const f = L.B.defs.rixes.tir.distances.pistolet;
+        let tirs = 0, fuit = 0, auPlusPres = 1e9;
+        const vrai = L.Combat.tirer;
+        L.Combat.tirer = function (e) {
+          if (e === d.t) { tirs++; auPlusPres = Math.min(auPlusPres, Math.hypot(d.t.x - d.m.x, d.t.y - d.m.y)); }
+          return vrai.apply(null, arguments);
+        };
+        for (let i = 0; i < 900; i++) {
+          tenirLaCible(d); d.t.vie = Math.min(d.t.vie, Math.floor(d.t.vieMax * 0.3)); o.frame(1);
+          if (d.t.etat === 'fuit') fuit++;
+        }
+        L.Combat.tirer = vrai;
+        return { tirs: tirs, fuit: fuit, auPlusPres: auPlusPres, milieu: (f[0] + f[1]) / 2 };
+    }""" % FUSILLADE)
+    assert r["fuit"] == 0 and r["tirs"] >= 3, "blessé, le tireur ne tire plus (%s)" % r
+    assert r["auPlusPres"] >= r["milieu"] - 5, "blessé, il tire encore de près (%s)" % r
+
+
+def test_la_moitie_couchee_les_autres_decrissent(banc):
+    """Trois Cravates sur toi : un couché, les deux autres tiennent ; deux couchés, le dernier se sauve en criant."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(52);
+        %s
+        const gens = trois(L, 40), j = L.B.joueur;
+        for (let i = 0; i < 90; i++) { tenir(L); o.frame(1); }
+        L.Entites.blesser(gens[0], 9999, j, { assomme: true });
+        let tiennent = 0;
+        for (let i = 0; i < 60; i++) { tenir(L); o.frame(1); if (gens[1].etat !== 'fuit' && gens[2].etat !== 'fuit') tiennent++; }
+        L.Entites.blesser(gens[2], 9999, j, { assomme: true });
+        let fuite = -1;
+        for (let i = 0; i < 60 && fuite < 0; i++) { tenir(L); o.frame(1); if (gens[1].etat === 'fuit') fuite = i; }
+        return { tiennent: tiennent, fuite: fuite, cri: gens[1].bulle && gens[1].bulle.texte,
+                 mots: L.B.defs.rixes.moral.deroute_mots };
+    }""" % TROIS)
+    assert r["tiennent"] == 60, "un seul couché, et ils détalent déjà (%s)" % r
+    assert r["fuite"] >= 0, "la moitié couchée, le dernier se bat encore (%s)" % r
+    assert r["cri"] in r["mots"], r
+
+
+def test_un_homme_de_mission_ne_lache_jamais(banc):
+    """Il est là pour toi (`cible`) : blessé, ou seul debout de son camp, il se bat encore."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(53);
+        %s
+        const gens = trois(L, 40), j = L.B.joueur, c = gens[1];
+        for (const e of gens) e.cible = true;
+        for (let i = 0; i < 60; i++) { tenir(L); o.frame(1); }
+        L.Entites.blesser(gens[0], 9999, j, { assomme: true });
+        L.Entites.blesser(gens[2], 9999, j, { assomme: true });
+        c.vie = Math.floor(c.vieMax * 0.2);
+        let fuit = 0;
+        for (let i = 0; i < 120; i++) { tenir(L); o.frame(1); if (c.etat === 'fuit') fuit++; }
+        return { fuit: fuit, etat: c.etat };
+    }""" % TROIS)
+    assert r["fuit"] == 0, r
+
+
+def test_l_arme_lachee_garde_ce_qui_reste_dans_le_chargeur(banc):
+    """⚠️ Couché, il lâchait son arme chargeur PLEIN : la mitraillette du marché noir devenait gratuite (la
+    relecture de la vague 2)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(54);
+        %s
+        const d = fusillade(L, 'boulonneux', 'mitraillette', 90);
+        for (let i = 0; i < 80; i++) { tenirLaCible(d); o.frame(1); }
+        d.t.rixe.balles = 5;
+        L.Entites.blesser(d.t, 9999, d.m, {});
+        const r = L.B.entites.find(function (q) { return q.type === 'ramassage' && q.arme === 'mitraillette'; });
+        return { munitions: r ? r.munitions : null };
+    }""" % FUSILLADE)
+    assert r["munitions"] == 5, r

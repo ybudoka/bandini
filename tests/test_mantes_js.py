@@ -158,6 +158,10 @@ def test_le_retournement_du_poignet_renverse_la_prise(banc):
 DUEL = """function (L, o) {
     %s
     const m = preparer(L, o, '%s'), j = L.B.joueur;
+    // ⚠️ Il TIENT jusqu'au bout, comme un homme de mission (`cible`) : depuis la vague 3 des bagarres de gangs
+    // (`rixe.js`), un blesse fuit — et le duel mesure qui tombe le dernier, pas qui detale. (`cible` l'empeche aussi
+    // de degainer l'arme de son gang : le duel reste au corps a corps.)
+    m.cible = true;
     let ko = null, hopital = null, paradees = 0, vols = 0, enVol = false, avant = null;
     const des = { techniques: 0 };
     const rng = L.B.rng;

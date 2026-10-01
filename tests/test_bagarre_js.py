@@ -115,7 +115,9 @@ def test_le_joueur_ne_paie_pas_la_bagarre(banc):
         if (!trouve) return { trouve: false };
         // On les rend fragiles : il FAUT des morts, sinon le juge ne mesure
         // que la moitié de ce qu'il annonce.
-        for (const e of rixeurs(L)) e.vie = 6;
+        // ⚠️ 6 sur 6, pas 6 sur 90 : depuis la vague 3 (le moral), un homme sous le tiers de sa vie fuit — il
+        // faut qu'il tombe au premier coup.
+        for (const e of rixeurs(L)) { e.vie = 6; e.vieMax = 6; }
         L.B.partie.stats.tues = 0;
         L.B.recherche.etoiles = 0;
         L.B.crimes.length = 0;
@@ -513,3 +515,33 @@ def test_une_rixe_armee_ne_se_retourne_pas_contre_le_joueur(banc):
     assert r["balles"] >= 3, "personne n'a tiré : le juge ne mesure rien (%s)" % r
     assert r["contre"] == 0, "la rixe armée s'est retournée contre le joueur (%s)" % r
     assert r["etoiles"] == 0 and r["crimes"] == 0, r
+
+
+def test_dans_une_rixe_le_camp_decime_se_sauve(banc):
+    """Vague 3 : deux des trois hommes d'un camp à terre, le troisième se sauve — et la rixe ne le reprend pas."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(19);
+        %s
+        const trouve = allumer(L);
+        if (!trouve) return { trouve: false };
+        for (let i = 0; i < 150; i++) o.frame(1);
+        const camp = rixeurs(L).filter(function (e) { return e.gang === trouve.ligne.a; });
+        const autre = rixeurs(L).find(function (e) { return e.gang === trouve.ligne.b; });
+        for (const e of camp) { e.vie = e.vieMax; e.vivant = true; if (e.etat === 'assomme') e.etat = 'bagarre'; }
+        L.Entites.blesser(camp[0], 9999, autre, { assomme: true });
+        L.Entites.blesser(camp[1], 9999, autre, { assomme: true });
+        const dernier = camp[2];
+        dernier.vie = dernier.vieMax;
+        let fuite = -1, repris = 0;
+        for (let i = 0; i < 120; i++) {
+          o.frame(1);
+          if (fuite < 0 && dernier.etat === 'fuit') fuite = i;
+          if (fuite >= 0 && dernier.etat === 'bagarre') repris++;
+        }
+        return { trouve: true, fuite: fuite, repris: repris, n: camp.length };
+    }""" % ALLUMER)
+    assert r["trouve"], "aucune frontière n'a ses deux trottoirs"
+    assert r["n"] == 3, r
+    assert r["fuite"] >= 0, "son camp décimé, il se bat encore (%s)" % r
+    assert r["repris"] == 0, "il est retourné à la rixe (%s)" % r

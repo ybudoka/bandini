@@ -73,8 +73,22 @@ TIR: dict = {
 }
 
 
+#: VAGUE 3 — LE MORAL. Sous un tiers de sa vie, il est BLESSÉ : au contact il fuit en boitant, au tir il recule au
+#: fond de sa fourchette et tire encore. La moitié de son camp à terre (morts compris), les debout DÉCRISSENT. Jamais
+#: un homme de mission, un allié ni un Mante : ils sont là pour ça.
+MORAL: dict = {
+    "blesse_part": 0.35,          # sous cette part de sa vie, il est blessé
+    "boite_allure": 0.6,          # blessé, il fuit à cette allure-là : il boite
+    "deroute_part": 0.5,          # cette part de son camp à terre, les autres se sauvent
+    "camp_px": 240,               # son camp : les membres de son gang qui se sont battus, à cette distance
+    "blesse_mots": ["AYOYE!", "J'SAIGNE!", "C'EST ASSEZ!"],
+    "deroute_mots": ["ON DÉCRISSE!", "SAUVE QUI PEUT!", "ON S'EN VA, LES GARS!"],
+}
+
+
 def exporter() -> dict:
     """Ce que le navigateur reçoit sous `B.defs.rixes`."""
     tir = dict(TIR, distances={k: list(v) for k, v in TIR["distances"].items()}, salve=list(TIR["salve"]),
                lever_mots=list(TIR["lever_mots"]))
-    return {"contact": dict(CONTACT), "arsenal": dict(ARSENAL), "part_armee": PART_ARMEE, "tir": tir}
+    moral = dict(MORAL, blesse_mots=list(MORAL["blesse_mots"]), deroute_mots=list(MORAL["deroute_mots"]))
+    return {"contact": dict(CONTACT), "arsenal": dict(ARSENAL), "part_armee": PART_ARMEE, "tir": tir, "moral": moral}

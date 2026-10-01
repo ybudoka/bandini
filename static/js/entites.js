@@ -5195,6 +5195,8 @@ const Entites = (function () {
       }
     } else if (e.etat === 'fuit' || e.etat === 'temoin') {
       vitesse = v.pieton_course * e.allure;
+      // Blesse dans une bagarre (`Rixe`, vague 3), il BOITE.
+      if (e.boite) vitesse *= B.defs.rixes.moral.boite_allure;
       if (--e.minuterie <= 0) { e.etat = 'flane'; e.cri = 0; }
       const menace = e.menace || B.joueur;
       const dx = e.x - menace.x, dy = e.y - menace.y;
@@ -5850,8 +5852,13 @@ const Entites = (function () {
   function lacherArme(e) {
     const def = Combat.armeDef(e.arme);
     if (!def || def.prix === 0 && def.slug === 'poings') { e.arme = null; return; }
-    creer('ramassage', e.x + (B.rng() - 0.5) * 8, e.y + 4, {
-      r: 4, objet: 'arme', arme: e.arme, munitions: def.chargeur, t: 0, solide: false,
+    // ⚠️ L'ARME DE SON GANG (`Rixe`, vague 2) tombe avec ce qui RESTE dans le chargeur (au moins une balle) — chargeur
+    // plein, la mitraillette du marche noir devenait gratuite — et a sa place a l'empreinte : un tirage de plus
+    // aurait deplace le hasard de la ville. Les autres armes tombent comme avant.
+    const deGang = e.armeDeGang && e.armeDeGang === e.arme && e.rixe && e.rixe.balles !== undefined;
+    const ecart = deGang ? (hash2(e.id, 0xD20B) % 1000) / 1000 - 0.5 : B.rng() - 0.5;
+    creer('ramassage', e.x + ecart * 8, e.y + 4, {
+      r: 4, objet: 'arme', arme: e.arme, munitions: deGang ? Math.max(1, e.rixe.balles) : def.chargeur, t: 0, solide: false,
     });
     e.arme = null;
   }

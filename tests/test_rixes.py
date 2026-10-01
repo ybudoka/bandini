@@ -82,3 +82,13 @@ def test_le_paquet_porte_l_arsenal():
     d = villes.assembler()["rixes"]
     assert d["arsenal"] == rixes.ARSENAL and d["part_armee"] == rixes.PART_ARMEE
     assert d["tir"]["distances"]["pistolet"] == list(rixes.TIR["distances"]["pistolet"])
+
+
+def test_la_fiche_du_moral_se_tient():
+    """Vague 3 : le blessé, la déroute."""
+    m = rixes.MORAL
+    assert 0 < m["blesse_part"] < m["deroute_part"] <= 1
+    assert 0 < m["boite_allure"] < 1, "il boite : plus lent qu'un fuyard sain"
+    assert m["camp_px"] >= 120
+    assert m["blesse_mots"] and m["deroute_mots"]
+    assert villes.assembler()["rixes"]["moral"]["deroute_mots"] == list(m["deroute_mots"])

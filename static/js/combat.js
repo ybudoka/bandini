@@ -595,7 +595,10 @@ const Combat = (function () {
         // joueur qui arrose l'allée ne doit pas transformer la fête en
         // carnage — il rate, c'est tout.
         if (p.foire) return false;
-        return c !== p.tireur && c.vivant && (c.type === 'pieton' || c.type === 'joueur');
+        // ⚠️ La balle d'un tireur de gang ne touche pas les SIENS (il tire entre eux) : blesses, ils fuyaient
+        // (le moral, vague 3), et chaque gang arme qui t'attaquait s'effondrait tout seul.
+        return c !== p.tireur && c.vivant && (c.type === 'pieton' || c.type === 'joueur')
+          && !(p.deGang && c.gang && p.tireur && c.gang === p.tireur.gang);
       })[0];
       if (touche && (!p.cloche || p.z < 14)) {
         // ⚠️ DANS UN CHAR, C'EST LA TOLE QUI PREND. `Entites.blesser` refuse
