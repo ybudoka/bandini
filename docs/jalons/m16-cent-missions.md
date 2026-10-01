@@ -1309,3 +1309,8 @@ catalogue.
     leur défaut, puis tout `donne` (message compris) : le catalogue pèse **≈ 25 octets gzip par mission** ; le brut des
     définitions est à 239 439 pour un plafond de 241 000 (les autres sessions y ajoutent aussi) : une dizaine de missions
     de marge. Relever le plafond brut reste la décision de Martin.
+- **1er oct. 2026 : en cours — un choix dans un dialogue, puis un passant qui donne une job** (Martin). Le choix :
+  pendant une réplique, deux ou trois réponses au clavier et à la manette, et la mission bifurque (objectifs, fin,
+  récompense) ; gardé par la sauvegarde ; déclaré dans le fichier de la mission. Puis `d09`. Le passant donneur :
+  un passant ordinaire interpelle le joueur et propose une courte job (né à l'empreinte, sans dé ni identifiant
+  qui décale la ville), une à la fois, jamais pendant une mission ; puis le plus possible de `t01`–`t15`.
