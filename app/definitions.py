@@ -179,6 +179,8 @@ def assembler() -> dict:
         "nuit": nuit.exporter(ville),
         "carte": ville,
         "missions": missions.pour_le_navigateur(),
+        # Les PETITES JOBS, pliées (`missions.jobs_pour_le_navigateur`) : `Jobs.deplier` les remet dans `missions`.
+        "jobs": missions.jobs_pour_le_navigateur(),
         # Les blocs de carte : leur passage en ville, et rien d'autre — leur carte voyage
         # à part, à la demande (`/api/carte/bloc/<slug>`).
         "blocs": blocs.pour_le_navigateur(),
@@ -190,7 +192,11 @@ def assembler() -> dict:
         "decalage_nord": nord.DECALAGE_NORD,
         "defis": missions.DEFIS,
         # ⚠️ Sans la VOIX ElevenLabs de chacun (`CHAMPS_HORS_DU_PAQUET`) : elle ne sert qu'à générer ses mp3.
-        "personnages": [{k: v for k, v in p.items() if k not in CHAMPS_HORS_DU_PAQUET} for p in missions.PERSONNAGES],
+        # Et les deux rôles des petites jobs sans leurs couleurs : le passant qui t'interpelle porte la tenue de SON
+        # archétype (`jobs.js`), jamais celles-là.
+        "personnages": [{k: v for k, v in p.items() if k not in CHAMPS_HORS_DU_PAQUET
+                         and not (k == "couleurs" and p["slug"] in missions.DONNEURS_PASSANTS)}
+                        for p in missions.PERSONNAGES],
         # Le portrait de qui parle, à gauche de la boîte de dialogue (`visages.js`).
         "visages": visages.pour_le_navigateur(),
         # Les squelettes qu'on habille : les garde-robes des passants, la tenue des personnages.

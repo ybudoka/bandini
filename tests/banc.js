@@ -105,6 +105,15 @@ function banc(corps) {
   //: de quoi juger qu'un reseau qui tombe une fois ne ferme pas une mission pour le reste
   //: de la partie.
   let missionsEnPanne = ENTREE.missions_panne || 0;
+  // ⚠️ LES PETITES JOBS VOYAGENT PLIÉES (`defs.jobs`) : le jeu les déplie dans le catalogue en arrivant
+  // (`Jobs.deplier`, l'ordre de `missions.CHAMPS_D_UNE_JOB`) ; le banc le fait ICI, pour pouvoir les poser comme les
+  // autres — le jeu, ensuite, ne les déplie pas deux fois (`jobsDepliees`).
+  if (Array.isArray(defs.jobs) && !defs.jobsDepliees) {
+    defs.jobs.forEach(function (j) {
+      defs.missions.push({ slug: j[0], titre: j[1], donneur: j[2], recompense: j[3], passant: j[4], prerequis: j[5] || [] });
+    });
+    defs.jobsDepliees = true;
+  }
   if (ENTREE.poser_les_missions !== false) {
     (defs.missions || []).forEach(function (m) {
       const d = MISSIONS[m.slug];
@@ -116,6 +125,7 @@ function banc(corps) {
       m.frontiere = d.frontiere || null;
       if (d.donne) m.donne = d.donne;   // comme `charger`
       if (d.branches) m.branches = d.branches;   // ce que paie chaque réponse d'un choix, comme `charger`
+      if (d.passant) m.passant = d.passant;   // le passant d'une petite job, entier, comme `charger`
       (d.voix || []).forEach(function (v) { defs.audio.histoire.push(v); });
     });
   }

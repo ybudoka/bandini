@@ -225,6 +225,8 @@ chacun dans [docs/personnages/](personnages/README.md).
 | `bouchard` | Sergent Bouchard | Khaivan | point:sergent | — |
 | `josee` | Josée | Jeanne Mance | point:contact | — |
 | `civil` | Le client | Alexandre | — (dans le taxi) | — |
+| `passant` | Un passant (une petite job) | Felix (la voix des passants) | — (dans la rue : `jobs.js` le fait naître) | — |
+| `passante` | Une passante (une petite job) | Amélie (la voix des passantes) | — (dans la rue : `jobs.js` la fait naître) | — |
 | `narrateur` | Le Clairon de la Baie | annonceur centre d'achat 1 | — | — |
 | `tipaul` | Ti-Paul Gagnon | Québec Tremblay | porte:depanneur | — |
 | `lulu` | Lucienne « Lulu » Pelletier | Claudia | point:lulu | — |

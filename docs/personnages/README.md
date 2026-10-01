@@ -38,6 +38,7 @@ Chaque fiche mêle deux sortes de faits.
 | [Ovila Saint-Onge](ovila.md) | `ovila` | au phare, dedans | annonceur centre d'achat 1 | m6 · p01 |
 | [Le narrateur du Clairon](le-narrateur.md) | `narrateur` | nulle part : c'est une voix | annonceur centre d'achat 1 | l'ouverture, le journal |
 | [Le client du taxi](le-client-du-taxi.md) | `civil` | sur la banquette arrière | Alexandre | m3 |
+| [Les passants des petites jobs](les-passants.md) | `passant`, `passante` | dans la rue, là où ils t'interpellent | Felix, Amélie (les voix de la rue) | t01–t06, t09, t11–t15 |
 | [Rocco Bandini](rocco.md) | — | absent : c'est lui qu'on remplace | — | partout, en creux |
 | [Sven Haugen](sven.md) | `sven` | sur la jetée, près de son porte-conteneurs | Martin - Clear and Comforting | m52 · m53 · m54 · q10 · v03 |
 | [Le Grand Mo](le-grand-mo.md) | `mo` | le banc du terminus | Alexandre Boutin | f04 |

@@ -1329,6 +1329,40 @@ catalogue.
       bouton, la question qui tient contre ACTION/PAUSE/RETOUR/FRAPPE/CARTE et le temps, la manette de Martin, le
       doigt, la sauvegarde, la question reposée, `exige.choix`, une question sous une scène) ; huit mutations,
       rouges.
+  - ✅ **Vague 19 : un passant qui donne une job, et douze petites jobs.** Un passant ORDINAIRE de la rue (un archétype
+    et un district, la clé `passant` de la mission) se présente — à pied, dehors, jamais pendant une mission, une offre
+    par demi-journée au plus (`partie.jobOfferte`), une minute et demie après la dernière mission —, marche jusqu'à toi
+    et te hèle (sa bulle, sa voix de passant : la partie `hele`, comptée en dernier) ; ACTION à côté de lui : son intro,
+    puis la job, sans téléphone. Il naît à l'empreinte (`static/js/jobs.js` : un dé prêté, un numéro hors de la suite,
+    sa tenue tirée de la garde-robe de son archétype, sa place d'une spirale sans dé) ; laissé en plan, il dit « Laisse
+    faire. » et redevient passant. Deux rôles, `passant` (Felix) et `passante` (Amélie) — les voix des passants —,
+    sans portrait ni présentation ; tout se dit en personne, l'échec compris. Recette : `docs/comment-monter-les-missions.md`
+    § 5 ter. Les jobs (après m6) : `t01` _Mon char est au lot_ (le banlieusard des Érables : son auto au lot, Gilles
+    qui appelle la police, le dépanneur — 80 $), `t02` _Le lunch des gars_ (le débardeur : trois hot-dogs à la cantine,
+    rapportés chauds en 90 s — 30 $), `t03` _Un lift au terminus_ (la dame à la valise et ses œufs, 90 s — 40 $),
+    `t04` _Mon BMX_ (l'ado de La Pointe, un Skateux qui le promène en janvier — 25 $), `t05` _La sacoche_ (reprise
+    par-derrière à l'itinérant — 50 $), `t06` _La commande de la taverne_ (le camion du gérant, deux caisses à la
+    cantine — 90 $), `t09` _La tournée du Clairon_ (six portes dans l'ordre, deux minutes et
+    demie — 60 $), `t11` _Le feu de camp_ (l'extincteur que le promeneur traîne depuis neuf ans — 50 $), `t12` _Une
+    gageure avec le livreur_ (l'hôpital en 75 s — 70 $), `t13` _La pelle du vieux_ (une Morue, et il te la laisse —
+    20 $ et la pelle), `t14` _Les mariés_ (la berline de l'oncle, la mariée au phare — 120 $), `t15` _L'autobus manqué_
+    (la fourrière avant le quart, 100 s — 40 $). 83 voix.
+    - ⚠️ **Écarts à la fiche** : une offre par demi-journée (la fiche disait « un par jour ») ; le donneur est un rôle
+      (`passant`/`passante`) qui porte l'archétype, pas `pieton:<slug>@district:<slug>` ; `t02` à la cantine, pas au
+      kiosque ; `t03`, `t15` sans « sans un choc » (aucune option ne le lit hors de `livrer`) ; `t10` (l'usine n'est
+      jamais un lieu de mission) et `t15` vont à la fourrière ; `t12` court contre la montre (`contre` n'est lu par
+      personne) ; `t09` à pied ou en char (le vélo est remisé l'hiver) ; `t04` un BMX en janvier. Restent `t07` (le p'tit perdu : rien ne pose un enfant qui se cache), `t08` (des boîtes à
+      porter dans l'usine), `t10`.
+    - **Le paquet** : le casse (x01-x04) venait de remplir la clé `missions` et le plafond brut, la suite était pleine.
+      Les jobs voyagent donc PLIÉES (`jobs`, une liste par job — 797 bruts, 363 gzip ; `missions.jobs_pour_le_navigateur`)
+      et le navigateur les déplie dans le catalogue (`Jobs.deplier`) ; leur passant n'y est qu'« archétype@district »,
+      les deux rôles n'y portent pas de couleurs. ⚠️ Le brut des définitions est à 241 947 pour 242 000 : la prochaine
+      clé qui grossit le passe — relever ou plier autre chose, c'est la décision de Martin.
+    - **Juges** : `tests/test_jobs.py` (la forme, cinq), `tests/test_jobs_js.py` (dix-huit : il se présente, hèle et vient ;
+      né sans dé ni numéro, la même tenue ; la cadence — trop tôt, en mission, au volant, une par demi-journée ; jamais
+      au téléphone ; les douze jobs jouées au bouton ; l'échec dit en personne, le dépliage du paquet) ; huit mutations, rouges (une huitième —
+      la garde « pendant une mission » — ne rougit pas : la cadence la double, `B.jobRepos` repart à chaque image de
+      mission).
 - **1er oct. 2026 : en cours — le casse, un char sur l'île, une course sur l'eau** (Martin). Trois vagues, chacune
   atterrie seule : (15) une **caisse populaire** neuve — la CAISSE POP d'origine est devenue l'ÉCOLE LA MANTE —, posée
   en dernier sur la ville finie, sans un dé, la ville d'avant identique (comparée en JSON), son intérieur (comptoir,

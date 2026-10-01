@@ -303,5 +303,8 @@ def exporter() -> dict:
         "hauts": list(HAUTS), "motifs": list(MOTIFS), "bas": list(BAS), "souliers": list(SOULIERS),
         "accessoires": list(ACCESSOIRES), "couleurs": {k: list(v) for k, v in COULEURS.items()},
         "garde_robes": robes,
-        "personnages": {p["slug"]: tenue_du_personnage(p["slug"]) for p in missions.PERSONNAGES},
+        # ⚠️ Pas les deux rôles des petites jobs (`missions.DONNEURS_PASSANTS`) : le passant qui t'interpelle porte la tenue
+        # de SON archétype, tirée à l'empreinte (`jobs.js`) — la leur ne serait jamais lue.
+        "personnages": {p["slug"]: tenue_du_personnage(p["slug"]) for p in missions.PERSONNAGES
+                        if p["slug"] not in missions.DONNEURS_PASSANTS},
     }

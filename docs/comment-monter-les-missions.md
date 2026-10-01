@@ -434,6 +434,45 @@ complet : `app/missions/d09.py` (Léo doit 800 $ à Sal ; on le couche, ou on pa
 - **Les juges** : la forme, `missions.erreurs_de_choix` (cousu à `erreurs_de_mise_en_scene`,
   `tests/test_choix.py`) ; le jeu, au bouton et de chaque côté, `tests/test_choix_js.py`.
 
+### 5 ter. Une petite job : un passant qui la donne (1er oct. 2026)
+
+Une mission courte peut se donner **dans la rue, par un passant ordinaire** — pas un personnage de l'histoire : il
+te repère, marche jusqu'à toi en te hélant, et ACTION à côté de lui lance son intro, puis la job, **sans
+téléphone**. Exemples : `t02.py` (le débardeur et son lunch), `t03.py` (un lift, `proteger`), `t05.py` (la sacoche,
+`pickpocket`), `t13.py` (la pelle du vieux, `tuer` + `retourner`).
+
+```python
+"donneur": "passant",                     # ou "passante" : deux RÔLES (`missions.DONNEURS_PASSANTS`)
+"prerequis": ["m6"],                      # après le tour du propriétaire
+"passant": {"archetype": "docker",        # QUI : un archétype de la rue (`pietons.CATALOGUE`, jamais un gang ni un métier)
+            "district": "quais",          # OÙ il se présente (None : partout)
+            "nom": "Le débardeur"},       # le nom de sa boîte de dialogue (24 caractères au plus)
+"dialogue": {
+    "hele": [_l("passant", "Hé! Le jeune!", jeu="[cheerful] Hé! Le jeune!")],   # son hèlement : SA BULLE et sa voix (≤ 16)
+    "intro": [ … ], "pendant": [ … ], "fin": [ … ], "echec": [ … ],             # PAS d'appel : il n'a pas ton numéro
+},
+```
+
+- **Le moteur** (`static/js/jobs.js`) : une offre par **demi-journée** au plus (`partie.jobOfferte`), jamais
+  pendant une mission, un défi, une sonnerie ou une poursuite, seulement **à pied** et dehors, une minute et demie au
+  moins après la dernière mission ; la job tirée à l'empreinte de la demi-journée parmi celles **de ton district**
+  (ou de partout). Il naît **à l'empreinte** : à 7–11 tuiles, sur un trottoir d'où il marche jusqu'à toi, un dé
+  prêté (`creerPieton` en tire deux), un numéro hors de la suite (`Entites.enDehorsDeLaSuite`), sa tenue tirée de
+  la garde-robe de son archétype : la ville ne glisse pas. Laissé en plan (on s'éloigne, trente secondes sans lui
+  parler), il dit « Laisse faire. » et redevient un passant ; la job reviendra une autre demi-journée.
+- **Une job ne s'offre jamais autrement** : ni au téléphone, ni au carnet, ni par la bulle d'un donneur
+  (`Histoire.disponibles` les écarte). Elle **voyage pliée** (la clé `jobs` du paquet, une liste par job :
+  `missions.jobs_pour_le_navigateur`, l'ordre de `CHAMPS_D_UNE_JOB`), et le navigateur la remet dans le catalogue en
+  arrivant (`Jobs.deplier`) ; son passant entier (le nom de sa boîte) arrive avec elle (`/api/mission/<slug>`). Une
+  petite job n'a ni `exige` ni `ferme`.
+- **Tout se dit en personne** (même l'échec), sans portrait, sous le nom de `passant.nom`, avec la voix des passants
+  (Felix, Amélie). Il **ne se présente pas** (un inconnu ne dit pas son nom).
+- **La fin se dit devant lui** : le dernier objectif est un `retourner` (il attend là où il t'a hélé), ou il est avec
+  toi (`proteger`, `cible` = le passant). Jugé : `missions.erreurs_de_passant` (`tests/test_jobs.py`) ; au banc,
+  `tests/test_jobs_js.py`. La triche (SAUT VERS UNE MISSION) et les bancs le font se présenter à deux pas
+  (`Jobs.offrir(slug, true)`).
+- `hele` se compte en **dernier** dans `PARTIES` : aucune voix déjà payée ne change de nom.
+
 ---
 
 ## 6. Les scènes (`scenes`, le vocabulaire de plans)

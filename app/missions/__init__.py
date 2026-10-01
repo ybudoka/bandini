@@ -448,7 +448,18 @@ PERSONNAGES: list[Personnage] = [
      "couleurs": {"c": "#2f3a52", "h": "#5a3a22", "s": "#e0b08a", "p": "#2a2a33"}, "ou": "point:roy",
      "heler": "Toi, approche.", "arrive_apres": "r01",
      "repos": ("Pas maintenant.", "Pas maintenant. J'ai une ville à nettoyer.")},
+    # --- LES PETITES JOBS (M16, arc T, 1er oct. 2026 — Martin : « un passant qui donne une job ») : un passant
+    # ORDINAIRE, pas un personnage de l'histoire. Deux RÔLES, comme le client du taxi (`civil`) : ils ne se tiennent
+    # nulle part (`ou` vide — `static/js/jobs.js` en fait naître un dans la rue, de l'archétype que la mission nomme,
+    # `passant`), ne se présentent pas, et parlent avec les voix des passants de la rue (`audio.VOIX_PAR_GENRE`).
+    {"slug": "passant", "nom": "Un passant", "genre": "homme", "voix": "Felix Tabarnak - Confident and Witty",
+     "couleurs": {"c": "#7a6a52", "h": "#3a2a1a", "s": "#e8b088", "p": "#2a2a3a"}, "ou": "", "heler": "Hé! Toi!"},
+    {"slug": "passante", "nom": "Une passante", "genre": "femme", "voix": "Amélie - Young, Confident and Friendly",
+     "couleurs": {"c": "#8a4a6a", "h": "#5a3a22", "s": "#f0c098", "p": "#2a2a3a"}, "ou": "", "heler": "Pardon, toi!"},
 ]
+
+#: Les deux rôles qui donnent une petite job (`passant` d'une mission, `erreurs_de_passant`).
+DONNEURS_PASSANTS = ("passant", "passante")
 
 
 class Mission(TypedDict):
@@ -686,7 +697,7 @@ from . import (  # noqa: E402
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
     s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
     e04, e06, e07, e10, la_pointe, s02, s05, s06, s09, s10, s11,
-    d01, d02, d03, d04, d05, d06, d07, d08, h03, h04, h05, h06, h07, l01, l02, l03, l04, l05, l06, r02, r03, r04, r05, r06, r07, r08, s07, s12, s14, e13, q12, q09, q08, i01, i02, i03, i05, i06, i08, h08, d09, q07, m98,
+    d01, d02, d03, d04, d05, d06, d07, d08, h03, h04, h05, h06, h07, l01, l02, l03, l04, l05, l06, r02, r03, r04, r05, r06, r07, r08, s07, s12, s14, e13, q12, q09, q08, i01, i02, i03, i05, i06, i08, h08, d09, t01, t02, t03, t04, t05, t06, t09, t11, t12, t13, t14, t15, q07, m98,
     x01, x02, x03, x04,
 )
 
@@ -788,6 +799,11 @@ CATALOGUE: list[Mission] = [
     x01.MISSION, x02.MISSION, x03.MISSION, x04.MISSION,
     # ⚠️ d09 (1er oct. 2026) : le premier CHOIX DANS UN DIALOGUE — Léo doit 800 à Sal ; on le couche, ou on paie.
     d09.MISSION,
+    # ⚠️ t02, t03, t05, t13 (1er oct. 2026) : les PETITES JOBS — un passant de la rue t'interpelle (`passant`,
+    # `static/js/jobs.js`), sans téléphone : le char au lot, le lunch des gars, un lift, le BMX, la sacoche, la bière de la taverne, la tournée
+    # du Clairon, le feu de camp, la gageure, la pelle du vieux, les mariés, l'autobus manqué.
+    t01.MISSION, t02.MISSION, t03.MISSION, t04.MISSION, t05.MISSION, t06.MISSION, t09.MISSION, t11.MISSION, t12.MISSION,
+    t13.MISSION, t14.MISSION, t15.MISSION,
     m97.MISSION, m98.MISSION, m99.MISSION,
 ]
 
@@ -1215,7 +1231,7 @@ def dans_l_ordre_ou_on_les_entend(mission: dict) -> list[dict]:
     on parle trop tôt (`renvoi`) et à la poignée de main qui l'accomplit (`accueil`) ; le client
     du taxi, la fin, l'échec."""
     dialogue = mission["dialogue"]
-    sortie = list(dialogue.get("appel") or []) + list(dialogue.get("intro") or [])
+    sortie = list(dialogue.get("hele") or []) + list(dialogue.get("appel") or []) + list(dialogue.get("intro") or [])
     for i in range(len(mission["objectifs"])):
         for partie in ("pendant", "renvoi", "accueil"):
             sortie += [ligne for ligne in dialogue.get(partie) or [] if ligne.get("objectif") == i]
@@ -1247,7 +1263,9 @@ def erreurs_de_presentation(catalogue: list[dict] | None = None) -> list[str]:
 #: L'ordre dans lequel se comptent les répliques d'une mission (le `n` du slug de voix).
 #: ⚠️ `renvoi` vient APRÈS `pendant` : un slug de voix se compte à sa place, et les mp3 déjà
 #: payés ne changent pas de nom. Et `accueil` vient APRÈS `renvoi`, pour la même raison.
-PARTIES = ("appel", "intro", "client", "fin", "echec", "pendant", "renvoi", "accueil", "generique")
+# `hele` (1er oct. 2026, les petites jobs) : ce que crie le passant qui t'interpelle, compté en DERNIER — aucune voix déjà
+# payée ne change de nom.
+PARTIES = ("appel", "intro", "client", "fin", "echec", "pendant", "renvoi", "accueil", "generique", "hele")
 
 
 def repliques() -> list[dict]:
@@ -1344,11 +1362,40 @@ def cles_des_serrures(blocs: list[dict]) -> dict[str, list[str]]:
 
 def pour_le_navigateur() -> list[dict]:
     """Le catalogue tel que le téléphone le reçoit : les missions SANS ce qu'elles
-    disent ni ce qu'elles montrent (voir `HORS_DU_PAQUET`)."""
-    return [{cle: copy.deepcopy(valeur) for cle, valeur in mission.items()
+    disent ni ce qu'elles montrent (voir `HORS_DU_PAQUET`). ⚠️ Sans les PETITES JOBS (`passant`) : elles voyagent
+    pliées à part (`jobs_pour_le_navigateur`), et le navigateur les déplie dans ce catalogue (`Jobs.deplier`)."""
+    return [{cle: _au_catalogue(cle, valeur) for cle, valeur in mission.items()
              if cle not in HORS_DU_PAQUET and cle != "donne"
              and not (cle in PAR_DEFAUT_AU_NAVIGATEUR and valeur == DEFAUTS_DE_MISSION[cle])}
-            for mission in CATALOGUE]
+            for mission in CATALOGUE if not mission.get("passant")]
+
+
+#: L'ordre des champs d'une petite job PLIÉE (`jobs_pour_le_navigateur`), que `Jobs.deplier` lit dans le même ordre.
+CHAMPS_D_UNE_JOB = ("slug", "titre", "donneur", "recompense", "passant", "prerequis")
+
+
+def jobs_pour_le_navigateur() -> list[list]:
+    """⚠️ LES PETITES JOBS, PLIÉES (1er oct. 2026) : une liste par job, dans l'ordre de `CHAMPS_D_UNE_JOB` — sans les
+    noms des clés, et le passant en « archétype@district » (`_au_catalogue`). Le casse (x01-x04) et douze petites
+    jobs passaient le budget de la clé `missions` et le plafond brut du paquet ; la suite (`/api/suite`) était pleine.
+    Ni le téléphone, ni le carnet, ni une bulle de donneur ne les offrent : seul `jobs.js` les lit, et le navigateur
+    les remet dans le catalogue en arrivant (`Jobs.deplier`)."""
+    sortie = []
+    for mission in CATALOGUE:
+        if mission.get("passant"):
+            assert not mission.get("exige") and not mission.get("ferme"), f"{mission['slug']} : une petite job pliée"
+            sortie.append([_au_catalogue(c, mission[c]) if c == "passant" else copy.deepcopy(mission[c])
+                           for c in CHAMPS_D_UNE_JOB])
+    return sortie
+
+
+def _au_catalogue(cle: str, valeur):
+    """Une clé de mission telle que le catalogue la porte. ⚠️ Une PETITE JOB (`passant`) n'y garde que ce qui la CHOISIT
+    — « l'archétype@le district » (`*` : partout), lu par `jobs.js` — ; le nom de sa boîte arrive avec elle
+    (`pour_jouer`), comme ce qu'elle dit. Douze petites jobs passaient le budget de la clé `missions`."""
+    if cle == "passant":
+        return f"{valeur['archetype']}@{valeur.get('district') or '*'}"
+    return copy.deepcopy(valeur)
 
 
 #: ⚠️ CE QU'ELLE DONNE VOYAGE AVEC LA MISSION (M16, le reste, 30 sept. 2026) : `donne` ne se lit qu'en la
@@ -1392,6 +1439,8 @@ def pour_jouer(slug: str) -> dict | None:
             **({"donne": copy.deepcopy(mission["donne"])} if mission.get("donne") else {}),
             # Ce que chaque réponse d'un choix change à la fin (`branches`) : lu en la réussissant, comme `donne`.
             **({"branches": copy.deepcopy(mission["branches"])} if mission.get("branches") else {}),
+            # Le passant d'une petite job, entier (son nom de boîte) : le catalogue n'en porte que l'archétype et le district.
+            **({"passant": copy.deepcopy(mission["passant"])} if mission.get("passant") else {}),
             # Le saut et la frontiere (`surplace.js`) : lus a la fin de l'intro, donc apres ce texte.
             **{cle: copy.deepcopy(mission[cle]) for cle in ("sur_place", "frontiere") if cle in mission}}
 
@@ -1643,6 +1692,56 @@ def erreurs_de_choix(mission: dict) -> list[str]:
     return erreurs
 
 
+# --- Un passant qui donne une job (1er oct. 2026, Martin) ----------------------------------------------------------
+#
+# ⚠️ Les petites jobs (l'arc T) : `"passant": {"archetype", "district", "nom"}` — QUI t'interpelle (un archétype de la
+# rue, `pietons.CATALOGUE`, jamais un gang), OÙ (un district, ou partout), et le nom de sa boîte de dialogue (« Le
+# débardeur »). Le donneur est un rôle (`passant` ou `passante`) ; le hèlement se dit (`hele`, une réplique courte : elle
+# est aussi sa bulle) ; tout le reste se dit EN PERSONNE — pas d'appel, il n'a pas ton numéro.
+
+CLES_D_UN_PASSANT = ("archetype", "district", "nom")
+NOM_DE_PASSANT_MAX = 24
+
+
+def erreurs_de_passant(mission: dict) -> list[str]:
+    """La forme d'une petite job. Une mission sans `passant` ne doit ni être donnée par un passant ni héler."""
+    from .. import carte, pietons
+
+    slug, pa, dialogue = mission["slug"], mission.get("passant"), mission["dialogue"]
+    hele = dialogue.get("hele") or []
+    if not pa:
+        erreurs = []
+        if mission["donneur"] in DONNEURS_PASSANTS:
+            erreurs.append(f"{slug} : un passant donneur veut sa clé `passant`")
+        if hele:
+            erreurs.append(f"{slug} : seul un passant qui donne une job hèle (`hele`)")
+        return erreurs
+    erreurs = []
+    if mission["donneur"] not in DONNEURS_PASSANTS:
+        erreurs.append(f"{slug} : une petite job se donne par un passant ({', '.join(DONNEURS_PASSANTS)})")
+    if set(pa) - set(CLES_D_UN_PASSANT):
+        erreurs.append(f"{slug} : passant — clés inconnues {sorted(set(pa) - set(CLES_D_UN_PASSANT))}")
+    arch = next((a for a in pietons.CATALOGUE if a["slug"] == pa.get("archetype")), None)
+    if not arch or arch.get("gang") or arch.get("metier"):
+        erreurs.append(f"{slug} : {pa.get('archetype')!r} n'est pas un passant ordinaire de la rue")
+    if pa.get("district") is not None and pa["district"] not in {d["slug"] for d in carte.DISTRICTS}:
+        erreurs.append(f"{slug} : district inconnu {pa['district']!r}")
+    if not pa.get("nom") or len(pa["nom"]) > NOM_DE_PASSANT_MAX:
+        erreurs.append(f"{slug} : le nom de sa boîte, {NOM_DE_PASSANT_MAX} caractères au plus")
+    if dialogue.get("appel"):
+        erreurs.append(f"{slug} : un passant n'appelle pas — il n'a pas ton numéro")
+    if len(hele) != 1 or hele[0]["qui"] != mission["donneur"] or len(hele[0]["texte"]) > HELER_MAX:
+        erreurs.append(f"{slug} : un hèlement, une réplique du passant, {HELER_MAX} caractères au plus (sa bulle)")
+    for partie, lignes in dialogue.items():
+        if any(ligne["qui"] != mission["donneur"] for ligne in lignes or []):
+            erreurs.append(f"{slug} : {partie} — seul le passant parle (une voix de la rue)")
+    objectifs = mission["objectifs"]
+    escorte = any(o.get("type") == "proteger" and o.get("cible") == mission["donneur"] for o in objectifs)
+    if not (objectifs and objectifs[-1].get("type") == "retourner") and not escorte:
+        erreurs.append(f"{slug} : la fin se dit devant lui — on revient le voir (`retourner`), ou il vient (`proteger`)")
+    return erreurs
+
+
 def erreurs_de_mise_en_scene(mission: dict) -> list[str]:
     """Ce qui manque à une mission pour être FINIE : ses scènes, ses répliques à
     chaque temps, et une fin qui ne parle pas par la bouche d'un absent."""
@@ -1726,7 +1825,7 @@ def erreurs_de_mise_en_scene(mission: dict) -> list[str]:
         if len(textes) > 1:
             erreurs.append(f"{slug} : {qui} se présente {len(textes)} fois — une fois par mission : "
                            + " / ".join(f"« {t} »" for t in textes))
-    return erreurs + erreurs_de_choix(mission)
+    return erreurs + erreurs_de_choix(mission) + erreurs_de_passant(mission)
 
 
 # --- Les scènes par défaut : le bloc Lego -----------------------------------------------------
@@ -1816,6 +1915,10 @@ def fin_chez_le_donneur(mission: dict) -> bool:
     donneur = personnage(donneur_final(mission))
     dernier = mission["objectifs"][-1] if mission["objectifs"] else {}
     if dernier.get("type") == "retourner":
+        return True
+    # ⚠️ UNE PETITE JOB (`passant`) finit toujours devant lui : on revient le voir (`retourner`), ou il est avec nous
+    # (`proteger`) — `erreurs_de_passant` le tient.
+    if mission.get("passant"):
         return True
     chez_lui = donneur["ou"][6:] if donneur and donneur["ou"].startswith("porte:") else None
     return bool(chez_lui) and dernier.get("lieu") == chez_lui

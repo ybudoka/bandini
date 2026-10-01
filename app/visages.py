@@ -121,6 +121,10 @@ VISAGES: dict[str, dict] = {
     "josee": _v("fine", "queue", "col_roule", signes=("cicatrice", "rouge")),
     # Le client du taxi : un policier en civil qui fait semblant d'être personne.
     "civil": _v("carree", "courte", "veston"),
+    # Les deux rôles des PETITES JOBS (le passant qui t'interpelle) : une tête de tout le monde. ⚠️ La boîte de dialogue
+    # ne la montre pas (`histoire.js`) — celui qui parle a la tenue de SON archétype, pas celle-ci.
+    "passant": _v("ronde", "courte", "chandail", "mal_rase"),
+    "passante": _v("fine", "carre", "gilet"),
     # Le Clairon de la Baie : la voix du journal, lunettes carrées et nœud papillon.
     "narrateur": _v("longue", "degarnie", "veston", "moustache", "carrees", signes=("noeud_pap",)),
     # Le dépanneur des Érables : roux, taches de rousseur, bouclé, la cinquantaine.

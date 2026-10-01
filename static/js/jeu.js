@@ -98,7 +98,7 @@ const Jeu = (function () {
     Monde.centrerCamera(j.x, j.y);
     Entites.peuplerDabord();          // ⚠️ apres le joueur : la bulle est autour de lui
     if (p.mission) p.mission = null;  // une mission ne survit pas au rechargement : ses figurants non plus
-    B.mission = null; B.defi = null; B.epreuve = null; B.conduite = null; B.rue = null; B.cinema = null; B.ouverture = null; B.scene = null; B.finEnAttente = null; B.generiqueEnAttente = null; B.videopoker = null; B.machineASous = null; B.tables = null; B.orignal = null;
+    B.mission = null; B.job = null; B.jobRepos = null; B.defi = null; B.epreuve = null; B.conduite = null; B.rue = null; B.cinema = null; B.ouverture = null; B.scene = null; B.finEnAttente = null; B.generiqueEnAttente = null; B.videopoker = null; B.machineASous = null; B.tables = null; B.orignal = null;
     B.sonnerie = null;                       // un telephone qui sonnait dans la partie d'avant ne sonne pas dans celle-ci
     B.abribusServis = {};                    // les abribus qu'un autobus vient de servir (Autobus)
     Traversier.oublier(); Navette.oublier(); Vedette.oublier();                    // rien a bord, la carte neuve n'a pas de pont pose
@@ -1551,7 +1551,8 @@ const Jeu = (function () {
     redim();
 
     return chargerDefinitions(racine).then(function (defs) {
-      B.defs = defs;
+      // Les PETITES JOBS voyagent pliées : elles rentrent dans le catalogue des missions (`Jobs.deplier`).
+      B.defs = Jobs.deplier(defs);
       // Les notes de la musique — le filet du sequenceur, hors du paquet depuis le 29 sept.
       // 2026 : demandees MAINTENANT, en arriere-plan, pendant que la ville se batit. Pas au
       // moment ou un mp3 rate : c'est souvent que le reseau vient de tomber (`Son.Notes`).
@@ -1632,7 +1633,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Souterrain: Souterrain, Entites: Entites, Combat: Combat, Techniques: Techniques, Rixe: Rixe, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Train: Train, Navette: Navette, Neige: Neige, Pluie: Pluie, Derapage: Derapage, Naufrage: Naufrage, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, RueDesSaisons: RueDesSaisons, Patinoire: Patinoire, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Territoires: Territoires, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Caisse: Caisse, Galeries: Galeries, Fetes: Fetes, Halloween: Halloween, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Collections: Collections, Suite: Suite, Decoration: Decoration, Puces: Puces, Interactions: Interactions, Police: Police, Vedette: Vedette, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Foyers: Foyers, FileDeFoire: FileDeFoire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Photos: Photos, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, SurPlace: SurPlace, Chapitres: Chapitres, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Train: Train, Navette: Navette, Neige: Neige, Pluie: Pluie, Derapage: Derapage, Naufrage: Naufrage, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, RueDesSaisons: RueDesSaisons, Patinoire: Patinoire, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Territoires: Territoires, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Caisse: Caisse, Galeries: Galeries, Fetes: Fetes, Halloween: Halloween, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Collections: Collections, Suite: Suite, Decoration: Decoration, Puces: Puces, Interactions: Interactions, Police: Police, Vedette: Vedette, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Foyers: Foyers, FileDeFoire: FileDeFoire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Photos: Photos, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, SurPlace: SurPlace, Chapitres: Chapitres, Jobs: Jobs, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, PORTRAITS: PORTRAITS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,

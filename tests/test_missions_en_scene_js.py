@@ -124,7 +124,10 @@ OUTILS = ('  const ORDRE = ' + json.dumps(missions.ordre_topologique()) + ';' + 
   }
   // ⚠️ Les missions faites AVANT `commencer` : c'est lui qui pose les donneurs, et
   // Ti-Guy n'attend plus au terminus une fois M1 faite (`parti_apres`).
-  function partie(L, slug) { if (L.B.interieur) L.Jeu.quitterLaPiece(); L.Jeu.retourTitre(); remettre(L); L.B.partie.missionsFaites = {}; L.B.partie.mission = null; faites(L, slug); L.Jeu.commencer(); tenirExige(L, mission(L, slug)); }
+  function partie(L, slug) { if (L.B.interieur) L.Jeu.quitterLaPiece(); L.Jeu.retourTitre(); remettre(L); L.B.partie.missionsFaites = {}; L.B.partie.mission = null; faites(L, slug); L.Jeu.commencer(); tenirExige(L, mission(L, slug)); passant(L, slug); }
+  // ⚠️ UNE PETITE JOB (`passant`) : son donneur est un passant de la rue, qui n'existe que s'il s'est présenté —
+  // il se présente ici, à deux pas (`Jobs.offrir`), comme dans la rue quand on va le voir.
+  function passant(L, slug) { const m = mission(L, slug); if (m && m.passant) L.Jobs.offrir(slug, true); }
   function allerVoir(L, o, m) {
     const perso = L.B.defs.personnages.find(function (p) { return p.slug === m.donneur; });
     if (perso.ou.indexOf('point:') === 0) {

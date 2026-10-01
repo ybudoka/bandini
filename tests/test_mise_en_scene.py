@@ -199,7 +199,7 @@ def test_les_voix_deja_payees_gardent_leur_slug():
                 if ligne.get("hiver"):
                     attendus[(partie, ligne["hiver"]["texte"])] = f"{ligne['qui']}-{m['slug']}-{n}-hiver"
         for r in missions.repliques():
-            if r["mission"] == m["slug"] and r["partie"] not in ("pendant", "renvoi", "accueil", "generique"):
+            if r["mission"] == m["slug"] and r["partie"] not in ("pendant", "renvoi", "accueil", "generique", "hele"):
                 assert r["slug"] == attendus[(r["partie"], r["texte"])], r
 
 

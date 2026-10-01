@@ -118,7 +118,9 @@ def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
     zones = {"port", "faubourg"} | {g["zone"] for g in pietons.GANGS}
     for m in missions.CATALOGUE:
         perso = missions.personnage(m["donneur"])
-        assert perso and perso["ou"], f"{m['slug']} : le donneur doit se tenir quelque part"
+        # ⚠️ Une PETITE JOB (`passant`, 1er oct. 2026) : son donneur est un passant de la rue, qui ne se tient nulle part
+        # — `jobs.js` le fait naître là où l'on est (`missions.erreurs_de_passant`).
+        assert perso and (perso["ou"] or m.get("passant")), f"{m['slug']} : le donneur doit se tenir quelque part"
         assert m["objectifs"], m["slug"]
         for o in m["objectifs"]:
             assert o["type"] in missions.TYPES_OBJECTIFS
@@ -226,7 +228,7 @@ def test_chaque_replique_a_une_voix_et_tient_en_deux_phrases():
     for m in missions.CATALOGUE:
         for partie in ("intro", "fin", "echec"):
             assert m["dialogue"][partie], f"{m['slug']} : pas de {partie}"
-        if m["prerequis"]:
+        if m["prerequis"] and not m.get("passant"):
             assert m["dialogue"]["appel"], f"{m['slug']} : apres la premiere, le donneur appelle"
             assert all(ligne["qui"] == m["donneur"] for ligne in m["dialogue"]["appel"])
 
@@ -326,6 +328,11 @@ def test_toute_mission_qui_a_des_prerequis_s_annonce_au_telephone():
     rien — personne n'irait le chercher."""
     for mission in missions.CATALOGUE:
         appel = mission["dialogue"].get("appel") or []
+        # ⚠️ Une PETITE JOB (`passant`) ne s'annonce JAMAIS au téléphone : le passant n'a pas ton numéro — il t'interpelle
+        # dans la rue (`jobs.js`), et `Histoire.disponibles` ne la donne pas au téléphone.
+        if mission.get("passant"):
+            assert not appel, mission["slug"]
+            continue
         assert bool(mission.get("prerequis")) == bool(appel), (
             f"{mission['slug']} : prerequis={mission.get('prerequis')} et {len(appel)} replique(s) d'appel"
         )

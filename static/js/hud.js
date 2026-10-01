@@ -2290,7 +2290,8 @@ const Hud = (function () {
       quand on ne peut pas : une scene joue, ou il n'y a nulle part ou se poser. */
   function lancerLaMission(m) {
     if (!B.joueur || B.cinema || B.scene) { message('UNE SCÈNE JOUE'); return false; }
-    if (!allerChezLeDonneur(m.donneur)) { message('INTROUVABLE'); return false; }
+    // ⚠️ Une PETITE JOB n'a pas d'adresse : son passant se présente là où l'on est (`Histoire.demarrer`, `Jobs.offrir`).
+    if (!m.passant && !allerChezLeDonneur(m.donneur)) { message('INTROUVABLE'); return false; }
     if (B.etat === 'pause') Jeu.reprendre();
     fermerMenu();
     Histoire.demarrer(m.slug);

@@ -78,6 +78,8 @@ const Histoire = (function () {
         if (d.donne) m.donne = d.donne;
         // Ce que paie chaque réponse d'un choix (`branches`, 1er oct. 2026) : lu en la réussissant, comme `donne`.
         if (d.branches) m.branches = d.branches;
+        // Le passant d'une petite job, entier (le nom de sa boîte) : le catalogue n'en porte que « archétype@district ».
+        if (d.passant) m.passant = d.passant;
         // ⚠️ SES VOIX SE DECLARENT ICI AUSSI. `Son.Voix.histoire()` lit la liste du
         // paquet, et celles d'une mission n'y sont plus : sans cette ligne, le texte
         // s'afficherait et personne ne parlerait. `chargerHistoire` va chercher les
@@ -198,8 +200,10 @@ const Histoire = (function () {
       aucune en cours, `exige` tenu, et pas fermees. */
   function disponibles() {
     if (B.partie.mission) return [];
+    // ⚠️ UNE PETITE JOB (`passant`) ne s'offre que dans la rue, par le passant qui t'interpelle (`Jobs`) : jamais au
+    // téléphone, au carnet, ni par la bulle d'un donneur.
     return defs().filter(function (m) {
-      return !faite(m.slug) && !estFermee(m.slug) && m.prerequis.every(faite) && exigeTenu(m.exige) && !absentLHiver(personnage(Chapitres.donneurDe(m)));
+      return !m.passant && !faite(m.slug) && !estFermee(m.slug) && m.prerequis.every(faite) && exigeTenu(m.exige) && !absentLHiver(personnage(Chapitres.donneurDe(m)));
     });
   }
 
@@ -982,8 +986,10 @@ const Histoire = (function () {
       telephone ; la meme ligne dite a deux pas ne l'est pas. Le client du taxi,
       lui, est assis dans le char. */
   function lignesDe(m, partie, filtre) {
-    const toujours = partie === 'appel' || partie === 'echec';
-    const auto = partie === 'intro' || partie === 'fin' || partie === 'pendant';
+    // ⚠️ UN PASSANT (une petite job, `Jobs`) n'a pas ton numéro : tout ce qu'il dit, il le dit en personne.
+    const passant = !!(m && m.passant);
+    const toujours = !passant && (partie === 'appel' || partie === 'echec');
+    const auto = !passant && (partie === 'intro' || partie === 'fin' || partie === 'pendant');
     // ⚠️ L'HIVER, la variante d'hiver (`hiver`, `_l(..., hiver=...)`) : l'hiver la moto est remisee
     // et le fuyard file en motoneige — la replique le dit, avec SA voix (le slug suivi de `-hiver`).
     const hiver = typeof Saisons !== 'undefined' && Saisons.enHiver();
@@ -1032,7 +1038,7 @@ const Histoire = (function () {
   function slugDeVoix(m, partie, i) {
     // ⚠️ `pendant` APRES `echec`, puis `renvoi`, comme `missions.PARTIES` : inseree plus tot,
     // elle renommerait des voix deja generees.
-    const ordre = ['appel', 'intro', 'client', 'fin', 'echec', 'pendant', 'renvoi', 'accueil', 'generique'];
+    const ordre = ['appel', 'intro', 'client', 'fin', 'echec', 'pendant', 'renvoi', 'accueil', 'generique', 'hele'];
     let n = 0;
     for (const p of ordre) {
       const lignes = m.dialogue[p] || [];
@@ -1063,8 +1069,10 @@ const Histoire = (function () {
     // presentera demain matin, avec sa manchette.
     // Le visage de qui parle, avec la mine que lui donne son jeu (`l.humeur`, tiree des
     // balises par `visages.humeur`). ⚠️ Pas pour l'ouverture `anonyme` : une voix sans visage.
-    Hud.dialogue(c.anonyme ? '' : (p ? p.nom : l.qui) + (l.telephone ? ' (AU TÉLÉPHONE)' : ''), decouper(l.texte), 0,
-                 c.anonyme ? null : { slug: l.qui, humeur: l.humeur || 'neutre' });
+    // Un passant (une petite job) porte le nom que sa mission lui donne : « Le débardeur », pas « Un passant ».
+    const nom = m && m.passant && l.qui === m.donneur ? m.passant.nom : (p ? p.nom : l.qui);
+    Hud.dialogue(c.anonyme ? '' : nom + (l.telephone ? ' (AU TÉLÉPHONE)' : ''), decouper(l.texte), 0,
+                 c.anonyme || (m && m.passant) ? null : { slug: l.qui, humeur: l.humeur || 'neutre' });
     c.voix = Son.Voix.parler(l.slug, { telephone: l.telephone, fin: function () { if (B.cinema === c && c.i === c.lignes.indexOf(l)) c.duree = Math.min(c.duree, c.t + 20); } });
     if (B.dialogue && c.voix) B.dialogue.voix = true;
     // La QUESTION : la réplique reste dans sa boîte, sa voix continue, et les réponses s'ouvrent au-dessus.
@@ -1411,6 +1419,10 @@ const Histoire = (function () {
   function parler(slug) {
     const p = personnage(slug);
     if (!p || B.cinema) return false;
+    // ⚠️ LE PASSANT QUI T'A INTERPELLÉ (une petite job, `Jobs`) : lui parler, c'est prendre sa job — son intro, puis
+    // la mission, sans téléphone. Il ne se « rencontre » pas : c'est un passant.
+    const job = Jobs.offreDe(slug);
+    if (job) { poserPuisDireLIntro(job); return true; }
     const premiere = rencontrer(slug);
     const enCours = courante();
     // ⚠️ L'objectif `parler` d'une mission : on l'accomplit en parlant a SA
@@ -1516,7 +1528,8 @@ const Histoire = (function () {
     if (!m || !B.partie) return false;
     abandonner();
     reinitialiser(slug);
-    rencontrer(m.donneur);
+    // Une PETITE JOB : son passant se présente à deux pas (`Jobs.offrir`) — c'est lui qui la donne, et qui l'attend.
+    if (m.passant) Jobs.offrir(slug, true); else rencontrer(m.donneur);
     poserPuisDireLIntro(m);
     return true;
   }
@@ -3997,6 +4010,7 @@ const Histoire = (function () {
     const cours = !!(r && B.interieur && faite(r.apres)) && B.t % 240 < 120;
     for (const e of B.entites) {
       if (!e.personnage || !e.vivant) continue;
+      if (e.job) { Jobs.bulle(e); continue; }      // le passant d'une petite job : sa bulle est à `Jobs`
       const dispo = disponibleDe(e.personnage);
       // ⚠️ SA BULLE S'ALLUME, SON TEXTE SE DEMANDE. Il est visible a plusieurs secondes
       // de marche : c'est la marge qu'il faut pour que la porte n'attende jamais.
@@ -4029,6 +4043,7 @@ const Histoire = (function () {
     majRetours();
     majSaisonniers();
     majTelephone();
+    Jobs.maj();
     majProtege();
     if (B.partie.mission) {
       if (!B.mission) B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0,

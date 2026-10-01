@@ -242,6 +242,8 @@ function etatInitial(defs) {
     //: Les choix de M16, par paire : `p.choix[q10]` vaut le slug pris
     //: (`q10` ou `q11`). C'est ce qui retient la branche qu'on a suivie.
     choix: {},
+    //: LES PETITES JOBS (`Jobs`) : la demi-journee ou un passant a offert la sienne — une offre par demi-journee au plus.
+    jobOfferte: -1,
     //: Le char que DONNE une mission, gare devant la planque (`donne.vehicule`,
     //: le taxi de m97). Il vit a part de `planque.vehicule` (celui qu'on y
     //: laisse soi-meme) pour ne pas ecraser la sauvegarde.

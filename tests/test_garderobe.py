@@ -43,8 +43,9 @@ def test_un_gang_garde_sa_couleur():
 
 def test_chaque_personnage_a_sa_tenue_et_le_chapeau_de_son_portrait():
     tenues = garderobe.exporter()["personnages"]
-    assert set(tenues) == {p["slug"] for p in missions.PERSONNAGES}
-    for p in missions.PERSONNAGES:
+    # Les deux rôles des petites jobs portent la tenue de leur archétype (`jobs.js`) : pas la leur.
+    assert set(tenues) == {p["slug"] for p in missions.PERSONNAGES if p["slug"] not in missions.DONNEURS_PASSANTS}
+    for p in [q for q in missions.PERSONNAGES if q["slug"] not in missions.DONNEURS_PASSANTS]:
         t = tenues[p["slug"]]
         assert t["squelette"] in garderobe.SQUELETTES and t["coiffure"] in garderobe.COIFFURES
         assert t["haut"] in garderobe.HAUTS and t["bas"] in garderobe.BAS
