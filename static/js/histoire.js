@@ -3162,6 +3162,7 @@ const Histoire = (function () {
     const l = placeDeFugue(e, j);
     if (!l) { e.epuise = true; return; }
     e.fugues++; e.fugue = l; e.fugueT = B.t;
+    if (e.bete === 'chien') Biscuit.japper(e);               // il détale en jappant : on l'entend filer
     e.suit = { x: l.x, y: l.y, vivant: true };
     e.vitesseSuite = B.defs.recherche.vitesses.joueur_sprint * FUGUE_VITESSE;
     B.mission.attend = texteDObjectif(o) + ' — IL SE SAUVE';

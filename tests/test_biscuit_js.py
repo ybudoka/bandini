@@ -12,7 +12,7 @@ import json
 from outils_missions import OUTILS, PLUS_LONGUES
 from test_arc_p_js import RECHARGER
 
-from app import missions
+from app import audio, missions
 
 AVANT = json.dumps([m["slug"] for m in missions.CATALOGUE if m["slug"] not in ("e03", "m97", "m98", "m99")]
                    + ["p02", "p05", "p04", "p10", "p09", "p11"])
@@ -32,6 +32,8 @@ def test_e03_biscuit_se_sauve_trois_fois_puis_se_laisse_prendre(banc):
         const B = L.B, p = B.partie;
         const j = partie(L);
         const argent = paiements(L);
+        const jappes = [], vraiJ = L.Son.SFX.jappement;
+        L.Son.SFX.jappement = function (x, y) { jappes.push({ x: x, y: y }); return vraiJ(x, y); };
         const beaulieu = L.Histoire.donneur('beaulieu');
         const dispo = L.Histoire.disponibleDe('beaulieu');
         serrer(L, o, 'beaulieu'); passer(L, o); ecouter(L);
@@ -54,6 +56,7 @@ def test_e03_biscuit_se_sauve_trois_fois_puis_se_laisse_prendre(banc):
           jouer(L, o, 3);
           const part = { fugue: !!e.fugue, vite: Math.round(Math.hypot(e.vx, e.vy) * 10) / 10, ligne: L.Histoire.ligneObjectif(),
                          pose: L.Entites.poseDePietonBete(e).decor };
+          part.jappe = jappes.length; part.wouf = !!(e.bulle && e.bulle.texte === 'WOUF!');
           laisserCourir(L, o, e);
           part.loin = tuiles(e, avant); part.duJoueur = tuiles(e, j); part.fugues = e.fugues; part.epuise = !!e.epuise;
           fugues.push(part);
@@ -81,6 +84,7 @@ def test_e03_biscuit_se_sauve_trois_fois_puis_se_laisse_prendre(banc):
         assert f["pose"] == "chien_bouge", (k, f)
         assert f["loin"] >= 3 and f["duJoueur"] >= 5, f"il détale, loin du joueur : {k} {f}"
         assert f["fugues"] == k + 1 and f["epuise"] == (k == 2), (k, f)
+        assert f["jappe"] == k + 1 and f["wouf"], f"il détale en jappant, sa bulle au-dessus : {k} {f}"
     assert r["assis"]["pose"] == {"decor": "chien", "cle": 2} and "ÉPUISÉ" in r["assis"]["ligne"], r["assis"]
     assert r["assis"]["etape"] == 0
     assert r["pris2"] == {"etape": 1, "suit": True, "dessine": True}, r["pris2"]
@@ -144,3 +148,44 @@ def test_avant_e03_pas_de_biscuit_aux_pieds_de_mme_beaulieu(banc):
         return { beaulieu: !!L.Histoire.donneur('beaulieu'), chien: L.B.entites.some(function (e) { return e.bete; }) };
     }""")
     assert r == {"beaulieu": True, "chien": False}, r
+
+
+def test_biscuit_jappe_un_vrai_jappement_avec_sa_bulle_plus_faible_au_loin(banc):
+    """Un jappement pour Biscuit (Martin, 1er oct. 2026) : trois variantes ElevenLabs, dans un LIEU chargé à la demande
+    (`LIEUX["biscuit"]`) ; il joue avec la bulle « WOUF! », là où est le chien — plus loin, plus faible, rien au-delà
+    d'un écran et demi ; le premier demande son lieu et joue sa synthèse ; aucun dé."""
+    catalogue = {e["slug"]: e for e in audio.CATALOGUE}
+    j = catalogue["jappement"]
+    assert j["variantes"] >= 2 and len(audio.fichiers_presents(j)) == j["variantes"], j
+    assert [lieu for lieu, slugs in audio.LIEUX.items() if "jappement" in slugs] == ["biscuit"]
+    r = banc("function (L, o) {" + AIDES + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, S = L.Son;
+        const j = partie(L, ['e03']);
+        jouer(L, o, 2);
+        const c = B.entites.find(function (e) { return e.chienDe === 'beaulieu'; });
+        const jappes = [], lieux = [], vraiJ = S.SFX.jappement, vraiC = S.Lieu.charger;
+        S.SFX.jappement = function (x, y) { const v = vraiJ(x, y); jappes.push({ x: x, y: y, v: v, wouf: !!(c.bulle && c.bulle.texte === 'WOUF!') }); return v; };
+        S.Lieu.charger = function (l) { lieux.push(l); };
+        // Loin de lui : rien. À côté, à pied : il t'adopte, et jappe — là où il est, sa bulle au-dessus.
+        aCote(L, c, -16 * 8); jouer(L, o, 10);
+        const loin = jappes.length;
+        aCote(L, c, -20); jouer(L, o, 4);
+        const adopte = jappes.slice();
+        const ici = adopte.length ? Math.hypot(adopte[0].x - c.x, adopte[0].y - c.y) : null;
+        // La distance : plus loin, plus faible ; au-delà d'un écran et demi, rien.
+        S.SFX.jappement = vraiJ;
+        // ⚠️ Les dés, comptés autour du jappement seul : la ville en tire à chaque image.
+        let des = 0; const vrai = B.rng; B.rng = function () { des++; return vrai(); };
+        const volumes = [20, 120, 240, 340, 400].map(function (dx) { return vraiJ(j.x + dx, j.y); });
+        S.Lieu.charger = vraiC; B.rng = vrai;
+        return { loin: loin, adopte: adopte, ici: ici, lieux: lieux, volumes: volumes, des: des };
+    }""")
+    assert r["loin"] == 0, "il jappe sans qu'on l'approche"
+    assert len(r["adopte"]) == 1 and r["adopte"][0]["wouf"], f"il t'adopte sans japper, ou sans sa bulle : {r}"
+    assert r["ici"] is not None and r["ici"] < 24, f"le jappement ne vient pas de lui : {r['ici']}"
+    assert r["adopte"][0]["v"] > 0.8, r["adopte"]
+    assert "biscuit" in r["lieux"], f"le premier jappement ne demande pas son fichier : {r['lieux']}"
+    v = r["volumes"]
+    assert v[0] > v[1] > v[2] > v[3] > 0 and v[4] == 0, f"au loin, plus faible ; trop loin, rien : {v}"
+    assert r["des"] == 0, "le jappement tire un dé de la ville"

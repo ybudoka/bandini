@@ -69,6 +69,13 @@ const Biscuit = (function () {
     c.suit = piste[0] || j;
   }
 
+  /** IL JAPPE (1er oct. 2026) : sa bulle « WOUF! », et le jappement là où il est (`Son.SFX.jappement` : au loin, plus
+      faible ; le premier, synthétisé, demande le fichier). Quand il t'adopte, et quand il détale dans e03. */
+  function japper(c) {
+    Entites.bulle(c, 'WOUF!', { duree: 60 });
+    Son.SFX.jappement(c.x, c.y);
+  }
+
   /** Une image : il naît à ses pieds, il t'adopte, il te suit, il rentre. */
   function maj() {
     const j = B.joueur;
@@ -111,10 +118,10 @@ const Biscuit = (function () {
       if (libre && dJ < ADOPTE_PX) {
         c.suiveur = true; c.suit = j; c.plante = null; c.piste = [];
         c.vitesseSuite = B.defs.recherche.vitesses.joueur_sprint;
-        Entites.bulle(c, 'WOUF!', { duree: 60 });
+        japper(c);
       }
     }
   }
 
-  return { maj, maitres, chienDe, ADOPTE_PX, LAISSE_PX };
+  return { maj, maitres, chienDe, japper, ADOPTE_PX, LAISSE_PX };
 })();

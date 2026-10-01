@@ -1628,8 +1628,14 @@ catalogue.
     ne compte pas dans l'air) — la ville est la même, au hachage près, qu'avant la vague.
   - ⚠️ Biscuit marche **sur tes pas** (une piste, le motif de l'escorté) et **rentre par où il est venu** : en ligne
     droite, l'édicule du métro entre la rue et Mme Beaulieu l'arrêtait à trois tuiles d'elle, pour toujours.
-  - ⚠️ Écart à la fiche : le chien n'a pas de jappement (un « WOUF! » en bulle seulement) ; « puis déménage » (sa fiche)
-    n'a aucune mission.
+  - ⚠️ Écart à la fiche : « puis déménage » (sa fiche) n'a aucune mission. ~~Le chien n'a pas de jappement~~ — **il en a un
+    depuis le 1er oct. 2026** (Martin) : `jappement`, trois variantes ElevenLabs (33 crédits ; Scribe les entend
+    « [dog barking] »), dans un lieu chargé à la demande (`LIEUX["biscuit"]`, 30 Ko) ; il joue avec la bulle « WOUF! »
+    (`Biscuit.japper`) quand il t'adopte et chaque fois qu'il détale dans e03, là où il est (`Son.SFX.jappement`,
+    `jouerA` : plus faible au loin, rien au-delà de 360 px) ; le premier demande son fichier et joue sa synthèse (deux
+    petits cris carrés). Juge : `test_biscuit_jappe_un_vrai_jappement_avec_sa_bulle_plus_faible_au_loin` (et chaque
+    fugue jappe, dans le juge d'e03) ; mutations : muet à l'adoption, fugue muette, pas de lieu demandé, sans distance —
+    rouges. **À écouter** : `static/audio/jappement-{1,2,3}.mp3`.
   - **Juges** : `tests/test_biscuit_js.py` (trois : e03 au bouton — vu au bois du phare, trois fugues à l'opposé, rien
     au volant, épuisé il se laisse prendre, pas de retour sans lui, la prime ; après e03, à ses pieds, il te suit à
     pied, rentre quand on monte en char, sans un dé ni un numéro ; avant e03, pas de chien) ; mutations : jamais de

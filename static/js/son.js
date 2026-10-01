@@ -347,6 +347,9 @@ const Son = (function () {
 
   /** Un son POSE dans le monde : plus loin, plus faible ; a droite, a droite.
       Rend le volume calcule (0 = trop loin, rien n'a joue). */
+  //: Un chien s'entend d'un écran et demi (Biscuit, `SFX.jappement`).
+  const JAPPE_PX = 360;
+
   function jouerA(slug, x, y, portee) {
     const j = B.joueur;
     if (!j) return 0;
@@ -925,6 +928,21 @@ const Son = (function () {
     hennissement: function (x, y) {
       if (estCharge('hennissement')) { jouerA('hennissement', x, y, 360); return; }
       ton(620, 0.5, 'sawtooth', 0.05, 0.6); ton(880, 0.25, 'sawtooth', 0.03, 0.7, 0.1);
+    },
+    //: BISCUIT JAPPE (1er oct. 2026, Martin : « un vrai jappement ») là où il est : plus loin, plus faible, et rien au-delà
+    //: de `JAPPE_PX`. Le PREMIER jappement demande son lieu (`LIEUX["biscuit"]`) et joue son filet — deux petits cris
+    //: aigus, à la même distance ; les suivants ont le fichier (trois variantes). Rend le volume (0 = trop loin).
+    jappement: function (x, y) {
+      const j = B.joueur;
+      if (!j) return 0;
+      const d = Math.hypot(x - j.x, y - j.y);
+      if (d >= JAPPE_PX) return 0;
+      if (estCharge('jappement')) return jouerA('jappement', x, y, JAPPE_PX);
+      const l = lieuDe('jappement');
+      if (l) Lieu.charger(l);
+      const v = 1 - d / JAPPE_PX;
+      ton(1180, 0.07, 'square', 0.07 * v, 0.62); ton(1260, 0.08, 'square', 0.07 * v, 0.58, 0.15);
+      return v;
     },
     //: La machine à sous : le bras et les rouleaux, le gain, le gros lot.
     bras_machine: function () { if (!joue('bras_machine')) { ton(110, 0.08, 'square', 0.18, 0.5); bruit(0.6, 0.07, 1400, 500); } },

@@ -847,6 +847,12 @@ CATALOGUE: list[Echantillon] = [
     _e("chien_puces", "Un chien au loin, au marché", duree_s=1.5, volume=0.3, influence=0.6,
        prompt="a single dog barking once, far away across an open field, one short woof then silence, quiet "
               "Sunday morning, outdoors, no voices, no music"),
+    # LE JAPPEMENT DE BISCUIT (1er oct. 2026, Martin : « un vrai jappement ») : le petit chien de Mme Beaulieu (e03) —
+    # trois variantes, jouées avec sa bulle « WOUF! » là où il est (`Son.SFX.jappement`, `jouerA` : au loin, plus
+    # faible). Un LIEU (`LIEUX["biscuit"]`) : chargé au premier jappement, qui garde sa synthèse en attendant.
+    _e("jappement", "Biscuit jappe", variantes=3, duree_s=1.0, volume=0.35, influence=0.7,
+       prompt="a small fluffy terrier dog yapping excitedly, two quick high-pitched happy barks, outdoors on a "
+              "suburban sidewalk, close by, no voices, no music"),
     _e("casino_salle", "La salle du casino", duree_s=8.0, volume=0.26, boucle=True, influence=0.45,
        prompt="casino gaming floor ambience, many slot machines chiming and jingling softly in "
               "the background, chips clicking on tables, murmuring crowd, seamless loop, "
@@ -1875,6 +1881,8 @@ LIEUX: dict[str, list[str]] = {
     # Le marché aux puces du dimanche (la deuxième vague) : la rumeur, chargée en approchant du marché ouvert
     # (`Puces.majSon`). Elle voyage avec le catalogue des collections, hors des définitions (`LIEUX_A_PART`).
     "puces": ["rumeur_puces", "chien_puces"],
+    # Biscuit, le chien de Mme Beaulieu (après e03, et pendant) : chargé au premier jappement (`Son.SFX.jappement`).
+    "biscuit": ["jappement"],
     # L'Halloween (les saisons, lot 3) : un SOIR — ils se chargent le 31 (`Halloween.maj`).
     "halloween": ["rire_sorciere", "porte_grince", "souffle_fantome"],
     "casino": ["casino_salle", "bras_machine", "gain_machine", "jackpot",
