@@ -2549,7 +2549,10 @@ const Monde = (function () {
         const hauts = etagesDuCommerce(d);
         if (hauts) FACADES.etagesDuCommerce(ctx, d, mursDeResidence()[hash2(d.x, d.y + 7) % 3] || mursDeResidence()[0],
                                             ferDesEscaliers(), (d.murX - ox) * TT, (d.y - oy) * TT, hauts, d.x - d.murX);
-        FACADES.devanture(ctx, d, g, (d.x - ox) * TT, (d.y - oy) * TT);
+        // Les enseignes qu'on dévisse la nuit (`Devisser`) : le néon pend à la place de la pancarte — ou la potence vide.
+        const neon = carte.laVille && typeof Devisser !== 'undefined' ? Devisser.deLaDevanture(d) : null;
+        FACADES.devanture(ctx, d, g, (d.x - ox) * TT, (d.y - oy) * TT, !!neon);
+        if (neon) Devisser.peindreDrapeau(ctx, neon, d, (d.x - ox) * TT, (d.y - oy) * TT);
       });
     }
     const residences = carte.residences && carte.residences.get(cle);
@@ -2646,6 +2649,10 @@ const Monde = (function () {
     if (carte.laVille) {
       const f = Territoires.cle();
       if (carte.frontiere !== f) { carte.morceaux.clear(); carte.frontiere = f; }
+      // ⚠️ ET LES ENSEIGNES (`Devisser`) : leur catalogue arrive après les définitions, et une enseigne dévissée laisse
+      // sa potence vide — les morceaux se recuisent à ces deux moments-là, jamais à chaque image.
+      const e = typeof Devisser !== 'undefined' ? Devisser.cle() : '';
+      if (carte.enseignes !== e) { carte.morceaux.clear(); carte.enseignes = e; }
     }
     carte.visibles.clear();
     for (let my = m0y; my <= m1y; my++) {

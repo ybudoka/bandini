@@ -122,8 +122,8 @@ def test_l_album_survit_a_la_sauvegarde_et_une_vieille_partie_repart_vide(banc):
         return { relue: relue.collections, vieille: vieille.collections, abimee: abimee.collections, texte: texte.collections };
     }""")
     assert r["relue"]["cartes"]["7"]["source"] == "rue", r["relue"]
-    # Trois familles depuis la vague 4 : les cartes, les bebelles et les sauts — vides, jamais `undefined`.
-    vide = {"cartes": {}, "bebelles": {}, "sauts": {}}
+    # Quatre familles depuis la vague 5 : les cartes, les bebelles, les sauts et les enseignes — vides, jamais `undefined`.
+    vide = {"cartes": {}, "bebelles": {}, "sauts": {}, "enseignes": {}}
     assert r["vieille"] == vide
     assert r["abimee"] == vide and r["texte"] == vide
 
@@ -174,7 +174,8 @@ def test_les_triches_vont_voir_une_carte_sans_la_ramasser_et_remplissent_l_album
     }""")
     assert r["titre"] == "COLLECTIONS" and r["premiere"] == "LA PLUS PROCHE"
     # La plus proche, les quarante cartes, l'en-tête des BEBELLES et les douze, celui des SAUTS et les vingt, le retour.
-    assert r["lignes"] == 1 + 40 + 1 + 12 + 2 + 1 + 20 + 1, r   # (+ l'en-tête du marché aux puces et sa ligne)
+    # (+ l'en-tête du marché aux puces et sa ligne, + l'en-tête des ENSEIGNES et les douze — vague 5)
+    assert r["lignes"] == 1 + 40 + 1 + 12 + 2 + 1 + 12 + 1 + 20 + 1, r
     assert r["rendu"] is True and 2 <= r["tuiles"] <= 5, r
     assert r["apres"] is False, "le saut de debug ramasse la carte"
     assert r["nombre"] == 40 and r["gain"] == 0, "TOUTES LES CARTES paie (ou n'en donne pas toutes)"
@@ -233,7 +234,7 @@ def test_les_sons_des_cartes_se_chargent_a_l_approche(banc):
     }""")
     assert r["loin"] is False, "les sons des cartes se chargent loin de toute carte"
     assert r["pres"] is True, "à un écran d'une carte, ses sons ne se chargent pas"
-    assert r["declares"] == ["carte_hockey", "orgue_arena", "bebelle", "reel_bebelles", "saut_reussi"], "les sons des cartes n'ont pas rejoint le paquet"
+    assert r["declares"] == ["carte_hockey", "orgue_arena", "bebelle", "reel_bebelles", "saut_reussi", "devisser"], "les sons des cartes n'ont pas rejoint le paquet"
     assert r["orgue"] == ["orgue_arena-1.mp3"], "l'orgue n'est pas déclaré une fois, avec son fichier"
 
 

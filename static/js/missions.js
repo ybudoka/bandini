@@ -361,6 +361,9 @@ const Missions = (function () {
     // La grue : la cabine, et la flèche qu'on tourne (9e vague).
     const grue = Chantiers.grueSousLaMain(j);
     if (grue) return Chantiers.monterDansLaGrue(j, grue);
+    // Une enseigne qu'on dévisse, la nuit (`Devisser`) : avant le bouclier humain. ⚠️ Elle écarte d'elle-même la
+    // porte (servie par l'appelant, après nous) : le jour, et devant une porte, elle ne prend jamais le bouton.
+    if (typeof Devisser !== 'undefined' && Devisser.sousLaMain(j)) return Devisser.agir(j);
     // ⚠️ LE BOUCLIER HUMAIN EN DERNIER, et c'est voulu : on attrape quelqu'un
     // quand ACTION n'avait rien d'autre a faire. Sinon le geste aurait pris
     // Josee en otage au lieu de lui parler. `otageSousLaMain` ecarte aussi la
@@ -3968,6 +3971,8 @@ const Missions = (function () {
     if (pelle) { B.invite = pelle; return; }
     const grue = Chantiers.inviteGrue(j);
     if (grue) { B.invite = grue; return; }
+    const enseigne = typeof Devisser !== 'undefined' ? Devisser.invite(j) : null;
+    if (enseigne) { B.invite = enseigne; return; }
     const objet = Combat.objetSousLaMain(j);
     if (objet) { const a = Combat.armeDef(objet.arme); B.invite = 'RAMASSER ' + (a ? a.nom.toUpperCase() : ''); return; }
     const porte = Monde.porteDevant(j);

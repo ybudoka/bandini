@@ -178,8 +178,10 @@ def test_elles_voyagent_a_part_hors_de_la_carte_et_des_definitions(paquets, clie
     # leurs places (vague 3). Relevé à 18 000 / 7 000 pour les sauts (vague 4) : ce paquet-ci arrive en arrière-plan,
     # après les définitions, et n'attend personne — c'est le plafond du dépôt, pas celui du premier écran.
     # Puis 16 987 / 5 964 avec les sauts (vague 4), et 17 872 / 6 348 avec le marché aux puces : relevé à 22 000 / 8 000.
-    assert paquets.collections.taille < 22_000
-    assert len(gzip.compress(paquets.collections.corps, 6)) < 8_000
+    # Puis 23 947 / 8 533 avec les douze enseignes (vague 5 : leurs emblèmes, leurs lignes, leurs places — 3 790 / 1 430
+    # à elles seules) : relevé à 26 000 / 9 500 (1er oct. 2026).
+    assert paquets.collections.taille < 26_000
+    assert len(gzip.compress(paquets.collections.corps, 6)) < 9_500
 
 
 def test_leurs_sons_voyagent_avec_elles_pas_dans_les_definitions(paquets):
@@ -188,7 +190,8 @@ def test_leurs_sons_voyagent_avec_elles_pas_dans_les_definitions(paquets):
     defs = json.loads(paquets.definitions.corps)
     col = json.loads(paquets.collections.corps)
     slugs = {e["slug"] for e in defs["audio"]["echantillons"]}
-    assert not slugs & {"carte_hockey", "orgue_arena", "bebelle", "reel_bebelles", "saut_reussi"} and "collections" not in defs["audio"]["lieux"]
+    sons = ["carte_hockey", "orgue_arena", "bebelle", "reel_bebelles", "saut_reussi", "devisser"]
+    assert not slugs & set(sons) and "collections" not in defs["audio"]["lieux"]
     assert col["sons"]["lieu"] == "collections"
-    assert [e["slug"] for e in col["sons"]["echantillons"]] == ["carte_hockey", "orgue_arena", "bebelle", "reel_bebelles", "saut_reussi"]
+    assert [e["slug"] for e in col["sons"]["echantillons"]] == sons
     assert all(e["fichiers"] for e in col["sons"]["echantillons"]), "un son des cartes sans son fichier"

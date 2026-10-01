@@ -28,6 +28,8 @@ TROPHEES: tuple[dict, ...] = (
     {"slug": "coupe_album", "nom": "LA COUPE DE LA LIGUE", "famille": "cartes", "palier": 40},
     # Vague 3 : l'étagère des bebelles, dès la première — et chaque bebelle trouvée s'y pose d'elle-même.
     {"slug": "etagere_bebelles", "nom": "L’ÉTAGÈRE DES BEBELLES", "famille": "bebelles", "palier": 1},
+    # Vague 5 : le mur des enseignes, dès la première — un panneau perforé où chaque enseigne dévissée pend à son crochet.
+    {"slug": "mur_enseignes", "nom": "LE MUR DES ENSEIGNES", "famille": "enseignes", "palier": 1},
 )
 
 #: Le catalogue Beausoleil. `texte` : la ligne du catalogue (une ligne du menu, 44 caractères au plus) — le ton
@@ -61,16 +63,21 @@ PLACES: dict[str, dict[str, dict]] = {
         "sofa": {"x": 8, "y": 4}, "jukebox": {"x": 3, "y": 1}, "tapis_tresse": {"x": 6, "y": 6},
         # L'étagère des bebelles, contre le mur du bas entre le poêle et la porte : DEUX tuiles (`l`).
         "etagere_bebelles": {"x": 4, "y": 6, "l": 2},
+        # Le mur des enseignes, appuyé au mur du haut sous les fenêtres, à côté du juke-box : DEUX tuiles.
+        "mur_enseignes": {"x": 4, "y": 1, "l": 2},
     },
     # Le chalet du rang (`blocs/rang.py`) : les cadres sur les rondins, de part et d'autre de la cheminée, la coupe
     # et la lampe sur la table de pin, le coin salon à droite (la garde-robe reste à portée), l'aquarium sous le
-    # coffre, le juke-box à gauche de la porte.
+    # coffre, le juke-box à gauche de la porte, le mur des enseignes dans le coin du bas.
     "chalet": {
         "cadre_dix": {"x": 3, "y": 1}, "cadre_vingt_cinq": {"x": 7, "y": 1}, "coupe_album": {"x": 2, "y": 5},
         "lampe_lave": {"x": 3, "y": 5}, "televiseur": {"x": 8, "y": 3}, "aquarium": {"x": 1, "y": 4},
-        "sofa": {"x": 8, "y": 5}, "jukebox": {"x": 1, "y": 6}, "tapis_tresse": {"x": 6, "y": 6},
+        "sofa": {"x": 8, "y": 5}, "jukebox": {"x": 3, "y": 6}, "tapis_tresse": {"x": 6, "y": 6},
         # Derrière le sofa, contre le mur du bas (la table de pin ferme le coin de gauche : le juke-box y est seul).
         "etagere_bebelles": {"x": 7, "y": 6, "l": 2},
+        # Dans le coin du bas, contre les rondins (ceux du haut portent les cadres et la cheminée) : le juke-box
+        # lui a laissé le coin et s'est rapproché de la porte (1er oct. 2026).
+        "mur_enseignes": {"x": 1, "y": 6, "l": 2},
     },
 }
 
@@ -81,7 +88,7 @@ PLACES: dict[str, dict[str, dict]] = {
 POSES: dict[str, str] = {
     "cadre_dix": "mur", "cadre_vingt_cinq": "mur", "coupe_album": "table", "lampe_lave": "table",
     "jukebox": "sol", "aquarium": "sol", "sofa": "sol", "televiseur": "sol", "tapis_tresse": "plat",
-    "etagere_bebelles": "sol",
+    "etagere_bebelles": "sol", "mur_enseignes": "sol",
 }
 SOLIDES = frozenset(s for s, p in POSES.items() if p == "sol")
 

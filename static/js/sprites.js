@@ -5572,7 +5572,8 @@ const FACADES = (function () {
   //: Python a tire a la position). Rien pour l'ordinaire.
   const DORURE = '#f2d27a';
 
-  function devanture(ctx, d, g, ox, oy) {
+  //: `sansPancarte` : une enseigne qu'on dévisse pend à sa place (`Devisser.peindreDrapeau`, peinte par `Monde`).
+  function devanture(ctx, d, g, ox, oy, sansPancarte) {
     const large = d.l * T;
 
     enseigne(ctx, d, g, ox, oy, large);
@@ -5590,7 +5591,7 @@ const FACADES = (function () {
       else porte(ctx, g, x, oy, quoi);
     }
 
-    if (d.pancarte) pancarte(ctx, d, g, ox, oy);
+    if (d.pancarte && !sansPancarte) pancarte(ctx, d, g, ox, oy);
     if (d.ideo != null) plaqueVerticale(ctx, d, ox + large - 11, oy);
   }
 

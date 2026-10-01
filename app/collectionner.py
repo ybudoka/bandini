@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from collections import deque
 
-from . import carte, frenesies
+from . import carte, devisser, frenesies
 
 #: Les équipes de la Ligue, une par district de terre — l'équipe du coin, et ses deux couleurs (le fond du
 #: chandail, la bande) : c'est elles qu'on voit par terre, et en grand au carnet.
@@ -662,7 +662,10 @@ def poser(ville: dict) -> dict:
               for k in range(-carte.ELAN_RAMPE, carte.RECEPTION_RAMPE + 2)]
     planque = next(p for p in ville["points_interet"] if p["slug"] == "planque")
     marche = puces.poser(ville, _depuis(ville, [(planque["x"], planque["y"])]), trouvailles + pistes)
-    return {"cartes": places, "bebelles": bebelles, "sauts": sauts, "puces": marche}
+    # Les enseignes qu'on dévisse la nuit (vague 5) : elles ne prennent aucune tuile — la règle LIT les devantures —,
+    # donc rien de ce qui précède ne bouge.
+    return {"cartes": places, "bebelles": bebelles, "sauts": sauts, "puces": marche,
+            "enseignes": devisser.poser(ville)}
 
 
 def exporter(places: dict | None, sons: dict | None = None) -> dict:
@@ -681,6 +684,7 @@ def exporter(places: dict | None, sons: dict | None = None) -> dict:
             "regle": {**REGLE, "paliers": dict(REGLE["paliers"])},
             "bebelles": _exporter_bebelles((places or {}).get("bebelles", [])),
             "puces": _puces().exporter((places or {}).get("puces")),
+            "enseignes": devisser.exporter((places or {}).get("enseignes")),
             "sauts": {"titre": "SAUTS", "liste": [dict(p) for p in (places or {}).get("sauts", [])],
                       "regle": {**REGLE_SAUTS, "paliers": dict(REGLE_SAUTS["paliers"])}},
             # Les sons des cartes (`audio.echantillons_a_part`) : hors des définitions, remis au paquet à l'arrivée.

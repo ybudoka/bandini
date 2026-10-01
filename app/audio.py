@@ -288,6 +288,12 @@ CATALOGUE: list[Echantillon] = [
     _e("saut_reussi", "Saut réussi", duree_s=2.0, volume=0.5, influence=0.55,
        prompt="a small group of young friends outdoors watching a car jump, a rising impressed ohhh then short "
               "whoops, whistles and clapping, close, dry, no words, no music"),
+    # LES ENSEIGNES QU'ON DÉVISSE LA NUIT (vague 5) : une vis qui lâche — le tournevis qui force, le grincement
+    # de la vis rouillée qui tourne, et la vis qui tombe sur le trottoir. Court : il revient quatre fois.
+    _e("devisser", "Une vis qui lâche", duree_s=1.0, volume=0.5, influence=0.65,
+       prompt="a screwdriver turning an old rusty screw out of a metal sign bracket at night: a short creaking "
+              "metallic squeak of the screw turning, then the small screw dropping and bouncing twice on a "
+              "concrete sidewalk with a tiny tink, close, dry, no voices, no music"),
     _e("etoile", "Niveau de recherche", duree_s=1.2, volume=0.79, influence=0.75,
        prompt="a police radio alert chirp followed by a burst of squelch "
               "static, tense and short, no voices, no music"),
@@ -1877,7 +1883,7 @@ LIEUX: dict[str, list[str]] = {
               "atterrissage", "crochet"],
     # Les cartes de hockey (des choses à collectionner, vague 1) : chargées quand une carte qui manque est à moins
     # d'un écran (`Collections.maj`). Le premier écran n'avait plus que six Ko de marge.
-    "collections": ["carte_hockey", "orgue_arena", "bebelle", "reel_bebelles", "saut_reussi"],
+    "collections": ["carte_hockey", "orgue_arena", "bebelle", "reel_bebelles", "saut_reussi", "devisser"],
     # Le marché aux puces du dimanche (la deuxième vague) : la rumeur, chargée en approchant du marché ouvert
     # (`Puces.majSon`). Elle voyage avec le catalogue des collections, hors des définitions (`LIEUX_A_PART`).
     "puces": ["rumeur_puces", "chien_puces"],

@@ -138,7 +138,7 @@ de 5 × 7 et sa palette, comme les bebelles), qui luit la nuit. Une ou deux par 
 | les Quais | **TAVERNE DU PORT** | la bock | « La draft à trente-cinq cennes. L'enseigne, gratis. » |
 | La Pointe | **SOUVENIRS** | le phare | « Le seul souvenir de La Pointe qu'on n'a pas payé 4,99 $. » |
 | le Petit-Canton | **CLUB MAH-JONG** | la tuile | « Le club a voté : la police ne sera pas appelée. Le vote était serré. » |
-| le Petit-Canton | **DRAGON D'OR** | le dragon | « Irène l'a remarqué. Irène remarque tout. » |
+| le Petit-Canton | **DRAGON D'OR** | la pièce d'or porte-bonheur | « Irène l'a remarqué. Irène remarque tout. » |
 | les Friches | **TI-POUT AUTOS** | le pneu | « Garantie trente jours ou trente pieds. L'enseigne n'a fait ni l'un ni l'autre. » |
 
 La Gare n'a aucun commerce sur la graine livrée : elle n'en a pas. ⚠️ **Où, sans un dé** : chaque enseigne nomme
@@ -369,9 +369,63 @@ fait** : le patron qui sort de la taverne ouverte la nuit serait la vague d'apr�
   une caisse du quai) ; vingt mutations vues rouges, dont cinq qui ne mordaient pas au premier passage (deux
   règles doublées retirées du code, un terrain synthétique pour l'écart, une sauvegarde abîmée, un don en double).
 
+### Vague 5 — les enseignes qu'on dévisse la nuit (✅ livrée le 1er oct. 2026)
+
+- **Le catalogue** : `app/devisser.py` — douze enseignes-drapeaux (`ENSEIGNES`), chacune un SLUG stable
+  (`partie.collections.enseignes[slug]`), les noms de devanture qu'elle peut prendre, deux lignes de carnet et un
+  emblème de 5 × 7 en couleurs de néon ; l'ordre du catalogue est sa place sur le mur de la planque. Le Dragon d'or
+  porte une pièce porte-bonheur (un dragon ne tient pas dans 5 × 7), Ti-Pout un pneu orange.
+- **Les places, sans un dé** : `devisser.poser`, appelé au bout de `collectionner.poser` — la devanture qui porte un
+  de ses noms ET une pancarte, son district d'abord, puis l'ordre de lecture. Elle LIT la ville et n'y pose rien
+  (juge : un espion pendant la génération, la ville avant et après à l'octet). Sur la graine livrée, les douze ont
+  leur place, chacune dans son district (le Rialto est à La Shop, où `enseignes.py` l'a ouvert).
+- **La façade** : le néon pend à la place de la pancarte (`Devisser.peindreDrapeau`, appelé par
+  `Monde.peindreDevantures` ; `FACADES.devanture` saute alors sa pancarte), une lueur de sa couleur la nuit, qui
+  grésille à l'empreinte de son rang. Dévissée : la potence vide, la barre et ses deux crochets, le fil coupé et
+  son bout de cuivre. Les morceaux de la ville se recuisent quand `Devisser.cle()` change (le catalogue qui arrive,
+  une enseigne qui tombe) — jamais à chaque image.
+- **Le geste** : la nuit (`Monde.estNuit`), à pied, debout sous le néon (16 px), ACTION — dans `Missions.interagir`
+  après la grue, avant le bouclier humain ; la porte d'abord (le néon se tait devant une porte). L'invite :
+  « DÉVISSER : LE CINÉMA RIALTO ». Le tournevis est une épreuve d'`Adresse` (`Adresse.EPREUVES.tournevis`,
+  posée par `devisser.js`) : le néon en grand et ses quatre vis, la tête de vis qu'on tourne et ses quarts, H/G/B/D
+  autour — la direction qui vient, allumée. Le premier cran pose la lame ; chaque pas dans le sens contraire des
+  aiguilles fait un quart ; quatre quarts, une vis (le son `devisser`) ; quatre vis, « ELLE LÂCHE ! ». Le mauvais
+  sens est dit (« DANS L'AUTRE SENS, TU LA REVISSES »), un saut de deux crans aussi (« UN QUART À LA FOIS ») —
+  rien ne se défait, aucun temps ne presse. Au stick on roule le pouce ; au clavier et à la croix, on tape les quatre
+  directions dans l'ordre. ESQUIVE abandonne : « L'ENSEIGNE RESTE ».
+- **Le risque** : l'enseigne tombe → `Police.signalerCrime('effraction', …, Police.quelqu_un_voit(…))` — le délit
+  existait (une étoile, il faut un témoin) et n'avait jamais servi. Un agent qui voit chauffe ; un passant qui a vu
+  court le raconter, et son silence s'achète. Le propriétaire : **pas fait**.
+- **Ce qu'elles rapportent** : 200 $, une ligne au journal (« ENSEIGNE : LE CINÉMA RIALTO — AU MUR DE LA
+  PLANQUE »), et aux paliers six et douze 1 000 $ et 3 000 $, le reel des bebelles et le bandeau.
+- **La planque** : `LE MUR DES ENSEIGNES` (`decoration.py`, palier 1, `sol`, deux tuiles) — un panneau perforé de
+  trois rangées de quatre crochets, chaque enseigne dévissée y pend (le même néon que sur la rue). Dans la planque de
+  Rocco, appuyé au mur sous les fenêtres, à côté du juke-box (4, 1) ; au chalet, dans le coin du bas (1, 6) —
+  ⚠️ **le juke-box du chalet s'est déplacé d'une tuile** pour lui laisser le coin (3, 6), toujours à gauche de la
+  porte. Sa pose est l'ensemble des enseignes dévissées, un bit chacune (`Devisser.masque`).
+- **Le carnet et le BILAN** : LE CARNET > ENSEIGNES (« n / 12 »), par district — celles qu'on a par leur nom (leurs
+  deux lignes, la nuit du vol, le district, le néon en grand), les autres « ??? · LA NUIT ». Le BILAN compte
+  « ENSEIGNES n / 12 ». La sauvegarde : une partie d'avant (ou abîmée) repart avec un mur vide.
+- **Les triches** : TRICHES > ALLER > COLLECTIONS a une section ENSEIGNES (`Devisser.allerA` : debout sous le néon,
+  et la nuit tombée si c'était le jour) ; LE JOUEUR > TOUTES LES ENSEIGNES.
+- **Le son** (ElevenLabs, ≈ 40 crédits) : `devisser` (la vis rouillée qui grince et tombe en tintant sur le trottoir,
+  0,9 s), recompressé à 64 kbit/s (7 567 octets), son du lieu `collections` (chargé à un écran d'une enseigne, la
+  nuit) ; la synthèse reste le filet. ⚠️ À écouter par Martin.
+- **Le poids** : rien dans les définitions ni dans la carte ; `/api/collections` passe à 23 947 bruts / 8 533 gzip
+  (3 790 / 1 430 pour les enseignes), son plafond relevé à 26 000 / 9 500.
+- **Captures** (`captures/enseignes/`) : `zoom-rialto-jour-avant.png`, `zoom-rialto-nuit-avant.png` (le néon rose
+  qui luit), `zoom-rialto-nuit-apres.png` / `zoom-rialto-jour-apres.png` (la potence vide), `zoom-dragon_or-nuit-avant.png`
+  (sous la plaque à idéogrammes), `zoom-bingo-jour-avant.png`, `zoom-ti_pout-jour-avant.png`, `tournevis.png`,
+  `tournevis-autre-sens.png`, `zoom-planque-mur-quelques.png`, `zoom-planque-mur-plein.png`, `carnet-enseignes.png`,
+  `carnet-rialto.png`.
+- **Juges** : `tests/test_enseignes_devissees.py` (huit) et `tests/test_enseignes_devissees_js.py` (douze, PAR LE
+  BOUTON : chacune des douze s’atteint par ACTION sous son néon) ; seize mutations vues rouges — dont deux qui
+  ne mordaient pas au premier passage : la ville du cache était déjà passée par la règle (le juge espionne
+  maintenant la génération), et la sauvegarde d'une partie abîmée.
+
 ### Ce qui reste
 
-- **Les enseignes qu'on dévisse la nuit** (la troisième famille de la fiche d'origine) : tranchée le 1er oct. 2026 —
-  la vague 5, plus haut sous « Fiche ».
+- **Les enseignes qu'on dévisse la nuit** : livrées le 1er oct. 2026 (la vague 5). Restent, si Martin le veut : le
+  propriétaire qui sort de la taverne ouverte la nuit, et le mur des enseignes ailleurs que dans les deux planques.
 - **Le marché aux puces du dimanche** ([sa fiche](le-marche-aux-puces-du-dimanche.md#fiche)) : il vendra les cartes qui
   manquent par `Collections.donner(numero, 'puces')` et les meubles `ou: puces`.

@@ -140,6 +140,23 @@ const Decoration = (function () {
         Collections.peindreBebelle(ctx, liste[i], 3 + (i % 4) * 7, 2 + Math.floor(i / 4) * 9 + 1, 1);
       }
     } };
+  // LE MUR DES ENSEIGNES (vague 5) : un panneau perforé appuyé au mur, trois rangées de quatre crochets — chaque
+  // enseigne dévissée y pend, le même néon que sur la rue (`Devisser.peindreNeon`). ⚠️ Sa POSE est le mur lui-même : un
+  // bit par enseigne, dans l'ordre du catalogue (`Devisser.masque`), comme l'étagère des bebelles.
+  DESSINS.mur_enseignes = { w: 34, h: 32, ancre: [17, 28], r: 8, sol: [15, 4], solide: true, variantes: 4096,
+    peindre: function (ctx, w, h, v) {
+      px(ctx, '#4a3626', 0, 0, 34, 32); px(ctx, '#6e5236', 0, 0, 34, 1);          // le cadre, son arête
+      px(ctx, '#b89a6a', 1, 1, 32, 30);                                             // le panneau perforé
+      for (let y = 3; y < 31; y += 3) for (let x = 2; x < 33; x += 3) px(ctx, '#8a7048', x, y, 1, 1);   // ses trous
+      px(ctx, '#2a1e14', 0, 31, 34, 1);
+      const liste = typeof Devisser !== 'undefined' ? Devisser.liste() : [];
+      for (let i = 0; i < 12; i++) {
+        const x = 1 + (i % 4) * 8, y = 1 + Math.floor(i / 4) * 10;
+        px(ctx, '#5c5e66', x + 3, y, 1, 1);                                         // le crochet
+        if (!liste[i] || !((v || 0) & (1 << i))) continue;
+        Devisser.peindreNeon(ctx, liste[i], x, y + 1, 1);
+      }
+    } };
   //: Posés dans le catalogue commun des décors : le moteur les peint comme les autres (`Entites.dessiner`).
   if (typeof DECORS !== 'undefined') for (const nom in DESSINS) DECORS[nom] = DESSINS[nom];
 
@@ -169,7 +186,8 @@ const Decoration = (function () {
     if (!ici) return [];
     const out = [];
     for (const t of trophees()) {
-      const n = t.famille === 'bebelles' ? Collections.nombreBebelles() : t.famille === 'cartes' ? Collections.nombre() : 0;
+      const n = t.famille === 'bebelles' ? Collections.nombreBebelles() : t.famille === 'cartes' ? Collections.nombre()
+        : t.famille === 'enseignes' && typeof Devisser !== 'undefined' ? Devisser.nombre() : 0;
       if (n >= t.palier && ici[t.slug]) out.push(t.slug);
     }
     for (const m of meubles()) if (livre(piece, m.slug) && ici[m.slug]) out.push(m.slug);
@@ -196,7 +214,7 @@ const Decoration = (function () {
         // Un objet de `l` tuiles se pose au milieu de ses tuiles ; l'étagère porte ce qu'on a trouvé (sa pose).
         posees.push(Entites.creer('decor', o.x * TT + (o.l || 1) * 8, yDeLaPose(pose(slug), o.y), {
           decor: slug, r: d.r || 0, solide: !!d.solide, dessine: true, deLaPlanque: true,
-          v: slug === 'etagere_bebelles' ? Collections.masqueBebelles() : 0,
+          v: slug === 'etagere_bebelles' ? Collections.masqueBebelles() : slug === 'mur_enseignes' ? Devisser.masque() : 0,
         }));
       }
     });

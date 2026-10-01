@@ -1621,6 +1621,7 @@ const Hud = (function () {
       ['CARTES DE HOCKEY', Collections.nombre() + ' / ' + (Collections.total() || '?')],
       ['BEBELLES', Collections.nombreBebelles() + ' / ' + (Collections.totalBebelles() || '?')],
       ['SAUTS', Collections.nombreSauts() + ' / ' + (Collections.totalSauts() || '?')],
+      ['ENSEIGNES', Devisser.nombre() + ' / ' + (Devisser.total() || '?')],
       // M13 : ce que dit le générique, et ce qu'il reste à faire après lui — la partie continue.
       ['MISSIONS', Object.keys(p.missionsFaites || {}).length + ' / ' + (B.defs.missions || []).filter(function (m) { return m.phase !== 2; }).length],
       ['DETTE DE ROCCO', p.dette > 0 ? Math.round(p.dette) + ' $' : 'RÉGLÉE'],
@@ -1848,6 +1849,9 @@ const Hud = (function () {
       // LES SAUTS (vague 4) : les vingt, leur record ; le district de ceux qui manquent.
       { libelle: 'SAUTS', cle: 'sauts', detail: Collections.nombreSauts() + ' / ' + (Collections.totalSauts() || '?'),
         faire: function () { ouvrirMenu(menuCarnetSauts()); return false; } },
+      // LES ENSEIGNES (vague 5) : les douze, par district ; le district de celles qui pendent encore.
+      { libelle: 'ENSEIGNES', cle: 'enseignes', detail: Devisser.nombre() + ' / ' + (Devisser.total() || '?'),
+        faire: function () { ouvrirMenu(menuCarnetEnseignes()); return false; } },
       // ⚠️ LA DETTE SE LIT ICI, sinon on l'oublie entre deux appels. C'est la
       // même règle que le carnet du poste : une pression qu'on subit sans
       // jamais pouvoir la regarder n'est pas une pression, c'est une
@@ -2004,6 +2008,40 @@ const Hud = (function () {
     items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet('sauts')); return false; } });
     return surLaLigne(depuis, { titre: 'LES SAUTS DE ROCCO', sur: Collections.nombreSauts() + ' / ' + (Collections.totalSauts() || '?'),
              largeur: 320, hauteur: VH - 30, items: items, retour: function () { ouvrirMenu(menuCarnet('sauts')); } });
+  }
+
+  /** Le nom d'un district, tel que la carte l'écrit (« LES QUAIS ») ; son slug à défaut. */
+  function nomDuDistrict(slug) {
+    const z = (Monde.carte.ville || Monde.carte).def.zones.find(function (w) { return w.slug === slug && !w.gang; });
+    return z ? z.nom.toUpperCase().replace("'", '’') : String(slug || '').toUpperCase();
+  }
+
+  /** ENSEIGNES : les douze, district par district — celles qu'on a dévissées par leur nom (leur fiche, leur néon en
+      grand), les autres « ??? » sous le district où elles pendent encore : c'est l'indice, et la nuit fait le reste. */
+  function menuCarnetEnseignes(depuis) {
+    const items = [];
+    if (!Devisser.total()) items.push(ligne('LE MUR DES ENSEIGNES N’EST PAS ENCORE ARRIVÉ'));
+    let district = null;
+    for (const f of Devisser.liste()) {
+      if (f.district !== district) { district = f.district; items.push(entete(nomDuDistrict(district))); }
+      if (!Devisser.devissee(f.slug)) { items.push(ligne('???', 'LA NUIT')); continue; }
+      items.push({ libelle: f.nom, cle: 'enseigne_' + f.slug,
+                   faire: function () { ouvrirMenu(menuCarnetEnseigne(f.slug)); return false; } });
+    }
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet('enseignes')); return false; } });
+    return surLaLigne(depuis, { titre: 'LES ENSEIGNES', sur: Devisser.nombre() + ' / ' + (Devisser.total() || '?'),
+             largeur: 320, hauteur: VH - 30, items: items, retour: function () { ouvrirMenu(menuCarnet('enseignes')); } });
+  }
+
+  /** Une enseigne : ce qu'en dit le carnet, la nuit où on l'a dévissée — et son néon, en grand. */
+  function menuCarnetEnseigne(slug) {
+    const f = Devisser.enseigne(slug), a = f && Collections.famille('enseignes')[slug];
+    const retour = function () { ouvrirMenu(menuCarnetEnseignes('enseigne_' + slug)); };
+    const items = f ? f.lignes.map(function (l) { return ligne(l); })
+      .concat([ligne('DÉVISSÉE', (a ? 'NUIT DU JOUR ' + a.jour : '') + ' · ' + nomDuDistrict(f.district))]) : [];
+    items.push({ libelle: 'RETOUR', faire: function () { retour(); return false; } });
+    return { titre: f ? f.nom : slug, largeur: 320, colonne: 250, curseur: items.length - 1, items: items, retour: retour,
+             dessiner: function (ctx, x, y, l) { if (f) Devisser.peindreNeon(ctx, f, x + l - 10 - 35, y + 22, 5); } };
   }
 
   /** Une bebelle : ce qu'en dit le carnet, où et quand on l'a trouvée — et elle, en grand. */
@@ -2640,6 +2678,18 @@ const Hud = (function () {
         message(ok ? 'LE MARCHÉ AUX PUCES — JOUR ' + B.partie.jour : 'LE MARCHÉ N’EST PAS ENCORE ARRIVÉ');
         return ok; } });
     }
+    // Les enseignes qui pendent encore : debout sous elles, la nuit tombée (`Devisser.allerA`).
+    const aDevisser = Devisser.aDevisser();
+    if (aDevisser.length) items.push(entete('ENSEIGNES'));
+    for (const f of aDevisser) {
+      items.push({ libelle: f.nom, detail: nomDuDistrict(f.district), enseigne: f.slug, faire: function () {
+        if (!aPiedEnVille()) return false;
+        const ok = Devisser.allerA(f);
+        if (B.etat === 'pause') Jeu.reprendre();
+        fermerMenu();
+        message(ok ? 'ENSEIGNE : ' + f.nom + ' — LA NUIT' : 'INTROUVABLE');
+        return ok; } });
+    }
     if (aSauter.length) items.push(entete('SAUTS'));
     for (const q of aSauter) {
       items.push({ libelle: q.nom, detail: q.rampe ? 'RAMPE' : 'TREMPLIN', saut: q.slug,
@@ -2696,6 +2746,15 @@ const Hud = (function () {
     const n = Collections.toutesLesBebelles();
     Son.SFX.argent();
     message(Collections.totalBebelles() ? 'TOUTES LES BEBELLES (+' + n + ')' : 'L’ÉTAGÈRE N’EST PAS ENCORE ARRIVÉE');
+    return false;
+  }
+
+  /** TOUTES LES ENSEIGNES (TRICHES > LE JOUEUR) : le mur de la planque plein, en silence. */
+  function toutesLesEnseignes() {
+    if (!B.partie) { message('PAS DE PARTIE'); return false; }
+    const n = Devisser.toutes();
+    Son.SFX.argent();
+    message(Devisser.total() ? 'TOUTES LES ENSEIGNES (+' + n + ')' : 'LE MUR DES ENSEIGNES N’EST PAS ENCORE ARRIVÉ');
     return false;
   }
 
@@ -2981,6 +3040,7 @@ const Hud = (function () {
       { libelle: 'TOUTES LES CARTES', faire: function () { toutesLesCartes(); return false; } },
       { libelle: 'TOUTES LES BEBELLES', faire: function () { toutesLesBebelles(); return false; } },
       { libelle: 'TOUS LES SAUTS', faire: function () { tousLesSauts(); return false; } },
+      { libelle: 'TOUTES LES ENSEIGNES', faire: function () { toutesLesEnseignes(); return false; } },
       { libelle: 'TOUTES LES PROPRIÉTÉS', faire: function () { toutesLesProprietes(); return false; } },
       { libelle: 'TOUS LES MEUBLES', faire: function () { tousLesMeubles(); return false; } },
       { libelle: 'EFFACER LA DETTE', faire: function () { effacerLaDette(); return false; } },
@@ -4723,7 +4783,7 @@ const Hud = (function () {
   return {
     nomIci, dessinerLaVilleDuBoss, init, voile, etat, progression, partDesScripts, finirChargement, message, prime, majPrime, montantDeLaPrime, PRIME, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, toutesLesTechniques, glyphesDOnglets, menuSautMissions, menuSautDefis, menuChezUnDonneur, menuEndroitsCles, menuJukebox, pointDuDefi, menuCarnet,
     ouvrirOnglet, toucherMenu, onglets: function () { return ongletsVisibles().map(function (o) { return o.slug; }); },
-    ciblesDuMenu: function () { return cibles.slice(); }, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuCarnetCollections, menuCarnetCarte, menuCarnetBebelles, menuCarnetBebelle, menuCarnetSauts, menuDebugCollections, menuOptions, menuManette, menuManetteBoutons, menuBilan,
+    ciblesDuMenu: function () { return cibles.slice(); }, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuCarnetCollections, menuCarnetCarte, menuCarnetBebelles, menuCarnetBebelle, menuCarnetSauts, menuCarnetEnseignes, menuCarnetEnseigne, menuDebugCollections, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     menuCommandes, ouvrirCommandes, majAideDuTitre, lignesDAide, glypheDAction, dessinerGlyphe, largeurGlyphe,
     menuParties, menuEffacer, menuCopier, tempsDeJeu, quand,
     legendeDeLaCarte, legendeDuZonage, lieuxSurLaCarte, couleurDeLieu, cibleDuBoulot, PULSE_JOUEUR, BATTEMENT_CIBLE, CALQUE_ALPHA,
