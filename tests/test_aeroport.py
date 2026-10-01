@@ -27,27 +27,30 @@ from app import aeroport, carte, economie, missions, recherche
 @pytest.fixture(scope="module")
 def ville():
     """⚠️ Sans les CONCESSIONNAIRES, des deux côtés : posés après l'aéroport, ils ajoutent leur porte au bout, et ce
-    juge veut ceux de l'aéroport au bout (juges « ce module ne déplace rien »)."""
-    from app import concessionnaires
-    pose = concessionnaires.poser_le_salon
+    juge veut ceux de l'aéroport au bout (juges « ce module ne déplace rien »). ⚠️ Ni la CAISSE POPULAIRE (le casse,
+    1er oct. 2026) : posée en dernier, elle ajoute son point d'intérêt au bout, après celui de l'aéroport."""
+    from app import caisse, concessionnaires
+    pose, caisse_pose = concessionnaires.poser_le_salon, caisse.poser
     concessionnaires.poser_le_salon = lambda chantier, v: None
+    caisse.poser = lambda v: None
     try:
         return carte.generer(nord=False)
     finally:
-        concessionnaires.poser_le_salon = pose
+        concessionnaires.poser_le_salon, caisse.poser = pose, caisse_pose
 
 
 @pytest.fixture(scope="module")
 def sans(ville):
     """La même ville, l'aéroport jamais posé."""
-    from app import concessionnaires
-    pose, salon = aeroport.poser, concessionnaires.poser_le_salon
+    from app import caisse, concessionnaires
+    pose, salon, caisse_pose = aeroport.poser, concessionnaires.poser_le_salon, caisse.poser
     aeroport.poser = lambda chantier, v: None
     concessionnaires.poser_le_salon = lambda chantier, v: None
+    caisse.poser = lambda v: None
     try:
         return carte.generer(nord=False)
     finally:
-        aeroport.poser, concessionnaires.poser_le_salon = pose, salon
+        aeroport.poser, concessionnaires.poser_le_salon, caisse.poser = pose, salon, caisse_pose
 
 
 def dedans(r, x, y):
