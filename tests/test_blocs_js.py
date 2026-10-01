@@ -264,10 +264,13 @@ def au_rang_sans_bruit(banc):
         const retour = { x: B.bloc.ville.x, y: B.bloc.ville.y };
         L.Missions.sauvegarderPartie();
         const sauvee = { x: B.partie.x, y: B.partie.y, retour: retour, bloc: !!B.bloc };
-        // 3. Les arbres du bloc — contre la rangée de l'ouest (rangée 30 : les tuiles 1 à 4
+        // 3. Les arbres du bloc — contre la rangée de l'ouest (rangée 16 : les tuiles 1 à 4
         // sont libres, l'arbre de la tuile 0 non) : on pousse vers la gauche, on reste au rang.
+        // ⚠️ Plus la rangée 30 : depuis le bois du 30 sept. 2026, la haie de la route en lacets y
+        // pousse aux tuiles 2 et 3, et le joueur s'y arrêtait avant l'arbre du bord. La rangée 16
+        // est au nord du bois : aucune haie n'y pousse.
         const arbres = B.entites.filter(function (e) { return e.type === 'decor' && e.decor === 'arbre'; });
-        j.x = 4 * TT + 8; j.y = 30 * TT + 8; L.Entites.indexer();
+        j.x = 4 * TT + 8; j.y = 16 * TT + 8; L.Entites.indexer();
         o.touche('KeyA'); for (let i = 0; i < 90; i++) o.frame(1); o.relacher('KeyA');
         const bloque = j.x;
         // 4. Personne ne naît au rang : quinze secondes, le joueur remis à l'arrivée.

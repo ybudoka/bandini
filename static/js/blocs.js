@@ -223,6 +223,60 @@ const Blocs = (function () {
     return { x: carte.w * TT - 20, y: c.y - 5 };
   }
 
+  /* ⚠️ LES CHEMINS DU BLOC (la route en lacets du rang, docs/jalons/une-route-en-lacets-vers-le-chalet.md) :
+     un ruban de gravier au bord LISSE, par-dessus des tuiles `§` peintes en herbe. Appele juste apres
+     `Monde.dessinerSol`, donc SOUS la neige, le verglas et les traces de pneus : l'hiver le blanchit comme
+     le reste. Le grain est celui du `g` des allees, en motif ancre au monde (il ne glisse pas avec la
+     camera). */
+  //: La lisiere d'herbe foulee deborde du ruban de tant de pixels de chaque cote.
+  const LISIERE_PX = 6;
+  //: Les ornieres : a cette part de la demi-largeur, de chaque cote du milieu.
+  const ORNIERES = 0.45;
+  let motif = null;
+  function motifDuChemin(ctx) {
+    if (motif) return motif;
+    const c = document.createElement('canvas');
+    c.width = c.height = 4 * TT;
+    const g = c.getContext('2d');
+    for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) {
+      g.save(); g.translate(i * TT, j * TT); TUILES['g'](g, hash2(i, j) & 15, TT); g.restore();
+    }
+    motif = ctx.createPattern(c, 'repeat');
+    return motif;
+  }
+  /** La meme courbe, decalee de `d` pixels sur sa normale (les ornieres). */
+  function decaler(pts, d) {
+    return pts.map(function (p, i) {
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+      const dx = b[0] - a[0], dy = b[1] - a[1], n = Math.hypot(dx, dy) || 1;
+      return [p[0] - dy / n * d, p[1] + dx / n * d];
+    });
+  }
+  function trait(ctx, pts, largeur, style) {
+    ctx.strokeStyle = style; ctx.lineWidth = largeur; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.stroke();
+  }
+  function dessinerChemins(ctx, cam) {
+    const b = B.bloc && B.bloc.def && B.bloc.def.bloc;
+    if (B.interieur || !b || !b.chemins || !b.chemins.length) return;
+    ctx.save();
+    ctx.translate(-Math.round(cam.x), -Math.round(cam.y));      // tout en pixels du monde : le motif s'y ancre
+    for (const ch of b.chemins) {
+      if (!ch.ornieres) {
+        const d = ch.largeur_px / 2 * ORNIERES;
+        ch.ornieres = [decaler(ch.points, -d), decaler(ch.points, d)];
+      }
+      trait(ctx, ch.points, ch.largeur_px + 2 * LISIERE_PX, 'rgba(58,82,40,0.30)');   // l'herbe foulee
+      trait(ctx, ch.points, ch.largeur_px, motifDuChemin(ctx));                       // le gravier
+      for (const o of ch.ornieres) trait(ctx, o, 3, 'rgba(126,110,78,0.55)');        // les ornieres
+      B.stats.rects += 4;
+    }
+    ctx.restore();
+  }
+
   /** Une plaque de bois, le mot, et une fleche vers le bord : on sait ou pousser. */
   function dessiner(ctx, cam) {
     if (B.interieur || !Monde.carte) return;
@@ -411,6 +465,6 @@ const Blocs = (function () {
 
   return { dessinerFumees, cheminees, fume, FUMEE, VAPEUR, init, maj, charger, liste, sauter, entrerAuNoir, contreLeBord, recul, retourEnVille, marge, porteur, capVersLInterieur, poursuiteAuBord,
            garder, souvenir, enMemoire, oublier, reprendre,
-           cibleDeSortie, dessiner, texteDInfo, DELAI_POURSUIVANTS,
+           cibleDeSortie, dessiner, dessinerChemins, texteDInfo, DELAI_POURSUIVANTS,
            get cartes() { return cartes; }, BORD_PX, PRES, RELANCE };
 })();

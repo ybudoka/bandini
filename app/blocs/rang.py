@@ -5,7 +5,8 @@ Martin (26 sept. 2026) : « Regroupe la clairière et la cabane à sucre avec le
 une vraie fusion », et « l'entrée de la ville au rang [doit être] une ouverture de rue ». On quitte la ville
 par la rue des Quais qui traverse jusqu'au bord ouest (`carte.OUVERTURES_DE_RUE`) ; au noir, on est sur le
 chemin de gravier qui la continue. Le chalet est au bord du lac de la clairière (son quai de bois), la cabane
-dans son érablière, de l'autre côté de l'allée.
+dans son érablière, de l'autre côté de la haie. Entre les deux, depuis le 30 sept. 2026, une route en lacets
+dans le bois (`CHEMIN`) : la cabane tout près de l'entrée, le chalet au bout du chemin.
 
 ⚠️ LE CHALET S'ACHÈTE (2 500 $, le prix du bar) et reste la deuxième planque : son lit, son coffre PARTAGÉ avec
 la planque de Rocco et sa garde-robe ; une partie rouverte s'y réveille avec le char garé sur sa place. La cabane
@@ -13,7 +14,9 @@ garde son comptoir des sucres (le printemps seulement, `magasins.COMPTOIRS["sucr
 Leurs PIÈCES n'ont pas bougé d'une tuile : elles viennent des anciens `chalet.py` et `cabane.py`.
 
 ⚠️ LE PLAN EST LA VÉRITÉ, composé une fois et sans un dé depuis les trois plans d'avant (le script est dans la
-fiche du jalon) : le lac et sa grève de la clairière, le toit et la façade du chalet, ceux de la cabane.
+fiche du jalon) : le lac et sa grève de la clairière, le toit et la façade du chalet, ceux de la cabane. Récrit
+par un script pour la route en lacets : le vieux L de gravier redevenu de l'herbe, la haie de `HAIE_X`. La route,
+sa lisière et la haie du bois ne sont PAS dans le plan : `blocs.plan_du_bloc` les cuit par-dessus, sans un dé.
 """
 
 from .. import carte
@@ -21,31 +24,31 @@ from .. import carte
 PLAN: tuple[str, ...] = (
     "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
     "AA,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A",
-    "A,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A",
+    "A,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,A",
     "AAb,,,A,A,AA,sssssssssss,AA,,,,,,,,,,,,bA,,,,,,,,,,,,T,,T,,T,,T,,,,,T,,T,,T,,T,A",
-    "A,,,,,,,,,ssss~~~~~~~~~ssss,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A",
-    "AA,,,,,,sss~~~~~~~~~~~~~~~sss,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A",
-    "A,,,,,,ss~~~~~~~~~~~~~~~~~~~ss,,,,,,,,,,,b,,,,,,,,,,,,T,,T,,T,,T,,,T,,T,,T,,T,,A",
-    "AA,,,,ss~~~~~~~~~~~~~~~~~~~~~ss,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A",
-    "A,,,,sss~~~~~~~~~~~~~~~~~~~~~sss,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A",
+    "A,,,,,,,,,ssss~~~~~~~~~ssss,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,A",
+    "AA,,,,,,sss~~~~~~~~~~~~~~~sss,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,A",
+    "A,,,,,,ss~~~~~~~~~~~~~~~~~~~ss,,,,,,,,,,,b,,,,,,,,,,,AT,,T,,T,,T,,,T,,T,,T,,T,,A",
+    "AA,,,,ss~~~~~~~~~~~~~~~~~~~~~ss,,,,,,,,,,,,,,A,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,A",
+    "A,,,,sss~~~~~~~~~~~~~~~~~~~~~sss,,,,,,,A,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,A",
     "AA,,,ss~~~~~~~~~~~~~~~~~~~~~~~ss,,,,,,,,,,,b,,,,,,,,,T,,T,,T,,T,,,,,T,,T,,T,,T,A",
-    "A,,,,sss~~~~~~~~~~~~~~~~~~~~~sss,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A",
-    "AA,,,,ss~~~~~~~~~~~~~~~~~~~~~ss,,,,,,,PPPPPPPPPPP,,,,,,,,,PPPPPPPPPPPPPP,,,,,,,A",
-    "A,,,,,,ss~~~~~~~~~~~~~~~~~~~ss,,,,,,,,PPPPPPPPPPP,,,,,,,,,PPPPPPPPPPPPPP,LLLLL,A",
-    "AA,,,,b,sss~~~~~~~~~~~~~~~sss,,,,,,,,,PPPPPPPPPPP,,,,,,,,,PPPPPPPPPPPPPP,,,,,,,A",
+    "A,,,,sss~~~~~~~~~~~~~~~~~~~~~sss,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,A",
+    "AA,,,,ss~~~~~~~~~~~~~~~~~~~~~ss,,,,,,,PPPPPPPPPPP,,,,A,,,,PPPPPPPPPPPPPP,,,,,,,A",
+    "A,,,,,,ss~~~~~~~~~~~~~~~~~~~ss,,,,,,,,PPPPPPPPPPP,,,,A,,,,PPPPPPPPPPPPPP,LLLLL,A",
+    "AA,,,,b,sss~~~~~~~~~~~~~~~sss,,,,,,,,,PPPPPPPPPPP,,,,A,,,,PPPPPPPPPPPPPP,,,,,,,A",
     "A,,,,,,,,,ssss~~~QQQ~~~ssss,,,,,,,,,,,PPPPPPPPPPP,,,,LLLL,PPPPPPPPPPPPPP,,,,,,,A",
-    "AA,,b,,,,,,,,ssssgggssss,,,,,,,,,,,,,,PPPPPPPPPPP,,,,,,,,,PPPPPPPPPPPPPP,LLLLL,A",
-    "A,,,,,,,,,,,,,,,,ggg,,,,,,,,,,,,,,,,,,HWWFFDFFWWH,,,,,,,,,HWWFFFDFFFFWWH,,,,,,,A",
-    "AA,,,,,,,,,,,,,,,ggg,,,,,,,,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,A",
-    "A,,,,,,,A,,,b,,,,ggg,,,,,,,,,,,,,,,,,,,,,,,g,ppp,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,A",
-    "AAA,,,,,,,,,,,,,,ggg,,,,,b,,,,,A,,,,,,,,,,,g,ppp,,,,,,,,,,,,,,,,g,,=,,,,,,,,,,,A",
-    "A,,,,,,,,,,,,,,,,ggg,,,,,A,,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,A",
-    "AA,,,,,,,,,,,,b,,ggg,,,,,,,,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,A",
-    "A,,,,,,,,,,,,A,,,ggg,,,,,,,b,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,A",
-    "AA,b,,,A,,,,,,,,,ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
-    "A,,,,,,,,,,,,,,,bggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
-    "AA,,,,,,,,,,,,,,,ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
-    "A,,,,b,,,,,,,,,,,ggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",
+    "AA,,b,,,,,,,,ssssgggssss,,,,,,,,,,,,,,PPPPPPPPPPP,,,,A,,,,PPPPPPPPPPPPPP,LLLLL,A",
+    "A,,,,,,,,,,,,,,,,ggg,,,,,,,,,,,,,,,,,,HWWFFDFFWWH,,,,A,,,,HWWFFFDFFFFWWH,,,,,,,A",
+    "AA,,,,,,,,,,,,,,,ggg,,,,,,,,,,,,,,,,,,,,,,,g,,,,,,,,,A,,,,,,,,,,g,,,,,,,,,,,,,,A",
+    "A,,,,,,,A,,,b,,,,ggg,,,,,,,,,,,,,,,,,,,,,,,g,ppp,,,,,A,,,,,,,,,,g,,,,,,,,,,,,,,A",
+    "AAA,,,,,,,,,,,,,,ggg,,,,,b,,,,,A,,,,,,,,,,,g,ppp,,,,,A,,,,,,,,,,g,,=,,,,,,,,,,,A",
+    "A,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,g,,,,,,,,,,,,,,A",
+    "AA,,,,,,,,,,,,b,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,g,,,,,,,,,,,,,,A",
+    "A,,,,,,,,,,,,A,,,,,,,,,,,,,b,,,,,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,g,,,,,,,,,,,,,,A",
+    "AA,b,,,A,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,g,,,,,,,,,,,,,,,",
+    "A,,,,,,,,,,,,,,,b,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,",
+    "AA,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,",
+    "A,,,,b,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,gg,,,,,,,,,,,,,,,,",
     "AA,,,,,,,,,,A,,,,,b,,,,,,,,,,,,,,,,,,,,,,A,,,E,,,,,E,,,E,,,,,gg,,,E,,,E,,E,,,E,A",
     "A,,,,,A,,,,,,,,,,,,,,,,,,,,,,,,b,,,A,,,,,,,,,,,,,,,,,,,,,,,,,gg,,,,,,,,,,,,,,,,A",
     "AA,,,,,b,,,,,,,,,,,,,,,,,,,,,A,,,,,,,,,,,,,,,,,ggggggggggggggggggggggggggggg,,,A",
@@ -149,6 +152,25 @@ CABANE = {
     ],
 }
 
+#: ⚠️ LA ROUTE EN LACETS (docs/jalons/une-route-en-lacets-vers-le-chalet.md) — Martin (30 sept. 2026) :
+#: « Montée vers le chalet », « Lacets dans le bois », « Bois dense + route roulante ». De l'entrée est, devant
+#: l'allée de la cabane, on file à l'ouest jusqu'à l'érable (45, 27) qu'on contourne, on plonge au sud dans le
+#: bois, on longe le fond du rang, on remonte à l'ouest (le sommet frôle le bord : sa haie y touche les arbres
+#: de la bordure, sinon on filerait par le bord jusqu'au lac), et on arrive au chalet PAR L'OUEST, devant sa
+#: cour, au pied de son allée (x 43) : au bout du chemin.
+#: ⚠️ LE BOIS : la haie de la route ne pousse que dans ses rectangles. Le premier ferme le côté du chalet au-dessus
+#: de la route, de l'allée du chalet à `HAIE_X` (rangées 20-22) ; le second, le sud-ouest, s'arrête à x = 46 —
+#: plus à l'est, un arbre tomberait à moins de 18 px du sentier de la calèche. La haie de `HAIE_X`, tracée
+#: dans le plan du bord nord à la rangée 22, sépare la cabane du chalet.
+HAIE_X = 53
+CHEMIN = {
+    "points": [(80, 24.5), (66, 24.5), (52, 24.5), (45.5, 24.5), (42.67, 25.67), (41.5, 28.5), (41.5, 33),
+               (41, 38), (36, 42.5), (26, 43.5), (16, 42), (9, 37), (6.3, 31), (9, 25), (14, 20), (20, 18.5),
+               (30, 18.5), (38, 18.5), (41.5, 18.5)],
+    "largeur": 3, "sol": "§", "arbre": "A", "haie": 2,
+    "bois": [[42, 20, HAIE_X - 41, 3], [1, 21, 46, 27]],
+}
+
 BLOC = {
     "slug": "rang",
     "nom": "Le rang",
@@ -177,6 +199,7 @@ BLOC = {
     "cheminees": [{"x": 43, "y": 12, "l": 2},
                   {"x": 69, "y": 11, "l": 1, "genre": "tole", "sucres": True},
                   {"x": 62, "y": 11, "l": 3, "genre": "lanterneau", "sucres": True}],
+    "chemins": [CHEMIN],
     # Les fenêtres de la cabane, devant sa façade.
     "lampes": [{"x": 59, "y": 17, "r": 26, "c": "fenetre"}, {"x": 70, "y": 17, "r": 26, "c": "fenetre"}],
     "cabane": CABANE,

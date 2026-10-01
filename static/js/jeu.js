@@ -1269,6 +1269,7 @@ const Jeu = (function () {
     const vue = { x: cam.x + (sec ? (Math.random() - 0.5) * sec * 8 : 0) + (B.photo ? B.photo.dx : 0),
                   y: cam.y + (sec ? (Math.random() - 0.5) * sec * 8 : 0) + (B.photo ? B.photo.dy : 0) };
     Monde.dessinerSol(ctx, vue);
+    if (!B.interieur) Blocs.dessinerChemins(ctx, vue);  // la route en lacets du rang : SOUS la neige et les traces
     if (B.interieur) Monde.dessinerFoyers(ctx, vue);   // le feu du foyer (le chalet du rang) : il danse, il ne se cuit pas
     if (!B.interieur) Monde.dessinerNids(ctx, vue);    // les nids-de-poule, dans la chaussee
     if (!B.interieur) Pont.dessiner(ctx, vue);        // le pont de glace et ses sapins, sous la neige

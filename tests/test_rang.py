@@ -128,3 +128,57 @@ def test_les_gens_de_la_cabane_se_tiennent_la_ou_l_on_marche_hors_du_sentier():
     t = rang.CABANE["table"]
     assert rang.PLAN[t["y"]][t["x"]] == "=", "la table de tire n'est pas où la cabane la cherche"
     assert sol[t["y"]][64] == "g" and abs(t["x"] * 16 + 8 - (64 * 16 + 8)) > 24 + 8, "la table bouche l'allée"
+
+
+# --- La route en lacets (docs/jalons/une-route-en-lacets-vers-le-chalet.md) ---------------------------------
+
+#: Les décors qui arrêtent un char (un buisson se traverse).
+ARRETENT = ("arbre", "erable_seau", "erable_tube", "corde_bois", "table_tire")
+
+
+def _en_char(depuis: tuple[int, int]) -> dict[tuple[int, int], int]:
+    """Le nombre de tuiles, en char, de `depuis` à chaque tuile du rang. ⚠️ En HUIT directions, et une
+    diagonale passe dès que la tuile d'arrivée est libre : entre deux troncs en biais (22 px entre les
+    centres, 12 px de jour), un char ne passe pas, mais un juge trop gentil vaut mieux qu'un bois percé."""
+    sol = blocs.sol_du_bloc(rang.BLOC)
+    murs = {(d["x"], d["y"]) for d in blocs.decor_du_bloc(rang.BLOC) if d["type"] in ARRETENT}
+
+    def libre(x, y):
+        return (0 <= y < len(sol) and 0 <= x < len(sol[0]) and (x, y) not in murs and sol[y][x] != "~"
+                and not carte.LEGENDE.get(sol[y][x], {}).get("solide"))
+
+    dist, file = {depuis: 0}, [depuis]
+    for x, y in file:
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                n = (x + dx, y + dy)
+                if n not in dist and libre(*n):
+                    dist[n] = dist[(x, y)] + 1
+                    file.append(n)
+    return dist
+
+
+def test_en_char_on_ne_rejoint_le_chalet_que_par_les_lacets():
+    """Martin (30 sept. 2026) : « Bois dense + route roulante ». Sans le bois, on file tout droit à travers
+    le champ (32 tuiles) ; avec, on suit la route (plus de cent)."""
+    a, c = rang.BLOC["arrivee"], rang.BLOC["planque"]["char"]
+    dist = _en_char((a["x"], a["y"]))
+    assert (c["x"], c["y"]) in dist, "la place du char ne se rejoint plus en char"
+    assert dist[(c["x"], c["y"])] >= 100, f"un raccourci : {dist[(c['x'], c['y'])]} tuiles jusqu'au chalet"
+    # Et la cabane, lieu public, reste tout près de l'entrée.
+    porte = next(p for p in rang.BLOC["portes"] if p["interieur"] == "cabane")
+    assert dist[(porte["x"], porte["y"] + 1)] <= 25
+
+
+def test_le_quatre_roues_est_du_cote_du_chalet():
+    c, q = rang.BLOC["planque"]["char"], rang.BLOC["quatre_roues"]
+    dist = _en_char((c["x"], c["y"]))
+    assert (q["x"], q["y"]) in dist and dist[(q["x"], q["y"])] <= 12, "la haie sépare le 4 roues du chalet"
+
+
+def test_la_route_est_roulante_et_sans_decor():
+    assert [f for f in blocs.erreurs(rang.BLOC) if "chemin" in f or "virage" in f] == []
+    sol = blocs.sol_du_bloc(rang.BLOC)
+    assert sum(ligne.count("§") for ligne in sol) > 300, "une route bien courte"
+    # Le vieux L de gravier est parti : plus de `g` sur les rangées de l'entrée, sauf les allées.
+    assert "g" not in sol[25][20:60], sol[25]

@@ -266,6 +266,12 @@ LEGENDE: dict[str, dict] = {
     # que `w` / `W` deux ecrans plus bas, et meme parade : les deux ne vivent
     # jamais dans le meme genre de plan (l'un est du SOL, l'autre du BATI).
     "g": {"nom": "allée de poussière de pierre", "terre": True},
+    # ⚠️ LE CHEMIN DE GRAVIER ROULÉ des blocs (la route en lacets du rang,
+    # docs/jalons/une-route-en-lacets-vers-le-chalet.md) : posé par un chemin de bloc
+    # (`blocs.plan_du_bloc`), jamais écrit dans un plan. Ni `terre` — une auto y roule à pleine
+    # vitesse, l'herbe d'à côté la ralentit — ni `route` : aucun trafic ne s'y engage. Il se peint
+    # en HERBE : le ruban lisse de `Blocs.dessinerChemins` est la route qu'on voit.
+    "§": {"nom": "chemin de gravier roulé", "chemin": True},
     # ⚠️ LA VOIE DU PETIT TRAIN DE LA FOIRE. On y marche (on la traverse pour
     # entrer), mais c'est un GLYPHE et pas du decor : la voie se cuit avec le
     # sol, une fois par morceau, au lieu de se repeindre a chaque image. Chaque

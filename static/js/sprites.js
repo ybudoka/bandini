@@ -4148,6 +4148,11 @@ const TUILES = (function () {
       points(ctx, v + 1, T, '#d2c5a6', 8, 55);
       if (v === 14 || v === 15) points(ctx, v + 1, T, '#9c8e70', 6, 96);   // du gravier plus gros
     },
+    // ⚠️ LE CHEMIN DE GRAVIER ROULÉ des blocs (la route en lacets du rang) : peint en HERBE,
+    // exprès. Sa tuile porte la vitesse et la collision ; la route qu'on voit est le ruban
+    // lisse de `Blocs.dessinerChemins`, par-dessus. Un gravier carré ici montrerait l'escalier
+    // de la grille au bord de la courbe.
+    '§': function (ctx, v, T) { TUILES[','](ctx, v, T); },
     // ⚠️ LA VOIE DU PETIT TRAIN DE LA FOIRE. La variante vient de
     // `Monde.varianteDeRail` : les bits 1/2/4/8 disent de quel cote la voie
     // continue (nord/est/sud/ouest, la lecture de la cloture), le bit 16 que

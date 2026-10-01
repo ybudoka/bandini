@@ -34,6 +34,7 @@ def lieux_des_blocs() -> dict[str, str]:
 
 
 import copy  # noqa: E402
+import math  # noqa: E402
 
 from .. import carte  # noqa: E402
 from . import cineparc, galeries, rang, souterrain, villa  # noqa: E402
@@ -54,16 +55,109 @@ def par_slug(slug: str) -> dict | None:
     return next((b for b in BLOCS + SOUS_SOLS if b["slug"] == slug), None)
 
 
-def sol_du_bloc(bloc: dict) -> list[str]:
-    """Le plan, ses décors remplacés par le sol qu'ils couvrent."""
+#: ⚠️ LES CHEMINS D'UN BLOC (docs/jalons/une-route-en-lacets-vers-le-chalet.md) : une courbe douce
+#: posée sur la grille. Ses points de passage sont en TUILES continues (le centre de la tuile (x, y)
+#: est (x + 0,5, y + 0,5)) ; la courbe passe par chacun (Catmull-Rom), échantillonnée tous les
+#: PAS_DU_CHEMIN_PX pixels — comme la voie de la montagne russe. Tout se calcule sans un dé : le même
+#: plan à chaque import.
+PAS_DU_CHEMIN_PX = 4
+#: La lisière : tant de tuiles, au-delà de la chaussée, d'où l'on retire arbres et buissons.
+LISIERE_TUILES = 1
+#: Un virage plus serré ne se prend pas en auto (trois tuiles de rayon).
+RAYON_MIN_PX = 48
+#: Les décors qu'un chemin a le droit de dégager ; tout autre décor sur sa chaussée ou sa lisière est une faute.
+DEGAGEABLES = ("arbre", "buisson")
+
+
+def _catmull_rom(p0, p1, p2, p3, t: float) -> tuple[float, float]:
+    """Un point à t ∈ [0, 1] de la courbe de Catmull-Rom entre p1 et p2 (p0, p3 : les voisins)."""
+    return tuple(
+        0.5 * (2 * p1[j] + (p2[j] - p0[j]) * t + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * t * t
+               + (3 * p1[j] - p0[j] - 3 * p2[j] + p3[j]) * t ** 3) for j in (0, 1))
+
+
+def echantillonner(points, pas_px: float = PAS_DU_CHEMIN_PX) -> list[tuple[float, float]]:
+    """Les points de passage (en tuiles) → la courbe, en PIXELS du monde, un point tous les ~`pas_px`
+    (au plus `pas_px` de large : un tronçon bombé va plus vite qu'en ligne droite, la corde p1-p2 sous-
+    estime sa longueur — surtout au premier et au dernier tronçon, aux bouts dupliqués — alors on RAFFINE
+    tant qu'un pas dépasse la cible, plutôt que de deviner un facteur de sécurité)."""
+    t_px = carte.TUILE_PX
+    p = [(x * t_px, y * t_px) for x, y in points]
+    p = [p[0]] + p + [p[-1]]
+    fins: list[tuple[float, float]] = []
+    for i in range(1, len(p) - 2):
+        p0, p1, p2, p3 = p[i - 1], p[i], p[i + 1], p[i + 2]
+        n = max(1, math.ceil(math.dist(p1, p2) / pas_px))
+        while True:
+            pts = [_catmull_rom(p0, p1, p2, p3, k / n) for k in range(n)]
+            if max(math.dist(a, b) for a, b in zip(pts, pts[1:] + [p2])) <= pas_px:
+                break
+            n += 1
+        fins.extend(pts)
+    fins.append(p[-2])
+    return fins
+
+
+def _portee_px(chemin: dict) -> float:
+    """Jusqu'où un chemin touche le plan : la chaussée, la lisière, puis la haie."""
+    t_px = carte.TUILE_PX
+    return chemin["largeur"] * t_px / 2 + (LISIERE_TUILES + chemin.get("haie", 2)) * t_px
+
+
+def distances_au_chemin(chemin: dict, largeur: int, hauteur: int) -> dict[tuple[int, int], float]:
+    """Chaque tuile à portée du chemin, et la distance (px) de son centre au tracé."""
+    t_px, portee = carte.TUILE_PX, _portee_px(chemin)
+    d: dict[tuple[int, int], float] = {}
+    for px, py in echantillonner(chemin["points"]):
+        for ty in range(max(0, int((py - portee) // t_px)), min(hauteur, int((py + portee) // t_px) + 1)):
+            for tx in range(max(0, int((px - portee) // t_px)), min(largeur, int((px + portee) // t_px) + 1)):
+                e = math.hypot((tx + 0.5) * t_px - px, (ty + 0.5) * t_px - py)
+                if e <= portee and e < d.get((tx, ty), math.inf):
+                    d[(tx, ty)] = e
+    return d
+
+
+def _dans(rectangles, x: int, y: int) -> bool:
+    return any(rx <= x < rx + rl and ry <= y < ry + rh for rx, ry, rl, rh in rectangles)
+
+
+def plan_du_bloc(bloc: dict) -> list[str]:
+    """Le plan, ses chemins posés : la chaussée sur chaque tuile dont le centre tombe dans la largeur,
+    la lisière dégagée de ses arbres et buissons, la haie du bois (dans ses zones, sur l'herbe seulement — et
+    sur les buissons : un char traverse un buisson, resté au milieu de la haie il y faisait un trou).
+    ⚠️ Ce que le chemin ne peut pas dégager (une corde de bois, de l'eau) reste : `erreurs` le dénonce."""
+    plan = [list(ligne) for ligne in bloc["plan"]]
+    if not bloc.get("chemins"):
+        return ["".join(ligne) for ligne in plan]
     decors = bloc.get("decors", {})
-    return ["".join(decors[g][0] if g in decors else g for g in ligne) for ligne in bloc["plan"]]
+    hauteur, largeur, t_px = len(plan), len(plan[0]), carte.TUILE_PX
+    degageables = {g: sol for g, (sol, genre) in decors.items() if genre in DEGAGEABLES}
+    for chemin in bloc["chemins"]:
+        demi = chemin["largeur"] * t_px / 2
+        lisiere = demi + LISIERE_TUILES * t_px
+        for (x, y), e in distances_au_chemin(chemin, largeur, hauteur).items():
+            g = plan[y][x]
+            if e <= demi:
+                if g in degageables or carte.LEGENDE.get(g, {}).get("terre"):
+                    plan[y][x] = chemin["sol"]
+            elif e <= lisiere:
+                if g in degageables:
+                    plan[y][x] = degageables[g]
+            elif (g == "," or degageables.get(g) == ",") and _dans(chemin.get("bois", ()), x, y):
+                plan[y][x] = chemin.get("arbre", "A")
+    return ["".join(ligne) for ligne in plan]
+
+
+def sol_du_bloc(bloc: dict) -> list[str]:
+    """Le plan (chemins posés), ses décors remplacés par le sol qu'ils couvrent."""
+    decors = bloc.get("decors", {})
+    return ["".join(decors[g][0] if g in decors else g for g in ligne) for ligne in plan_du_bloc(bloc)]
 
 
 def decor_du_bloc(bloc: dict) -> list[dict]:
     decors = bloc.get("decors", {})
     return [{"type": decors[g][1], "x": x, "y": y}
-            for y, ligne in enumerate(bloc["plan"]) for x, g in enumerate(ligne) if g in decors]
+            for y, ligne in enumerate(plan_du_bloc(bloc)) for x, g in enumerate(ligne) if g in decors]
 
 
 def carte_du_bloc(bloc: dict) -> dict:
@@ -104,6 +198,11 @@ def carte_du_bloc(bloc: dict) -> dict:
                  "planque": dict(bloc["planque"]) if bloc.get("planque") else None,
                  # Ses cheminées (le chalet) : une pierre sur le toit, et la fumée qui en sort.
                  "cheminees": [dict(c) for c in bloc.get("cheminees", [])],
+                 # ⚠️ SES CHEMINS (la route en lacets du rang) : le tracé en pixels, que `Blocs.dessinerChemins`
+                 # peint en ruban lisse ; les tuiles `§` dessous portent la vitesse et la collision.
+                 "chemins": [{"largeur_px": c["largeur"] * carte.TUILE_PX,
+                              "points": [[round(x, 1), round(y, 1)] for x, y in echantillonner(c["points"])]}
+                             for c in bloc.get("chemins", ())],
                  # L'ecran du cine-parc : son cadre, en tuiles (`Cineparc` peint la toile).
                  "ecran": dict(bloc["ecran"]) if bloc.get("ecran") else None,
                  # La fenêtre de sa cabine de projection (`Cineparc.faisceau` en part).
@@ -175,9 +274,9 @@ def pour_le_navigateur() -> list[dict]:
 def erreurs(bloc: dict, ville: dict | None = None) -> list[str]:
     """Ce qui cloche dans un bloc — le juge de `tests/test_blocs.py`."""
     slug, fautes = bloc["slug"], []
-    plan = bloc["plan"]
-    if len({len(ligne) for ligne in plan}) != 1:
+    if len({len(ligne) for ligne in bloc["plan"]}) != 1:
         fautes.append(f"{slug} : les lignes du plan n'ont pas toutes la même largeur")
+    plan = plan_du_bloc(bloc)
     connus = set(carte.LEGENDE) | set(bloc.get("decors", {}))
     inconnus = {g for ligne in plan for g in ligne} - connus
     if inconnus:
@@ -255,6 +354,25 @@ def erreurs(bloc: dict, ville: dict | None = None) -> list[str]:
     for cx, cy, cl, ch in bloc.get("cadres", ()):
         if cl * carte.TUILE_PX < ECRAN_PX[0] or ch * carte.TUILE_PX < ECRAN_PX[1]:
             fautes.append(f"{slug} : le cadre ({cx}, {cy}, {cl}, {ch}) est plus petit que l'écran")
+    # ⚠️ SES CHEMINS : la chaussée entière est du chemin (rien qu'on ne sache dégager dessus), aucun décor
+    # sur la chaussée ni la lisière, et aucun virage qu'une auto ne prend pas.
+    decors_poses = {(d["x"], d["y"]): d["type"] for d in decor_du_bloc(bloc)}
+    for i, chemin in enumerate(bloc.get("chemins", ())):
+        demi = chemin["largeur"] * carte.TUILE_PX / 2
+        lisiere = demi + LISIERE_TUILES * carte.TUILE_PX
+        for (x, y), e in sorted(distances_au_chemin(chemin, largeur, hauteur).items()):
+            if e <= demi and sol[y][x] != chemin["sol"]:
+                fautes.append(f"{slug} : le chemin {i} passe sur ({x}, {y}) {sol[y][x]!r}")
+            if e <= lisiere and (x, y) in decors_poses:
+                fautes.append(f"{slug} : un décor {decors_poses[(x, y)]} sur le chemin {i} en ({x}, {y})")
+        pts = echantillonner(chemin["points"])
+        k = 8                                                    # 32 px entre les trois points du cercle
+        for a, b, c in zip(pts, pts[k:], pts[2 * k:]):
+            ab, bc, ca = math.dist(a, b), math.dist(b, c), math.dist(c, a)
+            aire2 = abs((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]))
+            if aire2 > 1e-6 and ab * bc * ca / (2 * aire2) < RAYON_MIN_PX:
+                fautes.append(f"{slug} : le chemin {i} a un virage trop serré vers ({b[0]:.0f}, {b[1]:.0f}) px")
+                break
     # Le passage, dans la ville : sur son bord, et chacune de ses tuiles se marche.
     if ville is not None and bloc.get("passage"):
         p = passage_en_ville(bloc) if ville.get("decalage_nord") else bloc["passage"]
