@@ -26,7 +26,7 @@ def test_le_dojo_ne_deplace_rien(monkeypatch):
     du dojo changent — et la pièce de commerce qu'il a reprise disparaît.
     ⚠️ Les ENSEIGNES qui ouvrent pour vrai (`enseignes.poser`) sont posées juste après, sur la même
     règle : sans le dojo, le Rialto prenait sa porte. Neutralisées des DEUX côtés."""
-    from app import enseignes
+    from app import enseignes, etages
     monkeypatch.setattr(enseignes, "poser", lambda chantier, ville: [])
     avec = carte.generer(nord=False)
     monkeypatch.setattr(carte._Chantier, "poser_le_dojo", lambda self, ville: None)
@@ -41,7 +41,8 @@ def test_le_dojo_ne_deplace_rien(monkeypatch):
     assert len(enseignes) == 1 and enseignes[0][0]["texte"] == "DOJO DION", enseignes
     assert set(avec["interieurs"]) - set(sans["interieurs"]) == {"dojo"}
     reprise = set(sans["interieurs"]) - set(avec["interieurs"])
-    assert reprise == {portes[0][1]["interieur"]}, reprise
+    # ⚠️ Avec ses étages (`etages.monter`) : le logement du commerçant s'en va avec sa boutique.
+    assert reprise == set(etages.suite(sans["interieurs"], portes[0][1]["interieur"])), reprise
     assert len(avec["points_interet"]) == len(sans["points_interet"]) + 1
 
 

@@ -7497,6 +7497,14 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
     villas_mod.poser(ville)
     from . import clotures as clotures_mod
     clotures_mod.poser(ville)
+    # ⚠️ DES ÉTAGES DEDANS AUSSI (docs/jalons/des-etages-dedans-aussi.md), sur la ville FINIE (toutes ses tuiles,
+    # toutes ses portes) : combien d'étages chaque façade peint, sans un dé et sans une tuile. ⚠️ AVANT les
+    # frénésies et les cartes de hockey, qui se posent en tout dernier (leurs juges « ne déplacent rien » le
+    # vérifient) : les étages n'écrivent que `residences`, `devantures` et `interieurs`, qu'elles ne lisent pas.
+    from . import etages as etages_mod
+    etages_mod.compter(ville)
+    # Et derrière chaque porte posée par la ville, autant de niveaux que sa façade en peint.
+    etages_mod.monter(ville)
     # ⚠️ LES FRÉNÉSIES (P4, docs/jalons/quatre-activites-que-le-jeu-n-a-pas.md), APRÈS ABSOLUMENT TOUT, bande
     # nord comprise : une icône par district, dans une ruelle libre choisie par une règle — sans un dé, et rien
     # de posé dans une liste que la ville lit. La ville d'avant est la même à la tuile près.
@@ -7509,12 +7517,6 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
     # `definitions.construire` la sort et la sert sur `/api/collections`, avec le catalogue.
     from . import collectionner as collectionner_mod
     ville["collections"] = collectionner_mod.poser(ville)
-    # ⚠️ DES ÉTAGES DEDANS AUSSI (docs/jalons/des-etages-dedans-aussi.md), APRÈS ABSOLUMENT TOUT : combien
-    # d'étages chaque façade peint, compté sur la ville finie, sans un dé et sans une tuile.
-    from . import etages as etages_mod
-    etages_mod.compter(ville)
-    # Et derrière chaque porte posée par la ville, autant de niveaux que sa façade en peint.
-    etages_mod.monter(ville)
     return ville
 
 # --- Les interieurs ---------------------------------------------------------

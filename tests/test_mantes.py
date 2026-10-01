@@ -9,7 +9,7 @@ import json
 import pytest
 import villes
 
-from app import carte, devantures, garderobe, mantes, nord, pietons, techniques
+from app import carte, devantures, etages, garderobe, mantes, nord, pietons, techniques
 
 
 @pytest.fixture(scope="module")
@@ -105,7 +105,9 @@ def test_l_ecole_ne_deplace_rien(monkeypatch):
     enseignes = [(a, b) for a, b in zip(avec["devantures"], sans["devantures"]) if a != b]
     assert len(enseignes) == 1 and enseignes[0][0]["texte"] == mantes.ENSEIGNE, enseignes
     assert set(avec["interieurs"]) - set(sans["interieurs"]) == {mantes.SLUG}
-    assert set(sans["interieurs"]) - set(avec["interieurs"]) == {portes[0][1]["interieur"]}
+    # ⚠️ Avec ses étages (`etages.monter`) : le logement du commerçant s'en va avec sa boutique.
+    assert set(sans["interieurs"]) - set(avec["interieurs"]) == set(etages.suite(sans["interieurs"],
+                                                                                portes[0][1]["interieur"]))
     assert [q for q in avec["points_interet"] if q["type"] != mantes.SLUG] == sans["points_interet"]
     assert len(avec["points_interet"]) == len(sans["points_interet"]) + 1
     neuves = [z for z in avec["zones"] if z not in sans["zones"]]
