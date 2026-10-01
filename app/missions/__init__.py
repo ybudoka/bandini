@@ -26,7 +26,8 @@ TYPES_OBJECTIFS = (
     "monter",      # monter dans le vehicule de la mission (`vehicule`, `ou`) ;
                    # `prete` : a QUI il est — un char prete ne se vend pas ;
                    # `ou: ruelle:<lieu>:<n>` : la ruelle la plus proche a n tuiles au moins
-    "livrer",      # amener le vehicule de la mission a un lieu ; `sans_degats` : prime
+    "livrer",      # amener le vehicule de la mission a un lieu ; `sans_degats` : prime ; `repeint` : seulement
+                   # repeint depuis qu'on y est monte (x02) ; `rentre` : livre, il quitte la rue (i04, le hangar de Leo)
     "ramasser",    # ramasser un objet — `cible: fuyard` : le rattraper d'abord
     "tuer",        # mettre KO (ou pire) `n` membres d'un `groupe`, `chef` pour le boss ;
                    # `arme` et `vie` remplacent la fiche de l'archetype (voir ci-dessous)
@@ -64,7 +65,7 @@ TYPES_OBJECTIFS = (
     # --- M13 : la deuxième fin part en traversier. À bord (à pied ou au volant) quand
     # il QUITTE `escale` (un district de `traversier.ESCALES`) : manquer le départ, c'est
     # attendre le suivant, pas un échec.
-    "embarquer",   # `escale`
+    "embarquer",   # `escale` ; `bateau: navette` — la navette de l'île (Quais ↔ île), qui prend les chars (i04)
     # --- L'infiltration (Martin, 28 sept. 2026 : « fais des missions d'infiltration ») : un objet dans le
     # sac (`objet`, le slug que `partie.objets` retient), d'où qu'il vienne — posé à un lieu (`ou`) et
     # ramassé en marchant dessus, ou dans la poche d'un garde (`garde`, sa ronde dans la fiche du bloc),
@@ -81,6 +82,9 @@ TYPES_OBJECTIFS = (
     # Rester à `lieu` (à `rayon` tuiles) pendant `secondes` ; en sortir remet le compte à zéro, ou fait rater
     # (`strict`, échec `hors_zone`). `groupe`/`n` : des hommes arrivent de loin, `renforts` en ramène.
     "tenir",       # `lieu`, `rayon`, `secondes`, `strict`, `groupe`, `n`, `renforts`
+    # --- Un char sur l'île (1er oct. 2026, i04 « laisse-le refroidir ») : `heures` de JEU depuis le début de l'étape —
+    # vivre ou dormir les fait passer ; le départ est gardé dans la partie (une partie rouverte attend toujours).
+    "attendre",    # `heures`
 )
 
 #: Ce qu'un objet de mission a l'air, par terre (`OBJETS` de `static/js/sprites.js`, que `Entites`
@@ -698,7 +702,7 @@ from . import (  # noqa: E402
     s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
     e04, e06, e07, e10, la_pointe, s02, s05, s06, s09, s10, s11,
     d01, d02, d03, d04, d05, d06, d07, d08, h03, h04, h05, h06, h07, l01, l02, l03, l04, l05, l06, r02, r03, r04, r05, r06, r07, r08, s07, s12, s14, e13, q12, q09, q08, i01, i02, i03, i05, i06, i08, h08, d09, t01, t02, t03, t04, t05, t06, t09, t11, t12, t13, t14, t15, q07, m98,
-    x01, x02, x03, x04,
+    x01, x02, x03, x04, i04,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -764,6 +768,8 @@ from . import (  # noqa: E402
 # ⚠️ h03 à h07 (30 sept. 2026, vague 7) : l'hôpital — le Dr Lachance joue aux cartes chez Sal (h03, h06 : sa
 # dette payée en fausses ordonnances), un cœur par l'autobus de nuit (h04), le patient de Ginette qui file en
 # ambulance (h05), et la nuit des urgences quand un quartier change de mains (h07, `exige.liberes`).
+# ⚠️ i04 (1er oct. 2026, vague 16) : un char sur l'île — la berline chaude embarquée sur la navette, refroidie une journée
+# dans le hangar de Léo, ramenée repeinte (`embarquer` + `bateau: navette`, `ile:<lieu>`, `attendre`).
 # ⚠️ x01 à x04 (1er oct. 2026, vague 15) : le casse de la caisse populaire de La Shop (`caisse.py`) — le repérage
 # (Josée), puis deux préparatifs, le coupé repeint (Josée) et l'uniforme de livreur (Rosa), et le coup lui-même, qui
 # se joue avec ou sans eux (`si`/`sauf`, `Histoire.tenu`) et ferme la dernière coupe de Sal (d08).
@@ -795,7 +801,7 @@ CATALOGUE: list[Mission] = [
     l01.MISSION, l02.MISSION, l03.MISSION, l04.MISSION, l05.MISSION, l06.MISSION,
     r02.MISSION, r03.MISSION, r04.MISSION, r05.MISSION, r06.MISSION, r07.MISSION, r08.MISSION,
     s07.MISSION, s12.MISSION, s14.MISSION, e13.MISSION, q12.MISSION, q09.MISSION,
-    q08.MISSION, i01.MISSION, i02.MISSION, i03.MISSION, i05.MISSION, i06.MISSION, i08.MISSION, h08.MISSION,
+    q08.MISSION, i01.MISSION, i02.MISSION, i03.MISSION, i04.MISSION, i05.MISSION, i06.MISSION, i08.MISSION, h08.MISSION,
     x01.MISSION, x02.MISSION, x03.MISSION, x04.MISSION,
     # ⚠️ d09 (1er oct. 2026) : le premier CHOIX DANS UN DIALOGUE — Léo doit 800 à Sal ; on le couche, ou on paie.
     d09.MISSION,
@@ -1395,6 +1401,11 @@ def _au_catalogue(cle: str, valeur):
     (`pour_jouer`), comme ce qu'elle dit. Douze petites jobs passaient le budget de la clé `missions`."""
     if cle == "passant":
         return f"{valeur['archetype']}@{valeur.get('district') or '*'}"
+    # ⚠️ UN SEUL PRÉREQUIS VOYAGE NU (1er oct. 2026, i04) : `"i01"` et pas `["i01"]` — quatre octets sur soixante-dix
+    # missions ; le plafond brut des définitions n'en avait plus trente-trois. Le navigateur remet la liste en arrivant
+    # (`Jobs.deplier`), et rien d'autre ne lit le catalogue tel qu'il voyage.
+    if cle == "prerequis" and isinstance(valeur, list) and len(valeur) == 1:
+        return valeur[0]
     return copy.deepcopy(valeur)
 
 
@@ -1538,7 +1549,7 @@ ACTEURS_DE_MISSION = ("joueur", "donneur", "vehicule", "cible", "fuyard")
 #: d'autre ; `amarrage:<lieu>` : celui le plus près d'un lieu (`Histoire.amarragePres`,
 #: m53 et son relais de la rive nord).
 FORMES_DE_LIEU = ("place", "porte", "ruelle", "zone", "chez", "boutique", "district", "rampe",
-                   "mouillage", "amarrage", "traversier", "bloc")
+                   "mouillage", "amarrage", "traversier", "bloc", "navette", "ile")
 #: Les lieux NOMMÉS que `Histoire.resoudre` connaît sans forme (`pont` : la barrière du
 #: pont, `bois` : une tuile des bois, `foire` : l'arche) — le `ou` d'un objectif peut les
 #: nommer, et la scène par défaut les filme alors tels quels (q10 et sa moto au pont).

@@ -52,6 +52,8 @@ const Jobs = (function () {
       l'arrivée du paquet, on les remet dans le catalogue — une fois, sans doublon —, et tout le reste du jeu (le
       carnet, la triche, `Histoire.mission`) les trouve là comme les autres. Rend `defs`. */
   function deplier(defs) {
+    // ⚠️ Un seul prérequis voyage nu (`missions._au_catalogue`) : la liste revient ici, pour tout le jeu.
+    if (defs && Array.isArray(defs.missions)) defs.missions.forEach(function (m) { if (typeof m.prerequis === 'string') m.prerequis = [m.prerequis]; });
     if (!defs || !Array.isArray(defs.jobs) || defs.jobsDepliees) return defs;
     const missions = defs.missions || (defs.missions = []);
     const deja = {};

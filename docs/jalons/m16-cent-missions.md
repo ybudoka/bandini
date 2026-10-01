@@ -1411,3 +1411,32 @@ catalogue.
     devant sur quatre graines, la liste des objets) ; `test_casse_js.py` (six : x01, x02, x03 jouées au bouton, x04 tout
     préparé et rien de préparé, et la porte battante — mutée, rouge) ; `test_missions.py` (la table `caisse`, `si`/`sauf`
     jamais au départ ni hors `pendant`).
+- **1er oct. 2026 : vague 16 — un char sur l'île, et `i04`.** La **navette de l'île** (le deuxième bateau des Quais,
+  `navette.py`) prenait déjà les chars sur son pont, comme le traversier ; ce qui manquait, c'était **le chemin d'un
+  joueur** et de quoi l'écrire dans une mission. Le juge part de la rue des Quais (une voie qui descend vers le quai),
+  monte sur le pont au bouton, traverse, sort de la vieille jetée de l'île — par la friche, entre les barils de
+  l'usine et l'eau —, roule jusqu'au hangar de Léo par la gravelle et l'herbe sans couler, revient attendre la navette
+  au bout de la jetée, remonte, et redescend en ville (`tests/test_ile_en_char_js.py`, un pilote au bouton sur un
+  chemin trouvé dans la carte : `tests/outils_ile_en_char.py`). **Rien n'a bougé dans la carte** : l'île roulait déjà.
+  - **Au moteur** (en données, aucun slug) : `embarquer` + `bateau: navette` (la navette au lieu du traversier), les
+    lieux `navette:<escale>` (le bout de son quai) et `ile:<lieu>` (un lieu de l'île qu'on rejoint par l'eau — les
+    juges des barrières le savent, et `poserLeChar` y cherche de la terre, pas une rue : l'île n'en a aucune) ; un type
+    neuf, `attendre` (`heures` de JEU depuis le début de l'étape — vivre ou dormir les fait passer ; le départ est gardé
+    dans la partie, une partie rouverte attend toujours) ; et `livrer` + `rentre` (livré, le char quitte la rue).
+  - **`i04`** (Léo, _Laisser refroidir_ — 100 $) : une berline chaude derrière la cantine, trois étoiles ; la navette
+    aux heures impaires (la police n'y monte pas, l'île est un refuge) ; le hangar par la gravelle, où Léo la rentre ;
+    une journée de jeu ; une berline « jamais vue de sa vie » devant le hangar ; la navette du retour ; la planque.
+  - ⚠️ **Une heure de jeu, c'est vingt secondes** : du hangar à la jetée, il faut près d'une heure de route, et la navette
+    ne reste à quai que vingt minutes — on l'attend au bout de la jetée (le juge le fait, comme un joueur). Et en
+    tournant de la rue sur le pont des Quais (deux rangées), un coin de roue mord le bord de l'eau : le char ne coule
+    pas (trois secondes, `coule_s`), le juge tolère moins d'une seconde.
+  - ⚠️ **Écarts à la fiche** : « par le traversier » — c'est la navette, le deuxième traversier de la baie (le premier
+    ne dessert pas l'île) ; « le char repeint, les plaques changées » : Léo rend une berline neuve (`monter` sur
+    `ile:hangar_ile`) — pas une clé de `donne` ; la prime est de 100 $ (le juge des missions en veut une).
+  - ⚠️ **Le paquet** : le brut des définitions n'avait plus que 33 octets de marge (241 967 pour 242 000) — `i04` le
+    passait. **Un seul prérequis voyage nu** (`"i01"`, pas `["i01"]`, `missions._au_catalogue`) : quatre octets sur
+    soixante-dix missions ; le navigateur remet la liste en arrivant (`Jobs.deplier`). Juge : `test_missions.py`
+    (muté, rouge). Martin a relevé le plafond brut le même jour (255 000) ; la compaction reste.
+  - **Juges** : `test_ile_en_char_js.py` (deux : l'aller-retour au bouton, de la rue au hangar et retour ; i04 jouée
+    de l'appel à la prime — trois mutations rouges : `attendre` qui ne compte pas, la navette prise pour le traversier,
+    le char qui ne rentre pas) ; `test_missions.py` et `test_barrieres.py` apprennent `ile:` et `navette:`.

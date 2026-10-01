@@ -315,6 +315,15 @@ def test_les_lieux_des_missions_existent():
                 assert slug[len("amarrage:"):] in lieux and VILLE["amarrages"], \
                     f"{mission['slug']} : « {slug} » introuvable"
                 continue
+            # Un lieu DE L'ÎLE qu'on rejoint par l'eau (`ile:<lieu>`, i04) — une porte de l'île ; et le quai de la NAVETTE
+            # (`navette:<escale>`) : une escale qu'elle trace.
+            if slug.startswith("ile:"):
+                assert slug[len("ile:"):] in lieux, f"{mission['slug']} : « {slug} » introuvable"
+                continue
+            if slug.startswith("navette:"):
+                assert slug[len("navette:"):] in {q["district"] for q in VILLE["navette"]["escales"]}, \
+                    f"{mission['slug']} : « {slug} » introuvable"
+                continue
             assert slug in lieux, f"{mission['slug']} : « {slug} » introuvable"
     for defi in missions.DEFIS:
         for lieu in defi.get("points", []) + ([defi["lieu"]] if defi.get("lieu") else []):

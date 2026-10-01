@@ -145,6 +145,8 @@ const Histoire = (function () {
   /** CE QU'ON A PRÉPARÉ CHANGE LA SUITE (le casse, x04 — 1er oct. 2026) : `si` (cette mission est faite) et `sauf` (elle ne
       l'est pas), sur un objectif — tenu, il se joue ; sinon il se SAUTE — ou sur une réplique `pendant` — tenue, elle
       se dit. Le coupé du x02 qui attend dans la ruelle, Josée qui dit ce qui manque. ⚠️ En données, jamais un slug ici. */
+  /** L'heure de jeu, comptée depuis le premier jour : le jour et la fraction de jour de la partie. */
+  function heuresDeJeu() { return ((B.partie.jour || 0) + (B.partie.heure || 0)) * 24; }
   function tenu(o) { return !o || ((!o.si || faite(o.si)) && (!o.sauf || !faite(o.sauf))); }
   function courante() { return B.partie.mission ? mission(B.partie.mission.slug) : null; }
 
@@ -249,6 +251,11 @@ const Histoire = (function () {
     // cette différence pour un `livrer`).
     if (slug.indexOf('mouillage:') === 0) { const mo = trouverMouillage(slug.slice(10)); return mo && mo.poste ? { x: mo.poste.x, y: mo.poste.y, nom: 'le quai' } : null; }
     if (slug.indexOf('traversier:') === 0) return quaiDuTraversier(slug.slice(11));
+    // La NAVETTE DE L'ÎLE (un char sur l'île, 1er oct. 2026) : le bout de SON quai, aux Quais ou à l'île.
+    if (slug.indexOf('navette:') === 0) return quaiDuBateau(slug.slice(8), 'navette');
+    // `ile:<lieu>` : un lieu DE L'ÎLE qu'on rejoint par l'eau (la navette, la chaloupe) — le devant de sa porte, comme
+    // un autre. Le préfixe dit aux juges des barrières qu'on n'y marche pas depuis la ville.
+    if (slug.indexOf('ile:') === 0) return lieu(slug.slice(4));
     const p = point(slug);
     if (p) return { x: p.x * TT + 8, y: p.y * TT + 8, nom: p.nom };
     const porte = (Monde.carte.def.portes || []).find(function (q) { return q.lieu === slug; });
@@ -463,12 +470,22 @@ const Histoire = (function () {
   /** Le bout du quai du traversier dans le district `district` (`traversier.ESCALES`) : la
       tuile du milieu de ses accès, là où le pont touche la rive (M13, le capitaine Bérubé et
       m99). `null` si la ville n'a pas de traversier. */
-  function quaiDuTraversier(district) {
-    const d = typeof Traversier !== 'undefined' ? Traversier.donnees() : null;
+  function quaiDuTraversier(district) { return quaiDuBateau(district, 'traversier'); }
+
+  /** Le bateau d'un `embarquer` ou d'un lieu : le traversier (par défaut), ou la NAVETTE de l'île (`bateau: navette`)
+      — la même fabrique (`traversier.js`), une autre route (les Quais et l'île). */
+  function bateauNomme(bateau) {
+    if (bateau === 'navette') return typeof Navette !== 'undefined' ? Navette : null;
+    return typeof Traversier !== 'undefined' ? Traversier : null;
+  }
+
+  /** Le bout du quai du `bateau` dans le district `district` (son escale) : la tuile du milieu de ses accès. */
+  function quaiDuBateau(district, bateau) {
+    const b = bateauNomme(bateau), d = b ? b.donnees() : null;
     const q = d && d.escales.find(function (e) { return e.district === district; });
     if (!q || !q.acces.length) return null;
     const t = q.acces[Math.floor(q.acces.length / 2)];
-    return { x: t[0] * TT + 8, y: t[1] * TT + 8, nom: 'le quai du traversier', escale: q };
+    return { x: t[0] * TT + 8, y: t[1] * TT + 8, nom: bateau === 'navette' ? 'le quai de la navette' : 'le quai du traversier', escale: q };
   }
 
   /** Le mouillage `slug` (le n-ième, 0 par défaut — deux chalutiers partagent le
@@ -1831,6 +1848,8 @@ const Histoire = (function () {
         B.recherche.etoiles = Math.max(B.recherche.etoiles, o.etoiles || 1); B.recherche.vu = 0; B.recherche.flash = 60;
         B.recherche.dernierVu = { x: j.x, y: j.y, t: B.t };
         if (o.escorte) poserLEscorte(m, o);
+      } else if (o.type === 'attendre') {
+        p.depuis = heuresDeJeu();
       } else if (o.type === 'courses') {
         B.mission.courses = 0; B.mission.coursesDepart = Missions.boulot.faits.taxi;
       } else if (o.type === 'boulots') {
@@ -1938,7 +1957,13 @@ const Histoire = (function () {
     // `majAmarrages`), présents avant même que la mission commence. Sans ce test,
     // `Vehicules.creer` en ferait naître un second par-dessus.
     const dejaAmarre = surEau && cleAmarrage && B.entites.find(function (e) { return e.type === 'vehicule' && e.amarrage === cleAmarrage; });
-    const rue = ou && !surEau ? (o.ou.indexOf('ruelle:') === 0 ? ou : (tuileDeRue(ou.x, ou.y, 8, sansChar) || tuileDeRue(ou.x, ou.y, 8))) : null;
+    // ⚠️ SUR L'ÎLE (`ile:<lieu>`, i04), PAS UNE RUE : l'île n'en a aucune, et la plus proche est en ville, de l'autre
+    // côté de l'eau. Une tuile de terre libre devant le lieu, où un char tient (aucun mur, aucun décor solide).
+    const surIle = o.ou.indexOf('ile:') === 0;
+    const terre = surIle && ou ? tuileLibre(ou.x, ou.y + 2 * TT, 5, function (q) {
+      return sansChar(q) && !Monde.bloque(Math.floor(q.x / TT), Math.floor(q.y / TT), Monde.MASQUE_VEHICULE | Monde.EAU);
+    }) : null;
+    const rue = ou && !surEau ? (surIle ? terre : o.ou.indexOf('ruelle:') === 0 ? ou : (tuileDeRue(ou.x, ou.y, 8, sansChar) || tuileDeRue(ou.x, ou.y, 8))) : null;
     const place = rue || ou;
     if (!place) return null;
     const angle = surEau ? (ou.mouillage ? ou.mouillage.angle : 0) : (rue && rue.sens ? CAP_DE_FLECHE[rue.sens] : 0);
@@ -2502,6 +2527,8 @@ const Histoire = (function () {
           Vehicules.descendre(j, true);
           v.mission = null; v.vole = false; v.conducteur = null; v.etat = 'stationne';
           B.mission.entites = B.mission.entites.filter(function (e) { return e !== v; });
+          // `rentre` (i04) : on le rentre — Léo le roule dans son hangar. Il n'est plus dans la rue.
+          if (o.rentre) Entites.retirer(v);
           avancer();
         }
         return;
@@ -2571,6 +2598,15 @@ const Histoire = (function () {
       case 'survivre':
         if (B.t - p.debutT > (o.secondes || 30) * 60) avancer();
         return;
+      case 'attendre': {
+        // `attendre` (i04, « laisse-le refroidir une journée ») : `heures` de JEU depuis le début de l'étape — dormir
+        // les fait passer, comme vivre. Le départ est dans la partie (`p.depuis`) : il survit à une partie rouverte.
+        if (p.depuis === undefined || p.depuis === null) p.depuis = heuresDeJeu();
+        const reste = (o.heures || 24) - (heuresDeJeu() - p.depuis);
+        if (reste <= 0) { B.mission.attend = null; p.depuis = null; avancer(); return; }
+        B.mission.attend = texteDObjectif(o) + ' — ENCORE ' + Math.ceil(reste) + ' H';
+        return;
+      }
       case 'course': {
         const c = B.mission.course;
         if (!c || !c.points.length) { avancer(); return; }
@@ -2627,10 +2663,11 @@ const Histoire = (function () {
         // `Traversier.embarquer` qui met sur le pont ce qui s'y trouve à l'heure du départ ;
         // manquer le départ, c'est attendre le suivant. Une ville sans traversier ne
         // bloque pas la mission.
-        const l = quaiDuTraversier(o.escale);
-        if (!l) { avancer(); return; }
-        const s = Traversier.etatA(B.partie.heure);
-        const aBord = Traversier.aBord(j) || (j.dansVehicule && Traversier.aBord(j.dansVehicule));
+        // `bateau: navette` (un char sur l'île) : la navette de l'île, pas le traversier.
+        const l = quaiDuBateau(o.escale, o.bateau), bt = bateauNomme(o.bateau);
+        if (!l || !bt) { avancer(); return; }
+        const s = bt.etatA(B.partie.heure);
+        const aBord = bt.aBord(j) || (j.dansVehicule && bt.aBord(j.dansVehicule));
         if (aBord && s.phase === 'traverse' && s.de === l.escale.k) avancer();
         return;
       }
@@ -3877,7 +3914,7 @@ const Histoire = (function () {
       if (!o) return null;
       let l = null;
       if (o.type === 'aller') l = lieu(o.lieu);
-      else if (o.type === 'embarquer') l = quaiDuTraversier(o.escale);
+      else if (o.type === 'embarquer') l = quaiDuBateau(o.escale, o.bateau);
       else if (o.type === 'livrer') l = lieuDeLivraison(o.lieu);
       else if (o.type === 'monter') l = B.mission && B.mission.vehicule ? B.mission.vehicule : null;
       else if (o.type === 'retourner') l = ouTrouver(Chapitres.donneurDe(m));

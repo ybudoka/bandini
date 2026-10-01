@@ -132,7 +132,10 @@ def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
                 # ⚠️ Et l'île (arc I) : on y accoste sous un de ses bâtiments (`amarrage:hangar_ile`), jamais on n'y
                 # marche depuis la ville — ses lieux ne sont que des amarrages (`ile.BATIMENTS`).
                 amarre = o["lieu"].startswith("amarrage:") and o["lieu"].split(":", 1)[1] in (lieux | LIEUX_DE_L_ILE)
-                assert o["lieu"] in lieux or amarre or o["lieu"].startswith(("mouillage:", "traversier:")), \
+                # Et en char (i04, la navette) : un lieu de l'île par son préfixe (`ile:<lieu>`), le quai de la navette.
+                surlile = o["lieu"].startswith("ile:") and o["lieu"][4:] in LIEUX_DE_L_ILE
+                navette = o["lieu"] in ("navette:quais", "navette:ile")
+                assert o["lieu"] in lieux or amarre or surlile or navette or o["lieu"].startswith(("mouillage:", "traversier:")), \
                     f"{m['slug']} : lieu inconnu {o['lieu']}"
             # `course` (p04) : ses points, des lieux que `Histoire.resoudre` connaît. ⚠️ Et `boutique:<mot>` (h06, les
             # trois comptoirs des ordonnances) : un mot d'ENSEIGNE (`Histoire.boutiquex`), jamais une porte qui
@@ -412,4 +415,13 @@ def test_deux_missions_n_ont_jamais_le_meme_titre():
     from collections import Counter
     doubles = [t for t, n in Counter(m["titre"].upper() for m in missions.CATALOGUE).items() if n > 1]
     assert not doubles, doubles
+
+
+def test_un_seul_prerequis_voyage_nu_et_revient_en_liste(banc):
+    """Le plafond brut des définitions (1er oct. 2026) : `"prerequis":"i01"` au lieu de `["i01"]`. Le navigateur, lui,
+    ne voit que des listes — `every`, `length` et le carnet n'en savent rien."""
+    paquet = {m["slug"]: m for m in missions.pour_le_navigateur()}
+    assert paquet["i04"]["prerequis"] == "i01" and isinstance(paquet["d09"]["prerequis"], list)
+    r = banc("function (L, o) { return L.B.defs.missions.filter(function (m) { return !Array.isArray(m.prerequis); }).map(function (m) { return m.slug; }); }")
+    assert r == [], r
 

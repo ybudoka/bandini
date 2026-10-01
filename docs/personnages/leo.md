@@ -14,7 +14,7 @@
 | Voix | **Alexandre - Authentic French Canadian**, partagée avec le client du taxi (m3, qui ne va pas sur l'île) |
 | Bulle | « J'ai rien vu. » |
 | Couleurs | veste de travail brune, tuque rouge vin, pantalon bleu délavé |
-| Missions | aucune encore : posé par la 2e vague de l'île (27 sept. 2026), avant l'arc I de M16 — il y donnera **i04** et **i07** ; reçoit la caisse d'outils du capitaine dans **i01** (sa poignée de main) ; doit 800 $ à Sal dans **d09** — c'est lui qui pose le premier choix dans un dialogue (« Tu veux quoi, au juste? ») |
+| Missions | donne **i04** (laisser refroidir un char chaud dans son hangar, par la navette) ; donnera **i07** ; reçoit la caisse d'outils du capitaine dans **i01** (sa poignée de main) ; doit 800 $ à Sal dans **d09** — c'est lui qui pose le premier choix dans un dialogue (« Tu veux quoi, au juste? ») |
 
 ## Son histoire
 
@@ -40,7 +40,7 @@ quelqu'un, c'est Sven (i03). Léo doit aussi 800 piastres à Sal (d09) — il ne
 
 | Situation | Ce qu'il dit | Pourquoi |
 |---|---|---|
-| Au téléphone | « Léo, de l'île. » (à écrire en i04) | le moins de mots possible |
+| Au téléphone | « Léo, de l'île. » (i04) | le moins de mots possible |
 | À la première rencontre | « Léo Cyr. J'garde le hangar. Non, y a rien dedans. » | il répond à la question avant qu'on la pose |
 | Déjà connu, en personne | « J'ai rien vu. » (sa bulle) | |
 | Quand ça tourne mal | « J'étais pas là. » | |
