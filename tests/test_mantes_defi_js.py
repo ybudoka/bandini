@@ -32,12 +32,14 @@ PREPARER = """
     }
     // Un homme de `arch` a (dx, dy) du joueur, qui flane.
     function flaneur(o, arch, dx, dy) { const e = o.poser(arch, dx, dy); e.etat = 'flane'; return e; }
-    // Le joueur marche vers l'est (ESQUIVE jamais, FRAPPE jamais) ; on note ce que font les autres.
-    function marcher(L, o, gens, images) {
+    // Le joueur marche vers l'est (ESQUIVE jamais, FRAPPE jamais) ; on note ce que font les autres. `avantImage`,
+    // s'il est donne, passe avant chaque image.
+    function marcher(L, o, gens, images, avantImage) {
         const j = L.B.joueur, defis = [], proche = { d: 1e9 };
         const avant = gens.map(function (e) { return e.etat; });
         o.touche('KeyD');
         for (let t = 0; t < images; t++) {
+            if (avantImage) avantImage(t);
             o.frame(1);
             gens.forEach(function (e, i) {
                 proche.d = Math.min(proche.d, Math.hypot(e.x - j.x, e.y - j.y));
@@ -119,7 +121,13 @@ def test_les_cravates_n_ont_pas_change(banc, arme):
         const j = preparer(L, 196, 180);
         j.arme = 'ARME';
         const a = flaneur(o, 'cravate', 10 * 16, -16), b = flaneur(o, 'cravate', 20 * 16, 16);
-        const out = marcher(L, o, [a, b], 420);
+        // ⚠️ DEUX FLÂNEURS QUI FLÂNENT (1er oct. 2026) : la rue vidée, ce sont les deux seuls qu'on peut tirer pour
+        // rentrer souper (`quelquUnRentre`) ou s'arrêter devant une vitrine — et en route vers sa porte, ou arrêté, un
+        // Cravate ne prend plus l'arme au poing pour une provocation. Le témoin tombait sur 2 graines sur 13 le 30 sept.
+        // (d34eff4b), sur 5 le 1er oct. — la graine par défaut comprise depuis les braseros de l'hiver (253f58e3).
+        // Il ne juge que la provocation : 13 sur 13 des deux côtés.
+        a.butT = b.butT = 1e9;
+        const out = marcher(L, o, [a, b], 420, function () { a.porteBut = null; b.porteBut = null; });
         out.gang = a.gang;
         out.chez = L.Territoires.gangA(a.x, a.y);
         return out;
