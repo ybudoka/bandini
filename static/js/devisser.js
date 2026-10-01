@@ -18,7 +18,13 @@
    pend. Elle monte au mur de la planque (`Decoration`, `mur_enseignes` : un bit chacune, `masque`).
 
    ⚠️ LE SLUG EST LE NOM : `partie.collections.enseignes[slug] = { jour, source }`. Le catalogue arrive avec les
-   collections (`Collections.catalogue().enseignes`). */
+   collections (`Collections.catalogue().enseignes`).
+
+   ⚠️ LE PROPRIÉTAIRE (vague 6) : à la vis de son réveil (`proprio.reveil`, à l'empreinte du commerce — `devisser.py`),
+   il sort par la porte de son commerce, en pyjama ou en robe de chambre, et il crie ; puis, selon son tempérament, il
+   te court après (en pantoufles : il te colle aux talons, il ne frappe pas) ou il rentre appeler la police. Il naît HORS DE LA SUITE des numéros, avec un dé
+   PRÊTÉ (la règle du passant des jobs et du portier du casino) : la ville d'après est la même, au tirage près. Une fois
+   par nuit et par commerce ; certains ne sortent jamais (personne en haut, ou la porte est tenue). */
 
 const Devisser = (function () {
   'use strict';
@@ -183,9 +189,18 @@ const Devisser = (function () {
     if (j && (B.t || 0) % 30 === 0 && Monde.estNuit && Monde.estNuit()) {
       if (aDevisser().some(function (f) { const q = point(f); return Math.abs(q.x - j.x) < 480 && Math.abs(q.y - j.y) < 480; })) {
         Son.Lieu.charger('collections');
+        preparerVoix();
       }
     }
+    majProprios();
     if (!chantier) return;
+    // Le proprio qui court arrive sur toi : le tournevis tombe des mains (on se bat ou on se sauve).
+    if (B.epreuve && B.epreuve.slug === 'tournevis' && j && quiTeRattrape(j)) {
+      Adresse.fermer();
+      chantier = null;
+      Hud.message('L’ENSEIGNE RESTE — LE PROPRIO !', 150);
+      return;
+    }
     if (!B.epreuve || B.epreuve.slug !== 'tournevis' || !j || !j.vivant || j.dansVehicule) {
       if (B.epreuve && B.epreuve.slug === 'tournevis') Adresse.fermer();
       chantier = null;
@@ -204,7 +219,7 @@ const Devisser = (function () {
   function arracher(j, f) {
     const q = point(f), r = regle();
     j.animT = 14; j.animType = 'ramasse';
-    Police.signalerCrime(r.delit || 'effraction', q.x, q.y, Police.quelqu_un_voit(q.x, q.y, null));
+    crimes[f.slug] = Police.signalerCrime(r.delit || 'effraction', q.x, q.y, Police.quelqu_un_voit(q.x, q.y, null));
     return donner(f.slug, 'rue');
   }
 
@@ -260,6 +275,8 @@ const Devisser = (function () {
       e.quarts = 0;
       e.vis++;
       Son.SFX.devisser();
+      // Le grincement réveille quelqu'un en haut : à SA vis (la deuxième, la troisième, ou la dernière, quand elle lâche).
+      if (r.f && r.f.proprio && e.vis >= r.f.proprio.reveil) sortir(r.f);
       if (e.vis >= r.vis) { e.fini = LACHE; e.dit = 'ELLE LÂCHE !'; } else e.dit = 'UNE DE MOINS';
       return null;
     },
@@ -302,6 +319,171 @@ const Devisser = (function () {
   };
   if (typeof Adresse !== 'undefined') Adresse.EPREUVES.tournevis = TOURNEVIS;
 
+  // --- Le propriétaire qui sort (vague 6) --------------------------------------------------------------
+
+  function reglesProprio() { const d = donnees(); return (d && d.proprio) || null; }
+
+  //: Les pantoufles, et le pyjama qui dépasse sous la robe de chambre.
+  const PANTOUFLES = '#8a5a3a', PYJAMA_DESSOUS = '#d8d0c0';
+
+  //: Qui est dehors (`{ f, q, e, phase, t, crie }`), qui est au téléphone (`{ f, t, fin }`), le crime de chaque enseigne
+  //: tombée (`Police.signalerCrime`, ce que son coup de fil rapporte), et la nuit où chacun est déjà sorti.
+  let dehors = [], appels = [], crimes = {}, sortis = {};
+
+  /** La nuit de partie : de la tombée du jour à l'aube, le même numéro — un proprio ne sort qu'une fois par nuit. */
+  function nuit() { const p = B.partie; return p ? (p.heure >= 0.5 ? p.jour : p.jour - 1) : 0; }
+
+  /** `fn` jouée avec un dé PRÊTÉ (celui des jobs et du portier) : la file du jeu ne bouge pas d'un tirage. */
+  function sansLeDe(graine, fn) {
+    const de = B.rng;
+    let s = graine >>> 0;
+    B.rng = function () { s = hash2(s + 1, 0x5EED); return (s % 100000) / 100000; };
+    try { return fn(); } finally { B.rng = de; }
+  }
+
+  /** L'habit de nuit, enfilé sur le squelette (`Garderobe`) : la chemise rayée et le pantalon de la même couleur, ou la
+      robe de chambre à carreaux par-dessus le pyjama ; les pantoufles, toujours. */
+  function tenueDuProprio(q) {
+    const t = q.tenue, robe = t.habit === 'robe';
+    return { squelette: t.squelette, peau: t.peau, cheveux: t.cheveux, coiffure: t.coiffure, chapeau: 'aucun',
+             couleur_chapeau: '#1a1a22', haut: robe ? 'robe' : 'chemise', couleur_haut: t.couleur, motif: robe ? 'carreaute' : 'raye',
+             bas: 'pantalon', couleur_bas: robe ? PYJAMA_DESSOUS : t.couleur, souliers: 'souliers',
+             couleur_souliers: PANTOUFLES, accent: t.couleur, accessoires: [] };
+  }
+
+  let voixDeclarees = false;
+  /** Ses voix rejoignent le son, une fois : elles voyagent avec le catalogue, hors des définitions. */
+  function preparerVoix() {
+    const r = reglesProprio();
+    if (voixDeclarees || !r) return;
+    voixDeclarees = true;
+    if (r.voix) Son.Voix.declarer(r.voix);
+    Son.Voix.chargerHistoire('proprio');
+  }
+
+  /** Il crie `cle` : sa bulle, et sa voix de passant. */
+  function crier(d, cle) {
+    const r = reglesProprio(), t = r && r.repliques && r.repliques[d.q.genre] && r.repliques[d.q.genre][cle];
+    if (!t) return;
+    Entites.bulle(d.e, t, { duree: 170 });
+    preparerVoix();
+    Son.Voix.parler('proprio-' + d.q.genre + '-' + cle, {});
+  }
+
+  /** LE RÉVEIL : il sort par la porte de son commerce. Une fois par nuit ; jamais d'une enseigne sans proprio (la
+      porte est tenue, ou personne n'est en haut). Rend l'entité, ou null. */
+  function sortir(f) {
+    const q = f && f.proprio, r = reglesProprio(), n = nuit();
+    if (!q || !r || !B.partie || B.interieur || B.bloc || sortis[f.slug] === n) return null;
+    sortis[f.slug] = n;
+    const px = q.porte[0], py = q.porte[1];
+    const base = Entites.archetype(q.genre === 'f' ? 'passante' : 'passant');
+    // Sans son petit, sans le sou (on ne fait pas les poches d'un pyjama), sans courage ni bavardage : ce qu'il a vu,
+    // c'est LUI qui le raconte (son tempérament), pas la machine des témoins.
+    const arch = Object.assign({}, base, { accompagne: null, argent: [0, 0], vitesse: r.allure, courage: 0, temoin: 0,
+                                           tenue: tenueDuProprio(q) });
+    const e = Entites.enDehorsDeLaSuite(function () {
+      return sansLeDe(hash2(px, py * 7919 + 13), function () { return Entites.creerPieton(px * T + 8, (py + 1) * T + 8, arch); });
+    });
+    if (!e) return null;
+    // Né DANS la porte (`majPorte`) : invisible tant qu'elle s'ouvre, puis il fait un pas sur le trottoir.
+    Monde.ouvrirPorte(px, py);
+    e.sortie = { x: px, y: py, t: 0 };
+    e.metier = 'proprio';          // ni costume d'Halloween, ni compté dans la foule, ni témoin ordinaire
+    e.horsSaison = true;           // en pyjama en janvier : c'est toute la blague (`Entites.imageDe`)
+    e.etat = 'fige'; e.plante = null; e.dessine = false;
+    const d = { f: f, q: q, e: e, phase: 'sort', t: 0, crie: false, essais: 0 };
+    dehors.push(d);
+    return e;
+  }
+
+  /** Il rentre chez lui par sa porte (`majPorte` : il y marche, elle s'ouvre, il disparaît). */
+  function rentrer(d) {
+    const e = d.e;
+    d.phase = 'rentre'; d.t = 0;
+    e.etat = 'flane'; e.cap = null; e.plante = null; e.coupsDictes = false;
+    e.porteBut = { x: d.q.porte[0], y: d.q.porte[1] }; e.porteT = 0; e.porteBloque = 0;
+  }
+
+  /** Un proprio qui court, à portée de te tomber dessus, ou null. */
+  function quiTeRattrape(j) {
+    const r = reglesProprio(), rp = (r && r.rattrape_px) || 26;
+    for (const d of dehors) {
+      if (d.phase === 'court' && d.e.vivant && d.e.etat !== 'assomme' && dist2(d.e.x, d.e.y, j.x, j.y) < rp * rp) return d;
+    }
+    return null;
+  }
+
+  /** Une image d'un proprio dehors. Rend false quand on n'a plus à le suivre. */
+  function suivre(d) {
+    const e = d.e, j = B.joueur, r = reglesProprio();
+    const porteX = d.q.porte[0] * T + 8, porteY = (d.q.porte[1] + 1) * T + 8;
+    if (B.entites.indexOf(e) < 0) {
+      // Parti : rentré par sa porte (celui qui appelle décroche le téléphone), ou oublié par la ville, loin.
+      if (d.phase === 'rentre' && d.q.humeur === 'appelle' && !d.ko && dist2(e.x, e.y, porteX, porteY) < 24 * 24) {
+        appels.push({ f: d.f, t: B.t + r.appel_s * 60, fin: B.t + (r.appel_s + r.attente_s) * 60 });
+      }
+      return false;
+    }
+    if (!e.vivant) return false;
+    d.t++;
+    if (e.etat === 'assomme') { d.ko = true; d.phase = 'ko'; return true; }
+    // Relevé (il fuit) : il rentre — sans appeler personne, la tête lui tourne.
+    if (d.phase === 'ko') { rentrer(d); return true; }
+    if (e.sortie) return true;
+    if (d.phase === 'sort') {
+      if (!d.crie) { d.crie = true; d.t = 0; crier(d, 'sort'); }
+      if (j) e.face = Math.abs(j.x - e.x) >= Math.abs(j.y - e.y) ? (j.x > e.x ? 'droite' : 'gauche') : (j.y > e.y ? 'bas' : 'haut');
+      if (d.t < r.cri_images) return true;
+      crier(d, d.q.humeur);
+      // ⚠️ IL COURT, IL NE FRAPPE PAS (`coupsDictes` : personne ne lui dicte de coup) : un monsieur en pantoufles te
+      // colle aux talons et t'empêche de finir — il ne t'envoie pas à l'hôpital (au banc, ses poings y arrivaient en
+      // neuf secondes).
+      if (d.q.humeur === 'court') {
+        d.phase = 'court'; d.t = 0; e.plante = null; e.etat = 'attaque_joueur'; e.cri = 90; e.coupsDictes = true;
+      }
+      else { d.phase = 'annonce'; d.t = 0; }
+      return true;
+    }
+    // Celui qui appelle le dit d'abord, planté sur son perron (le temps qu'on le lise), puis il rentre composer.
+    if (d.phase === 'annonce') { if (d.t >= r.cri_images) rentrer(d); return true; }
+    if (d.phase === 'court') {
+      const loin = dist2(e.x, e.y, porteX, porteY) > 200 * 200;
+      // Il lâche : trop loin de chez lui, trop longtemps, ou tu l'as semé. Frappé (il fuit), il rentre sans un mot.
+      if (e.etat === 'attaque_joueur' || e.etat === 'attaque') {
+        if (loin || d.t > r.chasse_s * 60) { crier(d, 'lache'); rentrer(d); }
+      } else {
+        if (e.etat === 'flane') crier(d, 'lache');
+        rentrer(d);
+      }
+      return true;
+    }
+    if (d.phase === 'rentre' && !e.porteBut) {
+      // Bousculé, bloqué : il réessaie ; hors de l'écran, il est rentré.
+      if (++d.essais > 3 || !Entites.visibleAEcran(e.x, e.y, 20)) { Entites.retirer(e); return false; }
+      rentrer(d);
+    }
+    return true;
+  }
+
+  /** Le coup de fil : rentré, il compose — et si l'enseigne est tombée, la police l'apprend (l'effraction, rapportée
+      comme par un témoin qui téléphone). Si elle pend encore, il attend en ligne qu'elle tombe, `attente_s` au plus. */
+  function majAppels() {
+    appels = appels.filter(function (a) {
+      if (B.t < a.t) return true;
+      if (!devissee(a.f.slug)) return B.t < a.fin;
+      if (Police.rapporter(crimes[a.f.slug], null)) Hud.message('LE PROPRIO A APPELÉ LA POLICE', 180);
+      return false;
+    });
+  }
+
+  function majProprios() {
+    if (dehors.length && !B.interieur && !B.bloc) dehors = dehors.filter(suivre);
+    if (appels.length) majAppels();
+  }
+
+  function oublierProprios() { dehors = []; appels = []; crimes = {}; sortis = {}; }
+
   // --- Le debug ----------------------------------------------------------------------------------------
 
   /** TRICHES > ALLER > COLLECTIONS : debout sous l'enseigne, sur le trottoir — et la nuit tombée, si c'était le jour. */
@@ -323,9 +505,14 @@ const Devisser = (function () {
     return n;
   }
 
-  function oublier() { if (chantier && B.epreuve && B.epreuve.slug === 'tournevis') Adresse.fermer(); chantier = null; }
+  function oublier() {
+    if (chantier && B.epreuve && B.epreuve.slug === 'tournevis') Adresse.fermer();
+    chantier = null;
+    oublierProprios();
+  }
 
   return { donnees, liste, regle, enseigne, devissee, nombre, total, masque, cle, deLaDevanture, coin, point, aDevisser,
            peindreEmbleme, peindreNeon, peindreDrapeau, lampes, sousLaMain, invite, agir, maj, donner, allerA, toutes, oublier,
-           TOURNEVIS, get chantier() { return chantier; } };
+           TOURNEVIS, sortir, tenueDuProprio, quiTeRattrape,
+           get chantier() { return chantier; }, get dehors() { return dehors; }, get appels() { return appels; } };
 })();

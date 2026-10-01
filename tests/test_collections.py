@@ -179,8 +179,9 @@ def test_elles_voyagent_a_part_hors_de_la_carte_et_des_definitions(paquets, clie
     # après les définitions, et n'attend personne — c'est le plafond du dépôt, pas celui du premier écran.
     # Puis 16 987 / 5 964 avec les sauts (vague 4), et 17 872 / 6 348 avec le marché aux puces : relevé à 22 000 / 8 000.
     # Puis 23 947 / 8 533 avec les douze enseignes (vague 5 : leurs emblèmes, leurs lignes, leurs places — 3 790 / 1 430
-    # à elles seules) : relevé à 26 000 / 9 500 (1er oct. 2026).
-    assert paquets.collections.taille < 26_000
+    # à elles seules) : relevé à 26 000 / 9 500 (1er oct. 2026). Puis 26 336 avec le propriétaire qui sort (vague 6 :
+    # qui sort de chaque commerce, ses huit répliques et ses deux séries de voix — 1,1 Ko) : relevé à 27 000 bruts.
+    assert paquets.collections.taille < 27_000
     assert len(gzip.compress(paquets.collections.corps, 6)) < 9_500
 
 

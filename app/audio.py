@@ -2148,6 +2148,18 @@ def voix_puces() -> list[dict]:
             for r in puces.repliques()]
 
 
+def voix_proprio() -> list[dict]:
+    """Ce que crie le propriétaire qui sort quand on dévisse son enseigne (`devisser.REPLIQUES_PROPRIO`, vague 6) — sa
+    banque (`proprio`), en deux séries (homme, femme) sur `/api/collections` (⚠️ pas dans les définitions), chargée à
+    un écran d'une enseigne, la nuit (`Devisser.maj`). Une voix de PASSANT par genre (`VOIX_PAR_GENRE`) : un proprio
+    n'est pas un personnage, et il n'a pas de nom."""
+    from . import devisser
+    return [{"slug": r["slug"], "texte": r["texte"], "genre": r["genre"], "voix": VOIX_PAR_GENRE[r["genre"]],
+             "volume": 0.9, "histoire": True, "qui": r["qui"], "mission": r["mission"], "partie": r["partie"],
+             "telephone": False}
+            for r in devisser.repliques_du_proprio()]
+
+
 #: LA FILE DE LA FOIRE (Martin, 30 sept. 2026 : « il passe devant, ça chiale ») : ce que disent ceux qui
 #: attendent devant l'arche quand le joueur leur passe devant (`FileDeFoire`). Un genre par voix, comme la rue :
 #: c'est QUI chiale qui choisit.
@@ -2182,7 +2194,7 @@ def voix_de_la_file() -> list[dict]:
 def toutes_les_voix() -> list[dict]:
     return (list(VOIX) + list(VOIX_DE_LA_POLICE) + list(VOIX_DE_LA_FILE) + voix_histoire() + voix_journal()
             + voix_loto() + voix_ouverture() + voix_repos() + voix_dojo() + voix_galeries() + voix_halloween()
-            + voix_garage() + voix_photos() + voix_puces() + voix_patinoire())
+            + voix_garage() + voix_photos() + voix_puces() + voix_patinoire() + voix_proprio())
 
 
 #: LES VOIX QUI NE SE PARTAGENT PAS — la table, ecrite UNE fois : la voix, et le

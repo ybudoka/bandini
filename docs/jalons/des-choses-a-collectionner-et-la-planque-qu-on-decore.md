@@ -434,9 +434,64 @@ méchant.
   ne mordaient pas au premier passage : la ville du cache était déjà passée par la règle (le juge espionne
   maintenant la génération), et la sauvegarde d'une partie abîmée.
 
+### Vague 6 — le propriétaire qui sort (✅ livrée le 1er oct. 2026)
+
+- **Qui sort, à l'empreinte du commerce** (`devisser.proprio`, `crc32("réveillé:" + slug)`, jamais un dé) : personne
+  (une fois sur trois : il n'y a personne en haut), ou quelqu'un qui **court** ou qui **appelle** ; homme ou femme ; en
+  pyjama rayé ou en robe de chambre à carreaux (le pyjama dépasse aux chevilles), toujours en pantoufles ; et la vis
+  qui le réveille (la deuxième, la troisième, ou la dernière, quand elle lâche). ⚠️ **Personne ne sort d'une porte
+  tenue** (`PORTE_TENUE`) : chez Ti-Paul, c'est Ti-Paul (un personnage, avec sa voix) ; au Dragon d'or, le portier du
+  casino, ouvert toute la nuit. Les Souvenirs n'ont pas de porte. Sur la ville livrée :
+
+  | Commerce | Qui | Il se réveille | Habit |
+  |---|---|---|---|
+  | le Bingo | elle **court** | à la 3e vis | pyjama |
+  | le Clairon | elle **appelle** | quand elle tombe | pyjama |
+  | le Lave-auto | elle **appelle** | à la 3e vis | pyjama |
+  | les Quilles | il **court** | à la 2e vis | robe de chambre |
+  | la Cantine | il **appelle** | à la 2e vis | robe de chambre |
+  | le Mah-jong | il **appelle** | à la 2e vis | robe de chambre |
+  | Ti-Pout Autos | elle **court** | à la 2e vis | robe de chambre |
+  | Chez Ti-Paul, le Rialto, la Taverne du port, les Souvenirs, le Dragon d'or | personne | — | — |
+
+- **Il sort par la porte** de sa devanture (la vraie `D`, sinon la condamnée `d` : il habite en haut), né DANS la porte
+  comme un passant qui sort (`e.sortie`, `majPorte` : invisible tant qu'elle s'ouvre). Il naît **hors de la suite des
+  numéros** (`Entites.enDehorsDeLaSuite`) avec un **dé prêté** (`sansLeDe`, la règle des jobs et du portier) : sa
+  naissance ne tire rien du jeu. Il est `metier: 'proprio'` (ni costume d'Halloween, ni compté dans la foule, ni témoin
+  ordinaire) et `horsSaison` : en janvier, la ville ne lui enfile pas de manteau (`Entites.imageDe`) — c'est la blague.
+- **Il crie** (sa bulle, sa voix de passant — Felix pour lui, Amélie pour elle, `audio.VOIX_PAR_GENRE`), tourné vers
+  toi, le temps de le lire ; puis son tempérament :
+  - **il court** (« Attends que j'te pogne! J'cours vite, en pantoufles! » / « Reviens icitte! J'ai des bigoudis, pas
+    des béquilles! ») : il te colle aux talons — ⚠️ **sans frapper** (`coupsDictes`) : au banc, ses poings
+    t'envoyaient à l'hôpital en neuf secondes, ce n'est pas un monsieur en pantoufles. Arrivé sur toi (26 px), **le
+    tournevis te tombe des mains** (« L'ENSEIGNE RESTE — LE PROPRIO ! »). Il lâche au bout de douze secondes, ou à deux
+    cents pixels de sa porte : « Pfff… Reviens demain, j'vas être habillé! » / « Reviens aux heures d'ouverture, comme
+    tout le monde! », et il rentre.
+  - **il appelle** (« Bouge pas! J'appelle la police… dès que j'trouve mes lunettes! » / « J'appelle la police! Pis ma
+    belle-sœur, a va le savoir avant eux! ») : planté sur son perron le temps qu'on le lise, il rentre ; cinq secondes
+    plus tard, si l'enseigne est tombée, **l'effraction est rapportée** (`Police.rapporter`, comme un témoin qui
+    téléphone : la chaleur d'une étoile ; « LE PROPRIO A APPELÉ LA POLICE »). Elle pend encore : il attend en ligne
+    qu'elle tombe, une minute au plus.
+- **On peut l'assommer** : c'est un `coup_pieton` de plus (le délit ordinaire d'un coup sur un passant) ; assommé, il
+  n'appelle personne — relevé, il rentre, la tête lui tourne. Ou **se sauver**.
+- **Une fois par nuit et par commerce** (la nuit va de la tombée du jour à l'aube) ; la nuit d'après, il ressort.
+- **Le poids** : rien dans les définitions ni dans la carte ; qui sort, ses répliques et ses deux séries de voix
+  voyagent sur `/api/collections` (26 336 octets bruts : plafond relevé de 26 000 à 27 000).
+- **Les voix** (ElevenLabs v3, ≈ 500 crédits, deux passes : la première portait des balises que v3 ne connaît pas) :
+  huit `histoire-proprio-<h|f>-<sort|court|appelle|lache>.mp3`, −19,5 LUFS, relues par Scribe (tous les mots y sont,
+  aucune balise lue). ⚠️ À écouter par Martin.
+- **Captures** (`captures/enseignes/`) : `planche-proprios.png` (les sept, tels que le jeu les cuit),
+  `zoom-quilles-porte.png` (il sort), `zoom-quilles-crie.png` (la robe de chambre, la nuit), `proprio-bingo-crie.png`
+  (le pyjama rayé), `zoom-cantine-janvier-crie.png` (en robe de chambre dans la neige), `proprio-quilles-ensuite.png`.
+- **Juges** : `tests/test_proprio_des_enseignes.py` (cinq : la table écrite en toutes lettres, les portes tenues, une
+  vraie porte, aucun dé, ce qui voyage) et `tests/test_proprio_des_enseignes_js.py` (neuf, au bouton : sa vis, hors de la
+  suite et sans un dé ; le pyjama en janvier ; il crie, colle sans frapper et le tournevis tombe ; il appelle et la
+  police l'apprend ; assommé au bouton, il n'appelle personne ; il lâche au bout de sa poursuite ; il ne court pas loin
+  de chez lui ; une fois par nuit ; ceux qui ne sortent jamais) — seize mutations vues rouges.
+
 ### Ce qui reste
 
-- **Les enseignes qu'on dévisse la nuit** : livrées le 1er oct. 2026 (la vague 5). Restent, si Martin le veut : le
-  propriétaire qui sort de la taverne ouverte la nuit, et le mur des enseignes ailleurs que dans les deux planques.
+- **Les enseignes qu'on dévisse la nuit** : livrées le 1er oct. 2026 (la vague 5), et le propriétaire qui sort (la
+  vague 6). Reste, si Martin le veut : le mur des enseignes ailleurs que dans les deux planques.
 - **Le marché aux puces du dimanche** ([sa fiche](le-marche-aux-puces-du-dimanche.md#fiche)) : il vendra les cartes qui
   manquent par `Collections.donner(numero, 'puces')` et les meubles `ou: puces`.

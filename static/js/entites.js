@@ -6111,7 +6111,9 @@ const Entites = (function () {
     // ⚠️ L'HABIT DU MOMENT (les saisons, vague 4a) : sinon, la tenue tiree, habillee pour la saison et la
     // pluie (`Saisons.vetir` : manteau et tuque l'hiver, t-shirt l'ete) — la tenue elle-meme ne change pas.
     const costume = typeof Halloween !== 'undefined' ? Halloween.tenueDe(e) : e.tenue;
-    const tn = costume !== e.tenue ? costume : (e.tenue && typeof Saisons !== 'undefined' ? Saisons.vetir(e.tenue, e) : e.tenue);
+    // ⚠️ `horsSaison` : le propriétaire tiré du lit (`Devisser`) sort en pyjama, même en janvier — c'est la blague.
+    const tn = costume !== e.tenue ? costume
+      : (e.tenue && !e.horsSaison && typeof Saisons !== 'undefined' ? Saisons.vetir(e.tenue, e) : e.tenue);
     const habille = tn && typeof Garderobe !== 'undefined' ? Garderobe.cuire(tn) : null;
     // ⚠️ Et la fiche DU MOMENT : l'hiver, la conductrice sort du cabriolet en tuque et en bottes
     // (`fiche.hiver`, `Saisons.ficheDuMoment` ; docs/jalons/les-decapotables-l-hiver.md).

@@ -524,6 +524,11 @@ from app import patinoire as _patinoire  # noqa: E402
 
 JEU.update({f"{r['qui']}-patins-{r['cle']}": r["jeu"] for r in _patinoire.REPLIQUES})
 
+# LE PROPRIÉTAIRE QUI SORT QUAND ON DÉVISSE (`devisser.REPLIQUES_PROPRIO`, vague 6) : même règle.
+from app import devisser as _devisser  # noqa: E402
+
+JEU.update({f"proprio-{r['qui']}-{r['cle']}": r["jeu"] for r in _devisser.REPLIQUES_PROPRIO})
+
 # LE TIRAGE DU 6/49 (`loto.repliques`) : l'annonceur de la loterie. Les boules, d'un ton egal et net
 # — elles s'enchainent, une par une ; l'amorce et l'issue, elles, ont du jeu.
 from app import loto  # noqa: E402
