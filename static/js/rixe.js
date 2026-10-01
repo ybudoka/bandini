@@ -458,5 +458,77 @@ const Rixe = (function () {
     else tenirSaDistance(e, cible, f, vitesse);
   }
 
-  return { maj: maj, assaillants: assaillants, armer: armer, abriPour: abriPour, blesse: blesse };
+  // --- Vague 5c : la poursuite en char ------------------------------------------------------------------------
+
+  //: Le cap d'une voie, par sa fleche (la copie de `Histoire.CAP_DE_FLECHE`, prive la-bas).
+  const CAP = { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 };
+
+  function poursuite() { return B.defs.rixes.poursuite; }
+
+  /** Le gang qui t'attaque en ce moment (un homme debout, en combat contre toi, vu au combat il y a peu), ou null.
+      Pas un homme de mission, un allie, un Mante. */
+  function gangQuiTAttaque(j) {
+    for (const q of Entites.pietonsAutour(j.x, j.y, moral().camp_px)) {
+      if (!q.gang || q.etat === 'assomme' || !q.rixe || q.rixe.cible !== j || !(B.t - q.rixe.vu <= 120)) continue;
+      if (q.cible || q.allie || q.techniques) continue;
+      return q.gang;
+    }
+    return null;
+  }
+
+  /** Une voie hors de l'ecran, a `distance_px` du joueur, sans char dessus — cherchee dans l'ordre (seize
+      directions a partir d'un angle a l'empreinte, trois distances), jamais au de (`Histoire.rueHorsChamp` en tire). */
+  function rueDeLaPoursuite(j) {
+    const P = poursuite(), c = Monde.carte, d = P.distance_px;
+    const a0 = (hash2(B.t, 0x9055) % 360) * Math.PI / 180;
+    for (let k = 0; k < 16; k++) {
+      const a = a0 + k * Math.PI / 8;
+      for (const r of [d[0], (d[0] + d[1]) / 2, d[1]]) {
+        const tx = Math.floor((j.x + Math.cos(a) * r) / TT), ty = Math.floor((j.y + Math.sin(a) * r) / TT);
+        if (tx < 1 || ty < 1 || tx >= c.w - 1 || ty >= c.h - 1) continue;
+        const f = Monde.fleche(tx, ty);
+        if (CAP[f] === undefined) continue;
+        const x = tx * TT + 8, y = ty * TT + 8;
+        if (Entites.visibleAEcran(x, y, 40) || Vehicules.coupeLaLigne(x, y, x, y, null)) continue;
+        return { x: x, y: y, sens: f };
+      }
+    }
+    return null;
+  }
+
+  /** LA POURSUITE EN CHAR, une image (appelee par `Combat.maj`). Tu es dans un char pendant qu'un gang t'attaque :
+      apres `delai_images`, un char a ses couleurs nait hors de l'ecran et te prend en chasse (le conducteur
+      `poursuivant`). Au bout de `duree_images` — ou si tu sors du char, s'il est vole ou en epave —, il redevient un
+      char du trafic ; puis `repos_images` avant le prochain. Jamais pendant une mission, la paix du Boss, ni dedans. */
+  function majPoursuites() {
+    const P = poursuite(), j = B.joueur;
+    const S = B.rixePoursuite || (B.rixePoursuite = { v: null, fin: 0, repos: 0, depuis: 0 });
+    if (S.v && (B.t >= S.fin || S.v.etat === 'epave' || S.v.conducteur !== 'poursuivant' || !j || !j.dansVehicule)) {
+      if (S.v.etat !== 'epave' && S.v.conducteur === 'poursuivant') {
+        S.v.conducteur = 'trafic'; S.v.poursuite = false; S.v.surRails = false;
+      }
+      S.v = null;
+    }
+    const calme = !j || !j.dansVehicule || B.interieur || B.bloc || (B.partie && B.partie.boss) || B.t < S.repos
+      || (B.mission && B.mission.entites && B.mission.entites.some(function (q) {
+        return q.cible && q.vivant && q.etat !== 'assomme';
+      }));
+    if (S.v || calme) { S.depuis = 0; return; }
+    const gang = gangQuiTAttaque(j);
+    if (!gang) { S.depuis = 0; return; }
+    if (!S.depuis) S.depuis = B.t;
+    if (B.t - S.depuis < P.delai_images) return;
+    const rue = rueDeLaPoursuite(j);
+    if (!rue) return;
+    const v = Vehicules.creer(P.vehicule, rue.x, rue.y, CAP[rue.sens], {
+      conducteur: 'poursuivant', etat: 'roule', surRails: true, poursuite: true, sens: rue.sens,
+      couleur: Territoires.couleurDe(gang),
+    });
+    if (!v) return;
+    v.gang = gang; v.gangRixe = gang; v.vitesse = 2;
+    S.v = v; S.fin = B.t + P.duree_images; S.repos = B.t + P.repos_images; S.depuis = 0;
+  }
+
+  return { maj: maj, assaillants: assaillants, armer: armer, abriPour: abriPour, blesse: blesse,
+           majPoursuites: majPoursuites };
 })();

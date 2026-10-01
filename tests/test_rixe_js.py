@@ -882,3 +882,89 @@ def test_la_brique_te_blesse_et_epargne_les_siens(banc):
     }""")
     assert r["perdu"] > 0, "la brique ne l'a pas touché (%s)" % r
     assert r["ami"] == 0, "la brique a blessé un des siens (%s)" % r
+
+
+# --- Vague 5c : la poursuite en char -------------------------------------------------------------------------
+
+#: Trois Cravates sur le joueur ; puis il saute dans un char garé à côté (et y reste, sans rouler).
+FUITE = """
+    function fuirEnChar(L, o) {
+      const j = L.B.joueur;
+      const gens = trois(L, 60);
+      for (let i = 0; i < 60; i++) { tenir(L); o.frame(1); }
+      const v = L.Vehicules.creer('auto', j.x, j.y + 20, 0, { etat: 'stationne', couleur: '#3355aa' });
+      L.Entites.indexer();
+      L.Vehicules.monter(j, v);
+      return { gens: gens, v: v };
+    }
+    function poursuivants(L) {
+      return L.B.entites.filter(function (q) { return q.type === 'vehicule' && q.conducteur === 'poursuivant' && q.gangRixe; });
+    }
+"""
+
+
+def test_tu_fuis_en_char_un_char_du_gang_te_prend_en_chasse(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(90);
+        %s
+        %s
+        const P = L.B.defs.rixes.poursuite, d = fuirEnChar(L, o), j = L.B.joueur;
+        let ne = null, d0 = null, aLEcran = null;
+        for (let i = 0; i < P.delai_images + 30 && !ne; i++) {
+          tenir(L); o.frame(1);
+          const p = poursuivants(L)[0];
+          if (p) { ne = i; d0 = Math.hypot(p.x - d.v.x, p.y - d.v.y); aLEcran = L.Entites.visibleAEcran(p.x, p.y, 0); }
+        }
+        const p = poursuivants(L)[0];
+        let plusPres = d0;
+        for (let i = 0; i < 300 && p; i++) { tenir(L); o.frame(1); plusPres = Math.min(plusPres, Math.hypot(p.x - d.v.x, p.y - d.v.y)); }
+        return { ne: ne, dans: !!j.dansVehicule, gang: p && p.gangRixe, couleur: p && p.couleur, attendue: L.Territoires.couleurDe('cravates'),
+                 aLEcran: aLEcran, d0: d0, plusPres: plusPres, n: poursuivants(L).length };
+    }""" % (TROIS, FUITE))
+    assert r["dans"], "le joueur n'est pas monté dans le char : le juge ne mesure rien (%s)" % r
+    assert r["ne"] is not None and r["n"] == 1, "personne ne le prend en chasse (%s)" % r
+    assert r["gang"] == "cravates" and r["couleur"] == r["attendue"], r
+    assert r["aLEcran"] is False, "le char du gang est apparu à l'écran (%s)" % r
+    assert r["plusPres"] < r["d0"] - 100, "il ne fonce pas sur lui (%s)" % r
+
+
+def test_la_poursuite_finit_et_ne_revient_pas_aussitot(banc):
+    """Au bout de `duree_images`, le poursuivant redevient un char du trafic ; refuir aussitôt ne relance personne."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(91);
+        %s
+        %s
+        const P = L.B.defs.rixes.poursuite;
+        P.duree_images = 200;
+        const d = fuirEnChar(L, o);
+        for (let i = 0; i < P.delai_images + 10; i++) { tenir(L); o.frame(1); }
+        const p = poursuivants(L)[0];
+        for (let i = 0; i < 220; i++) { tenir(L); o.frame(1); }
+        const apres = p ? { conducteur: p.conducteur, poursuite: !!p.poursuite } : null;
+        // Il ressort, puis refuit en char : pas de nouveau poursuivant avant `repos_images`.
+        L.Vehicules.descendre(L.B.joueur);
+        for (const e of d.gens) { e.etat = 'attaque_joueur'; e.vie = e.vieMax; }
+        for (let i = 0; i < 30; i++) { tenir(L); o.frame(1); }
+        L.Vehicules.monter(L.B.joueur, d.v);
+        for (let i = 0; i < P.delai_images + 30; i++) { tenir(L); o.frame(1); }
+        return { apres: apres, encore: poursuivants(L).length };
+    }""" % (TROIS, FUITE))
+    assert r["apres"] == {"conducteur": "trafic", "poursuite": False}, r
+    assert r["encore"] == 0, r
+
+
+def test_pas_de_poursuite_pendant_une_mission_ni_la_paix_du_boss(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(92);
+        %s
+        %s
+        const P = L.B.defs.rixes.poursuite;
+        L.B.partie.boss = { jour: 1 };
+        fuirEnChar(L, o);
+        for (let i = 0; i < P.delai_images + 30; i++) { tenir(L); o.frame(1); }
+        return { boss: poursuivants(L).length };
+    }""" % (TROIS, FUITE))
+    assert r["boss"] == 0, r

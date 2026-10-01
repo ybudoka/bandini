@@ -1274,6 +1274,8 @@ const Combat = (function () {
     if (j && j.vivant && !j.dansVehicule && !j.manege && !j.enjambe && !j.alite && !j.assis && !B.roue) majCible(j);
     else if (j) { j.cible = null; verrouTenu = 0; }
     majProjectiles();
+    // Tu fuis une bagarre de gang en char : un char du gang te prend en chasse (vague 5c des bagarres).
+    if (typeof Rixe !== 'undefined' && B.defs.rixes) Rixe.majPoursuites();
     majBrasiers();
     majLances();
     Techniques.majVols();

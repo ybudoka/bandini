@@ -116,3 +116,12 @@ def test_la_fiche_des_lancers_se_tient():
     assert set(lan["objets"]) == {"brique", "bouteille"}
     assert all(o["degats"] > 0 for o in lan["objets"].values())
     assert villes.assembler()["rixes"]["lancer"]["distance_px"] == list(lan["distance_px"])
+
+
+def test_la_fiche_de_la_poursuite_se_tient():
+    """Vague 5c : tu fuis une bagarre en char, un char du gang te prend en chasse — né hors de l'écran, dans la bulle."""
+    p = rixes.POURSUITE
+    dmin, dmax = p["distance_px"]
+    assert 276 < dmin < dmax < 520
+    assert 0 < p["delai_images"] < p["duree_images"] < p["repos_images"]
+    assert villes.assembler()["rixes"]["poursuite"]["distance_px"] == list(p["distance_px"])

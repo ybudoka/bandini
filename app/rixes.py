@@ -115,6 +115,20 @@ LANCER: dict = {
 }
 
 
+#: VAGUE 5c — LA POURSUITE EN CHAR. Tu sautes dans un char pendant qu'un gang te tombe dessus : `delai_images`
+#: plus tard, un char à ses couleurs naît hors de l'écran (sur une voie, à `distance_px`) et te prend en chasse — le
+#: conducteur `poursuivant` des missions (`Histoire.commandesDuPoursuivant` : les rails de loin, droit sur toi de
+#: près). Au bout de `duree_images`, ou si tu sors du char, il redevient un char du trafic ; puis `repos_images`
+#: avant le prochain. Jamais pendant une mission, ni la paix du Boss, ni dedans.
+POURSUITE: dict = {
+    "delai_images": 90,
+    "duree_images": 1800,         # trente secondes de chasse
+    "repos_images": 3600,         # une minute avant la prochaine
+    "distance_px": (320, 500),    # hors de l'écran, dans la bulle d'oubli
+    "vehicule": "auto",
+}
+
+
 def exporter() -> dict:
     """Ce que le navigateur reçoit sous `B.defs.rixes`."""
     tir = dict(TIR, distances={k: list(v) for k, v in TIR["distances"].items()}, salve=list(TIR["salve"]),
@@ -124,4 +138,5 @@ def exporter() -> dict:
     return {"contact": dict(CONTACT), "arsenal": dict(ARSENAL), "part_armee": PART_ARMEE, "tir": tir, "moral": moral,
             "renforts": renforts,
             "lancer": dict(LANCER, distance_px=list(LANCER["distance_px"]),
-                           objets={k: dict(v) for k, v in LANCER["objets"].items()})}
+                           objets={k: dict(v) for k, v in LANCER["objets"].items()}),
+            "poursuite": dict(POURSUITE, distance_px=list(POURSUITE["distance_px"]))}
