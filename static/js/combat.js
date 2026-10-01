@@ -398,7 +398,9 @@ const Combat = (function () {
         foire: !!arme.foire, deGang: deGang && !!e.gang,
         // ⚠️ LA BOUTEILLE SE VOIT VOLER (les explosifs, vague 2 — Martin : « je veux voir la bouteille voler ») :
         // elle se dessine (`dessinerLance` : son ombre au sol, le verre qui tourne), et son chiffon laisse une traînée.
-        dessine: !!arme.feu_s, tour: 0,
+        dessine: !!(arme.feu_s || arme.souffle), tour: 0,
+        // LA ROQUETTE (les explosifs, vague 4b) : elle saute a l'impact (`sauterLaRoquette`) — pas de balle en plus.
+        souffle: arme.souffle || 0,
         vx: Math.cos(devie) * arme.vitesse_projectile,
         vy: Math.sin(devie) * arme.vitesse_projectile,
         z: 6, vz: arme.cloche ? 1.6 : 0, portee: arme.portee, parcouru: 0,
@@ -697,8 +699,13 @@ const Combat = (function () {
         Entites.particule(p.x, p.y - p.z - 4, -p.vx * 0.2 + (B.rng() - 0.5) * 0.3, -p.vy * 0.2 - 0.3, 10, B.rng() < 0.5 ? '#ff8c1a' : '#ffd23a', 2, -0.02);
         if (B.t % 3 === 0) Entites.particule(p.x, p.y - p.z - 6, -p.vx * 0.1, -0.4, 26, '#2a2a2a', 2, -0.01);
       }
+      if (p.souffle) {                                   // la roquette : sa flamme au cul, sa fumee qui reste derriere
+        Entites.particule(p.x - p.vx, p.y - p.vy - 6, -p.vx * 0.15, -p.vy * 0.15, 8, B.rng() < 0.5 ? '#ffd23a' : '#ff8c1a', 2, 0);
+        Entites.particule(p.x - p.vx * 2, p.y - p.vy * 2 - 6, (B.rng() - 0.5) * 0.3, -0.15, 40, '#9a9a9a', 3, -0.005);
+      }
       const tx = Math.floor(p.x / TT), ty = Math.floor(p.y / TT);
       if (Monde.solidite(tx, ty) === 1 && p.z <= 8) {
+        if (p.souffle) { Entites.retirer(p); sauterLaRoquette(p, p.x - p.vx, p.y - p.vy); continue; }
         Entites.poussiere(p.x, p.y, 3);
         Entites.decal(p.x, p.y, 'impact');
         Entites.retirer(p);
@@ -711,6 +718,7 @@ const Combat = (function () {
       // passe par-dessus tant qu'elle vole haut ; le bouchon de foire ne vise que ses cibles. Avant : la balle traversait la tole, et se cacher derriere un char ne protegeait de rien.
       if (!p.foire && (!p.cloche || p.z < 14)) {
         const tole = Vehicules.coupeLaLigne(p.x - p.vx, p.y - p.vy, p.x, p.y, p.enjambe || null);
+        if (tole && p.souffle) { Entites.retirer(p); sauterLaRoquette(p, p.x - p.vx * 0.5, p.y - p.vy * 0.5); continue; }
         if (tole) {
           abimerLeChar(tole, p.degats, p.tireur);
           Entites.decal(p.x - p.vx * 0.5, p.y - p.vy * 0.5, 'impact');
@@ -730,6 +738,7 @@ const Combat = (function () {
         return c !== p.tireur && c.vivant && (c.type === 'pieton' || c.type === 'joueur')
           && !(p.deGang && c.gang && p.tireur && c.gang === p.tireur.gang);
       })[0];
+      if (touche && p.souffle) { Entites.retirer(p); sauterLaRoquette(p, p.x, p.y); continue; }
       if (touche && (!p.cloche || p.z < 14)) {
         // ⚠️ DANS UN CHAR, C'EST LA TOLE QUI PREND. `Entites.blesser` refuse
         // qui est assis dans un char — c'est la qu'est la regle — et sans cette
@@ -753,6 +762,7 @@ const Combat = (function () {
         continue;
       }
       if (mordreLeDecor(p)) {
+        if (p.souffle) { Entites.retirer(p); sauterLaRoquette(p, p.x, p.y); continue; }
         Entites.poussiere(p.x, p.y, 3);
         Entites.decal(p.x, p.y, 'impact');
         Entites.retirer(p);
@@ -763,8 +773,25 @@ const Combat = (function () {
         Entites.poussiere(p.x, p.y, 2);
         Entites.retirer(p);
         if (p.feu_s) allumer(p.x, p.y, p);
+        if (p.souffle) sauterLaRoquette(p, p.x, p.y);   // au bout de sa portee, elle saute en l'air
       }
     }
+  }
+
+  /** La roquette saute ici : l'explosion commune, le tireur pour coupable (le souffle et les degats de sa fiche). */
+  function sauterLaRoquette(p, x, y) { exploserLa(x, y, armeDef(p.arme), p.tireur); }
+
+  /** La roquette en vol : un corps gris, son ogive rouge, ses ailettes — tournee dans le sens ou elle va. */
+  function dessinerRoquette(ctx, p, cx, cy) {
+    ctx.save();
+    ctx.translate(Math.round(p.x - cx), Math.round(p.y - 6 - cy));
+    ctx.rotate(Math.atan2(p.vy, p.vx));
+    ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(-6, 7, 12, 2);
+    ctx.fillStyle = '#5a5e66'; ctx.fillRect(-6, -1, 10, 3);
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(4, -1, 3, 3); ctx.fillRect(7, 0, 1, 1);
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(-7, -3, 3, 2); ctx.fillRect(-7, 2, 3, 2);
+    ctx.restore();
+    B.stats.rects += 6;
   }
 
   // --- Le C4 (les explosifs, vague 3) ----------------------------------------------
@@ -1709,7 +1736,7 @@ const Combat = (function () {
     viseeAssistee, dispersionDe, allumer, majBrasiers, majAttaque, arcDeMelee, majProjectiles, maj,
     allumerMeche, lacherMeche, lancer, majEnMain, majLances, dessinerLance, ramasser, oublierLances,
     allumerChiffon, majChiffon, lampes, enflammer, eteindre, majGensEnFeu, majJet, propager,
-    poserC4, majCharges, detonerC4, dessinerCharge, chargesDe,
+    poserC4, majCharges, detonerC4, dessinerCharge, chargesDe, sauterLaRoquette, dessinerRoquette,
     majCible, ciblesVerrouillables, VERROU_PORTEE,
     otageSousLaMain, viserOtage, prendreEnOtage, lacherOtage, majOtage, majSaisie,
   };

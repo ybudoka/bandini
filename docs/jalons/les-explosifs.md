@@ -873,3 +873,23 @@ lance-roquettes.
 - Juges `tests/test_c4_js.py` (un voleur démarre le char piégé : boum, le poseur coupable ; le joueur qui monte dans
   son char piégé saute aussi ; sur un char qui roule, ce n'est pas un piège) ; quatre mutations — trois mordent, la
   quatrième montrait une règle morte (le joueur au volant est déjà un `conducteur`), retirée.
+
+### Vague 4, lot 4b (✅ livré le 1er oct. 2026) : le lance-roquettes — le jalon est livré
+
+- **Au marché noir**, l'arme la plus chère du jeu (2 000 $, une roquette par chargeur, 400 $ la roquette) ; deux étoiles
+  à la sortir, on l'entend de loin (`bruit` 26).
+- **Il tire droit** (pas en cloche) ; la roquette se voit voler (`dessinerRoquette` : le corps gris, l'ogive rouge, les
+  ailettes, tournée dans le sens où elle va ; sa flamme et sa fumée derrière), et **elle saute à l'impact** — contre un
+  mur (à son pied), sur un char, sur quelqu'un, dans le décor — ou au bout de sa portée (220 px, sous la moitié de
+  l'écran) : l'explosion commune, le tireur pour coupable (`sauterLaRoquette`). Pas de balle en plus : c'est le
+  souffle qui blesse. Un mur fissuré dans le souffle cède.
+- Le son : `roquette` (le coup du tube, le sifflement — ElevenLabs, à écouter), avec son repli synthétisé. L'icône,
+  le portrait, le descriptif de la roue.
+- Juges `tests/test_roquette_js.py` (elle tire droit et saute au bout de sa portée ; sur le char qu'elle touche — SON
+  souffle, pas seulement celui du char ; sur qui elle touche ; contre le mur, à son pied ; elle se voit voler) et
+  `test_armes.py` ; six mutations, toutes mordent (le mur et le char ne mordaient pas : aucun juge ne tirait sur un
+  mur, et le char sautait seul sous la balle — corrigés). Regardé : la roquette qui part, sa fumée, son ombre.
+
+**Le jalon est livré** : vague 1, la grenade et la dynamite ; vague 2, le Molotov en mieux ; vague 3, le C4 et les murs
+fissurés ; vague 4, le char piégé et le lance-roquettes. Les murs fissurés du dehors se poseront avec les missions qui
+en voudront (la règle et son juge sont prêts).

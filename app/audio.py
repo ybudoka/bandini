@@ -391,6 +391,11 @@ CATALOGUE: list[Echantillon] = [
               "dull thump under a car tire, close, no music, no voice"),
     # Le C4 qu'on pose et qui s'arme (`armes.py`, `son="detonateur"`) : le scotch qu'on tire, puis deux bips
     # electroniques. Du lieu `explosifs`.
+    # La roquette qui part (`armes.py`, `son="roquette"`) : le coup sourd du tube, puis le sifflement qui s'eloigne.
+    # Du lieu `explosifs`.
+    _e("roquette", "Roquette tirée", duree_s=1.2, volume=0.6,
+       prompt="a shoulder-fired rocket launcher firing: a deep hollow thump, then a fast hissing whoosh of the rocket "
+              "flying away, close, no explosion, no music"),
     _e("detonateur", "C4 armé", duree_s=0.9, volume=0.5,
        prompt="a strip of duct tape pulled and pressed, then two short high electronic beeps of a "
               "detonator arming, close-up, no explosion, no music"),
@@ -1850,7 +1855,7 @@ LIEUX: dict[str, list[str]] = {
     # Les explosifs (29 sept. 2026) : pas un endroit, une POSSESSION — ils se
     # chargent la premiere fois qu'un explosif entre dans le sac ou qu'on en allume
     # un (`combat.js`). Une partie qui n'en touche jamais ne les telecharge pas.
-    "explosifs": ["meche", "goupille", "rebond", "detonateur"],
+    "explosifs": ["meche", "goupille", "rebond", "detonateur", "roquette"],
     # Le parapluie de Rosa : une POSSESSION, comme les explosifs — chargés quand il entre au sac.
     "parapluie": ["parapluie", "parapluie_revire"],
     # Les bêtes écrasées : pas un endroit, une RUELLE — chargés à la première bête qui naît

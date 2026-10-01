@@ -233,6 +233,12 @@ CATALOGUE: list[Arme] = [
     # Le plus cher du marche noir (le lance-roquettes, a venir, le sera plus).
     _a("plastic", "C4", "pose", 200, 14, 30, 1400, chargeur=3, munitions_max=6,
        prix_munitions=250, etoiles=1, son="detonateur", souffle=60),
+    # « Il est dans le char, la-bas. » LE LANCE-ROQUETTES (les explosifs, vague 4b) : il tire DROIT, et la roquette
+    # saute a l'impact — un mur, un char, quelqu'un, le decor — ou au bout de sa portee (plafonnee a l'ecran, comme la
+    # carabine). Pas de balle en plus : c'est le souffle qui blesse (`souffle`, l'explosion commune). Une roquette par
+    # chargeur, les munitions cheres : l'arme la plus chere du jeu.
+    _a("lance_roquettes", "Lance-roquettes", "tir", 240, 220, 90, 2000, chargeur=1, munitions_max=4,
+       vproj=5.0, prix_munitions=400, etoiles=2, bruit=26, son="roquette", souffle=64),
     # ⚠️ **LA CARABINE À BOUCHON de la galerie de tir** — jamais achetée, jamais
     # dans le sac : le forain la PRÊTE le temps du défi (`Histoire.commencerDefi`),
     # puis la reprend. `foire` est la défense qui la rend inoffensive dans

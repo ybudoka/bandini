@@ -110,7 +110,7 @@ def test_trois_armes_a_feu_qui_repondent_a_trois_questions():
     # ⚠️ Ce qui SAUTE (`lance`, `pose`) n'entre pas dans la comparaison : ses degats sont
     # ceux du centre d'une explosion qui baisse avec la distance, pas une balle.
     assert car["degats"] >= max(a["degats"] for a in armes.CATALOGUE
-                                if a["slug"] != "carabine" and a["type"] not in ("lance", "pose"))
+                                if a["slug"] != "carabine" and a["type"] not in ("lance", "pose") and not a["souffle"])
     assert mol["cloche"] is True and mol["feu_s"] > 0
     assert [a["slug"] for a in armes.CATALOGUE if a["feu_s"]] == ["molotov"]
     for a in armes.CATALOGUE:
@@ -178,7 +178,8 @@ def test_ce_qui_se_lance_a_sa_meche_et_son_souffle():
     assert d["prix"] < g["prix"] and d["souffle"] > g["souffle"] and d["meche"] > g["meche"]
     for a in armes.CATALOGUE:
         if a["type"] not in ("lance", "pose"):
-            assert a["meche"] == 0 and a["souffle"] == 0 and a["rebond"] is False, a["slug"]
+            assert a["meche"] == 0 and a["rebond"] is False, a["slug"]
+            assert a["souffle"] == 0 or a["slug"] == "lance_roquettes", a["slug"]
     assert armes.REGLES["explosion"]["bruit_tuiles"] > armes.par_slug("carabine")["bruit"]
 
 
@@ -200,7 +201,8 @@ def test_les_sons_des_explosifs_ne_pesent_pas_sur_le_premier_ecran():
     assert armes.par_slug("grenade")["son"] == "goupille"
     assert armes.par_slug("dynamite")["son"] == "meche"
     assert armes.par_slug("plastic")["son"] == "detonateur"
-    assert set(audio.LIEUX["explosifs"]) == {"goupille", "meche", "rebond", "detonateur"}
+    assert armes.par_slug("lance_roquettes")["son"] == "roquette"
+    assert set(audio.LIEUX["explosifs"]) == {"goupille", "meche", "rebond", "detonateur", "roquette"}
 
 
 def test_le_c4_se_pose_et_saute_quand_on_veut():
@@ -210,7 +212,18 @@ def test_le_c4_se_pose_et_saute_quand_on_veut():
 
     c4 = armes.par_slug("plastic")
     assert c4["type"] == "pose" and c4["meche"] == 0 and c4["cloche"] is False and c4["souffle"] > 0
-    assert c4["prix"] == max(a["prix"] for a in armes.achetables())
+    assert c4["prix"] < armes.par_slug("lance_roquettes")["prix"]
     assert "plastic" in magasins.MARCHE_NOIR["articles"] and "plastic" in magasins.MARCHE_NOIR["munitions"]
     r = armes.REGLES["c4"]
     assert r["max"] == 3 and 0 < r["tenir_images"] <= 60 and r["colle_px"] > 0
+
+
+def test_le_lance_roquettes_tire_droit_et_saute_a_l_impact():
+    """Vague 4b : il tire droit (pas en cloche), sa roquette a un souffle, une par chargeur, et c'est l'arme la plus
+    chère du jeu ; le marché noir la vend."""
+    from app import magasins
+
+    lr = armes.par_slug("lance_roquettes")
+    assert lr["type"] == "tir" and lr["cloche"] is False and lr["souffle"] > 0 and lr["chargeur"] == 1
+    assert lr["prix"] == max(a["prix"] for a in armes.achetables()) and lr["bruit"] > 0
+    assert "lance_roquettes" in magasins.MARCHE_NOIR["articles"] and "lance_roquettes" in magasins.MARCHE_NOIR["munitions"]

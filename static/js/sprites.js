@@ -9410,6 +9410,8 @@ const OBJETS = {
   mitraillette: function (ctx) { ctx.fillStyle = '#3a3d44'; ctx.fillRect(2, 4, 11, 2); ctx.fillRect(6, 6, 2, 4); ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 6, 2, 2); },
   carabine: function (ctx) { ctx.fillStyle = '#6b4b2c'; ctx.fillRect(1, 5, 6, 2); ctx.fillRect(2, 7, 2, 2); ctx.fillStyle = '#3a3d44'; ctx.fillRect(6, 4, 10, 2); ctx.fillStyle = '#9aa0a8'; ctx.fillRect(8, 2, 3, 1); },
   // La grenade : un ovale vert olive quadrille, sa cuillere et son anneau.
+  // Le lance-roquettes : le tube vert olive, sa poignée, sa mire, la roquette rouge qui dépasse.
+  lance_roquettes: function (ctx) { ctx.fillStyle = '#4b5a2a'; ctx.fillRect(1, 3, 13, 4); ctx.fillStyle = '#35401d'; ctx.fillRect(1, 6, 13, 1); ctx.fillRect(4, 3, 1, 4); ctx.fillStyle = '#2a2d34'; ctx.fillRect(6, 7, 2, 3); ctx.fillRect(9, 7, 1, 2); ctx.fillRect(7, 1, 2, 2); ctx.fillStyle = '#c0392b'; ctx.fillRect(14, 4, 2, 2); },
   // Le C4 : le pain de plastic blanc cassé, son ruban, le détonateur et sa diode.
   plastic: function (ctx) { ctx.fillStyle = '#d8d2c0'; ctx.fillRect(3, 3, 10, 6); ctx.fillStyle = '#b8b2a0'; ctx.fillRect(3, 8, 10, 1); ctx.fillStyle = '#5a5e66'; ctx.fillRect(3, 5, 10, 1); ctx.fillRect(7, 3, 1, 6); ctx.fillStyle = '#2a2d34'; ctx.fillRect(9, 1, 4, 3); ctx.fillStyle = '#e0402a'; ctx.fillRect(12, 1, 1, 1); ctx.fillStyle = '#c0392b'; ctx.fillRect(10, 4, 1, 2); ctx.fillStyle = '#2a4a8a'; ctx.fillRect(11, 4, 1, 2); },
   grenade: function (ctx) { ctx.fillStyle = '#4b5a2a'; ctx.fillRect(5, 3, 5, 6); ctx.fillRect(4, 4, 7, 4); ctx.fillStyle = '#35401d'; ctx.fillRect(5, 5, 5, 1); ctx.fillRect(7, 3, 1, 6); ctx.fillStyle = '#8a8d92'; ctx.fillRect(6, 1, 3, 2); ctx.fillRect(9, 2, 1, 3); ctx.fillStyle = '#c9ccd1'; ctx.fillRect(4, 1, 2, 1); ctx.fillRect(3, 2, 1, 1); },
@@ -9617,6 +9619,14 @@ const PORTRAITS = {
       [5, 14, 25, 4, '#c79a12'], [30, 14, 4, 3, '#c79a12'], [7, 9, 21, 1, '#6fb865'], [5, 18, 25, 1, '#1d4a1a'],
       [41, 12, 2, 1, '#b9b2a2'], [42, 15, 2, 2, '#b9b2a2'],
       [44, 9, 2, 5, '#ff8c1a'], [45, 5, 2, 5, '#ff8c1a'], [44, 10, 1, 2, '#ffe07a'], [46, 3, 1, 3, '#ffe07a'], [43, 7, 1, 2, '#c0392b'],
+    ]);
+  },
+  // Le lance-roquettes : le long tube olive, ses deux poignées, la mire, l'ogive rouge au bout.
+  lance_roquettes: function (ctx) {
+    peindrePortrait(ctx, [[4, 9, 36, 8, '#4b5a2a'], [40, 10, 5, 6, '#c0392b']], [
+      [4, 15, 36, 2, '#35401d'], [6, 10, 34, 1, '#6b7d3a'], [10, 9, 2, 8, '#35401d'], [30, 9, 2, 8, '#35401d'],
+      [16, 17, 3, 5, '#2a2d34'], [24, 17, 2, 4, '#2a2d34'], [20, 5, 4, 4, '#2a2d34'], [21, 6, 2, 2, '#9cc4e0'],
+      [44, 12, 2, 2, '#e0503c'],
     ]);
   },
   // Le C4 : deux pains de plastic bandés de ruban gris, le détonateur, ses fils rouge et bleu, la diode.

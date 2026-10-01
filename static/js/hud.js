@@ -4303,6 +4303,7 @@ const Hud = (function () {
     molotov: "Pour un groupe. Elle part en cloche et laisse une flaque de feu là où elle casse.",
     grenade: "Pour ceux qui sont au coin. Elle rebondit sur les murs. Tenue trop longtemps, elle cuit dans ta main.",
     mitraillette: "Pour quand ils sont trois. Tiens le bouton : ça crache et ça s'écarte. Le chargeur part en trois secondes.",
+    lance_roquettes: "Une roquette, tout droit. Elle saute où elle touche : un mur, un char, quelqu'un. Recharger est lent.",
     plastic: "Pose-le au sol, sur un mur, sur un char qui roule. Trois au plus. Tiens le bouton : tout saute.",
     carabine: "Pour celui qui est loin. Lente, sans écart, un passant d'une balle. On l'entend au bout de la rue.",
     carabine_foire: "Celle du forain, prêtée le temps de la galerie. Un bouchon : il ne fait tomber que les cibles.",

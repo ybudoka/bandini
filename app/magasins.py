@@ -468,9 +468,9 @@ def par_slug(slug: str) -> Magasin | None:
 #: comprises : Gus a une vitrine, Josee n'en a pas. `test_armes` le verifie.
 MARCHE_NOIR: dict = {"apres": "m5", "rabais": 0.7,
                      "articles": ["couteau", "pistolet", "fusil", "dynamite", "molotov", "grenade",
-                                  "mitraillette", "carabine", "plastic"],
+                                  "mitraillette", "carabine", "plastic", "lance_roquettes"],
                      "munitions": ["pistolet", "fusil", "dynamite", "molotov", "grenade",
-                                   "mitraillette", "carabine", "plastic"],
+                                   "mitraillette", "carabine", "plastic", "lance_roquettes"],
                      # ⚠️ Ce qui n'est pas une arme : le skimmer (`economie.GUICHET`),
                      # qu'on pose sur un guichet et qu'on revient vider le lendemain.
                      "objets": ["skimmer"]}
