@@ -430,6 +430,9 @@ const Hud = (function () {
   function majMenu() {
     const m = B.menu;
     if (!m) return;
+    // ⚠️ `sourd` (la boîte des réponses d'un choix, `Histoire.ouvrirLeChoix`) : quelques images où elle n'entend
+    // rien — l'ACTION qui passait la réplique d'avant, encore sous le pouce, choisissait la première réponse.
+    if (m.sourd > 0) { m.sourd--; clic = null; return; }
     // Un menu qui montre quelque chose de VIVANT (l'ecran MANETTE, et les
     // boutons qu'on voit s'allumer) se refait a chaque image.
     if (m.maj) m.maj(m);
@@ -534,6 +537,9 @@ const Hud = (function () {
   function boiteDuMenu(m) {
     const l = m.largeur || 300;
     const h = m.hauteur || Math.min(VH - 30, 40 + m.items.length * 14 + (m.aide ? 14 : 0));
+    // ⚠️ LA BOÎTE DES RÉPONSES (un choix dans un dialogue) se pose AU-DESSUS de la boîte de dialogue : la question
+    // reste lisible sous elle, on répond en la lisant.
+    if (m.choix) return { x: (VW - l) / 2, y: Math.max(4, VH - hauteurDuDialogue() - 8 - h - 6), l: l, h: h };
     return { x: (VW - l) / 2, y: (VH - h) / 2, l: l, h: h };
   }
 
@@ -3133,12 +3139,18 @@ const Hud = (function () {
     return d.t < 10 + lettres * 2;
   }
 
+  /** La hauteur de la boîte de dialogue ouverte (0 sans dialogue) : la boîte des réponses se pose au-dessus. */
+  function hauteurDuDialogue() {
+    const d = B.dialogue;
+    return d ? Math.max(22 + d.lignes.length * 9, d.visage ? PORTRAIT_BOITE : 0) : 0;
+  }
+
   function dessinerDialogue(ctx) {
     const d = B.dialogue;
     if (!d) return;
     d.t++;
     const v = d.visage;
-    const h = Math.max(22 + d.lignes.length * 9, v ? PORTRAIT_BOITE : 0);
+    const h = hauteurDuDialogue();
     const xt = 18 + (v ? PORTRAIT_DECALE : 0);
     ctx.fillStyle = 'rgba(11,10,18,0.9)'; ctx.fillRect(12, VH - h - 8, VW - 24, h);
     ctx.fillStyle = '#e8b33c'; ctx.fillRect(12, VH - h - 8, VW - 24, 1);
@@ -3151,7 +3163,8 @@ const Hud = (function () {
     // qu'un dialogue fige la ville (`Jeu.maj`), `B.t` ne bouge plus pendant
     // qu'on lit — et « ACTION > » serait reste eteint (ou allume) tout l'appel,
     // c'est-a-dire au seul moment ou il a quelque chose a dire.
-    if (B.cinema && (B.image >> 4) % 2 === 0) {
+    // Une question attend sa réponse (la boîte des réponses, au-dessus) : ACTION ne passe pas cette réplique-là.
+    if (B.cinema && !B.cinema.question && (B.image >> 4) % 2 === 0) {
       // ⚠️ Dans une scene, la derniere ligne d'un plan `dire` n'est pas la fin : d'autres
       // repliques suivent sous d'autres plans. On ne promet pas « FIN » a tort.
       const fin = (B.scene || B.cinema.i < B.cinema.lignes.length - 1) ? '>' : '> FIN';
@@ -4658,7 +4671,8 @@ const Hud = (function () {
       // « TOUT REGLER » ecrase par un « HE! LE COUSIN! »). Le voile de la
       // pause existe deja pour ca ; un menu en jeu fige le monde autant
       // qu'elle, il merite le meme fond.
-      if (B.menu) { ctx.fillStyle = 'rgba(11,10,18,0.6)'; ctx.fillRect(0, 0, VW, VH); B.stats.rects++; }
+      // ⚠️ Pas sous la boîte des réponses : c'est la question, dessous, qu'on lit pour répondre.
+      if (B.menu && !B.menu.choix) { ctx.fillStyle = 'rgba(11,10,18,0.6)'; ctx.fillRect(0, 0, VW, VH); B.stats.rects++; }
       dessinerMenu(ctx);
       if (B.menu && !B.scene) dessinerMessage(ctx, Math.max(2, boiteDuMenu(B.menu).y - 20));
     }

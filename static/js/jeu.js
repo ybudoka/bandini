@@ -1073,6 +1073,9 @@ const Jeu = (function () {
     // pour finir le dernier ennemi, la mission se gagne sous le coup, et la
     // scene de fin partait avec les coups suivants — on ne l'entendait jamais.
     if (B.etat === 'jeu' && B.scene) {
+      // ⚠️ UNE QUESTION POSÉE DANS UNE SCÈNE (un choix dans un dialogue) : la boîte des réponses répond aux boutons,
+      // et PAUSE ne passe pas la scène par-dessus une réponse qu'on n'a pas donnée.
+      if (B.menu) { Hud.majMenu(); Entree.videPresse(); return; }
       if (Entree.neuf('pause')) { Scenes.passer(); Entree.videPresse(); return; }
       Scenes.maj();
       Entree.videPresse();

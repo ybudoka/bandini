@@ -126,10 +126,12 @@ ECHECS = ("mort", "arrete", "vehicule_detruit", "chrono", "etoile", "protege_mor
 #: `survivre` faisaient déjà : la police à ce niveau au départ), et `renforts: {"vagues", "n"}` — quand il ne
 #: reste qu'un debout, la vague suivante arrive de loin (`tuer`, `tenir`).
 OPTIONS_OBJECTIFS = ("chrono_s", "sans_etoile", "sans_arme", "contre", "remet", "tenue", "allies", "treve", "donne",
-                     "etoiles", "renforts", "poursuite", "relais", "si", "sauf")
+                     "etoiles", "renforts", "poursuite", "relais", "si", "sauf", "branche")
 #: `si: <mission>` / `sauf: <mission>` (le casse, 1er oct. 2026) : l'objectif ne se joue que si cette mission est faite
 #: / ne l'est pas — sinon il se SAUTE (`Histoire.tenu`). Ce qu'on a préparé change la suite (x04 : le coupé du x02
 #: attend dans la ruelle). Les mêmes clés sur une réplique `pendant` (`_p(…, si=…)`) : dite ou tue.
+#: `branche: "<clé>"` (1er oct. 2026, un choix dans un dialogue) : l'objectif ne se joue que sur la branche que le
+#: joueur a choisie (`erreurs_de_choix`) ; sur l'autre, `Histoire.avancer` le saute.
 #: `relais: N` sur le fuyard (`ramasser`, `cible: fuyard`) : rattrapé, il saute dans un autre char tout près, N fois,
 #: avant de tomber pour de bon.
 #: `poursuite: {"groupe", "chars", "vehicule"}` (les chapitres) : des chars du gang, nés hors champ, qui te collent
@@ -478,6 +480,8 @@ class Mission(TypedDict):
     frontiere: NotRequired[str]   # un district, ou "bloc:<slug>" : on ne la quitte pas plus de 10 s
     # --- Des missions en chapitres (30 sept. 2026) — jugée par `erreurs_de_chapitre`.
     remplace: NotRequired[list[str]]  # les missions qu'un chapitre remplace, une par acte, dans l'ordre
+    # --- Un choix dans un dialogue (1er oct. 2026) — jugé par `erreurs_de_choix`.
+    branches: NotRequired[dict]   # par clé de réponse : {"recompense", "donne", "ferme"} qui remplacent ceux de la mission
 
 
 #: ⚠️ **CE QU'UNE MISSION RECOIT QUAND SON FICHIER NE LE DIT PAS.** Demande de
@@ -682,7 +686,7 @@ from . import (  # noqa: E402
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
     s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
     e04, e06, e07, e10, la_pointe, s02, s05, s06, s09, s10, s11,
-    d01, d02, d03, d04, d05, d06, d07, d08, h03, h04, h05, h06, h07, l01, l02, l03, l04, l05, l06, r02, r03, r04, r05, r06, r07, r08, s07, s12, s14, e13, q12, q09, q08, i01, i02, i03, i05, i06, i08, h08, q07, m98,
+    d01, d02, d03, d04, d05, d06, d07, d08, h03, h04, h05, h06, h07, l01, l02, l03, l04, l05, l06, r02, r03, r04, r05, r06, r07, r08, s07, s12, s14, e13, q12, q09, q08, i01, i02, i03, i05, i06, i08, h08, d09, q07, m98,
     x01, x02, x03, x04,
 )
 
@@ -782,6 +786,8 @@ CATALOGUE: list[Mission] = [
     s07.MISSION, s12.MISSION, s14.MISSION, e13.MISSION, q12.MISSION, q09.MISSION,
     q08.MISSION, i01.MISSION, i02.MISSION, i03.MISSION, i05.MISSION, i06.MISSION, i08.MISSION, h08.MISSION,
     x01.MISSION, x02.MISSION, x03.MISSION, x04.MISSION,
+    # ⚠️ d09 (1er oct. 2026) : le premier CHOIX DANS UN DIALOGUE — Léo doit 800 à Sal ; on le couche, ou on paie.
+    d09.MISSION,
     m97.MISSION, m98.MISSION, m99.MISSION,
 ]
 
@@ -1302,7 +1308,8 @@ def repliques() -> list[dict]:
 #: `Son.Voix.chargerHistoire` prend deja pour ses mp3.
 # `sur_place` et `frontiere` (30 sept. 2026) : elles servent a JOUER la mission, pas a la trouver — et six
 # cles dans le catalogue avaient passe le plafond du paquet de 18 octets gzip.
-HORS_DU_PAQUET = ("dialogue", "scenes", "objectifs", "sur_place", "frontiere")
+# `branches` (1er oct. 2026, un choix dans un dialogue) : ce que chaque réponse change à la fin — lu en la réussissant.
+HORS_DU_PAQUET = ("dialogue", "scenes", "objectifs", "sur_place", "frontiere", "branches")
 
 
 def _sans_le_jeu(dialogue: dict) -> dict:
@@ -1383,6 +1390,8 @@ def pour_jouer(slug: str) -> dict | None:
             "voix": audio.voix_de_mission(slug),
             # Ce qu'elle donne (`donne`) : sorti du catalogue (`pour_le_navigateur`), lu en la réussissant.
             **({"donne": copy.deepcopy(mission["donne"])} if mission.get("donne") else {}),
+            # Ce que chaque réponse d'un choix change à la fin (`branches`) : lu en la réussissant, comme `donne`.
+            **({"branches": copy.deepcopy(mission["branches"])} if mission.get("branches") else {}),
             # Le saut et la frontiere (`surplace.js`) : lus a la fin de l'intro, donc apres ce texte.
             **{cle: copy.deepcopy(mission[cle]) for cle in ("sur_place", "frontiere") if cle in mission}}
 
@@ -1541,6 +1550,99 @@ def erreurs_de_sur_place(mission: dict) -> list[str]:
     return erreurs
 
 
+# --- Un choix dans un dialogue (1er oct. 2026, Martin) ------------------------------------------------
+#
+# ⚠️ Les choix « ferme l'autre » (q10/q11, d07/d08, r03/r04) se font en prenant une mission plutôt qu'une autre, au
+# téléphone ou chez le donneur. Celui-ci se fait EN PARLANT : une réplique pose la question (`choix=[(clé, texte), …]`
+# sur `_l`/`_p`/`_a`), le joueur répond (deux ou trois réponses, `Histoire.ouvrirLeChoix`), et la MÊME mission bifurque :
+# des objectifs (`"branche": clé`), des répliques (`branche=clé`), et ce que la fin paie (`branches[clé]` : `recompense`,
+# `donne`, `ferme`). La réponse est gardée par la sauvegarde (`partie.mission.branche`, puis `partie.choix[slug]` à la
+# réussite), et une autre mission peut l'exiger (`exige.choix`).
+
+#: Où une question se pose : dans ce qu'on dit EN PERSONNE, avant ou pendant la mission — jamais au combiné de l'appel,
+#: jamais après (la fin, l'échec : il n'y a plus rien à bifurquer).
+PARTIES_D_UN_CHOIX = ("intro", "pendant", "accueil")
+#: Deux ou trois réponses — plus, c'est un menu de comptoir, pas une conversation.
+REPONSES_MIN, REPONSES_MAX = 2, 3
+#: Une réponse se lit en une ligne de la boîte des réponses (police 3x5, 300 px).
+REPONSE_MAX = 44
+CLES_D_UNE_BRANCHE = ("recompense", "donne", "ferme")
+
+
+def question(mission: dict) -> tuple[str, int, dict] | None:
+    """La réplique qui pose le choix de la mission : `(partie, index, ligne)`, ou None."""
+    for partie in PARTIES:
+        for i, ligne in enumerate(mission["dialogue"].get(partie) or []):
+            if ligne.get("choix"):
+                return partie, i, ligne
+    return None
+
+
+def erreurs_de_choix(mission: dict) -> list[str]:
+    """La forme d'un choix dans un dialogue. Une mission sans question ni branche n'en a aucune."""
+    slug, erreurs = mission["slug"], []
+    dialogue, objectifs = mission["dialogue"], mission["objectifs"]
+    questions = [(partie, i, ligne) for partie in PARTIES for i, ligne in enumerate(dialogue.get(partie) or [])
+                 if ligne.get("choix")]
+    marquees = [o for o in objectifs if o.get("branche")] + [ligne for partie in PARTIES
+                                                              for ligne in dialogue.get(partie) or [] if ligne.get("branche")]
+    branches = mission.get("branches") or {}
+    for autre, voulu in ((mission.get("exige") or {}).get("choix") or {}).items():
+        q = question(par_slug(autre)) if par_slug(autre) else None
+        if not q or voulu not in [r["cle"] for r in q[2]["choix"]]:
+            erreurs.append(f"{slug} : exige.choix {autre}={voulu!r} — ce choix n'existe pas")
+    if not questions:
+        if marquees or branches:
+            erreurs.append(f"{slug} : des branches sans question — une réplique doit poser le choix (`choix=`)")
+        return erreurs
+    if len(questions) > 1:
+        erreurs.append(f"{slug} : une question par mission ({len(questions)})")
+    partie, i, ligne = questions[0]
+    if partie not in PARTIES_D_UN_CHOIX:
+        erreurs.append(f"{slug} : une question se pose en personne ({', '.join(PARTIES_D_UN_CHOIX)}), pas dans {partie}")
+    reponses = ligne["choix"]
+    cles = [r["cle"] for r in reponses]
+    if not REPONSES_MIN <= len(reponses) <= REPONSES_MAX:
+        erreurs.append(f"{slug} : {len(reponses)} réponses — de {REPONSES_MIN} à {REPONSES_MAX}")
+    if len(set(cles)) != len(cles) or not all(re.fullmatch(r"[a-z_]+", c) for c in cles):
+        erreurs.append(f"{slug} : des clés de réponse distinctes, en minuscules ({cles})")
+    for r in reponses:
+        if r["texte"] != r["texte"].upper() or not 4 <= len(r["texte"]) <= REPONSE_MAX:
+            erreurs.append(f"{slug} : la réponse « {r['texte']} » — en MAJUSCULES, {REPONSE_MAX} caractères au plus")
+    # Où la question se pose, en étapes : l'intro avant tout objectif, sinon l'objectif de sa réplique.
+    ou = -1 if partie == "intro" else ligne.get("objectif", -1)
+    for k, o in enumerate(objectifs):
+        if o.get("branche") and o["branche"] not in cles:
+            erreurs.append(f"{slug} : l'objectif {k} suit la branche {o['branche']!r}, qui n'est pas une réponse")
+        # ⚠️ L'objectif 0 se POSE avant l'intro (`Histoire.commencer`) : une question de l'intro ne décide qu'à partir
+        # du 1. Et l'objectif de la question elle-même se joue avant qu'on ait répondu.
+        if o.get("branche") and k <= max(ou, 0):
+            erreurs.append(f"{slug} : l'objectif {k} bifurque avant que la question soit posée")
+    for p_, lignes in dialogue.items():
+        for r_ in lignes or []:
+            if r_.get("branche") and r_["branche"] not in cles:
+                erreurs.append(f"{slug} : une réplique {p_} suit la branche {r_['branche']!r}, qui n'est pas une réponse")
+    # ⚠️ Dans l'ordre où le joueur les ENTEND : une réplique de branche dite avant la question se dirait au hasard.
+    entendues = dans_l_ordre_ou_on_les_entend(mission)
+    rang = next(k for k, r_ in enumerate(entendues) if r_ is ligne)
+    for r_ in entendues[:rang + 1]:
+        if r_.get("branche"):
+            erreurs.append(f"{slug} : « {r_['texte']} » bifurque avant que la question soit posée")
+    for cle, b in branches.items():
+        if cle not in cles:
+            erreurs.append(f"{slug} : branches[{cle!r}] n'est pas une réponse")
+        if set(b) - set(CLES_D_UNE_BRANCHE):
+            erreurs.append(f"{slug} : branches[{cle!r}] — clés inconnues {sorted(set(b) - set(CLES_D_UNE_BRANCHE))}")
+        if not isinstance(b.get("recompense", 0), int) or b.get("recompense", 0) < 0:
+            erreurs.append(f"{slug} : branches[{cle!r}] — une récompense entière, jamais négative")
+    # ⚠️ UN CHOIX QUI NE CHANGE RIEN n'en est pas un : chaque réponse mène quelque part — un objectif, une réplique, ou
+    # ce que la fin paie.
+    for cle in cles:
+        if not (any(m.get("branche") == cle for m in marquees) or cle in branches):
+            erreurs.append(f"{slug} : la réponse {cle!r} ne change rien à la mission")
+    return erreurs
+
+
 def erreurs_de_mise_en_scene(mission: dict) -> list[str]:
     """Ce qui manque à une mission pour être FINIE : ses scènes, ses répliques à
     chaque temps, et une fin qui ne parle pas par la bouche d'un absent."""
@@ -1624,7 +1726,7 @@ def erreurs_de_mise_en_scene(mission: dict) -> list[str]:
         if len(textes) > 1:
             erreurs.append(f"{slug} : {qui} se présente {len(textes)} fois — une fois par mission : "
                            + " / ".join(f"« {t} »" for t in textes))
-    return erreurs
+    return erreurs + erreurs_de_choix(mission)
 
 
 # --- Les scènes par défaut : le bloc Lego -----------------------------------------------------

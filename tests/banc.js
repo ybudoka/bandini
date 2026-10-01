@@ -115,6 +115,7 @@ function banc(corps) {
       m.sur_place = d.sur_place || null;   // le saut et la frontiere (`SurPlace`), comme `charger`
       m.frontiere = d.frontiere || null;
       if (d.donne) m.donne = d.donne;   // comme `charger`
+      if (d.branches) m.branches = d.branches;   // ce que paie chaque réponse d'un choix, comme `charger`
       (d.voix || []).forEach(function (v) { defs.audio.histoire.push(v); });
     });
   }

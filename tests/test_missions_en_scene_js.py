@@ -370,6 +370,11 @@ def test_chaque_fin_se_joue_seule_et_se_dit_la_ou_il_faut(banc, racine, cas):
     assert r["sautes"] == 0, f"{slug} : {r['sautes']} plan(s) de la fin n'ont trouvé ni leur lieu ni leur acteur"
     assert r["joue"]["n"] < 6000, f"{slug} : la scène de fin ne se termine pas"
     fin = missions.par_slug(slug)["dialogue"]["fin"]
+    # ⚠️ UN CHOIX DANS UN DIALOGUE (d09) : la fin ne dit que les répliques de SA branche — ici, sans qu'on ait répondu,
+    # la première réponse (`Histoire.brancheDe`).
+    q = missions.question(missions.par_slug(slug))
+    if q:
+        fin = [ligne for ligne in fin if ligne.get("branche") in (None, q[2]["choix"][0]["cle"])]
     assert len(r["dites"]) == len(fin), (slug, r["dites"])
     au_combine = [("(AU TÉLÉPHONE)" in qui) for qui in r["dites"]]
     # ⚠️ CELUI QU'ON EST ALLÉ VOIR parle en personne (m98 : le maire, à la poignée de main qui finit la mission) ;

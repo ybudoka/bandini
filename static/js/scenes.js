@@ -565,7 +565,10 @@ const Scenes = (function () {
         const choix = p.repliques || null;
         const lignes = s.lignes.filter(function (l, i) { return !choix || choix.indexOf(i + 1) >= 0; });
         if (!lignes.length) return false;
-        Histoire.direLignes(lignes, { anonyme: s.anonyme, fin: function () { a.fini = true; } });
+        // ⚠️ La MISSION voyage avec ses répliques : c'est elle qui dit la branche d'un choix (`Histoire.brancheDe`),
+        // et une question posée dans une scène ouvre ses réponses.
+        Histoire.direLignes(lignes, { anonyme: s.anonyme, mission: s.mission ? s.mission.slug : null,
+                                      fin: function () { a.fini = true; } });
         return !a.fini;
       },
     },

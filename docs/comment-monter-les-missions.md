@@ -392,6 +392,48 @@ Ce que ça change, et ce que ça ne change pas :
   mission en moto devient une motoneige l'hiver, une berline sous la pluie (`charDeSaison`) : une
   réplique qui dit « moto » veut sa variante (m2, f04, p13, q10 l'ont).
 
+### 5 bis. Un choix dans un dialogue (1er oct. 2026)
+
+Les choix « ferme l'autre » (`q10`/`q11`, `d07`/`d08`, `r03`/`r04`) se font en prenant une mission plutôt qu'une
+autre. Celui-ci se fait **en parlant** : une réplique pose une question, le joueur répond (deux ou trois réponses, au
+clavier, à la manette ou au doigt), et **la même mission bifurque**. Tout se déclare dans son fichier — exemple
+complet : `app/missions/d09.py` (Léo doit 800 $ à Sal ; on le couche, ou on paie pour lui).
+
+```python
+"accueil": [
+    _a("leo", "Huit cents? J'ai un hangar vide pis une chaloupe qui prend l'eau. Tu veux quoi, au juste?", 2,
+       jeu="…",
+       choix=[("coucher", "SAL VEUT SON ARGENT. TOUT DE SUITE."),     # (clé, ce que le joueur répond)
+              ("payer", "LAISSE FAIRE. JE PAIE TES 800 $.")]),
+    _a("leo", "Tout de suite? Ben les gars du hangar vont avoir leur mot à dire.", 2, jeu="…", branche="coucher"),
+    _a("leo", "Toé? Pour moé? J'ai rien vu, pis j'oublierai pas.", 2, jeu="…", branche="payer"),
+],
+"objectifs": [ …,
+    {"type": "tuer", …, "branche": "coucher"},                       # ne se joue que sur cette branche
+    {"type": "payer", "montant": 800, "texte": "PAIE LES 800 $ DE LÉO", "branche": "payer"},
+    …],                                                              # sans `branche` : sur les deux
+"branches": {"payer": {"recompense": 0, "donne": {"dette": -800, "message": "…"}}},  # ce que la fin paie autrement
+```
+
+- **La question** : `choix=[(clé, texte), …]` sur `_l`, `_p` ou `_a`, dans l'`intro`, un `pendant` ou un `accueil`
+  (en personne, jamais à l'appel ni à la fin) ; **une par mission** ; 2 ou 3 réponses ; le texte d'une réponse en
+  MAJUSCULES, 44 caractères au plus. Le joueur ne parle pas : ses réponses s'affichent, elles ne se disent pas.
+- **À l'écran** : la réplique reste dans sa boîte, sa voix continue, et la boîte **TA RÉPONSE** s'ouvre juste
+  au-dessus (`Histoire.ouvrirLeChoix`, un menu du HUD `obligatoire`). Ni ACTION, ni le temps de lire, ni PAUSE,
+  RETOUR, FRAPPE ou CARTE ne la passent ; elle fait la sourde oreille 12 images en s'ouvrant (un pouce qui martèle
+  ACTION ne répond pas par accident). Sous une scène, la scène attend la réponse.
+- **Ce qui bifurque** : une **réplique** (`branche=clé`, dite seulement sur cette branche — après la question,
+  dans l'ordre où on l'entend), un **objectif** (`"branche": clé`, sauté sur l'autre — jamais l'objectif où la
+  question se pose, ni un avant ; une question d'intro ne décide qu'à partir de l'objectif 1, le 0 se pose avant
+  l'intro), et **ce que la fin paie** (`branches[clé]` : `recompense`, `donne` par-dessus celui de la mission,
+  `ferme`). Chaque réponse doit changer quelque chose (jugé).
+- **La sauvegarde** : la réponse vit dans `partie.mission.branche` pendant la mission, puis dans
+  `partie.choix[<slug>]` quand elle réussit. Une autre mission peut l'**exiger** : `"exige": {"choix": {"d09":
+  "payer"}}` (une relation qui a changé). Une question qu'on n'a pas répondue (sautée avec sa scène) se **repose**
+  avant l'étape qui bifurque ; un banc qui saute à la fin prend la première réponse.
+- **Les juges** : la forme, `missions.erreurs_de_choix` (cousu à `erreurs_de_mise_en_scene`,
+  `tests/test_choix.py`) ; le jeu, au bouton et de chaque côté, `tests/test_choix_js.py`.
+
 ---
 
 ## 6. Les scènes (`scenes`, le vocabulaire de plans)
@@ -511,7 +553,7 @@ En plus de `recompense`, la mission peut donner :
 **`exige` et `ferme`** (M16) viennent compléter `prerequis` :
 
 - `exige` — ce qu'il faut avoir **en plus** des prérequis : `argent_min`,
-  `proprietes`, `liberes`, `dette`, `tenue`, `heure`, et `une_de` (29 sept. 2026, q13 : l'une
+  `proprietes`, `liberes`, `dette`, `tenue`, `heure`, `choix` (une réponse donnée dans une autre mission, § 5 bis), et `une_de` (29 sept. 2026, q13 : l'une
   **ou** l'autre de ces missions faite — un prérequis ne sait dire que « et », et après un choix
   `ferme`, la suite s'ouvre par l'un ou l'autre côté). Un prérequis dit « après
   quoi » ; `exige` dit « dans quel état ».

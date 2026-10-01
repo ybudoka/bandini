@@ -76,6 +76,8 @@ const Histoire = (function () {
         m.frontiere = d.frontiere || null;
         // Ce qu'elle donne (`donne`), sorti du catalogue (30 sept. 2026) : lu par `recompenser` et `jouerLaFin`.
         if (d.donne) m.donne = d.donne;
+        // Ce que paie chaque réponse d'un choix (`branches`, 1er oct. 2026) : lu en la réussissant, comme `donne`.
+        if (d.branches) m.branches = d.branches;
         // ⚠️ SES VOIX SE DECLARENT ICI AUSSI. `Son.Voix.histoire()` lit la liste du
         // paquet, et celles d'une mission n'y sont plus : sans cette ligne, le texte
         // s'afficherait et personne ne parlerait. `chargerHistoire` va chercher les
@@ -158,6 +160,9 @@ const Histoire = (function () {
     // ⚠️ `une_de` (29 sept. 2026, q13) : un prerequis ne sait dire que « et ». Apres un CHOIX
     // (q10 ou q11, l'autre est fermee pour de bon), la suite s'ouvre par l'un OU l'autre cote.
     if (exige.une_de && !exige.une_de.some(faite)) return false;
+    // ⚠️ `choix` (1er oct. 2026) : la réponse qu'on a donnée dans une AUTRE mission (`partie.choix`, gardé à sa
+    // réussite) — ce qu'on a dit à quelqu'un change ce qu'on nous propose ensuite.
+    if (exige.choix && Object.keys(exige.choix).some(function (s) { return (p.choix || {})[s] !== exige.choix[s]; })) return false;
     // ⚠️ `exige.heure` ne se juge PAS ici : `disponibles()` est un filtre
     // statique, sans le moment du jour. L'heure se vérifie au DECLENCHEMENT du
     // téléphone (tranche 3, la police : être au casse-croûte à midi).
@@ -985,7 +990,9 @@ const Histoire = (function () {
     return ((m && m.dialogue && m.dialogue[partie]) || []).map(function (l, i) {
       const h = hiver && l.hiver;
       return { qui: l.qui, texte: h ? l.hiver : l.texte, telephone: toujours, auto: auto, objectif: l.objectif,
-               slug: slugDeVoix(m, partie, i) + (h ? '-hiver' : ''), humeur: l.humeur, dite: tenu(l) };
+               slug: slugDeVoix(m, partie, i) + (h ? '-hiver' : ''), humeur: l.humeur, dite: tenu(l),
+               // Un CHOIX (1er oct. 2026) : la question (`choix`) et la branche d'une réplique (`branche`).
+               choix: l.choix || null, branche: l.branche || null };
     }).filter(function (l) { return l.dite && (!filtre || filtre(l)); });
   }
 
@@ -1007,6 +1014,9 @@ const Histoire = (function () {
     if (!lignes || !lignes.length) { if (o.fin) o.fin(); return false; }
     B.cinema = { lignes: lignes, i: -1, t: 0, duree: 0, fin: o.fin || null, mission: o.mission || null,
                  partie: o.partie || null, anonyme: !!o.anonyme };
+    // ⚠️ Dans une scène, la Voix ne s'arme pas (`Scenes.jouer` l'a fait) ; ailleurs (une question redemandée,
+    // `demanderLeChoix`), on parle comme un `dire`.
+    if (!B.scene) Entree.contexte('dialogue');
     suivante();
     return true;
   }
@@ -1035,7 +1045,13 @@ const Histoire = (function () {
   function suivante() {
     const c = B.cinema;
     if (!c) return;
+    // ⚠️ UNE QUESTION ATTEND SA RÉPONSE : ni ACTION, ni le temps de lire, ni la voix finie ne la passent — seul un
+    // choix dans la boîte des réponses (`choisir`) rend la parole.
+    if (c.question) return;
     c.i++;
+    // Les répliques de l'AUTRE branche d'un choix ne se disent pas (`branche=`, `missions.erreurs_de_choix`).
+    const m = c.mission ? mission(c.mission) : null;
+    while (c.i < c.lignes.length && c.lignes[c.i].branche && c.lignes[c.i].branche !== brancheDe(m)) c.i++;
     if (c.i >= c.lignes.length) { finir(); return; }
     const l = c.lignes[c.i];
     const p = personnage(l.qui);
@@ -1051,6 +1067,92 @@ const Histoire = (function () {
                  c.anonyme ? null : { slug: l.qui, humeur: l.humeur || 'neutre' });
     c.voix = Son.Voix.parler(l.slug, { telephone: l.telephone, fin: function () { if (B.cinema === c && c.i === c.lignes.indexOf(l)) c.duree = Math.min(c.duree, c.t + 20); } });
     if (B.dialogue && c.voix) B.dialogue.voix = true;
+    // La QUESTION : la réplique reste dans sa boîte, sa voix continue, et les réponses s'ouvrent au-dessus.
+    if (l.choix && m && B.partie.mission && B.partie.mission.slug === m.slug && !B.partie.mission.branche) ouvrirLeChoix(c, l, m);
+  }
+
+  // --- Un choix dans un dialogue (1er oct. 2026, Martin) -------------------------------------------------------
+  //
+  // ⚠️ Une réplique POSE une question (`choix`, `missions.py`) ; le joueur répond — deux ou trois réponses, au
+  // clavier, à la manette ou au doigt, dans la boîte des réponses (un menu du HUD `obligatoire`, posé AU-DESSUS de
+  // la boîte de dialogue, qui reste lisible) — et la mission bifurque : ses objectifs (`branche`), ses répliques
+  // (`branche`), ce que la fin paie (`branches`). La réponse vit dans `partie.mission.branche` (la sauvegarde la
+  // garde), puis dans `partie.choix[slug]` quand la mission réussit.
+
+  //: Combien d'images la boîte des réponses fait la sourde oreille en s'ouvrant : l'ACTION qui passait la
+  //: réplique d'avant ne doit pas choisir la première réponse dans la foulée.
+  const CHOIX_SOURD = 12;
+
+  /** La question de la mission `m` : `{ partie, i, ligne }`, ou null. */
+  function questionDe(m) {
+    const ordre = ['appel', 'intro', 'client', 'fin', 'echec', 'pendant', 'renvoi', 'accueil', 'generique'];
+    for (const partie of ordre) {
+      const lignes = (m && m.dialogue && m.dialogue[partie]) || [];
+      for (let i = 0; i < lignes.length; i++) if (lignes[i].choix) return { partie: partie, i: i, ligne: lignes[i] };
+    }
+    return null;
+  }
+
+  /** La branche de la mission `m` : la réponse donnée (en cours, puis gardée à la réussite) — et, tant qu'on n'a
+      pas répondu, la PREMIÈRE réponse (un banc qui saute à la fin, une vieille partie : la mission se finit quand
+      même, sur une branche qui existe). Null pour une mission sans question. */
+  function brancheDe(m) {
+    if (!m) return null;
+    const p = B.partie;
+    if (p.mission && p.mission.slug === m.slug && p.mission.branche) return p.mission.branche;
+    if (p.choix && p.choix[m.slug]) return p.choix[m.slug];
+    const q = questionDe(m);
+    return q ? q.ligne.choix[0].cle : null;
+  }
+
+  /** Ce que la fin de `m` accorde : son `donne`, et par-dessus celui de la branche choisie (`branches`). */
+  function donneDe(m) {
+    const b = ((m && m.branches) || {})[brancheDe(m)] || {};
+    return Object.assign({}, (m && m.donne) || {}, b.donne || {});
+  }
+
+  /** La boîte des réponses. */
+  function ouvrirLeChoix(c, l, m) {
+    c.question = true;
+    Hud.ouvrirMenu({
+      titre: 'TA RÉPONSE', choix: true, obligatoire: true, classeur: null, sourd: CHOIX_SOURD,
+      items: l.choix.map(function (r) {
+        return { libelle: r.texte, cle: r.cle, faire: function () { choisir(r.cle); } };
+      }),
+    });
+  }
+
+  /** On a répondu : la mission prend sa branche, et la conversation reprend là où la question l'avait laissée. */
+  function choisir(cle) {
+    const c = B.cinema, p = B.partie;
+    if (!p.mission) return false;
+    p.mission.branche = cle;
+    if (B.menu && B.menu.choix) Hud.fermerMenu();
+    noter('TU AS RÉPONDU : ' + (((c && c.lignes[c.i] && c.lignes[c.i].choix) || []).find(function (r) { return r.cle === cle; }) || { texte: cle }).texte);
+    Missions.sauvegarderPartie();
+    if (!c) return true;
+    c.question = false;
+    Entree.contexte('dialogue');
+    suivante();
+    return true;
+  }
+
+  /** La question qu'on n'a pas encore répondue — passée avec la scène qui la posait, ou une partie reprise
+      avant la réponse : elle se REPOSE (sa réplique, sa voix, ses réponses) avant que la mission bifurque. */
+  function demanderLeChoix(m, suite) {
+    const q = questionDe(m);
+    if (!q) { suite(); return; }
+    const ligne = lignesDe(m, q.partie)[q.i];
+    ligne.telephone = false; ligne.auto = false;
+    direLignes([ligne], { mission: m.slug, partie: q.partie, fin: suite });
+  }
+
+  /** Un choix reste-t-il à faire avant de jouer l'étape d'après ? */
+  function choixEnAttente(m, p) {
+    if (p.branche || !questionDe(m)) return false;
+    const suivant = m.objectifs[p.etape + 1];
+    // Un objectif qui bifurque, ou la fin (ce que paie chaque réponse) : on ne la passe pas sans avoir répondu.
+    return !suivant || !!suivant.branche;
   }
 
   function finir() {
@@ -1080,6 +1182,7 @@ const Histoire = (function () {
     const c = B.cinema;
     if (!c) return;
     c.t++;
+    if (c.question) return;
     // ⚠️ LA LIGNE ATTEND SA VOIX. `duree` est le temps de LIRE (90 + 3 par
     // caractere) : il passait a la suivante voix ou pas, et la suivante coupe
     // la voix. Mesure le 16 sept. 2026 : neuf repliques de mission y perdaient
@@ -1459,7 +1562,7 @@ const Histoire = (function () {
     if (!m) { B.finEnAttente = null; return; }
     if (m.scenes && m.scenes.fin && !calme()) return;
     B.finEnAttente = null;
-    const d = m.donne || {};
+    const d = donneDe(m);
     jouerOuDire(m, 'fin', function () {
       if (d.message) Hud.message(d.message, 200);
       // ⚠️ **QUI S'EN VA EST DANS LES DONNEES** (`parti_apres`), pas dans la
@@ -1606,6 +1709,8 @@ const Histoire = (function () {
     // monterait sur un tableau absent. `maj` attend deja ; un appel direct (la
     // triche, un evenement) ne doit pas plus faire tomber la mission.
     if (!m.objectifs) return;
+    // ⚠️ UN CHOIX PAS ENCORE FAIT ne se saute pas : la question se repose avant l'étape qui bifurque (ou la fin).
+    if (choixEnAttente(m, p)) { demanderLeChoix(m, function () { if (courante() === m) avancer(enSilence); }); return; }
     // ⚠️ `objet` (l'infiltration) : ce que l'objectif FINI met dans le sac — le code que le terminal
     // pirate crache, et qui ouvre la chambre forte (une serrure `objet` du bloc). `obtenir` le met
     // lui-meme, au moment ou on le ramasse.
@@ -1629,8 +1734,9 @@ const Histoire = (function () {
     // ⚠️ Un acte dont la mission remplacée est DÉJÀ faite (une vieille partie qui a fait p04 sans p05) se saute :
     // on ne le rejoue pas, on ne le repaie pas.
     while (o && o.type === 'acte' && Chapitres.dejaFait(m, p.etape)) { p.etape = Chapitres.marqueurSuivant(m, p.etape); o = m.objectifs[p.etape]; }
-    // ⚠️ Un objectif `si`/`sauf` qui ne tient pas (`tenu`) se saute : rien ne se pose, rien ne se dit.
-    while (o && !tenu(o)) { p.etape++; o = m.objectifs[p.etape]; }
+    // ⚠️ Un objectif `si`/`sauf` qui ne tient pas (`tenu`) se saute : rien ne se pose, rien ne se dit. Et L'AUTRE BRANCHE
+    // d'un choix (`branche`) : ses objectifs ne se jouent pas.
+    while (o && (!tenu(o) || (o.branche && o.branche !== brancheDe(m)))) { p.etape++; o = m.objectifs[p.etape]; }
     if (!o || !o.allies) relacherLesAllies();
     relacherLesPoursuivants();
     if (!o) { reussir(); return; }
@@ -2677,7 +2783,13 @@ const Histoire = (function () {
   function reussir() {
     const m = courante();
     if (!m) return;
-    const p = B.partie, d = m.donne || {};
+    const p = B.partie;
+    // ⚠️ LA BRANCHE CHOISIE (un choix dans un dialogue) : gardée pour de bon, et c'est elle qui paie — sa récompense,
+    // son `donne` par-dessus celui de la mission, sa fermeture (`branches`).
+    const branche = brancheDe(m);
+    if (branche && questionDe(m)) p.choix[m.slug] = branche;
+    const b = ((m.branches || {})[branche]) || {};
+    const d = donneDe(m), recompense = b.recompense !== undefined ? b.recompense : m.recompense, ferme = b.ferme || m.ferme;
     const vehicule = B.mission ? B.mission.vehicule : null;
     nettoyer(false);
     if (p.tombes) delete p.tombes[m.slug];
@@ -2686,8 +2798,8 @@ const Histoire = (function () {
     Chapitres.reussi(m);
     p.mission = null;
     p.appelT = null;
-    const bonus = B.mission && B.mission.sansBosse ? Math.round(m.recompense * 0.5) : 0;
-    const prime = m.recompense + bonus;
+    const bonus = B.mission && B.mission.sansBosse ? Math.round(recompense * 0.5) : 0;
+    const prime = recompense + bonus;
     Missions.encaisser(prime, m.titre.toUpperCase(), true);
     accorder(d);
     // ⚠️ `ferme` (M16) : une mission qui en FERME une autre. Un choix est un
@@ -2695,7 +2807,7 @@ const Histoire = (function () {
     // recompense, et la mission fermee disparait de partout des la prochaine
     // fois qu'on regarde le telephone ou le carnet.
     // Une liste aussi (x04 ferme la dernière coupe de Sal ET les préparatifs qu'on n'a plus à faire).
-    [].concat(m.ferme || []).forEach(function (f) { if (p.fermees.indexOf(f) < 0) p.fermees.push(f); });
+    [].concat(ferme || []).forEach(function (f) { if (p.fermees.indexOf(f) < 0) p.fermees.push(f); });
     p.stats.missions = (p.stats.missions || 0) + 1;
     noter('MISSION : ' + m.titre + ' — ' + prime + ' $', true);
     B.mission = null;
@@ -3948,5 +4060,6 @@ const Histoire = (function () {
            proposerDefi, commencerDefi, finirDefi, abandonnerDefi, actionDeDefi, defisDeFoire, comptoirDeDefi, defiDuComptoir, canardAuCrochet,
            appareilsDe, jouableAvec, defiOuvert, defisOuverts, defiNeuf, ouvrirDefi, majDeblocages, planterLesPanneauxOuverts, APPAREIL_DU_CATALOGUE,
            cible, ligneObjectif, lieu, lieuDeLivraison, passageDuBloc, blocDuLieu, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, cibleDuParler, maj,
-           piratageSousLaMain, commencerPiratage, estCourse, dessinerCheminCourse, lampesDeCourse };
+           piratageSousLaMain, commencerPiratage, estCourse, dessinerCheminCourse, lampesDeCourse,
+           questionDe, brancheDe, donneDe, choisir, CHOIX_SOURD };
 })();

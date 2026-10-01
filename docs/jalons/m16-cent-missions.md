@@ -1314,6 +1314,21 @@ catalogue.
   récompense) ; gardé par la sauvegarde ; déclaré dans le fichier de la mission. Puis `d09`. Le passant donneur :
   un passant ordinaire interpelle le joueur et propose une courte job (né à l'empreinte, sans dé ni identifiant
   qui décale la ville), une à la fois, jamais pendant une mission ; puis le plus possible de `t01`–`t15`.
+  - ✅ **Vague 18 : un choix dans un dialogue, et `d09`.** Une réplique pose une question (`choix=[(clé, texte), …]`
+    sur `_l`/`_p`/`_a`), le joueur répond dans la boîte **TA RÉPONSE**, posée au-dessus de la boîte de dialogue
+    (clavier, manette, doigt ; obligatoire, sourde 12 images), et la mission bifurque : répliques et objectifs
+    `branche`, ce que la fin paie `branches[clé]` ; gardé par `partie.mission.branche` puis `partie.choix`, exigible
+    (`exige.choix`), reposé s'il a été sauté. Recette : `docs/comment-monter-les-missions.md` § 5 bis. `d09` (Sal,
+    _Un compte sur l'île_, après d04 et i01) : la chaloupe du capitaine, Léo devant son hangar — « TOUT DE SUITE »
+    (deux matelots, Léo paie, 250 $) ou « JE PAIE TES 800 $ » (de ta poche ; Sal les enlève de la dette, pas de
+    prime). 17 voix (≈ 1 650 crédits).
+    - ⚠️ **Écarts à la fiche** : on ne couche pas Léo lui-même (un personnage est intouchable, et il donne encore
+      i04, i07) — ses deux matelots s'en mêlent ; la branche « payer » coûte 800 $ et rend 800 de dette (Sal ne
+      refuse jamais l'argent) : à la dette déjà payée (d08), elle ne rend rien.
+    - **Juges** : `tests/test_choix.py` (la forme, sept), `tests/test_choix_js.py` (huit : chaque côté joué au
+      bouton, la question qui tient contre ACTION/PAUSE/RETOUR/FRAPPE/CARTE et le temps, la manette de Martin, le
+      doigt, la sauvegarde, la question reposée, `exige.choix`, une question sous une scène) ; huit mutations,
+      rouges.
 - **1er oct. 2026 : en cours — le casse, un char sur l'île, une course sur l'eau** (Martin). Trois vagues, chacune
   atterrie seule : (15) une **caisse populaire** neuve — la CAISSE POP d'origine est devenue l'ÉCOLE LA MANTE —, posée
   en dernier sur la ville finie, sans un dé, la ville d'avant identique (comparée en JSON), son intérieur (comptoir,
