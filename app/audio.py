@@ -620,6 +620,14 @@ CATALOGUE: list[Echantillon] = [
     _e("crissement", "Crissement de pneus", duree_s=1.2, volume=0.5,
        prompt="short car tires screeching and squealing on dry asphalt during a skid, close, "
               "no engine roar, no crash, no music"),
+    # LES BANCS DE NEIGE (les saisons, lot 6, vague 6c) : le char qui s'y plante, et ses roues qui patinent. Dans le
+    # « lieu » du dérapage (`LIEUX["derapage"]`) : chargés la première fois qu'on conduit, avec le crissement.
+    _e("banc_de_neige", "Char dans un banc de neige", duree_s=1.0, volume=0.6, variantes=2,
+       prompt="a car plowing nose first into a deep roadside snowbank, a heavy muffled whump of packed snow, "
+              "chunks of snow thudding down, close, no crash of metal, no music"),
+    _e("roues_patinent", "Roues qui patinent dans la neige", duree_s=1.4, volume=0.5,
+       prompt="a car stuck in deep snow, the engine revving and the tires spinning and whining on packed snow, "
+              "snow spraying, close, winter, no music"),
     _e("eclaboussure", "Éclaboussure", duree_s=0.9, volume=0.55,
        prompt="a car tire driving fast through a big puddle, a sharp splash of water "
               "spraying onto a sidewalk, close, no engine, no music"),
@@ -1883,7 +1891,7 @@ LIEUX: dict[str, list[str]] = {
     "distributrice": ["distributrice", "machine_brassee", "monnaie"],
     "chaussee": ["nid_de_poule", "conteneur", "tas", "plaque"],
     # Le derapage (les saisons, lot 6) : il se charge la premiere fois que le joueur conduit (`Derapage`).
-    "derapage": ["crissement"],
+    "derapage": ["crissement", "banc_de_neige", "roues_patinent"],
     # Les pas selon le sol (30 sept. 2026) : chargés au premier pas (`Monde.solDuPas`) — `pas`, le béton,
     # reste au premier écran et joue d'ici là, pour le joueur comme pour les passants.
     "pas": ["pas_herbe", "pas_gravier", "pas_sable", "pas_bois", "pas_carrelage", "pas_tapis", "pas_neige"],

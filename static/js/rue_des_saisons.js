@@ -27,6 +27,8 @@ const RueDesSaisons = (function () {
 
   //: La neige pleine de la palette d'hiver : un banc est a sa pleine largeur a cette neige-la.
   const NEIGE_PLEINE = 0.7;
+  //: La crete d'un banc de neige (vague 6c) : le blanc le plus vif, sur la bordure.
+  const CRETE = '#ffffff';
 
   /** Le moment de la rue : ce que la palette dit, lu une fois par morceau peint. */
   function moment() {
@@ -46,12 +48,26 @@ const RueDesSaisons = (function () {
     const l = Monde.carte && Monde.carte.legende[Monde.glyphe(tx, ty)];
     if (!l || l.stationnement || l.ruelle || l.rail) return [];
     const cotes = [];
-    COTES.forEach(function (c, i) { if (Monde.estTrottoir(tx + c[0], ty + c[1])) cotes.push(i); });
+    COTES.forEach(function (c, i) { if (Monde.estTrottoir(tx + c[0], ty + c[1]) && !uneEntree(tx, ty, c)) cotes.push(i); });
     return cotes;
   }
 
-  /** Les tuiles a banc d'un morceau, [tx, ty, cotes], trouvees une fois par carte et par morceau : la rue
-      ne bouge pas, et la repeinte d'un palier ne refait pas la recherche (le rythme). */
+  /** ⚠️ UNE ENTREE (vague 6c, les bancs qui enlisent) : la ou les chars traversent le trottoir — devant un rideau de
+      garage, une allee, un stationnement, la rampe du skatepark —, on a pellete : pas de banc. On regarde de l'autre cote
+      du trottoir et de l'abord (au plus six tuiles) ce qui l'attend. Sans ca, on se plantait en entrant chez Ti-Guy. Pure. */
+  function uneEntree(tx, ty, c) {
+    for (let k = 1; k <= 6; k++) {
+      const x = tx + c[0] * k, y = ty + c[1] * k, l = Monde.carte && Monde.carte.legende[Monde.glyphe(x, y)];
+      if (Monde.estTrottoir(x, y) || (l && l.abord)) continue;     // le trottoir, puis l'abord paves devant les batiments
+      return !!((l && l.garage) || Monde.estRoute(x, y));
+    }
+    return false;
+  }
+
+  /** Les tuiles a banc d'un morceau ET de sa bordure d'une tuile, [tx, ty, cotes], trouvees une fois par carte et par
+      morceau : la rue ne bouge pas, et la repeinte d'un palier ne refait pas la recherche (le rythme). ⚠️ La bordure :
+      le banc deborde sur le trottoir (vague 6c), et le trottoir d'un morceau peut border la rue du voisin — chacun
+      peint sa part, le canevas coupe le reste. */
   function bordsDuMorceau(mx, my, n) {
     const carte = Monde.carte;
     if (!carte.bordsDeRue) carte.bordsDeRue = new Map();
@@ -59,7 +75,7 @@ const RueDesSaisons = (function () {
     let l = carte.bordsDeRue.get(cle);
     if (l) return l;
     l = [];
-    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+    for (let j = -1; j <= n; j++) for (let i = -1; i <= n; i++) {
       const tx = mx * n + i, ty = my * n + j, cotes = bancsDe(tx, ty);
       if (cotes.length) l.push([tx, ty, cotes]);
     }
@@ -67,8 +83,13 @@ const RueDesSaisons = (function () {
     return l;
   }
 
+  /** ⚠️ LE BANC CHEVAUCHE LA BORDURE (vague 6c) : une levre dans la rue, le gros sur le bord du trottoir — le profil de
+      `BancsDeNeige.largeurs`, celui que lisent les roues. Peint dans la rue (4b), il mangeait la voie : les roues d'un
+      char au milieu de sa voie passent a 3 px de la bordure, et la levre n'en prend jamais plus. Sa grosseur suit la
+      neige qui tient ET les tempetes de l'hiver (`BancsDeNeige.grosseurVue`). */
   function peindreBancs(ctx, m, mx, my, T, n) {
-    const d = donnees().bancs;
+    const d = donnees().bancs, g = BancsDeNeige.grosseurVue();
+    if (!(g > 0)) return;
     const k = Math.min(1, m.neige / NEIGE_PLEINE);
     const sale = m.degel ? 0.35 + 0.5 * (1 - k) : 0;
     const blanc = sale ? meler(d.neige, d.sale, sale) : d.neige;
@@ -77,23 +98,34 @@ const RueDesSaisons = (function () {
       const tx = b[0], ty = b[1], cotes = b[2];
       const ox = (tx - mx * n) * T, oy = (ty - my * n) * T;
       cotes.forEach(function (c) {
-        const vertical = c >= 2;          // un banc le long d'un trottoir a gauche ou a droite
         for (let p = 0; p < T; p += 2) {
-          const h = hash(tx * 16 + (vertical ? 0 : p), ty * 16 + (vertical ? p : 0), 5 + c);
-          // Le profil du banc : une houle douce le long du trottoir, continue d'une tuile a l'autre (la
-          // coordonnee du monde, pas celle de la tuile) — au hasard pur, il faisait un peigne.
-          const s = (vertical ? ty : tx) * T + p + (c * 37);
-          const houle = 0.5 + 0.32 * Math.sin(s * 0.21) + 0.18 * Math.sin(s * 0.057 + (vertical ? tx : ty));
-          const l = Math.max(1, Math.round((d.largeur[0] + houle * (d.largeur[1] - d.largeur[0])) * k));
-          const a = c === 0 ? [ox + p, oy, 2, l] : c === 1 ? [ox + p, oy + T - l, 2, l]
-            : c === 2 ? [ox, oy + p, l, 2] : [ox + T - l, oy + p, l, 2];
+          const w = BancsDeNeige.largeurs(tx, ty, c, p, g);
+          if (!w) continue;
+          const r = w.rue, t = w.trottoir, h = hash(tx * 16 + (c >= 2 ? 0 : p), ty * 16 + (c >= 2 ? p : 0), 5 + c);
+          // Le corps du banc, de la rue (levre) au trottoir (le gros) : [x, y, largeur, hauteur].
+          const a = c === 0 ? [ox + p, oy - t, 2, t + r] : c === 1 ? [ox + p, oy + T - r, 2, t + r]
+            : c === 2 ? [ox - t, oy + p, t + r, 2] : [ox + T - r, oy + p, t + r, 2];
           ctx.fillStyle = blanc; ctx.fillRect(a[0], a[1], a[2], a[3]);
-          // L'ombre du banc, du cote de la rue : c'est elle qui lui donne du relief.
+          // L'ombre du cote de la rue (c'est elle qui lui donne du relief), et un trait plus pale du cote du trottoir :
+          // sur un trottoir enneige, sans lui, le banc s'y fondait.
           ctx.fillStyle = ombre;
-          if (c === 0) ctx.fillRect(a[0], oy + l, 2, 1);
-          else if (c === 1) ctx.fillRect(a[0], oy + T - l - 1, 2, 1);
-          else if (c === 2) ctx.fillRect(ox + l, a[1], 1, 2);
-          else ctx.fillRect(ox + T - l - 1, a[1], 1, 2);
+          if (c === 0) ctx.fillRect(a[0], oy + r, 2, 1);
+          else if (c === 1) ctx.fillRect(a[0], oy + T - r - 1, 2, 1);
+          else if (c === 2) ctx.fillRect(ox + r, a[1], 1, 2);
+          else ctx.fillRect(ox + T - r - 1, a[1], 1, 2);
+          ctx.fillStyle = meler(ombre, blanc, 0.15);
+          if (c === 0) ctx.fillRect(a[0], oy - t - 1, 2, 1);
+          else if (c === 1) ctx.fillRect(a[0], oy + T + t, 2, 1);
+          else if (c === 2) ctx.fillRect(ox - t - 1, a[1], 1, 2);
+          else ctx.fillRect(ox + T + t, a[1], 1, 2);
+          // La crete, sur la bordure : le blanc le plus vif, la ou le banc est le plus haut (assez gros pour en avoir une).
+          if (t >= 2 && !sale) {
+            ctx.fillStyle = CRETE;
+            if (c === 0) ctx.fillRect(a[0], oy - 1, 2, 1);
+            else if (c === 1) ctx.fillRect(a[0], oy + T, 2, 1);
+            else if (c === 2) ctx.fillRect(ox - 1, a[1], 1, 2);
+            else ctx.fillRect(ox + T, a[1], 1, 2);
+          }
           // Au degel, la neige sale : des grains de gravier.
           if (sale && part(h, 13) < 0.35) { ctx.fillStyle = d.sale; ctx.fillRect(a[0] + (h & 1), a[1] + ((h >> 1) & 1), 1, 1); }
         }

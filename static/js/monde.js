@@ -2678,6 +2678,10 @@ const Monde = (function () {
       // sa potence vide — les morceaux se recuisent à ces deux moments-là, jamais à chaque image.
       const e = typeof Devisser !== 'undefined' ? Devisser.cle() : '';
       if (carte.enseignes !== e) { carte.morceaux.clear(); carte.enseignes = e; }
+      // ⚠️ ET LES BANCS DE NEIGE (les saisons, lot 6, vague 6c) : ils grossissent a chaque tempete — les morceaux se
+      // repeignent quand leur grosseur change de palier (`BancsDeNeige.cle`), quelques fois par tempete.
+      const b = typeof BancsDeNeige !== 'undefined' ? BancsDeNeige.cle() : '';
+      if (carte.bancs !== b) { carte.morceaux.clear(); carte.bancs = b; }
     }
     carte.visibles.clear();
     for (let my = m0y; my <= m1y; my++) {

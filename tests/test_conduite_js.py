@@ -1058,6 +1058,9 @@ def test_un_mur_fait_mal_mais_ne_se_traverse_pas(banc):
         j.x = d.x; j.y = d.y;
         const v = o.char('auto', 0, 0, -Math.PI / 2);   // plein nord : le bord de la carte
         L.Vehicules.monter(j, v);
+        // ⚠️ En janvier, le char lancé plein nord traverse un trottoir : le banc de neige l'y planterait avant le mur
+        // (les saisons, vague 6c). On juge le mur : les bancs coupés.
+        L.BancsDeNeige.couper(true);
         const vie0 = v.vie;
         o.touche('KeyW'); o.frame(120); o.relacher('KeyW');
         let dedans = false;

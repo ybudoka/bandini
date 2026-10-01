@@ -1634,3 +1634,61 @@ glace et le dérapage (lot 6) restent en dernier, à part._
   on repart). La glissade du trafic sur la glace, prévue en 6c, est faite ici (sur ses rails). La glace ne se juge
   qu'au volant et au pied : à la manette de Martin, la plaque doit se voir venir, et le contre-braquage rattraper. Les
   agents à pied ne tombent pas. Rien ne fond sous les pneus ni ne se sale (la glace est une fonction du calendrier).
+
+### Lot 6, vague 6c — les bancs de neige qui enlisent (livrée le 1er oct. 2026)
+
+- **Le banc chevauche la bordure** (`static/js/bancs_de_neige.js`, ses réglages en tête du fichier, hors du paquet
+  comme ceux du dérapage et de la glace ; le dessin dans `rue_des_saisons.js`) : peint en 4b DANS la rue (3 à 6 px), il
+  mangeait la voie — une voie a 16 px, un char 14, ses roues passent à 3 px de la bordure. Il est maintenant à cheval :
+  une lèvre de 1 à 3 px dans la rue (jamais plus), le gros sur le bord du trottoir, une crête blanche sur la bordure et
+  un trait gris-bleu côté trottoir (sur un trottoir enneigé, sans lui, il s'y fondait — vu sur la capture). **Le dessin
+  et les roues lisent le même profil** (`largeurs`) : jugé pixel par pixel sur six morceaux, zéro écart.
+- **On a pelleté les entrées** : plus de banc devant un rideau de garage, une allée, un stationnement ou la rampe du
+  skatepark (de l'autre côté du trottoir et de l'abord, `uneEntree`) — on se plantait en entrant chez Ti-Guy, et le saut
+  du skatepark ne se prenait plus l'hiver (deux juges l'ont dit). Les bancs de 4b ont enfin leur trouée devant les entrées.
+- **Ce qu'il fait aux roues** (les quatre roues, pas la carrosserie qui surplombe ; `maj`, appelé par `majPhysique`) :
+  - **effleuré** de biais, il freine un peu et la neige gicle ; on glisse le long, comme contre une bordure ;
+  - **abordé au pas**, il retient : on le monte (et on en redescend) à 0,25 px/image au plus — aucun trottoir n'est fermé
+    au char qui y va doucement ;
+  - **abordé vite** (0,9 px/image ou plus VERS le banc, pas le long), le char s'y **plante** : le nez s'enfonce de 1 à 3
+    px, une gerbe de neige, un « whoump » (ElevenLabs), la caméra qui tressaute, et le HUD : « PRIS DANS LE BANC — RECULE,
+    OU BERCE : AVANCE, RECULE, AVANCE » (rappelé quand on patine et que le HUD n'a rien d'autre à dire) ;
+  - **pris**, il ne roule plus : le gaz fait patiner les roues (la neige gicle derrière, le moteur s'emballe —
+    ElevenLabs), un peu de neige se peint sur son nez ; **la marche arrière** l'en sort en deux secondes environ, **bercer**
+    (avancer, reculer, en rythme : moins de 40 images entre deux) en une ; le char va et vient d'un pixel et demi, on le
+    voit bercer. Le gaz seul ne l'en sort jamais. Sorti, il recule au pas hors du banc ;
+  - **le 4 roues et les camions lourds** (masse 2,5 et plus : le camion, l'autobus, l'asphalteuse, la pelleteuse) le
+    poussent : plus lents, jamais pris ; **la motoneige** et les coques n'en savent rien ;
+  - **l'IA hors des rails** (la police, les poursuivants) y perd de l'élan, n'y reste jamais prise ; **le trafic** roule
+    sur ses rails au milieu de sa voie : jugé sur toutes les bordures de la ville, aucune roue d'une auto, d'un camion ou
+    d'une moto au milieu de sa voie ne touche le banc, même plus gros que le plafond.
+- **Le calendrier** (`grosseurA`, une pure fonction du jour et de l'heure) : la neige qui tient (la palette de 4b), plus
+  **0,15 par tempête de l'hiver** (peu à peu, pendant qu'elle tombe : la charrue repousse au bord), au plus trois (le
+  deuxième hiver en a quatre) ; au dégel, il fond avec la palette, sale. Le banc s'élargit sur le trottoir, sa lèvre ne
+  dépasse jamais 3 px. Les morceaux se repeignent quand la grosseur change de palier (`BancsDeNeige.cle`) : jamais un
+  jour calme, quatre fois une soirée de tempête.
+- **Rien de posé, rien de tiré** : aucune tuile, aucune entité, aucun dé (la gerbe tire ses grains à l'empreinte de
+  l'image et du char) ; seul l'état d'un char pris vit sur le char (`v.banc`), et un char déplacé par autre chose (la
+  remorqueuse, un char qui le pousse) n'est plus pris.
+- **La mesure** (Chromium, Mac ; A/B apparié : les bancs coupés et allumés en alternance, 40 blocs de 30 images dans la
+  même page) : pris et patinant, la simulation 3,0 ms contre 3,0, le rendu 1,49 contre 1,49 ; en roulant le long d'une
+  rue bordée de bancs, 3,08 contre 3,09 et 1,66 contre 1,60 — au plus 0,06 ms par image. La repeinte de tous les
+  morceaux à l'écran (un palier) : 7,2 ms en janvier contre 4,5 à 6,5 en juillet (les bancs à cheval sur la bordure, les
+  Tempo, la neige des trottoirs), quelques fois par tempête.
+- **Juges** : `tests/test_bancs_de_neige_js.py` (10) — la grosseur aux tempêtes et au dégel, le plafond, la repeinte ;
+  le dessin et les roues au pixel ; au milieu de sa voie, rien ; y foncer plante (six bancs, trois graines), les roues
+  patinent, la neige gicle, le son et le HUD ; on sort en reculant, plus vite en berçant (six bancs, deux graines) ; au
+  pas, on le monte ; le 4 roues et le camion le poussent, la motoneige n'en sait rien ; l'IA n'y reste jamais prise
+  (six bancs, trois angles, deux graines, police et poursuivant) ; aucun dé, et hors du banc la conduite au pixel
+  (l'été contre la bordure, l'hiver au milieu de la voie) ; devant les portes de garage, on a pelleté. **29 mutations,
+  29 rouges** (le plafond n'a mordu qu'abaissé de quatre à trois tempêtes : aucun hiver n'en avait plus de quatre).
+- **Retouchés** (ils posaient un char immobile ou une trajectoire sur un banc de janvier) : `test_derapage_js` (le
+  pilote sur place), `test_neige_js::test_sur_la_neige_un_char_glisse…`, `test_glace_js` (la traversée d'une plaque de
+  la ligne d'arrêt qui longe la bordure), `test_nids_de_poule_js` (le nid au bord), `test_conduite_js::test_un_mur…`
+  (plein nord, il traversait un trottoir), `test_verglas_js::test_sur_la_glace_le_char_glisse` (volant à fond vers la bordure), `test_chantiers_js::test_le_tas_de_terre…` (l'élan traverse un trottoir) : chacun coupe les bancs (`BancsDeNeige.couper`) et le dit.
+- **Captures** regardées : la rue en janvier, en mars après deux tempêtes, au dégel ; un char pris de jour (la neige sur
+  le nez, la gerbe derrière), le soir (dans les phares), sous la tempête.
+- **Pas fait, à dire** : ça ne se juge qu'au volant — à la manette de Martin, le seuil (0,9 px/image vers le banc), le
+  temps pour sortir et le rythme du bercement sont dans `REGLAGES`. Les agents à pied et les passants traversent le banc
+  comme avant (peint). Une opération de déneigement ne charge pas les bancs dans les camions : ils grossissent jusqu'au
+  plafond, puis fondent au dégel. Un char laissé pris sur la chaussée est « mal garé » : la fourrière passe.

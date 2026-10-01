@@ -1229,6 +1229,9 @@ TAS = """
     v.etat = 'roule';
     v.vitesse = vitesse; v.vx = vitesse; v.vy = 0; v.angle = 0;
     const vie0 = v.vie;
+    // ⚠️ En janvier, l'elan traverse un trottoir et son banc de neige (les saisons, vague 6c), qui le retient au pas. On
+    // juge le tas : les bancs coupes le temps de l'essai.
+    L.BancsDeNeige.couper(true);
     let zMax = 0, vitesseMin = vitesse, decolle = -1;
     // Au plus 70 images, et on s'arrête dès qu'on a retombé passé le tas (voir plus bas) : ni jusqu'au mur d'en face.
     for (let k = 0; k < 70; k++) {
@@ -1241,6 +1244,7 @@ TAS = """
       // Retombé ET passé le tas : on s'arrête là. Plus loin, c'est le mur du lot d'en face, pas le tas.
       if (decolle >= 0 && v.z === 0 && (v.x - tas.x) > 25) break;
     }
+    L.BancsDeNeige.couper(false);
     return { tas: true, zMax: zMax, decolle: decolle, apres: (v.x - tas.x), vitesseMin: vitesseMin,
              perdu: vie0 - v.vie, brise: !!tas.brise, z: v.z, repit: v.tasT };
   }

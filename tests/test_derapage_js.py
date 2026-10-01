@@ -10,6 +10,9 @@ PILOTE = """
         const j = L.B.joueur, V = L.Vehicules, N = L.Neige;
         const vraie = N.adherence, vraiFrein = N.frein, P = L.Pluie, M = L.Monde;
         const vraiesP = [P.adherence, P.frein], vraiesM = [M.adherenceMouillee, M.freinMouille];
+        // ⚠️ Le char ne bouge pas (on juge son cap et sa vitesse, pas ou il va) : pose en janvier sur un banc de neige,
+        // il s'y planterait (les saisons, vague 6c). Les bancs coupes : on juge le sol.
+        L.BancsDeNeige.couper(true);
         N.adherence = function () { return adherence; }; N.frein = function () { return 1; };
         // La pluie et l'arroseuse bouchees : seule la neige dit ce que le sol tient (la meteo du jour ne joue pas).
         P.adherence = P.frein = M.adherenceMouillee = M.freinMouille = function () { return 1; };
@@ -25,7 +28,7 @@ PILOTE = """
             traj.push([v.angle, v.vx, v.vy, v.lacet || 0, v.vitesse]);
             if (Math.hypot(v.vx, v.vy) > 0.5) deriveMax = Math.max(deriveMax, Math.abs(Math.atan2(Math.sin(v.angle - Math.atan2(v.vy, v.vx)), Math.cos(v.angle - Math.atan2(v.vy, v.vx)))));
         }
-        N.adherence = vraie; N.frein = vraiFrein;
+        N.adherence = vraie; N.frein = vraiFrein; L.BancsDeNeige.couper(false);
         P.adherence = vraiesP[0]; P.frein = vraiesP[1]; M.adherenceMouillee = vraiesM[0]; M.freinMouille = vraiesM[1];
         L.Entites.retirer(v);
         const f = traj[traj.length - 1];

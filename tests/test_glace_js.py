@@ -33,6 +33,9 @@ OUTILS = """
     const V = L.Vehicules, j = L.B.joueur, a = capDe(p), l = Math.max(p.rx, p.ry);
     const v = V.creer('auto', p.x - Math.cos(a) * l * 0.85, p.y - Math.sin(a) * l * 0.85, a, { etat: 'stationne', couleur: '#3a6fb0' });
     v.conducteur = j; if (opts && opts.pneus) v.mods = { pneus: true };
+    // ⚠️ Une plaque de la ligne d'arret longe parfois la bordure : ses roues y touchaient le banc de neige (les saisons,
+    // vague 6c), qui freine. On juge la glace : les bancs coupes le temps de la traversee.
+    L.BancsDeNeige.couper(true);
     const s0 = (opts && opts.vitesse) || 3.4;
     v.vitesse = s0; v.vx = Math.cos(a) * s0; v.vy = Math.sin(a) * s0;
     const traj = []; let tourne = 0, prec = v.angle, dist = 0;
@@ -45,7 +48,7 @@ OUTILS = """
       traj.push([v.x, v.y, v.angle, v.vx, v.vy]);
       if (opts && opts.arret && Math.abs(v.vitesse) < 0.15) break;
     }
-    L.Entites.retirer(v);
+    L.Entites.retirer(v); L.BancsDeNeige.couper(false);
     return { tourne: Math.abs(tourne), dist: dist, traj: traj, images: traj.length };
   }
 """

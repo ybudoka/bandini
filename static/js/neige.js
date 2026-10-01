@@ -286,7 +286,7 @@ const Neige = (function () {
   }
 
   return {
-    donnees, intensiteA, intensite, couvertureA, couverture, operationA, operation, charrueDehors,
+    donnees, intensiteA, intensite, rangDeTempete, couvertureA, couverture, operationA, operation, charrueDehors,
     deneigee, deneiger, adherence, frein, vitesseTrafic, dansUneCase, majDeneigement, texteDInfo,
     maj, oublier, dessinerSol, dessinerTempete, dessinerPanneaux,
     get deneigees() { return deneigees.size; },

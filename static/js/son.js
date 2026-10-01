@@ -1155,6 +1155,27 @@ const Son = (function () {
       bruit(0.35, 0.07 * v, 5200, 3600);
       return v;
     },
+    // LES BANCS DE NEIGE (les saisons, lot 6, vague 6c) : le char qui s'y plante (un « whoump » etouffe), et ses roues
+    // qui patinent dedans, la ou il est. Tant que le lieu du derapage n'est pas charge, la synthese.
+    banc_de_neige: function (x, y) {
+      const j = B.joueur;
+      if (!j || !pret()) return 0;
+      const p = 480, v = 1 - Math.hypot(x - j.x, y - j.y) / p;
+      if (v <= 0) return 0;
+      if (estCharge('banc_de_neige')) return jouerA('banc_de_neige', x, y, p);
+      bruit(0.45, 0.16 * v, 420, 70);
+      return v;
+    },
+    roues_patinent: function (x, y) {
+      const j = B.joueur;
+      if (!j || !pret()) return 0;
+      const p = 480, v = 1 - Math.hypot(x - j.x, y - j.y) / p;
+      if (v <= 0) return 0;
+      if (estCharge('roues_patinent')) return jouerA('roues_patinent', x, y, p);
+      ton(140, 0.5, 'sawtooth', 0.04 * v, 260);
+      bruit(0.4, 0.05 * v, 2600, 1400);
+      return v;
+    },
     // LA PLUIE (les saisons, lot 2) : le tonnerre qui suit l'eclair, et l'eclaboussure d'un char dans
     // une flaque, la ou elle est. Tant que le groupe « pluie » n'est pas charge, la synthese.
     tonnerre: function () {

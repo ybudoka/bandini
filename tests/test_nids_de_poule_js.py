@@ -65,6 +65,9 @@ def test_pris_vite_le_volant_ne_repond_plus(banc):
     r = banc("function (L, o) {" + UN_NID + """
         L.Jeu.commencer();
         const B = L.B, j = B.joueur, V = L.Vehicules, n = unNid(L);
+        // ⚠️ Le nid longe parfois la bordure : en janvier, les roues y frottaient le banc de neige (les saisons, vague 6c),
+        // qui freine. On juge le nid : les bancs coupes.
+        L.BancsDeNeige.couper(true);
         B.entites = B.entites.filter(function (e) { return e === j || !(e.type === 'vehicule' || e.type === 'pieton' || e.type === 'police') || Math.hypot(e.x - n.x, e.y - n.y) > 300; });
         function passer(vitesse, auVolant) {
             const v = V.creer('auto', n.x - 40, n.y, 0, { etat: 'stationne' });

@@ -1186,6 +1186,9 @@ const Vehicules = (function () {
     const adh = (freinMain ? d.adherence_frein : d.adherence) * g;
     v.vx += (Math.cos(v.angle) * v.vitesse - v.vx) * adh;
     v.vy += (Math.sin(v.angle) * v.vitesse - v.vy) * adh;
+    // ⚠️ LES BANCS DE NEIGE (les saisons, lot 6, vague 6c) : ce que le banc fait aux roues — il frotte, il retient, il
+    // plante ; un char pris patine et se bat pour sortir. Hors de l'hiver (ou loin d'un banc), rien ne change.
+    BancsDeNeige.maj(v, cmd);
     Derapage.majSol(v, perte);                      // les traces, les sillons, le crissement
     // En l'air (rampe) : on retombe.
     if (v.z > 0 || v.vz !== 0) {

@@ -99,6 +99,9 @@ def test_sur_la_neige_un_char_glisse_et_freine_mal(banc):
             soir(L, true, neige ? undefined : ete(L));
             const v = L.Vehicules.creer('auto', j.x + 400, j.y + 400, 0, { etat: 'stationne', couleur: '#3a6fb0' });
             if (deblaye) L.Neige.deneiger(Math.floor(v.x / L.TT), Math.floor(v.y / L.TT), 3);
+            // ⚠️ Le char ne bouge pas (on juge son cap et son freinage) : pose sur un banc de neige, il s'y planterait
+            // (les saisons, vague 6c). Les bancs coupes : on juge la neige au sol.
+            L.BancsDeNeige.couper(true);
             v.vitesse = 3; v.vx = 3; v.vy = 0;
             let derive = 0, chemin = 0, dir = Math.atan2(v.vy, v.vx);
             for (let k = 0; k < 20; k++) {
@@ -110,7 +113,7 @@ def test_sur_la_neige_un_char_glisse_et_freine_mal(banc):
             v.vitesse = 3;
             let freinage = 0;
             while (v.vitesse > 0.15 && freinage < 400) { L.Vehicules.majPhysique(v, { gaz: 0, frein: 1, direction: 0, freinMain: false }); freinage++; }
-            L.Entites.retirer(v);
+            L.Entites.retirer(v); L.BancsDeNeige.couper(false);
             return { derive: derive, chemin: Math.abs(chemin), freinage: freinage };
         }
         return { sec: essai(false, false), neige: essai(true, false), deblaye: essai(true, true) };

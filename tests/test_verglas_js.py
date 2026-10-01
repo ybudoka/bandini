@@ -105,6 +105,9 @@ def test_sur_la_glace_le_char_glisse(banc):
             V.monter(j, v); j.x = v.x; j.y = v.y;
             v.vitesse = 3.2; v.vx = 3.2; v.vy = 0; v.angle = 0;
             L.Entites.indexer();
+            // ⚠️ Volant a fond, le char file vers la bordure : le banc de neige de mars l'y retenait (les saisons, vague
+            // 6c), et sa glissade ne se mesurait plus. On juge le verglas : les bancs coupes.
+            L.BancsDeNeige.couper(true);
             o.touche('KeyD'); o.touche('KeyW');
             let glisse = 0;
             for (let k = 0; k < 14; k++) {
@@ -113,7 +116,7 @@ def test_sur_la_glace_le_char_glisse(banc):
                 glisse = Math.max(glisse, Math.abs(Math.atan2(Math.sin(v.angle - cap), Math.cos(v.angle - cap))));
             }
             o.relacher('KeyD'); o.relacher('KeyW');
-            V.descendre(j, true);
+            V.descendre(j, true); L.BancsDeNeige.couper(false);
             B.entites.splice(B.entites.indexOf(v), 1);
             return glisse;
         }
