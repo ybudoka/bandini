@@ -110,6 +110,10 @@ const Reputation = (function () {
   /** Ce passant, qui a vu un crime en (x, y), va-t-il te dénoncer ? `tirage` : le dé que l'appelant a DÉJÀ tiré
       (`B.rng()`), qu'on lit seulement entre les deux seuils. */
   function denonce(e, tirage, x, y) {
+    // ⚠️ UN HOMME DE GANG NE PARLE PAS À LA POLICE, bien vu ou mal vu (son `temoin` est 0 au catalogue) : « mal vu,
+    // tout le monde » envoyait le Cravate qu'on bat témoigner contre toi au lieu de se battre (1er oct. 2026, la
+    // rixe : il n'esquivait plus un seul coup, 38 graines sur 40).
+    if (e.gang) return false;
     const q = quartierA(x, y), et = q ? etat(q) : 'neutre';
     if (et === 'bien') return false;
     if (et === 'mal') return true;

@@ -44,6 +44,24 @@ def test_bien_vu_personne_ne_parle_mal_vu_tout_le_monde(banc):
     assert r["neutreCoeur"] == 3 and r["neutreSansCoeur"] == 0, f"entre les deux, le cœur de chacun ne décide plus : {r}"
 
 
+def test_mal_vu_un_homme_de_gang_ne_parle_pas_pour_autant(banc):
+    """« Mal vu, tout le monde » : tout le monde qui parle à la police. Un Cravate n'y parle jamais (son `temoin` est
+    0 au catalogue) — le 1er oct. 2026, celui qu'on battait à la rixe partait témoigner au lieu de se battre, et
+    `test_rixe_js::test_il_esquive_parfois_ton_coup` est tombé sur 38 graines sur 40."""
+    r = banc("""function (L, o) {""" + PRELUDE + """
+        L.B.partie.reputation = {}; L.B.partie.reputation[q] = -60;
+        const ps = trois(0); ps.forEach(function (p) { p.gang = 'cravates'; p.courage = 0; p.etat = 'flane'; });
+        L.Police.signalerCrime('coup_pieton', j.x, j.y, true);
+        const police = temoins(ps);
+        for (const e of L.B.entites.slice()) if (e.type === 'pieton') L.Entites.retirer(e);
+        L.Entites.indexer();
+        const ps2 = trois(0); ps2.forEach(function (p) { p.gang = 'cravates'; p.courage = 0; p.etat = 'flane'; });
+        L.Entites.alerter(j.x, j.y, j, 0);
+        return { police: police, alerte: temoins(ps2) };
+    }""")
+    assert r == {"police": 0, "alerte": 0}, f"mal vu, un homme de gang va voir la police : {r}"
+
+
 def test_la_reputation_ne_change_pas_le_hasard(banc):
     r = banc("""function (L, o) {""" + PRELUDE + """
         const des = []; const rng = L.B.rng;
