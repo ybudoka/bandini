@@ -184,6 +184,17 @@ tombée), et LE JOUEUR > TOUTES LES ENSEIGNES.
 ⚠️ **À valider par Martin** : le geste (un tour par vis, quatre vis), le prix (200 $), et le propriétaire — **pas
 fait** : le patron qui sort de la taverne ouverte la nuit serait la vague d'après.
 
+### Vague 6 — le propriétaire qui sort (1er oct. 2026 — Martin : « le propriétaire qui sort de son commerce quand on dévisse »)
+
+Martin a validé le geste (quatre vis), le prix (200 $) et le mur de la planque. Ce qui vient : **pendant qu'on
+dévisse (ou quand l'enseigne tombe), le propriétaire du commerce sort par sa porte, en pyjama ou en robe de
+chambre.** Il crie (une ou deux répliques en bulle, une voix générique si c'est bon marché), puis, selon son
+**tempérament** — tiré à l'empreinte du commerce, jamais au dé —, il te court après ou il appelle la police. Il
+naît hors de la suite des identifiants de la ville, avec un dé prêté (comme les passants donneurs), et rentre
+chez lui après. On peut l'assommer (un délit de plus) ou se sauver. Pas toutes les enseignes : certaines sont
+muettes la nuit (fermé, personne en haut), à l'empreinte. Le ton d'[écrire drôle](../ecrire-drole.md) : jamais
+méchant.
+
 ## Notes
 
 ### Vague 1 — les cartes de hockey (✅ livrée le 30 sept. 2026)
