@@ -231,6 +231,10 @@ VISAGES: dict[str, dict] = {
     # L'inspectrice Roy (r02) : la tête longue, le chignon serré, le veston marine, l'insigne, et les cernes de qui
     # mange seule dans son char.
     "roy": _v("longue", "chignon", "veston", signes=("insigne", "cernes")),
+    # Mme Thérèse Beaulieu (e03), la promeneuse des Érables : la permanente blanche, les lunettes rondes au bout d'une
+    # chaînette, le gilet mauve tricoté par sa sœur, les joues roses du grand air — et les rides de quarante ans de
+    # promenades de chien.
+    "beaulieu": _v("ronde", "permanente", "gilet", lunettes="rondes", signes=("rides", "fard", "boucles")),
     "maitre": _v("ronde", "degarnie", "blouse", chapeau="canotier", signes=("rides", "sourcils_epais"),
                  t="#e6d49a"),
 }

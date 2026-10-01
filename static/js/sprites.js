@@ -7143,6 +7143,31 @@ const BETES_EN_MOUVEMENT = {
     ],
     sursaut: [{ etire: 0.85, rebond: 0.8, avant: [[0.6, 0], [1.2, 0]], arriere: [[-0.4, 0], [0.4, 0]], queue: [-4, -2.5] }],
   },
+  // ⚠️ LE CHIEN (Biscuit, e03 — 1er oct. 2026 : le premier chien du jeu). Le même squelette, plus haut sur pattes et
+  // plus long que le chat ; ce qui le NOMME, vu de la rue : les OREILLES QUI TOMBENT (pas les pointes du chat), le
+  // MUSEAU qui dépasse, le POITRAIL blanc, et la QUEUE EN L'AIR qui remue — un chien content court la queue haute.
+  // Biscuit est couleur biscuit : un blond roux, le dos plus foncé.
+  chien: {
+    teintes: { dos: '#a8743e', flanc: '#c98f52', ventre: '#8a5c2e', patte: '#7a4e26', loin: '#5e3b1c',
+               tete: '#c98f52', oreille: '#6e4420', museau: '#e8d2b0', poitrail: '#f0e2c8', oeil: '#1c1410',
+               nez: '#1c1410', langue: '#d8606a', queue: '#a8743e' },
+    long: 6.2, epais: 2.8, jambe: 4.2, tete: 2.6, queue: 5, queueEpais: 1,
+    // Le GALOP du chien : plus allongé que celui du chat, la queue tendue derrière.
+    fuit: [
+      { etire: 1.12, rebond: -1.4, avant: [[5.0, -1.4], [3.8, -2.4]], arriere: [[-5.0, -1.2], [-3.6, -2.2]], queue: [-5, -2] },
+      { etire: 1.00, rebond: 0.0, avant: [[1.4, 0], [2.8, 0]], arriere: [[-3.0, -2.6], [-2.0, -3.0]], queue: [-5, -3] },
+      { etire: 0.84, rebond: -0.6, avant: [[-0.9, 0], [0.3, -0.9]], arriere: [[1.4, 0], [0.5, -0.7]], queue: [-4.5, -3.5] },
+      { etire: 0.96, rebond: 0.0, avant: [[3.2, -2.4], [2.2, -3.2]], arriere: [[-2.4, 0], [-3.8, 0]], queue: [-5, -2.5] },
+    ],
+    // Le TROT de promenade : la queue HAUTE, qui remue d'une image à l'autre.
+    marche: [
+      { etire: 1.0, rebond: 0, avant: [[1.6, 0], [-0.6, 0]], arriere: [[-1.6, 0], [0.6, 0]], queue: [-2.5, -5] },
+      { etire: 1.0, rebond: -0.4, avant: [[0.6, -1.2], [0.9, 0]], arriere: [[-0.6, 0], [-0.9, -1.2]], queue: [-1.5, -5.5] },
+      { etire: 1.0, rebond: 0, avant: [[-0.6, 0], [1.6, 0]], arriere: [[0.6, 0], [-1.6, 0]], queue: [-2.5, -5] },
+      { etire: 1.0, rebond: -0.4, avant: [[0.9, 0], [0.6, -1.2]], arriere: [[-0.9, -1.2], [-0.6, 0]], queue: [-3.5, -4.5] },
+    ],
+    sursaut: [{ etire: 0.8, rebond: 1.0, avant: [[0.9, 0], [1.7, 0]], arriere: [[-0.7, 0], [0.4, 0]], queue: [-2, -5.5] }],
+  },
 };
 
 /** Un crayon au pixel : tout se pose en ARRONDI, rien ne s'antialiase. */
@@ -7206,13 +7231,25 @@ function peindreBeteEnMouvement(ctx, espece, cle) {
     }
     // Le corps.
     cr.ovale(cx, cy, a, f.epais, T.dos, T.flanc, T.ventre);
-    if (!T.anneau) for (let x = Math.round(cx - a + 2); x < cx + a - 2; x += 2) cr.px(x, Math.round(cy - f.epais + 0.6), T.rayure);
+    if (T.rayure) for (let x = Math.round(cx - a + 2); x < cx + a - 2; x += 2) cr.px(x, Math.round(cy - f.epais + 0.6), T.rayure);
     // Les pattes du cote PROCHE, par-dessus le ventre.
     cr.ligne(epaule[0], epaule[1], epaule[0] + im.avant[0][0], SOL + im.avant[0][1], T.patte);
     cr.ligne(hanche[0], hanche[1], hanche[0] + im.arriere[0][0], SOL + im.arriere[0][1], T.patte);
     // La tete, en avant du corps, un peu plus haut ; les oreilles ; l'oeil ; le museau.
     const hx = cx + a + f.tete * 0.55, hy = cy - f.epais * 0.55;
+    if (T.poitrail) cr.ovale(cx + a - 0.8, cy + 0.6, 1.6, f.epais * 0.7, T.poitrail, T.poitrail, T.poitrail);
     cr.ovale(hx, hy, f.tete, f.tete * 0.9, T.tete, T.tete, T.flanc);
+    if (T.oreille) {
+      // LE CHIEN : le museau qui dépasse devant, la truffe au bout, l'oreille qui TOMBE derrière l'œil (elle bat au
+      // galop), et la langue qui pend quand il court.
+      cr.ovale(hx + f.tete + 0.6, hy + 0.7, 1.5, 1.1, T.museau, T.museau, T.museau);
+      cr.px(hx + f.tete + 1.8, hy + 0.2, T.nez);
+      const bat = allure === 'fuit' ? [0, -1, 0, 1][(+n || 0) % 4] : 0;
+      cr.ligne(hx - 1.2, hy - f.tete + 0.6, hx - 1.8, hy + 1.2 + bat * 0.5, T.oreille, 2);
+      if (allure === 'fuit') cr.px(hx + f.tete + 0.8, hy + 2.0, T.langue);
+      cr.px(hx + 0.6, hy - 0.6, T.oeil);
+      return;
+    }
     cr.px(hx - 1, hy - f.tete - 0.6, T.ventre); cr.px(hx + 0.6, hy - f.tete - 0.6, T.ventre);
     if (T.masque) {
       // LE MASQUE du raton : une bande noire sur les yeux, le museau blanc devant.
@@ -7257,12 +7294,22 @@ function peindreBeteEnMouvement(ctx, espece, cle) {
       cr.px(x, y, Math.abs(dx) < 0.45 ? T.dos : Math.abs(dx) < 0.8 ? T.flanc : T.ventre);
     }
   }
-  if (!T.anneau) for (let y = Math.round(cy - lg + 2); y < cy + lg - 1; y += 2) { cr.px(cx - 1, y, T.rayure); cr.px(cx + 1, y, T.rayure); }
+  if (T.rayure) for (let y = Math.round(cy - lg + 2); y < cy + lg - 1; y += 2) { cr.px(cx - 1, y, T.rayure); cr.px(cx + 1, y, T.rayure); }
   // La tete, du cote ou il va.
   const hy = face ? cy + lg + 0.5 : cy - lg - 0.5;
   cr.ovale(cx, hy, f.tete, f.tete * 0.85, T.tete, T.tete, T.flanc);
-  // Les oreilles, du cote de la nuque : vers le corps.
+  // Les oreilles, du cote de la nuque : vers le corps. ⚠️ Le chien les a TOMBANTES, de chaque côté de la tête.
   const oy = face ? hy - f.tete * 0.8 : hy + f.tete * 0.2 - 1;
+  if (T.oreille) {
+    cr.ligne(cx - f.tete - 0.4, hy - 1, cx - f.tete - 0.6, hy + 1.5, T.oreille, 1);
+    cr.ligne(cx + f.tete - 0.2, hy - 1, cx + f.tete, hy + 1.5, T.oreille, 1);
+    if (face) {
+      cr.ovale(cx, hy + 1.6, 1.4, 1.0, T.museau, T.museau, T.museau);
+      cr.px(cx - 1.2, hy - 0.5, T.oeil); cr.px(cx + 0.8, hy - 0.5, T.oeil);
+      cr.px(cx - 0.2, hy + 2.0, T.nez);
+    }
+    return;
+  }
   cr.px(cx - f.tete + 0.3, oy, T.ventre); cr.px(cx + f.tete - 0.8, oy, T.ventre);
   if (face) {
     if (T.masque) { cr.ligne(cx - f.tete + 0.3, hy - 0.3, cx + f.tete - 0.3, hy - 0.3, T.masque); cr.px(cx - 0.5, hy + 0.8, T.museau); }
@@ -8308,6 +8355,40 @@ const DECORS = {
   } },
   raton_bouge: { solide: false, r: 0, variantes: 1, w: 28, h: 18, ancre: [14, 15], peindre: function (ctx, w, h, v) {
     peindreBeteEnMouvement(ctx, 'raton', v || 'fuit|droite|0');
+  } },
+  chien_bouge: { solide: false, r: 0, variantes: 1, w: 28, h: 18, ancre: [14, 15], peindre: function (ctx, w, h, v) {
+    peindreBeteEnMouvement(ctx, 'chien', v || 'fuit|droite|0');
+  } },
+  // LE CHIEN ASSIS (Biscuit, e03), vu d'en haut et un peu de face : assis sur son derrière, le poitrail blanc, les
+  // oreilles qui tombent, la queue qui balaie le trottoir (variante 0 ou 1 : elle bat d'un côté à l'autre). Variante 2 :
+  // ÉPUISÉ, couché le menton sur les pattes, la langue sortie.
+  chien: { solide: false, r: 0, variantes: 3, w: 16, h: 16, ancre: [8, 13], peindre: function (ctx, w, h, v) {
+    const T = BETES_EN_MOUVEMENT.chien.teintes;
+    ctx.fillStyle = 'rgba(20,18,26,0.24)'; ctx.fillRect(3, 13, 10, 2);        // son ombre
+    if (v === 2) {
+      ctx.fillStyle = T.ventre; ctx.fillRect(3, 8, 10, 5);                     // couché, allongé
+      ctx.fillStyle = T.dos; ctx.fillRect(3, 8, 9, 3);
+      ctx.fillStyle = T.patte; ctx.fillRect(4, 12, 2, 1); ctx.fillRect(10, 12, 2, 1);
+      ctx.fillStyle = T.tete; ctx.fillRect(5, 10, 6, 3);                       // la tête sur les pattes
+      ctx.fillStyle = T.oreille; ctx.fillRect(4, 10, 1, 3); ctx.fillRect(11, 10, 1, 3);
+      ctx.fillStyle = T.museau; ctx.fillRect(7, 12, 2, 1);
+      ctx.fillStyle = T.oeil; ctx.fillRect(6, 11, 1, 1); ctx.fillRect(9, 11, 1, 1);
+      ctx.fillStyle = T.langue; ctx.fillRect(8, 13, 1, 1);
+      ctx.fillStyle = T.queue; ctx.fillRect(13, 9, 2, 1);
+      return;
+    }
+    // La queue qui balaie, derrière lui.
+    ctx.fillStyle = T.queue;
+    if (v === 1) { ctx.fillRect(11, 11, 3, 1); ctx.fillRect(13, 10, 1, 1); } else { ctx.fillRect(2, 11, 3, 1); ctx.fillRect(2, 10, 1, 1); }
+    ctx.fillStyle = T.ventre; ctx.fillRect(4, 6, 8, 7);                        // le corps assis, ramassé
+    ctx.fillStyle = T.dos; ctx.fillRect(4, 6, 7, 6);
+    ctx.fillStyle = T.poitrail; ctx.fillRect(6, 8, 4, 4);                      // le poitrail blanc
+    ctx.fillStyle = T.patte; ctx.fillRect(5, 12, 2, 1); ctx.fillRect(9, 12, 2, 1);   // les pattes de devant
+    ctx.fillStyle = T.tete; ctx.fillRect(5, 2, 6, 5);                          // la tête
+    ctx.fillStyle = T.oreille; ctx.fillRect(4, 2, 1, 4); ctx.fillRect(11, 2, 1, 4);  // les oreilles qui tombent
+    ctx.fillStyle = T.museau; ctx.fillRect(6, 5, 4, 2);                        // le museau
+    ctx.fillStyle = T.nez; ctx.fillRect(7, 5, 2, 1);                           // la truffe
+    ctx.fillStyle = T.oeil; ctx.fillRect(6, 3, 1, 1); ctx.fillRect(9, 3, 1, 1);   // les yeux
   } },
   // La bete ECRASEE sous un char (`Entites.ecraserBete`) : a plat, deux variantes (la tete a droite ou a gauche).
   chat_ecrase: { solide: false, r: 0, variantes: 2, w: 22, h: 10, ancre: [11, 7], peindre: function (ctx, w, h, v) {

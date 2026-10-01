@@ -2603,6 +2603,29 @@ const Entites = (function () {
     return { decor: decor, allure: allure, dir: dir, image: image, cle: allure + '|' + dir + '|' + image };
   }
 
+  /** ⚠️ UN PIÉTON QU'ON PEINT EN BÊTE (1er oct. 2026, Biscuit — e03, `chercher` avec `bete`) : ce n'est pas une bête de
+      la ruelle (`B.betes`, qui ne compte pour rien) — il doit SUIVRE, monter dans le char, être ramené : un piéton,
+      intouchable, né hors de la suite des numéros. Il se dessine avec les peintres des bêtes : assis immobile (la queue
+      qui balaie, ou couché s'il est épuisé), au trot ou au galop selon sa vitesse, dans le sens où il va ; l'image se
+      lit à la DISTANCE parcourue (`anim.dist`), comme les bêtes — un chien bloqué ne court pas sur place. */
+  function poseDePietonBete(e) {
+    const vit = Math.hypot(e.vx || 0, e.vy || 0);
+    if (vit < 0.15) return { decor: e.bete, cle: e.epuise ? 2 : ((B.t + e.id) >> 4) & 1 };
+    const allure = vit > 1.7 ? 'fuit' : 'marche';
+    e.dir = directionDeBete(e);
+    const cycle = allure === 'fuit' ? 28 : 20;
+    const image = Math.floor(((e.anim && e.anim.dist) || 0) / (cycle / 4)) % 4;
+    return { decor: e.bete + '_bouge', cle: allure + '|' + e.dir + '|' + image };
+  }
+
+  function dessinerUnPietonBete(ctx, e, cx, cy) {
+    const p = poseDePietonBete(e), d = DECORS[p.decor];
+    if (!d) return;
+    const c = Atlas.cuirePeintre('decor|' + p.decor + '|' + p.cle, d.w, d.h, function (g, w, h) { d.peindre(g, w, h, p.cle); });
+    ctx.drawImage(c, Math.round(e.x - d.ancre[0] - cx), Math.round(e.y + 3 - d.ancre[1] - cy));
+    B.stats.images++;
+  }
+
   /** Une tuile ou une bete qui se sauve peut poser la patte. */
   function libreAuxPattes(x, y) { return Monde.marchablePieton(Math.floor(x / TT), Math.floor(y / TT)); }
 
@@ -6448,6 +6471,9 @@ const Entites = (function () {
         B.stats.images++;
         continue;
       }
+      // ⚠️ UN PIÉTON QU'ON PEINT EN BÊTE (`e.bete`, Biscuit — e03) : il marche, suit, se sauve et monte dans le char comme
+      // un escorté, mais c'est un chien qu'on voit.
+      if (e.bete && DECORS[e.bete]) { dessinerUnPietonBete(ctx, e, cx, cy); continue; }
       const img = imageDe(e);
       if (!img) continue;
       // ⚠️ Un nageur n'a pas d'ombre au sol, il a un REMOUS — et son corps est
@@ -6511,7 +6537,7 @@ const Entites = (function () {
     naitreLesEnfantsDeLaPlage, majPlage, plierBagage, naitreLeLastCall, chicaner, majCamelot, prochainPerron,
     poserLeJournal, rentrerLesJournaux, fairePartirUnRaton, bordDeLEau, chateauLePlusProche, majBallonVol, lancerLeBallon,
     naitreLesEnfantsAVelo, placeDEnfantAVelo, roulableEnfant, resterSurLeTrottoir,
-    naitreLesBetes, betesVivantes, ecraserBete, majBete, majLesBetes, chezElle, placeDeBete, betes, dessinerBetes, poseDeBete, directionDeBete, sEnvoler,
+    naitreLesBetes, poseDePietonBete, betesVivantes, ecraserBete, majBete, majLesBetes, chezElle, placeDeBete, betes, dessinerBetes, poseDeBete, directionDeBete, sEnvoler,
     naitreLaFoire, majForain, majMascotte, placeDansLaFoire, destinationDeFoire, estFemme,
     bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe, mousse,
     particule, sang, poussiere, decal, majParticules,

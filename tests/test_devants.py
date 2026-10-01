@@ -223,7 +223,8 @@ AIR = {0: 2, 1: 3, 2: 5, 3: 7, 4: 9}
 
 def _abribus_colles(ville: dict) -> list[str]:
     """Les arrêts dont l'abri ou le banc est dans l'air d'une porte de lieu de mission."""
-    donneurs = Counter(p["ou"][6:] for p in missions.PERSONNAGES if p["ou"].startswith("porte:"))
+    # ⚠️ Sans ceux qui sont DE PASSAGE (`de_passage`, Mme Beaulieu au dépanneur) : ils ne font pas glisser l'abribus.
+    donneurs = Counter(p["ou"][6:] for p in missions.PERSONNAGES if p["ou"].startswith("porte:") and not p.get("de_passage"))
     lieux = devants.lieux_de_mission(ville)
     portes = [p for p in ville["portes"] if p["lieu"] in lieux]
     trop = {lieu: n for lieu, n in donneurs.items() if n not in AIR}

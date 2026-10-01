@@ -1604,3 +1604,35 @@ catalogue.
     cette barrière tient) ; mutations : l'offre à toute heure, la chaîne qui n'attend pas, `depose` et `a_pied`
     ignorés, la barrière muette, l'erreur hors job retirée, le septième champ retiré — rouges.
   - **Voix** : 15 (≈ 1 340 caractères), générées, pas écoutées.
+- **1er oct. 2026 : vague 25 — Biscuit s'est sauvé (`e03`, Mme Beaulieu — 80 $), et le premier chien du jeu.**
+  - **Le chien** : `sprites.js` — `chien` (assis, la queue qui balaie ; couché, épuisé, la langue sortie) et
+    `chien_bouge` (le squelette des bêtes qui courent, `BETES_EN_MOUVEMENT.chien` : plus haut sur pattes que le chat, les
+    OREILLES QUI TOMBENT, le museau, le poitrail blanc, la queue haute qui remue au trot, tendue au galop). Ce n'est pas
+    une bête de la ruelle (`B.betes`, qui ne compte pour rien) : il doit suivre, monter dans le char, être ramené — un
+    PIÉTON peint en bête (`e.bete`, `Entites.poseDePietonBete` : assis, au trot, au galop, dans le sens où il va, l'image
+    à la distance parcourue). Capture : `captures/chien-planche.png`, `biscuit-fugue.png`, `biscuit-assis-zoom.png`.
+  - **`chercher` apprend la bête** (`bete`, `se_sauve`) : on la VOIT (pas cachée, la flèche la montre) ; à pied, à
+    moins de quatre tuiles, elle DÉTALE à l'opposé, plus vite que ton sprint, vers une place à l'empreinte (sept
+    détours fixes, une ligne libre ; coincée, elle s'arrête là) ; au volant, elle ne bouge pas ; après `se_sauve`
+    fugues, elle se couche — à deux pas, on l'attrape et elle nous suit comme un escorté (`Histoire.majFugue`).
+  - **Mme Thérèse Beaulieu** (fiche `docs/personnages/beaulieu.md`, visage — permanente blanche, lunettes rondes, gilet
+    mauve — qui cligne comme tous les portraits) : devant le dépanneur (le seul lieu de mission des Érables), après m6.
+    Voix : **Caroline** (partagée avec Mado), choisie à l'audition contre Julia et Grandma Clo (Scribe : seule
+    Caroline dit « pis », les deux autres « puis ») — **à valider par Martin** : `captures/audition-beaulieu-*.mp3`.
+  - **Après e03** (`chien: e03` dans sa fiche, `static/js/biscuit.js`) : Biscuit est assis à ses pieds ; à pied, passe
+    près de lui, il te suit dans les Érables ; en char, hors de son coin ou trop loin d'elle, il rentre s'asseoir. Né à
+    l'empreinte (un dé prêté, un numéro hors de la suite) : la ville ne glisse pas.
+  - ⚠️ **Un cinquième donneur au dépanneur faisait glisser la ville** : l'air d'un arrêt d'autobus s'élargit de deux
+    tuiles par donneur à la porte (`devants.air_d_un_arret`), et l'abribus du dépanneur glissait sur la place de Ti-Paul
+    (`test_donneurs_visibles_js`, rouge). Mme Beaulieu est **de passage** (`de_passage` : elle se tient à la porte, mais
+    ne compte pas dans l'air) — la ville est la même, au hachage près, qu'avant la vague.
+  - ⚠️ Biscuit marche **sur tes pas** (une piste, le motif de l'escorté) et **rentre par où il est venu** : en ligne
+    droite, l'édicule du métro entre la rue et Mme Beaulieu l'arrêtait à trois tuiles d'elle, pour toujours.
+  - ⚠️ Écart à la fiche : le chien n'a pas de jappement (un « WOUF! » en bulle seulement) ; « puis déménage » (sa fiche)
+    n'a aucune mission.
+  - **Juges** : `tests/test_biscuit_js.py` (trois : e03 au bouton — vu au bois du phare, trois fugues à l'opposé, rien
+    au volant, épuisé il se laisse prendre, pas de retour sans lui, la prime ; après e03, à ses pieds, il te suit à
+    pied, rentre quand on monte en char, sans un dé ni un numéro ; avant e03, pas de chien) ; mutations : jamais de
+    fugue, épuisé d'emblée, il fuit le char, né du dé de la ville, il suit en char, présent avant e03, peint en chat —
+    rouges.
+  - **Voix** : 8 (≈ 810 caractères) + 3 auditions (384), générées, pas écoutées.

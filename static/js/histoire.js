@@ -2634,6 +2634,8 @@ const Histoire = (function () {
         const c = B.mission.cachette;
         if (!c || !c.e) { avancer(); return; }          // une partie rouverte : personne à chercher, l'étape passe
         const e = c.e, d = Math.hypot(e.x - j.x, e.y - j.y);
+        // Une BÊTE (Biscuit, e03) ne se cache pas : on la voit, et elle SE SAUVE (`majFugue`).
+        if (e.bete) { majFugue(c, o, j, d); return; }
         if (!j.dansVehicule && d < CACHETTE_TROUVE_PX) { trouver(c, o); avancer(); return; }
         B.mission.attend = texteDObjectif(o) + ' — ' + (d < 3 * TT ? 'BRÛLANT' : d < 6 * TT ? 'CHAUD' : d < 10 * TT ? 'TIÈDE' : 'FROID');
         return;
@@ -3031,19 +3033,23 @@ const Histoire = (function () {
         if (!Monde.marchablePieton(tx, ty) || Monde.estChaussee(tx, ty) || Monde.estEau(tx, ty) || Monde.devantDUnePorte(tx, ty)) continue;
         let murs = 0;
         for (const v of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (Monde.bloque(tx + v[0], ty + v[1], Monde.MASQUE_PIETON)) murs++;
-        if (murs) places.push({ x: tx * TT + 8, y: ty * TT + 8 });
+        // Une bête (`bete`) ne se colle pas aux murs : elle court dans les bois, n'importe où on peut marcher.
+        if (murs || o.bete) places.push({ x: tx * TT + 8, y: ty * TT + 8 });
       }
     }
     if (!places.length) return null;
     const graine = hash2((p.jour || 0) + 1, hash2(m.slug.length, m.slug.charCodeAt(0) * 31 + m.slug.charCodeAt(m.slug.length - 1)));
     const l = places[graine % places.length];
-    const base = Entites.archetype(o.qui);
-    const arch = Object.assign({}, base, { accompagne: null, argent: [0, 0], intouchable: true });
+    // Une bête n'a pas d'archétype à elle : le corps d'un passant (sa vitesse, sa vie), qu'on peint en bête (`e.bete`).
+    const base = Entites.archetype(o.qui || 'passant');
+    const arch = Object.assign({}, base, { accompagne: null, argent: [0, 0], intouchable: true, tenue: null });
     const e = Entites.enDehorsDeLaSuite(function () {
       return sansLeDe(graine, function () { return Entites.creerPieton(l.x, l.y, arch); });
     });
     e.etat = 'fige'; e.intouchable = true; e.dessine = false; e.cache = true; e.mission = m.slug;
     e.nomDeMission = o.nom || null; e.plante = null; e.courage = 0;
+    // ⚠️ UNE BÊTE ON LA VOIT (Biscuit) : pas cachée, elle attend qu'on approche — et elle se sauve `se_sauve` fois.
+    if (o.bete) { e.bete = o.bete; e.dessine = true; e.cache = false; e.fugues = 0; e.epuise = !(o.se_sauve > 0); }
     B.mission.entites.push(e);
     B.mission.cachette = { e: e, x: c.x, y: c.y, r: r * TT };
     Entites.indexer();
@@ -3053,10 +3059,77 @@ const Histoire = (function () {
   /** Trouvé : il sort de sa cachette, et il nous suit comme un escorté (`majProtege`). */
   function trouver(c, o) {
     const e = c.e, j = B.joueur;
-    e.dessine = true; e.cache = false; e.trouve = true; e.suit = j;
+    e.dessine = true; e.cache = false; e.trouve = true; e.suit = j; e.fugue = null;
     e.vitesseSuite = B.defs.recherche.vitesses.joueur_sprint;
     B.mission.protege = e; B.mission.attend = null;
-    Hud.message('TROUVÉ' + (o.nom ? ' : ' + o.nom : '') + ' — IL TE SUIT', 150);
+    Hud.message((e.bete ? 'ATTRAPÉ' : 'TROUVÉ') + (o.nom ? ' : ' + o.nom : '') + ' — IL TE SUIT', 150);
+  }
+
+  // --- Une bête qui se sauve (`chercher` avec `bete`, Biscuit — e03) ---------------------------
+
+  //: À pied, plus près que ça, il détale. Au volant, il ne bouge pas : un char ne l'attrape pas.
+  const FUGUE_PX = 4 * TT;
+  //: Il court jusqu'à tant de tuiles de là où il était, à l'opposé de toi — plus vite que ton sprint.
+  const FUGUE_TUILES = 8, FUGUE_VITESSE = 1.25;
+  //: Il renonce à sa place s'il ne l'atteint pas en tant d'images (un coin, un banc de neige).
+  const FUGUE_MAX_T = 360;
+
+  /** ⚠️ IL SE SAUVE `se_sauve` FOIS, puis il est épuisé (1er oct. 2026, e03 — Martin : « un chien qui suit ou se
+      sauve »). À pied, à moins de `FUGUE_PX`, il détale vers une place à l'empreinte, à l'opposé du joueur ; arrivé, il
+      s'assoit et attend qu'on revienne. Après sa dernière fugue, il se couche, la langue sortie : à deux pas, on
+      l'attrape (`trouver`), et il nous suit comme un escorté. Sans dé : la place vient de l'angle et d'une liste fixe de
+      détours. */
+  function majFugue(c, o, j, d) {
+    const e = c.e;
+    if (e.fugue) {
+      const arrive = Math.hypot(e.x - e.fugue.x, e.y - e.fugue.y) < B.defs.pietons.reactions.suite_distance_px + 6;
+      // Coincé (un coin de clôture, un banc de neige) : il ne court pas sur place, il s'arrête là.
+      const r = e.fugueRepere || (e.fugueRepere = { x: e.x, y: e.y, t: B.t });
+      let coince = false;
+      if (B.t - r.t >= 30) { coince = Math.hypot(e.x - r.x, e.y - r.y) < 6; e.fugueRepere = { x: e.x, y: e.y, t: B.t }; }
+      if (arrive || coince || B.t - e.fugueT > FUGUE_MAX_T) {
+        e.fugueRepere = null;
+        e.fugue = null; e.suit = null; e.vx = 0; e.vy = 0; e.plante = null; e.etat = 'fige';
+        if (e.fugues >= (o.se_sauve || 0)) e.epuise = true;
+        B.mission.attend = texteDObjectif(o) + (e.epuise ? ' — ÉPUISÉ : ATTRAPE-LE' : ' — APPROCHE DOUCEMENT');
+        return;
+      }
+      B.mission.attend = texteDObjectif(o) + ' — IL SE SAUVE';
+      return;
+    }
+    if (e.epuise) {
+      B.mission.attend = texteDObjectif(o) + ' — ÉPUISÉ : ATTRAPE-LE';
+      if (!j.dansVehicule && d < CACHETTE_TROUVE_PX) { trouver(c, o); avancer(); }
+      return;
+    }
+    B.mission.attend = texteDObjectif(o) + ' — APPROCHE DOUCEMENT';
+    if (j.dansVehicule || d > FUGUE_PX) return;
+    const l = placeDeFugue(e, j);
+    if (!l) { e.epuise = true; return; }
+    e.fugues++; e.fugue = l; e.fugueT = B.t;
+    e.suit = { x: l.x, y: l.y, vivant: true };
+    e.vitesseSuite = B.defs.recherche.vitesses.joueur_sprint * FUGUE_VITESSE;
+    B.mission.attend = texteDObjectif(o) + ' — IL SE SAUVE';
+  }
+
+  /** Où il détale : à `FUGUE_TUILES` de lui, dans le sens joueur → lui, ou en biais si c'est un mur (cinq détours
+      fixes) ; une tuile où l'on marche, pas l'eau, et une ligne droite libre pour y courir. */
+  function placeDeFugue(e, j) {
+    const base = Math.atan2(e.y - j.y, e.x - j.x);
+    for (const da of [0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8]) {
+      for (const n of [FUGUE_TUILES, FUGUE_TUILES - 3]) {
+        const x = e.x + Math.cos(base + da) * n * TT, y = e.y + Math.sin(base + da) * n * TT;
+        const tx = Math.floor(x / TT), ty = Math.floor(y / TT);
+        if (!Monde.marchablePieton(tx, ty) || Monde.estEau(tx, ty)) continue;
+        let libre = true;
+        for (let k = 1; k < n * 2 && libre; k++) {
+          const px = e.x + (x - e.x) * k / (n * 2), py = e.y + (y - e.y) * k / (n * 2);
+          if (Monde.bloque(Math.floor(px / TT), Math.floor(py / TT), Monde.MASQUE_PIETON) || Monde.estEau(Math.floor(px / TT), Math.floor(py / TT))) libre = false;
+        }
+        if (libre) return { x: tx * TT + 8, y: ty * TT + 8 };
+      }
+    }
+    return null;
   }
 
   // --- Celui qu'on escorte (`proteger`) ---------------------------------------------------
@@ -4033,7 +4106,9 @@ const Histoire = (function () {
       // `chercher` : la flèche mène au coin où il se cache — pas à LUI ; arrivé dans le coin, elle se tait (on cherche).
       else if (o.type === 'chercher') {
         const c = B.mission && B.mission.cachette;
-        l = c && Math.hypot(c.x - j.x, c.y - j.y) > c.r ? { x: c.x, y: c.y, nom: o.nom || texteDObjectif(o) } : null;
+        // Une BÊTE se voit : la flèche la montre, elle (Biscuit).
+        if (c && c.e && c.e.bete) l = c.e;
+        else l = c && Math.hypot(c.x - j.x, c.y - j.y) > c.r ? { x: c.x, y: c.y, nom: o.nom || texteDObjectif(o) } : null;
       }
       else if (o.type === 'ramasser') l = B.mission && (B.mission.entites.find(function (e) { return e.objet === 'caisse'; }) || B.mission.entites.find(function (e) { return e.porteLaCaisse && e.vivant && e.etat !== 'assomme'; }) || (!B.mission.fuyardTombe ? B.mission.fuyard : null));
       else if (o.type === 'tuer') { const restants = B.mission ? B.mission.entites.filter(function (e) { return e.cible && e.vivant && e.etat !== 'assomme'; }) : []; l = restants[0] || null; }
@@ -4201,6 +4276,7 @@ const Histoire = (function () {
     majSaisonniers();
     majTelephone();
     Jobs.maj();
+    Biscuit.maj();
     majProtege();
     if (B.partie.mission) {
       if (!B.mission) B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0,

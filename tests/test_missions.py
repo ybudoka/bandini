@@ -11,7 +11,7 @@ def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
         "ti_guy", "thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu", "raymonde", "ovila",
         "mo", "fern", "mado", "gege", "xavier", "lachance", "gus", "rosa", "ginette", "gilles",
         "bonimenteur", "sven", "berube", "mireille", "jeanne", "leo", "norbert", "irene", "maitre", "cindy", "diane", "jo", "bilodeau", "zed", "trappeur", "tiloup", "boulon",
-        "prevost", "maire", "louise", "sal", "roy"]
+        "prevost", "maire", "louise", "sal", "roy", "beaulieu"]
     # Cindy n'est devant la cantine qu'entre q04 et q05, et q05 l'attend toujours : pas de repos, comme Ti-Guy.
     # Mireille (le DOJO DION) ouvre ses COURS a chaque fois : pas de repos, comme le -2 de Josee.
     # Ti-Guy s'en va apres m1 (il a m1 a donner tant qu'il est la) ; Josee ouvre le marche noir
@@ -21,13 +21,13 @@ def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
                                               "xavier", "lachance", "gus", "rosa", "ginette", "gilles",
                                               "bonimenteur", "sven", "berube", "jeanne", "leo", "norbert", "irene",
                                               "maitre", "diane", "bilodeau", "zed", "trappeur", "tiloup",
-                                              "boulon", "prevost", "maire", "sal", "roy")
+                                              "boulon", "prevost", "maire", "sal", "roy", "beaulieu")
                 for n in (1, 2)
                 # Le vieux maître n'arrive qu'après c04 (`arrive_apres`), bien après m5 : son premier repos ne
                 # s'entend jamais.
                 if (qui, n) not in (("josee", 2), ("maitre", 1), ("diane", 1), ("bilodeau", 1), ("zed", 1),
                                            ("trappeur", 1), ("tiloup", 1), ("boulon", 1), ("prevost", 1),
-                                           ("maire", 1), ("sal", 1), ("roy", 1))]
+                                           ("maire", 1), ("sal", 1), ("roy", 1), ("beaulieu", 1))]
     repos = missions.repliques_de_repos()
     assert [r["slug"] for r in repos] == attendus, "quarante-sept voix, pas quarante-huit"
     # ⚠️ Le même texte pour tous — sauf qui a le sien (`repos` : l'île, loin du Faubourg).
@@ -159,7 +159,8 @@ def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
                 assert o["type"] == "tuer" and arch and arch["frequence"] == 0.0, f"{m['slug']} : pieton {o['pieton']}"
             # `chercher` (t07) : celui qui se cache est un archétype de la rue (`qui`).
             if o["type"] == "chercher":
-                assert any(p["slug"] == o.get("qui") for p in pietons.CATALOGUE), f"{m['slug']} : qui se cache? {o.get('qui')}"
+                assert (any(p["slug"] == o.get("qui") for p in pietons.CATALOGUE)
+                        or o.get("bete") in missions.BETES_DE_MISSION), f"{m['slug']} : qui se cache? {o.get('qui')}"
             if o.get("vehicule"):
                 assert o["vehicule"] in {v["slug"] for v in __import__("app.vehicules", fromlist=["CATALOGUE"]).CATALOGUE}
         donne = m["donne"]

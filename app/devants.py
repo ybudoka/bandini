@@ -355,10 +355,12 @@ def _deplacer_les_reclames(chantier, ville: dict, larges: set, pris: set) -> tup
 
 
 def donneurs_dehors(lieu: str) -> int:
-    """Combien de personnages de l'histoire attendent DEHORS, à la porte de ce lieu (`porte:<lieu>`)."""
+    """Combien de personnages de l'histoire attendent DEHORS, à la porte de ce lieu (`porte:<lieu>`). ⚠️ Pas ceux qui
+    sont DE PASSAGE (`de_passage` : Mme Beaulieu et son chien, 1er oct. 2026) — un donneur de plus à une porte élargit
+    l'air de son arrêt d'autobus, et l'abribus du dépanneur glissait de deux tuiles : la ville d'avant changeait."""
     from . import missions
 
-    return sum(1 for p in missions.PERSONNAGES if p["ou"] == f"porte:{lieu}")
+    return sum(1 for p in missions.PERSONNAGES if p["ou"] == f"porte:{lieu}" and not p.get("de_passage"))
 
 
 def devant_des_arrets(ville: dict) -> set[tuple[int, int]]:

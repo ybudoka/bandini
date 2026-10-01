@@ -75,6 +75,7 @@ Chaque fiche mêle deux sortes de faits.
 | [Inspectrice Claudine Roy](roy.md) | `roy` | à son bureau du poste, dedans, après r01 | Kasandra (partagée avec Gisèle) | r02 · r03 · r06 · r08 |
 | [Ti-Rhéal Bergeron](ti-rheal.md) | `ti_rheal` | derrière sa table du marché aux puces, le dimanche matin | Christian Page - Narrative and Deep | aucune : son étal (hors de `PERSONNAGES`) |
 | [Gisèle Lachapelle](gisele.md) | `gisele` | derrière sa table du marché aux puces, le dimanche matin | Kasandra - Natural Quebecer UGC ad | aucune : son étal (hors de `PERSONNAGES`) |
+| [Mme Thérèse Beaulieu](beaulieu.md) | `beaulieu` | devant le dépanneur des Érables, après m6 ; Biscuit à ses pieds après e03 | Caroline (partagée avec Mado) | e03 |
 
 ⚠️ **Deux voix du compte ne se donnent à personne** : celles du scanner de police (Clara Dupont, la
 répartitrice, et Frederic, l'agent — `audio.VOIX_RESERVEES`, jugé). Avant de donner une voix à un

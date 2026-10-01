@@ -92,7 +92,14 @@ TYPES_OBJECTIFS = (
     # ligne d'objectif dit FROID, TIÈDE, CHAUD, BRÛLANT ; trouvé, il nous suit, et un `retourner` ne se fait pas sans
     # lui. Voir `Histoire.poserLaCachette`.
     "chercher",    # `qui` (un archétype), `ou`, `rayon` (def. 10), `nom`
+    # ⚠️ Ou une BÊTE (1er oct. 2026, e03 — Biscuit) : `bete` (une de `BETES_DE_MISSION`, à la place de `qui`) — on la
+    # VOIT (elle ne se cache pas), la flèche la montre, et elle SE SAUVE `se_sauve` fois quand on l'approche à pied,
+    # puis elle s'épuise et se laisse prendre ; elle nous suit ensuite comme un escorté (`Histoire.majFugue`).
 )
+
+#: Les bêtes qu'une mission fait chercher (`chercher`, `bete`) : un piéton peint en bête (`Entites.poseDePietonBete`) —
+#: le chien de Mme Beaulieu (e03). Chacune a ses peintres dans `sprites.js` : `<bete>` (assis) et `<bete>_bouge`.
+BETES_DE_MISSION = ("chien",)
 
 #: Ce qu'un objet de mission a l'air, par terre (`OBJETS` de `static/js/sprites.js`, que `Entites`
 #: sait peindre au sol). ⚠️ Un dessin inconnu se peindrait en sac : le juge le refuse.
@@ -178,6 +185,13 @@ class Personnage(TypedDict):
     # guérite donne sur le lot, derrière le grillage — Gilles, le gardien, et Ti-Loup, qui y achète les épaves).
     # Retour de Martin (30 sept. 2026) : ils se tenaient dehors, collés à Gros-Boulon (`histoire.js::placeDansLaCour`).
     dans_la_cour: NotRequired[bool]
+    # SON CHIEN (1er oct. 2026, Mme Beaulieu et Biscuit) : la mission après laquelle il est à ses pieds, et te suit à
+    # pied dans son district (`static/js/biscuit.js`). Avant, il s'est sauvé — c'est la mission.
+    chien: NotRequired[str]
+    # DE PASSAGE (1er oct. 2026, les personnages ajoutés à une porte déjà prise) : il se tient à la porte comme les autres
+    # (`Histoire.placeVisible`), mais ne compte pas dans l'air de l'arrêt d'autobus (`devants.donneurs_dehors`) — sans
+    # ça, chaque donneur de plus fait glisser l'abribus, et la ville d'avant change.
+    de_passage: NotRequired[bool]
     # Son repos à lui, au lieu de `REPOS` : `(avant, après)`, avant et après `REPOS["apres"]`.
     # ⚠️ Pour qui vit LOIN du Faubourg — « le Faubourg est tranquille », dit sur l'île, ment.
     repos: NotRequired[tuple[str, str]]
@@ -467,6 +481,14 @@ PERSONNAGES: list[Personnage] = [
     # ORDINAIRE, pas un personnage de l'histoire. Deux RÔLES, comme le client du taxi (`civil`) : ils ne se tiennent
     # nulle part (`ou` vide — `static/js/jobs.js` en fait naître un dans la rue, de l'archétype que la mission nomme,
     # `passant`), ne se présentent pas, et parlent avec les voix des passants de la rue (`audio.VOIX_PAR_GENRE`).
+    # --- Mme Beaulieu (1er oct. 2026, e03) : la promeneuse des Érables, et Biscuit, son chien. Devant le dépanneur (le
+    # seul lieu de mission des Érables : aucune tuile ne bouge), après m6 (`arrive_apres` : un personnage posé dès
+    # l'ouverture décalerait les identifiants de la ville). `chien` : la mission après laquelle Biscuit est à ses
+    # pieds (`static/js/biscuit.js`) — et te suit, à pied, dans les Érables.
+    {"slug": "beaulieu", "nom": "Mme Thérèse Beaulieu", "genre": "femme", "voix": "Caroline - Soft Quebec accent",
+     "couleurs": {"c": "#7a4a6a", "h": "#d8d4d0", "s": "#f0c8a8", "p": "#4a4a5a"}, "ou": "porte:depanneur",
+     "heler": "Ouhou! Vous!", "arrive_apres": "m6", "chien": "e03", "de_passage": True,
+     "repos": ("Biscuit dort.", "Biscuit dort sur le divan. Moi, je surveille les écureuils.")},
     {"slug": "passant", "nom": "Un passant", "genre": "homme", "voix": "Felix Tabarnak - Confident and Witty",
      "couleurs": {"c": "#7a6a52", "h": "#3a2a1a", "s": "#e8b088", "p": "#2a2a3a"}, "ou": "", "heler": "Hé! Toi!"},
     {"slug": "passante", "nom": "Une passante", "genre": "femme", "voix": "Amélie - Young, Confident and Friendly",
@@ -718,6 +740,7 @@ from . import (  # noqa: E402
     e08, e09, e11, s04, s13,
     t07, q14,
     t08, t10,
+    e03,
 )
 
 # ⚠️ L'ordre est celui du téléphone À ÉGALITÉ : depuis le 28 sept. 2026 (« le téléphone qui trie »), il
@@ -841,6 +864,9 @@ CATALOGUE: list[Mission] = [
     # ⚠️ t08, t10 (1er oct. 2026, la toute fin de M16) : deux petites jobs À L'USINE — trois boîtes à porter, un
     # machiniste qui pointe à l'heure ; elles ne s'offrent qu'aux heures où la cour est ouverte (`barriere_d_heure`).
     t08.MISSION, t10.MISSION,
+    # ⚠️ e03 (1er oct. 2026, la toute fin de M16) : Biscuit s'est sauvé — le premier chien du jeu, qui se sauve trois
+    # fois avant de se laisser prendre (`chercher`, `bete`), et Mme Beaulieu, la promeneuse des Érables.
+    e03.MISSION,
     m97.MISSION,
     # ⚠️ e11 (vague 21) : le maire, dans sa chambre entre m97 et m98, rachète son dossier — un CHOIX : vendu, ou à Louise.
     e11.MISSION,
