@@ -22,3 +22,4 @@ Ti-Guy ; `garage.note` lit « Bb3 » et « F#4 », `_air` lit « R », `Son.SFX.
 les autres airs. La voix de Ti-Guy (« … toute la rue va sortir en bedaine ») : générée, ⚠️ pas écoutée.
 - **Un peu moins vite** (Martin, 1er oct. 2026, à l'écoute) : la croche passe de 0,11 à 0,14 s (la noire à 0,28) ;
   l'air dure 4,5 s.
+- **Encore un peu plus lent** (Martin, même jour) : 0,14 → 0,17 s la croche (la noire à 0,34) ; l'air dure 5,4 s.

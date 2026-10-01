@@ -194,5 +194,5 @@ def test_le_klaxon_joue_la_soiree_du_hockey():
     for (hz, duree), (nom, croches) in zip(air, HOCKEY, strict=True):
         attendu = 0.0 if nom == "R" else BEMOLS.get(nom) or frequence(nom)
         assert abs(hz - attendu) < 0.05, (hz, nom)
-        assert abs(duree - croches * 0.14) < 1e-9, (duree, nom)        # Martin : « un peu moins vite » que 0,11
+        assert abs(duree - croches * 0.17) < 1e-9, (duree, nom)        # Martin : moins vite que 0,11, puis que 0,14
 

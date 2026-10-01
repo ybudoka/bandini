@@ -101,9 +101,9 @@ AIR_NUPTIALE = _air(0.1, "C4:3 F4:2 F4:1 F4:6 C4:3 G4:2 E4:1 F4:6")
 #: soupir), sol si♭~si♭ si♭ si♮, DO. Ce qui est entre les deux (la ronde de la mesure 5, le pont) tombe : un klaxon
 #: dure trois secondes et demie, pas douze mesures. Les liaisons fondent leurs notes ; le soupir du bout de la
 #: mesure 4 tombe, le demi-soupir de la mesure 11 reste (« R ») : c'est le rythme. Le temps (une croche) à
-#: 0,14 s : la noire à 0,28 — pas 128, un klaxon claironne ; mais à 0,11 (la noire de « Gens du pays »), elle
-#: déboulait (Martin, 1er oct. 2026 : « un peu moins vite »).
-AIR_HOCKEY = _air(0.14, "G3:2 G3:1 C4:2 C4:1 Bb3:2 G4:2 G4:1 C5:2 C5:1 Bb4:2 "
+#: 0,17 s : la noire à 0,34 — pas 128, un klaxon claironne ; mais à 0,11 (la noire de « Gens du pays »), elle
+#: déboulait (Martin, 1er oct. 2026 : « un peu moins vite », puis à 0,14 : « encore un peu plus lent »).
+AIR_HOCKEY = _air(0.17, "G3:2 G3:1 C4:2 C4:1 Bb3:2 G4:2 G4:1 C5:2 C5:1 Bb4:2 "
                         "G4:1 G3:1 G3:1 G3:1 C4:2 "
                         "G4:1 R:1 G4:1 Bb4:2 Bb4:1 B4:2 C5:2")
 #: « Bip-bip », le Road Runner : deux coups aigus, le second un peu plus long.
