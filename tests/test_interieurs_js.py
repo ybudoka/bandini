@@ -16,7 +16,9 @@ from app import missions
 #: PERSONNAGE posé dedans (`ou: "point:<type>"`) en est un, et se lit dans le catalogue :
 #: la liste écrite à la main avait oublié le Dr Lachance.
 #: Des gestes, pas des menus. L'ascenseur du garage souterrain descend au −1 (`Souterrain.descendreAPied`).
-SANS_MENU = ("escalier", "fouiller", "rame", "ascenseur") + tuple(
+#: La voûte de la caisse populaire (1er oct. 2026) : ACTION démarre le coup ou prend les sacs, et sans mission dit
+#: sa porte d'acier (`Caisse.agir`) — jouée au bouton par `test_casse_js.py` (`aLaVoute`, puis `action`).
+SANS_MENU = ("escalier", "fouiller", "rame", "ascenseur", "voute") + tuple(
     p["ou"][len("point:"):] for p in missions.PERSONNAGES if p["ou"].startswith("point:"))
 
 #: ⚠️ Les comptoirs encore en chantier, et le jalon qui les doit. La liste est
