@@ -115,6 +115,75 @@ complète pose son objet dans la planque, et il survit à une sauvegarde.
 ⚠️ Le paquet des définitions n'a plus de marge (7 octets gzip au 30 sept.) : rien de neuf n'y entre, ni dans
 la carte — tout passe par `/api/collections`.
 
+### Vague 5 — les enseignes qu'on dévisse la nuit (1er oct. 2026 — Martin : « la collection des enseignes »)
+
+La fiche d'origine la laissait « à trancher » : elle doublait l'affiche arrachée du décor qui répond. Ce qui
+est proposé, et livré :
+
+**Quoi : douze enseignes-drapeaux.** Pas le bandeau du commerce (c'est la façade : il garde sa place et son
+nom), mais **l'enseigne qui pend au bout, au-dessus du trottoir** — celle qu'on appelle une enseigne depuis
+le Moyen Âge, et la seule qu'on dévisse d'une main, debout sur le trottoir. Aujourd'hui chaque commerce a là
+une pancarte muette ; les douze qui ont du caractère y portent **un néon à leur emblème** (une petite grille
+de 5 × 7 et sa palette, comme les bebelles), qui luit la nuit. Une ou deux par district de commerces :
+
+| District | Enseigne | L'emblème | Au carnet (le ton d'[écrire drôle](../ecrire-drole.md) : on frappe le proprio, jamais le client) |
+|---|---|---|---|
+| le Faubourg | **BINGO** (le sous-sol) | la boule « B » | « Le conseil de fabrique la cherchera. Il cherche encore la quête de 1971. » |
+| le Faubourg | **LE CLAIRON** | le clairon | « Louise en fera sa une. Pour une fois, c'est vrai. » |
+| les Érables | **CHEZ TI-PAUL** | la bouteille de liqueur | « Ouvert sept jours, vingt-quatre heures. L'enseigne, elle, a pris congé. » |
+| les Érables | **LAVE-AUTO** | les bulles | « Garantie sans égratignures. On a pris l'enseigne avec des gants. » |
+| La Shop | **CINÉMA RIALTO** | la bobine | « Le proprio dit que c'est un monument historique. Le monument est chez nous. » |
+| La Shop | **SALLE DE QUILLES** | la quille | « La ligue du mardi ne s'en est pas aperçue : elle ne regarde que le tableau. » |
+| les Quais | **CANTINE** | le hot-dog | « Deux steamés, une frite, une enseigne. Le reste de la commande, on l'a payé. » |
+| les Quais | **TAVERNE DU PORT** | la bock | « La draft à trente-cinq cennes. L'enseigne, gratis. » |
+| La Pointe | **SOUVENIRS** | le phare | « Le seul souvenir de La Pointe qu'on n'a pas payé 4,99 $. » |
+| le Petit-Canton | **CLUB MAH-JONG** | la tuile | « Le club a voté : la police ne sera pas appelée. Le vote était serré. » |
+| le Petit-Canton | **DRAGON D'OR** | le dragon | « Irène l'a remarqué. Irène remarque tout. » |
+| les Friches | **TI-POUT AUTOS** | le pneu | « Garantie trente jours ou trente pieds. L'enseigne n'a fait ni l'un ni l'autre. » |
+
+La Gare n'a aucun commerce sur la graine livrée : elle n'en a pas. ⚠️ **Où, sans un dé** : chaque enseigne nomme
+ses noms de devanture (`BINGO`, `CANTINE`…) ; la règle prend, sur la ville FINIE, la devanture qui porte ce nom
+et une pancarte, dans son district d'abord, la première en ordre de lecture. La ville ne bouge pas d'un octet :
+rien n'est posé, tout se peint. Un nom qu'une ville n'a pas : l'enseigne reste au catalogue, sans place.
+
+**Le geste — LE TOURNEVIS.** La nuit seulement (`Monde.estNuit`, la règle des barrières et de la police), à pied,
+debout sous l'enseigne : ACTION ouvre une épreuve d'adresse (la boîte du bingo et du crochetage). **Quatre vis,
+et chacune se dévisse d'un tour complet dans le sens contraire des aiguilles** : HAUT, GAUCHE, BAS, DROITE — au
+stick, à la croix ou aux flèches (`Entree.axe`, le même axe que le piratage). ⚠️ **Aucune fenêtre de rythme et
+aucun échec** (la leçon du dojo) : on tourne à son rythme ; un cran dans le mauvais sens ne défait rien, il est
+seulement commenté (« DANS L'AUTRE SENS, TU LA REVISSES ») ; ESQUIVE abandonne, l'enseigne reste. Le jour, rien
+(aucune invite, le bouton reste à la porte et aux poches).
+
+**Le risque — un témoin.** Quand l'enseigne tombe, c'est une **effraction** (`recherche.DELITS["effraction"]`,
+une étoile, qui attendait son premier usage) : un policier qui voit → l'étoile tout de suite ; un passant qui
+a vu → il court le raconter, et on peut lui acheter son silence comme d'habitude. La nuit, les passants voient
+moins loin : c'est pour ça que ça se fait la nuit.
+
+**Ce qui change.**
+- **La façade** : à la place du néon, la potence vide, un fil qui pend et les deux trous de vis ; la lampe du néon
+  s'éteint. Peint dans le morceau (`Monde.peindreDevantures`, recuit quand le compte change) — la façade garde sa
+  place, son bandeau et son nom.
+- **La planque** : un trophée de plus, **LE MUR DES ENSEIGNES** — un panneau perforé de deux tuiles accroché sous
+  les fenêtres (palier 1, comme l'étagère des bebelles), trois rangées de quatre crochets ; chaque enseigne
+  dévissée y pend, la même qu'on a vue sur la rue. Sa pose est l'ensemble des enseignes dévissées (un bit
+  chacune). Au chalet du rang aussi, s'il y a la place.
+
+**Ce qu'elles rapportent.** 200 $ l'enseigne (la prime de collection, comme les cartes, les bebelles et les sauts —
+plus cher : la nuit, un témoin), et aux paliers : **six** → 1 000 $, **douze** → 3 000 $. Un son ElevenLabs court au
+dévissage d'une vis (le tournevis, le grincement, la vis qui tombe), le reel des bebelles aux paliers. Au carnet,
+LE CARNET > ENSEIGNES (« n / 12 ») : par district, celles qu'on a — leur nom, leurs deux lignes, la nuit du vol
+et l'emblème en grand —, les autres « ??? » et le district où elles pendent encore. Le BILAN compte
+« ENSEIGNES n / 12 ». La sauvegarde : `partie.collections.enseignes[slug] = { jour, source }`.
+
+**Le poids** : rien dans les définitions ni dans la carte — le catalogue, les emblèmes et les places voyagent sur
+`/api/collections` ; le son est un son de lieu (`audio.LIEUX["collections"]`, chargé à un écran d'une enseigne).
+
+**Le debug** : TRICHES > ALLER > COLLECTIONS a une section ENSEIGNES (on se pose sous l'enseigne, à la nuit
+tombée), et LE JOUEUR > TOUTES LES ENSEIGNES.
+
+⚠️ **À valider par Martin** : le geste (un tour par vis, quatre vis), le prix (200 $), et le propriétaire — **pas
+fait** : le patron qui sort de la taverne ouverte la nuit serait la vague d'après.
+
 ## Notes
 
 ### Vague 1 — les cartes de hockey (✅ livrée le 30 sept. 2026)
@@ -302,7 +371,7 @@ la carte — tout passe par `/api/collections`.
 
 ### Ce qui reste
 
-- **Les enseignes qu'on dévisse la nuit** (la troisième famille de la fiche d'origine) : à trancher par Martin — elles
-  doublent l'affiche arrachée du décor qui répond.
+- **Les enseignes qu'on dévisse la nuit** (la troisième famille de la fiche d'origine) : tranchée le 1er oct. 2026 —
+  la vague 5, plus haut sous « Fiche ».
 - **Le marché aux puces du dimanche** ([sa fiche](le-marche-aux-puces-du-dimanche.md#fiche)) : il vendra les cartes qui
   manquent par `Collections.donner(numero, 'puces')` et les meubles `ou: puces`.
