@@ -500,6 +500,7 @@ const Combat = (function () {
           if (Math.hypot(c.x - f.x, (c.y - f.y) / 0.6) > f.r) continue;
           if (c.type === 'vehicule') { Vehicules.endommager(c, degats, f.auteur); continue; }
           if (c.z > 8 || c.dansVehicule) continue;
+          enflammer(c, f.auteur, null, f);
           // Pousse HORS du feu, pas loin du lanceur.
           Entites.blesser(c, degats, f.auteur, { angle: angleVers(f.x, f.y, c.x, c.y), assomme: false, renverse: false });
         }
@@ -513,6 +514,64 @@ const Combat = (function () {
         }
       }
       if (f.reste <= 0) { Entites.decal(f.x, f.y, 'impact'); Entites.retirer(f); }
+    }
+  }
+
+  // --- Les gens prennent feu (les explosifs, vague 2, lot 2b) -------------------------
+
+  /** Met le feu a `c` (un passant, un joueur) : `duree` images (par defaut celles de la regle), `auteur` celui
+      dont le feu est le feu — une mort dans les flammes est la sienne. Il court en hurlant, loin de `depuis`.
+      ⚠️ Jamais plus de `gens.max` personnes en feu a la fois : une foule ne s'embrase pas d'un bout a l'autre. */
+  function enflammer(c, auteur, duree, depuis) {
+    const g = regles().incendie.gens;
+    if (!c || !c.vivant || c.enFeu > 0 || c.dansVehicule || c.z > 8) return false;
+    if (c.type !== 'pieton' && c.type !== 'joueur') return false;
+    let n = 0;
+    for (const q of B.entites) if (q.enFeu > 0) n++;
+    if (n >= g.max) return false;
+    c.enFeu = c.enFeuDe = Math.max(1, Math.round(duree || g.duree_s * 60));
+    c.feuAuteur = auteur || null;
+    if (c.type === 'pieton') {
+      c.etat = 'fuit'; c.menace = { x: (depuis || c).x - 1, y: (depuis || c).y - 1 };
+      c.minuterie = c.enFeu + 60; c.cri = 120;
+    }
+    if (typeof Son !== 'undefined' && Son.Rumeur) Son.Rumeur.crier();
+    return true;
+  }
+
+  /** Eteint `c` : l'eau, l'extincteur. Un nuage de vapeur. */
+  function eteindre(c) {
+    if (!(c && c.enFeu > 0)) return false;
+    c.enFeu = 0;
+    for (let i = 0; i < 6; i++) Entites.particule(c.x + (B.rng() - 0.5) * 8, c.y - 8, (B.rng() - 0.5) * 0.4, -0.5, 30, '#d8d8d8', 2, -0.01);
+    return true;
+  }
+
+  /** Ceux qui brulent : des flammes sur le corps, une morsure toutes les vingt images, et le feu a qui ils
+      frolent. L'eau les eteint ; le temps aussi. */
+  function majGensEnFeu() {
+    const g = regles().incendie.gens;
+    for (const c of B.entites.slice()) {
+      if (!(c.enFeu > 0)) continue;
+      if (!c.vivant || c.dansVehicule) { c.enFeu = 0; continue; }
+      if (Monde.estEau && Monde.estEau(Math.floor(c.x / TT), Math.floor(c.y / TT))) { eteindre(c); continue; }
+      c.enFeu--;
+      Entites.particule(c.x + (B.rng() - 0.5) * 8, c.y - 6 - B.rng() * 10, (B.rng() - 0.5) * 0.3, -0.7 - B.rng() * 0.5,
+                        12, B.rng() < 0.5 ? '#ff8c1a' : '#ffd23a', 2, -0.03);
+      if (B.t % 5 === 0) Entites.particule(c.x, c.y - 16, (B.rng() - 0.5) * 0.3, -0.5, 30, '#1e1e1e', 2, -0.01);
+      if (c.type === 'pieton' && c.etat !== 'assomme' && c.etat !== 'fuit') { c.etat = 'fuit'; c.minuterie = c.enFeu + 60; }
+      if (c.type === 'pieton') c.cri = Math.max(c.cri || 0, 30);
+      if (B.t % 20 !== 0) continue;
+      // ⚠️ `blesser` refuse un joueur contre un joueur, meme soi-meme : qui brule dans son propre feu brule quand meme.
+      const auteur = c.type === 'joueur' && Entites.estJoueur(c.feuAuteur) ? null : c.feuAuteur;
+      Entites.blesser(c, Math.max(1, Math.round(g.degats_par_seconde / 3)), auteur, { assomme: false, renverse: false });
+      const garde = Math.round(c.enFeuDe * g.contagion_garde);
+      if (garde < 20) continue;
+      for (const q of Entites.autour(c.x, c.y, g.contagion_px + 8, function (q) {
+        return q !== c && q.vivant && !(q.enFeu > 0) && (q.type === 'pieton' || q.type === 'joueur');
+      })) {
+        if (Math.hypot(q.x - c.x, q.y - c.y) <= g.contagion_px) enflammer(q, c.feuAuteur, garde, c);
+      }
     }
   }
 
@@ -703,7 +762,7 @@ const Combat = (function () {
   function lampes(cx, cy) {
     const out = [], r = regles().incendie.lueur_px;
     for (const e of B.entites) {
-      const chiffon = !!e.chiffon && e.type === 'joueur';
+      const chiffon = (!!e.chiffon && e.type === 'joueur') || e.enFeu > 0;
       if (e.type !== 'brasier' && !chiffon) continue;
       if (e.x < cx - r || e.x > cx + VW + r || e.y < cy - r || e.y > cy + VH + r) continue;
       out.push({ x: e.x - cx, y: e.y - (chiffon ? 12 : 4) - cy, r: chiffon ? Math.round(r * 0.6) : r, c: LUEUR_DU_FEU });
@@ -987,6 +1046,14 @@ const Combat = (function () {
       c.etat = 'fuit';
       c.minuterie = 180;
       if (e.t % 20 === 0) Entites.blesser(c, arme.degats, e, { assomme: true });
+    }
+    // LES GENS EN FEU ET LA FLAQUE (les explosifs, vague 2) : le jet les eteint — le joueur aussi, par son voisin.
+    for (const c of Entites.autour(e.x, e.y, arme.portee, function (q) {
+      return q !== e && (q.enFeu > 0 || q.type === 'brasier');
+    })) {
+      if (Math.abs(ecartAngle(e.angle, angleVers(e.x, e.y, c.x, c.y))) > 0.6) continue;
+      if (c.type === 'brasier') c.reste = Math.min(c.reste, Math.max(0, c.reste - 12));
+      else eteindre(c);
     }
     // Le feu de bâtiment (P4) : le jet d'extincteur attire la flamme. ⚠️ C'est
     // `Incendies` qui décide de la règle — ici, on ne lui donne que la main qui
@@ -1345,6 +1412,7 @@ const Combat = (function () {
     // Tu fuis une bagarre de gang en char : un char du gang te prend en chasse (vague 5c des bagarres).
     if (typeof Rixe !== 'undefined' && B.defs.rixes) Rixe.majPoursuites();
     majBrasiers();
+    majGensEnFeu();
     majLances();
     Techniques.majVols();
     // ⚠️ Une prise ne survit pas a un char, a la mort ni a une porte : sans ca, la
@@ -1524,7 +1592,7 @@ const Combat = (function () {
     frapper, tirer, lancerObjet, cycler, roulade, pickpocket, pochesAPrendre, victimeDesPoches, ramasserArme, objetSousLaMain, suivreLaMain, userArme: user,
     viseeAssistee, dispersionDe, allumer, majBrasiers, majAttaque, arcDeMelee, majProjectiles, maj,
     allumerMeche, lacherMeche, lancer, majEnMain, majLances, dessinerLance, ramasser, oublierLances,
-    allumerChiffon, majChiffon, lampes,
+    allumerChiffon, majChiffon, lampes, enflammer, eteindre, majGensEnFeu, majJet,
     majCible, ciblesVerrouillables, VERROU_PORTEE,
     otageSousLaMain, viserOtage, prendreEnOtage, lacherOtage, majOtage, majSaisie,
   };

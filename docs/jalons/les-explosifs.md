@@ -786,3 +786,19 @@ propage.
   s'éteint rangé, au volant, à la porte ; la bouteille se dessine au-dessus de son ombre, tourne, laisse sa traînée ;
   la flaque de 30 px et 8 s éclaire la nuit) ; six mutations, toutes mordent. Regardé : le chiffon en main, la
   bouteille en vol et son ombre, la lueur la nuit.
+
+### Vague 2, lot 2b (✅ livré le 1er oct. 2026) : les gens prennent feu
+
+- **Touché par la flaque**, un passant ou un joueur s'enflamme (`Combat.enflammer`) : il brûle 4 s, des flammes et
+  une fumée noire sur le corps, une lueur la nuit (`Combat.lampes`) ; le passant part en courant, loin de là où il a
+  pris feu, et crie ; le feu mord 15 PV/s (`REGLES["incendie"]["gens"]`). Une mort dans les flammes est celle du
+  lanceur (`mort_pieton`). ⚠️ `Entites.blesser` refuse un joueur contre un joueur, même soi-même : qui brûle dans son
+  propre feu brûle quand même (la morsure n'a alors pas d'auteur).
+- **Il allume qui il frôle** (à 12 px), pour 70 % de son temps à lui — le feu s'use d'un corps à l'autre — et jamais
+  plus de six personnes en feu à la fois : une foule ne s'embrase pas d'un bout à l'autre.
+- **L'eau l'éteint** (se jeter à l'eau), et **l'extincteur** aussi (`majJet` : le joueur par son voisin, les
+  passants) — l'extincteur entame aussi la flaque.
+- Juges `tests/test_molotov_js.py` (le passant touché prend feu, fuit, brûle puis s'éteint, et sa mort est celle du
+  lanceur ; il allume son voisin mais jamais toute la foule ; le joueur brûle aussi et l'eau l'éteint ; l'extincteur
+  éteint les gens et la flaque) ; sept mutations, toutes mordent (la fuite est écrite deux fois — à l'allumage et à
+  chaque image — et mord quand on retire les deux). Regardé : la flaque haute et sa fumée, la lueur la nuit.

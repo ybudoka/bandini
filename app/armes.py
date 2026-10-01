@@ -116,7 +116,13 @@ REGLES: dict = {
     # ⚠️ LE MOLOTOV EN MIEUX (docs/jalons/les-explosifs.md, vague 2, Martin : « plus gros et plus visible ») : la
     # flaque passe de 20 a 30 px et de 5 a 8 s (`feu_s`), et la nuit elle eclaire le sol jusqu'a `lueur_px` — comme
     # le chiffon allume dans la main.
-    "incendie": {"rayon_px": 30, "degats_par_seconde": 12, "lueur_px": 64},
+    "incendie": {"rayon_px": 30, "degats_par_seconde": 12, "lueur_px": 64,
+                 # ⚠️ LES GENS PRENNENT FEU (vague 2, lot 2b) : touche par la flaque, un passant (ou le joueur) brule
+                 # `duree_s` secondes, court en hurlant et perd `degats_par_seconde` ; il allume qui il frole (a
+                 # `contagion_px`), pour `contagion_garde` de son temps a lui — le feu s'use d'un corps a l'autre —,
+                 # et jamais plus de `max` personnes a la fois. L'eau et l'extincteur l'eteignent.
+                 "gens": {"duree_s": 4, "degats_par_seconde": 15, "contagion_px": 12, "contagion_garde": 0.7,
+                          "max": 6}},
     # Ce qui se lance (`lance`) et ce qui saute. `bruit_tuiles` : le rayon dans
     # lequel un agent ENTEND l'explosion — plus loin qu'une carabine (22) : une
     # detonation de chantier s'entend a l'autre bout du quartier. Le reste est
