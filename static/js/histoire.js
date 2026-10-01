@@ -990,10 +990,20 @@ const Histoire = (function () {
   //: A cette distance, celui qui parle est LA ; plus loin, on l'entend au combine.
   const RAYON_PRESENT = 12 * TT;
 
-  /** Celui qui parle est-il la, a portee de voix ? */
+  /** Celui qui parle est-il la, a portee de voix ?
+
+      ⚠️ UN DONNEUR A LA BARRE (Martin, 1er oct. 2026, i07) : Leo court le tour de l'ile dans le bateau de son
+      pere, a trente pixels de ta chaloupe, et son « A trois, on part » se disait AU COMBINE — `present` ne
+      cherchait que le pieton, reste devant son hangar. Le rival d'une course (`contre.qui`, `v.regate.qui`)
+      est aussi lui : a portee de voix, il parle en personne. */
   function present(qui) {
-    const j = B.joueur, e = donneur(qui);
-    return !!(j && e && e.dessine !== false && dist2(e.x, e.y, j.x, j.y) < RAYON_PRESENT * RAYON_PRESENT);
+    const j = B.joueur, e = donneur(qui), r2 = RAYON_PRESENT * RAYON_PRESENT;
+    if (!j) return false;
+    if (e && e.dessine !== false && dist2(e.x, e.y, j.x, j.y) < r2) return true;
+    const a = B.mission && B.mission.entites;
+    return !!(a && a.some(function (v) {
+      return v.regate && v.regate.qui === qui && B.entites.indexOf(v) >= 0 && dist2(v.x, v.y, j.x, j.y) < r2;
+    }));
   }
 
   /** Les repliques d'une partie, pretes a dire, avec leur slug de voix.

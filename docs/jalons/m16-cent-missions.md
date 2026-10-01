@@ -1429,7 +1429,8 @@ catalogue.
   - ⚠️ **Une heure de jeu, c'est vingt secondes** : du hangar à la jetée, il faut près d'une heure de route, et la navette
     ne reste à quai que vingt minutes — on l'attend au bout de la jetée (le juge le fait, comme un joueur). Et en
     tournant de la rue sur le pont des Quais (deux rangées), un coin de roue mord le bord de l'eau : le char ne coule
-    pas (trois secondes, `coule_s`), le juge tolère moins d'une seconde.
+    pas (trois secondes, `coule_s`), le juge tolère moins d'une seconde. ✅ Corrigé le jour même (Martin : « IL COULE —
+    SORS » s'affichait) : près d'une coque à quai, le char tient tant qu'une roue touche le pont ou le quai.
   - ⚠️ **Écarts à la fiche** : « par le traversier » — c'est la navette, le deuxième traversier de la baie (le premier
     ne dessert pas l'île) ; « le char repeint, les plaques changées » : Léo rend une berline neuve (`monter` sur
     `ile:hangar_ile`) — pas une clé de `donne` ; la prime est de 100 $ (le juge des missions en veut une).
@@ -1462,8 +1463,22 @@ catalogue.
     ramenée sous le hangar. Immobile au départ, Léo fait le tour et c'est raté.
   - ⚠️ **Écarts à la fiche** : pas de « repli à la nage » (la course se court en chaloupe : `vehicule`) ; sept points
     (les six bouées, puis la première : la ligne d'arrivée) ; le donneur est au hangar ET à la barre — sa réplique de
-    départ se dit au combiné.
+    départ se disait au combiné (✅ corrigé le jour même : `present` reconnaît le rival à la barre).
   - **Juges** : `test_regate.py` (quatre : la ville d'avant clé par clé, six bouées sur l'eau profonde autour de l'île,
     chaque bord de l'eau libre — le juge lit l'eau lui-même : muté, rouge —, et sans place, rien ne se pose) ;
     `test_regate_js.py` (trois : les bouées se lisent et se peignent ; i07 gagnée au bouton ; immobile, Léo gagne —
     deux mutations rouges : sans `battu`, sans rival qui court).
+- **1er oct. 2026 : deux défauts des vagues 16 et 17** (Martin, en jouant).
+  - **Le coin de roue au quai des Quais** : en tournant de la rue sur le pont de la navette (deux rangées), le char
+    coupe le coin du quai — son CENTRE passe au-dessus de l'eau qui borde le pont, ses roues arrière sur le quai,
+    l'avant sur l'acier. `majNoyade` ne lisait que la tuile du centre : « IL COULE — SORS », le char freinait dans ses
+    remous, et il ne coulait pas. Près d'une coque à quai (`Traversier.aQuaiPres`/`Navette.aQuaiPres`, deux tuiles), le
+    char tient tant qu'une de ses quatre roues touche du sol (`Vehicules`, `tenuAuQuai`) ; ailleurs, rien ne change (au
+    bord de n'importe quel quai, un char posé le nez dans l'eau resterait perché pour toujours). Juge :
+    `test_monter_sur_la_navette_en_coupant_le_coin_ne_dit_pas_il_coule` (trois virages de joueur, de la rue au pont, au
+    bouton : le coin d'eau est coupé, le message ne vient jamais, le char part à bord — muté, rouge) ; le juge de
+    l'aller-retour ne tolère plus une seconde d'eau.
+  - **Léo au téléphone dans `i07`** : « À trois, on part » se disait au combiné alors qu'il est à la barre, à trente
+    pixels — `present` ne cherchait que le piéton resté devant le hangar. Le rival d'une course (`contre.qui`) est
+    aussi lui : à portée de voix, il parle en personne. Juge : `test_i07_le_tour_de_l_ile_on_bat_leo` lit le combiné
+    réplique par réplique (muté, rouge).

@@ -1525,6 +1525,28 @@ const Vehicules = (function () {
     Son.jouerA(slug, v.x, v.y, 160);
   }
 
+  /** Une roue du char tient encore le pont d'une coque a quai, ou le quai qui y mene.
+
+      ⚠️ UN COIN DE ROUE N'EST PAS UN NAUFRAGE (Martin, 1er oct. 2026). En tournant de la rue sur le pont de la
+      navette (deux rangees), le char coupe le coin du quai : son CENTRE passe une fraction de seconde au-dessus
+      de l'eau qui borde le pont, ses roues arriere sur le quai, l'avant deja sur l'acier. `majNoyade` ne lisait
+      que la tuile du centre : « IL COULE — SORS », le char freinait dans ses remous, et il ne coulait pas. Pres
+      d'une coque a quai (`aQuaiPres`, deux tuiles), le char tient tant qu'une de ses quatre roues touche du sol ;
+      plus loin, c'est la baie, et la tuile du centre decide comme partout. ⚠️ Pas ailleurs : au bord de n'importe
+      quel quai, un char pose le nez dans l'eau resterait perche pour toujours. */
+  function tenuAuQuai(v) {
+    if (!(Traversier.aQuaiPres(v.x, v.y) || Navette.aQuaiPres(v.x, v.y))) return false;
+    const c = Math.cos(v.angle), s = Math.sin(v.angle);
+    const lo = Math.max(2, v.def.longueur / 2 - 3), la = Math.max(2, v.def.largeur / 2 - 2);
+    for (const fx of [-1, 1]) {
+      for (const fy of [-1, 1]) {
+        const px = v.x + c * fx * lo - s * fy * la, py = v.y + s * fx * lo + c * fy * la;
+        if (!Monde.estEau(Math.floor(px / TT), Math.floor(py / TT))) return true;
+      }
+    }
+    return false;
+  }
+
   /** Un char dans l'eau COULE. ⚠️ Et il est PERDU : on ne le retrouve ni au
       fond, ni a la fourriere. Sinon couler devient le moyen commode de se faire
       rembourser une epave — on pousse sa carcasse a l'eau et on va la racheter
@@ -1535,7 +1557,7 @@ const Vehicules = (function () {
       une deuxieme verite a tenir a jour. */
   function majNoyade(v) {
     const n = B.defs.recherche.nage;
-    if (v.def.eau || !Monde.estEau(Math.floor(v.x / TT), Math.floor(v.y / TT))) {
+    if (v.def.eau || !Monde.estEau(Math.floor(v.x / TT), Math.floor(v.y / TT)) || tenuAuQuai(v)) {
       v.coule = 0;
       return false;
     }

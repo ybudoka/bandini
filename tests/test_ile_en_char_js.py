@@ -9,6 +9,8 @@ on part de la rue, quatorze tuiles au nord du quai, et on conduit au bouton sur 
 
 import json
 
+import pytest
+
 from outils_ile_en_char import PILOTE
 from outils_missions import OUTILS, PLUS_LONGUES
 from test_arc_p_js import RECHARGER
@@ -71,16 +73,59 @@ def test_un_char_de_la_rue_des_quais_au_hangar_de_l_ile_et_retour(banc):
                  aBordRetour: aBordRetour, retour: retour, enVille: enVille, degats: Math.round(vie0 - v.vie),
                  b: [N.donnees().escales[1].x, N.donnees().escales[1].y] };
     }""")
-    # ⚠️ Un coin du pont : en tournant de la rue sur le pont (deux rangées), le centre du char mord le bord de l'eau
-    # quelques images — il ne coule pas (trois secondes, `coule_s`). Au-delà d'une seconde, c'est un piège.
-    assert r["monte"]["arrive"] <= 20 and r["monte"]["eau"] < 60, f"de la rue jusqu'au pont : {r['monte']}"
+    # Un coin du pont : en tournant de la rue sur le pont (deux rangées), le centre du char peut passer au-dessus du
+    # bord de l'eau — une roue tient encore le quai ou le pont, il ne coule pas (`tenuAuQuai`, 1er oct. 2026).
+    assert r["monte"]["arrive"] <= 20 and r["monte"]["eau"] == 0, f"de la rue jusqu'au pont : {r['monte']}"
     assert r["aBord"] is True and r["enMer"] == {"aBord": True, "eau": True}, r
     assert r["ile"]["aBord"] is False and r["b"][0] <= r["ile"]["tuile"][0] < r["b"][0] + 8, r["ile"]
     assert r["auHangar"]["arrive"] <= 20 and r["auHangar"]["eau"] == 0, f"de la jetée au hangar : {r['auHangar']}"
     assert r["jetee"]["arrive"] <= 20 and r["jetee"]["eau"] == 0, f"du hangar à la jetée : {r['jetee']}"
-    assert r["remonte"]["arrive"] <= 20 and r["remonte"]["eau"] < 60 and r["aBordRetour"] is True, r
-    assert r["retour"]["aBord"] is False and r["enVille"]["arrive"] <= 20 and r["enVille"]["eau"] < 60, r
+    assert r["remonte"]["arrive"] <= 20 and r["remonte"]["eau"] == 0 and r["aBordRetour"] is True, r
+    assert r["retour"]["aBord"] is False and r["enVille"]["arrive"] <= 20 and r["enVille"]["eau"] == 0, r
     assert r["degats"] <= 20, f"un aller-retour qui coûte {r['degats']} PV : un coin de mur, un baril ?"
+
+
+#: Un virage de joueur, de la rue au pont de la navette : tout droit vers le sud dans la colonne `col`, puis le coin du
+#: quai coupé en diagonale sur trois rangées jusqu'au milieu du pont — le centre du char passe au-dessus de l'eau
+#: qui borde le pont, les roues arrière sur le quai, l'avant sur l'acier.
+@pytest.mark.parametrize("col, vite", [(150, 1.6), (151, 1.0), (152, 1.6)])
+def test_monter_sur_la_navette_en_coupant_le_coin_ne_dit_pas_il_coule(banc, col, vite):
+    """Martin (1er oct. 2026) : « en tournant de la rue sur le pont de la navette, un coin de roue mord l'eau une
+    fraction de seconde, et IL COULE — SORS s'affiche sans que le char coule ». Le pont d'une coque à quai et le quai
+    qui y mène tiennent le char tant qu'une de ses roues les touche (`Vehicules`, `tenuAuQuai`)."""
+    r = banc("function (L, o) {" + PILOTE + TRAJET + """
+        L.Jeu.commencer();
+        const B = L.B, j = B.joueur, N = L.Navette, COL = """ + str(col) + """;
+        j.intouchable = true; j.invincible = 1e6;
+        if (B.menu && L.Hud.fermerMenu) L.Hud.fermerMenu();
+        const a = N.donnees().escales[0];
+        const depart = { x: COL * 16 + 8, y: (a.y - 12) * 16 + 8 };
+        heure(L, 0.7); o.frame(2);
+        j.x = depart.x; j.y = depart.y; L.Monde.centrerCamera(j.x, j.y);
+        const v = L.Vehicules.creer('luxe', depart.x, depart.y, Math.PI / 2, { etat: 'stationne' });
+        L.Entites.indexer(); L.Vehicules.monter(j, v); o.frame(2);
+        const dits = [], message = L.Hud.message;
+        L.Hud.message = function (t) { dits.push(t); return message.apply(this, arguments); };
+        // Le coin d'eau que le virage coupe : une tuile d'eau collée au pont, sous la diagonale.
+        let coin = 0;
+        const chemin = [];
+        for (let y = a.y - 11; y <= a.y - 3; y++) chemin.push({ x: COL * 16 + 8, y: y * 16 + 8 });
+        const p0 = { x: COL * 16 + 8, y: (a.y - 3) * 16 + 8 }, p1 = { x: (a.x + 3) * 16 + 8, y: a.y * 16 + 8 };
+        for (let k = 1; k <= 8; k++) chemin.push({ x: p0.x + (p1.x - p0.x) * k / 8, y: p0.y + (p1.y - p0.y) * k / 8 });
+        chemin.push({ x: (a.x + 4) * 16 + 8, y: a.y * 16 + 8 }, { x: (a.x + 5) * 16 + 8, y: a.y * 16 + 8 });
+        const frame = o.frame;
+        o.frame = function (n) {
+          for (let i = 0; i < (n || 1); i++) { frame(1); if (L.Monde.estEau(Math.floor(v.x / 16), Math.floor(v.y / 16))) coin++; }
+        };
+        const monte = piloter(L, o, v, chemin, 1500, 18, """ + str(vite) + """);
+        o.frame = frame;
+        heure(L, 0.999); o.frame(20);
+        return { monte: monte, coin: coin, dits: dits, aBord: !!v.aBord, vivant: B.entites.indexOf(v) >= 0 };
+    }""")
+    assert r["coin"] > 0, f"le virage n'a pas coupé le coin d'eau du quai : le juge ne prouve rien ({r})"
+    assert not any("COULE" in t for t in r["dits"]), f"« IL COULE » pour un coin de roue : {r['dits']}"
+    assert r["monte"]["eau"] == 0 and r["monte"]["arrive"] <= 20, r["monte"]
+    assert r["aBord"] is True and r["vivant"] is True, r
 
 
 #: Tout le catalogue avant i04 — Léo n'a plus qu'elle à donner.

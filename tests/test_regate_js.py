@@ -58,6 +58,13 @@ def test_i07_le_tour_de_l_ile_on_bat_leo(banc):
         L.Jeu.commencer(); L.graine(6);
         const B = L.B, p = B.partie;
         const argent = paiements(L);
+        // Au bout du fil ou en personne, réplique par réplique (`telephone`, tranché à la ligne par `present`).
+        const fil = {}, suivante = L.Histoire.suivante;
+        L.Histoire.suivante = function () {
+          const c = L.B.cinema, l = c && c.lignes[c.i];
+          if (l && c.partie) fil[c.partie + ':' + l.qui + ':' + (l.objectif === undefined ? '' : l.objectif)] = !!l.telephone;
+          return suivante.apply(this, arguments);
+        };
         const v = preparer(L, o), j = B.joueur;
         const c = B.mission.course, rival = c && c.rival;
         const depart = { etape: etape(L), points: c ? c.points.length : null, rival: rival && rival.slug,
@@ -68,13 +75,15 @@ def test_i07_le_tour_de_l_ile_on_bat_leo(banc):
         const baie = L.Histoire.lieuDeLivraison('amarrage:hangar_ile');
         v.x = baie.x; v.y = baie.y; v.vitesse = 0; v.vx = 0; v.vy = 0; j.x = v.x; j.y = v.y; L.Entites.indexer();
         jouer(L, o, 10); finir(L, o);
-        return { depart: depart, images: images, apres: apres, dites: dites, fait: !!p.missionsFaites.i07,
+        return { depart: depart, images: images, apres: apres, dites: dites, fil: fil, fait: !!p.missionsFaites.i07,
                  argent: argent.map(function (a) { return a.montant; }) };
     }""")
     assert r["depart"] == {"etape": 1, "points": 7, "rival": "bateau", "conducteur": "regate", "eauRival": True}, r["depart"]
     assert r["apres"]["etape"] == 2 and r["apres"]["rivalBouee"] < 7, f"Léo est arrivé avant : {r}"
     for dite in ("pendant:leo:0", "pendant:leo:1", "pendant:leo:2"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
+    # Martin (1er oct. 2026) : « À trois, on part » se disait au téléphone — Léo est à la barre, à côté de toi.
+    assert r["fil"].get("pendant:leo:1") is False, f"Léo, dans son bateau à côté, parle au combiné : {r['fil']}"
     assert r["fait"] is True and r["argent"] == [200], r
 
 

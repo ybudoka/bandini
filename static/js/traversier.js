@@ -157,6 +157,13 @@ function fabriqueDeTraversier(cle, NOM, ID_TRI) {
     pose = null;
   }
 
+  /** La coque est A QUAI et ce point (en pixels) est a deux tuiles d'elle au plus : la ou l'on tourne pour monter. */
+  function aQuaiPres(x, y) {
+    if (!pose || pose.carte !== Monde.carte) return false;
+    const d = donnees(), q = d.escales[pose.k], tx = Math.floor(x / TT), ty = Math.floor(y / TT);
+    return tx >= q.x - 2 && tx < q.x + d.coque.longueur + 2 && ty >= q.y - 2 && ty < q.y + d.coque.largeur + 2;
+  }
+
   /** Le bout de quai le plus proche : la ou l'on remet quelqu'un qui descend. */
   function quaiLePlusProche(q, x, y) {
     let mieux = null, dMin = Infinity;
@@ -448,7 +455,7 @@ function fabriqueDeTraversier(cle, NOM, ID_TRI) {
   }
 
   return {
-    donnees, etatA, placeA, avance, maj, oublier, aBord, texteDInfo, escaleIci, ajouterVisibles, dessinerSurLaCarte,
+    donnees, etatA, placeA, avance, maj, oublier, aBord, aQuaiPres, texteDInfo, escaleIci, ajouterVisibles, dessinerSurLaCarte,
     get pose() { return pose; }, get bord() { return bord.slice(); },
   };
 }
