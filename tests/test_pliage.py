@@ -13,6 +13,7 @@ La carte voyage EN COLONNES sur `/api/carte` (`app/pliage.py`) et le navigateur 
 
 import gzip
 import json
+import re
 
 import pytest
 
@@ -25,15 +26,32 @@ def _json(v) -> str:
     return json.dumps(v, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
 
 
+#: Une clé qu'un objet JavaScript range comme un INDICE (« 0 », « 12 », jamais « 01 ») : avant toutes les autres,
+#: dans l'ordre des nombres — c'est la règle de tout objet, `JSON.parse` compris.
+_INDICE = re.compile(r"0|[1-9][0-9]{0,8}")
+
+
 def _comme_le_navigateur(v):
-    """`v` tel que `JSON.stringify` l'écrirait : un flottant entier (`1.0`) s'y écrit `1`."""
+    """`v` tel que le navigateur le tient, pour `_json_du_navigateur` : un flottant entier (`1.0`) s'écrit `1`, et
+    les clés d'un objet dans l'ordre où `JSON.parse` les range — celles qui ressemblent à des indices devant, dans
+    l'ordre des nombres, puis les autres dans l'ordre du JSON servi (trié, `sort_keys`).
+
+    ⚠️ La légende a une clé « 0 » depuis le mur fissuré (1er oct. 2026, `bd8f4b96`) : le navigateur la range en
+    tête, que la carte voyage pliée ou non (`JSON.parse` fait pareil) — ce n'est pas le déplieur qui la déplace."""
     if isinstance(v, float) and v.is_integer():
         return int(v)
     if isinstance(v, list):
         return [_comme_le_navigateur(x) for x in v]
     if isinstance(v, dict):
-        return {k: _comme_le_navigateur(x) for k, x in v.items()}
+        indices = sorted((k for k in v if _INDICE.fullmatch(k)), key=int)
+        cles = indices + sorted(k for k in v if not _INDICE.fullmatch(k))
+        return {k: _comme_le_navigateur(v[k]) for k in cles}
     return v
+
+
+def _json_du_navigateur(v) -> str:
+    """Le JSON que `JSON.stringify` écrirait de `v`, l'ordre des clés compris (`_comme_le_navigateur`)."""
+    return json.dumps(_comme_le_navigateur(v), ensure_ascii=False, separators=(",", ":"))
 
 
 def _pareil(obtenu: str, attendu: str) -> tuple[bool, str]:
@@ -130,7 +148,7 @@ def test_le_navigateur_deplie_la_ville_a_l_octet_pres(paquets):
     différence permise, celle de tout `JSON.parse` : un flottant entier s'écrit sans son `.0`."""
     sortie = _deplier_au_navigateur(json.loads(paquets.carte.corps))
     attendue = pliage.deplier(json.loads(paquets.carte.corps))
-    ok, ecart = _pareil(sortie, _json(_comme_le_navigateur(attendue)))
+    ok, ecart = _pareil(sortie, _json_du_navigateur(attendue))
     assert ok, ecart
 
 
@@ -159,5 +177,5 @@ def test_le_jeu_recoit_la_carte_pliee_et_tient_la_ville_depliee(banc, paquet, ca
     assert r["demandee"] and r["meme"]
     attendue = _comme_le_navigateur(paquet["carte"])
     assert r["ordre"] == list(attendue)
-    differentes = sorted(k for k in attendue if r["cles"][k] != _json(attendue[k]))
+    differentes = sorted(k for k in attendue if r["cles"][k] != _json_du_navigateur(attendue[k]))
     assert not differentes, f"le jeu ne tient pas la ville que Python a pliée : {differentes}"
