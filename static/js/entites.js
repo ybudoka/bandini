@@ -5315,7 +5315,8 @@ const Entites = (function () {
       if (--e.bagarreT <= 0) { finirLaBagarre(e); return; }
       // ⚠️ Un rival qui a QUITTE la rixe (en deroute, il s'est sauve : `bagarre` faux) n'en est plus un : on le
       // pourchassait 888 images sur 900, et un blesse qui boite etait rattrape et tue (la relecture de la vague 3).
-      if (!e.rival || !e.rival.vivant || e.rival.etat === 'assomme' || !e.rival.bagarre
+      // (Un AGENT qui lui a tire dessus — vague 5d — reste son rival : il riposte.)
+      if (!e.rival || !e.rival.vivant || e.rival.etat === 'assomme' || (!e.rival.bagarre && !e.rival.agent)
           || dist2(e.x, e.y, e.rival.x, e.rival.y) > f.rival_px * f.rival_px) {
         e.rival = rivalDe(e, f);
       }
@@ -5355,6 +5356,9 @@ const Entites = (function () {
       // Ici on ne fait que tenir sa place : les trois temps appartiennent a
       // `Combat.majAttaque`, et on plante ses pieds pour cogner.
       e.vx = 0; e.vy = 0;
+      // ⚠️ La rixe DECOMPTE aussi pendant le geste : un tireur (vague 2) y passe une bonne part de son temps, et sa
+      // rixe durait d'autant plus que celle des autres — il se battait encore, seul, la rixe finie.
+      if (e.avantLeCoup === 'bagarre' && e.bagarreT > 0) e.bagarreT--;
       return;
     } else if (e.etat === 'aborde') {
       // Le solliciteur vient vers toi, d'un pas decide — jamais en courant :

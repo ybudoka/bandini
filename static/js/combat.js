@@ -431,8 +431,10 @@ const Combat = (function () {
       Entites.alerter(e.x, e.y, e, 3);
       if (arme.bruit > 0) Police.entendre(e.x, e.y, arme.bruit * TT, true);
       // ⚠️ PAS DE MEPRISE QUAND C'EST TOI QU'ON VISE : tu es la victime, pas le coupable (au banc, une Morue au
-      // fusil te valait un crime a ton nom).
-      if (cible.type !== 'joueur') Police.crimeDAutrui('arme_sortie', e.x, e.y, e);
+      // fusil te valait un crime a ton nom). Ni quand c'est un AGENT qui tire (vague 5d).
+      if (cible.type !== 'joueur' && !e.agent) Police.crimeDAutrui('arme_sortie', e.x, e.y, e);
+      // Une grosse fusillade fait venir la police (vague 5d) : on compte les coups de feu des gangs.
+      if (e.gang && !e.agent && typeof Rixe !== 'undefined') Rixe.noterCoupDeFeu(e);
     }
     // Le coup de feu, la fronde qui claque — sauf la bouteille, qu'on entend
     // quand elle CASSE (`allumer`), pas quand elle part. Celui d'un tireur de gang s'entend de LA OU il tire :

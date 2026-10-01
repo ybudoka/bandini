@@ -125,3 +125,15 @@ def test_la_fiche_de_la_poursuite_se_tient():
     assert 276 < dmin < dmax < 520
     assert 0 < p["delai_images"] < p["duree_images"] < p["repos_images"]
     assert villes.assembler()["rixes"]["poursuite"]["distance_px"] == list(p["distance_px"])
+
+
+def test_la_fiche_de_la_police_contre_les_gangs_se_tient():
+    """Vague 5d : une grosse fusillade (assez de coups, assez près, assez vite) fait venir une auto-patrouille."""
+    p = rixes.POLICE
+    assert p["coups"] >= 3 and p["fenetre_images"] > 0 and p["rayon_px"] > 0
+    dmin, dmax = p["distance_px"]
+    assert 0 < dmin < dmax
+    fmin, fmax = p["portee_px"]
+    assert 0 < fmin < fmax <= 180, "un agent tire au pistolet : sa portée"
+    assert p["agents"] >= 1 and p["calme_images"] > 0 and p["repos_images"] > p["fenetre_images"]
+    assert villes.assembler()["rixes"]["police"]["portee_px"] == list(p["portee_px"])

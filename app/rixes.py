@@ -129,6 +129,25 @@ POURSUITE: dict = {
 }
 
 
+#: VAGUE 5d — LA POLICE CONTRE LES GANGS (Martin : « elle se bat contre eux »). Une grosse fusillade — `coups` coups
+#: de feu de gang en `fenetre_images`, à `rayon_px` les uns des autres — fait venir une auto-patrouille : garée hors de
+#: l'écran à `distance_px` de la fusillade, sirène, et `agents` agents en descendent (`contreGang`). Ils visent le
+#: membre de gang ARMÉ le plus proche, tiennent leur distance (`portee_px`) et tirent ; celui qu'ils touchent dans
+#: une rixe riposte. Plus d'arme en vue `calme_images` : ils vont voir, puis flânent. Le joueur n'y est pour rien :
+#: ni étoile, ni méprise — mais s'il est recherché et qu'ils le voient, c'est lui qu'ils poursuivent.
+POLICE: dict = {
+    "coups": 8,
+    "fenetre_images": 600,
+    "rayon_px": 300,
+    "distance_px": (140, 280),
+    "agents": 2,
+    "portee_px": (60, 150),
+    "cadence_images": 40,
+    "calme_images": 240,
+    "repos_images": 3600,
+}
+
+
 def exporter() -> dict:
     """Ce que le navigateur reçoit sous `B.defs.rixes`."""
     tir = dict(TIR, distances={k: list(v) for k, v in TIR["distances"].items()}, salve=list(TIR["salve"]),
@@ -139,4 +158,5 @@ def exporter() -> dict:
             "renforts": renforts,
             "lancer": dict(LANCER, distance_px=list(LANCER["distance_px"]),
                            objets={k: dict(v) for k, v in LANCER["objets"].items()}),
-            "poursuite": dict(POURSUITE, distance_px=list(POURSUITE["distance_px"]))}
+            "poursuite": dict(POURSUITE, distance_px=list(POURSUITE["distance_px"])),
+            "police": dict(POLICE, distance_px=list(POLICE["distance_px"]), portee_px=list(POLICE["portee_px"]))}

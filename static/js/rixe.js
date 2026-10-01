@@ -283,7 +283,9 @@ const Rixe = (function () {
       const q = Entites.creerPieton(lieu.x + (i - (n - 1) / 2) * 14, lieu.y, arch);
       if (!q) continue;
       q.renfort = true; q.metier = 'bagarre'; q.cri = 90;
-      if (rixe) { q.bagarre = true; q.etat = 'bagarre'; q.bagarreT = e.bagarreT || 900; q.rival = cible; }
+      // ⚠️ Sa rixe finit avec celle de l'appelant, jamais apres : un defaut de 900 images le laissait se battre seul
+      // une fois la rixe finie.
+      if (rixe) { q.bagarre = true; q.etat = 'bagarre'; q.bagarreT = Math.max(0, e.bagarreT || 0); q.rival = cible; }
       else q.etat = 'attaque_joueur';
     }
     Entites.indexer();
@@ -529,6 +531,108 @@ const Rixe = (function () {
     S.v = v; S.fin = B.t + P.duree_images; S.repos = B.t + P.repos_images; S.depuis = 0;
   }
 
+  // --- Vague 5d : la police contre les gangs ------------------------------------------------------------------
+
+  function police() { return B.defs.rixes.police; }
+
+  /** Personne n'envoie la police : la paix du Boss, dedans, un bloc, une mission en cours. */
+  function policeAuRepos() {
+    return B.interieur || B.bloc || (B.partie && B.partie.boss) || (B.mission && B.mission.entites && B.mission.entites.some(function (q) {
+      return q.cible && q.vivant && q.etat !== 'assomme';
+    }));
+  }
+
+  /** Une place pour l'auto-patrouille : une voie a `distance_px` de la fusillade, hors de l'ecran, sans char dessus —
+      cherchee dans l'ordre, jamais au de. */
+  function rueDeLaPatrouille(F) {
+    const P = police(), c = Monde.carte, d = P.distance_px;
+    for (let k = 0; k < 16; k++) {
+      const a = k * Math.PI / 8;
+      for (const r of [d[0], (d[0] + d[1]) / 2, d[1]]) {
+        const tx = Math.floor((F.x + Math.cos(a) * r) / TT), ty = Math.floor((F.y + Math.sin(a) * r) / TT);
+        if (tx < 1 || ty < 1 || tx >= c.w - 1 || ty >= c.h - 1) continue;
+        const fl = Monde.fleche(tx, ty);
+        if (CAP[fl] === undefined) continue;
+        const x = tx * TT + 8, y = ty * TT + 8;
+        if (Entites.visibleAEcran(x, y, 40) || Vehicules.coupeLaLigne(x, y, x, y, null)) continue;
+        return { x: x, y: y, sens: fl };
+      }
+    }
+    return null;
+  }
+
+  /** L'auto-patrouille arrive : garee, sirene, ses agents en descendent (`contreGang`). Rend vrai si elle est la. */
+  function envoyerLaPolice(F) {
+    const P = police(), rue = rueDeLaPatrouille(F);
+    if (!rue) return false;
+    const def = Vehicules.vehiculeDef('police');
+    const v = Vehicules.creer('police', rue.x, rue.y, CAP[rue.sens], { etat: 'stationne', couleur: def.couleurs[0], sirene: true });
+    if (!v) return false;
+    v.contreGang = true;
+    for (let k = 0; k < P.agents; k++) {
+      const a = Police.creerAgent(rue.x + (k ? 12 : -12), rue.y + 14, 'contreGang');
+      if (!a) continue;
+      a.calmeT = P.calme_images; a.prochainTir = 0;
+    }
+    Entites.indexer();
+    return true;
+  }
+
+  /** UN COUP DE FEU DE GANG (appele par `Combat.tirer`) : on compte. `coups` coups en `fenetre_images`, a `rayon_px`
+      les uns des autres, et la police arrive — une fois, puis `repos_images`. */
+  function noterCoupDeFeu(e) {
+    const P = police(), F = B.fusillade || (B.fusillade = { x: 0, y: 0, n: 0, t: -1e9, repos: 0 });
+    if (B.t - F.t > P.fenetre_images || dist2(F.x, F.y, e.x, e.y) > P.rayon_px * P.rayon_px) {
+      F.x = e.x; F.y = e.y; F.n = 0;
+    }
+    F.n++; F.t = B.t;
+    if (F.n >= P.coups && B.t >= F.repos && !policeAuRepos() && envoyerLaPolice(F)) {
+      F.repos = B.t + P.repos_images; F.n = 0;
+    }
+  }
+
+  /** Sa proie : le membre de gang ARME (l'arme de son gang en main), en combat, le plus proche, a la portee de son
+      oeil. */
+  function proieDe(a) {
+    const P = police();
+    let meilleur = null, dMin = Infinity;
+    for (const q of Entites.pietonsAutour(a.x, a.y, P.portee_px[1] * 2)) {
+      if (!q.gang || !q.armeDeGang || q.arme !== q.armeDeGang || q.etat === 'assomme' || !q.rixe || !EN_COMBAT[q.etat]) continue;
+      const d = dist2(q.x, q.y, a.x, a.y);
+      if (d < dMin) { dMin = d; meilleur = q; }
+    }
+    return meilleur;
+  }
+
+  /** UN AGENT CONTRE UN GANG, une image (appele par `Police.gere`, etat `contreGang`). Il vise sa proie, tient sa
+      distance, tire a sa cadence ; celui qu'il touche dans une rixe le prend pour rival (`riposte`). Plus d'arme en
+      vue `calme_images` : il va voir la ou c'etait, puis flane. Rend vrai (la police le mene). */
+  function majAgent(a) {
+    const P = police(), vitesse = B.defs.recherche.vitesses.policier;
+    let cible = a.proie;
+    if (!cible || !cible.vivant || cible.etat === 'assomme' || !cible.armeDeGang
+        || dist2(cible.x, cible.y, a.x, a.y) > P.portee_px[1] * P.portee_px[1] * 9) cible = a.proie = proieDe(a);
+    if (!cible) {
+      a.vx = 0; a.vy = 0;
+      if (--a.calmeT <= 0) { a.etat = 'enquete'; a.but = { x: a.x, y: a.y }; a.enqueteT = 120; a.chemin = null; }
+      return true;
+    }
+    a.calmeT = P.calme_images;
+    // ⚠️ La police mene ses agents JUSQU'AU PAS : `majPieton` s'arrete des que `Police.gere` rend vrai — sans ces deux
+    // lignes, il reglait sa vitesse sans jamais avancer, et ne venait jamais a portee.
+    const enPlace = tenirSaDistance(a, cible, P.portee_px, vitesse);
+    Entites.deplacerCercle(a, a.vx, a.vy, Monde.MASQUE_NAGEUR);
+    Entites.regarder(a, cible.x - a.x, cible.y - a.y);
+    if (!enPlace || a.t < (a.prochainTir || 0)) return true;
+    if (Combat.tirer(a, Combat.armeDef('pistolet'), cible)) {
+      a.prochainTir = a.t + P.cadence_images;
+      // ⚠️ LA RIPOSTE : dans une rixe, il prend l'agent pour rival (la branche `bagarre` le garde, `agent`).
+      // (Seulement s'il est ENCORE dans la rixe : `bagarre` reste vrai apres.)
+      if (Entites.enPleineRixe(cible)) cible.rival = a;
+    }
+    return true;
+  }
+
   return { maj: maj, assaillants: assaillants, armer: armer, abriPour: abriPour, blesse: blesse,
-           majPoursuites: majPoursuites };
+           majPoursuites: majPoursuites, noterCoupDeFeu: noterCoupDeFeu, majAgent: majAgent };
 })();

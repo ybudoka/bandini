@@ -968,3 +968,78 @@ def test_pas_de_poursuite_pendant_une_mission_ni_la_paix_du_boss(banc):
         return { boss: poursuivants(L).length };
     }""" % (TROIS, FUITE))
     assert r["boss"] == 0, r
+
+
+# --- Vague 5d : la police contre les gangs -------------------------------------------------------------------
+
+#: Une fusillade au pistolet entre un Cravate et une Morue, plantée et increvable : jusqu'à ce que la police arrive.
+GROSSE = """
+    function grosseFusillade(L, o, images) {
+      const d = fusillade(L, 'cravate', 'pistolet', 100);
+      const agents = {};
+      for (let i = 0; i < images; i++) {
+        tenirLaCible(d); d.t.vie = d.t.vieMax; o.frame(1);
+        for (const a of L.B.entites) if (a.agent && a.etat === 'contreGang' && !agents[a.id]) agents[a.id] = { a: a, aLEcran: L.Entites.visibleAEcran(a.x, a.y, 0) };
+      }
+      return { d: d, agents: Object.keys(agents).map(function (k) { return agents[k]; }) };
+    }
+"""
+
+
+def test_une_grosse_fusillade_fait_venir_la_police(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(95);
+        %s
+        %s
+        const P = L.B.defs.rixes.police;
+        const f = grosseFusillade(L, o, 900);
+        const chars = L.B.entites.filter(function (q) { return q.type === 'vehicule' && q.contreGang; });
+        return { agents: f.agents.length, aLEcran: f.agents.filter(function (x) { return x.aLEcran; }).length,
+                 chars: chars.length, slug: chars[0] && chars[0].slug, attendus: P.agents,
+                 etoiles: L.B.recherche.etoiles };
+    }""" % (FUSILLADE, GROSSE))
+    assert r["chars"] == 1 and r["slug"] == "police", "aucune auto-patrouille (%s)" % r
+    assert r["agents"] == r["attendus"], r
+    assert r["aLEcran"] == 0, "un agent est apparu à l'écran (%s)" % r
+    assert r["etoiles"] == 0, "la police s'en prend au joueur qui n'a rien fait (%s)" % r
+
+
+def test_les_agents_tirent_sur_le_gang_arme_et_il_riposte(banc):
+    """Les agents visent le membre de gang ARMÉ, jamais le joueur ; celui qu'ils touchent dans une rixe les prend
+    pour rival et riposte."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(96);
+        %s
+        %s
+        L.B.defs.rixes.police.coups = 3;                 // vite
+        const tirs = { surGang: 0, surToi: 0, riposte: 0 };
+        const vrai = L.Combat.tirer;
+        L.Combat.tirer = function (e, arme, cible) {
+          if (e.agent && cible && cible.gang) tirs.surGang++;
+          if (e.agent && (!cible || cible === L.B.joueur)) tirs.surToi++;
+          if (e.gang && cible && cible.agent) tirs.riposte++;
+          return vrai.apply(null, arguments);
+        };
+        grosseFusillade(L, o, 1200);
+        L.Combat.tirer = vrai;
+        return tirs;
+    }""" % (FUSILLADE, GROSSE))
+    assert r["surGang"] >= 2, "les agents ne tirent pas sur le gang (%s)" % r
+    assert r["surToi"] == 0, "un agent tire sur le joueur qui n'a rien fait (%s)" % r
+    assert r["riposte"] >= 1, "le gang ne riposte pas (%s)" % r
+
+
+def test_pas_de_police_contre_les_gangs_pendant_la_paix_du_boss(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(97);
+        %s
+        %s
+        L.B.partie.boss = { jour: 1 };
+        L.B.defs.rixes.police.coups = 3;
+        const f = grosseFusillade(L, o, 600);
+        return { agents: f.agents.length };
+    }""" % (FUSILLADE, GROSSE))
+    assert r["agents"] == 0, r

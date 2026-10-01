@@ -426,7 +426,9 @@ const Police = (function () {
   }
 
   function alerterAgent(a, x, y) {
-    if (a.etat === 'poursuit') return;
+    // ⚠️ Deja au combat contre un gang (vague 5d des bagarres) : il n'enquete pas sur les coups de feu — ce sont
+    // les siens, et ceux qu'il est venu faire taire.
+    if (a.etat === 'poursuit' || a.etat === 'contreGang') return;
     a.etat = 'enquete'; a.but = { x: x, y: y }; a.chemin = null; a.enqueteT = 240;
   }
 
@@ -553,6 +555,9 @@ const Police = (function () {
       suivre(a, but, v.policier);
       return true;
     }
+    // CONTRE UN GANG (vague 5d des bagarres) : une grosse fusillade l'a fait venir ; il tire sur les gangs armes.
+    // (Tu es recherche et il te voit : la branche d'au-dessus l'a deja mis a ta poursuite.)
+    if (a.etat === 'contreGang') return Rixe.majAgent(a);
     if (a.etat === 'enquete') {
       if (!a.but || suivre(a, a.but, v.policier * 0.8)) {
         a.vx = 0; a.vy = 0;
