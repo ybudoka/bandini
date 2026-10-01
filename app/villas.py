@@ -101,6 +101,31 @@ def _jardin(sol: list[list[str]], r: dict, x0: int, x1: int, fond: int, herbe) -
     return poses
 
 
+def _refaire_la_piece(ville: dict, r: dict, x0: int, x1: int, rangees: range) -> None:
+    """LA VILLA À SA TAILLE (des intérieurs fidèles à l'extérieur) : la pièce derrière sa porte, s'il y en a une,
+    et la `vitrine` de la porte (la part de bâtiment qui est la sienne) reprennent les mesures du bâtiment ÉLARGI (`carte.mesures_de_la_part` : la largeur de la façade, la profondeur du
+    toit) ; ses étages d'avant partent, et `etages.monter`, qui passe après, empile ceux que la façade peint. ⚠️ La
+    même variante (le numéro de la pièce) : rien n'est tiré."""
+    from . import carte, etages
+    x_porte = r["x"] + r["porte"]
+    porte = next((p for p in ville.get("portes") or [] if (p["x"], p["y"]) == (x_porte, r["y"]) and p.get("interieur")),
+                 None)
+    pieces = ville.get("interieurs") or {}
+    m = etages.GENEREE.match((porte or {}).get("interieur") or "")
+    if not porte or not m or porte["interieur"] not in pieces:
+        return
+    mesures = carte.mesures_de_la_part({(x, y) for x in range(x0, x1 + 1) for y in rangees})
+    if not mesures:
+        return
+    largeur, hauteur = mesures
+    porte["vitrine"] = [x0, x1 - x0 + 1]                  # la part de bâtiment de la porte : toute la façade
+    slug = porte["interieur"]
+    for haut in etages.suite(pieces, slug)[1:]:
+        del pieces[haut]
+    pieces[slug] = carte.piece_de_logement(slug, largeur, hauteur, min(max(x_porte - x0 + 1, 1), largeur),
+                                           variante=int(m.group(1)))
+
+
 def poser(ville: dict) -> list[dict]:
     """Élargit les villas et ferme leur cour d'une haie. Rend la liste des villas (`x`, `y`, `l`, `avant`). Change
     `ville["sol"]` et, pour chaque villa, sa résidence (`x`, `l`, `motifs`, `porte`, `etages`, `villa`)."""
@@ -149,6 +174,7 @@ def poser(ville: dict) -> list[dict]:
             for x in list(range(x0, r["x"])) + list(range(r["x"] + r["l"], x1 + 1)):
                 sol[y][x] = "F" if y == r["y"] else "P"
         avant = dict(r)
+        _refaire_la_piece(ville, r, x0, x1, rangees)
         r["motifs"] = "F" * gauche + (r.get("motifs") or "F" * r["l"]) + "F" * droite
         r["porte"] = r["porte"] + gauche
         r["x"], r["l"] = x0, x1 - x0 + 1

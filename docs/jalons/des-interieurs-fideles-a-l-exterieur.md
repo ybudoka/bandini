@@ -192,3 +192,21 @@ le sien, dans sa pièce (`materiaux`, `carte._piece`) — un seul mur, la plinth
 - Juge `test_les_lieux_faits_a_la_main_portent_leur_habit` (la table en toutes lettres ; on entre dans la chapelle
   et chaque mur lit sa plinthe) ; quatre mutations, toutes mordent.
 - **Reste** au jalon : la villa à sa taille et à ses niveaux, après « Des étages dedans aussi ».
+
+**Vague 6, livrée le 1er oct. 2026 : la villa à sa taille et à ses niveaux** (après « Des étages dedans aussi »,
+atterri le matin même). La pièce de la villa avait gardé les mesures du cossu d'avant l'élargissement (6 × 5 pour
+une façade de 7) et un seul niveau. `villas.poser` la refait maintenant sur la ville finie (`_refaire_la_piece`) :
+les mesures du bâtiment ÉLARGI (`carte.mesures_de_la_part` — la façade entière, la profondeur du toit), la même
+variante (le numéro de la pièce : rien n'est tiré), la `vitrine` de la porte élargie avec elle (la part de bâtiment
+que le juge des mesures relit) ; ses étages d'avant partent, et `etages.monter`, qui passe après, empile ceux que la
+façade peint. Mesure : la villa des Érables ouvre sur 9 × 5 (son plancher de 7 × 3) et son étage.
+
+- Juges `test_villas.py` : la villa ouvre sur une pièce à sa taille et chaque niveau a les mesures du rez ; « seule
+  l'herbe devient villa » tolère que changent les portes et les pièces des villas, et rien d'autre ;
+  `test_carte.test_la_piece_a_les_mesures_de_son_batiment` les tient pour toute la ville. Trois mutations, deux
+  mordent — la troisième (retirer les étages d'avant) ne peut pas : aucun cossu devenu villa n'avait d'étage dans
+  la ville du témoin.
+- Regardé : la villa des Érables, au rez (le marbre, le lit d'ivoire, la cuisine, l'escalier, les horloges).
+
+**Le jalon est livré** : six vagues — le mur de la porte, l'habit du logement, le quartier et le genre, les
+commerces, les lieux faits à la main, la villa à sa taille.

@@ -7,7 +7,7 @@ from collections import deque
 
 import pytest
 
-from app import carte, clotures, villas
+from app import carte, clotures, etages, villas
 
 #: La table d'ici, pas celle du module : un juge qui relit la table qu'il juge ne rougit jamais.
 FACADE = set("FWDdPG")
@@ -40,8 +40,24 @@ def test_le_temoin_a_ses_villas(deux_villes):
 def test_seule_l_herbe_devient_villa_ou_haie(deux_villes):
     sans, avec, _ = deux_villes
     for cle in avec:
-        if cle not in {"sol", "residences", "decor"} | TOLERES:
+        if cle not in {"sol", "residences", "decor", "portes", "interieurs"} | TOLERES:
             assert avec[cle] == sans[cle], f"« {cle} » a changé : les villas déplacent la ville"
+    # Les portes et les pièces : seulement celles des villas (la vitrine élargie, la pièce à la taille de la villa).
+    villas_ = [r for r in avec["residences"] if r.get("villa")]
+    def d_une_villa(p):
+        return any(p["y"] == r["y"] and r["x"] <= p["x"] < r["x"] + r["l"] for r in villas_)
+    assert len(avec["portes"]) == len(sans["portes"])
+    leurs = set()
+    for a, b in zip(sans["portes"], avec["portes"]):
+        if a != b:
+            assert d_une_villa(b) and {k: v for k, v in a.items() if k != "vitrine"} == \
+                {k: v for k, v in b.items() if k != "vitrine"}, (a, b)
+        if d_une_villa(b) and b.get("interieur"):
+            leurs.add(b["interieur"])
+    niveaux = {n for slug in leurs for pieces in (avec["interieurs"], sans["interieurs"]) for n in etages.suite(pieces, slug)}
+    for slug in set(avec["interieurs"]) | set(sans["interieurs"]):
+        if avec["interieurs"].get(slug) != sans["interieurs"].get(slug):
+            assert slug in niveaux, f"la pièce {slug} a changé : elle n'est pas derrière une villa"
     # Le décor : celui d'avant, dans le même ordre, et le jardin des villas AU BOUT (ses numéros à part).
     assert avec["decor"][:len(sans["decor"])] == sans["decor"]
     assert {d["type"] for d in avec["decor"][len(sans["decor"]):]} <= JARDIN
@@ -143,3 +159,30 @@ def test_le_jardin_de_la_villa(deux_villes):
             assert sol[max(ys) + 1][min(xs)] == "`", "la piscine contre la haie"
             piscines += 1
     assert fontaines == len(posees) and portails >= 3 and piscines >= 3, (fontaines, portails, piscines)
+
+
+def test_la_villa_ouvre_sur_une_piece_a_sa_taille_et_a_ses_niveaux(deux_villes):
+    """Derrière la porte d'une villa, une pièce aux mesures du bâtiment ÉLARGI (la façade entière, la profondeur du
+    toit — murs compris, deux de plus), et autant de niveaux que la façade en peint (`etages.monter`)."""
+    _, avec, _ = deux_villes
+    vues = 0
+    for r in avec["residences"]:
+        if not r.get("villa"):
+            continue
+        p = next((q for q in avec["portes"] if (q["x"], q["y"]) == (r["x"] + r["porte"], r["y"]) and q.get("interieur")),
+                 None)
+        if not p:
+            continue
+        toit = 0
+        while avec["sol"][r["y"] - 1 - toit][r["x"]] == "P":
+            toit += 1
+        piece = avec["interieurs"][p["interieur"]]
+        assert (piece["largeur"], piece["hauteur"]) == (r["l"] + 2, toit + 1 + 2), (r, piece["largeur"], piece["hauteur"])
+        assert p["vitrine"] == [r["x"], r["l"]], p
+        suite = etages.suite(avec["interieurs"], p["interieur"])
+        assert len(suite) >= 2, f"la villa {r['x'], r['y']} n'a pas d'étage dedans"
+        for n in suite:
+            q = avec["interieurs"][n]
+            assert (q["largeur"], q["hauteur"]) == (piece["largeur"], piece["hauteur"]), (n, q["largeur"], q["hauteur"])
+        vues += 1
+    assert vues >= 1, "aucune villa du témoin n'a de porte qui s'ouvre"
