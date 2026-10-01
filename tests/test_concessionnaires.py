@@ -139,7 +139,11 @@ def test_le_salon_ne_deplace_rien(monkeypatch):
     avec = carte.generer(nord=False)
     monkeypatch.setattr(concessionnaires, "poser_le_salon", lambda chantier, ville: None)
     sans = carte.generer(nord=False)
-    touchees = ("sol", "portes", "devantures", "interieurs", "points_interet", "concessionnaires", "decor", "lampes")
+    # ⚠️ Les COLLECTIONS LISENT la ville finie (30 sept. 2026, vague 4 : les tremplins des sauts évitent le décor, et les
+    # cartes et les bebelles évitent les tremplins) : elles suivent le décor d'une ville à l'autre, sans y rien poser
+    # (`test_collections::test_les_cartes_ne_deplacent_rien`). Comme les éboueurs, on ne les compare pas.
+    touchees = ("sol", "portes", "devantures", "interieurs", "points_interet", "concessionnaires", "decor", "lampes",
+                "collections")
     for cle in avec:
         if cle in touchees:
             continue
@@ -218,7 +222,10 @@ def test_ti_pout_ne_deplace_rien(monkeypatch):
     avec = carte.generer()
     monkeypatch.setattr(concessionnaires, "poser_ti_pout", lambda ville: None)
     sans = carte.generer()
-    touchees = ("sol", "portes", "devantures", "interieurs", "points_interet", "concessionnaires", "lampes")
+    # ⚠️ Les COLLECTIONS LISENT la ville finie (30 sept. 2026, vague 4 : les tremplins des sauts évitent le décor, et les
+    # cartes et les bebelles évitent les tremplins) : elles suivent le décor d'une ville à l'autre, sans y rien poser
+    # (`test_collections::test_les_cartes_ne_deplacent_rien`). Comme les éboueurs, on ne les compare pas.
+    touchees = ("sol", "portes", "devantures", "interieurs", "points_interet", "concessionnaires", "lampes", "collections")
     for cle in avec:
         if cle in touchees:
             continue

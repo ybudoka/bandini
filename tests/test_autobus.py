@@ -233,6 +233,11 @@ def test_les_lignes_ne_deplacent_rien_de_la_ville(monkeypatch):
         # Le tramway aussi : ses arrêts se tiennent loin des abribus.
         if cle in ("decor", "autobus", "metro", "eboueurs", "tramway"):
             continue
+        # ⚠️ Les COLLECTIONS LISENT la ville finie (30 sept. 2026, vague 4 : les tremplins des sauts évitent le décor, et les
+        # cartes et les bebelles évitent les tremplins) : elles suivent le décor d'une ville à l'autre, sans y rien poser
+        # (`test_collections::test_les_cartes_ne_deplacent_rien`). Comme les éboueurs, on ne les compare pas.
+        if cle == "collections":
+            continue
         # ⚠️ Les annexes d'un chantier LISENT la ville finie (`chantiers.completer`) : elles ne
         # sont pas de la ville du générateur, et suivent le décor d'une ville à l'autre.
         if cle == "chantiers":

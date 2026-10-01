@@ -210,7 +210,10 @@ def test_hors_de_la_salete_la_ville_ne_bouge_pas(villes):
     pas un abribus, et pas un autre décor. La poubelle qui déborde est la même
     poubelle."""
     _ville, avant, apres = villes
-    touchees = {"decor", "graffitis", "nids_de_poule"}
+    # ⚠️ Les COLLECTIONS LISENT la ville finie (30 sept. 2026, vague 4 : les tremplins des sauts évitent le décor, et les
+    # cartes et les bebelles évitent les tremplins) : elles suivent le décor d'une ville à l'autre, sans y rien poser
+    # (`test_collections::test_les_cartes_ne_deplacent_rien`). Comme les éboueurs, on ne les compare pas.
+    touchees = {"decor", "graffitis", "nids_de_poule", "collections"}
     for cle in avant:
         if cle == "chantiers":
             # ⚠️ Sans leurs annexes : elles LISENT la ville finie (`chantiers.completer`).
@@ -443,10 +446,13 @@ def test_le_zonage_ne_touche_ni_une_tuile_ni_un_arbre(villes, monkeypatch):
     ville, _avant, _apres = villes
     monkeypatch.setattr(mobilier, "MEUBLES_PAR_USAGE", {})
     sans = carte.generer(nord=False)  # ⚠️ sous le patch : pas `villes_gardees`
+    # ⚠️ Les COLLECTIONS LISENT la ville finie (30 sept. 2026, vague 4 : les tremplins des sauts évitent le décor, et les
+    # cartes et les bebelles évitent les tremplins) : elles suivent le décor d'une ville à l'autre, sans y rien poser
+    # (`test_collections::test_les_cartes_ne_deplacent_rien`). Comme les éboueurs, on ne les compare pas.
     for cle in ville:
         if cle == "chantiers":
             assert chantiers.sans_annexes(ville[cle]) == chantiers.sans_annexes(sans[cle]), cle
-        elif cle != "decor":
+        elif cle not in ("decor", "collections"):
             assert json.dumps(ville[cle], sort_keys=True) == json.dumps(sans[cle], sort_keys=True), cle
     assert [d for d in ville["decor"] if d["type"] not in USAGE_DU_MEUBLE] == sans["decor"]
 
@@ -624,7 +630,10 @@ def test_les_commerces_montent_sans_rien_deplacer(villes, monkeypatch):
     ville = carte.generer(nord=False)
     monkeypatch.setattr(vitrines, "monter_et_descendre", lambda chantier, ville: {})
     sans = carte.generer(nord=False)
-    changent = {"devantures", "residences", "portes", "lampes"}
+    # ⚠️ Les COLLECTIONS LISENT la ville finie (30 sept. 2026, vague 4 : les tremplins des sauts évitent le décor, et les
+    # cartes et les bebelles évitent les tremplins) : elles suivent le décor d'une ville à l'autre, sans y rien poser
+    # (`test_collections::test_les_cartes_ne_deplacent_rien`). Comme les éboueurs, on ne les compare pas.
+    changent = {"devantures", "residences", "portes", "lampes", "collections"}
     for cle in ville:
         if cle not in changent:
             assert json.dumps(ville[cle], sort_keys=True) == json.dumps(sans[cle], sort_keys=True), cle

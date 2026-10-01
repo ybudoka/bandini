@@ -292,8 +292,11 @@ def test_la_ville_avec_ou_sans_chantiers_est_la_meme(monkeypatch):
     monkeypatch.setattr(chantiers, "tirer", lambda ville, batiments, graine: [])
     sans = carte.generer()
     assert sans["chantiers"] == []
+    # ⚠️ Les COLLECTIONS LISENT la ville finie (30 sept. 2026, vague 4 : les tremplins des sauts évitent le décor, et les
+    # cartes et les bebelles évitent les tremplins) : elles suivent le décor d'une ville à l'autre, sans y rien poser
+    # (`test_collections::test_les_cartes_ne_deplacent_rien`). Comme les éboueurs, on ne les compare pas.
     for cle, valeur in avec.items():
-        if cle != "chantiers":
+        if cle not in ("chantiers", "collections"):
             assert sans[cle] == valeur, f"« {cle} » change quand on ajoute les chantiers"
 
 
