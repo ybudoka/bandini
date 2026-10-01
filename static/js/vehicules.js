@@ -1465,6 +1465,39 @@ const Vehicules = (function () {
     return triche('vehicules') && !!B.joueur && v.conducteur === B.joueur;
   }
 
+  /** Le PREMIER char que coupe le segment (x0, y0)-(x1, y1) — le plus proche de (x0, y0) —, `sauf` celui-la (le char
+      du tireur) ; ou null. Un segment de longueur nulle dit si le point est SOUS un char. Le char est son rectangle :
+      `longueur` le long de son cap, `largeur` en travers. ⚠️ Le SEGMENT, pas le point d'arrivee : une balle de
+      carabine avance de dix pixels par image, et un char de travers n'en a que quatorze de large.
+      (Vague 5a des bagarres de gangs : les balles s'arretent sur les chars, et un char abrite.) */
+  function coupeLaLigne(x0, y0, x1, y1, sauf) {
+    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, demi = Math.hypot(x1 - x0, y1 - y0) / 2;
+    let meilleur = null, tMin = Infinity;
+    for (const v of Entites.autour(mx, my, demi + 32, function (q) { return q.type === 'vehicule' && q !== sauf; })) {
+      const t = segmentDansLeChar(x0, y0, x1, y1, v);
+      if (t !== null && t < tMin) { tMin = t; meilleur = v; }
+    }
+    return meilleur;
+  }
+
+  /** Ou (de 0 a 1) le segment entre-t-il dans le rectangle du char ? null s'il n'y entre pas (Liang-Barsky, dans le
+      repere du char). */
+  function segmentDansLeChar(x0, y0, x1, y1, v) {
+    const c = Math.cos(-v.angle), s = Math.sin(-v.angle);
+    const ax = (x0 - v.x) * c - (y0 - v.y) * s, ay = (x0 - v.x) * s + (y0 - v.y) * c;
+    const bx = (x1 - v.x) * c - (y1 - v.y) * s, by = (x1 - v.x) * s + (y1 - v.y) * c;
+    const hx = v.def.longueur / 2, hy = v.def.largeur / 2, dx = bx - ax, dy = by - ay;
+    let t0 = 0, t1 = 1;
+    const bords = [[-dx, ax + hx], [dx, hx - ax], [-dy, ay + hy], [dy, hy - ay]];
+    for (const b of bords) {
+      const p = b[0], q = b[1];
+      if (p === 0) { if (q < 0) return null; continue; }
+      const r = q / p;
+      if (p < 0) { if (r > t1) return null; if (r > t0) t0 = r; } else { if (r < t0) return null; if (r < t1) t1 = r; }
+    }
+    return t0;
+  }
+
   function endommager(v, degats, source) {
     if (v.etat === 'epave' || v.sauteBientot || degats <= 0 || blinde(v)) return;
     v.vie -= degats;
@@ -4600,7 +4633,7 @@ const Vehicules = (function () {
 
   return {
     ROTATIONS, courbeBraquage, vehiculeDef, cederLaVoie, creer, peupler, majGaresDeService, majLotsDeConcession, compteCommeGare, typeDeRue, remise, remisee, rentrerLesRemises, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, pousserLeDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
-    majPhysique, allureDuSol, avancer, heurterVehicules, heurterPietons, heurterBetes, endommager, exploser, declencherAlarme,
+    majPhysique, allureDuSol, avancer, heurterVehicules, heurterPietons, heurterBetes, endommager, coupeLaLigne, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, suitUnChar, klaxonnerLePassant, vitesseDeForce, majConducteur, commandesJoueur, rouler,
     pointDArret, approcheDeLaLigne, placeDeLaPanne, placeStationnee, garesVoulus,

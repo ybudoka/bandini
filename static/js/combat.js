@@ -384,9 +384,15 @@ const Combat = (function () {
     const vise = cible || B.joueur;
     const angle = joueur ? (arme.foire ? e.angle : viseeAssistee(e, e.angle)) : angleVers(e.x, e.y, vise.x, vise.y);
     const dispersion = dispersionDe(e, arme) * (deGang ? B.defs.rixes.tir.dispersion_facteur : 1);
+    // ⚠️ LE CHAR QU'IL ENJAMBE (vague 5a) : son char a lui, ou celui contre lequel il est colle — la balle nait au
+    // canon, devant lui, et naissait DANS la tole : l'agent qui tirait appuye sur son auto la criblait. Il tire
+    // par-dessus le capot ; ce char-la, sa balle l'ignore.
+    const mx = e.x + Math.cos(angle) * 8, my = e.y + Math.sin(angle) * 8 - 6;
+    const enjambe = e.dansVehicule || Vehicules.coupeLaLigne(e.x, e.y, mx, my, null);
     for (let i = 0; i < (arme.plombs || 1); i++) {
       const devie = angle + (alea() - 0.5) * dispersion * 2;
-      Entites.creer('projectile', e.x + Math.cos(angle) * 8, e.y + Math.sin(angle) * 8 - 6, {
+      Entites.creer('projectile', mx, my, {
+        enjambe: enjambe,
         r: 2, dessine: false, tireur: e, degats: arme.degats, arme: arme.slug,
         saigne: arme.saigne, cloche: !!arme.cloche, feu_s: arme.feu_s || 0,
         foire: !!arme.foire, deGang: deGang && !!e.gang,
@@ -589,6 +595,20 @@ const Combat = (function () {
         if (p.feu_s) allumer(p.x - p.vx, p.y - p.vy, p);     // au pied du mur, pas dedans
         continue;
       }
+      // ⚠️ LA BALLE S'ARRETE SUR UN CHAR (vague 5a des bagarres de gangs, Martin : « les tiennes aussi ») : au premier
+      // char que coupe son pas — le SEGMENT, une carabine avance de dix pixels par image —, et elle l'abime. Jamais
+      // le char qu'enjambe le tireur (`enjambe` : le sien, ou celui contre lequel il tire). Une bouteille en cloche
+      // passe par-dessus tant qu'elle vole haut ; le bouchon de foire ne vise que ses cibles. Avant : la balle traversait la tole, et se cacher derriere un char ne protegeait de rien.
+      if (!p.foire && (!p.cloche || p.z < 14)) {
+        const tole = Vehicules.coupeLaLigne(p.x - p.vx, p.y - p.vy, p.x, p.y, p.enjambe || null);
+        if (tole) {
+          Vehicules.endommager(tole, p.degats, p.tireur);
+          Entites.decal(p.x - p.vx * 0.5, p.y - p.vy * 0.5, 'impact');
+          Entites.retirer(p);
+          if (p.feu_s) allumer(p.x - p.vx, p.y - p.vy, p);
+          continue;
+        }
+      }
       const touche = Entites.autour(p.x, p.y, 7, function (c) {
         // ⚠️ **LE BOUCHON DE FOIRE NE BLESSE PERSONNE** : il ne vise que les
         // cibles de la galerie, jamais un passant, un donneur, une mascotte. Un
@@ -608,8 +628,8 @@ const Combat = (function () {
         // jamais rien obtenir, et un char serait devenu le seul endroit du jeu
         // ou l'on ne risque rien. C'est le meme geste que le brasier, qui
         // endommage le char plutot que son conducteur.
-        // ⚠️ Seule la balle qui aurait touche LE CONDUCTEUR mord la tole : tirer
-        // sur le capot d'un char vide ne fait toujours rien.
+        // (Depuis la vague 5a, la balle s'arrete d'abord sur la carrosserie, plus haut ; ceci reste pour celle qui
+        // atteint le conducteur sans couper le rectangle du char — un deux-roues, par exemple.)
         if (touche.dansVehicule) Vehicules.endommager(touche.dansVehicule, p.degats, p.tireur);
         // ⚠️ LA BALLE D'UN GANG TE PREND MOINS (`rixes.TIR.degats_contre_joueur`) : trois tireurs ne te couchent
         // pas en une seconde.

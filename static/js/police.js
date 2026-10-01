@@ -530,7 +530,10 @@ const Police = (function () {
         return true;
       }
       // A trois etoiles, on tire.
-      if (palier().tirent && a.vuT === 0 && d < p.tir_portee_tuiles * TT) {
+      // ⚠️ Pas a travers un char (vague 5a des bagarres de gangs : les balles s'arretent sur la tole) — sauf celui OU
+      // tu es : c'est lui qu'on crible. Sinon l'agent vidait son chargeur dans sa propre auto, qui finissait en epave.
+      if (palier().tirent && a.vuT === 0 && d < p.tir_portee_tuiles * TT
+          && !Vehicules.coupeLaLigne(a.x, a.y, j.x, j.y, j.dansVehicule || null)) {
         if (a.tirT-- <= 0) { a.tirT = p.tir_cadence_s * 60; Entites.regarder(a, j.x - a.x, j.y - a.y); Combat.tirer(a, Combat.armeDef('pistolet')); }
       }
       if (!j.dansVehicule && d < p.arrestation_px + 4) {

@@ -328,7 +328,9 @@ const Rixe = (function () {
         const x = tx * TT + 8, y = ty * TT + 8, dc = Math.hypot(cible.x - x, cible.y - y);
         if (dc < f[0] || dc > f[1] + TT) continue;
         const d = dist2(x, y, e.x, e.y);
-        if (d >= dMin || Monde.ligneLibre(x, y, cible.x, cible.y)) continue;
+        // Cache par un MUR, ou par un CHAR (vague 5a : les balles s'arretent sur la tole) — et pas sous un char.
+        if (d >= dMin || Vehicules.coupeLaLigne(x, y, x, y, null)) continue;
+        if (Monde.ligneLibre(x, y, cible.x, cible.y) && !Vehicules.coupeLaLigne(x, y, cible.x, cible.y, cible.dansVehicule || null)) continue;
         dMin = d; meilleur = { x: x, y: y };
       }
     }
@@ -345,7 +347,9 @@ const Rixe = (function () {
       voit pas. Rend vrai s'il est en place, la cible en vue. */
   function tenirSaDistance(e, cible, f, vitesse) {
     const dx = cible.x - e.x, dy = cible.y - e.y, d = Math.hypot(dx, dy) || 1;
-    const vue = Monde.ligneLibre(e.x, e.y, cible.x, cible.y);
+    // La cible en vue : ni mur, ni char entre eux (vague 5a) — sauf le char OU EST la cible : c'est lui qu'on crible.
+    const vue = Monde.ligneLibre(e.x, e.y, cible.x, cible.y)
+      && !Vehicules.coupeLaLigne(e.x, e.y, cible.x, cible.y, cible.dansVehicule || null);
     if (d < f[0]) { e.vx = -dx / d * vitesse; e.vy = -dy / d * vitesse; return false; }
     if (d > f[1] || !vue) { e.vx = dx / d * vitesse; e.vy = dy / d * vitesse; return false; }
     e.vx = 0; e.vy = 0;
