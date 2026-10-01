@@ -785,3 +785,30 @@ ne passe en `attaque_joueur`.
 #### Tâche 4 — juger large, regarder, atterrir
 
 Les juges de la vague 1 et la série des missions ; une capture d'une rixe armée ; la ligne du plan et ces notes.
+
+### Vague 3 — le moral et les blessés — **plan** (1er oct. 2026)
+
+> Exécuté comme les vagues 1 et 2 : sur place, juges d'abord, une relecture neuve à la fin.
+
+**Déjà là** (l'exploration) : un membre couché (`tuer`, `assommer`) lâche son arme au sol (`lacherArme`) et on la
+ramasse comme les autres. ⚠️ Mais chargeur PLEIN quoi qu'il ait tiré (la mitraillette du marché noir devenait
+gratuite — la relecture de la vague 2), et un tirage `B.rng()` pour sa place, en plus pour un Skateux armé.
+
+**La fiche** `rixes.MORAL` : `blesse_part` 0,35 (sous ce tiers de vie, il est blessé), `boite_allure` 0,6,
+`deroute_part` 0,5 (la moitié du camp à terre), `camp_px` 240, et les cris (`blesse_mots`, `deroute_mots`).
+
+**Le cerveau** (`rixe.js`, en tête de `Rixe.maj`) :
+- **Blessé au contact** : il FUIT EN BOITANT (`e.boite`, la fuite à `boite_allure`), en criant.
+- **Blessé tireur** : il se replie au fond de sa fourchette (la moitié haute) et continue de tirer.
+- **La déroute** : son camp (les membres de son gang qui se sont battus, `e.rixe`, à `camp_px` — debout ou à
+  terre, morts compris), la moitié à terre : les debout se sauvent, en criant. Dans une rixe, la bagarre finit.
+- Jamais un homme de mission (`cible`), un allié ni un Mante : ils sont là pour ça (comme `blesser`).
+- Rien au dé : seuils et cris à l'empreinte.
+
+**L'arme lâchée** : les balles qui RESTENT (`e.rixe.balles`, au moins une), et sa place à l'empreinte pour une
+arme de gang (le tirage `B.rng()` reste pour les autres, le hasard d'avant ne bouge pas).
+
+**Juges** (`test_rixe_js.py`, `test_rixes.py`) : le blessé au contact fuit en boitant (plus lent qu'un fuyard
+sain) ; le tireur blessé tire encore, de plus loin ; la moitié d'un camp couchée, les autres fuient — dans une
+rixe comme contre toi ; un homme de mission ne lâche jamais ; l'arme lâchée garde ce qui reste dans le chargeur,
+sans dé du jeu.
