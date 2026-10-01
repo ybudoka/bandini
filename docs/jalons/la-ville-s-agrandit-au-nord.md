@@ -1499,7 +1499,9 @@ avec une relecture neuve de toute la branche et une passe de corrections.
   qui tenaient par ce tirage fixent ce qu'ils jugent (l'archétype, la graine, l'intouchable).
 
 **Dettes** :
-- La **course de motoneige** ne se gagne, par le pilote du juge, qu'**une graine sur huit** — sur la base aussi.
+- ~~La **course de motoneige** ne se gagne, par le pilote du juge, qu'**une graine sur huit** — sur la base aussi.~~
+  Réglée le 1er oct. 2026 : c'était le pilote (une cible recalculée toutes les 20 images, qu'il dépassait) ;
+  il suit sa place sur la route, 24 graines sur 24, sans `L.graine`.
 - Les **phares du camion-benne et du camion-citerne** se voient quand ils montent l'écran (un `xfail` le tient) :
   un défaut d'avant, mis au jour par le nouveau hasard.
 - Les croisements de la couture n'ont pas de **feux piétons** (leurs feux de chars, oui).

@@ -81,18 +81,12 @@ def test_la_course_des_bois_se_joue_l_hiver(banc):
     sentiers, en levant le pied dans les virages, et la course se gagne avant la fin du chrono."""
     r = banc("function (L, o) {" + HIVER + """
         L.Jeu.commencer();
-        // ⚠️ UNE GRAINE FIXÉE (27 sept. 2026) : ce pilote de juge ne gagne la course qu'UNE FOIS SUR HUIT graines,
-        // sur la base comme depuis la bande nord (mesuré : graine 13 sur la base, 3 ici). Le juge tenait par
-        // le hasard du démarrage, que la bande a changé ; il dit maintenant « la course PEUT se gagner », et la
-        // fragilité est une dette (docs/jalons/la-ville-s-agrandit-au-nord.md, Notes).
-        // ⚠️ GRAINE 5 depuis le Petit-Canton bâti (27 sept. 2026) : il est dans la bulle de naissance du terminus,
-        // et le départ se rebat. Mesuré sur 24 graines : 4, 5, 6, 13 et 22 gagnent — 5, au milieu d'une grappe.
-        // ⚠️ GRAINE 4 depuis le bidonville de la gare et le casino du Dragon d'or (28 sept. 2026) : sur 24 graines,
-        // 3, 4 et 13 gagnent — 4, collée à 3.
-        // ⚠️ GRAINE 14 depuis les deux-roues remisés l'hiver (29 sept. 2026) : la rue d'hiver n'a plus ni moto
-        // ni vélo, et le départ se rebat encore. Sur 24 graines : la base gagne à 3, 4 et 13 ; le build à 14 seul.
-        // Le pilote du juge reste la dette (il gagne une fois sur huit à vingt-quatre).
-        L.graine(14);
+        // ⚠️ SANS GRAINE (1er oct. 2026). Le pilote ne gagnait qu'une graine sur huit à vingt-quatre, et il fallait
+        // en rechoisir une à chaque vague du nord (13, 5, 4, 14) — puis aucune depuis la grève rangée l'hiver
+        // (42ebc02d) : il rentrait dans un arbre au bord du sentier, au 6e fanion, à chaque graine. Ce n'était pas le
+        // hasard, c'était lui : il visait « trois tuiles devant » sur une route recalculée toutes les 20 images, et
+        // entre-temps la motoneige dépassait sa cible et coupait les virages. Il suit maintenant SA PLACE sur la
+        // route (`ou`) et vise trois tuiles plus loin : 9 s sur 24, 24 graines sur 24 (23 sur la base du 30 sept.).
         const B = L.B, H = L.Histoire, j = B.joueur, C = L.Conduite;
         const d = B.defs.defis.find(function (q) { return q.slug === 'motoneige'; });
         H.ouvrirDefi(d, true);
@@ -121,7 +115,7 @@ def test_la_course_des_bois_se_joue_l_hiver(banc):
             return out;
         }
         const tuile = function (px, py) { return Math.floor(px / 16) + ',' + Math.floor(py / 16); };
-        let k = 0, route = [], pour = -1;
+        let k = 0, route = [], pour = -1, ou = 0;
         o.touche('KeyW');
         for (; k < (d.chrono_s + 5) * 60 && B.defi; k++) {
             const b = e.balises[Math.min(e.i, e.balises.length - 1)];
@@ -132,9 +126,15 @@ def test_la_course_des_bois_se_joue_l_hiver(banc):
                     for (const t of sentiers) { const x = +t.split(',')[0] * 16 + 8, y = +t.split(',')[1] * 16 + 8, dd = Math.hypot(x - m.x, y - m.y); if (dd < dm) { dm = dd; mieux = t; } }
                     ici = mieux;
                 }
-                route = chemin(ici, tuile(b.x, b.y)); pour = e.i;
+                route = chemin(ici, tuile(b.x, b.y)); pour = e.i; ou = 0;
             }
-            const vise = route[Math.min(3, route.length - 1)] || tuile(b.x, b.y);
+            // Sa place sur la route : la tuile la plus proche, en avançant seulement (jamais en arrière).
+            const px = function (t) { return [+t.split(',')[0] * 16 + 8, +t.split(',')[1] * 16 + 8]; };
+            for (let q = ou + 1; q < Math.min(route.length, ou + 6); q++) {
+                const t = px(route[q]), t0 = px(route[ou]);
+                if (Math.hypot(t[0] - m.x, t[1] - m.y) <= Math.hypot(t0[0] - m.x, t0[1] - m.y)) ou = q;
+            }
+            const vise = route[Math.min(ou + 3, route.length - 1)] || tuile(b.x, b.y);
             const vx = +vise.split(',')[0] * 16 + 8, vy = +vise.split(',')[1] * 16 + 8;
             const voulu = Math.atan2(vy - m.y, vx - m.x);
             let a = voulu - m.angle; while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI;
