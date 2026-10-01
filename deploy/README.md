@@ -42,6 +42,13 @@ ssh -i ~/.ssh/dojo_deploy -o IdentitiesOnly=yes dojoadmin@103.98.215.181 \
   'bash /srv/bandini/repo/deploy/deploy.sh main'
 ```
 
+⚠️ **Quand `deploy.sh` lui-même a changé depuis la dernière mise en ligne, le premier lancement joue
+l'ANCIEN script** : bash lit le fichier pendant que son `git reset --hard` le remplace, et garde l'ancien.
+Le 1er oct. 2026 (0.391.23 → 0.401.4), la release est partie SANS l'étape « Les scripts maigrissent » —
+site sain, mais jeu.js à 37 700 octets sur le fil au lieu de 13 600. Le signe : l'étape manque au journal.
+Le remède : **relancer `deploy.sh` une deuxième fois** (le dépôt du serveur porte alors le nouveau), puis
+vérifier les tailles plus bas. `git diff <ancien main> <sha> --stat -- deploy/` le dit avant de pousser.
+
 ## La base des comptes (M14)
 
 Les comptes et leurs parties vivent dans `/srv/bandini/shared/donnees/bandini.sqlite3`
