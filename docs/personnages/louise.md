@@ -18,7 +18,7 @@ suit est une proposition.
 | Voix | **Ana Rita - Smooth, Expressive and Bright** — libre, vérifiée « quebec » en multilingue v2 ; en v3, à écouter |
 | Bulle | « Une photo? » |
 | Couleurs | imper beige, carré brun, taches de rousseur, pantalon anthracite, le crayon derrière l'oreille |
-| Missions | donne **l01** à **l06** (l'arc C de M16, renuméroté `l` : les slugs `c` sont pris par le Petit-Canton) ; son menu de photos |
+| Missions | donne **l01** à **l06** (l'arc C de M16, renuméroté `l` : les slugs `c` sont pris par le Petit-Canton) ; reçoit le dossier du maire dans **e11** (si on le garde) ; son menu de photos |
 
 ## Son histoire
 

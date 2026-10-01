@@ -30,7 +30,10 @@ MESURE_DU_PAQUET: dict[str, tuple[int, int]] = {
     # voyage avec la mission (`pour_jouer`) : 2 631 ; vague 14 (i06, i08, h08) : 2 793. 1er oct. 2026, le casse
     # (x01-x04) et d09 : 2 898 — et les douze PETITES JOBS n'y entrent pas : elles voyagent dans la suite (`jobs`,
     # `definitions.DANS_LA_SUITE`), « archétype@district » au lieu de leur passant entier (`missions._au_catalogue`).
-    "missions": (2_793, 3_150),
+    # Vagues 20 à 23 (1er oct. 2026 : p06-p12, e08-s13, q14 — quatorze missions de plus) : 3 195. Rien de ce qui reste
+    # au catalogue ne sort sans que le carnet, le GPS ou le téléphone perde de quoi choisir (titre, donneur, prérequis,
+    # prime ; et `echec` quand il ne vaut pas son défaut) : budget recalculé par la règle de départ.
+    "missions": (3_195, 3_600),
     # Les PETITES JOBS, pliées (1er oct. 2026, `missions.jobs_pour_le_navigateur`) : douze jobs, une liste chacune
     # (slug, titre, donneur, prime, « archétype@district », prérequis) — `Jobs.deplier` les remet dans `missions`.
     # ⚠️ Le brut des définitions n'a plus que ≈ 50 octets de marge sous 242 000 : la prochaine clé qui grossit le passe.

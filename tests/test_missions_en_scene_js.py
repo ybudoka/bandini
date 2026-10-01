@@ -139,7 +139,15 @@ OUTILS = ('  const ORDRE = ' + json.dumps(missions.ordre_topologique()) + ';' + 
     const perso = L.B.defs.personnages.find(function (p) { return p.slug === m.donneur; });
     if (perso.ou.indexOf('point:') === 0) {
       const piece = L.Histoire.pieceDuPoint(perso.ou.slice(6));
-      o.entrer(L.Monde.carte.portes.find(function (p) { return p.lieu === piece.slug; }));
+      // ⚠️ Une chambre d'ÉTAGE (le maire d'e11, 1er oct. 2026) n'a pas de porte en ville : on entre par la pièce dont
+      // l'escalier y monte, et on monte — comme `versLaFin` le fait pour une poignée de main.
+      const pieces = L.Monde.carte.def.interieurs || {};
+      const dessous = Object.keys(pieces).find(function (s) {
+        return (pieces[s].points || []).some(function (q) { return q.type === 'escalier' && q.vers === piece.slug; });
+      });
+      o.entrer(L.Monde.carte.portes.find(function (p) { return p.lieu === piece.slug; })
+        || L.Monde.carte.portes.find(function (p) { return p.lieu === dessous; }));
+      if (L.B.interieur && L.B.interieur.slug !== piece.slug) { L.Jeu.changerEtage(piece.slug); o.fondu(); }
     }
     const e = L.Histoire.donneur(m.donneur), j = L.B.joueur;
     j.x = e.x - 14; j.y = e.y; L.Entites.indexer();

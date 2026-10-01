@@ -14,7 +14,7 @@
 | Voix | **Nadine**, rauque, multilingue (« fr-swiss ») ; choisie parce que « l'accent fait le personnage » (`PERSONNAGES`) |
 | Bulle | « Le syndicat! » |
 | Couleurs | chandail prune, cheveux gris clair, pantalon ardoise |
-| Missions | rencontrée à **m6** ; donne **s03** |
+| Missions | rencontrée à **m6** ; donne **s03** ; et **s04** (la paie du quart de nuit, après la paix de La Shop) |
 
 ## Son histoire
 

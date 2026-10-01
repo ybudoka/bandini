@@ -14,7 +14,7 @@
 | Voix | **Riya Rao — Clear and Crisp**, vérifiée « quebec » en multilingue v2 ; permise (Martin, 25 sept. 2026), en v3 **à écouter** |
 | Bulle | « Vous, là! » |
 | Couleurs | tailleur bleu, carré châtain, pantalon foncé |
-| Missions | donne **e06**, **e07**, **e10** (les Érables libérés) ; donne aussi **e13** (sa berline reprise au lot) |
+| Missions | donne **e06**, **e07**, **e10** (les Érables libérés) ; donne aussi **e13** (sa berline reprise au lot) et **e08** (la cachette de Jo : la mère sous la conseillère) |
 
 ## Son histoire
 

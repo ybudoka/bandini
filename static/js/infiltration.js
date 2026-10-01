@@ -184,7 +184,9 @@ const Infiltration = (function () {
     // ⚠️ Ni un objet qui vient d'une TABLE de jeu (`table`, c02 : les des pipes du Pouce, qu'on glisse dans sa
     // manche au sous-sol — `Tripot.glisser`) : `ou` ne dit alors que ou aller.
     if (o && o.type === 'obtenir' && o.ou && !o.garde && !o.table && !possede(o.objet) && !objetPose(o.objet)) {
-      const l = Histoire.lieu(o.ou);
+      // ⚠️ Toute forme de lieu (1er oct. 2026, e08 : `rampe:pointe`) : `lieu` ne lisait qu'un nom de porte — un objet
+      // « au pied de la rampe » ne se posait jamais, et l'objectif attendait pour toujours. Un nom nu reste un `lieu`.
+      const l = o.ou.indexOf(':') > 0 ? Histoire.resoudre(o.ou, null) : Histoire.lieu(o.ou);
       if (l && !B.interieur) poserObjet(o, l.x, l.y);
     }
     if (!j || j.dansVehicule) return;

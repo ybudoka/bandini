@@ -14,7 +14,7 @@
 | Voix | **Québec Tremblay — Confident and Measured** (partagée avec Marco : jamais dans le même dialogue) |
 | Bulle | « Salut, l'ami! » |
 | Couleurs | chandail rouge, cheveux roux, pantalon ardoise |
-| Missions | rencontré à **m6** ; donne **e01**, **e02** ; une enveloppe de la tournée (**m51**) ; la piste de la remorqueuse (**s01**) |
+| Missions | rencontré à **m6** ; donne **e01**, **e02**, **e09** (le barbecue de janvier) ; une enveloppe de la tournée (**m51**) ; la piste de la remorqueuse (**s01**) |
 
 ## Son histoire
 

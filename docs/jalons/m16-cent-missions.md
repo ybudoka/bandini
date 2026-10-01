@@ -1507,4 +1507,36 @@ catalogue.
     `p06` collé au camion, qui nous voit ; `p07` un choc, pas de prime ; `p12` la chaloupe en épave) ; mutations : le
     rayon des arrêts de `p07` remis à trois (rouge), `sans_degats` retiré (rouge).
   - **Voix** : 43 (≈ 3 900 caractères), générées et mesurées, pas écoutées.
-
+- **1er oct. 2026 : vague 21 — les Érables et La Shop, la suite.** Cinq missions, des donneurs qui existent :
+  - `e08` (Diane, _La cachette de Jo_ — 250 $) : sa mère a trouvé un plan dans la chambre de Jo ; son coupé, un paquet
+    au pied de la rampe des Skateux sous le chrono (200 s), l'autre sous le phare, et retour chez elle avec un char des
+    Skateux collé derrière (`poursuite`).
+  - `e09` (Ti-Paul, _Le barbecue de janvier_ — 150 $) : trois poutines chaudes, en camion, à la quincaillerie, au
+    lave-auto et chez Prestige Autos, en deux minutes (`course`, `chrono_s`) ; puis le barbecue.
+  - `e11` (le maire, _Le maire te reçoit_ — un CHOIX) : dans sa chambre de l'hôtel (il n'y est qu'entre m97 et m98),
+    il rachète le dossier de la villa mille piastres. « VENDU, MONSIEUR LE MAIRE. » : la planque, puis sa chambre —
+    1 000 $. « IL EST PAS À VENDRE. » : la planque, Louise au kiosque, deux gardes du maire trop tard, et on remonte lui
+    dire non en pleine face — 300 $. La fin se dit dans sa chambre, d'un bord comme de l'autre.
+  - ⚠️ **La question se pose à la poignée de main** (`accueil` d'un `parler`, le patron de d09), pas dans l'intro : une
+    scène d'intro se joue seule au banc (`test_missions_en_scene_js`), et une question l'arrête jusqu'à ce qu'on
+    réponde — cinq rouges. Et le banc ne savait pas aller voir un donneur dans une chambre d'ÉTAGE (pas de porte en
+    ville) : `allerVoir` entre par la pièce dont l'escalier y monte, comme `versLaFin`.
+  - `s04` (Raymonde, _Le quart de nuit_ — 300 $) : la paie du quart de nuit en argent comptant à la caisse pop ; trois
+    Cravates et deux vagues de renforts, leur chef au couteau ; l'enveloppe à Raymonde.
+  - `s13` (Prévost, _Le prototype_ — 400 $, 600 sans une égratignure) : le coupé de Détroit chez les Skateux, la rampe
+    (30 px), la fourrière de Gilles avec un char des Chevreuils collé derrière.
+  - **Au moteur** : `obtenir` pose son objet à toute forme de lieu (`rampe:`, `zone:`, `boutique:`) — `Histoire.lieu`
+    ne lisait qu'un nom de porte, et un paquet « au pied de la rampe » ne se posait jamais.
+  - ⚠️ **Écarts à la fiche** : `e08` — Jo est parti après e04 : c'est sa mère qui donne la job ; `e09` — le vélo est remisé
+    l'hiver (une partie commence en janvier) : le camion, aux enseignes de la rue (à huit tuiles : elles sont loin de la
+    chaussée) ; `e11` — « c02 s'ouvre » : le slug est pris (Irène), Louise publie et paie ; `s04` — Bob Sauvé n'est pas
+    un personnage (et il a vendu le syndicat, s06) : Raymonde ; on porte la paie au lieu de « survivre » à la porte de
+    l'usine (jamais un lieu de mission) ; `s13` — livré à la fourrière, pas à l'usine.
+  - ⚠️ **Six balises que v3 ne connaît pas** (`hesitantly`, `seriously`, `urgently`) — `test_interpretation` les a
+    prises après la génération : refaites (≈ 550 caractères). Lancer `test_les_balises_sont_celles_que_v3_comprend`
+    AVANT de générer.
+  - **Juges** : `tests/test_erables_shop_suite_js.py` (neuf, au bouton de la poignée de main à la prime : chaque
+    mission ; `e08` et `e09` trop lents ; `e11` des deux côtés de la question ; `s13` une égratignure, pas de prime) ;
+    mutations : `obtenir` qui ne lit que les noms de porte (rouge), la prime de `s13` retirée (rouge).
+  - **Voix** : 58 (≈ 6 000 caractères, six refaites pour leurs balises, trois pour la question déplacée), générées et
+    mesurées, pas écoutées.

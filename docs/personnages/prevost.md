@@ -14,7 +14,7 @@
 | Voix | **Roland Lescalde — Epic Narrator** (un français « standard » vérifié) ; permise (Martin, 25 sept. 2026), en v3 **à écouter** |
 | Bulle | « Vous. » |
 | Couleurs | veston noir, cheveux argent gominés |
-| Missions | donne **s11** ; sa berline (**s05**) et son camion-citerne (**s09**) y passent ; donne aussi **s07** (le camion de Rimouski) |
+| Missions | donne **s11** ; sa berline (**s05**) et son camion-citerne (**s09**) y passent ; donne aussi **s07** (le camion de Rimouski) et **s13** (le prototype de Détroit) |
 
 ## Son histoire
 

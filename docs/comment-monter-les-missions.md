@@ -244,6 +244,8 @@ Contraintes **jugées** (voir `test_missions.py`) :
   termine ne se finirait pas de nuit sans défoncer la chaîne. Aujourd'hui, **`usine`** (la cour ferme la
   nuit) ne peut être le `lieu` d'aucun objectif — `parler` à quelqu'un qui s'y tient reste permis, mais
   on n'y `aller`/`livrer` pas. Le juge ne tourne pas au banc de la mission : il rougit à la suite complète.
+- `obtenir` pose son objet à **toute forme de lieu** (`rampe:pointe`, `zone:<x>`, `boutique:<mot>` — 1er oct. 2026,
+  e08) : un nom nu reste un lieu de porte.
 - ⚠️ **`ou: "quai"` et `ou: "bois"` ne posent rien** : `Histoire.tuileDeQuai` cherche les glyphes `q`/`j`
   et `tuileDeBois` le glyphe `n`, que la carte n'a plus — ils rendent `null`, et ce qu'on voulait y poser naît sur
   le joueur (q11, p05 l'ont vu au banc). Nommer un lieu, une `ruelle:` ou une `zone:` à la place.

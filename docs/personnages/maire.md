@@ -12,9 +12,9 @@
 | Rôle | le maire de la ville ; corrompu, jovial, il dort à l'Hôtel Bandini plus souvent que chez lui |
 | Où | dedans, dans la chambre de l'Hôtel Bandini — la chambre douze (`point:maire`, l'étage de l'hôtel) —, entre m97 (`arrive_apres`) et m98 (`parti_apres` : il démissionne) |
 | Voix | **Eric — Smooth, Trustworthy** (un français « standard » vérifié en multilingue v2) : le politicien lisse ; permise (Martin, 25 sept. 2026), en v3 **à écouter** |
-| Bulle | « Mon garçon! » (il n'a pas de mission à donner : on ne la voit jamais) |
+| Bulle | « Mon garçon! » (sa seule mission à donner, e11 : on la voit entre m97 et m98) |
 | Couleurs | robe de chambre bordeaux, cheveux gris rabattus, pyjama marine |
-| Missions | aucune à donner ; on le file (**e06**), on vole son dossier (**e07**, **v01**, **v02**), Raymonde le réveille (**s10**) — et il cède dans **m98** |
+| Missions | donne **e11** (_Le maire te reçoit_ : il rachète son dossier — vendu, ou à Louise) ; on le file (**e06**), on vole son dossier (**e07**, **v01**, **v02**), Raymonde le réveille (**s10**) — et il cède dans **m98** |
 
 ## Son histoire
 
