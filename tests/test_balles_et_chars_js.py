@@ -126,3 +126,48 @@ def test_un_gang_s_abrite_derriere_un_char(banc):
     }""")
     assert r["lieu"], "aucune rue dégagée sans abri : le juge ne mesure rien"
     assert r["abri"] and r["parLeChar"], "il ne s'abrite pas derrière le char (%s)" % r
+
+
+def test_les_balles_perdues_abiment_sans_faire_sauter_et_les_tiennes_si(banc):
+    """Martin (1er oct. 2026) : « abîmer sans exploser ». Les balles qui ne sont pas les tiennes (un gang, un agent)
+    abîment la tôle mais ne descendent pas un char sous 1 PV : pas d'épaves en chaîne autour d'une rixe. Les tiennes,
+    elles, le font toujours sauter."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(73);
+        %s
+        const d = ligne(L, 0, 'pistolet');
+        for (let k = 0; k < 6; k++) tirerEtAttendre(L, o, d, 'pistolet');      // trente balles de gang
+        const gang = { vie: d.v.vie, etat: d.v.etat };
+        const j = L.B.joueur;
+        for (let i = 0; i < 90; i++) o.frame(1);
+        L.Combat.ramasserArme('pistolet', 48);
+        j.arme = 'pistolet';
+        j.x = d.v.x - 30; j.y = d.v.y; L.Monde.centrerCamera(j.x, j.y);
+        for (let k = 0; k < 8 && d.v.etat !== 'epave'; k++) {
+          L.Entites.regarder(j, d.v.x - j.x, d.v.y - j.y);
+          L.Combat.tirer(j, L.Combat.armeDef('pistolet'));
+          for (let i = 0; i < 25; i++) o.frame(1);
+        }
+        return { gang: gang, toi: d.v.etat };
+    }""" % LIGNE)
+    assert r["gang"]["vie"] >= 1 and r["gang"]["etat"] != "epave", "les balles d'un gang ont fait sauter le char (%s)" % r
+    assert r["toi"] == "epave", "tes balles ne le font plus sauter (%s)" % r
+
+
+def test_le_char_ou_tu_es_saute_sous_les_balles_des_autres(banc):
+    """« Abîmer sans exploser » épargne les chars autour d'une rixe — pas celui où TU es : les balles qui te visent,
+    d'un gang ou d'un agent, le font sauter comme avant (la police te sortait de ton char à coups de pistolet)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(74);
+        %s
+        const d = ligne(L, 0, 'pistolet'), j = L.B.joueur;
+        for (let i = 0; i < 90; i++) o.frame(1);
+        j.x = d.v.x; j.y = d.v.y + 20;
+        L.Vehicules.monter(j, d.v);
+        for (let k = 0; k < 10 && d.v.etat !== 'epave'; k++) tirerEtAttendre(L, o, d, 'pistolet');
+        return { dans: j.dansVehicule === d.v || d.v.etat === 'epave', etat: d.v.etat, vie: d.v.vie };
+    }""" % LIGNE)
+    assert r["dans"], "le joueur n'est pas monté : le juge ne mesure rien (%s)" % r
+    assert r["etat"] == "epave", "le char où tu es ne saute plus sous les balles (%s)" % r

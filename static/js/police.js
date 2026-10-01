@@ -428,7 +428,7 @@ const Police = (function () {
   function alerterAgent(a, x, y) {
     // ⚠️ Deja au combat contre un gang (vague 5d des bagarres) : il n'enquete pas sur les coups de feu — ce sont
     // les siens, et ceux qu'il est venu faire taire.
-    if (a.etat === 'poursuit' || a.etat === 'contreGang') return;
+    if (a.etat === 'poursuit' || a.contreGang) return;
     a.etat = 'enquete'; a.but = { x: x, y: y }; a.chemin = null; a.enqueteT = 240;
   }
 
@@ -490,6 +490,9 @@ const Police = (function () {
     if (!a.vivant || a.etat === 'assomme' || a.recul > 0) return false;
     if (a.enjambe) { a.vx = 0; a.vy = 0; return true; }        // il est en haut d'une cloture
     if (a.etat === 'attaque') { a.vx = 0; a.vy = 0; return true; }        // il tire : Combat mene la phase
+    // CONTRE UN GANG (vague 5d) : touche, alerte, ou rendu par Combat apres son tir, il y RETOURNE — sauf s'il te
+    // poursuit (la branche du regard, plus bas, l'y met s'il te voit recherche).
+    if (a.contreGang && (a.etat === 'attaque_joueur' || a.etat === 'fuit' || a.etat === 'temoin' || a.etat === 'enquete')) a.etat = 'contreGang';
     if (a.etat === 'attaque_joueur') a.etat = 'poursuit';                 // Combat rend la main : on reprend la chasse
     if (a.etat === 'fuit' || a.etat === 'temoin') a.etat = 'poursuit';    // un agent ne fuit pas
     // ⚠️ L'AGENT QUI T'A SUIVI JUSQU'A L'ILE NE TE CHERCHE PLUS. Il ne te voit
@@ -1243,7 +1246,7 @@ const Police = (function () {
 
   return { dansLeCone, voit, piste, pisteFraiche, ratisse, porteeDuCasier, quelqu_un_voit, auRefuge, ajouterChaleur, etoilesAuMoins, signalerCrime, crimeDAutrui, rapporter, acheterLeSilence, remiseAZero, unCranDeMoins, entendre, palierDesRenforts,
            estStool, leStool, prixDuStool, majStools, appelDuStool, acheterLeStool, onNeTeReconnaitPlus,
-           creerAgent, agents, autos, gere, garder, seuilDeReperage, commandes, peuplerAgents, peuplerAutos, equipageDe: equipage, abandonnee,
+           creerAgent, agents, autos, gere, suivre, garder, seuilDeReperage, commandes, peuplerAgents, peuplerAutos, equipageDe: equipage, abandonnee,
            agentsVoulus, standingIci,
            paletteAgent: function () { return Object.assign({}, PALETTE_AGENT); },
            helico, majHelico, majBruitHelico, taireHelico, bruitHelico, dessinerHelico, lampeHelico, barrages, poserBarrage, maj };

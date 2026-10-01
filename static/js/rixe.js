@@ -511,10 +511,10 @@ const Rixe = (function () {
       }
       S.v = null;
     }
-    const calme = !j || !j.dansVehicule || B.interieur || B.bloc || (B.partie && B.partie.boss) || B.t < S.repos
-      || (B.mission && B.mission.entites && B.mission.entites.some(function (q) {
-        return q.cible && q.vivant && q.etat !== 'assomme';
-      }));
+    // ⚠️ AUCUNE MISSION, quelle qu'elle soit (une livraison sans degats, le char d'une mission), et pas en BATEAU :
+    // l'auto du gang foncait dans la baie (la relecture de la vague 5).
+    const calme = !j || !j.dansVehicule || (j.dansVehicule.def && j.dansVehicule.def.eau) || B.interieur || B.bloc
+      || (B.partie && B.partie.boss) || B.t < S.repos || B.mission || (B.partie && B.partie.mission);
     if (S.v || calme) { S.depuis = 0; return; }
     const gang = gangQuiTAttaque(j);
     if (!gang) { S.depuis = 0; return; }
@@ -545,15 +545,21 @@ const Rixe = (function () {
   /** Une place pour l'auto-patrouille : une voie a `distance_px` de la fusillade, hors de l'ecran, sans char dessus —
       cherchee dans l'ordre, jamais au de. */
   function rueDeLaPatrouille(F) {
-    const P = police(), c = Monde.carte, d = P.distance_px;
+    const P = police(), c = Monde.carte, d = P.distance_px, j = B.joueur;
+    // ⚠️ DANS LA BULLE DU JOUEUR, d'abord de son cote : une fusillade est a 300-500 px de lui, et une patrouille
+    // posee a 140-280 px d'elle au hasard des directions naissait au-dela de la bulle d'oubli — effacee aussitot (la
+    // relecture de la vague 5 : 4 directions sur 8).
+    const jmax2 = B.defs.rixes.renforts.joueur_max_px * B.defs.rixes.renforts.joueur_max_px;
+    const a0 = j ? angleVers(F.x, F.y, j.x, j.y) : 0;
     for (let k = 0; k < 16; k++) {
-      const a = k * Math.PI / 8;
+      const a = a0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * Math.PI / 8;
       for (const r of [d[0], (d[0] + d[1]) / 2, d[1]]) {
         const tx = Math.floor((F.x + Math.cos(a) * r) / TT), ty = Math.floor((F.y + Math.sin(a) * r) / TT);
         if (tx < 1 || ty < 1 || tx >= c.w - 1 || ty >= c.h - 1) continue;
         const fl = Monde.fleche(tx, ty);
         if (CAP[fl] === undefined) continue;
         const x = tx * TT + 8, y = ty * TT + 8;
+        if (j && dist2(x, y, j.x, j.y) > jmax2) continue;
         if (Entites.visibleAEcran(x, y, 40) || Vehicules.coupeLaLigne(x, y, x, y, null)) continue;
         return { x: x, y: y, sens: fl };
       }
@@ -570,9 +576,14 @@ const Rixe = (function () {
     if (!v) return false;
     v.contreGang = true;
     for (let k = 0; k < P.agents; k++) {
-      const a = Police.creerAgent(rue.x + (k ? 12 : -12), rue.y + 14, 'contreGang');
+      // Sa place : a cote de l'auto, sur une tuile ou l'on marche (sinon, contre l'auto).
+      let x = rue.x + (k ? 12 : -12), y = rue.y + 14;
+      if (!Monde.marchablePieton(Math.floor(x / TT), Math.floor(y / TT))) { x = rue.x; y = rue.y + (k ? 16 : -16); }
+      const a = Police.creerAgent(x, y, 'contreGang');
       if (!a) continue;
-      a.calmeT = P.calme_images; a.prochainTir = 0;
+      // ⚠️ UNE MARQUE DURABLE, pas seulement l'etat : touche, il fuyait puis flanait pour toujours ; alerte, il
+      // enquetait. Tant qu'elle tient, `Police.gere` le ramene au combat (et elle tombe au calme).
+      a.contreGang = true; a.calmeT = P.calme_images; a.prochainTir = 0;
     }
     Entites.indexer();
     return true;
@@ -614,12 +625,17 @@ const Rixe = (function () {
         || dist2(cible.x, cible.y, a.x, a.y) > P.portee_px[1] * P.portee_px[1] * 9) cible = a.proie = proieDe(a);
     if (!cible) {
       a.vx = 0; a.vy = 0;
-      if (--a.calmeT <= 0) { a.etat = 'enquete'; a.but = { x: a.x, y: a.y }; a.enqueteT = 120; a.chemin = null; }
+      if (--a.calmeT <= 0) { a.contreGang = false; a.etat = 'enquete'; a.but = { x: a.x, y: a.y }; a.enqueteT = 120; a.chemin = null; }
       return true;
     }
     a.calmeT = P.calme_images;
-    // ⚠️ La police mene ses agents JUSQU'AU PAS : `majPieton` s'arrete des que `Police.gere` rend vrai — sans ces deux
-    // lignes, il reglait sa vitesse sans jamais avancer, et ne venait jamais a portee.
+    const d = Math.hypot(cible.x - a.x, cible.y - a.y);
+    const vue = Monde.ligneLibre(a.x, a.y, cible.x, cible.y) && !Vehicules.coupeLaLigne(a.x, a.y, cible.x, cible.y, null);
+    // Trop loin, ou sans le voir : il y va PAR UN CHEMIN (`Police.suivre`, qui fait le pas) — en ligne droite, il
+    // butait contre le premier mur. ⚠️ La police mene ses agents jusqu'au pas : `majPieton` s'arrete des que
+    // `Police.gere` rend vrai.
+    if (d > P.portee_px[1] || !vue) { Police.suivre(a, cible, vitesse); return true; }
+    a.chemin = null;
     const enPlace = tenirSaDistance(a, cible, P.portee_px, vitesse);
     Entites.deplacerCercle(a, a.vx, a.vy, Monde.MASQUE_NAGEUR);
     Entites.regarder(a, cible.x - a.x, cible.y - a.y);

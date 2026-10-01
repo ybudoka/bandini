@@ -432,7 +432,8 @@ const Combat = (function () {
     // viennent voir — sans deplacer ce qu'ils te pretent —, et un passant peut te prendre pour lui (M12).
     if (deGang && !arme.foire) {
       Entites.alerter(e.x, e.y, e, 3);
-      if (arme.bruit > 0) Police.entendre(e.x, e.y, arme.bruit * TT, true);
+      // (Pas le coup de feu d'un AGENT : il s'entendait lui-meme et partait enqueter apres une balle — vague 5d.)
+      if (arme.bruit > 0 && !e.agent) Police.entendre(e.x, e.y, arme.bruit * TT, true);
       // ⚠️ PAS DE MEPRISE QUAND C'EST TOI QU'ON VISE : tu es la victime, pas le coupable (au banc, une Morue au
       // fusil te valait un crime a ton nom). Ni quand c'est un AGENT qui tire (vague 5d).
       if (cible.type !== 'joueur' && !e.agent) Police.crimeDAutrui('arme_sortie', e.x, e.y, e);
@@ -614,7 +615,7 @@ const Combat = (function () {
       if (!p.foire && (!p.cloche || p.z < 14)) {
         const tole = Vehicules.coupeLaLigne(p.x - p.vx, p.y - p.vy, p.x, p.y, p.enjambe || null);
         if (tole) {
-          Vehicules.endommager(tole, p.degats, p.tireur);
+          abimerLeChar(tole, p.degats, p.tireur);
           Entites.decal(p.x - p.vx * 0.5, p.y - p.vy * 0.5, 'impact');
           Entites.retirer(p);
           if (p.feu_s) allumer(p.x - p.vx, p.y - p.vy, p);
@@ -757,6 +758,18 @@ const Combat = (function () {
     });
   }
 
+  /** UN CHAR PREND UN COUP qui n'est pas de toi (vague 5 des bagarres, Martin : « abimer sans exploser ») : une balle
+      perdue de gang, d'un agent, une brique — la tole s'abime et fume, mais ne descend jamais jusqu'au FEU
+      (`conduite.physique.feu_sous`) : un char en feu se consume jusqu'a sauter, et une auto du trafic sautait en quatre
+      balles de pistolet. Tes coups a toi, eux, le font toujours sauter — et LE CHAR OU TU ES aussi, sous les balles
+      des autres : c'est toi qu'elles visent (la police te sortait de ton char a coups de pistolet). */
+  function abimerLeChar(v, degats, source) {
+    const toi = (source && (source === B.joueur || source.type === 'joueur'))
+      || Entites.joueurs().some(function (j) { return j.dansVehicule === v; });
+    const plancher = Math.ceil(v.vieMax * B.defs.conduite.physique.feu_sous) + 1;
+    Vehicules.endommager(v, toi ? degats : Math.min(degats, v.vie - plancher), source);
+  }
+
   /** UNE BRIQUE OU UNE BOUTEILLE LANCEE par un homme de gang (vague 5b des bagarres) : une `lance` INERTE — ni meche
       ni souffle —, qui vole en cloche vers `cible`, tombe a ses pieds (sa vitesse est reglee sur `vol_images`) et
       casse. ⚠️ Rien au de : la deviation se lit a l'empreinte. */
@@ -804,7 +817,7 @@ const Combat = (function () {
         return;
       }
       const tole = Vehicules.coupeLaLigne(g.x - g.vx, g.y - g.vy, g.x, g.y, null);
-      if (tole) { Vehicules.endommager(tole, g.degats, t); casser(g); return; }
+      if (tole) { abimerLeChar(tole, g.degats, t); casser(g); return; }
     }
     if (g.z <= 0) casser(g);
   }

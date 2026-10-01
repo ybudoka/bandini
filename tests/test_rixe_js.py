@@ -1043,3 +1043,76 @@ def test_pas_de_police_contre_les_gangs_pendant_la_paix_du_boss(banc):
         return { agents: f.agents.length };
     }""" % (FUSILLADE, GROSSE))
     assert r["agents"] == 0, r
+
+
+def test_l_agent_contre_un_gang_tient_le_combat(banc):
+    """⚠️ La relecture de la vague 5 : son propre coup de feu l'envoyait « enquêter » (une balle et c'était fini), et la
+    première balle reçue le faisait fuir puis flâner pour toujours. Il tire et retire, touché ou non."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(96);
+        %s
+        %s
+        L.B.defs.rixes.police.coups = 3;
+        const tirs = {}, touche = {};
+        const vrai = L.Combat.tirer;
+        L.Combat.tirer = function (e, arme, cible) { if (e.agent && cible && cible.gang) tirs[e.id] = (tirs[e.id] || 0) + 1; return vrai.apply(null, arguments); };
+        const d = fusillade(L, 'cravate', 'pistolet', 100);
+        for (let i = 0; i < 700; i++) { tenirLaCible(d); d.t.vie = d.t.vieMax; o.frame(1); }
+        // Chacun prend une balle du gang (la riposte la plus sure qui soit) — puis on regarde s'il tient.
+        const agents = L.B.entites.filter(function (a) { return a.agent && a.contreGang; });
+        const avant = {};
+        for (const a of agents) { L.Entites.blesser(a, 5, d.t, {}); touche[a.id] = a.etat; avant[a.id] = tirs[a.id] || 0; }
+        for (let i = 0; i < 400; i++) { tenirLaCible(d); d.t.vie = d.t.vieMax; o.frame(1); }
+        L.Combat.tirer = vrai;
+        return { tirs: tirs, apresLaBalle: agents.map(function (a) { return (tirs[a.id] || 0) - avant[a.id]; }),
+                 touches: agents.length, etats: agents.map(function (a) { return a.contreGang ? a.etat : 'lache:' + a.etat; }) };
+    }""" % (FUSILLADE, GROSSE))
+    vals = list(r["tirs"].values())
+    assert vals and min(vals) >= 3, "un agent ne tire qu'une fois (%s)" % r
+    assert r["touches"] >= 1, "aucun agent : le juge ne mesure rien (%s)" % r
+    assert all(e in ("contreGang", "attaque") for e in r["etats"]), "touché, il a lâché le combat (%s)" % r
+    assert min(r["apresLaBalle"]) >= 2, "touché, il ne tire plus (%s)" % r
+
+
+def test_la_patrouille_nait_dans_la_bulle_du_joueur(banc):
+    """⚠️ Cherchée à 140-280 px de la FUSILLADE — qui est à 300-500 px du joueur —, elle naissait hors de sa bulle
+    d'oubli et s'effaçait aussitôt (4 directions sur 8). Ses agents doivent encore être là 60 images plus tard."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, effaces = [], P = L.B.defs.rixes.police;
+        let venues = 0;
+        for (let k = 0; k < 8; k++) {
+          const a = k * Math.PI / 4, faux = { x: j.x + Math.cos(a) * 420, y: j.y + Math.sin(a) * 420, gang: 'cravates' };
+          L.B.fusillade = null;
+          const avant = L.B.entites.filter(function (q) { return q.agent && q.contreGang; }).length;
+          for (let n = 0; n < P.coups; n++) L.Rixe.noterCoupDeFeu(faux);
+          const nes = L.B.entites.filter(function (q) { return q.agent && q.contreGang; });
+          for (let i = 0; i < 60; i++) o.frame(1);
+          const restent = nes.filter(function (q) { return L.B.entites.indexOf(q) >= 0; }).length;
+          if (nes.length > avant) venues++;
+          if (nes.length > avant && restent < nes.length) effaces.push(k);
+          for (const q of nes) L.Entites.retirer(q);
+        }
+        return { effaces: effaces, venues: venues };
+    }""")
+    assert r["venues"] >= 6, "la patrouille ne vient pas : le juge ne mesure rien (%s)" % r
+    assert r["effaces"] == [], "la patrouille est née hors de la bulle (%s)" % r
+
+
+def test_pas_de_poursuite_pendant_n_importe_quelle_mission(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(93);
+        %s
+        %s
+        const P = L.B.defs.rixes.poursuite;
+        const avant = L.B.mission;
+        L.B.mission = { entites: [] };                   // une livraison : aucun homme de mission
+        fuirEnChar(L, o);
+        for (let i = 0; i < P.delai_images + 30; i++) { tenir(L); o.frame(1); }
+        const n = poursuivants(L).length;
+        L.B.mission = avant;
+        return { n: n };
+    }""" % (TROIS, FUITE))
+    assert r["n"] == 0, r
