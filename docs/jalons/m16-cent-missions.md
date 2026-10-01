@@ -1440,3 +1440,30 @@ catalogue.
   - **Juges** : `test_ile_en_char_js.py` (deux : l'aller-retour au bouton, de la rue au hangar et retour ; i04 jouée
     de l'appel à la prime — trois mutations rouges : `attendre` qui ne compte pas, la navette prise pour le traversier,
     le char qui ne rentre pas) ; `test_missions.py` et `test_barrieres.py` apprennent `ile:` et `navette:`.
+- **1er oct. 2026 : vague 17 — une course sur l'eau, et `i07`.** Six **bouées de course** autour de
+  l'Île-aux-Corneilles (`app/regate.py`), dans le sens des aiguilles d'une montre depuis le sud-est (le hangar de
+  Léo) : à sept tuiles de la rive, sur de l'eau profonde, loin des amarrages, et chaque bord du parcours est de l'eau
+  libre d'une bouée à l'autre. **Ni tuile ni décor** (un décor de plus au chargement décale l'identifiant de tout ce
+  qui naît après) : une liste de points posée en tout dernier, sans un dé (`ville["regate"]` ; la ville d'avant est la
+  même, clé par clé), que le navigateur PEINT (`static/js/regate.js` : la bouée orange à bande blanche, son mât, son
+  fanion, qui danse avec la houle ; la prochaine a son halo et son numéro).
+  - **Au moteur** : `course` lit `bouee:<n>` (`Histoire.resoudre`) ; `vehicule` (la course se court dans ce véhicule —
+    en chaloupe, pas à la nage) ; et **`contre`, enfin lu** (déclaré depuis la v1) : un RIVAL court les mêmes points,
+    droit d'une bouée à l'autre, à son `allure` (une VITESSE : au-dessus d'`allure` × sa pointe, il lève les gaz — à 0,82
+    « de gaz », la coque finissait quand même à sa pointe, et il faisait le tour en trente secondes) ; arrivé avant
+    toi, c'est raté (l'échec neuf `battu`) ; battu, il dérive. Léo se voit à la barre (`cavalierDe`, le conducteur
+    `regate`).
+  - ⚠️ **Une coque à un amarrage (`amarrage:<lieu>`) naissait par-dessus la chaloupe de décor du même amarrage** :
+    `poserLeChar` la faisait passer par `tuileDeRue`, et sur l'île — aucune rue — deux coques soudées, aucune ne
+    bougeait. Une coque prend maintenant la chaloupe amarrée (comme `mouillage:` et l'amarrage de Sven).
+  - **`i07`** (Léo, _Le tour de l'île_ — 200 $) : la vieille chaloupe de l'usine sous le hangar, « à trois, on part »,
+    les six bouées et retour à la première contre Léo dans le bateau de son père (`allure` 0,75 : un tour de trente-deux
+    secondes, mesuré ; le pilote du juge, à fond et sans freiner aux bouées, en fait vingt-sept), la chaloupe
+    ramenée sous le hangar. Immobile au départ, Léo fait le tour et c'est raté.
+  - ⚠️ **Écarts à la fiche** : pas de « repli à la nage » (la course se court en chaloupe : `vehicule`) ; sept points
+    (les six bouées, puis la première : la ligne d'arrivée) ; le donneur est au hangar ET à la barre — sa réplique de
+    départ se dit au combiné.
+  - **Juges** : `test_regate.py` (quatre : la ville d'avant clé par clé, six bouées sur l'eau profonde autour de l'île,
+    chaque bord de l'eau libre — le juge lit l'eau lui-même : muté, rouge —, et sans place, rien ne se pose) ;
+    `test_regate_js.py` (trois : les bouées se lisent et se peignent ; i07 gagnée au bouton ; immobile, Léo gagne —
+    deux mutations rouges : sans `battu`, sans rival qui court).

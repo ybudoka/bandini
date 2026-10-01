@@ -3444,6 +3444,7 @@ const Vehicules = (function () {
       // Un char de gang lancé à tes trousses par une mission (`poursuite`, les chapitres).
       else if (v.conducteur === 'poursuivant') { const c = Histoire.commandesDuPoursuivant(v); if (c === 'rails') majConducteur(v); else majPhysique(v, c); }
       else if (v.conducteur === 'derby') majPhysique(v, Conduite.commandesDerby(v));   // un bazou du derby
+      else if (v.conducteur === 'regate') majPhysique(v, Regate.commandes(v));        // le rival d'une course sur l'eau (i07)
       else majPhysique(v, { gaz: 0, frein: 0, direction: 0 });
       // La chasse finie, la sirene de l'auto-patrouille se tait.
       if (v.conducteur === 'police') v.sirene = B.recherche.etoiles > 0;
@@ -4400,7 +4401,8 @@ const Vehicules = (function () {
     // selle) et on ne voit plus qui la mene — comme dans une berline.
     if (!def || !def.selle || v.etat === 'epave' || v.plie) return null;
     if (v.conducteur === B.joueur) return B.joueur.swaps || null;
-    if (v.conducteur !== 'trafic' && v.conducteur !== 'vedette') return null;    // la vedette : son agent a la console
+    // la vedette : son agent a la console ; le rival d'une course sur l'eau (`regate`, i07) : Léo à la barre.
+    if (v.conducteur !== 'trafic' && v.conducteur !== 'vedette' && v.conducteur !== 'regate') return null;
     return (v.pilote && v.pilote.swaps) || null;
   }
 

@@ -1,6 +1,6 @@
 import re
 
-from app import armes, audio, blocs, caisse, carte, casino, economie, ile, mantes, missions, pietons, tripot
+from app import armes, audio, blocs, caisse, carte, casino, economie, ile, mantes, missions, pietons, regate, tripot
 
 
 def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
@@ -142,7 +142,9 @@ def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
             # deviendrait lieu de mission — la ville ne glisse pas ; le mot doit être peint quelque part.
             for point in o.get("points", []):
                 enseigne = point.startswith("boutique:") and _mot_d_enseigne(point.split(":", 1)[1])
-                assert (point in lieux or point in ("pont", "bois", "foire") or enseigne
+                # Et une bouée du tour de l'île (`bouee:<n>`, i07) : le parcours de `regate.py` en a six.
+                bouee = point.startswith("bouee:") and point[6:].isdigit() and int(point[6:]) < len(regate.ANCRES)
+                assert (point in lieux or point in ("pont", "bois", "foire") or enseigne or bouee
                         or point.startswith(("zone:", "rampe:"))), f"{m['slug']} : point de course inconnu {point}"
             for etape in o.get("par", []):
                 assert etape in lieux, f"{m['slug']} : lieu du détour inconnu {etape}"

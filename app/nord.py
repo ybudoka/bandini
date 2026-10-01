@@ -636,6 +636,12 @@ def _traversier(t, n):
         _paires(e["acces"], n)
 
 
+def _regate(r, n):
+    """Le tour de l'île (`regate.py`) : ses bouées sont des paires [x, y] — ou rien, sans place."""
+    if r:
+        _paires(r["bouees"], n)
+
+
 def _train(t, n):
     _paires(t["voie"], n)
     _paire(t["quai"], n, 2)                              # [x0, x1, y]
@@ -677,7 +683,7 @@ DECALAGES = {
     "intersections": _y, "jeux_de_foire": _jeux_de_foire, "kiosques_de_foire": _y, "lampes": _y, "lave_auto": _y, "largeur": _rien,
     "metro": _y, "montagne_russe": _montagne_russe, "mouillages": _mouillages, "neige": _neige,
     "nids_de_poule": _y, "nom": _rien, "paquets": _y, "patinoire": _y, "plages": _y, "points_interet": _y, "ponts": _y,
-    "portes": _y, "portes_garage": _y, "rampes": _y, "reclames": _y, "relief": _relief, "residences": _y,
+    "portes": _y, "portes_garage": _y, "rampes": _y, "reclames": _y, "regate": _regate, "relief": _relief, "residences": _y,
     "roue": _y, "scenes": _y, "slug": _rien, "sol": None, "stationnement_du_poste": _y, "toits": _y,
     "train_de_foire": _train, "tramway": _tramway, "traversier": _traversier, "tuile_px": _rien,
     "tuiles_bouchees": _rien, "voie": None, "zones": _y,

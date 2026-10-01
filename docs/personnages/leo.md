@@ -14,7 +14,7 @@
 | Voix | **Alexandre - Authentic French Canadian**, partagée avec le client du taxi (m3, qui ne va pas sur l'île) |
 | Bulle | « J'ai rien vu. » |
 | Couleurs | veste de travail brune, tuque rouge vin, pantalon bleu délavé |
-| Missions | donne **i04** (laisser refroidir un char chaud dans son hangar, par la navette) ; donnera **i07** ; reçoit la caisse d'outils du capitaine dans **i01** (sa poignée de main) ; doit 800 $ à Sal dans **d09** — c'est lui qui pose le premier choix dans un dialogue (« Tu veux quoi, au juste? ») |
+| Missions | donne **i04** (laisser refroidir un char chaud dans son hangar, par la navette) ; donne **i07** (le tour de l'île en chaloupe, contre lui dans le bateau de son père) ; reçoit la caisse d'outils du capitaine dans **i01** (sa poignée de main) ; doit 800 $ à Sal dans **d09** — c'est lui qui pose le premier choix dans un dialogue (« Tu veux quoi, au juste? ») |
 
 ## Son histoire
 

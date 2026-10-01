@@ -548,6 +548,8 @@ const Histoire = (function () {
     if (deux[0] === 'bloc') return passageDuBloc(deux[1]);
     if (deux[0] === 'boutique') return boutiquex(deux[1]);
     if (deux[0] === 'rampe') return tuileDeRampe(deux[1]);
+    // `bouee:<n>` (le tour de l'île, i07) : la n-ième bouée du parcours de la baie (`regate.py`). Pas de pixel dedans.
+    if (deux[0] === 'bouee') return B.interieur || B.bloc ? null : Regate.point(deux[1]);
     // ⚠️ Le CENTRE de la coque, pas son poste : une caméra le regarde, et
     // `poserLeChar` y fait naître le véhicule, à son cap (`m.angle`).
     if (deux[0] === 'mouillage') { const mo = trouverMouillage(deux.slice(1).join(':')); return mo ? { x: mo.x, y: mo.y, mouillage: mo } : null; }
@@ -1902,6 +1904,12 @@ const Histoire = (function () {
         const pts = (o.points || []).map(function (s) { return resoudre(s, m); }).filter(Boolean)
           .map(function (q) { return { x: q.x, y: q.y }; });
         B.mission.course = { i: 0, points: pts };
+        // `contre` (le tour de l'île, i07) : un RIVAL court les mêmes points (`Regate.creerRival`) — s'il passe la
+        // dernière avant toi, c'est raté (`battu`). Déclaré depuis la v1, lu par personne jusque-là.
+        if (o.contre && typeof o.contre === 'object') {
+          const r = Regate.creerRival(m, o, pts);
+          if (r) { B.mission.course.rival = r; B.mission.entites.push(r); Hud.message('À VOS MARQUES…', Regate.DECOMPTE); }
+        }
       } else if (o.type === 'tenir') {
         // `tenir` (les chapitres, « défendre le phare ») : le compte part de zéro ; les hommes arrivent de loin.
         B.mission.tenu = 0;
@@ -1950,7 +1958,10 @@ const Histoire = (function () {
     // toujours de l'eau. Le point ET LE CAP viennent tels quels du mouillage
     // (`navires.py`, angle donné) ou de l'amarrage de Sven (`amarrageDeSven`,
     // angle 0 — comme `Vehicules.majAmarrages`, une chaloupe n'en garde pas).
-    const surEau = o.ou.indexOf('mouillage:') === 0 || o.ou === 'amarrage:sven';
+    // ⚠️ Et toute COQUE à un amarrage (`amarrage:<lieu>`, i07) : elle passait par `tuileDeRue`, et sur l'île — aucune
+    // rue — elle naissait PAR-DESSUS la chaloupe de décor du même amarrage : deux coques soudées, aucune ne bougeait.
+    const coque = Vehicules.vehiculeDef(o.vehicule) && Vehicules.vehiculeDef(o.vehicule).eau;
+    const surEau = o.ou.indexOf('mouillage:') === 0 || o.ou === 'amarrage:sven' || (coque && o.ou.indexOf('amarrage:') === 0);
     const cleAmarrage = ou && (ou.mouillage || ou.amarrage);
     // ⚠️ « PRENDRE LA COQUE », PAS LA DÉDOUBLER (m52-m54, Sven) : le grand bateau
     // ou la chaloupe mouillés là sont du DÉCOR permanent (`Vehicules.majMouillages`,
@@ -2611,6 +2622,12 @@ const Histoire = (function () {
         const c = B.mission.course;
         if (!c || !c.points.length) { avancer(); return; }
         if (o.a_pied && j.dansVehicule) { B.mission.attend = texteDObjectif(o) + ' — À PIED, DESCENDS'; return; }
+        // `vehicule` (i07) : la course se court DANS ce véhicule — une chaloupe, pas à la nage.
+        if (o.vehicule && !(j.dansVehicule && j.dansVehicule.slug === o.vehicule)) {
+          B.mission.attend = texteDObjectif(o) + ' — ' + (o.vehicule === 'bateau' ? 'EN CHALOUPE' : 'AU VOLANT');
+          if (c.rival && Regate.arrive(c.rival)) { echouer('battu'); return; }
+          return;
+        }
         B.mission.attend = null;
         const pt = c.points[c.i], ici = j.dansVehicule || j, r = (o.rayon || 3) * TT;
         if (pt && dist2(ici.x, ici.y, pt.x, pt.y) < r * r) {
@@ -2618,7 +2635,13 @@ const Histoire = (function () {
           Son.SFX.ramasse();
           if (c.i < c.points.length) Hud.message('POINT ' + c.i + ' / ' + c.points.length, 90);
         }
-        if (c.i >= c.points.length) avancer();
+        // Le rival est arrivé avant toi : c'est raté.
+        if (c.i < c.points.length && c.rival && Regate.arrive(c.rival)) { echouer('battu'); return; }
+        if (c.i >= c.points.length) {
+          // Gagné : le rival se laisse dériver, puis rentre (ce n'est plus un char de mission qu'on surveille).
+          if (c.rival) c.rival.regate.battu = true;
+          avancer();
+        }
         return;
       }
       case 'parler':

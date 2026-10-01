@@ -161,6 +161,8 @@ MESURE_DE_LA_CARTE: dict[str, tuple[int, int]] = {
     "fourriere": (188, 350),
     "reclames": (181, 300),
     "navette": (178, 300),
+    # Le tour de l'île (1er oct. 2026, i07) : six bouées de course.
+    "regate": (60, 150),
     "rampes": (176, 300),
     "paquets": (172, 300),
     # La file devant l'arche (30 sept. 2026, docs/jalons/une-file-pour-entrer-a-la-foire.md) : `Monde.charger` la

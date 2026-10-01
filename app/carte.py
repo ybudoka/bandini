@@ -7528,6 +7528,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
     # `definitions.construire` la sort et la sert sur `/api/collections`, avec le catalogue.
     from . import collectionner as collectionner_mod
     ville["collections"] = collectionner_mod.poser(ville)
+    # ⚠️ LE TOUR DE L'ÎLE (M16, i07), EN TOUT DERNIER : six bouées de course autour de l'Île-aux-Corneilles, une liste de
+    # points que le navigateur peint et que `course` lit (`bouee:<n>`) — ni tuile, ni décor, sans un dé.
+    from . import regate as regate_mod
+    regate_mod.poser(ville)
     return ville
 
 # --- Les interieurs ---------------------------------------------------------
