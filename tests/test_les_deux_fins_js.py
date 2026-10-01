@@ -23,6 +23,11 @@ PREPARER = """
         L.Jeu.commencer(); L.graine(9);
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6']);
+        // Bérubé donne d'abord ses autres missions (q08, le moteur du capitaine, puis i01, l'île — 30 sept.) :
+        // un donneur ouvre la PREMIÈRE disponible de sa liste. Faites, pour que m99 soit la seule qu'il ait.
+        faites(L, B.defs.missions.filter(function (m) { return m.donneur === 'berube' && m.slug !== 'm99'; })
+                                 .map(function (m) { return m.slug; }));
+        const faitesAvant = Object.keys(B.partie.missionsFaites).length;
 """
 
 
@@ -102,6 +107,7 @@ def test_m99_le_dernier_traversier_se_joue_jusqu_au_generique_puis_la_ville_rest
         out.apres = { scene: !!B.scene, cinema: !!B.cinema, menu: B.menu ? B.menu.titre : null,
                       fins: Object.keys(B.partie.fins || {}), berube: !!L.Histoire.donneur('berube') };
         out.vus = vus;
+        out.faitesAvant = faitesAvant;
         out.valeurs = { argent: B.partie.argent, coffre: (B.partie.planque && B.partie.planque.coffre) || 0 };
         // La partie continue : on ferme le BILAN, le traversier traverse et accoste en face.
         L.Hud.fermerMenu();
@@ -123,7 +129,8 @@ def test_m99_le_dernier_traversier_se_joue_jusqu_au_generique_puis_la_ville_rest
     assert r["vus"]["musique"] == "generique", r["vus"]
     fortune = r["valeurs"]["argent"] + r["valeurs"]["coffre"]
     assert f"{fortune:,}".replace(",", " ") + " $" in r["vus"]["cartons"], r["vus"]["cartons"]
-    assert "7" in r["vus"]["cartons"], "sept missions faites (m1 à m6, et m99)"
+    assert r["faitesAvant"] >= 8, r["faitesAvant"]
+    assert str(r["faitesAvant"] + 1) in r["vus"]["cartons"], "les missions faites (m1 à m6, celles de Bérubé, et m99)"
     assert any(c.endswith("À SAL") or c == "RÉGLÉE" for c in r["vus"]["cartons"]), r["vus"]["cartons"]
     assert not any("{" in c for c in r["vus"]["cartons"]), r["vus"]["cartons"]
     assert r["apres"]["menu"] == "BILAN" and not r["apres"]["scene"] and not r["apres"]["cinema"], r["apres"]
