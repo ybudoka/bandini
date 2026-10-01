@@ -7753,7 +7753,10 @@ B  aaa   B
 B  cccc  B
 Bn      nB
 BBBBWWDWBB
-""", points=(_pt("vendre", 3, 4), _pt("reparer", 7, 1), _pt("repeindre", 3, 2),
+""", points=(_pt("vendre", 3, 4), _pt("repeindre", 3, 2),
+             # ⚠️ RÉPARER au bout GAUCHE de l'établi (`mm`, x 6-7) : à (7, 1), il touchait l'ascenseur, et
+             # `pointSousLaMain` (le plus proche dans une tuile et demie) en rendait un des deux injoignable.
+             _pt("reparer", 6, 1),
              # L'ascenseur du garage souterrain (docs/jalons/le-grand-garage-souterrain.md) : on l'attend au
              # pied du mur nord, ses portes peintes sur le mur (`Souterrain.dessiner`).
              _pt("ascenseur", 8, 1)),
