@@ -153,7 +153,11 @@ def test_le_paquet_ne_porte_plus_ce_qui_sert_a_jouer(client):
     remettrait au-dessus de son plafond sans que rien d'autre ne rougisse."""
     from app import missions
     paquet = client.get("/api/definitions").get_json()
-    assert len(paquet["missions"]) == len(missions.CATALOGUE)
+    # ⚠️ Les PETITES JOBS (`passant`, 1er oct. 2026) voyagent PLIÉES à part (`jobs`, `Jobs.deplier`) : le catalogue
+    # entier, c'est les missions plus les jobs, chacune une seule fois.
+    jobs = [j[0] for j in paquet["jobs"]]
+    assert sorted([m["slug"] for m in paquet["missions"]] + jobs) == sorted(m["slug"] for m in missions.CATALOGUE)
+    assert set(jobs) == {m["slug"] for m in missions.CATALOGUE if m.get("passant")}
     for mission in paquet["missions"]:
         for cle in missions.HORS_DU_PAQUET:
             assert cle not in mission, f"{mission['slug']} porte encore « {cle} » dans le paquet"
