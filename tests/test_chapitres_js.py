@@ -24,6 +24,11 @@ ZZ = """
     L.Jeu.commencer(); L.graine(6);
     // Et les six de la Pointe : le chapitre de banc est le seul que M. Bilodeau, le Trappeur ou Zed aient à donner.
     ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'p01', 'p02', 'p04', 'p05', 'p09', 'p10', 'p11'].forEach(function (s) { L.B.partie.missionsFaites[s] = 1; });
+    // Et ce qu'ils donnent APRÈS la paix de La Pointe (p07 chez M. Bilodeau, p08 et p12 chez Zed — vague 20) : faites
+    // aussi, sinon `parler` ouvre la leur au lieu du chapitre de banc.
+    L.B.defs.missions.forEach(function (x) {
+      if (['bilodeau', 'trappeur', 'zed'].indexOf(x.donneur) >= 0) L.B.partie.missionsFaites[x.slug] = 1;
+    });
     L.Jeu.retourTitre(); L.Jeu.commencer(); L.B.joueur.invincible = 1e6;
     return greffer(L);
   }
