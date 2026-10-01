@@ -34,6 +34,9 @@ def test_il_nait_la_nuit_sur_un_sentier_du_bois_et_y_marche(banc):
         const B = L.B, E = L.Entites, p = B.partie;
         let nuits = 0;
         for (let n = 1; n <= 300; n++) { p.jour = n; p.heure = 0.9; if (E.orignalDeLaNuit()) nuits++; }
+        // ⚠️ Le joueur reste DEBOUT : planté la nuit au bord du bois (le 8 janvier), il finissait à l'hôpital selon le
+        // hasard de la ville — dedans, et plus de bois sous `Monde.carte`.
+        B.joueur.invincible = 1e9;
         const soir = uneNuitAvecOrignal(L, o);
         const o1 = B.orignal;
         const ne = o1 ? { x: o1.x, y: o1.y, sentier: surUnSentier(L, o1.x, o1.y) } : null;
