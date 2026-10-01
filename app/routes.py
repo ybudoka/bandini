@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 import sqlite3
 from functools import lru_cache
 from pathlib import Path
@@ -20,7 +19,7 @@ from flask import (
 )
 
 from . import bd, comptes, defi
-from . import hors_ligne
+from . import hors_ligne, statiques
 
 bp = Blueprint("jeu", __name__)
 
@@ -31,7 +30,7 @@ def _scripts_du_jeu(gabarit: str) -> int:
 
     ⚠️ Lu dans le gabarit lui-meme, pas ecrit a la main : un script de plus dans
     la page et la barre s'arreterait avant la fin, ou deborderait."""
-    return len(re.findall(r"filename='js/[^']+'", Path(gabarit).read_text(encoding="utf-8")))
+    return len(statiques.scripts_de_la_page(Path(gabarit).read_text(encoding="utf-8")))
 
 
 @bp.route("/")

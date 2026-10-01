@@ -13,7 +13,7 @@ RACINE = Path(__file__).resolve().parent.parent
 if str(RACINE) not in sys.path:
     sys.path.insert(0, str(RACINE))
 
-from app import create_app, pliage  # noqa: E402
+from app import create_app, pliage, statiques  # noqa: E402
 from app.definitions import construire  # noqa: E402
 from config import Config  # noqa: E402
 
@@ -150,7 +150,20 @@ def serveur(tmp_path_factory, paquets):
 
 
 @pytest.fixture(scope="session")
-def banc(paquet, a_jouer, cartes_des_blocs, notes_de_la_musique, collections_du_paquet, suite_du_paquet, carte_pliee):
+def scripts_servis(tmp_path_factory):
+    """Les scripts du jeu tels que le téléphone les reçoit : MAIGRES (vague 4 des districts, 1er oct. 2026 —
+    `app/statiques.py`), sans commentaires ni indentation, ligne pour ligne. Le banc les joue : tous les juges JS
+    jugent ce que le navigateur exécute, et une erreur nomme toujours la bonne ligne du source."""
+    dossier = tmp_path_factory.mktemp("scripts_servis")
+    for nom in statiques.scripts_de_la_page((RACINE / "templates" / "index.html").read_text(encoding="utf-8")):
+        source = (RACINE / "static" / nom).read_text(encoding="utf-8")
+        (dossier / Path(nom).name).write_text(statiques.maigrir(source), encoding="utf-8")
+    return str(dossier)
+
+
+@pytest.fixture(scope="session")
+def banc(paquet, a_jouer, cartes_des_blocs, notes_de_la_musique, collections_du_paquet, suite_du_paquet, carte_pliee,
+         scripts_servis):
     """Fait tourner `corps` (une fonction JS `(L, o) => resultat`) dans le banc Node."""
     if OBLIGATOIRE and shutil.which("node") is None:
         pytest.fail("node est obligatoire (BANDINI_TESTS_OBLIGATOIRES=1) et il manque")
@@ -169,7 +182,8 @@ def banc(paquet, a_jouer, cartes_des_blocs, notes_de_la_musique, collections_du_
         # chercher chaque mission — c'est ainsi qu'on juge la porte elle-meme.
         # ⚠️ LA CARTE PLIÉE, comme le serveur la sert (30 sept. 2026) : le jeu la déplie en arrivant
         # (`Pliage.deplier`), et TOUS les juges du banc jouent donc sur la ville dépliée par le navigateur.
-        entree = {"racine": str(RACINE), "defs": {**paquet, "carte": carte_pliee}, "graine": graine,
+        # ⚠️ LES SCRIPTS MAIGRES, comme le serveur les sert (1er oct. 2026) : `scripts_servis`.
+        entree = {"racine": str(RACINE), "scripts": scripts_servis, "defs": {**paquet, "carte": carte_pliee}, "graine": graine,
                   "missions": a_jouer, "poser_les_missions": poser_les_missions,
                   "missions_panne": missions_panne, "blocs": cartes_des_blocs, "blocs_panne": blocs_panne,
                   # Les notes de la musique (`/api/musiques`) : le banc les sert comme le serveur.

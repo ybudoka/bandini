@@ -265,7 +265,49 @@ script qu'on édite.
   l'empreinte → deux rouges. Verts à côté : `test_hors_ligne` (le jeu réseau coupé compris), `test_navigateur`,
   `test_carte_du_depot`, `test_table_des_jalons`, `test_version`, `test_chargement_js`, `test_comptes` ; ruff.
 
-**Ce qui reste.** Le découpage révisé du 1er oct. 2026 (la fiche) : la vague 4 (les scripts maigrissent), la vague 5
-(les paquets partent avec les scripts) ; les pièces à part et le squelette par district attendent (vagues 6 et 7),
-le second une décision de Martin. ⚠️ Le téléphone de Martin est le seul juge qui manque : la sonde simule un réseau
+**Vague 4 — les scripts maigrissent (1er oct. 2026).** `statiques.maigrir` : le script sans ses commentaires ni son
+indentation, **ligne pour ligne** (le même nombre de lignes, chaque instruction sur la sienne — une erreur nomme
+toujours la bonne ligne du source, et les points-virgules automatiques voient les mêmes fins de ligne). Les
+chaînes, les expressions régulières et le texte des gabarits `` ` `` (indentation comprise) passent tels quels ;
+la seule ambiguïté — une barre oblique divise-t-elle ou ouvre-t-elle une expression régulière ? — se tranche par
+le jeton d'avant, l'en-tête d'un `if`/`while`/`for` compris. Un script que le maigrisseur ne sait pas lire est
+refusé (`ScriptIllisible`), jamais changé. Un seul maigrisseur, servi partout :
+
+- **en ligne** : `deploy.sh` maigrit la release avant la bascule (`python app/statiques.py`), et pose à côté de
+  chaque script son `.gz` au niveau 9 ; nginx sert `/static/` lui-même. ⚠️ **`gzip_static on`** dans le
+  `location /static/` du vhost (`deploy/nginx/…example`) lui fait servir ces `.gz` au lieu de compresser au
+  niveau 1 : une ligne à poser à la main sur le serveur (Martin), qui n'est pas nécessaire pour que ça marche ;
+- **le serveur de dev et les juges Chromium** reçoivent les mêmes octets (`Maigres`, branché sur la vue
+  `static` par `create_app`, relu quand un script change) ;
+- **le banc d'essai joue les scripts maigres** (`conftest.scripts_servis`, `ENTREE.scripts`) : les milliers de
+  juges JS jugent ce que le téléphone exécute.
+
+- **Le poids** (87 scripts) : 4 048 017 → 2 225 342 octets bruts ; sur le fil **1 535 300 → 749 512** au niveau 1
+  de nginx, **628 102** au niveau 9 (`gzip_static`). `jeu.js` seul : 37 385 → 13 573 (11 415).
+- **La mesure** (la sonde de la remesure, A/B apparié vague 3 contre vague 4, en alternance, trois passages
+  chacun, première visite) : écran titre **12 612 → 8 214 ms** (−4,4 s), scripts arrivés à 10 138 → 5 767 ms,
+  scripts sur le fil 1 562 784 → 776 813 octets ; JOUER → la ville, pareil (300 / 320 ms, le bruit). Le
+  processeur n'y gagne presque rien (tâches longues avant le titre : 1 405 / 1 392 ms) : le gain est sur le fil.
+  Avec `gzip_static on` (la sonde au niveau 9, deux passages, pas apparié) : **7 585 ms**, 654 636 octets de
+  scripts — 0,6 s de moins encore, pour une ligne de nginx.
+- **Vérifié hors des juges** : esbuild (`--minify-whitespace`) rend, pour chacun des 87 scripts, exactement le
+  même code de la source et du script maigre — un second lecteur de JavaScript, indépendant du nôtre.
+- **Juges** : `test_statiques.py` — treize pièges joués sous Node, maigres ou pas, la même sortie (chaînes et
+  gabarits qui portent `//` et `/*`, expressions régulières à barres obliques, après `return` et après l'en-tête
+  d'un `if`, divisions après une parenthèse, un crochet, un nombre, gabarits imbriqués, points-virgules
+  automatiques et `return` seul sur sa ligne, continuation de chaîne, commentaire collé `a/**/-/**/b`) ; un
+  script illisible refusé ; les 87 scripts de la page maigrissent, gardent leurs lignes, maigrissent une seconde
+  fois sans rien changer et se compilent (`vm.Script`) ; moins de 55 % du poids gzip ; le serveur les sert
+  maigres (304 compris), le reste de `static/` tel quel ; le déploiement les écrit avec leur `.gz` (décompressé
+  = le script maigre), refaire ne change rien, le travailleur n'est pas touché, et `deploy.sh` maigrit AVANT la
+  bascule. `test_statiques_js.py` — le banc joue les scripts maigres (`Jeu.demarrer` sans ses ⚠️, ses lignes
+  à leur place). Ils MORDENT, huit mutations, huit rouges : le banc qui lit les sources, le serveur qui sert les
+  sources, le gabarit pris pour du code, l'en-tête du `if` oublié, un commentaire de bloc qui mange ses lignes,
+  `return` suivi d'une division, `deploy.sh` sans l'étape, le `.gz` oublié.
+
+**Ce qui reste.** Le découpage révisé du 1er oct. 2026 (la fiche) : la vague 5 (les paquets partent avec les
+scripts) ; les pièces à part et le squelette par district attendent (vagues 6 et 7), le second une décision de
+Martin. ⚠️ **À poser sur le serveur par Martin** (facultatif, 0,6 s de plus en 3G rapide) : `gzip_static on;`
+dans le `location /static/` du vhost nginx (`deploy/nginx/bandini-gestiondojo.conf.example`), puis `sudo nginx -t
+&& sudo systemctl reload nginx`. ⚠️ Le téléphone de Martin est le seul juge qui manque : la sonde simule un réseau
 et un processeur, pas les siens.

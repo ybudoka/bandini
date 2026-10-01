@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
+from pathlib import Path
 
 from flask import Flask, url_for
 
@@ -10,7 +11,7 @@ from config import CLES_DE_DEVELOPPEMENT, Config
 
 from . import bd
 from .definitions import construire
-from .statiques import Empreintes
+from .statiques import Empreintes, Maigres
 from .version import VERSION
 
 
@@ -76,6 +77,19 @@ def create_app(config_object: type[Config] = Config) -> Flask:
         return url_for("static", filename=filename, v=empreintes(filename))
 
     app.extensions["empreintes"] = empreintes
+
+    # LES SCRIPTS MAIGRES (vague 4, `app/statiques.py`) : le serveur de dev et les juges Chromium reçoivent les
+    # octets que le téléphone reçoit — en ligne, nginx sert `/static/` lui-même, et `deploy.sh` a maigri la release.
+    maigres = Maigres(app.static_folder, Path(app.root_path, app.template_folder, "index.html"))
+    servir_le_statique = app.view_functions["static"]
+
+    def statique_ou_script_maigre(filename: str):
+        if filename in maigres.noms:
+            return maigres.reponse(filename)
+        return servir_le_statique(filename=filename)
+
+    app.view_functions["static"] = statique_ou_script_maigre
+    app.extensions["maigres"] = maigres
 
     @app.context_processor
     def variables_globales() -> dict:

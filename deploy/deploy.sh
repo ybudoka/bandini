@@ -45,6 +45,13 @@ python3 -m venv "$CIBLE/.venv"
 "$CIBLE/.venv/bin/pip" install --upgrade pip --quiet
 "$CIBLE/.venv/bin/pip" install -r "$CIBLE/requirements.txt" --quiet
 
+# ⚠️ LES SCRIPTS MAIGRISSENT AVANT LA BASCULE (1er oct. 2026, docs/jalons/charger-les-districts-autour-du-joueur.md) :
+# nginx sert `/static/` lui-meme, donc la release porte deja les scripts sans commentaires ni indentation (ligne
+# pour ligne), et le `.gz` de chacun au niveau 9 (pour `gzip_static on`). 1,5 Mo de scripts sur le fil -> 0,75.
+# Un script que le maigrisseur refuse arrete le deploiement ICI : `current` n'a pas encore bascule.
+echo "==> Les scripts maigrissent"
+"$CIBLE/.venv/bin/python" "$CIBLE/app/statiques.py" "$CIBLE"
+
 echo "==> Configuration partagee"
 ln -sfn "$BASE/shared/.env" "$CIBLE/.env"
 

@@ -37,12 +37,17 @@ server {
     gzip_min_length 1024;
     gzip_types text/css application/javascript text/javascript application/json image/svg+xml;
 
-    # nginx sert les fichiers statiques en direct. Les URL portent `?v=<version>`
-    # depuis les gabarits, donc un cache long est sans risque.
+    # nginx sert les fichiers statiques en direct.
+    # ⚠️ Chaque adresse porte l'empreinte de SON fichier (`?v=`, `app/statiques.py`) : un cache long est sans
+    # risque, et une mise en ligne ne fait repartir que les scripts qui ont change.
+    # `gzip_static on` : les scripts arrivent MAIGRES et deja compresses au niveau 9 par `deploy.sh` (leur `.gz`
+    # a cote) — 628 Ko de scripts sur le fil au lieu de 750 au niveau 1. Sans cette ligne, nginx compresse
+    # lui-meme au niveau 1, et ca marche aussi.
     location /static/ {
         alias /srv/bandini/current/static/;
         access_log off;
         expires 7d;
+        gzip_static on;
     }
 
     location / {

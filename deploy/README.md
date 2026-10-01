@@ -76,6 +76,11 @@ curl -sI -A navigateur -H 'Accept-Encoding: gzip' https://bandini.gestiondojo.ca
 # La carte sur le fil : ≈ 50 000 octets (compressee au niveau 9 par l'application, `Paquet.fil`) ;
 # ≈ 72 000 voudrait dire que nginx ou Caddy l'a decompressee puis recompressee a son niveau.
 curl -s -A navigateur -H 'Accept-Encoding: gzip' https://bandini.gestiondojo.ca/api/carte | wc -c
+# Les scripts arrivent MAIGRES (sans commentaires, `deploy.sh` → `python app/statiques.py`) et a l'empreinte de
+# leur contenu (`?v=` = 12 caracteres hexadecimaux, plus la version) : jeu.js ≈ 13 600 octets sur le fil au
+# niveau 1 de nginx, ≈ 11 400 avec `gzip_static on` (deploy/nginx) ; ≈ 37 000 voudrait dire qu'il n'a pas maigri.
+curl -s -A navigateur https://bandini.gestiondojo.ca/ | grep -o 'js/jeu.js?v=[^"]*'
+curl -s -A navigateur -H 'Accept-Encoding: gzip' "https://bandini.gestiondojo.ca$(curl -s -A navigateur https://bandini.gestiondojo.ca/ | grep -o '/static/js/jeu.js?v=[^"]*')" | wc -c
 # Le travailleur hors ligne : no-cache, un ETag, et toujours pas de Content-Security-Policy qui le bloquerait.
 curl -sI -A navigateur https://bandini.gestiondojo.ca/travailleur.js | grep -iE 'cache-control|etag|content-security'
 sudo journalctl -u bandini-gestiondojo -n 50

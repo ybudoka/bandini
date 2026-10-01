@@ -500,8 +500,12 @@ function banc(corps) {
   fenetre.globalThis = fenetre;
   vm.createContext(fenetre);
 
+  // ⚠️ LES SCRIPTS MAIGRES, tels que le serveur les sert (`app/statiques.py`, 1er oct. 2026) : sans commentaires
+  // ni indentation, ligne pour ligne. `ENTREE.scripts` est leur dossier (`conftest.scripts_servis`) ; sans lui (un
+  // harnais à la main), les sources.
+  const DOSSIER_DES_SCRIPTS = ENTREE.scripts || path.join(racine, 'static', 'js');
   for (const s of SCRIPTS) {
-    vm.runInContext(fs.readFileSync(path.join(racine, 'static', 'js', s), 'utf8'), fenetre, { filename: s });
+    vm.runInContext(fs.readFileSync(path.join(DOSSIER_DES_SCRIPTS, s), 'utf8'), fenetre, { filename: s });
   }
   const L = fenetre.BANDINI;
   if (!L) throw new Error('window.BANDINI absent apres chargement');
