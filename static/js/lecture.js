@@ -28,24 +28,9 @@ const Lecture = (function () {
 
   function donnees() { return (B.defs && B.defs.lectures) || null; }
 
-  /** Le quartier d'un passant : la zone de la VILLE sous ses pieds ; dans une pièce, celle de la porte
-      qu'on a passée. ⚠️ `B.defs.carte`, jamais `Monde.carte` : dans un bloc, `Monde.carte` est le bloc
-      (et un bloc n'a pas de quartier — on n'y lit rien). */
-  function quartierDe(e) {
-    const ville = B.defs && B.defs.carte;
-    if (!ville || B.bloc) return null;
-    let x = e.x, y = e.y;
-    if (B.interieur) {
-      const porte = Monde.carte && Monde.carte.porte;
-      if (!porte) return null;
-      x = porte.x * TT + 8; y = porte.y * TT + 8;
-    }
-    let trouvee = null;
-    for (const z of ville.zones || []) {
-      if (x >= z.x * TT && x < (z.x + z.l) * TT && y >= z.y * TT && y < (z.y + z.h) * TT) trouvee = z;
-    }
-    return trouvee ? trouvee.district || trouvee.slug : null;
-  }
+  /** Le quartier d'un passant : celui du point où il se tient (`Reputation.quartierA` — dans une pièce, celui de
+      la porte qu'on a passée ; un bloc n'en a pas, et on n'y lit rien). */
+  function quartierDe(e) { return Reputation.quartierA(e.x, e.y); }
 
   /** Sa ligne, ou null : un quartier sans lot (la baie, un bloc) n'a rien à dire. Gardée une fois lue. */
   function ligneDe(e) {

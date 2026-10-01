@@ -518,6 +518,9 @@ const Hud = (function () {
       texte(ctx, (choisi ? '> ' : '  ') + item.libelle, x + 8, yy, actif ? (choisi ? '#efe6d0' : '#cdc6e6') : '#6a6678', 1);
       const bord = x + col;
       if (item.detail) texte(ctx, item.detail, bord - 8 - Atlas.largeurTexte(item.detail, 1), yy, actif ? '#e8b33c' : '#6a6678', 1);
+      // Une jauge (la réputation d'un quartier) : entre le libellé et le détail, en colonne — `m.jaugeAvant` est la
+      // place que le détail le plus large réserve à sa droite.
+      if (item.jauge) item.jauge(ctx, bord - 8 - Atlas.largeurTexte(m.jaugeAvant || item.detail || '', 1) - 8 - 60, yy + 1, 60);
       if (actif) poserCible({ x: x + 4, y: yy - 4, l: col - 8, h: 14, item: i });
     });
   }
@@ -1838,6 +1841,9 @@ const Hud = (function () {
         faire: function () { ouvrirMenu(menuCarnetEnCours()); return false; } },
       { libelle: 'JOURNAL', cle: 'journal', detail: (p.carnet || []).length + ' ENTRÉES',
         faire: function () { ouvrirMenu(menuCarnetJournal()); return false; } },
+      // LA RÉPUTATION : ce que chaque quartier pense de toi (`Reputation`) — ici, celui où l'on se tient.
+      { libelle: 'RÉPUTATION', cle: 'reputation', detail: detailDeReputation(Reputation.quartierA(B.joueur.x, B.joueur.y)),
+        faire: function () { ouvrirMenu(menuCarnetReputation()); return false; } },
       { libelle: 'RÉPERTOIRE', cle: 'repertoire', detail: connus + ' PERSONNE' + (connus > 1 ? 'S' : ''),
         faire: function () { ouvrirMenu(menuCarnetRepertoire()); return false; } },
       // LES COLLECTIONS : l'album des cartes de hockey. Le compte PAR ÉQUIPE est l'indice : il dit où chercher.
@@ -2008,6 +2014,24 @@ const Hud = (function () {
     items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet('sauts')); return false; } });
     return surLaLigne(depuis, { titre: 'LES SAUTS DE ROCCO', sur: Collections.nombreSauts() + ' / ' + (Collections.totalSauts() || '?'),
              largeur: 320, hauteur: VH - 30, items: items, retour: function () { ouvrirMenu(menuCarnet('sauts')); } });
+  }
+
+  /** « +12 », « −35 · MAL VU », « +40 · BIEN VU » : la réputation d'un quartier, chiffrée. */
+  function detailDeReputation(q) {
+    if (!q || Reputation.quartiers().indexOf(q) < 0) return '—';
+    const v = Reputation.de(q), et = Reputation.etat(q);
+    return (v > 0 ? '+' : v < 0 ? '-' : '') + Math.abs(v) + (et === 'bien' ? ' · BIEN VU' : et === 'mal' ? ' · MAL VU' : '');
+  }
+
+  /** RÉPUTATION : chaque quartier, sa jauge et son chiffre. Bien vu, on ne te dénonce pas ; mal vu, tout le monde. */
+  function menuCarnetReputation(depuis) {
+    const items = Reputation.quartiers().map(function (q) {
+      return { libelle: nomDuDistrict(q), detail: detailDeReputation(q), actif: false,
+               jauge: function (ctx, x, y, l) { Reputation.dessinerJauge(ctx, x, y, l, q); } };
+    });
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet('reputation')); return false; } });
+    return surLaLigne(depuis, { titre: 'LA RÉPUTATION', sur: 'BIEN VU : PERSONNE NE PARLE', largeur: 320, hauteur: VH - 30,
+             items: items, jaugeAvant: '-100 · BIEN VU', retour: function () { ouvrirMenu(menuCarnet('reputation')); } });
   }
 
   /** Le nom d'un district, tel que la carte l'écrit (« LES QUAIS ») ; son slug à défaut. */
@@ -4073,6 +4097,7 @@ const Hud = (function () {
       Metro.dessinerSurLaCarte(ctx, pos);
       Train.dessinerSurLaCarte(ctx, pos);         // le train : pleine au sol, doublée sur le viaduc, pointillée sous la montagne
       Territoires.dessinerSurLaCarte(ctx, pos);   // les ilots PRIS, aux couleurs de qui les tient
+      Reputation.dessinerSurLaCarte(ctx, pos);    // ce que chaque quartier pense de toi : son nom, sa jauge
       dessinerLaVilleDuBoss(ctx, carte, pos);     // M13 : apres m98, les districts a l'or des Bandini
       SurPlace.dessinerSurLaCarte(ctx, pos);      // une mission gardee : le hors-zone grise
       Traversier.dessinerSurLaCarte(ctx, pos);

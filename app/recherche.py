@@ -178,6 +178,22 @@ TEMOINS = {
     "delai_depeche_s": 15,
 }
 
+#: LA RÉPUTATION PAR QUARTIER (docs/jalons/la-reputation-et-la-lecture-des-passants.md, vague 2, tranchée par
+#: Martin le 1er oct. 2026) : ce que le quartier pense de toi, de `min` à `max`, dans `partie.reputation`.
+#:
+#: ⚠️ **ELLE NE CHANGE QU'UNE CHOSE : LA DÉLATION.** Bien vu (`bien_vu` et plus), aucun passant du quartier ne
+#: devient témoin ; mal vu (`mal_vu` et moins), tous ceux qui ont vu le deviennent ; entre les deux, le cœur de
+#: chacun (`probaTemoin`), comme avant. Ni un prix, ni une mission, ni le stool (lui, c'est le casier).
+#:
+#: Ce qui la bouge : une mission réussie dans le quartier (`mission`), une petite job (`job`) ; un crime VU dans le
+#: quartier, `par_etoile` fois sa gravité (avec le répit du délit : un carambolage ne la vide pas). Chaque matin
+#: elle revient vers 0 de `retour_par_jour`. `quartiers` : ceux qui en ont une (les districts où l'on vit).
+REPUTATION = {
+    "min": -100, "max": 100, "bien_vu": 30, "mal_vu": -30,
+    "mission": 10, "job": 5, "par_etoile": 3, "retour_par_jour": 5,
+    "quartiers": ["faubourg", "erables", "shop", "quais", "pointe", "canton", "gare", "friches", "ile", "aeroport"],
+}
+
 #: ⚠️ LE CRIME D'AUTRUI (M12) : « un crime qu'on n'a pas commis peut te tomber dessus si
 #: tu es au mauvais endroit — un témoin qui te confond. C'est risqué, donc c'est RARE et
 #: LISIBLE (on voit le vrai coupable), et un juge vérifie qu'aucune étoile ne tombe sur
@@ -473,6 +489,7 @@ def exporter() -> dict:
         "vision": VISION,
         "temoins": TEMOINS,
         "autrui": dict(AUTRUI),
+        "reputation": dict(REPUTATION),
         "stool": dict(STOOL),
         "bouclier": dict(BOUCLIER),
         "deguisement": DEGUISEMENT,

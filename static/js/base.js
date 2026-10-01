@@ -256,6 +256,9 @@ function etatInitial(defs) {
     //: Les frénésies RÉUSSIES (`Frenesies`), par slug : `{ jour, temps }`. Une réussie ne revient
     //: plus ; une ratée n'y est pas, et son icône attend qu'on revienne.
     frenesies: {},
+    //: LA RÉPUTATION PAR QUARTIER (`Reputation`) : `{ quartier: valeur }`, de −100 à +100 ; absent = 0. Elle ne
+    //: change que la délation.
+    reputation: {},
     //: LES COLLECTIONS (`Collections`) : par famille, ce qu'on a trouvé, par NUMÉRO — `cartes[12] = { jour,
     //: source }` (`rue`, `puces`, `debug`). ⚠️ Jamais un index : le catalogue peut grandir sans rien décaler.
     collections: { cartes: {}, bebelles: {}, sauts: {}, enseignes: {} },
@@ -813,7 +816,7 @@ const Sauvegarde = (function () {
     const base = etatInitial(defs);
     if (!partie || typeof partie !== 'object') return base;
     const out = Object.assign({}, base, partie);
-    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'defisOuverts', 'paquets', 'frenesies', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance', 'contrebande', 'contacts', 'triches', 'techniques', 'coursPayes', 'forcesDesGangs', 'territoires', 'reprises']) {
+    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'defisOuverts', 'paquets', 'frenesies', 'reputation', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance', 'contrebande', 'contacts', 'triches', 'techniques', 'coursPayes', 'forcesDesGangs', 'territoires', 'reprises']) {
       out[k] = Object.assign({}, base[k], (partie[k] && typeof partie[k] === 'object') ? partie[k] : {});
     }
     if (!Array.isArray(out.tenues) || out.tenues.indexOf('chandail') < 0) out.tenues = ['chandail'].concat(Array.isArray(out.tenues) ? out.tenues : []);

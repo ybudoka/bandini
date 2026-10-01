@@ -2957,6 +2957,7 @@ const Histoire = (function () {
     if (p.tombes) delete p.tombes[m.slug];
     Chapitres.noterDuree(m);
     p.missionsFaites[m.slug] = p.jour;
+    Reputation.reussite(m);                   // son quartier s'en souvient (une petite job aussi, moins)
     Chapitres.reussi(m);
     p.mission = null;
     p.appelT = null;

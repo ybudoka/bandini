@@ -55,6 +55,14 @@ menu vide. C'est à Martin de dire si la ville en veut, et dans quelle vague.
 - **Une soixantaine de lignes** de passant, huit à dix par quartier, dans le ton de `docs/ecrire-drole.md`, relues
   avant de livrer.
 
+**Vague 2, tranchée par Martin le 1er oct. 2026** :
+
+- **Ce qui la fait bouger : les missions et les crimes vus.** Une mission réussie dans le quartier la monte (+10, une
+  petite job +5) ; un crime **vu** dans le quartier la descend selon sa gravité. Elle revient doucement vers 0, un
+  peu chaque jour. Une jauge de −100 à +100.
+- **Mal vu, le témoin est à coup sûr** : tout passant qui voit un crime court te dénoncer. **Bien vu, personne ne te
+  dénonce.** Entre les deux, rien ne change (le cœur de chacun, comme aujourd'hui).
+
 **Juges** : une ligne de passant ne pèse sur aucune mission (grep : aucun slug ne la lit) ;
 un enfant n'a jamais de profil ; la réputation ne change rien d'autre que la délation, et elle
 survit à une sauvegarde ; lire n'est jamais un objectif du catalogue.
@@ -87,3 +95,31 @@ survit à une sauvegarde ; lire n'est jamais un objectif du catalogue.
   mutations, toutes mordues (le cône, la garde de la cible, les enfants, le dé, la ligne gardée, le volant, le
   relâchement, la peinture, la gâchette, un passant qu'on dérange, la suite absente, la touche). Le bouton tactile
   est mesuré avec les autres (`test_navigateur`, aucun chevauchement).
+
+### Vague 2 — la réputation par quartier, livrée le 1er oct. 2026
+
+- **La règle** (`recherche.REPUTATION`, dans la clé `recherche` du paquet : 1 361 → 1 485 octets gzip, sous son
+  budget de 1 600) : de −100 à +100 ; **bien vu** à +30, **mal vu** à −30 ; une mission réussie +10, une petite job
+  +5 ; un crime vu −3 par étoile de gravité ; chaque matin, 5 de plus près de 0. Dix quartiers : les sept où l'on vit,
+  les Friches, l'île et l'aéroport.
+- **Ce qui l'écrit** (`static/js/reputation.js`) : `Police.signalerCrime`, quand un agent ou un passant a **vu** le
+  crime — avec le répit du délit (un carambolage est un délit, pas trois) ; `Histoire.reussir`, au quartier **du
+  donneur** (là où il se tient en ville, `Histoire.lieuDuPersonnage`), pour une petite job celui de sa fiche ou du
+  passant qui l'a demandée, et à défaut (une voix au téléphone) celui où l'on se tient ; `Missions.nouveauJour`, le
+  retour vers 0. Elle vit dans `partie.reputation` et **survit à la sauvegarde** (`etatInitial` et `completer`).
+- **Ce qu'elle change, et rien d'autre : la délation** (`Reputation.denonce`). Un passant qui a vu un crime
+  (`signalerCrime`) ou une violence **contre le joueur** (`Entites.alerter`) : bien vu, il ne te dénonce pas ; mal vu,
+  il te dénonce à coup sûr ; entre les deux, son cœur (`probaTemoin`) décide, comme avant. **Le dé se tire toujours**
+  (`B.rng()` reste dans l'appel) : la réputation ne change pas le hasard de la ville. Une violence entre deux autres
+  ne lit pas la réputation. Le stool (le casier) ne la lit pas non plus.
+- **Où on la lit** : le CARNET, ligne **RÉPUTATION** (le quartier où l'on se tient : « +45 · BIEN VU ») et sa page,
+  dix quartiers, chacun sa jauge (le zéro au milieu, vert du côté bien vu, rouge du côté mal vu) et son chiffre ; la
+  **CARTE** de la ville, le nom de chaque quartier en haut de son rectangle et sa jauge dessous. Les jauges du carnet
+  tiennent une colonne (`jaugeAvant`), quelle que soit la largeur du chiffre.
+- **Juges** : `test_reputation.py` (3 : la règle, les quartiers, et un grep — seule `denonce` décide, dans `police.js`
+  et `entites.js` ; seuls le carnet et la carte lisent sa valeur) ; `test_reputation_js.py` (9 : bien vu, mal vu,
+  neutre ; le même nombre de dés ; un crime vu ou pas, le répit, le plancher ; la mission au quartier du donneur et la
+  job ; le matin ; la sauvegarde ; l'alerte contre le joueur et contre un autre ; le carnet ; la carte). Dix-sept
+  mutations, seize mordues ; celle qui ne mord pas retire le défaut d'`etatInitial`, que `completer` refait seul —
+  la même redondance que pour les frénésies.
+- `Lecture.quartierDe` passe par `Reputation.quartierA` : un seul calcul du quartier pour les deux vagues.

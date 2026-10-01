@@ -5764,7 +5764,9 @@ const Entites = (function () {
         e.etat = 'attaque_joueur'; e.cri = 90; continue;
       }
       if (e.etat !== 'fuit' && e.etat !== 'temoin') {
-        e.etat = B.rng() < e.probaTemoin ? 'temoin' : 'fuit';
+        // Contre le joueur, le quartier décide (`Reputation.denonce`) — le dé se tire pareil.
+      const de = B.rng();
+      e.etat = (contreLeJoueur ? Reputation.denonce(e, de, x, y) : de < e.probaTemoin) ? 'temoin' : 'fuit';
         if (e.etat === 'temoin' && crime && !e.crime) e.crime = crime;   // il a quelque chose a raconter
         e.menace = menace;
         e.minuterie = reactions.fuite_secondes * 60;

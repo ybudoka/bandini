@@ -2304,6 +2304,7 @@ const Missions = (function () {
     revenusDuJour();
     // Les meubles commandés la veille au catalogue arrivent à la planque (`Decoration`).
     if (typeof Decoration !== 'undefined') Decoration.nouveauJour();
+    Reputation.nouveauJour();               // chaque quartier oublie un peu, dans un sens comme dans l'autre
     const loto = B.defs.loto ? nuitDuLoto() : null;
     // Le brouillard de demain matin : le Clairon l'annonce la veille, sous la manchette.
     const brume = typeof Brouillard !== 'undefined' ? Brouillard.annonceDeDemain() : null;

@@ -193,6 +193,8 @@ const Police = (function () {
     B.crimes.push(crime);
     if (B.crimes.length > 40) B.crimes.shift();
     B.partie.stats.crimes++;
+    // Le quartier s'en souvient, s'il l'a VU (un agent ou un passant) : sa réputation baisse (`Reputation`).
+    if (parAgent || vu) Reputation.crime(type, x, y);
     if (compte) {
       // ⚠️ UN CARAMBOLAGE EST UN DELIT, PAS TROIS (`repit_s` au catalogue) : le meme
       // delit, compte de nouveau avant le repit, ne chauffe pas une deuxieme fois. Le
@@ -211,7 +213,9 @@ const Police = (function () {
     for (const e of Entites.pietonsAutour(x, y, Math.min(t.rayon_tuiles * TT, portee))) {
       if (!e.vivant || e.agent || e.intouchable || e.metier || e.etat === 'assomme') continue;
       if (!dansLeCone(e.x, e.y, e.angle, demi, portee, x, y) || !Monde.ligneLibre(e.x, e.y, x, y)) continue;
-      if (B.rng() < e.probaTemoin) { e.etat = 'temoin'; e.crime = crime; e.menace = B.joueur; e.minuterie = t.oubli_s * 60; e.cri = 120; }
+      // ⚠️ Le quartier décide d'abord (`Reputation.denonce`) : bien vu, personne ne parle ; mal vu, tout le
+      // monde. Le dé se tire quand même : la réputation ne change pas le hasard de la ville.
+      if (Reputation.denonce(e, B.rng(), x, y)) { e.etat = 'temoin'; e.crime = crime; e.menace = B.joueur; e.minuterie = t.oubli_s * 60; e.cri = 120; }
     }
     return crime;
   }
