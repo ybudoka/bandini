@@ -764,3 +764,25 @@ def test_un_chantier_ouvert_a_sa_dynamite_et_elle_ne_revient_pas(banc):
   chaîne), `test_explosifs_js.py` (la mèche, la cuisson, dans la main, la porte, le char, l'eau, le mur, le flanc,
   le toit, la portée, la triche, le bouton, le dessin, les sons, le chantier) ; `test_armes.py` étendu.
   `verifier_ce_qui_casse.py` surveille maintenant `explosions.js` (la boucle du décor y est passée).
+
+### Vague 2, lot 2a (✅ livré le 1er oct. 2026) : il s'allume d'abord, on le voit voler, plus gros
+
+La vague 2 se livre en trois lots, chacun jouable : **2a** (ce lot), **2b** les gens prennent feu, **2c** le feu se
+propage.
+
+- **Il s'allume d'abord** (`Combat.allumerChiffon`, `majChiffon`) : au bouton, le premier appui met le feu au
+  chiffon — il flambe et fume dans la main, il éclaire la nuit — et le suivant lance la bouteille. Allumer ne coûte
+  rien, c'est la bouteille lancée qui sort du sac ; sans bouteille, la gâchette clique. Le chiffon s'éteint si l'on
+  range la bouteille, si l'on monte dans un char, si l'on tombe, et au noir d'une porte (`oublierLances`). La règle
+  se lit à `feu_s` (ce qui laisse du feu s'allume d'abord) : pas de champ de plus au catalogue, donc rien de plus au
+  paquet pour chaque arme. Les gangs, eux, lancent comme avant (`tirer`).
+- **On voit la bouteille voler** : le projectile de feu se dessine (`dessinerLance`, le peintre de la grenade : son
+  ombre au sol qui rétrécit quand elle monte, le verre qui tourne) et son chiffon laisse une traînée de flammes et de
+  fumée. Celles des gangs aussi.
+- **Plus gros, plus visible** : la flaque passe de 20 à 30 px et de 5 à 8 s (`REGLES["incendie"]`, `feu_s`), deux
+  langues de flamme par image, plus hautes, une fumée noire qui monte ; la nuit, elle éclaire le sol
+  (`Combat.lampes` dans `Monde.lampesVisibles`, `lueur_px` 64), comme le chiffon dans la main.
+- Juges `tests/test_molotov_js.py` (au bouton on allume puis on lance ; sans bouteille rien ne s'allume ; le chiffon
+  s'éteint rangé, au volant, à la porte ; la bouteille se dessine au-dessus de son ombre, tourne, laisse sa traînée ;
+  la flaque de 30 px et 8 s éclaire la nuit) ; six mutations, toutes mordent. Regardé : le chiffon en main, la
+  bouteille en vol et son ombre, la lueur la nuit.

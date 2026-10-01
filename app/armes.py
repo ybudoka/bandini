@@ -113,7 +113,10 @@ REGLES: dict = {
     # 100 PV y meurt en huit secondes s'il ne bouge pas ; il bouge (il fuit,
     # et le feu le pousse dehors). Un char qui reste dessus tombe sous le
     # cinquieme de sa vie et brule ensuite tout seul (`vehicules.PHYSIQUE`).
-    "incendie": {"rayon_px": 20, "degats_par_seconde": 12},
+    # ⚠️ LE MOLOTOV EN MIEUX (docs/jalons/les-explosifs.md, vague 2, Martin : « plus gros et plus visible ») : la
+    # flaque passe de 20 a 30 px et de 5 a 8 s (`feu_s`), et la nuit elle eclaire le sol jusqu'a `lueur_px` — comme
+    # le chiffon allume dans la main.
+    "incendie": {"rayon_px": 30, "degats_par_seconde": 12, "lueur_px": 64},
     # Ce qui se lance (`lance`) et ce qui saute. `bruit_tuiles` : le rayon dans
     # lequel un agent ENTEND l'explosion — plus loin qu'une carabine (22) : une
     # detonation de chantier s'entend a l'autre bout du quartier. Le reste est
@@ -175,7 +178,9 @@ CATALOGUE: list[Arme] = [
     #
     # « Ils sont groupes, et je veux que ca dure. » La bouteille part EN
     # CLOCHE, comme la bille de fronde, et la ou elle casse, une flaque de feu
-    # brule `feu_s` secondes. Elle ne fait pas de detonation (`bruit` 0) : ce
+    # brule `feu_s` secondes. ⚠️ Elle S'ALLUME D'ABORD (la vague 2 des explosifs) :
+    # un premier appui met le feu au chiffon, le suivant la lance — tout ce qui
+    # laisse du feu (`feu_s`) se lance ainsi, sans champ de plus au catalogue. Elle ne fait pas de detonation (`bruit` 0) : ce
     # qu'on entend, c'est le verre qui casse — a l'arrivee, pas au depart.
     # « Ils sont derriere le mur. » Elle part en cloche, TOMBE et roule un peu —
     # elle ne rebondit pas — et saute au bout d'une meche qu'on voit gresiller.
@@ -184,7 +189,7 @@ CATALOGUE: list[Arme] = [
     _a("dynamite", "Dynamite", "lance", 140, 110, 45, 650, chargeur=3, munitions_max=6,
        vproj=3.0, cloche=True, prix_munitions=90, etoiles=1, son="meche", meche=240, souffle=64),
     _a("molotov", "Cocktail Molotov", "tir", 6, 140, 40, 700, chargeur=3, munitions_max=9,
-       vproj=3.4, cloche=True, prix_munitions=90, etoiles=1, feu_s=5),
+       vproj=3.4, cloche=True, prix_munitions=90, etoiles=1, feu_s=8),
     # « Ils sont au coin. » Elle rebondit sur les murs et roule ; la meche
     # (2,5 s) brule DES qu'on la degoupille : la tenir, c'est la « cuire ».
     # Son son est la GOUPILLE, pas la meche : une grenade ne s'allume pas.

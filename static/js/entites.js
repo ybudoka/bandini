@@ -6448,6 +6448,8 @@ const Entites = (function () {
       }
       // La grenade, la dynamite en l'air : leur peintre est au combat.
       if (e.type === 'lance') { Combat.dessinerLance(ctx, e, cx, cy); continue; }
+      // Et la bouteille du Molotov en l'air (les explosifs, vague 2) : le meme peintre — son ombre, le verre qui tourne.
+      if (e.type === 'projectile') { if (e.feu_s) Combat.dessinerLance(ctx, e, cx, cy); continue; }
       if (e.type === 'ramassage' && e.objet === 'caisse') {
         const d = DECORS.caisse;
         const c = Atlas.cuirePeintre('decor|caisse', d.w, d.h, d.peindre);

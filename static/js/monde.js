@@ -3266,6 +3266,8 @@ const Monde = (function () {
     }
     // L'hiver, les braseros des places et les jongleurs de feu (`Foyers`) : sous le meme plafond.
     if (typeof Foyers !== 'undefined') for (const l of Foyers.lampes(cx, cy)) { if (out.length >= 25) break; out.push(l); }
+    // Le feu d'un Molotov et le chiffon allume dans la main (les explosifs, vague 2).
+    if (typeof Combat !== 'undefined' && Combat.lampes) for (const l of Combat.lampes(cx, cy)) { if (out.length >= 25) break; out.push(l); }
     return out;
   }
 

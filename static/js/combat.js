@@ -393,9 +393,12 @@ const Combat = (function () {
       const devie = angle + (alea() - 0.5) * dispersion * 2;
       Entites.creer('projectile', mx, my, {
         enjambe: enjambe,
-        r: 2, dessine: false, tireur: e, degats: arme.degats, arme: arme.slug,
+        r: 2, tireur: e, degats: arme.degats, arme: arme.slug,
         saigne: arme.saigne, cloche: !!arme.cloche, feu_s: arme.feu_s || 0,
         foire: !!arme.foire, deGang: deGang && !!e.gang,
+        // ⚠️ LA BOUTEILLE SE VOIT VOLER (les explosifs, vague 2 — Martin : « je veux voir la bouteille voler ») :
+        // elle se dessine (`dessinerLance` : son ombre au sol, le verre qui tourne), et son chiffon laisse une traînée.
+        dessine: !!arme.feu_s, tour: 0,
         vx: Math.cos(devie) * arme.vitesse_projectile,
         vy: Math.sin(devie) * arme.vitesse_projectile,
         z: 6, vz: arme.cloche ? 1.6 : 0, portee: arme.portee, parcouru: 0,
@@ -479,12 +482,14 @@ const Combat = (function () {
       if (f.type !== 'brasier') continue;
       f.reste--;
       const vif = Math.min(1, f.reste / 60);
-      if (B.t % 2 === 0) {
+      // ⚠️ PLUS GROS, PLUS VISIBLE (la vague 2 des explosifs) : deux langues de flamme par image, plus hautes, et une
+      // fumee NOIRE qui monte — un feu d'essence, pas un feu de camp.
+      for (let k = 0; k < 2; k++) {
         const a = B.rng() * Math.PI * 2, d = B.rng() * f.r * (0.4 + vif * 0.6);
-        Entites.particule(f.x + Math.cos(a) * d, f.y + Math.sin(a) * d * 0.6, (B.rng() - 0.5) * 0.3, -0.4 - B.rng() * 0.4,
-                          12 + vif * 12, B.rng() < 0.5 ? '#ff8c1a' : '#ffd23a', 2, -0.02);
+        Entites.particule(f.x + Math.cos(a) * d, f.y + Math.sin(a) * d * 0.6, (B.rng() - 0.5) * 0.3, -0.6 - B.rng() * 0.7,
+                          14 + vif * 16, B.rng() < 0.5 ? '#ff8c1a' : (B.rng() < 0.5 ? '#ffd23a' : '#e0402a'), 3, -0.03);
       }
-      if (B.t % 9 === 0) Entites.particule(f.x + (B.rng() - 0.5) * f.r, f.y - 4, (B.rng() - 0.5) * 0.3, -0.3, 40, '#3a3a3a', 2, -0.01);
+      if (B.t % 4 === 0) Entites.particule(f.x + (B.rng() - 0.5) * f.r, f.y - 8, (B.rng() - 0.5) * 0.3, -0.45, 60, '#1e1e1e', 3, -0.008);
       if (B.t % 20 === 0) {
         const degats = Math.max(1, Math.round(inc.degats_par_seconde / 3));
         const dedans = Entites.autour(f.x, f.y, f.r + 12, function (q) {
@@ -589,6 +594,11 @@ const Combat = (function () {
       p.x += p.vx; p.y += p.vy;
       p.parcouru += pas;
       if (p.cloche) { p.z += p.vz; p.vz -= 0.12; }
+      if (p.feu_s) {                                     // le chiffon qui brule en l'air : flammes et fumee derriere
+        p.tour += 0.35;
+        Entites.particule(p.x, p.y - p.z - 4, -p.vx * 0.2 + (B.rng() - 0.5) * 0.3, -p.vy * 0.2 - 0.3, 10, B.rng() < 0.5 ? '#ff8c1a' : '#ffd23a', 2, -0.02);
+        if (B.t % 3 === 0) Entites.particule(p.x, p.y - p.z - 6, -p.vx * 0.1, -0.4, 26, '#2a2a2a', 2, -0.01);
+      }
       const tx = Math.floor(p.x / TT), ty = Math.floor(p.y / TT);
       if (Monde.solidite(tx, ty) === 1 && p.z <= 8) {
         Entites.poussiere(p.x, p.y, 3);
@@ -659,6 +669,47 @@ const Combat = (function () {
     }
   }
 
+  // --- Le chiffon du Molotov (les explosifs, vague 2) -------------------------------
+
+  /** IL S'ALLUME D'ABORD : un premier appui met le feu au chiffon — on le voit flamber dans la main, il eclaire la
+      nuit (`lampes`) —, le suivant lance la bouteille (`tirer`). Allumer ne coute rien ; c'est la bouteille lancee
+      qui sort du sac. Sans bouteille, la gachette clique. */
+  function allumerChiffon(j, arme) {
+    const reste = munitions(arme.slug);
+    if (!triche('munitions') && reste !== null && reste <= 0) { Son.SFX.vide(); return false; }
+    Son.Lieu.charger('explosifs');
+    j.chiffon = { arme: arme.slug };
+    Son.SFX.arme({ son: 'meche' });                     // l'allumette, puis le chiffon qui prend
+    if (Entites.estJoueur(j)) Police.signalerCrime('arme_sortie', j.x, j.y, Police.quelqu_un_voit(j.x, j.y, j));
+    return true;
+  }
+
+  /** Le chiffon qui brule dans la main ; il s'eteint si l'on range la bouteille, si l'on monte dans un char ou si
+      l'on tombe (et au noir d'une porte : `oublierLances`). */
+  function majChiffon(j) {
+    const c = j && j.chiffon;
+    if (!c) return;
+    if (!j.vivant || j.dansVehicule || armeDe(j).slug !== c.arme) { j.chiffon = null; return; }
+    const hx = j.x + Math.cos(j.angle) * 6, hy = j.y - 10;
+    if (B.t % 2 === 0) Entites.particule(hx, hy, (B.rng() - 0.5) * 0.4, -0.6, 9, B.rng() < 0.5 ? '#ff8c1a' : '#ffd23a', 2, -0.02);
+    if (B.t % 7 === 0) Entites.particule(hx, hy - 3, (B.rng() - 0.5) * 0.2, -0.4, 22, '#2a2a2a', 1, -0.01);
+  }
+
+  //: La lueur d'un feu, la nuit (`Monde.lampesVisibles`) : la meme teinte que les braseros des places.
+  const LUEUR_DU_FEU = 'rgba(255,140,50,0.58)';
+  /** Les lueurs du feu (en pixels d'ecran, comme les autres lampes) : chaque flaque de Molotov, et le chiffon
+      allume dans une main. */
+  function lampes(cx, cy) {
+    const out = [], r = regles().incendie.lueur_px;
+    for (const e of B.entites) {
+      const chiffon = !!e.chiffon && e.type === 'joueur';
+      if (e.type !== 'brasier' && !chiffon) continue;
+      if (e.x < cx - r || e.x > cx + VW + r || e.y < cy - r || e.y > cy + VH + r) continue;
+      out.push({ x: e.x - cx, y: e.y - (chiffon ? 12 : 4) - cy, r: chiffon ? Math.round(r * 0.6) : r, c: LUEUR_DU_FEU });
+    }
+    return out;
+  }
+
   // --- Ce qui se lance (la grenade, la dynamite) ----------------------------------
 
   /** Allume l'arme `lance` en main : la meche brule DES MAINTENANT, dans la main
@@ -683,6 +734,8 @@ const Combat = (function () {
       du 29 sept. 2026). On la retire donc, sans bruit : c'est hors champ. */
   function oublierLances() {
     for (let i = B.entites.length - 1; i >= 0; i--) if (B.entites[i].type === 'lance') Entites.retirer(B.entites[i]);
+    // Et le chiffon d'un Molotov : on ne passe pas une porte une flamme a la main.
+    for (const j of Entites.joueurs()) j.chiffon = null;
   }
 
   /** Lache la meche : `force` 1 la lance devant soi, 0 la laisse tomber aux pieds. */
@@ -1320,6 +1373,7 @@ const Combat = (function () {
     // ⚠️ Assomme (le deuxieme joueur a terre, `Entites.blesser`), on attend
     // son partenaire : le compte se fait dans `majJoueur`, pas au bouton.
     majEnMain(j);
+    majChiffon(j);
     if (!j || j.dansVehicule || j.manege || !j.vivant || j.enjambe || j.alite || j.assis || j.etat === 'assomme') return;
     // ⚠️ PROJETE (un Mante, `techniques.js`) : en l'air ou couche, on ne fait rien — on retombe, on se releve.
     if (j.vol || j.auSol > 0) return;
@@ -1345,7 +1399,13 @@ const Combat = (function () {
 
     // Coup fort : on MAINTIENT la frappe, on relache quand c'est charge.
     const arme = armeDe(j);
-    if (arme.auto) {
+    if (arme.feu_s && arme.type === 'tir') {
+      // LE MOLOTOV : le premier appui allume le chiffon, le suivant lance (`allumerChiffon`).
+      if (ent.neuf('attaque')) {
+        if (!j.chiffon) allumerChiffon(j, arme);
+        else if (frapper(j, false)) j.chiffon = null;
+      }
+    } else if (arme.auto) {
       // ⚠️ Automatique : on TIENT. `frapper` refuse tant que la cadence court,
       // c'est elle qui rythme la rafale. Et a vide, la gachette tenue ne
       // clique qu'a la PRESSION — pas soixante fois par seconde.
@@ -1451,6 +1511,7 @@ const Combat = (function () {
     frapper, tirer, lancerObjet, cycler, roulade, pickpocket, pochesAPrendre, victimeDesPoches, ramasserArme, objetSousLaMain, suivreLaMain, userArme: user,
     viseeAssistee, dispersionDe, allumer, majBrasiers, majAttaque, arcDeMelee, majProjectiles, maj,
     allumerMeche, lacherMeche, lancer, majEnMain, majLances, dessinerLance, ramasser, oublierLances,
+    allumerChiffon, majChiffon, lampes,
     majCible, ciblesVerrouillables, VERROU_PORTEE,
     otageSousLaMain, viserOtage, prendreEnOtage, lacherOtage, majOtage, majSaisie,
   };
