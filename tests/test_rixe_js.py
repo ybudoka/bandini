@@ -823,3 +823,62 @@ def test_une_fois_sur_trois_ils_arrivent_en_char(banc):
     assert r["n"] >= 1 and r["chars"] == 1, r
     assert r["pres"] is not None and r["pres"] <= 64, "ils ne descendent pas du char (%s)" % r
     assert r["couleur"] == r["attendue"] and r["vitesse"] == 0, r
+
+
+# --- Vague 5b : ils lancent des choses -----------------------------------------------------------------------
+
+def test_a_distance_il_lance_une_brique_ou_une_bouteille_une_fois(banc):
+    """Un Cravate au bâton, à distance de lancer : il s'arrête, lance (une seule fois du combat) — l'objet VOLE (une
+    `lance` dessinée), te touche ou retombe près de toi, et casse."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(80);
+        %s
+        L.B.defs.rixes.lancer.chance_sur = 1;            // a coup sur
+        const gens = trois(L, 100), c = gens[1], j = L.B.joueur;
+        L.Entites.retirer(gens[0]); L.Entites.retirer(gens[2]);
+        const vie0 = j.vie;
+        let lances = 0, vu = null, posee = null, max = 0;
+        const deja = {};
+        for (let i = 0; i < 600; i++) {
+          j.vie = Math.max(j.vie, 1); o.frame(1);
+          for (const g of L.B.entites) if (g.type === 'lance' && g.inerte && g.tireur === c && !deja[g.id]) {
+            deja[g.id] = true; lances++; vu = { objet: g.objet, dessine: g.dessine, d: Math.round(Math.hypot(c.x - j.x, c.y - j.y)) };
+          }
+          const enVol = L.B.entites.filter(function (g) { return g.type === 'lance' && g.inerte; });
+          max = Math.max(max, enVol.length);
+          if (vu && !posee && enVol.length === 0) posee = i;
+        }
+        let rendu = 'ok';
+        try { L.Jeu.rendre(); } catch (e) { rendu = String(e); }
+        return { lances: lances, vu: vu, posee: posee, perdu: vie0 - j.vie, max: max, rendu: rendu, f: L.B.defs.rixes.lancer.distance_px };
+    }""" % TROIS)
+    assert r["lances"] == 1, "il ne lance pas, ou plus d'une fois (%s)" % r
+    assert r["vu"]["objet"] in ("brique", "bouteille") and r["vu"]["dessine"], r
+    assert r["f"][0] - 12 <= r["vu"]["d"] <= r["f"][1] + 12, "il lance de trop près ou trop loin (%s)" % r
+    assert r["posee"] is not None, "l'objet ne retombe jamais (%s)" % r
+    assert r["rendu"] == "ok", r
+
+
+def test_la_brique_te_blesse_et_epargne_les_siens(banc):
+    """L'objet lancé blesse le premier qu'il touche — jamais un homme de son gang."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(81);
+        const j = L.B.joueur;
+        for (let i = 0; i < 90; i++) o.frame(1);
+        j.invincible = 0;
+        // Dans la rue, pas sur la place du terminus : la brique y cassait sur le premier passant du coin.
+        j.y += 40; L.Monde.centrerCamera(j.x, j.y);
+        const c = L.Entites.creerPieton(j.x + 90, j.y, L.Entites.archetype('cravate'));
+        // Pres du joueur, la ou la brique REDESCEND (a mi-vol elle passe a plus de 14 px : par-dessus tout le monde).
+        const ami = L.Entites.creerPieton(j.x + 14, j.y, L.Entites.archetype('cravate'));
+        c.etat = 'fige'; ami.etat = 'fige'; ami.vie = ami.vieMax = 500;
+        L.Entites.indexer();
+        const vie0 = j.vie;
+        L.Combat.lancerObjet(c, j, 'brique');
+        for (let i = 0; i < 60; i++) { c.etat = 'fige'; ami.etat = 'fige'; ami.x = j.x + 14; ami.y = j.y; o.frame(1); }
+        return { perdu: vie0 - j.vie, ami: 500 - ami.vie };
+    }""")
+    assert r["perdu"] > 0, "la brique ne l'a pas touché (%s)" % r
+    assert r["ami"] == 0, "la brique a blessé un des siens (%s)" % r

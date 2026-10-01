@@ -103,6 +103,18 @@ RENFORTS: dict = {
 }
 
 
+#: VAGUE 5b — ILS LANCENT DES CHOSES. Un homme sans arme à feu, arrivé à distance de lancer, s'arrête, LANCE une
+#: brique ou une bouteille (une fois du combat, une fois sur `chance_sur`, à l'empreinte), puis repart au contact.
+#: L'objet vole en cloche (on le voit tourner), blesse le premier qu'il touche — jamais un des siens — et casse.
+LANCER: dict = {
+    "distance_px": (60, 110),     # d'où il lance : plus loin qu'il ne frappe
+    "chance_sur": 2,              # un sur deux le fait
+    "geste_images": 14,           # il s'arrête et arme le bras
+    "vol_images": 30,             # le temps de la cloche (z part de 6, monte de 1,6, perd 0,12) : il vise juste
+    "objets": {"brique": {"degats": 14}, "bouteille": {"degats": 10}},
+}
+
+
 def exporter() -> dict:
     """Ce que le navigateur reçoit sous `B.defs.rixes`."""
     tir = dict(TIR, distances={k: list(v) for k, v in TIR["distances"].items()}, salve=list(TIR["salve"]),
@@ -110,4 +122,6 @@ def exporter() -> dict:
     moral = dict(MORAL, blesse_mots=list(MORAL["blesse_mots"]), deroute_mots=list(MORAL["deroute_mots"]))
     renforts = dict(RENFORTS, distance_px=list(RENFORTS["distance_px"]), cris=list(RENFORTS["cris"]))
     return {"contact": dict(CONTACT), "arsenal": dict(ARSENAL), "part_armee": PART_ARMEE, "tir": tir, "moral": moral,
-            "renforts": renforts}
+            "renforts": renforts,
+            "lancer": dict(LANCER, distance_px=list(LANCER["distance_px"]),
+                           objets={k: dict(v) for k, v in LANCER["objets"].items()})}

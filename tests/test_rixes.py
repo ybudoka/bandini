@@ -105,3 +105,14 @@ def test_la_fiche_des_renforts_se_tient():
     assert 1 <= r["max_par_appel"] <= r["max_par_combat"]
     assert r["en_char_sur"] >= 1 and r["cris"]
     assert villes.assembler()["rixes"]["renforts"]["cris"] == list(r["cris"])
+
+
+def test_la_fiche_des_lancers_se_tient():
+    """Vague 5b : un homme sans arme à feu lance une brique ou une bouteille, à distance, une fois par combat."""
+    lan = rixes.LANCER
+    dmin, dmax = lan["distance_px"]
+    assert rixes.CONTACT["portee_px"] < dmin < dmax, "on lance de plus loin qu'on ne frappe"
+    assert lan["chance_sur"] >= 1 and lan["geste_images"] > 0 and lan["vol_images"] > 0
+    assert set(lan["objets"]) == {"brique", "bouteille"}
+    assert all(o["degats"] > 0 for o in lan["objets"].values())
+    assert villes.assembler()["rixes"]["lancer"]["distance_px"] == list(lan["distance_px"])

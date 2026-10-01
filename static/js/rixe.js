@@ -108,6 +108,28 @@ const Rixe = (function () {
     return true;
   }
 
+  /** A distance de lancer (`lancer.distance_px`), la cible en vue, une fois du combat et une fois sur `chance_sur` (a
+      l'empreinte) : il s'arrete, arme le bras (`geste_images`), et lance une brique ou une bouteille. Jamais un homme
+      de mission (la difficulte des missions est reglee au banc). Rend vrai pendant le geste. */
+  function lancer(e, cible, d, r) {
+    const Lc = B.defs.rixes.lancer;
+    if (r.lanceT) {
+      if (e.t < r.lanceT) { e.vx = 0; e.vy = 0; return true; }
+      const objets = Object.keys(Lc.objets).sort();
+      Combat.lancerObjet(e, cible, objets[hash2(e.id, 0x0B1E) % objets.length]);
+      r.lanceT = 0;
+      return false;
+    }
+    if (r.lanceFait || e.cible || d < Lc.distance_px[0] || d > Lc.distance_px[1]) return false;
+    if (hash2(e.id, 0x1A4C) % Lc.chance_sur !== 0 || !Monde.ligneLibre(e.x, e.y, cible.x, cible.y)) {
+      r.lanceFait = true;             // pas lui : il ne se reposera pas la question a chaque image
+      return false;
+    }
+    r.lanceFait = true; r.lanceT = e.t + Lc.geste_images;
+    e.vx = 0; e.vy = 0;
+    return true;
+  }
+
   function reculer(r, f) { r.posture = 'recul'; r.minuterie = f.recul_images; }
 
   /** Une image de combat contre `cible`, a `vitesse` (celle de sa course). Rend vrai si un coup est parti. */
@@ -129,6 +151,8 @@ const Rixe = (function () {
     // L'ARME DE SON GANG (vague 2) : il la degaine au premier echange, et se bat en tireur ou en lanceur.
     if (armer(e)) return majTir(e, cible, vitesse, r);
     const dx = cible.x - e.x, dy = cible.y - e.y, d = Math.hypot(dx, dy) || 1;
+    // ILS LANCENT DES CHOSES (vague 5b) : a distance, une fois du combat, une brique ou une bouteille.
+    if (lancer(e, cible, d, r)) return false;
     if (r.posture !== 'recul' && esquive(e, cible, d, f)) reculer(r, f);
     if (r.posture === 'recul') {
       if (--r.minuterie <= 0) r.posture = 'approche';

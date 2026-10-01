@@ -702,6 +702,58 @@ const Combat = (function () {
     });
   }
 
+  /** UNE BRIQUE OU UNE BOUTEILLE LANCEE par un homme de gang (vague 5b des bagarres) : une `lance` INERTE — ni meche
+      ni souffle —, qui vole en cloche vers `cible`, tombe a ses pieds (sa vitesse est reglee sur `vol_images`) et
+      casse. ⚠️ Rien au de : la deviation se lit a l'empreinte. */
+  function lancerObjet(e, cible, objet) {
+    const Lc = B.defs.rixes.lancer, d = Math.hypot(cible.x - e.x, cible.y - e.y);
+    const angle = angleVers(e.x, e.y, cible.x, cible.y) + ((hash2(e.id, e.t) % 1000) / 1000 - 0.5) * 0.12;
+    const v = d / Lc.vol_images;
+    return Entites.creer('lance', e.x + Math.cos(angle) * 6, e.y + Math.sin(angle) * 6, {
+      r: 3, dessine: true, solide: false, inerte: true, objet: objet, arme: 'bouteille', tireur: e,
+      degats: Lc.objets[objet].degats, reste: 1e9,
+      vx: Math.cos(angle) * v, vy: Math.sin(angle) * v, z: 6, vz: 1.6, angle: angle, tour: 0,
+    });
+  }
+
+  /** Elle casse : des eclats (a l'empreinte), une marque au sol, et le bruit de sa matiere, entendu de la ou elle
+      tombe. */
+  function casser(g) {
+    Entites.retirer(g);
+    if (Monde.estEau(Math.floor(g.x / TT), Math.floor(g.y / TT))) { Entites.remous(g.x, g.y, 6); return; }
+    Entites.decal(g.x, g.y, 'impact');
+    const teinte = g.objet === 'bouteille' ? '#9fd18a' : '#b0533a';
+    for (let i = 0; i < 5; i++) {
+      const a = i * 1.257 + (hash2(g.id, i) % 100) / 100;
+      Entites.particule(g.x, g.y, Math.cos(a) * 1.2, Math.sin(a) * 0.8, 14, teinte, 1, 0.1);
+    }
+    Son.depuis(g, function () { Son.SFX.bris(g.objet === 'bouteille' ? 'abribus' : 'palettes'); });
+  }
+
+  /** Une image de vol d'une brique ou d'une bouteille : le mur l'arrete, le premier qu'elle touche (jamais un des
+      siens) est blesse — moitie moins toi, comme une balle de gang —, un char prend le coup, sinon elle tombe. */
+  function majObjetLance(g) {
+    const R = regles().explosion;
+    g.x += g.vx; g.y += g.vy; g.z += g.vz; g.vz -= R.gravite;
+    g.tour += 0.35;
+    if (Monde.solidite(Math.floor(g.x / TT), Math.floor(g.y / TT)) === 1) { casser(g); return; }
+    if (g.z < TOIT_CHAR) {
+      const t = g.tireur, qui = Entites.autour(g.x, g.y, 7, function (c) {
+        return c !== t && c.vivant && (c.type === 'pieton' || c.type === 'joueur') && !(t && c.gang && c.gang === t.gang);
+      })[0];
+      if (qui) {
+        if (qui.dansVehicule) Vehicules.endommager(qui.dansVehicule, g.degats, t);
+        else Entites.blesser(qui, qui.type === 'joueur' ? g.degats * B.defs.rixes.tir.degats_contre_joueur : g.degats, t,
+                             { angle: Math.atan2(g.vy, g.vx), renverse: false });
+        casser(g);
+        return;
+      }
+      const tole = Vehicules.coupeLaLigne(g.x - g.vx, g.y - g.vy, g.x, g.y, null);
+      if (tole) { Vehicules.endommager(tole, g.degats, t); casser(g); return; }
+    }
+    if (g.z <= 0) casser(g);
+  }
+
   function exploserLa(x, y, arme, qui) {
     Explosions.faire(x, y, { rayon: arme.souffle, degats: arme.degats,
                              coupable: Entites.estJoueur(qui) ? qui : null, auteur: qui });
@@ -733,7 +785,8 @@ const Combat = (function () {
     const k = Math.max(0.4, 1 - g.z / 40);
     const w = Math.round(DECORS.ombre.w * 0.6 * k), h = Math.max(2, Math.round(DECORS.ombre.h * 0.6 * k));
     ctx.drawImage(ombre, Math.round(g.x - w / 2 - cx), Math.round(g.y - h / 2 - cy), w, h);
-    const img = Atlas.cuirePeintre('objet|' + def.sprite, 16, 10, function (c, lw, lh) { OBJETS[def.sprite](c, lw, lh); });
+    const sprite = g.objet || def.sprite;           // une brique lancee a son dessin a elle (vague 5b)
+    const img = Atlas.cuirePeintre('objet|' + sprite, 16, 10, function (c, lw, lh) { OBJETS[sprite](c, lw, lh); });
     ctx.save();
     ctx.translate(Math.round(g.x - cx), Math.round(g.y - g.z - 4 - cy));
     ctx.rotate(g.tour);
@@ -790,6 +843,7 @@ const Combat = (function () {
     for (let i = B.entites.length - 1; i >= 0; i--) {
       const g = B.entites[i];
       if (g.type !== 'lance') continue;
+      if (g.inerte) { majObjetLance(g); continue; }      // une brique, une bouteille : ni meche ni souffle
       const arme = armeDef(g.arme);
       // ⚠️ UN MUR DE BATIMENT EST HAUT : elle y rebondit a toute hauteur. (La
       // bille de fronde et la bouteille passent par-dessus a plus de 8 px — une
@@ -1390,7 +1444,7 @@ const Combat = (function () {
   return {
     CHARGE_MIN, ROULADE_IMAGES, TENIR_IMAGES, RALENTI, armeDef, armeCourante, armeDe, munitions, possede, regles,
     armesDuSac, aSec, degainer, retourRapide, ouvrirRoue, fermerRoue, creneauVise, majRoue, tempsQuiPasse,
-    frapper, tirer, cycler, roulade, pickpocket, pochesAPrendre, victimeDesPoches, ramasserArme, objetSousLaMain, suivreLaMain, userArme: user,
+    frapper, tirer, lancerObjet, cycler, roulade, pickpocket, pochesAPrendre, victimeDesPoches, ramasserArme, objetSousLaMain, suivreLaMain, userArme: user,
     viseeAssistee, dispersionDe, allumer, majBrasiers, majAttaque, arcDeMelee, majProjectiles, maj,
     allumerMeche, lacherMeche, lancer, majEnMain, majLances, dessinerLance, ramasser, oublierLances,
     majCible, ciblesVerrouillables, VERROU_PORTEE,

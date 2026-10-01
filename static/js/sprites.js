@@ -9302,6 +9302,8 @@ const OBJETS = {
   pelle: function (ctx) { ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 5, 9, 2); ctx.fillStyle = '#9aa0a8'; ctx.fillRect(11, 3, 4, 6); },
   cone: function (ctx) { ctx.fillStyle = '#d98324'; ctx.fillRect(6, 2, 4, 7); ctx.fillRect(4, 8, 8, 2); ctx.fillStyle = '#efe6d0'; ctx.fillRect(6, 5, 4, 1); },
   bouteille: function (ctx) { ctx.fillStyle = '#2f6b2a'; ctx.fillRect(5, 3, 4, 6); ctx.fillRect(6, 1, 2, 2); },
+  // La brique qu'un gang lance (vague 5b des bagarres) : rouge brique, un joint plus clair.
+  brique: function (ctx) { ctx.fillStyle = '#9c3b26'; ctx.fillRect(4, 3, 8, 4); ctx.fillStyle = '#c86a4e'; ctx.fillRect(4, 3, 8, 1); ctx.fillStyle = '#6e2818'; ctx.fillRect(4, 6, 8, 1); },
   // Le parapluie de Rosa, ferme : le manche en crosse, la toile roulee noire, la pointe.
   parapluie: function (ctx) {
     ctx.fillStyle = '#6b4b2c'; ctx.fillRect(1, 6, 1, 3); ctx.fillRect(2, 8, 2, 1); ctx.fillRect(2, 5, 3, 1);
