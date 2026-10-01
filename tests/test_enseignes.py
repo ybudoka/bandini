@@ -77,7 +77,7 @@ def test_les_enseignes_ne_deplacent_rien_d_autre(VILLE, monkeypatch):
     # ⚠️ LA CAISSE POPULAIRE de même (`caisse.poser`, en dernier) : elle prend la plus grande pièce de commerce
     # qui reste — sans les enseignes, le bingo ou la salle de quilles.
     from app import caisse
-    monkeypatch.setattr(caisse, "poser", lambda ville: None)
+    monkeypatch.setattr(caisse, "poser", lambda ville, aires=None: None)
     avec = carte.generer(graine=VILLE["graine"], nord=False)
     monkeypatch.setattr(enseignes, "poser", lambda chantier, ville: [])
     sans = carte.generer(graine=VILLE["graine"], nord=False)  # ⚠️ sous le patch : pas `villes`

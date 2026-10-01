@@ -152,8 +152,12 @@ def _devanture(ville: dict, porte: dict) -> dict | None:
                 None)
 
 
-def choisir(ville: dict) -> tuple[dict, dict, dict] | None:
-    """(la porte, sa devanture, sa pièce) que la caisse reprend, ou None. Une mesure, jamais un dé."""
+def choisir(ville: dict, aires: dict | None = None) -> tuple[dict, dict, dict] | None:
+    """(la porte, sa devanture, sa pièce) que la caisse reprend, ou None. Une mesure, jamais un dé.
+
+    ⚠️ `aires` : les tuiles de bâtiment derrière chaque vitrine (`_Chantier.aires_des_devantures`, dans le repère de la
+    ville finie). La caisse n'en prend pas une trop grande pour son enseigne (« CAISSE POP » est un nom MOYEN,
+    `devantures.a_sa_taille`) : sur la graine 7, la plus grande pièce était un hangar de 361 tuiles."""
     familles: dict[str, int] = {}
     for porte in ville["portes"]:
         it = porte.get("interieur") or ""
@@ -174,6 +178,9 @@ def choisir(ville: dict) -> tuple[dict, dict, dict] | None:
         devanture = _devanture(ville, porte)
         if not devanture or not devantures.tient_en(ENSEIGNE, devanture["l"]):
             continue
+        aire = (aires or {}).get((devanture["x"], devanture["y"]))
+        if aire is not None and not devantures.a_sa_taille(ENSEIGNE, aire):
+            continue
         if any(m in (devanture.get("texte") or "").upper() for m in mots):
             continue
         cle = (-largeur * hauteur, porte["y"], porte["x"])
@@ -182,10 +189,10 @@ def choisir(ville: dict) -> tuple[dict, dict, dict] | None:
     return meilleure[1:] if meilleure else None
 
 
-def poser(ville: dict) -> dict | None:
+def poser(ville: dict, aires: dict | None = None) -> dict | None:
     """Reprend la pièce choisie et en fait la caisse. Rend `{"porte": [x, y]}`, ou None si rien ne convient (rien ne
     plante : les missions du casse restent alors sans lieu, et `test_caisse` le dit pour la vraie ville)."""
-    choix = choisir(ville)
+    choix = choisir(ville, aires)
     if not choix:
         return None
     porte, devanture, dedans = choix

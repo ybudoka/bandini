@@ -19,7 +19,7 @@ from app import caisse, carte, devantures, devants, etages, missions, nord
 @lru_cache(maxsize=None)
 def _sans_la_caisse() -> str:
     """⚠️ La ville témoin se génère sous `mock.patch` : jamais par `villes` (le cache rendrait la ville d'avant)."""
-    with mock.patch.object(caisse, "poser", lambda ville: None):
+    with mock.patch.object(caisse, "poser", lambda ville, aires=None: None):
         return json.dumps(carte.generer(), sort_keys=True)
 
 

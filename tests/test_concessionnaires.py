@@ -137,7 +137,7 @@ def test_le_salon_ne_deplace_rien(monkeypatch):
     """La ville d'avant, identique hors du Salon : on AJOUTE une porte, une devanture, un point et une pièce au
     bout de leurs listes, et les tuiles changent dans la cour seulement. ⚠️ Sans la CAISSE POPULAIRE des deux côtés (le
     casse, 1er oct. 2026) : posée en dernier, elle ajoute son point d'intérêt au bout, après celui du Salon."""
-    monkeypatch.setattr(caisse, "poser", lambda ville: None)
+    monkeypatch.setattr(caisse, "poser", lambda ville, aires=None: None)
     avec = carte.generer(nord=False)
     monkeypatch.setattr(concessionnaires, "poser_le_salon", lambda chantier, ville: None)
     sans = carte.generer(nord=False)
@@ -221,7 +221,7 @@ def test_ti_pout_ne_tire_aucun_de():
 def test_ti_pout_ne_deplace_rien(monkeypatch):
     """⚠️ La cour se choisit SANS décor ni lampe dedans : ces listes-là ne bougent pas non plus (le jeu tire
     dans le décor par son index). Sans la caisse populaire des deux côtés, posée après : son point au bout."""
-    monkeypatch.setattr(caisse, "poser", lambda ville: None)
+    monkeypatch.setattr(caisse, "poser", lambda ville, aires=None: None)
     avec = carte.generer()
     monkeypatch.setattr(concessionnaires, "poser_ti_pout", lambda ville: None)
     sans = carte.generer()

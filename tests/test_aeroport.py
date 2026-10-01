@@ -32,7 +32,7 @@ def ville():
     from app import caisse, concessionnaires
     pose, caisse_pose = concessionnaires.poser_le_salon, caisse.poser
     concessionnaires.poser_le_salon = lambda chantier, v: None
-    caisse.poser = lambda v: None
+    caisse.poser = lambda v, aires=None: None
     try:
         return carte.generer(nord=False)
     finally:
@@ -46,7 +46,7 @@ def sans(ville):
     pose, salon, caisse_pose = aeroport.poser, concessionnaires.poser_le_salon, caisse.poser
     aeroport.poser = lambda chantier, v: None
     concessionnaires.poser_le_salon = lambda chantier, v: None
-    caisse.poser = lambda v: None
+    caisse.poser = lambda v, aires=None: None
     try:
         return carte.generer(nord=False)
     finally:

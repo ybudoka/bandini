@@ -149,7 +149,7 @@ def test_les_carrosseries_ne_deplacent_rien_d_autre(ville, monkeypatch):
     monkeypatch.setattr(concessionnaires, "poser_le_salon", lambda chantier, ville_: None)
     # La CAISSE POPULAIRE de même (`caisse.poser`, en dernier) : son point s'ajoute au bout.
     from app import caisse
-    monkeypatch.setattr(caisse, "poser", lambda ville_: None)
+    monkeypatch.setattr(caisse, "poser", lambda ville_, aires=None: None)
     avec = carte.generer(graine=ville["graine"], nord=False)
     monkeypatch.setattr(carte._Chantier, "poser_les_carrosseries", lambda self, ville_: [])
     sans = carte.generer(graine=ville["graine"], nord=False)

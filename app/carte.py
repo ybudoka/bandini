@@ -7507,7 +7507,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
     # d'un commerce reprise, son enseigne repeinte, un point d'intérêt au bout : la ville d'avant est la même, clé par clé.
     # Après les devants (son devant de mission est déjà dégagé), avant les étages (une pièce faite main n'en a pas).
     from . import caisse as caisse_mod
-    caisse_mod.poser(ville)
+    # ⚠️ À la mesure de son bâtiment (`devantures.a_sa_taille`) : les aires de la construction, décalées comme la ville
+    # si la bande nord s'est collée au-dessus.
+    decalage = nord_mod.DECALAGE_NORD if nord and plan == PLAN else 0
+    caisse_mod.poser(ville, {(x, y + decalage): a for (x, y), a in chantier.aires_des_devantures.items()})
     # ⚠️ DES ÉTAGES DEDANS AUSSI (docs/jalons/des-etages-dedans-aussi.md), sur la ville FINIE (toutes ses tuiles,
     # toutes ses portes) : combien d'étages chaque façade peint, sans un dé et sans une tuile. ⚠️ AVANT les
     # frénésies et les cartes de hockey, qui se posent en tout dernier (leurs juges « ne déplacent rien » le
