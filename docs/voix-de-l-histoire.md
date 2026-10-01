@@ -54,7 +54,7 @@ affiche « Quinze piastres », la voix dit « Quinze piasses ».
 dites sans puis avec 107 règles (`captures/essai-dico/`) : **sans** gagnait pour 27 mots (p'tit,
 truck, chum, Roy, OK, full, donc, docker, run…), c'était **pareil** pour 5 (gang, job, y'a, ET,
 Y a), **avec** ne gagnait que pour astheure et piastres. Les voix québécoises d'eleven_v3 disent
-déjà bien le parler d'ici : une règle qui n'aide pas nuit. Le lexique n'en garde que 6. Une voix
+déjà bien le parler d'ici : une règle qui n'aide pas nuit. Le lexique n'en garde que 6 (et `pis`, 1er oct. 2026). Une voix
 bute sur un mot : on fait dire UNE phrase sans puis avec (une paire ≈ 100 crédits), Martin
 écoute, et la règle entre seulement s'il préfère « avec ».
 
@@ -109,4 +109,12 @@ qu'aucune règle ne touche, et refuse les autres plutôt que de les faire payer 
 « banane », et la reconnaissance vocale a entendu « le banane »). Mais la reconnaissance vocale
 ne sait pas juger une règle réaliste : elle ramène « piasses » à « piastres ». **Seule l'oreille
 juge.**
+
+⚠️ **« pis » (1er oct. 2026)** : Chris (Ti-Loup) disait « puis ». L'alias « pi » l'a emporté sur le
+phonème `pi` dans une paire à graine fixe (Scribe : « puis » sans la règle et avec le phonème, « pis »
+avec l'alias, deux transcriptions chacune). Mais Scribe **ramène aussi /pi/ à « puis » selon la
+phrase** : sur « Pis le café… Je paie, pis j'oublie », il a écrit « puis » même avec l'alias « pie »,
+qu'aucune voix ne peut dire « puis ». Un « puis » de Scribe ne prouve donc pas qu'une voix dit
+« puis » ; seule la paire à graine fixe compare. Pour « astheure » (`astœʁ`), Scribe écrit
+« à cette heure » ou « à c't'heure » : c'est le bon mot.
 

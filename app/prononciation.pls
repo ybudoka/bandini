@@ -54,6 +54,15 @@
   <lexeme><grapheme>astheure</grapheme><phoneme>astœʁ</phoneme></lexeme> <!-- dit : asteure -->
   <lexeme><grapheme>Astheure</grapheme><phoneme>astœʁ</phoneme></lexeme> <!-- dit : Asteure -->
 
+  <!-- « Toi pis moi » : au Québec, « pi », jamais « puis ». Chris (Ti-Loup) disait
+       « puis » dans s02, s14 et q15. Écouté le 1er oct. 2026 par Scribe, pas encore
+       à l'oreille de Martin : une même phrase (« Un taxi, pis après, un cabriolet.
+       Pis des cubes, astheure, j'en ai plein. », même graine) transcrite deux fois.
+       Sans la règle : « puis » et « Puis », les deux fois. Avec le phonème pi :
+       encore « puis ». Avec l'alias « pi » : « pis » et « pis », les deux fois. -->
+  <lexeme><grapheme>pis</grapheme><alias>pi</alias></lexeme> <!-- dit : pi -->
+  <lexeme><grapheme>Pis</grapheme><alias>pi</alias></lexeme> <!-- dit : pi, en tête de phrase -->
+
   <!-- « Envoye, fonce! » : lu à la française, le E final se tait (« envoie »),
        et v3 seul ne le dit pas non plus. Martin : « devrait sonner envoueille ».
        Écouté le 24 sept. 2026 (Ti-Paul), quatre variantes : l'alias
