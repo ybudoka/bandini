@@ -578,6 +578,31 @@ const Monde = (function () {
     return true;
   }
 
+  //: Ce que devient un mur fissure qui cede : des gravats — la poussiere de pierre, ou l'on marche.
+  const GRAVATS = 'g';
+
+  /** LE MUR FISSURE CEDE (les explosifs, vague 3b) : seulement un `0` (`LEGENDE[...].fissure`), jamais un autre mur
+      — un trou dans une facade ouvrirait sur un toit. Il devient des gravats ; les morceaux voisins se repeignent
+      (les murs d'a cote lisent leurs voisins, et l'ombre tombe au sud). ⚠️ Un trou ne se sauvegarde pas : il se
+      referme au rechargement, comme une cloture defoncee — le mur revient a la mission suivante. */
+  function ceder(tx, ty) {
+    const g = glyphe(tx, ty), p = carte.legende[g] || {};
+    if (!p.fissure) return false;
+    const q = carte.legende[GRAVATS] || {};
+    const ligne = carte.sol[ty];
+    carte.sol[ty] = ligne.slice(0, tx) + GRAVATS + ligne.slice(tx + 1);
+    const i = ty * carte.w + tx;
+    carte.solide[i] = q.solide || 0;
+    carte.route[i] = q.route ? 1 : 0;
+    carte.passage[i] = 0;
+    for (let dy = -1; dy <= 2; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        carte.morceaux.delete(Math.floor((tx + dx) / MORCEAU) + ',' + Math.floor((ty + dy) / MORCEAU));
+      }
+    }
+    return true;
+  }
+
   /** Une cloture qui s'enjambe a cette tuile — grillage ou palissade de bois
       (voir `Entites.enjamber`). Le barbele, lui, ne s'enjambe pas. */
   function estEnjambable(tx, ty) { return solidite(tx, ty) === 4; }
@@ -3289,7 +3314,7 @@ const Monde = (function () {
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
     dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau, sousLeToit, cacheSousLeToit, abrite,
     barrieresCoulissantes, majBarrieresCoulissantes, dessinerBarrieresCoulissantes, COULISSE_GLISSE, COULISSE_TIENT,
-materiauxDuLogement, materiauxDuCommerce, estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, teinteDeToit, teintesDesToits, formeDeToit, formeDuToit, objetsDesToits, lampesDesLucarnes, logementElargi, sousLesEtages, etagesDuCommerce, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
+materiauxDuLogement, materiauxDuCommerce, ceder, estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, teinteDeToit, teintesDesToits, formeDeToit, formeDuToit, objetsDesToits, lampesDesLucarnes, logementElargi, sousLesEtages, etagesDuCommerce, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, ambianceVue, aLAbri, estNuit, estNuitVue, periode, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
     miniCarte, couleurMini, couleurMiniA, masqueDeLaCarte, masquee, hauteurConnue, chemin, demanderChemin, majChemins,

@@ -841,3 +841,22 @@ le lance-roquettes).
   sans C4 rien ; posé sur un char il le suit ; au noir d'une porte les charges ne sautent plus ; la charge se
   dessine) et `test_armes.py` (le type, le prix, le marché noir, les règles, le son) ; cinq mutations, toutes
   mordent. Regardé : une charge au sol, une sur une auto.
+
+### Vague 3, lot 3b (✅ livré le 1er oct. 2026) : les murs fissurés — la vague 3 est livrée
+
+- **Le mur fissuré** (`0`, un des derniers glyphes libres ; `LEGENDE[...]["fissure"]`) : un mur plein, qu'on voit
+  fissuré — le mur de son lieu (le mur ordinaire, ou le plâtre d'une pièce : `0@piece`) et une lézarde en zigzag,
+  ses branches, des éclats au pied. Il ne cède qu'à une explosion (`Monde.ceder`, appelée par l'explosion commune
+  pour chaque mur fissuré du souffle) et devient des gravats (`g`) où l'on passe ; les gravats volent ; les morceaux
+  voisins se repeignent. Aucun autre mur ne cède. Un trou ne se sauvegarde pas : il se referme au rechargement.
+- **Posés** : deux dans la villa du maire, au rez — entre le salon et la salle à manger, entre la salle à manger et la
+  cuisine. Une route de plus, bruyante ; jamais vers la chambre forte ni le bureau du maire. Les murs fissurés dehors
+  (les murets, les enceintes) et ceux que voudra une mission se poseront avec elles : la règle (du sol des deux côtés)
+  et son juge sont prêts.
+- Juges `tests/test_murs_fissures.py` (le mur fissuré est un mur plein ; chaque `0` de la ville, de ses pièces et de
+  ses blocs a du sol des deux côtés ; la villa a ses deux murs) et `tests/test_murs_fissures_js.py` (une explosion le
+  fait céder et pas son voisin plein ; seul lui cède ; le C4 posé contre lui l'ouvre ; il se peint fissuré) ; les
+  mutations mordent. Regardé : le mur et sa lézarde, sur la tôle et sur le plâtre.
+
+**La vague 3 est livrée** : le C4 (3a), les murs fissurés (3b). Reste la vague 4 : le char piégé et le
+lance-roquettes.

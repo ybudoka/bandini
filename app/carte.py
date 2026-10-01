@@ -394,6 +394,10 @@ LEGENDE: dict[str, dict] = {
     # ne se traverse pas et elle CACHE (`Monde.ligneLibre` ne s'arrête qu'aux murs). ⚠️ Pas un décor : un arbre
     # ne cache rien.
     "`": {"nom": "haie de cèdres", "solide": 1},
+    # LE MUR FISSURÉ (les explosifs, vague 3b) : un mur plein, qu'on VOIT fissuré, et qui ne cède qu'à une explosion
+    # (`Monde.ceder`) — il devient des gravats (`g`) où l'on passe. ⚠️ Toujours posé là où il y a du sol des deux
+    # côtés (un juge le tient) : un trou dans une façade ouvrirait sur un toit. `0` : un des derniers glyphes libres.
+    "0": {"nom": "mur fissuré", "solide": 1, "fissure": True},
     "(": {"nom": "clôture de fer forgé", "solide": 4, "cloture": "fer"},
     ")": {"nom": "portail de fer forgé", "solide": 5, "cloture": "fer", "coulissante": True},
     # --- Dedans : les planchers et les meubles ------------------------------

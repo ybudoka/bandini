@@ -5511,6 +5511,18 @@ const TUILES = (function () {
     ctx.fillStyle = '#3a3e42';                                                // la roue, ses rayons
     ctx.fillRect(est ? T - 6 : 0, sud ? T - 1 : 0, 6, 1); ctx.fillRect(est ? T - 1 : 0, sud ? T - 6 : 0, 1, 6);
   };
+  // LE MUR FISSURÉ (les explosifs, vague 3b) : le mur de son lieu — le mur ordinaire, ou le plâtre d'une pièce — et
+  // ses fissures, qu'on VOIT : une lézarde qui descend en zigzag, ses branches, des éclats tombés au pied.
+  function fissures(ctx, v) {
+    ctx.fillStyle = 'rgba(20,18,16,0.75)';
+    let x = 5 + (v >> 4) % 6;
+    for (let y = 1; y < 15; y++) { ctx.fillRect(x, y, 1, 1); if (y % 3 === 0) x += (y % 6 === 0) ? 1 : -1; }
+    ctx.fillRect(x + 1, 6, 3, 1); ctx.fillRect(x + 3, 7, 1, 2); ctx.fillRect(x - 3, 10, 3, 1);
+    ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(x + 1, 3, 1, 3);
+    ctx.fillStyle = '#8a8478'; ctx.fillRect(3, 14, 2, 1); ctx.fillRect(10, 15, 2, 1);
+  }
+  tuiles['0'] = function (ctx, v, T) { tuiles.B(ctx, v, T); fissures(ctx, v); };
+  tuiles['0@piece'] = function (ctx, v, T) { tuiles['B@piece'](ctx, v, T); fissures(ctx, v); };
   // LE GENRE : la moquette d'un bungalow — beige, à poils, des traces de pas qu'on ne voit qu'en plissant les yeux.
   tuiles['t@moquette'] = function (ctx, v, T) {
     plein(ctx, '#b8a47e', T);

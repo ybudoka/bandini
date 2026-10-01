@@ -54,6 +54,18 @@ const Explosions = (function () {
       // ⚠️ Le DECOR aussi. `Entites.autour(..., q.vivant)` ne le voit pas — le
       // decor ne vit pas — et une explosion qui laisse le lampadaire debout au
       // milieu du cratere ne se croit pas une seconde.
+      // LES MURS FISSURES du souffle cedent (vague 3b) — et eux seuls : les gravats volent.
+      const tr = Math.ceil(o.rayon / TT), cx = Math.floor(x / TT), cy = Math.floor(y / TT);
+      for (let ty = cy - tr; ty <= cy + tr; ty++) {
+        for (let tx = cx - tr; tx <= cx + tr; tx++) {
+          if (Math.hypot(tx * TT + 8 - x, ty * TT + 8 - y) > o.rayon) continue;
+          if (!Monde.ceder(tx, ty)) continue;
+          for (let k = 0; k < 10; k++) {
+            const a = B.rng() * Math.PI * 2, s = 0.5 + B.rng() * 2;
+            Entites.particule(tx * TT + 8, ty * TT + 8, Math.cos(a) * s, Math.sin(a) * s * 0.6, 30 + B.rng() * 20, k % 2 ? '#9a948a' : '#6a655c', 2, 0.12);
+          }
+        }
+      }
       for (const d of Entites.decorAutour(x, y, o.rayon)) {
         if (d.brise) continue;
         const part = 1 - Math.hypot(d.x - x, d.y - y) / o.rayon;

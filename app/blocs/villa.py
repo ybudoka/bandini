@@ -27,6 +27,9 @@ donne l'alerte : une étoile, et il te court après. Une mission `sans_etoile` e
 
 from .. import carte  # noqa: F401  (la légende des glyphes : `blocs.erreurs` la lit)
 
+#: ⚠️ LES MURS FISSURÉS (`0`, les explosifs, vague 3b) : deux murs du rez — entre le salon et la salle à manger, entre
+#: la salle à manger et la cuisine — cèdent à une explosion (le C4, une grenade) et deviennent des gravats où l'on
+#: passe. Une route de plus, bruyante : jamais vers la chambre forte ni le bureau du maire.
 PLAN: tuple[str, ...] = (
     "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
     "A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,A,AA",
@@ -43,11 +46,11 @@ PLAN: tuple[str, ...] = (
     "AA,,'```,g,,WttttttttttttttBthhhhhhttBtttttttttB,,g,,,A,,,,',,,,,,,,,,,A",
     "A,,,',,A,g,,BttttttttttttttBtaaaaaattBtttttttttW,,g,,,,,,,,',,,,,,,,,,,A",
     "AA,,',,,,g``BttttyyyyyyttttBthhhhhhttBtttttttttB,,g,,,,OOO,',,,,,,,,,,,A",
-    "A,,,',,,,g,,BttttyyyyyyttttBtttttttttBtttttttttB,,g,,,,OOO,',,,,,,,,,,,A",
+    "A,,,',,,,g,,Bttttyyyyyytttt0tttttttttBtttttttttB,,g,,,,OOO,',,,,,,,,,,,A",
     "AA,,',,,,g,,WttttyaayhyttttttttttttttBtttttttttB,,g,,,,OOO,',,,,,,,,,,,A",
     "A,,,',,A,g,,BttttyyyyyyttttBtttttttttBtttttttttB,,g,,,,FWF,',,,,,,,,,,,A",
     "AA,,',,,,g,,BttttyyyyyyttttBtttttttttttttttttttB,,g,,,,,,,,',,,,,,,,,,,A",
-    "A,,,',,,,g,,BttttttttttttttBtttttttttBtttttttttB,,g,,,,,,,,',,,,,,,,,,,A",
+    "A,,,',,,,g,,BttttttttttttttBttttttttt0tttttttttB,,g,,,,,,,,',,,,,,,,,,,A",
     "AA,,'```,g,,BttttttttttttttBttttttttnBtttttttttBgggggggggggg############",
     "A,,,',,,,g,,BttttttttttttttBtttttttttBtttttttttDgggggggggggg############",
     "AA,,',,,,g,,BttttttttttttttBtttttttttBtttttttttDgggggggggggg############",
