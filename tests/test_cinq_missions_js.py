@@ -179,7 +179,8 @@ def test_e01_les_chevreuils_leur_grand_frere_la_police_puis_bouchard_et_ti_paul_
     « Des missions plus longues » (22 sept. 2026) : leur grand frère sort (le chef : 160 PV, un bâton) ;
     les voisins appellent la police (on se cache dans le dépanneur) ; Ti-Paul nous envoie demander une
     patrouille à Bouchard, au casse-croûte — l'autre bout de la ville —, qui répond en personne ; on
-    revient à Ti-Paul, 150 $."""
+    revient à Ti-Paul, 150 $. ⚠️ e01 est l'acte 1 de _Ti-Paul et ses amis_ (2 oct. 2026) : tout se décale d'un.
+    """
     r = banc("function (L, o) {" + OUTILS + """
         L.Jeu.commencer(); L.graine(6);
         const B = L.B, j = B.joueur; j.invincible = 1e6;
@@ -193,7 +194,7 @@ def test_e01_les_chevreuils_leur_grand_frere_la_police_puis_bouchard_et_ti_paul_
         heure(L, true);       // ⚠️ APRES l'intro : la scène fait avancer l'horloge
         o.frame(3);
         const etapeNuit = etape(L);
-        const trois = hommes(L, 1);
+        const trois = hommes(L, 2);
         const arrivent = trois.map(function (h) { return { d: h.d, etat: h.e.etat, arme: h.e.arme || null, vie: h.e.vieMax }; });
         const pendant = boite(L);
         fermer(L);
@@ -228,30 +229,30 @@ def test_e01_les_chevreuils_leur_grand_frere_la_police_puis_bouchard_et_ti_paul_
                  police: police, seme: seme, versBouchard: versBouchard, loin: loin, bouchard: bouchard,
                  fait: !!B.partie.missionsFaites.e01, argent: argent.map(function (a) { return a.montant; }) };
     }""")
-    assert r["debut"] == {"parle": True, "slug": "e01"}
-    assert r["etapeNuit"] == 1 and len(r["arrivent"]) == 3, "la nuit : trois Chevreuils"
+    assert r["debut"] == {"parle": True, "slug": "ti_paul_et_ses_amis"}
+    assert r["etapeNuit"] == 2 and len(r["arrivent"]) == 3, "la nuit : trois Chevreuils"
     for h in r["arrivent"]:
         assert 100 <= h["d"] <= 260, f"ils arrivent de loin ({h['d']} px)"
         assert h["etat"] == "attaque_joueur"
         assert h["arme"] is None and h["vie"] == 60, "les poings nus, 60 PV : des ados"
-    assert r["pendant"] and r["pendant"]["slug"] == "tipaul-e01-9", "Ti-Paul les voit venir"
+    assert r["pendant"] and r["pendant"]["slug"] == "tipaul-ti_paul_et_ses_amis-10", "Ti-Paul les voit venir"
     f = r["frere"]
-    assert f["etape"] == 2 and f["ligne"].startswith("LEUR GRAND FRÈRE"), f
+    assert f["etape"] == 3 and f["ligne"].startswith("LEUR GRAND FRÈRE"), f
     assert f["fiche"] and f["fiche"]["vie"] == 160 and f["fiche"]["arme"] == "batte", "le grand frère a un bâton"
     assert f["d"] is not None and f["d"] < 200, "il sort près de nous"
-    assert f["boite"] and f["boite"]["slug"] == "tipaul-e01-10"
+    assert f["boite"] and f["boite"]["slug"] == "tipaul-ti_paul_et_ses_amis-11"
     p = r["police"]
-    assert p["etape"] == 3 and p["ligne"].startswith("SÈME LA POLICE") and p["etoiles"] >= 1, p
-    assert p["boite"] and p["boite"]["slug"] == "tipaul-e01-11"
+    assert p["etape"] == 4 and p["ligne"].startswith("SÈME LA POLICE") and p["etoiles"] >= 1, p
+    assert p["boite"] and p["boite"]["slug"] == "tipaul-ti_paul_et_ses_amis-12"
     s = r["seme"]
-    assert s["cache"] == 3 and s["apres"] == 4 and 0 < s["secondes"] < 150, f"cachés au dépanneur, l'étoile tombe : {s}"
+    assert s["cache"] == 4 and s["apres"] == 5 and 0 < s["secondes"] < 150, f"cachés au dépanneur, l'étoile tombe : {s}"
     assert r["versBouchard"]["ligne"].startswith("DEMANDE UNE PATROUILLE À BOUCHARD")
-    assert r["versBouchard"]["boite"] and r["versBouchard"]["boite"]["slug"] == "tipaul-e01-12"
+    assert r["versBouchard"]["boite"] and r["versBouchard"]["boite"]["slug"] == "tipaul-ti_paul_et_ses_amis-13"
     assert r["loin"] >= 100, f"le casse-croûte est loin du dépanneur ({r['loin']} tuiles)"
     b = r["bouchard"]
-    assert b["piece"] == "casse_croute" and b["avant"] == 4
-    assert b["boite"] == {"partie": "accueil", "qui": "bouchard", "slug": "bouchard-e01-13", "telephone": False}, b
-    assert b["pendantBoite"] == 4 and b["apres"] == 5 and b["ligne"].startswith("RETOURNE VOIR TI-PAUL")
+    assert b["piece"] == "casse_croute" and b["avant"] == 5
+    assert b["boite"] == {"partie": "accueil", "qui": "bouchard", "slug": "bouchard-ti_paul_et_ses_amis-33", "telephone": False}, b
+    assert b["pendantBoite"] == 5 and b["apres"] == 6 and b["ligne"].startswith("RETOURNE VOIR TI-PAUL")
     assert r["fait"] is True and r["argent"] == [150]
 
 

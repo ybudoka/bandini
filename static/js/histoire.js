@@ -181,7 +181,9 @@ const Histoire = (function () {
 
   /** La mission `m` a-t-elle besoin du personnage `slug` en ville : il la DONNE, ou l'on doit lui PARLER ? */
   function aBesoinDe(m, slug) {
-    return m.donneur === slug || (m.objectifs || []).some(function (o) {
+    // ⚠️ Le donneur d'un CHAPITRE est celui de l'acte qui attend (`Chapitres.donneurDe`) : Jo, qui donne l'acte 1 des
+    // Chevreuils, n'est plus retenu une fois son acte fait.
+    return Chapitres.donneurDe(m) === slug || (m.objectifs || []).some(function (o) {
       return !!o && o.type === 'parler' && cibleDuParler(o) === slug;
     });
   }
@@ -1654,6 +1656,20 @@ const Histoire = (function () {
     });
   }
 
+  /** Ceux qui PARTENT après la mission `slug` (`parti_apres`) quittent la ville quand elle est l'acte d'un chapitre
+      qui continue (`Chapitres.ouvrirActe`) : Jo se cache chez les siens dès sa course faite, pas à la paix des Érables.
+      ⚠️ Seulement s'il est vraiment parti (`estParti`) — rien d'autre ne le retient. */
+  function partirApres(slug) {
+    if (B.bloc) return;
+    dansLaVille(function () {
+      for (const p of personnages()) {
+        if (p.parti_apres !== slug || !estParti(p)) continue;
+        const e = donneur(p.slug);
+        if (e) Entites.retirer(e);
+      }
+    });
+  }
+
   /** Les chiffres que le générique écrit (`VALEURS_DE_TITRE`, `missions.py`). */
   function valeursDuGenerique() {
     // La FORTUNE du BILAN (`Hud.menuBilan`) : la poche et le coffre de la planque.
@@ -1795,8 +1811,12 @@ const Histoire = (function () {
     if (fait && fait.donne) {
       accorder(fait.donne);
       if (fait.donne.prime) {
-        Missions.encaisser(fait.donne.prime, m.titre.toUpperCase(), true);
-        Missions.annoncerPrime(fait.donne.prime, fait.donne.message || m.titre.toUpperCase(), 'ACTE RÉUSSI', 0);
+        // ⚠️ « Sans une bosse » (`sans_degats`, e02) se paie à l'acte qui l'a gagné — la moitié de SA prime, comme sa
+        // mission d'origine la payait (2 oct. 2026) — et ne déborde pas sur la prime du chapitre.
+        const bonus = B.mission && B.mission.sansBosse ? Math.round(fait.donne.prime * 0.5) : 0;
+        if (B.mission) B.mission.sansBosse = false;
+        Missions.encaisser(fait.donne.prime + bonus, m.titre.toUpperCase(), true);
+        Missions.annoncerPrime(fait.donne.prime + bonus, fait.donne.message || m.titre.toUpperCase(), 'ACTE RÉUSSI', bonus);
       } else if (fait.donne.message) Hud.message(fait.donne.message, 200);
     }
     p.etape++;
@@ -4394,7 +4414,7 @@ const Histoire = (function () {
   return { texteDObjectif, poserLaCachette, exigeTenu, tenu, porteLaTenue, faite, disponibles, disponibleDe, estParti, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
            donneur, creerDonneurs, majSaisonniers, absentLHiver, poserDonneur, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
            parler, dire, suivante, finir, commencer, demarrer, majCuivre, avancer, objectif, courante, reussir, echouer, evenement,
-           mission, accorder, ouEstLeJoueurEnVille, commandesDuPoursuivant, arriverApres,
+           mission, accorder, ouEstLeJoueurEnVille, commandesDuPoursuivant, arriverApres, partirApres,
            ouverture, passerOuverture, fichiersDeLOuverture, direLignes, majCinema, resoudre,
            lieuDuPersonnage, pieceDessous, ouTrouver, present, calme, jouerOuDire,
            reinitialiser, noter, rencontrer, CARNET_MAX, init, charger,

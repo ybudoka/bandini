@@ -197,7 +197,8 @@ def _jouer(banc, corps):
 def test_e02_la_biere_passe_par_le_phare_seme_la_patrouille_et_finit_chez_ti_paul(banc):
     """Ti-Paul : le camion de bière dort aux Quais ; deux caisses pour le gardien du phare (le bout
     est de La Pointe), une patrouille qui trouve la bière louche, puis le dépanneur (le bout ouest
-    des Érables). Deux fois la ville au lieu d'une."""
+    des Érables). Deux fois la ville au lieu d'une. ⚠️ e02 est l'acte 2 de _Ti-Paul et ses amis_ (2 oct. 2026) :
+    Ti-Paul le donne à qui a fait e01 ; le marqueur dit d'abord la fin de e01 et l'appel de e02, puis « Douce »."""
     r = _jouer(banc, """
         debut(L);
         const B = L.B, j = B.joueur, argent = paiements(L);
@@ -205,7 +206,9 @@ def test_e02_la_biere_passe_par_le_phare_seme_la_patrouille_et_finit_chez_ti_pau
         aCote(L, ti);
         const parle = L.Histoire.parler('tipaul');
         passer(L, o);
-        // La réplique PENDANT du premier objectif se dit, l'intro finie (« Douce, douce! »).
+        // Le marqueur de l'acte 2 : la fin de e01, l'appel et l'intro de e02 ; puis la réplique PENDANT du premier
+        // objectif (« Douce, douce! »).
+        const marqueur = ecouter(L, o);
         const douce = ecouter(L, o);
         const v = B.mission.vehicule, cantine = L.Histoire.lieu('cantine');
         const camion = { slug: v.slug, d: Math.round(Math.hypot(v.x - cantine.x, v.y - cantine.y)) };
@@ -223,9 +226,9 @@ def test_e02_la_biere_passe_par_le_phare_seme_la_patrouille_et_finit_chez_ti_pau
     """)
     assert r["parle"] and r["camion"]["slug"] == "camion", r
     assert r["douce"] and r["douce"]["texte"].startswith("Douce, douce"), r["douce"]
-    assert r["monte"] == 1 and r["phare"]["qui"] == "tipaul" and "La Pointe" in r["phare"]["texte"], r
+    assert r["monte"] == 9 and r["phare"]["qui"] == "tipaul" and "La Pointe" in r["phare"]["texte"], r
     assert r["t1"]["arrive"], f"le camion n'arrive pas au phare : {r['t1']}"
-    assert r["apresPhare"]["etape"] == 2 and r["apresPhare"]["etoiles"] >= 1, "au phare, une patrouille : %s" % r["apresPhare"]
+    assert r["apresPhare"]["etape"] == 10 and r["apresPhare"]["etoiles"] >= 1, "au phare, une patrouille : %s" % r["apresPhare"]
     assert r["apresPhare"]["boite"]["texte"].startswith("Une patrouille"), r["apresPhare"]
     assert r["s"]["seme"] and r["s"]["etoiles"] == 0, f"la patrouille ne lâche pas : {r['s']}"
     assert r["t2"]["arrive"] and r["fait"] is True, r

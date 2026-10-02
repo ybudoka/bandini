@@ -284,7 +284,8 @@ def test_chaque_defi_dit_avec_quoi_il_se_joue():
 
 def test_ce_qui_debloque_un_defi_existe():
     slugs = {d["slug"] for d in missions.DEFIS}
-    faites = {m["slug"] for m in missions.CATALOGUE}
+    # ⚠️ Et les missions devenues les ACTES d'un chapitre (2 oct. 2026) : l'acte fini les marque faites.
+    faites = {m["slug"] for m in missions.CATALOGUE} | {r for m in missions.CATALOGUE for r in m.get("remplace") or []}
     for d in missions.DEFIS:
         r = d.get("debloque")
         if not r:

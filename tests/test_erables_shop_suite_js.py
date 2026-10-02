@@ -19,9 +19,11 @@ from app import missions
 
 VAGUE = ("e08", "e09", "e11", "s04", "s13")
 # ⚠️ s13 est l'acte 2 des _Commandes de Prévost_ (2 oct. 2026) : le chapitre n'est pas fait, son acte 1 (s07) l'est.
+# ⚠️ Et e08, e09 : les derniers actes de _Diane et Jo_ et de _Ti-Paul et ses amis_ — leurs actes d'avant sont faits.
 AVANT = json.dumps([m["slug"] for m in missions.CATALOGUE
-                    if m["slug"] not in VAGUE + ("m97", "m98", "m99", "commandes_de_prevost")]
-                   + ["p02", "p05", "p04", "p10", "p09", "p11", "s07"])
+                    if m["slug"] not in VAGUE + ("m97", "m98", "m99", "commandes_de_prevost", "diane_et_jo",
+                                                 "ti_paul_et_ses_amis")]
+                   + ["p02", "p05", "p04", "p10", "p09", "p11", "s07", "e13", "e01", "e02"])
 
 AIDES = OUTILS + PLUS_LONGUES + RECHARGER + DEDANS + """
   function partie(L, plus) { faites(L, """ + AVANT + """.concat(plus || [])); return recharger(L); }
@@ -83,18 +85,18 @@ def _e08(banc, lent=False):
 
 def test_e08_les_deux_paquets_de_jo_a_la_pointe_et_diane(banc):
     r = _e08(banc)
-    assert r["pris"] == {"dispo": "e08", "mission": "e08"}, r["pris"]
+    assert r["pris"] == {"dispo": "diane_et_jo", "mission": "diane_et_jo"}, r["pris"]
     assert r["coupe"]["slug"] == "sport" and r["coupe"]["depanneur"] <= 12, r["coupe"]
-    assert r["monte"] == 1 and r["premier"]["etape"] == 2 and r["premier"]["skateux"] <= 12, r
-    assert r["second"]["etape"] == 3 and r["second"]["rampe"] <= 6, r["second"]
-    for dite in ("pendant:diane:0", "pendant:diane:1", "pendant:diane:2", "pendant:diane:3"):
+    assert r["monte"] == 6 and r["premier"]["etape"] == 7 and r["premier"]["skateux"] <= 12, r
+    assert r["second"]["etape"] == 8 and r["second"]["rampe"] <= 6, r["second"]
+    for dite in ("pendant:diane:4", "pendant:diane:5", "pendant:diane:6", "pendant:diane:7", "pendant:diane:8"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [250], r
 
 
 def test_e08_trop_lent_les_skateux_les_trouvent(banc):
     r = _e08(banc, lent=True)
-    assert r["pris"]["mission"] == "e08"
+    assert r["pris"]["mission"] == "diane_et_jo"
     assert r["rate"] is True and r["echecs"] == 1 and r["fait"] is False, r
 
 
@@ -126,17 +128,17 @@ def _e09(banc, lent=False):
 
 def test_e09_trois_poutines_chaudes_aux_enseignes_des_erables(banc):
     r = _e09(banc)
-    assert r["pris"] == {"dispo": "e09", "mission": "e09"}, r["pris"]
+    assert r["pris"] == {"dispo": "ti_paul_et_ses_amis", "mission": "ti_paul_et_ses_amis"}, r["pris"]
     assert r["camion"]["slug"] == "camion" and r["camion"]["depanneur"] <= 16, r["camion"]
-    assert r["monte"] == 1 and r["n"] == 3 and r["arrets"][:2] == [1, 2] and r["apres"] == 2, r
-    for dite in ("pendant:tipaul:0", "pendant:tipaul:1", "pendant:tipaul:2"):
+    assert r["monte"] == 14 and r["n"] == 3 and r["arrets"][:2] == [1, 2] and r["apres"] == 15, r
+    for dite in ("pendant:tipaul:12", "pendant:tipaul:13", "pendant:tipaul:14", "pendant:tipaul:15"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [150], r
 
 
 def test_e09_des_poutines_froides_c_est_rate(banc):
     r = _e09(banc, lent=True)
-    assert r["pris"]["mission"] == "e09"
+    assert r["pris"]["mission"] == "ti_paul_et_ses_amis"
     assert r["rate"] is True and r["echecs"] == 1 and r["fait"] is False, r
 
 

@@ -112,6 +112,8 @@ def test_chaque_mission_de_la_villa_a_sa_cle_avant_la_maison():
     from app import missions
     from app.blocs import villa
     par_slug = {m["slug"]: m for m in missions.CATALOGUE}
+    # ⚠️ Un prérequis peut viser l'ACTE d'un chapitre (2 oct. 2026) : il se lit comme son chapitre.
+    par_slug.update({r: m for m in missions.CATALOGUE for r in m.get("remplace") or []})
     donnent = set(missions.cles_des_serrures(blocs.BLOCS)["cle_villa"])
     dedans = {"villa_service", "villa_bureau", "villa_terminal", "villa_voute"}
     assert dedans <= set(villa.LIEUX)
@@ -132,4 +134,5 @@ def test_chaque_mission_de_la_villa_a_sa_cle_avant_la_maison():
         vues.append(m["slug"])
         soi = any(o.get("objet") == "cle_villa" for o in m["objectifs"][:etapes[0]])
         assert soi or avant(m["slug"]) & donnent, f"{m['slug']} entre dans la villa sans que rien ne lui donne la clé"
-    assert sorted(vues) == ["e07", "v02", "v03"], vues
+    # e07 est l'acte 3 des Chevreuils depuis le 2 oct. 2026 : la clé lui vient du pickpocket, plus haut dans le chapitre.
+    assert sorted(vues) == ["les_chevreuils", "v02", "v03"], vues

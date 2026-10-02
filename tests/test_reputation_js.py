@@ -112,7 +112,7 @@ def test_une_mission_monte_le_quartier_de_son_donneur_une_job_moins(banc):
         const ici = R.quartierA(j.x, j.y);
         const ou = L.Histoire.lieuDuPersonnage('tipaul');
         const chezTiPaul = R.quartierDeLaVille(ou.x, ou.y);
-        L.Histoire.commencer('e01'); L.B.cinema = null; L.B.scene = null;
+        L.Histoire.commencer('ti_paul_et_ses_amis'); L.B.cinema = null; L.B.scene = null;   // e01, son acte 1
         L.Histoire.reussir(); L.Histoire.finir();
         const apresMission = Object.assign({}, L.B.partie.reputation);
         L.Histoire.commencer('t01'); L.B.cinema = null; L.B.scene = null;

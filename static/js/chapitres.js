@@ -59,6 +59,7 @@ const Chapitres = (function () {
       if (!s || p.missionsFaites[s]) continue;
       p.missionsFaites[s] = p.jour;
       Histoire.arriverApres(s);                          // Zed arrive après p02 : il est là pour l'acte suivant
+      Histoire.partirApres(s);                           // Jo part après e04 : il ne reste pas planté pour la suite
     }
     chapitres()[m.slug] = etape;
     // Le chronomètre : l'acte d'avant se ferme (seulement s'il s'est joué ici — une reprise rouvre l'acte sans

@@ -574,3 +574,37 @@ def test_un_acte_dont_le_chapitre_est_fait_est_fait(banc):
         return { avant: avant, apres: L.Histoire.faite('zb'), autre: L.Histoire.faite('p03') };
     }""")
     assert r == {"avant": False, "apres": True, "autre": False}, r
+
+
+def test_rater_un_acte_ne_fait_retomber_que_ce_que_cet_acte_a_fait_prendre(banc):
+    """`Infiltration.rendre` vidait du sac tout ce que les objectifs du CHAPITRE avaient fait prendre : le dossier du
+    maire (acte 3 des Chevreuils) retombait quand on tombait à l'acte 4."""
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + REPRENDRE + """
+        const m = ouvrir(L), p = L.B.partie;
+        m.objectifs[1].objet = 'dossier_zz'; m.objectifs[4].objet = 'clef_zz';
+        commencer(L, o, 'zz'); jouer(L, o);
+        p.objets.dossier_zz = 1;                                   // pris à l'acte 1
+        p.mission.etape = 2; L.Histoire.avancer(); jouer(L, o);     // le marqueur de l'acte 2
+        p.objets.clef_zz = 1;                                      // pris à l'acte 2
+        L.Missions.hopital('banc'); attendreLeMenu(L, o);
+        return { dossier: !!p.objets.dossier_zz, clef: !!p.objets.clef_zz };
+    }""")
+    assert r == {"dossier": True, "clef": False}, r
+
+
+def test_sans_une_bosse_se_paie_a_l_acte_qui_l_a_gagne(banc):
+    """e02 (l'acte 2 de _Ti-Paul et ses amis_) payait la moitié de plus livrée sans une bosse : l'acte la paie, avec sa
+    prime, et la prime du chapitre ne la reprend pas."""
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + """
+        const m = ouvrir(L), B = L.B, p = B.partie;
+        m.objectifs[2].donne = { prime: 100 };
+        const argent = paiements(L);
+        commencer(L, o, 'zz'); jouer(L, o);
+        const ph = L.Histoire.lieu('phare'); B.joueur.x = ph.x; B.joueur.y = ph.y; L.Entites.indexer(); jouer(L, o);
+        B.mission.sansBosse = true;
+        a(L, 'bilodeau'); jouer(L, o);
+        const cc = L.Histoire.lieu('casse_croute'); B.joueur.x = cc.x; B.joueur.y = cc.y; L.Entites.indexer(); jouer(L, o);
+        a(L, 'trappeur'); finir(L, o);
+        return argent.map(function (x) { return x.montant; });
+    }""")
+    assert r == [150, 500], r

@@ -803,8 +803,9 @@ def test_rater_une_mission_ne_fait_pas_perdre_la_cle_d_une_autre(banc):
     r = banc("async function (L, o) {" + OUTILS + """
         L.Jeu.commencer(); nuit(L);
         const B = L.B, out = {};
-        B.partie.missionsFaites.e06 = 1; B.partie.missionsFaites.v01 = 1; B.partie.objets.cle_villa = 1;
-        commencer(L, o, 'e07');
+        // e07 est l'acte 3 des Chevreuils (2 oct. 2026) : e04 et e06 faits, le chapitre part à l'acte 3.
+        B.partie.missionsFaites.e04 = 1; B.partie.missionsFaites.e06 = 1; B.partie.missionsFaites.v01 = 1; B.partie.objets.cle_villa = 1;
+        commencer(L, o, 'les_chevreuils');
         L.Histoire.echouer('essai'); o.frame(2); fermer(L);
         out.apresE07 = Object.assign({}, B.partie.objets);
         delete B.partie.missionsFaites.v01; delete B.partie.objets.cle_villa;

@@ -14,15 +14,15 @@ PRELUDE = """
 
 
 def test_le_cuivre_sonne_apres_la_replique_qui_suit_l_intro(banc):
-    """e02 : Ti-Paul finit son intro, puis dit sa réplique du premier objectif (« Douce, douce! ») — le cuivre vient
-    après elle, pas entre les deux."""
+    """e05 : Diane finit son intro, puis dit sa réplique du premier objectif — le cuivre vient après elle, pas entre
+    les deux. (C'était e02, devenue l'acte 2 de _Ti-Paul et ses amis_ le 2 oct. 2026.)"""
     r = banc("""function (L, o) {""" + PRELUDE + """
-        L.Histoire.demarrer('e02');
+        L.Histoire.demarrer('e05');
         let derniereReplique = -1, pendantVu = false;
         for (image = 1; image < 4000; image++) {
             o.frame(1);
             const c = L.B.cinema;
-            if (c && c.mission === 'e02') { derniereReplique = image; if (c.partie === 'pendant') pendantVu = true; }
+            if (c && c.mission === 'e05') { derniereReplique = image; if (c.partie === 'pendant') pendantVu = true; }
             if (L.B.scene) derniereReplique = image;
             if (cuivres.length && image > cuivres[0] + 120) break;
         }
@@ -35,7 +35,7 @@ def test_le_cuivre_sonne_apres_la_replique_qui_suit_l_intro(banc):
 
 def test_le_cuivre_attend_qu_une_voix_finisse_mais_pas_pour_toujours(banc):
     r = banc("""function (L, o) {""" + PRELUDE + """
-        L.Histoire.commencer('e02', true);
+        L.Histoire.commencer('e05', true);
         L.B.mission.pendant = null; L.B.cinema = null; L.B.scene = null;
         const V = L.Son.Voix;
         // Une voix joue encore : le cuivre attend.

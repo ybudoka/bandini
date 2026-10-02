@@ -749,14 +749,14 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 # n'a besoin que de `_commun`, mais `CATALOGUE` se complete juste apres (les
 # cles par defaut et les scenes), et il faut donc que le moteur soit defini.
 from . import (  # noqa: E402
-    e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f10, f11, f12, f13, ambulance_de_nuit, m1, m2, m3,
+    ti_paul_et_ses_amis, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f10, f11, f12, f13, ambulance_de_nuit, m1, m2, m3,
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, nouvelle_inspectrice, lot_de_gilles,
     raymonde_et_le_syndicat, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
-    e04, e06, e07, e10, la_pointe, ti_loup_et_gros_boulon, s09, s11,
-    dette_de_rocco, garage_de_rocco, d07, d08, dette_du_docteur, h07, la_une, scoop_du_maire, l06, r03, r04, r06, r07, r08, commandes_de_prevost, s12, s14, e13, q12, q09, q08, i01, i02, i03, i05, i06, i08, h08, d09, t01, t02, t03, t04, t05, t06, t09, t11, t12, t13, t14, t15, q07, m98,
+    les_chevreuils, la_pointe, ti_loup_et_gros_boulon, s09, s11,
+    dette_de_rocco, garage_de_rocco, d07, d08, dette_du_docteur, h07, la_une, scoop_du_maire, l06, r03, r04, r06, r07, r08, commandes_de_prevost, s12, s14, q12, q09, q08, i01, i02, i03, i05, i06, i08, h08, d09, t01, t02, t03, t04, t05, t06, t09, t11, t12, t13, t14, t15, q07, m98,
     x01, x02, x03, x04, i04, i07,
     p06, p07, p08, p12,
-    e08, e09, e11, s04,
+    diane_et_jo, e11, s04,
     t07, q14,
     t08, t10,
     e03,
@@ -792,7 +792,9 @@ from . import (  # noqa: E402
 # ⚠️ q05, q06, q13 (29 sept. 2026, « le chemin vers les quatre libérations ») : Cindy qui veut sortir de la rue, le
 # Beau Denis couché à mains nues (`calme: morues`), et la nuit des Morues — la première libération de M16
 # (`libere: quais`), après l'un OU l'autre côté du choix de Sven (`exige.une_de`).
-# ⚠️ e04, e06, e07, e10 (29 sept. 2026, vague 2) : Jo et sa course, Diane, le maire suivi jusqu'à l'hôtel, son
+# ⚠️ Les Érables en CHAPITRES (2 oct. 2026, les autres arcs, vague E) : `ti_paul_et_ses_amis` (e01, e02, e09),
+# `les_chevreuils` (e04, e06, e07, e10), `diane_et_jo` (e13, e08). Avant :
+# e04, e06, e07, e10 (29 sept. 2026, vague 2) : Jo et sa course, Diane, le maire suivi jusqu'à l'hôtel, son
 # dossier volé à la villa — et les Chevreuils vidés, leur chef couché : c'était Jo (`libere: erables`).
 # ⚠️ `la_pointe` (30 sept. 2026, le premier CHAPITRE : docs/jalons/des-missions-en-chapitres.md) remplace ces six
 # missions, devenues ses six actes. Avant : p02, p05, p04, p09, p10, p11 (29 sept. 2026, vague 3) : La Pointe — le pont de M. Bilodeau, les collets du
@@ -847,11 +849,11 @@ from . import (  # noqa: E402
 # ne sonne qu'avec 15 000 $ en poche (`exige`), et une fin n'a rien à précéder.
 CATALOGUE: list[Mission] = [
     m1.MISSION, m2.MISSION, m3.MISSION, m4.MISSION, m5.MISSION, m6.MISSION, m50.MISSION,
-    f01.MISSION, e01.MISSION, q02.MISSION, raymonde_et_le_syndicat.MISSION, m51.MISSION,
+    f01.MISSION, ti_paul_et_ses_amis.MISSION, q02.MISSION, raymonde_et_le_syndicat.MISSION, m51.MISSION,
     f04.MISSION, f05.MISSION, f06.MISSION, f07.MISSION, f09.MISSION, f11.MISSION,
     ambulance_de_nuit.MISSION, p01.MISSION, q03.MISSION, e12.MISSION,
     f02.MISSION, f03.MISSION, f08.MISSION,
-    q04.MISSION, e02.MISSION, lot_de_gilles.MISSION,
+    q04.MISSION, lot_de_gilles.MISSION,
     p13.MISSION, p14.MISSION,
     m52.MISSION, m53.MISSION, m54.MISSION,
     q01.MISSION, q10.MISSION, q11.MISSION,
@@ -860,7 +862,7 @@ CATALOGUE: list[Mission] = [
     c01.MISSION, c02.MISSION, c03.MISSION, c04.MISSION,
     c05.MISSION, c06.MISSION, c07.MISSION, c08.MISSION,
     q05.MISSION, q06.MISSION, q13.MISSION,
-    e04.MISSION, e06.MISSION, e07.MISSION, e10.MISSION,
+    les_chevreuils.MISSION,
     la_pointe.MISSION,
     ti_loup_et_gros_boulon.MISSION, s09.MISSION, s11.MISSION,
     q07.MISSION,
@@ -869,7 +871,7 @@ CATALOGUE: list[Mission] = [
     la_une.MISSION, scoop_du_maire.MISSION, l06.MISSION,
     # ⚠️ À la place de r02 : Norbert (l'acte 3) se nomme dans q07, plus haut — « qui parle se nomme ».
     nouvelle_inspectrice.MISSION, r03.MISSION, r04.MISSION, r06.MISSION, r07.MISSION, r08.MISSION,
-    commandes_de_prevost.MISSION, s12.MISSION, s14.MISSION, e13.MISSION, q12.MISSION, q09.MISSION,
+    commandes_de_prevost.MISSION, s12.MISSION, s14.MISSION, q12.MISSION, q09.MISSION,
     q08.MISSION, i01.MISSION, i02.MISSION, i03.MISSION, i04.MISSION, i05.MISSION, i06.MISSION, i07.MISSION, i08.MISSION, h08.MISSION,
     x01.MISSION, x02.MISSION, x03.MISSION, x04.MISSION,
     # ⚠️ d09 (1er oct. 2026) : le premier CHOIX DANS UN DIALOGUE — Léo doit 800 à Sal ; on le couche, ou on paie.
@@ -886,7 +888,7 @@ CATALOGUE: list[Mission] = [
     p06.MISSION, p07.MISSION, p08.MISSION, p12.MISSION,
     # ⚠️ e08, e09, s04, s13 (1er oct. 2026, vague 21) : les Érables et La Shop — la cachette de Jo (sa mère), le barbecue
     # de janvier de Ti-Paul, la paie du quart de nuit, le prototype de Prévost.
-    e08.MISSION, e09.MISSION, s04.MISSION,
+    diane_et_jo.MISSION, s04.MISSION,
     # ⚠️ q14 (1er oct. 2026, vague 23) : la liste du Norvégien — deux modèles pour la cale de Sven, une demi-journée entre
     # les deux (`attendre`), sans une bosse ; seulement si l'on a choisi Sven (q10).
     q14.MISSION,
@@ -1461,7 +1463,19 @@ def cles_des_serrures(blocs: list[dict]) -> dict[str, list[str]]:
     """Chaque objet qu'une serrure de bloc demande (`condition.objet`), et les missions dont un objectif le
     met au sac — la clé de la villa : v01 (le garde du jardin) et e07 (le chauffeur)."""
     objets = sorted({s["condition"]["objet"] for b in blocs for s in b.get("serrures", ()) if "objet" in s.get("condition", {})})
-    return {o: sorted(m["slug"] for m in CATALOGUE if any(ob.get("objet") == o for ob in m["objectifs"])) for o in objets}
+    return {o: sorted(_qui_le_donne(m, o) for m in CATALOGUE if any(ob.get("objet") == o for ob in m["objectifs"]))
+            for o in objets}
+
+
+def _qui_le_donne(mission: dict, objet: str) -> str:
+    """La mission qui met `objet` au sac : celle-ci, ou — dans un CHAPITRE — la mission remplacée de l'acte dont un
+    objectif le donne (e07, l'acte 3 des Chevreuils : son acte fait, la clé de la villa revient au chargement)."""
+    acte = -1
+    for o in mission["objectifs"]:
+        acte += o.get("type") == "acte"
+        if o.get("objet") == objet:
+            return (mission.get("remplace") or [])[acte] if mission.get("remplace") and acte >= 0 else mission["slug"]
+    return mission["slug"]
 
 
 def pour_le_navigateur() -> list[dict]:
@@ -1594,7 +1608,9 @@ def _sa_mission_l_attend_toujours(p: dict) -> bool:
     """Il part après une mission qui est à lui dès la première minute (sans prérequis ni
     `exige`, ou sans autre prérequis que ce qui le fait arriver) : tant qu'il est là, on lui parle pour la
     prendre, jamais pour rien."""
-    m = par_slug(p["parti_apres"]) if p.get("parti_apres") else None
+    # ⚠️ Une mission de départ devenue l'ACTE d'un chapitre (Jo part après e04, l'acte 1 des Chevreuils) se lit comme
+    # son chapitre.
+    m = (par_slug(p["parti_apres"]) or remplacee_par(p["parti_apres"])) if p.get("parti_apres") else None
     # ⚠️ Ou dès qu'il ARRIVE (`arrive_apres`) : Cindy n'est devant la cantine qu'entre q04 et q05, et q05 ne demande
     # que q04 — elle a toujours sa mission à donner.
     arrivee = {p["arrive_apres"]} if p.get("arrive_apres") else set()

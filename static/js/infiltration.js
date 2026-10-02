@@ -227,7 +227,12 @@ const Infiltration = (function () {
     // la cle de l'autre dans le sac l'effacait, et la porte de service ne s'ouvrait plus jamais — v02
     // et v03 bloquees (la partie de Martin, jour 479).
     const avant = (B.partie.mission && B.partie.mission.avant) || [];
-    for (const o of m.objectifs) if (o.objet && avant.indexOf(o.objet) < 0) delete B.partie.objets[o.objet];
+    // ⚠️ UN CHAPITRE ne fait retomber que ce que l'ACTE qui rate a fait prendre (2 oct. 2026) : le dossier du maire,
+    // pris à l'acte 3 des Chevreuils, ne retombe pas parce qu'on tombe au 4e — on reprend l'acte, pas le chapitre.
+    const depuis = (typeof Chapitres !== 'undefined' && Chapitres.marqueurDe(m)) || 0;
+    m.objectifs.forEach(function (o, i) {
+      if (i >= depuis && o.objet && avant.indexOf(o.objet) < 0) delete B.partie.objets[o.objet];
+    });
     for (const e of B.entites.slice()) if (e.type === 'ramassage' && e.objetDeMission) Entites.retirer(e);
   }
 

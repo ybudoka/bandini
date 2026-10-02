@@ -141,10 +141,11 @@ def test_e13_la_berline_de_diane_reprise_au_lot(banc):
         return { dispo: dispo, berline: berline, semer: s, dites: dites, fait: !!p.missionsFaites.e13,
                  argent: argent.map(function (a) { return a.montant; }) };
     }""")
-    assert r["dispo"] == "e13", r
+    # e13 est l'acte 1 de _Diane et Jo_ (2 oct. 2026) : tout se décale d'un (le marqueur).
+    assert r["dispo"] == "diane_et_jo", r
     assert r["berline"]["slug"] == "luxe" and r["berline"]["lot"] <= 16, r["berline"]
-    assert r["semer"]["avant"]["etape"] == 1 and r["semer"]["apres"] == 0, r["semer"]
-    for dite in ("pendant:diane:0", "pendant:diane:1", "pendant:diane:2"):
+    assert r["semer"]["avant"]["etape"] == 2 and r["semer"]["apres"] == 0, r["semer"]
+    for dite in ("pendant:diane:1", "pendant:diane:2", "pendant:diane:3"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [300], r
 
