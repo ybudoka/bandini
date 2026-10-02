@@ -501,3 +501,65 @@ def test_l_intro_d_un_chapitre_trouve_les_hommes_du_premier_acte_poses(banc):
         return { intro: pendantLIntro, etape: B.partie.mission.etape, eux: eux };
     }""")
     assert r == {"intro": True, "etape": 1, "eux": 3}, r
+
+
+# --- Les autres arcs (2 oct. 2026) : ce que le moteur apprend pour eux -----------------------------------------------
+
+
+def test_l_echec_dit_celui_de_l_acte_qui_a_rate(banc):
+    """Chaque acte garde l'échec de sa mission d'origine (`_e`, l'étape de son marqueur) : on entend celui de l'acte
+    qui a raté, jamais celui d'un autre — et une réplique sans `objectif` se dit à n'importe lequel."""
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + REPRENDRE + """
+        const m = ouvrir(L), p = L.B.partie;
+        m.dialogue.echec = [{ qui: 'bilodeau', texte: 'Raté au pont.', objectif: 0 },
+                            { qui: 'trappeur', texte: 'Raté au bois.', objectif: 3 },
+                            { qui: 'trappeur', texte: 'Raté, tout court.' }];
+        const vu = [], vrai = L.Hud.dialogue;
+        L.Hud.dialogue = function (nom, lignes) { vu.push(lignes[0]); return vrai.apply(null, arguments); };
+        commencer(L, o, 'zz'); jouer(L, o);
+        p.mission.etape = 2; L.Histoire.avancer(); jouer(L, o);   // le marqueur de l'acte 2
+        const acte = L.Chapitres.marqueurDe(L.Histoire.courante());
+        L.Missions.hopital('banc');
+        attendreLeMenu(L, o);
+        return { acte: acte, echec: dites.filter(function (d) { return d.indexOf('echec:') === 0; }) };
+    }""")
+    assert r["acte"] == 3, r
+    assert r["echec"] == ["echec:trappeur:3", "echec:trappeur:"], f"seul l'échec de l'acte 2 (et le commun) : {r}"
+
+
+def test_un_prerequis_qui_vise_un_acte_s_ouvre_quand_l_acte_finit(banc):
+    """h03 attend d01 — l'acte 1 de la dette, pas tout le chapitre : la mission s'offre dès que l'acte est fini (le
+    chapitre laissé à l'acte 2, PLUS TARD — pendant une mission, rien d'autre ne s'offre)."""
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + REPRENDRE + """
+        ouvrir(L);
+        const B = L.B, p = B.partie;
+        B.defs.missions.push({ slug: 'zq', titre: 'Zq', donneur: 'ovila', recompense: 1, prerequis: ['za'], phase: 1,
+                               echec: [], donne: {}, objectifs: [{ type: 'aller', texte: 'VA', lieu: 'phare', rayon: 5 }],
+                               dialogue: { appel: [], intro: [], pendant: [], fin: [], echec: [] }, scenes: {} });
+        const offerte = function () { return L.Histoire.disponibles().some(function (x) { return x.slug === 'zq'; }); };
+        commencer(L, o, 'zz'); jouer(L, o);
+        const pendantActe1 = offerte();
+        const ph = L.Histoire.lieu('phare'); B.joueur.x = ph.x; B.joueur.y = ph.y; L.Entites.indexer(); jouer(L, o);
+        a(L, 'bilodeau'); jouer(L, o);
+        const acte2 = p.mission && p.mission.etape;
+        L.Missions.hopital('banc'); attendreLeMenu(L, o); choisir(L, o, 'PLUS TARD');
+        return { pendantActe1: pendantActe1, acte2: acte2, apres: offerte(), zz: !!p.missionsFaites.zz };
+    }""")
+    assert r == {"pendantActe1": False, "acte2": 4, "apres": True, "zz": False}, r
+
+
+def test_chaque_acte_compte_pour_le_quartier_de_son_donneur(banc):
+    """La réputation : le chapitre comptait une fois (son dernier donneur) là où ses missions comptaient chacune."""
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + """
+        ouvrir(L);
+        const B = L.B, comptes = [], vrai = L.Reputation.reussite;
+        L.Reputation.reussite = function (m) { comptes.push(L.Chapitres.donneurDe(m)); return vrai.apply(null, arguments); };
+        commencer(L, o, 'zz'); jouer(L, o);
+        const ph = L.Histoire.lieu('phare'); B.joueur.x = ph.x; B.joueur.y = ph.y; L.Entites.indexer(); jouer(L, o);
+        a(L, 'bilodeau'); jouer(L, o);
+        const apresActe1 = comptes.slice();
+        const cc = L.Histoire.lieu('casse_croute'); B.joueur.x = cc.x; B.joueur.y = cc.y; L.Entites.indexer(); jouer(L, o);
+        a(L, 'trappeur'); finir(L, o);
+        return { apresActe1: apresActe1, fin: comptes };
+    }""")
+    assert r == {"apresActe1": ["bilodeau"], "fin": ["bilodeau", "trappeur"]}, r

@@ -1,4 +1,4 @@
-"""Les petites usines de repliques (`_l`, `_p`, `_r`, `_a`), partagees par l'ouverture et les missions.
+"""Les petites usines de repliques (`_l`, `_p`, `_r`, `_a`, `_e`), partagees par l'ouverture et les missions.
 
 Chaque mission vit dans son propre fichier (`m1.py`, `m2.py`, …), chacun
 n'ayant besoin que de ces quatre-la pour ecrire ses dialogues. Elles sont ici,
@@ -57,6 +57,12 @@ def _r(qui: str, texte: str, objectif: int, jeu: str | None = None) -> dict:
     """Une réplique RENVOI : ce que dit `qui` quand on LUI parle alors que l'objectif
     `objectif` est en cours et que ce n'est pas encore son tour — « reviens à la nuit ».
     Elle se dit en personne, jamais au combiné : on est devant lui."""
+    return _ligne(qui, texte, jeu, objectif=objectif)
+
+
+def _e(qui: str, texte: str, objectif: int, jeu: str | None = None) -> dict:
+    """Une réplique ÉCHEC d'un ACTE (un chapitre, 2 oct. 2026) : `objectif` est l'étape du marqueur de son acte —
+    elle ne se dit que si c'est cet acte-là qui rate (`Histoire.echouer`). Au combiné, comme tout échec."""
     return _ligne(qui, texte, jeu, objectif=objectif)
 
 

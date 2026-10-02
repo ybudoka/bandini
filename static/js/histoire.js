@@ -3013,6 +3013,9 @@ const Histoire = (function () {
     if (!m) return;
     // Un CHAPITRE : le menu REPRENDRE L'ACTE attendra la fin de l'hôpital ou du poste (`Chapitres.majReprise`).
     Chapitres.retenir(m);
+    // ⚠️ L'ÉCHEC DE L'ACTE (2 oct. 2026) : une réplique `echec` accrochée au marqueur d'un acte ne se dit que si
+    // c'est cet acte-là qui rate — Sal ne parle pas du taxi de Momo quand on tombe chez Ti-Paul.
+    const marqueur = Chapitres.marqueurDe(m);
     retenirLesTombes(m);
     nettoyer(true);
     // ⚠️ Ce que ses objectifs avaient mis dans le sac (le dossier, le code de la chambre forte) retombe :
@@ -3027,7 +3030,7 @@ const Histoire = (function () {
     noter((job ? 'JOB RATÉE : ' : 'MISSION RATÉE : ') + m.titre, true);
     Son.SFX.erreur();
     B.partie.stats.echecs = (B.partie.stats.echecs || 0) + 1;
-    if (!job || present(m.donneur)) dire(m, 'echec', null);
+    if (!job || present(m.donneur)) dire(m, 'echec', null, function (l) { return l.objectif === undefined || l.objectif === marqueur; });
     void raison;
   }
 

@@ -29,6 +29,13 @@ const Chapitres = (function () {
 
   function chapitres() { const p = B.partie; return p.chapitres || (p.chapitres = {}); }
 
+  /** L'étape du marqueur de l'acte EN COURS de `m` (la mission courante) ; null hors chapitre. */
+  function marqueurDe(m) {
+    const a = actes(m), pm = B.partie.mission;
+    if (!a.length || !pm || pm.slug !== m.slug) return null;
+    return a[Math.max(0, acteA(m, pm.etape))];
+  }
+
   /** Le donneur de l'acte : celui de l'acte EN COURS si c'est la mission courante, celui de l'acte où l'on
       reprendra sinon ; celui de la mission hors chapitre. */
   function donneurDe(m) {
@@ -56,7 +63,12 @@ const Chapitres = (function () {
     chapitres()[m.slug] = etape;
     // Le chronomètre : l'acte d'avant se ferme (seulement s'il s'est joué ici — une reprise rouvre l'acte sans
     // fermer celui d'avant, dont la durée revient de la reprise).
-    if (pm.acteOuvert === k - 1) fermerActe(pm);
+    if (pm.acteOuvert === k - 1) {
+      fermerActe(pm);
+      // ⚠️ LA RÉPUTATION (2 oct. 2026, les autres arcs) : chaque acte compte pour le quartier de SON donneur, comme
+      // sa mission comptait — le chapitre, à sa réussite, compte pour le dernier (`Histoire.reussir`).
+      if (typeof Reputation !== 'undefined' && k > 0) Reputation.reussite({ slug: m.slug, donneur: marqueurs(m)[k - 1][1] });
+    }
     pm.acteOuvert = k;
     const ici = Histoire.ouEstLeJoueurEnVille();
     const v = j.dansVehicule;
@@ -189,5 +201,5 @@ const Chapitres = (function () {
     (m.remplace || []).forEach(function (s) { if (!p.missionsFaites[s]) p.missionsFaites[s] = p.jour; });
   }
 
-  return { actes, acteA, donneurDe, ouvrirActe, reussi, depart, fait, dejaFait, marqueurSuivant, retenir, majReprise, reprendre, compter, noterDuree };
+  return { actes, acteA, marqueurDe, donneurDe, ouvrirActe, reussi, depart, fait, dejaFait, marqueurSuivant, retenir, majReprise, reprendre, compter, noterDuree };
 })();

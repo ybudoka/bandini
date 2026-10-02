@@ -2167,8 +2167,13 @@ def erreurs_de_chapitre(mission: dict, catalogue: list[dict] | None = None) -> l
     `remplace` n'en a aucune.
 
     Un chapitre commence par un acte et ne finit pas sur un acte ; il remplace une mission par acte ;
-    chaque acte a un donneur connu ; et une mission remplacée ne reste ni au catalogue ni en prérequis
-    d'une autre — c'est le chapitre qu'on attend, maintenant."""
+    chaque acte a un donneur connu ; et une mission remplacée ne reste pas au catalogue.
+
+    ⚠️ UN PRÉREQUIS PEUT VISER UN ACTE (2 oct. 2026, les autres arcs) : la mission remplacée est marquée faite
+    quand son acte finit (`Chapitres.ouvrirActe`), et c'est ce que le téléphone lit déjà — h03 attend d01, l'acte 1
+    de la dette, pas tout le chapitre. Le pilote réécrivait ces prérequis vers le chapitre ; ils restent justes
+    à l'acte près. Et L'ÉCHEC D'UN ACTE : une réplique `echec` qui porte un `objectif` vise le marqueur de son
+    acte (`Histoire.echouer` ne dit que celle de l'acte qui a raté)."""
     slug, objs = mission["slug"], mission.get("objectifs") or []
     actes = [o for o in objs if o.get("type") == "acte"]
     remplace = mission.get("remplace") or []
@@ -2184,11 +2189,16 @@ def erreurs_de_chapitre(mission: dict, catalogue: list[dict] | None = None) -> l
     for o in actes:
         if not personnage(o.get("donneur", "")):
             erreurs.append(f"{slug} : l'acte « {o.get('texte')} » n'a pas de donneur connu")
+    marqueurs = {i for i, o in enumerate(objs) if o.get("type") == "acte"}
+    for ligne in (mission.get("dialogue") or {}).get("echec") or []:
+        if "objectif" in ligne and ligne["objectif"] not in marqueurs:
+            erreurs.append(f"{slug} : l'échec « {ligne['texte']} » ne vise pas le marqueur d'un acte")
+    for p in mission.get("prerequis") or []:
+        if p in remplace:
+            erreurs.append(f"{slug} : il attend {p}, l'un de ses propres actes")
     for autre in CATALOGUE if catalogue is None else catalogue:
         if autre["slug"] in remplace:
             erreurs.append(f"{slug} : {autre['slug']} est remplacée, elle ne reste pas au catalogue")
-        for p in sorted(set(autre.get("prerequis") or []) & set(remplace)):
-            erreurs.append(f"{autre['slug']} : son prérequis {p} est remplacé par {slug}")
     return erreurs
 
 
@@ -2197,7 +2207,9 @@ def ordre_topologique() -> list[str]:
 
     Leve ValueError sur un cycle ou un prerequis inconnu.
     """
-    restantes = {m["slug"]: set(m["prerequis"]) for m in CATALOGUE}
+    # ⚠️ Un prérequis qui vise un ACTE (une mission remplacée) se range avec son chapitre.
+    acte = {r: m["slug"] for m in CATALOGUE for r in m.get("remplace") or []}
+    restantes = {m["slug"]: {acte.get(p, p) for p in m["prerequis"]} for m in CATALOGUE}
     for slug, prerequis in restantes.items():
         inconnus = prerequis - set(restantes)
         if inconnus:

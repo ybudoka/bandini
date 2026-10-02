@@ -53,11 +53,32 @@ def test_le_donneur_d_un_acte_existe():
     assert any("donneur" in e for e in missions.erreurs_de_chapitre(m, catalogue=[]))
 
 
-def test_une_mission_remplacee_ne_reste_pas_au_catalogue_ni_en_prerequis():
+def test_une_mission_remplacee_ne_reste_pas_au_catalogue():
     autre = {"slug": "za", "prerequis": []}
     assert any("za" in e for e in missions.erreurs_de_chapitre(_chapitre(), catalogue=[autre]))
+
+
+def test_un_prerequis_peut_viser_un_acte_mais_pas_le_chapitre_lui_meme():
+    """2 oct. 2026 : h03 attend d01, l'acte 1 de la dette — l'acte fait compte comme sa mission (`ouvrirActe`)."""
     suite = {"slug": "zq", "prerequis": ["zb"]}
-    assert any("zb" in e for e in missions.erreurs_de_chapitre(_chapitre(), catalogue=[suite]))
+    assert missions.erreurs_de_chapitre(_chapitre(), catalogue=[suite]) == []
+    assert any("propres actes" in e for e in missions.erreurs_de_chapitre(_chapitre(prerequis=["za"]), catalogue=[]))
+
+
+def test_l_ordre_range_un_prerequis_d_acte_avec_son_chapitre():
+    ordre = missions.ordre_topologique()
+    for m in missions.CATALOGUE:
+        for p in m["prerequis"]:
+            chapitre = missions.remplacee_par(p)
+            assert ordre.index(chapitre["slug"] if chapitre else p) < ordre.index(m["slug"]), (m["slug"], p)
+
+
+def test_l_echec_d_un_acte_vise_son_marqueur():
+    m = _chapitre()
+    m["dialogue"]["echec"] = [{"qui": "trappeur", "texte": "Raté.", "objectif": 2}]
+    assert missions.erreurs_de_chapitre(m, catalogue=[]) == []
+    m["dialogue"]["echec"][0]["objectif"] = 3
+    assert any("marqueur" in e for e in missions.erreurs_de_chapitre(m, catalogue=[]))
 
 
 def test_le_catalogue_n_a_aucune_erreur_de_chapitre():
