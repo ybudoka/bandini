@@ -287,6 +287,31 @@ AFFICHE: dict = {
     "dit": "UNE FACE DE MOINS SUR LES MURS",
 }
 
+#: ATTENDRE, assis (`repos.js`, vague 2 — Martin, 2 oct. 2026 : « s'asseoir doit aussi permettre d'attendre
+#: quelques heures », et « accéléré sous tes yeux »). Assis, ACTION ouvre ATTENDRE 1 H · 2 H · 3 H · SE LEVER.
+#:
+#: Le temps FILE, il ne saute pas : la ville fait `vitesse` pas de simulation par image (les passants, les chars,
+#: la police, tout ce qui compte en images), plafonnés à `budget_ms` par image pour ne pas geler un téléphone ; et
+#: l'horloge avance d'une heure en `secondes_par_heure` secondes réelles (une heure de jeu en vaut 20 debout). Un
+#: appareil trop lent pour ses `vitesse` pas attend un peu plus longtemps — l'horloge suit les pas, pas la montre.
+#:
+#: ⚠️ On n'attend pas ce qui COMPTE le temps : un défi, une frénésie, un boulot, un objectif à chrono (ils
+#: compteraient au quadruple), ni la police aux fesses. Et l'attente cesse au stick, à un coup, à une étoile.
+ATTENDRE: dict = {
+    "invite": "ATTENDRE",
+    # Le bandeau pendant l'attente, et l'heure qu'il est (« ATTENTE — 18:23 ») : un état, pas un ordre.
+    "bandeau": "ATTENTE",
+    "heures": [1, 2, 3],
+    "secondes_par_heure": 2,
+    "vitesse": 4,
+    "budget_ms": 8,
+    "refus": {
+        "defi": "PAS EN PLEIN DÉFI",
+        "boulot": "PAS EN PLEIN BOULOT",
+        "chrono": "LE CHRONO TOURNE",
+    },
+}
+
 
 # --- Le caddie ---------------------------------------------------------------------
 
@@ -362,6 +387,7 @@ def exporter() -> dict:
     """Le catalogue tel que le navigateur le tient : des listes, jamais des tuples."""
     return {
         "affiche": dict(AFFICHE),
+        "attendre": {**ATTENDRE, "heures": list(ATTENDRE["heures"]), "refus": dict(ATTENDRE["refus"])},
         "asseoir": {**ASSEOIR, "sieges": {k: dict(v) for k, v in ASSEOIR["sieges"].items()},
                     "dedans": {k: dict(v) for k, v in ASSEOIR["dedans"].items()},
                     "refus": dict(ASSEOIR["refus"])},

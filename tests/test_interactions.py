@@ -29,13 +29,16 @@ def _mots_affiches():
              interactions.PLAQUE["invite"], interactions.PANNEAU["invite"]]
     for liste in p["merci"].values():
         mots.extend(liste)
+    at = interactions.ATTENDRE
+    mots.extend([at["invite"], at["bandeau"], *at["refus"].values()])
     return mots
 
 
 def test_le_catalogue_voyage_dans_le_paquet_et_se_lit_en_json():
     exporte = interactions.exporter()
     assert set(exporte) == {"asseoir", "fouiller", "boire", "barbecue", "parcometre", "caresser", "borne",
-                             "pourboire", "photo", "affiche", "lire", "caddie", "plaque", "panneau"}
+                             "pourboire", "photo", "affiche", "lire", "caddie", "plaque", "panneau",
+                             "attendre"}
     assert json.loads(json.dumps(exporte)) == exporte, "des listes et des dicts, jamais des tuples"
     assert villes.assembler()["interactions"] == exporte, "le navigateur lit `B.defs.interactions`"
 

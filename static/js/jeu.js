@@ -124,6 +124,7 @@ const Jeu = (function () {
     Devisser.oublier();                      // ni d'un tournevis à moitié tourné
     Interactions.oublier();                  // ni de la soif des fontaines
     Panneaux.oublier();                      // et on relit ses panneaux depuis le debut
+    Repos.oublier();                         // ni d'une attente en cours
     Monde.oublierLesRuesMouillees();         // ni de l'arroseuse d'une autre nuit
     B.lastCall = null;                       // ni des bars qu'elle a vus se vider
     B.transition = null;        // une partie ne commence jamais dans le noir d'une porte
@@ -1397,6 +1398,9 @@ const Jeu = (function () {
     let n = 0;
     tEtapes = {};
     while (accu >= PAS && n < 4) { maj(); accu -= PAS; n++; }
+    // ⚠️ ATTENDRE, ASSIS (`Repos.accelerer`) : la ville tourne plus vite — d'autres pas de simulation dans la
+    // MEME image, tant qu'elle a du budget. Rien ne change de regle : c'est le meme `maj`, plus souvent.
+    if (B.attente) n += Repos.accelerer(maj, n);
     if (accu > 200) accu = 0;
     const avantRendu = (typeof performance !== 'undefined' && performance.now) ? performance.now() : t;
     rendre();

@@ -294,11 +294,14 @@ const Interactions = (function () {
     if (!c || !j.vivant || j.dansVehicule || (B.interieur || null) !== (a.piece || null) || dist2(j.x, j.y, a.x, a.y) > 81) { j.assis = null; return false; }
     if (ent.axe.mag > 0) { seLever(j, ent.axe.x, ent.axe.y); return false; }
     if (ent.neuf('action')) {
-      // ⚠️ La pression qui nous lève est dépensée : sinon `Combat.maj`, plus loin
-      // dans la même image, en ferait un pickpocket, ou nous rassoirait aussitôt.
-      seLever(j, 0, 0);
+      // ⚠️ La pression est dépensée : sinon `Combat.maj`, plus loin dans la même
+      // image, en ferait un pickpocket, ou nous rassoirait aussitôt.
       j.gesteT = B.t; j.descenduT = B.t;
       Entree.videPresse();
+      // Le joueur 1 ouvre le menu de l'assis : ATTENDRE quelques heures, ou SE LEVER (`Repos.menuAssis`).
+      // L'autre joueur se lève : un menu change l'heure de tout le monde, et c'est au joueur 1.
+      if (j === B.joueur && typeof Repos !== 'undefined') { Hud.ouvrirMenu(Repos.menuAssis(j)); return true; }
+      seLever(j, 0, 0);
       return true;
     }
     // Un coup donné, une arme sortie, un sprint, un coup reçu : on est debout.

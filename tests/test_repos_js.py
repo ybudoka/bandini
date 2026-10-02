@@ -61,7 +61,7 @@ def test_on_s_assoit_sur_une_chaise_de_la_piece_et_le_stick_leve(banc):
     assert r["assis"] and r["face"] == DEDANS["h"]["pose"]
     assert r["ou"] == {"x": 3 * 16 + 8, "y": 4 * 16 + 8 + DEDANS["h"]["dy"]}, "le corps se pose SUR la chaise"
     assert r["encore"], "dans une pièce, on reste assis (le banc de la rue se levait dès qu'on était dedans)"
-    assert r["invAssis"] == "SE LEVER"
+    assert r["invAssis"] == interactions.ATTENDRE["invite"], "assis, ACTION ouvre le menu de l'attente (vague 2)"
     assert r["leve"], "le stick lève"
     assert abs(r["ici"]["x"] - r["avant"]["x"]) < 3 and r["ici"]["y"] > r["avant"]["y"] - 1, \
         "on se relève là où l'on se tenait, et le pas qui suit est le nôtre"
@@ -187,3 +187,111 @@ def test_au_chalet_on_se_leve_du_cote_libre_du_lit(banc):
     assert r["piece"] == "chalet"
     assert r["couche"], "au chalet acheté, le lit couche aussi"
     assert r["debout"] and not r["meuble"] and r["marche"], "debout sur le plancher, pas sur le lit"
+
+
+# --- Vague 2 : attendre, assis ---------------------------------------------------------------------------------
+
+ATTENDRE = interactions.ATTENDRE
+
+#: Assis sur la chaise (3, 4) de la planque, à l'heure `heure` ; ACTION ouvre le menu de l'assis.
+ASSIS = """
+    function asseoirALaPlanque(heure) {
+        entrer();
+        planter(3, 5, 3, 4);
+        o.tape('KeyE');
+        p.heure = heure;
+    }
+    function choisir(libelle) {
+        o.tape('KeyE');
+        const i = L.B.menu && L.B.menu.items.find(function (q) { return q.libelle === libelle; });
+        if (!i) return null;
+        if (i.actif !== false && i.faire()) L.Hud.fermerMenu();
+        return i;
+    }
+"""
+
+
+def test_assis_on_attend_deux_heures_en_accelere(banc):
+    """ATTENDRE 2 H : l'horloge arrive à l'heure dite (pas une minute plus loin), la ville fait ses pas de plus
+    (`vitesse` par image), et ça dure ce que Martin a voulu — deux secondes par heure. On reste assis."""
+    r = jouer(banc, ASSIS + """
+        asseoirALaPlanque(0.40);
+        o.tape('KeyE');
+        const menu = libelles();
+        L.Hud.fermerMenu();
+        const h0 = p.heure, jour = p.jour;
+        const i = choisir('%s 2 H');
+        const t0 = L.B.t;
+        let images = 0;
+        while (L.B.attente && images < 2000) { o.frame(1); images++; }
+        return { menu: menu, detail: i && i.detail, avance: (p.heure - h0) * 24, jour: p.jour - jour, images: images,
+                 pas: L.B.t - t0, assis: !!j.assis, msg: L.B.msg };
+    """ % ATTENDRE["invite"])
+    inv = ATTENDRE["invite"]
+    assert r["menu"] == ["%s %d H" % (inv, h) for h in ATTENDRE["heures"]] + ["SE LEVER"]
+    assert r["detail"] == "11:36", "l'heure d'arrivée se lit dans le menu (9 h 36 + 2 h)"
+    assert abs(r["avance"] - 2) < 0.01, "on arrive à l'heure dite, pas plus loin"
+    attendu = 2 * ATTENDRE["secondes_par_heure"] * 60
+    assert attendu * 0.9 <= r["images"] <= attendu * 1.1, "deux secondes réelles par heure"
+    assert r["pas"] >= r["images"] * (ATTENDRE["vitesse"] - 0.5), "la ville tourne plus vite : ses pas de plus"
+    assert r["assis"], "on reste assis après l'attente"
+    assert r["msg"].startswith("IL EST 11:3"), r["msg"]
+
+
+def test_le_stick_ou_un_coup_coupent_l_attente(banc):
+    """Au stick, on se lève et l'attente cesse ; un coup reçu aussi. L'horloge reprend son pas d'ordinaire."""
+    r = jouer(banc, ASSIS + """
+        asseoirALaPlanque(0.40);
+        choisir('%s 3 H');
+        o.frame(30);
+        pousser('KeyS');
+        const stick = { attente: !!L.B.attente, assis: !!j.assis, avance: (p.heure - 0.40) * 24 };
+        planter(3, 5, 3, 4); suivant();
+        o.tape('KeyE'); p.heure = 0.40;
+        choisir('%s 3 H');
+        o.frame(30);
+        j.invincible = 0; L.Entites.blesser(j, 5, null); o.frame(3);
+        const coup = { attente: !!L.B.attente, assis: !!j.assis, avance: (p.heure - 0.40) * 24 };
+        return { stick: stick, coup: coup };
+    """ % (ATTENDRE["invite"], ATTENDRE["invite"]))
+    for k in ("stick", "coup"):
+        assert not r[k]["attente"] and not r[k]["assis"], k
+        # Trente images d'attente : un quart d'heure ; trois heures si rien ne l'avait coupée.
+        assert 0.2 < r[k]["avance"] < 0.5, "%s : l'attente a filé, puis s'est arrêtée (%s h)" % (k, r[k]["avance"])
+
+
+def test_on_n_attend_pas_ce_qui_compte_le_temps(banc):
+    """En plein boulot, ou la police aux fesses : l'attente se montre grisée, avec sa raison, et rien ne file. Une
+    étoile en cours d'attente l'arrête."""
+    r = jouer(banc, ASSIS + """
+        asseoirALaPlanque(0.40);
+        L.Missions.boulot.etape = 'route';
+        o.tape('KeyE');
+        const i = L.B.menu.items[0], grise = { actif: i.actif, detail: i.detail };
+        i.actif === false || i.faire();
+        L.Hud.fermerMenu();
+        L.Missions.boulot.etape = null;
+        const rien = !L.B.attente;
+        choisir('%s 3 H');
+        o.frame(10);
+        L.B.recherche.etoiles = 1; o.frame(2);
+        return { grise: grise, rien: rien, coupe: !L.B.attente, msg: L.B.msg };
+    """ % ATTENDRE["invite"])
+    assert r["grise"] == {"actif": False, "detail": ATTENDRE["refus"]["boulot"]}
+    assert r["rien"]
+    assert r["coupe"] and r["msg"] == interactions.ASSEOIR["refus"]["police"]
+
+
+def test_minuit_passe_en_attendant_est_un_vrai_jour(banc):
+    """À 23 h 30, ATTENDRE 1 H mène au lendemain, 0 h 30 : un vrai jour (`nouveauJour`), comme l'horloge
+    ordinaire."""
+    r = jouer(banc, ASSIS + """
+        asseoirALaPlanque(23.5 / 24);
+        const jour = p.jour;
+        choisir('%s 1 H');
+        let n = 0;
+        while (L.B.attente && n < 1000) { o.frame(1); n++; }
+        return { jour: p.jour - jour, heure: p.heure * 24 };
+    """ % ATTENDRE["invite"])
+    assert r["jour"] == 1
+    assert abs(r["heure"] - 0.5) < 0.02

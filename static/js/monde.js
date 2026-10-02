@@ -3116,7 +3116,8 @@ const Monde = (function () {
     const bloc = B.bloc && B.bloc.def && B.bloc.def.bloc;
     if (bloc && bloc.nuit_tient && estNuit(p.heure)) return;
     const parImage = 1 / (B.defs.economie.jour_secondes * 60);
-    p.heure += parImage;
+    // ATTENDRE, assis (`Repos.majAttente`) : l'horloge file — une heure en deux secondes.
+    p.heure += parImage + (typeof Repos !== 'undefined' ? Repos.majAttente(parImage) : 0);
     if (p.heure >= 1) { p.heure -= 1; p.jour += 1; if (typeof Missions !== 'undefined' && Missions.nouveauJour) Missions.nouveauJour(); }
   }
 

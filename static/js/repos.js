@@ -128,5 +128,92 @@ const Repos = (function () {
     return rouvrir(j);
   }
 
-  return { siegeDevant, siegeAvantLePoint, sAsseoir, litDuPoint, seCoucher, rouvrir, majCouche, menuDuLit };
+  // --- Attendre, assis (vague 2) -----------------------------------------------------------------------------
+
+  function cfgAttente() { return B.defs && B.defs.interactions && B.defs.interactions.attendre; }
+
+  /** Pourquoi on ne peut pas attendre ici et maintenant, ou null. ⚠️ Tout ce qui COMPTE en images compterait au
+      quadruple : le défi, la frénésie, le boulot, l'objectif à chrono. Et la villa, dont la nuit tient
+      (`Monde.majHeure` y arrête l'horloge : l'attente n'y finirait jamais). */
+  function refusAttendre() {
+    const r = cfgAttente().refus;
+    if (B.recherche.etoiles > 0) return B.defs.interactions.asseoir.refus.police;
+    if (B.defi || B.epreuve || (typeof Frenesies !== 'undefined' && Frenesies.enCours())) return r.defi;
+    if (Missions.boulot.etape) return r.boulot;
+    const o = B.partie.mission && Histoire.objectif();
+    const bloc = B.bloc && B.bloc.def && B.bloc.def.bloc;
+    if ((o && o.chrono_s) || (bloc && bloc.nuit_tient)) return r.chrono;
+    return null;
+  }
+
+  /** L'heure qu'il sera dans `heures` heures, comme l'horloge l'écrit (« 14:20 »). */
+  function heureDans(heures) {
+    const minutes = Math.floor(((B.partie.heure + heures / 24) % 1) * 24 * 60);
+    const hh = Math.floor(minutes / 60), mm = minutes % 60;
+    return (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
+  }
+
+  /** Le menu de l'assis (ACTION, `Interactions.majAssis`) : ATTENDRE 1 H · 2 H · 3 H, et SE LEVER. Refusée, l'attente
+      se montre grisée, avec sa raison. */
+  function menuAssis(j) {
+    const c = cfgAttente(), refus = refusAttendre();
+    const items = c.heures.map(function (h) {
+      return { libelle: c.invite + ' ' + h + ' H', detail: refus || heureDans(h), actif: !refus,
+               faire: function () { attendre(j, h); return true; } };
+    });
+    items.push({ libelle: 'SE LEVER', faire: function () { Interactions.seLever(j, 0, 0); return true; } });
+    return { titre: 'ASSIS', items: items, aide: refus || 'LE STICK TE LÈVE, ET UN COUP AUSSI' };
+  }
+
+  /** L'attente commence : `reste`, en fraction de jour, ce que l'horloge doit encore avancer. */
+  function attendre(j, heures) {
+    B.attente = { joueur: j, reste: heures / 24 };
+    Hud.message(cfgAttente().bandeau + ' — ' + Monde.heureTexte(), 30);
+  }
+
+  function finir(message) {
+    B.attente = null;
+    if (message) Hud.message(message, 120);
+  }
+
+  /** Une image d'horloge (`Monde.majHeure`, `parImage` : ce qu'elle avance d'ordinaire) : ce qu'elle avance DE PLUS
+      pendant l'attente, et la fin de l'attente — à l'heure voulue, debout, sous un refus.
+
+      Par pas de simulation, l'horloge avance d'une heure divisée en `secondes_par_heure × 60` images × `vitesse`
+      pas : une heure en deux secondes, quand la ville fait ses quatre pas. ⚠️ Jamais plus que ce qui reste : on
+      arrive à l'heure dite, pas une minute plus loin. */
+  function majAttente(parImage) {
+    const at = B.attente;
+    if (!at) return 0;
+    if (!at.joueur.assis || !at.joueur.vivant) { finir(null); return 0; }
+    const refus = refusAttendre();
+    if (refus) { finir(refus); return 0; }
+    const c = cfgAttente();
+    const total = Math.min(at.reste, 1 / (24 * c.secondes_par_heure * 60 * c.vitesse));
+    const plus = Math.max(0, total - parImage);
+    at.reste -= parImage + plus;
+    // L'heure qu'il sera au sortir de cette image (l'horloge avance APRÈS nous, `Monde.majHeure`).
+    const ici = heureDans((parImage + plus) * 24);
+    if (at.reste <= 1e-9) finir('IL EST ' + ici);
+    else if (B.t % 6 === 0) Hud.message(c.bandeau + ' — ' + ici, 12);
+    return plus;
+  }
+
+  /** Après les pas ordinaires d'une image (`Jeu`, `n` pas) : la ville en fait d'autres pendant l'attente, jusqu'à
+      `vitesse` par pas ordinaire, tant que l'image a du budget. Rend le nombre de pas de plus. */
+  function accelerer(maj, n) {
+    const c = cfgAttente();
+    if (!B.attente || !c || !n) return 0;
+    const montre = typeof performance !== 'undefined' && performance.now ? function () { return performance.now(); } : function () { return 0; };
+    const t0 = montre(), max = n * (c.vitesse - 1);
+    let k = 0;
+    while (B.attente && k < max && montre() - t0 < c.budget_ms) { maj(); k++; }
+    return k;
+  }
+
+  /** Une partie neuve n'attend rien. */
+  function oublier() { B.attente = null; }
+
+  return { siegeDevant, siegeAvantLePoint, sAsseoir, litDuPoint, seCoucher, rouvrir, majCouche, menuDuLit,
+           refusAttendre, menuAssis, attendre, majAttente, accelerer, oublier };
 })();

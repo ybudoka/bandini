@@ -3891,8 +3891,8 @@ const Missions = (function () {
     // promet un geste qui n'aura pas lieu se lit comme un bogue.
     if (j && j.manege) return;
     if (!j || j.dansVehicule || B.menu || B.cinema) return;
-    // ⚠️ Assis sur un banc, ACTION ne fait qu'une chose : se lever (`Interactions.majAssis`).
-    if (j.assis) { B.invite = 'SE LEVER'; return; }
+    // ⚠️ Assis, ACTION ouvre le menu de l'assis : ATTENDRE, ou se lever (`Interactions.majAssis`, `Repos.menuAssis`).
+    if (j.assis) { B.invite = B.attente ? null : B.defs.interactions.attendre.invite; return; }
     // Couche dans son lit (`Repos.seCoucher`) : ACTION rouvre le menu du lit.
     if (j.alite && j.alite.aSoi) { B.invite = 'DORMIR'; return; }
     if (B.interieur) {

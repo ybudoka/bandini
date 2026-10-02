@@ -46,3 +46,25 @@ extrait de `sAsseoir`) et celui du lit d'hôpital (`Entites.coucher`, `seLever`)
 - Laissés : les sofas des déménagements, peints sur le trottoir un jour par année, ni entité ni obstacle.
 - Juges : `tests/test_repos_js.py` (six, au bouton ; chaque règle mutée les fait rougir) ; capture
   Chromium des trois poses (chaise, sofa, lit).
+
+**Vague 2 livrée (2 oct. 2026) — attendre, assis, en accéléré sous tes yeux.** Assis (un banc, une chaise, la
+berçante, le sofa), ACTION ouvre le menu de l'assis : ATTENDRE 1 H · 2 H · 3 H (l'heure d'arrivée en regard) et
+SE LEVER ; le stick lève toujours d'un coup. Les nombres sont dans `interactions.ATTENDRE`.
+
+- **Le temps file, il ne saute pas** : la ville fait `vitesse` (4) pas de simulation par image
+  (`Repos.accelerer`, appelé par `Jeu.avancer` après les pas ordinaires — le même `maj`, plus souvent), plafonnés
+  à `budget_ms` (8 ms) par image ; l'horloge avance d'une heure en `secondes_par_heure` (2) secondes
+  (`Repos.majAttente`, lue par `Monde.majHeure`). Mesuré dans Chromium, dehors sur un banc : 244 pas par
+  seconde, une heure toutes les 2 s, 3 h en 6 s, 8 ms par image au lieu de 3. Un appareil trop lent fait moins
+  de pas : l'attente dure un peu plus, l'horloge suit les pas.
+- **Le bandeau** « ATTENTE — 18:23 » (un état, pas l'ordre « ATTENDRE »), puis « IL EST 19:52 » à l'arrivée —
+  pile à l'heure dite. Minuit passé, c'est un vrai jour (`nouveauJour`), comme l'horloge ordinaire.
+- **Ce qui l'arrête** : le stick, un coup, SE LEVER, une étoile (son refus s'affiche). **Ce qui la refuse**
+  (grisée au menu, la raison à la place de l'heure) : la police, un défi ou une épreuve, une frénésie, un boulot,
+  un objectif à chrono, la villa dont la nuit tient — tout ce qui compte en images compterait au quadruple.
+- ⚠️ **ACTION assis ouvrait SE LEVER** ; le juge « la pression qui nous lève n'ouvre pas la machine d'à côté »
+  se juge maintenant au bouton, curseur sur SE LEVER. Le second joueur, lui, se lève toujours à ACTION : un
+  menu qui change l'heure de tout le monde est au joueur 1.
+- Juges : quatre de plus dans `tests/test_repos_js.py` (deux heures pile en ≈ 240 images avec ses pas de plus,
+  le stick et le coup qui coupent, le boulot grisé et l'étoile qui arrête, minuit) ; mutations mordues : le
+  refus du boulot, l'accélération, l'arrêt debout, l'arrêt au refus.

@@ -120,7 +120,7 @@ def test_on_s_assoit_sur_un_banc_par_le_bouton_et_le_stick_nous_leve(banc):
     assert r["face"] == c["sieges"]["banc"]["pose"]
     assert (r["sur"]["x"], r["sur"]["y"]) == (c["sieges"]["banc"]["dx"], c["sieges"]["banc"]["dy"]), \
         "le corps se pose sur l'assise, pas a cote"
-    assert r["inviteAssis"] == "SE LEVER"
+    assert r["inviteAssis"] == interactions.ATTENDRE["invite"], "assis, ACTION ouvre le menu de l'attente"
     assert r["encore"], "assis, on reste assis tant qu'on ne pousse pas"
     assert r["gainAssis"] > r["gainDebout"] * (c["souffle_x"] - 0.3), \
         "le souffle doit remonter %s fois plus vite assis que debout" % c["souffle_x"]
@@ -163,25 +163,30 @@ def test_on_ne_s_assoit_pas_avec_la_police_aux_fesses_ni_en_saignant(banc):
     assert r["inviteSang"] == c["saigne"] and not r["saigneur"], "assis, on ne saignerait plus : refuse"
 
 
-def test_un_coup_recu_ou_donne_nous_leve_et_ACTION_aussi_sans_faire_les_poches(banc):
+def test_un_coup_recu_nous_leve_et_ACTION_ouvre_le_menu_sans_faire_les_poches(banc):
     r = jouer(banc, """
         const d = devant('banc');
         if (!d) return { pasDeBanc: true };
         o.tape('KeyE'); const a1 = !!j.assis;
         L.Entites.blesser(j, 5, null); o.frame(2); const coup = !j.assis;
-        // ACTION : on se leve, et la pression est depensee — pas de pickpocket a la place. Un
-        // passant a la poche pleine nous tourne le dos, juste devant l'endroit ou l'on se releve.
+        // ACTION : le menu de l'assis (s'asseoir, attendre, se coucher — vague 2), et la pression est
+        // depensee — pas de pickpocket a la place. Un passant a la poche pleine nous tourne le dos, juste
+        // devant l'endroit ou l'on se releve ; SE LEVER, au menu, nous met debout.
         j.x = d.x; j.y = d.y + 14; j.invincible = 0; o.viser(d); L.Entites.indexer();
         o.tape('KeyE'); const b1 = !!j.assis;
         const passant = L.Entites.creerPieton(j.assis.avant.x, j.assis.avant.y - 14, L.Entites.archetype('touriste'));
         passant.etat = 'fige'; passant.argent = 50; passant.angle = -Math.PI / 2; L.Entites.indexer();
         const argent = p.argent;
-        o.tape('KeyE'); const b2 = !j.assis;
-        return { a1: a1, coup: coup, b1: b1, b2: b2, argent: p.argent - argent, poches: passant.argent };
+        o.tape('KeyE'); const menu = L.B.menu ? L.B.menu.items.map(function (i) { return i.libelle; }) : null;
+        const lever = L.B.menu && L.B.menu.items.find(function (i) { return i.libelle === 'SE LEVER'; });
+        if (lever && lever.faire()) L.Hud.fermerMenu();
+        const b2 = !j.assis;
+        return { a1: a1, coup: coup, b1: b1, b2: b2, menu: menu, argent: p.argent - argent, poches: passant.argent };
     """)
     assert not r.get("pasDeBanc")
     assert r["a1"] and r["coup"], "un coup recu nous met debout"
-    assert r["b1"] and r["b2"], "ACTION s'assoit, puis se leve"
+    assert r["menu"] and r["menu"][-1] == "SE LEVER", "assis, ACTION ouvre le menu de l'assis"
+    assert r["b1"] and r["b2"], "ACTION s'assoit, et SE LEVER nous met debout"
     assert r["argent"] == 0 and r["poches"] == 50, "la pression qui nous leve ne fait pas les poches"
 
 
@@ -656,7 +661,10 @@ def test_une_porte_passe_avant_le_banc_qui_la_jouxte(banc):
 def test_la_pression_qui_nous_leve_n_ouvre_pas_le_distributeur_d_a_cote(banc):
     """`majAssis` depense la pression (`Entree.videPresse`) : sans elle, `Combat.maj` la rejouait dans la
     meme image — et tout ce que la chaine d'ACTION sert AVANT le decor (une machine, un donneur, un etal)
-    s'ouvrait sous le nez de qui voulait seulement se lever."""
+    s'ouvrait sous le nez de qui voulait seulement se lever.
+
+    Depuis l'attente (s'asseoir, attendre, se coucher — vague 2), ACTION ouvre le menu de l'assis, et c'est SE
+    LEVER, choisi AU BOUTON, qui nous lève : ni la pression qui ouvre, ni celle qui choisit n'ouvrent la machine."""
     r = jouer(banc, """
         const d = devant('banc');
         if (!d) return { pasDeBanc: true };
@@ -666,10 +674,14 @@ def test_la_pression_qui_nous_leve_n_ouvre_pas_le_distributeur_d_a_cote(banc):
         L.Entites.reindexerDecor(); L.Entites.indexer();
         const machine = (function () { const s = j.x; j.x = av.x; const m = L.Missions.distributriceSousLaMain(Object.assign({}, j, { x: av.x, y: av.y, face: 'haut' })); j.x = s; return !!m; })();
         o.tape('KeyE');
-        return { assis: assis, machine: machine, leve: !j.assis, menu: !!L.B.menu };
+        const titre = L.B.menu && L.B.menu.titre;
+        if (L.B.menu) L.B.menu.curseur = L.B.menu.items.length - 1;
+        o.tape('KeyE'); o.frame(2);
+        return { assis: assis, machine: machine, titre: titre, leve: !j.assis, menu: !!L.B.menu };
     """)
     assert not r.get("pasDeBanc")
     assert r["assis"] and r["machine"], "le scenario doit avoir une machine devant l'endroit ou l'on se releve"
+    assert r["titre"] == "ASSIS", "ACTION ouvre le menu de l'assis, pas la machine"
     assert r["leve"] and not r["menu"], "la pression qui nous leve est depensee : aucun menu ne s'ouvre"
 
 
