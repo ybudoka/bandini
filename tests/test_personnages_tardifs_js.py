@@ -123,9 +123,14 @@ def test_m97_vient_apres_tout_ce_qui_a_besoin_de_marco():
     def chaine(slug, vus=None):
         vus = set() if vus is None else vus
         for p in par_slug[slug].get("prerequis", []):
-            if p not in vus:
-                vus.add(p)
-                chaine(p, vus)
+            # Un prérequis peut viser l'ACTE d'un chapitre (2 oct. 2026 : f09 est l'acte 2 de `deuxieme_service`) :
+            # le chapitre, et ce qu'il attend, viennent avant.
+            chapitre = missions.remplacee_par(p)
+            for q in [p] + ([chapitre["slug"]] if chapitre else []):
+                if q not in vus:
+                    vus.add(q)
+                    if q in par_slug:
+                        chaine(q, vus)
         return vus
 
     avant = chaine("m97")

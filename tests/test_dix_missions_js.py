@@ -19,13 +19,17 @@ def test_f04_acheter_un_couteau_chasser_les_cravates_puis_les_trois_caches(banc)
     ⚠️ Des missions plus longues (Martin, 22 sept. 2026) : la fin disait « trois paquets,
     retrouvés » sans qu'on en ramasse un. On les cherche maintenant aux trois coins de la ville,
     au volant : derrière l'hôtel (sud-ouest), au pied du phare (est), puis le troisième, qu'un
-    Cravate emporte en moto — rattrapé, cogné, il lâche la caisse — et on revient au terminus."""
+    Cravate emporte en moto — rattrapé, cogné, il lâche la caisse — et on revient au terminus.
+
+    ⚠️ Depuis le 2 oct. 2026, f04 est l'ACTE 1 de _Le Grand Mo et le kiosque_ (docs/jalons/des-missions-en-chapitres.md,
+    vague F) : le marqueur (étape 0), puis tout est décalé de 1 ; l'acte fait, f04 l'est, et l'acte 2 s'ouvre."""
     r = banc("function (L, o) {" + OUTILS + ROUTE + """
         L.Jeu.commencer(); L.B.partie.jour = 21;  // ⚠️ EN JUILLET : l'hiver, motos et vélos sont remisés (test_motos_velos_remises_js.py) L.graine(6);
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6']);
         const argent = paiements(L);
-        commencer(L, o, 'f04');
+        commencer(L, o, 'grand_mo_et_le_kiosque');
+        for (let k = 0; k < 10 && etape(L) < 1; k++) { o.frame(1); fermer(L); }
         const avant = etape(L);
         // Une bouchée achetée ne remplit rien : l'objectif ne doit PAS avancer.
         B.partie.objets.biere = true;
@@ -39,16 +43,16 @@ def test_f04_acheter_un_couteau_chasser_les_cravates_puis_les_trois_caches(banc)
         const apresArme = etape(L), ligne = L.Histoire.ligneObjectif();
         const mo = L.Histoire.donneur('mo');
         j.x = mo.x + 200; j.y = mo.y; L.Entites.indexer();
-        const cibles = B.mission.entites.filter(function (e) { return e.cible && e.etape === 1; });
+        const cibles = B.mission.entites.filter(function (e) { return e.cible && e.etape === 2; });
         cibles.forEach(function (e) { L.Entites.assommer(e); });
         o.frame(2); fermer(L);
         const t = { apresCravates: etape(L), ligneHotel: L.Histoire.ligneObjectif() };
         // Les trois caches, au volant.
         const v = unChar(L, j.x, j.y); auVolant(L, v);
         const hotel = L.Histoire.lieu('hotel'), phare = L.Histoire.lieu('phare');
-        t.versHotel = rouler(L, o, v, hotel.x, hotel.y, 3, function () { fermer(L); }, function () { return etape(L) !== 2; });
+        t.versHotel = rouler(L, o, v, hotel.x, hotel.y, 3, function () { fermer(L); }, function () { return etape(L) !== 3; });
         t.apresHotel = etape(L);
-        t.versPhare = rouler(L, o, v, phare.x, phare.y, 3, function () { fermer(L); }, function () { return etape(L) !== 3; });
+        t.versPhare = rouler(L, o, v, phare.x, phare.y, 3, function () { fermer(L); }, function () { return etape(L) !== 4; });
         for (let k = 0; k < 3; k++) { o.frame(1); fermer(L); }
         t.apresPhare = etape(L);
         const f = B.mission.fuyard;
@@ -64,20 +68,22 @@ def test_f04_acheter_un_couteau_chasser_les_cravates_puis_les_trois_caches(banc)
         j.x = mo3.x - 16; j.y = mo3.y; L.Entites.indexer();
         finir(L, o);
         return Object.assign(t, { avant: avant, apresBouchee: apresBouchee, apresArme: apresArme, ligne: ligne,
-                 fait: !!B.partie.missionsFaites.f04, argent: argent.map(function (a) { return a.montant; }) });
+                 fait: !!B.partie.missionsFaites.f04, argent: argent.map(function (a) { return a.montant; }),
+                 ensuite: etape(L), donneur: B.partie.mission ? L.Chapitres.donneurDe(L.Histoire.courante()) : null });
     }""")
-    assert r["avant"] == 0
-    assert r["apresBouchee"] == 0, "une bouchée (B.partie.objets) ne fait PAS avancer `acheter`"
-    assert r["apresArme"] == 1 and r["ligne"].startswith("CHASSE"), "un article `arme` avance l'objectif"
-    assert r["apresCravates"] == 2 and r["ligneHotel"].startswith("LE PREMIER PAQUET"), r
-    assert r["apresHotel"] == 3 and r["versHotel"] > 15 * 60, "l'hôtel, au sud-ouest : %s" % r
-    assert r["apresPhare"] == 4 and r["versPhare"] > 30 * 60, "le phare, à l'autre bout : %s" % r
+    assert r["avant"] == 1
+    assert r["apresBouchee"] == 1, "une bouchée (B.partie.objets) ne fait PAS avancer `acheter`"
+    assert r["apresArme"] == 2 and r["ligne"].startswith("CHASSE"), "un article `arme` avance l'objectif"
+    assert r["apresCravates"] == 3 and r["ligneHotel"].startswith("LE PREMIER PAQUET"), r
+    assert r["apresHotel"] == 4 and r["versHotel"] > 15 * 60, "l'hôtel, au sud-ouest : %s" % r
+    assert r["apresPhare"] == 5 and r["versPhare"] > 30 * 60, "le phare, à l'autre bout : %s" % r
     assert r["fuyard"] and r["fuyard"]["slug"] == "moto" and r["fuyard"]["dPhare"] < 16 * 16, (
         "le troisième file en moto, du phare : %s" % r["fuyard"])
     assert r["chasse"]["tombe"] and r["caisse"] == {"porteur": True, "caisse": True}, r
-    assert r["apresCaisse"] == 5, "la caisse ramassée : on retourne voir Mo %s" % r
+    assert r["apresCaisse"] == 6, "la caisse ramassée : on retourne voir Mo %s" % r
     assert r["retour"] > 20 * 60, "le terminus est loin du phare : %s images" % r["retour"]
     assert r["fait"] is True and r["argent"] == [150]
+    assert r["ensuite"] == 8 and r["donneur"] == "thibodeau", "l'acte 2 s'ouvre : la caisse de Madame Thibodeau %s" % r
 
 
 def test_f05_boulots_autobus_compte_jusqu_a_quatre_puis_la_run_du_phare(banc):
@@ -171,7 +177,8 @@ def test_f05_la_run_du_phare_se_rate_a_quatre_minutes(banc):
 
 
 #: Le parcours de Martin (22 sept. 2026) : garé devant le casse-croûte, on entre, Bouchard
-#: donne f06 DEDANS, on sort par la porte, on monte dans son char. `SUITE` joue ce qui vient
+#: donne f06 DEDANS, on sort par la porte, on monte dans son char. ⚠️ Depuis le 2 oct. 2026, f06 est l'ACTE 1 de
+#: _Deuxième service_ (vague F) : le marqueur attend qu'on sorte, puis tout est décalé de 1. `SUITE` joue ce qui vient
 #: après ; `c` est le stool, `mien` notre char, `fermer()` passe les répliques.
 F06 = "function (L, o) {" + OUTILS + """
     L.Jeu.commencer(); L.graine(6);
@@ -186,13 +193,14 @@ F06 = "function (L, o) {" + OUTILS + """
     j.x = porte.x * 16 + 8; j.y = (porte.y + 1) * 16 + 4; L.Entites.indexer();
     L.Jeu.entrer(porte); o.fondu();
     for (let k = 0; k < 200 && !B.interieur; k++) o.frame(1);
-    L.Histoire.commencer('f06');
+    L.Histoire.commencer('deuxieme_service');
     passer(L, o);
-    const c = B.mission.suivi;
     L.Jeu.sortir(); o.fondu();
     for (let k = 0; k < 200 && B.interieur; k++) o.frame(1);
     function fermerTout() { fermer(L); }
     fermerTout();
+    for (let k = 0; k < 10 && !B.mission.suivi; k++) { o.frame(1); fermerTout(); }
+    const c = B.mission.suivi;
     const dSortie = Math.round(Math.hypot(c.x - j.x, c.y - j.y));
     // À pied, cinq secondes : il attend qu'on soit au volant, rien ne rate.
     for (let i = 0; i < 300 && B.partie.mission; i++) { o.frame(1); fermerTout(); }
@@ -211,7 +219,7 @@ F06 = "function (L, o) {" + OUTILS + """
 DERRIERE = """
     const vus = {};
     let i = 0;
-    for (; i < 12000 && B.partie.mission && B.partie.mission.etape === 0; i++) {
+    for (; i < 12000 && B.partie.mission && B.partie.mission.etape === 1; i++) {
       if (!c.attendLeJoueur) {
         mien.x = c.x - Math.cos(c.angle) * ECART; mien.y = c.y - Math.sin(c.angle) * ECART;
         mien.vitesse = 0; mien.vx = 0; mien.vy = 0; j.x = mien.x; j.y = mien.y;
@@ -230,7 +238,8 @@ DERRIERE = """
 #: La mission finie ou ratée : il repart dans le trafic, pas escamoté sous nos yeux.
 LACHER = """
     finir(L, o);
-    fin.libre = c.mission === null && B.entites.indexOf(c) >= 0;
+    // Un chapitre : l'acte fini, la mission continue (l'acte 2) — son char reste en ville jusqu'à la fin du chapitre.
+    fin.libre = (c.mission === null || !!B.partie.mission) && B.entites.indexOf(c) >= 0;
 """
 
 #: Ce qui vient APRÈS la filature (Martin, 22 sept. 2026 : « plus long ») : on paie, on va
@@ -239,7 +248,7 @@ LACHER = """
 APRES_F06 = """
     for (let k = 0; k < 5; k++) { o.frame(1); fermerTout(); }
     fin.apresPaie = { etape: etape(L), argent: B.partie.argent };
-    const autre = B.mission && B.mission.chars ? B.mission.chars[2] : null;
+    const autre = B.mission && B.mission.chars ? B.mission.chars[3] : null;
     const hotel = L.Histoire.lieu('hotel');
     fin.autre = autre ? { slug: autre.slug, etat: autre.etat, dHotel: Math.round(Math.hypot(autre.x - hotel.x, autre.y - hotel.y)) } : null;
     fin.versHotel = rouler(L, o, mien, autre.x, autre.y, 3, fermerTout, function () { return Math.hypot(mien.x - autre.x, mien.y - autre.y) < 110; });
@@ -369,20 +378,20 @@ def test_f06_on_sort_du_casse_croute_et_on_le_file_jusqu_au_poste(banc):
     (sa copie de la déposition y dort), et on sème la police que le boum a réveillée."""
     r = banc(F06.replace("SUITE", DERRIERE.replace("ECART", "96") + ROUTE + APRES_F06))
     assert r["dSortie"] >= 5 * 16, "il naît à cinq tuiles au moins de la porte : %s" % r["dSortie"]
-    assert r["aPied"]["etape"] == 0 and r["aPied"]["attend"] is True, "à pied, il attend : %s" % r["aPied"]
+    assert r["aPied"]["etape"] == 1 and r["aPied"]["attend"] is True, "à pied, il attend : %s" % r["aPied"]
     assert r["aPied"]["ligne"].endswith("PRENDS UN CHAR"), r["aPied"]
-    assert r["etapeFilee"] == 1 and r["dPoste"] < 8 * 16, "filé jusqu'au poste, l'objectif avance : %s" % r
+    assert r["etapeFilee"] == 2 and r["dPoste"] < 8 * 16, "filé jusqu'au poste, l'objectif avance : %s" % r
     assert r["vus"]["garage"] < 5 * 16 and r["vus"]["terminus"] < 5 * 16, "le détour, étape par étape : %s" % r["vus"]
     assert r["images"] > 40 * 60, "une vraie filature, plus deux coins de rue : %s images" % r["images"]
     # APRÈS la filature : on paie, puis l'autre char du stool, puis la police.
-    assert r["apresPaie"] == {"etape": 2, "argent": 300}, "payé au poste : 500 − 200 $ %s" % r["apresPaie"]
+    assert r["apresPaie"] == {"etape": 3, "argent": 300}, "payé au poste : 500 − 200 $ %s" % r["apresPaie"]
     assert r["autre"] and r["autre"]["slug"] == "auto" and r["autre"]["etat"] == "stationne", r["autre"]
     assert r["autre"]["dHotel"] < 10 * 16, "son autre char dort derrière l'hôtel : %s" % r["autre"]
     assert r["versHotel"] > 15 * 60, "l'hôtel est à l'autre bout de la ville : %s images" % r["versHotel"]
-    assert r["demoli"]["etape"] == 3 and r["demoli"]["etoiles"] >= 2, "démoli, la police arrive : %s" % r["demoli"]
+    assert r["demoli"]["etape"] == 4 and r["demoli"]["etoiles"] >= 2, "démoli, la police arrive : %s" % r["demoli"]
     assert r["cache"]["entre"] and r["cache"]["dehors"] and r["cache"]["loin"] < 8 * 16, r["cache"]
     assert r["cache"]["images"] > 20 * 60, "deux étoiles se sèment, elles ne s'effacent pas : %s" % r["cache"]
-    assert r["fait"] is True and 300 in r["argent"], "200 $ payés, 300 $ de prime : %s" % r
+    assert r["fait"] is True and 300 in r["argent"], "200 $ payés, 300 $ de prime (l'acte 1 fini) : %s" % r
     assert r["libre"], "son char repart dans le trafic"
 
 
@@ -553,19 +562,23 @@ def test_f07_la_cantine_les_poches_par_derriere_puis_le_complice(banc):
     ⚠️ Des missions plus longues (Martin, 22 sept. 2026) : le voleur boit l'argent à la
     cantine des Quais, à l'autre bout de la ville — il n'existe qu'une fois qu'on y est (posé
     près du joueur) —, et, sa clé prise, son complice file en moto avec la caisse : rattrapé,
-    cogné, il la lâche. Puis le kiosque."""
+    cogné, il la lâche. Puis le kiosque.
+
+    ⚠️ Depuis le 2 oct. 2026, f07 est l'ACTE 2 de _Le Grand Mo et le kiosque_ (vague F) : une partie qui a fait f04
+    commence au marqueur de l'acte 2 (étape 7), et tout est décalé de 8 ; c'est le dernier acte, le chapitre se ferme."""
     r = banc("function (L, o) {" + OUTILS + ROUTE + """
         L.Jeu.commencer(); L.B.partie.jour = 21;  // ⚠️ EN JUILLET : l'hiver, motos et vélos sont remisés (test_motos_velos_remises_js.py) L.graine(6);
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'f04']);
         const argent = paiements(L);
-        commencer(L, o, 'f07');
-        o.frame(1); fermer(L);   // le « pendant » de l'objectif 0 ouvre une boîte
+        commencer(L, o, 'grand_mo_et_le_kiosque');
+        for (let k = 0; k < 20 && etape(L) < 8; k++) { o.frame(1); fermer(L); }
+        o.frame(1); fermer(L);   // le « pendant » de l'objectif 8 ouvre une boîte
         const t = { depart: etape(L), personneAuKiosque: !B.mission.entites.some(function (e) { return e.pickpocket; }) };
         const th = L.Histoire.donneur('thibodeau');
         const v = unChar(L, th.x, th.y); auVolant(L, v);
         const cantine = L.Histoire.lieu('cantine');
-        t.versCantine = rouler(L, o, v, cantine.x, cantine.y, 3, function () { fermer(L); }, function () { return etape(L) !== 0; });
+        t.versCantine = rouler(L, o, v, cantine.x, cantine.y, 3, function () { fermer(L); }, function () { return etape(L) !== 8; });
         for (let k = 0; k < 3; k++) { o.frame(1); fermer(L); }
         L.Vehicules.descendre(j, true);
         const victime = B.mission.entites.find(function (e) { return e.pickpocket === true; });
@@ -592,20 +605,20 @@ def test_f07_la_cantine_les_poches_par_derriere_puis_le_complice(banc):
         const th3 = L.Histoire.donneur('thibodeau');
         j.x = th3.x - 16; j.y = th3.y; L.Entites.indexer();
         finir(L, o);
-        return Object.assign(t, { avant: avant, vole: vole, apres: apres, fait: !!B.partie.missionsFaites.f07,
+        return Object.assign(t, { avant: avant, vole: vole, apres: apres, fait: !!B.partie.missionsFaites.f07 && !!B.partie.missionsFaites.grand_mo_et_le_kiosque,
                  argent: argent.map(function (a) { return a.montant; }) });
     }""")
-    assert r["depart"] == 0 and r["personneAuKiosque"], "le voleur n'est pas au kiosque : il boit à la cantine %s" % r
+    assert r["depart"] == 8 and r["personneAuKiosque"], "le voleur n'est pas au kiosque : il boit à la cantine %s" % r
     assert r["versCantine"] > 20 * 60, "la cantine des Quais, à l'autre bout : %s images" % r["versCantine"]
-    assert r["avant"]["etape"] == 1 and r["avant"]["argent"] > 0 and r["avant"]["vivant"] is True
+    assert r["avant"]["etape"] == 9 and r["avant"]["argent"] > 0 and r["avant"]["vivant"] is True
     assert r["avant"]["dCantine"] < 12 * 16, "il boit devant la cantine : %s" % r["avant"]
     assert r["vole"] is True, "par-derrière, à portée : le vol réussit"
     assert r["apres"]["argent"] == 0 and r["apres"]["vivant"] is True and r["apres"]["etat"] != "assomme", (
         "un vol par-derrière laisse la victime vivante et EN FUITE — jamais assommée")
-    assert r["apres"]["etape"] == 2, "poches vides : l'objectif avance quand même"
+    assert r["apres"]["etape"] == 10, "poches vides : l'objectif avance quand même"
     assert r["fuyard"] and r["fuyard"]["slug"] == "moto" and r["fuyard"]["dCantine"] < 16 * 16, r["fuyard"]
     assert r["chasse"]["tombe"] and r["caisse"] == {"porteur": True, "caisse": True}, r
-    assert r["apresCaisse"] == 3, "la caisse rattrapée : on retourne au kiosque %s" % r
+    assert r["apresCaisse"] == 11, "la caisse rattrapée : on retourne au kiosque %s" % r
     assert r["retour"] > 20 * 60, "le kiosque est loin des Quais : %s images" % r["retour"]
     assert r["fait"] is True and 200 in r["argent"], "200 $ de récompense (en plus des poches volées)"
 
@@ -618,13 +631,17 @@ def test_f09_proteger_marco_jusqu_au_kiosque_filer_le_troisieme_puis_le_garage(b
     ⚠️ Des missions plus longues (Martin, 22 sept. 2026) : la fin disait « j'ai vu où le reste
     de l'argent dort » sans qu'on l'ait vu. Après l'embuscade, le troisième Cravate se pousse en
     char : on le file jusqu'à l'hôtel Bandini (l'argent y DORT), Marco monté avec nous, puis on
-    le ramène au garage — la fin se dit devant lui, chez lui."""
+    le ramène au garage — la fin se dit devant lui, chez lui.
+
+    ⚠️ Depuis le 2 oct. 2026, f09 est l'ACTE 2 de _Deuxième service_ (vague F) : une partie qui a fait f06 commence au
+    marqueur de l'acte 2 (étape 5), et tout est décalé de 6 ; c'est le dernier acte, le chapitre se ferme."""
     r = banc("function (L, o) {" + OUTILS + ROUTE + """
         L.Jeu.commencer(); L.graine(6);
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm50', 'f01', 'f06']);
         const argent = paiements(L);
-        commencer(L, o, 'f09');
+        commencer(L, o, 'deuxieme_service');
+        for (let k = 0; k < 20 && !(B.mission && B.mission.protege); k++) { o.frame(1); fermer(L); }
         const protege = B.mission.protege;
         const avant = { etape: etape(L), protege: !!protege, vivant: protege && protege.vivant };
         const kiosque = L.Histoire.lieu('kiosque');
@@ -632,7 +649,7 @@ def test_f09_proteger_marco_jusqu_au_kiosque_filer_le_troisieme_puis_le_garage(b
         o.frame(2);
         const arrive = etape(L), ligne = L.Histoire.ligneObjectif();
         fermer(L);
-        const cibles = B.mission.entites.filter(function (e) { return e.cible && e.etape === 1; });
+        const cibles = B.mission.entites.filter(function (e) { return e.cible && e.etape === 7; });
         const t = { nCibles: cibles.length };
         cibles.forEach(function (e) { L.Entites.assommer(e); });
         o.frame(2); fermer(L);
@@ -646,7 +663,7 @@ def test_f09_proteger_marco_jusqu_au_kiosque_filer_le_troisieme_puis_le_garage(b
         for (let k = 0; k < 30; k++) { mien.vitesse = 0; o.frame(1); fermer(L); }
         t.marcoMonte = protege.dansVehicule === mien;
         let i = 0;
-        for (; i < 12000 && B.partie.mission && etape(L) === 2; i++) {
+        for (; i < 12000 && B.partie.mission && etape(L) === 8; i++) {
             // ⚠️ LE TRAFIC S'ÔTE DEVANT LUI (27 sept. 2026) : une remorqueuse garée en travers de sa route le
             // plantait pour toujours — une graine sur douze, sur la base comme ailleurs, et la graine 6 est
             // tombée dessus le jour où le Petit-Canton s'est bâti. Ce juge-ci juge la filature, pas le trafic.
@@ -668,18 +685,18 @@ def test_f09_proteger_marco_jusqu_au_kiosque_filer_le_troisieme_puis_le_garage(b
         const garage = L.Histoire.lieu('garage');
         let marcoArrive = null;
         t.retour = rouler(L, o, mien, garage.x, garage.y, 3, function () { if (B.partie.mission) marcoArrive = protege.dansVehicule === mien; fermer(L); },
-                          function () { return etape(L) !== 3; });
+                          function () { return etape(L) !== 9; });
         t.marcoArrive = marcoArrive;
         finir(L, o);
-        return Object.assign(t, { avant: avant, arrive: arrive, ligne: ligne, fait: !!B.partie.missionsFaites.f09,
+        return Object.assign(t, { avant: avant, arrive: arrive, ligne: ligne, fait: !!B.partie.missionsFaites.f09 && !!B.partie.missionsFaites.deuxieme_service,
                  argent: argent.map(function (a) { return a.montant; }), rentre: !!protege.rentre });
     }""")
-    assert r["avant"] == {"etape": 0, "protege": True, "vivant": True}
-    assert r["arrive"] == 1 and r["ligne"].startswith("REPOUSSE"), "arrivé au kiosque, vivant : l'objectif avance"
-    assert r["nCibles"] == 2 and r["apresCravates"] == 2, r
+    assert r["avant"] == {"etape": 6, "protege": True, "vivant": True}
+    assert r["arrive"] == 7 and r["ligne"].startswith("REPOUSSE"), "arrivé au kiosque, vivant : l'objectif avance"
+    assert r["nCibles"] == 2 and r["apresCravates"] == 8, r
     assert r["suivi"] and r["suivi"]["attend"] is True and r["suivi"]["d"] >= 5 * 16, "le troisième attend qu'on ait un char : %s" % r
     assert r["marcoMonte"] is True, "Marco monte dans le char arrêté à côté de lui"
-    assert r["apresFilature"] == 3 and r["dHotel"] < 8 * 16, "filé jusqu'à l'hôtel : %s" % r
+    assert r["apresFilature"] == 9 and r["dHotel"] < 8 * 16, "filé jusqu'à l'hôtel : %s" % r
     assert r["filature"] > 40 * 60, "de l'autre bout de la ville : %s images" % r["filature"]
     assert r["marcoFile"] is True and r["marcoArrive"] is True, "Marco reste dans le char jusqu'au garage : %s" % r
     assert r["retour"] > 15 * 60, "l'hôtel est loin du garage : %s images" % r["retour"]
@@ -689,7 +706,8 @@ def test_f09_proteger_marco_jusqu_au_kiosque_filer_le_troisieme_puis_le_garage(b
         L.Jeu.commencer(); L.graine(6);
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm50', 'f01', 'f06']);
-        commencer(L, o, 'f09');
+        commencer(L, o, 'deuxieme_service');
+        for (let k = 0; k < 20 && !(B.mission && B.mission.protege); k++) { o.frame(1); fermer(L); }
         L.Entites.assommer(B.mission.protege);
         o.frame(2);
         return { protege: !!B.partie.mission };

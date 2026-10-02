@@ -29,6 +29,9 @@ ARROSER = """
 """
 
 AVANT_F13 = "['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'f11']"
+#: f13 est l'ACTE 2 de _Mado et ses volontaires_ depuis le 2 oct. 2026 (docs/jalons/des-missions-en-chapitres.md,
+#: vague F) : une partie qui a fait f11 commence au marqueur de l'acte 2 (étape 5), et tout est décalé de 6.
+D = 6
 
 
 def _f13(banc, lent=False):
@@ -39,7 +42,9 @@ def _f13(banc, lent=False):
         const argent = paiements(L);
         const dispo = L.Histoire.disponibleDe('mado');
         const sacAvant = !!B.partie.armes.extincteur;
-        commencer(L, o, 'f13'); jouer(L, o);
+        commencer(L, o, 'mado_et_ses_volontaires');
+        for (let k = 0; k < 20 && etape(L) < """ + str(D) + """; k++) { o.frame(1); ecouter(L); }
+        jouer(L, o);
         const sac = B.partie.armes.extincteur;
         const remis = { avant: sacAvant, mun: sac ? sac.mun : null, enMain: j.arme };
         const feux = [], lieux = ['kiosque', 'vetements', 'terminus'];
@@ -53,8 +58,11 @@ def _f13(banc, lent=False):
             if (!fe) { feux.push(info); break; }
             if (""" + ("true" if lent else "false") + """ && i === 1) {
                 for (let k = 0; k < 91 * 60 && B.partie.mission; k++) o.frame(1);
-                return { remis: remis, feux: feux, rate: !B.partie.mission, fait: !!B.partie.missionsFaites.f13,
-                         feuApres: !!L.Incendies.feuDeMission() };
+                const rate = !B.partie.mission, feuApres = !!L.Incendies.feuDeMission();
+                for (let k = 0; k < 900 && (B.transition || B.cinema || !B.menu); k++) { o.frame(1); ecouter(L); }
+                return { remis: remis, feux: feux, rate: rate, fait: !!B.partie.missionsFaites.f13, feuApres: feuApres,
+                         menu: B.menu ? B.menu.items.map(function (x) { return x.libelle; }) : null, f11: !!B.partie.missionsFaites.f11,
+                         echec: dites.filter(function (d) { return d.indexOf('echec:') === 0; }) };
             }
             // Un seul coup de jet ne suffit pas : il résiste.
             devantLeFeu(L, fe);
@@ -81,29 +89,30 @@ def _f13(banc, lent=False):
         j.x = mado.x - 16; j.y = mado.y; L.Entites.indexer();
         finir(L, o);
         return { dispo: dispo && dispo.slug, remis: remis, feux: feux, munFin: munFin, fuite: fuite, retour: retour,
-                 dites: dites, fait: !!B.partie.missionsFaites.f13, argent: argent.map(function (a) { return a.montant; }),
+                 dites: dites, fait: !!B.partie.missionsFaites.f13 && !!B.partie.missionsFaites.mado_et_ses_volontaires,
+                 argent: argent.map(function (a) { return a.montant; }),
                  feuApres: !!L.Incendies.feuDeMission() };
     }""")
 
 
 def test_f13_trois_feux_au_jet_le_pyromane_puis_mado(banc):
     r = _f13(banc)
-    assert r["dispo"] == "f13", "Mado donne f13 après f11"
+    assert r["dispo"] == "mado_et_ses_volontaires", "Mado donne son chapitre, à l'acte 2, après f11"
     assert r["remis"]["avant"] is False and r["remis"]["mun"] == 100 and r["remis"]["enMain"] == "extincteur", (
         f"Mado met l'extincteur plein dans les mains : {r['remis']}")
     assert len(r["feux"]) == 3, r["feux"]
     for i, (feu, texte) in enumerate(zip(r["feux"], ("ÉTEINS LE FEU DU KIOSQUE", "LA BOUTIQUE DE ROSA", "LE TERMINUS"))):
-        assert feu["etape"] == i and feu["feu"], f"le feu {i} n'est pas allumé : {feu}"
+        assert feu["etape"] == D + i and feu["feu"], f"le feu {i} n'est pas allumé : {feu}"
         assert feu["ligne"].startswith(texte) and ":" in feu["ligne"], f"l'objectif dit son chrono : {feu['ligne']}"
         assert feu["loin"] <= 4, f"le feu {i} brûle loin de sa porte : {feu}"
         assert feu["gps"], f"la flèche ne pointe pas le feu {i}"
-        assert feu["apresUnCoup"] == {"eteint": False, "etape": i}, f"un coup de jet l'éteint : {feu}"
-        assert feu["eteint"] and feu["apres"] == i + 1, f"le jet n'a pas éteint le feu {i} : {feu}"
+        assert feu["apresUnCoup"] == {"eteint": False, "etape": D + i}, f"un coup de jet l'éteint : {feu}"
+        assert feu["eteint"] and feu["apres"] == D + i + 1, f"le jet n'a pas éteint le feu {i} : {feu}"
         assert 15 <= feu["images"] <= 40, f"un feu de mission tient un tiers de seconde au jet : {feu}"
     assert r["munFin"] >= 30, f"trois feux laissent de quoi en rater : {r['munFin']}"
-    assert r["fuite"]["etape"] == 3 and r["fuite"]["fuyard"] and r["fuite"]["avance"] > 5, r["fuite"]
-    assert r["retour"]["etape"] == 4 and r["retour"]["ligne"].startswith("RAPPORTE LE BIDON"), r["retour"]
-    for dite in ("pendant:mado:0", "pendant:mado:1", "pendant:mado:2", "pendant:mado:3", "pendant:mado:4"):
+    assert r["fuite"]["etape"] == D + 3 and r["fuite"]["fuyard"] and r["fuite"]["avance"] > 5, r["fuite"]
+    assert r["retour"]["etape"] == D + 4 and r["retour"]["ligne"].startswith("RAPPORTE LE BIDON"), r["retour"]
+    for dite in ["pendant:mado:%d" % (D + k) for k in range(-1, 5)]:
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [250], f"la mission paie, pas la prime du feu : {r['argent']}"
     assert r["feuApres"] is False
@@ -113,6 +122,9 @@ def test_f13_le_feu_de_rosa_gagne_la_facade_si_on_traine(banc):
     r = _f13(banc, lent=True)
     assert r["rate"] is True and r["fait"] is False, r
     assert r["feuApres"] is False, "une mission ratée n'oublie pas son feu en ville"
+    # Un chapitre : c'est l'échec des volontaires qu'on entend, f11 reste faite, et l'on reprend l'acte 2.
+    assert r["echec"] == ["echec:mado:5"] and r["f11"] is True, r
+    assert r["menu"][:2] == ["REPRENDRE L'ACTE 2", "PLUS TARD"], r["menu"]
 
 
 def test_un_feu_de_mission_ne_tire_aucun_de_et_ne_paie_pas_la_prime(banc):

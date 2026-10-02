@@ -749,7 +749,8 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 # n'a besoin que de `_commun`, mais `CATALOGUE` se complete juste apres (les
 # cles par defaut et les scenes), et il faut donc que le moteur soit defini.
 from . import (  # noqa: E402
-    ti_paul_et_ses_amis, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f10, f11, f12, f13, ambulance_de_nuit, m1, m2, m3,
+    ti_paul_et_ses_amis, e12, f01, f02, rosa_et_ses_clients, grand_mo_et_le_kiosque, f05, deuxieme_service, f08,
+    mado_et_ses_volontaires, f12, ambulance_de_nuit, m1, m2, m3,
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, lulu_et_le_poisson, gege_et_les_debardeurs, q04, q10, q11, nouvelle_inspectrice, lot_de_gilles,
     raymonde_et_le_syndicat, nuit_a_la_villa, chute_du_pouce, retour_du_maitre, cindy_et_le_beau_denis, q13,
     les_chevreuils, la_pointe, ti_loup_et_gros_boulon, s09, s11,
@@ -769,6 +770,9 @@ from . import (  # noqa: E402
 # sonne une fois par demi-journée au plus, jamais à 3★, pour le donneur dont la porte est la PLUS PROCHE
 # du joueur — et, à distance égale, pour la première mission disponible dont l'appel n'a pas été dit. Après m6, les contacts appellent dans l'ordre où le tour les a présentés (Ti-Paul, Lulu,
 # Raymonde), le sergent après eux, et m97 — la fin de Marco — reste la dernière du tronc.
+# ⚠️ Le Faubourg en CHAPITRES (2 oct. 2026, les autres arcs, vague F) : `grand_mo_et_le_kiosque` (f04, f07),
+# `deuxieme_service` (f06, f09), `mado_et_ses_volontaires` (f11, f13), `rosa_et_ses_clients` (f03, f10) ; f01, f02,
+# f05, f08 et f12 restent des missions. Avant :
 # ⚠️ Dix missions de plus (21 sept. 2026) : f04, f05, f06, f07, f09, f11 (Faubourg), h01 (l'hôpital),
 # p01 (La Pointe), q03 (Les Quais), e12 (Les Érables) — chacune après m6 (ou après une des dix,
 # f06/f07/f09), avant m97.
@@ -855,15 +859,15 @@ from . import (  # noqa: E402
 CATALOGUE: list[Mission] = [
     m1.MISSION, m2.MISSION, m3.MISSION, m4.MISSION, m5.MISSION, m6.MISSION, m50.MISSION,
     f01.MISSION, ti_paul_et_ses_amis.MISSION, lulu_et_le_poisson.MISSION, raymonde_et_le_syndicat.MISSION, m51.MISSION,
-    f04.MISSION, f05.MISSION, f06.MISSION, f07.MISSION, f09.MISSION, f11.MISSION,
+    grand_mo_et_le_kiosque.MISSION, f05.MISSION, deuxieme_service.MISSION, mado_et_ses_volontaires.MISSION,
     ambulance_de_nuit.MISSION, p01.MISSION, gege_et_les_debardeurs.MISSION, e12.MISSION,
-    f02.MISSION, f03.MISSION, f08.MISSION,
+    f02.MISSION, rosa_et_ses_clients.MISSION, f08.MISSION,
     q04.MISSION, lot_de_gilles.MISSION,
     p13.MISSION, p14.MISSION,
     m52.MISSION, m53.MISSION, m54.MISSION,
     q10.MISSION, q11.MISSION,
     nuit_a_la_villa.MISSION,
-    f13.MISSION, f10.MISSION, f12.MISSION,
+    f12.MISSION,
     chute_du_pouce.MISSION, retour_du_maitre.MISSION,
     cindy_et_le_beau_denis.MISSION, q13.MISSION,
     les_chevreuils.MISSION,

@@ -292,7 +292,8 @@ def test_f02_gilles_regarde_ailleurs_les_boulonneux_arrivent_et_gus_a_son_stock(
 def test_f03_la_caisse_de_rosa_ses_chums_la_robe_a_l_hotel_puis_la_boutique(banc):
     """Rosa : le Chevreuil en berline (rattrapé, la caisse ramassée), deux de ses chums à mains nues
     qui arrivent de loin, la robe de mariée à l'Hôtel Bandini (le bout sud-ouest), puis la boutique
-    (le nord-est) : la berline du Chevreuil sert de taxi."""
+    (le nord-est) : la berline du Chevreuil sert de taxi. ⚠️ Depuis le 2 oct. 2026, f03 est l'ACTE 1 de _Rosa et ses
+    clients_ (vague F) : le marqueur (étape 0), puis tout est décalé de 1 ; l'acte fait, l'acte 2 s'ouvre chez Rosa."""
     r = _jouer(banc, """
         debut(L);
         const B = L.B, j = B.joueur, argent = paiements(L);
@@ -303,7 +304,7 @@ def test_f03_la_caisse_de_rosa_ses_chums_la_robe_a_l_hotel_puis_la_boutique(banc
         const f = B.mission.fuyard;
         const ra = rattraper(L, o, 150);
         const apresCaisse = etape(L);
-        const deux = hommes(L, 1);
+        const deux = hommes(L, 2);
         const pendant1 = ecouter(L, o);
         j.x = j.x + 0; deux.forEach(function (h) { L.Entites.assommer(h.e); });
         o.frame(2);
@@ -318,18 +319,19 @@ def test_f03_la_caisse_de_rosa_ses_chums_la_robe_a_l_hotel_puis_la_boutique(banc
         finir(L, o);
         return { parle: parle, ra: ra, apresCaisse: apresCaisse, deux: deux.map(function (h) { return { d: h.d, etat: h.etat, arme: h.arme, vie: h.vie }; }),
                  pendant1: pendant1, pendant2: pendant2, apresBagarre: apresBagarre, t1: t1, pendant3: pendant3, aLHotel: aLHotel,
-                 t2: t2, fait: !!B.partie.missionsFaites.f03, argent: argent };
+                 t2: t2, fait: !!B.partie.missionsFaites.f03, argent: argent, ensuite: etape(L) };
     """)
     assert r["parle"] and r["ra"]["fuit"] > 60 and r["ra"]["tombe"] and r["ra"]["caisse"], r["ra"]
-    assert r["apresCaisse"] == 1 and len(r["deux"]) == 2, r
+    assert r["apresCaisse"] == 2 and len(r["deux"]) == 2, r
     for h in r["deux"]:
         assert 100 <= h["d"] <= 260 and h["etat"] == "attaque_joueur", h
         assert h["arme"] is None and h["vie"] == 60, "des Chevreuils à mains nues, comme e01"
     assert r["pendant1"]["qui"] == "rosa" and r["pendant1"]["texte"].startswith("Ses petits amis"), r["pendant1"]
-    assert r["apresBagarre"] == 2 and r["pendant2"]["texte"].startswith("Tant qu'à y être"), r
-    assert r["t1"]["arrive"] and r["aLHotel"] == 3, r["t1"]
+    assert r["apresBagarre"] == 3 and r["pendant2"]["texte"].startswith("Tant qu'à y être"), r
+    assert r["t1"]["arrive"] and r["aLHotel"] == 4, r["t1"]
     assert r["pendant3"]["texte"].startswith("La mariée a appelé"), r["pendant3"]
     assert r["fait"] is True and r["argent"] == [250], r
+    assert r["ensuite"] == 6, "l'acte 2 s'ouvre : la chemise hawaïenne"
     print("f03", {"hotel": r["t1"]["tuiles"], "boutique": r["t2"]["tuiles"], "s": [r["t1"]["secondes"], r["t2"]["secondes"]]})
 
 
@@ -387,7 +389,8 @@ def test_f08_la_cle_chez_rosa_la_fourriere_la_police_le_phare_puis_le_garage(ban
 
 def test_f11_mado_tient_trente_secondes_les_cravates_tombent_le_troisieme_file_avec_la_caisse(banc):
     """Mado : trente secondes de négociation (jouées image par image), deux Cravates qui arrivent de
-    loin, un troisième qui file en berline avec la caisse, rattrapé ; on la rapporte à Mado."""
+    loin, un troisième qui file en berline avec la caisse, rattrapé ; on la rapporte à Mado. ⚠️ Depuis le 2 oct. 2026,
+    f11 est l'ACTE 1 de _Mado et ses volontaires_ (vague F) : le marqueur (étape 0), puis tout est décalé de 1."""
     r = _jouer(banc, """
         debut(L);
         const B = L.B, j = B.joueur, argent = paiements(L);
@@ -397,9 +400,9 @@ def test_f11_mado_tient_trente_secondes_les_cravates_tombent_le_troisieme_file_a
         passer(L, o);
         const t0 = B.t;
         let n = 0;
-        for (; n < 60 * 40 && etape(L) === 0; n++) { o.frame(1); if (B.cinema) break; }
+        for (; n < 60 * 40 && etape(L) === 1; n++) { o.frame(1); if (B.cinema) break; }
         const tenu = Math.round((B.t - t0) / 60);
-        const deux = hommes(L, 1);
+        const deux = hommes(L, 2);
         const pendant1 = ecouter(L, o);
         j.x = mado.x + 300; j.y = mado.y; L.Entites.indexer();
         deux.forEach(function (h) { L.Entites.assommer(h.e); });
@@ -413,17 +416,18 @@ def test_f11_mado_tient_trente_secondes_les_cravates_tombent_le_troisieme_file_a
         finir(L, o);
         return { parle: parle, tenu: tenu, deux: deux.map(function (h) { return { d: h.d, etat: h.etat }; }), pendant1: pendant1,
                  pendant2: pendant2, apresBagarre: apresBagarre, ra: ra, pendant3: pendant3, aRapporter: aRapporter,
-                 fait: !!B.partie.missionsFaites.f11, argent: argent };
+                 fait: !!B.partie.missionsFaites.f11, argent: argent, ensuite: etape(L) };
     """)
     assert r["parle"] and 29 <= r["tenu"] <= 32, f"trente secondes tenues : {r['tenu']}"
     assert len(r["deux"]) == 2 and all(100 <= h["d"] <= 260 for h in r["deux"]), r["deux"]
     assert r["pendant1"]["qui"] == "mado" and r["pendant1"]["texte"].startswith("Bougez pas"), r["pendant1"]
-    assert r["apresBagarre"] == {"etape": 2, "fuyard": True}, r["apresBagarre"]
+    assert r["apresBagarre"] == {"etape": 3, "fuyard": True}, r["apresBagarre"]
     assert r["pendant2"]["texte"].startswith("Le troisième se sauve"), r["pendant2"]
     assert r["ra"] and r["ra"]["fuit"] > 60 and r["ra"]["tombe"] and r["ra"]["caisse"], r["ra"]
-    assert r["aRapporter"]["etape"] == 3 and r["aRapporter"]["ligne"].startswith("RAPPORTE LA CAISSE"), r["aRapporter"]
+    assert r["aRapporter"]["etape"] == 4 and r["aRapporter"]["ligne"].startswith("RAPPORTE LA CAISSE"), r["aRapporter"]
     assert r["pendant3"]["texte"].startswith("Reviens au casse-croûte"), r["pendant3"]
     assert r["fait"] is True and r["argent"] == [200], r
+    assert r["ensuite"] == 6, "l'acte 2 s'ouvre : les volontaires"
 
 
 def test_r01_le_carnet_rattrape_roy_semee_puis_le_coffre_de_l_hotel_sans_une_etoile(banc):
