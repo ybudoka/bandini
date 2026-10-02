@@ -750,10 +750,10 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 # cles par defaut et les scenes), et il faut donc que le moteur soit defini.
 from . import (  # noqa: E402
     e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f10, f11, f12, f13, ambulance_de_nuit, m1, m2, m3,
-    m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
+    m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, nouvelle_inspectrice, s01,
     s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
     e04, e06, e07, e10, la_pointe, s02, s05, s06, s09, s10, s11,
-    dette_de_rocco, garage_de_rocco, d07, d08, dette_du_docteur, h07, la_une, scoop_du_maire, l06, r02, r03, r04, r05, r06, r07, r08, s07, s12, s14, e13, q12, q09, q08, i01, i02, i03, i05, i06, i08, h08, d09, t01, t02, t03, t04, t05, t06, t09, t11, t12, t13, t14, t15, q07, m98,
+    dette_de_rocco, garage_de_rocco, d07, d08, dette_du_docteur, h07, la_une, scoop_du_maire, l06, r03, r04, r06, r07, r08, s07, s12, s14, e13, q12, q09, q08, i01, i02, i03, i05, i06, i08, h08, d09, t01, t02, t03, t04, t05, t06, t09, t11, t12, t13, t14, t15, q07, m98,
     x01, x02, x03, x04, i04, i07,
     p06, p07, p08, p12,
     e08, e09, e11, s04, s13,
@@ -819,7 +819,8 @@ from . import (  # noqa: E402
 # ⚠️ s07, s12, s14, e13, q12, q09 (30 sept. 2026, vague 12) : ce qui restait des districts, avec des donneurs qui
 # existent — le camion de Prévost au quai, la retraite de Gilles, trois autos-patrouilles en cubes pour Ti-Loup, la
 # berline de Diane reprise au lot, la mère de Josée à l'urgence, la course des débardeurs.
-# ⚠️ r02 à r05 (30 sept. 2026, vague 10) : Roy contre Bouchard — l'inspectrice reprend son carnet (r02), puis le
+# ⚠️ `nouvelle_inspectrice` (r01, r05, r02) : 2 oct. 2026, un CHAPITRE des autres arcs, vague R. Avant :
+# r02 à r05 (30 sept. 2026, vague 10) : Roy contre Bouchard — l'inspectrice reprend son carnet (r02), puis le
 # CHOIX : son stool (r03) ou le sergent qui lui vole son char (r04) ; et le camion des pièces à conviction (r05).
 # r06 à r08 (vague 11) : de chaque bord, ce que le choix ouvre — les affiches et la patrouille avec Roy, l'auto
 # banalisée avec Bouchard.
@@ -848,7 +849,7 @@ CATALOGUE: list[Mission] = [
     f04.MISSION, f05.MISSION, f06.MISSION, f07.MISSION, f09.MISSION, f11.MISSION,
     ambulance_de_nuit.MISSION, p01.MISSION, q03.MISSION, e12.MISSION,
     f02.MISSION, f03.MISSION, f08.MISSION,
-    q04.MISSION, e02.MISSION, r01.MISSION, s01.MISSION,
+    q04.MISSION, e02.MISSION, s01.MISSION,
     p13.MISSION, p14.MISSION,
     m52.MISSION, m53.MISSION, m54.MISSION,
     q01.MISSION, q10.MISSION, q11.MISSION, s08.MISSION,
@@ -864,7 +865,8 @@ CATALOGUE: list[Mission] = [
     dette_de_rocco.MISSION, garage_de_rocco.MISSION, d07.MISSION, d08.MISSION,
     dette_du_docteur.MISSION, h07.MISSION,
     la_une.MISSION, scoop_du_maire.MISSION, l06.MISSION,
-    r02.MISSION, r03.MISSION, r04.MISSION, r05.MISSION, r06.MISSION, r07.MISSION, r08.MISSION,
+    # ⚠️ À la place de r02 : Norbert (l'acte 3) se nomme dans q07, plus haut — « qui parle se nomme ».
+    nouvelle_inspectrice.MISSION, r03.MISSION, r04.MISSION, r06.MISSION, r07.MISSION, r08.MISSION,
     s07.MISSION, s12.MISSION, s14.MISSION, e13.MISSION, q12.MISSION, q09.MISSION,
     q08.MISSION, i01.MISSION, i02.MISSION, i03.MISSION, i04.MISSION, i05.MISSION, i06.MISSION, i07.MISSION, i08.MISSION, h08.MISSION,
     x01.MISSION, x02.MISSION, x03.MISSION, x04.MISSION,

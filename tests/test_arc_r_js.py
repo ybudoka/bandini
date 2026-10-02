@@ -1,4 +1,9 @@
-"""L'arc R, Roy contre Bouchard (M16, vague 10, 30 sept. 2026) — r02 à r05 JOUÉES au bouton.
+"""L'arc R, Roy contre Bouchard (M16, vague 10, 30 sept. 2026) — JOUÉ au bouton.
+
+⚠️ Depuis le 2 oct. 2026, r01, r05 et r02 sont les trois ACTES de _La nouvelle inspectrice_ (docs/jalons/
+des-missions-en-chapitres.md, vague R) ; le choix (r03/r04) et ses suites restent des missions. Les juges de r05 et
+r02 commencent le chapitre là où une vieille partie le reprendrait (acte 2, acte 3) ; celui de r01 est dans
+`test_missions_longues_js.py`.
 
 - Roy n'est au poste qu'après r01 (`arrive_apres`), dedans (`point:roy`).
 - r02 : le carnet au coffre de l'hôtel (la poignée de main de Norbert), rapporté à Roy ; le choix s'ouvre.
@@ -10,7 +15,7 @@ from outils_missions import OUTILS, PLUS_LONGUES
 from test_arc_f_js import DEDANS
 from test_arc_p_js import RECHARGER
 
-AVANT_R = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'r01']
+AVANT_R = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'r01', 'r05']
 
 CHEZ_ROY = """
   function chezRoy(L, o) {
@@ -55,7 +60,7 @@ def test_r02_roy_reprend_son_carnet_et_pose_le_marche(banc):
         dedans(L, o, 'poste');
         const avant = !!B.entites.find(function (e) { return e.personnage === 'roy'; });
         sortir(L, o);
-        faites(L, ['r01']);
+        faites(L, ['r01', 'r05']);
         const j = recharger(L);
         const argent = paiements(L);
         const chez = chezRoy(L, o);
@@ -64,12 +69,12 @@ def test_r02_roy_reprend_son_carnet_et_pose_le_marche(banc):
         dedans(L, o, 'poste'); serrer(L, o, 'roy'); finir(L, o);
         const choix = ['r03', 'r04'].map(function (s) { return L.Histoire.disponibles().some(function (m) { return m.slug === s; }); });
         return { avant: avant, chez: chez, carnet: carnet, dites: dites, choix: choix,
-                 fait: !!p.missionsFaites.r02, argent: argent.map(function (a) { return a.montant; }) };
+                 fait: !!p.missionsFaites.r02 && !!p.missionsFaites.nouvelle_inspectrice, argent: argent.map(function (a) { return a.montant; }) };
     }""")
     assert r["avant"] is False, "pas de Roy au poste avant r01"
-    assert r["chez"] == {"piece": "poste", "la": True, "mission": "r02"}, r["chez"]
-    assert r["carnet"] == 1, r
-    for dite in ("pendant:roy:0", "accueil:norbert:0", "pendant:roy:1"):
+    assert r["chez"] == {"piece": "poste", "la": True, "mission": "nouvelle_inspectrice"}, "Roy donne le chapitre, à l'acte 3"
+    assert r["carnet"] == 12, r
+    for dite in ("pendant:roy:10", "pendant:roy:11", "accueil:norbert:11", "pendant:roy:12"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [150], r
     assert r["choix"] == [True, True], "après r02, les deux côtés du choix"
@@ -147,30 +152,48 @@ def test_r04_l_auto_de_roy_au_lot_ferme_r03(banc):
     assert "r03" in r["fermees"], "le sergent a gagné : plus de stool pour Roy"
 
 
-def test_r05_le_camion_des_pieces_a_conviction_au_garage(banc):
-    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + RECHARGER + DEDANS + CHEZ_ROY + """
+def _r05(banc, mourir=False):
+    return banc("function (L, o) {" + OUTILS + PLUS_LONGUES + RECHARGER + DEDANS + CHEZ_ROY + """
         L.Jeu.commencer(); L.graine(6);
         const B = L.B, p = B.partie;
-        faites(L, """ + _avant("r02", "r04") + """);
+        faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'r01']);
         const j = recharger(L);
         const argent = paiements(L);
         const mission = chezBouchard(L, o);
         const po = L.Histoire.lieu('poste');
         j.x = po.x; j.y = po.y; L.Entites.indexer();
         laNuit(L, o); jouer(L, o);
+        if (""" + ("true" if mourir else "false") + """) {
+            L.Missions.hopital('banc');
+            for (let k = 0; k < 900 && (B.transition || B.cinema || !B.menu); k++) { o.frame(1); ecouter(L); }
+            return { mission: mission, menu: B.menu ? B.menu.items.map(function (i) { return i.libelle; }) : null,
+                     echec: dites.filter(function (d) { return d.indexOf('echec:') === 0; }) };
+        }
         const vol = volerEtSemer(L, o);
         const baie = L.Histoire.lieuDeLivraison('garage');
         vol.v.x = baie.x; vol.v.y = baie.y; vol.v.vitesse = 0; j.x = vol.v.x; j.y = vol.v.y; L.Entites.indexer();
-        finir(L, o);
-        return { mission: mission, slug: vol.slug, semer: vol.semer, cache: vol.cache, dites: dites,
+        jouer(L, o, 20);
+        return { mission: mission, slug: vol.slug, semer: vol.semer, cache: vol.cache, dites: dites, apres: etape(L),
                  fait: !!p.missionsFaites.r05, argent: argent.map(function (a) { return a.montant; }) };
     }""")
-    assert r["mission"] == "r05", r
-    assert r["slug"] == "camion" and r["semer"]["etape"] == 2 and r["semer"]["etoiles"] >= 2, r
+
+
+def test_r05_le_camion_des_pieces_a_conviction_au_garage(banc):
+    r = _r05(banc)
+    assert r["mission"] == "nouvelle_inspectrice", "Bouchard donne le chapitre, à l'acte 2"
+    assert r["slug"] == "camion" and r["semer"]["etape"] == 8 and r["semer"]["etoiles"] >= 2, r
     assert r["cache"]["apres"] == 0, r
-    for dite in ("pendant:bouchard:1", "pendant:bouchard:2", "pendant:bouchard:3"):
+    for dite in ("pendant:bouchard:5", "pendant:bouchard:6", "pendant:bouchard:7", "pendant:bouchard:8"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [250], r
+    assert r["apres"] >= 11 and "pendant:roy:10" in r["dites"], "l'acte 3 s'ouvre : Roy appelle"
+
+
+def test_r05_mort_au_poste_reprendre_l_acte_2_et_son_echec(banc):
+    r = _r05(banc, mourir=True)
+    assert r["mission"] == "nouvelle_inspectrice"
+    assert r["menu"][:2] == ["REPRENDRE L'ACTE 2", "PLUS TARD"], r
+    assert r["echec"] == ["echec:bouchard:5"], "on entend l'échec de r05, pas celui du carnet"
 
 
 # --- La fin de l'arc R (vague 11, 30 sept. 2026) : les affiches et la patrouille avec Roy, l'auto banalisée avec

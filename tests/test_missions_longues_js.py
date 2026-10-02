@@ -430,7 +430,7 @@ def test_r01_le_carnet_rattrape_roy_semee_puis_le_coffre_de_l_hotel_sans_une_eto
     r = _jouer(banc, """
         debut(L);
         const B = L.B, j = B.joueur, argent = paiements(L);
-        L.Histoire.demarrer('r01');
+        L.Histoire.demarrer('nouvelle_inspectrice');   // r01 est son acte 1 (2 oct. 2026)
         passer(L, o);
         heure(L, true);
         const poste = L.Histoire.lieu('poste');
@@ -455,7 +455,7 @@ def test_r01_le_carnet_rattrape_roy_semee_puis_le_coffre_de_l_hotel_sans_une_eto
     """)
     assert r["pendant1"]["qui"] == "bouchard" and r["pendant1"]["texte"].startswith("Il roule vers le pont"), r["pendant1"]
     assert r["ra"]["tombe"] and r["ra"]["caisse"], r["ra"]
-    assert r["apresCarnet"] == {"etape": 2, "etoiles": 1}, f"le carnet, puis Roy : une étoile, posée par la mission {r}"
+    assert r["apresCarnet"] == {"etape": 3, "etoiles": 1}, f"le carnet, puis Roy : une étoile, posée par la mission {r}"
     assert r["pendant2"]["texte"].startswith("Roy t'a vu partir"), r["pendant2"]
     assert r["s"]["seme"] and r["s"]["depart"] == 1, r["s"]
     assert r["pendant3"]["texte"].startswith("Pas au poste"), r["pendant3"]
