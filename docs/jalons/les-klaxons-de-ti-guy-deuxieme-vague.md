@@ -43,3 +43,8 @@ dictionnaire ; juges `tests/test_klaxons_de_ti_guy_js.py` (neuf juges ; trois mu
   (`captures/klaxons/accent/`) — une règle qui ne gagne pas s'en va.
 - ⚠️ **La Soirée du hockey n'y est pas** : pas de transcription fiable de l'air. Elle attend une partition.
 - Dix voix de Ti-Guy et quatre bruitages : générés, ⚠️ **pas écoutés** par une oreille humaine.
+- **L'accent anglais, retiré le 3 oct. 2026** : Martin a comparé SANS et AVEC (crie-3, cucaracha, police) —
+  « c'est mieux sans » ; et « ça doit dépendre de la langue de la voix » : Ti-Guy est une voix québécoise, il dit
+  l'anglais comme un gars d'ici, et l'IPA lui mettait un son étranger dans la bouche. Les sept règles sont parties
+  (le juge de l'IPA oublie ɹ, æ, ʌ, ɚ) ; les trois voix SANS gardées de côté sont revenues, et Dixie, la marche
+  nuptiale et Bip-bip, faites avec les règles, sont refaites sans.

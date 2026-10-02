@@ -15,6 +15,9 @@
   PAREIL pour 5 (gang, job, y'a, ET, Y a), AVEC ne gagnait que pour astheure et
   piastres. Les voix québécoises d'eleven_v3 disent déjà bien le parler d'ici :
   une règle qui n'aide pas nuit. Ne rien ajouter « au cas où ».
+  Le 3 oct. 2026, les mots ANGLAIS de Ti-Guy (les klaxons : Cracker Jack,
+  whoop-whoop, Camaro), en IPA anglais : SANS gagnait encore. Les sept règles
+  sont parties (Dixie, Dukes of Hazzard, Road Runner et Just married avec elles).
 
   ⚠️ Phonème IPA OU alias, celui que l'oreille a choisi. Le phonème dit le son
   exact ; il ne vaut que pour eleven_v3 (multilingual_v2 l'ignore) — toutes les
@@ -68,19 +71,6 @@
        Écouté le 24 sept. 2026 (Ti-Paul), quatre variantes : l'alias
        « Anvoueille » gagne, devant « Envoueille » et les IPA ɑ̃vwɛːj, ɑ̃ˈvwɛj. -->
   <lexeme><grapheme>Envoye</grapheme><alias>Anvoueille</alias></lexeme> <!-- dit : Anvoueille -->
-
-  <!-- LES MOTS ANGLAIS DE TI-GUY (les klaxons, docs/jalons/les-klaxons-de-ti-guy-deuxieme-vague.md).
-       Écouté le 30 sept. 2026 SANS (Ti-Guy, « une boîte de Cracker Jack ») : Martin veut que la voix
-       « utilise plus l'accent anglais pour les mots en anglais » ; v3 les lisait à la française. Des
-       phonèmes ANGLAIS (ɹ, æ, ʌ, ɚ) pour ces mots seulement : une balise d'accent colorerait toute la
-       réplique. AVEC : à confirmer à l'écoute. -->
-  <lexeme><grapheme>Cracker Jack</grapheme><phoneme>ˈkɹækɚ ˈdʒæk</phoneme></lexeme> <!-- dit : Crak-eur Djak, à l'anglaise -->
-  <lexeme><grapheme>whoop-whoop</grapheme><phoneme>ˈwʊp ˈwʊp</phoneme></lexeme> <!-- dit : woup-woup, à l'anglaise -->
-  <lexeme><grapheme>Camaro</grapheme><phoneme>kəˈmɛɹoʊ</phoneme></lexeme> <!-- dit : Ka-mé-ro, à l'anglaise -->
-  <lexeme><grapheme>Dukes of Hazzard</grapheme><phoneme>ˈduks əv ˈhæzɚd</phoneme></lexeme> <!-- dit : Doukss ov Hazeurd, à l'anglaise -->
-  <lexeme><grapheme>Dixie</grapheme><phoneme>ˈdɪksi</phoneme></lexeme> <!-- dit : Dik-si, à l'anglaise -->
-  <lexeme><grapheme>Road Runner</grapheme><phoneme>ˈɹoʊd ˈɹʌnɚ</phoneme></lexeme> <!-- dit : Rôde Reuneur, à l'anglaise -->
-  <lexeme><grapheme>Just married</grapheme><phoneme>ˈdʒʌst ˈmæɹid</phoneme></lexeme> <!-- dit : Djeust Maride, à l'anglaise -->
 
   <!-- =================================================================== -->
   <!-- ===== EN RÉSERVE : les autres formes des mots écoutés ============= -->
