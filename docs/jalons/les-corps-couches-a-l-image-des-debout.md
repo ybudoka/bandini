@@ -42,3 +42,10 @@ la pancarte). Même longueur que debout, même tenue.
   écrites à la main. `test_garderobe_js.py` : le chapeau tombe à côté de la tête sans la toucher.
   `test_decapotable_l_hiver_js.py` : la conductrice couchée l'hiver a sa tuque. **Cinq mutations, toutes
   rouges** (l'ancre propre, les yeux, la tenue, le chapeau resté sur la tête, les `o` collés fermés).
+- **Les yeux fermés, pour vrai** (Martin, 3 oct. 2026 : « ferme-leur les yeux ») : fermés en `k`, ils
+  se lisaient comme deux pupilles qui fixent le ciel. Ils sont maintenant une **paupière** (`z`,
+  `Atlas.paupiere` : la peau du passant ombrée vers un brun chaud ; la garde-robe la tire de la peau de
+  la tenue). Le mime (ses yeux sont des `k` dans le fard) et la mascotte (un reflet sur une pupille, et
+  c'était le reflet d'une oreille qu'on fermait) **nomment** leurs yeux (`yeux`, en [x, y] debout), avec
+  leur paupière à eux : grise sur le fard, fourrure sombre. `Atlas.grilleCouchee` est ce que la cuisson
+  peint et ce que le juge lit. Cinq mutations rouges, dont la paupière noire et la paupière couleur de peau.

@@ -574,7 +574,7 @@ const Garderobe = (function () {
     const p = tn.couleur_bas || '#2a2a3a', t = tn.couleur_chapeau || '#1a1a22', a = tn.accent || '#c0392b';
     return {
       k: '#101018', o: '#ffffff', e: '#1a1a22', w: '#efe6d0', W: '#f7f2e6', y: '#e8e23c', v: '#1a1a1a',
-      s: s, S: melange(s, h, 0.45),
+      s: s, S: melange(s, h, 0.45), z: Atlas.paupiere(s),
       h: h, H: melange(h, '#000000', 0.3),
       c: c, C: melange(c, '#000000', 0.28), Q: melange(c, '#ffffff', 0.3),
       p: p, b: tn.couleur_souliers || '#1a1a1a',

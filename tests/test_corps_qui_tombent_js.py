@@ -95,8 +95,9 @@ DEBOUT_ET_COUCHE = """
       let debout, couche;
       if (e.tenue) { debout = L.Garderobe.grille(e.tenue, 'bas', 0); couche = L.Garderobe.grille(e.tenue, 'couche', 0); }
       else {
-        debout = L.Saisons.ficheDuMoment(e.sprite, L.SPRITES[e.sprite])[1].poses.bas[0];
-        couche = L.Atlas.coucher(debout);
+        const fiche = L.Saisons.ficheDuMoment(e.sprite, L.SPRITES[e.sprite])[1];
+        debout = fiche.poses.bas[0];
+        couche = L.Atlas.grilleCouchee(fiche);
       }
       return { debout: debout, couche: couche, image: { w: ic.canvas.width, h: ic.canvas.height, ancre: ic.ancre, pose: ic.pose },
                imageDebout: { w: ib.canvas.width, h: ib.canvas.height } };
@@ -110,7 +111,8 @@ def test_le_corps_a_terre_est_le_corps_debout_tourne(banc):
     (la robe, le short, les bottes, la coiffure, la barbe, la carrure). Maintenant, chaque pixel du
     passant debout se retrouve à terre, tourné d'un quart de tour (la tête à droite) — tous les
     passants du catalogue, ceux de la garde-robe comme ceux dessinés à la main — et seuls les yeux
-    changent : fermés, en contour."""
+    changent : fermés, en paupière (`z`). Le mime (ses yeux dans le fard) et la mascotte (un reflet
+    sur une pupille) nomment les leurs (`yeux`) : sans eux, ils fixaient le ciel."""
     r = banc("""function (L) {
         """ + DEBOUT_ET_COUCHE + """
         L.Jeu.commencer();
@@ -123,7 +125,7 @@ def test_le_corps_a_terre_est_le_corps_debout_tourne(banc):
             tous++;
             const v = c[x][H - 1 - y];
             if (v === b[y][x]) continue;
-            if (v === 'k' && b[y][x] === 'o') yeux++; else manque++;
+            if (v === 'z') yeux++; else manque++;
           }
           c.forEach(function (r) { couches += r.replace(/\\./g, '').length; });
           out[a.slug] = { forme: [d.image.w, d.image.h, d.imageDebout.h, d.imageDebout.w], pose: d.image.pose,
@@ -138,8 +140,9 @@ def test_le_corps_a_terre_est_le_corps_debout_tourne(banc):
             f"{slug} : couché {c['forme'][:2]}, debout {c['forme'][2:]} (hauteur, largeur) — pas le même corps"
         assert c["tous"] > 60, slug
         assert c["manque"] == 0 and c["enTrop"] == 0, f"{slug} : {c['manque']} pixels du corps debout perdus à terre"
-        assert c["yeux"] <= 2, f"{slug} : {c['yeux']} pixels blancs fermés — un `o` qui n'était pas un oeil"
-    fermes = [s for s, c in r.items() if c["yeux"] == 2]
+        assert c["yeux"] <= 4, f"{slug} : {c['yeux']} pixels fermés — un `o` qui n'était pas un oeil"
+    assert r["amuseur"]["yeux"] == 2 and r["mascotte"]["yeux"] == 4, "le mime ou la mascotte a les yeux ouverts à terre"
+    fermes = [s for s, c in r.items() if c["yeux"] >= 2]
     assert len(fermes) > len(r) // 2, f"les yeux restent ouverts à terre ({len(fermes)} sur {len(r)} fermés)"
 
 
@@ -168,21 +171,33 @@ def test_le_corps_a_terre_tombe_sur_ses_pieds(banc):
 
 def test_coucher_ferme_les_yeux_et_rien_d_autre(banc):
     """`Atlas.coucher` est un quart de tour : la tête (en haut) passe à droite, le côté gauche en
-    haut. Les yeux sont les `o` SEULS de la première rangée qui en a : la chemise de l'avocat (un `o`
-    plus bas) et le fard du mime (tout en `o`, les yeux en contour) ne bougent pas."""
+    haut. Les yeux sont les `o` SEULS de la première rangée qui en a, fermés en paupière (`z`, pas le
+    `k` du contour : un point noir dans un visage est une pupille — Martin, 3 oct. 2026 : « ferme-leur
+    les yeux ») : la chemise de l'avocat (un `o` plus bas) et le fard du mime (tout en `o`) ne bougent
+    pas. Un dessin qui NOMME ses yeux (`yeux`, en [x, y] debout) les voit fermés, et rien d'autre ; la
+    paupière est la peau ombrée, ni noire ni la peau."""
     r = banc("""function (L) {
         const A = L.Atlas;
         return {
           tour: A.coucher(['ab', 'cd', 'ef']),
           yeux: A.coucher(['.oo.', 'o..o', '.o..']),
           mime: A.coucher(['oooo', 'okko']),
+          nommes: A.coucher(['oooo', 'okko'], [[1, 1], [2, 1]]),
+          peau: '#e8b088', paupiere: A.paupiere('#e8b088'),
+          garderobe: L.Garderobe.palette({ peau: '#5a3420' }).z, foncee: A.paupiere('#5a3420'),
           ancre: A.ancreCouchee(['....', '.kk.', '.kk.', '.kk.']),
         };
     }""")
     assert r["tour"] == ["eca", "fdb"]
     # La première rangée a des `o` collés : ce ne sont pas des yeux ; la deuxième, si.
-    assert r["yeux"] == [".k.", "o.o", "..o", ".k."]
+    assert r["yeux"] == [".z.", "o.o", "..o", ".z."]
     assert r["mime"] == ["oo", "ko", "ko", "oo"]
+    assert r["nommes"] == ["oo", "zo", "zo", "oo"]
+    peau, lid = (int(r["peau"][1:], 16), int(r["paupiere"][1:], 16))
+    somme = lambda n: (n >> 16 & 255) + (n >> 8 & 255) + (n & 255)  # noqa: E731
+    assert somme(lid) < somme(peau) - 60, f"la paupière {r['paupiere']} est la peau {r['peau']}"
+    assert somme(lid) > 3 * 0x30, f"la paupière {r['paupiere']} est noire : une pupille"
+    assert r["garderobe"] == r["foncee"], "la garde-robe ne peint pas la paupière de la peau du passant"
     assert r["ancre"] == [1, 3]
 
 

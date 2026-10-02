@@ -46,28 +46,44 @@ const Atlas = (function () {
 
   /** LE CORPS A TERRE (docs/jalons/les-corps-couches-a-l-image-des-debout.md) : la grille debout de
       face (`bas`), tournee d'un quart de tour — la tete a droite, sur le dos — et les yeux fermes :
-      les `o` SEULS (aucun `o` a cote) de la premiere rangee qui en a deviennent `k`. Plus bas, un
-      `o` est une chemise ; et le fard du mime, tout en `o`, n'a pas d'yeux a fermer.
+      les `o` SEULS (aucun `o` a cote) de la premiere rangee qui en a deviennent `z`, la PAUPIERE
+      (`paupiere`, la peau ombree). Plus bas, un `o` est une chemise ; et le fard du mime, tout en
+      `o`, n'a pas d'yeux a trouver : son dessin les nomme (`yeux`, des [x, y] de la grille debout).
+      ⚠️ Pas `k` : un point noir dans un visage, c'est une pupille — les morts fixaient le ciel (Martin,
+      3 oct. 2026 : « ferme-leur les yeux »).
       Pure : (lignes, chaines ou tableaux) -> lignes. Rien d'autre ne change : la longueur du corps
       a terre est sa hauteur debout, et il porte ce qu'il porte debout.
       ⚠️ Avant le 2 oct. 2026, chaque dessin avait un `couche` a la main, tire d'un gabarit de
       12 px : plus court que le corps debout, et sans sa tenue (Martin : « pas equivalent »). */
-  function coucher(lignes) {
+  function coucher(lignes, nommes) {
     const H = lignes.length, W = H ? lignes[0].length : 0;
     const o = function (x, y) { return y >= 0 && y < H && lignes[y][x] === 'o'; };
     const seul = function (x, y) { return o(x, y) && !o(x - 1, y) && !o(x + 1, y) && !o(x, y - 1) && !o(x, y + 1); };
     let yeux = -1;
     for (let y = 0; y < H && yeux < 0; y++) for (let x = 0; x < W; x++) if (seul(x, y)) { yeux = y; break; }
+    const ferme = nommes
+      ? function (x, y) { return nommes.some(function (q) { return q[0] === x && q[1] === y; }); }
+      : function (x, y) { return y === yeux && seul(x, y); };
     const out = [];
     for (let y = 0; y < W; y++) {
       let r = '';
       for (let x = 0; x < H; x++) {
         const ch = lignes[H - 1 - x][y];
-        r += (H - 1 - x === yeux && seul(y, yeux)) ? 'k' : ch;
+        r += ferme(y, H - 1 - x) ? 'z' : ch;
       }
       out.push(r);
     }
     return out;
+  }
+
+  /** La grille couchee d'un dessin : sa pose `bas` couchee, ses yeux nommes fermes. Ce que `cuire` peint. */
+  function grilleCouchee(def) { return coucher(def.poses.bas[0], def.yeux); }
+
+  /** La couleur d'une paupiere fermee (`z`) : la peau `peau`, ombree vers un brun chaud. */
+  function paupiere(peau) {
+    const n = parseInt((peau || '#e8b088').slice(1), 16), c = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    const vers = [58, 32, 20];
+    return '#' + c.map(function (v, i) { return Math.round(v + (vers[i] - v) * 0.42).toString(16).padStart(2, '0'); }).join('');
   }
 
   /** L'ancre d'un corps couche (`coucher(lignes)`) : le milieu de sa longueur, sous son flanc —
@@ -112,20 +128,19 @@ const Atlas = (function () {
     // Le corps a terre se CUIT de la pose debout (`coucher`), a la demande : un passant ne tombe pas
     // toujours. Son ancre est a lui (`ancres`), la grille couchee n'a pas la forme de la debout.
     if (def.poses.bas && !def.machine && !def.poses.couche) {
-      const debout = def.poses.bas[0];
       let couche = null;
       Object.defineProperty(poses, 'couche', {
         enumerable: true, configurable: true,
         get: function () {
           if (!couche) {
             const c = Base.nouveauCanvas(def.h, def.w);
-            peindreGrille(c.getContext('2d'), coucher(debout), pal, def.h, def.w, false);
+            peindreGrille(c.getContext('2d'), grilleCouchee(def), Object.assign({ z: paupiere(pal.s) }, pal), def.h, def.w, false);
             couche = [c];
           }
           return couche;
         },
       });
-      cuit.ancres = { couche: ancreCouchee(debout) };
+      cuit.ancres = { couche: ancreCouchee(def.poses.bas[0]) };
     }
     cache.set(cle, cuit);
     return cuit;
@@ -571,5 +586,5 @@ const Atlas = (function () {
       et seuls les dessins qui la lisent se recuisent — pas les chars ni les passants. */
   function oublier(prefixe) { for (const k of Array.from(cache.keys())) if (k.indexOf(prefixe) === 0) cache.delete(k); }
 
-  return { valider, cuire, coucher, ancreCouchee, toitDe, projeter, cuireCap, grilleDuCap, ouTombe, cuireTuile, cuirePeintre, texte, largeurTexte, normaliser, connait, vider, oublier, get taille() { return cache.size; } };
+  return { valider, cuire, coucher, grilleCouchee, ancreCouchee, paupiere, toitDe, projeter, cuireCap, grilleDuCap, ouTombe, cuireTuile, cuirePeintre, texte, largeurTexte, normaliser, connait, vider, oublier, get taille() { return cache.size; } };
 })();

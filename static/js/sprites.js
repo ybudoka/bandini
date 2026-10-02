@@ -346,8 +346,10 @@ SPRITES.conductrice.hiver = (function (f) {
    sa pose debout couchee (`Atlas.coucher`), la pancarte comprise. */
 SPRITES.mascotte = {
   w: 16, h: 20, ancre: [8, 19],
-  pal: { k: '#101018', h: '#8a5a2b', s: '#efe0c0', c: '#c0392b', p: '#4a3320', o: '#ffffff' },
+  pal: { k: '#101018', h: '#8a5a2b', s: '#efe0c0', c: '#c0392b', p: '#4a3320', o: '#ffffff', z: '#5a3a1a' },
   swaps: ['c', 'h', 's', 'p'],
+  // Ses yeux : le reflet (`o`) sur la pupille (`k`), dans la fourrure. A terre, une paupiere de fourrure sombre (`z`).
+  yeux: [[5, 5], [10, 5], [5, 6], [10, 6]],
   poses: {
     bas: [
       ['..khk.kkkk.khk..', '.khhhkhhhhkhhhk.', 'khhshhhhhhhhshhk', '.khhhhhhhhhhhhk.', '..khhhhhhhhhhk..', '.khhhohhhhohhhk.', '.khhhksssskhhhk.', '.khhhsskksshhhk.', '..khsssssssshk..', '..khhsksskshhk..', '...khhskkshhk...', '....khhhhhhk....', '..kkhhcccchhkk..', '.khhhhhcchhhhhk.', '.khhhhhhhhhhhhk.', '.khhhhhhhhhhhhk.', '.kskhhhhhhhhksk.', '..kkppphhpppkk..', '...kpppkkpppk...', '....kkk..kkk....'],
@@ -1087,8 +1089,10 @@ SPRITES.amuseur = {
   // ⚠️ Le `d` est le BLEU MARINE de la mariniere, pas le noir du contour : a
   // douze pixels, une raie noire sur du creme se confond avec le contour et le
   // mime redevient une silhouette blanche.
-  pal: { k: '#101018', s: '#e8b088', h: '#2a2a2a', c: '#efe6d0', p: '#1a1a22', o: '#ffffff', d: '#2b3a6b', b: '#1a1a22' },
+  pal: { k: '#101018', s: '#e8b088', h: '#2a2a2a', c: '#efe6d0', p: '#1a1a22', o: '#ffffff', d: '#2b3a6b', b: '#1a1a22', z: '#a8a8b4' },
   swaps: ['c', 'h', 's', 'p'],
+  // Ses yeux, dans le fard (`o`) : `Atlas.coucher` ne les trouve pas seul. A terre, la paupiere (`z`) est grise.
+  yeux: [[5, 3], [6, 3]],
   poses: {
     bas: [
       ['...kkkkkk...', '..kkkkkkkk..', '...koooook..', '...kokkook..', '...kooooko..', '....kook....', '..kcccccck..', '..kddddddk..', '..kcccccck..', '..kddddddk..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
