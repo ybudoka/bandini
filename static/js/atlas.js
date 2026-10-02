@@ -44,6 +44,45 @@ const Atlas = (function () {
     }
   }
 
+  /** LE CORPS A TERRE (docs/jalons/les-corps-couches-a-l-image-des-debout.md) : la grille debout de
+      face (`bas`), tournee d'un quart de tour — la tete a droite, sur le dos — et les yeux fermes :
+      les `o` SEULS (aucun `o` a cote) de la premiere rangee qui en a deviennent `k`. Plus bas, un
+      `o` est une chemise ; et le fard du mime, tout en `o`, n'a pas d'yeux a fermer.
+      Pure : (lignes, chaines ou tableaux) -> lignes. Rien d'autre ne change : la longueur du corps
+      a terre est sa hauteur debout, et il porte ce qu'il porte debout.
+      ⚠️ Avant le 2 oct. 2026, chaque dessin avait un `couche` a la main, tire d'un gabarit de
+      12 px : plus court que le corps debout, et sans sa tenue (Martin : « pas equivalent »). */
+  function coucher(lignes) {
+    const H = lignes.length, W = H ? lignes[0].length : 0;
+    const o = function (x, y) { return y >= 0 && y < H && lignes[y][x] === 'o'; };
+    const seul = function (x, y) { return o(x, y) && !o(x - 1, y) && !o(x + 1, y) && !o(x, y - 1) && !o(x, y + 1); };
+    let yeux = -1;
+    for (let y = 0; y < H && yeux < 0; y++) for (let x = 0; x < W; x++) if (seul(x, y)) { yeux = y; break; }
+    const out = [];
+    for (let y = 0; y < W; y++) {
+      let r = '';
+      for (let x = 0; x < H; x++) {
+        const ch = lignes[H - 1 - x][y];
+        r += (H - 1 - x === yeux && seul(y, yeux)) ? 'k' : ch;
+      }
+      out.push(r);
+    }
+    return out;
+  }
+
+  /** L'ancre d'un corps couche (`coucher(lignes)`) : le milieu de sa longueur, sous son flanc —
+      le corps tombe la ou se tenaient ses pieds, centre sur eux. */
+  function ancreCouchee(lignes) {
+    const H = lignes.length, W = H ? lignes[0].length : 0;
+    let x0 = 99, x1 = -1, y1 = -1;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (lignes[y][x] === '.') continue;
+      // (x, y) debout tombe en (H - 1 - y, x) couche.
+      x0 = Math.min(x0, H - 1 - y); x1 = Math.max(x1, H - 1 - y); y1 = Math.max(y1, x);
+    }
+    return x1 < 0 ? [H >> 1, W - 1] : [(x0 + x1 + 1) >> 1, y1 + 1];
+  }
+
   /** Cuit un sprite ; `swaps` = { lettre: couleur }. Rend { w, h, ancre, poses }. */
   function cuire(nom, def, swaps) {
     const cle = nom + '|' + (swaps ? JSON.stringify(swaps) : '');
@@ -70,6 +109,24 @@ const Atlas = (function () {
       poses[base + 'droite'] = poses[pose];
     }
     const cuit = { w: def.w, h: def.h, ancre: def.ancre || [def.w >> 1, def.h - 1], poses: poses };
+    // Le corps a terre se CUIT de la pose debout (`coucher`), a la demande : un passant ne tombe pas
+    // toujours. Son ancre est a lui (`ancres`), la grille couchee n'a pas la forme de la debout.
+    if (def.poses.bas && !def.machine && !def.poses.couche) {
+      const debout = def.poses.bas[0];
+      let couche = null;
+      Object.defineProperty(poses, 'couche', {
+        enumerable: true, configurable: true,
+        get: function () {
+          if (!couche) {
+            const c = Base.nouveauCanvas(def.h, def.w);
+            peindreGrille(c.getContext('2d'), coucher(debout), pal, def.h, def.w, false);
+            couche = [c];
+          }
+          return couche;
+        },
+      });
+      cuit.ancres = { couche: ancreCouchee(debout) };
+    }
     cache.set(cle, cuit);
     return cuit;
   }
@@ -514,5 +571,5 @@ const Atlas = (function () {
       et seuls les dessins qui la lisent se recuisent — pas les chars ni les passants. */
   function oublier(prefixe) { for (const k of Array.from(cache.keys())) if (k.indexOf(prefixe) === 0) cache.delete(k); }
 
-  return { valider, cuire, toitDe, projeter, cuireCap, grilleDuCap, ouTombe, cuireTuile, cuirePeintre, texte, largeurTexte, normaliser, connait, vider, oublier, get taille() { return cache.size; } };
+  return { valider, cuire, coucher, ancreCouchee, toitDe, projeter, cuireCap, grilleDuCap, ouTombe, cuireTuile, cuirePeintre, texte, largeurTexte, normaliser, connait, vider, oublier, get taille() { return cache.size; } };
 })();

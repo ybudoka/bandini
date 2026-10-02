@@ -35,6 +35,7 @@ comme en jeu, debout, de profil et renversés :
 - **La planche d'abord** : tous les passants du catalogue peints par `Entites.dessiner`, debout, de
   profil et renversés (un script Playwright du scratchpad). C'est elle qui a trouvé les 14 morts
   debout — aucun juge ne regardait la pose d'un mort.
+- ⚠️ **Remplacé le 2 oct. 2026** ([les corps couchés à l'image des debout](les-corps-couches-a-l-image-des-debout.md)) : le gabarit et les 18 poses `couche` tirées de lui sont retirés ; le corps à terre se cuit de la pose debout.
 - **Le gabarit** (`SPRITES.joueur.poses.couche`, donc tout ce que la garde-robe habille) : sur le
   dos, la tête à droite, les bras en croix, une tête de cinq rangées où les cheveux entourent le
   visage et où les yeux sont fermés. Quatre variantes comparées à ×9 ; le profil tourné de 90° a

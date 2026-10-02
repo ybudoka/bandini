@@ -160,10 +160,10 @@ def test_l_hiver_elle_descend_en_tuque(banc):
             memeAncre: JSON.stringify(ete.ancre) === JSON.stringify(hiver.ancre),
             tuque: lignes.slice(0, 3).join('').replace(/[^qQf]/g, '').length,
             bottes: (lignes[13] + lignes[14]).indexOf('s') < 0,
-            couche: JSON.stringify(hiver.poses.couche) === JSON.stringify(ete.poses.couche),
+            couche: L.Atlas.coucher(lignes).join('').replace(/[^qQf]/g, '').length,
         };
     }""")
     assert f["memeForme"] and f["memeAncre"], "le corps d'hiver n'a pas la forme de la robe : elle sauterait"
     assert f["tuque"] >= 12, f"la tuque ne couvre que {f['tuque']} pixels du crâne"
     assert f["bottes"], "l'hiver, elle a encore les jambes nues"
-    assert f["couche"], "par terre, la tuque tombe : `couche` reste celle de la robe"
+    assert f["couche"] >= 12, "par terre, elle est son corps d'hiver couché (`Atlas.coucher`), la tuque comprise"

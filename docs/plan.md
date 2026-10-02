@@ -78,7 +78,6 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
-| Les corps couchés à l'image des debout | ⬜ **en cours** | 2 oct. 2026 | **P2** | **correctif** | [fiche](jalons/les-corps-couches-a-l-image-des-debout.md#fiche) |
 | Reprendre un acte sans redire la fin d'avant | ⬜ **en cours** (Martin, 3 oct. 2026 : à la reprise d'un chapitre, le donneur de l'acte d'avant redit sa fin au téléphone) | 3 oct. 2026 | **P2** | **correctif** | [fiche](jalons/reprendre-un-acte-sans-redire-la-fin-d-avant.md#fiche) |
 | Des comptoirs qui vendent ce que dit l'enseigne | ⬜ **à faire** (Martin, 3 oct. 2026 : des achats cohérents dans les commerces ; aujourd'hui la couleur de l'enseigne décide seule du comptoir — 53 enseignes sur 177 vendent ce que dit leur nom ; tranché par Martin : P2, et un commerce sans vente rend un service à lui) | — | **P2** | **correctif** | [fiche](jalons/des-comptoirs-qui-vendent-ce-que-dit-l-enseigne.md#fiche) |
 | Le lave-auto qu'on traverse, en vitre | ⬜ **en cours** (tranché par Martin : de la rue à la ruelle, sous un toit de verre, un convoyeur qui tire le char, la police voit sans entrer, l'étoile tombe à la sortie) | 30 sept. 2026 | **P4** | ajout | [fiche](jalons/le-lave-auto-qu-on-traverse.md#fiche) |

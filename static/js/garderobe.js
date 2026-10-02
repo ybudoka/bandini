@@ -524,8 +524,32 @@ const Garderobe = (function () {
 
   // ------------------------------------------------------------------ la tenue enfilee
 
+  /** LE CORPS A TERRE, habille : la pose debout de face, avec toute sa tenue, couchee par
+      `Atlas.coucher` (la tete a droite, les yeux fermes). Le chapeau TOMBE : il roule a cote de la
+      tete, a plat ; la capuche, elle, tient au manteau. Les rangees qu'il faut au chapeau s'ajoutent
+      au-dessus de la tete debout — couche, a droite : l'ancre (`Atlas.ancreCouchee` du squelette nu)
+      ne bouge pas. */
+  function grilleCouchee(tn) {
+    const tombe = tn.chapeau && tn.chapeau !== 'aucun' && tn.chapeau !== 'capuche' && CHAPEAUX[tn.chapeau];
+    const debout = grille(tombe ? Object.assign({}, tn, { chapeau: 'aucun' }) : tn, 'bas', 0);
+    let g = debout.map(function (r) { return r.split(''); });
+    if (tombe) {
+      // La tete du squelette NU : habille, une salopette n'a plus de `c` ou la chercher.
+      const c = CHAPEAUX[tn.chapeau].bas, t = tete(squelette(tn.squelette || 'homme').poses.bas[0]), w = c.g[0].length;
+      // Un pixel d'air entre le crane et le chapeau, et deux colonnes de cote : il a roule.
+      let y = t.haut - 1 - c.g.length;
+      while (y < 0) { g.unshift(vide(g[0].length)); y++; t.haut++; }
+      const x = Math.max(0, Math.min(g[0].length - w, t.x0 + Math.floor((t.x1 - t.x0 + 1 - w) / 2) + 2));
+      c.g.forEach(function (l, dy) {
+        for (let i = 0; i < l.length; i++) if (l[i] !== '.') pose(g, x + i, y + dy, l[i]);
+      });
+    }
+    return Atlas.coucher(g.map(function (r) { return r.join(''); }));
+  }
+
   /** La grille d'une pose habillee, en lettres — ce que `cuire` peint et ce que les juges lisent. */
   function grille(tn, nomPose, image) {
+    if (nomPose === 'couche') return grilleCouchee(tn);
     const sq = squelette(tn.squelette || 'homme');
     const src = sq.poses[nomPose] && sq.poses[nomPose][image || 0];
     if (!src) return null;
@@ -618,7 +642,19 @@ const Garderobe = (function () {
       if (!sq.poses[base + 'gauche']) definir(base + 'gauche', p, true);
       if (!sq.poses[base + 'droite']) definir(base + 'droite', p, false);
     }
-    const cuit = { w: sq.w, h: sq.h, ancre: sq.ancre, poses: poses, mains: sq.mains, tenue: tn };
+    // Le corps a terre : sa grille a sa forme a elle (couchee, et plus longue d'un chapeau tombe).
+    Object.defineProperty(poses, 'couche', {
+      enumerable: true, configurable: true,
+      get: function () {
+        if (!peintes.couche) {
+          const g = grille(tn, 'couche');
+          peintes.couche = [peindre(g, pal, g[0].length, g.length, false)];
+        }
+        return peintes.couche;
+      },
+    });
+    const cuit = { w: sq.w, h: sq.h, ancre: sq.ancre, ancres: { couche: Atlas.ancreCouchee(sq.poses.bas[0]) },
+                   poses: poses, mains: sq.mains, tenue: tn };
     cache.set(k, cuit);
     while (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value);
     return cuit;

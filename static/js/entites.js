@@ -6188,7 +6188,9 @@ const Entites = (function () {
     // le joueur marchait vers la gauche (Martin).
     const miroir = nom.endsWith('gauche');
     const main = def.mains ? (def.mains[miroir ? nom.slice(0, -6) + 'droite' : nom] || null) : null;
-    return { canvas: poses[Math.min(i, poses.length - 1)], ancre: cuit.ancre, pose: nom, main: main, miroir: miroir, largeur: cuit.w };
+    // ⚠️ Le corps a terre a SON ancre (`Atlas.coucher` : sa grille est tournee d'un quart de tour).
+    const ancre = (cuit.ancres && cuit.ancres[nom]) || cuit.ancre;
+    return { canvas: poses[Math.min(i, poses.length - 1)], ancre: ancre, pose: nom, main: main, miroir: miroir, largeur: cuit.w };
   }
 
   // --- La pose : ce que le corps fait en plus de marcher ---------------------------

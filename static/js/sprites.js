@@ -71,18 +71,11 @@ const SPRITES = {
       tech_saisie_bas: [['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '..kcccccck..', '.kcccccccck.', 'ksskcccckssk', 'kkkkcccckkkk', '..kppppppk..', '..kpppkpppk.', '..kppk.kppk.', '..kbbk.kbbk.', '..kkkk.kkkk.']],
       tech_saisie_cote: [['....kkkk....', '...khhhhk...', '...khhhhhk..', '...khssosk..', '...khssssk..', '...khsssk...', '....kssk....', '...kcccck...', '...kccccccss', '...kccccccss', '...kcckkkkkk', '...kppppk...', '...kppppk...', '...kpkkpk...', '...kbk.kbk..', '...kkk.kkk..']],
       tech_saisie_haut: [['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcccccck..', '.kkcccccckk.', '.kcccccccck.', '..kcccccck..', '..kppppppk..', '..kpppkpppk.', '..kppk.kppk.', '..kbbk.kbbk.', '..kkkk.kkkk.']],
-      // ⚠️ Une seule image, et l'entite pose `face = 'couche'` : c'est ainsi
-      // qu'un KO et un mort se dessinent sans faire tourner un canevas.
-      // ⚠️ LE GABARIT DE TOUS LES CORPS A TERRE (docs/jalons/des-corps-qui-tombent-pour-vrai.md) :
-      // sur le dos, la tete a droite, les bras en croix — une vraie tete, les cheveux autour et
-      // les yeux fermes (`k`). L'ancien etait un boudin : un pixel de peau au bout, sans bras.
-      // Chaque dessin a la main en tire le sien, avec ce qui le nomme (les balles du jongleur,
-      // les echasses, la raclette...). Un dessin SANS `couche` mourait DEBOUT (`imageDe` retombe
-      // sur `bas`) : le juge `test_corps_qui_tombent_js.py` le refuse.
-      couche: [
-        ['............', '............', '............', '............', '............', '............', '.....k......', '....ksk.kkk.',
-         '.kkkkcckhhhk', 'kbppccckskhk', 'kkppcccssshk', 'kbppccckskhk', '.kkkcckkhhhk', '...ksk..kkk.', '....k.......', '............'],
-      ],
+      // ⚠️ PAS DE POSE `couche` ICI, ni dans aucun dessin de passant : un KO et un mort (`face =
+      // 'couche'`) se CUISENT de la pose `bas`, tournee d'un quart de tour, les yeux fermes
+      // (`Atlas.coucher` ; docs/jalons/les-corps-couches-a-l-image-des-debout.md). Le gabarit dessine
+      // a la main faisait 12 px de long contre 16 debout, et n'avait pas la tenue : Martin ne
+      // reconnaissait plus le passant par terre.
       cote: [
         ['....kkkk....', '...khhhhk...', '...khhhhhk..', '...khssosk..', '...khssssk..', '...khsssk...', '....kssk....', '...kcccck...',
          '...kcccck...', '...kcckck...', '...kccksk...', '...kppppk...', '...kppppk...', '...kpkkpk...', '...kbk.kbk..', '...kkk.kkk..'],
@@ -239,8 +232,8 @@ SPRITES.enfant_velo = {
 
    Meme alphabet que `joueur` (`c` le bustier, `p` la jupe, `h` les cheveux,
    `s` la peau, `b` les talons) : les echanges du catalogue marchent pareil.
-   Pas de pose de coup — elle ne frappe personne ; `couche` est celle du
-   joueur, un corps par terre est un corps par terre. */
+   Pas de pose de coup — elle ne frappe personne ; a terre, c'est sa pose
+   debout couchee (`Atlas.coucher`), la robe comprise. */
 SPRITES.racoleuse = {
   w: 12, h: 16, ancre: [6, 15],
   pal: { k: '#101018', s: '#f0c098', h: '#f2d27a', c: '#ff3d8e', p: '#c2185b', o: '#ffffff', b: '#1a1a22' },
@@ -270,10 +263,6 @@ SPRITES.racoleuse = {
       ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhssosk..', '..khhssssk..', '..khhsssk...', '..khhkssk...', '..khkcccck..',
        '...kcccck...', '...kcckck...', '...kccksk...', '..kppppppk..', '.kpppppppk..', '....kssk....', '....kbbk....', '....kkkk....'],
     ],
-    couche: [
-      ['............', '............', '............', '............', '............', '............', '.....k.hhh..', '....ksk.kkkh',
-       '.kkkkcckhhhk', 'kbspccckskhk', 'kkspcccssshk', 'kbspccckskhk', '.kkkcckkhhhk', '...ksk..kkkh', '....k..hhh..', '............'],
-    ],
   },
 };
 
@@ -285,7 +274,7 @@ SPRITES.racoleuse = {
    le bas — le catalogue leur donne le MEME rose, une robe n'a pas de haut et de
    bas —, `h` les cheveux, `s` la peau. `d` (la ceinture et les plis) et `b` (les
    souliers) sont a elle et ne se troquent pas. Pas de pose de coup : elle ne
-   frappe personne ; `couche` est la sienne, la robe etalee. Assise au volant,
+   frappe personne ; a terre, sa pose debout couchee (`Atlas.coucher`). Assise au volant,
    c'est le corps du joueur qui la peint (`volant_*`) avec ses couleurs. */
 SPRITES.conductrice = {
   w: 12, h: 16, ancre: [6, 15],
@@ -316,10 +305,6 @@ SPRITES.conductrice = {
       ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhssosk..', '..khhssssk..', '..khhsssk...', '..khhkssk...', '..khhkcck...',
        '..khhcccsk..', '...kcdddk...', '...kppppk...', '..kppppppk..', '.kppdppdppk.', '....kssk....', '....kbbk....', '....kkkk....'],
     ],
-    couche: [
-      ['............', '............', '............', '............', '............', '............', '.....k.hhh..', '....ksk.kkkh',
-       '.kkkkcckhhhk', 'kbspdcckskhk', 'kkspdccssshk', 'kbspdcckskhk', '.kkkcckkhhhk', '...ksk..kkkh', '....k..hhh..', '............'],
-    ],
   },
 };
 
@@ -329,12 +314,11 @@ SPRITES.conductrice = {
    rangee — deux dessins d'un meme corps finissent par diverger : la tuque couvre les trois rangees du
    crane (le pompon `f` dans le contour, `q` la tuque, `Q` son revers), le col (`f`) prend le haut de la
    robe a l'epaule, les bras nus (`s`, rangees 8 et 9) deviennent des manches (`c`), les jambes (`s`,
-   rangees 13 et 14) des bottes (`b`, le blanc de ses souliers). `couche` reste la sienne : la tuque
-   tombe quand on est par terre. */
+   rangees 13 et 14) des bottes (`b`, le blanc de ses souliers). Par terre, elle est sa pose debout
+   couchee (`Atlas.coucher`) : la tuque aussi, elle est tricotee dans le dessin. */
 SPRITES.conductrice.hiver = (function (f) {
   const TUQUE = ['....kffk....', '...kqqqqk...', '..kQQQQQQk..'];
   const vetir = function (g, vue) {
-    if (vue === 'couche') return g;
     return g.map(function (r, y) {
       if (y < TUQUE.length) return TUQUE[y];
       if (y === 7 && vue !== 'haut') return r.replace(/c/g, 'f');
@@ -358,8 +342,8 @@ SPRITES.conductrice.hiver = (function (f) {
    Meme alphabet que `joueur` : `c` est la PANCARTE (pas un chandail — le
    catalogue lui donne un creme), `p` le pantalon, `h`, `s`, `b` comme
    d'habitude ; `r` la bande rouge et `d` l'encre sont a lui et ne se
-   troquent pas. Pas de pose de coup : il crie, il ne frappe pas ; `couche`
-   est celle du joueur, un corps par terre est un corps par terre. */
+   troquent pas. Pas de pose de coup : il crie, il ne frappe pas ; a terre,
+   sa pose debout couchee (`Atlas.coucher`), la pancarte comprise. */
 SPRITES.mascotte = {
   w: 16, h: 20, ancre: [8, 19],
   pal: { k: '#101018', h: '#8a5a2b', s: '#efe0c0', c: '#c0392b', p: '#4a3320', o: '#ffffff' },
@@ -381,9 +365,6 @@ SPRITES.mascotte = {
       ['.....khkk.......', '...kkhhhhkk.....', '..khhhhhhhhk....', '.khhhhhhhhhhk...', '.khhhhhhhhhhk...', '.khhhhhhhhohk...', 'khhhhhhhhskssk..', '.khhhhhhsssssk..', '.khhhhhhssssssk.', '.khhhhhhhssksk..', '..khhhhhhhhkk...', '...kkhhhhhk.....', '...khhhhhcck....', '..khhhhhhhhhk...', '..khhhhhhhhhk...', '..khhhhhhhhhk...', '...khhhhhhhk....', '....kpppppk.....', '....kpppppk.....', '.....kkkkk......'],
       ['.....khkk.......', '...kkhhhhkk.....', '..khhhhhhhhk....', '.khhhhhhhhhhk...', '.khhhhhhhhhhk...', '.khhhhhhhhohk...', 'khhhhhhhhskssk..', '.khhhhhhsssssk..', '.khhhhhhssssssk.', '.khhhhhhhssksk..', '..khhhhhhhhkk...', '...kkhhhhhk.....', '...khhhhhcck....', '..khhhhhhhhhk...', '..khhhhhhhhhk...', '..khhhhhhhhhk...', '...khhhhhhhk....', '...kppphhppk....', '...kpppkkppk....', '....kkk..kk.....'],
       ['.....khkk.......', '...kkhhhhkk.....', '..khhhhhhhhk....', '.khhhhhhhhhhk...', '.khhhhhhhhhhk...', '.khhhhhhhhohk...', 'khhhhhhhhskssk..', '.khhhhhhsssssk..', '.khhhhhhssssssk.', '.khhhhhhhssksk..', '..khhhhhhhhkk...', '...kkhhhhhk.....', '...khhhhhcck....', '..khhhhhhhhhk...', '..khhhhhhhhhk...', '..khhhhhhhhhk...', '...khhhhhhhk....', '....kpphpppk....', '....kppkpppk....', '.....kk.kkk.....'],
-    ],
-    couche: [
-      ['................', '................', '................', '................', '................', '................', '................', '................', '................', '..kkkkkk........', '.khhhhhhk.kk....', 'khhhhhhhhkhhkkk.', 'khhkhhhhhhhhhhhk', 'khhhshhhhhhhhhhk', 'khhhhhhhhhhhhhhk', '.khhhhhhhhhhhhhk', '..kkkkkkkkhhkkk.', '..........kk....', '................', '................'],
     ],
   },
 };
@@ -415,10 +396,6 @@ SPRITES.homme_sandwich = {
        '..krkcccckrk..', '..kckcckckck..', '..kckcckskck..', '..kckppppkck..', '..kkkkkkkkkk..', '...kpk..kpk...', '...kbk..kbk...', '...kkk..kkk...'],
       ['.....kkkk.....', '....khhhhk....', '....khhhhhk...', '....khssosk...', '....khssssk...', '....khsssk....', '.....kssk.....', '..kkkkkkkkkk..',
        '..krkcccckrk..', '..kckcckckck..', '..kckcckskck..', '..kckppppkck..', '..kkkkkkkkkk..', '.....kppk.....', '.....kbbk.....', '.....kkkk.....'],
-    ],
-    couche: [
-      ['..............', '..............', '..............', '......k.......', '.....ksk.kkk..', '..kkkkcckhhhk.', '.kbppccckskhk.', '.kkppcccssshk.',
-       '.kbppccckskhk.', '..kkkcckkhhhk.', '....ksk..kkk..', '.kkkkkkkkkkk..', '.krrrrrrrrrk..', '.kcdcddcdcdk..', '.kkkkkkkkkkk..', '..............'],
     ],
   },
 };
@@ -1053,10 +1030,6 @@ SPRITES.avocat = {
       ['............', '............', '....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kshhhhsk..',
        '...kssssk...', '..kccotock..', '.kckcotockc.', '.kskcctcksk.', '..kppppppk..', '..kppkkppk..', '..kbbk.kbbk.', '..kkkk.kkkk.'],
     ],
-    couche: [
-      ['............', '............', '............', '............', '............', '............', '.....k......', '....ksk.kkk.',
-       '.kkkkcckhhhk', 'kbppccokskhk', 'kkppcttssshk', 'kbppccokskhk', '.kkkcckkhhhk', '...ksk..kkk.', '....k.......', '............'],
-    ],
   },
 };
 /* --- Trois sortes de gens, pas trois palettes -------------------------------
@@ -1098,10 +1071,6 @@ SPRITES.musicien = {
       ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '..kcgggggk..', '..kcgssggk..', '...kcgggk...', '....kppppk..', '...kpp.ppk..', '...kk...kk..'],
       ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '..kcgggggk..', '..kcgggggk..', '...kssggk...', '....kppppk..', '...kpp.ppk..', '...kk...kk..'],
     ],
-    couche: [
-      ['............', '............', '............', '.....k......', '....ksk.kkk.', '.kkkkcckhhhk', 'kbppkgckskhk', 'kkppgggssshk',
-       'kbppkgckskhk', '.kkkcckkhhhk', '...ksk..kkk.', '....k.......', '............'],
-    ],
   },
 };
 // Le mime : chapeau melon, visage blanc, chandail raye. Trois formes
@@ -1139,10 +1108,6 @@ SPRITES.amuseur = {
       ['...kkkkkk...', '..kkkkkkkk..', '...koooook.s', '...kokkook.s', '...kooook..k', '....kok....k', '..kcccccck..', '..kddddddk..', '..kcccccck..', '..kddddddk..', '...kppppk...', '..kpp.ppk...', '..kk...kk...'],
       ['............', '...kkkkkk...', '..kkkkkkkk..', '...koooook..', '...kokkook..', '...kooook...', '..kcccccck..', '..kddddddk..', 'sskcccccck..', '..kddddddk..', '...kppppk...', '..kpp.ppk...', '..kk...kk...'],
     ],
-    couche: [
-      ['............', '............', '............', '.....k..kkk.', '....ksk.kkk.', '.kkkkdckhhhk', 'kbppcdckokhk', 'kkppcdcooohk',
-       'kbppcdckokhk', '.kkkcdkkhhhk', '...ksk..kkk.', '....k.......', '............'],
-    ],
   },
 };
 // ⚠️ DEUX images qui ne sont pas une marche : manteau ferme, manteau
@@ -1164,10 +1129,6 @@ SPRITES.exhibitionniste = {
     cote: [
       ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '...kccccck..', '...kccccck..', '...kccccck..', '...kccccck..', '....kbbbk...', '....kk.k....'],
       ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '...kccccck..', '...kccccck..', '...kccccck..', '...kccccck..', '....kbbbk...', '....k.kk....'],
-    ],
-    couche: [
-      ['............', '............', '............', '.....k......', '....ksk.kkk.', '.kkkkcckhhhk', 'kbcccccckskh', 'kkcccccssshk',
-       'kbccccckskhk', '.kkkcckkhhhk', '...ksk..kkk.', '....k.......', '............'],
     ],
   },
 };
@@ -1218,11 +1179,6 @@ SPRITES.jongleur = {
       ['.......jj.....', '.......jj.....', '..........vv..', '..........vv..', '..rr..........', '..rr..........', '....kkkkkk....', '....khhhhhk...', '....khsssok...', '....khssssk...', '....khsssk....', '.....kssk.....', '...skcccccks..', '..sskcdddcks..', '....kcdddck...', '....kccccck...', '.....kppppk...', '....kppk.kk...', '....kkk.......'],
       ['..............', '..............', '....rr....jj..', '....rr....jj..', '..vv..........', '..vv..........', '....kkkkkk....', '....khhhhhk...', '....khsssok...', '....khssssk...', '....khsssk....', '.....kssk.....', '...skcccccks..', '..sskcdddcks..', '....kcdddck...', '....kccccck...', '.....kppppk...', '....kppk.kk...', '....kkk.......'],
     ],
-    couche: [
-      ['..............', '..............', '..............', '..............', '..............', '..............', '..............', '..............',
-       '..............', 'j.....k.......', '.....ksk.kkk..', '..kkkkcckhhhk.', '.kbppccckskhk.', '.kkppcccssshk.', '.kbppccckskhk.', '..kkkcckkhhhk.',
-       '....ksk..kkk.v', '.....k......r.', '..............'],
-    ],
   },
 };
 // LE JONGLEUR DE FEU (docs/jalons/la-foire-fermee-l-hiver.md, vague 3) : l'hiver, le meme numero au meme
@@ -1245,7 +1201,7 @@ SPRITES.jongleur.hiver = (function (f) {
     });
   }
   const poses = {};
-  for (const nom in f.poses) poses[nom] = nom === 'couche' ? f.poses[nom] : f.poses[nom].map(flamber);
+  for (const nom in f.poses) poses[nom] = f.poses[nom].map(flamber);
   return Object.assign({}, f, {
     pal: Object.assign({}, f.pal, { y: '#ffe36a', f: '#ff7a1f' }),
     poses: poses,
@@ -1281,12 +1237,6 @@ SPRITES.echassier = {
       ['..kkkkkk....', '..kccccck...', '..kccccck...', '.kkkkkkkk...', '..ksssssk...', '..kssssok...', '...ksssk....', '..kccccck...', '.kcccccck...', '.kcccccck...', '..kccccck...', '..kppppk....', '..kppppk....', '.kppkkppk...', '.kppkkppk...', '.kkkkkkkk...', '..ee..ee....', '..ee..ee....', '..ee..ee....', '..ee..ee....', '..ee..ee....', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '..kkkkkkkk..'],
       ['....kkkkkk..', '....kccccck.', '....kccccck.', '...kkkkkkkk.', '....ksssssk.', '....kssssok.', '.....ksssk..', '....kccccck.', '...kcccccck.', '...kcccccck.', '....kccccck.', '....kppppk..', '....kppppk..', '...kppkkppk.', '...kppkkppk.', '...kkkkkkkk.', '....ee..ee..', '....ee..ee..', '....ee..ee..', '....ee..ee..', '....ee..ee..', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '..kkkkkkkk..'],
     ],
-    couche: [
-      ['............', '............', '............', '............', '............', '............', '............', '............',
-       '............', '............', '............', '............', '............', '............', '.....k..kck.', '....ksk.kck.',
-       '.kkkkcckhhhk', 'kbppccckskhk', 'kkppcccssshk', 'kbppccckskhk', '.kkkcckkhhhk', '...ksk..kkk.', 'kkeeeeeeeee.', '............',
-       '.keeeeeeeeek', '............'],
-    ],
   },
 };
 
@@ -1320,10 +1270,6 @@ SPRITES.contractuelle = {
       ['...kccccck..', '..kvvvvvvk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '...kcoock...', '...kcoock...', '...kccccck..', '....kppppk..', '...kppk.kk..', '...kkk......'],
       ['...kccccck..', '..kvvvvvvk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '...kcoock...', '...kcoock...', '...kccccck..', '....kppppk..', '....kpk.kk..', '....kk......'],
     ],
-    couche: [
-      ['............', '............', '............', '.....k..kvk.', '....ksk.kck.', '.kkkkcckhhhk', 'kbppcockskhk', 'kkppcoossshk',
-       'kbppccckskhk', '.kkkcckkhhhk', '...ksk..kkk.', '....k.......', '............'],
-    ],
   },
 };
 // Le chapeau LARGE (il deborde des deux cotes, personne d'autre n'en a),
@@ -1344,10 +1290,6 @@ SPRITES.touriste = {
     cote: [
       ['...kaaaak...', '.kaaaaaaaak.', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '..kbcccck...', '..kbcolck...', '..kbcccck...', '...kccccck..', '....kppppk..', '...kppk.kk..', '...kkk......'],
       ['...kaaaak...', '.kaaaaaaaak.', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '..kbcccck...', '..kbcolck...', '..kbcccck...', '...kccccck..', '....kppppk..', '....kpk.kk..', '....kk......'],
-    ],
-    couche: [
-      ['............', '............', '............', '.....k.kaaak', '....ksk.kaak', '.kkkkcckhhhk', 'kbppclckskhk', 'kkppcolssshk',
-       'kbppccckskhk', '.kkkcckkhhhk', '...ksk..kkk.', '....k.......', '............'],
     ],
   },
 };
@@ -1370,10 +1312,6 @@ SPRITES.ivrogne = {
       ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khhsssk..', '...khhhhk...', '....khhk....', '...kccccck..', '..gkccccck..', '..gkccccck..', '...kccccck..', '....kppppk..', '...kppk.kk..', '...kkk......'],
       ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khhsssk..', '...khhhhk...', '....khhk....', '...kccccck..', '..gkccccck..', '..gkccccck..', '...kccccck..', '....kppppk..', '....kpk.kk..', '....kk......'],
     ],
-    couche: [
-      ['............', '............', '............', '.....k......', '....ksk.kkk.', '.kkkkcckhhhk', 'kbppccckhkhk', 'kkppccchhshk',
-       'kbppccckhkhk', '.kkkcckkhhhk', '.gksk..kkk..', '.g..k.......', '............'],
-    ],
   },
 };
 // Le BANDEAU blanc et les JAMBES NUES : le seul de la ville a ne pas porter
@@ -1395,10 +1333,6 @@ SPRITES.jogger = {
       ['...kkkkkk...', '...kbbbbbk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '..skccccck..', '..skccccck..', '...kccccck..', '....kpppk...', '....kssssk..', '...kssk.kk..', '...kkk......'],
       ['...kkkkkk...', '...kbbbbbk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '..skccccck..', '..skccccck..', '...kccccck..', '....kpppk...', '....kssssk..', '....ksk.kk..', '....kk......'],
     ],
-    couche: [
-      ['............', '............', '............', '.....k......', '....ksk.kkk.', '.kkkkcckhhbk', 'kbsspcckskbk', 'kksspccssskk',
-       'kbsspcckskbk', '.kkkcckkhhbk', '...ksk..kkk.', '....k.......', '............'],
-    ],
   },
 };
 // La sacoche EN BANDOULIERE (une diagonale du haut de l'epaule a la hanche)
@@ -1419,10 +1353,6 @@ SPRITES.facteur = {
     cote: [
       ['...kccccck..', '..kvvvvvvk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kbcccck..', '...kcbcock..', '...kccbbck..', '...kccccck..', '....kppppk..', '...kppk.kk..', '...kkk......'],
       ['...kccccck..', '..kvvvvvvk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kbcccck..', '...kcbcock..', '...kccbbck..', '...kccccck..', '....kppppk..', '....kpk.kk..', '....kk......'],
-    ],
-    couche: [
-      ['............', '............', '............', '.o...k..kvk.', '....ksk.kck.', '.kkkkbckhhhk', 'kbppcbckskhk', 'kkppccbssshk',
-       'kbppcccbskhk', '.kkkcckkhhhk', '...ksk..kkk.', '....k...o...', '............'],
     ],
   },
 };
@@ -1456,10 +1386,6 @@ SPRITES.crieur = {
       ['...kvvvvk...', '..kcccccck..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '..okccccck..', '.ookccccck..', '..okccccck..', '...kccccck..', '....kppppk..', '...kppk.kk..', '...kkk......'],
       ['...kvvvvk...', '..kcccccck..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '..okccccck..', '.ookccccck..', '..okccccck..', '...kccccck..', '....kppppk..', '....kpk.kk..', '....kk......'],
     ],
-    couche: [
-      ['............', '............', '............', 'o....k..kvk.', '....ksk.kck.', '.kkkkcckhhhk', 'kbppccckskhk', 'kkppcccssshk',
-       'kbppccckskhk', '.kkkcckkhhhk', '...ksk..kkk.', '.oo.k....o..', '............'],
-    ],
   },
 };
 // ⚠️ LA RACLETTE EN TRAVERS, plus large que lui, et le SEAU jaune au
@@ -1482,10 +1408,6 @@ SPRITES.laveur = {
       ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '..lllllll...', '...kccccck..', '...kccccck..', '...kppppk...', '..gkppk.kk..', '..gkkk......'],
       ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '..lllllll...', '...kccccck..', '...kccccck..', '...kppppk...', '..gkppk.kk..', '..gkkk......'],
     ],
-    couche: [
-      ['............', '............', '............', '.....k......', '....ksk.kkk.', '.kkkkcckhhhk', 'kbppccckskhk', 'kkppcccssshk',
-       'kbppccckskhk', '.kkkcckkhhhk', 'gg.ksk..kkk.', 'gglllllll...', '............'],
-    ],
   },
 };
 // Le capuchon qui mange le visage et les mains DANS les poches : une
@@ -1506,10 +1428,6 @@ SPRITES.pickpocket = {
     cote: [
       ['...kkkkkk...', '...khhhhhk..', '...khhssok..', '...khsssk...', '...khssk....', '....kssk....', '...kccccck..', '...kcoock...', '...kccccck..', '...kccccck..', '....kppppk..', '...kppk.kk..', '...kkk......'],
       ['...kkkkkk...', '...khhhhhk..', '...khhssok..', '...khsssk...', '...khssk....', '....kssk....', '...kccccck..', '...kcoock...', '...kccccck..', '...kccccck..', '....kppppk..', '....kpk.kk..', '....kk......'],
-    ],
-    couche: [
-      ['............', '............', '............', '............', '.........kk.', '.kkkkkkkkhhk', 'kbppcccckshk', 'kkppcoccsshk',
-       'kbppcccckshk', '.kkkkkkkkhhk', '.........kk.', '............', '............'],
     ],
   },
 };

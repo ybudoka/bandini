@@ -79,40 +79,111 @@ def test_tout_passant_qu_on_renverse_tombe_couche(banc):
     assert r["debout"] == []
 
 
-def test_une_pose_couchee_est_couchee_et_montre_une_tete(banc):
-    """La pose `couche` de chaque dessin est un corps À TERRE : ses cheveux et ses jambes sont sur
-    les mêmes rangées (debout, les cheveux sont en haut et les jambes en bas) — ou, sans jambes à
-    voir (la mascotte), il est plus large que haut. Et on y voit une tête : de la peau (ou le fard
-    du mime) et des cheveux (ou un capuchon)."""
+#: Chaque passant du catalogue, debout de face puis à terre : les GRILLES de lettres que la cuisson
+#: peint (le banc n'a pas de pixels), et l'image qu'`imageDe` rend à terre (sa taille, son ancre).
+#: Sans chapeau : il tombe, il est jugé à part (`test_garderobe_js.py`).
+DEBOUT_ET_COUCHE = """
+    function lesDeux(L, a, court) {
+      const e = L.Entites.creerPieton(L.B.joueur.x, L.B.joueur.y, a);
+      if (e.tenue && e.tenue.chapeau !== 'capuche') e.tenue = Object.assign({}, e.tenue, { chapeau: 'aucun' });
+      // `court` : coiffe court, sans rien sur la tete — une crete perce la capuche, debout comme a terre.
+      if (e.tenue && court) e.tenue = Object.assign({}, e.tenue, { chapeau: 'aucun', coiffure: 'courte' });
+      e.horsSaison = true; e.vx = 0; e.vy = 0;
+      e.face = 'bas'; const ib = L.Entites.imageDe(e);
+      e.vivant = false; e.etat = 'mort'; e.face = 'couche'; const ic = L.Entites.imageDe(e);
+      L.Entites.retirer(e);
+      let debout, couche;
+      if (e.tenue) { debout = L.Garderobe.grille(e.tenue, 'bas', 0); couche = L.Garderobe.grille(e.tenue, 'couche', 0); }
+      else {
+        debout = L.Saisons.ficheDuMoment(e.sprite, L.SPRITES[e.sprite])[1].poses.bas[0];
+        couche = L.Atlas.coucher(debout);
+      }
+      return { debout: debout, couche: couche, image: { w: ic.canvas.width, h: ic.canvas.height, ancre: ic.ancre, pose: ic.pose },
+               imageDebout: { w: ib.canvas.width, h: ib.canvas.height } };
+    }
+"""
+
+
+def test_le_corps_a_terre_est_le_corps_debout_tourne(banc):
+    """Demande de Martin (2 oct. 2026) : les corps à terre « ne sont pas équivalents au personnage
+    debout ». Le gabarit couché commun faisait 12 px de long contre 16 debout et perdait la tenue
+    (la robe, le short, les bottes, la coiffure, la barbe, la carrure). Maintenant, chaque pixel du
+    passant debout se retrouve à terre, tourné d'un quart de tour (la tête à droite) — tous les
+    passants du catalogue, ceux de la garde-robe comme ceux dessinés à la main — et seuls les yeux
+    changent : fermés, en contour."""
     r = banc("""function (L) {
+        """ + DEBOUT_ET_COUCHE + """
+        L.Jeu.commencer();
         const out = {};
-        for (const nom in L.SPRITES) {
-          const d = L.SPRITES[nom];
-          if (!d.poses || !d.poses.couche || d.machine) continue;
-          const g = d.poses.couche[0];
-          let x0 = 99, x1 = -1, y0 = 99, y1 = -1;
-          g.forEach(function (r, y) { for (let x = 0; x < r.length; x++) if (r[x] !== '.') {
-            x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } });
-          const tout = g.join('');
-          const rangs = function (re) { return g.map(function (r, y) { return re.test(r) ? y : -1; }).filter(function (y) { return y >= 0; }); };
-          const cheveux = rangs(/h/), jambes = rangs(/[pb]/);
-          out[nom] = { w: x1 - x0 + 1, h: y1 - y0 + 1, largeur: d.w, hauteur: d.h, lignes: g.length,
-                       jambes: jambes.length, cote_a_cote: jambes.some(function (y) { return cheveux.indexOf(y) >= 0; }),
-                       peau: /[so]/.test(tout), cheveux: cheveux.length > 0 };
+        for (const a of L.B.defs.pietons.catalogue) {
+          const d = lesDeux(L, a), b = d.debout, c = d.couche, H = b.length;
+          let manque = 0, yeux = 0, tous = 0, couches = 0;
+          for (let y = 0; y < H; y++) for (let x = 0; x < b[y].length; x++) {
+            if (b[y][x] === '.') continue;
+            tous++;
+            const v = c[x][H - 1 - y];
+            if (v === b[y][x]) continue;
+            if (v === 'k' && b[y][x] === 'o') yeux++; else manque++;
+          }
+          c.forEach(function (r) { couches += r.replace(/\\./g, '').length; });
+          out[a.slug] = { forme: [d.image.w, d.image.h, d.imageDebout.h, d.imageDebout.w], pose: d.image.pose,
+                          tous: tous, manque: manque, yeux: yeux, enTrop: couches - tous };
         }
         return out;
     }""")
-    for nom in ("joueur", "musicien", "amuseur", "jongleur", "echassier", "exhibitionniste", "contractuelle",
-                "touriste", "ivrogne", "jogger", "facteur", "crieur", "laveur", "pickpocket",
-                "racoleuse", "conductrice", "avocat", "homme_sandwich", "mascotte"):
-        assert nom in r, f"{nom} n'a pas de pose couchée"
-    for nom, c in r.items():
-        assert c["lignes"] == c["hauteur"], nom
-        if c["jambes"]:
-            assert c["cote_a_cote"], f"{nom} : les jambes sous les cheveux, c'est un corps debout"
-        else:
-            assert c["w"] > c["h"], f"{nom} : {c['w']}x{c['h']}, ce n'est pas un corps à terre"
-        assert c["peau"] and c["cheveux"], nom
+    assert len(r) > 40
+    for slug, c in r.items():
+        assert c["pose"] == "couche", slug
+        assert c["forme"][0] == c["forme"][2] and c["forme"][1] == c["forme"][3], \
+            f"{slug} : couché {c['forme'][:2]}, debout {c['forme'][2:]} (hauteur, largeur) — pas le même corps"
+        assert c["tous"] > 60, slug
+        assert c["manque"] == 0 and c["enTrop"] == 0, f"{slug} : {c['manque']} pixels du corps debout perdus à terre"
+        assert c["yeux"] <= 2, f"{slug} : {c['yeux']} pixels blancs fermés — un `o` qui n'était pas un oeil"
+    fermes = [s for s, c in r.items() if c["yeux"] == 2]
+    assert len(fermes) > len(r) // 2, f"les yeux restent ouverts à terre ({len(fermes)} sur {len(r)} fermés)"
+
+
+def test_le_corps_a_terre_tombe_sur_ses_pieds(banc):
+    """Le corps couché est centré sur l'endroit où se tenaient ses pieds (l'ancre), et il repose
+    juste au-dessus : un mort ne glisse pas d'un demi-corps en tombant, et le plus long (l'échassier,
+    26 px avec ses échasses) aussi. Coiffé court et sans chapeau : l'ancre est celle du corps (le
+    squelette nu), une crête qui perce la capuche la dépasse."""
+    r = banc("""function (L) {
+        """ + DEBOUT_ET_COUCHE + """
+        L.Jeu.commencer();
+        const out = {};
+        for (const a of L.B.defs.pietons.catalogue) {
+          const d = lesDeux(L, a, true), c = d.couche;
+          let x0 = 99, x1 = -1, y1 = -1;
+          c.forEach(function (r, y) { for (let x = 0; x < r.length; x++) if (r[x] !== '.') { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y1 = Math.max(y1, y); } });
+          out[a.slug] = { milieu: (x0 + x1 + 1) / 2 - d.image.ancre[0], dessous: d.image.ancre[1] - y1, long: x1 - x0 + 1 };
+        }
+        return out;
+    }""")
+    for slug, c in r.items():
+        assert abs(c["milieu"]) <= 0.5, f"{slug} : le corps est décalé de {c['milieu']} px de ses pieds"
+        assert c["dessous"] == 1, f"{slug} : le corps flotte ou s'enfonce ({c['dessous']})"
+    assert r["echassier"]["long"] >= 26, "l'échassier tombe avec ses échasses"
+
+
+def test_coucher_ferme_les_yeux_et_rien_d_autre(banc):
+    """`Atlas.coucher` est un quart de tour : la tête (en haut) passe à droite, le côté gauche en
+    haut. Les yeux sont les `o` SEULS de la première rangée qui en a : la chemise de l'avocat (un `o`
+    plus bas) et le fard du mime (tout en `o`, les yeux en contour) ne bougent pas."""
+    r = banc("""function (L) {
+        const A = L.Atlas;
+        return {
+          tour: A.coucher(['ab', 'cd', 'ef']),
+          yeux: A.coucher(['.oo.', 'o..o', '.o..']),
+          mime: A.coucher(['oooo', 'okko']),
+          ancre: A.ancreCouchee(['....', '.kk.', '.kk.', '.kk.']),
+        };
+    }""")
+    assert r["tour"] == ["eca", "fdb"]
+    # La première rangée a des `o` collés : ce ne sont pas des yeux ; la deuxième, si.
+    assert r["yeux"] == [".k.", "o.o", "..o", ".k."]
+    assert r["mime"] == ["oo", "ko", "ko", "oo"]
+    assert r["ancre"] == [1, 3]
 
 
 @pytest.mark.parametrize("espece", ["chat", "raton"])

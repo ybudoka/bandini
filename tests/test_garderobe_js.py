@@ -89,11 +89,22 @@ def test_un_chapeau_se_pose_sur_la_tete_dans_chaque_vue_et_chaque_pose_debout(ba
             const g = G.grille(Object.assign({}, base, { chapeau: 'tuque' }), p, 0).join('');
             if (g.indexOf('t') < 0) sans[p] = true;
         });
-        const couche = G.grille(Object.assign({}, base, { chapeau: 'tuque' }), 'couche', 0).join('');
-        return { sans: Object.keys(sans), couche: couche.indexOf('t') >= 0 };
+        // Couché, le chapeau tombe : il est là, à côté de la tête, sans la toucher.
+        const g = G.grille(Object.assign({}, base, { chapeau: 'tuque' }), 'couche', 0);
+        let tuque = 0, colle = 0;
+        g.forEach(function (r, y) { for (let x = 0; x < r.length; x++) {
+            if (r[x] !== 't') continue;
+            tuque++;
+            [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
+                const v = (g[y + d[1]] || '')[x + d[0]];
+                if (v === 'h' || v === 's') colle++;
+            });
+        } });
+        return { sans: Object.keys(sans), tuque: tuque, colle: colle };
     }""")
     assert r["sans"] == [], f"la tuque tombe dans : {r['sans']}"
-    assert r["couche"] is False, "couché, le chapeau tombe"
+    assert r["tuque"] > 0, "couché, la tuque a disparu au lieu de tomber"
+    assert r["colle"] == 0, "couché, le chapeau est resté sur la tête"
 
 
 def test_les_passants_s_habillent_sans_tirer_un_seul_de(banc):
