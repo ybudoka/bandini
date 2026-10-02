@@ -3781,8 +3781,12 @@ const Vehicules = (function () {
       }
       poser(inter);
     });
+    // ⚠️ LA PLAQUE DE RUE (2 oct. 2026, `Panneaux`) : UNE par croisement, sur le poteau qui est déjà là —
+    // le panneau d'arrêt, ou le mât du coin nord-est d'un carrefour à feux. Un champ, pas une entité :
+    // aucun numéro de plus.
     function poser(inter) {
       if (inter.feux) {
+        let plaque = true;
         for (const coin of COINS(inter)) {
           const c = coinLibre(coin[0], coin[1]);
           // ⚠️ LE MAT SE PLANTE AU BORD DE SA TUILE, DU COTE DE LA RUE, pas en
@@ -3792,7 +3796,8 @@ const Vehicules = (function () {
           // bras passe la bordure a trois pixels et pend au-dessus de la voie,
           // ce qu'une potence est censee faire.
           const e = Entites.creer('feu', c[0] * TT + (coin[3] > 0 ? TT - 3 : 3), c[1] * TT + 15,
-                                  { inter: inter, axe: coin[2], bras: coin[3], traverses: [], r: 2, solide: false });
+                                  { inter: inter, axe: coin[2], bras: coin[3], traverses: [], r: 2, solide: false, plaque: plaque });
+          plaque = false;
           poteaux.set(c[0] + ',' + c[1], e);
         }
       } else if (inter.stop) {
@@ -3800,7 +3805,7 @@ const Vehicules = (function () {
                         'v': [inter.x - 1, inter.y - 1], '^': [inter.x + inter.l, inter.y + inter.h] };
         const c = coinLibre(coins[inter.stop][0], coins[inter.stop][1]);
         poteaux.set(c[0] + ',' + c[1], Entites.creer('stop', c[0] * TT + 8, c[1] * TT + 15,
-                                                     { inter: inter, decor: 'stop', r: 2, solide: false }));
+                                                     { inter: inter, decor: 'stop', r: 2, solide: false, plaque: true }));
       }
     }
     // ⚠️ LES FEUX PIETONS VIENNENT DE LA CARTE, pas d'un coin devine ici. Leur

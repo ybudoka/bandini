@@ -409,7 +409,7 @@ const Son = (function () {
   //: leur propre son (`borne_cassee`, `argent`, `monnaie`), joue par `briser`.
   const MATIERE_DU_BRIS = {
     lampadaire: 'pelle', parcometre: 'pelle', boite_aux_lettres: 'pelle', poteau_amarrage: 'pelle',
-    baril: 'pelle', baril_feu: 'pelle', caddie: 'pelle', kiosque_journaux: 'pelle', bbq: 'pelle',
+    baril: 'pelle', baril_feu: 'pelle', caddie: 'pelle', caddie_debout: 'pelle', kiosque_journaux: 'pelle', bbq: 'pelle',
     poubelle: 'pelle', poubelle_pleine: 'pelle',
     abribus: 'bouteille', abribus_nord: 'bouteille', abribus_est: 'bouteille', abribus_ouest: 'bouteille',
     bac: 'casse', cible_foire: 'casse', table_pique_nique: 'casse', chaise_sauveteur: 'casse',

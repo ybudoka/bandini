@@ -20,6 +20,10 @@ tout le reste) et on appuie.
 - **vider un parcomètre** (deuxième vague, 22 sept. 2026) — déjà posé devant les
   commerces (`mobilier.py`), jamais interactif : de la monnaie, et un DÉLIT
   (`recherche.DELITS`) — un passant qui voit peut aller le raconter ;
+- **fouiller le caddie couché**, puis le **redresser** et le **pousser** (deuxième vague,
+  2 oct. 2026) : il roule, il heurte, il sert de bélier (`static/js/caddies.js`) ;
+- **lire la plaque d'un coin de rue**, et **un panneau drôle** (`panneaux.py`) — une ligne par
+  pression, comme la plaque d'une statue ;
 - **ouvrir la borne-fontaine** : la gerbe que la ville connaît déjà quand un char
   défonce une borne, mais à la main — on s'y rafraîchit ;
 - **un pourboire** à l'artiste de rue : la pièce change vraiment de poche ;
@@ -284,6 +288,76 @@ AFFICHE: dict = {
 }
 
 
+# --- Le caddie ---------------------------------------------------------------------
+
+#: LE CADDIE COUCHÉ de la ville (deuxième vague, tranché par Martin le 2 oct. 2026) : il se FOUILLE
+#: d'abord, puis il se REDRESSE et se POUSSE à pied (`static/js/caddies.js`).
+#:
+#: ⚠️ **CE QU'ON Y TROUVE NE CASSE PAS LES COLLECTIONS** : de la monnaie, une canette consignée (les
+#: trouvailles des bacs, `TROUVAILLES`), ou un objet drôle qu'on laisse là — jamais une carte de
+#: hockey ni une bebelle, qui ont leurs places à elles (`collectionner.py`). Une fois par jour et par
+#: caddie, comme un bac ; l'objet drôle se choisit à l'empreinte du caddie et du jour, sans un dé de plus.
+#:
+#: ⚠️ **IL ROULE, IL HEURTE, IL SERT DE BÉLIER** : poussé, il prend la vitesse de qui le pousse
+#: (`pousse_x` de plus, il part devant) et roule ensuite sur sa lancée (`frottement` par image). LANCÉ AU
+#: SPRINT (ESQUIVE tenue, pas la course de tous les jours), et tant qu'il garde `belier` de vitesse, il
+#: bouscule le passant qu'il touche (un pas de côté et un mot, jamais un coup : ni PV, ni délit) et cogne
+#: le char (`degats_char`, et l'alarme d'un char garé qui en a une) ; sinon, il s'arrête contre lui. ⚠️ Le
+#: sprint, pas une vitesse : l'hiver, sans bottes, un sprint dans la neige (2,6 × 0,8) va moins vite que la
+#: course de l'été — `belier` reste sous lui. Un mur le renvoie (`rebond`). Il reste là où on le laisse, et
+#: la partie s'en souvient (`partie.caddies`).
+CADDIE: dict = {
+    "invite_fouiller": "FOUILLER LE CADDIE",
+    "invite_redresser": "REDRESSER LE CADDIE",
+    "redresse": "IL TIENT SUR SES ROUES — POUSSE-LE",
+    "decors": ("caddie",),
+    "debout": "caddie_debout",
+    "portee_px": PORTEE_PX,
+    # (poids, trouvaille) : UN `B.rng()`, ordonné comme écrit. `drole` : un des objets ci-dessous.
+    "table": ((30, "monnaie"), (15, "canettes"), (55, "drole")),
+    "droles": (
+        "UN SOULIER DÉPAREILLÉ. LE GAUCHE.",
+        "UN CIRCULAIRE DE 1994. LE BEURRE EST EN SPÉCIAL.",
+        "UNE COUPE STANLEY EN PLASTIQUE",
+        "UNE LISTE D’ÉPICERIE : « DU PAIN. »",
+        "UN BAS DE LAINE. JUSTE UN.",
+        "UN PIGEON. IL ÉTAIT LÀ AVANT TOI.",
+    ),
+    "pousse_x": 1.1,
+    "frottement": 0.975,
+    "vitesse_max": 3.2,
+    "belier": 1.6,
+    "rebond": 0.3,
+    "degats_char": 3,
+    "bouscule": ("R’GARDE OÙ TU POUSSES!", "C’EST PAS UN CHAR!", "AYOYE, MES ORTEILS!"),
+}
+
+# --- La plaque de rue et le panneau drôle ---------------------------------------------
+
+#: LA PLAQUE DE RUE (tranché par Martin le 2 oct. 2026) : la plaque bleue d'un coin, sur le poteau du
+#: panneau d'arrêt ou sur le mât d'un feu (un par croisement, `Vehicules.creerSignalisation`) ; ACTION
+#: dessous dit le coin. Le nom se lit sur la trame (`static/js/panneaux.js`, la même règle que
+#: `autobus.nom_de_coin` — un juge les compare) : rien de neuf dans la carte.
+PLAQUE: dict = {
+    "invite": "LIRE LA PLAQUE",
+    "portee_px": PORTEE_PX,
+    "duree_images": 420,
+    # Le coin, et le quartier où il est. ⚠️ Les ordinaux comme sur une plaque du Québec (`autobus.ordinal`) :
+    # « 1re », puis « 2e », « 3e »… Les rues de la bande nord se comptent depuis la couture, vers le nord.
+    "coin": "COIN {rue} ET {avenue} — {quartier}",
+    "rue": "{n} RUE",
+    "rue_nord": "{n} RUE NORD",
+    "avenue": "{n} AVENUE",
+}
+
+#: LE PANNEAU DRÔLE (`panneaux.py`, qui voyage dans la suite) : une ligne par pression, comme une plaque.
+PANNEAU: dict = {
+    "invite": "LIRE LE PANNEAU",
+    "portee_px": PORTEE_PX,
+    "duree_images": 420,
+}
+
+
 def exporter() -> dict:
     """Le catalogue tel que le navigateur le tient : des listes, jamais des tuples."""
     return {
@@ -305,4 +379,8 @@ def exporter() -> dict:
         "pourboire": {**POURBOIRE, "metiers": list(POURBOIRE["metiers"]),
                       "merci": {m: list(mots) for m, mots in POURBOIRE["merci"].items()}},
         "photo": {**PHOTO, "pourboire": list(PHOTO["pourboire"]), "merci": list(PHOTO["merci"])},
+        "caddie": {**CADDIE, "decors": list(CADDIE["decors"]), "table": [list(e) for e in CADDIE["table"]],
+                   "droles": list(CADDIE["droles"]), "bouscule": list(CADDIE["bouscule"])},
+        "plaque": dict(PLAQUE),
+        "panneau": dict(PANNEAU),
     }

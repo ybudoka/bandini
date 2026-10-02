@@ -8978,6 +8978,27 @@ const DECORS = {
     ctx.fillStyle = '#26262a'; ctx.fillRect(3, 1, 2, 2); ctx.fillRect(10, 1, 2, 2);   // les roues, vers le ciel
   } },
 
+  // LE CADDIE REDRESSE (le decor, les betes et les gens repondent, 2 oct. 2026) : le meme panier de fil
+  // de fer, sur ses quatre roues, vu d'en haut. ⚠️ `variantes` sert de POSE : le cote de la poignee
+  // rouge (0 au sud, 1 au nord, 2 a l'ouest, 3 a l'est) — celui de qui le pousse (`Caddies`). Il n'est
+  // jamais pose par la carte : c'est le caddie couche qu'on a remis sur ses roues.
+  caddie_debout: { variantes: 4, casse: 0.9, pv: 20, w: 18, h: 16, ancre: [9, 13], r: 5, sol: [5, 3], solide: true, peindre: function (ctx, w, h, pose) {
+    ctx.fillStyle = 'rgba(20,18,26,0.18)'; ctx.fillRect(3, 13, 12, 2);        // son ombre
+    ctx.fillStyle = '#26262a';                                                // les roues
+    ctx.fillRect(4, 12, 2, 2); ctx.fillRect(12, 12, 2, 2); ctx.fillRect(4, 5, 2, 1); ctx.fillRect(12, 5, 2, 1);
+    ctx.fillStyle = '#6f757c'; ctx.fillRect(4, 11, 10, 1);                    // le chassis
+    ctx.fillStyle = '#9aa0a6';                                                // le panier, en fil de fer
+    ctx.fillRect(3, 2, 12, 1); ctx.fillRect(4, 9, 10, 1); ctx.fillRect(3, 2, 1, 7); ctx.fillRect(14, 2, 1, 7);
+    for (let x = 6; x < 14; x += 3) ctx.fillRect(x, 3, 1, 6);                 // le grillage
+    ctx.fillRect(4, 5, 10, 1);
+    ctx.fillStyle = '#c4c9ce'; ctx.fillRect(3, 2, 12, 1);                     // le bord qui prend le jour
+    ctx.fillStyle = '#c0392b';                                                // la poignee rouge
+    if (pose === 1) ctx.fillRect(3, 0, 12, 2);
+    else if (pose === 2) { ctx.fillRect(0, 2, 2, 8); ctx.fillStyle = '#6f757c'; ctx.fillRect(2, 3, 1, 1); ctx.fillRect(2, 8, 1, 1); }
+    else if (pose === 3) { ctx.fillRect(16, 2, 2, 8); ctx.fillStyle = '#6f757c'; ctx.fillRect(15, 3, 1, 1); ctx.fillRect(15, 8, 1, 1); }
+    else { ctx.fillRect(3, 9, 12, 2); ctx.fillStyle = '#e05a4a'; ctx.fillRect(3, 9, 12, 1); }
+  } },
+
   // LA POUBELLE QUI DEBORDE : la cuve de `poubelle`, le couvercle de travers, un
   // sac qui depasse et un autre au pied. ⚠️ Ce n'est pas un decor de plus : c'est
   // la MEME poubelle, dans un quartier pauvre (`salete.deplacer` la change).

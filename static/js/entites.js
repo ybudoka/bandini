@@ -789,8 +789,18 @@ const Entites = (function () {
     const fiche = DECORS[d.decor] || {};
     if (!fiche.poussable || d.brise) return false;
     if (!d.chez) d.chez = { x: d.x, y: d.y };
-    const nx = d.x + mx, ny = d.y + my, sol = fiche.sol || [d.r, d.r];
+    const nx = d.x + mx, ny = d.y + my;
     if (Math.max(Math.abs(nx - d.chez.x), Math.abs(ny - d.chez.y)) > (fiche.portee || 0)) return false;
+    if (!decorPeutAller(d, nx, ny)) return false;
+    replacerDecor(d, nx, ny);
+    return true;
+  }
+
+  /** La boîte du décor `d`, posée en (nx, ny), tient-elle ? Ses quatre coins sur des tuiles libres
+      (solidité 0), et aucun autre décor solide dessous. ⚠️ La règle de la benne (`pousserDecor`),
+      reprise telle quelle par le caddie qu'on pousse (`Caddies`). */
+  function decorPeutAller(d, nx, ny) {
+    const fiche = DECORS[d.decor] || {}, sol = fiche.sol || [d.r, d.r];
     for (const sx of [-1, 1]) {
       for (const sy of [-1, 1]) {
         if (Monde.solidite(Math.floor((nx + sx * sol[0]) / TT), Math.floor((ny + sy * sol[1]) / TT)) !== 0) return false;
@@ -801,6 +811,12 @@ const Entites = (function () {
       const so = (DECORS[o.decor] || {}).sol || [o.r || 4, o.r || 4];
       if (Math.abs(nx - o.x) < sol[0] + so[0] && Math.abs(ny - o.y) < sol[1] + so[1]) return false;
     }
+    return true;
+  }
+
+  /** Poser le décor `d` en (nx, ny), sans rien vérifier, et tenir l'index fixe à jour : sans quoi
+      les piétons buteraient sur l'endroit qu'il a quitté et traverseraient celui où il est. */
+  function replacerDecor(d, nx, ny) {
     const ancienne = cle(d.x, d.y);
     d.x = nx; d.y = ny;
     if (cle(nx, ny) !== ancienne) {
@@ -810,9 +826,8 @@ const Entites = (function () {
         if (i >= 0) liste.splice(i, 1);
         if (!liste.length) grilleFixe.delete(ancienne);
       }
-      ajouterA(grilleFixe, d);
+      if (estIndexable(d)) ajouterA(grilleFixe, d);
     }
-    return true;
   }
 
   /** Y a-t-il deja quelqu'un debout ici ? ⚠️ Les deux branches de
@@ -4766,6 +4781,8 @@ const Entites = (function () {
       // difference entre une barre qui se remplit seule et une avance achetee.
       j.endurance = Math.min(v.endurance, j.endurance + v.endurance_par_image * 0.6);
     }
+    // Il sprinte VRAIMENT (ESQUIVE tenue, du souffle) : le caddie qu'il pousse part en belier (`Caddies`).
+    j.sprinte = sprinte;
     // L'HIVER A PIED (`rosa-habille-l-hiver.md`) : sans bottes, la neige au sol ralentit.
     const hiver = j === B.joueur && !j.nage ? hiverAPied(j) : null;
     if (hiver && hiver.neige) vitesse *= hiver.neige;
@@ -6405,7 +6422,7 @@ const Entites = (function () {
     // wagon passe devant un passant ou derriere, selon sa rangee — mais ils ne
     // sont PAS dans `B.entites` (la lecon des betes). `Foire` ajoute ce qui est
     // a l'ecran, et chacun porte son peintre.
-    if (!B.interieur) { Foire.ajouterVisibles(visibles, cx, cy); Traversier.ajouterVisibles(visibles, cx, cy); Navette.ajouterVisibles(visibles, cx, cy); Fetes.ajouterVisibles(visibles, cx, cy); Halloween.ajouterVisibles(visibles, cx, cy); RueDesSaisons.ajouterVisibles(visibles, cx, cy); Foyers.ajouterVisibles(visibles, cx, cy); Cabane.ajouterVisibles(visibles, cx, cy); Train.ajouterVisibles(visibles, cx, cy); FileDeFoire.ajouterVisibles(visibles, cx, cy); }
+    if (!B.interieur) { Foire.ajouterVisibles(visibles, cx, cy); Traversier.ajouterVisibles(visibles, cx, cy); Navette.ajouterVisibles(visibles, cx, cy); Fetes.ajouterVisibles(visibles, cx, cy); Halloween.ajouterVisibles(visibles, cx, cy); RueDesSaisons.ajouterVisibles(visibles, cx, cy); Foyers.ajouterVisibles(visibles, cx, cy); Cabane.ajouterVisibles(visibles, cx, cy); Train.ajouterVisibles(visibles, cx, cy); FileDeFoire.ajouterVisibles(visibles, cx, cy); Panneaux.ajouterVisibles(visibles, cx, cy); }
     const profond = function (e) { return e.remorqueePar ? e.remorqueePar.y + 0.5 : e.y; };
     visibles.sort(function (a, b) {
       return (a.vivant ? 1 : 0) - (b.vivant ? 1 : 0) || profond(a) - profond(b) || a.id - b.id;
@@ -6429,7 +6446,7 @@ const Entites = (function () {
       // l'EFFACE en silence : c'est ce qui est arrive aux feux, muets d'un
       // bout a l'autre de la ville parce qu'ils portaient `decor: 'feu'`.
       if (e.peindreFoire) { e.peindreFoire(ctx); continue; }
-      if (e.type === 'feu') { Vehicules.dessinerFeu(ctx, e, cx, cy); continue; }
+      if (e.type === 'feu') { Vehicules.dessinerFeu(ctx, e, cx, cy); if (e.plaque) Panneaux.dessinerPlaque(ctx, e, cx, cy); continue; }
       if (e.type === 'feu_pieton') { Vehicules.dessinerFeuPieton(ctx, e, cx, cy); continue; }
       if (e.decor) {                 // decor ET commerces ambulants
         const d = DECORS[e.decor];
@@ -6465,6 +6482,7 @@ const Entites = (function () {
         const vol = e.altitude || 0;
         ctx.drawImage(c, Math.round(e.x - d.ancre[0] - cx), Math.round(e.y - d.ancre[1] + houle - vol - cy));
         B.stats.images++;
+        if (e.plaque) Panneaux.dessinerPlaque(ctx, e, cx, cy);   // la plaque de rue du panneau d'arret
         continue;
       }
       if (e.type === 'vehicule') {
@@ -6579,7 +6597,7 @@ const Entites = (function () {
     plageEn, litLibre, coinDePlage, plageEnSaison, enSaison, majLesFoyers,
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele, mouiller,
     enjamber, majEnjambe, clotureDevant, reglesCloture,
-    blesser, assommer, tuer, alerter, klaxonne, tasser, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers, naitreLEquipe, pousserDecor, boiteTouche, majVolDeChar, emporterLeChar,
+    blesser, assommer, tuer, alerter, klaxonne, tasser, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers, naitreLEquipe, pousserDecor, decorPeutAller, replacerDecor, boiteTouche, majVolDeChar, emporterLeChar,
     majBagarre, allumerLaBagarre, frontiereProche, rivalDe, enPleineRixe, majAqueduc, JET_EAU_IMAGES,
     naitreLesEnfantsDeLaPlage, majPlage, plierBagage, naitreLeLastCall, chicaner, majCamelot, prochainPerron,
     poserLeJournal, rentrerLesJournaux, fairePartirUnRaton, bordDeLEau, chateauLePlusProche, majBallonVol, lancerLeBallon,

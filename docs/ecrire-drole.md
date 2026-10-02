@@ -144,6 +144,8 @@ le suivre, pas le précéder.
 | **Dialogues de mission** | `app/missions/<slug>.py` (`dialogue`, chaque réplique avec son `jeu=`) | listes `appel`/`intro`/`pendant`/`client`/`fin`/`echec` (+ `renvoi`, `accueil`) | Chaque temps a sa voix ; voir `comment-monter-les-missions.md`. |
 | **Enseignes / devantures** | `app/devantures.py` (`COMMERCES_COSSUS`, `COMMERCES_PAUVRES`, `A_LOUER`) | un nom de commerce, court, évocateur | Renommées et **placardées** par `app/vitrines.py` ; les cossus vs pauvres. |
 | **Graffitis / placardage** | `app/vitrines.py` (motifs de placardage) | motif visuel + texte court | Une vitrine sur trois en pauvre ; jamais au-dessus d'une enseigne visitable. |
+| **Panneaux drôles** | `app/panneaux.py` (`PANNEAUX`, un ou deux par district) | deux ou trois lignes, une par pression d'ACTION, chacune tient dans le toast | Un panneau de la Ville (ou de quelqu'un) qui se croit sérieux : la règle, puis la chute (« STATIONNEMENT INTERDIT… SAUF SI TU CONNAIS SAL. »). On frappe en haut — la Ville, le comité, le casino, les gangs —, et ce qu'un panneau nomme existe dans la ville (un juge le vérifie). |
+| **Objets du caddie** | `app/interactions.py` (`CADDIE["droles"]`, et `bouscule`) | une ligne : l'objet, parfois sa chute | Ce qu'on trouve dans un caddie couché et qu'on laisse là (« UN PIGEON. IL ÉTAIT LÀ AVANT TOI. ») ; jamais une carte ni une bebelle, qui ont leurs collections. Le passant qu'un caddie lancé bouscule dit un mot, pas une insulte. |
 
 ---
 

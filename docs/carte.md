@@ -374,6 +374,19 @@ La foule anonyme, les sortes posées, et les gens d'intérieur. `frequence`
   Shop. Au bord du sentier des grands parcs de quartier des Érables, cinq bustes (la mairesse
   Rose-Aimée Paradis, l'abbé Côté, l'inventeur Omer Gauthier). On lit leur plaque à ACTION, une
   ligne par pression.
+- **Plaques de rue** (`panneaux.js`) : une plaque bleue par croisement, sur le poteau du panneau
+  d'arrêt ou le mât nord-est d'un feu ; ACTION dessous dit le coin (« COIN 4e RUE ET 7e AVENUE — LE
+  FAUBOURG »). Les avenues se comptent d'ouest en est, les rues du nord au sud (comme les arrêts
+  d'autobus) ; dans la bande nord, depuis la couture : 1re Rue Nord, 2e Rue Nord… Rien dans la carte.
+- **Panneaux drôles** (`panneaux.py`) : quatorze, un ou deux par district, sur l'abord d'un trottoir
+  (l'herbe aux Friches) — le stationnement du Faubourg « sauf si tu connais Sal », Gérard le
+  nid-de-poule, la surveillance de Madame Gauthier et le comité des boîtes aux lettres aux Érables,
+  les jours sans accident de l'usine Prévost, les goélands des Quais, la baignade de La Pointe, la
+  maison qui gagne toujours au Dragon d'or, le terrain à vendre des Friches, la cueillette de scrap
+  des Boulonneux. On les lit à ACTION, une ligne par pression ; ils voyagent dans la suite du paquet.
+- **Caddies** : les dix-neuf caddies couchés de la ville (au pied des murs des plex, dans les épaves
+  des Friches et le bric-à-brac de la Gare) se fouillent, puis se redressent et se poussent
+  (`caddies.js`) ; un caddie qu'on a laissé debout reste où on l'a laissé.
 - **Aéroport** (`aeroport.py`) : l'aérogare (lieu `aeroport`, famille transport,
   pièce `aerogare` — comptoirs, sièges, carrousel, portiques), la tour de contrôle,
   deux hangars et la guérite (portes condamnées), la piste 09-27, la voie de

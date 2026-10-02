@@ -47,7 +47,7 @@ Et ce qui n'a pas été essayé : **arracher une affiche** « Recherché » (`po
 sans fin tant que les étoiles durent — il faut d'abord un plafond par affiche arrachée),
 **pousser un caddie**, **lire** un panneau.
 
-### Fiche du caddie et du panneau (tranché par Martin, 2 oct. 2026)
+### Fiche du caddie et du panneau (tranché par Martin, 2 oct. 2026) — ✅ livrée, voir les notes
 
 - **Le caddie, les deux** : le caddie couché de la ville se **fouille** d'abord (ACTION : de la monnaie, une
   canette consignée, des objets drôles — jamais une carte de hockey ni une bebelle, qui ont leurs places dans
@@ -59,6 +59,61 @@ sans fin tant que les étoiles durent — il faut d'abord un plafond par affiche
 - Le buisson reste annulé : ces deux gestes livrés, la deuxième vague l'est.
 
 ## Notes
+
+✅ **2e vague, la fin : le caddie et le panneau** (2 oct. 2026, tranché par Martin) — la deuxième vague est livrée
+(le buisson reste annulé).
+
+- **Le caddie, les deux** (`interactions.CADDIE`, `static/js/caddies.js`) : ACTION devant un caddie couché le
+  **fouille** (« FOUILLER LE CADDIE ») — de la monnaie, une canette consignée (les trouvailles des bacs) ou un objet
+  drôle qu'on laisse là (« UN PIGEON. IL ÉTAIT LÀ AVANT TOI. »), jamais une carte ni une bebelle ; une fois par jour
+  et par caddie (`partie.fouilles`, `cad:` + la tuile où il est né). Fouillé, la pression suivante le **redresse** :
+  c'est le MÊME décor (`caddie` → `caddie_debout`, aucune entité, aucun numéro), la poignée rouge du côté de qui
+  le pousse. **On le pousse en marchant dedans** : il prend la vitesse du joueur (+10 %), roule sur sa lancée et
+  ralentit, un mur le renvoie, il ne roule ni dans un mur ni sur un pas de porte, et il s'arrête contre un passant
+  ou un char. **Lancé au sprint** (ESQUIVE tenue, `j.sprinte`), c'est un **bélier** : il bouscule le passant (un
+  recul et un mot — « R’GARDE OÙ TU POUSSES! » —, ni PV, ni délit, ni étoile) et cogne le char (3 PV de tôle,
+  l'alarme d'un char garé qui en a une). Un char qui roule vers lui le pousse ; un char lancé l'écrase (son
+  `casse`, comme le caddie couché), et le matin le répare là où il est.
+- ⚠️ **Le bélier est un sprint, pas une vitesse** : le premier seuil (2,5 px/image) ne mordait jamais en janvier —
+  sans bottes, la neige ralentit le sprint à 2,08 (×0,8), sous la course de l'été. Le juge du banc l'a vu ; le
+  caddie retient maintenant qu'on l'a lancé au sprint (`d.lance`) et le reste tant qu'il garde 1,6 px/image
+  (`test_le_belier_tient_meme_au_sprint_dans_la_neige`).
+- **Il reste là où on le laisse** : `partie.caddies` (sa tuile de naissance → `[x, y, pose]`), et `Caddies.poser()`,
+  juste après `Entites.creerDecor`, le remet debout à sa place quand la partie se rouvre — avant la foule. Une partie
+  où l'on n'a touché à aucun caddie ne change pas d'un pixel. `Entites.pousserDecor` (la benne) est coupée en deux :
+  `decorPeutAller` (la boîte tient-elle là) et `replacerDecor` (l'index fixe suit), que le caddie reprend.
+- **La plaque de rue** (`static/js/panneaux.js`) : une par croisement, bleue, peinte sur le poteau du panneau d'arrêt
+  (par-dessus l'octogone) ou sur le mât nord-est d'un feu (la lame du côté opposé au bras) —
+  `Vehicules.creerSignalisation` marque le poteau `plaque`, un champ, pas une entité. ACTION dessous : « COIN 4e RUE
+  ET 7e AVENUE — LE FAUBOURG ». Le nom se lit sur la trame, avec la règle des arrêts d'autobus
+  (`autobus.nom_de_coin`) — un juge compare chaque arrêt nommé d'après son coin ; dans la bande nord, les rues se
+  comptent depuis la couture (1re Rue Nord, 2e Rue Nord…). ⚠️ `adresse.js` ne connaît pas les rues : c'est le module
+  des épreuves d'adresse (les défis debout). Rien de neuf dans la carte.
+- **Les panneaux drôles** (`app/panneaux.py`) : quatorze, un ou deux par district, en tôle de la Ville ou en
+  contreplaqué ; posés sur la ville FINIE sans un dé (l'abord collé à un trottoir, l'herbe aux Friches, hors des
+  territoires de gang, loin des portes, des coins et du décor) ; une ligne par pression, comme une plaque de
+  statue. Ni dans le décor ni dans la carte : ils voyagent dans la **suite** du paquet (`DANS_LA_SUITE`) et se
+  peignent dans le tri du dessin sans entité (`Panneaux.ajouterVisibles`).
+- ⚠️ **Le panneau d'un défi garde son bouton** : la plaque et le panneau drôle se lisent avec le décor, tout au bout
+  d'ACTION (`Interactions.decorSousLaMain`, le plus proche gagne) ; le défi est servi plus haut
+  (`Missions.interagir`). Un juge plante un panneau drôle sur la tuile même d'un panneau de défi.
+- **Le poids** : `interactions` 1 863 → 2 251 gzip (budget relevé à 2 600, la raison à sa ligne) ; la suite
+  28 855 → 30 264 bruts, 11 943 → 12 676 gzip — ⚠️ **ses plafonds relevés à 31 000 / 13 000, À VALIDER PAR
+  MARTIN** (`test_le_paquet_reste_leger`, le pourquoi y est écrit).
+- **Juges** : `test_caddie_et_panneaux.py` (6 : le caddie ne rend que monnaie et objets drôles, le bélier tient
+  au sprint dans la neige, un ou deux panneaux par district et tous posés, au bord du trottoir loin des portes,
+  sans dé ni carte, ce qu'un panneau nomme existe) et `test_caddie_et_panneaux_js.py` (18, **au bouton** : fouiller
+  puis redresser, l'objet drôle, pousser — il part devant, roule, s'arrête, la partie s'en souvient —, le mur, le
+  bélier contre un passant et contre un char, au sprint et pas à la course, la partie rouverte, rien ne naît ;
+  la plaque du stop et du feu, une par croisement, la même règle que les arrêts, la bande nord ; chaque panneau
+  drôle ligne par ligne et peint ; le défi qui garde son bouton ; chaque ligne tient dans le toast).
+- ⚠️ **Dix mutations, dix rouges** : redresser sans fouiller, la poussée retirée, le bélier jamais lancé, le bélier à
+  la course, la partie rouverte qui oublie, la plaque du stop retirée, le panneau lu AVANT le défi (en tête de
+  `Missions.interagir`), une ligne de panneau qui ne passe pas à la suivante, le mur ignoré, le char jamais cogné.
+- **Captures regardées** (Chromium) : le caddie couché, redressé (la poignée rouge du côté du joueur) et poussé
+  jusqu'au coin ; la plaque bleue sur un panneau d'arrêt et sur le mât d'un feu des Érables ; le panneau de la Ville
+  au Faubourg, le contreplaqué des Érables et celui des Friches.
+
 
 ✅ **2e vague, troisième geste : vider un parcomètre** (22 sept. 2026).
 

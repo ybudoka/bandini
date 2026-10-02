@@ -41,7 +41,10 @@ MESURE_DU_PAQUET: dict[str, tuple[int, int]] = {
     "garderobe": (3_460, 3_950),
     "personnages": (2_728, 3_150),
     "vehicules": (1_973, 2_300),
-    "interactions": (1_839, 2_150),
+    # Le caddie, la plaque de rue et le panneau drôle (2 oct. 2026, docs/jalons/le-decor-les-betes-et-les-gens-repondent.md) :
+    # la fouille du caddie (six objets drôles), sa poussée (sept nombres) et ce que dit le passant bousculé, plus
+    # l'invite et le gabarit de la plaque — 1 863 → 2 251. Les panneaux, eux, voyagent dans la SUITE (`panneaux`).
+    "interactions": (2_251, 2_600),
     "visages": (1_695, 2_000),
     # Rosa habille l'hiver, vague 2 (30 sept. 2026) : `saisons.joueur` — le froid, la neige, le verglas et
     # la ceinture fléchée, avec leurs répliques (1 695 → 2 117).
@@ -525,9 +528,16 @@ def test_le_paquet_reste_leger(paquets):
     3 641 bruts, 1 914 gzip seules) mènent la suite à 28 533 bruts et 11 844 gzip. Elle part après l'écran titre, en
     arrière-plan : le démarrage ne bouge pas. Proposé à Martin : relever, une requête à part, ou moins de lignes — il
     a relevé.
+
+    ⚠️ **LES PANNEAUX DRÔLES, LE 2 OCT. 2026 — LA SUITE : 29 000 → 31 000 BRUTS, 12 500 → 13 000 GZIP, À VALIDER
+    PAR MARTIN** (docs/jalons/le-decor-les-betes-et-les-gens-repondent.md). Quatorze panneaux à lire en ville
+    (`panneaux.py`, leur place et leurs lignes : 1 397 bruts) mènent la suite à 30 264 bruts et 12 676 gzip. Ils
+    ne servent qu'une fois dans la rue : la suite (après l'écran titre, en arrière-plan) est leur place, pas les
+    définitions (le démarrage ne bouge pas) ni la carte (à cent octets gzip de son plafond). Les autres chemins :
+    les mettre dans les définitions (sous leurs plafonds, mais lues avant l'écran titre), ou moins de panneaux.
     """
     for nom, brut_max, fil_max in (("definitions", 255_000, 57_500), ("carte", 562_000, 55_000),
-                                   ("musiques", 50_000, 10_000), ("suite", 29_000, 12_500)):
+                                   ("musiques", 50_000, 10_000), ("suite", 31_000, 13_000)):
         paquet = getattr(paquets, nom)
         mesures = {"definitions": MESURE_DU_PAQUET, "carte": MESURE_DE_LA_CARTE}
         qui = f" — qui a grossi : {_qui_a_grossi(paquet.corps, mesure=mesures[nom])}" if nom in mesures else ""

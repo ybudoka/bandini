@@ -202,6 +202,11 @@ const Interactions = (function () {
     { geste: 'parcometre', table: function (c) { return c.parcometre.decors; }, portee: function (c) { return c.parcometre.portee_px; },
       refus: function (j, d) { return videDuJour(d) ? cfg().parcometre.deja : null; },
       invite: function (c) { return c.parcometre.invite; }, faire: forcerLeParcometre },
+    // Le caddie couché : on le FOUILLE, puis — fouillé du jour — on le REDRESSE (`Caddies`).
+    { geste: 'caddie', table: function (c) { return c.caddie.decors; }, portee: function (c) { return c.caddie.portee_px; },
+      refus: function () { return null; },
+      invite: function (c, j, d) { return caddieFouille(d) ? c.caddie.invite_redresser : c.caddie.invite_fouiller; },
+      faire: function (j, d) { return caddieFouille(d) ? Caddies.redresser(j, d) : fouillerLeCaddie(j, d); } },
     { geste: 'borne', table: function (c) { return c.borne.decors; }, portee: function (c) { return c.borne.portee_px; },
       // Ouverte par la canicule (les saisons, vague 4c) : les enfants jouent, on la laisse couler.
       refus: function (j, d) { return typeof RueDesSaisons !== 'undefined' && RueDesSaisons.borneOuverte(d) ? cfg().borne.enfants : null; },
@@ -234,6 +239,11 @@ const Interactions = (function () {
         break;
       }
     }
+    // La plaque d'un coin de rue et le panneau drôle (`Panneaux`) : ce ne sont pas des décors de la carte
+    // (un poteau de la signalisation, un panneau de la suite), mais ils se lisent de la même main — le plus
+    // proche gagne, comme entre deux décors.
+    const lu = typeof Panneaux !== 'undefined' ? Panneaux.sousLaMain(j) : null;
+    if (lu && lu.d2 < dMin) meilleur = { geste: { faire: function (q) { return Panneaux.lire(q, lu); } }, decor: lu.cible, refus: null, invite: lu.invite };
     return meilleur;
   }
 
@@ -336,9 +346,36 @@ const Interactions = (function () {
     const facteur = c.standing[standing] === undefined ? 1 : c.standing[standing];
     const nuit = c.la_nuit && Monde.estNuit(p.heure) ? c.la_nuit : null;
     const slug = choisirLaTrouvaille(c.tables[c.decors[bac.decor]], facteur, nuit);
-    const t = c.trouvailles[slug];
     // Le raton ne reste pas dans la poubelle : on le voit filer.
     if (nuit && slug === nuit.par) Entites.fairePartirUnRaton(bac.x, bac.y + 4);
+    return rendreLaTrouvaille(j, c.trouvailles[slug]);
+  }
+
+  /** Le caddie couché, fouillé aujourd'hui ? La même case que les bacs (`partie.fouilles`), préfixée
+      `cad:` et tenue par la tuile où il est NÉ (`Caddies.cle`) : il ne change pas de nom en roulant. */
+  function caddieFouille(d) {
+    const p = B.partie, k = Caddies.cle(d);
+    return !!k && !!p.fouilles && p.fouilles['cad:' + k] === p.jour;
+  }
+
+  /** FOUILLER LE CADDIE : de la monnaie, une canette consignée (les trouvailles des bacs), ou un objet
+      drôle qu'on laisse là — jamais une carte ni une bebelle, qui ont leurs places dans les collections.
+      UN `B.rng()`, comme un bac ; l'objet drôle se lit à l'empreinte du caddie et du jour. */
+  function fouillerLeCaddie(j, d) {
+    const c = cfg().caddie, p = B.partie;
+    j.animT = 16; j.animType = 'ramasse';
+    p.fouilles = p.fouilles || {};
+    p.fouilles['cad:' + Caddies.cle(d)] = p.jour;
+    const slug = choisirLaTrouvaille(c.table, 1, null);
+    if (slug !== 'drole') return rendreLaTrouvaille(j, cfg().fouiller.trouvailles[slug]);
+    const t = d.chezCaddie || d;
+    Hud.message(c.droles[hash2(Math.floor(t.x / TT) * 7919 + Math.floor(t.y / TT), p.jour) % c.droles.length]);
+    Son.SFX.ramasse();
+    return true;
+  }
+
+  /** Ce qu'une fouille rend : l'argent, la bouchée, la morsure ou rien. */
+  function rendreLaTrouvaille(j, t) {
     if (t.argent) {
       const gain = t.argent[0] + Math.floor(B.rng() * (t.argent[1] - t.argent[0] + 1));
       Missions.encaisser(gain, t.texte);
