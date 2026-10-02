@@ -113,7 +113,7 @@ AIR_BIP_BIP = _air(0.07, "A5:2 A5:3")
 #: l'empreinte, jamais deux fois la même de suite (`Garage.klaxonner`). Slug : `ti_guy-garage-crie-<n>`.
 ENGUEULADES: list[str] = [
     "Tasse-toé!",
-    "Enweye, avance!",
+    "Avance, envoye!",
     "Heille, le cave! T'as-tu eu ton permis dans une boîte de Cracker Jack?",
     "Bouge de d'là!",
     "C'est vert! Ça virera pas plus vert que ça!",

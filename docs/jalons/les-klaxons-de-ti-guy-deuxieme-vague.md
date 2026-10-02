@@ -48,3 +48,7 @@ dictionnaire ; juges `tests/test_klaxons_de_ti_guy_js.py` (neuf juges ; trois mu
   l'anglais comme un gars d'ici, et l'IPA lui mettait un son étranger dans la bouche. Les sept règles sont parties
   (le juge de l'IPA oublie ɹ, æ, ʌ, ɚ) ; les trois voix SANS gardées de côté sont revenues, et Dixie, la marche
   nuptiale et Bip-bip, faites avec les règles, sont refaites sans.
+- **« Enweye, avance! » devient « Avance, envoye! »** (3 oct. 2026) : Martin trouvait crie-2 raté — c'était le mot.
+  « Enweye » n'est pas au dictionnaire ; « Envoye, avance! » (l'alias « Anvoueille » de Ti-Paul) sortait
+  « envoue avence » en criant ; le mot en fin de phrase, sa règle minuscule à « anvwèye », gagne contre « anvouéye »
+  et l'IPA ɑ̃vwɛj (sept prises en tout, ~150 caractères).

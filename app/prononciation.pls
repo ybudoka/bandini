@@ -72,11 +72,15 @@
        « Anvoueille » gagne, devant « Envoueille » et les IPA ɑ̃vwɛːj, ɑ̃ˈvwɛj. -->
   <lexeme><grapheme>Envoye</grapheme><alias>Anvoueille</alias></lexeme> <!-- dit : Anvoueille -->
 
+  <!-- « Avance, envoye! » (Ti-Guy, le klaxon qui engueule) : crié, « anvoueille » perdait son « ou »
+       (« en-vo-ille ») ; « Enweye » non plus n'y était pas. Écouté le 3 oct. 2026, trois essais : l'alias
+       « anvwèye » gagne, devant « anvouéye » et l'IPA ɑ̃vwɛj. La majuscule (Ti-Paul) garde sa lecture. -->
+  <lexeme><grapheme>envoye</grapheme><alias>anvwèye</alias></lexeme> <!-- dit : anvwèye -->
+
   <!-- =================================================================== -->
   <!-- ===== EN RÉSERVE : les autres formes des mots écoutés ============= -->
   <!-- =================================================================== -->
 
   <lexeme><grapheme>piastre</grapheme><phoneme>pjɑs</phoneme></lexeme> <!-- dit : piasse -->
-  <lexeme><grapheme>envoye</grapheme><alias>anvoueille</alias></lexeme> <!-- dit : anvoueille -->
 
 </lexicon>

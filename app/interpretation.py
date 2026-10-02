@@ -602,7 +602,7 @@ JEU.update({
     "ti_guy-garage-enroue": "[sarcastic] Celui-là tousse. Cinquante piastres, c'est le prix d'un klaxon qui a la grippe.",
     # … et les engueulades qu'il a enregistrées dedans (`garage.ENGUEULADES`) : il GUEULE, au volant d'un autre.
     "ti_guy-garage-crie-1": "[angry] [shouting] Tasse-toé!",
-    "ti_guy-garage-crie-2": "[annoyed] [shouting] Enweye, avance!",
+    "ti_guy-garage-crie-2": "[annoyed] [shouting] Avance, envoye!",
     "ti_guy-garage-crie-3": "[angry] [shouting] Heille, le cave! [sarcastic] T'as-tu eu ton permis dans une boîte de Cracker Jack?",
     "ti_guy-garage-crie-4": "[gruffly] [shouting] Bouge de d'là!",
     "ti_guy-garage-crie-5": "[annoyed] [shouting] C'est vert! Ça virera pas plus vert que ça!",
