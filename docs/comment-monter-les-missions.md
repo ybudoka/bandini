@@ -674,7 +674,9 @@ signée). La fiche : `docs/jalons/des-missions-en-chapitres.md`.
   le chapitre l'est aussi. Une mission remplacée sort du catalogue ; un `prerequis` peut la nommer encore : il
   attend alors son ACTE (h03 attend d01, l'acte 1 de _La dette de Rocco_), marqué fait quand l'acte finit.
 - **Ce qui ne se met pas en chapitre** : un acte avec un `exige` (il bloquerait tout le chapitre dès son premier
-  acte), une `frontiere`, un échec propre (`arme`), ou un bout d'un CHOIX (`ferme`) — ces missions restent seules.
+  acte), une `frontiere`, un acte qui attend une mission d'un autre fil (s11 attend aussi s09 : le chapitre entier
+  l'attendrait), ou un bout d'un CHOIX (`ferme`) — ces missions restent seules. Les échecs `etoile` et `arme` ne
+  bloquent rien : ils ne se déclenchent que par `sans_etoile`/`sans_arme`, sur l'objectif qui les porte.
 - **Le chronomètre** : le temps de chaque acte s'écrit dans la partie (`durees`), et le carnet l'affiche à côté
   de FAITE. C'est lui qui dit si on tient 5 à 10 minutes.
 

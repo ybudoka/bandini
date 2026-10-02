@@ -167,7 +167,7 @@ bouton, acte par acte, avec une reprise.
   — la même voix, coupée au silence après le nom (`ffmpeg`), sans voix neuve.
 - **La réputation** : chaque acte compte pour le quartier de son donneur, comme sa mission comptait.
 - Ce qui ne passe pas en chapitre : un acte avec un `exige` (il bloquerait tout le chapitre dès le premier acte), une
-  `frontiere`, un échec propre (`arme` : s11 se porte sans arme), ou un bout d'un CHOIX (`ferme`) ; ces missions
+  `frontiere`, un acte qui attend une mission d'un autre fil (s11 attend aussi s09), ou un bout d'un CHOIX (`ferme`) ; ces missions
   restent des missions. Les scènes écrites d'un acte du milieu tombent (ses répliques se disent au marqueur), comme
   au pilote : le chapitre garde la scène d'intro de son premier acte et celle de fin de son dernier.
 
@@ -178,15 +178,15 @@ bouton, acte par acte, avec une reprise.
 |---|---|---|---|---|---|---|
 | D ✅ | la dette | _La dette de Rocco_ (`dette_de_rocco`) | d01 (Sal), d02 (Sal), d03 (Sal), d04 (Sal) | rien d'ajouté : 522 s au chronomètre de Martin | 8-9 min | — |
 | D ✅ | la dette | _Le garage de Rocco_ (`garage_de_rocco`) | d05 (Josée), d06 (Gus) | des renforts de Ciseaux au garage, aux deux actes | 5-6 min | d07/d08 (le choix, `exige.dette`), d09 (l'île, un choix) |
-| H | l'hôpital | _L'ambulance de nuit_ (`ambulance_de_nuit`) | h01 (Lachance), h02 (Ginette) | — (trois transports, une filature) | 6-8 min | — |
-| H | l'hôpital | _La dette du docteur_ (`dette_du_docteur`) | h03 (Lachance), h04 (Lachance), h05 (Ginette), h06 (Lachance) | des renforts de Cravates (h03, h05) | 8-10 min | h07 (`exige.liberes`), h08 (l'île) |
-| L | le Clairon | _La une_ (`la_une`) | l01 (Louise), l02 (Louise) | une auto de police de plus à semer | 5-6 min | — |
-| L | le Clairon | _Le scoop du maire_ (`scoop_du_maire`) | l03, l04, l05 (Louise) | des renforts des hommes du maire | 7-9 min | l06 (`exige.liberes`) |
-| R | Roy et Bouchard | _La nouvelle inspectrice_ (`nouvelle_inspectrice`) | r01 (Bouchard), r05 (Bouchard), r02 (Roy) | — | 7-9 min | le choix r03/r04 et ses suites (r06, r07, r08) |
-| S | La Shop | _Le lot de Gilles_, _Ti-Loup et Gros-Boulon_, _Raymonde_, _Prévost_ | s01-s08-s12 ; s02-s05-s09 ; s03-s06-s10 ; s07-s13 | à voir à la vague | 5-8 min | s11 (sans arme), s04, s14 |
-| E | les Érables | _Ti-Paul_, _Les Chevreuils_, _Diane_ | e01-e02-e09 ; e04-e06-e07-e10 ; e13-e08 | à voir | 5-8 min | e03, e05, e11, e12, e14 |
-| Q | les Quais | _Lulu_, _Gégé_, _Cindy et le Beau Denis_ | q02-q01 ; q03-q09 ; q05-q06-q12 | à voir | 5-7 min | q04, le choix q10/q11, q13 (`exige.une_de`), q07, q08, q14, q15 |
-| I | l'île | _Le moteur_, _Sœur Jeanne_, _Léo_ | q08-i01 ; i02-i05 ; i04-i07 | à voir | 5-7 min | i03/i06 (i06 suit q11, un bout du choix), i08, h08, d09 |
+| H ✅ | l'hôpital | _L'ambulance de nuit_ (`ambulance_de_nuit`) | h01 (Lachance), h02 (Ginette) | — (trois transports, une filature) | 6-8 min | — |
+| H ✅ | l'hôpital | _La dette du docteur_ (`dette_du_docteur`) | h03 (Lachance), h04 (Lachance), h05 (Ginette), h06 (Lachance) | des renforts de Cravates (h03, h05) | 8-10 min | h07 (`exige.liberes`), h08 (l'île) |
+| L ✅ | le Clairon | _La une_ (`la_une`) | l01 (Louise), l02 (Louise) | — (deux polices à semer, dont trois étoiles sous le chrono) | 5-6 min | — |
+| L ✅ | le Clairon | _Le scoop du maire_ (`scoop_du_maire`) | l03, l04, l05 (Louise) | deux hommes du maire de renfort (l04) | 7-9 min | l06 (`exige.liberes`) |
+| R ✅ | Roy et Bouchard | _La nouvelle inspectrice_ (`nouvelle_inspectrice`) | r01 (Bouchard), r05 (Bouchard), r02 (Roy) | — | 7-9 min | le choix r03/r04 et ses suites (r06, r07, r08) |
+| S ✅ | La Shop | _Le lot de Gilles_ (`lot_de_gilles`) ; _Ti-Loup et Gros-Boulon_ (`ti_loup_et_gros_boulon`) ; _Raymonde et le syndicat_ (`raymonde_et_le_syndicat`) ; _Les commandes de Prévost_ (`commandes_de_prevost`) | s01-s08 ; s02-s05 ; s03-s06-s10 ; s07-s13 | — | 5-9 min | s09 (317 s chez Martin), s12 (423 s), s14 (373 s) durent déjà ; s11 (attend aussi s09), s04 |
+| E ✅ | les Érables | _Ti-Paul et ses amis_ (`ti_paul_et_ses_amis`) ; _Les Chevreuils_ (`les_chevreuils`) ; _Diane et Jo_ (`diane_et_jo`) | e01-e02-e09 ; e04-e06-e07-e10 ; e13-e08 | — | 5-10 min | e03, e05, e11 (un choix), e12, e14 |
+| Q ✅ | les Quais | _Lulu et le poisson_ (`lulu_et_le_poisson`) ; _Gégé et les débardeurs_ (`gege_et_les_debardeurs`) ; _Cindy et le Beau Denis_ (`cindy_et_le_beau_denis`) | q02-q01 ; q03-q09 ; q05-q06-q12 | — | 5-8 min | q04, le choix q10/q11, q13 (`exige.une_de`), q07, q14, q15 |
+| I ✅ | l'île | _Le moteur du capitaine_ (`le_moteur_du_capitaine`) ; _Sœur Jeanne_ (`soeur_jeanne`) | q08-i01 ; i02-i05 | — | 5-7 min | i04 (une journée à attendre, ≈ 8 min de jeu à elle seule) et i07, i03/i06 (un bout du choix), i08, h08, d09 |
 
 **Les écarts** :
 - **L** : _Le scoop du maire_ attend ce que ses trois actes attendaient — l01, f10 **et e07** : l03 n'attendait pas
@@ -1365,4 +1365,43 @@ d04 — Sal, quatre actes, 15 étapes) et _Le garage de Rocco_ (`garage_de_rocco
 - **Les juges** : `test_arc_d_js.py` réécrit acte par acte (l'échec d'un acte, REPRENDRE L'ACTE 3 qui remet les faux
   Ciseaux, les renforts du garage vus rougir sans eux) ; `test_chapitres*.py` (le prérequis d'acte, l'échec d'acte, la
   réputation, chaque règle vue rouge sans elle) ; `test_casse_js.py` marque les actes des chapitres faits.
+
+**Les autres arcs — vagues H, L, R, S, E, Q et I livrées le 2 oct. 2026.** Dix-neuf chapitres en tout avec la dette (vingt
+avec La Pointe) ; 49 missions de M16 sont devenues des actes.
+- **H, l'hôpital** : _L'ambulance de nuit_ (h01, h02) et _La dette du docteur_ (h03 à h06, deux Cravates de renfort aux
+  deux bagarres). 67 voix renommées ; coupés : « C'est Ginette, de l'hôpital », « Ici Lachance », « Lachance, à
+  l'appareil ».
+- **L, le Clairon** : _La une_ (l01, l02) et _Le scoop du maire_ (l03 à l05, deux hommes du maire de renfort). 51 voix ;
+  coupés : « C'est Louise. … Viens au kiosque », « Louise, au Clairon », « C'est Louise! ». ⚠️ Écart : le scoop attend
+  e07 dès son acte 1.
+- **R, Roy et Bouchard** : _La nouvelle inspectrice_ (r01, r05, r02 — r05 passe avant r02). 32 voix ; coupés :
+  « Bouchard. » à l'acte 2, et « Assis-toi. » dans l'intro de Roy, dite au combiné. Le choix reste en missions.
+- **S, La Shop** : _Le lot de Gilles_ (s01, s08), _Ti-Loup et Gros-Boulon_ (s02, s05), _Raymonde et le syndicat_ (s03, s06,
+  s10), _Les commandes de Prévost_ (s07, s13). s09, s12 et s14 restent seules : elles tiennent déjà 5 à 7 minutes chez
+  Martin. 86 voix ; quatre noms coupés. ⚠️ Écart : s03 ratait sans la mort, le chapitre rate aussi à la mort.
+- **E, les Érables** : _Ti-Paul et ses amis_ (e01, e02, e09), _Les Chevreuils_ (e04, e06, e07, e10 — la libération), _Diane
+  et Jo_ (e13, e08). 95 voix ; cinq noms coupés.
+- **Q, les Quais** : _Lulu et le poisson_ (q02, q01), _Gégé et les débardeurs_ (q03, q09), _Cindy et le Beau Denis_ (q05,
+  q06, q12). **I, l'île** : _Le moteur du capitaine_ (q08, i01), _Sœur Jeanne_ (i02, i05) ; Léo (i04, i07) reste seul :
+  i04 attend une journée de jeu, ≈ 8 minutes à elle seule. 119 voix ; cinq noms coupés, et « Viens au bar, vite » de
+  Josée (on y est).
+- **Le moteur, en chemin** : ce que les arcs ont montré, chaque règle vue rouge sans elle (`test_chapitres_js.py`) —
+  un acte dont le chapitre est fait est fait (`Chapitres.faitParSonChapitre` : une partie ou un juge qui ne porte que
+  le chapitre) ; rater un acte ne fait retomber que ce que CET acte a fait prendre (`Infiltration.rendre` : le dossier
+  du maire) ; le donneur retenu d'un chapitre est celui de l'acte qui attend (`aBesoinDe`), et qui part après la
+  mission d'un acte part à la fin de cet acte (`Histoire.partirApres` : Jo, Cindy) ; « sans une bosse » se paie à
+  l'acte qui l'a gagné ; la clé d'une serrure revient par l'acte qui la donne (`cles_des_serrures`).
+- **Les voix** : aucune voix neuve après la dette — 514 voix payées renommées, dont 25 coupées dans leur propre
+  prise (`ffmpeg`, au silence, le temps mort remis, le niveau remonté quand le nom portait la phrase : cinq voix),
+  chacune relue par Scribe. **Crédits** : 10 813 avant, 10 574 après la dette — **239 dépensés en tout** (les deux voix du
+  garage, refaites une fois pour « pis »).
+- **Les juges** : chaque arc a son banc réécrit acte par acte (`test_arc_h_js`, `test_arc_c_js`, `test_arc_r_js`,
+  `test_arc_s_js`, `test_arc_e_js`, `test_arc_q_js`, `test_arc_i_js`, et les tranches de dix, cinq et quatre missions,
+  les missions longues, les districts) avec au moins une reprise par chapitre de l'arc (REPRENDRE L'ACTE N et l'échec
+  de l'acte) ; le banc des scènes pose qui arrive après les actes qu'il saute, et retourne voir le donneur de l'acte.
+  ⚠️ Le banc complet des scènes (`test_missions_en_scene_js`, 1 128 cas) a tourné sur la dette seule, puis sur H à E
+  ensemble, puis sur Q et I ensemble — pas vague par vague.
+- **Ce qui reste** : Léo (i04, i07), et les arcs hors de la liste — C (Irène et le vieux maître, c01-c08 : huit
+  missions d'une ou deux étapes, le meilleur candidat), F (le Faubourg), V (la villa) ; à trancher avec Martin. Et le
+  chronomètre de ses vraies parties : c'est lui qui dira si chaque chapitre tient ses 5 à 10 minutes.
 

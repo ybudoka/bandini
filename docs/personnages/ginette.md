@@ -2,7 +2,8 @@
 
 ← [les personnages](README.md) · [le jeu d'acteur](../jeu-d-acteur.md)
 
-> « C'est Ginette, de l'hôpital. Un commis vide notre pharmacie depuis des semaines. J'ai besoin de toi. » — h02
+> « Moi, c'est Ginette, l'infirmière-chef. Les clés, pis va dormir, t'as une face de garde de nuit. » — _L'ambulance de nuit_,
+> acte 1 (h01) ; à l'acte 2, son appel n'a plus que « Un commis vide notre pharmacie depuis des semaines. »
 
 ## En bref
 
