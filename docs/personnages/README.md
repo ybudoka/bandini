@@ -31,7 +31,7 @@ Chaque fiche mêle deux sortes de faits.
 | [Madame Thibodeau](madame-thibodeau.md) | `thibodeau` | devant son kiosque | Julia | m2 · m51 · f12 |
 | [Marco « le Cousin »](marco.md) | `marco` | devant le garage | Québec Tremblay | m3 · m50 · f01 · m97 |
 | [Le sergent Réjean Bouchard](sergent-bouchard.md) | `bouchard` | au casse-croûte, dedans | Khaivan | m4 · m51 · v02 |
-| [Josée « la Chef » Pelletier](josee.md) | `josee` | au bar Le Brouillard, dedans | Jeanne Mance | m5 · m6 · q04 · q11 · v01 · d05 · d07 · q12 · i03 · i06 · i08 |
+| [Josée « la Chef » Pelletier](josee.md) | `josee` | au bar Le Brouillard, dedans | Jeanne Mance | m5 · m6 · q04 · q11 · v01 · garage_de_rocco (acte 1) · d07 · q12 · i03 · i06 · i08 |
 | [Ti-Paul Gagnon](ti-paul.md) | `tipaul` | devant son dépanneur | Québec Tremblay | m6 · e01 · m51 |
 | [Lucienne « Lulu » Pelletier](lulu.md) | `lulu` | à la cantine des Quais, dedans | Claudia | m6 · m50 · q02 · m51 · q01 |
 | [Raymonde Fortin](raymonde.md) | `raymonde` | devant l'usine Prévost | Nadine | m6 · s03 |
@@ -47,7 +47,7 @@ Chaque fiche mêle deux sortes de faits.
 | [Gérard « Gégé » Morin](gege.md) | `gege` | devant la cantine des Quais | Alexandre Boutin | q03 · q09 |
 | [Xavier](xavier.md) | `xavier` | devant le dépanneur | Premium Male teacher (Adam) | e12 |
 | [Dr Lachance](dr-lachance.md) | `lachance` | à l'hôpital, dedans | Patrick | h01 · h03 · h04 · h06 · h07 · h08 |
-| [Gus Lévesque](gus.md) | `gus` | à l'armurerie | Khaivan | f02 · d06 · f12 (une enveloppe) |
+| [Gus Lévesque](gus.md) | `gus` | à l'armurerie | Khaivan | f02 · garage_de_rocco (acte 2) · f12 (une enveloppe) |
 | [Rosa Di Meo](rosa.md) | `rosa` | à la Boutique Rosa | Amélie | f03 · f10 · f12 (une enveloppe) |
 | [Ginette](ginette.md) | `ginette` | à l'hôpital | Jeanne Mance | h02 · h05 |
 | [Gilles Thériault](gilles.md) | `gilles` | à la guérite de la fourrière | Patrick | s01 · s08 · s12 |
@@ -71,7 +71,7 @@ Chaque fiche mêle deux sortes de faits.
 | [Réjean Prévost](prevost.md) | `prevost` | à son bureau de l'usine, dedans, après s10 | Roland Lescalde | s11 · s07 |
 | [Le maire Réal Tanguay](maire.md) | `maire` | dans la chambre de l'Hôtel Bandini, dedans, entre m97 et m98 | Eric - Smooth, Trustworthy | m98 (la poignée de main, et il cède) |
 | [Victor Tam, « Sifu Tam »](victor-tam.md) | `maitre` | dans sa salle de l'ÉCOLE LA MANTE, dedans — une fois revenu de Floride (après c04) | Luca - Storyteller | c05 (sa poignée de main) · c06 · c07 · c08 |
-| [Salvatore « Sal » Ferraro](sal.md) | `sal` | à sa chaise de barbier, au milieu du terminus, dedans, après m6 | Pascal — Voix québécoise chaleureuse | d01 · d02 · d03 · d04 · d08 |
+| [Salvatore « Sal » Ferraro](sal.md) | `sal` | à sa chaise de barbier, au milieu du terminus, dedans, après m6 | Pascal — Voix québécoise chaleureuse | dette_de_rocco (quatre actes) · d08 |
 | [Inspectrice Claudine Roy](roy.md) | `roy` | à son bureau du poste, dedans, après r01 | Évangéline (acadienne ; Kasandra jusqu'au 1er oct. 2026) | r02 · r03 · r06 · r08 |
 | [Ti-Rhéal Bergeron](ti-rheal.md) | `ti_rheal` | derrière sa table du marché aux puces, le dimanche matin | Christian Page - Narrative and Deep | aucune : son étal (hors de `PERSONNAGES`) |
 | [Gisèle Lachapelle](gisele.md) | `gisele` | derrière sa table du marché aux puces, le dimanche matin | Kasandra - Natural Quebecer UGC ad | aucune : son étal (hors de `PERSONNAGES`) |

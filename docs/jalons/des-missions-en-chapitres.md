@@ -176,8 +176,8 @@ bouton, acte par acte, avec une reprise.
 
 | Vague | Arc | Chapitre (slug) | Actes, dans l'ordre (donneur) | Ce qui fait durer | Visée | Reste en missions |
 |---|---|---|---|---|---|---|
-| D | la dette | _La dette de Rocco_ (`dette_de_rocco`) | d01 (Sal), d02 (Sal), d03 (Sal), d04 (Sal) | rien d'ajouté : 522 s au chronomètre de Martin | 8-9 min | — |
-| D | la dette | _Le garage de Rocco_ (`garage_de_rocco`) | d05 (Josée), d06 (Gus) | des renforts de Ciseaux au garage, aux deux actes | 5-6 min | d07/d08 (le choix, `exige.dette`), d09 (l'île, un choix) |
+| D ✅ | la dette | _La dette de Rocco_ (`dette_de_rocco`) | d01 (Sal), d02 (Sal), d03 (Sal), d04 (Sal) | rien d'ajouté : 522 s au chronomètre de Martin | 8-9 min | — |
+| D ✅ | la dette | _Le garage de Rocco_ (`garage_de_rocco`) | d05 (Josée), d06 (Gus) | des renforts de Ciseaux au garage, aux deux actes | 5-6 min | d07/d08 (le choix, `exige.dette`), d09 (l'île, un choix) |
 | H | l'hôpital | _L'ambulance de nuit_ (`ambulance_de_nuit`) | h01 (Lachance), h02 (Ginette) | — (trois transports, une filature) | 6-8 min | — |
 | H | l'hôpital | _La dette du docteur_ (`dette_du_docteur`) | h03 (Lachance), h04 (Lachance), h05 (Ginette), h06 (Lachance) | des renforts de Cravates (h03, h05) | 8-10 min | h07 (`exige.liberes`), h08 (l'île) |
 | L | le Clairon | _La une_ (`la_une`) | l01 (Louise), l02 (Louise) | une auto de police de plus à semer | 5-6 min | — |
@@ -1344,3 +1344,25 @@ donneur ; une vieille partie qui avait fait p04 et p10 sans p05 rejouait et repa
 de poursuite ne s'oubliait jamais et ne se volait pas ; le chronomètre ne comptait aucune réplique (≈ 3 minutes de La
 Pointe) ; mourir deux fois dans le même acte faisait perdre le char ; l'intro filmait un pont vide (un marqueur sans saut
 ni réplique s'enchaîne maintenant sous l'intro).
+
+**Les autres arcs — vague D livrée le 2 oct. 2026 : la dette.** _La dette de Rocco_ (`dette_de_rocco` : d01, d02, d03,
+d04 — Sal, quatre actes, 15 étapes) et _Le garage de Rocco_ (`garage_de_rocco` : d05 Josée, d06 Gus — deux actes,
+9 étapes). Le choix (d07/d08) et d09 restent des missions.
+- **Le moteur** a appris ce que les arcs demandent : un prérequis peut viser un ACTE (h03 attend d01, i08 attend d05 :
+  `ordre_topologique` lit le chapitre, `disponibles()` lisait déjà l'acte fait) ; l'ÉCHEC DE L'ACTE (`_e`, accroché
+  au marqueur : on entend celui de l'acte qui a raté) ; chaque acte compte pour la RÉPUTATION du quartier de son
+  donneur, comme sa mission comptait.
+- **Rien de perdu** : 64 voix payées renommées ; les six échecs gardés, un par acte. Sal se nomme une fois : ses appels
+  de d02, d03 et d04 ont perdu « C'est Sal, au terminus », « Sal, le barbier » et « Ici Sal » — **la même voix,
+  coupée au silence** (`ffmpeg`, le temps mort de 0,35 s remis), vérifiée à l'oreille de Scribe (le texte qu'elle
+  entend est le texte coupé). L'appel de d02 perd aussi « Passe me voir » : Sal est à côté de toi, devant le garage.
+- **Ce qui fait durer** : _La dette de Rocco_, rien — la partie de Martin y a mis 522 s (d01 22 s, d02 107, d03 130,
+  d04 263) ; _Le garage de Rocco_, des Ciseaux de renfort aux deux bagarres (deux, puis deux vagues de deux), chacun
+  annoncé par une réplique neuve (Josée, Gus) : **2 voix neuves, ≈ 170 caractères** (deux refaites : « Pis » se
+  disait « Puis »).
+- **Tombées** : les scènes d'intro écrites de d02, d03, d04 et d06 (leurs répliques se disent au marqueur).
+- **La partie de Martin** (d01 à d05 faites) : la dette est faite, le garage commence à l'acte 2, chez Gus (jugé).
+- **Les juges** : `test_arc_d_js.py` réécrit acte par acte (l'échec d'un acte, REPRENDRE L'ACTE 3 qui remet les faux
+  Ciseaux, les renforts du garage vus rougir sans eux) ; `test_chapitres*.py` (le prérequis d'acte, l'échec d'acte, la
+  réputation, chaque règle vue rouge sans elle) ; `test_casse_js.py` marque les actes des chapitres faits.
+

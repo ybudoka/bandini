@@ -21,8 +21,10 @@ from test_arc_p_js import RECHARGER
 from app import missions
 
 #: Tout le catalogue avant le casse — Josée et Rosa n'ont plus que lui à donner.
-AVANT = json.dumps([m["slug"] for m in missions.CATALOGUE
-                    if not m["slug"].startswith("x0") and m["slug"] not in ("m97", "m98", "m99")])
+# ⚠️ Un CHAPITRE fait a fait les missions qu'il remplace (`Chapitres.reussi`) : x01 attend d06, l'acte 2 du garage.
+AVANT = json.dumps([s for m in missions.CATALOGUE
+                    if not m["slug"].startswith("x0") and m["slug"] not in ("m97", "m98", "m99")
+                    for s in [m["slug"], *(m.get("remplace") or [])]])
 
 CAISSE = """
   // Ce que Josée DIT (le texte des répliques `pendant`), pour juger les `si`/`sauf`.

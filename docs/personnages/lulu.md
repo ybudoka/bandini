@@ -82,7 +82,7 @@ et elle compte.
 ## Ce qui l'attend (M16)
 
 `q01` « La cantine de Lulu » (des matelots qui mangent sans payer), `q12` « La Chef a un cœur » (leur mère),
-`d04` « La collecte du barbier ».
+`d04` « La collecte du barbier » (l'acte 4 de _La dette de Rocco_).
 
 ## À trancher
 

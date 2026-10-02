@@ -664,9 +664,17 @@ signée). La fiche : `docs/jalons/des-missions-en-chapitres.md`.
   (le donneur qui appelle, puis ce qu'il explique) est un `pendant` **sur l'étape du marqueur** ; la fin
   d'un acte, dite en personne, un `pendant` sur le marqueur de l'acte **suivant** ; `fin` est celle du
   dernier acte, **chez le donneur du dernier acte** (`donneur_final`). « Qui parle se nomme » : une fois par
-  personne dans le chapitre. Plafond de répliques : 18 **par acte**.
+  personne dans le chapitre. Plafond de répliques : 18 **par acte**. Quand un arc existant passe en chapitre, le
+  nom redit à l'appel d'un acte suivant se COUPE dans la même voix (`ffmpeg`, au silence, le temps mort de 0,35 s
+  remis) plutôt que de payer une voix neuve (la dette, 2 oct. 2026).
+- **L'échec d'un acte** : `_e(qui, texte, marqueur, jeu=…)` dans `echec` — dite seulement si c'est cet acte qui rate
+  (`marqueur` = l'étape de son `acte`) ; une réplique `_l` sans étape se dit pour n'importe lequel. Un arc passé en
+  chapitre garde ainsi l'échec de chacune de ses missions.
 - **`remplace`** : une partie qui avait fait ces missions reprend au premier acte pas fait ; toutes faites,
-  le chapitre l'est aussi. Une mission remplacée sort du catalogue, et aucun `prerequis` ne la nomme plus.
+  le chapitre l'est aussi. Une mission remplacée sort du catalogue ; un `prerequis` peut la nommer encore : il
+  attend alors son ACTE (h03 attend d01, l'acte 1 de _La dette de Rocco_), marqué fait quand l'acte finit.
+- **Ce qui ne se met pas en chapitre** : un acte avec un `exige` (il bloquerait tout le chapitre dès son premier
+  acte), une `frontiere`, un échec propre (`arme`), ou un bout d'un CHOIX (`ferme`) — ces missions restent seules.
 - **Le chronomètre** : le temps de chaque acte s'écrit dans la partie (`durees`), et le carnet l'affiche à côté
   de FAITE. C'est lui qui dit si on tient 5 à 10 minutes.
 

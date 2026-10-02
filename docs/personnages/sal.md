@@ -14,7 +14,7 @@
 | Voix | **Pascal — Voix québécoise chaleureuse** (québécoise, mûre, « radio ») ; en v3 **à écouter** |
 | Bulle | « Assis-toi. » |
 | Couleurs | sarrau blanc de barbier, cheveux argent gominés, peau olive |
-| Missions | donne **d01**, **d02**, **d03**, **d04** (la vague 6 de M16), **d08** (la dernière coupe, la dette payée), **d09** (Léo et ses 800 $ : on le couche, ou on paie pour lui) ; volé par **d07** (le choix) ; reçoit l'argent du Dr Lachance, son client de poker (**h03**, **h06**) ; ses hommes, les Ciseaux, sont les collecteurs de la dette (`missions.js`, `envoyerLesCollecteurs`) |
+| Missions | donne **_La dette de Rocco_** (`dette_de_rocco`, un chapitre de quatre actes depuis le 2 oct. 2026 : c'étaient d01, d02, d03, d04, la vague 6 de M16), **d08** (la dernière coupe, la dette payée), **d09** (Léo et ses 800 $ : on le couche, ou on paie pour lui) ; volé par **d07** (le choix) ; reçoit l'argent du Dr Lachance, son client de poker (**h03**, **h06**) ; ses hommes, les Ciseaux, sont les collecteurs de la dette (`missions.js`, `envoyerLesCollecteurs`) |
 
 ## Son histoire
 
@@ -46,7 +46,8 @@ amis — Ti-Paul, Lulu et Ovila lui doivent aussi, et c'est le neveu qu'il envoi
 ## Comment il salue et se présente
 
 Au téléphone, le nom et le métier, de moins en moins à mesure qu'on le connaît : « Sal Ferraro, le barbier du
-terminus » (d01), « C'est Sal, au terminus » (d02), « Sal, le barbier » (d03), « Ici Sal » (d04). En personne :
+terminus » (d01, l'acte 1 de _La dette de Rocco_) — une fois par chapitre : aux actes suivants, ses appels
+d'avant (« C'est Sal, au terminus », « Sal, le barbier », « Ici Sal ») ont perdu le nom, coupé dans la même voix. En personne :
 « Assis-toi. » Et, la dette payée : « Ici Sal. Ton livre est fermé, le neveu. » (d08)
 
 ## Ce qu'il a dit (le canon)

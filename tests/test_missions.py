@@ -387,13 +387,13 @@ def test_le_paquet_ne_porte_pas_l_echec_ni_la_phase_qui_valent_leur_defaut():
     du paquet ; le navigateur remet l'échec par défaut (`Histoire.echecsDe`) et ne lit pas la phase d'une mission.
     Ce qui ne vaut PAS son défaut voyage : m3 rate si le taxi de Marco est détruit."""
     paquet = {m["slug"]: m for m in missions.pour_le_navigateur()}
-    d05 = paquet["d05"]
-    assert missions.par_slug("d05")["echec"] == ["mort", "arrete"]
-    assert "echec" not in d05 and "phase" not in d05, d05
+    d07 = paquet["d07"]
+    assert missions.par_slug("d07")["echec"] == ["mort", "arrete"]
+    assert "echec" not in d07 and "phase" not in d07, d07
     assert paquet["m3"]["echec"] == ["arrete", "vehicule_detruit"]
     # Et ce qu'elle donne voyage avec la mission (`pour_jouer`) : il ne se lit qu'en la réussissant.
-    assert "donne" not in d05, d05
-    assert missions.pour_jouer("d05")["donne"] == missions.par_slug("d05")["donne"]
+    assert "donne" not in d07, d07
+    assert missions.pour_jouer("d07")["donne"] == missions.par_slug("d07")["donne"]
 
 
 def test_si_et_sauf_nomment_une_mission_et_ne_touchent_ni_le_depart_ni_les_scenes():

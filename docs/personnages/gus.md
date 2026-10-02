@@ -14,7 +14,7 @@
 | Voix | **Khaivan — Quebec accent** (partagée avec le sergent Bouchard : jamais dans le même dialogue) |
 | Bulle | « Quoi, jeune? » |
 | Couleurs | chandail olive délavé, cheveux gris, pantalon foncé |
-| Missions | donne **f02**, **d06** (les Ciseaux de Sal au garage), **x02** (le coupé du touriste, repeint, pour le casse de Josée) ; une des cinq enveloppes de **f12** |
+| Missions | donne **f02**, l'acte 2 de **_Le garage de Rocco_** (les Ciseaux de Sal au garage — c'était d06), **x02** (le coupé du touriste, repeint, pour le casse de Josée) ; une des cinq enveloppes de **f12** |
 
 ## Son histoire
 

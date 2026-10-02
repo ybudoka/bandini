@@ -753,7 +753,7 @@ from . import (  # noqa: E402
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
     s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
     e04, e06, e07, e10, la_pointe, s02, s05, s06, s09, s10, s11,
-    d01, d02, d03, d04, d05, d06, d07, d08, h03, h04, h05, h06, h07, l01, l02, l03, l04, l05, l06, r02, r03, r04, r05, r06, r07, r08, s07, s12, s14, e13, q12, q09, q08, i01, i02, i03, i05, i06, i08, h08, d09, t01, t02, t03, t04, t05, t06, t09, t11, t12, t13, t14, t15, q07, m98,
+    dette_de_rocco, garage_de_rocco, d07, d08, h03, h04, h05, h06, h07, l01, l02, l03, l04, l05, l06, r02, r03, r04, r05, r06, r07, r08, s07, s12, s14, e13, q12, q09, q08, i01, i02, i03, i05, i06, i08, h08, d09, t01, t02, t03, t04, t05, t06, t09, t11, t12, t13, t14, t15, q07, m98,
     x01, x02, x03, x04, i04, i07,
     p06, p07, p08, p12,
     e08, e09, e11, s04, s13,
@@ -803,7 +803,8 @@ from . import (  # noqa: E402
 # l'accord porté sans arme à Gros-Boulon (`libere: shop`).
 # ⚠️ q07 (29 sept. 2026, vague 5) : Norbert et la chambre 12 — elle met l'hôtel EN VENTE (`donne.a_vendre`), la
 # quatrième propriété que _Le Boss_ (M13) demande.
-# ⚠️ d01, d02, d03, d04 (30 sept. 2026, vague 6) : la dette de Rocco a un visage — Sal Ferraro, le barbier du
+# ⚠️ `dette_de_rocco` et `garage_de_rocco` (2 oct. 2026, les CHAPITRES des autres arcs, vague D) remplacent d01 à d04,
+# puis d05 et d06, devenues leurs actes. Avant : d01, d02, d03, d04 (30 sept. 2026, vague 6) : la dette de Rocco a un visage — Sal Ferraro, le barbier du
 # terminus. On lui montre sa garantie (le garage), on lui ramène l'enveloppe de Momo le taxi, on couche les faux
 # Ciseaux qui collectent en son nom aux Quais, et on fait sa collecte chez Ti-Paul, Lulu et Ovila : chaque job
 # efface un bout de la dette (`donne.dette`).
@@ -858,7 +859,7 @@ CATALOGUE: list[Mission] = [
     la_pointe.MISSION,
     s02.MISSION, s06.MISSION, s05.MISSION, s09.MISSION, s10.MISSION, s11.MISSION,
     q07.MISSION,
-    d01.MISSION, d02.MISSION, d03.MISSION, d04.MISSION, d05.MISSION, d06.MISSION, d07.MISSION, d08.MISSION,
+    dette_de_rocco.MISSION, garage_de_rocco.MISSION, d07.MISSION, d08.MISSION,
     h03.MISSION, h04.MISSION, h05.MISSION, h06.MISSION, h07.MISSION,
     l01.MISSION, l02.MISSION, l03.MISSION, l04.MISSION, l05.MISSION, l06.MISSION,
     r02.MISSION, r03.MISSION, r04.MISSION, r05.MISSION, r06.MISSION, r07.MISSION, r08.MISSION,

@@ -182,7 +182,9 @@ OUTILS = ('  const ORDRE = ' + json.dumps(missions.ordre_topologique()) + ';' + 
       j.x = l.x; j.y = l.y;
     }
     else if (o.type === 'retourner') {
-      const e = L.Histoire.donneur(m.donneur) || L.Histoire.lieuDuPersonnage(m.donneur);
+      // ⚠️ Le donneur du dernier ACTE d'un chapitre (Gus, au bout du garage de Rocco) : c'est lui qu'on retourne voir.
+      const qui = L.Chapitres.donneurDe(m);
+      const e = L.Histoire.donneur(qui) || L.Histoire.lieuDuPersonnage(qui);
       j.x = e.x - 14; j.y = e.y;
     }
     // ⚠️ UNE POIGNÉE DE MAIN finit DEVANT sa cible quand la scène de fin la fait JOUER (m98 : le maire, dans la

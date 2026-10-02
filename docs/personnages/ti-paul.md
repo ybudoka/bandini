@@ -87,7 +87,7 @@ Il reste **dehors**, devant sa porte : il surveille son parking.
 ## Ce qui l'attend (M16)
 
 `e02` « La bière de Ti-Paul » (un camion de bière au quai), `e09` « Le barbecue » (des poutines en vélo),
-`d04` « La collecte du barbier » (il doit de l'argent à Sal).
+`d04` « La collecte du barbier » (l'acte 4 de _La dette de Rocco_) (il doit de l'argent à Sal).
 
 ## À trancher
 
