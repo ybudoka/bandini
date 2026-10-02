@@ -144,6 +144,61 @@ restent à écrire (Q, E, S, P, H, D, C, R, T, I, X de M16) s'écrivent directem
   chapitre.
 - Six donneurs pour un chapitre : deux voix partagées ne se croisent jamais dans un même dialogue.
 
+### Les autres arcs : l'ordre, et ce que devient chaque arc
+
+_Martin, 2 oct. 2026, après avoir joué La Pointe : « c'est bon : on y va »._ Les arcs de M16 ont été écrits en
+missions de une à dix étapes, chacune un acte tout prêt (`remplace`). Un arc devient **un ou plusieurs chapitres** :
+une suite de missions qui se suivent (chacune n'attend que la précédente, ou ce que le chapitre attend déjà), de
+5 à 10 minutes. Un arc par vague, verte et atterrie seule.
+
+**Ce qu'une vague garde, sans exception** : chaque réplique et sa voix payée (renommée) ; l'**échec** de chaque
+acte (`echec` accroché au marqueur de son acte : on entend celui de l'acte qui a raté) ; les prérequis des autres
+missions ; une vieille partie (une mission faite compte comme son acte) ; et un juge de banc qui JOUE le chapitre au
+bouton, acte par acte, avec une reprise.
+
+**Ce que le moteur apprend pour les arcs** (vague D, la première) :
+- **Un prérequis peut viser un acte** : la mission remplacée est marquée faite quand son acte finit
+  (`Chapitres.ouvrirActe`), et c'est ce que `disponibles()` lit déjà. h03 attend d01 (l'acte 1 de la dette), pas tout
+  le chapitre ; le validateur l'accepte, `ordre_topologique` lit le chapitre à la place de l'acte. (Le pilote
+  réécrivait les prérequis vers le chapitre : p07 attend `la_pointe`, c'était juste — p11 était le dernier acte.)
+- **L'échec de l'acte** : une réplique `echec` qui porte un `objectif` (l'étape de son marqueur) ne se dit que si
+  c'est cet acte qui rate ; sans `objectif`, pour n'importe lequel.
+- **Qui parle se nomme, une fois par donneur dans le chapitre** : l'appel d'un acte suivant perd son « C'est Sal »
+  — la même voix, coupée au silence après le nom (`ffmpeg`), sans voix neuve.
+- **La réputation** : chaque acte compte pour le quartier de son donneur, comme sa mission comptait.
+- Ce qui ne passe pas en chapitre : un acte avec un `exige` (il bloquerait tout le chapitre dès le premier acte), une
+  `frontiere`, un échec propre (`arme` : s11 se porte sans arme), ou un bout d'un CHOIX (`ferme`) ; ces missions
+  restent des missions. Les scènes écrites d'un acte du milieu tombent (ses répliques se disent au marqueur), comme
+  au pilote : le chapitre garde la scène d'intro de son premier acte et celle de fin de son dernier.
+
+**L'ordre** : d'abord l'arc le plus joué (D : Martin a fait d01 à d05 avec le chronomètre — d01 en 22 s, d02 en
+107, d03 en 130, d04 en 263, d05 en 78), puis ceux dont la chaîne est la plus droite.
+
+| Vague | Arc | Chapitre (slug) | Actes, dans l'ordre (donneur) | Ce qui fait durer | Visée | Reste en missions |
+|---|---|---|---|---|---|---|
+| D | la dette | _La dette de Rocco_ (`dette_de_rocco`) | d01 (Sal), d02 (Sal), d03 (Sal), d04 (Sal) | rien d'ajouté : 522 s au chronomètre de Martin | 8-9 min | — |
+| D | la dette | _Le garage de Rocco_ (`garage_de_rocco`) | d05 (Josée), d06 (Gus) | des renforts de Ciseaux au garage, aux deux actes | 5-6 min | d07/d08 (le choix, `exige.dette`), d09 (l'île, un choix) |
+| H | l'hôpital | _L'ambulance de nuit_ (`ambulance_de_nuit`) | h01 (Lachance), h02 (Ginette) | — (trois transports, une filature) | 6-8 min | — |
+| H | l'hôpital | _La dette du docteur_ (`dette_du_docteur`) | h03 (Lachance), h04 (Lachance), h05 (Ginette), h06 (Lachance) | des renforts de Cravates (h03, h05) | 8-10 min | h07 (`exige.liberes`), h08 (l'île) |
+| L | le Clairon | _La une_ (`la_une`) | l01 (Louise), l02 (Louise) | une auto de police de plus à semer | 5-6 min | — |
+| L | le Clairon | _Le scoop du maire_ (`scoop_du_maire`) | l03, l04, l05 (Louise) | des renforts des hommes du maire | 7-9 min | l06 (`exige.liberes`) |
+| R | Roy et Bouchard | _La nouvelle inspectrice_ (`nouvelle_inspectrice`) | r01 (Bouchard), r05 (Bouchard), r02 (Roy) | — | 7-9 min | le choix r03/r04 et ses suites (r06, r07, r08) |
+| S | La Shop | _Le lot de Gilles_, _Ti-Loup et Gros-Boulon_, _Raymonde_, _Prévost_ | s01-s08-s12 ; s02-s05-s09 ; s03-s06-s10 ; s07-s13 | à voir à la vague | 5-8 min | s11 (sans arme), s04, s14 |
+| E | les Érables | _Ti-Paul_, _Les Chevreuils_, _Diane_ | e01-e02-e09 ; e04-e06-e07-e10 ; e13-e08 | à voir | 5-8 min | e03, e05, e11, e12, e14 |
+| Q | les Quais | _Lulu_, _Gégé_, _Cindy et le Beau Denis_ | q02-q01 ; q03-q09 ; q05-q06-q12 | à voir | 5-7 min | q04, le choix q10/q11, q13 (`exige.une_de`), q07, q08, q14, q15 |
+| I | l'île | _Le moteur_, _Sœur Jeanne_, _Léo_ | q08-i01 ; i02-i05 ; i04-i07 | à voir | 5-7 min | i03/i06 (i06 suit q11, un bout du choix), i08, h08, d09 |
+
+**Les écarts** :
+- **L** : _Le scoop du maire_ attend ce que ses trois actes attendaient — l01, f10 **et e07** : l03 n'attendait pas
+  e07 (le maire suivi à l'hôtel) ; c'est l04 qui l'attendait.
+- **R** : le choix (r03 ferme r04) ne se coupe pas en actes tant qu'un acte ne sait pas fermer l'autre bord ; ses cinq
+  missions restent des missions.
+- **X (le casse) reste en missions** : ses préparatifs (x02, x03) sont FACULTATIFS — x04 les ferme ; un chapitre les
+  rendrait obligatoires. Rien à gagner.
+- Hors de la liste de M16, à trancher avec Martin : **C** (Irène et le vieux maître, c01-c08 : huit missions d'une
+  ou deux étapes, le meilleur candidat après D), **F** (le Faubourg), **V** (la villa, trois missions à `frontiere`).
+  Les petites jobs (T) ne passent jamais en chapitre : un passant les donne, une à la fois.
+
 ### Le plan d'exécution — tranche 1 : le moteur et La Pointe
 
 > **Pour qui l'exécute :** superpowers:subagent-driven-development ou superpowers:executing-plans, tâche par tâche.
