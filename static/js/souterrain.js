@@ -182,12 +182,15 @@ const Souterrain = (function () {
     if (niveaux() >= 2 || !Missions.possede(Missions.proprieteDe('garage'))) return null;
     const prix = B.defs.economie.tarifs.sous_sol_2;
     return { libelle: 'AGRANDIR LE SOUS-SOL', detail: prix + ' $ — LE −2, DIX CASES', actif: B.partie.argent >= prix,
-             faire: function () {
+             // ⚠️ LE COMPTOIR RESTE OUVERT (Martin, 22 sept. 2026 : « on quitte seulement avec B ou Esc ») : la ligne
+             // dit ce qui est fait, et ne se rachete plus.
+             faire: function (item) {
                if (!Missions.payer(prix, 'LE −2')) { Son.SFX.erreur(); return false; }
                B.partie.souterrain.niveaux = 2;
                Hud.message('LE −2 EST À TOI — LA GRILLE EST LEVÉE', 180);
                Missions.sauvegarderPartie();
-               return true;
+               if (item) { item.libelle = 'LE −2 EST À TOI'; item.detail = ''; item.actif = false; }
+               return false;
              } };
   }
 
