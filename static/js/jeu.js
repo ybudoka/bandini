@@ -785,6 +785,7 @@ const Jeu = (function () {
     Combat.fermerRoue(false);
     B.etat = 'pause';
     Hud.etat('pause');
+    B.veille = { calme: 0, actif: false, relache: false, part: 0, t: 0, dx: 0, dy: 0 };
     Missions.sauvegarderPartie();
     Hud.ouvrirMenu(Hud.menuPause());
   }
@@ -792,8 +793,57 @@ const Jeu = (function () {
   function reprendre() {
     if (B.etat !== 'pause') return;
     B.etat = 'jeu';
+    B.veille = null;
     Hud.etat('jeu');
     if (B.menu) Hud.fermerMenu();
+  }
+
+  /*: ⚠️ L'ECRAN DE VEILLE DE LA PAUSE (Martin, 3 oct. 2026 : « je voudrais un style de
+    screen saver » ; il a choisi la camera qui flane, a 20 s). Apres VEILLE_IMAGES en
+    pause sans toucher a rien, le menu et le HUD s'effacent, le voile s'eclaircit, et
+    la camera derive lentement autour du joueur sur la ville figee — le logo dans un
+    coin (`Hud.dessiner`).
+
+    ⚠️ L'APPUI QUI REVEILLE NE SERT QU'A REVEILLER : START ne reprend pas la partie,
+    ACTION ne choisit pas la ligne sous le curseur. Le menu revient, la camera rentre,
+    et il faut un deuxieme appui pour agir — on revient d'un cafe, on ne sait plus ou
+    est le curseur. Et tant que le geste qui a reveille TIENT (un stick pousse, un doigt
+    pose), la pause attend qu'il lache : sinon l'image d'apres, il descendrait le menu.
+
+    ⚠️ Une Lissajous lente (deux periodes premieres entre elles) qui part de zero, et
+    dont l'amplitude suit le fondu (`part`) : la camera demarre et rentre en douceur,
+    sans jamais sauter. Bornee comme celle de la photo (`majPhoto`) : la ville, et pas
+    l'ile cachee. */
+  const VEILLE_IMAGES = 20 * 60;
+  const VEILLE_ENTRE = 1 / 90, VEILLE_SORT = 1 / 15;     // le fondu : 1,5 s pour s'endormir, 0,25 s pour revenir
+  const VEILLE_AMPLITUDE = { x: VW * 0.6, y: VH * 0.6 };
+  const VEILLE_PERIODES = { x: 70 * 60, y: 47 * 60 };   // en images
+
+  /** Une image de la veille, en pause. Rend vrai si l'image a servi a REVEILLER (ou
+      attend encore que le geste du reveil lache). */
+  function majVeille() {
+    const v = B.veille;
+    if (!v) return false;
+    const bouge = Entree.activite();
+    let reveil = false;
+    if (v.actif) {
+      if (bouge) { v.actif = false; v.calme = 0; v.relache = true; reveil = true; }
+    } else if (v.relache) {
+      if (bouge) reveil = true; else v.relache = false;
+    } else {
+      v.calme = bouge ? 0 : v.calme + 1;
+      // ⚠️ Jamais pendant qu'on reapprend un bouton de manette : on attend l'appui.
+      if (v.calme >= VEILLE_IMAGES && !Entree.apprendEnCours()) v.actif = true;
+    }
+    v.part = v.actif ? Math.min(1, v.part + VEILLE_ENTRE) : Math.max(0, v.part - VEILLE_SORT);
+    if (v.actif) v.t++;
+    const cx = v.part * VEILLE_AMPLITUDE.x * Math.sin(2 * Math.PI * v.t / VEILLE_PERIODES.x);
+    const cy = v.part * VEILLE_AMPLITUDE.y * Math.sin(2 * Math.PI * v.t / VEILLE_PERIODES.y);
+    const lim = Monde.limitesCamera();
+    const dx = borner(B.cam.x + cx, lim.xMin, lim.xMax) - B.cam.x;
+    const dy = borner(B.cam.y + cy, lim.yMin, lim.yMax) - B.cam.y;
+    if (!Monde.vueSurLeMasque(B.cam.x + dx, B.cam.y + dy)) { v.dx = dx; v.dy = dy; }
+    return reveil;
   }
 
   function basculerPause() { if (B.etat === 'jeu') pause(); else if (B.etat === 'pause') reprendre(); else if (B.etat === 'carte') fermerCarte(); else if (B.etat === 'photo') fermerPhoto(); }
@@ -1247,6 +1297,8 @@ const Jeu = (function () {
     } else if (B.etat === 'photo') {
       majPhoto();
     } else if (B.etat === 'pause') {
+      // La veille d'abord : endormie, la pause n'ecoute rien d'autre que le reveil.
+      if (majVeille() || (B.veille && B.veille.actif)) { Entree.videPresse(); return; }
       // ⚠️ Pendant qu'on reapprend un bouton de manette, ECHAP annule
       // l'apprentissage ; il ne sort pas de la pause.
       if (Entree.apprendEnCours()) { Hud.majMenu(); Entree.videPresse(); return; }
@@ -1307,8 +1359,9 @@ const Jeu = (function () {
     ctx.fillRect(0, 0, VW, VH);
     const cam = B.cam;
     const sec = B.cam.secousse > 0.05 ? B.cam.secousse : 0;
-    const vue = { x: cam.x + (sec ? (Math.random() - 0.5) * sec * 8 : 0) + (B.photo ? B.photo.dx : 0),
-                  y: cam.y + (sec ? (Math.random() - 0.5) * sec * 8 : 0) + (B.photo ? B.photo.dy : 0) };
+    const veille = B.etat === 'pause' && B.veille;
+    const vue = { x: cam.x + (sec ? (Math.random() - 0.5) * sec * 8 : 0) + (B.photo ? B.photo.dx : 0) + (veille ? veille.dx : 0),
+                  y: cam.y + (sec ? (Math.random() - 0.5) * sec * 8 : 0) + (B.photo ? B.photo.dy : 0) + (veille ? veille.dy : 0) };
     Monde.dessinerSol(ctx, vue);
     if (!B.interieur) Blocs.dessinerChemins(ctx, vue);  // la route en lacets du rang : SOUS la neige et les traces
     if (B.interieur) Monde.dessinerFoyers(ctx, vue);   // le feu du foyer (le chalet du rang) : il danse, il ne se cuit pas
@@ -1682,7 +1735,7 @@ const Jeu = (function () {
     });
   }
 
-  return { demarrer, commencer, jouer, ouvrirParties, jouerPartie, effacerPartie, copierPartie, entrer, chargerPiece, sortir, entrerDansLeBloc, passerDansLeBloc, sortirDuBloc, changerDeBloc, revenirEnVille, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, ouvrirPhoto, fermerPhoto, basculerCoop, majCoop, retourTitre, maj, rendre, avancer, get horsLigne() { return horsLigne; } };
+  return { demarrer, commencer, jouer, ouvrirParties, jouerPartie, effacerPartie, copierPartie, entrer, chargerPiece, sortir, entrerDansLeBloc, passerDansLeBloc, sortirDuBloc, changerDeBloc, revenirEnVille, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, majVeille, VEILLE_IMAGES, ouvrirCarte, fermerCarte, ouvrirPhoto, fermerPhoto, basculerCoop, majCoop, retourTitre, maj, rendre, avancer, get horsLigne() { return horsLigne; } };
 })();
 
 /* Surface de test et de debogage — la seule poignee du banc d'essai. */

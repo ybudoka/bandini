@@ -245,7 +245,22 @@ const Entree = (function () {
     bas: basJoueur2, neuf: neufJoueur2,
     vibrer: function (ms) { if (!joueur1PrendLaManette()) vibrer(ms); },
   };
+  //: La souris qui bouge, une touche hors du jeu (Maj, F5…) : rien qu'une action
+  //: lise, mais quelqu'un est la. Seul l'ecran de veille de la pause l'ecoute.
+  let remue = false;
+
+  /** Quelqu'un touche a quelque chose CETTE image : un appui neuf, n'importe ou (clavier,
+      manette, doigt, casque), un stick ou un pouce pousse, la souris qui bouge. Ce qui
+      reveille l'ecran de veille de la pause (`Jeu.majVeille`). A lire AVANT `videPresse`. */
+  function activite() {
+    if (remue || axe.mag > 0 || pouce.actif) return true;
+    const sacs = [presse, vNeuf, vNeufTact, vNeufCasque];
+    for (let i = 0; i < sacs.length; i++) for (const k in sacs[i]) if (sacs[i][k]) return true;
+    return epauleNeuve.g || epauleNeuve.d || epauleNeuveCasque.g || epauleNeuveCasque.d;
+  }
+
   function videPresse() {
+    remue = false;
     for (const k in presse) presse[k] = false;
     for (const a in vNeuf) vNeuf[a] = false;
     for (const a in vNeufTact) vNeufTact[a] = false;
@@ -967,7 +982,12 @@ const Entree = (function () {
 
   function init(d, w, n) {
     doc = d; fenetre = w; nav = n;
-    w.addEventListener('keydown', function (e) { surToucheSecrete(e); surTouche(e, true); });
+    w.addEventListener('keydown', function (e) { remue = true; surToucheSecrete(e); surTouche(e, true); });
+    // ⚠️ `movementX/Y` : un pointeur immobile envoie parfois un `pointermove` (une
+    // page qui defile sous lui) ; il ne doit pas reveiller l'ecran de veille.
+    w.addEventListener('pointermove', function (e) { if (e.movementX || e.movementY) remue = true; });
+    w.addEventListener('pointerdown', function () { remue = true; });
+    w.addEventListener('wheel', function () { remue = true; }, { passive: true });
     w.addEventListener('keyup', function (e) { surTouche(e, false); });
     w.addEventListener('blur', toutRelacher);
     w.addEventListener('gamepadconnected', function () { manetteVue = true; appareil = 'manette'; Son.reveiller(); });
@@ -977,7 +997,7 @@ const Entree = (function () {
 
   return {
     MAP_TOUCHES, MANETTE_DEFAUT, ZONE_MORTE,
-    init, debutImage, bas, neuf, basTactile, neufTactile, neufSansManette, neufEpaule, videPresse, toutRelacher, contexte, passerEnTactile,
+    init, debutImage, activite, bas, neuf, basTactile, neufTactile, neufSansManette, neufEpaule, videPresse, toutRelacher, contexte, passerEnTactile,
     etiquettesTactiles: etiquettes,
     toucheEnfoncee: function (code) { return !!enfonce[code]; },
     surSecret, surSuiteActions,

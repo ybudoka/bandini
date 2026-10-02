@@ -19,3 +19,20 @@ Choisi par Martin : la caméra qui flâne, à 20 s.
 veille et la caméra bouge ; une touche réveille, toujours en pause ; une capture pour regarder.
 
 ## Notes
+
+_Livré le 3 oct. 2026._
+
+- **Le son** : `Son.Pause` glisse le gain maître vers `pause` (0,3, dans `app/musique.py`) avec `glisser`, comme le
+  ducking ; `Mus.tick` le fait avancer à chaque image, pause comprise. `majVolume` passe par `volumeMaitre()` :
+  le muet reste une coupure franche.
+- **La veille** : `Jeu.majVeille`, en tête de la branche pause de `maj`. `B.veille` naît à `pause()` et meurt à
+  `reprendre()`. `Entree.activite()` dit si quelqu'un touche à quelque chose cette image (appui neuf, stick, pouce,
+  souris qui bouge, molette). ⚠️ L'appui qui réveille est avalé, et tant que son geste TIENT (`relache`), la pause
+  attend qu'il lâche : sans ça, le stick du réveil descendait le menu l'image d'après.
+- **Le dessin** : `Hud.dessiner` efface le HUD et le menu par `globalAlpha` (seules la roue et la grande carte le
+  remettent à 1, et ni l'une ni l'autre ne vit en pause), éclaircit le voile de 0,6 à 0,2, et `dessinerVeille` pose
+  une bande sombre en bas et le logo de l'accueil, qui respire. La caméra : `vue` + `B.veille.dx/dy`, bornée par
+  `Monde.limitesCamera` et `vueSurLeMasque` comme la photo.
+- **Juges** : `tests/test_pause_veille_js.py` (10), chacun vu rouge par mutation (le glissement du maître, l'appui
+  avalé, la garde `relache`, le compte remis à zéro, la souris, la vue décalée). Capture Chromium : sans la bande,
+  le logo se perdait sur la façade de Chez Gus.

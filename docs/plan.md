@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (308 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (310 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -78,7 +78,6 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
-| La pause baisse le son et tombe en veille | ⬜ **en cours** (Martin, 3 oct. 2026 : le son s'affaiblit en pause, et un écran de veille — la caméra flâne sur la ville figée après 20 s sans toucher) | 3 oct. 2026 | **P4** | ajout | [fiche](jalons/la-pause-baisse-le-son-et-tombe-en-veille.md#fiche) |
 | Des comptoirs qui vendent ce que dit l'enseigne | ⬜ **en cours** (vague 1 : la table des rayons et la bouffe ; Martin, 3 oct. 2026 : des achats cohérents dans les commerces ; aujourd'hui la couleur de l'enseigne décide seule du comptoir — 53 enseignes sur 177 vendent ce que dit leur nom ; tranché par Martin : P2, et un commerce sans vente rend un service à lui) | 3 oct. 2026 | **P2** | **correctif** | [fiche](jalons/des-comptoirs-qui-vendent-ce-que-dit-l-enseigne.md#fiche) |
 | Des blocs de carte en extensions | ⬜ **en cours** (✅ vagues 1 à 3 livrées : à pied, au volant, à deux, la police qui reprend au bord, et le premier vrai bloc — le chalet du rang, la deuxième planque ; reste « un vrai dehors », avec le bloc qui en aura besoin) | 25 sept. 2026 | **P3** | ajout | [fiche](jalons/des-blocs-de-carte-en-extensions.md#fiche) |
 | Charger les districts autour du joueur | ⬜ **en cours** (✅ vague 1 livrée : la carte voyage pliée, 70 538 → 52 129 octets gzip, une garde par clé ; ✅ vague 2 livrée : le serveur compresse les paquets une fois au niveau 9 ; le découpage révisé le 1er oct. 2026 après la remesure — ce sont les SCRIPTS qui faisaient attendre, 1,56 Mo sur 1,68 en 3G rapide, et une mise en ligne les faisait tous repartir : ✅ vague 3 livrée, les scripts à l'empreinte de leur contenu ; ✅ vague 4 livrée, les scripts maigrissent, 1 535 → 750 Ko sur le fil ; ✅ vague 5 livrée, les paquets partent avec les scripts — l'écran titre en 3G rapide de 12,6 à 7,7 s à la première visite, de 2,6 à 2,1 s aux suivantes ; restent les pièces à part et le squelette par district, le second attend une décision de Martin) | 30 sept. 2026 | **P3** | **correctif** | [fiche](jalons/charger-les-districts-autour-du-joueur.md#fiche) · [notes](jalons/charger-les-districts-autour-du-joueur.md#notes) |

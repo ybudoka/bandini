@@ -73,7 +73,7 @@ const Son = (function () {
       if (!AC) return 'absent';
       try { ctx = new AC(); } catch (e) { return 'absent'; }
       maitre = ctx.createGain();
-      maitre.gain.value = B.options.muet ? 0 : VOLUME_MAITRE;
+      maitre.gain.value = volumeMaitre();
       maitre.connect(ctx.destination);
       // ⚠️ `resume()` est asynchrone : au retour du geste l'etat est encore
       // « suspended ». Sans cet ecouteur, le bandeau « touche l'ecran » resterait
@@ -102,8 +102,11 @@ const Son = (function () {
 
   /** Le son coupe doit couper AUSSI ce qui tourne deja (sirene, moteur). */
   function majVolume() {
-    if (maitre) maitre.gain.value = B.options.muet ? 0 : VOLUME_MAITRE;
+    if (maitre) maitre.gain.value = volumeMaitre();
   }
+
+  /** Le volume du maitre : coupe si muet, sinon le plein, baisse par la pause. */
+  function volumeMaitre() { return B.options.muet ? 0 : VOLUME_MAITRE * Pause.niveau; }
 
   function pret() { return !!ctx && !B.options.muet; }
 
@@ -624,6 +627,23 @@ const Son = (function () {
           delete courante.avant;
         }
       });
+    },
+  };
+
+  /*: ⚠️ LA PAUSE BAISSE TOUT (Martin, 3 oct. 2026 : « affaiblis le son sur pause »).
+    Avant, la musique, la radio et le moteur jouaient plein volume par-dessus le menu.
+    C'est le MAITRE qui baisse, pas les boucles une a une : tout ce qui sonne y passe,
+    et ce qui demarre pendant la pause (un clic de menu) sort deja au bon volume.
+    Meme glissement que le ducking (`glisser`) : jamais d'un coup. */
+  const Pause = {
+    niveau: 1,          // 1 = plein ; `pause` (les reglages de la musique) = en pause
+
+    /** Une image (`Mus.tick`) : vise le bas tant que le jeu est en pause. */
+    maj: function () {
+      const cible = B.etat === 'pause' ? (reglagesMusique().pause || 0.3) : 1;
+      if (Pause.niveau === cible) return;
+      Pause.niveau = glisser(Pause.niveau, cible);
+      majVolume();
     },
   };
 
@@ -2836,6 +2856,7 @@ const Son = (function () {
     tick: function () {
       // Le ducking glisse d'abord : la duree d'un pas ne depend pas de ce qui joue.
       Duck.maj();
+      Pause.maj();
       // Les pistes en notes qui finissent leur fondu de sortie — avant tout le
       // reste : quand plus rien ne joue, elles sont justement les seules.
       if (Mus.sortantes.length) {
@@ -3064,8 +3085,9 @@ const Son = (function () {
   return {
     init, reveiller, sonder, etatSon, enAttente, surEtat, pret, suspendre, fermer, majVolume, prechauffer, ton, bruit, SFX, Mus, Chef, Rue,
     chargerEchantillons, echantillon, joue, estCharge, jouerA, presence, depuis, solDuPas, pasDePassant, chocDuDecor, boucle, boucleActive, reglerBoucle, volumeBoucle, etouffer, coupureBoucle,
-    Radio, Ambiance, Rumeur, Voix, Ondes, Souffle, Quartier, Lieu, Notes,
+    Radio, Ambiance, Rumeur, Voix, Ondes, Souffle, Quartier, Lieu, Notes, Pause,
     get contexte() { return ctx; },
+    get volumeMaitre() { return maitre ? maitre.gain.value : null; },
     // ⚠️ Les bruitages seuls : les voix, l'ambiance et les radios ont leurs
     // propres clefs dans `tampons`, et le test des bruitages compte l'egalite.
     get charges() {

@@ -15,6 +15,9 @@ const Hud = (function () {
     if (toile && toile.addEventListener) {
       toile.addEventListener('pointerdown', function (ev) {
         if (!B.menu) return;
+        // ⚠️ Endormie, la pause ne fait que se reveiller (`Jeu.majVeille`) : le clic
+        // ne choisit pas la ligne qui se cachait sous le doigt.
+        if (B.etat === 'pause' && B.veille && B.veille.part > 0) return;
         const b = toile.getBoundingClientRect();
         if (!b.width || !b.height) return;
         toucherMenu((ev.clientX - b.left) * VW / b.width, (ev.clientY - b.top) * VH / b.height);
@@ -3343,6 +3346,35 @@ const Hud = (function () {
     }
   }
 
+  /** L'ecran de veille de la pause : le logo de l'accueil dans le coin, et ce qui
+      reveille. `part` : 0 = la pause, 1 = endormie. Le logo respire, a peine, pour
+      qu'on voie que le jeu n'est pas gele. */
+  function dessinerVeille(ctx, part) {
+    const respire = 0.75 + 0.25 * Math.sin(B.image / 60);
+    const logo = logoCharge();
+    // ⚠️ Une bande sombre au bas de l'ecran, comme au cinema : sur une facade
+    // chargee (Chez Gus, ses fenetres, son enseigne), le logo seul ne se lisait plus.
+    ctx.fillStyle = 'rgba(11,10,18,' + (0.6 * part).toFixed(3) + ')';
+    ctx.fillRect(0, VH - 58, VW, 58);
+    B.stats.rects++;
+    ctx.save();
+    ctx.globalAlpha = part * respire;
+    if (logo) {
+      const w = logo.naturalWidth * 2, h = logo.naturalHeight * 2;
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(logo, VW - w - 12, VH - h - 22, w, h);
+      B.stats.images++;
+    } else {
+      const xn = VW - Atlas.largeurTexte('BANDINI', 2) - 12;
+      Atlas.texte(ctx, 'BANDINI', xn + 1, VH - 47, '#0b0a12', 2);
+      Atlas.texte(ctx, 'BANDINI', xn, VH - 48, '#e8b33c', 2);
+    }
+    const aide = 'UN BOUTON POUR REVENIR';
+    ctx.globalAlpha = 0.7 * part;
+    texte(ctx, aide, VW - Atlas.largeurTexte(aide, 1) - 12, VH - 16, '#cdc6e6', 1);
+    ctx.restore();
+  }
+
   /** Le noir d'un changement de scene (`Jeu.transiter`) : il monte a 1 sur la
       scene qu'on quitte, se TIENT le temps de l'ellipse, et redescend sur la
       nouvelle.
@@ -4577,7 +4609,12 @@ const Hud = (function () {
     // arme, mini-carte, heure : une barre de vie par-dessus une scene ou l'on
     // ne joue pas encore, c'est une scene que personne ne regarde. Seule la
     // boite de dialogue reste, plus bas — c'est elle qui porte les mots.
+    // L'ecran de veille de la pause (`Jeu.majVeille`) : 0 = la pause, 1 = endormie.
+    const veille = B.etat === 'pause' && B.veille ? B.veille.part : 0;
     if ((B.etat === 'jeu' || B.etat === 'pause') && !B.scene) {
+      // ⚠️ Endormie, le HUD s'efface avec le menu : la ville seule. (Seules la roue et la
+      // grande carte remettent `globalAlpha` a 1, et ni l'une ni l'autre ne vit en pause.)
+      if (veille > 0) ctx.globalAlpha = 1 - veille;
       // Vie et endurance, en haut a gauche.
       barre(ctx, 6, 6, 60, 5, j ? j.vie / j.vieMax : 1, '#c4362f');
       const v = j && j.dansVehicule;
@@ -4749,9 +4786,13 @@ const Hud = (function () {
       if (!(B.etat === 'jeu' && B.menu)) dessinerMessage(ctx, 40);
       if (B.etat === 'jeu') iconeDeChargement(ctx);
       if (B.etat === 'pause') {
-        ctx.fillStyle = 'rgba(11,10,18,0.6)'; ctx.fillRect(0, 0, VW, VH);
-        dessinerMenu(ctx);
+        // Le voile s'eclaircit en s'endormant : on regarde la ville, pas un mur.
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = 'rgba(11,10,18,' + (0.6 - 0.4 * veille).toFixed(3) + ')'; ctx.fillRect(0, 0, VW, VH);
+        if (veille < 1) { ctx.globalAlpha = 1 - veille; dessinerMenu(ctx); ctx.globalAlpha = 1; }
+        if (veille > 0) dessinerVeille(ctx, veille);
       }
+      ctx.globalAlpha = 1;
     }
     if (B.etat === 'jeu') {
       // L'ouverture passe SOUS la boite de dialogue : le noir et le titre sont

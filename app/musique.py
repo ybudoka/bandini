@@ -964,6 +964,11 @@ MUSIQUE = {
     "ducking": 0.25,
     "baisse_s": 0.3,
     "remonte_s": 1.2,
+    # ⚠️ LA PAUSE BAISSE TOUT LE SON (Martin, 3 oct. 2026 : « affaiblis le son sur
+    # pause ») : le gain MAITRE — musique, radio, moteur, sirene — glisse a `pause`
+    # en `baisse_s`, et remonte en `remonte_s` a la reprise. Jamais d'un coup ; le
+    # muet, lui, reste une coupure franche.
+    "pause": 0.3,
     "hysteresis_px": 96,        # six tuiles a franchir avant de changer de piste
     # ⚠️ LE MUSICIEN DE RUE N'EST PAS DANS L'ECHELLE, et c'est voulu : ce n'est
     # pas une piste, c'est un SON DU MONDE — il sort d'un gars qu'on voit, comme
