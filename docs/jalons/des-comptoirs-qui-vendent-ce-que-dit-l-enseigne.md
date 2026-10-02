@@ -39,8 +39,8 @@ rarement, et c'est une raison de plus pour que ce qu'on y trouve soit juste.
 
 **Le comptoir vend ce que dit l'enseigne.** On entre à la BOULANGERIE, on achète du pain et des beignes ; à la
 BIJOUTERIE, une chaîne en or ; chez PNEUS DESCHAMPS, des pneus d'hiver. Et un commerce qui ne vend rien au comptoir
-(la BANQUE, le NOTAIRE, les DOUANES) **ne fait pas semblant** : pas de menu d'emplettes, il rend un service à lui ou
-on y est reçu d'une réplique.
+(la BANQUE, le NOTAIRE, les DOUANES) **ne fait pas semblant** : pas de menu d'emplettes, **il rend un service à lui**
+— tranché par Martin le 3 oct. 2026, plutôt qu'une simple réplique ou une porte fermée.
 
 - **Un rayon par enseigne, écrit à la main.** Une table `enseigne → rayon` (à côté de `COMMERCES`) et une table
   `rayon → articles` (dans `magasins.py`). Le genre garde la couleur, la pièce et le mobilier ; c'est le rayon qui
@@ -68,9 +68,12 @@ on y est reçu d'une réplique.
    artisan (cordonnier → bottes ; pépinière → plantes de la planque), marine (cordages, moteurs → rien au comptoir, ou
    une pièce pour le bateau), santé (opticien → lunettes, dentiste et vétérinaire → soins, pas de pilules), savoir
    (disques, livres → la collection, si elle existe).
-3. **Les services, et ce qui reste à trancher avec Martin** : ce que fait un commerce qui ne vend rien au comptoir
-   (une réplique, ou un service à lui — la banque, la poste, l'hôtel qui loue une chambre pour dormir) ; les
-   articles qui demandent une mécanique neuve (le bouquet qui se donne, la nourriture pour le chat, le vélo).
+3. **Les services** (Martin, 3 oct. 2026 : chaque commerce sans vente rend un service à lui). Un service par
+   métier, et chacun est une mécanique : la liste se fait au début de la vague, et chaque service qui n'a pas
+   d'effet en jeu évident se tranche avec Martin. Des pistes : l'hôtel et le motel louent une chambre (DORMIR, comme
+   la planque), la banque fait le change ou garde l'argent, la poste envoie un colis, le photographe fait un
+   portrait, le taxi te conduit, la garderie… à trouver. Puis les articles qui demandent une mécanique neuve (le
+   bouquet qui se donne, la nourriture pour le chat, le vélo).
 
 ### Juges
 
@@ -79,7 +82,7 @@ on y est reçu d'une réplique.
 - **Rien n'est vendu hors de son rayon** : chaque article d'un comptoir de commerce appartient au rayon de son
   enseigne, et chaque article existe dans son catalogue (bouchée, tenue, arme, déco).
 - **Au banc** : on entre dans une porte de chaque rayon, ACTION au comptoir, et le menu porte l'enseigne au-dessus
-  des articles de son rayon ; un commerce sans vente n'ouvre pas de menu d'emplettes.
+  des articles de son rayon ; un commerce sans vente n'ouvre pas de menu d'emplettes, mais son service.
 - **La ville ne bouge pas** : la même ville avec et sans les rayons, clé par clé (les juges « ce module ne déplace rien »).
 
 ## Notes
