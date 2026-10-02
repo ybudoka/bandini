@@ -403,7 +403,10 @@ def test_f06_trop_pres_il_te_voit_trop_loin_on_le_perd(banc):
 
 
 def test_h02_on_file_le_commis_ti_paul_jase_on_seme_et_on_rapporte(banc):
-    """h02 file comme f06 (`suivre`, même patron), mais dehors : Ginette se tient devant
+    """⚠️ Depuis le 2 oct. 2026, h02 est l'ACTE 2 de _L'ambulance de nuit_ (docs/jalons/des-missions-en-chapitres.md) :
+    une partie qui a fait h01 commence le chapitre au marqueur de l'acte 2 (étape 7), et tout est décalé de 8.
+
+    h02 file comme f06 (`suivre`, même patron), mais dehors : Ginette se tient devant
     l'hôpital. Le commis naît à bonne distance, attend qu'on soit au volant, traverse la
     ville, et c'est SON arrivée au dépanneur (`lieu`) qui fait passer à la suite. ⚠️ Plus longue (22 sept. 2026) : on fait jaser Ti-Paul au
     bouton, on vide les poches du commis, il crie au voleur (une étoile, semée en se
@@ -415,8 +418,9 @@ def test_h02_on_file_le_commis_ti_paul_jase_on_seme_et_on_rapporte(banc):
         const argent = paiements(L);
         const g = L.Histoire.donneur('ginette');
         j.x = g.x - 16; j.y = g.y; L.Entites.indexer();
-        commencer(L, o, 'h02');
-        o.frame(1); fermer(L);
+        commencer(L, o, 'ambulance_de_nuit');
+        // Le marqueur de l'acte 2 dit d'abord la fin de h01 et l'appel de Ginette ; puis le commis se pose.
+        for (let k = 0; k < 60 && !B.mission.suivi; k++) { o.frame(1); ecouter(L); }
         const c = B.mission.suivi;
         const dNaissance = Math.round(Math.hypot(c.x - j.x, c.y - j.y));
         const CAP = { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 };
@@ -425,7 +429,7 @@ def test_h02_on_file_le_commis_ti_paul_jase_on_seme_et_on_rapporte(banc):
         j.x = mien.x + 10; j.y = mien.y; L.Entites.indexer();
         L.Vehicules.monter(j, mien); L.Entites.indexer();
         let i = 0;
-        for (; i < 12000 && B.partie.mission && B.partie.mission.etape === 0; i++) {
+        for (; i < 12000 && B.partie.mission && B.partie.mission.etape <= 8; i++) {
             if (!c.attendLeJoueur) {
                 mien.x = c.x - Math.cos(c.angle) * 96; mien.y = c.y - Math.sin(c.angle) * 96;
                 mien.vitesse = 0; mien.vx = 0; mien.vy = 0; j.x = mien.x; j.y = mien.y;
@@ -450,21 +454,21 @@ def test_h02_on_file_le_commis_ti_paul_jase_on_seme_et_on_rapporte(banc):
         j.x = g2.x - 16; j.y = g2.y; L.Entites.indexer();
         finir(L, o);
         return { dNaissance: dNaissance, file: file, accueil: accueil, vol: vol, vole: vole, semer: semer, cache: cache,
-                 retour: retour, dites: dites, fait: !!B.partie.missionsFaites.h02,
+                 retour: retour, dites: dites, fait: !!B.partie.missionsFaites.h02 && !!B.partie.missionsFaites.ambulance_de_nuit,
                  argent: argent.map(function (a) { return a.montant; }) };
     }""")
     assert r["dNaissance"] >= 5 * 16, r
     f = r["file"]
-    assert f["etape"] == 1 and f["ligne"].startswith("FAIS JASER TI-PAUL"), f"arrivé au dépanneur, on va voir Ti-Paul : {f}"
+    assert f["etape"] == 9 and f["ligne"].startswith("FAIS JASER TI-PAUL"), f"arrivé au dépanneur, on va voir Ti-Paul : {f}"
     assert f["dDepanneur"] < 8 * 16, f"il s'est rangé au dépanneur : {f}"
     assert f["images"] > 60 * 60, f"une vraie filature, d'un bout à l'autre de la ville : {f['images']} images"
     assert r["accueil"] == "accueil", "au bouton, Ti-Paul jase (sa poignée de main)"
-    assert r["vol"]["etape"] == 2 and r["vol"]["ligne"].startswith("REPRENDS"), r["vol"]
+    assert r["vol"]["etape"] == 10 and r["vol"]["ligne"].startswith("REPRENDS"), r["vol"]
     assert r["vole"] is True
-    assert r["semer"]["etape"] == 3 and r["semer"]["ligne"].startswith("IL CRIE AU VOLEUR") and r["semer"]["etoiles"] >= 1, r["semer"]
+    assert r["semer"]["etape"] == 11 and r["semer"]["ligne"].startswith("IL CRIE AU VOLEUR") and r["semer"]["etoiles"] >= 1, r["semer"]
     assert r["cache"]["dedans"] and r["cache"]["apres"] == 0, f"semée en se cachant : {r['cache']}"
-    assert r["retour"]["etape"] == 4 and r["retour"]["loin"] > 200, f"les pilules à rapporter, loin : {r['retour']}"
-    for dite in ("pendant:ginette:1", "accueil:tipaul:1", "pendant:ginette:3"):
+    assert r["retour"]["etape"] == 12 and r["retour"]["loin"] > 200, f"les pilules à rapporter, loin : {r['retour']}"
+    for dite in ("pendant:ginette:7", "pendant:ginette:9", "accueil:tipaul:9", "pendant:ginette:11"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and 250 in r["argent"], r
 
@@ -475,7 +479,10 @@ def test_h01_trois_transports_puis_le_phare_puis_les_cles_a_ginette(banc):
     compteur pour les deux autres ; puis l'urgence du phare, à l'autre bout de la ville ;
     le gardien ramené à l'urgence (`livrer` : l'ambulance est encore le char de la
     mission) ; et les clés rendues à Ginette, au bouton — sa poignée de main se dit, et la
-    mission se ferme."""
+    mission se ferme.
+
+    ⚠️ Depuis le 2 oct. 2026, h01 est l'ACTE 1 de _L'ambulance de nuit_ : tout est décalé d'un (le marqueur), et
+    les clés rendues ouvrent l'acte 2 — Ginette et sa pharmacie."""
     r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + """
         L.Jeu.commencer(); L.graine(6);
         const B = L.B, j = B.joueur; j.invincible = 1e6;
@@ -483,7 +490,7 @@ def test_h01_trois_transports_puis_le_phare_puis_les_cles_a_ginette(banc):
         const argent = paiements(L);
         const h = L.Histoire.lieu('hopital');
         j.x = h.x; j.y = h.y + 20; L.Entites.indexer();
-        commencer(L, o, 'h01');
+        commencer(L, o, 'ambulance_de_nuit');
         let hh = B.partie.heure;
         for (let k = 0; k < 400 && L.Monde.estNuit(hh); k++) hh = (hh + 0.005) % 1;
         B.partie.heure = hh; o.frame(2);
@@ -511,30 +518,31 @@ def test_h01_trois_transports_puis_le_phare_puis_les_cles_a_ginette(banc):
         const etapePhare = { etape: etape(L), ligne: L.Histoire.ligneObjectif(), loin: loinDe(L, 'hopital', 'phare') };
         const ph = L.Histoire.lieu('phare');
         v.x = ph.x; v.y = ph.y; v.vitesse = 0; j.x = v.x; j.y = v.y; L.Entites.indexer();
-        for (let k = 0; k < 10 && etape(L) === 3; k++) { o.frame(1); ecouter(L); }
+        for (let k = 0; k < 10 && etape(L) === 4; k++) { o.frame(1); ecouter(L); }
         const etapeRetour = { etape: etape(L), ligne: L.Histoire.ligneObjectif(), dans: j.dansVehicule === v };
         const baie = L.Histoire.lieuDeLivraison('hopital');
         v.x = baie.x; v.y = baie.y; v.vitesse = 0; j.x = v.x; j.y = v.y; L.Entites.indexer();
-        for (let k = 0; k < 10 && etape(L) === 4; k++) { o.frame(1); ecouter(L); }
+        for (let k = 0; k < 10 && etape(L) === 5; k++) { o.frame(1); ecouter(L); }
         const etapeCles = { etape: etape(L), ligne: L.Histoire.ligneObjectif(), aPied: !j.dansVehicule };
         const accueil = serrer(L, o, 'ginette');
-        finir(L, o);
-        return { deJour: deJour, etapeNuit: etapeNuit, etapeMonte: etapeMonte, ambulance: ambulance, pris: pris,
+        jouer(L, o, 20);
+        return { apres: etape(L), deJour: deJour, etapeNuit: etapeNuit, etapeMonte: etapeMonte, ambulance: ambulance, pris: pris,
                  unTransport: unTransport, etapePhare: etapePhare, etapeRetour: etapeRetour, etapeCles: etapeCles,
                  accueil: accueil, dites: dites, fait: !!B.partie.missionsFaites.h01,
                  argent: argent.map(function (a) { return a.montant; }) };
     }""")
-    assert r["deJour"] == {"etape": 0, "attend": "ATTENDS LA NUIT"}, r["deJour"]
-    assert r["etapeNuit"] == 1 and r["ambulance"] == "ambulance" and r["etapeMonte"] == 2, r
+    assert r["deJour"] == {"etape": 1, "attend": "ATTENDS LA NUIT"}, r["deJour"]
+    assert r["etapeNuit"] == 2 and r["ambulance"] == "ambulance" and r["etapeMonte"] == 3, r
     assert r["pris"] is True and r["unTransport"] == 1, f"un vrai transport au klaxon compte : {r}"
-    assert r["etapePhare"]["etape"] == 3 and r["etapePhare"]["ligne"].startswith("URGENCE AU PHARE"), r["etapePhare"]
+    assert r["etapePhare"]["etape"] == 4 and r["etapePhare"]["ligne"].startswith("URGENCE AU PHARE"), r["etapePhare"]
     assert r["etapePhare"]["loin"] > 150, f"le phare, à l'autre bout de la ville : {r['etapePhare']['loin']} tuiles"
-    assert r["etapeRetour"]["etape"] == 4 and r["etapeRetour"]["dans"], f"au phare en ambulance : on ramène le gardien : {r}"
-    assert r["etapeCles"]["etape"] == 5 and r["etapeCles"]["aPied"], f"livré à l'urgence, on descend : {r['etapeCles']}"
+    assert r["etapeRetour"]["etape"] == 5 and r["etapeRetour"]["dans"], f"au phare en ambulance : on ramène le gardien : {r}"
+    assert r["etapeCles"]["etape"] == 6 and r["etapeCles"]["aPied"], f"livré à l'urgence, on descend : {r['etapeCles']}"
     assert r["accueil"] == "accueil", f"au bouton, Ginette parle (sa poignée de main) : {r}"
-    for dite in ("pendant:lachance:3", "pendant:lachance:4", "accueil:ginette:5"):
+    for dite in ("pendant:lachance:4", "pendant:lachance:5", "accueil:ginette:6", "pendant:lachance:7", "pendant:ginette:7"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
-    assert r["fait"] is True and 300 in r["argent"], r
+    assert r["fait"] is True and 300 in r["argent"], "l'acte fini marque h01 faite et paie sa prime"
+    assert r["apres"] >= 8, "l'acte 2 commence : le commis"
 
 
 def test_f07_la_cantine_les_poches_par_derriere_puis_le_complice(banc):

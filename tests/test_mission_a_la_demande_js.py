@@ -233,13 +233,13 @@ def test_ce_qu_elle_donne_arrive_avec_la_mission(banc):
     le porte pas (r03)."""
     r = banc("""async function (L, o) {
         L.Jeu.commencer();
-        const m = L.Histoire.mission('h03');
+        const m = L.Histoire.mission('dette_du_docteur');   // h03 à h06, depuis le 2 oct. 2026
         const avant = { message: (m.donne || {}).message || null };
-        L.Histoire.charger('h03');
+        L.Histoire.charger('dette_du_docteur');
         for (let i = 0; i < 4; i++) await o.attendre();
         return { avant: avant, apres: (m.donne || {}).message || null,
                  casier: (L.Histoire.mission('r03').donne || {}).casier || null };
     }""", poser_les_missions=False)
     assert r["avant"] == {"message": None}, "le message voyage encore au paquet"
-    assert r["apres"] == "LA MOITIÉ DE LA DETTE DU DOCTEUR EST PAYÉE", r
+    assert r["apres"] == "LE DOCTEUR NE DOIT PLUS RIEN À SAL", r
     assert r["casier"] is None, "`donne` n'arrive qu'avec sa mission"

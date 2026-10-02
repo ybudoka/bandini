@@ -563,3 +563,14 @@ def test_chaque_acte_compte_pour_le_quartier_de_son_donneur(banc):
         return { apresActe1: apresActe1, fin: comptes };
     }""")
     assert r == {"apresActe1": ["bilodeau"], "fin": ["bilodeau", "trappeur"]}, r
+
+
+def test_un_acte_dont_le_chapitre_est_fait_est_fait(banc):
+    """Une partie (ou un juge) qui ne porte que le chapitre fait : ses actes le sont, et ce qui les attend s'ouvre."""
+    r = banc("function (L, o) {" + OUTILS + ZZ + """
+        ouvrir(L);
+        const p = L.B.partie, avant = L.Histoire.faite('zb');
+        p.missionsFaites.zz = 1;
+        return { avant: avant, apres: L.Histoire.faite('zb'), autre: L.Histoire.faite('p03') };
+    }""")
+    assert r == {"avant": False, "apres": True, "autre": False}, r

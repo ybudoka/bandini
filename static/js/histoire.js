@@ -140,8 +140,10 @@ const Histoire = (function () {
   function personnages() { return B.defs.personnages || []; }
   function personnage(slug) { return personnages().find(function (p) { return p.slug === slug; }) || null; }
   function mission(slug) { return defs().find(function (m) { return m.slug === slug; }) || null; }
-  // ⚠️ Un CHAPITRE dont toutes les missions remplacées sont faites l'est aussi (une vieille partie).
-  function faite(slug) { return !!B.partie.missionsFaites[slug] || Chapitres.fait(mission(slug)); }
+  // ⚠️ Un CHAPITRE dont toutes les missions remplacées sont faites l'est aussi (une vieille partie). Et l'inverse : un
+  // acte dont le chapitre est fait l'est (une partie qui ne porte que le chapitre — h03 attend d01, l'acte 1 de la
+  // dette ; `Chapitres.reussi` les marque, mais une partie ou un juge qui n'a écrit que `dette_de_rocco` aussi).
+  function faite(slug) { return !!B.partie.missionsFaites[slug] || Chapitres.fait(mission(slug)) || Chapitres.faitParSonChapitre(slug); }
   /** CE QU'ON A PRÉPARÉ CHANGE LA SUITE (le casse, x04 — 1er oct. 2026) : `si` (cette mission est faite) et `sauf` (elle ne
       l'est pas), sur un objectif — tenu, il se joue ; sinon il se SAUTE — ou sur une réplique `pendant` — tenue, elle
       se dit. Le coupé du x02 qui attend dans la ruelle, Josée qui dit ce qui manque. ⚠️ En données, jamais un slug ici. */

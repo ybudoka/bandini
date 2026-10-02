@@ -749,11 +749,11 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 # n'a besoin que de `_commun`, mais `CATALOGUE` se complete juste apres (les
 # cles par defaut et les scenes), et il faut donc que le moteur soit defini.
 from . import (  # noqa: E402
-    e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f10, f11, f12, f13, h01, h02, m1, m2, m3,
+    e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f10, f11, f12, f13, ambulance_de_nuit, m1, m2, m3,
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, r01, s01,
     s03, s08, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
     e04, e06, e07, e10, la_pointe, s02, s05, s06, s09, s10, s11,
-    dette_de_rocco, garage_de_rocco, d07, d08, h03, h04, h05, h06, h07, l01, l02, l03, l04, l05, l06, r02, r03, r04, r05, r06, r07, r08, s07, s12, s14, e13, q12, q09, q08, i01, i02, i03, i05, i06, i08, h08, d09, t01, t02, t03, t04, t05, t06, t09, t11, t12, t13, t14, t15, q07, m98,
+    dette_de_rocco, garage_de_rocco, d07, d08, dette_du_docteur, h07, l01, l02, l03, l04, l05, l06, r02, r03, r04, r05, r06, r07, r08, s07, s12, s14, e13, q12, q09, q08, i01, i02, i03, i05, i06, i08, h08, d09, t01, t02, t03, t04, t05, t06, t09, t11, t12, t13, t14, t15, q07, m98,
     x01, x02, x03, x04, i04, i07,
     p06, p07, p08, p12,
     e08, e09, e11, s04, s13,
@@ -826,7 +826,8 @@ from . import (  # noqa: E402
 # ⚠️ l01 à l06 (30 sept. 2026, vague 9) : l'arc C de la fiche, le Clairon — `l` pour Louise, les slugs `c` sont pris
 # (Irène, le vieux maître). Une série de photos, la une sur toi, sa source (Norbert), le scoop du maire, la rédaction
 # qui brûle, et l'entrevue au phare.
-# ⚠️ h03 à h07 (30 sept. 2026, vague 7) : l'hôpital — le Dr Lachance joue aux cartes chez Sal (h03, h06 : sa
+# ⚠️ `ambulance_de_nuit` (h01, h02) et `dette_du_docteur` (h03 à h06) : 2 oct. 2026, les CHAPITRES des autres arcs,
+# vague H. Avant : h03 à h07 (30 sept. 2026, vague 7) : l'hôpital — le Dr Lachance joue aux cartes chez Sal (h03, h06 : sa
 # dette payée en fausses ordonnances), un cœur par l'autobus de nuit (h04), le patient de Ginette qui file en
 # ambulance (h05), et la nuit des urgences quand un quartier change de mains (h07, `exige.liberes`).
 # ⚠️ i04 (1er oct. 2026, vague 16) : un char sur l'île — la berline chaude embarquée sur la navette, refroidie une journée
@@ -844,9 +845,9 @@ CATALOGUE: list[Mission] = [
     m1.MISSION, m2.MISSION, m3.MISSION, m4.MISSION, m5.MISSION, m6.MISSION, m50.MISSION,
     f01.MISSION, e01.MISSION, q02.MISSION, s03.MISSION, m51.MISSION,
     f04.MISSION, f05.MISSION, f06.MISSION, f07.MISSION, f09.MISSION, f11.MISSION,
-    h01.MISSION, p01.MISSION, q03.MISSION, e12.MISSION,
+    ambulance_de_nuit.MISSION, p01.MISSION, q03.MISSION, e12.MISSION,
     f02.MISSION, f03.MISSION, f08.MISSION,
-    q04.MISSION, e02.MISSION, h02.MISSION, r01.MISSION, s01.MISSION,
+    q04.MISSION, e02.MISSION, r01.MISSION, s01.MISSION,
     p13.MISSION, p14.MISSION,
     m52.MISSION, m53.MISSION, m54.MISSION,
     q01.MISSION, q10.MISSION, q11.MISSION, s08.MISSION,
@@ -860,7 +861,7 @@ CATALOGUE: list[Mission] = [
     s02.MISSION, s06.MISSION, s05.MISSION, s09.MISSION, s10.MISSION, s11.MISSION,
     q07.MISSION,
     dette_de_rocco.MISSION, garage_de_rocco.MISSION, d07.MISSION, d08.MISSION,
-    h03.MISSION, h04.MISSION, h05.MISSION, h06.MISSION, h07.MISSION,
+    dette_du_docteur.MISSION, h07.MISSION,
     l01.MISSION, l02.MISSION, l03.MISSION, l04.MISSION, l05.MISSION, l06.MISSION,
     r02.MISSION, r03.MISSION, r04.MISSION, r05.MISSION, r06.MISSION, r07.MISSION, r08.MISSION,
     s07.MISSION, s12.MISSION, s14.MISSION, e13.MISSION, q12.MISSION, q09.MISSION,

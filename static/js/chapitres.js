@@ -108,6 +108,12 @@ const Chapitres = (function () {
     return !!(m && m.remplace && m.remplace.length && m.remplace.every(function (s) { return B.partie.missionsFaites[s]; }));
   }
 
+  /** La mission `slug` est-elle l'acte d'un chapitre FAIT ? (`Histoire.faite`) */
+  function faitParSonChapitre(slug) {
+    const p = B.partie, defs = (B.defs && B.defs.missions) || [];
+    return defs.some(function (m) { return m.remplace && m.remplace.indexOf(slug) >= 0 && !!p.missionsFaites[m.slug]; });
+  }
+
   // --- Le chronomètre (docs/jalons/des-missions-en-chapitres.md : c'est lui qui dit si on tient 5 à 10 minutes) ---
 
   /** Une image de mission jouée : `Histoire.maj` ne tourne ni sous un menu, ni en pause, ni dans un fondu. */
@@ -201,5 +207,5 @@ const Chapitres = (function () {
     (m.remplace || []).forEach(function (s) { if (!p.missionsFaites[s]) p.missionsFaites[s] = p.jour; });
   }
 
-  return { actes, acteA, marqueurDe, donneurDe, ouvrirActe, reussi, depart, fait, dejaFait, marqueurSuivant, retenir, majReprise, reprendre, compter, noterDuree };
+  return { actes, acteA, marqueurDe, donneurDe, ouvrirActe, reussi, depart, fait, faitParSonChapitre, dejaFait, marqueurSuivant, retenir, majReprise, reprendre, compter, noterDuree };
 })();
