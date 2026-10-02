@@ -535,8 +535,15 @@ def test_le_paquet_reste_leger(paquets):
     ne servent qu'une fois dans la rue : la suite (après l'écran titre, en arrière-plan) est leur place, pas les
     définitions (le démarrage ne bouge pas) ni la carte (à cent octets gzip de son plafond). Les autres chemins :
     les mettre dans les définitions (sous leurs plafonds, mais lues avant l'écran titre), ou moins de panneaux.
+
+    ⚠️ **LA CARTE : 562 000 → 600 000 BRUTS, 55 000 → 60 000 GZIP, LE 2 OCT. 2026, TRANCHÉ PAR MARTIN.** Mesure :
+    561 155 bruts, 54 891 gzip (niveau 6), 52 821 sur le fil (niveau 9) — 109 octets de marge, après les panneaux
+    drôles, le caddie et les bateaux d'hiver. Proposé à Martin : plier ce qui ne l'est pas encore, la vague 7 (le
+    découpage par district, ~55 ms pour le plus gros risque) ou relever — il a relevé : la carte voyage déjà pliée
+    et compressée au maximum, et le démarrage se joue sur les scripts (docs/jalons/charger-les-districts-autour-du-
+    joueur.md). La garde par clé (`MESURE_DE_LA_CARTE`) reste : c'est elle qui dit qui grossit.
     """
-    for nom, brut_max, fil_max in (("definitions", 255_000, 57_500), ("carte", 562_000, 55_000),
+    for nom, brut_max, fil_max in (("definitions", 255_000, 57_500), ("carte", 600_000, 60_000),
                                    ("musiques", 50_000, 10_000), ("suite", 31_000, 13_000)):
         paquet = getattr(paquets, nom)
         mesures = {"definitions": MESURE_DU_PAQUET, "carte": MESURE_DE_LA_CARTE}
