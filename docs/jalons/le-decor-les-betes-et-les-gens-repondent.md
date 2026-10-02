@@ -47,6 +47,17 @@ Et ce qui n'a pas été essayé : **arracher une affiche** « Recherché » (`po
 sans fin tant que les étoiles durent — il faut d'abord un plafond par affiche arrachée),
 **pousser un caddie**, **lire** un panneau.
 
+### Fiche du caddie et du panneau (tranché par Martin, 2 oct. 2026)
+
+- **Le caddie, les deux** : le caddie couché de la ville se **fouille** d'abord (ACTION : de la monnaie, une
+  canette consignée, des objets drôles — jamais une carte de hockey ni une bebelle, qui ont leurs places dans
+  les collections) ; puis il se **redresse** et se **pousse** à pied : il roule, il heurte, il sert de bélier
+  (un passant bousculé, un char cogné), et il reste là où on le laisse. Sans un dé qui décale la ville.
+- **Le panneau, les deux** : (a) la **plaque de rue** — ACTION sous la plaque d'un coin dit son nom ;
+  (b) des **panneaux drôles** à lire en ville, un ou deux par district (le ton de `docs/ecrire-drole.md`), posés
+  sans dé, lus au bouton. ⚠️ Le panneau d'un défi garde son ACTION.
+- Le buisson reste annulé : ces deux gestes livrés, la deuxième vague l'est.
+
 ## Notes
 
 ✅ **2e vague, troisième geste : vider un parcomètre** (22 sept. 2026).
@@ -188,7 +199,8 @@ sans fin tant que les étoiles durent — il faut d'abord un plafond par affiche
   (`Interactions.afficheSousLaMain` ; une affiche est une entité à part, hors de l'index des décors).
 - **Juges** (`tests/test_affiche_arrachee_js.py`, au bouton) : l'invite, l'affiche partie, le stool qui
   attend ; aucune recollée tant que la poursuite dure, le compte remis à zéro après. Trois mutations.
-- **Restent le caddie et le panneau — à préciser par Martin** : le caddie de la ville est COUCHÉ (un décor
+- **Restent le caddie et le panneau — tranchés par Martin le 2 oct. 2026** (voir plus bas, « Fiche du caddie et
+  du panneau »). La question d'alors : le caddie de la ville est COUCHÉ (un décor
   renversé, cassable) — le redresser et le pousser, ou le fouiller ? Et le seul panneau qu'on vise est
   celui d'un défi, qui a déjà son ACTION — lire le nom de la rue (`adresse.js` le sait), ou les panneaux
   « À LOUER » des chantiers ?
