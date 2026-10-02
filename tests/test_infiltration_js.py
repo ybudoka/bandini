@@ -1,7 +1,10 @@
 """L'infiltration au banc (docs/jalons/infiltration-portes-verrouillees-et-gardes-prives.md) : la villa du
 maire (`app/blocs/villa.py`), ses gardes de ronde (`Police.garder`), ses escaliers et ses cadres de caméra
 (`Infiltration`, `Monde.cibleCamera`), ses serrures (`carte.BARRIERES`, condition `objet`), l'objectif
-`obtenir` — et les trois missions (v01, v02, v03) JOUÉES de bout en bout.
+`obtenir` — et les trois infiltrations JOUÉES de bout en bout. Depuis le 2 oct. 2026, v01, v02 et v03 sont les trois
+actes d'UN chapitre, _Une nuit à la villa_ (`nuit_a_la_villa`, docs/jalons/des-missions-en-chapitres.md, vague V) :
+chaque acte commence par le saut au chemin de la villa (`sur_place` sur son marqueur), et chaque juge le reprend là où
+une vieille partie le reprendrait (les actes d'avant faits, la clé au sac).
 
 ⚠️ **UN PASSE-MURAILLE N'EST PAS UN JOUEUR.** Le marcheur du banc (`aller`) avance au pas du joueur
 (1,2 px par image) d'une tuile à la suivante d'un chemin où l'on marche (les murs, les clôtures et les
@@ -26,6 +29,20 @@ OUTILS = outils("fermer", "passer", "etape") + (
   async function laisserArriver(L, o) { for (let i = 0; i < 6; i++) { o.frame(1); await o.attendre(); } }
   function nuit(L) { L.B.partie.heure = 23 / 24; }
   function commencer(L, o, slug) { L.Histoire.commencer(slug); L.B.cinema = null; L.B.scene = null; o.frame(2); fermer(L); }
+  /** Le chapitre de la villa, à l'acte où la partie en est : le saut de son marqueur (fondu, la nuit, le chemin),
+      puis l'étape `e` — le premier objectif de l'acte après l'« aller » de nuit, fait en arrivant. */
+  async function aLActe(L, o, e) {
+    commencer(L, o, 'nuit_a_la_villa');
+    await jusqua(L, o, e);
+    return !!(L.B.bloc && L.B.bloc.slug === 'villa');
+  }
+  /** Jouer jusqu'à l'étape `e`, et que le saut d'un marqueur soit fini — ⚠️ la carte du bloc se charge par le
+      réseau (`Blocs.charger`) : le fondu l'attend, et le banc doit la laisser arriver (`o.attendre`). */
+  async function jusqua(L, o, e) {
+    for (let k = 0; k < 2400 && etape(L) !== null && (etape(L) < e || L.B.transition); k++) { o.frame(1); await o.attendre(); fermer(L); }
+    fermer(L);
+    return etape(L);
+  }
 
   /** Passer dans la villa : au bout de la rue du bord ouest des Érables, on pousse vers l'ouest. */
   async function entrerALaVilla(L, o) {
@@ -576,90 +593,102 @@ def test_le_gps_vise_le_passage_en_ville_et_le_garde_dans_la_villa(banc):
     pixel en ville) ; dans la villa, le garde qui a la clé."""
     r = banc("async function (L, o) {" + OUTILS + """
         L.Jeu.commencer(); nuit(L);
-        commencer(L, o, 'v01');
-        L.B.partie.mission.etape = 1;
+        // L'acte 1, sans laisser jouer son marqueur (son saut nous mettrait dans la villa) : l'étape du vol, en ville.
+        L.Histoire.commencer('nuit_a_la_villa'); L.B.cinema = null; L.B.scene = null;
+        L.B.partie.mission.etape = 2;
         const p = L.B.defs.blocs.find(function (b) { return b.slug === 'villa'; }).passage;
         const enVille = L.Histoire.cible();
         await entrerALaVilla(L, o);
-        L.B.partie.mission.etape = 1;
+        L.B.partie.mission.etape = 2;
         o.frame(2); fermer(L);
         const g = garde(L, 'jardin'), dedans = L.Histoire.cible();
         return { enVille: enVille, passage: { x: 16, y: (p.de + p.l / 2) * 16 }, dedans: dedans, g: { x: g.x, y: g.y }, porte: g.porteObjet };
     }""")
     v = r["enVille"]
     assert v and abs(v["x"] - r["passage"]["x"]) <= 16 and abs(v["y"] - r["passage"]["y"]) <= 16, r
-    assert r["porte"] == "cle_villa", "le garde du jardin n'a pas la clé pendant v01"
+    assert r["porte"] == "cle_villa", "le garde du jardin n'a pas la clé pendant l'acte 1 (v01)"
     assert abs(r["dedans"]["x"] - r["g"]["x"]) < 2 and abs(r["dedans"]["y"] - r["g"]["y"]) < 2, r
 
 
-def test_v01_on_vole_la_cle_du_garde_du_jardin_sans_se_faire_voir(banc):
-    """v01, jouée : de nuit, au passage ; par le trou de la palissade ; dans le dos du garde du jardin,
-    ACTION — la clé ; ressortir par le chemin. Aucune étoile, la clé reste dans le sac, Josée paie."""
+def test_acte_1_on_vole_la_cle_du_garde_du_jardin_sans_se_faire_voir(banc):
+    """L'acte 1 (v01), joué : le saut de son marqueur, de nuit, au chemin ; par le trou de la palissade ; dans le dos
+    du garde du jardin, ACTION — la clé ; ressortir par le chemin. Aucune étoile, la clé reste dans le sac, l'acte paie
+    sa prime (500 $), v01 est faite — et l'acte 2 s'ouvre au chemin, dans la même nuit : Bouchard."""
     r = banc("async function (L, o) {" + OUTILS + """
         L.Jeu.commencer(); nuit(L);
         const B = L.B, j = B.joueur; j.invincible = 1e6;
-        const avant = B.partie.argent;
-        commencer(L, o, 'v01');
-        const t = { entre: await entrerALaVilla(L, o) };
+        const avant = B.partie.argent, heure = B.partie.heure;
+        const t = { entre: await aLActe(L, o, 2) };
         t.apresEntree = etat(L);
         t.trou = parLeTrou(L, o);
         t.vol = voler(L, o, 'jardin', { x: 20, y: 3 });
         t.apresVol = etat(L);
-        t.sortie = ressortir(L, o, function () { return !B.partie.mission; });
-        t.fin = etat(L);
-        passer(L, o);
+        t.sortie = ressortir(L, o, function () { return etape(L) >= 4; });
         t.argent = B.partie.argent - avant;
+        await jusqua(L, o, 6);
+        t.fin = etat(L);
+        t.nuit = L.Monde.estNuit(B.partie.heure);
+        t.donneur = L.Chapitres.donneurDe(L.Histoire.courante());
         return t;
     }""")
     assert r["entre"], r
-    assert r["apresEntree"]["etape"] == 1, f"arrivé de nuit au chemin, l'objectif 0 n'avance pas : {r['apresEntree']}"
+    assert r["apresEntree"]["etape"] == 2 and r["apresEntree"]["bloc"] == "villa", \
+        f"le saut de l'acte 1 pose au chemin, de nuit, et l'« aller » se fait en arrivant : {r['apresEntree']}"
     assert r["trou"] is True, r
     assert r["vol"] is True and r["apresVol"]["objets"].get("cle_villa") == 1, r
-    assert r["apresVol"]["etoiles"] == 0 and r["apresVol"]["etape"] == 2, r
+    assert r["apresVol"]["etoiles"] == 0 and r["apresVol"]["etape"] == 3, r
     assert r["sortie"] is True and "v01" in r["fin"]["faites"], (r["apresVol"], r["fin"])
     assert r["fin"]["objets"].get("cle_villa") == 1, "la clé ne reste pas dans le sac"
-    assert r["argent"] >= 500, r
+    assert r["argent"] == 500, r
+    assert r["fin"]["mission"] == "nuit_a_la_villa" and r["fin"]["etape"] == 6 and r["fin"]["bloc"] == "villa", \
+        f"l'acte 2 s'ouvre dans la villa : {r['fin']}"
+    assert r["nuit"] and r["donneur"] == "bouchard", r
 
 
-def test_v02_le_dossier_du_bureau_d_en_haut(banc):
-    """v02, jouée : la clé ouvre la porte de service ; la cuisine, le corridor, le hall, le grand escalier ;
-    à l'étage, le bureau du maire et son dossier (ramassé en marchant dessus) ; redescendre et ressortir
-    sans une étoile. Bouchard paie et efface deux pages du casier."""
+def test_acte_2_le_dossier_du_bureau_d_en_haut(banc):
+    """L'acte 2 (v02), joué là où une vieille partie le reprend (v01 faite, la clé au sac) : le saut au chemin ; la clé
+    ouvre la porte de service ; la cuisine, le corridor, le hall, le grand escalier ; à l'étage, le bureau du maire et
+    son dossier (ramassé en marchant dessus) ; redescendre et ressortir sans une étoile. L'acte paie sa prime (700 $)
+    et efface deux pages du casier, et l'acte 3 s'ouvre au chemin : Sven."""
     r = banc("async function (L, o) {" + OUTILS + """
         L.Jeu.commencer(); nuit(L);
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         B.partie.missionsFaites.v01 = 1; B.partie.objets.cle_villa = 1; B.partie.casier = 5;
-        commencer(L, o, 'v02');
-        const t = { entre: await entrerALaVilla(L, o) };
+        const avant = B.partie.argent;
+        const t = { entre: await aLActe(L, o, 6) };
+        t.debut = etat(L);
         t.trou = entrerParLeTrou(L, o);
-        t.service = aller(L, o, { x: 20, y: 32 }, 20000, function () { return etape(L) >= 2; });
+        t.service = aller(L, o, { x: 20, y: 32 }, 20000, function () { return etape(L) >= 7; });
         t.apresService = etat(L);
-        t.dossier = aller(L, o, lieu(L, 'villa_bureau'), 60000, function () { return etape(L) >= 3; });
+        t.dossier = aller(L, o, lieu(L, 'villa_bureau'), 60000, function () { return etape(L) >= 8; });
         t.apresDossier = etat(L);
-        t.sortie = ressortir(L, o, function () { return !B.partie.mission; });
+        t.sortie = ressortir(L, o, function () { return etape(L) >= 9; });
+        await jusqua(L, o, 11);
         t.fin = etat(L);
-        passer(L, o);
         t.casier = B.partie.casier;
+        t.argent = B.partie.argent - avant;
+        t.donneur = L.Chapitres.donneurDe(L.Histoire.courante());
         return t;
     }""")
-    assert r["entre"] and r["trou"] is True, r
-    assert r["service"] is True and r["apresService"]["etape"] == 2 and r["apresService"]["etoiles"] == 0, r
+    assert r["entre"] and r["debut"]["etape"] == 6, r["debut"]
+    assert r["trou"] is True, r
+    assert r["service"] is True and r["apresService"]["etape"] == 7 and r["apresService"]["etoiles"] == 0, r
     assert r["dossier"] is True and r["apresDossier"]["objets"].get("dossier_bouchard") == 1, r
     assert r["apresDossier"]["etoiles"] == 0, r
     assert r["sortie"] is True and "v02" in r["fin"]["faites"], r
-    assert r["casier"] == 3, r
+    assert r["casier"] == 3 and r["argent"] == 700, r
+    assert r["fin"]["etape"] == 11 and r["fin"]["bloc"] == "villa" and r["donneur"] == "sven", r["fin"]
 
 
-def test_v03_la_chambre_forte_au_piratage(banc):
-    """v03, jouée : la cave par l'escalier de la cuisine ; le terminal, piraté au clavier — le code dans
-    le sac, la porte de la chambre forte s'ouvre ; le grand livre ; ressortir sans une étoile, puis le
-    rapporter à Sven."""
+def test_acte_3_la_chambre_forte_au_piratage(banc):
+    """L'acte 3 (v03), le dernier, joué là où une vieille partie le reprend : la cave par l'escalier de la cuisine ; le
+    terminal, piraté au clavier — le code dans le sac, la porte de la chambre forte s'ouvre ; le grand livre ;
+    ressortir sans une étoile, puis le rapporter à Sven : le chapitre est fait."""
     r = banc("async function (L, o) {" + OUTILS + PILOTE + """
         L.Jeu.commencer(); nuit(L);
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         B.partie.missionsFaites.v01 = 1; B.partie.missionsFaites.v02 = 1; B.partie.objets.cle_villa = 1;
-        commencer(L, o, 'v03');
-        const t = { entre: await entrerALaVilla(L, o) };
+        const t = { entre: await aLActe(L, o, 11) };
         const porte = serrure(L, 'villa_voute');
         t.fermeeAvant = !!L.Monde.barriereA(porte.x, porte.y, 'pieton');
         t.trou = entrerParLeTrou(L, o);
@@ -669,12 +698,12 @@ def test_v03_la_chambre_forte_au_piratage(banc):
         o.tape('KeyE', 2);
         t.ouvert = !!B.piratage;
         if (B.piratage) piloter(L, o);
-        fermer(L);
+        fermer(L); o.frame(1); fermer(L);
         t.apresPiratage = etat(L);
         t.fermeeApres = !!L.Monde.barriereA(porte.x, porte.y, 'pieton');
-        t.livre = aller(L, o, lieu(L, 'villa_voute'), 20000, function () { return etape(L) >= 3; });
+        t.livre = aller(L, o, lieu(L, 'villa_voute'), 20000, function () { return etape(L) >= 13; });
         t.apresLivre = etat(L);
-        t.sortie = ressortir(L, o, function () { return etape(L) >= 4; });
+        t.sortie = ressortir(L, o, function () { return etape(L) >= 14; });
         t.dehors = sortirDeLaVilla(L, o);
         const sven = L.Histoire.donneur('sven');
         if (sven) { j.x = sven.x + 14; j.y = sven.y; L.Entites.indexer(); }
@@ -685,29 +714,44 @@ def test_v03_la_chambre_forte_au_piratage(banc):
     assert r["entre"] and r["trou"] is True, r
     assert r["fermeeAvant"], "la chambre forte est ouverte avant le piratage"
     assert r["terminal"] is True and r["ouvert"], f"le piratage ne s'ouvre pas au terminal : {r}"
-    assert r["apresPiratage"]["objets"].get("code_voute") == 1 and r["apresPiratage"]["etape"] == 2, r
+    assert r["apresPiratage"]["objets"].get("code_voute") == 1 and r["apresPiratage"]["etape"] == 12, r
     assert not r["fermeeApres"], "le code est dans le sac et la chambre forte reste fermée"
     assert r["livre"] is True and r["apresLivre"]["objets"].get("grand_livre") == 1, r
     assert r["apresLivre"]["etoiles"] == 0, r
     assert r["sortie"] is True and r["dehors"], r
-    assert "v03" in r["fin"]["faites"], r
+    assert "v03" in r["fin"]["faites"] and r["fin"]["mission"] is None, r
 
 
-def test_une_mission_ratee_fait_retomber_ce_qu_elle_avait_fait_prendre(banc):
-    """Vu avec le dossier en poche : v02 est ratée (`etoile`), le dossier retombe (on se refait la
-    mission du début) — la clé, venue de v01, reste."""
-    r = banc("async function (L, o) {" + OUTILS + """
+def test_un_acte_rate_fait_retomber_ce_qu_il_avait_fait_prendre_puis_on_le_reprend(banc):
+    """Vu avec le dossier en poche : l'acte 2 (v02) est raté (`etoile`), le dossier retombe — la clé, venue de l'acte 1,
+    reste ; c'est l'échec de Bouchard qu'on entend. Puis le menu : REPRENDRE L'ACTE 2 — le saut ramène au chemin de
+    la villa, de nuit, à la porte de service à ouvrir de nouveau, la clé toujours en poche."""
+    from outils_missions import PLUS_LONGUES
+    r = banc("async function (L, o) {" + OUTILS + PLUS_LONGUES + """
         L.Jeu.commencer(); nuit(L);
-        const B = L.B;
+        const B = L.B, j = B.joueur; j.invincible = 1e6;
         B.partie.missionsFaites.v01 = 1; B.partie.objets.cle_villa = 1;
-        commencer(L, o, 'v02');
-        B.partie.mission.etape = 3; B.partie.objets.dossier_bouchard = 1;
+        await aLActe(L, o, 6);
+        B.partie.mission.etape = 8; B.partie.objets.dossier_bouchard = 1;
         L.Police.etoilesAuMoins(1);
-        o.frame(2);
-        return { mission: B.partie.mission, objets: Object.assign({}, B.partie.objets) };
+        for (let k = 0; k < 120 && B.partie.mission; k++) { o.frame(1); ecouter(L); }
+        const rate = { mission: B.partie.mission, objets: Object.assign({}, B.partie.objets) };
+        for (let k = 0; k < 2400 && (B.transition || B.cinema || !B.menu); k++) { o.frame(1); await o.attendre(); ecouter(L); }
+        const menu = B.menu ? B.menu.items.map(function (i) { return i.libelle; }) : null;
+        const item = B.menu.items.find(function (x) { return x.libelle.indexOf('REPRENDRE') === 0; });
+        if (item.faire(item) !== false && B.menu) L.Hud.fermerMenu();
+        for (let k = 0; k < 2400 && (B.transition || etape(L) === null || etape(L) < 6); k++) { o.frame(1); await o.attendre(); ecouter(L); }
+        fermer(L);
+        return { rate: rate, menu: menu, echec: dites.filter(function (d) { return d.indexOf('echec:') === 0; }),
+                 repris: Object.assign(etat(L), { nuit: L.Monde.estNuit(B.partie.heure), gardee: !!B.partie.mission.gardee }) };
     }""")
-    assert r["mission"] is None, "vu, et la mission discrète continue"
-    assert "dossier_bouchard" not in r["objets"] and r["objets"].get("cle_villa") == 1, r
+    assert r["rate"]["mission"] is None, "vu, et l'infiltration continue"
+    assert "dossier_bouchard" not in r["rate"]["objets"] and r["rate"]["objets"].get("cle_villa") == 1, r["rate"]
+    assert r["echec"] == ["echec:bouchard:4"], f"l'échec de Bouchard, pas celui de Josée : {r['echec']}"
+    assert r["menu"][:2] == ["REPRENDRE L'ACTE 2", "PLUS TARD"], r["menu"]
+    rp = r["repris"]
+    assert rp["mission"] == "nuit_a_la_villa" and rp["etape"] == 6 and rp["bloc"] == "villa", rp
+    assert rp["nuit"] and rp["gardee"] and rp["etoiles"] == 0 and rp["objets"].get("cle_villa") == 1, rp
 
 
 def test_la_carte_ne_montre_que_l_etage_ou_l_on_est(banc):
@@ -765,7 +809,7 @@ def test_un_objectif_a_un_autre_etage_se_vise_par_son_escalier(banc):
         B.partie.missionsFaites.v01 = 1; B.partie.objets.cle_villa = 1;
         await entrerALaVilla(L, o);
         L.Infiltration.gardes().forEach(function (g) { L.Entites.retirer(g); });
-        commencer(L, o, 'v02');
+        L.Histoire.commencer('nuit_a_la_villa'); B.cinema = null; B.scene = null;   // l'acte 2, sans son saut
         const vise = function (etape, x, y) {
           B.partie.mission.etape = etape;
           j.x = x * TT + 8; j.y = y * TT + 8; L.Entites.indexer();
@@ -773,12 +817,12 @@ def test_un_objectif_a_un_autre_etage_se_vise_par_son_escalier(banc):
           return c ? { x: Math.floor(c.x / TT), y: Math.floor(c.y / TT), nom: c.nom } : null;
         };
         const out = {};
-        out.dossierDuRez = vise(2, 42, 17);        // le dossier est à l'étage : le grand escalier du hall
-        out.dossierDeLEtage = vise(2, 18, 60);     // à l'étage : l'escalier de la bibliothèque, qui monte au 2e
-        out.dossierDuSecond = vise(2, 3, 90);      // au 2e : le bureau
-        out.dossierDeLaCave = vise(2, 45, 64);     // de la cave : remonter à la cuisine d'abord
-        out.sortieDeLEtage = vise(3, 30, 52);      // ressortir : redescendre
-        out.sortieDuSecond = vise(3, 20, 80);      // du 2e : redescendre à l'étage
+        out.dossierDuRez = vise(7, 42, 17);        // le dossier est à l'étage : le grand escalier du hall
+        out.dossierDeLEtage = vise(7, 18, 60);     // à l'étage : l'escalier de la bibliothèque, qui monte au 2e
+        out.dossierDuSecond = vise(7, 3, 90);      // au 2e : le bureau
+        out.dossierDeLaCave = vise(7, 45, 64);     // de la cave : remonter à la cuisine d'abord
+        out.sortieDeLEtage = vise(8, 30, 52);      // ressortir : redescendre
+        out.sortieDuSecond = vise(8, 20, 80);      // du 2e : redescendre à l'étage
         return out;
     }""")
     hall, etage = villa.ESCALIERS[0]["a"], villa.ESCALIERS[0]["b"]
@@ -809,8 +853,9 @@ def test_rater_une_mission_ne_fait_pas_perdre_la_cle_d_une_autre(banc):
         L.Histoire.echouer('essai'); o.frame(2); fermer(L);
         out.apresE07 = Object.assign({}, B.partie.objets);
         delete B.partie.missionsFaites.v01; delete B.partie.objets.cle_villa;
-        commencer(L, o, 'v01');
-        B.partie.objets.cle_villa = 1;                  // volée pendant la mission
+        // v01 est l'acte 1 de la nuit à la villa (2 oct. 2026) : sans laisser jouer son saut.
+        L.Histoire.commencer('nuit_a_la_villa'); B.cinema = null; B.scene = null; B.partie.mission.etape = 2;
+        B.partie.objets.cle_villa = 1;                  // volée pendant l'acte
         L.Histoire.echouer('essai'); o.frame(2); fermer(L);
         out.apresV01 = Object.assign({}, B.partie.objets);
         const perdue = { missionsFaites: { v01: 463 }, objets: { skimmer: 0 } };

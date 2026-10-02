@@ -751,7 +751,7 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 from . import (  # noqa: E402
     ti_paul_et_ses_amis, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f10, f11, f12, f13, ambulance_de_nuit, m1, m2, m3,
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, lulu_et_le_poisson, gege_et_les_debardeurs, q04, q10, q11, nouvelle_inspectrice, lot_de_gilles,
-    raymonde_et_le_syndicat, v01, v02, v03, chute_du_pouce, retour_du_maitre, cindy_et_le_beau_denis, q13,
+    raymonde_et_le_syndicat, nuit_a_la_villa, chute_du_pouce, retour_du_maitre, cindy_et_le_beau_denis, q13,
     les_chevreuils, la_pointe, ti_loup_et_gros_boulon, s09, s11,
     dette_de_rocco, garage_de_rocco, d07, d08, dette_du_docteur, h07, la_une, scoop_du_maire, l06, r03, r04, r06, r07, r08, commandes_de_prevost, s12, s14, le_moteur_du_capitaine, soeur_jeanne, i03, i06, i08, h08, d09, t01, t02, t03, t04, t05, t06, t09, t11, t12, t13, t14, t15, q07, m98,
     x01, x02, x03, x04, i04, i07,
@@ -777,7 +777,8 @@ from . import (  # noqa: E402
 # Bouchard), s01 (la Shop — Gilles), p13/p14 (La Pointe — la foire prend vie, le Bonimenteur).
 # ⚠️ Quatre de plus (25 sept. 2026) : q01 (Lulu, après q02), q10/q11 (le choix entre Sven et Josée —
 # chacune `ferme` l'autre ; q10 après m54, Sven ayant dit « une dernière fois »), s08 (Gilles, après s01).
-# ⚠️ Trois infiltrations (28 sept. 2026) : v01 (Josée, après q04), v02 (Bouchard), v03 (Sven) — la
+# ⚠️ `nuit_a_la_villa` (v01, v02, v03) : 2 oct. 2026, un CHAPITRE des autres arcs, vague V — une seule nuit à la
+# villa. Avant : trois infiltrations (28 sept. 2026) : v01 (Josée, après q04), v02 (Bouchard), v03 (Sven) — la
 # villa du maire, un bloc (`app/blocs/villa.py`), avant m97.
 # ⚠️ f13 (28 sept. 2026) : Mado et ses trois feux, la première mission qui allume le sien (`eteindre`) ;
 # f10 (Rosa, la chemise hawaïenne — `tenue`, Norbert) et f12 (Madame Thibodeau, les cinq enveloppes :
@@ -861,7 +862,7 @@ CATALOGUE: list[Mission] = [
     p13.MISSION, p14.MISSION,
     m52.MISSION, m53.MISSION, m54.MISSION,
     q10.MISSION, q11.MISSION,
-    v01.MISSION, v02.MISSION, v03.MISSION,
+    nuit_a_la_villa.MISSION,
     f13.MISSION, f10.MISSION, f12.MISSION,
     chute_du_pouce.MISSION, retour_du_maitre.MISSION,
     cindy_et_le_beau_denis.MISSION, q13.MISSION,

@@ -280,36 +280,39 @@ def test_q13_se_joue_sur_place_et_gardee(banc):
 
 
 def test_v01_finit_au_bord_sans_rater(banc):
-    """⚠️ Le dernier objectif (« RESSORS PAR LE CHEMIN ») se joue au bord du bloc : la mission est
-    gagnée avant que le passage ne ramène en ville, et rien ne la fait rater après."""
+    """⚠️ Le dernier objectif de v01 (« RESSORS PAR LE CHEMIN ») se joue au bord du bloc : l'acte est gagné avant que
+    le passage ne ramène en ville, et rien ne le fait rater après. Depuis le 2 oct. 2026, v01 est l'acte 1 de
+    `nuit_a_la_villa` : fait au bord, l'acte 2 s'ouvre — son saut repose au chemin, dans la même nuit."""
     r = banc("async function (L, o) {" + OUTILS + PLUS_LONGUES + """
         L.Jeu.commencer(); L.graine(6);
         const B = L.B, p = B.partie, j = B.joueur; j.invincible = 1e6;
         faites(L, ['q04']); p.heure = 0.90;
-        commencer(L, o, 'v01'); p.mission.gardee = true;
+        commencer(L, o, 'nuit_a_la_villa'); p.mission.gardee = true;
         L.Blocs.sauter('villa'); for (let k = 0; k < 400 && B.transition; k++) { o.frame(1); await o.attendre(); }
-        p.mission.etape = 1; L.Histoire.avancer(true);   // avancer passe a la SUIVANTE : la 2, « RESSORS »
+        p.mission.etape = 2; L.Histoire.avancer(true);   // avancer passe a la SUIVANTE : la 3, « RESSORS »
         const depart = p.mission && p.mission.etape;
         const l = L.Histoire.lieu('villa_chemin'); j.x = l.x; j.y = l.y; L.Entites.indexer();
         const echecs = p.stats.echecs || 0;
-        for (let k = 0; k < 900; k++) { o.frame(1); if (B.transition) o.fondu(); }
-        return { depart: depart, faite: !!p.missionsFaites.v01, echecs: (p.stats.echecs || 0) - echecs };
+        for (let k = 0; k < 900; k++) { o.frame(1); fermer(L); if (B.transition) o.fondu(); }
+        return { depart: depart, faite: !!p.missionsFaites.v01, echecs: (p.stats.echecs || 0) - echecs,
+                 ensuite: p.mission && p.mission.etape, bloc: B.bloc && B.bloc.slug };
     }""")
-    assert r == {"depart": 2, "faite": True, "echecs": 0}
+    assert r == {"depart": 3, "faite": True, "echecs": 0, "ensuite": 6, "bloc": "villa"}
 
 
 def _sortie(slug):
-    """L'étape « RESSORS PAR LE CHEMIN » d'une mission de la villa."""
+    """Les étapes « RESSORS PAR LE CHEMIN » de la nuit à la villa — une par acte (v01, v02, v03)."""
     m = next(m for m in missions.CATALOGUE if m["slug"] == slug)
-    return next(i for i, o in enumerate(m["objectifs"]) if o["texte"].startswith("RESSORS"))
+    return [i for i, o in enumerate(m["objectifs"]) if o["texte"].startswith("RESSORS")]
 
 
-@pytest.mark.parametrize("slug", ["v01", "v02", "v03"])
-def test_sortir_de_la_villa_en_longeant_la_palissade_passe_l_etape(banc, slug):
+@pytest.mark.parametrize("acte", [0, 1, 2])
+def test_sortir_de_la_villa_en_longeant_la_palissade_passe_l_etape(banc, acte):
     """⚠️ Revue finale : la bande d'herbe à l'est mène à la sortie sans passer à trois tuiles du chemin.
     On ressort par le nord-est, comme Josée le dit — l'étape doit être passée avant la ville, sinon la
-    frontière fait rater la mission, le butin en poche."""
-    sortie = _sortie(slug)
+    frontière fait rater la mission, le butin en poche. Une étape par acte de `nuit_a_la_villa`."""
+    slug = "nuit_a_la_villa"
+    sortie = _sortie(slug)[acte]
     r = banc("async function (L, o) {" + OUTILS + PLUS_LONGUES + """
         const SLUG = '""" + slug + """', SORTIE = """ + str(sortie) + """;
         L.Jeu.commencer(); L.graine(6);
@@ -323,6 +326,7 @@ def test_sortir_de_la_villa_en_longeant_la_palissade_passe_l_etape(banc, slug):
         p.mission.etape = SORTIE - 1; L.Histoire.avancer(true);   // avancer passe a la SUIVANTE
         const depart = p.mission && p.mission.etape;
         const passee = function () { return !!p.missionsFaites[SLUG] || (!!p.mission && p.mission.etape > SORTIE); };
+        // ⚠️ Passée, l'étape ouvre l'acte suivant, dont le saut repose au chemin : c'est le passage qu'on juge.
         const chemin = [[70, 16], [70, 18], [70, 19], [71, 20], [72, 20]];
         const echecs = p.stats.echecs || 0;
         for (let i = 0; i + 1 < chemin.length && B.bloc && !passee(); i++) {
@@ -340,13 +344,22 @@ def test_sortir_de_la_villa_en_longeant_la_palissade_passe_l_etape(banc, slug):
 
 def test_les_missions_branchees_sur_place():
     """Qui se joue sur place aujourd'hui — e07 non : son vol de clé se joue en ville, avant la villa. Et p05 est
-    devenue l'acte 2 de La Pointe (30 sept. 2026, un chapitre) : son saut à la nuit est sur le MARQUEUR de l'acte."""
-    assert {m["slug"] for m in missions.CATALOGUE if m.get("sur_place")} == {"v01", "v02", "v03", "q13"}
+    devenue l'acte 2 de La Pointe (30 sept. 2026, un chapitre) : son saut à la nuit est sur le MARQUEUR de l'acte ;
+    v01, v02 et v03, les trois actes de `nuit_a_la_villa` (2 oct. 2026), ont chacun le leur."""
+    assert {m["slug"] for m in missions.CATALOGUE if m.get("sur_place")} == {"q13"}
     pointe = missions.par_slug("la_pointe")
     assert [o.get("sur_place") for o in pointe["objectifs"] if o["type"] == "acte"][1] == {"lieu": "phare", "heure": "nuit"}
+    villa = missions.par_slug("nuit_a_la_villa")
+    assert [o.get("sur_place") for o in villa["objectifs"] if o["type"] == "acte"] == [{"lieu": "villa_chemin", "heure": "nuit"}] * 3
+    assert villa["frontiere"] == "bloc:villa"
 
 
-@pytest.mark.parametrize("slug", [m["slug"] for m in missions.CATALOGUE if m.get("sur_place")])
+def _saut_au_depart(m):
+    """Le saut d'une mission sur place : le sien, ou celui du marqueur de son premier acte (un chapitre)."""
+    return m.get("sur_place") or next((o.get("sur_place") for o in m["objectifs"][:1] if o.get("type") == "acte"), None)
+
+
+@pytest.mark.parametrize("slug", [m["slug"] for m in missions.CATALOGUE if _saut_au_depart(m)])
 def test_chaque_mission_sur_place_se_joue_sur_place(banc, slug):
     """Le juge de toute mission branchée, la prochaine comprise : prise de jour chez son donneur, elle
     commence à l'heure, au lieu, dedans sa frontière — par le vrai chemin de l'intro (`demarrer`), et le
@@ -360,15 +373,20 @@ def test_chaque_mission_sur_place_se_joue_sur_place(banc, slug):
         L.Histoire.demarrer(SLUG);
         for (let k = 0; k < 600 && !(p.mission && p.mission.gardee); k++) { ecouter(L); o.frame(1); await o.attendre(); }
         for (let k = 0; k < 400 && B.transition; k++) { o.frame(1); await o.attendre(); }
+        // Un chapitre : le saut est sur le marqueur du premier acte, qui part après l'intro.
+        for (let k = 0; k < 1200 && p.mission && p.mission.etape === 0; k++) { ecouter(L); o.frame(1); if (B.transition) o.fondu(); await o.attendre(); }
+        for (let k = 0; k < 400 && B.transition; k++) { o.frame(1); await o.attendre(); }
         // Le saut et la frontière arrivent avec le texte de la mission (`/api/mission`), pas dans le paquet.
-        const jouee = L.Histoire.courante() || {}, sp = jouee.sur_place || {};
+        const jouee = L.Histoire.courante() || {};
+        const premier = (jouee.objectifs || [])[0] || {};
+        const sp = jouee.sur_place || (premier.type === 'acte' && premier.sur_place) || {};
         const l = sp.lieu ? L.Histoire.lieu(sp.lieu) : null;
         return { gardee: !!(p.mission && p.mission.gardee), heure: p.heure, nuit: L.Monde.estNuit(p.heure),
                  loin: l ? Math.hypot(j.x - l.x, j.y - l.y) : -1,
-                 dedans: jouee.frontiere ? L.SurPlace.dedans(jouee.frontiere) : true, lue: !!jouee.sur_place };
+                 dedans: jouee.frontiere ? L.SurPlace.dedans(jouee.frontiere) : true, lue: !!sp.lieu };
     }""", poser_les_missions=False)
     m = next(m for m in missions.CATALOGUE if m["slug"] == slug)
-    h = m["sur_place"]["heure"]
+    h = _saut_au_depart(m)["heure"]
     assert r["gardee"] and r["lue"], r
     if h == "nuit":
         assert r["nuit"], r
@@ -380,12 +398,13 @@ def test_chaque_mission_sur_place_se_joue_sur_place(banc, slug):
 
 
 def test_la_frontiere_tombe_au_premier_retourner(banc):
-    """Tranché par Martin (30 sept. 2026) : rapporter le butin au donneur se fait ailleurs — v03 est gardée
-    dans la villa jusqu'à « RAPPORTE LE GRAND LIVRE À SVEN », pas après."""
+    """Tranché par Martin (30 sept. 2026) : rapporter le butin au donneur se fait ailleurs — v03 (l'acte 3 de
+    `nuit_a_la_villa`) est gardée dans la villa jusqu'à « RAPPORTE LE GRAND LIVRE À SVEN », pas après."""
     r = banc("async function (L, o) {" + OUTILS + FRONTIERE + """
         L.Jeu.commencer(); L.graine(6); L.B.joueur.invincible = 1e6;
         const B = L.B, p = B.partie;
-        garder(L, o, 'v03', 'bloc:villa');
+        // La nuit à la villa (v03 est son acte 3), sans laisser jouer le saut de son marqueur.
+        commencer(L, o, 'nuit_a_la_villa'); p.mission.gardee = true;
         const objs = L.Histoire.courante().objectifs;
         const retour = objs.findIndex(function (q) { return q.type === 'retourner'; });
         p.mission.etape = retour - 2; L.Histoire.avancer(true);            // l'étape d'avant : gardée

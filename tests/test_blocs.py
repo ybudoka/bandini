@@ -134,5 +134,6 @@ def test_chaque_mission_de_la_villa_a_sa_cle_avant_la_maison():
         vues.append(m["slug"])
         soi = any(o.get("objet") == "cle_villa" for o in m["objectifs"][:etapes[0]])
         assert soi or avant(m["slug"]) & donnent, f"{m['slug']} entre dans la villa sans que rien ne lui donne la clé"
-    # e07 est l'acte 3 des Chevreuils depuis le 2 oct. 2026 : la clé lui vient du pickpocket, plus haut dans le chapitre.
-    assert sorted(vues) == ["les_chevreuils", "v02", "v03"], vues
+    # e07 est l'acte 3 des Chevreuils depuis le 2 oct. 2026 : la clé lui vient du pickpocket, plus haut dans le chapitre ;
+    # v02 et v03, les actes 2 et 3 de la nuit à la villa : la clé leur vient de l'acte 1 (v01), plus haut aussi.
+    assert sorted(vues) == ["les_chevreuils", "nuit_a_la_villa"], vues
