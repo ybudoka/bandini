@@ -14,7 +14,7 @@
 | Voix | **Alexandre Boutin — Professional** (partagée avec Gégé : jamais dans le même dialogue) |
 | Bulle | « J'ai vu de quoi. » |
 | Couleurs | chandail gris-vert, cheveux gris, pantalon kaki |
-| Missions | donne **f04** |
+| Missions | donne **_Le Grand Mo et le kiosque_** (`grand_mo_et_le_kiosque`, un chapitre depuis le 2 oct. 2026 : son acte 1, les paquets de Rocco — c'était f04 ; l'acte 2 est à Madame Thibodeau) |
 
 ## Son histoire
 

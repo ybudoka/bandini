@@ -17,7 +17,7 @@ Proposée par Claude le 29 sept. 2026 (la fiche du quartier laissait le donneur 
 | Voix | **Meera - Friendly and Conversational** — libre, vérifiée « quebec » en multilingue v2 ; en v3, son accent est à écouter |
 | Bulle | « Hé, le pigeon! » |
 | Couleurs | gilet de laine jade, permanente argentée, grosses lunettes, pantalon anthracite |
-| Missions | **c01** (la porte du tripot) · **c02** (ses dés) · **c03** (son livre) · **c04** (sa caisse, et le tripot qui change de mains) |
+| Missions | **_La chute du Pouce_** (`chute_du_pouce`, un chapitre de quatre actes depuis le 2 oct. 2026 : c01, la porte du tripot · c02, ses dés · c03, son livre · c04, sa caisse, et le tripot qui change de mains) · l'acte 1 de **_Le retour du maître_** (`retour_du_maitre` : c05, le droit de table) |
 
 ## Son histoire
 

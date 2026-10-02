@@ -94,12 +94,13 @@ test (`erreurs_de_mise_en_scene`), pas seulement un œil humain.
   passage** en ville. Les districts : ceux de `carte.DISTRICTS` et du nord, plus `ile` et `aeroport`. Le
   hors-zone se grise sur la mini-carte et la grande carte (une frontière de district seulement).
   ⚠️ **La frontière tombe au premier `retourner`** (tranché par Martin le 30 sept. 2026) : rapporter le
-  butin au donneur se fait ailleurs — `v03` est gardée dans la villa jusqu'à « RAPPORTE LE GRAND LIVRE ».
+  butin au donneur se fait ailleurs — _Une nuit à la villa_ (`nuit_a_la_villa`, v01 à v03) est gardée dans la
+  villa jusqu'à « RAPPORTE LE GRAND LIVRE ».
   Une mission dont les objectifs commencent HORS de la frontière (e07 : le vol de clé en ville, avant
   la villa) ne la prend pas.
 - ⚠️ **Tout lieu nommé** (`sur_place`, un `lieu` ou un `ou` d'objectif) doit être **dans** la frontière
   (jugé sur la ville, `tests/test_sur_place.py`) : sinon la mission envoie le joueur là où elle le fait
-  rater — jusqu'au premier `retourner`. Exemples : `v01`, `v02`, `v03` (`bloc:villa`), `q13` (`quais`),
+  rater — jusqu'au premier `retourner`. Exemples : `nuit_a_la_villa` (`bloc:villa`), `q13` (`quais`),
   `p05` (`pointe`). ⚠️ Un chemin de sortie de bloc sous une frontière veut un rayon qui couvre toute la
   sortie (6 au chemin de la villa) : sinon on ressort sans l'avoir « fait », et la mission rate.
   `test_chaque_mission_sur_place_se_joue_sur_place` juge d'office toute mission qu'on y branche.
@@ -565,7 +566,7 @@ attendre le précédent), `fond` (le plan ne retient pas la scène).
 **Les acteurs nommables** : `joueur`, `donneur`, `vehicule`, `cible`, `fuyard`,
 plus tout `slug` de `PERSONNAGES`. **Les formes de lieu** : un acteur,
 `place:<acteur>`, `porte:<lieu>`, `ruelle:<lieu>`, `zone:<x>`, `chez:<personnage>`, `bloc:<slug>` (le
-passage d'un bloc de carte, en ville — la villa de v01 à v03).
+passage d'un bloc de carte, en ville — la villa de `nuit_a_la_villa`).
 
 ⚠️ **La fin ne parle pas par la bouche d'un absent.** Si le dernier objectif
 n'est pas `retourner` (et qu'on n'est pas chez le donneur), la scène de fin doit
@@ -675,7 +676,12 @@ signée). La fiche : `docs/jalons/des-missions-en-chapitres.md`.
   attend alors son ACTE (h03 attend d01, l'acte 1 de _La dette de Rocco_), marqué fait quand l'acte finit.
 - **Ce qui ne se met pas en chapitre** : un acte avec un `exige` (il bloquerait tout le chapitre dès son premier
   acte), une `frontiere`, un acte qui attend une mission d'un autre fil (s11 attend aussi s09 : le chapitre entier
-  l'attendrait), ou un bout d'un CHOIX (`ferme`) — ces missions restent seules. Les échecs `etoile` et `arme` ne
+  l'attendrait), ou un bout d'un CHOIX (`ferme`) — ces missions restent seules. Deux exceptions vues aux arcs C et V
+  (2 oct. 2026) : un `exige` qui ne fait que redire ce que l'objectif demande peut tomber (c02 : « MISE 500 $ » — sous
+  500 $, le Pouce ne triche pas, et l'acte attend qu'on revienne avec de quoi miser) ; et une `frontiere` que TOUS les
+  actes partagent reste au niveau du chapitre, avec le `sur_place` sur le marqueur de chaque acte (la villa : une
+  seule nuit, et REPRENDRE L'ACTE ramène au chemin). ⚠️ Au banc, le saut d'un marqueur vers un BLOC attend sa carte,
+  qui arrive par le réseau : laisser arriver (`await o.attendre()`), sinon le saut se fait à vide. Les échecs `etoile` et `arme` ne
   bloquent rien : ils ne se déclenchent que par `sans_etoile`/`sans_arme`, sur l'objectif qui les porte.
 - **Le chronomètre** : le temps de chaque acte s'écrit dans la partie (`durees`), et le carnet l'affiche à côté
   de FAITE. C'est lui qui dit si on tient 5 à 10 minutes.

@@ -187,7 +187,9 @@ bouton, acte par acte, avec une reprise.
 | E ✅ | les Érables | _Ti-Paul et ses amis_ (`ti_paul_et_ses_amis`) ; _Les Chevreuils_ (`les_chevreuils`) ; _Diane et Jo_ (`diane_et_jo`) | e01-e02-e09 ; e04-e06-e07-e10 ; e13-e08 | — | 5-10 min | e03, e05, e11 (un choix), e12, e14 |
 | Q ✅ | les Quais | _Lulu et le poisson_ (`lulu_et_le_poisson`) ; _Gégé et les débardeurs_ (`gege_et_les_debardeurs`) ; _Cindy et le Beau Denis_ (`cindy_et_le_beau_denis`) | q02-q01 ; q03-q09 ; q05-q06-q12 | — | 5-8 min | q04, le choix q10/q11, q13 (`exige.une_de`), q07, q14, q15 |
 | I ✅ | l'île | _Le moteur du capitaine_ (`le_moteur_du_capitaine`) ; _Sœur Jeanne_ (`soeur_jeanne`) | q08-i01 ; i02-i05 | — | 5-7 min | i04 (une journée à attendre, ≈ 8 min de jeu à elle seule) et i07, i03/i06 (un bout du choix), i08, h08, d09 |
-
+| C ✅ | Irène et le vieux maître | _La chute du Pouce_ (`chute_du_pouce`) ; _Le retour du maître_ (`retour_du_maitre`) | c01-c02-c03-c04 (Irène) ; c05 (Irène), c06-c07-c08 (le maître) | — (la barbotte, la filature, le chrono du livre, le camion sans une bosse) | 8-10 min chacun | — |
+| V ✅ | la villa du maire | _Une nuit à la villa_ (`nuit_a_la_villa`) | v01 (Josée), v02 (Bouchard), v03 (Sven) | — (17 gardes : ≈ 4 min par infiltration au banc) | ≈ 10 min, une seule nuit | — |
+| F ✅ | le Faubourg | _Le Grand Mo et le kiosque_ (`grand_mo_et_le_kiosque`) ; _Deuxième service_ (`deuxieme_service`) ; _Mado et ses volontaires_ (`mado_et_ses_volontaires`) ; _Rosa et ses clients_ (`rosa_et_ses_clients`) | f04 (Mo)-f07 (Thibodeau) ; f06 (Bouchard)-f09 (Marco) ; f11-f13 (Mado) ; f03-f10 (Rosa) | — | 6-9 min | f01 (sept étapes, ouvre trois fils), f02 et f08 (f08 attend deux fils : f02 et f03), f05 (quatre arrêts et un chrono de 4 min), f12 (attend trois fils) |
 **Les écarts** :
 - **L** : _Le scoop du maire_ attend ce que ses trois actes attendaient — l01, f10 **et e07** : l03 n'attendait pas
   e07 (le maire suivi à l'hôtel) ; c'est l04 qui l'attendait.
@@ -195,9 +197,16 @@ bouton, acte par acte, avec une reprise.
   missions restent des missions.
 - **X (le casse) reste en missions** : ses préparatifs (x02, x03) sont FACULTATIFS — x04 les ferme ; un chapitre les
   rendrait obligatoires. Rien à gagner.
-- Hors de la liste de M16, à trancher avec Martin : **C** (Irène et le vieux maître, c01-c08 : huit missions d'une
-  ou deux étapes, le meilleur candidat après D), **F** (le Faubourg), **V** (la villa, trois missions à `frontiere`).
-  Les petites jobs (T) ne passent jamais en chapitre : un passant les donne, une à la fois.
+- Hors de la liste de M16 : **C** (Irène et le vieux maître), **F** (le Faubourg) et **V** (la villa) — Martin a tranché
+  le 2 oct. 2026 : ils passent aussi (voir la table, et les notes). Les petites jobs (T) ne passent jamais en
+  chapitre : un passant les donne, une à la fois.
+- **C** : l'`exige` de c02 (500 $ en poche) tombe — il aurait fermé _La chute du Pouce_ dès l'acte 1. L'objectif le
+  redit (« MISE 500 $ »), et le Pouce ne triche jamais sous 500 $ : l'acte attend qu'on revienne avec de quoi miser.
+  L'acte 4 part du terminus (où l'acte 3 finit) : le chauffeur du Pouce file de là.
+- **V** : la `frontiere` (`bloc:villa`) que les trois infiltrations partageaient reste au niveau du chapitre, et le
+  `sur_place` passe sur le marqueur de chaque acte : une seule nuit, et REPRENDRE L'ACTE ramène au chemin de la villa.
+- **F** : deux arcs dans un — les commerçants (Rosa, Mo et Madame Thibodeau, Mado) et l'affaire des Cravates de
+  Marco ; chaque paire est une suite droite, et ce qui attend plusieurs fils (f08, f12) reste seul.
 
 ### Le plan d'exécution — tranche 1 : le moteur et La Pointe
 
@@ -1405,3 +1414,39 @@ avec La Pointe) ; 49 missions de M16 sont devenues des actes.
   missions d'une ou deux étapes, le meilleur candidat), F (le Faubourg), V (la villa) ; à trancher avec Martin. Et le
   chronomètre de ses vraies parties : c'est lui qui dira si chaque chapitre tient ses 5 à 10 minutes.
 
+
+**Les arcs C, V et F — livrés le 2 oct. 2026.** Martin a tranché : les trois arcs hors de la liste de M16 passent
+aussi. Sept chapitres de plus (vingt-sept avec La Pointe) ; 20 missions de plus sont devenues des actes.
+- **C, Irène et le vieux maître** : _La chute du Pouce_ (`chute_du_pouce` : c01 à c04, Irène, 12 étapes) et _Le retour
+  du maître_ (`retour_du_maitre` : c05 Irène, c06 à c08 le maître, 12 étapes). La porte du sous-sol s'ouvre à l'acte 2
+  (`apres: c01`, la mission de l'acte 1 est faite à l'ouverture de l'acte 2), le tripot change de mains à la fin du
+  premier chapitre (`apres: c04`), le maître arrive après c04 pour le second, et l'école rouvre à sa fin (`apres:
+  c08`, `calme: mantes`) ; la main de la mante s'apprend à la fin de l'acte 3. 86 voix renommées ; coupés dans la même
+  voix : « Irène Lam, mon pigeon » (deux fois) et « Irène Lam », « Sifu Tam, petit scarabée », « C'est Sifu Tam »,
+  « Sifu Tam », et « Reviens me voir demain » (le mannequin, c'est tout de suite). ⚠️ L'appel de c02 se disait déjà
+  sans « C'est Irène Lam, mon pigeon » (la voix payée ne l'a jamais dit) : le texte suit la voix. ⚠️ L'`exige` de c02
+  tombe (voir les écarts).
+- **V, la villa** : _Une nuit à la villa_ (`nuit_a_la_villa` : v01 Josée, v02 Bouchard, v03 Sven, 15 étapes) — une
+  seule nuit au lieu de trois sauts ; la `frontiere` au chapitre, le `sur_place` sur chaque marqueur. 33 voix
+  renommées, aucune coupée (trois donneurs, un appel chacun). Le sac : la clé de l'acte 1 sert aux actes 2 et 3, et
+  rater l'acte 2 ne fait retomber que le dossier.
+- **F, le Faubourg** : _Le Grand Mo et le kiosque_ (f04 Mo, f07 Madame Thibodeau), _Deuxième service_ (f06 Bouchard,
+  f09 Marco), _Mado et ses volontaires_ (f11, f13), _Rosa et ses clients_ (f03, f10) — dix à douze étapes chacun. f01,
+  f02, f05, f08 et f12 restent des missions : f01 a déjà sept étapes et ouvre trois fils ; f08 attend deux fils (f02 et
+  f03), donc f02 n'a personne avec qui faire chapitre ; f05 a quatre arrêts et un chrono de quatre minutes ; f12 attend
+  trois fils (m97 l'attend). Les défis débloqués par f04 et f06 s'ouvrent à la fin de leur acte. 85 voix renommées ;
+  coupés : « Rosa, de la boutique » et « C'est Mado! ».
+- **Les voix** : aucune voix neuve ; 204 voix payées renommées, dont 8 coupées dans leur propre prise (`ffmpeg`, au
+  silence, réencodées à 64 kb/s, le niveau remonté sous −20,5 LUFS : quatre voix), chacune relue par Scribe.
+  **Crédits** : ≈ 26 (Scribe seulement) — 10 544 restants.
+- **Le moteur** : rien de neuf. Au banc, le saut d'un marqueur vers un bloc attend la carte du bloc, qui arrive par
+  le réseau (`await o.attendre()`).
+- **Les juges** : `test_chute_du_pouce_js` et `test_vieux_maitre_js` réécrits acte par acte (REPRENDRE L'ACTE 3 après
+  le livre raté, REPRENDRE L'ACTE 2 après le duel), l'acte 1 dans `test_tripot_js` ; `test_infiltration_js` joue les
+  trois actes de la nuit à la villa et reprend l'acte 2 (l'échec de Bouchard, la clé gardée, le chemin, la nuit) ;
+  `test_sur_place_js` juge les trois sorties au chemin et le saut du premier acte ; les juges de f03, f04, f06, f07,
+  f09, f10, f11 et f13 suivent leur acte (`test_dix_missions_js`, `test_missions_longues_js`, `test_arc_f_js`,
+  `test_eteindre_js`), et `test_arc_f_js` reprend l'acte 2 de chacun des trois autres chapitres du Faubourg.
+- **La partie de Martin** (c01 à c08, f01 à f13 et v01 à v03 faites) : les sept chapitres sont faits pour lui. Ce qu'il
+  doit jouer : une partie neuve, ou le saut du debug, pour entendre les marqueurs et les noms coupés.
+- **Ce qui reste** : Léo (i04, i07), à trancher ; et le chronomètre de ses vraies parties.

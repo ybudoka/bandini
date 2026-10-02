@@ -28,10 +28,10 @@ Chaque fiche mêle deux sortes de faits.
 | Personnage | Slug | Où il se tient | Voix (ElevenLabs) | Missions |
 |---|---|---|---|---|
 | [Ti-Guy Lelièvre](ti-guy.md) | `ti_guy` | devant le terminus, puis au garage | Felix Tabarnak | m1 · m4 (au combiné) |
-| [Madame Thibodeau](madame-thibodeau.md) | `thibodeau` | devant son kiosque | Julia | m2 · m51 · f12 |
-| [Marco « le Cousin »](marco.md) | `marco` | devant le garage | Québec Tremblay | m3 · m50 · f01 · m97 |
-| [Le sergent Réjean Bouchard](sergent-bouchard.md) | `bouchard` | au casse-croûte, dedans | Khaivan | m4 · m51 · v02 · nouvelle_inspectrice (actes 1, 2) · r04 · r07 |
-| [Josée « la Chef » Pelletier](josee.md) | `josee` | au bar Le Brouillard, dedans | Jeanne Mance | m5 · m6 · q04 · q11 · v01 · garage_de_rocco (acte 1) · d07 · cindy_et_le_beau_denis (actes 2, 3) · i03 · i06 · i08 |
+| [Madame Thibodeau](madame-thibodeau.md) | `thibodeau` | devant son kiosque | Julia | m2 · m51 · grand_mo_et_le_kiosque (acte 2) · f12 |
+| [Marco « le Cousin »](marco.md) | `marco` | devant le garage | Québec Tremblay | m3 · m50 · f01 · f08 · deuxieme_service (acte 2) · m97 |
+| [Le sergent Réjean Bouchard](sergent-bouchard.md) | `bouchard` | au casse-croûte, dedans | Khaivan | m4 · m51 · nuit_a_la_villa (acte 2) · deuxieme_service (acte 1) · nouvelle_inspectrice (actes 1, 2) · r04 · r07 |
+| [Josée « la Chef » Pelletier](josee.md) | `josee` | au bar Le Brouillard, dedans | Jeanne Mance | m5 · m6 · q04 · q11 · nuit_a_la_villa (acte 1) · garage_de_rocco (acte 1) · d07 · cindy_et_le_beau_denis (actes 2, 3) · i03 · i06 · i08 |
 | [Ti-Paul Gagnon](ti-paul.md) | `tipaul` | devant son dépanneur | Québec Tremblay | m6 · ti_paul_et_ses_amis (acte 1) · m51 |
 | [Lucienne « Lulu » Pelletier](lulu.md) | `lulu` | à la cantine des Quais, dedans | Claudia | m6 · m50 · lulu_et_le_poisson (actes 1, 2) · m51 |
 | [Raymonde Fortin](raymonde.md) | `raymonde` | devant l'usine Prévost | Nadine | m6 · raymonde_et_le_syndicat (acte 1) |
@@ -40,15 +40,15 @@ Chaque fiche mêle deux sortes de faits.
 | [Le client du taxi](le-client-du-taxi.md) | `civil` | sur la banquette arrière | Alexandre | m3 |
 | [Les passants des petites jobs](les-passants.md) | `passant`, `passante` | dans la rue, là où ils t'interpellent | Felix, Amélie (les voix de la rue) | t01–t06, t09, t11–t15 |
 | [Rocco Bandini](rocco.md) | — | absent : c'est lui qu'on remplace | — | partout, en creux |
-| [Sven Haugen](sven.md) | `sven` | sur la jetée, près de son porte-conteneurs | Martin - Clear and Comforting | m52 · m53 · m54 · q10 · v03 |
-| [Le Grand Mo](le-grand-mo.md) | `mo` | le banc du terminus | Alexandre Boutin | f04 |
+| [Sven Haugen](sven.md) | `sven` | sur la jetée, près de son porte-conteneurs | Martin - Clear and Comforting | m52 · m53 · m54 · q10 · nuit_a_la_villa (acte 3) |
+| [Le Grand Mo](le-grand-mo.md) | `mo` | le banc du terminus | Alexandre Boutin | grand_mo_et_le_kiosque (acte 1) |
 | [Fern Côté](fern.md) | `fern` | le quai d'autobus du terminus | Premium Male teacher (Adam) | f05 · f12 (une enveloppe) |
-| [Mado](mado.md) | `mado` | devant le casse-croûte du Faubourg | Caroline | f11 · f13 · f12 (une enveloppe) |
+| [Mado](mado.md) | `mado` | devant le casse-croûte du Faubourg | Caroline | mado_et_ses_volontaires · f12 (une enveloppe) |
 | [Gérard « Gégé » Morin](gege.md) | `gege` | devant la cantine des Quais | Alexandre Boutin | gege_et_les_debardeurs (actes 1, 2) |
 | [Xavier](xavier.md) | `xavier` | devant le dépanneur | Premium Male teacher (Adam) | e12 |
 | [Dr Lachance](dr-lachance.md) | `lachance` | à l'hôpital, dedans | Patrick | ambulance_de_nuit (acte 1) · dette_du_docteur (actes 1, 2, 4) · h07 · h08 |
 | [Gus Lévesque](gus.md) | `gus` | à l'armurerie | Khaivan | f02 · garage_de_rocco (acte 2) · f12 (une enveloppe) |
-| [Rosa Di Meo](rosa.md) | `rosa` | à la Boutique Rosa | Amélie | f03 · f10 · f12 (une enveloppe) |
+| [Rosa Di Meo](rosa.md) | `rosa` | à la Boutique Rosa | Amélie | rosa_et_ses_clients · f12 (une enveloppe) |
 | [Ginette](ginette.md) | `ginette` | à l'hôpital | Jeanne Mance | ambulance_de_nuit (acte 2) · dette_du_docteur (acte 3) |
 | [Gilles Thériault](gilles.md) | `gilles` | à la guérite de la fourrière | Patrick | lot_de_gilles (actes 1, 2) · s12 |
 | [Le Bonimenteur](le-bonimenteur.md) | `bonimenteur` | à l'arche de la foire | Léo | p13 · p14 |
@@ -56,9 +56,9 @@ Chaque fiche mêle deux sortes de faits.
 | [Mireille Dion](mireille.md) | `mireille` | au comptoir du DOJO DION, au Faubourg, dedans | Marie Line - Energetic and Clear | ses cours (le dojo) |
 | [Sœur Jeanne](jeanne.md) | `jeanne` | sur le parvis de la chapelle, sur l'Île-aux-Corneilles | Julia | soeur_jeanne (actes 1, 2) |
 | [Léo Cyr](leo.md) | `leo` | devant le hangar sans nom, sur l'Île-aux-Corneilles | Alexandre | le_moteur_du_capitaine (acte 2, sa poignée de main) · i04 · i07 |
-| [Norbert](norbert.md) | `norbert` | dans le hall de l'Hôtel Bandini, au bout du comptoir | Martin Dupont Intime | f10 (sa cible) · c03 · scoop_du_maire (acte 1, la source de Louise) |
-| [Irène Lam](irene.md) | `irene` | au bout du bar du casino du Dragon d'or, au Petit-Canton, dedans | Meera | c01 · c02 · c03 · c04 · c05 |
-| [Réal « le Pouce » Vachon](le-pouce.md) | `pouce` | nulle part : au tripot, puis parti pour Sorel | Callum - Husky Trickster | c04 (une réplique, en se sauvant) |
+| [Norbert](norbert.md) | `norbert` | dans le hall de l'Hôtel Bandini, au bout du comptoir | Martin Dupont Intime | rosa_et_ses_clients (acte 2, sa cible) · chute_du_pouce (acte 3) · scoop_du_maire (acte 1, la source de Louise) |
+| [Irène Lam](irene.md) | `irene` | au bout du bar du casino du Dragon d'or, au Petit-Canton, dedans | Meera | chute_du_pouce · retour_du_maitre (acte 1) |
+| [Réal « le Pouce » Vachon](le-pouce.md) | `pouce` | nulle part : au tripot, puis parti pour Sorel | Callum - Husky Trickster | chute_du_pouce (acte 4 : une réplique, en se sauvant) |
 | [Cindy Boivin](cindy.md) | `cindy` | devant la cantine des Quais, dans la Brume — jusqu'à q05 (Norbert l'engage à la réception) | Ruby Roo | cindy_et_le_beau_denis (acte 1) |
 | [Diane Larivière](diane.md) | `diane` | devant le dépanneur des Érables, après e01 | Riya Rao | les_chevreuils (actes 2, 3, 4) · diane_et_jo (acte 1) |
 | [Louise Tremblay-Dion](louise.md) | `louise` | devant le kiosque de Mme Thibodeau, après m2 | Ana Rita | ses photos (une par jour, pour la une) · la_une (actes 1, 2) · scoop_du_maire (actes 1, 2, 3) · l06 |
@@ -70,7 +70,7 @@ Chaque fiche mêle deux sortes de faits.
 | [Marcel « Gros-Boulon » Boulanger](boulon.md) | `boulon` | devant la fourrière, après s02 | Roger | ti_loup_et_gros_boulon (acte 2) · s09 · s11 (l'accord) |
 | [Réjean Prévost](prevost.md) | `prevost` | à son bureau de l'usine, dedans, après s10 | Roland Lescalde | s11 · commandes_de_prevost (actes 1, 2) |
 | [Le maire Réal Tanguay](maire.md) | `maire` | dans la chambre de l'Hôtel Bandini, dedans, entre m97 et m98 | Eric - Smooth, Trustworthy | m98 (la poignée de main, et il cède) |
-| [Victor Tam, « Sifu Tam »](victor-tam.md) | `maitre` | dans sa salle de l'ÉCOLE LA MANTE, dedans — une fois revenu de Floride (après c04) | Luca - Storyteller | c05 (sa poignée de main) · c06 · c07 · c08 |
+| [Victor Tam, « Sifu Tam »](victor-tam.md) | `maitre` | dans sa salle de l'ÉCOLE LA MANTE, dedans — une fois revenu de Floride (après c04) | Luca - Storyteller | retour_du_maitre (sa poignée de main à l'acte 1 ; actes 2, 3, 4) |
 | [Salvatore « Sal » Ferraro](sal.md) | `sal` | à sa chaise de barbier, au milieu du terminus, dedans, après m6 | Pascal — Voix québécoise chaleureuse | dette_de_rocco (quatre actes) · d08 |
 | [Inspectrice Claudine Roy](roy.md) | `roy` | à son bureau du poste, dedans, après r01 | Évangéline (acadienne ; Kasandra jusqu'au 1er oct. 2026) | nouvelle_inspectrice (acte 3) · r03 · r06 · r08 |
 | [Ti-Rhéal Bergeron](ti-rheal.md) | `ti_rheal` | derrière sa table du marché aux puces, le dimanche matin | Christian Page - Narrative and Deep | aucune : son étal (hors de `PERSONNAGES`) |

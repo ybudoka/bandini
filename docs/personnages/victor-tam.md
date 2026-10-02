@@ -17,7 +17,7 @@ vieux maître revient reprendre ses élèves). Ce que c05 à c08 ont dit fait fo
 | Voix | **Luca - Storyteller** — libre, un Français de France, chaleureux et naturel (Martin a permis les voix d'ailleurs, 25 sept. 2026) ; en v3, à écouter |
 | Bulle | « Approche, élève! » ; l'école rouverte, en classe : « UN, DEUX… LA MANTE! » (`mantes.REPRISE`) |
 | Couleurs | chemise fleurie turquoise, chapeau de paille, bermudas beiges, bronzé, une couronne de cheveux blancs |
-| Missions | nommé par Irène dans **c05** (sa poignée de main) · **c06** (Kenny) · **c07** (Monsieur Bois) · **c08** (les portes ouvertes) |
+| Missions | les actes de **_Le retour du maître_** (`retour_du_maitre`, un chapitre depuis le 2 oct. 2026) : nommé par Irène à l'acte 1 (c05, sa poignée de main) · acte 2, Kenny (c06) · acte 3, Monsieur Bois (c07) · acte 4, les portes ouvertes (c08) ; il se nomme une fois, à sa poignée de main |
 
 ## Son histoire
 

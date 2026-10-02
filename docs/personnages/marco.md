@@ -14,7 +14,7 @@
 | Voix | **Québec Tremblay — Confident and Measured** (partagée avec Ti-Paul : jamais dans le même dialogue) |
 | Bulle | « Hé! Viens ici! » |
 | Couleurs | chandail jaune, cheveux noirs, peau hâlée |
-| Missions | donne **m3**, **m50**, **f01**, **f08**, **f09**, **m97** ; une enveloppe de **f12** — le donneur le plus présent du jeu ; serre la main du neveu dans **m1** |
+| Missions | donne **m3**, **m50**, **f01**, **f08**, l'acte 2 de **_Deuxième service_** (`deuxieme_service`, depuis le 2 oct. 2026 : sa part au kiosque — c'était f09), **m97** ; une enveloppe de **f12** — le donneur le plus présent du jeu ; serre la main du neveu dans **m1** |
 
 ## Son histoire
 

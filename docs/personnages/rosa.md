@@ -15,7 +15,7 @@
 | Voix | **Amélie — Young, Confident and Friendly** |
 | Bulle | « Une minute! » |
 | Couleurs | chandail prune, cheveux foncés, pantalon sombre |
-| Missions | donne **f03** et **f10** (la chemise hawaïenne, la lettre pour Norbert) ; une enveloppe de **f12** ; garde la clé de la berline de Rocco (**f08**) ; donne **x03** (l'uniforme de livreur oublié chez elle, porté jusqu'à la caisse populaire) |
+| Missions | donne **_Rosa et ses clients_** (`rosa_et_ses_clients`, un chapitre de deux actes depuis le 2 oct. 2026 : f03, la robe de mariée ; f10, la chemise hawaïenne et la lettre pour Norbert ; elle se nomme une fois, à l'appel de f03) ; une enveloppe de **f12** ; garde la clé de la berline de Rocco (**f08**) ; donne **x03** (l'uniforme de livreur oublié chez elle, porté jusqu'à la caisse populaire) |
 
 ## Son histoire
 

@@ -14,7 +14,7 @@
 | Voix | **Jeanne Mance — Charming, Clear and Young**, québécoise |
 | Bulle | « Approche, toi. » |
 | Couleurs | chandail rouge, cheveux noirs, pantalon noir |
-| Missions | donne **m5**, **m6**, **q04**, **q11** (les camions de Sven — le choix contre **q10**), **v01** (la clé du maire, la première infiltration de la villa), **_Le garage de Rocco_** (`garage_de_rocco`, acte 1 : l'acte du garage pour Me Desjardins — c'était d05), **d07** (la berline de Sal — le choix contre **d08**) ; ouvre le marché noir après m5 (au lieu de dire son repos) ; donne aussi **q12** (sa mère à l'urgence) ; donne aussi **i03** (le hangar sans nom) ; donne aussi **i06** (le chalutier de Sven) et **i08** (la cache de Rocco) ; donne **x01** (le repérage de la caisse populaire) et **x04** (le coup : la paie de l'usine, et Sal qui n'aura pas sa part) |
+| Missions | donne **m5**, **m6**, **q04**, **q11** (les camions de Sven — le choix contre **q10**), l'acte 1 d'**_Une nuit à la villa_** (`nuit_a_la_villa`, un chapitre depuis le 2 oct. 2026 : la clé du maire, c'était v01), **_Le garage de Rocco_** (`garage_de_rocco`, acte 1 : l'acte du garage pour Me Desjardins — c'était d05), **d07** (la berline de Sal — le choix contre **d08**) ; ouvre le marché noir après m5 (au lieu de dire son repos) ; donne aussi **q12** (sa mère à l'urgence) ; donne aussi **i03** (le hangar sans nom) ; donne aussi **i06** (le chalutier de Sven) et **i08** (la cache de Rocco) ; donne **x01** (le repérage de la caisse populaire) et **x04** (le coup : la paie de l'usine, et Sal qui n'aura pas sa part) |
 
 ## Son histoire
 

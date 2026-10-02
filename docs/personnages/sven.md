@@ -14,7 +14,7 @@
 | Voix | **Martin - Clear and Comforting** (norvégien, accent d'Oslo) |
 | Bulle | « Viens, discret. » |
 | Couleurs | veste gris-bleu, cheveux gris, pantalon noir |
-| Missions | donne **m52** · **m53** · **m54** · **q10** (« j'avais dit une dernière fois » — le choix contre **q11**) · **v03** (la chambre forte de la villa du maire) · **q14** (la liste du Norvégien, après q10) ; tient l'ardoise du quai (la liste du quai) — sauf pour qui a brûlé ses camions (**q11**) : elle passe à Ti-Loup (**q15**) |
+| Missions | donne **m52** · **m53** · **m54** · **q10** (« j'avais dit une dernière fois » — le choix contre **q11**) · l'acte 3 d'**_Une nuit à la villa_** (`nuit_a_la_villa`, la chambre forte du maire — c'était v03) · **q14** (la liste du Norvégien, après q10) ; tient l'ardoise du quai (la liste du quai) — sauf pour qui a brûlé ses camions (**q11**) : elle passe à Ti-Loup (**q15**) |
 
 ## Son histoire
 

@@ -14,7 +14,7 @@
 | Voix | **Caroline — Soft Quebec accent** |
 | Bulle | « T'as faim, toi? » |
 | Couleurs | chandail rose fané, cheveux auburn, pantalon ardoise |
-| Missions | donne **f11** et **f13** ; une enveloppe de **f12** ; paie le sergent chaque midi, et le dit à la poignée de main de **r03** |
+| Missions | donne **_Mado et ses volontaires_** (`mado_et_ses_volontaires`, un chapitre de deux actes depuis le 2 oct. 2026 : f11, elle tient tête ; f13, les trois feux ; elle se nomme une fois, à l'appel de f11) ; une enveloppe de **f12** ; paie le sergent chaque midi, et le dit à la poignée de main de **r03** |
 
 ## Son histoire
 
