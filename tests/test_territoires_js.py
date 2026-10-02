@@ -4,8 +4,8 @@ Martin : un coin par nuit ; coucher ses membres l'affaiblit ; il garde son cœur
 
 OUTILS = """
     function tuileDe(L, ilot) {
-        const d = L.Territoires.donnees();
-        return { x: (d.x[ilot.bx] + 4) * 16 + 8, y: (d.y[ilot.by] + d.y0 + 4) * 16 + 8 };
+        const d = L.Territoires.donnees(), r = L.Territoires.rectangle(d, ilot);
+        return { x: (r.x0 + 4) * 16 + 8, y: (r.y0 + 4) * 16 + 8 };
     }
     function ilots(L, gang) {
         const d = L.Territoires.donnees();
@@ -25,7 +25,7 @@ def test_une_partie_neuve_n_a_rien_de_pris_et_la_cour_reste_la_cour(banc):
         return { pris: Object.keys(p.territoires).length, force: T.force('cravates'),
                  dansLaCour: T.gangA(c.x, c.y), ailleurs: T.gangA(a.x, a.y), gangs: d.gangs.length };
     }""")
-    assert r["pris"] == 0 and r["force"] == 100 and r["gangs"] == 5, r
+    assert r["pris"] == 0 and r["force"] == 100 and r["gangs"] == 6, r
     assert r["dansLaCour"] == "cravates" and r["ailleurs"] is None, r
 
 

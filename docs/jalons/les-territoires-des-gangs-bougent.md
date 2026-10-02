@@ -124,3 +124,28 @@ piétons ; une zone `libere` ne bouge plus ; tout survit à une sauvegarde.
   passer les mains nues ; en route vers sa porte, pareil (il lâche sa porte) ; hors de chez lui, gang calme, joueur
   en char : rien, et pas un dé. Quatre mutations rouges (le guet retiré à l'arrêt, à la porte ; le territoire et le
   gang calme retirés de `guetter`).
+
+### Vague 4 — les Mantes du Petit-Canton — **livrée le 2 oct. 2026**
+
+- ⚠️ **La bande nord a sa trame, mais les colonnes de la ville.** Ses rangées sont à elle (`nord.RANGEES_NORD`) ; ses
+  colonnes sont celles de la ville d'avant (`carte.COLONNES`). Le Petit-Canton entre donc dans la carte des îlots en
+  **rangées négatives** (−7 à −1, du nord au sud) : sa rangée du bas touche celle du haut du Faubourg, colonne pour
+  colonne. La couture est une frontière comme une autre — les voisins se comptent pareil.
+- **Le navigateur reçoit la trame du nord** (`pietons.territoires.nord`) : `ilotA` lit l'une ou l'autre trame selon le
+  côté de la couture, et `rectangle` (exporté) rend les tuiles d'un îlot des deux côtés — la carte, les tags et le
+  gang chez lui passent tous par lui.
+- **Le cœur des Mantes** est le coin de leur école (`mantes.ZONE` : quatre îlots) — elles n'ont pas de cour `g`. Leur
+  coin commence au milieu de la rue ouest : son bord appartient à l'îlot voisin, qui n'est pas un cœur.
+- **Leurs mots** (`MANTES`, `MNT`) vivent dans `territoires.TAGS_DES_MANTES`, pas dans `devantures.TAGS_GANG` : la
+  ville cuit ses tags avec ce dictionnaire, et une clé de plus y aurait changé des murs.
+- **Seul le Canton entre** : les Friches et la Gare (les Chevreuils et les Boulonneux du voisin du sud) restent hors
+  du jeu — leurs gangs ne s'étendent pas au nord.
+- Rien ne bouge au départ : à forces égales, la couture ne bouge pas ; coucher des Cravates fait gagner les Mantes,
+  et l'inverse.
+- **Juges** : trois de plus dans `test_territoires.py` (le Canton par le nord, en rangées négatives, la couture
+  colonne pour colonne ; le cœur au coin de l'école ; les mots hors des tags de la ville) et
+  `test_territoires_mantes_js.py` (7 : la trame du nord, ses rectangles qui pavent la bande jusqu'à la couture ; le bas
+  du Canton face aux Cravates ; Mantes fortes, un coin du Faubourg pris par la couture et habité par elles ; Cravates
+  fortes, le Canton pris mais jamais l'école en soixante nuits ; à forces égales, rien ; les mots des Mantes sur un
+  coin pris ; la carte peint un coin du Canton). Six mutations, toutes mordues — celle du rectangle d'une seule
+  rangée seulement quand le juge a vérifié que les rectangles pavent la bande.

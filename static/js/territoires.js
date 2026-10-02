@@ -11,6 +11,10 @@
 
    ⚠️ AUCUN DE : la nuit choisit l'ilot a prendre a l'empreinte du jour (`hash2`), jamais `B.rng()`.
 
+   ⚠️ LA BANDE NORD A SA TRAME (vague 4, les Mantes) : le Petit-Canton y est, ses ilots en rangees NEGATIVES (−7 a −1)
+   au-dessus du Faubourg — memes colonnes, d'autres rangees (`t.nord`). `ilotA` et `rectangle` lisent l'une ou l'autre
+   trame selon le cote de la couture ; les voisins, eux, se comptent comme partout (la rangee −1 touche la rangee 0).
+
    ⚠️ UN ILOT PRIS SE VIT : les membres du gang qui le tient y naissent et le defendent, comme dans une cour
    (`gangA`, lu par `Entites.peupler` et par l'hostilite a l'arme au poing). Les ilots d'origine d'un district,
    eux, restent ce qu'ils etaient : sans gang dans la rue, hors de sa cour. */
@@ -57,18 +61,33 @@ const Territoires = (function () {
     }
     prepare = { ilots: ilots, regles: t.regles, gangs: t.districts.map(function (d) { return d.gang; }),
                 x: coupes(g.colonnes, g.rues_v), y: coupes(g.rangees, g.rues_h), y0: g.y0 || 0,
+                // La trame du nord (le Petit-Canton) : ses coupes, de la premiere rangee a la couture (`y0`).
+                yNord: t.nord ? coupes(t.nord.rangees, t.nord.rues_h) : null,
                 w: g.colonnes.reduce(function (s, n) { return s + n; }, 0) + g.rues_v.reduce(function (s, n) { return s + n; }, 0),
                 h: g.rangees.reduce(function (s, n) { return s + n; }, 0) + g.rues_h.reduce(function (s, n) { return s + n; }, 0) };
     return prepare;
   }
 
-  /** L'ilot de cette tuile (de la ville d'avant), ou null. */
+  /** L'ilot de cette tuile, ou null : dans la ville d'avant, ou dans la bande nord (en rangees negatives). */
   function ilotA(tx, ty) {
     const d = donnees();
     if (!d) return null;
     const y = ty - d.y0;
-    if (tx < 0 || y < 0 || tx >= d.w || y >= d.h) return null;
+    if (tx < 0 || tx >= d.w || y >= d.h) return null;
+    if (y < 0) {
+      if (!d.yNord || ty < 0) return null;
+      return d.ilots[rang(d.x, tx) + ',' + (rang(d.yNord, ty) - d.yNord.length)] || null;
+    }
     return d.ilots[rang(d.x, tx) + ',' + rang(d.y, y)] || null;
+  }
+
+  /** Les rangees de tuiles d'un ilot (`by`), de part et d'autre de la couture : [y0, y1). */
+  function rangeesDe(d, by) {
+    if (by < 0) {
+      const r = by + d.yNord.length;
+      return [d.yNord[r], r + 1 < d.yNord.length ? d.yNord[r + 1] : d.y0];
+    }
+    return [d.y[by] + d.y0, (by + 1 < d.y.length ? d.y[by + 1] : d.h) + d.y0];
   }
 
   function partie() {
@@ -247,9 +266,8 @@ const Territoires = (function () {
     Object.keys(p.territoires).forEach(function (k) {
       const i = d.ilots[k];
       if (!i) return;
-      const x0 = d.x[i.bx], x1 = i.bx + 1 < d.x.length ? d.x[i.bx + 1] : d.w;
-      const y0 = d.y[i.by] + d.y0, y1 = (i.by + 1 < d.y.length ? d.y[i.by + 1] : d.h) + d.y0;
-      const a = pos(x0 * TT, y0 * TT), b = pos(x1 * TT, y1 * TT);
+      const r = rectangle(d, i);
+      const a = pos(r.x0 * TT, r.y0 * TT), b = pos(r.x1 * TT, r.y1 * TT);
       ctx.globalAlpha = 0.45;
       ctx.fillStyle = couleurDe(p.territoires[k]);
       ctx.fillRect(Math.round(a.x), Math.round(a.y), Math.max(1, Math.round(b.x - a.x)), Math.max(1, Math.round(b.y - a.y)));
@@ -311,8 +329,8 @@ const Territoires = (function () {
 
   /** Le rectangle de tuiles d'un ilot (coupe au milieu des rues, comme `ilotA`). */
   function rectangle(d, i) {
-    return { x0: d.x[i.bx], x1: i.bx + 1 < d.x.length ? d.x[i.bx + 1] : d.w,
-             y0: d.y[i.by] + d.y0, y1: (i.by + 1 < d.y.length ? d.y[i.by + 1] : d.h) + d.y0 };
+    const y = rangeesDe(d, i.by);
+    return { x0: d.x[i.bx], x1: i.bx + 1 < d.x.length ? d.x[i.bx + 1] : d.w, y0: y[0], y1: y[1] };
   }
 
   /** Les tags que `gang` pose dans l'ilot `i` de `carte` : [{ x, y, texte, motif, penche, gang }]. */
@@ -394,6 +412,6 @@ const Territoires = (function () {
     return tient && tient !== signe ? { couleur: bombeDe(tient), tuiles: gangDuTexte[gr.texte].tuiles } : null;
   }
 
-  return { donnees, ilotA, tenuPar, force, horsJeu, liberer, gangA, couche, nuit, ligneDuClairon, couleurDe, nomDe,
+  return { donnees, ilotA, rectangle, tenuPar, force, horsJeu, liberer, gangA, couche, nuit, ligneDuClairon, couleurDe, nomDe,
            dessinerSurLaCarte, dessinerLaLegende, cle, tagsDeLaFrontiere, barre, gangDuTag, bombeDe };
 })();
