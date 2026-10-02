@@ -983,6 +983,8 @@ const Vehicules = (function () {
     if (v.def && v.def.eau) return !Monde.estEau(tx, ty);
     // ⚠️ Le passage d'un rideau leve, pour le seul char qu'il attend (`Monde.seuilOuvert`).
     if (Monde.seuilOuvert(v, tx, ty)) return false;
+    // Et le tunnel du lave-auto, pour le seul char du lavage (`Enseignes.tunnelOuvert`).
+    if (Enseignes.tunnelOuvert(v, tx, ty)) return false;
     return Monde.bloque(tx, ty, Monde.MASQUE_VEHICULE);
   }
 
@@ -2158,6 +2160,8 @@ const Vehicules = (function () {
     // on ressort a pied par-dessous le rideau, dans la baie.
     const rideau = Monde.rideauDe(v);
     if (rideau && !force) { Hud.message('RECULE D’ABORD — T’ES SOUS LE TOIT'); Son.SFX.erreur(); return false; }
+    // Sur le rail du lave-auto, les portieres donnent sur la vitre.
+    if (!force && Enseignes.auLavage(v)) { Hud.message('PAS PENDANT LE LAVAGE'); Son.SFX.erreur(); return false; }
     const cotes = [v.angle + Math.PI / 2, v.angle - Math.PI / 2, v.angle + Math.PI];
     let pose = false;
     if (rideau) { const baie = Monde.baieDeLaPorteDeGarage(rideau); j.x = baie.x; j.y = baie.y; pose = true; }

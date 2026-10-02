@@ -1339,7 +1339,7 @@ const Jeu = (function () {
     if (!B.interieur) Histoire.dessinerCheminCourse(ctx, vue);   // le trace d'une course, sur la chaussee
     Regate.dessiner(ctx, vue);                                   // les bouées du tour de l'île, sur la baie
     if (!B.interieur) { Conduite.dessinerSol(ctx, vue); Rue.dessinerSol(ctx, vue); SaintJean.dessinerDefile(ctx, vue); }   // la case, les lignes, les cones d'une epreuve au volant
-    Enseignes.dessinerSol(ctx, vue);                   // la baie du lave-auto ; le film sur la toile du Rialto
+    Enseignes.dessinerSol(ctx, vue);                   // le plancher mouille du lave-auto ; le film sur la toile du Rialto
     if (B.interieur) Tables.dessinerSalle(ctx, vue);   // la roue, le sabot, la cloche : sur le feutre des tables du Dragon d'or
     if (B.interieur) Tripot.dessinerSalle(ctx, vue);   // la barbotte du Pouce, ses dés sur le feutre, la lampe qui pend
     if (B.interieur) Caisse.dessiner(ctx, vue);        // la caisse populaire : la minuterie de la voûte, en rouge
@@ -1350,6 +1350,7 @@ const Jeu = (function () {
     if (!B.interieur) Patinoire.dessinerLames(ctx, vue);  // les lames des patineurs, sous leurs pieds
     Entites.dessiner(ctx, vue);
     if (!B.interieur) BancsDeNeige.dessiner(ctx, vue);   // la neige sur le nez d'un char pris dans un banc (lot 6, vague 6c)
+    Enseignes.dessinerTunnel(ctx, vue);                // le lave-auto : son toit de verre, ses brosses, ses portes vitrees
     Entites.dessinerCible(ctx, vue);
     Entites.dessinerParticules(ctx, vue);
     Lecture.dessiner(ctx, vue);                        // LIRE tenu : la fiche du passant, au-dessus de tout le monde

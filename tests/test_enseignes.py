@@ -58,15 +58,6 @@ def test_chaque_comptoir_d_enseigne_fait_jouer_ou_propose_quelque_chose():
     assert magasins.COMPTOIRS["quilles"]["defi"] == "quilles" and defi["epreuve"] == "quilles" and defi["a_pied"]
 
 
-def test_la_baie_du_lave_auto_est_sur_la_chaussee_devant_sa_porte(VILLE):
-    b = VILLE["lave_auto"]
-    porte = next(p for p in VILLE["portes"] if p["lieu"] == "lave_auto")
-    assert b["x"] <= porte["x"] < b["x"] + b["l"] and 0 < b["y"] - porte["y"] <= 5, (b, porte)
-    for y in range(b["y"], b["y"] + b["h"]):
-        for x in range(b["x"], b["x"] + b["l"]):
-            assert carte.LEGENDE[VILLE["sol"][y][x]].get("route"), f"la baie mord sur « {VILLE['sol'][y][x]} » en {x, y}"
-
-
 def test_les_enseignes_ne_deplacent_rien_d_autre(VILLE, monkeypatch):
     """⚠️ Posées sur la ville FINIE et sans dé, comme le dojo : la même ville sans elles est identique, hors
     de leurs portes (la pièce, le lieu, le nom), de leurs enseignes, des pièces reprises et des points

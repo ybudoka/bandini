@@ -12,9 +12,10 @@ district. ⚠️ Le Faubourg, serré de lieux garantis, n'a que DEUX portes de c
 2026 : le dojo en a pris une, le Rialto l'autre) : la salle de quilles est à La Shop, un hangar de
 ligue. Aucune qui convient : l'enseigne n'ouvre pas, et rien ne plante.
 
-⚠️ **LE LAVE-AUTO SE TRAVERSE EN CHAR** : sa baie est peinte sur la chaussée devant la porte
-(`ville["lave_auto"]`) — rien n'y est solide, la rue reste une rue. On y roule au pas, on paie, et le
-char lavé est MOINS RECONNAISSABLE : la chaleur baisse d'un cran (`static/js/enseignes.js`).
+⚠️ **LE LAVE-AUTO SE TRAVERSE EN CHAR**, de la rue à la ruelle, par un tunnel vitré dans son bâtiment
+(docs/jalons/le-lave-auto-qu-on-traverse.md) : ici, il ne choisit qu'une façade QUI SE TRAVERSE
+(`lave_auto.tunnel`, une mesure) ; le tunnel lui-même se pose à la fin, sur la ville finie (`lave_auto.poser`).
+Le char lavé est MOINS RECONNAISSABLE : la chaleur baisse d'un cran (`static/js/enseignes.js`).
 """
 
 from __future__ import annotations
@@ -52,9 +53,9 @@ REGLES = {
     # LE RIALTO : le billet, les heures des séances (en heures du jour), et la longueur du film
     # (en secondes de jeu). Le film se regarde assis dans le noir ; il se joue sur la toile.
     "rialto": {"billet": 5, "seances": [18.0, 23.5], "film_s": 45, "repos_pv": 20},
-    # LE LAVE-AUTO : le prix, et combien de temps rester AU PAS dans la baie avant que les brosses
-    # aient fini. Au-dessus de `vitesse_max`, on passe tout droit sans se faire laver.
-    "lave_auto": {"prix": 12, "duree_s": 1.5, "vitesse_max": 1.2},
+    # LE LAVE-AUTO : le prix ; le tunnel s'ouvre au char qui arrive devant sa porte vitrée AU PAS (sous
+    # `vitesse_max`), et le convoyeur le tire de la façade à la ruelle en `duree_s` secondes.
+    "lave_auto": {"prix": 12, "duree_s": 5.5, "vitesse_max": 1.2},
 }
 
 
@@ -180,25 +181,13 @@ def _devanture(ville: dict, porte: dict) -> dict | None:
                  and d["x"] <= porte["x"] < d["x"] + d["l"]), None)
 
 
-def _baie(chantier, porte: dict) -> dict | None:
-    """La baie du lave-auto : les deux premières rangées de chaussée sous la porte, sur trois
-    tuiles de large. ⚠️ Rien n'y est posé : c'est une zone, peinte et lue par le navigateur."""
-    from .carte import LEGENDE
-    for j in range(1, 6):
-        y = porte["y"] + j
-        if y + 1 >= chantier.hauteur:
-            return None
-        rangees = [y, y + 1]
-        if all(LEGENDE[chantier.sol[yy][x]].get("route") for yy in rangees
-               for x in range(porte["x"] - 1, porte["x"] + 2)):
-            return {"x": porte["x"] - 1, "y": y, "l": 3, "h": 2}
-    return None
-
-
 def poser(chantier, ville: dict) -> list[str]:
     """Rend les slugs des enseignes posées. Appelée après le DOJO DION, avant les devants."""
     from . import chantiers as chantiers_mod
+    from . import lave_auto as lave_auto_mod
     from .carte import DISTRICTS, SPECIAUX, TUILE_PX
+
+    ville["lave_auto"] = None          # le tunnel, posé à la fin (`lave_auto.poser`)
 
     garantis = {s["slug"] for s in SPECIAUX.values()} | {"dojo"}
     interdites: set[tuple[int, int]] = set()
@@ -246,7 +235,8 @@ def poser(chantier, ville: dict) -> list[str]:
                 continue
             if (porte["x"], porte["y"]) in interdites:
                 continue
-            baie = _baie(chantier, porte) if fiche["slug"] == "lave_auto" else None
+            # Le lave-auto : une façade qui se traverse jusqu'à la ruelle (le tunnel se pose à la fin).
+            baie = lave_auto_mod.tunnel(chantier.sol, set(), porte) if fiche["slug"] == "lave_auto" else None
             if fiche["slug"] == "lave_auto" and not baie:
                 continue
             cle = (not deja, ailleurs, texte != fiche["texte"], abs(porte["x"] - cx) + abs(porte["y"] - cy),
@@ -269,8 +259,6 @@ def poser(chantier, ville: dict) -> list[str]:
         # (`magasins.sortes_devant`), posée avant — un Rialto repeint « nuit » avait une machine à café.
         ville["points_interet"].append({"type": slug, "slug": slug, "nom": fiche["nom"],
                                         "x": porte["x"], "y": porte["y"] + 1, "famille": fiche["famille"]})
-        if baie:
-            ville["lave_auto"] = baie
         prises.append((porte["x"], porte["y"]))
         posees.append(slug)
     return posees

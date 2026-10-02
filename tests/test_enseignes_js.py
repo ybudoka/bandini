@@ -231,36 +231,3 @@ def test_le_billet_du_rialto_dit_le_film_du_soir(une_soiree_au_rialto):
     assert len({titre for _, titre in r}) == 3, r
     for libelle, titre in r:
         assert libelle == "UN BILLET — " + titre, r
-
-
-def test_un_char_lave_perd_un_cran_de_chaleur_une_fois_par_passage(banc):
-    rl = enseignes.REGLES["lave_auto"]
-    r = banc("function (L, o) {" + OUTILS + """
-        L.Jeu.commencer();
-        const B = L.B, b = B.defs.enseignes.lave_auto, j = B.joueur;
-        const x = (b.x + b.l / 2) * TT, y = (b.y + 1) * TT;
-        const v = L.Vehicules.creer('auto', x, y, 0, { etat: 'stationne', couleur: '#c0392b' });
-        L.Vehicules.monter(j, v);
-        // ⚠️ On juge la baie, pas la police : personne ne t'arrête. Le lave-auto est aux Érables, au haut de la
-        // ville d'avant — depuis que la bande nord est collée au-dessus, un agent pouvait y naître et venir te
-        // sortir du char à deux étoiles avant le deuxième lavage.
-        j.intouchable = true;
-        B.partie.argent = 100;
-        B.recherche.etoiles = 2; B.recherche.chaleur = 10;
-        function rester(n) { for (let k = 0; k < n; k++) { v.x = x; v.y = y; v.vitesse = 0.2; B.recherche.vu = 0; o.frame(1); } }
-        rester(B.defs.enseignes.regles.lave_auto.duree_s * 60 + 10);
-        const une = { etoiles: B.recherche.etoiles, argent: B.partie.argent };
-        rester(200);
-        const reste = { etoiles: B.recherche.etoiles, argent: B.partie.argent };
-        // Trop vite dans la baie : les brosses n'ont pas le temps.
-        v.x = x + 200; o.frame(1);
-        for (let k = 0; k < 200; k++) { v.x = x; v.y = y; v.vitesse = 3; o.frame(1); }
-        const vite = { etoiles: B.recherche.etoiles, argent: B.partie.argent };
-        v.x = x + 200; o.frame(1);
-        rester(B.defs.enseignes.regles.lave_auto.duree_s * 60 + 10);
-        return { une: une, reste: reste, vite: vite, deux: { etoiles: B.recherche.etoiles, argent: B.partie.argent } };
-    }""")
-    assert r["une"] == {"etoiles": 1, "argent": 100 - rl["prix"]}, r
-    assert r["reste"] == r["une"], "lavé deux fois sans sortir de la baie"
-    assert r["vite"] == r["une"], "lavé à pleine vitesse"
-    assert r["deux"] == {"etoiles": 0, "argent": 100 - 2 * rl["prix"]}, r

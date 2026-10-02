@@ -408,6 +408,14 @@ CATALOGUE: list[Echantillon] = [
     _e("neons", "Les néons du sous-sol", duree_s=8.0, volume=0.18, boucle=True, influence=0.5,
        prompt="fluorescent tube lights buzzing and humming in an empty underground concrete parking garage, faint "
               "distant ventilation drone, seamless loop, no voices, no music"),
+    # LE LAVE-AUTO QU'ON TRAVERSE (docs/jalons/le-lave-auto-qu-on-traverse.md) : le jet d'eau des arches, au
+    # prélavage et au rinçage ; le séchoir qui souffle au fond du tunnel. Du lieu `lave_auto`, chargés à l'approche.
+    _e("jet_lavage", "Le jet du lave-auto", duree_s=2.0, volume=0.45,
+       prompt="high pressure water jets spraying onto a car body inside an automatic car wash tunnel, hissing spray "
+              "drumming on metal and glass, close, no music, no voice"),
+    _e("sechoir", "Le séchoir du lave-auto", duree_s=2.5, volume=0.45,
+       prompt="the powerful blowers of an automatic car wash dryer starting up, a loud rushing roar of air over a wet "
+              "car, close, no music, no voice"),
     _e("detonateur", "C4 armé", duree_s=0.9, volume=0.5,
        prompt="a strip of duct tape pulled and pressed, then two short high electronic beeps of a "
               "detonator arming, close-up, no explosion, no music"),
@@ -1899,6 +1907,8 @@ LIEUX: dict[str, list[str]] = {
     "explosifs": ["meche", "goupille", "rebond", "detonateur", "roquette"],
     # Le garage souterrain (vague 2) : chargés dans la pièce du garage ou au sous-sol (`Souterrain.majSon`).
     "souterrain": ["ascenseur", "rampe", "neons"],
+    # Le lave-auto qu'on traverse : chargés à l'approche de son tunnel (`Enseignes.majLaveAuto`).
+    "lave_auto": ["jet_lavage", "sechoir"],
     # Le parapluie de Rosa : une POSSESSION, comme les explosifs — chargés quand il entre au sac.
     "parapluie": ["parapluie", "parapluie_revire"],
     # Les bêtes écrasées : pas un endroit, une RUELLE — chargés à la première bête qui naît

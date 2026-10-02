@@ -1049,6 +1049,10 @@ const Son = (function () {
       ton(520, 0.26, 'square', 0.22, 2.6); ton(520, 0.26, 'square', 0.22, 2.6, 0.32);
     },
     brosses: function () { bruit(1.4, 0.18, 1100, 300); bruit(1.4, 0.08, 5000, 2200); },
+    // Le lave-auto qu'on traverse : le jet d'eau sous pression, puis le souffle du sechoir (lieu `lave_auto`).
+    // ⚠️ PAS `jet` : c'est le jet de l'extincteur (`Combat`), appele a chaque image.
+    jet_lavage: function () { if (!joue('jet_lavage')) bruit(1.2, 0.12, 6000, 3000); },
+    sechoir: function () { if (!joue('sechoir')) bruit(1.6, 0.14, 900, 600); },
     // --- L'eau ---------------------------------------------------------------
     // ⚠️ Jusqu'ici, entrer dans l'eau jouait `choc` — la TOLE FROISSEE d'un
     // accident de char — et nager ne jouait rien du tout : les pas sont coupes

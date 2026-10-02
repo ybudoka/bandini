@@ -7515,6 +7515,11 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE, nord: bool = Tru
     # si la bande nord s'est collée au-dessus.
     decalage = nord_mod.DECALAGE_NORD if nord and plan == PLAN else 0
     caisse_mod.poser(ville, {(x, y + decalage): a for (x, y), a in chantier.aires_des_devantures.items()})
+    # ⚠️ LE LAVE-AUTO QU'ON TRAVERSE (docs/jalons/le-lave-auto-qu-on-traverse.md), sur la ville FINIE, sans un dé ni une
+    # tuile : son tunnel vitré (deux colonnes du bâtiment, de la façade à la ruelle), la vitrine de sa porte rognée et la
+    # pièce du bureau à sa nouvelle mesure. Avant les étages, qui lisent la pièce.
+    from . import lave_auto as lave_auto_mod
+    lave_auto_mod.poser(ville)
     # ⚠️ DES ÉTAGES DEDANS AUSSI (docs/jalons/des-etages-dedans-aussi.md), sur la ville FINIE (toutes ses tuiles,
     # toutes ses portes) : combien d'étages chaque façade peint, sans un dé et sans une tuile. ⚠️ AVANT les
     # frénésies et les cartes de hockey, qui se posent en tout dernier (leurs juges « ne déplacent rien » le

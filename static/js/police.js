@@ -569,7 +569,7 @@ const Police = (function () {
         // garage : le rideau est entre vous deux, et il ne passe pas la main au travers.
         // ⚠️ Ni D'UNE COQUE : a la nage, on ne sort personne d'un bateau — c'est la vedette qui l'arraisonne.
         if (!triche('pasArrete') && d < 30 && Math.abs(j.dansVehicule.vitesse) < 0.5 && !j.intouchable && !B.menu
-            && !Monde.rideauDe(j.dansVehicule) && !j.dansVehicule.def.eau) { Vehicules.descendre(j, true); Hud.message('SORS DU CHAR !'); }
+            && !Monde.rideauDe(j.dansVehicule) && !j.dansVehicule.def.eau && !Enseignes.auLavage(j.dansVehicule)) { Vehicules.descendre(j, true); Hud.message('SORS DU CHAR !'); }
         return true;
       }
       suivre(a, but, v.policier);

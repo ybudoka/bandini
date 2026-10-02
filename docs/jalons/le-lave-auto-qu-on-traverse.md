@@ -66,8 +66,9 @@ les tirages ; ce qui s'en va (décor, lampe) s'en va après.
 - **La sortie** : le rideau du fond monte, on reprend la main quand le pare-chocs arrière a passé le seuil, **une
   étoile tombe** (`Police.unCranDeMoins`, comme aujourd'hui). Le char reste luisant un moment.
 - **Sens unique** : le rideau du fond ne s'ouvre qu'au char sur le rail ; de la ruelle, rien ne s'ouvre.
-- **Pendant le lavage**, on ne descend pas (« PAS PENDANT LE LAVAGE »). Si le char brûle, si le joueur meurt ou si une
-  scène prend la main, le rail s'arrête et les deux rideaux se lèvent.
+- **Pendant le lavage**, on ne descend pas (« PAS PENDANT LE LAVAGE »), et l'agent à pied ne sort personne du char à
+  travers la vitre. Si le char brûle ou n'est plus au joueur, le rail s'arrête et les deux rideaux se lèvent ; si une
+  scène, un menu ou un fondu prend la main, le rail **attend** (tout lever mettrait le char dans un mur).
 - **Les sons** : les brosses d'aujourd'hui (`Son.SFX.brosses`), et deux bruitages neufs par ElevenLabs — le jet d'eau
   et le séchoir — dans un lieu chargé au premier geste (`audio.LIEUX`).
 
@@ -83,4 +84,52 @@ les tirages ; ce qui s'en va (décor, lampe) s'en va après.
   Chaque règle retirée une fois, pour voir son juge rougir.
 - **À l'œil** : une capture Chromium du tunnel en plein lavage, ouverte dans Aperçu avant de livrer.
 
+### Plan d'exécution (3 oct. 2026)
+
+_Repris d'une session arrêtée après la fiche (aucune ligne de code) ; Martin : « continue les lave auto »._
+
+- **Mesuré sur la ville de la graine** : le lave-auto des Érables (porte des piétons en (33, 191), bâtiment x 29 à 36)
+  se traverse déjà — façade, trois rangées de toit (188-190), la dalle (187), la ruelle (185-186). Les deux colonnes
+  du tunnel : 29-30 (rien de posé devant ni derrière) ; le bureau garde 31 à 36, la porte des piétons dedans.
+- **Le choix reste dans `enseignes.poser`** (une mesure, sans dé) : la condition « le bâtiment se traverse » y
+  remplace la baie de chaussée — la même porte qu'aujourd'hui, donc rien d'autre ne bouge. **Le tunnel se pose à la
+  fin** (`app/lave_auto.py`, après la caisse, avant les étages), sur la ville finie : `ville["lave_auto"]`, la vitrine
+  de la porte rognée de ses deux colonnes, la pièce du bureau redessinée à sa nouvelle mesure. Aucune tuile ne change :
+  le toit reste un toit, solide pour tout le monde.
+- ⚠️ **Rien ne s'enlève** : un décor retiré décalerait les identifiants de tout ce qui naît ensuite (le décor naît au
+  démarrage). Le tunnel exige donc un passage déjà libre devant l'entrée et derrière la sortie, au lieu de déplacer
+  ce qui y serait posé.
+- **Le passage** (`static/js/enseignes.js`) : le toit du tunnel s'ouvre au seul char du lavage (`tunnelOuvert`, lu
+  par `Vehicules.tuileInterdite`, comme `seuilOuvert`) ; le rail le pose lui-même chaque image (après la physique),
+  cap au nord ; les deux rideaux vitrés s'animent comme ceux d'un garage ; on paie au seuil.
+- **À l'œil** : le sol mouillé du tunnel sous les gens ; par-dessus eux, le toit de verre teinté, ses reflets, les
+  brosses, les jets, le séchoir et les deux portes vitrées.
+
 ## Notes
+
+**Livré le 3 oct. 2026.** Repris d'une session arrêtée après la fiche ; Martin : « continue les lave auto ».
+
+- **Le tunnel** (`app/lave_auto.py`) : deux colonnes du bâtiment, de la façade à sa dernière rangée de toit, posé sur
+  la ville finie, sans un dé ni une tuile — le toit reste un toit, solide pour tout autre char et pour les piétons. Le
+  bureau garde la porte des piétons : la vitrine de sa porte est rognée des deux colonnes, sa pièce redessinée à sa
+  nouvelle mesure (le juge des mesures de pièce, sur cinq graines, reste vert). Aux Érables, x 29-30, de la façade
+  (191) à la rangée 188 ; le bureau, x 31 à 36.
+- **Le choix de la façade** reste dans `enseignes.poser` (une mesure) : « elle se traverse » remplace « une baie de
+  chaussée devant ». Sur la graine du jeu, la même porte qu'avant, et la ville ne change qu'au lave-auto (juge).
+  ⚠️ Sur d'autres graines, la porte peut changer (l'ancienne ne se traversait pas) — c'est attendu.
+- **Rien ne s'enlève** : un décor retiré décalerait les identifiants ; le tunnel exige un passage déjà libre (une
+  distributrice devant une colonne le fait passer de l'autre côté du bâtiment, juge sur plan dessiné à la main).
+- **Le passage** (`static/js/enseignes.js`) : au pas, le nez vers la porte, avec 12 $, la porte vitrée monte (en
+  reculant, rien ; sans l'argent, « PAS ASSEZ », une fois) ; on ne passe le seuil qu'une fois la porte levée ; au
+  seuil on paie, le volant se fige et le convoyeur pose le char chaque image, au milieu du tunnel, cap au nord, jusqu'à
+  ce que l'arrière ait passé la sortie (5,5 s) ; une étoile tombe, le char sort luisant (des éclats, dix secondes).
+  La porte d'entrée redescend derrière lui, celle du fond monte quand il en approche.
+- **Pendant le lavage** : on ne descend pas (« PAS PENDANT LE LAVAGE ») ; l'agent à pied ne sort personne du char
+  (`Police`, non jugé au banc : la règle est une ligne, lue avec celle du rideau de garage) ; un menu, une scène ou un
+  fondu figent le rail ; le char détruit (ou qui n'est plus au joueur) arrête tout et lève les deux portes.
+- **Le dessin** : sous les gens, le béton mouillé du tunnel et sa rigole ; par-dessus, le toit de verre teinté, ses
+  montants et ses reflets, la rampe des jets, les deux brosses qui tournent, le séchoir, les deux portes vitrées.
+- **Les sons** (ElevenLabs, lieu `lave_auto`, chargés à l'approche) : `jet_lavage` aux jets et au rinçage, les brosses
+  d'avant, `sechoir` au fond. ⚠️ Pas `jet` : c'était déjà le jet de l'extincteur, joué à chaque image — un juge l'a vu.
+- **Juges** : `tests/test_lave_auto.py` (6) et `tests/test_lave_auto_js.py` (10, au bouton) ; ceux de la baie retirés.
+  Dix-huit mutations, toutes mordues — deux après l'ajout de leur juge (la porte levée avant de passer ; en reculant).
