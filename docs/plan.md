@@ -78,6 +78,7 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
+| La pause baisse le son et tombe en veille | ⬜ **en cours** (Martin, 3 oct. 2026 : le son s'affaiblit en pause, et un écran de veille — la caméra flâne sur la ville figée après 20 s sans toucher) | 3 oct. 2026 | **P4** | ajout | [fiche](jalons/la-pause-baisse-le-son-et-tombe-en-veille.md#fiche) |
 | Reprendre un acte sans redire la fin d'avant | ⬜ **en cours** (Martin, 3 oct. 2026 : à la reprise d'un chapitre, le donneur de l'acte d'avant redit sa fin au téléphone) | 3 oct. 2026 | **P2** | **correctif** | [fiche](jalons/reprendre-un-acte-sans-redire-la-fin-d-avant.md#fiche) |
 | Des comptoirs qui vendent ce que dit l'enseigne | ⬜ **en cours** (vague 1 : la table des rayons et la bouffe ; Martin, 3 oct. 2026 : des achats cohérents dans les commerces ; aujourd'hui la couleur de l'enseigne décide seule du comptoir — 53 enseignes sur 177 vendent ce que dit leur nom ; tranché par Martin : P2, et un commerce sans vente rend un service à lui) | 3 oct. 2026 | **P2** | **correctif** | [fiche](jalons/des-comptoirs-qui-vendent-ce-que-dit-l-enseigne.md#fiche) |
 | Des blocs de carte en extensions | ⬜ **en cours** (✅ vagues 1 à 3 livrées : à pied, au volant, à deux, la police qui reprend au bord, et le premier vrai bloc — le chalet du rang, la deuxième planque ; reste « un vrai dehors », avec le bloc qui en aura besoin) | 25 sept. 2026 | **P3** | ajout | [fiche](jalons/des-blocs-de-carte-en-extensions.md#fiche) |
