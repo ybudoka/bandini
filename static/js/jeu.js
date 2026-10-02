@@ -103,6 +103,7 @@ const Jeu = (function () {
     B.sonnerie = null;                       // un telephone qui sonnait dans la partie d'avant ne sonne pas dans celle-ci
     B.abribusServis = {};                    // les abribus qu'un autobus vient de servir (Autobus)
     Traversier.oublier(); Navette.oublier(); Vedette.oublier();                    // rien a bord, la carte neuve n'a pas de pont pose
+    Sillage.oublier(); BaieDHiver.oublier();                                       // ni sillage, ni chenal, ni bers d'une autre carte
     Halloween.oublier();                     // les enfants d'une autre partie
     Patinoire.oublier();                     // les patineurs d'une autre partie
     Fetes.oublier();                         // la tuile du tronc du sapin est rendue
@@ -1189,6 +1190,7 @@ const Jeu = (function () {
         pas('brouillard', Brouillard.maj);
         pas('police', Police.maj);
         pas('vedette', Vedette.maj);       // sur l'eau, la vedette de police (les bateaux, vague 4)
+        pas('sillage', Sillage.maj);       // la poupe de chaque coque qui file : son sillage (les bateaux, vague 5)
         pas('incendies', Incendies.maj);
         pas('frenesies', Frenesies.maj);   // l'icône qu'on prend exprès, le chrono, le compte
         pas('lecture', Lecture.maj);       // LIRE tenu : la ligne du passant qu'on regarde
@@ -1286,6 +1288,7 @@ const Jeu = (function () {
     if (!B.interieur) Blocs.dessinerChemins(ctx, vue);  // la route en lacets du rang : SOUS la neige et les traces
     if (B.interieur) Monde.dessinerFoyers(ctx, vue);   // le feu du foyer (le chalet du rang) : il danse, il ne se cuit pas
     if (!B.interieur) Monde.dessinerNids(ctx, vue);    // les nids-de-poule, dans la chaussee
+    if (!B.interieur) BaieDHiver.dessiner(ctx, vue);  // l'hiver, la glace de rive et les glaces flottantes (les bateaux, vague 5)
     if (!B.interieur) Pont.dessiner(ctx, vue);        // le pont de glace et ses sapins, sous la neige
     if (!B.interieur) Verglas.dessinerSol(ctx, vue);   // la glace : le reflet, les eclats, les branches cassees
     if (!B.interieur) Glace.dessinerSol(ctx, vue);     // la glace noire de l'hiver : ses plaques, SOUS la neige (lot 6, vague 6b)
@@ -1296,6 +1299,8 @@ const Jeu = (function () {
     if (!B.interieur) RueDesSaisons.dessinerFlaques(ctx, vue);   // l'eau des bornes ouvertes de la canicule (vague 4c)
     if (!B.interieur) Patinoire.dessinerSol(ctx, vue); // l'hiver, la patinoire du parc : sa glace et ses bandes, sous les patineurs
     if (!B.interieur) Naufrage.dessinerSol(ctx, vue);  // la ou un char a coule : les cercles, la tache d'huile
+    if (!B.interieur) Sillage.dessiner(ctx, vue);      // le sillage et l'ecume des coques, sous elles (les bateaux, vague 5)
+    if (!B.interieur) BaieDHiver.dessinerBers(ctx, vue);   // l'hiver, les chaloupes sur leurs bers, a quai
     // Le tunnel, la rame et ses fenetres : peints par-dessus le sol de la piece,
     // sous les gens du quai.
     if (B.interieur) Metro.dessiner(ctx, vue);
@@ -1659,7 +1664,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Blocs: Blocs, Souterrain: Souterrain, Entites: Entites, Combat: Combat, Techniques: Techniques, Rixe: Rixe, Dojo: Dojo,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Train: Train, Navette: Navette, Neige: Neige, Pluie: Pluie, Derapage: Derapage, Glace: Glace, Naufrage: Naufrage, Piscine: Piscine, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, RueDesSaisons: RueDesSaisons, BancsDeNeige: BancsDeNeige, Patinoire: Patinoire, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Territoires: Territoires, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Caisse: Caisse, Regate: Regate, Galeries: Galeries, Fetes: Fetes, Halloween: Halloween, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Lecture: Lecture, Reputation: Reputation, Collections: Collections, Suite: Suite, Decoration: Decoration, Puces: Puces, Interactions: Interactions, Caddies: Caddies, Panneaux: Panneaux, Repos: Repos, Police: Police, Vedette: Vedette, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Foyers: Foyers, FileDeFoire: FileDeFoire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Devisser: Devisser, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Photos: Photos, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, SurPlace: SurPlace, Chapitres: Chapitres, Jobs: Jobs, Biscuit: Biscuit, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Train: Train, Navette: Navette, Neige: Neige, Pluie: Pluie, Derapage: Derapage, Glace: Glace, Naufrage: Naufrage, Piscine: Piscine, Brouillard: Brouillard, Verglas: Verglas, Calendrier: Calendrier, Saisons: Saisons, RueDesSaisons: RueDesSaisons, BancsDeNeige: BancsDeNeige, Patinoire: Patinoire, Pont: Pont, SaintJean: SaintJean, Cineparc: Cineparc, Cabane: Cabane, Canton: Canton, Casino: Casino, Territoires: Territoires, QuatreRoues: QuatreRoues, Tables: Tables, Tripot: Tripot, Caisse: Caisse, Regate: Regate, Galeries: Galeries, Fetes: Fetes, Halloween: Halloween, Incendies: Incendies, Explosions: Explosions, Frenesies: Frenesies, Lecture: Lecture, Reputation: Reputation, Collections: Collections, Suite: Suite, Decoration: Decoration, Puces: Puces, Interactions: Interactions, Caddies: Caddies, Panneaux: Panneaux, Repos: Repos, Police: Police, Vedette: Vedette, Sillage: Sillage, BaieDHiver: BaieDHiver, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Foyers: Foyers, FileDeFoire: FileDeFoire, Missions: Missions, Scenes: Scenes, Adresse: Adresse, Devisser: Devisser, Enseignes: Enseignes, Garage: Garage, Demenagement: Demenagement, Photos: Photos, Conduite: Conduite, Rue: Rue, Circuit: Circuit, Infiltration: Infiltration, Histoire: Histoire, SurPlace: SurPlace, Chapitres: Chapitres, Jobs: Jobs, Biscuit: Biscuit, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages, Garderobe: Garderobe,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, PORTRAITS: PORTRAITS, FACADES: FACADES,
     ETOILE: ETOILE, MOMENTS: MOMENTS,

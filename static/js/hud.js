@@ -1644,6 +1644,15 @@ const Hud = (function () {
     return enOnglet('bilan', { titre: 'BILAN', items: lignes.map(function (l) { return { libelle: l[0], detail: l[1], actif: false }; }) });
   }
 
+  //: Une coque se compte en NOEUDS, et a la meme echelle pour toutes (la chaloupe 22 a fond, le cargo 13) :
+  //: un cargo a « 120 » comme la sport, ca ne se croyait pas (les bateaux, vague 5).
+  const NOEUDS_PAR_PX = 7;
+  /** Ce que dit le compteur : les km/h d'un char (120 a sa pointe), les noeuds d'une coque. */
+  function compteur(v) {
+    if (v.def.eau) return Math.round(Math.abs(v.vitesse) * NOEUDS_PAR_PX) + ' NŒUDS';
+    return Math.round(Math.abs(v.vitesse) / v.def.vitesse_max * 120) + ' KM/H';
+  }
+
   // --- Les parties : trois emplacements, au titre ------------------------------------
 
   const MOIS = ['JANV.', 'FÉVR.', 'MARS', 'AVR.', 'MAI', 'JUIN', 'JUIL.', 'AOÛT', 'SEPT.', 'OCT.', 'NOV.', 'DÉC.'];
@@ -4607,8 +4616,7 @@ const Hud = (function () {
       // savoir ou elle passe pour ne pas lui rentrer dedans.
       let boiteBoulot = null;
       if (v) {
-        const kmh = Math.round(Math.abs(v.vitesse) / v.def.vitesse_max * 120);
-        texte(ctx, kmh + ' KM/H', 70, 8, '#efe6d0', 1);
+        texte(ctx, compteur(v), 70, 8, '#efe6d0', 1);
         // ⚠️ La ligne dit QUEL boulot : a quatre, « TAXI » en tete d'une
         // livraison de pizza ne veut plus rien dire.
         const nomBoulot = Missions.boulot.fiche() ? Missions.boulot.fiche().nom.toUpperCase() : '';
@@ -4813,7 +4821,7 @@ const Hud = (function () {
   return {
     nomIci, dessinerLaVilleDuBoss, init, voile, etat, progression, partDesScripts, finirChargement, message, prime, majPrime, montantDeLaPrime, PRIME, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, toutesLesTechniques, glyphesDOnglets, menuSautMissions, menuSautDefis, menuChezUnDonneur, menuEndroitsCles, menuJukebox, pointDuDefi, menuCarnet,
     ouvrirOnglet, toucherMenu, onglets: function () { return ongletsVisibles().map(function (o) { return o.slug; }); },
-    ciblesDuMenu: function () { return cibles.slice(); }, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuCarnetCollections, menuCarnetCarte, menuCarnetBebelles, menuCarnetBebelle, menuCarnetSauts, menuCarnetEnseignes, menuCarnetEnseigne, menuDebugCollections, menuOptions, menuManette, menuManetteBoutons, menuBilan,
+    ciblesDuMenu: function () { return cibles.slice(); }, compteur, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuCarnetCollections, menuCarnetCarte, menuCarnetBebelles, menuCarnetBebelle, menuCarnetSauts, menuCarnetEnseignes, menuCarnetEnseigne, menuDebugCollections, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     menuCommandes, ouvrirCommandes, majAideDuTitre, lignesDAide, glypheDAction, dessinerGlyphe, largeurGlyphe,
     menuParties, menuEffacer, menuCopier, tempsDeJeu, quand,
     legendeDeLaCarte, legendeDuZonage, lieuxSurLaCarte, couleurDeLieu, cibleDuBoulot, PULSE_JOUEUR, BATTEMENT_CIBLE, CALQUE_ALPHA,

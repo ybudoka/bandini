@@ -40,6 +40,8 @@ COURSE = """
 def test_les_bouees_du_tour_se_lisent_et_se_peignent(banc):
     r = banc("function (L, o) {" + """
         L.Jeu.commencer();
+        // ⚠️ L'ÉTÉ (les bateaux, vague 5) : l'hiver, les bouées sont retirées de la baie hors d'une course.
+        L.B.partie.jour = 22;
         const b = L.B.defs.carte.regate.bouees;
         const p = L.Histoire.resoudre('bouee:3', null);
         const peint = [];

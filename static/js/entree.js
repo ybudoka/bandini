@@ -925,6 +925,9 @@ const Entree = (function () {
       // klaxon d'une auto-patrouille n'a jamais servi a rien.
       : nom === 'vehicule_sirene'
       ? { attaque: 'SIRÈNE', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO', saisir: nitro }
+      // Une coque : sa corne (ou le klaxon d'un hors-bord), et pas de frein a main sous l'esquive (les bateaux, vague 5).
+      : nom === 'vehicule_coque'
+      ? { attaque: v && v.def && v.def.klaxon === 'corne' ? 'CORNE' : 'KLAXON', action: 'SORTIR', esquive: '·', arme: 'RADIO', saisir: '·' }
       : nom === 'vehicule_sonnette'                       // un velo : sa sonnette
       ? { attaque: 'SONNETTE', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO', saisir: '·' }
       : nom === 'menu'

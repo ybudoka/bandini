@@ -80,6 +80,9 @@ const Regate = (function () {
     const b = parcours();
     if (!b || B.interieur || B.bloc) return;
     const course = B.mission && B.mission.course, vise = course && course.points[course.i];
+    // ⚠️ L'HIVER, LES BOUEES SONT RETIREES de la baie, comme les chaloupes (les bateaux, vague 5) — sauf pendant une
+    // course : une mission qui court le tour de l'ile en janvier a ses bouees.
+    if (!course && typeof BaieDHiver !== 'undefined' && BaieDHiver.remisees()) return;
     for (let n = 0; n < b.length; n++) {
       const x = Math.round(b[n][0] * TT + 8 - vue.x), y = Math.round(b[n][1] * TT + 8 - vue.y);
       const houle = Math.round(Math.sin((B.t + n * 37) / 24) * 1.5);

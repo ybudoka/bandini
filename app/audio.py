@@ -769,6 +769,25 @@ CATALOGUE: list[Echantillon] = [
        prompt="a small outboard boat motor idling and puttering on calm water, "
               "two-stroke engine putter with water slap against the hull, "
               "recorded from on board, seamless loop, no voices, no music"),
+    # --- LES BATEAUX NE SONT PAS DES CHARS (vague 5, 30 sept. 2026) -------------------
+    # ⚠️ Le chalutier et le porte-conteneurs tournaient au HORS-BORD de la chaloupe, et
+    # on montait a bord de tous en ENFOURCHANT une bequille de velo. Un diesel lent et
+    # grave, et des pas sur un pont. Charges a part (`LIEUX["bateaux"]`) : le premier
+    # ecran est plein, et ils ne servent qu'au bord de l'eau. ⚠️ Trois secondes et 32 kbit/s : le plafond des
+    # lieux (`test_le_poids_audio_reste_raisonnable`) n'avait plus que 23 Ko — on compresse avant de relever.
+    _e("moteur_diesel", "Diesel du chalutier et du cargo", duree_s=3.0, volume=0.34,
+       boucle=True, influence=0.55,
+       prompt="a large marine diesel engine idling deep and slow aboard a fishing trawler, "
+              "low heavy thumping rumble with hull vibration and gentle water wash, "
+              "recorded from on deck, seamless loop, no voices, no music"),
+    _e("a_bord", "Monter a bord", duree_s=1.2, volume=0.40,
+       prompt="two footsteps stepping onto the wooden deck of a small boat, the hull rocks "
+              "and creaks, a small splash of water against the side, close up, no voices, no music"),
+    # L'hiver de la baie (vague 5, 2 oct. 2026) : une coque qui entre dans les glaces flottantes ou la glace de rive
+    # les CROQUE — un choc sourd, la glace qui racle le long de la coque (`BaieDHiver.traine`).
+    _e("glace_coque", "La glace contre la coque", duree_s=1.6, volume=0.45, influence=0.6,
+       prompt="the hull of a small boat bumping into floating river ice, hard crunch and grinding scrape of ice "
+              "chunks against the fiberglass hull, slush hiss, close up, no motor, no voices, no music"),
     # --- M15, 2e vague : LE SOUFFLE DU JOUEUR. Il sprinte, il s'essouffle, et on
     # n'entendait rien : la barre d'endurance ne se lisait qu'en la regardant.
     # Une boucle qui monte avec la depense, et une inspiration quand le souffle
@@ -1857,6 +1876,8 @@ QUARTIERS = {
 #: un au Brouillard aussi.
 LIEUX: dict[str, list[str]] = {
     "cabane": ["caleche", "hennissement", "evaporateur"],
+    # Les bateaux (vague 5) : charges a la premiere coque qu'on approche ou qu'on prend (`Vehicules`).
+    "bateaux": ["moteur_diesel", "a_bord", "glace_coque"],
     # Le train (29 sept. 2026) : sa ligne longe le haut de la carte ; ses sons se chargent quand on s'en
     # approche. Le budget du premier écran n'avait plus que 6 Ko de marge — et ils n'y servent à rien.
     "train": ["klaxon_train", "cloche_passage", "roulement_train"],

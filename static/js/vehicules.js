@@ -512,8 +512,14 @@ const Vehicules = (function () {
     // ⚠️ Les grands bateaux ne dependent pas des chaloupes : une ville sans
     // amarrage aurait quand meme son cargo.
     if (!places.length || !j || B.interieur) return majMouillages();
+    // ⚠️ L'HIVER, LES CHALOUPES DE PLAISANCE SONT SUR LEURS BERS (les bateaux, vague 5) : l'amarrage est MARQUE — on
+    // n'y fait plus naitre de chaloupe, et celle du decor qui y dort rentre hors champ ; `BaieDHiver.dessinerBers` peint
+    // la coque sous sa bache, a quai. Aucun amarrage ne sort de la liste (un tirage), et ce qui est a quelqu'un reste a
+    // l'eau : la chaloupe d'une mission (Sven), celle qu'on a prise ou volee.
+    const hiver = typeof BaieDHiver !== 'undefined' && BaieDHiver.remisees();
     let nees = 0;
     for (const place of places) {
+      if (hiver) { remiserLaChaloupe(place); continue; }
       const x = place.x * TT + 8, y = place.y * TT + 8;
       const d2 = (x - j.x) * (x - j.x) + (y - j.y) * (y - j.y);
       const deja = B.entites.some(function (q) {
@@ -538,6 +544,19 @@ const Vehicules = (function () {
       if (v) { v.amarrage = place; nees++; }
     }
     return nees + majMouillages();
+  }
+
+  /** La chaloupe du DECOR qui dort a cet amarrage, l'hiver, rentre sur son ber — hors champ, et jamais ce qui est a
+      quelqu'un (une mission, le joueur, ce qu'il a vole ou paye). */
+  function remiserLaChaloupe(place) {
+    const j = B.joueur;
+    for (const v of B.entites) {
+      if (v.type !== 'vehicule' || v.amarrage !== place || v.slug !== 'bateau' || v.etat !== 'stationne' || v.conducteur) continue;
+      if (v.mission || v.aToi || v.vole || v.aLaPlanque || v.aQui || (j && j.dansVehicule === v)) continue;
+      if (Entites.visibleAEcran(v.x, v.y, 24)) continue;
+      Entites.retirer(v);
+      return;
+    }
   }
 
   /** LES GRANDS BATEAUX A QUAI : le chalutier et le porte-conteneurs (demande de
@@ -1154,6 +1173,9 @@ const Vehicules = (function () {
     const freinMain = cmd.freinMain && !eau;
     if (freinMain) v.vitesse *= 0.965;
     v.vitesse *= d.friction;
+    // ⚠️ L'HIVER, LA GLACE DE LA BAIE (`BaieDHiver`, les bateaux, vague 5) : l'etrave qui y entre la croque, et elle prend
+    // de l'erre a chaque image. Hors de l'hiver, rien.
+    if (eau && typeof BaieDHiver !== 'undefined') BaieDHiver.traine(v);
     // La NITRO (le garage de Ti-Guy) pousse la pointe le temps de sa bonbonne (`Garage.pointe`).
     v.vitesse = borner(v.vitesse, -d.vitesse_recul, d.vitesse_max * sol * Garage.pointe(v));
     if (Math.abs(v.vitesse) < 0.02 && !cmd.gaz && !cmd.frein) v.vitesse = 0;
@@ -1596,7 +1618,8 @@ const Vehicules = (function () {
       une deuxieme verite a tenir a jour. */
   function majNoyade(v) {
     const n = B.defs.recherche.nage;
-    if (v.def.eau || !Monde.estEau(Math.floor(v.x / TT), Math.floor(v.y / TT)) || tenuAuQuai(v)) {
+    // ⚠️ Une coque flotte — sauf son EPAVE, qui coule comme un char (les bateaux, vague 5).
+    if ((v.def.eau && v.etat !== 'epave') || !Monde.estEau(Math.floor(v.x / TT), Math.floor(v.y / TT)) || tenuAuQuai(v)) {
       v.coule = 0;
       return false;
     }
@@ -2068,7 +2091,8 @@ const Vehicules = (function () {
     // Une coque volee se compte a part (BATEAUX VOLES) : le journal des vols d'autos ne la lit pas.
     if (crime) { Police.signalerCrime(crime, v.x, v.y, vu); const s = B.partie.stats; if (v.def.eau) s.bateauxVoles = (s.bateauxVoles || 0) + 1; else s.volees++; }
     // ⚠️ L'etiquette du bouton tactile suit l'avertisseur : SIRENE, SONNETTE, KLAXON.
-    Entree.contexte(v.def.sirene ? 'vehicule_sirene' : v.def.klaxon === 'sonnette' ? 'vehicule_sonnette' : 'vehicule');
+    Entree.contexte(v.def.sirene ? 'vehicule_sirene' : v.def.eau ? 'vehicule_coque' : v.def.klaxon === 'sonnette' ? 'vehicule_sonnette' : 'vehicule');
+    if (v.def.eau) Son.Lieu.charger('bateaux');     // le diesel et les pas sur le pont, une fois
     bruitDeMontee(v);
     if (v.def.classe !== 'velo') Son.boucle(boucleDeMoteur(v), true, 0.6);
     if (v.def.radio) { Son.Ambiance.arreter(); Son.Radio.jouer(v.def.radio); }
@@ -2081,14 +2105,21 @@ const Vehicules = (function () {
       silencieux, il cogne et il crachote, et c'est le seul moteur du jeu qu'on
       entende par-dessus de l'eau. Le reste ne change pas : meme montee dans les
       tours, meme hauteur qui suit la vitesse. */
-  function boucleDeMoteur(v) { return v.def.classe === 'bateau' ? 'moteur_bateau' : 'moteur'; }
+  /** ⚠️ Le chalutier et le cargo (la corne) tournent au DIESEL (les bateaux, vague 5) — tant qu'il n'est pas
+      charge (`audio.LIEUX.bateaux`), au hors-bord de la chaloupe plutot qu'en silence. */
+  function boucleDeMoteur(v) {
+    if (v.def.classe !== 'bateau') return 'moteur';
+    return v.def.klaxon === 'corne' && Son.estCharge('moteur_diesel') ? 'moteur_diesel' : 'moteur_bateau';
+  }
 
   /** Le bruit de la montee, et de la descente : la portiere d'un char — ou
       la bequille et le cadre d'une moto et d'un velo, qu'on enfourche.
       ⚠️ La FICHE decide (`portieres`, `vehicules.py`), pas un
       `slug === 'velo'` ici. */
   function bruitDeMontee(v) {
-    if (v.def.portieres) Son.SFX.porte('vehicule'); else Son.SFX.enfourcher();
+    // Une coque : des pas sur un pont, pas la bequille d'un velo (les bateaux, vague 5).
+    if (v.def.eau) Son.SFX.aBord();
+    else if (v.def.portieres) Son.SFX.porte('vehicule'); else Son.SFX.enfourcher();
   }
 
   /** L'avertisseur du char, au bouton du klaxon : le klaxon, ou la sonnette
@@ -2164,6 +2195,7 @@ const Vehicules = (function () {
     // l'autre bout de la ville. Eteindre ce qui ne joue pas ne coute rien.
     Son.boucle('moteur', false);
     Son.boucle('moteur_bateau', false);
+    Son.boucle('moteur_diesel', false);
     Son.Radio.arreter();
     // ⚠️ On ne relance pas l'ambiance unique : `Son.Chef` reprend la main a
     // la prochaine image, avec la musique du district ou l'on descend.
@@ -3959,7 +3991,11 @@ const Vehicules = (function () {
   const PHARE_BAS_Z = 10;
   //: La lueur sur chaque lampe peinte : petite, comme celle d'un feu de
   //: circulation (`RAYON_LAMPE`) — une lampe ne s'eclaire qu'elle-meme.
-  const LUEURS = { l: { rayon: 5, alpha: 0.55, defaut: '#fff3b0' }, t: { rayon: 5, alpha: 0.5, defaut: '#ff4b3e' } };
+  //: `J` et `Z` : les feux de cote d'une coque, rouge a babord et vert a tribord (les bateaux, vague 5). Petits : ce
+  //: sont des feux de position, pas des phares.
+  const LUEURS = { l: { rayon: 5, alpha: 0.55, defaut: '#fff3b0' }, t: { rayon: 5, alpha: 0.5, defaut: '#ff4b3e' },
+                   J: { rayon: 3, alpha: 0.6, defaut: '#ff3b30' }, Z: { rayon: 3, alpha: 0.6, defaut: '#2fe06a' } };
+  const LAMPE = { l: true, t: true, J: true, Z: true };
   //: ⚠️ LE PLAFOND COMPTE DES CHARS. Il comptait des lampes — douze, deux par
   //: char : passe six chars a l'ecran, les suivants roulaient eteints. Un char de
   //: ville en allume cinq (un faisceau, deux phares, deux feux) ; l'autobus
@@ -4016,14 +4052,14 @@ const Vehicules = (function () {
     for (const p of (def && def.machine ? def.machine.pieces : [])) {
       let lettre = null, u = 0, w = 0, z = 0;
       if (p[0] === 'bloc') {
-        lettre = [p[4], p[5], p[6]].find(function (ch) { return ch === 'l' || ch === 't'; }) || null;
+        lettre = [p[4], p[5], p[6]].find(function (ch) { return LAMPE[ch]; }) || null;
         u = (p[1][0] + p[1][1]) / 2; w = (p[2][0] + p[2][1]) / 2; z = (p[3][0] + p[3][1]) / 2;
       } else if (p[0] === 'point') {
         lettre = p[2]; u = p[1][0]; w = p[1][1]; z = p[1][2];
       } else if (p[0] === 'tube') {
         lettre = p[3]; u = (p[1][0] + p[2][0]) / 2; w = (p[1][1] + p[2][1]) / 2; z = (p[1][2] + p[2][2]) / 2;
       }
-      if (lettre !== 'l' && lettre !== 't') continue;
+      if (!LAMPE[lettre]) continue;
       const lueur = LUEURS[lettre], teinte = (def.pal && def.pal[lettre]) || lueur.defaut;
       liste.push({ u: u, w: w, z: z, lettre: lettre, r: lueur.rayon, teinte: teinte, alpha: lueur.alpha,
                    c: rgba(teinte, lueur.alpha) });
@@ -4191,7 +4227,8 @@ const Vehicules = (function () {
       // Et une lampe eclaire vers ou elle POINTE : pleine quand elle nous regarde (le
       // phare d'un char qui descend, le feu arriere d'un char qui monte), a 40 % de
       // profil, ou l'on n'en devine que le coin. `sa` est la part du cap vers le bas.
-      const face = l.lettre === 't' ? -sa : sa;
+      // Un feu de cote regarde sur le flanc : a demi, de quelque cap qu'on le voie.
+      const face = l.lettre === 't' ? -sa : (l.lettre === 'J' || l.lettre === 'Z') ? 0.5 : sa;
       const part = parts[n] * (LUEUR_DE_PROFIL + (1 - LUEUR_DE_PROFIL) * Math.max(0, face));
       if (part <= 0) continue;
       const lampe = { x: x0 + l.u * ca - l.w * sa, y: y0 + (l.u * sa + l.w * ca) * k - l.z, r: l.r,
@@ -4676,7 +4713,7 @@ const Vehicules = (function () {
 
   return {
     ROTATIONS, courbeBraquage, vehiculeDef, cederLaVoie, creer, peupler, majGaresDeService, majLotsDeConcession, compteCommeGare, typeDeRue, remise, remisee, rentrerLesRemises, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, pousserLeDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
-    majPhysique, allureDuSol, avancer, heurterVehicules, heurterPietons, heurterBetes, endommager, coupeLaLigne, exploser, declencherAlarme,
+    majPhysique, allureDuSol, avancer, lampesDeLaMachine, heurterVehicules, heurterPietons, heurterBetes, endommager, coupeLaLigne, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, suitUnChar, klaxonnerLePassant, vitesseDeForce, majConducteur, commandesJoueur, rouler,
     pointDArret, approcheDeLaLigne, placeDeLaPanne, placeStationnee, garesVoulus,

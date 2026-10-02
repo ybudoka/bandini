@@ -139,6 +139,39 @@ s'efface hors champ. Le sprite : les juges du parc (`test_poses_vehicules`, `tes
 **Atterrir** : juges neufs + police, conduite, bateaux, vague 1-2, trafic, poses, définitions, ville_vit ;
 `ruff` ; la ligne du plan « ✅ vagues 3 et 4 livrées ».
 
+## Plan de la vague 5
+
+> Martin, 30 sept. 2026 : l'habillage d'abord (une session l'a écrit, sans l'atterrir : `3852df2d`, rejoué sur dev le
+> 2 oct.). La foire fermée l'hiver a rendu les chaloupes d'hiver à ce jalon ; Martin, 2 oct. 2026 : « on y va » —
+> l'habillage ET l'hiver.
+
+(1) **Le compteur** : `Hud.compteur(v)` — `NŒUDS` pour une coque (7 nœuds par px/image : chaloupe 22, vedette 26,
+chalutier 18, cargo 13), `KM/H` sinon. (2) **Le bouton** : un contexte `vehicule_coque` — `CORNE` ou `KLAXON`
+selon la fiche, et plus de `FREIN` sous l'esquive (il ne fait rien sur l'eau) ; la vedette garde `SIRÈNE`.
+(3) **Monter à bord** : des pas sur un pont (`Son.SFX.aBord`, l'échantillon `a_bord`), plus la béquille du vélo.
+(4) **Le diesel** : le chalutier et le cargo (la corne) tournent en `moteur_diesel`, la chaloupe garde son
+hors-bord ; tant que le diesel n'est pas chargé, le hors-bord. Les deux sons vont dans `audio.LIEUX["bateaux"]`
+(le premier écran est plein), chargés à la première coque qu'on approche ou qu'on prend. (5) **Les feux de
+navigation** : le blanc devant (`l`) et à la poupe (`t`, blanc au lieu de rouge), le rouge à bâbord (`J`) et le
+vert à tribord (`Z`), deux lueurs neuves. (6) **L'épave coule** : une coque épave passe par `majNoyade` (le
+naufrage, la tache d'huile) et s'efface en trois secondes au lieu de flotter et fumer quarante. (7) **Le sillage**
+(`static/js/sillage.js`) : la poupe de chaque coque qui file note un point toutes les deux images (`maj`, le temps du
+monde) ; deux bras d'écume qui s'ouvrent avec l'âge, le bouillon de l'hélice, la moustache d'étrave ; le traversier et
+la navette aussi. Peint sous les coques, jamais sur la terre, sans un dé ni une particule.
+
+**L'hiver** (`static/js/baie_d_hiver.js`, tant que la neige tient — `Saisons.enHiver`) : (8) **la glace de rive**
+contre les quais et les berges (3 px en décembre, 8 en février) et **les glaces flottantes** qui dérivent vers l'est
+(une part des cellules de 44 px selon le mois : 0,2 en décembre, 0,58 en février, la débâcle de mars à 0,34), et le
+frasil ; tout est une pure fonction de la cellule et de l'heure, taillé aux tuiles d'eau. (9) **Le chenal** du
+traversier et de la navette reste ouvert, bordé de glace cassée — ils roulent à l'heure comme avant. (10) **À la
+barre** : l'étrave qui entre dans la glace la croque (`glace_coque`, ElevenLabs), la barre tremble, et la glace prend
+5 % de l'erre à chaque image (`BaieDHiver.traine`, dans `majPhysique`). (11) **Les chaloupes de plaisance sur leurs
+bers** : `majAmarrages` MARQUE l'amarrage — aucune chaloupe n'y naît, celle du décor qui y dort rentre hors champ ; le
+ber est PEINT à quai (planches, grève, gazon — jamais un trottoir), la coque sous sa bâche blanche ou bleue, la neige
+dessus. La chaloupe d'une mission (Sven), celle du joueur, le chalutier, le cargo et la vedette restent à l'eau.
+(12) **Les bouées de la régate** sont retirées l'hiver, sauf pendant une course. Le pont de glace, la patinoire et la
+motoneige ne changent pas.
+
 ## Notes
 
 - **Vague 1 livrée le 30 sept. 2026 — la conduite.** Deux nombres dans `PHYSIQUE` (`app/vehicules.py`) :
@@ -198,4 +231,37 @@ s'efface hors champ. Le sprite : les juges du parc (`test_poses_vehicules`, `tes
   (dans un canal bâti ; l'ancien repli avait le même défaut) ; une vedette sortie du champ (au-delà de 60 tuiles)
   file plein est au lieu de garder son cap ; une vedette dont on ne veut plus garde sa sirène jusqu'à s'effacer ;
   le parcours du champ alloue ses quatre directions à chaque tuile.
-
+- **Vague 5 livrée le 2 oct. 2026 — l'habillage et l'hiver.** L'habillage, écrit le 30 sept. par une session qui ne
+  l'a pas atterri (`3852df2d`), rejoué sur dev : le compteur en **NŒUDS** (`Hud.compteur`, 7 nœuds par px/image :
+  chaloupe 22, vedette 26, chalutier 18, cargo 13) ; le bouton **CORNE** (chalutier, cargo) ou KLAXON (chaloupe), plus de
+  FREIN sous l'esquive (`vehicule_coque`), SIRÈNE pour la vedette ; des **pas sur un pont** en montant à bord
+  (`a_bord`) ; le **diesel** du chalutier et du cargo (`moteur_diesel`, le hors-bord tant qu'il n'est pas chargé) ;
+  les **feux de navigation** (rouge à bâbord `J`, vert à tribord `Z`, blanc à la poupe) ; l'**épave qui coule** et
+  s'efface. Puis le **sillage** (`static/js/sillage.js`) et **l'hiver de la baie** (`static/js/baie_d_hiver.js`) —
+  voir le plan de la vague 5 ci-dessus.
+- **À la barre, l'hiver** : une glace flottante prise à 2,6 px/image (≈ 18 nœuds) se croque une fois — le son, la barre
+  qui tremble — et la chaloupe en sort à 1,1 px/image au lieu de 2,3 en eau libre (24 images, gaz lâché). Gaz tenu,
+  on la traverse au ralenti : elle se contourne, elle ne bloque pas.
+- **Les bers** : 13 amarrages sur 20 ont un quai, une grève ou un gazon à deux tuiles ; les sept autres touchent un
+  trottoir — leur chaloupe est remisée ailleurs (rien à l'amarrage l'hiver). Une coque à l'eau sur l'amarrage (Sven,
+  une mission) efface le ber vide d'à côté. ⚠️ Peint SOUS les passants (avec le sol, après la neige) : on marche à
+  travers, comme les meubles du 1er juillet.
+- **La mesure** (A/B apparié, base et vague 5 servies en même temps, mêmes scènes, processeur ×4, 8 lots de 150
+  images en alternance, maj + rendu) : l'été, une chaloupe qui file, +1,0 ms/image (+7,6 %) ; l'hiver, au milieu des
+  glaces, +1,4 ms (+10,5 %). Le JavaScript des deux modules en compte 0,15 ms l'été, 0,6 ms l'hiver ; le reste est la
+  peinture du canevas. ⚠️ La première version peignait une goutte d'écume par `fillRect` et trois remplissages par
+  glace : la peinture par lots (un chemin et un remplissage par teinte) a retranché le JavaScript, sans changer l'écart
+  total — ce n'était pas le clip (essayé sans : le même écart).
+- **Le son** : `glace_coque` (ElevenLabs, 1,6 s, 96 kbit/s, 20 Ko) dans `audio.LIEUX["bateaux"]` avec le diesel et
+  les pas sur le pont, chargés à la première coque ; la synthèse est le filet. **À écouter par Martin.**
+- **Les juges** : `tests/test_bateaux_habillage_js.py` (six) et `tests/test_bateaux_hiver_js.py` (douze, dont la barre
+  dans la glace sur trois graines) ; chacun vu rougir sous sa mutation (24 mutations, toutes rouges — trois juges
+  resserrés après une première passe verte : l'écume au ras du quai, le chenal jugé à mi-chemin, le ber d'été sans
+  coque à l'eau). `test_regate_js` pose juillet pour peindre ses bouées.
+- **Captures regardées** : une chaloupe qui file en juillet et son sillage ; la baie en janvier (glace de rive,
+  glaces flottantes, une chaloupe volée qui les fend) ; le chenal du traversier ; les chaloupes sur leurs bers aux
+  Quais ; la débâcle de mars.
+- ⚠️ **Pas fait, à dire** : le pilote en ciré, la coque qui se mouille ; l'eau glacée qui fait mal au nageur l'hiver ;
+  le traversier pris dans la glace un jour de grand froid (il roule à l'heure, toute l'année) ; la motoneige sur la baie
+  (elle roule sur le pont de glace comme avant) ; les contextes du bouton remis à « vehicule » après un menu (vrai
+  aussi pour la sirène et la sonnette, d'avant).

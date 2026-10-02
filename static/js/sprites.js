@@ -2036,7 +2036,9 @@ const MACHINE_BATEAU = {
     ['bloc', [-17.4, -15.2], [-1.2, 1.2], [4.0, 8.0], 'k', 'k', 'k', 0.2],                  // le moteur
     ['tube', [-16.2, 0, 4.0], [-16.2, 0, 0.2], 'M', 0.2],
     BARRE_FRANCHE,
-    ['bloc', [12.6, 15.4], [-0.9, 0.9], [5.0, 7.0], 'l', 'l', 'l', 0.3],                     // les feux de navigation
+    ['bloc', [12.6, 15.4], [-0.9, 0.9], [5.0, 7.0], 'l', 'l', 'l', 0.3],                     // les feux de navigation : le blanc devant,
+    ['bloc', [9.6, 11.0], [-4.6, -3.8], [5.4, 6.4], 'J', 'J', 'J', 0.3],                     // le rouge a babord,
+    ['bloc', [9.6, 11.0], [3.8, 4.6], [5.4, 6.4], 'Z', 'Z', 'Z', 0.3],                       // le vert a tribord
     ['bloc', [-15.8, -14.0], [-1.0, 1.0], [5.2, 7.2], 't', 't', 't', 0.3],
   ],
 };
@@ -2093,7 +2095,9 @@ SPRITES.remorqueuse.gyrophares = { quand: 'remorque', a: ['#ffd84a', '#6a4812'],
 SPRITES.pelleteuse = enVolume(MACHINE_PELLETEUSE, 38, 68, { k: '#101018', c: '#e8b33c', v: '#7fb3d8', r: '#26262b', s: '#4b4f56', h: '#7c828a', m: '#8d949c', a: '#ff9a1f', l: '#fff3b0', t: '#ff4b3e' });
 SPRITES.camion = enVolume(MACHINE_CAMION, 40, 76, { k: '#101018', c: '#7f8c8d', b: '#8d99a6', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', s: '#565c63', n: '#aab4be' });
 SPRITES.autobus = enVolume(MACHINE_AUTOBUS, 48, 80, { k: '#101018', c: '#2980b9', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', s: '#1f5f8b', e: '#ffd84a' });
-SPRITES.bateau = assisDedans(MACHINE_BATEAU, 30, 48, 'barre', { k: '#101018', c: '#ecf0f1', v: '#7fb3d8', r: '#3a2f26', l: '#fff3b0', t: '#ff4b3e', x: '#ecf0f1', y: '#ecf0f1', s: '#00000030', u: '#8a6a44' });
+// ⚠️ LES FEUX D'UNE COQUE NE SONT PAS CEUX D'UN CHAR (les bateaux, vague 5) : blanc devant (`l`), BLANC a la
+// poupe (`t` — pas le rouge d'un feu arriere), rouge a babord (`J`), vert a tribord (`Z`).
+SPRITES.bateau = assisDedans(MACHINE_BATEAU, 30, 48, 'barre', { k: '#101018', c: '#ecf0f1', v: '#7fb3d8', r: '#3a2f26', l: '#fff3b0', t: '#f4f1e0', x: '#ecf0f1', y: '#ecf0f1', s: '#00000030', u: '#8a6a44', J: '#ff3b30', Z: '#2fe06a' });
 
 /* --- Les variantes du parc : la meme empreinte, une autre silhouette ------------------
 
@@ -2451,6 +2455,8 @@ const MACHINE_CHALUTIER = {
     ['tube', [7.0, -5.0, 30.0], [7.0, 5.0, 30.0], 'M', 0.2],
     ['bloc', [4.6, 9.4], [-0.5, 0.5], [22.0, 22.8], 'k', 'k', 'k', 0.3],
     ['bloc', [6.4, 7.6], [-0.6, 0.6], [33.5, 35.0], 'l', 'l', 'l', 0.3],
+    ['bloc', [10.6, 12.4], [-6.6, -6.0], [16.8, 18.0], 'J', 'J', 'J', 0.3],                  // les feux de cote, au toit de la timonerie
+    ['bloc', [10.6, 12.4], [6.0, 6.6], [16.8, 18.0], 'Z', 'Z', 'Z', 0.3],
     // Le tambour, son filet vert et ses flotteurs.
     ['bloc', [-19.5, -14.5], [-5.0, 5.0], [8.6, 12.8], 'n', 'n', 'M', 0.1],
     ['bloc', [-18.4, -17.2], [-3.4, -2.2], [12.8, 13.8], 'o', 'o', 'o', 0.12],
@@ -2516,6 +2522,8 @@ const MACHINE_PORTE_CONTENEURS = {
       ['bloc', [-62.0, -55.0], [-19.0, 19.0], [38.0, 42.0], 'B', 'w', 'W', 0.05],
       ['bloc', [-55.0, -54.92], [-17.5, 17.5], [39.0, 41.0], 'v', 'v', 'v', 0.12],
       ['tube', [-54.88, -17.8, 38.6], [-54.88, 17.8, 38.6], 'D', 0.2], ['tube', [-54.88, -17.8, 41.4], [-54.88, 17.8, 41.4], 'D', 0.2],
+      ['bloc', [-58.0, -56.0], [-19.6, -19.0], [40.0, 41.8], 'J', 'J', 'J', 0.3],             // les feux de cote, aux ailes de la passerelle
+      ['bloc', [-58.0, -56.0], [19.0, 19.6], [40.0, 41.8], 'Z', 'Z', 'Z', 0.3],
       ['tube', [-55.94, -13.0, 18.0], [-55.94, 13.0, 18.0], 'E', 0.12], ['tube', [-55.94, -13.0, 23.0], [-55.94, 13.0, 23.0], 'E', 0.12],
       ['tube', [-55.94, -13.0, 28.0], [-55.94, 13.0, 28.0], 'E', 0.12], ['tube', [-55.94, -13.0, 33.0], [-55.94, 13.0, 33.0], 'E', 0.12],
       // Les canots de sauvetage, orange, de chaque bord.
@@ -2529,9 +2537,9 @@ const MACHINE_PORTE_CONTENEURS = {
   ),
 };
 
-SPRITES.chalutier = enVolume(MACHINE_CHALUTIER, 56, 104, { k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#5a2a22', l: '#fff3b0', t: '#ff4b3e', u: '#8a6a44', w: '#ecf0f1', W: '#b9c0c7', n: '#3f6b4a', o: '#e67e22' });
+SPRITES.chalutier = enVolume(MACHINE_CHALUTIER, 56, 104, { k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#5a2a22', l: '#fff3b0', t: '#f4f1e0', u: '#8a6a44', w: '#ecf0f1', W: '#b9c0c7', n: '#3f6b4a', o: '#e67e22', J: '#ff3b30', Z: '#2fe06a' });
 SPRITES.porte_conteneurs = enVolume(MACHINE_PORTE_CONTENEURS, 160, 232, {
-  k: '#101018', c: '#1f3a5f', v: '#7fb3d8', r: '#8e2b20', l: '#fff3b0', t: '#ff4b3e', u: '#6b7078', w: '#ecf0f1', W: '#b9c0c7',
+  k: '#101018', c: '#1f3a5f', v: '#7fb3d8', r: '#8e2b20', l: '#fff3b0', t: '#f4f1e0', u: '#6b7078', w: '#ecf0f1', W: '#b9c0c7', J: '#ff3b30', Z: '#2fe06a',
   n: '#26262e', s: '#c0392b', y: '#f39c12', q: '#2b2b30',
   a: '#b03a2e', b: '#2e6da4', e: '#d68910', f: '#1e8449', g: '#95a5a6', h: '#d5d8dc',
 });

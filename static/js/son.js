@@ -1333,6 +1333,9 @@ const Son = (function () {
     // entendre en passant (`jouerA`) ; ici c'est la sienne.
     sonnette: function () { if (!joue('sonnette')) { ton(2600, 0.1, 'sine', 0.16); ton(2600, 0.14, 'sine', 0.12, 1, 0.13); } },
     // Un deux-roues s'enfourche : la bequille et le cadre, pas une portiere.
+    // Une coque qui entre dans les glaces de l'hiver (`BaieDHiver.traine`) : le choc sourd, la glace qui racle.
+    glaceCoque: function () { if (!jouerDuLieu('glace_coque')) { bruit(0.3, 0.2, 2200, 260); ton(85, 0.14, 'sine', 0.12, 0.6); } },
+    aBord: function () { if (!joue('a_bord')) { bruit(0.08, 0.2, 500, 120); ton(140, 0.08, 'sine', 0.1, 0.5, 0.04); } },
     enfourcher: function () { if (!joue('enfourcher')) { bruit(0.05, 0.15, 1800, 300); ton(700, 0.05, 'square', 0.08, 0.6, 0.03); } },
     // ⚠️ **ELLE REND SA DUREE**, en secondes — le seul SFX qui rende quelque
     // chose. Le dialogue de l'appel attend la fin de la sonnerie
