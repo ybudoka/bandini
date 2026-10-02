@@ -1,5 +1,6 @@
 """Des étages dedans aussi (docs/jalons/des-etages-dedans-aussi.md) : le navigateur peint les étages que Python a
 comptés (`au_dessus`), sans les recompter — et on y monte."""
+from app import etages
 
 
 def test_le_navigateur_peint_ce_que_python_a_compte(banc):
@@ -13,6 +14,27 @@ def test_le_navigateur_peint_ce_que_python_a_compte(banc):
         return f;
     }""")
     assert r == [], r[:5]
+
+
+def test_le_navigateur_peint_le_mur_que_python_a_mesure(banc, paquet):
+    """Le mur d'un commerce va au bout de son bâtiment, rideau de garage compris (la façade du garage Bandini,
+    2 oct. 2026) : la règle vit deux fois (`etages._mur`, `Monde.murDuBatiment`), et les deux mesurent pareil —
+    sinon le dehors peint des étages sur un mur dont Python n'a pas compté le toit."""
+    c = paquet["carte"]
+    sol, qui = c["sol"], etages._toits(c["sol"])
+    prises = {(q["x"] + i, q["y"]) for q in c["devantures"] + c["residences"] for i in range(q["l"])}
+    logements = set()
+    for r in c["residences"]:
+        x0, large = etages._mur(r, qui, sol, prises)
+        logements |= {(x0 + i, r["y"]) for i in range(large)}
+    attendu = [list(etages._mur(d, qui, sol, prises, logements, rideaux=True)) for d in c["devantures"]]
+    r = banc("""function (L) {
+        return L.Monde.carte.def.devantures.map(function (d) { L.Monde.etagesDuCommerce(d); return [d.murX, d.murL]; });
+    }""")
+    ecarts = [(d["texte"], d["x"], d["y"], a, b) for d, a, b in zip(c["devantures"], attendu, r) if a != b]
+    assert not ecarts, ecarts[:5]
+    assert any(sol[d["y"]][x] == "G" for d, (x0, large) in zip(c["devantures"], attendu)
+               for x in range(x0, x0 + large)), "aucun mur de commerce ne passe sur un rideau : le juge ne mord pas"
 
 
 def test_on_monte_au_dernier_etage_et_on_redescend_au_bouton(banc):

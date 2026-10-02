@@ -22,3 +22,19 @@ Deux défauts sur la même capture :
 char au fond de la baie n'a plus un pixel au-dessus du toit.
 
 ## Notes
+
+Livré le 2 oct. 2026.
+
+- **La façade pleine largeur.** Le mur d'un commerce passe aussi sur un rideau de garage (`G`) : `rideaux` dans
+  `etages._mur` et `Monde.murDuBatiment`, pour les devantures seulement (un logement garde sa règle). Le mur de
+  GARAGE BANDINI va de x 155 à 162 au lieu de 157 à 162 : le bardeau et ses deux étages couvrent le rideau et le
+  coin de brique. Mesuré sur la ville : c'est la seule des 135 devantures qui bouge, et ses étages ne changent
+  pas (deux). Le rideau se peint par-dessus le mur (`dessinerPortesDeGarage`), un pixel de cadre autour.
+- **Le nez sous le toit.** Le masque d'un char près d'un rideau (`Monde.sousLeToit`) monte deux tuiles plus
+  haut que le fond de la baie (`NEZ_SOUS_LE_TOIT`, une demi-longueur d'autobus). La tache de la capture était
+  l'arrière d'un char rangé phares au seuil : l'autobus orange de Martin (48 px), reproduit au banc avant le
+  correctif. Les lampes lisent la même zone.
+- **Juges** : `test_la_facade_du_garage_couvre_son_rideau_et_tout_son_batiment` (trois graines),
+  `test_le_navigateur_peint_le_mur_que_python_a_mesure` (les deux règles mesurent pareil, chaque devanture),
+  `test_un_autobus_phares_au_seuil_a_tout_son_arriere_sous_le_toit` ; le masque attendu de
+  `test_sous_le_linteau_le_char_se_peint_coupe_au_bas_du_rideau` suit. Chacun rougit quand on retire sa règle.

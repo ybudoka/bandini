@@ -59,9 +59,10 @@ def _toits(sol: list[str]) -> list[list[int]]:
     return qui
 
 
-def _mur(q: dict, qui: list[list[int]], sol: list[str], prises: set, aussi: frozenset | set = frozenset()
-         ) -> tuple[int, int]:
-    """Le mur d'une façade va au bout de son bâtiment (`murDuBatiment`) : (x, largeur)."""
+def _mur(q: dict, qui: list[list[int]], sol: list[str], prises: set, aussi: frozenset | set = frozenset(),
+         rideaux: bool = False) -> tuple[int, int]:
+    """Le mur d'une façade va au bout de son bâtiment (`murDuBatiment`) : (x, largeur). ⚠️ `rideaux` : celui d'un
+    commerce passe aussi sur un rideau de garage (`G`) — la façade du garage Bandini, pleine largeur (2 oct. 2026)."""
     w, y = len(sol[0]), q["y"]
 
     def batiment(x: int) -> int:
@@ -70,7 +71,7 @@ def _mur(q: dict, qui: list[list[int]], sol: list[str], prises: set, aussi: froz
     lui = batiment(q["x"])
 
     def libre(x: int) -> bool:
-        return (0 <= x < w and lui >= 0 and batiment(x) == lui and sol[y][x] in "FW"
+        return (0 <= x < w and lui >= 0 and batiment(x) == lui and sol[y][x] in ("FWG" if rideaux else "FW")
                 and (x, y) not in prises and (x, y) not in aussi)
 
     x0, x1 = q["x"], q["x"] + q["l"] - 1
@@ -108,7 +109,7 @@ def compter(ville: dict) -> None:
     for d in devantures:
         # Un commerce : deux ou trois étages en tout, à l'empreinte de sa devanture ; la rangée au-dessus de la
         # vitrine est celle de l'enseigne. Son mur s'arrête devant celui d'un logement.
-        x0, large = _mur({"x": d["x"], "y": d["y"], "l": d["l"]}, qui, sol, prises, murs_des_logements)
+        x0, large = _mur({"x": d["x"], "y": d["y"], "l": d["l"]}, qui, sol, prises, murs_des_logements, rideaux=True)
         etages = 2 + hash2(d["x"], d["y"]) % 2
         d["au_dessus"] = max(0, min(etages - 1, ETAGES_MAX, _profondeur(qui, d["y"], x0, large) - 2))
 

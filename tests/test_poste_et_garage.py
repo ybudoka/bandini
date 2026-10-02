@@ -157,6 +157,23 @@ def test_le_garage_a_une_vraie_porte_de_deux_tuiles_a_cote_de_la_sienne(ville):
     assert abs(porte["x"] - pg["x"]) <= 5, "le rideau est au bout du monde de la porte de Ti-Guy"
 
 
+def test_la_facade_du_garage_couvre_son_rideau_et_tout_son_batiment(ville):
+    """Martin (2 oct. 2026) : « mets aussi la façade pleine largeur ». Le mur à étages de GARAGE BANDINI
+    s'arrêtait au milieu de son rideau (la devanture commence sur sa deuxième tuile) : la première tuile et la
+    brique d'à côté restaient sans façade. Le mur d'un commerce passe sur le rideau (`etages._mur`, `rideaux`)."""
+    from app import etages
+    pg = next(p for p in ville["portes_garage"] if p["lieu"] == "garage")
+    d = next(q for q in ville["devantures"] if q["y"] == pg["y"] and q["x"] <= pg["x"] + pg["l"] - 1 < q["x"] + q["l"])
+    sol, qui = ville["sol"], etages._toits(ville["sol"])
+    prises = {(q["x"] + i, q["y"]) for q in ville["devantures"] + ville["residences"] for i in range(q["l"])}
+    x0, large = etages._mur(d, qui, sol, prises, rideaux=True)
+    assert x0 <= pg["x"] and pg["x"] + pg["l"] <= x0 + large, (d, pg, x0, large)
+    # Jusqu'au bout du bâtiment : la tuile d'à côté, de chaque bord, n'est plus de sa façade.
+    lui = qui[d["y"] - 1][d["x"]]
+    for x in (x0 - 1, x0 + large):
+        assert qui[d["y"] - 1][x] != lui or sol[d["y"]][x] not in "FWG", (x, sol[d["y"]][x0 - 2:x0 + large + 2])
+
+
 def test_devant_le_rideau_une_baie_paveee_libre_jusqu_a_la_rue(ville):
     """Les deux tuiles devant chaque lame : roulables, sans decor, et pavees —
     pas un `_` d'abord entre la baie et le trottoir."""

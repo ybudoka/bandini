@@ -1306,10 +1306,15 @@ const Monde = (function () {
       (`Entites.dessiner` la decoupe) et pour ses lampes (`Vehicules.allumerLesPhares` n'y
       allume rien) : les lampes se composent par-dessus toute l'image (`Base.fin`), et un
       char cache sous le toit y jetait ses phares et ses feux arriere A TRAVERS le toit
-      (retour de Martin, 22 sept. 2026 : « on devrait rien voir »). */
+      (retour de Martin, 22 sept. 2026 : « on devrait rien voir »).
+      ⚠️ ET PLUS HAUT QUE LA BAIE (`NEZ_SOUS_LE_TOIT`) : un char range a le CENTRE dans la baie, pas le nez — celui
+      qui va au fond sort son capot au-dessus, peint par-dessus la facade (la tache brune sur la capture de Martin,
+      2 oct. 2026). Au-dessus de la baie, c'est le toit : rien d'un char ne s'y voit jamais. */
   function sousLeToit(pg) {
-    return { x0: pg.x * TT, x1: (pg.x + pg.l) * TT, y0: (pg.y - pg.baie) * TT, y1: basDuRideau(pg) };
+    return { x0: pg.x * TT, x1: (pg.x + pg.l) * TT, y0: (pg.y - pg.baie - NEZ_SOUS_LE_TOIT) * TT, y1: basDuRideau(pg) };
   }
+  //: De combien de tuiles le nez d'un char depasse le fond de la baie, au plus : une demi-longueur d'autobus (24 px).
+  const NEZ_SOUS_LE_TOIT = 2;
   function cacheSousLeToit(pg, x, y) {
     if (!pg) return false;
     const z = sousLeToit(pg);
@@ -1982,8 +1987,11 @@ const Monde = (function () {
       fait quatre tuiles au plus, et son batiment en fait souvent plus — le reste de la facade gardait la brique
       rouge de la ville, deux materiaux sur le meme mur. On etend donc son mur, de chaque cote, sur les tuiles de
       MUR NU (`F`) de la meme rangee dont le toit, juste au-dessus, est le MEME batiment (`teintesDesToits`) —
-      jamais sur une devanture, ni sur un autre logement. Sans un de, sans une donnee de plus. Rend `{ x, l }`. */
-  function murDuBatiment(r, aussi) {
+      jamais sur une devanture, ni sur un autre logement. Sans un de, sans une donnee de plus. Rend `{ x, l }`.
+      ⚠️ `rideaux` : le mur d'un COMMERCE passe aussi sur un rideau de garage (`G`), perce dans le meme mur (Martin,
+      2 oct. 2026 : « la facade pleine largeur ») — celui de GARAGE BANDINI s'arretait au milieu du sien. Le rideau
+      se peint par-dessus (`dessinerPortesDeGarage`). La meme regle que `etages._mur`. */
+  function murDuBatiment(r, aussi, rideaux) {
     if (r.murEtendu) return r.murEtendu;
     const t = teintesDesToits(), w = carte.w, prises = tuilesDeFacade();
     const batiment = function (x) { return x >= 0 && x < w && r.y > 0 ? t.qui[(r.y - 1) * w + x] : -1; };
@@ -1991,7 +1999,7 @@ const Monde = (function () {
     let x0 = r.x, x1 = r.x + r.l - 1;
     const libre = function (x) {
       const g = carte.sol[r.y][x];
-      return lui >= 0 && batiment(x) === lui && (g === 'F' || g === 'W') && !prises.has(x + ',' + r.y)
+      return lui >= 0 && batiment(x) === lui && (g === 'F' || g === 'W' || (rideaux && g === 'G')) && !prises.has(x + ',' + r.y)
         && !(aussi && aussi.has(x + ',' + r.y));
     };
     if (r.declin == null) {
@@ -2038,7 +2046,7 @@ const Monde = (function () {
   function etagesDuCommerce(d) {
     if (d.hauts !== undefined) return d.hauts;
     // Son mur va au bout de son batiment, comme celui d'un logement — sans prendre ce qu'un logement voisin a pris.
-    const m = murDuBatiment({ x: d.x, y: d.y, l: d.l }, murDesLogements());
+    const m = murDuBatiment({ x: d.x, y: d.y, l: d.l }, murDesLogements(), true);
     d.murX = m.x; d.murL = m.l;
     d.hauts = d.au_dessus || 0;
     return d.hauts;

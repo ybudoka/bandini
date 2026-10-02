@@ -331,8 +331,9 @@ def test_sous_le_linteau_le_char_se_peint_coupe_au_bas_du_rideau(banc):
         return { pourLui: pourLui, pourLoin: journal.slice(), ouverture: pg.ouverture,
                  // Le bas des lames : 3 px sous le haut de la rangee du rideau, plus ce qui
                  // en est descendu (12 px de course, `dessinerPortesDeGarage`).
-                 attendu: [pg.x * TT - cx, (pg.y - pg.baie) * TT - cy, pg.l * TT,
-                           pg.y * TT + 3 + Math.round(12 * (1 - pg.ouverture)) - (pg.y - pg.baie) * TT] };
+                 // Le haut : plus haut que le fond de la baie, de quoi cacher le nez (`NEZ_SOUS_LE_TOIT`).
+                 attendu: [pg.x * TT - cx, (pg.y - pg.baie - 2) * TT - cy, pg.l * TT,
+                           pg.y * TT + 3 + Math.round(12 * (1 - pg.ouverture)) - (pg.y - pg.baie - 2) * TT] };
     """)
     assert 0 < r["ouverture"] < 1, f"le juge voulait un rideau a mi-course ({r['ouverture']})"
     lui = r["pourLui"]
@@ -341,6 +342,24 @@ def test_sous_le_linteau_le_char_se_peint_coupe_au_bas_du_rideau(banc):
     rects = [e[1:] for e in lui[:i] if e[0] == "rect"][-2:]
     assert rects[-1] == [round(n) for n in r["attendu"]], (rects, r["attendu"])
     assert ["clip", "evenodd"] not in r["pourLoin"], "un char loin des rideaux se peint sous un masque"
+
+
+def test_un_autobus_phares_au_seuil_a_tout_son_arriere_sous_le_toit(banc):
+    """La capture de Martin (2 oct. 2026) : un char rangé dans la baie, l'avant au seuil, et son arrière qui
+    sortait du toit en tache brune par-dessus la façade du garage — le masque s'arrêtait au fond de la baie, et un
+    autobus (48 px, le plus long qu'on y range) a le centre dans la baie, pas l'arrière. Rien d'un char rangé ne
+    se peint au-dessus du toit."""
+    r = banc("""function (L) {
+        const TT = L.TT, f = [];
+        for (const pg of L.Monde.portesDeGarage()) {
+            if (!pg.baie) continue;
+            const z = L.Monde.sousLeToit(pg);
+            const arriere = (pg.y + 1) * TT - L.B.defs.vehicules.find(function (v) { return v.slug === 'autobus'; }).longueur;   // l'avant au bas du seuil
+            if (z.y0 > arriere - 2) f.push([pg.lieu, pg.x, pg.y, z.y0, arriere]);  // 2 px : le trait du contour
+        }
+        return f;
+    }""")
+    assert r == [], r[:5]
 
 
 # --- 2e vague : les bungalows, on s'y cache -------------------------------------------
