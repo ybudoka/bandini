@@ -1275,6 +1275,8 @@ const Missions = (function () {
   }
 
   function utiliserPoint(j) {
+    // Couche dans son lit (`Repos.seCoucher`) : on n'y regarde plus rien, c'est le menu de CE lit qui revient.
+    if (j.alite && j.alite.aSoi) return Repos.rouvrir(j);
     // ⚠️ Un personnage DEBOUT devant nous passe avant le comptoir : depuis
     // qu'on les voit, Bouchard et Josee ne se tiennent plus forcement sur leur
     // point (Josee pointe une TABLE — personne ne se tient debout dessus), et
@@ -1284,7 +1286,12 @@ const Missions = (function () {
     // Le gerant de la caisse populaire, quand on lui livre un colis (x03, `caisse.js`).
     if (Caisse.gerantSousLaMain(j)) { j.animT = 10; j.animType = 'ramasse'; return Caisse.livrer(j); }
     const point = pointSousLaMain(j);
+    // Une chaise, une berçante, le sofa de la planque, droit devant (`Repos`) : plus pres que le point, on s'assoit.
+    const siege = Repos.siegeAvantLePoint(j, point);
+    if (siege) return Repos.sAsseoir(j, siege);
     if (!point) return false;
+    // Le lit A SOI couche avant d'ouvrir son menu ; celui du chalet a vendre ne propose que de l'acheter.
+    if (point.type === 'lit' && !planqueAVendre(B.interieur)) return Repos.seCoucher(j, point);
     j.animT = 10; j.animType = 'ramasse';           // un geste vers le comptoir
     // Le sergent au casse-croute, Josee au bar : des personnages, pas des
     // comptoirs. Leur point reste le filet, si on l'aborde par l'autre bord.
@@ -3886,6 +3893,8 @@ const Missions = (function () {
     if (!j || j.dansVehicule || B.menu || B.cinema) return;
     // ⚠️ Assis sur un banc, ACTION ne fait qu'une chose : se lever (`Interactions.majAssis`).
     if (j.assis) { B.invite = 'SE LEVER'; return; }
+    // Couche dans son lit (`Repos.seCoucher`) : ACTION rouvre le menu du lit.
+    if (j.alite && j.alite.aSoi) { B.invite = 'DORMIR'; return; }
     if (B.interieur) {
       // Le metro dit ce qu'ACTION fait sous terre (monter, descendre, remonter) —
       // et se tait quand la rame n'est pas la : une invite qui promet un geste
@@ -3899,6 +3908,8 @@ const Missions = (function () {
       const caisse = Caisse.invite(j);
       if (caisse) { B.invite = caisse; return; }
       const point = pointSousLaMain(j);
+      const siege = Repos.siegeAvantLePoint(j, point);
+      if (siege) { B.invite = siege.refus || B.defs.interactions.asseoir.invite; return; }
       if (point) {
         const assis = Histoire.personnageDuPoint(point.type);
         const vente = point.type === 'caisse' && aVendre(B.interieur.slug);

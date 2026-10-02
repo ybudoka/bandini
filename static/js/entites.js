@@ -4603,9 +4603,12 @@ const Entites = (function () {
     j.face = 'bas';
     if (!lit || Math.floor(j.x / TT) !== lit.x || Math.floor(j.y / TT) !== lit.y) return;
     const glyphe = Monde.glyphe(lit.x, lit.y);
-    let pied = lit.y;
+    let pied = lit.y, droite = lit.x;
     while (Monde.estMeuble(lit.x, pied + 1) && Monde.glyphe(lit.x, pied + 1) === glyphe) pied++;
-    const cx = (lit.x + 0.5) * TT, cy = (lit.y + pied + 1) / 2 * TT;
+    // ⚠️ Un lit de DEUX places (la planque, l'hotel, le phare, le chalet : `Repos.seCoucher`) : sa colonne de droite
+    // est encore du lit, et au chalet le classeur bouche le pied de celle de gauche — on cherche tout autour.
+    while (Monde.estMeuble(droite + 1, lit.y) && Monde.glyphe(droite + 1, lit.y) === glyphe) droite++;
+    const cx = (lit.x + droite + 1) / 2 * TT, cy = (lit.y + pied + 1) / 2 * TT;
     // ⚠️ Et d'ou l'on peut CONTINUER dans ce sens : au pied du lit de l'urgence
     // il y a une chaise de la salle d'attente, et depuis qu'on ne marche plus sur
     // les meubles, se lever la, c'etait se lever contre elle — pousser vers le bas
@@ -4617,8 +4620,8 @@ const Entites = (function () {
       const s = suite + ((tx + 0.5) * TT - cx) * dx + ((ty + 0.5) * TT - cy) * dy;
       if (s > meilleur) { meilleur = s; place = { x: tx, y: ty }; }
     }
-    for (let ty = lit.y; ty <= pied; ty++) { essayer(lit.x - 1, ty); essayer(lit.x + 1, ty); }
-    essayer(lit.x, pied + 1);
+    for (let ty = lit.y; ty <= pied; ty++) { essayer(lit.x - 1, ty); essayer(droite + 1, ty); }
+    for (let tx = lit.x; tx <= droite; tx++) essayer(tx, pied + 1);
     if (place) { j.x = place.x * TT + 8; j.y = place.y * TT + 8; }
     regarder(j, dx, dy);
   }
@@ -4684,6 +4687,8 @@ const Entites = (function () {
     // ne pousse pas, et la PREMIERE poussee leve. On marche dans la meme image,
     // depuis le pas de cote que `seLever` vient de poser.
     if (j.alite) {
+      // Dans son lit a soi (`Repos.seCoucher`), ACTION rouvre le menu du lit.
+      if (typeof Repos !== 'undefined' && Repos.majCouche(j, ent)) { j.vx = 0; j.vy = 0; return; }
       if (!(ent.axe.mag > 0)) { j.vx = 0; j.vy = 0; return; }
       seLever(j, ent.axe.x, ent.axe.y);
     }

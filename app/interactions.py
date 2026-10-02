@@ -58,6 +58,16 @@ ASSEOIR: dict = {
         "banc_est": {"pose": "assis_droite", "dx": 1, "dy": 1},
         "banc_ouest": {"pose": "assis_gauche", "dx": -1, "dy": 1},
     },
+    # DEDANS (`repos.js`, 2 oct. 2026 — Martin : « il faut pouvoir s'asseoir sur les sofas ») : la chaise (`h`) et
+    # la berçante (`V`) d'une pièce, depuis le milieu de leur tuile — le corps pose ses pieds au bord de l'assise,
+    # comme le patient et l'avocat (`entites.peuplerInterieur`) ; toutes deux ont le dossier au nord. Et le sofa à
+    # carreaux de la planque, depuis son ancre : il tourne le dos au mur du bas, face à la télé — l'assis regarde
+    # le nord et se dessine AVANT lui, comme au banc vu de dos.
+    "dedans": {
+        "h": {"pose": "assis_bas", "dx": 0, "dy": 6},
+        "V": {"pose": "assis_bas", "dx": 0, "dy": 6},
+        "sofa": {"pose": "assis_haut", "dx": 0, "dy": -5},
+    },
     # ⚠️ Le souffle remonte plus vite assis : deux fois et demie la reprise
     # debout (`endurance_par_image * 0,6` — c'est le facteur de plus, pas le taux).
     "souffle_x": 2.5,
@@ -279,6 +289,7 @@ def exporter() -> dict:
     return {
         "affiche": dict(AFFICHE),
         "asseoir": {**ASSEOIR, "sieges": {k: dict(v) for k, v in ASSEOIR["sieges"].items()},
+                    "dedans": {k: dict(v) for k, v in ASSEOIR["dedans"].items()},
                     "refus": dict(ASSEOIR["refus"])},
         "fouiller": {**FOUILLER, "decors": dict(FOUILLER["decors"]),
                      "tables": {t: [list(e) for e in table] for t, table in FOUILLER["tables"].items()},

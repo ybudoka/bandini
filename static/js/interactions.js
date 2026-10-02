@@ -241,12 +241,20 @@ const Interactions = (function () {
 
   function sAsseoir(j, banc) {
     const s = cfg().asseoir.sieges[banc.decor];
-    // ⚠️ Comme le lit d'hôpital : une pose déjà dessinée (celle du patient), rien
-    // d'autre. On garde OÙ l'on se tenait pour s'y relever, et ce qu'on avait de
-    // vie pour sentir le premier coup.
-    j.assis = { x: banc.x + s.dx, y: banc.y + s.dy, avant: { x: j.x, y: j.y, face: j.face }, vie: j.vie, t: 0 };
-    j.x = j.assis.x; j.y = j.assis.y; j.vx = 0; j.vy = 0; j.roule = 0;
-    j.face = s.pose;
+    return asseoirA(j, banc.x + s.dx, banc.y + s.dy, s.pose);
+  }
+
+  /** S'asseoir en (x, y), dans la pose `pose` — le banc de la rue comme la chaise et le
+      sofa d'une pièce (`Repos`).
+
+      ⚠️ Comme le lit d'hôpital : une pose déjà dessinée (celle du patient), rien
+      d'autre. On garde OÙ l'on se tenait pour s'y relever, ce qu'on avait de vie pour
+      sentir le premier coup, et LA PIÈCE où l'on s'est assis (`null` dehors) : ailleurs,
+      on n'est plus assis. */
+  function asseoirA(j, x, y, pose) {
+    j.assis = { x: x, y: y, avant: { x: j.x, y: j.y, face: j.face }, vie: j.vie, t: 0, piece: B.interieur || null };
+    j.x = x; j.y = y; j.vx = 0; j.vy = 0; j.roule = 0;
+    j.face = pose;
     // La pression qui nous assied ne monte pas non plus dans le char d'à côté.
     j.descenduT = B.t;
     return true;
@@ -272,8 +280,8 @@ const Interactions = (function () {
     // le meme banc, chacun se leve avec son appareil (`Entree.SOURCE1/2`).
     const ent = j.entree || Entree;
     if (!a) return false;
-    // Ailleurs que sur le banc (l'hôpital, le poste, une porte) : on n'est plus assis.
-    if (!c || !j.vivant || j.dansVehicule || B.interieur || dist2(j.x, j.y, a.x, a.y) > 81) { j.assis = null; return false; }
+    // Ailleurs que sur le siège (l'hôpital, le poste, une porte, une autre pièce) : on n'est plus assis.
+    if (!c || !j.vivant || j.dansVehicule || (B.interieur || null) !== (a.piece || null) || dist2(j.x, j.y, a.x, a.y) > 81) { j.assis = null; return false; }
     if (ent.axe.mag > 0) { seLever(j, ent.axe.x, ent.axe.y); return false; }
     if (ent.neuf('action')) {
       // ⚠️ La pression qui nous lève est dépensée : sinon `Combat.maj`, plus loin
@@ -536,5 +544,5 @@ const Interactions = (function () {
 
   return { afficheSousLaMain, arracherLAffiche, peutAgir, artisteSousLaMain, touristeSousLaMain, chatSousLaMain, decorSousLaMain,
            utiliserSurLesGens, utiliserSurLesBetes, utiliserSurLeDecor,
-           inviteGens, inviteBetes, inviteDecor, majAssis, seLever, maj, oublier, fouilleDuJour, fontaineSeche, jetDe };
+           inviteGens, inviteBetes, inviteDecor, majAssis, seLever, asseoirA, refusAsseoir, maj, oublier, fouilleDuJour, fontaineSeche, jetDe };
 })();
