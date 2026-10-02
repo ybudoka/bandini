@@ -215,8 +215,8 @@ def test_une_replique_renvoi_s_accroche_a_un_objectif_qui_existe_et_se_dit_en_pe
     assert any("renvoi accrochée à un objectif qui n'existe pas" in e for e in missions.erreurs_de_mise_en_scene(fiche))
     renvois = [r for r in missions.repliques() if r["partie"] == "renvoi"]
     # ⚠️ Lulu (m50) d'abord ; c02 (29 sept. 2026) : Irène renvoie au sous-sol qui lui parle pendant qu'on doit
-    # descendre. Un renvoi de plus s'ajoute ici — la liste dit qu'aucun ne se perd en route.
-    assert [r["slug"] for r in renvois] == ["lulu-m50-12", "irene-c02-10"], "m50 : Lulu dit d'attendre la nuit"
+    # descendre (l'acte 2 de `chute_du_pouce` depuis le 2 oct. 2026). Un renvoi de plus s'ajoute ici — la liste dit qu'aucun ne se perd en route.
+    assert [r["slug"] for r in renvois] == ["lulu-m50-12", "irene-chute_du_pouce-41"], "m50 : Lulu dit d'attendre la nuit"
     assert not any(r["telephone"] for r in renvois)
 
 

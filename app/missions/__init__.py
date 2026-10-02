@@ -751,7 +751,7 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 from . import (  # noqa: E402
     ti_paul_et_ses_amis, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f10, f11, f12, f13, ambulance_de_nuit, m1, m2, m3,
     m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, lulu_et_le_poisson, gege_et_les_debardeurs, q04, q10, q11, nouvelle_inspectrice, lot_de_gilles,
-    raymonde_et_le_syndicat, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, cindy_et_le_beau_denis, q13,
+    raymonde_et_le_syndicat, v01, v02, v03, chute_du_pouce, retour_du_maitre, cindy_et_le_beau_denis, q13,
     les_chevreuils, la_pointe, ti_loup_et_gros_boulon, s09, s11,
     dette_de_rocco, garage_de_rocco, d07, d08, dette_du_docteur, h07, la_une, scoop_du_maire, l06, r03, r04, r06, r07, r08, commandes_de_prevost, s12, s14, le_moteur_du_capitaine, soeur_jeanne, i03, i06, i08, h08, d09, t01, t02, t03, t04, t05, t06, t09, t11, t12, t13, t14, t15, q07, m98,
     x01, x02, x03, x04, i04, i07,
@@ -782,6 +782,8 @@ from . import (  # noqa: E402
 # ⚠️ f13 (28 sept. 2026) : Mado et ses trois feux, la première mission qui allume le sien (`eteindre`) ;
 # f10 (Rosa, la chemise hawaïenne — `tenue`, Norbert) et f12 (Madame Thibodeau, les cinq enveloppes :
 # la fin de l'arc F, après f08, f09 et f10).
+# ⚠️ `chute_du_pouce` (c01 à c04) et `retour_du_maitre` (c05 à c08) : 2 oct. 2026, les CHAPITRES des autres arcs,
+# vague C. Avant :
 # ⚠️ c01 (29 sept. 2026) : Irène Lam, la première du Petit-Canton — les rabatteurs du Pouce, et la porte du
 # tripot sous le Dragon d'or qui s'ouvre après elle (`tripot.PORTE`), avant m97. Puis la chute du Pouce (29 sept.
 # 2026, Martin : « on fait tomber le Pouce pour de bon ») : c02 (ses dés, glissés à la barbotte), c03 (son livre,
@@ -861,8 +863,7 @@ CATALOGUE: list[Mission] = [
     q10.MISSION, q11.MISSION,
     v01.MISSION, v02.MISSION, v03.MISSION,
     f13.MISSION, f10.MISSION, f12.MISSION,
-    c01.MISSION, c02.MISSION, c03.MISSION, c04.MISSION,
-    c05.MISSION, c06.MISSION, c07.MISSION, c08.MISSION,
+    chute_du_pouce.MISSION, retour_du_maitre.MISSION,
     cindy_et_le_beau_denis.MISSION, q13.MISSION,
     les_chevreuils.MISSION,
     la_pointe.MISSION,

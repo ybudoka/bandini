@@ -408,10 +408,11 @@ def test_la_salle_enfumee_s_entend_et_se_voit(banc):
 
 
 def test_c01_jouee_au_bouton_d_irene_a_la_porte_ouverte(banc):
-    """c01, _La barbotte du Pouce_, jouée de l'appel à la porte : après m6, Irène appelle ; elle se tient au bout du
-    bar du Dragon d'or (on lui serre la main au bouton, elle dit l'intro) ; en sortant, deux rabatteurs attendent à
-    la porte du terminus ; couchés, la ligne dit de rapporter le jeton au Dragon d'or ; arrivé devant, la mission
-    se ferme (400 $), et la porte du sous-sol est ouverte : on descend au bouton."""
+    """c01, _La barbotte du Pouce_ — l'acte 1 du chapitre `chute_du_pouce` depuis le 2 oct. 2026 (vague C) —, jouée de
+    l'appel à la porte : après m6, Irène appelle ; elle se tient au bout du bar du Dragon d'or (on lui serre la main au
+    bouton, elle dit l'intro du chapitre) ; en sortant, deux rabatteurs attendent à la porte du terminus ; couchés, la
+    ligne dit de rapporter le jeton au Dragon d'or ; arrivé devant, l'acte paie sa prime (400 $), c01 est faite, l'acte 2
+    s'ouvre (sa fin, puis l'appel de c02, au marqueur), et la porte du sous-sol est ouverte : on descend au bouton."""
     from outils_missions import OUTILS as OUTILS_MISSIONS, PLUS_LONGUES
     r = banc("function (L, o) {" + OUTILS + OUTILS_MISSIONS + PLUS_LONGUES + """
         L.Jeu.commencer(); L.graine(6);
@@ -431,7 +432,7 @@ def test_c01_jouee_au_bouton_d_irene_a_la_porte_ouverte(banc):
         L.Jeu.sortir(); o.fondu(); for (let k = 0; k < 200 && B.interieur; k++) o.frame(1);
         jouer(L, o, 20);
         const t = L.Histoire.lieu('terminus');
-        const gars = B.mission.entites.filter(function (e) { return e.cible && e.etape === 0; });
+        const gars = B.mission.entites.filter(function (e) { return e.cible && e.etape === 1; });
         const bagarre = { n: gars.length, loin: Math.max.apply(null, gars.map(function (e) { return Math.round(Math.hypot(e.x - t.x, e.y - t.y) / 16); })) };
         const porteFermee = { etape: etape(L) };
         // Au terminus (le GPS y mène) : on les couche là, loin du Dragon d'or.
@@ -440,22 +441,23 @@ def test_c01_jouee_au_bouton_d_irene_a_la_porte_ouverte(banc):
         const retour = { etape: etape(L), ligne: L.Histoire.ligneObjectif() };
         const c = L.Histoire.lieu('nord_casino');
         j.x = c.x; j.y = c.y + 8; L.Entites.indexer(); jouer(L, o, 30);
-        let fin = 0;
-        for (let k = 0; k < 6000 && (B.partie.mission || B.scene || B.cinema); k++) { if (B.scene) fin++; o.frame(1); ecouter(L); }
+        for (let k = 0; k < 2400 && etape(L) !== null && etape(L) < 4; k++) { o.frame(1); ecouter(L); }
+        const ouvert = { etape: etape(L), ligne: L.Histoire.ligneObjectif() };
         const fait = !!B.partie.missionsFaites.c01;
         const ici = auSousSol(L, o);
-        return { dispo: dispo && dispo.slug, bar: bar, debut: debut, intro: intro, fin: fin, bagarre: bagarre, retour: retour,
+        return { dispo: dispo && dispo.slug, bar: bar, debut: debut, intro: intro, ouvert: ouvert, bagarre: bagarre, retour: retour,
                  fait: fait, argent: argent.map(function (a) { return a.montant; }), dites: dites, ici: ici };
     }""")
-    assert r["dispo"] == "c01", "Irène donne c01 après m6"
+    assert r["dispo"] == "chute_du_pouce", "Irène donne la chute du Pouce après m6"
     # Son point est au bout du bar (31, 1) ; elle se tient debout à la tuile libre voisine la plus proche du milieu
     # de la salle (`placeDebout`) — au coin du comptoir.
     assert abs(r["bar"]["x"] - 31) <= 1 and abs(r["bar"]["y"] - 1) <= 1, f"Irène se tient au bout du bar : {r['bar']}"
-    assert r["debut"] == {"mission": "c01", "etape": 0}, r
-    assert r["intro"] > 60 and r["fin"] > 60, "l'intro et la fin se jouent (leurs scènes)"
+    assert r["debut"] == {"mission": "chute_du_pouce", "etape": 1}, "le marqueur de l'acte 1 passe sous l'intro"
+    assert r["intro"] > 60, "l'intro se joue (sa scène)"
     assert r["bagarre"]["n"] == 2 and r["bagarre"]["loin"] <= 8, r["bagarre"]
-    assert r["retour"]["etape"] == 1 and r["retour"]["ligne"].startswith("RAPPORTE UN JETON"), r["retour"]
-    for dite in ("pendant:irene:0", "pendant:irene:1"):
+    assert r["retour"]["etape"] == 2 and r["retour"]["ligne"].startswith("RAPPORTE UN JETON"), r["retour"]
+    for dite in ("pendant:irene:1", "pendant:irene:2", "pendant:irene:3"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [400], r
+    assert r["ouvert"]["etape"] == 4 and r["ouvert"]["ligne"].startswith("EMPOCHE LES DÉS JAUNES"), r["ouvert"]
     assert r["ici"] == "nord_tripot", "la porte du sous-sol reste fermée après c01"

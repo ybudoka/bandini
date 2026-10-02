@@ -140,7 +140,9 @@ def test_la_porte_du_sous_sol_est_une_barriere_de_la_piece_qui_garde_l_escalier(
     b = casino.PIECE["barrieres"][0]
     assert b == tripot.PORTE and b["decor"] == "porte_tripot" and b["forcer"] is None and b["plein"]
     assert set(b["arrete"]) == {"pieton", "vehicule"} and list(b["condition"]) == ["apres"]
-    assert b["condition"]["apres"] in {m["slug"] for m in missions.CATALOGUE}
+    # ⚠️ c01 est l'acte 1 de `chute_du_pouce` depuis le 2 oct. 2026 : faite à l'ouverture de l'acte 2 (`Chapitres.ouvrirActe`).
+    apres = b["condition"]["apres"]
+    assert apres in {m["slug"] for m in missions.CATALOGUE} or missions.remplacee_par(apres)
     assert b["raison"] == b["raison"].upper() and 0 < len(b["raison"]) <= 40
     salle = casino.PIECE
     assert carte.marchable(salle["sol"][b["y"]][b["x"]]), "la porte est sur le plancher : ouverte, on y passe"
