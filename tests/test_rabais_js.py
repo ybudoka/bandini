@@ -29,8 +29,11 @@ OBSERVER = {
 
 
 def _promis():
+    # ⚠️ Et ce qu'un ACTE donne (`donne` sur un objectif, les chapitres) : le rabais de la fourrière vient de l'acte 1
+    # du _Lot de Gilles_ (s01) depuis le 2 oct. 2026.
     return {cle: (m["slug"], v) for m in missions.CATALOGUE
-            for cle, v in (m.get("donne", {}).get("rabais") or {}).items()}
+            for d in [m.get("donne") or {}] + [o.get("donne") or {} for o in m["objectifs"]]
+            for cle, v in (d.get("rabais") or {}).items()}
 
 
 def test_chaque_rabais_promis_par_une_mission_se_lit_quelque_part():

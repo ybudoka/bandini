@@ -177,7 +177,7 @@ def test_s08_la_nuit_au_lot_trois_boulonneux_l_auto_volee_puis_sa_case(banc):
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 's01']);
         const argent = paiements(L);
         const dispo = L.Histoire.disponibleDe('gilles');
-        commencer(L, o, 's08');
+        commencer(L, o, 'lot_de_gilles');   // s08 est son acte 2 (2 oct. 2026) : tout se décale de 6
         const f = L.Histoire.lieu('fourriere');
         j.x = f.x; j.y = f.y + 20; L.Entites.indexer();
         let hh = B.partie.heure;
@@ -185,7 +185,7 @@ def test_s08_la_nuit_au_lot_trois_boulonneux_l_auto_volee_puis_sa_case(banc):
         B.partie.heure = hh; jouer(L, o);
         const deJour = etape(L);
         laNuit(L, o); jouer(L, o);
-        const gars = B.mission.entites.filter(function (e) { return e.cible && e.etape === 1; });
+        const gars = B.mission.entites.filter(function (e) { return e.cible && e.etape === 7; });
         const bagarre = { etape: etape(L), n: gars.length,
                           courent: gars.every(function (e) { return e.etat === 'attaque_joueur'; }) };
         gars.forEach(function (e) { L.Entites.assommer(e); });
@@ -199,13 +199,13 @@ def test_s08_la_nuit_au_lot_trois_boulonneux_l_auto_volee_puis_sa_case(banc):
         conduireA(L, o, v, 'fourriere');
         finir(L, o);
         return { dispo: dispo && dispo.slug, deJour: deJour, bagarre: bagarre, volee: volee, route: route, dites: dites,
-                 fait: !!B.partie.missionsFaites.s08, argent: argent.map(function (a) { return a.montant; }) };
+                 fait: !!B.partie.missionsFaites.s08 && !!B.partie.missionsFaites.lot_de_gilles, argent: argent.map(function (a) { return a.montant; }) };
     }""")
-    assert r["dispo"] == "s08", "Gilles donne s08 après sa remorqueuse"
-    assert r["deJour"] == 0, "de jour, on attend la nuit"
-    assert r["bagarre"]["etape"] == 1 and r["bagarre"]["n"] == 3 and r["bagarre"]["courent"], r["bagarre"]
-    assert r["volee"]["etape"] == 2 and r["volee"]["slug"] == "auto" and r["volee"]["loin"] > 20, r["volee"]
-    assert r["route"]["etape"] == 3 and r["route"]["ligne"].startswith("RAMÈNE"), r["route"]
-    for dite in ("pendant:gilles:1", "pendant:gilles:2", "pendant:gilles:3"):
+    assert r["dispo"] == "lot_de_gilles", "Gilles donne l'acte 2 après sa remorqueuse"
+    assert r["deJour"] == 6, "de jour, on attend la nuit"
+    assert r["bagarre"]["etape"] == 7 and r["bagarre"]["n"] == 3 and r["bagarre"]["courent"], r["bagarre"]
+    assert r["volee"]["etape"] == 8 and r["volee"]["slug"] == "auto" and r["volee"]["loin"] > 20, r["volee"]
+    assert r["route"]["etape"] == 9 and r["route"]["ligne"].startswith("RAMÈNE"), r["route"]
+    for dite in ("pendant:gilles:5", "pendant:gilles:7", "pendant:gilles:8", "pendant:gilles:9"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [200]

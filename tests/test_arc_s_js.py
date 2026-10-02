@@ -1,6 +1,10 @@
 """L'arc S jusqu'à sa libération (M16, 29 sept. 2026) — s02, s05, s06, s09, s10 et s11 JOUÉES au bouton, sur le
 modèle de `test_arc_q_js.py`.
 
+⚠️ Depuis le 2 oct. 2026 (docs/jalons/des-missions-en-chapitres.md, vague S), La Shop est en CHAPITRES : s02 et s05 sont
+les actes de _Ti-Loup et Gros-Boulon_, s06 et s10 les actes 2 et 3 de _Raymonde et le syndicat_ (s03, l'acte 1, est
+jugé dans `test_cinq_missions_js.py`). Chaque juge commence le chapitre là où une vieille partie le reprendrait.
+
 - s02 : Ti-Loup (devant la fourrière après s01 seulement), sa remorqueuse, trois épaves au lot (`boulots`).
 - s05 : la berline de Prévost derrière l'usine, livrée au compacteur — `calme: boulonneux`.
 - s06 : le char de Bob Sauvé filé jusqu'au Brouillard (`suivre`).
@@ -52,7 +56,7 @@ def test_s02_la_remorqueuse_de_ti_loup_trois_epaves(banc):
         const j = recharger(L);
         const argent = paiements(L);
         const dispo = L.Histoire.disponibleDe('tiloup');
-        commencer(L, o, 's02'); jouer(L, o);
+        commencer(L, o, 'ti_loup_et_gros_boulon'); jouer(L, o);
         const v = B.mission.vehicule || (B.mission.chars && B.mission.chars[0]);
         const f = L.Histoire.lieu('fourriere');
         const remorqueuse = { slug: v && v.slug, lot: v ? Math.round(Math.hypot(v.x - f.x, v.y - f.y) / 16) : null };
@@ -61,15 +65,15 @@ def test_s02_la_remorqueuse_de_ti_loup_trois_epaves(banc):
         const contrats = { etape: etape(L), ligne: L.Histoire.ligneObjectif() };
         b.faits.remorquage = B.mission.boulotsDepart + 3; jouer(L, o);
         const retour = { etape: etape(L) };
-        versLui(L, 'tiloup'); finir(L, o);
+        versLui(L, 'tiloup'); jouer(L, o, 20);
         return { avant: avant, dispo: dispo && dispo.slug, remorqueuse: remorqueuse, contrats: contrats, retour: retour, dites: dites,
                  fait: !!p.missionsFaites.s02, argent: argent.map(function (a) { return a.montant; }) };
     }""")
-    assert r["avant"] is False and r["dispo"] == "s02", r
+    assert r["avant"] is False and r["dispo"] == "ti_loup_et_gros_boulon", r
     assert r["remorqueuse"]["slug"] == "remorqueuse" and r["remorqueuse"]["lot"] <= 10, r["remorqueuse"]
-    assert r["contrats"]["etape"] == 1 and r["contrats"]["ligne"].endswith("0/3"), r["contrats"]
-    assert r["retour"]["etape"] == 2
-    for dite in ("pendant:tiloup:1", "pendant:tiloup:2"):
+    assert r["contrats"]["etape"] == 2 and r["contrats"]["ligne"].endswith("0/3"), r["contrats"]
+    assert r["retour"]["etape"] == 3
+    for dite in ("pendant:tiloup:2", "pendant:tiloup:3", "pendant:tiloup:4", "pendant:boulon:4"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [250]
 
@@ -82,7 +86,7 @@ def test_s05_la_berline_de_prevost_au_compacteur_et_les_boulonneux_te_laissent_v
         const j = recharger(L);
         const argent = paiements(L);
         const dispo = L.Histoire.disponibleDe('boulon');
-        commencer(L, o, 's05'); jouer(L, o);
+        commencer(L, o, 'ti_loup_et_gros_boulon'); jouer(L, o);
         const v = B.mission.vehicule || (B.mission.chars && B.mission.chars[0]);
         const u = L.Histoire.lieu('usine');
         const berline = { slug: v && v.slug, usine: v ? Math.round(Math.hypot(v.x - u.x, v.y - u.y) / 16) : null };
@@ -92,12 +96,12 @@ def test_s05_la_berline_de_prevost_au_compacteur_et_les_boulonneux_te_laissent_v
         const livree = { etape: etape(L) };
         versLui(L, 'boulon'); finir(L, o);
         return { dispo: dispo && dispo.slug, berline: berline, route: route, livree: livree, dites: dites,
-                 fait: !!p.missionsFaites.s05, argent: argent.map(function (a) { return a.montant; }), calmes: p.calmes.slice() };
+                 fait: !!p.missionsFaites.s05 && !!p.missionsFaites.ti_loup_et_gros_boulon, argent: argent.map(function (a) { return a.montant; }), calmes: p.calmes.slice() };
     }""")
-    assert r["dispo"] == "s05"
+    assert r["dispo"] == "ti_loup_et_gros_boulon", "une vieille partie qui a fait s02 : Gros-Boulon donne l'acte 2"
     assert r["berline"]["slug"] == "luxe" and r["berline"]["usine"] <= 24, r["berline"]
-    assert r["route"]["etape"] == 1 and r["livree"]["etape"] == 2, r
-    for dite in ("pendant:boulon:0", "pendant:boulon:1", "pendant:boulon:2"):
+    assert r["route"]["etape"] == 6 and r["livree"]["etape"] == 7, r
+    for dite in ("pendant:boulon:4", "pendant:boulon:5", "pendant:boulon:6", "pendant:boulon:7"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [400] and r["calmes"] == ["boulonneux"], r
 
@@ -109,8 +113,8 @@ def test_s06_le_char_de_bob_sauve_file_jusqu_au_bar(banc):
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'e01', 'q02', 's03']);
         const j = recharger(L);
         const argent = paiements(L);
-        const dispo = L.Histoire.disponibles().some(function (m) { return m.slug === 's06'; });
-        commencer(L, o, 's06'); jouer(L, o);
+        const dispo = L.Histoire.disponibles().some(function (m) { return m.slug === 'raymonde_et_le_syndicat'; });
+        commencer(L, o, 'raymonde_et_le_syndicat'); jouer(L, o);
         const c = B.mission.suivi;
         const images = filer(L, o, c);
         const bar = L.Histoire.lieu('bar');
@@ -119,8 +123,8 @@ def test_s06_le_char_de_bob_sauve_file_jusqu_au_bar(banc):
         return { dispo: dispo, file: file, dites: dites, fait: !!p.missionsFaites.s06, argent: argent.map(function (a) { return a.montant; }) };
     }""")
     assert r["dispo"] is True
-    assert r["file"]["etape"] == 1 and r["file"]["dBar"] < 10 and r["file"]["images"] > 20 * 60, r["file"]
-    for dite in ("pendant:raymonde:0", "pendant:raymonde:1"):
+    assert r["file"]["etape"] == 9 and r["file"]["dBar"] < 10 and r["file"]["images"] > 20 * 60, r["file"]
+    for dite in ("pendant:raymonde:7", "pendant:raymonde:8", "pendant:raymonde:9"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [250]
 
@@ -160,11 +164,11 @@ def test_s10_raymonde_menee_au_maire_et_les_gardiens_de_prevost(banc):
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'e01', 'q02', 's03', 's06']);
         const j = recharger(L);
         const argent = paiements(L);
-        commencer(L, o, 's10'); jouer(L, o);
+        commencer(L, o, 'raymonde_et_le_syndicat'); jouer(L, o);
         const c = B.mission.protege;
         const suit = rejoindre(L, o, c);
         arriverAvec(L, o, c, 'hotel'); jouer(L, o, 30);
-        const eux = B.mission.entites.filter(function (e) { return e.cible && e.etape === 1; });
+        const eux = B.mission.entites.filter(function (e) { return e.cible && e.etape === 12; });
         const h = L.Histoire.lieu('hotel');
         const gardiens = { n: eux.length, arch: eux.map(function (e) { return e.arch; }),
                            courent: eux.every(function (e) { return e.etat === 'attaque_joueur'; }),
@@ -172,12 +176,12 @@ def test_s10_raymonde_menee_au_maire_et_les_gardiens_de_prevost(banc):
         eux.forEach(function (e) { L.Entites.assommer(e); });
         finir(L, o);
         return { personnage: c && c.personnage, suit: suit, gardiens: gardiens, dites: dites,
-                 fait: !!p.missionsFaites.s10, argent: argent.map(function (a) { return a.montant; }) };
+                 fait: !!p.missionsFaites.s10 && !!p.missionsFaites.raymonde_et_le_syndicat, argent: argent.map(function (a) { return a.montant; }) };
     }""")
     assert r["personnage"] == "raymonde" and r["suit"] is True, r
     g = r["gardiens"]
     assert g["n"] == 2 and set(g["arch"]) == {"gardien"} and g["courent"] and g["loin"] <= 20, g
-    for dite in ("pendant:raymonde:0", "pendant:raymonde:1"):
+    for dite in ("pendant:raymonde:10", "pendant:raymonde:11", "pendant:raymonde:12"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [300]
 

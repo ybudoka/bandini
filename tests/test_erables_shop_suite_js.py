@@ -18,8 +18,10 @@ from test_arc_p_js import RECHARGER
 from app import missions
 
 VAGUE = ("e08", "e09", "e11", "s04", "s13")
-AVANT = json.dumps([m["slug"] for m in missions.CATALOGUE if m["slug"] not in VAGUE + ("m97", "m98", "m99")]
-                   + ["p02", "p05", "p04", "p10", "p09", "p11"])
+# ⚠️ s13 est l'acte 2 des _Commandes de Prévost_ (2 oct. 2026) : le chapitre n'est pas fait, son acte 1 (s07) l'est.
+AVANT = json.dumps([m["slug"] for m in missions.CATALOGUE
+                    if m["slug"] not in VAGUE + ("m97", "m98", "m99", "commandes_de_prevost")]
+                   + ["p02", "p05", "p04", "p10", "p09", "p11", "s07"])
 
 AIDES = OUTILS + PLUS_LONGUES + RECHARGER + DEDANS + """
   function partie(L, plus) { faites(L, """ + AVANT + """.concat(plus || [])); return recharger(L); }
@@ -254,7 +256,7 @@ def _s13(banc, bosse=False):
         const monte = etape(L);
         // Le saut : le char en l'air, comme le Grand Saut (`v.z` haut, sinon la gravité le pose avant la lecture).
         v.z = 60; v.vz = 2; v.vx = 3; v.vy = 0; v.vitesse = 3;
-        for (let k = 0; k < 40 && etape(L) === 1; k++) { if (v.z <= 0) v.z = 60; o.frame(1); ecouter(L); }
+        for (let k = 0; k < 40 && etape(L) === 5; k++) { if (v.z <= 0) v.z = 60; o.frame(1); ecouter(L); }
         const saute = etape(L);
         jouer(L, o, 30);
         const colle = B.entites.filter(function (e) { return e.type === 'vehicule' && e.poursuivant; }).length;
@@ -269,10 +271,10 @@ def _s13(banc, bosse=False):
 
 def test_s13_le_prototype_la_rampe_et_la_fourriere_sans_une_egratignure(banc):
     r = _s13(banc)
-    assert r["dispo"] == "s13" and r["mission"] == "s13", r
+    assert r["dispo"] == "commandes_de_prevost" and r["mission"] == "commandes_de_prevost", "Prévost donne l'acte 2"
     assert r["proto"]["slug"] == "sport" and r["proto"]["skateux"] <= 14, r["proto"]
-    assert r["monte"] == 1 and r["saute"] == 2, r
-    for dite in ("pendant:prevost:0", "pendant:prevost:1", "pendant:prevost:2"):
+    assert r["monte"] == 5 and r["saute"] == 6, r
+    for dite in ("pendant:prevost:3", "pendant:prevost:4", "pendant:prevost:5", "pendant:prevost:6"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [600], r["argent"]
 

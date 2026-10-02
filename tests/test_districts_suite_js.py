@@ -52,9 +52,10 @@ def test_s07_le_camion_de_prevost_au_quai(banc):
         return { piece: piece, mission: mission, quai: quai, dites: dites, fait: !!p.missionsFaites.s07,
                  argent: argent.map(function (a) { return a.montant; }) };
     }""")
-    assert r["piece"] == "usine" and r["mission"] == "s07", r
-    assert r["quai"]["etape"] == 1 and r["quai"]["slug"] == "camion", r["quai"]
-    for dite in ("pendant:prevost:0", "pendant:prevost:1"):
+    # s07 est l'acte 1 des _Commandes de Prévost_ (2 oct. 2026) : tout se décale d'un (le marqueur).
+    assert r["piece"] == "usine" and r["mission"] == "commandes_de_prevost", r
+    assert r["quai"]["etape"] == 2 and r["quai"]["slug"] == "camion", r["quai"]
+    for dite in ("pendant:prevost:1", "pendant:prevost:2"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [350], r
 

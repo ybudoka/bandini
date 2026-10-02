@@ -359,18 +359,20 @@ def test_s03_les_gardiens_le_camion_de_paie_deux_etoiles_le_bar_tenu_puis_josee(
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'e01', 'q02']);
         const argent = paiements(L);
-        L.Histoire.commencer('s03'); B.cinema = null; B.scene = null;
+        // ⚠️ s03 est l'ACTE 1 de _Raymonde et le syndicat_ (2 oct. 2026) : le marqueur (étape 0) passe, puis le camion.
+        L.Histoire.commencer('raymonde_et_le_syndicat'); B.cinema = null; B.scene = null;
+        for (let k = 0; k < 10 && !B.mission.vehicule; k++) o.frame(1);
         const v = B.mission.vehicule, hotel = L.Histoire.lieu('hotel');
         const camion = v ? { slug: v.slug, d: Math.round(Math.hypot(v.x - hotel.x, v.y - hotel.y)) } : null;
         const etoiles0 = B.recherche.etoiles;
         j.x = v.x + 20; j.y = v.y; L.Entites.indexer();
         L.Vehicules.monter(j, v); L.Entites.indexer();
-        o.frame(2);
+        o.frame(3);   // ⚠️ une image de plus : le marqueur de l'acte 1 en a pris une
         // Les gardiens sortent : ils arrivent de loin, sur nous.
         const gardes = { etape: etape(L), ligne: L.Histoire.ligneObjectif(), boite: boite(L), dans: j.dansVehicule === v,
-                         hommes: hommes(L, 1).map(function (h) { return { d: h.d, etat: h.e.etat }; }) };
+                         hommes: hommes(L, 2).map(function (h) { return { d: h.d, etat: h.e.etat }; }) };
         fermer(L);
-        hommes(L, 1).forEach(function (h) { L.Entites.assommer(h.e); });
+        hommes(L, 2).forEach(function (h) { L.Entites.assommer(h.e); });
         o.frame(2);
         const etapeSemer = etape(L), etoiles = B.recherche.etoiles;
         const pendant = boite(L);
@@ -383,9 +385,9 @@ def test_s03_les_gardiens_le_camion_de_paie_deux_etoiles_le_bar_tenu_puis_josee(
         o.frame(3);
         // Prévost envoie ses Boulonneux : ils arrivent de loin sur nous.
         const renforts = { etape: etape(L), ligne: L.Histoire.ligneObjectif(), boite: boite(L), aPied: !j.dansVehicule,
-                           hommes: hommes(L, 4).map(function (h) { return { d: h.d, etat: h.e.etat }; }) };
+                           hommes: hommes(L, 5).map(function (h) { return { d: h.d, etat: h.e.etat }; }) };
         fermer(L);
-        hommes(L, 4).forEach(function (h) { L.Entites.assommer(h.e); });
+        hommes(L, 5).forEach(function (h) { L.Entites.assommer(h.e); });
         o.frame(2);
         const versJosee = { etape: etape(L), ligne: L.Histoire.ligneObjectif(), boite: boite(L) };
         fermer(L);
@@ -402,25 +404,25 @@ def test_s03_les_gardiens_le_camion_de_paie_deux_etoiles_le_bar_tenu_puis_josee(
     assert r["camion"] and r["camion"]["slug"] == "camion" and r["camion"]["d"] >= 100, r["camion"]
     assert r["etoiles0"] == 0, "la police ne sait rien tant qu'on n'a pas pris le camion"
     g = r["gardes"]
-    assert g["etape"] == 1 and g["ligne"].startswith("LES GARDIENS DE PRÉVOST") and g["dans"], g
-    assert g["boite"] and g["boite"]["slug"] == "raymonde-s03-9" and g["boite"]["telephone"] is True
+    assert g["etape"] == 2 and g["ligne"].startswith("LES GARDIENS DE PRÉVOST") and g["dans"], g
+    assert g["boite"] and g["boite"]["slug"] == "raymonde-raymonde_et_le_syndicat-10" and g["boite"]["telephone"] is True
     assert len(g["hommes"]) == 2, g["hommes"]
     for h in g["hommes"]:
         assert 100 <= h["d"] <= 260 and h["etat"] == "attaque_joueur", f"les gardiens arrivent sur nous : {h}"
-    assert r["etapeSemer"] == 2 and r["etoiles"] >= 2, "monté dans le camion de paie : deux étoiles"
-    assert r["pendant"] == {"partie": "pendant", "qui": "raymonde", "slug": "raymonde-s03-10", "telephone": True}
-    assert r["etapeLivrer"] == 3 and r["ligne"].startswith("LIVRE LA PAIE AU BAR"), "semée, on livre"
+    assert r["etapeSemer"] == 3 and r["etoiles"] >= 2, "monté dans le camion de paie : deux étoiles"
+    assert r["pendant"] == {"partie": "pendant", "qui": "raymonde", "slug": "raymonde-raymonde_et_le_syndicat-11", "telephone": True}
+    assert r["etapeLivrer"] == 4 and r["ligne"].startswith("LIVRE LA PAIE AU BAR"), "semée, on livre"
     rf = r["renforts"]
-    assert rf["etape"] == 4 and rf["ligne"].startswith("PRÉVOST ENVOIE SES BOULONNEUX") and rf["aPied"], rf
-    assert rf["boite"] and rf["boite"]["slug"] == "raymonde-s03-11"
+    assert rf["etape"] == 5 and rf["ligne"].startswith("PRÉVOST ENVOIE SES BOULONNEUX") and rf["aPied"], rf
+    assert rf["boite"] and rf["boite"]["slug"] == "raymonde-raymonde_et_le_syndicat-12"
     assert len(rf["hommes"]) == 3, rf["hommes"]
     for h in rf["hommes"]:
         assert 100 <= h["d"] <= 260 and h["etat"] == "attaque_joueur", f"ils arrivent de loin, sur nous : {h}"
-    assert r["versJosee"]["etape"] == 5 and r["versJosee"]["ligne"].startswith("REMETS LA PAIE À JOSÉE")
+    assert r["versJosee"]["etape"] == 6 and r["versJosee"]["ligne"].startswith("REMETS LA PAIE À JOSÉE")
     j = r["josee"]
-    assert j["piece"] == "bar" and j["avant"] == 5 and j["paye"] == 0, j
-    assert j["boite"] == {"partie": "accueil", "qui": "josee", "slug": "josee-s03-12", "telephone": False}, j
-    assert j["pendantBoite"] == 5
+    assert j["piece"] == "bar" and j["avant"] == 6 and j["paye"] == 0, j
+    assert j["boite"] == {"partie": "accueil", "qui": "josee", "slug": "josee-raymonde_et_le_syndicat-28", "telephone": False}, j
+    assert j["pendantBoite"] == 6
     assert r["fait"] is True and r["argent"] == [450]
 
 
@@ -441,15 +443,16 @@ def test_s03_le_camion_de_paie_a_fond_seme_l_agent_a_pied_et_les_etoiles_tombent
         B.defs.conduite.trafic.vehicules_max = 0; B.defs.conduite.trafic.stationnes_max = 0;
         B.defs.recherche.police.regarde_toutes_les_images = 1;
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'e01', 'q02']);
-        L.Histoire.commencer('s03'); B.cinema = null; B.scene = null;
+        L.Histoire.commencer('raymonde_et_le_syndicat'); B.cinema = null; B.scene = null;
+        for (let k = 0; k < 10 && !B.mission.vehicule; k++) o.frame(1);
         const v = B.mission.vehicule;
         j.x = v.x + 20; j.y = v.y; L.Entites.indexer();
         L.Vehicules.monter(j, v); L.Entites.indexer();
-        o.frame(2); fermer(L);
+        o.frame(3);   // ⚠️ une image de plus : le marqueur de l'acte 1 en a pris une fermer(L);
         // Les deux gardiens (22 sept. 2026) : couchés, la police arrive.
-        B.mission.entites.filter(function (e) { return e.type === 'pieton' && e.cible && e.etape === 1; })
+        B.mission.entites.filter(function (e) { return e.type === 'pieton' && e.cible && e.etape === 2; })
           .forEach(function (e) { L.Entites.assommer(e); });
-        o.frame(2); fermer(L);
+        for (let k = 0; k < 10 && etape(L) === 2; k++) { o.frame(1); fermer(L); }
         const debut = { etape: etape(L), etoiles: B.recherche.etoiles };
         // La plus longue ligne droite vers l'est où passe un camion (trois rangées libres).
         let route = null;
@@ -490,13 +493,13 @@ def test_s03_le_camion_de_paie_a_fond_seme_l_agent_a_pied_et_les_etoiles_tombent
                  s: +(i / 60).toFixed(1), d: Math.round(Math.hypot(agent.x - v.x, agent.y - v.y)),
                  etoiles: B.recherche.etoiles, etape: etape(L), dans: j.dansVehicule === v };
     }""")
-    assert r["debut"] == {"etape": 2, "etoiles": 2}, r["debut"]
+    assert r["debut"] == {"etape": 3, "etoiles": 2}, r["debut"]
     assert r["route"]["l"] >= 200, f"pas de ligne droite assez longue pour juger : {r['route']}"
     assert r["dans"], "on est sorti du camion en route"
     assert r["pointe"] >= 0.95 * r["fiche"], f"le camion plafonne sous sa fiche : {r}"
     assert r["perdu"] is not None, f"l'agent à pied ne lâche pas le camion : {r}"
     assert r["tombe"] is not None, f"les deux étoiles ne tombent jamais : {r}"
-    assert r["etape"] == 2 and r["etoiles"] == 1, r
+    assert r["etape"] == 3 and r["etoiles"] == 1, r
 
 
 def test_m51_la_tournee_du_sergent_trois_enveloppes_un_agent_honnete_josee_puis_le_casse_croute(banc):

@@ -163,6 +163,9 @@ OUTILS = ('  const ORDRE = ' + json.dumps(missions.ordre_topologique()) + ';' + 
     L.Histoire.commencer(m.slug);
     while (L.B.cinema) L.Histoire.suivante();
     L.B.partie.mission.etape = m.objectifs.length - 1;
+    // ⚠️ UN CHAPITRE sauté à sa dernière étape a joué ses actes d'avant : leurs missions sont faites, et qui arrive après
+    // elles est là (Gros-Boulon arrive après s02, l'acte 1 de Ti-Loup et Gros-Boulon : c'est lui qui finit).
+    (m.remplace || []).slice(0, -1).forEach(function (s) { L.B.partie.missionsFaites[s] = 1; L.Histoire.arriverApres(s); });
     const o = m.objectifs[m.objectifs.length - 1], j = L.B.joueur;
     // ⚠️ **OU L'ON EST QUAND LA FIN PART**, et c'est le dernier objectif qui le
     // dit — c'est lui, ensuite, qui decide si le donneur est a portee de voix.

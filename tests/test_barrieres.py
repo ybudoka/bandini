@@ -214,6 +214,6 @@ def test_la_regle_de_l_usine_se_tient_et_refuse_ce_qu_elle_doit_refuser():
     assert pliees["t08"][6:] == ["usine"] and pliees["t10"][6:] == ["usine"]
     assert all(len(j) == len(missions.CHAMPS_D_UNE_JOB) for s, j in pliees.items() if s not in ("t08", "t10"))
     # Une mission du telephone qui irait a l'usine : refusee par la forme.
-    m = copy.deepcopy(missions.par_slug("s03"))
+    m = copy.deepcopy(missions.par_slug("s04"))
     m["objectifs"][-1]["lieu"] = "usine"
     assert any("seule une petite job" in e for e in missions.erreurs_de_passant(m))

@@ -466,7 +466,8 @@ def test_r01_le_carnet_rattrape_roy_semee_puis_le_coffre_de_l_hotel_sans_une_eto
 
 def test_s01_ti_paul_sait_tout_la_remorqueuse_les_boulonneux_reviennent_puis_le_lot(banc):
     """Gilles : Ti-Paul d'abord (au bout ouest, il sait qui a pris la remorqueuse), la remorqueuse en
-    zone des Boulonneux, les Boulonneux qui reviennent la chercher, puis la route du lot."""
+    zone des Boulonneux, les Boulonneux qui reviennent la chercher, puis la route du lot. ⚠️ s01 est l'acte 1 du
+    _Lot de Gilles_ (2 oct. 2026) : tout se décale d'un (le marqueur)."""
     r = _jouer(banc, """
         debut(L);
         faites(L, ['f02']);
@@ -493,7 +494,7 @@ def test_s01_ti_paul_sait_tout_la_remorqueuse_les_boulonneux_reviennent_puis_le_
         const v = B.mission.vehicule;
         const zone = L.Histoire.resoudre('zone:boulonneux', L.Histoire.courante());
         monterDans(L, o, v);
-        const trois = hommes(L, 2);
+        const trois = hommes(L, 3);
         const pendant2 = ecouter(L, o);
         const monte = etape(L);
         trois.forEach(function (h) { L.Entites.assommer(h.e); });
@@ -507,15 +508,15 @@ def test_s01_ti_paul_sait_tout_la_remorqueuse_les_boulonneux_reviennent_puis_le_
                  trois: trois.map(function (h) { return { d: h.d, etat: h.etat }; }), pendant2: pendant2, apresBagarre: apresBagarre,
                  t: t, legs: legs, fait: !!B.partie.missionsFaites.s01, argent: argent };
     """)
-    assert r["parle"] and r["slug"] == "s01", r
+    assert r["parle"] and r["slug"] == "lot_de_gilles", r
     assert any("Ti-Paul" in t for t in r["intro"]), f"Gilles envoie chez Ti-Paul dès l'intro : {r['intro']}"
     assert r["rendu"] and r["accueil"]["partie"] == "accueil" and r["accueil"]["qui"] == "tipaul", r["accueil"]
     assert r["accueil"]["texte"].startswith("Salut, l'ami, c'est Ti-Paul"), r["accueil"]
-    assert r["apresTiPaul"] == 1 and r["pendant1"]["qui"] == "gilles", r
-    assert r["monte"] == 2 and len(r["trois"]) == 3, r
+    assert r["apresTiPaul"] == 2 and r["pendant1"]["qui"] == "gilles", r
+    assert r["monte"] == 3 and len(r["trois"]) == 3, r
     for h in r["trois"]:
         assert 100 <= h["d"] <= 260 and h["etat"] == "attaque_joueur", h
     assert r["pendant2"]["texte"].startswith("Ils reviennent la chercher"), r["pendant2"]
-    assert r["apresBagarre"] == 3
+    assert r["apresBagarre"] == 4
     assert r["t"]["arrive"] and r["fait"] is True and r["argent"] == [250], (r["t"], r["fait"], r["argent"])
     print("s01", {"legs": r["legs"], "fourriere": r["t"]["tuiles"], "s": r["t"]["secondes"]})
