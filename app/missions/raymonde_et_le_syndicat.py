@@ -87,9 +87,9 @@ MISSION = {
             _p("raymonde", "Perds-les avant le bar! Josée aime pas les visiteurs en uniforme.", 3, jeu="[firmly] Perds-les avant le bar! [sarcastic] Josée aime pas les visiteurs… en uniforme."),
             _p("raymonde", "Prévost a su! Il envoie ses Boulonneux au bar. Tiens la porte, Josée te regarde.", 5, jeu="[firmly] Prévost a su! Il envoie ses Boulonneux au bar. [matter-of-fact] Tiens la porte… Josée te regarde."),
             # Acte 2 : la fin de s03, en personne ; puis l'appel et l'intro de s06.
-            _p("raymonde", "Toutes les enveloppes y sont. Mes gars vont manger cette semaine.", 7, jeu="[relieved] Toutes les enveloppes y sont… [warmly] Mes gars vont manger cette semaine."),
-            _p("raymonde", "Dix pour cent pour Josée? Josée pis Prévost, c'est la même école.", 7, jeu="[bitterly] Dix pour cent pour Josée? [wryly] Josée pis Prévost… c'est la même école."),
-            _p("raymonde", "Prévost va hurler. Laisse-le hurler, moi j'ai jamais eu peur d'un patron.", 7, jeu="[firmly] Prévost va hurler. Laisse-le hurler… [wryly] moi j'ai jamais eu peur d'un patron."),
+            _p("raymonde", "Toutes les enveloppes y sont. Mes gars vont manger cette semaine.", 7, jeu="[relieved] Toutes les enveloppes y sont… [warmly] Mes gars vont manger cette semaine.", cloture=True),
+            _p("raymonde", "Dix pour cent pour Josée? Josée pis Prévost, c'est la même école.", 7, jeu="[bitterly] Dix pour cent pour Josée? [wryly] Josée pis Prévost… c'est la même école.", cloture=True),
+            _p("raymonde", "Prévost va hurler. Laisse-le hurler, moi j'ai jamais eu peur d'un patron.", 7, jeu="[firmly] Prévost va hurler. Laisse-le hurler… [wryly] moi j'ai jamais eu peur d'un patron.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « Raymonde, du syndicat. » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("raymonde", "Prévost connaît le nom de chacun de mes gars. Quelqu'un lui a vendu la liste.", 7, jeu="[serious] Prévost connaît le nom de chacun de mes gars. [bitterly] Quelqu'un lui a vendu la liste."),
             _p("raymonde", "Bob Sauvé. Contremaître le jour, syndiqué le soir. Il joue sur deux tableaux.", 7, jeu="[matter-of-fact] Bob Sauvé. [wryly] Contremaître le jour, syndiqué le soir. [bitterly] Il joue sur deux tableaux."),
@@ -97,8 +97,8 @@ MISSION = {
             _p("raymonde", "Il part. Reste loin, Bob regarde toujours derrière lui, il a de quoi.", 8, jeu="[quietly] Il part. [firmly] Reste loin… [wryly] Bob regarde toujours derrière lui, il a de quoi."),
             _p("raymonde", "Le Brouillard. Pis Prévost à la table du fond, je gage. Reviens me voir.", 9, jeu="[bitterly] Le Brouillard. Pis Prévost à la table du fond, je gage. [firmly] Reviens me voir."),
             # Acte 3 : la fin de s06, en personne ; puis l'appel et l'intro de s10.
-            _p("raymonde", "Sauvé pis Prévost, au même bar, le même soir. Ça me suffit.", 10, jeu="[coldly] Sauvé pis Prévost, au même bar, le même soir. [firmly] Ça me suffit."),
-            _p("raymonde", "Mes gars vont l'apprendre de ma bouche. Pas du Clairon.", 10, jeu="[serious] Mes gars vont l'apprendre de ma bouche. [warmly] Pas du Clairon."),
+            _p("raymonde", "Sauvé pis Prévost, au même bar, le même soir. Ça me suffit.", 10, jeu="[coldly] Sauvé pis Prévost, au même bar, le même soir. [firmly] Ça me suffit.", cloture=True),
+            _p("raymonde", "Mes gars vont l'apprendre de ma bouche. Pas du Clairon.", 10, jeu="[serious] Mes gars vont l'apprendre de ma bouche. [warmly] Pas du Clairon.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « Raymonde, du syndicat. » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("raymonde", "Je vais voir le maire ce soir. Prévost a des hommes qui me suivent.", 10, jeu="[serious] Je vais voir le maire ce soir. [quietly] Prévost a des hommes qui me suivent."),
             _p("raymonde", "Le maire dort à l'hôtel, tout le monde le sait astheure. Il va m'écouter, en robe de chambre.", 10, jeu="[wryly] Le maire dort à l'hôtel, tout le monde le sait astheure. [amused] Il va m'écouter, en robe de chambre."),

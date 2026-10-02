@@ -139,9 +139,9 @@ MISSION = {
             _p("irene", "Deux gars en cravate qui offrent des jetons aux perdants de l'autobus. Tu peux pas les manquer.", 1, jeu="[wryly] Deux gars en cravate qui offrent des jetons aux perdants de l'autobus. [amused] Tu peux pas les manquer."),
             _p("irene", "Un jeton, c'est assez. Reviens au Dragon d'or, je gage cinq piasses que t'as pas un bleu.", 2, jeu="[satisfied] Un jeton, c'est assez. [teasing] Reviens au Dragon d'or… je gage cinq piasses que t'as pas un bleu."),
             # Acte 2 : la fin de c01, en personne ; puis l'appel et l'intro de c02.
-            _p("irene", "Montre le jeton au gros de l'escalier. En bas, joue gros, pis regarde les mains du Pouce.", 3, jeu="[knowingly] Montre le jeton au gros de l'escalier. [firmly] En bas, joue gros… pis regarde les mains du Pouce."),
-            _p("irene", "Quand ses dés sont plus jaunes que les vrais, c'est de la vieille ivoire pipée. Change de côté, ou crie-le.", 3, jeu="[quietly] Quand ses dés sont plus jaunes que les vrais, c'est de la vieille ivoire pipée. [amused] Change de côté… ou crie-le."),
-            _p("irene", "Pis perds pas tout. La chance, ça existe pas, y a juste du monde qui sait compter.", 3, jeu="[warmly] Pis perds pas tout. [knowingly] La chance, ça existe pas… y a juste du monde qui sait compter."),
+            _p("irene", "Montre le jeton au gros de l'escalier. En bas, joue gros, pis regarde les mains du Pouce.", 3, jeu="[knowingly] Montre le jeton au gros de l'escalier. [firmly] En bas, joue gros… pis regarde les mains du Pouce.", cloture=True),
+            _p("irene", "Quand ses dés sont plus jaunes que les vrais, c'est de la vieille ivoire pipée. Change de côté, ou crie-le.", 3, jeu="[quietly] Quand ses dés sont plus jaunes que les vrais, c'est de la vieille ivoire pipée. [amused] Change de côté… ou crie-le.", cloture=True),
+            _p("irene", "Pis perds pas tout. La chance, ça existe pas, y a juste du monde qui sait compter.", 3, jeu="[warmly] Pis perds pas tout. [knowingly] La chance, ça existe pas… y a juste du monde qui sait compter.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « C'est Irène Lam, mon pigeon. » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("irene", "J'ai un tour de passe-passe à te montrer, pis c'est pas avec des cartes.", 3, jeu="[teasing] J'ai un tour de passe-passe à te montrer… pis c'est pas avec des cartes."),
             _p("irene", "Pour faire tomber le Pouce, « il a l'air croche », ça suffit pas. Il me faut ses dés jaunes, dans ma main.", 3, jeu="[quietly] Pour faire tomber le Pouce, « il a l'air croche »… ça suffit pas. [firmly] Il me faut ses dés jaunes, dans ma main."),
@@ -149,9 +149,9 @@ MISSION = {
             _p("irene", "C'est son truc à lui. Je gage cinq piasses qu'il a jamais pensé qu'on lui ferait.", 3, jeu="[amused] C'est son truc à lui. [teasing] Je gage cinq piasses qu'il a jamais pensé qu'on lui ferait."),
             _p("irene", "Cinq cents piasses, pas moins. En bas de ça, il se donne même pas la peine de tricher.", 4, jeu="[matter-of-fact] Cinq cents piasses, pas moins. [wryly] En bas de ça, il se donne même pas la peine de tricher."),
             # Acte 3 : la fin de c02, en personne ; puis l'appel et l'intro de c03.
-            _p("irene", "T'es sorti avec, pis il a rien vu? Trente ans que j'attends de voir ça.", 5, jeu="[impressed] T'es sorti avec, pis il a rien vu? [amused] Trente ans que j'attends de voir ça."),
-            _p("irene", "Garde-les dans ta poche. C'est la place la plus sûre du quartier, astheure.", 5, jeu="[knowingly] Garde-les dans ta poche. [teasing] C'est la place la plus sûre du quartier, astheure."),
-            _p("irene", "Mais des dés, c'est juste la triche. Moi, je veux savoir où dort l'argent du monde.", 5, jeu="[serious] Mais des dés… c'est juste la triche. [firmly] Moi, je veux savoir où dort l'argent du monde."),
+            _p("irene", "T'es sorti avec, pis il a rien vu? Trente ans que j'attends de voir ça.", 5, jeu="[impressed] T'es sorti avec, pis il a rien vu? [amused] Trente ans que j'attends de voir ça.", cloture=True),
+            _p("irene", "Garde-les dans ta poche. C'est la place la plus sûre du quartier, astheure.", 5, jeu="[knowingly] Garde-les dans ta poche. [teasing] C'est la place la plus sûre du quartier, astheure.", cloture=True),
+            _p("irene", "Mais des dés, c'est juste la triche. Moi, je veux savoir où dort l'argent du monde.", 5, jeu="[serious] Mais des dés… c'est juste la triche. [firmly] Moi, je veux savoir où dort l'argent du monde.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « Irène Lam, mon pigeon. » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("irene", "Le Pouce couche dans la suite royale de l'hôtel, pis je gage qu'il dort sur un livre.", 5, jeu="[mischievously] Le Pouce couche dans la suite royale de l'hôtel… pis je gage qu'il dort sur un livre."),
             _p("irene", "Un tricheur écrit tout ce qu'il gagne. Pas pour l'impôt : pour se le relire, le soir.", 5, jeu="[knowingly] Un tricheur écrit tout ce qu'il gagne. [wryly] Pas pour l'impôt… pour se le relire, le soir."),
@@ -160,9 +160,9 @@ MISSION = {
             _p("irene", "Il regarde ses chiffres, pas son rétroviseur. Reste pas collé dessus quand même.", 7, jeu="[amused] Il regarde ses chiffres, pas son rétroviseur. [firmly] Reste pas collé dessus quand même."),
             _p("irene", "Il l'a laissé au terminus pour les rabatteurs? Ramasse-le avant eux, vite!", 8, jeu="[surprised] Il l'a laissé au terminus pour les rabatteurs? [firmly] Ramasse-le avant eux, vite!"),
             # Acte 4 : la fin de c03, en personne ; puis l'appel et l'intro de c04.
-            _p("irene", "« Chan, trois mille deux cents. Boulangerie, un camion. » Il a une belle main d'écriture, pour un voleur.", 9, jeu="[bitterly] « Chan, trois mille deux cents. Boulangerie, un camion. » [sarcastic] Il a une belle main d'écriture, pour un voleur."),
-            _p("irene", "Pis en bas de la page, ce qu'il doit à ses rabatteurs. Il les paye même pas.", 9, jeu="[amused] Pis en bas de la page, ce qu'il doit à ses rabatteurs. [wryly] Il les paye même pas."),
-            _p("irene", "Garde le livre. Demain, on va lui présenter sa facture.", 9, jeu="[firmly] Garde le livre. [satisfied] Demain… on va lui présenter sa facture."),
+            _p("irene", "« Chan, trois mille deux cents. Boulangerie, un camion. » Il a une belle main d'écriture, pour un voleur.", 9, jeu="[bitterly] « Chan, trois mille deux cents. Boulangerie, un camion. » [sarcastic] Il a une belle main d'écriture, pour un voleur.", cloture=True),
+            _p("irene", "Pis en bas de la page, ce qu'il doit à ses rabatteurs. Il les paye même pas.", 9, jeu="[amused] Pis en bas de la page, ce qu'il doit à ses rabatteurs. [wryly] Il les paye même pas.", cloture=True),
+            _p("irene", "Garde le livre. Demain, on va lui présenter sa facture.", 9, jeu="[firmly] Garde le livre. [satisfied] Demain… on va lui présenter sa facture.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « Irène Lam. » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("irene", "Le Pouce a vu que son livre manquait, pis il fait ses valises à soir.", 9, jeu="[quietly] Le Pouce a vu que son livre manquait… pis il fait ses valises à soir."),
             _p("irene", "Il vide la caisse du sous-sol. Cette caisse-là, mon pigeon, c'est la paye du quartier.", 9, jeu="[serious] Il vide la caisse du sous-sol. [somber] Cette caisse-là, mon pigeon… c'est la paye du quartier."),

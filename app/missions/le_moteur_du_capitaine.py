@@ -76,8 +76,8 @@ MISSION = {
             _p("berube", "Ils ont pris le chemin du pont. Un moteur, ça pèse ; ils iront pas loin.", 1, jeu="[matter-of-fact] Ils ont pris le chemin du pont. [calm] Un moteur, ça pèse ; ils iront pas loin."),
             _p("berube", "Je t'attends au bout du quai. Mets-le pas à l'eau, il nage pas mieux que moi.", 2, jeu="[calm] Je t'attends au bout du quai. [wryly] Mets-le pas à l'eau, il nage pas mieux que moi."),
             # Acte 2 : la fin de q08, en personne ; puis l'appel et l'intro de i01.
-            _p("berube", "Un Johnson de cinquante-huit. Il a plus de milles que moi, pis il tourne encore.", 3, jeu="[warmly] Un Johnson de cinquante-huit. [calm] Il a plus de milles que moi, pis il tourne encore."),
-            _p("berube", "Merci. La chaloupe est à ta disposition, quand tu voudras voir l'île.", 3, jeu="[warmly] Merci. [matter-of-fact] La chaloupe est à ta disposition, quand tu voudras voir l'île."),
+            _p("berube", "Un Johnson de cinquante-huit. Il a plus de milles que moi, pis il tourne encore.", 3, jeu="[warmly] Un Johnson de cinquante-huit. [calm] Il a plus de milles que moi, pis il tourne encore.", cloture=True),
+            _p("berube", "Merci. La chaloupe est à ta disposition, quand tu voudras voir l'île.", 3, jeu="[warmly] Merci. [matter-of-fact] La chaloupe est à ta disposition, quand tu voudras voir l'île.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « Bérubé. » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("berube", "Le moteur tourne comme au premier jour. J'ai une commission pour l'île.", 3, jeu="[calm] Le moteur tourne comme au premier jour. J'ai une commission pour l'île."),
             _p("berube", "Une caisse d'outils pour Léo, au hangar. Je la lui promets depuis l'été.", 3, jeu="[matter-of-fact] Une caisse d'outils pour Léo, au hangar. [calm] Je la lui promets depuis l'été."),

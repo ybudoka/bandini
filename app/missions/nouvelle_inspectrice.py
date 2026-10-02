@@ -102,8 +102,8 @@ MISSION = {
             _p("bouchard", "Roy t'a vu partir. Sème-la, le jeune, une inspectrice ça lâche pas un os.", 3, jeu="[nervously] Roy t'a vu partir. [firmly] Sème-la, le jeune… une inspectrice ça lâche pas un os."),
             _p("bouchard", "Pas au poste, pas chez nous : le coffre de l'Hôtel Bandini. Personne fouille chez un mort.", 4, jeu="[gravely] Pas au poste, pas chez nous… le coffre de l'Hôtel Bandini. [deadpan] Personne fouille chez un mort."),
             # Acte 2 : la fin de r01, en personne ; puis l'appel et l'intro de r05.
-            _p("bouchard", "Mon carnet. Vingt ans de petites affaires, dedans. Ça reste entre nous deux.", 5, jeu="[relieved] Mon carnet. [gravely] Vingt ans de petites affaires, dedans. Ça reste entre nous deux."),
-            _p("bouchard", "Roy va devoir fouiller ailleurs. T'as fait ça proprement.", 5, jeu="[satisfied] Roy va devoir fouiller ailleurs. [gruffly] T'as fait ça proprement."),
+            _p("bouchard", "Mon carnet. Vingt ans de petites affaires, dedans. Ça reste entre nous deux.", 5, jeu="[relieved] Mon carnet. [gravely] Vingt ans de petites affaires, dedans. Ça reste entre nous deux.", cloture=True),
+            _p("bouchard", "Roy va devoir fouiller ailleurs. T'as fait ça proprement.", 5, jeu="[satisfied] Roy va devoir fouiller ailleurs. [gruffly] T'as fait ça proprement.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « Bouchard. » — il s'est nommé à l'appel du chapitre.
             _p("bouchard", "Les armes du Faubourg partent pour Québec cette nuit. Y en a des tiennes dedans.", 5, jeu="[gruffly] Les armes du Faubourg partent pour Québec cette nuit. [knowingly] Y en a des tiennes dedans."),
             _p("bouchard", "À Québec, ils font des tests. Pis les tests, ça raconte des histoires à des juges.", 5, jeu="[nervously] À Québec, ils font des tests. [gruffly] Pis les tests, ça raconte des histoires à des juges."),
@@ -114,8 +114,8 @@ MISSION = {
             _p("bouchard", "Ça crie sur la radio. Perds-les avant le pont, après c'est la Sûreté.", 8, jeu="[nervously] Ça crie sur la radio. [firmly] Perds-les avant le pont, après c'est la Sûreté."),
             _p("bouchard", "Au garage, astheure. La baie est ouverte, personne regarde.", 9, jeu="[matter-of-fact] Au garage, astheure. [gruffly] La baie est ouverte, personne regarde."),
             # Acte 3 : la fin de r05, en personne ; puis l'appel et l'intro de r02.
-            _p("bouchard", "Propre. Les pièces à conviction ont eu un accident de parcours.", 10, jeu="[satisfied] Propre. [deadpan] Les pièces à conviction ont eu un accident de parcours."),
-            _p("bouchard", "Tes vieilles affaires sont au garage. Le reste, on l'a jamais vu.", 10, jeu="[knowingly] Tes vieilles affaires sont au garage. [gruffly] Le reste, on l'a jamais vu."),
+            _p("bouchard", "Propre. Les pièces à conviction ont eu un accident de parcours.", 10, jeu="[satisfied] Propre. [deadpan] Les pièces à conviction ont eu un accident de parcours.", cloture=True),
+            _p("bouchard", "Tes vieilles affaires sont au garage. Le reste, on l'a jamais vu.", 10, jeu="[knowingly] Tes vieilles affaires sont au garage. [gruffly] Le reste, on l'a jamais vu.", cloture=True),
             _p("roy", "Inspectrice Roy, du poste. Je sais qui a pris mon carnet. Passe me voir, on va jaser.", 10, jeu="[firmly] Inspectrice Roy, du poste. [coldly] Je sais qui a pris mon carnet. Passe me voir, on va jaser."),
             # ⚠️ Coupée : « Assis-toi. » — elle parle au combiné.
             _p("roy", "Je t'arrête pas, je t'aurais déjà arrêté. Je veux mon carnet.", 10, jeu="[calm] Je t'arrête pas, je t'aurais déjà arrêté. [firmly] Je veux mon carnet."),

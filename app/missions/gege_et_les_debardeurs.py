@@ -66,9 +66,9 @@ MISSION = {
             _p("gege", "La police s'en vient. Un débardeur a jamais rien vu, apprends ça vite.", 3, jeu="[firmly] La police s'en vient. [gruffly] Un débardeur a jamais rien vu… apprends ça vite."),
             _p("gege", "Reviens à la cantine. Les gars veulent voir la face de celui qui a fait ça.", 4, jeu="[satisfied] Reviens à la cantine. [gruffly] Les gars veulent voir la face de celui qui a fait ça."),
             # Acte 2 : la fin de q03, en personne ; puis l'appel et l'intro de q09.
-            _p("gege", "Le camion brûle sur le boulevard. Les scabs resteront chez eux, à soir.", 5, jeu="[satisfied] Le camion brûle sur le boulevard. [firmly] Les scabs resteront chez eux… à soir."),
-            _p("gege", "Les gars vont s'en souvenir. T'as du cran.", 5, jeu="[impressed] Les gars vont s'en souvenir. [gruffly] T'as du cran."),
-            _p("gege", "Pis ses Boulonneux vont boiter jusqu'à la paie. Bon débarras.", 5, jeu="[amused] Pis ses Boulonneux vont boiter jusqu'à la paie. [gruffly] Bon débarras."),
+            _p("gege", "Le camion brûle sur le boulevard. Les scabs resteront chez eux, à soir.", 5, jeu="[satisfied] Le camion brûle sur le boulevard. [firmly] Les scabs resteront chez eux… à soir.", cloture=True),
+            _p("gege", "Les gars vont s'en souvenir. T'as du cran.", 5, jeu="[impressed] Les gars vont s'en souvenir. [gruffly] T'as du cran.", cloture=True),
+            _p("gege", "Pis ses Boulonneux vont boiter jusqu'à la paie. Bon débarras.", 5, jeu="[amused] Pis ses Boulonneux vont boiter jusqu'à la paie. [gruffly] Bon débarras.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « Gégé, des débardeurs. » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("gege", "Vendredi, c'est la course des camions. Les gars veulent te voir chauffer.", 5, jeu="[firmly] Vendredi, c'est la course des camions. [amused] Les gars veulent te voir chauffer."),
             _p("gege", "Le perdant paie la bière. Ça fait trois ans que c'est moi, ça va faire.", 5, jeu="[gruffly] Le perdant paie la bière. [amused] Ça fait trois ans que c'est moi, ça va faire."),

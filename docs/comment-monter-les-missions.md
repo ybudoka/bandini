@@ -663,7 +663,10 @@ signée). La fiche : `docs/jalons/des-missions-en-chapitres.md`.
   partie qui avait fait la mission d'un acte le saute : ni rejoué, ni repayé.
 - **Les répliques** : `appel` et `intro` sont celles du premier acte ; ce qui ouvre un acte suivant
   (le donneur qui appelle, puis ce qu'il explique) est un `pendant` **sur l'étape du marqueur** ; la fin
-  d'un acte, dite en personne, un `pendant` sur le marqueur de l'acte **suivant** ; `fin` est celle du
+  d'un acte, dite en personne, un `pendant` sur le marqueur de l'acte **suivant**, **en premier** et avec
+  **`cloture=True`** — un chapitre REPRIS à cet acte (REPRENDRE L'ACTE, ou plus tard chez son donneur) ne la redit
+  pas : sans elle, Josée répondait au téléphone devant Chez Gus avec ce qu'elle avait dit au Brouillard (3 oct.
+  2026, jugé : `erreurs_de_chapitre` la demande à toute réplique du donneur d'avant au marqueur) ; `fin` est celle du
   dernier acte, **chez le donneur du dernier acte** (`donneur_final`). « Qui parle se nomme » : une fois par
   personne dans le chapitre. Plafond de répliques : 18 **par acte**. Quand un arc existant passe en chapitre, le
   nom redit à l'appel d'un acte suivant se COUPE dans la même voix (`ffmpeg`, au silence, le temps mort de 0,35 s

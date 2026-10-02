@@ -74,8 +74,8 @@ MISSION = {
             _p("mado", "Le troisième se sauve avec ma caisse! Rattrape-le, mon grand, c'est ma semaine au complet!", 3, jeu="[worried] Le troisième se sauve avec ma caisse! [firmly] Rattrape-le, mon grand, c'est ma semaine au complet!"),
             _p("mado", "Reviens au casse-croûte avec ça. Pis compte pas les billets, y en a des collés au ketchup.", 4, jeu="[relieved] Reviens au casse-croûte avec ça. [playfully] Pis compte pas les billets… y en a des collés au ketchup."),
             # Acte 2 : la fin de f11, en personne ; puis l'appel et l'intro de f13.
-            _p("mado", "C'est réglé. Mon casse-croûte va respirer encore un bout.", 5, jeu="[relieved] C'est réglé. [warmly] Mon casse-croûte va respirer encore un bout."),
-            _p("mado", "Assis-toi, mon grand, j't'en garde une portion — pas question que tu repartes le ventre vide.", 5, jeu="[warmly] Assis-toi, mon grand… [tenderly] j't'en garde une portion, pas question que tu repartes le ventre vide."),
+            _p("mado", "C'est réglé. Mon casse-croûte va respirer encore un bout.", 5, jeu="[relieved] C'est réglé. [warmly] Mon casse-croûte va respirer encore un bout.", cloture=True),
+            _p("mado", "Assis-toi, mon grand, j't'en garde une portion — pas question que tu repartes le ventre vide.", 5, jeu="[warmly] Assis-toi, mon grand… [tenderly] j't'en garde une portion, pas question que tu repartes le ventre vide.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « C'est Mado! » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("mado", "Ça sent la fumée partout dans le Faubourg, pis la caserne est à l'autre bout de la baie.", 5, jeu="[worried] Ça sent la fumée partout dans le Faubourg… [firmly] pis la caserne est à l'autre bout de la baie."),
             _p("mado", "Le kiosque de Madame Thibodeau pogne en feu. Tiens, l'extincteur de ma cuisine, il est plein.", 5, jeu="[worried] Le kiosque de Madame Thibodeau pogne en feu. [firmly] Tiens, l'extincteur de ma cuisine… il est plein."),

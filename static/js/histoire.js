@@ -1033,7 +1033,7 @@ const Histoire = (function () {
       return { qui: l.qui, texte: h ? l.hiver : l.texte, telephone: toujours, auto: auto, objectif: l.objectif,
                slug: slugDeVoix(m, partie, i) + (h ? '-hiver' : ''), humeur: l.humeur, dite: tenu(l),
                // Un CHOIX (1er oct. 2026) : la question (`choix`) et la branche d'une réplique (`branche`).
-               choix: l.choix || null, branche: l.branche || null };
+               choix: l.choix || null, branche: l.branche || null, cloture: !!l.cloture };
     }).filter(function (l) { return l.dite && (!filtre || filtre(l)); });
   }
 
@@ -4396,7 +4396,9 @@ const Histoire = (function () {
       if (B.mission.pendant !== undefined && B.mission.pendant !== null) {
         const etape = B.mission.pendant;
         B.mission.pendant = null;
-        dire(courante(), 'pendant', null, function (l) { return l.objectif === etape; });
+        // ⚠️ La fin de l'acte d'avant (`cloture`) ne se dit qu'à un acte ENCHAÎNÉ (`Chapitres.ouvrirActe`).
+        const enchaine = !!B.partie.mission.enchaine;
+        dire(courante(), 'pendant', null, function (l) { return l.objectif === etape && (!l.cloture || enchaine); });
         return;
       }
       majCuivre();                               // le cuivre du départ, quand tout le monde s'est tu

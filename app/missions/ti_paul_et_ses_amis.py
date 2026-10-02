@@ -99,9 +99,9 @@ MISSION = {
             _p("tipaul", "Les voisins ont appelé la police! Pas pour les drifts, hein: pour toi.", 4, jeu="[worried] Les voisins ont appelé la police! [wryly] Pas pour les drifts, hein… pour toi."),
             _p("tipaul", "Passe voir Bouchard, au casse-croûte. Dis-lui que mon parking a besoin d'une patrouille!", 5, jeu="[cheerful] Passe voir Bouchard, au casse-croûte. [mischievously] Dis-lui que mon parking a besoin d'une patrouille!"),
             # Acte 2 : la fin de e01, en personne ; puis l'appel et l'intro de e02.
-            _p("tipaul", "Trois Chevreuils étendus, pis mon parking est vide. T'es un artiste!", 7, jeu="[impressed] Trois Chevreuils étendus, pis mon parking est vide. [cheerful] T'es un artiste!"),
-            _p("tipaul", "Pas de patrouille? Ben c'est toi, ma patrouille, l'ami!", 7, jeu="[amused] Pas de patrouille? [cheerful] Ben c'est toi, ma patrouille, l'ami!"),
-            _p("tipaul", "Lulu, à la cantine, a un camion de poisson qui poireaute. Va la voir de ma part.", 7, jeu="[knowingly] Lulu, à la cantine, a un camion de poisson qui poireaute. Va la voir… de ma part."),
+            _p("tipaul", "Trois Chevreuils étendus, pis mon parking est vide. T'es un artiste!", 7, jeu="[impressed] Trois Chevreuils étendus, pis mon parking est vide. [cheerful] T'es un artiste!", cloture=True),
+            _p("tipaul", "Pas de patrouille? Ben c'est toi, ma patrouille, l'ami!", 7, jeu="[amused] Pas de patrouille? [cheerful] Ben c'est toi, ma patrouille, l'ami!", cloture=True),
+            _p("tipaul", "Lulu, à la cantine, a un camion de poisson qui poireaute. Va la voir de ma part.", 7, jeu="[knowingly] Lulu, à la cantine, a un camion de poisson qui poireaute. Va la voir… de ma part.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « C'est Ti-Paul! » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("tipaul", "Mon stock de bière est resté au quai des Quais. Va donc me le chercher!", 7, jeu="[worried] Mon stock de bière est resté au quai des Quais. [excited] Va donc me le chercher!"),
             _p("tipaul", "Le camion est caché derrière la cantine de Lulu. Prends-le, pis roule tranquille jusqu'ici.", 7, jeu="[matter-of-fact] Le camion est caché derrière la cantine de Lulu. [firmly] Prends-le, pis roule tranquille jusqu'ici."),
@@ -111,8 +111,8 @@ MISSION = {
             _p("tipaul", "Tout au bout de La Pointe, l'ami! Deux caisses, pas trois : il compte juste quand ça l'arrange.", 9, jeu="[cheerful] Tout au bout de La Pointe, l'ami! [knowingly] Deux caisses, pas trois… il compte juste quand ça l'arrange."),
             _p("tipaul", "Une patrouille te suit? Ma bière a pas de permis, pis toi non plus. Sème-les!", 10, jeu="[nervously] Une patrouille te suit? Ma bière a pas de permis, pis toi non plus. [firmly] Sème-les!"),
             # Acte 3 : la fin de e02, en personne ; puis l'appel et l'intro de e09.
-            _p("tipaul", "Pas une bosse, pas une caisse de cassée! T'es un vrai chauffeur, toi.", 12, jeu="[impressed] Pas une bosse, pas une caisse de cassée! [happy] T'es un vrai chauffeur, toi."),
-            _p("tipaul", "Un mois de stock, grâce à toi. Tiens, pour la peine.", 12, jeu="[warmly] Un mois de stock, grâce à toi. [satisfied] Tiens, pour la peine."),
+            _p("tipaul", "Pas une bosse, pas une caisse de cassée! T'es un vrai chauffeur, toi.", 12, jeu="[impressed] Pas une bosse, pas une caisse de cassée! [happy] T'es un vrai chauffeur, toi.", cloture=True),
+            _p("tipaul", "Un mois de stock, grâce à toi. Tiens, pour la peine.", 12, jeu="[warmly] Un mois de stock, grâce à toi. [satisfied] Tiens, pour la peine.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « C'est Ti-Paul, du dépanneur! » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("tipaul", "C'est le barbecue de janvier, pis j'ai besoin d'un chauffeur!", 12, jeu="[cheerful] C'est le barbecue de janvier, pis j'ai besoin d'un chauffeur!"),
             _p("tipaul", "Un barbecue en janvier, l'ami. L'été, tout le monde en fait, ça a pas de mérite.", 12, jeu="[cheerful] Un barbecue en janvier, l'ami. [playfully] L'été, tout le monde en fait, ça a pas de mérite."),

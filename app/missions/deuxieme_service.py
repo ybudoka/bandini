@@ -83,9 +83,9 @@ MISSION = {
             _p("bouchard", "Un stool, ça garde toujours une copie. La sienne dort dans son autre char, derrière l'hôtel.", 3, jeu="[knowingly] Un stool, ça garde toujours une copie. [gruffly] La sienne dort dans son autre char… derrière l'hôtel."),
             _p("bouchard", "Mes gars s'en viennent. Je peux rien pour toi, le jeune, sème-les.", 4, jeu="[nervously] Mes gars s'en viennent. [matter-of-fact] Je peux rien pour toi, le jeune… sème-les."),
             # Acte 2 : la fin de f06, en personne ; puis l'appel et l'intro de f09.
-            _p("bouchard", "Il se taira. Deux cents piastres achètent beaucoup de silence, par icitte.", 5, jeu="[satisfied] Il se taira. [wryly] Deux cents piastres achètent beaucoup de silence, par icitte."),
-            _p("bouchard", "T'as fait ça proprement. C'est tout ce que je demande.", 5, jeu="[gruffly] T'as fait ça proprement. [matter-of-fact] C'est tout ce que je demande."),
-            _p("bouchard", "Pis la copie, j'en ai jamais entendu parler.", 5, jeu="[deadpan] Pis la copie… j'en ai jamais entendu parler."),
+            _p("bouchard", "Il se taira. Deux cents piastres achètent beaucoup de silence, par icitte.", 5, jeu="[satisfied] Il se taira. [wryly] Deux cents piastres achètent beaucoup de silence, par icitte.", cloture=True),
+            _p("bouchard", "T'as fait ça proprement. C'est tout ce que je demande.", 5, jeu="[gruffly] T'as fait ça proprement. [matter-of-fact] C'est tout ce que je demande.", cloture=True),
+            _p("bouchard", "Pis la copie, j'en ai jamais entendu parler.", 5, jeu="[deadpan] Pis la copie… j'en ai jamais entendu parler.", cloture=True),
             _p("marco", "Cousin, c'est Marco. J'ai ma part à aller chercher au kiosque, pis j'aime pas marcher seul.", 5, jeu="[casually] Cousin, c'est Marco. [wryly] J'ai ma part à aller chercher au kiosque… pis j'aime pas marcher seul."),
             _p("marco", "Les Cravates ont pas digéré la dernière fois. Reste collé sur moi jusqu'au kiosque.", 5, jeu="[casually] Les Cravates ont pas digéré la dernière fois. [firmly] Reste collé sur moi… jusqu'au kiosque."),
             _p("marco", "Si ça chauffe, tu t'en occupes. Moi, je marche vite pis je regarde pas en arrière.", 5, jeu="[wryly] Si ça chauffe, tu t'en occupes. [nervously] Moi, je marche vite… pis je regarde pas en arrière."),

@@ -2204,7 +2204,12 @@ def erreurs_de_chapitre(mission: dict, catalogue: list[dict] | None = None) -> l
     quand son acte finit (`Chapitres.ouvrirActe`), et c'est ce que le téléphone lit déjà — h03 attend d01, l'acte 1
     de la dette, pas tout le chapitre. Le pilote réécrivait ces prérequis vers le chapitre ; ils restent justes
     à l'acte près. Et L'ÉCHEC D'UN ACTE : une réplique `echec` qui porte un `objectif` vise le marqueur de son
-    acte (`Histoire.echouer` ne dit que celle de l'acte qui a raté)."""
+    acte (`Histoire.echouer` ne dit que celle de l'acte qui a raté).
+
+    ⚠️ LA FIN DE L'ACTE D'AVANT (`cloture`, 3 oct. 2026) : au marqueur d'un acte, ce que dit encore le donneur de l'acte
+    d'avant — quand ce n'est pas aussi celui de cet acte — ferme l'acte d'avant, et porte `cloture` : un chapitre repris
+    à cet acte ne le redit pas. Une `cloture` se dit au marqueur d'un acte qui en a un avant lui, avant les répliques du
+    nouveau donneur."""
     slug, objs = mission["slug"], mission.get("objectifs") or []
     actes = [o for o in objs if o.get("type") == "acte"]
     remplace = mission.get("remplace") or []
@@ -2224,6 +2229,22 @@ def erreurs_de_chapitre(mission: dict, catalogue: list[dict] | None = None) -> l
     for ligne in (mission.get("dialogue") or {}).get("echec") or []:
         if "objectif" in ligne and ligne["objectif"] not in marqueurs:
             erreurs.append(f"{slug} : l'échec « {ligne['texte']} » ne vise pas le marqueur d'un acte")
+    donneurs = {i: o.get("donneur") for i, o in enumerate(objs) if o.get("type") == "acte"}
+    ordre = sorted(donneurs)
+    for partie, lignes in (mission.get("dialogue") or {}).items():
+        for ligne in lignes:
+            if ligne.get("cloture") and (partie != "pendant" or ligne.get("objectif") not in ordre[1:]):
+                erreurs.append(f"{slug} : « {ligne['texte']} » ferme un acte, elle se dit au marqueur de l'acte suivant")
+    for k, e in enumerate(ordre[1:], start=1):
+        avant, ici = donneurs[ordre[k - 1]], donneurs[e]
+        lignes = [x for x in (mission.get("dialogue") or {}).get("pendant") or [] if x.get("objectif") == e]
+        for ligne in lignes:
+            if ligne["qui"] == avant and avant != ici and not ligne.get("cloture"):
+                erreurs.append(f"{slug} : « {ligne['texte']} » ({avant}, au marqueur de l'acte {k + 1}) ferme l'acte d'avant"
+                               " — `cloture=True`, sinon une reprise la redit")
+        vus = [bool(x.get("cloture")) for x in lignes]
+        if vus != sorted(vus, reverse=True):
+            erreurs.append(f"{slug} : au marqueur de l'acte {k + 1}, la fin de l'acte d'avant (`cloture`) passe en premier")
     for p in mission.get("prerequis") or []:
         if p in remplace:
             erreurs.append(f"{slug} : il attend {p}, l'un de ses propres actes")

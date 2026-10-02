@@ -81,8 +81,8 @@ MISSION = {
             _p("prevost", "Les clés sont dessus. Mes camions, je les paie, je ne les verrouille pas.", 1, jeu="[matter-of-fact] Les clés sont dessus. [smugly] Mes camions, je les paie, je ne les verrouille pas."),
             _p("prevost", "Le quai des Quais, devant la cantine. Le capitaine attend, et il déteste attendre.", 2, jeu="[coldly] Le quai des Quais, devant la cantine. [matter-of-fact] Le capitaine attend, et il déteste attendre."),
             # Acte 2 : la fin de s07, en personne ; puis l'appel et l'intro de s13.
-            _p("prevost", "Le cargo est parti à l'heure. Six mois de paie pour La Shop, grâce à un voleur de chars.", 3, jeu="[satisfied] Le cargo est parti à l'heure. [smugly] Six mois de paie pour La Shop, grâce à un voleur de chars."),
-            _p("prevost", "Votre enveloppe. Ne la montrez pas à Raymonde, elle croirait que je suis devenu gentil.", 3, jeu="[matter-of-fact] Votre enveloppe. [wryly] Ne la montrez pas à Raymonde, elle croirait que je suis devenu gentil."),
+            _p("prevost", "Le cargo est parti à l'heure. Six mois de paie pour La Shop, grâce à un voleur de chars.", 3, jeu="[satisfied] Le cargo est parti à l'heure. [smugly] Six mois de paie pour La Shop, grâce à un voleur de chars.", cloture=True),
+            _p("prevost", "Votre enveloppe. Ne la montrez pas à Raymonde, elle croirait que je suis devenu gentil.", 3, jeu="[matter-of-fact] Votre enveloppe. [wryly] Ne la montrez pas à Raymonde, elle croirait que je suis devenu gentil.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « Réjean Prévost. » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("prevost", "Un bien de l'usine a quitté la cour sans facture. Je veux le récupérer.", 3, jeu="[matter-of-fact] Un bien de l'usine a quitté la cour sans facture. Je veux le récupérer."),
             _p("prevost", "Un prototype. Monté ici, pour la foire de Détroit. Il dort chez les Skateux, à La Pointe.", 3, jeu="[matter-of-fact] Un prototype. Monté ici, pour la foire de Détroit. [coldly] Il dort chez les Skateux, à La Pointe."),

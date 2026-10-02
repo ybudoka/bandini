@@ -62,8 +62,8 @@ MISSION = {
             _p("tiloup", "Klaxonne. Une épave, c'est comme un client : ça attend pas.", 2, jeu="[gruffly] Klaxonne. [wryly] Une épave, c'est comme un client : ça attend pas."),
             _p("tiloup", "Trois. Reviens, j'ai de l'argent qui sent l'huile.", 3, jeu="[satisfied] Trois. [amused] Reviens… j'ai de l'argent qui sent l'huile."),
             # Acte 2 : la fin de s02, en personne ; puis l'appel et l'intro de s05.
-            _p("tiloup", "Trois cubes. Du beau métal, pas une question. On va bien s'entendre, toi pis moi.", 4, jeu="[satisfied] Trois cubes. Du beau métal, pas une question. [warmly] On va bien s'entendre, toi pis moi."),
-            _p("tiloup", "Gros-Boulon veut te parler. Les gars de l'usine, ceux que Prévost a mis dehors.", 4, jeu="[quietly] Gros-Boulon veut te parler. [serious] Les gars de l'usine… ceux que Prévost a mis dehors."),
+            _p("tiloup", "Trois cubes. Du beau métal, pas une question. On va bien s'entendre, toi pis moi.", 4, jeu="[satisfied] Trois cubes. Du beau métal, pas une question. [warmly] On va bien s'entendre, toi pis moi.", cloture=True),
+            _p("tiloup", "Gros-Boulon veut te parler. Les gars de l'usine, ceux que Prévost a mis dehors.", 4, jeu="[quietly] Gros-Boulon veut te parler. [serious] Les gars de l'usine… ceux que Prévost a mis dehors.", cloture=True),
             _p("boulon", "Gros-Boulon, Marcel pour ma mère. Ti-Loup dit que t'es correct, on va voir.", 4, jeu="[gruffly] Gros-Boulon… [wryly] Marcel pour ma mère. [coldly] Ti-Loup dit que t'es correct… on va voir."),
             _p("boulon", "Prévost nous a mis dehors, deux cents gars, un vendredi. Lui, il a gardé sa berline.", 4, jeu="[bitterly] Prévost nous a mis dehors, deux cents gars, un vendredi. [angry] Lui, il a gardé sa berline."),
             _p("boulon", "Elle dort derrière l'usine. Je la veux en cube, chez Ti-Loup.", 4, jeu="[menacingly] Elle dort derrière l'usine. [firmly] Je la veux en cube, chez Ti-Loup."),

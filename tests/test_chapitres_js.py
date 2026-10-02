@@ -608,3 +608,63 @@ def test_sans_une_bosse_se_paie_a_l_acte_qui_l_a_gagne(banc):
         return argent.map(function (x) { return x.montant; });
     }""")
     assert r == [150, 500], r
+
+
+# --- Reprendre un acte sans redire la fin d'avant (3 oct. 2026, docs/jalons/reprendre-un-acte-sans-redire-la-fin-d-avant.md)
+
+#: Le marqueur de l'acte 2 dit la fin de l'acte 1 (`cloture`, M. Bilodeau), puis l'appel du Trappeur.
+CLOTURE = """
+  function avecCloture(m) {
+    m.dialogue.pendant = [{ qui: 'bilodeau', texte: 'Le pont tient. Merci.', objectif: 3, cloture: true },
+                          { qui: 'trappeur', texte: 'Le Trappeur. Mes collets.', objectif: 3 }];
+  }
+  function espion(L) {
+    const vu = [], vrai = L.Hud.dialogue;
+    L.Hud.dialogue = function (nom, lignes) { vu.push(lignes.join(' ')); return vrai.apply(null, arguments); };
+    return vu;
+  }
+"""
+
+
+def test_enchaine_le_marqueur_dit_la_fin_de_l_acte_d_avant(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + CLOTURE + """
+        const m = ouvrir(L), p = L.B.partie;
+        avecCloture(m);
+        commencer(L, o, 'zz'); jouer(L, o);
+        const vu = espion(L);
+        p.mission.etape = 2; L.Histoire.avancer(); jouer(L, o);   // l'acte 1 fini ici : le marqueur s'enchaîne
+        return vu;
+    }""")
+    assert r == ["Le pont tient. Merci.", "Le Trappeur. Mes collets."], r
+
+
+def test_repris_plus_tard_le_donneur_d_avant_ne_redit_pas_sa_fin(banc):
+    """La capture de Martin : devant Chez Gus, à l'acte 2, Josée répondait au téléphone avec la fin de l'acte 1."""
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + CLOTURE + """
+        ouvrir(L);
+        const B = L.B;
+        B.partie.chapitres = { zz: 3 }; B.partie.appels.zz = true;
+        L.Jeu.retourTitre(); L.Jeu.commencer(); B.joueur.invincible = 1e6;
+        avecCloture(L.Histoire.mission('zz'));   // celle qu'`ouvrir` a greffée : le paquet survit au retour au titre
+        const vu = espion(L);
+        a(L, 'trappeur'); L.Histoire.parler('trappeur'); jouer(L, o, 12);
+        return { vu: vu, etape: B.partie.mission && B.partie.mission.etape };
+    }""")
+    assert r["etape"] == 4, r
+    assert r["vu"] == ["Le Trappeur. Mes collets."], r
+
+
+def test_repris_apres_l_hopital_le_donneur_d_avant_ne_redit_pas_sa_fin(banc):
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + ZZ + REPRENDRE + CLOTURE + """
+        const m = ouvrir(L), p = L.B.partie;
+        avecCloture(m);
+        commencer(L, o, 'zz'); jouer(L, o);
+        p.mission.etape = 2; L.Histoire.avancer(); jouer(L, o);   // le marqueur de l'acte 2, enchaîné
+        L.Missions.hopital('banc');
+        attendreLeMenu(L, o);
+        const vu = espion(L);
+        choisir(L, o, 'REPRENDRE'); jouer(L, o, 12);
+        return { vu: vu, etape: p.mission && p.mission.etape };
+    }""")
+    assert r["etape"] == 4, r
+    assert r["vu"] == ["Le Trappeur. Mes collets."], r

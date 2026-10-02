@@ -44,12 +44,16 @@ def _l(qui: str, texte: str, jeu: str | None = None, hiver: tuple[str, str] | No
 
 def _p(qui: str, texte: str, objectif: int, jeu: str | None = None, hiver: tuple[str, str] | None = None,
        si: str | None = None, sauf: str | None = None,
-       branche: str | None = None, choix: list[tuple[str, str]] | None = None) -> dict:
+       branche: str | None = None, choix: list[tuple[str, str]] | None = None, cloture: bool = False) -> dict:
     """Une réplique PENDANT : dite quand l'objectif `objectif` (compté à partir de 0)
     commence — au combiné si celui qui la dit n'est pas là. `si` / `sauf` (le casse, x04) : dite
     seulement si cette mission est faite / ne l'est pas — ce qu'on a préparé, et ce qui manque
-    (`Histoire.tenu`). `branche` / `choix` : un choix dans un dialogue (`_bifurque`)."""
-    cles = {k: v for k, v in (("si", si), ("sauf", sauf)) if v}
+    (`Histoire.tenu`). `branche` / `choix` : un choix dans un dialogue (`_bifurque`).
+
+    ⚠️ `cloture` (un chapitre, 3 oct. 2026) : au marqueur d'un acte, la réplique qui FERME l'acte d'avant — la fin
+    de la mission qu'il remplaçait, dite par son donneur. Elle ne se dit que si l'acte S'ENCHAÎNE ; un chapitre
+    repris à cet acte (REPRENDRE L'ACTE, ou plus tard chez le donneur) ne la redit pas (`Chapitres.repris`)."""
+    cles = {k: v for k, v in (("si", si), ("sauf", sauf), ("cloture", cloture)) if v}
     return _bifurque(_ligne(qui, texte, jeu, hiver, objectif=objectif, **cles), branche, choix)
 
 

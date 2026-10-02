@@ -121,9 +121,9 @@ MISSION = {
             _p("lachance", "Je t'attends dehors. Je n'aime pas l'odeur de la lotion à barbe de Sal.", 3, jeu="[quietly] Je t'attends dehors. [wryly] Je n'aime pas l'odeur de la lotion à barbe de Sal."),
             _p("lachance", "Mon quart commence dans dix minutes. Le poker, lui, attendra.", 4, jeu="[matter-of-fact] Mon quart commence dans dix minutes. [somber] Le poker, lui, attendra."),
             # Acte 2 : la fin de h03, en personne ; puis l'appel et l'intro de h04.
-            _p("lachance", "La moitié de payée. Le reste, je trouverai bien comment.", 5, jeu="[relieved] La moitié de payée. [quietly] Le reste… je trouverai bien comment."),
-            _p("lachance", "Tiens. Pour ton temps, pis pour ton silence.", 5, jeu="[matter-of-fact] Tiens. [firmly] Pour ton temps, pis pour ton silence."),
-            _p("lachance", "Si Ginette demande, j'étais en consultation. Ce n'est même pas un mensonge.", 5, jeu="[deadpan] Si Ginette demande, j'étais en consultation. [wryly] Ce n'est même pas un mensonge."),
+            _p("lachance", "La moitié de payée. Le reste, je trouverai bien comment.", 5, jeu="[relieved] La moitié de payée. [quietly] Le reste… je trouverai bien comment.", cloture=True),
+            _p("lachance", "Tiens. Pour ton temps, pis pour ton silence.", 5, jeu="[matter-of-fact] Tiens. [firmly] Pour ton temps, pis pour ton silence.", cloture=True),
+            _p("lachance", "Si Ginette demande, j'étais en consultation. Ce n'est même pas un mensonge.", 5, jeu="[deadpan] Si Ginette demande, j'étais en consultation. [wryly] Ce n'est même pas un mensonge.", cloture=True),
             # ⚠️ Coupée : « Ici Lachance. »
             _p("lachance", "Un cœur arrive par l'autobus de nuit, pis mes ambulanciers sont tous sortis.", 5, jeu="[concerned] Un cœur arrive par l'autobus de nuit, pis mes ambulanciers sont tous sortis."),
             _p("lachance", "Un cœur, dans une glacière de pêcheur. Il vient de Québec, il a quatre heures de vie.", 5, jeu="[gravely] Un cœur, dans une glacière de pêcheur. [matter-of-fact] Il vient de Québec… il a quatre heures de vie."),
@@ -133,8 +133,8 @@ MISSION = {
             _p("lachance", "Une glacière bleue, avec du tape. Le chauffeur n'a pas voulu la garder sur ses genoux.", 7, jeu="[matter-of-fact] Une glacière bleue, avec du tape. [wryly] Le chauffeur n'a pas voulu la garder sur ses genoux."),
             _p("lachance", "La salle est prête, le patient est endormi. Il manque juste toi.", 8, jeu="[serious] La salle est prête, le patient est endormi. [firmly] Il manque juste toi."),
             # Acte 3 : la fin de h04, en personne ; puis l'appel et l'intro de h05.
-            _p("lachance", "Il bat. Dans quelqu'un d'autre, mais il bat.", 9, jeu="[relieved] Il bat. [softly] Dans quelqu'un d'autre… mais il bat."),
-            _p("lachance", "Tu as conduit comme un ambulancier. C'est le plus beau compliment que je fais.", 9, jeu="[warmly] Tu as conduit comme un ambulancier. [matter-of-fact] C'est le plus beau compliment que je fais."),
+            _p("lachance", "Il bat. Dans quelqu'un d'autre, mais il bat.", 9, jeu="[relieved] Il bat. [softly] Dans quelqu'un d'autre… mais il bat.", cloture=True),
+            _p("lachance", "Tu as conduit comme un ambulancier. C'est le plus beau compliment que je fais.", 9, jeu="[warmly] Tu as conduit comme un ambulancier. [matter-of-fact] C'est le plus beau compliment que je fais.", cloture=True),
             _p("ginette", "C'est Ginette, de l'hôpital. Un patient est parti sans signer son congé. Avec mon ambulance.", 9, jeu="[annoyed] C'est Ginette, de l'hôpital. Un patient est parti sans signer son congé. [sarcastic] Avec mon ambulance."),
             _p("ginette", "Je te dirai pas son nom. Disons que tu l'as déjà couché une fois, dans le Faubourg.", 9, jeu="[firmly] Je te dirai pas son nom. [knowingly] Disons que tu l'as déjà couché une fois, dans le Faubourg."),
             _p("ginette", "Vingt-deux points de suture, pis il repart avec la trousse de morphine. Quel remerciement.", 9, jeu="[annoyed] Vingt-deux points de suture, pis il repart avec la trousse de morphine. [sarcastic] Quel remerciement."),
@@ -143,8 +143,8 @@ MISSION = {
             _p("ginette", "Ses amis arrivent. Des Cravates, encore. On va manquer de fil, à ce rythme-là.", 11, jeu="[annoyed] Ses amis arrivent. Des Cravates, encore. [deadpan] On va manquer de fil, à ce rythme-là."),
             _p("ginette", "La trousse, fermée, à mon comptoir. Pis touche pas au contenu.", 12, jeu="[firmly] La trousse, fermée, à mon comptoir. [coldly] Pis touche pas au contenu."),
             # Acte 4 : la fin de h05, en personne ; puis l'appel et l'intro de h06.
-            _p("ginette", "Scellée, complète. Il a même pas su l'ouvrir, le pauvre.", 13, jeu="[satisfied] Scellée, complète. [sarcastic] Il a même pas su l'ouvrir, le pauvre."),
-            _p("ginette", "Tiens. Pis la prochaine fois qu'il se présente à l'urgence, c'est toi qui le recouds.", 13, jeu="[matter-of-fact] Tiens. [wryly] Pis la prochaine fois qu'il se présente à l'urgence, c'est toi qui le recouds."),
+            _p("ginette", "Scellée, complète. Il a même pas su l'ouvrir, le pauvre.", 13, jeu="[satisfied] Scellée, complète. [sarcastic] Il a même pas su l'ouvrir, le pauvre.", cloture=True),
+            _p("ginette", "Tiens. Pis la prochaine fois qu'il se présente à l'urgence, c'est toi qui le recouds.", 13, jeu="[matter-of-fact] Tiens. [wryly] Pis la prochaine fois qu'il se présente à l'urgence, c'est toi qui le recouds.", cloture=True),
             # ⚠️ Coupée : « Lachance, à l'appareil. »
             _p("lachance", "Sal veut le reste en pilules. Viens, avant que je change d'idée.", 13, jeu="[quietly] Sal veut le reste en pilules. [firmly] Viens, avant que je change d'idée."),
             _p("lachance", "Trois ordonnances de calmants, trois patients qui n'existent pas. Ma signature, par exemple, est vraie.", 13, jeu="[quietly] Trois ordonnances de calmants, trois patients qui n'existent pas. [bitterly] Ma signature, par exemple, est vraie."),

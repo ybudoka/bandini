@@ -28,3 +28,21 @@ REPRIS ; repris, le marqueur ne dit pas ses répliques `cloture`.
 
 **Juges** : une reprise à l'acte 2 ne dit que ce que dit le donneur de l'acte 2 ; enchaîné, la fin de l'acte 1 se dit
 toujours ; et chaque fin d'une mission remplacée, quand elle est dite au marqueur de l'acte suivant, porte `cloture`.
+
+## Notes
+
+Livré le 3 oct. 2026.
+
+- **Les données.** `_p(…, cloture=True)` sur les 110 répliques qui ferment un acte, dans 30 chapitres — retrouvées en
+  comparant chaque réplique de marqueur à la `fin` de la mission que l'acte d'avant remplaçait (les instantanés
+  d'avant chaque commit de chapitre). Aucune voix ne change de nom : le slug ne compte que la place de la réplique.
+- **Le moteur.** `Chapitres.ouvrirActe` pose `mission.enchaine` (l'acte d'avant s'est ouvert ici :
+  `acteOuvert === k - 1`) ; `Histoire.maj` ne dit une `cloture` qu'enchaînée. Une reprise — REPRENDRE L'ACTE, ou
+  PLUS TARD puis le donneur de l'acte — repart d'une mission neuve, sans `acteOuvert` : elle se tait.
+- **Les juges.** Au banc (`test_chapitres_js.py`) : enchaîné, la fin de l'acte 1 se dit ; repris plus tard, ou après
+  l'hôpital, seul le donneur de l'acte 2 parle — les deux rougissaient avant le correctif, avec la réplique de
+  M. Bilodeau. En Python (`erreurs_de_chapitre`) : au marqueur d'un acte, une réplique du donneur d'avant (quand ce
+  n'est pas aussi celui de cet acte) porte `cloture`, une `cloture` ne se dit qu'au marqueur d'un acte suivant, et
+  en premier ; retirer celle de Josée fait rougir le catalogue.
+- **Reste, hors de ce jalon** : la voix de M. Bilodeau dit « cinquante piastres » quand sa boîte dit « deux »
+  (`bilodeau-la_pointe-3`, le péage changé après la prise).

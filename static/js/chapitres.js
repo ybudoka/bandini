@@ -70,6 +70,10 @@ const Chapitres = (function () {
       // sa mission comptait — le chapitre, à sa réussite, compte pour le dernier (`Histoire.reussir`).
       if (typeof Reputation !== 'undefined' && k > 0) Reputation.reussite({ slug: m.slug, donneur: marqueurs(m)[k - 1][1] });
     }
+    // ⚠️ ENCHAÎNÉ OU REPRIS (3 oct. 2026) : l'acte d'avant s'est-il joué ICI ? Repris (REPRENDRE L'ACTE, ou plus
+    // tard chez le donneur de cet acte), le marqueur ne redit pas la fin de l'acte d'avant (`cloture`) : Josée
+    // répondait au téléphone devant Chez Gus avec ce qu'elle avait déjà dit au Brouillard.
+    pm.enchaine = k > 0 && pm.acteOuvert === k - 1;
     pm.acteOuvert = k;
     const ici = Histoire.ouEstLeJoueurEnVille();
     const v = j.dansVehicule;

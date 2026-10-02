@@ -83,9 +83,9 @@ MISSION = {
             _p("lachance", "Je sais, j'avais dit trois. Le gardien du phare a déboulé son escalier, lui, il compte pas.", 4, jeu="[wryly] Je sais, j'avais dit trois. [matter-of-fact] Le gardien du phare a déboulé son escalier… lui, il compte pas."),
             _p("lachance", "Il a une jambe cassée, pas besoin de lui casser l'autre. Évite les nids-de-poule.", 5, jeu="[deadpan] Il a une jambe cassée, pas besoin de lui casser l'autre. [firmly] Évite les nids-de-poule."),
             # Acte 2 : la fin de h01, en personne ; puis l'appel et l'intro de h02.
-            _p("lachance", "Trois de plus qui dorment dans un vrai lit, cette nuit. Ça compte.", 7, jeu="[relieved] Trois de plus qui dorment dans un vrai lit, cette nuit. [calm] Ça compte."),
-            _p("lachance", "L'hôpital te doit une faveur. Reviens si tu en as besoin.", 7, jeu="[matter-of-fact] L'hôpital te doit une faveur. [warmly] Reviens si tu en as besoin."),
-            _p("lachance", "Le gardien du phare te fait dire merci. Il boite, mais il le dit.", 7, jeu="[matter-of-fact] Le gardien du phare te fait dire merci. [wryly] Il boite… mais il le dit."),
+            _p("lachance", "Trois de plus qui dorment dans un vrai lit, cette nuit. Ça compte.", 7, jeu="[relieved] Trois de plus qui dorment dans un vrai lit, cette nuit. [calm] Ça compte.", cloture=True),
+            _p("lachance", "L'hôpital te doit une faveur. Reviens si tu en as besoin.", 7, jeu="[matter-of-fact] L'hôpital te doit une faveur. [warmly] Reviens si tu en as besoin.", cloture=True),
+            _p("lachance", "Le gardien du phare te fait dire merci. Il boite, mais il le dit.", 7, jeu="[matter-of-fact] Le gardien du phare te fait dire merci. [wryly] Il boite… mais il le dit.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « C'est Ginette, de l'hôpital. » — elle s'est nommée en prenant les clés.
             _p("ginette", "Un commis vide notre pharmacie depuis des semaines. J'ai besoin de toi.", 7, jeu="[annoyed] Un commis vide notre pharmacie depuis des semaines. [firmly] J'ai besoin de toi."),
             _p("ginette", "Il sort dans dix minutes. Suis-le sans qu'il te voie, il va vendre ça au dépanneur.", 7, jeu="[matter-of-fact] Il sort dans dix minutes. [firmly] Suis-le sans qu'il te voie… il va vendre ça au dépanneur."),

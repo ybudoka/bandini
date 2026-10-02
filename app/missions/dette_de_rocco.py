@@ -118,9 +118,9 @@ MISSION = {
         "pendant": [
             _p("sal", "Marche pas trop vite, le neveu. À mon âge, on court juste après l'argent.", 1, jeu="[amused] Marche pas trop vite, le neveu. [wryly] À mon âge, on court juste après l'argent."),
             # Acte 2 : la fin de d01, en personne ; puis l'appel et l'intro de d02.
-            _p("sal", "Belle bâtisse. Ton oncle avait du goût pour les affaires qu'il payait pas.", 2, jeu="[impressed] Belle bâtisse. [wryly] Ton oncle avait du goût… pour les affaires qu'il payait pas."),
-            _p("sal", "Tant que tu paies, le garage reste à ton nom. Mes hommes passent chaque semaine, tu les connais.", 2, jeu="[calm] Tant que tu paies, le garage reste à ton nom. [menacingly] Mes hommes passent chaque semaine… tu les connais."),
-            _p("sal", "Tiens, pour le taxi. Reviens me voir quand t'auras envie de travailler ta dette.", 2, jeu="[warmly] Tiens, pour le taxi. [knowingly] Reviens me voir quand t'auras envie de travailler ta dette."),
+            _p("sal", "Belle bâtisse. Ton oncle avait du goût pour les affaires qu'il payait pas.", 2, jeu="[impressed] Belle bâtisse. [wryly] Ton oncle avait du goût… pour les affaires qu'il payait pas.", cloture=True),
+            _p("sal", "Tant que tu paies, le garage reste à ton nom. Mes hommes passent chaque semaine, tu les connais.", 2, jeu="[calm] Tant que tu paies, le garage reste à ton nom. [menacingly] Mes hommes passent chaque semaine… tu les connais.", cloture=True),
+            _p("sal", "Tiens, pour le taxi. Reviens me voir quand t'auras envie de travailler ta dette.", 2, jeu="[warmly] Tiens, pour le taxi. [knowingly] Reviens me voir quand t'auras envie de travailler ta dette.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « C'est Sal, au terminus. » et « Passe me voir. » — il est là, et il s'est nommé.
             _p("sal", "Ton premier versement tombe aujourd'hui, le neveu.", 2, jeu="[matter-of-fact] Ton premier versement tombe aujourd'hui, le neveu."),
             _p("sal", "Cinq cents piasses. Tu les as pas? Je le savais, personne les a dans ta famille.", 2, jeu="[amused] Cinq cents piasses. Tu les as pas? [wryly] Je le savais, personne les a dans ta famille."),
@@ -130,8 +130,8 @@ MISSION = {
             _p("sal", "Les madames du terminus appellent la police pour un rien. Fais-toi oublier.", 4, jeu="[annoyed] Les madames du terminus appellent la police pour un rien. [calm] Fais-toi oublier."),
             _p("sal", "L'enveloppe, pas le taxi. Je coupe des cheveux, moi, je vends pas de chars.", 5, jeu="[matter-of-fact] L'enveloppe, pas le taxi. [wryly] Je coupe des cheveux, moi… je vends pas de chars."),
             # Acte 3 : la fin de d02, en personne ; puis l'appel et l'intro de d03.
-            _p("sal", "Cinq cents, juste. Momo compte mieux qu'il conduit.", 6, jeu="[satisfied] Cinq cents, juste. [amused] Momo compte mieux qu'il conduit."),
-            _p("sal", "Je te les marque dans mon livre. Pis ça, c'est pour ta peine : on travaille pas pour rien chez nous.", 6, jeu="[warmly] Je te les marque dans mon livre. [knowingly] Pis ça, c'est pour ta peine : on travaille pas pour rien chez nous."),
+            _p("sal", "Cinq cents, juste. Momo compte mieux qu'il conduit.", 6, jeu="[satisfied] Cinq cents, juste. [amused] Momo compte mieux qu'il conduit.", cloture=True),
+            _p("sal", "Je te les marque dans mon livre. Pis ça, c'est pour ta peine : on travaille pas pour rien chez nous.", 6, jeu="[warmly] Je te les marque dans mon livre. [knowingly] Pis ça, c'est pour ta peine : on travaille pas pour rien chez nous.", cloture=True),
             # ⚠️ Coupée : « Sal, le barbier. »
             _p("sal", "J'ai un problème de réputation, le neveu. Pis toi, t'as une dette.", 6, jeu="[annoyed] J'ai un problème de réputation, le neveu. [calm] Pis toi, t'as une dette."),
             _p("sal", "Mes hommes, on les appelle les Ciseaux. Ils coupent ce qui dépasse.", 6, jeu="[calm] Mes hommes, on les appelle les Ciseaux. [menacingly] Ils coupent ce qui dépasse."),
@@ -140,8 +140,8 @@ MISSION = {
             _p("sal", "Le plus grand, c'est leur chef. Il se promène avec un bâton comme si c'était une canne.", 7, jeu="[wryly] Le plus grand, c'est leur chef. [amused] Il se promène avec un bâton comme si c'était une canne."),
             _p("sal", "La police des Quais dort d'habitude. Faut croire que t'as fait du bruit.", 8, jeu="[amused] La police des Quais dort d'habitude. [knowingly] Faut croire que t'as fait du bruit."),
             # Acte 4 : la fin de d03, en personne ; puis l'appel et l'intro de d04.
-            _p("sal", "Trois gars de moins qui disent mon nom. Mon nom, le neveu, c'est tout ce que j'ai.", 10, jeu="[satisfied] Trois gars de moins qui disent mon nom. [serious] Mon nom, le neveu… c'est tout ce que j'ai."),
-            _p("sal", "Ton oncle aurait négocié. Toi, tu règles. Je sais pas encore si c'est mieux.", 10, jeu="[impressed] Ton oncle aurait négocié. Toi, tu règles. [wryly] Je sais pas encore si c'est mieux."),
+            _p("sal", "Trois gars de moins qui disent mon nom. Mon nom, le neveu, c'est tout ce que j'ai.", 10, jeu="[satisfied] Trois gars de moins qui disent mon nom. [serious] Mon nom, le neveu… c'est tout ce que j'ai.", cloture=True),
+            _p("sal", "Ton oncle aurait négocié. Toi, tu règles. Je sais pas encore si c'est mieux.", 10, jeu="[impressed] Ton oncle aurait négocié. Toi, tu règles. [wryly] Je sais pas encore si c'est mieux.", cloture=True),
             # ⚠️ Coupée : « Ici Sal. »
             _p("sal", "J'ai une tournée pour toi, le neveu. Trois clients, trois quartiers.", 10, jeu="[warmly] J'ai une tournée pour toi, le neveu. [matter-of-fact] Trois clients, trois quartiers."),
             _p("sal", "Ti-Paul au dépanneur, Lulu à la cantine, Ovila au phare. Tu les connais, je pense.", 10, jeu="[knowingly] Ti-Paul au dépanneur, Lulu à la cantine, Ovila au phare. [wryly] Tu les connais, je pense."),

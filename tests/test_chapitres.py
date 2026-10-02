@@ -81,6 +81,26 @@ def test_l_echec_d_un_acte_vise_son_marqueur():
     assert any("marqueur" in e for e in missions.erreurs_de_chapitre(m, catalogue=[]))
 
 
+def test_la_fin_de_l_acte_d_avant_porte_cloture():
+    """Au marqueur de l'acte 2, M. Bilodeau ferme l'acte 1 : sans `cloture`, une reprise à l'acte 2 la redit (Josée au
+    téléphone devant Chez Gus, 3 oct. 2026)."""
+    m = _chapitre()
+    m["dialogue"]["pendant"] = [{"qui": "bilodeau", "texte": "Le pont tient.", "objectif": 2, "cloture": True},
+                                {"qui": "trappeur", "texte": "Mes collets.", "objectif": 2}]
+    assert missions.erreurs_de_chapitre(m, catalogue=[]) == []
+    del m["dialogue"]["pendant"][0]["cloture"]
+    assert any("cloture=True" in e for e in missions.erreurs_de_chapitre(m, catalogue=[]))
+
+
+def test_une_cloture_se_dit_au_marqueur_d_un_acte_suivant_et_en_premier():
+    m = _chapitre()
+    m["dialogue"]["pendant"] = [{"qui": "bilodeau", "texte": "Le pont tient.", "objectif": 0, "cloture": True}]
+    assert any("marqueur de l'acte suivant" in e for e in missions.erreurs_de_chapitre(m, catalogue=[]))
+    m["dialogue"]["pendant"] = [{"qui": "trappeur", "texte": "Mes collets.", "objectif": 2},
+                                {"qui": "bilodeau", "texte": "Le pont tient.", "objectif": 2, "cloture": True}]
+    assert any("en premier" in e for e in missions.erreurs_de_chapitre(m, catalogue=[]))
+
+
 def test_le_catalogue_n_a_aucune_erreur_de_chapitre():
     for m in missions.CATALOGUE:
         assert missions.erreurs_de_chapitre(m) == [], m["slug"]

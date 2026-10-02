@@ -82,9 +82,9 @@ MISSION = {
             _p("cindy", "Pas trop vite. Mes talons sont faits pour attendre, pas pour marcher.", 1, jeu="[wryly] Pas trop vite. [nervously] Mes talons sont faits pour attendre… pas pour marcher."),
             _p("cindy", "C'est ses gars! Denis les a envoyés, je te l'avais dit!", 2, jeu="[shouting] C'est ses gars! [worried] Denis les a envoyés, je te l'avais dit!"),
             # Acte 2 : la fin de q05, en personne ; puis l'appel et l'intro de q06.
-            _p("cindy", "On est rendus. Je pensais jamais voir cette porte-là de l'autre bord.", 3, jeu="[relieved] On est rendus. [softly] Je pensais jamais voir cette porte-là… de l'autre bord."),
-            _p("cindy", "Norbert m'attend à huit heures. Il a dit « mademoiselle ». Personne m'a jamais dit ça.", 3, jeu="[surprised] Norbert m'attend à huit heures. [tenderly] Il a dit « mademoiselle »… Personne m'a jamais dit ça."),
-            _p("cindy", "Denis va être en maudit. Dis-le à Josée avant qu'il le dise, lui.", 3, jeu="[worried] Denis va être en maudit. [firmly] Dis-le à Josée… avant qu'il le dise, lui."),
+            _p("cindy", "On est rendus. Je pensais jamais voir cette porte-là de l'autre bord.", 3, jeu="[relieved] On est rendus. [softly] Je pensais jamais voir cette porte-là… de l'autre bord.", cloture=True),
+            _p("cindy", "Norbert m'attend à huit heures. Il a dit « mademoiselle ». Personne m'a jamais dit ça.", 3, jeu="[surprised] Norbert m'attend à huit heures. [tenderly] Il a dit « mademoiselle »… Personne m'a jamais dit ça.", cloture=True),
+            _p("cindy", "Denis va être en maudit. Dis-le à Josée avant qu'il le dise, lui.", 3, jeu="[worried] Denis va être en maudit. [firmly] Dis-le à Josée… avant qu'il le dise, lui.", cloture=True),
             _p("josee", "Josée. Denis a envoyé ses gars sur une fille que je t'avais confiée. Viens au bar.", 3, jeu="[coldly] Josée. Denis a envoyé ses gars sur une fille que je t'avais confiée. [firmly] Viens au bar."),
             _p("josee", "Denis est à moi depuis dix ans. Il pense que ça lui donne des droits.", 3, jeu="[matter-of-fact] Denis est à moi depuis dix ans. [coldly] Il pense que ça lui donne des droits."),
             _p("josee", "Va le voir chez nous, au port. Pas d'arme. Je veux qu'il se relève, pis qu'il s'en souvienne.", 3, jeu="[menacingly] Va le voir chez nous, au port. [firmly] Pas d'arme. Je veux qu'il se relève… pis qu'il s'en souvienne."),
@@ -94,9 +94,9 @@ MISSION = {
             _p("josee", "Quelqu'un a appelé la police. Pas un des miens. Disparais.", 6, jeu="[matter-of-fact] Quelqu'un a appelé la police. [coldly] Pas un des miens. Disparais."),
             _p("josee", "Viens au bar. Les Morues ont quelque chose à te dire.", 7, jeu="[calm] Viens au bar. [mysteriously] Les Morues ont quelque chose à te dire."),
             # Acte 3 : la fin de q06, en personne ; puis l'appel et l'intro de q12.
-            _p("josee", "Denis s'est relevé. Il boite, pis il a compris. Toute la Morue l'a vu.", 8, jeu="[satisfied] Denis s'est relevé. Il boite, pis il a compris. [coldly] Toute la Morue l'a vu."),
-            _p("josee", "Mes gars te laissent passer, astheure. T'as frappé à la loyale, chez eux.", 8, jeu="[matter-of-fact] Mes gars te laissent passer, astheure. [confident] T'as frappé à la loyale, chez eux."),
-            _p("josee", "Pis la petite, à l'hôtel. Dis-lui que la Chef paie son premier loyer.", 8, jeu="[warmly] Pis la petite, à l'hôtel. [quietly] Dis-lui que la Chef paie son premier loyer."),
+            _p("josee", "Denis s'est relevé. Il boite, pis il a compris. Toute la Morue l'a vu.", 8, jeu="[satisfied] Denis s'est relevé. Il boite, pis il a compris. [coldly] Toute la Morue l'a vu.", cloture=True),
+            _p("josee", "Mes gars te laissent passer, astheure. T'as frappé à la loyale, chez eux.", 8, jeu="[matter-of-fact] Mes gars te laissent passer, astheure. [confident] T'as frappé à la loyale, chez eux.", cloture=True),
+            _p("josee", "Pis la petite, à l'hôtel. Dis-lui que la Chef paie son premier loyer.", 8, jeu="[warmly] Pis la petite, à l'hôtel. [quietly] Dis-lui que la Chef paie son premier loyer.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « Josée. » — le nom redit (une fois par chapitre) — et « Viens au bar, vite. » : on y est.
             _p("josee", "C'est ma mère.", 8, jeu="[quietly] C'est ma mère."),
             _p("josee", "Elle a fait une crise aux Érables. Lulu l'a assise au dépanneur de Ti-Paul.", 8, jeu="[worried] Elle a fait une crise aux Érables. [matter-of-fact] Lulu l'a assise au dépanneur de Ti-Paul."),

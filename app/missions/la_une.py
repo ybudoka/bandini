@@ -85,8 +85,8 @@ MISSION = {
             _p("louise", "Il m'a vue! Pis il a pas aimé son profil. Décolle!", 2, jeu="[excited] Il m'a vue! [amused] Pis il a pas aimé son profil. [shouting] Décolle!"),
             _p("louise", "Au port, astheure. La lumière du soir sur la cantine, c'est ma dernière de la journée.", 3, jeu="[calm] Au port, astheure. [warmly] La lumière du soir sur la cantine, c'est ma dernière de la journée."),
             # Acte 2 : la fin de l01, en personne ; puis l'appel et l'intro de l02.
-            _p("louise", "Regarde-moi ça. Bouchard en furie, pis le port qui dort. C'est la une.", 4, jeu="[excited] Regarde-moi ça. Bouchard en furie, pis le port qui dort. [satisfied] C'est la une."),
-            _p("louise", "Tiens, pour l'essence. Le Clairon paie mal, mais il paie comptant.", 4, jeu="[wryly] Tiens, pour l'essence. [confident] Le Clairon paie mal, mais il paie comptant."),
+            _p("louise", "Regarde-moi ça. Bouchard en furie, pis le port qui dort. C'est la une.", 4, jeu="[excited] Regarde-moi ça. Bouchard en furie, pis le port qui dort. [satisfied] C'est la une.", cloture=True),
+            _p("louise", "Tiens, pour l'essence. Le Clairon paie mal, mais il paie comptant.", 4, jeu="[wryly] Tiens, pour l'essence. [confident] Le Clairon paie mal, mais il paie comptant.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « C'est Louise. » et « Viens au kiosque. » — elle s'est nommée, et elle est là.
             _p("louise", "J'ai trouvé ma une de demain, pis c'est toi.", 4, jeu="[teasing] J'ai trouvé ma une de demain, pis c'est toi."),
             _p("louise", "Tout le monde parle du neveu de Rocco. Personne l'a jamais vu. Je veux la photo.", 4, jeu="[confident] Tout le monde parle du neveu de Rocco. Personne l'a jamais vu. [excited] Je veux la photo."),

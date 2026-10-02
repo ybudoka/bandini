@@ -84,8 +84,8 @@ MISSION = {
             _p("diane", "Il a appelé la police, évidemment. Par principe, lui aussi.", 2, jeu="[wryly] Il a appelé la police, évidemment. [calm] Par principe, lui aussi."),
             _p("diane", "Devant le dépanneur, en face des pompes. C'est là qu'on me voit le mieux.", 3, jeu="[confident] Devant le dépanneur, en face des pompes. [wryly] C'est là qu'on me voit le mieux."),
             # Acte 2 : la fin de e13, en personne ; puis l'appel et l'intro de e08.
-            _p("diane", "Pas une bosse. Vous conduisez mieux que mon chauffeur, et vous parlez moins.", 4, jeu="[satisfied] Pas une bosse. [wryly] Vous conduisez mieux que mon chauffeur, et vous parlez moins."),
-            _p("diane", "Pour votre peine. Et quand je serai mairesse, le lot aura un nouveau règlement.", 4, jeu="[calm] Pour votre peine. [confident] Et quand je serai mairesse, le lot aura un nouveau règlement."),
+            _p("diane", "Pas une bosse. Vous conduisez mieux que mon chauffeur, et vous parlez moins.", 4, jeu="[satisfied] Pas une bosse. [wryly] Vous conduisez mieux que mon chauffeur, et vous parlez moins.", cloture=True),
+            _p("diane", "Pour votre peine. Et quand je serai mairesse, le lot aura un nouveau règlement.", 4, jeu="[calm] Pour votre peine. [confident] Et quand je serai mairesse, le lot aura un nouveau règlement.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « Diane Larivière. » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("diane", "J'ai besoin de vous, et de votre discrétion. C'est au sujet de Jo.", 4, jeu="[quietly] J'ai besoin de vous, et de votre discrétion. [somber] C'est au sujet de Jo."),
             _p("diane", "J'ai trouvé un plan dans sa chambre. Deux paquets, cachés au stationnement des Skateux.", 4, jeu="[somber] J'ai trouvé un plan dans sa chambre. [quietly] Deux paquets, cachés au stationnement des Skateux."),

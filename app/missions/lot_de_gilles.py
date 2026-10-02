@@ -67,8 +67,8 @@ MISSION = {
             _p("gilles", "Fais attention en la sortant de là. Elle est vieille, mais elle est encore à moi.", 2, jeu="[gravely] Fais attention en la sortant de là. [tenderly] Elle est vieille, mais elle est encore à moi."),
             _p("gilles", "Ils reviennent la chercher. Tiens-leur tête, le jeune, trente ans, ça se laisse pas voler deux fois.", 3, jeu="[worried] Ils reviennent la chercher. [firmly] Tiens-leur tête, le jeune… trente ans, ça se laisse pas voler deux fois."),
             # Acte 2 : la fin de s01, en personne ; puis l'appel et l'intro de s08.
-            _p("gilles", "Ma vieille remorqueuse. Pas une égratignure de plus.", 5, jeu="[relieved] Ma vieille remorqueuse. [warmly] Pas une égratignure de plus."),
-            _p("gilles", "Merci, le jeune. Reviens icitte, je te ferai un prix sur le rachat.", 5, jeu="[satisfied] Merci, le jeune. [matter-of-fact] Reviens icitte, je te ferai un prix sur le rachat."),
+            _p("gilles", "Ma vieille remorqueuse. Pas une égratignure de plus.", 5, jeu="[relieved] Ma vieille remorqueuse. [warmly] Pas une égratignure de plus.", cloture=True),
+            _p("gilles", "Merci, le jeune. Reviens icitte, je te ferai un prix sur le rachat.", 5, jeu="[satisfied] Merci, le jeune. [matter-of-fact] Reviens icitte, je te ferai un prix sur le rachat.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « C'est Gilles, de la fourrière. » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("gilles", "Des chars disparaissent du lot la nuit, pis c'est pas ma remorqueuse.", 5, jeu="[somber] Des chars disparaissent du lot la nuit… pis c'est pas ma remorqueuse."),
             _p("gilles", "Trente ans que je garde ce lot-là. J'ai jamais perdu un char, pis j'commencerai pas à la fin.", 5, jeu="[somber] Trente ans que je garde ce lot-là. [firmly] J'ai jamais perdu un char… pis j'commencerai pas à la fin."),

@@ -133,9 +133,9 @@ MISSION = {
             _p("irene", "L'École La Mante, au nord du quartier. Cogne fort, il a pris le pli de la sieste en Floride.", 1, jeu="[teasing] L'École La Mante, au nord du quartier. [amused] Cogne fort… il a pris le pli de la sieste en Floride."),
             _p("maitre", "À mains nues, là. Un élève de la Mante, on le corrige, on le casse pas.", 2, jeu="[firmly] À mains nues, là. [warmly] Un élève de la Mante, on le corrige… on le casse pas."),
             # Acte 2 : la fin de c05, en personne ; puis l'appel et l'intro de c06.
-            _p("irene", "Le club a ravoir ses tuiles, pis trois gamins ont une oreille plus longue que l'autre.", 3, jeu="[satisfied] Le club a ravoir ses tuiles… [amused] pis trois gamins ont une oreille plus longue que l'autre."),
-            _p("irene", "Victor est revenu pour de bon, qu'il dit. Je gage cinq piasses qu'il repart en janvier.", 3, jeu="[wryly] Victor est revenu pour de bon, qu'il dit. [teasing] Je gage cinq piasses qu'il repart en janvier."),
-            _p("irene", "Va le voir de temps en temps. Il te trouve de l'allure, pis il se trompe rarement.", 3, jeu="[warmly] Va le voir de temps en temps. [tenderly] Il te trouve de l'allure… pis il se trompe rarement."),
+            _p("irene", "Le club a ravoir ses tuiles, pis trois gamins ont une oreille plus longue que l'autre.", 3, jeu="[satisfied] Le club a ravoir ses tuiles… [amused] pis trois gamins ont une oreille plus longue que l'autre.", cloture=True),
+            _p("irene", "Victor est revenu pour de bon, qu'il dit. Je gage cinq piasses qu'il repart en janvier.", 3, jeu="[wryly] Victor est revenu pour de bon, qu'il dit. [teasing] Je gage cinq piasses qu'il repart en janvier.", cloture=True),
+            _p("irene", "Va le voir de temps en temps. Il te trouve de l'allure, pis il se trompe rarement.", 3, jeu="[warmly] Va le voir de temps en temps. [tenderly] Il te trouve de l'allure… pis il se trompe rarement.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « Sifu Tam, petit scarabée. » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("maitre", "Oui, j'ai un cellulaire : ma fille me l'a acheté en Floride.", 3, jeu="[amused] Oui, j'ai un cellulaire : ma fille me l'a acheté en Floride."),
             _p("maitre", "Kenny, mon meilleur élève. À huit ans, il faisait le grand écart. À vingt-deux, il fait le caïd.", 3, jeu="[warmly] Kenny, mon meilleur élève. [wryly] À huit ans, il faisait le grand écart… À vingt-deux, il fait le caïd."),
@@ -144,10 +144,10 @@ MISSION = {
             _p("maitre", "Il conduit comme dans les films, en regardant la caméra. Reste loin, il te verra pas.", 4, jeu="[amused] Il conduit comme dans les films, en regardant la caméra. [knowingly] Reste loin… il te verra pas."),
             _p("maitre", "Salue-le avant, le poing dans la paume. Après, tu le couches. C'est la politesse.", 5, jeu="[serious] Salue-le avant, le poing dans la paume. [firmly] Après, tu le couches. [playfully] C'est la politesse."),
             # Acte 3 : la fin de c06, en personne ; puis l'appel et l'intro de c07.
-            _p("maitre", "Kenny balaie le plancher de l'école depuis une heure. Il chiale, mais il balaie.", 6, jeu="[satisfied] Kenny balaie le plancher de l'école depuis une heure. [amused] Il chiale… mais il balaie."),
-            _p("maitre", "Un de rendu. Il en reste une gang, pis moi j'ai soixante-quatorze ans.", 6, jeu="[sighs] Un de rendu. [wryly] Il en reste une gang… pis moi j'ai soixante-quatorze ans."),
+            _p("maitre", "Kenny balaie le plancher de l'école depuis une heure. Il chiale, mais il balaie.", 6, jeu="[satisfied] Kenny balaie le plancher de l'école depuis une heure. [amused] Il chiale… mais il balaie.", cloture=True),
+            _p("maitre", "Un de rendu. Il en reste une gang, pis moi j'ai soixante-quatorze ans.", 6, jeu="[sighs] Un de rendu. [wryly] Il en reste une gang… pis moi j'ai soixante-quatorze ans.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « Reviens me voir demain. » — le mannequin, c'est tout de suite (l'appel de c07 suit), la même voix coupée.
-            _p("maitre", "On a un mannequin de bois à aller chercher.", 6, jeu="[mysteriously] On a un mannequin de bois à aller chercher."),
+            _p("maitre", "On a un mannequin de bois à aller chercher.", 6, jeu="[mysteriously] On a un mannequin de bois à aller chercher.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « C'est Sifu Tam. » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("maitre", "Mes élèves ont vendu Monsieur Bois à la fourrière pour quarante piasses.", 6, jeu="[bitterly] Mes élèves ont vendu Monsieur Bois à la fourrière… pour quarante piasses."),
             _p("maitre", "Monsieur Bois, c'est le mannequin de l'école. Mille neuf cent soixante-seize, du vrai érable.", 6, jeu="[tenderly] Monsieur Bois, c'est le mannequin de l'école. [confident] Mille neuf cent soixante-seize… du vrai érable."),
@@ -156,9 +156,9 @@ MISSION = {
             _p("maitre", "Gilles te prête son camion. Il m'a dit de te dire que c'est pas un char de course.", 7, jeu="[amused] Gilles te prête son camion. [deadpan] Il m'a dit de te dire que c'est pas un char de course."),
             _p("maitre", "Doucement dans les nids-de-poule. Monsieur Bois a mon âge, pis il a mal au dos lui aussi.", 8, jeu="[worried] Doucement dans les nids-de-poule. [wryly] Monsieur Bois a mon âge… pis il a mal au dos lui aussi."),
             # Acte 4 : la fin de c07, en personne ; puis l'appel et l'intro de c08.
-            _p("maitre", "Monsieur Bois est à sa place. Regarde-le, il sourit, je te jure.", 9, jeu="[relieved] Monsieur Bois est à sa place. [amused] Regarde-le… il sourit, je te jure."),
-            _p("maitre", "En échange, je t'apprends la main de la mante. Il frappe, tu accueilles, tu tournes.", 9, jeu="[serious] En échange, je t'apprends la main de la mante. [calm] Il frappe… tu accueilles… tu tournes."),
-            _p("maitre", "Garde-la pour les frimeurs. Pis dis pas à Irène que c'était gratis, elle va vouloir la même.", 9, jeu="[knowingly] Garde-la pour les frimeurs. [mischievously] Pis dis pas à Irène que c'était gratis… elle va vouloir la même."),
+            _p("maitre", "Monsieur Bois est à sa place. Regarde-le, il sourit, je te jure.", 9, jeu="[relieved] Monsieur Bois est à sa place. [amused] Regarde-le… il sourit, je te jure.", cloture=True),
+            _p("maitre", "En échange, je t'apprends la main de la mante. Il frappe, tu accueilles, tu tournes.", 9, jeu="[serious] En échange, je t'apprends la main de la mante. [calm] Il frappe… tu accueilles… tu tournes.", cloture=True),
+            _p("maitre", "Garde-la pour les frimeurs. Pis dis pas à Irène que c'était gratis, elle va vouloir la même.", 9, jeu="[knowingly] Garde-la pour les frimeurs. [mischievously] Pis dis pas à Irène que c'était gratis… elle va vouloir la même.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « Sifu Tam. » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("maitre", "Demain matin, l'école rouvre, pis je vais le crier dans tout le quartier.", 9, jeu="[cheerful] Demain matin, l'école rouvre… pis je vais le crier dans tout le quartier."),
             _p("maitre", "J'ai imprimé des affiches. Irène en met une au Dragon d'or, entre la loto pis les dés.", 9, jeu="[confident] J'ai imprimé des affiches. [amused] Irène en met une au Dragon d'or… entre la loto pis les dés."),

@@ -121,8 +121,8 @@ MISSION = {
             _p("josee", "Ils ont des lampes de poche. S'il regarde de ton bord, recule dans le noir. Tout de suite.", 2, jeu="[serious] Ils ont des lampes de poche. [firmly] S'il regarde de ton bord, recule dans le noir. Tout de suite."),
             _p("josee", "La clé est à toi. Sors par où t'es entré, pas plus vite qu'un chat.", 3, jeu="[satisfied] La clé est à toi. [quietly] Sors par où t'es entré… pas plus vite qu'un chat."),
             # Acte 2 : la fin de v01, en personne ; puis l'appel et l'intro de v02.
-            _p("josee", "Une clé, pis personne l'a vue partir. Garde-la, un jour on va entrer chez le maire sans sonner.", 4, jeu="[satisfied] Une clé, pis personne l'a vue partir. [mysteriously] Garde-la… un jour on va entrer chez le maire sans sonner."),
-            _p("josee", "T'as les mains fines. C'est plus rare que des gros bras.", 4, jeu="[warmly] T'as les mains fines. [matter-of-fact] C'est plus rare que des gros bras."),
+            _p("josee", "Une clé, pis personne l'a vue partir. Garde-la, un jour on va entrer chez le maire sans sonner.", 4, jeu="[satisfied] Une clé, pis personne l'a vue partir. [mysteriously] Garde-la… un jour on va entrer chez le maire sans sonner.", cloture=True),
+            _p("josee", "T'as les mains fines. C'est plus rare que des gros bras.", 4, jeu="[warmly] T'as les mains fines. [matter-of-fact] C'est plus rare que des gros bras.", cloture=True),
             _p("bouchard", "Salut, le jeune, c'est Bouchard. Paraît que t'as une clé qui m'intéresse.", 4, jeu="[gruffly] Salut, le jeune, c'est Bouchard. [knowingly] Paraît que t'as une clé qui m'intéresse."),
             _p("bouchard", "Le maire garde un dossier sur moi. Des enveloppes, des dates, des photos.", 4, jeu="[gravely] Le maire garde un dossier sur moi. [nervously] Des enveloppes, des dates… des photos."),
             _p("bouchard", "Il est dans son bureau, en haut de la villa. Tu rentres par la porte de service, tu le prends.", 4, jeu="[firmly] Il est dans son bureau, en haut de la villa. [matter-of-fact] Tu rentres par la porte de service, tu le prends."),
@@ -131,8 +131,8 @@ MISSION = {
             _p("bouchard", "Le grand escalier est dans le hall. Le gars du hall regarde la porte d'en avant, pas son dos.", 7, jeu="[quietly] Le grand escalier est dans le hall. [knowingly] Le gars du hall regarde la porte d'en avant, pas son dos."),
             _p("bouchard", "Tu l'as? Sors de là. Tranquille, comme un gars qui a rien vu.", 8, jeu="[nervously] Tu l'as? [firmly] Sors de là. Tranquille, comme un gars qui a rien vu."),
             # Acte 3 : la fin de v02, en personne ; puis l'appel et l'intro de v03.
-            _p("bouchard", "Propre. Ce dossier-là va faire une belle flamme dans le poêle du poste.", 9, jeu="[satisfied] Propre. [deadpan] Ce dossier-là va faire une belle flamme dans le poêle du poste."),
-            _p("bouchard", "Pis ton casier maigrit de deux pages. Entre nous, ça s'appelle de la gratitude.", 9, jeu="[knowingly] Pis ton casier maigrit de deux pages. [deadpan] Entre nous, ça s'appelle de la gratitude."),
+            _p("bouchard", "Propre. Ce dossier-là va faire une belle flamme dans le poêle du poste.", 9, jeu="[satisfied] Propre. [deadpan] Ce dossier-là va faire une belle flamme dans le poêle du poste.", cloture=True),
+            _p("bouchard", "Pis ton casier maigrit de deux pages. Entre nous, ça s'appelle de la gratitude.", 9, jeu="[knowingly] Pis ton casier maigrit de deux pages. [deadpan] Entre nous, ça s'appelle de la gratitude.", cloture=True),
             _p("sven", "Sven. Le maire de cette ville tient ses comptes dans une cave. J'aimerais les lire.", 9, jeu="[Norwegian accent][calm] Sven. [matter-of-fact] Le maire de cette ville tient ses comptes… dans une cave. J'aimerais les lire."),
             _p("sven", "Sous la villa, une chambre forte. Dedans, un grand livre : qui le maire paie, et qui le paie.", 9, jeu="[Norwegian accent][quietly] Sous la villa, une chambre forte. [matter-of-fact] Dedans, un grand livre : qui le maire paie… et qui le paie."),
             _p("sven", "La porte obéit à un terminal. Tu connais ce genre de serrure, maintenant.", 9, jeu="[Norwegian accent][calm] La porte obéit à un terminal. [wryly] Tu connais ce genre de serrure… maintenant."),

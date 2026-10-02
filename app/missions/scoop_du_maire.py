@@ -107,8 +107,8 @@ MISSION = {
             _p("norbert", "Je crains que ces messieurs ne soient pas des clients. Je les ai vus avec le chauffeur du maire.", 3, jeu="[concerned] Je crains que ces messieurs ne soient pas des clients. [quietly] Je les ai vus avec le chauffeur du maire."),
             _p("louise", "Il est là, il tremble, pis il parle. Viens entendre ça.", 4, jeu="[excited] Il est là, il tremble, pis il parle. [quietly] Viens entendre ça."),
             # Acte 2 : la fin de l03, en personne ; puis l'appel et l'intro de l04.
-            _p("louise", "Le maire a une chambre à l'année à l'hôtel. Payée par la ville. Norbert a les reçus.", 5, jeu="[excited] Le maire a une chambre à l'année à l'hôtel. [serious] Payée par la ville. Norbert a les reçus."),
-            _p("louise", "Il me manque juste une preuve qu'on peut imprimer. Je te rappelle, mon beau.", 5, jeu="[knowingly] Il me manque juste une preuve qu'on peut imprimer. [teasing] Je te rappelle, mon beau."),
+            _p("louise", "Le maire a une chambre à l'année à l'hôtel. Payée par la ville. Norbert a les reçus.", 5, jeu="[excited] Le maire a une chambre à l'année à l'hôtel. [serious] Payée par la ville. Norbert a les reçus.", cloture=True),
+            _p("louise", "Il me manque juste une preuve qu'on peut imprimer. Je te rappelle, mon beau.", 5, jeu="[knowingly] Il me manque juste une preuve qu'on peut imprimer. [teasing] Je te rappelle, mon beau.", cloture=True),
             # ⚠️ Coupée : « Louise, au Clairon. »
             _p("louise", "Norbert m'a donné les reçus. Il me manque le dossier que t'as dans ton sac.", 5, jeu="[excited] Norbert m'a donné les reçus. [knowingly] Il me manque le dossier que t'as dans ton sac."),
             _p("louise", "Le maire m'a déjà tué une histoire, y a trois ans. Celle-là, il la tuera pas.", 5, jeu="[bitterly] Le maire m'a déjà tué une histoire, y a trois ans. [firmly] Celle-là, il la tuera pas."),
@@ -118,8 +118,8 @@ MISSION = {
             _p("louise", "Les presses roulent! Pis les hommes du maire aussi. Tiens-les loin.", 7, jeu="[excited] Les presses roulent! [concerned] Pis les hommes du maire aussi. Tiens-les loin."),
             _p("louise", "Six mille copies. Viens chercher la tienne au kiosque, mon beau.", 8, jeu="[satisfied] Six mille copies. [teasing] Viens chercher la tienne au kiosque, mon beau."),
             # Acte 3 : la fin de l04, en personne ; puis l'appel et l'intro de l05.
-            _p("louise", "« Le maire dort à l'hôtel. » Aux frais de la ville, depuis trois ans. Tout est là.", 9, jeu="[excited] « Le maire dort à l'hôtel. » Aux frais de la ville, depuis trois ans. [satisfied] Tout est là."),
-            _p("louise", "Ça, c'est ta part. Pis garde ton sac fermé : il va vouloir savoir d'où ça vient.", 9, jeu="[warmly] Ça, c'est ta part. [serious] Pis garde ton sac fermé : il va vouloir savoir d'où ça vient."),
+            _p("louise", "« Le maire dort à l'hôtel. » Aux frais de la ville, depuis trois ans. Tout est là.", 9, jeu="[excited] « Le maire dort à l'hôtel. » Aux frais de la ville, depuis trois ans. [satisfied] Tout est là.", cloture=True),
+            _p("louise", "Ça, c'est ta part. Pis garde ton sac fermé : il va vouloir savoir d'où ça vient.", 9, jeu="[warmly] Ça, c'est ta part. [serious] Pis garde ton sac fermé : il va vouloir savoir d'où ça vient.", cloture=True),
             # ⚠️ Coupée : « C'est Louise! »
             _p("louise", "Le Clairon brûle! Quelqu'un a vidé un bidon sur la façade!", 9, jeu="[worried] Le Clairon brûle! Quelqu'un a vidé un bidon sur la façade!"),
             _p("louise", "Tiens, l'extincteur de mon char. Il servait pour les cigarettes du typographe.", 9, jeu="[nervously] Tiens, l'extincteur de mon char. [wryly] Il servait pour les cigarettes du typographe."),

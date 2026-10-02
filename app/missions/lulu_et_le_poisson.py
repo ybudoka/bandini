@@ -78,9 +78,9 @@ MISSION = {
             _p("lulu", "Fais-le payer, le sergent! Pis compte les billets devant lui, hein.", 4, jeu="[firmly] Fais-le payer, le sergent! [teasing] Pis compte les billets devant lui, hein."),
             _p("lulu", "Rapporte-moi ça vite, mon grand. Pis mange en chemin, t'as l'air d'un fantôme.", 5, jeu="[warmly] Rapporte-moi ça vite, mon grand. [teasing] Pis mange en chemin… t'as l'air d'un fantôme."),
             # Acte 2 : la fin de q02, en personne ; puis l'appel et l'intro de q01.
-            _p("lulu", "Pas une écaille de perdue! Le sergent va être content, pis moi, j'suis payée.", 6, jeu="[relieved] Pas une écaille de perdue! [cheerful] Le sergent va être content, pis moi, j'suis payée."),
-            _p("lulu", "Pis le sergent a payé? Ben coudonc. Y va pleuvoir des poissons.", 6, jeu="[surprised] Pis le sergent a payé? [amused] Ben coudonc… Y va pleuvoir des poissons."),
-            _p("lulu", "Passe voir Raymonde, à l'usine. Elle cherche quelqu'un qui conduit bien, pis qui pose pas de questions.", 6, jeu="[knowingly] Passe voir Raymonde, à l'usine. Elle cherche quelqu'un qui conduit bien… pis qui pose pas de questions."),
+            _p("lulu", "Pas une écaille de perdue! Le sergent va être content, pis moi, j'suis payée.", 6, jeu="[relieved] Pas une écaille de perdue! [cheerful] Le sergent va être content, pis moi, j'suis payée.", cloture=True),
+            _p("lulu", "Pis le sergent a payé? Ben coudonc. Y va pleuvoir des poissons.", 6, jeu="[surprised] Pis le sergent a payé? [amused] Ben coudonc… Y va pleuvoir des poissons.", cloture=True),
+            _p("lulu", "Passe voir Raymonde, à l'usine. Elle cherche quelqu'un qui conduit bien, pis qui pose pas de questions.", 6, jeu="[knowingly] Passe voir Raymonde, à l'usine. Elle cherche quelqu'un qui conduit bien… pis qui pose pas de questions.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « Allô, mon grand, c'est Lulu! » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("lulu", "J'ai trois Morues qui mangent chez nous depuis lundi, pis pas une cenne.", 6, jeu="[teasing] J'ai trois Morues qui mangent chez nous depuis lundi… pis pas une cenne."),
             _p("lulu", "C'est les gars de ma sœur. Josée dit qu'une Morue, ça paie pas dans la famille.", 6, jeu="[wryly] C'est les gars de ma sœur. [annoyed] Josée dit qu'une Morue… ça paie pas dans la famille."),

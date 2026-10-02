@@ -73,8 +73,8 @@ MISSION = {
             _p("rosa", "Tant qu'à y être, la robe de mariée va à l'hôtel. La mariée attend, le marié, moins.", 3, jeu="[knowingly] Tant qu'à y être, la robe de mariée va à l'hôtel. [wryly] La mariée attend… le marié, moins."),
             _p("rosa", "La mariée a appelé, elle pleure de joie. Rapporte-moi le reste de la caisse.", 4, jeu="[amused] La mariée a appelé, elle pleure de joie. [calm] Rapporte-moi le reste de la caisse."),
             # Acte 2 : la fin de f03, en personne ; puis l'appel et l'intro de f10.
-            _p("rosa", "Impeccable. Pas une couture de défaite.", 5, jeu="[satisfied] Impeccable. [amused] Pas une couture de défaite."),
-            _p("rosa", "Tiens, un rabais pour toi. Rocco payait toujours plein prix, lui. T'es différent.", 5, jeu="[knowingly] Tiens, un rabais pour toi. [softly] Rocco payait toujours plein prix, lui. T'es différent."),
+            _p("rosa", "Impeccable. Pas une couture de défaite.", 5, jeu="[satisfied] Impeccable. [amused] Pas une couture de défaite.", cloture=True),
+            _p("rosa", "Tiens, un rabais pour toi. Rocco payait toujours plein prix, lui. T'es différent.", 5, jeu="[knowingly] Tiens, un rabais pour toi. [softly] Rocco payait toujours plein prix, lui. T'es différent.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « Rosa, de la boutique. » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("rosa", "Un client a oublié une chemise hawaïenne chez nous, pis une lettre dans la poche.", 5, jeu="[knowingly] Un client a oublié une chemise hawaïenne chez nous… pis une lettre dans la poche."),
             _p("rosa", "La lettre est pour Norbert, le concierge de l'Hôtel Bandini. Il ouvre juste au gars en chemise.", 5, jeu="[knowingly] La lettre est pour Norbert, le concierge de l'Hôtel Bandini. [wryly] Il ouvre juste au gars en chemise."),

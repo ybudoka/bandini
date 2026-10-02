@@ -90,8 +90,8 @@ MISSION = {
             _p("jo", "Y est parti! Colle-lui au pare-chocs, le vieux!", 1, jeu="[excited] Y est parti! [shouting] Colle-lui au pare-chocs, le vieux!"),
             _p("jo", "OK, OK, t'es capable. Apporte-moi ses clés, qu'on en finisse.", 2, jeu="[impressed] OK, OK… t'es capable. [casually] Apporte-moi ses clés, qu'on en finisse."),
             # Acte 2 : la fin de e04, en personne ; puis l'appel et l'intro de e06.
-            _p("jo", "Ses clés. Ha! Il va entendre parler de ça jusqu'à Noël.", 3, jeu="[laughs] [amused] Ses clés. Ha! Il va entendre parler de ça jusqu'à Noël."),
-            _p("jo", "Les Chevreuils te toucheront pas, le vieux. Pis dis rien à ma mère, OK?", 3, jeu="[confident] Les Chevreuils te toucheront pas, le vieux. [nervously] Pis dis rien à ma mère, OK?"),
+            _p("jo", "Ses clés. Ha! Il va entendre parler de ça jusqu'à Noël.", 3, jeu="[laughs] [amused] Ses clés. Ha! Il va entendre parler de ça jusqu'à Noël.", cloture=True),
+            _p("jo", "Les Chevreuils te toucheront pas, le vieux. Pis dis rien à ma mère, OK?", 3, jeu="[confident] Les Chevreuils te toucheront pas, le vieux. [nervously] Pis dis rien à ma mère, OK?", cloture=True),
             _p("diane", "Diane Larivière, conseillère municipale. J'ai un service à vous demander, discrètement.", 3, jeu="[confident] Diane Larivière, conseillère municipale. [quietly] J'ai un service à vous demander… discrètement."),
             _p("diane", "Le maire Tanguay dit aux citoyens qu'il dort à la villa. Sa voiture dit autre chose.", 3, jeu="[knowingly] Le maire Tanguay dit aux citoyens qu'il dort à la villa. [wryly] Sa voiture dit autre chose."),
             _p("diane", "Ce soir, sa berline va sortir. Suivez-la jusqu'où elle s'arrête.", 3, jeu="[calm] Ce soir, sa berline va sortir. [firmly] Suivez-la jusqu'où elle s'arrête."),
@@ -99,8 +99,8 @@ MISSION = {
             _p("diane", "Elle sort. Laissez-lui de l'avance, il regarde toujours dans son rétroviseur.", 4, jeu="[quietly] Elle sort. [calm] Laissez-lui de l'avance… il regarde toujours dans son rétroviseur."),
             _p("diane", "L'Hôtel Bandini. Évidemment. Revenez me voir, je veux chaque détail.", 5, jeu="[amused] L'Hôtel Bandini. Évidemment. [firmly] Revenez me voir… je veux chaque détail."),
             # Acte 3 : la fin de e06, en personne ; puis l'appel et l'intro de e07.
-            _p("diane", "Trois nuits par semaine à l'hôtel, aux frais de la ville. Les citoyens vont adorer.", 6, jeu="[wryly] Trois nuits par semaine à l'hôtel, aux frais de la ville. [satisfied] Les citoyens vont adorer."),
-            _p("diane", "Gardez ça pour vous. Une information se vend mieux quand personne d'autre ne l'a.", 6, jeu="[knowingly] Gardez ça pour vous. [calm] Une information se vend mieux… quand personne d'autre ne l'a."),
+            _p("diane", "Trois nuits par semaine à l'hôtel, aux frais de la ville. Les citoyens vont adorer.", 6, jeu="[wryly] Trois nuits par semaine à l'hôtel, aux frais de la ville. [satisfied] Les citoyens vont adorer.", cloture=True),
+            _p("diane", "Gardez ça pour vous. Une information se vend mieux quand personne d'autre ne l'a.", 6, jeu="[knowingly] Gardez ça pour vous. [calm] Une information se vend mieux… quand personne d'autre ne l'a.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « Diane Larivière. » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("diane", "Le maire a un dossier sur chaque conseiller. Je veux le mien, et les autres.", 6, jeu="[serious] Le maire a un dossier sur chaque conseiller. Je veux le mien… et les autres."),
             _p("diane", "Son chauffeur achète ses cigarettes ici, à six heures. La clé de la porte de service est sur lui.", 6, jeu="[matter-of-fact] Son chauffeur achète ses cigarettes ici, à six heures. [quietly] La clé de la porte de service est sur lui."),
@@ -111,8 +111,8 @@ MISSION = {
             _p("diane", "En haut, au fond. Ne touchez à rien d'autre, il compte ses stylos.", 10, jeu="[quietly] En haut, au fond. [wryly] Ne touchez à rien d'autre… il compte ses stylos."),
             _p("diane", "Sortez comme vous êtes entré. Doucement.", 11, jeu="[calm] Sortez comme vous êtes entré. [softly] Doucement."),
             # Acte 4 : la fin de e07, en personne ; puis l'appel et l'intro de e10.
-            _p("diane", "Mon nom est dedans. Le vôtre aussi, d'ailleurs. Gardez-le, ce dossier : il vaut cher.", 13, jeu="[surprised] Mon nom est dedans. [amused] Le vôtre aussi, d'ailleurs. [knowingly] Gardez-le, ce dossier : il vaut cher."),
-            _p("diane", "Il y a une page sur les Chevreuils. Sur mon fils. Nous en reparlerons.", 13, jeu="[quietly] Il y a une page sur les Chevreuils. [somber] Sur mon fils… Nous en reparlerons."),
+            _p("diane", "Mon nom est dedans. Le vôtre aussi, d'ailleurs. Gardez-le, ce dossier : il vaut cher.", 13, jeu="[surprised] Mon nom est dedans. [amused] Le vôtre aussi, d'ailleurs. [knowingly] Gardez-le, ce dossier : il vaut cher.", cloture=True),
+            _p("diane", "Il y a une page sur les Chevreuils. Sur mon fils. Nous en reparlerons.", 13, jeu="[quietly] Il y a une page sur les Chevreuils. [somber] Sur mon fils… Nous en reparlerons.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « Diane Larivière. » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("diane", "Le conseil vote la paix dans les Érables jeudi. Aidez-moi à la rendre vraie.", 13, jeu="[serious] Le conseil vote la paix dans les Érables jeudi. [firmly] Aidez-moi à la rendre vraie."),
             _p("diane", "Les Chevreuils tiennent deux coins derrière le boulevard. Je les veux vides.", 13, jeu="[matter-of-fact] Les Chevreuils tiennent deux coins derrière le boulevard. [coldly] Je les veux vides."),

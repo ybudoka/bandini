@@ -82,8 +82,8 @@ MISSION = {
             _p("jeanne", "Il l'a mise dans une vieille chaloupe, au bord de l'eau. Elle est lourde, va doucement.", 3, jeu="[warmly] Il l'a mise dans une vieille chaloupe, au bord de l'eau. [gravely] Elle est lourde, va doucement."),
             _p("jeanne", "Accoste sous la chapelle. Les corneilles vont te faire une haie d'honneur.", 4, jeu="[tenderly] Accoste sous la chapelle. [wryly] Les corneilles vont te faire une haie d'honneur."),
             # Acte 2 : la fin de i02, en personne ; puis l'appel et l'intro de i05.
-            _p("jeanne", "Elle est revenue. Ce soir, elle sonne les vêpres, pis toute la baie va l'entendre.", 6, jeu="[tenderly] Elle est revenue. [warmly] Ce soir, elle sonne les vêpres, pis toute la baie va l'entendre."),
-            _p("jeanne", "Prends ça, mon enfant. Pis si un jour tu pars en traversier, écoute-la sonner.", 6, jeu="[warmly] Prends ça, mon enfant. [tenderly] Pis si un jour tu pars en traversier, écoute-la sonner."),
+            _p("jeanne", "Elle est revenue. Ce soir, elle sonne les vêpres, pis toute la baie va l'entendre.", 6, jeu="[tenderly] Elle est revenue. [warmly] Ce soir, elle sonne les vêpres, pis toute la baie va l'entendre.", cloture=True),
+            _p("jeanne", "Prends ça, mon enfant. Pis si un jour tu pars en traversier, écoute-la sonner.", 6, jeu="[warmly] Prends ça, mon enfant. [tenderly] Pis si un jour tu pars en traversier, écoute-la sonner.", cloture=True),
             # ⚠️ Coupée (2 oct. 2026) : « Sœur Jeanne, du quai de l'île! » — le nom redit (une fois par chapitre), la même voix coupée.
             _p("jeanne", "La vieille conserverie brûle, mon enfant, viens vite.", 6, jeu="[firmly] La vieille conserverie brûle, mon enfant, viens vite."),
             _p("jeanne", "Des matelots dormaient dedans, avec un fanal. Le bon Dieu leur a donné une leçon, trop fort.", 6, jeu="[worried] Des matelots dormaient dedans, avec un fanal. [wryly] Le bon Dieu leur a donné une leçon, trop fort."),
