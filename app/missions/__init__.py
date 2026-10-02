@@ -750,10 +750,10 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 # cles par defaut et les scenes), et il faut donc que le moteur soit defini.
 from . import (  # noqa: E402
     ti_paul_et_ses_amis, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f10, f11, f12, f13, ambulance_de_nuit, m1, m2, m3,
-    m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, q01, q02, q03, q04, q10, q11, nouvelle_inspectrice, lot_de_gilles,
-    raymonde_et_le_syndicat, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, q05, q06, q13,
+    m4, m5, m6, m50, m51, m52, m53, m54, m97, m99, p01, p13, p14, lulu_et_le_poisson, gege_et_les_debardeurs, q04, q10, q11, nouvelle_inspectrice, lot_de_gilles,
+    raymonde_et_le_syndicat, v01, v02, v03, c01, c02, c03, c04, c05, c06, c07, c08, cindy_et_le_beau_denis, q13,
     les_chevreuils, la_pointe, ti_loup_et_gros_boulon, s09, s11,
-    dette_de_rocco, garage_de_rocco, d07, d08, dette_du_docteur, h07, la_une, scoop_du_maire, l06, r03, r04, r06, r07, r08, commandes_de_prevost, s12, s14, q12, q09, q08, i01, i02, i03, i05, i06, i08, h08, d09, t01, t02, t03, t04, t05, t06, t09, t11, t12, t13, t14, t15, q07, m98,
+    dette_de_rocco, garage_de_rocco, d07, d08, dette_du_docteur, h07, la_une, scoop_du_maire, l06, r03, r04, r06, r07, r08, commandes_de_prevost, s12, s14, le_moteur_du_capitaine, soeur_jeanne, i03, i06, i08, h08, d09, t01, t02, t03, t04, t05, t06, t09, t11, t12, t13, t14, t15, q07, m98,
     x01, x02, x03, x04, i04, i07,
     p06, p07, p08, p12,
     diane_et_jo, e11, s04,
@@ -789,7 +789,9 @@ from . import (  # noqa: E402
 # ⚠️ c05 à c08 (29 sept. 2026, Martin : « les deux ») : le vieux maître des Mantes revient de Floride. Irène l'a
 # appelé (c05, le droit de table au mah-jong) ; lui reprend ses élèves un par un — Kenny chez Gus (c06), Monsieur Bois
 # à la fourrière et une technique en échange (c07), et les portes ouvertes (c08 : l'école rouvre, `mantes.REPRISE`).
-# ⚠️ q05, q06, q13 (29 sept. 2026, « le chemin vers les quatre libérations ») : Cindy qui veut sortir de la rue, le
+# ⚠️ Les Quais et l'île en CHAPITRES (2 oct. 2026, les autres arcs, vagues Q et I) : `lulu_et_le_poisson` (q02, q01),
+# `gege_et_les_debardeurs` (q03, q09), `cindy_et_le_beau_denis` (q05, q06, q12), `le_moteur_du_capitaine` (q08, i01),
+# `soeur_jeanne` (i02, i05). Avant : q05, q06, q13 (29 sept. 2026, « le chemin vers les quatre libérations ») : Cindy qui veut sortir de la rue, le
 # Beau Denis couché à mains nues (`calme: morues`), et la nuit des Morues — la première libération de M16
 # (`libere: quais`), après l'un OU l'autre côté du choix de Sven (`exige.une_de`).
 # ⚠️ Les Érables en CHAPITRES (2 oct. 2026, les autres arcs, vague E) : `ti_paul_et_ses_amis` (e01, e02, e09),
@@ -849,19 +851,19 @@ from . import (  # noqa: E402
 # ne sonne qu'avec 15 000 $ en poche (`exige`), et une fin n'a rien à précéder.
 CATALOGUE: list[Mission] = [
     m1.MISSION, m2.MISSION, m3.MISSION, m4.MISSION, m5.MISSION, m6.MISSION, m50.MISSION,
-    f01.MISSION, ti_paul_et_ses_amis.MISSION, q02.MISSION, raymonde_et_le_syndicat.MISSION, m51.MISSION,
+    f01.MISSION, ti_paul_et_ses_amis.MISSION, lulu_et_le_poisson.MISSION, raymonde_et_le_syndicat.MISSION, m51.MISSION,
     f04.MISSION, f05.MISSION, f06.MISSION, f07.MISSION, f09.MISSION, f11.MISSION,
-    ambulance_de_nuit.MISSION, p01.MISSION, q03.MISSION, e12.MISSION,
+    ambulance_de_nuit.MISSION, p01.MISSION, gege_et_les_debardeurs.MISSION, e12.MISSION,
     f02.MISSION, f03.MISSION, f08.MISSION,
     q04.MISSION, lot_de_gilles.MISSION,
     p13.MISSION, p14.MISSION,
     m52.MISSION, m53.MISSION, m54.MISSION,
-    q01.MISSION, q10.MISSION, q11.MISSION,
+    q10.MISSION, q11.MISSION,
     v01.MISSION, v02.MISSION, v03.MISSION,
     f13.MISSION, f10.MISSION, f12.MISSION,
     c01.MISSION, c02.MISSION, c03.MISSION, c04.MISSION,
     c05.MISSION, c06.MISSION, c07.MISSION, c08.MISSION,
-    q05.MISSION, q06.MISSION, q13.MISSION,
+    cindy_et_le_beau_denis.MISSION, q13.MISSION,
     les_chevreuils.MISSION,
     la_pointe.MISSION,
     ti_loup_et_gros_boulon.MISSION, s09.MISSION, s11.MISSION,
@@ -871,8 +873,8 @@ CATALOGUE: list[Mission] = [
     la_une.MISSION, scoop_du_maire.MISSION, l06.MISSION,
     # ⚠️ À la place de r02 : Norbert (l'acte 3) se nomme dans q07, plus haut — « qui parle se nomme ».
     nouvelle_inspectrice.MISSION, r03.MISSION, r04.MISSION, r06.MISSION, r07.MISSION, r08.MISSION,
-    commandes_de_prevost.MISSION, s12.MISSION, s14.MISSION, q12.MISSION, q09.MISSION,
-    q08.MISSION, i01.MISSION, i02.MISSION, i03.MISSION, i04.MISSION, i05.MISSION, i06.MISSION, i07.MISSION, i08.MISSION, h08.MISSION,
+    commandes_de_prevost.MISSION, s12.MISSION, s14.MISSION,
+    le_moteur_du_capitaine.MISSION, soeur_jeanne.MISSION, i03.MISSION, i04.MISSION, i06.MISSION, i07.MISSION, i08.MISSION, h08.MISSION,
     x01.MISSION, x02.MISSION, x03.MISSION, x04.MISSION,
     # ⚠️ d09 (1er oct. 2026) : le premier CHOIX DANS UN DIALOGUE — Léo doit 800 à Sal ; on le couche, ou on paie.
     d09.MISSION,

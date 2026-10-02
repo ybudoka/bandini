@@ -39,9 +39,9 @@ def test_q01_trois_morues_dehors_la_caisse_du_midi_puis_la_cantine_moins_chere(b
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'e01', 'q02']);
         const argent = paiements(L);
         const dispo = L.Histoire.disponibleDe('lulu');
-        commencer(L, o, 'q01'); jouer(L, o);
+        commencer(L, o, 'lulu_et_le_poisson'); jouer(L, o);   // q01 est son acte 2 (2 oct. 2026, marqueur 6)
         const cantine = L.Histoire.lieu('cantine');
-        const morues = B.mission.entites.filter(function (e) { return e.cible && e.etape === 0; });
+        const morues = B.mission.entites.filter(function (e) { return e.cible && e.etape === 7; });
         const coin = L.Histoire.resoudre('zone:morues', null);
         const galerie = { n: morues.length, ligne: L.Histoire.ligneObjectif(),
             coin: Math.max.apply(null, morues.map(function (e) { return Math.round(Math.hypot(e.x - coin.x, e.y - coin.y) / 16); })),
@@ -64,15 +64,15 @@ def test_q01_trois_morues_dehors_la_caisse_du_midi_puis_la_cantine_moins_chere(b
                  fait: !!B.partie.missionsFaites.q01, argent: argent.map(function (a) { return a.montant; }),
                  rabais: B.partie.rabais.cantine };
     }""")
-    assert r["dispo"] == "q01", "Lulu donne q01 après le poisson du vendredi"
+    assert r["dispo"] == "lulu_et_le_poisson", "Lulu donne l'acte 2 après le poisson du vendredi"
     assert r["galerie"]["n"] == 3 and r["galerie"]["mains"] and r["galerie"]["ligne"].startswith("VA PRÉSENTER"), (
         f"trois Morues, les mains vides : {r['galerie']}")
     # ⚠️ Dans leur coin, LOIN de la cantine : la fin se joue là (voir q01.py).
     assert r["galerie"]["cantine"] > 20, f"les Morues sont posées trop près de la cantine : {r['galerie']}"
-    assert r["fuite"]["etape"] == 1 and r["fuite"]["fuyard"] and r["fuite"]["ligne"].startswith("LE QUATRIÈME"), r["fuite"]
+    assert r["fuite"]["etape"] == 8 and r["fuite"]["fuyard"] and r["fuite"]["ligne"].startswith("LE QUATRIÈME"), r["fuite"]
     assert r["fuite"]["avance"] > 10, f"le fuyard doit filer avec la caisse : {r['fuite']}"
-    assert r["retour"]["etape"] == 2 and r["retour"]["ligne"].startswith("RAPPORTE"), r["retour"]
-    for dite in ("pendant:lulu:1", "pendant:lulu:2"):
+    assert r["retour"]["etape"] == 9 and r["retour"]["ligne"].startswith("RAPPORTE"), r["retour"]
+    for dite in ("pendant:lulu:6", "pendant:lulu:8", "pendant:lulu:9"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [150]
     assert r["rabais"] == 0.75, "le rabais de la cantine est promis : il doit être inscrit"

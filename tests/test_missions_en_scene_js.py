@@ -563,7 +563,8 @@ def test_la_coupe_de_l_intro_de_m1_filme_le_char_pas_une_ruelle_vide(banc):
 @pytest.mark.parametrize("slug,vers,cible", [
     ("m4", "porte:poste", "police"),       # l'auto-patrouille attend devant le poste
     ("m5", "zone:cravates", "cravates"),   # les Cravates tiennent leurs coins
-    ("q02", "ruelle:cantine:10", "camion"),  # le camion de poisson dort dans sa ruelle
+    # le camion de poisson dort dans sa ruelle (q02, l'acte 1 de _Lulu et le poisson_ depuis le 2 oct. 2026)
+    ("lulu_et_le_poisson", "ruelle:cantine:10", "camion"),
 ])
 def test_la_coupe_d_une_intro_qui_commence_dedans_filme_ce_qu_elle_pose(banc, slug, vers, cible):
     """⚠️ La règle des scènes, généralisée : une coupe vers la rue doit y trouver

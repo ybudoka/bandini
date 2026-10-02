@@ -708,15 +708,17 @@ def test_q03_detruire_le_camion_puis_les_boulonneux_la_police_et_gege(banc):
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6']);
         const argent = paiements(L);
-        commencer(L, o, 'q03');
-        o.frame(1); ecouter(L);   // le « pendant » de l'objectif 0 ouvre une boîte : la fermer avant de jouer
-        const camion = B.mission.chars[0];
+        // ⚠️ q03 est l'acte 1 de _Gégé et les débardeurs_ (2 oct. 2026) : le marqueur (étape 0), puis le camion (étape 1).
+        commencer(L, o, 'gege_et_les_debardeurs');
+        for (let k = 0; k < 10 && !B.mission.chars[1]; k++) { o.frame(1); ecouter(L); }
+        o.frame(1); ecouter(L);   // le « pendant » du camion ouvre une boîte : la fermer avant de jouer
+        const camion = B.mission.chars[1];
         const avant = { etape: etape(L), camion: camion ? camion.slug : null, etat: camion ? camion.etat : null };
         j.x = camion.x + 60; j.y = camion.y; L.Entites.indexer();
         camion.etat = 'epave';
         jouer(L, o);
         const apres = etape(L);
-        const gars = B.mission.entites.filter(function (e) { return e.cible && e.etape === 1; });
+        const gars = B.mission.entites.filter(function (e) { return e.cible && e.etape === 2; });
         const bagarre = { n: gars.length, groupe: gars.map(function (e) { return e.archetype || e.arch || ''; }),
                           courent: gars.every(function (e) { return e.etat === 'attaque_joueur'; }),
                           pres: Math.max.apply(null, gars.map(function (e) { return Math.round(Math.hypot(e.x - j.x, e.y - j.y) / 16); })) };
@@ -731,15 +733,15 @@ def test_q03_detruire_le_camion_puis_les_boulonneux_la_police_et_gege(banc):
         return { avant: avant, apres: apres, bagarre: bagarre, semer: semer, cache: cache, retour: retour, dites: dites,
                  fait: !!B.partie.missionsFaites.q03, argent: argent.map(function (a) { return a.montant; }) };
     }""")
-    assert r["avant"] == {"etape": 0, "camion": "camion", "etat": "stationne"}, r["avant"]
-    assert r["apres"] == 1, "le camion est une épave : `detruire` avance"
+    assert r["avant"] == {"etape": 1, "camion": "camion", "etat": "stationne"}, r["avant"]
+    assert r["apres"] == 2, "le camion est une épave : `detruire` avance"
     assert r["bagarre"]["n"] == 3 and r["bagarre"]["courent"] and r["bagarre"]["pres"] <= 12, (
         f"trois Boulonneux arrivent sur le joueur, à la course : {r['bagarre']}")
-    assert r["semer"]["etape"] == 2 and r["semer"]["ligne"].startswith("LA POLICE") and r["semer"]["etoiles"] >= 2, r["semer"]
+    assert r["semer"]["etape"] == 3 and r["semer"]["ligne"].startswith("LA POLICE") and r["semer"]["etoiles"] >= 2, r["semer"]
     assert r["cache"]["dedans"] and r["cache"]["apres"] == 0 and r["cache"]["images"] > 60, f"semée en se cachant : {r['cache']}"
-    assert r["retour"]["etape"] == 3 and r["retour"]["ligne"].startswith("RETOURNE"), r["retour"]
+    assert r["retour"]["etape"] == 4 and r["retour"]["ligne"].startswith("RETOURNE"), r["retour"]
     assert r["retour"]["loin"] > 200, f"la cantine, à l'autre bout de la ville : {r['retour']['loin']} tuiles"
-    for dite in ("pendant:gege:1", "pendant:gege:2", "pendant:gege:3"):
+    for dite in ("pendant:gege:2", "pendant:gege:3", "pendant:gege:4"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [300]
 
@@ -754,9 +756,10 @@ def test_q03_le_camion_pousse_a_l_eau_est_detruit(banc):
         L.Jeu.commencer(); L.graine(6);
         const B = L.B, j = B.joueur, TT = L.TT, c = L.Monde.carte; j.invincible = 1e6;
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6']);
-        commencer(L, o, 'q03');
+        commencer(L, o, 'gege_et_les_debardeurs');
+        for (let k = 0; k < 10 && !B.mission.chars[1]; k++) { o.frame(1); ecouter(L); }
         o.frame(1); ecouter(L);
-        const camion = B.mission.chars[0];
+        const camion = B.mission.chars[1];
         const tx = Math.floor(camion.x / TT), ty = Math.floor(camion.y / TT);
         let eau = null, d2 = Infinity;
         for (let y = 1; y < c.h - 1; y++) for (let x = 1; x < c.w - 1; x++) {
@@ -774,7 +777,7 @@ def test_q03_le_camion_pousse_a_l_eau_est_detruit(banc):
     }""")
     assert r["coule"] >= 0, f"le camion n'a pas coulé : le juge ne prouve rien ({r})"
     assert r["etat"] == "epave", f"le camion au fond de l'eau n'est pas une épave : {r['etat']!r}"
-    assert r["etape"] == 1, f"le camion coulé ne compte pas pour `detruire` : étape {r['etape']} ({r})"
+    assert r["etape"] == 2, f"le camion coulé ne compte pas pour `detruire` : étape {r['etape']} ({r})"
 
 def test_e12_le_phare_la_rampe_de_la_pointe_la_police_puis_le_depanneur(banc):
     """`sauter` (M16) : le vol se compte comme le défi *Le Grand Saut* (`vol_px`), tant que

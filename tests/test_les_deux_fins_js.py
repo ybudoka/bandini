@@ -129,7 +129,8 @@ def test_m99_le_dernier_traversier_se_joue_jusqu_au_generique_puis_la_ville_rest
     assert r["vus"]["musique"] == "generique", r["vus"]
     fortune = r["valeurs"]["argent"] + r["valeurs"]["coffre"]
     assert f"{fortune:,}".replace(",", " ") + " $" in r["vus"]["cartons"], r["vus"]["cartons"]
-    assert r["faitesAvant"] >= 8, r["faitesAvant"]
+    # m1 à m6, et ce que Bérubé donne avant m99 : un chapitre depuis le 2 oct. 2026 (Le moteur du capitaine, q08 et i01).
+    assert r["faitesAvant"] >= 7, r["faitesAvant"]
     assert str(r["faitesAvant"] + 1) in r["vus"]["cartons"], "les missions faites (m1 à m6, celles de Bérubé, et m99)"
     assert any(c.endswith("À SAL") or c == "RÉGLÉE" for c in r["vus"]["cartons"]), r["vus"]["cartons"]
     assert not any("{" in c for c in r["vus"]["cartons"]), r["vus"]["cartons"]

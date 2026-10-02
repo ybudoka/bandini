@@ -8,7 +8,10 @@ prime, sur le modèle de `test_arc_f_js.py`.
 - q13, _La nuit des Morues_ : offerte après q06 ET l'un des deux côtés du choix (`exige.une_de`) ; les matelots
   de Sven (`pieton: matelot`) débarquent en deux vagues puis leur bosco ; et **les Quais sont libérés, dans le
   monde** — le gang ne sort plus, ne saute plus, ne prend plus de coin, rend ceux qu'il tenait, sa cour
-  redevient « Les Quais » sous la mini-carte, _Le Boss_ compte un district de plus, et la sauvegarde le garde."""
+  redevient « Les Quais » sous la mini-carte, _Le Boss_ compte un district de plus, et la sauvegarde le garde.
+
+⚠️ Depuis le 2 oct. 2026 (docs/jalons/des-missions-en-chapitres.md, vague Q), q05 et q06 sont les actes 1 et 2 de
+_Cindy et le Beau Denis_ (marqueurs 0 et 3) ; q13 reste une mission."""
 
 from outils_missions import OUTILS, PLUS_LONGUES
 
@@ -40,7 +43,7 @@ def _q05(banc, tuer_cindy=False):
         const dispo = L.Histoire.disponibleDe('cindy');
         const devant = L.Histoire.donneur('cindy'), cantine = L.Histoire.lieu('cantine');
         const poste = devant ? Math.round(Math.hypot(devant.x - cantine.x, devant.y - cantine.y) / 16) : null;
-        commencer(L, o, 'q05'); jouer(L, o);
+        commencer(L, o, 'cindy_et_le_beau_denis'); jouer(L, o);
         const c = B.mission.protege;
         const attend = { etape: etape(L), c: !!c, suit: !!(c && c.suit), personnage: c && c.personnage };
         const suit = rejoindre(L, o, c);
@@ -51,7 +54,7 @@ def _q05(banc, tuer_cindy=False):
         arriverAvec(L, o, c, 'hotel');
         const arrivee = { etape: etape(L), ligne: L.Histoire.ligneObjectif() };
         jouer(L, o, 30);
-        const gars = B.mission.entites.filter(function (e) { return e.cible && e.etape === 1; });
+        const gars = B.mission.entites.filter(function (e) { return e.cible && e.etape === 2; });
         const h = L.Histoire.lieu('hotel');
         const bagarre = { n: gars.length, arch: gars.map(function (e) { return e.arch; }),
                           courent: gars.every(function (e) { return e.etat === 'attaque_joueur'; }),
@@ -68,13 +71,13 @@ def _q05(banc, tuer_cindy=False):
 def test_q05_cindy_nous_suit_jusqu_a_l_hotel_puis_les_gars_de_denis_et_elle_quitte_la_rue(banc):
     r = _q05(banc)
     assert r["absente"] is True, "Cindy n'est pas devant la cantine avant q04 (et ne décale rien à l'ouverture)"
-    assert r["dispo"] == "q05", "Cindy donne q05 après la cargaison du Norvégien"
+    assert r["dispo"] == "cindy_et_le_beau_denis", "Cindy donne le chapitre après la cargaison du Norvégien"
     assert r["poste"] is not None and r["poste"] <= 6, f"Cindy se tient devant la cantine : {r['poste']}"
-    assert r["attend"] == {"etape": 0, "c": True, "suit": False, "personnage": "cindy"}, r["attend"]
+    assert r["attend"] == {"etape": 1, "c": True, "suit": False, "personnage": "cindy"}, r["attend"]
     assert r["suit"] is True, "rejointe, elle nous suit"
-    assert r["arrivee"]["etape"] == 1 and r["arrivee"]["ligne"].startswith("LES GARS DU BEAU DENIS"), r["arrivee"]
+    assert r["arrivee"]["etape"] == 2 and r["arrivee"]["ligne"].startswith("LES GARS DU BEAU DENIS"), r["arrivee"]
     assert r["bagarre"]["n"] == 2 and r["bagarre"]["courent"] and r["bagarre"]["loin"] <= 20, r["bagarre"]
-    for dite in ("pendant:cindy:0", "pendant:cindy:1"):
+    for dite in ("pendant:cindy:1", "pendant:cindy:2"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [100]
     assert r["partie"] is True, "Cindy travaille à l'hôtel : elle ne se tient plus devant la cantine"
@@ -93,14 +96,14 @@ def _q06(banc, arme):
         const argent = paiements(L);
         // ⚠️ Josée a d'autres missions ouvertes avant elle dans le catalogue (q11, le choix) : on juge que q06 est
         // OFFERTE, pas qu'elle passe la première.
-        const dispo = L.Histoire.disponibles().find(function (m) { return m.slug === 'q06' && m.donneur === 'josee'; });
+        const dispo = L.Histoire.disponibles().find(function (m) { return m.slug === 'cindy_et_le_beau_denis' && L.Chapitres.donneurDe(m) === 'josee'; });
         p.armes.pistolet = { mun: 12, usure: 0 }; j.arme = 'pistolet'; p.arme = 'pistolet';
-        commencer(L, o, 'q06'); jouer(L, o);
+        commencer(L, o, 'cindy_et_le_beau_denis'); jouer(L, o);
         const bar = L.Histoire.lieu('bar');
         j.x = bar.x; j.y = bar.y + 8; L.Entites.indexer(); jouer(L, o);
         const armee = { ligne: L.Histoire.ligneObjectif(), etape: etape(L) };
         const coin = L.Histoire.resoudre('zone:morues', null);
-        const gardes = B.mission.entites.filter(function (e) { return e.cible && e.etape === 0; });
+        const gardes = B.mission.entites.filter(function (e) { return e.cible && e.etape === 4; });
         const pose = { n: gardes.length, mains: gardes.every(function (e) { return !e.arme; }),
                        coin: Math.max.apply(null, gardes.map(function (e) { return Math.round(Math.hypot(e.x - coin.x, e.y - coin.y) / 16); })) };
         if (""" + ("true" if arme else "false") + """) {
@@ -112,7 +115,7 @@ def _q06(banc, arme):
         const rangee = L.Histoire.ligneObjectif();
         j.x = gardes[0].x + 30; j.y = gardes[0].y; L.Entites.indexer(); jouer(L, o, 4);
         gardes.forEach(function (e) { L.Entites.assommer(e); }); jouer(L, o);
-        const denis = B.mission.entites.find(function (e) { return e.cible && e.etape === 1; });
+        const denis = B.mission.entites.find(function (e) { return e.cible && e.etape === 5; });
         const chef = { etape: etape(L), ligne: L.Histoire.ligneObjectif(), chef: !!(denis && denis.chef),
                        mains: denis && !denis.arme, vie: denis && denis.vieMax };
         L.Entites.assommer(denis); jouer(L, o);
@@ -128,8 +131,8 @@ def _q06(banc, arme):
 
 def test_q06_une_arme_au_poing_chez_les_morues_c_est_rate(banc):
     r = _q06(banc, arme=True)
-    assert r["dispo"] == "q06", "Josée donne q06 après Cindy"
-    assert r["armee"]["etape"] == 0 and r["armee"]["ligne"].endswith("— RANGE TON ARME"), (
+    assert r["dispo"] == "cindy_et_le_beau_denis", "Josée donne l'acte 2 après Cindy"
+    assert r["armee"]["etape"] == 4 and r["armee"]["ligne"].endswith("— RANGE TON ARME"), (
         f"la ligne doit dire de ranger l'arme avant d'y entrer : {r['armee']}")
     assert r["pose"]["n"] == 2 and r["pose"]["mains"] and r["pose"]["coin"] <= 12, r["pose"]
     assert r["rate"] is True and r["echecs"] == 1, f"un pistolet au poing chez les Morues doit faire rater : {r}"
@@ -139,10 +142,10 @@ def test_q06_une_arme_au_poing_chez_les_morues_c_est_rate(banc):
 def test_q06_a_mains_nues_denis_tombe_et_les_morues_te_laissent_passer(banc):
     r = _q06(banc, arme=False)
     assert "RANGE TON ARME" not in r["rangee"], r["rangee"]
-    assert r["chef"]["etape"] == 1 and r["chef"]["chef"] and r["chef"]["mains"] and r["chef"]["vie"] == 180, r["chef"]
-    assert r["semer"]["etape"] == 2 and r["semer"]["etoiles"] >= 2, r["semer"]
+    assert r["chef"]["etape"] == 5 and r["chef"]["chef"] and r["chef"]["mains"] and r["chef"]["vie"] == 180, r["chef"]
+    assert r["semer"]["etape"] == 6 and r["semer"]["etoiles"] >= 2, r["semer"]
     assert r["cache"]["dedans"] and r["cache"]["apres"] == 0, r["cache"]
-    for dite in ("pendant:josee:1", "pendant:josee:2", "pendant:josee:3"):
+    for dite in ("pendant:josee:3", "pendant:josee:5", "pendant:josee:6", "pendant:josee:7"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [350]
     assert r["calmes"] == ["morues"] and r["calmeMorues"] is True

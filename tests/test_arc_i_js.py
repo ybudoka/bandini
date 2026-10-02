@@ -50,9 +50,10 @@ def test_q08_le_moteur_du_capitaine(banc):
         return { dispo: dispo, retour: retour, dites: dites, fait: !!p.missionsFaites.q08,
                  argent: argent.map(function (a) { return a.montant; }) };
     }""")
-    assert r["dispo"] == "q08", r
-    assert r["retour"]["etape"] == 1 and r["retour"]["ligne"].startswith("RAPPORTE LE MOTEUR"), r["retour"]
-    for dite in ("pendant:berube:0", "pendant:berube:1"):
+    # q08 et i01 sont les actes du _Moteur du capitaine_ (2 oct. 2026, marqueurs 0 et 3).
+    assert r["dispo"] == "le_moteur_du_capitaine", r
+    assert r["retour"]["etape"] == 2 and r["retour"]["ligne"].startswith("RAPPORTE LE MOTEUR"), r["retour"]
+    for dite in ("pendant:berube:1", "pendant:berube:2"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [200], r
 
@@ -77,11 +78,11 @@ def test_i01_la_chaloupe_jusqu_au_hangar_de_l_ile(banc):
         return { mission: mission, chaloupe: chaloupe, monte: monte, accoste: accoste, accueil: accueil, dites: dites,
                  fait: !!p.missionsFaites.i01, argent: argent.map(function (a) { return a.montant; }) };
     }""")
-    assert r["mission"] == "i01", r
+    assert r["mission"] == "le_moteur_du_capitaine", "le capitaine donne l'acte 2 à qui a fait q08"
     assert r["chaloupe"] == {"slug": "bateau", "eau": True}, r["chaloupe"]
-    assert r["monte"] == 1 and r["accoste"] == 2, r
+    assert r["monte"] == 5 and r["accoste"] == 6, r
     assert r["accueil"] == "accueil", r
-    for dite in ("pendant:berube:0", "pendant:berube:1", "pendant:berube:2", "accueil:leo:2"):
+    for dite in ("pendant:berube:3", "pendant:berube:4", "pendant:berube:5", "pendant:berube:6", "accueil:leo:6"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [120], r
 
@@ -109,10 +110,11 @@ def test_i02_la_cloche_rachetee_et_ramenee_par_l_eau(banc):
         return { mission: mission, paye: paye, slug: v && v.slug, accoste: accoste, dites: dites,
                  fait: !!p.missionsFaites.i02, argent: argent.map(function (a) { return a.montant; }) };
     }""")
-    assert r["mission"] == "i02", r
-    assert r["paye"]["etape"] == 2 and r["paye"]["argent"] == 800, r["paye"]
-    assert r["slug"] == "bateau" and r["accoste"] == 4, r
-    for dite in ("accueil:tiloup:0", "pendant:jeanne:1", "pendant:jeanne:2", "pendant:jeanne:3"):
+    # i02 et i05 sont les actes de _Sœur Jeanne_ (2 oct. 2026, marqueurs 0 et 6).
+    assert r["mission"] == "soeur_jeanne", r
+    assert r["paye"]["etape"] == 3 and r["paye"]["argent"] == 800, r["paye"]
+    assert r["slug"] == "bateau" and r["accoste"] == 5, r
+    for dite in ("accueil:tiloup:1", "pendant:jeanne:2", "pendant:jeanne:3", "pendant:jeanne:4"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [150], r
 
@@ -168,10 +170,10 @@ def test_i05_la_conserverie_brule_pres_du_hangar(banc):
         const ou = feu ? L.Incendies.position(feu) : null;
         const brule = { feu: !!feu, arme: j.arme, pres: ou ? Math.round(Math.hypot(ou.x - h.x, ou.y - h.y) / 16) : null };
         aPied(L); o.touche('KeyJ');
-        for (let k = 0; k < 400 && etape(L) === 0; k++) { j.x = ou.x; j.y = ou.y + 18; j.angle = -Math.PI / 2; o.frame(1); ecouter(L); }
+        for (let k = 0; k < 400 && etape(L) === 7; k++) { j.x = ou.x; j.y = ou.y + 18; j.angle = -Math.PI / 2; o.frame(1); ecouter(L); }
         o.relacher('KeyJ'); o.frame(1);
         const eteint = etape(L);
-        const eux = B.mission.entites.filter(function (e) { return e.cible && e.etape === 1; });
+        const eux = B.mission.entites.filter(function (e) { return e.cible && e.etape === 8; });
         const matelots = { n: eux.length, arch: eux.map(function (e) { return e.arch; }) };
         eux.forEach(function (e) { L.Entites.assommer(e); }); jouer(L, o, 10);
         const retour = etape(L);
@@ -179,11 +181,11 @@ def test_i05_la_conserverie_brule_pres_du_hangar(banc):
         return { mission: mission, brule: brule, eteint: eteint, matelots: matelots, retour: retour, dites: dites,
                  fait: !!p.missionsFaites.i05, argent: argent.map(function (a) { return a.montant; }) };
     }""")
-    assert r["mission"] == "i05", r
+    assert r["mission"] == "soeur_jeanne", r
     assert r["brule"]["feu"] and r["brule"]["arme"] == "extincteur" and r["brule"]["pres"] <= 8, r["brule"]
-    assert r["eteint"] == 1 and r["matelots"]["n"] == 3 and set(r["matelots"]["arch"]) == {"matelot"}, r
-    assert r["retour"] == 2, r
-    for dite in ("pendant:jeanne:0", "pendant:jeanne:1", "pendant:jeanne:2"):
+    assert r["eteint"] == 8 and r["matelots"]["n"] == 3 and set(r["matelots"]["arch"]) == {"matelot"}, r
+    assert r["retour"] == 9, r
+    for dite in ("pendant:jeanne:6", "pendant:jeanne:7", "pendant:jeanne:8", "pendant:jeanne:9"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [200], r
 

@@ -697,10 +697,12 @@ def test_action_parle_a_la_personne_meme_avec_un_char_a_portee(banc):
         L.Jeu.commencer(); L.graine(6);
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'].forEach(function (s) { B.partie.missionsFaites[s] = 1; });
-        L.Histoire.commencer('q02'); B.cinema = null; B.scene = null;
+        L.Histoire.commencer('lulu_et_le_poisson'); B.cinema = null; B.scene = null;   // q02, son acte 1
+        for (let k = 0; k < 10 && !B.mission.vehicule; k++) o.frame(1);
         const v = B.mission.vehicule, ti = L.Histoire.donneur('tipaul');
-        j.x = v.x + 20; j.y = v.y; L.Entites.indexer(); L.Vehicules.monter(j, v); L.Entites.indexer(); o.frame(2);
+        j.x = v.x + 20; j.y = v.y; L.Entites.indexer(); L.Vehicules.monter(j, v); L.Entites.indexer(); o.frame(3);
         while (B.cinema) L.Histoire.suivante();
+        o.frame(2); while (B.cinema) L.Histoire.suivante();
         // Garé juste derrière Ti-Paul, dans l'axe : on le regarde, lui ET le camion.
         v.x = ti.x + 12; v.y = ti.y; v.vitesse = 0; j.x = v.x; j.y = v.y; L.Entites.indexer(); o.frame(1);
         L.Vehicules.descendre(j); L.Entites.indexer(); o.frame(2);

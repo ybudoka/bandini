@@ -262,18 +262,22 @@ def test_q02_le_camion_de_poisson_la_glace_de_ti_paul_le_sergent_paie_et_lulu_en
     « Des missions plus longues » (22 sept. 2026) : détour aux Érables — on descend chez Ti-Paul pour la
     glace (sa poignée de main se dit), on remonte dans LE MÊME camion ; on livre au casse-croûte ; le
     sergent paie en personne (dedans) ; on rapporte l'argent à la cantine. Sans bosse, la mission paie la
-    moitié en plus ; avec une bosse, non — la prime se décide à la livraison et tient jusqu'à la fin."""
+    moitié en plus ; avec une bosse, non — la prime se décide à la livraison et tient jusqu'à la fin.
+
+    ⚠️ q02 est l'acte 1 de _Lulu et le poisson_ (2 oct. 2026) : tout se décale d'un (le marqueur), et l'acte paie sa
+    prime, bonus compris, quand l'argent arrive à la cantine."""
     JEU = """
         L.Jeu.commencer(); L.graine(6);
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6']);
         const argent = paiements(L);
-        L.Histoire.commencer('q02'); B.cinema = null; B.scene = null;
+        L.Histoire.commencer('lulu_et_le_poisson'); B.cinema = null; B.scene = null;
+        for (let k = 0; k < 10 && !B.mission.vehicule; k++) o.frame(1);
         const v = B.mission.vehicule, cantine = L.Histoire.lieu('cantine');
         const camion = v ? { slug: v.slug, etat: v.etat, d: Math.round(Math.hypot(v.x - cantine.x, v.y - cantine.y)) } : null;
         j.x = v.x + 20; j.y = v.y; L.Entites.indexer();
         L.Vehicules.monter(j, v); L.Entites.indexer();
-        o.frame(2);
+        o.frame(3);
         const etapeCourante = etape(L), ligne = L.Histoire.ligneObjectif();
         const pendant = boite(L);
         fermer(L);
@@ -322,23 +326,23 @@ def test_q02_le_camion_de_poisson_la_glace_de_ti_paul_le_sergent_paie_et_lulu_en
     c = propre["camion"]
     assert c and c["slug"] == "camion" and c["etat"] == "stationne", "le camion de poisson dort là avant qu'on en parle"
     assert c["d"] >= 100, f"il faut le chercher, pas le trouver à la porte ({c['d']} px de la cantine)"
-    assert propre["etape"] == 1 and propre["ligne"].startswith("ARRÊTE CHERCHER DE LA GLACE"), "monté, on va chercher la glace"
-    assert propre["pendant"] == {"partie": "pendant", "qui": "lulu", "slug": "lulu-q02-8", "telephone": True}, \
+    assert propre["etape"] == 2 and propre["ligne"].startswith("ARRÊTE CHERCHER DE LA GLACE"), "monté, on va chercher la glace"
+    assert propre["pendant"] == {"partie": "pendant", "qui": "lulu", "slug": "lulu-lulu_et_le_poisson-8", "telephone": True}, \
         "Lulu le dit au combiné : elle est à sa cantine"
     assert propre["loin"] >= 100, f"le dépanneur est à l'autre bout de la ville ({propre['loin']} tuiles de la cantine)"
     g = propre["glace"]
-    assert g["avant"] == 1 and not g["dansLeCamion"]
-    assert g["boite"] == {"partie": "accueil", "qui": "tipaul", "slug": "tipaul-q02-12", "telephone": False}, g
-    assert g["pendantBoite"] == 1 and g["apres"] == 2 and g["ligne"].startswith("LIVRE LE POISSON"), g
-    assert g["suite"] and g["suite"]["slug"] == "lulu-q02-9", "Lulu : doucement dans les tournants"
+    assert g["avant"] == 2 and not g["dansLeCamion"]
+    assert g["boite"] == {"partie": "accueil", "qui": "tipaul", "slug": "tipaul-lulu_et_le_poisson-22", "telephone": False}, g
+    assert g["pendantBoite"] == 2 and g["apres"] == 3 and g["ligne"].startswith("LIVRE LE POISSON"), g
+    assert g["suite"] and g["suite"]["slug"] == "lulu-lulu_et_le_poisson-9", "Lulu : doucement dans les tournants"
     lv = propre["livre"]
-    assert lv["etape"] == 3 and lv["ligne"].startswith("FAIS PAYER LE SERGENT") and lv["aPied"], lv
-    assert lv["boite"] and lv["boite"]["slug"] == "lulu-q02-10"
+    assert lv["etape"] == 4 and lv["ligne"].startswith("FAIS PAYER LE SERGENT") and lv["aPied"], lv
+    assert lv["boite"] and lv["boite"]["slug"] == "lulu-lulu_et_le_poisson-10"
     s = propre["sergent"]
-    assert s["piece"] == "casse_croute" and s["avant"] == 3
-    assert s["boite"] == {"partie": "accueil", "qui": "bouchard", "slug": "bouchard-q02-13", "telephone": False}, s
-    assert s["pendantBoite"] == 3 and s["apres"] == 4 and s["ligne"].startswith("RAPPORTE L'ARGENT À LULU"), s
-    assert s["suite"] and s["suite"]["slug"] == "lulu-q02-11"
+    assert s["piece"] == "casse_croute" and s["avant"] == 4
+    assert s["boite"] == {"partie": "accueil", "qui": "bouchard", "slug": "bouchard-lulu_et_le_poisson-23", "telephone": False}, s
+    assert s["pendantBoite"] == 4 and s["apres"] == 5 and s["ligne"].startswith("RAPPORTE L'ARGENT À LULU"), s
+    assert s["suite"] and s["suite"]["slug"] == "lulu-lulu_et_le_poisson-11"
     assert propre["argentAvant"] == 0, "rien n'est payé avant d'avoir rapporté l'argent à Lulu"
     assert propre["fait"] is True and propre["argent"] == [375], "250 $ et la prime sans bosse (+50 %)"
     assert cabosse["fait"] is True and cabosse["argent"] == [250], "une bosse, et la prime s'en va"

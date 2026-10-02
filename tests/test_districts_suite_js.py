@@ -180,15 +180,16 @@ def _q12(banc, lent=False):
 
 def test_q12_la_mere_de_josee_a_l_urgence(banc):
     r = _q12(banc)
-    assert r["mission"] == "q12" and r["slug"] == "ambulance" and r["mere"] == 2, r
-    for dite in ("pendant:josee:0", "pendant:josee:1", "pendant:josee:2"):
+    # q12 est l'acte 3 de _Cindy et le Beau Denis_ (2 oct. 2026, marqueur 8).
+    assert r["mission"] == "cindy_et_le_beau_denis" and r["slug"] == "ambulance" and r["mere"] == 11, r
+    for dite in ("pendant:josee:8", "pendant:josee:9", "pendant:josee:10", "pendant:josee:11"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [300], r
 
 
 def test_q12_trop_lent_c_est_rate(banc):
     r = _q12(banc, lent=True)
-    assert r["mission"] == "q12"
+    assert r["mission"] == "cindy_et_le_beau_denis"
     assert r["rate"] is True and r["echecs"] == 1 and r["fait"] is False, r
 
 
@@ -213,8 +214,9 @@ def test_q09_trois_points_autour_des_quais_en_camion(banc):
         return { dispo: dispo, slug: v.slug, n: pts.length, passes: passes, dites: dites, fait: !!p.missionsFaites.q09,
                  argent: argent.map(function (a) { return a.montant; }) };
     }""")
-    assert r["dispo"] == "q09", r
+    # q09 est l'acte 2 de _Gégé et les débardeurs_ (2 oct. 2026, marqueur 5).
+    assert r["dispo"] == "gege_et_les_debardeurs", r
     assert r["slug"] == "camion" and r["n"] == 3 and r["passes"][:2] == [1, 2], r
-    for dite in ("pendant:gege:0", "pendant:gege:1", "pendant:gege:2"):
+    for dite in ("pendant:gege:5", "pendant:gege:6", "pendant:gege:7", "pendant:gege:8"):
         assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [300], r
