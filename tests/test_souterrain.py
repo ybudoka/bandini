@@ -94,3 +94,49 @@ def test_deux_rangees_face_a_face_autour_d_une_allee():
     for y in range(bas_du_nord, haut_du_sud):
         assert all(plan[y][x] == "#" for x in range(1, len(plan[0]) - 1)), f"l'allée est libre à la rangée {y}"
     assert len(plan[0]) * carte.TUILE_PX <= blocs.ECRAN_PX[0] and len(plan) * carte.TUILE_PX <= blocs.ECRAN_PX[1]
+
+
+# --- La vague 2 : le −2 -----------------------------------------------------------------------------------------
+
+
+def test_le_moins_deux_tient_debout_en_sous_sol_a_part():
+    """Le −2 est un DEUXIÈME sous-sol, pas un deuxième cadre : le juge des blocs veut chaque cadre plus grand que
+    l'écran, et le −1 est plus petit depuis ses deux rangées face à face."""
+    b = souterrain.BLOC_2
+    assert blocs.erreurs(b) == []
+    assert b in blocs.SOUS_SOLS and b not in blocs.BLOCS and blocs.par_slug("souterrain_2") is b
+    assert b["passage"] is None and b["seuil"] == "garage" and b["abrite"] is True
+
+
+def test_p11_a_p20_aux_memes_places_que_p1_a_p10():
+    plan, a_pied = souterrain.PLAN_2, blocs.a_pied_depuis_l_arrivee(souterrain.BLOC_2)
+    assert [c["n"] for c in souterrain.CASES_2] == list(range(11, 21))
+    assert len(souterrain.CASES) + len(souterrain.CASES_2) == souterrain.CASES_MAX
+    for c, d in zip(souterrain.CASES, souterrain.CASES_2):
+        assert (c["x"], c["y"], c["l"], c["h"], c["cap"]) == (d["x"], d["y"], d["l"], d["h"], d["cap"])
+        tuiles = {(d["x"] + i, d["y"] + j) for i in range(d["l"]) for j in range(d["h"])}
+        glyphe = "^" if d["cap"] < 0 else "v"
+        assert all(plan[y][x] == glyphe for x, y in tuiles) and tuiles <= a_pied, f"P{d['n']}"
+
+
+def test_la_rampe_interieure_relie_les_deux_niveaux_par_le_mur_est():
+    r1, r2 = souterrain.BLOC["rampes"], souterrain.BLOC_2["retour"]
+    assert len(r1) == 1 and r1[0]["vers"] == "souterrain_2" and r1[0]["achat"] == 2, "la grille tient jusqu'au −2 acheté"
+    assert r2["vers"] == "souterrain" and r2["bord"] == r1[0]["bord"] == "est"
+    for bloc, rampe in ((souterrain.BLOC, r1[0]), (souterrain.BLOC_2, r2)):
+        sol, a_pied = blocs.sol_du_bloc(bloc), blocs.a_pied_depuis_l_arrivee(bloc)
+        largeur = len(sol[0])
+        for i in range(rampe["l"]):
+            assert carte.LEGENDE[sol[rampe["de"] + i][largeur - 1]].get("solide", 0) == 0
+            assert (largeur - 1, rampe["de"] + i) in a_pied, "on rejoint la rampe depuis l'arrivée"
+        a = rampe["arrivee"]
+        assert rampe["de"] <= a["y"] < rampe["de"] + rampe["l"], "on arrive dans l'axe de la rampe"
+    assert not any(set(ligne) - {"B"} for ligne in souterrain.PLAN_2[:2]), "le −2 n'a pas de rampe vers la rue"
+
+
+def test_la_carte_du_bloc_porte_ses_rampes_et_le_prix_du_moins_deux():
+    from app import economie
+    assert blocs.carte_du_bloc(souterrain.BLOC)["bloc"]["rampes"][0]["vers"] == "souterrain_2"
+    assert blocs.carte_du_bloc(souterrain.BLOC_2)["bloc"]["retour"]["vers"] == "souterrain"
+    assert blocs.carte_du_bloc(blocs.par_slug("rang"))["bloc"]["rampes"] == []
+    assert economie.TARIFS["sous_sol_2"] == 10000, "tranché par Martin : le −2 à 10 000 $"

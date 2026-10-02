@@ -486,7 +486,7 @@ const Jeu = (function () {
       devant le chalet, un arbre abattu — y est encore en revenant, le temps de la partie
       (`Blocs.souvenir`). La premiere fois, on le batit : ses arbres (`creerDecor`), et le
       char de sa planque que la sauvegarde avait garde. */
-  function passerDansLeBloc(bloc, def, retour, ici) {
+  function passerDansLeBloc(bloc, def, retour, ici, cap) {
     const j = B.joueur;
     Derapage.oublier();                      // les traces de la ville ne suivent pas dans le bloc (autres coordonnees)
     Naufrage.oublier();                      // ni ses taches d'huile
@@ -519,7 +519,7 @@ const Jeu = (function () {
     // n'en garde jamais un (`quitterLeBloc` → `Souterrain.ranger`).
     if (Souterrain.est(bloc.slug)) Souterrain.garnir(def);
     const r = def.bloc.retour;
-    if (ici) poserLesVoyageurs(gens, ici, j.angle || 0);
+    if (ici) poserLesVoyageurs(gens, ici, cap !== undefined ? cap : (j.angle || 0));
     else poserLesVoyageurs(gens, { x: def.bloc.arrivee.x * TT + 8, y: def.bloc.arrivee.y * TT + 8 }, Blocs.capVersLInterieur(r));
     // Recherche, ceux qui te suivaient passent par le meme bord que toi, un peu apres.
     Blocs.poursuiteAuBord(r, Monde.carte);
@@ -537,6 +537,30 @@ const Jeu = (function () {
     const place = garde.x === null || garde.x === undefined
       ? { x: planque.char.x * TT + 8, y: planque.char.y * TT + 8 } : { x: garde.x, y: garde.y };
     recreerLeChar(garde, place);
+  }
+
+  /** D'UN BLOC A L'AUTRE, sans repasser par la ville (le garage souterrain : la rampe interieure du −1 au −2, et
+      l'ascenseur entre les deux) : au noir, le bloc d'ou l'on part se range (`quitterLeBloc` : ses chars dans la
+      partie), puis l'autre se charge, et l'on y est a `ici` (un point, ou une fonction de sa carte), tourne vers
+      `cap` — au volant comme a pied. Le noir tient le temps que sa carte arrive. Le retour en ville du bloc
+      d'arrivee se pose comme a une entree ordinaire (son `seuil`, ou son passage). */
+  function changerDeBloc(slug, ici, cap) {
+    finirTransition();
+    const b = Blocs.liste().find(function (q) { return q.slug === slug; });
+    if (!B.bloc || !b) return false;
+    Blocs.charger(slug);
+    transiter(FONDU_ETAGE, function () {
+      const def = Blocs.cartes[slug];
+      if (!def || !B.bloc) return;
+      const gens = voyageurs();
+      quitterLeBloc(gens);
+      for (const e of gens) if (B.entites.indexOf(e) < 0) B.entites.push(e);
+      const retour = Blocs.retourEnVille(b, Blocs.porteur(B.joueur));
+      if (!retour) return;
+      passerDansLeBloc(b, def, retour, typeof ici === 'function' ? ici(def) : ici, cap);
+      if (!B.joueur.dansVehicule) Entites.regarder(B.joueur, Math.cos(cap), Math.sin(cap));
+    }, null, function () { return !Blocs.cartes[slug]; });
+    return true;
   }
 
   /** Revient du bloc : au noir, la ville reprend sa place telle qu'on l'a laissee, et l'on
@@ -1193,7 +1217,8 @@ const Jeu = (function () {
         pas('sillage', Sillage.maj);       // la poupe de chaque coque qui file : son sillage (les bateaux, vague 5)
         pas('incendies', Incendies.maj);
         pas('frenesies', Frenesies.maj);   // l'icône qu'on prend exprès, le chrono, le compte
-        pas('lecture', Lecture.maj);       // LIRE tenu : la ligne du passant qu'on regarde
+        pas('lecture', Lecture.maj);
+        pas('souterrain', Souterrain.majSon);   // les neons du sous-sol, et ses sons charges pres du garage       // LIRE tenu : la ligne du passant qu'on regarde
         pas('suite', Suite.maj);               // la suite du paquet : redemandée si elle a raté
         pas('collections', Collections.maj);   // une carte de hockey par terre, qu'on ramasse en marchant dessus
         pas('devisser', Devisser.maj);         // le tournevis en cours, sous une enseigne, la nuit
@@ -1656,7 +1681,7 @@ const Jeu = (function () {
     });
   }
 
-  return { demarrer, commencer, jouer, ouvrirParties, jouerPartie, effacerPartie, copierPartie, entrer, chargerPiece, sortir, entrerDansLeBloc, passerDansLeBloc, sortirDuBloc, revenirEnVille, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, ouvrirPhoto, fermerPhoto, basculerCoop, majCoop, retourTitre, maj, rendre, avancer, get horsLigne() { return horsLigne; } };
+  return { demarrer, commencer, jouer, ouvrirParties, jouerPartie, effacerPartie, copierPartie, entrer, chargerPiece, sortir, entrerDansLeBloc, passerDansLeBloc, sortirDuBloc, changerDeBloc, revenirEnVille, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, ouvrirPhoto, fermerPhoto, basculerCoop, majCoop, retourTitre, maj, rendre, avancer, get horsLigne() { return horsLigne; } };
 })();
 
 /* Surface de test et de debogage — la seule poignee du banc d'essai. */

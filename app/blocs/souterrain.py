@@ -14,7 +14,7 @@ les pose sur les cases à chaque descente (`static/js/souterrain.js`). Le plan n
 
 import math
 
-#: Les cases d'un niveau, et de tout le sous-sol (le −2 est la vague 2).
+#: Les cases d'un niveau, et de tout le sous-sol (−1 et −2).
 PAR_NIVEAU = 10
 CASES_MAX = 20
 
@@ -22,7 +22,8 @@ CASES_MAX = 20
 #: pourrait mettre 2 rangées face à face ») : cinq cases au nord, le nez au mur nord (`^`), cinq au sud, le nez au mur
 #: sud (`v`), une allée de cinq tuiles entre les deux — assez pour qu'un camion recule d'une case. La rampe au
 #: nord-est (12 à 14), l'ascenseur au mur sud-est (ses portes, les deux `D`). `B` : du béton peint (`materiaux`, comme
-#: les murs d'une pièce). 17 × 14 : plus petit que l'écran, centré avec du noir autour, comme une pièce.
+#: les murs d'une pièce). 17 × 14 : plus petit que l'écran, centré avec du noir autour, comme une pièce. Au mur est,
+#: dans l'allée, la RAMPE INTÉRIEURE (rangées 6 à 8) qui descend au −2 — fermée d'une grille tant qu'il n'est pas acheté.
 PLAN: tuple[str, ...] = (
     "BBBBBBBBBBBB###BB",
     "BBBBBBBBBBBB###BB",
@@ -30,9 +31,9 @@ PLAN: tuple[str, ...] = (
     "B^^^^^^^^^^#####B",
     "B^^^^^^^^^^#####B",
     "B###############B",
-    "B###############B",
-    "B###############B",
-    "B###############B",
+    "B################",
+    "B################",
+    "B################",
     "B###############B",
     "Bvvvvvvvvvv#####B",
     "Bvvvvvvvvvv#####B",
@@ -50,6 +51,12 @@ CASES: tuple[dict, ...] = (
 #: arrive en descendant.
 ASCENSEUR = {"x": 13, "y": 12, "l": 2}
 
+#: LA RAMPE INTÉRIEURE (vague 2) : une ouverture de trois tuiles au mur est, dans l'allée. On la prend au volant (ou à
+#: pied) et l'on passe, au noir, à l'autre niveau (`Jeu.changerDeBloc`), cap gardé ; on y arrive au bas de SA rampe,
+#: tourné vers l'allée. `achat` : le nombre de niveaux qu'il faut posséder pour que la grille soit levée.
+RAMPE_EST = {"bord": "est", "de": 6, "l": 3}
+ARRIVEE_DE_LA_RAMPE = {"x": 14, "y": 7}
+
 BLOC = {
     "slug": "souterrain",
     "nom": "Le garage souterrain",
@@ -66,5 +73,46 @@ BLOC = {
     # Sous terre : ni pluie, ni neige, ni nuit (`Monde.aLAbri`).
     "abrite": True,
     "materiaux": {"B": "piece", "D": "piece"},
-    "souterrain": {"cases": CASES, "ascenseur": ASCENSEUR},
+    "souterrain": {"cases": CASES, "ascenseur": ASCENSEUR, "niveau": 1},
+    # La rampe intérieure vers le −2, fermée tant qu'il n'est pas acheté (`achat`).
+    "rampes": [dict(RAMPE_EST, vers="souterrain_2", arrivee=ARRIVEE_DE_LA_RAMPE, achat=2)],
+}
+
+#: LE −2 (vague 2) : le même béton que le −1, sans rampe vers la rue — on y descend par la rampe intérieure du −1 ou par
+#: l'ascenseur. Sa seule ouverture, au mur est, REMONTE au −1 (`retour` avec `vers`) : c'est elle que le GPS vise.
+PLAN_2: tuple[str, ...] = (
+    "BBBBBBBBBBBBBBBBB",
+    "BBBBBBBBBBBBBBBBB",
+    "B^^^^^^^^^^#####B",
+    "B^^^^^^^^^^#####B",
+    "B^^^^^^^^^^#####B",
+    "B###############B",
+    "B################",
+    "B################",
+    "B################",
+    "B###############B",
+    "Bvvvvvvvvvv#####B",
+    "Bvvvvvvvvvv#####B",
+    "Bvvvvvvvvvv#####B",
+    "BBBBBBBBBBBBBDDBB",
+)
+
+#: P11 à P20 : les mêmes places que P1 à P10, dix rangs plus loin dans `partie.souterrain.cases`.
+CASES_2: tuple[dict, ...] = tuple(dict(c, n=c["n"] + PAR_NIVEAU) for c in CASES)
+
+BLOC_2 = {
+    "slug": "souterrain_2",
+    "nom": "Le garage souterrain, −2",
+    "panneau": "−2", "panneau_retour": "−1",
+    "plan": PLAN_2,
+    "decors": {},
+    "passage": None,
+    "seuil": "garage",
+    "retour": dict(RAMPE_EST, vers="souterrain", arrivee=ARRIVEE_DE_LA_RAMPE),
+    "arrivee": dict(ARRIVEE_DE_LA_RAMPE),
+    "gens": False,
+    "abrite": True,
+    "materiaux": {"B": "piece", "D": "piece"},
+    "souterrain": {"cases": CASES_2, "ascenseur": ASCENSEUR, "niveau": 2},
+    "rampes": [],
 }

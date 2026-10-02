@@ -46,7 +46,7 @@ BLOCS: list[dict] = [rang.BLOC, cineparc.BLOC, galeries.BLOC, villa.BLOC]
 
 #: ⚠️ LES SOUS-SOLS : des blocs SANS passage en ville — on y descend par un rideau (`seuil`), pas en poussant contre
 #: un bord. À part de `BLOCS`, dont les juges exigent un passage (docs/jalons/le-grand-garage-souterrain.md).
-SOUS_SOLS: list[dict] = [souterrain.BLOC]
+SOUS_SOLS: list[dict] = [souterrain.BLOC, souterrain.BLOC_2]
 
 BORDS = ("nord", "sud", "est", "ouest")
 
@@ -223,7 +223,9 @@ def carte_du_bloc(bloc: dict) -> dict:
                  # Sous terre (le garage souterrain) : ni pluie, ni neige, ni nuit (`Monde.aLAbri`).
                  "abrite": bool(bloc.get("abrite", False)),
                  # Ses cases et son ascenseur (`Souterrain`) ; null ailleurs.
-                 "souterrain": copy.deepcopy(bloc["souterrain"]) if bloc.get("souterrain") else None},
+                 "souterrain": copy.deepcopy(bloc["souterrain"]) if bloc.get("souterrain") else None,
+                 # Ses rampes vers un AUTRE bloc (le −1 et le −2 du sous-sol, `Jeu.changerDeBloc`) ; vides ailleurs.
+                 "rampes": copy.deepcopy(bloc.get("rampes", []))},
     }
 
 

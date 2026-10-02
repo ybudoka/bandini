@@ -422,7 +422,7 @@ const Atlas = (function () {
   //: supporter les accents ». Elles gardent leur accent et `lettre` le dessine.
   const SANS_ACCENT = {
     'Œ': 'OE', 'Æ': 'AE',
-    '’': "'", '‘': "'", '«': '"', '»': '"', '“': '"', '”': '"', '—': '-', '–': '-', '…': '...',
+    '’': "'", '‘': "'", '«': '"', '»': '"', '“': '"', '”': '"', '—': '-', '–': '-', '−': '-', '…': '...',
   };
 
   //: ⚠️ Meme piege avec les espaces invisibles : toLocaleString('fr-CA') separe

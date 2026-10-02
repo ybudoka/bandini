@@ -535,6 +535,9 @@ def facture_hopital(argent: int) -> int:
 # --- Revenus ---------------------------------------------------------------
 
 TARIFS = {
+    # LE −2 DU GARAGE SOUTERRAIN (docs/jalons/le-grand-garage-souterrain.md) : dix cases de plus, AGRANDIR LE
+    # SOUS-SOL au comptoir de Ti-Guy (tranché par Martin, 30 sept. 2026).
+    "sous_sol_2": 10000,
     "pickpocket_min": 5,
     "pickpocket_max": 25,
     "cash_sol_min": 5,

@@ -1384,6 +1384,10 @@ const Son = (function () {
     // Le C4 qu'on pose (les explosifs, vague 3) : le scotch, puis deux bips du detonateur.
     // La roquette qui part (les explosifs, vague 4b) : le coup du tube, le sifflement.
     roquette: function () { if (!joue('roquette')) { bruit(0.25, 0.4, 180); ton(900, 0.5, 'sawtooth', 0.08, 0.3); } },
+    // Le garage souterrain (vague 2) : le ding et le moteur de l'ascenseur, les pneus en echo sur la rampe, les neons.
+    ascenseur: function () { if (!joue('ascenseur')) { ton(1320, 0.3, 'sine', 0.12); ton(110, 0.9, 'sawtooth', 0.04, 1, 0.3); } },
+    rampe: function () { if (!joue('rampe')) bruit(0.5, 0.05, 2400, 900); },
+    neons: function (volume) { tenir('neons', volume, function () {}); },
     detonateur: function () { if (!joue('detonateur')) { ton(2600, 0.06, 'square', 0.08, 1); ton(2600, 0.06, 'square', 0.08, 1, 0.14); } },
     goupille: function () { if (!joue('goupille')) { ton(2400, 0.05, 'square', 0.1, 0.9); ton(3200, 0.12, 'triangle', 0.12, 1, 0.08); } },
     rebond: function () { if (!joue('rebond')) { ton(420, 0.08, 'square', 0.12, 0.3); bruit(0.06, 0.2, 1800, 400); } },

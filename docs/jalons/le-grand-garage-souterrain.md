@@ -1602,3 +1602,42 @@ noir, à trancher alors.
 
 Reste la **vague 2** : le −2 (P11 à P20, 10 000 $, AGRANDIR LE SOUS-SOL, la grille), la rampe intérieure au volant, et
 les sons (l'ascenseur, l'écho des pneus, les néons).
+
+**Plan de la vague 2 (2 oct. 2026)** — tranché sur la question laissée ouverte : **un deuxième sous-sol à part**
+(`souterrain_2`, 17 × 14 comme le −1), pas un deuxième cadre ; le juge « chaque cadre plus grand que l'écran » ne bouge
+pas.
+
+- **La rampe intérieure** : au mur est du −1 (une ouverture de trois tuiles dans l'allée), elle descend au −2 ; au mur
+  est du −2, elle remonte au −1. Au volant ou à pied, au noir, cap gardé (`Jeu.changerDeBloc`, neuf : d'un bloc à
+  l'autre sans repasser par la ville). Le −2 n'a pas d'autre sortie que cette rampe et l'ascenseur.
+- **La grille** : tant que le −2 n'est pas acheté, la rampe du −1 est fermée — une grille peinte sur l'ouverture, et
+  pousser contre ne mène nulle part.
+- **AGRANDIR LE SOUS-SOL — 10 000 $** au comptoir de Ti-Guy, dans la pièce du garage (garage à toi, −2 pas encore
+  ouvert) : `partie.souterrain.niveaux = 2`.
+- **Les cases** : P11 à P20 sont les rangs 10 à 19 de `partie.souterrain.cases` ; chaque niveau range et garnit les
+  siens (`q.n − 1`), et Ti-Guy gare ce qui reste dans l'allée sur une case libre de CE niveau, sinon de l'autre.
+- **L'ascenseur dessert les trois arrêts** une fois le −2 ouvert : un petit menu (GARAGE · −1 · −2) au lieu d'un
+  aller simple.
+- **Les sons** (ElevenLabs, dans `audio.LIEUX`) : le ding et le moteur de l'ascenseur à chaque trajet ; les pneus qui
+  crissent en écho à chaque rampe ; le bourdonnement des néons en fond, au sous-sol seulement.
+
+**Vague 2 livrée (2 oct. 2026) : le −2.** AGRANDIR LE SOUS-SOL — 10 000 $ au comptoir de Ti-Guy (`economie.TARIFS
+["sous_sol_2"]`, `Souterrain.itemAgrandir`) ouvre dix cases de plus, P11 à P20, dans un **deuxième sous-sol à part**
+(`souterrain_2`, le même béton, sans rampe vers la rue). On y descend au volant par la **rampe intérieure** du mur est
+du −1 — une grille et son étiquette « −2 » tant qu'il n'est pas acheté — ou par l'ascenseur, qui dessert alors trois
+arrêts (GARAGE · −1 · −2, un petit menu ; avec un seul niveau, l'aller simple de la vague 1). La rampe du −2 remonte au
+−1. Les sons, générés par ElevenLabs (lieu `souterrain`, chargé dans la pièce du garage ou en bas) : le ding et le
+moteur de l'ascenseur à chaque trajet, les pneus qui crissent en écho à chaque rampe (et à la descente du rideau), et
+les néons qui bourdonnent en fond, au sous-sol seulement. Juges : `tests/test_souterrain.py` (14, dont 4 du −2) et
+`tests/test_souterrain_deux_js.py` (9) ; dix-huit mutations, toutes mordues (celle qui garde les vieilles cases d'un
+niveau, par le juge de la vague 1 « le char qu'on remonte quitte le sous-sol »).
+
+Ce qui a changé en route :
+
+- **D'un bloc à l'autre** (`Jeu.changerDeBloc`) : au noir, le bloc d'où l'on part se range (`quitterLeBloc` : ses chars
+  dans la partie), l'autre se charge et l'on y est, cap donné, au volant comme à pied. Un `retour` peut mener à un
+  autre bloc (`vers`), et un bloc a ses `rampes` (`Blocs.maj` ; GPS : « Vers la rampe »).
+- **Chaque niveau range SES cases** (`q.n − 1` : P11 est le rang 10) et laisse celles de l'autre telles quelles ; Ti-Guy
+  gare ce qui reste dans l'allée sur une case libre de ce niveau, sinon de l'autre.
+- **Le signe moins (−) se dessine** : la police pixel n'avait que le trait d'union ; `Atlas` le remplace, comme le tiret
+  cadratin.

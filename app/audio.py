@@ -396,6 +396,18 @@ CATALOGUE: list[Echantillon] = [
     _e("roquette", "Roquette tirée", duree_s=1.2, volume=0.6,
        prompt="a shoulder-fired rocket launcher firing: a deep hollow thump, then a fast hissing whoosh of the rocket "
               "flying away, close, no explosion, no music"),
+    # LE GARAGE SOUTERRAIN (docs/jalons/le-grand-garage-souterrain.md, vague 2) : l'ascenseur (son ding, ses portes,
+    # son moteur) à chaque trajet ; les pneus qui crissent en écho à chaque rampe ; les néons qui bourdonnent en fond,
+    # au sous-sol seulement. Du lieu `souterrain` : chargés dans la pièce du garage ou en bas.
+    _e("ascenseur", "L'ascenseur du sous-sol", duree_s=2.5, volume=0.5,
+       prompt="an old freight elevator in an underground parking garage: one bright ding, the steel doors sliding "
+              "shut, then a low electric motor hum as the car moves, close, no music, no voice"),
+    _e("rampe", "Pneus en écho sur la rampe", duree_s=1.5, volume=0.5,
+       prompt="car tires squealing briefly on smooth painted concrete in an underground parking garage ramp, strong "
+              "echo and reverb, no crash, no music, no voice"),
+    _e("neons", "Les néons du sous-sol", duree_s=8.0, volume=0.18, boucle=True, influence=0.5,
+       prompt="fluorescent tube lights buzzing and humming in an empty underground concrete parking garage, faint "
+              "distant ventilation drone, seamless loop, no voices, no music"),
     _e("detonateur", "C4 armé", duree_s=0.9, volume=0.5,
        prompt="a strip of duct tape pulled and pressed, then two short high electronic beeps of a "
               "detonator arming, close-up, no explosion, no music"),
@@ -1885,6 +1897,8 @@ LIEUX: dict[str, list[str]] = {
     # chargent la premiere fois qu'un explosif entre dans le sac ou qu'on en allume
     # un (`combat.js`). Une partie qui n'en touche jamais ne les telecharge pas.
     "explosifs": ["meche", "goupille", "rebond", "detonateur", "roquette"],
+    # Le garage souterrain (vague 2) : chargés dans la pièce du garage ou au sous-sol (`Souterrain.majSon`).
+    "souterrain": ["ascenseur", "rampe", "neons"],
     # Le parapluie de Rosa : une POSSESSION, comme les explosifs — chargés quand il entre au sac.
     "parapluie": ["parapluie", "parapluie_revire"],
     # Les bêtes écrasées : pas un endroit, une RUELLE — chargés à la première bête qui naît

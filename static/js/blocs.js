@@ -161,7 +161,16 @@ const Blocs = (function () {
     majPoursuivants();
     const e = porteur(j);
     if (B.bloc) {
-      if (contreLeBord(B.bloc.def.bloc.retour, Monde.carte, e)) Jeu.sortirDuBloc();
+      const bb = B.bloc.def.bloc;
+      // ⚠️ UN RETOUR QUI MÈNE À UN AUTRE BLOC (`vers` : le −2 du sous-sol remonte au −1) ne ramène pas en ville.
+      if (contreLeBord(bb.retour, Monde.carte, e)) {
+        if (bb.retour.vers) passerLaRampe(bb.retour); else Jeu.sortirDuBloc();
+        return;
+      }
+      // Ses rampes vers un autre bloc (le −1 descend au −2) — une rampe fermee (sa grille) ne mene nulle part.
+      for (const o of bb.rampes || []) {
+        if (contreLeBord(o, Monde.carte, e) && (typeof Souterrain === 'undefined' || Souterrain.rampeOuverte(o))) { passerLaRampe(o); return; }
+      }
       return;
     }
     for (const b of liste()) {
@@ -172,6 +181,15 @@ const Blocs = (function () {
         return;
       }
     }
+  }
+
+  /** Une rampe d'un bloc a l'autre : on arrive a son `arrivee`, tourne vers l'interieur (le dos a la rampe d'en
+      face), et les pneus crissent en echo sur le beton. */
+  function passerLaRampe(o) {
+    if (B.transition) return;
+    const cap = capVersLInterieur(o);
+    if (typeof Son !== 'undefined' && Son.SFX.rampe) Son.SFX.rampe();
+    Jeu.changerDeBloc(o.vers, { x: o.arrivee.x * TT + 8, y: o.arrivee.y * TT + 8 }, cap);
   }
 
   /** Recherche, on passe un bord : les agents d'avant restent de leur cote, et ceux qui te
@@ -459,8 +477,8 @@ const Blocs = (function () {
   /** Ce que le GPS vise dans un bloc : la sortie, vers la ville. */
   function cibleDeSortie() {
     if (!B.bloc) return null;
-    const c = centre(B.bloc.def.bloc.retour, Monde.carte);
-    return { x: c.x, y: c.y, nom: 'Vers la ville', couleur: '#7fc4ff' };
+    const r = B.bloc.def.bloc.retour, c = centre(r, Monde.carte);
+    return { x: c.x, y: c.y, nom: r.vers ? 'Vers la rampe' : 'Vers la ville', couleur: '#7fc4ff' };
   }
 
   return { dessinerFumees, cheminees, fume, FUMEE, VAPEUR, init, maj, charger, liste, sauter, entrerAuNoir, contreLeBord, recul, retourEnVille, marge, porteur, capVersLInterieur, poursuiteAuBord,

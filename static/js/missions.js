@@ -1846,6 +1846,9 @@ const Missions = (function () {
       (`majGarage`), conducteur a bord. */
   function menuGarage(items, vDonne) {
     const eco = B.defs.economie, p = B.partie, v = vDonne || charDevant();
+    // AGRANDIR LE SOUS-SOL (le −2 du garage souterrain) : au comptoir de Ti-Guy, dans la piece — char devant ou pas.
+    const agrandir = B.interieur && Souterrain.itemAgrandir();
+    if (agrandir) items.push(agrandir);
     if (!v) {
       items.push({ libelle: 'GARE UN CHAR DEVANT LA PORTE', actif: false });
       return { titre: 'GARAGE ROCCO BANDINI', items: items };
