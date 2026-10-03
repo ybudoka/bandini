@@ -926,6 +926,19 @@ const Entree = (function () {
       axe.x = h ? x / h : 0; axe.y = h ? y / h : 0; axe.mag = h ? 1 : 0; axe.source = 'clavier';
     }
     lireSuitesActions();
+    cacherLeTactileSousLaManette();
+  }
+
+  //: ⚠️ LES BOUTONS TACTILES S'EFFACENT QUAND ON PREND LA MANETTE (demande de Martin, 3 oct. 2026,
+  //: sa manette sur l'iPhone) : ils couvraient l'ecran pour rien. Le doigt qui revient sur la vitre
+  //: les ramene (`initTactile`, `touchstart`). Seule la classe change : l'ecran reste plein, et le
+  //: HUD garde ses marges du tactile (`estTactile`) — rien ne saute quand on passe de l'un a l'autre.
+  let tactileCache = false;
+  function cacherLeTactileSousLaManette() {
+    const cache = tactile && appareilCourant() === 'manette';
+    if (cache === tactileCache || !doc || !doc.body) return;
+    tactileCache = cache;
+    if (cache) doc.body.classList.add('manette-en-main'); else doc.body.classList.remove('manette-en-main');
   }
 
   /** Ce qu'on lit sur les boutons tactiles dans ce contexte-la. L'ecran

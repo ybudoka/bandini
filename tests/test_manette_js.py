@@ -671,3 +671,27 @@ def test_au_volant_le_stick_ne_fait_que_tourner(banc):
     assert r["rt"]["gaz"] > 0.9 and r["rt"]["frein"] == 0, "RT avance"
     assert r["lt"]["frein"] > 0.9 and r["lt"]["gaz"] == 0, "LT freine et recule"
     assert r["flecheHaut"]["gaz"] == 1 and r["flecheBas"]["frein"] == 1, "le clavier garde ses fleches"
+
+
+def test_les_boutons_tactiles_s_effacent_quand_on_prend_la_manette(banc):
+    """Martin, 3 oct. 2026, sa manette sur l'iPhone : les boutons tactiles couvraient l'ecran. Un geste de
+    la manette les cache (`manette-en-main`) ; le doigt qui revient sur la vitre les ramene."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const corps = o.doc.body.classList;
+        o.pointeur('pointerdown', 90, 570, 1); o.frame(2);
+        o.pointeur('pointerup', 90, 570, 1); o.frame(2);
+        const auDoigt = { tactile: corps.contains('tactile'), cache: corps.contains('manette-en-main') };
+        const b = []; for (let k = 0; k <= 15; k++) b.push(k === 0 ? 1 : 0);
+        o.pad([0, 0], b); o.frame(2);
+        o.pad([0, 0], []); o.frame(2);
+        const aLaManette = { tactile: corps.contains('tactile'), cache: corps.contains('manette-en-main') };
+        o.pointeur('pointerdown', 90, 570, 1); o.frame(2);
+        o.pointeur('pointerup', 90, 570, 1); o.frame(2);
+        const retour = { tactile: corps.contains('tactile'), cache: corps.contains('manette-en-main') };
+        o.pad(null); o.frame(2);
+        return { auDoigt: auDoigt, aLaManette: aLaManette, retour: retour };
+    }""")
+    assert r["auDoigt"] == {"tactile": True, "cache": False}
+    assert r["aLaManette"] == {"tactile": True, "cache": True}, "la manette doit cacher les boutons tactiles"
+    assert r["retour"] == {"tactile": True, "cache": False}, "le doigt doit ramener les boutons tactiles"

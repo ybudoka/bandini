@@ -303,6 +303,8 @@ kbd {
 
 #tactile { display: none; }
 body.tactile #tactile { display: block; }
+/* La manette en main (`Entree`, `cacherLeTactileSousLaManette`) : le doigt sur la vitre les ramene. */
+body.tactile.manette-en-main #tactile { display: none; }
 body.tactile .pied { display: none; }
 body.tactile .jeu { padding: 0; }
 body.tactile .ecran { border-radius: 0; box-shadow: none; }
