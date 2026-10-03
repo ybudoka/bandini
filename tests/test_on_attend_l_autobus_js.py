@@ -123,6 +123,14 @@ def test_l_autobus_s_arrete_pour_eux_ils_montent_et_descendent_plus_loin(banc, g
         const vide = { servi: (L.B.abribusServis || {})[p.a.id], avant: quartArrivee, apres: L.Autobus.quartDHeure() };
         // On suit l'autobus jusqu'à ce que ceux d'ICI soient tous descendus (d'autres
         // montent en route : ils ne sont pas le sujet).
+        // ⚠️ LE TRAFIC EST COUPÉ PENDANT QU'ON LE SUIT (2 oct. 2026, la suite complète) : ce juge mesure l'abribus, pas
+        // la rue. Au carrefour des Quais (72, 283), un camion arrêté au feu de la voie d'en face mord sur la voie de
+        // l'autobus : la caisse l'accroche en passant, pivote et reste prise — 3 graines sur 21 (16, 24, 26) après
+        // les bateaux (vague 5, qui ne fait plus naître de chaloupe l'hiver et rebat donc le trafic), 0 sur 20 avant. C'est le
+        // bouchon des Quais qui avait déjà fait changer la graine par défaut (6, plus haut).
+        L.B.defs.conduite.trafic.vehicules_max = 0;
+        L.B.entites.filter(function (e) { return e.type === 'vehicule' && e.conducteur === 'trafic'; })
+            .forEach(function (e) { L.Entites.retirer(e); });
         const descentes = [];
         const dIci = function () { return bus.bord.filter(function (b) { return b.depuis === p.a.id; }).length; };
         for (let i = 0; i < 12000 && dIci() && L.B.entites.indexOf(bus) >= 0; i++) {
@@ -160,6 +168,48 @@ def test_l_autobus_s_arrete_pour_eux_ils_montent_et_descendent_plus_loin(banc, g
     for d in r["descentes"]:
         assert d["arret"] in d["attendu"], d
         assert d["nes"] and all(n < 48 for n in d["nes"]), f"descendu loin du trottoir de l'arrêt : {d}"
+
+
+def test_qui_attend_au_pas_de_la_porte_n_emporte_pas_celui_qui_descend(banc):
+    """⚠️ Celui qui ATTEND se tient au pas de la porte de l'autobus : celui qui descendait ici était dévié à
+    l'arrêt suivant, où l'attendait souvent un autre — il refaisait le tour de la ligne (graine 4 du juge
+    d'au-dessus, de l'arrêt 47 au 32, suite complète du 2 oct. 2026). Il descend maintenant un pas à côté,
+    le long de la caisse, à son arrêt. Le juge plante un passant immobile pile au pas de la porte de
+    l'autobus arrêté, et met à bord un voyageur qui descend ICI."""
+    r = banc("function (L, o) {" + PREPARER + """
+        const p = preparer(L, o);
+        for (let i = 0; i < 40; i++) { o.frame(1); tenir(L, p); }
+        let bus = null;
+        for (let i = 0; i < 9000 && !bus; i++) {
+            o.frame(1); tenir(L, p);
+            for (const v of L.B.entites) if (v.conducteur === 'ligne' && v.arretT > 0 && v.arret === p.a.id) bus = v;
+        }
+        if (!bus) return { bus: false };
+        const cx = Math.cos(bus.angle), cy = Math.sin(bus.angle);
+        const porte = { x: bus.x + cx * bus.def.longueur / 4 - cy * (bus.def.largeur / 2 + 9),
+                        y: bus.y + cy * bus.def.longueur / 4 + cx * (bus.def.largeur / 2 + 9) };
+        const bloque = L.Entites.creerPieton(porte.x, porte.y, null);
+        bloque.etat = 'fige'; bloque.plante = { x: porte.x, y: porte.y }; bloque.vx = 0; bloque.vy = 0;
+        bus.bord = bus.bord || [];
+        const b = { arret: p.a.id, depuis: -1, arch: 'passant', swaps: null, tenue: null, graine: 4242, qui: -1 };
+        bus.bord.push(b);
+        const avant = new Set(L.B.entites);
+        // ⚠️ Mesuré à l'image où il descend : ensuite, il s'en va à ses affaires.
+        for (let i = 0; i < 200 && bus.arretT > 0 && bus.bord.indexOf(b) >= 0; i++) { o.frame(1); tenir(L, p); }
+        const nes = L.B.entites.filter(function (e) { return e.type === 'pieton' && e.descenduDe !== undefined && !avant.has(e); });
+        const quai = { x: p.a.quai[0] * 16 + 8, y: p.a.quai[1] * 16 + 8 };
+        return { bus: true, aBord: bus.bord.indexOf(b) >= 0, arret: b.arret, ici: p.a.id,
+                 bloqueLa: Math.round(Math.hypot(bloque.x - porte.x, bloque.y - porte.y)),
+                 nes: nes.map(function (e) { return { quai: Math.round(Math.hypot(e.x - quai.x, e.y - quai.y)),
+                                                      bloque: Math.round(Math.hypot(e.x - bloque.x, e.y - bloque.y)) }; }) };
+    }""")
+    assert r["bus"], "aucun autobus ne s'est arrêté à l'abribus : le juge ne mesure rien"
+    assert r["bloqueLa"] <= 6, f"le passant planté a quitté le pas de la porte : le juge ne mesure rien ({r})"
+    assert not r["aBord"] and r["arret"] == r["ici"], f"il n'est pas descendu à son arrêt : {r}"
+    assert r["nes"], f"personne n'est sorti de l'autobus : {r}"
+    for n in r["nes"]:
+        assert n["bloque"] >= 10, f"descendu DANS celui qui attend : {r}"
+        assert n["quai"] < 48, f"descendu loin du trottoir de l'arrêt : {r}"
 
 
 def test_l_autobus_s_arrete_pour_qui_attend_et_a_bord_pour_qui_descend(banc):

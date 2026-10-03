@@ -711,6 +711,9 @@ const Autobus = (function () {
   //: (5) : un voyageur qui chevauche la tole POUSSE l'autobus hors de sa voie — mesure,
   //: 29 releves sur 1175 hors du trace avec un pas de 4 px.
   const PAS_DE_PORTE = 9;
+  //: Ou l'on descend, en pas de 12 px le long de la caisse depuis la porte (`faireDescendre`) : vers l'arriere
+  //: d'abord (les places d'avant ce correctif), puis un pas ou deux vers l'avant.
+  const PLACES_DE_DESCENTE = [0, 1, 2, 3, -1, -2];
 
   /** La porte de l'autobus, cote trottoir, au tiers avant de la caisse. */
   function porteDe(v) {
@@ -761,17 +764,30 @@ const Autobus = (function () {
     const a = arret(v.arret);
     if (!a || !v.bord || !v.bord.length) return;
     const partent = v.bord.filter(function (b) { return b.arret === v.arret; });
-    const porte = porteDe(v);
-    partent.forEach(function (b, k) {
-      const x = porte.x - Math.cos(v.angle) * 12 * k, y = porte.y - Math.sin(v.angle) * 12 * k;
-      if (!Monde.marchablePieton(Math.floor(x / TT), Math.floor(y / TT))) return;
-      // Quelqu'un sur le pas de la porte : on ne descend pas DANS lui, on descend
-      // a l'arret suivant.
-      if (Entites.autour(x, y, 11, Entites.deboutDansLaFoule).length) {
+    const porte = porteDe(v), pris = [];
+    partent.forEach(function (b) {
+      // ⚠️ UNE PLACE LIBRE LE LONG DE LA CAISSE, pas seulement la sienne (2 oct. 2026, la suite complete) : celui
+      // qui ATTEND a l'abribus se tient au pas de la porte, et le voyageur qui descendait ici etait devie a
+      // l'arret suivant — ou l'attendait souvent un autre. Il refaisait le tour de la ligne (de l'arret 47 au 32,
+      // graine 4 de `test_on_attend_l_autobus_js`) au lieu de descendre deux a quatre arrets plus loin. Sans
+      // personne devant la porte, le k-ieme descend a la k-ieme place, comme avant ; sinon a la premiere place
+      // libre et marchable, un pas devant ou derriere — et seulement s'il n'y en a aucune, a l'arret suivant.
+      let x = null, y = null;
+      for (const s of PLACES_DE_DESCENTE) {
+        const px = porte.x - Math.cos(v.angle) * 12 * s, py = porte.y - Math.sin(v.angle) * 12 * s;
+        if (!Monde.marchablePieton(Math.floor(px / TT), Math.floor(py / TT))) continue;
+        if (pris.some(function (q) { return Math.hypot(q[0] - px, q[1] - py) < 11; })) continue;
+        if (Entites.autour(px, py, 11, Entites.deboutDansLaFoule).length) continue;
+        x = px; y = py;
+        break;
+      }
+      // Personne ne peut descendre ici sans descendre DANS quelqu'un : a l'arret suivant.
+      if (x === null) {
         const L = ligne(v.ligne), rang = L ? L.ordre.findIndex(function (o) { return o.arret === v.arret; }) : -1;
         if (rang >= 0) b.arret = L.ordre[(rang + 1) % L.ordre.length].arret;
         return;
       }
+      pris.push([x, y]);
       v.bord.splice(v.bord.indexOf(b), 1);
       const e = sansLeDe(b.graine, function () {
         const arch = Entites.archetype(b.arch);
