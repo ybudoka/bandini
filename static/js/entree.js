@@ -182,6 +182,14 @@ const Entree = (function () {
       BAS (voir `contexte`). A la manette et au clavier, ces boutons-la gardent
       leur sens — le bouton de droite d'une manette est aussi RETOUR. */
   function basTactile(a) { return !!vTact[a]; }
+  //: Le clavier et le doigt, SANS la manette (ni les Touch du casque) : au
+  //: volant, la croix de la manette ne fait que tourner — le gaz et le recul
+  //: sont aux gachettes (`Vehicules.commandesJoueur`). En coop, le clavier du
+  //: deuxieme joueur ne compte pas quand le premier a pris la manette.
+  function basSansManette(a) {
+    if (B.coop && joueur1PrendLaManette()) return !!vTact[a];
+    return !!vTact[a] || MAP_TOUCHES[a].some(function (k) { return enfonce[k]; });
+  }
   function neufTactile(a) { return !!vNeufTact[a]; }
   function neufSansManette(a) {
     return !!vNeufTact[a] || !!vNeufCasque[a] || MAP_TOUCHES[a].some(function (k) { return presse[k]; });
@@ -997,7 +1005,7 @@ const Entree = (function () {
 
   return {
     MAP_TOUCHES, MANETTE_DEFAUT, ZONE_MORTE,
-    init, debutImage, activite, bas, neuf, basTactile, neufTactile, neufSansManette, neufEpaule, videPresse, toutRelacher, contexte, passerEnTactile,
+    init, debutImage, activite, bas, neuf, basTactile, basSansManette, neufTactile, neufSansManette, neufEpaule, videPresse, toutRelacher, contexte, passerEnTactile,
     etiquettesTactiles: etiquettes,
     toucheEnfoncee: function (code) { return !!enfonce[code]; },
     surSecret, surSuiteActions,

@@ -637,3 +637,37 @@ def test_l_aide_montre_rt_pour_viser(banc):
     assert r["texte"] == ["RT"]
     assert r["pieces"] == ["gachette_d"]
     assert r["allumee"] is True, "appuyer sur RT n'allume pas la ligne VISER"
+
+
+def test_au_volant_le_stick_ne_fait_que_tourner(banc):
+    """Martin, 3 oct. 2026, sa manette sur l'iPhone (une manette reconnue, `mapping: 'standard'`) : au
+    volant, le stick et la croix ne font QUE tourner ; avancer, c'est RT (7), reculer LT (6). Le clavier
+    garde ses fleches pour le gaz et le frein."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        const v = o.char('auto', 0, 0, 0);
+        v.aToi = true;
+        L.Vehicules.monter(j, v);
+        L.Entites.indexer();
+        function boutons(i) { const b = []; for (let k = 0; k <= 15; k++) b.push(k === i ? 1 : 0); return b; }
+        function cmd(axes, i) { o.pad(axes, boutons(i)); o.frame(2); return L.Vehicules.commandesJoueur(v); }
+        const out = {
+            stickHaut: cmd([0, -1], -1), stickBas: cmd([0, 1], -1), stickBiais: cmd([-0.7, -0.7], -1),
+            croixHaut: cmd([0, 0], 12), croixBas: cmd([0, 0], 13), croixDroite: cmd([0, 0], 15),
+            rt: cmd([0, 0], 7), lt: cmd([0, 0], 6),
+        };
+        o.pad(null); o.frame(2);
+        o.touche('ArrowUp'); o.frame(2); out.flecheHaut = L.Vehicules.commandesJoueur(v); o.relacher('ArrowUp');
+        o.touche('ArrowDown'); o.frame(2); out.flecheBas = L.Vehicules.commandesJoueur(v); o.relacher('ArrowDown');
+        o.frame(2);
+        return out;
+    }""")
+    for k in ("stickHaut", "stickBas", "stickBiais", "croixHaut", "croixBas", "croixDroite"):
+        assert r[k]["gaz"] == 0 and r[k]["frein"] == 0, "%s : la manette ne doit que tourner (%s)" % (k, r[k])
+    assert r["stickHaut"]["direction"] == 0 and r["stickBas"]["direction"] == 0
+    assert r["stickBiais"]["direction"] < -0.5, "le stick en biais doit tourner a gauche"
+    assert r["croixDroite"]["direction"] == 1
+    assert r["rt"]["gaz"] > 0.9 and r["rt"]["frein"] == 0, "RT avance"
+    assert r["lt"]["frein"] > 0.9 and r["lt"]["gaz"] == 0, "LT freine et recule"
+    assert r["flecheHaut"]["gaz"] == 1 and r["flecheBas"]["frein"] == 1, "le clavier garde ses fleches"

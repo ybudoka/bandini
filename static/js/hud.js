@@ -1119,7 +1119,8 @@ const Hud = (function () {
   function ligneDAide(c, appareil, page, fam, etat) {
     if (appareil === 'manette') {
       if (c === 'marcher') return { glyphes: [icone('stick', stickPousse), icone('croix', croixTenue)], pieces: ['stick', 'croix'] };
-      if (c === 'tourner') return { glyphes: [icone('stick', stickPousse)], pieces: ['stick'] };
+      // Au volant, le stick ET la croix tournent — et rien d'autre (`Vehicules.commandesJoueur`).
+      if (c === 'tourner') return { glyphes: [icone('stick', stickPousse), icone('croix', croixTenue)], pieces: ['stick', 'croix'] };
       // ⚠️ VISER est la gachette du gaz, a pied (`Entree`, `gachetteVise`) : pas
       // un bouton du profil, la meme piece que GAZ sur la page du volant.
       // LIRE, son pendant, est la gachette du frein (`gachetteLit`).
