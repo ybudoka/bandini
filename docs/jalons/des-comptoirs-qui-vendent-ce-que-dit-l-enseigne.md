@@ -86,3 +86,30 @@ BIJOUTERIE, une chaîne en or ; chez PNEUS DESCHAMPS, des pneus d'hiver. Et un c
 - **La ville ne bouge pas** : la même ville avec et sans les rayons, clé par clé (les juges « ce module ne déplace rien »).
 
 ## Notes
+
+### Vague 1 : la table et la bouffe (livrée le 3 oct. 2026)
+
+- **`app/rayons.py`** : 246 noms d'enseigne que la ville peut peindre (les trois catalogues de `devantures` et la
+  réserve). **97 décidés** (`ENSEIGNES`) et **149 en attente** (`EN_ATTENTE`, chacun avec ce qu'il vendra et sa
+  vague). Un juge veut chaque nom dans l'une des deux tables, jamais dans les deux.
+- **24 rayons** (`RAYONS`), 23 de bouffe : boulangerie, pâtisserie, pâtisserie chinoise, beignerie, boucherie,
+  traiteur, pizzeria, resto chinois, dim sum, BBQ cantonais, nouilles, rôtisserie, casse-croûte, binerie, moules,
+  épicerie, épicerie chinoise, fruiterie, laiterie, fromagerie, chocolatier, vins, bistro ; et le comptoir d'un
+  CINÉMA RIALTO qui n'est pas le Rialto. **36 bouchées neuves** (`rayons.BOUCHEES`, pas dans `economie.TARIFS` :
+  elles voyagent avec leurs rayons) : de 4 à 5 au dollar, sous la borne du hot-dog. Plus une enseigne de bouffe au
+  comptoir de sa couleur.
+- **Déjà justes** : les tavernes et les bars (`nuit`), les poissonneries (`marine`), les pharmacies (`sante`), les
+  quincailleries (`artisan`), les tabagies et les dépanneurs (`commerce`), la friperie (`mode`), les barbiers
+  (`salon`), les journaux (`journal`) — décidés vers le comptoir de leur famille.
+- **Le poids** : 20 370 octets bruts tels quels, 6 201 compactés (`rayons.exporter` : `[slug, nom]` par article,
+  les noms rangés par rayon), dans la **suite** du paquet (`DANS_LA_SUITE`), qui part après l'écran titre. Aucun
+  plafond n'avait la marge : Martin a relevé celui de la suite (31 000 → 37 000 bruts, 13 000 → 15 500 gzip).
+  `Missions.rayons` les déplie une fois et verse les prix des bouchées dans les tarifs du jeu.
+- **Le navigateur** : `Missions.comptoirDuPoint` prend le rayon au nom de la porte (que `Monde.entrer` donne à la
+  pièce) quand le point est un comptoir de famille ; sinon, et pour une enseigne en attente, le comptoir du genre.
+  Les heures restent celles du genre. Rien ne bouge dans la ville : ni tuile, ni porte, ni dé.
+- **Juges** : `test_rayons.py` (les deux tables couvrent tout, un rayon vend à son point, la bouffe dit son nom,
+  les articles existent, rien ne bat le hot-dog, chaque porte de commerce de la ville porte un nom connu, le paquet
+  porte les rayons) ; `test_rayons_js.py` (le menu de chacune des 97 enseignes décidées, une en attente et le
+  dépanneur qui gardent le leur, et l'achat du pain au bouton par la vraie porte d'une BOULANGERIE). Chacun rougit
+  quand on retire le rayon du navigateur ou une ligne de la table.

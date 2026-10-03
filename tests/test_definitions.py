@@ -542,9 +542,16 @@ def test_le_paquet_reste_leger(paquets):
     découpage par district, ~55 ms pour le plus gros risque) ou relever — il a relevé : la carte voyage déjà pliée
     et compressée au maximum, et le démarrage se joue sur les scripts (docs/jalons/charger-les-districts-autour-du-
     joueur.md). La garde par clé (`MESURE_DE_LA_CARTE`) reste : c'est elle qui dit qui grossit.
+
+    ⚠️ **LES RAYONS DES COMPTOIRS, LE 3 OCT. 2026 — LA SUITE : 31 000 → 37 000 BRUTS, 13 000 → 15 500 GZIP, TRANCHÉ
+    PAR MARTIN** (docs/jalons/des-comptoirs-qui-vendent-ce-que-dit-l-enseigne.md). Le rayon de chaque enseigne
+    (24 comptoirs, 97 enseignes, 36 bouchées neuves) : 20 370 bruts tels quels, 6 201 compactés (`rayons.exporter`,
+    2 140 gzip). Aucun plafond n'avait la marge ; les définitions d'avant l'écran titre étaient à 238 octets gzip du
+    leur. Proposé à Martin : relever la suite, une requête à part, ou relever les définitions — il a relevé la
+    suite : elle part après l'écran titre, et sans elle un comptoir sert celui de son genre.
     """
     for nom, brut_max, fil_max in (("definitions", 255_000, 57_500), ("carte", 600_000, 60_000),
-                                   ("musiques", 50_000, 10_000), ("suite", 31_000, 13_000)):
+                                   ("musiques", 50_000, 10_000), ("suite", 37_000, 15_500)):
         paquet = getattr(paquets, nom)
         mesures = {"definitions": MESURE_DU_PAQUET, "carte": MESURE_DE_LA_CARTE}
         qui = f" — qui a grossi : {_qui_a_grossi(paquet.corps, mesure=mesures[nom])}" if nom in mesures else ""

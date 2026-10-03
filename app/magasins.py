@@ -153,6 +153,10 @@ def ambulant(slug: str) -> dict | None:
 
 # --- Les comptoirs des commerces ordinaires --------------------------------
 
+#: ⚠️ Depuis le 3 oct. 2026, le comptoir de FAMILLE n'est plus que le recours : une enseigne qui a son RAYON
+#: (`rayons.py` : la BOULANGERIE, le BBQ CANTONAIS…) vend le sien. Ici restent les heures, la saison, et ce que
+#: vendent les enseignes encore en attente (`rayons.EN_ATTENTE`) et les lieux garantis (le dépanneur de Ti-Paul).
+
 #: ⚠️ « Un comptoir qui ne donne rien est une porte qu'on ouvre pour rien. »
 #: Depuis qu'un commerce ordinaire sur cinq s'ouvre, il fallait repondre a la
 #: question : et qu'est-ce qu'on y fait ? Un comptoir par FAMILLE de devanture

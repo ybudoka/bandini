@@ -1529,6 +1529,46 @@ const Missions = (function () {
     return cn.ferme + ' ' + Math.round(comptoir.heures[0] * 24) + ' H';
   }
 
+  /** LE RAYON DE L'ENSEIGNE (docs/jalons/des-comptoirs-qui-vendent-ce-que-dit-l-enseigne.md) : le comptoir
+      d'une famille de devanture vend ce que dit le nom de SA porte — la BOULANGERIE du pain, le BBQ CANTONAIS du
+      canard laque (`rayons.ENSEIGNES`, `rayons.RAYONS`). ⚠️ Le nom de la porte, pas celui de la piece : dix-huit
+      commerces partagent une piece, et c'est la porte qui la renomme (`Monde.entrer`). Une enseigne sans rayon
+      (encore en attente), un lieu qui a la sienne (le depanneur de Ti-Paul, le terminus) ou un comptoir qui n'est
+      pas une famille (la cabane a sucre, le Rialto) garde le comptoir de son genre. Les HEURES restent celles du
+      genre (`comptoirFerme`) : le rayon ne change que ce qu'on achete. */
+  function comptoirDuPoint(point) {
+    const comptoirs = B.defs.comptoirs || {}, famille = comptoirs[point.genre];
+    if (!famille || famille.bloc || famille.enseigne) return famille || null;
+    const r = rayons(), nom = B.interieur && B.interieur.nom;
+    const slug = r && nom && r.enseignes[nom];
+    return (slug && (r.rayons[slug] || comptoirs[slug])) || famille;
+  }
+
+  /** Les rayons DEPLIES, une fois (`rayons.exporter` les envoie compacts, dans la suite du paquet) : un comptoir
+      par rayon, au meme format que ceux de famille (`magasins.COMPTOIRS`) — le tarif d'un article est son slug,
+      ses gains `<slug>_pv` et `<slug>_souffle` ; le nom de chaque enseigne, vers son rayon. Les prix des bouchees
+      que seul un rayon vend (`rayons.BOUCHEES`) rejoignent les tarifs du jeu : `itemBouchee` et `manger` les y
+      lisent comme les autres (Python garde qu'aucune cle n'y est deja). Null tant que la suite n'est pas la. */
+  function rayons() {
+    const r = B.defs.rayons;
+    if (!r) return null;
+    if (r.deplie) return r.deplie;
+    const tarifs = B.defs.economie.tarifs, enseignes = {}, comptoirs = {};
+    Object.keys(r.tarifs).forEach(function (s) {
+      const t = r.tarifs[s];
+      tarifs[s] = t[0]; tarifs[s + '_pv'] = t[1]; tarifs[s + '_souffle'] = t[2];
+    });
+    Object.keys(r.enseignes).forEach(function (s) { r.enseignes[s].forEach(function (nom) { enseignes[nom] = s; }); });
+    Object.keys(r.rayons).forEach(function (s) {
+      comptoirs[s] = { nom: r.rayons[s][0], marge: 1, rabais: 1, articles: r.rayons[s][1].map(function (a) {
+        return { slug: a[0], nom: a[1], tarif: a[0], gain_pv: a[0] + '_pv', gain_souffle: a[0] + '_souffle',
+                 effet: a[2] || null, arme: null, tenue: null, journal: false };
+      }) };
+    });
+    r.deplie = { enseignes: enseignes, rayons: comptoirs };
+    return r.deplie;
+  }
+
   /** Ce qu'on achete au comptoir d'un commerce ordinaire.
 
       ⚠️ Rien n'est ecrit ici : le comptoir vient du serveur
@@ -1539,7 +1579,7 @@ const Missions = (function () {
       test, pas dans la partie. */
   function menuComptoir(point, items) {
     const p = B.partie, tarifs = B.defs.economie.tarifs, piece = B.interieur;
-    const comptoir = (B.defs.comptoirs || {})[point.genre];
+    const comptoir = comptoirDuPoint(point);
     if (!comptoir) return null;
     // Ferme, on ne promet pas de prix : le menu le dit, et ACTION ne vendra rien.
     const ferme = comptoirFerme(point);
@@ -4107,7 +4147,7 @@ const Missions = (function () {
            coupon, prixAmbulant, crieurSousLaMain, filleSousLaMain, stoolSousLaMain, etalSousLaMain, temoinSousLaMain, prendreCoupon,
            paliersDe, palierDebloque, avantage, compterLeBoulot,
            boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, dansLaCour, majFourriere, malGare, majMalGares, estDeLaPlanque, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, proprieteDe, possede, aVendre,
-           dormir, dormirJusquAuSoir, porterTenue, fouiller, menuComptoir, comptoirFerme, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, majGarage, menuDuRideau, menuArmurerie, menuVetements,
+           dormir, dormirJusquAuSoir, porterTenue, fouiller, menuComptoir, comptoirDuPoint, comptoirFerme, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, majGarage, menuDuRideau, menuArmurerie, menuVetements,
            repeindre, prixCarrosserie, refusDuSeuil,
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais,
            nuitDeLaDette, detteDuLendemain, collecteurs, envoyerLesCollecteurs, majCollecteurs, rembourser, collecteurSousLaMain, menuDette,
