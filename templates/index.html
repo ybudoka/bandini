@@ -187,9 +187,14 @@
      (Les onglets et les lignes d'un menu, eux, se touchent SUR la toile —
      `Hud.toucherMenu` : on les touche une fois, on ne les tient pas.) #}
   <div id="tactile" aria-hidden="true">
-    <div id="croix"><u></u></div>
+    {# La ZONE du joystick flottant : invisible, il nait sous le doigt (`Entree`, `initTactile`). #}
+    <div id="croix"><i><u></u></i></div>
+    {# Au volant (`body.au-volant`) : pas de joystick, deux boutons pour tourner. #}
+    <div id="volant"><b data-a="gauche">◀</b><b data-a="droite">▶</b></div>
     <div id="boutons">
       <b data-a="attaque">FRAPPE</b><b data-a="action">ACTION</b><b data-a="esquive">COURS</b><b data-a="arme">ARME</b><b data-a="saisir">SAISIR</b><b data-a="lire">LIRE</b>
+      {# Les PEDALES, au volant seulement (`body.au-volant`) : le pouce gauche tourne, le droit avance et recule. #}
+      <b data-a="gaz">GAZ</b><b data-a="frein">RECUL</b>
     </div>
     <div id="haut"><b data-a="pause">❚❚</b><b data-a="plein">⛶</b></div>
   </div>

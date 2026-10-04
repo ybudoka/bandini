@@ -313,15 +313,24 @@ body.tactile .aide { display: none; }
 #tactile { position: fixed; inset: 0; z-index: 5; pointer-events: none; touch-action: none; }
 #tactile > * { pointer-events: auto; touch-action: none; -webkit-user-select: none; user-select: none; }
 
+/* La ZONE du joystick flottant : le quart bas-gauche, la ou le pouce gauche se pose
+   en paysage — a l'ecart des boutons de droite et de PAUSE en haut. Invisible : le
+   joystick (`i`) n'y nait que sous le doigt (`#croix.actif`), centre sur lui. */
 #croix {
   position: absolute;
-  left: max(14px, env(safe-area-inset-left));
-  bottom: max(16px, env(safe-area-inset-bottom));
-  width: 140px; height: 140px;
+  left: 0; bottom: 0;
+  width: min(42vw, 340px); height: min(64vh, 250px);
+}
+#croix i {
+  display: none;
+  position: absolute; left: 50%; top: 50%;
+  width: 140px; height: 140px; margin: -70px 0 0 -70px;
   border-radius: 50%;
   background: radial-gradient(circle at 50% 50%, rgba(42, 36, 64, .62), rgba(11, 10, 18, .5) 70%, transparent 72%);
   border: 1px solid rgba(232, 179, 60, .25);
+  pointer-events: none;
 }
+#croix.actif i { display: block; }
 #croix u {
   position: absolute; left: 50%; top: 50%;
   width: 52px; height: 52px; margin: -26px 0 0 -26px;
@@ -364,6 +373,58 @@ body.tactile .aide { display: none; }
 #boutons b[data-a="saisir"] { right: 90px; bottom: 146px; width: 56px; height: 56px; font-size: 10px; }
 /* LIRE (la lecture des passants) : on le TIENT, au-dessus d'ARME, 8 px d'air ; 20 px a droite de SAISIR. */
 #boutons b[data-a="lire"] { right: 20px; bottom: 168px; width: 50px; height: 50px; font-size: 10px; }
+
+/* --- Au volant (`Entree.contexte`, `body.au-volant`) ----------------------
+   Le pouce gauche tourne aux boutons ◀ ▶ (`#volant`, plus de joystick), le
+   droit les PEDALES : GAZ, la plus grosse, dans le coin ; RECUL a sa gauche, ou
+   le pouce tombe en glissant. Le reste monte d'un etage, 10 px d'air entre
+   chaque pastille (le test tactile du navigateur mesure les chevauchements).
+   Ce qui ne sert pas au volant (« · ») s'efface. */
+#boutons b[data-a="gaz"], #boutons b[data-a="frein"] { display: none; }
+body.au-volant #boutons b.vide { display: none; }
+body.au-volant #boutons b[data-a="gaz"], body.au-volant #boutons b[data-a="frein"] {
+  display: flex; border-radius: 18px; font-size: 13px;
+}
+body.au-volant #boutons b[data-a="gaz"] {
+  right: 6px; bottom: 8px; width: 80px; height: 92px;
+  background: rgba(46, 120, 70, .62); border-color: rgba(120, 220, 140, .55);
+}
+body.au-volant #boutons b[data-a="gaz"].on { background: rgba(90, 200, 110, .7); }
+body.au-volant #boutons b[data-a="frein"] {
+  right: 96px; bottom: 4px; width: 72px; height: 76px;
+  background: rgba(130, 40, 36, .62); border-color: rgba(230, 110, 100, .55);
+}
+body.au-volant #boutons b[data-a="frein"].on { background: rgba(210, 70, 60, .7); }
+body.au-volant #boutons b[data-a="esquive"] { right: 104px; bottom: 90px; width: 58px; height: 58px; }
+body.au-volant #boutons b[data-a="attaque"] { right: 16px; bottom: 110px; width: 60px; height: 60px; font-size: 10px; }
+body.au-volant #boutons b[data-a="action"] { right: 104px; bottom: 158px; width: 54px; height: 54px; }
+body.au-volant #boutons b[data-a="arme"] { right: 22px; bottom: 180px; width: 50px; height: 50px; font-size: 10px; }
+/* La NITRO, sur le char qui en a une : a gauche de RECUL, au ras du bas. */
+body.au-volant #boutons b[data-a="saisir"] {
+  right: 178px; bottom: 6px; width: 52px; height: 52px; font-size: 10px;
+  background: rgba(40, 90, 150, .62); border-color: rgba(110, 180, 240, .55);
+}
+/* Le VOLANT : pas de joystick, deux gros boutons pour tourner, sous le pouce gauche. */
+#volant { display: none; }
+body.au-volant #croix { display: none; }
+body.au-volant #volant {
+  display: block; position: absolute;
+  left: max(14px, env(safe-area-inset-left)); bottom: max(16px, env(safe-area-inset-bottom));
+  width: 196px; height: 92px;
+}
+#volant b {
+  position: absolute; bottom: 0; width: 88px; height: 88px;
+  display: flex; align-items: center; justify-content: center;
+  font: 700 30px var(--mono); color: var(--parchemin);
+  background: rgba(42, 36, 64, .66);
+  border: 1px solid rgba(232, 179, 60, .4); border-radius: 22px;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, .5);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .06s ease, background .06s ease;
+}
+#volant b[data-a="gauche"] { left: 0; }
+#volant b[data-a="droite"] { left: 104px; }
+#volant b.on { background: rgba(232, 179, 60, .55); transform: translateY(1px) scale(.94); }
 
 #haut {
   position: absolute;

@@ -13,16 +13,9 @@ const Hud = (function () {
     // 480 x 270 pixels du jeu.
     const toile = d.getElementById('toile');
     if (toile && toile.addEventListener) {
-      toile.addEventListener('pointerdown', function (ev) {
-        if (!B.menu) return;
-        // ⚠️ Endormie, la pause ne fait que se reveiller (`Jeu.majVeille`) : le clic
-        // ne choisit pas la ligne qui se cachait sous le doigt.
-        if (B.etat === 'pause' && B.veille && B.veille.part > 0) return;
-        const b = toile.getBoundingClientRect();
-        if (!b.width || !b.height) return;
-        toucherMenu((ev.clientX - b.left) * VW / b.width, (ev.clientY - b.top) * VH / b.height);
-      });
+      toile.addEventListener('pointerdown', function (ev) { toucherToile(ev.clientX, ev.clientY); });
     }
+    toileDuMenu = toile;
     // ⚠️ `videPresse` : ENTREE sur le bouton qui a le focus fait un clic ET un
     // appui d'ACTION. Le clic ouvre le choix des parties, et l'appui, lu a
     // l'image suivante, y choisirait aussitot la ligne sous le curseur.
@@ -425,6 +418,18 @@ const Hud = (function () {
   let clic = null;
   //: Les zones a toucher, telles que le DERNIER menu dessine les a posees.
   let cibles = [], ciblesDe = null;
+  let toileDuMenu = null;
+  /** Un toucher de la toile, en px de l'ecran : la ligne de menu ou l'onglet dessous. Aussi
+      appele par la zone du joystick (`Entree`), qui couvre le bas de la toile. */
+  function toucherToile(cx, cy) {
+    if (!B.menu || !toileDuMenu) return;
+    // ⚠️ Endormie, la pause ne fait que se reveiller (`Jeu.majVeille`) : le clic
+    // ne choisit pas la ligne qui se cachait sous le doigt.
+    if (B.etat === 'pause' && B.veille && B.veille.part > 0) return;
+    const b = toileDuMenu.getBoundingClientRect();
+    if (!b.width || !b.height) return;
+    toucherMenu((cx - b.left) * VW / b.width, (cy - b.top) * VH / b.height);
+  }
   function poserCible(zone) { cibles.push(zone); }
 
   /** Un doigt ou un clic en (x, y), en pixels du jeu (480 x 270). */
@@ -1144,9 +1149,17 @@ const Hud = (function () {
         return code ? { s: 'touche', code: code, allume: function () { return Entree.toucheEnfoncee(code); } } : { s: 'espace' };
       }) };
     }
-    // Le doigt : le pouce, et les quatre boutons sous leur nom du moment.
+    // Le doigt : le pouce, et les boutons sous leur nom du moment. ⚠️ Au volant, le gaz et le
+    // recul sont des PEDALES (`Entree.etiquettes`) : le pouce ne fait que tourner.
     const vers = { marcher: null, tourner: 'cote', gaz: 'haut', frein: 'bas' };
-    if (c in vers) return { glyphes: [icone('pouce', poucePose, vers[c])], cible: 'croix' };
+    // Et on y tourne aux boutons ◀ ▶ (`#volant`) : plus de joystick.
+    if (page === 'volant' && c === 'tourner') {
+      return { glyphes: [icone('pouce', function () { return Entree.basTactile('gauche') || Entree.basTactile('droite'); }, 'cote')],
+               cible: 'gauche' };
+    }
+    if (c in vers && !(page === 'volant' && (c === 'gaz' || c === 'frein'))) {
+      return { glyphes: [icone('pouce', poucePose, vers[c])], cible: 'croix' };
+    }
     if (c === 'pause') return { glyphes: [icone('pause', function () { return Entree.basTactile('pause'); })], cible: 'pause' };
     const noms = Entree.etiquettesTactiles(page === 'volant' ? 'vehicule' : 'pied');
     if (!noms[c]) return null;
@@ -1441,6 +1454,14 @@ const Hud = (function () {
     lire: { x: 164, y: 37, r: 6 },     // LIRE, au-dessus d'ARME (`styles.css`)
     attaque: { x: 164, y: 80, r: 9 }, esquive: { x: 134, y: 94, r: 7 },
     pause: { x: 170, y: 10, r: 5 } };
+  //: Le meme telephone, AU VOLANT (`styles.css`, `body.au-volant`) : les boutons ◀ ▶ a gauche,
+  //: les PEDALES dans le coin (`pedale`), le reste un etage plus haut ; ni joystick ni LIRE.
+  const PLAN_TACTILE_VOLANT = { l: 184, h: 104,
+    gauche: { x: 14, y: 86, r: 8, pedale: '#3a3450' }, droite: { x: 34, y: 86, r: 8, pedale: '#3a3450' },
+    gaz: { x: 163, y: 80, r: 9, pedale: '#2e7846' }, frein: { x: 131, y: 85, r: 8, pedale: '#82281f' },
+    esquive: { x: 129, y: 56, r: 6 }, attaque: { x: 163, y: 50, r: 7 },
+    action: { x: 130, y: 33, r: 6 }, arme: { x: 160, y: 30, r: 6 }, saisir: { x: 103, y: 88, r: 5 },
+    pause: { x: 170, y: 10, r: 5 } };
 
   function disque(ctx, cx, cy, r, couleur) {
     ctx.fillStyle = couleur;
@@ -1451,8 +1472,8 @@ const Hud = (function () {
     B.stats.rects += 2 * r + 1;
   }
 
-  function dessinerCommandesTactile(ctx, lignes, x, y) {
-    const P = PLAN_TACTILE;
+  function dessinerCommandesTactile(ctx, lignes, x, y, slug) {
+    const P = slug === 'volant' ? PLAN_TACTILE_VOLANT : PLAN_TACTILE;
     // ⚠️ DECALE A GAUCHE, pas centre : sur un telephone en paysage, les quatre
     // boutons couvrent le coin en bas a droite de l'ecran — centre, le plan
     // poussait FRAPPE et SPRINT dessous (vu a la capture, 844 x 390).
@@ -1473,12 +1494,15 @@ const Hud = (function () {
     ctx.fillStyle = '#8a8698'; ctx.fillRect(ox - 2, oy - 2, P.l + 4, P.h + 4);
     ctx.fillStyle = '#15141c'; ctx.fillRect(ox, oy, P.l, P.h);
     B.stats.rects += 2;
-    for (const nom of ['croix', 'attaque', 'action', 'esquive', 'arme', 'saisir', 'lire']) {
+    for (const nom of ['croix', 'gauche', 'droite', 'attaque', 'action', 'esquive', 'arme', 'saisir', 'lire', 'gaz', 'frein']) {
       const c = P[nom];
+      if (!c) continue;
       const tenu = nom === 'croix' ? poucePose() : Entree.basTactile(nom);
-      disque(ctx, ox + c.x, oy + c.y, c.r, tenu ? '#e8b33c' : '#3a3450');
+      const couleur = tenu ? '#e8b33c' : c.pedale || '#3a3450';
+      if (c.pedale) { ctx.fillStyle = couleur; ctx.fillRect(ox + c.x - c.r + 2, oy + c.y - c.r, 2 * c.r - 3, 2 * c.r + 1); B.stats.rects++; }
+      else disque(ctx, ox + c.x, oy + c.y, c.r, couleur);
     }
-    disque(ctx, ox + P.croix.x, oy + P.croix.y, 6, '#6b5a2e');
+    if (P.croix) disque(ctx, ox + P.croix.x, oy + P.croix.y, 6, '#6b5a2e');
     const c = P.pause;
     ctx.fillStyle = Entree.basTactile('pause') ? '#e8b33c' : '#3a3450';
     ctx.fillRect(ox + c.x - c.r, oy + c.y - c.r, 2 * c.r + 1, 2 * c.r + 1);
@@ -1536,7 +1560,7 @@ const Hud = (function () {
     const lignes = lignesDAide(page, appareil);
     if (appareil === 'manette') dessinerCommandesManette(ctx, lignes, x, y, l);
     else if (appareil === 'clavier') dessinerCommandesClavier(ctx, lignes, x, y, l);
-    else dessinerCommandesTactile(ctx, lignes, x, y);
+    else dessinerCommandesTactile(ctx, lignes, x, y, page.slug);
     if (!m.classeur) dessinerPiedDesCommandes(ctx, m, appareil, x, y, l, h);
   }
 
@@ -4863,7 +4887,7 @@ const Hud = (function () {
   return {
     nomIci, dessinerLaVilleDuBoss, init, voile, etat, progression, partDesScripts, finirChargement, message, prime, majPrime, montantDeLaPrime, PRIME, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, toutesLesTechniques, glyphesDOnglets, menuSautMissions, menuSautDefis, menuChezUnDonneur, menuEndroitsCles, menuJukebox, pointDuDefi, menuCarnet,
     ouvrirOnglet, toucherMenu, onglets: function () { return ongletsVisibles().map(function (o) { return o.slug; }); },
-    ciblesDuMenu: function () { return cibles.slice(); }, compteur, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuCarnetCollections, menuCarnetCarte, menuCarnetBebelles, menuCarnetBebelle, menuCarnetSauts, menuCarnetEnseignes, menuCarnetEnseigne, menuDebugCollections, menuOptions, menuManette, menuManetteBoutons, menuBilan,
+    ciblesDuMenu: function () { return cibles.slice(); }, toucherToile, compteur, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuCarnetCollections, menuCarnetCarte, menuCarnetBebelles, menuCarnetBebelle, menuCarnetSauts, menuCarnetEnseignes, menuCarnetEnseigne, menuDebugCollections, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     menuCommandes, ouvrirCommandes, majAideDuTitre, lignesDAide, glypheDAction, dessinerGlyphe, largeurGlyphe,
     menuParties, menuEffacer, menuCopier, tempsDeJeu, quand,
     legendeDeLaCarte, legendeDuZonage, lieuxSurLaCarte, couleurDeLieu, cibleDuBoulot, PULSE_JOUEUR, BATTEMENT_CIBLE, CALQUE_ALPHA,

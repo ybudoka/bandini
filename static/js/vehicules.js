@@ -3389,8 +3389,10 @@ const Vehicules = (function () {
     // ⚠️ A LA MANETTE, LE STICK ET LA CROIX NE FONT QUE TOURNER (demande de Martin, 3 oct. 2026, sa
     // manette sur l'iPhone) : avancer, c'est la gachette de droite, reculer celle de gauche
     // (`Entree.gaz`, `Entree.frein`). Un stick pousse en biais vers le haut accelerait dans chaque
-    // virage. Le clavier (fleches) et le pouce sur la vitre gardent haut = gaz, bas = frein.
-    let gaz = Entree.basSansManette('haut') ? 1 : 0, frein = Entree.basSansManette('bas') ? 1 : 0;
+    // virage. Le clavier garde ses fleches (haut = gaz, bas = frein) ; au doigt, ce sont les
+    // PEDALES GAZ et RECUL (`Entree.etiquettes`), et on tourne aux boutons ◀ ▶ (`#volant`).
+    let gaz = Entree.basSansManette('haut') || Entree.basTactile('gaz') ? 1 : 0;
+    let frein = Entree.basSansManette('bas') || Entree.basTactile('frein') ? 1 : 0;
     if (axe.source === 'tactile') { if (axe.y < -0.2) gaz = Math.max(gaz, -axe.y); if (axe.y > 0.2) frein = Math.max(frein, axe.y); }
     gaz = Math.max(gaz, Entree.gaz); frein = Math.max(frein, Entree.frein);
     const direction = axe.source === 'clavier' ? (Entree.bas('droite') ? 1 : 0) - (Entree.bas('gauche') ? 1 : 0) : borner(axe.x * 1.3, -1, 1);

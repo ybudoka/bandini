@@ -550,6 +550,85 @@ def test_les_commandes_tactiles_sont_grandes_et_visibles(browser, serveur):
     contexte.close()
 
 
+
+def test_au_volant_les_commandes_tactiles_deviennent_des_pedales(browser, serveur):
+    """Martin, 4 oct. 2026 : « optimise complètement les contrôles visuels pour la conduite », puis « pas de
+    joystick, juste gauche et droite ». Au volant, au doigt : deux boutons ◀ ▶ pour tourner, deux PEDALES
+    (GAZ, RECUL), et ce qui ne sert pas au volant (LIRE, la NITRO d'un char qui n'en a pas) effacé — sans
+    qu'aucune pastille en morde une autre. A pied, le joystick ne se voit pas : il nait sous le doigt."""
+    contexte = browser.new_context(viewport={"width": 844, "height": 390}, has_touch=True, is_mobile=True,
+                                   device_scale_factor=2)
+    page = contexte.new_page()
+    erreurs = []
+    page.on("pageerror", lambda e: erreurs.append(str(e)))
+    page.goto(serveur)
+    attendre_titre(page)
+    page.tap("#bouton-jouer")
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.evaluate("window.BANDINI.Histoire.passerOuverture()")
+    page.wait_for_function("!window.BANDINI.B.ouverture")
+    if page.evaluate("!!window.BANDINI.B.menu"):
+        page.tap('#tactile b[data-a="action"]')
+        page.wait_for_function("!window.BANDINI.B.menu")
+    # A pied : ni pedales ni ◀ ▶, et le joystick ne se voit pas tant qu'on n'y touche pas.
+    assert page.locator('#tactile b[data-a="gaz"]').bounding_box() is None
+    assert page.locator('#tactile b[data-a="gauche"]').bounding_box() is None
+    assert page.locator("#croix i").bounding_box() is None, "le joystick se voit sans doigt"
+    zone = page.locator("#croix").bounding_box()
+    # Le doigt pose n'importe ou dans la zone : le joystick nait CENTRE sous lui.
+    px, py = zone["x"] + zone["width"] * 0.7, zone["y"] + zone["height"] * 0.4
+    page.mouse.move(px, py)
+    page.mouse.down()
+    anneau = page.locator("#croix i").bounding_box()
+    assert anneau and abs(anneau["x"] + anneau["width"] / 2 - px) < 2 and abs(anneau["y"] + anneau["height"] / 2 - py) < 2, anneau
+    page.mouse.up()
+    assert page.locator("#croix i").bounding_box() is None, "le joystick reste apres le relacher"
+    page.evaluate("""() => {
+        const L = window.BANDINI, j = L.B.joueur;
+        const v = L.Vehicules.creer('auto', j.x + 24, j.y, 0, { etat: 'stationne' });
+        L.Entites.indexer();
+        L.Vehicules.monter(j, v);
+    }""")
+    page.wait_for_function("document.body.classList.contains('au-volant')")
+    assert page.locator("#croix").bounding_box() is None, "pas de joystick au volant"
+    assert page.inner_text('#tactile b[data-a="gaz"]') == "GAZ"
+    assert page.inner_text('#tactile b[data-a="frein"]') == "RECUL"
+    assert page.locator('#tactile b[data-a="lire"]').bounding_box() is None, "LIRE ne sert pas au volant"
+    assert page.locator('#tactile b[data-a="saisir"]').bounding_box() is None, "pas de NITRO sur ce char"
+    boites = {a: page.locator(f'#tactile b[data-a="{a}"]').bounding_box()
+              for a in ("gauche", "droite", "gaz", "frein", "attaque", "action", "esquive", "arme", "pause", "plein")}
+    for nom, b in boites.items():
+        assert b, nom
+        assert b["x"] >= 0 and b["y"] >= 0 and b["x"] + b["width"] <= 844 and b["y"] + b["height"] <= 390, nom
+    assert boites["gaz"]["width"] >= 72 and boites["frein"]["width"] >= 64, "les pedales sont les plus grosses"
+    assert boites["gauche"]["width"] >= 72 and boites["droite"]["x"] > boites["gauche"]["x"]
+    noms = sorted(boites)
+    for i, un in enumerate(noms):
+        for autre in noms[i + 1:]:
+            a, b = boites[un], boites[autre]
+            chevauche = (a["x"] < b["x"] + b["width"] and b["x"] < a["x"] + a["width"]
+                         and a["y"] < b["y"] + b["height"] and b["y"] < a["y"] + a["height"])
+            assert not chevauche, f"{un} et {autre} se chevauchent : {a} / {b}"
+
+    def tenir(nom, ms):
+        b = boites[nom]
+        page.mouse.move(b["x"] + b["width"] / 2, b["y"] + b["height"] / 2)
+        page.mouse.down()
+        page.wait_for_timeout(ms)
+        r = page.evaluate("""() => { const v = window.BANDINI.B.joueur.dansVehicule;
+            return { vitesse: v.vitesse, direction: window.BANDINI.Vehicules.commandesJoueur(v).direction }; }""")
+        page.mouse.up()
+        return r
+    # Le GAZ fait avancer le char ; ◀ et ▶ tournent, sans accelerer.
+    assert tenir("gaz", 600)["vitesse"] > 0.1
+    page.wait_for_function("window.BANDINI.B.joueur.dansVehicule.vitesse < 0.05", timeout=10000)
+    droite = tenir("droite", 300)
+    gauche = tenir("gauche", 300)
+    assert droite["direction"] == 1 and gauche["direction"] == -1, (droite, gauche)
+    assert abs(gauche["vitesse"]) < 0.05, "tourner a fait avancer le char"
+    assert erreurs == []
+    contexte.close()
+
 def test_le_pincement_est_bloque_par_les_trois_couches():
     with open(os.path.join(RACINE, "templates", "base.html"), encoding="utf-8") as f:
         base = f.read()
