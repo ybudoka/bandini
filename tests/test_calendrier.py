@@ -35,7 +35,8 @@ def test_la_meme_annee_des_deux_cotes(banc, paquet):
 def test_une_partie_neuve_commence_sans_neige(banc):
     """Martin, 4 oct. 2026 : « le jeu doit débuter à un moment sans neige ». Une partie neuve commence au
     jour `DEPART` (le 1er mai) ; toute sa première journée, pas un flocon, pas de neige qui tient, pas de
-    banc, pas de gadoue, pas de verglas. Une vieille sauvegarde, elle, garde son jour."""
+    banc, pas de gadoue, pas de verglas. Une vieille sauvegarde, elle, garde son jour. (Le banc commence le
+    1er janvier pour les autres juges : `depart_du_jeu=True` joue le vrai départ.)"""
     assert calendrier.saison(calendrier.DEPART) != "hiver"
     r = banc("""function (L, o) {
         L.Jeu.commencer();
@@ -48,7 +49,7 @@ def test_une_partie_neuve_commence_sans_neige(banc):
         }
         return { jour: j, debut: p.chantiers.debut, mois: L.Calendrier.mois(j), neige: rien,
                  vieille: L.Sauvegarde.completer({ jour: 3 }, L.B.defs).jour };
-    }""")
+    }""", depart_du_jeu=True)
     assert r["jour"] == r["debut"] == calendrier.DEPART and r["mois"] == "mai"
     assert r["neige"] == [], r["neige"][:3]
     assert r["vieille"] == 3

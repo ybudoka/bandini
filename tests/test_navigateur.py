@@ -18,6 +18,8 @@ else:
     pytest.importorskip("playwright.sync_api")
 from playwright.sync_api import TimeoutError as DelaiDepasse  # noqa: E402
 
+from app import calendrier  # noqa: E402
+
 ECRANS = {
     "bureau": (1280, 720),
     "tablette": (1024, 768),
@@ -344,7 +346,7 @@ def test_changer_de_partie_recharge_la_page_et_rouvre_le_choix(page, serveur, er
     assert page.evaluate(ici) == "2  NOUVELLE PARTIE", "le choix se rouvre tout seul, sur la partie prise"
     appui("KeyE")
     page.wait_for_selector('#bandini[data-etat="jeu"]')
-    assert page.evaluate("() => BANDINI.B.partie.jour") == 1
+    assert page.evaluate("() => BANDINI.B.partie.jour") == calendrier.DEPART, "une partie neuve commence le 1er mai"
     assert page.evaluate("() => !!(BANDINI.B.scene || BANDINI.B.ouverture)"), "une partie neuve s'ouvre sur sa scene"
     assert page.evaluate("() => localStorage.getItem('bandini-emplacement-v1')") == "2"
     assert page.evaluate("() => localStorage.getItem('bandini-partie-v1')") == un, "la 1 n'a pas bouge"
