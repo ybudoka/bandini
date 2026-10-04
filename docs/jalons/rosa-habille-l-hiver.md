@@ -22,7 +22,7 @@ marin gris tacheté), la ceinture sur la taille, la fléchée avec ses franges, 
 fermé à la main au sec, ouvert tout seul sous la pluie (celui des passants, lot 4a des
 saisons). ⚠️ Le joueur n'est plus habillé d'hiver par la saison : ce qu'il porte, c'est ce
 qu'on voit — sinon le froid punirait un joueur qui a l'air botté. Rocco te donne une vieille
-tuque au départ (une partie commence le 1er janvier) ; les bottes, tu les achètes.
+tuque au départ (une partie commençait alors le 1er janvier ; le 1er mai depuis le 4 oct. 2026) ; les bottes, tu les achètes.
 
 Vague 2 — les effets. Le froid : dehors, à pied, en grand froid (`froid` de la palette ≥ le
 seuil des habits d'hiver), sans ce qu'il faut — une tuque ET des bottes d'hiver, ou les

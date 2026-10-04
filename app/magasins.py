@@ -392,7 +392,7 @@ TENUES = [
     # L'hiver chez Rosa (`docs/jalons/rosa-habille-l-hiver.md`) : cinq tuques de plus, et trois
     # places neuves où tout se cumule — `pieds` (des `souliers` du squelette), `taille` (un
     # accessoire) et `main` (un `objet`). ⚠️ La vieille tuque de Rocco ne se vend pas (`prime`) :
-    # une partie commence le 1er janvier, et c'est lui qui te la donne.
+    # c'est lui qui te la donne au départ d'une partie.
     {"slug": "tuque_rocco", "nom": "Vieille tuque de Rocco", "prix": None, "couleur": "#6a5a4a",
      "prime": "rocco", "emplacement": "tete", "piece": {"chapeau": "tuque_chantier"}},
     {"slug": "tuque_pompon", "nom": "Tuque à pompon", "prix": 35, "couleur": "#2c3e50",

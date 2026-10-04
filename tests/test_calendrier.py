@@ -30,3 +30,25 @@ def test_la_meme_annee_des_deux_cotes(banc, paquet):
     }""")
     assert r == [[calendrier.mois(j), calendrier.saison(j)] for j in range(1, 86)]
     assert paquet["calendrier"] == calendrier.pour_le_navigateur()
+
+
+def test_une_partie_neuve_commence_sans_neige(banc):
+    """Martin, 4 oct. 2026 : « le jeu doit débuter à un moment sans neige ». Une partie neuve commence au
+    jour `DEPART` (le 1er mai) ; toute sa première journée, pas un flocon, pas de neige qui tient, pas de
+    banc, pas de gadoue, pas de verglas. Une vieille sauvegarde, elle, garde son jour."""
+    assert calendrier.saison(calendrier.DEPART) != "hiver"
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const p = L.B.partie, j = p.jour, rien = [];
+        for (let h = 0; h < 1; h += 1 / 48) {
+            const n = { tempete: L.Neige.intensiteA(j, h), sol: L.Neige.couvertureA(j, h),
+                        palette: L.Saisons.paletteA(j, h).neige || 0, banc: L.BancsDeNeige.grosseurA(j, h),
+                        gadoue: L.Pluie.gadoueA(j, h), verglas: L.Verglas.intensiteA(j, h) };
+            if (Object.keys(n).some(function (k) { return n[k] > 0; })) rien.push([h, n]);
+        }
+        return { jour: j, debut: p.chantiers.debut, mois: L.Calendrier.mois(j), neige: rien,
+                 vieille: L.Sauvegarde.completer({ jour: 3 }, L.B.defs).jour };
+    }""")
+    assert r["jour"] == r["debut"] == calendrier.DEPART and r["mois"] == "mai"
+    assert r["neige"] == [], r["neige"][:3]
+    assert r["vieille"] == 3
