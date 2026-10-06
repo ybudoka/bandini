@@ -118,3 +118,28 @@ BIJOUTERIE, une chaîne en or ; chez PNEUS DESCHAMPS, des pneus d'hiver. Et un c
   porte les rayons) ; `test_rayons_js.py` (le menu de chacune des 97 enseignes décidées, une en attente et le
   dépanneur qui gardent le leur, et l'achat du pain au bouton par la vraie porte d'une BOULANGERIE). Chacun rougit
   quand on retire le rayon du navigateur ou une ligne de la table.
+
+### Vague 2a : les tenues et les armes (livrée le 6 oct. 2026)
+
+- **16 rayons de plus** (`rayons.RAYONS`, sous « Vague 2a »), et **23 enseignes** sorties de `EN_ATTENTE` : les bottes
+  (BOTTES DE TRAVAIL, BOTTES ET CIRES, CHAUSSURES LÉO, la CORDONNERIE avec la ceinture), le linge de travail
+  (SALOPETTES), la boutique (BOUTIQUE DIANE, COUTURE CHEZ EVA), le tailleur (le complet, la veste de cuir), la HAUTE
+  COUTURE (les mêmes, à 1,4 fois le prix de Rosa), les chapeaux (MODISTE), la MERCERIE (les tuques, la ceinture, le
+  parapluie), le magasin d'usine (TEXTILE, MANUFACTURE, à 0,8), la MAROQUINERIE ; les SPORTS (le bâton et la tuque
+  bleu-blanc-rouge), PÊCHE ET CHASSE (le couteau, la fronde, les bottes de loup marin), le SURPLUS d'armée, la
+  LIQUIDATION (à moitié prix), le BRIC-À-BRAC (la tuque en Phentex et le poing américain), les SOUVENIRS (la ceinture
+  fléchée) ; l'ATELIER vend ce que vend la quincaillerie (`artisan`).
+- **Rien de neuf** : chaque article est une tenue de Rosa (`_tenue`) ou une arme de Chez Gus (`_arme`), sous son nom
+  de catalogue. Une arme prend son prix fois la `marge` du rayon, une tenue le sien fois le `rabais` — les deux que
+  le comptoir de famille avait déjà. Aucun rayon ne vend ce qui détone (le marché noir seul) ni un lot ou un cadeau
+  (la casquette de la foire, la tuque de Rocco) : un juge le tient.
+- **Le poids** : la suite était à 500 octets de son plafond. Le format compact a maigri plutôt que de demander un
+  plafond de plus : plus de nom de rayon (le menu porte celui de la porte), le nom d'une bouchée écrit UNE fois
+  (`noms` ; un juge veut le même nom dans tous les rayons), une tenue en `t:<slug>` et une arme en `a:<slug>`, et
+  plus les 50 enseignes qui retombent d'elles-mêmes au comptoir de leur famille (la TAVERNE, le barbier). Les rayons
+  pèsent 7 220 octets bruts au lieu de 8 128 ; la suite fait 36 749 bruts (plafond 37 000) et 15 102 gzip (15 500).
+  ⚠️ Les tranches 2b et 2c ne tiendront pas dans 251 octets : à trancher avec Martin à ce moment-là.
+- **Juges** : `test_rayons.py` (les tenues et les armes chez qui le dit, ce qui ne se vend pas, le format compact, un
+  nom par bouchée) ; `test_rayons_js.py` (les menus des 120 enseignes décidées, et au bouton par de vraies portes :
+  le bâton aux SPORTS BEAULIEU au prix de Gus fois la marge, les bottes d'hiver payées, rangées et portées aux BOTTES
+  DE TRAVAIL). Retirer du navigateur la lecture des tenues et des armes fait rougir les deux.

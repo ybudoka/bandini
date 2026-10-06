@@ -52,7 +52,7 @@ def test_la_bouffe_vend_ce_que_dit_son_nom():
     assert "tourtiere" in vend("BOUCHERIE PARÉ")
 
 
-def test_les_articles_des_rayons_existent_et_se_mangent():
+def test_les_articles_des_rayons_existent_et_se_vendent():
     for slug, rayon in rayons.RAYONS.items():
         assert rayon["articles"] and rayon["nom"], slug
         vus = [a["slug"] for a in rayon["articles"]]
@@ -66,7 +66,16 @@ def test_les_articles_des_rayons_existent_et_se_mangent():
                 assert (a["tarif"], a["gain_pv"], a["gain_souffle"]) == (
                     a["slug"], f"{a['slug']}_pv", f"{a['slug']}_souffle"), f"{slug}/{a['slug']}"
             if a["arme"]:
-                assert (armes.par_slug(a["arme"]) or {}).get("prix", 0) > 0, a
+                arme = armes.par_slug(a["arme"]) or {}
+                assert arme.get("prix", 0) > 0, a
+                # Ce qui fait du bruit ne se vend qu'au marché noir (`test_armes`) : Gus a une vitrine, un rayon aussi.
+                assert not arme.get("bruit"), f"{slug}/{a['slug']} : une arme qui détone, hors du marché noir"
+                assert a["nom"] == arme["nom"], f"{slug}/{a['slug']} : le nom du catalogue (`_arme`)"
+            if a["tenue"]:
+                tenue = next((t for t in magasins.TENUES if t["slug"] == a["tenue"]), {})
+                # Un lot (la casquette de la foire) ou un cadeau (la tuque de Rocco) ne s'achète nulle part.
+                assert tenue.get("prix") and not tenue.get("prime"), f"{slug}/{a['slug']} : une tenue qui ne se vend pas"
+                assert a["nom"] == tenue["nom"], f"{slug}/{a['slug']} : le nom du catalogue (`_tenue`)"
             for cle in ("gain_pv", "gain_souffle"):
                 if a[cle]:
                     assert 0 < (rayons.tarif(a[cle]) or 0) <= 100, f"{slug}/{a['slug']} : {a[cle]}"
@@ -117,5 +126,51 @@ def test_la_suite_porte_les_rayons(paquets):
     assert "rayons" in suite and "rayons" not in defs
     r = suite["rayons"]
     assert "BOULANGERIE" in r["enseignes"]["boulangerie"]
-    assert r["rayons"]["boulangerie"][1][0] == ["pain", "Pain de ménage"]
+    assert r["rayons"]["boulangerie"][0][0] == "pain" and r["noms"]["pain"] == "Pain de ménage"
     assert r["tarifs"]["pain"] == list(rayons.BOUCHEES["pain"])
+
+
+def test_les_tenues_et_les_armes_se_vendent_chez_qui_le_dit():
+    """Vague 2a : les bottes au magasin de bottes, le complet chez le tailleur, le bâton aux sports — ce que Rosa et
+    Chez Gus vendaient seuls se trouve chez qui l'annonce."""
+    def vend(nom):
+        slug = rayons.ENSEIGNES[nom]
+        return {a["tenue"] or a["arme"] or a["slug"] for a in (rayons.RAYONS.get(slug) or magasins.COMPTOIRS[slug])["articles"]}
+    assert "bottes_hiver" in vend("BOTTES DE TRAVAIL") and "bottes_hiver" in vend("CORDONNERIE")
+    assert "salopette" in vend("SALOPETTES")
+    assert "complet" in vend("TAILLEUR ROMÉO")
+    assert "batte" in vend("SPORTS BEAULIEU") and "couteau" in vend("PÊCHE ET CHASSE")
+    assert "ceinture_flechee" in vend("SOUVENIRS")
+    assert not vend("MODISTE") & {"sandwich", "chips"}
+    genres = rayons.noms_des_enseignes()
+    reste = sorted(n for n in rayons.EN_ATTENTE if "mode" in genres[n])
+    assert reste == ["PARFUMERIE", "SOIERIE MEI", "TATOUAGE", "TISSUS ET SOIES"], reste
+
+
+def test_le_format_compact_dit_la_sorte_de_chaque_article():
+    """`rayons.exporter` : une tenue part en `t:<slug>`, une arme en `a:<slug>`, une bouchée en slug avec son nom
+    UNE fois dans `noms` — et la marge et le rabais suivent le rayon quand ils ne valent pas 1 (`Missions.rayons`
+    les relit)."""
+    e = rayons.exporter()
+    r, noms = e["rayons"], e["noms"]
+    assert r["sports"][0][0] == "a:batte" and "t:tuque_bbr" in r["sports"][0]
+    assert r["sports"][1:] == [1.2, 1.0]
+    assert r["liquidation"][1:] == [1.0, 0.5]
+    assert r["boulangerie"] == [["pain", "croissant", "beigne", "cafe"]]
+    assert noms["pain"] == "Pain de ménage" and noms["cafe"] == ["Café", "cafe"]
+    assert {n[1] for n in noms.values() if isinstance(n, list)} <= set(magasins.EFFETS)
+    assert not any(":" in a for a in noms), "un slug de bouchée qui se lirait comme une tenue ou une arme"
+    # Ce qui retombe de soi-même au comptoir de sa famille ne voyage pas : la TAVERNE, le barbier.
+    envoyees = {n for ns in e["enseignes"].values() for n in ns}
+    assert "TAVERNE" not in envoyees and "BARBIER" not in envoyees
+    assert "DÉPANNEUR" in envoyees and "BOULANGERIE" in envoyees
+
+
+def test_une_bouchee_a_le_meme_nom_dans_tous_les_rayons():
+    """Son nom voyage une fois (`exporter`, `noms`) : deux rayons qui la nommeraient autrement mentiraient l'un des deux."""
+    vus: dict[str, set] = {}
+    for rayon in rayons.RAYONS.values():
+        for a in rayon["articles"]:
+            if a["tarif"]:
+                vus.setdefault(a["slug"], set()).add((a["nom"], a["effet"]))
+    assert not {s: v for s, v in vus.items() if len(v) > 1}

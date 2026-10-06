@@ -27,8 +27,8 @@ la pièce et son mobilier. Le rayon ne change que ce qu'on achète.
 
 from __future__ import annotations
 
-from . import devantures, economie
-from .magasins import _CINEMA, _art
+from . import armes, devantures, economie
+from .magasins import _CINEMA, TENUES, _art
 
 #: Les bouchées que seul un rayon vend : (prix, PV, souffle). ⚠️ Pas dans `economie.TARIFS` : elles voyagent dans
 #: la SUITE du paquet avec leurs rayons (`definitions.DANS_LA_SUITE`) — le paquet d'avant l'écran titre était à
@@ -96,8 +96,21 @@ _LIQUEUR = _bouchee("liqueur", "Liqueur")
 _BIERE = _bouchee("biere", "Grosse bière")
 
 
-def _rayon(nom: str, *articles) -> dict:
-    return {"nom": nom, "marge": 1.0, "rabais": 1.0, "articles": list(articles)}
+def _tenue(slug: str):
+    """Une tenue du catalogue de Rosa (`magasins.TENUES`), sous SON nom : le menu l'affiche ainsi (`itemTenue`)."""
+    t = next(t for t in TENUES if t["slug"] == slug)
+    return _art(slug, t["nom"], tenue=slug)
+
+
+def _arme(slug: str):
+    """Une arme du catalogue de Chez Gus, sous son nom : son prix est le sien, fois la `marge` du rayon."""
+    return _art(slug, armes.par_slug(slug)["nom"], arme=slug)
+
+
+def _rayon(nom: str, *articles, marge: float = 1.0, rabais: float = 1.0) -> dict:
+    """`marge` : ce que le rayon prend en plus sur une arme (le quincaillier n'est pas un armurier) ; `rabais` : la
+    part du prix de Rosa qu'il demande pour une tenue (la liquidation vend des fins de série)."""
+    return {"nom": nom, "marge": marge, "rabais": rabais, "articles": list(articles)}
 
 
 RAYONS: dict[str, dict] = {
@@ -154,6 +167,35 @@ RAYONS: dict[str, dict] = {
     # Un CINÉMA RIALTO qui n'est pas LE Rialto (la porte qu'`enseignes` a renommée garde son comptoir) : le
     # comptoir à grignotines, sans la séance.
     "cinema": _rayon("Le comptoir du cinéma", *_CINEMA),
+    # --- Vague 2a : les tenues et les armes — ce que Rosa et Chez Gus vendent déjà, chez qui le dit.
+    "bottes": _rayon("Les chaussures", _tenue("bottes_hiver"), _tenue("loup_marin")),
+    "cordonnerie": _rayon("La cordonnerie", _tenue("bottes_hiver"), _tenue("loup_marin"), _tenue("ceinture")),
+    "salopettes": _rayon("Le linge de travail", _tenue("salopette"), _tenue("camisole"), _tenue("tuque_chantier")),
+    "boutique": _rayon("La boutique", _tenue("chemise_hawai"), _tenue("coupe_vent"), _tenue("camisole"),
+                       _tenue("parapluie")),
+    "tailleur": _rayon("Le tailleur", _tenue("complet"), _tenue("veste_cuir"), _tenue("ceinture")),
+    "haute_couture": _rayon("La haute couture", _tenue("complet"), _tenue("veste_cuir"), _tenue("feutre"),
+                            _tenue("canotier"), rabais=1.4),
+    "chapeaux": _rayon("Les chapeaux", _tenue("beret"), _tenue("canotier"), _tenue("feutre"), _tenue("cowboy"),
+                       _tenue("casquette")),
+    "mercerie": _rayon("La mercerie", _tenue("tuque"), _tenue("tuque_pompon"), _tenue("tuque_oreilles"),
+                       _tenue("ceinture"), _tenue("parapluie")),
+    # Le magasin d'usine : ce qui sort de la manufacture, au prix d'usine.
+    "manufacture": _rayon("Le magasin d'usine", _tenue("coupe_vent"), _tenue("camisole"), _tenue("salopette"),
+                          rabais=0.8),
+    "maroquinerie": _rayon("La maroquinerie", _tenue("veste_cuir"), _tenue("ceinture")),
+    # Le bâton de hockey et la tuque du Canadien.
+    "sports": _rayon("Les sports", _arme("batte"), _tenue("tuque_bbr"), _tenue("casquette"), marge=1.2),
+    "chasse": _rayon("La chasse et la pêche", _arme("couteau"), _arme("fronde"), _tenue("loup_marin"),
+                     _tenue("tuque_oreilles"), marge=1.2),
+    "surplus": _rayon("Le surplus d'armée", _arme("couteau"), _tenue("bottes_hiver"), _tenue("tuque_chantier"),
+                      _tenue("coupe_vent"), marge=1.1, rabais=0.7),
+    # Les fins de série : ce que personne n'a voulu, à moitié prix.
+    "liquidation": _rayon("La liquidation", _tenue("chemise_hawai"), _tenue("canotier"), _tenue("cowboy"),
+                          _tenue("parapluie"), rabais=0.5),
+    "bric_a_brac": _rayon("Le bric-à-brac", _tenue("tuque_phentex"), _tenue("parapluie"), _arme("poing_americain"),
+                          _arme("fronde"), rabais=0.6),
+    "souvenirs": _rayon("Les souvenirs", _tenue("ceinture_flechee"), _tenue("tuque_bbr"), _tenue("tuque_pompon")),
 }
 
 #: Le rayon de chaque enseigne décidée. ⚠️ Écrit nom par nom : rien n'est déduit du genre.
@@ -204,6 +246,20 @@ ENSEIGNES: dict[str, str] = {
     "PHARMACIE": "sante", "PHARMACIE ROY": "sante", "PHARMACIE TANG": "sante", "HERBORISTE CHAN": "sante",
     "QUINCAILLERIE": "artisan", "OUTILLAGE": "artisan", "LOCATION D'OUTILS": "artisan",
     "FRIPERIE": "mode", "HABITS": "mode",
+    # --- Les tenues et les armes (vague 2a).
+    "BOTTES DE TRAVAIL": "bottes", "BOTTES ET CIRES": "bottes", "CHAUSSURES LÉO": "bottes",
+    "CORDONNERIE": "cordonnerie",
+    "SALOPETTES": "salopettes",
+    "BOUTIQUE DIANE": "boutique", "COUTURE CHEZ EVA": "boutique",
+    "TAILLEUR NG": "tailleur", "TAILLEUR ROMÉO": "tailleur", "TAILLEUR": "tailleur",
+    "HAUTE COUTURE": "haute_couture",
+    "MODISTE": "chapeaux", "MERCERIE": "mercerie",
+    "TEXTILE": "manufacture", "MANUFACTURE": "manufacture",
+    "MAROQUINERIE": "maroquinerie",
+    "SPORTS BEAULIEU": "sports", "PÊCHE ET CHASSE": "chasse", "SURPLUS": "surplus",
+    "LIQUIDATION": "liquidation", "BRIC-À-BRAC": "bric_a_brac", "SOUVENIRS": "souvenirs",
+    # L'atelier vend les outils de la quincaillerie : le comptoir `artisan` le dit déjà.
+    "ATELIER": "artisan",
     # Ce qui n'est pas un comptoir : le fauteuil du barbier, le présentoir du journal.
     "BARBIER GILLES": "salon", "BARBIER WONG": "salon", "BARBIER": "salon", "COIFFURE JENNY": "salon",
     "COIFFURE LINE": "salon", "SALON LOUISE": "salon",
@@ -217,22 +273,18 @@ POINTS = ("salon", "journal")
 #: Les enseignes qui vendent ENCORE au comptoir de leur famille : ce qu'elles vendront, et à quelle vague.
 #: ⚠️ Cette table ne doit que rapetisser : chaque vague en sort des lignes vers `ENSEIGNES`.
 EN_ATTENTE: dict[str, str] = {
-    # --- Vague 2 : les marchandises qui existent déjà (tenues, armes, déco de la planque, options du garage).
+    # --- Vague 2 : les marchandises (2b les options du garage, 2c les meubles de la planque, 2d le neuf qui se
+    # dessine — Martin, 6 oct. 2026). Ce qui demande une mécanique neuve (le bouquet, le chat, le vélo) suit les
+    # services.
     "BIJOUTERIE": "des bijoux à porter", "BIJOUX CHEUNG": "des bijoux à porter",
     "FLEURISTE": "un bouquet", "FLEURISTE MEI": "un bouquet", "FLEURISTE ROSE": "un bouquet",
     "ANIMALERIE": "de quoi nourrir le chat", "RADIO-TV DUMAS": "la déco de la planque",
-    "RADIO-TV KWOK": "la déco de la planque", "SPORTS BEAULIEU": "le bâton, le casque",
-    "PÊCHE ET CHASSE": "le couteau, la canne", "JOUETS ET TRAINS": "des jouets", "CERFS-VOLANTS": "un cerf-volant",
+    "RADIO-TV KWOK": "la déco de la planque", "JOUETS ET TRAINS": "des jouets", "CERFS-VOLANTS": "un cerf-volant",
     "LANTERNES FUNG": "la déco de la planque", "LOCATION VÉLOS": "un vélo", "PLANCHES": "une planche",
-    "SOUVENIRS": "des souvenirs", "IMPORT YIP": "des importations", "ENTREPÔT 7": "le gros",
-    "PRÊT SUR GAGES": "racheter, revendre", "BRIC-À-BRAC": "du bric-à-brac", "LIQUIDATION": "des fins de série",
-    "SURPLUS": "le surplus d'armée", "GROSSISTE": "le gros", "À LOUER": "rien : un local vide",
-    "BOTTES DE TRAVAIL": "des bottes", "BOTTES ET CIRES": "des bottes", "CHAUSSURES LÉO": "des chaussures",
-    "SALOPETTES": "une salopette", "BOUTIQUE DIANE": "des tenues", "COUTURE CHEZ EVA": "des tenues",
-    "TAILLEUR NG": "un habit", "TAILLEUR ROMÉO": "un habit", "TAILLEUR": "un habit", "MERCERIE": "des chapeaux",
-    "SOIERIE MEI": "des tenues", "TISSUS ET SOIES": "des tenues", "MODISTE": "des chapeaux",
-    "TEXTILE": "des tenues", "MANUFACTURE": "des tenues", "PARFUMERIE": "du parfum",
-    "HAUTE COUTURE": "des tenues", "MAROQUINERIE": "une ceinture", "TATOUAGE": "un tatouage",
+    "IMPORT YIP": "des importations", "ENTREPÔT 7": "le gros", "PRÊT SUR GAGES": "racheter, revendre",
+    "GROSSISTE": "le gros", "À LOUER": "rien : un local vide",
+    "SOIERIE MEI": "un foulard de soie", "TISSUS ET SOIES": "un foulard de soie", "PARFUMERIE": "du parfum",
+    "TATOUAGE": "un tatouage",
     "ACIER DU NORD": "des pièces", "ATELIER 12": "les options du garage", "CIRE ET HUILE": "un lavage, une vidange",
     "DÉBOSSELAGE": "réparer le char", "FERRAILLE": "revendre une épave", "LAVE-AUTO": "un lavage",
     "MACHINERIE": "des pièces", "PEINTURE AUTO": "repeindre le char", "PIÈCES D'AUTO": "les options du garage",
@@ -241,12 +293,12 @@ EN_ATTENTE: dict[str, str] = {
     "SILENCIEUX": "un silencieux", "SOUDURE PELLETIER": "le blindage", "TRANSMISSION": "le moteur gonflé",
     "ÉLECTRIQUE": "des pièces", "SOUDURE": "le blindage", "MOTEURS": "le moteur gonflé", "USINAGE": "des pièces",
     "FONDERIE": "des pièces",
-    "ARTISANAT": "de l'artisanat", "BOIS DE SCIAGE": "du bois", "CORDONNERIE": "des bottes",
+    "ARTISANAT": "de l'artisanat", "BOIS DE SCIAGE": "du bois",
     "FERBLANTIER": "de la tôle", "FERRONNERIE YU": "du fer forgé", "IMPRIMERIE": "des affiches",
     "MEUBLES GAGNON": "les meubles de la planque", "PALETTES": "des palettes", "PLOMBERIE": "de la plomberie",
     "PÉPINIÈRE": "les plantes de la planque", "SERRURIER": "des clés, un crochet", "TAPISSIER": "les meubles de la planque",
     "VAISSELLE CHOW": "la vaisselle de la planque", "ANTIQUAIRE": "des antiquités", "ENCADREUR": "un cadre",
-    "VITRIER": "une vitre", "ATELIER": "des outils", "SCIERIE": "du bois", "MENUISERIE": "du bois",
+    "VITRIER": "une vitre", "SCIERIE": "du bois", "MENUISERIE": "du bois",
     "ACCASTILLAGE": "le gréement du bateau", "APPÂTS ET LIGNES": "la canne et les appâts", "APPÂTS": "des appâts",
     "CORDAGES": "des cordages", "GLACE ET SEL": "de la glace", "MOTEURS MARINS": "le moteur du bateau",
     "VOILERIE": "une voile", "CHALOUPES": "une chaloupe", "CHANTIER NAVAL": "réparer le bateau",
@@ -287,17 +339,41 @@ def noms_des_enseignes() -> dict[str, set[str]]:
     return g
 
 
+def _compact(a) -> str:
+    """Un article, compact : `"t:<slug>"` une tenue, `"a:<slug>"` une arme (leur nom est celui de leur catalogue —
+    `_tenue`, `_arme`) ; une bouchée, son slug (son nom, et son effet, dans `noms` : `exporter`)."""
+    if a["tenue"]:
+        return f"t:{a['tenue']}"
+    if a["arme"]:
+        return f"a:{a['arme']}"
+    return a["slug"]
+
+
 def exporter() -> dict:
     """Ce qui part au navigateur, COMPACT (la suite a un plafond : 6 Ko bruts au lieu de 20) :
-    `rayons` — slug : [nom, [[article, nom] ou [article, nom, effet], …]] (le tarif d'un article est son slug, ses
-    gains `<slug>_pv` et `<slug>_souffle` : `_bouchee`, et un juge le tient) ; `enseignes` — rayon : [noms] ;
-    `tarifs` — les `BOUCHEES`, slug : [prix, PV, souffle]. `Missions.rayons` le déplie une fois."""
-    par_rayon: dict[str, list[str]] = {}
+
+    - `rayons` — slug : [[article compact, …]] (`_compact`), suivi de `marge, rabais` quand l'un des deux n'est
+      pas 1. ⚠️ Pas le nom du rayon : le menu porte celui de la porte (`Missions.menuComptoir`) ;
+    - `noms` — le nom de chaque bouchée, UNE fois (`"pain": "Pain de ménage"`), ou `[nom, effet]` (le café) : une
+      bouchée a le même nom dans tous les rayons qui la vendent (un juge le tient). Son tarif est son slug, ses
+      gains `<slug>_pv` et `<slug>_souffle` (`_bouchee`) ;
+    - `enseignes` — rayon : [noms]. ⚠️ Sans celles qui tomberaient au même endroit sans être nommées : le comptoir
+      de leur propre famille (la TAVERNE sert `nuit`), ou un point qui n'est pas un comptoir (`POINTS` : le barbier,
+      le Clairon) — le navigateur retombe sur le comptoir du genre (`Missions.comptoirDuPoint`) ;
+    - `tarifs` — les `BOUCHEES`, slug : [prix, PV, souffle].
+
+    `Missions.rayons` le déplie une fois."""
+    genres, par_rayon = noms_des_enseignes(), {}
     for nom, slug in ENSEIGNES.items():
-        par_rayon.setdefault(slug, []).append(nom)
-    return {
-        "rayons": {slug: [r["nom"], [[a["slug"], a["nom"]] + ([a["effet"]] if a["effet"] else []) for a in r["articles"]]]
-                   for slug, r in RAYONS.items()},
-        "enseignes": par_rayon,
-        "tarifs": {slug: list(t) for slug, t in BOUCHEES.items()},
-    }
+        if slug not in POINTS and genres[nom] != {slug}:
+            par_rayon.setdefault(slug, []).append(nom)
+    rayons, noms = {}, {}
+    for slug, r in RAYONS.items():
+        rayons[slug] = [[_compact(a) for a in r["articles"]]]
+        if (r["marge"], r["rabais"]) != (1.0, 1.0):
+            rayons[slug] += [r["marge"], r["rabais"]]
+        for a in r["articles"]:
+            if a["tarif"]:
+                noms[a["slug"]] = [a["nom"], a["effet"]] if a["effet"] else a["nom"]
+    return {"rayons": rayons, "noms": noms, "enseignes": par_rayon,
+            "tarifs": {slug: list(t) for slug, t in BOUCHEES.items()}}

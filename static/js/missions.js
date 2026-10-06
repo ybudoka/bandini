@@ -1560,9 +1560,22 @@ const Missions = (function () {
     });
     Object.keys(r.enseignes).forEach(function (s) { r.enseignes[s].forEach(function (nom) { enseignes[nom] = s; }); });
     Object.keys(r.rayons).forEach(function (s) {
-      comptoirs[s] = { nom: r.rayons[s][0], marge: 1, rabais: 1, articles: r.rayons[s][1].map(function (a) {
-        return { slug: a[0], nom: a[1], tarif: a[0], gain_pv: a[0] + '_pv', gain_souffle: a[0] + '_souffle',
-                 effet: a[2] || null, arme: null, tenue: null, journal: false };
+      // ⚠️ Pas de nom de rayon : le menu porte celui de la porte (`menuComptoir`).
+      const x = r.rayons[s];
+      comptoirs[s] = { nom: '', marge: x[1] || 1, rabais: x[2] || 1, articles: x[0].map(function (a) {
+        // Une tenue (`t:`) ou une arme (`a:`) : son nom est celui de son catalogue (`rayons._compact`).
+        const sorte = a.charAt(1) === ':' ? a.charAt(0) : null;
+        if (sorte) {
+          const slug = a.slice(2);
+          const def = sorte === 't' ? (B.defs.tenues || []).find(function (t) { return t.slug === slug; })
+                                    : Combat.armeDef(slug);
+          return { slug: slug, nom: def ? def.nom : slug, tarif: null, gain_pv: null, gain_souffle: null, effet: null,
+                   arme: sorte === 'a' ? slug : null, tenue: sorte === 't' ? slug : null, journal: false };
+        }
+        // Une bouchee : son nom (et son effet, le cafe) une fois pour tous les rayons, `noms`.
+        const n = r.noms[a], nom = typeof n === 'string' ? n : n[0];
+        return { slug: a, nom: nom, tarif: a, gain_pv: a + '_pv', gain_souffle: a + '_souffle',
+                 effet: typeof n === 'string' ? null : n[1], arme: null, tenue: null, journal: false };
       }) };
     });
     r.deplie = { enseignes: enseignes, rayons: comptoirs };

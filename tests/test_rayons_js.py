@@ -110,3 +110,51 @@ def test_a_la_vraie_porte_d_une_boulangerie_action_achete_du_pain(banc):
     assert r["nom"] == "BOULANGERIE" and r["premier"] == "PAIN DE MÉNAGE", r
     assert r["argent"] == 100 - rayons.BOUCHEES["pain"][0], r
     assert r["vie"] > 10, r
+
+
+def test_aux_sports_action_achete_le_baton_et_au_magasin_de_bottes_on_les_enfile(banc):
+    """Vague 2a, au BOUTON, par de vraies portes : aux SPORTS BEAULIEU, le bâton au prix de Gus fois la marge du
+    rayon, et il est dans les mains ; aux BOTTES DE TRAVAIL, les bottes d'hiver payées, rangées et portées."""
+    r = banc("""function (L, o) {
+        %s
+        L.Jeu.commencer();
+        if (L.B.menu) L.Hud.fermerMenu();
+        const B = L.B, j = B.joueur;
+        function acheter(genre, nom) {
+            const porte = portesDe(L, genre)[0], point = pointDe(L, porte.interieur);
+            porte.nom = nom;
+            B.partie.heure = 0.5;
+            j.x = porte.x * 16 + 8; j.y = (porte.y + 1) * 16 + 10;
+            L.Jeu.entrer(porte);
+            for (let k = 0; k < 240 && (!B.interieur || B.transition); k++) o.frame(1);
+            if (!B.interieur) return null;
+            if (B.transition) o.fondu();
+            const faire = function () { return L.Missions.menuDuPoint(point); };
+            const menu = faire();
+            menu.refaire = faire;
+            B.partie.argent = 1000;
+            L.Hud.ouvrirMenu(menu);
+            menu.curseur = 0;
+            const out = { nom: B.interieur.nom, premier: menu.items[0].libelle, detail: menu.items[0].detail };
+            o.tape('KeyE', 2);
+            out.argent = B.partie.argent;
+            if (L.B.menu) L.Hud.fermerMenu();
+            L.Jeu.sortir();
+            for (let k = 0; k < 240 && (B.interieur || B.transition); k++) o.frame(1);
+            return out;
+        }
+        const sports = acheter('commerce', 'SPORTS BEAULIEU');
+        sports.arme = !!B.partie.armes.batte;
+        const bottes = acheter('mode', 'BOTTES DE TRAVAIL');
+        bottes.rangees = B.partie.tenues.indexOf('bottes_hiver') >= 0;
+        bottes.pieds = B.partie.pieds;
+        return { sports: sports, bottes: bottes };
+    }""" % TROUVER)
+    from app import armes
+    baton = round(armes.par_slug("batte")["prix"] * rayons.RAYONS["sports"]["marge"])
+    s, b = r["sports"], r["bottes"]
+    assert s and s["nom"] == "SPORTS BEAULIEU" and s["premier"] == "BÂTON" and s["detail"] == f"{baton} $", s
+    assert s["argent"] == 1000 - baton and s["arme"], s
+    prix = next(t["prix"] for t in magasins.TENUES if t["slug"] == "bottes_hiver")
+    assert b and b["nom"] == "BOTTES DE TRAVAIL" and b["premier"] == "BOTTES D'HIVER", b
+    assert b["argent"] == 1000 - prix and b["rangees"] and b["pieds"] == "bottes_hiver", b
