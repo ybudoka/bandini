@@ -91,6 +91,15 @@ BIJOUTERIE, une chaîne en or ; chez PNEUS DESCHAMPS, des pneus d'hiver. Et un c
    les photos, fait un portrait, des photos de voyage ; **3d** la MISSION DU PORT et l'HOSPICE donnent une soupe à
    qui est cassé, et les comptoirs sans effet (la POSTE, le NOTAIRE, les DOUANES…) disent une réplique de leur métier.
 
+4. **Les 53 dernières** (tranché par Martin le 6 oct. 2026, en trois tranches) : **4a** ce qui se branche sur
+   l'existant — GROSSISTE, ENTREPÔT 7 et IMPORT YIP rachètent la contrebande de Sven au prix du jour, LOCATION VÉLOS
+   pose un vélo devant la porte, le CHANTIER NAVAL et la CALE SÈCHE réparent le bateau amarré devant, les fournisseurs
+   (des pièces, du bois, de la tôle, des cordages…) et À LOUER disent leur réplique ; **4b** la planque de Rocco gagne
+   une pièce (celle d'en arrière, par une porte intérieure) pour ce qui se décore — la lanterne, les plantes, la
+   vaisselle, le tableau, les antiquités, le cadre ; **4c** les objets neufs — les disques et les livres deviennent des
+   collections (comme les bebelles), le tatouage change ta tête pour la police, le parfum, le bouquet et les jouets se
+   donnent à un passant.
+
 ### Juges
 
 - **Toutes les enseignes ont un rayon**, et tout rayon nommé existe : une enseigne neuve sans rayon fait rougir la
