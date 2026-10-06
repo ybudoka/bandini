@@ -68,6 +68,11 @@ BIJOUTERIE, une chaîne en or ; chez PNEUS DESCHAMPS, des pneus d'hiver. Et un c
    artisan (cordonnier → bottes ; pépinière → plantes de la planque), marine (cordages, moteurs → rien au comptoir, ou
    une pièce pour le bateau), santé (opticien → lunettes, dentiste et vétérinaire → soins, pas de pilules), savoir
    (disques, livres → la collection, si elle existe).
+   ⚠️ _Découpée en quatre tranches (Martin, 6 oct. 2026), chacune atterrit seule :_ **2a** les tenues et les armes
+   (le rayon transporte ce que le comptoir sait déjà vendre) ; **2b** les options du garage, chez les commerces de
+   l'auto, sur le char garé devant la porte ; **2c** les meubles de la planque, livrés le lendemain comme ceux du
+   catalogue Beausoleil ; **2d** le neuf qui se dessine — les bijoux de la bijouterie, les lunettes fumées de
+   l'opticien.
 3. **Les services** (Martin, 3 oct. 2026 : chaque commerce sans vente rend un service à lui). Un service par
    métier, et chacun est une mécanique : la liste se fait au début de la vague, et chaque service qui n'a pas
    d'effet en jeu évident se tranche avec Martin. Des pistes : l'hôtel et le motel louent une chambre (DORMIR, comme
