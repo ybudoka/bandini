@@ -80,6 +80,17 @@ BIJOUTERIE, une chaîne en or ; chez PNEUS DESCHAMPS, des pneus d'hiver. Et un c
    portrait, le taxi te conduit, la garderie… à trouver. Puis les articles qui demandent une mécanique neuve (le
    bouquet qui se donne, la nourriture pour le chat, le vélo).
 
+   ⚠️ _Tranché par Martin le 6 oct. 2026, en quatre tranches :_ **3a** les services dont la mécanique existe — l'HÔTEL
+   et le MOTEL louent une chambre (dormir, comme la planque), les cliniques, dentistes et le SPA soignent au PV
+   manquant, la BUANDERIE et le NETTOYEUR lavent le linge (une étoile de moins), la BANQUE et la CAISSE POP tiennent un
+   compte (à l'abri de la prison et de l'hôpital), les ASSURANCES assurent le char garé devant, le LAVE-AUTO et CIRE ET
+   HUILE le lavent, la FERRAILLE l'achète au prix d'une épave, le CLUB VIDÉO loue un film, le BINGO vend sa carte, le
+   CLUB MAH-JONG et la SALLE DE JEUX ont une table du Dragon d'or ; les PRÊTS RAPIDES et CHÈQUES CASH prennent les
+   versements de la dette de Rocco, le PRÊT SUR GAGES rachète les armes ; **3b** TAXI DIAMANT, une course où l'on
+   veut, payée à la distance ; **3c** le photographe (PHOTO EXPRESS, PHOTO SOUVENIR, PHOTOGRAPHE, STUDIO LAU) rachète
+   les photos, fait un portrait, des photos de voyage ; **3d** la MISSION DU PORT et l'HOSPICE donnent une soupe à
+   qui est cassé, et les comptoirs sans effet (la POSTE, le NOTAIRE, les DOUANES…) disent une réplique de leur métier.
+
 ### Juges
 
 - **Toutes les enseignes ont un rayon**, et tout rayon nommé existe : une enseigne neuve sans rayon fait rougir la
