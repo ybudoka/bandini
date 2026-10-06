@@ -55,6 +55,8 @@ def create_app(config_object: type[Config] = Config) -> Flask:
     app.extensions["collections"] = paquets.collections
     # La suite du paquet (le Clairon, les Galeries hantées), hors des définitions depuis le 30 sept. 2026.
     app.extensions["suite"] = paquets.suite
+    # Les rayons des comptoirs, sortis de la suite le 6 oct. 2026.
+    app.extensions["rayons"] = paquets.rayons
     # Tout ce qu'une mission demande pour se jouer : ce qu'elle dit, ce qu'elle montre,
     # avec quelles voix, et ce qu'elle demande de faire. Hors du paquet depuis le
     # 24 sept. 2026 — voir `definitions.py`.

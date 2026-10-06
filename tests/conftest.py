@@ -87,6 +87,10 @@ def paquet(paquets):
     for cle, valeur in json.loads(paquets.suite.corps.decode("utf-8")).items():
         if cle != "empreinte":
             donnees[cle] = valeur
+    # Et les RAYONS des comptoirs (`/api/rayons`, sortis de la suite le 6 oct. 2026), de même.
+    for cle, valeur in json.loads(paquets.rayons.corps.decode("utf-8")).items():
+        if cle != "empreinte":
+            donnees[cle] = valeur
     return donnees
 
 
@@ -94,6 +98,12 @@ def paquet(paquets):
 def carte_pliee(paquets):
     """La carte telle qu'elle voyage sur `/api/carte` : pliée en colonnes (`app/pliage.py`, 30 sept. 2026)."""
     return json.loads(paquets.carte.corps.decode("utf-8"))
+
+
+@pytest.fixture(scope="session")
+def rayons_du_paquet(paquets):
+    """Les rayons des comptoirs — un `/api/rayons`, sortis de la suite le 6 oct. 2026."""
+    return json.loads(paquets.rayons.corps.decode("utf-8"))
 
 
 @pytest.fixture(scope="session")
@@ -163,7 +173,7 @@ def scripts_servis(tmp_path_factory):
 
 @pytest.fixture(scope="session")
 def banc(paquet, a_jouer, cartes_des_blocs, notes_de_la_musique, collections_du_paquet, suite_du_paquet, carte_pliee,
-         scripts_servis):
+         scripts_servis, rayons_du_paquet):
     """Fait tourner `corps` (une fonction JS `(L, o) => resultat`) dans le banc Node."""
     if OBLIGATOIRE and shutil.which("node") is None:
         pytest.fail("node est obligatoire (BANDINI_TESTS_OBLIGATOIRES=1) et il manque")
@@ -195,7 +205,8 @@ def banc(paquet, a_jouer, cartes_des_blocs, notes_de_la_musique, collections_du_
                   "collections": collections_du_paquet, "collections_panne": collections_panne,
                   # La suite du paquet (`/api/suite`) : servie comme le serveur. `poser_la_suite=False` retire
                   # ses clés des définitions avant le démarrage, et `suite_panne` fait tomber les premières demandes.
-                  "suite": suite_du_paquet, "poser_la_suite": poser_la_suite, "suite_panne": suite_panne}
+                  "suite": suite_du_paquet, "poser_la_suite": poser_la_suite, "suite_panne": suite_panne,
+                  "rayons": rayons_du_paquet}
         # ⚠️ LE BANC COMMENCE LE 1ER JANVIER (4 oct. 2026) : le jeu fait commencer une partie neuve le 1er mai,
         # sans neige (`calendrier.DEPART`), mais des centaines de juges tiennent à la rue de janvier qu'ils ont
         # toujours jouée (ses graines, ses foules, sa neige) et mesurent autre chose que la saison. Le banc garde

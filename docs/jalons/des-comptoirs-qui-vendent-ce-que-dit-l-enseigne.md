@@ -337,3 +337,30 @@ d'avant choisissent leur porte sans lui), sur la ville finie et sans dé : le Fa
 la porte de commerce la plus proche de son cœur, près de la planque — la pièce d'un commerce de service, et son
 fauteuil (`piece_de_barbier`). La suite complète, passée en parallèle avec lui, n'a rougi qu'au juge des enseignes qui
 voulait un comptoir.
+
+### Vague 4a : ce qui se branche sur l'existant (livrée le 6 oct. 2026)
+
+- **33 enseignes** sorties de `EN_ATTENTE` (226 décidées sur 246) :
+  - GROSSISTE, ENTREPÔT 7 et IMPORT YIP rachètent les caisses de Sven au prix du jour, sur le char garé devant
+    (`itemsRevente(piece, partout)`) ;
+  - LOCATION VÉLOS pose un vélo à toi DANS LA RUE, devant la porte (`poserDevantLaPorte` : `B.entites` est la pièce
+    tant qu'on est dedans ; une couleur donnée, pour ne pas tirer de dé) ;
+  - le CHANTIER NAVAL, la CALE SÈCHE et MOTEURS MARINS réparent le bateau amarré devant (`bateauDevant`, douze tuiles),
+    au prix de Ti-Guy ;
+  - vingt-cinq fournisseurs (l'acier, la fonderie, le bois, la tôle, les cordages, la voilerie, les appâts…) servent un
+    café et disent leur réplique (« On vend à la tonne. T'as un dix-roues? ») ; À LOUER, la sienne (« Local à louer.
+    Le proprio est en Floride. »).
+- ⚠️ **Un bogue plus vieux que les rayons, trouvé en route** : la revente de contrebande au comptoir des quatre
+  commerces (le dépanneur, le bar, la cantine, le casse-croûte) ne s'affichait JAMAIS en jeu. Dedans, `Monde.carte` est
+  la pièce, et `Monde.zoneA` lisait ses zones — aucune — : pas de district, pas de prix du jour, pas de ligne. Son juge
+  posait `B.interieur` sans entrer, et `Monde.carte` y restait la ville. `districtDe` et `facteurDuJour` lisent
+  maintenant la ville qui attend dans `B.exterieur` ; un juge entre par la vraie porte du dépanneur
+  (`test_au_vrai_depanneur_la_revente_s_affiche`), et rougit avec l'ancien code.
+- **Les rayons voyagent seuls** (Martin, 6 oct. 2026, au troisième débordement de la suite : 44 397 / 44 000) : sur
+  `/api/rayons` (`definitions.Paquets.rayons`, `rayons_empreinte`), demandés après la suite, en arrière-plan, gardés par
+  la coquille du travailleur (`data-url-rayons`). Le chargeur de la suite est devenu une fabrique (`Suite.rayons`, mêmes
+  réessais, même garde d'empreinte). La suite redescend à 30 630 bruts ; les rayons ont leur plafond (18 000 bruts,
+  7 500 gzip ; 13 799 et 5 746 à leur sortie). Tant qu'ils manquent, un comptoir sert celui de son genre.
+- **Juges** : `test_rayons.py` (qui fait quoi, et plus rien de l'industrie ni de la marine en attente) ;
+  `test_rayons_js.py` (au bouton : le vélo dans la rue et pas dans la pièce, les caisses vendues au grossiste, le
+  bateau réparé au chantier naval).

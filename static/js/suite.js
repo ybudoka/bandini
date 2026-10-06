@@ -17,6 +17,9 @@
 const Suite = (function () {
   'use strict';
 
+  /** Un paquet a part (`nom` : ce qu'il dit quand il rate), avec sa demande, ses reessais et ses attentes. */
+  function fabriquer(nom) {
+
   //: Une demande ratée se refait, au plus une fois par tant d'images (dix secondes).
   const REESSAI_IMAGES = 600;
   //: La demande : null | 'en cours' | 'arrivee' | 'ratee' | 'etrangere'.
@@ -39,7 +42,7 @@ const Suite = (function () {
     demande.etat = 'en cours';
     demande.essaiT = B.t || 0;
     fenetre.fetch(demande.url)
-      .then(function (r) { if (!r.ok) throw new Error('suite ' + r.status); return r.json(); })
+      .then(function (r) { if (!r.ok) throw new Error(nom + ' ' + r.status); return r.json(); })
       .then(function (p) {
         if (!p || (demande.empreinte && p.empreinte !== demande.empreinte)) { demande.etat = 'etrangere'; return; }
         poser(p);
@@ -82,4 +85,11 @@ const Suite = (function () {
   function attentes() { return enAttente.length; }
 
   return { charger, poser, arrivee, quand, reclamer, maj, etat, attentes, REESSAI_IMAGES };
+  }
+
+  // La suite du paquet, et a cote d'elle les RAYONS des comptoirs (`/api/rayons`, sortis de la suite le 6 oct.
+  // 2026 : `Missions.rayons` les lit dans `B.defs.rayons`, et sert le comptoir du genre tant qu'ils manquent).
+  const suite = fabriquer('suite');
+  suite.rayons = fabriquer('rayons');
+  return suite;
 })();

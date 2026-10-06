@@ -1270,6 +1270,7 @@ const Jeu = (function () {
         pas('lecture', Lecture.maj);
         pas('souterrain', Souterrain.majSon);   // les neons du sous-sol, et ses sons charges pres du garage       // LIRE tenu : la ligne du passant qu'on regarde
         pas('suite', Suite.maj);               // la suite du paquet : redemandée si elle a raté
+        pas('rayons', Suite.rayons.maj);       // les rayons des comptoirs, de même
         pas('collections', Collections.maj);   // une carte de hockey par terre, qu'on ramasse en marchant dessus
         pas('devisser', Devisser.maj);         // le tournevis en cours, sous une enseigne, la nuit
         pas('decoration', Decoration.maj);     // le juke-box se tait quand on sort de la planque
@@ -1673,6 +1674,8 @@ const Jeu = (function () {
       // La suite du paquet (le Clairon, les Galeries hantées — `definitions.DANS_LA_SUITE`) : ce qu'on ne lit
       // jamais avant d'avoir quitté le titre. Demandée MAINTENANT, en arrière-plan, comme les notes (`Suite`).
       Suite.charger(w, racine.dataset.urlSuite, defs.suite_empreinte);
+      // Les rayons des comptoirs (`/api/rayons`), sortis de la suite : en arrière-plan, après elle (`Suite.rayons`).
+      Suite.rayons.charger(w, racine.dataset.urlRayons, defs.rayons_empreinte);
       Hud.progression(95);
       Monde.charger(defs.carte);
       // La partie du dernier emplacement joue : celle que JOUER propose d'abord.

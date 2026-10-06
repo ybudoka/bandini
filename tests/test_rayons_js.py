@@ -572,3 +572,61 @@ def test_au_barbier_de_la_ville_la_coupe_fait_oublier_ta_face(banc):
     }""")
     assert r and r["nom"] == "BARBIER", r
     assert "BLOND" in r["items"] and "POIVRE ET SEL" in r["items"], r
+
+
+def test_le_velo_devant_la_porte_le_grossiste_et_le_chantier_naval(banc):
+    """Vague 4a, au BOUTON : à LOCATION VÉLOS, le vélo loué attend DANS LA RUE devant la porte (pas dans la pièce) ; au
+    GROSSISTE, les caisses du char garé devant se vendent au prix du jour ; au CHANTIER NAVAL, le bateau amarré devant
+    repart neuf."""
+    r = banc("""function (L, o) {
+        %s
+        L.Jeu.commencer();
+        if (L.B.menu) L.Hud.fermerMenu();
+        const B = L.B, j = B.joueur, p = B.partie, out = {};
+        let pt = ouvrir(L, o, 'commerce', 'LOCATION VÉLOS', 'emplettes');
+        p.argent = 100;
+        out.velo = presser(L, o, pt, 'LOUER UN VÉLO');
+        out.dansLaPiece = B.entites.some(function (e) { return e.type === 'vehicule' && e.slug === 'velo'; });
+        sortir(L, o);
+        out.dehors = B.entites.some(function (e) { return e.type === 'vehicule' && e.slug === 'velo' && e.aToi
+                                                     && Math.hypot(e.x - j.x, e.y - j.y) < 60; });
+        out.argentVelo = p.argent;
+        // Le vélo loué s'en va : la porte du grossiste est peut-être la même, et il passerait pour le char devant.
+        B.entites.forEach(function (e) { if (e.slug === 'velo' && e.aToi) { e.x = 10; e.y = 10; } });
+        const v = L.Vehicules.creer('auto', 0, 0, 0, { etat: 'stationne', couleur: '#c0392b' });
+        const slug = Object.keys(B.defs.economie.contrebande.marchandises)[0];
+        v.cargaison = {}; v.cargaison[slug] = 2;
+        pt = ouvrir(L, o, 'commerce', 'GROSSISTE', 'emplettes', function (j) { v.x = j.x + 24; v.y = j.y + 8; L.Entites.indexer(); });
+        p.argent = 0;
+        out.grossiste = presser(L, o, pt, 'VENDRE 2 CAISSES');
+        out.argentGros = p.argent; out.cargaison = v.cargaison[slug];
+        sortir(L, o);
+        const b = L.Vehicules.creer('bateau', 0, 0, 0, { etat: 'stationne', couleur: '#ecf0f1' });
+        pt = ouvrir(L, o, 'marine', 'CHANTIER NAVAL', 'emplettes', function (j) { b.x = j.x + 40; b.y = j.y + 30; b.vie = 10; L.Entites.indexer(); });
+        p.argent = 5000;
+        out.chantier = presser(L, o, pt, 'RÉPARER LE BATEAU');
+        out.neuf = b.vie === b.vieMax;
+        return out;
+    }""" % ENTRER)
+    assert r["velo"]["curseur"] >= 0 and not r["dansLaPiece"] and r["dehors"] and r["argentVelo"] == 92, r
+    assert r["grossiste"]["curseur"] >= 0 and r["argentGros"] > 0 and r["cargaison"] == 0, r["grossiste"]
+    assert r["chantier"]["curseur"] >= 0 and r["neuf"], r
+
+
+def test_les_rayons_arrivent_par_leur_propre_requete(banc):
+    """Les rayons voyagent seuls (`/api/rayons`, 6 oct. 2026) : partis d'un paquet NU, le jeu va les chercher, et la
+    BOULANGERIE vend son pain une fois qu'ils sont là — avant, elle sert le comptoir de son genre, sans planter."""
+    r = banc("""function (L, o) {
+        %s
+        const B = L.B;
+        const avant = !!B.defs.rayons;
+        L.Jeu.commencer();
+        if (L.B.menu) L.Hud.fermerMenu();
+        for (let k = 0; k < 10 && !L.Suite.rayons.arrivee(); k++) o.frame(1);
+        const pt = ouvrir(L, o, 'bouffe', 'BOULANGERIE', 'emplettes');
+        return { avant: avant, arrivee: L.Suite.rayons.arrivee(),
+                 items: L.Missions.menuDuPoint(pt).items.map(function (q) { return q.libelle; }) };
+    }""" % ENTRER, poser_la_suite=False)
+    # (`avant` : la demande arrive avant même la première image du banc, comme celle de la suite.)
+    assert r["arrivee"], r
+    assert r["items"][0] == "PAIN DE MÉNAGE", r

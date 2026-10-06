@@ -1852,6 +1852,30 @@ const Missions = (function () {
       case 'replique':
         // Ce qu'il dit s'ecrit sous le menu (`menuComptoir`, `aide`).
         return [{ libelle: 'RIEN À VENDRE ICI', actif: false }];
+      case 'revente': {
+        // LE GROSSISTE rachete les caisses de Sven au prix du jour, sur le char gare devant (`itemsRevente`).
+        const lignes = itemsRevente(B.interieur, true);
+        if (lignes.length && !(charDevant() || {}).cargaison) lignes.push({ libelle: 'GARE TON CHAR CHARGÉ DEVANT', actif: false });
+        return lignes;
+      }
+      case 'velo':
+        // LA LOCATION : un velo pose DEVANT LA PORTE — dans la rue (`B.exterieur.entites`), pas dans la piece.
+        return [{ libelle: libelle, detail: prix + ' $', actif: p.argent >= prix && !!B.exterieur,
+                  faire: function () {
+                    if (!payer(prix, 'LA LOCATION')) return false;
+                    poserDevantLaPorte('velo');
+                    Hud.message('TON VÉLO T’ATTEND DEVANT', 160);
+                    return false;
+                  } }];
+      case 'radouber': {
+        // LE CHANTIER NAVAL repare le bateau amarre devant, au prix de Ti-Guy (`reparation_par_pv`).
+        const bateau = bateauDevant();
+        if (!bateau) return [{ libelle: 'AMARRE UN BATEAU DEVANT', actif: false }];
+        const cout = Math.round((bateau.vieMax - bateau.vie) * eco.reparation_par_pv * facteur);
+        return [{ libelle: libelle + ' — ' + bateau.def.nom.toUpperCase(), detail: cout > 0 ? cout + ' $' : 'COMME NEUF',
+                  actif: cout > 0 && p.argent >= cout,
+                  faire: function () { payer(cout, 'LE CHANTIER'); bateau.vie = bateau.vieMax; return false; } }];
+      }
       case 'sic_bo':
         return [{ libelle: libelle, actif: true, faire: function () { Hud.ouvrirMenu(Tables.menu('sic_bo')); return true; } }];
       case 'machine':
@@ -2084,6 +2108,35 @@ const Missions = (function () {
       if (d < dMin) { dMin = d; meilleur = e; }
     }
     return meilleur;
+  }
+
+  /** Le bateau amarre devant la porte (un chantier naval est au bord de l'eau) : le plus proche, a 12 tuiles. */
+  function bateauDevant() {
+    const ext = B.exterieur;
+    if (!ext) return null;
+    let meilleur = null, dMin = 192 * 192;
+    for (const e of ext.entites) {
+      if (e.type !== 'vehicule' || !e.def || !e.def.eau || e.etat === 'epave') continue;
+      const d = dist2(e.x, e.y, ext.x, ext.y);
+      if (d < dMin) { dMin = d; meilleur = e; }
+    }
+    return meilleur;
+  }
+
+  /** Un vehicule a toi, pose dans la rue a cote de la porte par ou l'on est entre : ⚠️ ne pas le laisser dans
+      `B.entites`, qui est la PIECE tant qu'on est dedans. */
+  function poserDevantLaPorte(slug) {
+    const ext = B.exterieur;
+    if (!ext) return null;
+    // ⚠️ Une couleur DONNEE : sans elle, `creer` tire un de, et tout le hasard de la ville glisse d'un cran.
+    const def = Vehicules.vehiculeDef(slug);
+    const v = Vehicules.creer(slug, ext.x + 20, ext.y + 6, 0, { etat: 'stationne', couleur: def && def.couleurs[0] });
+    if (!v) return null;
+    const i = B.entites.indexOf(v);
+    if (i >= 0) B.entites.splice(i, 1);
+    ext.entites.push(v);
+    v.aToi = true;
+    return v;
   }
 
   function prixDeVente(v) {
@@ -4038,7 +4091,7 @@ const Missions = (function () {
       ⚠️ `hash2`, pas `B.rng()` : un prix affiche ne consomme pas un de. */
   function facteurDuJour(district, slug) {
     const c = B.defs.economie.contrebande;
-    const districts = (Monde.carte && Monde.carte.def.districts) || [];
+    const ville = villeDuMoment(), districts = (ville && ville.def && ville.def.districts) || [];
     const di = Math.max(0, districts.findIndex(function (d) { return d.slug === district; }));
     const mi = Object.keys(c.marchandises).sort().indexOf(slug);   // stable, quel que soit l'ordre du paquet
     const h = hash2(B.partie.jour * 131 + di, 977 + mi) % 1000;
@@ -4049,9 +4102,17 @@ const Missions = (function () {
     return Math.round(B.defs.economie.contrebande.marchandises[slug].vente * facteurDuJour(district, slug));
   }
 
+  /** ⚠️ DEDANS, `Monde.carte` est la PIECE (et `Monde.zoneA` lit ses zones, aucune) : on lit celles de la ville qui
+      attend dans `B.exterieur`. Sans ca, la revente au comptoir du depanneur ne s'affichait jamais en jeu — le juge
+      posait `B.interieur` sans entrer (6 oct. 2026). */
+  function villeDuMoment() { return B.exterieur && B.exterieur.carte ? B.exterieur.carte : Monde.carte; }
   function districtDe(x, y) {
-    const z = Monde.zoneA(x, y);
-    return z ? z.district : null;
+    const ville = villeDuMoment();
+    let trouvee = null;
+    for (const z of (ville && ville.zones) || []) {
+      if (x >= z.x * TT && x < (z.x + z.l) * TT && y >= z.y * TT && y < (z.y + z.h) * TT) trouvee = z;
+    }
+    return trouvee ? trouvee.district : null;
   }
 
   /** Le comptoir de la cale : une caisse dans le coffre du char d'a cote. */
@@ -4080,9 +4141,11 @@ const Missions = (function () {
 
   /** Au comptoir d'un commerce qui en prend : le prix du jour du district, et
       « vendre » chaque marchandise qu'on a dans le char gare devant. */
-  function itemsRevente(piece) {
+  /** `partout` : un GROSSISTE (`rayons`, le service `revente`) rachete ou qu'il soit, pas seulement aux quatre
+      comptoirs de la contrebande. */
+  function itemsRevente(piece, partout) {
     const c = B.defs.economie.contrebande, items = [];
-    if (!piece || c.comptoirs.indexOf(piece.slug) < 0 || !B.exterieur) return items;
+    if (!piece || (!partout && c.comptoirs.indexOf(piece.slug) < 0) || !B.exterieur) return items;
     const district = districtDe(B.exterieur.x, B.exterieur.y);
     if (!district) return items;
     const prix = {}, affiche = [];

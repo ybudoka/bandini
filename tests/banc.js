@@ -155,8 +155,11 @@ function banc(corps) {
     les chercher —, et `suite_panne` fait tomber les premières demandes. */
   const SUITE = ENTREE.suite || { empreinte: '' };
   let suiteEnPanne = ENTREE.suite_panne || 0;
+  // Les rayons des comptoirs (`/api/rayons`, sortis de la suite le 6 oct. 2026) : servis et posés de même.
+  const RAYONS = ENTREE.rayons || { empreinte: '' };
   if (ENTREE.poser_la_suite === false) {
     Object.keys(SUITE).forEach(function (cle) { if (cle !== 'empreinte') delete defs[cle]; });
+    Object.keys(RAYONS).forEach(function (cle) { if (cle !== 'empreinte') delete defs[cle]; });
   }
   const html = fs.readFileSync(path.join(racine, 'templates', 'index.html'), 'utf8');
   const SCRIPTS = Array.from(html.matchAll(/filename='js\/([^']+)'/g)).map(function (m) { return m[1]; });
@@ -172,6 +175,7 @@ function banc(corps) {
                       urlMusiques: '/api/musiques?e=' + (NOTES.empreinte || ''),
                       urlCollections: '/api/collections?e=' + ((COLLECTIONS && COLLECTIONS.empreinte) || ''),
                       urlSuite: '/api/suite?e=' + (SUITE.empreinte || ''),
+                      urlRayons: '/api/rayons?e=' + (RAYONS.empreinte || ''),
                       urlCompte: '/api/compte/', urlDefi: '/api/defi' };
   elements.bandini = bandini;
   const tactile = faireElement('div', 'tactile');
@@ -365,6 +369,9 @@ function banc(corps) {
       if (adresse.indexOf('/api/musiques') === 0) {
         if (notesEnPanne > 0) { notesEnPanne--; return Promise.reject(new Error('reseau coupe')); }
         return Promise.resolve({ ok: true, status: 200, json: function () { return Promise.resolve(NOTES); } });
+      }
+      if (adresse.indexOf('/api/rayons') === 0) {
+        return Promise.resolve({ ok: true, status: 200, json: function () { return Promise.resolve(RAYONS); } });
       }
       if (adresse.indexOf('/api/suite') === 0) {
         if (suiteEnPanne > 0) { suiteEnPanne--; return Promise.reject(new Error('reseau coupe')); }

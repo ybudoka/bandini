@@ -136,7 +136,9 @@ def test_le_comptoir_d_un_commerce_ordinaire_vend(banc, paquet):
         L.Missions.utiliserPoint(j);
         const menu = L.B.menu;
         const titre = menu.titre, n = menu.items.length;
-        menu.items[0].faire();
+        // ⚠️ Le sandwich par son NOM : au dépanneur, la revente de contrebande (son prix du jour) passe devant — elle
+        // ne s'affichait pas en jeu avant le 6 oct. 2026 (`districtDe` lisait la pièce).
+        menu.items.find(function (q) { return q.libelle === 'SANDWICH'; }).faire();
         return { invite: invite, titre: titre, n: n, argent: L.B.partie.argent,
                  vie: j.vie, souffle: j.endurance, nom: L.B.interieur.nom };
     }""")

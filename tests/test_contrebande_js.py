@@ -121,3 +121,25 @@ def test_la_police_fouille_le_char_saisi(banc, paquet):
     assert r["seul"] == 5 and r["videV"] == 0
     assert r["videW"] == 0, "le char saisi part au lot avec ses caisses"
     assert r["saisi"] is True
+
+
+def test_au_vrai_depanneur_la_revente_s_affiche(banc):
+    """Le juge d'au-dessus pose `B.interieur` SANS ENTRER : `Monde.carte` y reste la ville. Par la vraie porte du
+    dépanneur, dedans, `Monde.carte` est la pièce — et la revente lisait ses zones (aucune) : rien ne s'affichait
+    (trouvé le 6 oct. 2026, avec les grossistes des comptoirs)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        if (L.B.menu) L.Hud.fermerMenu();
+        const B = L.B, j = B.joueur, porte = L.Monde.carte.portes.find(function (q) { return q.lieu === 'depanneur'; });
+        j.x = porte.x * 16 + 8; j.y = (porte.y + 1) * 16 + 10;
+        const v = L.Vehicules.creer('auto', j.x + 24, j.y + 8, 0, { etat: 'stationne', couleur: '#c0392b' });
+        v.cargaison = { cigarettes: 2, boisson: 0 };
+        L.Entites.indexer();
+        L.Jeu.entrer(porte);
+        for (let k = 0; k < 240 && (!B.interieur || B.transition); k++) o.frame(1);
+        if (B.transition) o.fondu();
+        return { dedans: B.interieur && B.interieur.slug, libelles: L.Missions.itemsRevente(B.interieur).map(function (i) { return i.libelle; }) };
+    }""")
+    assert r["dedans"] == "depanneur", r
+    assert r["libelles"] and r["libelles"][0].startswith("PRIX DU JOUR"), r
+    assert any(ligne.startswith("VENDRE 2 CAISSES") for ligne in r["libelles"]), r

@@ -165,6 +165,12 @@ SERVICES: dict[str, dict] = {
     "soupe": {"nom": "Un bol de soupe", "prix": None},
     # Ce que dit un comptoir qui ne vend rien (vague 3d, `REPLIQUES`) : une ligne, et sa réplique sous le menu.
     "replique": {"nom": None, "prix": None},
+    # Vague 4a : ce qui se branche sur l'existant. Les grossistes rachètent la contrebande de Sven au prix du jour
+    # (`Missions.itemsRevente`, le char garé devant et sa cargaison) ; la location pose un vélo devant la porte ; le
+    # chantier naval répare le bateau amarré devant (au prix de Ti-Guy, `reparation_par_pv`).
+    "revente": {"nom": None, "prix": None},
+    "velo": {"nom": "Louer un vélo", "prix": 8},
+    "radouber": {"nom": "Réparer le bateau", "prix": None},
     # La course de TAXI DIAMANT (vague 3b) : une ligne par destination (`TAXI`), payée à la distance.
     "taxi": {"nom": None, "prix": None},
 }
@@ -198,6 +204,33 @@ REPLIQUES: dict[str, str] = {
     "ÉCOLE": "Inscriptions fermées. Reviens en septembre.",
     "BIBLIOTHÈQUE": "Chut.",
     "ARCHIVES": "Ton dossier? Il est classé. Comme une affaire.",
+    # --- Vague 4a : les fournisseurs, qui ne vendent pas au détail, et le local vide.
+    "ACIER DU NORD": "On vend à la tonne. T'as un dix-roues?",
+    "FONDERIE": "On coule du fer. Pas des histoires.",
+    "MACHINERIE": "Une pièce? Donne-moi le numéro de série.",
+    "USINAGE": "Tolérance d'un millième. Pour toi, aucune.",
+    "ÉLECTRIQUE": "Touche à rien. Surtout pas au fil rouge.",
+    "SILENCIEUX": "Des silencieux de char. Pas l'autre sorte.",
+    "BOIS DE SCIAGE": "Deux par quatre, quatre par quatre. C'est tout.",
+    "SCIERIE": "La scie est partie dîner. Reviens à une heure.",
+    "MENUISERIE": "Une armoire sur mesure? Six semaines.",
+    "PALETTES": "Des palettes. Juste des palettes. Fiers.",
+    "FERBLANTIER": "La tôle, c'est pour les toits. Pas pour toi.",
+    "FERRONNERIE YU": "Des grilles en fer forgé. Contre les voleurs.",
+    "PLOMBERIE": "Un tuyau qui coule? Mets une chaudière.",
+    "VITRIER": "Tu casses, on remplace. On t'a vu venir.",
+    "SERRURIER": "Une clé de char? Montre-moi les papiers.",
+    "IMPRIMERIE": "Des affiches « Recherché »? On en imprime déjà.",
+    "ARTISANAT": "Tout est fait à la main. Surtout le prix.",
+    "ACCASTILLAGE": "Des poulies, des taquets. T'as pas de voilier.",
+    "CORDAGES": "Du câble au mètre. Pour amarrer, juré.",
+    "VOILERIE": "Une voile? Mesure ton bateau d'abord.",
+    "GLACE ET SEL": "La glace pour le poisson. Le sel pour l'hiver.",
+    "CHALOUPES": "Les chaloupes se vendent au printemps.",
+    "MARINA": "Les quais sont loués à l'année. À des docteurs.",
+    "APPÂTS": "Des vers, des vers, des vers. Ça mord pas.",
+    "APPÂTS ET LIGNES": "Ça mord pas aujourd'hui. Ni hier.",
+    "À LOUER": "Local à louer. Le proprio est en Floride.",
 }
 
 #: Où TAXI DIAMANT te dépose : un lieu de la ville (`lieu` d'une porte), et ce que la ligne en dit. ⚠️ Écrit à la main,
@@ -354,6 +387,12 @@ RAYONS: dict[str, dict] = {
     # Une façade BINGO qui n'est pas LE bingo (`enseignes.ENSEIGNES` n'en ouvre qu'une) : le café et le beigne de la
     # salle, et le chemin du sous-sol.
     "bingo": _rayon("Le bingo", _CAFE, _bouchee("beigne", "Beigne"), _service("replique")),
+    # --- Vague 4a : ce qui se branche sur l'existant.
+    "grossiste": _rayon("Le quai de chargement", _service("revente"), _CAFE),
+    "location_velos": _rayon("La location", _service("velo"), _LIQUEUR),
+    "chantier_naval": _rayon("Le chantier", _service("radouber"), _CAFE),
+    # Les fournisseurs vendent aux entrepreneurs : un café pour attendre, et leur réplique.
+    "fournisseur": _rayon("Le comptoir", _CAFE, _service("replique")),
     # --- Vague 3c : le photographe.
     "photographe": _rayon("Le photographe", _meuble("portrait"), _service("developper"), _service("rachat")),
     # --- Vague 3b : la course de taxi.
@@ -445,6 +484,35 @@ ENSEIGNES: dict[str, str] = {
     "LAVE-AUTO": "lavage", "CIRE ET HUILE": "lavage", "FERRAILLE": "ferraille",
     "CLUB VIDÉO": "club_video", "CLUB MAH-JONG": "mah_jong", "SALLE DE JEUX": "salle_de_jeux",
     "PRÊTS RAPIDES": "preteur", "CHÈQUES CASH": "preteur", "PRÊT SUR GAGES": "gages",
+    # --- Ce qui se branche sur l'existant (vague 4a).
+    "GROSSISTE": "grossiste", "ENTREPÔT 7": "grossiste", "IMPORT YIP": "grossiste", "LOCATION VÉLOS": "location_velos",
+    "CHANTIER NAVAL": "chantier_naval", "CALE SÈCHE": "chantier_naval", "MOTEURS MARINS": "chantier_naval",
+    "À LOUER": "guichet",
+    "ACIER DU NORD": "fournisseur",
+    "FONDERIE": "fournisseur",
+    "MACHINERIE": "fournisseur",
+    "USINAGE": "fournisseur",
+    "ÉLECTRIQUE": "fournisseur",
+    "SILENCIEUX": "fournisseur",
+    "BOIS DE SCIAGE": "fournisseur",
+    "SCIERIE": "fournisseur",
+    "MENUISERIE": "fournisseur",
+    "PALETTES": "fournisseur",
+    "FERBLANTIER": "fournisseur",
+    "FERRONNERIE YU": "fournisseur",
+    "PLOMBERIE": "fournisseur",
+    "VITRIER": "fournisseur",
+    "SERRURIER": "fournisseur",
+    "IMPRIMERIE": "fournisseur",
+    "ARTISANAT": "fournisseur",
+    "ACCASTILLAGE": "fournisseur",
+    "CORDAGES": "fournisseur",
+    "VOILERIE": "fournisseur",
+    "GLACE ET SEL": "fournisseur",
+    "CHALOUPES": "fournisseur",
+    "MARINA": "fournisseur",
+    "APPÂTS": "fournisseur",
+    "APPÂTS ET LIGNES": "fournisseur",
     "TAXI DIAMANT": "taxi",
     "MISSION DU PORT": "soupe_populaire", "HOSPICE": "soupe_populaire", "BINGO": "bingo",
     "LOCATION CHALOUPE": "guichet", "CAPITAINERIE": "guichet", "VÉTÉRINAIRE": "guichet", "ASSOCIATION LI": "guichet",
@@ -473,26 +541,16 @@ POINTS = ("salon", "journal")
 #: Les enseignes qui vendent ENCORE au comptoir de leur famille : ce qu'elles vendront, et à quelle vague.
 #: ⚠️ Cette table ne doit que rapetisser : chaque vague en sort des lignes vers `ENSEIGNES`.
 EN_ATTENTE: dict[str, str] = {
-    # --- Les marchandises qui demandent une mécanique neuve.
-    "FLEURISTE": "un bouquet", "FLEURISTE MEI": "un bouquet", "FLEURISTE ROSE": "un bouquet",
-    "JOUETS ET TRAINS": "des jouets", "CERFS-VOLANTS": "un cerf-volant",
-    "LANTERNES FUNG": "une lanterne pour la planque", "LOCATION VÉLOS": "un vélo", "PLANCHES": "une planche",
-    "IMPORT YIP": "des importations", "ENTREPÔT 7": "le gros", "GROSSISTE": "le gros",
-    "À LOUER": "rien : un local vide", "PARFUMERIE": "du parfum", "TATOUAGE": "un tatouage",
-    "ACIER DU NORD": "des pièces", "MACHINERIE": "des pièces", "SILENCIEUX": "un silencieux",
-    "ÉLECTRIQUE": "des pièces", "USINAGE": "des pièces", "FONDERIE": "des pièces",
-    "ARTISANAT": "de l'artisanat", "BOIS DE SCIAGE": "du bois", "FERBLANTIER": "de la tôle",
-    "FERRONNERIE YU": "du fer forgé", "IMPRIMERIE": "des affiches", "PALETTES": "des palettes",
-    "PLOMBERIE": "de la plomberie", "PÉPINIÈRE": "les plantes de la planque", "SERRURIER": "des clés, un crochet",
-    "VAISSELLE CHOW": "la vaisselle de la planque", "ANTIQUAIRE": "des antiquités", "ENCADREUR": "un cadre",
-    "VITRIER": "une vitre", "SCIERIE": "du bois", "MENUISERIE": "du bois",
-    "ACCASTILLAGE": "le gréement du bateau", "APPÂTS ET LIGNES": "la canne et les appâts", "APPÂTS": "des appâts",
-    "CORDAGES": "des cordages", "GLACE ET SEL": "de la glace", "MOTEURS MARINS": "le moteur du bateau",
-    "VOILERIE": "une voile", "CHALOUPES": "une chaloupe", "CHANTIER NAVAL": "réparer le bateau",
-    "CALE SÈCHE": "réparer le bateau", "MARINA": "un mouillage",
+    # --- Vague 4b : la déco de la planque agrandie.
+    "LANTERNES FUNG": "une lanterne pour la planque", "PÉPINIÈRE": "les plantes de la planque",
+    "VAISSELLE CHOW": "la vaisselle de la planque", "GALERIE D'ART": "un tableau", "ANTIQUAIRE": "des antiquités",
+    "ENCADREUR": "un cadre",
+    # --- Vague 4c : les objets neufs (les collections, le tatouage, ce qui se donne).
     "DISQUES VOGUE": "des disques", "MUSIQUE LAROSE": "un instrument", "LIBRAIRIE": "des livres",
     "LIBRAIRIE CHUNG": "des livres", "LIVRES": "des livres", "PAPETERIE": "de la papeterie",
-    "GALERIE D'ART": "un tableau",
+    "PARFUMERIE": "du parfum", "TATOUAGE": "un tatouage", "FLEURISTE": "un bouquet", "FLEURISTE MEI": "un bouquet",
+    "FLEURISTE ROSE": "un bouquet", "JOUETS ET TRAINS": "des jouets", "CERFS-VOLANTS": "un cerf-volant",
+    "PLANCHES": "une planche",
 }
 
 

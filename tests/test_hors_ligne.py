@@ -84,7 +84,7 @@ def test_les_paquets_se_demandent_par_leur_empreinte(client):
     page = client.get("/").get_data(as_text=True)
     coquille = config_du_travailleur(client)["coquille"]
     for nom, route in (("definitions", "/api/definitions"), ("carte", "/api/carte"), ("musiques", "/api/musiques"),
-                       ("collections", "/api/collections"), ("suite", "/api/suite")):
+                       ("collections", "/api/collections"), ("suite", "/api/suite"), ("rayons", "/api/rayons")):
         adresse = re.search(rf'data-url-{nom}="([^"]+)"', page).group(1)
         etag = client.get(route).headers["ETag"].strip('"')
         assert adresse == f"{route}?e={etag}", adresse

@@ -50,6 +50,7 @@ def _page_d_accueil() -> str:
                            empreinte_musiques=current_app.extensions["musiques"].etag,
                            empreinte_collections=current_app.extensions["collections"].etag,
                            empreinte_suite=current_app.extensions["suite"].etag,
+                           empreinte_rayons=current_app.extensions["rayons"].etag,
                            empreinte_missions=current_app.extensions["missions_empreinte"],
                            empreinte_blocs=current_app.extensions["blocs_empreinte"],
                            url_compte=comptes.CHEMIN_COOKIE + "/")
@@ -125,6 +126,14 @@ def api_suite():
     autres ; les definitions nomment son empreinte (`suite_empreinte`).
     """
     return _revalide(current_app.extensions["suite"])
+
+
+@bp.route("/api/rayons")
+def api_rayons():
+    """Les rayons des comptoirs (docs/jalons/des-comptoirs-qui-vendent-ce-que-dit-l-enseigne.md) : ce que vend
+    chaque enseigne. Sortis de la suite le 6 oct. 2026 (elle débordait) ; demandés après elle, en arrière-plan, et
+    gardés par le travailleur. Les définitions nomment leur empreinte (`rayons_empreinte`)."""
+    return _revalide(current_app.extensions["rayons"])
 
 
 @bp.route("/api/collections")

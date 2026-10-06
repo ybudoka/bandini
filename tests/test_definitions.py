@@ -98,6 +98,8 @@ MESURE_DU_PAQUET: dict[str, tuple[int, int]] = {
     "repos": (107, 250),
     "cles_des_serrures": (64, 200),
     "suite_empreinte": (38, 150),
+    # Les rayons des comptoirs, sortis de la suite le 6 oct. 2026 (`/api/rayons`).
+    "rayons_empreinte": (38, 150),
     "musiques_empreinte": (38, 150),
     "missions_empreinte": (38, 150),
     "empreinte": (38, 150),
@@ -560,9 +562,15 @@ def test_le_paquet_reste_leger(paquets):
     PAR MARTIN.** La vague 3 (les services) a mangé la marge : 40 008 octets après avoir compacté les services (un nom
     seul quand il n'y a ni prix ni char) ; le photographe et les répliques des comptoirs en demandent environ 3 000 de
     plus. Proposé à Martin : relever, les rayons dans une requête à part, ou les répliques en voix — il a relevé.
+
+    ⚠️ **LES RAYONS VOYAGENT SEULS, LE 6 OCT. 2026 (Martin).** Troisième débordement (44 397 / 44 000, les répliques des
+    fournisseurs) : les rayons sortent de la suite (`/api/rayons`, `rayons_empreinte`) — la suite redescend à 30 630
+    bruts, et les rayons ont leur propre plafond (13 799 bruts et 5 746 gzip à leur sortie ; la déco de la planque et
+    les collections restent à venir).
     """
     for nom, brut_max, fil_max in (("definitions", 255_000, 57_500), ("carte", 600_000, 60_000),
-                                   ("musiques", 50_000, 10_000), ("suite", 44_000, 18_000)):
+                                   ("musiques", 50_000, 10_000), ("suite", 44_000, 18_000),
+                                   ("rayons", 18_000, 7_500)):
         paquet = getattr(paquets, nom)
         mesures = {"definitions": MESURE_DU_PAQUET, "carte": MESURE_DE_LA_CARTE}
         qui = f" — qui a grossi : {_qui_a_grossi(paquet.corps, mesure=mesures[nom])}" if nom in mesures else ""

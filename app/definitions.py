@@ -83,7 +83,7 @@ from .version import VERSION
 DANS_LA_SUITE: tuple[str, ...] = ("journal", "journal_speciales", "journal_lecons", "journal_matins",
                                   "photos", "galeries", "voix_de_la_suite",
                                   "repliques_de_la_file", "klaxons", "patinoire", "lectures",
-                                  "panneaux", "rayons")
+                                  "panneaux")
 
 #: Ce qu'une fiche de personnage porte et qu'aucun script ne lit : sa voix ElevenLabs (le nom de la voix,
 #: `audio.voix_*` la lit en Python pour générer ses mp3). 1 698 octets bruts / 658 gzip sur le paquet.
@@ -294,6 +294,9 @@ class Paquets:
     #: La suite du paquet (`/api/suite`) : les clés de `DANS_LA_SUITE`, que le navigateur remet dans `B.defs`.
     #: Les définitions nomment son empreinte (`suite_empreinte`), comme celle des notes.
     suite: Paquet
+    #: Les rayons des comptoirs (`/api/rayons`, `rayons.exporter`) : sortis de la suite le 6 oct. 2026. Les
+    #: définitions nomment son empreinte (`rayons_empreinte`).
+    rayons: Paquet
 
 
 def _json(donnees: dict) -> bytes:
@@ -341,6 +344,11 @@ def construire() -> Paquets:
     donnees["musiques_empreinte"] = musiques.etag
     suite = _signer({cle: donnees.pop(cle) for cle in DANS_LA_SUITE})
     donnees["suite_empreinte"] = suite.etag
+    # ⚠️ LES RAYONS DES COMPTOIRS VOYAGENT SEULS (`/api/rayons`, Martin, 6 oct. 2026) : ils ont fait déborder la
+    # suite trois fois (docs/jalons/des-comptoirs-qui-vendent-ce-que-dit-l-enseigne.md). Demandés après elle, en
+    # arrière-plan, gardés par la coquille ; sans eux, un comptoir sert celui de son genre.
+    rayons = _signer({"rayons": donnees.pop("rayons")})
+    donnees["rayons_empreinte"] = rayons.etag
     # Un paquet par mission, signe comme les autres.
     a_jouer = {m["slug"]: _signer(missions.pour_jouer(m["slug"])) for m in missions.CATALOGUE}
     # ⚠️ UNE empreinte pour les trente-six, posee dans l'adresse (`?e=`) comme celles
@@ -358,4 +366,4 @@ def construire() -> Paquets:
     donnees["blocs_empreinte"] = des_blocs
     return Paquets(definitions=_signer(donnees), carte=carte, a_jouer=a_jouer,
                    missions_empreinte=des_missions, blocs=des_cartes, blocs_empreinte=des_blocs,
-                   musiques=musiques, collections=collections, suite=suite)
+                   musiques=musiques, collections=collections, suite=suite, rayons=rayons)

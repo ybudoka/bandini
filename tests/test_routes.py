@@ -31,7 +31,7 @@ def test_la_taille_decompressee_voyage_avec_les_paquets(client):
 
 
 #: Toutes les routes qui passent par `routes._revalide` (un paquet signé et son ETag).
-ROUTES_DES_PAQUETS = ("/api/definitions", "/api/carte", "/api/musiques", "/api/suite", "/api/collections",
+ROUTES_DES_PAQUETS = ("/api/definitions", "/api/carte", "/api/musiques", "/api/suite", "/api/rayons", "/api/collections",
                       "/api/mission/m1", "/api/carte/bloc/rang")
 
 

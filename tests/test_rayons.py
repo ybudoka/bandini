@@ -122,13 +122,16 @@ def test_chaque_porte_de_commerce_de_la_ville_porte_un_nom_que_les_rayons_connai
     assert not inconnus, inconnus
 
 
-def test_la_suite_porte_les_rayons(paquets):
-    """Dans la suite du paquet (`DANS_LA_SUITE`), compacts — pas dans les définitions d'avant l'écran titre."""
+def test_les_rayons_voyagent_seuls(paquets):
+    """Sur `/api/rayons` (sortis de la suite le 6 oct. 2026, Martin : elle débordait), compacts — ni dans les
+    définitions d'avant l'écran titre, ni dans la suite ; les définitions nomment leur empreinte."""
     import json
+    rayons_ = json.loads(paquets.rayons.corps)
     suite = json.loads(paquets.suite.corps)
     defs = json.loads(paquets.definitions.corps)
-    assert "rayons" in suite and "rayons" not in defs
-    r = suite["rayons"]
+    assert "rayons" in rayons_ and "rayons" not in suite and "rayons" not in defs
+    assert defs["rayons_empreinte"] == paquets.rayons.etag
+    r = rayons_["rayons"]
     assert "BOULANGERIE" in r["enseignes"]["boulangerie"]
     assert r["rayons"]["boulangerie"][0][0] == "pain" and r["noms"]["pain"] == "Pain de ménage"
     assert r["tarifs"]["pain"] == list(rayons.BOUCHEES["pain"])
@@ -286,3 +289,16 @@ def test_ceux_qui_ne_vendent_rien_disent_leur_replique():
     genres = rayons.noms_des_enseignes()
     services = sorted(n for n in rayons.EN_ATTENTE if genres[n] & {"service"})
     assert not services, f"des services en attente : {services}"
+
+
+def test_ce_qui_se_branche_sur_l_existant():
+    """Vague 4a : les grossistes rachètent la contrebande, la location pose un vélo, le chantier naval répare le bateau,
+    et les fournisseurs (qui ne vendent pas au détail) disent leur réplique."""
+    def services(nom):
+        return {a.get("service") for a in rayons.RAYONS[rayons.ENSEIGNES[nom]]["articles"]} - {None}
+    assert all(services(n) == {"revente"} for n in ("GROSSISTE", "ENTREPÔT 7", "IMPORT YIP"))
+    assert services("LOCATION VÉLOS") == {"velo"} and services("CHANTIER NAVAL") == {"radouber"}
+    assert services("ACIER DU NORD") == {"replique"} and "ACIER DU NORD" in rayons.REPLIQUES
+    assert services("À LOUER") == {"replique"}
+    genres = rayons.noms_des_enseignes()
+    assert not [n for n in rayons.EN_ATTENTE if genres[n] & {"industrie", "marine"}], "l'industrie et la marine attendent"
