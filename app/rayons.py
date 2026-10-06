@@ -157,7 +157,19 @@ SERVICES: dict[str, dict] = {
     # limites du jour sont celles du casino (`Tables`, `Casino`).
     "sic_bo": {"nom": "La table de sic bo", "prix": None},
     "machine": {"nom": "La machine à sous", "prix": None},
+    # La course de TAXI DIAMANT (vague 3b) : une ligne par destination (`TAXI`), payée à la distance.
+    "taxi": {"nom": None, "prix": None},
 }
+
+#: Où TAXI DIAMANT te dépose : un lieu de la ville (`lieu` d'une porte), et ce que la ligne en dit. ⚠️ Écrit à la main,
+#: comme les rayons : ceux où l'on revient, et ceux qui sont loin.
+TAXI: tuple[tuple[str, str], ...] = (
+    ("planque", "La planque"), ("garage", "Le garage de Ti-Guy"), ("vetements", "Chez Rosa"),
+    ("armurerie", "Chez Gus"), ("bar", "Le Brouillard"), ("hopital", "L'hôpital"), ("dojo", "Le dojo"),
+    ("nord_casino", "Le Dragon d'or"), ("phare", "Le phare de La Pointe"), ("aeroport", "L'aéroport"),
+)
+#: Le prix d'une course : la prise en charge, et un dollar par `TAXI_TUILES` tuiles à vol d'oiseau.
+TAXI_BASE, TAXI_TUILES = 5, 8
 
 #: La part du prix de Chez Gus que le prêteur sur gages donne pour une arme.
 GAGES = 0.4
@@ -297,6 +309,8 @@ RAYONS: dict[str, dict] = {
     "preteur": _rayon("Le comptoir", _service("dette")),
     # Le prêt sur gages rachète tes armes, et revend celles des autres un peu moins cher que Gus.
     "gages": _rayon("Le prêt sur gages", _service("gages"), _arme("poing_americain"), _arme("couteau"), marge=0.8),
+    # --- Vague 3b : la course de taxi.
+    "taxi": _rayon("Le répartiteur", _service("taxi"), _CAFE),
     # --- Vague 2c : les meubles de la planque, livrés le lendemain (`Decoration`), chez qui les vend.
     "radio_tv": _rayon("La radio-télé", _meuble("televiseur"), _meuble("jukebox")),
     "meubles": _rayon("Les meubles", _meuble("sofa"), _meuble("tapis_tresse"), _meuble("lampe_lave")),
@@ -384,6 +398,7 @@ ENSEIGNES: dict[str, str] = {
     "LAVE-AUTO": "lavage", "CIRE ET HUILE": "lavage", "FERRAILLE": "ferraille",
     "CLUB VIDÉO": "club_video", "CLUB MAH-JONG": "mah_jong", "SALLE DE JEUX": "salle_de_jeux",
     "PRÊTS RAPIDES": "preteur", "CHÈQUES CASH": "preteur", "PRÊT SUR GAGES": "gages",
+    "TAXI DIAMANT": "taxi",
     # --- Le neuf (vague 2d).
     "BIJOUTERIE": "bijouterie", "BIJOUX CHEUNG": "bijouterie", "OPTICIEN": "opticien", "OPTIQUE": "opticien",
     "SOIERIE MEI": "soierie", "TISSUS ET SOIES": "soierie",
@@ -425,7 +440,6 @@ EN_ATTENTE: dict[str, str] = {
     "GALERIE D'ART": "un tableau",
     # --- Les services qui restent (Martin, 6 oct. 2026) : 3b la course de taxi, 3c le photographe (le rachat, le
     # portrait, les photos de voyage), 3d la soupe de qui est cassé et les répliques de ceux qui ne vendent rien.
-    "TAXI DIAMANT": "une course",
     "PHOTO EXPRESS": "le photographe", "PHOTO SOUVENIR": "le photographe", "PHOTOGRAPHE": "le photographe",
     "STUDIO LAU": "le photographe",
     "MISSION DU PORT": "une soupe pour qui est cassé", "HOSPICE": "une soupe pour qui est cassé",
@@ -468,6 +482,14 @@ def _compact(a) -> str:
     return a["slug"]
 
 
+def _service_compact(v: dict) -> str | list:
+    """Un service, compact : son nom seul ; `[nom, prix]` s'il a un prix ; `[nom, prix, 1]` s'il travaille sur le char.
+    Un service sans nom (le coffre, la dette, les gages, le taxi : ils font leurs lignes) ne voyage pas."""
+    if v.get("char"):
+        return [v["nom"], v["prix"], 1]
+    return [v["nom"], v["prix"]] if v["prix"] else v["nom"]
+
+
 def exporter() -> dict:
     """Ce qui part au navigateur, COMPACT (la suite a un plafond : 6 Ko bruts au lieu de 20) :
 
@@ -479,7 +501,8 @@ def exporter() -> dict:
     - `enseignes` — rayon : [noms]. ⚠️ Sans celles qui tomberaient au même endroit sans être nommées : le comptoir
       de leur propre famille (la TAVERNE sert `nuit`), ou un point qui n'est pas un comptoir (`POINTS` : le barbier,
       le Clairon) — le navigateur retombe sur le comptoir du genre (`Missions.comptoirDuPoint`) ;
-    - `services` — chaque service : [nom, prix, char] (`SERVICES`), et `reglages` — `GAGES`, `FERRAILLE`, `SOINS_PV` ;
+    - `services` — chaque service qui a un nom (`_service_compact`), `reglages` — `GAGES`, `FERRAILLE`, `SOINS_PV`, le
+      prix du taxi — et `taxi`, ses destinations (`TAXI`) ;
     - `tarifs` — les `BOUCHEES`, slug : [prix, PV, souffle].
 
     `Missions.rayons` le déplie une fois."""
@@ -495,6 +518,7 @@ def exporter() -> dict:
         for a in r["articles"]:
             if a["tarif"]:
                 noms[a["slug"]] = [a["nom"], a["effet"]] if a["effet"] else a["nom"]
-    return {"rayons": rayons, "noms": noms, "enseignes": par_rayon, "services": {k: [v["nom"], v["prix"], 1 if v.get("char") else 0] for k, v in SERVICES.items()},
-            "reglages": {"gages": GAGES, "ferraille": FERRAILLE, "soins_pv": SOINS_PV},
+    return {"rayons": rayons, "noms": noms, "enseignes": par_rayon, "services": {k: _service_compact(v) for k, v in SERVICES.items() if v["nom"]},
+            "reglages": {"gages": GAGES, "ferraille": FERRAILLE, "soins_pv": SOINS_PV, "taxi": [TAXI_BASE, TAXI_TUILES]},
+            "taxi": [list(t) for t in TAXI],
             "tarifs": {slug: list(t) for slug, t in BOUCHEES.items()}}

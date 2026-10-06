@@ -250,3 +250,17 @@ MACHINERIE, USINAGE…) ; et la marine (cordages, voilerie, moteurs marins : le 
   rachète le couteau, l'HÔTEL fait dormir jusqu'au lendemain ; l'assurance et le lavage sur le char garé devant, la
   FERRAILLE qui prend l'épave, le film, la table de sic bo, le motel). Le fauteuil rendu au barbier et le gage qui ne
   retire pas l'arme font rougir le juge du bouton.
+
+### Vague 3b : la course de taxi (livrée le 6 oct. 2026)
+
+- **TAXI DIAMANT** a son rayon (le répartiteur, et son café) : une ligne par destination (`rayons.TAXI`, écrites à la
+  main — la planque, le garage, Rosa, Gus, le Brouillard, l'hôpital, le dojo, le Dragon d'or, le phare, l'aéroport),
+  payée 5 $ plus un dollar par huit tuiles à vol d'oiseau (`TAXI_BASE`, `TAXI_TUILES`). Une destination à moins de
+  douze tuiles ne se propose pas : on y va à pied.
+- **On sort chez Rosa** : la rue de sortie (`B.exterieur`) est recalée sur la porte de la destination, puis
+  `Jeu.sortir` — comme le métro remonte à l'édicule d'une autre station. Le char qu'on avait garé devant le taxi y
+  reste.
+- **Le plafond de la suite** : 40 000 → 44 000 bruts, 16 500 → 18 000 gzip (Martin, 6 oct. 2026) — elle était à 40 131 ; les
+  services ont maigri (un nom seul quand il n'y a ni prix ni char, et rien pour ceux qui font leurs lignes).
+- **Juges** : chaque destination a sa porte dans la ville (`test_rayons.py`) ; au bouton, la course CHEZ ROSA payée,
+  et l'on sort devant la boutique (`test_rayons_js.py`). Sans la rue recalée, le juge rougit.

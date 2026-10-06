@@ -555,9 +555,14 @@ def test_le_paquet_reste_leger(paquets):
     bouchée, plus de nom de rayon, plus les enseignes qui retombent d'elles-mêmes à leur famille) ; il restait 251
     octets, et les options du garage, les meubles et le neuf (2b à 2d) en demandent environ 2 000. Proposé à Martin :
     relever la suite, une requête à part pour les rayons — il a relevé : la suite part après l'écran titre.
+
+    ⚠️ **LES SERVICES DES COMPTOIRS, LE 6 OCT. 2026 — LA SUITE : 40 000 → 44 000 BRUTS, 16 500 → 18 000 GZIP, TRANCHÉ
+    PAR MARTIN.** La vague 3 (les services) a mangé la marge : 40 008 octets après avoir compacté les services (un nom
+    seul quand il n'y a ni prix ni char) ; le photographe et les répliques des comptoirs en demandent environ 3 000 de
+    plus. Proposé à Martin : relever, les rayons dans une requête à part, ou les répliques en voix — il a relevé.
     """
     for nom, brut_max, fil_max in (("definitions", 255_000, 57_500), ("carte", 600_000, 60_000),
-                                   ("musiques", 50_000, 10_000), ("suite", 40_000, 16_500)):
+                                   ("musiques", 50_000, 10_000), ("suite", 44_000, 18_000)):
         paquet = getattr(paquets, nom)
         mesures = {"definitions": MESURE_DU_PAQUET, "carte": MESURE_DE_LA_CARTE}
         qui = f" — qui a grossi : {_qui_a_grossi(paquet.corps, mesure=mesures[nom])}" if nom in mesures else ""

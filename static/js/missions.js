@@ -1584,11 +1584,12 @@ const Missions = (function () {
         // Une piece du garage (`p:`) ou un service au char (`s:`), sur le char gare devant la porte.
         if (sorte === 'p' || sorte === 's') {
           const slug = a.slice(2), q = sorte === 'p' && Garage.piece(slug);
-          const sv = sorte === 's' ? r.services[slug] : null;
-          return { slug: slug, nom: q ? q.nom : (sv && sv[0]) || slug, tarif: null, gain_pv: null, gain_souffle: null,
+          // Un service : son nom seul, `[nom, prix]`, ou `[nom, prix, 1]` au char (`rayons._service_compact`).
+          const sv = sorte === 's' ? r.services[slug] : null, liste = Array.isArray(sv);
+          return { slug: slug, nom: q ? q.nom : (liste ? sv[0] : sv) || slug, tarif: null, gain_pv: null, gain_souffle: null,
                    effet: null, arme: null, tenue: null, journal: false,
                    piece: sorte === 'p' ? slug : null, service: sorte === 's' ? slug : null,
-                   prix: sv ? sv[1] : null, char: sorte === 'p' || !!(sv && sv[2]) };
+                   prix: liste ? sv[1] : null, char: sorte === 'p' || !!(liste && sv[2]) };
         }
         if (sorte) {
           const slug = a.slice(2);
@@ -1603,7 +1604,7 @@ const Missions = (function () {
                  effet: typeof n === 'string' ? null : n[1], arme: null, tenue: null, journal: false };
       }) };
     });
-    r.deplie = { enseignes: enseignes, rayons: comptoirs, reglages: r.reglages || {} };
+    r.deplie = { enseignes: enseignes, rayons: comptoirs, reglages: r.reglages || {}, taxi: r.taxi || [] };
     return r.deplie;
   }
 
@@ -1790,6 +1791,28 @@ const Missions = (function () {
                     Jeu.transiter(FONDU_NUIT, function () { soigner(j, repos); }, 'LE GÉNÉRIQUE DÉFILE');
                     return true;
                   } }];
+      }
+      case 'taxi': {
+        // TAXI DIAMANT : une course vers un lieu de la ville, payee a la distance ; on sort par la porte du lieu,
+        // comme le metro remonte a l'edicule d'une autre station (`B.exterieur` recale, puis `Jeu.sortir`).
+        const ext = B.exterieur, tarif = reglages.taxi || [5, 8];
+        if (!ext || !ext.carte) return [];
+        const lignes = (r.taxi || []).map(function (d) {
+          const porte = ext.carte.portes.find(function (q) { return q.lieu === d[0]; });
+          if (!porte) return null;
+          const x = porte.x * TT + 8, y = (porte.y + 1) * TT + 10, tuiles = Math.hypot(x - ext.x, y - ext.y) / TT;
+          if (tuiles < 12) return null;                       // on y est presque : a pied
+          const cout = Math.round((tarif[0] + tuiles / tarif[1]) * facteur);
+          return { libelle: d[1].toUpperCase(), detail: cout + ' $', actif: p.argent >= cout,
+                   faire: function () {
+                     if (!payer(cout, 'LA COURSE')) return false;
+                     ext.x = x; ext.y = y; ext.porte = { x: porte.x, y: porte.y };
+                     Jeu.sortir();
+                     Hud.message('LE TAXI TE DÉPOSE — ' + d[1].toUpperCase(), 180);
+                     return true;
+                   } };
+        }).filter(Boolean);
+        return lignes.length ? lignes : [{ libelle: 'PAS DE CHAUFFEUR', actif: false }];
       }
       case 'sic_bo':
         return [{ libelle: libelle, actif: true, faire: function () { Hud.ouvrirMenu(Tables.menu('sic_bo')); return true; } }];

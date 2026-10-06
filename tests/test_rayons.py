@@ -252,3 +252,12 @@ def test_chaque_service_rend_le_sien():
     for nom, slug in rayons.ENSEIGNES.items():
         if "service" in genres[nom] and slug == "salon":
             assert "BARBIER" in nom or "COIFFURE" in nom or "SALON" in nom, nom
+
+
+def test_chaque_destination_du_taxi_a_sa_porte_dans_la_ville():
+    """Vague 3b : TAXI DIAMANT dépose devant la porte d'un lieu (`rayons.TAXI`) — une destination sans porte serait une
+    ligne qui ne se montre jamais."""
+    v = villes.exporter()
+    lieux = {p.get("lieu") for p in v["portes"]}
+    assert not [s for s, _ in rayons.TAXI if s not in lieux], [s for s, _ in rayons.TAXI if s not in lieux]
+    assert rayons.ENSEIGNES["TAXI DIAMANT"] == "taxi"

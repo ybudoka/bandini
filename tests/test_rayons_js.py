@@ -441,3 +441,25 @@ def test_les_autres_services_se_proposent_et_la_ferraille_achete_l_epave(banc):
     assert r["video"][0].startswith("LOUER UN FILM — "), r["video"]
     assert r["table"], r
     assert r["motel"][:2] == ["DORMIR JUSQU’AU MATIN", "DORMIR JUSQU’AU SOIR"], r["motel"]
+
+
+def test_le_taxi_te_depose_devant_chez_rosa(banc):
+    """Vague 3b, au BOUTON, par une vraie porte renommée TAXI DIAMANT : la course CHEZ ROSA payée à la distance, et l'on
+    sort de la pièce devant la porte de la boutique, à l'autre bout de la ville."""
+    r = banc("""function (L, o) {
+        %s
+        L.Jeu.commencer();
+        if (L.B.menu) L.Hud.fermerMenu();
+        const B = L.B, j = B.joueur, p = B.partie;
+        const pt = ouvrir(L, o, 'service', 'TAXI DIAMANT', 'salon');
+        if (!pt) return null;
+        p.argent = 500;
+        const avant = presser(L, o, pt, 'CHEZ ROSA');
+        for (let k = 0; k < 400 && (B.interieur || B.transition); k++) o.frame(1);
+        const rosa = L.Monde.carte.portes.find(function (q) { return q.lieu === 'vetements'; });
+        return { avant: avant, dehors: !B.interieur, argent: p.argent,
+                 loin: Math.hypot(j.x - (rosa.x * 16 + 8), j.y - (rosa.y + 1) * 16) };
+    }""" % ENTRER)
+    assert r and r["avant"]["curseur"] >= 0, r
+    assert r["dehors"] and r["loin"] < 40, r
+    assert rayons.TAXI_BASE < 500 - r["argent"] < 200, r
