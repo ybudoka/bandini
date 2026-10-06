@@ -28,9 +28,9 @@ def test_un_rayon_decide_est_un_rayon_un_comptoir_de_famille_ou_le_point_de_son_
             point = carte.MOBILIER[genre]["point"][0]
             if slug in rayons.POINTS:
                 ok = point == slug
-            elif point == "salon":
-                # Le fauteuil d'une pièce de SERVICE devient le comptoir d'un rayon neuf (`Missions.rayonDuFauteuil`) —
-                # jamais celui d'une famille (le barbier garde son fauteuil).
+            elif point in ("salon", "journal"):
+                # Le fauteuil d'une pièce de SERVICE, le présentoir d'une pièce du SAVOIR, deviennent le comptoir d'un
+                # rayon neuf (`Missions.rayonDuFauteuil`) — jamais celui d'une famille (le barbier garde son fauteuil).
                 ok = slug in rayons.RAYONS
             else:
                 comptoir = rayons.RAYONS.get(slug) or magasins.COMPTOIRS.get(slug)
@@ -272,3 +272,17 @@ def test_chaque_lieu_de_l_album_a_sa_porte_et_le_photographe_le_developpe():
     assert len(photos.ALBUM) == 10 and not [s for s, _ in photos.ALBUM if s not in lieux]
     for nom in ("PHOTO EXPRESS", "PHOTO SOUVENIR", "PHOTOGRAPHE", "STUDIO LAU"):
         assert {a.get("service") for a in rayons.RAYONS[rayons.ENSEIGNES[nom]]["articles"]} >= {"developper", "rachat"}
+
+
+def test_ceux_qui_ne_vendent_rien_disent_leur_replique():
+    """Vague 3d (Martin, 6 oct. 2026 : « soupe et répliques ») : chaque enseigne d'un rayon à réplique a la sienne,
+    courte (elle s'écrit sous le menu) ; la MISSION DU PORT et l'HOSPICE servent la soupe ; et plus aucun service
+    n'attend."""
+    a_replique = {nom for nom, slug in rayons.ENSEIGNES.items()
+                  if any(a.get("service") == "replique" for a in (rayons.RAYONS.get(slug) or {}).get("articles", []))}
+    assert a_replique == set(rayons.REPLIQUES), a_replique ^ set(rayons.REPLIQUES)
+    assert all(0 < len(t) <= 50 for t in rayons.REPLIQUES.values()), [t for t in rayons.REPLIQUES.values() if len(t) > 50]
+    assert rayons.ENSEIGNES["MISSION DU PORT"] == rayons.ENSEIGNES["HOSPICE"] == "soupe_populaire"
+    genres = rayons.noms_des_enseignes()
+    services = sorted(n for n in rayons.EN_ATTENTE if genres[n] & {"service"})
+    assert not services, f"des services en attente : {services}"

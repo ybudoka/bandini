@@ -294,3 +294,32 @@ MACHINERIE, USINAGE…) ; et la marine (cordages, voilerie, moteurs marins : le 
 - **Juges** : `test_decoration.py` (les places, `photographe` comme lieu de vente) ; `test_rayons_js.py` (au bouton, au
   PHOTOGRAPHE : le portrait payé, tiré avec la tenue du jour, absent aujourd'hui, au mur demain ; l'album complet pose
   son cadre à la planque, pas au chalet).
+
+### Vague 3d : la soupe des pauvres et les répliques (livrée le 6 oct. 2026)
+
+- **La soupe** : la MISSION DU PORT et l'HOSPICE servent un bol de soupe aux pois (ses gains, `economie.TARIFS`),
+  gratuit, une fois par jour (`partie.soupe`), à qui a moins de 20 $ en poche (`rayons.SOUPE`). Riche, la ligne le dit
+  gentiment : « POUR CEUX QUI SONT CASSÉS » — on ne rit pas des pauvres (docs/ecrire-drole.md).
+- **Les répliques** (`rayons.REPLIQUES`, 20 enseignes, cinquante lettres au plus) : ceux qui ne vendent rien ont un
+  comptoir quand même — « RIEN À VENDRE ICI », et leur réplique sous le menu (`aide`) : le métier qui se moque de
+  lui-même (« Le guichet ferme dans cinq minutes. Depuis 1974. », « Chut. »). Les fausses façades BINGO servent le café
+  et le beigne de la salle, et renvoient au vrai, au sous-sol du Faubourg.
+- **Le présentoir du savoir** : l'ÉCOLE, l'ÉCOLE DE DANSE, la BIBLIOTHÈQUE et les ARCHIVES n'ont ni comptoir ni
+  fauteuil, mais le présentoir du Clairon (`journal`) ; comme le fauteuil des pièces de service, il devient le comptoir
+  de leur rayon (`rayonDuFauteuil`), aux heures de la famille `service`. Le kiosque et les journaux gardent le Clairon.
+- **Juges** : chaque enseigne à réplique a la sienne, assez courte, et plus aucun service n'attend (`test_rayons.py`) ;
+  au bouton, la soupe à la MISSION DU PORT (riche : refusée ; cassé : servie, puis « À DEMAIN »), et l'ÉCOLE qui dit sa
+  réplique (`test_rayons_js.py`). Le présentoir rendu au Clairon fait rougir le juge.
+
+### Ce qui reste après la vague 3
+
+53 enseignes attendent une mécanique neuve : le bouquet qui se donne (FLEURISTE), les jouets, le cerf-volant, le vélo à
+louer, la planche, la lanterne de la planque, les plantes et la vaisselle, les disques, les livres et l'instrument, la
+papeterie, le tableau, l'antiquaire et le cadre, le parfum, le tatouage ; le gros (ENTREPÔT 7, GROSSISTE) et les
+importations ; « des pièces » sans destinataire (ACIER DU NORD, MACHINERIE, USINAGE…), le bois, la tôle, le fer forgé ;
+et la marine (cordages, voilerie, moteurs marins, chantier naval : le bateau n'a pas encore de garage). Elles vendent
+encore au comptoir de leur couleur.
+
+⚠️ **Une ville sans barbier** : la ville livrée n'ouvre que trois pièces de service (la BUANDERIE, le STUDIO LAU, le
+NOTAIRE LEUNG) ; toutes ont maintenant leur rayon, et la coupe de cheveux — qui fait oublier ta face à la police — ne
+se trouve plus nulle part en ville. Le barbier garde son fauteuil (`salon`), mais aucune porte de barbier ne s'ouvre.

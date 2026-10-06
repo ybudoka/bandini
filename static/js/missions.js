@@ -1475,6 +1475,8 @@ const Missions = (function () {
         if (!caisse && !aVendre(piece.slug)) items.push({ libelle: 'CE N’EST PAS À TOI', actif: false });
         return { titre: piece.nom.toUpperCase(), items: items };
       case 'journal':
+        // Une enseigne du SAVOIR qui a son rayon (l'ECOLE, la BIBLIOTHEQUE) : le presentoir devient son comptoir.
+        if (rayonDuFauteuil()) return menuComptoir(pointDuFauteuil(point), items);
         items.push({ libelle: 'LE CLAIRON DE LA BAIE', detail: tarifs.journal + ' $', actif: p.argent >= tarifs.journal,
                      faire: function () { payer(tarifs.journal, 'JOURNAL'); lireLeJournal(); return true; } });
         // Le presentoir de Ti-Paul vend aussi le billet du 6/49 (`loto` sur le point).
@@ -1547,8 +1549,9 @@ const Missions = (function () {
     return (slug && (r.rayons[slug] || comptoirs[slug])) || famille;
   }
 
-  /** Le rayon de la porte quand on est assis au fauteuil d'une piece de SERVICE (`salon`), ou null : seul un rayon
-      neuf le remplace, jamais le comptoir de famille (le barbier garde son fauteuil). */
+  /** Le rayon de la porte devant le fauteuil d'une piece de SERVICE (`salon`) ou le presentoir d'une piece du SAVOIR
+      (`journal`), ou null : seul un rayon neuf les remplace, jamais un comptoir de famille (le barbier garde son
+      fauteuil, le kiosque son Clairon). Ses heures sont celles de la famille `service`. */
   function rayonDuFauteuil() {
     const r = rayons(), nom = B.interieur && B.interieur.nom, slug = r && nom && r.enseignes[nom];
     return (slug && r.rayons[slug]) || null;
@@ -1604,7 +1607,8 @@ const Missions = (function () {
                  effet: typeof n === 'string' ? null : n[1], arme: null, tenue: null, journal: false };
       }) };
     });
-    r.deplie = { enseignes: enseignes, rayons: comptoirs, reglages: r.reglages || {}, taxi: r.taxi || [] };
+    r.deplie = { enseignes: enseignes, rayons: comptoirs, reglages: r.reglages || {}, taxi: r.taxi || [],
+                 repliques: r.repliques || {} };
     return r.deplie;
   }
 
@@ -1656,7 +1660,10 @@ const Missions = (function () {
       if (a.tenue) return items.push(itemTenue(a, (comptoir.rabais || 1) * rabais(cle)));
       items.push(itemBouchee(a, null, rabais(cle)));
     });
-    return { titre: piece.nom.toUpperCase(), items: items, sur: p.argent + ' $' };
+    // UN COMPTOIR QUI NE VEND RIEN dit sa replique sous le menu (`rayons.REPLIQUES`).
+    const r = comptoir.articles.some(function (a) { return a.service === 'replique'; }) ? rayons() : null;
+    const aide = r && r.repliques[piece.nom] ? '« ' + r.repliques[piece.nom].toUpperCase() + ' »' : undefined;
+    return { titre: piece.nom.toUpperCase(), items: items, sur: p.argent + ' $', aide: aide };
   }
 
   /** Une bouchee, au comptoir comme a la machine : le prix, ce qu'elle rend, le geste.
@@ -1830,6 +1837,21 @@ const Missions = (function () {
         return [{ libelle: 'VENDRE : ' + d.sujets[ph.sujet].nom, detail: offre + ' $', actif: true,
                   faire: function () { Photos.racheter(); return false; } }];
       }
+      case 'soupe': {
+        // LA SOUPE DES PAUVRES : gratuite, une fois par jour, sous le seuil (`rayons.SOUPE`) — la soupe aux pois.
+        const t = B.defs.economie.tarifs, casse = p.argent < (reglages.soupe || 20), servie = p.soupe === p.jour;
+        return [{ libelle: libelle, detail: servie ? 'À DEMAIN' : casse ? 'GRATUIT' : 'POUR CEUX QUI SONT CASSÉS',
+                  actif: casse && !servie,
+                  faire: function () {
+                    p.soupe = p.jour;
+                    soigner(j, t.soupe_pv); nourrir(j, t.soupe_souffle);
+                    Hud.message('LA SOUPE EST CHAUDE', 150);
+                    return false;
+                  } }];
+      }
+      case 'replique':
+        // Ce qu'il dit s'ecrit sous le menu (`menuComptoir`, `aide`).
+        return [{ libelle: 'RIEN À VENDRE ICI', actif: false }];
       case 'sic_bo':
         return [{ libelle: libelle, actif: true, faire: function () { Hud.ouvrirMenu(Tables.menu('sic_bo')); return true; } }];
       case 'machine':
@@ -4169,7 +4191,8 @@ const Missions = (function () {
           : vente ? 'ACHETER ' + vente.nom.toUpperCase()
           : (point.type === 'distributrice' ? inviteDistributrice(machineDuPoint(point))
             : point.type === 'escalier' && point.descend ? 'DESCENDRE'
-            : point.type === 'salon' && rayonDuFauteuil() ? comptoirFerme(pointDuFauteuil(point)) || 'AU COMPTOIR'
+            : (point.type === 'salon' || point.type === 'journal') && rayonDuFauteuil()
+              ? comptoirFerme(pointDuFauteuil(point)) || 'AU COMPTOIR'
             : (point.type === 'emplettes' && comptoirFerme(point)) || (LIBELLES[point.type] || point.type.toUpperCase()));
         return;
       }

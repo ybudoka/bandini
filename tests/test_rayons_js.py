@@ -524,3 +524,31 @@ def test_le_portrait_se_tire_avec_la_tenue_du_jour_et_se_pose_au_mur_de_la_planq
     assert r["portrait"] and r["portrait"]["haut"] and r["portrait"]["peau"], r
     assert not r["aujourdhui"] and r["demain"], r
     assert not r["cadreAvant"] and r["cadreApres"] and not r["chalet"], r
+
+
+def test_la_soupe_pour_qui_est_casse_et_la_replique_de_l_ecole(banc):
+    """Vague 3d, au BOUTON : à la MISSION DU PORT, cassé, un bol de soupe gratuit (une fois par jour) ; riche, il ne se
+    sert pas. À l'ÉCOLE (le présentoir d'une pièce du savoir), plus de Clairon : RIEN À VENDRE ICI, et sa réplique."""
+    r = banc("""function (L, o) {
+        %s
+        L.Jeu.commencer();
+        if (L.B.menu) L.Hud.fermerMenu();
+        const B = L.B, j = B.joueur, p = B.partie, out = {};
+        let pt = ouvrir(L, o, 'sante', 'MISSION DU PORT', 'emplettes');
+        p.argent = 500;
+        out.riche = L.Missions.menuDuPoint(pt).items[0];
+        p.argent = 3; j.vie = 30;
+        out.casse = presser(L, o, pt, 'UN BOL DE SOUPE');
+        out.vie = j.vie; out.argent = p.argent;
+        out.deux = L.Missions.menuDuPoint(pt).items[0];
+        sortir(L, o);
+        pt = ouvrir(L, o, 'savoir', 'ÉCOLE', 'journal');
+        const m = L.Missions.menuDuPoint(pt);
+        out.ecole = { items: m.items.map(function (q) { return q.libelle; }), aide: m.aide };
+        return out;
+    }""" % ENTRER)
+    assert r["riche"]["actif"] is False and r["riche"]["detail"] == "POUR CEUX QUI SONT CASSÉS", r
+    assert r["casse"]["curseur"] >= 0 and r["vie"] > 30 and r["argent"] == 3, r
+    assert r["deux"]["actif"] is False and r["deux"]["detail"] == "À DEMAIN", r
+    assert r["ecole"]["items"] == ["RIEN À VENDRE ICI"], r
+    assert r["ecole"]["aide"] == "« " + rayons.REPLIQUES["ÉCOLE"].upper() + " »", r

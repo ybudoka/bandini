@@ -161,8 +161,43 @@ SERVICES: dict[str, dict] = {
     # jour (`photos.PHOTOGRAPHE`).
     "developper": {"nom": None, "prix": None},
     "rachat": {"nom": None, "prix": None},
+    # La soupe de la MISSION DU PORT et de l'HOSPICE (vague 3d) : gratuite, une fois par jour, à qui est cassé (`SOUPE`).
+    "soupe": {"nom": "Un bol de soupe", "prix": None},
+    # Ce que dit un comptoir qui ne vend rien (vague 3d, `REPLIQUES`) : une ligne, et sa réplique sous le menu.
+    "replique": {"nom": None, "prix": None},
     # La course de TAXI DIAMANT (vague 3b) : une ligne par destination (`TAXI`), payée à la distance.
     "taxi": {"nom": None, "prix": None},
+}
+
+#: La soupe des pauvres : sous `seuil` dollars en poche, un bol par jour (les gains de la soupe aux pois,
+#: `economie.TARIFS`). ⚠️ « On ne rit pas des pauvres » (docs/ecrire-drole.md) : celui qui a de l'argent se le fait
+#: dire gentiment.
+SOUPE = {"seuil": 20}
+
+#: LES RÉPLIQUES des comptoirs qui ne vendent rien (vague 3d, Martin, 6 oct. 2026 : « soupe et répliques ») : une par
+#: enseigne, dans le ton de docs/ecrire-drole.md — le métier qui se moque de lui-même, jamais du client. ⚠️ Cinquante
+#: lettres au plus : elles s'écrivent sous le menu (`aide`).
+REPLIQUES: dict[str, str] = {
+    "BINGO": "Le vrai bingo, c'est au sous-sol du Faubourg.",
+    "MISSION DU PORT": "Une soupe, une chaise, pas de questions.",
+    "HOSPICE": "Assieds-toi. Personne est pressé, ici.",
+    "LOCATION CHALOUPE": "Toutes louées. Depuis 1987.",
+    "CAPITAINERIE": "La marée monte, la marée descend. C'est tout.",
+    "VÉTÉRINAIRE": "Pas de bête? Ton char compte pas.",
+    "ASSOCIATION LI": "Cotisation : un sourire. Déjà payée.",
+    "BUREAU DE PAIE": "Ton nom est pas sur la liste. Ni sur aucune.",
+    "BUREAU DE POSTE": "Le guichet ferme dans cinq minutes. Depuis 1974.",
+    "DOUANES": "Rien à déclarer? Ta face dit le contraire.",
+    "GARDERIE": "On garde les enfants. Pas les fugitifs.",
+    "NOTAIRE BÉLIVEAU": "Ton testament? « Tout à Rocco. » C'est fait.",
+    "NOTAIRE LEUNG": "Signez ici, ici et ici. Pour rien, mais signez.",
+    "BUREAU": "Prends un numéro. On est rendus au trois.",
+    "DÉPÔT": "Le dépôt dépose. Le reste, c'est pas nos affaires.",
+    "ENTREPOSAGE": "Ce qu'il y a dans les casiers? On veut pas savoir.",
+    "ÉCOLE DE DANSE": "Le cours de cha-cha est complet. Le tien aussi.",
+    "ÉCOLE": "Inscriptions fermées. Reviens en septembre.",
+    "BIBLIOTHÈQUE": "Chut.",
+    "ARCHIVES": "Ton dossier? Il est classé. Comme une affaire.",
 }
 
 #: Où TAXI DIAMANT te dépose : un lieu de la ville (`lieu` d'une porte), et ce que la ligne en dit. ⚠️ Écrit à la main,
@@ -313,6 +348,12 @@ RAYONS: dict[str, dict] = {
     "preteur": _rayon("Le comptoir", _service("dette")),
     # Le prêt sur gages rachète tes armes, et revend celles des autres un peu moins cher que Gus.
     "gages": _rayon("Le prêt sur gages", _service("gages"), _arme("poing_americain"), _arme("couteau"), marge=0.8),
+    # --- Vague 3d : la soupe des pauvres, et ceux qui ne vendent rien (leur réplique, `REPLIQUES`).
+    "soupe_populaire": _rayon("La soupe", _service("soupe"), _service("replique")),
+    "guichet": _rayon("Le guichet", _service("replique")),
+    # Une façade BINGO qui n'est pas LE bingo (`enseignes.ENSEIGNES` n'en ouvre qu'une) : le café et le beigne de la
+    # salle, et le chemin du sous-sol.
+    "bingo": _rayon("Le bingo", _CAFE, _bouchee("beigne", "Beigne"), _service("replique")),
     # --- Vague 3c : le photographe.
     "photographe": _rayon("Le photographe", _meuble("portrait"), _service("developper"), _service("rachat")),
     # --- Vague 3b : la course de taxi.
@@ -405,6 +446,12 @@ ENSEIGNES: dict[str, str] = {
     "CLUB VIDÉO": "club_video", "CLUB MAH-JONG": "mah_jong", "SALLE DE JEUX": "salle_de_jeux",
     "PRÊTS RAPIDES": "preteur", "CHÈQUES CASH": "preteur", "PRÊT SUR GAGES": "gages",
     "TAXI DIAMANT": "taxi",
+    "MISSION DU PORT": "soupe_populaire", "HOSPICE": "soupe_populaire", "BINGO": "bingo",
+    "LOCATION CHALOUPE": "guichet", "CAPITAINERIE": "guichet", "VÉTÉRINAIRE": "guichet", "ASSOCIATION LI": "guichet",
+    "BUREAU DE PAIE": "guichet", "BUREAU DE POSTE": "guichet", "DOUANES": "guichet", "GARDERIE": "guichet",
+    "NOTAIRE BÉLIVEAU": "guichet", "NOTAIRE LEUNG": "guichet", "BUREAU": "guichet", "DÉPÔT": "guichet",
+    "ENTREPOSAGE": "guichet", "ÉCOLE DE DANSE": "guichet", "ÉCOLE": "guichet", "BIBLIOTHÈQUE": "guichet",
+    "ARCHIVES": "guichet",
     "PHOTO EXPRESS": "photographe", "PHOTO SOUVENIR": "photographe", "PHOTOGRAPHE": "photographe",
     "STUDIO LAU": "photographe",
     # --- Le neuf (vague 2d).
@@ -446,15 +493,6 @@ EN_ATTENTE: dict[str, str] = {
     "DISQUES VOGUE": "des disques", "MUSIQUE LAROSE": "un instrument", "LIBRAIRIE": "des livres",
     "LIBRAIRIE CHUNG": "des livres", "LIVRES": "des livres", "PAPETERIE": "de la papeterie",
     "GALERIE D'ART": "un tableau",
-    # --- Les services qui restent (Martin, 6 oct. 2026) : 3d la soupe de qui est cassé et les répliques de ceux qui ne vendent rien.
-    "MISSION DU PORT": "une soupe pour qui est cassé", "HOSPICE": "une soupe pour qui est cassé",
-    "BINGO": "le café du bingo, et le chemin du sous-sol", "LOCATION CHALOUPE": "une réplique",
-    "CAPITAINERIE": "une réplique", "VÉTÉRINAIRE": "une réplique", "ASSOCIATION LI": "une réplique",
-    "BUREAU DE PAIE": "une réplique", "BUREAU DE POSTE": "une réplique", "DOUANES": "une réplique",
-    "GARDERIE": "une réplique", "NOTAIRE BÉLIVEAU": "une réplique", "NOTAIRE LEUNG": "une réplique",
-    "BUREAU": "une réplique", "DÉPÔT": "une réplique", "ENTREPOSAGE": "une réplique",
-    "ÉCOLE DE DANSE": "une réplique", "ÉCOLE": "une réplique", "BIBLIOTHÈQUE": "une réplique",
-    "ARCHIVES": "une réplique",
 }
 
 
@@ -507,7 +545,7 @@ def exporter() -> dict:
       de leur propre famille (la TAVERNE sert `nuit`), ou un point qui n'est pas un comptoir (`POINTS` : le barbier,
       le Clairon) — le navigateur retombe sur le comptoir du genre (`Missions.comptoirDuPoint`) ;
     - `services` — chaque service qui a un nom (`_service_compact`), `reglages` — `GAGES`, `FERRAILLE`, `SOINS_PV`, le
-      prix du taxi — et `taxi`, ses destinations (`TAXI`) ;
+      prix du taxi, le seuil de la soupe — `taxi`, ses destinations (`TAXI`), et `repliques` (`REPLIQUES`) ;
     - `tarifs` — les `BOUCHEES`, slug : [prix, PV, souffle].
 
     `Missions.rayons` le déplie une fois."""
@@ -524,6 +562,7 @@ def exporter() -> dict:
             if a["tarif"]:
                 noms[a["slug"]] = [a["nom"], a["effet"]] if a["effet"] else a["nom"]
     return {"rayons": rayons, "noms": noms, "enseignes": par_rayon, "services": {k: _service_compact(v) for k, v in SERVICES.items() if v["nom"]},
-            "reglages": {"gages": GAGES, "ferraille": FERRAILLE, "soins_pv": SOINS_PV, "taxi": [TAXI_BASE, TAXI_TUILES]},
-            "taxi": [list(t) for t in TAXI],
+            "reglages": {"gages": GAGES, "ferraille": FERRAILLE, "soins_pv": SOINS_PV, "taxi": [TAXI_BASE, TAXI_TUILES],
+                         "soupe": SOUPE["seuil"]},
+            "taxi": [list(t) for t in TAXI], "repliques": dict(REPLIQUES),
             "tarifs": {slug: list(t) for slug, t in BOUCHEES.items()}}
