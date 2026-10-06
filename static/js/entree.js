@@ -71,6 +71,9 @@ const Entree = (function () {
       elle reste le frein. */
   function gachetteLit(etat, f) { if (f > GESTE) etat.lire = true; }
   const ZONE_MORTE = 0.2, ZONE_PLEINE = 0.95;
+  //: Le rayon de course du joystick flottant, en px : son anneau fait 140 px, le pouce 52.
+  const RAYON_POUCE = 56;
+  let lacherPouce = null;
   //: De combien un bouton ou un axe doit bouger pour qu'on dise « c'est
   //: celui-la » pendant un apprentissage.
   const GESTE = 0.5;
@@ -182,6 +185,14 @@ const Entree = (function () {
       BAS (voir `contexte`). A la manette et au clavier, ces boutons-la gardent
       leur sens — le bouton de droite d'une manette est aussi RETOUR. */
   function basTactile(a) { return !!vTact[a]; }
+  //: Le clavier et le doigt, SANS la manette (ni les Touch du casque) : au
+  //: volant, la croix de la manette ne fait que tourner — le gaz et le recul
+  //: sont aux gachettes (`Vehicules.commandesJoueur`). En coop, le clavier du
+  //: deuxieme joueur ne compte pas quand le premier a pris la manette.
+  function basSansManette(a) {
+    if (B.coop && joueur1PrendLaManette()) return !!vTact[a];
+    return !!vTact[a] || MAP_TOUCHES[a].some(function (k) { return enfonce[k]; });
+  }
   function neufTactile(a) { return !!vNeufTact[a]; }
   function neufSansManette(a) {
     return !!vNeufTact[a] || !!vNeufCasque[a] || MAP_TOUCHES[a].some(function (k) { return presse[k]; });
@@ -794,14 +805,20 @@ const Entree = (function () {
     // le clavier ou la manette, lui, doit se lire a chaque fois.
     fenetre.addEventListener('touchstart', function () { appareil = 'tactile'; }, { passive: true });
 
+    //: ⚠️ LE JOYSTICK FLOTTE (demande de Martin, 4 oct. 2026) : `#croix` est une ZONE invisible,
+    //: en bas a gauche, la ou le pouce gauche se pose (`styles.css`). Rien ne s'y voit tant
+    //: qu'on n'y touche pas ; le doigt qui s'y pose fait naitre le joystick CENTRE SOUS LUI
+    //: (`anneau`), et il disparait au relacher. Au volant, la zone s'efface : on tourne aux
+    //: boutons ◀ ▶ (`#volant`).
     const croix = d.getElementById('croix');
+    const anneau = croix.querySelector('i');
     const bouton = croix.querySelector('u');
-    let doigt = null;
+    let doigt = null, origine = null, parcours = 0;
     function capter(el, id) { try { el.setPointerCapture(id); } catch (e) { /* rien */ } }
     function suivre(ev) {
-      const r = croix.getBoundingClientRect();
-      let dx = ev.clientX - (r.left + r.width / 2), dy = ev.clientY - (r.top + r.height / 2);
-      const max = r.width / 2 - 14;
+      let dx = ev.clientX - origine.x, dy = ev.clientY - origine.y;
+      parcours = Math.max(parcours, Math.hypot(dx, dy));
+      const max = RAYON_POUCE;
       const dist = Math.hypot(dx, dy);
       if (dist > max) { dx *= max / dist; dy *= max / dist; }
       if (bouton) bouton.style.transform = 'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px)';
@@ -816,14 +833,26 @@ const Entree = (function () {
     //: etait un nouvel appui — une ligne de menu de plus, sans rien demander.
     function direction(a, v) { poser(vTact, a, v > (vTact[a] ? 0.35 : 0.5)); }
     function lacher(ev) {
-      if (doigt !== null && ev.pointerId !== doigt) return;
+      if (doigt !== null && ev && ev.pointerId !== doigt) return;
+      // ⚠️ La zone couvre le bas de l'ecran : une ligne de menu qui s'y trouve se touche
+      // quand meme. Un doigt pose et leve SANS glisser, menu ouvert, est un toucher de la
+      // toile (`Hud.toucherToile`), pas un coup de joystick.
+      const tape = ev && doigt !== null && origine && parcours < 10 && B.menu;
       doigt = null;
       if (bouton) bouton.style.transform = '';
+      croix.classList.remove('actif');
       pouce.x = 0; pouce.y = 0; pouce.mag = 0; pouce.actif = false;
       ['gauche', 'droite', 'haut', 'bas'].forEach(function (a) { poser(vTact, a, false); });
+      if (tape && typeof Hud !== 'undefined' && Hud.toucherToile) Hud.toucherToile(origine.x, origine.y);
     }
+    lacherPouce = function () { if (doigt !== null) lacher(null); };
     croix.addEventListener('pointerdown', function (ev) {
       ev.preventDefault(); doigt = ev.pointerId; capter(croix, doigt); passerEnTactile();
+      // Le joystick nait sous le doigt.
+      origine = { x: ev.clientX, y: ev.clientY }; parcours = 0;
+      const r = croix.getBoundingClientRect();
+      if (anneau) { anneau.style.left = (ev.clientX - r.left).toFixed(1) + 'px'; anneau.style.top = (ev.clientY - r.top).toFixed(1) + 'px'; }
+      croix.classList.add('actif');
       Son.reveiller(); vibrer(8); suivre(ev);
     });
     croix.addEventListener('pointermove', function (ev) { if (ev.pointerId === doigt) { ev.preventDefault(); suivre(ev); } });
@@ -918,6 +947,19 @@ const Entree = (function () {
       axe.x = h ? x / h : 0; axe.y = h ? y / h : 0; axe.mag = h ? 1 : 0; axe.source = 'clavier';
     }
     lireSuitesActions();
+    cacherLeTactileSousLaManette();
+  }
+
+  //: ⚠️ LES BOUTONS TACTILES S'EFFACENT QUAND ON PREND LA MANETTE (demande de Martin, 3 oct. 2026,
+  //: sa manette sur l'iPhone) : ils couvraient l'ecran pour rien. Le doigt qui revient sur la vitre
+  //: les ramene (`initTactile`, `touchstart`). Seule la classe change : l'ecran reste plein, et le
+  //: HUD garde ses marges du tactile (`estTactile`) — rien ne saute quand on passe de l'un a l'autre.
+  let tactileCache = false;
+  function cacherLeTactileSousLaManette() {
+    const cache = tactile && appareilCourant() === 'manette';
+    if (cache === tactileCache || !doc || !doc.body) return;
+    tactileCache = cache;
+    if (cache) doc.body.classList.add('manette-en-main'); else doc.body.classList.remove('manette-en-main');
   }
 
   /** Ce qu'on lit sur les boutons tactiles dans ce contexte-la. L'ecran
@@ -926,8 +968,15 @@ const Entree = (function () {
   function etiquettes(nom) {
     const e = etiquettesDesCinq(nom);
     e.lire = e.saisir === 'SAISIR' ? 'LIRE' : '·';
+    // Les pedales n'existent qu'au volant (`styles.css`, `body.au-volant`).
+    const volant = estAuVolant(nom);
+    e.gaz = volant ? 'GAZ' : '·';
+    e.frein = volant ? 'RECUL' : '·';
     return e;
   }
+
+  //: Les contextes du volant : un char, un char a sirene, une coque, un velo.
+  function estAuVolant(nom) { return String(nom).indexOf('vehicule') === 0; }
 
   function etiquettesDesCinq(nom) {
     // La NITRO (le garage de Ti-Guy) prend le bouton libre du volant, sur le char qui en a une.
@@ -976,8 +1025,19 @@ const Entree = (function () {
     const e = etiquettes(nom);
     Object.keys(e).forEach(function (a) {
       const b = doc.querySelector('#boutons b[data-a="' + a + '"]');
-      if (b) b.textContent = e[a];
+      if (!b) return;
+      b.textContent = e[a];
+      // Un bouton qui ne fait rien (« · ») : au volant, il s'efface (`styles.css`).
+      if (e[a] === '·') b.classList.add('vide'); else b.classList.remove('vide');
     });
+    // ⚠️ La disposition DU VOLANT (`styles.css`) : les pedales, ◀ ▶ a la place du joystick, les
+    // boutons qui ne servent pas effaces. Un menu ou une scene ouverts au volant rendent la
+    // disposition de leur contexte : le joystick y redevient une croix, pour choisir.
+    if (doc.body) {
+      if (estAuVolant(nom)) doc.body.classList.add('au-volant'); else doc.body.classList.remove('au-volant');
+    }
+    // La zone du joystick s'efface au volant : un pouce qui y etait pose ne tient plus rien.
+    if (estAuVolant(nom) && lacherPouce) lacherPouce();
   }
 
   function init(d, w, n) {
@@ -997,7 +1057,7 @@ const Entree = (function () {
 
   return {
     MAP_TOUCHES, MANETTE_DEFAUT, ZONE_MORTE,
-    init, debutImage, activite, bas, neuf, basTactile, neufTactile, neufSansManette, neufEpaule, videPresse, toutRelacher, contexte, passerEnTactile,
+    init, debutImage, activite, bas, neuf, basTactile, basSansManette, neufTactile, neufSansManette, neufEpaule, videPresse, toutRelacher, contexte, passerEnTactile,
     etiquettesTactiles: etiquettes,
     toucheEnfoncee: function (code) { return !!enfonce[code]; },
     surSecret, surSuiteActions,

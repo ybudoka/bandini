@@ -99,9 +99,10 @@ roule sur des rails : il lève le pied dans la neige, mais il ne glisse jamais.
   char repart ou attend la dépanneuse ; jamais en pleine poursuite une police qui se perd.
 - **Les traces de pneus** sont une mémoire, comme la neige déblayée : un nombre borné, qui s'efface,
   peintes au sol sous les chars — et jamais sauvegardées.
-- **Une partie neuve commence le 1er janvier** : la première impression est une ville blanche et
-  glissante. À trancher par Martin : la garder (c'est l'hiver québécois), ou faire commencer
-  l'année ailleurs — ce qui déplace toutes les fenêtres de saison (cabane, Saint-Jean, Fêtes).
+- ~~Une partie neuve commence le 1er janvier~~ — **tranché par Martin (4 oct. 2026) : « le jeu doit
+  débuter à un moment sans neige »**. Une partie neuve commence le **1er mai** (`calendrier.DEPART`,
+  jour 14) ; l'année, elle, ne bouge pas (le jour 1 reste le 1er janvier, les fenêtres de saison
+  restent où elles sont), et une partie déjà commencée garde son jour.
 - **Les missions** ne changent pas avec la saison, sauf celles qui le disent ; une mission ne doit
   jamais devenir impossible en hiver (la motoneige ne remplace pas un char qu'une mission exige).
 - **Regarder une couche peinte** avant de livrer : une capture Chromium par saison, les juges verts
@@ -124,7 +125,8 @@ saisons + pluie »._
   monde, jamais l'été ; la motoneige, le pont de glace et le hockey suivent l'hiver, pas l'option.
   (Le verglas a sa propre option, « VERGLAS (ESSAI) », et son jour 11 tombe en avril : il reste tel
   quel au lot 1, à trancher avec la glace du lot 6.)
-- **Une partie commence toujours le 1er janvier** ; pour voir une saison sans jouer vingt-six jours, une
+- **Une partie commence toujours au même jour** (le 1er janvier à l'époque, le 1er mai depuis le
+  4 oct. 2026) ; pour voir une saison sans jouer vingt-six jours, une
   triche **« CHANGER DE MOIS »** (TRICHES › DIVERS).
 - **L'Halloween au complet** : le décor (citrouilles sur les perrons, lumières orange et violettes, toiles),
   les **passants déguisés** et les enfants qui passent l'Halloween, **une maison hantée ou un défi**, et

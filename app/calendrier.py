@@ -6,7 +6,9 @@ ciné-parc (l'été), le temps des Fêtes. Plutôt que d'inventer un cycle par i
 toutes : Martin a dit « fais tout le reste », et c'est la décision la plus simple qui les porte.
 
 ⚠️ **UNE PURE FONCTION DU JOUR** : `mois(jour)`, `saison(jour)`. Rien à sauvegarder, aucun dé, la même
-année pour tout le monde. Le jour 1 d'une partie est le premier janvier.
+année pour tout le monde. Le jour 1 de l'année est le premier janvier, mais une partie neuve commence
+au jour `DEPART`, le 1er mai (Martin, 4 oct. 2026 : « le jeu doit débuter à un moment sans neige ») —
+on apprend la ville avant qu'elle glisse. Une partie déjà commencée garde son jour.
 
 ⚠️ **SEULS LES JALONS QUI LA LISENT EN DÉPENDENT** : la neige ne tombe que l'hiver (depuis le
 29 sept. 2026, pour tout le monde), la ville change de couleur avec elle (`saisons.py`) ; le verglas
@@ -17,6 +19,10 @@ from __future__ import annotations
 
 #: Combien de jours dans une année du jeu.
 ANNEE = 40
+
+#: Le jour de l'année où commence une partie neuve : le 1er mai, la neige fondue et la gadoue
+#: d'avril partie (`pluie.EFFETS["gadoue"]`, jusqu'à 13,5). Un juge tient qu'il n'y neige pas.
+DEPART = 14
 
 #: Le premier jour de chaque mois, dans l'année (1 à 40) : trois ou quatre jours par mois.
 MOIS = [
@@ -60,4 +66,4 @@ def saison(jour: int) -> str:
 
 
 def pour_le_navigateur() -> dict:
-    return {"annee": ANNEE, "mois": [[m, d] for m, d in MOIS], "saisons": dict(SAISONS), "dates": dict(DATES)}
+    return {"annee": ANNEE, "mois": [[m, d] for m, d in MOIS], "saisons": dict(SAISONS), "dates": dict(DATES), "depart": DEPART}

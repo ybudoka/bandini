@@ -1,7 +1,8 @@
 /* Bandini — l'annee de Baie-des-Brumes : quarante jours, douze mois, quatre saisons (`app/calendrier.py`,
    `B.defs.calendrier`).
 
-   ⚠️ UNE PURE FONCTION DU JOUR : le jour 1 d'une partie est le premier janvier, et la meme annee
+   ⚠️ UNE PURE FONCTION DU JOUR : le jour 1 est le premier janvier (une partie neuve commence au jour
+   `depart`, le 1er mai, sans neige — `etatInitial`), et la meme annee
    revient tous les quarante jours, pour tout le monde. Rien a sauvegarder, aucun de. Ce sont les
    jalons qui la LISENT (le pont de glace, la motoneige, la Saint-Jean, le cine-parc…) qui en
    dependent — la neige tombe l'hiver, et le verglas les trois derniers jours de mars. */

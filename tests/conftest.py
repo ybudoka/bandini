@@ -173,7 +173,7 @@ def banc(paquet, a_jouer, cartes_des_blocs, notes_de_la_musique, collections_du_
                  reseau: dict | None = None, defi: dict | None = None, poser_les_missions: bool = True,
                  missions_panne: int = 0, blocs_panne: int = 0, poser_les_notes: bool = True,
                  notes_panne: int = 0, collections_panne: int = 0, poser_la_suite: bool = True,
-                 suite_panne: int = 0):
+                 suite_panne: int = 0, depart_du_jeu: bool = False):
         # `stockage` / `session` : ce que le navigateur gardait AVANT le chargement.
         # `reseau` : ce que /api/compte/ repond (M14) — l'ouverture part des que la
         # ville est batie, donc ses reponses se posent avant, jamais pendant.
@@ -196,6 +196,12 @@ def banc(paquet, a_jouer, cartes_des_blocs, notes_de_la_musique, collections_du_
                   # La suite du paquet (`/api/suite`) : servie comme le serveur. `poser_la_suite=False` retire
                   # ses clés des définitions avant le démarrage, et `suite_panne` fait tomber les premières demandes.
                   "suite": suite_du_paquet, "poser_la_suite": poser_la_suite, "suite_panne": suite_panne}
+        # ⚠️ LE BANC COMMENCE LE 1ER JANVIER (4 oct. 2026) : le jeu fait commencer une partie neuve le 1er mai,
+        # sans neige (`calendrier.DEPART`), mais des centaines de juges tiennent à la rue de janvier qu'ils ont
+        # toujours jouée (ses graines, ses foules, sa neige) et mesurent autre chose que la saison. Le banc garde
+        # donc le jour 1 ; `depart_du_jeu=True` joue le vrai départ (test_calendrier.py le tient).
+        if not depart_du_jeu and "calendrier" in paquet:
+            entree["defs"]["calendrier"] = {**paquet["calendrier"], "depart": 1}
         if stockage is not None:
             entree["stockage"] = stockage
         if session is not None:

@@ -94,6 +94,9 @@ const B = {
 /** Ce qui survit a un rechargement — et ses valeurs par defaut. */
 function etatInitial(defs) {
   const eco = (defs && defs.economie) || {};
+  //: ⚠️ Une partie neuve commence le 1er mai, sans neige (`calendrier.DEPART`) — le jour de la partie
+  //: EST le jour de l'annee : le HUD dit « JOUR 14 · MAI », et l'annee suit son cours.
+  const depart = (defs && defs.calendrier && defs.calendrier.depart) || 1;
   return {
     version: 1,
     empreinte: defs ? defs.empreinte : '',
@@ -102,15 +105,15 @@ function etatInitial(defs) {
     decalage_nord: (defs && defs.decalage_nord) || 0,
     argent: eco.argent_depart || 50,
     casier: 0,
-    jour: 1,
+    jour: depart,
     heure: 0.35,
     // ⚠️ Le jour ou les chantiers de CETTE partie ont commence : leur phase se lit
     // du jour courant et de celui-ci, donc deux appareils qui ouvrent la meme
     // sauvegarde voient la meme ville (voir `Chantiers.phaseVoulue`).
-    chantiers: { debut: 1 },
+    chantiers: { debut: depart },
     vie: 100,
     tenue: 'chandail',
-    // ⚠️ Rocco te donne sa vieille tuque : une partie commence le 1er janvier (`rosa-habille-l-hiver.md`).
+    // ⚠️ Rocco te donne sa vieille tuque au depart (`rosa-habille-l-hiver.md`) : en mai, les soirs sont frais.
     tenues: ['chandail', 'tuque_rocco'],
     chapeau: 'tuque_rocco', // le chapeau porte (`magasins.TENUES`, `emplacement: 'tete'`), ou rien
     pieds: null,          // les bottes (`emplacement: 'pieds'`), ou les souliers de toujours
