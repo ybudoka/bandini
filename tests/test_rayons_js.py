@@ -491,6 +491,36 @@ def test_le_phare_sur_la_pellicule_le_studio_le_developpe_et_rachete_la_photo(ba
     }""" % ENTRER)
     from app import photos
     assert r["pellicule"] == ["phare"] and "PHARE" in r["dit"], r
-    assert r["dev"]["libelles"][0] == "L’ALBUM DES LIEUX" and r["album"] == ["phare"], r
+    assert "L’ALBUM DES LIEUX" in r["dev"]["libelles"] and r["album"] == ["phare"], r
     assert r["argentDev"] == 100 - photos.PHOTOGRAPHE["developper"], r
     assert r["argent"] == r["argentDev"] + 75 and r["photo"] is None, r
+
+
+def test_le_portrait_se_tire_avec_la_tenue_du_jour_et_se_pose_au_mur_de_la_planque(banc):
+    """Vague 3c, 2e partie, au BOUTON : au PHOTOGRAPHE, TON PORTRAIT payé et tiré avec la tenue du jour
+    (`partie.portrait`) ; le lendemain, il est au mur de la planque de Rocco. Et l'album des lieux complet y pose son
+    cadre."""
+    r = banc("""function (L, o) {
+        %s
+        L.Jeu.commencer();
+        if (L.B.menu) L.Hud.fermerMenu();
+        for (let k = 0; k < 5 && !L.Collections.catalogue(); k++) o.frame(1);
+        const B = L.B, p = B.partie, out = {};
+        const pt = ouvrir(L, o, 'service', 'PHOTOGRAPHE', 'salon');
+        p.argent = 500;
+        out.achat = presser(L, o, pt, 'TON PORTRAIT');
+        out.argent = p.argent; out.portrait = p.portrait;
+        out.aujourdhui = L.Decoration.presents('planque').indexOf('portrait') >= 0;
+        p.jour += 1;
+        out.demain = L.Decoration.presents('planque').indexOf('portrait') >= 0;
+        out.cadreAvant = L.Decoration.presents('planque').indexOf('cadre_lieux') >= 0;
+        p.album = {};
+        B.defs.photos.album.forEach(function (a) { p.album[a[0]] = 1; });
+        out.cadreApres = L.Decoration.presents('planque').indexOf('cadre_lieux') >= 0;
+        out.chalet = L.Decoration.presents('chalet').indexOf('cadre_lieux') >= 0;
+        return out;
+    }""" % ENTRER)
+    assert r["achat"]["curseur"] >= 0 and r["argent"] == 440, r
+    assert r["portrait"] and r["portrait"]["haut"] and r["portrait"]["peau"], r
+    assert not r["aujourdhui"] and r["demain"], r
+    assert not r["cadreAvant"] and r["cadreApres"] and not r["chalet"], r

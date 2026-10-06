@@ -314,7 +314,7 @@ RAYONS: dict[str, dict] = {
     # Le prêt sur gages rachète tes armes, et revend celles des autres un peu moins cher que Gus.
     "gages": _rayon("Le prêt sur gages", _service("gages"), _arme("poing_americain"), _arme("couteau"), marge=0.8),
     # --- Vague 3c : le photographe.
-    "photographe": _rayon("Le photographe", _service("developper"), _service("rachat")),
+    "photographe": _rayon("Le photographe", _meuble("portrait"), _service("developper"), _service("rachat")),
     # --- Vague 3b : la course de taxi.
     "taxi": _rayon("Le répartiteur", _service("taxi"), _CAFE),
     # --- Vague 2c : les meubles de la planque, livrés le lendemain (`Decoration`), chez qui les vend.

@@ -30,6 +30,8 @@ TROPHEES: tuple[dict, ...] = (
     {"slug": "etagere_bebelles", "nom": "L’ÉTAGÈRE DES BEBELLES", "famille": "bebelles", "palier": 1},
     # Vague 5 : le mur des enseignes, dès la première — un panneau perforé où chaque enseigne dévissée pend à son crochet.
     {"slug": "mur_enseignes", "nom": "LE MUR DES ENSEIGNES", "famille": "enseignes", "palier": 1},
+    # L'album des lieux complet (le photographe, `photos.ALBUM`) : dix cartes postales sous verre.
+    {"slug": "cadre_lieux", "nom": "L’ALBUM DES LIEUX", "famille": "lieux", "palier": 10},
 )
 
 #: Le catalogue Beausoleil. `texte` : la ligne du catalogue (une ligne du menu, 44 caractères au plus) — le ton
@@ -47,7 +49,15 @@ MEUBLES: tuple[dict, ...] = (
      "texte": "LA LAVE NE SORT PAS. GARANTIE UN AN."},
     {"slug": "tapis_tresse", "nom": "LE TAPIS TRESSÉ", "prix": 90, "ou": ["catalogue", "puces"],
      "texte": "TRESSÉ À LA MAIN. PAR QUI ? NE DEMANDE PAS."},
+    # Le portrait du photographe (docs/jalons/des-comptoirs-qui-vendent-ce-que-dit-l-enseigne.md, vague 3c) : tiré au
+    # studio avec la tenue et la coupe du jour (`partie.portrait`), encadré, livré le lendemain.
+    {"slug": "portrait", "nom": "TON PORTRAIT", "prix": 60, "ou": ["photographe"],
+     "texte": "TON MEILLEUR PROFIL. IL A FAIT SON POSSIBLE."},
 )
+
+#: Ce qui ne se pose QUE dans certaines planques : les rondins du chalet n'ont plus de place au mur (les deux cadres,
+#: les fenêtres, la cheminée) ni de table libre — le portrait et l'album des lieux vont chez Rocco.
+SEULEMENT: dict[str, tuple[str, ...]] = {"portrait": ("planque",), "cadre_lieux": ("planque",)}
 
 #: Où chaque objet se pose, par pièce de planque : une tuile de la pièce (`l` : sa largeur en tuiles, 1 si absent —
 #: l'étagère des bebelles en prend deux). ⚠️ Les cadres se posent sur la rangée
@@ -65,6 +75,9 @@ PLACES: dict[str, dict[str, dict]] = {
         "etagere_bebelles": {"x": 4, "y": 6, "l": 2},
         # Le mur des enseignes, appuyé au mur du haut sous les fenêtres, à côté du juke-box : DEUX tuiles.
         "mur_enseignes": {"x": 4, "y": 1, "l": 2},
+        # Le photographe (vague 3c) : l'album des lieux au-dessus du coffre, le portrait dans le coin, au-dessus de la
+        # garde-robe — les deux derniers bouts de mur.
+        "cadre_lieux": {"x": 6, "y": 1}, "portrait": {"x": 9, "y": 1},
     },
     # Le chalet du rang (`blocs/rang.py`) : les cadres sur les rondins, de part et d'autre de la cheminée, la coupe
     # et la lampe sur la table de pin, le coin salon à droite (la garde-robe reste à portée), l'aquarium sous le
@@ -88,7 +101,7 @@ PLACES: dict[str, dict[str, dict]] = {
 POSES: dict[str, str] = {
     "cadre_dix": "mur", "cadre_vingt_cinq": "mur", "coupe_album": "table", "lampe_lave": "table",
     "jukebox": "sol", "aquarium": "sol", "sofa": "sol", "televiseur": "sol", "tapis_tresse": "plat",
-    "etagere_bebelles": "sol", "mur_enseignes": "sol",
+    "etagere_bebelles": "sol", "mur_enseignes": "sol", "cadre_lieux": "mur", "portrait": "mur",
 }
 SOLIDES = frozenset(s for s, p in POSES.items() if p == "sol")
 

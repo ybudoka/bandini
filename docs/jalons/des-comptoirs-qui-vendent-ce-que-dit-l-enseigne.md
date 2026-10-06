@@ -278,4 +278,19 @@ MACHINERIE, USINAGE…) ; et la marine (cordages, voilerie, moteurs marins : le 
 - **Juges** : chaque lieu de l'album a sa porte, et les quatre développent et rachètent (`test_rayons.py`) ; au
   bouton : le phare dans le cadre sur la pellicule, développé au STUDIO LAU, la photo rachetée (`test_rayons_js.py`).
   Sans la pellicule, le juge rougit.
-- **Reste de la 3c** : le portrait encadré au mur de la planque, et le cadre de l'album complet.
+
+### Vague 3c, 2e partie : le portrait et le cadre de l'album (livrée le 6 oct. 2026)
+
+- **TON PORTRAIT** (60 $, `decoration.MEUBLES`, `ou: photographe`) : chez les quatre photographes, tiré au studio avec
+  la tenue et la coupe du jour (`partie.portrait` : la peau, les cheveux, la couleur du haut, le chapeau s'il y en a
+  un), encadré d'or, livré le lendemain au mur de la planque de Rocco (`Decoration.livrerA`, comme les meubles).
+- **L'ALBUM DES LIEUX** complet (les dix) pose son cadre au mur, comme les cartes de hockey posent les leurs : un
+  trophée (`famille: lieux`, `palier: 10`), dix cartes postales sous verre, chacune son ciel et la couleur de son lieu.
+- **La planque de Rocco seulement** (`decoration.SEULEMENT`) : les rondins du chalet n'ont plus un bout de mur (les deux
+  cadres, les fenêtres, la cheminée) ni une table libre. Dans la planque, les deux derniers bouts de mur : au-dessus du
+  coffre et dans le coin de la garde-robe. Le juge de la décoration admet une place absente quand `SEULEMENT` le dit.
+- **Regardés avant la livraison** : les deux portraits (avec et sans chapeau) et le cadre de l'album, peints par le jeu
+  à ×8 dans Chromium, à côté du cadre des dix cartes pour l'échelle.
+- **Juges** : `test_decoration.py` (les places, `photographe` comme lieu de vente) ; `test_rayons_js.py` (au bouton, au
+  PHOTOGRAPHE : le portrait payé, tiré avec la tenue du jour, absent aujourd'hui, au mur demain ; l'album complet pose
+  son cadre à la planque, pas au chalet).

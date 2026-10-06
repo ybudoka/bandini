@@ -26,7 +26,9 @@ def _bloque(piece, x, y):
 def test_chaque_objet_est_pose_sur_le_bon_genre_de_tuile(slug):
     piece, places = PIECES[slug], decoration.PLACES[slug]
     tout = {t["slug"] for t in decoration.TROPHEES} | {m["slug"] for m in decoration.MEUBLES}
-    assert set(places) == tout, f"{slug} : il manque une place à {tout - set(places)}"
+    # Ce qui ne va que dans certaines planques (`SEULEMENT`, le chalet est plein) : ailleurs, pas de place.
+    tout = {s for s in tout if slug in decoration.SEULEMENT.get(s, (slug,))}
+    assert set(places) == tout, f"{slug} : il manque une place à {tout - set(places)}, ou il y en a une de trop"
     vus = set()
     # ⚠️ Un objet large (`l`, l'étagère des bebelles : deux tuiles) : CHAQUE tuile qu'il couvre suit la règle.
     for objet, o, x, y in ((s, o, o["x"] + i, o["y"]) for s, o in places.items() for i in range(o.get("l", 1))):
@@ -81,7 +83,8 @@ def test_le_catalogue_est_sur_la_table_des_deux_planques():
 
 def test_le_catalogue_se_lit_et_se_vend():
     for m in decoration.MEUBLES:
-        assert m["prix"] > 0 and set(m["ou"]) <= {"catalogue", "puces"} and m["ou"], m
+        # `photographe` : le portrait, qui ne se vend qu'au studio (le rayon du photographe, `rayons.RAYONS`).
+        assert m["prix"] > 0 and set(m["ou"]) <= {"catalogue", "puces", "photographe"} and m["ou"], m
         assert len(m["texte"]) <= 44 and m["texte"] == m["texte"].upper(), m["texte"]
     # Les trophées des cartes suivent les paliers de l'album : pas un de plus, pas un de moins. Les bebelles ont
     # UN trophée, dès la première : l'étagère où elles se posent.
