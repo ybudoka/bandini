@@ -183,8 +183,11 @@ def test_elles_voyagent_a_part_hors_de_la_carte_et_des_definitions(paquets, clie
     # Puis 23 947 / 8 533 avec les douze enseignes (vague 5 : leurs emblèmes, leurs lignes, leurs places — 3 790 / 1 430
     # à elles seules) : relevé à 26 000 / 9 500 (1er oct. 2026). Puis 26 336 avec le propriétaire qui sort (vague 6 :
     # qui sort de chaque commerce, ses huit répliques et ses deux séries de voix — 1,1 Ko) : relevé à 27 000 bruts.
-    assert paquets.collections.taille < 27_000
-    assert len(gzip.compress(paquets.collections.corps, 6)) < 9_500
+    # Puis 28 002 avec la planque des comptoirs (6 oct. 2026, docs/jalons/des-comptoirs-qui-vendent-ce-que-dit-
+    # l-enseigne.md : le portrait, la pièce d'en arrière et ses six meubles, les étagères des collections — 9 769 gzip) :
+    # relevé à 30 000 bruts et 11 000 gzip.
+    assert paquets.collections.taille < 30_000
+    assert len(gzip.compress(paquets.collections.corps, 6)) < 11_000
 
 
 def test_leurs_sons_voyagent_avec_elles_pas_dans_les_definitions(paquets):

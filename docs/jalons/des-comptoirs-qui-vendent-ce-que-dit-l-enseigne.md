@@ -416,3 +416,10 @@ voulait un comptoir.
   ACTION, le passant devenu ami ; sans la règle de `Reputation.denonce`, il te dénonce encore — le juge rougit).
 
 **Le jalon est livré** le 6 oct. 2026 : 53 enseignes sur 177 vendaient ce que dit leur nom le 3 oct. ; les 246 le font.
+
+⚠️ **La suite complète sur le jalon livré** (6 oct. 2026, en parallèle, `test_navigateur` compris) : trois rouges sur
+11 900. Deux de ce jalon — le paquet des collections (`/api/collections`) pesait 28 002 bruts et 9 769 gzip avec la
+planque des comptoirs, plafond relevé à 30 000 / 11 000 comme les cinq fois d'avant (il arrive en arrière-plan) ; et
+un juge des enseignes dévissées qui voulait leur mur dans TOUTES les pièces de `PLACES`, la pièce d'en arrière comprise.
+Le troisième (`test_la_premiere_mission_se_joue_en_scenes…`, au navigateur) flanche aussi sur le commit d'avant la 4a,
+et passe seul : la charge de la suite parallèle.

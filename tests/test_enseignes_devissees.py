@@ -105,7 +105,8 @@ def test_la_regle_tient_a_la_police_et_a_la_planque():
     assert d["etoiles"] == 1 and d["temoin"], "dévisser une enseigne : une étoile, et il faut un témoin"
     mur = [t for t in decoration.TROPHEES if t["famille"] == "enseignes"]
     assert [(t["slug"], t["palier"]) for t in mur] == [("mur_enseignes", 1)]
-    assert all("mur_enseignes" in places for places in decoration.PLACES.values())
+    # Dans les deux planques (`decoration.PARTOUT`) — pas dans la pièce d'en arrière, qui n'a que ce qui s'achète en ville.
+    assert all("mur_enseignes" in decoration.PLACES[piece] for piece in decoration.PARTOUT)
     assert set(devisser.REGLE["paliers"]) == {"6", "12"} and devisser.REGLE["vis"] == 4 and devisser.REGLE["crans"] == 4
 
 
