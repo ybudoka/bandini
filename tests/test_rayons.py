@@ -217,7 +217,8 @@ def test_les_meubles_de_la_planque_se_vendent_en_ville():
     for slug, r in rayons.RAYONS.items():
         for a in r["articles"]:
             if a.get("meuble"):
-                assert a["meuble"] in decoration.PLACES["planque"], f"{slug}/{a['slug']}"
+                m = next(m for m in decoration.MEUBLES if m["slug"] == a["meuble"])
+                assert a["meuble"] in decoration.PLACES[m.get("piece", "planque")], f"{slug}/{a['slug']}"
 
 
 def test_le_neuf_se_porte_au_cou_et_sur_les_yeux_et_rosa_ne_le_vend_pas():

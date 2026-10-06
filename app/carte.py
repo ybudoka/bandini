@@ -7746,14 +7746,31 @@ BBBWWDWWBBB
 BBBWWWBBBBB
 Bll   k  nB
 Bll   k  mB
-B ah yyy  B
+B ah yyy /B
 B ah yyy  B
 B    yyy eB
 Bj z    n B
 BBBBWWDWWBB
 """, points=(_pt("lit", 2, 2), _pt("coffre", 6, 1), _pt("garde_robe", 9, 5),
              # Le catalogue Beausoleil, sur la table : les meubles de la planque qu'on décore (`decoration.py`).
-             _pt("catalogue", 2, 4)),
+             _pt("catalogue", 2, 4),
+             # LA PIÈCE D'EN ARRIÈRE (docs/jalons/des-comptoirs-qui-vendent-ce-que-dit-l-enseigne.md, vague 4b —
+             # Martin, 6 oct. 2026) : la planque était pleine ; ce qui se décore en ville va là.
+             _pt("escalier", 9, 3, vers="planque_arriere", libelle="LA PIÈCE D’EN ARRIÈRE")),
+     gens=()),
+
+    # La pièce d'en arrière de la planque : une réserve (deux chaises, des classeurs, des étagères), des murs pour
+    # accrocher et du plancher pour poser (`decoration.PLACES["planque_arriere"]`). On y passe par la planque ; sa porte
+    # donne sur la même rue. ⚠️ Le retour « descend » : de deux escaliers qui se répondent, un seul (le juge).
+    _piece("planque_arriere", "La pièce d'en arrière", porte="maison", plan="""
+BBBWBBBBB
+B       B
+B       B
+B  hh k B
+Bk      B
+B/ e   eB
+BBBBDBBBB
+""", points=(_pt("escalier", 1, 5, vers="planque", libelle="LA PLANQUE", descend=True),),
      gens=()),
 
     # Le garage : deux ponts, un mur d'outils, des pneus empiles.

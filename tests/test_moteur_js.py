@@ -44,7 +44,8 @@ def test_le_moteur_charge_et_expose_son_api(banc, paquet):
     # ⚠️ Plus UNE pour les collections (30 sept. 2026, `/api/collections`), et UNE pour la suite du paquet
     # (30 sept. 2026, `/api/suite` : le Clairon, les Galeries hantees) — sorties du paquet, demandees juste
     # apres lui, comme les notes.
-    assert r["fetchs"] == 7 + r["ouverture"]
+    # ⚠️ Plus UNE pour les rayons des comptoirs (6 oct. 2026, `/api/rayons` : sortis de la suite, demandes apres elle).
+    assert r["fetchs"] == 8 + r["ouverture"]
     assert r["ouverture"] <= 6, "l'ouverture se prechauffe ; la ville, non"
 
 

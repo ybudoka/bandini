@@ -148,6 +148,55 @@ const Decoration = (function () {
     px(ctx, t.cheveux || '#3a2a1a', 4, 4, 4, 1); px(ctx, t.cheveux || '#3a2a1a', 3, 5, 1, 2);   // la coupe
     if (t.chapeau) px(ctx, t.chapeau, 3, 3, 6, 2);                                      // le chapeau du jour
   } };
+  // --- La pièce d'en arrière (les comptoirs de la ville, vague 4b) ---------------------------------------
+  // La lanterne de papier rouge, au mur : son cordon, ses bandes dorées, son gland.
+  DESSINS.lanterne = { w: 8, h: 12, ancre: [4, 14], r: 0, solide: false, peindre: function (ctx) {
+    px(ctx, '#2a1a10', 3, 0, 2, 2);                                                    // le cordon
+    px(ctx, '#d8a83a', 1, 2, 6, 1); px(ctx, '#d8a83a', 1, 8, 6, 1);                    // les bandes
+    px(ctx, '#c0392b', 0, 3, 8, 5); px(ctx, '#e8603a', 1, 3, 2, 5);                    // le papier, son reflet
+    px(ctx, '#8e2418', 4, 3, 1, 5);
+    px(ctx, '#d8a83a', 3, 9, 2, 3);                                                    // le gland
+  } };
+  // Le ficus : son pot de terre cuite, ses feuilles qui débordent. Debout, dans le coin.
+  DESSINS.ficus = { w: 12, h: 18, ancre: [6, 16], r: 5, sol: [5, 4], solide: true, peindre: function (ctx) {
+    px(ctx, '#a8522a', 3, 12, 6, 6); px(ctx, '#c86a3a', 3, 12, 6, 1); px(ctx, '#7a3a1e', 4, 17, 4, 1);   // le pot
+    px(ctx, '#5a3a1e', 5, 7, 2, 5);                                                    // le tronc
+    px(ctx, '#2e7d4f', 1, 1, 10, 7); px(ctx, '#3a9a5a', 2, 0, 6, 3); px(ctx, '#3a9a5a', 0, 4, 4, 3);
+    px(ctx, '#236a3e', 7, 5, 4, 3); px(ctx, '#4ab06a', 4, 2, 2, 2);                    // les feuilles
+  } };
+  // Le vaisselier : le buffet du bas, les tablettes du haut et ses assiettes debout.
+  DESSINS.vaisselier = { w: 14, h: 22, ancre: [7, 20], r: 6, sol: [6, 4], solide: true, peindre: function (ctx) {
+    px(ctx, '#5a3a20', 0, 0, 14, 22); px(ctx, '#7a5230', 1, 0, 12, 1);                // le bâti
+    px(ctx, '#3a2414', 1, 2, 12, 10);                                                  // le fond du haut
+    for (let i = 0; i < 2; i++) {
+      px(ctx, '#8a6238', 1, 6 + i * 5, 12, 1);                                         // les tablettes
+      for (let k = 0; k < 3; k++) { px(ctx, '#e8e2d0', 2 + k * 4, 2 + i * 5, 3, 4); px(ctx, '#3a6a9a', 3 + k * 4, 3 + i * 5, 1, 2); }
+    }
+    px(ctx, '#6a4424', 1, 13, 12, 8); px(ctx, '#8a5a30', 1, 13, 12, 1);               // le buffet
+    px(ctx, '#d8b04a', 4, 16, 1, 2); px(ctx, '#d8b04a', 9, 16, 1, 2);                 // les poignées
+  } };
+  // Le tableau : un coucher de soleil sur la baie, dans un cadre doré.
+  DESSINS.tableau = { w: 16, h: 12, ancre: [8, 14], r: 0, solide: false, peindre: function (ctx) {
+    px(ctx, '#b8902c', 0, 0, 16, 12);
+    px(ctx, '#e8783a', 1, 1, 14, 4); px(ctx, '#f0a84a', 1, 4, 14, 2);                 // le ciel
+    px(ctx, '#f8d84a', 9, 3, 3, 2);                                                    // le soleil
+    px(ctx, '#2a4a7a', 1, 6, 14, 5); px(ctx, '#3a6a9a', 2, 7, 4, 1); px(ctx, '#3a6a9a', 9, 9, 5, 1);   // la baie
+    px(ctx, '#3a2a1e', 3, 5, 5, 1);                                                    // la côte
+  } };
+  // L'horloge grand-père : la boîte de bois, le cadran, le balancier qui va et vient (deux poses).
+  DESSINS.horloge = { w: 8, h: 24, ancre: [4, 22], r: 4, sol: [3, 4], solide: true, variantes: 2, anime: 30,
+    peindre: function (ctx, w, h, v) {
+      px(ctx, '#4a2a16', 0, 0, 8, 24); px(ctx, '#6a4024', 1, 0, 6, 1);              // la boîte
+      px(ctx, '#e8e2c8', 1, 2, 6, 6); px(ctx, '#2a2a30', 3, 3, 1, 3); px(ctx, '#2a2a30', 4, 5, 2, 1);   // le cadran
+      px(ctx, '#1c1210', 2, 10, 4, 11);                                                // la vitre du bas
+      px(ctx, '#d8b04a', v ? 2 : 4, 18, 2, 2); px(ctx, '#9a7a30', 3, 10, 1, 8);       // le balancier
+    } };
+  // Le miroir doré : ovale, et ce qu'il reflète — un bout de mur et de fenêtre.
+  DESSINS.miroir = { w: 10, h: 13, ancre: [5, 15], r: 0, solide: false, peindre: function (ctx) {
+    px(ctx, '#b8902c', 1, 0, 8, 13); px(ctx, '#b8902c', 0, 2, 10, 9);
+    px(ctx, '#a8c8d8', 2, 1, 6, 11); px(ctx, '#a8c8d8', 1, 3, 8, 7);
+    px(ctx, '#e8f4fa', 3, 2, 2, 4); px(ctx, '#8ab0c8', 5, 7, 3, 4);                    // le reflet
+  } };
   // L'ÉTAGÈRE DES BEBELLES (vague 3) : trois tablettes de quatre, en pin foncé, contre le mur du bas — deux tuiles.
   // ⚠️ Sa POSE est l'étagère elle-même : un bit par bebelle trouvée, dans l'ordre du catalogue
   // (`Collections.masqueBebelles`) — chaque étagère différente se cuit une fois, comme une pose de manège.

@@ -13,7 +13,8 @@ import pytest
 from app import carte, collectionner, decoration
 from app.blocs import rang
 
-PIECES = {"planque": carte.INTERIEURS["planque"], "chalet": rang.PIECE_CHALET}
+PIECES = {"planque": carte.INTERIEURS["planque"], "chalet": rang.PIECE_CHALET,
+          "planque_arriere": carte.INTERIEURS["planque_arriere"]}
 
 
 def _bloque(piece, x, y):
@@ -27,7 +28,7 @@ def test_chaque_objet_est_pose_sur_le_bon_genre_de_tuile(slug):
     piece, places = PIECES[slug], decoration.PLACES[slug]
     tout = {t["slug"] for t in decoration.TROPHEES} | {m["slug"] for m in decoration.MEUBLES}
     # Ce qui ne va que dans certaines planques (`SEULEMENT`, le chalet est plein) : ailleurs, pas de place.
-    tout = {s for s in tout if slug in decoration.SEULEMENT.get(s, (slug,))}
+    tout = {s for s in tout if slug in decoration.SEULEMENT.get(s, decoration.PARTOUT)}
     assert set(places) == tout, f"{slug} : il manque une place à {tout - set(places)}, ou il y en a une de trop"
     vus = set()
     # ⚠️ Un objet large (`l`, l'étagère des bebelles : deux tuiles) : CHAQUE tuile qu'il couvre suit la règle.
@@ -72,11 +73,15 @@ def test_toute_la_planque_pleine_on_rejoint_encore_chaque_point(slug):
 
     for p in piece["points"]:
         assert a_portee(p["x"], p["y"]), f"{slug} : le point {p['type']} n'est plus à portée, tout posé"
-    assert a_portee(places["jukebox"]["x"], places["jukebox"]["y"]), f"{slug} : le juke-box hors de portée"
+    # (La pièce d'en arrière n'a pas de juke-box : il est dans les deux planques, `decoration.PARTOUT`.)
+    if "jukebox" in places:
+        assert a_portee(places["jukebox"]["x"], places["jukebox"]["y"]), f"{slug} : le juke-box hors de portée"
 
 
 def test_le_catalogue_est_sur_la_table_des_deux_planques():
     for slug, piece in PIECES.items():
+        if slug not in decoration.PARTOUT:
+            continue                     # la pièce d'en arrière : on y pose ce qu'on achète en ville
         cat = [p for p in piece["points"] if p["type"] == "catalogue"]
         assert len(cat) == 1 and piece["sol"][cat[0]["y"]][cat[0]["x"]] == "a", f"{slug} : pas de catalogue sur la table"
 
@@ -84,7 +89,8 @@ def test_le_catalogue_est_sur_la_table_des_deux_planques():
 def test_le_catalogue_se_lit_et_se_vend():
     for m in decoration.MEUBLES:
         # `photographe` : le portrait, qui ne se vend qu'au studio (le rayon du photographe, `rayons.RAYONS`).
-        assert m["prix"] > 0 and set(m["ou"]) <= {"catalogue", "puces", "photographe"} and m["ou"], m
+        # `ville` : ce qui se vend aux comptoirs de la ville (les rayons, vague 4b), pour la pièce d'en arrière.
+        assert m["prix"] > 0 and set(m["ou"]) <= {"catalogue", "puces", "photographe", "ville"} and m["ou"], m
         assert len(m["texte"]) <= 44 and m["texte"] == m["texte"].upper(), m["texte"]
     # Les trophées des cartes suivent les paliers de l'album : pas un de plus, pas un de moins. Les bebelles ont
     # UN trophée, dès la première : l'étagère où elles se posent.

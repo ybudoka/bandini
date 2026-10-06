@@ -1701,10 +1701,12 @@ const Missions = (function () {
   function itemMeuble(a, facteur) {
     const p = B.partie, m = Decoration.meuble(a.meuble);
     if (!m) return { libelle: a.meuble.toUpperCase(), detail: 'EN ROUTE', actif: false };
-    const prix = Math.round(m.prix * facteur), deja = Decoration.commande('planque', m.slug);
-    return { libelle: m.nom, detail: deja ? (Decoration.livre('planque', m.slug) ? 'À TOI' : 'LIVRÉ DEMAIN') : prix + ' $',
+    // Sa piece : la planque de Rocco, ou celle d'en arriere (`decoration.MEUBLES`, `piece` — vague 4b).
+    const ou = m.piece || 'planque';
+    const prix = Math.round(m.prix * facteur), deja = Decoration.commande(ou, m.slug);
+    return { libelle: m.nom, detail: deja ? (Decoration.livre(ou, m.slug) ? 'À TOI' : 'LIVRÉ DEMAIN') : prix + ' $',
              texte: m.texte, actif: !deja && p.argent >= prix,
-             faire: function () { Decoration.livrerA('planque', m.slug, prix, 'ACHETÉ EN VILLE'); return false; } };
+             faire: function () { Decoration.livrerA(ou, m.slug, prix, 'ACHETÉ EN VILLE'); return false; } };
   }
 
   /** LES SERVICES D'UN RAYON (`rayons.SERVICES`) : ce qu'un comptoir FAIT plutot que vendre, chacun avec une
@@ -4253,6 +4255,7 @@ const Missions = (function () {
         B.invite = assis ? 'PARLER À ' + assis.nom.toUpperCase()
           : vente ? 'ACHETER ' + vente.nom.toUpperCase()
           : (point.type === 'distributrice' ? inviteDistributrice(machineDuPoint(point))
+            : point.type === 'escalier' && point.libelle ? point.libelle
             : point.type === 'escalier' && point.descend ? 'DESCENDRE'
             : (point.type === 'salon' || point.type === 'journal') && rayonDuFauteuil()
               ? comptoirFerme(pointDuFauteuil(point)) || 'AU COMPTOIR'

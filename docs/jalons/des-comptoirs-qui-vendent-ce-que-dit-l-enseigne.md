@@ -364,3 +364,22 @@ voulait un comptoir.
 - **Juges** : `test_rayons.py` (qui fait quoi, et plus rien de l'industrie ni de la marine en attente) ;
   `test_rayons_js.py` (au bouton : le vélo dans la rue et pas dans la pièce, les caisses vendues au grossiste, le
   bateau réparé au chantier naval).
+
+### Vague 4b : la pièce d'en arrière de la planque (livrée le 6 oct. 2026)
+
+- **La planque de Rocco gagne une pièce** (Martin, 6 oct. 2026 : « agrandir la planque ») : `planque_arriere`, « La
+  pièce d'en arrière », 7 sur 5 — une réserve (deux chaises, des classeurs, des étagères : le juge veut une pièce meublée). On y passe par un point `escalier` de la planque, en (9, 3) — la seule
+  tuile de plancher libre loin de la porte (à une tuile, il volait ACTION à la sortie) — dont l'invite dit « LA PIÈCE
+  D'EN ARRIÈRE » (`libelle` du point) ; on revient par « LA PLANQUE » (le retour `descend` : de deux escaliers qui se
+  répondent, un seul). Sa porte donne sur la même rue.
+- **Six meubles neufs, vendus en ville** (`decoration.MEUBLES`, `ou: ville`, `piece: planque_arriere`), livrés le
+  lendemain dans la pièce d'en arrière : la lanterne de papier (LANTERNES FUNG), le ficus (PÉPINIÈRE), le vaisselier
+  (VAISSELLE CHOW), le tableau (GALERIE D'ART), l'horloge grand-père dont le balancier va et vient (ANTIQUAIRE, avec le
+  miroir), le miroir doré (ENCADREUR, avec le tableau). Chacun a son dessin (`decoration.js`) et sa place
+  (`PLACES["planque_arriere"]`, `SEULEMENT`) ; les deux planques d'avant gardent les leurs (`PARTOUT`).
+- ⚠️ **`changerEtage` ne meublait pas** : un trophée ou un meuble ne naissait qu'en entrant par la rue (`Jeu.entrer`).
+  La pièce d'en arrière, où l'on arrive par la planque, se meuble maintenant aussi (`Decoration.meubler`).
+- **Juges** : `test_decoration.py` (la pièce d'en arrière, ses places, tout posé on rejoint chaque point) ;
+  `test_rayons_js.py` (au bouton : la lanterne achetée chez LANTERNES FUNG, livrée le lendemain dans la pièce d'en
+  arrière et pas dans la planque ; par la vraie planque, l'invite du passage, la pièce, et la lanterne au mur). Les six
+  dessins regardés dans Chromium à ×8 avant la livraison.

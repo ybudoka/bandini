@@ -38,7 +38,8 @@ def test_chaque_enseigne_decidee_vend_son_rayon_au_comptoir(banc):
     # ⚠️ Sans les rayons à SERVICES (vague 3) : leurs lignes se calculent (le prix des soins, le coffre) — ils ont leurs
     # juges à eux, plus bas.
     cas = [[nom, sorted(genres[nom])[0], slug] for nom, slug in sorted(rayons.ENSEIGNES.items())
-           if slug not in rayons.POINTS and not any(a.get("service") for a in (rayons.RAYONS.get(slug) or {}).get("articles", []))]
+           if slug not in rayons.POINTS and not any(a.get("service") for a in (rayons.RAYONS.get(slug) or {}).get("articles", []))
+           and not genres[nom] & {"savoir", "service"}]       # le présentoir et le fauteuil : leurs juges, plus bas
     r = banc("""function (L) {
         %s
         L.Jeu.commencer();
@@ -630,3 +631,42 @@ def test_les_rayons_arrivent_par_leur_propre_requete(banc):
     # (`avant` : la demande arrive avant même la première image du banc, comme celle de la suite.)
     assert r["arrivee"], r
     assert r["items"][0] == "PAIN DE MÉNAGE", r
+
+
+def test_la_lanterne_va_dans_la_piece_d_en_arriere(banc):
+    """Vague 4b, au BOUTON : chez LANTERNES FUNG, la lanterne payée, livrée le lendemain dans la pièce d'en arrière
+    (pas dans la planque, pleine) ; par la vraie planque, le passage y mène, et elle y pend au mur."""
+    r = banc("""function (L, o) {
+        %s
+        L.Jeu.commencer();
+        if (L.B.menu) L.Hud.fermerMenu();
+        for (let k = 0; k < 5 && !L.Collections.catalogue(); k++) o.frame(1);
+        const B = L.B, j = B.joueur, p = B.partie, out = {};
+        const pt = ouvrir(L, o, 'commerce', 'LANTERNES FUNG', 'emplettes');
+        p.argent = 500;
+        out.achat = presser(L, o, pt, 'LA LANTERNE');
+        out.argent = p.argent;
+        sortir(L, o);
+        p.jour += 1;
+        out.arriere = L.Decoration.presents('planque_arriere');
+        out.planque = L.Decoration.presents('planque');
+        const porte = L.Monde.carte.portes.find(function (q) { return q.lieu === 'planque'; });
+        j.x = porte.x * 16 + 8; j.y = (porte.y + 1) * 16 + 10;
+        L.Jeu.entrer(porte);
+        for (let k = 0; k < 240 && (!B.interieur || B.transition); k++) o.frame(1);
+        if (B.transition) o.fondu();
+        const passage = B.interieur.points.find(function (q) { return q.type === 'escalier'; });
+        j.x = passage.x * 16 + 8; j.y = passage.y * 16 + 8;
+        L.Missions.majInvite(j);
+        out.invite = B.invite;
+        L.Missions.utiliserPoint(j);
+        for (let k = 0; k < 240 && B.transition; k++) o.frame(1);
+        if (B.transition) o.fondu();
+        out.piece = B.interieur && B.interieur.slug;
+        out.decors = B.entites.filter(function (e) { return e.deLaPlanque; }).map(function (e) { return e.decor; });
+        return out;
+    }""" % ENTRER)
+    assert r["achat"]["curseur"] >= 0 and r["argent"] == 420, r
+    assert r["arriere"] == ["lanterne"] and "lanterne" not in r["planque"], r
+    assert r["invite"] == "LA PIÈCE D’EN ARRIÈRE" and r["piece"] == "planque_arriere", r
+    assert r["decors"] == ["lanterne"], r

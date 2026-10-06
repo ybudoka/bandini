@@ -51,13 +51,32 @@ MEUBLES: tuple[dict, ...] = (
      "texte": "TRESSÉ À LA MAIN. PAR QUI ? NE DEMANDE PAS."},
     # Le portrait du photographe (docs/jalons/des-comptoirs-qui-vendent-ce-que-dit-l-enseigne.md, vague 3c) : tiré au
     # studio avec la tenue et la coupe du jour (`partie.portrait`), encadré, livré le lendemain.
+    # Vague 4b : ce qui se vend EN VILLE (`ou: ville`, les rayons des comptoirs) et se pose dans la pièce d'en arrière
+    # de la planque (`piece`) — la lanterne, le ficus, le vaisselier, le tableau, l'horloge, le miroir.
+    {"slug": "lanterne", "nom": "LA LANTERNE DE PAPIER", "prix": 80, "ou": ["ville"], "piece": "planque_arriere",
+     "texte": "PORTE BONHEUR. PAS GARANTI."},
+    {"slug": "ficus", "nom": "LE FICUS", "prix": 45, "ou": ["ville"], "piece": "planque_arriere",
+     "texte": "ARROSE-LE. IL T'EN VOUDRA PAS."},
+    {"slug": "vaisselier", "nom": "LE VAISSELIER", "prix": 300, "ou": ["ville"], "piece": "planque_arriere",
+     "texte": "LA VAISSELLE DES GRANDES OCCASIONS. AUCUNE."},
+    {"slug": "tableau", "nom": "LE TABLEAU", "prix": 450, "ou": ["ville"], "piece": "planque_arriere",
+     "texte": "UN COUCHER DE SOLEIL SUR LA BAIE. SIGNÉ."},
+    {"slug": "horloge", "nom": "L’HORLOGE GRAND-PÈRE", "prix": 600, "ou": ["ville"], "piece": "planque_arriere",
+     "texte": "ELLE SONNE LES HEURES. ET LES QUARTS."},
+    {"slug": "miroir", "nom": "LE MIROIR DORÉ", "prix": 120, "ou": ["ville"], "piece": "planque_arriere",
+     "texte": "TU Y VERRAS UN BANDIT. C'EST NORMAL."},
     {"slug": "portrait", "nom": "TON PORTRAIT", "prix": 60, "ou": ["photographe"],
      "texte": "TON MEILLEUR PROFIL. IL A FAIT SON POSSIBLE."},
 )
 
 #: Ce qui ne se pose QUE dans certaines planques : les rondins du chalet n'ont plus de place au mur (les deux cadres,
 #: les fenêtres, la cheminée) ni de table libre — le portrait et l'album des lieux vont chez Rocco.
-SEULEMENT: dict[str, tuple[str, ...]] = {"portrait": ("planque",), "cadre_lieux": ("planque",)}
+SEULEMENT: dict[str, tuple[str, ...]] = {"portrait": ("planque",), "cadre_lieux": ("planque",),
+                                         # La pièce d'en arrière (vague 4b) : ce qui se vend en ville.
+                                         **{s: ("planque_arriere",) for s in ("lanterne", "ficus", "vaisselier",
+                                                                               "tableau", "horloge", "miroir")}}
+#: Les planques où va ce qui n'a pas de `SEULEMENT` : celle de Rocco et le chalet.
+PARTOUT: tuple[str, ...] = ("planque", "chalet")
 
 #: Où chaque objet se pose, par pièce de planque : une tuile de la pièce (`l` : sa largeur en tuiles, 1 si absent —
 #: l'étagère des bebelles en prend deux). ⚠️ Les cadres se posent sur la rangée
@@ -92,6 +111,12 @@ PLACES: dict[str, dict[str, dict]] = {
         # lui a laissé le coin et s'est rapproché de la porte (1er oct. 2026).
         "mur_enseignes": {"x": 1, "y": 6, "l": 2},
     },
+    # La pièce d'en arrière de la planque (vague 4b) : le tableau, le miroir et la lanterne au mur, l'horloge et le
+    # vaisselier contre les murs du haut, le ficus dans le coin — le passage (1, 5) et l'entrée (4, 5) dégagés.
+    "planque_arriere": {
+        "tableau": {"x": 2, "y": 1}, "miroir": {"x": 5, "y": 1}, "lanterne": {"x": 6, "y": 1},
+        "horloge": {"x": 1, "y": 2}, "vaisselier": {"x": 7, "y": 2}, "ficus": {"x": 7, "y": 4},
+    },
 }
 
 #: Comment chaque objet se tient dans sa tuile : `mur` (sur la rangée sous le mur du haut, peint SUR le mur),
@@ -102,6 +127,7 @@ POSES: dict[str, str] = {
     "cadre_dix": "mur", "cadre_vingt_cinq": "mur", "coupe_album": "table", "lampe_lave": "table",
     "jukebox": "sol", "aquarium": "sol", "sofa": "sol", "televiseur": "sol", "tapis_tresse": "plat",
     "etagere_bebelles": "sol", "mur_enseignes": "sol", "cadre_lieux": "mur", "portrait": "mur",
+    "tableau": "mur", "miroir": "mur", "lanterne": "mur", "horloge": "sol", "vaisselier": "sol", "ficus": "sol",
 }
 SOLIDES = frozenset(s for s, p in POSES.items() if p == "sol")
 

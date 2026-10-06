@@ -715,6 +715,8 @@ const Jeu = (function () {
       B.interieur = piece.interieur;
       Entites.reindexerDecor();
       Entites.peuplerInterieur(piece.interieur);
+      // La piece d'en arriere de la planque (vague 4b des comptoirs) : ce qu'on y a fait livrer y nait, comme a la porte.
+      Decoration.meubler(piece.interieur);
       Histoire.creerDonneursDedans(piece.interieur);
       // ⚠️ `ou` : la ou l'on arrive quand ce n'est ni un escalier ni la porte — le
       // quai du metro, ou l'on descend de la rame et pas de l'escalier.

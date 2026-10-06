@@ -387,6 +387,13 @@ RAYONS: dict[str, dict] = {
     # Une façade BINGO qui n'est pas LE bingo (`enseignes.ENSEIGNES` n'en ouvre qu'une) : le café et le beigne de la
     # salle, et le chemin du sous-sol.
     "bingo": _rayon("Le bingo", _CAFE, _bouchee("beigne", "Beigne"), _service("replique")),
+    # --- Vague 4b : la déco de la pièce d'en arrière de la planque (`decoration.MEUBLES`, `piece`).
+    "lanternes": _rayon("Les lanternes", _meuble("lanterne")),
+    "pepiniere": _rayon("La pépinière", _meuble("ficus")),
+    "vaisselle": _rayon("La vaisselle", _meuble("vaisselier")),
+    "galerie": _rayon("La galerie", _meuble("tableau")),
+    "antiquaire": _rayon("L'antiquaire", _meuble("horloge"), _meuble("miroir"), marge=1.2),
+    "encadreur": _rayon("L'encadreur", _meuble("miroir"), _meuble("tableau"), marge=0.9),
     # --- Vague 4a : ce qui se branche sur l'existant.
     "grossiste": _rayon("Le quai de chargement", _service("revente"), _CAFE),
     "location_velos": _rayon("La location", _service("velo"), _LIQUEUR),
@@ -484,6 +491,9 @@ ENSEIGNES: dict[str, str] = {
     "LAVE-AUTO": "lavage", "CIRE ET HUILE": "lavage", "FERRAILLE": "ferraille",
     "CLUB VIDÉO": "club_video", "CLUB MAH-JONG": "mah_jong", "SALLE DE JEUX": "salle_de_jeux",
     "PRÊTS RAPIDES": "preteur", "CHÈQUES CASH": "preteur", "PRÊT SUR GAGES": "gages",
+    # --- La déco de la pièce d'en arrière (vague 4b).
+    "LANTERNES FUNG": "lanternes", "PÉPINIÈRE": "pepiniere", "VAISSELLE CHOW": "vaisselle",
+    "GALERIE D'ART": "galerie", "ANTIQUAIRE": "antiquaire", "ENCADREUR": "encadreur",
     # --- Ce qui se branche sur l'existant (vague 4a).
     "GROSSISTE": "grossiste", "ENTREPÔT 7": "grossiste", "IMPORT YIP": "grossiste", "LOCATION VÉLOS": "location_velos",
     "CHANTIER NAVAL": "chantier_naval", "CALE SÈCHE": "chantier_naval", "MOTEURS MARINS": "chantier_naval",
@@ -541,10 +551,6 @@ POINTS = ("salon", "journal")
 #: Les enseignes qui vendent ENCORE au comptoir de leur famille : ce qu'elles vendront, et à quelle vague.
 #: ⚠️ Cette table ne doit que rapetisser : chaque vague en sort des lignes vers `ENSEIGNES`.
 EN_ATTENTE: dict[str, str] = {
-    # --- Vague 4b : la déco de la planque agrandie.
-    "LANTERNES FUNG": "une lanterne pour la planque", "PÉPINIÈRE": "les plantes de la planque",
-    "VAISSELLE CHOW": "la vaisselle de la planque", "GALERIE D'ART": "un tableau", "ANTIQUAIRE": "des antiquités",
-    "ENCADREUR": "un cadre",
     # --- Vague 4c : les objets neufs (les collections, le tatouage, ce qui se donne).
     "DISQUES VOGUE": "des disques", "MUSIQUE LAROSE": "un instrument", "LIBRAIRIE": "des livres",
     "LIBRAIRIE CHUNG": "des livres", "LIVRES": "des livres", "PAPETERIE": "de la papeterie",
