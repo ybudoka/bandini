@@ -182,3 +182,30 @@ BIJOUTERIE, une chaîne en or ; chez PNEUS DESCHAMPS, des pneus d'hiver. Et un c
 - **Juges** : `test_rayons.py` (qui vend quel meuble, et chacun a sa place à la planque) ; `test_rayons_js.py` (au
   bouton, à la RADIO-TV DUMAS : le téléviseur payé au prix du catalogue, « LIVRÉ DEMAIN », livré le jour suivant).
   Le meuble retiré du menu fait rougir les deux juges du banc.
+
+### Vague 2d : le neuf qui se porte (livrée le 6 oct. 2026)
+
+- **Deux places neuves sur le joueur** (`magasins.PLACES`, `PLACES_DE_TENUE`, `partie.cou` et `partie.yeux`) : ce qui
+  se porte AU COU et SUR LES YEUX, en plus du reste, comme la ceinture et le parapluie. Chez Rosa, deux sections de
+  plus (AU COU, LES LUNETTES).
+- **Quatre tenues neuves**, marquées `en_ville` : Rosa ne les vend pas — elles n'y paraissent qu'une fois à soi, pour
+  les remettre. La BIJOUTERIE et BIJOUX CHEUNG vendent la chaîne en or (400 $) et la chaîne plaquée or (90 $, la même
+  de loin) ; l'OPTICIEN et l'OPTIQUE, les lunettes fumées ; la SOIERIE MEI et TISSUS ET SOIES, le foulard de soie (et
+  la chemise hawaïenne).
+- **Un seul dessin neuf** : la chaîne (`chaine`, ajoutée au BOUT de `garderobe.ACCESSOIRES` — aucune garde-robe de
+  passant ne la nomme, aucun dé ne bouge), un V d'or au col de face, une maille de profil, dans le jaune de la
+  palette (`y`). Les lunettes fumées (`lunettes_soleil`) et le foulard se dessinaient déjà sur les passants. Les
+  grilles cuites ont été regardées de face et de profil avant la livraison.
+- **Le poids** : les quatre tenues voyagent avec les autres, dans les définitions ; leur budget (`tenues`, 1 050 gzip)
+  et celui du paquet tiennent.
+- **Juges** : `test_rayons.py` (qui vend le neuf, les deux places, chaque tenue `en_ville` vendue par quelqu'un) ;
+  `test_garderobe.py` (les places, les pièces du cou et des yeux) ; `test_rayons_js.py` (au bouton, à la BIJOUTERIE :
+  la chaîne payée, portée au cou, dessinée ; absente chez Rosa avant, présente après).
+
+### Ce qui reste après la vague 2
+
+102 enseignes attendent encore. Les services (vague 3, une cinquantaine), et les marchandises qui demandent une
+mécanique neuve : le bouquet qui se donne (FLEURISTE), les jouets, le cerf-volant, le vélo à louer, la planche, la
+lanterne de la planque, les plantes et la vaisselle, les disques, les livres et l'instrument, le parfum, le
+tatouage ; le gros (ENTREPÔT 7, GROSSISTE) et le prêt sur gages ; « des pièces » sans destinataire (ACIER DU NORD,
+MACHINERIE, USINAGE…) ; et la marine (cordages, voilerie, moteurs marins : le bateau n'a pas encore de garage).

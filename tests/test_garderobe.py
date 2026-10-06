@@ -71,7 +71,7 @@ def test_chaque_tenue_de_rosa_est_une_piece_qu_on_enfile():
             assert set(piece) == {"chapeau"} and piece["chapeau"] in garderobe.CHAPEAUX[1:], t["slug"]
         elif t["emplacement"] == "pieds":
             assert set(piece) == {"souliers"} and piece["souliers"] in garderobe.SOULIERS[1:], t["slug"]
-        elif t["emplacement"] == "taille":
+        elif t["emplacement"] in ("taille", "cou", "yeux"):
             assert set(piece) == {"accessoires"} and set(piece["accessoires"]) <= set(garderobe.ACCESSOIRES), t["slug"]
         elif t["emplacement"] == "main":
             assert piece == {"objet": "parapluie"}, t["slug"]
@@ -106,4 +106,6 @@ def test_rosa_habille_l_hiver():
     assert sum(1 for t in tuques if t["prix"]) == 6, "la rouge, et cinq de plus"
     rocco = next(t for t in magasins.TENUES if t["slug"] == "tuque_rocco")
     assert rocco["prix"] is None and rocco.get("prime"), "la tuque de Rocco se donne, elle ne se vend pas"
-    assert list(magasins.PLACES) == ["corps", "tete", "pieds", "taille", "main"]
+    # Le cou et les yeux : la bijouterie, la soierie et l'opticien (docs/jalons/des-comptoirs-qui-vendent-ce-que-dit-
+    # l-enseigne.md, vague 2d).
+    assert list(magasins.PLACES) == ["corps", "tete", "pieds", "taille", "main", "cou", "yeux"]

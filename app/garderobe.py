@@ -48,9 +48,10 @@ BAS = ("pantalon", "short", "jupe")
 SOULIERS = ("souliers", "bottes", "bottes_hiver", "loup_marin")
 
 #: ⚠️ On n'en ajoute qu'AU BOUT : `garderobe.js` les parcourt dans l'ordre, et une garde-robe qui
-#: en nomme un tire un dé pour lui. `ceinture` et `ceinture_flechee` : la taille, chez Rosa.
+#: en nomme un tire un dé pour lui. `ceinture` et `ceinture_flechee` : la taille, chez Rosa ; `chaine` : le cou, à la
+#: bijouterie (aucune garde-robe ne la nomme : un passant n'en tire pas).
 ACCESSOIRES = ("lunettes", "lunettes_soleil", "barbe", "moustache", "sac_a_dos", "cravate",
-               "foulard", "ceinture", "ceinture_flechee")
+               "foulard", "ceinture", "ceinture_flechee", "chaine")
 
 #: Les peaux et les cheveux que la ville connaît déjà (`pietons.CATALOGUE`), et quelques-uns de
 #: plus : la garde-robe les mélange.

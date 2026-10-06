@@ -217,6 +217,10 @@ RAYONS: dict[str, dict] = {
     "bric_a_brac": _rayon("Le bric-à-brac", _tenue("tuque_phentex"), _tenue("parapluie"), _arme("poing_americain"),
                           _arme("fronde"), rabais=0.6),
     "souvenirs": _rayon("Les souvenirs", _tenue("ceinture_flechee"), _tenue("tuque_bbr"), _tenue("tuque_pompon")),
+    # --- Vague 2d : le neuf qui se porte au cou et sur les yeux (`magasins.TENUES`, `en_ville` : pas chez Rosa).
+    "bijouterie": _rayon("La bijouterie", _tenue("chaine_or"), _tenue("chaine_plaquee")),
+    "opticien": _rayon("L'opticien", _tenue("lunettes_fumees")),
+    "soierie": _rayon("La soierie", _tenue("foulard_soie"), _tenue("chemise_hawai")),
     # --- Vague 2b : les commerces de l'auto font au char garé devant la porte ce que fait Ti-Guy, chacun son métier.
     # Le café de la salle d'attente, partout.
     "pneus": _rayon("Les pneus", _piece("pneus"), _CAFE),
@@ -307,6 +311,9 @@ ENSEIGNES: dict[str, str] = {
     "ATELIER 12": "pieces_auto", "PIÈCES D'AUTO": "pieces_auto", "PIÈCES USAGÉES": "pieces_usagees",
     "PEINTURE AUTO": "peinture_auto", "SABLAGE AU JET": "peinture_auto",
     "DÉBOSSELAGE": "carrosserie", "RADIATEURS": "carrosserie",
+    # --- Le neuf (vague 2d).
+    "BIJOUTERIE": "bijouterie", "BIJOUX CHEUNG": "bijouterie", "OPTICIEN": "opticien", "OPTIQUE": "opticien",
+    "SOIERIE MEI": "soierie", "TISSUS ET SOIES": "soierie",
     # --- Les meubles de la planque (vague 2c).
     "RADIO-TV DUMAS": "radio_tv", "RADIO-TV KWOK": "radio_tv",
     "MEUBLES GAGNON": "meubles", "TAPISSIER": "tapissier", "ANIMALERIE": "animalerie",
@@ -323,16 +330,14 @@ POINTS = ("salon", "journal")
 #: Les enseignes qui vendent ENCORE au comptoir de leur famille : ce qu'elles vendront, et à quelle vague.
 #: ⚠️ Cette table ne doit que rapetisser : chaque vague en sort des lignes vers `ENSEIGNES`.
 EN_ATTENTE: dict[str, str] = {
-    # --- Vague 2 : les marchandises (2d le neuf qui se dessine — Martin, 6 oct. 2026). Ce qui demande une
-    # mécanique neuve (le bouquet, le vélo, le cerf-volant) suit les services.
-    "BIJOUTERIE": "des bijoux à porter", "BIJOUX CHEUNG": "des bijoux à porter",
+    # --- Vague 2 : ce qui reste des marchandises. Ce qui demande une mécanique neuve (le bouquet, le vélo, le
+    # cerf-volant) suit les services.
     "FLEURISTE": "un bouquet", "FLEURISTE MEI": "un bouquet", "FLEURISTE ROSE": "un bouquet",
     "JOUETS ET TRAINS": "des jouets", "CERFS-VOLANTS": "un cerf-volant",
     "LANTERNES FUNG": "une lanterne pour la planque", "LOCATION VÉLOS": "un vélo", "PLANCHES": "une planche",
     "IMPORT YIP": "des importations", "ENTREPÔT 7": "le gros", "PRÊT SUR GAGES": "racheter, revendre",
     "GROSSISTE": "le gros", "À LOUER": "rien : un local vide",
-    "SOIERIE MEI": "un foulard de soie", "TISSUS ET SOIES": "un foulard de soie", "PARFUMERIE": "du parfum",
-    "TATOUAGE": "un tatouage",
+    "PARFUMERIE": "du parfum", "TATOUAGE": "un tatouage",
     "ACIER DU NORD": "des pièces", "CIRE ET HUILE": "un lavage, une vidange", "FERRAILLE": "revendre une épave",
     "LAVE-AUTO": "un lavage", "MACHINERIE": "des pièces", "SILENCIEUX": "un silencieux", "ÉLECTRIQUE": "des pièces",
     "USINAGE": "des pièces", "FONDERIE": "des pièces",
@@ -346,7 +351,7 @@ EN_ATTENTE: dict[str, str] = {
     "CORDAGES": "des cordages", "GLACE ET SEL": "de la glace", "MOTEURS MARINS": "le moteur du bateau",
     "VOILERIE": "une voile", "CHALOUPES": "une chaloupe", "CHANTIER NAVAL": "réparer le bateau",
     "CALE SÈCHE": "réparer le bateau", "MARINA": "un mouillage",
-    "OPTICIEN": "des lunettes fumées", "OPTIQUE": "des lunettes fumées",
+    
     "DISQUES VOGUE": "des disques", "MUSIQUE LAROSE": "un instrument", "LIBRAIRIE": "des livres",
     "LIBRAIRIE CHUNG": "des livres", "LIVRES": "des livres", "PAPETERIE": "de la papeterie",
     "GALERIE D'ART": "un tableau",

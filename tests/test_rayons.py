@@ -144,7 +144,7 @@ def test_les_tenues_et_les_armes_se_vendent_chez_qui_le_dit():
     assert not vend("MODISTE") & {"sandwich", "chips"}
     genres = rayons.noms_des_enseignes()
     reste = sorted(n for n in rayons.EN_ATTENTE if "mode" in genres[n])
-    assert reste == ["PARFUMERIE", "SOIERIE MEI", "TATOUAGE", "TISSUS ET SOIES"], reste
+    assert reste == ["PARFUMERIE", "TATOUAGE"], reste
 
 
 def test_le_format_compact_dit_la_sorte_de_chaque_article():
@@ -211,3 +211,20 @@ def test_les_meubles_de_la_planque_se_vendent_en_ville():
         for a in r["articles"]:
             if a.get("meuble"):
                 assert a["meuble"] in decoration.PLACES["planque"], f"{slug}/{a['slug']}"
+
+
+def test_le_neuf_se_porte_au_cou_et_sur_les_yeux_et_rosa_ne_le_vend_pas():
+    """Vague 2d : la chaîne en or à la BIJOUTERIE, les lunettes fumées chez l'OPTICIEN, le foulard de soie à la
+    SOIERIE — des tenues à deux places neuves (`cou`, `yeux` : `magasins.PLACES`), vendues EN VILLE seulement."""
+    from app import garderobe
+    def vend(nom):
+        return {a["tenue"] for a in rayons.RAYONS[rayons.ENSEIGNES[nom]]["articles"]} - {None}
+    assert "chaine_or" in vend("BIJOUTERIE") and "chaine_or" in vend("BIJOUX CHEUNG")
+    assert vend("OPTICIEN") == {"lunettes_fumees"} == vend("OPTIQUE")
+    assert "foulard_soie" in vend("SOIERIE MEI")
+    en_ville = [t for t in magasins.TENUES if t.get("en_ville")]
+    assert {t["emplacement"] for t in en_ville} == {"cou", "yeux"} <= set(magasins.PLACES)
+    vendues = {a["tenue"] for r in rayons.RAYONS.values() for a in r["articles"]}
+    for t in en_ville:
+        assert t["slug"] in vendues, f"{t['slug']} : vendue en ville, mais par personne"
+        assert set(t["piece"]["accessoires"]) <= set(garderobe.ACCESSOIRES), t["slug"]

@@ -516,6 +516,13 @@ const Garderobe = (function () {
       pose(g, milieu, t0, 'a'); pose(g, milieu + 1, t0, 'a');
       for (let y = t0 + 1; y <= t0 + 2; y++) if ('cCwQ'.indexOf(lit(g, milieu, y)) >= 0) pose(g, milieu, y, 'a');
     }
+    // La chaine en or (la bijouterie) : un V d'or au col, de face ; une maille au cou, de profil.
+    if (a.chaine && vue === 'bas') {
+      pose(g, xa + 1, t0, 'y'); pose(g, xb - 1, t0, 'y');
+      for (let x = xa + 2; x < xb - 1; x++) if (x === milieu || x === milieu + 1) pose(g, x, t0 + 1, 'y');
+    } else if (a.chaine && vue === 'cote') {
+      pose(g, xb - 1, t0, 'y');
+    }
     if (a.foulard) {
       for (let x = 0; x < g[t0].length; x++) if ('cCQw'.indexOf(g[t0][x]) >= 0) g[t0][x] = 'a';
       if (vue === 'bas') pose(g, xa + 1, t0 + 1, 'a');
@@ -738,6 +745,10 @@ const Garderobe = (function () {
     // Les places de Rosa (`rosa-habille-l-hiver.md`) : chacune ne lit que SA place.
     const place = function (champ, emplacement) { const t = trouve(partie[champ]); return t && t.emplacement === emplacement ? t : null; };
     const pieds = place('pieds', 'pieds'), taille = place('taille', 'taille');
+    // Le cou et les yeux (la bijouterie, l'opticien) : des accessoires, comme la ceinture.
+    const enPlus = [taille, place('cou', 'cou'), place('yeux', 'yeux')].reduce(function (acc, t) {
+      return t ? acc.concat(t.piece.accessoires || []) : acc;
+    }, []);
     const piece = (corps && corps.piece) || {};
     return {
       squelette: 'homme', peau: pal.s, cheveux: partie.cheveux || pal.h, coiffure: 'courte',
@@ -745,7 +756,7 @@ const Garderobe = (function () {
       bas: 'pantalon', couleur_bas: pal.p,
       souliers: pieds ? pieds.piece.souliers : 'souliers', couleur_souliers: pieds ? pieds.couleur : pal.b,
       chapeau: tete && tete.piece ? tete.piece.chapeau : 'aucun', couleur_chapeau: tete ? tete.couleur : '#1a1a22',
-      accessoires: (piece.accessoires || []).concat(taille ? taille.piece.accessoires : []), accent: '#c0392b',
+      accessoires: (piece.accessoires || []).concat(enPlus), accent: '#c0392b',
     };
   }
 

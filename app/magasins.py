@@ -424,11 +424,23 @@ TENUES = [
     # (`caisse.js`).
     {"slug": "livreur", "nom": "Uniforme de livreur", "prix": None, "couleur": "#7a5230", "prime": "rosa",
      "emplacement": "corps", "piece": {"haut": "chemise"}},
+    # DES COMPTOIRS QUI VENDENT CE QUE DIT L'ENSEIGNE, vague 2d (docs/jalons/des-comptoirs-qui-vendent-ce-que-dit-l-
+    # enseigne.md) : ce qui se porte au COU et sur les YEUX, deux places de plus où tout se cumule. `en_ville` : Rosa ne
+    # les vend pas (la bijouterie, l'opticien, la soierie, `rayons.RAYONS`) — chez elle, on ne fait que les remettre.
+    {"slug": "chaine_or", "nom": "Chaîne en or", "prix": 400, "couleur": "#e8c23c", "en_ville": True,
+     "emplacement": "cou", "piece": {"accessoires": ["chaine"]}},
+    {"slug": "chaine_plaquee", "nom": "Chaîne plaquée or", "prix": 90, "couleur": "#e8c23c", "en_ville": True,
+     "emplacement": "cou", "piece": {"accessoires": ["chaine"]}},
+    {"slug": "foulard_soie", "nom": "Foulard de soie", "prix": 70, "couleur": "#c0392b", "en_ville": True,
+     "emplacement": "cou", "piece": {"accessoires": ["foulard"]}},
+    {"slug": "lunettes_fumees", "nom": "Lunettes fumées", "prix": 60, "couleur": "#1a1a22", "en_ville": True,
+     "emplacement": "yeux", "piece": {"accessoires": ["lunettes_soleil"]}},
 ]
 
 #: Où se porte une tenue, et le champ de la partie qui dit laquelle on porte (`B.partie[champ]`).
 #: On porte une pièce de chaque place à la fois ; ⚠️ l'ordre est celui des sections chez Rosa.
-PLACES = {"corps": "tenue", "tete": "chapeau", "pieds": "pieds", "taille": "taille", "main": "main"}
+PLACES = {"corps": "tenue", "tete": "chapeau", "pieds": "pieds", "taille": "taille", "main": "main", "cou": "cou",
+          "yeux": "yeux"}
 
 #: Chez le barbier (`boutique_service`) : la coupe change la COULEUR des cheveux
 #: du sprite (`h`). ⚠️ Ce n'est pas de la coquetterie — changer de tete remet la

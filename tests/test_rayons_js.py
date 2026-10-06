@@ -69,7 +69,7 @@ def test_une_enseigne_en_attente_et_un_lieu_garanti_gardent_le_comptoir_de_leur_
         L.Jeu.commencer();
         const B = L.B, I = L.Monde.carte.def.interieurs, porte = portesDe(L, 'commerce')[0];
         B.partie.heure = 0.5;
-        B.interieur = Object.assign({}, I[porte.interieur], { nom: 'BIJOUTERIE' });
+        B.interieur = Object.assign({}, I[porte.interieur], { nom: 'JOUETS ET TRAINS' });
         const attente = libelles(L.Missions.menuDuPoint(pointDe(L, porte.interieur)));
         const dep = I.depanneur, pt = dep.points.find(function (q) { return q.type === 'emplettes'; });
         B.interieur = dep;
@@ -77,7 +77,7 @@ def test_une_enseigne_en_attente_et_un_lieu_garanti_gardent_le_comptoir_de_leur_
         B.interieur = null;
         return { attente: attente, depanneur: depanneur };
     }""" % TROUVER)
-    assert "BIJOUTERIE" in rayons.EN_ATTENTE
+    assert "JOUETS ET TRAINS" in rayons.EN_ATTENTE
     assert r["attente"] == _attendu("commerce"), r
     assert all(n in r["depanneur"] for n in _attendu("bouffe")), r
 
@@ -255,3 +255,45 @@ def test_a_la_radio_tv_on_achete_le_televiseur_et_il_arrive_le_lendemain_a_la_pl
     assert r and r["libelle"] == "LE TÉLÉVISEUR" and r["detail"] == f"{prix} $", r
     assert r["argent"] == 2000 - prix and r["apres"] == "LIVRÉ DEMAIN", r
     assert not r["livreAujourdhui"] and r["livreDemain"], r
+
+
+def test_a_la_bijouterie_la_chaine_se_porte_au_cou_et_rosa_ne_la_vend_pas(banc):
+    """Vague 2d, au BOUTON, par une vraie porte renommée BIJOUTERIE : la chaîne en or payée, rangée, portée AU COU
+    (`partie.cou`) et dessinée (`Garderobe.duJoueur` : l'accessoire `chaine`) ; chez Rosa, elle n'est pas à vendre —
+    elle n'y paraît qu'une fois à soi, pour la remettre."""
+    r = banc("""function (L, o) {
+        %s
+        L.Jeu.commencer();
+        if (L.B.menu) L.Hud.fermerMenu();
+        const B = L.B, j = B.joueur, porte = portesDe(L, 'commerce')[0], point = pointDe(L, porte.interieur);
+        const chezRosa = function () {
+            return L.Missions.menuVetements().items.map(function (q) { return q.libelle; }).filter(function (l) {
+                return l === 'CHAÎNE EN OR'; }).length;
+        };
+        const avant = chezRosa();
+        porte.nom = 'BIJOUTERIE';
+        B.partie.heure = 0.5;
+        j.x = porte.x * 16 + 8; j.y = (porte.y + 1) * 16 + 10;
+        L.Jeu.entrer(porte);
+        for (let k = 0; k < 240 && (!B.interieur || B.transition); k++) o.frame(1);
+        if (!B.interieur) return null;
+        if (B.transition) o.fondu();
+        B.partie.argent = 1000;
+        const faire = function () { return L.Missions.menuDuPoint(point); };
+        const menu = faire();
+        menu.refaire = faire;
+        L.Hud.ouvrirMenu(menu);
+        menu.curseur = 0;
+        const out = { premier: menu.items[0].libelle, avant: avant };
+        o.tape('KeyE', 2);
+        if (L.B.menu) L.Hud.fermerMenu();
+        out.argent = B.partie.argent;
+        out.cou = B.partie.cou;
+        out.accessoires = j.tenue.accessoires;
+        out.apres = chezRosa();
+        return out;
+    }""" % TROUVER)
+    prix = next(t["prix"] for t in magasins.TENUES if t["slug"] == "chaine_or")
+    assert r and r["premier"] == "CHAÎNE EN OR" and r["argent"] == 1000 - prix, r
+    assert r["cou"] == "chaine_or" and "chaine" in r["accessoires"], r
+    assert r["avant"] == 0 and r["apres"] == 1, r

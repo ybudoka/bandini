@@ -2240,12 +2240,14 @@ const Missions = (function () {
   }
 
   //: Ce qu'on lit a cote d'une piece qu'on porte, selon sa place.
-  const SUR_TOI = { tete: 'SUR TA TÊTE', pieds: 'AUX PIEDS', taille: 'À LA TAILLE', main: 'À LA MAIN' };
+  const SUR_TOI = { tete: 'SUR TA TÊTE', pieds: 'AUX PIEDS', taille: 'À LA TAILLE', main: 'À LA MAIN', cou: 'AU COU',
+                   yeux: 'SUR LE NEZ' };
   function surToi(t) { return SUR_TOI[t.emplacement] || 'PORTÉE'; }
 
   //: Les sections, dans l'ordre de `PLACES_DE_TENUE` (`magasins.PLACES`).
   const SECTIONS_DE_TENUE = [['corps', 'LE LINGE'], ['tete', 'LES CHAPEAUX'], ['pieds', 'LES BOTTES'],
-                             ['taille', 'LES CEINTURES'], ['main', 'LE PARAPLUIE']];
+                             ['taille', 'LES CEINTURES'], ['main', 'LE PARAPLUIE'], ['cou', 'AU COU'],
+                             ['yeux', 'LES LUNETTES']];
 
   /** Le linge, les chapeaux, les bottes, les ceintures, le parapluie : chacun sous son titre (`entete`). */
   function parEmplacement(tenues, item) {
@@ -2265,8 +2267,10 @@ const Missions = (function () {
     // chez Rosa qu'une fois GAGNEE — sinon le lot des trois jeux d'adresse
     // s'achete au comptoir d'a cote, et il ne vaut plus rien. Une fois a soi,
     // elle se range avec les autres : c'est la qu'on vient la remettre.
+    // ⚠️ Ni ce qui se vend EN VILLE (`en_ville` : la chaine de la bijouterie, les lunettes de l'opticien) : Rosa ne
+    // fait que les remettre, une fois a soi.
     const items = parEmplacement((B.defs.tenues || []).filter(function (t) {
-      return !t.prime || p.tenues.indexOf(t.slug) >= 0;
+      return !(t.prime || t.en_ville) || p.tenues.indexOf(t.slug) >= 0;
     }), function (t) {
       const deja = p.tenues.indexOf(t.slug) >= 0, prix = auRabais(t.prix, 'vetements');
       return { libelle: t.nom.toUpperCase(), detail: deja ? (portee(t) ? surToi(t) : 'À TOI') : prix + ' $',

@@ -119,6 +119,8 @@ function etatInitial(defs) {
     pieds: null,          // les bottes (`emplacement: 'pieds'`), ou les souliers de toujours
     taille: null,         // la ceinture (`emplacement: 'taille'`), ou rien
     main: null,           // le parapluie (`emplacement: 'main'`), ou rien
+    cou: null,            // la chaîne, le foulard (`emplacement: 'cou'`), ou rien
+    yeux: null,           // les lunettes fumées (`emplacement: 'yeux'`), ou rien
     cheveux: null,        // la couleur donnee par le barbier (`magasins.COIFFURES`)
     fouilles: {},         // les logements deja fouilles, par porte et par etage
     armes: { poings: { mun: null } },
@@ -303,7 +305,8 @@ function triche(nom) {
 
 /** Ou se porte une tenue (`emplacement`), et le champ de la partie qui dit laquelle on porte :
     `magasins.PLACES`, dans l'ordre des sections chez Rosa. Une piece de chaque place a la fois. */
-const PLACES_DE_TENUE = { corps: 'tenue', tete: 'chapeau', pieds: 'pieds', taille: 'taille', main: 'main' };
+const PLACES_DE_TENUE = { corps: 'tenue', tete: 'chapeau', pieds: 'pieds', taille: 'taille', main: 'main', cou: 'cou',
+                          yeux: 'yeux' };
 
 /** Le champ de `B.partie` qui porte la tenue `t` (`tenue`, `chapeau`, `pieds`...). */
 function champDeTenue(t) { return PLACES_DE_TENUE[(t && t.emplacement) || 'corps'] || 'tenue'; }
