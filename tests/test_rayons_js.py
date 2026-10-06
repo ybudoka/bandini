@@ -552,3 +552,23 @@ def test_la_soupe_pour_qui_est_casse_et_la_replique_de_l_ecole(banc):
     assert r["deux"]["actif"] is False and r["deux"]["detail"] == "À DEMAIN", r
     assert r["ecole"]["items"] == ["RIEN À VENDRE ICI"], r
     assert r["ecole"]["aide"] == "« " + rayons.REPLIQUES["ÉCOLE"].upper() + " »", r
+
+
+def test_au_barbier_de_la_ville_la_coupe_fait_oublier_ta_face(banc):
+    """La vraie porte du BARBIER (`enseignes.ENSEIGNES`, Martin, 6 oct. 2026) : sans renommer quoi que ce soit, on y
+    entre, et le fauteuil coupe les cheveux — la seule pièce de service de la ville à garder la coupe."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        if (L.B.menu) L.Hud.fermerMenu();
+        const B = L.B, j = B.joueur, porte = L.Monde.carte.portes.find(function (q) { return q.lieu === 'barbier'; });
+        if (!porte) return null;
+        const point = L.Monde.carte.def.interieurs.barbier.points.find(function (q) { return q.type === 'salon'; });
+        B.partie.heure = 0.5;
+        j.x = porte.x * 16 + 8; j.y = (porte.y + 1) * 16 + 10;
+        L.Jeu.entrer(porte);
+        for (let k = 0; k < 240 && (!B.interieur || B.transition); k++) o.frame(1);
+        if (B.transition) o.fondu();
+        return { nom: B.interieur && B.interieur.nom, items: L.Missions.menuDuPoint(point).items.map(function (q) { return q.libelle; }) };
+    }""")
+    assert r and r["nom"] == "BARBIER", r
+    assert "BLOND" in r["items"] and "POIVRE ET SEL" in r["items"], r

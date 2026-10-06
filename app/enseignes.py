@@ -1,4 +1,4 @@
-"""Les enseignes qui ouvrent pour vrai : bingo, quilles, lave-auto, Rialto
+"""Les enseignes qui ouvrent pour vrai : bingo, quilles, lave-auto, Rialto — et le barbier
 (docs/jalons/les-enseignes-qui-ouvrent-pour-vrai.md).
 
 Quatre façades de la ville deviennent des endroits où l'on entre : le BINGO du sous-sol, la SALLE DE
@@ -37,6 +37,12 @@ ENSEIGNES: tuple[dict, ...] = (
      "sans_standing": None},
     {"slug": "lave_auto", "texte": "LAVE-AUTO", "nom": "Le lave-auto", "district": "erables",
      "famille": "service", "prefere": "LAVE-AUTO", "sans_standing": None},
+    # LE BARBIER (docs/jalons/des-comptoirs-qui-vendent-ce-que-dit-l-enseigne.md, vague 3 — Martin, 6 oct. 2026 :
+    # « ouvrir une porte de barbier ») : les pièces de service de la ville rendent toutes leur service à elles, et la
+    # coupe qui fait oublier ta face n'était plus nulle part. ⚠️ EN DERNIER : les quatre d'avant choisissent leur porte
+    # sans lui. Le Faubourg n'a plus de porte : il prend la plus proche de son cœur, près de la planque.
+    {"slug": "barbier", "texte": "BARBIER", "nom": "Le barbier", "district": "faubourg",
+     "famille": "service", "prefere": "BARBIER", "sans_standing": None},
 )
 
 #: Deux enseignes neuves jamais à moins de tant de tuiles l'une de l'autre : un Rialto collé sur la
@@ -67,7 +73,7 @@ REGLES = {
 # cinéma de cinq tuiles sur quatre n'est pas un cinéma. Sans un dé : les mêmes mesures donnent la même pièce.
 
 #: Le plus petit plancher (largeur, profondeur, murs déduits) de chacune.
-MESURES_MIN = {"bingo": (6, 4), "rialto": (6, 5), "quilles": (7, 5), "lave_auto": (4, 3)}
+MESURES_MIN = {"bingo": (6, 4), "rialto": (6, 5), "quilles": (7, 5), "lave_auto": (4, 3), "barbier": (3, 3)}
 
 
 def _comptoir(grille: list[list[str]], porte: int, long_: int) -> list[tuple[int, int]]:
@@ -170,8 +176,17 @@ def piece_de_lave_auto(largeur: int, hauteur: int, porte: int) -> dict:
     return piece
 
 
+def piece_de_barbier(largeur: int, hauteur: int, porte: int) -> dict:
+    """Le salon du barbier : la pièce d'un commerce de service, son fauteuil (`salon`) et son miroir — la coupe qui
+    fait oublier ta face (`Missions.menuSalon`)."""
+    from .carte import piece_de_commerce
+    piece = piece_de_commerce("barbier", "service", largeur, hauteur, porte)
+    piece["nom"] = "Le barbier"
+    return piece
+
+
 PIECES = {"bingo": piece_de_bingo, "rialto": piece_de_rialto, "quilles": piece_de_quilles,
-          "lave_auto": piece_de_lave_auto}
+          "lave_auto": piece_de_lave_auto, "barbier": piece_de_barbier}
 
 
 # --- Le choix des portes ----------------------------------------------------------------------

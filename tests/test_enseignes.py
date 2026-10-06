@@ -33,6 +33,12 @@ def test_chacune_a_sa_porte_son_enseigne_et_un_comptoir_qui_sert(VILLE, slug):
     assert devanture["texte"] == porte["nom"], devanture
     assert devantures.tient_en(devanture["texte"], devanture["l"])
     piece = VILLE["interieurs"][slug]
+    if slug == "barbier":
+        # Le barbier n'a pas de comptoir : son fauteuil (`salon`), la coupe qui fait oublier ta face.
+        assert [q for q in piece["points"] if q["type"] == "salon"], "le barbier sans fauteuil"
+        point = next(q for q in VILLE["points_interet"] if q["slug"] == slug)
+        assert (point["x"], point["y"]) == (porte["x"], porte["y"] + 1) and point["famille"] in carte.FAMILLES_DE_LIEU
+        return
     points = [q for q in piece["points"] if q["type"] == "emplettes"]
     assert points, f"{slug} : aucun comptoir"
     for q in points:

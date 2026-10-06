@@ -320,6 +320,11 @@ importations ; « des pièces » sans destinataire (ACIER DU NORD, MACHINERIE, U
 et la marine (cordages, voilerie, moteurs marins, chantier naval : le bateau n'a pas encore de garage). Elles vendent
 encore au comptoir de leur couleur.
 
-⚠️ **Une ville sans barbier** : la ville livrée n'ouvre que trois pièces de service (la BUANDERIE, le STUDIO LAU, le
-NOTAIRE LEUNG) ; toutes ont maintenant leur rayon, et la coupe de cheveux — qui fait oublier ta face à la police — ne
-se trouve plus nulle part en ville. Le barbier garde son fauteuil (`salon`), mais aucune porte de barbier ne s'ouvre.
+⚠️ **Une ville sans barbier, réparée le jour même** : la ville n'ouvrait que trois pièces de service (la BUANDERIE, le
+STUDIO LAU, le NOTAIRE LEUNG), et c'est là qu'on se faisait couper les cheveux ; une fois leur service rendu, la coupe
+qui fait oublier ta face n'était plus nulle part. Tranché par Martin (6 oct. 2026) : **ouvrir une porte de barbier**.
+Le BARBIER est la cinquième des enseignes qui ouvrent pour vrai (`enseignes.ENSEIGNES`, EN DERNIER : les quatre
+d'avant choisissent leur porte sans lui), sur la ville finie et sans dé : le Faubourg n'ayant plus de porte, il prend
+la porte de commerce la plus proche de son cœur, près de la planque — la pièce d'un commerce de service, et son
+fauteuil (`piece_de_barbier`). La suite complète, passée en parallèle avec lui, n'a rougi qu'au juge des enseignes qui
+voulait un comptoir.
