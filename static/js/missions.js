@@ -1565,6 +1565,13 @@ const Missions = (function () {
       comptoirs[s] = { nom: '', marge: x[1] || 1, rabais: x[2] || 1, articles: x[0].map(function (a) {
         // Une tenue (`t:`) ou une arme (`a:`) : son nom est celui de son catalogue (`rayons._compact`).
         const sorte = a.charAt(1) === ':' ? a.charAt(0) : null;
+        // Une piece du garage (`p:`) ou un service au char (`s:`), sur le char gare devant la porte.
+        if (sorte === 'p' || sorte === 's') {
+          const slug = a.slice(2), q = sorte === 'p' && Garage.piece(slug);
+          return { slug: slug, nom: q ? q.nom : r.services[slug], tarif: null, gain_pv: null, gain_souffle: null,
+                   effet: null, arme: null, tenue: null, journal: false,
+                   piece: sorte === 'p' ? slug : null, service: sorte === 's' ? slug : null };
+        }
         if (sorte) {
           const slug = a.slice(2);
           const def = sorte === 't' ? (B.defs.tenues || []).find(function (t) { return t.slug === slug; })
@@ -1610,7 +1617,18 @@ const Missions = (function () {
     // Le jeu du comptoir d'une enseigne (la carte de bingo, le billet du Rialto, le lavage).
     const jeu = comptoir.joue && Enseignes.itemDuComptoir(comptoir.joue);
     if (jeu) items.push(jeu);
+    // UN COMMERCE DE L'AUTO (les PNEUS, la SOUDURE, la PEINTURE AUTO) travaille sur le char gare devant sa porte,
+    // comme Ti-Guy (`charDevant`) : sans char, il le dit une fois, et ses pieces et ses services ne se proposent pas.
+    const auChar = comptoir.articles.some(function (a) { return a.piece || a.service; });
+    const v = auChar ? charDevant() : null, char = v && Garage.accepte(v) ? v : null;
+    if (auChar && !char) items.push({ libelle: 'GARE UN CHAR DEVANT LA PORTE', actif: false });
     comptoir.articles.forEach(function (a) {
+      if (a.piece || a.service) {
+        const facteur = (comptoir.marge || 1) * rabais(cle);
+        const it = char && (a.piece ? Garage.itemPiece(char, a.piece, payer, facteur) : itemServiceAuChar(char, a, facteur));
+        if (it) items.push(it);
+        return;
+      }
       if (a.arme) return items.push(itemArme(a, (comptoir.marge || 1) * rabais(cle)));
       if (a.tenue) return items.push(itemTenue(a, (comptoir.rabais || 1) * rabais(cle)));
       items.push(itemBouchee(a, null, rabais(cle)));
@@ -1645,6 +1663,23 @@ const Missions = (function () {
                if (a.journal) { lireLeJournal(); return true; }
                return false;
              } };
+  }
+
+  /** Un service au char gare devant, chez un commerce de l'auto : reparer (la CARROSSERIE, la SOUDURE) ou repeindre
+      (la PEINTURE AUTO) — les prix et les gestes de Ti-Guy (`menuGarage`), fois `facteur`. */
+  function itemServiceAuChar(v, a, facteur) {
+    const eco = B.defs.economie, p = B.partie, libelle = a.nom.toUpperCase();
+    if (a.service === 'reparer') {
+      const prix = Math.round((v.vieMax - v.vie) * eco.reparation_par_pv * facteur);
+      return { libelle: libelle, detail: prix > 0 ? prix + ' $' : 'COMME NEUF', actif: prix > 0 && p.argent >= prix,
+               faire: function () { payer(prix, 'RÉPARATION'); v.vie = v.vieMax; return false; } };
+    }
+    if (a.service === 'repeindre') {
+      const prix = Math.round(eco.repeinte * facteur);
+      return { libelle: libelle, detail: prix + ' $', actif: p.argent >= prix,
+               faire: function () { payer(prix, 'PEINTURE'); repeindre(v); return false; } };
+    }
+    return null;
   }
 
   /** Ce qu'un article rend a qui le mange : la vie, le souffle, et le cafe. */

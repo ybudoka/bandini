@@ -27,7 +27,7 @@ la pièce et son mobilier. Le rayon ne change que ce qu'on achète.
 
 from __future__ import annotations
 
-from . import armes, devantures, economie
+from . import armes, devantures, economie, garage
 from .magasins import _CINEMA, TENUES, _art
 
 #: Les bouchées que seul un rayon vend : (prix, PV, souffle). ⚠️ Pas dans `economie.TARIFS` : elles voyagent dans
@@ -105,6 +105,20 @@ def _tenue(slug: str):
 def _arme(slug: str):
     """Une arme du catalogue de Chez Gus, sous son nom : son prix est le sien, fois la `marge` du rayon."""
     return _art(slug, armes.par_slug(slug)["nom"], arme=slug)
+
+
+def _piece(slug: str):
+    """Une pièce de Ti-Guy (`garage.PIECES`), posée sur le char garé devant la porte : son prix fois la `marge`."""
+    q = next(q for q in garage.PIECES if q["slug"] == slug)
+    return {**_art(slug, q["nom"]), "piece": slug}
+
+
+#: Ce qu'un commerce de l'auto fait au char garé devant, comme Ti-Guy (`Missions.menuGarage`) : le nom de la ligne.
+SERVICES_AU_CHAR = {"reparer": "Réparer le char", "repeindre": "Repeindre (efface le vol)"}
+
+
+def _service(slug: str):
+    return {**_art(slug, SERVICES_AU_CHAR[slug]), "service": slug}
 
 
 def _rayon(nom: str, *articles, marge: float = 1.0, rabais: float = 1.0) -> dict:
@@ -196,6 +210,18 @@ RAYONS: dict[str, dict] = {
     "bric_a_brac": _rayon("Le bric-à-brac", _tenue("tuque_phentex"), _tenue("parapluie"), _arme("poing_americain"),
                           _arme("fronde"), rabais=0.6),
     "souvenirs": _rayon("Les souvenirs", _tenue("ceinture_flechee"), _tenue("tuque_bbr"), _tenue("tuque_pompon")),
+    # --- Vague 2b : les commerces de l'auto font au char garé devant la porte ce que fait Ti-Guy, chacun son métier.
+    # Le café de la salle d'attente, partout.
+    "pneus": _rayon("Les pneus", _piece("pneus"), _CAFE),
+    "soudure": _rayon("La soudure", _piece("blindage"), _service("reparer"), _CAFE),
+    "moteurs": _rayon("Les moteurs", _piece("moteur"), _piece("nitro"), _CAFE),
+    "pieces_auto": _rayon("Les pièces d'auto", _piece("moteur"), _piece("blindage"), _piece("pneus"), _piece("nitro"),
+                          _CAFE),
+    # Les pièces usagées : les mêmes, tombées d'une épave, à 0,7.
+    "pieces_usagees": _rayon("Les pièces usagées", _piece("moteur"), _piece("blindage"), _piece("pneus"), _CAFE,
+                             marge=0.7),
+    "peinture_auto": _rayon("La peinture", _service("repeindre"), _CAFE),
+    "carrosserie": _rayon("La carrosserie", _service("reparer"), _CAFE),
 }
 
 #: Le rayon de chaque enseigne décidée. ⚠️ Écrit nom par nom : rien n'est déduit du genre.
@@ -260,6 +286,13 @@ ENSEIGNES: dict[str, str] = {
     "LIQUIDATION": "liquidation", "BRIC-À-BRAC": "bric_a_brac", "SOUVENIRS": "souvenirs",
     # L'atelier vend les outils de la quincaillerie : le comptoir `artisan` le dit déjà.
     "ATELIER": "artisan",
+    # --- Les commerces de l'auto (vague 2b).
+    "PNEUS BEAULIEU": "pneus", "PNEUS DESCHAMPS": "pneus",
+    "SOUDURE PELLETIER": "soudure", "SOUDURE": "soudure",
+    "TRANSMISSION": "moteurs", "MOTEURS": "moteurs",
+    "ATELIER 12": "pieces_auto", "PIÈCES D'AUTO": "pieces_auto", "PIÈCES USAGÉES": "pieces_usagees",
+    "PEINTURE AUTO": "peinture_auto", "SABLAGE AU JET": "peinture_auto",
+    "DÉBOSSELAGE": "carrosserie", "RADIATEURS": "carrosserie",
     # Ce qui n'est pas un comptoir : le fauteuil du barbier, le présentoir du journal.
     "BARBIER GILLES": "salon", "BARBIER WONG": "salon", "BARBIER": "salon", "COIFFURE JENNY": "salon",
     "COIFFURE LINE": "salon", "SALON LOUISE": "salon",
@@ -285,14 +318,9 @@ EN_ATTENTE: dict[str, str] = {
     "GROSSISTE": "le gros", "À LOUER": "rien : un local vide",
     "SOIERIE MEI": "un foulard de soie", "TISSUS ET SOIES": "un foulard de soie", "PARFUMERIE": "du parfum",
     "TATOUAGE": "un tatouage",
-    "ACIER DU NORD": "des pièces", "ATELIER 12": "les options du garage", "CIRE ET HUILE": "un lavage, une vidange",
-    "DÉBOSSELAGE": "réparer le char", "FERRAILLE": "revendre une épave", "LAVE-AUTO": "un lavage",
-    "MACHINERIE": "des pièces", "PEINTURE AUTO": "repeindre le char", "PIÈCES D'AUTO": "les options du garage",
-    "PIÈCES USAGÉES": "les options du garage", "PNEUS BEAULIEU": "des pneus d'hiver",
-    "PNEUS DESCHAMPS": "des pneus d'hiver", "RADIATEURS": "réparer le char", "SABLAGE AU JET": "repeindre le char",
-    "SILENCIEUX": "un silencieux", "SOUDURE PELLETIER": "le blindage", "TRANSMISSION": "le moteur gonflé",
-    "ÉLECTRIQUE": "des pièces", "SOUDURE": "le blindage", "MOTEURS": "le moteur gonflé", "USINAGE": "des pièces",
-    "FONDERIE": "des pièces",
+    "ACIER DU NORD": "des pièces", "CIRE ET HUILE": "un lavage, une vidange", "FERRAILLE": "revendre une épave",
+    "LAVE-AUTO": "un lavage", "MACHINERIE": "des pièces", "SILENCIEUX": "un silencieux", "ÉLECTRIQUE": "des pièces",
+    "USINAGE": "des pièces", "FONDERIE": "des pièces",
     "ARTISANAT": "de l'artisanat", "BOIS DE SCIAGE": "du bois",
     "FERBLANTIER": "de la tôle", "FERRONNERIE YU": "du fer forgé", "IMPRIMERIE": "des affiches",
     "MEUBLES GAGNON": "les meubles de la planque", "PALETTES": "des palettes", "PLOMBERIE": "de la plomberie",
@@ -340,12 +368,17 @@ def noms_des_enseignes() -> dict[str, set[str]]:
 
 
 def _compact(a) -> str:
-    """Un article, compact : `"t:<slug>"` une tenue, `"a:<slug>"` une arme (leur nom est celui de leur catalogue —
-    `_tenue`, `_arme`) ; une bouchée, son slug (son nom, et son effet, dans `noms` : `exporter`)."""
+    """Un article, compact : `"t:<slug>"` une tenue, `"a:<slug>"` une arme, `"p:<slug>"` une pièce du garage (leur
+    nom est celui de leur catalogue — `_tenue`, `_arme`, `_piece`), `"s:<slug>"` un service au char
+    (`SERVICES_AU_CHAR`) ; une bouchée, son slug (son nom, et son effet, dans `noms` : `exporter`)."""
     if a["tenue"]:
         return f"t:{a['tenue']}"
     if a["arme"]:
         return f"a:{a['arme']}"
+    if a.get("piece"):
+        return f"p:{a['piece']}"
+    if a.get("service"):
+        return f"s:{a['service']}"
     return a["slug"]
 
 
@@ -360,6 +393,7 @@ def exporter() -> dict:
     - `enseignes` — rayon : [noms]. ⚠️ Sans celles qui tomberaient au même endroit sans être nommées : le comptoir
       de leur propre famille (la TAVERNE sert `nuit`), ou un point qui n'est pas un comptoir (`POINTS` : le barbier,
       le Clairon) — le navigateur retombe sur le comptoir du genre (`Missions.comptoirDuPoint`) ;
+    - `services` — le nom de chaque service au char (`SERVICES_AU_CHAR`) ;
     - `tarifs` — les `BOUCHEES`, slug : [prix, PV, souffle].
 
     `Missions.rayons` le déplie une fois."""
@@ -375,5 +409,5 @@ def exporter() -> dict:
         for a in r["articles"]:
             if a["tarif"]:
                 noms[a["slug"]] = [a["nom"], a["effet"]] if a["effet"] else a["nom"]
-    return {"rayons": rayons, "noms": noms, "enseignes": par_rayon,
+    return {"rayons": rayons, "noms": noms, "enseignes": par_rayon, "services": dict(SERVICES_AU_CHAR),
             "tarifs": {slug: list(t) for slug, t in BOUCHEES.items()}}

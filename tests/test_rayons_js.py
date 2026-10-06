@@ -23,8 +23,11 @@ TROUVER = """
 
 
 def _attendu(slug: str) -> list[str]:
+    """Le menu SANS char garé devant : un commerce de l'auto le dit une fois, et ne propose ni pièce ni service."""
     comptoir = rayons.RAYONS.get(slug) or magasins.COMPTOIRS[slug]
-    return [a["nom"].upper() for a in comptoir["articles"]]
+    auto = [a for a in comptoir["articles"] if a.get("piece") or a.get("service")]
+    return (["GARE UN CHAR DEVANT LA PORTE"] if auto else []) + [a["nom"].upper() for a in comptoir["articles"]
+                                                                 if a not in auto]
 
 
 def test_chaque_enseigne_decidee_vend_son_rayon_au_comptoir(banc):
@@ -129,10 +132,10 @@ def test_aux_sports_action_achete_le_baton_et_au_magasin_de_bottes_on_les_enfile
             for (let k = 0; k < 240 && (!B.interieur || B.transition); k++) o.frame(1);
             if (!B.interieur) return null;
             if (B.transition) o.fondu();
+            B.partie.argent = 1000;                 // ⚠️ avant le menu : une ligne trop chère s'y écrit inactive
             const faire = function () { return L.Missions.menuDuPoint(point); };
             const menu = faire();
             menu.refaire = faire;
-            B.partie.argent = 1000;
             L.Hud.ouvrirMenu(menu);
             menu.curseur = 0;
             const out = { nom: B.interieur.nom, premier: menu.items[0].libelle, detail: menu.items[0].detail };
@@ -158,3 +161,57 @@ def test_aux_sports_action_achete_le_baton_et_au_magasin_de_bottes_on_les_enfile
     prix = next(t["prix"] for t in magasins.TENUES if t["slug"] == "bottes_hiver")
     assert b and b["nom"] == "BOTTES DE TRAVAIL" and b["premier"] == "BOTTES D'HIVER", b
     assert b["argent"] == 1000 - prix and b["rangees"] and b["pieds"] == "bottes_hiver", b
+
+
+def test_aux_pneus_on_pose_les_pneus_d_hiver_sur_le_char_gare_devant(banc):
+    """Vague 2b, au BOUTON, par une vraie porte renommée PNEUS DESCHAMPS : un char garé devant, ACTION sur la
+    première ligne — les pneus d'hiver sont payés au prix de Ti-Guy et posés SUR CE CHAR ; à la PEINTURE AUTO, le
+    même char repeint ; à la CARROSSERIE, cabossé, il repart neuf."""
+    r = banc("""function (L, o) {
+        %s
+        L.Jeu.commencer();
+        if (L.B.menu) L.Hud.fermerMenu();
+        const B = L.B, j = B.joueur, porte = portesDe(L, 'industrie')[0], point = pointDe(L, porte.interieur);
+        B.partie.heure = 0.5;
+        j.x = porte.x * 16 + 8; j.y = (porte.y + 1) * 16 + 10;
+        const v = L.Vehicules.creer('auto', j.x + 24, j.y + 8, 0, { etat: 'stationne', couleur: '#c0392b' });
+        L.Entites.indexer();
+        function premier(nom, avant) {
+            porte.nom = nom;
+            j.x = porte.x * 16 + 8; j.y = (porte.y + 1) * 16 + 10;
+            L.Jeu.entrer(porte);
+            for (let k = 0; k < 240 && (!B.interieur || B.transition); k++) o.frame(1);
+            if (!B.interieur) return null;
+            if (B.transition) o.fondu();
+            if (avant) avant();
+            B.partie.argent = 2000;                 // ⚠️ avant le menu : une ligne trop chère s'y écrit inactive
+            const faire = function () { return L.Missions.menuDuPoint(point); };
+            const menu = faire();
+            menu.refaire = faire;
+            L.Hud.ouvrirMenu(menu);
+            menu.curseur = 0;
+            const out = { libelle: menu.items[0].libelle, detail: menu.items[0].detail };
+            o.tape('KeyE', 2);
+            out.argent = B.partie.argent;
+            if (L.B.menu) L.Hud.fermerMenu();
+            L.Jeu.sortir();
+            for (let k = 0; k < 240 && (B.interieur || B.transition); k++) o.frame(1);
+            return out;
+        }
+        const pneus = premier('PNEUS DESCHAMPS');
+        pneus.pose = !!(v.mods && v.mods.pneus);
+        v.vole = true;
+        const peinture = premier('PEINTURE AUTO');
+        peinture.vole = v.vole;
+        const carrosserie = premier('DÉBOSSELAGE', function () { v.vie = Math.round(v.vieMax / 2); });
+        carrosserie.neuf = v.vie === v.vieMax;
+        return { pneus: pneus, peinture: peinture, carrosserie: carrosserie };
+    }""" % TROUVER)
+    from app import economie, garage
+    prix = next(q["prix"] for q in garage.PIECES if q["slug"] == "pneus")
+    p, pe, c = r["pneus"], r["peinture"], r["carrosserie"]
+    assert p and p["libelle"] == "POSER : PNEUS D'HIVER" and p["detail"] == f"{prix} $", p
+    assert p["argent"] == 2000 - prix and p["pose"], p
+    assert pe and pe["libelle"] == "REPEINDRE (EFFACE LE VOL)" and pe["argent"] == 2000 - economie.REPEINTE, pe
+    assert pe["vole"] is False, pe
+    assert c and c["libelle"] == "RÉPARER LE CHAR" and c["argent"] < 2000 and c["neuf"], c

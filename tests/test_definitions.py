@@ -549,9 +549,15 @@ def test_le_paquet_reste_leger(paquets):
     2 140 gzip). Aucun plafond n'avait la marge ; les définitions d'avant l'écran titre étaient à 238 octets gzip du
     leur. Proposé à Martin : relever la suite, une requête à part, ou relever les définitions — il a relevé la
     suite : elle part après l'écran titre, et sans elle un comptoir sert celui de son genre.
+
+    ⚠️ **LA VAGUE 2 DES COMPTOIRS, LE 6 OCT. 2026 — LA SUITE : 37 000 → 40 000 BRUTS, 15 500 → 16 500 GZIP, TRANCHÉ
+    PAR MARTIN.** Les tenues et les armes (2a) ont tenu en compactant le format (8 128 → 7 220 octets : un nom par
+    bouchée, plus de nom de rayon, plus les enseignes qui retombent d'elles-mêmes à leur famille) ; il restait 251
+    octets, et les options du garage, les meubles et le neuf (2b à 2d) en demandent environ 2 000. Proposé à Martin :
+    relever la suite, une requête à part pour les rayons — il a relevé : la suite part après l'écran titre.
     """
     for nom, brut_max, fil_max in (("definitions", 255_000, 57_500), ("carte", 600_000, 60_000),
-                                   ("musiques", 50_000, 10_000), ("suite", 37_000, 15_500)):
+                                   ("musiques", 50_000, 10_000), ("suite", 40_000, 16_500)):
         paquet = getattr(paquets, nom)
         mesures = {"definitions": MESURE_DU_PAQUET, "carte": MESURE_DE_LA_CARTE}
         qui = f" — qui a grossi : {_qui_a_grossi(paquet.corps, mesure=mesures[nom])}" if nom in mesures else ""

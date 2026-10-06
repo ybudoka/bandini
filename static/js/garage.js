@@ -87,18 +87,24 @@ const Garage = (function () {
                  return false;
                } };
     });
-    return donnees().pieces.map(function (q) {
-      const pose = !!(v.mods && v.mods[q.slug]);
-      return { libelle: 'POSER : ' + q.nom.toUpperCase(), detail: pose ? 'POSÉ' : q.prix + ' $',
-               actif: !pose && p.argent >= q.prix,
-               faire: function () {
-                 if (!payer(q.prix, q.nom.toUpperCase())) return false;
-                 const m = {}; m[q.slug] = true;
-                 poser(v, m);
-                 commenter(q.slug);
-                 return false;
-               } };
-    }).concat(lignes);
+    return donnees().pieces.map(function (q) { return itemPiece(v, q.slug, payer, 1, true); }).concat(lignes);
+  }
+
+  /** La ligne d'UNE piece pour le char `v` : chez Ti-Guy (`items`, qui la commente de sa voix), ou au comptoir d'un
+      commerce de l'auto (`Missions.menuComptoir`, le rayon des PNEUS : son prix fois `facteur`, et pas de Ti-Guy). */
+  function itemPiece(v, slug, payer, facteur, tiGuy) {
+    const p = B.partie, q = piece(slug);
+    if (!q || !accepte(v)) return null;
+    const prix = Math.round(q.prix * (facteur || 1)), pose = !!(v.mods && v.mods[q.slug]);
+    return { libelle: 'POSER : ' + q.nom.toUpperCase(), detail: pose ? 'POSÉ' : prix + ' $',
+             actif: !pose && p.argent >= prix,
+             faire: function () {
+               if (!payer(prix, q.nom.toUpperCase())) return false;
+               const m = {}; m[q.slug] = true;
+               poser(v, m);
+               if (tiGuy) commenter(q.slug);
+               return false;
+             } };
   }
 
   /** Ti-Guy commente la piece posee : sa voix, et la ligne a l'ecran. */
@@ -192,5 +198,5 @@ const Garage = (function () {
       || Police.autos().some(pres);
   }
 
-  return { accepte, poser, fiche, valeur, items, hiver, pointe, maj, klaxonDe, klaxonner, klaxonParSlug, notesDe, canettes, commenter };
+  return { accepte, poser, fiche, valeur, items, itemPiece, piece, hiver, pointe, maj, klaxonDe, klaxonner, klaxonParSlug, notesDe, canettes, commenter };
 })();

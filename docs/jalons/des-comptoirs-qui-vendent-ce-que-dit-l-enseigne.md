@@ -143,3 +143,26 @@ BIJOUTERIE, une chaîne en or ; chez PNEUS DESCHAMPS, des pneus d'hiver. Et un c
   nom par bouchée) ; `test_rayons_js.py` (les menus des 120 enseignes décidées, et au bouton par de vraies portes :
   le bâton aux SPORTS BEAULIEU au prix de Gus fois la marge, les bottes d'hiver payées, rangées et portées aux BOTTES
   DE TRAVAIL). Retirer du navigateur la lecture des tenues et des armes fait rougir les deux.
+
+### Vague 2b : les commerces de l'auto (livrée le 6 oct. 2026)
+
+- **7 rayons de plus**, et **13 enseignes** sorties de `EN_ATTENTE` : les PNEUS (BEAULIEU, DESCHAMPS) posent les pneus
+  d'hiver, la SOUDURE (et PELLETIER) le blindage et répare, les MOTEURS et la TRANSMISSION le moteur gonflé et la
+  nitro, l'ATELIER 12 et les PIÈCES D'AUTO les quatre pièces, les PIÈCES USAGÉES trois d'entre elles à 0,7 ; la
+  PEINTURE AUTO et le SABLAGE AU JET repeignent (le vol s'efface, comme chez Ti-Guy), le DÉBOSSELAGE et les RADIATEURS
+  réparent. Et le café de la salle d'attente, partout.
+- **Sur le char garé devant la porte** (`Missions.charDevant`, le même que Ti-Guy) : sans char, le menu le dit une
+  fois (« GARE UN CHAR DEVANT LA PORTE ») et ne propose que le café. Les pièces sont celles de `garage.PIECES`
+  (`Garage.itemPiece`, sortie de `Garage.items`), au prix de Ti-Guy fois la `marge` du rayon, sans la voix de Ti-Guy
+  (ce n'est pas lui au comptoir) ; réparer et repeindre, ceux de `menuGarage` (`itemServiceAuChar`).
+- **Deux sortes d'article de plus**, que seuls les rayons portent (`_piece`, `_service` : rien ne change dans
+  `magasins.Article`, que les définitions d'avant l'écran titre transportent) ; au format compact, `p:<slug>` et
+  `s:<slug>`, et le nom des services voyage une fois (`services`).
+- **Restent** : SILENCIEUX (aucune pièce ne fait taire un char), CIRE ET HUILE et le LAVE-AUTO (un lavage, avec les
+  services), la FERRAILLE (revendre une épave), et ce qui vend « des pièces » sans dire pour quoi (ACIER DU NORD,
+  MACHINERIE, ÉLECTRIQUE, USINAGE, FONDERIE).
+- **Le plafond de la suite** : 37 000 → 40 000 bruts, 15 500 → 16 500 gzip (Martin, 6 oct. 2026).
+- **Juges** : `test_rayons.py` (ce que fait chaque commerce de l'auto, toute pièce et tout service existent) ;
+  `test_rayons_js.py` (au bouton, par une vraie porte, un char garé devant : les pneus d'hiver posés sur CE char au
+  prix de Ti-Guy, la PEINTURE AUTO qui efface le vol, le DÉBOSSELAGE qui rend le char neuf ; sans char, la ligne qui
+  le dit). Les pièces retirées du menu font rougir le juge des pneus.

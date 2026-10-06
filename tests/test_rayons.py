@@ -58,7 +58,7 @@ def test_les_articles_des_rayons_existent_et_se_vendent():
         vus = [a["slug"] for a in rayon["articles"]]
         assert len(vus) == len(set(vus)), f"{slug} : un article en double"
         for a in rayon["articles"]:
-            cibles = [a["tarif"], a["arme"], a["tenue"]]
+            cibles = [a["tarif"], a["arme"], a["tenue"], a.get("piece"), a.get("service")]
             assert sum(1 for c in cibles if c) == 1, f"{slug}/{a['slug']} : une seule sorte d'article"
             if a["tarif"]:
                 assert (rayons.tarif(a["tarif"]) or 0) > 0, f"{slug}/{a['slug']} : pas de prix"
@@ -174,3 +174,23 @@ def test_une_bouchee_a_le_meme_nom_dans_tous_les_rayons():
             if a["tarif"]:
                 vus.setdefault(a["slug"], set()).add((a["nom"], a["effet"]))
     assert not {s: v for s, v in vus.items() if len(v) > 1}
+
+
+def test_les_commerces_de_l_auto_travaillent_sur_le_char():
+    """Vague 2b : les PNEUS posent des pneus d'hiver, la PEINTURE AUTO repeint, la CARROSSERIE répare — les pièces et
+    les gestes de Ti-Guy (`garage.PIECES`, `Missions.menuGarage`), sur le char garé devant la porte."""
+    from app import garage
+    def fait(nom):
+        r = rayons.RAYONS[rayons.ENSEIGNES[nom]]
+        return {a.get("piece") or a.get("service") for a in r["articles"]} - {None}
+    assert fait("PNEUS DESCHAMPS") == {"pneus"} and fait("PNEUS BEAULIEU") == {"pneus"}
+    assert fait("PEINTURE AUTO") == {"repeindre"} and fait("DÉBOSSELAGE") == {"reparer"}
+    assert "blindage" in fait("SOUDURE PELLETIER") and "moteur" in fait("TRANSMISSION")
+    pieces = {q["slug"] for q in garage.PIECES}
+    for slug, r in rayons.RAYONS.items():
+        for a in r["articles"]:
+            assert not a.get("piece") or a["piece"] in pieces, f"{slug}/{a['slug']}"
+            assert not a.get("service") or a["service"] in rayons.SERVICES_AU_CHAR, f"{slug}/{a['slug']}"
+    genres = rayons.noms_des_enseignes()
+    assert not [n for n in ("PNEUS DESCHAMPS", "PEINTURE AUTO") if n in rayons.EN_ATTENTE]
+    assert all("industrie" in genres[n] for n in ("PNEUS DESCHAMPS", "SOUDURE", "PIÈCES USAGÉES"))
