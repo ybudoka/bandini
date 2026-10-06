@@ -166,3 +166,19 @@ BIJOUTERIE, une chaîne en or ; chez PNEUS DESCHAMPS, des pneus d'hiver. Et un c
   `test_rayons_js.py` (au bouton, par une vraie porte, un char garé devant : les pneus d'hiver posés sur CE char au
   prix de Ti-Guy, la PEINTURE AUTO qui efface le vol, le DÉBOSSELAGE qui rend le char neuf ; sans char, la ligne qui
   le dit). Les pièces retirées du menu font rougir le juge des pneus.
+
+### Vague 2c : les meubles de la planque (livrée le 6 oct. 2026)
+
+- **4 rayons de plus**, et **5 enseignes** sorties de `EN_ATTENTE` : les RADIO-TV (DUMAS, KWOK) vendent le téléviseur
+  et le juke-box, MEUBLES GAGNON le sofa, le tapis tressé et la lampe à lave, le TAPISSIER le sofa et le tapis (à 0,9 :
+  c'est lui qui les refait), l'ANIMALERIE l'aquarium (poisson rouge inclus, il s'appelle Gérald).
+- **Livrés le lendemain à la planque de Rocco**, comme chez Gisèle aux puces : `Decoration.livrerA(piece, slug, prix,
+  carnet)`, sorti de `commander` (le catalogue Beausoleil y passe aussi). Un meuble commandé ici se dit « LIVRÉ
+  DEMAIN » au catalogue et aux puces, et l'inverse — c'est la même commande (`partie.meubles.planque`).
+- **Le nom et le prix voyagent avec les collections** (`/api/collections`, `decoration.MEUBLES`) : le rayon ne porte
+  que `m:<slug>`. Si les collections ne sont pas encore arrivées, la ligne dit « EN ROUTE », inactive.
+- **Restent** : LANTERNES FUNG (une lanterne pour la planque — un meuble neuf à dessiner), la PÉPINIÈRE et la
+  VAISSELLE CHOW (la planque n'a ni plantes ni vaisselle), l'ANIMALERIE garde l'idée de nourrir le chat pour plus tard.
+- **Juges** : `test_rayons.py` (qui vend quel meuble, et chacun a sa place à la planque) ; `test_rayons_js.py` (au
+  bouton, à la RADIO-TV DUMAS : le téléviseur payé au prix du catalogue, « LIVRÉ DEMAIN », livré le jour suivant).
+  Le meuble retiré du menu fait rougir les deux juges du banc.

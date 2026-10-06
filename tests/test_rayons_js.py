@@ -28,6 +28,7 @@ def _attendu(slug: str) -> list[str]:
     auto = [a for a in comptoir["articles"] if a.get("piece") or a.get("service")]
     return (["GARE UN CHAR DEVANT LA PORTE"] if auto else []) + [a["nom"].upper() for a in comptoir["articles"]
                                                                  if a not in auto]
+# ⚠️ Un meuble s'affiche sous le nom du catalogue Beausoleil (« LE TÉLÉVISEUR ») : `_meuble` le prend tel quel.
 
 
 def test_chaque_enseigne_decidee_vend_son_rayon_au_comptoir(banc):
@@ -215,3 +216,42 @@ def test_aux_pneus_on_pose_les_pneus_d_hiver_sur_le_char_gare_devant(banc):
     assert pe and pe["libelle"] == "REPEINDRE (EFFACE LE VOL)" and pe["argent"] == 2000 - economie.REPEINTE, pe
     assert pe["vole"] is False, pe
     assert c and c["libelle"] == "RÉPARER LE CHAR" and c["argent"] < 2000 and c["neuf"], c
+
+
+def test_a_la_radio_tv_on_achete_le_televiseur_et_il_arrive_le_lendemain_a_la_planque(banc):
+    """Vague 2c, au BOUTON, par une vraie porte renommée RADIO-TV DUMAS : le téléviseur payé au prix du catalogue,
+    commandé pour la planque de Rocco — livré le lendemain, comme chez Gisèle."""
+    r = banc("""function (L, o) {
+        %s
+        L.Jeu.commencer();
+        if (L.B.menu) L.Hud.fermerMenu();
+        for (let k = 0; k < 5 && !L.Collections.catalogue(); k++) o.frame(1);
+        const B = L.B, j = B.joueur, porte = portesDe(L, 'commerce')[0], point = pointDe(L, porte.interieur);
+        porte.nom = 'RADIO-TV DUMAS';
+        B.partie.heure = 0.5;
+        j.x = porte.x * 16 + 8; j.y = (porte.y + 1) * 16 + 10;
+        L.Jeu.entrer(porte);
+        for (let k = 0; k < 240 && (!B.interieur || B.transition); k++) o.frame(1);
+        if (!B.interieur) return null;
+        if (B.transition) o.fondu();
+        B.partie.argent = 2000;
+        const faire = function () { return L.Missions.menuDuPoint(point); };
+        const menu = faire();
+        menu.refaire = faire;
+        L.Hud.ouvrirMenu(menu);
+        menu.curseur = 0;
+        const out = { libelle: menu.items[0].libelle, detail: menu.items[0].detail };
+        o.tape('KeyE', 2);
+        out.argent = B.partie.argent;
+        out.apres = L.Missions.menuDuPoint(point).items[0].detail;
+        out.livreAujourdhui = L.Decoration.livre('planque', 'televiseur');
+        B.partie.jour += 1;
+        out.livreDemain = L.Decoration.livre('planque', 'televiseur');
+        if (L.B.menu) L.Hud.fermerMenu();
+        return out;
+    }""" % TROUVER)
+    from app import decoration
+    prix = next(m["prix"] for m in decoration.MEUBLES if m["slug"] == "televiseur")
+    assert r and r["libelle"] == "LE TÉLÉVISEUR" and r["detail"] == f"{prix} $", r
+    assert r["argent"] == 2000 - prix and r["apres"] == "LIVRÉ DEMAIN", r
+    assert not r["livreAujourdhui"] and r["livreDemain"], r

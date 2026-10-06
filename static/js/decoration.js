@@ -265,12 +265,19 @@ const Decoration = (function () {
 
   /** Commander `slug` pour la planque où l'on est : payé tout de suite, livré le lendemain. */
   function commander(slug) {
-    const p = B.partie, piece = B.interieur && B.interieur.slug, m = meuble(slug);
+    const piece = B.interieur && B.interieur.slug;
+    return livrerA(piece, slug, meuble(slug) && meuble(slug).prix, 'COMMANDÉ AU CATALOGUE');
+  }
+
+  /** Acheter `slug` au prix `prix` et le faire livrer le lendemain dans la planque `piece` : le catalogue (la planque
+      où l'on est), et le comptoir d'un magasin de meubles (`Missions.menuComptoir` : celle de Rocco). */
+  function livrerA(piece, slug, prix, carnet) {
+    const p = B.partie, m = meuble(slug);
     if (!m || !piece || !places(piece) || commande(piece, slug)) return false;
-    if (!Missions.payer(m.prix, m.nom)) return false;
+    if (!Missions.payer(prix, m.nom)) return false;
     commandes(piece)[slug] = { jour: p.jour };
     Hud.message(m.nom + ' — LIVRÉ DEMAIN', 160);
-    Histoire.noter('COMMANDÉ AU CATALOGUE : ' + m.nom, false);
+    Histoire.noter(carnet + ' : ' + m.nom, false);
     return true;
   }
 
@@ -291,6 +298,6 @@ const Decoration = (function () {
 
   function oublier() { if (joue) Son.Radio.arreter(); joue = false; }
 
-  return { DESSINS, donnees, pose, meubles, trophees, places, presents, livre, commande, meubler, jukebox, maj, menuCatalogue,
-           commander, nouveauJour, oublier };
+  return { DESSINS, donnees, pose, meubles, meuble, trophees, places, presents, livre, commande, meubler, jukebox, maj,
+           menuCatalogue, commander, livrerA, nouveauJour, oublier };
 })();

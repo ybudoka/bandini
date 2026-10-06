@@ -27,7 +27,7 @@ la pièce et son mobilier. Le rayon ne change que ce qu'on achète.
 
 from __future__ import annotations
 
-from . import armes, devantures, economie, garage
+from . import armes, decoration, devantures, economie, garage
 from .magasins import _CINEMA, TENUES, _art
 
 #: Les bouchées que seul un rayon vend : (prix, PV, souffle). ⚠️ Pas dans `economie.TARIFS` : elles voyagent dans
@@ -111,6 +111,13 @@ def _piece(slug: str):
     """Une pièce de Ti-Guy (`garage.PIECES`), posée sur le char garé devant la porte : son prix fois la `marge`."""
     q = next(q for q in garage.PIECES if q["slug"] == slug)
     return {**_art(slug, q["nom"]), "piece": slug}
+
+
+def _meuble(slug: str):
+    """Un meuble du catalogue Beausoleil (`decoration.MEUBLES`), livré le lendemain à la planque de Rocco, comme
+    chez Gisèle aux puces : son prix fois la `marge` du rayon."""
+    m = next(m for m in decoration.MEUBLES if m["slug"] == slug)
+    return {**_art(slug, m["nom"]), "meuble": slug}
 
 
 #: Ce qu'un commerce de l'auto fait au char garé devant, comme Ti-Guy (`Missions.menuGarage`) : le nom de la ligne.
@@ -222,6 +229,13 @@ RAYONS: dict[str, dict] = {
                              marge=0.7),
     "peinture_auto": _rayon("La peinture", _service("repeindre"), _CAFE),
     "carrosserie": _rayon("La carrosserie", _service("reparer"), _CAFE),
+    # --- Vague 2c : les meubles de la planque, livrés le lendemain (`Decoration`), chez qui les vend.
+    "radio_tv": _rayon("La radio-télé", _meuble("televiseur"), _meuble("jukebox")),
+    "meubles": _rayon("Les meubles", _meuble("sofa"), _meuble("tapis_tresse"), _meuble("lampe_lave")),
+    # Le tapissier refait les sofas : le sien est un peu moins cher.
+    "tapissier": _rayon("Le tapissier", _meuble("sofa"), _meuble("tapis_tresse"), marge=0.9),
+    # L'aquarium : poisson rouge inclus, il s'appelle Gérald. Et la nourriture du chat, un jour.
+    "animalerie": _rayon("L'animalerie", _meuble("aquarium")),
 }
 
 #: Le rayon de chaque enseigne décidée. ⚠️ Écrit nom par nom : rien n'est déduit du genre.
@@ -293,6 +307,9 @@ ENSEIGNES: dict[str, str] = {
     "ATELIER 12": "pieces_auto", "PIÈCES D'AUTO": "pieces_auto", "PIÈCES USAGÉES": "pieces_usagees",
     "PEINTURE AUTO": "peinture_auto", "SABLAGE AU JET": "peinture_auto",
     "DÉBOSSELAGE": "carrosserie", "RADIATEURS": "carrosserie",
+    # --- Les meubles de la planque (vague 2c).
+    "RADIO-TV DUMAS": "radio_tv", "RADIO-TV KWOK": "radio_tv",
+    "MEUBLES GAGNON": "meubles", "TAPISSIER": "tapissier", "ANIMALERIE": "animalerie",
     # Ce qui n'est pas un comptoir : le fauteuil du barbier, le présentoir du journal.
     "BARBIER GILLES": "salon", "BARBIER WONG": "salon", "BARBIER": "salon", "COIFFURE JENNY": "salon",
     "COIFFURE LINE": "salon", "SALON LOUISE": "salon",
@@ -306,14 +323,12 @@ POINTS = ("salon", "journal")
 #: Les enseignes qui vendent ENCORE au comptoir de leur famille : ce qu'elles vendront, et à quelle vague.
 #: ⚠️ Cette table ne doit que rapetisser : chaque vague en sort des lignes vers `ENSEIGNES`.
 EN_ATTENTE: dict[str, str] = {
-    # --- Vague 2 : les marchandises (2b les options du garage, 2c les meubles de la planque, 2d le neuf qui se
-    # dessine — Martin, 6 oct. 2026). Ce qui demande une mécanique neuve (le bouquet, le chat, le vélo) suit les
-    # services.
+    # --- Vague 2 : les marchandises (2d le neuf qui se dessine — Martin, 6 oct. 2026). Ce qui demande une
+    # mécanique neuve (le bouquet, le vélo, le cerf-volant) suit les services.
     "BIJOUTERIE": "des bijoux à porter", "BIJOUX CHEUNG": "des bijoux à porter",
     "FLEURISTE": "un bouquet", "FLEURISTE MEI": "un bouquet", "FLEURISTE ROSE": "un bouquet",
-    "ANIMALERIE": "de quoi nourrir le chat", "RADIO-TV DUMAS": "la déco de la planque",
-    "RADIO-TV KWOK": "la déco de la planque", "JOUETS ET TRAINS": "des jouets", "CERFS-VOLANTS": "un cerf-volant",
-    "LANTERNES FUNG": "la déco de la planque", "LOCATION VÉLOS": "un vélo", "PLANCHES": "une planche",
+    "JOUETS ET TRAINS": "des jouets", "CERFS-VOLANTS": "un cerf-volant",
+    "LANTERNES FUNG": "une lanterne pour la planque", "LOCATION VÉLOS": "un vélo", "PLANCHES": "une planche",
     "IMPORT YIP": "des importations", "ENTREPÔT 7": "le gros", "PRÊT SUR GAGES": "racheter, revendre",
     "GROSSISTE": "le gros", "À LOUER": "rien : un local vide",
     "SOIERIE MEI": "un foulard de soie", "TISSUS ET SOIES": "un foulard de soie", "PARFUMERIE": "du parfum",
@@ -323,8 +338,8 @@ EN_ATTENTE: dict[str, str] = {
     "USINAGE": "des pièces", "FONDERIE": "des pièces",
     "ARTISANAT": "de l'artisanat", "BOIS DE SCIAGE": "du bois",
     "FERBLANTIER": "de la tôle", "FERRONNERIE YU": "du fer forgé", "IMPRIMERIE": "des affiches",
-    "MEUBLES GAGNON": "les meubles de la planque", "PALETTES": "des palettes", "PLOMBERIE": "de la plomberie",
-    "PÉPINIÈRE": "les plantes de la planque", "SERRURIER": "des clés, un crochet", "TAPISSIER": "les meubles de la planque",
+    "PALETTES": "des palettes", "PLOMBERIE": "de la plomberie",
+    "PÉPINIÈRE": "les plantes de la planque", "SERRURIER": "des clés, un crochet", 
     "VAISSELLE CHOW": "la vaisselle de la planque", "ANTIQUAIRE": "des antiquités", "ENCADREUR": "un cadre",
     "VITRIER": "une vitre", "SCIERIE": "du bois", "MENUISERIE": "du bois",
     "ACCASTILLAGE": "le gréement du bateau", "APPÂTS ET LIGNES": "la canne et les appâts", "APPÂTS": "des appâts",
@@ -370,7 +385,7 @@ def noms_des_enseignes() -> dict[str, set[str]]:
 def _compact(a) -> str:
     """Un article, compact : `"t:<slug>"` une tenue, `"a:<slug>"` une arme, `"p:<slug>"` une pièce du garage (leur
     nom est celui de leur catalogue — `_tenue`, `_arme`, `_piece`), `"s:<slug>"` un service au char
-    (`SERVICES_AU_CHAR`) ; une bouchée, son slug (son nom, et son effet, dans `noms` : `exporter`)."""
+    (`SERVICES_AU_CHAR`), `"m:<slug>"` un meuble (son nom et son prix voyagent avec les collections : `Decoration`) ; une bouchée, son slug (son nom, et son effet, dans `noms` : `exporter`)."""
     if a["tenue"]:
         return f"t:{a['tenue']}"
     if a["arme"]:
@@ -379,6 +394,8 @@ def _compact(a) -> str:
         return f"p:{a['piece']}"
     if a.get("service"):
         return f"s:{a['service']}"
+    if a.get("meuble"):
+        return f"m:{a['meuble']}"
     return a["slug"]
 
 

@@ -58,7 +58,7 @@ def test_les_articles_des_rayons_existent_et_se_vendent():
         vus = [a["slug"] for a in rayon["articles"]]
         assert len(vus) == len(set(vus)), f"{slug} : un article en double"
         for a in rayon["articles"]:
-            cibles = [a["tarif"], a["arme"], a["tenue"], a.get("piece"), a.get("service")]
+            cibles = [a["tarif"], a["arme"], a["tenue"], a.get("piece"), a.get("service"), a.get("meuble")]
             assert sum(1 for c in cibles if c) == 1, f"{slug}/{a['slug']} : une seule sorte d'article"
             if a["tarif"]:
                 assert (rayons.tarif(a["tarif"]) or 0) > 0, f"{slug}/{a['slug']} : pas de prix"
@@ -194,3 +194,20 @@ def test_les_commerces_de_l_auto_travaillent_sur_le_char():
     genres = rayons.noms_des_enseignes()
     assert not [n for n in ("PNEUS DESCHAMPS", "PEINTURE AUTO") if n in rayons.EN_ATTENTE]
     assert all("industrie" in genres[n] for n in ("PNEUS DESCHAMPS", "SOUDURE", "PIÈCES USAGÉES"))
+
+
+def test_les_meubles_de_la_planque_se_vendent_en_ville():
+    """Vague 2c : le téléviseur à la RADIO-TV, le sofa chez MEUBLES GAGNON, l'aquarium à l'ANIMALERIE — les meubles du
+    catalogue Beausoleil (`decoration.MEUBLES`), chacun avec sa place à la planque de Rocco (sinon la livraison n'a
+    nulle part où le poser)."""
+    from app import decoration
+    def meubles(nom):
+        r = rayons.RAYONS[rayons.ENSEIGNES[nom]]
+        return {a.get("meuble") for a in r["articles"]} - {None}
+    assert meubles("RADIO-TV DUMAS") == {"televiseur", "jukebox"} == meubles("RADIO-TV KWOK")
+    assert "sofa" in meubles("MEUBLES GAGNON") and "sofa" in meubles("TAPISSIER")
+    assert meubles("ANIMALERIE") == {"aquarium"}
+    for slug, r in rayons.RAYONS.items():
+        for a in r["articles"]:
+            if a.get("meuble"):
+                assert a["meuble"] in decoration.PLACES["planque"], f"{slug}/{a['slug']}"

@@ -1565,6 +1565,11 @@ const Missions = (function () {
       comptoirs[s] = { nom: '', marge: x[1] || 1, rabais: x[2] || 1, articles: x[0].map(function (a) {
         // Une tenue (`t:`) ou une arme (`a:`) : son nom est celui de son catalogue (`rayons._compact`).
         const sorte = a.charAt(1) === ':' ? a.charAt(0) : null;
+        // Un meuble (`m:`) : son nom et son prix voyagent avec les collections (`Decoration`), lus au comptoir.
+        if (sorte === 'm') {
+          return { slug: a.slice(2), nom: a.slice(2), tarif: null, gain_pv: null, gain_souffle: null, effet: null,
+                   arme: null, tenue: null, journal: false, meuble: a.slice(2) };
+        }
         // Une piece du garage (`p:`) ou un service au char (`s:`), sur le char gare devant la porte.
         if (sorte === 'p' || sorte === 's') {
           const slug = a.slice(2), q = sorte === 'p' && Garage.piece(slug);
@@ -1629,6 +1634,7 @@ const Missions = (function () {
         if (it) items.push(it);
         return;
       }
+      if (a.meuble) return items.push(itemMeuble(a, (comptoir.marge || 1) * rabais(cle)));
       if (a.arme) return items.push(itemArme(a, (comptoir.marge || 1) * rabais(cle)));
       if (a.tenue) return items.push(itemTenue(a, (comptoir.rabais || 1) * rabais(cle)));
       items.push(itemBouchee(a, null, rabais(cle)));
@@ -1663,6 +1669,18 @@ const Missions = (function () {
                if (a.journal) { lireLeJournal(); return true; }
                return false;
              } };
+  }
+
+  /** Un meuble au comptoir d'un magasin (la RADIO-TV, MEUBLES GAGNON, l'ANIMALERIE) : le prix du catalogue Beausoleil
+      fois `facteur`, livre le lendemain a la planque de Rocco (`Decoration.livrerA`), comme chez Gisele aux puces.
+      ⚠️ Le catalogue voyage avec les collections : pas encore arrive, la ligne attend le camion. */
+  function itemMeuble(a, facteur) {
+    const p = B.partie, m = Decoration.meuble(a.meuble);
+    if (!m) return { libelle: a.meuble.toUpperCase(), detail: 'EN ROUTE', actif: false };
+    const prix = Math.round(m.prix * facteur), deja = Decoration.commande('planque', m.slug);
+    return { libelle: m.nom, detail: deja ? (Decoration.livre('planque', m.slug) ? 'À TOI' : 'LIVRÉ DEMAIN') : prix + ' $',
+             texte: m.texte, actif: !deja && p.argent >= prix,
+             faire: function () { Decoration.livrerA('planque', m.slug, prix, 'ACHETÉ EN VILLE'); return false; } };
   }
 
   /** Un service au char gare devant, chez un commerce de l'auto : reparer (la CARROSSERIE, la SOUDURE) ou repeindre
