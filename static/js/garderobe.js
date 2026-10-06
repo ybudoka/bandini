@@ -516,6 +516,15 @@ const Garderobe = (function () {
       pose(g, milieu, t0, 'a'); pose(g, milieu + 1, t0, 'a');
       for (let y = t0 + 1; y <= t0 + 2; y++) if ('cCwQ'.indexOf(lit(g, milieu, y)) >= 0) pose(g, milieu, y, 'a');
     }
+    // Le tatouage (le TATOUAGE) : une ancre d'encre sur le bras gauche, de face et de profil.
+    if (a.tatouage && vue !== 'haut') {
+      // La premiere peau du bras sous le col (la main, au bout de la manche) : un pixel d'encre.
+      for (let y = t0 + 1; y <= t0 + 5; y++) {
+        const r = g[y] || [];
+        const x = vue === 'cote' ? r.lastIndexOf('s') : r.indexOf('s');
+        if (x >= 0) { r[x] = 'e'; break; }
+      }
+    }
     // La chaine en or (la bijouterie) : un V d'or au col, de face ; une maille au cou, de profil.
     if (a.chaine && vue === 'bas') {
       pose(g, xa + 1, t0, 'y'); pose(g, xb - 1, t0, 'y');
@@ -748,7 +757,7 @@ const Garderobe = (function () {
     // Le cou et les yeux (la bijouterie, l'opticien) : des accessoires, comme la ceinture.
     const enPlus = [taille, place('cou', 'cou'), place('yeux', 'yeux')].reduce(function (acc, t) {
       return t ? acc.concat(t.piece.accessoires || []) : acc;
-    }, []);
+    }, []).concat(partie.tatouage ? ['tatouage'] : []);         // le tatouage du TATOUAGE (il reste)
     const piece = (corps && corps.piece) || {};
     return {
       squelette: 'homme', peau: pal.s, cheveux: partie.cheveux || pal.h, coiffure: 'courte',

@@ -32,6 +32,9 @@ TROPHEES: tuple[dict, ...] = (
     {"slug": "mur_enseignes", "nom": "LE MUR DES ENSEIGNES", "famille": "enseignes", "palier": 1},
     # L'album des lieux complet (le photographe, `photos.ALBUM`) : dix cartes postales sous verre.
     {"slug": "cadre_lieux", "nom": "L’ALBUM DES LIEUX", "famille": "lieux", "palier": 10},
+    # Les collections des comptoirs complètes (`rayons.COLLECTIONS`, vague 4c) : leur étagère, au mur d'en arrière.
+    {"slug": "discotheque", "nom": "LA DISCOTHÈQUE", "famille": "disques", "palier": 12},
+    {"slug": "bibliotheque", "nom": "LA BIBLIOTHÈQUE", "famille": "livres", "palier": 12},
 )
 
 #: Le catalogue Beausoleil. `texte` : la ligne du catalogue (une ligne du menu, 44 caractères au plus) — le ton
@@ -74,7 +77,8 @@ MEUBLES: tuple[dict, ...] = (
 SEULEMENT: dict[str, tuple[str, ...]] = {"portrait": ("planque",), "cadre_lieux": ("planque",),
                                          # La pièce d'en arrière (vague 4b) : ce qui se vend en ville.
                                          **{s: ("planque_arriere",) for s in ("lanterne", "ficus", "vaisselier",
-                                                                               "tableau", "horloge", "miroir")}}
+                                                                               "tableau", "horloge", "miroir",
+                                                                               "discotheque", "bibliotheque")}}
 #: Les planques où va ce qui n'a pas de `SEULEMENT` : celle de Rocco et le chalet.
 PARTOUT: tuple[str, ...] = ("planque", "chalet")
 
@@ -116,6 +120,8 @@ PLACES: dict[str, dict[str, dict]] = {
     "planque_arriere": {
         "tableau": {"x": 2, "y": 1}, "miroir": {"x": 5, "y": 1}, "lanterne": {"x": 6, "y": 1},
         "horloge": {"x": 1, "y": 2}, "vaisselier": {"x": 7, "y": 2}, "ficus": {"x": 7, "y": 4},
+        # Les étagères des collections (vague 4c), aux deux derniers bouts de mur.
+        "discotheque": {"x": 1, "y": 1}, "bibliotheque": {"x": 4, "y": 1},
     },
 }
 
@@ -128,6 +134,7 @@ POSES: dict[str, str] = {
     "jukebox": "sol", "aquarium": "sol", "sofa": "sol", "televiseur": "sol", "tapis_tresse": "plat",
     "etagere_bebelles": "sol", "mur_enseignes": "sol", "cadre_lieux": "mur", "portrait": "mur",
     "tableau": "mur", "miroir": "mur", "lanterne": "mur", "horloge": "sol", "vaisselier": "sol", "ficus": "sol",
+    "discotheque": "mur", "bibliotheque": "mur",
 }
 SOLIDES = frozenset(s for s, p in POSES.items() if p == "sol")
 

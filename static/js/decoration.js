@@ -197,6 +197,22 @@ const Decoration = (function () {
     px(ctx, '#a8c8d8', 2, 1, 6, 11); px(ctx, '#a8c8d8', 1, 3, 8, 7);
     px(ctx, '#e8f4fa', 3, 2, 2, 4); px(ctx, '#8ab0c8', 5, 7, 3, 4);                    // le reflet
   } };
+  // Les étagères des collections des comptoirs (vague 4c) : les douze disques, les douze livres, au mur.
+  function peindreEtagere(ctx, dos) {
+    px(ctx, '#4a2e18', 0, 0, 16, 12); px(ctx, '#6a4424', 0, 0, 16, 1); px(ctx, '#2a1a10', 1, 1, 14, 10);
+    px(ctx, '#8a5a30', 1, 6, 14, 1); px(ctx, '#8a5a30', 1, 11, 14, 1);                // les deux tablettes
+    for (let i = 0; i < 12; i++) {
+      const x = 2 + (i % 6) * 2, y = i < 6 ? 2 : 7;
+      px(ctx, dos[i % dos.length], x, y, 1, 4);                                       // les dos, debout
+    }
+  }
+  DESSINS.discotheque = { w: 16, h: 12, ancre: [8, 14], r: 0, solide: false, peindre: function (ctx) {
+    // Des pochettes de toutes les couleurs (des noires disparaissaient sur le fond de l'étagère).
+    peindreEtagere(ctx, ['#e8e2d0', '#c0392b', '#d8a83a', '#2980b9', '#8a8f94', '#2e7d4f']);
+  } };
+  DESSINS.bibliotheque = { w: 16, h: 12, ancre: [8, 14], r: 0, solide: false, peindre: function (ctx) {
+    peindreEtagere(ctx, ['#7a2a22', '#2e5a2a', '#1e3a6e', '#b8902c', '#5a3a78', '#a8522a']);   // des reliures
+  } };
   // L'ÉTAGÈRE DES BEBELLES (vague 3) : trois tablettes de quatre, en pin foncé, contre le mur du bas — deux tuiles.
   // ⚠️ Sa POSE est l'étagère elle-même : un bit par bebelle trouvée, dans l'ordre du catalogue
   // (`Collections.masqueBebelles`) — chaque étagère différente se cuit une fois, comme une pose de manège.
@@ -260,7 +276,8 @@ const Decoration = (function () {
     for (const t of trophees()) {
       const n = t.famille === 'bebelles' ? Collections.nombreBebelles() : t.famille === 'cartes' ? Collections.nombre()
         : t.famille === 'enseignes' && typeof Devisser !== 'undefined' ? Devisser.nombre()
-        : t.famille === 'lieux' && typeof Photos !== 'undefined' ? Photos.album().a.length : 0;
+        : t.famille === 'lieux' && typeof Photos !== 'undefined' ? Photos.album().a.length
+        : ((B.partie && B.partie.collectionsDesComptoirs) || {})[t.famille] || 0;
       if (n >= t.palier && ici[t.slug]) out.push(t.slug);
     }
     for (const m of meubles()) if (livre(piece, m.slug) && ici[m.slug]) out.push(m.slug);

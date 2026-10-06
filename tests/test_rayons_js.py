@@ -670,3 +670,36 @@ def test_la_lanterne_va_dans_la_piece_d_en_arriere(banc):
     assert r["arriere"] == ["lanterne"] and "lanterne" not in r["planque"], r
     assert r["invite"] == "LA PIÈCE D’EN ARRIÈRE" and r["piece"] == "planque_arriere", r
     assert r["decors"] == ["lanterne"], r
+
+
+def test_les_disques_un_a_la_fois_et_le_tatouage(banc):
+    """Vague 4c, au BOUTON : chez DISQUES VOGUE, le premier titre, puis le deuxième — dans l'ordre ; la collection
+    complète pose la discothèque à la pièce d'en arrière. Au TATOUAGE, la police oublie ta face, et l'encre se voit."""
+    r = banc("""function (L, o) {
+        %s
+        L.Jeu.commencer();
+        if (L.B.menu) L.Hud.fermerMenu();
+        for (let k = 0; k < 5 && !L.Collections.catalogue(); k++) o.frame(1);
+        const B = L.B, j = B.joueur, p = B.partie, out = {};
+        let pt = ouvrir(L, o, 'savoir', 'DISQUES VOGUE', 'journal');
+        p.argent = 500;
+        const titres = B.defs.rayons.collections.disques;
+        out.un = presser(L, o, pt, titres[0].toUpperCase());
+        out.deux = presser(L, o, pt, titres[1].toUpperCase());
+        out.n = p.collectionsDesComptoirs.disques;
+        out.avant = L.Decoration.presents('planque_arriere').indexOf('discotheque') >= 0;
+        p.collectionsDesComptoirs.disques = 12;
+        out.apres = L.Decoration.presents('planque_arriere').indexOf('discotheque') >= 0;
+        out.fini = L.Missions.menuDuPoint(pt).items.map(function (q) { return q.libelle; });
+        sortir(L, o);
+        pt = ouvrir(L, o, 'mode', 'TATOUAGE', 'emplettes');
+        p.argent = 500; B.recherche.etoiles = 2; B.recherche.chaleur = 300;
+        out.tatou = presser(L, o, pt, 'TE FAIRE TATOUER');
+        out.etoiles = B.recherche.etoiles; out.encre = j.tenue.accessoires.indexOf('tatouage') >= 0;
+        out.encore = L.Missions.menuDuPoint(pt).items[0].libelle;
+        return out;
+    }""" % ENTRER)
+    assert r["un"]["curseur"] >= 0 and r["deux"]["curseur"] >= 0 and r["n"] == 2, r
+    assert not r["avant"] and r["apres"] and "TU LES AS TOUS" in r["fini"], r
+    assert r["tatou"]["curseur"] >= 0 and r["etoiles"] == 0 and r["encre"], r
+    assert r["encore"] == "TU AS DÉJÀ LE TIEN", r

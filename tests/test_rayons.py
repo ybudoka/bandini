@@ -151,7 +151,7 @@ def test_les_tenues_et_les_armes_se_vendent_chez_qui_le_dit():
     assert not vend("MODISTE") & {"sandwich", "chips"}
     genres = rayons.noms_des_enseignes()
     reste = sorted(n for n in rayons.EN_ATTENTE if "mode" in genres[n])
-    assert reste == ["PARFUMERIE", "TATOUAGE"], reste
+    assert reste == ["PARFUMERIE"], reste
 
 
 def test_le_format_compact_dit_la_sorte_de_chaque_article():
@@ -303,3 +303,19 @@ def test_ce_qui_se_branche_sur_l_existant():
     assert services("À LOUER") == {"replique"}
     genres = rayons.noms_des_enseignes()
     assert not [n for n in rayons.EN_ATTENTE if genres[n] & {"industrie", "marine"}], "l'industrie et la marine attendent"
+
+
+def test_les_collections_des_comptoirs_et_le_tatouage():
+    """Vague 4c (Martin, 6 oct. 2026 : « collections + effets ») : douze disques, douze livres, chaque collection
+    complète pose son étagère dans la pièce d'en arrière ; le tatouage est un accessoire (il se dessine)."""
+    from app import decoration, garderobe
+    assert all(len(v) == 12 and len(set(v)) == 12 for v in rayons.COLLECTIONS.values())
+    assert all(len(t) <= 34 for v in rayons.COLLECTIONS.values() for t in v)
+    paliers = {t["famille"]: t["palier"] for t in decoration.TROPHEES}
+    assert paliers["disques"] == paliers["livres"] == 12
+    assert "tatouage" in garderobe.ACCESSOIRES
+    def services(nom):
+        return {a.get("service") for a in rayons.RAYONS[rayons.ENSEIGNES[nom]]["articles"]} - {None}
+    assert services("DISQUES VOGUE") == {"disques"} and services("LIBRAIRIE CHUNG") == {"livres"}
+    assert services("TATOUAGE") == {"tatouage"}
+    assert sorted(rayons.EN_ATTENTE) == ["FLEURISTE", "FLEURISTE MEI", "FLEURISTE ROSE", "JOUETS ET TRAINS", "PARFUMERIE"]

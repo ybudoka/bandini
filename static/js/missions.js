@@ -1608,7 +1608,7 @@ const Missions = (function () {
       }) };
     });
     r.deplie = { enseignes: enseignes, rayons: comptoirs, reglages: r.reglages || {}, taxi: r.taxi || [],
-                 repliques: r.repliques || {} };
+                 repliques: r.repliques || {}, collections: r.collections || {} };
     return r.deplie;
   }
 
@@ -1878,6 +1878,34 @@ const Missions = (function () {
                   actif: cout > 0 && p.argent >= cout,
                   faire: function () { payer(cout, 'LE CHANTIER'); bateau.vie = bateau.vieMax; return false; } }];
       }
+      case 'disques': case 'livres': {
+        // UNE COLLECTION DU COMPTOIR (`rayons.COLLECTIONS`) : le titre suivant qu'on n'a pas, dans l'ordre — rien au de.
+        const titres = (r && r.collections && r.collections[a.service]) || [];
+        p.collectionsDesComptoirs = p.collectionsDesComptoirs || {};
+        const n = p.collectionsDesComptoirs[a.service] || 0, titre = titres[n];
+        const lignes = [{ libelle: a.service === 'disques' ? 'TES DISQUES' : 'TES LIVRES', detail: n + ' / ' + titres.length, actif: false }];
+        if (!titre) return lignes.concat([{ libelle: 'TU LES AS TOUS', actif: false }]);
+        return lignes.concat([{ libelle: titre.toUpperCase(), detail: prix + ' $', actif: p.argent >= prix,
+                                faire: function () {
+                                  payer(prix, a.service === 'disques' ? 'LE DISQUE' : 'LE LIVRE');
+                                  p.collectionsDesComptoirs[a.service] = n + 1;
+                                  if (n + 1 === titres.length) Hud.message('LA COLLECTION EST COMPLÈTE — À LA PLANQUE DEMAIN', 220);
+                                  return false;
+                                } }]);
+      }
+      case 'tatouage':
+        // LE TATOUAGE : une tete neuve pour la police, comme la coupe (`menuSalon`), et il reste (`partie.tatouage`).
+        if (p.tatouage) return [{ libelle: 'TU AS DÉJÀ LE TIEN', actif: false }];
+        return [{ libelle: libelle, detail: prix + ' $', actif: p.argent >= prix,
+                  faire: function () {
+                    payer(prix, 'LE TATOUAGE');
+                    p.tatouage = true;
+                    j.tenue = Garderobe.duJoueur(p, B.defs);
+                    Police.remiseAZero();
+                    Police.onNeTeReconnaitPlus();
+                    Hud.message('« MAMAN », SUR LE BRAS', 180);
+                    return false;
+                  } }];
       case 'sic_bo':
         return [{ libelle: libelle, actif: true, faire: function () { Hud.ouvrirMenu(Tables.menu('sic_bo')); return true; } }];
       case 'machine':

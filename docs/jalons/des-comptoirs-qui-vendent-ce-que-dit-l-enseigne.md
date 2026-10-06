@@ -383,3 +383,20 @@ voulait un comptoir.
   `test_rayons_js.py` (au bouton : la lanterne achetée chez LANTERNES FUNG, livrée le lendemain dans la pièce d'en
   arrière et pas dans la planque ; par la vraie planque, l'invite du passage, la pièce, et la lanterne au mur). Les six
   dessins regardés dans Chromium à ×8 avant la livraison.
+
+### Vague 4c, 1re partie : les collections, le tatouage (livrée le 6 oct. 2026)
+
+- **Deux collections de comptoir** (`rayons.COLLECTIONS`, Martin : « les disques et les livres en collections, comme
+  les bebelles ») : douze disques chez DISQUES VOGUE et MUSIQUE LAROSE (12 $), douze livres dans les trois librairies
+  (10 $), vendus UN À LA FOIS, dans l'ordre — le suivant qu'on n'a pas, rien au dé (`partie.collectionsDesComptoirs`).
+  Des titres inventés (« Rocco chante Noël », « Mémoires d'un parcomètre »). Chaque collection complète pose son
+  étagère au mur de la pièce d'en arrière (`decoration.TROPHEES` : la discothèque, la bibliothèque, palier 12).
+- **Le TATOUAGE** (80 $) : une tête neuve pour la police (`remiseAZero`, `onNeTeReconnaitPlus`, comme la coupe), et il
+  reste (`partie.tatouage`) — un pixel d'encre sur la main, de face et de profil (l'accessoire `tatouage`, ajouté au BOUT
+  de `garderobe.ACCESSOIRES`). Une fois tatoué, la ligne dit « TU AS DÉJÀ LE TIEN ».
+- **Les CERFS-VOLANTS, les PLANCHES et la PAPETERIE** : une liqueur, et leur réplique.
+- **Regardés** : les deux étagères dans Chromium (les pochettes noires disparaissaient sur le fond : elles ont pris des
+  couleurs), le tatouage dans les grilles cuites.
+- **Juges** : `test_rayons.py` (douze titres chacune, les paliers, l'accessoire, qui vend quoi) ; `test_rayons_js.py` (au
+  bouton : le premier disque puis le deuxième, la discothèque à la collection complète, « TU LES AS TOUS » ; le
+  tatouage qui fait tomber les étoiles et qui se dessine).

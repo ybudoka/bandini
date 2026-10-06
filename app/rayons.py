@@ -171,6 +171,11 @@ SERVICES: dict[str, dict] = {
     "revente": {"nom": None, "prix": None},
     "velo": {"nom": "Louer un vélo", "prix": 8},
     "radouber": {"nom": "Réparer le bateau", "prix": None},
+    # Vague 4c : les deux COLLECTIONS des comptoirs (`COLLECTIONS`, un titre de plus à chaque achat, dans l'ordre)
+    # et le tatouage (`TATOUAGE` : une tête neuve pour la police, comme la coupe, et il reste).
+    "disques": {"nom": None, "prix": 12},
+    "livres": {"nom": None, "prix": 10},
+    "tatouage": {"nom": "Te faire tatouer", "prix": 80},
     # La course de TAXI DIAMANT (vague 3b) : une ligne par destination (`TAXI`), payée à la distance.
     "taxi": {"nom": None, "prix": None},
 }
@@ -231,6 +236,25 @@ REPLIQUES: dict[str, str] = {
     "APPÂTS": "Des vers, des vers, des vers. Ça mord pas.",
     "APPÂTS ET LIGNES": "Ça mord pas aujourd'hui. Ni hier.",
     "À LOUER": "Local à louer. Le proprio est en Floride.",
+    # --- Vague 4c : ce qui ne se vend pas encore.
+    "CERFS-VOLANTS": "Pas de vent aujourd'hui. Ni demain.",
+    "PLANCHES": "Une planche à roulettes? T'as passé l'âge.",
+    "PAPETERIE": "Des crayons, des cahiers. Pour tes aveux.",
+}
+
+#: LES COLLECTIONS DES COMPTOIRS (vague 4c, Martin, 6 oct. 2026 : « les disques et les livres en collections, comme
+#: les bebelles ») : douze titres chacune, vendus UN À LA FOIS et dans l'ordre (le suivant qu'on n'a pas — rien au
+#: dé) ; la collection complète pose son étagère dans la pièce d'en arrière (`decoration.TROPHEES`). ⚠️ Des titres
+#: inventés, dans le ton de docs/ecrire-drole.md.
+COLLECTIONS: dict[str, tuple[str, ...]] = {
+    "disques": ("Les Brumes, live au Brouillard", "Ti-Guy et ses klaxons", "Disco Mirage, volume 3",
+                "Chansons pour la débâcle", "Rocco chante Noël", "Les grands succès de la Shop",
+                "Polka des Érables", "Gérald, la trame sonore", "Accordéon pour débutants",
+                "Les plus beaux slows de 1974", "Bingo! L'album", "Sven chante la mer"),
+    "livres": ("Le Brouillard, tome 1", "La mécanique pour les bandits", "La Baie, une histoire mouillée",
+               "La tourtière en quarante leçons", "Les secrets du Norvégien", "Le pêcheur malchanceux",
+               "Chroniques de La Pointe", "Comment parler à la police", "Le hockey expliqué aux poissons",
+               "L'art de se cacher", "Mémoires d'un parcomètre", "Le Brouillard, tome 2"),
 }
 
 #: Où TAXI DIAMANT te dépose : un lieu de la ville (`lieu` d'une porte), et ce que la ligne en dit. ⚠️ Écrit à la main,
@@ -387,6 +411,12 @@ RAYONS: dict[str, dict] = {
     # Une façade BINGO qui n'est pas LE bingo (`enseignes.ENSEIGNES` n'en ouvre qu'une) : le café et le beigne de la
     # salle, et le chemin du sous-sol.
     "bingo": _rayon("Le bingo", _CAFE, _bouchee("beigne", "Beigne"), _service("replique")),
+    # --- Vague 4c : les collections et le tatouage.
+    "disquaire": _rayon("Les disques", _service("disques")),
+    "librairie": _rayon("Les livres", _service("livres")),
+    "tatoueur": _rayon("Le tatoueur", _service("tatouage")),
+    # Le magasin qui ne vend rien de ce qu'il annonce : une liqueur, et sa réplique.
+    "boutique_vide": _rayon("Le comptoir", _LIQUEUR, _service("replique")),
     # --- Vague 4b : la déco de la pièce d'en arrière de la planque (`decoration.MEUBLES`, `piece`).
     "lanternes": _rayon("Les lanternes", _meuble("lanterne")),
     "pepiniere": _rayon("La pépinière", _meuble("ficus")),
@@ -491,6 +521,10 @@ ENSEIGNES: dict[str, str] = {
     "LAVE-AUTO": "lavage", "CIRE ET HUILE": "lavage", "FERRAILLE": "ferraille",
     "CLUB VIDÉO": "club_video", "CLUB MAH-JONG": "mah_jong", "SALLE DE JEUX": "salle_de_jeux",
     "PRÊTS RAPIDES": "preteur", "CHÈQUES CASH": "preteur", "PRÊT SUR GAGES": "gages",
+    # --- Les collections, le tatouage, et ce qui ne se vend pas encore (vague 4c).
+    "DISQUES VOGUE": "disquaire", "MUSIQUE LAROSE": "disquaire", "LIBRAIRIE": "librairie",
+    "LIBRAIRIE CHUNG": "librairie", "LIVRES": "librairie", "TATOUAGE": "tatoueur",
+    "CERFS-VOLANTS": "boutique_vide", "PLANCHES": "boutique_vide", "PAPETERIE": "boutique_vide",
     # --- La déco de la pièce d'en arrière (vague 4b).
     "LANTERNES FUNG": "lanternes", "PÉPINIÈRE": "pepiniere", "VAISSELLE CHOW": "vaisselle",
     "GALERIE D'ART": "galerie", "ANTIQUAIRE": "antiquaire", "ENCADREUR": "encadreur",
@@ -551,12 +585,9 @@ POINTS = ("salon", "journal")
 #: Les enseignes qui vendent ENCORE au comptoir de leur famille : ce qu'elles vendront, et à quelle vague.
 #: ⚠️ Cette table ne doit que rapetisser : chaque vague en sort des lignes vers `ENSEIGNES`.
 EN_ATTENTE: dict[str, str] = {
-    # --- Vague 4c : les objets neufs (les collections, le tatouage, ce qui se donne).
-    "DISQUES VOGUE": "des disques", "MUSIQUE LAROSE": "un instrument", "LIBRAIRIE": "des livres",
-    "LIBRAIRIE CHUNG": "des livres", "LIVRES": "des livres", "PAPETERIE": "de la papeterie",
-    "PARFUMERIE": "du parfum", "TATOUAGE": "un tatouage", "FLEURISTE": "un bouquet", "FLEURISTE MEI": "un bouquet",
-    "FLEURISTE ROSE": "un bouquet", "JOUETS ET TRAINS": "des jouets", "CERFS-VOLANTS": "un cerf-volant",
-    "PLANCHES": "une planche",
+    # --- Vague 4c, 2e partie : ce qui se donne à un passant (le geste OFFRIR).
+    "PARFUMERIE": "du parfum", "FLEURISTE": "un bouquet", "FLEURISTE MEI": "un bouquet",
+    "FLEURISTE ROSE": "un bouquet", "JOUETS ET TRAINS": "des jouets",
 }
 
 
@@ -609,7 +640,8 @@ def exporter() -> dict:
       de leur propre famille (la TAVERNE sert `nuit`), ou un point qui n'est pas un comptoir (`POINTS` : le barbier,
       le Clairon) — le navigateur retombe sur le comptoir du genre (`Missions.comptoirDuPoint`) ;
     - `services` — chaque service qui a un nom (`_service_compact`), `reglages` — `GAGES`, `FERRAILLE`, `SOINS_PV`, le
-      prix du taxi, le seuil de la soupe — `taxi`, ses destinations (`TAXI`), et `repliques` (`REPLIQUES`) ;
+      prix du taxi, le seuil de la soupe — `taxi`, ses destinations (`TAXI`), `repliques` (`REPLIQUES`) et
+      `collections` (`COLLECTIONS`) ;
     - `tarifs` — les `BOUCHEES`, slug : [prix, PV, souffle].
 
     `Missions.rayons` le déplie une fois."""
@@ -629,4 +661,5 @@ def exporter() -> dict:
             "reglages": {"gages": GAGES, "ferraille": FERRAILLE, "soins_pv": SOINS_PV, "taxi": [TAXI_BASE, TAXI_TUILES],
                          "soupe": SOUPE["seuil"]},
             "taxi": [list(t) for t in TAXI], "repliques": dict(REPLIQUES),
+            "collections": {k: list(v) for k, v in COLLECTIONS.items()},
             "tarifs": {slug: list(t) for slug, t in BOUCHEES.items()}}

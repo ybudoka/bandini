@@ -76,7 +76,7 @@ dessiné à la main (sauf exceptions), et appartient à une **famille de lieu**
 | `M` | Chez Gus (armurerie) | `armurerie` | ✅ | magasin |
 | `A` | Boutique Rosa (vêtements) | `vetements` | ✅ | magasin |
 | `G` | Garage Rocco Bandini | `garage` | ✅ | tes_places |
-| `K` | La planque de Rocco | `planque` | ✅ | tes_places |
+| `K` | La planque de Rocco | `planque` | ✅ (+ pièce d'en arrière `planque_arriere`) | tes_places |
 | `P` | Poste de police | `poste` | ✅ | service |
 | `H` | Hôpital de Baie-des-Brumes | `hopital` | ✅ (+ étage `hopital_soins`) | soins |
 | `B` | Bar Le Brouillard | `bar` | ✅ | tes_places |
