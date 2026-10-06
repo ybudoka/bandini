@@ -264,3 +264,18 @@ MACHINERIE, USINAGE…) ; et la marine (cordages, voilerie, moteurs marins : le 
   services ont maigri (un nom seul quand il n'y a ni prix ni char, et rien pour ceux qui font leurs lignes).
 - **Juges** : chaque destination a sa porte dans la ville (`test_rayons.py`) ; au bouton, la course CHEZ ROSA payée,
   et l'on sort devant la boutique (`test_rayons_js.py`). Sans la rue recalée, le juge rougit.
+
+### Vague 3c, 1re partie : l'album des lieux et le rachat (livrée le 6 oct. 2026)
+
+- **L'album des lieux** (Martin, 6 oct. 2026 : « photos de voyage », un album à collectionner) : le mode photo
+  reconnaît dix lieux (`photos.ALBUM` — le phare, l'aéroport, le Dragon d'or, la chapelle, le terminus, l'usine, le
+  Rialto, l'hôpital, la caisse populaire, la fourrière), par la PORTE du lieu dans le cadre (`Photos.lieuDuCadre`). Le
+  déclic le met sur la pellicule (`partie.pellicule`) et le dit (« SUR LA PELLICULE : LE PHARE DE LA POINTE ») ; une
+  photo de lieu n'empêche pas la photo du Clairon, les deux se prennent du même déclic.
+- **Les quatre photographes** (PHOTO EXPRESS, PHOTO SOUVENIR, PHOTOGRAPHE, STUDIO LAU) ont leur rayon : l'album
+  (n / 10), DÉVELOPPER LA PELLICULE (5 $ le lieu, `photos.PHOTOGRAPHE`), et le RACHAT de la photo du jour à la moitié
+  du prix de Louise — même trop vieille pour le Clairon : il en fait des cartes postales.
+- **Juges** : chaque lieu de l'album a sa porte, et les quatre développent et rachètent (`test_rayons.py`) ; au
+  bouton : le phare dans le cadre sur la pellicule, développé au STUDIO LAU, la photo rachetée (`test_rayons_js.py`).
+  Sans la pellicule, le juge rougit.
+- **Reste de la 3c** : le portrait encadré au mur de la planque, et le cadre de l'album complet.

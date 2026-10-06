@@ -261,3 +261,14 @@ def test_chaque_destination_du_taxi_a_sa_porte_dans_la_ville():
     lieux = {p.get("lieu") for p in v["portes"]}
     assert not [s for s, _ in rayons.TAXI if s not in lieux], [s for s, _ in rayons.TAXI if s not in lieux]
     assert rayons.ENSEIGNES["TAXI DIAMANT"] == "taxi"
+
+
+def test_chaque_lieu_de_l_album_a_sa_porte_et_le_photographe_le_developpe():
+    """Vague 3c (Martin, 6 oct. 2026 : « photos de voyage ») : le mode photo reconnaît la PORTE d'un lieu de l'album
+    (`photos.ALBUM`) — un lieu sans porte ne se prendrait jamais ; et les quatre photographes développent et rachètent."""
+    from app import photos
+    v = villes.exporter()
+    lieux = {p.get("lieu") for p in v["portes"]}
+    assert len(photos.ALBUM) == 10 and not [s for s, _ in photos.ALBUM if s not in lieux]
+    for nom in ("PHOTO EXPRESS", "PHOTO SOUVENIR", "PHOTOGRAPHE", "STUDIO LAU"):
+        assert {a.get("service") for a in rayons.RAYONS[rayons.ENSEIGNES[nom]]["articles"]} >= {"developper", "rachat"}

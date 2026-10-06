@@ -62,11 +62,56 @@ const Photos = (function () {
     if (!donnees()) return null;
     const p = B.partie, s = juger(vue);
     if (!B.photo) return s;
-    if (!s) { B.photo.dit = 'RIEN QUI VAILLE UNE UNE'; p.photoVide = p.jour; return null; }
+    const lieu = lieuDuCadre(vue);
+    if (!s) { B.photo.dit = lieu ? lieu : 'RIEN QUI VAILLE UNE UNE'; if (!lieu) p.photoVide = p.jour; return null; }
     const vaut = prix(s), gardee = p.photo && p.photo.jour === p.jour ? p.photo : null;
     if (!gardee || vaut > gardee.prix) p.photo = { sujet: s, prix: vaut, jour: p.jour };
-    B.photo.dit = 'PHOTO : ' + donnees().sujets[s].nom + ' — LOUISE EN DONNERAIT ' + vaut + ' $';
+    B.photo.dit = 'PHOTO : ' + donnees().sujets[s].nom + ' — LOUISE EN DONNERAIT ' + vaut + ' $' + (lieu ? ' · ' + lieu : '');
     return s;
+  }
+
+  // --- L'album des lieux (le photographe, `photos.ALBUM`) ----------------------------------
+
+  /** Un lieu de l'album dont la PORTE est dans le cadre, pas encore dans l'album ni sur la pellicule : il y entre
+      (`partie.pellicule`), et le declic le dit. Rend la ligne a dire, ou null. ⚠️ En ville seulement. */
+  function lieuDuCadre(vue) {
+    const p = B.partie, d = donnees();
+    if (!d.album || B.interieur || !Monde.carte || !Monde.carte.portes) return null;
+    p.pellicule = p.pellicule || []; p.album = p.album || {};
+    for (const a of d.album) {
+      if (p.album[a[0]] || p.pellicule.indexOf(a[0]) >= 0) continue;
+      const porte = Monde.carte.portes.find(function (q) { return q.lieu === a[0]; });
+      if (porte && dans(vue, porte.x * TT + 8, porte.y * TT + 8)) {
+        p.pellicule.push(a[0]);
+        return 'SUR LA PELLICULE : ' + a[1].toUpperCase();
+      }
+    }
+    return null;
+  }
+
+  /** Le photographe developpe la pellicule : chaque lieu entre dans l'album. Rend le nombre. */
+  function developper() {
+    const p = B.partie, n = (p.pellicule || []).length;
+    p.album = p.album || {};
+    (p.pellicule || []).forEach(function (s) { p.album[s] = p.jour; });
+    p.pellicule = [];
+    return n;
+  }
+
+  /** Les lieux de l'album, ceux qu'on a, et leur nombre. */
+  function album() {
+    const d = donnees(), p = B.partie, tous = (d && d.album) || [];
+    return { tous: tous, a: tous.filter(function (a) { return p.album && p.album[a[0]]; }) };
+  }
+
+  /** Le photographe rachete la photo du jour : une part du prix de Louise, meme trop vieille pour le Clairon. */
+  function racheter() {
+    const p = B.partie, d = donnees(), ph = p.photo;
+    if (!ph || !d) return 0;
+    const offre = Math.round(ph.prix * d.photographe.rachat);
+    p.photo = null;
+    Missions.encaisser(offre, 'PHOTO AU PHOTOGRAPHE');
+    return offre;
   }
 
   // --- Louise --------------------------------------------------------------------------
@@ -125,5 +170,5 @@ const Photos = (function () {
     return true;
   }
 
-  return { sujets, prix, juger, declic, accueillir, vendre, ligneDuClairon, matin };
+  return { sujets, prix, juger, declic, accueillir, vendre, ligneDuClairon, matin, lieuDuCadre, developper, album, racheter };
 })();

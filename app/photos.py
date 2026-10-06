@@ -35,6 +35,21 @@ REGLES = {
     "vol_z": 6,
 }
 
+#: L'ALBUM DES LIEUX (docs/jalons/des-comptoirs-qui-vendent-ce-que-dit-l-enseigne.md, vague 3c — Martin, 6 oct. 2026 :
+#: « photos de voyage ») : les lieux que le mode photo reconnaît — la PORTE du lieu (`lieu` d'une porte) dans le cadre.
+#: Le déclic les met sur la pellicule (`partie.pellicule`) ; le photographe les développe, et ils entrent dans l'album
+#: (`partie.album`). ⚠️ Écrits à la main : des lieux qu'on va chercher, d'un bout à l'autre de la ville.
+ALBUM: tuple[tuple[str, str], ...] = (
+    ("phare", "Le phare de La Pointe"), ("aeroport", "L'aéroport"), ("nord_casino", "Le Dragon d'or"),
+    ("chapelle", "La chapelle Sainte-Anne"), ("terminus", "Le terminus"), ("usine", "L'usine Prévost"),
+    ("rialto", "Le cinéma Rialto"), ("hopital", "L'hôpital"), ("caisse_pop", "La caisse populaire"),
+    ("fourriere", "La fourrière"),
+)
+
+#: Ce que fait le photographe (vague 3c) : développer un lieu de la pellicule, et racheter la photo du jour — à une
+#: part du prix de Louise, et même trop vieille pour le Clairon (il en fait des cartes postales).
+PHOTOGRAPHE = {"developper": 5, "rachat": 0.5}
+
 #: Ce que Louise dit, par clé. Le slug de la voix : `louise-clairon-<cle>` ; le jeu d'acteur est dans
 #: `interpretation.JEU`. ⚠️ Elle se nomme UNE fois, dans sa salutation (« Qui parle se nomme »).
 REPLIQUES: list[dict] = [
@@ -62,4 +77,5 @@ def meilleur(sujets: list[str]) -> str | None:
 
 def pour_le_navigateur() -> dict:
     return {"sujets": {k: dict(v) for k, v in SUJETS.items()}, "regles": dict(REGLES),
-            "repliques": {r["cle"]: r["texte"] for r in REPLIQUES}}
+            "repliques": {r["cle"]: r["texte"] for r in REPLIQUES},
+            "album": [list(a) for a in ALBUM], "photographe": dict(PHOTOGRAPHE)}

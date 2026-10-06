@@ -1814,6 +1814,22 @@ const Missions = (function () {
         }).filter(Boolean);
         return lignes.length ? lignes : [{ libelle: 'PAS DE CHAUFFEUR', actif: false }];
       }
+      case 'developper': {
+        // L'ALBUM DES LIEUX : la pellicule du mode photo (`Photos.lieuDuCadre`), developpee ici.
+        const ph = B.defs.photos, al = Photos.album(), n = (p.pellicule || []).length;
+        const cout = Math.round(n * ((ph && ph.photographe.developper) || 5) * facteur);
+        return [{ libelle: 'L’ALBUM DES LIEUX', detail: al.a.length + ' / ' + al.tous.length, actif: false },
+                { libelle: 'DÉVELOPPER LA PELLICULE', detail: n ? n + ' LIEU' + (n > 1 ? 'X' : '') + ' · ' + cout + ' $' : 'RIEN DESSUS',
+                  actif: n > 0 && p.argent >= cout,
+                  faire: function () { payer(cout, 'DÉVELOPPEMENT'); Photos.developper(); return false; } }];
+      }
+      case 'rachat': {
+        const ph = p.photo, d = B.defs.photos;
+        if (!ph || !d) return [{ libelle: 'PAS DE PHOTO À VENDRE', actif: false }];
+        const offre = Math.round(ph.prix * d.photographe.rachat);
+        return [{ libelle: 'VENDRE : ' + d.sujets[ph.sujet].nom, detail: offre + ' $', actif: true,
+                  faire: function () { Photos.racheter(); return false; } }];
+      }
       case 'sic_bo':
         return [{ libelle: libelle, actif: true, faire: function () { Hud.ouvrirMenu(Tables.menu('sic_bo')); return true; } }];
       case 'machine':

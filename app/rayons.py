@@ -157,6 +157,10 @@ SERVICES: dict[str, dict] = {
     # limites du jour sont celles du casino (`Tables`, `Casino`).
     "sic_bo": {"nom": "La table de sic bo", "prix": None},
     "machine": {"nom": "La machine à sous", "prix": None},
+    # Le photographe (vague 3c) : développer la pellicule (l'album des lieux, `photos.ALBUM`) et racheter la photo du
+    # jour (`photos.PHOTOGRAPHE`).
+    "developper": {"nom": None, "prix": None},
+    "rachat": {"nom": None, "prix": None},
     # La course de TAXI DIAMANT (vague 3b) : une ligne par destination (`TAXI`), payée à la distance.
     "taxi": {"nom": None, "prix": None},
 }
@@ -309,6 +313,8 @@ RAYONS: dict[str, dict] = {
     "preteur": _rayon("Le comptoir", _service("dette")),
     # Le prêt sur gages rachète tes armes, et revend celles des autres un peu moins cher que Gus.
     "gages": _rayon("Le prêt sur gages", _service("gages"), _arme("poing_americain"), _arme("couteau"), marge=0.8),
+    # --- Vague 3c : le photographe.
+    "photographe": _rayon("Le photographe", _service("developper"), _service("rachat")),
     # --- Vague 3b : la course de taxi.
     "taxi": _rayon("Le répartiteur", _service("taxi"), _CAFE),
     # --- Vague 2c : les meubles de la planque, livrés le lendemain (`Decoration`), chez qui les vend.
@@ -399,6 +405,8 @@ ENSEIGNES: dict[str, str] = {
     "CLUB VIDÉO": "club_video", "CLUB MAH-JONG": "mah_jong", "SALLE DE JEUX": "salle_de_jeux",
     "PRÊTS RAPIDES": "preteur", "CHÈQUES CASH": "preteur", "PRÊT SUR GAGES": "gages",
     "TAXI DIAMANT": "taxi",
+    "PHOTO EXPRESS": "photographe", "PHOTO SOUVENIR": "photographe", "PHOTOGRAPHE": "photographe",
+    "STUDIO LAU": "photographe",
     # --- Le neuf (vague 2d).
     "BIJOUTERIE": "bijouterie", "BIJOUX CHEUNG": "bijouterie", "OPTICIEN": "opticien", "OPTIQUE": "opticien",
     "SOIERIE MEI": "soierie", "TISSUS ET SOIES": "soierie",
@@ -438,10 +446,7 @@ EN_ATTENTE: dict[str, str] = {
     "DISQUES VOGUE": "des disques", "MUSIQUE LAROSE": "un instrument", "LIBRAIRIE": "des livres",
     "LIBRAIRIE CHUNG": "des livres", "LIVRES": "des livres", "PAPETERIE": "de la papeterie",
     "GALERIE D'ART": "un tableau",
-    # --- Les services qui restent (Martin, 6 oct. 2026) : 3b la course de taxi, 3c le photographe (le rachat, le
-    # portrait, les photos de voyage), 3d la soupe de qui est cassé et les répliques de ceux qui ne vendent rien.
-    "PHOTO EXPRESS": "le photographe", "PHOTO SOUVENIR": "le photographe", "PHOTOGRAPHE": "le photographe",
-    "STUDIO LAU": "le photographe",
+    # --- Les services qui restent (Martin, 6 oct. 2026) : 3d la soupe de qui est cassé et les répliques de ceux qui ne vendent rien.
     "MISSION DU PORT": "une soupe pour qui est cassé", "HOSPICE": "une soupe pour qui est cassé",
     "BINGO": "le café du bingo, et le chemin du sous-sol", "LOCATION CHALOUPE": "une réplique",
     "CAPITAINERIE": "une réplique", "VÉTÉRINAIRE": "une réplique", "ASSOCIATION LI": "une réplique",

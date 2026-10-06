@@ -463,3 +463,34 @@ def test_le_taxi_te_depose_devant_chez_rosa(banc):
     assert r and r["avant"]["curseur"] >= 0, r
     assert r["dehors"] and r["loin"] < 40, r
     assert rayons.TAXI_BASE < 500 - r["argent"] < 200, r
+
+
+def test_le_phare_sur_la_pellicule_le_studio_le_developpe_et_rachete_la_photo(banc):
+    """Vague 3c, au BOUTON : un déclic avec la porte du phare dans le cadre la met sur la pellicule ; au STUDIO LAU,
+    DÉVELOPPER la fait entrer dans l'album, et la photo du jour se vend à la moitié du prix de Louise."""
+    r = banc("""function (L, o) {
+        %s
+        L.Jeu.commencer();
+        if (L.B.menu) L.Hud.fermerMenu();
+        const B = L.B, p = B.partie, out = {};
+        const phare = L.Monde.carte.portes.find(function (q) { return q.lieu === 'phare'; });
+        B.photo = {};
+        L.Photos.declic({ x: phare.x * 16 - 100, y: phare.y * 16 - 60 });
+        out.pellicule = (p.pellicule || []).slice();
+        out.dit = B.photo.dit;
+        B.photo = null;
+        const pt = ouvrir(L, o, 'service', 'STUDIO LAU', 'salon');
+        p.argent = 100;
+        p.photo = { sujet: 'feu', prix: 150, jour: p.jour - 3 };
+        out.dev = presser(L, o, pt, 'DÉVELOPPER');
+        out.album = Object.keys(p.album || {});
+        out.argentDev = p.argent;
+        out.rachat = presser(L, o, pt, 'VENDRE : ');
+        out.argent = p.argent; out.photo = p.photo;
+        return out;
+    }""" % ENTRER)
+    from app import photos
+    assert r["pellicule"] == ["phare"] and "PHARE" in r["dit"], r
+    assert r["dev"]["libelles"][0] == "L’ALBUM DES LIEUX" and r["album"] == ["phare"], r
+    assert r["argentDev"] == 100 - photos.PHOTOGRAPHE["developper"], r
+    assert r["argent"] == r["argentDev"] + 75 and r["photo"] is None, r
