@@ -114,6 +114,8 @@ const Reputation = (function () {
     // tout le monde » envoyait le Cravate qu'on bat témoigner contre toi au lieu de se battre (1er oct. 2026, la
     // rixe : il n'esquivait plus un seul coup, 38 graines sur 40).
     if (e.gang) return false;
+    // UN CADEAU ACHETE UN TEMOIN DE MOINS (`rayons.CADEAUX`, le geste OFFRIR) : celui qui en a recu un se tait.
+    if (e.ami) return false;
     const q = quartierA(x, y), et = q ? etat(q) : 'neutre';
     if (et === 'bien') return false;
     if (et === 'mal') return true;

@@ -87,6 +87,37 @@ const Interactions = (function () {
 
   function mot(liste) { return liste[Math.floor(B.rng() * liste.length)]; }
 
+  // --- Offrir (les comptoirs de la ville, `rayons.CADEAUX`) ---------------------------------
+
+  /** Le cadeau qu'on porte (le premier, dans l'ordre des rayons), ou null. */
+  function cadeauEnPoche() {
+    const r = typeof Missions !== 'undefined' && Missions.rayons ? Missions.rayons() : null, p = B.partie;
+    if (!r || !p || !p.cadeaux) return null;
+    const slug = Object.keys(r.cadeaux).find(function (s) { return (p.cadeaux[s] || 0) > 0; });
+    return slug ? { slug: slug, fiche: r.cadeaux[slug] } : null;
+  }
+
+  /** Le passant ORDINAIRE a qui l'offrir : pas un artiste (le pourboire), pas un gars de gang, pas un agent, pas
+      quelqu'un qui en a deja recu un. */
+  function passantPourUnCadeau(j) {
+    if (!cadeauEnPoche()) return null;
+    return Entites.pietonsAutour(j.x, j.y, cfg().pourboire.portee_px).find(function (e) {
+      return disponible(e) && !e.metier && !e.gang && !e.agent && !e.ami && faceA(j, e.x, e.y) && !Combat.pochesAPrendre(j, e);
+    }) || null;
+  }
+
+  /** OFFRIR : il dit merci, et ⚠️ il ne te denoncera plus (`e.ami` : la reputation le lit, la ou un passant devient temoin). */
+  function offrir(j, e) {
+    const c = cadeauEnPoche(), p = B.partie;
+    if (!c) return false;
+    p.cadeaux[c.slug] -= 1;
+    e.ami = true;
+    Entites.bulle(e, mot(c.fiche[1]), { duree: 120 });
+    Hud.message('TU OFFRES ' + c.fiche[0].toUpperCase(), 120);
+    j.animT = 12; j.animType = 'ramasse';
+    return true;
+  }
+
   function donnerUnPourboire(j, artiste) {
     const c = cfg().pourboire;
     Missions.payer(c.montant, 'POURBOIRE');
@@ -474,6 +505,8 @@ const Interactions = (function () {
     if (artiste) { j.gesteT = B.t; return donnerUnPourboire(j, artiste); }
     const touriste = touristeSousLaMain(j);
     if (touriste) { j.gesteT = B.t; return prendreLaPhoto(j, touriste); }
+    const ami = passantPourUnCadeau(j);
+    if (ami) { j.gesteT = B.t; return offrir(j, ami); }
     return false;
   }
 
@@ -538,6 +571,7 @@ const Interactions = (function () {
     const c = cfg();
     if (artisteSousLaMain(j)) return c.pourboire.invite + ' — ' + c.pourboire.montant + ' $';
     if (touristeSousLaMain(j)) return c.photo.invite;
+    if (passantPourUnCadeau(j)) return 'OFFRIR ' + cadeauEnPoche().fiche[0].toUpperCase();
     return null;
   }
 
@@ -584,5 +618,5 @@ const Interactions = (function () {
 
   return { afficheSousLaMain, arracherLAffiche, peutAgir, artisteSousLaMain, touristeSousLaMain, chatSousLaMain, decorSousLaMain,
            utiliserSurLesGens, utiliserSurLesBetes, utiliserSurLeDecor,
-           inviteGens, inviteBetes, inviteDecor, majAssis, seLever, asseoirA, refusAsseoir, maj, oublier, fouilleDuJour, fontaineSeche, jetDe };
+           inviteGens, inviteBetes, inviteDecor, offrir, passantPourUnCadeau, majAssis, seLever, asseoirA, refusAsseoir, maj, oublier, fouilleDuJour, fontaineSeche, jetDe };
 })();

@@ -1608,7 +1608,7 @@ const Missions = (function () {
       }) };
     });
     r.deplie = { enseignes: enseignes, rayons: comptoirs, reglages: r.reglages || {}, taxi: r.taxi || [],
-                 repliques: r.repliques || {}, collections: r.collections || {} };
+                 repliques: r.repliques || {}, collections: r.collections || {}, cadeaux: r.cadeaux || {} };
     return r.deplie;
   }
 
@@ -1892,6 +1892,18 @@ const Missions = (function () {
                                   if (n + 1 === titres.length) Hud.message('LA COLLECTION EST COMPLÈTE — À LA PLANQUE DEMAIN', 220);
                                   return false;
                                 } }]);
+      }
+      case 'bouquet': case 'parfum': case 'jouet': {
+        // CE QUI SE DONNE (`rayons.CADEAUX`) : on l'achete, on le porte, et ACTION devant un passant le lui offre.
+        p.cadeaux = p.cadeaux || {};
+        const n = p.cadeaux[a.service] || 0;
+        return [{ libelle: libelle, detail: prix + ' $' + (n ? ' · TU EN AS ' + n : ''), actif: p.argent >= prix,
+                  faire: function () {
+                    payer(prix, libelle);
+                    p.cadeaux[a.service] = (p.cadeaux[a.service] || 0) + 1;
+                    Hud.message('À OFFRIR À UN PASSANT — ACTION DEVANT LUI', 180);
+                    return false;
+                  } }];
       }
       case 'tatouage':
         // LE TATOUAGE : une tete neuve pour la police, comme la coupe (`menuSalon`), et il reste (`partie.tatouage`).
@@ -4474,7 +4486,7 @@ const Missions = (function () {
            coupon, prixAmbulant, crieurSousLaMain, filleSousLaMain, stoolSousLaMain, etalSousLaMain, temoinSousLaMain, prendreCoupon,
            paliersDe, palierDebloque, avantage, compterLeBoulot,
            boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, dansLaCour, majFourriere, malGare, majMalGares, estDeLaPlanque, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, proprieteDe, possede, aVendre,
-           dormir, dormirJusquAuSoir, porterTenue, fouiller, menuComptoir, comptoirDuPoint, comptoirFerme, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, majGarage, menuDuRideau, menuArmurerie, menuVetements,
+           dormir, dormirJusquAuSoir, rayons, porterTenue, fouiller, menuComptoir, comptoirDuPoint, comptoirFerme, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, majGarage, menuDuRideau, menuArmurerie, menuVetements,
            repeindre, prixCarrosserie, refusDuSeuil,
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais,
            nuitDeLaDette, detteDuLendemain, collecteurs, envoyerLesCollecteurs, majCollecteurs, rembourser, collecteurSousLaMain, menuDette,

@@ -176,6 +176,10 @@ SERVICES: dict[str, dict] = {
     "disques": {"nom": None, "prix": 12},
     "livres": {"nom": None, "prix": 10},
     "tatouage": {"nom": "Te faire tatouer", "prix": 80},
+    # Vague 4c, 2e partie : ce qui se DONNE à un passant (`CADEAUX` ; le geste OFFRIR, `Interactions`).
+    "bouquet": {"nom": "Un bouquet", "prix": 15},
+    "parfum": {"nom": "Un flacon de parfum", "prix": 40},
+    "jouet": {"nom": "Un train de bois", "prix": 20},
     # La course de TAXI DIAMANT (vague 3b) : une ligne par destination (`TAXI`), payée à la distance.
     "taxi": {"nom": None, "prix": None},
 }
@@ -255,6 +259,19 @@ COLLECTIONS: dict[str, tuple[str, ...]] = {
                "La tourtière en quarante leçons", "Les secrets du Norvégien", "Le pêcheur malchanceux",
                "Chroniques de La Pointe", "Comment parler à la police", "Le hockey expliqué aux poissons",
                "L'art de se cacher", "Mémoires d'un parcomètre", "Le Brouillard, tome 2"),
+}
+
+#: CE QUI SE DONNE (vague 4c, Martin, 6 oct. 2026 : « le parfum, le bouquet et les jouets se donnent à un passant ») :
+#: on l'achète, on le porte (`partie.cadeaux`), et ACTION devant un passant ordinaire le lui offre (`Interactions`). Il
+#: dit merci (`merci`, une ligne au hasard du jeu), et ⚠️ il NE TE DÉNONCE PLUS (`e.ami`, `Reputation.denonce`) : un
+#: cadeau achète un témoin de moins. L'ordre est celui où on les offre quand on en porte plusieurs.
+CADEAUX: dict[str, dict] = {
+    "bouquet": {"nom": "le bouquet", "merci": ("Pour moi? T'aurais pas dû.", "Des fleurs! Ça fait des années.",
+                                               "Merci… je dirai rien, promis.")},
+    "parfum": {"nom": "le parfum", "merci": ("Ça sent le Paris!", "Merci. Je t'ai jamais vu, OK?",
+                                             "Wow. Du vrai, à part ça.")},
+    "jouet": {"nom": "le train de bois", "merci": ("Pour mon petit? Merci!", "Tchou-tchou! Merci, monsieur.",
+                                                   "C'est gentil. Je l'oublierai pas.")},
 }
 
 #: Où TAXI DIAMANT te dépose : un lieu de la ville (`lieu` d'une porte), et ce que la ligne en dit. ⚠️ Écrit à la main,
@@ -411,7 +428,10 @@ RAYONS: dict[str, dict] = {
     # Une façade BINGO qui n'est pas LE bingo (`enseignes.ENSEIGNES` n'en ouvre qu'une) : le café et le beigne de la
     # salle, et le chemin du sous-sol.
     "bingo": _rayon("Le bingo", _CAFE, _bouchee("beigne", "Beigne"), _service("replique")),
-    # --- Vague 4c : les collections et le tatouage.
+    # --- Vague 4c : ce qui se donne, les collections et le tatouage.
+    "fleuriste": _rayon("Le fleuriste", _service("bouquet")),
+    "parfumerie": _rayon("La parfumerie", _service("parfum")),
+    "jouets": _rayon("Les jouets", _service("jouet"), _tenue("casquette")),
     "disquaire": _rayon("Les disques", _service("disques")),
     "librairie": _rayon("Les livres", _service("livres")),
     "tatoueur": _rayon("Le tatoueur", _service("tatouage")),
@@ -521,7 +541,9 @@ ENSEIGNES: dict[str, str] = {
     "LAVE-AUTO": "lavage", "CIRE ET HUILE": "lavage", "FERRAILLE": "ferraille",
     "CLUB VIDÉO": "club_video", "CLUB MAH-JONG": "mah_jong", "SALLE DE JEUX": "salle_de_jeux",
     "PRÊTS RAPIDES": "preteur", "CHÈQUES CASH": "preteur", "PRÊT SUR GAGES": "gages",
-    # --- Les collections, le tatouage, et ce qui ne se vend pas encore (vague 4c).
+    # --- Ce qui se donne, les collections, le tatouage, et ce qui ne se vend pas encore (vague 4c).
+    "FLEURISTE": "fleuriste", "FLEURISTE MEI": "fleuriste", "FLEURISTE ROSE": "fleuriste",
+    "PARFUMERIE": "parfumerie", "JOUETS ET TRAINS": "jouets",
     "DISQUES VOGUE": "disquaire", "MUSIQUE LAROSE": "disquaire", "LIBRAIRIE": "librairie",
     "LIBRAIRIE CHUNG": "librairie", "LIVRES": "librairie", "TATOUAGE": "tatoueur",
     "CERFS-VOLANTS": "boutique_vide", "PLANCHES": "boutique_vide", "PAPETERIE": "boutique_vide",
@@ -584,11 +606,7 @@ POINTS = ("salon", "journal")
 
 #: Les enseignes qui vendent ENCORE au comptoir de leur famille : ce qu'elles vendront, et à quelle vague.
 #: ⚠️ Cette table ne doit que rapetisser : chaque vague en sort des lignes vers `ENSEIGNES`.
-EN_ATTENTE: dict[str, str] = {
-    # --- Vague 4c, 2e partie : ce qui se donne à un passant (le geste OFFRIR).
-    "PARFUMERIE": "du parfum", "FLEURISTE": "un bouquet", "FLEURISTE MEI": "un bouquet",
-    "FLEURISTE ROSE": "un bouquet", "JOUETS ET TRAINS": "des jouets",
-}
+EN_ATTENTE: dict[str, str] = {}
 
 
 def noms_des_enseignes() -> dict[str, set[str]]:
@@ -662,4 +680,5 @@ def exporter() -> dict:
                          "soupe": SOUPE["seuil"]},
             "taxi": [list(t) for t in TAXI], "repliques": dict(REPLIQUES),
             "collections": {k: list(v) for k, v in COLLECTIONS.items()},
+            "cadeaux": {k: [v["nom"], list(v["merci"])] for k, v in CADEAUX.items()},
             "tarifs": {slug: list(t) for slug, t in BOUCHEES.items()}}

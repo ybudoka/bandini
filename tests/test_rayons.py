@@ -151,7 +151,7 @@ def test_les_tenues_et_les_armes_se_vendent_chez_qui_le_dit():
     assert not vend("MODISTE") & {"sandwich", "chips"}
     genres = rayons.noms_des_enseignes()
     reste = sorted(n for n in rayons.EN_ATTENTE if "mode" in genres[n])
-    assert reste == ["PARFUMERIE"], reste
+    assert reste == [], reste
 
 
 def test_le_format_compact_dit_la_sorte_de_chaque_article():
@@ -318,4 +318,4 @@ def test_les_collections_des_comptoirs_et_le_tatouage():
         return {a.get("service") for a in rayons.RAYONS[rayons.ENSEIGNES[nom]]["articles"]} - {None}
     assert services("DISQUES VOGUE") == {"disques"} and services("LIBRAIRIE CHUNG") == {"livres"}
     assert services("TATOUAGE") == {"tatouage"}
-    assert sorted(rayons.EN_ATTENTE) == ["FLEURISTE", "FLEURISTE MEI", "FLEURISTE ROSE", "JOUETS ET TRAINS", "PARFUMERIE"]
+    assert not rayons.EN_ATTENTE, "toutes les enseignes ont leur rayon (vague 4c)"

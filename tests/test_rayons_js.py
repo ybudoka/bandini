@@ -72,7 +72,7 @@ def test_une_enseigne_en_attente_et_un_lieu_garanti_gardent_le_comptoir_de_leur_
         L.Jeu.commencer();
         const B = L.B, I = L.Monde.carte.def.interieurs, porte = portesDe(L, 'commerce')[0];
         B.partie.heure = 0.5;
-        B.interieur = Object.assign({}, I[porte.interieur], { nom: 'JOUETS ET TRAINS' });
+        B.interieur = Object.assign({}, I[porte.interieur], { nom: 'UNE ENSEIGNE INCONNUE' });
         const attente = libelles(L.Missions.menuDuPoint(pointDe(L, porte.interieur)));
         const dep = I.depanneur, pt = dep.points.find(function (q) { return q.type === 'emplettes'; });
         B.interieur = dep;
@@ -80,7 +80,7 @@ def test_une_enseigne_en_attente_et_un_lieu_garanti_gardent_le_comptoir_de_leur_
         B.interieur = null;
         return { attente: attente, depanneur: depanneur };
     }""" % TROUVER)
-    assert "JOUETS ET TRAINS" in rayons.EN_ATTENTE
+    assert "UNE ENSEIGNE INCONNUE" not in rayons.ENSEIGNES   # (plus rien n'attend : un nom inconnu)
     assert r["attente"] == _attendu("commerce"), r
     assert all(n in r["depanneur"] for n in _attendu("bouffe")), r
 
@@ -703,3 +703,34 @@ def test_les_disques_un_a_la_fois_et_le_tatouage(banc):
     assert not r["avant"] and r["apres"] and "TU LES AS TOUS" in r["fini"], r
     assert r["tatou"]["curseur"] >= 0 and r["etoiles"] == 0 and r["encre"], r
     assert r["encore"] == "TU AS DÉJÀ LE TIEN", r
+
+
+def test_le_bouquet_offert_achete_un_temoin_de_moins(banc):
+    """Vague 4c, 2e partie, au BOUTON : chez le FLEURISTE, un bouquet ; dehors, devant un passant ordinaire, l'invite
+    dit OFFRIR LE BOUQUET, ACTION le lui donne — et ce passant-là ne te dénoncera plus (`Reputation.denonce`)."""
+    r = banc("""function (L, o) {
+        %s
+        L.Jeu.commencer();
+        if (L.B.menu) L.Hud.fermerMenu();
+        const B = L.B, j = B.joueur, p = B.partie, out = {};
+        const pt = ouvrir(L, o, 'commerce', 'FLEURISTE', 'emplettes');
+        p.argent = 100;
+        out.achat = presser(L, o, pt, 'UN BOUQUET');
+        out.cadeaux = Object.assign({}, p.cadeaux);
+        sortir(L, o);
+        const arch = L.Entites.archetype('passant') || L.Entites.archetype('client');
+        const e = L.Entites.creerPieton(j.x, j.y + 14, arch);
+        e.etat = 'fige'; e.metier = null; e.gang = null;
+        j.face = 'bas'; j.angle = Math.PI / 2;
+        L.Missions.majInvite(j);
+        out.invite = B.invite;
+        out.avant = L.Reputation.denonce(e, 0, e.x, e.y);
+        o.tape('KeyE', 2);
+        out.ami = !!e.ami; out.reste = p.cadeaux.bouquet;
+        out.apres = L.Reputation.denonce(e, 0, e.x, e.y);
+        return out;
+    }""" % ENTRER)
+    assert r["achat"]["curseur"] >= 0 and r["cadeaux"] == {"bouquet": 1}, r
+    assert r["invite"] == "OFFRIR LE BOUQUET", r
+    assert r["ami"] and r["reste"] == 0, r
+    assert r["apres"] is False, r

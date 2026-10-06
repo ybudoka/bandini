@@ -400,3 +400,19 @@ voulait un comptoir.
 - **Juges** : `test_rayons.py` (douze titres chacune, les paliers, l'accessoire, qui vend quoi) ; `test_rayons_js.py` (au
   bouton : le premier disque puis le deuxième, la discothèque à la collection complète, « TU LES AS TOUS » ; le
   tatouage qui fait tomber les étoiles et qui se dessine).
+
+### Vague 4c, 2e partie : ce qui se donne (livrée le 6 oct. 2026) — et le jalon est livré
+
+- **Le bouquet, le parfum, le train de bois** (`rayons.CADEAUX`, Martin : « ils se donnent à un passant ») : les trois
+  FLEURISTES, la PARFUMERIE et JOUETS ET TRAINS (avec une casquette) les vendent ; on les porte (`partie.cadeaux`), et
+  devant un passant ORDINAIRE — pas un artiste (c'est le pourboire), pas un gars de gang, pas un agent —, l'invite dit
+  « OFFRIR LE BOUQUET » et ACTION le lui donne (`Interactions.offrir`, après le pourboire et la photo du touriste). Il
+  dit merci (une ligne de `merci`), et ⚠️ **il ne te dénoncera plus** (`e.ami`, lu par `Reputation.denonce`) : un cadeau
+  achète un témoin de moins. Les remerciements voyagent avec les rayons, pas dans les définitions d'avant l'écran titre.
+- **Plus rien n'attend** : `rayons.EN_ATTENTE` est vide, les 246 noms d'enseigne que la ville peut peindre ont leur rayon,
+  leur comptoir de famille quand il dit juste, ou leur point (le barbier, le Clairon). Les juges qui prenaient une
+  enseigne en attente comme exemple prennent un nom inconnu, qui retombe au comptoir de sa couleur.
+- **Juges** : `test_rayons.py` (plus rien en attente) ; `test_rayons_js.py` (au bouton : le bouquet acheté, l'invite,
+  ACTION, le passant devenu ami ; sans la règle de `Reputation.denonce`, il te dénonce encore — le juge rougit).
+
+**Le jalon est livré** le 6 oct. 2026 : 53 enseignes sur 177 vendaient ce que dit leur nom le 3 oct. ; les 246 le font.
