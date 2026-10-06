@@ -28,6 +28,10 @@ def test_un_rayon_decide_est_un_rayon_un_comptoir_de_famille_ou_le_point_de_son_
             point = carte.MOBILIER[genre]["point"][0]
             if slug in rayons.POINTS:
                 ok = point == slug
+            elif point == "salon":
+                # Le fauteuil d'une pièce de SERVICE devient le comptoir d'un rayon neuf (`Missions.rayonDuFauteuil`) —
+                # jamais celui d'une famille (le barbier garde son fauteuil).
+                ok = slug in rayons.RAYONS
             else:
                 comptoir = rayons.RAYONS.get(slug) or magasins.COMPTOIRS.get(slug)
                 ok = (point == "emplettes" and comptoir is not None and not comptoir.get("bloc")
@@ -190,7 +194,7 @@ def test_les_commerces_de_l_auto_travaillent_sur_le_char():
     for slug, r in rayons.RAYONS.items():
         for a in r["articles"]:
             assert not a.get("piece") or a["piece"] in pieces, f"{slug}/{a['slug']}"
-            assert not a.get("service") or a["service"] in rayons.SERVICES_AU_CHAR, f"{slug}/{a['slug']}"
+            assert not a.get("service") or a["service"] in rayons.SERVICES, f"{slug}/{a['slug']}"
     genres = rayons.noms_des_enseignes()
     assert not [n for n in ("PNEUS DESCHAMPS", "PEINTURE AUTO") if n in rayons.EN_ATTENTE]
     assert all("industrie" in genres[n] for n in ("PNEUS DESCHAMPS", "SOUDURE", "PIÈCES USAGÉES"))
@@ -228,3 +232,23 @@ def test_le_neuf_se_porte_au_cou_et_sur_les_yeux_et_rosa_ne_le_vend_pas():
     for t in en_ville:
         assert t["slug"] in vendues, f"{t['slug']} : vendue en ville, mais par personne"
         assert set(t["piece"]["accessoires"]) <= set(garderobe.ACCESSOIRES), t["slug"]
+
+
+def test_chaque_service_rend_le_sien():
+    """Vague 3a (Martin, 6 oct. 2026) : un commerce qui ne vend rien rend un service à lui — l'hôtel loue un lit, la
+    clinique soigne, la banque ouvre le coffre, les prêteurs prennent la dette, le prêt sur gages rachète les armes."""
+    def services(nom):
+        return {a.get("service") for a in rayons.RAYONS[rayons.ENSEIGNES[nom]]["articles"]} - {None}
+    assert services("HÔTEL DES QUAIS") == {"nuit", "sieste"} == services("MOTEL LA POINTE")
+    assert all(services(n) == {"soins"} for n in ("CLINIQUE", "DOCTEUR", "DENTISTE", "SPA", "ACUPUNCTURE LEE"))
+    assert services("BANQUE") == {"coffre"} == services("CAISSE POP")
+    assert services("PRÊTS RAPIDES") == {"dette"} and services("PRÊT SUR GAGES") == {"gages"}
+    assert services("BUANDERIE") == {"linge"} and services("FERRAILLE") == {"epave"}
+    assert services("CLUB MAH-JONG") == {"sic_bo"} and services("CLUB VIDÉO") == {"film"}
+    vendus = {a.get("service") for r in rayons.RAYONS.values() for a in r["articles"]}
+    assert set(rayons.SERVICES) <= vendus, f"des services que personne ne rend : {set(rayons.SERVICES) - vendus}"
+    # Plus de coupe de cheveux à la banque : les pièces de service qui gardent le fauteuil sont des barbiers, ou attendent.
+    genres = rayons.noms_des_enseignes()
+    for nom, slug in rayons.ENSEIGNES.items():
+        if "service" in genres[nom] and slug == "salon":
+            assert "BARBIER" in nom or "COIFFURE" in nom or "SALON" in nom, nom

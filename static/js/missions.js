@@ -1483,6 +1483,9 @@ const Missions = (function () {
       case 'emplettes':
         return menuComptoir(point, items);
       case 'salon':
+        // Une enseigne de SERVICE qui a son rayon (la BANQUE, la BUANDERIE, les ASSURANCES) : le fauteuil du barbier
+        // devient son comptoir, aux heures de sa famille — on ne coupe plus les cheveux a la banque.
+        if (rayonDuFauteuil()) return menuComptoir(pointDuFauteuil(point), items);
         return menuSalon(items);
       case 'casier':
         return menuCasier();
@@ -1544,6 +1547,14 @@ const Missions = (function () {
     return (slug && (r.rayons[slug] || comptoirs[slug])) || famille;
   }
 
+  /** Le rayon de la porte quand on est assis au fauteuil d'une piece de SERVICE (`salon`), ou null : seul un rayon
+      neuf le remplace, jamais le comptoir de famille (le barbier garde son fauteuil). */
+  function rayonDuFauteuil() {
+    const r = rayons(), nom = B.interieur && B.interieur.nom, slug = r && nom && r.enseignes[nom];
+    return (slug && r.rayons[slug]) || null;
+  }
+  function pointDuFauteuil(point) { return Object.assign({}, point, { type: 'emplettes', genre: 'service' }); }
+
   /** Les rayons DEPLIES, une fois (`rayons.exporter` les envoie compacts, dans la suite du paquet) : un comptoir
       par rayon, au meme format que ceux de famille (`magasins.COMPTOIRS`) — le tarif d'un article est son slug,
       ses gains `<slug>_pv` et `<slug>_souffle` ; le nom de chaque enseigne, vers son rayon. Les prix des bouchees
@@ -1573,9 +1584,11 @@ const Missions = (function () {
         // Une piece du garage (`p:`) ou un service au char (`s:`), sur le char gare devant la porte.
         if (sorte === 'p' || sorte === 's') {
           const slug = a.slice(2), q = sorte === 'p' && Garage.piece(slug);
-          return { slug: slug, nom: q ? q.nom : r.services[slug], tarif: null, gain_pv: null, gain_souffle: null,
+          const sv = sorte === 's' ? r.services[slug] : null;
+          return { slug: slug, nom: q ? q.nom : (sv && sv[0]) || slug, tarif: null, gain_pv: null, gain_souffle: null,
                    effet: null, arme: null, tenue: null, journal: false,
-                   piece: sorte === 'p' ? slug : null, service: sorte === 's' ? slug : null };
+                   piece: sorte === 'p' ? slug : null, service: sorte === 's' ? slug : null,
+                   prix: sv ? sv[1] : null, char: sorte === 'p' || !!(sv && sv[2]) };
         }
         if (sorte) {
           const slug = a.slice(2);
@@ -1590,7 +1603,7 @@ const Missions = (function () {
                  effet: typeof n === 'string' ? null : n[1], arme: null, tenue: null, journal: false };
       }) };
     });
-    r.deplie = { enseignes: enseignes, rayons: comptoirs };
+    r.deplie = { enseignes: enseignes, rayons: comptoirs, reglages: r.reglages || {} };
     return r.deplie;
   }
 
@@ -1624,14 +1637,17 @@ const Missions = (function () {
     if (jeu) items.push(jeu);
     // UN COMMERCE DE L'AUTO (les PNEUS, la SOUDURE, la PEINTURE AUTO) travaille sur le char gare devant sa porte,
     // comme Ti-Guy (`charDevant`) : sans char, il le dit une fois, et ses pieces et ses services ne se proposent pas.
-    const auChar = comptoir.articles.some(function (a) { return a.piece || a.service; });
-    const v = auChar ? charDevant() : null, char = v && Garage.accepte(v) ? v : null;
+    // ⚠️ La FERRAILLE prend aussi l'epave : elle cherche son char sans la trier.
+    const auChar = comptoir.articles.some(function (a) { return a.char; });
+    const epaves = comptoir.articles.some(function (a) { return a.service === 'epave'; });
+    const v = auChar ? charDevant(epaves) : null, char = v && Garage.accepte(v) ? v : null;
     if (auChar && !char) items.push({ libelle: 'GARE UN CHAR DEVANT LA PORTE', actif: false });
     comptoir.articles.forEach(function (a) {
       if (a.piece || a.service) {
         const facteur = (comptoir.marge || 1) * rabais(cle);
-        const it = char && (a.piece ? Garage.itemPiece(char, a.piece, payer, facteur) : itemServiceAuChar(char, a, facteur));
-        if (it) items.push(it);
+        if (a.char && !char) return;
+        if (a.piece) { const it = Garage.itemPiece(char, a.piece, payer, facteur); if (it) items.push(it); return; }
+        itemsDuService(a, facteur, char).forEach(function (it) { items.push(it); });
         return;
       }
       if (a.meuble) return items.push(itemMeuble(a, (comptoir.marge || 1) * rabais(cle)));
@@ -1683,21 +1699,104 @@ const Missions = (function () {
              faire: function () { Decoration.livrerA('planque', m.slug, prix, 'ACHETÉ EN VILLE'); return false; } };
   }
 
-  /** Un service au char gare devant, chez un commerce de l'auto : reparer (la CARROSSERIE, la SOUDURE) ou repeindre
-      (la PEINTURE AUTO) — les prix et les gestes de Ti-Guy (`menuGarage`), fois `facteur`. */
-  function itemServiceAuChar(v, a, facteur) {
-    const eco = B.defs.economie, p = B.partie, libelle = a.nom.toUpperCase();
-    if (a.service === 'reparer') {
-      const prix = Math.round((v.vieMax - v.vie) * eco.reparation_par_pv * facteur);
-      return { libelle: libelle, detail: prix > 0 ? prix + ' $' : 'COMME NEUF', actif: prix > 0 && p.argent >= prix,
-               faire: function () { payer(prix, 'RÉPARATION'); v.vie = v.vieMax; return false; } };
+  /** LES SERVICES D'UN RAYON (`rayons.SERVICES`) : ce qu'un comptoir FAIT plutot que vendre, chacun avec une
+      mecanique qui existe — le lit de la planque a l'hotel, `soigner` a la clinique, une etoile de moins a la
+      buanderie, le coffre au guichet de la banque, la dette de Sal chez les preteurs, l'assurance et la vente de
+      Ti-Guy sur le char gare devant (`v`). Rend les lignes du menu (le coffre et les gages en font plusieurs).
+      `facteur` : la marge du rayon et le rabais du quartier. */
+  function itemsDuService(a, facteur, v) {
+    const eco = B.defs.economie, p = B.partie, j = B.joueur, libelle = a.nom.toUpperCase();
+    const r = rayons(), reglages = (r && r.reglages) || {};
+    const prix = a.prix ? Math.round(a.prix * facteur) : 0;
+    switch (a.service) {
+      case 'reparer': {
+        const cout = Math.round((v.vieMax - v.vie) * eco.reparation_par_pv * facteur);
+        return [{ libelle: libelle, detail: cout > 0 ? cout + ' $' : 'COMME NEUF', actif: cout > 0 && p.argent >= cout,
+                  faire: function () { payer(cout, 'RÉPARATION'); v.vie = v.vieMax; return false; } }];
+      }
+      case 'repeindre':
+        return [{ libelle: libelle, detail: prix + ' $', actif: p.argent >= prix,
+                  faire: function () { payer(prix, 'PEINTURE'); repeindre(v); return false; } }];
+      case 'assurer': {
+        // La prime de Ti-Guy, payee par `assurer` : l'assureur est le meme, d'un comptoir a l'autre.
+        const prime = primeAssurance(v), proprio = aQui(v);
+        return [{ libelle: 'ASSURER ' + v.def.nom.toUpperCase(),
+                  detail: v.assure ? 'DÉJÀ ASSURÉ' : enqueteEnCours() ? 'L’ASSUREUR ENQUÊTE'
+                    : prime + ' $ / COUVRE ' + valeurAssuree(v) + ' $',
+                  actif: !v.assure && !proprio && !enqueteEnCours() && p.argent >= prime,
+                  faire: function () { assurer(v); return false; } }];
+      }
+      case 'laver':
+        return [{ libelle: libelle, detail: prix + ' $', actif: p.argent >= prix,
+                  faire: function () { payer(prix, 'LAVAGE'); Police.unCranDeMoins(); Hud.message('LE CHAR BRILLE'); return false; } }];
+      case 'epave': {
+        const proprio = aQui(v), offre = Math.round(v.def.prix * eco.vente_fraction * (reglages.ferraille || 0.5) * facteur);
+        return [{ libelle: 'VENDRE ' + v.def.nom.toUpperCase() + ' À LA FERRAILLE',
+                  detail: proprio ? 'IL EST À ' + proprio : offre + ' $', actif: !proprio && offre > 0,
+                  faire: function () {
+                    if (aQui(v)) { Son.SFX.erreur(); return false; }
+                    encaisser(offre, 'À LA FERRAILLE');
+                    if (B.joueur && B.joueur.dansVehicule === v) Vehicules.descendre(B.joueur, true);
+                    const i = B.exterieur ? B.exterieur.entites.indexOf(v) : -1;
+                    if (i >= 0) B.exterieur.entites.splice(i, 1);
+                    return false;
+                  } }];
+      }
+      case 'nuit':
+        return [{ libelle: libelle, detail: prix + ' $', actif: p.argent >= prix,
+                  faire: function () { payer(prix, 'LA CHAMBRE'); dormir(); return true; } }];
+      case 'sieste': {
+        const tot = p.heure < eco.sieste.reveil;
+        return [{ libelle: libelle, detail: tot ? prix + ' $' : 'IL FAIT DÉJÀ NOIR', actif: tot && p.argent >= prix,
+                  faire: function () { payer(prix, 'LA CHAMBRE'); dormirJusquAuSoir(); return true; } }];
+      }
+      case 'soins': {
+        const manque = j.vieMax - j.vie, cout = Math.max(1, Math.round(manque * (reglages.soins_pv || 0.5) * facteur));
+        return [{ libelle: libelle, detail: manque > 0 ? cout + ' $ / +' + manque + ' PV' : 'EN PLEINE FORME',
+                  actif: manque > 0 && p.argent >= cout,
+                  faire: function () { payer(cout, 'LES SOINS'); soigner(j, manque); return false; } }];
+      }
+      case 'linge': {
+        const cherche = B.recherche && B.recherche.etoiles > 0;
+        return [{ libelle: libelle, detail: cherche ? prix + ' $' : 'PERSONNE NE TE CHERCHE', actif: cherche && p.argent >= prix,
+                  faire: function () { payer(prix, 'LE LAVAGE'); Police.unCranDeMoins(); Hud.message('PROPRE COMME UN SOU NEUF'); return false; } }];
+      }
+      case 'coffre':
+        return [{ libelle: 'TON COFFRE', detail: p.planque.coffre + ' $', actif: false }].concat(menuCoffre().items);
+      case 'dette':
+        if (!(p.dette > 0)) return [{ libelle: 'TA DETTE EST RÉGLÉE', actif: false }];
+        return menuDette(null).items;
+      case 'gages': {
+        const lignes = Object.keys(p.armes).map(function (slug) {
+          const arme = Combat.armeDef(slug);
+          if (!arme || !(arme.prix > 0)) return null;
+          const offre = Math.round(arme.prix * (reglages.gages || 0.4));
+          return { libelle: 'LAISSER ' + arme.nom.toUpperCase(), detail: '+' + offre + ' $', actif: true,
+                   faire: function () {
+                     delete p.armes[slug];
+                     if (j.arme === slug) { j.arme = 'poings'; p.arme = 'poings'; }
+                     encaisser(offre, 'AU PRÊTEUR');
+                     return false;
+                   } };
+        }).filter(Boolean);
+        return lignes.length ? lignes : [{ libelle: 'RIEN À LAISSER EN GAGE', actif: false }];
+      }
+      case 'film': {
+        // Ce que le film du Rialto rend (`enseignes.REGLES`), regarde dans l'arriere-boutique.
+        const repos = B.defs.enseignes.regles.rialto.repos_pv;
+        return [{ libelle: libelle + ' — ' + Cineparc.programme().titre, detail: prix + ' $', actif: p.argent >= prix,
+                  faire: function () {
+                    payer(prix, 'LA CASSETTE');
+                    Jeu.transiter(FONDU_NUIT, function () { soigner(j, repos); }, 'LE GÉNÉRIQUE DÉFILE');
+                    return true;
+                  } }];
+      }
+      case 'sic_bo':
+        return [{ libelle: libelle, actif: true, faire: function () { Hud.ouvrirMenu(Tables.menu('sic_bo')); return true; } }];
+      case 'machine':
+        return [{ libelle: libelle, actif: true, faire: function () { Hud.ouvrirMenu(Casino.menu()); return true; } }];
     }
-    if (a.service === 'repeindre') {
-      const prix = Math.round(eco.repeinte * facteur);
-      return { libelle: libelle, detail: prix + ' $', actif: p.argent >= prix,
-               faire: function () { payer(prix, 'PEINTURE'); repeindre(v); return false; } };
-    }
-    return null;
+    return [];
   }
 
   /** Ce qu'un article rend a qui le mange : la vie, le souffle, et le cafe. */
@@ -1913,12 +2012,13 @@ const Missions = (function () {
   // --- Le garage de Ti-Guy --------------------------------------------------------------
 
   /** Le char gare devant : le plus proche de la porte, dans les 90 px. */
-  function charDevant() {
+  function charDevant(epaves) {
     const ext = B.exterieur;
     if (!ext) return null;
     let meilleur = null, dMin = 90 * 90;
     for (const e of ext.entites) {
-      if (e.type !== 'vehicule' || e.etat === 'epave' || (e.def && e.def.eau)) continue;   // Ti-Guy ne prend pas une coque
+      // Ti-Guy ne prend pas une coque ; une epave, seule la ferraille la prend (`epaves`).
+      if (e.type !== 'vehicule' || (e.etat === 'epave' && !epaves) || (e.def && e.def.eau)) continue;
       const d = dist2(e.x, e.y, ext.x, ext.y);
       if (d < dMin) { dMin = d; meilleur = e; }
     }
@@ -4030,6 +4130,7 @@ const Missions = (function () {
           : vente ? 'ACHETER ' + vente.nom.toUpperCase()
           : (point.type === 'distributrice' ? inviteDistributrice(machineDuPoint(point))
             : point.type === 'escalier' && point.descend ? 'DESCENDRE'
+            : point.type === 'salon' && rayonDuFauteuil() ? comptoirFerme(pointDuFauteuil(point)) || 'AU COMPTOIR'
             : (point.type === 'emplettes' && comptoirFerme(point)) || (LIBELLES[point.type] || point.type.toUpperCase()));
         return;
       }

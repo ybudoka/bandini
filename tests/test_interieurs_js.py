@@ -235,6 +235,9 @@ def test_les_tiroirs_d_un_logement_ne_se_fouillent_qu_une_fois(banc, paquet):
 def test_le_barbier_change_la_tete_et_fait_oublier_la_tienne(banc, paquet):
     coupe = paquet["economie"]["tarifs"]["coupe"]
     couleur = paquet["coiffures"][1]["couleur"]
+    # ⚠️ Une porte RENOMMÉE BARBIER : depuis la vague 3 des comptoirs, le fauteuil d'une pièce de service qui a son rayon
+    # (la BANQUE, la BUANDERIE) est un comptoir (`Missions.rayonDuFauteuil`) — et la ville n'ouvre que trois pièces de
+    # service, aucune de barbier.
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur, c = L.Monde.carte;
@@ -243,6 +246,7 @@ def test_le_barbier_change_la_tete_et_fait_oublier_la_tienne(banc, paquet):
                 return q.type === 'salon';
             });
         });
+        porte.nom = 'BARBIER';
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
         o.entrer(porte);
         const point = L.B.interieur.points.find(function (p) { return p.type === 'salon'; });

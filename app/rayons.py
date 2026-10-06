@@ -120,12 +120,55 @@ def _meuble(slug: str):
     return {**_art(slug, m["nom"]), "meuble": slug}
 
 
-#: Ce qu'un commerce de l'auto fait au char garé devant, comme Ti-Guy (`Missions.menuGarage`) : le nom de la ligne.
-SERVICES_AU_CHAR = {"reparer": "Réparer le char", "repeindre": "Repeindre (efface le vol)"}
+#: Les SERVICES : ce qu'un comptoir FAIT plutôt que vendre (`Missions.itemsDuService`). `nom` : la ligne du menu
+#: (un service qui en fait plusieurs, comme le coffre, n'en a pas) ; `prix` : son prix de base, fois la `marge` du
+#: rayon (None : il le calcule — la réparation au PV, l'assurance à la valeur du char) ; `char` : il travaille sur le
+#: char garé devant la porte (`Missions.charDevant`), comme Ti-Guy (`menuGarage`).
+#:
+#: ⚠️ Vague 3 (Martin, 6 oct. 2026 : « un service à lui ») : chacun réutilise une mécanique qui existe — le lit de la
+#: planque, `soigner`, la police qui lâche une étoile, le coffre, l'assurance et la vente de Ti-Guy, la dette de Sal,
+#: le film du Rialto, les tables du Dragon d'or. Aucun n'a d'état à lui.
+SERVICES: dict[str, dict] = {
+    # Les commerces de l'auto (vague 2b, 3a).
+    "reparer": {"nom": "Réparer le char", "prix": None, "char": True},
+    "repeindre": {"nom": "Repeindre (efface le vol)", "prix": economie.REPEINTE, "char": True},
+    "assurer": {"nom": "Assurer le char", "prix": None, "char": True},
+    # Le lavage du lave-auto (`enseignes.REGLES`), au comptoir : le char repart propre, la police le cherche un peu moins.
+    "laver": {"nom": "Laver le char (une étoile de moins)", "prix": 12, "char": True},
+    # La ferraille rachète TOUT ce qui roule encore ou plus, épave comprise, au prix de la tôle.
+    "epave": {"nom": "Vendre le char à la ferraille", "prix": None, "char": True},
+    # L'hôtel : le lit de la planque, payé — dormir jusqu'au matin (la partie se sauve), ou jusqu'au soir.
+    # ⚠️ Les libellés du lit de la planque : ce sont deux départs, et le menu se referme (`test_un_comptoir_reste_ouvert`).
+    "nuit": {"nom": "Dormir jusqu’au matin", "prix": 40},
+    "sieste": {"nom": "Dormir jusqu’au soir", "prix": 20},
+    # Les soins, au PV manquant : un peu plus cher que les pilules (0,40 $ le PV), mais jusqu'au bout.
+    "soins": {"nom": "Te faire soigner", "prix": None},
+    # Le linge lavé : celui qu'on cherchait n'a plus de taches — une étoile de moins, comme le lave-auto.
+    "linge": {"nom": "Laver ton linge (une étoile de moins)", "prix": 15},
+    # Le coffre de la planque, au guichet : ce qui y est ne part pas en prison (`Missions.menuCoffre`).
+    "coffre": {"nom": None, "prix": None},
+    # La dette de Rocco : les versements se font aussi au comptoir des prêteurs (`Missions.menuDette`).
+    "dette": {"nom": None, "prix": None},
+    # Le prêt sur gages rachète tes armes, à 40 % du prix de Chez Gus.
+    "gages": {"nom": None, "prix": None},
+    # Une cassette au club vidéo : le film du Rialto, regardé dans l'arrière-boutique (deux heures, `repos_pv`).
+    "film": {"nom": "Louer un film", "prix": 4},
+    # Une table du Dragon d'or, ailleurs : le sic bo au club de mah-jong, la machine à sous à la salle de jeux. Leurs
+    # limites du jour sont celles du casino (`Tables`, `Casino`).
+    "sic_bo": {"nom": "La table de sic bo", "prix": None},
+    "machine": {"nom": "La machine à sous", "prix": None},
+}
+
+#: La part du prix de Chez Gus que le prêteur sur gages donne pour une arme.
+GAGES = 0.4
+#: La part de `VENTE_FRACTION` que la ferraille donne pour un char, quel que soit son état.
+FERRAILLE = 0.5
+#: Le prix d'un PV aux soins (fois la `marge` : le spa coûte plus cher que la clinique).
+SOINS_PV = 0.5
 
 
 def _service(slug: str):
-    return {**_art(slug, SERVICES_AU_CHAR[slug]), "service": slug}
+    return {**_art(slug, SERVICES[slug]["nom"] or slug), "service": slug}
 
 
 def _rayon(nom: str, *articles, marge: float = 1.0, rabais: float = 1.0) -> dict:
@@ -233,6 +276,27 @@ RAYONS: dict[str, dict] = {
                              marge=0.7),
     "peinture_auto": _rayon("La peinture", _service("repeindre"), _CAFE),
     "carrosserie": _rayon("La carrosserie", _service("reparer"), _CAFE),
+    # --- Vague 3a : les services dont la mécanique existe (`SERVICES`).
+    "hotel": _rayon("L'hôtel", _service("nuit"), _service("sieste"), _CAFE),
+    # Le motel : la même chambre, les draps en moins.
+    "motel": _rayon("Le motel", _service("nuit"), _service("sieste"), _LIQUEUR, marge=0.6),
+    "clinique": _rayon("La clinique", _service("soins")),
+    "dentiste": _rayon("Le dentiste", _service("soins"), marge=1.2),
+    "acupuncture": _rayon("L'acupuncture", _service("soins"), _THE, marge=0.8),
+    # Le spa soigne aussi, et c'est le prix qui fait du bien.
+    "spa": _rayon("Le spa", _service("soins"), _THE, marge=2.0),
+    "buanderie": _rayon("La buanderie", _service("linge"), _LIQUEUR),
+    "nettoyeur": _rayon("Le nettoyeur", _service("linge"), marge=1.5),
+    "banque": _rayon("Le guichet", _service("coffre")),
+    "assurances": _rayon("Les assurances", _service("assurer"), _CAFE),
+    "lavage": _rayon("Le lavage", _service("laver"), _CAFE),
+    "ferraille": _rayon("La ferraille", _service("epave")),
+    "club_video": _rayon("Le club vidéo", _service("film"), _bouchee("mais", "Maïs éclaté"), _LIQUEUR),
+    "mah_jong": _rayon("Le club", _service("sic_bo"), _THE),
+    "salle_de_jeux": _rayon("La salle de jeux", _service("machine"), _LIQUEUR, _bouchee("chips", "Chips")),
+    "preteur": _rayon("Le comptoir", _service("dette")),
+    # Le prêt sur gages rachète tes armes, et revend celles des autres un peu moins cher que Gus.
+    "gages": _rayon("Le prêt sur gages", _service("gages"), _arme("poing_americain"), _arme("couteau"), marge=0.8),
     # --- Vague 2c : les meubles de la planque, livrés le lendemain (`Decoration`), chez qui les vend.
     "radio_tv": _rayon("La radio-télé", _meuble("televiseur"), _meuble("jukebox")),
     "meubles": _rayon("Les meubles", _meuble("sofa"), _meuble("tapis_tresse"), _meuble("lampe_lave")),
@@ -311,6 +375,15 @@ ENSEIGNES: dict[str, str] = {
     "ATELIER 12": "pieces_auto", "PIÈCES D'AUTO": "pieces_auto", "PIÈCES USAGÉES": "pieces_usagees",
     "PEINTURE AUTO": "peinture_auto", "SABLAGE AU JET": "peinture_auto",
     "DÉBOSSELAGE": "carrosserie", "RADIATEURS": "carrosserie",
+    # --- Les services (vague 3a).
+    "HÔTEL DES QUAIS": "hotel", "MOTEL LA POINTE": "motel",
+    "CLINIQUE": "clinique", "DOCTEUR": "clinique", "POLYCLINIQUE": "clinique",
+    "DENTISTE": "dentiste", "DENTISTE DR LO": "dentiste", "ACUPUNCTURE LEE": "acupuncture", "SPA": "spa",
+    "BUANDERIE": "buanderie", "BUANDERIE SUN": "buanderie", "NETTOYEUR": "nettoyeur",
+    "BANQUE": "banque", "CAISSE POP": "banque", "ASSURANCES": "assurances",
+    "LAVE-AUTO": "lavage", "CIRE ET HUILE": "lavage", "FERRAILLE": "ferraille",
+    "CLUB VIDÉO": "club_video", "CLUB MAH-JONG": "mah_jong", "SALLE DE JEUX": "salle_de_jeux",
+    "PRÊTS RAPIDES": "preteur", "CHÈQUES CASH": "preteur", "PRÊT SUR GAGES": "gages",
     # --- Le neuf (vague 2d).
     "BIJOUTERIE": "bijouterie", "BIJOUX CHEUNG": "bijouterie", "OPTICIEN": "opticien", "OPTIQUE": "opticien",
     "SOIERIE MEI": "soierie", "TISSUS ET SOIES": "soierie",
@@ -330,48 +403,39 @@ POINTS = ("salon", "journal")
 #: Les enseignes qui vendent ENCORE au comptoir de leur famille : ce qu'elles vendront, et à quelle vague.
 #: ⚠️ Cette table ne doit que rapetisser : chaque vague en sort des lignes vers `ENSEIGNES`.
 EN_ATTENTE: dict[str, str] = {
-    # --- Vague 2 : ce qui reste des marchandises. Ce qui demande une mécanique neuve (le bouquet, le vélo, le
-    # cerf-volant) suit les services.
+    # --- Les marchandises qui demandent une mécanique neuve.
     "FLEURISTE": "un bouquet", "FLEURISTE MEI": "un bouquet", "FLEURISTE ROSE": "un bouquet",
     "JOUETS ET TRAINS": "des jouets", "CERFS-VOLANTS": "un cerf-volant",
     "LANTERNES FUNG": "une lanterne pour la planque", "LOCATION VÉLOS": "un vélo", "PLANCHES": "une planche",
-    "IMPORT YIP": "des importations", "ENTREPÔT 7": "le gros", "PRÊT SUR GAGES": "racheter, revendre",
-    "GROSSISTE": "le gros", "À LOUER": "rien : un local vide",
-    "PARFUMERIE": "du parfum", "TATOUAGE": "un tatouage",
-    "ACIER DU NORD": "des pièces", "CIRE ET HUILE": "un lavage, une vidange", "FERRAILLE": "revendre une épave",
-    "LAVE-AUTO": "un lavage", "MACHINERIE": "des pièces", "SILENCIEUX": "un silencieux", "ÉLECTRIQUE": "des pièces",
-    "USINAGE": "des pièces", "FONDERIE": "des pièces",
-    "ARTISANAT": "de l'artisanat", "BOIS DE SCIAGE": "du bois",
-    "FERBLANTIER": "de la tôle", "FERRONNERIE YU": "du fer forgé", "IMPRIMERIE": "des affiches",
-    "PALETTES": "des palettes", "PLOMBERIE": "de la plomberie",
-    "PÉPINIÈRE": "les plantes de la planque", "SERRURIER": "des clés, un crochet", 
+    "IMPORT YIP": "des importations", "ENTREPÔT 7": "le gros", "GROSSISTE": "le gros",
+    "À LOUER": "rien : un local vide", "PARFUMERIE": "du parfum", "TATOUAGE": "un tatouage",
+    "ACIER DU NORD": "des pièces", "MACHINERIE": "des pièces", "SILENCIEUX": "un silencieux",
+    "ÉLECTRIQUE": "des pièces", "USINAGE": "des pièces", "FONDERIE": "des pièces",
+    "ARTISANAT": "de l'artisanat", "BOIS DE SCIAGE": "du bois", "FERBLANTIER": "de la tôle",
+    "FERRONNERIE YU": "du fer forgé", "IMPRIMERIE": "des affiches", "PALETTES": "des palettes",
+    "PLOMBERIE": "de la plomberie", "PÉPINIÈRE": "les plantes de la planque", "SERRURIER": "des clés, un crochet",
     "VAISSELLE CHOW": "la vaisselle de la planque", "ANTIQUAIRE": "des antiquités", "ENCADREUR": "un cadre",
     "VITRIER": "une vitre", "SCIERIE": "du bois", "MENUISERIE": "du bois",
     "ACCASTILLAGE": "le gréement du bateau", "APPÂTS ET LIGNES": "la canne et les appâts", "APPÂTS": "des appâts",
     "CORDAGES": "des cordages", "GLACE ET SEL": "de la glace", "MOTEURS MARINS": "le moteur du bateau",
     "VOILERIE": "une voile", "CHALOUPES": "une chaloupe", "CHANTIER NAVAL": "réparer le bateau",
     "CALE SÈCHE": "réparer le bateau", "MARINA": "un mouillage",
-    
     "DISQUES VOGUE": "des disques", "MUSIQUE LAROSE": "un instrument", "LIBRAIRIE": "des livres",
     "LIBRAIRIE CHUNG": "des livres", "LIVRES": "des livres", "PAPETERIE": "de la papeterie",
     "GALERIE D'ART": "un tableau",
-    "CLUB VIDÉO": "louer un film",
-    # --- Vague 3 : les services (Martin, 3 oct. 2026 : chacun le sien).
-    "HÔTEL DES QUAIS": "une chambre pour dormir", "MOTEL LA POINTE": "une chambre pour dormir",
-    "CLUB MAH-JONG": "une partie", "SALLE DE JEUX": "une partie", "BINGO": "une carte de bingo",
-    "LOCATION CHALOUPE": "louer une chaloupe", "CAPITAINERIE": "les nouvelles du port",
-    "DENTISTE": "des soins", "DENTISTE DR LO": "des soins", "CLINIQUE": "des soins", "DOCTEUR": "des soins",
-    "POLYCLINIQUE": "des soins", "VÉTÉRINAIRE": "soigner une bête", "ACUPUNCTURE LEE": "des soins",
-    "MISSION DU PORT": "une soupe pour qui est cassé", "HOSPICE": "un lit", "SPA": "des soins",
-    "ASSOCIATION LI": "un service du quartier", "ASSURANCES": "une assurance", "BANQUE": "le change, un dépôt",
-    "CAISSE POP": "le change, un dépôt", "CHÈQUES CASH": "encaisser", "PRÊTS RAPIDES": "un prêt",
-    "BUREAU DE PAIE": "la paie", "BUREAU DE POSTE": "envoyer un colis", "BUANDERIE": "laver son linge",
-    "BUANDERIE SUN": "laver son linge", "NETTOYEUR": "laver son linge", "DOUANES": "un service des douanes",
-    "GARDERIE": "un service du quartier", "NOTAIRE BÉLIVEAU": "un acte", "NOTAIRE LEUNG": "un acte",
-    "PHOTO EXPRESS": "un portrait", "PHOTO SOUVENIR": "un portrait", "PHOTOGRAPHE": "un portrait",
-    "STUDIO LAU": "un portrait", "TAXI DIAMANT": "une course", "BUREAU": "un service du quartier",
-    "DÉPÔT": "un service du quartier", "ENTREPOSAGE": "un casier", "ÉCOLE DE DANSE": "un cours",
-    "ÉCOLE": "un cours", "BIBLIOTHÈQUE": "lire", "ARCHIVES": "lire",
+    # --- Les services qui restent (Martin, 6 oct. 2026) : 3b la course de taxi, 3c le photographe (le rachat, le
+    # portrait, les photos de voyage), 3d la soupe de qui est cassé et les répliques de ceux qui ne vendent rien.
+    "TAXI DIAMANT": "une course",
+    "PHOTO EXPRESS": "le photographe", "PHOTO SOUVENIR": "le photographe", "PHOTOGRAPHE": "le photographe",
+    "STUDIO LAU": "le photographe",
+    "MISSION DU PORT": "une soupe pour qui est cassé", "HOSPICE": "une soupe pour qui est cassé",
+    "BINGO": "le café du bingo, et le chemin du sous-sol", "LOCATION CHALOUPE": "une réplique",
+    "CAPITAINERIE": "une réplique", "VÉTÉRINAIRE": "une réplique", "ASSOCIATION LI": "une réplique",
+    "BUREAU DE PAIE": "une réplique", "BUREAU DE POSTE": "une réplique", "DOUANES": "une réplique",
+    "GARDERIE": "une réplique", "NOTAIRE BÉLIVEAU": "une réplique", "NOTAIRE LEUNG": "une réplique",
+    "BUREAU": "une réplique", "DÉPÔT": "une réplique", "ENTREPOSAGE": "une réplique",
+    "ÉCOLE DE DANSE": "une réplique", "ÉCOLE": "une réplique", "BIBLIOTHÈQUE": "une réplique",
+    "ARCHIVES": "une réplique",
 }
 
 
@@ -390,7 +454,7 @@ def noms_des_enseignes() -> dict[str, set[str]]:
 def _compact(a) -> str:
     """Un article, compact : `"t:<slug>"` une tenue, `"a:<slug>"` une arme, `"p:<slug>"` une pièce du garage (leur
     nom est celui de leur catalogue — `_tenue`, `_arme`, `_piece`), `"s:<slug>"` un service au char
-    (`SERVICES_AU_CHAR`), `"m:<slug>"` un meuble (son nom et son prix voyagent avec les collections : `Decoration`) ; une bouchée, son slug (son nom, et son effet, dans `noms` : `exporter`)."""
+    (`SERVICES`), `"m:<slug>"` un meuble (son nom et son prix voyagent avec les collections : `Decoration`) ; une bouchée, son slug (son nom, et son effet, dans `noms` : `exporter`)."""
     if a["tenue"]:
         return f"t:{a['tenue']}"
     if a["arme"]:
@@ -415,7 +479,7 @@ def exporter() -> dict:
     - `enseignes` — rayon : [noms]. ⚠️ Sans celles qui tomberaient au même endroit sans être nommées : le comptoir
       de leur propre famille (la TAVERNE sert `nuit`), ou un point qui n'est pas un comptoir (`POINTS` : le barbier,
       le Clairon) — le navigateur retombe sur le comptoir du genre (`Missions.comptoirDuPoint`) ;
-    - `services` — le nom de chaque service au char (`SERVICES_AU_CHAR`) ;
+    - `services` — chaque service : [nom, prix, char] (`SERVICES`), et `reglages` — `GAGES`, `FERRAILLE`, `SOINS_PV` ;
     - `tarifs` — les `BOUCHEES`, slug : [prix, PV, souffle].
 
     `Missions.rayons` le déplie une fois."""
@@ -431,5 +495,6 @@ def exporter() -> dict:
         for a in r["articles"]:
             if a["tarif"]:
                 noms[a["slug"]] = [a["nom"], a["effet"]] if a["effet"] else a["nom"]
-    return {"rayons": rayons, "noms": noms, "enseignes": par_rayon, "services": dict(SERVICES_AU_CHAR),
+    return {"rayons": rayons, "noms": noms, "enseignes": par_rayon, "services": {k: [v["nom"], v["prix"], 1 if v.get("char") else 0] for k, v in SERVICES.items()},
+            "reglages": {"gages": GAGES, "ferraille": FERRAILLE, "soins_pv": SOINS_PV},
             "tarifs": {slug: list(t) for slug, t in BOUCHEES.items()}}

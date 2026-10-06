@@ -220,3 +220,33 @@ mécanique neuve : le bouquet qui se donne (FLEURISTE), les jouets, le cerf-vola
 lanterne de la planque, les plantes et la vaisselle, les disques, les livres et l'instrument, le parfum, le
 tatouage ; le gros (ENTREPÔT 7, GROSSISTE) et le prêt sur gages ; « des pièces » sans destinataire (ACIER DU NORD,
 MACHINERIE, USINAGE…) ; et la marine (cordages, voilerie, moteurs marins : le bateau n'a pas encore de garage).
+
+### Vague 3a : les services dont la mécanique existe (livrée le 6 oct. 2026)
+
+- **18 rayons de plus**, et **24 enseignes** sorties de `EN_ATTENTE` (168 décidées sur 246). Chaque service réutilise
+  une mécanique du jeu (`rayons.SERVICES`, `Missions.itemsDuService`), aucun n'a d'état à lui :
+  - l'HÔTEL DES QUAIS et le MOTEL LA POINTE (à 0,6) : le lit de la planque, payé — dormir jusqu'au matin (la partie
+    se sauve, devant leur porte) ou jusqu'au soir ;
+  - la CLINIQUE, le DOCTEUR, la POLYCLINIQUE, les DENTISTES (1,2), l'ACUPUNCTURE LEE (0,8), le SPA (2) : les soins, au
+    PV manquant (0,50 $ le PV : un peu plus que les pilules, mais jusqu'au bout) ;
+  - la BUANDERIE, le NETTOYEUR (1,5) : laver son linge, une étoile de moins (comme le lave-auto) ;
+  - la BANQUE et la CAISSE POP : le coffre de la planque au guichet — pas un compte de plus, le même argent à l'abri
+    de la prison ;
+  - les ASSURANCES : l'assurance de Ti-Guy, sur le char garé devant ; le LAVE-AUTO et CIRE ET HUILE : le laver (une
+    étoile de moins) ; la FERRAILLE : l'acheter, épave comprise, à la moitié du prix de vente de Ti-Guy, et il quitte
+    la rue ;
+  - le CLUB VIDÉO : le film du soir, regardé dans l'arrière-boutique (`repos_pv` du Rialto) ; le CLUB MAH-JONG : la
+    table de sic bo du Dragon d'or ; la SALLE DE JEUX : la machine à sous (les limites du jour sont celles du casino) ;
+  - les PRÊTS RAPIDES et CHÈQUES CASH : les versements de la dette de Rocco (`menuDette`, le répit compris) ; le PRÊT
+    SUR GAGES : il rachète tes armes à 40 % du prix de Gus, et revend un poing américain et un couteau à 0,8.
+- **Plus de coupe de cheveux à la banque** : les pièces de SERVICE n'ont pas de comptoir, mais le fauteuil du barbier
+  (`salon`). Quand la porte a un rayon neuf (`Missions.rayonDuFauteuil`), le fauteuil devient son comptoir, aux heures
+  de la famille `service`, et l'invite dit « AU COMPTOIR ». Le barbier et le coiffeur gardent leur fauteuil.
+- **L'hôtel dit « DORMIR JUSQU’AU MATIN »**, comme le lit de la planque : ce sont deux départs, et le menu se referme
+  (`test_un_comptoir_reste_ouvert`) ; le film aussi (il passe au noir), et les tables ouvrent leur propre menu.
+- **Juges** : `test_rayons.py` (chaque service rendu par quelqu'un, qui rend quoi, plus de fauteuil de barbier ailleurs
+  que chez les barbiers) ; `test_rayons_js.py` (au bouton, par de vraies portes : la CLINIQUE soigne au PV manquant, la
+  BUANDERIE fait tomber une étoile, la BANQUE dépose au coffre, les PRÊTS RAPIDES prennent l'acompte, le PRÊT SUR GAGES
+  rachète le couteau, l'HÔTEL fait dormir jusqu'au lendemain ; l'assurance et le lavage sur le char garé devant, la
+  FERRAILLE qui prend l'épave, le film, la table de sic bo, le motel). Le fauteuil rendu au barbier et le gage qui ne
+  retire pas l'arme font rougir le juge du bouton.

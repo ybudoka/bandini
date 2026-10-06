@@ -35,8 +35,10 @@ def test_chaque_enseigne_decidee_vend_son_rayon_au_comptoir(banc):
     """Toutes les enseignes à comptoir, une par une, dans une pièce de leur famille : le menu porte l'enseigne
     et vend son rayon — ni plus, ni le comptoir de sa couleur."""
     genres = rayons.noms_des_enseignes()
+    # ⚠️ Sans les rayons à SERVICES (vague 3) : leurs lignes se calculent (le prix des soins, le coffre) — ils ont leurs
+    # juges à eux, plus bas.
     cas = [[nom, sorted(genres[nom])[0], slug] for nom, slug in sorted(rayons.ENSEIGNES.items())
-           if slug not in rayons.POINTS]
+           if slug not in rayons.POINTS and not any(a.get("service") for a in (rayons.RAYONS.get(slug) or {}).get("articles", []))]
     r = banc("""function (L) {
         %s
         L.Jeu.commencer();
@@ -297,3 +299,145 @@ def test_a_la_bijouterie_la_chaine_se_porte_au_cou_et_rosa_ne_la_vend_pas(banc):
     assert r and r["premier"] == "CHAÎNE EN OR" and r["argent"] == 1000 - prix, r
     assert r["cou"] == "chaine_or" and "chaine" in r["accessoires"], r
     assert r["avant"] == 0 and r["apres"] == 1, r
+
+
+#: Entrer par une vraie porte de la famille `genre`, renommée `nom`, et ouvrir le menu de son point (le comptoir, ou
+#: le fauteuil d'une pièce de service). `avant` : ce qu'on pose une fois dedans.
+ENTRER = """
+    function ouvrir(L, o, genre, nom, type, devant) {
+        const B = L.B, j = B.joueur, I = L.Monde.carte.def.interieurs, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) {
+            const piece = p.interieur && I[p.interieur];
+            return piece && /^(nord_)?[a-z]+_\\d+$/.test(p.interieur)
+                && (piece.points || []).some(function (q) { return q.type === type && (type !== 'emplettes' || q.genre === genre); });
+        });
+        if (!porte) return null;
+        const point = I[porte.interieur].points.find(function (q) { return q.type === type; });
+        porte.nom = nom;
+        B.partie.heure = 0.5;
+        j.x = porte.x * 16 + 8; j.y = (porte.y + 1) * 16 + 10;
+        if (devant) devant(j);                       // un char garé devant CETTE porte-ci
+        L.Jeu.entrer(porte);
+        for (let k = 0; k < 240 && (!B.interieur || B.transition); k++) o.frame(1);
+        if (!B.interieur) return null;
+        if (B.transition) o.fondu();
+        return point;
+    }
+    function presser(L, o, point, ligne) {
+        const B = L.B, faire = function () { return L.Missions.menuDuPoint(point); };
+        const menu = faire();
+        menu.refaire = faire;
+        L.Hud.ouvrirMenu(menu);
+        menu.curseur = menu.items.findIndex(function (q) { return q.libelle.indexOf(ligne) === 0; });
+        const avant = { libelles: menu.items.map(function (q) { return q.libelle; }), curseur: menu.curseur };
+        if (menu.curseur >= 0) o.tape('KeyE', 2);
+        if (B.transition) o.fondu();
+        if (L.B.menu) L.Hud.fermerMenu();
+        return avant;
+    }
+    function sortir(L, o) {
+        L.Jeu.sortir();
+        for (let k = 0; k < 240 && (L.B.interieur || L.B.transition); k++) o.frame(1);
+    }
+"""
+
+
+def test_les_services_au_bouton(banc):
+    """Vague 3a, au BOUTON, par de vraies portes : la CLINIQUE soigne au PV manquant, la BUANDERIE fait lâcher une
+    étoile, la BANQUE dépose au coffre de la planque (et plus de coupe de cheveux), les PRÊTS RAPIDES prennent un
+    versement sur la dette, le PRÊT SUR GAGES rachète le couteau, l'HÔTEL fait dormir jusqu'au matin."""
+    r = banc("""function (L, o) {
+        %s
+        L.Jeu.commencer();
+        if (L.B.menu) L.Hud.fermerMenu();
+        const B = L.B, j = B.joueur, p = B.partie, out = {};
+        let pt = ouvrir(L, o, 'sante', 'CLINIQUE', 'emplettes');
+        p.argent = 1000; j.vie = 40;
+        out.clinique = presser(L, o, pt, 'TE FAIRE SOIGNER');
+        out.clinique.vie = j.vie; out.clinique.argent = p.argent;
+        sortir(L, o);
+        pt = ouvrir(L, o, 'service', 'BUANDERIE', 'salon');
+        p.argent = 1000; B.recherche.etoiles = 2;
+        out.buanderie = presser(L, o, pt, 'LAVER TON LINGE');
+        out.buanderie.etoiles = B.recherche.etoiles; out.buanderie.argent = p.argent;
+        sortir(L, o);
+        pt = ouvrir(L, o, 'service', 'BANQUE', 'salon');
+        p.argent = 1000; p.planque.coffre = 0;
+        out.banque = presser(L, o, pt, 'DÉPOSER 100 $');
+        out.banque.coffre = p.planque.coffre; out.banque.argent = p.argent;
+        sortir(L, o);
+        pt = ouvrir(L, o, 'service', 'PRÊTS RAPIDES', 'salon');
+        p.argent = 5000; const dette = p.dette;
+        out.preteur = presser(L, o, pt, 'DONNER');
+        out.preteur.avant = dette; out.preteur.apres = p.dette;
+        sortir(L, o);
+        pt = ouvrir(L, o, 'commerce', 'PRÊT SUR GAGES', 'emplettes');
+        p.argent = 0; p.armes.couteau = { mun: null };
+        out.gages = presser(L, o, pt, 'LAISSER COUTEAU');
+        out.gages.couteau = !!p.armes.couteau; out.gages.argent = p.argent;
+        sortir(L, o);
+        pt = ouvrir(L, o, 'nuit', 'HÔTEL DES QUAIS', 'emplettes');
+        p.argent = 1000; const jour = p.jour; j.vie = 10;
+        out.hotel = presser(L, o, pt, 'DORMIR JUSQU');
+        for (let k = 0; k < 400 && B.transition; k++) o.frame(1);
+        out.hotel.jour = p.jour - jour; out.hotel.vie = j.vie; out.hotel.argent = p.argent;
+        return out;
+    }""" % ENTRER)
+    from app import economie
+    c, bu, ba, pr, g, h = (r[k] for k in ("clinique", "buanderie", "banque", "preteur", "gages", "hotel"))
+    assert c["curseur"] >= 0 and c["vie"] == 100 and c["argent"] == 1000 - 30, c
+    assert bu["curseur"] >= 0 and bu["etoiles"] == 1 and bu["argent"] == 1000 - 15, bu
+    assert "BLOND" not in ba["libelles"] and ba["coffre"] == 100 and ba["argent"] == 900, ba
+    assert pr["curseur"] >= 0 and pr["apres"] == pr["avant"] - economie.DETTE["acompte_min"], pr
+    assert not g["couteau"] and g["argent"] == round(60 * rayons.GAGES), g
+    assert h["jour"] == 1 and h["argent"] == 1000 - 40 * rayons.RAYONS["hotel"]["marge"], h
+
+
+def test_les_autres_services_se_proposent_et_la_ferraille_achete_l_epave(banc):
+    """Le reste de la vague 3a : les ASSURANCES et le LAVE-AUTO travaillent sur le char garé devant ; la FERRAILLE
+    l'achète même en épave, et il quitte la rue ; le CLUB VIDÉO loue le film du soir ; le CLUB MAH-JONG ouvre la table
+    de sic bo ; le MOTEL fait dormir jusqu'au soir."""
+    r = banc("""function (L, o) {
+        %s
+        L.Jeu.commencer();
+        if (L.B.menu) L.Hud.fermerMenu();
+        const B = L.B, j = B.joueur, p = B.partie, out = {};
+        function menu(genre, nom, type, devant) {
+            const pt = ouvrir(L, o, genre, nom, type, devant);
+            const libelles = L.Missions.menuDuPoint(pt).items.map(function (q) { return q.libelle; });
+            return { pt: pt, libelles: libelles };
+        }
+        p.argent = 5000;
+        // Un char garé devant la porte d'assurances : posé où le joueur sortira.
+        const v = L.Vehicules.creer('auto', 0, 0, 0, { etat: 'stationne', couleur: '#c0392b' });
+        v.x = 0; v.y = 0;
+        function garer(j) { v.x = j.x + 24; v.y = j.y + 8; L.Entites.indexer(); }
+        out.assurances = menu('service', 'ASSURANCES', 'salon').libelles; sortir(L, o);
+        out.assurances2 = menu('service', 'ASSURANCES', 'salon', garer).libelles; sortir(L, o);
+        out.lavage = menu('industrie', 'LAVE-AUTO', 'emplettes', garer).libelles; sortir(L, o);
+        v.etat = 'epave';
+        const f = menu('industrie', 'FERRAILLE', 'emplettes', garer);
+        out.ferraille = presser(L, o, f.pt, 'VENDRE');
+        out.ferraille.parti = B.exterieur.entites.indexOf(v) < 0;
+        out.ferraille.argent = p.argent;
+        sortir(L, o);
+        out.video = menu('nuit', 'CLUB VIDÉO', 'emplettes').libelles; sortir(L, o);
+        const mj = menu('nuit', 'CLUB MAH-JONG', 'emplettes');
+        const m = L.Missions.menuDuPoint(mj.pt);
+        L.Hud.ouvrirMenu(m);
+        m.curseur = m.items.findIndex(function (q) { return q.libelle === 'LA TABLE DE SIC BO'; });
+        o.tape('KeyE', 2);
+        out.table = L.B.menu && L.B.menu !== m ? L.B.menu.titre : null;       // le menu de la table, pas le comptoir
+        if (L.B.menu) L.Hud.fermerMenu();
+        sortir(L, o);
+        out.motel = menu('nuit', 'MOTEL LA POINTE', 'emplettes').libelles;
+        return out;
+    }""" % ENTRER)
+    assert r["assurances"][0] == "GARE UN CHAR DEVANT LA PORTE", r["assurances"]
+    assert r["assurances2"][0].startswith("ASSURER "), r["assurances2"]
+    assert r["lavage"][0] == "LAVER LE CHAR (UNE ÉTOILE DE MOINS)", r["lavage"]
+    assert r["ferraille"]["libelles"][0].endswith("À LA FERRAILLE") and r["ferraille"]["parti"], r["ferraille"]
+    assert r["ferraille"]["argent"] > 5000, r["ferraille"]
+    assert r["video"][0].startswith("LOUER UN FILM — "), r["video"]
+    assert r["table"], r
+    assert r["motel"][:2] == ["DORMIR JUSQU’AU MATIN", "DORMIR JUSQU’AU SOIR"], r["motel"]
