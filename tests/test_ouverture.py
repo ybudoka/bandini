@@ -296,6 +296,47 @@ def test_une_partie_en_cours_ne_revoit_pas_l_ouverture(banc):
     assert r["vue"] is True, "et la revoir ne remet pas le drapeau a zero : elle ne rejouera pas d'elle-meme"
 
 
+def test_une_vieille_partie_descend_au_terminus_et_renait_a_la_planque(banc):
+    """⚠️ « Neuve » veut dire SANS POSITION, pas sans passe : une partie d'avant
+    l'ouverture, m1 faite, perd sa position quand la carte change, et l'ouverture
+    se joue pour elle. Sans l'ouverture, elle naitrait devant la planque — et le
+    car la deposait au terminus pour la faire glisser jusqu'a la planque sous nos
+    yeux, mille pixels en une seconde (Martin, 8 oct. 2026). Le car depose au
+    terminus ; c'est la fin de la scene qui la ramene chez elle."""
+    r = banc("""function (L, o) {
+        L.Jeu.retourTitre();
+        L.B.partie.x = null; L.B.partie.y = null; L.B.partie.ouvertureVue = false;
+        L.B.partie.missionsFaites = { m1: 1 };
+        L.Jeu.commencer();
+        const chezLui = { x: L.B.joueur.x, y: L.B.joueur.y };
+        L.Jeu.retourTitre();
+        L.B.partie.x = null; L.B.partie.y = null; L.B.partie.ouvertureVue = false;
+        L.B.partie.missionsFaites = { m1: 1 };
+        L.Jeu.jouer();
+        const arret = L.B.ouverture.arret;
+        let n = 0, pas = 0, loin = 0, prec = null;
+        while (L.B.ouverture && n < 3000) {
+            o.frame(1); n++;
+            if (!L.B.ouverture) break;
+            const j = L.B.joueur;
+            if (j.dessine) {
+                if (prec) pas = Math.max(pas, Math.hypot(j.x - prec.x, j.y - prec.y));
+                loin = Math.max(loin, Math.hypot(j.x - arret.x, j.y - arret.y));
+                prec = { x: j.x, y: j.y };
+            }
+        }
+        const planque = (L.Monde.carte.def.portes || []).find(function (q) { return q.lieu === 'planque'; });
+        return { pas: pas, loin: loin,
+                 chezLuiAuTerminus: Math.hypot(chezLui.x - arret.x, chezLui.y - arret.y),
+                 aLaPlanque: Math.hypot(chezLui.x - (planque.x * 16 + 8), chezLui.y - (planque.y * 16 + 8)),
+                 revenu: Math.hypot(L.B.joueur.x - chezLui.x, L.B.joueur.y - chezLui.y) };
+    }""")
+    assert r["aLaPlanque"] < 40 and r["chezLuiAuTerminus"] > 300, "le juge suppose une partie qui nait a la planque"
+    assert r["loin"] < 120, "il descend du car au terminus et y reste toute la scene"
+    assert r["pas"] < 4, "un pas, pas un teleport"
+    assert r["revenu"] < 1, "et la fin de la scene le ramene la ou il serait ne sans elle : devant la planque"
+
+
 def test_la_ville_est_figee_et_le_hud_se_tait_pendant_l_ouverture(banc):
     """⚠️ Figee pour deux raisons, et la seconde est la vraie : une scene ou un
     char peut entrer dans le champ n'est plus une scene, et une partie qui

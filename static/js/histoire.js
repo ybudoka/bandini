@@ -1275,6 +1275,9 @@ const Histoire = (function () {
 
       Rend `false` si la scene est impossible (pas de rue devant le terminus) :
       la partie commence alors comme avant, sans rien dire. */
+  //: Plus loin que ca de la porte du terminus, on ne nait pas « au terminus » : le car depose a la porte.
+  const QUAI_PX = 64;
+
   function ouverture(rejoue) {
     const j = B.joueur;
     if (!j || B.scene || B.interieur) return false;
@@ -1292,8 +1295,15 @@ const Histoire = (function () {
     //     se joue quand meme au terminus (c'est la qu'est le car), le bonhomme y
     //     est prete le temps de la revoir, et il revient chez lui a la derniere
     //     image.
+    //   - ⚠️ ET UNE PARTIE NEUVE QUI NAIT AILLEURS : « neuve », c'est sans
+    //     position, pas sans passe. Une vieille partie, m1 faite, perd sa position
+    //     quand la carte change et nait devant la PLANQUE : le car la deposait au
+    //     terminus et la faisait glisser mille pixels sous nos yeux (Martin, 8 oct.
+    //     2026). Loin du terminus, on descend au terminus comme a la revue, et la
+    //     fin de la scene ramene chez soi.
     const chezLui = { x: j.x, y: j.y };
-    const quai = rejoue ? { x: porte.x, y: porte.y } : chezLui;
+    const ailleurs = Math.hypot(chezLui.x - porte.x, chezLui.y - porte.y) > QUAI_PX;
+    const quai = rejoue || ailleurs ? { x: porte.x, y: porte.y } : chezLui;
     // ⚠️ Les phrases viennent du PAQUET (`missions.repliques_ouverture()`), avec
     // leur slug de voix deja calcule : le navigateur ne refait pas la regle.
     const lignes = (B.defs.ouverture || []).map(function (l) {
