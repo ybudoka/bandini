@@ -287,6 +287,26 @@ const Autobus = (function () {
     return Entites.visibleAEcran(v.x, v.y, 40) ? Math.round(h.arret_images * 0.6) : 0;
   }
 
+  /** La tuile visee compte pour atteinte, meme sans y etre pose pile, quand il l'a DEPASSEE (le long de
+      sa route) — ou, pousse hors de son rail de plus d'un pixel, quand il en est a moins d'une tuile.
+
+      ⚠️ POUSSE HORS DE SON RAIL, IL LE REPREND PLUS LOIN (l'autobus accroche au carrefour des Quais,
+      2 oct. 2026 ; l'arroseuse qui tourne a 180°, Martin, 8 oct. 2026). Sur son rail, `rouler` le pose
+      pile sur sa cible et rien ne change : il pivote au centre de la tuile. Mais un choc le pousse de
+      quelques pixels — aux Quais, sa caisse frolait en sortant du virage le camion arrete au rouge a la
+      ligne d'en face — et il n'atteignait plus jamais ce centre. Pousse au-dela, la cible passait
+      derriere lui, et il se retournait pour y revenir : le demi-tour de l'arroseuse. Pousse de cote,
+      treize pixels vers le trottoir et cinq avant sa tuile, il la visait presque a angle droit, le nez
+      dans la voie d'en face, contre le meme camion : 2 612 images pris, puis le demi-tour. Hors du rail,
+      il vise donc toujours au moins une tuile devant lui, et rejoint sa voie en biais. */
+  function tuileAtteinte(v, L, cible) {
+    const a = L.tuiles[(v.etape + L.n - 1) % L.n], b = L.tuiles[v.etape];
+    const dx = b[0] - a[0], dy = b[1] - a[1];
+    const long = (v.x - cible.x) * dx + (v.y - cible.y) * dy;   // > 0 : depassee
+    const cote = Math.abs((v.x - cible.x) * dy - (v.y - cible.y) * dx);
+    return long >= 0 || (cote > 1 && long > -TT);
+  }
+
   /** L'autobus d'une ligne, a chaque image. */
   function conduire(v) {
     const L = ligne(v.ligne);
@@ -324,7 +344,7 @@ const Autobus = (function () {
     // attendait la boite qu'elle tenait (1 400 images d'impasse), ou sur l'auto arretee a la
     // ligne d'a cote, qui la repoussait d'autant qu'elle avancait. `rouler` pose le vehicule
     // pile sur sa cible (`pas = min(dist, vitesse)`) : il y arrive.
-    if (dist2(cible.x, cible.y, v.x, v.y) < 0.25) {
+    if (dist2(cible.x, cible.y, v.x, v.y) < 0.25 || tuileAtteinte(v, L, cible)) {
       const ici = v.etape;
       // ⚠️ LA BOITE SE REND SUR LA VOIE DE SORTIE, comme le trafic (`cibleDeLaVoie`) — ni sur la
       // ligne d'arret, ni dans la boite. On la rendait des qu'il visait une tuile qui n'etait pas

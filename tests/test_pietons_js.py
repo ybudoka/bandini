@@ -1103,12 +1103,18 @@ def test_la_fille_de_la_brume_tient_son_coin(banc):
     base et le métro, six décalages de dés) ; sans poste, le rapport tombe à
     1,0. Et une fois sur trente-six, elle s'écarte de 510 px sans fuir — d'où
     « cinq essais sur six », et pas six.
+
+    ⚠️ **LES GRAINES 34 À 39 SONT DEVENUES 100 À 105** (8 oct. 2026, l'autobus poussé hors de son rail qui le
+    reprend plus loin, au lieu de rester pris ou de faire demi-tour) : la ville autour d'elle a changé, et sur les
+    graines 34 à 39 le rapport est tombé à 1,26. Mesuré sur huit lots de six graines (100 à 147) : de 1,81 à 2,98
+    avec l'autobus corrigé, de 1,38 à 2,98 avant — le lot 34 était un tirage malchanceux, pas un recul. Le lot 100
+    donne 2,20 avant comme après.
     """
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const essais = [];
         for (let n = 0; n < 6; n++) {
-            L.graine(34 + n);
+            L.graine(100 + n);
             const fille = o.poser('racoleuse', 20, 0);
             const passante = o.poser('passante', -20, 0);
             fille.etat = 'flane'; passante.etat = 'flane';
