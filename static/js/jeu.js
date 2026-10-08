@@ -1161,6 +1161,9 @@ const Jeu = (function () {
       // et PAUSE ne passe pas la scène par-dessus une réponse qu'on n'a pas donnée.
       if (B.menu) { Hud.majMenu(); Entree.videPresse(); return; }
       if (Entree.neuf('pause')) { Scenes.passer(); Entree.videPresse(); return; }
+      // ⚠️ La secousse du dernier coup retombe sous la scène (`Monde.amortirSecousse`) : figée avec la
+      // ville, elle faisait sauter l'écran jusqu'à la dernière réplique (Martin, 8 oct. 2026).
+      Monde.amortirSecousse();
       Scenes.maj();
       Entree.videPresse();
       return;
@@ -1208,6 +1211,7 @@ const Jeu = (function () {
       // replique (`majCinema` compte ses propres images) et qui raccroche. Le
       // figer, ce serait un appel dont on ne sort jamais.
       if (B.cinema && B.joueur && !B.joueur.dansVehicule) {
+        Monde.amortirSecousse();          // le coup d'avant ne fait pas trembler la réplique (voir la scène)
         Histoire.maj();
         Entree.videPresse();
         return;

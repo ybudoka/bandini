@@ -3085,6 +3085,16 @@ const Monde = (function () {
     const cible = cibleCamera(mx, my);
     B.cam.x += (cible.x - B.cam.x) * 0.12;
     B.cam.y += (cible.y - B.cam.y) * 0.12;
+    amortirSecousse();
+  }
+
+  /** La secousse de la caméra retombe d'un pas (`Jeu.rendre` en tire la vue au hasard tant qu'elle passe 0,05).
+      ⚠️ AUSSI QUAND LA VILLE EST FIGÉE (Martin, 8 oct. 2026 : « quand on termine une mission en tuant un
+      personnage, l'écran saute jusqu'à la fin du dialogue ») : elle ne retombait qu'ici, avec la caméra qui
+      suit le joueur — or le coup qui couche le dernier homme gagne la mission dans la même image, la scène de
+      fin fige la ville, et la secousse du coup restait à 0,9 toute la conversation. `Jeu.maj` l'appelle donc
+      aussi sous une scène et sous un dialogue qui fige la ville. */
+  function amortirSecousse() {
     if (B.cam.secousse > 0) B.cam.secousse *= 0.9;
   }
 
@@ -3103,7 +3113,7 @@ const Monde = (function () {
     const cible = cibleCamera(j.x + avanceX, j.y + avanceY);
     B.cam.x += (cible.x - B.cam.x) * 0.12;
     B.cam.y += (cible.y - B.cam.y) * 0.12;
-    if (B.cam.secousse > 0) B.cam.secousse *= 0.9;
+    amortirSecousse();
   }
 
   // --- Heure et ambiance ---------------------------------------------------------------
@@ -3329,7 +3339,7 @@ const Monde = (function () {
     barrieresCoulissantes, majBarrieresCoulissantes, dessinerBarrieresCoulissantes, COULISSE_GLISSE, COULISSE_TIENT,
 materiauxDuLogement, materiauxDuCommerce, ceder, estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, teinteDeToit, teintesDesToits, formeDeToit, formeDuToit, objetsDesToits, lampesDesLucarnes, logementElargi, sousLesEtages, etagesDuCommerce, estRoute, estPassage, estChaussee, estAbord, estTrottoir, estTerre, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
-    dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, ambianceVue, aLAbri, estNuit, estNuitVue, periode, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
+    dessinerSol, centrerCamera, majCamera, amortirSecousse, limitesCamera, majHeure, ambiance, ambianceVue, aLAbri, estNuit, estNuitVue, periode, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
     miniCarte, couleurMini, couleurMiniA, masqueDeLaCarte, masquee, hauteurConnue, chemin, demanderChemin, majChemins,
     largeRefuse, sortieDuLarge, retenirAuLarge, avertirDuLarge, vueSurLeMasque, AVANCE_CAMERA,
     cheminRoute, routeLaPlusProche,
