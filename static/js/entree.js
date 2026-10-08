@@ -804,6 +804,11 @@ const Entree = (function () {
     // ⚠️ Une fois, c'est pour la classe `tactile` ; le doigt qui REVIENT apres
     // le clavier ou la manette, lui, doit se lire a chaque fois.
     fenetre.addEventListener('touchstart', function () { appareil = 'tactile'; }, { passive: true });
+    // ⚠️ LE PLEIN ECRAN QUE LE NAVIGATEUR NE SAIT PAS FAIRE NE SE MONTRE PAS (Martin, 8 oct. 2026 : « le bouton
+    // plein ecran, qui ne fait rien sur iPhone ») : Safari sur iPhone n'a ni `requestFullscreen` ni
+    // `webkitRequestFullscreen` pour la page — seulement pour une video. L'iPad et Android gardent le bouton.
+    const racine = d.documentElement;
+    if (racine && !racine.requestFullscreen && !racine.webkitRequestFullscreen) d.body.classList.add('sans-plein-ecran');
 
     //: ⚠️ LE JOYSTICK FLOTTE (demande de Martin, 4 oct. 2026) : `#croix` est une ZONE invisible,
     //: en bas a gauche, la ou le pouce gauche se pose (`styles.css`). Rien ne s'y voit tant

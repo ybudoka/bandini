@@ -553,6 +553,95 @@ def test_les_commandes_tactiles_sont_grandes_et_visibles(browser, serveur):
 
 
 
+def test_l_ecran_titre_ne_montre_ni_joystick_ni_boutons(browser, serveur):
+    """Martin, 8 oct. 2026 : « sur l'écran principal, les boutons tactiles et joystick ne devraient pas apparaître ».
+    Au titre, on touche JOUER et les lignes du menu ; les commandes viennent avec la partie."""
+    contexte = browser.new_context(viewport={"width": 393, "height": 852}, has_touch=True, is_mobile=True,
+                                   device_scale_factor=3)
+    page = contexte.new_page()
+    page.goto(serveur)
+    attendre_titre(page)
+    assert page.evaluate("document.body.classList.contains('tactile')"), "le telephone n'a pas ete reconnu"
+    for el in ('#tactile b[data-a="attaque"]', '#tactile b[data-a="pause"]', "#croix", "#volant"):
+        assert page.locator(el).bounding_box() is None, f"{el} se montre a l'ecran titre"
+    page.tap("#bouton-jouer")
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    assert page.locator('#tactile b[data-a="attaque"]').bounding_box(), "les boutons ne viennent pas avec la partie"
+    assert page.locator("#croix").bounding_box(), "le joystick ne vient pas avec la partie"
+    contexte.close()
+
+
+def test_sans_plein_ecran_possible_le_bouton_ne_se_montre_pas(browser, serveur):
+    """Martin, 8 oct. 2026 : « on peut aussi enlever le bouton plein écran, qui ne fait rien sur iPhone ». Safari
+    sur iPhone n'a ni `requestFullscreen` ni `webkitRequestFullscreen` pour la page : le juge les retire avant le
+    chargement, comme sur l'iPhone. Le bouton ne se montre pas, et PAUSE prend le coin, à sa place."""
+    contexte = browser.new_context(viewport={"width": 393, "height": 852}, has_touch=True, is_mobile=True,
+                                   device_scale_factor=3)
+    contexte.add_init_script("delete Element.prototype.requestFullscreen; delete Element.prototype.webkitRequestFullscreen;")
+    page = contexte.new_page()
+    page.goto(serveur)
+    attendre_titre(page)
+    page.tap("#bouton-jouer")
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    assert page.evaluate("document.body.classList.contains('sans-plein-ecran')"), "l'iPhone n'a pas ete reconnu"
+    assert page.locator('#tactile b[data-a="plein"]').bounding_box() is None, "le bouton plein ecran se montre sur l'iPhone"
+    pause = page.locator('#tactile b[data-a="pause"]').bounding_box()
+    haut = page.locator("#haut").bounding_box()
+    assert pause and abs((pause["x"] + pause["width"]) - (haut["x"] + haut["width"])) < 1, f"PAUSE n'a pas pris le coin : {pause} / {haut}"
+    contexte.close()
+
+
+@pytest.mark.parametrize("nitro", [False, True])
+def test_au_volant_en_portrait_la_piste_ne_deborde_sur_aucun_bouton(browser, serveur, nitro):
+    """Martin, 8 oct. 2026, sur son iPhone en portrait : « le joystick déborde sur le bouton ». La piste faisait
+    220 px fixes depuis le bord gauche ; à 393 px de large, son bout passait 19 px sous RECUL, et la NITRO (au ras
+    du bas, à gauche de RECUL) tombait en plein dessus. Le juge d'au-dessus mesurait en paysage, où tout tenait.
+    En portrait, à la largeur d'un iPhone, avec et sans NITRO : aucune pastille n'en mord une autre, et la piste
+    reste une piste couchée."""
+    contexte = browser.new_context(viewport={"width": 393, "height": 852}, has_touch=True, is_mobile=True,
+                                   device_scale_factor=3)
+    page = contexte.new_page()
+    erreurs = []
+    page.on("pageerror", lambda e: erreurs.append(str(e)))
+    page.goto(serveur)
+    attendre_titre(page)
+    page.tap("#bouton-jouer")
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.evaluate("window.BANDINI.Histoire.passerOuverture()")
+    page.wait_for_function("!window.BANDINI.B.ouverture")
+    if page.evaluate("!!window.BANDINI.B.menu"):
+        page.tap('#tactile b[data-a="action"]')
+        page.wait_for_function("!window.BANDINI.B.menu")
+    page.evaluate("""(nitro) => {
+        const L = window.BANDINI, j = L.B.joueur;
+        const v = L.Vehicules.creer('auto', j.x + 24, j.y, 0, { etat: 'stationne' });
+        if (nitro) v.mods = Object.assign({}, v.mods, { nitro: true });
+        L.Entites.indexer();
+        L.Vehicules.monter(j, v);
+    }""", nitro)
+    page.wait_for_function("document.body.classList.contains('au-volant')")
+    noms = ["gaz", "frein", "attaque", "action", "esquive", "arme", "pause", "plein"] + (["saisir"] if nitro else [])
+    if nitro:
+        page.wait_for_function("""() => { const b = document.querySelector('#tactile b[data-a="saisir"]');
+                                          return b && b.getBoundingClientRect().width > 0; }""")
+    boites = {a: page.locator(f'#tactile b[data-a="{a}"]').bounding_box() for a in noms}
+    boites["volant"] = page.locator("#volant").bounding_box()
+    for nom, b in boites.items():
+        assert b, nom
+        assert b["x"] >= 0 and b["y"] >= 0 and b["x"] + b["width"] <= 393 and b["y"] + b["height"] <= 852, (nom, b)
+    piste = boites["volant"]
+    assert piste["width"] >= 2 * piste["height"], f"une piste couchee, plus large que haute : {piste}"
+    cles = sorted(boites)
+    for i, un in enumerate(cles):
+        for autre in cles[i + 1:]:
+            a, b = boites[un], boites[autre]
+            chevauche = (a["x"] < b["x"] + b["width"] and b["x"] < a["x"] + a["width"]
+                         and a["y"] < b["y"] + b["height"] and b["y"] < a["y"] + a["height"])
+            assert not chevauche, f"{un} et {autre} se chevauchent : {a} / {b}"
+    assert not erreurs, erreurs
+    contexte.close()
+
+
 def test_au_volant_les_commandes_tactiles_deviennent_des_pedales(browser, serveur):
     """Martin, 4 oct. 2026 : « optimise complètement les contrôles visuels pour la conduite », puis « pas de
     joystick, juste gauche et droite ». Au volant, au doigt : une piste pour tourner, deux PEDALES
