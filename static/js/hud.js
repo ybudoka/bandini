@@ -1152,10 +1152,10 @@ const Hud = (function () {
     // Le doigt : le pouce, et les boutons sous leur nom du moment. ⚠️ Au volant, le gaz et le
     // recul sont des PEDALES (`Entree.etiquettes`) : le pouce ne fait que tourner.
     const vers = { marcher: null, tourner: 'cote', gaz: 'haut', frein: 'bas' };
-    // Et on y tourne aux boutons ◀ ▶ (`#volant`) : plus de joystick.
+    // Et on y tourne a la piste (`#volant`) : un pouce qui ne va qu'a gauche ou a droite.
     if (page === 'volant' && c === 'tourner') {
       return { glyphes: [icone('pouce', function () { return Entree.basTactile('gauche') || Entree.basTactile('droite'); }, 'cote')],
-               cible: 'gauche' };
+               cible: 'volant' };
     }
     if (c in vers && !(page === 'volant' && (c === 'gaz' || c === 'frein'))) {
       return { glyphes: [icone('pouce', poucePose, vers[c])], cible: 'croix' };
@@ -1454,10 +1454,10 @@ const Hud = (function () {
     lire: { x: 164, y: 37, r: 6 },     // LIRE, au-dessus d'ARME (`styles.css`)
     attaque: { x: 164, y: 80, r: 9 }, esquive: { x: 134, y: 94, r: 7 },
     pause: { x: 170, y: 10, r: 5 } };
-  //: Le meme telephone, AU VOLANT (`styles.css`, `body.au-volant`) : les boutons ◀ ▶ a gauche,
-  //: les PEDALES dans le coin (`pedale`), le reste un etage plus haut ; ni joystick ni LIRE.
+  //: Le meme telephone, AU VOLANT (`styles.css`, `body.au-volant`) : la piste a gauche (`piste` : sa
+  //: demi-longueur), les PEDALES dans le coin (`pedale`), le reste un etage plus haut ; ni joystick ni LIRE.
   const PLAN_TACTILE_VOLANT = { l: 184, h: 104,
-    gauche: { x: 14, y: 86, r: 8, pedale: '#3a3450' }, droite: { x: 34, y: 86, r: 8, pedale: '#3a3450' },
+    volant: { x: 25, y: 86, r: 8, piste: 15 },
     gaz: { x: 163, y: 80, r: 9, pedale: '#2e7846' }, frein: { x: 131, y: 85, r: 8, pedale: '#82281f' },
     esquive: { x: 129, y: 56, r: 6 }, attaque: { x: 163, y: 50, r: 7 },
     action: { x: 130, y: 33, r: 6 }, arme: { x: 160, y: 30, r: 6 }, saisir: { x: 103, y: 88, r: 5 },
@@ -1484,7 +1484,8 @@ const Hud = (function () {
     for (const li of lignes) {
       const c = P[li.cible], aGauche = c.x < P.l / 2;
       li.cible = { x: ox + c.x, y: oy + c.y };
-      li.bouts = [{ x: li.cible.x + (aGauche ? -c.r - 1 : c.r + 1), y: li.cible.y }];
+      const bord = (c.piste || 0) + c.r + 1;      // la piste : au bout de la piste
+      li.bouts = [{ x: li.cible.x + (aGauche ? -bord : bord), y: li.cible.y }];
       (aGauche ? gauche : droite).push(li);
     }
     // ⚠️ Les lignes du pouce s'empilent VERS LE HAUT : au volant il y en a
@@ -1494,9 +1495,18 @@ const Hud = (function () {
     ctx.fillStyle = '#8a8698'; ctx.fillRect(ox - 2, oy - 2, P.l + 4, P.h + 4);
     ctx.fillStyle = '#15141c'; ctx.fillRect(ox, oy, P.l, P.h);
     B.stats.rects += 2;
-    for (const nom of ['croix', 'gauche', 'droite', 'attaque', 'action', 'esquive', 'arme', 'saisir', 'lire', 'gaz', 'frein']) {
+    for (const nom of ['croix', 'volant', 'attaque', 'action', 'esquive', 'arme', 'saisir', 'lire', 'gaz', 'frein']) {
       const c = P[nom];
       if (!c) continue;
+      if (c.piste) {
+        // La piste aux bouts ronds, et son pouce : au centre, ou au bord du cote qu'on tient.
+        const g = Entree.basTactile('gauche'), d = Entree.basTactile('droite');
+        const cx = ox + c.x, cy = oy + c.y, course = c.piste - c.r + 3;
+        disque(ctx, cx - c.piste, cy, c.r, '#3a3450'); disque(ctx, cx + c.piste, cy, c.r, '#3a3450');
+        ctx.fillStyle = '#3a3450'; ctx.fillRect(cx - c.piste, cy - c.r, 2 * c.piste + 1, 2 * c.r + 1); B.stats.rects++;
+        disque(ctx, cx + (d ? course : g ? -course : 0), cy, 5, g || d ? '#e8b33c' : '#6b5a2e');
+        continue;
+      }
       const tenu = nom === 'croix' ? poucePose() : Entree.basTactile(nom);
       const couleur = tenu ? '#e8b33c' : c.pedale || '#3a3450';
       if (c.pedale) { ctx.fillStyle = couleur; ctx.fillRect(ox + c.x - c.r + 2, oy + c.y - c.r, 2 * c.r - 3, 2 * c.r + 1); B.stats.rects++; }

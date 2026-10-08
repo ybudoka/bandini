@@ -73,7 +73,7 @@ const Entree = (function () {
   const ZONE_MORTE = 0.2, ZONE_PLEINE = 0.95;
   //: Le rayon de course du joystick flottant, en px : son anneau fait 140 px, le pouce 52.
   const RAYON_POUCE = 56;
-  let lacherPouce = null;
+  let lacherPouce = null, lacherLeVolant = null;
   //: De combien un bouton ou un axe doit bouger pour qu'on dise « c'est
   //: celui-la » pendant un apprentissage.
   const GESTE = 0.5;
@@ -808,8 +808,8 @@ const Entree = (function () {
     //: ⚠️ LE JOYSTICK FLOTTE (demande de Martin, 4 oct. 2026) : `#croix` est une ZONE invisible,
     //: en bas a gauche, la ou le pouce gauche se pose (`styles.css`). Rien ne s'y voit tant
     //: qu'on n'y touche pas ; le doigt qui s'y pose fait naitre le joystick CENTRE SOUS LUI
-    //: (`anneau`), et il disparait au relacher. Au volant, la zone s'efface : on tourne aux
-    //: boutons ◀ ▶ (`#volant`).
+    //: (`anneau`), et il disparait au relacher. Au volant, la zone s'efface : on tourne a la
+    //: piste (`#volant`, plus bas).
     const croix = d.getElementById('croix');
     const anneau = croix.querySelector('i');
     const bouton = croix.querySelector('u');
@@ -846,6 +846,45 @@ const Entree = (function () {
       if (tape && typeof Hud !== 'undefined' && Hud.toucherToile) Hud.toucherToile(origine.x, origine.y);
     }
     lacherPouce = function () { if (doigt !== null) lacher(null); };
+
+    //: ⚠️ LE VOLANT EST UNE PISTE (Martin, 8 oct. 2026 : « un joystick sous forme d'un carre aux cotes
+    //: arrondis […] au centre, limite au bord ») : le pouce y reste au centre, suit le doigt sur
+    //: l'horizontale seulement et s'arrete au bord. Il ne dit que GAUCHE ou DROITE, tout ou rien,
+    //: comme les boutons ◀ ▶ qu'il remplace — le doigt pose au milieu ne tourne pas.
+    const volant = d.getElementById('volant');
+    const pommeau = volant && volant.querySelector('u');
+    let doigtVolant = null;
+    function suivreVolant(ev) {
+      const r = volant.getBoundingClientRect();
+      const max = Math.max(1, (r.width - (pommeau ? pommeau.offsetWidth : 52)) / 2 - 6);
+      const dx = borner(ev.clientX - (r.left + r.width / 2), -max, max);
+      if (pommeau) pommeau.style.transform = 'translateX(' + dx.toFixed(1) + 'px)';
+      // Le meme seuil a deux crans que le joystick, mais plus pres du centre : un bouton ◀ se
+      // tenait des qu'on le touchait, la piste tourne des le premier quart de sa course.
+      const v = dx / max;
+      ['gauche', 'droite'].forEach(function (a, k) {
+        const cote = k ? v : -v;
+        poser(vTact, a, cote > (vTact[a] ? 0.15 : 0.25));
+      });
+    }
+    function lacherVolant(ev) {
+      if (doigtVolant === null || (ev && ev.pointerId !== doigtVolant)) return;
+      doigtVolant = null;
+      if (pommeau) pommeau.style.transform = '';
+      volant.classList.remove('actif');
+      poser(vTact, 'gauche', false); poser(vTact, 'droite', false);
+    }
+    if (volant) {
+      lacherLeVolant = function () { lacherVolant(null); };
+      volant.addEventListener('pointerdown', function (ev) {
+        ev.preventDefault(); doigtVolant = ev.pointerId; capter(volant, doigtVolant); passerEnTactile();
+        volant.classList.add('actif');
+        Son.reveiller(); vibrer(8); suivreVolant(ev);
+      });
+      volant.addEventListener('pointermove', function (ev) { if (ev.pointerId === doigtVolant) { ev.preventDefault(); suivreVolant(ev); } });
+      volant.addEventListener('pointerup', lacherVolant);
+      volant.addEventListener('pointercancel', lacherVolant);
+    }
     croix.addEventListener('pointerdown', function (ev) {
       ev.preventDefault(); doigt = ev.pointerId; capter(croix, doigt); passerEnTactile();
       // Le joystick nait sous le doigt.
@@ -1030,7 +1069,7 @@ const Entree = (function () {
       // Un bouton qui ne fait rien (« · ») : au volant, il s'efface (`styles.css`).
       if (e[a] === '·') b.classList.add('vide'); else b.classList.remove('vide');
     });
-    // ⚠️ La disposition DU VOLANT (`styles.css`) : les pedales, ◀ ▶ a la place du joystick, les
+    // ⚠️ La disposition DU VOLANT (`styles.css`) : les pedales, la piste a la place du joystick, les
     // boutons qui ne servent pas effaces. Un menu ou une scene ouverts au volant rendent la
     // disposition de leur contexte : le joystick y redevient une croix, pour choisir.
     if (doc.body) {
@@ -1038,6 +1077,8 @@ const Entree = (function () {
     }
     // La zone du joystick s'efface au volant : un pouce qui y etait pose ne tient plus rien.
     if (estAuVolant(nom) && lacherPouce) lacherPouce();
+    // Et la piste s'efface en descendant : un doigt qui y tenait ne tourne plus rien.
+    if (!estAuVolant(nom) && lacherLeVolant) lacherLeVolant();
   }
 
   function init(d, w, n) {

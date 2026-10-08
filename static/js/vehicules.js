@@ -3390,7 +3390,7 @@ const Vehicules = (function () {
     // manette sur l'iPhone) : avancer, c'est la gachette de droite, reculer celle de gauche
     // (`Entree.gaz`, `Entree.frein`). Un stick pousse en biais vers le haut accelerait dans chaque
     // virage. Le clavier garde ses fleches (haut = gaz, bas = frein) ; au doigt, ce sont les
-    // PEDALES GAZ et RECUL (`Entree.etiquettes`), et on tourne aux boutons ◀ ▶ (`#volant`).
+    // PEDALES GAZ et RECUL (`Entree.etiquettes`), et on tourne a la piste (`#volant`).
     let gaz = Entree.basSansManette('haut') || Entree.basTactile('gaz') ? 1 : 0;
     let frein = Entree.basSansManette('bas') || Entree.basTactile('frein') ? 1 : 0;
     if (axe.source === 'tactile') { if (axe.y < -0.2) gaz = Math.max(gaz, -axe.y); if (axe.y > 0.2) frein = Math.max(frein, axe.y); }

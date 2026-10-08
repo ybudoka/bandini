@@ -555,9 +555,13 @@ def test_les_commandes_tactiles_sont_grandes_et_visibles(browser, serveur):
 
 def test_au_volant_les_commandes_tactiles_deviennent_des_pedales(browser, serveur):
     """Martin, 4 oct. 2026 : « optimise complètement les contrôles visuels pour la conduite », puis « pas de
-    joystick, juste gauche et droite ». Au volant, au doigt : deux boutons ◀ ▶ pour tourner, deux PEDALES
+    joystick, juste gauche et droite ». Au volant, au doigt : une piste pour tourner, deux PEDALES
     (GAZ, RECUL), et ce qui ne sert pas au volant (LIRE, la NITRO d'un char qui n'en a pas) effacé — sans
-    qu'aucune pastille en morde une autre. A pied, le joystick ne se voit pas : il nait sous le doigt."""
+    qu'aucune pastille en morde une autre. A pied, le joystick ne se voit pas : il nait sous le doigt.
+
+    ⚠️ La piste (Martin, 8 oct. 2026 : « au lieu des flèches […] un joystick sous forme d'un carré aux côtés
+    arrondis ») : le pouce du joystick au centre, qui suit le doigt sur l'horizontale et s'arrête au bord —
+    gauche ou droite, tout ou rien, comme les flèches qu'elle remplace."""
     contexte = browser.new_context(viewport={"width": 844, "height": 390}, has_touch=True, is_mobile=True,
                                    device_scale_factor=2)
     page = contexte.new_page()
@@ -572,9 +576,9 @@ def test_au_volant_les_commandes_tactiles_deviennent_des_pedales(browser, serveu
     if page.evaluate("!!window.BANDINI.B.menu"):
         page.tap('#tactile b[data-a="action"]')
         page.wait_for_function("!window.BANDINI.B.menu")
-    # A pied : ni pedales ni ◀ ▶, et le joystick ne se voit pas tant qu'on n'y touche pas.
+    # A pied : ni pedales ni piste, et le joystick ne se voit pas tant qu'on n'y touche pas.
     assert page.locator('#tactile b[data-a="gaz"]').bounding_box() is None
-    assert page.locator('#tactile b[data-a="gauche"]').bounding_box() is None
+    assert page.locator("#volant").bounding_box() is None
     assert page.locator("#croix i").bounding_box() is None, "le joystick se voit sans doigt"
     zone = page.locator("#croix").bounding_box()
     # Le doigt pose n'importe ou dans la zone : le joystick nait CENTRE sous lui.
@@ -598,12 +602,17 @@ def test_au_volant_les_commandes_tactiles_deviennent_des_pedales(browser, serveu
     assert page.locator('#tactile b[data-a="lire"]').bounding_box() is None, "LIRE ne sert pas au volant"
     assert page.locator('#tactile b[data-a="saisir"]').bounding_box() is None, "pas de NITRO sur ce char"
     boites = {a: page.locator(f'#tactile b[data-a="{a}"]').bounding_box()
-              for a in ("gauche", "droite", "gaz", "frein", "attaque", "action", "esquive", "arme", "pause", "plein")}
+              for a in ("gaz", "frein", "attaque", "action", "esquive", "arme", "pause", "plein")}
+    boites["volant"] = page.locator("#volant").bounding_box()
     for nom, b in boites.items():
         assert b, nom
         assert b["x"] >= 0 and b["y"] >= 0 and b["x"] + b["width"] <= 844 and b["y"] + b["height"] <= 390, nom
     assert boites["gaz"]["width"] >= 72 and boites["frein"]["width"] >= 64, "les pedales sont les plus grosses"
-    assert boites["gauche"]["width"] >= 72 and boites["droite"]["x"] > boites["gauche"]["x"]
+    piste, pouce = boites["volant"], page.locator("#volant u").bounding_box()
+    assert piste["width"] >= 2 * piste["height"], "une piste couchee, plus large que haute"
+    assert pouce, "le pouce se voit des qu'on est au volant, sans doigt"
+    milieu = (piste["x"] + piste["width"] / 2, piste["y"] + piste["height"] / 2)
+    assert abs(pouce["x"] + pouce["width"] / 2 - milieu[0]) < 2 and abs(pouce["y"] + pouce["height"] / 2 - milieu[1]) < 2, "au centre"
     noms = sorted(boites)
     for i, un in enumerate(noms):
         for autre in noms[i + 1:]:
@@ -612,22 +621,41 @@ def test_au_volant_les_commandes_tactiles_deviennent_des_pedales(browser, serveu
                          and a["y"] < b["y"] + b["height"] and b["y"] < a["y"] + a["height"])
             assert not chevauche, f"{un} et {autre} se chevauchent : {a} / {b}"
 
-    def tenir(nom, ms):
+    def tenir(nom, ms, dx=0.0, glisse=0.0):
         b = boites[nom]
-        page.mouse.move(b["x"] + b["width"] / 2, b["y"] + b["height"] / 2)
+        page.mouse.move(b["x"] + b["width"] / 2 + dx, b["y"] + b["height"] / 2)
         page.mouse.down()
+        if glisse:
+            page.mouse.move(b["x"] + b["width"] / 2 + dx + glisse, b["y"] + b["height"] / 2 + 30, steps=4)
         page.wait_for_timeout(ms)
         r = page.evaluate("""() => { const v = window.BANDINI.B.joueur.dansVehicule;
             return { vitesse: v.vitesse, direction: window.BANDINI.Vehicules.commandesJoueur(v).direction }; }""")
+        r["pouce"] = page.locator("#volant u").bounding_box()
         page.mouse.up()
+        page.wait_for_timeout(100)                  # le pouce revient en 40 ms (`transition`)
+        r["relache"] = page.locator("#volant u").bounding_box()
+        r["apres"] = page.evaluate("""() => window.BANDINI.Vehicules.commandesJoueur(window.BANDINI.B.joueur.dansVehicule).direction""")
         return r
-    # Le GAZ fait avancer le char ; ◀ et ▶ tournent, sans accelerer.
+    # Le GAZ fait avancer le char ; la piste tourne, sans accelerer.
     assert tenir("gaz", 600)["vitesse"] > 0.1
     page.wait_for_function("window.BANDINI.B.joueur.dansVehicule.vitesse < 0.05", timeout=10000)
-    droite = tenir("droite", 300)
-    gauche = tenir("gauche", 300)
+    droite = tenir("volant", 300, dx=piste["width"] * 0.3)
+    gauche = tenir("volant", 300, dx=-piste["width"] * 0.3)
     assert droite["direction"] == 1 and gauche["direction"] == -1, (droite, gauche)
     assert abs(gauche["vitesse"]) < 0.05, "tourner a fait avancer le char"
+    assert droite["pouce"]["x"] + droite["pouce"]["width"] / 2 > milieu[0] + 10, "le pouce suit le doigt"
+    assert gauche["pouce"]["x"] + gauche["pouce"]["width"] / 2 < milieu[0] - 10
+    for r in (droite, gauche):
+        assert abs(r["pouce"]["y"] + r["pouce"]["height"] / 2 - milieu[1]) < 2, "sur l'horizontale seulement"
+        assert abs(r["relache"]["x"] + r["relache"]["width"] / 2 - milieu[0]) < 2, "lacher le ramene au centre"
+        assert r["apres"] == 0, "lacher redresse le volant"
+    # Le doigt qui sort de la piste : le pouce s'arrete au bord, et le volant tient.
+    loin = tenir("volant", 200, dx=piste["width"] * 0.3, glisse=400)
+    assert loin["direction"] == 1, loin
+    assert loin["pouce"]["x"] + loin["pouce"]["width"] <= piste["x"] + piste["width"] + 1, "le pouce sort de la piste"
+    assert loin["pouce"]["x"] + loin["pouce"]["width"] >= piste["x"] + piste["width"] - 8, "il s'arrete AU bord"
+    # Pose au milieu : rien (une zone morte, comme le joystick a pied).
+    assert tenir("volant", 150)["direction"] == 0
     assert erreurs == []
     contexte.close()
 
